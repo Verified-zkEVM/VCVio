@@ -48,11 +48,11 @@ that no hidden cell of the signed digests of `log` is drawn in `st`.
   of another type (`not_hiddenChild_inr`), the chain steps at and above the selected step of a
   used position (`not_hiddenChild_chainChild`), and the opened FORS secrets
   (`not_hiddenChild_inl_forsSkAdrs`) are not hidden.
-* **The forgery's replay.** Read off a cache with the `H_msg` entries of the state, the used
-  leaves of `HashSig.SLHDSA.Security.RomDescentSecret` are used positions
-  (`usedPosition_of_usedLeaf`), its unopened coordinates are not opened
-  (`not_openedCoord_of_unopenedCoord`), and a chain value hidden at a larger state is a hidden
-  chain step (`hiddenChainStep_of_le`), whose cell is a hidden cell
+* **The forgery's replay.** Read off a cache with the `H_msg` entries of the state, a used
+  position is a used leaf of `HashSig.SLHDSA.Security.RomDescentSecret` at its own layer
+  (`usedLeaf_of_usedPosition`, `layer_eq_of_forgerLayer`), the replay's unopened coordinates are
+  not opened (`not_openedCoord_of_unopenedCoord`), and a chain value hidden at a larger state is a
+  hidden chain step (`hiddenChainStep_of_le`), whose cell is a hidden cell
   (`mem_hiddenCells_of_hiddenChainStep`, `mem_hiddenCells_forsSkAdrs`).
 
 ## References
@@ -328,20 +328,26 @@ theorem hiddenUndrawn_of_mem_support_deferredImpl [SampleableType core.Y] [Decid
 /-! ## Hidden cells of a forgery's replay
 
 A forgery's replay is read off a cache `c` of the public hash whose `H_msg` entries are those of
-the public cache `C` of a state. Its used leaves are then positions used by the signed digests,
-its unopened coordinates are not opened by them, and a chain value it finds hidden at a larger
-state, where the honest message is drawn, is a hidden chain step. -/
+the public cache `C` of a state. A position used by the signed digests is then a leaf a logged
+signature uses, a coordinate its replay finds unopened is not opened by the signed digests, and a
+chain value it finds hidden at a larger state, where the honest message is drawn, is a hidden
+chain step. -/
 
-/-- A leaf a logged signature uses, read off a cache with the `H_msg` entries of `C`, is a
-position used by the digests the log signs in `C`. -/
-theorem usedPosition_of_usedLeaf {o : RomOutcome vp core} {c : PublicHash.Cache core}
+/-- A position used by the digests a log signs in `C` is, read off a cache with the `H_msg`
+entries of `C`, a leaf a logged signature uses at the position's layer. -/
+theorem usedLeaf_of_usedPosition {o : RomOutcome vp core} {c : PublicHash.Cache core}
     {C : (hashSpec core).QueryCache}
     (hc : ∀ r pk root msg, c (.hmsg r pk root msg) = C (.inl (.hmsg r pk root msg)))
-    {j : Fin vp.params.d} {pos : LayerPosition vp} (h : UsedLeaf o c j pos) :
-    UsedPosition (SignedDigest core o.pk o.log C) pos := by
-  obtain ⟨e, he, d, hd, rfl⟩ := h
-  refine ⟨d, ⟨e, he, (hc _ _ _ _).symm.trans hd⟩, ?_⟩
-  congr 1
+    {pos : LayerPosition vp} (h : UsedPosition (SignedDigest core o.pk o.log C) pos) :
+    UsedLeaf o c pos.layer pos := by
+  obtain ⟨d, ⟨e, he, hd⟩, hpos⟩ := h
+  exact ⟨e, he, d, (hc _ _ _ _).trans hd, hpos⟩
+
+/-- The replay of a forgery enters layer `j` at a position of layer `j`. -/
+theorem layer_eq_of_forgerLayer {o : RomOutcome vp core} {c : PublicHash.Cache core}
+    {j : Fin vp.params.d} {pos : LayerPosition vp} {m : core.Y} (h : ForgerLayer o c j pos m) :
+    pos.layer = j := by
+  obtain ⟨d, -, -, -, rfl, -⟩ := h
   exact Fin.ext (LayerPosition.atLayer_layer_val _ _ _)
 
 /-- A FORS coordinate no logged signature opens, read off a cache with the `H_msg` entries of

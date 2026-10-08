@@ -18,7 +18,8 @@ On every run of the lab experiment `labExperiment core adv pkSeed` in the deferr
 SLH-DSA graph `slhGraph core pkSeed`, before the end fill, no cell is drawn that is hidden for the
 digests the transcript's log signs: no WOTS+ chain step below the one the honest message selects
 at a used position, no chain step below the top at an unused position, and no unopened FORS
-secret (`hiddenUndrawn_of_mem_support_deferredImpl_labExperiment`).
+secret. The transcript's public key carries the graph's public seed `pkSeed`
+(`hiddenUndrawn_of_mem_support_deferredImpl_labExperiment`).
 
 The invariant `HiddenUndrawn pk log st` is carried through the three stages of the experiment by
 `SignatureAlg.holds_of_mem_support_run_unforgeableTranscriptExperiment`.
@@ -308,22 +309,23 @@ theorem hiddenUndrawn_of_mem_support_labScheme_sign (hd : core.KeyDiscipline vp)
 /-! ## The experiment -/
 
 /-- **No hidden cell is drawn before the end fill.** On every run of the lab experiment in
-the deferred game over the SLH-DSA graph, from the empty state, the final state draws no cell that
-is hidden for the digests its transcript's log signs at its public key: no WOTS+ chain step below
-the one the drawn honest message selects at a used position, no chain step below the top at an
-unused one, and no FORS secret that no signed digest opens. -/
+the deferred game over the SLH-DSA graph at the public seed `pkSeed`, from the empty state, the
+transcript's public key has public seed `pkSeed`, and the final state draws no cell that is hidden
+for the digests the transcript's log signs at that key: no WOTS+ chain step below the one the
+drawn honest message selects at a used position, no chain step below the top at an unused one,
+and no FORS secret that no signed digest opens. -/
 theorem hiddenUndrawn_of_mem_support_deferredImpl_labExperiment [SampleableType core.SkSeed]
     [SampleableType core.SkPrf] (hd : core.KeyDiscipline vp) {e : core.SkSeed ≃ core.Y}
     {optRand : PublicKeyCore core → ProbComp core.Y} {pkSeedDist : ProbComp core.PkSeed}
     (adv : UnforgeableAdversary (romScheme core e optRand pkSeedDist)) {z}
     (hz : z ∈ support ((simulateQ (slhGraph core pkSeed).deferredImpl
       (labExperiment core adv pkSeed)).run ((∅, ∅), []))) :
-    HiddenUndrawn core z.1.pk z.1.log z.2.1 := by
+    z.1.pk.pkSeed = pkSeed ∧ HiddenUndrawn core z.1.pk z.1.log z.2.1 := by
   refine (holds_of_mem_support_run_unforgeableTranscriptExperiment
     (slhGraph core pkSeed).deferredImpl
     (I := fun pk sk log s ↦ sk = pk ∧ pk.pkSeed = pkSeed ∧ HiddenUndrawn core pk log s.1)
     (allowed := IsAmbientLabQuery core) ?_ ?_ ?_ ?_ (labAdversary core adv pkSeed)
-    (allQueriesSatisfy_labAdversary_main adv) hz).2.2
+    (allQueriesSatisfy_labAdversary_main adv) hz).2
   · intro w hw
     simp only [labScheme, simulateQ_bind, StateT.run_bind, mem_support_bind_iff, simulateQ_pure,
       StateT.run_pure, support_pure, Set.mem_singleton_iff] at hw
