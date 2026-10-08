@@ -23,7 +23,10 @@ In the eager game `CanonicalGraph.eagerImpl` a read draws its cell and a touch d
 discards the value (`CanonicalGraph.eagerImpl_readCell_run`,
 `CanonicalGraph.eagerImpl_touchCell_run`), so there a touch-then-read over cells that all exist
 draws cells `0, …, s` and returns the value of cell `s`
-(`CanonicalGraph.eagerImpl_touchRead_succ_run`).
+(`CanonicalGraph.eagerImpl_touchRead_succ_run`). Whether or not the cells exist, a touch is in
+the eager game a read whose value is discarded (`CanonicalGraph.simulateQ_eagerImpl_touchCell`),
+so a touch-then-read of cell `s + 1` is the touch-then-read of cell `s` followed by a read of cell
+`s + 1` (`CanonicalGraph.simulateQ_eagerImpl_touchRead_succ`).
 
 The `_pred` lemmas carry a predicate on programs, closed under `pure` and `bind`, from the touches
 and reads of cells to these programs.
@@ -132,5 +135,23 @@ theorem eagerImpl_touchRead_succ_run (cell : ℕ → Option (X ⊕ K)) (s : ℕ)
         (RelabelState.drawCell c').run z.2 := by
   simp only [touchRead, touchUpTo, hc, hc', simulateQ_bind, StateT.run_bind, bind_assoc,
     G.eagerImpl_readCell_run, G.eagerImpl_touchCell_run, bind_map_left]
+
+/-- In the eager game a touch is a read whose value is discarded, whether or not the cell
+exists. -/
+theorem simulateQ_eagerImpl_touchCell (c : Option (X ⊕ K)) :
+    simulateQ G.eagerImpl (touchCell c) = (fun _ ↦ ()) <$> simulateQ G.eagerImpl (readCell c) := by
+  rcases c with _ | c
+  · simp [touchCell, readCell]
+  · exact StateT.ext fun st ↦ by
+      rw [StateT.run_map, G.eagerImpl_touchCell_run, G.eagerImpl_readCell_run]
+
+/-- In the eager game a touch-then-read of cell `s + 1` is the touch-then-read of cell `s`
+followed by a read of cell `s + 1`, whether or not the cells exist. -/
+theorem simulateQ_eagerImpl_touchRead_succ (cell : ℕ → Option (X ⊕ K)) (s : ℕ) :
+    simulateQ G.eagerImpl (touchRead cell (s + 1)) =
+      simulateQ G.eagerImpl (touchRead cell s) >>= fun _ ↦
+        simulateQ G.eagerImpl (readCell (cell (s + 1))) := by
+  simp only [touchRead, touchUpTo, simulateQ_bind, G.simulateQ_eagerImpl_touchCell, bind_assoc,
+    bind_map_left]
 
 end CanonicalGraph
