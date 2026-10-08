@@ -67,8 +67,10 @@ suffixed `_run_classPosImplFwd` are about a run of a whole program under `simula
   hit set unchanged, and `freshHitStep_of_eq_none` gives the hit set after one that is.
 * `ne_none_of_mem_hits_of_mem_support_classPosImplFwd_run`: a step keeps every hit cached, and
   `ne_none_of_mem_hits_of_mem_support_run_classPosImplFwd` carries that along a run.
-* `mono_of_mem_support_run_classPosImplFwd_freshHitAux`: along a run the cache and the hit set
-  only grow, and a cached point keeps its class and position.
+* `mono_of_mem_support_classPosImplFwd_run`: a step only extends the cache, keeps the class and
+  position of every point cached before it, and only grows the hit set, by points cached before
+  it. `mono_of_mem_support_run_classPosImplFwd_freshHitAux` carries the first three along a
+  run.
 
 ## Scope
 
@@ -798,14 +800,18 @@ theorem freshHitStep_of_eq_none (hc : c x = none) (hx : trig x) :
     freshHitStep trig rel c x u hs = hs ∪ {y | c y ≠ none ∧ rel x u y} := by
   simp [freshHitStep, hc, hx]
 
+/-- A point of the hit set after a step was in it before, or is cached in `c`. -/
+theorem mem_or_ne_none_of_mem_freshHitStep {y : spec.Domain}
+    (hy : y ∈ freshHitStep trig rel c x u hs) : y ∈ hs ∨ c y ≠ none := by
+  unfold freshHitStep at hy
+  split_ifs at hy
+  · exact hy.imp_right And.left
+  · exact .inl hy
+
 /-- If every point of `hs` is cached in `c`, so is every point of the hit set after a step. -/
 theorem ne_none_of_mem_freshHitStep (hhs : ∀ y ∈ hs, c y ≠ none) :
-    ∀ y ∈ freshHitStep trig rel c x u hs, c y ≠ none := by
-  unfold freshHitStep
-  split_ifs
-  · rintro y (hy | hy)
-    exacts [hhs y hy, hy.1]
-  · exact hhs
+    ∀ y ∈ freshHitStep trig rel c x u hs, c y ≠ none := fun y hy =>
+  (mem_or_ne_none_of_mem_freshHitStep trig rel hy).elim (hhs y) id
 
 end FreshHitStep
 
@@ -883,6 +889,26 @@ theorem le_of_mem_support_tapeImplFwd_run (t : (unifSpec + (spec + spec)).Domain
   · exact key _ x _ y (by simpa [tapeCachingImplClass_apply_inl] using hy)
   · exact key _ x _ y (by simpa [tapeCachingImplClass_apply_inr] using hy)
 
+/-- **One step of the instrumented run.** A step of `classPosImplFwd` under `freshHitAux` only
+extends the cache, keeps the class and position of every point cached before it, and only grows
+the hit set, by points cached before it. -/
+theorem mono_of_mem_support_classPosImplFwd_run (t : (unifSpec + (spec + spec)).Domain)
+    (s : (spec.QueryCache × ((k : J) → List (R k))) × (ClassPos spec.Domain J × Set spec.Domain))
+    (y : (unifSpec + (spec + spec)).Range t ×
+      (spec.QueryCache × ((k : J) → List (R k))) × (ClassPos spec.Domain J × Set spec.Domain))
+    (hy : y ∈ support ((classPosImplFwd R τ hR (freshHitAux trig rel) t).run s)) :
+    s.1.1 ≤ y.2.1.1 ∧ (∀ p, s.1.1 p ≠ none → y.2.2.1.cls p = s.2.1.cls p ∧
+      y.2.2.1.pos p = s.2.1.pos p) ∧ s.2.2 ⊆ y.2.2.2 ∧
+      ∀ p ∈ y.2.2.2, p ∈ s.2.2 ∨ s.1.1 p ≠ none := by
+  obtain ⟨hv, hq⟩ := (QueryImpl.mem_support_extendState_run_iff _ _ t s y).1 hy
+  rw [hq]
+  refine ⟨le_of_mem_support_tapeImplFwd_run τ hR t s.1 _ hv,
+    fun p hp => classPosAuxFwd_cls_pos_of_ne_none τ t _ _ _ _ hp, ?_⟩
+  rcases t with n | (x | x)
+  · exact ⟨subset_rfl, fun p hp => .inl hp⟩
+  all_goals exact ⟨subset_freshHitStep trig rel,
+    fun p hp => mem_or_ne_none_of_mem_freshHitStep trig rel hp⟩
+
 /-- **The hit set changes only at fresh draws.** A step of `classPosImplFwd` under
 `freshHitAux` that is not a query, at either copy, of a point uncached before it and satisfying
 `trig` leaves the hit set unchanged. -/
@@ -914,16 +940,10 @@ theorem ne_none_of_mem_hits_of_mem_support_classPosImplFwd_run
       (spec.QueryCache × ((k : J) → List (R k))) × (ClassPos spec.Domain J × Set spec.Domain))
     (hy : y ∈ support ((classPosImplFwd R τ hR (freshHitAux trig rel) t).run s)) :
     ∀ p ∈ y.2.2.2, y.2.1.1 p ≠ none := by
-  obtain ⟨hv, hq⟩ := (QueryImpl.mem_support_extendState_run_iff _ _ t s y).1 hy
-  have hcached : ∀ p ∈ y.2.2.2, s.1.1 p ≠ none := by
-    rw [hq]
-    rcases t with n | (x | x)
-    · exact hs
-    · exact ne_none_of_mem_freshHitStep trig rel hs
-    · exact ne_none_of_mem_freshHitStep trig rel hs
+  obtain ⟨hle, -, -, hnew⟩ := mono_of_mem_support_classPosImplFwd_run trig rel τ hR t s y hy
   intro p hp
-  obtain ⟨v, hv'⟩ := Option.ne_none_iff_exists'.mp (hcached p hp)
-  rw [le_of_mem_support_tapeImplFwd_run τ hR t s.1 _ hv hv']
+  obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp ((hnew p hp).elim (hs p) id)
+  rw [hle hv]
   exact Option.some_ne_none v
 
 /-- **Hits stay cached along a run.** If every point of the hit set is cached in the initial
@@ -955,19 +975,12 @@ theorem mono_of_mem_support_run_classPosImplFwd_freshHitAux {α : Type}
     (fun s' => s.1.1 ≤ s'.1.1 ∧ (∀ t, s.1.1 t ≠ none → s'.2.1.cls t = s.2.1.cls t ∧
       s'.2.1.pos t = s.2.1.pos t) ∧ s.2.2 ⊆ s'.2.2)
     (fun t s' ⟨hle, hcp, hsub⟩ y hy => ?_) oa s ⟨le_rfl, fun _ _ => ⟨rfl, rfl⟩, subset_rfl⟩ z hz
-  obtain ⟨hv, hq⟩ := (QueryImpl.mem_support_extendState_run_iff _ _ t s' y).1 hy
-  refine ⟨hle.trans (le_of_mem_support_tapeImplFwd_run τ hR t s'.1 _ hv), fun p hp => ?_,
-    hsub.trans ?_⟩
-  · obtain ⟨v, hv'⟩ := Option.ne_none_iff_exists'.mp hp
-    obtain ⟨h₁, h₂⟩ := classPosAuxFwd_cls_pos_of_ne_none τ t s'.1 y.2.1 y.1 s'.2.1
-      (y := p) (by rw [hle hv']; exact Option.some_ne_none v)
-    rw [hq]
-    exact ⟨h₁.trans (hcp p hp).1, h₂.trans (hcp p hp).2⟩
-  · rw [hq]
-    rcases t with n | (x | x)
-    · exact subset_rfl
-    · exact subset_freshHitStep trig rel
-    · exact subset_freshHitStep trig rel
+  obtain ⟨hle', hcp', hsub', -⟩ :=
+    mono_of_mem_support_classPosImplFwd_run trig rel τ hR t s' y hy
+  refine ⟨hle.trans hle', fun p hp => ?_, hsub.trans hsub'⟩
+  obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp hp
+  obtain ⟨h₁, h₂⟩ := hcp' p (by rw [hle hv]; exact Option.some_ne_none v)
+  exact ⟨h₁.trans (hcp p hp).1, h₂.trans (hcp p hp).2⟩
 
 end FreshHit
 
