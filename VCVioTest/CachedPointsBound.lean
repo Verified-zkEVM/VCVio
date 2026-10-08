@@ -15,8 +15,9 @@ import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 The lazy random oracle on `ℕ` caches only the point of each query, so the generic bound
 `QueryImpl.CachesOnlyQueryPoint.encard_inter_le_add_of_mem_support_simulateQ` applies to it. A
-program querying `0` and then `1` has budget `2` and leaves both points cached on every run, so
-the bound `2` on the cached points is attained.
+program querying `0`, `2` and `1` is charged only for its queries at points of `D = {0, 1}`, so its
+budget is `2` although it makes three queries. Every run caches all three points, so the bound `2`
+on the cached points of `D` is attained, and the uncharged point `2` lies outside `D`.
 -/
 
 public section
@@ -39,41 +40,62 @@ theorem randomOracle_cachesOnlyQueryPoint :
     subst h
     rfl
 
-/-- Query the points `0` and `1`. -/
-def twoQueries : OracleComp natSpec Bool := do
+/-- The charged points. -/
+def D : Set ℕ := {k | k < 2}
+
+/-- Query the points `0`, `2` and `1`. -/
+def threeQueries : OracleComp natSpec Bool := do
   let _ ← natSpec.query 0
+  let _ ← natSpec.query 2
   natSpec.query 1
 
-/-- `twoQueries` makes two queries. -/
-theorem isQueryBoundP_twoQueries : IsQueryBoundP twoQueries (fun _ ↦ True) 2 := by
-  simp [twoQueries]
+/-- `threeQueries` makes two queries at points of `D`. -/
+theorem isQueryBoundP_threeQueries : IsQueryBoundP threeQueries (· < 2) 2 := by
+  simp [threeQueries]
 
-/-- Every run of `twoQueries` from the empty cache caches at most two points. -/
-theorem encard_cached_le {z : Bool × natSpec.QueryCache}
-    (hz : z ∈ support ((simulateQ natSpec.randomOracle twoQueries).run ∅)) :
-    (cached z.2).encard ≤ 2 := by
+/-- Every run of `threeQueries` from the empty cache caches at most two points of `D`. -/
+theorem encard_inter_cached_le {z : Bool × natSpec.QueryCache}
+    (hz : z ∈ support ((simulateQ natSpec.randomOracle threeQueries).run ∅)) :
+    (D ∩ cached z.2).encard ≤ 2 := by
   simpa [cached] using
     randomOracle_cachesOnlyQueryPoint.encard_inter_le_add_of_mem_support_simulateQ
-      (D := Set.univ) (fun _ _ _ _ ↦ trivial) isQueryBoundP_twoQueries hz
+      (D := D) (fun _ _ h hk ↦ Option.some_inj.1 h ▸ hk) isQueryBoundP_threeQueries hz
 
-/-- Every run of `twoQueries` caches both of its points, so the bound is attained. -/
-theorem encard_cached_eq {z : Bool × natSpec.QueryCache}
-    (hz : z ∈ support ((simulateQ natSpec.randomOracle twoQueries).run ∅)) :
-    (cached z.2).encard = 2 := by
-  refine le_antisymm (encard_cached_le hz) ?_
-  rw [twoQueries, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+/-- Every run of `threeQueries` caches all three of its points. -/
+theorem mem_cached {z : Bool × natSpec.QueryCache}
+    (hz : z ∈ support ((simulateQ natSpec.randomOracle threeQueries).run ∅)) :
+    ({0, 1, 2} : Set ℕ) ⊆ cached z.2 := by
+  rw [threeQueries, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
     mem_support_bind_iff] at hz
-  obtain ⟨w, hw, hz⟩ := hz
+  obtain ⟨w₀, hw₀, hz⟩ := hz
+  rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, mem_support_bind_iff] at hz
+  obtain ⟨w₂, hw₂, hz⟩ := hz
   rw [simulateQ_spec_query] at hz
-  have h1 := (QueryImpl.withCaching_run_isSome_apply_iff _ hz 1).2 (Or.inr rfl)
-  have h0 := (QueryImpl.withCaching_run_isSome_apply_iff _ hz 0).2
-    (Or.inl ((QueryImpl.withCaching_run_isSome_apply_iff _ hw 0).2 (Or.inr rfl)))
-  have hsub : ({0, 1} : Set ℕ) ⊆ cached z.2 := by
+  have h₀ := (QueryImpl.withCaching_run_isSome_apply_iff _ hw₀ 0).2 (Or.inr rfl)
+  have h₂ := (QueryImpl.withCaching_run_isSome_apply_iff _ hw₂ 2).2 (Or.inr rfl)
+  have h₀ := (QueryImpl.withCaching_run_isSome_apply_iff _ hw₂ 0).2 (Or.inl h₀)
+  rintro k (rfl | rfl | rfl)
+  · exact (QueryImpl.withCaching_run_isSome_apply_iff _ hz 0).2 (Or.inl h₀)
+  · exact (QueryImpl.withCaching_run_isSome_apply_iff _ hz 1).2 (Or.inr rfl)
+  · exact (QueryImpl.withCaching_run_isSome_apply_iff _ hz 2).2 (Or.inl h₂)
+
+/-- Every run of `threeQueries` caches both points of `D`, so the bound is attained. -/
+theorem encard_inter_cached_eq {z : Bool × natSpec.QueryCache}
+    (hz : z ∈ support ((simulateQ natSpec.randomOracle threeQueries).run ∅)) :
+    (D ∩ cached z.2).encard = 2 := by
+  refine le_antisymm (encard_inter_cached_le hz) ?_
+  have hsub : ({0, 1} : Set ℕ) ⊆ D ∩ cached z.2 := by
     rintro k (rfl | rfl)
-    · exact h0
-    · exact h1
+    · exact ⟨by simp [D], mem_cached hz (by simp)⟩
+    · exact ⟨by simp [D], mem_cached hz (by simp)⟩
   calc (2 : ℕ∞) = ({0, 1} : Set ℕ).encard := by
         rw [Set.encard_pair (by decide)]
-    _ ≤ (cached z.2).encard := Set.encard_le_encard hsub
+    _ ≤ (D ∩ cached z.2).encard := Set.encard_le_encard hsub
+
+/-- The uncharged point `2` is cached on every run of `threeQueries`, outside `D`. -/
+theorem two_mem_cached_diff {z : Bool × natSpec.QueryCache}
+    (hz : z ∈ support ((simulateQ natSpec.randomOracle threeQueries).run ∅)) :
+    2 ∈ cached z.2 \ D :=
+  ⟨mem_cached hz (by simp), by simp [D]⟩
 
 end VCVioTest.CachedPointsBound

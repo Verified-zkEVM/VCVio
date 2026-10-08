@@ -61,37 +61,6 @@ theorem IsQueryBoundP.cnt_le_of_mem_support_run_extendState {σ : Type}
     (fun t hp st w hw ↦ by simpa only [hp, ↓reduceIte] using hstep t st w hw)
     (fun t hp st w hw ↦ by simpa only [hp, ↓reduceIte, add_zero] using hstep t st w hw) (s, c) z hz
 
-/-- Run a `p`-bounded-by-`n` computation under a stateful handler, and let `f` be an
-`ℕ∞`-valued resource of the state that grows by at most one on each `p`-query and does not grow
-on any other query. On every output of the run, the resource exceeds its initial value by at
-most `n`. -/
-theorem IsQueryBoundP.resource_le_add_of_mem_support_run_simulateQ {σ : Type}
-    {impl : QueryImpl spec (StateT σ (OracleComp spec'))} {p : ι → Prop} [DecidablePred p]
-    (f : σ → ℕ∞)
-    (hstep : ∀ t s, ∀ w ∈ support ((impl t).run s), f w.2 ≤ f s + if p t then 1 else 0)
-    {oa : OracleComp spec α} {n : ℕ} (h : IsQueryBoundP oa p n) {s : σ} {z : α × σ}
-    (hz : z ∈ support ((simulateQ impl oa).run s)) :
-    f z.2 ≤ f s + n := by
-  induction oa using OracleComp.inductionOn generalizing n s with
-  | pure x =>
-    simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-    subst hz
-    exact le_self_add
-  | query_bind t k ih =>
-    rw [isQueryBoundP_query_bind_iff] at h
-    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, mem_support_bind_iff] at hz
-    obtain ⟨w, hw, hz⟩ := hz
-    refine (ih w.1 (h.2 w.1) hz).trans ?_
-    by_cases hpt : p t
-    · obtain ⟨m, rfl⟩ := Nat.exists_eq_add_one_of_ne_zero (h.1.resolve_left (not_not_intro hpt)).ne'
-      have hw' := hstep t s w hw
-      simp only [hpt, ↓reduceIte, Nat.add_sub_cancel, Nat.cast_add, Nat.cast_one] at hw' ⊢
-      calc f w.2 + m ≤ f s + 1 + m := add_le_add hw' le_rfl
-        _ = f s + (m + 1) := by rw [add_assoc, add_comm 1]
-    · have hw' := hstep t s w hw
-      simp only [hpt, ↓reduceIte, add_zero] at hw' ⊢
-      exact add_le_add hw' le_rfl
-
 end OracleComp
 
 namespace QueryImpl

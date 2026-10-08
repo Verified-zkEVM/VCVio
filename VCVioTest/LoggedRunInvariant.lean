@@ -14,7 +14,7 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle
 The ambient oracle has two queries: `false` leaves a counter unchanged and `true` increments it.
 The logged inner handler answers each of its queries with one `true` query. The invariant "the
 counter is its initial value plus the length of the log" is preserved by the logged handler and by
-the ambient `false` query, so `QueryImpl.inv_of_mem_support_run_add_withLogging` gives it at the
+the ambient `false` query, so `QueryImpl.holds_of_mem_support_run_add_withLogging` gives it at the
 end of every run of a program that makes only ambient `false` queries. A program making the
 ambient `true` query ends with the counter one above the length of its empty log, so the
 restriction to allowed ambient queries cannot be dropped.
@@ -52,7 +52,7 @@ theorem eq_add_length_of_mem_support_loggedRun {α : Type} {oa : OracleComp (amb
     (hoa : AllQueriesSatisfy oa (Sum.elim (· = false) fun _ ↦ True)) {n₀ : ℕ}
     {z : (α × QueryLog logSpec) × ℕ} (hz : z ∈ support (loggedRun oa n₀)) :
     z.2 = n₀ + z.1.2.length := by
-  simpa using QueryImpl.inv_of_mem_support_run_add_withLogging counter inner
+  simpa using QueryImpl.holds_of_mem_support_run_add_withLogging counter inner
     (fun log n ↦ n = n₀ + log.length)
     (fun t ht log n hn w hw ↦ by
       subst ht

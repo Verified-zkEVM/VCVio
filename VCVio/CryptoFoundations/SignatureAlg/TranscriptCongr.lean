@@ -7,7 +7,6 @@ Authors: Alexander Hicks
 module
 
 public import VCVio.CryptoFoundations.SignatureAlg.Transcript
-public import VCVio.OracleComp.EvalDist.Measure
 import all VCVio.CryptoFoundations.SignatureAlg.Transcript
 
 /-!
@@ -123,7 +122,7 @@ theorem evalDist_simulateQ_run_unforgeableTranscriptExperiment_congr_of_inv
     (evalDist_simulateQ_run_runWithSigningOracle_bind_congr_of_inv so z.1.1 z.1.2 (I z.1.1 z.1.2)
       (fun t ht ↦ hamb t ht z.1.1 z.1.2) (hsign z.1.1 z.1.2) (hsignI z.1.1 z.1.2) _
       (hadv z.1.1) hI _)
-  have hw' := inv_of_mem_support_run_runWithSigningOracle so A z.1.1 z.1.2 (fun _ ↦ I z.1.1 z.1.2)
+  have hw' := holds_of_mem_support_run_runWithSigningOracle so A z.1.1 z.1.2 (fun _ ↦ I z.1.1 z.1.2)
     (fun t ht _ ↦ hamb t ht z.1.1 z.1.2) (fun msg _ ↦ hsignI z.1.1 z.1.2 msg) (hadv z.1.1) hI hw
   exact evalDist_bind_congr_left_of_forall (hverify z.1.1 z.1.2 _ _ w.2 hw') _
 

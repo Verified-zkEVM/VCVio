@@ -38,9 +38,9 @@ the signing algorithm between two intermediate states below the final one
 (`exists_mem_support_run_sign_of_mem_log`). Conversely, a predicate on the signing log and the
 state that the adversary's ambient steps preserve, and that every run of the signing algorithm
 preserves once its entry is appended to the log, holds at the end of the signing stage
-(`inv_of_mem_support_run_runWithSigningOracle`); established by key generation and preserved by
+(`holds_of_mem_support_run_runWithSigningOracle`); established by key generation and preserved by
 verification, it holds at the end of the experiment
-(`inv_of_mem_support_run_unforgeableTranscriptExperiment`).
+(`holds_of_mem_support_run_unforgeableTranscriptExperiment`).
 -/
 
 public section
@@ -212,7 +212,7 @@ a stateful interpretation of the ambient oracles, preserved by every step at an 
 ambient query and by every run of the signing algorithm once its entry is appended to the log.
 A program whose ambient queries are all `allowed`, run with the signing oracle from a state
 satisfying `I` with the empty log, ends with its log in a state satisfying `I`. -/
-theorem inv_of_mem_support_run_runWithSigningOracle {σ : Type}
+theorem holds_of_mem_support_run_runWithSigningOracle {σ : Type}
     (so : QueryImpl spec (StateT σ ProbComp)) (sigAlg : SignatureAlg (OracleComp spec) M PK SK S)
     (pk : PK) (sk : SK) {allowed : ι → Prop} (I : QueryLog (M →ₒ S) → σ → Prop)
     (hamb : ∀ t, allowed t → ∀ log s, I log s → ∀ z ∈ support ((so t).run s), I log z.2)
@@ -224,7 +224,7 @@ theorem inv_of_mem_support_run_runWithSigningOracle {σ : Type}
     (hz : z ∈ support ((simulateQ so (sigAlg.runWithSigningOracle pk sk oa)).run s₀)) :
     I z.1.2 z.2 := by
   simpa only [List.nil_append] using
-    QueryImpl.inv_of_mem_support_run_add_withLogging so (sigAlg.sign pk sk) I hamb hsign hoa h₀ hz
+    QueryImpl.holds_of_mem_support_run_add_withLogging so (sigAlg.sign pk sk) I hamb hsign hoa h₀ hz
 
 /-- **Invariants of the transcript experiment.** Let `I pk sk log s` be a predicate on a key pair,
 a signing log and the state of a stateful interpretation of the ambient oracles. Suppose key
@@ -232,7 +232,7 @@ generation establishes it with the empty log, every step at an `allowed` ambient
 run of verification preserve it, and every run of signing preserves it once its entry is appended
 to the log. Against an adversary whose ambient queries are all `allowed`, every transcript of
 the experiment satisfies `I` with its key pair and log in the final state. -/
-theorem inv_of_mem_support_run_unforgeableTranscriptExperiment {σ : Type}
+theorem holds_of_mem_support_run_unforgeableTranscriptExperiment {σ : Type}
     (so : QueryImpl spec (StateT σ ProbComp)) {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     {allowed : ι → Prop} (I : PK → SK → QueryLog (M →ₒ S) → σ → Prop) {s₀ : σ}
     (hkeygen : ∀ z ∈ support ((simulateQ so sigAlg.keygen).run s₀), I z.1.1 z.1.2 [] z.2)
@@ -251,7 +251,7 @@ theorem inv_of_mem_support_run_unforgeableTranscriptExperiment {σ : Type}
   obtain ⟨s₁, s₂, hk, hf, hv⟩ :=
     exists_mem_support_run_of_mem_support_run_unforgeableTranscriptExperiment so adv hz
   exact hverify _ _ _ _ _ _
-    (inv_of_mem_support_run_runWithSigningOracle so sigAlg z.1.pk z.1.sk (I z.1.pk z.1.sk)
+    (holds_of_mem_support_run_runWithSigningOracle so sigAlg z.1.pk z.1.sk (I z.1.pk z.1.sk)
       (fun t ht ↦ hamb t ht z.1.pk z.1.sk) (hsign z.1.pk z.1.sk) (hadv z.1.pk) (hkeygen _ hk) hf)
     _ hv
 

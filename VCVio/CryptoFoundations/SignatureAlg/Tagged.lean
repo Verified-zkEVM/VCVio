@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.SignatureAlg.Transcript
 public import VCVio.OracleComp.QueryTracking.QueryBound.Tagged
+import VCVio.OracleComp.QueryTracking.SubSpec
 
 /-!
 # The tagged unforgeability experiment
@@ -38,7 +39,9 @@ verification make no `q`-query, the budget is a budget of the whole experiment
 (`isQueryBoundP_unforgeableTranscriptExperiment_mapOracles`); the tagged experiment is the instance
 in which `G` tags. When verification makes up to `V` `q`-queries, the budget of the experiment
 is `n + V` (`isQueryBoundP_unforgeableExperiment_mapOracles_add` and
-`isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_add`).
+`isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_add`). The interpreted adversary makes
+only ambient queries of a predicate that every interpretation `G t` respects
+(`allQueriesSatisfy_mapOracles`).
 -/
 
 public section
@@ -153,6 +156,27 @@ theorem isQueryBoundP_unforgeableTranscriptExperiment_mapOracles
     IsQueryBoundP (unforgeableTranscriptExperiment (adv.mapOracles G (sigAlg' := sigAlg'))) q n :=
   isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_add G hadv hG_p hG_np hkeygen hsign
     hverify
+
+/-- An adversary whose ambient oracles are interpreted through `G` makes only `allowed` ambient
+queries when every interpretation `G t` does: its signing queries are passed on unchanged. -/
+theorem allQueriesSatisfy_mapOracles {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (adv : UnforgeableAdversary sigAlg) {allowed : ι' → Prop}
+    (hG : ∀ t, AllQueriesSatisfy (G t) allowed) (pk : PK) :
+    AllQueriesSatisfy ((adv.mapOracles G (sigAlg' := sigAlg')).main pk)
+      (Sum.elim allowed fun _ ↦ True) := by
+  classical
+  rw [UnforgeableAdversary.mapOracles_main, ← isQueryBoundP_zero_iff]
+  have h₀ := (isQueryBoundP_zero_iff (adv.main pk) (fun _ ↦ True)).2
+    (allQueriesSatisfy_of_forall (fun _ ↦ trivial) _)
+  simp only [not_true_eq_false] at h₀
+  refine IsQueryBoundP.simulateQ_of_step h₀ (fun _ h ↦ h.elim) ?_
+  rintro (t | m) -
+  · simp only [QueryImpl.addLift_def, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply]
+    exact IsQueryBoundP.liftComp_subSpec (fun _ ↦ Iff.rfl)
+      ((isQueryBoundP_zero_iff (G t) allowed).2 (hG t))
+  · simp only [QueryImpl.addLift_def, QueryImpl.add_apply_inr, QueryImpl.liftTarget_apply]
+    exact IsQueryBoundP.liftComp_subSpec (q := fun t ↦ ¬Sum.elim allowed (fun _ ↦ True) t)
+      (p := fun _ ↦ False) (fun _ ↦ iff_of_false not_false (not_not_intro trivial)) (by simp)
 
 end MapOracles
 

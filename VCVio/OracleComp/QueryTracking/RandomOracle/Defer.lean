@@ -58,9 +58,10 @@ drawn only by touches hidden from the public queries until they are drawn by a r
 - `CanonicalGraph.prEvent_eagerImpl_le_maskedImpl`: the eager game is at most the masked game, or a
   conflict.
 - `CanonicalGraph.deferredImpl_cachesOnlyQueryPoint` and
-  `CanonicalGraph.encard_inter_setOf_isSome_le_add_of_mem_support_deferredImpl`: the deferred game
-  caches a public point only on a public query at it, so under a budget charging every public query
-  at a point of `D`, a run adds at most the budget's number of points of `D` to the public cache.
+  `CanonicalGraph.encard_inter_setOf_isSome_le_add_of_mem_support_simulateQ_deferredImpl`: the
+  deferred game caches a public point only on a public query at it, so under a budget charging
+  every public query at a point of `D`, a run adds at most the budget's number of points of `D` to
+  the public cache.
 -/
 
 public section
@@ -395,7 +396,7 @@ theorem deferredImpl_cachesOnlyQueryPoint :
 
 /-- Under a query budget charging every public query at a point of a set `D`, a run of the
 deferred game adds at most `q` points of `D` to the public cache. -/
-theorem encard_inter_setOf_isSome_le_add_of_mem_support_deferredImpl {D : Set ι}
+theorem encard_inter_setOf_isSome_le_add_of_mem_support_simulateQ_deferredImpl {D : Set ι}
     {p : (pub.withLabels X K R).Domain → Prop} [DecidablePred p]
     (hp : ∀ t ∈ D, p (.inl (.inl (.inr t)))) {α : Type} {oa : OracleComp (pub.withLabels X K R) α}
     {q : ℕ} (h : IsQueryBoundP oa p q) {s : RelabelState pub X K R × List (X ⊕ K)}

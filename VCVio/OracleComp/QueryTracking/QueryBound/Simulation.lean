@@ -322,6 +322,39 @@ theorem IsTotalQueryBound.residual_of_mem_support_run_simulateQ_le_cost [Finite 
       (spec := spec) (ι := ι) (oa := oa) (ob := ob) (n := n) (z := (z.1, qc)) h hqc
   exact hres.mono (by omega)
 
+/-- Let `impl : QueryImpl spec (StateT σ (OracleComp spec'))`, `p : ι → Prop` and `f : σ → ℕ∞`
+satisfy, for every query `t`, every state `s` and every outcome `(_, s')` of `(impl t).run s`,
+`f s' ≤ f s + 1` if `p t` and `f s' ≤ f s` otherwise. If `oa` makes at most `n` queries
+satisfying `p`, then `f s' ≤ f s + n` for every outcome `(_, s')` of `(simulateQ impl oa).run s`.
+The index type `ι` need not be finite. -/
+theorem IsQueryBoundP.resource_le_add_of_mem_support_run_simulateQ
+    {ι' : Type u} {spec' : OracleSpec ι'} {σ : Type u}
+    {impl : QueryImpl spec (StateT σ (OracleComp spec'))} {p : ι → Prop} [DecidablePred p]
+    (f : σ → ℕ∞)
+    (hstep : ∀ t s, ∀ w ∈ support ((impl t).run s), f w.2 ≤ f s + if p t then 1 else 0)
+    {oa : OracleComp spec α} {n : ℕ} (h : IsQueryBoundP oa p n) {s : σ} {z : α × σ}
+    (hz : z ∈ support ((simulateQ impl oa).run s)) :
+    f z.2 ≤ f s + n := by
+  induction oa using OracleComp.inductionOn generalizing n s with
+  | pure x =>
+    simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
+    subst hz
+    exact le_self_add
+  | query_bind t k ih =>
+    rw [isQueryBoundP_query_bind_iff] at h
+    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, mem_support_bind_iff] at hz
+    obtain ⟨w, hw, hz⟩ := hz
+    refine (ih w.1 (h.2 w.1) hz).trans ?_
+    by_cases hpt : p t
+    · obtain ⟨m, rfl⟩ := Nat.exists_eq_add_one_of_ne_zero (h.1.resolve_left (not_not_intro hpt)).ne'
+      have hw' := hstep t s w hw
+      simp only [hpt, ↓reduceIte, Nat.add_sub_cancel, Nat.cast_add, Nat.cast_one] at hw' ⊢
+      calc f w.2 + m ≤ f s + 1 + m := add_le_add hw' le_rfl
+        _ = f s + (m + 1) := by rw [add_assoc, add_comm 1]
+    · have hw' := hstep t s w hw
+      simp only [hpt, ↓reduceIte, add_zero] at hw' ⊢
+      exact add_le_add hw' le_rfl
+
 /-- Let `impl : QueryImpl spec (StateT σ (OracleComp spec'))`, `p : ι → Prop` and `f : σ → ℕ`
 satisfy, for every query `t`, every state `s` and every outcome `(_, s')` of `(impl t).run s`:
 
@@ -338,27 +371,15 @@ theorem IsQueryBoundP.cost_le_of_mem_support_run_simulateQ
     (hstep_np : ∀ t, ¬ p t → ∀ s, ∀ z ∈ support ((impl t).run s), f z.2 ≤ f s)
     {oa : OracleComp spec α} {n : ℕ} (h : IsQueryBoundP oa p n) (s : σ) :
     ∀ z ∈ support ((simulateQ impl oa).run s), f z.2 ≤ f s + n := by
-  induction oa using OracleComp.inductionOn generalizing n s with
-  | pure x =>
-    intro z hz
-    simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-    subst hz
-    simp
-  | query_bind t oa ih =>
-    intro z hz
-    rw [isQueryBoundP_query_bind_iff] at h
-    simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-      OracleQuery.cont_query, id_map, StateT.run_bind, mem_support_bind_iff] at hz
-    obtain ⟨x, hx, hzx⟩ := hz
-    have hrec := ih x.1 (h.2 x.1) x.2 z hzx
-    by_cases hpt : p t
-    · have h1 := hstep_p t hpt s x hx
-      have h2 : 0 < n := h.1.resolve_left (not_not_intro hpt)
-      simp only [hpt, ↓reduceIte] at hrec
-      omega
-    · have h1 := hstep_np t hpt s x hx
-      simp only [hpt, ↓reduceIte] at hrec
-      omega
+  intro z hz
+  have := h.resource_le_add_of_mem_support_run_simulateQ (fun s ↦ (f s : ℕ∞))
+    (fun t s w hw ↦ by
+      by_cases hpt : p t
+      · simp only [hpt, ↓reduceIte]
+        exact_mod_cast hstep_p t hpt s w hw
+      · simp only [hpt, ↓reduceIte, add_zero]
+        exact_mod_cast hstep_np t hpt s w hw) hz
+  exact_mod_cast this
 
 /-- Per-index bound implies total bound (sum over indices). -/
 theorem IsTotalQueryBound.of_perIndex [DecidableEq ι] [Fintype ι]
