@@ -7,17 +7,19 @@ Authors: Alexander Hicks
 module
 
 public import HashSig.SLHDSA.Security.LabScheme
+public import HashSig.SLHDSA.Security.KeyDiscipline
 public import HashSig.SLHDSA.Concrete.FIPS
 
 /-!
 # The lab scheme at the shipped bundles
 
-At every SHAKE bundle the lab scheme, the lab forger and the lab experiment elaborate at the
-derivation-world types the secret-free run uses, and the lifted transcript experiment of the
-secret-free scheme runs the lab forger's program. At SLH-DSA-SHAKE-128s a lab callback at the key
-of a ledger address reads that address's node, a lab FORS leaf of a reachable FORS tree touches
-its secret and reads the leaf, and a lab WOTS+ chain at a reachable instance makes no public hash
-query.
+At every SHAKE bundle the lab experiment elaborates at the derivation-world types the secret-free
+run uses, the lifted transcript experiment of the secret-free scheme runs the lab forger's
+program, lab key generation makes no hash query, and lab signing makes no tweakable-hash query.
+At SLH-DSA-SHAKE-128s lab key generation is the lab root of the top-layer tree, a lab callback at
+a ledger address reads that address's node, a lab FORS leaf of a reachable FORS tree touches its
+secret and reads the leaf, and in the canonical graph the only child of a later hash step of a
+reachable WOTS+ chain is the chain cell before it.
 -/
 
 public section
@@ -41,17 +43,6 @@ noncomputable example (vp : ValidatedParams) (e : (shakeCore vp).SkSeed ≃ (sha
     OracleComp (labSpec (shakeCore vp)) (DeriveOutcome (shakeCore vp)) :=
   labExperiment (shakeCore vp) adv pkSeed
 
-/-- At every SHAKE bundle the lab experiment is the transcript experiment of the lab scheme
-against the lab forger. -/
-example (vp : ValidatedParams) (e : (shakeCore vp).SkSeed ≃ (shakeCore vp).Y)
-    (optRand : PublicKeyCore (shakeCore vp) → ProbComp (shakeCore vp).Y)
-    (pkSeed : (shakeCore vp).PkSeed)
-    (adv : UnforgeableAdversary (romScheme (shakeCore vp) e optRand (pure pkSeed))) :
-    labExperiment (shakeCore vp) adv pkSeed =
-      unforgeableTranscriptExperiment (sigAlg := labScheme (shakeCore vp) optRand pkSeed)
-        (labAdversary (shakeCore vp) adv pkSeed) :=
-  rfl
-
 /-- At every SHAKE bundle the lifted secret-free experiment runs the lab forger's program. -/
 example (vp : ValidatedParams) (e : (shakeCore vp).SkSeed ≃ (shakeCore vp).Y)
     (optRand : PublicKeyCore (shakeCore vp) → ProbComp (shakeCore vp).Y)
@@ -65,41 +56,82 @@ example (vp : ValidatedParams) (e : (shakeCore vp).SkSeed ≃ (shakeCore vp).Y)
         ⟨(labAdversary (shakeCore vp) adv pkSeed).main⟩ :=
   liftComp_unforgeableTranscriptExperiment_deriveAdversary (shakeCore vp) adv pkSeed
 
+/-- A query of the hash oracles. -/
+def IsHashQuery {vp : ValidatedParams} (core : CorePrimitives vp.params) :
+    (labSpec core).Domain → Prop :=
+  fun t => ∃ q, t = .inl (.inl (.inr q))
+
+/-- A tweakable-hash query. -/
+def IsThashQuery {vp : ValidatedParams} (core : CorePrimitives vp.params) :
+    (labSpec core).Domain → Prop :=
+  fun t => ∃ s k xs, t = .inl (.inl (.inr (.inl (.thash s k xs))))
+
+open Classical in
+/-- At every SHAKE bundle lab key generation makes no hash query. -/
+example (vp : ValidatedParams) :
+    IsQueryBoundP (labKeygen (shakeCore vp)) (IsHashQuery (shakeCore vp)) 0 :=
+  labKeygen_pred _ (Q := fun oa => IsQueryBoundP oa _ 0) (fun x => isQueryBoundP_pure _ x 0)
+    (fun _ _ h h' => isQueryBoundP_bind h fun x _ => h' x)
+    (fun _ => (isQueryBoundP_query_iff _ _ 0).2 fun ⟨_, h⟩ => nomatch h)
+    (fun c => by
+      rcases c with _ | _ <;> exact (isQueryBoundP_query_iff _ _ 0).2 fun ⟨_, h⟩ => nomatch h)
+
+open Classical in
+/-- At every SHAKE bundle lab signing makes no tweakable-hash query: its one hash query is
+`H_msg`. -/
+example (vp : ValidatedParams) (pkSeed : (shakeCore vp).PkSeed) (msg : List Byte)
+    (pkRoot R : (shakeCore vp).Y) :
+    IsQueryBoundP (labSignInternal (shakeCore vp) pkSeed msg pkRoot R)
+      (IsThashQuery (shakeCore vp)) 0 := by
+  refine labSignInternal_pred _ (Q := fun oa => IsQueryBoundP oa _ 0)
+    (fun x => isQueryBoundP_pure _ x 0) (fun _ _ h h' => isQueryBoundP_bind h fun x _ => h' x)
+    (fun _ => (isQueryBoundP_query_iff _ _ 0).2 fun ⟨_, _, _, h⟩ => nomatch h)
+    (fun c => by
+      rcases c with _ | _ <;>
+        exact (isQueryBoundP_query_iff _ _ 0).2 fun ⟨_, _, _, h⟩ => nomatch h) _ _ _ _ ?_
+  simp only [PublicHash.hmsg, HasQuery.instOfMonadLift_query]
+  exact (isQueryBoundP_query_iff (spec := labSpec _) _
+    (.inl (.inl (.inr (.inl (.hmsg R pkSeed pkRoot msg))))) 0).2 fun ⟨_, _, _, h⟩ => nomatch h
+
 /-- The validated parameters of SLH-DSA-SHAKE-128s. -/
 abbrev vp128s : ValidatedParams := FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams
 
 /-- At SLH-DSA-SHAKE-128s the lab key generation is the lab XMSS root of the top-layer tree. -/
-example (pkSeed : (shakeCore vp128s).PkSeed) :
-    labKeygen (shakeCore vp128s) pkSeed =
-      labXmssNode (shakeCore vp128s) pkSeed (GeneralHypertree.layerAdrs (7 - 1) 0) 9 0 :=
+example : labKeygen (shakeCore vp128s) =
+    labXmssNode (shakeCore vp128s) (GeneralHypertree.layerAdrs (7 - 1) 0) 9 0 :=
   rfl
 
 /-- At SLH-DSA-SHAKE-128s the lab `F` at the first hash step of a reachable WOTS+ chain reads the
-label of the step's node. -/
-example (pkSeed : (shakeCore vp128s).PkSeed) (pos : LayerPosition vp128s)
-    (i : Fin vp128s.params.len) (y : (shakeCore vp128s).Y) :
-    labF (shakeCore vp128s) pkSeed ((wotsChainAdrs (wotsInstanceAdrs pos) i.val).setHashAddress 0)
-      y = labRead (shakeCore vp128s) ⟨_, _,
-        wotsChainAdrs_setHashAddress_mem_constructionAddresses (t := 0) pos i (by decide), rfl⟩ :=
-  labNode_of_mem _ (wotsChainAdrs_setHashAddress_mem_constructionAddresses pos i (by decide)) _
+label of the step's node, whatever its input. -/
+example (pos : LayerPosition vp128s) (i : Fin vp128s.params.len) (y : (shakeCore vp128s).Y) :
+    labF (shakeCore vp128s) ((wotsChainAdrs (wotsInstanceAdrs pos) i.val).setHashAddress 0) y =
+      readCell (some (.inr ⟨_, _,
+        wotsChainAdrs_setHashAddress_mem_constructionAddresses (t := 0) pos i (by decide), rfl⟩)) :=
+  labNode_of_mem _ (wotsChainAdrs_setHashAddress_mem_constructionAddresses pos i (by decide))
 
 /-- At SLH-DSA-SHAKE-128s a lab FORS leaf of a reachable FORS tree touches its secret and reads
 the leaf. -/
-example (pkSeed : (shakeCore vp128s).PkSeed) (pos : BottomPosition vp128s)
-    (tree : Fin vp128s.params.k) {t : ℕ} (ht : t / 2 ^ vp128s.params.a = tree.val) :
-    labForsLeaf (shakeCore vp128s) pkSeed pos.forsAdrs t = (do
-      labTouch (shakeCore vp128s)
-        (.inl (.inl ⟨_, _, Adrs.isSecretKey_forsSkAdrs pos.forsAdrs t, rfl⟩))
-      labRead (shakeCore vp128s) ⟨_, _, forsLeafAdrs_mem_constructionAddresses pos tree ht, rfl⟩) :=
-  labForsLeaf_of_mem _ _ (forsLeafAdrs_mem_constructionAddresses pos tree ht)
+example (pos : BottomPosition vp128s) (tree : Fin vp128s.params.k) {t : ℕ}
+    (ht : t / 2 ^ vp128s.params.a = tree.val) :
+    labForsLeaf (shakeCore vp128s) pos.forsAdrs t = (do
+      touchCell (some (.inl (.inl ⟨_, _, Adrs.isSecretKey_forsSkAdrs pos.forsAdrs t, rfl⟩)))
+      readCell (some (.inr ⟨_, _, forsLeafAdrs_mem_constructionAddresses pos tree ht, rfl⟩))) :=
+  labForsLeaf_of_mem _ (forsLeafAdrs_mem_constructionAddresses pos tree ht)
 
-open Classical in
-/-- At SLH-DSA-SHAKE-128s a lab WOTS+ chain of at most `w - 1` steps at a reachable instance makes
-no public hash query. -/
+/-- At SLH-DSA-SHAKE-128s, in the canonical graph, the only child of hash step `1` of a reachable
+WOTS+ chain is the label of step `0`, cell `1` of the chain. -/
 example (pkSeed : (shakeCore vp128s).PkSeed) (pos : LayerPosition vp128s)
-    (i : Fin vp128s.params.len) {s : ℕ} (hs : s ≤ vp128s.params.w - 1) :
-    IsQueryBoundP (labChain (shakeCore vp128s) pkSeed (wotsInstanceAdrs pos) i s)
-      (fun t => ∃ q, t = .inl (.inl (.inr q))) 0 :=
-  isQueryBoundP_labChain_wotsInstanceAdrs _ pkSeed pos i hs _ fun _ h => h
+    (i : Fin vp128s.params.len) :
+    (slhGraph (shakeCore vp128s) pkSeed).ch ⟨_, _,
+        wotsChainAdrs_setHashAddress_mem_constructionAddresses (t := 1) pos i (by decide), rfl⟩ =
+      [.inr ⟨_, _,
+        wotsChainAdrs_setHashAddress_mem_constructionAddresses (t := 0) pos i (by decide), rfl⟩] := by
+  rw [slhGraph_ch_wotsChainAdrs_setHashAddress _
+      (Concrete.keyDiscipline_shakePrimitives _
+        (fipsApprovedAddressBounds .SLHDSA_SHAKE_128s).toCanonicalAddressBounds) pkSeed
+      (wotsChainAdrs_setHashAddress_mem_constructionAddresses (t := 1) pos i (by decide)),
+    pathCell_succ_of_mem _ _
+      (wotsChainAdrs_setHashAddress_mem_constructionAddresses (t := 0) pos i (by decide))]
+  rfl
 
 end SLHDSA.LabSchemeTest
