@@ -91,6 +91,7 @@ public import VCVioTest.RandomOracleHiddenSeed
 public import VCVioTest.RandomOracleJointPotential
 public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting
+public import VCVioTest.RandomOracleSettled
 public import VCVioTest.RandomOracleTwoPhase
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
