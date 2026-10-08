@@ -323,6 +323,7 @@ public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape
+public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.HitPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.Position
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Commute
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Defer

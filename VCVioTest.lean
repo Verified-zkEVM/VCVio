@@ -93,6 +93,7 @@ public import VCVioTest.RandomOracleDefer
 public import VCVioTest.RandomOracleFreshQuery
 public import VCVioTest.RandomOracleHiddenSeed
 public import VCVioTest.RandomOracleHiddenSeedCollapse
+public import VCVioTest.RandomOracleHitPotential
 public import VCVioTest.RandomOracleJointPotential
 public import VCVioTest.RandomOracleReadSet
 public import VCVioTest.RandomOracleRelabel
