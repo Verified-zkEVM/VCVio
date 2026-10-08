@@ -50,6 +50,7 @@ public import HashSig.SLHDSA.Security.CacheSecret
 public import HashSig.SLHDSA.Security.CanonicalGames
 public import HashSig.SLHDSA.Security.ComponentTraces
 public import HashSig.SLHDSA.Security.Composition
+public import HashSig.SLHDSA.Security.CoverageHits
 public import HashSig.SLHDSA.Security.CoverageRoles
 public import HashSig.SLHDSA.Security.DigestTransport
 public import HashSig.SLHDSA.Security.EncodedTargets
