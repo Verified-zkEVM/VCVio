@@ -77,7 +77,6 @@ public import HashSig.SLHDSA.Security.OpenPreBound
 public import HashSig.SLHDSA.Security.PrfHops
 public import HashSig.SLHDSA.Security.ReachableTargets
 public import HashSig.SLHDSA.Security.RomDescentSecret
-public import HashSig.SLHDSA.Security.RomKeyed
 public import HashSig.SLHDSA.Security.RomSchemeBridge
 public import HashSig.SLHDSA.Security.RomSchemeRun
 public import HashSig.SLHDSA.Security.RomSchemeUnion
