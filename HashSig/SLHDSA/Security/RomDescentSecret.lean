@@ -52,11 +52,14 @@ position and the digest-derived FORS instance through the membership lemmas of
 leaf with a different honest message is on a chain where the forgery's message selects a smaller
 step (`chainStepsCore_two_encodings`), and at an unused leaf it is on a chain where that message
 selects a step below the top (`exists_chainStepsCore_lt_pred_w`).  The positional facts draw no
-secret: `childTreeAdrs`
-and `forsInstanceAdrs` name the tree and FORS instance a hypertree position signs,
-`forgerMessage?` is the message the verification replay presents to each layer, and
+secret: `childTreeAdrs` and `forsInstanceAdrs` name the tree and FORS instance a hypertree position
+signs, `forgerMessage?` is the message the verification replay presents to each layer, and
 `forgerLayers_of_recoverFromPositionM` reads every layer of a settled Algorithm 13 run off the
-cache.
+cache.  The root of the child tree and the roots compression of the FORS instance are
+union-ledger targets (`xmssNodeAdrs_childTreeAdrs_mem_constructionAddresses`,
+`forsPkAdrs_forsInstanceAdrs_mem_constructionAddresses`), so at every position so is the address
+`msgAdrs pos` whose value is the honest message signed there
+(`msgAdrs_mem_constructionAddresses`).
 
 ## Scope
 
@@ -73,16 +76,18 @@ cache.
 
 ## Labels
 
-Twenty-six declarations, none private.
+Thirty declarations, none private.
 
 *Positions and the verifier's replay*: `childTreeAdrs`, `childTreeAdrs_next`, `forsInstanceAdrs`,
-`forsInstanceAdrs_initial`, `forgerMessage?`, `recoverFromPositionM_pos_congr`,
-`forgerLayers_of_recoverFromPositionM`.
+`forsInstanceAdrs_initial`, `forsPkAdrs_forsInstanceAdrs_mem_constructionAddresses`,
+`xmssNodeAdrs_childTreeAdrs_mem_constructionAddresses`, `forgerMessage?`,
+`recoverFromPositionM_pos_congr`, `forgerLayers_of_recoverFromPositionM`.
 
 *Honest entries and the target collision*: `HonestEntry`, `HonestEntry.mono`, `TargetCollision`.
 
 *Digests, used leaves and honest messages*: `LoggedDigest`, `ForgerDigest`, `UsedLeaf`,
-`honestMessage?`, `HiddenChainValue`, `UnopenedCoord`.
+`honestMessage?`, `msgAdrs`, `msgAdrs_mem_constructionAddresses`, `HiddenChainValue`,
+`UnopenedCoord`.
 
 *The forger's replay*: `ForgerLayer`, `HiddenHit`, `ItsrCovered`.
 
@@ -132,6 +137,32 @@ theorem childTreeAdrs_next (pos : LayerPosition vp) (h : pos.layer.val + 1 < vp.
 /-- The FORS instance address of the initial position is the digest's. -/
 theorem forsInstanceAdrs_initial (parts : DigestParts vp.params) :
     forsInstanceAdrs (LayerPosition.initial vp parts) = parts.forsAdrs := by rfl
+
+/-- The FORS roots compression of the instance a layer-zero position signs is a union-ledger
+target. -/
+theorem forsPkAdrs_forsInstanceAdrs_mem_constructionAddresses (pos : LayerPosition vp)
+    (h0 : pos.layer.val = 0) :
+    forsPkAdrs (forsInstanceAdrs pos) ∈ constructionAddresses vp :=
+  forsRootAdrs_mem_constructionAddresses
+    (⟨⟨pos.tree.val, by simpa [h0] using pos.tree.isLt⟩, pos.leaf⟩ : BottomPosition vp)
+
+/-- The root of the child tree a position above layer zero signs is a union-ledger target. -/
+theorem xmssNodeAdrs_childTreeAdrs_mem_constructionAddresses (pos : LayerPosition vp)
+    (h0 : 0 < pos.layer.val) :
+    xmssNodeAdrs (childTreeAdrs pos) vp.params.hp 0 ∈ constructionAddresses vp := by
+  have hh : layerTreeHeight vp (pos.layer.val - 1) =
+      layerTreeHeight vp pos.layer.val + vp.params.hp := by
+    have := pos.layer.isLt
+    rw [layerTreeHeight, layerTreeHeight, show vp.params.d - (pos.layer.val - 1 + 1) =
+      vp.params.d - (pos.layer.val + 1) + 1 by omega, Nat.add_mul, one_mul]
+  have hlt : pos.tree.val * 2 ^ vp.params.hp + pos.leaf.val <
+      2 ^ layerTreeHeight vp (pos.layer.val - 1) := by
+    rw [hh, pow_add]
+    calc _ < (pos.tree.val + 1) * 2 ^ vp.params.hp := by have := pos.leaf.isLt; linarith
+      _ ≤ _ := Nat.mul_le_mul_right _ pos.tree.isLt
+  exact xmssNodeAdrs_mem_constructionAddresses
+    (⟨⟨pos.layer.val - 1, by omega⟩, ⟨_, hlt⟩⟩ : LayerTreeCoord vp) vp.valid.hp_pos le_rfl
+    (by simp)
 
 /-- The message the verification replay presents to hypertree layer `j`, read off the cache:
 the FORS public key at layer `0`, then the root each XMSS signature recovers. -/
@@ -321,6 +352,20 @@ FORS public key of the instance at layer `0`, the honest root of the child tree 
     (pos : LayerPosition vp) : Option core.Y :=
   if pos.layer.val = 0 then forsPkGenWithSecret? core c secret pk (forsInstanceAdrs pos)
   else xmssRootWithSecret? core c secret pk (childTreeAdrs pos)
+
+/-- The address of the tweakable hash whose value is the honest message signed at `pos`: the
+FORS roots compression of the instance at layer `0`, the root of the child tree above. -/
+@[expose] def msgAdrs (pos : LayerPosition vp) : Adrs :=
+  if pos.layer.val = 0 then forsPkAdrs (forsInstanceAdrs pos)
+  else xmssNodeAdrs (childTreeAdrs pos) vp.params.hp 0
+
+/-- The address of the honest message at every position is a union-ledger target. -/
+theorem msgAdrs_mem_constructionAddresses (pos : LayerPosition vp) :
+    msgAdrs pos ∈ constructionAddresses vp := by
+  unfold msgAdrs
+  split_ifs with h0
+  · exact forsPkAdrs_forsInstanceAdrs_mem_constructionAddresses pos h0
+  · exact xmssNodeAdrs_childTreeAdrs_mem_constructionAddresses pos (Nat.pos_of_ne_zero h0)
 
 /-- The chain value at step `t` of chain `i` of the WOTS+ leaf at `pos` is hidden: the leaf is
 unused, or it is used and `t` is below the step its honest message selects on chain `i`. -/
