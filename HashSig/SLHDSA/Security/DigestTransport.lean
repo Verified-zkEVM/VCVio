@@ -9,6 +9,7 @@ module
 public import HashSig.SLHDSA.EncodingLemmas
 public import HashSig.SLHDSA.Fors
 public import HashSig.SLHDSA.Position
+public import HashSig.SLHDSA.Security.CanonicalGames
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.Covering
 public import VCVio.OracleComp.EvalDist.MeasureSpec
 
@@ -507,6 +508,20 @@ theorem coveringDigest_fst_eq_iff (vp : ValidatedParams) (d d' : Bytes vp.params
   simp only [mul_comm _ (2 ^ vp.params.hp), Nat.mul_add_div (Nat.two_pow_pos _),
     Nat.div_eq_of_lt l1, Nat.div_eq_of_lt l2, add_zero] at hd
   exact ⟨hd, hm⟩
+
+open Security.CanonicalGames in
+/-- A FORS digit of a digest is matched, leaf and digit, by every digest whose index list
+contains that digit's index. -/
+theorem coveringDigest_match_of_mem_hmsgIndices (vp : ValidatedParams)
+    (digest d' : Bytes vp.params.m) (i : Fin vp.params.k)
+    (h : (⟨(splitDigest vp.params digest).idxTree, (splitDigest vp.params digest).idxLeaf, i,
+        ⟨forsIdx vp.params (splitDigest vp.params digest).md.toList i.val,
+          forsIdx_lt _ _ _⟩⟩ : HmsgIndex vp.params) ∈ hmsgIndices vp.params d') :
+    (coveringDigest vp d').1 = (coveringDigest vp digest).1 ∧
+      (coveringDigest vp d').2 i = (coveringDigest vp digest).2 i := by
+  obtain ⟨h1, h2, h3⟩ := (mem_hmsgIndices _ _ _).1 h
+  exact ⟨(coveringDigest_fst_eq_iff vp d' digest).2 ⟨h1.symm, h2.symm⟩,
+    Fin.ext (by rw [coveringDigest_snd_val, coveringDigest_snd_val]; exact h3.symm)⟩
 
 /-! ## The slack fields and the encoder -/
 
