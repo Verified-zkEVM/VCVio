@@ -16,7 +16,6 @@ public import VCVioTest.CryptoFoundations.PRFTableMeasure
 public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.CryptoFoundations.UniversalHash
-public import VCVioTest.EqDistTriple
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.DisagreementMeasure
@@ -60,6 +59,7 @@ public import VCVioTest.ModuleAPI.Heap
 public import VCVioTest.MonadProbability
 public import VCVioTest.Native
 public import VCVioTest.OracleComp.AdaptiveMeasure
+public import VCVioTest.OracleComp.EqDistTriple
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.SecurityFamily

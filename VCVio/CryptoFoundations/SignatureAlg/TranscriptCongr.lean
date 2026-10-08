@@ -38,14 +38,6 @@ namespace SignatureAlg
 
 variable {ι : Type} {spec : OracleSpec ι} {M PK SK S σ : Type}
 
-/-- Computations with equal measures under every measurable structure on their outputs have
-equal measures after a common continuation. -/
-private theorem evalDist_bind_congr_left_of_forall {α γ : Type} [MeasurableSpace γ]
-    {mx my : ProbComp α} (h : ∀ [MeasurableSpace α], 𝒟[mx] = 𝒟[my]) (f : α → ProbComp γ) :
-    𝒟[mx >>= f] = 𝒟[my >>= f] := by
-  let : MeasurableSpace α := ⊤
-  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete, h]
-
 /-- Signing stages agree under every continuation. Let `I` be a predicate on the state of a
 stateful interpretation `so` of the ambient oracles, preserved by every step at an `allowed`
 ambient query and by every run of the signing algorithm of `A`, and let the signing algorithms of
