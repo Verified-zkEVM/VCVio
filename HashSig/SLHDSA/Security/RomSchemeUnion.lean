@@ -17,8 +17,10 @@ public seed, each conjoined with freshness of the forged message for the signing
 `RunTargetCollision`, `RunHiddenHit` and `RunItsrCovered`.  They are exactly the disjuncts of
 `bad_event_of_wins_romSchemeRun`, so the forging advantage against `romScheme` in the
 random-oracle runtime is at most the sum of their probabilities under `romSchemeRun`
-(`unforgeableAdvantage_romScheme_le_add`).  At a point mass `pkSeedDist = pure pkSeed` the bound
-is per public seed, the shape of `SecurityTarget`.
+(`unforgeableAdvantage_romScheme_le_add`), and at most the probability of a target collision or a
+hidden-value hit plus that of interleaved-target coverage
+(`unforgeableAdvantage_romScheme_le_or_add`).  At a point mass `pkSeedDist = pure pkSeed` the
+bounds are per public seed, the shape of `SecurityTarget`.
 
 ## Scope
 
@@ -30,7 +32,8 @@ is per public seed, the shape of `SecurityTarget`.
 
 *The events*: `RunFresh`, `RunTargetCollision`, `RunHiddenHit`, `RunItsrCovered`.
 
-*The union bound*: `unforgeableAdvantage_romScheme_le_add`.
+*The union bound*: `unforgeableAdvantage_romScheme_le_or_add`,
+`unforgeableAdvantage_romScheme_le_add`.
 -/
 
 public section
@@ -72,6 +75,23 @@ variable [SampleableType core.SkSeed] [SampleableType core.SkPrf] [DecidableEq c
   [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed]
   [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
 
+/-- **The union bound, with the first two events grouped.**  The forging advantage against
+`romScheme` in the random-oracle runtime is at most the probability of a target collision or a
+hidden-value hit, plus that of interleaved-target coverage, each with a fresh forged message, under
+`romSchemeRun`. -/
+theorem unforgeableAdvantage_romScheme_le_or_add (laws : core.ByteLaws)
+    (e : core.SkSeed ≃ core.Y) (optRand : PublicKeyCore core → ProbComp core.Y)
+    (pkSeedDist : ProbComp core.PkSeed)
+    (adv : UnforgeableAdversary (romScheme core e optRand pkSeedDist)) :
+    unforgeableAdvantage (ProbCompRuntime.rom (hashSpec core)) adv ≤
+      Pr{let z ← romSchemeRun core e optRand pkSeedDist adv}[
+        RunTargetCollision core e z ∨ RunHiddenHit core e z] +
+      Pr{let z ← romSchemeRun core e optRand pkSeedDist adv}[RunItsrCovered core z] := by
+  rw [unforgeableAdvantage_romScheme_eq]
+  exact (prEvent_mono_of_support _ _ _ fun z hz hw ↦ or_assoc.2
+    (bad_event_of_wins_romSchemeRun laws e optRand pkSeedDist adv hz hw)).trans
+    (prEvent_or_le _ _ _)
+
 /-- **The union bound.**  The forging advantage against `romScheme` in the random-oracle runtime
 is at most the probability of a target collision, plus that of a hidden-value hit, plus that of
 interleaved-target coverage, each with a fresh forged message, under `romSchemeRun`. -/
@@ -82,9 +102,9 @@ theorem unforgeableAdvantage_romScheme_le_add (laws : core.ByteLaws) (e : core.S
       Pr{let z ← romSchemeRun core e optRand pkSeedDist adv}[RunTargetCollision core e z] +
       Pr{let z ← romSchemeRun core e optRand pkSeedDist adv}[RunHiddenHit core e z] +
       Pr{let z ← romSchemeRun core e optRand pkSeedDist adv}[RunItsrCovered core z] := by
-  rw [unforgeableAdvantage_romScheme_eq, add_assoc]
-  refine (prEvent_mono_of_support _ _ _ fun z hz hw =>
-    bad_event_of_wins_romSchemeRun laws e optRand pkSeedDist adv hz hw).trans ?_
-  exact (prEvent_or_le _ _ _).trans (add_le_add_right (prEvent_or_le _ _ _) _)
+  calc _ ≤ _ := unforgeableAdvantage_romScheme_le_or_add core laws e optRand pkSeedDist adv
+    _ ≤ _ := by
+      gcongr
+      exact prEvent_or_le _ _ _
 
 end SLHDSA.Security
