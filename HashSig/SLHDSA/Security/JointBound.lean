@@ -25,24 +25,30 @@ The forging advantage is then bounded in two forms, both per public seed:
 
 * `unforgeableAdvantage_romScheme_pure_le_add_idealDraw`: at most `2 (qh + V) / |Y|` plus the
   probability of interleaved-target coverage (`RunItsrCovered`) in the ideal hidden-seed game
-  `idealDraw`, read on the rebuilt transcript and the merged cache. The first game hop is applied
-  to the whole bad event before the union is split, so a seed guess is charged once, inside the
-  joint term, and the coverage term is a probability of a game in which every secret value and
-  randomizer is a table entry sampled independently of the public answers.
+  `idealDraw` (`HashSig.SLHDSA.Security.SeedCouplingBound`), read on the rebuilt transcript and
+  the merged cache. The first game hop is applied to the whole bad event before the union is
+  split, so a seed guess is charged once, inside the joint term, and the coverage term is a
+  probability of a game in which every secret value and randomizer is a table entry sampled
+  independently of the public answers. Coverage reads only the `H_msg` answers, which merging
+  leaves as they are in the ideal run's public cache, so the coverage term is the probability of
+  coverage in the secret-free ideal run alone, read at any fixed seeds
+  (`prEvent_idealDraw_runItsrCovered_eq`).
 * `unforgeableAdvantage_romScheme_pure_le_add`: at most `2 (qh + V) / |Y|` plus the probability of
-  `RunItsrCovered` in the run itself. For deterministic signing this run-level coverage term
-  cannot be bounded at the size of the coverage term of the security target: a forger that guesses
-  `SK.prf` through its `PRF_msg` queries predicts every randomizer and grinds `H_msg` until the
-  digests it gets signed cover its target, so coverage in the run is about as likely as that
-  guess, which the joint term already charges. The coverage term to bound separately is the one in
-  the ideal hidden-seed game.
+  `RunItsrCovered` in the run itself. For deterministic signing at the FIPS 205 parameter sets,
+  this run-level coverage term cannot be bounded at the size of the coverage term of
+  `securityBound`: a forger that guesses `SK.prf` through its `PRF_msg` queries predicts every
+  randomizer and grinds `H_msg` until the digests it gets signed cover its target, so coverage in
+  the run is at least about as likely as that guess (≈ `qh / |SK.prf|`), which the joint term
+  already charges. The coverage term of the ideal-game form is free of that guess: there every
+  randomizer is sampled independently of the public answers.
 
 ## The chain of games
 
 * The run is the real hidden-seed game under uniform secret seeds
   (`prEvent_romSchemeRun_pure_eq`), which is at most the ideal game read on the rebuilt cache, or
   a public point encoding a derivation (`SecretEncoding.prEvent_bind_realImpl_le_or`). Together
-  these are the first hop, `prEvent_romSchemeRun_pure_le_or`, stated on `idealDraw`.
+  these are the first hop, `prEvent_romSchemeRun_pure_le_prEvent_idealDraw_or`, stated on
+  `idealDraw`.
 * The ideal game is at most the eager relabelled game of the canonical graph `slhGraph core
   pkSeed`, or a conflict (`CanonicalGraph.prEvent_idealImpl_le_eagerImpl_liftComp`).
 * In the eager game the lifted secret-free experiment is the lab experiment
@@ -89,38 +95,6 @@ variable {vp : ValidatedParams} {core : CorePrimitives vp.params}
   [SampleableType core.SkPrf] [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed]
   [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
 
-/-- The ideal hidden-seed game of SLH-DSA at public seed `pkSeed`: the secret seeds drawn
-uniformly, paired with the outcome and the final split cache of the secret-free experiment run in
-the ideal game (`SecretEncoding.idealImpl`) from the empty caches. The seeds are drawn
-independently of that run, in which every secret value and randomizer is a table entry sampled
-independently of the public answers. -/
-@[expose] noncomputable def idealDraw (e : core.SkSeed ≃ core.Y)
-    (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
-    (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed))) :
-    ProbComp ((core.SkSeed × core.SkPrf) × (DeriveOutcome core ×
-      SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y)) := do
-  let s ← $ᵗ (core.SkSeed × core.SkPrf)
-  let z ← (simulateQ (SecretEncoding.idealImpl (hashSpec core) (DeriveQuery core) core.Y)
-    (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))).run (∅, ∅)
-  return (s, z)
-
-/-- **The run against the ideal hidden-seed game.** An event `Q` of the run of SLH-DSA in the
-random-oracle model at public seed `pkSeed` and its final cache has probability at most that, in
-`idealDraw`, `Q` holds of the transcript rebuilt with the drawn seeds `s` and of the cache merged
-under `s`, or the final public cache holds a point encoding a derivation under `s`. -/
-theorem prEvent_romSchemeRun_pure_le_or (e : core.SkSeed ≃ core.Y)
-    (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
-    (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed)))
-    (Q : RomOutcome vp core × (hashSpec core).QueryCache → Prop) :
-    Pr{let z ← romSchemeRun core e optRand (pure pkSeed) adv}[Q z] ≤
-      Pr{let w ← idealDraw e optRand pkSeed adv}[
-        Q (DeriveOutcome.fill core w.1 w.2.1, (secretEncoding core e pkSeed).merge w.1 w.2.2) ∨
-          ∃ x, (w.2.2.1 ((secretEncoding core e pkSeed).enc w.1 x)).isSome] := by
-  rw [prEvent_romSchemeRun_pure_eq core e optRand pkSeed adv Q]
-  refine ((secretEncoding core e pkSeed).prEvent_bind_realImpl_le_or _
-    fun s z ↦ Q (DeriveOutcome.fill core s z.1, z.2)).trans (le_of_eq ?_)
-  simp only [idealDraw, bind_assoc, pure_bind]
-
 /-- **The ideal hidden-seed game is bounded on the deferred lab experiment.** Under the key
 discipline, an event `F` of the seeds and the outcome of `idealDraw` at public seed `pkSeed` has
 probability at most that of `F` or a conflict in the deferred run of the lab experiment, its end
@@ -164,12 +138,7 @@ theorem prEvent_idealDraw_le_prEvent_deferredFillDraw (hd : core.KeyDiscipline v
         F s (zst.1.1, G.toSplitCache zst.2) ∨ G.Conflict zst.2] := by
     rw [← OracleComp.prEvent_bind_bind_swap]
     simp only [CanonicalGraph.deferredFillDraw, bind_assoc, bind_map_left, pure_bind]
-  have hdraw : Pr{let w ← idealDraw e optRand pkSeed adv}[F w.1 w.2] =
-      Pr{let s ← ms; let z ← (simulateQ (SecretEncoding.idealImpl (hashSpec core)
-        (DeriveQuery core) core.Y) oa).run (∅, ∅)}[F s z] := by
-    simp only [idealDraw, bind_assoc, pure_bind]
-    rfl
-  rw [hdraw, hswap, prEvent_bind_bind_eq_lintegral_of_discrete,
+  rw [prEvent_idealDraw_eq, hswap, prEvent_bind_bind_eq_lintegral_of_discrete,
     prEvent_bind_bind_eq_lintegral_of_discrete]
   refine lintegral_mono fun s ↦ (hs s).trans (le_of_eq ?_)
   simp only [bind_assoc, bind_map_left]
@@ -197,7 +166,7 @@ theorem prEvent_romSchemeRun_le_prEvent_deferredFillDraw (hd : core.KeyDisciplin
     Pr{let z ← romSchemeRun core e optRand (pure pkSeed) adv}[Q z] ≤
       Pr{let w ← (slhGraph core pkSeed).deferredFillDraw ($ᵗ (core.SkSeed × core.SkPrf))
                 (labExperiment core adv pkSeed)}[H w] :=
-  (prEvent_romSchemeRun_pure_le_or e optRand pkSeed adv Q).trans
+  (prEvent_romSchemeRun_pure_le_prEvent_idealDraw_or e optRand pkSeed adv Q).trans
     ((prEvent_idealDraw_le_prEvent_deferredFillDraw hd e optRand pkSeed adv fun s z ↦
       Q (DeriveOutcome.fill core s z.1, (secretEncoding core e pkSeed).merge s z.2) ∨
         ∃ x, (z.2.1 ((secretEncoding core e pkSeed).enc s x)).isSome).trans
@@ -231,7 +200,7 @@ theorem prEvent_idealDraw_runTargetCollision_or_runHiddenHit_or_exists_isSome_le
     (fun w ↦ (slhGraph core pkSeed).Conflict w.2.1 ∨ (slhNodeKeys core pkSeed).TCHazard w.2.1 ∨
       ∃ x, (w.2.1.1 ((secretEncoding core e pkSeed).enc w.2.2 x)).isSome)
     fun _ hw h ↦ conflict_or_tcHazard_or_exists_isSome_of_mem_support_deferredFillDraw hd hw
-      (h.imp_left id)).trans <|
+      h).trans <|
   (slhNodeKeys core pkSeed).prEvent_deferredFillDraw_le_of_budget _
     (fun s C ↦ ∃ x, (C ((secretEncoding core e pkSeed).enc s x)).isSome) (seedCharge core pkSeed)
     (prEvent_exists_isSome_apply_secretEncoding_enc_le e pkSeed hcard) _ _
@@ -255,7 +224,7 @@ theorem prEvent_romSchemeRun_runTargetCollision_or_runHiddenHit_le (hd : core.Ke
     Pr{let z ← romSchemeRun core e optRand (pure pkSeed) adv}[
       RunTargetCollision core e z ∨ RunHiddenHit core e z] ≤
     2 * ((qh : ℝ≥0∞) + GeneralScheme.verifyInternalQueryBound vp.params) / Nat.card core.Y :=
-  (prEvent_romSchemeRun_pure_le_or e optRand pkSeed adv _).trans
+  (prEvent_romSchemeRun_pure_le_prEvent_idealDraw_or e optRand pkSeed adv _).trans
     (prEvent_idealDraw_runTargetCollision_or_runHiddenHit_or_exists_isSome_le hd hcard e optRand
       pkSeed hadv)
 
@@ -281,7 +250,7 @@ theorem unforgeableAdvantage_romScheme_pure_le_add_idealDraw (laws : core.ByteLa
           (secretEncoding core e pkSeed).merge w.1 w.2.2)] := by
   set E := secretEncoding core e pkSeed
   refine (unforgeableAdvantage_romScheme_le_prEvent_or core laws e optRand (pure pkSeed) adv).trans
-    ((prEvent_romSchemeRun_pure_le_or e optRand pkSeed adv _).trans ?_)
+    ((prEvent_romSchemeRun_pure_le_prEvent_idealDraw_or e optRand pkSeed adv _).trans ?_)
   refine (prEvent_mono _ _ (fun w ↦ (((RunTargetCollision core e
       (DeriveOutcome.fill core w.1 w.2.1, E.merge w.1 w.2.2) ∨
       RunHiddenHit core e (DeriveOutcome.fill core w.1 w.2.1, E.merge w.1 w.2.2)) ∨
@@ -296,6 +265,53 @@ theorem unforgeableAdvantage_romScheme_pure_le_add_idealDraw (laws : core.ByteLa
   exact prEvent_idealDraw_runTargetCollision_or_runHiddenHit_or_exists_isSome_le hd hcard e optRand
     pkSeed hadv
 
+/-- **The coverage term of the ideal hidden-seed game does not depend on the drawn seeds.**
+Interleaved-target coverage with a fresh forged message, read in `idealDraw` on the transcript
+rebuilt with the drawn seeds and the cache merged under them, has the probability that the
+secret-free experiment run alone in the ideal game fires it, read on the transcript rebuilt with
+any fixed seeds `s₀` and on the run's final public cache. Coverage reads only `H_msg` answers, and
+no `H_msg` point encodes a derivation, so merging leaves them as they are in the public cache. -/
+theorem prEvent_idealDraw_runItsrCovered_eq (e : core.SkSeed ≃ core.Y)
+    (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
+    (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed)))
+    (s₀ : core.SkSeed × core.SkPrf) :
+    Pr{let w ← idealDraw e optRand pkSeed adv}[
+        RunItsrCovered core (DeriveOutcome.fill core w.1 w.2.1,
+          (secretEncoding core e pkSeed).merge w.1 w.2.2)] =
+      Pr{let z ← (simulateQ (SecretEncoding.idealImpl (hashSpec core) (DeriveQuery core) core.Y)
+          (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))).run (∅, ∅)}[
+        RunItsrCovered core (DeriveOutcome.fill core s₀ z.1, z.2.1)] := by
+  have hm : ∀ (s : core.SkSeed × core.SkPrf)
+      (C : SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y)
+      (r : core.Y) (ps : core.PkSeed) (pr : core.Y) (m : List Byte),
+      ((secretEncoding core e pkSeed).merge s C).fst (.hmsg r ps pr m) =
+        C.1.fst (.hmsg r ps pr m) := fun s C _ _ _ _ ↦ by
+    simp only [QueryCache.fst_apply]
+    refine (secretEncoding core e pkSeed).merge_apply_of_not_exists s C ?_
+    rintro ⟨x | ⟨o, msg⟩, hx⟩ <;> cases hx
+  have ho : ∀ (o o' : RomOutcome vp core) (C : (hashSpec core).QueryCache), o.pk = o'.pk →
+      o.log = o'.log → o.msg = o'.msg → o.sig = o'.sig →
+      (RunItsrCovered core (o, C) ↔ RunItsrCovered core (o', C)) := by
+    rintro ⟨pk, sk, log, msg, sig, v⟩ ⟨pk', sk', log', msg', sig', v'⟩ C hpk hlog hmsg hsig
+    cases hpk; cases hlog; cases hmsg; cases hsig
+    exact Iff.rfl
+  have hev : ∀ w : (core.SkSeed × core.SkPrf) × (DeriveOutcome core ×
+      SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y),
+      RunItsrCovered core (DeriveOutcome.fill core w.1 w.2.1,
+          (secretEncoding core e pkSeed).merge w.1 w.2.2) ↔
+        RunItsrCovered core (DeriveOutcome.fill core s₀ w.2.1, w.2.2.1) := fun w ↦ by
+    rw [ho _ (DeriveOutcome.fill core s₀ w.2.1) _
+      (by simp only [DeriveOutcome.fill, UnforgeableTranscript.mapSk_pk])
+      (by simp only [DeriveOutcome.fill, UnforgeableTranscript.mapSk_log])
+      (by simp only [DeriveOutcome.fill, UnforgeableTranscript.mapSk_msg])
+      (by simp only [DeriveOutcome.fill, UnforgeableTranscript.mapSk_sig])]
+    simp only [RunItsrCovered, ItsrCovered, ForgerDigest, LoggedDigest, RunFresh, hm]
+  rw [prEvent_congr _ _ _ hev, prEvent_idealDraw_eq e optRand pkSeed adv
+    fun _ z ↦ RunItsrCovered core (DeriveOutcome.fill core s₀ z.1, z.2.1)]
+  let _ : MeasurableSpace (core.SkSeed × core.SkPrf) := ⊤
+  rw [prEvent_bind_bind_eq_lintegral_of_discrete, lintegral_const]
+  simp
+
 /-- **The forging advantage per public seed, up to coverage in the run.** Under the byte laws, the
 key discipline and `|Y| ≤ |SK.prf|`, the forging advantage against SLH-DSA in the random-oracle
 model at public seed `pkSeed`, of a forger with hash budget `qh`, is at most `2 (qh + V) / |Y|`,
@@ -303,11 +319,13 @@ with `V` the verifier's query bound, plus the probability that the run fires int
 coverage with a fresh forged message (`RunItsrCovered`). The statement is per public seed; the
 coverage term remains a probability of the run and is not bounded here; the faithfulness step
 relating the three-oracle model to the byte-level scheme is not included. For deterministic
-signing this run-level coverage term cannot be bounded at the size of the coverage term of the
-security target: a forger that guesses `SK.prf` through its `PRF_msg` queries predicts every
-randomizer and grinds `H_msg` until the digests it gets signed cover its target, so coverage in the
-run is about as likely as that guess, which the first term already charges. The form whose
-coverage term is to be bounded is `unforgeableAdvantage_romScheme_pure_le_add_idealDraw`. -/
+signing at the FIPS 205 parameter sets, this run-level coverage term cannot be bounded at the size
+of the coverage term of `securityBound`: a forger that guesses `SK.prf` through its `PRF_msg`
+queries predicts every randomizer and grinds `H_msg` until the digests it gets signed cover its
+target, so coverage in the run is at least about as likely as that guess (≈ `qh / |SK.prf|`),
+which the first term already charges. The coverage term of
+`unforgeableAdvantage_romScheme_pure_le_add_idealDraw` is free of that guess: there every
+randomizer is sampled independently of the public answers. -/
 theorem unforgeableAdvantage_romScheme_pure_le_add (laws : core.ByteLaws)
     (hd : core.KeyDiscipline vp) (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf)
     (e : core.SkSeed ≃ core.Y) (optRand : PublicKeyCore core → ProbComp core.Y)

@@ -47,18 +47,9 @@ theorem prEvent_romSchemeRun_pure_le_add_shake (vp : ValidatedParams)
       (hashSpec (Concrete.shakePrimitives vp.params).core).QueryCache → Prop) :
     Pr{let z ← romSchemeRun (Concrete.shakePrimitives vp.params).core e optRand (pure pkSeed)
         adv}[Q z] ≤
-      Pr{let s ← $ᵗ ((Concrete.shakePrimitives vp.params).core.SkSeed ×
-            (Concrete.shakePrimitives vp.params).core.SkPrf)
-         let z ← (simulateQ (SecretEncoding.idealImpl
-             (hashSpec (Concrete.shakePrimitives vp.params).core)
-             (DeriveQuery (Concrete.shakePrimitives vp.params).core)
-             (Concrete.shakePrimitives vp.params).core.Y)
-           (unforgeableTranscriptExperiment
-             (deriveAdversary (Concrete.shakePrimitives vp.params).core adv
-               pkSeed))).run (∅, ∅)}[
-        Q (DeriveOutcome.fill (Concrete.shakePrimitives vp.params).core s z.1,
-          (secretEncoding (Concrete.shakePrimitives vp.params).core e pkSeed).merge s
-            z.2)] +
+      Pr{let w ← idealDraw e optRand pkSeed adv}[
+        Q (DeriveOutcome.fill (Concrete.shakePrimitives vp.params).core w.1 w.2.1,
+          (secretEncoding (Concrete.shakePrimitives vp.params).core e pkSeed).merge w.1 w.2.2)] +
         qh * ((256 ^ vp.params.n : ℕ) : ℝ≥0∞)⁻¹ := by
   rw [← Concrete.natCard_shakePrimitives_y]
   exact prEvent_romSchemeRun_pure_le_add
@@ -79,18 +70,9 @@ theorem prEvent_romSchemeRun_pure_le_add_sha2 (vp : ValidatedParams)
       (hashSpec (Concrete.sha2Primitives vp.params).core).QueryCache → Prop) :
     Pr{let z ← romSchemeRun (Concrete.sha2Primitives vp.params).core e optRand (pure pkSeed)
         adv}[Q z] ≤
-      Pr{let s ← $ᵗ ((Concrete.sha2Primitives vp.params).core.SkSeed ×
-            (Concrete.sha2Primitives vp.params).core.SkPrf)
-         let z ← (simulateQ (SecretEncoding.idealImpl
-             (hashSpec (Concrete.sha2Primitives vp.params).core)
-             (DeriveQuery (Concrete.sha2Primitives vp.params).core)
-             (Concrete.sha2Primitives vp.params).core.Y)
-           (unforgeableTranscriptExperiment
-             (deriveAdversary (Concrete.sha2Primitives vp.params).core adv
-               pkSeed))).run (∅, ∅)}[
-        Q (DeriveOutcome.fill (Concrete.sha2Primitives vp.params).core s z.1,
-          (secretEncoding (Concrete.sha2Primitives vp.params).core e pkSeed).merge s
-            z.2)] +
+      Pr{let w ← idealDraw e optRand pkSeed adv}[
+        Q (DeriveOutcome.fill (Concrete.sha2Primitives vp.params).core w.1 w.2.1,
+          (secretEncoding (Concrete.sha2Primitives vp.params).core e pkSeed).merge w.1 w.2.2)] +
         qh * ((256 ^ vp.params.n : ℕ) : ℝ≥0∞)⁻¹ := by
   rw [← Concrete.natCard_sha2Primitives_y]
   exact prEvent_romSchemeRun_pure_le_add
@@ -115,11 +97,9 @@ theorem prEvent_romSchemeRun_pure_le_add_sha (e : shaCore.SkSeed ≃ shaCore.Y)
     (hadv : adv.RomQueryBound qh qs)
     (Q : RomOutcome Concrete.sha128_24Vp shaCore × (hashSpec shaCore).QueryCache → Prop) :
     Pr{let z ← romSchemeRun shaCore e optRand (pure pkSeed) adv}[Q z] ≤
-      Pr{let s ← $ᵗ (shaCore.SkSeed × shaCore.SkPrf)
-         let z ← (simulateQ (SecretEncoding.idealImpl (hashSpec shaCore) (DeriveQuery shaCore)
-             shaCore.Y)
-           (unforgeableTranscriptExperiment (deriveAdversary shaCore adv pkSeed))).run (∅, ∅)}[
-        Q (DeriveOutcome.fill shaCore s z.1, (secretEncoding shaCore e pkSeed).merge s z.2)] +
+      Pr{let w ← idealDraw e optRand pkSeed adv}[
+        Q (DeriveOutcome.fill shaCore w.1 w.2.1,
+          (secretEncoding shaCore e pkSeed).merge w.1 w.2.2)] +
         qh * ((256 ^ 16 : ℕ) : ℝ≥0∞)⁻¹ := by
   rw [← natCard_shaPrimitives_y]
   exact prEvent_romSchemeRun_pure_le_add Concrete.keySeparated_shaPrimitives le_rfl e optRand
