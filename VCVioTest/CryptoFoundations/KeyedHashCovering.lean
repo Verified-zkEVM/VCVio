@@ -33,6 +33,12 @@ target the event is everything while the bound is below `1`.
 The fibre count `card_filter_card_image_eq_split` is checked against a brute-force count at tiny
 parameters, including every degenerate one — `qh = 0`, `qs = 0`, `n = 0`, `r = 0 < n`, `r = n` —
 and the `Nat.descFactorial` variant of its statement is refuted.
+
+The two-family count `card_filter_card_image_card_toRight_eq` is checked against a brute-force
+count, and its hypothesis `r₁ ≤ r` is shown necessary.  `weightedTargetCoverBound` is evaluated at
+`h = a = 1`, `k = 2`, `qs = qw = 1`, where it equals `2 ^ (-2) * E[(X + Y) ^ 2]` for independent
+`X ~ Bernoulli(1/2)` and `Y ~ Bernoulli(w/2)`, and the witness sum of
+`sum_pow_card_image_eq_weightedTargetCoverBound` takes the same value there.
 -/
 
 public section
@@ -198,5 +204,52 @@ theorem card_filter_card_image_eq_split_0_3_2_2 :
       0 * (3 : ℕ).choose 2 *
         (Finset.univ.filter fun s : Fin 2 → Fin 2 => Function.Surjective s).card := by
   decide
+
+/-! ## The weighted per-target bound -/
+
+/-- `Fin 2 → Fin 2 ⊕ Fin 1` with two distinct values, one of them on the right: four functions,
+`C(2, 1) * C(1, 1)` images times two surjections. -/
+theorem card_filter_card_image_card_toRight_eq_2_1_2_2_1 :
+    (Finset.univ.filter fun f : Fin 2 → Fin 2 ⊕ Fin 1 =>
+        (Finset.univ.image f).card = 2 ∧ (Finset.univ.image f).toRight.card = 1).card = 4 ∧
+      (2 : ℕ).choose (2 - 1) * (1 : ℕ).choose 1 *
+        (Finset.univ.filter fun s : Fin 2 → Fin 2 => Function.Surjective s).card = 4 := by
+  decide
+
+/-- **`r₁ ≤ r` is necessary for the two-family count.**  At `n = r = 1` and `r₁ = 2` no function
+has more right values than values, while the right-hand side, with `r - r₁` truncated to `0`,
+is `1`. -/
+theorem card_filter_card_image_card_toRight_ne_of_lt :
+    (Finset.univ.filter fun f : Fin 1 → Fin 1 ⊕ Fin 2 =>
+        (Finset.univ.image f).card = 1 ∧ (Finset.univ.image f).toRight.card = 2).card ≠
+      (1 : ℕ).choose (1 - 2) * (2 : ℕ).choose 2 *
+        (Finset.univ.filter fun s : Fin 1 → Fin 1 => Function.Surjective s).card := by
+  decide
+
+/-- **A numeric value.**  At `h = a = 1`, `k = 2` and one coverer position of each kind the
+weighted bound is `(1 + 2 * w) / 8`, which is `2 ^ (-2) * E[(X + Y) ^ 2]` for independent
+`X ~ Bernoulli(1/2)` and `Y ~ Bernoulli(w/2)`. -/
+theorem weightedTargetCoverBound_1_1_2_1_1 (w : ℝ≥0∞) :
+    weightedTargetCoverBound 1 1 2 1 1 w = ((2 : ℝ≥0∞)⁻¹) ^ 3 * (1 + 2 * w) := by
+  have h0 : (Finset.univ.filter fun s : Fin 2 → Fin 0 => Function.Surjective s).card = 0 := by
+    decide
+  have h1 : (Finset.univ.filter fun s : Fin 2 → Fin 1 => Function.Surjective s).card = 1 := by
+    decide
+  have h2 : (Finset.univ.filter fun s : Fin 2 → Fin 2 => Function.Surjective s).card = 2 := by
+    decide
+  have hx : (2 : ℝ≥0∞) * 2⁻¹ = 1 := ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top
+  simp only [weightedTargetCoverBound, Finset.sum_range_succ, Finset.sum_range_zero, h0, h1, h2]
+  norm_num
+  calc _ = ((2 : ℝ≥0∞)⁻¹) ^ 3 + w * 2⁻¹ ^ 3 + w * 2⁻¹ ^ 3 * (2 * 2⁻¹) := by ring
+    _ = _ := by rw [hx]; ring
+
+/-- The weighted witness sum over the four assignments `Fin 2 → Fin 1 ⊕ Fin 1` takes the same
+value. -/
+theorem sum_witness_1_1_2_1_1 (w : ℝ≥0∞) :
+    ∑ f : Fin 2 → Fin 1 ⊕ Fin 1,
+        (((2 : ℝ≥0∞) ^ 1)⁻¹) ^ (Finset.univ.image f).card * (((2 : ℝ≥0∞) ^ 1)⁻¹) ^ 2 *
+          w ^ (Finset.univ.filter fun p : Fin 1 => ∃ i, f i = .inr p).card =
+      ((2 : ℝ≥0∞)⁻¹) ^ 3 * (1 + 2 * w) := by
+  rw [sum_pow_card_image_eq_weightedTargetCoverBound, weightedTargetCoverBound_1_1_2_1_1]
 
 end CoveringTest

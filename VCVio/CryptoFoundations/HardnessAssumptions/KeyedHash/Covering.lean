@@ -8,6 +8,7 @@ module
 
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Tape
+import Mathlib.Data.Nat.Choose.Vandermonde
 
 /-!
 # Interleaved-target coverage of uniform digests
@@ -88,6 +89,16 @@ is `S(k, r) * qs.descFactorial r`, with `S` the Stirling numbers of the second k
 at `qs = 0` for `0 < k` (`targetCoverBound_zero`), so a bound that must be positive when there are
 no coverers needs a separate term for that mass.
 
+**Weighted coverers.**  When some coverer positions only count with a weight `w` per distinct
+position — a per-witness factor that a union bound multiplies in — the witness sum ranges over
+`Fin k → Fin qs ⊕ Fin qw`, and `sum_pow_card_image_eq_weightedTargetCoverBound` evaluates it as
+`weightedTargetCoverBound h a k qs qw w`, by splitting the image of an assignment into its two
+parts (`card_filter_card_image_card_toRight_eq`).  For `w ≤ 1` the weighted bound is
+`2 ^ (-a * k) * E[Z ^ k]` for `Z` the sum of a binomial with `qs` trials of success probability
+`2 ^ (-h)` and an independent one with `qw` trials of success probability `w * 2 ^ (-h)`.  It is
+`targetCoverBound h a k qs` at `qw = 0` and at `w = 0`, `targetCoverBound h a k (qs + qw)` at
+`w = 1`, and monotone in `w` in between.
+
 **The obligation the separation carries.**  Confining the coverers to their own family is sound
 only if every position a coverer may occupy is one at which a digest was really signed; otherwise
 the separated budget is not a budget at all.  That obligation has a cardinality part and a
@@ -126,11 +137,14 @@ or with signature positions.
 * The random-oracle transport `evalDist_run_randomOracle_setOf_cacheCovered_le` is stated for the
   single-budget event only.  Nothing here transports the separated bound to a random-oracle run,
   which would need the tape positions of the signing queries located inside the cache.
+* `targetCoverBound` and `weightedTargetCoverBound` are defined by their closed forms.  Their
+  readings as binomial moments are not formalized here, and nothing here gives the weight `w` a
+  probabilistic meaning: `sum_pow_card_image_eq_weightedTargetCoverBound` is a counting identity.
 * Nothing here is quantum.
 
 ## Labels
 
-Forty-eight declarations, five of them `private` and internal to the proofs: the canonical
+Fifty-six declarations, five of them `private` and internal to the proofs: the canonical
 representative helpers.
 
 *The model*: `Digest`, `Covered`.
@@ -155,11 +169,17 @@ representative helpers.
 `evalDist_answerTape_tapeCoveredSplit_le`.
 
 *The closed form*: `card_filter_image_eq_card_filter_surjective`, `card_filter_card_image_eq`,
-`card_filter_card_image_eq_split`, `sum_pow_card_image_eq_sum_range`,
-`sum_pow_card_image_eq_closedForm`, `evalDist_answerTape_tapeCoveredSplit_le_closedForm`.
+`card_filter_card_image_eq_split`, `card_filter_card_image_card_toRight_eq`,
+`sum_pow_card_image_eq_sum_range`, `sum_pow_card_image_eq_closedForm`,
+`evalDist_answerTape_tapeCoveredSplit_le_closedForm`.
 
 *The per-target bound*: `targetCoverBound`, `closedForm_eq_mul_targetCoverBound`,
 `evalDist_answerTape_tapeCoveredSplit_le_mul_targetCoverBound`, `targetCoverBound_zero`.
+
+*The weighted per-target bound*: `weightedTargetCoverBound`, `weightedTargetCoverBound_qw_zero`,
+`weightedTargetCoverBound_weight_zero`, `weightedTargetCoverBound_weight_one`,
+`monotone_weightedTargetCoverBound`, `targetCoverBound_le_weightedTargetCoverBound`,
+`sum_pow_card_image_eq_weightedTargetCoverBound`.
 
 *The random-oracle run*: `CacheCovered`, `tapeCoveredReuse_of_cacheCovered`,
 `evalDist_run_randomOracle_setOf_cacheCovered_le`.
@@ -749,6 +769,39 @@ theorem card_filter_card_image_eq_split (qh qs n r : ℕ) :
   rw [hsplit, Finset.card_product, Finset.card_univ, Fintype.card_fin,
     card_filter_card_image_eq (β := Fin qs) n r, Fintype.card_fin, mul_assoc]
 
+/-- **Counting by image size on a sum type.**  For `r₁ ≤ r`, the functions `Fin n → α ⊕ β` with
+exactly `r` distinct values, `r₁` of them in `β`, number `C(|α|, r - r₁) * C(|β|, r₁)` times the
+number of surjections `Fin n → Fin r`: the image splits into its `α` part and its `β` part, and
+the functions with a given image are counted by `card_filter_image_eq_card_filter_surjective`. -/
+theorem card_filter_card_image_card_toRight_eq {α β : Type*} [Fintype α] [Fintype β]
+    [DecidableEq α] [DecidableEq β] (n : ℕ) {r r₁ : ℕ} (hr : r₁ ≤ r) :
+    (Finset.univ.filter fun f : Fin n → α ⊕ β =>
+        (Finset.univ.image f).card = r ∧ (Finset.univ.image f).toRight.card = r₁).card
+      = (Fintype.card α).choose (r - r₁) * (Fintype.card β).choose r₁ *
+        (Finset.univ.filter fun s : Fin n → Fin r => Function.Surjective s).card := by
+  classical
+  set t := Finset.univ.filter fun T : Finset (α ⊕ β) => T.card = r ∧ T.toRight.card = r₁
+  have ht : t.card = (Fintype.card α).choose (r - r₁) * (Fintype.card β).choose r₁ := by
+    rw [← Finset.card_univ, ← Finset.card_univ, ← Finset.card_powersetCard,
+      ← Finset.card_powersetCard, ← Finset.card_product]
+    refine Finset.card_equiv Finset.sumEquiv.toEquiv fun T => ?_
+    have := Finset.card_toLeft_add_card_toRight (u := T)
+    change _ ↔ (T.toLeft, T.toRight) ∈ _
+    simp only [t, Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_product,
+      Finset.mem_powersetCard, Finset.subset_univ]
+    omega
+  have hfib : ∀ T ∈ t, (Finset.filter (fun f : Fin n → α ⊕ β => Finset.univ.image f = T)
+      (Finset.univ.filter fun f : Fin n → α ⊕ β =>
+        (Finset.univ.image f).card = r ∧ (Finset.univ.image f).toRight.card = r₁)).card
+      = (Finset.univ.filter fun s : Fin n → Fin r => Function.Surjective s).card := by
+    intro T hT
+    have hT' := (Finset.mem_filter.mp hT).2
+    rw [Finset.filter_filter,
+      Finset.filter_congr (fun f _ => ⟨fun hh => hh.2, fun hh => ⟨hh ▸ hT', hh⟩⟩)]
+    exact card_filter_image_eq_card_filter_surjective hT'.1
+  rw [Finset.card_eq_sum_card_fiberwise (f := fun f : Fin n → α ⊕ β => Finset.univ.image f)
+    (t := t) (fun f hf => by simpa [t] using hf), Finset.sum_const_nat hfib, ht]
+
 /-- **Regrouping the split sum by the number of distinct coverers.**  Unconditional: the image of
 a `Fin k`-indexed assignment has at most `k` elements, so `r` never escapes `range (k + 1)`. -/
 theorem sum_pow_card_image_eq_sum_range (qh qs : ℕ) :
@@ -832,6 +885,85 @@ summand carries `C(0, r) = 0`. -/
 theorem targetCoverBound_zero (hk : 0 < k) : targetCoverBound h a k 0 = 0 := by
   obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_lt hk
   simp [targetCoverBound, Finset.sum_range_succ']
+
+/-! ### The weighted per-target bound -/
+
+/-- **The weighted per-target coverage bound** with `qs` coverer positions of weight one and `qw`
+coverer positions of weight `w`,
+`∑ r ≤ k, ∑ r₁ ≤ r, C(qs, r - r₁) * C(qw, r₁) * w ^ r₁ * #{surjections Fin k → Fin r} *
+2 ^ (-h * r) * 2 ^ (-a * k)`, the sums being over the number `r` of distinct coverers and the
+number `r₁` of them among the weighted positions.  For `w ≤ 1` it is `2 ^ (-a * k) * E[Z ^ k]`
+for `Z` the sum of independent binomials with `qs` trials of success probability `2 ^ (-h)` and
+`qw` trials of success probability `w * 2 ^ (-h)`. -/
+@[expose] noncomputable def weightedTargetCoverBound (qs qw : ℕ) (w : ℝ≥0∞) : ℝ≥0∞ :=
+  ∑ r ∈ Finset.range (k + 1), ∑ r₁ ∈ Finset.range (r + 1),
+    ((qs.choose (r - r₁) * qw.choose r₁ *
+        (Finset.univ.filter fun s : Fin k → Fin r => Function.Surjective s).card : ℕ) : ℝ≥0∞) *
+      w ^ r₁ * ((((2 : ℝ≥0∞) ^ h)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k)
+
+/-- Without weighted positions the weighted bound is the per-target bound. -/
+theorem weightedTargetCoverBound_qw_zero (qs : ℕ) (w : ℝ≥0∞) :
+    weightedTargetCoverBound h a k qs 0 w = targetCoverBound h a k qs := by
+  simp [weightedTargetCoverBound, targetCoverBound, Finset.sum_range_succ']
+
+/-- At weight zero the weighted bound is the per-target bound. -/
+theorem weightedTargetCoverBound_weight_zero (qs qw : ℕ) :
+    weightedTargetCoverBound h a k qs qw 0 = targetCoverBound h a k qs := by
+  simp [weightedTargetCoverBound, targetCoverBound, Finset.sum_range_succ']
+
+/-- At weight one the weighted positions are ordinary coverer positions: the weighted bound is the
+per-target bound at `qs + qw` coverers, by Vandermonde's identity. -/
+theorem weightedTargetCoverBound_weight_one (qs qw : ℕ) :
+    weightedTargetCoverBound h a k qs qw 1 = targetCoverBound h a k (qs + qw) := by
+  refine Finset.sum_congr rfl fun r _ => ?_
+  rw [add_comm qs, Nat.add_choose_eq,
+    Finset.Nat.sum_antidiagonal_eq_sum_range_succ (fun i j => qw.choose i * qs.choose j),
+    Finset.sum_mul, Nat.cast_sum, Finset.sum_mul]
+  refine Finset.sum_congr rfl fun r₁ _ => ?_
+  push_cast
+  ring
+
+/-- The weighted bound is monotone in the weight. -/
+theorem monotone_weightedTargetCoverBound (qs qw : ℕ) :
+    Monotone (weightedTargetCoverBound h a k qs qw) := fun _ _ hw => by
+  unfold weightedTargetCoverBound
+  gcongr
+
+/-- The per-target bound is at most the weighted bound at any weight. -/
+theorem targetCoverBound_le_weightedTargetCoverBound (qs qw : ℕ) (w : ℝ≥0∞) :
+    targetCoverBound h a k qs ≤ weightedTargetCoverBound h a k qs qw w :=
+  (weightedTargetCoverBound_weight_zero h a k qs qw).symm.trans_le
+    (monotone_weightedTargetCoverBound h a k qs qw (zero_le : 0 ≤ w))
+
+/-- **The weighted witness sum in closed form.**  Over the assignments of the `k` digits to `qs`
+coverer positions of weight one and `qw` coverer positions of weight `w`, the per-witness cost
+`2 ^ (-h * r) * 2 ^ (-a * k)`, with `r` the number of distinct coverers, times `w` to the number
+of distinct weighted coverers, sums to `weightedTargetCoverBound h a k qs qw w`. -/
+theorem sum_pow_card_image_eq_weightedTargetCoverBound (qs qw : ℕ) (w : ℝ≥0∞) :
+    ∑ f : Fin k → Fin qs ⊕ Fin qw,
+        (((2 : ℝ≥0∞) ^ h)⁻¹) ^ (Finset.univ.image f).card * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k *
+          w ^ (Finset.univ.filter fun p : Fin qw => ∃ i, f i = .inr p).card =
+      weightedTargetCoverBound h a k qs qw w := by
+  classical
+  have hR : ∀ f : Fin k → Fin qs ⊕ Fin qw, (Finset.univ.filter fun p : Fin qw =>
+      ∃ i, f i = .inr p) = (Finset.univ.image f).toRight := fun f => by ext p; simp
+  simp_rw [hR]
+  rw [← Finset.sum_fiberwise_of_maps_to (g := fun f : Fin k → Fin qs ⊕ Fin qw =>
+    (Finset.univ.image f).card) (t := Finset.range (k + 1))
+    fun f _ => Finset.mem_range.mpr (Nat.lt_succ_of_le (Finset.card_image_le.trans (by simp)))]
+  refine Finset.sum_congr rfl fun r _ => ?_
+  rw [← Finset.sum_fiberwise_of_maps_to
+    (s := Finset.univ.filter fun f : Fin k → Fin qs ⊕ Fin qw => (Finset.univ.image f).card = r)
+    (g := fun f : Fin k → Fin qs ⊕ Fin qw => (Finset.univ.image f).toRight.card)
+    (t := Finset.range (r + 1)) fun f hf => Finset.mem_range.mpr (Nat.lt_succ_of_le
+      ((Finset.mem_filter.mp hf).2 ▸ Finset.card_toRight_le))]
+  refine Finset.sum_congr rfl fun r₁ hr₁ => ?_
+  rw [Finset.filter_filter, Finset.sum_congr rfl fun f hf => by
+      rw [(Finset.mem_filter.mp hf).2.1, (Finset.mem_filter.mp hf).2.2],
+    Finset.sum_const, nsmul_eq_mul,
+    card_filter_card_image_card_toRight_eq _ (Nat.lt_succ_iff.mp (Finset.mem_range.mp hr₁)),
+    Fintype.card_fin, Fintype.card_fin]
+  ring
 
 /-! ## Coverage of a random-oracle answer cache -/
 
