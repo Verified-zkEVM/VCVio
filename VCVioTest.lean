@@ -59,6 +59,7 @@ public import VCVioTest.ModuleAPI.Heap
 public import VCVioTest.MonadProbability
 public import VCVioTest.Native
 public import VCVioTest.OracleComp.AdaptiveMeasure
+public import VCVioTest.OracleComp.BudgetedPotential
 public import VCVioTest.OracleComp.EqDistTriple
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query

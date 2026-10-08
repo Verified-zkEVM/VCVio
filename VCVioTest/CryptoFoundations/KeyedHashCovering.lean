@@ -26,6 +26,10 @@ be injective, although a non-injective one does lower the number of distinct pos
 coverers occupy below the number of distinct coverer indices; that per-witness gap is pinned
 separately, since it is what the bound's canonicalisation step exists to absorb.
 
+The per-witness bound `evalDist_answerTape_coverWitness_le` charges a coverer serving several
+digits for its leaf once, and its freshness hypothesis is necessary: with the coverer on the
+target the event is everything while the bound is below `1`.
+
 The fibre count `card_filter_card_image_eq_split` is checked against a brute-force count at tiny
 parameters, including every degenerate one — `qh = 0`, `qs = 0`, `n = 0`, `r = 0 < n`, `r = n` —
 and the `Nat.descFactorial` variant of its statement is refuted.
@@ -105,6 +109,33 @@ theorem exists_card_image_comp_lt :
     ∃ (cov : Fin 2 → Fin 1) (f : Fin 2 → Fin 2),
       (Finset.univ.image fun i => cov (f i)).card < (Finset.univ.image f).card := by
   decide
+
+/-! ## The per-witness bound -/
+
+/-- **One coverer serving two digits pays its leaf once.**  Coordinate `1` covers both digits of
+coordinate `0`, and the per-witness bound charges one leaf factor and two digit factors. -/
+theorem evalDist_answerTape_coverWitness_le_const (h a : ℕ) :
+    𝒟[answerTape (Digest h a 2) 3]
+        {v | ∀ i, (v 1).1 = (v 0).1 ∧ (v 1).2 i = (v 0).2 i} ≤
+      ((2 : ℝ≥0∞) ^ h)⁻¹ * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ 2 := by
+  have hcard : (Finset.univ.image fun _ : Fin 2 => (1 : Fin 3)).card = 1 := by decide
+  simpa [hcard] using evalDist_answerTape_coverWitness_le h a 2 (0 : Fin 3)
+    (fun _ => (1 : Fin 3)) fun _ => by decide
+
+/-- **Freshness is necessary for the per-witness bound.**  With the coverer on the target, at
+`q = k = 1` and `h = a = 1`, the event is everything, so its mass is `1`, while the bound is
+`1 / 4`. -/
+theorem not_le_coverWitness_of_self :
+    ¬ 𝒟[answerTape (Digest 1 1 1) 1]
+        {v | ∀ i, (v ((fun _ => 0) i)).1 = (v 0).1 ∧ (v ((fun _ => 0) i)).2 i = (v 0).2 i} ≤
+      (((2 : ℝ≥0∞) ^ 1)⁻¹) ^ (Finset.univ.image fun _ : Fin 1 => (0 : Fin 1)).card *
+        (((2 : ℝ≥0∞) ^ 1)⁻¹) ^ 1 := by
+  have huniv : {v : Fin 1 → Digest 1 1 1 |
+      ∀ i, (v ((fun _ => 0) i)).1 = (v 0).1 ∧ (v ((fun _ => 0) i)).2 i = (v 0).2 i} =
+      Set.univ := Set.eq_univ_of_forall fun v _ => ⟨rfl, rfl⟩
+  have hcard : (Finset.univ.image fun _ : Fin 1 => (0 : Fin 1)).card = 1 := by decide
+  rw [huniv, measure_univ, hcard]
+  norm_num
 
 /-! ## The fibre count at small parameters -/
 
