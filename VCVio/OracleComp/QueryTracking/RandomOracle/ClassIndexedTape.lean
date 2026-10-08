@@ -55,8 +55,9 @@ them. Nothing in it ties an answer to a class. What does that is the instrumenta
 
 ## Scope
 
-* Nothing here bounds the mass of any tape event, and nothing here relates a run event to a
-  tape event: both are the business of `ClassIndexedTape/Position.lean`.
+* Nothing here relates a run event to a tape event; `ClassIndexedTape/Position.lean` does.
+  Nothing here or there bounds the mass of a tape event: that is `IndepProductEvents.lean`,
+  reached through `evalDist_tapeFamily_setOf_eq` and `evalDist_tapeFamily_setOf_eq₂`.
 * The set-level bridge to `IndepProductEvents.lean` covers one class
   (`evalDist_tapeFamily_setOf_eq`) or two (`evalDist_tapeFamily_setOf_eq₂`). Both require the
   answer types to carry a measurable space on which every set is measurable, and produce the
@@ -282,7 +283,7 @@ private theorem length_of_mem_support_tapeOn (m : J → ℕ) :
 
 /-- **A drawn tape family has the lengths it was asked for.** This is what lets a caller
 discharge the per-class query bounds of the position lemmas of `ClassIndexedTape/Position.lean`
-against an event of `tapeFamily`, and so compose them with the transports there. -/
+against an event of `tapeFamily`, and so compose them with the transport there. -/
 theorem length_of_mem_support_tapeFamily (m : J → ℕ) {L : (j : J) → List (R j)}
     (hL : L ∈ support (tapeFamily R m)) (j : J) : (L j).length = m j :=
   length_of_mem_support_tapeOn m Finset.univ.toList (Finset.nodup_toList _) L hL j
@@ -671,51 +672,6 @@ private theorem evalDist_run_query_step {β : Type} [MeasurableSpace β] (j : J)
     simp only [tapeStep_run_some hc, pure_bind]
     exact ih u₀ c m
 
-/-- **The duplicated lazy random oracle is the class-indexed tape oracle averaged over a
-bundled iid tape family.** For every assignment `m` of tape lengths to classes, running `oa`
-under the shared lazy random oracle from cache `c` has the same joint distribution of output
-and final cache as drawing one independent uniform tape per class, running `oa` under
-`tapeCachingImplClass` from `c` with those tapes, and forgetting the unconsumed tapes. -/
-theorem evalDist_run_dupRandomOracle_eq_tapeFamily {α : Type}
-    (oa : OracleComp (spec + spec) α) (c : spec.QueryCache) (m : J → ℕ) :
-    letI : MeasurableSpace (α × spec.QueryCache) := ⊤
-    𝒟[(simulateQ (dupRandomOracle spec) oa).run c] =
-      𝒟[(do let L ← tapeFamily R m
-            let z ← (simulateQ (tapeCachingImplClass R τ hR) oa).run (c, L)
-            return (z.1, z.2.1))] := by
-  let _ : MeasurableSpace (α × spec.QueryCache) := ⊤
-  let _ : MeasurableSpace ((k : J) → List (R k)) := ⊤
-  induction oa using OracleComp.inductionOn generalizing c m with
-  | pure x =>
-    simp only [simulateQ_pure, StateT.run_pure, pure_bind]
-    rw [_root_.evalDist_bind_const]
-    rw [measure_univ, one_smul]
-  | query_bind t k ih =>
-    have hredL : (simulateQ (dupRandomOracle spec)
-          (liftM ((spec + spec).query t) >>= k)).run c =
-        ((dupRandomOracle spec t).run c) >>= fun p =>
-          (simulateQ (dupRandomOracle spec) (k p.1)).run p.2 := by
-      rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-    have hredR : ∀ L : (k : J) → List (R k),
-        (simulateQ (tapeCachingImplClass R τ hR)
-            (liftM ((spec + spec).query t) >>= k)).run (c, L) =
-          ((tapeCachingImplClass R τ hR t).run (c, L)) >>= fun p =>
-            (simulateQ (tapeCachingImplClass R τ hR) (k p.1)).run p.2 := fun L => by
-      rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-    rw [hredL]
-    simp only [hredR, bind_assoc]
-    rcases t with t | t
-    · rw [dupRandomOracle_apply_inl, tapeCachingImplClass_apply_inl]
-      exact evalDist_run_query_step _ t (hR (Sum.inl t))
-        (fun u c' => (simulateQ (dupRandomOracle spec) (k u)).run c')
-        (fun u s => (simulateQ (tapeCachingImplClass R τ hR) (k u)).run s >>= fun z =>
-          pure (z.1, z.2.1)) c m ih
-    · rw [dupRandomOracle_apply_inr, tapeCachingImplClass_apply_inr]
-      exact evalDist_run_query_step _ t (hR (Sum.inr t))
-        (fun u c' => (simulateQ (dupRandomOracle spec) (k u)).run c')
-        (fun u s => (simulateQ (tapeCachingImplClass R τ hR) (k u)).run s >>= fun z =>
-          pure (z.1, z.2.1)) c m ih
-
 variable (τ hR) in
 /-- **The duplicated lazy random oracle with private sampling forwarded is the class-indexed
 tape oracle with private sampling forwarded, averaged over a bundled iid tape family.** For every
@@ -758,6 +714,26 @@ theorem evalDist_run_dupRandomOracleFwd_eq_tapeFamily {α : Type}
         (fun u c' => (simulateQ (dupRandomOracleFwd spec) (k u)).run c')
         (fun u s => (simulateQ (tapeImplFwd R τ hR) (k u)).run s >>= fun z =>
           pure (z.1, z.2.1)) c m ih
+
+/-- **The duplicated lazy random oracle is the class-indexed tape oracle averaged over a
+bundled iid tape family.** For every assignment `m` of tape lengths to classes, running `oa`
+under the shared lazy random oracle from cache `c` has the same joint distribution of output
+and final cache as drawing one independent uniform tape per class, running `oa` under
+`tapeCachingImplClass` from `c` with those tapes, and forgetting the unconsumed tapes.
+
+This is `evalDist_run_dupRandomOracleFwd_eq_tapeFamily` at a program that samples nothing
+privately. -/
+theorem evalDist_run_dupRandomOracle_eq_tapeFamily {α : Type}
+    (oa : OracleComp (spec + spec) α) (c : spec.QueryCache) (m : J → ℕ) :
+    letI : MeasurableSpace (α × spec.QueryCache) := ⊤
+    𝒟[(simulateQ (dupRandomOracle spec) oa).run c] =
+      𝒟[(do let L ← tapeFamily R m
+            let z ← (simulateQ (tapeCachingImplClass R τ hR) oa).run (c, L)
+            return (z.1, z.2.1))] := by
+  have h := evalDist_run_dupRandomOracleFwd_eq_tapeFamily τ hR
+    (OracleComp.liftComp oa (unifSpec + (spec + spec))) c m
+  simp only [dupRandomOracleFwd, tapeImplFwd, QueryImpl.simulateQ_add_liftComp_right] at h
+  exact h
 
 end Identification
 

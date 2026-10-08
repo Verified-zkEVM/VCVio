@@ -19,12 +19,12 @@ run.
 
 `classPosAux` instruments a run with the class and position each cache entry was answered at,
 the entries consumed from each tape, and the queries made at each class. `ClassPosInv` is the
-invariant its run maintains, and `exists_pos_of_mem_support_run_tapeCachingImplClass` is the
-consequence a caller wants: under *per-class* query bounds, every cache entry is the value of
-its class's tape at a position of that tape, and distinct entries sit at distinct
+invariant its run maintains, and `ClassPosInv.exists_pos` is the consequence a caller wants:
+under *per-class* query bounds on a set `T` of classes, every cache entry of a class in `T` is
+the value of its class's tape at a position of that tape, and distinct entries sit at distinct
 class-position pairs. Per-class bounds are what the split forces: the total-cache-size device
 of `Tape.lean` does not survive it, since one class exhausting its tape is consistent with the
-other classes' entries making up the total.
+other classes' entries making up the total. Classes outside `T` need no bound at all.
 
 The invariant also *pins the class*: `ClassPosInv.cls_tau` records that a point's class is the
 class of one of its two call sites, so the existence lemma returns `j = τ (.inl t) ∨ j = τ
@@ -33,36 +33,32 @@ tape an entry came off, and — since the class also determines the answer type 
 convert the tape value to the type of the cache entry. The lemma therefore also returns that
 type equality, and states the entry in cast form rather than as a bare `HEq`.
 
-`evalDist_run_dupRandomOracle_setOf_le_of_transport` and
-`prEvent_run_dupRandomOracle_le_of_transport` bound an event of the lazy run's final cache by
-the mass of a tape event off which no instrumented run produces it.
+## Runs
 
-## Forwarded private sampling
-
-A program that samples privately runs over `unifSpec + (spec + spec)`, under
-`dupRandomOracleFwd` lazily and under `tapeImplFwd` on tapes. `instrImpl` instruments the
-forwarded tape run with the same bookkeeping, through `classPosAuxFwd`, which records nothing
-at a private query, beside a passive state `Q` of the caller's own.
-
-* `exists_pos_of_mem_support_run_instrImpl` is the position lemma restricted to a set `T` of
-  classes: query bounds are needed only for the classes in `T`, and the position is returned
-  only for points whose class lies in `T`. Every cached point still has its class pinned to one
-  of its two call sites.
-* `cnt_le_of_isQueryBoundP` discharges those bounds: a bound on the queries of class `j` the
-  program makes, stated through `classOf`, bounds the class's query counter on every
-  instrumented run.
-* `prEvent_run_dupRandomOracleFwd_le_sum` is the transport in bind form. If every lazy-run
+* `exists_pos_of_mem_support_run_tapeCachingImplClass` reads `ClassPosInv.exists_pos` off a run
+  over the duplicated interface `spec + spec`.
+* A program that samples privately runs over `unifSpec + (spec + spec)`, under
+  `dupRandomOracleFwd` lazily and under `tapeImplFwd` on tapes. `classPosImplFwd` instruments
+  the forwarded tape run with the same bookkeeping, through `classPosAuxFwd`, which records
+  nothing at a private query, beside a passive state `Q` of the caller's own.
+  `classPosInvAuxFwd_step` is its one-step preservation of `ClassPosInv`, and
+  `exists_pos_of_mem_support_run_classPosImplFwd` reads `ClassPosInv.exists_pos` off its runs.
+* `cnt_le_of_isQueryBoundP` discharges the per-class bounds: a bound on the queries of class
+  `j` the program makes, stated through `classOf`, bounds the class's query counter on every
+  instrumented forwarded run.
+* `prEvent_run_dupRandomOracleFwd_le_sum` is the transport, in bind form. If every lazy-run
   event `P` is witnessed on the instrumented run by some `w` in a finite set, with a tape event
-  `M w` of the family and a run event `H w` of mass at most `β w` on every family, then
-  `P` has mass at most `∑ w, Pr_tape[M w] * β w`.
+  `M w` of the family and a run event `H w` of mass at most `β w` on every family, then `P` has
+  mass at most `∑ w, Pr_tape[M w] * β w`. A program over `spec + spec` alone enters it through
+  `OracleComp.liftComp`, which `QueryImpl.simulateQ_add_liftComp_right` removes on the lazy
+  side.
 
 ## Scope
 
-* Nothing here bounds the mass of any tape event. For an event of one class's tape,
-  `evalDist_tapeFamily_setOf_eq` restates it over that class's `answerTape`; for two classes
-  carrying the same answer type, `evalDist_tapeFamily_setOf_eq₂` restates it over one.
+* Nothing here bounds the mass of any tape event: that is `IndepProductEvents.lean`, reached
+  through `evalDist_tapeFamily_setOf_eq` and `evalDist_tapeFamily_setOf_eq₂`.
 * The position lemmas start from the empty cache and the empty bookkeeping.
-* The transports quantify over the families the draw can produce, so
+* The transport quantifies over the families the draw can produce, so
   `length_of_mem_support_tapeFamily` identifies the lengths of the family a hypothesis is handed
   with the lengths `m` it was drawn at.
 -/
@@ -456,136 +452,76 @@ theorem classPosInvAux_step (Lfam : (k : J) → List (R k)) (t : (spec + spec).D
 
 omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)]
   [∀ t : spec.Domain, SampleableType (spec.Range t)] in
-/-- A point's class determines the type of its answers. -/
-private theorem range_eq_of_cls
-    (hRt : ∀ t : (spec + spec).Domain, (spec + spec).Range t = R (τ t))
-    {t : spec.Domain} {j : J} (hjt : j = τ (Sum.inl t) ∨ j = τ (Sum.inr t)) :
-    spec.Range t = R j := by
-  rcases hjt with rfl | rfl
-  · exact hRt (Sum.inl t)
-  · exact hRt (Sum.inr t)
-
-omit [Fintype J] [∀ j, SampleableType (R j)] in
-/-- **Every cache entry of a class-indexed tape run sits at its own position on its own
-class's tape.** In a run of `oa` under the instrumented `tapeCachingImplClass` from the empty
-cache on the tape family `Lfam`, if every class was queried no more often than its tape is
-long, then each cache entry is the value of its class's tape at a position of that tape, and
-distinct cached points sit at distinct class-position pairs.
-
-The class is pinned to one of the point's two call sites, which is what lets a caller say
-*which* tape an entry came off; with it comes the equality of the point's range with that
-class's answer type, so the entry is returned in cast form and needs no further transport.
+/-- **The positions of cached points, read off the invariant.** Under `ClassPosInv` with
+bookkeeping `p`, every cached point has a class, pinned to one of its two call sites. If every
+class in `T` was queried no more often than its tape is long, then a cached point whose class
+`j` lies in `T` is the value of that class's tape at a position of that tape, returned in cast
+form along the equality of the point's range with `R j`. Distinct cached points sit at distinct
+class-position pairs.
 
 The per-class query bounds are what exclude the fallback answers sampled after a tape runs
 out: such an answer costs its class one query beyond the ones that consumed its whole tape.
 A bound on the *total* size of the cache does not exclude them, because one class running out
-of tape is consistent with the others' entries making up the total. -/
+of tape is consistent with the others' entries making up the total. Classes outside `T` need
+no bound, so a class without a query budget does not obstruct the conclusion for the others. -/
+theorem ClassPosInv.exists_pos (hR : ∀ t : (spec + spec).Domain, (spec + spec).Range t = R (τ t))
+    {Lfam l : (k : J) → List (R k)} {c : spec.QueryCache} {p : ClassPos spec.Domain J}
+    (hinv : ClassPosInv τ Lfam c l p.cls p.pos p.next p.cnt) (T : Set J)
+    (hq : ∀ j ∈ T, p.cnt j ≤ (Lfam j).length) :
+    (∀ t y, c t = some y → ∃ j, p.cls t = some j ∧ (j = τ (Sum.inl t) ∨ j = τ (Sum.inr t)) ∧
+        (j ∈ T → ∃ n, p.pos t = some n ∧ n < (Lfam j).length ∧
+          ∃ h : spec.Range t = R j, (Lfam j)[n]? = some (cast h y))) ∧
+      (∀ t t' j n, p.cls t = some j → p.pos t = some n → p.cls t' = some j →
+        p.pos t' = some n → t = t') := by
+  refine ⟨fun t y ht => ?_, hinv.pos_inj⟩
+  have htne : c t ≠ none := by rw [ht]; exact Option.some_ne_none y
+  obtain ⟨j, hj⟩ : ∃ j, p.cls t = some j := Option.ne_none_iff_exists'.mp (hinv.cls_ne_none t htne)
+  have hjt : j = τ (Sum.inl t) ∨ j = τ (Sum.inr t) := by
+    rcases hinv.cls_tau t (by rw [hj]; exact Option.some_ne_none j) with hc | hc
+    · exact Or.inl (Option.some_inj.mp (hj.symm.trans hc))
+    · exact Or.inr (Option.some_inj.mp (hj.symm.trans hc))
+  refine ⟨j, hj, hjt, fun hjT => ?_⟩
+  obtain ⟨n, hn⟩ : ∃ n, p.pos t = some n := by
+    rcases hp : p.pos t with _ | n
+    · obtain ⟨hnil, hlt⟩ := hinv.fallback t j htne hj hp
+      have hlen := hinv.length_add j
+      rw [hnil, List.length_nil, Nat.zero_add] at hlen
+      exact absurd (hlen ▸ hlt) (by have := hq j hjT; omega)
+    · exact ⟨n, rfl⟩
+  obtain ⟨hlt, hval⟩ := hinv.pos_spec t j n hj hn
+  have hRj : spec.Range t = R j := by
+    rcases hjt with rfl | rfl
+    · exact hR (Sum.inl t)
+    · exact hR (Sum.inr t)
+  rw [ht] at hval
+  exact ⟨n, hn, lt_of_lt_of_le hlt (by have := hinv.length_add j; omega), hRj,
+    eq_some_cast_of_heq _ hval⟩
+
+omit [Fintype J] [∀ j, SampleableType (R j)] in
+/-- **Every cache entry of a class-indexed tape run of a budgeted class sits at its own
+position on its class's tape.** `ClassPosInv.exists_pos` at the final state of a run of `oa`
+under the instrumented `tapeCachingImplClass` from the empty cache and the empty bookkeeping on
+the tape family `Lfam`. -/
 theorem exists_pos_of_mem_support_run_tapeCachingImplClass {α : Type}
     (Lfam : (k : J) → List (R k)) (oa : OracleComp (spec + spec) α)
     {z : α × (spec.QueryCache × ((k : J) → List (R k))) × ClassPos spec.Domain J}
     (hz : z ∈ support ((simulateQ
       (QueryImpl.extendState (tapeCachingImplClass R τ hR) (classPosAux R τ)) oa).run
         ((∅, Lfam), ClassPos.init)))
-    (hq : ∀ j, z.2.2.cnt j ≤ (Lfam j).length) :
-    (∀ t y, z.2.1.1 t = some y → ∃ j n, z.2.2.cls t = some j ∧ z.2.2.pos t = some n ∧
-        n < (Lfam j).length ∧ (j = τ (Sum.inl t) ∨ j = τ (Sum.inr t)) ∧
-        ∃ h : spec.Range t = R j, (Lfam j)[n]? = some (cast h y)) ∧
+    (T : Set J) (hq : ∀ j ∈ T, z.2.2.cnt j ≤ (Lfam j).length) :
+    (∀ t y, z.2.1.1 t = some y → ∃ j, z.2.2.cls t = some j ∧
+        (j = τ (Sum.inl t) ∨ j = τ (Sum.inr t)) ∧
+        (j ∈ T → ∃ n, z.2.2.pos t = some n ∧ n < (Lfam j).length ∧
+          ∃ h : spec.Range t = R j, (Lfam j)[n]? = some (cast h y))) ∧
       (∀ t t' j n, z.2.2.cls t = some j → z.2.2.pos t = some n → z.2.2.cls t' = some j →
-        z.2.2.pos t' = some n → t = t') := by
-  have hinv := simulateQ_run_preserves_inv_of_query
+        z.2.2.pos t' = some n → t = t') :=
+  (simulateQ_run_preserves_inv_of_query
     (QueryImpl.extendState (tapeCachingImplClass R τ hR) (classPosAux R τ))
     (fun s => ClassPosInv τ Lfam s.1.1 s.1.2 s.2.cls s.2.pos s.2.next s.2.cnt)
     (fun t s hs => classPosInvAux_step Lfam t s hs) oa _
-    (ClassPosInv.empty τ Lfam) z hz
-  refine ⟨fun t y ht => ?_, hinv.pos_inj⟩
-  have htne : z.2.1.1 t ≠ none := by rw [ht]; exact Option.some_ne_none y
-  obtain ⟨j, hj⟩ : ∃ j, z.2.2.cls t = some j :=
-    Option.ne_none_iff_exists'.mp (hinv.cls_ne_none t htne)
-  obtain ⟨n, hn⟩ : ∃ n, z.2.2.pos t = some n := by
-    rcases hp : z.2.2.pos t with _ | n
-    · obtain ⟨hnil, hlt⟩ := hinv.fallback t j htne hj hp
-      have hlen := hinv.length_add j
-      rw [hnil, List.length_nil, Nat.zero_add] at hlen
-      exact absurd (hlen ▸ hlt) (by have := hq j; omega)
-    · exact ⟨n, rfl⟩
-  obtain ⟨hlt, hval⟩ := hinv.pos_spec t j n hj hn
-  have hjt : j = τ (Sum.inl t) ∨ j = τ (Sum.inr t) := by
-    rcases hinv.cls_tau t (by rw [hj]; exact Option.some_ne_none j) with hc | hc
-    · exact Or.inl (Option.some_inj.mp (hj.symm.trans hc))
-    · exact Or.inr (Option.some_inj.mp (hj.symm.trans hc))
-  rw [ht] at hval
-  exact ⟨j, n, hj, hn, lt_of_lt_of_le hlt (by have := hinv.length_add j; omega), hjt,
-    range_eq_of_cls hR hjt, eq_some_cast_of_heq _ hval⟩
-
-/-! ## Transporting a tape-family bound -/
-
-/-- **Transporting a tape-family bound to a duplicated lazy random-oracle run.** If the event
-`E` of the tape family has mass at most `b`, and off `E` no instrumented run of `oa` on that
-family can leave a final cache satisfying `P`, then the shared lazy random-oracle run leaves a
-cache satisfying `P` with mass at most `b`.
-
-The mass of `E` is the caller's obligation. For an event of a single class's tape,
-`evalDist_tapeFamily_setOf_eq` restates it over that class's `answerTape`, where the product
-bounds of `IndepProductEvents.lean` apply; for an event of two classes carrying the same answer
-type, `evalDist_tapeFamily_setOf_eq₂` restates it over a single `answerTape` spanning both.
-
-`htransport` is given only the families the draw can actually produce, so
-`length_of_mem_support_tapeFamily` applies to the `Lfam` it is handed. That is what lets it
-discharge the per-class query bounds of
-`exists_pos_of_mem_support_run_tapeCachingImplClass`, which are stated against the lengths of
-that family rather than against `m`. -/
-theorem evalDist_run_dupRandomOracle_setOf_le_of_transport {α : Type}
-    (oa : OracleComp (spec + spec) α) (P : spec.QueryCache → Prop) (m : J → ℕ)
-    (b : ℝ≥0∞) (E : Set ((k : J) → List (R k)))
-    (hE : letI : MeasurableSpace ((k : J) → List (R k)) := ⊤; 𝒟[tapeFamily R m] E ≤ b)
-    (htransport : ∀ Lfam ∈ support (tapeFamily R m), Lfam ∉ E → ∀ z ∈ support ((simulateQ
-        (QueryImpl.extendState (tapeCachingImplClass R τ hR) (classPosAux R τ)) oa).run
-        ((∅, Lfam), ClassPos.init)),
-      ¬ P z.2.1.1) :
-    letI : MeasurableSpace (α × spec.QueryCache) := ⊤
-    𝒟[(simulateQ (dupRandomOracle spec) oa).run ∅] {z | P z.2} ≤ b := by
-  classical
-  let _ : MeasurableSpace (α × spec.QueryCache) := ⊤
-  let _ : MeasurableSpace ((k : J) → List (R k)) := ⊤
-  let _ : DiscreteMeasurableSpace ((k : J) → List (R k)) := ⟨fun _ => trivial⟩
-  rw [evalDist_run_dupRandomOracle_eq_tapeFamily (R := R) (τ := τ) (hR := hR) oa ∅ m]
-  refine le_trans ?_ hE
-  refine evalDist_bind_apply_le_of_forall_mem_support_notMem_eq_zero _ _
-    MeasurableSet.of_discrete MeasurableSet.of_discrete fun Lfam hLs hL => ?_
-  refine evalDist.apply_eq_zero_of_disjoint_support _ MeasurableSet.of_discrete fun z hz => ?_
-  rw [mem_support_bind_iff] at hz
-  obtain ⟨w, hw, hz⟩ := hz
-  rw [support_pure, Set.mem_singleton_iff] at hz
-  subst hz
-  rw [← extendState_run_proj_eq (tapeCachingImplClass R τ hR) (classPosAux R τ) oa
-    (∅, Lfam) ClassPos.init, support_map] at hw
-  obtain ⟨y, hy, hyw⟩ := hw
-  have hyy : y.2.1.1 = w.2.1 := by rw [← hyw]; rfl
-  simp only [Set.mem_ofPred_eq, ← hyy]
-  exact htransport Lfam hLs hL y hy
-
-/-- **Transporting a tape-family bound to a duplicated lazy random-oracle run, as an event
-probability.** If the event `E` of the tape family has probability at most `b`, and off `E` no
-instrumented run of `oa` on a family the draw can produce can leave a final cache satisfying
-`P`, then the shared lazy random-oracle run leaves a cache satisfying `P` with probability at
-most `b`. -/
-theorem prEvent_run_dupRandomOracle_le_of_transport {α : Type}
-    (oa : OracleComp (spec + spec) α) (P : spec.QueryCache → Prop) (m : J → ℕ)
-    (b : ℝ≥0∞) (E : ((k : J) → List (R k)) → Prop)
-    (hE : Pr{let L ← tapeFamily R m}[E L] ≤ b)
-    (htransport : ∀ Lfam ∈ support (tapeFamily R m), ¬ E Lfam → ∀ z ∈ support ((simulateQ
-        (QueryImpl.extendState (tapeCachingImplClass R τ hR) (classPosAux R τ)) oa).run
-        ((∅, Lfam), ClassPos.init)),
-      ¬ P z.2.1.1) :
-    Pr{let z ← (simulateQ (dupRandomOracle spec) oa).run ∅}[P z.2] ≤ b := by
-  let _ : MeasurableSpace (α × spec.QueryCache) := ⊤
-  let _ : MeasurableSpace ((k : J) → List (R k)) := ⊤
-  rw [prEvent_eq_evalDist_of_discrete] at hE ⊢
-  exact evalDist_run_dupRandomOracle_setOf_le_of_transport (τ := τ) (hR := hR) oa P m b
-    {L | E L} hE htransport
+    (ClassPosInv.empty τ Lfam) z hz).exists_pos hR T hq
 
 end Position
-
 
 /-! ## Forwarded private sampling -/
 
@@ -611,10 +547,30 @@ def classPosAuxFwd (R : J → Type) (τ : (spec + spec).Domain → J) :
   | .inl _ => fun _ _ _ p => p
   | .inr t => classPosAux R τ t
 
+omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)]
+  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
+@[simp] theorem classOf_inl (τ : (spec + spec).Domain → J) (n : unifSpec.Domain) :
+    classOf τ (Sum.inl n) = none := rfl
+
+omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)]
+  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
+@[simp] theorem classOf_inr (τ : (spec + spec).Domain → J) (t : (spec + spec).Domain) :
+    classOf τ (Sum.inr t) = some (τ t) := rfl
+
+omit [Fintype J] [∀ j, SampleableType (R j)]
+  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
+@[simp] theorem classPosAuxFwd_inl (R : J → Type) (τ : (spec + spec).Domain → J)
+    (n : unifSpec.Domain) : classPosAuxFwd R τ (Sum.inl n) = fun _ _ _ p => p := rfl
+
+omit [Fintype J] [∀ j, SampleableType (R j)]
+  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
+@[simp] theorem classPosAuxFwd_inr (R : J → Type) (τ : (spec + spec).Domain → J)
+    (t : (spec + spec).Domain) : classPosAuxFwd R τ (Sum.inr t) = classPosAux R τ t := rfl
+
 /-- **The instrumented forwarded class-indexed tape oracle.** `tapeImplFwd`, with the position
 bookkeeping of `classPosAuxFwd` beside a passive auxiliary state `Q` that `aux` updates from
 each step's states and answer. Neither auxiliary component influences the run. -/
-abbrev instrImpl (R : J → Type) (τ : (spec + spec).Domain → J)
+abbrev classPosImplFwd (R : J → Type) (τ : (spec + spec).Domain → J)
     (hR : ∀ t : (spec + spec).Domain, (spec + spec).Range t = R (τ t)) {Q : Type}
     (aux : (t : (unifSpec + (spec + spec)).Domain) →
       (spec.QueryCache × ((k : J) → List (R k))) → (unifSpec + (spec + spec)).Range t →
@@ -632,20 +588,45 @@ variable (τ : (spec + spec).Domain → J)
     (spec.QueryCache × ((k : J) → List (R k))) → Q → Q) (q₀ : Q)
 
 omit [Fintype J] [∀ j, SampleableType (R j)] in
-/-- **Every cache entry of a forwarded class-indexed tape run of a taped class sits at its own
-position on its class's tape.** In a run of `oa` under `instrImpl` from the empty cache and
-the empty bookkeeping on the tape family `Lfam`, every cached point has a class, pinned to one
-of its two call sites. If every class in `T` was queried no more often than its tape is long,
-then a cached point whose class `j` lies in `T` is the value of that class's tape at a position
-of that tape, returned in cast form along the equality of the point's range with `R j`.
-Distinct cached points sit at distinct class-position pairs.
+/-- Every step of `classPosImplFwd` preserves `ClassPosInv`: a private uniform query changes
+neither the cache, the tapes nor the bookkeeping, and a query of the duplicated interface is a
+step of the unforwarded instrumentation. -/
+theorem classPosInvAuxFwd_step (Lfam : (k : J) → List (R k))
+    (t : (unifSpec + (spec + spec)).Domain)
+    (s : (spec.QueryCache × ((k : J) → List (R k))) × (ClassPos spec.Domain J × Q))
+    (hs : ClassPosInv τ Lfam s.1.1 s.1.2 s.2.1.cls s.2.1.pos s.2.1.next s.2.1.cnt)
+    (y : (unifSpec + (spec + spec)).Range t ×
+      (spec.QueryCache × ((k : J) → List (R k))) × (ClassPos spec.Domain J × Q))
+    (hy : y ∈ support ((classPosImplFwd R τ hR aux t).run s)) :
+    ClassPosInv τ Lfam y.2.1.1 y.2.1.2 y.2.2.1.cls y.2.2.1.pos y.2.2.1.next y.2.2.1.cnt := by
+  rw [QueryImpl.extendState_apply, mem_support_bind_iff] at hy
+  obtain ⟨v, hv, hy⟩ := hy
+  rw [support_pure, Set.mem_singleton_iff] at hy
+  subst hy
+  rcases t with n | t
+  · have hv2 : v.2 = s.1 := by
+      simp only [tapeImplFwd, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
+        StateT.run_monadLift, support_bind, support_pure, Set.mem_iUnion] at hv
+      obtain ⟨u, -, hu⟩ := hv
+      rw [Set.mem_singleton_iff] at hu
+      rw [hu]
+    simpa only [classPosAuxFwd, hv2] using hs
+  · have hv' : (v.1, (v.2, classPosAux R τ t s.1 v.1 v.2 s.2.1)) ∈ support
+        ((QueryImpl.extendState (tapeCachingImplClass R τ hR) (classPosAux R τ) t).run
+          (s.1, s.2.1)) := by
+      rw [QueryImpl.extendState_apply, mem_support_bind_iff]
+      exact ⟨v, hv, by simp⟩
+    exact classPosInvAux_step Lfam t (s.1, s.2.1) hs _ hv'
 
-Classes outside `T` need no bound, so a class without a query budget does not obstruct the
-lemma for the others. -/
-theorem exists_pos_of_mem_support_run_instrImpl {α : Type} (Lfam : (k : J) → List (R k))
-    (oa : OracleComp (unifSpec + (spec + spec)) α)
+omit [Fintype J] [∀ j, SampleableType (R j)] in
+/-- **Every cache entry of a forwarded class-indexed tape run of a budgeted class sits at its
+own position on its class's tape.** `ClassPosInv.exists_pos` at the final state of a run of
+`oa` under `classPosImplFwd` from the empty cache and the empty bookkeeping on the tape family
+`Lfam`. Only the classes in `T` need a query bound. -/
+theorem exists_pos_of_mem_support_run_classPosImplFwd {α : Type}
+    (Lfam : (k : J) → List (R k)) (oa : OracleComp (unifSpec + (spec + spec)) α)
     {z : α × ((spec.QueryCache × ((k : J) → List (R k))) × (ClassPos spec.Domain J × Q))}
-    (hz : z ∈ support ((simulateQ (instrImpl R τ hR aux) oa).run
+    (hz : z ∈ support ((simulateQ (classPosImplFwd R τ hR aux) oa).run
       ((∅, Lfam), (ClassPos.init, q₀))))
     (T : Set J) (hq : ∀ j ∈ T, z.2.2.1.cnt j ≤ (Lfam j).length) :
     (∀ t y, z.2.1.1 t = some y → ∃ j, z.2.2.1.cls t = some j ∧
@@ -653,59 +634,21 @@ theorem exists_pos_of_mem_support_run_instrImpl {α : Type} (Lfam : (k : J) → 
         (j ∈ T → ∃ n, z.2.2.1.pos t = some n ∧ n < (Lfam j).length ∧
           ∃ h : spec.Range t = R j, (Lfam j)[n]? = some (cast h y))) ∧
       (∀ t t' j n, z.2.2.1.cls t = some j → z.2.2.1.pos t = some n → z.2.2.1.cls t' = some j →
-        z.2.2.1.pos t' = some n → t = t') := by
-  have hinv := simulateQ_run_preserves_inv_of_query (instrImpl R τ hR aux)
+        z.2.2.1.pos t' = some n → t = t') :=
+  (simulateQ_run_preserves_inv_of_query (classPosImplFwd R τ hR aux)
     (fun s => ClassPosInv τ Lfam s.1.1 s.1.2 s.2.1.cls s.2.1.pos s.2.1.next s.2.1.cnt)
-    (fun t s hs y hy => by
-      rw [QueryImpl.extendState_apply, mem_support_bind_iff] at hy
-      obtain ⟨v, hv, hy⟩ := hy
-      rw [support_pure, Set.mem_singleton_iff] at hy
-      subst hy
-      rcases t with n | t
-      · have hv2 : v.2 = s.1 := by
-          simp only [tapeImplFwd, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
-            StateT.run_monadLift, support_bind, support_pure, Set.mem_iUnion] at hv
-          obtain ⟨u, -, hu⟩ := hv
-          rw [Set.mem_singleton_iff] at hu
-          rw [hu]
-        simpa only [classPosAuxFwd, hv2] using hs
-      · have hv' : (v.1, (v.2, classPosAux R τ t s.1 v.1 v.2 s.2.1)) ∈ support
-            ((QueryImpl.extendState (tapeCachingImplClass R τ hR) (classPosAux R τ) t).run
-              (s.1, s.2.1)) := by
-          rw [QueryImpl.extendState_apply, mem_support_bind_iff]
-          exact ⟨v, hv, by simp⟩
-        exact classPosInvAux_step Lfam t (s.1, s.2.1) hs _ hv')
-    oa _ (ClassPosInv.empty τ Lfam) z hz
-  refine ⟨fun t y ht => ?_, hinv.pos_inj⟩
-  have htne : z.2.1.1 t ≠ none := by rw [ht]; exact Option.some_ne_none y
-  obtain ⟨j, hj⟩ : ∃ j, z.2.2.1.cls t = some j :=
-    Option.ne_none_iff_exists'.mp (hinv.cls_ne_none t htne)
-  have hjt : j = τ (Sum.inl t) ∨ j = τ (Sum.inr t) := by
-    rcases hinv.cls_tau t (by rw [hj]; exact Option.some_ne_none j) with hc | hc
-    · exact Or.inl (Option.some_inj.mp (hj.symm.trans hc))
-    · exact Or.inr (Option.some_inj.mp (hj.symm.trans hc))
-  refine ⟨j, hj, hjt, fun hjT => ?_⟩
-  obtain ⟨n, hn⟩ : ∃ n, z.2.2.1.pos t = some n := by
-    rcases hp : z.2.2.1.pos t with _ | n
-    · obtain ⟨hnil, hlt⟩ := hinv.fallback t j htne hj hp
-      have hlen := hinv.length_add j
-      rw [hnil, List.length_nil, Nat.zero_add] at hlen
-      exact absurd (hlen ▸ hlt) (by have := hq j hjT; omega)
-    · exact ⟨n, rfl⟩
-  obtain ⟨hlt, hval⟩ := hinv.pos_spec t j n hj hn
-  rw [ht] at hval
-  exact ⟨n, hn, lt_of_lt_of_le hlt (by have := hinv.length_add j; omega),
-    range_eq_of_cls hR hjt, eq_some_cast_of_heq _ hval⟩
+    (classPosInvAuxFwd_step τ hR aux Lfam) oa _ (ClassPosInv.empty τ Lfam) z hz).exists_pos
+    hR T hq
 
 omit [Fintype J] [∀ j, SampleableType (R j)] in
 /-- **Per-class query budgets bound the class counters.** If `oa` makes at most `n` queries of
-tape class `j`, then on every run of `oa` under `instrImpl` from the empty bookkeeping, the query
-counter of class `j` is at most `n`. -/
+tape class `j`, then on every run of `oa` under `classPosImplFwd` from the empty bookkeeping,
+the query counter of class `j` is at most `n`. -/
 theorem cnt_le_of_isQueryBoundP {α : Type} (Lfam : (k : J) → List (R k))
     (oa : OracleComp (unifSpec + (spec + spec)) α) (j : J) {n : ℕ}
     (hb : IsQueryBoundP oa (fun t => classOf τ t = some j) n)
     {z : α × ((spec.QueryCache × ((k : J) → List (R k))) × (ClassPos spec.Domain J × Q))}
-    (hz : z ∈ support ((simulateQ (instrImpl R τ hR aux) oa).run
+    (hz : z ∈ support ((simulateQ (classPosImplFwd R τ hR aux) oa).run
       ((∅, Lfam), (ClassPos.init, q₀)))) :
     z.2.2.1.cnt j ≤ n := by
   have hcnt : ∀ (t : (unifSpec + (spec + spec)).Domain) s u s' (p : ClassPos spec.Domain J),
@@ -727,7 +670,7 @@ theorem cnt_le_of_isQueryBoundP {α : Type} (Lfam : (k : J) → List (R k))
       · simp [classOf, hj, Function.update_of_ne (Ne.symm hj)]
   have hsupp : ∀ t
       (st : (spec.QueryCache × ((k : J) → List (R k))) × (ClassPos spec.Domain J × Q)) y,
-      y ∈ support ((instrImpl R τ hR aux t).run st) →
+      y ∈ support ((classPosImplFwd R τ hR aux t).run st) →
         y.2.2.1.cnt j ≤ st.2.1.cnt j + if classOf τ t = some j then 1 else 0 := by
     intro t st y hy
     rw [QueryImpl.extendState_apply, mem_support_bind_iff] at hy
@@ -735,7 +678,7 @@ theorem cnt_le_of_isQueryBoundP {α : Type} (Lfam : (k : J) → List (R k))
     rw [support_pure, Set.mem_singleton_iff] at hy
     subst hy
     exact hcnt t _ _ _ _
-  have := hb.cost_le_of_mem_support_run_simulateQ (impl := instrImpl R τ hR aux)
+  have := hb.cost_le_of_mem_support_run_simulateQ (impl := classPosImplFwd R τ hR aux)
     (fun st => st.2.1.cnt j)
     (fun t ht st y hy => by simpa [ht] using hsupp t st y hy)
     (fun t ht st y hy => by simpa [ht] using hsupp t st y hy) _ z hz
@@ -754,10 +697,10 @@ theorem prEvent_run_dupRandomOracleFwd_le_sum {α W : Type}
       Prop)
     (β : W → ℝ≥0∞)
     (hmap : ∀ L ∈ support (tapeFamily R m), ∀ z ∈ support
-        ((simulateQ (instrImpl R τ hR aux) oa).run ((∅, L), (ClassPos.init, q₀))),
+        ((simulateQ (classPosImplFwd R τ hR aux) oa).run ((∅, L), (ClassPos.init, q₀))),
       P (z.1, z.2.1.1) → ∃ w ∈ Ws, M w L ∧ H w z)
     (hH : ∀ L ∈ support (tapeFamily R m), ∀ w ∈ Ws,
-      Pr{let z ← (simulateQ (instrImpl R τ hR aux) oa).run
+      Pr{let z ← (simulateQ (classPosImplFwd R τ hR aux) oa).run
           ((∅, L), (ClassPos.init, q₀))}[H w z] ≤ β w) :
     Pr{let z ← (simulateQ (dupRandomOracleFwd spec) oa).run ∅}[P z] ≤
       ∑ w ∈ Ws, Pr{let L ← tapeFamily R m}[M w L] * β w := by
@@ -767,7 +710,7 @@ theorem prEvent_run_dupRandomOracleFwd_le_sum {α W : Type}
   let _ : MeasurableSpace ((k : J) → List (R k)) := ⊤
   have _ : DiscreteMeasurableSpace ((k : J) → List (R k)) := ⟨fun _ => trivial⟩
   set run := fun L : (k : J) → List (R k) =>
-    (simulateQ (instrImpl R τ hR aux) oa).run ((∅, L), (ClassPos.init, q₀)) with hrun
+    (simulateQ (classPosImplFwd R τ hR aux) oa).run ((∅, L), (ClassPos.init, q₀)) with hrun
   have hcomp : (tapeFamily R m >>= fun L =>
       (simulateQ (tapeImplFwd R τ hR) oa).run (∅, L) >>= fun z =>
         (pure (z.1, z.2.1) : ProbComp (α × spec.QueryCache))) =
