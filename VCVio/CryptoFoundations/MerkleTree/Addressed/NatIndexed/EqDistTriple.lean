@@ -7,7 +7,7 @@ Authors: Alexander Hicks
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Option
-public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple
+public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple.Simulate
 
 /-!
 # Equal-distribution triples for effectful Merkle traversals
@@ -160,7 +160,10 @@ variable {ι : Type} {spec : OracleSpec ι} {σ Y : Type} {so : QueryImpl spec (
   {r : σ → σ → Prop} [IsPreorder σ r] (Inv : σ → Prop) (R : ℕ → ℕ → Y → σ → Prop)
   {leaf₁ leaf₂ : ℕ → OracleComp spec Y} {node₁ node₂ : ℕ → ℕ → Y → Y → OracleComp spec Y}
 
-/-- `PerfectMerkleTree.merkleRootM_eqDistTriple` for callbacks over `spec` under `so`. -/
+/-- Roots of the perfect subtree at `(z, t)`, over callbacks on `spec` run under `so`, agree when
+the leaf callbacks agree at its leaves and the node callbacks at its internal nodes; the right-hand
+root is related to the final state at `(z, t)`. The simulation of a traversal is the traversal of
+the simulated callbacks, so this is `PerfectMerkleTree.merkleRootM_eqDistTriple` for those. -/
 theorem merkleRootM (hR : ∀ h i y s s', r s s' → R h i y s → R h i y s') (z t : ℕ)
     (hleaf : ∀ i, i / 2 ^ z = t →
       so.EqDistTriple r Inv (leaf₁ i) (leaf₂ i) fun y s ↦ Inv s ∧ R 0 i y s)
@@ -179,7 +182,11 @@ theorem merkleRootM (hR : ∀ h i y s s', r s s' → R h i y s → R h i y s') (
   rw [QueryImpl.EqDistTriple, e, e]
   exact merkleRootM_eqDistTriple Inv R hR z t hleaf hnode
 
-/-- `PerfectMerkleTree.intrinsicAuthPathM_eqDistTriple` for callbacks over `spec` under `so`. -/
+/-- Authentication paths of leaf `idx` over `z` levels, over callbacks on `spec` run under `so`,
+agree when the callbacks agree at the leaves and internal nodes of the height-`z` subtree
+containing `idx`; entry `j` of the right-hand path is related to the final state as the value of
+the level-`j` sibling. The simulation of a traversal is the traversal of the simulated callbacks,
+so this is `PerfectMerkleTree.intrinsicAuthPathM_eqDistTriple` for those. -/
 theorem intrinsicAuthPathM (hR : ∀ h i y s s', r s s' → R h i y s → R h i y s') (idx z : ℕ)
     (hleaf : ∀ i, i / 2 ^ z = idx / 2 ^ z →
       so.EqDistTriple r Inv (leaf₁ i) (leaf₂ i) fun y s ↦ Inv s ∧ R 0 i y s)
@@ -199,7 +206,12 @@ theorem intrinsicAuthPathM (hR : ∀ h i y s s', r s s' → R h i y s → R h i 
   rw [QueryImpl.EqDistTriple, e, e]
   exact intrinsicAuthPathM_eqDistTriple Inv R hR idx z hleaf hnode
 
-/-- `PerfectMerkleTree.climbM_eqDistTriple` for callbacks over `spec` under `so`. -/
+/-- Climbs from leaf `idx`, over node callbacks on `spec` run under `so`, agree when the node
+callbacks agree at the ancestors of the leaf and the starting value and path entries are related
+to the starting state as the values of the leaf and of its siblings; the right-hand climb is
+related to the final state as the value of the ancestor at height `auth.length`. The simulation
+of a climb is the climb of the simulated callbacks, so this is
+`PerfectMerkleTree.climbM_eqDistTriple` for those. -/
 theorem climbM (hR : ∀ h i y s s', r s s' → R h i y s → R h i y s') (idx : ℕ) (node : Y)
     (auth : List Y)
     (hnode : ∀ h, h < auth.length → ∀ left right,

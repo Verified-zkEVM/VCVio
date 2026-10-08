@@ -8,7 +8,6 @@ module
 
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.EvalDist.Measure
-public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 public import ToMathlib.Data.Vector
 public import ToMathlib.Order.RelClasses
 
@@ -46,6 +45,10 @@ postcondition `fun _ ↦ I`, gives the signing-stage hypotheses of
 measures by `OracleComp.EqDistTriple.evalDist_run_eq`, and preservation of `I` by the signing
 algorithm of the first scheme by the support condition with that scheme on the right, through
 `OracleComp.EqDistTriple.symm` if needed.
+
+For programs over an oracle specification run under one stateful interpretation `so`,
+`QueryImpl.EqDistTriple so` is, by definition, the triple of their simulations under `so`
+(`VCVio.OracleComp.SimSemantics.StateT.EqDistTriple.Simulate`).
 -/
 
 public section
@@ -161,77 +164,3 @@ theorem ofFnM_eqDistTriple {r : σ → σ → Prop} [IsPreorder σ r] {k : ℕ} 
     · simpa [getElem_push_lt] using hs.2 i
 
 end Vector
-
-/-! ## Triples between simulated programs -/
-
-namespace QueryImpl
-
-variable {ι : Type} {spec : OracleSpec ι} {σ α β : Type}
-
-/-- The programs `oa` and `ob` over `spec`, each run under the stateful interpretation `so`, form
-an equal-distribution triple: from every state satisfying `P` their simulations have equal
-output-and-state measures, and every outcome of the simulation of `ob` moves the state along `r`
-and satisfies `Q`. -/
-@[expose] def EqDistTriple (so : QueryImpl spec (StateT σ ProbComp)) (r : σ → σ → Prop)
-    (P : σ → Prop) (oa ob : OracleComp spec α) (Q : α → σ → Prop) : Prop :=
-  OracleComp.EqDistTriple r P (simulateQ so oa) (simulateQ so ob) Q
-
-namespace EqDistTriple
-
-variable {so : QueryImpl spec (StateT σ ProbComp)} {r : σ → σ → Prop} {P P' : σ → Prop}
-  {oa ob : OracleComp spec α} {Q Q' : α → σ → Prop}
-
-/-- A triple whose precondition is strengthened and whose postcondition is weakened. -/
-theorem mono (h : so.EqDistTriple r P oa ob Q) (hP : ∀ s, P' s → P s)
-    (hQ : ∀ a s, Q a s → Q' a s) : so.EqDistTriple r P' oa ob Q' :=
-  OracleComp.EqDistTriple.mono h hP hQ
-
-/-- A fact about the state that `r` preserves holds after both programs when it holds before. -/
-theorem frame (h : so.EqDistTriple r P oa ob Q) {F : σ → Prop}
-    (hF : ∀ s s', r s s' → F s → F s') :
-    so.EqDistTriple r (fun s ↦ P s ∧ F s) oa ob (fun a s ↦ Q a s ∧ F s) :=
-  OracleComp.EqDistTriple.frame h hF
-
-/-- The right-hand program of a triple may be replaced by one with the same simulation. -/
-theorem of_simulateQ_eq_right {ob' : OracleComp spec α} (h : so.EqDistTriple r P oa ob Q)
-    (e : simulateQ so ob = simulateQ so ob') : so.EqDistTriple r P oa ob' Q := by
-  rw [QueryImpl.EqDistTriple, ← e]
-  exact h
-
-/-- Returning one value from both sides. -/
-theorem pure [Std.Refl r] (a : α) (h : ∀ s, P s → Q a s) :
-    so.EqDistTriple r P (Pure.pure a) (Pure.pure a) Q := by
-  rw [QueryImpl.EqDistTriple, simulateQ_pure]
-  exact OracleComp.EqDistTriple.pure a h
-
-/-- Sequential composition: the continuations need to be related only from the states and
-outputs the simulation of the first right-hand program reaches. -/
-theorem bind [IsTrans σ r] {f g : α → OracleComp spec β} {S : β → σ → Prop}
-    (h : so.EqDistTriple r P oa ob Q) (hfg : ∀ a, so.EqDistTriple r (Q a) (f a) (g a) S) :
-    so.EqDistTriple r P (oa >>= f) (ob >>= g) S := by
-  rw [QueryImpl.EqDistTriple, simulateQ_bind, simulateQ_bind]
-  exact OracleComp.EqDistTriple.bind h hfg
-
-/-- When every step of `so` moves the state along the preorder `r`, every program forms a triple
-with itself. -/
-theorem refl [IsPreorder σ r] (hso : ∀ t s, ∀ z ∈ support ((so t).run s), r s z.2)
-    (oa : OracleComp spec α) : so.EqDistTriple r P oa oa fun _ _ ↦ True :=
-  OracleComp.EqDistTriple.of_support fun s _ z hz ↦
-    ⟨OracleComp.simulateQ_run_preservesInv so (r s)
-      (fun t _ hs z hz ↦ _root_.trans hs (hso t _ z hz)) oa s (_root_.refl s) z hz, trivial⟩
-
-/-- Componentwise triples give a triple for `Vector.ofFnM`, as in `Vector.ofFnM_eqDistTriple`. -/
-theorem ofFnM [IsPreorder σ r] {k : ℕ} (Inv : σ → Prop) (R : Fin k → α → σ → Prop)
-    (hR : ∀ i a s s', r s s' → R i a s → R i a s') {f g : Fin k → OracleComp spec α}
-    (h : ∀ i, so.EqDistTriple r Inv (f i) (g i) fun a s ↦ Inv s ∧ R i a s) :
-    so.EqDistTriple r Inv (Vector.ofFnM f) (Vector.ofFnM g)
-      fun v s ↦ Inv s ∧ ∀ i, R i v[i] s := by
-  have e : ∀ f : Fin k → OracleComp spec α,
-      simulateQ so (Vector.ofFnM f) = Vector.ofFnM fun i ↦ simulateQ so (f i) :=
-    fun f ↦ Vector.ofFnM_natural (simulateQ' so) f _ fun _ ↦ rfl
-  rw [QueryImpl.EqDistTriple, e, e]
-  exact Vector.ofFnM_eqDistTriple Inv R hR h
-
-end EqDistTriple
-
-end QueryImpl

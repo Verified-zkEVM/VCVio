@@ -369,6 +369,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple
+public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple.Simulate
 public import VCVio.OracleComp.SimSemantics.StateT.Measure
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection

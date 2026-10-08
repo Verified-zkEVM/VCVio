@@ -137,7 +137,7 @@ theorem evalDist_eagerImpl_liftComp_eq_labExperiment {e : core.SkSeed ≃ core.Y
   exact evalDist_simulateQ_run_unforgeableTranscriptExperiment_congr_of_inv _
     (allowed := fun _ ↦ True) (fun _ (sk : PublicKeyCore core) _ ↦ sk.pkSeed = pkSeed)
     (hkeygen.evalDist_run_eq trivial)
-    (fun z hz ↦ ((OracleComp.EqDistTriple.symm hkeygen) st trivial).2 z hz |>.2)
+    (fun z hz ↦ (hkeygen.symm st trivial).2 z hz |>.2)
     (fun _ _ _ _ _ h _ _ ↦ h)
     (fun pk sk msg s h ↦ (hsign pk sk msg h).evalDist_run_eq trivial)
     (fun _ _ _ _ h _ _ ↦ h)

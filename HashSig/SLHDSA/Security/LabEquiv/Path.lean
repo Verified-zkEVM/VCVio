@@ -7,7 +7,7 @@ Authors: Alexander Hicks
 module
 
 public import HashSig.SLHDSA.Security.LabScheme
-public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple
+public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple.Simulate
 
 /-!
 # Honest and lab steps in the eager game
@@ -120,7 +120,8 @@ abbrev LabTriple (pkSeed : core.PkSeed) {α : Type} (P : LabState core → Prop)
 /-- Every program is related to itself, with any precondition and no postcondition. -/
 theorem labTriple_refl (pkSeed : core.PkSeed) {α : Type} (P : LabState core → Prop)
     (oa : OracleComp (labSpec core) α) : LabTriple core pkSeed P oa oa fun _ _ ↦ True :=
-  QueryImpl.EqDistTriple.refl (fun _ _ _ ↦ (slhGraph core pkSeed).le_of_mem_support_eagerImpl) oa
+  QueryImpl.EqDistTriple.refl_of_step
+    (fun _ _ _ ↦ (slhGraph core pkSeed).le_of_mem_support_eagerImpl) oa
 
 /-- **The node step.** At a ledger address `a`, from a state in which the cells of the structural
 children of `a` hold `xs`, the honest tweakable hash `T(PK.seed, a, xs)` and the lab read of the
@@ -157,7 +158,7 @@ which its cell then holds. -/
 theorem labSecret_labTriple (pkSeed : core.PkSeed) {a : Adrs} (ha : a.IsSecretKey) :
     LabTriple core pkSeed (fun _ ↦ True) (labSecret core a) (labSecret core a)
       fun y st ↦ CellHolds core st (childCell core (.inl a)) y := by
-  refine EqDistTriple.of_support fun st _ z hz ↦ ?_
+  refine QueryImpl.EqDistTriple.of_support fun st _ z hz ↦ ?_
   rw [labSecret_of_isSecretKey core ha, CanonicalGraph.eagerImpl_readCell_run] at hz
   obtain ⟨hle, hc⟩ := RelabelState.le_and_cell_eq_of_mem_support_drawCell hz
   exact ⟨hle, _, childCell_inl core ha, hc⟩
