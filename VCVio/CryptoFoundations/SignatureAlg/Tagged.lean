@@ -186,7 +186,8 @@ theorem isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_sign
     (hverify : ∀ pk msg sig, IsQueryBoundP (sigAlg'.verify pk msg sig) q 0) :
     IsQueryBoundP (unforgeableTranscriptExperiment (adv.mapOracles G (sigAlg' := sigAlg'))) q n :=
   isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_add G hadv
-    (fun t _ => (hG t).mono zero_le_one) (fun t _ => hG t) hkeygen (fun pk sk msg _ => hsign pk sk msg)
+    (fun t _ => (hG t).mono zero_le_one) (fun t _ => hG t) hkeygen
+    (fun pk sk msg _ => hsign pk sk msg)
     (fun _ _ msg h => (h (hp msg)).elim) hverify
 
 /-- An adversary whose ambient oracles are interpreted through `G` makes only `allowed` ambient
