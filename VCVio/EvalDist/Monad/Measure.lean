@@ -20,7 +20,8 @@ The general interchange theorem requires joint measurability; the three-draw law
 specializes to discrete intermediate results and leaves the final result space arbitrary.
 Inside an event, a draw with countable outputs commutes with any other draw.
 Uniform finite draws can be reindexed by a bijection before an arbitrary continuation.
-A bound on a scalar observation over the support bounds its expectation.
+A bound on a scalar observation over the support bounds its expectation, and an observation
+that is at least `1` on an event bounds the event's probability.
 -/
 
 public section
@@ -184,7 +185,7 @@ theorem apply_eq_zero_of_disjoint_support (mx : m α) {event : Set α}
 
 end evalDist
 
-/-! ## Expectations bounded on the support -/
+/-! ## Expectations bounded on the support, and Markov's inequality -/
 
 /-- A bound on a scalar observation at every output in the support bounds its expectation. -/
 theorem lintegral_id_evalDist_map_le_of_le_of_mem_support {m : Type → Type v} [Monad m]
@@ -197,6 +198,17 @@ theorem lintegral_id_evalDist_map_le_of_le_of_mem_support {m : Type → Type v} 
         lintegral_mono_ae (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete hf)
     _ = c * 𝒟[mx] Set.univ := lintegral_const c
     _ ≤ c := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)
+
+/-- **Markov's inequality for a scalar observation.**  An event on which the observation is at
+least `1` has probability at most the observation's expectation. -/
+theorem prEvent_le_lintegral_id_evalDist_map {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α) {p : α → Prop}
+    {f : α → ENNReal} (hpf : ∀ x, p x → 1 ≤ f x) :
+    Pr{let x ← mx}[p x] ≤ ∫⁻ r, r ∂𝒟[f <$> mx] := by
+  let _ : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete, lintegral_id_evalDist_map,
+    ← lintegral_indicator_one MeasurableSet.of_discrete]
+  exact lintegral_mono (Set.indicator_le fun x hx => hpf x hx)
 
 /-! ## Commuting draws inside an event -/
 

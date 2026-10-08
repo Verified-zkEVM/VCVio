@@ -40,6 +40,15 @@ instance on the state type, the output type or the query ranges.
   implementation is the count of the base one.
 * `expectedSimulatedQueryCount_mono` and `expectedSimulatedQueryCount_or_of_disjoint`:
   monotonicity in the charged predicate, and additivity over disjoint charged predicates.
+* `lintegral_run_le_of_budget`: a potential `Φ n` on the state, indexed by a remaining budget `n`
+  of charged queries, whose expectation a charged step raises by at most one budget level and an
+  uncharged step not at all, has expected final `Φ 0` at most `Φ n` of the initial state when
+  the computation makes at most `n` charged queries. `prEvent_run_le_of_budget` is its Markov
+  form, for an event on which `Φ 0` is at least `1`. It bounds products of per-query lotteries,
+  such as the probability that `u` designated values are all hit by at most `n` fresh uniform
+  draws from `Y`: the potential is `n ^ u / |Y| ^ u` with `u` the number of values still
+  pending, and its step inequality `n ^ u + u * n ^ (u - 1) ≤ (n + 1) ^ u` is
+  `pow_add_mul_le_add_pow`.
 
 ## Related notions
 
@@ -47,6 +56,9 @@ instance on the state type, the output type or the query ranges.
 runtime monad with `[EvalDistSemantics m]`, which `StateT σ m` is not.
 `OracleComp.ProgramLogic.Relational.expectedQuerySlack` accumulates a state-dependent charge over
 `StateT (σ × Bool) (OracleComp spec')` against a residual budget and a bad flag.
+`OracleComp.IsPotentialStep` charges the first firing of a bad state predicate to a potential that
+grows along every path, against a budget on that potential rather than on the number of queries;
+it bounds sums of per-step firing masses, not products.
 
 The construction follows `formal/xmss/XmssSecurity/Proof/ExpectedQueryCount.lean` in
 `github.com/leanEthereum/leanVM`.
@@ -249,5 +261,57 @@ theorem expectedSimulatedQueryCount_or_of_disjoint (left right : spec.Domain →
     simp only [ih, hind]
     rw [lintegral_id_evalDist_map_add]
     ac_rfl
+
+/-! ## A potential indexed by the remaining budget -/
+
+/-- **The budgeted expected-potential bound.**  `Φ n s` is a potential on the state, indexed by a
+remaining budget `n` of charged queries and monotone in it.  If one interpreted step at index `t`
+from state `s` has expected `Φ n` on its final state at most `Φ (n + 1) s` when `t` is charged
+and at most `Φ n s` otherwise, then a computation making at most `n` charged queries has
+expected `Φ 0` on the final state of its interpreted run at most `Φ n s`.
+
+The potential is spent along the run: each charged step may raise the expectation by the
+difference between two consecutive budget levels, and an uncharged step may not raise it at all.
+A potential that does not depend on `n` gives the plain supermartingale bound, and
+`Φ n s = resource s + n` gives the expected-resource bound that
+`lintegral_resource_le_add_expectedSimulatedQueryCount` and
+`expectedSimulatedQueryCount_le_of_isQueryBoundP` combine to. -/
+theorem lintegral_run_le_of_budget (Φ : ℕ → σ → ℝ≥0∞) (hmono : ∀ s, Monotone fun n => Φ n s)
+    (hstep : ∀ (t : spec.Domain) (s : σ) (n : ℕ),
+      ∫⁻ r, r ∂𝒟[(fun z => Φ n z.2) <$> (so t).run s] ≤
+        Φ (n + if charged t then 1 else 0) s)
+    (oa : OracleComp spec α) (n : ℕ) (hq : oa.IsQueryBoundP charged n) (s : σ) :
+    ∫⁻ r, r ∂𝒟[(fun z => Φ 0 z.2) <$> (simulateQ so oa).run s] ≤ Φ n s := by
+  induction oa using OracleComp.inductionOn generalizing s n with
+  | pure x =>
+    simpa [simulateQ_pure] using hmono s (Nat.zero_le n)
+  | query_bind t k ih =>
+    rw [isQueryBoundP_query_bind_iff] at hq
+    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, lintegral_id_evalDist_map_bind]
+    by_cases ht : charged t
+    · obtain _ | n := n
+      · exact absurd (hq.1.resolve_left (not_not_intro ht)) (lt_irrefl 0)
+      simp only [ht, ↓reduceIte, Nat.add_sub_cancel] at hq
+      refine (lintegral_id_evalDist_map_mono _ fun z : spec.Range t × σ =>
+        ih z.1 n (hq.2 z.1) z.2).trans ?_
+      simpa only [ht, ↓reduceIte] using hstep t s n
+    · simp only [ht, ↓reduceIte] at hq
+      refine (lintegral_id_evalDist_map_mono _ fun z : spec.Range t × σ =>
+        ih z.1 n (hq.2 z.1) z.2).trans ?_
+      simpa only [ht, ↓reduceIte, add_zero] using hstep t s n
+
+/-- **The budgeted expected-potential bound, as an event probability.**  Under the hypotheses of
+`lintegral_run_le_of_budget`, an event `E` of the output and final state on which `Φ 0` is at
+least `1` has probability at most `Φ n s` after a computation making at most `n` charged
+queries. -/
+theorem prEvent_run_le_of_budget (Φ : ℕ → σ → ℝ≥0∞) (hmono : ∀ s, Monotone fun n => Φ n s)
+    (hstep : ∀ (t : spec.Domain) (s : σ) (n : ℕ),
+      ∫⁻ r, r ∂𝒟[(fun z => Φ n z.2) <$> (so t).run s] ≤
+        Φ (n + if charged t then 1 else 0) s)
+    (E : α × σ → Prop) (hE : ∀ z, E z → 1 ≤ Φ 0 z.2)
+    (oa : OracleComp spec α) (n : ℕ) (hq : oa.IsQueryBoundP charged n) (s : σ) :
+    Pr{let z ← (simulateQ so oa).run s}[E z] ≤ Φ n s :=
+  (prEvent_le_lintegral_id_evalDist_map _ hE).trans
+    (lintegral_run_le_of_budget so charged Φ hmono hstep oa n hq s)
 
 end OracleComp
