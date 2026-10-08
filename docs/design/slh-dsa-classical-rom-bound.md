@@ -30,23 +30,28 @@ collision with an honest entry, a hit on a hidden chain value or unopened FORS s
 of every FORS coordinate of the forgery's digest by logged signatures. Two further losses come from
 the proof itself: the forger guessing a secret seed (the hidden-seed coupling,
 `VCVio/OracleComp/QueryTracking/RandomOracle/HiddenSeed.lean`) and, in the faithfulness step,
-forger strings that begin with `SK.prf`.
+forger and signer strings that begin with `SK.prf`.
 
-Each loss is charged against the **queries of the kind that can cause it**, rather than against
-`q_h`, on every run: one joint potential over the deferred relabelled game covers the hidden-value
-hit, the target collision (at oracle-key level, so a forger input of any length at a node's key
-counts), the seed guess and, at byte level, the faithfulness misroute, and each forger or verifier
-query is charged by its kind. A query at an honest (ledger) key under `PK.seed` causes at most two
-unit hazards: its input can equal a hidden value, or its fresh answer can equal the honest answer.
-A query at a secret-derivable point (a `PRF` key or `PRF_msg`) causes one, the seed guess. Under
-the key-separation hypothesis (`CorePrimitives.KeySeparated`) no derivable point is at an honest
-key, so the kinds are disjoint for the target collision, the hidden-value hit and the seed guess;
-disjointness from the faithfulness event is owed with the faithfulness theorem. The forger's
-queries then cost at most `2·q_h / 2^{8n}`, and the verifier's are charged in the same potential
-(below). Both hazards are reachable at that rate, so an accounting that charges hazards rather
-than forgeries cannot go below 2; going lower requires showing that a single hazard is not yet a
-forgery, as leanVM's refined route does (below). Adding the losses as separate `q_h`-bounded
-terms instead gives a constant of 4.
+Each loss is to be charged against the **queries of the kind that can cause it**, rather than
+against `q_h`, on every run: one joint potential over the deferred relabelled game is to cover the
+hidden-value hit, the target collision (at oracle-key level, so a forger input of any length at a
+node's key counts), the seed guess and, for deterministic signing at byte level, the faithfulness
+misroute, with each forger or verifier query charged by its kind. The generic joint potential is
+`VCVio/OracleComp/QueryTracking/RandomOracle/JointPotential.lean`; its SLH-DSA instantiation and the
+faithfulness hook are owed. A query at an honest (ledger) key under `PK.seed` causes at most two
+unit hazards: its input can equal a hidden value, or its fresh answer can equal the honest answer. A
+query at a secret-derivable point (a `PRF` key or `PRF_msg`) causes one, the seed guess. For
+deterministic signing at byte level, an `H_msg` query causes one, the faithfulness event, when its
+string begins with `SK.prf`; these points are at no key, so this kind is disjoint from the others.
+Under the key-separation hypothesis (`CorePrimitives.KeySeparated`) no derivable point is at an
+honest key, so the kinds are disjoint for the target collision, the hidden-value hit and the seed
+guess. That the faithfulness theorem states its loss as an event of the typed run, joined into the
+potential and charged nowhere else, is owed with it. The forger's queries then cost at most
+`2·q_h / 2^{8n}`, and the verifier's are charged in the same potential (below). Both hazards are
+reachable at that rate, so an accounting that charges hazards rather than forgeries cannot go
+below 2; going lower requires showing that a single hazard is not yet a forgery, as leanVM's
+refined route does (below). Adding the losses as separate `q_h`-bounded terms instead gives a
+constant of 4.
 
 Beside the forger's `2·q_h / 2^{8n}`, the bound has two terms:
 
@@ -59,15 +64,15 @@ The three-oracle bound (`securityBound` in `Target.lean`) has no term linear in 
 signing mode: signing queries enter only through the coverage term. For deterministic signing the
 byte-level statement adds `q_s / 2^{8n}`, the faithfulness event for the signer's strings: a
 signing query whose randomizer equals `SK.prf`, so that its `H_msg` string begins with `SK.prf`.
-That event is joined into the same joint potential, not added as a separate probability.
+That event is to be joined into the same joint potential, not added as a separate probability.
 
 ### Levels
 
 Per-query level `−log₂(bound / q_h)` at `q_h = q_s = 2^64`. "Hedged" is the three-oracle bound,
-which holds in both signing modes; "Deterministic" is the byte-level bound for deterministic
-signing, with its `q_s / 2^{8n}` term. "Two-hazard limit" is the level with the coverage term and
-the constant 2 alone; `8n − 1` is the level of `Adv ≤ q_h / 2^{8n−1}`. The last column is the
-coverage term's cost in units of `q_h / 2^{8n}`.
+which holds in both signing modes; "Deterministic" adds to it the `q_s / 2^{8n}` term that the
+byte-level statement carries for deterministic signing. "Two-hazard limit" is the level with the
+coverage term and the constant 2 alone; `8n − 1` is the level of `Adv ≤ q_h / 2^{8n−1}`. The last
+column is the coverage term's cost in units of `q_h / 2^{8n}`.
 
 | Set | Hedged | Deterministic | Losses added separately (deterministic) | Two-hazard limit | `8n − 1` | Coverage cost |
 |---|---|---|---|---|---|---|
@@ -123,7 +128,7 @@ How it reaches 127, from its `PROOF.md`:
 | Scheme | FIPS 205, all twelve parameter sets | A SPHINCS variant: target-sum Winternitz with counter search, three layers, its own few-time signature |
 | Budget | Forger's queries `q_h` and `q_s`; honest work free | Every query of the experiment, key generation, signing and verification included |
 | Signatures per key | Evaluated at `2^64` | At most `2^24`, enforced by the game |
-| Secret seeds | `SK.seed`, `SK.prf` of `n` bytes: guessing costs `q_h / 2^{8n}` | 256-bit master seed |
+| Secret seeds | `SK.seed`, `SK.prf` of `n` bytes: guessing costs `q_h / 2^{8n}` (inside the constant 2) | 256-bit master seed |
 | Signing | Never fails; hedged or deterministic randomizer | Can fail (randomizer and counter searches); a completeness theorem bounds failure |
 | Unforgeability | EUF-CMA first, then SUF-CMA | SUF-CMA |
 | Bound | `2·q_h / 2^{8n}` plus coverage and verifier terms; byte-level deterministic adds `q_s / 2^{8n}` | `q / 2^127` |
@@ -139,8 +144,9 @@ what makes the statement informative at that signature count.
   in Lean with VCVio, which de-risks the target.
 - The two-hazard accounting behind the constant.
 - The expected charged-query count, `VCVio/OracleComp/QueryTracking/ExpectedQueryCount.lean`,
-  which follows `formal/xmss/XmssSecurity/Proof/ExpectedQueryCount.lean`. It carries the
-  expected-count form of the hidden-seed coupling; the bound above charges pathwise instead.
+  which follows `formal/xmss/XmssSecurity/Proof/ExpectedQueryCount.lean`. The expected-count
+  form of the hidden-seed coupling (`HiddenSeed.lean`) is stated with it; the bound above charges
+  pathwise instead.
 - Guidance on the hidden-value event: relabelling honest nodes and deferring their values, which
   plays a role like that of leanVM's canonical graph of honest hash inputs (`Proof/Hypertree`)
   and the exact adaptive posteriors of its uniform tables (`Proof/Base`).

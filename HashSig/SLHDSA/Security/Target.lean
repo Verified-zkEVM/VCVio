@@ -55,9 +55,10 @@ transcript of one execution, `SignatureAlg.UnforgeableTranscript` at the SLH-DSA
 numerals at the security theorem; `r` bounds the honest entries that share one oracle key, and
 `GeneralScheme.verifyInternalQueryBound` bounds the verifier's own queries, which a forger can
 make fire without making any query itself. Signing queries enter only through the coverage term,
-in both signing modes. For deterministic signing the byte-level statement over a single SHAKE256
-adds one term `2^{-8n}` per signing query, for the event that a signing query's randomizer equals
-`SK.prf`, so that the signer's `H_msg` string begins with `SK.prf`.
+in both signing modes. The byte-level statement over a single SHAKE256, to be related to this model
+by a faithfulness theorem, adds the losses of that step and, for deterministic signing, one term
+`2^{-8n}` per signing query, for the event that a signing query's randomizer equals `SK.prf`, so
+that the signer's `H_msg` string begins with `SK.prf`.
 `SecurityTarget` is a statement about a given core: it is a security result only at a shipped
 bundle with the constants fixed, since at a degenerate core — one whose node type has a single
 element, say — the right-hand side reaches one and the target holds trivially.
