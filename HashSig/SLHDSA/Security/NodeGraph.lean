@@ -57,7 +57,10 @@ Three facts make the graph the honest one.
   derivation is a node point.
 
 The points are injective at every input length (`slhGraph_pt_inj`), with no hypothesis on the
-encoding, so only node `κ` has points at key `κ`.
+encoding, so only node `κ` has points at key `κ`. The node keys `slhNodeKeys core pkSeed` place a
+public query at node `κ` exactly when it is a `thash` query at `pkSeed` and `κ`, of any input
+(`slhNodeKeys_node_thash_eq_some_iff`), and at no node otherwise
+(`slhNodeKeys_node_eq_none_of_forall_ne_thash`).
 
 `slhGraph` is exposed: the range of the public oracle at a node point is `core.Y` by `rfl`, and a
 program querying a node point makes the `thash` query itself, with no cast. The other
@@ -435,6 +438,51 @@ theorem _root_.SLHDSA.CorePrimitives.KeyDiscipline.slhGraph_ch_of_nodeKeyOf_eq_s
     pkSeed h
 
 end Graph
+
+/-! ## The node of a public point -/
+
+section NodeKeys
+
+variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
+
+open Classical in
+/-- **The node keys of the graph at public seed `pkSeed`.** A tweakable-hash query at the public
+seed `pkSeed` and a node's key is at that node, whatever its inputs; no other public query is at a
+node. -/
+noncomputable def slhNodeKeys (pkSeed : core.PkSeed) : (slhGraph core pkSeed).NodeKeys where
+  node
+    | .inl (.thash s κ _) =>
+        if h : s = pkSeed ∧ ∃ a ∈ constructionAddresses vp, core.adrsToKey a = κ then
+          some ⟨κ, h.2⟩ else none
+    | _ => none
+  node_pt {k} _ _ := dite_eq_left ⟨rfl, k.2⟩
+  range_eq {t} _ h := by
+    rcases t with (_ | _) | _
+    · rfl
+    all_goals exact absurd h (by simp)
+
+/-- A tweakable-hash query is at node `k` exactly when it is at the public seed and `k`'s key. -/
+theorem slhNodeKeys_node_thash_eq_some_iff {pkSeed s : core.PkSeed} {κ : core.AdrsKey}
+    {xs : List core.Y} {k : NodeKey core} :
+    (slhNodeKeys core pkSeed).node (.inl (.thash s κ xs)) = some k ↔ s = pkSeed ∧ κ = k.1 := by
+  dsimp only [slhNodeKeys]
+  split_ifs with h
+  · rw [Option.some.injEq]
+    exact ⟨fun h' => ⟨h.1, by rw [← h']⟩, fun h' => Subtype.ext h'.2⟩
+  · simp only [false_iff, not_and]
+    rintro rfl rfl
+    exact h ⟨rfl, k.2⟩
+
+/-- A public query other than a tweakable hash is at no node. -/
+theorem slhNodeKeys_node_eq_none_of_forall_ne_thash {pkSeed : core.PkSeed}
+    {t : PublicHashQuery core.PkSeed core.AdrsKey core.Y ⊕ PrfMsgQuery core.SkPrf core.Y}
+    (ht : ∀ s κ xs, t ≠ .inl (.thash s κ xs)) : (slhNodeKeys core pkSeed).node t = none := by
+  rcases t with (⟨s, κ, xs⟩ | _) | _
+  · exact absurd rfl (ht s κ xs)
+  all_goals rfl
+
+end NodeKeys
+
 
 /-! ## Node keys and derivation keys -/
 

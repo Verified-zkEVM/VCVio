@@ -7,6 +7,7 @@ Authors: Alexander Hicks
 module
 
 public import HashSig.SLHDSA.Security.NodeGraph
+public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential
 
 /-!
 # The canonical node graph at the FIPS 205 parameter sets
@@ -20,7 +21,9 @@ child, the derivation at the key of its secret-key address; a FORS node at heigh
 two children, the labels of the two leaves below it; and a FORS roots compression has the labels of
 the `k` tree roots, in tree order, as its children. At SLH-DSA-SHAKE-128s a WOTS+ public-key
 compression has `35 = len` children. No derivation key is a node key, a non-secret-key address has
-no derivation key, and the points of the graph are injective at every length.
+no derivation key, and the points of the graph are injective at every length. The node keys
+`slhNodeKeys` place a node point at its node, a `thash` query at another public seed or a message
+hash at no node, and the joint potential of the relabelling applies at them.
 -/
 
 public section
@@ -228,5 +231,68 @@ example (ps : FipsParameterSet) (pkSeed : (approvedPrimitives ps).core.PkSeed)
     {vs vs' : List (approvedPrimitives ps).core.Y}
     (h : (slhGraph _ pkSeed).pt κ vs = (slhGraph _ pkSeed).pt κ' vs') : κ = κ' ∧ vs = vs' :=
   slhGraph_pt_inj _ pkSeed h
+
+/-- At every FIPS 205 parameter set the node keys place a node point at its node. -/
+example (ps : FipsParameterSet) (pkSeed : (approvedPrimitives ps).core.PkSeed)
+    (κ : NodeKey (vp := ps.validatedParams) (approvedPrimitives ps).core)
+    (vs : List (approvedPrimitives ps).core.Y) :
+    (slhNodeKeys _ pkSeed).node ((slhGraph _ pkSeed).pt κ vs) = some κ :=
+  slhNodeKeys_node_thash_eq_some_iff _ |>.2 ⟨rfl, rfl⟩
+
+/-- At every FIPS 205 parameter set a tweakable-hash query at another public seed is at no
+node. -/
+example (ps : FipsParameterSet) {pkSeed s : (approvedPrimitives ps).core.PkSeed} (h : s ≠ pkSeed)
+    (κ : (approvedPrimitives ps).core.AdrsKey) (xs : List (approvedPrimitives ps).core.Y) :
+    (slhNodeKeys (vp := ps.validatedParams) _ pkSeed).node (.inl (.thash s κ xs)) = none :=
+  Option.eq_none_iff_forall_ne_some.2 fun _ hk =>
+    h ((slhNodeKeys_node_thash_eq_some_iff _).1 hk).1
+
+/-- At every FIPS 205 parameter set a message-hash query is at no node. -/
+example (ps : FipsParameterSet) (pkSeed : (approvedPrimitives ps).core.PkSeed)
+    (q : PublicHashQuery (approvedPrimitives ps).core.PkSeed (approvedPrimitives ps).core.AdrsKey
+      (approvedPrimitives ps).core.Y) (hq : ∀ s κ xs, q ≠ .thash s κ xs) :
+    (slhNodeKeys (vp := ps.validatedParams) _ pkSeed).node (.inl q) = none :=
+  slhNodeKeys_node_eq_none_of_forall_ne_thash _ fun s κ xs h => hq s κ xs (Sum.inl_injective h)
+
+section JointPotential
+
+open OracleComp OracleSpec
+open scoped ENNReal
+
+variable [DecidableEq (PublicHashQuery core.PkSeed core.AdrsKey core.Y ⊕
+    PrfMsgQuery core.SkPrf core.Y)] [DecidableEq (DeriveQuery core)]
+  [DecidableEq (NodeKey core)] [SampleableType core.Y]
+  [∀ t, SampleableType ((hashSpec core).Range t)]
+
+/-- The joint potential over the deferred game, the end fill and a draw, at the node keys of the
+graph: under a pathwise budget, a conflict, a target collision at a node key, or the hazard of the
+draw has probability at most the budget. -/
+theorem prEvent_deferredFillDraw_slhNodeKeys_le (pkSeed : core.PkSeed) {S α : Type}
+    (ms : ProbComp S) (H : S → (hashSpec core).QueryCache → Prop)
+    (c : (hashSpec core).QueryCache → ℝ≥0∞) (hH : ∀ C, Pr{let s ← ms}[H s C] ≤ c C)
+    (oa : OracleComp ((hashSpec core).withLabels (DeriveQuery core) (NodeKey core) core.Y) α)
+    (B : ℝ≥0∞) (hB : B ≠ ⊤)
+    (hbud : ∀ z ∈ support ((simulateQ (slhGraph core pkSeed).deferredImpl oa).run ((∅, ∅), [])),
+      2 * (((slhNodeKeys core pkSeed).keyEntries z.2.1.1).encard : ℝ≥0∞) / Nat.card core.Y +
+        c z.2.1.1 ≤ B) :
+    Pr{let w ← (slhGraph core pkSeed).deferredFillDraw ms oa}[
+      (slhGraph core pkSeed).Conflict w.2.1 ∨ (slhNodeKeys core pkSeed).TCHazard w.2.1 ∨
+        H w.2.2 w.2.1.1] ≤ B :=
+  (slhNodeKeys core pkSeed).prEvent_deferredFillDraw_le_of_budget ms H c hH oa B hB hbud
+
+end JointPotential
+
+/-- At every FIPS 205 parameter set the joint-potential bound applies at the node keys of the
+graph. -/
+example (ps : FipsParameterSet) (pkSeed : (approvedPrimitives ps).core.PkSeed) (S α : Type)
+    [DecidableEq (PublicHashQuery (approvedPrimitives ps).core.PkSeed
+      (approvedPrimitives ps).core.AdrsKey (approvedPrimitives ps).core.Y ⊕
+      PrfMsgQuery (approvedPrimitives ps).core.SkPrf (approvedPrimitives ps).core.Y)]
+    [DecidableEq (DeriveQuery (vp := ps.validatedParams) (approvedPrimitives ps).core)]
+    [DecidableEq (NodeKey (vp := ps.validatedParams) (approvedPrimitives ps).core)]
+    [SampleableType (approvedPrimitives ps).core.Y]
+    [∀ t, SampleableType
+      ((hashSpec (p := ps.validatedParams.params) (approvedPrimitives ps).core).Range t)] :=
+  prEvent_deferredFillDraw_slhNodeKeys_le (vp := ps.validatedParams) _ pkSeed (S := S) (α := α)
 
 end SLHDSA.NodeGraphTest
