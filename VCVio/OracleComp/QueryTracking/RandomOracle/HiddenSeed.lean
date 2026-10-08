@@ -60,31 +60,13 @@ raised with probability at most `ε` times that expected count
 (`SecretEncoding.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount`). The count is one
 of the ideal game, which does not depend on the secret, so other bounds charged against the
 `p`-queries of the same ideal run share it. A pathwise budget `IsQueryBoundP oa p q` bounds the
-expected count by `q` and gives the flag bound `q * ε`
-(`SecretEncoding.prEvent_flaggedIdealImpl_le_mul`); under it the final public cache of every run
-holds at most `q` points of `D`
-(`SecretEncoding.encard_inter_setOf_isSome_le_of_mem_support_idealImpl`). The bound `q * ε` is
-attained: a single public query at a point encoded under half of the secrets raises the flag with
-probability `1 / 2 = q * ε`. The same reading of the flag gives the event form of the coupling,
+expected count by `q` (`OracleComp.mul_expectedSimulatedQueryCount_le_of_isQueryBoundP`), so the
+flag bound is then at most `q * ε`. The bound is attained: a single public query at a point
+encoded under half of the secrets raises the flag with probability `1 / 2`, which is `ε` times its
+expected count of one. The same reading of the flag gives the event form of the coupling,
 with no loss term: an event of the real game is at most the event, read on the merged cache, or
 an encoded point in the final public cache, in the ideal game
 (`SecretEncoding.prEvent_realImpl_le_or`).
-
-Bookkeeping that an event must read alongside the games, such as a log or a record of where each
-answer came from, is carried through the bounds by extending the coupled real game and the ideal
-game by the same passive auxiliary state (`QueryImpl.extendState`). Its update may read the
-secret, the query, its answer, the split state before and after the step (including the
-derivation table) and its own previous value, but not the flag. The extended forms
-`SecretEncoding.prEvent_coupledImpl_extendState_le_add_mul_expectedSimulatedQueryCount`,
-`SecretEncoding.prEvent_coupledImpl_extendState_le_add_mul` and
-`SecretEncoding.prEvent_coupledImpl_extendState_le_add` bound an event of the extended coupled
-game's output, split state and auxiliary state by the same event of the extended ideal game.
-The averaged form charges the count of the unextended ideal game. A passive auxiliary state does
-not change the count (`OracleComp.expectedSimulatedQueryCount_extendState`), so it is also the
-count of the extended ideal game, and bounds proved in that game share it.
-Forgetting the auxiliary state and merging, the extended coupled game is the real game
-(`SecretEncoding.map_run_simulateQ_coupledImpl_extendState`), so an event of the real game is an
-event of the extended coupled game.
 
 ## Main statements
 
@@ -95,11 +77,6 @@ event of the extended coupled game.
 - `SecretEncoding.prEvent_coupledImpl_le_add_mul_expectedSimulatedQueryCount`: the same bound for
   an event of the coupled game's split state, which exposes the derivation table that the ideal
   game samples independently.
-- `SecretEncoding.prEvent_coupledImpl_extendState_le_add_mul_expectedSimulatedQueryCount`: the
-  same bound for the coupled and ideal games extended by a shared passive auxiliary state; the
-  count is of the unextended ideal game, which is also the count of every extension of it
-  (`OracleComp.expectedSimulatedQueryCount_extendState`), so bounds proved in an extended ideal
-  game share it.
 - `SecretEncoding.prEvent_realImpl_le_or` and `SecretEncoding.prEvent_bind_realImpl_le_or`: the
   event form, for a fixed secret and for a secret drawn from any distribution: an event of the
   real game is at most the same event of the ideal game, read on the merged cache, or a public
@@ -109,13 +86,8 @@ event of the extended coupled game.
   a set containing every encoded point.
 - `SecretEncoding.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount`: the flag bound
   `ε` times the expected count.
-- `SecretEncoding.prEvent_realImpl_le_add_mul`, `SecretEncoding.prEvent_coupledImpl_le_add_mul`,
-  `SecretEncoding.prEvent_coupledImpl_extendState_le_add_mul` and
-  `SecretEncoding.prEvent_flaggedIdealImpl_le_mul`: the same bounds under the budget, with the
-  loss `q * ε`.
-- `SecretEncoding.prEvent_realImpl_le_add`, `SecretEncoding.prEvent_coupledImpl_le_add` and
-  `SecretEncoding.prEvent_coupledImpl_extendState_le_add`: the fixed-secret bounds, charging the
-  flag probability of the flagged ideal game.
+- `SecretEncoding.prEvent_coupledImpl_le_add`: the fixed-secret bound, charging the flag
+  probability of the flagged ideal game.
 - `SecretEncoding.agreeUntilBad_coupledImpl_flaggedIdealImpl`: the coupled real game and the
   flagged ideal game agree until the flag.
 - `SecretEncoding.deriveImpl_comp_withDerivationsLift` and
@@ -126,8 +98,7 @@ event of the extended coupled game.
   query of a budget whose predicate no uniform-sampling query satisfies.
 - `SecretEncoding.map_run_simulateQ_coupledImpl` and
   `SecretEncoding.map_run_simulateQ_flaggedIdealImpl`: the coupled and flagged games project onto
-  the real and ideal games; `SecretEncoding.map_run_simulateQ_coupledImpl_extendState` projects
-  the coupled game extended by an auxiliary state onto the real game.
+  the real and ideal games.
 -/
 
 public section
@@ -441,20 +412,6 @@ theorem map_run_simulateQ_coupledImpl (s : S) {α : Type}
       rw [← merge_cacheQuery_table]
       rfl
 
-/-- Forgetting a passive auxiliary state and the flag and merging the split state turns the
-extended coupled game into the real one. -/
-theorem map_run_simulateQ_coupledImpl_extendState (s : S) {Q : Type}
-    (aux : (t : (pub.withDerivations X R).Domain) → SplitCache pub X R × Bool →
-      (pub.withDerivations X R).Range t → SplitCache pub X R × Bool → Q → Q)
-    {α : Type} (oa : OracleComp (pub.withDerivations X R) α) (st : SplitCache pub X R × Bool)
-    (r : Q) :
-    Prod.map id (fun st' : (SplitCache pub X R × Bool) × Q ↦ E.merge s st'.1.1) <$>
-        (simulateQ ((E.coupledImpl s).extendState aux) oa).run (st, r) =
-      (simulateQ (E.realImpl s) oa).run (E.merge s st.1) := by
-  rw [← E.map_run_simulateQ_coupledImpl s oa st,
-    ← extendState_run_proj_eq (E.coupledImpl s) aux oa st r, Functor.map_map]
-  rfl
-
 /-! ## The ideal game and its flagged form -/
 
 variable [SampleableType R]
@@ -579,50 +536,6 @@ theorem prEvent_coupledImpl_le_add (s : S) {α : Type}
   exact (E.agreeUntilBad_coupledImpl_flaggedIdealImpl s).prEvent_simulateQ_run_le_add_bad_right
     (E.flaggedIdealImpl_preservesInv s) oa _ fun z ↦ P (z.1, z.2.1)
 
-/-- Real game against the ideal game, for a fixed secret: an event of the real game is at most
-the event, read on the merged cache, in the ideal game, plus the chance that the flagged ideal
-game makes a public query at an encoded point. -/
-theorem prEvent_realImpl_le_add (s : S) {α : Type} (oa : OracleComp (pub.withDerivations X R) α)
-    (P : α × pub.QueryCache → Prop) :
-    Pr{let z ← (simulateQ (E.realImpl s) oa).run ∅}[P z] ≤
-      Pr{let z ← (simulateQ (idealImpl pub X R) oa).run (∅, ∅)}[P (z.1, E.merge s z.2)] +
-        Pr{let z ← (simulateQ (E.flaggedIdealImpl s) oa).run ((∅, ∅), false)}[z.2.2 = true] := by
-  have h := E.map_run_simulateQ_coupledImpl s oa ((∅, ∅), false)
-  rw [merge_empty] at h
-  rw [← h, prEvent_map]
-  exact E.prEvent_coupledImpl_le_add s oa fun z ↦ P (z.1, E.merge s z.2)
-
-/-- Coupled real game against the ideal game, both extended by the same passive auxiliary state,
-for a fixed secret: an event of the extended coupled game's output, split state and auxiliary
-state, with the flag forgotten, is at most the same event in the extended ideal game plus the
-chance that the flagged ideal game raises its flag. The auxiliary update `aux` reads the query,
-its answer, the split state before and after the step and its own previous value, but not the
-flag. -/
-theorem prEvent_coupledImpl_extendState_le_add (s : S) {Q : Type} (r₀ : Q)
-    (aux : (t : (pub.withDerivations X R).Domain) → SplitCache pub X R →
-      (pub.withDerivations X R).Range t → SplitCache pub X R → Q → Q)
-    {α : Type} (oa : OracleComp (pub.withDerivations X R) α)
-    (P : α × SplitCache pub X R × Q → Prop) :
-    Pr{
-      let z ← (simulateQ ((E.coupledImpl s).extendState fun t st u st' r ↦
-        aux t st.1 u st'.1 r) oa).run (((∅, ∅), false), r₀)}[P (z.1, z.2.1.1, z.2.2)] ≤
-      Pr{let z ← (simulateQ ((idealImpl pub X R).extendState aux) oa).run ((∅, ∅), r₀)}[P z] +
-        Pr{let z ← (simulateQ (E.flaggedIdealImpl s) oa).run ((∅, ∅), false)}[z.2.2 = true] := by
-  let aux' : (t : (pub.withDerivations X R).Domain) → SplitCache pub X R × Bool →
-      (pub.withDerivations X R).Range t → SplitCache pub X R × Bool → Q → Q :=
-    fun t st u st' r ↦ aux t st.1 u st'.1 r
-  have hideal : Prod.map id (fun st : (SplitCache pub X R × Bool) × Q ↦ (st.1.1, st.2)) <$>
-      (simulateQ ((E.flaggedIdealImpl s).extendState aux') oa).run (((∅, ∅), false), r₀) =
-      (simulateQ ((idealImpl pub X R).extendState aux) oa).run ((∅, ∅), r₀) := by
-    refine map_run_simulateQ_eq_of_query_map_eq _ _ _ (fun t st ↦ ?_) oa _
-    simp only [flaggedIdealImpl, QueryImpl.extendState_apply, bind_pure_comp, Functor.map_map,
-      Prod.map_apply, id_eq, aux']
-  rw [← hideal, prEvent_map,
-    ← extendState_run_proj_eq (E.flaggedIdealImpl s) aux' oa ((∅, ∅), false) r₀, prEvent_map]
-  exact ((E.agreeUntilBad_coupledImpl_flaggedIdealImpl s).extendState aux')
-    |>.prEvent_simulateQ_run_le_add_bad_right ((E.flaggedIdealImpl_preservesInv s).extendState aux')
-      oa _ fun z ↦ P (z.1, z.2.1.1, z.2.2)
-
 /-! ## The flag and the public cache -/
 
 /-- A step of the ideal game caches a public point exactly when the point was cached before the
@@ -682,19 +595,6 @@ theorem encard_inter_setOf_isSome_le_add_of_mem_support_idealImpl {D : Set ι}
       (D ∩ {t' | (st.1 t').isSome}).encard + if p t then 1 else 0 :=
   idealImpl_cachesOnlyQueryPoint.encard_inter_le_add_of_mem_support
     (by rintro ((n | t) | x) k ht hk <;> cases ht; exact hp _ hk) hw
-
-/-- Under a query budget charging every public query at a point of a set `D`, the final public
-cache of the ideal game, run from empty states, holds at most `q` points of `D`. -/
-theorem encard_inter_setOf_isSome_le_of_mem_support_idealImpl {D : Set ι}
-    {p : (pub.withDerivations X R).Domain → Prop} [DecidablePred p]
-    (hp : ∀ t ∈ D, p (.inl (.inr t))) {α : Type} {oa : OracleComp (pub.withDerivations X R) α}
-    {q : ℕ} (h : IsQueryBoundP oa p q) {z : α × SplitCache pub X R}
-    (hz : z ∈ support ((simulateQ (idealImpl pub X R) oa).run (∅, ∅))) :
-    (D ∩ {t | (z.2.1 t).isSome}).encard ≤ q := by
-  simpa only [QueryCache.empty_apply, Option.isSome_none, Bool.false_eq_true, Set.ofPred_false,
-    Set.inter_empty, Set.encard_empty, zero_add] using
-    idealImpl_cachesOnlyQueryPoint.encard_inter_le_add_of_mem_support_simulateQ
-      (by rintro ((n | t) | x) k ht hk <;> cases ht; exact hp _ hk) h hz
 
 /-- Under a charged predicate holding at every public query at a point of a set `D`, the expected
 number of points of `D` in the final public cache of the ideal game, run from empty states, is at
@@ -805,22 +705,6 @@ theorem prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount {ms : ProbCo
         gcongr
         exact lintegral_encard_inter_setOf_isSome_le_expectedSimulatedQueryCount hD oa
 
-/-- Under a query budget charging every public query at an encodable point, the flagged ideal
-game run under a secret drawn from `ms` raises its flag with probability at most `q * ε`, where
-`ε` bounds, for every public point, the chance that it encodes some derivation under the
-secret. -/
-theorem prEvent_flaggedIdealImpl_le_mul {ms : ProbComp S} {ε : ℝ≥0∞}
-    (hε : ∀ t, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] ≤ ε)
-    {p : (pub.withDerivations X R).Domain → Prop} [DecidablePred p]
-    (hp : ∀ s x, p (.inl (.inr (E.enc s x)))) {α : Type}
-    {oa : OracleComp (pub.withDerivations X R) α} {q : ℕ} (h : IsQueryBoundP oa p q) :
-    Pr{
-      let s ← ms
-      let z ← (simulateQ (E.flaggedIdealImpl s) oa).run ((∅, ∅), false)}[z.2.2 = true] ≤
-      q * ε :=
-  (E.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount hε hp oa).trans <|
-    mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ p h _ ε
-
 /-- Coupled real game against the ideal game, for a secret drawn from `ms`: an event of the secret
 and of the coupled game's output and split state, with the flag forgotten, is at most the same
 event in the ideal game plus `ε` times the expected number of `p`-queries of the ideal game, where
@@ -842,85 +726,6 @@ theorem prEvent_coupledImpl_le_add_mul_expectedSimulatedQueryCount {ms : ProbCom
   simp only [prEvent_bind_bind_eq_lintegral_of_discrete]
   exact (lintegral_mono fun s ↦ E.prEvent_coupledImpl_le_add s oa (P s)).trans
     (lintegral_add_left Measurable.of_discrete _).le
-
-/-- Coupled real game against the ideal game, for a secret drawn from `ms` and under a query
-budget charging every public query at an encodable point: an event of the secret and of the
-coupled game's output and split state, with the flag forgotten, is at most the same event in the
-ideal game plus `q * ε`, where `ε` bounds, for every public point, the chance that it encodes some
-derivation under the secret. -/
-theorem prEvent_coupledImpl_le_add_mul {ms : ProbComp S} {ε : ℝ≥0∞}
-    (hε : ∀ t, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] ≤ ε)
-    {p : (pub.withDerivations X R).Domain → Prop} [DecidablePred p]
-    (hp : ∀ s x, p (.inl (.inr (E.enc s x)))) {α : Type}
-    {oa : OracleComp (pub.withDerivations X R) α} {q : ℕ} (h : IsQueryBoundP oa p q)
-    (P : S → α × SplitCache pub X R → Prop) :
-    Pr{
-      let s ← ms
-      let z ← (simulateQ (E.coupledImpl s) oa).run ((∅, ∅), false)}[P s (z.1, z.2.1)] ≤
-      Pr{let s ← ms; let z ← (simulateQ (idealImpl pub X R) oa).run (∅, ∅)}[P s z] +
-        q * ε :=
-  (E.prEvent_coupledImpl_le_add_mul_expectedSimulatedQueryCount hε hp oa P).trans <|
-    add_le_add le_rfl <|
-      mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ p h _ ε
-
-/-- Coupled real game against the ideal game, both extended by the same passive auxiliary state,
-for a secret drawn from `ms`: an event of the secret and of the extended coupled game's output,
-split state and auxiliary state is at most the same event in the extended ideal game plus `ε`
-times the expected number of `p`-queries of the (unextended) ideal game, where `ε` bounds, for
-every public point, the chance that it encodes some derivation under the secret, and `p` holds at
-every public query at an encodable point. The auxiliary update `aux s` may read the secret, the
-query, its answer, the split state before and after the step and its own previous value, but not
-the flag. -/
-theorem prEvent_coupledImpl_extendState_le_add_mul_expectedSimulatedQueryCount {Q : Type}
-    (r₀ : Q)
-    (aux : S → (t : (pub.withDerivations X R).Domain) → SplitCache pub X R →
-      (pub.withDerivations X R).Range t → SplitCache pub X R → Q → Q)
-    {ms : ProbComp S} {ε : ℝ≥0∞} (hε : ∀ t, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] ≤ ε)
-    {p : (pub.withDerivations X R).Domain → Prop} [DecidablePred p]
-    (hp : ∀ s x, p (.inl (.inr (E.enc s x)))) {α : Type}
-    (oa : OracleComp (pub.withDerivations X R) α) (P : S → α × SplitCache pub X R × Q → Prop) :
-    Pr{
-      let s ← ms
-      let z ← (simulateQ ((E.coupledImpl s).extendState fun t st u st' r ↦
-        aux s t st.1 u st'.1 r) oa).run (((∅, ∅), false), r₀)}[P s (z.1, z.2.1.1, z.2.2)] ≤
-      Pr{
-        let s ← ms
-        let z ← (simulateQ ((idealImpl pub X R).extendState (aux s)) oa).run ((∅, ∅), r₀)}[
-        P s z] + ε * expectedSimulatedQueryCount (idealImpl pub X R) p oa (∅, ∅) := by
-  let _ : MeasurableSpace S := ⊤
-  refine le_trans ?_ (add_le_add le_rfl
-    (E.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount hε hp oa))
-  simp only [prEvent_bind_bind_eq_lintegral_of_discrete]
-  exact (lintegral_mono fun s ↦
-    E.prEvent_coupledImpl_extendState_le_add s r₀ (aux s) oa (P s)).trans
-    (lintegral_add_left Measurable.of_discrete _).le
-
-/-- Coupled real game against the ideal game, both extended by the same passive auxiliary state,
-for a secret drawn from `ms` and under a query budget charging every public query at an
-encodable point: an event of the secret and of the extended coupled game's output, split state
-and auxiliary state is at most the same event in the extended ideal game plus `q * ε`, where `ε`
-bounds, for every public point, the chance that it encodes some derivation under the secret. The
-auxiliary update `aux s` may read the secret, the query, its answer, the split state before and
-after the step and its own previous value, but not the flag. -/
-theorem prEvent_coupledImpl_extendState_le_add_mul {Q : Type} (r₀ : Q)
-    (aux : S → (t : (pub.withDerivations X R).Domain) → SplitCache pub X R →
-      (pub.withDerivations X R).Range t → SplitCache pub X R → Q → Q)
-    {ms : ProbComp S} {ε : ℝ≥0∞} (hε : ∀ t, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] ≤ ε)
-    {p : (pub.withDerivations X R).Domain → Prop} [DecidablePred p]
-    (hp : ∀ s x, p (.inl (.inr (E.enc s x)))) {α : Type}
-    {oa : OracleComp (pub.withDerivations X R) α} {q : ℕ} (h : IsQueryBoundP oa p q)
-    (P : S → α × SplitCache pub X R × Q → Prop) :
-    Pr{
-      let s ← ms
-      let z ← (simulateQ ((E.coupledImpl s).extendState fun t st u st' r ↦
-        aux s t st.1 u st'.1 r) oa).run (((∅, ∅), false), r₀)}[P s (z.1, z.2.1.1, z.2.2)] ≤
-      Pr{
-        let s ← ms
-        let z ← (simulateQ ((idealImpl pub X R).extendState (aux s)) oa).run ((∅, ∅), r₀)}[
-        P s z] + q * ε :=
-  (E.prEvent_coupledImpl_extendState_le_add_mul_expectedSimulatedQueryCount r₀ aux hε hp oa
-    P).trans <| add_le_add le_rfl <|
-      mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ p h _ ε
 
 /-- Real game against the ideal game, for a secret drawn from `ms`: an event of the secret and of
 the real game is at most the event, read on the merged cache, in the ideal game, plus `ε` times
@@ -944,25 +749,6 @@ theorem prEvent_realImpl_le_add_mul_expectedSimulatedQueryCount {ms : ProbComp S
   simp only [hs, bind_map_left]
   exact E.prEvent_coupledImpl_le_add_mul_expectedSimulatedQueryCount hε hp oa
     fun s z ↦ P s (z.1, E.merge s z.2)
-
-/-- Real game against the ideal game, for a secret drawn from `ms` and under a query budget
-charging every public query at an encodable point: an event of the secret and of the real game is
-at most the event, read on the merged cache, in the ideal game, plus `q * ε`, where `ε` bounds,
-for every public point, the chance that it encodes some derivation under the secret. -/
-theorem prEvent_realImpl_le_add_mul {ms : ProbComp S} {ε : ℝ≥0∞}
-    (hε : ∀ t, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] ≤ ε)
-    {p : (pub.withDerivations X R).Domain → Prop} [DecidablePred p]
-    (hp : ∀ s x, p (.inl (.inr (E.enc s x)))) {α : Type}
-    {oa : OracleComp (pub.withDerivations X R) α} {q : ℕ} (h : IsQueryBoundP oa p q)
-    (P : S → α × pub.QueryCache → Prop) :
-    Pr{let s ← ms; let z ← (simulateQ (E.realImpl s) oa).run ∅}[P s z] ≤
-      Pr{
-        let s ← ms
-        let z ← (simulateQ (idealImpl pub X R) oa).run (∅, ∅)}[P s (z.1, E.merge s z.2)] +
-        q * ε :=
-  (E.prEvent_realImpl_le_add_mul_expectedSimulatedQueryCount hε hp oa P).trans <|
-    add_le_add le_rfl <|
-      mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ p h _ ε
 
 end SecretEncoding
 

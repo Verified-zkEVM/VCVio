@@ -38,10 +38,10 @@ secret seeds `s` uniformly, runs the transcript experiment of `deriveScheme` aga
 `deriveAdversary core adv` in the real game `(secretEncoding core e pkSeed).realImpl s` from the
 empty cache, and rebuilds the transcript with `DeriveOutcome.fill core s`.
 `prEvent_romSchemeRun_pure_eq` is its form for the probability of an event. Its right side,
-with the draw of `s` outside the real game, is the left side of the averaged real-game bounds
-`SecretEncoding.prEvent_realImpl_le_add_mul_expectedSimulatedQueryCount` and
-`SecretEncoding.prEvent_realImpl_le_add_mul` at `ms := $ᵗ (core.SkSeed × core.SkPrf)` and the
-event `fun s z => Q (DeriveOutcome.fill core s z.1, z.2)`.
+with the draw of `s` outside the real game, is the left side of the averaged real-game bound
+`SecretEncoding.prEvent_realImpl_le_add_mul_expectedSimulatedQueryCount` at
+`ms := $ᵗ (core.SkSeed × core.SkPrf)` and the event
+`fun s z => Q (DeriveOutcome.fill core s z.1, z.2)`.
 
 ## Scope
 
