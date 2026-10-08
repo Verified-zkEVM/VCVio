@@ -175,6 +175,19 @@ theorem le_and_cell_eq_of_mem_support_drawCell {c : X ⊕ K} {st : RelabelState 
   exact ⟨⟨le_rfl, QueryImpl.withCaching_cache_le _ _ _ _ hw⟩,
     QueryImpl.withCaching_run_caches _ _ _ _ hw⟩
 
+/-- Drawing a cell changes no other cell. -/
+theorem cell_eq_of_mem_support_drawCell {c c' : X ⊕ K} {st : RelabelState pub X K R}
+    {z : R × RelabelState pub X K R} (hz : z ∈ support ((drawCell c).run st)) (hc : c' ≠ c) :
+    z.2.2 c' = st.2 c' := by
+  cases h : st.2 c with
+  | some v =>
+    rw [drawCell_run_of_cell_eq_some h, support_pure, Set.mem_singleton_iff] at hz
+    rw [hz]
+  | none =>
+    rw [drawCell_run_of_cell_eq_none h, support_map] at hz
+    obtain ⟨u, -, rfl⟩ := hz
+    exact QueryCache.cacheQuery_of_ne _ _ hc
+
 /-- The label operations with every operation drawing its cell: `touch c` draws `c` and discards
 it, `read k` draws the label of `k`. -/
 @[expose] noncomputable def labelImpl :

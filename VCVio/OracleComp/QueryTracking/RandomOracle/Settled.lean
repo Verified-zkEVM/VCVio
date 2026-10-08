@@ -39,6 +39,8 @@ with the merged caches of the conflict-free states extending a state as its admi
   conflict-free states extending the post-state.
 - `CanonicalGraph.merge_apply_of_mem_support_relabelImpl_pub`: a public query of the relabelled
   game leaves its answer in the merged cache of the post-state.
+- `CanonicalGraph.fst_apply_of_mem_support_deferredImpl_pub`: a public query of the deferred game
+  at a point that is no node's point leaves its answer in the public cache.
 -/
 
 public section
@@ -71,6 +73,17 @@ theorem merge_apply_of_mem_support_relabelImpl_pub {t : ι} {st : RelabelState p
       fun _ ↦ G.childVals_congr fun _ _ ↦ rfl
     rw [G.merge_apply_of_not_exists (st := (w.2, st.2)) (by simpa only [hcv] using ht)]
     exact QueryImpl.withCaching_run_caches _ _ _ _ hw
+
+/-- A public query of the deferred game at a point that is no node's point leaves its answer at
+that point in the public cache. -/
+theorem fst_apply_of_mem_support_deferredImpl_pub {t : ι} (ht : ∀ k vs, G.pt k vs ≠ t)
+    {s : RelabelState pub X K R × List (X ⊕ K)} {z}
+    (hz : z ∈ support ((G.deferredImpl (.inl (.inl (.inr t)))).run s)) :
+    z.2.1.1 t = some z.1 := by
+  rw [deferredImpl_run_inl, G.relabelImpl_run_pub_of_not_exists fun ⟨k, vs, _, h⟩ ↦ ht k vs h,
+    Functor.map_map, support_map] at hz
+  obtain ⟨w, hw, rfl⟩ := hz
+  exact QueryImpl.withCaching_run_caches _ _ _ _ hw
 
 /-- If every query `t` of a handler `h`, run in the deferred game, returns an answer that `rd st`
 holds at `t` for every conflict-free state `st` extending its post-state, then a program run

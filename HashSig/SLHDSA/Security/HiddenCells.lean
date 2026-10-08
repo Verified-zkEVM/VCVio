@@ -9,7 +9,6 @@ module
 public import HashSig.SLHDSA.Security.LabScheme
 public import HashSig.SLHDSA.Security.RomDescentSecret
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ReadSet
-import all HashSig.SLHDSA.Security.NodeGraph
 import HashSig.SLHDSA.Security.AddressKeys
 
 /-!
@@ -299,15 +298,15 @@ theorem hiddenUndrawn_of_mem_support_deferredImpl [SampleableType core.Y] [Decid
   have hle := (slhGraph core pkSeed).le_of_mem_support_deferredImpl hz
   have hU : ∀ d, SignedDigest core pk log s.1.1 d → SignedDigest core pk log z.2.1.1 d :=
     fun _ h ↦ h.mono (fun _ h ↦ h) hle.1
-  rcases (slhGraph core pkSeed).cell_eq_or_exists_childVals_of_mem_support_deferredImpl hz c with
-    h | ⟨κ, vs, rfl, hκ⟩
+  rcases (slhGraph core pkSeed).cell_eq_or_draws_of_mem_support_deferredImpl hz c with
+    h | ⟨κ, vs, rfl, hκ, -⟩ | ⟨_, ⟨⟩, -⟩ | ⟨_, ⟨⟩, -⟩
   · rw [h]
     exact hs c (hiddenCells_anti hU hle hc)
   · exfalso
     obtain ⟨b, hb, hbc⟩ := hc
     rcases hb with ⟨pos, i, t, rfl, hstep⟩ | ⟨bp, t, -, rfl, -⟩
     · rcases t with _ | t
-      · simp [chainChild, childCell] at hbc
+      · simp [chainChild, childCell_inl_eq_some_iff] at hbc
       · have hmem := wotsChainAdrs_setHashAddress_mem_constructionAddresses pos i (t := t)
           (by have := hstep.1; omega)
         rw [chainChild, childCell_inr core hmem] at hbc
@@ -323,7 +322,7 @@ theorem hiddenUndrawn_of_mem_support_deferredImpl [SampleableType core.Y] [Decid
         rcases hκ with _ | ⟨hv, -⟩
         rw [hnone] at hv
         exact absurd hv (by simp)
-    · simp [childCell] at hbc
+    · simp [childCell_inl_eq_some_iff] at hbc
 
 /-! ## Hidden cells of a forgery's replay
 
@@ -374,31 +373,6 @@ theorem hiddenChainStep_of_le (hle : st ≤ st') {pos : LayerPosition vp} {i t :
 
 /-! ## Distinct children have distinct cells -/
 
-/-- Under key injectivity on the in-range addresses, two in-range structural children with the
-same cell are equal. -/
-theorem eq_of_childCell_eq_some (hinj : core.KeyInjective vp) {b b' : Adrs ⊕ Adrs}
-    {c : DeriveQuery core ⊕ NodeKey core} (hc : childCell core b = some c)
-    (hc' : childCell core b' = some c) (hb : AddressFacts vp (b.elim id id))
-    (hb' : AddressFacts vp (b'.elim id id)) : b = b' := by
-  rcases b with a | a <;> rcases b' with a' | a' <;>
-    simp only [childCell, Option.map_eq_some_iff] at hc hc'
-  · obtain ⟨k, hk, rfl⟩ := hc
-    obtain ⟨k', hk', hkk⟩ := hc'
-    obtain rfl : k' = k := Sum.inl_injective (Sum.inl_injective hkk)
-    rw [prfKeyOf_eq_some_iff] at hk hk'
-    exact congrArg Sum.inl (hinj hb hb' (hk.2.trans hk'.2.symm))
-  · obtain ⟨_, -, rfl⟩ := hc
-    obtain ⟨_, -, h⟩ := hc'
-    simp at h
-  · obtain ⟨_, -, rfl⟩ := hc
-    obtain ⟨_, -, h⟩ := hc'
-    simp at h
-  · obtain ⟨k, hk, rfl⟩ := hc
-    obtain ⟨k', hk', hkk⟩ := hc'
-    obtain rfl : k' = k := Sum.inr_injective hkk
-    rw [nodeKeyOf_eq_some_iff] at hk hk'
-    exact congrArg Sum.inr (hinj hb hb' (hk.2.trans hk'.2.symm))
-
 /-- **Reading unhidden children.** Under the key discipline, the cell of an in-range structural
 child that is not hidden is not a hidden cell. -/
 theorem not_mem_hiddenCells_of_childCell_eq_some (hd : core.KeyDiscipline vp) {b : Adrs ⊕ Adrs}
@@ -414,15 +388,14 @@ theorem not_mem_hiddenCells_of_childCell_eq_some (hd : core.KeyDiscipline vp) {b
 theorem addressFacts_of_childCell_inr_eq_some (hb : CanonicalAddressBounds vp.params) {a : Adrs}
     {c : DeriveQuery core ⊕ NodeKey core} (hc : childCell core (.inr a) = some c) :
     AddressFacts vp a := by
-  simp only [childCell, Option.map_eq_some_iff] at hc
-  obtain ⟨κ, hκ, -⟩ := hc
-  exact addressFacts_of_mem_constructionAddresses hb ((nodeKeyOf_eq_some_iff core).1 hκ).1
+  obtain ⟨-, ha, -⟩ := (childCell_inr_eq_some_iff core).1 hc
+  exact addressFacts_of_mem_constructionAddresses hb ha
 
 /-- A derivation that is not a secret, such as a randomizer, is not a hidden cell. -/
 theorem inl_inr_not_mem_hiddenCells (x : core.Y × List Byte) :
     (.inl (.inr x) : DeriveQuery core ⊕ NodeKey core) ∉ hiddenCells core U st := by
   rintro ⟨b, -, hb⟩
-  rcases b with a | a <;> simp [childCell] at hb
+  rcases b with a | a <;> simp [childCell_inl_eq_some_iff, childCell_inr_eq_some_iff] at hb
 
 /-! ## Children that are not hidden -/
 
@@ -473,15 +446,5 @@ theorem not_hiddenChild_inl_forsSkAdrs {d : Bytes vp.params.m} (hd : U d) (i : F
       Adrs.ext hl.symm ht.symm rfl hw.symm rfl rfl
     rw [hadrs, ← hidx] at h
     exact h ⟨d, hd, i, rfl, rfl⟩
-
-/-- The global leaf index of an opened FORS coordinate is below `k * 2 ^ a`. -/
-theorem forsSigLeafIndex_lt (md : List Byte) (i : Fin vp.params.k) :
-    forsSigLeafIndex vp.params md i.val < vp.params.k * 2 ^ vp.params.a := by
-  have h := forsIdx_lt vp.params md i.val
-  have hi : i.val + 1 ≤ vp.params.k := i.isLt
-  calc forsSigLeafIndex vp.params md i.val = i.val * 2 ^ vp.params.a + forsIdx vp.params md i.val
-        := forsSigLeafIndex_eq _ _ _
-    _ < (i.val + 1) * 2 ^ vp.params.a := by rw [Nat.add_mul, one_mul]; omega
-    _ ≤ _ := Nat.mul_le_mul_right _ hi
 
 end SLHDSA.Security

@@ -51,7 +51,8 @@ Three facts make the graph the honest one.
 * *Children at a key* (`slhGraph_ch_of_nodeKeyOf_eq_some`): where the encoding is injective on
   the in-range addresses (`CorePrimitives.KeyInjective`), under the FIPS 205 address widths
   (`CanonicalAddressBounds`), the children of the node at the key of a ledger address `a` are the
-  cells of the structural children of `a` itself.
+  cells of the structural children of `a` itself, and distinct in-range structural children have
+  distinct cells (`eq_of_childCell_eq_some`).
 * *Separation* (`prfKey_val_ne_nodeKey_val`, `secretEncoding_enc_ne_slhGraph_pt`): under key
   separation (`CorePrimitives.KeySeparated`) no derivation key is a node key, so no encoded
   derivation is a node point.
@@ -345,6 +346,44 @@ theorem childCell_inl {a : Adrs} (h : a.IsSecretKey) :
 theorem childCell_inr {a : Adrs} (h : a ∈ constructionAddresses vp) :
     childCell core (.inr a) = some (.inr ⟨core.adrsToKey a, a, h, rfl⟩) := by
   simp [childCell, nodeKeyOf_of_mem core h]
+
+/-- A secret child has cell `c` exactly when its address is a secret-key address and `c` is the
+derivation at a key that is the address's oracle key. -/
+theorem childCell_inl_eq_some_iff {a : Adrs} {c : DeriveQuery core ⊕ NodeKey core} :
+    childCell core (.inl a) = some c ↔
+      ∃ k : PrfKey core, a.IsSecretKey ∧ core.adrsToKey a = k.1 ∧ .inl (.inl k) = c := by
+  simp only [childCell, Option.map_eq_some_iff, prfKeyOf_eq_some_iff, and_assoc]
+
+/-- A node child has cell `c` exactly when its address is a ledger address and `c` is the label
+of a node whose key is the address's oracle key. -/
+theorem childCell_inr_eq_some_iff {a : Adrs} {c : DeriveQuery core ⊕ NodeKey core} :
+    childCell core (.inr a) = some c ↔
+      ∃ κ : NodeKey core, a ∈ constructionAddresses vp ∧ core.adrsToKey a = κ.1 ∧ .inr κ = c := by
+  simp only [childCell, Option.map_eq_some_iff, nodeKeyOf_eq_some_iff, and_assoc]
+
+variable {core} in
+/-- Under key injectivity on the in-range addresses, two in-range structural children with the
+same cell are equal. -/
+theorem eq_of_childCell_eq_some (hinj : core.KeyInjective vp) {b b' : Adrs ⊕ Adrs}
+    {c : DeriveQuery core ⊕ NodeKey core} (hc : childCell core b = some c)
+    (hc' : childCell core b' = some c) (hb : AddressFacts vp (b.elim id id))
+    (hb' : AddressFacts vp (b'.elim id id)) : b = b' := by
+  rcases b with a | a <;> rcases b' with a' | a' <;>
+    simp only [childCell_inl_eq_some_iff, childCell_inr_eq_some_iff] at hc hc'
+  · obtain ⟨k, -, hk, rfl⟩ := hc
+    obtain ⟨k', -, hk', hkk⟩ := hc'
+    obtain rfl : k' = k := Sum.inl_injective (Sum.inl_injective hkk)
+    exact congrArg Sum.inl (hinj hb hb' (hk.trans hk'.symm))
+  · obtain ⟨_, -, -, rfl⟩ := hc
+    obtain ⟨_, -, -, h⟩ := hc'
+    simp at h
+  · obtain ⟨_, -, -, rfl⟩ := hc
+    obtain ⟨_, -, -, h⟩ := hc'
+    simp at h
+  · obtain ⟨κ, -, hκ, rfl⟩ := hc
+    obtain ⟨κ', -, hκ', hκκ⟩ := hc'
+    obtain rfl : κ' = κ := Sum.inr_injective hκκ
+    exact congrArg Sum.inr (hinj hb hb' (hκ.trans hκ'.symm))
 
 /-- Every structural child of a ledger address has a cell. -/
 theorem isSome_childCell_of_mem_childAdrs {a : Adrs} (ha : a ∈ constructionAddresses vp)

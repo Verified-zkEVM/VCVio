@@ -903,6 +903,41 @@ theorem AllQueriesSatisfy.simulateQ_run'_bind
     bind_map_left, map_bind]
   rfl
 
+/-- **Invariants of a run with restricted queries.** If every query of `oa` satisfies `P`, and
+every step of `impl` at a query satisfying `P` preserves `Inv`, then a run of `oa` from a state
+satisfying `Inv` ends in a state satisfying `Inv`. -/
+theorem AllQueriesSatisfy.holds_of_mem_support_run_simulateQ {ι : Type} {spec : OracleSpec ι}
+    {σ α : Type} {impl : QueryImpl spec (StateT σ ProbComp)} {P : ι → Prop}
+    {oa : OracleComp spec α} (h : AllQueriesSatisfy oa P) (Inv : σ → Prop)
+    (hstep : ∀ t, P t → ∀ s, Inv s → ∀ z ∈ support ((impl t).run s), Inv z.2) {s : σ}
+    (hs : Inv s) {z : α × σ} (hz : z ∈ support ((simulateQ impl oa).run s)) : Inv z.2 := by
+  induction oa using OracleComp.inductionOn generalizing s z with
+  | pure a =>
+    simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
+    exact hz ▸ hs
+  | query_bind t oa ih =>
+    rw [allQueriesSatisfy_query_bind_iff] at h
+    have hz' : z ∈ support (((simulateQ impl
+        (OracleSpec.query t : OracleComp spec (spec.Range t))).run s) >>=
+          fun w ↦ (simulateQ impl (oa w.1)).run w.2) := by
+      simpa [simulateQ_bind, OracleComp.liftM_def] using hz
+    obtain ⟨w, hw, hz⟩ := (mem_support_bind_iff _ _ _).1 hz'
+    exact ih w.1 (h.2 w.1) (hstep t h.1 s hs w (by simpa [simulateQ_spec_query] using hw)) hz
+
+/-- A simulation of a program whose queries all satisfy `P`, through a handler whose programs at
+the queries satisfying `P` make only queries satisfying `Q`, makes only queries satisfying `Q`. -/
+theorem AllQueriesSatisfy.simulateQ {τ : Type u} {spec' : OracleSpec.{u, u} τ}
+    {impl : QueryImpl spec (OracleComp spec')} {P : ι → Prop} {Q : τ → Prop}
+    {oa : OracleComp spec α} (h : AllQueriesSatisfy oa P)
+    (himpl : ∀ t, P t → AllQueriesSatisfy (impl t) Q) :
+    AllQueriesSatisfy (_root_.simulateQ impl oa) Q := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => exact allQueriesSatisfy_pure x Q
+  | query_bind t k ih =>
+    rw [allQueriesSatisfy_query_bind_iff] at h
+    rw [simulateQ_bind, simulateQ_spec_query]
+    exact allQueriesSatisfy_bind (himpl t h.1) fun u ↦ ih u (h.2 u)
+
 /-! ## Biconditional transfer under query-count-preserving simulators
 
 `loggingOracle`, `countingOracle`, and the `withTrace*` / `withCost` / `withCounting`

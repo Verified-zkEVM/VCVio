@@ -230,7 +230,7 @@ theorem hiddenKept_of_mem_support_labSignFromPosition (hd : core.KeyDiscipline v
 
 /-! ## Signing -/
 
-/-- The `H_msg` query leaves its digest in the public cache and reads no hidden cell. -/
+/-- The `H_msg` query leaves its digest in the public cache. -/
 theorem fst_apply_hmsg_of_mem_support_deferredImpl (r : core.Y) (pk : core.PkSeed)
     (root : core.Y) (msg : List Byte)
     {s : RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y ×
@@ -240,14 +240,8 @@ theorem fst_apply_hmsg_of_mem_support_deferredImpl (r : core.Y) (pk : core.PkSee
     z.2.1.1 (.inl (.hmsg r pk root msg)) = some z.1 := by
   rw [show (PublicHash.hmsg core r pk root msg : OracleComp (labSpec core) _) =
       liftM ((labSpec core).query (.inl (.inl (.inr (.inl (.hmsg r pk root msg)))))) from rfl,
-    simulateQ_spec_query, CanonicalGraph.deferredImpl_run_inl, support_map] at hz
-  obtain ⟨w, hw, rfl⟩ := hz
-  have hnot : ¬∃ κ vs, (slhGraph core pkSeed).childVals w.2 κ = some vs ∧
-      (slhGraph core pkSeed).pt κ vs = .inl (.hmsg r pk root msg) := by
-    rintro ⟨κ, vs, -, h⟩
-    simp at h
-  exact ((slhGraph core pkSeed).merge_apply_of_not_exists hnot).symm.trans
-    ((slhGraph core pkSeed).merge_apply_of_mem_support_relabelImpl_pub hw)
+    simulateQ_spec_query] at hz
+  exact (slhGraph core pkSeed).fst_apply_of_mem_support_deferredImpl_pub (by simp) hz
 
 /-- **Signing keeps the hidden cells undrawn.** A run of lab signing on `msg`, at a key pair whose
 secret key is its public key at the public seed `pkSeed`, from a state whose hidden cells are

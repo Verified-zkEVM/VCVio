@@ -28,7 +28,9 @@ Instances of `Q` include `fun oa => IsQueryBoundP oa p 0` and `fun oa => AllQuer
 The hypotheses range over address types rather than the exact addresses visited, so they are the
 same at every layer; the type of each address a program builds is checked by evaluation
 (`Nat.le_of_ble_eq_true rfl`). A predicate that holds only on a bounded family of addresses, such
-as the addresses a program visits, does not meet them.
+as the addresses a program visits, does not meet them. The chain lemma `chainWith_pred` is the
+exception: its hypothesis is on the addresses the chain visits, so it also serves a predicate that
+holds only on part of a chain.
 
 The key-level counterpart is `CorePrimitives.KeySeparated`: no address of type at most `4` shares
 its oracle key with a secret-key address. Every shipped bundle satisfies it
@@ -68,14 +70,14 @@ variable {m : Type → Type*} [Monad m] [LawfulMonad m] (Q : ∀ {α : Type}, m 
 
 omit [LawfulMonad m] in
 include hpure hbind in
-/-- A WOTS+ chain at an address of type at most `4` satisfies `Q` when the hash callback does at
-every address of type at most `4`. -/
-theorem chainWith_pred {Y : Type} {hash : Adrs → Y → m Y}
-    (hhash : ∀ a : Adrs, a.type ≤ 4 → ∀ y, Q (hash a y)) {adrs : Adrs} (hadrs : adrs.type ≤ 4)
-    (x : Y) (i : ℕ) : ∀ s, Q (chainWith hash adrs x i s)
-  | 0 => hpure _
-  | s + 1 => hbind _ _ (chainWith_pred hhash hadrs x i s) fun y =>
-      hhash (adrs.setHashAddress (i + s)) hadrs y
+/-- A WOTS+ chain from hash address `i` over `s` steps satisfies `Q` when the hash callback does
+at each address the chain visits, `adrs.setHashAddress (i + j)` for `j < s`. -/
+theorem chainWith_pred {Y : Type} {hash : Adrs → Y → m Y} {adrs : Adrs} (x : Y) (i : ℕ) :
+    ∀ s, (∀ j < s, ∀ y, Q (hash (adrs.setHashAddress (i + j)) y)) →
+      Q (chainWith hash adrs x i s)
+  | 0, _ => hpure _
+  | s + 1, h => hbind _ _ (chainWith_pred x i s fun j hj => h j (by omega)) fun y =>
+      h s (by omega) y
 
 variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
   {hash : Adrs → core.Y → m core.Y} {compress : Adrs → List core.Y → m core.Y}
@@ -93,7 +95,7 @@ theorem wotsPkGenWithSecret_pred (adrs : Adrs) :
     Q (wotsPkGenWithSecret core hash compress secret adrs) :=
   hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun _ =>
     hbind _ _ (hsecret _ (Adrs.isSecretKey_wotsSkAdrs _ _)) fun x =>
-      chainWith_pred Q hpure hbind hhash type_le_four x 0 _)
+      chainWith_pred Q hpure hbind x 0 _ fun _ _ => hhash _ type_le_four)
     fun _ => hcompress _ type_le_four _
 
 include hpure hbind hhash hsecret in
@@ -102,14 +104,14 @@ theorem wotsSignWithSecret_pred (msg : core.Y) (adrs : Adrs) :
     Q (wotsSignWithSecret core hash secret msg adrs) :=
   Vector.ofFnM_pred Q hpure hbind _ fun _ =>
     hbind _ _ (hsecret _ (Adrs.isSecretKey_wotsSkAdrs _ _)) fun x =>
-      chainWith_pred Q hpure hbind hhash type_le_four x 0 _
+      chainWith_pred Q hpure hbind x 0 _ fun _ _ => hhash _ type_le_four
 
 include hpure hbind hhash hcompress in
 /-- WOTS+ public-key recovery satisfies `Q`. -/
 theorem wotsPkFromSigWith_pred (sig : WotsSig vp.params core) (msg : core.Y) (adrs : Adrs) :
     Q (wotsPkFromSigWith core hash compress sig msg adrs) :=
   hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun _ =>
-    chainWith_pred Q hpure hbind hhash type_le_four _ _ _)
+    chainWith_pred Q hpure hbind _ _ _ fun _ _ => hhash _ type_le_four)
     fun _ => hcompress _ type_le_four _
 
 /-! ## XMSS -/

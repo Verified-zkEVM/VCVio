@@ -58,18 +58,6 @@ abbrev ReadsUnhidden (pkSeed : core.PkSeed) (U : Bytes vp.params.m → Prop)
     (oa : OracleComp (labSpec core) α) : Prop :=
   AllQueriesSatisfy oa ((slhGraph core pkSeed).ReadsWithin (hiddenCells core U st)ᶜ)
 
-/-- A WOTS+ chain applies its hash at the addresses `start + j` for `j < steps`, so it satisfies a
-predicate closed under `bind` as soon as each of those hash calls does. -/
-theorem chainWith_pred_of_lt {Y : Type} {m : Type → Type*} [Monad m]
-    (Q : ∀ {α : Type}, m α → Prop) (hpure : ∀ {α : Type} (x : α), Q (pure x))
-    (hbind : ∀ {α β : Type} (oa : m α) (ob : α → m β), Q oa → (∀ x, Q (ob x)) → Q (oa >>= ob))
-    {hash : Adrs → Y → m Y} {adrs : Adrs} (x : Y) (start : ℕ) :
-    ∀ steps, (∀ j < steps, ∀ y, Q (hash (adrs.setHashAddress (start + j)) y)) →
-      Q (chainWith hash adrs x start steps)
-  | 0, _ => hpure _
-  | s + 1, h => hbind _ _ (chainWith_pred_of_lt Q hpure hbind x start s fun j hj ↦ h j (by omega))
-      fun y ↦ h s (by omega) y
-
 /-! ## The public and randomizer queries of signing -/
 
 /-- The `H_msg` query reads no hidden cell. -/
@@ -261,7 +249,7 @@ theorem readsUnhidden_wotsPkFromSigWith (hd : core.KeyDiscipline vp)
     ReadsUnhidden core pkSeed U st
       (wotsPkFromSigWith core (labF core) (labTl core) sig msg (wotsInstanceAdrs pos)) :=
   allQueriesSatisfy_bind (allQueriesSatisfy_ofFnM _ fun i ↦
-    chainWith_pred_of_lt (ReadsUnhidden core pkSeed U st) (fun _ ↦ allQueriesSatisfy_pure _ _)
+    chainWith_pred (ReadsUnhidden core pkSeed U st) (fun _ ↦ allQueriesSatisfy_pure _ _)
       (fun _ _ ↦ allQueriesSatisfy_bind) _ _ _ fun j _ _ ↦
         readsUnhidden_labNode pkSeed hd
           (not_hiddenChild_chainChild (i := i.val) (t := chainStepsCore core msg i.val + j + 1)
@@ -301,7 +289,8 @@ theorem readsUnhidden_labForsSign (hd : core.KeyDiscipline vp) {d : Bytes vp.par
   rw [labSecret_eq_readCell_childCell (Adrs.isSecretKey_forsSkAdrs _ _), ← forsSigLeafIndex_eq]
   exact readsUnhidden_readCell_childCell pkSeed hd fun _ _ ↦
     ⟨by simpa using (addressFacts_forsSkAdrs hd.canonicalAddressBounds
-        (BottomPosition.ofDigestParts vp (splitDigest vp.params d)) (forsSigLeafIndex_lt _ i)),
+        (BottomPosition.ofDigestParts vp (splitDigest vp.params d))
+        (forsSigLeafIndex_lt _ _ i.isLt)),
       not_hiddenChild_inl_forsSkAdrs hU i⟩
 
 end SLHDSA.Security
