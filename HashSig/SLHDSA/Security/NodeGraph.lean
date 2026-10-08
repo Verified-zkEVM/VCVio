@@ -7,7 +7,8 @@ Authors: Alexander Hicks
 module
 
 public import HashSig.SLHDSA.Security.ComponentTraces
-public import HashSig.SLHDSA.Security.HonestEntryUnique
+public import HashSig.SLHDSA.Security.KeyDiscipline
+public import HashSig.SLHDSA.Security.RomDescentSecret
 public import HashSig.SLHDSA.Security.SeedCoupling
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Relabel
 import HashSig.SLHDSA.Security.AddressKeys
@@ -48,11 +49,12 @@ Three facts make the graph the honest one.
   node child of a ledger address is a ledger address, so every structural child has a cell
   (`isSome_childCell_of_mem_childAdrs`) and the children of a node are exactly the cells of the
   structural children of its address (`map_some_slhGraph_ch`). This holds for every encoding.
-* *Children at a key* (`slhGraph_ch_of_nodeKeyOf_eq_some`): where the encoding is injective on
-  the in-range addresses (`CorePrimitives.KeyInjective`), under the FIPS 205 address widths
-  (`CanonicalAddressBounds`), the children of the node at the key of a ledger address `a` are the
-  cells of the structural children of `a` itself, and distinct in-range structural children have
-  distinct cells (`eq_of_childCell_eq_some`).
+* *Children at a key* (`slhGraph_ch_of_nodeKeyOf_eq_some`): every ledger address is in range
+  under the FIPS 205 address widths (`CanonicalAddressBounds`,
+  `addressFacts_of_mem_constructionAddresses`), so where the encoding is injective on the
+  in-range addresses (`CorePrimitives.KeyInjective`) the children of the node at the key of a
+  ledger address `a` are the cells of the structural children of `a` itself, and distinct
+  in-range structural children have distinct cells (`eq_of_childCell_eq_some`).
 * *Separation* (`prfKey_val_ne_nodeKey_val`, `secretEncoding_enc_ne_slhGraph_pt`): under key
   separation (`CorePrimitives.KeySeparated`) no derivation key is a node key, so no encoded
   derivation is a node point.
@@ -259,6 +261,18 @@ theorem mem_constructionAddresses_of_inr_mem_childAdrs {a b : Adrs}
       rcases hb with rfl | rfl
       · exact hnode 0 (Nat.zero_le _)
       · exact hnode 1 le_rfl
+
+/-- Every address of the union ledger is FIPS-canonical and lies in the hypertree's layer and tree
+ranges. -/
+theorem addressFacts_of_mem_constructionAddresses (hb : CanonicalAddressBounds vp.params)
+    {a : Adrs} (ha : a ∈ constructionAddresses vp) : AddressFacts vp a := by
+  rcases (mem_constructionAddresses_iff a).1 ha with h | h | h | h | h | h
+  · exact addressFacts_forsLeafAddresses vp hb a h
+  · exact addressFacts_forsTreeAddresses vp hb a h
+  · exact addressFacts_forsRootAddresses vp hb a h
+  · exact addressFacts_wotsStepAddresses vp hb a h
+  · exact addressFacts_wotsPkAddresses vp hb a h
+  · exact addressFacts_xmssNodeAddresses vp hb a h
 
 end Children
 

@@ -6,8 +6,7 @@ Authors: Alexander Hicks
 
 module
 
-public import HashSig.SLHDSA.Security.KeyDiscipline
-public import HashSig.SLHDSA.Security.RomDescentSecret
+public import HashSig.SLHDSA.Security.NodeGraph
 import HashSig.SLHDSA.Security.AddressKeys
 
 /-!
@@ -23,9 +22,10 @@ have equal inputs (`HonestEntry.input_unique`).
 The argument has three steps.
 
 * Every address of the union ledger `constructionAddresses vp` is in range
-  (`addressFacts_of_mem_constructionAddresses`), and each constructor of `HonestEntry` places its
-  entry address in that ledger (`HonestEntry.exists_mem_constructionAddresses`), so key
-  injectivity makes the two entry addresses equal.
+  (`addressFacts_of_mem_constructionAddresses`, from `HashSig.SLHDSA.Security.NodeGraph`), and
+  each constructor of `HonestEntry` places its entry address in that ledger
+  (`HonestEntry.exists_mem_constructionAddresses`), so key injectivity makes the two entry
+  addresses equal.
 * Equal entry addresses have equal type words, which fixes the constructor: the six entry
   addresses have types `2` (XMSS node), `1` (WOTS+ public key), `0` (WOTS+ chain step), `3` (FORS
   leaf and FORS node) and `4` (FORS roots), and a FORS leaf sits at tree height `0` while a FORS
@@ -40,10 +40,9 @@ The argument has three steps.
 
 ## Labels
 
-Ten declarations, none private.
+Nine declarations, none private.
 
-*Ledger addresses*: `addressFacts_of_mem_constructionAddresses`,
-`HonestEntry.exists_mem_constructionAddresses`.
+*Ledger addresses*: `HonestEntry.exists_mem_constructionAddresses`.
 
 *Base-address dependencies of the readers*: `xmssNodeWithSecret?_congr`,
 `wotsPkGenTopsWithSecret?_congr`, `wotsChainAdrs_congr`, `wotsSkAdrs_congr`, `forsSkAdrs_congr`,
@@ -63,19 +62,6 @@ namespace SLHDSA
 namespace Security
 
 /-! ## Ledger addresses -/
-
-/-- Every address of the union ledger is FIPS-canonical and lies in the hypertree's layer and tree
-ranges. -/
-theorem addressFacts_of_mem_constructionAddresses {vp : ValidatedParams}
-    (hb : CanonicalAddressBounds vp.params) {a : Adrs} (ha : a ∈ constructionAddresses vp) :
-    AddressFacts vp a := by
-  rcases (mem_constructionAddresses_iff a).1 ha with h | h | h | h | h | h
-  · exact addressFacts_forsLeafAddresses vp hb a h
-  · exact addressFacts_forsTreeAddresses vp hb a h
-  · exact addressFacts_forsRootAddresses vp hb a h
-  · exact addressFacts_wotsStepAddresses vp hb a h
-  · exact addressFacts_wotsPkAddresses vp hb a h
-  · exact addressFacts_xmssNodeAddresses vp hb a h
 
 /-- The key of an honest entry is the key of an address of the union ledger. -/
 theorem HonestEntry.exists_mem_constructionAddresses {vp : ValidatedParams}
