@@ -25,6 +25,10 @@ ruled out only by its zero budget.
 A second program classes points by value rather than by call site, and overruns the empty tape
 of class `false`. The position lemma at `T = {true}` needs only the budget of class `true`, and
 still reads the cached answer at `true` off the first entry of tape `true`.
+
+A third program queries `true` through each copy in turn, beside a hit set written at fresh draws
+at `true`. The second query hits the cache, so it writes nothing: the hit set stays empty
+although that query's answer equals the cached value at `true`.
 -/
 
 public section
@@ -156,5 +160,60 @@ theorem cache_true_eq_head {L : (k : Bool) → List (Ans k)}
   rw [hlen] at hn
   obtain rfl : n = 0 := by simpa using hn
   simpa using hval
+
+/-- A fresh draw at `true` hits the cached point equal to its answer. -/
+abbrev hitAux := freshHitAux (spec := pts) (R := Ans) (· = true) (fun _ u y => y = u)
+
+/-- Query the point `true` through the left copy, then again through the right copy. -/
+def prog₃ : OracleComp (unifSpec + (pts + pts)) Bool := do
+  let _ ← liftM ((unifSpec + (pts + pts)).query (Sum.inr (Sum.inl true)))
+  liftM ((unifSpec + (pts + pts)).query (Sum.inr (Sum.inr true)))
+
+/-- The second query of `true` hits the cache and writes nothing, so the hit set stays empty
+although that query's answer equals the cached value at `true`. -/
+theorem hits_prog₃ {z : Bool × ((pts.QueryCache × ((k : Bool) → List (Ans k))) ×
+      (ClassPos Bool Bool × Set Bool))}
+    (hz : z ∈ support ((simulateQ (classPosImplFwd Ans site site_range hitAux) prog₃).run
+      ((∅, fun _ => []), (ClassPos.init, ∅)))) :
+    z.2.2.2 = ∅ := by
+  rw [prog₃, simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
+  obtain ⟨y, hy, hz⟩ := hz
+  rw [simulateQ_spec_query] at hy hz
+  obtain ⟨hy, hyq⟩ := (mem_support_run_classPosImplFwd_iff site site_range _ _ _ _).1 hy
+  have hc : y.2.1.1 true ≠ none := by
+    rw [tapeImplFwd, QueryImpl.add_apply_inr, tapeCachingImplClass_apply_inl,
+      tapeStep_run_nil (QueryCache.empty_apply true) rfl, support_map] at hy
+    obtain ⟨u, -, hu⟩ := hy
+    rw [← (Prod.mk.inj hu).2]
+    simp
+  have hfresh : ∀ x, (Sum.inr (Sum.inr true) : (unifSpec + (pts + pts)).Domain) =
+      Sum.inr (Sum.inl x) ∨ (Sum.inr (Sum.inr true) : (unifSpec + (pts + pts)).Domain) =
+      Sum.inr (Sum.inr x) → y.2.1.1 x = none → ¬ x = true := by
+    rintro x (h | h) hx
+    · simp at h
+    · obtain rfl : true = x := by simpa using h
+      exact absurd hx hc
+  rw [hits_eq_of_mem_support_run_classPosImplFwd _ _ site site_range _ _ hfresh _ hz, hyq]
+  ext y
+  simp [hitAux, freshHitStep]
+
+/-- A fresh answer `false` at `true` hits the cached point `false`. -/
+example : freshHitStep (spec := pts) (· = true) (fun _ u y => y = u)
+    ((∅ : pts.QueryCache).cacheQuery false false) true false ∅ = {false} := by
+  rw [freshHitStep_of_eq_none (fun x : Bool => x = true) _ (by simp) rfl]
+  ext y
+  cases y <;> simp
+
+/-- On every run from an empty hit set the hits are cached, and the hit set and the cache only
+grow. -/
+example {L : (k : Bool) → List (Ans k)}
+    {z : Bool × ((pts.QueryCache × ((k : Bool) → List (Ans k))) ×
+      (ClassPos Bool Bool × Set Bool))}
+    (hz : z ∈ support ((simulateQ (classPosImplFwd Ans site site_range hitAux) prog).run
+      ((∅, L), (ClassPos.init, ∅)))) :
+    (∀ p ∈ z.2.2.2, z.2.1.1 p ≠ none) ∧ ∅ ≤ z.2.1.1 :=
+  ⟨ne_none_of_mem_hits_of_mem_support_run _ _ site site_range prog
+    ((∅, L), (ClassPos.init, ∅)) (fun _ h => h.elim) hz,
+    (mono_of_mem_support_run_classPosImplFwd_freshHitAux _ _ site site_range prog _ hz).1⟩
 
 end ClassIndexedTapeTest
