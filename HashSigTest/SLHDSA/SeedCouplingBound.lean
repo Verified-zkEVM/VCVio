@@ -18,8 +18,8 @@ the SHA2-128-24 compatibility bundle `Concrete.shaPrimitives`, with both of its 
 discharged: key separation by `Concrete.keySeparated_shakePrimitives`,
 `Concrete.keySeparated_sha2Primitives` and `Concrete.keySeparated_shaPrimitives`, and
 `|Y| ≤ |SK.prf|` because both carriers are byte vectors of the same width. The loss is
-`qh / 256 ^ n` at the SHAKE and FIPS SHA-2 bundles (`natCard_shakePrimitives_y`,
-`natCard_sha2Primitives_y`), and `qh / 256 ^ 16` at the compatibility bundle
+`qh / 256 ^ n` at the SHAKE and FIPS SHA-2 bundles (`Concrete.natCard_shakePrimitives_y`,
+`Concrete.natCard_sha2Primitives_y`), and `qh / 256 ^ 16` at the compatibility bundle
 (`natCard_shaPrimitives_y`), so the bound is not vacuous.
 -/
 
@@ -31,15 +31,6 @@ open scoped ENNReal
 namespace SLHDSA.SeedCouplingBoundTest
 
 open Security
-
-/-- The node type of the SHAKE bundle has `256 ^ n` elements. -/
-theorem natCard_shakePrimitives_y (p : Params) :
-    Nat.card (Concrete.shakePrimitives p).core.Y = 256 ^ p.n := by
-  change Nat.card (Vector UInt8 p.n) = 256 ^ p.n
-  rw [Nat.card_congr (arrayVectorEquivFin UInt8 p.n), Nat.card_fun, Nat.card_eq_fintype_card,
-    ← FinEnum.card_eq_fintypeCard, FinEnum.card_UInt8, Nat.card_eq_fintype_card,
-    Fintype.card_fin]
-  norm_num
 
 /-- The hidden-seed bound at a SHAKE bundle, with key separation and `|Y| ≤ |SK.prf|`
 discharged: the loss is `qh / 256 ^ n`. -/
@@ -69,18 +60,9 @@ theorem prEvent_romSchemeRun_pure_le_add_shake (vp : ValidatedParams)
           (secretEncoding (Concrete.shakePrimitives vp.params).core e pkSeed).merge s
             z.2)] +
         qh * ((256 ^ vp.params.n : ℕ) : ℝ≥0∞)⁻¹ := by
-  rw [← natCard_shakePrimitives_y]
+  rw [← Concrete.natCard_shakePrimitives_y]
   exact prEvent_romSchemeRun_pure_le_add
     (Concrete.keySeparated_shakePrimitives vp.params) le_rfl e optRand pkSeed hadv Q
-
-/-- The node type of the FIPS SHA-2 bundle has `256 ^ n` elements. -/
-theorem natCard_sha2Primitives_y (p : Params) :
-    Nat.card (Concrete.sha2Primitives p).core.Y = 256 ^ p.n := by
-  change Nat.card (Vector UInt8 p.n) = 256 ^ p.n
-  rw [Nat.card_congr (arrayVectorEquivFin UInt8 p.n), Nat.card_fun, Nat.card_eq_fintype_card,
-    ← FinEnum.card_eq_fintypeCard, FinEnum.card_UInt8, Nat.card_eq_fintype_card,
-    Fintype.card_fin]
-  norm_num
 
 /-- The hidden-seed bound at a FIPS SHA-2 bundle, with key separation and `|Y| ≤ |SK.prf|`
 discharged: the loss is `qh / 256 ^ n`. -/
@@ -110,7 +92,7 @@ theorem prEvent_romSchemeRun_pure_le_add_sha2 (vp : ValidatedParams)
           (secretEncoding (Concrete.sha2Primitives vp.params).core e pkSeed).merge s
             z.2)] +
         qh * ((256 ^ vp.params.n : ℕ) : ℝ≥0∞)⁻¹ := by
-  rw [← natCard_sha2Primitives_y]
+  rw [← Concrete.natCard_sha2Primitives_y]
   exact prEvent_romSchemeRun_pure_le_add
     (Concrete.keySeparated_sha2Primitives vp.params) le_rfl e optRand pkSeed hadv Q
 

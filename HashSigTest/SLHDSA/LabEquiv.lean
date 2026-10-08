@@ -8,7 +8,7 @@ module
 
 public import HashSig.SLHDSA.Security.LabEquiv.Experiment
 public import HashSig.SLHDSA.Security.KeyDiscipline
-public import HashSig.SLHDSA.Concrete.FIPS
+public import HashSigTest.SLHDSA.Bundles
 
 /-!
 # The lab experiment in the eager game at the shipped bundles
@@ -26,11 +26,7 @@ open OracleComp OracleSpec SignatureAlg
 
 namespace SLHDSA.LabEquivTest
 
-open Security
-
-/-- The core of the SHAKE bundle at validated parameters `vp`. -/
-abbrev shakeCore (vp : ValidatedParams) : CorePrimitives vp.params :=
-  (Concrete.shakePrimitives vp.params).core
+open Security BundleTest
 
 /-- At every SHAKE bundle whose address fields fit, the lifted experiment and the lab experiment
 have the same measure from the empty state, under the discrete measurable structure. -/

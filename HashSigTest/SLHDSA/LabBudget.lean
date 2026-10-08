@@ -9,7 +9,7 @@ module
 public import HashSig.SLHDSA.Security.LabBudget
 public import HashSig.SLHDSA.Security.KeySeparation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential
-public import HashSigTest.SLHDSA.SeedCouplingBound
+public import HashSigTest.SLHDSA.Bundles
 
 /-!
 # The budget of the lab experiment at the SHAKE bundles
@@ -29,11 +29,7 @@ open scoped ENNReal
 
 namespace SLHDSA.LabBudgetTest
 
-open Security SeedCouplingBoundTest
-
-/-- The core of the SHAKE bundle at validated parameters `vp`. -/
-abbrev shakeCore (vp : ValidatedParams) : CorePrimitives vp.params :=
-  (Concrete.shakePrimitives vp.params).core
+open Security BundleTest
 
 /-- The budget at a SHAKE bundle, on every deferred run of the lab experiment. -/
 example (vp : ValidatedParams) (e : (shakeCore vp).SkSeed ≃ (shakeCore vp).Y)
@@ -47,7 +43,7 @@ example (vp : ValidatedParams) (e : (shakeCore vp).SkSeed ≃ (shakeCore vp).Y)
         ((256 ^ vp.params.n : ℕ) : ℝ≥0∞) + seedCharge (shakeCore vp) pkSeed z.2.1.1 ≤
       2 * ((qh : ℝ≥0∞) + GeneralScheme.verifyInternalQueryBound vp.params) /
         ((256 ^ vp.params.n : ℕ) : ℝ≥0∞) := by
-  rw [← natCard_shakePrimitives_y]
+  rw [← Concrete.natCard_shakePrimitives_y]
   exact two_mul_encard_keyEntries_div_add_seedCharge_le_of_mem_support
     (Concrete.keySeparated_shakePrimitives vp.params) hadv hz
 
@@ -68,14 +64,14 @@ example (vp : ValidatedParams) (e : (shakeCore vp).SkSeed ≃ (shakeCore vp).Y)
         ∃ x, (w.2.1.1 ((secretEncoding (shakeCore vp) e pkSeed).enc w.2.2 x)).isSome] ≤
       2 * ((qh : ℝ≥0∞) + GeneralScheme.verifyInternalQueryBound vp.params) /
         ((256 ^ vp.params.n : ℕ) : ℝ≥0∞) := by
-  rw [← natCard_shakePrimitives_y]
+  rw [← Concrete.natCard_shakePrimitives_y]
   refine (slhNodeKeys (shakeCore vp) pkSeed).prEvent_deferredFillDraw_le_of_budget _
     (fun s C => ∃ x, (C ((secretEncoding (shakeCore vp) e pkSeed).enc s x)).isSome)
     (seedCharge (shakeCore vp) pkSeed)
     (prEvent_exists_isSome_apply_secretEncoding_enc_le e pkSeed le_rfl) _ _ ?_
     fun z hz => two_mul_encard_keyEntries_div_add_seedCharge_le_of_mem_support
       (Concrete.keySeparated_shakePrimitives vp.params) hadv hz
-  rw [natCard_shakePrimitives_y]
+  rw [Concrete.natCard_shakePrimitives_y]
   exact ENNReal.div_ne_top (by finiteness) (by positivity)
 
 end SLHDSA.LabBudgetTest

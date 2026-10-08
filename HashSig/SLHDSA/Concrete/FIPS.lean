@@ -393,6 +393,22 @@ instance (p : Params) : DecidableEq (sha2Primitives p).Y :=
 instance (p : Params) : DecidableEq (sha2Primitives p).AdrsKey :=
   inferInstanceAs (DecidableEq (Bytes 22))
 
+/-! ### Node counts -/
+
+/-- The node type of the SHAKE bundle has `256 ^ n` elements. -/
+theorem natCard_shakePrimitives_y (p : Params) :
+    Nat.card (shakePrimitives p).core.Y = 256 ^ p.n := by
+  change Nat.card (Vector UInt8 p.n) = 256 ^ p.n
+  rw [Nat.card_congr (arrayVectorEquivFin UInt8 p.n), Nat.card_fun, Nat.card_eq_fintype_card,
+    ← FinEnum.card_eq_fintypeCard, FinEnum.card_UInt8, Nat.card_eq_fintype_card,
+    Fintype.card_fin]
+  norm_num
+
+/-- The node type of the FIPS SHA-2 bundle has `256 ^ n` elements. -/
+theorem natCard_sha2Primitives_y (p : Params) :
+    Nat.card (sha2Primitives p).core.Y = 256 ^ p.n :=
+  natCard_shakePrimitives_y p
+
 /-! ## All approved profiles and byte coherence -/
 
 /-- Select the exact FIPS primitive family for one of the twelve approved parameter names. -/

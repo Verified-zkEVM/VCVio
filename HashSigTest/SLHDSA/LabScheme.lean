@@ -8,7 +8,7 @@ module
 
 public import HashSig.SLHDSA.Security.LabScheme
 public import HashSig.SLHDSA.Security.KeyDiscipline
-public import HashSig.SLHDSA.Concrete.FIPS
+public import HashSigTest.SLHDSA.Bundles
 
 /-!
 # The lab scheme at the shipped bundles
@@ -28,11 +28,7 @@ open OracleComp OracleSpec SignatureAlg
 
 namespace SLHDSA.LabSchemeTest
 
-open Security
-
-/-- The core of the SHAKE bundle at validated parameters `vp`. -/
-abbrev shakeCore (vp : ValidatedParams) : CorePrimitives vp.params :=
-  (Concrete.shakePrimitives vp.params).core
+open Security BundleTest
 
 /-- At every SHAKE bundle the lab experiment is a program over the lab oracles returning the
 transcript of the secret-free scheme. -/

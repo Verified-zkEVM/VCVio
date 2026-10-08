@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.Security.Transport
 public import HashSig.SLHDSA.Security.KeyDiscipline
+public import HashSigTest.SLHDSA.Bundles
 
 /-!
 # Hidden cells of the deferred lab experiment
@@ -30,20 +31,13 @@ open OracleComp OracleSpec SignatureAlg
 
 namespace SLHDSA.HiddenUndrawnTest
 
-open Concrete Security
+open Concrete Security BundleTest
+open scoped MergedCache
 
 variable {vp : ValidatedParams} {core : CorePrimitives vp.params} {e : core.SkSeed ≃ core.Y}
   {pkSeed : core.PkSeed} {s : core.SkSeed × core.SkPrf}
 
-local notation "𝒞[" e ", " pkSeed ", " s ", " st "]" =>
-  QueryCache.fst (SecretEncoding.merge (secretEncoding _ e pkSeed) s
-    (CanonicalGraph.toSplitCache (slhGraph _ pkSeed) st))
-
 /-! ## The forgery's hidden values -/
-
-/-- The core of the SHAKE bundle at validated parameters `vp`. -/
-abbrev shakeCore (vp : ValidatedParams) : CorePrimitives vp.params :=
-  (shakePrimitives vp.params).core
 
 /-- At every SHAKE bundle whose address fields fit their widths, a WOTS+ chain value that the
 replay of a forgery, read off the merged cache of a state `st` above the final state of a run of
