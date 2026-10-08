@@ -107,6 +107,18 @@ def UnforgeableTranscript.mapSk (g : SK' → SK) (z : UnforgeableTranscript M PK
     (z : UnforgeableTranscript M PK SK' S) : (z.mapSk g).log = z.log := by
   simp only [UnforgeableTranscript.mapSk]
 
+@[simp] theorem UnforgeableTranscript.mapSk_msg (g : SK' → SK)
+    (z : UnforgeableTranscript M PK SK' S) : (z.mapSk g).msg = z.msg := by
+  simp only [UnforgeableTranscript.mapSk]
+
+@[simp] theorem UnforgeableTranscript.mapSk_sig (g : SK' → SK)
+    (z : UnforgeableTranscript M PK SK' S) : (z.mapSk g).sig = z.sig := by
+  simp only [UnforgeableTranscript.mapSk]
+
+@[simp] theorem UnforgeableTranscript.mapSk_verified (g : SK' → SK)
+    (z : UnforgeableTranscript M PK SK' S) : (z.mapSk g).verified = z.verified := by
+  simp only [UnforgeableTranscript.mapSk]
+
 /-- The unforgeability experiment is the success bit of its transcript. -/
 theorem map_wins_unforgeableTranscriptExperiment
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S} (adv : UnforgeableAdversary sigAlg) :

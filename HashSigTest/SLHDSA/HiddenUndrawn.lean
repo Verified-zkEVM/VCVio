@@ -6,8 +6,7 @@ Authors: Alexander Hicks
 
 module
 
-public import HashSig.SLHDSA.Security.HiddenUndrawn
-public import HashSig.SLHDSA.Security.LabelReaders
+public import HashSig.SLHDSA.Security.Transport
 public import HashSig.SLHDSA.Security.KeyDiscipline
 
 /-!
@@ -42,54 +41,6 @@ local notation "𝒞[" e ", " pkSeed ", " s ", " st "]" =>
 
 /-! ## The forgery's hidden values -/
 
-/-- A WOTS+ chain value that the replay of a forgery on the merged cache of `st` finds hidden is
-undrawn in a smaller state `st₀` with the same public cache whose hidden cells are undrawn. -/
-theorem wots_cell_undrawn (hd : core.KeyDiscipline vp)
-    {st₀ st : RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y}
-    (hle : st₀ ≤ st) (hfst : st.1 = st₀.1)
-    {o : RomOutcome vp core} (hpk : o.pk.pkSeed = pkSeed) (hsk : o.sk.skSeed = s.1)
-    (h5 : HiddenUndrawn core o.pk o.log st₀)
-    {j : Fin vp.params.d} {pos : LayerPosition vp} {m : core.Y} {i : Fin vp.params.len}
-    (hFL : ForgerLayer o 𝒞[e, pkSeed, s, st] j pos m)
-    (hHCV : HiddenChainValue (oracleSecret core e o.pk.pkSeed o.sk.skSeed) o 𝒞[e, pkSeed, s, st]
-      j pos i.val (chainStepsCore core m i.val))
-    (ht : chainStepsCore core m i.val < vp.params.w - 1) :
-    ∃ c, childCell core (chainChild pos i.val (chainStepsCore core m i.val)) = some c ∧
-      st₀.2 c = none := by
-  have hc : ∀ r pk root msg, 𝒞[e, pkSeed, s, st] (.hmsg r pk root msg) =
-      st₀.1 (.inl (.hmsg r pk root msg)) := fun r pk root msg ↦ by
-    rw [merge_fst_hmsg, hfst]
-  obtain ⟨c, hcell⟩ := Option.isSome_iff_exists.1
-    (isSome_childCell_chainChild (core := core) pos i (le_of_lt ht))
-  refine ⟨c, hcell, h5 c (mem_hiddenCells_of_hiddenChainStep ?_ hcell)⟩
-  refine hiddenChainStep_of_le hle ht fun hpos ↦ ?_
-  have hUL := usedLeaf_of_usedPosition hc hpos
-  rw [layer_eq_of_forgerLayer hFL] at hUL
-  obtain ⟨m', hm', hlt⟩ := hHCV hUL
-  rw [hpk, hsk] at hm'
-  exact ⟨m', label_of_honestMessage? hd pos hm', hlt⟩
-
-/-- A FORS secret that the replay of a forgery on the merged cache of `st` finds unopened is
-undrawn in a state `st₀` with the same public cache whose hidden cells are undrawn. -/
-theorem fors_cell_undrawn
-    {st₀ st : RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y}
-    (hfst : st.1 = st₀.1) {o : RomOutcome vp core} (h5 : HiddenUndrawn core o.pk o.log st₀)
-    {digest : Bytes vp.params.m} {i : Fin vp.params.k}
-    (hUC : UnopenedCoord o 𝒞[e, pkSeed, s, st] (splitDigest vp.params digest).forsAdrs
-      (forsSigLeafIndex vp.params (splitDigest vp.params digest).md.toList i.val)) :
-    ∃ c, childCell core (.inl (forsSkAdrs (splitDigest vp.params digest).forsAdrs
-        (forsSigLeafIndex vp.params (splitDigest vp.params digest).md.toList i.val))) = some c ∧
-      st₀.2 c = none := by
-  have hc : ∀ r pk root msg, 𝒞[e, pkSeed, s, st] (.hmsg r pk root msg) =
-      st₀.1 (.inl (.hmsg r pk root msg)) := fun r pk root msg ↦ by
-    rw [merge_fst_hmsg, hfst]
-  refine ⟨_, childCell_inl core (Adrs.isSecretKey_forsSkAdrs _ _), h5 _ ?_⟩
-  simpa using mem_hiddenCells_forsSkAdrs (core := core) (st := st₀)
-    (BottomPosition.ofDigestParts vp (splitDigest vp.params digest))
-    (forsSigLeafIndex_lt _ _ i.isLt)
-    (not_openedCoord_of_unopenedCoord (o := o) hc (by simpa using hUC))
-    (childCell_inl core (Adrs.isSecretKey_forsSkAdrs _ _))
-
 /-- The core of the SHAKE bundle at validated parameters `vp`. -/
 abbrev shakeCore (vp : ValidatedParams) : CorePrimitives vp.params :=
   (shakePrimitives vp.params).core
@@ -120,7 +71,7 @@ example (vp : ValidatedParams) (hb : CanonicalAddressBounds vp.params)
       z.2.1.2 c = none :=
   have h := hiddenUndrawn_of_mem_support_deferredImpl_labExperiment pkSeed
     (keyDiscipline_shakePrimitives vp hb) adv hz
-  wots_cell_undrawn (keyDiscipline_shakePrimitives vp hb) hle hfst
+  exists_cell_chainChild_eq_none_of_hiddenChainValue (keyDiscipline_shakePrimitives vp hb) hle hfst
     (by simpa [DeriveOutcome.fill] using h.1) (by simp [DeriveOutcome.fill, fillSecretKey])
     (by simpa [DeriveOutcome.fill] using h.2) hFL hHCV ht
 
@@ -143,7 +94,7 @@ example (vp : ValidatedParams) (hb : CanonicalAddressBounds vp.params)
     ∃ c, childCell _ (.inl (forsSkAdrs (splitDigest vp.params digest).forsAdrs
         (forsSigLeafIndex vp.params (splitDigest vp.params digest).md.toList i.val))) = some c ∧
       z.2.1.2 c = none :=
-  fors_cell_undrawn hfst (by simpa [DeriveOutcome.fill] using
+  exists_cell_forsSkAdrs_eq_none_of_unopenedCoord hfst (by simpa [DeriveOutcome.fill] using
     (hiddenUndrawn_of_mem_support_deferredImpl_labExperiment pkSeed
       (keyDiscipline_shakePrimitives vp hb) adv hz).2) hUC
 

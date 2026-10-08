@@ -6,6 +6,7 @@ Authors: Alexander Hicks
 
 module
 
+public import HashSig.SLHDSA.Security.HiddenUndrawn
 public import HashSig.SLHDSA.Security.LabelReaders
 public import HashSig.SLHDSA.Security.LabScheme
 public import HashSig.SLHDSA.Security.RomSchemeUnion
@@ -13,7 +14,6 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Settled
 import HashSig.SLHDSA.Security.CacheDecomposition
 import HashSig.SLHDSA.Security.ComponentTraces
-import all VCVio.CryptoFoundations.SignatureAlg.Transcript
 
 /-!
 # Events of the deferred lab experiment on its final public cache
@@ -50,10 +50,20 @@ potential charges them.
   FORS secret is the honest one, read after the fill, while that cell was undrawn when
   verification ran, the filled state is a conflict (`conflict_of_forgerLayer_of_cell_eq_none`,
   `conflict_of_forgerDigest_of_cell_eq_none`).
+* **Hidden values are undrawn before the fill.** In a state whose hidden cells for a transcript's
+  log are undrawn (`HiddenUndrawn`), the cell of a WOTS+ chain value that the forgery's replay
+  finds hidden, and of a FORS secret it finds unopened, is undrawn
+  (`exists_cell_chainChild_eq_none_of_hiddenChainValue`,
+  `exists_cell_forsSkAdrs_eq_none_of_unopenedCoord`). The final state of every deferred run of
+  the lab experiment is such a state (`hiddenUndrawn_of_mem_support_deferredImpl_labExperiment`),
+  so a hidden-value hit after the fill is a conflict (`conflict_of_hiddenHit`).
+* **The transport.** A target collision or hidden-value hit of the rebuilt transcript, a seed
+  hazard of the split state, or a conflict, is a conflict, a target collision at a node key, or a
+  seed hazard of the final public cache
+  (`conflict_or_tcHazard_or_exists_isSome_of_mem_support_deferredFillDraw`).
 
 ## Scope
 
-* That the hidden cells are undrawn before the fill is a hypothesis here.
 * Nothing here is probabilistic: the statements hold on every point of the support.
 -/
 
@@ -73,29 +83,6 @@ local notation "𝒞[" e ", " pkSeed ", " s ", " st "]" =>
 
 /-- The oracle-backed secret provider at the first secret seed of `s`. -/
 local notation "𝒮[" e ", " pkSeed ", " s "]" => oracleSecret _ e pkSeed (Prod.fst s)
-
-/-! ## The rebuilt transcript -/
-
-section Fill
-
-variable (s : core.SkSeed × core.SkPrf) (z : DeriveOutcome core)
-
-/-- Rebuilding keeps the public key. -/
-private theorem fill_pk : (DeriveOutcome.fill core s z).pk = z.pk := rfl
-
-/-- The rebuilt secret key carries the first secret seed. -/
-private theorem fill_sk_skSeed : (DeriveOutcome.fill core s z).sk.skSeed = s.1 := rfl
-
-/-- Rebuilding keeps the forged message. -/
-private theorem fill_msg : (DeriveOutcome.fill core s z).msg = z.msg := rfl
-
-/-- Rebuilding keeps the forgery. -/
-private theorem fill_sig : (DeriveOutcome.fill core s z).sig = z.sig := rfl
-
-/-- Rebuilding keeps the verdict. -/
-private theorem fill_verified : (DeriveOutcome.fill core s z).verified = z.verified := rfl
-
-end Fill
 
 /-! ## Encoded points of the split state -/
 
@@ -146,8 +133,8 @@ theorem tcHazard_of_runTargetCollision_fill (hd : core.KeyDiscipline vp) {e : co
       (secretEncoding core e pkSeed).merge s ((slhGraph core pkSeed).toSplitCache st))) :
     (slhNodeKeys core pkSeed).TCHazard st := by
   have h := h.1
-  dsimp only at h
-  rw [fill_pk, fill_sk_skSeed, hpk] at h
+  simp only [DeriveOutcome.fill, UnforgeableTranscript.mapSk_pk, UnforgeableTranscript.mapSk_sk,
+    fillSecretKey, hpk] at h
   exact tcHazard_of_targetCollision hd h
 
 /-! ## Completed public misses -/
@@ -323,6 +310,63 @@ theorem isSome_thash_of_forgerDigest {c₀ c : PublicHash.Cache core} (hle : c�
 
 end Replay
 
+/-! ## The forgery's hidden values are undrawn before the fill -/
+
+section Undrawn
+
+variable {e : core.SkSeed ≃ core.Y} {pkSeed : core.PkSeed} {s : core.SkSeed × core.SkPrf}
+  {st₀ st : RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y}
+
+/-- A WOTS+ chain value that the replay of a forgery on the cache of `st` finds hidden has an
+undrawn cell in a state `st₀ ≤ st` with the same public cache whose hidden cells, for the
+transcript's log, are undrawn. -/
+theorem exists_cell_chainChild_eq_none_of_hiddenChainValue (hd : core.KeyDiscipline vp)
+    (hle : st₀ ≤ st) (hfst : st.1 = st₀.1)
+    {o : RomOutcome vp core} (hpk : o.pk.pkSeed = pkSeed) (hsk : o.sk.skSeed = s.1)
+    (h5 : HiddenUndrawn core o.pk o.log st₀)
+    {j : Fin vp.params.d} {pos : LayerPosition vp} {m : core.Y} {i : Fin vp.params.len}
+    (hFL : ForgerLayer o 𝒞[e, pkSeed, s, st] j pos m)
+    (hHCV : HiddenChainValue (oracleSecret core e o.pk.pkSeed o.sk.skSeed) o 𝒞[e, pkSeed, s, st]
+      j pos i.val (chainStepsCore core m i.val))
+    (ht : chainStepsCore core m i.val < vp.params.w - 1) :
+    ∃ c, childCell core (chainChild pos i.val (chainStepsCore core m i.val)) = some c ∧
+      st₀.2 c = none := by
+  have hc : ∀ r pk root msg, 𝒞[e, pkSeed, s, st] (.hmsg r pk root msg) =
+      st₀.1 (.inl (.hmsg r pk root msg)) := fun r pk root msg ↦ by
+    rw [merge_fst_hmsg, hfst]
+  obtain ⟨c, hcell⟩ := Option.isSome_iff_exists.1
+    (isSome_childCell_chainChild (core := core) pos i (le_of_lt ht))
+  refine ⟨c, hcell, h5 c (mem_hiddenCells_of_hiddenChainStep ?_ hcell)⟩
+  refine hiddenChainStep_of_le hle ht fun hpos ↦ ?_
+  have hUL := usedLeaf_of_usedPosition hc hpos
+  rw [layer_eq_of_forgerLayer hFL] at hUL
+  obtain ⟨m', hm', hlt⟩ := hHCV hUL
+  rw [hpk, hsk] at hm'
+  exact ⟨m', label_of_honestMessage? hd pos hm', hlt⟩
+
+/-- A FORS secret that the replay of a forgery on the cache of `st` finds unopened has an undrawn
+cell in a state `st₀` with the same public cache whose hidden cells, for the transcript's log, are
+undrawn. -/
+theorem exists_cell_forsSkAdrs_eq_none_of_unopenedCoord (hfst : st.1 = st₀.1)
+    {o : RomOutcome vp core} (h5 : HiddenUndrawn core o.pk o.log st₀)
+    {digest : Bytes vp.params.m} {i : Fin vp.params.k}
+    (hUC : UnopenedCoord o 𝒞[e, pkSeed, s, st] (splitDigest vp.params digest).forsAdrs
+      (forsSigLeafIndex vp.params (splitDigest vp.params digest).md.toList i.val)) :
+    ∃ c, childCell core (.inl (forsSkAdrs (splitDigest vp.params digest).forsAdrs
+        (forsSigLeafIndex vp.params (splitDigest vp.params digest).md.toList i.val))) = some c ∧
+      st₀.2 c = none := by
+  have hc : ∀ r pk root msg, 𝒞[e, pkSeed, s, st] (.hmsg r pk root msg) =
+      st₀.1 (.inl (.hmsg r pk root msg)) := fun r pk root msg ↦ by
+    rw [merge_fst_hmsg, hfst]
+  refine ⟨_, childCell_inl core (Adrs.isSecretKey_forsSkAdrs _ _), h5 _ ?_⟩
+  simpa using mem_hiddenCells_forsSkAdrs (core := core) (st := st₀)
+    (BottomPosition.ofDigestParts vp (splitDigest vp.params digest))
+    (forsSigLeafIndex_lt _ _ i.isLt)
+    (not_openedCoord_of_unopenedCoord (o := o) hc (by simpa using hUC))
+    (childCell_inl core (Adrs.isSecretKey_forsSkAdrs _ _))
+
+end Undrawn
+
 /-! ## Hidden values met by the verifier -/
 
 section Hidden
@@ -396,6 +440,28 @@ theorem conflict_of_forgerDigest_of_cell_eq_none (hd : core.KeyDiscipline vp) (h
       ((secretEncoding core e _).merge_toSplitCache_le_merge_toSplitCache (slhGraph core _) s hle
         hc)) hv hD i) hx)
 
+/-- **A hidden-value hit after the fill is a conflict.** Let `st₀ ≤ st` have the same public
+cache, let the hidden cells of `st₀` for a transcript's log be undrawn, and let verification of
+its forgery settle on the cache that `st₀` stands for. A hidden-value hit of the transcript, at its
+own provider and read on the cache that `st` stands for, makes `st` a conflict. -/
+theorem conflict_of_hiddenHit (hd : core.KeyDiscipline vp) (hle : st₀ ≤ st)
+    (hfst : st.1 = st₀.1) {o : RomOutcome vp core} (hpk : o.pk.pkSeed = pkSeed)
+    (hsk : o.sk.skSeed = s.1) (h5 : HiddenUndrawn core o.pk o.log st₀) {b : Bool}
+    (hv : simulateQ 𝒞[e, pkSeed, s, st₀].toPartialImpl (GeneralScheme.verifyInternalM
+      (m := OracleComp (publicHashSpec core)) vp core o.msg o.sig o.pk) = some b)
+    (h : HiddenHit (oracleSecret core e o.pk.pkSeed o.sk.skSeed) o 𝒞[e, pkSeed, s, st]) :
+    (slhGraph core pkSeed).Conflict st := by
+  rcases h with ⟨j, pos, m, i, x, hFL, hHCV, ht, hx, hg⟩ | ⟨digest, i, hD, hUC, hx⟩
+  · obtain ⟨c, hcell, h₀⟩ :=
+      exists_cell_chainChild_eq_none_of_hiddenChainValue hd hle hfst hpk hsk h5 hFL hHCV ht
+    rw [hpk, hsk] at hx
+    rw [hpk] at hg
+    exact conflict_of_forgerLayer_of_cell_eq_none hd hle hpk hv hFL i ht hx hg
+      ((pathCell_wotsInstanceAdrs core pos i.val _).trans hcell) h₀
+  · obtain ⟨c, hcell, h₀⟩ := exists_cell_forsSkAdrs_eq_none_of_unopenedCoord hfst h5 hUC
+    rw [hpk, hsk] at hx
+    exact conflict_of_forgerDigest_of_cell_eq_none hd hle hpk hv hD i hx hcell h₀
+
 end Hidden
 
 /-! ## The settled verification -/
@@ -443,25 +509,6 @@ theorem simulateQ_toPartialImpl_verifyInternalM_of_mem_support_deferredImpl
 
 variable [SampleableType core.SkSeed] [SampleableType core.SkPrf]
 
-/-- On a run of the lab experiment in the deferred game, the transcript's public key has the
-graph's public seed. -/
-private theorem pkSeed_eq_of_mem_support_deferredImpl_labExperiment {pkSeed : core.PkSeed}
-    {e : core.SkSeed ≃ core.Y} {optRand : PublicKeyCore core → ProbComp core.Y}
-    {pkSeedDist : ProbComp core.PkSeed}
-    (adv : UnforgeableAdversary (romScheme core e optRand pkSeedDist))
-    {s₀ : RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y ×
-      List (DeriveQuery core ⊕ NodeKey core)} {z}
-    (hz : z ∈ support ((simulateQ (slhGraph core pkSeed).deferredImpl
-      (labExperiment core adv pkSeed)).run s₀)) :
-    z.1.pk.pkSeed = pkSeed := by
-  obtain ⟨_, -, hk, -, -⟩ :=
-    exists_mem_support_run_of_mem_support_run_unforgeableTranscriptExperiment _
-      (labAdversary core adv pkSeed) hz
-  simp only [labScheme, simulateQ_bind, StateT.run_bind, mem_support_bind_iff, simulateQ_pure,
-    StateT.run_pure, support_pure, Set.mem_singleton_iff] at hk
-  obtain ⟨w, -, hw⟩ := hk
-  exact congrArg (fun p ↦ p.1.1.pkSeed) hw
-
 /-- **The deferred verification is settled on the rebuilt cache.** On a run of the lab
 experiment in the deferred game, verification of the forgery in the transcript rebuilt with secret
 seeds `s` is replayed to the transcript's verdict by the cache that any conflict-free state `st`
@@ -486,7 +533,8 @@ theorem simulateQ_toPartialImpl_verifyInternalM_of_mem_support_deferredImpl_labE
   obtain ⟨-, s₂, -, -, hv⟩ :=
     exists_mem_support_run_of_mem_support_run_unforgeableTranscriptExperiment _
       (labAdversary core adv pkSeed) hz
-  rw [fill_msg, fill_sig, fill_pk, fill_verified]
+  simp only [DeriveOutcome.fill, UnforgeableTranscript.mapSk_msg, UnforgeableTranscript.mapSk_sig,
+    UnforgeableTranscript.mapSk_pk, UnforgeableTranscript.mapSk_verified]
   exact simulateQ_toPartialImpl_verifyInternalM_of_mem_support_deferredImpl hsep hv hle hc s hseed
 
 /-! ## The events after the end fill -/
@@ -510,8 +558,8 @@ theorem tcHazard_of_mem_support_deferredFillDraw (hd : core.KeyDiscipline vp)
     (h : RunTargetCollision core e (DeriveOutcome.fill core w.2.2 w.1.1,
       (secretEncoding core e pkSeed).merge w.2.2 ((slhGraph core pkSeed).toSplitCache w.2.1))) :
     (slhNodeKeys core pkSeed).TCHazard w.2.1 :=
-  tcHazard_of_runTargetCollision_fill hd (pkSeed_eq_of_mem_support_deferredImpl_labExperiment adv
-    ((CanonicalGraph.mem_support_deferredFillDraw_iff _).1 hw).1) h
+  tcHazard_of_runTargetCollision_fill hd (hiddenUndrawn_of_mem_support_deferredImpl_labExperiment
+    pkSeed hd adv ((CanonicalGraph.mem_support_deferredFillDraw_iff _).1 hw).1).1 h
 
 /-- **The verification after the end fill.** On the deferred run of the lab experiment, its end
 fill and a draw of secret seeds `s`, off a conflict of the filled state and off a point of its
@@ -531,6 +579,45 @@ theorem simulateQ_toPartialImpl_verifyInternalM_of_mem_support_deferredFillDraw
   obtain ⟨hz, hst, -⟩ := (CanonicalGraph.mem_support_deferredFillDraw_iff _).1 hw
   exact simulateQ_toPartialImpl_verifyInternalM_of_mem_support_deferredImpl_labExperiment hsep adv
     hz (RelabelState.le_of_mem_support_endFill hst) hc _ hseed
+
+/-- **The event transport.** On the deferred run of the lab experiment, its end fill and a draw
+of secret seeds, a target collision or a hidden-value hit of the rebuilt transcript read on the
+cache that the filled state stands for, a point of its split state encoding a derivation under
+the drawn seeds, or a conflict, is a conflict of the filled state, a target collision at one of
+its node keys, or a point of its public cache encoding a derivation under the drawn seeds. -/
+theorem conflict_or_tcHazard_or_exists_isSome_of_mem_support_deferredFillDraw
+    (hd : core.KeyDiscipline vp)
+    (hw : w ∈ support ((slhGraph core pkSeed).deferredFillDraw ($ᵗ (core.SkSeed × core.SkPrf))
+      (labExperiment core adv pkSeed)))
+    (h : ((RunTargetCollision core e (DeriveOutcome.fill core w.2.2 w.1.1,
+          (secretEncoding core e pkSeed).merge w.2.2 ((slhGraph core pkSeed).toSplitCache w.2.1)) ∨
+        RunHiddenHit core e (DeriveOutcome.fill core w.2.2 w.1.1,
+          (secretEncoding core e pkSeed).merge w.2.2
+            ((slhGraph core pkSeed).toSplitCache w.2.1))) ∨
+      ∃ x, (((slhGraph core pkSeed).toSplitCache w.2.1).1
+        ((secretEncoding core e pkSeed).enc w.2.2 x)).isSome) ∨
+      (slhGraph core pkSeed).Conflict w.2.1) :
+    (slhGraph core pkSeed).Conflict w.2.1 ∨ (slhNodeKeys core pkSeed).TCHazard w.2.1 ∨
+      ∃ x, (w.2.1.1 ((secretEncoding core e pkSeed).enc w.2.2 x)).isSome := by
+  obtain ⟨hz, hst, -⟩ := (CanonicalGraph.mem_support_deferredFillDraw_iff _).1 hw
+  obtain ⟨hpk, h5⟩ := hiddenUndrawn_of_mem_support_deferredImpl_labExperiment pkSeed hd adv hz
+  have hle := RelabelState.le_of_mem_support_endFill hst
+  have hfst := RelabelState.fst_eq_of_mem_support_endFill hst
+  rcases h with ((htc | hhh) | hseed) | hc
+  · exact Or.inr (Or.inl (tcHazard_of_runTargetCollision_fill hd hpk htc))
+  · by_cases hc : (slhGraph core pkSeed).Conflict w.2.1
+    · exact Or.inl hc
+    by_cases hseed : ∃ x, (w.2.1.1 ((secretEncoding core e pkSeed).enc w.2.2 x)).isSome
+    · exact Or.inr (Or.inr hseed)
+    have hv := simulateQ_toPartialImpl_verifyInternalM_of_mem_support_deferredImpl_labExperiment
+      hd.keySeparated adv hz le_rfl (fun h ↦ hc (CanonicalGraph.Conflict.mono _ hle h)) w.2.2
+      (by rwa [← hfst])
+    exact Or.inl (conflict_of_hiddenHit hd hle hfst (o := DeriveOutcome.fill core w.2.2 w.1.1)
+      (by simpa [DeriveOutcome.fill] using hpk) (by simp [DeriveOutcome.fill, fillSecretKey])
+      (by simpa [DeriveOutcome.fill] using h5) hv hhh.1)
+  · exact Or.inr (Or.inr
+      ((exists_isSome_toSplitCache_fst_secretEncoding_enc_iff hd.keySeparated).1 hseed))
+  · exact Or.inl hc
 
 end Run
 
