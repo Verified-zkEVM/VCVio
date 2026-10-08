@@ -641,6 +641,18 @@ theorem IsQueryBoundP.simulateQ_of_step {ι' : Type u} {spec' : OracleSpec ι'}
       have hbound : (if p t then 1 else 0) + (if p t then n - 1 else n) = n := by grind
       simpa [hbound] using isQueryBoundP_bind hlift fun u _ => ih u (h.2 u)
 
+/-- A simulation whose every step makes no `q`-query makes no `q`-query, whatever the
+simulated computation. -/
+theorem isQueryBoundP_simulateQ_zero {ι' : Type u} {spec' : OracleSpec ι'}
+    {q : ι' → Prop} [DecidablePred q] {impl : QueryImpl spec (OracleComp spec')}
+    (oa : OracleComp spec α) (h : ∀ t, IsQueryBoundP (impl t) q 0) :
+    IsQueryBoundP (simulateQ impl oa) q 0 := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t mx ih =>
+      simp only [simulateQ_query_bind, OracleQuery.input_query, monadLift_self]
+      exact isQueryBoundP_bind (h t) fun u _ => ih u
+
 /-- Transfer a predicate-targeted query bound through `simulateQ` into an append-logged
 `WriterT` target semantics, provided each simulated source query step is itself `q`-bounded (by
 `1` on `p`-indices, by `0` on `¬ p`-indices). This is the `WriterT` counterpart of

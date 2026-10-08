@@ -70,13 +70,6 @@ theorem isDerivablePublicQuery_enc (e : core.SkSeed ≃ core.Y) (pkSeed : core.P
 
 /-! ## The secret-free scheme and its experiment -/
 
-/-- Two programs that make no `p`-query compose to one that makes none. -/
-private theorem isQueryBoundP_bind_zero {ι : Type} {spec : OracleSpec ι} {p : ι → Prop}
-    [DecidablePred p] {α β : Type} (oa : OracleComp spec α) (ob : α → OracleComp spec β)
-    (h : IsQueryBoundP oa p 0) (h' : ∀ x, IsQueryBoundP (ob x) p 0) :
-    IsQueryBoundP (oa >>= ob) p 0 :=
-  isQueryBoundP_bind h fun x _ => h' x
-
 variable {core}
 
 /-- Under key separation, a tweakable-hash query at an address of type at most `4` is not

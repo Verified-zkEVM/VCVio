@@ -323,6 +323,14 @@ lemma isQueryBoundP_bind
       refine ih'.mono ?_
       grind
 
+/-- `oa >>= ob` makes no `p`-query when `oa` and every continuation `ob x` make none. The
+continuations are taken at every value, so the bound composes as a predicate on programs that
+holds of every `pure` and is preserved by `bind`. -/
+lemma isQueryBoundP_bind_zero (oa : OracleComp spec α) (ob : α → OracleComp spec β)
+    (h : IsQueryBoundP oa p 0) (h' : ∀ x, IsQueryBoundP (ob x) p 0) :
+    IsQueryBoundP (oa >>= ob) p 0 :=
+  isQueryBoundP_bind h fun x _ => h' x
+
 /-- Transfer a predicate-targeted query bound through a `StateT` simulation
 whose handler step consumes at most one target-side predicate query exactly when
 the source query satisfies the source predicate.
