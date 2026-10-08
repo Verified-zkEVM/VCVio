@@ -614,7 +614,7 @@ def classPosAuxFwd (R : J → Type) (τ : (spec + spec).Domain → J) :
 /-- **The instrumented forwarded class-indexed tape oracle.** `tapeImplFwd`, with the position
 bookkeeping of `classPosAuxFwd` beside a passive auxiliary state `Q` that `aux` updates from
 each step's states and answer. Neither auxiliary component influences the run. -/
-abbrev instrImpl (R : J → Type) [∀ j, SampleableType (R j)] (τ : (spec + spec).Domain → J)
+abbrev instrImpl (R : J → Type) (τ : (spec + spec).Domain → J)
     (hR : ∀ t : (spec + spec).Domain, (spec + spec).Range t = R (τ t)) {Q : Type}
     (aux : (t : (unifSpec + (spec + spec)).Domain) →
       (spec.QueryCache × ((k : J) → List (R k))) → (unifSpec + (spec + spec)).Range t →
@@ -631,7 +631,7 @@ variable (τ : (spec + spec).Domain → J)
     (spec.QueryCache × ((k : J) → List (R k))) → (unifSpec + (spec + spec)).Range t →
     (spec.QueryCache × ((k : J) → List (R k))) → Q → Q) (q₀ : Q)
 
-omit [Fintype J] in
+omit [Fintype J] [∀ j, SampleableType (R j)] in
 /-- **Every cache entry of a forwarded class-indexed tape run of a taped class sits at its own
 position on its class's tape.** In a run of `oa` under `instrImpl` from the empty cache and
 the empty bookkeeping on the tape family `Lfam`, every cached point has a class, pinned to one
@@ -640,8 +640,8 @@ then a cached point whose class `j` lies in `T` is the value of that class's tap
 of that tape, returned in cast form along the equality of the point's range with `R j`.
 Distinct cached points sit at distinct class-position pairs.
 
-Classes outside `T` need no bound, so a class whose answers are drawn freshly past its tape,
-such as one charged no query budget, does not obstruct the lemma for the others. -/
+Classes outside `T` need no bound, so a class without a query budget does not obstruct the
+lemma for the others. -/
 theorem exists_pos_of_mem_support_run_instrImpl {α : Type} (Lfam : (k : J) → List (R k))
     (oa : OracleComp (unifSpec + (spec + spec)) α)
     {z : α × ((spec.QueryCache × ((k : J) → List (R k))) × (ClassPos spec.Domain J × Q))}
@@ -697,7 +697,7 @@ theorem exists_pos_of_mem_support_run_instrImpl {α : Type} (Lfam : (k : J) → 
   exact ⟨n, hn, lt_of_lt_of_le hlt (by have := hinv.length_add j; omega),
     range_eq_of_cls hR hjt, eq_some_cast_of_heq _ hval⟩
 
-omit [Fintype J] in
+omit [Fintype J] [∀ j, SampleableType (R j)] in
 /-- **Per-class query budgets bound the class counters.** If `oa` makes at most `n` queries of
 tape class `j`, then on every run of `oa` under `instrImpl` from the empty bookkeeping, the query
 counter of class `j` is at most `n`. -/
