@@ -73,8 +73,6 @@ public import HashSig.SLHDSA.Security.LabScheme
 public import HashSig.SLHDSA.Security.LabelReaders
 public import HashSig.SLHDSA.Security.LimitedProfile
 public import HashSig.SLHDSA.Security.NodeGraph
-public import HashSig.SLHDSA.Security.OpenPreBound
-public import HashSig.SLHDSA.Security.PrfHops
 public import HashSig.SLHDSA.Security.ReachableTargets
 public import HashSig.SLHDSA.Security.RomDescentSecret
 public import HashSig.SLHDSA.Security.RomSchemeBridge
