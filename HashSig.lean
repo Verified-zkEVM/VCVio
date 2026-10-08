@@ -58,6 +58,7 @@ public import HashSig.SLHDSA.Security.HonestEntryUnique
 public import HashSig.SLHDSA.Security.HypertreeWitnesses
 public import HashSig.SLHDSA.Security.KeyDiscipline
 public import HashSig.SLHDSA.Security.KeySeparation
+public import HashSig.SLHDSA.Security.LabelReaders
 public import HashSig.SLHDSA.Security.LimitedProfile
 public import HashSig.SLHDSA.Security.NodeGraph
 public import HashSig.SLHDSA.Security.OpenPreBound
