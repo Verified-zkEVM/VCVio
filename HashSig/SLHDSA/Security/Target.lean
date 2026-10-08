@@ -50,10 +50,14 @@ transcript of one execution, `SignatureAlg.UnforgeableTranscript` at the SLH-DSA
 
 `SecurityTarget core e optRand c r` bounds the advantage by `securityBound`:
 `(qh + 1) · targetCoverBound h a k qs` for the interleaved-target coverage of `H_msg`, and
-`(c · qh + qs + (r + 1) · verifyInternalQueryBound) / |Y|` for the events on single oracle
-answers. The constants `c` and `r` are fixed numerals at the security theorem; `r` bounds the
-honest entries that share one oracle key, and `GeneralScheme.verifyInternalQueryBound` bounds the
-verifier's own queries, which a forger can make fire without making any query itself.
+`(c · qh + (r + 1) · verifyInternalQueryBound) / |Y|` for the events on single oracle answers,
+`c` per forger hash query and `r + 1` per verifier query. The constants `c` and `r` are fixed
+numerals at the security theorem; `r` bounds the honest entries that share one oracle key, and
+`GeneralScheme.verifyInternalQueryBound` bounds the verifier's own queries, which a forger can
+make fire without making any query itself. Signing queries enter only through the coverage term,
+in both signing modes. For deterministic signing the byte-level statement over a single SHAKE256
+adds one term `2^{-8n}` per signing query, for the event that a signing query's randomizer equals
+`SK.prf`, so that the signer's `H_msg` string begins with `SK.prf`.
 `SecurityTarget` is a statement about a given core: it is a security result only at a shipped
 bundle with the constants fixed, since at a degenerate core — one whose node type has a single
 element, say — the right-hand side reaches one and the target holds trivially.
@@ -197,11 +201,11 @@ theorem unforgeableExperiment_romScheme (e : core.SkSeed ≃ core.Y)
   rfl
 
 /-- The right-hand side of the security target for a node type of `card` elements: the coverage
-of the verifier's and the adversary's `H_msg` values, and terms linear in the adversary's hash
-queries, its signing queries and the verifier's own queries. -/
+of the verifier's and the adversary's `H_msg` values by `qs` signatures, and `c / card` per
+adversary hash query and `(r + 1) / card` per query of the verifier. -/
 @[expose] noncomputable def securityBound (p : Params) (card c r qh qs : ℕ) : ℝ≥0∞ :=
   ((qh : ℝ≥0∞) + 1) * KeyedHash.Covering.targetCoverBound p.h p.a p.k qs +
-    ((c : ℝ≥0∞) * qh + qs + ((r + 1) * GeneralScheme.verifyInternalQueryBound p : ℕ)) *
+    ((c : ℝ≥0∞) * qh + ((r + 1) * GeneralScheme.verifyInternalQueryBound p : ℕ)) *
       (card : ℝ≥0∞)⁻¹
 
 variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed]
@@ -209,7 +213,8 @@ variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [Decidable
 
 /-- **The security target** at the constants `c` and `r`: for each public seed, every adversary
 against `romScheme` at that seed making at most `qh` hash queries and `qs` signing queries forges
-with probability at most `securityBound vp.params |Y| c r qh qs`. -/
+with probability at most `securityBound vp.params |Y| c r qh qs`, the coverage of `H_msg` by the
+`qs` signatures plus `c / |Y|` per hash query and `(r + 1) / |Y|` per query of the verifier. -/
 @[expose] def SecurityTarget (e : core.SkSeed ≃ core.Y)
     (optRand : PublicKeyCore core → ProbComp core.Y) (c r : ℕ) : Prop :=
   ∀ (pkSeed : core.PkSeed) (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed)))

@@ -22,6 +22,8 @@ statement is not degenerate.
 * **The verifier term is a separate term.** At zero budget the right-hand side is exactly
   `(r + 1) · verifyInternalQueryBound / |Y|` (`securityBound_zero`), so the target does not force an
   adversary that makes no query to have advantage zero: the verifier's own queries can still fire.
+* **Signing queries enter only through the coverage term.** With no hash query the right-hand side
+  is the coverage term plus the verifier term at every signing budget (`securityBound_qh_zero`).
 * **The target is not vacuous at a real parameter set.** At SLH-DSA-128s, with `qh = qs = 2^64`,
   `|Y| = 2^128`, `c = 8` and `r = 7`, the right-hand side is below one (`securityBound_128s_lt_one`;
   crudely below `2^-33`).
@@ -118,6 +120,12 @@ theorem securityBound_zero (p : Params) (hk : 0 < p.k) (card c r : ℕ) :
       ((r + 1) * GeneralScheme.verifyInternalQueryBound p : ℕ) * (card : ℝ≥0∞)⁻¹ := by
   simp [securityBound, targetCoverBound_zero p.h p.a p.k hk]
 
+theorem securityBound_qh_zero (p : Params) (card c r qs : ℕ) :
+    securityBound p card c r 0 qs =
+      targetCoverBound p.h p.a p.k qs +
+        ((r + 1) * GeneralScheme.verifyInternalQueryBound p : ℕ) * (card : ℝ≥0∞)⁻¹ := by
+  simp [securityBound]
+
 theorem verifyInternalQueryBound_128s :
     GeneralScheme.verifyInternalQueryBound
       (FipsParameterSet.SLHDSA_SHA2_128s.validatedParams).params = 3929 := by
@@ -169,7 +177,7 @@ theorem securityBound_128s_lt_one :
     simp_rw [term_128s, ← Finset.sum_mul, ← Nat.cast_sum]
     gcongr
   have key : ((2 ^ 64 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 70 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹) +
-      ((8 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((7 + 1) * 3929 : ℕ) : ℝ≥0∞)) *
+      ((8 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((7 + 1) * 3929 : ℕ) : ℝ≥0∞)) *
         (((2 ^ 128 : ℕ) : ℝ≥0∞))⁻¹ < 1 := by
     rw [← ENNReal.toReal_lt_toReal (by finiteness) ENNReal.one_ne_top]
     rw [ENNReal.toReal_add (by finiteness) (by finiteness)]

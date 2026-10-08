@@ -32,34 +32,42 @@ the proof itself: the forger guessing a secret seed (the hidden-seed coupling,
 `VCVio/OracleComp/QueryTracking/RandomOracle/HiddenSeed.lean`) and, in the faithfulness step,
 forger strings that begin with `SK.prf`.
 
-Each loss is to be charged against the **expected number of queries of the kind that can cause
-it**, rather than against `q_h`: target collisions and hidden-value hits against queries at honest
-(ledger) keys under `PK.seed`, seed guessing against queries at secret-derivable points, and the
-faithfulness loss against strings beginning with `SK.prf`. The design claims, still to be checked,
-are that under the address-injectivity hypothesis these kinds are disjoint, and that a query at an
-honest key causes at most two unit hazards: its input can equal a hidden value, or its fresh
-answer can equal the honest answer. The losses then sum to at most `2·q_h / 2^{8n}`. Both hazards
-are reachable at that rate, so an accounting that charges hazards rather than forgeries cannot go
-below 2; going lower requires showing that a single hazard is not yet a forgery, as leanVM's
-refined route does (below). Adding the losses as separate `q_h`-bounded terms instead gives a
-constant of 4. The expected counts are to be taken with
-`VCVio/OracleComp/QueryTracking/ExpectedQueryCount.lean`.
+Each loss is charged against the **queries of the kind that can cause it**, rather than against
+`q_h`, on every run: one joint potential over the deferred relabelled game covers the hidden-value
+hit, the target collision (at oracle-key level, so a forger input of any length at a node's key
+counts), the seed guess and, at byte level, the faithfulness misroute, and each forger or verifier
+query is charged by its kind. A query at an honest (ledger) key under `PK.seed` causes at most two
+unit hazards: its input can equal a hidden value, or its fresh answer can equal the honest answer.
+A query at a secret-derivable point (a `PRF` key or `PRF_msg`) causes one, the seed guess. Under
+the key-separation hypothesis (`CorePrimitives.KeySeparated`) no derivable point is at an honest
+key, so the kinds are disjoint for the target collision, the hidden-value hit and the seed guess;
+disjointness from the faithfulness event is owed with the faithfulness theorem. The forger's
+queries then cost at most `2·q_h / 2^{8n}`, and the verifier's are charged in the same potential
+(below). Both hazards are reachable at that rate, so an accounting that charges hazards rather
+than forgeries cannot go below 2; going lower requires showing that a single hazard is not yet a
+forgery, as leanVM's refined route does (below). Adding the losses as separate `q_h`-bounded
+terms instead gives a constant of 4.
 
-Three terms remain outside that charge:
+Beside the forger's `2·q_h / 2^{8n}`, the bound has two terms:
 
 - the interleaved-target coverage `(q_h + 1) · targetCoverBound h a k q_s`
   (`VCVio/CryptoFoundations/HardnessAssumptions/KeyedHash/Covering.lean`), which equals
-  `2^{−ak}·E[Bin(q_s, 2^{−h})^k]`;
-- the verifier's own queries, `(r + 1) · verifyInternalQueryBound` at `r = 1`, two hazards each;
-- for deterministic signing, a term `q_s / 2^{8n}` from honest strings in the faithfulness step,
-  not yet known to be absorbable. `securityBound` in `Target.lean` carries this term in both
-  modes; the hedged target below drops it.
+  `2^{−ak}·E[Bin(q_s, 2^{−h})^k]`, outside the potential;
+- the verifier's own queries, `(r + 1) · verifyInternalQueryBound` at `r = 1`, two hazards each.
+
+The three-oracle bound (`securityBound` in `Target.lean`) has no term linear in `q_s`, in either
+signing mode: signing queries enter only through the coverage term. For deterministic signing the
+byte-level statement adds `q_s / 2^{8n}`, the faithfulness event for the signer's strings: a
+signing query whose randomizer equals `SK.prf`, so that its `H_msg` string begins with `SK.prf`.
+That event is joined into the same joint potential, not added as a separate probability.
 
 ### Levels
 
-Per-query level `−log₂(bound / q_h)` at `q_h = q_s = 2^64`. "Two-hazard limit" is the level with the
-coverage term and the constant 2 alone; `8n − 1` is the level of `Adv ≤ q_h / 2^{8n−1}`. The last
-column is the coverage term's cost in units of `q_h / 2^{8n}`.
+Per-query level `−log₂(bound / q_h)` at `q_h = q_s = 2^64`. "Hedged" is the three-oracle bound,
+which holds in both signing modes; "Deterministic" is the byte-level bound for deterministic
+signing, with its `q_s / 2^{8n}` term. "Two-hazard limit" is the level with the coverage term and
+the constant 2 alone; `8n − 1` is the level of `Adv ≤ q_h / 2^{8n−1}`. The last column is the
+coverage term's cost in units of `q_h / 2^{8n}`.
 
 | Set | Hedged | Deterministic | Losses added separately (deterministic) | Two-hazard limit | `8n − 1` | Coverage cost |
 |---|---|---|---|---|---|---|
@@ -76,11 +84,11 @@ the exact probability instead, the coverage costs drop to 0.10 (128f), 0.11 (192
 0.01. At `q_s ≤ 2^62` the coverage term is negligible at every set, and the two-hazard limit is
 `8n − 1`.
 
-The levels are those of the three-oracle model. The byte-level statement over a single SHAKE256
-adds the losses of the faithfulness step. At `n = 32` one of them, a forger string that reads as
-two different typed queries, costs about `2^{−172}` if bounded directly, which would bring the
-256-bit sets down to about 236 bits; the `n = 32` rows assume the randomised routing argument that
-removes it.
+The "Deterministic" column adds only the `q_s / 2^{8n}` term to the three-oracle bound. The
+byte-level statement over a single SHAKE256 also adds the other losses of the faithfulness step,
+in both modes. At `n = 32` one of them, a forger string that reads as two different typed
+queries, costs about `2^{−172}` if bounded directly, which would bring the 256-bit sets down to
+about 236 bits; the `n = 32` rows assume the randomised routing argument that removes it.
 
 ## leanVM's 127-bit proof
 
@@ -118,7 +126,7 @@ How it reaches 127, from its `PROOF.md`:
 | Secret seeds | `SK.seed`, `SK.prf` of `n` bytes: guessing costs `q_h / 2^{8n}` | 256-bit master seed |
 | Signing | Never fails; hedged or deterministic randomizer | Can fail (randomizer and counter searches); a completeness theorem bounds failure |
 | Unforgeability | EUF-CMA first, then SUF-CMA | SUF-CMA |
-| Bound | `2·q_h / 2^{8n}` plus coverage, verifier and deterministic terms | `q / 2^127` |
+| Bound | `2·q_h / 2^{8n}` plus coverage and verifier terms; byte-level deterministic adds `q_s / 2^{8n}` | `q / 2^127` |
 
 Counting the whole experiment suits a scheme capped at `2^24` signatures. At FIPS 205's `2^64`,
 honest signing alone makes about `2^81` to `2^86` hash queries depending on the set, so at the
@@ -131,7 +139,8 @@ what makes the statement informative at that signature count.
   in Lean with VCVio, which de-risks the target.
 - The two-hazard accounting behind the constant.
 - The expected charged-query count, `VCVio/OracleComp/QueryTracking/ExpectedQueryCount.lean`,
-  which follows `formal/xmss/XmssSecurity/Proof/ExpectedQueryCount.lean`.
+  which follows `formal/xmss/XmssSecurity/Proof/ExpectedQueryCount.lean`. It carries the
+  expected-count form of the hidden-seed coupling; the bound above charges pathwise instead.
 - Guidance on the hidden-value event: relabelling honest nodes and deferring their values, which
   plays a role like that of leanVM's canonical graph of honest hash inputs (`Proof/Hypertree`)
   and the exact adaptive posteriors of its uniform tables (`Proof/Base`).
@@ -145,7 +154,8 @@ None of the accounting choices above changes the scheme: the bound is about FIPS
 so an implementation proved to refine the Lean byte-level specification inherits it. The facts an
 implementation does depend on are:
 
-- **Signing mode.** Deterministic signing carries the extra `q_s / 2^{8n}` term.
+- **Signing mode.** At byte level, deterministic signing carries the extra `q_s / 2^{8n}` term;
+  the three-oracle bound is the same in both modes.
 - **Signature count.** The bound is a function of `q_s`; a deployment that signs fewer than `2^64`
   messages per key obtains the corresponding smaller coverage term.
 - **Address encoding.** The key hypothesis `CorePrimitives.KeyDiscipline` bundles injectivity of
