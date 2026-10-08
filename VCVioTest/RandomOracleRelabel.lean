@@ -25,7 +25,8 @@ at the derivation's value, once the derivation is drawn, by the node's label.
   only with probability `2⁻¹`.
 * Under the secret encoding that reads the derivation at the public point named by the secret, the
   split state merged under the encoding reads the derivation there, the node's label at the
-  node's point, and the public cache elsewhere.
+  node's point, and the public cache elsewhere. Where the secret names the node's own point, that
+  point reads the derivation rather than the label.
 -/
 
 public section
@@ -242,5 +243,22 @@ example (s : Bool) {st : RelabelState (Bool →ₒ Bool) Unit Unit Bool}
     E.merge s (G.toSplitCache st) (!s) = st.1 (!s) :=
   E.merge_toSplitCache_apply_of_not_exists G s (by cases s <;> decide)
     fun ⟨_, _, hk, _⟩ ↦ by rw [childVals_eq, h] at hk; cases hk
+
+/-- When the secret encodes the derivation at the node's own point, that point reads the
+derivation, not the node's label: with the derivation drawn at `v`, the label at `!v` and the
+secret `v`, the node's point `v` at its drawn children values `[v]` reads `v`. So the merged
+split state reads a node's label at its point only where no derivation is encoded there. -/
+example (v : Bool) :
+    let st : RelabelState (Bool →ₒ Bool) Unit Unit Bool :=
+      (∅, ((∅ : ((Unit ⊕ Unit) →ₒ Bool).QueryCache).cacheQuery (.inl ()) v).cacheQuery
+        (.inr ()) (!v))
+    G.childVals st () = some [v] ∧
+      E.merge v (G.toSplitCache st) (G.pt () [v]) = some v ∧ st.2 (.inr ()) = some (!v) := by
+  intro st
+  refine ⟨?_, ?_, ?_⟩
+  · rw [childVals_eq]; simp [st, QueryCache.cacheQuery_of_ne]
+  · refine (E.merge_toSplitCache_apply_enc G v st ()).trans ?_
+    simp [st, QueryCache.cacheQuery_of_ne]
+  · simp [st]
 
 end RelabelToy
