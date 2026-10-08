@@ -92,10 +92,6 @@ theorem prEvent_roleExperiment_hitAll_le {e : core.SkSeed ≃ core.Y}
     (range_eq_tapeClassRange core) L TapeClass.forger P _ ?_
     (fun x _ t => prEvent_randRel_le core x t) (IsRoleRandQuery core) (fun x hx => ⟨hx, hx⟩) _ qs
     (isQueryBoundP_roleExperiment_rand core hadv pkSeed)
-  rintro ((t | t) | (k | x)) hx
-  · exact hx.elim
-  · exact ⟨hL, hL⟩
-  · exact hx.elim
-  · exact ⟨hL, hL⟩
+  rintro ((t | t) | (k | x)) hx <;> first | exact hx.elim | exact ⟨hL, hL⟩
 
 end SLHDSA.Security.Coverage

@@ -27,24 +27,10 @@ point relates to are equal. `HitAll` is the event that every designated position
 
 ## The potential
 
-`hitPot … ε n s` is `(n * ε) ^ hitPending s` on a state satisfying `HitInv` and `HitDistinct`,
-`0` on a state satisfying `HitInv` but not `HitDistinct`, and `⊤` off `HitInv`. `HitInv` is the
-position invariant `ClassPosInv` together with the fact that every hit point is cached. The gate
-makes the step inequality of `OracleComp.lintegral_run_le_of_isQueryBoundP` hold at every state,
-reachable or not: at a state off `HitInv` its right-hand side is `⊤`.
-
-* `hitPot_step` is that step inequality. A step that is not a fresh draw at a `trig` point keeps
-  the hit set, so it keeps every cleared position cleared and clears no other; it can only
-  designate further points, which can only break `HitDistinct`. A fresh draw at a `trig` point
-  `x` answers uniformly when the tapes of the classes of `x` are empty. Its answer `u` clears a
-  pending position only if `rel x u t` holds of the point `t` there, which has mass at most `ε`
-  per pending position, and under `HitDistinct` it clears at most one. So the expected
-  potential is at most `(n * ε) ^ k + k * ε * (n * ε) ^ (k - 1) ≤ ((n + 1) * ε) ^ k` for `k`
-  pending positions, by `pow_add_mul_le_add_pow`.
-* `prEvent_hitAll_le` composes `hitPot_step`, `hitPot_mono`, `hitPot_init` and
-  `one_le_hitPot_of_hitAll` through `OracleComp.prEvent_run_le_of_isQueryBoundP`: a program
-  making at most `n` queries satisfying `charged`, which covers every query at a `trig` point,
-  reaches `HitAll` from the empty state with probability at most `(n * ε) ^ P.card`.
+`hitPot` is gated: `⊤` off `HitInv` (the position invariant `ClassPosInv` and every hit point
+cached), so that the step inequality of `OracleComp.lintegral_run_le_of_isQueryBoundP` holds at
+every state, reachable or not, and `0` off `HitDistinct`. `hitPot_step` is that step inequality,
+and `prEvent_hitAll_le` composes it through `OracleComp.prEvent_run_le_of_isQueryBoundP`.
 
 ## Scope
 
@@ -111,7 +97,7 @@ def HitAll (s : HitState spec R) : Prop :=
 
 /-- **The hit potential** at a remaining budget of `n` charged draws, each of which hits a given
 point with probability at most `ε`: `(n * ε) ^ hitPending s` on `HitInv` and `HitDistinct`, `0`
-on `HitInv` alone, and `⊤` off `HitInv`. -/
+on `HitInv` without `HitDistinct`, and `⊤` off `HitInv`. -/
 @[expose]
 noncomputable def hitPot (ε : ℝ≥0∞) (n : ℕ) (s : HitState spec R) : ℝ≥0∞ := by
   classical
@@ -186,21 +172,21 @@ variable [DecidableEq ι] [DecidableEq J] [∀ t : spec.Domain, SampleableType (
   {t : (unifSpec + (spec + spec)).Domain} {s : HitState spec R}
   {y : (unifSpec + (spec + spec)).Range t × HitState spec R}
 
-/-- A step of the instrumented run preserves `HitInv`, keeps the class and position of every
-point cached before it, only grows the hit set, and adds to it only points cached before it. -/
+/-- A step of the instrumented run preserves `HitInv`. -/
 theorem hitInv_of_mem_support_classPosImplFwd_run (hs : HitInv τ Lfam s)
     (hy : y ∈ support ((classPosImplFwd R τ hR (freshHitAux trig rel) t).run s)) :
-    HitInv τ Lfam y.2 ∧
-      (∀ t', s.1.1 t' ≠ none → y.2.2.1.cls t' = s.2.1.cls t' ∧ y.2.2.1.pos t' = s.2.1.pos t') ∧
-      s.2.2 ⊆ y.2.2.2 ∧ ∀ t' ∈ y.2.2.2, s.1.1 t' ≠ none := by
-  obtain ⟨-, hq⟩ := (QueryImpl.mem_support_extendState_run_iff _ _ t s y).1 hy
-  refine ⟨⟨classPosInvAuxFwd_step τ hR _ Lfam t s hs.1 y hy,
-    ne_none_of_mem_hits_of_mem_support_classPosImplFwd_run trig rel τ hR t s hs.2 y hy⟩,
-    fun t' ht' => by rw [hq]; exact classPosAuxFwd_cls_pos_of_ne_none τ t _ _ _ _ ht', ?_⟩
-  rw [hq]
-  rcases t with n | (x | x)
-  · exact ⟨subset_rfl, hs.2⟩
-  all_goals exact ⟨subset_freshHitStep trig rel, ne_none_of_mem_freshHitStep trig rel hs.2⟩
+    HitInv τ Lfam y.2 :=
+  ⟨classPosInvAuxFwd_step τ hR _ Lfam t s hs.1 y hy,
+    ne_none_of_mem_hits_of_mem_support_classPosImplFwd_run trig rel τ hR t s hs.2 y hy⟩
+
+/-- A point with a class before a step keeps its class and its position after it. -/
+theorem cls_pos_of_mem_support_classPosImplFwd_run (hs : HitInv τ Lfam s)
+    (hy : y ∈ support ((classPosImplFwd R τ hR (freshHitAux trig rel) t).run s))
+    {t' : spec.Domain} {j : J} (hc : s.2.1.cls t' = some j) :
+    y.2.2.1.cls t' = some j ∧ y.2.2.1.pos t' = s.2.1.pos t' := by
+  obtain ⟨h₁, h₂⟩ := (mono_of_mem_support_classPosImplFwd_run trig rel τ hR t s y hy).2.1 t'
+    fun h => by simp [hs.1.cls_none t' h] at hc
+  exact ⟨h₁.trans hc, h₂⟩
 
 /-- After a step, a designated position is cleared exactly when a point sitting there before the
 step is in the hit set after it. -/
@@ -208,34 +194,30 @@ theorem hitCleared_iff_of_mem_support_classPosImplFwd_run (hs : HitInv τ Lfam s
     (hy : y ∈ support ((classPosImplFwd R τ hR (freshHitAux trig rel) t).run s)) (p : ℕ) :
     HitCleared jF y.2 p ↔
       ∃ t', s.2.1.cls t' = some jF ∧ s.2.1.pos t' = some p ∧ t' ∈ y.2.2.2 := by
-  obtain ⟨-, hcp, -, hcached⟩ := hitInv_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy
+  obtain ⟨-, hcp, -, hnew⟩ := mono_of_mem_support_classPosImplFwd_run trig rel τ hR t s y hy
   constructor
   · rintro ⟨t', hc, hp, hh⟩
-    obtain ⟨h₁, h₂⟩ := hcp t' (hcached t' hh)
+    obtain ⟨h₁, h₂⟩ := hcp t' ((hnew t' hh).elim (hs.2 t') id)
     exact ⟨t', h₁ ▸ hc, h₂ ▸ hp, hh⟩
   · rintro ⟨t', hc, hp, hh⟩
-    obtain ⟨h₁, h₂⟩ := hcp t' fun h => by simp [hs.1.cls_none t' h] at hc
-    exact ⟨t', h₁ ▸ hc, h₂ ▸ hp, hh⟩
+    obtain ⟨h₁, h₂⟩ := cls_pos_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy hc
+    exact ⟨t', h₁, h₂ ▸ hp, hh⟩
 
 /-- A step designates no fewer points, so `HitDistinct` after it gives `HitDistinct` before. -/
 theorem hitDistinct_of_mem_support_classPosImplFwd_run (hs : HitInv τ Lfam s)
     (hy : y ∈ support ((classPosImplFwd R τ hR (freshHitAux trig rel) t).run s))
     (hD : HitDistinct rel jF P y.2) : HitDistinct rel jF P s := by
-  obtain ⟨-, hcp, -⟩ := hitInv_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy
-  have hkeep : ∀ t' p, s.2.1.cls t' = some jF → s.2.1.pos t' = some p →
-      y.2.2.1.cls t' = some jF ∧ y.2.2.1.pos t' = some p := fun t' p hc hp => by
-    obtain ⟨h₁, h₂⟩ := hcp t' fun h => by simp [hs.1.cls_none t' h] at hc
-    exact ⟨h₁.trans hc, h₂.trans hp⟩
   intro t₁ t₂ p p' hp hp' hc₁ hp₁ hc₂ hp₂
-  exact hD t₁ t₂ p p' hp hp' (hkeep _ _ hc₁ hp₁).1 (hkeep _ _ hc₁ hp₁).2 (hkeep _ _ hc₂ hp₂).1
-    (hkeep _ _ hc₂ hp₂).2
+  obtain ⟨h₁, h₁'⟩ := cls_pos_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy hc₁
+  obtain ⟨h₂, h₂'⟩ := cls_pos_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy hc₂
+  exact hD t₁ t₂ p p' hp hp' h₁ (h₁'.trans hp₁) h₂ (h₂'.trans hp₂)
 
 /-- A step clears no fewer positions, so no more are pending after it. -/
 theorem hitPending_le_of_mem_support_classPosImplFwd_run (hs : HitInv τ Lfam s)
     (hy : y ∈ support ((classPosImplFwd R τ hR (freshHitAux trig rel) t).run s)) :
     hitPending jF P y.2 ≤ hitPending jF P s := by
   classical
-  obtain ⟨-, -, hsub, -⟩ := hitInv_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy
+  obtain ⟨-, -, hsub, -⟩ := mono_of_mem_support_classPosImplFwd_run trig rel τ hR t s y hy
   refine Finset.card_le_card (Finset.monotone_filter_right _ fun p _ hn hc => hn ?_)
   obtain ⟨t', hc', hp', hh⟩ := hc
   exact (hitCleared_iff_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy p).2
@@ -248,7 +230,7 @@ theorem hitPot_le_of_hits_eq (hs : HitInv τ Lfam s)
     (hh : y.2.2.2 = s.2.2) (ε : ℝ≥0∞) (n : ℕ) :
     hitPot τ Lfam rel jF P ε n y.2 ≤ hitPot τ Lfam rel jF P ε n s := by
   classical
-  have hy' := (hitInv_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy).1
+  have hy' := hitInv_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy
   by_cases hD : HitDistinct rel jF P y.2
   · rw [hitPot_of_hitDistinct hy' hD, hitPot_of_hitDistinct hs
       (hitDistinct_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy hD), hitPending,
@@ -278,7 +260,7 @@ theorem hitPot_le_of_hits_eq_union (hs : HitInv τ Lfam s) (hD : HitDistinct rel
       {u' | HitsPending rel jF P s x u'}.indicator
         (fun _ => ((n : ℝ≥0∞) * ε) ^ (hitPending jF P s - 1)) u := by
   classical
-  have hy' := (hitInv_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy).1
+  have hy' := hitInv_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy
   by_cases hDy : HitDistinct rel jF P y.2
   swap
   · rw [hitPot_of_not_hitDistinct hy' hDy]
@@ -322,46 +304,30 @@ theorem hitPot_le_of_hits_eq_union (hs : HitInv τ Lfam s) (hD : HitDistinct rel
     rw [Set.indicator_of_notMem (show u ∉ {u' | HitsPending rel jF P s x u'} from hB), add_zero]
     exact le_of_eq (congrArg _ (by omega))
 
-omit [DecidableEq ι] [DecidableEq J] in
-/-- **The mass of hitting a pending designated point.** If `rel x u t` has mass at most `ε` over
-a uniform `u` for every point `t`, a uniform answer at `x` hits a point sitting at a pending
-designated position with probability at most `ε` per pending position. -/
-theorem prEvent_hitsPending_le (hs : HitInv τ Lfam s) (x : spec.Domain) {ε : ℝ≥0∞}
-    (hε : ∀ t', Pr{let u ← ($ᵗ spec.Range x : ProbComp _)}[rel x u t'] ≤ ε) :
-    Pr{let u ← ($ᵗ spec.Range x : ProbComp _)}[HitsPending rel jF P s x u] ≤
-      hitPending jF P s * ε := by
-  classical
-  have hev : ∀ u, HitsPending rel jF P s x u ↔ ∃ p ∈ P.filter fun p => ¬ HitCleared jF s p,
-      ∃ t', s.2.1.cls t' = some jF ∧ s.2.1.pos t' = some p ∧ rel x u t' := fun u => by
-    simp only [HitsPending, Finset.mem_filter, and_assoc]
-  simp only [hev]
-  refine (prEvent_exists_finset_le _ _ _).trans ?_
-  rw [hitPending, ← nsmul_eq_mul]
-  refine Finset.sum_le_card_nsmul _ _ _ fun p _ => ?_
-  by_cases hp : ∃ t₀, s.2.1.cls t₀ = some jF ∧ s.2.1.pos t₀ = some p
-  · obtain ⟨t₀, hc₀, hp₀⟩ := hp
-    refine (prEvent_mono _ _ _ fun u ⟨t', hc', hp', hr⟩ => ?_).trans (hε t₀)
-    rwa [← hs.1.pos_inj t' t₀ jF p hc' hp' hc₀ hp₀]
-  · rw [prEvent_eq_zero_of_forall_not _ _ fun u ⟨t', hc', hp', _⟩ => hp ⟨t', hc', hp'⟩]
-    exact zero_le
-
 end Step
 
 /-! ## The expected step -/
 
 section Expected
 
-/-- A bound `a ^ k`, raised by `a ^ (k - 1)` on an event of mass at most `k * ε`, has expectation
-at most `(a + ε) ^ k` over a uniform sample. -/
-private theorem lintegral_uniformSample_le {A : Type} [SampleableType A] (f : A → ℝ≥0∞)
-    (B : Set A) (a ε : ℝ≥0∞) (k : ℕ) (hf : ∀ u, f u ≤ a ^ k + B.indicator (fun _ => a ^ (k - 1)) u)
+/-- If the answer of a step is a uniform sample, and the potential after the step is at most
+`a ^ k`, raised by `a ^ (k - 1)` when the answer falls in a set of mass at most `k * ε`, then the
+expected potential is at most `(a + ε) ^ k`. -/
+private theorem lintegral_le_of_fst_uniform {A σ : Type} [SampleableType A]
+    (mx : ProbComp (A × σ)) (hmx : Prod.fst <$> mx = ($ᵗ A : ProbComp A)) (f : σ → ℝ≥0∞)
+    (B : Set A) (a ε : ℝ≥0∞) (k : ℕ)
+    (hf : ∀ y ∈ support mx, f y.2 ≤ a ^ k + B.indicator (fun _ => a ^ (k - 1)) y.1)
     (hB : Pr{let u ← ($ᵗ A : ProbComp A)}[u ∈ B] ≤ k * ε) :
-    ∫⁻ r, r ∂𝒟[f <$> ($ᵗ A : ProbComp A)] ≤ (a + ε) ^ k := by
+    ∫⁻ r, r ∂𝒟[(fun y => f y.2) <$> mx] ≤ (a + ε) ^ k := by
   let _ : MeasurableSpace A := ⊤
-  refine (lintegral_id_evalDist_map_mono _ hf).trans ?_
-  calc ∫⁻ r, r ∂𝒟[(fun u => a ^ k + B.indicator (fun _ => a ^ (k - 1)) u) <$>
-          ($ᵗ A : ProbComp A)]
-      = ∫⁻ r, r ∂𝒟[(fun _ => a ^ k) <$> ($ᵗ A : ProbComp A)] +
+  let _ : MeasurableSpace (A × σ) := ⊤
+  calc ∫⁻ r, r ∂𝒟[(fun y => f y.2) <$> mx]
+      ≤ ∫⁻ r, r ∂𝒟[(fun u => a ^ k + B.indicator (fun _ => a ^ (k - 1)) u) <$>
+          ($ᵗ A : ProbComp A)] := by
+        rw [← hmx, Functor.map_map, lintegral_id_evalDist_map, lintegral_id_evalDist_map]
+        exact lintegral_mono_ae
+          (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete hf)
+    _ = ∫⁻ r, r ∂𝒟[(fun _ => a ^ k) <$> ($ᵗ A : ProbComp A)] +
           ∫⁻ r, r ∂𝒟[B.indicator (fun _ => a ^ (k - 1)) <$> ($ᵗ A : ProbComp A)] :=
         lintegral_id_evalDist_map_add _ _ _
     _ ≤ a ^ k + a ^ (k - 1) * (k * ε) := by
@@ -402,8 +368,7 @@ theorem hitPot_step
   by_cases hD : HitDistinct rel jF P s
   swap
   · refine (lintegral_id_evalDist_map_le_of_le_of_mem_support _ fun y hy => ?_).trans zero_le
-    rw [hitPot_of_not_hitDistinct
-      (hitInv_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy).1
+    rw [hitPot_of_not_hitDistinct (hitInv_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy)
       (mt (hitDistinct_of_mem_support_classPosImplFwd_run trig rel τ hR hs hy) hD)]
   by_cases hfresh : ∃ x, (t = .inr (.inl x) ∨ t = .inr (.inr x)) ∧ s.1.1 x = none ∧ trig x
   · obtain ⟨x, ht, hc, hx⟩ := hfresh
@@ -418,35 +383,32 @@ theorem hitPot_step
       have := hs.1.length_add j
       simp only [hj, List.length_nil, Nat.add_eq_zero_iff] at this
       exact List.eq_nil_of_length_eq_zero this.1
+    -- a uniform answer hits a pending designated point with mass at most `ε` per position
+    have hB : Pr{let u ← ($ᵗ spec.Range x : ProbComp _)}[
+        u ∈ {u | HitsPending rel jF P ((c, L), q) x u}] ≤ hitPending jF P ((c, L), q) * ε := by
+      have hev : ∀ u, u ∈ {u | HitsPending rel jF P ((c, L), q) x u} ↔
+          ∃ p ∈ P.filter fun p => ¬ HitCleared jF ((c, L), q) p, ∃ t',
+            q.1.cls t' = some jF ∧ q.1.pos t' = some p ∧ rel x u t' := fun u => by
+        simp only [Set.mem_ofPred_eq, HitsPending, Finset.mem_filter, and_assoc]
+      simp only [hev]
+      refine (prEvent_exists_finset_le _ _ _).trans ?_
+      rw [hitPending, ← nsmul_eq_mul]
+      refine Finset.sum_le_card_nsmul _ _ _ fun p _ => ?_
+      by_cases hp : ∃ t₀, q.1.cls t₀ = some jF ∧ q.1.pos t₀ = some p
+      · obtain ⟨t₀, hc₀, hp₀⟩ := hp
+        refine (prEvent_mono _ _ _ fun u ⟨t', hc', hp', hr⟩ => ?_).trans (hε x hx t₀)
+        rwa [← hs.1.pos_inj t' t₀ jF p hc' hp' hc₀ hp₀]
+      · rw [prEvent_eq_zero_of_forall_not _ _ fun u ⟨t', hc', hp', _⟩ => hp ⟨t', hc', hp'⟩]
+        exact zero_le
     rcases ht with rfl | rfl
-    · have hrun : (classPosImplFwd R τ hR (freshHitAux trig rel) (.inr (.inl x))).run
-          ((c, L), q) = (fun u => (u, ((c.cacheQuery x u, L), (classPosAuxFwd R τ (.inr (.inl x))
-            (c, L) u (c.cacheQuery x u, L) q.1, freshHitStep trig rel c x u q.2)))) <$>
-            ($ᵗ spec.Range x : ProbComp _) := by
-        rw [QueryImpl.extendState_apply]
-        simp [tapeCachingImplClass_apply_inl, tapeStep_run_nil hc (hnil _ (hlazy x hx).1),
-          freshHitAux]
-      rw [hrun, Functor.map_map]
-      refine lintegral_uniformSample_le _ {u | HitsPending rel jF P ((c, L), q) x u} _ _ _
-        (fun u => ?_) (prEvent_hitsPending_le rel τ hs x (hε x hx))
-      refine hitPot_le_of_hits_eq_union trig rel τ hR (t := .inr (.inl x)) hs hD (y := (u, _)) ?_
-        x u (freshHitStep_of_eq_none trig rel hc hx) ε n
-      rw [hrun, support_map, support_uniformSample, Set.image_univ]
-      exact ⟨u, rfl⟩
-    · have hrun : (classPosImplFwd R τ hR (freshHitAux trig rel) (.inr (.inr x))).run
-          ((c, L), q) = (fun u => (u, ((c.cacheQuery x u, L), (classPosAuxFwd R τ (.inr (.inr x))
-            (c, L) u (c.cacheQuery x u, L) q.1, freshHitStep trig rel c x u q.2)))) <$>
-            ($ᵗ spec.Range x : ProbComp _) := by
-        rw [QueryImpl.extendState_apply]
-        simp [tapeCachingImplClass_apply_inr, tapeStep_run_nil hc (hnil _ (hlazy x hx).2),
-          freshHitAux]
-      rw [hrun, Functor.map_map]
-      refine lintegral_uniformSample_le _ {u | HitsPending rel jF P ((c, L), q) x u} _ _ _
-        (fun u => ?_) (prEvent_hitsPending_le rel τ hs x (hε x hx))
-      refine hitPot_le_of_hits_eq_union trig rel τ hR (t := .inr (.inr x)) hs hD (y := (u, _)) ?_
-        x u (freshHitStep_of_eq_none trig rel hc hx) ε n
-      rw [hrun, support_map, support_uniformSample, Set.image_univ]
-      exact ⟨u, rfl⟩
+    all_goals
+      refine lintegral_le_of_fst_uniform (A := spec.Range x) _ ?_ _ _ _ _ _
+        (fun y hy => hitPot_le_of_hits_eq_union trig rel τ hR hs hD hy x y.1
+          ((congrArg (·.2) ((QueryImpl.mem_support_extendState_run_iff _ _ _ _ _).1 hy).2).trans
+            (freshHitStep_of_eq_none trig rel hc hx)) ε n) hB
+      rw [QueryImpl.extendState_apply]
+      simp [tapeCachingImplClass_apply_inl, tapeCachingImplClass_apply_inr,
+        tapeStep_run_nil hc (hnil _ (hlazy x hx).1), tapeStep_run_nil hc (hnil _ (hlazy x hx).2)]
   · push Not at hfresh
     have hh := hits_eq_self_of_mem_support_classPosImplFwd_run trig rel τ hR t s
       fun x hxt hc => hfresh x hxt hc

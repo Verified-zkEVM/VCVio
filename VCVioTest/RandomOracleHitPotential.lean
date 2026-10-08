@@ -20,7 +20,8 @@ to its answer. The designated positions are positions of the tape of class `fals
 * On the empty state every designated position is pending, and the potential is
   `(n * ε) ^ P.card`.
 * A program making at most `n` queries at `true` hits the point at position `0` of tape `false`
-  with probability at most `n / 2`.
+  with probability at most `n / 2`, and the points at positions `0` and `1` with probability at
+  most `(n / 2) ^ 2`.
 * Off the gating invariant the potential is `⊤`.
 -/
 
@@ -83,5 +84,17 @@ example (L : (k : Bool) → List (Ans k)) (hL : L true = []) {α : Type}
     (fun x hx => by subst hx; exact ⟨hL, hL⟩) (fun x _ y => prEvent_hitRel_le x y) _
     (fun x hx => by subst hx; exact ⟨rfl, rfl⟩) oa n hq).trans_eq ?_
   simp
+
+/-- **Two designated positions.** A program making at most `n` queries at `true` hits the points
+at positions `0` and `1` of tape `false` with probability at most `(n / 2) ^ 2`. -/
+example (L : (k : Bool) → List (Ans k)) (hL : L true = []) {α : Type}
+    (oa : OracleComp (unifSpec + (pts + pts)) α) (n : ℕ)
+    (hq : IsQueryBoundP oa (fun t => classOf byVal t = some true) n) :
+    Pr{let z ← (simulateQ (classPosImplFwd Ans byVal byVal_range
+        (freshHitAux (· = true) hitRel)) oa).run ((∅, L), (ClassPos.init, ∅))}[
+        HitAll hitRel false {0, 1} z.2] ≤ ((n : ℝ≥0∞) * 2⁻¹) ^ 2 :=
+  prEvent_hitAll_le (· = true) hitRel byVal byVal_range L false {0, 1} 2⁻¹
+    (fun x hx => by subst hx; exact ⟨hL, hL⟩) (fun x _ y => prEvent_hitRel_le x y) _
+    (fun x hx => by subst hx; exact ⟨rfl, rfl⟩) oa n hq
 
 end HitPotentialTest
