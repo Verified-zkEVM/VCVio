@@ -177,7 +177,8 @@ theorem isQueryBoundP_labExperiment {e : core.SkSeed ≃ core.Y}
     (fun | .inl _, _ => hG _ ▸ (isQueryBoundP_query_iff _ _ _).2 False.elim
          | .inr _, ht => (ht trivial).elim)
     (isQueryBoundP_labScheme_keygen pkSeed optRand (fun _ => id) fun _ => id)
-    (isQueryBoundP_labScheme_sign pkSeed optRand)
+    (fun pk sk msg _ => (isQueryBoundP_labScheme_sign pkSeed optRand pk sk msg).mono zero_le_one)
+    (fun pk sk msg _ => isQueryBoundP_labScheme_sign pkSeed optRand pk sk msg)
     (isQueryBoundP_labScheme_verify pkSeed optRand)
 
 /-! ## The budget on every deferred run -/

@@ -31,17 +31,23 @@ With `IsQueryBoundP.cnt_le_of_mem_support_run_extendState`, the two give a pathw
 adversary's queries on every run of the experiment under any stateful handler.
 
 The budget transport rests on `isQueryBoundP_runWithSigningOracle_simulateQ_addLift`: running a
-program through an interpretation of its ambient oracles and a signing oracle whose algorithm
-makes no `q`-query, a budget of the program becomes a `q`-budget of the run. For an adversary whose
-ambient oracles are interpreted through `G` against a scheme whose key generation, signing and
-verification make no `q`-query, the budget is a budget of the whole experiment
-(`isQueryBoundP_unforgeableExperiment_mapOracles`) and of its transcript
-(`isQueryBoundP_unforgeableTranscriptExperiment_mapOracles`); the tagged experiment is the instance
-in which `G` tags. When verification makes up to `V` `q`-queries, the budget of the experiment
-is `n + V` (`isQueryBoundP_unforgeableExperiment_mapOracles_add` and
-`isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_add`). The interpreted adversary makes
-only ambient queries of a predicate that every interpretation `G t` respects
-(`allQueriesSatisfy_mapOracles`).
+program through an interpretation of its ambient oracles and a signing oracle, where each
+`p`-query of the program, ambient or signing, costs at most one `q`-query and every other query
+costs none, a `p`-budget of the program becomes a `q`-budget of the run. When key generation makes
+no `q`-query and verification up to `V`, an adversary's budget `n` gives the budget `n + V` of the
+experiment (`isQueryBoundP_unforgeableExperiment_mapOracles_add`) and of its transcript
+(`isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_add`). Two instances are named:
+
+* key generation, signing and verification make no `q`-query, and the budget is a budget of the
+  experiment (`isQueryBoundP_unforgeableExperiment_mapOracles`) and of its transcript
+  (`isQueryBoundP_unforgeableTranscriptExperiment_mapOracles`); the tagged experiment is the case
+  in which `G` tags;
+* the budget counts signing queries, each signature makes at most one `q`-query and nothing else
+  makes any, and the number of signing queries bounds the `q`-queries of the transcript experiment
+  (`isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_sign`).
+
+The interpreted adversary makes only ambient queries of a predicate that every interpretation
+`G t` respects (`allQueriesSatisfy_mapOracles`).
 -/
 
 public section
@@ -55,8 +61,8 @@ variable {ι ι' : Type} {spec : OracleSpec ι} {spec' : OracleSpec ι'} {M PK S
 /-! ## Query budgets through the signing oracle -/
 
 /-- Run a `p`-bounded-by-`n` program through an interpretation `G` of its ambient oracles and the
-signing oracle of `sigAlg`. If `G` spends at most one `q`-query on each `p`-query and none on any
-other query, and signing makes no `q`-query, the run is `q`-bounded by `n`. -/
+signing oracle of `sigAlg`. If `G` and signing each spend at most one `q`-query on a `p`-query
+and none on any other query, the run is `q`-bounded by `n`. -/
 theorem isQueryBoundP_runWithSigningOracle_simulateQ_addLift
     (sigAlg : SignatureAlg (OracleComp spec') M PK SK S) (pk : PK) (sk : SK)
     (G : QueryImpl spec (OracleComp spec')) {p : ι ⊕ M → Prop} [DecidablePred p]
@@ -64,25 +70,27 @@ theorem isQueryBoundP_runWithSigningOracle_simulateQ_addLift
     (h : IsQueryBoundP oa p n)
     (hG_p : ∀ t, p (.inl t) → IsQueryBoundP (G t) q 1)
     (hG_np : ∀ t, ¬ p (.inl t) → IsQueryBoundP (G t) q 0)
-    (hsign : ∀ msg, IsQueryBoundP (sigAlg.sign pk sk msg) q 0) :
+    (hsign_p : ∀ msg, p (.inr msg) → IsQueryBoundP (sigAlg.sign pk sk msg) q 1)
+    (hsign_np : ∀ msg, ¬ p (.inr msg) → IsQueryBoundP (sigAlg.sign pk sk msg) q 0) :
     IsQueryBoundP (sigAlg.runWithSigningOracle pk sk
       (simulateQ (G.addLift (QueryImpl.id' (M →ₒ S))) oa)) q n := by
   rw [runWithSigningOracle, ← QueryImpl.simulateQ_compose]
   have hinl : ∀ t, (((spec'.passthrough + sigAlg.signingOracle pk sk) ∘ₛ
       G.addLift (QueryImpl.id' (M →ₒ S))) (.inl t)).run = (·, ∅) <$> G t := fun t => by
     simp [QueryImpl.simulateQ_add_liftM_left, writerT_run_simulateQ_liftTarget]
-  have hinr : ∀ msg, IsQueryBoundP (((spec'.passthrough + sigAlg.signingOracle pk sk) ∘ₛ
-      G.addLift (QueryImpl.id' (M →ₒ S))) (.inr msg)).run q 0 := fun msg => by
-    simpa [QueryImpl.simulateQ_add_liftM_right, signingOracle] using hsign msg
+  have hinr : ∀ msg k, IsQueryBoundP (sigAlg.sign pk sk msg) q k →
+      IsQueryBoundP (((spec'.passthrough + sigAlg.signingOracle pk sk) ∘ₛ
+        G.addLift (QueryImpl.id' (M →ₒ S))) (.inr msg)).run q k := fun msg k h => by
+    simpa [QueryImpl.simulateQ_add_liftM_right, signingOracle] using h
   refine IsQueryBoundP.simulateQ_run_writerT_of_step h ?_ ?_
   · rintro (t | msg) hp
     · rw [hinl, isQueryBoundP_map_iff]
       exact hG_p t hp
-    · exact (hinr msg).mono zero_le_one
+    · exact hinr msg 1 (hsign_p msg hp)
   · rintro (t | msg) hp
     · rw [hinl, isQueryBoundP_map_iff]
       exact hG_np t hp
-    · exact hinr msg
+    · exact hinr msg 0 (hsign_np msg hp)
 
 /-! ## Query budgets of the experiment -/
 
@@ -93,16 +101,18 @@ variable {SK' : Type} {sigAlg' : SignatureAlg (OracleComp spec') M PK SK' S}
   {q : ι' → Prop} [DecidablePred q] {n : ℕ}
 
 /-- Let `G` spend at most one `q`-query on each ambient `p`-query and none on any other ambient
-query, let key generation and signing of `sigAlg'` make no `q`-query, and let verification make at
-most `V`. Then the experiment of `sigAlg'` against an adversary with `p`-budget `n` whose ambient
-oracles are interpreted through `G` makes at most `n + V` `q`-queries. -/
+query, let signing of `sigAlg'` spend at most one `q`-query on each `p`-signing query and none on
+any other, let key generation make no `q`-query, and let verification make at most `V`. Then the
+experiment of `sigAlg'` against an adversary with `p`-budget `n` whose ambient oracles are
+interpreted through `G` makes at most `n + V` `q`-queries. -/
 theorem isQueryBoundP_unforgeableExperiment_mapOracles_add
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S} {adv : UnforgeableAdversary sigAlg}
     {V : ℕ} (hadv : ∀ pk, IsQueryBoundP (adv.main pk) p n)
     (hG_p : ∀ t, p (.inl t) → IsQueryBoundP (G t) q 1)
     (hG_np : ∀ t, ¬ p (.inl t) → IsQueryBoundP (G t) q 0)
     (hkeygen : IsQueryBoundP sigAlg'.keygen q 0)
-    (hsign : ∀ pk sk msg, IsQueryBoundP (sigAlg'.sign pk sk msg) q 0)
+    (hsign_p : ∀ pk sk msg, p (.inr msg) → IsQueryBoundP (sigAlg'.sign pk sk msg) q 1)
+    (hsign_np : ∀ pk sk msg, ¬ p (.inr msg) → IsQueryBoundP (sigAlg'.sign pk sk msg) q 0)
     (hverify : ∀ pk msg sig, IsQueryBoundP (sigAlg'.verify pk msg sig) q V) :
     IsQueryBoundP (unforgeableExperiment (adv.mapOracles G (sigAlg' := sigAlg'))) q (n + V) := by
   rw [unforgeableExperiment, show n + V = 0 + (n + (V + 0)) by omega]
@@ -111,7 +121,7 @@ theorem isQueryBoundP_unforgeableExperiment_mapOracles_add
     isQueryBoundP_bind (hverify pk msg sig) fun _ _ => isQueryBoundP_pure _ _ _
   rw [UnforgeableAdversary.mapOracles_main]
   exact isQueryBoundP_runWithSigningOracle_simulateQ_addLift _ pk sk _ (hadv pk) hG_p hG_np
-    (hsign pk sk)
+    (hsign_p pk sk) (hsign_np pk sk)
 
 /-- Let `G` spend at most one `q`-query on each ambient `p`-query and none on any other ambient
 query, and let key generation, signing and verification of `sigAlg'` make no `q`-query. Then
@@ -126,7 +136,9 @@ theorem isQueryBoundP_unforgeableExperiment_mapOracles
     (hsign : ∀ pk sk msg, IsQueryBoundP (sigAlg'.sign pk sk msg) q 0)
     (hverify : ∀ pk msg sig, IsQueryBoundP (sigAlg'.verify pk msg sig) q 0) :
     IsQueryBoundP (unforgeableExperiment (adv.mapOracles G (sigAlg' := sigAlg'))) q n :=
-  isQueryBoundP_unforgeableExperiment_mapOracles_add G hadv hG_p hG_np hkeygen hsign hverify
+  isQueryBoundP_unforgeableExperiment_mapOracles_add G hadv hG_p hG_np hkeygen
+    (fun pk sk msg _ => (hsign pk sk msg).mono zero_le_one) (fun pk sk msg _ => hsign pk sk msg)
+    hverify
 
 /-- The bound of `isQueryBoundP_unforgeableExperiment_mapOracles_add` for the transcript
 experiment. -/
@@ -136,12 +148,14 @@ theorem isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_add
     (hG_p : ∀ t, p (.inl t) → IsQueryBoundP (G t) q 1)
     (hG_np : ∀ t, ¬ p (.inl t) → IsQueryBoundP (G t) q 0)
     (hkeygen : IsQueryBoundP sigAlg'.keygen q 0)
-    (hsign : ∀ pk sk msg, IsQueryBoundP (sigAlg'.sign pk sk msg) q 0)
+    (hsign_p : ∀ pk sk msg, p (.inr msg) → IsQueryBoundP (sigAlg'.sign pk sk msg) q 1)
+    (hsign_np : ∀ pk sk msg, ¬ p (.inr msg) → IsQueryBoundP (sigAlg'.sign pk sk msg) q 0)
     (hverify : ∀ pk msg sig, IsQueryBoundP (sigAlg'.verify pk msg sig) q V) :
     IsQueryBoundP (unforgeableTranscriptExperiment (adv.mapOracles G (sigAlg' := sigAlg'))) q
       (n + V) :=
   (isQueryBoundP_iff_of_map_eq (map_wins_unforgeableTranscriptExperiment _)).2 <|
-    isQueryBoundP_unforgeableExperiment_mapOracles_add G hadv hG_p hG_np hkeygen hsign hverify
+    isQueryBoundP_unforgeableExperiment_mapOracles_add G hadv hG_p hG_np hkeygen hsign_p hsign_np
+      hverify
 
 /-- The bound of `isQueryBoundP_unforgeableExperiment_mapOracles` for the transcript
 experiment. -/
@@ -154,8 +168,26 @@ theorem isQueryBoundP_unforgeableTranscriptExperiment_mapOracles
     (hsign : ∀ pk sk msg, IsQueryBoundP (sigAlg'.sign pk sk msg) q 0)
     (hverify : ∀ pk msg sig, IsQueryBoundP (sigAlg'.verify pk msg sig) q 0) :
     IsQueryBoundP (unforgeableTranscriptExperiment (adv.mapOracles G (sigAlg' := sigAlg'))) q n :=
-  isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_add G hadv hG_p hG_np hkeygen hsign
+  isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_add G hadv hG_p hG_np hkeygen
+    (fun pk sk msg _ => (hsign pk sk msg).mono zero_le_one) (fun pk sk msg _ => hsign pk sk msg)
     hverify
+
+/-- Let the adversary's `p`-queries be exactly its signing queries, let `G` and key generation and
+verification of `sigAlg'` make no `q`-query, and let signing make at most one. Then the transcript
+experiment of `sigAlg'` against an adversary with at most `n` signing queries whose ambient oracles
+are interpreted through `G` makes at most `n` `q`-queries. -/
+theorem isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_sign
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S} {adv : UnforgeableAdversary sigAlg}
+    (hadv : ∀ pk, IsQueryBoundP (adv.main pk) p n)
+    (hp : ∀ msg, p (.inr msg)) (hnp : ∀ t, ¬ p (.inl t))
+    (hG : ∀ t, IsQueryBoundP (G t) q 0)
+    (hkeygen : IsQueryBoundP sigAlg'.keygen q 0)
+    (hsign : ∀ pk sk msg, IsQueryBoundP (sigAlg'.sign pk sk msg) q 1)
+    (hverify : ∀ pk msg sig, IsQueryBoundP (sigAlg'.verify pk msg sig) q 0) :
+    IsQueryBoundP (unforgeableTranscriptExperiment (adv.mapOracles G (sigAlg' := sigAlg'))) q n :=
+  isQueryBoundP_unforgeableTranscriptExperiment_mapOracles_add G hadv (fun t h => (hnp t h).elim)
+    (fun t _ => hG t) hkeygen (fun pk sk msg _ => hsign pk sk msg)
+    (fun _ _ msg h => (h (hp msg)).elim) hverify
 
 /-- An adversary whose ambient oracles are interpreted through `G` makes only `allowed` ambient
 queries when every interpretation `G t` does: its signing queries are passed on unchanged. -/
