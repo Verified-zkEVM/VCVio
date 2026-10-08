@@ -58,6 +58,7 @@ public import HashSig.SLHDSA.Security.HiddenUndrawn
 public import HashSig.SLHDSA.Security.HmsgWitnesses
 public import HashSig.SLHDSA.Security.HonestEntryUnique
 public import HashSig.SLHDSA.Security.HypertreeWitnesses
+public import HashSig.SLHDSA.Security.JointBound
 public import HashSig.SLHDSA.Security.KeyDiscipline
 public import HashSig.SLHDSA.Security.KeySeparation
 public import HashSig.SLHDSA.Security.LabBudget
