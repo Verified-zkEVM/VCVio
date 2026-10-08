@@ -12,11 +12,13 @@ public import HashSigTest.SLHDSA.Target
 /-!
 # Role tagging and per-class budgets of the secret-free SLH-DSA experiment, checked
 
-* **The class map.** An `H_msg` query is class `F` on the forger copy and class `S` on the signer
-  copy; a tweakable-hash query and a derivation are class `N` on either copy.
+* **The class map.** An `H_msg` query is of class `forger` on the forger copy and `signer` on the
+  signer copy; a tweakable-hash query and a derivation are of class `other` on either copy. The
+  signer's role never reaches class `forger`, and a randomizer derivation stays one in either
+  role.
 * **The budgets at a concrete forger.** `replayForger` evaluates `H_msg` once and asks for one
-  signature, so its role experiment makes at most two class-`F` queries, one class-`S` query and
-  one randomizer derivation.
+  signature, so its role experiment makes at most two queries of class `forger`, one of class
+  `signer` and one randomizer derivation. The lifted forger makes no derivation query.
 * **The signing and verification bounds are attained.** With a fixed `opt_rand`, signing makes an
   `H_msg` query and a randomizer derivation, and verification makes an `H_msg` query, so none of
   the bounds `1` drops to `0`.
@@ -35,20 +37,31 @@ variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 /-! ## The class map -/
 
 example (r : core.Y) (s : core.PkSeed) (root : core.Y) (msg : List Byte) :
-    tau core (.inl (.inl (.inl (.hmsg r s root msg)))) = .F := rfl
+    tapeClass core (.inl (.inl (.inl (.hmsg r s root msg)))) = .forger := rfl
 
 example (r : core.Y) (s : core.PkSeed) (root : core.Y) (msg : List Byte) :
-    tau core (.inr (.inl (.inl (.hmsg r s root msg)))) = .S := rfl
+    tapeClass core (.inr (.inl (.inl (.hmsg r s root msg)))) = .signer := rfl
 
 example (s : core.PkSeed) (k : core.AdrsKey) (xs : List core.Y) :
-    tau core (.inr (.inl (.inl (.thash s k xs)))) = .N := rfl
+    tapeClass core (.inr (.inl (.inl (.thash s k xs)))) = .other := rfl
 
-example (x : DeriveQuery core) : tau core (.inl (.inr x)) = .N := rfl
+example (x : DeriveQuery core) : tapeClass core (.inl (.inr x)) = .other := rfl
 
-/-- The forger's role sends an `H_msg` query to class `F`. -/
+/-- The forger's role sends an `H_msg` query to class `forger`. -/
 example (r : core.Y) (s : core.PkSeed) (root : core.Y) (msg : List Byte) :
-    IsClsQuery core .F (roleFQuery core (.inl (.inr (.inl (.hmsg r s root msg))))) :=
-  (isClsQuery_F_roleFQuery_iff core _).2 trivial
+    AnswerTape.classOf (tapeClass core)
+      (roleQuery core .forger (.inl (.inr (.inl (.hmsg r s root msg))))) = some .forger :=
+  (classOf_roleQuery_eq_some_iff core .forger .forger _).2 ⟨rfl, trivial⟩
+
+/-- The signer's role sends no query to class `forger`. -/
+example (t : (deriveSpec core).Domain) :
+    AnswerTape.classOf (tapeClass core) (roleQuery core .signer t) ≠ some .forger :=
+  fun h => nomatch ((classOf_roleQuery_eq_some_iff core .signer .forger t).1 h).1
+
+/-- A randomizer derivation is a randomizer point on either copy. -/
+example (o : core.Y) (msg : List Byte) (r : Role) :
+    IsRoleRandQuery core (roleQuery core r (.inr (.inr (o, msg)))) :=
+  (isRoleRandQuery_roleQuery_iff core r _).2 trivial
 
 /-! ## The budgets at a concrete forger -/
 
@@ -61,19 +74,26 @@ variable [SampleableType core.SkSeed] [SampleableType core.SkPrf] (e : core.SkSe
   (pkSeedDist : ProbComp core.PkSeed)
 
 example : IsQueryBoundP (roleExperiment core (replayForger core e optRand pkSeedDist) pkSeed)
-    (IsClsQuery core .F) 2 :=
-  isQueryBoundP_roleExperiment_F core (romQueryBound_replayForger core e optRand pkSeedDist)
+    (fun t => AnswerTape.classOf (tapeClass core) t = some .forger) 2 :=
+  isQueryBoundP_roleExperiment_forger core (romQueryBound_replayForger core e optRand pkSeedDist)
     pkSeed
 
 example : IsQueryBoundP (roleExperiment core (replayForger core e optRand pkSeedDist) pkSeed)
-    (IsClsQuery core .S) 1 :=
-  isQueryBoundP_roleExperiment_S core (romQueryBound_replayForger core e optRand pkSeedDist)
+    (fun t => AnswerTape.classOf (tapeClass core) t = some .signer) 1 :=
+  isQueryBoundP_roleExperiment_signer core (romQueryBound_replayForger core e optRand pkSeedDist)
     pkSeed
 
 example : IsQueryBoundP (roleExperiment core (replayForger core e optRand pkSeedDist) pkSeed)
     (IsRoleRandQuery core) 1 :=
   isQueryBoundP_roleExperiment_rand core (romQueryBound_replayForger core e optRand pkSeedDist)
     pkSeed
+
+/-- The lifted replay forger makes no derivation query. -/
+example (pk : PublicKeyCore core) :
+    AllQueriesSatisfy
+      ((deriveAdversary core (replayForger core e optRand pkSeedDist) pkSeed).main pk)
+      (Sum.elim (fun t => t.isLeft = true) fun _ => True) :=
+  allQueriesSatisfy_deriveAdversary_main core _ pkSeed pk
 
 /-- Collapsing the roles of the replay forger's experiment gives its secret-free experiment. -/
 example : simulateQ (SecretEncoding.collapseFwd (hashSpec core) (DeriveQuery core) core.Y)
