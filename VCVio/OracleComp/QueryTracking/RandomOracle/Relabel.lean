@@ -225,6 +225,13 @@ theorem childVals_mono {st st' : RelabelState pub X K R} (hle : st ≤ st') {k :
     {vs : List R} (h : G.childVals st k = some vs) : G.childVals st' k = some vs :=
   G.childVals_eq_some_iff.2 ((G.childVals_eq_some_iff.1 h).imp fun _ _ h ↦ hle.2 h)
 
+/-- Two states whose cells agree at the children of `k` have the same children values at `k`. -/
+theorem childVals_congr {st st' : RelabelState pub X K R} {k : K}
+    (h : ∀ c ∈ G.ch k, st.2 c = st'.2 c) : G.childVals st k = G.childVals st' k :=
+  Option.ext fun vs ↦ by
+    rw [childVals_eq_some_iff, childVals_eq_some_iff, List.forall₂_apply_eq_some_iff,
+      List.forall₂_apply_eq_some_iff, List.map_inj_left.2 h]
+
 /-- A point is the point of at most one node at drawn children values. -/
 theorem eq_of_childVals_of_pt_eq {st st' : RelabelState pub X K R} {k k' : K}
     {vs vs' : List R} (h : G.childVals st k = some vs) (h' : G.childVals st' k' = some vs')

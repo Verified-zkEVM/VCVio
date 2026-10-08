@@ -227,6 +227,15 @@ lemma cacheQuery_of_ne {t' t : spec.Domain} (u : spec.Range t) (h : t' ≠ t) :
     (cache.cacheQuery t u) t' = cache t' := by
   simp [cacheQuery, h]
 
+/-- After caching an answer at `t`, the cache answers `t'` exactly when `t'` is `t` or the cache
+already answered `t'`. -/
+lemma isSome_cacheQuery_apply_iff {t' t : spec.Domain} (u : spec.Range t) :
+    ((cache.cacheQuery t u) t').isSome ↔ t' = t ∨ (cache t').isSome := by
+  by_cases h : t' = t
+  · subst h
+    simp only [cacheQuery_self, Option.isSome_some, true_or]
+  · simp only [cacheQuery_of_ne _ _ h, h, false_or]
+
 /-- An answer function agrees with `cache.cacheQuery t u` iff it agrees with `cache` and returns
 `u` on `t`, provided `t` was not already cached. -/
 lemma agreesWithFn_cacheQuery_iff (t : spec.Domain) (u : spec.Range t) (f : QueryImpl spec Id)

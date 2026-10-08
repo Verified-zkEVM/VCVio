@@ -13,7 +13,7 @@ public import Mathlib.Data.List.Forall2
 
 `List.mapM f l` with `f : α → Option β` succeeds with `l'` exactly when `f` succeeds at every
 entry of `l` with the matching entry of `l'`, and so succeeds at all exactly when `f` succeeds at
-every entry of `l`.
+every entry of `l`. Entrywise success is the equation `l.map f = l'.map some`.
 -/
 
 public section
@@ -36,6 +36,12 @@ theorem mapM_eq_some_iff_forall₂ {f : α → Option β} :
     | cons b l' =>
       rw [forall₂_cons, ← mapM_eq_some_iff_forall₂ (l := l)]
       cases f a <;> cases l.mapM f <;> simp
+
+/-- `f` sends the entries of `l` to the matching entries of `vs` exactly when `l.map f` is
+`vs.map some`. -/
+theorem forall₂_apply_eq_some_iff {f : α → Option β} {l : List α} {vs : List β} :
+    Forall₂ (fun a b ↦ f a = some b) l vs ↔ l.map f = vs.map some := by
+  rw [← forall₂_eq_eq_eq, forall₂_map_left_iff, forall₂_map_right_iff]
 
 /-- In the `Option` monad, `l.mapM f` succeeds exactly when `f` succeeds at every entry of `l`. -/
 theorem isSome_mapM_iff {f : α → Option β} :

@@ -19,8 +19,10 @@ fires a conflict exactly when the derivation is drawn at `g`, and a target colli
 the label is drawn at the forger's answer.
 
 * With `R = Bool` the run, with its single public entry at the node's key, fires either hazard
-  with probability `3/4`: more than `1/|R| = 1/2`, so the coefficient `2` of
-  `2 · #keyEntries / |R|` cannot be lowered to `1`.
+  with probability `3/4`, more than `1/|R| = 1/2`. This is also the probability of the event of
+  `CanonicalGraph.NodeKeys.prEvent_deferredFillDraw_and_le` with the coefficient `1` in place of
+  `2`, no draw, no hazard and the budget `1/2`, so the coefficient `2` of `2 · #keyEntries / |R|`
+  cannot be lowered to `1` (`JointPotentialToy.not_oneChargeBound`).
 * With a secret drawn uniformly from `R` after the end fill and the seed hazard "the secret is a
   cached public point", the joint bound gives `3/|R|` for the three hazards together, which is
   `3/8 < 1` at `R = Fin 8`.
@@ -169,6 +171,50 @@ theorem one_charge_lt_prEvent_forgerFirst_bool :
     rw [ENNReal.toReal_div, ENNReal.toReal_div]; norm_num
   exact (ENNReal.toReal_lt_toReal (ENNReal.div_ne_top (by simp) (by simp))
     (ENNReal.div_ne_top (by simp) (by simp))).1 this
+
+/-- `CanonicalGraph.NodeKeys.prEvent_deferredFillDraw_and_le` on the one-node graph over `Bool`,
+with the coefficient `1` in place of `2`: the event bounded by `B` is charged
+`#keyEntries / |R| + c` instead of `2 · #keyEntries / |R| + c`. -/
+def OneChargeBound : Prop :=
+  ∀ {S α : Type} (ms : ProbComp S) (H : S → (Bool →ₒ Bool).QueryCache → Prop)
+    (c : (Bool →ₒ Bool).QueryCache → ℝ≥0∞), (∀ C, Pr{let s ← ms}[H s C] ≤ c C) →
+    ∀ (oa : OracleComp ((Bool →ₒ Bool).withLabels Unit Unit Bool) α) (B : ℝ≥0∞), B ≠ ⊤ →
+      Pr{let w ← (G Bool).deferredFillDraw ms oa}[
+        ((G Bool).Conflict w.2.1 ∨ (nk Bool).TCHazard w.2.1 ∨ H w.2.2 w.2.1.1) ∧
+          (((nk Bool).keyEntries w.2.1.1).encard : ℝ≥0∞) / Nat.card Bool + c w.2.1.1 ≤ B] ≤ B
+
+/-- With no draw, no hazard and the budget `1/2`, the event of `OneChargeBound` on the run with
+one public entry at the node's key has probability `3/4`. -/
+theorem prEvent_deferredFillDraw_oneCharge_bool :
+    Pr{let w ← (G Bool).deferredFillDraw (pure ()) (forgerFirst false)}[
+      ((G Bool).Conflict w.2.1 ∨ (nk Bool).TCHazard w.2.1 ∨ False) ∧
+        (((nk Bool).keyEntries w.2.1.1).encard : ℝ≥0∞) / Nat.card Bool + 0 ≤ 1 / 2] = 3 / 4 := by
+  have key : ∀ st : RelabelState (Bool →ₒ Bool) Unit Unit Bool,
+      (((G Bool).Conflict st ∨ (nk Bool).TCHazard st ∨ False) ∧
+        (((nk Bool).keyEntries st.1).encard : ℝ≥0∞) / Nat.card Bool + 0 ≤ 1 / 2) ↔
+      (((G Bool).Conflict st ∨ (nk Bool).TCHazard st) ∧
+        ((nk Bool).keyEntries st.1).encard ≤ 1) := by
+    intro st
+    simp only [or_false, add_zero, Nat.card_eq_fintype_card, Fintype.card_bool, Nat.cast_ofNat]
+    refine and_congr Iff.rfl ?_
+    rw [ENNReal.div_le_iff_le_mul (Or.inl two_ne_zero) (Or.inl ENNReal.ofNat_ne_top),
+      ENNReal.div_mul_cancel two_ne_zero ENNReal.ofNat_ne_top, ← ENat.toENNReal_one,
+      ENat.toENNReal_le]
+  rw [← prEvent_forgerFirst_bool]
+  simp only [CanonicalGraph.deferredFillDraw, bind_assoc, pure_bind, key]
+
+/-- `OneChargeBound` fails: the coefficient `2` of
+`CanonicalGraph.NodeKeys.prEvent_deferredFillDraw_and_le` cannot be lowered to `1`. -/
+theorem not_oneChargeBound : ¬OneChargeBound := fun h ↦ by
+  have h1 := prEvent_deferredFillDraw_oneCharge_bool.symm.trans_le
+    (h (pure ()) (fun _ _ ↦ False) (fun _ ↦ 0)
+      (fun _ ↦ le_of_eq (prEvent_eq_zero_of_forall_not _ _ fun _ h ↦ h)) (forgerFirst false)
+      (1 / 2) (ENNReal.div_ne_top ENNReal.one_ne_top two_ne_zero))
+  have h2 : ((1 : ℝ≥0∞) / 2).toReal < ((3 : ℝ≥0∞) / 4).toReal := by
+    rw [ENNReal.toReal_div, ENNReal.toReal_div]
+    norm_num
+  exact absurd h1 (not_le.2 ((ENNReal.toReal_lt_toReal (ENNReal.div_ne_top (by simp) (by simp))
+    (ENNReal.div_ne_top (by simp) (by simp))).1 h2))
 
 /-! ## A seed hazard after the end fill -/
 

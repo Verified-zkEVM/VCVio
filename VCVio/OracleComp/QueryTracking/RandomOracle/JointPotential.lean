@@ -8,6 +8,7 @@ module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Defer
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshAnswer
+import ToMathlib.Data.List.MapM
 import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 /-!
@@ -127,15 +128,7 @@ theorem potential_le_two_mul (st : RelabelState pub X K R) :
     (ENat.toENNReal_le.2 (Set.encard_le_encard h2))
 
 @[simp] theorem potential_empty : nk.potential ((∅, ∅) : RelabelState pub X K R) = 0 := by
-  have h1 : nk.completeEntries ((∅, ∅) : RelabelState pub X K R) = ∅ := by
-    ext t
-    simp only [completeEntries, QueryCache.empty_apply, Option.isSome_none, Bool.false_eq_true,
-      false_and, Set.ofPred_false, Set.mem_empty_iff_false]
-  have h2 : nk.labelledEntries ((∅, ∅) : RelabelState pub X K R) = ∅ := by
-    ext t
-    simp only [labelledEntries, QueryCache.empty_apply, Option.isSome_none, Bool.false_eq_true,
-      false_and, Set.ofPred_false, Set.mem_empty_iff_false]
-  rw [potential, h1, h2, Set.encard_empty, add_zero, ENat.toENNReal_zero, ENNReal.zero_div]
+  simp [potential, completeEntries, labelledEntries]
 
 end Potential
 
@@ -150,46 +143,15 @@ no two elements of `A` to one element, bounds `A.encard` by `T.encard`. -/
 private theorem encard_le_of_rel {α β : Type} {A : Set α} {T : Set β} (r : α → β → Prop)
     (h1 : ∀ a ∈ A, ∃ b ∈ T, r a b) (h2 : ∀ a ∈ A, ∀ a' ∈ A, ∀ b, r a b → r a' b → a = a') :
     A.encard ≤ T.encard := by
-  classical
   rcases A.eq_empty_or_nonempty with rfl | ⟨a₀, ha₀⟩
   · rw [Set.encard_empty]
     exact zero_le
-  let f : α → β := fun a ↦ if h : a ∈ A then (h1 a h).choose else (h1 a₀ ha₀).choose
-  refine Set.encard_le_encard_of_injOn (f := f) (fun a ha ↦ ?_) (fun a ha a' ha' he ↦ ?_)
-  · simp only [f, ha, ↓reduceDIte]
-    exact (h1 a ha).choose_spec.1
-  · simp only [f, ha, ha', ↓reduceDIte] at he
-    exact h2 a ha a' ha' _ (h1 a ha).choose_spec.2 (he ▸ (h1 a' ha').choose_spec.2)
-
-private theorem forall₂_congr_of_mem {α β : Type} {F F' : α → Option β} {l : List α}
-    {vs : List β} (hF : ∀ c ∈ l, F c = F' c) (h : List.Forall₂ (fun c v ↦ F c = some v) l vs) :
-    List.Forall₂ (fun c v ↦ F' c = some v) l vs := by
-  induction h with
-  | nil => exact .nil
-  | cons hab _ ih =>
-    exact .cons ((hF _ (List.mem_cons_self ..)).symm.trans hab)
-      (ih fun c hc ↦ hF c (List.mem_cons_of_mem _ hc))
-
-private theorem eq_of_forall₂_of_mem {α β : Type} {F F' : α → Option β} {l : List α}
-    {vs : List β} (h : List.Forall₂ (fun c v ↦ F c = some v) l vs)
-    (h' : List.Forall₂ (fun c v ↦ F' c = some v) l vs) {c : α} (hc : c ∈ l) : F c = F' c := by
-  induction h with
-  | nil => exact absurd hc List.not_mem_nil
-  | cons hab _ ih =>
-    cases h' with
-    | cons hab' h'' =>
-      rcases List.mem_cons.1 hc with rfl | hc
-      · rw [hab, hab']
-      · exact ih h'' hc
+  have : Nonempty β := ⟨(h1 a₀ ha₀).choose⟩
+  choose! f hfT hfr using h1
+  exact Set.encard_le_encard_of_injOn hfT fun a ha a' ha' he ↦
+    h2 a ha a' ha' _ (hfr a ha) (he ▸ hfr a' ha')
 
 variable [DecidableEq X] [DecidableEq K]
-
-private theorem isSome_cacheQuery_iff (D : ((X ⊕ K) →ₒ R).QueryCache) (c c' : X ⊕ K) (u : R) :
-    ((D.cacheQuery c u) c').isSome ↔ c' = c ∨ (D c').isSome := by
-  by_cases h : c' = c
-  · subst h
-    simp only [QueryCache.cacheQuery_self, Option.isSome_some, true_or]
-  · simp only [QueryCache.cacheQuery_of_ne _ _ h, h, false_or]
 
 /-- The public entries at the key of a node whose children are all drawn once `c` is. -/
 private def completeEntriesAfter (st : RelabelState pub X K R) (c : X ⊕ K) : Set ι :=
@@ -203,12 +165,14 @@ private def labelledEntriesAfter (st : RelabelState pub X K R) (c : X ⊕ K) : S
 private theorem completeEntries_cacheQuery (st : RelabelState pub X K R) (c : X ⊕ K) (u : R) :
     nk.completeEntries (st.1, st.2.cacheQuery c u) = completeEntriesAfter (nk := nk) st c := by
   ext t
-  simp only [completeEntries, completeEntriesAfter, Set.mem_ofPred_eq, isSome_cacheQuery_iff]
+  simp only [completeEntries, completeEntriesAfter, Set.mem_ofPred_eq,
+    QueryCache.isSome_cacheQuery_apply_iff]
 
 private theorem labelledEntries_cacheQuery (st : RelabelState pub X K R) (c : X ⊕ K) (u : R) :
     nk.labelledEntries (st.1, st.2.cacheQuery c u) = labelledEntriesAfter (nk := nk) st c := by
   ext t
-  simp only [labelledEntries, labelledEntriesAfter, Set.mem_ofPred_eq, isSome_cacheQuery_iff]
+  simp only [labelledEntries, labelledEntriesAfter, Set.mem_ofPred_eq,
+    QueryCache.isSome_cacheQuery_apply_iff]
 
 /-- Drawing an undrawn cell adds to the potential exactly the entries it newly charges. -/
 private theorem potential_cacheQuery_cell {st : RelabelState pub X K R} {c : X ⊕ K}
@@ -237,7 +201,7 @@ private theorem encard_conflict_le {st : RelabelState pub X K R}
   · rintro u ⟨k, vs, hk, hC⟩
     have hlen := G.length_eq_of_childVals_eq_some hk
     refine ⟨G.pt k vs, ⟨⟨hC, k, nk.node_pt hlen, fun c' hc' ↦ ?_⟩, ?_⟩, k, vs, hk, rfl, hC⟩
-    · exact (isSome_cacheQuery_iff _ _ _ _).1
+    · exact (QueryCache.isSome_cacheQuery_apply_iff _ _).1
         (G.isSome_childVals_iff.1 (by rw [hk]; rfl) c' hc')
     · rintro ⟨-, k', hk', hall⟩
       obtain rfl : k = k' := Option.some_inj.1 ((nk.node_pt hlen).symm.trans hk')
@@ -251,12 +215,11 @@ private theorem encard_conflict_le {st : RelabelState pub X K R}
     obtain ⟨rfl, rfl⟩ := G.eq_of_childVals_of_pt_eq hk hk' hpt.symm
     have hcmem : c ∈ G.ch k := by
       by_contra hcn
-      refine hst (Or.inl ⟨k, vs, G.childVals_eq_some_iff.2 (forall₂_congr_of_mem
-        (fun c' hc' ↦ ?_) (G.childVals_eq_some_iff.1 hk)), hC⟩)
-      exact QueryCache.cacheQuery_of_ne _ _ fun h ↦ hcn (h ▸ hc')
-    have h := eq_of_forall₂_of_mem (G.childVals_eq_some_iff.1 hk)
-      (G.childVals_eq_some_iff.1 hk') hcmem
-    simpa only [QueryCache.cacheQuery_self, Option.some_inj] using h
+      refine hst (Or.inl ⟨k, vs, (G.childVals_congr fun c' hc' ↦ ?_).trans hk, hC⟩)
+      exact (QueryCache.cacheQuery_of_ne _ _ fun h : c' = c ↦ hcn (h ▸ hc')).symm
+    rw [G.childVals_eq_some_iff, List.forall₂_apply_eq_some_iff] at hk hk'
+    simpa only [QueryCache.cacheQuery_self, Option.some_inj] using
+      List.map_inj_left.1 (hk.trans hk'.symm) c hcmem
 
 /-- A drawn label equal to a public entry at its node's key is charged to that entry, newly
 charged, and each entry pins the drawn value. -/
@@ -394,31 +357,33 @@ section Steps
 
 variable (nk : G.NodeKeys) [DecidableEq X] [DecidableEq K] [SampleableType R]
 
-/-- A cell draw in the deferred game, with its result mapped by `f` and the pending list kept,
-is deterministic when the cell is drawn and otherwise charged by the potential. -/
-private theorem drawCell_step {β : Type} (f : R → β) (g : β → R) (hgf : ∀ u, g (f u) = u)
-    {st : RelabelState pub X K R} (hst : ¬(G.Conflict st ∨ nk.TCHazard st))
-    (cs : List (X ⊕ K)) (c : X ⊕ K) :
-    (∃ a s', (fun z : R × RelabelState pub X K R ↦ (f z.1, (z.2, cs))) <$>
+/-- A cell draw, with its result mapped by `f` and its state wrapped by `wrap`, is deterministic
+when the cell is drawn and otherwise charged by the potential of the state that `proj` reads back
+out of the wrapper. -/
+private theorem drawCell_step {β σ : Type} (f : R → β) (g : β → R) (hgf : ∀ u, g (f u) = u)
+    (wrap : RelabelState pub X K R → σ) (proj : σ → RelabelState pub X K R)
+    (hproj : ∀ st, proj (wrap st) = st) {st : RelabelState pub X K R}
+    (hst : ¬(G.Conflict st ∨ nk.TCHazard st)) (c : X ⊕ K) :
+    (∃ a s', (fun z : R × RelabelState pub X K R ↦ (f z.1, wrap z.2)) <$>
         (RelabelState.drawCell c).run st = pure (a, s') ∧
-        ¬(G.Conflict s'.1 ∨ nk.TCHazard s'.1)) ∨
-    (∃ (samp : ProbComp β) (upd : β → RelabelState pub X K R × List (X ⊕ K)) (w : ℝ≥0∞),
-      (fun z : R × RelabelState pub X K R ↦ (f z.1, (z.2, cs))) <$>
+        ¬(G.Conflict (proj s') ∨ nk.TCHazard (proj s'))) ∨
+    (∃ (samp : ProbComp β) (upd : β → σ) (w : ℝ≥0∞),
+      (fun z : R × RelabelState pub X K R ↦ (f z.1, wrap z.2)) <$>
         (RelabelState.drawCell c).run st = (fun b ↦ (b, upd b)) <$> samp ∧
-      Pr{let b ← samp}[G.Conflict (upd b).1 ∨ nk.TCHazard (upd b).1] ≤ w ∧
-      ∀ b, w + nk.potential st ≤ nk.potential (upd b).1) := by
+      Pr{let b ← samp}[G.Conflict (proj (upd b)) ∨ nk.TCHazard (proj (upd b))] ≤ w ∧
+      ∀ b, w + nk.potential st ≤ nk.potential (proj (upd b))) := by
   cases hc : st.2 c with
   | some v =>
-    exact Or.inl ⟨f v, (st, cs), by rw [RelabelState.drawCell_run_of_cell_eq_some hc, map_pure],
-      hst⟩
+    exact Or.inl ⟨f v, wrap st, by rw [RelabelState.drawCell_run_of_cell_eq_some hc, map_pure],
+      by rwa [hproj]⟩
   | none =>
     obtain ⟨w, hw, hpot⟩ := exists_cell_charge hst hc
-    refine Or.inr ⟨f <$> ($ᵗ R), fun b ↦ ((st.1, st.2.cacheQuery c (g b)), cs), w, ?_, ?_,
-      fun b ↦ hpot (g b)⟩
+    refine Or.inr ⟨f <$> ($ᵗ R), fun b ↦ wrap (st.1, st.2.cacheQuery c (g b)), w, ?_, ?_,
+      fun b ↦ by rw [hproj]; exact hpot (g b)⟩
     · rw [RelabelState.drawCell_run_of_cell_eq_none hc, Functor.map_map, Functor.map_map]
       simp only [hgf]
     · rw [prEvent_map]
-      simpa only [hgf] using hw
+      simpa only [hgf, hproj] using hw
 
 /-- The cell oracle charges conflicts and target collisions at node keys to the joint
 potential. -/
@@ -429,13 +394,8 @@ theorem isPotentialStep_cellImpl :
     rw [RelabelState.cellImpl_apply] at hz
     exact potential_mono (RelabelState.le_and_cell_eq_of_mem_support_drawCell hz).1
   step c st hst := by
-    rw [RelabelState.cellImpl_apply]
-    cases hc : st.2 c with
-    | some v => exact Or.inl ⟨v, st, RelabelState.drawCell_run_of_cell_eq_some hc, hst⟩
-    | none =>
-      obtain ⟨w, hw, hpot⟩ := exists_cell_charge hst hc
-      exact Or.inr ⟨$ᵗ R, fun u ↦ (st.1, st.2.cacheQuery c u), w,
-        RelabelState.drawCell_run_of_cell_eq_none hc, hw, hpot⟩
+    simpa only [RelabelState.cellImpl_apply, id_eq, Prod.mk.eta, id_map'] using
+      drawCell_step nk id id (fun _ ↦ rfl) id id (fun _ ↦ rfl) hst c
 
 variable [DecidableEq ι] [∀ t, SampleableType (pub.Range t)]
 
@@ -465,7 +425,7 @@ theorem isPotentialStep_deferredImpl :
       · obtain ⟨k, vs, hk, rfl⟩ := h
         rw [G.deferredImpl_run_inl, G.relabelImpl_run_pt hk, Functor.map_map]
         exact drawCell_step nk (cast (G.range_eq k vs).symm) (cast (G.range_eq k vs))
-          (fun u ↦ cast_cast _ _ u) hst cs (.inr k)
+          (fun u ↦ cast_cast _ _ u) (·, cs) Prod.fst (fun _ ↦ rfl) hst (.inr k)
       · cases hC : st.1 t with
         | some v =>
           refine Or.inl ⟨v, (st, cs), ?_, hst⟩
@@ -480,10 +440,10 @@ theorem isPotentialStep_deferredImpl :
           simp only [hC, bind_pure_comp, Functor.map_map]
           rfl
     · rw [G.deferredImpl_run_inl, relabelImpl_apply_inr]
-      exact drawCell_step nk id id (fun _ ↦ rfl) hst cs (.inl x)
+      exact drawCell_step nk id id (fun _ ↦ rfl) (·, cs) Prod.fst (fun _ ↦ rfl) hst (.inl x)
     · exact Or.inl ⟨(), (st, cs ++ [c]), G.deferredImpl_run_touch c _, hst⟩
     · rw [G.deferredImpl_run_read]
-      exact drawCell_step nk id id (fun _ ↦ rfl) hst cs (.inr k)
+      exact drawCell_step nk id id (fun _ ↦ rfl) (·, cs) Prod.fst (fun _ ↦ rfl) hst (.inr k)
 
 end Steps
 
