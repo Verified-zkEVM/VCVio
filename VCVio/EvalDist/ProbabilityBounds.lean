@@ -288,6 +288,27 @@ theorem prEvent_bind_le_prEvent_add (mx : m α) (f : α → m β)
   (prEvent_bind_le_prEvent_add_mul_prEvent_not mx f p q h).trans
     (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one mx fun a ↦ ¬ p a)) _)
 
+/-- When an event of the inner draw has the same probability `c` for every value of the outer
+draw, the joint event with a predicate on the outer value factors as `c` times the outer
+probability. -/
+theorem prEvent_bind_and_eq_mul (mx : m α) (my : α → m β)
+    (q : β → Prop) (p : α → Prop) {c : ℝ≥0∞} (hq : ∀ a, Pr{let b ← my a}[q b] = c) :
+    Pr{let a ← mx; let b ← my a}[q b ∧ p a] = c * Pr{let a ← mx}[p a] := by
+  let : MeasurableSpace α := ⊤
+  have hinner (a : α) : Pr{let b ← my a}[q b ∧ p a] = {a | p a}.indicator (fun _ => c) a := by
+    by_cases ha : p a
+    · simpa only [ha, and_true, Set.indicator_of_mem (show a ∈ {a | p a} from ha)] using hq a
+    · rw [Set.indicator_of_notMem (show a ∉ {a | p a} from ha)]
+      exact prEvent_eq_zero_of_forall_not _ _ fun _ h => ha h.2
+  have hbind := prEvent_bind_eq_lintegral_of_discrete mx
+    (fun a => do let b ← my a; pure (q b ∧ p a)) id
+  have hbind' : Pr{let a ← mx; let b ← my a}[q b ∧ p a] =
+      ∫⁻ a, Pr{let b ← my a}[q b ∧ p a] ∂𝒟[mx] := by
+    simpa only [bind_assoc, pure_bind, id_eq] using hbind
+  rw [hbind']
+  simp_rw [hinner]
+  rw [lintegral_indicator_const MeasurableSet.of_discrete, prEvent_eq_evalDist_of_discrete]
+
 end conditioning
 
 /-! ## Reachable continuations through core attachment
