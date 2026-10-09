@@ -53,21 +53,10 @@ local instance [∀ d, Finite (R d)] : ∀ q, Finite ((unifSpec + ofFn R) q)
   · intro h
     exact ⟨.inr t, h, by simp⟩
 
-private theorem allQueriesSatisfy_mono' {ι : Type} {spec : OracleSpec ι}
-    (oa : OracleComp spec α) (P Q : ι → Prop)
-    (h : AllQueriesSatisfy oa P) (himp : ∀ t, P t → Q t) :
-    AllQueriesSatisfy oa Q := by
-  induction oa using OracleComp.inductionOn with
-  | pure a => exact allQueriesSatisfy_pure _ _
-  | query_bind t k ih =>
-      obtain ⟨ht, hk⟩ := (allQueriesSatisfy_query_bind_iff _ _ _).mp h
-      exact (allQueriesSatisfy_query_bind_iff _ _ _).mpr ⟨himp t ht, fun u => ih u (hk u)⟩
-
 theorem allQueriesSatisfy_possibleRandomOracleKeys [DecidableEq D]
     [∀ d, Finite (R d)] (oa : OracleComp (unifSpec + ofFn R) α) :
     AllQueriesSatisfy oa (Sum.elim (fun _ => True) (· ∈ possibleRandomOracleKeys oa)) := by
-  apply allQueriesSatisfy_mono' oa _ _ (allQueriesSatisfy_possibleQueryKeys oa)
-  intro q hq
+  refine (allQueriesSatisfy_possibleQueryKeys oa).mono fun q hq => ?_
   cases q with
   | inl n => trivial
   | inr t => exact (mem_possibleRandomOracleKeys oa t).mpr hq
@@ -139,7 +128,6 @@ theorem extendCache_update [DecidableEq D] (S : Finset D)
         QueryCache.cacheQuery_of_ne _ _ hqt]
     · simp [extendCache, hs, QueryCache.cacheQuery_of_ne _ _ hq]
 
-
 /-- Reembed the ordered hash-query log without changing its answers or multiplicities. -/
 @[expose] noncomputable def extendLog (S : Finset D)
     (log : QueryLog (ofFn (fun t : S => R t.val))) : QueryLog (ofFn R) :=
@@ -205,7 +193,8 @@ theorem randomOracleLoggedRun_restrict [DecidableEq D]
         simpa only [Functor.map_map, extendLoggedResult, extendLog, List.map_append,
           List.map_cons, List.map_nil, List.singleton_append, extendCache_update] using step
 
-
+/-- `QueryImpl.withCaching_run_none` and `QueryImpl.withCaching_run_some` as one `match`, for
+`simp` through a cached handler step. -/
 private theorem fixedHashRun [DecidableEq D] (g : ∀ d, R d)
     (cache : (ofFn R).QueryCache) (t : D) :
     ((((QueryImpl.ofFn g).liftTarget ProbComp).withCaching) t).run cache =
@@ -269,8 +258,6 @@ theorem fixedTableLoggedRun_restrict [DecidableEq D]
           (ih u (hs.2 u) inside)
         simpa only [Functor.map_map, extendLoggedResult, extendLog, List.map_append,
           List.map_cons, List.map_nil, List.singleton_append, extendCache_update] using step
-
-
 
 @[simp] theorem freshKeysOfLog_extendLog [DecidableEq D] (S : Finset D)
     (log : QueryLog (ofFn (fun t : S => R t.val))) :

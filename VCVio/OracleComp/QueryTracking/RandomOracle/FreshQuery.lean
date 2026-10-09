@@ -356,18 +356,7 @@ theorem allQueriesSatisfy_possibleQueryKeys [DecidableEq D] [∀ d, Finite (R d)
   | pure a => exact allQueriesSatisfy_pure _ _
   | query_bind t k ih =>
       rw [allQueriesSatisfy_query_bind_iff]
-      refine ⟨by simp, fun u => ?_⟩
-      have mono : ∀ (ob : OracleComp (ofFn R) α) (P Q : D → Prop),
-          AllQueriesSatisfy ob P → (∀ d, P d → Q d) → AllQueriesSatisfy ob Q := by
-        intro ob P Q h hpq
-        induction ob using OracleComp.inductionOn with
-        | pure a => exact allQueriesSatisfy_pure _ _
-        | query_bind d rest ihr =>
-            exact (allQueriesSatisfy_query_bind_iff _ _ _).mpr
-              ⟨hpq d ((allQueriesSatisfy_query_bind_iff _ _ _).mp h).1,
-                fun v => ihr v (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 v)⟩
-      apply mono _ _ _ (ih u)
-      intro d hd
+      refine ⟨by simp, fun u => (ih u).mono fun d hd => ?_⟩
       simp only [possibleQueryKeys_query_bind, Finset.mem_insert, Set.Finite.mem_toFinset,
         Set.mem_iUnion, Finset.mem_coe]
       exact Or.inr ⟨u, hd⟩

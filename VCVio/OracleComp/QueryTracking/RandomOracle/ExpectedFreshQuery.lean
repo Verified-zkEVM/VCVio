@@ -24,7 +24,7 @@ variable {D α : Type} {R : D → Type}
 
 /-- Sampling a finite complete answer assignment and then running fixed-table interleaved
 execution gives the joint distribution of the actual cached run: output, ordered RO log, and
-final cache. The proof is cache-parametrized for induction through a miss. -/
+final cache. -/
 theorem evalDist_randomOracleLoggedRun_eq_fixedTable_finite
     [DecidableEq D] [Finite D]
     [∀ d, SampleableType (R d)] [SampleableType (∀ d, R d)]
@@ -246,32 +246,6 @@ variable {D α : Type} {R : D → Type}
 variable [DecidableEq D] [Finite D]
   [∀ d, SampleableType (R d)] [SampleableType (∀ d, R d)]
 
-/-- If the conditional chance of a query event is constant across an outer draw, the joint
-event factors into that query chance and the bad-answer chance. -/
-theorem prEvent_bind_and_factor {A B : Type} (mx : ProbComp A) (my : A → ProbComp B)
-    (queried : B → Prop) (bad : A → Prop) (q : ENNReal)
-    (hq : ∀ a, Pr{let z ← my a}[queried z] = q) :
-    Pr{let a ← mx; let z ← my a}[queried z ∧ bad a] =
-      q * Pr{let a ← mx}[bad a] := by
-  let : MeasurableSpace A := ⊤
-  have hinner (a : A) :
-      Pr{let z ← my a}[queried z ∧ bad a] =
-        {a | bad a}.indicator (fun _ => q) a := by
-    by_cases ha : bad a
-    · simpa only [ha, and_true, Set.indicator_of_mem (show a ∈ {a | bad a} from ha)]
-        using hq a
-    · simp [ha, Set.indicator_of_notMem]
-  have hbind := prEvent_bind_eq_lintegral_of_discrete mx
-    (fun a => do let z ← my a; pure (queried z ∧ bad a)) id
-  have hbind' :
-      Pr{let a ← mx; let z ← my a}[queried z ∧ bad a] =
-        ∫⁻ a, Pr{let z ← my a}[queried z ∧ bad a] ∂𝒟[mx] := by
-    simpa only [bind_assoc, pure_bind, id_eq] using hbind
-  rw [hbind']
-  simp_rw [hinner]
-  rw [lintegral_indicator_const MeasurableSet.of_discrete]
-  rw [prEvent_eq_evalDist_of_discrete]
-
 /-- A particular bad key is charged by the probability it appears in the fixed-table log,
 including all interleaved private draws. -/
 theorem prEvent_interleavedFreshKey_bad_le
@@ -306,11 +280,10 @@ theorem prEvent_interleavedFreshKey_bad_le
       Pr{let u ← $ᵗ (R t); let z ← (fixedTableLoggedRun oa (Function.update g t u) ∅)}[
         t ∈ freshKeysOfLog z.1.2 ∧ bad t (Function.update g t u)] ≤
       Pr{let z ← (fixedTableLoggedRun oa g ∅)}[t ∈ freshKeysOfLog z.1.2] * error t := by
-    have hfactor := prEvent_bind_and_factor ($ᵗ (R t))
+    have hfactor := prEvent_bind_and_eq_mul ($ᵗ (R t))
       (fun u => fixedTableLoggedRun oa (Function.update g t u) ∅)
       (fun z => t ∈ freshKeysOfLog z.1.2)
       (fun u => bad t (Function.update g t u))
-      (Pr{let z ← (fixedTableLoggedRun oa g ∅)}[t ∈ freshKeysOfLog z.1.2])
       (fun u => prEvent_fixedTableLoggedRun_queries_mem_update oa g t u ∅)
     rw [hfactor]
     gcongr
@@ -368,6 +341,37 @@ end OracleComp
 namespace OracleComp
 
 variable {D α : Type} {R : D → Type}
+
+/-- A finite union of key-specific bad events is charged by the expected sum of the weights
+of the keys that actually appear. -/
+private theorem prEvent_bad_in_freshKeys_le_expectedCharge
+    {β : Type} [Finite D] [MeasurableSpace β] [DiscreteMeasurableSpace β]
+    (mx : ProbComp β) (keys : β → Finset D) (bad : D → β → Prop)
+    (error : D → ENNReal)
+    (hkey : ∀ t, Pr{let a ← mx}[t ∈ keys a ∧ bad t a] ≤
+      Pr{let a ← mx}[t ∈ keys a] * error t) :
+    Pr{let a ← mx}[∃ t ∈ keys a, bad t a] ≤
+      ∫⁻ a, ∑ t ∈ keys a, error t ∂𝒟[mx] := by
+  classical
+  let : Fintype D := Fintype.ofFinite D
+  have h : Pr{let a ← mx}[∃ t, t ∈ keys a ∧ bad t a] ≤
+      ∫⁻ a, ∑ t, ({x | t ∈ keys x}.indicator (fun _ => error t)) a ∂𝒟[mx] := by
+    calc
+      _ ≤ ∑ t, Pr{let a ← mx}[t ∈ keys a ∧ bad t a] :=
+        prEvent_exists_le mx (fun t a => t ∈ keys a ∧ bad t a)
+      _ ≤ ∑ t, Pr{let a ← mx}[t ∈ keys a] * error t :=
+        Finset.sum_le_sum (fun t _ => hkey t)
+      _ = _ := by
+        rw [lintegral_finsetSum]
+        · apply Finset.sum_congr rfl
+          intro t _
+          rw [lintegral_indicator_const MeasurableSet.of_discrete]
+          rw [prEvent_eq_evalDist_of_discrete]
+          exact mul_comm _ _
+        · intro t _
+          exact measurable_const.indicator MeasurableSet.of_discrete
+  simpa only [Set.indicator_apply, Set.mem_ofPred_eq, Finset.sum_ite_mem,
+    Finset.univ_inter] using h
 variable [DecidableEq D] [Finite D]
   [∀ d, SampleableType (R d)] [SampleableType (∀ d, R d)]
 
@@ -426,38 +430,6 @@ theorem prEvent_tableFreshKey_bad_le
     _ = Pr{let g ← $ᵗ (∀ d, R d)}[t ∈ tableFreshKeys oa g] * error t := by
         rw [prEvent_eq_evalDist_of_discrete]
         exact mul_comm _ _
-
-omit [DecidableEq D] [Finite D] in
-/-- A finite union of key-specific bad events is charged by the expected sum of the weights
-of the keys that actually appear. -/
-private theorem prEvent_bad_in_freshKeys_le_expectedCharge
-    {β : Type} [Finite D] [MeasurableSpace β] [DiscreteMeasurableSpace β]
-    (mx : ProbComp β) (keys : β → Finset D) (bad : D → β → Prop)
-    (error : D → ENNReal)
-    (hkey : ∀ t, Pr{let a ← mx}[t ∈ keys a ∧ bad t a] ≤
-      Pr{let a ← mx}[t ∈ keys a] * error t) :
-    Pr{let a ← mx}[∃ t ∈ keys a, bad t a] ≤
-      ∫⁻ a, ∑ t ∈ keys a, error t ∂𝒟[mx] := by
-  classical
-  let : Fintype D := Fintype.ofFinite D
-  have h : Pr{let a ← mx}[∃ t, t ∈ keys a ∧ bad t a] ≤
-      ∫⁻ a, ∑ t, ({x | t ∈ keys x}.indicator (fun _ => error t)) a ∂𝒟[mx] := by
-    calc
-      _ ≤ ∑ t, Pr{let a ← mx}[t ∈ keys a ∧ bad t a] :=
-        prEvent_exists_le mx (fun t a => t ∈ keys a ∧ bad t a)
-      _ ≤ ∑ t, Pr{let a ← mx}[t ∈ keys a] * error t :=
-        Finset.sum_le_sum (fun t _ => hkey t)
-      _ = _ := by
-        rw [lintegral_finsetSum]
-        · apply Finset.sum_congr rfl
-          intro t _
-          rw [lintegral_indicator_const MeasurableSet.of_discrete]
-          rw [prEvent_eq_evalDist_of_discrete]
-          exact mul_comm _ _
-        · intro t _
-          exact measurable_const.indicator MeasurableSet.of_discrete
-  simpa only [Set.indicator_apply, Set.mem_ofPred_eq, Finset.sum_ite_mem,
-    Finset.univ_inter] using h
 
 /-- Under independent uniform answer cells, a bad event at any adaptively queried key is
 bounded by the expected weight of the distinct keys in the actual deterministic trace. -/
