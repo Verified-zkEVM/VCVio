@@ -98,6 +98,28 @@ theorem prEvent_exists_le_card_mul {ι : Type} [Fintype ι] (mx : m α) (p : ι 
   (prEvent_exists_le mx p).trans (by
     simpa using Finset.sum_le_card_nsmul Finset.univ _ ε (fun i _ ↦ h i))
 
+/-- Union bound over a finite index set with a uniform bound on each event. -/
+theorem prEvent_exists_finset_le_card_mul {ι : Type} (s : Finset ι) (mx : m α)
+    (p : ι → α → Prop) {ε : ℝ≥0∞} (h : ∀ i ∈ s, Pr{let x ← mx}[p i x] ≤ ε) :
+    Pr{let x ← mx}[∃ i ∈ s, p i x] ≤ s.card * ε :=
+  (prEvent_exists_finset_le s mx p).trans (by simpa using Finset.sum_le_card_nsmul s _ ε h)
+
+/-- If at most one index satisfies `p`, and each index satisfying `p` has its event with
+probability at most `ε`, then some index satisfying `p` has its event with probability at most
+`ε`. The predicate `p` does not depend on the drawn value. -/
+theorem prEvent_exists_and_le_of_subsingleton {ι : Type} (mx : m α) (p : ι → Prop)
+    (event : ι → α → Prop) {ε : ℝ≥0∞} (hε : ∀ i, p i → Pr{let x ← mx}[event i x] ≤ ε)
+    (hp : {i | p i}.Subsingleton) :
+    Pr{let x ← mx}[∃ i, p i ∧ event i x] ≤ ε := by
+  have hcard : hp.finite.toFinset.card ≤ 1 := Finset.card_le_one.mpr fun a ha b hb ↦
+    hp (hp.finite.mem_toFinset.mp ha) (hp.finite.mem_toFinset.mp hb)
+  refine (prEvent_mono _ _ (fun x ↦ ∃ i ∈ hp.finite.toFinset, event i x)
+    fun _ ⟨i, hi, h⟩ ↦ ⟨i, hp.finite.mem_toFinset.mpr hi, h⟩).trans
+    ((prEvent_exists_finset_le_card_mul _ mx event
+      fun i hi ↦ hε i (hp.finite.mem_toFinset.mp hi)).trans ?_)
+  calc (hp.finite.toFinset.card : ℝ≥0∞) * ε ≤ (1 : ℕ) * ε := by gcongr
+    _ = ε := by simp
+
 /-- An event splits along a second predicate. -/
 theorem prEvent_eq_prEvent_and_add_prEvent_and_not (mx : m α) (p q : α → Prop) :
     Pr{let x ← mx}[p x] = Pr{let x ← mx}[p x ∧ q x] + Pr{let x ← mx}[p x ∧ ¬ q x] := by
