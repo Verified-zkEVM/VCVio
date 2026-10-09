@@ -60,13 +60,6 @@ variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
   ∃ c', c = some c' ∧ st.2 c' = some y
 
 variable {core} in
-/-- An existing cell holds `y` exactly when it is drawn at `y`. -/
-@[simp]
-theorem cellHolds_some_iff {st : LabState core} {c : DeriveQuery core ⊕ NodeKey core}
-    {y : core.Y} : CellHolds core st (some c) y ↔ st.2 c = some y := by
-  simp [CellHolds]
-
-variable {core} in
 /-- A held cell stays held as the state grows. -/
 theorem CellHolds.mono {st st' : LabState core} (hle : st ≤ st')
     {c : Option (DeriveQuery core ⊕ NodeKey core)} {y : core.Y} (h : CellHolds core st c y) :

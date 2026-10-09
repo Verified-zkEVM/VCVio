@@ -43,7 +43,6 @@ FORS public key.
   (`keygenInternalWithSecretM` is `GeneralHypertree.rootWithSecretM`), so the decomposition of
   Algorithm 18 into a root reading and the assembled key pair has no counterpart here; the root
   reading is what `exists_xmssNodeWithSecret?_eq_some_of_rootWithSecretM` consumes.
-* No cache-size lower bound is stated here.
 * No property of any particular cache is proved here, and nothing here is probabilistic or quantum.
 
 ## Labels
@@ -66,7 +65,6 @@ FORS public key.
 *Hypertree layers and Algorithm 19*:
 `simulateQ_toPartialImpl_signFromPositionWithSecret_add_two_eq_some_iff`,
 `simulateQ_toPartialImpl_signFromPositionWithSecret_one_false_eq_some_iff`,
-`simulateQ_toPartialImpl_signFromPositionWithSecret_one_true_eq_some_iff`,
 `simulateQ_toPartialImpl_signInternalWithSecretRandomizerM_eq_some_iff`,
 `components_of_simulateQ_toPartialImpl_signInternalWithSecretRandomizerM`.
 
@@ -83,7 +81,7 @@ FORS public key.
 
 *FORS coverage*: `forsPkGenWithSecret?_eq_some_of_forsSignWithSecret`.
 
-Twenty-nine declarations, none private.
+Twenty-eight declarations, none private.
 -/
 
 public section
@@ -395,25 +393,6 @@ theorem simulateQ_toPartialImpl_signFromPositionWithSecret_one_false_eq_some_iff
         #v[sig] = sigs := by
   simp only [GeneralHypertree.signFromPositionWithSecret, simulateQ_bind_eq_some_iff,
     simulateQ_pure_eq_some_iff, Bool.false_eq_true, ↓reduceIte]
-
-/-- Algorithm 12 over a provider at its last layer with final recovery is settled exactly when
-the XMSS signature at that position is settled and the root it recovers is settled. -/
-theorem simulateQ_toPartialImpl_signFromPositionWithSecret_one_true_eq_some_iff
-    (pk : core.PkSeed) (pos : LayerPosition vp) (h : pos.layer.val + 1 = vp.params.d)
-    (msg : core.Y) {sigs : Vector (XmssSig vp.params core) 1} :
-    simulateQ c.toPartialImpl (GeneralHypertree.signFromPositionWithSecret core
-        (PublicHash.f core pk) (PublicHash.tl core pk) (PublicHash.h core pk) secret true
-        pos 1 h msg) = some sigs ↔
-      ∃ sig : XmssSig vp.params core,
-        simulateQ c.toPartialImpl (xmssSignWithSecret core (PublicHash.f core pk)
-          (PublicHash.tl core pk) (PublicHash.h core pk) secret msg pos.toAdrs pos.leaf.val) =
-            some sig ∧
-        ∃ root, simulateQ c.toPartialImpl
-          (xmssPkFromSigM core pos.leaf.val sig msg pk pos.toAdrs) = some root ∧
-        #v[sig] = sigs := by
-  simp only [GeneralHypertree.signFromPositionWithSecret, ↓reduceIte,
-    xmssPkFromSigWith_publicHash_eq_xmssPkFromSigM, simulateQ_bind_eq_some_iff,
-    simulateQ_pure_eq_some_iff]
 
 /-- Algorithm 19 over a provider, with the randomizer `R` supplied, is settled exactly when its
 `H_msg` query is cached at some digest, the FORS signature over the provider at that digest is

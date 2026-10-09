@@ -117,13 +117,6 @@ opened secret at its cell, and each authentication-path entry at the cell of its
       (sibling (forsLeafIndex vp.params md i / 2 ^ j)) sig[i].auth[j] st
 
 variable {core} in
-/-- A held XMSS signature stays held as the state grows. -/
-theorem XmssSigHolds.mono {pos : LayerPosition vp} {msg : core.Y} {sig : XmssSig vp.params core}
-    {st st' : LabState core} (hle : st ≤ st') (h : XmssSigHolds core pos msg sig st) :
-    XmssSigHolds core pos msg sig st' :=
-  ⟨fun i ↦ (h.1 i).mono hle, fun j hj ↦ (h.2 j hj).mono hle⟩
-
-variable {core} in
 /-- A held FORS signature stays held as the state grows. -/
 theorem ForsSigHolds.mono {pos : BottomPosition vp} {md : List Byte}
     {sig : ForsSigCore vp.params core} {st st' : LabState core} (hle : st ≤ st')

@@ -457,13 +457,6 @@ theorem slhGraph_pt_inj (pkSeed : core.PkSeed) {κ κ' : NodeKey core} {vs vs' :
   simp only [slhGraph_pt, Sum.inl.injEq, PublicHashQuery.thash.injEq, true_and] at h
   exact ⟨Subtype.ext h.1, h.2⟩
 
-/-- The graphs at distinct public seeds have no point in common. -/
-theorem slhGraph_pt_ne_of_ne {pkSeed pkSeed' : core.PkSeed} (h : pkSeed ≠ pkSeed')
-    (κ κ' : NodeKey core) (vs vs' : List core.Y) :
-    (slhGraph core pkSeed).pt κ vs ≠ (slhGraph core pkSeed').pt κ' vs' := by
-  simp only [slhGraph_pt, ne_eq, Sum.inl.injEq, PublicHashQuery.thash.injEq, not_and]
-  exact fun h' => absurd h' h
-
 /-- The children of a node are exactly the cells of the structural children of its address: no
 structural child is dropped. -/
 theorem map_some_slhGraph_ch (pkSeed : core.PkSeed) (κ : NodeKey core) :

@@ -33,7 +33,7 @@ honest entry sits at an address of the union ledger `constructionAddresses` of
 below `w - 1`.  The two secret-consuming constructors, a WOTS+ chain entry and a FORS leaf, carry
 the settled secret they start from as a premise, so an honest entry never rests on a secret the
 cache does not record.  The honest relation reads only the provider, the public seed and the
-cache, and is monotone in the cache (`HonestEntry.mono`).
+cache.
 
 **Hidden-value hit** (`HiddenHit`).  The forgery's WOTS+ signature entry on some chain of the leaf
 the verification replay enters is the honest chain value at the step its message selects, that
@@ -76,14 +76,14 @@ union-ledger targets (`xmssNodeAdrs_childTreeAdrs_mem_constructionAddresses`,
 
 ## Labels
 
-Thirty-one declarations, none private.
+Thirty declarations, none private.
 
 *Positions and the verifier's replay*: `childTreeAdrs`, `childTreeAdrs_next`, `forsInstanceAdrs`,
 `forsInstanceAdrs_initial`, `forsPkAdrs_forsInstanceAdrs_mem_constructionAddresses`,
 `xmssNodeAdrs_childTreeAdrs_mem_constructionAddresses`, `forgerMessage?`, `forgerMessage?_mono`,
 `recoverFromPositionM_pos_congr`, `forgerLayers_of_recoverFromPositionM`.
 
-*Honest entries and the target collision*: `HonestEntry`, `HonestEntry.mono`, `TargetCollision`.
+*Honest entries and the target collision*: `HonestEntry`, `TargetCollision`.
 
 *Digests, used leaves and honest messages*: `LoggedDigest`, `ForgerDigest`, `UsedLeaf`,
 `honestMessage?`, `msgAdrs`, `msgAdrs_mem_constructionAddresses`, `HiddenChainValue`,
@@ -304,30 +304,6 @@ inductive HonestEntry (secret : Adrs → OracleComp (publicHashSpec core) core.Y
       (h : ∀ i : Fin vp.params.k,
         forsNodeWithSecret? core c secret pk adrs vp.params.a i.val = some roots[i]) :
       HonestEntry secret pk c (.thash pk (core.adrsToKey (forsPkAdrs adrs)) roots.toList)
-
-/-- An honest entry stays honest in a larger cache. -/
-theorem HonestEntry.mono {secret : Adrs → OracleComp (publicHashSpec core) core.Y}
-    {pk : core.PkSeed} {c c' : PublicHash.Cache core} (h : c ≤ c')
-    {t : (publicHashSpec core).Domain} (ht : HonestEntry secret pk c t) :
-    HonestEntry secret pk c' t := by
-  induction ht with
-  | xmssNode adrs height i l r hheight hmem hl hr =>
-    exact .xmssNode adrs height i l r hheight hmem
-      (QueryCache.simulateQ_toPartialImpl_mono h _ hl)
-      (QueryCache.simulateQ_toPartialImpl_mono h _ hr)
-  | wotsPk adrs tops hmem hw =>
-    exact .wotsPk adrs tops hmem (QueryCache.simulateQ_toPartialImpl_mono h _ hw)
-  | wotsChain adrs i steps x v hmem hx hv =>
-    exact .wotsChain adrs i steps x v hmem (QueryCache.simulateQ_toPartialImpl_mono h _ hx)
-      (QueryCache.simulateQ_toPartialImpl_mono h _ hv)
-  | forsLeaf adrs leaf x hmem hx =>
-    exact .forsLeaf adrs leaf x hmem (QueryCache.simulateQ_toPartialImpl_mono h _ hx)
-  | forsNode adrs height i l r hheight hmem hl hr =>
-    exact .forsNode adrs height i l r hheight hmem
-      (QueryCache.simulateQ_toPartialImpl_mono h _ hl)
-      (QueryCache.simulateQ_toPartialImpl_mono h _ hr)
-  | forsRoots adrs roots hmem hr =>
-    exact .forsRoots adrs roots hmem fun i => QueryCache.simulateQ_toPartialImpl_mono h _ (hr i)
 
 /-- Two cache entries at one `thash` key with equal answers and different inputs, one of which is
 an honest entry for the provider `secret` at public seed `pk`. -/

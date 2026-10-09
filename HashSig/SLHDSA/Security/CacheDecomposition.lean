@@ -21,9 +21,9 @@ single WOTS+ chain step, so that a settled reading can be followed down to the i
 
 Each `simulateQ_toPartialImpl_*_eq_some_iff` lemma is an equivalence between a settled reading of
 one program and settled readings of its immediate sub-programs.  The scheme layer decomposes
-Algorithm 20; the hypertree layer peels one XMSS layer off Algorithm 13; the FORS layer reduces
-the FORS public key and its recovery to per-tree Merkle roots and climbs; the WOTS+ layer reduces
-chain tops to chains and a chain to its `F` queries; the XMSS layer splits the recovery of
+Algorithm 20; the hypertree layer peels one XMSS layer off Algorithm 13; the FORS layer reduces the
+recovery of the FORS public key to per-tree leaf queries and climbs; the WOTS+ layer reduces
+recovered chain tops to chains and a chain to its `F` queries; the XMSS layer splits the recovery of
 Algorithm 11 into WOTS+ recovery and climb.  The `chain?` lemmas compose and split chains
 (`chain?_add_eq_some_iff`) and, for two settled chains of equal length that end at the same value,
 find the first step at which they split into two cached `F` entries with one answer
@@ -40,7 +40,7 @@ find the first step at which they split into two cached `F` entries with one ans
 
 ## Labels
 
-Sixteen declarations.
+Fourteen declarations.
 
 *Algorithm 20*: `simulateQ_toPartialImpl_verifyInternalM_eq_some_true_iff`,
 `exists_of_simulateQ_toPartialImpl_verifyInternalM_eq_some`.
@@ -49,12 +49,10 @@ Sixteen declarations.
 `simulateQ_toPartialImpl_recoverFromPositionM_one_eq_some_iff`,
 `simulateQ_toPartialImpl_pkFromSigM_eq`.
 
-*FORS trees*: `simulateQ_toPartialImpl_forsPkGenM_eq_some_iff`,
-`simulateQ_toPartialImpl_forsPkFromSigM_eq_some_iff`.
+*FORS trees*: `simulateQ_toPartialImpl_forsPkFromSigM_eq_some_iff`.
 
 *WOTS+ chains*: `simulateQ_toPartialImpl_chainM_succ_eq_some_iff`,
 `simulateQ_toPartialImpl_chainM_add_eq_some_iff`,
-`simulateQ_toPartialImpl_wotsPkGenTopsM_eq_some_iff`,
 `simulateQ_toPartialImpl_wotsPkFromSigTopsM_eq_some_iff`.
 
 *XMSS trees*: `simulateQ_toPartialImpl_xmssPkFromSigM_eq_some_iff`.
@@ -103,15 +101,6 @@ theorem simulateQ_toPartialImpl_chainM_add_eq_some_iff (pk : core.PkSeed) (adrs 
     rw [← Nat.add_assoc i a b]
     exact ⟨fun ⟨w, ⟨z, hz, hw⟩, hq⟩ => ⟨z, hz, w, hw, hq⟩,
       fun ⟨z, hz, w, hw, hq⟩ => ⟨w, ⟨z, hz, hw⟩, hq⟩⟩
-
-/-- The honest chain tops are settled exactly when every full chain from its secret value is
-settled, at the corresponding top. -/
-theorem simulateQ_toPartialImpl_wotsPkGenTopsM_eq_some_iff (sk : core.SkSeed)
-    (pk : core.PkSeed) (adrs : Adrs) {tops : Vector core.Y p.len} :
-    simulateQ c.toPartialImpl (wotsPkGenTopsM core sk pk adrs) = some tops ↔
-      ∀ i : Fin p.len, simulateQ c.toPartialImpl (chainM core pk (wotsChainAdrs adrs i.val)
-        (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (p.w - 1)) = some tops[i] := by
-  simp only [wotsPkGenTopsM, wotsPkGenTopsWith, simulateQ_ofFnM_eq_some_iff, chainM]
 
 /-- The chain tops recovered from a WOTS+ signature are settled exactly when every chain suffix
 from the signature entry is settled, at the corresponding top. -/
@@ -190,19 +179,6 @@ theorem chain?_diverge (pk : core.PkSeed) (adrs : Adrs) (u v : core.Y) (i n : �
     · exact Or.inr ⟨n, Nat.lt_succ_self n, u₁, v₁, y, h, hu₁, hv₁, hqu, hqv⟩
 
 /-! ## FORS trees -/
-
-/-- The honest FORS public key is settled exactly when every tree root is settled and the `T_k`
-compression of the roots is cached. -/
-theorem simulateQ_toPartialImpl_forsPkGenM_eq_some_iff (sk : core.SkSeed) (pk : core.PkSeed)
-    (adrs : Adrs) {fpk : core.Y} :
-    simulateQ c.toPartialImpl (forsPkGenM core sk pk adrs) = some fpk ↔
-      ∃ roots : Vector core.Y p.k,
-        (∀ i : Fin p.k, simulateQ c.toPartialImpl (PerfectMerkleTree.merkleRootM
-          (forsLeafWith core (PublicHash.f core pk) sk pk adrs)
-          (forsNodeHashWith (PublicHash.h core pk) adrs) p.a i.val) = some roots[i]) ∧
-        c (.thash pk (core.adrsToKey (forsPkAdrs adrs)) roots.toList) = some fpk := by
-  simp only [forsPkGenM, forsPkGenWith, forsRootWith, simulateQ_bind_eq_some_iff,
-    simulateQ_ofFnM_eq_some_iff, simulateQ_toPartialImpl_tl]
 
 /-- FORS recovery is settled exactly when, for every tree, the `F` query of the revealed secret
 is cached and the climb from it is settled at the recovered root, and the `T_k` compression of
