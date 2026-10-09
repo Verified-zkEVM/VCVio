@@ -323,6 +323,14 @@ lemma isQueryBoundP_bind
       refine ih'.mono ?_
       grind
 
+/-- `oa >>= ob` makes no `p`-query when `oa` and every continuation `ob x` make none. The
+continuations are taken at every value, so the bound composes as a predicate on programs that
+holds of every `pure` and is preserved by `bind`. -/
+lemma isQueryBoundP_bind_zero (oa : OracleComp spec α) (ob : α → OracleComp spec β)
+    (h : IsQueryBoundP oa p 0) (h' : ∀ x, IsQueryBoundP (ob x) p 0) :
+    IsQueryBoundP (oa >>= ob) p 0 :=
+  isQueryBoundP_bind h fun x _ => h' x
+
 /-- Transfer a predicate-targeted query bound through a `StateT` simulation
 whose handler step consumes at most one target-side predicate query exactly when
 the source query satisfies the source predicate.
@@ -514,6 +522,13 @@ lemma allQueriesSatisfy_ofFnM {n : ℕ} (f : Fin n → OracleComp spec α) {P : 
       rw [Vector.ofFnM_succ]
       exact allQueriesSatisfy_bind (ih (fun i => f i.castSucc) (fun i => h i.castSucc))
         fun _ => allQueriesSatisfy_bind (h (Fin.last n)) fun _ => allQueriesSatisfy_pure _ _
+
+/-- Every computation satisfies a predicate-only bound whose predicate holds at every index. -/
+lemma allQueriesSatisfy_of_forall {P : ι → Prop} (hP : ∀ t, P t) (oa : OracleComp spec α) :
+    AllQueriesSatisfy oa P := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => exact allQueriesSatisfy_pure x P
+  | query_bind t mx ih => exact (allQueriesSatisfy_query_bind_iff t mx P).2 ⟨hP t, ih⟩
 
 end AllQueriesSatisfy
 

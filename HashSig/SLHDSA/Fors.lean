@@ -8,6 +8,7 @@ module
 public import HashSig.SLHDSA.Xmss
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
 import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
+import VCVio.OracleComp.SimSemantics.SimulateQ.Option
 
 /-!
 # FORS (FIPS 205 §8)
@@ -228,20 +229,6 @@ def forsPkFromSig (prims : Primitives p) (sig : ForsSigCore p prims.core) (md : 
 
 /-! ### Naturality -/
 
-private theorem monadHom_ofFnM {m n : Type → Type*} [Monad m] [LawfulMonad m]
-    [Monad n] [LawfulMonad n] (F : m →ᵐ n) {α : Type} {k : ℕ}
-    (fm : Fin k → m α) (fn : Fin k → n α) (h : ∀ i, F (fm i) = fn i) :
-    F (Vector.ofFnM fm) = Vector.ofFnM fn := by
-  induction k with
-  | zero => simp [F.mmap_pure]
-  | succ k ih =>
-      rw [Vector.ofFnM_succ, Vector.ofFnM_succ, F.mmap_bind]
-      rw [ih (fun i => fm i.castSucc) (fun i => fn i.castSucc) (fun i => h i.castSucc)]
-      congr 1
-      funext xs
-      rw [F.mmap_bind, h (Fin.last k)]
-      simp [F.mmap_pure]
-
 /-- A monad morphism commutes with FORS leaf production when it commutes with the leaf-hash
 callback. -/
 theorem forsLeafWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
@@ -294,7 +281,7 @@ theorem forsPkGenWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
     F (forsPkGenWith core hashm nodeHashm compressm sk pk adrs) =
       forsPkGenWith core hashn nodeHashn compressn sk pk adrs := by
   simp [forsPkGenWith, F.mmap_bind,
-    monadHom_ofFnM F _ _ (fun i => forsRootWith_natural F core hashm hashn nodeHashm nodeHashn
+    Vector.ofFnM_natural F _ _ (fun i => forsRootWith_natural F core hashm hashn nodeHashm nodeHashn
       hhash hnode sk pk adrs i.val), hcompress]
 
 /-- A monad morphism commutes with FORS signing when it commutes with the leaf and node
@@ -309,7 +296,7 @@ theorem forsSignWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
     (md : List Byte) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     F (forsSignWith core hashm nodeHashm md sk pk adrs) =
       forsSignWith core hashn nodeHashn md sk pk adrs := by
-  apply monadHom_ofFnM F
+  apply Vector.ofFnM_natural F
   intro i
   simp [PerfectMerkleTree.intrinsicAuthPathM_natural F _ _ _ _
     (fun t => forsLeafWith_natural F core hashm hashn hhash sk pk adrs t)
@@ -340,7 +327,7 @@ theorem forsPkFromSigWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad 
         let leaf ← hashn (forsNodeAdrs adrs 0 idx) (sig[i.val]).sk
         PerfectMerkleTree.climbM (forsNodeHashWith nodeHashn adrs) idx leaf
           (sig[i.val]).auth.toList) := by
-    apply monadHom_ofFnM F
+    apply Vector.ofFnM_natural F
     intro i
     rw [F.mmap_bind, hhash]
     congr 1
@@ -572,15 +559,6 @@ theorem forsSignM_then_forsPkFromSigM_isTotalQueryBound (core : CorePrimitives p
 
 /-! ### Pure API equations -/
 
-private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
-    (answer : QueryImpl spec Id) (g : Fin k → OracleComp spec α) :
-    simulateQ answer (Vector.ofFnM g) = Vector.ofFn fun i => simulateQ answer (g i) := by
-  calc
-    simulateQ answer (Vector.ofFnM g) =
-        Vector.ofFnM (fun i => simulateQ answer (g i)) :=
-      monadHom_ofFnM (simulateQ' answer) g _ (fun _ => rfl)
-    _ = Vector.ofFn fun i => simulateQ answer (g i) := Vector.idRun_ofFnM
-
 @[simp] theorem forsLeaf_eq_f (prims : Primitives p) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) (t : ℕ) :
     forsLeaf prims sk pk adrs t =
@@ -609,7 +587,9 @@ private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
       (Vector.ofFn (fun i : Fin p.k => forsRoot prims sk pk adrs i.val)).toList := by
   simp only [forsPkGen, forsPkGenM, forsPkGenWith, simulateQ_bind, simulateQ_ofFnM,
     PublicHash.tl, simulateQ_HasQuery_query, PublicHash.impl]
-  rfl
+  apply congrArg (prims.Thash pk (prims.adrsToKey (forsPkAdrs adrs)))
+  congr 1
+  exact Vector.idRun_ofFnM
 
 @[simp] theorem forsSign_eq_ofFn (prims : Primitives p) (md : List Byte)
     (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
@@ -620,6 +600,7 @@ private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
           (forsNodeHash prims pk adrs) idx p.a) := by
   unfold forsSign forsSignM forsSignWith
   rw [simulateQ_ofFnM]
+  refine Vector.idRun_ofFnM.trans ?_
   apply Vector.ext
   intro i hi
   simp only [Vector.getElem_ofFn, simulateQ_bind, simulateQ_pure,
@@ -646,6 +627,7 @@ theorem forsSign_authPath_length (prims : Primitives p) (md : List Byte)
     PublicHash.impl]
   apply congrArg (prims.Thash pk (prims.adrsToKey (forsPkAdrs adrs)))
   congr 1
+  refine Vector.idRun_ofFnM.trans ?_
   apply Vector.ext
   intro i hi
   simp only [Vector.getElem_ofFn, PerfectMerkleTree.simulateQ_climbM]

@@ -381,9 +381,6 @@ def shakeKeyEq (p : Params) :
 instance (p : Params) : DecidableEq (sha2Primitives p).Y :=
   inferInstanceAs (DecidableEq (Bytes p.n))
 
-instance (p : Params) : DecidableEq (shakePrimitives p).Y :=
-  inferInstanceAs (DecidableEq (Bytes p.n))
-
 /-- Every check of one profile under one bundle: FORS at the digest address, XMSS at each listed
 position, the hypertree loops along those positions, and the scheme end to end. -/
 def exerciseBundle (vp : ValidatedParams) (label : String) (prims : Primitives vp.params)

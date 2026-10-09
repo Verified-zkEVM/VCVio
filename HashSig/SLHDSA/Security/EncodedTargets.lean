@@ -16,9 +16,9 @@ import HashSig.SLHDSA.ForsConformance
 primitive bundle derives from a reachable address ledger are still pairwise distinct.  Structural
 distinctness does not give this: a concrete encoder has narrower field domains than
 `ValidatedParams` imposes, and outside those domains both approved encoders collapse distinct
-addresses onto one key.  SHA-2's total projection returns the all-zero key, which is the genuine
-key of the all-zero WOTS-hash address rather than a sentinel; SHAKE's serialization truncates each
-field to its width.
+addresses onto one key.  SHA-2's total projection returns the fallback key of the address type,
+which is the key of no address in its domain but is shared by every rejected address of one type
+class; SHAKE's serialization truncates each field to its width.
 
 The two encoders need different amounts of the parameter set:
 
@@ -46,7 +46,9 @@ exact selector and connecting it to program traces remain downstream obligations
 
 Both records are satisfied by every FIPS 205 parameter set and by the limited SHA2-128-24 profile.
 The scope here is the eight tweakable-hash target roles.  The two secret-key derivation address
-types pass through the same SHA-2 gate but are not hash targets, so they are not covered.
+types pass through the same SHA-2 gate but are not hash targets, so no ledger lists them; their
+per-address facts at reachable positions are `addressFacts_wotsSkAdrs` and
+`addressFacts_forsSkAdrs`.
 
 ## References
 
@@ -152,8 +154,8 @@ structure AddressFacts (vp : ValidatedParams) (a : Adrs) : Prop where
   /-- The address sits in a tree reachable at some layer of this hypertree. -/
   tree_lt : a.tree < 2 ^ ((vp.params.d - 1) * vp.params.hp)
 
-/-- Structural addresses that the SHA-2 instantiation compresses without its zero fallback. -/
-def Sha2Domain (a : Adrs) : Prop :=
+/-- Structural addresses that the SHA-2 instantiation compresses without its fallback. -/
+@[expose] def Sha2Domain (a : Adrs) : Prop :=
   a.isCanonical = true ∧ Adrs.Fits 1 a.layer = true ∧ Adrs.Fits 8 a.tree = true
 
 /-- The domain is exactly what the checked compression boundary accepts, so a canary that runs
@@ -292,6 +294,15 @@ theorem addressFacts_wotsPkAdrs {vp : ValidatedParams}
   layer_lt := pos.layer.isLt
   tree_lt := tree_lt_hypertree _ pos.tree
 
+/-- Every WOTS+ secret-key address of a reachable instance carries the address facts. -/
+theorem addressFacts_wotsSkAdrs {vp : ValidatedParams}
+    (hb : CanonicalAddressBounds vp.params) (pos : LayerPosition vp) (i : Fin vp.params.len) :
+    AddressFacts vp (wotsSkAdrs (wotsInstanceAdrs pos) i.val) where
+  canonical := wotsSkAdrs_isCanonical _ _ (wotsInstanceAdrs_isCanonical hb pos)
+    (fits_four_of_lt (by have := i.isLt; have := hb.len_le; omega))
+  layer_lt := pos.layer.isLt
+  tree_lt := tree_lt_hypertree _ pos.tree
+
 /-- Every FORS node address with four-byte height and index carries the address facts. -/
 theorem addressFacts_forsNodeAdrs {vp : ValidatedParams}
     (hb : CanonicalAddressBounds vp.params) (pos : BottomPosition vp) {z t : ℕ}
@@ -308,6 +319,18 @@ theorem addressFacts_forsPkAdrs {vp : ValidatedParams}
     (hb : CanonicalAddressBounds vp.params) (pos : BottomPosition vp) :
     AddressFacts vp (forsPkAdrs pos.forsAdrs) where
   canonical := ForsConformance.forsPkAdrs_isCanonical _ (BottomPosition.forsAdrs_isCanonical hb pos)
+  layer_lt := vp.valid.d_pos
+  tree_lt := tree_lt_hypertree 0 pos.tree
+
+/-- Every FORS secret-key address of a reachable bottom position, at a global leaf index below
+`k * 2^a`, carries the address facts. -/
+theorem addressFacts_forsSkAdrs {vp : ValidatedParams}
+    (hb : CanonicalAddressBounds vp.params) (pos : BottomPosition vp) {t : ℕ}
+    (ht : t < vp.params.k * 2 ^ vp.params.a) :
+    AddressFacts vp (forsSkAdrs pos.forsAdrs t) where
+  canonical :=
+    ForsConformance.forsSkAdrs_isCanonical _ _ (BottomPosition.forsAdrs_isCanonical hb pos)
+      (fits_four_of_lt (lt_of_lt_of_le ht hb.forsIndex_le))
   layer_lt := vp.valid.d_pos
   tree_lt := tree_lt_hypertree 0 pos.tree
 
@@ -441,7 +464,7 @@ theorem addressFacts_wotsPkAddresses (vp : ValidatedParams)
 /-! ## Approved instantiations -/
 
 /-- On a duplicate-free ledger inside the SHA-2 address domain, the compressed `ADRSc` tweaks of
-`sha2Primitives` stay duplicate-free.  The hypothesis is what rules out the zero fallback: every
+`sha2Primitives` stay duplicate-free.  The hypothesis is what rules out the fallback: every
 listed address compresses successfully, so its key is its own `ADRSc`. -/
 theorem encodeTargets_sha2_nodup {p : Params} {addresses : List Adrs}
     (hnodup : addresses.Nodup) (hdomain : ∀ a ∈ addresses, Sha2Domain a) :

@@ -22,6 +22,17 @@ statements: comparisons with fractions of the sample space reduce to comparisons
 probability one and zero are universal and empty events, and independent uniform draws combined
 by a bijection are a single uniform draw. Every uniform sampler of a type denotes the same
 measure, so statements about `$ᵗ α` do not depend on the chosen sampler.
+
+There are two set-mass bounds for a uniform sample, and they differ in where the numerator comes
+from.  `evalDist_uniformSample_le_of_encard_le` takes a bound `k` fixed in advance, and
+`evalDist_uniformSample_le_encard_div` takes the set's own cardinality; a potential argument that
+charges a different set at every step has no single `k` to supply, so it needs the latter.  The
+latter's denominator is `Nat.card` rather than `Fintype.card` because `SampleableType` yields
+only `Finite` (`SampleableType.finite`).  `evalDist_uniformSample_eq_encard_div` is the exact
+form, which a tightness argument needs because an inequality in the wrong direction is useless
+there; it is stated at a `Fintype`, with a `Fintype.card` denominator, to match its consumer and
+not because exactness needs the extra hypothesis — the same equality holds at `Nat.card` under
+the `Finite` that `SampleableType` yields alone.
 -/
 
 public section
@@ -37,6 +48,36 @@ theorem evalDist_uniformSample_singleton {α : Type} [SampleableType α] [_root_
     [MeasurableSpace α] [MeasurableSingletonClass α] (x : α) :
     𝒟[($ᵗ α : ProbComp α)] {x} = (Fintype.card α : ENNReal)⁻¹ := by
   rw [evalDist_uniformSample, uniformOn_univ_apply_singleton]
+
+/-- A uniform finite sample lands in a set of at most `k` elements with probability at most
+`k / |α|`. -/
+theorem evalDist_uniformSample_le_of_encard_le {α : Type} [SampleableType α] [_root_.Fintype α]
+    [MeasurableSpace α] [MeasurableSingletonClass α] (S : Set α) (k : ℕ)
+    (hS : S.encard ≤ (k : ℕ∞)) :
+    𝒟[($ᵗ α : ProbComp α)] S ≤ (k : ENNReal) / Fintype.card α := by
+  rw [evalDist_uniformSample, ProbabilityTheory.uniformOn_univ,
+    MeasureTheory.Measure.count_apply MeasurableSet.of_discrete]
+  gcongr
+  exact (ENat.toENNReal_le.mpr hS).trans_eq (by simp)
+
+/-- A uniform finite sample lands in a set with exactly its cardinality's share of the mass. -/
+theorem evalDist_uniformSample_eq_encard_div {α : Type} [SampleableType α] [_root_.Fintype α]
+    [MeasurableSpace α] [MeasurableSingletonClass α] (S : Set α) :
+    𝒟[($ᵗ α : ProbComp α)] S = (S.encard : ENNReal) / Fintype.card α := by
+  rw [evalDist_uniformSample, ProbabilityTheory.uniformOn_univ,
+    MeasureTheory.Measure.count_apply MeasurableSet.of_discrete]
+
+/-- A uniform finite sample lands in a set with at most its own cardinality's share of the mass:
+`S.encard / Nat.card α`. -/
+theorem evalDist_uniformSample_le_encard_div {α : Type} [SampleableType α]
+    [MeasurableSpace α] [MeasurableSingletonClass α] (S : Set α) :
+    𝒟[($ᵗ α : ProbComp α)] S ≤ (S.encard : ENNReal) / Nat.card α := by
+  let _ : _root_.Fintype α := Fintype.ofFinite α
+  have hfin := Set.toFinite S
+  refine le_trans (evalDist_uniformSample_le_of_encard_le S hfin.toFinset.card
+    (le_of_eq hfin.encard_eq_coe_toFinset_card)) ?_
+  rw [Nat.card_eq_fintype_card, hfin.encard_eq_coe_toFinset_card]
+  simp
 
 /-- A uniform finite sample satisfies a decidable event with its accepted fraction of outputs. -/
 @[simp↓ high, grind norm↓]
@@ -111,6 +152,25 @@ theorem prEvent_uniformSample_eq_singleton {α : Type} [SampleableType α] [_roo
     (a : α) : Pr{let x ← $ᵗ α}[x = a] = (Fintype.card α : ℝ≥0∞)⁻¹ := by
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_singleton, evalDist_uniformSample_singleton]
+
+/-- The probability of drawing one particular element uniformly, with the `Nat.card`
+denominator that the `Finite` yielded by `SampleableType` supports. -/
+theorem prEvent_uniformSample_eq_singleton_natCard {α : Type} [SampleableType α] (a : α) :
+    Pr{let x ← $ᵗ α}[x = a] = (Nat.card α : ℝ≥0∞)⁻¹ := by
+  let : _root_.Fintype α := Fintype.ofFinite α
+  rw [prEvent_uniformSample_eq_singleton, Nat.card_eq_fintype_card]
+
+/-- An injective image of a uniform sample takes any one value with probability at most the
+reciprocal of the cardinality of the sample space. -/
+theorem prEvent_uniformSample_apply_eq_le {α β : Type} [SampleableType α] {f : α → β}
+    (hf : Function.Injective f) (b : β) :
+    Pr{let x ← $ᵗ α}[f x = b] ≤ (Nat.card α : ℝ≥0∞)⁻¹ := by
+  by_cases h : ∃ a, f a = b
+  · obtain ⟨a, rfl⟩ := h
+    rw [← prEvent_uniformSample_eq_singleton_natCard a]
+    exact prEvent_mono _ _ _ fun _ hx ↦ hf hx
+  · rw [(prEvent_uniformSample_eq_zero_iff _).2 fun x hx ↦ h ⟨x, hx⟩]
+    exact zero_le
 
 section counting
 
@@ -282,6 +342,14 @@ theorem prEvent_uniformSample_inst_irrel (i₁ i₂ : SampleableType α) (p : α
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete,
     evalDist_uniformSample_inst_irrel]
+
+/-- Transporting a uniform sample along an equality of types gives a uniform sample. -/
+theorem prEvent_map_cast_uniformSample {β : Type} [iα : SampleableType α] [iβ : SampleableType β]
+    (h : α = β) (p : β → Prop) :
+    Pr{let x ← cast h <$> ($ᵗ α)}[p x] = Pr{let x ← $ᵗ β}[p x] := by
+  subst h
+  rw [show (cast rfl : α → α) = id from rfl, id_map]
+  exact prEvent_uniformSample_inst_irrel iα iβ p
 
 end samplerIrrelevance
 

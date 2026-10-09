@@ -191,7 +191,7 @@ unchanged.
 
 `advance_xmssNodeAdrsKey_injective` consumes `EncodedTargetLedgerConditions` rather than assuming
 a fresh injectivity hypothesis, so a concrete profile discharges it through
-`approvedEncodedTargetLedgerConditions`; the SHA-2 zero fallback is never treated as unreachable.
+`approvedEncodedTargetLedgerConditions`; the SHA-2 key fallback is never treated as unreachable.
 
 ## References
 
@@ -804,7 +804,7 @@ walk carry different encoded tweaks.  Together with `xmssNodeAdrsKey_injective`,
 coordinates, heights and node indices, this is what stops two hypertree witnesses at different
 layers from attacking the same tweak of `xmssHTcrCProblem`.
 
-The conditions are consumed, not assumed afresh, so the SHA-2 zero fallback is never treated as
+The conditions are consumed, not assumed afresh, so the SHA-2 key fallback is never treated as
 unreachable. -/
 theorem advance_xmssNodeAdrsKey_injective {prims : Primitives vp.params}
     (conditions : EncodedTargetLedgerConditions vp prims) (pos : LayerPosition vp) {j j' : ℕ}

@@ -14,6 +14,10 @@ public import VCVio.OracleComp.Constructions.SampleableType.Basic
 The (lazy) random oracle samples a fresh uniform value on first query and caches the result
 for future consistency. Same input always yields same output. State: `QueryCache`.
 This is `uniformSampleImpl.withCaching`.
+
+Two lazy random oracles run side by side on a product cache take the same steps as one lazy
+random oracle on the sum signature, with the two caches paired by `OracleSpec.QueryCache.addEquiv`
+(`QueryImpl.run_parallelStateT_randomOracle_map_eq`).
 -/
 
 @[expose] public section
@@ -53,3 +57,28 @@ lemma run_eq (t : spec₀.Domain) (cache : spec₀.QueryCache) :
   | some u => rw [QueryImpl.withCaching_run_some uniformSampleImpl h]
 
 end randomOracle
+
+namespace QueryImpl
+
+variable {ι₁ ι₂ : Type} {spec₁ : OracleSpec.{0, 0} ι₁} {spec₂ : OracleSpec.{0, 0} ι₂}
+  [DecidableEq ι₁] [DecidableEq ι₂]
+  [∀ t : spec₁.Domain, SampleableType (spec₁.Range t)]
+  [∀ t : spec₂.Domain, SampleableType (spec₂.Range t)]
+
+/-- One step of the two independent lazy random oracles on a product cache is one step of the
+lazy random oracle on the sum signature, transported along `OracleSpec.QueryCache.addEquiv`. -/
+lemma run_parallelStateT_randomOracle_map_eq (t : (spec₁ + spec₂).Domain)
+    (p : spec₁.QueryCache × spec₂.QueryCache) :
+    Prod.map id (QueryCache.addEquiv spec₁ spec₂) <$>
+        ((QueryImpl.parallelStateT spec₁.randomOracle spec₂.randomOracle) t).run p =
+      ((spec₁ + spec₂).randomOracle t).run (QueryCache.addEquiv spec₁ spec₂ p) := by
+  obtain ⟨c₁, c₂⟩ := p
+  cases t with
+  | inl t =>
+      rcases h : c₁ t with _ | u <;>
+        simp [QueryImpl.parallelStateT, h, QueryCache.addEquiv_cacheQuery_inl, Prod.map]
+  | inr t =>
+      rcases h : c₂ t with _ | u <;>
+        simp [QueryImpl.parallelStateT, h, QueryCache.addEquiv_cacheQuery_inr, Prod.map]
+
+end QueryImpl

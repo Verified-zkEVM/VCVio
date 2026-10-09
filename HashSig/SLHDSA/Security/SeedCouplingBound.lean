@@ -1,0 +1,219 @@
+/-
+Copyright (c) 2026 Alexander Hicks. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Alexander Hicks
+-/
+
+module
+
+public import HashSig.SLHDSA.Security.SeedCouplingQueries
+import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+
+/-!
+# The hidden-seed bound for the run of SLH-DSA
+
+At a fixed public seed `pkSeed`, the run of SLH-DSA in the random-oracle model is the real
+hidden-seed game of the secret-free experiment, averaged over uniform secret seeds
+(`HashSig.SLHDSA.Security.SeedCoupling`). This module applies the averaged hidden-seed bound of
+`VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed` to it: an event of the run is at most the
+same event of the *ideal* game, in which the secret values and randomizers are entries of a table
+sampled independently of every public answer, plus `1 / |Y|` times the expected number of
+derivable public queries (`IsDerivablePublicQuery core pkSeed`) of the ideal run, and so, under
+key separation, plus `qh / |Y|` for a forger with hash budget `qh`.
+
+* `prEvent_mem_range_secretEncoding_enc_le`: under uniform secret seeds, a public point encodes a
+  derivation with probability at most `1 / |Y|`, when `|Y| ≤ |SK.prf|`. A tweakable-hash point
+  `thash _ _ [y]` pins `SK.seed` to `e.symm y`; a `PRF_msg` point pins `SK.prf`; no other point
+  encodes a derivation.
+* `prEvent_exists_isSome_apply_secretEncoding_enc_le`: under uniform secret seeds, a public cache
+  holds a point encoding a derivation with probability at most its seed charge `seedCharge`: its
+  number of cached derivable points divided by `|Y|`, when `|Y| ≤ |SK.prf|`.
+* `idealDraw`: the ideal hidden-seed game, uniform secret seeds paired with the run of the
+  secret-free experiment in the ideal game (`prEvent_idealDraw_eq` unfolds an event of it).
+* `prEvent_romSchemeRun_pure_le_prEvent_idealDraw_or`: an event of the run and its final cache is
+  at most the event, read on the rebuilt transcript and the merged cache, in `idealDraw`, or a
+  point encoding a derivation under the drawn seeds in the final public cache of `idealDraw`.
+* `prEvent_romSchemeRun_pure_le_add_mul_expectedSimulatedQueryCount`: an event of the run and its
+  final cache is at most the event, read on the rebuilt transcript and the merged cache, in
+  `idealDraw`, plus `1 / |Y|` times the expected number of derivable public queries of the
+  transcript experiment in the ideal game. The count is of every derivable public query of the
+  experiment, honest ones included; under key separation only the forger makes them
+  (`isQueryBoundP_unforgeableTranscriptExperiment_deriveAdversary`). It needs neither key
+  separation nor a query budget: the count is of the secret-free ideal run, so further losses
+  charged against the queries of that run share it.
+* `prEvent_romSchemeRun_pure_le_add`: under key separation and the hash budget `qh`, the same
+  bound with the loss `qh / |Y|`.
+
+## Scope
+
+* The statements are per public seed: the scheme is `romScheme core e optRand (pure pkSeed)`.
+* Nothing here is quantum.
+-/
+
+public section
+
+open OracleComp OracleSpec SignatureAlg
+open scoped ENNReal
+
+namespace SLHDSA.Security
+
+variable {vp : ValidatedParams} {core : CorePrimitives vp.params}
+
+/-! ## A public point encodes a derivation with probability at most `1 / |Y|` -/
+
+/-- **A public point encodes a derivation under uniform secret seeds with probability at most
+`1 / |Y|`.** At a tweakable-hash point `thash _ _ [y]` the secret seed is `e.symm y`, which has
+probability `1 / |SK.seed| = 1 / |Y|`; at a `PRF_msg` point the message-`PRF` key is fixed, which
+has probability `1 / |SK.prf| ≤ 1 / |Y|`; no other point encodes a derivation. -/
+theorem prEvent_mem_range_secretEncoding_enc_le [SampleableType core.SkSeed]
+    [SampleableType core.SkPrf] (e : core.SkSeed ≃ core.Y) (pkSeed : core.PkSeed)
+    (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf) (t : (hashSpec core).Domain) :
+    Pr{let s ← $ᵗ (core.SkSeed × core.SkPrf)}[
+      t ∈ Set.range ((secretEncoding core e pkSeed).enc s)] ≤ (Nat.card core.Y : ℝ≥0∞)⁻¹ := by
+  rcases t with (⟨pk, k, xs⟩ | t) | ⟨sp, o, msg⟩
+  · refine SampleableType.prEvent_uniformSample_prod_le_of_forall_snd _ fun sp ↦ ?_
+    calc _ ≤ Pr{let x ← $ᵗ core.SkSeed}[[e x] = xs] := prEvent_mono _ _ _ fun x ↦ by
+          rintro ⟨k' | ⟨o, msg⟩, h⟩
+          · simp only [secretEncoding_enc_inl, Sum.inl.injEq, PublicHashQuery.thash.injEq] at h
+            exact h.2.2
+          · cases h
+      _ ≤ (Nat.card core.SkSeed : ℝ≥0∞)⁻¹ := SampleableType.prEvent_uniformSample_apply_eq_le
+          (fun x x' h ↦ e.injective (List.singleton_injective h)) xs
+      _ = _ := by rw [Nat.card_congr e]
+  · rw [(SampleableType.prEvent_uniformSample_eq_zero_iff _).2 ?_]
+    · exact zero_le
+    rintro s ⟨k | ⟨o, msg⟩, h⟩ <;> cases h
+  · refine SampleableType.prEvent_uniformSample_prod_le_of_forall_fst _ fun x ↦ ?_
+    calc _ ≤ Pr{let y ← $ᵗ core.SkPrf}[y = sp] := prEvent_mono _ _ _ fun y ↦ by
+          rintro ⟨k | ⟨o', msg'⟩, h⟩
+          · cases h
+          · simp only [secretEncoding_enc_inr, Sum.inr.injEq, PrfMsgQuery.mk.injEq] at h
+            exact h.1
+      _ = (Nat.card core.SkPrf : ℝ≥0∞)⁻¹ :=
+          SampleableType.prEvent_uniformSample_eq_singleton_natCard sp
+      _ ≤ _ := ENNReal.inv_le_inv.2 (by exact_mod_cast hcard)
+
+variable (core) in
+/-- The seed charge of a public cache at public seed `pkSeed`: its cached derivable public points,
+over `|Y|`. -/
+@[expose] noncomputable def seedCharge (pkSeed : core.PkSeed) (C : (hashSpec core).QueryCache) :
+    ℝ≥0∞ :=
+  ({t | (C t).isSome ∧ IsDerivablePublicQuery core pkSeed (.inl (.inr t))}.encard : ℝ≥0∞) /
+    Nat.card core.Y
+
+/-- **A public cache holds a point encoding a derivation under uniform secret seeds with
+probability at most its seed charge**, `1 / |Y|` per cached derivable point, when
+`|Y| ≤ |SK.prf|`. -/
+theorem prEvent_exists_isSome_apply_secretEncoding_enc_le [SampleableType core.SkSeed]
+    [SampleableType core.SkPrf] (e : core.SkSeed ≃ core.Y) (pkSeed : core.PkSeed)
+    (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf) (C : (hashSpec core).QueryCache) :
+    Pr{let s ← $ᵗ (core.SkSeed × core.SkPrf)}[
+      ∃ x, (C ((secretEncoding core e pkSeed).enc s x)).isSome] ≤ seedCharge core pkSeed C := by
+  rw [seedCharge, ENNReal.div_eq_inv_mul, Set.ofPred_and, Set.inter_comm]
+  exact (secretEncoding core e pkSeed).prEvent_exists_isSome_apply_enc_le
+    (prEvent_mem_range_secretEncoding_enc_le e pkSeed hcard)
+    (isDerivablePublicQuery_enc core e pkSeed) C
+
+/-! ## The bound for the run -/
+
+variable [SampleableType core.Y] [DecidableEq core.Y] [SampleableType core.SkSeed]
+  [SampleableType core.SkPrf] [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed]
+  [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
+
+/-- The ideal hidden-seed game of SLH-DSA at public seed `pkSeed`: the secret seeds drawn
+uniformly, paired with the outcome and the final split cache of the secret-free experiment run in
+the ideal game (`SecretEncoding.idealImpl`) from the empty caches. The seeds are drawn
+independently of that run, in which every secret value and randomizer is a table entry sampled
+independently of the public answers. -/
+@[expose] noncomputable def idealDraw (e : core.SkSeed ≃ core.Y)
+    (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
+    (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed))) :
+    ProbComp ((core.SkSeed × core.SkPrf) × (DeriveOutcome core ×
+      SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y)) := do
+  let s ← $ᵗ (core.SkSeed × core.SkPrf)
+  let z ← (simulateQ (SecretEncoding.idealImpl (hashSpec core) (DeriveQuery core) core.Y)
+    (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))).run (∅, ∅)
+  return (s, z)
+
+/-- An event of `idealDraw` is the event of the seeds drawn uniformly and then of the ideal run. -/
+theorem prEvent_idealDraw_eq (e : core.SkSeed ≃ core.Y)
+    (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
+    (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed)))
+    (P : core.SkSeed × core.SkPrf →
+      DeriveOutcome core × SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y →
+        Prop) :
+    Pr{let w ← idealDraw e optRand pkSeed adv}[P w.1 w.2] =
+      Pr{let s ← $ᵗ (core.SkSeed × core.SkPrf)
+         let z ← (simulateQ (SecretEncoding.idealImpl (hashSpec core) (DeriveQuery core) core.Y)
+           (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))).run (∅, ∅)}[
+        P s z] := by
+  simp only [idealDraw, bind_assoc, pure_bind]
+
+/-- **The run against the ideal hidden-seed game.** An event `Q` of the run of SLH-DSA in the
+random-oracle model at public seed `pkSeed` and its final cache has probability at most that, in
+`idealDraw`, `Q` holds of the transcript rebuilt with the drawn seeds `s` and of the cache merged
+under `s`, or the final public cache holds a point encoding a derivation under `s`. -/
+theorem prEvent_romSchemeRun_pure_le_prEvent_idealDraw_or (e : core.SkSeed ≃ core.Y)
+    (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
+    (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed)))
+    (Q : RomOutcome vp core × (hashSpec core).QueryCache → Prop) :
+    Pr{let z ← romSchemeRun core e optRand (pure pkSeed) adv}[Q z] ≤
+      Pr{let w ← idealDraw e optRand pkSeed adv}[
+        Q (DeriveOutcome.fill core w.1 w.2.1, (secretEncoding core e pkSeed).merge w.1 w.2.2) ∨
+          ∃ x, (w.2.2.1 ((secretEncoding core e pkSeed).enc w.1 x)).isSome] := by
+  rw [prEvent_romSchemeRun_pure_eq core e optRand pkSeed adv Q, prEvent_idealDraw_eq e optRand
+    pkSeed adv fun s z ↦ Q (DeriveOutcome.fill core s z.1, (secretEncoding core e pkSeed).merge s
+      z.2) ∨ ∃ x, (z.2.1 ((secretEncoding core e pkSeed).enc s x)).isSome]
+  exact (secretEncoding core e pkSeed).prEvent_bind_realImpl_le_or _
+    fun s z ↦ Q (DeriveOutcome.fill core s z.1, z.2)
+
+/-- **The run of SLH-DSA at a public seed against the ideal game, charged in expectation.** For
+`|Y| ≤ |SK.prf|`, an event of the run and its final cache is at most the event, read on the
+transcript rebuilt with the secret seeds `s` and on the merged cache, in `idealDraw`, where `s` is
+drawn uniformly and the secret-free experiment runs in the ideal game, plus `1 / |Y|` times the
+expected number of derivable public queries of that ideal run. The count is of every derivable
+public query of the experiment, honest ones included; under key separation only the forger makes
+them (`isQueryBoundP_unforgeableTranscriptExperiment_deriveAdversary`). In the ideal game every
+secret value and randomizer is an entry of a table sampled independently of the public answers. -/
+theorem prEvent_romSchemeRun_pure_le_add_mul_expectedSimulatedQueryCount
+    (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf) (e : core.SkSeed ≃ core.Y)
+    (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
+    (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed)))
+    (Q : RomOutcome vp core × (hashSpec core).QueryCache → Prop) :
+    Pr{let z ← romSchemeRun core e optRand (pure pkSeed) adv}[Q z] ≤
+      Pr{let w ← idealDraw e optRand pkSeed adv}[
+        Q (DeriveOutcome.fill core w.1 w.2.1, (secretEncoding core e pkSeed).merge w.1 w.2.2)] +
+        (Nat.card core.Y : ℝ≥0∞)⁻¹ *
+          expectedSimulatedQueryCount
+            (SecretEncoding.idealImpl (hashSpec core) (DeriveQuery core) core.Y)
+            (IsDerivablePublicQuery core pkSeed)
+            (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed)) (∅, ∅) := by
+  rw [prEvent_romSchemeRun_pure_eq core e optRand pkSeed adv Q,
+    prEvent_idealDraw_eq e optRand pkSeed adv
+      fun s z ↦ Q (DeriveOutcome.fill core s z.1, (secretEncoding core e pkSeed).merge s z.2)]
+  exact (secretEncoding core e pkSeed).prEvent_realImpl_le_add_mul_expectedSimulatedQueryCount
+    (prEvent_mem_range_secretEncoding_enc_le e pkSeed hcard)
+    (isDerivablePublicQuery_enc core e pkSeed) _ _
+
+/-- **The run of SLH-DSA at a public seed against the ideal game.** Under key separation, for a
+forger with hash budget `qh` and `|Y| ≤ |SK.prf|`, an event of the run and its final cache is at
+most the event, read on the transcript rebuilt with the secret seeds `s` and on the merged cache,
+in `idealDraw`, where `s` is drawn uniformly and the secret-free experiment runs in the ideal game,
+plus `qh / |Y|`. In the ideal game every secret value and randomizer is an entry of a table sampled
+independently of the public answers. -/
+theorem prEvent_romSchemeRun_pure_le_add (hsep : core.KeySeparated)
+    (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf) (e : core.SkSeed ≃ core.Y)
+    (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
+    {adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed))} {qh qs : ℕ}
+    (hadv : adv.RomQueryBound qh qs)
+    (Q : RomOutcome vp core × (hashSpec core).QueryCache → Prop) :
+    Pr{let z ← romSchemeRun core e optRand (pure pkSeed) adv}[Q z] ≤
+      Pr{let w ← idealDraw e optRand pkSeed adv}[
+        Q (DeriveOutcome.fill core w.1 w.2.1, (secretEncoding core e pkSeed).merge w.1 w.2.2)] +
+        qh * (Nat.card core.Y : ℝ≥0∞)⁻¹ := by
+  refine (prEvent_romSchemeRun_pure_le_add_mul_expectedSimulatedQueryCount hcard e optRand
+    pkSeed adv Q).trans (add_le_add le_rfl ?_)
+  exact mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ _
+    (isQueryBoundP_unforgeableTranscriptExperiment_deriveAdversary hsep pkSeed hadv) _ _
+
+end SLHDSA.Security

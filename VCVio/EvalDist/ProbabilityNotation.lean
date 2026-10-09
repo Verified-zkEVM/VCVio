@@ -245,6 +245,17 @@ theorem prEvent_bind_congr
   exact prEvent_bind_congr_ae mx f g p q (measurable_fst.comp hobs)
     (measurable_snd.comp hobs) (Filter.Eventually.of_forall h)
 
+/-- An event of two successive draws, which may read both outputs, integrates the event of the
+second draw over a discrete first draw. -/
+theorem prEvent_bind_bind_eq_lintegral_of_discrete
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : m α) (f : α → m β) (p : α → β → Prop) :
+    Pr{let x ← mx; let y ← f x}[p x y] = ∫⁻ x, Pr{let y ← f x}[p x y] ∂𝒟[mx] := by
+  simpa only [id_eq, bind_pure] using
+    prEvent_bind_eq_lintegral_of_discrete mx (fun x ↦ do let y ← f x; return p x y) id
+
 /-- An output map composes the final event with that map. -/
 @[grind norm]
 theorem prEvent_map
@@ -252,6 +263,27 @@ theorem prEvent_map
     {α β : Type} (mx : m α) (f : α → β) (p : β → Prop) :
     Pr{let y ← f <$> mx}[p y] = Pr{let x ← mx}[p (f x)] := by
   rw [bind_map_left]
+
+/-- Two output maps of one computation: an event of the first map is at most an event of the
+second when, at every output, the first event implies the second. -/
+theorem prEvent_map_le_map
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {γ α β : Type} (mx : m γ) (f : γ → α) (g : γ → β) (p : α → Prop) (q : β → Prop)
+    (h : ∀ x, p (f x) → q (g x)) :
+    Pr{let y ← f <$> mx}[p y] ≤ Pr{let z ← g <$> mx}[q z] := by
+  rw [prEvent_map, prEvent_map]
+  exact prEvent_mono _ _ _ h
+
+/-- An event of a pure computation is at most an event of another pure computation when the
+first event implies the second. -/
+theorem prEvent_pure_le_pure
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type} (a : α) (b : β) (p : α → Prop) (q : β → Prop) (h : p a → q b) :
+    Pr{let y ← (pure a : m α)}[p y] ≤ Pr{let z ← (pure b : m β)}[q z] := by
+  simpa only [map_pure] using
+    prEvent_map_le_map (pure () : m Unit) (fun _ ↦ a) (fun _ ↦ b) p q fun _ ↦ h
 
 /-- Events of independent draws have the product of their probabilities. -/
 @[simp↓ high, grind norm↓]

@@ -16,13 +16,17 @@ import ToMathlib.Probability.UniformOn
 
 Continuations that denote the same measure on all syntactically reachable outputs may
 be interchanged. The proof inducts on the free program, so no probability/support bridge
-or positivity assumption on query answers is necessary.
+or positivity assumption on query answers is necessary. Likewise, computations with equal
+measures under every measurable structure on their outputs may be interchanged before a common
+continuation.
 
 If every query answer has positive singleton mass, a second induction identifies structural
 support with positive output mass. Native uniform oracle specifications satisfy that condition,
 so their events of probability one, zero, or positive probability are exactly the events holding
-on all, none, or some structurally reachable outputs; wrapped optional computations are observed
-through their present values.
+on all, none, or some structurally reachable outputs, and computations with equal measures have
+equal supports; wrapped optional computations are observed through their present values. In
+particular a union of events indexed by an arbitrary set, each of probability at most `ε`, has
+probability at most `ε` times the cardinality of the set.
 -/
 
 public section
@@ -50,6 +54,16 @@ theorem evalDist_bind_congr_of_support {ι : Type u} {α β : Type} {spec : Orac
     apply Filter.Eventually.of_forall
     intro u
     exact ih u fun a ha => h a ((MonadAttach.mem_support_bind).mpr ⟨u, by simp, ha⟩)
+
+/-- Computations with equal measures under every measurable structure on their outputs have
+equal measures after a common continuation. -/
+theorem evalDist_bind_congr_left_of_forall {ι : Type u} {α β : Type}
+    {spec : OracleSpec.{u, 0} ι} [EvalDistSemantics (OracleComp spec)]
+    [LawfulEvalDistSemantics (OracleComp spec)] [MeasurableSpace β] {mx my : OracleComp spec α}
+    (h : ∀ [MeasurableSpace α], 𝒟[mx] = 𝒟[my]) (f : α → OracleComp spec β) :
+    𝒟[mx >>= f] = 𝒟[my >>= f] := by
+  let : MeasurableSpace α := ⊤
+  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete, h]
 
 private theorem evalDist_query_bind_bind_swap
     {ι : Type u} {β γ : Type} {spec : OracleSpec.{u, 0} ι}
@@ -88,6 +102,18 @@ theorem evalDist_bind_bind_swap
       _ = 𝒟[query t >>= fun v ↦ my >>= fun b ↦ k v >>= fun a ↦ f a b] :=
         evalDist_bind_congr_of_support (query t) _ _ fun v _ ↦ ih v
       _ = _ := evalDist_query_bind_bind_swap t my (fun v b ↦ k v >>= fun a ↦ f a b)
+
+/-- Independent oracle computations commute inside an event. Only the actual query answers must
+be countable; the two output types require neither countability nor measurable-space
+instances. -/
+theorem prEvent_bind_bind_swap
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [∀ t, Countable (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (p : α → β → Prop) :
+    Pr{let a ← mx; let b ← my}[p a b] = Pr{let b ← my; let a ← mx}[p a b] :=
+  congrArg (· {True}) <| evalDist_bind_bind_swap mx my fun a b ↦ pure (p a b)
 
 /-- Compare measurable valuations of continuation outputs on structural support. The common
 computation's unobserved intermediate result needs no measurable-space instance. -/
@@ -307,6 +333,19 @@ theorem mem_support_iff_evalDist_singleton_pos
   mem_support_iff_evalDist_singleton_pos_of_fullSupport
     (fun t u => OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos t u) mx x
 
+/-- Under native uniform oracle semantics, computations with equal measures under every
+measurable structure on their outputs have the same structural support. -/
+theorem support_eq_of_evalDist_eq
+    {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [OracleSpec.IsUniformMeasureSpec spec]
+    {α : Type v} {mx my : OracleComp spec α} (h : ∀ [MeasurableSpace α], 𝒟[mx] = 𝒟[my]) :
+    support mx = support my := by
+  let : MeasurableSpace α := ⊤
+  ext x
+  rw [mem_support_iff_evalDist_singleton_pos, mem_support_iff_evalDist_singleton_pos, h]
+
 /-- Under native uniform oracle semantics, an event has probability one exactly when it contains
 every structurally reachable output. -/
 @[grind =]
@@ -385,6 +424,28 @@ theorem prEvent_pos_iff (mx : OracleComp spec α) (p : α → Prop) :
   rw [pos_iff_ne_zero, ne_eq, prEvent_eq_zero_iff]
   push Not
   rfl
+
+/-- **Union bound over a set of indices.** Under native uniform oracle semantics, a uniform bound
+`ε` on each event indexed by `T` bounds their union by `ε` times the cardinality of `T`, with no
+finiteness hypothesis: an infinite `T` makes the bound trivial unless `ε = 0`, and then no
+structurally reachable output satisfies any of the events. -/
+theorem prEvent_exists_mem_le_encard_mul {κ : Type} (mx : OracleComp spec α) (T : Set κ)
+    (p : κ → α → Prop) {ε : ℝ≥0∞} (h : ∀ i ∈ T, Pr{let x ← mx}[p i x] ≤ ε) :
+    Pr{let x ← mx}[∃ i ∈ T, p i x] ≤ ε * (T.encard : ℝ≥0∞) := by
+  by_cases hfin : T.Finite
+  · calc Pr{let x ← mx}[∃ i ∈ T, p i x]
+        = Pr{let x ← mx}[∃ i ∈ hfin.toFinset, p i x] := by simp only [Set.Finite.mem_toFinset]
+      _ ≤ ∑ i ∈ hfin.toFinset, Pr{let x ← mx}[p i x] := prEvent_exists_finset_le _ _ _
+      _ ≤ hfin.toFinset.card • ε :=
+          Finset.sum_le_card_nsmul _ _ _ fun i hi ↦ h i (hfin.mem_toFinset.1 hi)
+      _ = ε * (T.encard : ℝ≥0∞) := by
+          rw [nsmul_eq_mul, mul_comm, hfin.encard_eq_coe_toFinset_card]
+          simp only [ENat.toENNReal_coe]
+  rcases eq_or_ne ε 0 with rfl | hε₀
+  · refine ((prEvent_eq_zero_iff mx _).2 fun x hx ⟨i, hi, hp⟩ ↦ ?_).trans_le zero_le
+    exact ((prEvent_pos_iff mx (p i)).2 ⟨x, hx, hp⟩).ne' (nonpos_iff_eq_zero.1 (h i hi))
+  · rw [Set.Infinite.encard_eq hfin, ENat.toENNReal_top, ENNReal.mul_top hε₀]
+    exact le_top
 
 /-- A wrapped optional oracle computation has a probability-one event exactly when every
 structurally reachable output is a present value satisfying the event. -/

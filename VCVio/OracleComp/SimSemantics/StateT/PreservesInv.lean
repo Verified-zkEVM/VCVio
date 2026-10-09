@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
 public import VCVio.OracleComp.SimSemantics.Append.Core
 public import VCVio.OracleComp.EvalDist.Measure
@@ -28,7 +29,8 @@ The `WriterT` analogue of this theory lives in
 ## Main definitions
 
 - `QueryImpl.PreservesInv` — every oracle query implementation step preserves `Inv`;
-  `QueryImpl.PreservesInv.add` / `preservesInv_add_iff` split it over a sum of implementations
+  `QueryImpl.PreservesInv.add` / `preservesInv_add_iff` split it over a sum of implementations,
+  and `QueryImpl.PreservesInv.extendState` carries it through a passive state extension
 - `OracleComp.simulateQ_run_preservesInv` — simulating any oracle computation
   with a preserving implementation preserves `Inv` on the final state
 - `InitSatisfiesInv` — every sampled initial state satisfies the invariant
@@ -104,6 +106,18 @@ lemma preservesInv_add_iff {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {sp
     PreservesInv (impl₁ + impl₂) Inv ↔ PreservesInv impl₁ Inv ∧ PreservesInv impl₂ Inv :=
   ⟨fun h => ⟨fun t => by simpa only [add_apply_inl] using h (.inl t),
     fun t => by simpa only [add_apply_inr] using h (.inr t)⟩, fun h => h.1.add h.2⟩
+
+/-- A handler preserving an invariant still preserves it, read on the base state, after being
+extended by a passive auxiliary state. -/
+theorem PreservesInv.extendState {ι : Type} {spec : OracleSpec ι} {σ Q : Type}
+    {impl : QueryImpl spec (StateT σ ProbComp)} {Inv : σ → Prop} (h : PreservesInv impl Inv)
+    (aux : (t : spec.Domain) → σ → spec.Range t → σ → Q → Q) :
+    PreservesInv (impl.extendState aux) fun st ↦ Inv st.1 := by
+  intro t st hst z hz
+  rw [extendState_apply, mem_support_bind_iff] at hz
+  obtain ⟨w, hw, hz⟩ := hz
+  rw [support_pure, Set.mem_singleton_iff] at hz
+  exact hz ▸ h t st.1 hst w hw
 
 end QueryImpl
 

@@ -101,7 +101,7 @@ what `wotsLeafAdrs_eq_wotsInstanceAdrs` records.  Nothing is restated.
 
 `xmssNodeAdrsKey_injective` consumes `EncodedTargetLedgerConditions` rather than assuming a fresh
 injectivity hypothesis, so a concrete profile discharges it through
-`approvedEncodedTargetLedgerConditions`; the SHA-2 zero fallback is therefore never treated as
+`approvedEncodedTargetLedgerConditions`; the SHA-2 key fallback is therefore never treated as
 unreachable.
 
 ## The case analysis
@@ -623,7 +623,7 @@ different tweaks of `xmssHTcrCProblem`.
 The coordinate is stated in the bounded form a witness produces — `0 < z ≤ h'` and a horizontal
 index below `2 ^ (h' - z)` — because those are exactly the coordinates `xmssNodeAddresses` lists.
 The conditions are consumed, not assumed afresh: `approvedEncodedTargetLedgerConditions` discharges
-them for every approved profile, so the SHA-2 zero fallback is never treated as unreachable. -/
+them for every approved profile, so the SHA-2 key fallback is never treated as unreachable. -/
 theorem xmssNodeAdrsKey_injective {prims : Primitives vp.params}
     (conditions : EncodedTargetLedgerConditions vp prims)
     {coord coord' : LayerTreeCoord vp} {z z' j j' : ℕ}

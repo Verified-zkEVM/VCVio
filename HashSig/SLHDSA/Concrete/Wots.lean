@@ -13,7 +13,7 @@ public import HashSig.SLHDSA.Wots
 
 The generic WOTS+ constructors preserve the canonical, narrow address grammar required by the
 checked SHA2 adapter.  These lemmas make explicit that WOTS secret derivation, every chain hash
-step, and public-key compression cannot enter the total primitive bundle's zero fallback when
+step, and public-key compression cannot enter the total primitive bundle's fallbacks when
 started from a `Sha2Address` and given four-byte indices.
 -/
 

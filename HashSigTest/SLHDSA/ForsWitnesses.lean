@@ -43,7 +43,7 @@ itself returns.
 The `example`s pin the theorem statements at that bundle and at approved profiles.  The last group
 is kernel-checked rather than run: on a profile whose layer-zero tree indices overflow SHA-2's
 compressed eight-byte tree field, two distinct listed FORS leaf targets encode to the same
-all-zero key, so `forsLeafAdrsKey_injective`'s `EncodedTargetLedgerConditions` hypothesis is
+SHA-2 fallback key, so `forsLeafAdrsKey_injective`'s `EncodedTargetLedgerConditions` hypothesis is
 load-bearing rather than decorative.
 -/
 
@@ -652,11 +652,11 @@ example : Function.Injective fun pos : BottomPosition twoLayer =>
 
 /-! ## The encoded-distinctness hypothesis is load-bearing
 
-`Concrete.sha2AdrsKey` sends every address outside its checked domain to the all-zero key, which is
-the genuine key of the all-zero WOTS-hash address rather than a sentinel.  On a profile whose
-layer-zero tree indices overflow the compressed eight-byte tree field, two distinct listed FORS
-leaf targets therefore share a tweak, and `forsLeafAdrsKey_injective` is false without its
-`EncodedTargetLedgerConditions` argument. -/
+`Concrete.sha2AdrsKey` sends every address outside its checked domain to the fallback key of its
+type, `Concrete.sha2FallbackKey`, so distinct out-of-domain addresses of one type share a key.  On a
+profile whose layer-zero tree indices overflow the compressed eight-byte tree field, two distinct
+listed FORS leaf targets therefore share a tweak, and `forsLeafAdrsKey_injective` is false without
+its `EncodedTargetLedgerConditions` argument. -/
 
 example : deep.params.k = 14 := by decide
 example : deep.params.t = 4096 := by decide
@@ -676,9 +676,9 @@ theorem deepLeafCoord_tree (t : ℕ) (ht : t < 2 ^ 64 + 2) :
     (forsNodeAdrs (deepLeafCoord t ht).1.1.forsAdrs 0
       ((deepLeafCoord t ht).1.2.val * deep.params.t + (deepLeafCoord t ht).2.val)).tree = t := rfl
 
-/-- Two distinct listed FORS leaf targets of the `deep` profile carry the same encoded SHA-2
-tweak, namely the all-zero key: their layer-zero tree indices exceed the compressed eight-byte
-tree field, and the checked compression falls back to that key rather than to a sentinel. -/
+/-- Two distinct listed FORS leaf targets of the `deep` profile carry the same encoded SHA-2 tweak,
+namely the fallback key of their type: their layer-zero tree indices exceed the compressed
+eight-byte tree field, so the checked compression rejects both. -/
 theorem deep_forsLeaf_sha2_alias :
     ∃ c₁ c₂ : (BottomPosition deep × Fin deep.params.k) × Fin deep.params.t,
       forsNodeAdrs c₁.1.1.forsAdrs 0 (c₁.1.2.val * deep.params.t + c₁.2.val) ∈
@@ -706,8 +706,9 @@ theorem deep_forsLeaf_sha2_alias :
       norm_num
       omega
     rw [adrsToKey_sha2, adrsToKey_sha2,
-      sha2AdrsKey_eq_zero_of_tree_overflow _ (hfits (2 ^ 64) (le_refl _) _),
-      sha2AdrsKey_eq_zero_of_tree_overflow _ (hfits (2 ^ 64 + 1) (by norm_num) _)]
+      sha2AdrsKey_eq_sha2FallbackKey_of_tree_overflow _ (hfits (2 ^ 64) (le_refl _) _),
+      sha2AdrsKey_eq_sha2FallbackKey_of_tree_overflow _ (hfits (2 ^ 64 + 1) (by norm_num) _)]
+    rfl
 
 /-- Consequently `forsLeafAdrsKey_injective` is false for the SHA-2 bundle at this profile: its
 `EncodedTargetLedgerConditions` hypothesis is load-bearing. -/
