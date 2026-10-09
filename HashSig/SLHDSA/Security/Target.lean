@@ -224,8 +224,10 @@ variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [Decidable
 
 /-- **The security target** at the constants `c` and `r`: for each public seed, every adversary
 against `romScheme` at that seed making at most `qh` hash queries and `qs` signing queries forges
-with probability at most `securityBound vp.params |Y| c r qh qs`, the coverage of `H_msg` by the
-`qs` signatures plus `c / |Y|` per hash query and `(r + 1) / |Y|` per query of the verifier. -/
+with probability at most `securityBound vp.params |Y| c r qh qs`: the weighted coverage term
+`(qh + 1) · weightedTargetCoverBound h a k qs qh (qs / |Y|)`, in which the digests of the `qs`
+signatures cover the target at weight one and the adversary's own `H_msg` values at weight
+`qs / |Y|`, plus `c / |Y|` per hash query and `(r + 1) / |Y|` per query of the verifier. -/
 @[expose] def SecurityTarget (e : core.SkSeed ≃ core.Y)
     (optRand : PublicKeyCore core → ProbComp core.Y) (c r : ℕ) : Prop :=
   ∀ (pkSeed : core.PkSeed) (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed)))

@@ -60,7 +60,10 @@ it over any distribution of the public seed, the uniform one of FIPS 205 include
 * The model is the classical random-oracle model with three oracles: the tweakable hash, `H_msg`
   and `PRF_msg`. Nothing here is quantum.
 * `optRand` is arbitrary, so the statements cover hedged and deterministic signing.
-* The `H_msg` answers are drawn by the global sampler of `Bytes m`.
+* The `H_msg` answers of the model are drawn by any uniform sampler of `Bytes m`, the one
+  `SecurityTarget` binds. The answer tapes of the proof draw from the global sampler; the tape
+  identification `AnswerTape.evalDist_run_dupRandomOracleFwd_eq_tapeFamily` relates the two,
+  since only the uniform law of either enters.
 * The faithfulness step relating the three-oracle model to the byte-level scheme over a single
   SHAKE256 is not included: neither its losses nor, for deterministic signing, its term
   `qs / 2 ^ (8 n)`.
@@ -84,10 +87,11 @@ section TapeMatch
 /-- The index of a coverer slot on the concatenation of the forger tape, of length `qh + 1`, and
 the signer tape, of length `qs`, for the target at forger-tape position `n`: a signer slot `inl s`
 is at `qh + 1 + s`, and a forger slot `inr p` at the `p`-th forger-tape position other than `n`. -/
-@[expose] def coverIdx {qh qs : ℕ} (n : Fin (qh + 1)) : Fin qs ⊕ Fin qh → Fin ((qh + 1) + qs)
+def coverIdx {qh qs : ℕ} (n : Fin (qh + 1)) : Fin qs ⊕ Fin qh → Fin ((qh + 1) + qs)
   | .inl s => Fin.natAdd (qh + 1) s
   | .inr p => Fin.castAdd qs (n.succAbove p)
 
+/-- Distinct coverer slots have distinct indices. -/
 theorem coverIdx_injective {qh qs : ℕ} (n : Fin (qh + 1)) :
     Function.Injective (coverIdx (qs := qs) n) := by
   rintro (s | p) (s' | p') h <;>
@@ -98,7 +102,7 @@ theorem coverIdx_injective {qh qs : ℕ} (n : Fin (qh + 1)) :
   · exact congrArg Sum.inr (Fin.succAbove_right_injective (Fin.ext h))
 
 /-- No coverer slot sits at the target position. -/
-theorem coverIdx_ne {qh qs : ℕ} (n : Fin (qh + 1)) (c : Fin qs ⊕ Fin qh) :
+theorem coverIdx_ne_castAdd {qh qs : ℕ} (n : Fin (qh + 1)) (c : Fin qs ⊕ Fin qh) :
     coverIdx n c ≠ Fin.castAdd qs n := by
   rcases c with s | p <;>
     simp only [coverIdx, ne_eq, Fin.ext_iff, Fin.val_natAdd, Fin.val_castAdd]
@@ -157,7 +161,7 @@ theorem prEvent_tapeMatch_le {qh qs : ℕ}
     exact ⟨h1, h2⟩
   refine (measure_mono hsub).trans ?_
   rw [evalDist_answerTape_preimage_coveringDigest vp ((qh + 1) + qs)]
-  refine (evalDist_answerTape_coverWitness_le _ _ _ j₀ g fun i => coverIdx_ne n (f i)).trans
+  refine (evalDist_answerTape_coverWitness_le _ _ _ j₀ g fun i => coverIdx_ne_castAdd n (f i)).trans
     (le_of_eq ?_)
   have hg : Finset.univ.image g = (Finset.univ.image f).image (coverIdx n) := by
     rw [Finset.image_image]
@@ -176,9 +180,9 @@ theorem card_desigPos {qh qs : ℕ} (w : Fin (qh + 1) × (Fin vp.params.k → Fi
     (desigPos w).card = (Finset.univ.filter fun p : Fin qh => ∃ i, w.2 i = .inr p).card :=
   Finset.card_image_of_injective _ (Fin.val_injective.comp Fin.succAbove_right_injective)
 
-variable [SampleableType core.Y] [DecidableEq core.Y] [SampleableType core.SkSeed]
-  [SampleableType core.SkPrf] [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey]
-  [DecidableEq core.SkPrf]
+variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [DecidableEq core.Y]
+  [SampleableType core.SkSeed] [SampleableType core.SkPrf] [DecidableEq core.PkSeed]
+  [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
 
 /-- **The hit probability of a witness.** On the instrumented role run of a forger with signing
 budget `qs`, over a tape family whose tape of class `other` is empty, every designated position of
@@ -202,9 +206,9 @@ end HitAll
 
 /-! ## The coverage bound -/
 
-variable [SampleableType core.Y] [DecidableEq core.Y] [SampleableType core.SkSeed]
-  [SampleableType core.SkPrf] [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey]
-  [DecidableEq core.SkPrf]
+variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [DecidableEq core.Y]
+  [SampleableType core.SkSeed] [SampleableType core.SkPrf] [DecidableEq core.PkSeed]
+  [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
 
 /-- **The coverage bound in the ideal hidden-seed game, per public seed.** For a forger with hash
 budget `qh` and signing budget `qs`, `idealDraw` at public seed `pkSeed` fires interleaved-target
@@ -290,8 +294,7 @@ under the byte laws, the key discipline and `|Y| ≤ |SK.prf|`, the forging adva
 queries is at most `securityBound vp.params |Y| 2 1 qh qs`:
 `(qh + 1) · weightedTargetCoverBound h a k qs qh (qs / |Y|) + 2 (qh + V) / |Y|`, with `V` the
 verifier's query bound. `optRand` is arbitrary, so this holds for hedged and deterministic
-signing. The faithfulness step relating the three-oracle model to the byte-level scheme over a
-single SHAKE256 is not included. -/
+signing, and the `H_msg` answers may be drawn by any uniform sampler of `Bytes m`. -/
 theorem unforgeableAdvantage_romScheme_pure_le_securityBound (laws : core.ByteLaws)
     (hd : core.KeyDiscipline vp) (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf)
     (e : core.SkSeed ≃ core.Y) (optRand : PublicKeyCore core → ProbComp core.Y)
@@ -312,8 +315,8 @@ theorem unforgeableAdvantage_romScheme_pure_le_securityBound (laws : core.ByteLa
 model with three oracles (the tweakable hash, `H_msg` and `PRF_msg`), under the byte laws, the key
 discipline and `|Y| ≤ |SK.prf|`, for every public seed, every forger against `romScheme` at that
 seed making at most `qh` hash queries and `qs` signing queries has forging advantage at most
-`securityBound vp.params |Y| 2 1 qh qs`, in both signing modes. The faithfulness step relating the
-three-oracle model to the byte-level scheme over a single SHAKE256 is not included. -/
+`securityBound vp.params |Y| 2 1 qh qs`, in both signing modes and at every uniform sampler of
+`Bytes m`. -/
 theorem securityTarget_two_one (laws : core.ByteLaws) (hd : core.KeyDiscipline vp)
     (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf) (e : core.SkSeed ≃ core.Y)
     (optRand : PublicKeyCore core → ProbComp core.Y) :
@@ -324,9 +327,7 @@ theorem securityTarget_two_one (laws : core.ByteLaws) (hd : core.KeyDiscipline v
 random-oracle model with three oracles, under the byte laws, the key discipline and
 `|Y| ≤ |SK.prf|`, every forger against `romScheme` with the public seed drawn from `pkSeedDist`,
 the uniform draw of FIPS 205 included, making at most `qh` hash queries and `qs` signing queries
-has forging advantage at most `securityBound vp.params |Y| 2 1 qh qs`, in both signing modes. The
-faithfulness step relating the three-oracle model to the byte-level scheme over a single SHAKE256
-is not included. -/
+has forging advantage at most `securityBound vp.params |Y| 2 1 qh qs`, in both signing modes. -/
 theorem unforgeableAdvantage_romScheme_le_securityBound (laws : core.ByteLaws)
     (hd : core.KeyDiscipline vp) (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf)
     (e : core.SkSeed ≃ core.Y) (optRand : PublicKeyCore core → ProbComp core.Y)

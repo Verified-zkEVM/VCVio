@@ -180,8 +180,8 @@ for the other class. -/
 
 end Events
 
-variable [SampleableType core.Y] [DecidableEq core.Y] [DecidableEq core.PkSeed]
-  [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
+variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [DecidableEq core.Y]
+  [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
 
 /-! ## The instrumented run -/
 
@@ -230,7 +230,7 @@ private theorem cache_of_mem_support_tapeStep_run {j : TapeClass} {x : (jointSpe
     subst hy
     exact ⟨hc, fun _ _ => rfl⟩
 
-omit [SampleableType core.Y] in
+omit [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] in
 /-- The class bookkeeping of a tape step gives a freshly queried point the class of the step and
 keeps the class of every other point. -/
 private theorem classPosStep_cls {j : TapeClass} {x : (jointSpec core).Domain}
@@ -447,7 +447,8 @@ variable {core} [SampleableType core.SkSeed] [SampleableType core.SkPrf]
   {e : core.SkSeed ≃ core.Y} {optRand : PublicKeyCore core → ProbComp core.Y}
   {pkSeedDist : ProbComp core.PkSeed}
 
-omit [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf] in
+omit [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey]
+  [DecidableEq core.SkPrf] in
 /-- The forger of the role experiment makes only frame queries: its hash queries go to the forger
 copy, and the lifted forger makes no derivation query. -/
 theorem allQueriesSatisfy_roleExperiment_main

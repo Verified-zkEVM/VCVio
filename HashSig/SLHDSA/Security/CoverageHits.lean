@@ -53,7 +53,8 @@ message `M`, at any public key. -/
 
 /-- A uniform answer at a point satisfies `randRel` at a given point with probability at most
 `1 / |Y|`: only the randomizer of that point qualifies. -/
-theorem prEvent_randRel_le [SampleableType core.Y] (x t : (jointSpec core).Domain) :
+theorem prEvent_randRel_le [SampleableType core.Y] [SampleableType (Bytes vp.params.m)]
+    (x t : (jointSpec core).Domain) :
     Pr{let u ← ($ᵗ (jointSpec core).Range x : ProbComp _)}[randRel core x u t] ≤
       (Nat.card core.Y : ℝ≥0∞)⁻¹ := by
   have h0 : ∀ y : (jointSpec core).Domain, (∀ u, ¬ randRel core y u t) →
@@ -68,9 +69,9 @@ theorem prEvent_randRel_le [SampleableType core.Y] (x t : (jointSpec core).Domai
       (SampleableType.prEvent_uniformSample_eq_singleton_natCard R).le
   all_goals exact h0 _ fun _ h => h
 
-variable [SampleableType core.Y] [DecidableEq core.Y] [SampleableType core.SkSeed]
-  [SampleableType core.SkPrf] [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey]
-  [DecidableEq core.SkPrf]
+variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [DecidableEq core.Y]
+  [SampleableType core.SkSeed] [SampleableType core.SkPrf] [DecidableEq core.PkSeed]
+  [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
 
 /-- **Hitting every designated forger-tape position.** On the instrumented run of the role
 experiment over a tape family whose tape of class `other` is empty, every position of `P` on the
