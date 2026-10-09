@@ -20,9 +20,13 @@ message-`PRF` key type of either bundle are both `n`-byte strings, so `|Y| ≤ |
 equality, and `|Y| = 256 ^ n`.
 
 * `securityTarget_shake`, `securityTarget_sha2`: the target, per public seed.
+* `securityTarget_shake_fips`, `securityTarget_sha2_fips`: the target at all twelve FIPS 205
+  parameter sets, six per family.
+* The target at any uniform sampler of the `H_msg` answers, not only the global one.
 * `unforgeableAdvantage_shake_le`, `unforgeableAdvantage_sha2_le`: the bound for every
   distribution of the public seed, with `|Y|` evaluated as `256 ^ n`.
-* At SLH-DSA-SHAKE-128s, the bound for the uniform public seed of FIPS 205.
+* At SLH-DSA-SHAKE-128s, the bound for the uniform public seed of FIPS 205, in deterministic
+  signing (`opt_rand = PK.seed`) and in hedged signing.
 * At every bundle, the coverage term of the ideal hidden-seed game is bounded by the weighted
   coverage term.
 -/
@@ -55,6 +59,35 @@ theorem securityTarget_sha2 (vp : ValidatedParams) (hb : ApprovedAddressBounds v
   securityTarget_two_one (sha2Primitives_byteLaws vp.params) (keyDiscipline_sha2Primitives vp hb)
     le_rfl e optRand
 
+/-- **The target at every FIPS 205 SHAKE parameter set.** -/
+theorem securityTarget_shake_fips (ps : FipsParameterSet)
+    (e : (shakeCore ps.validatedParams).SkSeed ≃ (shakeCore ps.validatedParams).Y)
+    (optRand : PublicKeyCore (shakeCore ps.validatedParams) →
+      ProbComp (shakeCore ps.validatedParams).Y) :
+    SecurityTarget (shakeCore ps.validatedParams) e optRand 2 1 :=
+  securityTarget_shake _ (fipsApprovedAddressBounds ps).toCanonicalAddressBounds e optRand
+
+/-- **The target at every FIPS 205 SHA-2 parameter set.** -/
+theorem securityTarget_sha2_fips (ps : FipsParameterSet)
+    (e : (sha2Core ps.validatedParams).SkSeed ≃ (sha2Core ps.validatedParams).Y)
+    (optRand : PublicKeyCore (sha2Core ps.validatedParams) →
+      ProbComp (sha2Core ps.validatedParams).Y) :
+    SecurityTarget (sha2Core ps.validatedParams) e optRand 2 1 :=
+  securityTarget_sha2 _ (fipsApprovedAddressBounds ps) e optRand
+
+/-- The target holds at every uniform sampler of `Bytes m`, the answer type of `H_msg`, not only
+at the global one. -/
+example (inst : SampleableType (Bytes FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams.params.m))
+    (e : (shakeCore FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams).SkSeed ≃
+      (shakeCore FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams).Y)
+    (optRand : PublicKeyCore (shakeCore FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams) →
+      ProbComp (shakeCore FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams).Y) :
+    @SecurityTarget _ (shakeCore FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams) _ _ _ _ inst
+      _ _ _ e optRand 2 1 :=
+  securityTarget_two_one (shakePrimitives_byteLaws _)
+    (keyDiscipline_shakePrimitives _
+      (fipsApprovedAddressBounds .SLHDSA_SHAKE_128s).toCanonicalAddressBounds) le_rfl e optRand
+
 /-- At every SHAKE bundle whose address fields fit their widths, a forger making at most `qh` hash
 queries and `qs` signing queries, with the public seed drawn from any distribution, forges with
 probability at most `securityBound vp.params (256 ^ n) 2 1 qh qs`. -/
@@ -85,15 +118,15 @@ theorem unforgeableAdvantage_sha2_le (vp : ValidatedParams)
   exact unforgeableAdvantage_romScheme_le_securityBound (sha2Primitives_byteLaws vp.params)
     (keyDiscipline_sha2Primitives vp hb) le_rfl e optRand pkSeedDist adv hadv
 
-/-- At SLH-DSA-SHAKE-128s, with the public seed drawn uniformly as FIPS 205 prescribes, a forger
-making at most `qh` hash queries and `qs` signing queries forges with probability at most
-`securityBound` at `|Y| = 256 ^ 16`, `c = 2` and `r = 1`. -/
+/-- At SLH-DSA-SHAKE-128s, in deterministic signing (`opt_rand = PK.seed`) with the public seed
+drawn uniformly as FIPS 205 prescribes, a forger making at most `qh` hash queries and `qs` signing
+queries forges with probability at most `securityBound` at `|Y| = 256 ^ 16`, `c = 2` and
+`r = 1`. -/
 example (e : (shakeCore FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams).SkSeed ≃
       (shakeCore FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams).Y)
-    (optRand : PublicKeyCore (shakeCore FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams) →
-      ProbComp (shakeCore FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams).Y)
     (adv : UnforgeableAdversary (romScheme (shakeCore
-      FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams) e optRand
+      FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams) e
+        (fun pk => pure (shakeRandomizerOfPkSeed _ pk.pkSeed))
         ($ᵗ (shakeCore FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams).PkSeed)))
     {qh qs : ℕ} (hadv : adv.RomQueryBound qh qs) :
     unforgeableAdvantage (ProbCompRuntime.rom (hashSpec (shakeCore
@@ -101,7 +134,22 @@ example (e : (shakeCore FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams).SkSe
       securityBound FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams.params (256 ^ 16) 2 1 qh
         qs :=
   unforgeableAdvantage_shake_le _
-    (fipsApprovedAddressBounds .SLHDSA_SHAKE_128s).toCanonicalAddressBounds e optRand _ adv hadv
+    (fipsApprovedAddressBounds .SLHDSA_SHAKE_128s).toCanonicalAddressBounds e _ _ adv hadv
+
+/-- At SLH-DSA-SHA2-256f, in hedged signing (`opt_rand` uniform) with the public seed drawn
+uniformly, the same bound holds at `|Y| = 256 ^ 32`. -/
+example (e : (sha2Core FipsParameterSet.SLHDSA_SHA2_256f.validatedParams).SkSeed ≃
+      (sha2Core FipsParameterSet.SLHDSA_SHA2_256f.validatedParams).Y)
+    (adv : UnforgeableAdversary (romScheme (sha2Core
+      FipsParameterSet.SLHDSA_SHA2_256f.validatedParams) e
+        (fun _ => $ᵗ (sha2Core FipsParameterSet.SLHDSA_SHA2_256f.validatedParams).Y)
+        ($ᵗ (sha2Core FipsParameterSet.SLHDSA_SHA2_256f.validatedParams).PkSeed)))
+    {qh qs : ℕ} (hadv : adv.RomQueryBound qh qs) :
+    unforgeableAdvantage (ProbCompRuntime.rom (hashSpec (sha2Core
+        FipsParameterSet.SLHDSA_SHA2_256f.validatedParams))) adv ≤
+      securityBound FipsParameterSet.SLHDSA_SHA2_256f.validatedParams.params (256 ^ 32) 2 1 qh
+        qs :=
+  unforgeableAdvantage_sha2_le _ (fipsApprovedAddressBounds .SLHDSA_SHA2_256f) e _ _ adv hadv
 
 /-- At every SHAKE bundle, the coverage term of the ideal hidden-seed game at a fixed public seed
 is at most `(qh + 1) · weightedTargetCoverBound h a k qs qh (qs / 256 ^ n)`. -/

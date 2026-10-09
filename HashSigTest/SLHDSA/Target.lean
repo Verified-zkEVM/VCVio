@@ -27,8 +27,7 @@ statement is not degenerate.
   plus the verifier term at every signing budget (`securityBound_qh_zero`).
 * **The target is not vacuous at a real parameter set.** At SLH-DSA-128s, with `qh = qs = 2^64`,
   `|Y| = 2^128`, `c = 2` and `r = 1`, the constants at which the target is proved, the right-hand
-  side is below one (`securityBound_128s_lt_one`; crudely below `2^-21`, bounding the weight
-  `qs / |Y|` by one).
+  side is below one (`securityBound_128s_lt_one`; crudely about `2^-32`).
 * **The verifier count** is `3929` at 128s and `17522` at 256f (`verifyInternalQueryBound_128s`,
   `verifyInternalQueryBound_256f`), the counts of FIPS 205 Algorithm 20 with full chain
   completions.
@@ -149,21 +148,65 @@ theorem targetCoverBound_le (h a k qs : ℕ) :
           ≤ (Finset.univ : Finset (Fin k → Fin r)).card := Finset.card_filter_le _ _
       _ = r ^ k := by simp
 
+/-- With at most one weighted coverer expected (`qw * w ≤ 1`) and `1 ≤ qs`, each summand of
+`weightedTargetCoverBound` is at most `(r + 1) · qs^r · r^k · 2^(-h r) · 2^(-a k)`. -/
+theorem weightedTargetCoverBound_le (h a k qs qw : ℕ) (w : ℝ≥0∞) (hqs : 1 ≤ qs)
+    (hw : (qw : ℝ≥0∞) * w ≤ 1) :
+    weightedTargetCoverBound h a k qs qw w ≤ ∑ r ∈ Finset.range (k + 1),
+      (((r + 1) * qs ^ r * r ^ k : ℕ) : ℝ≥0∞) *
+        ((((2 : ℝ≥0∞) ^ h)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k) := by
+  refine Finset.sum_le_sum fun r _ => ?_
+  have hS : (Finset.univ.filter fun s : Fin k → Fin r => Function.Surjective s).card ≤ r ^ k :=
+    (Finset.card_filter_le _ _).trans (by simp)
+  calc ∑ r₁ ∈ Finset.range (r + 1),
+        ((qs.choose (r - r₁) * qw.choose r₁ *
+          (Finset.univ.filter fun s : Fin k → Fin r => Function.Surjective s).card : ℕ) :
+            ℝ≥0∞) * w ^ r₁ * ((((2 : ℝ≥0∞) ^ h)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k)
+      ≤ ∑ _r₁ ∈ Finset.range (r + 1), ((qs ^ r * r ^ k : ℕ) : ℝ≥0∞) *
+          ((((2 : ℝ≥0∞) ^ h)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k) := by
+        refine Finset.sum_le_sum fun r₁ _ => ?_
+        gcongr
+        push_cast
+        calc (qs.choose (r - r₁) : ℝ≥0∞) * qw.choose r₁ *
+              (Finset.univ.filter fun s : Fin k → Fin r => Function.Surjective s).card * w ^ r₁
+            = (qs.choose (r - r₁) : ℝ≥0∞) *
+                (Finset.univ.filter fun s : Fin k → Fin r => Function.Surjective s).card *
+                  ((qw.choose r₁ : ℝ≥0∞) * w ^ r₁) := by ring
+          _ ≤ (qs : ℝ≥0∞) ^ r * (r : ℝ≥0∞) ^ k * 1 := by
+            gcongr
+            · exact_mod_cast (Nat.choose_le_pow qs _).trans
+                (Nat.pow_le_pow_right hqs (Nat.sub_le r r₁))
+            · exact_mod_cast hS
+            · calc (qw.choose r₁ : ℝ≥0∞) * w ^ r₁ ≤ (qw : ℝ≥0∞) ^ r₁ * w ^ r₁ := by
+                    gcongr
+                    exact_mod_cast Nat.choose_le_pow qw r₁
+                _ = ((qw : ℝ≥0∞) * w) ^ r₁ := (mul_pow _ _ _).symm
+                _ ≤ 1 := pow_le_one₀ zero_le hw
+          _ = (qs : ℝ≥0∞) ^ r * (r : ℝ≥0∞) ^ k := mul_one _
+    _ = (((r + 1) * qs ^ r * r ^ k : ℕ) : ℝ≥0∞) *
+          ((((2 : ℝ≥0∞) ^ h)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k) := by
+        rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+        push_cast
+        ring
+
 theorem term_128s (r : ℕ) :
-    (((2 ^ 65) ^ r * r ^ 14 : ℕ) : ℝ≥0∞) * ((((2 : ℝ≥0∞) ^ 63)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ 12)⁻¹) ^ 14)
-      = ((4 ^ r * r ^ 14 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹ := by
-  have e : ((2 ^ 65) ^ r * r ^ 14 : ℕ) = (4 ^ r * r ^ 14) * 2 ^ (63 * r) := by
-    rw [← pow_mul, show 65 * r = 2 * r + 63 * r by ring, pow_add, pow_mul]; ring
-  rw [e]
-  push_cast
-  rw [← ENNReal.inv_pow, ← ENNReal.inv_pow, ← pow_mul, ← pow_mul, ENNReal.inv_pow,
-    ENNReal.inv_pow]
-  calc (4 : ℝ≥0∞) ^ r * (r : ℝ≥0∞) ^ 14 * 2 ^ (63 * r) * (2⁻¹ ^ (63 * r) * 2⁻¹ ^ (12 * 14))
-      = 4 ^ r * (r : ℝ≥0∞) ^ 14 * (2 ^ (63 * r) * 2⁻¹ ^ (63 * r)) * 2⁻¹ ^ 168 := by ring
-    _ = 4 ^ r * (r : ℝ≥0∞) ^ 14 * (2 ^ 168)⁻¹ := by
-      rw [← mul_pow, ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top, one_pow, mul_one,
-        ENNReal.inv_pow]
-    _ = 4 ^ r * (r : ℝ≥0∞) ^ 14 * 2⁻¹ ^ (12 * 14) := by rw [ENNReal.inv_pow]
+    (((r + 1) * (2 ^ 64) ^ r * r ^ 14 : ℕ) : ℝ≥0∞) *
+        ((((2 : ℝ≥0∞) ^ 63)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ 12)⁻¹) ^ 14)
+      = (((r + 1) * 2 ^ r * r ^ 14 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹ := by
+  have e : ((r + 1) * (2 ^ 64) ^ r * r ^ 14 : ℕ) = ((r + 1) * 2 ^ r * r ^ 14) * 2 ^ (63 * r) := by
+    rw [← pow_mul, show 64 * r = r + 63 * r by ring, pow_add]; ring
+  have h2 : (2 : ℝ≥0∞) ^ (63 * r) * ((2 : ℝ≥0∞) ^ 63)⁻¹ ^ r = 1 := by
+    rw [← ENNReal.inv_pow, ← pow_mul,
+      ENNReal.mul_inv_cancel (by simp) (by simp)]
+  have h3 : (((2 : ℝ≥0∞) ^ 12)⁻¹) ^ 14 = ((2 : ℝ≥0∞) ^ 168)⁻¹ := by
+    rw [← ENNReal.inv_pow, ← pow_mul]
+  rw [e, Nat.cast_mul, h3]
+  calc (((r + 1) * 2 ^ r * r ^ 14 : ℕ) : ℝ≥0∞) * ((2 ^ (63 * r) : ℕ) : ℝ≥0∞) *
+        (((2 : ℝ≥0∞) ^ 63)⁻¹ ^ r * ((2 : ℝ≥0∞) ^ 168)⁻¹)
+      = (((r + 1) * 2 ^ r * r ^ 14 : ℕ) : ℝ≥0∞) *
+          ((2 : ℝ≥0∞) ^ (63 * r) * ((2 : ℝ≥0∞) ^ 63)⁻¹ ^ r) * ((2 : ℝ≥0∞) ^ 168)⁻¹ := by
+        push_cast; ring
+    _ = _ := by rw [h2, mul_one]
 
 theorem securityBound_128s_lt_one :
     securityBound (FipsParameterSet.SLHDSA_SHA2_128s.validatedParams).params (2 ^ 128) 2 1
@@ -173,18 +216,17 @@ theorem securityBound_128s_lt_one :
       (FipsParameterSet.SLHDSA_SHA2_128s.validatedParams).params.k = 14 := by decide
   have hV := verifyInternalQueryBound_128s
   rw [securityBound, hp.1, hp.2.1, hp.2.2, hV]
-  have hN : (∑ r ∈ Finset.range 15, (4 ^ r * r ^ 14 : ℕ)) < 2 ^ 82 := by decide
-  have hw : ((2 ^ 64 : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞) ≤ 1 :=
-    ENNReal.div_le_of_le_mul (by rw [one_mul]; exact Nat.cast_le.2 (by norm_num))
+  have hN : (∑ r ∈ Finset.range 15, ((r + 1) * 2 ^ r * r ^ 14 : ℕ)) < 2 ^ 72 := by decide
+  have hw : ((2 ^ 64 : ℕ) : ℝ≥0∞) * (((2 ^ 64 : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞)) ≤ 1 := by
+    rw [← mul_div_assoc, ← Nat.cast_mul, ← pow_add]
+    exact (ENNReal.div_self (by simp) (by simp)).le
   have hI : weightedTargetCoverBound 63 12 14 (2 ^ 64) (2 ^ 64)
       (((2 ^ 64 : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞)) ≤
-        ((2 ^ 82 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹ := by
-    refine (monotone_weightedTargetCoverBound _ _ _ _ _ hw).trans ?_
-    rw [weightedTargetCoverBound_weight_one, show 2 ^ 64 + 2 ^ 64 = 2 ^ 65 by norm_num]
-    refine (targetCoverBound_le _ _ _ _).trans ?_
+        ((2 ^ 72 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹ := by
+    refine (weightedTargetCoverBound_le _ _ _ _ _ _ Nat.one_le_two_pow hw).trans ?_
     simp_rw [term_128s, ← Finset.sum_mul, ← Nat.cast_sum]
     gcongr
-  have key : ((2 ^ 64 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 82 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹) +
+  have key : ((2 ^ 64 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 72 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹) +
       ((2 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((1 + 1) * 3929 : ℕ) : ℝ≥0∞)) *
         (((2 ^ 128 : ℕ) : ℝ≥0∞))⁻¹ < 1 := by
     rw [← ENNReal.toReal_lt_toReal (by finiteness) ENNReal.one_ne_top]
