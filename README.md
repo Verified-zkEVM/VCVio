@@ -62,9 +62,9 @@ infrastructure and some tooling and automation remain under active development.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
 - `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
 - `HashSig/` contains hash-based signatures: proof-level specifications, component-level FIPS 205
-  conformance results, and security results for SLH-DSA. SLH-DSA is proved EUF-CMA secure in the
-  classical random-oracle model with three oracles (the tweakable hash, `H_msg` and `PRF_msg`),
-  per public seed and averaged over seed distributions (`securityTarget_two_one`). A faithfulness
+  conformance results, and security results for SLH-DSA. SLH-DSA has a proved quantitative EUF-CMA bound
+  in the classical random-oracle model with three oracles (the tweakable hash, `H_msg` and
+  `PRF_msg`), per public seed and averaged over seed distributions (`securityTarget_two_one`). A faithfulness
   theorem relating that model to the byte-level scheme, an SUF-CMA bound and a complete FIPS
   conformance result are not proved; see `docs/design/slh-dsa-status-and-roadmap.md`.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
