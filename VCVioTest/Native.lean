@@ -22,7 +22,9 @@ open scoped ENNReal
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `NeverFail, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
+  for name in [`PMF, `SPMF, `evalSPMF, `probOutput, `probEvent, `probFailure, `NeverFail,
+      `EvalDistCompatible, `DiscreteEvalDistCompatible, `OracleSpec.IsProbabilitySpec,
+      `OracleSpec.IsUniformSpec, `PFunctor.IsProbabilitySpec, `PFunctor.IsUniformSpec] do
     if env.contains name then
       throwError "native entry point unexpectedly imports {name}"
 
@@ -245,5 +247,40 @@ example (mx : ℝ → m α) (p : ℝ → α → Prop) [∀ r, DecidablePred (p r
     evalDist.isProbabilityMeasure_bind_ite (mx r) (p r) (yes r) (no r)
 
 end Branches
+
+section Simulation
+
+open OracleSpec OracleComp
+
+/-- A coin sampler that also counts its calls; the counter needs no measurable structure. -/
+def countingCoin : QueryImpl coinSpec (StateT ℕ ProbComp) := fun _ ↦
+  StateT.mk fun calls ↦ (fun b ↦ (b, calls + 1)) <$> ($ᵗ Bool)
+
+-- Answer-preserving stateful implementations preserve every output law once state is discarded.
+example {α : Type} [MeasurableSpace α] (oa : OracleComp coinSpec α) (calls : ℕ) :
+    𝒟[(simulateQ countingCoin oa).run' calls] = 𝒟[oa] :=
+  evalDist_simulateQ_run'_eq_of_forall countingCoin (fun t calls ↦ by
+    rw [countingCoin, StateT.run'_eq, StateT.run_mk, Functor.map_map]
+    simp only [id_map']
+    rw [SampleableType.evalDist_uniformSample, IsMeasureSpec.toMeasure_eq_uniformOn]) oa calls
+
+-- The canonical uniform sampler implements a uniform oracle without changing any output law.
+example {α : Type} [MeasurableSpace α] (oa : OracleComp coinSpec α) :
+    𝒟[simulateQ uniformSampleImpl oa] = 𝒟[oa] :=
+  uniformSampleImpl.evalDist_simulateQ oa
+
+-- Borel events on real outputs have their discrete-structure mass.
+example (oa : ProbComp ℝ) :
+    𝒟[oa] (Set.Icc 0 1) = (letI : MeasurableSpace ℝ := ⊤; 𝒟[oa]) (Set.Icc 0 1) :=
+  evalDist_apply_eq_top_apply oa measurableSet_Icc
+
+-- Event congruence compares continuations with different, unmeasured output types.
+example {β γ : Type} (mx : ProbComp Bool) (f : Bool → ProbComp β) (g : Bool → ProbComp γ)
+    (p : β → Prop) (q : γ → Prop)
+    (h : ∀ b ∈ support mx, Pr{let y ← f b}[p y] = Pr{let z ← g b}[q z]) :
+    Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] :=
+  prEvent_bind_congr_of_support mx f g p q h
+
+end Simulation
 
 end VCVioTest.Native

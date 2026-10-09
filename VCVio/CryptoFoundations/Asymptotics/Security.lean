@@ -5,7 +5,8 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.SecExp
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.CryptoFoundations.Asymptotics.Negligible
 
 /-!

@@ -169,7 +169,7 @@ acknowledges measure semantics.
 
 ### 2.2 `SemanticsVia` is an existing abstraction seam
 
-[`VCVio/EvalDist/Defs/Semantics.lean`](../../VCVio/EvalDist/Defs/Semantics.lean)
+[`VCVio/EvalDist/Defs/Semantics/Core.lean`](../../VCVio/EvalDist/Defs/Semantics/Core.lean)
 defines `SemanticsVia m Obs`. It separates:
 
 - an internal semantic monad `Sem`;
@@ -178,7 +178,7 @@ defines `SemanticsVia m Obs`. It separates:
 
 The observation does not have to be a monad morphism. This matters for stateful or
 instrumented computations whose hidden state is discarded only at the observation
-boundary. `SPMFSemantics` and `PMFSemantics` are current specializations.
+boundary. `MeasureSemanticsVia` is its measure-valued specialization.
 
 This is a better migration seam than requiring every source monad to lift directly into
 every future probability representation. A measure-oriented design should preserve the
@@ -1336,7 +1336,7 @@ users retain ordinary discrete probability notation.
 
 - [`ToMathlib/ProbabilityTheory/SPMF.lean`](../../ToMathlib/ProbabilityTheory/SPMF.lean)
 - [`VCVio/EvalDist/Defs/Basic.lean`](../../VCVio/EvalDist/Defs/Basic.lean)
-- [`VCVio/EvalDist/Defs/Semantics.lean`](../../VCVio/EvalDist/Defs/Semantics.lean)
+- [`VCVio/EvalDist/Defs/Semantics/Core.lean`](../../VCVio/EvalDist/Defs/Semantics/Core.lean)
 - [`VCVio/EvalDist/Defs/Support.lean`](../../VCVio/EvalDist/Defs/Support.lean)
 - [`VCVio/OracleComp/EvalDist.lean`](../../VCVio/OracleComp/EvalDist.lean)
 - [`VCVio/EvalDist/Expectation.lean`](../../VCVio/EvalDist/Expectation.lean)
@@ -1455,7 +1455,7 @@ read through the GitHub API rather than from PR prose.
 | Claim | Method |
 |---|---|
 | `SPMF := OptionT PMF`, its `FunLike`, and the `SPMF.mk`/`toPMF` round-trips | Read `ToMathlib/ProbabilityTheory/SPMF.lean` |
-| `SemanticsVia` / `SPMFSemantics` / `PMFSemantics` as described in §2.2 | Read `VCVio/EvalDist/Defs/Semantics.lean` in full |
+| `SemanticsVia` / `MeasureSemanticsVia` as described in §2.2 | Read `VCVio/EvalDist/Defs/Semantics/Core.lean` in full |
 | `probEvent` is defined through `PMF.toOuterMeasure` | Read `VCVio/EvalDist/Defs/Basic.lean` |
 | `IsProbabilitySpec.toPMF` is PMF-valued; `IsUniformSpec` adds `Fintype`/`Inhabited`/uniformity | Read `VCVio/OracleComp/EvalDist.lean` |
 | `support` is `MonadLiftT m SetM`-based | Read `VCVio/EvalDist/Defs/Support.lean`; `SetM` located at `Mathlib/Data/Set/Functor.lean` |

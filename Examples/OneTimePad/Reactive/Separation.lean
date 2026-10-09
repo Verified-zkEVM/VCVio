@@ -90,12 +90,6 @@ theorem evalDist_reusedPair_fst [EvalDistSemantics ProbComp] (message : Bool) :
     𝒟[Prod.fst <$> reusedPair message] = 𝒟[$ᵗ Bool] := by
   simp [reusedPair]
 
-/-- The first projection of a reused pad has the original key law. -/
-@[deprecated evalDist_reusedPair_fst (since := "2026-09-13")]
-theorem reusedPair_first [EvalDistSemantics ProbComp] (message : Bool) :
-    𝒟[Prod.fst <$> reusedPair message] = 𝒟[$ᵗ Bool] :=
-  evalDist_reusedPair_fst message
-
 /-- The second projection of a reused pad has the original key law when the key is uniform. -/
 theorem evalDist_reusedPair_snd_of_uniform [EvalDistSemantics ProbComp]
     [LawfulEvalDistSemantics ProbComp]
@@ -107,13 +101,6 @@ theorem evalDist_reusedPair_snd_of_uniform [EvalDistSemantics ProbComp]
       let e : Bool ≃ Bool := ⟨Bool.not, Bool.not, Bool.not_not, Bool.not_not⟩
       simpa [reusedPair, e] using
         (evalDist_map_equiv_of_uniform ($ᵗ Bool) hcoin e)
-
-/-- The second projection of a reused pad has the original key law. -/
-@[deprecated "Use evalDist_reusedPair_snd_of_uniform with a uniformity certificate"
-  (since := "2026-09-13")]
-theorem reusedPair_second (message : Bool) :
-    𝒟[Prod.snd <$> reusedPair message] = 𝒟[$ᵗ Bool] :=
-  evalDist_reusedPair_snd_of_uniform evalDist_uniformSample message
 
 /-- Equal marginal ciphertext laws do not imply equal joint transcript laws. -/
 theorem reusedPair_laws_ne : 𝒟[reusedPair false] ≠ 𝒟[reusedPair true] := by

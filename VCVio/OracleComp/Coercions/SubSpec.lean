@@ -53,10 +53,6 @@ variable {ι : Type u} {τ : Type v}
   {spec : OracleSpec ι} {superSpec : OracleSpec τ} {α : Type w}
 variable [spec.IsUniformSpec] [superSpec.IsUniformSpec] [h : spec ⊂ₒ superSpec]
 
-lemma probFailure_liftComp (mx : OracleComp spec α) :
-    Pr[⊥ | liftComp mx superSpec] = Pr[⊥ | mx] := by
-  rw [probFailure_eq_zero, probFailure_eq_zero]
-
 variable [spec ˡ⊂ₒ superSpec]
 
 @[grind =] lemma evalSPMF_liftComp (mx : OracleComp spec α) :

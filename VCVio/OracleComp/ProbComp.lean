@@ -17,7 +17,6 @@ Finite support and discrete output-probability equations for the uniform samplin
 
 @[expose] public section
 
-
 open OracleComp ENNReal
 
 universe u v w
@@ -43,9 +42,6 @@ lemma probOutput_uniformFin (n : ℕ) (m : Fin (n + 1)) :
 lemma probEvent_uniformFin (n : ℕ) (p : Fin (n + 1) → Prop) [DecidablePred p] :
     Pr[ p | do $[0..n]] = (Fin.countP fun i => p i) / ↑(n + 1) := by
   simp [uniformFin_def, Fin.card_eq_countP_mem]
-
-lemma probFailure_uniformFin (n : ℕ) :
-    Pr[⊥ | do $[0..n]] = 0 := by aesop
 
 end uniformFin
 
@@ -85,16 +81,7 @@ lemma probEvent_uniformRange (n m : ℕ)
   simp only [Finset.mem_filter, Finset.mem_Icc, Fin.ofNat_Icc_iff h,
     Finset.mem_univ, true_and]
 
-lemma probFailure_uniformRange (n m : ℕ) (h : n < m) :
-    Pr[⊥ | uniformRange n m h] = 0 := by aesop
-
 end uniformRange
-
-section uniformSelect
-
-variable {cont : Type u} {β : Type}
-
-end uniformSelect
 
 section uniformSelectList
 

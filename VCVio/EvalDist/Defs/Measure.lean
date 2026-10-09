@@ -5,7 +5,9 @@ Authors: Devon Tuma
 -/
 module
 
-public import VCVio.Prelude
+public import VCVio.Prelude.Core
+public import ToMathlib.Probability.ProbabilityMassFunction.Lemmas
+public import ToMathlib.ProbabilityTheory.SPMF
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Measure.Core
 public import VCVio.EvalDist.Defs.Measure.Deterministic

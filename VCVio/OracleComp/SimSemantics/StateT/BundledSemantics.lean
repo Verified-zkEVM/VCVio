@@ -5,12 +5,13 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
-public import VCVio.EvalDist.Defs.Semantics
+public import VCVio.EvalDist.Defs.Semantics.Core
 public import ToMathlib.Control.StateT
 
 /-!
@@ -26,9 +27,6 @@ throughout the crypto constructions in this repo:
 
 `ProbCompRuntime.withStateOracle` bundles these semantics with the lift of plain `ProbComp`
 sampling into the uniform summand, giving the runtime of such a world.
-
-The `SPMFSemantics` construction remains as the executable compatibility surface while runtime
-consumers migrate to `MeasureSemanticsVia.withStateOracle`.
 -/
 
 @[expose] public section
@@ -117,57 +115,3 @@ lemma withStateOracle_evalDist
   rfl
 
 end ProbCompRuntime
-
-namespace SPMFSemantics
-
-/-- Bundled `SPMF` semantics for an oracle world consisting of public randomness plus a hidden
-stateful oracle implementation.
-
-The surface monad is `OracleComp (unifSpec + hashSpec)`. Internally, computations are interpreted
-by simulating the public-randomness queries with their identity implementation and the additional
-oracle family `hashSpec` with the supplied stateful simulator `hashImpl`. The hidden state is then
-initialized at `s` and discarded, leaving only the externally visible output subdistribution. -/
-noncomputable def withStateOracle
-    {ι : Type} {hashSpec : OracleSpec ι} {σ : Type}
-    (hashImpl : QueryImpl hashSpec (StateT σ ProbComp)) (s : σ) :
-    SPMFSemantics (OracleComp (unifSpec + hashSpec)) where
-  Sem := StateT σ ProbComp
-  instMonadSem := inferInstance
-  interpret := simulateQ'
-    ((QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) + hashImpl)
-  observe := fun mx => (liftM (StateT.run' mx s) : SPMF _)
-
-/-- `withStateOracle` commutes with `<$>`: mapping a function over the surface computation
-is the same as mapping it over the observed `SPMF`.
-
-This holds because `interpret` is the bundled monad morphism `simulateQ'`, and the `StateT`
-observer `fun mx => toSPMF (StateT.run' mx s)` preserves `<$>` even though it is not a full
-monad morphism: `<$>` does not thread state, so `Prod.fst <$> (f <$> mx).run s` factors as
-`f <$> (Prod.fst <$> mx.run s) = f <$> StateT.run' mx s`. -/
-@[simp] lemma withStateOracle_evalSPMF_map
-    {ι : Type} {hashSpec : OracleSpec ι} {σ : Type}
-    (hashImpl : QueryImpl hashSpec (StateT σ ProbComp)) (s : σ)
-    {α β : Type} (f : α → β) (mx : OracleComp (unifSpec + hashSpec) α) :
-    (SPMFSemantics.withStateOracle hashImpl s).evalSPMF (f <$> mx) =
-      f <$> (SPMFSemantics.withStateOracle hashImpl s).evalSPMF mx := by
-  set impl := (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) + hashImpl
-  change (liftM (StateT.run' (simulateQ impl (f <$> mx)) s) : SPMF _) =
-    f <$> (liftM (StateT.run' (simulateQ impl mx) s) : SPMF _)
-  rw [simulateQ_map, StateT.run'_map', liftM_map]
-
-/-- `withStateOracle` commutes with the specific `>>= pure ∘ f` pattern produced by
-a do-block returning a pure value at the end. A direct corollary of
-`withStateOracle_evalSPMF_map`. -/
-lemma withStateOracle_evalSPMF_bind_pure
-    {ι : Type} {hashSpec : OracleSpec ι} {σ : Type}
-    (hashImpl : QueryImpl hashSpec (StateT σ ProbComp)) (s : σ)
-    {α β : Type} (mx : OracleComp (unifSpec + hashSpec) α) (f : α → β) :
-    (SPMFSemantics.withStateOracle hashImpl s).evalSPMF (mx >>= fun x => pure (f x)) =
-      f <$> (SPMFSemantics.withStateOracle hashImpl s).evalSPMF mx := by
-  calc
-    _ = (SPMFSemantics.withStateOracle hashImpl s).evalSPMF (f <$> mx) := by
-      rw [map_eq_bind_pure_comp]
-      rfl
-    _ = _ := withStateOracle_evalSPMF_map hashImpl s f mx
-
-end SPMFSemantics

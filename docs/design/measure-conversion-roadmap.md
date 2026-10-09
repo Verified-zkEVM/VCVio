@@ -173,6 +173,70 @@ commitment example's TV theorem remain distinct theorem families. Their required
 use the existing explicit coherence theorem in their compatibility owners. The native Hoare
 and simulation modules do not import PMF/SPMF or probability compatibility classes.
 
+## Dead and orphaned retiring-probability checkpoint
+
+The retirement surface kept for compatibility is the façade itself: `SPMF`, `evalSPMF`/`𝒮[…]`,
+`probOutput`/`probEvent`/`probFailure` with their `Pr[…]` notation, and the equations crossing
+between `Pr[…]` and `𝒟[…]`. Scalar lemmas survive only while an unconverted consumer uses them.
+
+Declarations with no remaining consumer are deleted rather than deprecated: unused scalar
+twins of native lemmas, the unused `SPMFSemantics`/`PMFSemantics` bundles, the ReaderT and
+`FinRatPMF.Raw` PMF lifts, the deprecated fork façade, and orphaned lemmas of the scalar
+EvalDist, SPMF, uniform-selection, tracing, and query-tracking APIs. Consumers are counted
+through proof terms, including the auxiliary declarations that `simp` generates for its lemmas.
+Lemmas carrying `simp`, `grind`, `gcongr`, or `aesop` attributes are kept even when orphaned,
+since automation can use them without a recorded reference; they retire with the scalar
+automation benchmarks. The executable `FinRatPMF.Raw` sampler and its native denotation are
+unaffected.
+
+## Measure normal form checkpoint
+
+`simp` keeps measure goals in measure normal form. The façade equations
+`evalDist_apply_singleton`, `evalDist_apply_setOf`, and `evalDist_apply_univ` are explicit
+rewrites rather than simp rules, so a native proof is never silently turned into a scalar one;
+a proof that still reasons in `Pr[…]` crosses with `rw`. The `game_rule` set normalizes
+`evalDist_pure` instead of the scalar `pure`/`bind` evaluations. The native support
+characterization of probability-one events follows the scalar ones out of the default `grind`
+set. The native import guard also rejects `evalSPMF`, the scalar evaluation functions, and the
+PMF-backed specification classes.
+
+## Native simulation and congruence checkpoint
+
+`OracleComp.SimSemantics.Measure` states the simulation laws natively for any lawful target
+semantics: implementations with equal answer measures simulate every computation to the same
+measure, and an implementation denoting each query's configured answer measure preserves the
+computation's denotation. The stateful form constrains only the answer marginal from every
+state; the service state needs no measurable space, and a warm cache is correctly excluded.
+The canonical uniform sampler is such an implementation.
+
+Event and measure congruence after a common oracle computation compare continuations on
+structural support, including continuations with different unmeasured output types. Uniform
+specifications supply the countability that the bind-swap law needs. Event masses do not depend
+on the measurable structure that makes the event measurable, so results proved under the discrete
+structure `⊤` apply under any chosen space, such as a Borel structure. Native regressions cover a
+hidden counter state, real-valued outputs, and different continuation output types.
+
+## Native probability-equality planner checkpoint
+
+The `vcstep` probability-equality planner recognizes native goals: equalities of `Pr{…}[…]`
+events, of applied `𝒟[…]` masses, and of output measures. Swaps rewrite with the native bind-swap
+laws, under shared prefixes through measure congruence, and congruence leaves the continuations
+on the structural support of the shared prefix. The retiring scalar goals keep their existing
+actions. Native Hoare lowering lemmas use `prEvent` names, and the singleton-output variants,
+which are the events `(· = x)`, are removed. `VCVioTest/NativeProbabilityTactics.lean` gates the
+native `simp` and planner contract and records the remaining `simp` gaps.
+
+## Import-closure checkpoint
+
+Modules that import a retiring hub (`SampleableType`, `ProbComp`, `OracleComp.EvalDist`,
+`LoggingOracle`, `SubSpec`, `Replicate`, `UniformCompatibility`, the bundled-semantics and
+random-oracle simulation modules, `SecExp`) but use none of its declarations import the hub's
+native owners instead. `SecExp` itself imports only what `BoundedAdversary` needs, and its clients
+import the scalar modules they use explicitly. `scripts/check-spmf-closure.py` keeps the exact set
+of modules whose imports reach the SPMF backend; this checkpoint takes it from 455 to 390 of the
+tracked proof-library modules. Final removal deletes the modules in that closure's core and
+regenerates the umbrellas.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

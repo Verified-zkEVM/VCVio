@@ -14,7 +14,8 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.Coercions.Add
-public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.OracleComp.ProbCompLift
+public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.ProgramLogic.NotationCore
 public import VCVio.ProgramLogic.Tactics.Unary
 
@@ -416,13 +417,13 @@ theorem perfectlyCorrect [SampleableType Chal]
     by_cases hx : (pk, sk) ∈ support hr.gen
     · have hrel : rel pk sk = true := hr.gen_sound pk sk hx
       simpa [← OracleComp.ProgramLogic.propInd_eq_ite, hx] using
-        (OracleComp.ProgramLogic.triple_probOutput_eq_one
+        (OracleComp.ProgramLogic.triple_prEvent_eq_one
           (oa := do
             let (c, e) ← σ.commit pk sk
             let r ← $ᵗ Chal
             let s ← σ.respond pk sk e r
             pure (σ.verify pk c r s))
-          (x := true) (h := by rw [prEvent_eq_evalDist_singleton]; exact hc pk sk hrel))
+          (p := (· = true)) (h := by rw [prEvent_eq_evalDist_singleton]; exact hc pk sk hrel))
     · simpa [← OracleComp.ProgramLogic.propInd_eq_ite, hx] using
         (OracleComp.ProgramLogic.triple_zero
           (oa := do

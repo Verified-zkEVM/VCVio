@@ -29,7 +29,6 @@ section support
 variable [Monad m] [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
 variable (mx : m α) (my : m β) (f : α → γ) (g : β → δ)
 
-
 @[simp high]
 lemma support_seq_map_prod_mk :
     support (Prod.mk <$> mx <*> my) = support mx ×ˢ support my := by
@@ -56,9 +55,6 @@ end support
 /-! ## Probabilities of pairs -/
 
 variable [MonadLiftT m SPMF]
-
-lemma probOutput_prod_mk_eq_probEvent (mx : m (α × β)) (x : α) (y : β) :
-    Pr[= (x, y) | mx] = Pr[ fun z => z.1 = x ∧ z.2 = y | mx] := by grind
 
 @[simp, grind =]
 lemma probEvent_fst_eq_snd (mx : m (α × α)) :
@@ -149,43 +145,10 @@ lemma probOutput_bind_map_prod_mk_eq_mul'
     Pr[= z | do let y ← my; (f ·, g y) <$> mx] = Pr[= z.1 | f <$> mx] * Pr[= z.2 | g <$> my] := by
   simpa [monad_norm] using probOutput_seq_map_prod_mk_map_eq_mul' mx my f g z
 
-lemma probOutput_bind_bind_prod_mk_eq_mul
-    (mx : m α) (my : m β) (f : α → γ) (g : β → δ) (z : γ × δ) :
-    Pr[= z | do let x ← mx; let y ← my; return (f x, g y)] =
-      Pr[= z.1 | f <$> mx] * Pr[= z.2 | g <$> my] := by simp
-
 lemma probOutput_bind_bind_prod_mk_eq_mul'
     (mx : m α) (my : m β) (f : α → γ) (g : β → δ) (x : γ) (y : δ) :
     Pr[= (x, y) | do let a ← mx; let b ← my; return (f a, g b)] =
       Pr[= x | f <$> mx] * Pr[= y | g <$> my] := by simp
-
-/-- Two conditionally independent executions dominate the square of the
-corresponding single-execution output probability. -/
-lemma sq_probOutput_bind_le_probOutput_bind_prod
-    (source : m α) (kernel : α → m β) (y : β) :
-    Pr[= y | source >>= kernel] ^ 2 ≤
-      Pr[= (y, y) | source >>= fun x => do
-        let a ← kernel x
-        let b ← kernel x
-        pure (a, b)] := by
-  have hfactor (x : α) :
-      Pr[= (y, y) | do
-        let a ← kernel x
-        let b ← kernel x
-        pure (a, b)] = Pr[= y | kernel x] * Pr[= y | kernel x] := by
-    rw [probOutput_bind_bind_prod_mk_eq_mul']
-    simp only [show (fun a : β ↦ a) = id from rfl, id_map]
-  rw [probOutput_bind_eq_tsum source kernel y,
-    probOutput_bind_eq_tsum source (fun x ↦ do
-      let a ← kernel x
-      let b ← kernel x
-      pure (a, b)) (y, y)]
-  refine (ENNReal.sq_tsum_le_tsum_sq
-    (fun x ↦ Pr[= x | source]) (fun x ↦ Pr[= y | kernel x])
-      (tsum_probOutput_le_one (mx := source))).trans_eq ?_
-  refine tsum_congr fun x ↦ ?_
-  rw [hfactor]
-  simp [sq]
 
 @[simp]
 lemma probOutput_prod_mk_fst_map [DecidableEq β] (mx : m α) (y : β) (z : α × β) :

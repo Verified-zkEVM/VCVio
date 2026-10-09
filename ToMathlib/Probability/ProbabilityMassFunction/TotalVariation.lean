@@ -53,8 +53,6 @@ protected def etvDist (p q : PMF α) : ℝ≥0∞ :=
 /-- Total variation distance on PMFs. -/
 protected def tvDist (p q : PMF α) : ℝ := (p.etvDist q).toReal
 
-lemma tvDist_def (p q : PMF α) : p.tvDist q = (p.etvDist q).toReal := rfl
-
 @[simp] lemma etvDist_self (p : PMF α) : p.etvDist p = 0 := by
   simp [PMF.etvDist]
 
@@ -207,12 +205,6 @@ lemma etvDist_option_punit :
       2 * ENNReal.absDiff (p (some ())) (q (some ())) from by ring,
     mul_div_assoc]
   simp [ENNReal.mul_div_cancel two_ne_zero ofNat_ne_top]
-
-lemma tvDist_option_punit :
-    p.tvDist q = |(p (some ())).toReal - (q (some ())).toReal| := by
-  simp only [PMF.tvDist, etvDist_option_punit]
-  exact ENNReal.absDiff_toReal (ne_top_of_le_ne_top one_ne_top (PMF.coe_le_one p _))
-    (ne_top_of_le_ne_top one_ne_top (PMF.coe_le_one q _))
 
 end OptionPUnit
 

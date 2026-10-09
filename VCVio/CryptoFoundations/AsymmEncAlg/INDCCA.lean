@@ -8,10 +8,13 @@ module
 
 public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-public import VCVio.OracleComp.Coercions.SubSpec
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.Coercions.SubSpec.Basic
+public import VCVio.OracleComp.Coercions.SubSpec.Measure
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.SimSemantics.Append
-public import VCVio.CryptoFoundations.SecExp
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # Asymmetric Encryption Schemes: IND-CCA

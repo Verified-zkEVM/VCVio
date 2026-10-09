@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 
 /-!

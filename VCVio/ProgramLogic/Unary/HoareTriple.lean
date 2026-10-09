@@ -354,7 +354,7 @@ theorem triple_dite {c : Prop} [Decidable c] {pre : ℝ≥0∞}
 
 open scoped Classical in
 /-- An observed event probability is WP of its indicator assertion. -/
-lemma probEvent_eq_wp_indicator (oa : OracleComp spec α) (p : α → Prop)
+lemma prEvent_eq_wp_indicator (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] :
     Pr{let x ← oa}[p x] = wp oa (fun x ↦ if p x then 1 else 0) := by
   rw [prEvent_eq_evalDist_map]
@@ -373,18 +373,13 @@ lemma probEvent_eq_wp_indicator (oa : OracleComp spec α) (p : α → Prop)
       by_cases hx : p x <;> simp [hx])
 
 /-- Native event probability is WP of its proposition indicator. -/
-lemma probEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι}
+lemma prEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι}
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← oa}[p x] = wp oa (fun x => propInd (p x)) := by
   classical
-  simpa only [propInd_eq_ite] using probEvent_eq_wp_indicator oa p
-
-/-- An observed singleton probability is WP of its indicator assertion. -/
-lemma probOutput_eq_wp_indicator (oa : OracleComp spec α) [DecidableEq α] (x : α) :
-    Pr{let y ← oa}[y = x] = wp oa (fun y ↦ if y = x then 1 else 0) :=
-  probEvent_eq_wp_indicator oa (fun y ↦ y = x)
+  simpa only [propInd_eq_ite] using prEvent_eq_wp_indicator oa p
 
 /-- Assertions agreeing on structural support have equal quantitative WP. -/
 lemma wp_congr_of_support (oa : OracleComp spec α) {f g : α → ℝ≥0∞}
@@ -409,7 +404,7 @@ theorem wp_eq_sum_finSupport [∀ t, Fintype (spec.Range t)] [DecidableEq α] (o
     _ = _ := by
       apply Finset.sum_congr rfl
       intro x _
-      rw [probOutput_eq_wp_indicator, ← wp_const_mul]
+      rw [prEvent_eq_wp_indicator, ← wp_const_mul]
       congr 1
       funext y
       split_ifs <;> simp
@@ -480,70 +475,38 @@ variable [OracleSpec.IsMeasureSpec spec]
   wp_eq_lintegral_map _ _
 
 /-- Indicator-event probability as an exact quantitative triple. -/
-theorem triple_probEvent_indicator (oa : OracleComp spec α) (p : α → Prop) [DecidablePred p] :
+theorem triple_prEvent_indicator (oa : OracleComp spec α) (p : α → Prop) [DecidablePred p] :
     Triple (Pr{let x ← oa}[p x]) oa (fun x => if p x then 1 else 0) :=
-  triple_ofLE (by rw [probEvent_eq_wp_indicator])
-
-/-- Singleton-output probability as an exact quantitative triple. -/
-theorem triple_probOutput_indicator (oa : OracleComp spec α) [DecidableEq α] (x : α) :
-    Triple (Pr{let y ← oa}[y = x]) oa (fun y => if y = x then 1 else 0) :=
-  triple_ofLE (by rw [probOutput_eq_wp_indicator])
+  triple_ofLE (by rw [prEvent_eq_wp_indicator])
 
 /-- Lower bounds on `probEvent` are exactly indicator-postcondition triples. -/
-theorem le_probEvent_iff_triple_indicator (oa : OracleComp spec α) (p : α → Prop)
+theorem le_prEvent_iff_triple_indicator (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] (r : ℝ≥0∞) :
     r ≤ Pr{let x ← oa}[p x] ↔
       Triple r oa (fun x => if p x then 1 else 0) := by
-  rw [triple_iff_le_wp, ← probEvent_eq_wp_indicator]
-
-/-- Lower bounds on `probOutput` are exactly singleton-indicator triples. -/
-theorem le_probOutput_iff_triple_indicator (oa : OracleComp spec α) [DecidableEq α]
-    (x : α) (r : ℝ≥0∞) :
-    r ≤ Pr{let y ← oa}[y = x] ↔
-      Triple r oa (fun y => if y = x then 1 else 0) := by
-  rw [triple_iff_le_wp, ← probOutput_eq_wp_indicator]
+  rw [triple_iff_le_wp, ← prEvent_eq_wp_indicator]
 
 /-- The support event of an `OracleComp` occurs almost surely. -/
-theorem probEvent_mem_support (oa : OracleComp spec α) :
+theorem prEvent_mem_support (oa : OracleComp spec α) :
     Pr{let x ← oa}[x ∈ support oa] = 1 := by
   rw [prEvent_congr_of_support oa _ (fun _ ↦ True) (fun _ hx ↦ by simp only [hx]),
     prEvent_eq_evalDist_map]
   simp
 
 /-- Exact probability-1 events are exact quantitative triples. -/
-theorem triple_probEvent_eq_one (oa : OracleComp spec α) (p : α → Prop)
+theorem triple_prEvent_eq_one (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] (h : Pr{let x ← oa}[p x] = 1) :
     Triple (1 : ℝ≥0∞) oa (fun x => if p x then 1 else 0) := by
-  have := triple_probEvent_indicator (oa := oa) p
+  have := triple_prEvent_indicator (oa := oa) p
   rwa [h] at this
-
-/-- Exact probability-1 singleton outputs are exact quantitative triples. -/
-theorem triple_probOutput_eq_one (oa : OracleComp spec α) [DecidableEq α]
-    (x : α) (h : Pr{let y ← oa}[y = x] = 1) :
-    Triple (1 : ℝ≥0∞) oa (fun y => if y = x then 1 else 0) := by
-  have := triple_probOutput_indicator (oa := oa) x
-  rwa [h] at this
-
-/-- Probability-one singleton events are exactly probability-one indicator triples. -/
-theorem probOutput_eq_one_iff_triple (oa : OracleComp spec α) [DecidableEq α]
-    (x : α) :
-    Pr{let y ← oa}[y = x] = 1 ↔
-      Triple (1 : ℝ≥0∞) oa (fun y => if y = x then 1 else 0) := by
-  constructor
-  · exact triple_probOutput_eq_one oa x
-  · intro h
-    have hle : (1 : ℝ≥0∞) ≤ Pr{let y ← oa}[y = x] := by
-      rw [probOutput_eq_wp_indicator]; exact triple_toLE h
-    exact le_antisymm ((measure_mono (Set.subset_univ _)).trans
-      (evalDist_apply_univ_le_one (do let y ← oa; pure (y = x)))) hle
 
 /-- Support membership is a useful default cut function for support-sensitive bind proofs. -/
 theorem triple_support (oa : OracleComp spec α) [DecidablePred fun x => x ∈ support oa] :
     Triple (1 : ℝ≥0∞) oa
       (fun x => if x ∈ support oa then 1 else 0) := by
   simpa using
-    triple_probEvent_eq_one (oa := oa) (p := fun x => x ∈ support oa)
-      (h := probEvent_mem_support (oa := oa))
+    triple_prEvent_eq_one (oa := oa) (p := fun x => x ∈ support oa)
+      (h := prEvent_mem_support (oa := oa))
 
 /-! ## Loop stepping rules (Triple-level) -/
 

@@ -31,13 +31,4 @@ lemma probFailure_writerT_run_simulateQ [IsUniformSpec spec]
     (oa : OracleComp spec α) : Pr[⊥ | (simulateQ so oa).run] = Pr[⊥ | oa] := by
   induction oa using OracleComp.inductionOn <;> simp
 
-/-- A writer-instrumented simulation never fails iff the underlying computation never fails. -/
-lemma NeverFail_writerT_run_simulateQ_iff [IsUniformSpec spec]
-    {so : QueryImpl spec (WriterT ω (OracleComp spec))}
-    (oa : OracleComp spec α) :
-    NeverFail ((simulateQ so oa).run : OracleComp spec _) ↔
-      NeverFail (oa : OracleComp spec α) := by
-  rw [← probFailure_eq_zero_iff, ← probFailure_eq_zero_iff,
-    probFailure_writerT_run_simulateQ oa]
-
 end OracleComp

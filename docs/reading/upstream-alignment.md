@@ -364,7 +364,7 @@ primary even when a finite-distribution lift exists; the explicit `ProbComp.Disc
 scope selects the adapter at a retiring calibration boundary. Lossless lifts publish
 probability-measure instances, so consumers infer their mass properties from the base computation.
 Generic observation bundles and their native measure observers live in
-`VCVio.EvalDist.Defs.Semantics.Core`; the original import facade also exports the discrete adapters.
+`VCVio.EvalDist.Defs.Semantics.Core`.
 Their bundled measures expose subprobability and finiteness automatically, and known probability
 certificates propagate through optional, exceptional, and global semantics bundling. The lossless
 `ProbabilitySemantics` bundle registers the guaranteed probability properties of bare denotations

@@ -7,7 +7,8 @@ Authors: Devon Tuma
 module
 
 public import PolyFun.Interaction.UC.ReactiveNetwork.HandledAssembly
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.FailureMeasure
 

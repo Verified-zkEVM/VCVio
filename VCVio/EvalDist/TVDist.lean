@@ -264,16 +264,6 @@ theorem tvDist_bind_left_le_const
     _ = (∑' a : α, Pr[= a | mx].toReal) * c := Summable.tsum_mul_right _ hp_summable
     _ = c := by rw [hp_sum_toReal, one_mul]
 
-/-- Unrestricted companion of `tvDist_bind_left_le_const`: a uniform per-`a` bound
-`tvDist (f a) (g a) ≤ c` lifts through the shared `mx` bind. -/
-theorem tvDist_bind_left_le_const'
-    {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadAttach m] [EvalDistCompatible m]
-    {α β : Type u} (mx : m α) (f g : α → m β) (c : ℝ)
-    (hfg : ∀ a, tvDist (f a) (g a) ≤ c) :
-    tvDist (mx >>= f) (mx >>= g) ≤ c :=
-  tvDist_bind_left_le_const mx f g c fun a _ => hfg a
-
 /-- `ℝ≥0∞` form of `tvDist_bind_left_le_const`, matching the quantitative APIs: a per-`a` bound
 `ENNReal.ofReal (tvDist (f a) (g a)) ≤ ε` on the support of `mx` lifts through the shared bind. -/
 theorem ofReal_tvDist_bind_left_le_const
@@ -291,16 +281,6 @@ theorem ofReal_tvDist_bind_left_le_const
         (fun a ha => (ENNReal.ofReal_le_iff_le_toReal htop).mp (hfg a ha))
     rw [← ENNReal.ofReal_toReal htop]
     exact ENNReal.ofReal_le_ofReal hreal
-
-/-- Unrestricted companion of `ofReal_tvDist_bind_left_le_const`. -/
-theorem ofReal_tvDist_bind_left_le_const'
-    {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadAttach m] [EvalDistCompatible m]
-    {α β : Type u}
-    (mx : m α) (f g : α → m β) (ε : ℝ≥0∞)
-    (hfg : ∀ a, ENNReal.ofReal (tvDist (f a) (g a)) ≤ ε) :
-    ENNReal.ofReal (tvDist (mx >>= f) (mx >>= g)) ≤ ε :=
-  ofReal_tvDist_bind_left_le_const mx f g ε fun a _ => hfg a
 
 /-! ### TV distance for bind with a bad event -/
 
@@ -347,18 +327,6 @@ lemma tvDist_bind_left_event_le
   le_trans (tvDist_bind_left_le mx f g)
     (tsum_probOutput_toReal_mul_tvDist_le_probEvent mx f g bad h_eq)
 
-/-- `ENNReal` form of `tvDist_bind_left_event_le`, matching the quantitative
-identical-until-bad APIs. -/
-lemma ofReal_tvDist_bind_left_event_le
-    {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    {α : Type u} {β : Type u}
-    (mx : m α) (f g : α → m β) (bad : α → Prop)
-    (h_eq : ∀ a, ¬ bad a → 𝒮[f a] = 𝒮[g a]) :
-    ENNReal.ofReal (tvDist (mx >>= f) (mx >>= g)) ≤ Pr[bad | mx] := by
-  refine le_trans (ENNReal.ofReal_le_ofReal
-    (tvDist_bind_left_event_le mx f g bad h_eq)) ?_
-  rw [ENNReal.ofReal_toReal probEvent_ne_top]
-
 /-- Bind/event TV bound with different base computations: the base TV distance plus the
 bad-event probability controls the whole bind. -/
 lemma tvDist_bind_event_le
@@ -374,19 +342,6 @@ lemma tvDist_bind_event_le
     _ ≤ Pr[bad | mx].toReal + tvDist mx my :=
         add_le_add (tvDist_bind_left_event_le mx f g bad h_eq)
           (tvDist_bind_right_le g mx my)
-
-/-- `ENNReal` form of `tvDist_bind_event_le`. -/
-lemma ofReal_tvDist_bind_event_le
-    {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    {α : Type u} {β : Type u}
-    (mx my : m α) (f g : α → m β) (bad : α → Prop)
-    (h_eq : ∀ a, ¬ bad a → 𝒮[f a] = 𝒮[g a]) :
-    ENNReal.ofReal (tvDist (mx >>= f) (my >>= g))
-      ≤ Pr[bad | mx] + ENNReal.ofReal (tvDist mx my) := by
-  refine le_trans (ENNReal.ofReal_le_ofReal
-    (tvDist_bind_event_le mx my f g bad h_eq)) ?_
-  rw [ENNReal.ofReal_add ENNReal.toReal_nonneg (tvDist_nonneg mx my),
-    ENNReal.ofReal_toReal probEvent_ne_top]
 
 /-- Bind/event TV bound with different base computations, charging the bad-event
 probability under the right base computation. This is the symmetric orientation of

@@ -12,7 +12,8 @@ public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Map
-public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.Replicate.Basic
+public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist
 public import VCVio.ProgramLogic.Unary.HoarePropTriple

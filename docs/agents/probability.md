@@ -345,8 +345,8 @@ discrete compatibility equations. Finite and weighted sum-of-squares inequalitie
 the same integral Cauchy–Schwarz theorem by integrating atomic measures.
 `VCVio.OracleComp.Constructions.Fork.Basic` owns the typed occurrence constructions and
 `prEvent_sq_le_observedForkPair`: arbitrary discrete answer measures suffice, with no uniformity
-assumption or measurable-space arguments on the observed outputs. The original fork import
-facade retains the deprecated discrete equations. `evalDist_map_answer_completeOccurrence` and
+assumption or measurable-space arguments on the observed outputs.
+`evalDist_map_answer_completeOccurrence` and
 `evalDist_map_secondAnswer_fork` recover the configured response measure without assigning a
 measurable space to the completion or fork record. `prEvent_answer_completeOccurrence` transports
 answer events to a fresh query. `prEvent_focusCollision_fork` identifies the exact collision
@@ -380,7 +380,8 @@ is derived from it at an explicit compatibility boundary:
 `evalDist_apply_singleton` (`𝒟[mx] {x} = Pr[= x | mx]`), `evalDist_apply_setOf`
 (`𝒟[mx] {x | p x} = Pr[p | mx]` on a discrete space), `evalDist_apply_univ`
 (`𝒟[mx] univ = 1 - Pr[⊥ | mx]`), and `lintegral_evalDist` (`∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g`).
-The compatibility adapter satisfies the class definitionally; the free-monad fold satisfies it
+These are rewrites, not default `simp` rules: `simp` leaves `𝒟[mx] s` in measure normal form, and a
+proof that wants the façade crosses with an explicit `rw`. The compatibility adapter satisfies the class definitionally; the free-monad fold satisfies it
 whenever its measure specification agrees with its probability specification
 (`PFunctor.IsMeasureSpec.Compatible`, which `IsProbabilitySpec.toMeasureSpec` satisfies by `rfl`).
 For a finite uniform oracle, `OracleSpec.IsUniformMeasureSpec.instCompatible` proves the same
@@ -555,8 +556,7 @@ unfolds; consumers do not need to supply the measurable-map equation.
 The lower-level `MeasureSemanticsVia` continues to describe potentially lossy surface semantics.
 Import `VCVio.EvalDist.Defs.Semantics.Core` for native bundles and
 `VCVio.EvalDist.MeasureSemantics` for effect-preserving transformer observations. These paths
-contain no PMF/SPMF backend; `Defs.Semantics` additionally exports the discrete compatibility
-bundles. Bundled `evalDist` observations infer `IsSubprobabilityMeasure` and `IsFiniteMeasure`.
+contain no PMF/SPMF backend. Bundled `evalDist` observations infer `IsSubprobabilityMeasure` and `IsFiniteMeasure`.
 Known probability certificates propagate through bundling, and bundled kernels infer
 `IsMarkovKernel` from certificates for their output family. The total semantics bundle's bare
 denotation and effect-preserving `optionT`, `exceptT`, and `writerT` observations infer

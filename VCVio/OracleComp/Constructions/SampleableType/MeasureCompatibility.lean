@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.EvalDist.Monad.Measure
-public import VCVio.OracleComp.EvalDist.UniformCompatibility
+public import VCVio.OracleComp.EvalDist.MeasureSpec
 
 /-!
 # Measure compatibility for the discrete sampling frontend

@@ -487,38 +487,6 @@ lemma evalSPMF_liftComp_uniformSample_bind_simulateQ_run'_addValue
         simpa only [probOutput_def] using congrFun (congrArg DFunLike.coe
           (ih u₀ (σ.update t rest))) a
 
-lemma evalSPMF_liftComp_replicate_uniformSample_bind_simulateQ_run'_addValues
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ j, SampleableType (spec₀.Range j)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (i : ι₀) {α : Type} (oa : OracleComp spec₀ α) (n : ℕ) :
-    ∀ (σ : QuerySeed spec₀),
-    𝒮[(do
-      let us ← liftComp (replicate n ($ᵗ spec₀.Range i)) spec₀
-      (simulateQ seededOracle oa).run' (σ.addValues us) : OracleComp spec₀ α)] =
-    𝒮[((simulateQ seededOracle oa).run' σ : OracleComp spec₀ α)] := by
-  induction n with
-  | zero => intro σ; simp [replicate_zero, QuerySeed.addValues_nil]
-  | succ n ih =>
-    intro σ
-    simp only [replicate_succ, monad_norm, liftComp_bind, liftComp_pure, Function.comp]
-    have hrew : (do
-        let u ← liftComp ($ᵗ spec₀.Range i) spec₀
-        let us ← liftComp (replicate n ($ᵗ spec₀.Range i)) spec₀
-        (simulateQ seededOracle oa).run' (σ.addValues (u :: us)) : OracleComp spec₀ α) =
-      (do
-        let u ← liftComp ($ᵗ spec₀.Range i) spec₀
-        let us ← liftComp (replicate n ($ᵗ spec₀.Range i)) spec₀
-        (simulateQ seededOracle oa).run' ((σ.addValues [u]).addValues us) :
-          OracleComp spec₀ α) := by
-      congr 1; ext u; congr 1; ext us
-      rw [QuerySeed.addValues_cons]
-    rw [congrArg evalSPMF hrew, evalSPMF_bind]
-    simp_rw [ih]
-    rw [← evalSPMF_bind]
-    exact evalSPMF_liftComp_uniformSample_bind_simulateQ_run'_addValue σ i oa
-
 private lemma probOutput_liftComp_generateSeed_bind_simulateQ_run'_takeAtIndex_eq_tsum
     {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
     [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
@@ -676,21 +644,6 @@ lemma evalSPMF_liftComp_generateSeed_bind_simulateQ_run'_takeAtIndex
         congr 1; ext u
         exact probOutput_prependValues_takeAtIndex_tsum_eq_query_mul qc js t i₀ k
           (mx u) u x hcount (ih u _ js.dedup k)
-
-lemma probOutput_generateSeed_bind_map_simulateQ_takeAtIndex
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀) (i₀ : ι₀) (k : ℕ)
-    {α β : Type} (oa : OracleComp spec₀ α) (f : α → β) (y : β) :
-    Pr[= y | (do
-      let seed ← liftComp (generateSeed spec₀ qc js) spec₀
-      f <$> (simulateQ seededOracle oa).run' (seed.takeAtIndex i₀ k) : OracleComp spec₀ β)] =
-      Pr[= y | f <$> oa] := by
-  rw [← map_bind]
-  exact probOutput_map_eq_of_evalSPMF_eq
-    (evalSPMF_liftComp_generateSeed_bind_simulateQ_run'_takeAtIndex qc js i₀ k oa) f y
 
 private lemma takeAtIndex_prependValues_singleton_self_aux {ι₀ : Type} {spec₀ : OracleSpec ι₀}
     [DecidableEq ι₀] (t : ι₀) (k : ℕ) (hk : 0 < k) (u₀ : spec₀.Range t) (s' : QuerySeed spec₀) :

@@ -8,6 +8,7 @@ module
 
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.SimSemantics.Measure
 public import ToMathlib.MeasureTheory.DiscreteInstances
 import VCVio.EvalDist.Monad.Measure
 import VCVio.EvalDist.ProbabilityBounds
@@ -333,3 +334,21 @@ theorem evalDist_decide_eq_uniformBool_half
   norm_num
 
 end ProbComp
+
+namespace uniformSampleImpl
+
+open OracleSpec OracleComp
+
+variable {ι : Type*} {spec : OracleSpec ι} [∀ t, SampleableType (spec.Range t)]
+  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsUniformMeasureSpec spec]
+
+/-- Answering every query with the canonical uniform sampler preserves the output measure of every
+computation under uniform oracle semantics. -/
+theorem evalDist_simulateQ {α : Type} [MeasurableSpace α] (oa : OracleComp spec α) :
+    𝒟[simulateQ uniformSampleImpl oa] = 𝒟[oa] :=
+  evalDist_simulateQ_eq_of_forall _ (fun t ↦ by
+    rw [uniformSampleImpl_apply, SampleableType.evalDist_uniformSample,
+      OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]) oa
+
+end uniformSampleImpl
