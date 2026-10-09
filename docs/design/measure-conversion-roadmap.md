@@ -247,6 +247,13 @@ measures, and several hop lemmas are strengthened from `true`-event equalities t
 output measures. `simp` evaluates the Boolean sample space `{false, true}` under any probability
 measure. Scalar lemmas that only these examples used are removed with them.
 
+The stream PRG built from a PRF is native as well. Its switching argument bounds the lazy
+random-oracle output chain against a uniform output vector in measure total variation, observed
+in the discrete structure on output vectors, by the state-collision mass, pushing the random seed
+and each fresh block through `measureETVDist_bind_bind_le_lintegral`. The birthday bound reads
+collision masses off output measures, and the uniform-key hypothesis is an equality of key
+measures.
+
 ## Symmetric-encryption checkpoint
 
 `SymmEncAlg` states correctness and perfect secrecy with output measures over any lawful measure
@@ -419,8 +426,130 @@ specification than the simulated program; agreement off bad input states, as equ
 output measures, is a special case. Two computations that agree on every event away from a bad
 event are within its probability after any post-processing, with no measurable structure on the
 outputs. The programmable-oracle bounds, the random-oracle bridge and the query-bounded
-exact-output transport are native, and `by_upto` targets the native bound; the ε-slack
-refinements and their consumers remain on the discrete layer.
+exact-output transport are native, and `by_upto` targets the native bound.
+
+Per-query slack is native as well. When the two handlers are within total variation `ε` on each
+charged query from a good state and coincide elsewhere, a computation making at most `q` charged
+queries keeps the runs within `q * ε` plus the bad-event mass, and dropping the bad state leaves
+the pure per-query budget. The random-oracle commitment hiding proof uses the native lemma, so
+the discrete identical-until-bad module has been removed. The state-dependent expected slack, its
+constant-slack corollaries and their state-separating and Fiat–Shamir consumers remain on the
+discrete layer.
+
+## PRF tag/reader checkpoint
+
+The PRF tag/reader protocol is native. The authentication bounds are stated in `ℝ≥0∞` on output
+measures: the forged-acceptance collision bound, its uniform-digest specializations and the
+end-to-end PRF-plus-collision bound. The single-cell collision argument is an expectation
+bound on a one-cell potential, discharged through quantitative `wp`. The unlinkability chain's
+session-collision union bounds, eagerizations, cell-swap bridge and direct coupling rewrite
+event probabilities through equalities of output measures and the native disagreement bound,
+and the network-level transport reads verdict masses off output measures. The discrete
+disagreement module and the scalar wrappers the coupling used have been removed.
+
+## Fischlin checkpoint
+
+The Fischlin transform is native. Completeness compares the random-oracle game with its
+pure-probability model through equalities of output measures in the discrete structure: each
+repetition's lazy search couples to fresh uniform draws together with its cached hash, the
+repetitions thread the cache without collisions, and the verifier's re-queries become cache hits.
+The rejection bound unions per-repetition tail events on the model's independent product.
+Knowledge soundness bounds the bad event by the verifier accepting while the extractor's scan
+misses, then runs the supermartingale induction over the lazy random oracle in quantitative `wp`;
+each leaf is the verifier's acceptance mass on a partially cached oracle, computed from the
+independent product of hits and fresh draws. Bind and map congruence along equal discrete output
+measures, and the matching support transfer, are part of the general measure API.
+
+## Oracle IND-CPA checkpoint
+
+The oracle IND-CPA hybrid argument is native. The counted-hybrid transports, the endpoint
+identifications of the left/right hybrids and the uniform-bit branch decomposition are equalities
+of output measures, and the one-time-to-many-time lift no longer assumes a finite or inhabited
+ciphertext type. The machine-level responder readings remain on the discrete coinductive
+handler.
+
+## Native tactic gate checkpoint
+
+The discrete probability tactic benchmarks have measure-side twins over `ProbComp`, an abstract
+lawful monad, and the `Id`, `OptionT` and `ExceptT` carriers, covering outcome and event masses,
+uniform draws, independence, success mass, the support bridge, `do`-shapes and long chains. Their
+dated guards list the native automation gaps: `grind` lacks Dirac, uniform and success-mass rules;
+product singletons, `Set.univ` on `Bool`, the uniform event law after pushforward normalisation,
+and the support bridges need explicit steps. The discrete benchmarks remain until the lemma
+families they gate are retired.
+
+## Seeded forking checkpoint
+
+The Bellare–Neven seeded forking lemma is native. Uniform seed generation has an exact point
+mass on its support and splits off a uniform head answer at any oracle with a positive count.
+Running against the seeded oracle on such a seed has the output measure of the computation
+itself, resampling an appended answer is invisible, and truncating the seed keeps the joint law
+of the truncated prefix and the output. The forking bound follows as events: the squared success
+probability is the Jensen bound over the truncated seed, the resampled second run matches a run on
+the truncated seed, and collisions with the seeded answer cost `acc / h`. The eager random oracle
+averaged over a generated seed has the output measure of fresh independent queries.
+
+## Replay forking checkpoint
+
+The replay forking lemma is native under uniform answer measures. Each fork-index component is
+bounded by the pair event after the Cauchy–Schwarz squaring step, less a collision term of
+`acc / h` that the uniform focused answer contributes, so the squared-sum estimate follows from
+events on the canonical context fork alone. The Fiat–Shamir replay bound takes the measure
+instances of `wrappedSpec` as hypotheses, and the NMA extraction bound consumes it through a
+native simulation of the challenge oracle by uniform sampling; only the expectation-level
+aggregation over key generation remains on the discrete layer, since it goes through the
+Jensen marginal of `expectedValue`. The measure-transport module for the old bound is gone.
+
+## Uniform sampling compatibility checkpoint
+
+Uniform sampling has a single measure law, `SampleableType.evalDist_uniformSample`, taken from
+the class certificate; the copy that went through the discrete adapter is gone, and
+`SampleableType.MeasureCompatibility` now holds only the `ProbComp.DiscreteCompatibility`
+scope. Importers that used it or the retiring sampling, `ProbComp`, uniform-compatibility and
+subspec hubs only for native declarations import the native modules directly.
+
+## Retirement preparation checkpoint
+
+The per-query `PMF` interpretations are deprecated: `OracleSpec.IsProbabilitySpec`,
+`OracleSpec.IsUniformSpec`, and its `ofFintypeInhabited` constructor point to
+`OracleSpec.IsMeasureSpec`, `OracleSpec.IsUniformMeasureSpec`, and
+`IsUniformMeasureSpec.ofFiniteNonempty`; the polynomial-functor forms point to
+`PFunctor.IsMeasureSpec` and `PFunctor.IsMeasureSpec.uniformOfFiniteNonempty`. `NeverFail`, `EvalDistCompatible`, and
+`DiscreteEvalDistCompatible` were already deprecated. The `usesRetiredProbability` linter now
+reports direct uses of all seven classes as well as the scalar API, which enrolled thirty
+declarations that used a class without the scalar functions: the class fields and
+constructors themselves, the uniform instances and the bridge instance they feed, the
+polynomial-functor measure-compatibility class, the query-slack expectation of the until-bad
+family, the Fiat–Shamir challenge instances, and ML-DSA's `ExpandA` idealization. Two unused
+uniform instances and one unused binder were removed instead of enrolled. The local warning
+budget matches CI: nothing uses the deprecated support API, so its exclusion is gone. The
+`SPMF` import closure stands at 194 modules.
+
+## Final removal
+
+Every remaining ledger entry sits in a family waiting on open work or in the façade itself:
+slack, HVZK, and aborting Fiat–Shamir with their ML-DSA clients (#507, #508, #639); Rényi
+divergence and the GPV and Falcon clients (#466, #471, #478); expectation and the Fiat–Shamir
+NMA aggregation (#515); the coinductive responders, which need a measurable coalgebra. Once
+those convert, removal deletes these modules and regenerates the umbrellas:
+
+- `ToMathlib`: `ProbabilityTheory/SPMF`, `Probability/ProbabilityMassFunction/{TotalVariation,
+  RenyiDivergence,RadonNikodym,Lemmas,Measure}`, and `Probability/Divergence/RenyiDiscrete`.
+- `VCVio/EvalDist`: `Defs/{Basic,Instances,NeverFails,AlternativeMonad}`,
+  `Monad/{Basic,Map,Seq}`, `List`, `Prod`, `Option`, `Bool`, `BitVec`, `Fintype`, `TVDist`,
+  `RenyiDivergence`, `Expectation`, `ExpectationMeasure`, `Instances/{OptionT,ErrorT}`, and
+  `PFunctor`, with the discrete bridges of `Defs/Measure` (including the priority-10
+  `instEvalDistSemanticsOfMonadLiftTSPMF` fallback), `FailureMeasure`, `PFunctorMeasure`, and
+  `MeasureTVDist`.
+- `VCVio/OracleComp`: the `EvalDist`, `ProbComp`, `Constructions/SampleableType`, and
+  `Coercions/SubSpec` hubs, `EvalDist/UniformCompatibility`, and
+  `Constructions/SampleableType/MeasureCompatibility`.
+
+The dormant `Interop` library imports the `OptionT` and `ErrorT` instances and moves with them.
+After removal the retired-probability ledger and the SPMF import-closure baseline are empty, and
+both checks can be deleted. One question stays open: whether `Pr[= x | mx]` and `Pr[p | mx]`
+are re-pointed to `𝒟[mx] {x}` and `Pr{let x ← mx}[p x]`, which changes what the singleton form
+requires (measurable singletons), or removed so that `Pr{…}[…]` is the only event syntax.
 
 ## Next conversion batch
 
@@ -430,16 +559,10 @@ Compact native event formatting is published in #763. The observed continuation 
 is published in #764 as a separate prerequisite for the next complete reader conversion.
 Continue with independently validated PRs:
 
-1. Convert the complete PRFTagReader direct-coupling reader/slot/composition families and their
-   table/cache dependencies through the native disagreement API, then delete unused scalar
-   disagreement declarations.
-2. Convert abort-aware HVZK, ML-DSA simulator/pregate/gating, and affected aborting Fiat–Shamir
+1. Convert abort-aware HVZK, ML-DSA simulator/pregate/gating, and affected aborting Fiat–Shamir
    security clients, preserving observable `none` outcomes.
-3. Convert Sigma HVZK, exact transcripts, predictability, and challenge uniformity, with Schnorr
+2. Convert Sigma HVZK, exact transcripts, predictability, and challenge uniformity, with Schnorr
    and affected Fiat–Shamir simulation/stateful-hop/security families.
-4. Convert Fischlin search/runtime/model/completeness using native products and projections.
-5. Convert Fischlin extraction/potential/supermartingale/soundness and delete unused expectation
-   declarations.
 
 Independent products (#756), exact expected signing costs (#752), and reader cache representation
 (#760) have landed. Preserve their algorithms and Schnorr transform guarantees in #755. These feature algorithms are not duplicated by conversions.
@@ -454,10 +577,9 @@ Record each published checkpoint and its remaining compatibility consumers here 
 | Program logic | Finish direct core predicate-transformer integration and measurable fixed-program WP; quantitative and relational rules use native measures and explicit measurable joint kernels. |
 | Security and games | Convert reductions, games, advantages, asymptotic packaging, and necessary lattice/hash/example clients by theorem family. |
 | Statistics | Native total variation, divergence, expectations, concentration, and independent product rules through Mathlib owners. |
-| Forking | Seeded and replay forking after their tracking and relational prerequisites pass validation. |
+| Forking | Seeded and replay forking are native; the remaining step is the `expectedValue` aggregation in the Fiat–Shamir NMA bound. |
 | Fiat–Shamir | Convert complete theorem families, including abort bounds and their downstream scheme proofs. |
-| Fischlin | Convert cost, completeness, and soundness together with all affected clients. |
-| Retirement | Delete unused scalar backends, compatibility classes, and fallback instances; finish required downstream conversions and empty the retired-probability ledger. |
+| Retirement | Compatibility classes are deprecated and linted; after the remaining families convert, delete the modules listed under *Final removal* and empty the retired-probability ledger. |
 
 PRs may cover broad independent theorem families once their shared APIs are established. Validate
 each family before expanding to another subsystem. Publish a complete checkpoint before opening

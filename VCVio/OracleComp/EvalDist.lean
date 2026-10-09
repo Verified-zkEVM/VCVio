@@ -34,6 +34,7 @@ variable {ι} {spec : OracleSpec ι}
 
 /-- A per-query distribution on an `OracleSpec`, definitionally the generic
 probability specification on its underlying polynomial functor. -/
+@[deprecated "VCVio retiring probability API: use OracleSpec.IsMeasureSpec" (since := "2026-09-27")]
 abbrev IsProbabilitySpec (spec : OracleSpec ι) :=
   PFunctor.IsProbabilitySpec spec.toPFunctor
 
@@ -51,6 +52,8 @@ ranges. Bundles finiteness and inhabitedness of every response type with
 agrees with `PMF.uniformOfFintype`. Use this as the canonical input to lemmas
 that mention `Fintype.card (spec.Range _)` or `PMF.uniformOfFintype` in their
 statements. -/
+@[deprecated "VCVio retiring probability API: use OracleSpec.IsUniformMeasureSpec"
+  (since := "2026-09-27")]
 class IsUniformSpec (spec : OracleSpec ι) extends IsProbabilitySpec spec where
   /-- Every response set is finite. -/
   fintype : ∀ t, Fintype (spec.Range t)
@@ -66,7 +69,9 @@ Deliberately **not** an instance — `IsUniformSpec` must be opted into per
 spec so that uniform-sampling semantics never attach silently to a spec
 whose author didn't intend a probabilistic interpretation. Use this
 helper when declaring `IsUniformSpec` for a concrete spec. -/
-@[reducible] noncomputable def IsUniformSpec.ofFintypeInhabited
+@[deprecated "VCVio retiring probability API: use OracleSpec.IsUniformMeasureSpec.ofFiniteNonempty"
+  (since := "2026-09-27"), reducible]
+noncomputable def IsUniformSpec.ofFintypeInhabited
     {ι : Type u} (spec : OracleSpec ι)
     [hF : ∀ t, Fintype (spec.Range t)] [hI : ∀ t, Inhabited (spec.Range t)] :
     IsUniformSpec spec where
@@ -223,13 +228,6 @@ section evalSPMFConvenience
 
 variable [IsUniformSpec spec] [IsProbabilitySpec spec']
 
-lemma evalSPMF_query_bind
-    (t : spec.Domain) (ou : spec.Range t → OracleComp spec α) :
-    𝒮[(query t : OracleComp spec _) >>= ou] =
-      (PMF.uniformOfFintype (spec.Range t) : SPMF _) >>=
-        fun u => evalSPMF (ou u) := by
-  rw [evalSPMF_bind, evalSPMF_query]
-
 lemma probOutput_congr {x y : α} {oa : OracleComp spec α} {oa' : OracleComp spec' α}
     (h1 : x = y) (h2 : 𝒮[oa] = 𝒮[oa']) : Pr[= x | oa] = Pr[= y | oa'] := by
   simp_rw [probOutput_def, h1, h2]
@@ -335,70 +333,6 @@ noncomputable def evalSPMFWhen (d : QueryImpl spec SPMF) (mx : OracleComp spec �
   simulateQ (r := SPMF) d mx
 
 end evalSPMFWhen
-
-section supportPeel
-
-/-- `obtain`-friendly bind support peeler at the bare `OracleComp` level. Unlike `rw
-[mem_support_bind_iff]`, applying this lemma to a hypothesis uses *definitional* unification to
-match `mx >>= f`, so it engages through the `Monad`/`MonadLift` instance-tree mismatches that block
-the syntactic `rw` (the elaborated `OracleComp.instMonad`/`Bind.bind` spelling produced by
-unfolding nested protocol definitions differs syntactically from the canonical `>>=`). -/
-lemma mem_support_bind_peel (mx : OracleComp spec α) (f : α → OracleComp spec β) {y : β}
-    (hy : y ∈ support (mx >>= f)) :
-    ∃ a, a ∈ support mx ∧ y ∈ support (f a) := by
-  rwa [mem_support_bind_iff] at hy
-
-/-- `obtain`-friendly `pure` support resolver at the bare `OracleComp` level: `y ∈ support (pure
-a)` forces `y = a`, matched by definitional unification (so it engages on the
-`PFunctor.FreeM.pure` spelling that the syntactic `support_pure` `rw` rejects). -/
-lemma eq_of_mem_support_pure (a : α) {y : α}
-    (hy : y ∈ support (pure a : OracleComp spec α)) : y = a := by
-  rwa [support_pure, Set.mem_singleton_iff] at hy
-
-/-- `obtain`-friendly `<$>` (map) support peeler at the bare `OracleComp` level: `y ∈ support (g
-<$> mx)` yields a preimage `a ∈ support mx` with `y = g a`, matched by definitional unification
-(so it engages on the elaborated `Functor.map`/`OracleComp.instMonad` spelling that the syntactic
-`support_map` `rw` rejects). -/
-lemma mem_support_map_peel (g : α → β) (mx : OracleComp spec α) {y : β}
-    (hy : y ∈ support (g <$> mx)) :
-    ∃ a, a ∈ support mx ∧ y = g a := by
-  rw [support_map, Set.mem_image] at hy
-  obtain ⟨a, ha, hy⟩ := hy
-  exact ⟨a, ha, hy.symm⟩
-
-end supportPeel
-
-section freeMProbability
-
-variable [IsProbabilitySpec spec]
-
-/-- Probability of an event after mapping a raw polynomial free program,
-viewed through the `OracleComp` semantic bridge. -/
-lemma probEvent_ofFreeM_map (mx : spec.toPFunctor.FreeM α) (f : α → β)
-    (event : β → Prop) :
-    Pr[event | OracleComp.ofFreeM (PFunctor.FreeM.map f mx)] =
-      Pr[event ∘ f | OracleComp.ofFreeM mx] :=
-  probEvent_map (OracleComp.ofFreeM mx) f event
-
-/-- Probability of an event for a raw polynomial `pure`, viewed through
-`OracleComp`. -/
-lemma probEvent_ofFreeM_pure (x : α) (event : α → Prop) [DecidablePred event] :
-    Pr[event | OracleComp.ofFreeM
-      (pure x : spec.toPFunctor.FreeM α)] = if event x then 1 else 0 := by
-  change Pr[event | (pure x : OracleComp spec α)] = _
-  exact probEvent_pure x event
-
-/-- Bind decomposition for a raw polynomial free program, viewed through
-`OracleComp`. -/
-lemma probEvent_ofFreeM_bind_eq_tsum (mx : spec.toPFunctor.FreeM α)
-    (next : α → spec.toPFunctor.FreeM β) (event : β → Prop) :
-    Pr[event | OracleComp.ofFreeM (PFunctor.FreeM.bind mx next)] =
-      ∑' x, Pr[= x | OracleComp.ofFreeM mx] *
-        Pr[event | OracleComp.ofFreeM (next x)] :=
-  probEvent_bind_eq_tsum (OracleComp.ofFreeM mx)
-    (fun x => OracleComp.ofFreeM (next x)) event
-
-end freeMProbability
 
 end OracleComp
 

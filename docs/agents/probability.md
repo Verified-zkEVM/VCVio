@@ -1,5 +1,8 @@
 # Probability Reasoning (EvalDist and ProbComp)
 
+To convert code written against the discrete `Pr[…]`/`evalSPMF` API, follow
+[`probability-migration.md`](probability-migration.md).
+
 For the cross-project survey of SPMF, Mathlib measures and kernels, PolyFun
 coalgebraic limits, ArkLib, Bluebell/Iris, and possible long-term migration paths, see
 [`Probability Semantics for Computations: Landscape and Design Options`](../reading/probability-semantics-landscape.md).
@@ -14,7 +17,8 @@ proofs. [`docs/reading/`](../reading/README.md) indexes the full design record.
 `import VCVio.Native` is the public entry point for native oracle, sampling, measure, kernel,
 operational-support, unary/relational WP, and stateful security foundations. Its ordinary import
 closure contains neither
-`PMF` nor `SPMF`; `VCVioTest.Native` checks this boundary. Some older module paths additionally
+`PMF` nor `SPMF`; `VCVioTest.Native` checks this boundary. The deprecated hub modules
+`OracleComp.EvalDist`, `OracleComp.ProbComp`, and `Constructions.SampleableType` additionally
 export discrete compatibility corollaries. WriterCost, QueryCost, and CostModel are native owners.
 
 Handler instrumentation uses native owners in `QueryImpl.Constructions.Core`, `Append.Core`,
@@ -368,10 +372,11 @@ using the finite-uniform pushforward law. `evalDist_bind_congr` compares continu
 measures pointwise without a measurable-space instance on the intermediate result.
 `VCVio.OracleComp.EvalDist.Measure` gives `evalDist_bind_congr_of_support` by structural
 induction, without a probability/support bridge. These laws power the PRF tag/reader cache,
-composed-handler, and shared-observation proofs. `SampleableType.MeasureCompatibility`
-keeps the finite adapter calibration for legacy runtimes. BR93's measure-level masking
-step takes the chosen measure's uniformity certificate explicitly; its finite corollary
-uses the adapter calibration.
+composed-handler, and shared-observation proofs. `SampleableType.evalDist_uniformSample` is
+the one measure law for `$ᵗ α`, read off the class certificate for any measurable space with
+measurable singletons. `SampleableType.MeasureCompatibility` holds only the
+`ProbComp.DiscreteCompatibility` scope for explicitly scoped compatibility proofs. BR93's
+masking step takes the chosen measure's uniformity certificate explicitly.
 
 The finite distribution API is
 explicit as `evalSPMF mx` / `𝒮[mx]`, and `Pr[...]` remains the discrete compatibility façade. One
@@ -398,9 +403,10 @@ The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq
 only needs equality of result types, whereas a measure denotation also depends on the selected
 `MeasurableSpace`, so there is no blanket finite-type measurable-space instance.
 
-`SPMF`, `evalSPMF`, `probOutput`, `probEvent`, and `probFailure` are deprecated.
+`SPMF`, `evalSPMF`, `probOutput`, `probEvent`, and `probFailure` are deprecated, as are the
+classes that interpret them: `IsProbabilitySpec`, `IsUniformSpec`, `NeverFail`, `EvalDistCompatible`, and `DiscreteEvalDistCompatible`.
 Mathlib owns `PMF`, so VCVio's `usesRetiredProbability` environment linter
-records direct uses of it and the local finite API in `scripts/nolints.json`.
+records direct uses of it, the local finite API, and those classes in `scripts/nolints.json`.
 New theorem statements should prefer `𝒟` or `Pr{...}[...]` and use a named
 compatibility equation only when discrete execution is needed.
 
@@ -696,7 +702,6 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
 | Lemma | Use |
 |-------|-----|
 | `probOutput_eq_zero_of_not_mem_support` | `x ∉ support mx → Pr[= x \| mx] = 0` |
-| `probOutput_bind_eq_tsum_subtype` | Restrict tsum to `support mx` |
 | `probOutput_bind_eq_sum_finSupport` | Finite sum over `finSupport` |
 
 ## Decision Tree: Which Lemma Do I Reach For?
@@ -716,7 +721,7 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
    → Otherwise: `probOutput_map_eq_tsum_subtype` or `probOutput_map_eq_sum_finSupport_ite`
 
 5. **Need to restrict a sum to support?**
-   → `probOutput_bind_eq_tsum_subtype` or `probOutput_bind_eq_sum_finSupport`
+   → `probOutput_bind_eq_sum_finSupport`
 
 6. **Continuation doesn't depend on result?**
    → `probOutput_bind_const` / `probEvent_bind_const`
@@ -859,6 +864,15 @@ to the `ProbComp` forms only because `Pr[⊥] = 0` there. New API filled along t
 `probOutput_map` (the `probOutput`/`<$>` companion to `probEvent_map`, `@[grind =]`), `support_guard`,
 and the `orElse` (`<|>`) probability lemmas for `OptionT (OracleComp spec)` (`probFailure_orElse` etc.).
 
+`VCVioTest/NativeProbabilityTactics.lean` and `VCVioTest/NativeMonadProbability.lean` are the
+measure-side counterparts of these two gates: the same families stated with `𝒟[…]` and `Pr{…}[…]`, under
+the same rules. Their dated guards record where the native sets are weaker than the discrete ones:
+`grind` has no Dirac, uniform or success-mass rules; a product singleton is not split into a
+rectangle; `simp` rewrites `(Set.univ : Set Bool)` to `{false, true}` ahead of the lossless-mass
+rule; the uniform event law is keyed on the `Pr{…}` bind form, which `simp` first normalises into a
+pushforward; and the support/mass bridges are applied by name. Closing one of these retires its
+guard in the same change.
+
 **Opting out downstream.** VCVio deliberately extends the *default* `grind` set — the monad laws
 above plus the probability/support bridges — and these tags are inherited by every project that
 imports it. All of the standard escape hatches work if a downstream `grind` call misbehaves:
@@ -947,7 +961,8 @@ normal form.
   boundaries; measure-native proofs without discrete compatibility keep their measure denotation.
 
 **What the gates enforce.** The gate files (`VCVioTest/ProbabilityTactics.lean`,
-`MonadProbability.lean`, `GrindFailFast.lean`, `Tactic/*.lean`, `EvalDist/*.lean`) state
+`MonadProbability.lean`, `NativeProbabilityTactics.lean`, `NativeMonadProbability.lean`,
+`GrindFailFast.lean`, `Tactic/*.lean`, `EvalDist/*.lean`) state
 "goal family → one terminal tactic" and are the gate for every change to these sets:
 
 1. *One terminal call.* A positive entry is `by <one tactic>` or a term: `simp`, `grind`,
@@ -980,7 +995,7 @@ library proofs got shorter; a set with no library caller is itself a finding.
 
 ## Common Mistakes
 
-1. **Missing probability spec classes**: on `OracleComp spec`, `evalSPMF`/`probOutput`/`Pr[...]` require `[IsProbabilitySpec spec]`. Uniform/cardinality lemmas and support-probability lemmas require `[IsUniformSpec spec]`, not just finite, inhabited answer types. Use `IsUniformSpec.ofFintypeInhabited spec` when a concrete finite inhabited spec should use uniform sampling. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output.
+1. **Missing probability spec classes**: on `OracleComp spec`, `𝒟[...]` and `Pr{...}[...]` require `[OracleSpec.IsMeasureSpec spec]` over measurable answer spaces, and uniform answers `[OracleSpec.IsUniformMeasureSpec spec]`, not just finite, nonempty answer types. Use `IsUniformMeasureSpec.ofFiniteNonempty spec` when a concrete finite spec should answer uniformly. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output. The deprecated `evalSPMF`/`probOutput`/`Pr[...]` façade requires the deprecated `[IsProbabilitySpec spec]`, and its cardinality lemmas the deprecated `[IsUniformSpec spec]`.
 
 2. **Carrying duplicate probability instances**: do not add a separate `[IsProbabilitySpec spec]` when `[IsUniformSpec spec]` is already in scope. `IsUniformSpec` extends `IsProbabilitySpec`; a second instance can make instance search ambiguous and may not describe the same distributions.
 

@@ -129,8 +129,7 @@ theorem multiple_le_single_add_bad_of_joint_law
   rw [verdict_law_congr _ _ hmultiple _ _ hbound,
     verdict_law_congr _ _ hsingle _ _ hbound,
     stateEvent_law_congr _ _ hbad _ _ hbound _ _ hmeas]
-  simpa only [evalDist_apply_singleton] using
-    multiple_le_single_add_bad (sessionsPerTag := sessionsPerTag)
-      out adversary qReader qTag hReader hTag
+  exact multiple_le_single_add_bad (sessionsPerTag := sessionsPerTag)
+    out adversary qReader qTag hReader hTag
 
 end PRFTagReader.Network

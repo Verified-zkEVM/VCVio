@@ -13,10 +13,11 @@ public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 
 The measure-side counterpart of `VCVioTest/ProbabilityTactics.lean`: goal families about the
 primary measure `𝒟[…]`, each closed by one terminal tactic, following the conventions of
-`CONTRIBUTING.md` (*Tactic Gate Files*). The contract it pins is that `simp` keeps the measure
-side in measure normal form: singleton, event and total masses stay `𝒟[mx] s`. Crossing into the
-retiring discrete façade is an explicit rewrite by `evalDist_apply_singleton`,
-`evalDist_apply_setOf` or `evalDist_apply_univ`. Inside `ProbComp.DiscreteCompatibility` an
+`docs/agents/probability.md` (*Normal forms and the tactic contract*). The contract it pins is
+that `simp` keeps the measure side in measure normal form: singleton, event and total masses stay
+`𝒟[mx] s`. Crossing into the deprecated discrete notation is an explicit rewrite by
+`evalDist_apply_singleton`, `evalDist_apply_setOf` or `evalDist_apply_univ`. Inside
+`ProbComp.DiscreteCompatibility` an
 integral against `𝒟[mx]` becomes `expectedValue mx g`; native integrals retain their
 measure-theoretic normal form. The Giry laws for `bind`/`map` stay out of default `simp`
 on both sides, and the integral form of a bind is an intermediate, not a target.

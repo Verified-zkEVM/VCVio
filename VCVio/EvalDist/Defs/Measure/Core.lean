@@ -189,6 +189,23 @@ theorem evalDist_map_apply_of_discrete {m : Type u → Type v} [Monad m] [Lawful
     (hs : MeasurableSet s) : 𝒟[f <$> mx] s = 𝒟[mx] (f ⁻¹' s) :=
   evalDist_map_apply mx Measurable.of_discrete hs
 
+/-- Computations with the same output measure in the discrete structure keep equal output
+measures after a common continuation. -/
+theorem evalDist_bind_congr_of_evalDist_eq {m : Type u → Type v} [Monad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace β]
+    (mx my : m α) (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my])) (f : α → m β) :
+    𝒟[mx >>= f] = 𝒟[my >>= f] := by
+  let : MeasurableSpace α := ⊤
+  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete, h]
+
+/-- Computations with the same output measure in the discrete structure keep equal output
+measures under a common map. -/
+theorem evalDist_map_congr_of_evalDist_eq {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace β]
+    (mx my : m α) (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my])) (f : α → β) :
+    𝒟[f <$> mx] = 𝒟[f <$> my] := by
+  simpa only [map_eq_bind_pure_comp] using evalDist_bind_congr_of_evalDist_eq mx my h (pure ∘ f)
+
 /-- Independent sequential draws denote Mathlib's product measure. -/
 theorem evalDist_pair {m : Type u → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]

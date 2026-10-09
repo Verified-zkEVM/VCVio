@@ -40,20 +40,26 @@ namespace SymmEncAlg
 variable {m : Type → Type u} [Monad m] [EvalDistSemantics m] {M K C : Type}
 
 /-- An encryption scheme is complete if decryption recovers every message with
-probability `1`: each round trip denotes the Dirac measure at the input message. -/
-def Complete [MeasurableSpace M] (encAlg : SymmEncAlg m M K C) : Prop :=
+probability `1`: each round trip denotes the Dirac measure at the input message. Messages carry
+the discrete measurable structure, so the round trip is determined on every event. -/
+def Complete (encAlg : SymmEncAlg m M K C) : Prop :=
+  letI : MeasurableSpace M := ⊤
   ∀ msg : M, 𝒟[encAlg.completenessExperiment msg] = Measure.dirac (some msg)
 
-/-- Channel form of perfect secrecy: every message induces the same ciphertext measure. -/
-def ciphertextRowsEqualAt [MeasurableSpace C] (encAlg : SymmEncAlg m M K C) : Prop :=
+/-- Channel form of perfect secrecy: every message induces the same ciphertext measure.
+Ciphertexts carry the discrete measurable structure, so the rows agree on every event. -/
+def ciphertextRowsEqualAt (encAlg : SymmEncAlg m M K C) : Prop :=
+  let : MeasurableSpace C := ⊤
   ∀ msg₀ msg₁ : M,
     𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment msg₀] =
       𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment msg₁]
 
 /-- Standard perfect secrecy expressed as independence: for every lossless message sampler, the
-joint message/ciphertext measure is the product of the message and ciphertext marginals. -/
-def perfectSecrecyAt [MeasurableSpace M] [MeasurableSpace C] (encAlg : SymmEncAlg m M K C) :
-    Prop :=
+joint message/ciphertext measure is the product of the message and ciphertext marginals.
+Messages and ciphertexts carry the discrete measurable structure. -/
+def perfectSecrecyAt (encAlg : SymmEncAlg m M K C) : Prop :=
+  letI : MeasurableSpace M := ⊤
+  let : MeasurableSpace C := ⊤
   ∀ mgen : m M, IsProbabilityMeasure 𝒟[mgen] →
     𝒟[encAlg.perfectSecrecyExperiment mgen] =
       𝒟[mgen].prod 𝒟[encAlg.perfectSecrecyCipherExperiment mgen]
@@ -73,10 +79,14 @@ theorem evalDist_perfectSecrecyCipherExperiment_of_rows (encAlg : SymmEncAlg m M
   rw [encAlg.perfectSecrecyCipherExperiment_eq_bind mgen, evalDist_bind_of_discrete]
   simp only [hrow, Measure.bind_const, measure_univ, one_smul]
 
+end rows
+
 /-- Equal ciphertext rows imply perfect secrecy in the independence form. -/
-theorem perfectSecrecyAt_of_ciphertextRowsEqualAt [Nonempty M] (encAlg : SymmEncAlg m M K C)
-    (hrows : encAlg.ciphertextRowsEqualAt) :
+theorem perfectSecrecyAt_of_ciphertextRowsEqualAt [LawfulMonad m] [Nonempty M]
+    (encAlg : SymmEncAlg m M K C) (hrows : encAlg.ciphertextRowsEqualAt) :
     encAlg.perfectSecrecyAt := by
+  let : MeasurableSpace M := ⊤
+  let : MeasurableSpace C := ⊤
   intro mgen hmgen
   let row := 𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment (Classical.arbitrary M)]
   have hrow : ∀ msg, 𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment msg] = row :=
@@ -86,8 +96,6 @@ theorem perfectSecrecyAt_of_ciphertextRowsEqualAt [Nonempty M] (encAlg : SymmEnc
   refine Measure.bind_congr_right (Filter.Eventually.of_forall fun msg ↦ ?_)
   dsimp only
   rw [evalDist_map _ measurable_prodMk_left, hrow]
-
-end rows
 
 /-- **Shannon's theorem.** If the key is uniform and encryption is deterministic and bijective in
 the key for each message, then every ciphertext row is uniform. -/
@@ -109,13 +117,15 @@ theorem evalDist_perfectSecrecyCipherGivenMsgExperiment_of_uniformKey_of_bijecti
 bijective in the key give equal ciphertext rows. -/
 theorem ciphertextRowsEqualAt_of_uniformKey_of_bijective
     [MeasurableSpace K] [DiscreteMeasurableSpace K] [MeasurableSingletonClass K]
-    [MeasurableSpace C] [MeasurableSingletonClass C]
+    [hC : MeasurableSpace C] [DiscreteMeasurableSpace C]
     [Finite K] [Finite C] [Nonempty K] [Nonempty C]
     (encAlg : SymmEncAlg m M K C) (enc : K → M → C)
     (hkey : 𝒟[encAlg.keygen] = uniformOn Set.univ)
     (henc : ∀ k msg, 𝒟[encAlg.encrypt k msg] = Measure.dirac (enc k msg))
     (hbij : ∀ msg, Function.Bijective fun k ↦ enc k msg) :
     encAlg.ciphertextRowsEqualAt := by
+  obtain rfl : hC = ⊤ := top_le_iff.mp fun _ _ ↦ MeasurableSet.of_discrete
+  let : MeasurableSpace C := ⊤
   intro msg₀ msg₁
   rw [evalDist_perfectSecrecyCipherGivenMsgExperiment_of_uniformKey_of_bijective encAlg enc
       hkey henc hbij msg₀,

@@ -8,9 +8,9 @@ module
 
 public import VCVio.CryptoFoundations.Fischlin.Completeness
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
-import all VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
 import VCVio.EvalDist.IndepProductMeasure
-import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+import all VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
+import VCVio.OracleComp.Constructions.SampleableType.Basic
 import Mathlib.Probability.UniformOn
 
 /-!
@@ -91,43 +91,6 @@ private lemma smallSumCount_le :
       rw [h1]; exact Nat.choose_le_choose _ (by omega)
   · rw [Finset.card_range, smul_eq_mul]
 
-/-- The probability that `n` IID uniform draws land in a (decidable) target set is exactly the
-size of the target set over `(Fintype.card α) ^ n`. -/
-private lemma probEvent_mOfFn_uniformSample {α : Type} [SampleableType α] [Fintype α]
-    (n : ℕ) (p : (Fin n → α) → Prop) [DecidablePred p] :
-    Pr[p | Fin.mOfFn n (fun _ => ($ᵗ α : ProbComp α))]
-      = ((Finset.univ.filter p).card : ℝ≥0∞) / (Fintype.card α : ℝ≥0∞) ^ n := by
-  let : MeasurableSpace α := ⊤
-  rw [← evalDist_apply_setOf,
-    evalDist_mOfFn_const_uniform n ($ᵗ α : ProbComp α) evalDist_uniformSample,
-    ProbabilityTheory.uniformOn_univ]
-  rw [show {x : Fin n → α | p x} = ((Finset.univ.filter p : Finset (Fin n → α)) : Set _) by
-    ext x; simp]
-  rw [MeasureTheory.Measure.count_apply_finset]
-  simp [Nat.cast_pow]
-
-/-- **Untouched slot completes with probability exactly `μ`.** The probability that `ρ` fresh
-uniform `Fin (2^b)` draws sum to at most `S` is exactly `smallSumCount ρ b S / (2^b)^ρ`. -/
-private lemma probEvent_sum_le_mOfFn_uniform :
-    Pr[fun v => ∑ i, (v i).val ≤ S | Fin.mOfFn ρ (fun _ => $ᵗ (Fin (2 ^ b)))]
-      = (smallSumCount ρ b S : ℝ≥0∞) / ((2 ^ b : ℕ) : ℝ≥0∞) ^ ρ := by
-  rw [probEvent_mOfFn_uniformSample, Fintype.card_fin, smallSumCount]
-
-/-- **Conditional tail.** Given a revealed partial sum `T ≤ S`, the probability that `k` fresh
-uniform draws bring the total to at most `S` is exactly `smallSumCount k b (S - T) / (2^b)^k`.
-This is the per-slot completion probability with some coordinates already revealed, used by the
-potential-function step of the knowledge-soundness bound. -/
-private lemma probEvent_add_sum_le_mOfFn_uniform (k T : ℕ) (hT : T ≤ S) :
-    Pr[fun v => T + ∑ i, (v i).val ≤ S | Fin.mOfFn k (fun _ => $ᵗ (Fin (2 ^ b)))]
-      = (smallSumCount k b (S - T) : ℝ≥0∞) / ((2 ^ b : ℕ) : ℝ≥0∞) ^ k := by
-  have hfilter :
-      (Finset.univ.filter (fun v : Fin k → Fin (2 ^ b) => T + ∑ i, (v i).val ≤ S))
-        = (Finset.univ.filter (fun v : Fin k → Fin (2 ^ b) => ∑ i, (v i).val ≤ S - T)) :=
-    Finset.filter_congr fun v _ => by omega
-  rw [probEvent_mOfFn_uniformSample k
-      (fun v : Fin k → Fin (2 ^ b) => T + ∑ i, (v i).val ≤ S),
-    Fintype.card_fin, smallSumCount, hfilter]
-
 /-- **Mixed-cache query vector.** Simulating a `Fin.mOfFn` of random-oracle re-queries at
 pairwise distinct records on a cache that stores exactly the `hits`-marked records: each hit
 reads its cached value deterministically; each miss draws a fresh uniform `Fin (2^b)` (and
@@ -143,31 +106,34 @@ private lemma run'_mOfFn_query_mixed [DecidableEq Stmt] [DecidableEq Commit] [De
     (f : Fin n → Fin (2 ^ b) → β)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (hcache : ∀ i, cache (records i) = hits i) :
-    𝒮[(simulateQ (fischlinImpl ρ b M)
+    letI : MeasurableSpace (Fin n → β) := ⊤
+    𝒟[(simulateQ (fischlinImpl ρ b M)
         (Fin.mOfFn n fun i => do
           let h ← HasQuery.query (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M) (records i)
           pure (f i h))).run' cache]
-      = 𝒮[(fun u => fun i => f i (u i)) <$>
+      = 𝒟[(fun u => fun i => f i (u i)) <$>
           Fin.mOfFn n fun i =>
             match hits i with
             | some h => (pure h : ProbComp (Fin (2 ^ b)))
             | none => $ᵗ Fin (2 ^ b)] := by
   induction n generalizing cache with
   | zero =>
+      let : MeasurableSpace (Fin 0 → β) := ⊤
       simp only [Fin.mOfFn, simulateQ_pure, StateT.run'_pure', map_pure]
-      exact congrArg (fun z => 𝒮[(pure z : ProbComp (Fin 0 → β))]) (funext fun i => i.elim0)
+      exact congrArg (fun z => 𝒟[(pure z : ProbComp (Fin 0 → β))]) (funext fun i => i.elim0)
   | succ n ih =>
+      let : MeasurableSpace (Fin (n + 1) → β) := ⊤
       -- Tail step, shared by both branches: with head answer `x` and any cache `c` storing
       -- `hits ∘ Fin.succ` at the tail records, the tail simulation matches the model tail.
       have hstep : ∀ (x : Fin (2 ^ b))
           (c : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache),
           (∀ j : Fin n, c (records j.succ) = hits j.succ) →
-          𝒮[(simulateQ (fischlinImpl ρ b M)
+          𝒟[(simulateQ (fischlinImpl ρ b M)
               (Fin.mOfFn n (fun j => do
                 let h ← HasQuery.query (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M)
                   (records j.succ)
                 pure (f j.succ h)) >>= fun rest => pure (Fin.cons (f 0 x) rest))).run' c]
-            = 𝒮[(fun u : Fin n → Fin (2 ^ b) => fun i : Fin (n + 1) =>
+            = 𝒟[(fun u : Fin n → Fin (2 ^ b) => fun i : Fin (n + 1) =>
                   f i ((Fin.cons x u : Fin (n + 1) → Fin (2 ^ b)) i)) <$>
                 Fin.mOfFn n fun j =>
                   match hits j.succ with
@@ -175,13 +141,13 @@ private lemma run'_mOfFn_query_mixed [DecidableEq Stmt] [DecidableEq Commit] [De
                   | none => $ᵗ Fin (2 ^ b)] := by
         intro x c hc
         rw [bind_pure_comp, simulateQ_map, StateT.run'_map']
-        refine (evalSPMF_map_eq_of_evalSPMF_eq
+        refine (evalDist_map_congr_of_evalDist_eq _ _
           (ih (fun j => records j.succ)
             (fun j₁ j₂ hj => Fin.succ_injective n (hinj hj))
             (fun j => hits j.succ) (fun j => f j.succ) c hc)
           (Fin.cons (α := fun _ => β) (f 0 x))).trans ?_
         rw [Functor.map_map]
-        refine congrArg evalSPMF (congrArg (· <$> _) ?_)
+        refine congrArg (fun mx => 𝒟[mx]) (congrArg (· <$> _) ?_)
         funext u i
         refine Fin.cases ?_ (fun k => ?_) i
         · simp [Fin.cons_zero]
@@ -211,8 +177,7 @@ private lemma run'_mOfFn_query_mixed [DecidableEq Stmt] [DecidableEq Commit] [De
           simp only [uniformSampleImpl, bind_map_left, pure_bind, simulateQ_pure,
             StateT.run_pure, bind_assoc]
           simp only [hh, map_bind]
-          rw [evalSPMF_bind, evalSPMF_bind]
-          refine congrArg (𝒮[$ᵗ Fin (2 ^ b)] >>= ·) (funext fun x => ?_)
+          refine evalDist_bind_congr _ _ _ fun x => ?_
           rw [hstep x (cache.cacheQuery (records 0) x) (hcache' x)]
           simp only [map_pure, bind_pure_comp]
 
@@ -227,16 +192,18 @@ private lemma run'_mOfFn_query_mixed_bind
     (f : Fin n → Fin (2 ^ b) → β) (V : (Fin n → β) → γ)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (hcache : ∀ i, cache (records i) = hits i) :
-    𝒮[(simulateQ (fischlinImpl ρ b M)
+    letI : MeasurableSpace γ := ⊤
+    𝒟[(simulateQ (fischlinImpl ρ b M)
         ((Fin.mOfFn n fun i => do
           let h ← HasQuery.query (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M) (records i)
           pure (f i h)) >>= fun results => pure (V results))).run' cache]
-      = 𝒮[(Fin.mOfFn n fun i =>
+      = 𝒟[(Fin.mOfFn n fun i =>
             match hits i with
             | some h => (pure h : ProbComp (Fin (2 ^ b)))
             | none => $ᵗ Fin (2 ^ b)) >>= fun u => pure (V fun i => f i (u i))] := by
+  let : MeasurableSpace γ := ⊤
   rw [bind_pure_comp V, simulateQ_map, StateT.run'_map']
-  refine (evalSPMF_map_eq_of_evalSPMF_eq
+  refine (evalDist_map_congr_of_evalDist_eq _ _
     (run'_mOfFn_query_mixed ρ b M n records hinj hits f cache hcache) V).trans ?_
   rw [Functor.map_map, bind_pure_comp]
 
@@ -252,10 +219,10 @@ private lemma verify_run'_mixed [DecidableEq Stmt] [DecidableEq Commit] [Decidab
     (hits : Fin ρ → Option (Fin (2 ^ b)))
     (hcache : ∀ i, cache (⟨pk, msg, List.ofFn (fun j => (sig j).1), i, (sig i).2.1, (sig i).2.2⟩ :
       FischlinROInput Stmt Commit Chal Resp ρ M) = hits i) :
-    𝒮[(simulateQ (fischlinImpl ρ b M)
+    𝒟[(simulateQ (fischlinImpl ρ b M)
         ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).verify pk msg sig)).run' cache]
-      = 𝒮[(Fin.mOfFn ρ fun i =>
+      = 𝒟[(Fin.mOfFn ρ fun i =>
             match hits i with
             | some h => (pure h : ProbComp (Fin (2 ^ b)))
             | none => $ᵗ Fin (2 ^ b)) >>= fun u =>
@@ -303,38 +270,40 @@ private lemma foldl_add_eq_sum (u : Fin ρ → Fin (2 ^ b)) :
 /-- The product of per-coordinate hit/miss probabilities: zero unless `u` extends the hits,
 in which case it is `(2^b)⁻¹` per miss. -/
 private lemma prob_extend_hits (hits : Fin ρ → Option (Fin (2 ^ b))) (u : Fin ρ → Fin (2 ^ b)) :
-    Pr[= u | Fin.mOfFn ρ fun i =>
+    Pr{let v ← (Fin.mOfFn ρ fun i =>
         match hits i with
         | some h => (pure h : ProbComp (Fin (2 ^ b)))
-        | none => $ᵗ Fin (2 ^ b)]
+        | none => $ᵗ Fin (2 ^ b))}[v = u]
       = if ∀ i h, hits i = some h → u i = h
           then (((2 ^ b : ℕ) : ℝ≥0∞))⁻¹ ^ (Finset.univ.filter fun i : Fin ρ => hits i = none).card
           else 0 := by
-  rw [← evalDist_apply_singleton, evalDist_mOfFn, MeasureTheory.Measure.pi_singleton]
-  simp only [evalDist_apply_singleton]
+  rw [prEvent_eq_evalDist_singleton, evalDist_mOfFn, MeasureTheory.Measure.pi_singleton]
   by_cases hcomp : ∀ i h, hits i = some h → u i = h
   · rw [ite_eq_left hcomp]
     have hfactor : ∀ i : Fin ρ,
-        Pr[= u i | (match hits i with
+        𝒟[(match hits i with
           | some h => (pure h : ProbComp (Fin (2 ^ b)))
-          | none => $ᵗ Fin (2 ^ b))]
+          | none => $ᵗ Fin (2 ^ b))] {u i}
           = if hits i = none then (((2 ^ b : ℕ) : ℝ≥0∞))⁻¹ else 1 := by
       intro i
       cases hh : hits i with
       | none =>
           simp only [ite_true]
-          rw [probOutput_uniformSample, Fintype.card_fin]
+          rw [SampleableType.evalDist_uniformSample_singleton, Fintype.card_fin]
       | some h =>
           have hu : u i = h := hcomp i h hh
-          rw [probOutput_pure, ite_eq_left hu, ite_eq_right (Option.some_ne_none h)]
+          simp only [evalDist_pure, hu]
+          rw [MeasureTheory.Measure.dirac_apply_of_mem (Set.mem_singleton h),
+            ite_eq_right (Option.some_ne_none h)]
     rw [Finset.prod_congr rfl fun i _ => hfactor i, Finset.prod_ite, Finset.prod_const,
       Finset.prod_const_one, mul_one]
   · rw [ite_eq_right hcomp]
     push Not at hcomp
     obtain ⟨i, h, hh, hne⟩ := hcomp
     refine Finset.prod_eq_zero (Finset.mem_univ i) ?_
-    simp only [hh]
-    rw [probOutput_pure, ite_eq_right hne]
+    simp only [hh, evalDist_pure]
+    rw [MeasureTheory.Measure.dirac_apply,
+      Set.indicator_of_notMem (by simpa using Ne.symm hne)]
 
 /-- **The ψ leaf (exact).** The probability that the Fischlin verifier accepts on a cache
 storing exactly the `hits`-marked records is EXACTLY the σ-verification indicator times the
@@ -342,7 +311,7 @@ number of hit-compatible small-sum hash tuples over the miss-space volume `(2^b)
 
 For `hits = fun _ => none` (the all-fresh case) the bound specializes to
 `smallSumCount ρ b S / (2^b)^ρ` via `partialSmallSumCount_none`. -/
-private lemma verify_probOutput_true_mixed
+private lemma verify_evalDist_true_mixed
     [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp] [DecidableEq M]
     [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
     (pk : Stmt) (msg : M)
@@ -351,33 +320,33 @@ private lemma verify_probOutput_true_mixed
     (hits : Fin ρ → Option (Fin (2 ^ b)))
     (hcache : ∀ i, cache (⟨pk, msg, List.ofFn (fun j => (sig j).1), i, (sig i).2.1, (sig i).2.2⟩ :
       FischlinROInput Stmt Commit Chal Resp ρ M) = hits i) :
-    Pr[= true | (simulateQ (fischlinImpl ρ b M)
+    𝒟[(simulateQ (fischlinImpl ρ b M)
         ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
-          σ hr ρ b S M).verify pk msg sig)).run' cache]
+          σ hr ρ b S M).verify pk msg sig)).run' cache] {true}
       = (if ((List.finRange ρ).all fun i => σ.verify pk (sig i).1 (sig i).2.1 (sig i).2.2) = true
           then 1 else 0) *
         (partialSmallSumCount ρ b hits S : ℝ≥0∞) /
           (((2 ^ b : ℕ) : ℝ≥0∞)) ^ (Finset.univ.filter fun i : Fin ρ => hits i = none).card := by
-  rw [probOutput_def, verify_run'_mixed σ hr ρ b S M pk msg sig cache hits hcache,
-    ← probOutput_def, probOutput_bind_eq_sum_fintype]
+  rw [verify_run'_mixed σ hr ρ b S M pk msg sig cache hits hcache,
+    ← prEvent_eq_evalDist_singleton, prEvent_bind_eq_sum_fintype]
   by_cases haV :
       ((List.finRange ρ).all fun i => σ.verify pk (sig i).1 (sig i).2.1 (sig i).2.2) = true
   · -- σ-verification accepted: the verdict is exactly the small-sum event.
     have hterm : ∀ u : Fin ρ → Fin (2 ^ b),
-        Pr[= u | Fin.mOfFn ρ fun i =>
+        Pr{let v ← (Fin.mOfFn ρ fun i =>
             match hits i with
             | some h => (pure h : ProbComp (Fin (2 ^ b)))
-            | none => $ᵗ Fin (2 ^ b)] *
-          Pr[= true | (pure
+            | none => $ᵗ Fin (2 ^ b))}[v = u] *
+          Pr{let r ← (pure
             (((List.finRange ρ).all fun i => σ.verify pk (sig i).1 (sig i).2.1 (sig i).2.2) &&
               decide ((List.finRange ρ).foldl (fun acc i => acc + (u i).val) 0 ≤ S)) :
-            ProbComp Bool)]
+            ProbComp Bool)}[r = true]
           = if (∀ i h, hits i = some h → u i = h) ∧ ∑ i, (u i).val ≤ S
               then (((2 ^ b : ℕ) : ℝ≥0∞))⁻¹ ^
                 (Finset.univ.filter fun i : Fin ρ => hits i = none).card
               else 0 := by
       intro u
-      rw [prob_extend_hits ρ b hits u, probOutput_pure, foldl_add_eq_sum ρ b u, haV]
+      rw [prob_extend_hits ρ b hits u, prEvent_pure, foldl_add_eq_sum ρ b u, haV]
       by_cases h3 : ∀ i h, hits i = some h → u i = h <;>
         by_cases h2 : (∑ i, (u i).val) ≤ S <;>
         simp [h3, h2]
@@ -389,17 +358,17 @@ private lemma verify_probOutput_true_mixed
         ((List.finRange ρ).all fun i => σ.verify pk (sig i).1 (sig i).2.1 (sig i).2.2) = false :=
       Bool.eq_false_iff.mpr haV
     have hterm0 : ∀ u : Fin ρ → Fin (2 ^ b),
-        Pr[= u | Fin.mOfFn ρ fun i =>
+        Pr{let v ← (Fin.mOfFn ρ fun i =>
             match hits i with
             | some h => (pure h : ProbComp (Fin (2 ^ b)))
-            | none => $ᵗ Fin (2 ^ b)] *
-          Pr[= true | (pure
+            | none => $ᵗ Fin (2 ^ b))}[v = u] *
+          Pr{let r ← (pure
             (((List.finRange ρ).all fun i => σ.verify pk (sig i).1 (sig i).2.1 (sig i).2.2) &&
               decide ((List.finRange ρ).foldl (fun acc i => acc + (u i).val) 0 ≤ S)) :
-            ProbComp Bool)]
+            ProbComp Bool)}[r = true]
           = 0 := by
       intro u
-      rw [haV', probOutput_pure]
+      rw [haV', prEvent_pure]
       simp
     rw [Finset.sum_congr rfl fun u _ => hterm0 u, Finset.sum_const_zero, ite_eq_right haV, zero_mul,
       ENNReal.zero_div]
@@ -427,8 +396,8 @@ private lemma ksVerify_true_support_allVerified
         σ hr ρ b S M).verify x msg π)).run' cache) := by
     rw [StateT.run', support_map]
     exact ⟨(true, c'), h, rfl⟩
-  have hpos := probOutput_pos _ _ hmem
-  rw [verify_probOutput_true_mixed σ hr ρ b S M x msg π cache
+  have hpos := (mem_support_iff_evalDist_singleton_pos _ _).mp hmem
+  rw [verify_evalDist_true_mixed σ hr ρ b S M x msg π cache
     (fun j => cache (⟨x, msg, List.ofFn (fun k => (π k).1), j, (π j).2.1, (π j).2.2⟩ :
       FischlinROInput Stmt Commit Chal Resp ρ M)) (fun j => rfl),
     ite_eq_right hall, zero_mul, ENNReal.zero_div] at hpos
@@ -445,9 +414,9 @@ private lemma knowledgeSoundnessExperiment_bad_le_misses'
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
         (FischlinProof Commit Chal Resp ρ))
     (x : Stmt) (msg : M) :
-    Pr[= true | knowledgeSoundnessExperiment σ hr ρ b S M prover x msg] ≤
-      Pr[fun out => out.2 = true ∧ fischlinFindWitness σ ρ b M x out.1.1 out.1.2 = none
-        | ksSample σ hr ρ b S M prover x msg] :=
+    𝒟[knowledgeSoundnessExperiment σ hr ρ b S M prover x msg] {true} ≤
+      Pr{let out ← ksSample σ hr ρ b S M prover x msg}[out.2 = true ∧
+        fischlinFindWitness σ ρ b M x out.1.1 out.1.2 = none] :=
   knowledgeSoundnessExperiment_bad_le_misses σ hr ρ b S M hss prover x msg
     (fun π cache c' h => ksVerify_true_support_allVerified σ hr ρ b S M x msg π cache c' h)
 

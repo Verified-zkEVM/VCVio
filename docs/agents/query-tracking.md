@@ -130,7 +130,6 @@ Read this top-down before adding a new instrumentation wrapper. The rule of thum
 Defining the wrapper through this chain provides structural projection and support equations,
 including `proj_simulateQ_*` and `support_proj_simulateQ_*`, plus query-bound transfer. These
 equations preserve any observation of the projected program, including its chosen-space measure.
-Older facade modules also export their remaining scalar compatibility corollaries.
 
 See `docs/agents/oracle-comp.md` for the full table of combinators and the underlying theory.
 

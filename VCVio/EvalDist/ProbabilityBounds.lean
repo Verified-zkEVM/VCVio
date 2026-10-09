@@ -86,6 +86,24 @@ theorem prEvent_exists_finset_le {ι : Type} (s : Finset ι) (mx : m α) (p : ι
   obtain ⟨i, hi, hp⟩ := hx
   exact Set.mem_biUnion hi hp
 
+/-- Over a finite type of values, the event that an optional observation is present has the total
+probability of its individual values. -/
+theorem prEvent_isSome_eq_sum {γ : Type} [Fintype γ] (mx : m α) (f : α → Option γ) :
+    Pr{let x ← mx}[(f x).isSome] = ∑ k, Pr{let x ← mx}[f x = some k] := by
+  let : MeasurableSpace α := ⊤
+  simp only [prEvent_eq_evalDist_of_discrete]
+  rw [← measure_biUnion_finset (fun i _ j _ hij ↦ Set.disjoint_left.mpr fun _ hi hj ↦
+      hij (Option.some.inj (hi.symm.trans hj))) fun _ _ ↦ MeasurableSet.of_discrete]
+  congr 1
+  ext x
+  simp [Option.isSome_iff_exists]
+
+/-- Disjoint selector events of one computation have total probability at most one. -/
+theorem sum_prEvent_eq_some_le_one {γ : Type} [Fintype γ] (mx : m α) (f : α → Option γ) :
+    ∑ k, Pr{let x ← mx}[f x = some k] ≤ 1 := by
+  rw [← prEvent_isSome_eq_sum]
+  exact prEvent_le_one _ _
+
 /-- Union bound over a finite type. -/
 theorem prEvent_exists_le {ι : Type} [Fintype ι] (mx : m α) (p : ι → α → Prop) :
     Pr{let x ← mx}[∃ i, p i x] ≤ ∑ i, Pr{let x ← mx}[p i x] := by
@@ -200,6 +218,40 @@ theorem prEvent_bind_le_of_forall_le (mx : m α) (f : α → m β) (q : β → P
       ≤ ∫⁻ _, ε ∂𝒟[mx] := lintegral_mono h
     _ = ε * 𝒟[mx] Set.univ := lintegral_const ε
     _ ≤ ε := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)
+
+/-- A pointwise comparison of continuation events survives a common draw. -/
+theorem prEvent_bind_mono_of_forall_le {γ : Type} (mx : m α) (f : α → m β) (g : α → m γ)
+    (p : β → Prop) (q : γ → Prop) (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y]) :
+    Pr{let y ← mx >>= f}[p y] ≤ Pr{let y ← mx >>= g}[q y] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_bind_eq_lintegral_of_discrete]
+  exact lintegral_mono h
+
+/-- A continuation event bounded by `ε` where `p` holds, and null where it fails, is bounded after
+a common draw by the probability of `p` times `ε`. -/
+theorem prEvent_bind_le_prEvent_mul_of_forall_le (mx : m α) (f : α → m β) (p : α → Prop)
+    (q : β → Prop) {ε : ℝ≥0∞} (h₁ : ∀ a, p a → Pr{let y ← f a}[q y] ≤ ε)
+    (h₂ : ∀ a, ¬ p a → Pr{let y ← f a}[q y] = 0) :
+    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] * ε := by
+  classical
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_eq_evalDist_of_discrete, mul_comm,
+    ← lintegral_indicator_const MeasurableSet.of_discrete]
+  refine lintegral_mono fun a => ?_
+  by_cases hp : p a
+  · simpa [Set.indicator_of_mem (show a ∈ {x | p x} from hp)] using h₁ a hp
+  · rw [Set.indicator_of_notMem (show a ∉ {x | p x} from hp), h₂ a hp]
+
+/-- A pointwise split of a continuation event into two other continuation events survives a
+common draw. -/
+theorem prEvent_bind_le_add_of_forall_le {γ δ : Type} (mx : m α) (f : α → m β)
+    (g : α → m γ) (k : α → m δ) (p : β → Prop) (q : γ → Prop) (r : δ → Prop)
+    (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y] + Pr{let y ← k a}[r y]) :
+    Pr{let y ← mx >>= f}[p y] ≤ Pr{let y ← mx >>= g}[q y] + Pr{let y ← mx >>= k}[r y] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_bind_eq_lintegral_of_discrete,
+    prEvent_bind_eq_lintegral_of_discrete, ← lintegral_add_left Measurable.of_discrete]
+  exact lintegral_mono h
 
 /-- A uniform lower bound on the event of every continuation bounds the event after a lossless
 common draw. -/

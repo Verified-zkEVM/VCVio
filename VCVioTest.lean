@@ -34,7 +34,7 @@ public import VCVioTest.FiatShamirAbort
 public import VCVioTest.FiatShamirKnowledgeExtraction
 public import VCVioTest.FischlinExpectedCost
 public import VCVioTest.FischlinExtraction
-public import VCVioTest.ForkMeasure
+public import VCVioTest.ForkBounds
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.GrindFailFast
 public import VCVioTest.ITSR
@@ -55,6 +55,7 @@ public import VCVioTest.ModuleAPI.Counting
 public import VCVioTest.ModuleAPI.Heap
 public import VCVioTest.MonadProbability
 public import VCVioTest.Native
+public import VCVioTest.NativeMonadProbability
 public import VCVioTest.NativeProbabilityTactics
 public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.PreservesInv

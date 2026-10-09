@@ -9,7 +9,6 @@ public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.QueryTracking.Unpredictability
-public import VCVio.EvalDist.TVDist
 public import VCVio.ProgramLogic.Notation
 public import VCVio.ProgramLogic.Relational.SimulateQ
 
@@ -60,9 +59,6 @@ noncomputable instance {M S C : Type} [Fintype C] [Inhabited C]
   OracleSpec.IsUniformMeasureSpec.ofFiniteNonempty _
 
 variable {M S C : Type} [DecidableEq M] [DecidableEq S] [Fintype C] [Inhabited C]
-
-noncomputable instance : IsUniformSpec (CMOracle M S C) :=
-  IsUniformSpec.ofFintypeInhabited _
 
 /-- Commit to message `m` with salt `s` by querying the random oracle at `(m, s)`. -/
 def CMCommit (m : M) (s : S) : OracleComp (CMOracle M S C) C :=

@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.ProgramLogic.Relational.SimulateQ.Basic
+public import VCVio.ProgramLogic.Relational.SimulateQ.Coupling
 public import VCVio.ProgramLogic.Relational.SimulateQ.UntilBad
 public import VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 public import VCVio.ProgramLogic.Relational.SimulateQ.StateDependent
@@ -42,9 +42,7 @@ carrying it as an unbounded remainder.
   implementations agree on steps between good states and keep bad states bad, the total variation
   between their simulations is bounded by the probability of ending in a bad state. The handlers
   may disagree on the step that sets a bad flag, and `_of_run_eq` / `_of_evalDist_eq` take
-  agreement off bad input states. `tvDist_simulateQ_le_probEvent_bad` states the discrete
-  version, and `tvDist_simulateQ_le_probEvent_output_bad` the one whose flag lives in the
-  output.
+  agreement off bad input states.
 - `tvDist_simulateQ_le_qeps_plus_probEvent_output_bad` and
   `tvDist_simulateQ_le_queryBound_mul_slack_plus_probEvent_bad`: ε-perturbed refinements, where
   the two implementations may differ by up to `ε` on each (charged) query.

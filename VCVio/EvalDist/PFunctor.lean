@@ -32,12 +32,15 @@ transparency when applying the generic `FreeM.liftM_lift` law. -/
 attribute [local implicit_reducible] SetM
 
 /-- Per-operation probability distributions for a polynomial interface. -/
+@[deprecated "VCVio retiring probability API: use PFunctor.IsMeasureSpec" (since := "2026-09-27")]
 class IsProbabilitySpec (P : PFunctor.{uA, u}) where
   /-- The distribution of directions available at an operation. -/
   toPMF : Handler PMF P
 
 /-- A finitely branching polynomial interface whose operation responses use
 the canonical uniform distribution. -/
+@[deprecated "VCVio retiring probability API: use PFunctor.IsMeasureSpec.uniformOfFiniteNonempty"
+  (since := "2026-09-27")]
 class IsUniformSpec (P : PFunctor.{uA, u}) extends IsProbabilitySpec P where
   /-- Every direction type is finite. -/
   fintype : ∀ a, Fintype (P.B a)
@@ -52,7 +55,8 @@ attribute [reducible, instance] IsUniformSpec.fintype IsUniformSpec.inhabited
 /-- Construct uniform probability semantics from finite, inhabited direction
 types. This is deliberately not an instance: probability semantics remain an
 explicit opt-in. -/
-@[reducible]
+@[deprecated "VCVio retiring probability API: use PFunctor.IsMeasureSpec.uniformOfFiniteNonempty"
+  (since := "2026-09-27"), reducible]
 noncomputable def IsUniformSpec.ofFintypeInhabited (P : PFunctor.{uA, u})
     [hF : ∀ a, Fintype (P.B a)] [hI : ∀ a, Inhabited (P.B a)] : IsUniformSpec P where
   toPMF operation := PMF.uniformOfFintype (P.B operation)

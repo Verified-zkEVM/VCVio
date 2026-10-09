@@ -8,7 +8,7 @@ module
 public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.ProgramLogic.Tactics.Relational
-public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVioWidgets.GameHop.Panel
 
 /-!
