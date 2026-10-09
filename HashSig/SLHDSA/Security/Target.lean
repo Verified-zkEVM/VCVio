@@ -49,16 +49,22 @@ transcript of one execution, `SignatureAlg.UnforgeableTranscript` at the SLH-DSA
 ## The target
 
 `SecurityTarget core e optRand c r` bounds the advantage by `securityBound`:
-`(qh + 1) · targetCoverBound h a k qs` for the interleaved-target coverage of `H_msg`, and
-`(c · qh + (r + 1) · verifyInternalQueryBound) / |Y|` for the events on single oracle answers,
-`c` per forger hash query and `r + 1` per verifier query. The constants `c` and `r` are fixed
-numerals at the security theorem; `r` bounds the honest entries that share one oracle key, and
-`GeneralScheme.verifyInternalQueryBound` bounds the verifier's own queries, which a forger can
-make fire without making any query itself. Signing queries enter only through the coverage term,
-in both signing modes. The byte-level statement over a single SHAKE256, to be related to this model
-by a faithfulness theorem, adds the losses of that step and, for deterministic signing, one term
-`2^{-8n}` per signing query, for the event that a signing query's randomizer equals `SK.prf`, so
-that the signer's `H_msg` string begins with `SK.prf`.
+`(qh + 1) · weightedTargetCoverBound h a k qs qh (qs / |Y|)` for the interleaved-target coverage
+of `H_msg`, and `(c · qh + (r + 1) · verifyInternalQueryBound) / |Y|` for the events on single
+oracle answers, `c` per forger hash query and `r + 1` per verifier query. The coverage term counts
+the digits of the target digest covered by the digests of the `qs` signing queries at weight one,
+and those covered by the forger's own `H_msg` answers at other positions, of which there are at
+most `qh`, at weight `qs / |Y|`: a signature can carry such an answer only if one of the `qs`
+fresh randomizers equals the answer's randomizer. It is at least the unweighted
+`(qh + 1) · targetCoverBound h a k qs`
+(`KeyedHash.Covering.targetCoverBound_le_weightedTargetCoverBound`), with equality at `qh = 0`.
+The constants `c` and `r` are fixed numerals at the security theorem; `r` bounds the honest entries
+that share one oracle key, and `GeneralScheme.verifyInternalQueryBound` bounds the verifier's own
+queries, which a forger can make fire without making any query itself. Signing queries enter only
+through the coverage term, in both signing modes. The byte-level statement over a single SHAKE256,
+to be related to this model by a faithfulness theorem, adds the losses of that step and, for
+deterministic signing, one term `2^{-8n}` per signing query, for the event that a signing query's
+randomizer equals `SK.prf`, so that the signer's `H_msg` string begins with `SK.prf`.
 `SecurityTarget` is a statement about a given core: it is a security result only at a shipped
 bundle with the constants fixed, since at a degenerate core — one whose node type has a single
 element, say — the right-hand side reaches one and the target holds trivially.
@@ -71,9 +77,11 @@ forger-chosen string can also be read as a query of another oracle depends on th
 
 ## Scope
 
-This module states the target; it proves no bound on the advantage. The three-oracle model is the
-model the proof works in. The single-SHAKE256 instantiation, in which the tweakable hash, `H_msg`
-and `PRF_msg` are one function, is related to it by a separate faithfulness theorem.
+This module states the target; it proves no bound on the advantage. The target at `c = 2` and
+`r = 1` is proved in `HashSig.SLHDSA.Security.CoverageBound` (`securityTarget_two_one`). The
+three-oracle model is the model the proof works in. The single-SHAKE256 instantiation, in which the
+tweakable hash, `H_msg` and `PRF_msg` are one function, is to be related to it by a separate
+faithfulness theorem, which is not part of this development.
 
 ## References
 
@@ -202,10 +210,12 @@ theorem unforgeableExperiment_romScheme (e : core.SkSeed ≃ core.Y)
   rfl
 
 /-- The right-hand side of the security target for a node type of `card` elements: the coverage
-of the verifier's and the adversary's `H_msg` values by `qs` signatures, and `c / card` per
-adversary hash query and `(r + 1) / card` per query of the verifier. -/
+of the verifier's and the adversary's `H_msg` values by `qs` signatures, the adversary's own `H_msg`
+values counting as coverers at weight `qs / card`, and `c / card` per adversary hash query and
+`(r + 1) / card` per query of the verifier. -/
 @[expose] noncomputable def securityBound (p : Params) (card c r qh qs : ℕ) : ℝ≥0∞ :=
-  ((qh : ℝ≥0∞) + 1) * KeyedHash.Covering.targetCoverBound p.h p.a p.k qs +
+  ((qh : ℝ≥0∞) + 1) *
+      KeyedHash.Covering.weightedTargetCoverBound p.h p.a p.k qs qh ((qs : ℝ≥0∞) / card) +
     ((c : ℝ≥0∞) * qh + ((r + 1) * GeneralScheme.verifyInternalQueryBound p : ℕ)) *
       (card : ℝ≥0∞)⁻¹
 

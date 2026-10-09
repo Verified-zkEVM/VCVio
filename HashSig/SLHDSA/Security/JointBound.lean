@@ -77,7 +77,8 @@ bound for the run and the ideal-game form of the advantage bound follow.
 * The bounds are per public seed: the scheme is `romScheme core e optRand (pure pkSeed)`.
 * Interleaved-target coverage is not bounded here; it remains a probability, in the ideal
   hidden-seed game in `unforgeableAdvantage_romScheme_pure_le_add_idealDraw` and in the run in
-  `unforgeableAdvantage_romScheme_pure_le_add`.
+  `unforgeableAdvantage_romScheme_pure_le_add`. `HashSig.SLHDSA.Security.CoverageBound` bounds
+  the ideal-game term (`prEvent_idealDraw_runItsrCovered_le`).
 * The losses of the faithfulness step relating the three-oracle model to the byte-level scheme
   over a single SHAKE256 are not included.
 * Nothing here is quantum.
