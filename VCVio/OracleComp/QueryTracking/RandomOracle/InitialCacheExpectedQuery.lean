@@ -135,7 +135,7 @@ private theorem completeTable_extend_restrict [∀ d, Nonempty (R d)]
   · cases hc : cache t <;> simp [completeTable, extendTable, ht, restrictCache, hc]
   · simp [completeTable, extendTable, ht]
 
-private theorem completeTable_idempotent
+theorem completeTable_idempotent
     (cache : (ofFn R).QueryCache) (g : ∀ d, R d) :
     completeTable cache (completeTable cache g) = completeTable cache g := by
   funext t
@@ -283,31 +283,5 @@ theorem prEvent_randomOracle_le_expectedNewQueryCharge [DecidableEq D]
           (Function.update g t u))))] ≤ error t.val
     simp_rw [completeTable_extend_restrict, extendTable_update]
     exact hbad t.val (extendTable S g) (by simpa [smallCache, restrictCache] using hc)
-
-/-- With an empty initial cache, the initial-cache theorem has the established
-distinct-query trace and own-cell hypotheses. -/
-theorem prEvent_randomOracle_le_expectedFreshQueryCharge_via_initialCache [DecidableEq D]
-    [∀ d, SampleableType (R d)]
-    (oa : OracleComp (unifSpec + ofFn R) α)
-    (event : α → Prop) (bad : D → (∀ d, R d) → Prop) (error : D → ENNReal)
-    (htrace : ∀ g z, z ∈ support (fixedTableLoggedRun oa g ∅) →
-      event z.1.1 → ∃ t ∈ freshKeysOfLog z.1.2, bad t g)
-    (hbad : ∀ t g, Pr{let u ← $ᵗ (R t)}[bad t
-      (Function.update g t u)] ≤ error t) :
-    Pr{let z ← randomOracleLoggedRun oa}[event z.1.1] ≤
-      expectedFreshQueryCharge oa error := by
-  have htrace' : ∀ g z, z ∈ support (fixedTableLoggedRun oa g ∅) →
-      event z.1.1 → ∃ t ∈ newQueryKeys (∅ : (ofFn R).QueryCache) z.1.2,
-        bad t (completeTable ∅ g) := by
-    intro g z hz he
-    obtain ⟨t, ht, hb⟩ := htrace g z hz he
-    exact ⟨t, by simpa using ht, by simpa only [completeTable_empty] using hb⟩
-  have hbad' : ∀ t g, (∅ : (ofFn R).QueryCache) t = none →
-      Pr{let u ← $ᵗ (R t)}[bad t (completeTable ∅ (Function.update g t u))] ≤
-        error t := by
-    intro t g _
-    simpa only [completeTable_empty] using hbad t g
-  simpa only [expectedNewQueryCharge_empty_cache] using
-    prEvent_randomOracle_le_expectedNewQueryCharge oa ∅ event bad error htrace' hbad'
 
 end OracleComp
