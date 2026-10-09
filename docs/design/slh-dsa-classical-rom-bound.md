@@ -31,12 +31,11 @@ coverage term is not bounded at the size of the target's coverage term
 ([Coverage after the seed hop](#coverage-after-the-seed-hop)).
 
 **What is not proved.** The faithfulness step relating the three-oracle model to the byte-level
-scheme over a single SHAKE256 is not proved. Nor, therefore, are its losses: the deterministic
-signing term `q_s / 2^{8n}`, and at `n = 32` the routing argument that the byte-level reading of
-the `n = 32` rows of the levels table assumes ([Levels](#levels)). Of the levels below, the
-"Hedged" column evaluates the proved three-oracle bound, and reading it as a level of the
-byte-level scheme needs the faithfulness step; the other columns evaluate formulas that are not
-Lean results.
+scheme over a single SHAKE256 is not proved. Nor, therefore, are its losses: the terms
+`(q_s + 1) / 2^{8n}` of the faithfulness hook, and at `n = 32` a weak-key term of about
+`2^{−172}` that no designed argument removes ([The 256-bit sets](#the-256-bit-sets)). Of the
+levels below, the "Three-oracle" column evaluates the proved three-oracle bound, which is not a
+level of the byte-level scheme; the other columns evaluate formulas that are not Lean results.
 
 ## The statement
 
@@ -65,18 +64,18 @@ forger and signer strings that begin with `SK.prf`.
 Each loss is charged against the **queries of the kind that can cause it**, rather than against
 `q_h`, on every run: one joint potential over the deferred relabelled game covers the hidden-value
 hit, the target collision (at oracle-key level, so a forger input of any length at a node's key
-counts) and the seed guess, and is to cover, for deterministic signing at byte level, the
-faithfulness misroute, with each forger or verifier query charged by its kind. The generic joint
-potential is `VCVio/OracleComp/QueryTracking/RandomOracle/JointPotential.lean`. Its SLH-DSA
+counts) and the seed guess, and is to cover, at byte level, the faithfulness misroute, with each
+forger or verifier query charged by its kind. The generic joint potential is
+`VCVio/OracleComp/QueryTracking/RandomOracle/JointPotential.lean`. Its SLH-DSA
 instantiation for the target collision, the hidden-value hit and the seed guess is proved
 (`HashSig/SLHDSA/Security/JointBound.lean`, through the event transport of
 `HashSig/SLHDSA/Security/Transport.lean`); the faithfulness hook (`Fev`), which is to join the
 faithfulness event into the same potential, is owed. A query at an honest (ledger) key under
 `PK.seed` causes at most two unit hazards: its input can equal a hidden value, or its fresh answer
 can equal the honest answer. A query at a secret-derivable point (a `PRF` key or `PRF_msg`) causes
-one, the seed guess. For deterministic signing at byte level, an `H_msg` query causes one, the
-faithfulness event, when its string begins with `SK.prf`; these points are at no key, so this kind
-is disjoint from the others. Under the key-separation hypothesis (`CorePrimitives.KeySeparated`) no
+one, the seed guess. At byte level, an `H_msg` query causes one, the faithfulness event, when its
+string begins with `SK.prf`; these points are at no key, so this kind is disjoint from the others.
+Under the key-separation hypothesis (`CorePrimitives.KeySeparated`) no
 derivable point is at an honest key, so the kinds are disjoint for the target collision, the
 hidden-value hit and the seed guess. That the faithfulness theorem states its loss as an event of
 the typed run, joined into the potential and charged nowhere else, is owed with it. The forger's
@@ -101,10 +100,14 @@ Beside the forger's `2·q_h / 2^{8n}`, the bound has two terms:
 - the verifier's own queries, `(r + 1) · verifyInternalQueryBound` at `r = 1`, two hazards each.
 
 The three-oracle bound (`securityBound` in `Target.lean`) has no term linear in `q_s`, in either
-signing mode: signing queries enter only through the coverage term. For deterministic signing the
-byte-level statement adds `q_s / 2^{8n}`, the faithfulness event for the signer's strings: a
-signing query whose randomizer equals `SK.prf`, so that its `H_msg` string begins with `SK.prf`.
-That event is to be joined into the same joint potential, not added as a separate probability.
+signing mode: signing queries enter only through the coverage term. The byte-level statement adds
+`q_s / 2^{8n}`, the faithfulness event for the signer's strings: a signing query whose randomizer
+equals `SK.prf`, so that its `H_msg` string begins with `SK.prf`. It also adds `1 / 2^{8n}` for
+`SK.prf = PK.seed`. Both are to be joined into the same joint potential, not added as separate
+probabilities, and both are charged in either signing mode, so the byte-level bound is the same
+for hedged and deterministic signing. For hedged signing the faithfulness event misroutes only if
+some signing query's `opt_rand` equals `PK.seed`; a hedged statement that bounds the two jointly
+would replace `q_s / 2^{8n}` by `q_s (q_h + q_s + 1) / 2^{16n}` and keep the three-oracle level.
 
 ### Coverage after the seed hop
 
@@ -134,36 +137,67 @@ levels table the two forms give the same levels to four decimals.
 
 ### Levels
 
-Per-query level `−log₂(bound / q_h)` at `q_h = q_s = 2^64`. "Hedged" evaluates the three-oracle
-bound `securityBound` at `c = 2`, `r = 1`, which is proved per public seed and holds in both signing
-modes; with the weighted coverage term these levels are those of the unweighted term to four
-decimals at every set. The other columns are evaluations of formulas, not Lean results.
-"Deterministic" adds to the three-oracle bound the `q_s / 2^{8n}` term that the byte-level
-statement carries for deterministic signing, and the faithfulness step that would prove it is not
-proved. "Two-hazard limit" is the level with the coverage term and the constant 2
-alone; `8n − 1` is the level of `Adv ≤ q_h / 2^{8n−1}`. The last column is the coverage term's cost
-in units of `q_h / 2^{8n}`.
+Per-query level `−log₂(bound / q_h)` at `q_h = q_s = 2^64`. "Three-oracle" evaluates the
+three-oracle bound `securityBound` at `c = 2`, `r = 1`, which is proved per public seed and holds
+in both signing modes (`securityTarget_two_one`); with the weighted coverage term these levels are
+those of the unweighted term to four decimals at every set. It is the level of the three-oracle
+model, not of the byte-level scheme. The other columns are evaluations of formulas, not Lean
+results, and the faithfulness step that would make them levels of the byte-level scheme is not
+proved. "Byte level" adds to the three-oracle bound the terms `1 / 2^{8n}` (`SK.prf = PK.seed`)
+and `q_s / 2^{8n}` (the signer's faithfulness event) and omits the weak-key term; with the
+faithfulness hook charged in both signing modes it is the byte-level level of hedged and
+deterministic signing alike, and at `n = 32` it holds per public seed for every seed outside the
+weak set ([The 256-bit sets](#the-256-bit-sets)). "Byte level, averaged" adds the weak-key term
+`|A_hon| / 2^256`, the byte-level bound averaged over the key pair; it differs from "Byte level"
+only at `n = 32`. "Losses added separately" charges the losses of "Byte level" as separate
+`q_h`-bounded terms, the constant 4 above, and also omits the weak-key term. "Two-hazard limit"
+is the level with the coverage term and the constant 2 alone; `8n − 1` is the level of
+`Adv ≤ q_h / 2^{8n−1}`. The last column is the coverage term's cost in units of `q_h / 2^{8n}`.
 
-| Set | Hedged | Deterministic | Losses added separately (deterministic) | Two-hazard limit | `8n − 1` | Coverage cost |
-|---|---|---|---|---|---|---|
-| 128s | 126.99 | 126.41 | 125.67 | 126.99 | 127 | 0.02 |
-| 128f | 126.54 | 126.09 | 125.48 | 126.54 | 127 | 0.76 |
-| 192s | 190.82 | 190.29 | 189.60 | 190.82 | 191 | 0.27 |
-| 192f | 190.87 | 190.33 | 189.62 | 190.87 | 191 | 0.19 |
-| 256s | 254.41 | 254.00 | 253.41 | 254.41 | 255 | 1.00 |
-| 256f | 254.27 | 253.89 | 253.34 | 254.27 | 255 | 1.32 |
+| Set | Three-oracle | Byte level | Byte level, averaged | Losses added separately | Two-hazard limit | `8n − 1` | Coverage cost |
+|---|---|---|---|---|---|---|---|
+| 128s | 126.99 | 126.41 | 126.41 | 125.67 | 126.99 | 127 | 0.02 |
+| 128f | 126.54 | 126.09 | 126.09 | 125.48 | 126.54 | 127 | 0.76 |
+| 192s | 190.82 | 190.29 | 190.29 | 189.60 | 190.82 | 191 | 0.27 |
+| 192f | 190.87 | 190.33 | 190.33 | 189.62 | 190.87 | 191 | 0.19 |
+| 256s | 254.41 | 254.00 | 235.95 | 253.41 | 254.41 | 255 | 1.00 |
+| 256f | 254.27 | 253.89 | 236.26 | 253.34 | 254.27 | 255 | 1.32 |
 
 The coverage term relaxes the exact coverage probability of the interleaved-target event. With
 the exact probability instead, the coverage costs drop to 0.10 (128f), 0.11 (192f) and 1.06
-(256f), and the hedged levels rise to 126.93, 190.92 and 254.39; the other sets change by at most
-0.01. At `q_s ≤ 2^62` the coverage term is negligible at every set, and the two-hazard limit is
-`8n − 1`.
+(256f), and the three-oracle levels rise to 126.93, 190.92 and 254.39; the other sets change by
+at most 0.01. At `q_s ≤ 2^62` the coverage term is negligible at every set, and the two-hazard
+limit is `8n − 1`.
 
-The "Deterministic" column adds only the `q_s / 2^{8n}` term to the three-oracle bound. The
-byte-level statement over a single SHAKE256 also adds the other losses of the faithfulness step,
-in both modes. At `n = 32` one of them, a forger string that reads as two different typed
-queries, costs about `2^{−172}` if bounded directly, which would bring the 256-bit sets down to
-about 236 bits; the `n = 32` rows assume the randomised routing argument that removes it.
+#### The 256-bit sets
+
+FIPS 205 §11.1 lays out the `H_msg` input as `R‖PK.seed‖PK.root‖M` and a tweakable-hash input as
+`PK.seed‖ADRS‖M_1‖…‖M_ℓ`. At `n = 32` the 32-byte `ADRS` field sits where the `H_msg` input has
+`PK.seed`. Let `A_hon` be the set of address encodings that honest key generation, signing and
+verification evaluate. When `PK.seed ∈ A_hon` (a weak seed) and `R = PK.seed`, the `H_msg` input
+`PK.seed‖PK.seed‖PK.root‖M` is also the tweakable-hash input at the honest address `ADRS* = PK.seed`
+with blocks `PK.root‖M`; this holds at every address type the verifier evaluates, from FORS leaves
+and WOTS chains to tree nodes, FORS roots and WOTS public keys. A forger can use such a string in
+both roles. It can query the string as a node and forge with `R* = PK.seed`. And the verifier's own
+`H_msg` input at `R* = PK.seed` is then also a tweakable-hash input on its own verification path
+whenever that path reaches `ADRS*` with first block `PK.root` (self-reference).
+
+The randomised routing argument sends each ambiguous forger string to one of its two readings by a
+fair coin. It removes the forger-query case but not self-reference, since no router sees the
+verifier's queries. The argument is therefore incomplete, and it does not establish the `n = 32`
+byte-level rows. The faithfulness analysis that proposed the routing argument already required a
+separate self-reference lemma for this case, stated over a cache of byte strings rather than typed
+points; that lemma is not designed. Without it the byte-level bound at `n = 32` carries the weak-key
+term `|A_hon| / 2^256`, about `2^{−171.95}` at 256s and `2^{−172.26}` at 256f. The term depends only
+on `PK.seed`, not on the adversary: it is the probability that the uniform `PK.seed` is weak. At
+`q_h = q_s = 2^64` the byte-level levels are:
+
+- averaged over the uniform `PK.seed`: 235.95 (256s) and 236.26 (256f);
+- per seed, for every `PK.seed` outside the weak set: 254.00 (256s) and 253.89 (256f).
+
+The averaged level loses about one bit per halving of `q_h`, because the weak-key term is fixed
+while the per-query normalisation changes: at `q_h = q_s = 2^40` it is about 212 (211.95 at 256s,
+212.26 at 256f), against 254.42 per seed outside the weak set.
 
 ## leanVM's 127-bit proof
 
@@ -201,7 +235,7 @@ How it reaches 127, from its `PROOF.md`:
 | Secret seeds | `SK.seed`, `SK.prf` of `n` bytes: guessing costs `q_h / 2^{8n}` (inside the constant 2) | 256-bit master seed |
 | Signing | Never fails; hedged or deterministic randomizer | Can fail (randomizer and counter searches); a completeness theorem bounds failure |
 | Unforgeability | EUF-CMA first, then SUF-CMA | SUF-CMA |
-| Bound | `2·q_h / 2^{8n}` plus coverage and verifier terms; byte-level deterministic adds `q_s / 2^{8n}` | `q / 2^127` |
+| Bound | `2·q_h / 2^{8n}` plus coverage and verifier terms; byte level adds `(q_s + 1) / 2^{8n}` and, at `n = 32`, the weak-key term `\|A_hon\| / 2^256` | `q / 2^127` |
 
 Counting the whole experiment suits a scheme capped at `2^24` signatures. At FIPS 205's `2^64`,
 honest signing alone makes about `2^81` to `2^86` hash queries depending on the set, so at the
@@ -230,8 +264,10 @@ None of the accounting choices above changes the scheme: the bound is about FIPS
 so an implementation proved to refine the Lean byte-level specification inherits it. The facts an
 implementation does depend on are:
 
-- **Signing mode.** At byte level, deterministic signing carries the extra `q_s / 2^{8n}` term;
-  the three-oracle bound is the same in both modes.
+- **Signing mode.** The three-oracle bound is the same in both modes, and so is the byte-level
+  bound with the faithfulness hook charged in both, `q_s / 2^{8n}` included. Only a hedged
+  statement that bounds the faithfulness event jointly with `opt_rand = PK.seed` would remove
+  that term for hedged signing.
 - **Signature count.** The bound is a function of `q_s`; a deployment that signs fewer than `2^64`
   messages per key obtains the corresponding smaller coverage term.
 - **Address encoding.** The key hypothesis `CorePrimitives.KeyDiscipline` bundles injectivity of

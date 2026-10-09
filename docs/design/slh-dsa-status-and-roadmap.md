@@ -145,9 +145,10 @@ The hypotheses are the byte laws, the key discipline (`CorePrimitives.KeyDiscipl
 `|Y| ≤ |SK.prf|`; all three are discharged at every FIPS 205 bundle. The adversary's budget counts
 its own hash queries `q_h` and signing queries `q_s`; key generation, signing and verification are
 not charged. Not proved: the faithfulness theorem relating the three-oracle model to the
-byte-level scheme over a single SHAKE256 (or SHA-2), with its losses and the deterministic-signing
-term `q_s / 2^{8n}`; a strong-unforgeability bound; and the external interfaces (Algorithms
-21–25), which the theorem does not reach.
+byte-level scheme over a single SHAKE256 (or SHA-2), with its losses, among them `q_s / 2^{8n}` in
+both signing modes and, at `n = 32`, a weak-key term of about `2^{−172}` that holds the averaged
+byte-level level of the 256-bit sets near 236 bits at `q_h = q_s = 2^64`; a strong-unforgeability
+bound; and the external interfaces (Algorithms 21–25), which the theorem does not reach.
 
 ## Security lane: slices, status, and source correspondence
 
