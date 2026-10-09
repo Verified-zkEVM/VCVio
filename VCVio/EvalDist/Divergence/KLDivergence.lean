@@ -47,8 +47,7 @@ universe u uA
 
 namespace PFunctor.FreeM
 
-variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.IsMeasureSpec]
-  [∀ a, DiscreteMeasurableSpace (P.B a)] {α β : Type u}
+variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.IsMeasureSpec] {α β : Type u}
   [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
 
 /-! ### A continuation as a Markov kernel -/
@@ -60,10 +59,11 @@ on the output type, which may be continuous. -/
 noncomputable def denoteKernel (f : α → FreeM P β) : Kernel α β :=
   evalDistKernelOfDiscrete f
 
-omit [∀ a, DiscreteMeasurableSpace (P.B a)] in
 @[simp]
 theorem denoteKernel_apply (f : α → FreeM P β) (x : α) :
     denoteKernel f x = denote (f x) := rfl
+
+variable [∀ a, DiscreteMeasurableSpace (P.B a)]
 
 instance isMarkovKernel_denoteKernel (f : α → FreeM P β) :
     IsMarkovKernel (denoteKernel f) :=

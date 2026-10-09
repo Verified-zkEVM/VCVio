@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # Gate for the `StateT` invariant rules

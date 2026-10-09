@@ -61,7 +61,7 @@ noncomputable instance weightedMeasureSpec : OracleSpec.IsMeasureSpec WeightedSp
 
 example : (wp (WeightedSpec.query 0 : OracleComp WeightedSpec Bool)
     (fun answer ↦ Prob.indicator (answer = true)) Lean.Order.bot).val = 0 := by
-  rw [MeasureProgramLogic.Probabilistic.wp_val_eq_lintegral]
+  rw [MeasureProgramLogic.Probabilistic.wp_val_eq_lintegral _ _ Measurable.of_discrete]
   simp only [OracleComp.evalDist_liftM_query]
   simp [OracleSpec.IsMeasureSpec.toMeasure, PFunctor.IsMeasureSpec.toMeasure]
 

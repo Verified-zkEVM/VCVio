@@ -80,12 +80,12 @@ theorem wp_bind {α β γ δ : Type}
     (PFunctor.FreeM.support_finite my).countable
     (PFunctor.FreeM.support_finite (mx >>= f)).countable
     (PFunctor.FreeM.support_finite (my >>= g)).countable
-    (ae_of_forall_mem_support mx _ fun _ h ↦ h)
-    (ae_of_forall_mem_support my _ fun _ h ↦ h)
+    (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete fun _ h ↦ h)
+    (evalDist.ae_of_forall_mem_support my _ MeasurableSet.of_discrete fun _ h ↦ h)
     .of_discrete .of_discrete
-    (fun a ha ↦ ae_of_forall_mem_support (f a) _ fun x hx ↦
+    (fun a ha ↦ evalDist.ae_of_forall_mem_support (f a) _ MeasurableSet.of_discrete fun x hx ↦
       MonadAttach.mem_support_bind.mpr ⟨a, ha, hx⟩)
-    (fun b hb ↦ ae_of_forall_mem_support (g b) _ fun y hy ↦
+    (fun b hb ↦ evalDist.ae_of_forall_mem_support (g b) _ MeasurableSet.of_discrete fun y hy ↦
       MonadAttach.mem_support_bind.mpr ⟨b, hb, hy⟩)
     (fun _ _ _ _ h ↦ by simpa only [wp, RelWP] using h)
 
@@ -95,7 +95,7 @@ theorem wp_refl {α : Type} [∀ t, Finite (spec₁.Range t)] (mx : OracleComp s
     wp mx mx (· = ·) := by
   let : MeasurableSpace α := ⊤
   exact relWP_refl_of_ae_mem_countable mx (PFunctor.FreeM.support_finite mx).countable
-    (ae_of_forall_mem_support mx _ fun _ h ↦ h)
+    (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete fun _ h ↦ h)
 
 end OracleComp.MeasureRelational
 

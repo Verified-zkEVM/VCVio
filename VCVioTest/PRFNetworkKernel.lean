@@ -86,7 +86,7 @@ example (adversary : UnlinkAdversary Bool Bool Bool) (qReader qTag : ℕ)
       (qReader + qTag) adversary (UnlinkState.init, ∅)] {true} ≤
     𝒟[verdict (noisy (singleIdealQueryImpl (sessionsPerTag := 2)))
       (qReader + qTag) adversary (UnlinkState.init, ∅)] {true} +
-    𝒟[stateEvent (noisy (multipleBadQueryImpl (sessionsPerTag := 2)))
+    𝒟[stateEvent (noisy (multipleBadQueryImpl _ _ _ 2))
       (qReader + qTag) adversary ((UnlinkState.init, ∅), UnlinkBadState.init)
       (fun state => state.2.bad)] {true} +
     ((qReader * Fintype.card Bool : ℕ) : ℝ≥0∞) / (Fintype.card Bool : ℝ≥0∞) +
@@ -94,6 +94,6 @@ example (adversary : UnlinkAdversary Bool Bool Bool) (qReader qTag : ℕ)
     ((qReader * Fintype.card Bool * 2 : ℕ) : ℝ≥0∞) / (Fintype.card Bool : ℝ≥0∞) := by
   exact multiple_le_single_add_bad_of_joint_law _ _ _
     (noisy_joint_law _) (noisy_joint_law _) (noisy_joint_law _)
-    Measurable.of_discrete adversary qReader qTag hReader hTag
+    Measurable.of_discrete true adversary qReader qTag hReader hTag
 
 end PRFTagReader.Network.Tests

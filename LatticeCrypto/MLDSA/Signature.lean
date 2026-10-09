@@ -38,7 +38,11 @@ open LatticeCrypto TransformOps
 
 namespace MLDSA
 
-variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
+variable (p : Params) (prims : Primitives p)
+
+section Scheme
+
+variable [nttOps : NTTRingOps]
 
 /-- The FIPS 204 signature format: `(c̃, z, h)`. -/
 structure FIPSSignature where
@@ -132,26 +136,24 @@ def fipsVerify (pk : PublicKey p prims) (msg : List Byte)
   decide (cTildeRecomputed = sig.cTilde) &&
   decide (prims.hintWeight sig.h ≤ p.omega)
 
+end Scheme
+
 /-! ### Vector Arithmetic Helpers -/
 
-omit nttOps in
 private lemma rq_sub_add_cancel (a b : Rq) : a - b + b = a :=
   LatticeCrypto.Poly.ext_get_eq fun i => by
     change ((coeffRing.add (coeffRing.sub a b) b) : Rq).get i = a.get i
     simp [sub_add_cancel]
 
-omit nttOps in
 private lemma rq_add_neg_cancel (a b : Rq) : a + b + (-b) = a :=
   LatticeCrypto.Poly.ext_get_eq fun i => by
     change ((coeffRing.add (coeffRing.add a b) (coeffRing.neg b)) : Rq).get i = a.get i
     simp [add_neg_cancel_right]
 
-omit nttOps in
 private lemma neg_rq_get (f : Rq) (i : Fin ringDegree) : (-f).get i = -(f.get i) := by
   change (coeffRing.neg f).get i = _
   simp
 
-omit nttOps in
 private lemma polyNorm_neg (f : Rq) : polyNorm (-f) = polyNorm f := by
   unfold polyNorm normOps
   simp only [LatticeCrypto.zmodPolyNormOps, LatticeCrypto.normOpsOfCenteredView]
@@ -161,44 +163,6 @@ private lemma polyNorm_neg (f : Rq) : polyNorm (-f) = polyNorm f := by
   simp only [LatticeCrypto.zmodCenteredCoeffView, coeffRing.coeff_neg]
   exact LatticeCrypto.centeredRepr_natAbs_neg _
 
-/-! ### Correctness -/
-
-private lemma fipsSignLoop_exists
-    (sk : SecretKey p) (aHat : TqMatrix p.k p.l)
-    (mu : Bytes 64) (rhoDoublePrime : Bytes 64) (maxAttempts : ℕ)
-    (sig : FIPSSignature p prims)
-    (h : fipsSignLoop p prims sk aHat mu rhoDoublePrime maxAttempts = some sig) :
-    ∃ i ∈ List.range maxAttempts,
-      fipsSignAttempt p prims sk aHat mu rhoDoublePrime (i * p.l) = some sig :=
-  List.exists_of_findSome?_eq_some h
-
-private lemma fipsSignAttempt_spec
-    (sk : SecretKey p) (aHat : TqMatrix p.k p.l)
-    (mu : Bytes 64) (rhoDoublePrime : Bytes 64) (kappa : ℕ)
-    (sig : FIPSSignature p prims)
-    (h : fipsSignAttempt p prims sk aHat mu rhoDoublePrime kappa = some sig) :
-    let y := prims.expandMask rhoDoublePrime kappa
-    let w := aHat * y
-    let w1 := prims.highBitsVec w
-    let c := prims.sampleInBall (prims.hashCommitment mu (prims.w1Encode w1))
-    let cs2 := c • sk.s2
-    let z := y + c • sk.s1
-    let ct0 := c • sk.t0
-    sig.cTilde = prims.hashCommitment mu (prims.w1Encode w1) ∧
-    sig.z = z ∧
-    sig.h = prims.makeHintVec (-ct0) (w - cs2 + ct0) ∧
-    polyVecNorm z < p.gamma1 - p.beta ∧
-    polyVecNorm (prims.lowBitsVec (w - cs2)) < p.gamma2 - p.beta ∧
-    polyVecNorm ct0 < p.gamma2 ∧
-    prims.hintWeight sig.h ≤ p.omega := by
-  unfold fipsSignAttempt at h
-  dsimp only at h
-  split_ifs at h with h_outer h_inner
-  rw [Option.some.injEq] at h
-  subst h
-  exact ⟨rfl, rfl, rfl, h_outer.1, h_outer.2, h_inner.1, h_inner.2⟩
-
-omit nttOps in
 /-- Single-component recovery: `UseHint(MakeHint(-ct₀, r + ct₀), r + ct₀) = HighBits(r + s)`
 when `‖ct₀‖ ≤ γ₂`, `‖LowBits(r)‖ < γ₂ - β`, and `‖s‖ ≤ β`, and `r + s = w`.
 
@@ -230,7 +194,6 @@ lemma useHint_makeHint_eq_highBits
   rw [← h_hide_low r_j s_j p.beta h_s_bound h2]
   rw [h_r_eq, rq_sub_add_cancel w_j s_j]
 
-omit nttOps in
 /-- When all signing norm bounds hold, UseHint recovers the original commitment:
 `UseHintVec(MakeHintVec(-ct₀, w - cs₂ + ct₀), w - cs₂ + ct₀) = HighBitsVec(w)`.
 
@@ -279,6 +242,45 @@ lemma useHintVec_makeHintVec_eq_highBitsVec
       LatticeCrypto.zmodPolyNormOps_cInfNorm (cs2.get jj)
     rw [show cs2[j] = cs2.get jj by rfl, hnorm]
     exact h_cs2_bound jj
+
+variable [nttOps : NTTRingOps]
+
+/-! ### Correctness -/
+
+private lemma fipsSignLoop_exists
+    (sk : SecretKey p) (aHat : TqMatrix p.k p.l)
+    (mu : Bytes 64) (rhoDoublePrime : Bytes 64) (maxAttempts : ℕ)
+    (sig : FIPSSignature p prims)
+    (h : fipsSignLoop p prims sk aHat mu rhoDoublePrime maxAttempts = some sig) :
+    ∃ i ∈ List.range maxAttempts,
+      fipsSignAttempt p prims sk aHat mu rhoDoublePrime (i * p.l) = some sig :=
+  List.exists_of_findSome?_eq_some h
+
+private lemma fipsSignAttempt_spec
+    (sk : SecretKey p) (aHat : TqMatrix p.k p.l)
+    (mu : Bytes 64) (rhoDoublePrime : Bytes 64) (kappa : ℕ)
+    (sig : FIPSSignature p prims)
+    (h : fipsSignAttempt p prims sk aHat mu rhoDoublePrime kappa = some sig) :
+    let y := prims.expandMask rhoDoublePrime kappa
+    let w := aHat * y
+    let w1 := prims.highBitsVec w
+    let c := prims.sampleInBall (prims.hashCommitment mu (prims.w1Encode w1))
+    let cs2 := c • sk.s2
+    let z := y + c • sk.s1
+    let ct0 := c • sk.t0
+    sig.cTilde = prims.hashCommitment mu (prims.w1Encode w1) ∧
+    sig.z = z ∧
+    sig.h = prims.makeHintVec (-ct0) (w - cs2 + ct0) ∧
+    polyVecNorm z < p.gamma1 - p.beta ∧
+    polyVecNorm (prims.lowBitsVec (w - cs2)) < p.gamma2 - p.beta ∧
+    polyVecNorm ct0 < p.gamma2 ∧
+    prims.hintWeight sig.h ≤ p.omega := by
+  unfold fipsSignAttempt at h
+  dsimp only at h
+  split_ifs at h with h_outer h_inner
+  rw [Option.some.injEq] at h
+  subst h
+  exact ⟨rfl, rfl, rfl, h_outer.1, h_outer.2, h_inner.1, h_inner.2⟩
 
 /-- Correctness of FIPS ML-DSA, conditional on the algebraic key identity (`h_wApprox_eq`)
 and the challenge-product norm bound (`h_cs2_bound`, for the challenge `c = SampleInBall(c̃)`).

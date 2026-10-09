@@ -5,11 +5,11 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.SimSemantics.StateT.Basic
-public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
-public import VCVio.OracleComp.SimSemantics.Append
-public import VCVio.EvalDist.Monad.Basic
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
+public import VCVio.OracleComp.SimSemantics.Append.Core
+public import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # `StateT σ ProbComp` Invariant Theory
@@ -19,8 +19,8 @@ Support-based invariant reasoning for shared, stateful oracle simulations
 predicate `Inv : σ → Prop` is preserved by an implementation when every reachable
 post-state satisfies it.
 
-We use **support-based** formulations (rather than `Pr[ ...] = 1`) to keep
-downstream proofs lightweight.
+Reachability controls pathwise invariants. Output independence uses the successful-output
+measure directly; uniform oracle computations are lossless.
 
 The `WriterT` analogue of this theory lives in
 `SimSemantics/WriterT/PreservesInv.lean`.
@@ -36,7 +36,6 @@ The `WriterT` analogue of this theory lives in
 - `StateT.PreservesInv` — computation preserves an invariant on the state; the structural
   rules `preservesInv_pure`/`_monadLift`/`_map`/`_bind`/`_get_bind`/`_set_of`/`_mapM` check a
   handler written in `do` notation clause by clause
-- `StateT.NeverFailsUnder` — computation does not fail under an invariant
 - `StateT.OutputIndependent` — output distribution is independent of the initial state
   under an invariant
 - `StateT.outputIndependent_after_preservesInv` — non-interference: output-independent
@@ -47,7 +46,7 @@ The `WriterT` analogue of this theory lives in
 
 noncomputable section
 
-open OracleComp OracleSpec
+open OracleComp OracleSpec MeasureTheory
 
 open scoped OracleSpec.PrimitiveQuery
 
@@ -172,25 +171,21 @@ every outcome in the support of `mx.run σ0` has final state equal to `σ0`. -/
 def StatePreserving {σ α : Type} (mx : StateT σ ProbComp α) : Prop :=
   ∀ σ0, ∀ z ∈ support (mx.run σ0), z.2 = σ0
 
-/-- `NeverFailsUnder mx Inv` means that starting from any state satisfying `Inv`, the computation
-does not fail (its failure probability is `0`). -/
-def NeverFailsUnder {σ α : Type} (mx : StateT σ ProbComp α) (Inv : σ → Prop) : Prop :=
-  ∀ σ0, Inv σ0 → Pr[⊥ | mx.run σ0] = 0
-
 /-- `OutputIndependent mx Inv` means the output distribution of `mx` does not depend on the
 initial state, as long as the initial state satisfies `Inv`.
 
 This is distributional equality of `run'` (which discards the final state). -/
-def OutputIndependent {σ α : Type} (mx : StateT σ ProbComp α) (Inv : σ → Prop) : Prop :=
+def OutputIndependent {σ α : Type} [MeasurableSpace α]
+    (mx : StateT σ ProbComp α) (Inv : σ → Prop) : Prop :=
   ∀ σ0 σ1, Inv σ0 → Inv σ1 →
-    𝒮[mx.run' σ0] = 𝒮[mx.run' σ1]
+    𝒟[mx.run' σ0] = 𝒟[mx.run' σ1]
 
 @[simp] lemma statePreserving_pure {σ α : Type} (a : α) :
     StatePreserving (pure a : StateT σ ProbComp α) := by
   intro σ0 z hz
   simp_all
 
-@[simp] lemma outputIndependent_pure {σ α : Type} (Inv : σ → Prop) (a : α) :
+@[simp] lemma outputIndependent_pure {σ α : Type} [MeasurableSpace α] (Inv : σ → Prop) (a : α) :
     OutputIndependent (pure a : StateT σ ProbComp α) Inv := by
   intro σ0 σ1 _ _
   simp
@@ -266,33 +261,19 @@ lemma preservesInv_mapM {σ α β : Type} {f : α → StateT σ ProbComp β} (In
     exact preservesInv_bind _ _ _ (hf a) fun _ =>
       preservesInv_bind _ _ _ ih fun _ => preservesInv_pure _ Inv
 
-/-- If `mx` is output-independent on `Inv`, and `my` preserves `Inv` and never fails under `Inv`,
-then the output distribution of `mx` is unchanged by running `my` first and then running `mx`
-on the resulting state. -/
+/-- An invariant-preserving prefix leaves the measure of a subsequent output-independent
+computation unchanged. Uniform oracle computations are lossless. -/
 lemma outputIndependent_after_preservesInv {σ α β : Type}
+    [MeasurableSpace α]
     (mx : StateT σ ProbComp α) (my : StateT σ ProbComp β) (Inv : σ → Prop)
     (hmx : OutputIndependent mx Inv)
-    (hmyInv : PreservesInv my Inv)
-    (hmyNoFail : NeverFailsUnder my Inv) :
+    (hmyInv : PreservesInv my Inv) :
     ∀ σ0, Inv σ0 →
-      𝒮[(my.run σ0) >>= fun us => mx.run' us.2] = 𝒮[mx.run' σ0] := by
+      𝒟[(my.run σ0) >>= fun us => mx.run' us.2] = 𝒟[mx.run' σ0] := by
   intro σ0 hσ0
-  refine SPMF.ext fun a => ?_
-  rw [← probOutput_def, ← probOutput_def]
-  rw [probOutput_bind_eq_tsum]
-  have hbind_eq :
-      (∑' us : β × σ, Pr[= us | my.run σ0] * Pr[= a | mx.run' us.2]) =
-        (∑' us : β × σ, Pr[= us | my.run σ0]) * Pr[= a | mx.run' σ0] := by
-    rw [← ENNReal.tsum_mul_right]
-    refine tsum_congr fun us => ?_
-    rcases eq_or_ne (Pr[= us | my.run σ0]) 0 with hus | hus
-    · rw [hus, zero_mul, zero_mul]
-    · have hInv : Inv us.2 := hmyInv σ0 hσ0 us ((mem_support_iff _ _).2 hus)
-      simp only [probOutput_def, hmx us.2 σ0 hInv hσ0]
-  rw [hbind_eq]
-  have hsum : (∑' us : β × σ, Pr[= us | my.run σ0]) = 1 := by
-    have htotal := tsum_probOutput_add_probFailure (my.run σ0)
-    rwa [hmyNoFail σ0 hσ0, add_zero] at htotal
-  rw [hsum, one_mul]
+  rw [OracleComp.evalDist_bind_congr_of_support (my.run σ0)
+    (fun us => mx.run' us.2) (fun _ => mx.run' σ0)
+    (fun us hus => hmx us.2 σ0 (hmyInv σ0 hσ0 us hus) hσ0)]
+  exact OracleComp.evalDist_bind_const (my.run σ0) (mx.run' σ0)
 
 end StateT

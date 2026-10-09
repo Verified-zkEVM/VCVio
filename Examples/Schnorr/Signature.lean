@@ -40,9 +40,9 @@ Given `Module F G`, a generator `g : G`, and a bijection
 
 ## Security: the bound
 
-Let `ε := A.advantage` be the EUF-CMA advantage of an adversary `A` making at
-most `qS` signing-oracle queries and `qH` random-oracle queries against the
-random-oracle runtime `FiatShamir.runtime`. Define
+Let `ε := unforgeableAdvantage (FiatShamir.runtime M) A` be the EUF-CMA advantage of an
+adversary `A` making at most `qS` signing-oracle queries and `qH` random-oracle queries
+against the random-oracle runtime `FiatShamir.runtime`. Define
 
 ```
 ε' := ε  -  qS · (qS + qH) / |F|
@@ -53,7 +53,7 @@ overhead exceeds `ε`, the bound is trivially satisfied). Then there is a DLog
 reduction `B : DLogAdversary F G` such that
 
 ```
-ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ B succeeds in dlogExp g ].
+ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ B succeeds in dlogExperiment g ].
 ```
 
 This is the Pointcheval-Stern bound with quantitative HVZK plugged in at
@@ -116,61 +116,60 @@ The Schnorr-specific inputs are exactly:
 
 @[expose] public section
 
-
 open OracleComp OracleSpec DiffieHellman
 open scoped ENNReal
 
 namespace Schnorr
 
-variable (F : Type) [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
-variable (G : Type) [AddCommGroup G] [Module F G] [SampleableType G] [DecidableEq G]
+variable (F : Type) [Field F] [SampleableType F]
+variable (G : Type) [AddCommGroup G] [Module F G] [DecidableEq G]
 
 /-- Schnorr signature scheme: Fiat-Shamir applied to the Schnorr Σ-protocol
 with the discrete-log generable relation. The construction itself does not
 require a bijection between `F` and `G` via `· • g`; that hypothesis is only
 needed at the security theorem `signature_euf_cma`. -/
-def signature (g : G) (M : Type) [DecidableEq M] :
+def signature [SampleableType G] (g : G) (M : Type) [DecidableEq M] :
     SignatureAlg (OracleComp (unifSpec + (M × G →ₒ F)))
       (M := M) (PK := G) (SK := F) (S := G × F) :=
-  FiatShamir (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
+  FiatShamir (Schnorr.sigma F G g) (dlogGenerable F g) M
 
-omit [Fintype F] [DecidableEq F] in
 /-- Completeness of the Schnorr signature follows from completeness of the
 underlying Schnorr Σ-protocol via the generic Fiat-Shamir completeness theorem. -/
-theorem signature_complete (g : G) (M : Type) [DecidableEq M] :
+theorem signature_complete [SampleableType G] (g : G) (M : Type) [DecidableEq M] :
     SignatureAlg.PerfectlyComplete
       (signature F G g M)
       (FiatShamir.runtime (Commit := G) (Chal := F) M) :=
   FiatShamir.perfectlyCorrect _ _ M (Schnorr.sigma_complete F G g)
 
-omit [Fintype F] [SampleableType G] in
-/-- The DLog hard-relation experiment (`hardRelationExp` for `dlogGenerable`)
-and the textbook DLog experiment (`dlogExp`) are the same probability, given
+/-- The DLog hard-relation experiment (`hardRelationExperiment` for `dlogGenerable`)
+and the textbook DLog experiment (`dlogExperiment`) are the same probability, given
 the bijection `· • g : F → G`. The factor of `g` ignored by the lifted
-`fun _ pk => red pk` reduction is harmless because `dlogExp` re-supplies it. -/
-private theorem hardRelationExp_dlogGenerable_eq_dlogExp
+`fun _ pk => red pk` reduction is harmless because `dlogExperiment` re-supplies it. -/
+private theorem hardRelationExperiment_dlogGenerable_eq_dlogExperiment [DecidableEq F]
     (g : G) (hg : Function.Bijective (· • g : F → G))
     (red : G → ProbComp F) :
-    Pr[= true | hardRelationExp (dlogGenerable (F := F) g) red] =
-    Pr[= true | dlogExp g (fun _ pk => red pk)] := by
-  rw [show Pr[= true | hardRelationExp (dlogGenerable (F := F) g) red] =
+    Pr[= true | hardRelationExperiment (dlogGenerable F g) red] =
+    Pr[= true | dlogExperiment g (fun _ pk => red pk)] := by
+  rw [show Pr[= true | hardRelationExperiment (dlogGenerable F g) red] =
       Pr[= true | do
         let x ← $ᵗ F
         let w ← red (x • g)
         pure (decide (w • g = x • g))] by
-    simp [hardRelationExp, dlogGenerable]]
+    simp [hardRelationExperiment, dlogGenerable]]
   exact probOutput_bind_congr' _ true fun x =>
     probOutput_bind_congr' _ true fun sk => by simp [hg.1.eq_iff]
+
+variable [DecidableEq F] [SampleableType G]
 
 /-- DLog adversary built from a Schnorr EUF-CMA adversary: the Fiat-Shamir witness finder
 `FiatShamir.cmaReduction` for the Schnorr Σ-protocol and the Schnorr HVZK simulator, run on the
 challenge public key. The generator argument of `DLogAdversary` is ignored because the
 reduction is specialized to `g`. -/
 def dlogReduction (g : G) (M : Type) [DecidableEq M]
-    (adv : SignatureAlg.unforgeableAdv (signature F G g M)) (qH : ℕ) :
+    (adv : SignatureAlg.UnforgeableAdversary (signature F G g M)) (qH : ℕ) :
     DLogAdversary F G :=
   letI : Inhabited F := ⟨0⟩
-  fun _ pk => FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
+  fun _ pk => FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable F g) M
     (Schnorr.simTranscript F G g) adv qH pk
 
 /-- **EUF-CMA reduction for Schnorr signatures (Pointcheval-Stern).**
@@ -178,12 +177,12 @@ def dlogReduction (g : G) (M : Type) [DecidableEq M]
 The bound is
 
 ```
-ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ dlogReduction g M adv qH succeeds in dlogExp g ],
+ε' · ( ε' / (qH + 1)  -  1 / |F| )  ≤  Pr[ dlogReduction g M adv qH succeeds in dlogExperiment g ],
 ε' := ε  -  qS · (qS + qH) / |F|,
 ```
 
-where `ε := adv.advantage (FiatShamir.runtime M)` is the EUF-CMA advantage and
-`qS`, `qH` upper-bound the signing-oracle and random-oracle queries. This is
+where `ε := SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv` is the EUF-CMA
+advantage and `qS`, `qH` upper-bound the signing-oracle and random-oracle queries. This is
 the textbook Pointcheval-Stern denominator: the Fiat-Shamir reduction wraps
 the source adversary so the forgery's hash point is always among the forkable
 positions, and the framework's `Fork.forkPoint qH` indexing in `Fin (qH + 1)`
@@ -199,22 +198,23 @@ Three Schnorr-specific facts feed in:
   is uniform on `G` whenever `F` acts simply transitively via `g`, giving
   the commit-collision bound `β = 1/|F|`.
 
-The result is delivered in the textbook DLog form `dlogExp g (dlogReduction F G g M adv qH)`
-via the conversion `hardRelationExp_dlogGenerable_eq_dlogExp`. -/
-theorem signature_euf_cma (g : G)
+The result is delivered in the textbook DLog form `dlogExperiment g (dlogReduction F G g M adv qH)`
+via the conversion `hardRelationExperiment_dlogGenerable_eq_dlogExperiment`. -/
+theorem signature_euf_cma [Fintype F] (g : G)
     (hg : Function.Bijective (· • g : F → G))
     (M : Type) [DecidableEq M]
-    (adv : SignatureAlg.unforgeableAdv (signature F G g M))
+    (adv : SignatureAlg.UnforgeableAdversary (signature F G g M))
     (qS qH : ℕ)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound (M := M) (Commit := G) (Chal := F)
       (S' := G × F) (oa := adv.main pk) qS qH) :
-    let eps := adv.advantage (FiatShamir.runtime (Commit := G) (Chal := F) M) -
+    let eps :=
+      SignatureAlg.unforgeableAdvantage (FiatShamir.runtime (Commit := G) (Chal := F) M) adv -
       ((qS : ENNReal) * (qS + qH) * ((Fintype.card F : ℝ≥0∞)⁻¹))
     eps * (eps / (qH + 1 : ENNReal) - FiatShamir.challengeSpaceInv F) ≤
-      Pr[= true | dlogExp g (dlogReduction F G g M adv qH)] := by
+      Pr[= true | dlogExperiment g (dlogReduction F G g M adv qH)] := by
   let : Inhabited F := ⟨0⟩
   have hred := FiatShamir.euf_cma_bound
-    (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
+    (Schnorr.sigma F G g) (dlogGenerable F g) M
     (Schnorr.sigma_speciallySound F G g)
     (by intro ω₁ p₁ ω₂ p₂; simp [Schnorr.sigma])
     (Schnorr.simTranscript F G g)
@@ -224,8 +224,8 @@ theorem signature_euf_cma (g : G)
     (Schnorr.sigma_simCommitPredictability F G g hg)
     adv qS qH hQ
   simp only [mul_zero, ENNReal.ofReal_zero, zero_add] at hred ⊢
-  exact hred.trans (le_of_eq (hardRelationExp_dlogGenerable_eq_dlogExp F G g hg
-    (FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
+  exact hred.trans (le_of_eq (hardRelationExperiment_dlogGenerable_eq_dlogExperiment F G g hg
+    (FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable F g) M
       (Schnorr.simTranscript F G g) adv qH)))
 
 #guard_msgs (drop info) in

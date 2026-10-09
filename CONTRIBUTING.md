@@ -167,6 +167,23 @@ The toolchain and Mathlib move together, and the other pins follow them. The ord
 For probability tactic tests, follow the
 [tactic-test conventions](docs/agents/probability.md#normal-forms-and-the-tactic-contract).
 
+### Section Variables
+
+Lean includes an instance-implicit section variable in every theorem whose statement mentions
+the variables its type refers to, whether or not the proof uses it, and the `unusedSectionVars`
+linter then demands an `omit [...] in` line. Definitions are unaffected: their unused variables are
+pruned after elaboration. So a `variable` line carries an instance assumption only when the
+theorems in its scope genuinely share it. An assumption a few declarations need goes on those
+declarations; an assumption a contiguous block of declarations shares gets a `section` around that
+block with its own `variable` line, reordering declarations when that keeps the file readable. An
+assumption derivable from another in scope (`[Finite X]` beside `[SampleableType X]`, `[Fintype X]`
+beside `[FinEnum X]`, `[Nonempty X]` beside `[Inhabited X]`) is not declared at all; the proof
+derives it (`Fintype.ofFinite`, `SampleableType.finite`). `omit` is for the genuine exception in a
+section, not for choreography: a file with more `omit` lines than `variable` binders needs its
+sections rethought. Beyond the noise, omitted variables still take part in instance search while
+a statement elaborates, and hypothesis changes to a definition ripple into the omit lists of every
+file that mentions its types; see gotcha 31 in [`docs/agents/gotchas.md`](docs/agents/gotchas.md).
+
 ## Licensing
 
 This project is licensed under Apache 2.0. By contributing, you agree that your contributions are licensed under the same terms.

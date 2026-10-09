@@ -532,6 +532,125 @@ theorem relTriple_simulateQ_run'_of_query_map_eq
       (EqRel α) :=
   relTriple_eqRel_of_eq <| OracleComp.run'_simulateQ_eq_of_query_map_eq impl₁ impl₂ proj hproj oa s
 
+/-! ## Stochastic dominance through `simulateQ` -/
+
+/-- **Marginal stochastic dominance through `simulateQ` (self-referential / Fubini form).**
+
+The marginal counterpart of `relTriple_simulateQ_run_mono`. Where the latter demands a
+*pointwise* per-step coupling whose support respects an output-and-state relation, this lemma
+demands only a *marginal* per-step inequality: at every query and every pair of `R`-related
+states, the one-step run of `impl₁` followed by *any* left tail `k₁` has bad-marginal at most
+the one-step run of `impl₂` followed by *any* right tail `k₂`, provided the two tails are
+themselves marginally bad-dominated from every pair of `R`-related successor states.
+
+This is the right shape when the two handlers genuinely diverge on the answer distribution at a
+single step (e.g. an eager deterministic ghost read vs. a deferred-sampling read), so no
+pointwise coupling can dominate the bad flag at that step, yet the *marginal* bad mass — the
+`tsum` over the deferred draw, taken before the divergent continuation is applied — is still
+ordered (Fubini / tsum-swap). The per-step premise is self-referential by design: discharging
+it at the divergent step is exactly the marginal draw-commutation, the hard content this lemma
+isolates from the free-monad bookkeeping.
+
+The base hypothesis `h_base` (`R s₁ s₂ → bad₁ s₁ → bad₂ s₂`) discharges the `pure` leaf, where no
+further step can repair the bad flag: there the bad marginal is exactly the indicator of the
+current state, so `R` must already carry the bad implication.
+
+Applying it: `h_step` carries the entire probabilistic obligation, and it is quantified over
+*arbitrary* tails, so it may be discharged query-by-query — trivially wherever the two handlers
+agree, and by the marginal draw-commutation at the one query where they diverge. Reach instead
+for the sibling `probEvent_dist_simulateQ_mono` when no pointwise state relation exists at all:
+that version uses a relation on the two *run distributions*, which applies when the successor
+states are related only through a coupling over a deferred draw, at the price of also having to
+seed the relation at every `pure` leaf. -/
+theorem probEvent_marginal_simulateQ_mono
+    {ι₁ : Type u} {ι₂ : Type u}
+    {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    [IsUniformSpec spec₁] [IsUniformSpec spec₂]
+    {σ₁ σ₂ : Type}
+    (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
+    (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec₂)))
+    (R : σ₁ → σ₂ → Prop)
+    (bad₁ : σ₁ → Prop) (bad₂ : σ₂ → Prop)
+    (h_base : ∀ (s₁ : σ₁) (s₂ : σ₂), R s₁ s₂ → bad₁ s₁ → bad₂ s₂)
+    (h_step : ∀ (t : spec.Domain) (s₁ : σ₁) (s₂ : σ₂), R s₁ s₂ →
+      ∀ {γ : Type} (k₁ : (spec.Range t × σ₁) → OracleComp spec₁ (γ × σ₁))
+        (k₂ : (spec.Range t × σ₂) → OracleComp spec₂ (γ × σ₂)),
+        (∀ (u : spec.Range t) (s₁' : σ₁) (s₂' : σ₂), R s₁' s₂' →
+          Pr[ fun z => bad₁ z.2 | k₁ (u, s₁')] ≤ Pr[ fun z => bad₂ z.2 | k₂ (u, s₂')]) →
+        Pr[ fun z => bad₁ z.2 | (impl₁ t).run s₁ >>= k₁] ≤
+          Pr[ fun z => bad₂ z.2 | (impl₂ t).run s₂ >>= k₂])
+    (oa : OracleComp spec α) (s₁ : σ₁) (s₂ : σ₂) (hR : R s₁ s₂) :
+    Pr[fun z => bad₁ z.2 | (simulateQ impl₁ oa).run s₁] ≤
+      Pr[fun z => bad₂ z.2 | (simulateQ impl₂ oa).run s₂] := by
+  classical
+  induction oa using OracleComp.inductionOn generalizing s₁ s₂ with
+  | pure a =>
+    -- both sides are point masses on `(a, s₁)` / `(a, s₂)`; reduce to the base implication.
+    simp only [simulateQ_pure, StateT.run_pure, probEvent_pure]
+    by_cases hb : bad₁ s₁
+    · simp [hb, h_base s₁ s₂ hR hb]
+    · simp [hb]
+  | query_bind t ob ih =>
+    simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
+      id_map, StateT.run_bind]
+    exact h_step t s₁ s₂ hR _ _ ih
+
+/-- **Distribution-level stochastic dominance through `simulateQ`.**
+
+The *distribution-level* sibling of `probEvent_marginal_simulateQ_mono`. Where the latter carries
+a **pointwise** state relation `R : σ₁ → σ₂ → Prop` and discharges the per-query step at every pair
+of `R`-related *states*, this lemma carries a relation `Rrun` directly on the two run
+**distributions** (the whole `OracleComp spec₁ (γ × σ₁)` / `OracleComp spec₂ (γ × σ₂)`
+computations), generic over the output type `γ`. This is the shape needed when the per-step
+recoupling is inherently *joint-law* — e.g. an eager handler that has already committed sampled
+keys into its state versus a deferred-sampling handler that only carries a pending *count*, so that
+no pointwise state predicate relates the two successor states yet the two run distributions are
+related by a coupling over the deferred draw.
+
+The entire probabilistic content is isolated into the three premises:
+
+* `h_pure` seeds the relation at the `pure` leaves (the run distributions are the two point masses
+  `pure (a, s₁)` / `pure (a, s₂)`);
+* `h_bind` is the distribution-level bind congruence: given a query `t` and any two tails `k₁ k₂`
+  whose per-output continuations are already `Rrun`-related, the one-step runs followed by those
+  tails are again `Rrun`-related. Discharging `h_bind` at a divergent step *is* the marginal
+  draw-commutation, the hard content this lemma isolates;
+* `h_bad` reads the ordered bad marginals off any `Rrun`-related pair of run distributions.
+
+Applying it: nothing relates the initial states `s₁ s₂`, because `h_pure` is quantified over *all*
+leaves and so already seeds `Rrun` wherever the induction reaches one. That is the trade against
+`probEvent_marginal_simulateQ_mono`, which seeds only from its `R`-related base but must then
+exhibit a pointwise `R` relating the successor states at every step. -/
+theorem probEvent_dist_simulateQ_mono
+    {ι₁ : Type u} {ι₂ : Type u}
+    {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    [IsUniformSpec spec₁] [IsUniformSpec spec₂]
+    {σ₁ σ₂ : Type}
+    (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
+    (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec₂)))
+    (Rrun : ∀ {γ : Type}, OracleComp spec₁ (γ × σ₁) → OracleComp spec₂ (γ × σ₂) → Prop)
+    (bad₁ : σ₁ → Prop) (bad₂ : σ₂ → Prop)
+    (h_pure : ∀ {γ : Type} (a : γ) (s₁ : σ₁) (s₂ : σ₂),
+      Rrun (pure (a, s₁)) (pure (a, s₂)))
+    (h_bind : ∀ (t : spec.Domain) (s₁ : σ₁) (s₂ : σ₂),
+      ∀ {γ : Type} (k₁ : (spec.Range t × σ₁) → OracleComp spec₁ (γ × σ₁))
+        (k₂ : (spec.Range t × σ₂) → OracleComp spec₂ (γ × σ₂)),
+        (∀ (u : spec.Range t) (s₁' : σ₁) (s₂' : σ₂), Rrun (k₁ (u, s₁')) (k₂ (u, s₂'))) →
+        Rrun ((impl₁ t).run s₁ >>= k₁) ((impl₂ t).run s₂ >>= k₂))
+    (h_bad : ∀ {γ : Type} (r₁ : OracleComp spec₁ (γ × σ₁)) (r₂ : OracleComp spec₂ (γ × σ₂)),
+      Rrun r₁ r₂ → Pr[ fun z => bad₁ z.2 | r₁] ≤ Pr[ fun z => bad₂ z.2 | r₂])
+    (oa : OracleComp spec α) (s₁ : σ₁) (s₂ : σ₂) :
+    Pr[fun z => bad₁ z.2 | (simulateQ impl₁ oa).run s₁] ≤
+      Pr[fun z => bad₂ z.2 | (simulateQ impl₂ oa).run s₂] := by
+  -- the induction is pure free-monad bookkeeping; `h_bad` reads the marginals off `Rrun`
+  refine h_bad _ _ ?_
+  induction oa using OracleComp.inductionOn generalizing s₁ s₂ with
+  | pure a =>
+    -- both run distributions are the point masses `pure (a, s₁)` / `pure (a, s₂)`
+    simpa using h_pure a s₁ s₂
+  | query_bind t ob ih =>
+    simpa using h_bind t s₁ s₂ _ _ ih
+
 /-! ## "Identical until bad" fundamental lemma -/
 
 variable [IsUniformSpec spec]
@@ -610,125 +729,6 @@ private lemma probEvent_bad_eq {σ : Type}
   -- the unflagged masses already agree; complementation transports that to the flagged ones
   rw [ENNReal.eq_sub_of_add_eq probEvent_ne_top h1, ENNReal.eq_sub_of_add_eq probEvent_ne_top h2,
     probEvent_not_bad_eq impl₁ impl₂ bad h_agree h_mono₁ h_mono₂ oa s₀]
-
-omit [IsUniformSpec spec] in
-/-- **Marginal stochastic dominance through `simulateQ` (self-referential / Fubini form).**
-
-The marginal counterpart of `relTriple_simulateQ_run_mono`. Where the latter demands a
-*pointwise* per-step coupling whose support respects an output-and-state relation, this lemma
-demands only a *marginal* per-step inequality: at every query and every pair of `R`-related
-states, the one-step run of `impl₁` followed by *any* left tail `k₁` has bad-marginal at most
-the one-step run of `impl₂` followed by *any* right tail `k₂`, provided the two tails are
-themselves marginally bad-dominated from every pair of `R`-related successor states.
-
-This is the right shape when the two handlers genuinely diverge on the answer distribution at a
-single step (e.g. an eager deterministic ghost read vs. a deferred-sampling read), so no
-pointwise coupling can dominate the bad flag at that step, yet the *marginal* bad mass — the
-`tsum` over the deferred draw, taken before the divergent continuation is applied — is still
-ordered (Fubini / tsum-swap). The per-step premise is self-referential by design: discharging
-it at the divergent step is exactly the marginal draw-commutation, the hard content this lemma
-isolates from the free-monad bookkeeping.
-
-The base hypothesis `h_base` (`R s₁ s₂ → bad₁ s₁ → bad₂ s₂`) discharges the `pure` leaf, where no
-further step can repair the bad flag: there the bad marginal is exactly the indicator of the
-current state, so `R` must already carry the bad implication.
-
-Applying it: `h_step` carries the entire probabilistic obligation, and it is quantified over
-*arbitrary* tails, so it may be discharged query-by-query — trivially wherever the two handlers
-agree, and by the marginal draw-commutation at the one query where they diverge. Reach instead
-for the sibling `probEvent_dist_simulateQ_mono` when no pointwise state relation exists at all:
-that version uses a relation on the two *run distributions*, which applies when the successor
-states are related only through a coupling over a deferred draw, at the price of also having to
-seed the relation at every `pure` leaf. -/
-theorem probEvent_marginal_simulateQ_mono
-    {ι₁ : Type u} {ι₂ : Type u}
-    {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    [IsUniformSpec spec₁] [IsUniformSpec spec₂]
-    {σ₁ σ₂ : Type}
-    (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
-    (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec₂)))
-    (R : σ₁ → σ₂ → Prop)
-    (bad₁ : σ₁ → Prop) (bad₂ : σ₂ → Prop)
-    (h_base : ∀ (s₁ : σ₁) (s₂ : σ₂), R s₁ s₂ → bad₁ s₁ → bad₂ s₂)
-    (h_step : ∀ (t : spec.Domain) (s₁ : σ₁) (s₂ : σ₂), R s₁ s₂ →
-      ∀ {γ : Type} (k₁ : (spec.Range t × σ₁) → OracleComp spec₁ (γ × σ₁))
-        (k₂ : (spec.Range t × σ₂) → OracleComp spec₂ (γ × σ₂)),
-        (∀ (u : spec.Range t) (s₁' : σ₁) (s₂' : σ₂), R s₁' s₂' →
-          Pr[ fun z => bad₁ z.2 | k₁ (u, s₁')] ≤ Pr[ fun z => bad₂ z.2 | k₂ (u, s₂')]) →
-        Pr[ fun z => bad₁ z.2 | (impl₁ t).run s₁ >>= k₁] ≤
-          Pr[ fun z => bad₂ z.2 | (impl₂ t).run s₂ >>= k₂])
-    (oa : OracleComp spec α) (s₁ : σ₁) (s₂ : σ₂) (hR : R s₁ s₂) :
-    Pr[fun z => bad₁ z.2 | (simulateQ impl₁ oa).run s₁] ≤
-      Pr[fun z => bad₂ z.2 | (simulateQ impl₂ oa).run s₂] := by
-  classical
-  induction oa using OracleComp.inductionOn generalizing s₁ s₂ with
-  | pure a =>
-    -- both sides are point masses on `(a, s₁)` / `(a, s₂)`; reduce to the base implication.
-    simp only [simulateQ_pure, StateT.run_pure, probEvent_pure]
-    by_cases hb : bad₁ s₁
-    · simp [hb, h_base s₁ s₂ hR hb]
-    · simp [hb]
-  | query_bind t ob ih =>
-    simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
-      id_map, StateT.run_bind]
-    exact h_step t s₁ s₂ hR _ _ ih
-
-omit [IsUniformSpec spec] in
-/-- **Distribution-level stochastic dominance through `simulateQ`.**
-
-The *distribution-level* sibling of `probEvent_marginal_simulateQ_mono`. Where the latter carries
-a **pointwise** state relation `R : σ₁ → σ₂ → Prop` and discharges the per-query step at every pair
-of `R`-related *states*, this lemma carries a relation `Rrun` directly on the two run
-**distributions** (the whole `OracleComp spec₁ (γ × σ₁)` / `OracleComp spec₂ (γ × σ₂)`
-computations), generic over the output type `γ`. This is the shape needed when the per-step
-recoupling is inherently *joint-law* — e.g. an eager handler that has already committed sampled
-keys into its state versus a deferred-sampling handler that only carries a pending *count*, so that
-no pointwise state predicate relates the two successor states yet the two run distributions are
-related by a coupling over the deferred draw.
-
-The entire probabilistic content is isolated into the three premises:
-
-* `h_pure` seeds the relation at the `pure` leaves (the run distributions are the two point masses
-  `pure (a, s₁)` / `pure (a, s₂)`);
-* `h_bind` is the distribution-level bind congruence: given a query `t` and any two tails `k₁ k₂`
-  whose per-output continuations are already `Rrun`-related, the one-step runs followed by those
-  tails are again `Rrun`-related. Discharging `h_bind` at a divergent step *is* the marginal
-  draw-commutation, the hard content this lemma isolates;
-* `h_bad` reads the ordered bad marginals off any `Rrun`-related pair of run distributions.
-
-Applying it: nothing relates the initial states `s₁ s₂`, because `h_pure` is quantified over *all*
-leaves and so already seeds `Rrun` wherever the induction reaches one. That is the trade against
-`probEvent_marginal_simulateQ_mono`, which seeds only from its `R`-related base but must then
-exhibit a pointwise `R` relating the successor states at every step. -/
-theorem probEvent_dist_simulateQ_mono
-    {ι₁ : Type u} {ι₂ : Type u}
-    {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    [IsUniformSpec spec₁] [IsUniformSpec spec₂]
-    {σ₁ σ₂ : Type}
-    (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
-    (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec₂)))
-    (Rrun : ∀ {γ : Type}, OracleComp spec₁ (γ × σ₁) → OracleComp spec₂ (γ × σ₂) → Prop)
-    (bad₁ : σ₁ → Prop) (bad₂ : σ₂ → Prop)
-    (h_pure : ∀ {γ : Type} (a : γ) (s₁ : σ₁) (s₂ : σ₂),
-      Rrun (pure (a, s₁)) (pure (a, s₂)))
-    (h_bind : ∀ (t : spec.Domain) (s₁ : σ₁) (s₂ : σ₂),
-      ∀ {γ : Type} (k₁ : (spec.Range t × σ₁) → OracleComp spec₁ (γ × σ₁))
-        (k₂ : (spec.Range t × σ₂) → OracleComp spec₂ (γ × σ₂)),
-        (∀ (u : spec.Range t) (s₁' : σ₁) (s₂' : σ₂), Rrun (k₁ (u, s₁')) (k₂ (u, s₂'))) →
-        Rrun ((impl₁ t).run s₁ >>= k₁) ((impl₂ t).run s₂ >>= k₂))
-    (h_bad : ∀ {γ : Type} (r₁ : OracleComp spec₁ (γ × σ₁)) (r₂ : OracleComp spec₂ (γ × σ₂)),
-      Rrun r₁ r₂ → Pr[ fun z => bad₁ z.2 | r₁] ≤ Pr[ fun z => bad₂ z.2 | r₂])
-    (oa : OracleComp spec α) (s₁ : σ₁) (s₂ : σ₂) :
-    Pr[fun z => bad₁ z.2 | (simulateQ impl₁ oa).run s₁] ≤
-      Pr[fun z => bad₂ z.2 | (simulateQ impl₂ oa).run s₂] := by
-  -- the induction is pure free-monad bookkeeping; `h_bad` reads the marginals off `Rrun`
-  refine h_bad _ _ ?_
-  induction oa using OracleComp.inductionOn generalizing s₁ s₂ with
-  | pure a =>
-    -- both run distributions are the point masses `pure (a, s₁)` / `pure (a, s₂)`
-    simpa using h_pure a s₁ s₂
-  | query_bind t ob ih =>
-    simpa using h_bind t s₁ s₂ _ _ ih
 
 /-- The fundamental lemma of game playing: if two oracle implementations agree whenever
 a "bad" flag is unset, then the total variation distance between the two simulations

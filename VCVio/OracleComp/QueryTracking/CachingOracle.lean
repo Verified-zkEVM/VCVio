@@ -7,7 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.QueryTracking.Structures
-public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
@@ -130,10 +130,7 @@ theorem withCachingAux_run'_eq
       (simulateQ base.withCaching oa).run' cache := by
   have hmap := congrArg (Prod.fst <$> ·)
     (withCachingAux_run_proj_eq base hit miss hmiss oa cache q)
-  rw [StateT.run', StateT.run']
-  change (fun a => id a.1) <$> (simulateQ (withCachingAux hit miss) oa).run (cache, q) =
-    Prod.fst <$> (simulateQ base.withCaching oa).run cache
-  simpa only [Functor.map_map, Function.comp_def, Prod.map] using hmap
+  simpa only [StateT.run'_eq, Functor.map_map, Function.comp_def, Prod.map, id_eq] using hmap
 
 end CacheAuxProjection
 
@@ -180,9 +177,6 @@ theorem PreservesInv.withCachingAux_aux
 
 section CacheMonotonicity
 
-variable [spec.DecidableEq]
-
-omit [spec.DecidableEq] in
 /-- Running `withCaching` at state `cache` produces a result whose cache is `≥ cache`.
 On a cache hit the state is unchanged; on a miss a single entry is added. -/
 lemma withCaching_cache_le [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
@@ -198,9 +192,25 @@ lemma withCaching_cache_le [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
     obtain ⟨v, _, rfl⟩ := hz
     exact QueryCache.le_cacheQuery cache₀ ht
 
+/-- Let `t` be a query, and consider any possible outcome of a `withCaching` step
+on `t`. Then the final cache maps `t` to the returned answer. -/
+lemma withCaching_run_caches [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+    (so : QueryImpl spec m) (t : spec.Domain) (cache₀ : QueryCache spec)
+    (z) (hz : z ∈ support ((so.withCaching t).run cache₀)) :
+    z.2 t = some z.1 := by
+  cases ht : cache₀ t with
+  | some u =>
+    rw [withCaching_run_some so ht, support_pure, Set.mem_singleton_iff] at hz
+    rw [hz]
+    exact ht
+  | none =>
+    rw [withCaching_run_none so ht, support_map] at hz
+    obtain ⟨v, _, rfl⟩ := hz
+    exact QueryCache.cacheQuery_self cache₀ t v
+
 /-- `withCaching` preserves the invariant `(cache₀ ≤ ·)` (the cache only grows). -/
 lemma PreservesInv.withCaching_le {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
-    [DecidableEq ι₀] [spec₀.DecidableEq]
+    [DecidableEq ι₀]
     (so : QueryImpl spec₀ ProbComp) (cache₀ : QueryCache spec₀) :
     QueryImpl.PreservesInv (so.withCaching) (cache₀ ≤ ·) :=
   fun t cache hle z hz => hle.trans (withCaching_cache_le so t cache z hz)
@@ -241,7 +251,7 @@ lemma isTotalQueryBound_run_withCaching
       rw [withCaching_run_some _ hcache]
       trivial
 
-lemma isPerIndexQueryBound_run_withCaching [IsUniformSpec spec]
+lemma isPerIndexQueryBound_run_withCaching
     (so : QueryImpl spec (OracleComp spec)) (t : spec.Domain) {qb : ι → ℕ}
     (h : OracleComp.IsPerIndexQueryBound (so t) qb) (cache : spec.QueryCache) :
     OracleComp.IsPerIndexQueryBound ((so.withCaching t).run cache) qb := by
@@ -262,9 +272,8 @@ end QueryImpl
 namespace OracleComp
 
 variable {ι : Type u} [DecidableEq ι] {spec : OracleSpec ι}
-  {ι' : Type u} {spec' : OracleSpec ι'} [IsUniformSpec spec'] {α : Type u}
+  {ι' : Type u} {spec' : OracleSpec ι'} {α : Type u}
 
-omit [IsUniformSpec spec'] in
 theorem IsQueryBoundP.simulateQ_run_withCaching
     {p : ι → Prop} [DecidablePred p] {q : ι' → Prop} [DecidablePred q]
     (so : QueryImpl spec (OracleComp spec'))
@@ -279,7 +288,6 @@ theorem IsQueryBoundP.simulateQ_run_withCaching
     (fun t hnp => QueryImpl.isQueryBoundP_run_withCaching so t (hstep_np t hnp))
     cache
 
-omit [IsUniformSpec spec'] in
 theorem IsTotalQueryBound.simulateQ_run_withCaching
     (so : QueryImpl spec (OracleComp spec'))
     {oa : OracleComp spec α} {n : ℕ}
@@ -291,7 +299,7 @@ theorem IsTotalQueryBound.simulateQ_run_withCaching
     (fun t => QueryImpl.isTotalQueryBound_run_withCaching so t (hstep t))
     cache
 
-theorem IsPerIndexQueryBound.simulateQ_run_withCaching [IsUniformSpec spec]
+theorem IsPerIndexQueryBound.simulateQ_run_withCaching
     (so : QueryImpl spec (OracleComp spec))
     {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : IsPerIndexQueryBound oa qb)
@@ -334,23 +342,6 @@ lemma run_none {t : spec.Domain} {cache : spec.QueryCache} (h : cache t = none) 
       (fun u => (u, cache.cacheQuery t u)) <$> (liftM (query t) : OracleComp spec _) := by
   rw [eq_withCaching, QueryImpl.withCaching_run_none _ h, QueryImpl.ofLift_apply]
 
-/-- Trivially true via `probFailure_eq_zero` since both sides are `OracleComp` computations.
-A generic `withCaching` version for arbitrary base monads would require a separate argument
-because caching changes the oracle semantics (cache hits skip the underlying oracle call). -/
-lemma probFailure_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀} [DecidableEq ι₀]
-    [IsUniformSpec spec₀] {α : Type}
-    (oa : OracleComp spec₀ α) (cache : QueryCache spec₀) :
-    Pr[⊥ | (simulateQ spec₀.cachingOracle oa).run cache] = Pr[⊥ | oa] := by
-  simp
-
-/-- Trivially true via `probFailure_eq_zero`; see `probFailure_run_simulateQ`. -/
-@[simp]
-lemma NeverFail_run_simulateQ_iff {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀} [DecidableEq ι₀]
-    [IsUniformSpec spec₀] {α : Type}
-    (oa : OracleComp spec₀ α) (cache : QueryCache spec₀) :
-    NeverFail ((simulateQ spec₀.cachingOracle oa).run cache) ↔ NeverFail oa := by
-  rw [← probFailure_eq_zero_iff, ← probFailure_eq_zero_iff, probFailure_run_simulateQ]
-
 lemma simulateQ_query (t : spec.Domain) :
     simulateQ cachingOracle (liftM (query t)) = cachingOracle t := by
   simp [_root_.simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query]
@@ -378,7 +369,7 @@ theorem isQueryBoundP_run_simulateQ {ι₀ : Type} [DecidableEq ι₀]
     cache
 
 theorem isPerIndexQueryBound_run_simulateQ {ι₀ : Type} [DecidableEq ι₀]
-    {spec₀ : OracleSpec.{0, 0} ι₀} [IsUniformSpec spec₀] {α : Type}
+    {spec₀ : OracleSpec.{0, 0} ι₀} {α : Type}
     {oa : OracleComp spec₀ α} {qb : ι₀ → ℕ}
     (h : OracleComp.IsPerIndexQueryBound oa qb) (cache : spec₀.QueryCache) :
     OracleComp.IsPerIndexQueryBound ((simulateQ spec₀.cachingOracle oa).run cache) qb :=
@@ -421,12 +412,7 @@ lemma withCacheOverlay_bind {α β : Type u} (cache : spec.QueryCache)
     withCacheOverlay cache (oa >>= ob) =
       ((simulateQ cachingOracle oa).run cache >>= fun p =>
         withCacheOverlay p.2 (ob p.1)) := by
-  simp only [withCacheOverlay, simulateQ_bind, StateT.run']
-  change Prod.fst <$> (((simulateQ cachingOracle oa >>=
-    fun x => simulateQ cachingOracle (ob x)) :
-      StateT (QueryCache spec) (OracleComp spec) β).run cache) = _
-  rw [StateT.run_bind, map_bind]
-  rfl
+  simp only [withCacheOverlay, simulateQ_bind, StateT.run'_eq, StateT.run_bind, map_bind]
 
 lemma withCacheOverlay_map {α β : Type u} (cache : spec.QueryCache)
     (f : α → β) (oa : OracleComp spec α) :
@@ -460,24 +446,19 @@ private lemma fst_map_cachingOracle_run_none (cache : spec.QueryCache) (t : spec
 lemma withCacheOverlay_query_hit (cache : spec.QueryCache) (t : spec.Domain)
     (v : spec.Range t) (hv : cache t = some v) :
     withCacheOverlay cache (query t : OracleComp spec (spec.Range t)) = pure v := by
-  change Prod.fst <$> (simulateQ cachingOracle
-    (query t : OracleComp spec (spec.Range t))).run cache = _
+  rw [withCacheOverlay, StateT.run'_eq]
   rw [cachingOracle.simulateQ_query, fst_map_cachingOracle_run_some cache t v hv]
 
 lemma withCacheOverlay_query_miss (cache : spec.QueryCache) (t : spec.Domain)
     (hv : cache t = none) :
     withCacheOverlay cache (query t : OracleComp spec (spec.Range t)) = query t := by
-  change Prod.fst <$> (simulateQ cachingOracle
-    (query t : OracleComp spec (spec.Range t))).run cache = _
+  rw [withCacheOverlay, StateT.run'_eq]
   rw [cachingOracle.simulateQ_query, fst_map_cachingOracle_run_none cache t hv]
 
 end withCacheOverlay
 
 namespace OracleComp
 
-variable [spec.DecidableEq]
-
-omit [spec.DecidableEq] in
 /-- `simulateQ cachingOracle` only grows the cache: for any `oa`, if
 `z ∈ support ((simulateQ cachingOracle oa).run cache₀)` then `cache₀ ≤ z.2`. -/
 theorem simulateQ_cachingOracle_cache_le {α : Type u}
@@ -497,26 +478,13 @@ theorem simulateQ_cachingOracle_cache_le {α : Type u}
       have hle_mid : cache₀ ≤ cache_mid := QueryImpl.withCaching_cache_le _ _ cache₀ _ hmid
       exact hle_mid.trans (ih _ cache_mid z hrest)
 
-omit [spec.DecidableEq] in
 /-- After running `cachingOracle` on a single query at `t`, the resulting cache
 maps `t` to the returned value. -/
 theorem cachingOracle_query_caches (t : spec.Domain)
     (cache₀ : QueryCache spec)
     (v : spec.Range t) (cache₁ : QueryCache spec)
     (hmem : (v, cache₁) ∈ support ((cachingOracle t).run cache₀)) :
-    cache₁ t = some v := by
-  simp only [cachingOracle.apply_eq, StateT.run_bind, StateT.run_get, pure_bind] at hmem
-  cases hc : cache₀ t with
-  | some u =>
-    simp only [hc, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hmem
-    obtain ⟨rfl, rfl⟩ := hmem
-    exact hc
-  | none =>
-    simp only [hc, StateT.run_bind, StateT.run_monadLift, monad_norm] at hmem
-    rw [mem_support_bind_iff] at hmem
-    obtain ⟨u, _, hmem⟩ := hmem
-    simp only [StateT.run_modifyGet, support_pure, Set.mem_singleton_iff] at hmem
-    obtain ⟨rfl, rfl⟩ := hmem
-    exact QueryCache.cacheQuery_self cache₀ t v
+    cache₁ t = some v :=
+  QueryImpl.withCaching_run_caches _ t cache₀ _ hmem
 
 end OracleComp

@@ -8,10 +8,10 @@ module
 
 public import Mathlib.Algebra.Polynomial.Eval.Defs
 public import PolyFun.PFunctor.Bound
-public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.QueryTracking.CountingOracle
-public import VCVio.OracleComp.SimSemantics.Append
-public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.Support
+public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
+public import VCVio.OracleComp.SimSemantics.Append.Core
+public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 
 /-!
 # Structural query bounds
@@ -73,10 +73,7 @@ lemma isQueryBound_query_iff (t : ι) (b : B)
     IsQueryBound (liftM (spec.query t) : OracleComp spec _) b canQuery cost ↔
     canQuery t b := by
   rw [isQueryBound_iff_isRollBound, OracleComp.liftM_def]
-  change PFunctor.FreeM.IsRollBound
-    ((id : spec.Range t → spec.Range t) <$> PFunctor.FreeM.lift (P := spec.toPFunctor) t)
-    b canQuery cost ↔ canQuery t b
-  rw [PFunctor.FreeM.isRollBound_map_iff, PFunctor.FreeM.isRollBound_lift_iff]
+  exact PFunctor.FreeM.isRollBound_lift_iff (P := spec.toPFunctor) t b canQuery cost
 
 private lemma isQueryBound_map_aux (oa : OracleComp spec α) (f : α → β)
     (canQuery : ι → B → Prop) (cost : ι → B → B) :
@@ -658,7 +655,6 @@ theorem IsPerIndexQueryBound.counting_bounded {oa : OracleComp spec α} {qb : ι
     obtain ⟨hne, u, hu⟩ := hz
     have h_snd : Function.update z.2 t (z.2 t - 1) ≤
         Function.update qb t (qb t - 1) := by
-      change (z.1, Function.update z.2 t (z.2 t - 1)).2 ≤ _
       exact ih u (h.2 u) hu
     intro i
     by_cases hi : i = t
@@ -834,7 +830,7 @@ lemma not_isTotalQueryBound_bind_query_prefix_zero
 
 /-- If a computation is followed by a continuation that always starts with one query,
 then a bound on the whole computation by `n + 1` yields a bound on the prefix by `n`. -/
-lemma IsTotalQueryBound.of_bind_query_prefix [spec.Inhabited]
+lemma IsTotalQueryBound.of_bind_query_prefix [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α}
     {next : α → spec.Domain}
     {ob : ∀ x, spec.Range (next x) → OracleComp spec β}
@@ -850,7 +846,7 @@ lemma IsTotalQueryBound.of_bind_query_prefix [spec.Inhabited]
       rw [bind_assoc, isTotalQueryBound_query_bind_iff] at h
       rw [isTotalQueryBound_query_bind_iff]
       have hn : 0 < n := Nat.pos_of_ne_zero fun hz =>
-        absurd (hz ▸ h.2 default) not_isTotalQueryBound_bind_query_prefix_zero
+        absurd (hz ▸ h.2 (Classical.arbitrary _)) not_isTotalQueryBound_bind_query_prefix_zero
       exact ⟨hn, fun u => ih u (n := n - 1) (Nat.sub_add_cancel hn ▸ h.2 u)⟩
 
 theorem IsTotalQueryBound.simulateQ_run_of_step {ι' : Type u} {spec' : OracleSpec ι'}

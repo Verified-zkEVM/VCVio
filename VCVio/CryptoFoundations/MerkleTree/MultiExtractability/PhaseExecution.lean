@@ -30,7 +30,7 @@ variable {Cfg Query Address Y S R : Type}
 is exactly the executable `withQueryLog` prefix followed by a suffix receiving the accumulated
 log.  This theorem is useful both for commitment phases and for the terminal opening phase. -/
 theorem adaptivePrefixRunFrom_eq_withQueryLog
-    [DecidableEq Query] [DecidableEq Y]
+    [DecidableEq Query]
     (prefixComp : OracleComp (Query →ₒ Y) S)
     (suffix : S → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
     (cache : (Query →ₒ Y).QueryCache) (log : (Query →ₒ Y).QueryLog) :
@@ -98,7 +98,7 @@ theorem probEvent_withQueryLog_stablePhase_le
 /-- A raw commitment phase followed by cumulative-log recording has exactly the same cached
 semantics as the executable `withQueryLog` phase followed by suffix recording. -/
 theorem adaptivePrefixRunFrom_commit_eq
-    [DecidableEq Query] [DecidableEq Y]
+    [DecidableEq Query]
     {config : Configuration Cfg Address}
     (extractorState : ExtractorState Cfg Query Address Y config)
     (commit : OracleComp (Query →ₒ Y) (Cfg × Y × S))

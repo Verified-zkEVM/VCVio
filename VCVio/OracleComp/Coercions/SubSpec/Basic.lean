@@ -165,6 +165,13 @@ end OracleSpec
 
 namespace OracleComp
 
+/-- Lifting a primitive query through a signature inclusion first translates the query and
+then inserts it into the target free program. -/
+lemma liftM_eq_liftM_liftM [MonadLiftT (OracleQuery spec) (OracleQuery superSpec)]
+    (q : OracleQuery spec α) :
+    (liftM q : OracleComp superSpec α) =
+      liftM (liftM q : OracleQuery superSpec α) := rfl
+
 section liftComp
 
 /-- Lift a computation from `spec` to `superSpec` using a `SubSpec` instance on queries.
@@ -190,6 +197,13 @@ lemma liftComp_query (q : OracleQuery spec α) :
     liftComp (q : OracleComp spec _) superSpec =
       q.cont <$> (liftM (spec.query q.input) : OracleComp superSpec _) := by
   simp [liftComp]
+
+/-- Signature translation of a primitive query is its query lift. -/
+lemma liftComp_liftM_query (t : spec.Domain) :
+    liftComp (liftM (spec.query t) : OracleComp spec (spec.Range t)) superSpec =
+      (liftM (spec.query t) : OracleComp superSpec (spec.Range t)) := by
+  simpa only [OracleQuery.cont_query, OracleQuery.input_query, id_map] using
+    liftComp_query superSpec (spec.query t)
 
 @[simp]
 lemma liftComp_bind (mx : OracleComp spec α) (ob : α → OracleComp spec β) :

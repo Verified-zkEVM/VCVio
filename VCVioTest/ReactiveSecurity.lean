@@ -106,56 +106,50 @@ theorem law_server_uniform : law (server ($ᵗ Bool)) (context 5) =
     Measure.map_smul _ Measurable.of_discrete.aemeasurable]
   simp [Measure.map_dirac' Measurable.of_discrete]
 
-private theorem tvDist_dirac_half {α : Type} [MeasurableSpace α]
+private theorem etvDist_dirac_half {α : Type} [MeasurableSpace α]
     [MeasurableSingletonClass α] (x y : α) (hxy : x ≠ y) :
-    (Measure.dirac x).tvDist
-      ((2 : ℝ≥0∞)⁻¹ • Measure.dirac x + (2 : ℝ≥0∞)⁻¹ • Measure.dirac y) = 1 / 2 := by
-  have hdist : (Measure.dirac x).etvDist
+    (Measure.dirac x).etvDist
       ((2 : ℝ≥0∞)⁻¹ • Measure.dirac x + (2 : ℝ≥0∞)⁻¹ • Measure.dirac y) = 2⁻¹ := by
-    have hhalf : (2 : ℝ≥0∞)⁻¹ ≤ 1 := ENNReal.inv_le_one.mpr (by norm_num)
-    apply le_antisymm
-    · refine iSup_le fun s => ?_
-      by_cases hx : x ∈ s.1 <;> by_cases hy : y ∈ s.1 <;>
-        simp [Measure.dirac_apply' _ s.2, hx, hy, ENNReal.absDiff,
-          ENNReal.inv_two_add_inv_two, tsub_eq_zero_of_le hhalf]
-    · have h := Measure.absDiff_apply_le_etvDist (Measure.dirac x)
-        ((2 : ℝ≥0∞)⁻¹ • Measure.dirac x + (2 : ℝ≥0∞)⁻¹ • Measure.dirac y)
-        (measurableSet_singleton x)
-      simpa [Measure.dirac_apply', hxy, Ne.symm hxy, ENNReal.absDiff,
-        tsub_eq_zero_of_le hhalf] using h
-  simp [Measure.tvDist, hdist]
+  have hhalf : (2 : ℝ≥0∞)⁻¹ ≤ 1 := ENNReal.inv_le_one.mpr (by norm_num)
+  apply le_antisymm
+  · refine iSup_le fun s => ?_
+    by_cases hx : x ∈ s.1 <;> by_cases hy : y ∈ s.1 <;>
+      simp [Measure.dirac_apply' _ s.2, hx, hy, ENNReal.absDiff,
+        ENNReal.inv_two_add_inv_two, tsub_eq_zero_of_le hhalf]
+  · have h := Measure.absDiff_apply_le_etvDist (Measure.dirac x)
+      ((2 : ℝ≥0∞)⁻¹ • Measure.dirac x + (2 : ℝ≥0∞)⁻¹ • Measure.dirac y)
+      (measurableSet_singleton x)
+    simpa [Measure.dirac_apply', hxy, Ne.symm hxy, ENNReal.absDiff,
+      tsub_eq_zero_of_le hhalf] using h
 
 /-- Each adjacent executed comparison has error one half. -/
 theorem advantage_pure_uniform (bit : Bool) :
-    advantage (server (pure bit)) (server ($ᵗ Bool)) (context 5) = 1 / 2 := by
-  rw [advantage_eq_tvDist, law_server_pure, law_server_uniform]
+    advantage (server (pure bit)) (server ($ᵗ Bool)) (context 5) = 2⁻¹ := by
+  rw [advantage_eq_etvDist, law_server_pure, law_server_uniform]
   cases bit
-  · exact tvDist_dirac_half _ _ (by decide)
+  · exact etvDist_dirac_half _ _ (by decide)
   · rw [add_comm]
-    exact tvDist_dirac_half _ _ (by decide)
+    exact etvDist_dirac_half _ _ (by decide)
 
 /-- The two deterministic communicating servers are perfectly distinguishable. -/
 theorem advantage_false_true :
     advantage (server (pure false)) (server (pure true)) (context 5) = 1 := by
-  rw [advantage_eq_tvDist, law_server_pure, law_server_pure]
-  have hdist : (Measure.dirac (some (some false) : Result)).etvDist
-      (Measure.dirac (some (some true))) = 1 := by
-    apply le_antisymm
-    · exact Measure.etvDist_le_one _ _ (by simp) (by simp)
-    · simpa [ENNReal.absDiff] using Measure.absDiff_apply_le_etvDist
-        (Measure.dirac (some (some false) : Result)) (Measure.dirac (some (some true)))
-        (measurableSet_singleton (some (some false)))
-  simp [Measure.tvDist, hdist]
+  rw [advantage_eq_etvDist, law_server_pure, law_server_pure]
+  apply le_antisymm
+  · exact Measure.etvDist_le_one _ _ (by simp) (by simp)
+  · simpa [ENNReal.absDiff] using Measure.absDiff_apply_le_etvDist
+      (Measure.dirac (some (some false) : Result)) (Measure.dirac (some (some true)))
+      (measurableSet_singleton (some (some false)))
 
 /-- Reusing a positive error threshold under transitivity is unsound even for actual networks. -/
 theorem fixed_error_not_transitive :
     ¬ (∀ first middle last : System boundary,
-      advantage first middle (context 5) ≤ 1 / 2 →
-      advantage middle last (context 5) ≤ 1 / 2 →
-      advantage first last (context 5) ≤ 1 / 2) := by
+      advantage first middle (context 5) ≤ 2⁻¹ →
+      advantage middle last (context 5) ≤ 2⁻¹ →
+      advantage first last (context 5) ≤ 2⁻¹) := by
   intro h
   have hleft := (advantage_pure_uniform false).le
-  have hright : advantage (server ($ᵗ Bool)) (server (pure true)) (context 5) ≤ 1 / 2 := by
+  have hright : advantage (server ($ᵗ Bool)) (server (pure true)) (context 5) ≤ 2⁻¹ := by
     simpa only [advantage_comm] using (advantage_pure_uniform true).le
   have hbad := h _ _ _ hleft hright
   rw [advantage_false_true] at hbad
@@ -163,7 +157,7 @@ theorem fixed_error_not_transitive :
 
 /-- The graded API composes the two real comparisons with the required sum of errors. -/
 theorem executed_graded_comparison :
-    ContextualWithin (fun closing => closing = context 5) (1 / 2 + 1 / 2)
+    ContextualWithin (fun closing => closing = context 5) (2⁻¹ + 2⁻¹)
       (server (pure false)) (server (pure true)) := by
   apply ContextualWithin.trans (middle := server ($ᵗ Bool))
   · rintro _ rfl
@@ -174,7 +168,7 @@ theorem executed_graded_comparison :
 
 /-- The same allowed-context comparison fails if its error is left at one half. -/
 theorem executed_half_comparison_false :
-    ¬ ContextualWithin (fun closing => closing = context 5) (1 / 2)
+    ¬ ContextualWithin (fun closing => closing = context 5) 2⁻¹
       (server (pure false)) (server (pure true)) := by
   intro h
   have hbad := h (context 5) rfl

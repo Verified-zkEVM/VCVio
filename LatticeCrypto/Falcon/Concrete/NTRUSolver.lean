@@ -6,6 +6,8 @@ Authors: Quang Dao
 
 module
 public import LatticeCrypto.Falcon.Concrete.BigInt31
+public import LatticeCrypto.Falcon.Concrete.FXR
+public import LatticeCrypto.Falcon.Concrete.PolyBigInt
 public import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
 
 /-!
@@ -41,6 +43,8 @@ public section
 
 namespace Falcon.Concrete.NTRUSolver
 
+open Falcon.Concrete.FXR
+
 /-! ## Constants -/
 
 /-- The Falcon modulus `q = 12289`. -/
@@ -57,49 +61,6 @@ def WORD_WIN : Array Nat := #[1, 1, 2, 2, 2, 3, 3, 4, 5, 7]
 
 /-- Minimum depth at which intermediate `(f, g)` are saved during descent. -/
 def MIN_SAVE_FG : Array Nat := #[0, 0, 1, 2, 2, 2, 2, 2, 2, 3, 3]
-
-/-! ## FXR (Fixed-point Real) type stubs
-
-The FXR type is a 32.32 fixed-point number stored as `UInt64`.
-Full implementation will come from a dedicated FXR module
-(port of `kgen_fxp.c`). -/
-
-abbrev FXR := UInt64
-
-namespace FXR
-
-@[inline] def zero : FXR := 0
-
-@[inline] def ofInt (j : Int32) : FXR := j.toUInt32.toUInt64 <<< 32
-
-@[inline] def add (x y : FXR) : FXR := x + y
-
-@[inline] def sqr (_x : FXR) : FXR := sorry
-
-@[inline] def lt (x y : FXR) : Bool := x.toInt64 < y.toInt64
-
-@[inline] def ofScaled32 (x : UInt64) : FXR := x
-
-end FXR
-
-/-! ## Stub operations for modules not yet ported
-
-These functions will be provided by `PolyBigInt` and `FXR` modules once
-they are ported from `kgen_fxp.c` and `kgen_poly.c`. -/
-
-private def poly_big_to_small (_logn : Nat) (_s : Array UInt32) (_off : Nat)
-    (_lim : Int32) : Option (Array Int8) := sorry
-
-private def vect_set (_logn : Nat) (_f : Array Int8) : Array FXR := sorry
-private def vect_FFT (_logn : Nat) (_f : Array FXR) : Array FXR := sorry
-private def vect_iFFT (_logn : Nat) (_f : Array FXR) : Array FXR := sorry
-private def vect_invnorm_fft (_logn : Nat) (_a _b : Array FXR) (_e : Nat) :
-    Array FXR := sorry
-private def vect_adj_fft (_logn : Nat) (_a : Array FXR) : Array FXR := sorry
-private def vect_mul_realconst (_logn : Nat) (_a : Array FXR) (_c : FXR) :
-    Array FXR := sorry
-private def vect_mul_selfadj_fft (_logn : Nat) (_a _b : Array FXR) :
-    Array FXR := sorry
 
 /-! ## Helper types and conversions -/
 
@@ -395,8 +356,235 @@ level by:
 
 6. **Verification**: Check `f·G - g·F ≡ q (mod p₀)` in NTT form. -/
 
-def solve_NTRU_intermediate (_logn_top : Nat) (_f _g : Array Int8)
-    (_depth : Nat) (_buf : Array UInt32) : Option (Array UInt32) := sorry
+/-- Smallest degree exponent at which the Babai subtraction uses
+`PolyBigInt.poly_sub_scaled_ntt` instead of the quadratic `PolyBigInt.poly_sub_scaled`
+(at depths above 1). -/
+private def minLognFgNtt : Nat := 4
+
+/-- Offset, in the `6 · 2^logn_top`-word solver buffer, of the `(f, g)` pair saved by
+`make_fg_deepest` for depth `depth` (valid when `MIN_SAVE_FG[logn_top] ≤ depth < logn_top`). -/
+private def savedFGOffset (logn_top depth : Nat) : Nat := Id.run do
+  let mut off := 6 <<< logn_top
+  for d in [MIN_SAVE_FG.getD logn_top 0:depth + 1] do
+    off := off - (MAX_BL_SMALL.getD d 1 <<< (logn_top + 1 - d))
+  return off
+
+/-- Reduce the `2^logn` signed big integers of `a` (`len` words each, stride `2^logn`)
+modulo the small prime `pr`, and convert the result to NTT representation. -/
+private def modPrimeNTT (logn : Nat) (a : Array UInt32) (len : Nat)
+    (pr : SmallPrimeNTT.SmallPrime) (gm : Array UInt32) : Array UInt32 := Id.run do
+  let n := 1 <<< logn
+  let rx := SmallPrimeNTT.mp_Rx31 len pr.p pr.p0i pr.R2
+  let mut t : Array UInt32 := Array.replicate n 0
+  for j in [:n] do
+    t := t.set! j (zint_mod_small_signed a len j n pr.p pr.p0i pr.R2 rx)
+  return SmallPrimeNTT.mp_NTT logn t gm pr.p pr.p0i
+
+/-- Convert the `2^logn` signed big integers of `a` (`len` words each) to RNS+NTT over the
+first `len + 1` small primes (one line of `2^logn` words per prime). -/
+private def toRNSNTTExtended (logn : Nat) (a : Array UInt32) (len : Nat) :
+    Array UInt32 := Id.run do
+  let mut out : Array UInt32 := #[]
+  for i in [:len + 1] do
+    let pr := SmallPrimeNTT.PRIMES.getD i default
+    let gm := SmallPrimeNTT.mp_mkgm logn pr.g pr.p pr.p0i
+    out := out ++ modPrimeNTT logn a len pr gm
+  return out
+
+/-- Number of bits by which one Babai iteration is assumed to shrink `(F, G)`. -/
+private def reduceBits (logn_top : Nat) : UInt32 :=
+  match logn_top with
+  | 9 => 13
+  | 10 => 11
+  | _ => 16
+
+/-- Lift `(F, G)` from depth `depth + 1` to depth `depth` of the NTRU solver (for
+`1 ≤ depth < logn_top`). The deeper `(F, G)` are read from the start of `buf` (`dlen` words
+per coefficient, degree `2^(logn_top - depth - 1)`); on success the new `(F, G)` are written
+at the start of the returned buffer (`MAX_BL_SMALL[depth]` words per coefficient), and the
+rest of the buffer (in particular the saved intermediate `(f, g)`) is left unchanged.
+Returns `none` when the reduced solution fails the modular check of the NTRU equation. -/
+def solve_NTRU_intermediate (logn_top : Nat) (f g : Array Int8)
+    (depth : Nat) (buf : Array UInt32) : Option (Array UInt32) := Id.run do
+  let logn := logn_top - depth
+  let n := 1 <<< logn
+  let hn := n >>> 1
+  let slen := MAX_BL_SMALL.getD depth 1
+  let llen := MAX_BL_LARGE.getD depth 1
+  let dlen := MAX_BL_SMALL.getD (depth + 1) 1
+
+  -- (F, G) from the deeper level
+  let Fd := extractRange buf 0 (dlen * hn)
+  let Gd := extractRange buf (dlen * hn) (dlen * hn)
+
+  -- (f, g) at this level, in RNS+NTT (slen words per coefficient)
+  let fgt :=
+    if depth < MIN_SAVE_FG.getD logn_top 0 then
+      extractRange (make_fg_intermediate logn_top f g depth) 0 (2 * slen * n)
+    else
+      extractRange buf (savedFGOffset logn_top depth) (2 * slen * n)
+  let mut ft := extractRange fgt 0 (slen * n)
+  let mut gt := extractRange fgt (slen * n) (slen * n)
+
+  -- Deeper (F, G) in RNS, stored in the upper half of each n-word line.
+  let mut Ft : Array UInt32 := Array.replicate (llen * n) 0
+  let mut Gt : Array UInt32 := Array.replicate (llen * n) 0
+  for i in [:llen] do
+    let pr := SmallPrimeNTT.PRIMES.getD i default
+    let rx := SmallPrimeNTT.mp_Rx31 dlen pr.p pr.p0i pr.R2
+    for j in [:hn] do
+      Ft := Ft.set! (i * n + hn + j)
+        (zint_mod_small_signed Fd dlen j hn pr.p pr.p0i pr.R2 rx)
+      Gt := Gt.set! (i * n + hn + j)
+        (zint_mod_small_signed Gd dlen j hn pr.p pr.p0i pr.R2 rx)
+
+  -- Unreduced (F, G) modulo each of the llen primes. (f, g) are brought back to RNS as the
+  -- first slen primes are processed, then rebuilt into plain integers.
+  for i in [:llen] do
+    if i == slen then
+      let (fg', _) := BigInt31.zint_rebuild_CRT (ft ++ gt) slen n 2 PRIMES_BI true
+        (Array.replicate slen 0)
+      ft := extractRange fg' 0 (slen * n)
+      gt := extractRange fg' (slen * n) (slen * n)
+    let pr := SmallPrimeNTT.PRIMES.getD i default
+    let p := pr.p
+    let p0i := pr.p0i
+    let R2 := pr.R2
+    let (gm, igm) := SmallPrimeNTT.mp_mkgmigm logn pr.g pr.ig p p0i
+    let (fx, gx) :=
+      if i < slen then
+        (extractRange ft (i * n) n, extractRange gt (i * n) n)
+      else
+        (modPrimeNTT logn ft slen pr gm, modPrimeNTT logn gt slen pr gm)
+    if i < slen then
+      ft := writeRange ft (i * n) (SmallPrimeNTT.mp_iNTT logn fx igm p p0i)
+      gt := writeRange gt (i * n) (SmallPrimeNTT.mp_iNTT logn gx igm p p0i)
+    let Fdn := SmallPrimeNTT.mp_NTT (logn - 1) (extractRange Ft (i * n + hn) hn) gm p p0i
+    let Gdn := SmallPrimeNTT.mp_NTT (logn - 1) (extractRange Gt (i * n + hn) hn) gm p p0i
+    let mut Fe : Array UInt32 := Array.replicate n 0
+    let mut Ge : Array UInt32 := Array.replicate n 0
+    for j in [:hn] do
+      let fa := getU32 fx (2 * j)
+      let fb := getU32 fx (2 * j + 1)
+      let ga := getU32 gx (2 * j)
+      let gb := getU32 gx (2 * j + 1)
+      let mFp := SmallPrimeNTT.mp_montymul (getU32 Fdn j) R2 p p0i
+      let mGp := SmallPrimeNTT.mp_montymul (getU32 Gdn j) R2 p p0i
+      Fe := Fe.set! (2 * j) (SmallPrimeNTT.mp_montymul gb mFp p p0i)
+      Fe := Fe.set! (2 * j + 1) (SmallPrimeNTT.mp_montymul ga mFp p p0i)
+      Ge := Ge.set! (2 * j) (SmallPrimeNTT.mp_montymul fb mGp p p0i)
+      Ge := Ge.set! (2 * j + 1) (SmallPrimeNTT.mp_montymul fa mGp p p0i)
+    Ft := writeRange Ft (i * n) (SmallPrimeNTT.mp_iNTT logn Fe igm p p0i)
+    Gt := writeRange Gt (i * n) (SmallPrimeNTT.mp_iNTT logn Ge igm p p0i)
+
+  if slen == llen then
+    let (fg', _) := BigInt31.zint_rebuild_CRT (ft ++ gt) slen n 2 PRIMES_BI true
+      (Array.replicate slen 0)
+    ft := extractRange fg' 0 (slen * n)
+    gt := extractRange fg' (slen * n) (slen * n)
+
+  -- Unreduced (F, G) as plain integers.
+  let (FG', _) := BigInt31.zint_rebuild_CRT (Ft ++ Gt) llen n 2 PRIMES_BI true
+    (Array.replicate llen 0)
+  Ft := extractRange FG' 0 (llen * n)
+  Gt := extractRange FG' (llen * n) (llen * n)
+
+  -- Babai reduction.
+  let useSubNtt := depth > 1 && logn >= minLognFgNtt
+  let rlen := min (WORD_WIN.getD depth 1) slen
+  let blen := slen - rlen
+  let ftb := extractRange ft (blen * n) (rlen * n)
+  let gtb := extractRange gt (blen * n) (rlen * n)
+  let scaleFg : UInt32 := 31 * blen.toUInt32
+  let mut scaleFG : UInt32 := 31 * llen.toUInt32
+
+  let scaleXf := PolyBigInt.poly_max_bitlength logn ftb rlen
+  let scaleXg := PolyBigInt.poly_max_bitlength logn gtb rlen
+  let scaleX := scaleXf ^^^ ((scaleXf ^^^ scaleXg) &&& BigInt31.tbmask (scaleXf - scaleXg))
+  let scaleT0 : UInt32 := 15 - logn.toUInt32
+  let scaleT := scaleT0 ^^^ ((scaleT0 ^^^ scaleX) &&& BigInt31.tbmask (scaleX - scaleT0))
+  let scdiff := scaleX - scaleT
+
+  -- rt3 <- adj(f)/(f*adj(f) + g*adj(g)), rt4 <- adj(g)/(f*adj(f) + g*adj(g))  (FFT)
+  let mut rt3 := vectFFT logn (PolyBigInt.poly_big_to_fixed logn ftb rlen scdiff)
+  let mut rt4 := vectFFT logn (PolyBigInt.poly_big_to_fixed logn gtb rlen scdiff)
+  let rt1n := vectNormFft logn rt3 rt4
+  rt3 := vectMul2e logn rt3 scaleT.toUInt64
+  rt4 := vectMul2e logn rt4 scaleT.toUInt64
+  for i in [:hn] do
+    let d := rt1n.getD i 0
+    rt3 := rt3.set! i (fxrDiv (rt3.getD i 0) d)
+    rt3 := rt3.set! (i + hn) (fxrDiv (fxrNeg (rt3.getD (i + hn) 0)) d)
+    rt4 := rt4.set! i (fxrDiv (rt4.getD i 0) d)
+    rt4 := rt4.set! (i + hn) (fxrDiv (fxrNeg (rt4.getD (i + hn) 0)) d)
+
+  -- (f, g) in RNS+NTT over slen + 1 primes, for poly_sub_scaled_ntt.
+  let ftN := if useSubNtt then toRNSNTTExtended logn ft slen else #[]
+  let gtN := if useSubNtt then toRNSNTTExtended logn gt slen else #[]
+
+  let mut FGlen := llen
+  let rb := reduceBits logn_top
+  -- `scaleFG` decreases by `rb ≥ 11` per iteration until it reaches `scaleFg`, so
+  -- `31 * llen` iterations always suffice.
+  for _ in [:31 * llen + 1] do
+    let (tlen, toff) := PolyBigInt.divrem31 scaleFG
+    let tl := tlen.toNat
+    let mut rt1 := PolyBigInt.poly_big_to_fixed logn
+      (extractRange Ft (tl * n) ((FGlen - tl) * n)) (FGlen - tl) (scaleX + toff)
+    let mut rt2 := PolyBigInt.poly_big_to_fixed logn
+      (extractRange Gt (tl * n) ((FGlen - tl) * n)) (FGlen - tl) (scaleX + toff)
+    rt1 := vectFFT logn rt1
+    rt2 := vectFFT logn rt2
+    rt1 := vectMulFft logn rt1 rt3
+    rt2 := vectMulFft logn rt2 rt4
+    rt2 := vectAdd logn rt2 rt1
+    rt2 := vectIFFT logn rt2
+    let k : Array Int32 := (Array.range n).map fun i => fxrRound (rt2.getD i 0)
+
+    let scaleK := scaleFG - scaleFg
+    if depth == 1 then
+      let (F', G') := PolyBigInt.polySubKfgScaledDepth1 logn_top Ft Gt FGlen k scaleK f g
+      Ft := F'
+      Gt := G'
+    else if useSubNtt then
+      Ft := PolyBigInt.poly_sub_scaled_ntt logn Ft FGlen ftN slen k scaleK
+      Gt := PolyBigInt.poly_sub_scaled_ntt logn Gt FGlen gtN slen k scaleK
+    else
+      Ft := PolyBigInt.poly_sub_scaled logn Ft FGlen ft slen k scaleK
+      Gt := PolyBigInt.poly_sub_scaled logn Gt FGlen gt slen k scaleK
+
+    if scaleFG <= scaleFg then break
+    if scaleFG <= scaleFg + rb then
+      scaleFG := scaleFg
+    else
+      scaleFG := scaleFG - rb
+    for _ in [:llen] do
+      if FGlen > slen && 31 * (FGlen - slen) > (scaleFG - scaleFg + 30).toNat then
+        FGlen := FGlen - 1
+
+  -- Output: F then G, slen words per coefficient.
+  let capF := extractRange Ft 0 (slen * n)
+  let capG := extractRange Gt 0 (slen * n)
+  let out := writeRange (writeRange buf 0 capF) (slen * n) capG
+
+  -- At depth 1 (f, g) are not kept; the depth-0 check covers that level.
+  if depth == 1 then return some out
+
+  -- Check f*G - g*F = q modulo the first prime (in NTT).
+  let pr := SmallPrimeNTT.PRIMES.getD 0 default
+  let p := pr.p
+  let p0i := pr.p0i
+  let gm := SmallPrimeNTT.mp_mkgm logn pr.g p p0i
+  let fN := if useSubNtt then extractRange ftN 0 n else modPrimeNTT logn ft slen pr gm
+  let gN := if useSubNtt then extractRange gtN 0 n else modPrimeNTT logn gt slen pr gm
+  let capGN := modPrimeNTT logn capG slen pr gm
+  let capFN := modPrimeNTT logn capF slen pr gm
+  let rv := SmallPrimeNTT.mp_montymul Q 1 p p0i
+  for i in [:n] do
+    let t3 := SmallPrimeNTT.mp_montymul (getU32 fN i) (getU32 capGN i) p p0i
+    let x := SmallPrimeNTT.mp_montymul (getU32 gN i) (getU32 capFN i) p p0i
+    if SmallPrimeNTT.mp_sub t3 x p != rv then return none
+  return some out
 
 /-! ## solve_NTRU_depth0
 
@@ -413,8 +601,94 @@ suffices for all modular arithmetic.
 6. Verify `f·G - g·F ≡ q·R (mod p)` for all NTT slots.
 7. Convert back via inverse NTT and normalize. -/
 
-def solve_NTRU_depth0 (_logn : Nat) (_f _g : Array Int8)
-    (_buf : Array UInt32) : Option (Array UInt32) := sorry
+/-- Solve the NTRU equation at the top level (depth 0, degree `2^logn`), given `(F, G)` from
+depth 1 at the start of `buf` (one word per coefficient). On success the reduced `(F, G)`
+(plain one-word signed coefficients) are written at the start of the returned buffer.
+Returns `none` when `f·G - g·F = q` fails modulo the first small prime. -/
+def solve_NTRU_depth0 (logn : Nat) (f g : Array Int8)
+    (buf : Array UInt32) : Option (Array UInt32) := Id.run do
+  let n := 1 <<< logn
+  let hn := n >>> 1
+  let pr := SmallPrimeNTT.PRIMES.getD 0 default
+  let p := pr.p
+  let p0i := pr.p0i
+  let R2 := pr.R2
+  let (gm, igm) := SmallPrimeNTT.mp_mkgmigm logn pr.g pr.ig p p0i
+
+  -- f and g in RNS+NTT
+  let ft := SmallPrimeNTT.mp_NTT logn (SmallPrimeNTT.mp_set_small logn f p) gm p p0i
+  let gt := SmallPrimeNTT.mp_NTT logn (SmallPrimeNTT.mp_set_small logn g p) gm p p0i
+
+  -- Deeper (F, G) in RNS+NTT
+  let Fd := SmallPrimeNTT.mp_NTT (logn - 1)
+    (SmallPrimeNTT.poly_mp_set (logn - 1) (extractRange buf 0 hn) p) gm p p0i
+  let Gd := SmallPrimeNTT.mp_NTT (logn - 1)
+    (SmallPrimeNTT.poly_mp_set (logn - 1) (extractRange buf hn hn) p) gm p p0i
+
+  -- Unreduced (F, G) (RNS+NTT)
+  let mut Fp : Array UInt32 := Array.replicate n 0
+  let mut Gp : Array UInt32 := Array.replicate n 0
+  for i in [:hn] do
+    let fa := getU32 ft (2 * i)
+    let fb := getU32 ft (2 * i + 1)
+    let ga := getU32 gt (2 * i)
+    let gb := getU32 gt (2 * i + 1)
+    let mFd := SmallPrimeNTT.mp_montymul (getU32 Fd i) R2 p p0i
+    let mGd := SmallPrimeNTT.mp_montymul (getU32 Gd i) R2 p p0i
+    Fp := Fp.set! (2 * i) (SmallPrimeNTT.mp_montymul gb mFd p p0i)
+    Fp := Fp.set! (2 * i + 1) (SmallPrimeNTT.mp_montymul ga mFd p p0i)
+    Gp := Gp.set! (2 * i) (SmallPrimeNTT.mp_montymul fb mGd p p0i)
+    Gp := Gp.set! (2 * i + 1) (SmallPrimeNTT.mp_montymul fa mGd p p0i)
+
+  -- t1 <- F*adj(f) + G*adj(g), t3 <- f*adj(f) + g*adj(g)  (RNS+NTT)
+  let mut t1 : Array UInt32 := Array.replicate n 0
+  let mut t3 : Array UInt32 := Array.replicate n 0
+  for i in [:n] do
+    let w := SmallPrimeNTT.mp_montymul (getU32 ft (n - 1 - i)) R2 p p0i
+    t1 := t1.set! i (SmallPrimeNTT.mp_montymul w (getU32 Fp i) p p0i)
+    t3 := t3.set! i (SmallPrimeNTT.mp_montymul w (getU32 ft i) p p0i)
+  for i in [:n] do
+    let w := SmallPrimeNTT.mp_montymul (getU32 gt (n - 1 - i)) R2 p p0i
+    t1 := t1.set! i
+      (SmallPrimeNTT.mp_add (getU32 t1 i) (SmallPrimeNTT.mp_montymul w (getU32 Gp i) p p0i) p)
+    t3 := t3.set! i
+      (SmallPrimeNTT.mp_add (getU32 t3 i) (SmallPrimeNTT.mp_montymul w (getU32 gt i) p p0i) p)
+  t1 := SmallPrimeNTT.mp_iNTT logn t1 igm p p0i
+  t3 := SmallPrimeNTT.mp_iNTT logn t3 igm p p0i
+
+  -- Fixed-point FFT of both (plain values scaled down by 2^10), then divide and round.
+  let toFxr (x : UInt32) : FXR :=
+    fxrOfScaled32 ((SmallPrimeNTT.mp_norm x p).toInt64.toUInt64 <<< 22)
+  let rt2full := vectFFT logn ((Array.range n).map fun i => toFxr (getU32 t3 i))
+  let rt2 := rt2full.extract 0 hn
+  let mut rt3 := vectFFT logn ((Array.range n).map fun i => toFxr (getU32 t1 i))
+  rt3 := vectDivSelfadjFft logn rt3 rt2
+  rt3 := vectIFFT logn rt3
+
+  -- k in RNS+NTT+Montgomery
+  let mut k : Array UInt32 :=
+    (Array.range n).map fun i => SmallPrimeNTT.mp_set (fxrRound (rt3.getD i 0)) p
+  k := SmallPrimeNTT.mp_NTT logn k gm p p0i
+  k := k.map fun x => SmallPrimeNTT.mp_montymul x R2 p p0i
+
+  -- Subtract k*(f, g) from (F, G) and check f*G - g*F = q.
+  let rv := SmallPrimeNTT.mp_montymul Q 1 p p0i
+  for i in [:n] do
+    let ki := getU32 k i
+    let fi := getU32 ft i
+    let gi := getU32 gt i
+    let Fi := SmallPrimeNTT.mp_sub (getU32 Fp i) (SmallPrimeNTT.mp_montymul ki fi p p0i) p
+    let Gi := SmallPrimeNTT.mp_sub (getU32 Gp i) (SmallPrimeNTT.mp_montymul ki gi p p0i) p
+    Fp := Fp.set! i Fi
+    Gp := Gp.set! i Gi
+    let x := SmallPrimeNTT.mp_sub
+      (SmallPrimeNTT.mp_montymul fi Gi p p0i) (SmallPrimeNTT.mp_montymul gi Fi p p0i) p
+    if x != rv then return none
+
+  -- Back to plain representation.
+  Fp := SmallPrimeNTT.poly_mp_norm logn (SmallPrimeNTT.mp_iNTT logn Fp igm p p0i) p
+  Gp := SmallPrimeNTT.poly_mp_norm logn (SmallPrimeNTT.mp_iNTT logn Gp igm p p0i) p
+  return some (writeRange (writeRange (ensureSize buf (2 * n)) 0 Fp) n Gp)
 
 /-! ## Lifting loop helper -/
 
@@ -451,14 +725,19 @@ The algorithm proceeds in three phases:
 
 Returns `some (F, G)` on success, or `none` on failure. -/
 
+/-- Solve `f·G - g·F = q` for short `(F, G)` given short `(f, g)` of degree `2^logn`,
+returning `none` when the resultants are not coprime, a reduction check fails, or a
+coefficient of `F` or `G` falls outside `[-127, 127]`. -/
 def solve_NTRU (logn : Nat) (f g : Array Int8) :
     Option (Array Int8 × Array Int8) := do
   let n := 1 <<< logn
   let buf ← solve_NTRU_deepest logn f g
   let buf ← liftIntermediateLevels logn f g buf
   let buf ← solve_NTRU_depth0 logn f g buf
-  let capF ← poly_big_to_small logn buf 0 127
-  let capG ← poly_big_to_small logn buf n 127
+  let (capF, okF) := PolyBigInt.poly_big_to_small logn (extractRange buf 0 n) 127
+  guard okF
+  let (capG, okG) := PolyBigInt.poly_big_to_small logn (extractRange buf n n) 127
+  guard okG
   pure (capF, capG)
 
 /-! ## check_ortho_norm
@@ -475,23 +754,24 @@ Its squared norm is computed and compared against the threshold constant
 `72251709809335` (a 32.32 fixed-point value from Section 3.8.2 of the
 Falcon specification). -/
 
+/-- Whether the squared norm of `q · (adj f, adj g) / (f·adj f + g·adj g)`, computed in
+32.32 fixed point, is below the Falcon acceptance threshold. -/
 def check_ortho_norm (logn : Nat) (f g : Array Int8) : Bool := Id.run do
   let n := 1 <<< logn
-  let mut rt1 := vect_FFT logn (vect_set logn f)
-  let mut rt2 := vect_FFT logn (vect_set logn g)
-  let rt3 := vect_invnorm_fft logn rt1 rt2 0
-  rt1 := vect_adj_fft logn rt1
-  rt2 := vect_adj_fft logn rt2
-  rt1 := vect_mul_realconst logn rt1 (FXR.ofInt 12289)
-  rt2 := vect_mul_realconst logn rt2 (FXR.ofInt 12289)
-  rt1 := vect_mul_selfadj_fft logn rt1 rt3
-  rt2 := vect_mul_selfadj_fft logn rt2 rt3
-  rt1 := vect_iFFT logn rt1
-  rt2 := vect_iFFT logn rt2
-  let mut sn : FXR := FXR.zero
+  let mut rt1 := vectFFT logn (vectSet logn (f.map Int8.toInt32))
+  let mut rt2 := vectFFT logn (vectSet logn (g.map Int8.toInt32))
+  let rt3 := vectInvnormFft logn rt1 rt2 0
+  rt1 := vectAdjFft logn rt1
+  rt2 := vectAdjFft logn rt2
+  rt1 := vectMulRealconst logn rt1 (fxrOf 12289)
+  rt2 := vectMulRealconst logn rt2 (fxrOf 12289)
+  rt1 := vectMulSelfadjFft logn rt1 rt3
+  rt2 := vectMulSelfadjFft logn rt2 rt3
+  rt1 := vectIFFT logn rt1
+  rt2 := vectIFFT logn rt2
+  let mut sn : FXR := fxrZero
   for i in [:n] do
-    sn := FXR.add sn
-      (FXR.add (FXR.sqr (rt1.getD i 0)) (FXR.sqr (rt2.getD i 0)))
-  return FXR.lt sn (FXR.ofScaled32 72251709809335)
+    sn := fxrAdd sn (fxrAdd (fxrSqr (rt1.getD i 0)) (fxrSqr (rt2.getD i 0)))
+  return fxrLt sn (fxrOfScaled32 72251709809335)
 
 end Falcon.Concrete.NTRUSolver

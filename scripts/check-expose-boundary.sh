@@ -29,7 +29,7 @@ BASELINE="${EXPOSE_BOUNDARY_BASELINE:-scripts/expose_boundary_baseline.tsv}"
 if [[ -n "${EXPOSE_BOUNDARY_LIBS:-}" ]]; then
   read -r -a LIBS <<< "$EXPOSE_BOUNDARY_LIBS"
 else
-  LIBS=(VCVio ToMathlib LatticeCrypto HashSig Examples Extern VCVioWidgets VCVioTest
+  LIBS=(VCVio VCVioCslib ToMathlib LatticeCrypto HashSig Examples Extern VCVioWidgets VCVioTest
     LatticeCryptoTest HashSigTest)
 fi
 

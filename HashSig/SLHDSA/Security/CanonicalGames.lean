@@ -16,6 +16,7 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTOpen
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPREFinalValidity
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCRFinalValidity
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUDFinalValidity
+public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.ToFinalValidity
 
 /-!
 # Canonical SLH-DSA component games
@@ -57,15 +58,12 @@ and are consumed through exported equations such as `*_th`, `*_thColl`, `*_input
 
 ## Follow-ups
 
-The `T_ℓ` collection problems `forsTlTcrCProblem` and `wotsTlTcrCProblem` coincide structurally
-with `(prims.thashTcrProblem arity cap).toSourceFinalValidity`, the source-final-validity image of
-the reject-on-arrival problem packaged by `HashSig.SLHDSA.Security`.  That tie is not provable from
-`HashSig` today: `SM_DT_TCR_Problem.toSourceFinalValidity` is `@[reducible]` but not exposed and
-VCVio exports no projection lemmas for it, so neither `rfl` nor a propositional proof goes through
-across the module boundary.  Once VCVio exposes or provides projection lemmas for
-`SM_DT_TCR_Problem.toSourceFinalValidity` and `SM_DT_PRE_Problem.toSourceFinalValidity`, state
-`forsTlTcrCProblem_eq_toSourceFinalValidity` and `wotsTlTcrCProblem_eq_toSourceFinalValidity` here
-so the `SM_DT_TCR_advantage_toSourceFinalValidity` theorems transfer to these games.
+The `T_ℓ` collection problems `forsTlTcrCProblem` and `wotsTlTcrCProblem` agree with the
+source-final-validity images of `prims.thashTcrProblem` at their respective arities and target caps.
+The equations `forsTlTcrCProblem_eq_toSourceFinalValidity` and
+`wotsTlTcrCProblem_eq_toSourceFinalValidity` identify those bundles through VCVio's public
+conversion laws. The named adversary conversion and experiment/advantage equalities in
+`TweakableHash.ToFinalValidity` then apply to those problem presentations.
 
 ## References
 
@@ -198,6 +196,20 @@ Algorithm 5 feeds `F` an `n`-byte node, so the subspace parameter is the node ty
   th := prims.hHash
   thColl := prims.thashCollection
   numTargets := targetCount p .xmssH
+
+/-- The FORS compression game is the final-validity image of its collection TCR problem. -/
+theorem forsTlTcrCProblem_eq_toSourceFinalValidity [SampleableType prims.PkSeed] :
+    forsTlTcrCProblem prims =
+      (prims.thashTcrProblem p.k (targetCount p .forsTl)).toSourceFinalValidity := by
+  simp only [forsTlTcrCProblem, Primitives.thashTcrProblem_eq,
+    TweakableHash.SM_DT_TCR_Problem.toSourceFinalValidity_eq]
+
+/-- The WOTS+ compression game is the final-validity image of its collection TCR problem. -/
+theorem wotsTlTcrCProblem_eq_toSourceFinalValidity [SampleableType prims.PkSeed] :
+    wotsTlTcrCProblem prims =
+      (prims.thashTcrProblem p.len (targetCount p .wotsTl)).toSourceFinalValidity := by
+  simp only [wotsTlTcrCProblem, Primitives.thashTcrProblem_eq,
+    TweakableHash.SM_DT_TCR_Problem.toSourceFinalValidity_eq]
 
 /-! ## Standalone-game field equations
 

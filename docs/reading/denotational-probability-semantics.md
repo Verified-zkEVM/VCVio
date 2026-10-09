@@ -80,6 +80,13 @@ PolyFun `Resumption` two finite-fuel observations and their returned-output limi
 These definitions keep three events distinct: a returned `none`, a returned error, and not yet
 returning. Any eventual limit semantics must preserve that distinction.
 
+For a finite program with a uniform total-query bound, `truncateMeasure_toResumption`,
+`outputMeasure_toResumption`, and `returnedMeasure_toResumption` identify these observations
+with its ordinary `FreeM.denote` measure. The bound ensures that no branch exceeds the selected
+fuel. [`Examples/ResumptionRejection.lean`](../../Examples/ResumptionRejection.lean) instead
+has arbitrarily long finite runs: its cutoff mass is `4⁻ᵏ`, and its limiting returned measure
+is uniform on three outcomes with total mass one.
+
 The infinite-trace layer is intentionally not fabricated from arbitrary `Resumption` values.
 PolyFun resumptions are probability-free and their continuation functions are arbitrary Lean
 functions. A trace law therefore needs a measurable presentation of the coalgebra: measurable

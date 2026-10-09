@@ -88,6 +88,18 @@ and characterization `…_iff` theorems. Mark a definition `@[expose]` only when
 downstream definitional equality is an intentional part of the API and a
 theorem would materially obstruct ordinary use.
 
+In Lean 4.34 a theorem written with syntactic `:= rfl` requests automatic
+definitional-equality registration. For an exported theorem, that registration
+requires the unfolded definitions to be exposed. An ordinary theorem proof
+such as `:= by unfold operation; rfl` can instead prove a public propositional
+equation while keeping `operation` opaque to importers. Choose which contract
+the consumer needs before adding exposure; exported theorem proofs alone do
+not require exposing their implementation dependencies. Exercise the equation
+through an ordinary import after narrowing the boundary.
+
+The [API-boundary campaign ledger](../reading/api-boundary-campaign.md) records
+consumer evidence, intentional reducers, instance leaks, and upstream blockers.
+
 The definitional identities among the semantic façades (`evalDist`,
 `evalSPMF`, `simulateQ`, `support`, `probOutput`) are an implementation
 detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. Proofs inside those

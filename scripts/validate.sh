@@ -19,7 +19,7 @@ usage() {
 Usage: ./scripts/validate.sh [--lint] [--test] [--ffi] [--axioms]
 
 Default fast checks (shared with per-PR CI):
-  - lake build of the seven proof libraries, with the non-sorry warning budget
+  - lake build of the seven default proof libraries and the optional P/poly facade, with the non-sorry warning budget
   - ./scripts/check-imports.sh (generated umbrella modules are current)
   - the boundary checks: PolyFun, broad expose, complexity backend,
     Extern and Interop isolation
@@ -57,7 +57,7 @@ if (( run_ffi )) && ! (( run_test )); then
   exit 1
 fi
 
-PROOF_LIBS=(ToMathlib VCVio LatticeCrypto Extern HashSig Examples VCVioWidgets)
+PROOF_LIBS=(ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples VCVioWidgets)
 BUILD_LOG="$(mktemp "${TMPDIR:-/tmp}/vcvio-validate-build.XXXXXX")"
 TEST_LOG="$(mktemp "${TMPDIR:-/tmp}/vcvio-validate-test.XXXXXX")"
 trap 'rm -f "$BUILD_LOG" "$TEST_LOG"' EXIT

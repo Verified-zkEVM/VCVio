@@ -308,7 +308,7 @@ bounded by its import-isolation gate, and is not built by the main CI build job.
 test libraries that have umbrella modules are swept by an explicit `--root` pair after
 `lake test` has built them; see the module docstring. -/
 def defaultRoots : Array Name :=
-  #[`VCVio, `ToMathlib, `Extern, `LatticeCrypto, `HashSig, `Examples, `VCVioWidgets]
+  #[`VCVio, `VCVioCslib, `ToMathlib, `Extern, `LatticeCrypto, `HashSig, `Examples, `VCVioWidgets]
 
 /-- The constants whose appearance in an eagerly-initialised value means the initialiser
 enumerates a type. Listed in source, with the reason each one is here, so the gate's reach

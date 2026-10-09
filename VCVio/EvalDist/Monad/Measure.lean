@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.Monad.Support
 public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Bounds
 import ToMathlib.Probability.UniformOn
@@ -17,6 +18,7 @@ The Giry composition laws transport measure-level independence to computation sy
 The general interchange theorem requires joint measurability; the three-draw law
 specializes to discrete intermediate results and leaves the final result space arbitrary.
 Uniform finite draws can be reindexed by a bijection before an arbitrary continuation.
+A bound on a scalar observation over the support bounds its expectation.
 -/
 
 public section
@@ -82,18 +84,13 @@ theorem evalDist_bind_bind_swap (mx : m α) (my : m β) (f : α → β → m γ)
   simp_rw [evalDist_bind my _ (hfa _), evalDist_bind mx _ (hfb _)]
   exact Measure.bind_bind_swap _ _ hf
 
-omit [MeasurableSpace α] [MeasurableSpace β] in
-/-- Independent draws of countable intermediate types commute before a measurably observed
-result. The intermediate spaces are used only internally, so callers do not need to select or
-thread measurable-space instances for them. -/
+/-- Independent countable draws with measurable singletons commute before any continuation.
+The selected source spaces make joint measurability automatic. -/
 theorem evalDist_bind_bind_swap_of_countable [Countable α] [Countable β]
+    [MeasurableSingletonClass α] [MeasurableSingletonClass β]
     (mx : m α) (my : m β) (f : α → β → m γ) :
     𝒟[mx >>= fun a => my >>= fun b => f a b] =
       𝒟[my >>= fun b => mx >>= fun a => f a b] := by
-  let : MeasurableSpace α := ⊤
-  let : MeasurableSpace β := ⊤
-  let : DiscreteMeasurableSpace α := ⟨fun _ => by simp⟩
-  let : DiscreteMeasurableSpace β := ⟨fun _ => by simp⟩
   exact evalDist_bind_bind_swap mx my f Measurable.of_discrete
 
 /-- Move the third independent discrete draw to the front of a computation. -/
@@ -158,3 +155,43 @@ theorem evalDist_bind_apply_le_add_of_disagree (mx : m α) (f g : α → m β)
     𝒟[mx >>= f] event ≤ 𝒟[mx >>= g] event + 𝒟[mx] bad + ε := by
   rw [evalDist_bind mx f hf, evalDist_bind mx g hg]
   exact Measure.bind_apply_le_add_of_disagree _ _ _ hf hg hbad hevent hgood
+
+/-! ## Reachability and measurable observations -/
+
+namespace evalDist
+
+variable [LawfulMonad m] [MonadAttach m] [WeaklyLawfulMonadAttach m]
+
+/-- A measurable predicate holding on every possible output holds almost everywhere under the
+successful-output measure. Core attachment supplies a subtype of possible outputs, and its
+measurable projection recovers the original computation. -/
+theorem ae_of_forall_mem_support (mx : m α) (p : α → Prop)
+    (hp : MeasurableSet {x | p x}) (h : ∀ x ∈ support mx, p x) :
+    ∀ᵐ x ∂𝒟[mx], p x := by
+  rw [← WeaklyLawfulMonadAttach.map_attach (x := mx),
+    evalDist_map (MonadAttach.attach mx) measurable_subtype_coe,
+    ae_map_iff measurable_subtype_coe.aemeasurable hp]
+  exact Filter.Eventually.of_forall fun x ↦ h x.1 x.2
+
+/-- A measurable event containing no possible output has zero successful mass. -/
+theorem apply_eq_zero_of_disjoint_support (mx : m α) {event : Set α}
+    (hevent : MeasurableSet event) (h : ∀ x ∈ support mx, x ∉ event) :
+    𝒟[mx] event = 0 := by
+  simpa only [ae_iff, not_not, Set.ofPred_mem_eq] using
+    ae_of_forall_mem_support mx (fun x ↦ x ∉ event) hevent.compl h
+
+end evalDist
+
+/-! ## Expectations bounded on the support -/
+
+/-- A bound on a scalar observation at every output in the support bounds its expectation. -/
+theorem lintegral_id_evalDist_map_le_of_le_of_mem_support {m : Type → Type v} [Monad m]
+    [LawfulMonad m] [MonadAttach m] [WeaklyLawfulMonadAttach m] [EvalDistSemantics m]
+    [LawfulEvalDistSemantics m] {α : Type} (mx : m α) {f : α → ENNReal} {c : ENNReal}
+    (hf : ∀ x ∈ support mx, f x ≤ c) : ∫⁻ r, r ∂𝒟[f <$> mx] ≤ c := by
+  let _ : MeasurableSpace α := ⊤
+  rw [lintegral_id_evalDist_map]
+  calc ∫⁻ x, f x ∂𝒟[mx] ≤ ∫⁻ _, c ∂𝒟[mx] :=
+        lintegral_mono_ae (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete hf)
+    _ = c * 𝒟[mx] Set.univ := lintegral_const c
+    _ ≤ c := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)

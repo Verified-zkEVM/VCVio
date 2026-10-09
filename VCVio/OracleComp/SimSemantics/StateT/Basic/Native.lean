@@ -114,6 +114,20 @@ def flattenStateT {ι : Type _} {spec : OracleSpec ι}
       (fun y : spec.Range t × τ => (y.1, (s, y.2))) <$> (impl t).run q := by
   simp [flattenStateT]
 
+/-- Running `(outer.mapStateTBase inner).flattenStateT t` from `(s, q)` simulates
+`(inner t).run s` with `outer` from state `q`, then maps
+`((u, s'), q')` to `(u, (s', q'))`. -/
+@[simp, grind =] theorem flattenStateT_mapStateTBase_apply_run {ι₀ ι₁ : Type _}
+    {spec₀ : OracleSpec ι₀} {spec₁ : OracleSpec ι₁}
+    {m : Type u → Type v} [Monad m] {σ τ : Type u}
+    (outer : QueryImpl spec₁ (StateT τ m))
+    (inner : QueryImpl spec₀ (StateT σ (OracleComp spec₁)))
+    (t : spec₀.Domain) (s : σ) (q : τ) :
+    ((outer.mapStateTBase inner).flattenStateT t).run (s, q) =
+      (fun y : (spec₀.Range t × σ) × τ => (y.1.1, (y.1.2, y.2))) <$>
+        (simulateQ outer ((inner t).run s)).run q :=
+  rfl
+
 /-- Indexed version of `QueryImpl.parallelStateT`. Note that `m` cannot vary with `t`.
 dtumad: The `Function.update` thing is nice but forces `DecidableEq`. -/
 @[expose]
@@ -168,8 +182,15 @@ end QueryImpl
 
 namespace OracleComp
 
-variable {ι : Type*} {spec : OracleSpec ι} {m : Type u → Type v} [Monad m] [LawfulMonad m]
-  {σ : Type u} (so : QueryImpl spec (StateT σ m))
+variable {ι : Type*} {spec : OracleSpec ι} {m : Type u → Type v} [Monad m] {σ : Type u}
+
+/-- Running a base-monad action lifted into `StateT σ m` threads the state `s` through
+unchanged, pairing it with the produced value. -/
+lemma liftM_run_StateT {α : Type u} (x : m α) (s : σ) :
+    (liftM x : StateT σ m α).run s = x >>= fun a => pure (a, s) :=
+  StateT.run_lift x s
+
+variable [LawfulMonad m] (so : QueryImpl spec (StateT σ m))
 
 /-- Simulating a query followed by a continuation, under a stateful handler, runs the handler
 at that query and threads its output state into the simulation of the continuation.
@@ -203,13 +224,6 @@ lemma StateT_run'_simulateQ_eq_self {α} (so : QueryImpl spec (StateT σ (Oracle
   | query_bind t oa ih =>
     simp only [StateT.run'_eq] at ih
     simpa [ih] using congr_arg (· >>= oa) (h t s)
-
-omit [LawfulMonad m] in
-/-- Running a base-monad action lifted into `StateT σ m` threads the state `s` through
-unchanged, pairing it with the produced value. -/
-lemma liftM_run_StateT {α : Type u} (x : m α) (s : σ) :
-    (liftM x : StateT σ m α).run s = x >>= fun a => pure (a, s) :=
-  StateT.run_lift x s
 
 variable {τ : Type u}
 

@@ -47,7 +47,38 @@ open scoped ENNReal
 
 namespace OracleComp
 
-variable {R : Type} [DecidableEq R]
+variable {R : Type}
+
+/-! ## Iterated draws: the explicit front-block key list
+
+Stage A defers a *single* output-irrelevant draw. `drawList` lifts this to `n` interleaved draws
+by collecting them into an explicit front block: draw a list of `n` independent keys up front,
+against which a run's hidden draws can be exhibited and then charged by the abstract
+`hiddenReadList` union bound. -/
+
+/-- Draw a list of `n` independent keys from `oa` (the front block of the deferred-sampling
+factorization). The keys are the hidden targets; the list length is the key count `n`. -/
+noncomputable def drawList (oa : ProbComp R) : ℕ → ProbComp (List R)
+  | 0 => pure []
+  | n + 1 => do
+      let w ← oa
+      let ws ← drawList oa n
+      pure (w :: ws)
+
+/-- The front-block draw never fails: it only ever draws from `oa` (which is failure-free) and
+returns, so `drawList oa n` has zero failure mass. -/
+lemma probFailure_drawList (oa : ProbComp R) (n : ℕ) :
+    Pr[⊥ | drawList oa n] = 0 := by
+  induction n with
+  | zero => simp [drawList]
+  | succ n _ => rw [drawList]; simp
+
+/-- Total output mass of the front-block draw is `1` (it never fails). -/
+lemma tsum_probOutput_drawList_eq_one (oa : ProbComp R) (n : ℕ) :
+    (∑' ws : List R, Pr[= ws | drawList oa n]) = 1 :=
+  tsum_probOutput_eq_one' (probFailure_drawList oa n)
+
+variable [DecidableEq R]
 
 /-! ## Hidden-target adaptive first-fire bound
 
@@ -367,36 +398,5 @@ theorem probEvent_bind_fire_le_of_marginal_eq_readMany {α : Type} {oa : ProbCom
     exact tsum_congr fun w => by rw [hmarg w]
   rw [hcongr]
   exact probEvent_hiddenReadMany_le hε q σ
-
-/-! ## Iterated draws: the explicit front-block key list
-
-Stage A defers a *single* output-irrelevant draw. `drawList` lifts this to `n` interleaved draws
-by collecting them into an explicit front block: draw a list of `n` independent keys up front,
-against which a run's hidden draws can be exhibited and then charged by the abstract
-`hiddenReadList` union bound. -/
-
-/-- Draw a list of `n` independent keys from `oa` (the front block of the deferred-sampling
-factorization). The keys are the hidden targets; the list length is the key count `n`. -/
-noncomputable def drawList (oa : ProbComp R) : ℕ → ProbComp (List R)
-  | 0 => pure []
-  | n + 1 => do
-      let w ← oa
-      let ws ← drawList oa n
-      pure (w :: ws)
-
-omit [DecidableEq R] in
-/-- The front-block draw never fails: it only ever draws from `oa` (which is failure-free) and
-returns, so `drawList oa n` has zero failure mass. -/
-lemma probFailure_drawList (oa : ProbComp R) (n : ℕ) :
-    Pr[⊥ | drawList oa n] = 0 := by
-  induction n with
-  | zero => simp [drawList]
-  | succ n _ => rw [drawList]; simp
-
-omit [DecidableEq R] in
-/-- Total output mass of the front-block draw is `1` (it never fails). -/
-lemma tsum_probOutput_drawList_eq_one (oa : ProbComp R) (n : ℕ) :
-    (∑' ws : List R, Pr[= ws | drawList oa n]) = 1 :=
-  tsum_probOutput_eq_one' (probFailure_drawList oa n)
 
 end OracleComp

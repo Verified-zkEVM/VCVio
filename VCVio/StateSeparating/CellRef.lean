@@ -227,14 +227,15 @@ structure SupportWriteFootprint {m : Type (max u v)
 
 namespace SupportWriteFootprint
 
-variable {m : Type (max u v) → Type*} [Monad m] [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+variable {m : Type (max u v) → Type*} [Monad m] [MonadAttach m] [ExactMonadAttach m]
 variable {α β : Type (max u v)}
 
-omit [LawfulMonad m] in
 theorem preserves {c : StateT (Heap Ident) m α} (footprint : SupportWriteFootprint c)
     (r : CellRef Ident) (hr : r.id ∉ footprint.writes) :
     SupportPreserves c r :=
   footprint.sound r hr
+
+variable [LawfulMonad m]
 
 def pure (x : α) : SupportWriteFootprint (pure x : StateT (Heap Ident) m α) where
   writes := ∅
@@ -344,23 +345,20 @@ namespace SupportPreservesExcept
 
 section support
 
-variable {m : Type (max u v) → Type*} [Monad m] [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+variable {m : Type (max u v) → Type*} [Monad m] [MonadAttach m] [ExactMonadAttach m]
 variable {α : Type (max u v)} {c : StateT (Heap Ident) m α} {r : CellRef Ident}
 variable {event : Heap Ident → α × Heap Ident → Prop}
 
-omit [LawfulMonad m] in
 theorem of_supportPreserves (hc : SupportPreserves c r) :
     SupportPreservesExcept c r event :=
   fun h z hz _ => hc h z hz
 
-omit [LawfulMonad m] in
 theorem mono_event (hc : SupportPreservesExcept c r event)
     {event' : Heap Ident → α × Heap Ident → Prop}
     (hsubset : ∀ h z, event h z → event' h z) :
     SupportPreservesExcept c r event' :=
   fun h z hz hnot => hc h z hz fun hevent => hnot (hsubset h z hevent)
 
-omit [LawfulMonad m] in
 theorem supportPreserves_of_false_event
     (hc : SupportPreservesExcept c r (fun _ _ => False)) :
     SupportPreserves c r :=
@@ -414,22 +412,20 @@ namespace SupportCellRel
 
 section support
 
-variable {m : Type (max u v) → Type*} [Monad m] [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+variable {m : Type (max u v) → Type*} [Monad m] [MonadAttach m] [ExactMonadAttach m]
 variable {α β : Type (max u v)} {c : StateT (Heap Ident) m α}
 variable {k : α → StateT (Heap Ident) m β} {r : CellRef Ident}
 variable {rel : r.Value → r.Value → Prop}
 
-omit [LawfulMonad m] in
 theorem of_supportPreserves (hc : SupportPreserves c r) :
     SupportCellRel c r Eq :=
   fun h z hz => (hc h z hz).symm
 
-omit [LawfulMonad m] in
 theorem supportPreserves_of_eq (hc : SupportCellRel c r Eq) :
     SupportPreserves c r :=
   fun h z hz => (hc h z hz).symm
 
-theorem bind (hc : SupportCellRel c r rel)
+theorem bind [LawfulMonad m] (hc : SupportCellRel c r rel)
     (hk : ∀ a, SupportCellRel (k a) r rel)
     (htrans : ∀ x y z, rel x y → rel y z → rel x z) :
     SupportCellRel (c >>= k) r rel := by
@@ -471,24 +467,22 @@ namespace SupportMeasureBound
 
 section support
 
-variable {m : Type (max u v) → Type*} [Monad m] [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+variable {m : Type (max u v) → Type*} [Monad m] [MonadAttach m] [ExactMonadAttach m]
 variable {α β : Type (max u v)} {c : StateT (Heap Ident) m α}
 variable {k : α → StateT (Heap Ident) m β} {r : CellRef Ident}
 variable {measure : r.Value → Nat}
 
-omit [LawfulMonad m] in
 theorem of_supportPreserves (hc : SupportPreserves c r) :
     SupportMeasureBound c r measure 0 := by
   intro h z hz
   simp [hc h z hz]
 
-omit [LawfulMonad m] in
 theorem mono_delta {δ₁ δ₂ : Nat} (hc : SupportMeasureBound c r measure δ₁)
     (hle : δ₁ ≤ δ₂) :
     SupportMeasureBound c r measure δ₂ :=
   fun h z hz => (hc h z hz).trans (Nat.add_le_add_left hle (measure (r.get h)))
 
-theorem bind {δ₁ δ₂ : Nat} (hc : SupportMeasureBound c r measure δ₁)
+theorem bind [LawfulMonad m] {δ₁ δ₂ : Nat} (hc : SupportMeasureBound c r measure δ₁)
     (hk : ∀ a, SupportMeasureBound (k a) r measure δ₂) :
     SupportMeasureBound (c >>= k) r measure (δ₁ + δ₂) := by
   intro h z hz
@@ -966,9 +960,8 @@ variable {ι : Type uι} {spec : OracleSpec.{uι, max u₀ v} ι}
 variable {α : Type (max u₀ v)}
 variable {Ident₀ : Type u₀} [CellSpec.{u₀, max u₀ v} Ident₀]
 variable {m : Type (max u₀ v) → Type*} [Monad m] [LawfulMonad m] [MonadLiftT m PMF]
-    [LawfulMonadLiftT m PMF] [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
+    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
 
-omit [LawfulMonadLiftT m PMF] in
 theorem CellWriteFootprint.simulateQ_run_cellUnchanged_prob_eq_one
     {impl : QueryImpl spec (StateT (Heap Ident₀) m)}
     (footprint : CellWriteFootprint impl) (r : CellRef Ident₀)

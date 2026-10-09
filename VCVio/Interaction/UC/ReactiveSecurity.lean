@@ -30,6 +30,7 @@ public section
 namespace Interaction.UC.ReactiveSecurity
 
 open PFunctor OracleComp ReactiveProcess ReactiveNetwork MeasureTheory
+open scoped ENNReal
 
 /-- Executable finite fragments with probabilistic local operations and private machine states. -/
 abbrev System (boundary : PortBoundary) := HandledAssembly ProbComp boundary Bool
@@ -94,23 +95,23 @@ theorem law_univ_le_one (system : System Δ) (context : Context Δ) :
   evalDist_apply_univ_le_one _
 
 /-- Statistical distance between the two actual experiments against one fixed context. -/
-noncomputable def advantage (real ideal : System Δ) (context : Context Δ) : ℝ :=
-  (law real context).tvDist (law ideal context)
+noncomputable def advantage (real ideal : System Δ) (context : Context Δ) : ℝ≥0∞ :=
+  (law real context).etvDist (law ideal context)
 
 /-- The distinguishing advantage compares the actual observation measures. -/
-theorem advantage_eq_tvDist (real ideal : System Δ) (context : Context Δ) :
-    advantage real ideal context = (law real context).tvDist (law ideal context) := by
+theorem advantage_eq_etvDist (real ideal : System Δ) (context : Context Δ) :
+    advantage real ideal context = (law real context).etvDist (law ideal context) := by
   unfold advantage
   rfl
 
 /-- Reversing the two experiments preserves their statistical distance. -/
 theorem advantage_comm (real ideal : System Δ) (context : Context Δ) :
-    advantage real ideal context = advantage ideal real context := Measure.tvDist_comm _ _
+    advantage real ideal context = advantage ideal real context := Measure.etvDist_comm _ _
 
 /-- Sequential comparisons add their distinguishing-error bounds. -/
 theorem advantage_triangle (first middle last : System Δ) (context : Context Δ) :
     advantage first last context ≤ advantage first middle context + advantage middle last context :=
-  Measure.tvDist_triangle _ _ _ (law_univ_le_one _ _) (law_univ_le_one _ _) (law_univ_le_one _ _)
+  Measure.etvDist_triangle _ _ _
 
 namespace Context
 
@@ -180,12 +181,12 @@ theorem experiment_wire_right (left : System (PortBoundary.tensor Δ₁ Γ))
       context.environment context.fuel)
 
 /-- Statistical comparison against an explicitly allowed class of executable contexts. -/
-@[expose] def ContextualWithin (allowed : Context Δ → Prop) (error : ℝ)
+@[expose] def ContextualWithin (allowed : Context Δ → Prop) (error : ℝ≥0∞)
     (real ideal : System Δ) : Prop :=
   ∀ context, allowed context → advantage real ideal context ≤ error
 
 /-- Statistical comparison against every finite executable closing context and horizon. -/
-@[expose] def Contextual (error : ℝ) (real ideal : System Δ) : Prop :=
+@[expose] def Contextual (error : ℝ≥0∞) (real ideal : System Δ) : Prop :=
   ∀ context, advantage real ideal context ≤ error
 
 namespace Contextual
@@ -193,34 +194,34 @@ namespace Contextual
 /-- A concrete system has zero advantage against itself at every finite horizon. -/
 theorem refl (system : System Δ) : Contextual 0 system system := by
   intro context
-  simp only [advantage, Measure.tvDist_self, le_refl]
+  simp only [advantage, Measure.etvDist_self, le_refl]
 
 /-- Sequential statistical comparisons add their error bounds. -/
-theorem trans {first middle last : System Δ} {error₁ error₂ : ℝ}
+theorem trans {first middle last : System Δ} {error₁ error₂ : ℝ≥0∞}
     (h₁ : Contextual error₁ first middle) (h₂ : Contextual error₂ middle last) :
     Contextual (error₁ + error₂) first last := fun context =>
   (advantage_triangle first middle last context).trans (add_le_add (h₁ context) (h₂ context))
 
 /-- Replacement of the left parallel fragment uses its executable residual context. -/
-theorem par_left {real ideal : System Δ₁} {error : ℝ} (h : Contextual error real ideal)
+theorem par_left {real ideal : System Δ₁} {error : ℝ≥0∞} (h : Contextual error real ideal)
     (right : System Δ₂) : Contextual error (real.par right) (ideal.par right) := by
   intro context
   simpa only [advantage, law, experiment_par_left] using h (context.parLeft right)
 
 /-- Replacement of the right parallel fragment uses its executable residual context. -/
-theorem par_right {real ideal : System Δ₂} {error : ℝ} (left : System Δ₁)
+theorem par_right {real ideal : System Δ₂} {error : ℝ≥0∞} (left : System Δ₁)
     (h : Contextual error real ideal) : Contextual error (left.par real) (left.par ideal) := by
   intro context
   simpa only [advantage, law, experiment_par_right] using h (context.parRight left)
 
 /-- Independent replacements in parallel add their statistical error bounds. -/
-theorem par_compose {real₁ ideal₁ : System Δ₁} {real₂ ideal₂ : System Δ₂} {error₁ error₂ : ℝ}
+theorem par_compose {real₁ ideal₁ : System Δ₁} {real₂ ideal₂ : System Δ₂} {error₁ error₂ : ℝ≥0∞}
     (h₁ : Contextual error₁ real₁ ideal₁) (h₂ : Contextual error₂ real₂ ideal₂) :
     Contextual (error₁ + error₂) (real₁.par real₂) (ideal₁.par ideal₂) :=
   (h₁.par_left real₂).trans (par_right ideal₁ h₂)
 
 /-- Replacement of the left wired fragment retains the actual shared-boundary traffic. -/
-theorem wire_left {real ideal : System (PortBoundary.tensor Δ₁ Γ)} {error : ℝ}
+theorem wire_left {real ideal : System (PortBoundary.tensor Δ₁ Γ)} {error : ℝ≥0∞}
     (h : Contextual error real ideal)
     (right : System (PortBoundary.tensor (PortBoundary.swap Γ) Δ₂)) :
     Contextual error (real.wire right) (ideal.wire right) := by
@@ -228,15 +229,15 @@ theorem wire_left {real ideal : System (PortBoundary.tensor Δ₁ Γ)} {error : 
   simpa only [advantage, law, experiment_wire_left] using h (context.wireLeft right)
 
 /-- Replacement of the right wired fragment retains the actual shared-boundary traffic. -/
-theorem wire_right {real ideal : System (PortBoundary.tensor (PortBoundary.swap Γ) Δ₂)} {error : ℝ}
-    (left : System (PortBoundary.tensor Δ₁ Γ)) (h : Contextual error real ideal) :
+theorem wire_right {real ideal : System (PortBoundary.tensor (PortBoundary.swap Γ) Δ₂)}
+    {error : ℝ≥0∞} (left : System (PortBoundary.tensor Δ₁ Γ)) (h : Contextual error real ideal) :
     Contextual error (left.wire real) (left.wire ideal) := by
   intro context
   simpa only [advantage, law, experiment_wire_right] using h (context.wireRight left)
 
 /-- Independent replacements across a shared boundary add their statistical error bounds. -/
 theorem wire_compose {real₁ ideal₁ : System (PortBoundary.tensor Δ₁ Γ)}
-    {real₂ ideal₂ : System (PortBoundary.tensor (PortBoundary.swap Γ) Δ₂)} {error₁ error₂ : ℝ}
+    {real₂ ideal₂ : System (PortBoundary.tensor (PortBoundary.swap Γ) Δ₂)} {error₁ error₂ : ℝ≥0∞}
     (h₁ : Contextual error₁ real₁ ideal₁) (h₂ : Contextual error₂ real₂ ideal₂) :
     Contextual (error₁ + error₂) (real₁.wire real₂) (ideal₁.wire ideal₂) :=
   (h₁.wire_left real₂).trans (wire_right ideal₁ h₂)
@@ -246,7 +247,7 @@ end Contextual
 namespace ContextualWithin
 
 /-- Error bounds add when both comparisons admit the same executable contexts. -/
-theorem trans {allowed : Context Δ → Prop} {first middle last : System Δ} {error₁ error₂ : ℝ}
+theorem trans {allowed : Context Δ → Prop} {first middle last : System Δ} {error₁ error₂ : ℝ≥0∞}
     (h₁ : ContextualWithin allowed error₁ first middle)
     (h₂ : ContextualWithin allowed error₂ middle last) :
     ContextualWithin allowed (error₁ + error₂) first last := fun context hallowed =>
@@ -256,7 +257,7 @@ theorem trans {allowed : Context Δ → Prop} {first middle last : System Δ} {e
 /-- Allowed-context comparison composes on the left when the actual residual context is admitted. -/
 theorem par_left {allowed : Context Δ₁ → Prop}
     {compositeAllowed : Context (PortBoundary.tensor Δ₁ Δ₂) → Prop}
-    {real ideal : System Δ₁} {error : ℝ} (h : ContextualWithin allowed error real ideal)
+    {real ideal : System Δ₁} {error : ℝ≥0∞} (h : ContextualWithin allowed error real ideal)
     (right : System Δ₂)
     (hcontext : ∀ context, compositeAllowed context → allowed (context.parLeft right)) :
     ContextualWithin compositeAllowed error (real.par right) (ideal.par right) := by
@@ -267,7 +268,7 @@ theorem par_left {allowed : Context Δ₁ → Prop}
 /-- Right parallel replacement requires admission of the executable residual context. -/
 theorem par_right {allowed : Context Δ₂ → Prop}
     {compositeAllowed : Context (PortBoundary.tensor Δ₁ Δ₂) → Prop}
-    {real ideal : System Δ₂} {error : ℝ} (left : System Δ₁)
+    {real ideal : System Δ₂} {error : ℝ≥0∞} (left : System Δ₁)
     (h : ContextualWithin allowed error real ideal)
     (hcontext : ∀ context, compositeAllowed context → allowed (context.parRight left)) :
     ContextualWithin compositeAllowed error (left.par real) (left.par ideal) := by
@@ -278,7 +279,7 @@ theorem par_right {allowed : Context Δ₂ → Prop}
 /-- Left wired replacement requires admission of the executable residual context. -/
 theorem wire_left {allowed : Context (PortBoundary.tensor Δ₁ Γ) → Prop}
     {compositeAllowed : Context (PortBoundary.tensor Δ₁ Δ₂) → Prop}
-    {real ideal : System (PortBoundary.tensor Δ₁ Γ)} {error : ℝ}
+    {real ideal : System (PortBoundary.tensor Δ₁ Γ)} {error : ℝ≥0∞}
     (h : ContextualWithin allowed error real ideal)
     (right : System (PortBoundary.tensor (PortBoundary.swap Γ) Δ₂))
     (hcontext : ∀ context, compositeAllowed context → allowed (context.wireLeft right)) :
@@ -290,7 +291,7 @@ theorem wire_left {allowed : Context (PortBoundary.tensor Δ₁ Γ) → Prop}
 /-- Right wired replacement requires admission of the executable residual context. -/
 theorem wire_right {allowed : Context (PortBoundary.tensor (PortBoundary.swap Γ) Δ₂) → Prop}
     {compositeAllowed : Context (PortBoundary.tensor Δ₁ Δ₂) → Prop}
-    {real ideal : System (PortBoundary.tensor (PortBoundary.swap Γ) Δ₂)} {error : ℝ}
+    {real ideal : System (PortBoundary.tensor (PortBoundary.swap Γ) Δ₂)} {error : ℝ≥0∞}
     (left : System (PortBoundary.tensor Δ₁ Γ)) (h : ContextualWithin allowed error real ideal)
     (hcontext : ∀ context, compositeAllowed context → allowed (context.wireRight left)) :
     ContextualWithin compositeAllowed error (left.wire real) (left.wire ideal) := by

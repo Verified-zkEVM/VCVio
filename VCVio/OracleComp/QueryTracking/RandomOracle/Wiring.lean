@@ -23,8 +23,7 @@ open OracleComp OracleSpec PFunctor
 
 namespace OracleComp
 
-variable {D R Boxes : Type} [DecidableEq D] [Finite D] [Finite R] [Nonempty R]
-  [SampleableType R] [SampleableType (D → R)]
+variable {D R Boxes : Type} [DecidableEq D] [Finite D] [SampleableType R] [SampleableType (D → R)]
   {Arity : Boxes → Type} {Dom : (b : Boxes) → Arity b → PFunctor}
   {Cod : Boxes → PFunctor}
 

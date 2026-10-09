@@ -46,43 +46,46 @@ def composeWithDEM [Monad m]
 
 section Correct
 
-variable [DecidableEq K] [DecidableEq M] [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+variable [DecidableEq K] [DecidableEq M] [Monad m] [MonadLiftT m SPMF]
   [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
 
-omit [LawfulMonadLiftT m SPMF] in
 /-- From KEM correctness at the monadic probability level, every reachable decapsulation of an
 honest ciphertext returns the encapsulated key. -/
 private lemma kem_decaps_mem_support
     [LawfulMonad m]
     {kem : KEMScheme m K PK SK CKEM}
-    (hkem : Pr[= true | kem.CorrectExp] = 1)
+    (hkem : Pr[= true | kem.correctnessExperiment] = 1)
     {pk : PK} {sk : SK} (hks : (pk, sk) ∈ support kem.keygen)
     {c : CKEM} {k : K} (hck : (c, k) ∈ support (kem.encaps pk))
     {kOpt : Option K} (hkOpt : kOpt ∈ support (kem.decaps sk c)) :
     kOpt = some k := by
-  have hmem : decide (kOpt = some k) ∈ support kem.CorrectExp := by
-    simp only [KEMScheme.CorrectExp, mem_support_bind_iff, support_pure,
+  have hmem : decide (kOpt = some k) ∈ support kem.correctnessExperiment := by
+    simp only [KEMScheme.correctnessExperiment, mem_support_bind_iff, support_pure,
       Set.mem_singleton_iff, decide_eq_decide, Prod.exists]
     exact ⟨pk, sk, hks, c, k, hck, kOpt, hkOpt, Iff.rfl⟩
-  simpa [((probOutput_eq_one_iff (mx := kem.CorrectExp) (x := true)).mp hkem).2] using hmem
+  simpa [((probOutput_eq_one_iff (mx := kem.correctnessExperiment) (x := true)).mp hkem).2]
+    using hmem
+
+variable [LawfulMonadLiftT m SPMF]
 
 /-- If a KEM and externally keyed DEM are both perfectly correct in the concrete probabilistic
 semantics of `m`, then their composition is also perfectly correct. -/
 theorem perfectlyCorrect_composeWithDEM
     [LawfulMonad m]
     (kem : KEMScheme m K PK SK CKEM) (dem : DEMScheme m K M CDEM)
-    (hkem : Pr[= true | kem.CorrectExp] = 1)
-    (hdem : ∀ k : K, ∀ msg : M, Pr[= true | dem.CorrectExp k msg] = 1) :
-    ∀ msg, Pr[= true | (kem.composeWithDEM dem).CorrectExp msg] = 1 := by
+    (hkem : Pr[= true | kem.correctnessExperiment] = 1)
+    (hdem : ∀ k : K, ∀ msg : M, Pr[= true | dem.correctnessExperiment k msg] = 1) :
+    ∀ msg, Pr[= true | (kem.composeWithDEM dem).correctnessExperiment msg] = 1 := by
   intro msg
   rw [← hkem]
-  simp only [AsymmEncAlg.CorrectExp, composeWithDEM, KEMScheme.CorrectExp, monad_norm]
+  simp only [AsymmEncAlg.correctnessExperiment, composeWithDEM, KEMScheme.correctnessExperiment,
+    monad_norm]
   refine probOutput_bind_congr fun ⟨pk, sk⟩ hks => ?_
   refine probOutput_bind_congr fun ⟨kc, k⟩ hck => ?_
   rw [probOutput_bind_bind_swap (mx := dem.encrypt k msg) (my := kem.decaps sk kc)]
   refine probOutput_bind_congr fun kOpt hkOpt => ?_
   obtain rfl := kem_decaps_mem_support hkem hks hck hkOpt
-  simpa [DEMScheme.CorrectExp, probOutput_pure, monad_norm] using hdem k msg
+  simpa [DEMScheme.correctnessExperiment, probOutput_pure, monad_norm] using hdem k msg
 
 end Correct
 
@@ -94,7 +97,7 @@ variable {ι : Type} {spec : OracleSpec ι} [SampleableType K]
 def composeWithDEM_toKEMLeftReduction
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem)) :
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem)) :
     kem.IND_CPA_Adversary where
   State := M × adversary.State
   preChallenge pk := do
@@ -108,7 +111,7 @@ def composeWithDEM_toKEMLeftReduction
 def composeWithDEM_toKEMRightReduction
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem)) :
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem)) :
     kem.IND_CPA_Adversary where
   State := M × adversary.State
   preChallenge pk := do
@@ -124,7 +127,7 @@ the same `encaps`-then-`encrypt` effect order as the composed scheme. -/
 def composeWithDEM_toDEMReduction
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem)) :
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem)) :
     dem.IND_CPA_Adversary where
   State := CKEM × adversary.State
   chooseMessages := do
@@ -149,7 +152,7 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem))
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem))
     (heval_pure : ∀ {α : Type} [MeasurableSpace α] (a : α),
         runtime.evalDist (pure a : OracleComp spec α) = Measure.dirac a)
     (heval_bind : ∀ {α β : Type} [MeasurableSpace α] [MeasurableSpace β]
@@ -161,7 +164,7 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
         runtime.evalDist (runtime.liftProbComp pc) = 𝒟[pc])
     (hno_fail : ∀ (mx : OracleComp spec Bool),
         runtime.evalDist mx {true} + runtime.evalDist mx {false} = 1) :
-    AsymmEncAlg.IND_CPA_OneTime_biasAdvantage (kem.composeWithDEM dem) runtime adversary ≤
+    AsymmEncAlg.IND_CPA_OneTime_Advantage (kem.composeWithDEM dem) runtime adversary ≤
       kem.IND_CPA_Advantage runtime (kem.composeWithDEM_toKEMLeftReduction dem adversary) +
       kem.IND_CPA_Advantage runtime (kem.composeWithDEM_toKEMRightReduction dem adversary) +
       dem.IND_CPA_Advantage runtime
@@ -204,7 +207,7 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
   have hnot (b : Bool) (x y : M) : (if !b then x else y) = (if b then y else x) := by
     cases b <;> rfl
   simpa only [evalDist_eq_runtime, Measure.boolBias,
-    AsymmEncAlg.IND_CPA_OneTime_biasAdvantage, KEMScheme.IND_CPA_Advantage,
+    AsymmEncAlg.IND_CPA_OneTime_Advantage, KEMScheme.IND_CPA_Advantage,
     DEMScheme.IND_CPA_Advantage,
     AsymmEncAlg.IND_CPA_OneTime_Game, KEMScheme.IND_CPA_Game, DEMScheme.IND_CPA_Game,
     KEMDEM.composedGame, KEMDEM.kemGame, KEMDEM.demGame, prepare, encaps, finish,

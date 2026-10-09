@@ -5,11 +5,11 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.EvalDist.UniformCompatibility
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.EvalDist.Defs.Semantics.Core
 public import PolyFun.Control.Monad.Hom
-import VCVio.EvalDist.Monad.Map
+import VCVio.EvalDist.Monad.Measure
 
 /-!
 # Bundled Lifts from `ProbComp`
@@ -129,6 +129,12 @@ noncomputable def probComp : ProbCompRuntime ProbComp where
 @[simp]
 lemma probComp_evalDist [MeasurableSpace α] (mx : ProbComp α) :
     probComp.evalDist mx = 𝒟[mx] := rfl
+
+/-- The canonical `ProbComp` runtime assigns every computation a probability measure. -/
+instance [MeasurableSpace α] (mx : ProbComp α) :
+    MeasureTheory.IsProbabilityMeasure (probComp.evalDist mx) := by
+  rw [probComp_evalDist]
+  infer_instance
 
 /-- The canonical `ProbComp` runtime satisfies the pure-return factoring law: `evalDist`
 commutes with binding a pure measurable function. Security decompositions that couple several

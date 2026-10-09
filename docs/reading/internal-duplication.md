@@ -45,12 +45,10 @@ are four presentations of "run the computation and accumulate a cost". `AddWrite
 (`VCVio/OracleComp/QueryTracking/WriterCost.lean`) is canonical: `CostModel.expectedCost`
 already delegates to `AddWriterT.expectedCost`. `QueryImpl.withCost`, defined in
 `CountingOracle.lean`, supports arbitrary monoid-valued costs. Its `withCounting` specialization
-writes into the *multiplicative* `QueryCount` writer (`Structures.lean` gives
-`QueryCount ι := ι → ℕ` a `Monoid` whose `mul` is `+`). Folding it onto `AddWriterT` is blocked
-by the `QueryCount` design item in the ledger: the definition is `@[reducible]`, so that
-`Monoid` instance leaks onto every `ι → ℕ` (`#synth Monoid (ℕ → ℕ)` finds it), and the fold has
-to change the carrier (the repo already uses `κ →₀ ℕ` in `ResourceProfile.lean`) before it can
-change the writer.
+uses `AddWriterT (QueryCount ι)` with the standard `Multiplicative` tag. Counts remain
+ordinary functions with their pointwise algebra; no custom monoid instance is installed on
+the function type. `AddWriterT.runAdd` exposes untagged counts. The structural bound APIs
+remain separate from generic runtime-instantiated accounting.
 
 **Oracle handlers and interaction samplers.** `QueryImpl spec m` already specializes PolyFun's
 `PFunctor.Handler m spec.toPFunctor` through `QueryImpl.eq_handler`; `ProbHandler` in

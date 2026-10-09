@@ -176,7 +176,7 @@ def extractabilityInner [DecidableEq Y]
 
 /-- Shared-cache random-oracle interpretation of the stateful game. All commitments, terminal
 opening work, and honest verification use one lazy random function. -/
-def extractabilityGame [DecidableEq Query] [DecidableEq Y]
+def extractabilityExperiment [DecidableEq Query] [DecidableEq Y]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config) :
@@ -218,11 +218,11 @@ theorem prob_hasOpeningOrEqualRootDisagreement_le_hasAnyCheckpointExtractionDisa
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config) :
     Pr[ Transcript.HasOpeningOrEqualRootDisagreement model |
-      extractabilityGame model config rounds adversary] ≤
+      extractabilityExperiment model config rounds adversary] ≤
         Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-          extractabilityGame model config rounds adversary] :=
+          extractabilityExperiment model config rounds adversary] :=
   _root_.probEvent_mono
-    (mx := extractabilityGame model config rounds adversary)
+    (mx := extractabilityExperiment model config rounds adversary)
     (fun transcript _ h =>
       Transcript.HasOpeningOrEqualRootDisagreement.toHasAnyCheckpointExtractionDisagreement
         model transcript h)
@@ -238,9 +238,9 @@ theorem openingOrEqualRootDisagreement_bound_of_anyCheckpointExtractionDisagreem
     (adversary : Adversary Cfg Query Address Y config) (bound : ENNReal)
     (hstrong :
       Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-        extractabilityGame model config rounds adversary] ≤ bound) :
+        extractabilityExperiment model config rounds adversary] ≤ bound) :
     Pr[ Transcript.HasOpeningOrEqualRootDisagreement model |
-      extractabilityGame model config rounds adversary] ≤ bound :=
+      extractabilityExperiment model config rounds adversary] ≤ bound :=
   (prob_hasOpeningOrEqualRootDisagreement_le_hasAnyCheckpointExtractionDisagreement
     model config rounds adversary).trans hstrong
 

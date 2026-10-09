@@ -95,17 +95,17 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 
 section complete
 
-variable [SampleableType Chal] [IsUniformSpec unifSpec]
+variable [SampleableType Chal]
 
 /-- A protocol is perfectly complete if the honest prover always convinces the verifier
 on valid statement-witness pairs. -/
 def PerfectlyComplete (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel) : Prop :=
   ∀ x w, rel x w = true →
-    Pr[= true | do
+    𝒟[do
       let (pc, sc) ← σ.commit x w
       let ω ← $ᵗ Chal
       let π ← σ.respond x w sc ω
-      return σ.verify x pc ω π] = 1
+      return σ.verify x pc ω π] {true} = 1
 
 end complete
 

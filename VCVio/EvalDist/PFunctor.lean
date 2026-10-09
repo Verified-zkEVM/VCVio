@@ -40,9 +40,9 @@ class IsProbabilitySpec (P : PFunctor.{uA, u}) where
 the canonical uniform distribution. -/
 class IsUniformSpec (P : PFunctor.{uA, u}) extends IsProbabilitySpec P where
   /-- Every direction type is finite. -/
-  fintype : P.Fintype
+  fintype : ∀ a, Fintype (P.B a)
   /-- Every direction type is inhabited. -/
-  inhabited : P.Inhabited
+  inhabited : ∀ a, Inhabited (P.B a)
   /-- Each operation uses the canonical uniform distribution on directions. -/
   toPMF_eq_uniform : ∀ operation,
     toPMF operation = PMF.uniformOfFintype (P.B operation)
@@ -54,7 +54,7 @@ types. This is deliberately not an instance: probability semantics remain an
 explicit opt-in. -/
 @[reducible]
 noncomputable def IsUniformSpec.ofFintypeInhabited (P : PFunctor.{uA, u})
-    [hF : P.Fintype] [hI : P.Inhabited] : IsUniformSpec P where
+    [hF : ∀ a, Fintype (P.B a)] [hI : ∀ a, Inhabited (P.B a)] : IsUniformSpec P where
   toPMF operation := PMF.uniformOfFintype (P.B operation)
   fintype := hF
   inhabited := hI

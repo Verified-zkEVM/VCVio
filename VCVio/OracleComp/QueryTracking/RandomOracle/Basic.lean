@@ -6,6 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.OracleComp.QueryTracking.CachingOracle
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # Lazy Random Oracle

@@ -94,8 +94,8 @@ fixed before it is proved:
 
 1. The reduction is existentially quantified. `GenerableRelation.gen_sound` guarantees a
    witness for every generated statement, so the reduction that returns such a witness, chosen
-   classically, wins `hardRelationExp` with probability `1`, and the statement holds for every
-   adversary. The final statement must name the reduction, as `FiatShamir.euf_cma_bound` does
+   classically, wins `hardRelationExperiment` with probability `1`, and the statement holds for
+   every adversary. The final statement must name the reduction, as `FiatShamir.euf_cma_bound` does
    with `FiatShamir.cmaReduction`; this requires a with-aborts analogue of
    `FiatShamir.cmaToNmaAdv`.
 2. `ε`, `p_abort`, and `δ : ℝ` are not tied to the identification scheme and are not
@@ -114,15 +114,14 @@ theorem euf_cma_bound
     (hhvzk : ids.HVZK sim ζ_zk)
     (recover : Stmt → Chal → Resp → Commit)
     (hcr : ids.CommitmentRecoverable recover)
-    (adv : SignatureAlg.unforgeableAdv
-      (FiatShamirWithAbort
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+    (adv : SignatureAlg.UnforgeableAdversary
+      (FiatShamirWithAbort.inROM ids hr M maxAttempts))
     (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
     ∃ reduction : Stmt → ProbComp Wit,
-      adv.advantage (runtime M) ≤
-        Pr[= true | hardRelationExp hr reduction] +
+      SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
+        Pr[= true | hardRelationExperiment hr reduction] +
           ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
   let _ := hc
   let _ := hζ
@@ -143,15 +142,14 @@ theorem euf_cma_bound_perfectHVZK
     (hhvzk : ids.PerfectHVZK sim)
     (recover : Stmt → Chal → Resp → Commit)
     (hcr : ids.CommitmentRecoverable recover)
-    (adv : SignatureAlg.unforgeableAdv
-      (FiatShamirWithAbort
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+    (adv : SignatureAlg.UnforgeableAdversary
+      (FiatShamirWithAbort.inROM ids hr M maxAttempts))
     (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
     ∃ reduction : Stmt → ProbComp Wit,
-      adv.advantage (runtime M) ≤
-        Pr[= true | hardRelationExp hr reduction] +
+      SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
+        Pr[= true | hardRelationExperiment hr reduction] +
           ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort 0 δ hp) :=
   euf_cma_bound (ids := ids) (M := M) (maxAttempts := maxAttempts)
     (hc := hc) (sim := sim) (ζ_zk := 0) (hζ := le_rfl)

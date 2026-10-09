@@ -6,11 +6,9 @@ Authors: Quang Dao
 
 module
 public import Mathlib.Algebra.Polynomial.Eval.Defs
-public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.OracleComp.QueryTracking.QueryCost
-public import VCVio.ProgramLogic.Unary.HoareTriple
 import Mathlib.Tactic.GRewrite
-import Mathlib.MeasureTheory.Integral.Lebesgue.Markov
 
 /-!
 # Cost Models for Oracle Computations
@@ -40,7 +38,7 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 
 @[expose] public section
 
-open OracleSpec OracleComp OracleComp.ProgramLogic ENNReal
+open OracleSpec OracleComp ENNReal
 
 /-! ## Cost Model, Cost Oracle, Cost Distribution
 
@@ -48,7 +46,7 @@ All definitions below operate at `Type` (= `Type 0`), matching the program logic
 support API.
 -/
 
-variable {ι : Type} {spec : OracleSpec ι} {α : Type} {ω : Type}
+variable {ι : Type} {spec : OracleSpec ι} {α β : Type} {ω : Type}
 
 /-- Oracle that tracks additive cost. Wraps `costOracle` with `Multiplicative`
 to get additive accumulation through the existing `WriterT` infrastructure. -/
@@ -95,30 +93,12 @@ theorem fst_map_costDist [AddCommMonoid ω] (oa : OracleComp spec α) (cm : Cost
     Prod.fst <$> costDist oa cm = oa :=
   fst_map_run_simulateQ_addCostOracle cm.queryCost oa
 
-namespace AddWriterT
-
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
-
-/-- For `OracleComp`, `AddWriterT.expectedCost` is the Lebesgue integral over the run semantics,
-projected to the additive cost component. -/
-lemma expectedCost_eq_lintegral_run
-    (oa : AddWriterT ω (OracleComp spec) α) (val : ω → ENNReal) :
-    AddWriterT.expectedCost oa val =
-      letI : MeasurableSpace (α × Multiplicative ω) := ⊤
-      ∫⁻ z, val (Multiplicative.toAdd z.2) ∂𝒟[oa.run] := by
-  let : MeasurableSpace ω := ⊤
-  let : MeasurableSpace (α × Multiplicative ω) := ⊤
-  rw [AddWriterT.expectedCost, AddWriterT.costs_def,
-    lintegral_evalDist_map oa.run Measurable.of_discrete Measurable.of_discrete]
-
-end AddWriterT
 
 /-! ## Expected Cost -/
 
 section ExpectedCost
 
-variable [AddCommMonoid ω]
+variable [AddCommMonoid ω] [MeasurableSpace ω]
 variable [∀ t, MeasurableSpace (spec.Range t)]
   [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
 
@@ -139,28 +119,28 @@ noncomputable abbrev expectedCostNat (oa : OracleComp spec α)
 
 /-- The `CostModel.expectedCost` facade is the Lebesgue integral of the cost projection of the
 instrumented joint distribution. -/
-theorem expectedCost_eq_lintegral_costDist (oa : OracleComp spec α) (cm : CostModel spec ω)
-    (val : ω → ℝ≥0∞) :
+theorem expectedCost_eq_lintegral_costDist [MeasurableSpace α]
+    (oa : OracleComp spec α) (cm : CostModel spec ω)
+    (val : ω → ℝ≥0∞) (hval : Measurable val) :
     expectedCost oa cm val =
-      letI : MeasurableSpace (α × Multiplicative ω) := ⊤
       ∫⁻ z, val (Multiplicative.toAdd z.2) ∂𝒟[costDist oa cm] :=
-  AddWriterT.expectedCost_eq_lintegral_run _ val
+  AddWriterT.expectedCost_eq_lintegral_run _ val hval
 
 @[simp]
 theorem expectedCost_pure (x : α) (cm : CostModel spec ω)
-    (val : ω → ℝ≥0∞) (hval : val 0 = 0) :
+    (val : ω → ℝ≥0∞) (hvalMeas : Measurable val) (hval : val 0 = 0) :
     expectedCost (spec := spec) (pure x) cm val = 0 := by
-  simpa [expectedCost, instrumentedRun] using hval
+  simpa only [expectedCost, instrumentedRun, simulateQ_pure] using
+    (AddWriterT.expectedCost_pure x val hvalMeas).trans hval
 
 /-- If `val z.2 ≤ c` for all `z` in the support of `costDist`, then `expectedCost ≤ c`.
 This is the key bridge from worst-case (support) bounds to expected bounds. -/
 theorem expectedCost_le_of_support_bound (oa : OracleComp spec α) (cm : CostModel spec ω)
-    (val : ω → ℝ≥0∞) (c : ℝ≥0∞)
+    (val : ω → ℝ≥0∞) (c : ℝ≥0∞) (hval : Measurable val)
     (h : ∀ z ∈ support (costDist oa cm), val (Multiplicative.toAdd z.2) ≤ c) :
     expectedCost oa cm val ≤ c := by
-  let : MeasurableSpace ω := ⊤
   apply AddWriterT.expectedCost_le_of_ae_le
-  apply OracleComp.ae_of_forall_mem_support
+  apply evalDist.ae_of_forall_mem_support _ _ (measurableSet_le hval measurable_const)
   intro w hw
   rw [AddWriterT.costs_def, support_map] at hw
   obtain ⟨z, hz, rfl⟩ := hw
@@ -183,11 +163,53 @@ theorem worstCaseCostBound_iff_support_bound [AddCommMonoid ω] [Preorder ω]
   unfold WorstCaseCostBound costDist instrumentedRun AddWriterT.PathwiseCostAtMost
   rfl
 
+/-- The actual instrumented query charges its key before the continuation. -/
+theorem costDist_query_bind [AddCommMonoid ω]
+    (t : spec.Domain) (k : spec.Range t → OracleComp spec α) (cm : CostModel spec ω) :
+    costDist ((spec.query t : OracleComp spec (spec.Range t)) >>= k) cm =
+      (spec.query t : OracleComp spec (spec.Range t)) >>= fun u =>
+        (fun z => (z.1, Multiplicative.ofAdd (cm.queryCost t + Multiplicative.toAdd z.2))) <$>
+          costDist (k u) cm := by
+  simp [costDist, instrumentedRun, simulateQ_bind, simulateQ_query,
+    QueryImpl.withAddCost, WriterT.run_bind, bind_assoc]
+
+/-- A pure computation has zero pathwise cost. -/
+@[simp] theorem worstCaseCostBound_pure [AddCommMonoid ω] [Preorder ω]
+    (a : α) (cm : CostModel spec ω) (B : ω) :
+    WorstCaseCostBound (pure a) cm B ↔ 0 ≤ B := by
+  simp [worstCaseCostBound_iff_support_bound, costDist, instrumentedRun]
+
+/-- A query budget bounds the key charge plus every supported continuation cost. -/
+theorem worstCaseCostBound_query_bind_iff [AddCommMonoid ω] [Preorder ω]
+    (t : spec.Domain) (k : spec.Range t → OracleComp spec α) (cm : CostModel spec ω) (B : ω) :
+    WorstCaseCostBound ((spec.query t : OracleComp spec (spec.Range t)) >>= k) cm B ↔
+      ∀ u z, z ∈ support (costDist (k u) cm) →
+        cm.queryCost t + Multiplicative.toAdd z.2 ≤ B := by
+  rw [worstCaseCostBound_iff_support_bound, costDist_query_bind]
+  simp only [support_bind, support_liftM_query, Set.mem_iUnion, Set.mem_univ,
+    support_map, Set.mem_image]
+  constructor
+  · intro h u z hz
+    exact h _ ⟨u, trivial, z, hz, rfl⟩
+  · intro h z hz
+    obtain ⟨u, _, w, hw, rfl⟩ := hz
+    exact h u w hw
+
+/-- Pathwise budgets add under sequencing of the actual instrumented computations. -/
+theorem WorstCaseCostBound.bind [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
+    {oa : OracleComp spec α} {k : α → OracleComp spec β} {cm : CostModel spec ω} {A B : ω}
+    (ha : WorstCaseCostBound oa cm A) (hb : ∀ a, WorstCaseCostBound (k a) cm B) :
+    WorstCaseCostBound (oa >>= k) cm (A + B) := by
+  unfold WorstCaseCostBound instrumentedRun at *
+  rw [simulateQ_bind]
+  exact AddWriterT.pathwiseCostAtMost_bind ha hb
+
+
 /-! ## Cost Bounds -/
 
 section CostBounds
 
-variable [AddCommMonoid ω]
+variable [AddCommMonoid ω] [MeasurableSpace ω]
 variable [∀ t, MeasurableSpace (spec.Range t)]
   [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
 
@@ -201,40 +223,28 @@ is monotone with respect to `≤` on `ω`. -/
 theorem WorstCaseCostBound.toExpectedCostBound [Preorder ω]
     {oa : OracleComp spec α} {cm : CostModel spec ω} {bound : ω}
     (hstrict : WorstCaseCostBound oa cm bound)
-    {val : ω → ℝ≥0∞} (hval_mono : Monotone val) :
+    {val : ω → ℝ≥0∞} (hval_mono : Monotone val) (hval : Measurable val) :
     ExpectedCostBound oa cm val (val bound) :=
-  AddWriterT.expectedCost_le_of_aeCostAtMost _
-    (AddWriterT.aeCostAtMost_of_pathwiseCostAtMost hstrict) hval_mono
+  AddWriterT.expectedCost_le_of_pathwiseCostAtMost hstrict hval_mono hval
 
 /-- **Markov's inequality for cost distributions** (multiplication form).
 The probability that the valued cost exceeds `t`, times `t`, is at most `expectedCost`. -/
 theorem probEvent_cost_gt_mul_le_expectedCost
-    (oa : OracleComp spec α) (cm : CostModel spec ω) (val : ω → ℝ≥0∞) (t : ℝ≥0∞) :
+    (oa : OracleComp spec α) (cm : CostModel spec ω)
+    (val : ω → ℝ≥0∞) (hval : Measurable val) (t : ℝ≥0∞) :
     Pr{let z ← costDist oa cm}[t < val (Multiplicative.toAdd z.2)] * t ≤
       expectedCost oa cm val := by
-  let : MeasurableSpace (α × Multiplicative ω) := ⊤
-  rw [prEvent_eq_evalDist_of_discrete, expectedCost_eq_lintegral_costDist]
-  have hsubset :
-      {z : α × Multiplicative ω | t < val (Multiplicative.toAdd z.2)} ⊆
-        {z | t ≤ val (Multiplicative.toAdd z.2)} := by
-    intro z hz
-    simpa only [Set.mem_ofPred_eq] using hz.le
-  calc
-    𝒟[costDist oa cm] {z | t < val (Multiplicative.toAdd z.2)} * t =
-        t * 𝒟[costDist oa cm] {z | t < val (Multiplicative.toAdd z.2)} := mul_comm _ _
-    _ ≤ t * 𝒟[costDist oa cm] {z | t ≤ val (Multiplicative.toAdd z.2)} :=
-      mul_le_mul_of_nonneg_left (MeasureTheory.measure_mono hsubset) zero_le
-    _ ≤ ∫⁻ z, val (Multiplicative.toAdd z.2) ∂𝒟[costDist oa cm] :=
-      MeasureTheory.mul_meas_ge_le_lintegral Measurable.of_discrete t
+  simpa only [AddWriterT.prEvent_costs, expectedCost, costDist] using
+    AddWriterT.prEvent_cost_gt_mul_le_expectedCost (instrumentedRun oa cm) hval t
 
 /-- **Markov's inequality for cost distributions** (division form). -/
 theorem probEvent_cost_gt_le_expectedCost_div
-    (oa : OracleComp spec α) (cm : CostModel spec ω) (val : ω → ℝ≥0∞)
+    (oa : OracleComp spec α) (cm : CostModel spec ω) (val : ω → ℝ≥0∞) (hval : Measurable val)
     (t : ℝ≥0∞) (ht : 0 < t) (ht' : t ≠ ⊤) :
     Pr{let z ← costDist oa cm}[t < val (Multiplicative.toAdd z.2)] ≤
       expectedCost oa cm val / t :=
   (ENNReal.le_div_iff_mul_le (.inl ht.ne') (.inl ht')).mpr
-    (probEvent_cost_gt_mul_le_expectedCost oa cm val t)
+    (probEvent_cost_gt_mul_le_expectedCost oa cm val hval t)
 
 end CostBounds
 
@@ -282,7 +292,7 @@ private lemma mem_support_costDist_unit_query_bind_of_mem_support
     exact ⟨z, hz, by simp [Nat.add_comm]⟩
 
 private theorem isPerIndexQueryBound_of_unit_support_bound
-    [DecidableEq ι] [spec.Inhabited]
+    [DecidableEq ι] [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {bound : ℕ}
     (hSupport : ∀ z ∈ support (costDist oa CostModel.unit),
       Multiplicative.toAdd z.2 ≤ bound) :
@@ -293,12 +303,13 @@ private theorem isPerIndexQueryBound_of_unit_support_bound
   | query_bind t mx ih =>
       rw [isPerIndexQueryBound_query_bind_iff]
       refine ⟨?_, fun u => ?_⟩
-      · rcases OracleComp.support_nonempty (mx default) with ⟨x, hx⟩
-        rcases exists_mem_support_costDist_of_mem_support (mx default) CostModel.unit hx with
+      · obtain ⟨u₀⟩ : Nonempty (spec.Range t) := inferInstance
+        rcases OracleComp.support_nonempty (mx u₀) with ⟨x, hx⟩
+        rcases exists_mem_support_costDist_of_mem_support (mx u₀) CostModel.unit hx with
           ⟨c, hc⟩
         have hle : Multiplicative.toAdd c + 1 ≤ bound := by
           simpa using
-            hSupport _ (mem_support_costDist_unit_query_bind_of_mem_support t mx default hc)
+            hSupport _ (mem_support_costDist_unit_query_bind_of_mem_support t mx u₀ hc)
         omega
       · have hcontSupport :
             ∀ z ∈ support (costDist (mx u) CostModel.unit), z.2 ≤ bound - 1 := by
@@ -315,7 +326,7 @@ private theorem isPerIndexQueryBound_of_unit_support_bound
 if every execution uses at most `bound` total unit-cost steps, then each oracle index
 is queried at most `bound` times. -/
 theorem WorstCaseCostBound.toIsPerIndexQueryBound_unit
-    [DecidableEq ι] [spec.Inhabited]
+    [DecidableEq ι] [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {bound : ℕ}
     (h : WorstCaseCostBound oa CostModel.unit bound) :
     IsPerIndexQueryBound oa (fun _ => bound) :=
@@ -358,7 +369,7 @@ theorem IsPerIndexQueryBound.toWorstCaseCostBound_unit_sum
             (f := fun u => instrumentedRun (mx u) CostModel.unit)
             (n₂ := ∑ i, Function.update qb t (qb t - 1) i)
             (by simpa [instrumentedRun, CostModel.unit,
-                  HasQuery.Program.withUnitCost] using
+                  HasQuery.Program.withUnitCost, HasQuery.Program.withAddCost] using
               (HasQuery.queryBoundedAboveBy_withUnitCost_query
                 (QueryImpl.ofLift spec (OracleComp spec)) t))
             (fun u => ih u (hqb.2 u))
@@ -376,7 +387,8 @@ theorem IsPerIndexQueryBound.toExpectedCostBound_unit_sum
     {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : IsPerIndexQueryBound oa qb) :
     ExpectedCostBound oa CostModel.unit (fun n => (n : ENNReal)) (∑ i, qb i) := by
-  simpa using (toWorstCaseCostBound_unit_sum h).toExpectedCostBound Nat.mono_cast
+  simpa using (toWorstCaseCostBound_unit_sum h).toExpectedCostBound
+    Nat.mono_cast Measurable.of_discrete
 
 end UnitCostBridge
 

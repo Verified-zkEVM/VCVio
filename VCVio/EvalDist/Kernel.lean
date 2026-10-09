@@ -101,6 +101,26 @@ theorem evalDist_bind_eq_comp_of_discrete [Monad m] [EvalDistSemantics m]
     𝒟[mx >>= f] = Measure.bind 𝒟[mx] (evalDistKernelOfDiscrete f) :=
   evalDist_bind_of_discrete mx f
 
+/-- Composing measurable families of computation measures gives a measurable family. -/
+@[fun_prop]
+theorem measurable_evalDist_bind [Monad m] [EvalDistSemantics m]
+    [LawfulEvalDistSemantics m] [MeasurableSpace ρ] [MeasurableSpace α]
+    [MeasurableSpace β] (f : ρ → m α) (g : α → m β)
+    (hf : Measurable fun r ↦ 𝒟[f r]) (hg : Measurable fun a ↦ 𝒟[g a]) :
+    Measurable fun r ↦ 𝒟[f r >>= g] := by
+  simp only [evalDist_bind _ _ hg]
+  exact (Measure.measurable_bind' hg).comp hf
+
+/-- A composed computation family denotes Mathlib's composition of its kernels. -/
+theorem evalDistKernel_bind [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    [MeasurableSpace ρ] [MeasurableSpace α] [MeasurableSpace β]
+    (f : ρ → m α) (g : α → m β)
+    (hf : Measurable fun r ↦ 𝒟[f r]) (hg : Measurable fun a ↦ 𝒟[g a]) :
+    evalDistKernel (fun r ↦ f r >>= g) (measurable_evalDist_bind f g hf hg) =
+      evalDistKernel g hg ∘ₖ evalDistKernel f hf := by
+  ext r : 1
+  exact evalDist_bind (f r) g hg
+
 namespace MeasureSemanticsVia
 
 variable [Monad m]
@@ -256,6 +276,20 @@ theorem isMarkovKernel_evalDistKernel [EvalDistSemantics m]
     (hProbability : ∀ state, IsProbabilityMeasure 𝒟[mx state]) :
     IsMarkovKernel (StateT.evalDistKernel mx hMeasurable) :=
   _root_.isMarkovKernel_evalDistKernel mx hMeasurable hProbability
+
+/-- Stateful bind composes the joint output-state kernel with a continuation on that pair.
+The continuation receives the final state produced by the first computation. -/
+theorem evalDistKernel_bind [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    [MeasurableSpace ρ] [MeasurableSpace α] [MeasurableSpace β]
+    (mx : StateT ρ m α) (f : α → StateT ρ m β)
+    (hmx : Measurable fun state ↦ 𝒟[mx state])
+    (hf : Measurable fun p : α × ρ ↦ 𝒟[f p.1 p.2]) :
+    StateT.evalDistKernel (mx >>= f)
+        (_root_.measurable_evalDist_bind mx (fun p : α × ρ ↦ f p.1 p.2) hmx hf) =
+      _root_.evalDistKernel (fun p : α × ρ ↦ f p.1 p.2) hf ∘ₖ
+        StateT.evalDistKernel mx hmx := by
+  ext state : 1
+  exact _root_.evalDist_bind (mx state) (fun p ↦ f p.1 p.2) hf
 
 /-- Discarding the final state maps its denotation along the first projection. -/
 @[simp↓, grind =]

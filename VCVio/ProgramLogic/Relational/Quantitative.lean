@@ -9,6 +9,7 @@ module
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import VCVio.EvalDist.TVDist
 public import VCVio.ProgramLogic.Unary.HoareTriple
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import ToMathlib.ProbabilityTheory.OptimalCoupling
 
 /-!
@@ -1188,12 +1189,15 @@ from `IsCoupling.apply_pure_left_eq`), and the relational expectation reduces to
 expectation `wp y (post a)` (resp. `wp x (fun a => post a b)`). This is the genuinely
 quantitative analogue of the qualitative `Anchored Prop` instance in
 `VCVio/ProgramLogic/Relational/Basic.lean`. -/
-noncomputable instance instAnchored_eRelWP :
+noncomputable instance instAnchored_eRelWP
+    [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
+    [∀ t, MeasurableSpace (spec₂.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)] :
     MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) ℝ≥0∞ where
   rwp_pure_left {α β} a y post := by
     change eRelWP (pure a : OracleComp spec₁ α) y post =
       wp y (post a)
     rw [wp_eq_tsum]
+    simp only [probOutput_true_eq_probEvent, probEvent_eq_eq_probOutput]
     apply le_antisymm
     · refine iSup_le fun c => ?_
       have hcPure : SPMF.IsCoupling c.1 (pure a) (𝒮[y]) := by
@@ -1216,6 +1220,7 @@ noncomputable instance instAnchored_eRelWP :
     change eRelWP x (pure b : OracleComp spec₂ β) post =
       wp x (fun a => post a b)
     rw [wp_eq_tsum]
+    simp only [probOutput_true_eq_probEvent, probEvent_eq_eq_probOutput]
     apply le_antisymm
     · refine iSup_le fun c => ?_
       have hcPure : SPMF.IsCoupling c.1 (𝒮[x]) (pure b) := by

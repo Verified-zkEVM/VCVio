@@ -104,7 +104,7 @@ private theorem querying_verifier_bound : queryingAdversary.HasVerifierQueryBoun
 commitment plus the terminal query, while the honest verifier remains separately zero-cost. -/
 theorem queryingGlobalStrongBound (rounds : ℕ) :
     Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityGame model config rounds queryingAdversary] ≤
+      extractabilityExperiment model config rounds queryingAdversary] ≤
       (multiCheckpointROMErrorNumerator (rounds * 3) rounds 0 (rounds + 1) : ENNReal) *
         (Nat.card Bool : ENNReal)⁻¹ := by
   exact anyCheckpointDisagreement_rom_bound_uniformShape model config rounds queryingAdversary
@@ -172,7 +172,7 @@ opening continuation to depend on the extractor state. It exercises the accounti
 separate ghost continuation queries from real adversarial queries. -/
 theorem claimingGlobalStrongBound (rounds : ℕ) :
     Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-        extractabilityGame model config rounds (claimingAdversary rounds)] ≤
+        extractabilityExperiment model config rounds (claimingAdversary rounds)] ≤
       (multiCheckpointROMErrorNumerator (rounds * 3) rounds rounds rounds : ENNReal) *
         (Nat.card Bool : ENNReal)⁻¹ := by
   exact anyCheckpointDisagreement_rom_bound_uniformShape model config rounds

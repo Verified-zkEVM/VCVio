@@ -53,10 +53,9 @@ entries). The total reduction loss is `qS·ε + Pr[collision]`. -/
 section IdenticalUntilBadEpsilon
 
 variable {ι : Type} {spec : OracleSpec ι}
-variable {ι' : Type} {spec' : OracleSpec ι'} [IsUniformSpec spec']
+variable {ι' : Type} {spec' : OracleSpec ι'}
 variable {α : Type} {σ : Type}
 
-omit [IsUniformSpec spec'] in
 /-- "Bad propagation": starting from a bad state, every output of the simulation has the
 bad flag set. This generalizes the per-step `h_mono` hypothesis to the full simulation. -/
 private lemma mem_support_simulateQ_run_of_bad
@@ -79,6 +78,8 @@ private lemma mem_support_simulateQ_run_of_bad
       obtain ⟨⟨u, p'⟩, h_mem, h_z⟩ := hz
       have hp' : p'.2 = true := h_mono t p hp (u, p') h_mem
       exact ih u p' hp' z h_z
+
+variable [IsUniformSpec spec']
 
 /-- Under bad-monotonicity, a simulation started from a bad state has bad output probability
 exactly `1` (using the canonical `MonadLiftT (OracleComp spec) PMF` to ensure no failure

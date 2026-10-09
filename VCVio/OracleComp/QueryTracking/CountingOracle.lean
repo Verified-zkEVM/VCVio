@@ -5,9 +5,9 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.Tracing
+public import VCVio.OracleComp.EvalDist
 
 /-!
 # Counting Queries Made by a Computation
@@ -21,8 +21,9 @@ It also allows for generating things like seed values for a computation more tig
 
 `QueryImpl.withCost` and `QueryImpl.withCounting` are response-independent traces, defined as
 specialisations of `QueryImpl.withTraceBefore` (see `Tracing.lean`): the cost is accumulated
-*before* the underlying handler runs, so failed queries still incur their cost. The counting
-case picks `QueryCount.single` as the trace function.
+*before* the underlying handler runs. An abort in the underlying monad can still discard
+the whole writer result; retaining a count on failure requires an optional result inside
+the writer. The counting case uses `Multiplicative.ofAdd ∘ QueryCount.single`.
 -/
 
 @[expose] public section
@@ -43,67 +44,23 @@ section withCost
 
 variable {ω : Type u} [Monoid ω]
 
-/-- Wrap an oracle implementation to accumulate cost in a `WriterT ω` layer.
-The cost function `costFn` assigns a cost value to each oracle query.
-Cost is accumulated *before* the implementation runs, so failed queries are still costed.
+section discreteCompatibility
 
-This is the response-independent specialisation of `QueryImpl.withTraceBefore`:
-the trace value depends only on the query, not on the response.
-
-**Side-channel trace instrumentation.**
-`withCost` doubles as automatic side-channel instrumentation: given any
-`OracleComp spec α` and a cost function `costFn : spec.Domain → ω`,
-`(simulateQ (base.withCost costFn) oa).run` produces `m (α × ω)` without
-modifying the computation's source code. The cost function encodes the
-observation model:
-
-* `fun _ => ()` (constant-time): every query looks identical to the observer.
-* `fun t => queryLabel t` (typed): the observer sees which oracle was queried
-  but not the arguments or results.
-
-This is the preferred approach when the observation model is "every oracle
-query is visible." For observations at non-query points (e.g. pure-computation
-timing), use the explicit `observe` / `runObs` API from `ObservationOracle`. -/
-def withCost (so : QueryImpl spec m) (costFn : spec.Domain → ω) :
-    QueryImpl spec (WriterT ω m) :=
-  so.withTraceBefore costFn
-
-lemma withCost_eq_withTraceBefore (so : QueryImpl spec m) (costFn : spec.Domain → ω) :
-    so.withCost costFn = so.withTraceBefore costFn := rfl
-
-@[simp, grind =]
-lemma withCost_apply (so : QueryImpl spec m) (costFn : spec.Domain → ω)
-    (t : spec.Domain) :
-    so.withCost costFn t = (do tell (costFn t); so t) := by
-  exact withTraceBefore_apply so costFn t
-
-lemma fst_map_run_withCost [LawfulMonad m]
-    (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
-    Prod.fst <$> (simulateQ (so.withCost costFn) mx).run = simulateQ so mx :=
-  fst_map_run_withTraceBefore so costFn mx
+variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
 /-- Cost-tracking preserves failure probability: for any base monad `m` with `MonadLiftT m SPMF`,
 wrapping an oracle implementation with `withCost` does not change the probability of failure. -/
-lemma probFailure_run_simulateQ_withCost [LawfulMonad m] [MonadLiftT m SPMF]
-    [LawfulMonadLiftT m SPMF]
+lemma probFailure_run_simulateQ_withCost [LawfulMonad m]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
     Pr[⊥ | (simulateQ (so.withCost costFn) mx).run] = Pr[⊥ | simulateQ so mx] :=
   probFailure_run_simulateQ_withTraceBefore so costFn mx
 
-lemma NeverFail_run_simulateQ_withCost_iff [LawfulMonad m] [MonadLiftT m SPMF]
-    [LawfulMonadLiftT m SPMF]
+lemma NeverFail_run_simulateQ_withCost_iff [LawfulMonad m]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
     NeverFail (simulateQ (so.withCost costFn) mx).run ↔ NeverFail (simulateQ so mx) :=
   neverFail_run_simulateQ_withTraceBefore_iff so costFn mx
 
-/-- When every query costs the monoid identity `1`, the trace is always `1`,
-so `withCost` is a no-op up to pairing with `1`. -/
-@[simp]
-lemma run_simulateQ_withCost_const_one [LawfulMonad m]
-    (so : QueryImpl spec m) (mx : OracleComp spec α) :
-    (simulateQ (so.withCost (fun _ => (1 : ω))) mx).run =
-      (·, 1) <$> simulateQ so mx :=
-  run_simulateQ_withTraceBefore_const_one so mx
+end discreteCompatibility
 
 /-! ### EvalDist Bridge for `withCost`
 
@@ -111,87 +68,44 @@ These lemmas connect the result-marginal distribution of a `withCost`-instrument
 computation to the distribution of the uninstrumented computation, enabling direct
 probability-level reasoning about traced computations. -/
 
-lemma evalSPMF_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+/-- Cost instrumentation preserves the successful-output measure after forgetting cost. -/
+lemma evalDist_fst_run_withCost [LawfulMonad m] [EvalDistSemantics m] [MeasurableSpace α]
+    (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
+    𝒟[Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] = 𝒟[simulateQ so mx] := by
+  rw [fst_map_run_withCost]
+
+section discreteCompatibility
+
+variable [MonadLiftT m SPMF]
+
+lemma evalSPMF_fst_run_withCost [LawfulMonad m] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
     𝒮[Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] =
       𝒮[simulateQ so mx] :=
   evalSPMF_fst_run_withTraceBefore so costFn mx
 
-lemma probOutput_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+lemma probOutput_fst_run_withCost [LawfulMonad m] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) (x : α) :
     Pr[= x | Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] =
       Pr[= x | simulateQ so mx] :=
   probOutput_fst_run_withTraceBefore so costFn mx x
 
-lemma support_fst_run_withCost [LawfulMonad m] [MonadAttach m]
-    (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
-    support (Prod.fst <$> (simulateQ (so.withCost costFn) mx).run) =
-      support (simulateQ so mx) :=
-  support_fst_run_withTraceBefore so costFn mx
+end discreteCompatibility
 
 end withCost
 
-/-- Wrap an oracle implementation to count queries in a `WriterT (QueryCount ι)` layer.
-Counting happens before the implementation runs, so failed queries are still counted.
-This is a special case of `withCost` where the cost function is `QueryCount.single`. -/
-def withCounting [DecidableEq ι] (so : QueryImpl spec m) :
-    QueryImpl spec (WriterT (QueryCount ι) m) :=
-  so.withCost (QueryCount.single ·)
-
-@[simp, grind =]
-lemma withCounting_apply [DecidableEq ι] (so : QueryImpl spec m) (t : spec.Domain) :
-    so.withCounting t = (do tell (QueryCount.single t); so t) := by
-  exact withCost_apply so (QueryCount.single ·) t
-
-lemma withCounting_eq_withCost [DecidableEq ι] (so : QueryImpl spec m) :
-    so.withCounting = so.withCost (QueryCount.single ·) := rfl
-
-lemma fst_map_run_withCounting [DecidableEq ι] [LawfulMonad m]
+/-- Additive counting preserves the successful-output measure after forgetting counts. -/
+lemma evalDist_fst_runAdd_withCounting [DecidableEq ι] [LawfulMonad m]
+    [EvalDistSemantics m] [MeasurableSpace α]
     (so : QueryImpl spec m) (mx : OracleComp spec α) :
-    Prod.fst <$> (simulateQ (so.withCounting) mx).run = simulateQ so mx :=
-  fst_map_run_withCost so _ mx
+    𝒟[Prod.fst <$> (simulateQ so.withCounting mx).runAdd] = 𝒟[simulateQ so mx] := by
+  rw [fst_map_runAdd_withCounting]
 
 end QueryImpl
-
-/-- Oracle with arbitrary cost tracking. The cost is accumulated in a `WriterT ω` layer
-while preserving the original oracle behavior. -/
-def costOracle {ω : Type u} [Monoid ω] (costFn : spec.Domain → ω) :
-    QueryImpl spec (WriterT ω (OracleComp spec)) :=
-  (QueryImpl.ofLift spec (OracleComp spec)).withCost costFn
-
-/-- Oracle for counting the number of queries made by a computation. The count is stored as a
-function from oracle indices to counts, to give finer grained information about the count. -/
-def OracleSpec.countingOracle [DecidableEq ι] :
-    QueryImpl spec (WriterT (QueryCount ι) (OracleComp spec)) :=
-  (QueryImpl.ofLift spec (OracleComp spec)).withCounting
-
-/-- Pointwise behavior of the generic cost oracle. -/
-@[simp]
-lemma costOracle_apply {ω : Type u} [Monoid ω] (costFn : spec.Domain → ω)
-    (t : spec.Domain) :
-    costOracle costFn t =
-      (do tell (costFn t); liftM (liftM (spec.query t) : OracleComp spec _)) := by
-  rw [costOracle, QueryImpl.withCost_apply, QueryImpl.ofLift_apply]
-
-/-- Pointwise behavior of the per-index counting oracle. -/
-@[simp]
-lemma OracleSpec.countingOracle_apply [DecidableEq ι] (t : spec.Domain) :
-    spec.countingOracle t =
-      (do tell (QueryCount.single t); liftM (liftM (spec.query t) : OracleComp spec _)) := by
-  rw [OracleSpec.countingOracle, QueryImpl.withCounting_apply, QueryImpl.ofLift_apply]
-
-lemma countingOracle_eq_costOracle [DecidableEq ι] :
-    spec.countingOracle = costOracle (QueryCount.single ·) := rfl
 
 namespace costOracle
 
 variable {ω : Type u} [Monoid ω]
-
-@[simp]
-lemma fst_map_run_simulateQ (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
-    Prod.fst <$> (simulateQ (costOracle costFn) oa).run = oa := by
-  rw [costOracle, QueryImpl.fst_map_run_withCost, simulateQ_ofLift_eq_self]
-
 lemma evalSPMF_fst_run_simulateQ [IsUniformSpec spec]
     (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
     𝒮[Prod.fst <$> (simulateQ (costOracle costFn) oa).run] = 𝒮[oa] := by
@@ -201,28 +115,11 @@ lemma probOutput_fst_run_simulateQ [IsUniformSpec spec]
     (costFn : spec.Domain → ω) (oa : OracleComp spec α) (x : α) :
     Pr[= x | Prod.fst <$> (simulateQ (costOracle costFn) oa).run] = Pr[= x | oa] := by
   rw [fst_map_run_simulateQ]
-
-lemma support_run_simulateQ [IsUniformSpec spec]
-    (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
-    support (Prod.fst <$> (simulateQ (costOracle costFn) oa).run) = support oa := by
-  rw [fst_map_run_simulateQ]
-
 end costOracle
 
 namespace countingOracle
 
 variable [DecidableEq ι]
-
-@[simp]
-lemma fst_map_run_simulateQ (oa : OracleComp spec α) :
-    Prod.fst <$> (simulateQ countingOracle oa).run = oa := by
-  rw [countingOracle, QueryImpl.fst_map_run_withCounting, simulateQ_ofLift_eq_self]
-
-@[simp]
-lemma run_simulateQ_bind_fst (oa : OracleComp spec α) (ob : α → OracleComp spec β) :
-    ((simulateQ countingOracle oa).run >>= fun x => ob x.1) = oa >>= ob := by
-  rw [← bind_map_left Prod.fst, fst_map_run_simulateQ]
-
 /-- Specialization of `QueryImpl.probFailure_run_simulateQ_withCost` to `countingOracle`. -/
 lemma probFailure_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
     [DecidableEq ι₀] [IsUniformSpec spec₀] {α : Type} (oa : OracleComp spec₀ α) :
@@ -244,7 +141,7 @@ lemma probEvent_fst_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι
     [DecidableEq ι₀] [IsUniformSpec spec₀] {α : Type}
     (oa : OracleComp spec₀ α) (p : α → Prop) :
     Pr[ fun z => p z.1 | (simulateQ (spec₀.countingOracle) oa).run] = Pr[ p | oa] := by
-  rw [show (fun z : α × QueryCount ι₀ => p z.1) = p ∘ Prod.fst from rfl,
+  rw [show (fun z : α × Multiplicative (QueryCount ι₀) => p z.1) = p ∘ Prod.fst from rfl,
     ← probEvent_map, fst_map_run_simulateQ]
 
 lemma probOutput_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
@@ -258,224 +155,10 @@ lemma evalSPMF_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0}
     [IsUniformSpec spec₀] {α : Type} (oa : OracleComp spec₀ α) :
     𝒮[Prod.fst <$> (simulateQ (spec₀.countingOracle) oa).run] = 𝒮[oa] := by
   rw [fst_map_run_simulateQ]
-
-lemma support_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀} [DecidableEq ι₀]
-    [IsUniformSpec spec₀] {α : Type} (oa : OracleComp spec₀ α) :
-    support (Prod.fst <$> (simulateQ (spec₀.countingOracle) oa).run) = support oa := by
-  rw [fst_map_run_simulateQ]
-
 section support
 
-/-- Compatibility helper matching old state-style counting semantics:
-simulate with zero initial count, then offset by `qc`. -/
-def simulate (oa : OracleComp spec α) (qc : QueryCount ι) :
-    OracleComp spec (α × QueryCount ι) :=
-  Prod.map id (qc + ·) <$> (simulateQ countingOracle oa).run
-
-lemma simulate_eq_map_simulate_zero (oa : OracleComp spec α) (qc : QueryCount ι) :
-    simulate oa qc = Prod.map id (qc + ·) <$> simulate oa 0 := by
-  simp only [simulate, Functor.map_map]
-  congr 1
-  funext ⟨x, q⟩
-  simp
-
-/-- We can always reduce simulation with counting to start with `0`,
-and add the initial count back at the end. -/
-lemma support_simulate (oa : OracleComp spec α) (qc : QueryCount ι) :
-    support (simulate oa qc) = Prod.map id (qc + ·) '' support (simulate oa 0) := by
-  rw [simulate_eq_map_simulate_zero]
-  simp
-
-/-- Reduce membership in support of simulation with counting to simulation starting from `0`. -/
-lemma mem_support_simulate_iff (oa : OracleComp spec α) (qc : QueryCount ι)
-    (z : α × QueryCount ι) :
-    z ∈ support (simulate oa qc) ↔
-      ∃ qc', (z.1, qc') ∈ support (simulate oa 0) ∧ qc + qc' = z.2 := by
-  rw [support_simulate]
-  aesop
-
-lemma mem_support_simulate_iff_of_le (oa : OracleComp spec α) (qc : QueryCount ι)
-    (z : α × QueryCount ι) (hz : qc ≤ z.2) :
-    z ∈ support (simulate oa qc) ↔ (z.1, z.2 - qc) ∈ support (simulate oa 0) := by
-  rw [mem_support_simulate_iff oa qc z]
-  refine ⟨?_, ?_⟩
-  · rintro ⟨qc', hmem, hq⟩
-    convert hmem using 2
-    funext i
-    have hqi : qc i + qc' i = z.2 i := congrFun hq i
-    simpa [Pi.sub_apply, hqi] using (Nat.add_sub_cancel_left (qc i) (qc' i))
-  · refine fun hmem => ⟨z.2 - qc, hmem, ?_⟩
-    funext i
-    simp [Pi.add_apply, Pi.sub_apply, Nat.add_sub_of_le (hz i)]
-
-lemma le_of_mem_support_simulate {oa : OracleComp spec α} {qc : QueryCount ι}
-    {z : α × QueryCount ι} (h : z ∈ support (simulate oa qc)) : qc ≤ z.2 := by
-  obtain ⟨qc', _, hq⟩ := (mem_support_simulate_iff oa qc z).1 h
-  exact fun i => le_of_le_of_eq (Nat.le_add_right _ _) (congrFun hq i)
-
 section snd_map
-
-lemma mem_support_snd_map_simulate_iff (oa : OracleComp spec α)
-    (qc qc' : QueryCount ι) :
-    qc' ∈ support (((fun z : α × QueryCount ι => z.2) <$> simulate oa qc) :
-      OracleComp spec (QueryCount ι)) ↔
-      ∃ qc'', ∃ x, (x, qc'') ∈ support (simulate oa 0) ∧ qc + qc'' = qc' := by
-  simp only [support_map, Set.mem_image, Prod.exists, exists_eq_right]
-  refine ⟨fun ⟨x, hx⟩ => ?_, fun ⟨qc'', x, hmem, hq⟩ => ?_⟩
-  · obtain ⟨qc'', hmem, hq⟩ := (mem_support_simulate_iff oa qc (x, qc')).1 hx
-    exact ⟨qc'', x, hmem, hq⟩
-  · exact ⟨x, (mem_support_simulate_iff oa qc (x, qc')).2 ⟨qc'', hmem, hq⟩⟩
-
-lemma mem_support_snd_map_simulate_iff_of_le (oa : OracleComp spec α)
-    {qc qc' : QueryCount ι} (hqc : qc ≤ qc') :
-    qc' ∈ support (((fun z : α × QueryCount ι => z.2) <$> simulate oa qc) :
-      OracleComp spec (QueryCount ι)) ↔
-      qc' - qc ∈ support (((fun z : α × QueryCount ι => z.2) <$> simulate oa 0) :
-        OracleComp spec (QueryCount ι)) := by
-  rw [mem_support_snd_map_simulate_iff]
-  simp only [support_map, Set.mem_image, Prod.exists, exists_eq_right]
-  refine ⟨fun ⟨qc'', x, hmem, hq⟩ => ⟨x, ?_⟩, fun ⟨x, hx⟩ => ⟨qc' - qc, x, hx, ?_⟩⟩
-  · convert hmem using 2
-    funext i
-    simp [Pi.sub_apply, ← congrFun hq i]
-  · funext i
-    simp [Pi.add_apply, Pi.sub_apply, Nat.add_sub_of_le (hqc i)]
-
-lemma le_of_mem_support_snd_map_simulate {oa : OracleComp spec α}
-    {qc qc' : QueryCount ι}
-    (h : qc' ∈ support (((fun z : α × QueryCount ι => z.2) <$> simulate oa qc) :
-      OracleComp spec (QueryCount ι))) : qc ≤ qc' := by
-  obtain ⟨qc'', _, _, hq⟩ := (mem_support_snd_map_simulate_iff oa qc qc').1 h
-  exact fun i => le_of_le_of_eq (Nat.le_add_right _ _) (congrFun hq i)
-
-lemma sub_mem_support_snd_map_simulate {oa : OracleComp spec α}
-    {qc qc' : QueryCount ι}
-    (h : qc' ∈ support (((fun z : α × QueryCount ι => z.2) <$> simulate oa qc) :
-      OracleComp spec (QueryCount ι))) :
-    qc' - qc ∈ support (((fun z : α × QueryCount ι => z.2) <$> simulate oa 0) :
-      OracleComp spec (QueryCount ι)) :=
-  (mem_support_snd_map_simulate_iff_of_le (oa := oa)
-    (hqc := le_of_mem_support_snd_map_simulate h)).1 h
-
 end snd_map
-
-lemma add_mem_support_simulate {oa : OracleComp spec α} {qc : QueryCount ι}
-    {z : α × QueryCount ι} (hz : z ∈ support (simulate oa qc)) (qc' : QueryCount ι) :
-    (z.1, z.2 + qc') ∈ support (simulate oa (qc + qc')) := by
-  rcases (mem_support_simulate_iff oa qc z).1 hz with ⟨qc1, hmem, hq⟩
-  refine (mem_support_simulate_iff oa (qc + qc') (z.1, z.2 + qc')).2 ?_
-  refine ⟨qc1, hmem, ?_⟩
-  funext i
-  have hi : qc i + qc1 i = z.2 i := by simpa [Pi.add_apply] using congrFun hq i
-  simp only [Pi.add_apply]
-  omega
-
-lemma add_right_mem_support_simulate_iff (oa : OracleComp spec α)
-    (qc qc' : QueryCount ι) (x : α) :
-    (x, qc + qc') ∈ support (simulate oa qc) ↔ (x, qc') ∈ support (simulate oa 0) := by
-  rw [mem_support_simulate_iff]
-  aesop
-
-lemma add_left_mem_support_simulate_iff (oa : OracleComp spec α)
-    (qc qc' : QueryCount ι) (x : α) :
-    (x, qc' + qc) ∈ support (simulate oa qc) ↔ (x, qc') ∈ support (simulate oa 0) := by
-  rw [add_comm qc' qc]
-  exact add_right_mem_support_simulate_iff oa qc qc' x
-
-lemma mem_support_simulate_pure_iff (x : α) (qc : QueryCount ι)
-    (z : α × QueryCount ι) :
-    z ∈ support (simulate (pure x : OracleComp spec α) qc) ↔ z = (x, qc) := by
-  simp [simulate]
-
-lemma apply_ne_zero_of_mem_support_simulate_queryBind {t : spec.Domain}
-    {oa : spec.Range t → OracleComp spec α} {qc : QueryCount ι} {z : α × QueryCount ι}
-    (hz : z ∈ support (simulate ((query t : OracleComp spec _) >>= oa) qc)) :
-    z.2 t ≠ 0 := by
-  obtain ⟨q0, hq0mem, hqsum⟩ :=
-    (mem_support_simulate_iff (oa := ((query t : OracleComp spec _) >>= oa)) qc z).1 hz
-  obtain ⟨u, b, _hb, hq0⟩ := (by
-    simpa [simulate, countingOracle, QueryImpl.withCounting_apply] using hq0mem)
-  have hqt : qc t + q0 t = z.2 t := congrFun hqsum t
-  have hq0t : q0 t = QueryCount.single t t + b t := by
-    simpa [Pi.add_apply] using (congrFun hq0 t).symm
-  simp only [QueryCount.single, Pi.single_eq_same] at hq0t
-  omega
-
-lemma exists_mem_support_of_mem_support_simulate_queryBind {t : spec.Domain}
-    {oa : spec.Range t → OracleComp spec α} {qc : QueryCount ι} {z : α × QueryCount ι}
-    (hz : z ∈ support (simulate ((query t : OracleComp spec _) >>= oa) qc)) :
-    ∃ u, (z.1, Function.update z.2 t (z.2 t - 1)) ∈ support (simulate (oa u) qc) := by
-  obtain ⟨q0, hq0mem, hqsum⟩ :=
-    (mem_support_simulate_iff (oa := ((query t : OracleComp spec _) >>= oa)) qc z).1 hz
-  obtain ⟨u, b, hb, hq0⟩ := (by
-    simpa [simulate, countingOracle, QueryImpl.withCounting_apply] using hq0mem)
-  have hb0 : (z.1, b) ∈ support (simulate (oa u) 0) := by
-    simpa [simulate, countingOracle] using hb
-  refine ⟨u, (mem_support_simulate_iff (oa := oa u) qc
-    (z := (z.1, Function.update z.2 t (z.2 t - 1)))).2 ⟨b, hb0, ?_⟩⟩
-  funext j
-  have hqj : qc j + q0 j = z.2 j := congrFun hqsum j
-  have hq0j : q0 j = QueryCount.single t j + b j := by
-    simpa [Pi.add_apply] using (congrFun hq0 j).symm
-  rcases eq_or_ne j t with rfl | hj
-  · simp only [Pi.add_apply, QueryCount.single, Pi.single_eq_same, Function.update_self]
-      at hq0j ⊢
-    omega
-  · simp only [Pi.add_apply, QueryCount.single, Pi.single_eq_of_ne hj,
-          Function.update_of_ne hj] at hq0j ⊢
-    omega
-
-lemma mem_support_simulate_queryBind_iff (t : spec.Domain)
-    (oa : spec.Range t → OracleComp spec α) (qc : QueryCount ι) (z : α × QueryCount ι) :
-    z ∈ support (simulate ((query t : OracleComp spec _) >>= oa) qc) ↔
-      z.2 t ≠ 0 ∧
-      ∃ u, (z.1, Function.update z.2 t (z.2 t - 1)) ∈ support (simulate (oa u) qc) := by
-  refine ⟨?_, ?_⟩
-  · intro hz
-    exact ⟨apply_ne_zero_of_mem_support_simulate_queryBind hz,
-      exists_mem_support_of_mem_support_simulate_queryBind hz⟩
-  · rintro ⟨hz0, hu⟩
-    rcases hu with ⟨u, hu⟩
-    rcases (mem_support_simulate_iff (oa := oa u) qc
-      (z := (z.1, Function.update z.2 t (z.2 t - 1)))).1 hu with ⟨b, hb0, hbEq⟩
-    have hbRun : (z.1, b) ∈ support ((simulateQ countingOracle (oa u)).run) := by
-      simpa [simulate] using hb0
-    have hbRun' : (z.1, b) ∈
-        support ((simulateQ (QueryImpl.id' spec).withCounting (oa u)).run) := by
-      simpa [countingOracle] using hbRun
-    let q0 : QueryCount ι := QueryCount.single t + b
-    have hq0mem : (z.1, q0) ∈ support (simulate ((query t : OracleComp spec _) >>= oa) 0) := by
-      have hex :
-          ∃ i a b', (a, b') ∈ support (simulateQ (QueryImpl.id' spec).withCounting (oa i)).run ∧
-            (a, QueryCount.single t + b') = (z.1, q0) :=
-        ⟨u, z.1, b, hbRun', by simp [q0]⟩
-      simpa [simulate, countingOracle, QueryImpl.withCounting_apply] using hex
-    have hqsum : qc + q0 = z.2 := by
-      funext j
-      have hbEqj : qc j + b j = (Function.update z.2 t (z.2 t - 1)) j := by
-        simpa [Pi.add_apply] using congrFun hbEq j
-      rcases eq_or_ne j t with rfl | hj
-      · have hzpos : 0 < z.2 j := Nat.pos_of_ne_zero hz0
-        simp only [q0, Pi.add_apply, QueryCount.single, Pi.single_eq_same, Function.update_self]
-          at hbEqj ⊢
-        omega
-      · simp only [q0, Pi.add_apply, QueryCount.single, Pi.single_eq_of_ne hj,
-          Function.update_of_ne hj] at hbEqj ⊢
-        omega
-    exact (mem_support_simulate_iff (oa := ((query t : OracleComp spec _) >>= oa))
-      qc z).2 ⟨q0, hq0mem, hqsum⟩
-
-lemma exists_mem_support_of_mem_support {oa : OracleComp spec α} {x : α} (hx : x ∈ support oa)
-    (qc : QueryCount ι) : ∃ qc', (x, qc') ∈ support (simulate oa qc) := by
-  have hx' : x ∈ support (Prod.fst <$> (simulateQ countingOracle oa).run) := by
-    simpa [fst_map_run_simulateQ] using hx
-  rw [support_map] at hx'
-  obtain ⟨z, hz, rfl⟩ := hx'
-  refine ⟨qc + z.2, (mem_support_simulate_iff (oa := oa) qc (z := (z.1, qc + z.2))).2
-    ⟨z.2, ?_, rfl⟩⟩
-  rw [simulate, support_map]
-  exact ⟨z, hz, by simp [Prod.map]⟩
-
 end support
 
 end countingOracle

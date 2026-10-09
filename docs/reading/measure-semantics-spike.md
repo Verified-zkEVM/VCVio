@@ -41,7 +41,7 @@ the existing `Pr[…]` lemma applied directly:
 
 ```lean
 example (sp : ℕ) (mgen : ProbComp (BitVec sp)) (σ : BitVec sp) :
-    FreeM.denote ((oneTimePad sp).PerfectSecrecyCipherExp mgen) {σ}
+    FreeM.denote ((oneTimePad sp).perfectSecrecyCipherExperiment mgen) {σ}
       = (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
   rw [denote_probComp_apply_singleton]
   exact oneTimePad.probOutput_cipher_uniform sp mgen σ

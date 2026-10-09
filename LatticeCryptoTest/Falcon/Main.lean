@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import LatticeCryptoTest.Falcon.Helpers
 public import LatticeCryptoTest.Falcon.TestVectors
+public import LatticeCryptoTest.Falcon.KeyGenDiff
 
 /-!
 # Falcon Test Runner
@@ -846,6 +847,7 @@ def main : IO Unit := do
   runFalconFloatingPointTests st
   runFalconLowLevelTests st
   runFalconSigningTests st
+  Falcon.Test.KeyGenDiff.runFalconKeyGenDiffTests st
   -- ── Summary ────────────────────────────────────
   let s ← st.get
   IO.println s!"=== {s.passed} passed, {s.failed} failed ==="

@@ -125,46 +125,46 @@ private lemma initialize_bounded_prefix :
   rfl
 
 private lemma experiment_valid :
-    SM_DT_OpenPRE_SourceFinalValidity.Experiment valid = pure true := by
+    SM_DT_OpenPRE_SourceFinalValidity.experiment valid = pure true := by
   rfl
 
 private lemma experiment_overlong :
-    SM_DT_OpenPRE_SourceFinalValidity.Experiment overlong = pure true := by
+    SM_DT_OpenPRE_SourceFinalValidity.experiment overlong = pure true := by
   rfl
 
 private lemma experiment_collectionClash :
-    SM_DT_OpenPRE_SourceFinalValidity.Experiment collectionClash = pure false := by
+    SM_DT_OpenPRE_SourceFinalValidity.experiment collectionClash = pure false := by
   rfl
 
 private lemma experiment_openedSelected :
-    SM_DT_OpenPRE_SourceFinalValidity.Experiment openedSelected = pure false := by
+    SM_DT_OpenPRE_SourceFinalValidity.experiment openedSelected = pure false := by
   rfl
 
 private lemma experiment_duplicateTargets :
-    SM_DT_OpenPRE_SourceFinalValidity.Experiment duplicateTargets = pure false := by
+    SM_DT_OpenPRE_SourceFinalValidity.experiment duplicateTargets = pure false := by
   rfl
 
 private lemma experiment_openedOther :
-    SM_DT_OpenPRE_SourceFinalValidity.Experiment openedOther = pure true := by
+    SM_DT_OpenPRE_SourceFinalValidity.experiment openedOther = pure true := by
   rfl
 
 private lemma tcr_reduction_valid :
-    SM_DT_TCR_SourceFinalValidity.Experiment (SM_DT_OpenPRE_SourceFinalValidity.toTCR valid) =
+    SM_DT_TCR_SourceFinalValidity.experiment (SM_DT_OpenPRE_SourceFinalValidity.toTCR valid) =
       pure false := by
   rfl
 
 private lemma dspr_reduction_valid :
-    SM_DT_DSPR_SourceFinalValidity.Experiment (SM_DT_OpenPRE_SourceFinalValidity.toDSPR valid) =
+    SM_DT_DSPR_SourceFinalValidity.experiment (SM_DT_OpenPRE_SourceFinalValidity.toDSPR valid) =
       pure true := by
   rfl
 
 private lemma dspr_reduction_openedSelected :
-    SM_DT_DSPR_SourceFinalValidity.Experiment
+    SM_DT_DSPR_SourceFinalValidity.experiment
       (SM_DT_OpenPRE_SourceFinalValidity.toDSPR openedSelected) = pure false := by
   rfl
 
 private lemma sp_reduction_valid :
-    SM_DT_DSPR_SourceFinalValidity.SPExperiment (SM_DT_OpenPRE_SourceFinalValidity.toDSPR valid) =
+    SM_DT_DSPR_SourceFinalValidity.spExperiment (SM_DT_OpenPRE_SourceFinalValidity.toDSPR valid) =
       pure false := by
   rfl
 
@@ -195,11 +195,11 @@ noncomputable def validCountingInterface :
   singleMass := 1
   multipleMass := fun k => (no_multiple_index k).elim
   openPRE_decomposition := by
-    simp only [SM_DT_OpenPRE_SourceFinalValidity.Advantage, experiment_valid]
+    simp only [SM_DT_OpenPRE_SourceFinalValidity.advantage, experiment_valid]
     rw [Finset.sum_eq_zero (fun k _ => (no_multiple_index k).elim)]
     simp
   dspr_decomposition := by
-    simp only [SM_DT_DSPR_SourceFinalValidity.Advantage, SM_DT_DSPR_SourceFinalValidity.Success,
+    simp only [SM_DT_DSPR_SourceFinalValidity.advantage, SM_DT_DSPR_SourceFinalValidity.Success,
       SM_DT_DSPR_SourceFinalValidity.SPProbability, dspr_reduction_valid, sp_reduction_valid,
       SM_DT_OpenPRE_SourceFinalValidity.reciprocalMass]
     rw [Finset.sum_eq_zero (fun k _ => (no_multiple_index k).elim)]
@@ -210,7 +210,7 @@ noncomputable def validCountingInterface :
     simp
 
 theorem quantitative_reduction_interface_canary :
-    SM_DT_OpenPRE_SourceFinalValidity.Advantage valid ≤
+    SM_DT_OpenPRE_SourceFinalValidity.advantage valid ≤
       SM_DT_OpenPRE_SourceFinalValidity.TCRDSPRBound valid :=
   SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound valid validCountingInterface
 
@@ -308,17 +308,17 @@ end RunLevelInvariant
 /-- Mutation-resistant pins for prefix truncation, final validity, and the adaptive opening
 phase. -/
 theorem exact_game_canary :
-    SM_DT_OpenPRE_SourceFinalValidity.Experiment valid = pure true ∧
-      SM_DT_OpenPRE_SourceFinalValidity.Experiment overlong = pure true ∧
-      SM_DT_OpenPRE_SourceFinalValidity.Experiment collectionClash = pure false ∧
-      SM_DT_OpenPRE_SourceFinalValidity.Experiment openedSelected = pure false ∧
-      SM_DT_OpenPRE_SourceFinalValidity.Experiment duplicateTargets = pure false ∧
-      SM_DT_OpenPRE_SourceFinalValidity.Experiment openedOther = pure true ∧
-      SM_DT_TCR_SourceFinalValidity.Experiment (SM_DT_OpenPRE_SourceFinalValidity.toTCR valid) =
+    SM_DT_OpenPRE_SourceFinalValidity.experiment valid = pure true ∧
+      SM_DT_OpenPRE_SourceFinalValidity.experiment overlong = pure true ∧
+      SM_DT_OpenPRE_SourceFinalValidity.experiment collectionClash = pure false ∧
+      SM_DT_OpenPRE_SourceFinalValidity.experiment openedSelected = pure false ∧
+      SM_DT_OpenPRE_SourceFinalValidity.experiment duplicateTargets = pure false ∧
+      SM_DT_OpenPRE_SourceFinalValidity.experiment openedOther = pure true ∧
+      SM_DT_TCR_SourceFinalValidity.experiment (SM_DT_OpenPRE_SourceFinalValidity.toTCR valid) =
         pure false ∧
-      SM_DT_DSPR_SourceFinalValidity.Experiment (SM_DT_OpenPRE_SourceFinalValidity.toDSPR valid) =
+      SM_DT_DSPR_SourceFinalValidity.experiment (SM_DT_OpenPRE_SourceFinalValidity.toDSPR valid) =
         pure true ∧
-      SM_DT_DSPR_SourceFinalValidity.Experiment
+      SM_DT_DSPR_SourceFinalValidity.experiment
         (SM_DT_OpenPRE_SourceFinalValidity.toDSPR openedSelected) = pure false :=
   ⟨experiment_valid, experiment_overlong, experiment_collectionClash,
     experiment_openedSelected, experiment_duplicateTargets, experiment_openedOther,

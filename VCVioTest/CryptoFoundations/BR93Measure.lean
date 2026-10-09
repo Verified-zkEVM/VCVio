@@ -26,19 +26,19 @@ namespace VCVioTest.BR93Measure
 variable {PK SK Rand M : Type} [Inhabited Rand] [DecidableEq Rand]
   [SampleableType Rand] [SampleableType M] [AddCommGroup M]
   (tdp : TrapdoorPermutation PK SK Rand)
-  (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M))
+  (adv : CPA_Adversary PK Rand M)
 
 example [unifSpec.toPFunctor.IsMeasureSpec] :
-    PFunctor.FreeM.denote (badEventExp tdp adv) {true} ≤
-      PFunctor.FreeM.denote (tdpExp tdp (inverter tdp adv)) {true} := by
-  exact measure_badEventExp_le_tdpExp adv
+    PFunctor.FreeM.denote (badEventExperiment tdp adv) {true} ≤
+      PFunctor.FreeM.denote (tdpExperiment tdp (inverter tdp adv)) {true} := by
+  exact measure_badEventExperiment_le_tdpExperiment adv
 
 noncomputable local instance : unifSpec.toPFunctor.IsMeasureSpec where
   toMeasure _ := Measure.dirac 0
   isProbabilityMeasure _ := inferInstance
 
-example : PFunctor.FreeM.denote (badEventExp tdp adv) {true} ≤
-    PFunctor.FreeM.denote (tdpExp tdp (inverter tdp adv)) {true} := by
-  exact measure_badEventExp_le_tdpExp adv
+example : PFunctor.FreeM.denote (badEventExperiment tdp adv) {true} ≤
+    PFunctor.FreeM.denote (tdpExperiment tdp (inverter tdp adv)) {true} := by
+  exact measure_badEventExperiment_le_tdpExperiment adv
 
 end VCVioTest.BR93Measure

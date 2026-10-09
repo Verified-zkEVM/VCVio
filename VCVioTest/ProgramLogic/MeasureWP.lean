@@ -50,7 +50,7 @@ universe v
 
 variable {m : Type → Type v} [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-  {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+  {α : Type} [MeasurableSpace α]
 
 example (mx : m α) (f g : α → ENNReal) (hfg : ∀ x, f x ≤ g x) :
     MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g := by
@@ -61,18 +61,25 @@ example (mx : m α) (f g : α → ENNReal) (hfg : ∀ x, f x ≤ g x) :
     MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g := by
   grw [hfg]
 
-example (mx : m α) (f g : α → ENNReal) (c : ENNReal) :
+example (mx : m α) (f g : α → ENNReal) (c : ENNReal)
+    (hf : Measurable f) (hg : Measurable g) :
     MAlgOrdered.wp mx (fun x ↦ c + f x + g x) =
-      c * 𝒟[mx] Set.univ + MAlgOrdered.wp mx f + MAlgOrdered.wp mx g := by simp
+      c * 𝒟[mx] Set.univ + MAlgOrdered.wp mx f + MAlgOrdered.wp mx g := by
+  simp only [MeasureProgramLogic.Quantitative.wp_add mx (fun x ↦ c + f x) g
+      (measurable_const.add hf) hg,
+    MeasureProgramLogic.Quantitative.wp_add mx (fun _ ↦ c) f measurable_const hf,
+    MeasureProgramLogic.Quantitative.wp_const]
 
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal)
+    (hf : Measurable f) (hg : Measurable g)
     (hfg : ∀ᵐ x ∂𝒟[mx], f x ≤ c + g x) :
     MAlgOrdered.wp mx f ≤ c * 𝒟[mx] Set.univ + MAlgOrdered.wp mx g :=
-  MeasureProgramLogic.Quantitative.wp_le_const_mul_mass_add mx hfg
+  MeasureProgramLogic.Quantitative.wp_le_const_mul_mass_add mx hf hg hfg
 
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal) [IsProbabilityMeasure 𝒟[mx]]
+    (hf : Measurable f) (hg : Measurable g)
     (hfg : ∀ᵐ x ∂𝒟[mx], f x ≤ c + g x) :
     MAlgOrdered.wp mx f ≤ c + MAlgOrdered.wp mx g := by
-  simpa using MeasureProgramLogic.Quantitative.wp_le_const_mul_mass_add mx hfg
+  simpa using MeasureProgramLogic.Quantitative.wp_le_const_mul_mass_add mx hf hg hfg
 
 end VCVioTest.ProgramLogic.MeasureWP

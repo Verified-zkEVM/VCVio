@@ -46,29 +46,30 @@ abbrev toPMF [IsProbabilitySpec spec] (t : spec.Domain) : PMF (spec.Range t) :=
 end IsProbabilitySpec
 
 /-- An `OracleSpec` whose responses are uniformly sampled from finite, inhabited
-ranges. Bundles `spec.Fintype`, `spec.Inhabited`, and `IsProbabilitySpec spec`
-together with a `Prop` witness that the per-query distribution agrees with
-`PMF.uniformOfFintype`. Use this as the canonical input to lemmas that
-mention `Fintype.card (spec.Range _)` or `PMF.uniformOfFintype` in their
+ranges. Bundles finiteness and inhabitedness of every response type with
+`IsProbabilitySpec spec` and a `Prop` witness that the per-query distribution
+agrees with `PMF.uniformOfFintype`. Use this as the canonical input to lemmas
+that mention `Fintype.card (spec.Range _)` or `PMF.uniformOfFintype` in their
 statements. -/
 class IsUniformSpec (spec : OracleSpec ι) extends IsProbabilitySpec spec where
   /-- Every response set is finite. -/
-  fintype : spec.Fintype
+  fintype : ∀ t, Fintype (spec.Range t)
   /-- Every response set is inhabited. -/
-  inhabited : spec.Inhabited
+  inhabited : ∀ t, Inhabited (spec.Range t)
   /-- The per-query distribution is the uniform distribution on the response set. -/
   toPMF_eq_uniform : ∀ t, toPMF t = PMF.uniformOfFintype (spec.Range t)
 
 attribute [reducible, instance] IsUniformSpec.fintype IsUniformSpec.inhabited
 
-/-- Bridge from `[spec.Fintype] [spec.Inhabited]` to `IsUniformSpec spec`.
+/-- Bridge from finite, inhabited response types to `IsUniformSpec spec`.
 Deliberately **not** an instance — `IsUniformSpec` must be opted into per
 spec so that uniform-sampling semantics never attach silently to a spec
 whose author didn't intend a probabilistic interpretation. Use this
 helper when declaring `IsUniformSpec` for a concrete spec. -/
 @[reducible] noncomputable def IsUniformSpec.ofFintypeInhabited
     {ι : Type u} (spec : OracleSpec ι)
-    [hF : spec.Fintype] [hI : spec.Inhabited] : IsUniformSpec spec where
+    [hF : ∀ t, Fintype (spec.Range t)] [hI : ∀ t, Inhabited (spec.Range t)] :
+    IsUniformSpec spec where
   toPMF t := PMF.uniformOfFintype (spec.Range t)
   fintype := hF
   inhabited := hI
@@ -91,8 +92,8 @@ instance so it cannot participate in overly broad `toPFunctor` unification. -/
 noncomputable def IsUniformSpec.toPFunctor [h : IsUniformSpec spec] :
     PFunctor.IsUniformSpec spec.toPFunctor where
   toPMF := h.toPMF
-  fintype := h.fintype.toFintype
-  inhabited := h.inhabited.toInhabited
+  fintype := h.fintype
+  inhabited := h.inhabited
   toPMF_eq_uniform := h.toPMF_eq_uniform
 
 end OracleSpec
@@ -128,33 +129,6 @@ lemma evalSPMF_query_toPMF [IsProbabilitySpec spec] (t : spec.Domain) :
 
 end evalSPMF_main
 
-section finSupport
-
-variable [spec.Fintype]
-
-/-- Finite version of support for when oracles have a finite set of possible outputs.
-NOTE: we can't use `simulateQ` because `Finset` lacks a `Monad` instance. -/
-instance : HasEvalFinset (OracleComp spec) where
-  finSupport {α} _ mx := OracleComp.construct
-    (fun x => {x}) (fun _ _ r => Finset.univ.biUnion r) mx
-  coe_finSupport {α} _ mx := by
-    induction mx using OracleComp.inductionOn with
-    | pure x => simp
-    | query_bind t mx h => simp [h]
-
-@[simp, grind =] lemma finSupport_liftM [DecidableEq α] (q : OracleQuery spec α) :
-    finSupport (liftM q : OracleComp spec α) = Finset.univ.image q.cont := by grind
-
-lemma finSupport_query [spec.DecidableEq] (t : spec.Domain) :
-    finSupport (query t : OracleComp spec _) = Finset.univ := by grind
-
-lemma mem_finSupport_liftM_iff [DecidableEq α] (q : OracleQuery spec α) (x : α) :
-    x ∈ finSupport (liftM q : OracleComp spec α) ↔ ∃ t, q.cont t = x := by simp
-
-lemma mem_finSupport_query [spec.DecidableEq] (t : spec.Domain) (u : spec.Range t) :
-    u ∈ finSupport (query t : OracleComp spec _) := by grind
-
-end finSupport
 
 section evalSPMF
 
@@ -323,6 +297,14 @@ end evalSPMFConvenience
 
 section guard
 
+lemma support_guard {p : Prop} [Decidable p] :
+    support (guard p : OptionT (OracleComp spec) Unit) = if p then {()} else ∅ := by
+  by_cases hp : p
+  · simp [OracleComp.guard_eq, hp]
+  · simp only [OracleComp.guard_eq, hp, ↓reduceIte, OptionT.support_def]
+    ext x
+    simp
+
 variable [IsProbabilitySpec spec]
 
 lemma probOutput_guard {p : Prop} [Decidable p] :
@@ -342,15 +324,6 @@ lemma probFailure_guard {p : Prop} [Decidable p] :
   · exact probFailure_pure ()
   · -- See note above.
     simp [OptionT.probFailure_eq, OptionT.run_failure]
-
-omit [spec.IsProbabilitySpec] in
-lemma support_guard {p : Prop} [Decidable p] :
-    support (guard p : OptionT (OracleComp spec) Unit) = if p then {()} else ∅ := by
-  by_cases hp : p
-  · simp [OracleComp.guard_eq, hp]
-  · simp only [OracleComp.guard_eq, hp, ↓reduceIte, OptionT.support_def]
-    ext x
-    simp
 
 /-- For any `PUnit`-valued computation in an arbitrary monad with an `SPMF` denotation, the
 probability of returning `()` is the complementary mass of its failure probability. -/

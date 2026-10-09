@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.StateSeparating.Advantage
 public import VCVio.StateSeparating.MeasureDistEquiv
+public import VCVio.OracleComp.Coercions.SubSpec
 
 /-!
 # State-separating handlers: distributional equivalence

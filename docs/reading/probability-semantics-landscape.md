@@ -1348,7 +1348,7 @@ users retain ordinary discrete probability notation.
 - [`VCVio/EvalDist/Instances/FinRatPMF.lean`](../../VCVio/EvalDist/Instances/FinRatPMF.lean)
 - [`ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean)
 - [`ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean)
-- [`ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean)
+- [`ToMathlib/Probability/TailSums.lean`](../../ToMathlib/Probability/TailSums.lean)
 - [`VCVio/ProgramLogic`](../../VCVio/ProgramLogic)
 - [`VCVio/ProgramLogic/Unary/WP`](../../VCVio/ProgramLogic/Unary/WP)
 - [`VCVio/ProgramLogic/Relational/WP`](../../VCVio/ProgramLogic/Relational/WP)

@@ -12,23 +12,36 @@ public import VCVio.ProgramLogic.Unary.HoareTriple
 # `gcongr` through `wp`
 
 Canaries for the `@[gcongr]` tag on `wp_mono`: `gcongr` descends through `wp` into the
-postcondition, also under a finite sum, and `wp_eq_expectedValue` is the bridge to the
-`expectedValue` laws.
+postcondition and structural support, also under a finite sum. Measurable assertions use
+`wp_eq_lintegral` in the chosen output space.
 -/
 
 public section
 
 open scoped OracleComp.Quantitative Std.Internal.Do
 
-open ENNReal OracleSpec OracleComp
+open ENNReal OracleSpec OracleComp MeasureTheory
 open OracleComp.ProgramLogic
 open scoped OracleComp.ProgramLogic
+
+run_cmd do
+  let env ← Lean.getEnv
+  for name in [`PMF, `SPMF, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
+    if env.contains name then
+      throwError "native Hoare WP unexpectedly imports {name}"
 
 namespace VCVioTest.ProgramLogicGCongr
 
 universe u
 
-variable {ι : Type u} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
+variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
+  [∀ t, MeasurableSpace (spec.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+
+example (P Q : Prop) (h : P → Q) : propInd P ≤ propInd Q := by apply_rw [h]
+
+example (oa : OracleComp spec α) (p q : α → Prop) (h : ∀ x, p x → q x) :
+    wp oa (fun x ↦ propInd (p x)) ≤ wp oa (fun x ↦ propInd (q x)) := by apply_rw [h]
 
 example (oa : OracleComp spec α) (f g : α → ℝ≥0∞) (h : ∀ x, f x ≤ g x) :
     wp oa f ≤ wp oa g := by
@@ -40,9 +53,10 @@ example (oa : OracleComp spec α) (f g : Fin 3 → α → ℝ≥0∞) (h : ∀ s
   gcongr with s _ x
   exact h s x
 
-example (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
-    wp oa post = OracleComp.EvalDist.expectedValue oa post :=
-  wp_eq_expectedValue oa post
+example [MeasurableSpace α] (oa : OracleComp spec α) (post : α → ℝ≥0∞)
+    (hpost : Measurable post) :
+    wp oa post = ∫⁻ x, post x ∂𝒟[oa] :=
+  wp_eq_lintegral oa post hpost
 
 /-- Support-aware descent exposes exactly the hypothesis needed by the continuation. -/
 example (oa : OracleComp spec α) (f g : α → ℝ≥0∞)
@@ -58,11 +72,11 @@ example (oa : OracleComp spec α) (f g : Fin 3 → α → ℝ≥0∞)
   gcongr with i _ x hx
   exact h i x hx
 
-/-- Raw core WP syntax needs an explicit façade change before congruence descent. -/
+/-- Public normalization exposes structural support to core WP congruence. -/
 example (oa : OracleComp spec α) (f g : α → ℝ≥0∞)
     (h : ∀ x ∈ support oa, f x ≤ g x) :
     Std.Internal.Do.wp oa f Lean.Order.bot ≤ Std.Internal.Do.wp oa g Lean.Order.bot := by
-  change wp oa f ≤ wp oa g
+  simp only [OracleComp.Quantitative.wp_eq_mAlgOrdered_wp]
   gcongr with x hx
   exact h x hx
 

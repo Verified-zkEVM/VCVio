@@ -65,6 +65,8 @@ packaged as the reusable capability `HasDummyAdversaryFactor`.
 
 @[expose] public section
 
+open scoped ENNReal
+
 universe u
 
 namespace Interaction
@@ -173,7 +175,8 @@ but not on the environment. The back-channel `back` is universally
 quantified to allow the environment-adversary side-channel to be
 arbitrary.
 -/
-def UCSecure (exec : Execution T) (ε : ℝ) {Δ : ProtocolBoundary} (π F : Protocol T Δ) : Prop :=
+def UCSecure (exec : Execution T) (ε : ℝ≥0∞) {Δ : ProtocolBoundary} (π F : Protocol T Δ) :
+    Prop :=
   ∀ (back : PortBoundary) (A : Adversary T Δ back),
   ∃ S : Adversary T Δ back,
   ∀ Z : Environment T Δ back,
@@ -194,7 +197,7 @@ The proof rewrites both `EXEC π A Z` and `EXEC F A Z` via
 -/
 theorem observedCompEmulates_toUCSecure_id
     [OpenTheory.HasPlugWireFactor T]
-    {sem : Semantics T} {ε : ℝ}
+    {sem : Semantics T} {ε : ℝ≥0∞}
     {Δ : ProtocolBoundary} {π F : Protocol T Δ}
     (h : ObservedCompEmulates sem ε π F) :
     UCSecure (Execution.ofSemantics sem) ε π F :=
@@ -212,7 +215,7 @@ principle as an instance of this class.
 -/
 class HasDummyAdversaryFactor (T : OpenTheory.{u}) extends OpenTheory.IsCompactClosed T where
   toObservedCompUCSecure_dummy :
-    {sem : Semantics T} → {ε : ℝ} →
+    {sem : Semantics T} → {ε : ℝ≥0∞} →
     {Δ : ProtocolBoundary} → {π F : Protocol T Δ} →
     UCSecure (Execution.ofSemantics sem) ε π F →
     ∃ (SimSpace : Type u) (simulate : SimSpace → T.Plug Δ.toPort →
@@ -236,7 +239,7 @@ local proof hole.
 -/
 theorem ucSecure_toObservedCompUCSecure_dummy
     [HasDummyAdversaryFactor T]
-    {sem : Semantics T} {ε : ℝ}
+    {sem : Semantics T} {ε : ℝ≥0∞}
     {Δ : ProtocolBoundary} {π F : Protocol T Δ}
     (h : UCSecure (Execution.ofSemantics sem) ε π F) :
     ∃ (SimSpace : Type u) (simulate : SimSpace → T.Plug Δ.toPort →

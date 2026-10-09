@@ -29,7 +29,7 @@ variable {ι : Type} {spec : OracleSpec ι} {α β : Type}
 the selected occurrence context. -/
 @[deprecated "VCVio retiring probability API: use `prEvent_sq_le_observedForkPair`"
   (since := "2026-09-16")]
-theorem sq_probOutput_map_le_observedForkPair [spec.DecidableEq] [IsUniformSpec spec]
+theorem sq_probOutput_map_le_observedForkPair [DecidableEq ι] [IsUniformSpec spec]
     (main : OracleComp spec α) (i : ι) (n : Nat) (observe : α → Option β) (value : β)
     (hselect : OutputSelectsOccurrence main i n observe value) :
     Pr[= value | observe <$> main] ^ 2 ≤
@@ -62,8 +62,7 @@ theorem probEvent_answer_ofFreeM_complete [IsProbabilitySpec spec]
   let : MeasurableSpace occ.Completion := ⊤
   have h := congrArg (fun μ ↦ μ {answer | P answer})
     (evalDist_map_answer_completeOccurrence occ)
-  rw [evalDist_map_of_discrete, Measure.map_apply Measurable.of_discrete .of_discrete,
-    ← evalDist_query i] at h
+  rw [evalDist_map_apply_of_discrete _ _ .of_discrete, ← evalDist_query i] at h
   simpa only [Set.preimage_setOf_eq, Cursor.completeOccurrence, evalDist_apply_setOf] using h
 
 /-- The two focused answers of a located fork collide with probability at most

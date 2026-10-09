@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.ITSR
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-! # ITSR source-game canaries -/
 

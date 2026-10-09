@@ -39,18 +39,18 @@ universe u v
 
 variable {m : Type u → Type v} {α β : Type u}
 
+/-- `probFailure_bind_eq_add_tsum` with the sum packaged as an `expectedValue`: the failure of
+a bind is the prefix failure plus the expected failure of the continuation. -/
+theorem probFailure_bind_eq_add_expectedValue [Monad m] [MonadLiftT m SPMF]
+    [LawfulMonadLiftT m SPMF]
+    (mx : m α) (my : α → m β) :
+    Pr[⊥ | mx >>= my] = Pr[⊥ | mx] + expectedValue mx fun x => Pr[⊥ | my x] :=
+  probFailure_bind_eq_add_tsum mx my
+
 section compatible
 
 variable [MonadLiftT m SPMF] [EvalDistSemantics m] [DiscreteEvalDistCompatible m]
   [MeasurableSpace α]
-
-omit [EvalDistSemantics m] [DiscreteEvalDistCompatible m] [MeasurableSpace α] in
-/-- `probFailure_bind_eq_add_tsum` with the sum packaged as an `expectedValue`: the failure of
-a bind is the prefix failure plus the expected failure of the continuation. -/
-theorem probFailure_bind_eq_add_expectedValue [Monad m] [LawfulMonadLiftT m SPMF]
-    (mx : m α) (my : α → m β) :
-    Pr[⊥ | mx >>= my] = Pr[⊥ | mx] + expectedValue mx fun x => Pr[⊥ | my x] :=
-  probFailure_bind_eq_add_tsum mx my
 
 /-- Failure is the mass missing from the denoted measure. -/
 theorem probFailure_eq_one_sub_evalDist_univ (mx : m α) :

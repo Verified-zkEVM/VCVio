@@ -15,8 +15,8 @@ public import VCVio.OracleComp.QueryTracking.QueryBound
 
 Core definitions for the RFID-style tag/reader protocol: transcripts, reader replies, session
 patterns, the keyed-hash family packaging, game states, oracle specifications, adversary
-abbreviations, the real and ideal authentication games, the random-function authentication game,
-the unlinkability games, and the bad-event world.
+abbreviations, the real, ideal and random-function authentication experiments, the two
+unlinkability worlds, and the bad-event experiment.
 
 The auth→PRF reduction and the security theorems built on these definitions live in the sibling
 `Auth`, `Collision`, and `BadEvent` modules.
@@ -27,7 +27,6 @@ The auth→PRF reduction and the security theorems built on these definitions li
 open OracleComp OracleSpec ENNReal
 
 namespace PRFTagReader
-
 
 /-- Transcript emitted by a tag in one session: a fresh nonce together with its authenticator. -/
 structure TagTranscript (Nonce Digest : Type) where
@@ -202,7 +201,7 @@ abbrev AuthAdversary (TagId Nonce Digest : Type) :=
 abbrev UnlinkAdversary (TagId Nonce Digest : Type) :=
   OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool
 
-section AuthGame
+section AuthRealExperiment
 
 variable {TagId Nonce Digest : Type}
   [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
@@ -243,7 +242,7 @@ def authRealQueryImpl (hash : TagId → Nonce → Digest) :
     authReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) hash
 
 /-- Real active-authentication experiment. -/
-def authExp {K : Type} {sessionsPerTag : ℕ}
+def authRealExperiment {K : Type} {sessionsPerTag : ℕ}
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : AuthAdversary TagId Nonce Digest) : ProbComp Bool := do
   let k ← prfs.keygen
@@ -253,9 +252,9 @@ def authExp {K : Type} {sessionsPerTag : ℕ}
     adversary).run AuthState.init
   return decide (st.readerForged ≠ ∅)
 
-end AuthGame
+end AuthRealExperiment
 
-section AuthIdealGame
+section AuthIdealExperiment
 
 variable {TagId Nonce Digest : Type}
   [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
@@ -309,22 +308,23 @@ def authIdealQueryImpl :
 
 /-- Ideal active-authentication experiment. The keyed hash is replaced by a lazy random function on
 `(tag, nonce)`, and the reader only accepts transcripts that match the cached table. -/
-def authIdealExp
+def authIdealExperiment
     (adversary : AuthAdversary TagId Nonce Digest) : ProbComp Bool := do
   let (_, st) ← (simulateQ
     (authIdealQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest))
     adversary).run AuthIdealState.init
   return decide (st.readerForged ≠ ∅)
 
-end AuthIdealGame
+end AuthIdealExperiment
 
-section AuthRFGame
+section AuthRFExperiment
 
 variable {TagId Nonce Digest : Type}
   [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
   [DecidableEq Nonce] [SampleableType Nonce]
   [DecidableEq Digest] [SampleableType Digest]
 
+variable (Digest) in
 /-- Lazy random-function lookup at `(tag, nonce)`: return the cached digest if present, otherwise
 sample a fresh uniform digest and cache it. This is the `randomOracle` step expressed directly on
 the `responses` table of `AuthIdealState`. -/
@@ -347,8 +347,7 @@ noncomputable def authRFReaderQueryImpl :
     QueryImpl ((TagTranscript Nonce Digest) →ₒ ReaderReply)
       (StateT (AuthIdealState TagId Nonce Digest) ProbComp) := fun transcript => do
   let pairs ← (Finset.univ : Finset TagId).toList.mapM (fun tag => do
-    let d ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      tag transcript.nonce
+    let d ← authRFLookup Digest tag transcript.nonce
     return (tag, d))
   let st ← get
   let accepted : Bool := decide (∃ p ∈ pairs, p.2 = transcript.auth)
@@ -359,6 +358,7 @@ noncomputable def authRFReaderQueryImpl :
     AuthIdealState TagId Nonce Digest)
   return ReaderReply.ofBool accepted
 
+variable (TagId Nonce Digest) in
 /-- Combined oracle implementation for the random-function authentication world: the honest tag
 oracle of the ideal world together with the fresh-drawing random-function reader. -/
 noncomputable def authRFQueryImpl :
@@ -369,21 +369,18 @@ noncomputable def authRFQueryImpl :
 
 /-- Direct form of the random-function authentication experiment: run the adversary against
 `authRFQueryImpl` and win when a forged reader acceptance is recorded. -/
-noncomputable def authRFDirectExp
+noncomputable def authRFDirectExperiment
     (adversary : AuthAdversary TagId Nonce Digest) : ProbComp Bool := do
   let (_, st) ← (simulateQ
-    (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest))
+    (authRFQueryImpl TagId Nonce Digest)
     adversary).run AuthIdealState.init
   return decide (st.readerForged ≠ ∅)
 
-end AuthRFGame
-section UnlinkGame
+end AuthRFExperiment
+section UnlinkWorlds
 
-variable {TagId Slot Nonce Digest : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Slot Nonce Digest : Type} {sessionsPerTag : ℕ}
+  [DecidableEq TagId] [Fintype TagId] [SampleableType Nonce] [DecidableEq Digest]
 
 /-- Reader acceptance for a fixed tag in a given unlinkability session pattern. -/
 def tagAccepts (hash : Slot → Nonce → Digest)
@@ -456,7 +453,7 @@ def unlinkSingleQueryImpl {K : Type}
       (singlePattern (TagId := TagId) sessionsPerTag)
 
 /-- Multiple-session unlinkability world: each tag reuses its own slot across all sessions. -/
-def unlinkMultipleExp {K : Type}
+def unlinkMultipleExperiment {K : Type}
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) : ProbComp Bool := do
   let k ← prfs.keygen
@@ -465,132 +462,24 @@ def unlinkMultipleExp {K : Type}
 
 /-- Single-session unlinkability world: each tag query consumes a fresh slot, while the reader
 checks all session slots for that tag. -/
-def unlinkSingleExp {K : Type}
+def unlinkSingleExperiment {K : Type}
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) : ProbComp Bool := do
   let k ← prfs.keygen
   (simulateQ (unlinkSingleQueryImpl (TagId := TagId) (Nonce := Nonce)
     (Digest := Digest) prfs k) adversary).run' UnlinkState.init
 
-/-- One-sided unlinkability gap `Pr[Multiple] - Pr[Single]` between the two session-allocation
-worlds. -/
+/-- Unlinkability advantage: the distinguishing advantage `Measure.boolDist` between the
+multiple-session and single-session worlds. -/
 noncomputable def unlinkabilityAdvantage {K : Type}
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (adversary : UnlinkAdversary TagId Nonce Digest) : ℝ :=
-  (Pr[= true | unlinkMultipleExp (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary]).toReal -
-    (Pr[= true | unlinkSingleExp (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary]).toReal
+    (adversary : UnlinkAdversary TagId Nonce Digest) : ℝ≥0∞ :=
+  𝒟[unlinkMultipleExperiment (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      (sessionsPerTag := sessionsPerTag) prfs adversary].boolDist
+    𝒟[unlinkSingleExperiment (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      (sessionsPerTag := sessionsPerTag) prfs adversary]
 
-/-! ## Failure-freeness of the unlinkability experiments
-
-An `UnlinkAdversary` is an arbitrary `OracleComp (UnlinkOracleSpec …) Bool`, so it may itself
-contain `failure`. Because `UnlinkOracleSpec` carries no probability semantics, `NeverFail
-adversary` is not even a well-typed statement: failure-freeness of an experiment can only be
-asserted *relative to* the adversary not forcing a failure when run in the corresponding world.
-
-The two `…_run` lemmas below record that the handlers add no failure of their own: every oracle
-step of `unlinkMultipleQueryImpl` / `unlinkSingleQueryImpl` is built from `$ᵗ`-sampling and pure
-state updates, hence never fails. Consequently the experiment fails exactly when the simulated
-adversary run does, and the `…_neverFail` lemmas conclude `NeverFail` of the whole experiment from
-the honest hypothesis that the adversary run never fails (together with `[NeverFail prfs.keygen]`
-for the key sampler). -/
-
-omit [Nonempty TagId] [DecidableEq Nonce] [NeZero sessionsPerTag] in
-/-- Every oracle step of the multiple-session handler never fails: the tag step samples a nonce via
-`$ᵗ` and performs pure state updates, and the reader step is a pure reply. -/
-theorem neverFail_unlinkMultipleQueryImpl_run {K : Type}
-    (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag) (k : K)
-    (t : (UnlinkOracleSpec TagId Nonce Digest).Domain) (s : UnlinkState TagId) :
-    NeverFail ((unlinkMultipleQueryImpl (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) prfs k t).run s) := by
-  rcases t with tag | transcript
-  · simp only [unlinkMultipleQueryImpl, QueryImpl.add_apply_inl]
-    unfold unlinkTagQueryImpl
-    refine NeverFail.of_probFailure_eq_zero _ ?_
-    simp
-  · simp only [unlinkMultipleQueryImpl, QueryImpl.add_apply_inr, unlinkReaderQueryImpl]
-    refine NeverFail.of_probFailure_eq_zero _ ?_
-    simp
-
-omit [Nonempty TagId] [DecidableEq Nonce] [NeZero sessionsPerTag] in
-/-- Every oracle step of the single-session handler never fails: the tag step samples a nonce via
-`$ᵗ` and performs pure state updates, and the reader step is a pure reply. -/
-theorem neverFail_unlinkSingleQueryImpl_run {K : Type}
-    (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag) (k : K)
-    (t : (UnlinkOracleSpec TagId Nonce Digest).Domain) (s : UnlinkState TagId) :
-    NeverFail ((unlinkSingleQueryImpl (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) prfs k t).run s) := by
-  rcases t with tag | transcript
-  · simp only [unlinkSingleQueryImpl, QueryImpl.add_apply_inl]
-    unfold unlinkTagQueryImpl
-    refine NeverFail.of_probFailure_eq_zero _ ?_
-    simp
-  · simp only [unlinkSingleQueryImpl, QueryImpl.add_apply_inr, unlinkReaderQueryImpl]
-    refine NeverFail.of_probFailure_eq_zero _ ?_
-    simp
-
-omit [Nonempty TagId] [DecidableEq Nonce] [NeZero sessionsPerTag] in
-/-- The multiple-session unlinkability experiment never fails, provided the key sampler never fails
-and the adversary, simulated in the multiple-session world, never forces a failure. -/
-theorem unlinkMultipleExp_neverFail {K : Type}
-    (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (adversary : UnlinkAdversary TagId Nonce Digest) [NeverFail prfs.keygen]
-    (hrun : ∀ k, NeverFail ((simulateQ (unlinkMultipleQueryImpl
-      (TagId := TagId) (Nonce := Nonce) (Digest := Digest) prfs k) adversary).run
-        UnlinkState.init)) :
-    NeverFail (unlinkMultipleExp (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) prfs adversary) := by
-  unfold unlinkMultipleExp
-  refine NeverFail.bind_of_forall (hy := fun k => ?_)
-  rw [StateT.run']
-  have := hrun k
-  exact NeverFail.instMap _
-
-omit [Nonempty TagId] [DecidableEq Nonce] [NeZero sessionsPerTag] in
-/-- The single-session unlinkability experiment never fails, provided the key sampler never fails
-and the adversary, simulated in the single-session world, never forces a failure. -/
-theorem unlinkSingleExp_neverFail {K : Type}
-    (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (adversary : UnlinkAdversary TagId Nonce Digest) [NeverFail prfs.keygen]
-    (hrun : ∀ k, NeverFail ((simulateQ (unlinkSingleQueryImpl
-      (TagId := TagId) (Nonce := Nonce) (Digest := Digest) prfs k) adversary).run
-        UnlinkState.init)) :
-    NeverFail (unlinkSingleExp (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) prfs adversary) := by
-  unfold unlinkSingleExp
-  refine NeverFail.bind_of_forall (hy := fun k => ?_)
-  rw [StateT.run']
-  have := hrun k
-  exact NeverFail.instMap _
-
-omit [Nonempty TagId] [DecidableEq Nonce] [NeZero sessionsPerTag] in
-/-- `probFailure` form of `unlinkMultipleExp_neverFail`: `Pr[⊥ | multiple experiment] = 0` under
-the same hypotheses. -/
-theorem probFailure_unlinkMultipleExp_eq_zero {K : Type}
-    (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (adversary : UnlinkAdversary TagId Nonce Digest) [NeverFail prfs.keygen]
-    (hrun : ∀ k, NeverFail ((simulateQ (unlinkMultipleQueryImpl
-      (TagId := TagId) (Nonce := Nonce) (Digest := Digest) prfs k) adversary).run
-        UnlinkState.init)) :
-    Pr[⊥ | unlinkMultipleExp (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) prfs adversary] = 0 :=
-  (unlinkMultipleExp_neverFail prfs adversary hrun).probFailure_eq_zero
-
-omit [Nonempty TagId] [DecidableEq Nonce] [NeZero sessionsPerTag] in
-/-- `probFailure` form of `unlinkSingleExp_neverFail`: `Pr[⊥ | single experiment] = 0` under the
-same hypotheses. -/
-theorem probFailure_unlinkSingleExp_eq_zero {K : Type}
-    (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (adversary : UnlinkAdversary TagId Nonce Digest) [NeverFail prfs.keygen]
-    (hrun : ∀ k, NeverFail ((simulateQ (unlinkSingleQueryImpl
-      (TagId := TagId) (Nonce := Nonce) (Digest := Digest) prfs k) adversary).run
-        UnlinkState.init)) :
-    Pr[⊥ | unlinkSingleExp (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) prfs adversary] = 0 :=
-  (unlinkSingleExp_neverFail prfs adversary hrun).probFailure_eq_zero
-
-end UnlinkGame
+end UnlinkWorlds
 
 section BadEvent
 
@@ -642,7 +531,7 @@ def unlinkBadQueryImpl :
     unlinkBadReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
 
 /-- Bad-event experiment from the `RF_bad` multiple-session collision world. -/
-def unlinkBadExp
+def unlinkBadExperiment
     (adversary : UnlinkAdversary TagId Nonce Digest) : ProbComp Bool := do
   let (_, st) ← (simulateQ
     (unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)

@@ -25,11 +25,9 @@ namespace VCVioTest.PFunctorFacade
 /-- A one-operation polynomial interface returning one of three directions. -/
 @[expose, reducible] def triPFunctor : PFunctor := ⟨Unit, fun _ => Fin 3⟩
 
-instance : triPFunctor.Fintype where
-  fintypeB _ := by infer_instance
+instance (a : triPFunctor.A) : Fintype (triPFunctor.B a) := by infer_instance
 
-instance : triPFunctor.Inhabited where
-  inhabitedB _ := by infer_instance
+instance (a : triPFunctor.A) : Inhabited (triPFunctor.B a) := by infer_instance
 
 noncomputable instance : triPFunctor.IsUniformSpec :=
   PFunctor.IsUniformSpec.ofFintypeInhabited _

@@ -6,8 +6,8 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 
 /-!
 # State-Projection Lemmas for `simulateQ`
@@ -89,9 +89,7 @@ theorem run'_simulateQ_eq_of_query_map_eq
     (simulateQ impl₁ oa).run' s = (simulateQ impl₂ oa).run' (proj s) := by
   have hmap := congrArg (fun p => Prod.fst <$> p)
     (map_run_simulateQ_eq_of_query_map_eq impl₁ impl₂ proj hproj oa s)
-  change Prod.fst <$> (simulateQ impl₁ oa).run s =
-    Prod.fst <$> (simulateQ impl₂ oa).run (proj s)
-  simpa [Functor.map_map, Function.comp_def] using hmap
+  simpa [StateT.run'_eq, Functor.map_map, Function.comp_def] using hmap
 
 /-! ## State-projection: invariant-gated -/
 
@@ -102,7 +100,6 @@ is the natural strengthening of `map_run_simulateQ_eq_of_query_map_eq` for
 projections that only agree on a reachable subset of states. -/
 theorem map_run_simulateQ_eq_of_query_map_eq_inv'
     {ι ι' : Type} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
-    [IsUniformSpec spec']
     {σ₁ σ₂ : Type _}
     (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec')))
     (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec')))
@@ -128,7 +125,6 @@ support-preservation half of `map_run_simulateQ_eq_of_query_map_eq_inv'`,
 exposed separately for projected continuations after a simulated prefix. -/
 theorem simulateQ_run_preserves_inv_of_query
     {ι ι' : Type} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
-    [IsUniformSpec spec']
     {σ : Type _}
     (impl : QueryImpl spec (StateT σ (OracleComp spec')))
     (inv : σ → Prop)
@@ -149,7 +145,6 @@ theorem simulateQ_run_preserves_inv_of_query
 a stateful continuation. -/
 theorem map_run_simulateQ_bind_eq_of_query_map_eq_inv'
     {ι ι' : Type} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
-    [IsUniformSpec spec']
     {σ₁ σ₂ : Type _} {β : Type u}
     (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec')))
     (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec')))
@@ -175,7 +170,6 @@ theorem map_run_simulateQ_bind_eq_of_query_map_eq_inv'
 /-- `run'` projection corollary of `map_run_simulateQ_eq_of_query_map_eq_inv'`. -/
 theorem run'_simulateQ_eq_of_query_map_eq_inv'
     {ι ι' : Type} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
-    [IsUniformSpec spec']
     {σ₁ σ₂ : Type _}
     (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec')))
     (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec')))
@@ -188,9 +182,7 @@ theorem run'_simulateQ_eq_of_query_map_eq_inv'
     (simulateQ impl₁ oa).run' s = (simulateQ impl₂ oa).run' (proj s) := by
   have hmap := congrArg (fun p => Prod.fst <$> p)
     (map_run_simulateQ_eq_of_query_map_eq_inv' impl₁ impl₂ inv proj hinv hproj oa s hs)
-  change Prod.fst <$> (simulateQ impl₁ oa).run s =
-    Prod.fst <$> (simulateQ impl₂ oa).run (proj s)
-  simpa [Functor.map_map, Function.comp_def] using hmap
+  simpa [StateT.run'_eq, Functor.map_map, Function.comp_def] using hmap
 
 end OracleComp
 
@@ -204,7 +196,6 @@ only needs to commute with each query on states satisfying `inv`, and `inv` must
 be preserved by each query step. -/
 structure StateOrnament
     {ι ι' : Type} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
-    [IsUniformSpec spec']
     {σ τ : Type _}
     (decorated : QueryImpl spec (StateT σ (OracleComp spec')))
     (base : QueryImpl spec (StateT τ (OracleComp spec'))) where
@@ -220,7 +211,6 @@ structure StateOrnament
 namespace StateOrnament
 
 variable {ι ι' : Type} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
-variable [IsUniformSpec spec']
 variable {σ τ : Type _}
 variable {decorated : QueryImpl spec (StateT σ (OracleComp spec'))}
 variable {base : QueryImpl spec (StateT τ (OracleComp spec'))}
@@ -242,9 +232,7 @@ theorem run'_eq {α : Type}
     (simulateQ decorated oa).run' s =
       (simulateQ base oa).run' (orn.proj s) := by
   have hmap := congrArg (fun p => Prod.fst <$> p) (orn.run_eq oa s hs)
-  change Prod.fst <$> (simulateQ decorated oa).run s =
-    Prod.fst <$> (simulateQ base oa).run (orn.proj s)
-  simpa [Functor.map_map, Function.comp_def] using hmap
+  simpa [StateT.run'_eq, Functor.map_map, Function.comp_def] using hmap
 
 end StateOrnament
 
@@ -305,9 +293,8 @@ theorem simulateQ_run'_eq_of_snd_invariant
     (oa : OracleComp spec α) (s : σ) :
     (simulateQ impl oa).run' (s, q₀) =
     (simulateQ (QueryImpl.fixSndStateT impl q₀) oa).run' s := by
-  change Prod.fst <$> (simulateQ impl oa).run (s, q₀) =
-    Prod.fst <$> (simulateQ (QueryImpl.fixSndStateT impl q₀) oa).run s
-  simpa [Functor.map_map, Function.comp_def] using congrArg (fun p => Prod.fst <$> p)
+  simpa [StateT.run'_eq, Functor.map_map, Function.comp_def] using
+    congrArg (fun p => Prod.fst <$> p)
     (simulateQ_run_eq_of_snd_invariant impl q₀ h_inv oa s)
 
 end OracleComp
@@ -398,9 +385,7 @@ theorem extendState_run'_eq
     (simulateQ (QueryImpl.extendState so aux) oa).run' (s, q) =
       (simulateQ so oa).run' s := by
   have hmap := congrArg (fun p => Prod.fst <$> p) (extendState_run_proj_eq so aux oa s q)
-  change Prod.fst <$> (simulateQ (QueryImpl.extendState so aux) oa).run (s, q) =
-    Prod.fst <$> (simulateQ so oa).run s
-  simpa [Functor.map_map, Function.comp_def] using hmap
+  simpa [StateT.run'_eq, Functor.map_map, Function.comp_def] using hmap
 
 /-- Forgetting the left auxiliary `Q` component commutes with the full
 simulation. This is the left-product analogue of `extendState_run_proj_eq`. -/
@@ -428,8 +413,6 @@ theorem extendStateLeft_run'_eq
     (simulateQ (QueryImpl.extendStateLeft so aux) oa).run' (q, s) =
       (simulateQ so oa).run' s := by
   have hmap := congrArg (fun p => Prod.fst <$> p) (extendStateLeft_run_proj_eq so aux oa s q)
-  change Prod.fst <$> (simulateQ (QueryImpl.extendStateLeft so aux) oa).run (q, s) =
-    Prod.fst <$> (simulateQ so oa).run s
-  simpa [Functor.map_map, Function.comp_def] using hmap
+  simpa [StateT.run'_eq, Functor.map_map, Function.comp_def] using hmap
 
 end OracleComp

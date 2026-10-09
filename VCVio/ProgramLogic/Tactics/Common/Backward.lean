@@ -228,30 +228,24 @@ private def mkUnaryPostLERfl (post postTy : Expr) : MetaM Expr := do
     let h ← mkAppOptM ``le_rfl #[none, none, some lhs]
     mkLambdaFVars #[a] h
 
-/-- Scan the theorem's binder mvars `xs` for an `IsUniformSpec ?spec` instance
-binder and return it, so `mkAppOptM` can forward the unresolved mvar into
-`triple_conseq`'s instance slot instead of trying to synthesize it eagerly
-(which fails while `?spec` is still a free metavariable). -/
-private def isUniformSpecInstanceFrom (xs : Array Expr) : MetaM (Option Expr) := do
-  for x in xs do
-    let ty ← whnfR (← inferType x)
-    if ty.getAppFn.isConstOf ``OracleSpec.IsUniformSpec then
-      return some x
-  return none
-
-private def mkTripleConseqApp (uniform? : Option Expr)
-    (pre preAbstract prog postSpec postAbstract hpre hpost specProof : Expr) : MetaM Expr :=
-  mkAppOptM ``OracleComp.ProgramLogic.triple_conseq
-    #[none, none, uniform?, none, some pre, some preAbstract, some prog,
-      some postSpec, some postAbstract, some hpre, some hpost, some specProof]
+private def mkTripleConseqApp (hpre hpost specProof : Expr) : MetaM Expr := do
+  let type ← whnfR (← inferType specProof)
+  unless type.isAppOfArity ``Std.Internal.Do.Triple 11 do
+    throwError "expected a core triple, got:{indentExpr type}"
+  let args := type.getAppArgs
+  -- Retain the source proof's assertion and WP instances while its program is abstract.
+  let assertionArgs : Array (Option Expr) := (args.extract 0 6).map some
+  let h ← mkAppOptM ``Std.Internal.Do.Triple.entails_wp_of_pre_post
+    (assertionArgs ++ #[some args[7]!, some args[6]!, none, some args[8]!, none,
+      some args[9]!, some args[10]!, some specProof, some hpre, some hpost])
+  mkAppOptM ``Std.Internal.Do.Triple.intro
+    (assertionArgs ++ #[some args[6]!, some args[7]!, none, none, some args[10]!, some h])
 
 /-- Generalize a folded unary `Triple pre prog post` proof into a reusable
 backward-rule source by abstracting concrete `post` and always abstracting
-`pre` through `triple_conseq`. -/
-private def mkUnaryTripleBackwardProof (proofArgs : Array Expr)
-    (pre _prog postSpec specProof : Expr) :
+`pre` through core's consequence rule. -/
+private def mkUnaryTripleBackwardProof (pre postSpec specProof : Expr) :
     MetaM Expr := do
-  let uniform? ← isUniformSpecInstanceFrom proofArgs
   let mut postAbstract := postSpec.consumeMData
   unless postAbstract.isMVar do
     let postTy ← inferType postSpec
@@ -262,16 +256,14 @@ private def mkUnaryTripleBackwardProof (proofArgs : Array Expr)
     let preAbstract ← mkFreshExprMVar (userName := `pre) preTy
     let hpreTy ← mkLE preAbstract pre
     let hpre ← mkFreshExprMVar (userName := `vc) hpreTy
-    return (← mkTripleConseqApp uniform?
-      pre preAbstract _prog postSpec postAbstract hpre hpost specProof)
+    return (← mkTripleConseqApp hpre hpost specProof)
   let preTy ← inferType pre
   let preAbstract ← mkFreshExprMVar (userName := `pre) preTy
   let hpreTy ← mkLE preAbstract pre
   let hpre ← mkFreshExprMVar (userName := `vc) hpreTy
   let postTy ← inferType postAbstract
   let hpost ← mkUnaryPostLERfl postAbstract postTy
-  mkTripleConseqApp uniform?
-    pre preAbstract _prog postAbstract postAbstract hpre hpost specProof
+  mkTripleConseqApp hpre hpost specProof
 
 /-- Generalize a raw unary `pre ⊑ wp prog post epost` proof into a reusable
 backward rule source by abstracting concrete `post` and always abstracting
@@ -345,7 +337,7 @@ private def normalizeRawRelProof (prf type : Expr) : MetaM Expr := do
 
 private def mkVCSpecBackwardRule (entry : VCSpecEntry) (rawGoal : Bool) :
     MetaM VCSpecBackwardRule := do
-  let (xsNoBridge, _bisNoBridge, prfNoBridge, typeNoBridge) ←
+  let (_xsNoBridge, _bisNoBridge, prfNoBridge, typeNoBridge) ←
     instantiateProofNoBridge entry.proof
   let (_xs, _bis, prf, type) ← entry.proof.instantiate
   let (prf, type) ←
@@ -356,8 +348,8 @@ private def mkVCSpecBackwardRule (entry : VCSpecEntry) (rawGoal : Bool) :
   let prf ←
     if !rawGoal then
       match unaryTripleParts? typeNoBridge with
-      | some (pre, prog, post) =>
-          mkUnaryTripleBackwardProof xsNoBridge pre prog post prfNoBridge
+      | some (pre, _prog, post) =>
+          mkUnaryTripleBackwardProof pre post prfNoBridge
       | none =>
           normalizeRawRelProof prf type
     else

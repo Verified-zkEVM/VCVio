@@ -362,29 +362,6 @@ lemma probOutput_bind_uniformBool {α : Type}
   simp only [probOutput_uniformSample, Fintype.card_bool, Nat.cast_ofNat, add_comm, div_eq_mul_inv]
   rw [← left_distrib, mul_comm]
 
-/-- Guessing a uniformly random bit after branching between `real` and `rand` decomposes into
-the difference of the branch success probabilities. -/
-lemma probOutput_uniformBool_branch_toReal_sub_half (real rand : ProbComp Bool) :
-    (Pr[= true | do
-      let b ← ($ᵗ Bool)
-      let z ← if b then real else rand
-      pure (b == z)]).toReal - 1 / 2 =
-    ((Pr[= true | real]).toReal - (Pr[= true | rand]).toReal) / 2 := by
-  have hformula : Pr[= true | do
-      let b ← ($ᵗ Bool)
-      let z ← if b then real else rand
-      pure (b == z)] = (Pr[= true | real] + Pr[= false | rand]) / 2 := by
-    rw [probOutput_bind_uniformBool]
-    simp
-  have hfalseAsSub : Pr[= false | rand] = 1 - Pr[= true | rand] := by
-    rw [← (by simp : Pr[= true | rand] + Pr[= false | rand] = 1),
-      ENNReal.add_sub_cancel_left probOutput_ne_top]
-  rw [hformula, ENNReal.toReal_div,
-    ENNReal.toReal_add probOutput_ne_top probOutput_ne_top,
-    hfalseAsSub, ENNReal.toReal_sub_of_le probOutput_le_one ENNReal.one_ne_top]
-  simp only [ENNReal.toReal_one, ENNReal.toReal_ofNat]
-  ring
-
 /-- If the distribution of `f b` is independent of `b`, then guessing a uniformly random
 bit by running `f` has success probability exactly 1/2.
 This is the core lemma behind "all-random hybrid has probability 1/2" arguments. -/
@@ -433,17 +410,6 @@ lemma probEvent_uniformSample_eq_query [∀ i, SampleableType (spec.Range i)]
       Pr[p | (spec.query t : OracleComp spec (spec.Range t))] := by
   rw [probEvent_def, probEvent_def, evalSPMF_uniformSample_eq_query]
 
-/-- Given that the output type of all oracles has a `SampleableType` instance, replace all queries
-with uniformly random responses by calling the corresponding `uniformSample` at each query. -/
-def uniformSampleImpl [∀ i, SampleableType (spec.Range i)] :
-    QueryImpl spec ProbComp := fun t => $ᵗ spec.Range t
-
-/-- A uniformly sampled implementation answers each query with the uniform sampler for
-that query's response type. -/
-@[simp]
-lemma uniformSampleImpl_apply [∀ i, SampleableType (spec.Range i)] (t : spec.Domain) :
-    uniformSampleImpl (spec := spec) t = $ᵗ spec.Range t := rfl
-
 namespace uniformSampleImpl
 
 variable [∀ i, SampleableType (spec.Range i)]
@@ -467,18 +433,6 @@ lemma probEvent_simulateQ [IsUniformSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
     Pr[ p | simulateQ uniformSampleImpl oa] = Pr[ p | oa] := by
   simp only [probEvent_eq_tsum_indicator, probOutput_simulateQ]
-
-@[simp]
-lemma support_simulateQ [IsUniformSpec spec] {α : Type}
-    (oa : OracleComp spec α) :
-    support (simulateQ uniformSampleImpl oa) = support oa :=
-  Set.ext fun x => mem_support_iff_of_evalSPMF_eq (evalSPMF_simulateQ oa) x
-
-@[simp]
-lemma finSupport_simulateQ [IsUniformSpec spec] {α : Type}
-    [DecidableEq α] (oa : OracleComp spec α) :
-    finSupport (simulateQ uniformSampleImpl oa) = finSupport oa := by
-  simp [finSupport_eq_iff_support_eq_coe]
 
 end uniformSampleImpl
 

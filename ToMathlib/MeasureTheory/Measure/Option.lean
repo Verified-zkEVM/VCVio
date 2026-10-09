@@ -87,6 +87,11 @@ theorem dropNone_eq_comap_some (μ : Measure (Option α)) :
   ext s hs
   rw [dropNone_apply μ hs, Option.measurableEmbedding_some.comap_apply]
 
+/-- Embedding every outcome as a successful value and discarding failure preserves the measure. -/
+@[simp]
+theorem dropNone_map_some (μ : Measure α) : (μ.map some).dropNone = μ := by
+  rw [dropNone_eq_comap_some, Option.measurableEmbedding_some.comap_map]
+
 /-- Mapping successful values commutes with discarding the absent outcomes. -/
 theorem dropNone_map {β : Type*} [MeasurableSpace β]
     (μ : Measure (Option α)) (f : α → β) (hf : Measurable f) :

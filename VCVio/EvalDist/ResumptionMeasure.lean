@@ -174,4 +174,41 @@ theorem returnedMeasure_apply_univ_le_one [∀ a, DiscreteMeasurableSpace (P.B a
   rw [returnedMeasure_apply computation Set.univ MeasurableSet.univ]
   exact iSup_le fun k => outputMeasure_apply_univ_le_one k computation
 
+section FinitePrograms
+
+variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)]
+  [∀ a, DiscreteMeasurableSpace (P.B a)] [P.IsMeasureSpec]
+  {α : Type u} [MeasurableSpace α]
+
+/-- Truncation beyond a total query bound returns the finite program with no cutoff. -/
+theorem truncateMeasure_toResumption (c : FreeM P α) {k : ℕ}
+    (h : c.IsTotalRollBound k) :
+    Resumption.truncateMeasure k (FreeM.toResumption c) = (FreeM.denote c).map some := by
+  rw [Resumption.truncateMeasure,
+    Resumption.truncate_toResumption_eq_map_some h,
+    FreeM.denote_map_of_measurable c some Option.measurable_some]
+
+/-- Beyond a total query bound, returned outputs have exactly the finite-program measure. -/
+theorem outputMeasure_toResumption (c : FreeM P α) {k : ℕ}
+    (h : c.IsTotalRollBound k) :
+    Resumption.outputMeasure k (FreeM.toResumption c) = FreeM.denote c := by
+  rw [Resumption.outputMeasure, truncateMeasure_toResumption c h, Measure.dropNone_map_some]
+
+/-- The limiting output measure agrees with the denotation of a uniformly bounded program. -/
+theorem returnedMeasure_toResumption (c : FreeM P α) {k : ℕ}
+    (h : c.IsTotalRollBound k) :
+    Resumption.returnedMeasure (FreeM.toResumption c) = FreeM.denote c := by
+  apply le_antisymm
+  · apply iSup_le
+    intro j
+    calc
+      Resumption.outputMeasure j (FreeM.toResumption c) ≤
+          Resumption.outputMeasure (max j k) (FreeM.toResumption c) :=
+        Resumption.monotone_outputMeasure _ (le_max_left j k)
+      _ = FreeM.denote c := outputMeasure_toResumption c (h.mono (le_max_right j k))
+  · rw [← outputMeasure_toResumption c h]
+    exact Resumption.outputMeasure_le_returnedMeasure k _
+
+end FinitePrograms
+
 end PFunctor.Resumption
