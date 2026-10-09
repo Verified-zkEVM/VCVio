@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
+public import VCVio.OracleComp.QueryTracking.RandomOracle.InitialCacheExpectedQuery
 
 /-!
 # Fresh-query API checks
@@ -195,5 +196,39 @@ theorem nonuniformAdaptive_bound :
             evalWithAnswerFn_liftM_query] using h
         exact Bool.eq_false_of_not_eq_true' hn
 
+
+end FreshQueryConsumer
+
+/-! ## The initial-cache bound at the empty cache -/
+
+namespace FreshQueryConsumer
+
+variable {D α : Type} {R : D → Type}
+
+/-- At the empty initial cache, `prEvent_randomOracle_le_expectedNewQueryCharge` gives back the
+empty-cache theorem `prEvent_randomOracle_le_expectedFreshQueryCharge` from its own hypotheses. -/
+example [DecidableEq D]
+    [∀ d, SampleableType (R d)]
+    (oa : OracleComp (unifSpec + ofFn R) α)
+    (event : α → Prop) (bad : D → (∀ d, R d) → Prop) (error : D → ENNReal)
+    (htrace : ∀ g z, z ∈ support (fixedTableLoggedRun oa g ∅) →
+      event z.1.1 → ∃ t ∈ freshKeysOfLog z.1.2, bad t g)
+    (hbad : ∀ t g, Pr{let u ← $ᵗ (R t)}[bad t
+      (Function.update g t u)] ≤ error t) :
+    Pr{let z ← randomOracleLoggedRun oa}[event z.1.1] ≤
+      expectedFreshQueryCharge oa error := by
+  have htrace' : ∀ g z, z ∈ support (fixedTableLoggedRun oa g ∅) →
+      event z.1.1 → ∃ t ∈ newQueryKeys (∅ : (ofFn R).QueryCache) z.1.2,
+        bad t (completeTable ∅ g) := by
+    intro g z hz he
+    obtain ⟨t, ht, hb⟩ := htrace g z hz he
+    exact ⟨t, by simpa using ht, by simpa only [completeTable_empty] using hb⟩
+  have hbad' : ∀ t g, (∅ : (ofFn R).QueryCache) t = none →
+      Pr{let u ← $ᵗ (R t)}[bad t (completeTable ∅ (Function.update g t u))] ≤
+        error t := by
+    intro t g _
+    simpa only [completeTable_empty] using hbad t g
+  simpa only [expectedNewQueryCharge_empty_cache] using
+    prEvent_randomOracle_le_expectedNewQueryCharge oa ∅ event bad error htrace' hbad'
 
 end FreshQueryConsumer
