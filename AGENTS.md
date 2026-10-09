@@ -68,9 +68,11 @@ The repo also includes a first-class lattice cryptography library under `Lattice
 - `Extern/`: native FFI surface — the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them. No proof library may import it; the backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
 - `LatticeCrypto/`: lattice-specific algebra, hardness assumptions, scheme definitions, security theorems, and concrete implementations.
 - `HashSig/`: hash-based signatures — SLH-DSA (SPHINCS+, FIPS 205) proof-level specs,
-  component-level FIPS conformance results, and security-facing interfaces (no unforgeability
-  theorem or complete FIPS conformance result yet). Peer of `LatticeCrypto/`; depends on
-  `VCVio`/`ToMathlib` but nothing in those imports it back.
+  component-level FIPS conformance results, and an EUF-CMA bound in the classical random-oracle
+  model with three oracles (the tweakable hash, `H_msg`, `PRF_msg`): `securityTarget_two_one`,
+  per public seed and averaged over seed distributions. There is no faithfulness theorem relating
+  that model to the byte-level scheme, no SUF-CMA bound and no complete FIPS conformance result.
+  Peer of `LatticeCrypto/`; depends on `VCVio`/`ToMathlib` but nothing in those imports it back.
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
 - `VCVioWidgets/`: optional widget experiments and visualizations.
