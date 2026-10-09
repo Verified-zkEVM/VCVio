@@ -1125,7 +1125,7 @@ def runProbEqNormalize : TacticM Bool := do
   return false
 
 /-- Try to handle a probability equality goal by swap, congr, or swap+congr.
-Also tries a fallback bridge from exact `probOutput` equalities into relational VCGen. -/
+Also tries a fallback bridge from equal event probabilities into relational VCGen. -/
 def runProbOutputEqRelBridge : TacticM Bool := do
   let saved ← saveState
   let tryBridge (symmFirst : Bool) : TacticM Bool := do
@@ -1133,7 +1133,7 @@ def runProbOutputEqRelBridge : TacticM Bool := do
       if symmFirst then
         evalTactic (← `(tactic| symm))
       evalTactic (← `(tactic|
-        apply OracleComp.ProgramLogic.Relational.probOutput_eq_of_relTriple_eqRel))
+        apply OracleComp.ProgramLogic.Relational.prEvent_eq_of_relTriple_eqRel))
     with
     | some _ => return true
     | none => return false

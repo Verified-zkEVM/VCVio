@@ -48,7 +48,7 @@ private def runRVCGenStepWithTheoremNames
 
 /-- `rvcstep` applies one relational VCGen step.
 
-It first lowers `GameEquiv` / `evalSPMF` equality goals into relational mode, then
+It first lowers `GameEquiv` / output-measure equality goals into relational mode, then
 tries the obvious structural relational rule on `RelTriple` / `RelWP` / quantitative
 `VCVio.ProgramLogic.RelTriple` goals: synchronized conditionals, `simulateQ`, `Functor.map`,
 bounded traversals, bind decomposition, or random/query coupling.
@@ -305,26 +305,27 @@ macro "rel_inline" ids:ident* : tactic =>
 /-! ## Proof mode entry tactics -/
 
 /-- `by_equiv` transforms a `GameEquiv g₁ g₂` goal into `RelTriple g₁ g₂ (EqRel α)`.
-Also works for `evalSPMF g₁ = evalSPMF g₂` goals.
-Always targets `RelTriple` (coupling-based), never `RelTriple'` (eRHL-based),
-so that `rvcstep` / `rvcgen` work on the resulting goal. -/
+Also works for output-measure equalities `𝒟[g₁] = 𝒟[g₂]` in the discrete structure.
+Always targets the coupling-based `RelTriple`, so that `rvcstep` / `rvcgen` work on the
+resulting goal. -/
 macro (name := byEquiv) "by_equiv" : tactic =>
   `(tactic|
     first
       | apply OracleComp.ProgramLogic.GameEquiv.of_relTriple
       | (change OracleComp.ProgramLogic.Relational.RelTriple _ _ _)
-      | (apply OracleComp.ProgramLogic.Relational.evalSPMF_eq_of_relTriple_eqRel))
+      | (apply OracleComp.ProgramLogic.Relational.evalDist_eq_of_relTriple_eqRel))
 
-/-- `rel_dist` reduces a `RelTriple oa ob (EqRel α)` goal to `evalSPMF oa = evalSPMF ob`.
+/-- `rel_dist` reduces a `RelTriple oa ob (EqRel α)` goal to equality of the output measures
+`𝒟[oa] = 𝒟[ob]` in the discrete structure.
 
 This is the reverse direction of `by_equiv`: while `by_equiv` enters relational mode from a
 distributional equality, `rel_dist` exits relational mode back to distributional reasoning.
 
 Useful when both sides are equal in distribution but not syntactically identical, and the
-equality is easier to prove at the `evalSPMF` level than via stepwise coupling. -/
+equality is easier to prove at the measure level than via stepwise coupling. -/
 macro (name := relDist) "rel_dist" : tactic =>
   `(tactic|
-    apply OracleComp.ProgramLogic.Relational.relTriple_eqRel_of_evalSPMF_eq)
+    apply OracleComp.ProgramLogic.Relational.relTriple_eqRel_of_evalDist_eq)
 
 /-- `game_trans` introduces an intermediate game for transitivity of `GameEquiv`.
 
@@ -340,21 +341,21 @@ macro_rules
     `(tactic|
       refine OracleComp.ProgramLogic.GameEquiv.trans (g₂ := $g) ?_ ?_)
 
-/-- `by_dist` transforms a TV distance or advantage bound goal into a subgoal
-suitable for relational or coupling reasoning. -/
+/-- `by_dist` transforms an advantage bound goal into an advantage bound for a second game
+together with a total variation bound between the two games. -/
 syntax "by_dist" (term)? : tactic
 
 macro_rules
   | `(tactic| by_dist) =>
     `(tactic|
-      apply OracleComp.ProgramLogic.AdvBound.of_tvDist)
+      apply OracleComp.ProgramLogic.AdvBound.of_measureETVDist)
   | `(tactic| by_dist $eps) =>
     `(tactic|
-      (apply OracleComp.ProgramLogic.AdvBound.of_tvDist (ε₂ := $eps)))
+      (apply OracleComp.ProgramLogic.AdvBound.of_measureETVDist (ε₂ := $eps)))
 
-/-- `by_upto bad` applies the "identical until bad" TV-distance theorem for `simulateQ`.
-It leaves the standard four subgoals: initial non-bad state, agreement off bad,
-and bad-state monotonicity for each implementation. -/
+/-- `by_upto bad` applies the "identical until bad" total-variation theorem for `simulateQ`.
+It leaves the standard three subgoals: agreement off bad states, and bad-state monotonicity for
+each implementation. -/
 syntax "by_upto" term : tactic
 
 elab_rules : tactic
@@ -363,7 +364,7 @@ elab_rules : tactic
         return
       let target ← instantiateMVars (← getMainTarget)
       throwError
-        "by_upto: expected a TV-distance goal for two `simulateQ ... run'` computations\n\
+        "by_upto: expected a `measureETVDist` goal for two `simulateQ ... run'` computations\n\
         bounded by\n\
         the probability of a bad event on the left simulation;\n\
         got:{indentExpr target}"

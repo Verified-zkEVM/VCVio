@@ -95,13 +95,14 @@ measurable family. The quantitative rule supplies a witness lower bound; it does
 existence of an optimal coupling or interchange a supremum with integration. A product of
 arbitrary discrete measurable spaces need not itself be discrete. Do not hide that distinction
 in an automatic relational assertion-algebra instance.
-`open scoped MeasureProgramLogic.Relational` selects PolyFun's qualitative `MAlgRelOrdered`
-interface for finite-response oracle trees. The source and final operational output sets are
-finite concentration sets, so arbitrary final relations are handled by restricting to their
-countable measurable part. This works for uncountable output types and weighted interpretations;
-it needs only finite responses, without enumerations or uniformity. The quantitative algebra is
-not installed by this scope, and the qualitative algebra is not automatically anchored to
-structural demonic WP under weighted interpretations.
+The qualitative `MAlgRelOrdered` instance for finite-response oracle trees
+(`OracleComp.ProgramLogic.Relational.CouplingPost`) observes each output in its discrete
+measurable structure. The source and final operational output sets are finite concentration
+sets, so arbitrary final relations are handled by restricting to their countable measurable part.
+This works for uncountable output types and weighted interpretations; it needs only finite
+responses, without enumerations or uniformity. The anchoring to structural demonic WP and the
+bijection rules hold under uniform response measures, where every reachable output has positive
+mass.
 The generic relational class and laws come from `PolyFun.Control.Monad.Algebra.Relational`.
 `ToMathlib.Control.Monad.RelationalAlgebra` additionally installs the named upstream transformer
 constructions for compatibility typeclass search. New code can select those constructions
@@ -721,8 +722,8 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
    → `probOutput_bind_const` / `probEvent_bind_const`
 
 7. **Two computations have same distribution?**
-   → For legacy coupling lemmas, show `evalSPMF oa = evalSPMF ob`, or use
-     `relTriple_eqRel_of_evalSPMF_eq`. For Mathlib probability results, compare `𝒟[oa]` and `𝒟[ob]`.
+   → Compare `𝒟[oa]` and `𝒟[ob]`; `relTriple_eqRel_of_evalDist_eq` turns an equality in the
+     discrete structure into an `EqRel` coupling.
 
 ## `grind` vs `simp` on Probability Goals
 

@@ -360,6 +360,68 @@ entries, an empty collection contributing no successful mass; a uniform range an
 give an event its proportion of admissible values. The discrete selection lemmas remain only
 while the legacy tactic benchmarks exercise them. Two orphaned scalar lemmas are removed.
 
+## Indicator-triple checkpoint
+
+The indicator-postcondition relational triple, which restated the coupling-based `RelTriple`
+through `eRelWP`, is removed together with its bridges, its effect rules and the finite-support
+compactness development that proved its equivalence with coupling existence. Trace
+noninterference is stated with `RelTriple`. The zero-error approximate equality coupling
+identifies output distributions through the total-variation characterization, and the coherence
+file keeps the direction in which a supported coupling gives the indicator full relational mass.
+The converse returns with the measure-backed rebase of `eRelWP`.
+
+## Qualitative relational checkpoint
+
+`CouplingPost` is a measure coupling of the two output laws, each observed in the discrete
+structure on its output type, under which the relation holds almost everywhere; `RelWP` and
+`RelTriple` keep their names and the sequential rule needs finite response types. The anchoring
+instance and the query bijection rule assume uniform response measures, under which every
+reachable output has positive mass. The second oracle-level coupling interface is folded into
+this one. Equality couplings give equal output measures and equal event probabilities, and an
+implication along a coupling bounds one event by another. Game equivalence compares output
+measures in the discrete structure, and the advantage bound measures the distance of the `true`
+mass from one half, transported by measure total variation. Trace noninterference, trace leakage
+freedom and leakage bounds are native, as are the coupling rules for simulated computations and
+the stochastic-dominance rules for bad-state events; identical-until-bad bounds stay on the
+discrete layer for now. Coupling-existence coherence with `eRelWP` returns with its rebase.
+
+## Quantitative relational checkpoint
+
+`eRelWP` is the supremum of coupled `lintegral` expectations over couplings of the two output
+measures observed in the discrete structure. A coupling of oracle computations concentrates on the
+finite product of their supports, so its expectation is a finite sum; exchanging the supremum with
+that sum and choosing conditional couplings on the support gives the bind rule. A `pure` side
+collapses `eRelWP` to the unary expectation of the other side, and the graph of a bijection
+couples a uniform sample or query with itself, with the unary expectation along the bijection as
+its value. The total-variation characterization of `eRelWP` on equality returns once the maximal
+coupling of output measures is available. The discrete subprobability coupling module is removed,
+and the public-projection total-variation bound used by the stateful Fiat–Shamir hops sits beside
+the discrete event bound it refines.
+
+## Maximal-coupling checkpoint
+
+Two probability measures concentrated on a common finite set have total variation equal to one
+minus their overlap `∑ a, min (μ {a}) (ν {a})`. No coupling puts more than the overlap on a
+diagonal point, and the maximal coupling, which puts the overlap on the diagonal and spreads the
+residual masses independently, attains it. For oracle computations this identifies measure total
+variation with the complement of the best coupled probability of equal outputs, so an approximate
+equality coupling with error `ε` is exactly a total variation bound `ε`, and a zero-error one gives
+game equivalence.
+
+## Identical-until-bad checkpoint
+
+The fundamental lemma of game playing is native. Two stateful handlers that give every event the
+same probability on steps between good states, and that keep bad states bad, produce simulations
+that agree on every event away from a bad final state; their output-state pairs, and hence their
+outputs, are within the probability of ending in a bad state in measure total variation. The
+handlers may disagree on the step that sets a bad flag, and they may run in a different oracle
+specification than the simulated program; agreement off bad input states, as equal runs or equal
+output measures, is a special case. Two computations that agree on every event away from a bad
+event are within its probability after any post-processing, with no measurable structure on the
+outputs. The programmable-oracle bounds, the random-oracle bridge and the query-bounded
+exact-output transport are native, and `by_upto` targets the native bound; the ε-slack
+refinements and their consumers remain on the discrete layer.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

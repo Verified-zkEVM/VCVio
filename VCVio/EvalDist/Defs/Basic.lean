@@ -133,9 +133,6 @@ lemma mem_support_iff (mx : m α) (x : α) :
   rw [support_eq_SPMF_support, SPMF.mem_support_iff,
     probOutput_def, evalSPMF_def]
 
-lemma mem_support_iff_evalSPMF_apply_ne_zero (mx : m α) (x : α) :
-    x ∈ support mx ↔ 𝒮[mx] x ≠ 0 := by grind
-
 @[grind =]
 lemma mem_finSupport_iff [DecidableEq α] [HasEvalFinset m] (mx : m α) (x : α) :
     x ∈ finSupport mx ↔ Pr[= x | mx] ≠ 0 := by grind
@@ -793,13 +790,6 @@ lemma probEvent_mono'' (h : ∀ x, p x → q x) : Pr[ p | mx] ≤ Pr[ q | mx] :=
   simp only [probEvent_eq_tsum_ite]
   refine ENNReal.tsum_le_tsum fun x => ?_
   by_cases hp : p x <;> by_cases hq : q x <;> simp_all
-
-open Classical in
-lemma indicator_objective_eq_probEvent (mx : m (α × β)) (R : α → β → Prop) :
-    (∑' z, Pr[= z | mx] * (if R z.1 z.2 then 1 else 0)) = Pr[ fun z => R z.1 z.2 | mx] := by
-  rw [probEvent_eq_tsum_ite]
-  refine tsum_congr fun z => ?_
-  by_cases hR : R z.1 z.2 <;> simp [hR]
 
 variable [MonadAttach m] [EvalDistCompatible m]
 

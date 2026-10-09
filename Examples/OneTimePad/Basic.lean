@@ -110,6 +110,6 @@ lemma cipherGivenMsg_equiv (sp : ℕ) (msg₀ msg₁ : BitVec sp) :
     GameEquiv
       ((oneTimePad sp).perfectSecrecyCipherGivenMsgExperiment msg₀)
       ((oneTimePad sp).perfectSecrecyCipherGivenMsgExperiment msg₁) :=
-  evalSPMF_eq_of_evalDist_eq _ _ (ciphertextRowsEqual sp msg₀ msg₁)
+  ciphertextRowsEqual sp msg₀ msg₁
 
 end oneTimePad

@@ -186,22 +186,19 @@ lemma probOutput_multipleBad_run'_eq_multipleIdeal
     | inl tag =>
       change RelTriple ((multipleBadQueryImpl _ _ _ _ (Sum.inl tag)) s₁) _ _
       rw [multipleBadQueryImpl_tag_run]
-      refine relTriple_of_evalSPMF_eq_right
-        (congrArg evalSPMF (bind_pure ((multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag) (Sum.inl tag)) s₁.1))) ?_
+      refine relTriple_of_evalDist_eq_right (ob := _ >>= pure) (by rw [bind_pure]) ?_
       refine relTriple_bind (relTriple_refl _) ?_
       rintro a b rfl
       exact relTriple_pure_pure ⟨rfl, rfl⟩
     | inr transcript =>
       change RelTriple ((multipleBadQueryImpl _ _ _ _ (Sum.inr transcript)) s₁) _ _
       rw [multipleBadQueryImpl_reader_run]
-      refine relTriple_of_evalSPMF_eq_right
-        (congrArg evalSPMF (bind_pure ((multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag) (Sum.inr transcript)) s₁.1))) ?_
+      refine relTriple_of_evalDist_eq_right (ob := _ >>= pure) (by rw [bind_pure]) ?_
       refine relTriple_bind (relTriple_refl _) ?_
       rintro a b rfl
       exact relTriple_pure_pure ⟨rfl, rfl⟩
-  exact probOutput_eq_of_relTriple_eqRel hrt out
+  rw [← evalDist_apply_singleton, ← evalDist_apply_singleton]
+  exact congrArg (· {out}) (evalDist_eq_of_relTriple_eqRel hrt)
 
 /-- The bad flag threaded by `multipleBadQueryImpl` is monotone under a single per-query step:
 started from a `MultipleBadState` whose bad flag is set, every output state still has it set.

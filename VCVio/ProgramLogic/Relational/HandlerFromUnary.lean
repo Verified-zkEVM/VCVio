@@ -62,7 +62,10 @@ open Std.Do
 namespace OracleComp.ProgramLogic.Relational
 
 variable {ι₁ ι₂ : Type} {spec₁ : OracleSpec.{0, 0} ι₁} {spec₂ : OracleSpec.{0, 0} ι₂}
-variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
+variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
+  [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
+  [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 variable {σ₁ σ₂ α β : Type}
 
 /-! ### Per-call lifts (one transformer layer) -/
@@ -173,7 +176,7 @@ extracts output equality and the state-relation invariant from a paired
 instance of the two unary postconditions, which is exactly the bridge
 needed by `relTriple_simulateQ_run`. -/
 theorem relTriple_simulateQ_run_of_triples
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec₂)))
     (R_state : σ₁ → σ₂ → Prop)
@@ -221,7 +224,7 @@ are evaluated at the resulting step writer. Typical instantiations are
 `countingOracle_triple` and `costOracle_triple` with `qc₀ = 0` /
 `s₀ = 1`. -/
 theorem relTriple_simulateQ_run_writerT_of_triples
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {ω₁ ω₂ : Type} [Monoid ω₁] [Monoid ω₂]
     (impl₁ : QueryImpl spec (WriterT ω₁ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (WriterT ω₂ (OracleComp spec₂)))
@@ -263,7 +266,7 @@ theorem relTriple_simulateQ_run_writerT_of_triples
 
 Drops the writer component, leaving only `EqRel α` on outputs. -/
 theorem relTriple_simulateQ_run_writerT'_of_triples
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {ω₁ ω₂ : Type} [Monoid ω₁] [Monoid ω₂]
     (impl₁ : QueryImpl spec (WriterT ω₁ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (WriterT ω₂ (OracleComp spec₂)))
@@ -295,10 +298,10 @@ theorem relTriple_simulateQ_run_writerT'_of_triples
 
 Drops the final state from both sides, leaving only a relational equality
 on the return values. This is the canonical shape needed for probability
-transport (via `probOutput_eq_of_relTriple_eqRel`), matching
+transport (via `prEvent_eq_of_relTriple_eqRel`), matching
 `relTriple_simulateQ_run'` at the handler-triple layer. -/
 theorem relTriple_simulateQ_run'_of_triples
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec₂)))
     (R_state : σ₁ → σ₂ → Prop)
@@ -334,7 +337,8 @@ The lemmas below convert `Std.Do.Triple` invariant specs produced by
 recommended entry point from the `mvcgen` proof style into whole-program
 relational reasoning. -/
 
-omit [IsUniformSpec spec₁] in
+omit [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
+  [OracleSpec.IsMeasureSpec spec₁] [∀ t, Finite (spec₁.Range t)] in
 /-- Convert a unary `Std.Do.Triple` invariant-preservation spec into the
 `support`-based preservation hypothesis consumed by
 `relTriple_simulateQ_run_of_impl_eq_preservesInv` and friends.
@@ -411,7 +415,9 @@ theorem relTriple_simulateQ_run_of_impl_eq_triple
 
 section SmokeTests
 
-variable {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι} [∀ t, MeasurableSpace (spec.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+  [∀ t, Finite (spec.Range t)]
 variable [DecidableEq ι]
 
 /-- Smoke test: independent product coupling for two `cachingOracle` runs

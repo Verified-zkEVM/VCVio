@@ -153,7 +153,10 @@ theorem sigma_hvzk (g : G) [Finite F] :
     simp [h_eq, add_smul, mul_smul, add_sub_cancel_right]
   · show _ = Pr[= t | simTranscript F G g pk]
     unfold simTranscript
-    apply probOutput_eq_of_relTriple_eqRel (x := t)
+    let : MeasurableSpace (G × F × F) := ⊤
+    rw [← evalDist_apply_singleton, ← evalDist_apply_singleton]
+    refine congrArg (· {t})
+      (evalDist_eq_of_relTriple_eqRel (spec₁ := unifSpec) (spec₂ := unifSpec) ?_)
     rvcstep
     intro c _ hc; subst hc
     rvcstep using (· + c * sk)

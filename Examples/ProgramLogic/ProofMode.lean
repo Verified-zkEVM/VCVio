@@ -26,7 +26,9 @@ open scoped OracleComp.ProgramLogic
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
+variable [∀ t, Finite (spec.Range t)]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α β γ : Type}
 
 /-! ## Handler normalization -/
@@ -56,24 +58,23 @@ example {g₁ g₂ g₃ : OracleComp spec α}
 section ByUpto
 
 variable {σ : Type} {ι : Type} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
-variable {α : Type}
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
+variable {α : Type} [MeasurableSpace α]
 
 example
     (impl₁ impl₂ : QueryImpl spec (StateT σ (OracleComp spec)))
-    (bad : σ → Prop) [DecidablePred bad]
+    (bad : σ → Prop)
     (oa : OracleComp spec α) (s₀ : σ)
-    (h_init : ¬bad s₀)
     (h_agree : ∀ (t : spec.Domain) (s : σ), ¬bad s →
       (impl₁ t).run s = (impl₂ t).run s)
     (h_mono₁ : ∀ (t : spec.Domain) (s : σ), bad s →
       ∀ x ∈ support ((impl₁ t).run s), bad x.2)
     (h_mono₂ : ∀ (t : spec.Domain) (s : σ), bad s →
       ∀ x ∈ support ((impl₂ t).run s), bad x.2) :
-    tvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
-      ≤ Pr[ bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀].toReal := by
+    measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
+      ≤ Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2] := by
   by_upto bad
-  · exact h_init
   · exact h_agree
   · exact h_mono₁
   · exact h_mono₂
@@ -85,7 +86,9 @@ end ByUpto
 section RelSim
 
 variable {σ₁ σ₂ : Type} {ι : Type} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
+variable [∀ t, Finite (spec.Range t)]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example
@@ -127,7 +130,9 @@ end RelSim
 section RelSimDist
 
 variable {σ : Type} {ι : Type} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
+variable [∀ t, Finite (spec.Range t)]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example
@@ -135,7 +140,7 @@ example
     (impl₂ : QueryImpl spec (StateT σ (OracleComp spec)))
     (oa : OracleComp spec α)
     (himpl : ∀ (t : spec.Domain) (s : σ),
-      𝒮[(impl₁ t).run s] = 𝒮[(impl₂ t).run s])
+      letI : MeasurableSpace (spec.Range t × σ) := ⊤; 𝒟[(impl₁ t).run s] = 𝒟[(impl₂ t).run s])
     (s₁ s₂ : σ) (hs : s₁ = s₂) :
     ⟪(simulateQ impl₁ oa).run' s₁
      ~ (simulateQ impl₂ oa).run' s₂
@@ -185,8 +190,8 @@ end GameEquiv
 
 section ByDist
 
-example {game₁ game₂ : OracleComp spec Bool} {ε₁ ε₂ : ℝ}
-    (hbound : AdvBound game₁ ε₁) (htv : tvDist game₁ game₂ ≤ ε₂) :
+example {game₁ game₂ : OracleComp spec Bool} {ε₁ ε₂ : ℝ≥0∞}
+    (hbound : AdvBound game₁ ε₁) (htv : measureETVDist game₁ game₂ ≤ ε₂) :
     AdvBound game₂ (ε₁ + ε₂) := by
   by_dist ε₂
   · exact hbound
@@ -198,11 +203,13 @@ end ByDist
 
 section RelDist
 
-variable {ι : Type} {spec : OracleSpec ι} [IsUniformSpec spec]
+variable {ι : Type} {spec : OracleSpec ι} [∀ t, Finite (spec.Range t)]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example {oa ob : OracleComp spec α}
-    (h : 𝒮[oa] = 𝒮[ob]) :
+    (h : letI : MeasurableSpace α := ⊤; 𝒟[oa] = 𝒟[ob]) :
     ⟪oa ~ ob | EqRel α⟫ := by
   rel_dist
   exact h
