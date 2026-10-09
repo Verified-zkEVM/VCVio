@@ -11,16 +11,11 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Option
 /-!
 # Coverage of a perfect Merkle tree under a partial oracle
 
-What a settled reading of a perfect-tree program settles below it, when the oracle is
-interpreted into `Option`.  A settled subtree root settles the root of every subtree under it,
-hence every leaf and every internal hash query of that subtree
-(`exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq`,
-`exists_simulateQ_leaf_eq_some_of_merkleRootM`,
-`exists_simulateQ_nodeHash_eq_some_of_merkleRootM`).  A settled authentication path is settled
-entrywise: entry `j` is the settled root of the sibling subtree at height `j`
-(`simulateQ_intrinsicAuthPathM_eq_some_iff`).  A settled climb from a settled leaf along a
-settled authentication path settles every ancestor of the leaf, the running value of the climb
-being the settled sub-root at each height (`simulateQ_merkleRootM_div_pow_eq_some_of_climbM`).
+What a settled reading of a perfect-tree program settles below it, when the oracle is interpreted
+into `Option`.  A settled subtree root settles the root of every subtree under it
+(`exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq`).  A settled climb from a settled leaf along a
+settled authentication path settles every ancestor of the leaf, the running value of the climb being
+the settled sub-root at each height (`simulateQ_merkleRootM_div_pow_eq_some_of_climbM`).
 
 ## Scope
 
@@ -32,14 +27,11 @@ being the settled sub-root at each height (`simulateQ_merkleRootM_div_pow_eq_som
 
 ## Labels
 
-Five declarations.
+Two declarations.
 
-*Settled subtrees*: `exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq`,
-`exists_simulateQ_leaf_eq_some_of_merkleRootM`,
-`exists_simulateQ_nodeHash_eq_some_of_merkleRootM`.
+*Settled subtrees*: `exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq`.
 
-*Settled paths and climbs*: `simulateQ_intrinsicAuthPathM_eq_some_iff`,
-`simulateQ_merkleRootM_div_pow_eq_some_of_climbM`.
+*Settled climbs*: `simulateQ_merkleRootM_div_pow_eq_some_of_climbM`.
 -/
 
 public section
@@ -76,50 +68,7 @@ theorem exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq {z t : ℕ} {r : Y}
     · exact ih hl (by omega)
     · exact ih hr (by omega)
 
-/-- Every leaf of a settled subtree is settled. -/
-theorem exists_simulateQ_leaf_eq_some_of_merkleRootM {z t : ℕ} {r : Y}
-    (h : simulateQ impl (merkleRootM leaf nodeHash z t) = some r) {i : ℕ} (hi : i / 2 ^ z = t) :
-    ∃ v, simulateQ impl (leaf i) = some v :=
-  exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq impl leaf nodeHash h (Nat.zero_le z)
-    (by simpa using hi)
-
-/-- Every internal node of a settled subtree has its hash query settled at the settled roots of
-its two children. -/
-theorem exists_simulateQ_nodeHash_eq_some_of_merkleRootM {z t : ℕ} {r : Y}
-    (h : simulateQ impl (merkleRootM leaf nodeHash z t) = some r) (h' i : ℕ) (hpos : 0 < h')
-    (hle : h' ≤ z) (hi : i / 2 ^ (z - h') = t) :
-    ∃ l rr v, simulateQ impl (merkleRootM leaf nodeHash (h' - 1) (2 * i)) = some l ∧
-      simulateQ impl (merkleRootM leaf nodeHash (h' - 1) (2 * i + 1)) = some rr ∧
-      simulateQ impl (nodeHash h' i l rr) = some v := by
-  obtain ⟨v, hv⟩ := exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq impl leaf nodeHash h hle hi
-  obtain ⟨h'', rfl⟩ := Nat.exists_eq_succ_of_ne_zero hpos.ne'
-  obtain ⟨l, rr, hl, hr, hq⟩ :=
-    (simulateQ_merkleRootM_succ_eq_some_iff impl leaf nodeHash h'' i).mp hv
-  exact ⟨l, rr, v, hl, hr, hq⟩
-
-/-! ## Settled paths and climbs -/
-
-/-- An authentication path is settled exactly when it is settled entrywise: entry `j` is the
-settled root of the sibling subtree at height `j`. -/
-theorem simulateQ_intrinsicAuthPathM_eq_some_iff (idx : ℕ) {z : ℕ} {path : Vector Y z} :
-    simulateQ impl (intrinsicAuthPathM leaf nodeHash idx z) = some path ↔
-      ∀ j : Fin z, simulateQ impl (merkleRootM leaf nodeHash j (sibling (idx / 2 ^ j.val))) =
-        some path[j] := by
-  induction z with
-  | zero =>
-    simp only [intrinsicAuthPathM, simulateQ_pure_eq_some_iff]
-    exact ⟨fun _ j => j.elim0, fun _ => Vector.eq_empty.symm⟩
-  | succ z ih =>
-    rw [simulateQ_intrinsicAuthPathM_succ_eq_some_iff]
-    constructor
-    · rintro ⟨prefix_, sib, hpre, hsib, rfl⟩ j
-      refine Fin.lastCases ?_ (fun j => ?_) j
-      · simpa using hsib
-      · simpa [Vector.getElem_push] using ih.mp hpre j
-    · intro h
-      refine ⟨path.pop, path[z], ih.mpr fun j => ?_, ?_, Vector.push_pop_back path⟩
-      · simpa [Vector.getElem_pop] using h j.castSucc
-      · simpa using h (Fin.last z)
+/-! ## Settled climbs -/
 
 /-- If leaf `idx` is settled at `y`, its authentication path over `z` levels is settled at
 `path`, and the climb from `y` along `path` is settled at `v`, then the height-`z` ancestor of

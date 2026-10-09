@@ -31,9 +31,9 @@ The readers `wotsPkGenTopsWithSecret?`, `xmssNodeWithSecret?`, `xmssRootWithSecr
 `forsNodeWithSecret?` and `forsPkGenWithSecret?` are the honest programs under the cache.  The
 `*_eq_some_iff` lemmas decompose the WOTS+, XMSS, FORS, hypertree and Algorithm 19 programs into
 their settled draws and queries, each secret draw a separate settled-secret conjunct.  The coverage
-lemmas state that a signed-through XMSS tree is settled in its entirety, that key generation settles
-the top tree, and that a settled FORS signature whose recovered key is settled settles the honest
-FORS public key.
+lemmas state that a signed-through XMSS tree is settled along the signed leaf's root path, up to
+its honest root, and that a settled FORS signature whose recovered key is settled settles the
+honest FORS public key.
 
 ## Scope
 
@@ -41,8 +41,7 @@ FORS public key.
   `HashSig.SLHDSA.Security.CacheDecomposition`.
 * Key generation over a provider is the top-tree root program itself
   (`keygenInternalWithSecretM` is `GeneralHypertree.rootWithSecretM`), so the decomposition of
-  Algorithm 18 into a root reading and the assembled key pair has no counterpart here; the root
-  reading is what `exists_xmssNodeWithSecret?_eq_some_of_rootWithSecretM` consumes.
+  Algorithm 18 into a root reading and the assembled key pair has no counterpart here.
 * No property of any particular cache is proved here, and nothing here is probabilistic or quantum.
 
 ## Labels
@@ -71,17 +70,11 @@ FORS public key.
 *Signed-through XMSS tree*:
 `simulateQ_toPartialImpl_xmssLeafWithSecret_eq_some_of_xmssSignWithSecret`,
 `xmssNodeWithSecret?_div_pow_eq_some_of_xmssSignWithSecret`,
-`exists_xmssNodeWithSecret?_eq_some_of_sibling`,
-`exists_xmssNodeWithSecret?_eq_some_of_xmssSignWithSecret`,
-`xmssRootWithSecret?_eq_some_of_xmssSignWithSecret`,
-`exists_xmssNodeHash_entry_of_xmssSignWithSecret`.
-
-*Top tree from key generation*: `exists_xmssNodeWithSecret?_eq_some_of_rootWithSecretM`,
-`exists_secret_and_chainM_eq_some_of_rootWithSecretM`.
+`xmssRootWithSecret?_eq_some_of_xmssSignWithSecret`.
 
 *FORS coverage*: `forsPkGenWithSecret?_eq_some_of_forsSignWithSecret`.
 
-Twenty-eight declarations, none private.
+Twenty-three declarations, none private.
 -/
 
 public section
@@ -263,31 +256,9 @@ theorem xmssNodeWithSecret?_div_pow_eq_some_of_xmssSignWithSecret {root : core.Y
   exact ⟨hroot, fun z hz => PerfectMerkleTree.exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq
     _ _ _ hroot hz (PerfectMerkleTree.div_pow_eq_div_pow_div_pow idx z p.hp hz).symm⟩
 
-/-- Every node in a sibling subtree of the signed leaf's root path is settled by the signature
-alone. -/
-theorem exists_xmssNodeWithSecret?_eq_some_of_sibling {z s t : ℕ} (hzs : z ≤ s) (hs : s < p.hp)
-    (ht : t / 2 ^ (s - z) = PerfectMerkleTree.sibling (idx / 2 ^ s)) :
-    ∃ v, xmssNodeWithSecret? core c secret pk adrs z t = some v := by
-  obtain ⟨hpath, -⟩ := (simulateQ_toPartialImpl_xmssSignWithSecret_eq_some_iff core c secret msg
-    pk adrs idx).mp hsign
-  rw [PerfectMerkleTree.simulateQ_intrinsicAuthPathM_eq_some_iff] at hpath
-  exact PerfectMerkleTree.exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq _ _ _
-    (hpath ⟨s, hs⟩) hzs ht
-
 variable (hidx : idx < 2 ^ p.hp) {root : core.Y}
   (hrec : simulateQ c.toPartialImpl (xmssPkFromSigM core idx sig msg pk adrs) = some root)
 include hidx hrec
-
-/-- Every node of a tree signed through over a provider is settled. -/
-theorem exists_xmssNodeWithSecret?_eq_some_of_xmssSignWithSecret :
-    ∀ z t, z ≤ p.hp → t < 2 ^ (p.hp - z) →
-      ∃ v, xmssNodeWithSecret? core c secret pk adrs z t = some v := by
-  intro z t hz ht
-  rcases PerfectMerkleTree.eq_div_pow_or_exists_sibling hidx hz ht with rfl | ⟨s, hzs, hs, hsib⟩
-  · exact (xmssNodeWithSecret?_div_pow_eq_some_of_xmssSignWithSecret core c secret msg pk adrs
-      idx hsign hrec).2 z hz
-  · exact exists_xmssNodeWithSecret?_eq_some_of_sibling core c secret msg pk adrs idx hsign hzs
-      hs hsib
 
 /-- The honest root of a tree signed through over a provider is settled, at the recovered
 root. -/
@@ -296,22 +267,6 @@ theorem xmssRootWithSecret?_eq_some_of_xmssSignWithSecret :
   have h := (xmssNodeWithSecret?_div_pow_eq_some_of_xmssSignWithSecret core c secret msg pk adrs
     idx hsign hrec).1
   rwa [Nat.div_eq_of_lt hidx] at h
-
-/-- At every internal node `(h, i)` of a tree signed through over a provider the honest children
-are settled and the honest `H` entry at the node's `TREE` address, on those children, is in the
-cache. -/
-theorem exists_xmssNodeHash_entry_of_xmssSignWithSecret (h i : ℕ) (hpos : 0 < h) (hle : h ≤ p.hp)
-    (hi : i < 2 ^ (p.hp - h)) :
-    ∃ l r v, xmssNodeWithSecret? core c secret pk adrs (h - 1) (2 * i) = some l ∧
-      xmssNodeWithSecret? core c secret pk adrs (h - 1) (2 * i + 1) = some r ∧
-      c (.thash pk (core.adrsToKey (xmssNodeAdrs adrs h i)) [l, r]) = some v := by
-  obtain ⟨w, hw⟩ := exists_xmssNodeWithSecret?_eq_some_of_xmssSignWithSecret core c secret msg pk
-    adrs idx hsign hidx hrec h i hle hi
-  obtain ⟨h', rfl⟩ := Nat.exists_eq_succ_of_ne_zero hpos.ne'
-  simp only [xmssNodeWithSecret?, xmssNodeWithSecret, PerfectMerkleTree.merkleRootM,
-    simulateQ_bind_eq_some_iff, xmssNodeHashWith, simulateQ_toPartialImpl_h] at hw
-  obtain ⟨l, hl, r, hr, hq⟩ := hw
-  exact ⟨l, r, w, hl, hr, hq⟩
 
 end Xmss
 
@@ -440,39 +395,6 @@ theorem components_of_simulateQ_toPartialImpl_signInternalWithSecretRandomizerM
     (simulateQ_toPartialImpl_signInternalWithSecretRandomizerM_eq_some_iff core c secret msg
       pkSeed pkRoot R).mp h
   exact ⟨rfl, digest, forsPk, hd, hfs, hfp, hht⟩
-
-/-! ## The top tree from key generation -/
-
-variable (pk : core.PkSeed) {pkRoot : core.Y}
-  (h : simulateQ c.toPartialImpl (GeneralHypertree.rootWithSecretM core secret pk) = some pkRoot)
-include h
-
-/-- Every node of the top tree is settled by key generation over a provider. -/
-theorem exists_xmssNodeWithSecret?_eq_some_of_rootWithSecretM :
-    ∀ z t, z ≤ vp.params.hp → t < 2 ^ (vp.params.hp - z) →
-      ∃ v, xmssNodeWithSecret? core c secret pk
-        (GeneralHypertree.layerAdrs (vp.params.d - 1) 0) z t = some v := by
-  intro z t hz ht
-  exact PerfectMerkleTree.exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq _ _ _ h hz
-    (Nat.div_eq_of_lt ht)
-
-/-- Every WOTS+ chain of every leaf of the top tree is settled by key generation over a provider:
-its secret is settled, and the full chain from it is settled. -/
-theorem exists_secret_and_chainM_eq_some_of_rootWithSecretM (t : ℕ) (ht : t < 2 ^ vp.params.hp)
-    (i : Fin vp.params.len) :
-    ∃ x, simulateQ c.toPartialImpl (secret (wotsSkAdrs
-        (wotsLeafAdrs (GeneralHypertree.layerAdrs (vp.params.d - 1) 0) t) i.val)) = some x ∧
-      ∃ v, simulateQ c.toPartialImpl (chainM core pk
-        (wotsChainAdrs (wotsLeafAdrs (GeneralHypertree.layerAdrs (vp.params.d - 1) 0) t) i.val)
-        x 0 (vp.params.w - 1)) = some v := by
-  obtain ⟨leaf, hleaf⟩ := exists_xmssNodeWithSecret?_eq_some_of_rootWithSecretM core c secret pk
-    h 0 t (Nat.zero_le _) (by simpa using ht)
-  simp only [xmssNodeWithSecret?, xmssNodeWithSecret, PerfectMerkleTree.merkleRootM,
-    xmssLeafWithSecret, wotsPkGenWithSecret, simulateQ_bind_eq_some_iff] at hleaf
-  obtain ⟨tops, htops, -⟩ := hleaf
-  obtain ⟨x, hx, hchain⟩ := (wotsPkGenTopsWithSecret?_eq_some_iff core c
-    secret pk _).mp htops i
-  exact ⟨x, hx, tops[i], hchain⟩
 
 end Hypertree
 
