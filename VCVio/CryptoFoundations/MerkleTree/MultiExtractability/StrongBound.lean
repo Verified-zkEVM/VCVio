@@ -512,9 +512,7 @@ theorem Adversary.isAdversaryPrefixQueryBound_of_schedule
 The single `queryBound` covers every adaptive commitment phase and terminal opening production
 along each complete adversarial execution. Honest batch verification is excluded from that budget
 and charged separately through `verifierOverhead`. The conclusion bounds the full three-branch
-strong failure event under one shared cached homogeneous random oracle. The uniform-measure
-premise fixes the native oracle semantics; the proof uses an explicit compatibility certificate
-to transport the finite counting bound from the uniform point-mass interpretation. -/
+strong failure event under one shared cached homogeneous random oracle. -/
 theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y] [Inhabited Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
