@@ -22,11 +22,13 @@ statement is not degenerate.
 * **The verifier term is a separate term.** At zero budget the right-hand side is exactly
   `(r + 1) · verifyInternalQueryBound / |Y|` (`securityBound_zero`), so the target does not force an
   adversary that makes no query to have advantage zero: the verifier's own queries can still fire.
-* **Signing queries enter only through the coverage term.** With no hash query the right-hand side
-  is the coverage term plus the verifier term at every signing budget (`securityBound_qh_zero`).
+* **Signing queries enter only through the coverage term.** With no hash query the weighted
+  coverage term is the unweighted `targetCoverBound h a k qs`, and the right-hand side is that term
+  plus the verifier term at every signing budget (`securityBound_qh_zero`).
 * **The target is not vacuous at a real parameter set.** At SLH-DSA-128s, with `qh = qs = 2^64`,
-  `|Y| = 2^128`, `c = 8` and `r = 7`, the right-hand side is below one (`securityBound_128s_lt_one`;
-  crudely below `2^-33`).
+  `|Y| = 2^128`, `c = 2` and `r = 1`, the constants at which the target is proved, the right-hand
+  side is below one (`securityBound_128s_lt_one`; crudely below `2^-21`, bounding the weight
+  `qs / |Y|` by one).
 * **The verifier count** is `3929` at 128s and `17522` at 256f (`verifyInternalQueryBound_128s`,
   `verifyInternalQueryBound_256f`), the counts of FIPS 205 Algorithm 20 with full chain
   completions.
@@ -118,13 +120,13 @@ open KeyedHash.Covering
 theorem securityBound_zero (p : Params) (hk : 0 < p.k) (card c r : ℕ) :
     securityBound p card c r 0 0 =
       ((r + 1) * GeneralScheme.verifyInternalQueryBound p : ℕ) * (card : ℝ≥0∞)⁻¹ := by
-  simp [securityBound, targetCoverBound_zero p.h p.a p.k hk]
+  simp [securityBound, weightedTargetCoverBound_qw_zero, targetCoverBound_zero p.h p.a p.k hk]
 
 theorem securityBound_qh_zero (p : Params) (card c r qs : ℕ) :
     securityBound p card c r 0 qs =
       targetCoverBound p.h p.a p.k qs +
         ((r + 1) * GeneralScheme.verifyInternalQueryBound p : ℕ) * (card : ℝ≥0∞)⁻¹ := by
-  simp [securityBound]
+  simp [securityBound, weightedTargetCoverBound_qw_zero]
 
 theorem verifyInternalQueryBound_128s :
     GeneralScheme.verifyInternalQueryBound
@@ -148,36 +150,42 @@ theorem targetCoverBound_le (h a k qs : ℕ) :
       _ = r ^ k := by simp
 
 theorem term_128s (r : ℕ) :
-    (((2 ^ 64) ^ r * r ^ 14 : ℕ) : ℝ≥0∞) * ((((2 : ℝ≥0∞) ^ 63)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ 12)⁻¹) ^ 14)
-      = ((2 ^ r * r ^ 14 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹ := by
-  have e : ((2 ^ 64) ^ r * r ^ 14 : ℕ) = (2 ^ r * r ^ 14) * 2 ^ (63 * r) := by
-    rw [← pow_mul, show 64 * r = r + 63 * r by ring, pow_add]; ring
+    (((2 ^ 65) ^ r * r ^ 14 : ℕ) : ℝ≥0∞) * ((((2 : ℝ≥0∞) ^ 63)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ 12)⁻¹) ^ 14)
+      = ((4 ^ r * r ^ 14 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹ := by
+  have e : ((2 ^ 65) ^ r * r ^ 14 : ℕ) = (4 ^ r * r ^ 14) * 2 ^ (63 * r) := by
+    rw [← pow_mul, show 65 * r = 2 * r + 63 * r by ring, pow_add, pow_mul]; ring
   rw [e]
   push_cast
   rw [← ENNReal.inv_pow, ← ENNReal.inv_pow, ← pow_mul, ← pow_mul, ENNReal.inv_pow,
     ENNReal.inv_pow]
-  calc (2 : ℝ≥0∞) ^ r * (r : ℝ≥0∞) ^ 14 * 2 ^ (63 * r) * (2⁻¹ ^ (63 * r) * 2⁻¹ ^ (12 * 14))
-      = 2 ^ r * (r : ℝ≥0∞) ^ 14 * (2 ^ (63 * r) * 2⁻¹ ^ (63 * r)) * 2⁻¹ ^ 168 := by ring
-    _ = 2 ^ r * (r : ℝ≥0∞) ^ 14 * (2 ^ 168)⁻¹ := by
+  calc (4 : ℝ≥0∞) ^ r * (r : ℝ≥0∞) ^ 14 * 2 ^ (63 * r) * (2⁻¹ ^ (63 * r) * 2⁻¹ ^ (12 * 14))
+      = 4 ^ r * (r : ℝ≥0∞) ^ 14 * (2 ^ (63 * r) * 2⁻¹ ^ (63 * r)) * 2⁻¹ ^ 168 := by ring
+    _ = 4 ^ r * (r : ℝ≥0∞) ^ 14 * (2 ^ 168)⁻¹ := by
       rw [← mul_pow, ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top, one_pow, mul_one,
         ENNReal.inv_pow]
-    _ = 2 ^ r * (r : ℝ≥0∞) ^ 14 * 2⁻¹ ^ (12 * 14) := by rw [ENNReal.inv_pow]
+    _ = 4 ^ r * (r : ℝ≥0∞) ^ 14 * 2⁻¹ ^ (12 * 14) := by rw [ENNReal.inv_pow]
 
 theorem securityBound_128s_lt_one :
-    securityBound (FipsParameterSet.SLHDSA_SHA2_128s.validatedParams).params (2 ^ 128) 8 7
+    securityBound (FipsParameterSet.SLHDSA_SHA2_128s.validatedParams).params (2 ^ 128) 2 1
       (2 ^ 64) (2 ^ 64) < 1 := by
   have hp : (FipsParameterSet.SLHDSA_SHA2_128s.validatedParams).params.h = 63 ∧
       (FipsParameterSet.SLHDSA_SHA2_128s.validatedParams).params.a = 12 ∧
       (FipsParameterSet.SLHDSA_SHA2_128s.validatedParams).params.k = 14 := by decide
   have hV := verifyInternalQueryBound_128s
   rw [securityBound, hp.1, hp.2.1, hp.2.2, hV]
-  have hN : (∑ r ∈ Finset.range 15, (2 ^ r * r ^ 14 : ℕ)) < 2 ^ 70 := by decide
-  have hI : targetCoverBound 63 12 14 (2 ^ 64) ≤ ((2 ^ 70 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹ := by
+  have hN : (∑ r ∈ Finset.range 15, (4 ^ r * r ^ 14 : ℕ)) < 2 ^ 82 := by decide
+  have hw : ((2 ^ 64 : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞) ≤ 1 :=
+    ENNReal.div_le_of_le_mul (by rw [one_mul]; exact Nat.cast_le.2 (by norm_num))
+  have hI : weightedTargetCoverBound 63 12 14 (2 ^ 64) (2 ^ 64)
+      (((2 ^ 64 : ℕ) : ℝ≥0∞) / ((2 ^ 128 : ℕ) : ℝ≥0∞)) ≤
+        ((2 ^ 82 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹ := by
+    refine (monotone_weightedTargetCoverBound _ _ _ _ _ hw).trans ?_
+    rw [weightedTargetCoverBound_weight_one, show 2 ^ 64 + 2 ^ 64 = 2 ^ 65 by norm_num]
     refine (targetCoverBound_le _ _ _ _).trans ?_
     simp_rw [term_128s, ← Finset.sum_mul, ← Nat.cast_sum]
     gcongr
-  have key : ((2 ^ 64 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 70 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹) +
-      ((8 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((7 + 1) * 3929 : ℕ) : ℝ≥0∞)) *
+  have key : ((2 ^ 64 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 82 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹) +
+      ((2 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((1 + 1) * 3929 : ℕ) : ℝ≥0∞)) *
         (((2 ^ 128 : ℕ) : ℝ≥0∞))⁻¹ < 1 := by
     rw [← ENNReal.toReal_lt_toReal (by finiteness) ENNReal.one_ne_top]
     rw [ENNReal.toReal_add (by finiteness) (by finiteness)]
