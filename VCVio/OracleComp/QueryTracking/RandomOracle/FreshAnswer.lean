@@ -27,14 +27,9 @@ of `Φ` that the step pays.  The engine is `evalDist_bind_apply_setOf_and_le_of_
 is followed by a terminal continuation `g` on its final output and state, charged by its own
 hypothesis: from a final state where `P` fails, `g` fires its event below the budget `K` with mass
 at most `K - Φ`, and never lowers the potential.  Then from a state `s` where `P` fails, the run
-followed by `g` fires below `K` with mass at most `K - Φ s`.  Taking `g` to be a second run, under
-a second handler and with its own bad predicate and potential on its own state, gives the
-two-phase bound `evalDist_bind_run_apply_setOf_and_le_of_potential`: both phases are charged
-against one budget, the second through the engine itself, provided the handover from the first
-final state to the second start state keeps the bad predicate failing and does not lower the
-potential.  Taking `g` to be an independent draw `x ← mx`, whose hazard `H x` fires at each final
-state with probability at most a weight `c`, gives `prEvent_bind_draw_and_le_of_potential`, which
-charges the draw `c` on top of the potential.
+followed by `g` fires below `K` with mass at most `K - Φ s`.  Taking `g` to be an independent draw
+`x ← mx`, whose hazard `H x` fires at each final state with probability at most a weight `c`,
+gives `prEvent_bind_draw_and_le_of_potential`, which charges the draw `c` on top of the potential.
 
 ## Scope
 
@@ -50,29 +45,16 @@ charges the draw `c` on top of the potential.
   needs `simp [h]` rather than `rw [h]`, since the instance is not syntactically the ambient one.
   The `prEvent_…` forms state the same bounds with the events observed in `Prop` by
   `Pr{…}[…]`, and take no measurable-space argument at all.
-* In the two-phase bound the second handler `so₂`, its bad predicate `P₂` and its potential `Φ₂`
-  are fixed independently of the handover: they cannot depend on the first phase's output or
-  final state.  When the second phase's predicate depends on the first phase's result, or a
-  third phase follows, either use the continuation form with the dependence inside `g` (the
-  continuation forms nest), or lift the second phase's state so that it carries the first
-  phase's data.
 * Nothing here is quantum: the handlers are classical stateful samplers.
 
 ## Labels
 
-Seven declarations.
-
-*The potential engine*:
+Five declarations.
 
 * `OracleComp.le_of_mem_support_run_simulateQ_of_step`, `OracleComp.IsPotentialStep`,
   `OracleComp.evalDist_bind_apply_setOf_and_le_of_potential`,
   `OracleComp.prEvent_bind_and_le_of_potential`,
   `OracleComp.prEvent_bind_draw_and_le_of_potential`.
-
-*Two phases*:
-
-* `OracleComp.evalDist_bind_run_apply_setOf_and_le_of_potential`,
-  `OracleComp.prEvent_bind_run_and_le_of_potential`.
 -/
 
 public section
@@ -234,71 +216,5 @@ theorem prEvent_bind_draw_and_le_of_potential {so : QueryImpl spec (StateT σ Pr
       exact zero_le
 
 end Potential
-
-/-! ## Two phases -/
-
-section TwoPhase
-
-variable {ι ι₂ : Type} {spec : OracleSpec ι} {spec₂ : OracleSpec ι₂} {σ σ₂ α β : Type}
-  {so₁ : QueryImpl spec (StateT σ ProbComp)} {P₁ : σ → Prop} {Φ₁ : σ → ℝ≥0∞}
-  {so₂ : QueryImpl spec₂ (StateT σ₂ ProbComp)} {P₂ : σ₂ → Prop} {Φ₂ : σ₂ → ℝ≥0∞}
-
-/-- **The potential-charged first-fire bound across two phases.**  A run under the handler `so₁`
-is followed by a run of a program `ob z` under a second handler `so₂`, started from a state
-`init z` computed from the first run's final output and state `z`.  Each handler charges its own
-bad predicate to its own potential (`IsPotentialStep`; `P₁`, `Φ₁` on `σ` and `P₂`, `Φ₂` on `σ₂`),
-and the handover preserves both: a state where `P₁` fails starts the second phase where `P₂`
-fails, and `Φ₁` never exceeds the starting `Φ₂`.  Then from a state where `P₁` fails the two
-phases end in a state firing `P₂` with `Φ₂ ≤ K` with mass at most `K - Φ₁ s`: the firing mass of
-both phases is charged against the one budget `K`.
-
-The measurable-space instance on `β × σ₂` is pinned to `⊤` inside the statement; a consumer must
-fix `⊤` too. -/
-theorem evalDist_bind_run_apply_setOf_and_le_of_potential
-    (h₁ : IsPotentialStep so₁ P₁ Φ₁) (h₂ : IsPotentialStep so₂ P₂ Φ₂)
-    (init : α × σ → σ₂) (hinitP : ∀ z, ¬ P₁ z.2 → ¬ P₂ (init z))
-    (hinitΦ : ∀ z, Φ₁ z.2 ≤ Φ₂ (init z))
-    (oa : OracleComp spec α) (ob : α × σ → OracleComp spec₂ β) (K : ℝ≥0∞) (hK' : K ≠ ⊤) :
-    ∀ s : σ, ¬ P₁ s →
-      (letI : MeasurableSpace (β × σ₂) := ⊤;
-        𝒟[(simulateQ so₁ oa).run s >>= fun z => (simulateQ so₂ (ob z)).run (init z)]
-          {y | P₂ y.2 ∧ Φ₂ y.2 ≤ K} ≤ K - Φ₁ s) := by
-  let _ : MeasurableSpace (β × σ₂) := ⊤
-  refine evalDist_bind_apply_setOf_and_le_of_potential h₁
-    (fun z => (simulateQ so₂ (ob z)).run (init z)) (fun y => P₂ y.2) (fun y => Φ₂ y.2) K hK'
-    (fun z y hy => ?_) (fun z hz => ?_) oa
-  · exact (hinitΦ z).trans
-      (le_of_mem_support_run_simulateQ_of_step so₂ Φ₂ h₂.mono (ob z) (init z) hy)
-  · rw [← bind_pure ((simulateQ so₂ (ob z)).run (init z))]
-    refine (evalDist_bind_apply_setOf_and_le_of_potential h₂ pure (fun y => P₂ y.2)
-      (fun y => Φ₂ y.2) K hK' (fun _ y hy => ?_) (fun y hy => ?_) (ob z) (init z)
-      (hinitP z hz)).trans (tsub_le_tsub_left (hinitΦ z) K)
-    · rw [support_pure, Set.mem_singleton_iff] at hy
-      rw [hy]
-    · rw [evalDist_pure, Measure.dirac_apply' _ MeasurableSet.of_discrete,
-        Set.indicator_of_notMem (fun h => hy h.1)]
-      exact zero_le
-
-/-- **The potential-charged first-fire bound across two phases, as an event probability.**  A
-run under the handler `so₁` is followed by a run of a program `ob z` under a second handler
-`so₂`, started from a state `init z` computed from the first run's final output and state `z`.
-Each handler charges its own bad predicate to its own potential (`IsPotentialStep`; `P₁`, `Φ₁` on
-`σ` and `P₂`, `Φ₂` on `σ₂`), and the handover preserves both: a state where `P₁` fails starts the
-second phase where `P₂` fails, and `Φ₁` never exceeds the starting `Φ₂`.  Then from a state where
-`P₁` fails the two phases end in a state firing `P₂` with `Φ₂ ≤ K` with probability at most
-`K - Φ₁ s`. -/
-theorem prEvent_bind_run_and_le_of_potential
-    (h₁ : IsPotentialStep so₁ P₁ Φ₁) (h₂ : IsPotentialStep so₂ P₂ Φ₂)
-    (init : α × σ → σ₂) (hinitP : ∀ z, ¬ P₁ z.2 → ¬ P₂ (init z))
-    (hinitΦ : ∀ z, Φ₁ z.2 ≤ Φ₂ (init z))
-    (oa : OracleComp spec α) (ob : α × σ → OracleComp spec₂ β) (K : ℝ≥0∞) (hK' : K ≠ ⊤)
-    (s : σ) (hs : ¬ P₁ s) :
-    Pr{let z ← (simulateQ so₁ oa).run s; let y ← (simulateQ so₂ (ob z)).run (init z)}[
-      P₂ y.2 ∧ Φ₂ y.2 ≤ K] ≤ K - Φ₁ s := by
-  let _ : MeasurableSpace (β × σ₂) := ⊤
-  rw [← bind_assoc, prEvent_eq_evalDist_of_discrete]
-  exact evalDist_bind_run_apply_setOf_and_le_of_potential h₁ h₂ init hinitP hinitΦ oa ob K hK' s hs
-
-end TwoPhase
 
 end OracleComp
