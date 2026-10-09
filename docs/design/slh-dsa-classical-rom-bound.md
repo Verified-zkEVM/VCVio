@@ -5,22 +5,38 @@ FIPS 205 SLH-DSA is accounted, records the levels that accounting reaches, and c
 with the 127-bit proof for a SPHINCS variant in
 [`leanEthereum/leanVM`](https://github.com/leanEthereum/leanVM) (`formal/sphincs`), whose argument
 this work draws on. The development is in pull request #766; the implementation status of `main`
-is in [`slh-dsa-status-and-roadmap.md`](slh-dsa-status-and-roadmap.md). Of the bound below, the
-joint target-collision and hidden-value term `2(q_h + V) / 2^{8n}`, with `V` the verifier's query
-bound `verifyInternalQueryBound` and the seed guess charged inside it, is proved in Lean for each
-fixed public seed (`prEvent_romSchemeRun_runTargetCollision_or_runHiddenHit_le`,
-`HashSig/SLHDSA/Security/JointBound.lean`; stated over `|Y|`, which is `2^{8n}` at the FIPS 205
-bundles), under the key discipline and `|Y| ≤ |SK.prf|`, both discharged at every FIPS 205 bundle.
-With the union bound split after the first game hop, it gives, per public seed, a forging
-advantage of at most that term plus the probability of interleaved-target coverage in the ideal
-hidden-seed game (`unforgeableAdvantage_romScheme_pure_le_add_idealDraw`), in which every secret
-value and randomizer is sampled independently of the public answers. The same bound with the
-coverage probability of the run in place of the ideal one
+is in [`slh-dsa-status-and-roadmap.md`](slh-dsa-status-and-roadmap.md).
+
+**What is proved.** The three-oracle bound `securityBound` at `c = 2` and `r = 1` is proved in Lean
+for each fixed public seed, in both signing modes: `securityTarget_two_one`
+(`HashSig/SLHDSA/Security/CoverageBound.lean`) proves `SecurityTarget core e optRand 2 1` under the
+byte laws, the key discipline and `|Y| ≤ |SK.prf|`, all three discharged at every FIPS 205 bundle,
+with `optRand` arbitrary. `unforgeableAdvantage_romScheme_le_securityBound` averages it over any
+distribution of the public seed, the uniform one of FIPS 205 included. The bound is stated over
+`|Y|`, which is `2^{8n}` at the FIPS 205 bundles, and is the sum of two proved terms:
+
+- the joint target-collision and hidden-value term `2(q_h + V) / 2^{8n}`, with `V` the verifier's
+  query bound `verifyInternalQueryBound` and the seed guess charged inside it
+  (`prEvent_romSchemeRun_runTargetCollision_or_runHiddenHit_le`,
+  `HashSig/SLHDSA/Security/JointBound.lean`). With the union bound split after the first game hop,
+  the forging advantage is at most that term plus the probability of interleaved-target coverage in
+  the ideal hidden-seed game (`unforgeableAdvantage_romScheme_pure_le_add_idealDraw`), in which
+  every secret value and randomizer is sampled independently of the public answers;
+- the coverage term `(q_h + 1) · weightedTargetCoverBound h a k q_s q_h (q_s / 2^{8n})`, which
+  bounds that coverage probability (`prEvent_idealDraw_runItsrCovered_le`).
+
+The same bound with the coverage probability of the run in place of the ideal one
 (`unforgeableAdvantage_romScheme_pure_le_add`) also holds, but for deterministic signing its
 coverage term is not bounded at the size of the target's coverage term
-([Coverage after the seed hop](#coverage-after-the-seed-hop)). The coverage term and the
-faithfulness step are not yet proved, so no full bound below is proved; the levels are evaluations
-of the target formula, not Lean results.
+([Coverage after the seed hop](#coverage-after-the-seed-hop)).
+
+**What is not proved.** The faithfulness step relating the three-oracle model to the byte-level
+scheme over a single SHAKE256 is not proved. Nor, therefore, are its losses: the deterministic
+signing term `q_s / 2^{8n}`, and at `n = 32` the routing argument that the byte-level reading of
+the `n = 32` rows of the levels table assumes ([Levels](#levels)). Of the levels below, the
+"Hedged" column evaluates the proved three-oracle bound, and reading it as a level of the
+byte-level scheme needs the faithfulness step; the other columns evaluate formulas that are not
+Lean results.
 
 ## The statement
 
@@ -72,9 +88,16 @@ gives a constant of 4.
 
 Beside the forger's `2·q_h / 2^{8n}`, the bound has two terms:
 
-- the interleaved-target coverage `(q_h + 1) · targetCoverBound h a k q_s`
-  (`VCVio/CryptoFoundations/HardnessAssumptions/KeyedHash/Covering.lean`), which equals
-  `2^{−ak}·E[Bin(q_s, 2^{−h})^k]`, outside the potential;
+- the interleaved-target coverage `(q_h + 1) · weightedTargetCoverBound h a k q_s q_h w` at
+  `w = q_s / 2^{8n}` (`VCVio/CryptoFoundations/HardnessAssumptions/KeyedHash/Covering.lean`),
+  outside the potential. A FORS digit of the target can be covered by the digest of one of the
+  `q_s` signing queries, at weight one, or by one of the forger's own `H_msg` answers at another
+  position, at weight `w`: a signature carries such an answer only if a fresh randomizer of a
+  signing query hits that answer's point, which has probability at most `q_s / 2^{8n}`. For
+  `w ≤ 1` the term equals `2^{−ak}·E[(Bin(q_s, 2^{−h}) + Bin(q_h, w·2^{−h}))^k]`; at `w = 0` or
+  `q_h = 0` it is the unweighted `targetCoverBound h a k q_s`, which equals
+  `2^{−ak}·E[Bin(q_s, 2^{−h})^k]` and is at most the weighted term at every weight
+  (`targetCoverBound_le_weightedTargetCoverBound`);
 - the verifier's own queries, `(r + 1) · verifyInternalQueryBound` at `r = 1`, two hazards each.
 
 The three-oracle bound (`securityBound` in `Target.lean`) has no term linear in `q_s`, in either
@@ -98,17 +121,26 @@ A proof that bounds coverage as a separate summand therefore takes it after the 
 ideal hidden-seed game, as `unforgeableAdvantage_romScheme_pure_le_add_idealDraw` does. There the
 coverage event reads only the `H_msg` answers of the public cache, and its probability does not
 depend on the secret seeds (`prEvent_idealDraw_runItsrCovered_eq`). A forger can still query a
-signer's `H_msg` point before the signer does, by guessing the signer's fresh randomizer, so a
-coverage bound proved in that game carries a term for forger pre-queries hitting signer points.
-Whether the coverage form of `securityBound`, `(q_h + 1) · targetCoverBound h a k q_s`, holds in
-the ideal game is open.
+signer's `H_msg` point before the signer does, by guessing the signer's fresh randomizer, so the
+coverage bound proved in that game carries a term for forger pre-queries hitting signer points:
+the forger's own `H_msg` answers count as coverers at weight `q_s / 2^{8n}`, which is the
+coverage term `(q_h + 1) · weightedTargetCoverBound h a k q_s q_h (q_s / 2^{8n})` of
+`securityBound` (`prEvent_idealDraw_runItsrCovered_le`). The proof runs the ideal game on
+class-indexed answer tapes, the forger's and the signer's `H_msg` answers on separate tapes, and
+bounds every witness of coverage by the product of its tape mass and the probability that fresh
+randomizer draws hit its forger-tape coverers. The unweighted form
+`(q_h + 1) · targetCoverBound h a k q_s` is not proved in the ideal game; at the budgets of the
+levels table the two forms give the same levels to four decimals.
 
 ### Levels
 
-Per-query level `−log₂(bound / q_h)` at `q_h = q_s = 2^64`. Every column evaluates the target
-formula; none is a Lean result. "Hedged" is the three-oracle bound, which holds in both signing
-modes; "Deterministic" adds to it the `q_s / 2^{8n}` term that the byte-level statement carries for
-deterministic signing. "Two-hazard limit" is the level with the coverage term and the constant 2
+Per-query level `−log₂(bound / q_h)` at `q_h = q_s = 2^64`. "Hedged" evaluates the three-oracle
+bound `securityBound` at `c = 2`, `r = 1`, which is proved per public seed and holds in both signing
+modes; with the weighted coverage term these levels are those of the unweighted term to four
+decimals at every set. The other columns are evaluations of formulas, not Lean results.
+"Deterministic" adds to the three-oracle bound the `q_s / 2^{8n}` term that the byte-level
+statement carries for deterministic signing, and the faithfulness step that would prove it is not
+proved. "Two-hazard limit" is the level with the coverage term and the constant 2
 alone; `8n − 1` is the level of `Adv ≤ q_h / 2^{8n−1}`. The last column is the coverage term's cost
 in units of `q_h / 2^{8n}`.
 
@@ -121,7 +153,7 @@ in units of `q_h / 2^{8n}`.
 | 256s | 254.41 | 254.00 | 253.41 | 254.41 | 255 | 1.00 |
 | 256f | 254.27 | 253.89 | 253.34 | 254.27 | 255 | 1.32 |
 
-`targetCoverBound` relaxes the exact coverage probability of the interleaved-target event. With
+The coverage term relaxes the exact coverage probability of the interleaved-target event. With
 the exact probability instead, the coverage costs drop to 0.10 (128f), 0.11 (192f) and 1.06
 (256f), and the hedged levels rise to 126.93, 190.92 and 254.39; the other sets change by at most
 0.01. At `q_s ≤ 2^62` the coverage term is negligible at every set, and the two-hazard limit is
