@@ -62,7 +62,7 @@ general: a trivial adversary always querying salt `s` makes the bad event for
 `s` certain. The textbook lemma silently averages over the uniform salt, which
 `hiding_bound_finite` makes explicit by sampling the salt inside a packaged
 `HidingAvgSpec` experiment. -/
-theorem hiding_bound_avg [Finite M] [MeasurableSpace C] [MeasurableSingletonClass C]
+theorem hiding_bound_avg [Finite M]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     (∑ s : S, measureETVDist (hidingReal A s) (hidingSim A s)) / (Fintype.card S : ℝ≥0∞) ≤
@@ -85,18 +85,20 @@ oracle) and then run the corresponding per-salt game.
 This is the textbook-facing wrapper around `hiding_bound_avg`: it pushes the
 salt sampling through `measureETVDist_bind_bind_le_lintegral`, leaving the
 per-salt sum that `hiding_bound_avg` already controls. -/
-theorem hiding_bound_finite [Finite M] [MeasurableSpace C] [MeasurableSingletonClass C]
-    [MeasurableSpace S] [MeasurableSingletonClass S] {AUX : Type} {t : ℕ}
+theorem hiding_bound_finite [Finite M]
+    {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     measureETVDist (hidingMixedReal (M := M) (S := S) (C := C) A)
       (hidingMixedSim (M := M) (S := S) (C := C) A) ≤
       t / (Fintype.card S : ℝ≥0∞) := by
+  let : MeasurableSpace S := ⊤
   refine (measureETVDist_bind_bind_le_lintegral _ _ _ Measurable.of_discrete
     Measurable.of_discrete (fun s => measureETVDist (hidingReal A s) (hidingSim A s))
     (ae_of_all _ fun s => ?_)).trans ?_
   · simp only [measureETVDist, evalDist_liftComp_uniform, le_refl]
   · rw [lintegral_fintype]
-    simp_rw [evalDist_liftM_query, OracleSpec.IsUniformMeasureSpec.toMeasure_singleton]
+    simp only [evalDist_liftM_query_uniform (spec := HidingAvgSpec M S C) (Sum.inl ()),
+      ProbabilityTheory.uniformOn_univ_apply_singleton]
     refine le_of_eq_of_le ?_ (hiding_bound_avg A)
     rw [ENNReal.div_eq_inv_mul, Finset.mul_sum]
     exact Finset.sum_congr rfl fun s _ => mul_comm _ _

@@ -345,7 +345,7 @@ private lemma IND_CPA_stepAdversary_game_eq_hybridBranch [Inhabited M]
     rfl
   conv_rhs =>
     rw [StateT.run'_eq, hmap]
-  refine Eq.trans ?_ (evalDist_map_congr_of_evalDist_eq _ _ hresume (bit == ·))
+  refine Eq.trans ?_ (((EvalDistEq.of_evalDist_eq hresume).map (bit == ·)).evalDist_eq)
   simp only [monad_norm]
   refine evalDist_bind_congr _ _ _ fun ⟨res, _st⟩ => ?_
   cases res <;> simp

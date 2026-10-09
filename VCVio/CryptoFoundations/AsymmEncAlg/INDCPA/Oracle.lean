@@ -353,7 +353,7 @@ lemma IND_CPA_queryImpl_hybridLR_counted_proj_eq_queryImpl'_false
 /-- The counted real IND-CPA implementation preserves the budget-indexed invariant
 `st.2 + budget ≤ q`: after answering a query that the structural bound permits, the spent counter
 plus the decremented budget still fits under `q`. This is the per-query preservation obligation
-fed to `evalDist_simulateQ_run_eq_of_impl_eq_queryBound`. -/
+fed to `evalDistEq_simulateQ_run_of_impl_eq_queryBound`. -/
 private lemma IND_CPA_queryImpl'_counted_run_invariant_le
     (pk : PK) (b : Bool) (q : ℕ) (t : encAlg'.IND_CPA_oracleSpec.Domain)
     (st : encAlg'.IND_CPA_CountedState) (budget : ℕ) (hInv : st.2 + budget ≤ q)
@@ -380,7 +380,7 @@ private lemma IND_CPA_queryImpl'_counted_run_invariant_le
 /-- If a counted IND-CPA hybrid implementation agrees with the counted real implementation
 through the first `q` fresh LR queries, then any adversary making at most `q` LR queries sees
 the same output distribution as in the real IND-CPA game. -/
-theorem IND_CPA_run'_evalDist_eq_queryImpl'_of_bounded_eq
+theorem IND_CPA_run'_evalDistEq_queryImpl'_of_bounded
     (implCounted : PK → Bool → ℕ →
       QueryImpl encAlg'.IND_CPA_oracleSpec (StateT encAlg'.IND_CPA_CountedState ProbComp))
     (hsame : ∀ (pk : PK) (b : Bool) (realUntil : ℕ)
@@ -393,11 +393,11 @@ theorem IND_CPA_run'_evalDist_eq_queryImpl'_of_bounded_eq
     (budget : ℕ)
     (hbound : comp.IsQueryBoundP (· matches .inr _) budget)
     (cache : (M × M →ₒ C).QueryCache) (n : ℕ) (hn : n + budget ≤ q) :
-    letI : MeasurableSpace α := ⊤
-    𝒟[(simulateQ (implCounted pk b q) comp).run' (cache, n)] =
-      𝒟[(simulateQ (encAlg'.IND_CPA_queryImpl' pk b) comp).run' cache] := by
+    (simulateQ (implCounted pk b q) comp).run' (cache, n) =ᵈ
+      (simulateQ (encAlg'.IND_CPA_queryImpl' pk b) comp).run' cache := by
+  refine evalDistEq_iff_evalDist_eq.mpr ?_
   let : MeasurableSpace α := ⊤
-  have hrun := OracleComp.ProgramLogic.Relational.evalDist_simulateQ_run_eq_of_impl_eq_queryBound
+  have hrun := OracleComp.ProgramLogic.Relational.evalDistEq_simulateQ_run_of_impl_eq_queryBound
         (impl₁ := implCounted pk b q) (impl₂ := encAlg'.IND_CPA_queryImpl'_counted pk b)
         (Inv := fun st budget => st.2 + budget ≤ q)
         (canQuery := fun t n => ¬ (Sum.isRight t = true) ∨ 0 < n)
@@ -415,7 +415,7 @@ theorem IND_CPA_run'_evalDist_eq_queryImpl'_of_bounded_eq
       𝒟[(simulateQ (encAlg'.IND_CPA_queryImpl'_counted pk b) comp).run'
         (cache, n)] := by
     simp only [StateT.run'_eq]
-    exact evalDist_map_congr_of_evalDist_eq _ _ hrun Prod.fst
+    exact (hrun.map Prod.fst).evalDist_eq
   refine hcounted_run'.trans ?_
   simpa using congrArg (fun mx => 𝒟[mx]) (OracleComp.run'_simulateQ_eq_of_query_map_eq
       (impl₁ := encAlg'.IND_CPA_queryImpl'_counted pk b)
@@ -445,9 +445,8 @@ theorem IND_CPA_countedGame_eq_game_of_MakesAtMostQueries
     𝒟[IND_CPA_Game (encAlg := encAlg') adversary] := by
   unfold IND_CPA_Game
   refine evalDist_bind_congr _ _ _ fun b => evalDist_bind_congr _ _ _ fun ⟨pk, _sk⟩ => ?_
-  exact evalDist_bind_congr_of_evalDist_eq _ _
-    (IND_CPA_run'_evalDist_eq_queryImpl'_of_bounded_eq (encAlg' := encAlg')
-      implCounted hsame pk b q (adversary pk) q (hq pk) ∅ 0 (by omega)) _
+  exact ((IND_CPA_run'_evalDistEq_queryImpl'_of_bounded (encAlg' := encAlg')
+      implCounted hsame pk b q (adversary pk) q (hq pk) ∅ 0 (by omega)).bind_left _).evalDist_eq
 
 /-- IND-CPA advantage of an oracle adversary: the Boolean bias `Measure.boolBias`
 `|Pr[b = b'] - Pr[b ≠ b']|` of the oracle IND-CPA game. An adversary that always guesses
@@ -486,7 +485,8 @@ theorem IND_CPA_LR_hybrid_q_evalDist_eq_left_of_MakesAtMostQueries
       𝒟[encAlg'.IND_CPA_LR_Experiment adversary true] := by
   unfold IND_CPA_LR_hybrid IND_CPA_LR_Experiment
   refine evalDist_bind_congr _ _ _ fun ⟨pk, _sk⟩ => ?_
-  exact IND_CPA_run'_evalDist_eq_queryImpl'_of_bounded_eq
+  refine EvalDistEq.evalDist_eq ?_
+  exact IND_CPA_run'_evalDistEq_queryImpl'_of_bounded
     (encAlg' := encAlg')
     (implCounted := fun pk b realUntil =>
       if b then encAlg'.IND_CPA_queryImpl_hybridLR_counted pk realUntil

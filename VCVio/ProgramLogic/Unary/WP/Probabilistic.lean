@@ -33,8 +33,6 @@ open ENNReal Std.Internal.Do
 namespace OracleComp.Probabilistic
 
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
-  [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [OracleSpec.IsMeasureSpec spec]
 
 /-- Oracle expectation preserves the probability bound. -/

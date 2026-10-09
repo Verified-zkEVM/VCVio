@@ -73,8 +73,7 @@ private lemma withCachingTrackingPolicy_mono_pair
 
 section measure
 
-variable [∀ t, MeasurableSpace (spec'.Range t)] [∀ t, DiscreteMeasurableSpace (spec'.Range t)]
-  [IsMeasureSpec spec']
+variable [IsMeasureSpec spec']
 
 /-! ## Per-step agreement on good outputs -/
 

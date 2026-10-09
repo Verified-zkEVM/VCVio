@@ -112,7 +112,6 @@ end ProbComp
 /-- A fair coin gives an event its proportion of the two outcomes. -/
 theorem OracleComp.prEvent_coin (p : Bool → Prop) [DecidablePred p] :
     Pr{let b ← OracleComp.coin}[p b] = ((Finset.univ.filter p).card : ℝ≥0∞) / 2 := by
-  rw [prEvent_eq_evalDist_of_discrete, OracleComp.coin, OracleComp.evalDist_liftM_query,
-    show OracleSpec.IsMeasureSpec.toMeasure (spec := coinSpec) () = uniformOn Set.univ from
-      OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform (), uniformOn_univ_apply_setOf]
+  rw [prEvent_eq_evalDist_of_discrete, OracleComp.coin,
+    OracleComp.evalDist_liftM_query_uniform (spec := coinSpec) (), uniformOn_univ_apply_setOf]
   simp

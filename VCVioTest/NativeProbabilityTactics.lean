@@ -20,10 +20,10 @@ improves. One guard covers a family of same-shaped entries when the family is na
 note. Bind-swap and shared-prefix congruence go through the `vcstep` planner.
 
 Two gaps recur across the file and are named once here. `grind` does no `ℝ≥0∞` or cardinality
-arithmetic and has no measure-side rules for Dirac, uniform or lossless masses, so it closes only
-the symbolic families (equiprobability after a rewrite, pushforward of an event, structural
-`bind`/`pure` collapse). Finite counting leaves `#{x | p x} / n` unevaluated, as on the discrete
-side; `simp [Finset.filter_eq']` evaluates singleton filters and `rfl` the rest.
+arithmetic and has no measure-side rules for Dirac or uniform masses, so beyond the lossless
+event it closes only the symbolic families (equiprobability after a rewrite, pushforward of an
+event, structural `bind`/`pure` collapse). Finite counting leaves `#{x | p x} / n` unevaluated, as
+on the discrete side; `simp [Finset.filter_eq']` evaluates singleton filters and `rfl` the rest.
 -/
 
 public section
@@ -208,7 +208,7 @@ example (mx : OptionT ProbComp Bool) :
     𝒟[mx >>= fun _ => (failure : OptionT ProbComp Bool)] = 0 := by simp
 
 example : Pr{let _ ← (($ ([true, false] : List Bool)) : OptionT ProbComp Bool)}[True] = 1 := by
-  fail_if_success (simp; done)  -- gap(simp, 2026-09-26): stops at the unevaluated selection
+  fail_if_success simp  -- gap(simp, 2026-09-26): no rule reaches the unevaluated selection
   rw [ProbComp.prEvent_uniformSelectList]; simp [ENNReal.div_self]
 
 /-- Selecting from a list counts entries with multiplicity. -/
@@ -314,20 +314,17 @@ def coinPadded : ProbComp Bool := do
 
 /-! ### Losslessness through `do` structure
 
-gap(grind): `grind` unfolds the definitions but has no lossless-mass rule. -/
+The lossless-mass law closes an oracle computation's true event without unfolding it; a failing
+carrier is unfolded into its lifted draws. -/
 
-example : Pr{let _ ← coinThenNeg}[True] = 1 := by
-  fail_if_success grind [coinThenNeg]  -- gap(grind, 2026-09-26): losslessness, covers the section
-  simp [coinThenNeg]
-example : Pr{let _ ← twoThenAnd}[True] = 1 := by simp [twoThenAnd]
-example : Pr{let _ ← nestedDraw}[True] = 1 := by simp [nestedDraw]
-example : Pr{let _ ← chain12}[True] = 1 := by simp [chain12]
+example : Pr{let _ ← coinThenNeg}[True] = 1 := by grind
+example : Pr{let _ ← coinThenNeg}[True] = 1 := by simp
+example : Pr{let _ ← twoThenAnd}[True] = 1 := by simp
+example : Pr{let _ ← nestedDraw}[True] = 1 := by simp
+example : Pr{let _ ← chain12}[True] = 1 := by simp
 example : 𝒟[chain12] Set.univ = 1 := by simp [chain12]
 example : Pr{let _ ← chain12Opt}[True] = 1 := by simp [chain12Opt]
-
-example : Pr{let _ ← branchToFin}[True] = 1 := by
-  fail_if_success (simp [branchToFin]; done)  -- gap(simp, 2026-09-26): a map over an `if`
-  simp [branchToFin, apply_ite]
+example : Pr{let _ ← branchToFin}[True] = 1 := by simp
 
 /-! ### Structural normalization of a deep chain -/
 
@@ -369,7 +366,7 @@ variable (α β : Type) [SampleableType α] [SampleableType β]
 
 example (x y : α) :
     Pr{let z ← ($ᵗ α : ProbComp α)}[z = x] = Pr{let z ← ($ᵗ α : ProbComp α)}[z = y] := by
-  fail_if_success (simp; done)  -- gap(simp, 2026-09-26): abstract equiprobability
+  fail_if_success simp  -- gap(simp, 2026-09-26): abstract equiprobability
   fail_if_success grind  -- gap(grind, 2026-09-26): abstract equiprobability
   classical
   refine Eq.trans ?_ (SampleableType.prEvent_uniformSample_equiv (Equiv.swap x y) (· = y))
@@ -378,8 +375,7 @@ example (x y : α) :
 example (z : α × β) :
     Pr{let w ← ((·, ·) <$> ($ᵗ α) <*> ($ᵗ β) : ProbComp (α × β))}[w = z] =
       Pr{let a ← ($ᵗ α : ProbComp α)}[a = z.1] * Pr{let b ← ($ᵗ β : ProbComp β)}[b = z.2] := by
-  simp only [seq_eq_bind_map, map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_apply,
-    Prod.ext_iff]
+  simp only [seq_eq_bind_map, prEvent_norm, Prod.ext_iff]
   exact prEvent_bind_bind_and _ _ _ _
 
 end abstract
@@ -400,5 +396,16 @@ example (mx : ProbComp Bool) (f g : Bool → ProbComp (Fin 3)) (y : Fin 3)
 example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → ProbComp Bool) :
     𝒟[mx >>= fun a => my >>= fun b => f a b] = 𝒟[my >>= fun b => mx >>= fun a => f a b] := by
   vcstep
+
+/-! ## 10. Events whose continuation destructures its input
+
+An event computation written as a destructuring `do` block keeps a `match` around the returned
+proposition, so it stays in bind form; implication between the returned propositions is
+transported below the bind. -/
+
+example (mx : ProbComp (Bool × Bool)) :
+    prEvent (do let (a, b) ← mx; pure (a = true ∧ b = true)) ≤
+      prEvent (do let (a, _) ← mx; pure (a = true)) :=
+  prEvent_bind_mono_of_support _ _ _ fun ⟨_, _⟩ _ => prEvent_pure_mono And.left
 
 end VCVioTest.NativeProbabilityTactics

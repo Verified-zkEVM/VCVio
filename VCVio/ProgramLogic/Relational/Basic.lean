@@ -58,7 +58,6 @@ theorem ae_map_of_ae_mem_countable {X Y : Type*} [MeasurableSpace X] [Measurable
 
 variable {ι₁ : Type u} {ι₂ : Type v}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{v, 0} ι₂}
-variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
 variable {α β γ δ : Type}
 
 section measureSpec
@@ -80,9 +79,6 @@ theorem CouplingPost.mono {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ 
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
   exact relWP_mono h hRS
-
-variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
 
 /-- Pure computations are coupled exactly on the relation between their values. -/
 @[simp]
@@ -233,35 +229,36 @@ lemma relTriple_symm {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β} {
   refine relTriple_iff_relWP.2 ⟨c.swap, ?_⟩
   exact (MeasurableEquiv.prodComm (α := α) (β := β)).measurableEmbedding.ae_map_iff.2 hc
 
-/-- Transport a relational triple across equality of the left output measure. -/
-lemma relTriple_of_evalDist_eq_left
-    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃} [∀ t, MeasurableSpace (spec₃.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec₃.Range t)] [IsMeasureSpec spec₃]
+/-- Transport a relational triple across equality in distribution of the left computation. -/
+lemma relTriple_of_evalDistEq_left
+    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
+    [IsMeasureSpec spec₃]
     [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {oa' : OracleComp spec₂ α}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
-    (heq : (letI : MeasurableSpace α := ⊤; 𝒟[oa] = 𝒟[oa'])) (h : RelTriple oa' ob R) :
+    (heq : oa =ᵈ oa') (h : RelTriple oa' ob R) :
     RelTriple oa ob R := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
   obtain ⟨c, hc⟩ := relTriple_iff_relWP.1 h
   exact relTriple_iff_relWP.2
-    ⟨⟨c.joint, ⟨c.isCoupling.fst_eq.trans heq.symm, c.isCoupling.snd_eq⟩⟩, hc⟩
+    ⟨⟨c.joint, ⟨c.isCoupling.fst_eq.trans heq.evalDist_eq.symm,
+      c.isCoupling.snd_eq⟩⟩, hc⟩
 
-/-- Transport a relational triple across equality of the right output measure. -/
-lemma relTriple_of_evalDist_eq_right
-    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃} [∀ t, MeasurableSpace (spec₃.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec₃.Range t)] [IsMeasureSpec spec₃]
+/-- Transport a relational triple across equality in distribution of the right computation. -/
+lemma relTriple_of_evalDistEq_right
+    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
+    [IsMeasureSpec spec₃]
     [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     {ob' : OracleComp spec₃ β} {R : RelPost α β}
-    (heq : (letI : MeasurableSpace β := ⊤; 𝒟[ob] = 𝒟[ob'])) (h : RelTriple oa ob R) :
+    (heq : ob =ᵈ ob') (h : RelTriple oa ob R) :
     RelTriple oa ob' R := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
   obtain ⟨c, hc⟩ := relTriple_iff_relWP.1 h
   exact relTriple_iff_relWP.2
-    ⟨⟨c.joint, ⟨c.isCoupling.fst_eq, c.isCoupling.snd_eq.trans heq⟩⟩, hc⟩
+    ⟨⟨c.joint, ⟨c.isCoupling.fst_eq, c.isCoupling.snd_eq.trans heq.evalDist_eq⟩⟩, hc⟩
 
 /-- Bind composition rule for relational triples. -/
 lemma relTriple_bind
@@ -276,18 +273,16 @@ lemma relTriple_eqRel_of_eq {oa ob : OracleComp spec₁ α}
     (h : oa = ob) : RelTriple (spec₁ := spec₁) (spec₂ := spec₁) oa ob (EqRel α) :=
   h ▸ relTriple_refl oa
 
-/-- Equality of output measures gives an equality-relation relational triple. -/
-lemma relTriple_eqRel_of_evalDist_eq {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
-    (h : (letI : MeasurableSpace α := ⊤; 𝒟[oa] = 𝒟[ob])) :
-    RelTriple oa ob (EqRel α) :=
-  relTriple_of_evalDist_eq_right h (relTriple_refl oa)
+/-- Equality in distribution gives an equality-relation relational triple. -/
+lemma relTriple_eqRel_of_evalDistEq {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
+    (h : oa =ᵈ ob) : RelTriple oa ob (EqRel α) :=
+  relTriple_of_evalDistEq_right h (relTriple_refl oa)
 
-/-- If two computations have equal output measures, any reflexive postcondition holds. -/
-lemma relTriple_of_evalDist_eq
+/-- If two computations are equal in distribution, any reflexive postcondition holds. -/
+lemma relTriple_of_evalDistEq
     {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α} {R : RelPost α α}
-    (h : (letI : MeasurableSpace α := ⊤; 𝒟[oa] = 𝒟[ob])) (hR : ∀ x, R x x) :
-    RelTriple oa ob R :=
-  relTriple_post_mono (relTriple_eqRel_of_evalDist_eq h) fun x _ hxy => hxy ▸ hR x
+    (h : oa =ᵈ ob) (hR : ∀ x, R x x) : RelTriple oa ob R :=
+  relTriple_post_mono (relTriple_eqRel_of_evalDistEq h) fun x _ hxy => hxy ▸ hR x
 
 /-- Swapping two adjacent independent binds preserves the output distribution. -/
 lemma relTriple_bind_bind_swap_eqRel
@@ -298,25 +293,30 @@ lemma relTriple_bind_bind_swap_eqRel
       (ob >>= fun b => oa >>= fun a => f a b)
       (EqRel γ) := by
   let : MeasurableSpace γ := ⊤
-  exact relTriple_eqRel_of_evalDist_eq (OracleComp.evalDist_bind_bind_swap oa ob f)
+  exact relTriple_eqRel_of_evalDistEq
+    (EvalDistEq.of_evalDist_eq (OracleComp.evalDist_bind_bind_swap oa ob f))
 
-/-- Equality-relation relational triples identify the output measures. -/
-lemma evalDist_eq_of_relTriple_eqRel {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
-    (h : RelTriple oa ob (EqRel α)) :
-    letI : MeasurableSpace α := ⊤; 𝒟[oa] = 𝒟[ob] := by
+/-- Computations related by an equality-relation relational triple are equal in distribution. -/
+lemma evalDistEq_of_relTriple_eqRel {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
+    (h : RelTriple oa ob (EqRel α)) : oa =ᵈ ob := by
   let : MeasurableSpace α := ⊤
   obtain ⟨c, hc⟩ := relTriple_iff_relWP.1 h
+  refine EvalDistEq.of_evalDist_eq ?_
   calc 𝒟[oa] = c.joint.map Prod.fst := c.isCoupling.fst_eq.symm
     _ = c.joint.map Prod.snd := Measure.map_congr hc
     _ = 𝒟[ob] := c.isCoupling.snd_eq
 
+/-- Equality-relation relational triples identify the output measures in every measurable
+structure. -/
+lemma evalDist_eq_of_relTriple_eqRel [MeasurableSpace α] {oa : OracleComp spec₁ α}
+    {ob : OracleComp spec₂ α} (h : RelTriple oa ob (EqRel α)) : 𝒟[oa] = 𝒟[ob] :=
+  (evalDistEq_of_relTriple_eqRel h).evalDist_eq
+
 /-- Equality-relation relational triples give every event the same probability. -/
 lemma prEvent_eq_of_relTriple_eqRel {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
     (h : RelTriple oa ob (EqRel α)) (p : α → Prop) :
-    Pr{let a ← oa}[p a] = Pr{let b ← ob}[p b] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete,
-    evalDist_eq_of_relTriple_eqRel h]
+    Pr{let a ← oa}[p a] = Pr{let b ← ob}[p b] :=
+  (evalDistEq_of_relTriple_eqRel h).prEvent_eq p
 
 /-- Event monotonicity from a relational triple: if `RelTriple oa ob R` and `R a b` forces
 `p a → q b`, then `Pr{let a ← oa}[p a] ≤ Pr{let b ← ob}[q b]`. Both events are read through the
@@ -338,30 +338,30 @@ lemma prEvent_le_of_relTriple {oa : OracleComp spec₁ α} {ob : OracleComp spec
 
 /-- Transitivity through an intermediate computation related to the left side by `EqRel`. -/
 lemma relTriple_trans_eqRel_left
-    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃} [∀ t, MeasurableSpace (spec₃.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec₃.Range t)] [IsMeasureSpec spec₃]
+    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
+    [IsMeasureSpec spec₃]
     [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ α}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
     (hleft : RelTriple oa mid (EqRel α)) (hright : RelTriple mid ob R) :
     RelTriple oa ob R :=
-  relTriple_of_evalDist_eq_left (evalDist_eq_of_relTriple_eqRel hleft) hright
+  relTriple_of_evalDistEq_left (evalDistEq_of_relTriple_eqRel hleft) hright
 
 /-- Transitivity through an intermediate computation related to the right side by `EqRel`. -/
 lemma relTriple_trans_eqRel_right
-    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃} [∀ t, MeasurableSpace (spec₃.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec₃.Range t)] [IsMeasureSpec spec₃]
+    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
+    [IsMeasureSpec spec₃]
     [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ β}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
     (hleft : RelTriple oa mid R) (hright : RelTriple mid ob (EqRel β)) :
     RelTriple oa ob R :=
-  relTriple_of_evalDist_eq_right (evalDist_eq_of_relTriple_eqRel hright) hleft
+  relTriple_of_evalDistEq_right (evalDistEq_of_relTriple_eqRel hright) hleft
 
 /-- Transitivity of equality-relation relational triples through an intermediate computation. -/
 lemma relTriple_trans_eqRel
-    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃} [∀ t, MeasurableSpace (spec₃.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec₃.Range t)] [IsMeasureSpec spec₃]
+    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
+    [IsMeasureSpec spec₃]
     [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ α} {ob : OracleComp spec₃ α}
     (hleft : RelTriple oa mid (EqRel α)) (hright : RelTriple mid ob (EqRel α)) :
@@ -389,11 +389,12 @@ lemma relTriple_map {R : RelPost γ δ} {f : α → γ} {g : β → δ}
     (MAlgRelOrdered.relWP_map_left f oa (g <$> ob) _))
 
 /-- If a relational triple holds for `fun a b => f a = g b`, then mapping by `f` and `g`
-produces equal output measures. Generalizes `evalDist_eq_of_relTriple_eqRel`. -/
-lemma evalDist_map_eq_of_relTriple {σ : Type} {f : α → σ} {g : β → σ} {oa : OracleComp spec₁ α}
-    {ob : OracleComp spec₂ β} (h : RelTriple oa ob (fun a b => f a = g b)) :
-    letI : MeasurableSpace σ := ⊤; 𝒟[f <$> oa] = 𝒟[g <$> ob] :=
-  evalDist_eq_of_relTriple_eqRel (relTriple_map h)
+gives computations equal in distribution. Generalizes `evalDistEq_of_relTriple_eqRel`. -/
+lemma evalDistEq_map_of_relTriple {σ : Type} {f : α → σ} {g : β → σ}
+    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    (h : RelTriple oa ob (fun a b => f a = g b)) :
+    f <$> oa =ᵈ g <$> ob :=
+  evalDistEq_of_relTriple_eqRel (relTriple_map h)
 
 private lemma list_eq_of_forall₂_eqRel {xs ys : List α}
     (hxy : List.Forall₂ (EqRel α) xs ys) : xs = ys := by
@@ -528,9 +529,7 @@ end measureSpec
 
 section uniformMeasureSpec
 
-variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
-  [IsUniformMeasureSpec spec₁] [IsUniformMeasureSpec spec₂]
+variable [IsUniformMeasureSpec spec₁] [IsUniformMeasureSpec spec₂]
 
 /-- A coupling with a Dirac first marginal forces the first coordinate, so an almost-sure
 relation holds between that value and every structurally reachable output of the second
@@ -611,8 +610,9 @@ theorem isCoupling_query_graph (t : spec₁.Domain) {f : spec₁.Range t → spe
       𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))]
       𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))] := by
   have := IsUniformMeasureSpec.nonempty_range (spec := spec₁) t
-  have hq := OracleComp.evalDist_liftM_query_eq_uniformOn_top (spec := spec₁) t
   let : MeasurableSpace (spec₁.Range t) := ⊤
+  have hq : 𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))] = uniformOn Set.univ :=
+    OracleComp.evalDist_liftM_query_uniform t
   have h := Measure.IsCoupling.graph 𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))]
     (Measurable.of_discrete (f := f))
   rwa [hq, map_uniformOn_univ_of_bijective Measurable.of_discrete hf, ← hq] at h

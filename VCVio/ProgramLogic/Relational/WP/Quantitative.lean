@@ -32,9 +32,7 @@ namespace OracleComp.Rel.Quantitative
 
 variable {ι₁ ι₂ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
-variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
-  [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
+variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 variable {α β γ δ : Type}
 
 section measureSpec

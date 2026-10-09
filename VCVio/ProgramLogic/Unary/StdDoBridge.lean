@@ -46,8 +46,7 @@ theorem wpProp_iff_forall_support (oa : OracleComp spec α) (p : α → Prop) :
 
 /-- Uniform native measures identify probability-one observations with structural correctness. -/
 theorem wpProp_iff_probEvent_eq_one
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
+    [OracleSpec.IsUniformMeasureSpec spec]
     (oa : OracleComp spec α) (p : α → Prop) :
     wpProp (spec := spec) oa p ↔ Pr{let x ← oa}[p x] = 1 := by
   rw [wpProp_iff_forall_support, OracleComp.prEvent_eq_one_iff]

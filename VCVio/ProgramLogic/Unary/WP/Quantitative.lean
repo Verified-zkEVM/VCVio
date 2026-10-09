@@ -40,8 +40,7 @@ universe u v
 namespace OracleComp.ProgramLogic
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α β : Type}
 
 /-! ## Expectation algebra and the `MAlgOrdered` instance -/
@@ -61,8 +60,7 @@ namespace OracleComp.Quantitative
 /-! ## `Std.Internal.Do.WP` instance for `OracleComp` -/
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α β : Type}
 
 /-- Core weakest preconditions from the quantitative expectation algebra.
@@ -260,8 +258,7 @@ end OracleComp.Quantitative
 namespace OracleComp.Quantitative
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α β : Type}
 
 namespace WriterT

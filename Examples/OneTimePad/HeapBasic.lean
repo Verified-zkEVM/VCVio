@@ -184,9 +184,9 @@ parallel-channel cutovers (e.g. `Examples.OneTimePad.HeapPar`) can
 feed it to `QueryImpl.Stateful.MeasureDistEquiv.parSum_congr` without re-running
 the case-split. -/
 
-/-- **Per-handler measure equality** between `realImpl sp` and
+/-- **Per-handler equality in distribution** between `realImpl sp` and
 `idealImpl sp`. On every input `(query, heap)`, the two handlers
-produce the same output measure, for every measurable structure on the output.
+produce the same distribution on replies and updated heaps.
 
 Splits on `h .used`:
 
@@ -197,10 +197,11 @@ Splits on `h .used`:
   XOR-with-`m` on the sampled value, which `(· ^^^ m)` being a
   bijection on `BitVec sp` makes invisible to the output measure (via
   `evalDist_bind_bijective_of_uniform`). -/
-theorem realImpl_impl_evalDist_idealImpl (sp : ℕ) (q : (otpSpec sp).Domain)
-    (h : Heap UsedFlag) [MeasurableSpace ((otpSpec sp).Range q × Heap UsedFlag)] :
-    𝒟[((realImpl sp) q).run h] =
-      𝒟[((idealImpl sp) q).run h] := by
+theorem realImpl_impl_evalDistEq_idealImpl (sp : ℕ) (q : (otpSpec sp).Domain)
+    (h : Heap UsedFlag) :
+    ((realImpl sp) q).run h =ᵈ ((idealImpl sp) q).run h := by
+  let : MeasurableSpace ((otpSpec sp).Range q × Heap UsedFlag) := ⊤
+  refine EvalDistEq.of_evalDist_eq ?_
   cases q with
   | enc m =>
     change 𝒟[if h .used then (pure (0#sp, h) : OracleComp unifSpec _)
@@ -231,11 +232,10 @@ adversary, on every output type.
 
 Proof shape: `QueryImpl.Stateful.MeasureDistEquiv.of_step` from the default initial
 heap state, using the per-(query, heap) handler equivalence
-`realImpl_impl_evalDist_idealImpl`. -/
+`realImpl_impl_evalDistEq_idealImpl`. -/
 theorem realImpl_distEquiv_idealImpl (sp : ℕ) :
     realImpl sp ≡ᵈ₀ idealImpl sp :=
-  QueryImpl.Stateful.MeasureDistEquiv.of_step
-    (fun q h => realImpl_impl_evalDist_idealImpl sp q h) Heap.empty
+  QueryImpl.Stateful.MeasureDistEquiv.of_step (realImpl_impl_evalDistEq_idealImpl sp) Heap.empty
 
 /-! ## Single-call adversary and corollary -/
 
@@ -254,8 +254,8 @@ def encOnce (sp : ℕ) (m : BitVec sp) : OracleComp (otpSpec sp) (BitVec sp) :=
 of `realImpl_distEquiv_idealImpl` by specialising the universal `≡ᵈ` to
 the canonical single-call adversary `encOnce sp m`.
 
-The same content, framed as `SymmEncAlg.perfectSecrecyCipherGivenMsgExperiment`
-equivalence, is proved as `cipherGivenMsg_equiv` in
+The same content, framed as equality in distribution of
+`SymmEncAlg.perfectSecrecyCipherGivenMsgExperiment` rows, is proved as `ciphertextRowsEqual` in
 `Examples.OneTimePad.Basic`. The state-separating framing replaces the
 "reductive bijection" of that proof with the "per-call gate" idiom: a
 direct existence statement at the handler level rather than a

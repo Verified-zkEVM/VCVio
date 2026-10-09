@@ -328,7 +328,7 @@ theorem unlinkBadExperiment_le_sessionCollisionBound
       Pr{let z ← ((simulateQ (unlinkBadQueryImpl (sessionsPerTag := sessionsPerTag)) adversary).run
         UnlinkBadState.init)}[z.2.bad = true] := by
     rw [← prEvent_eq_evalDist_singleton, unlinkBadExperiment]
-    simp only [bind_assoc, pure_bind]
+    simp only [prEvent_norm]
   rw [hlhs]
   have hremaining :
       unlinkBadRemaining (sessionsPerTag := sessionsPerTag)

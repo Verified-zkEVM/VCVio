@@ -139,7 +139,6 @@ the structural support of the shared prefix. -/
 section native
 
 variable {ι' : Type} {spec' : OracleSpec ι'}
-  [∀ t, MeasurableSpace (spec'.Range t)] [∀ t, DiscreteMeasurableSpace (spec'.Range t)]
   [∀ t, Countable (spec'.Range t)] [OracleSpec.IsMeasureSpec spec']
 
 example {mx : OracleComp spec' α} {f g : α → OracleComp spec' β} {q : β → Prop}

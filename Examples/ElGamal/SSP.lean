@@ -308,7 +308,7 @@ element of `G` and acts as a one-time pad additively masking `m₀` or `m₁`. P
 This is the state-separating analogue of
 `Examples.ElGamal.Basic.IND_CPA_OneTime_DDHReduction_rand_half`: a handler-level
 uniform-masking argument lifted across the whole adversary via
-`OracleComp.evalDist_simulateQ_run_congr_of_forall`. -/
+`OracleComp.evalDist_simulateQ_run_congr`. -/
 
 section RandSwapSymmetry
 
@@ -335,13 +335,13 @@ private theorem evalDist_bind_smul_add_eq {γ : Type} [MeasurableSpace γ] (gen 
 identical on both sides; the `LR` case reduces to the uniform-masking argument (`c • gen + m₀`
 and `c • gen + m₁` have the same law over `c ← $ᵗ F` when `(· • gen)` is bijective)
 after pushing the reductions' post-processing `pure (B, T + m_b)` through the bind. -/
-private theorem composed_rand_swap_handler_evalDist (gen : G)
+private theorem composed_rand_swap_handler_evalDistEq (gen : G)
     (hg : Function.Bijective (fun x : F => x • gen))
-    (q : Unit ⊕ (G × G)) (s : Option F) [MeasurableSpace ((lrSpec G).Range q × Option F)] :
-    𝒟[(simulateQ (dhTripleRand (F := F) gen)
-          ((dhToLR_leftHandler (G := G)) q)).run s] =
-      𝒟[(simulateQ (dhTripleRand (F := F) gen)
-          ((dhToLR_rightHandler (G := G)) q)).run s] := by
+    (q : Unit ⊕ (G × G)) (s : Option F) :
+    (simulateQ (dhTripleRand (F := F) gen) ((dhToLR_leftHandler (G := G)) q)).run s =ᵈ
+      (simulateQ (dhTripleRand (F := F) gen) ((dhToLR_rightHandler (G := G)) q)).run s := by
+  let : MeasurableSpace ((lrSpec G).Range q × Option F) := ⊤
+  refine EvalDistEq.of_evalDist_eq ?_
   rcases q with ⟨⟩ | ⟨m₀, m₁⟩
   · simp [dhToLR_leftHandler, dhToLR_rightHandler]
   · -- LR (m₀, m₁): normalise both sides to bind form and apply the uniform-masking lemma.
@@ -400,7 +400,7 @@ private theorem composed_rand_swap_handler_evalDist (gen : G)
 
 /-- Hop #3: under the DDH-random handler, the left- and right-message reductions have equal
 output measures against every adversary. The per-query uniform-masking argument lifts across
-the full adversary via `OracleComp.evalDist_simulateQ_run_congr_of_forall`. -/
+the full adversary via `OracleComp.evalDist_simulateQ_run_congr`. -/
 theorem measureDistEquiv_dhToLR_link_rand_swap
     (gen : G) (hg : Function.Bijective (fun x : F => x • gen)) :
     QueryImpl.Stateful.MeasureDistEquiv
@@ -416,8 +416,8 @@ theorem measureDistEquiv_dhToLR_link_rand_swap
     _root_.evalDist_map _ measurable_fst]
   congr 1
   rw [← QueryImpl.simulateQ_compose, ← QueryImpl.simulateQ_compose]
-  exact OracleComp.evalDist_simulateQ_run_congr_of_forall _ _
-    (fun q state => composed_rand_swap_handler_evalDist (F := F) gen hg q state) A none
+  exact OracleComp.evalDist_simulateQ_run_congr _ _
+    (composed_rand_swap_handler_evalDistEq (F := F) gen hg) A none
 
 end RandSwapSymmetry
 

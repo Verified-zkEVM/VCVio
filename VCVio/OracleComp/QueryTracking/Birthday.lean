@@ -29,8 +29,7 @@ variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
 
 section logCollision
 
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [IsUniformMeasureSpec spec] [∀ t, Fintype (spec.Range t)]
+variable [IsUniformMeasureSpec spec] [∀ t, Fintype (spec.Range t)]
 
 /-! ## Per-Pair Collision Bound (Textbook Step 3)
 
@@ -365,8 +364,7 @@ private lemma run_simulateQ_cachingOracle_query_bind_of_miss {α : Type} {t : sp
       StateT.modifyGet, StateT.run]; rfl
   rw [hstep]; simp [monad_norm]
 
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [IsUniformMeasureSpec spec] [∀ t, Fintype (spec.Range t)]
+variable [IsUniformMeasureSpec spec] [∀ t, Fintype (spec.Range t)]
 
 /-- **Cache-collision induction core**: running any computation `ob` (bounded by `m` queries)
 through `cachingOracle` starting from a collision-free cache `cache₀` whose populated keys fit

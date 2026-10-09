@@ -159,11 +159,36 @@ judgments and kernels; flattened support does not acquire an exact bind law.
 The primary notation is measure-valued: `𝒟[mx] : Measure α`. The generic classes and Giry laws
 live in `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
 `VCVio.EvalDist.PFunctorMeasure.Core`. These core modules do not import a PMF/SPMF backend.
-`Pr{let x ← mx; ...}[event]` is the computation-style event notation. Write the first
-statement directly after `Pr{`; no space is required. An explicit line break after `Pr{` is
-also supported for multiline sequences. It elaborates
-an ordinary Lean `do` sequence, returns its final Boolean or proposition, and takes
-the `{True}` mass of that result's `𝒟`. It works with a direct measure-only oracle
+`Pr{x ← mx; y ← my x}[event]` is the event notation. Its draws are `x ← e` items separated by
+`;`, and an action may continue on the following lines. An ordinary `do` sequence, such as
+`Pr{let x ← mx; let y := f x}[event]` or a multi-line block, is accepted as well.
+`Pr{mx}[= a]` is the probability of the single output `a` and needs no measurable singletons.
+The notation denotes `prEvent (mx : m Prop) := 𝒟[mx] {True}` of the computation returning
+the event. It is elaborated in the normal form `simp` maintains:
+- binds end in a map of the eta-reduced final event;
+- local `let`s are substituted;
+- a branch is split into its arms.
+
+`simp only [prEvent_norm]` brings any event computation into this form, and `simp` rewrites
+`𝒟[mx] {True}` to `prEvent mx`. The event laws are keyed on `prEvent`:
+- bounds, `pure`, `failure` and constant prefixes;
+- sequencing, deterministic monads and lossless oracle computations;
+- uniform sampling, bind swaps and support congruence.
+
+`prEvent_def` unfolds an event to its measure when an argument needs the measure itself. Goals
+display in the draw form.
+
+`mx =ᵈ my` (`EvalDistEq`, in `VCVio.EvalDist.EvalDistEq`) states that two computations, possibly
+in different monads, give every event the same probability. It needs no measurable space on the
+output:
+- `EvalDistEq.evalDist_eq` gives equal output measures in every structure;
+- `EvalDistEq.of_evalDist_eq` proves it from equal measures in a discrete structure;
+- `evalDistEq_iff_forall_prEvent_eq_output` reduces it to point masses on countable outputs.
+
+It is an equivalence usable in `calc`, and its bind and map congruences are registered for
+`gcongr` and `grw`. A lemma whose selector's type depends on an implicit argument, such as a
+query index, is rewritten with that argument supplied: `Functor.map` unifies the selector before
+the computation. The notation works with a direct measure-only oracle
 interpretation as well as a finite compatibility interpretation. The
 `prEvent_eq_evalDist` theorem requires a measurable predicate; its
 discrete specialization discharges that condition. `prEvent_eq_evalDist_decide`
@@ -450,6 +475,33 @@ distribution for an arbitrary oracle, so `IsUniformMeasureSpec.ofFiniteNonempty`
 opt-in and only the concrete `unifSpec` and `coinSpec` instances are global. Structural
 `OracleComp.support` needs neither measure class; a
 positive-mass bridge needs assumptions on the chosen measures.
+
+Oracle answer measures live on the discrete σ-algebra. `OracleSpec.IsMeasureSpec spec` is
+`PFunctor.IsMeasureSpec` at `fun _ => ⊤`, so `IsMeasureSpec.toMeasure t` is a measure on
+`(spec.Range t, ⊤)`, and statements about oracle computations take no measurable-space
+hypotheses on answer types. Continuous answer measures belong at the `PFunctor.FreeM` level,
+where `PFunctor.IsMeasureSpec` accepts arbitrary measurable structures. The query laws are generic
+in the measurable structure that observes an answer:
+
+- `evalDist_liftM_query` gives `(toMeasure t).trim le_top`, and `MeasureTheory.trim_eq_self`
+  removes the trim when the observing instance is `⊤` by definition, as for `Bool` and `Fin n`;
+- `evalDist_liftM_query_apply` (simp) evaluates a measurable event to `toMeasure t s`;
+- `evalDist_liftM_query_uniform` gives `uniformOn Set.univ` for a uniform specification, and
+  `evalDist_liftM_unifSpec_query` and `evalDist_liftM_coinSpec_query` are its simp forms for the
+  built-in specifications.
+
+When a concrete specification's answer type appears reduced (`Bool` rather than
+`spec.Range t`), `rw` and `simp` match the generic laws only with the specification named, as in
+`evalDist_liftM_query_apply (spec := S) t hs`: Lean assigns the measurable-space argument before
+the query has determined `spec`. Handler-level hypotheses (`evalDist_simulateQ_congr`,
+`evalDist_simulateQ_run_congr`, `QueryImpl.Stateful.MeasureDistEquiv.of_step`,
+`wp_simulateQ_eq`, `wp_simulateQ_run'_eq`) are equalities in distribution `=ᵈ`, so handler states
+need no measurable structure either. A tactic proof that needs the discrete structure on an answer
+or on a reply-state product declares it with `let : MeasurableSpace (spec.Range t) := ⊤`, using
+`let` because the goal is a proposition. A concrete specification with finite nonempty answers
+takes `IsUniformMeasureSpec.ofFiniteNonempty _` as a local instance on that specification. Sums
+get their instances from `IsMeasureSpec.add` and `IsUniformMeasureSpec.add`, and a local instance
+declared on the sum itself would compete with them.
 For oracle-relative possibility, use `OracleComp.reachableWhen possibleOutputs oa`:
 it follows only the query responses in `possibleOutputs`, with pure/query/bind laws
 and a `gcongr` monotonicity rule. PolyFun defines the underlying
@@ -727,8 +779,9 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
    → `probOutput_bind_const` / `probEvent_bind_const`
 
 7. **Two computations have same distribution?**
-   → Compare `𝒟[oa]` and `𝒟[ob]`; `relTriple_eqRel_of_evalDist_eq` turns an equality in the
-     discrete structure into an `EqRel` coupling.
+   → State `oa =ᵈ ob` (`EvalDistEq`, possibly across monads); `relTriple_eqRel_of_evalDistEq`
+     turns it into an `EqRel` coupling, and `EvalDistEq.of_evalDist_eq` proves it from equal
+     output measures in a discrete structure.
 
 ## `grind` vs `simp` on Probability Goals
 
@@ -867,11 +920,10 @@ and the `orElse` (`<|>`) probability lemmas for `OptionT (OracleComp spec)` (`pr
 `VCVioTest/NativeProbabilityTactics.lean` and `VCVioTest/NativeMonadProbability.lean` are the
 measure-side counterparts of these two gates: the same families stated with `𝒟[…]` and `Pr{…}[…]`, under
 the same rules. Their dated guards record where the native sets are weaker than the discrete ones:
-`grind` has no Dirac, uniform or success-mass rules; a product singleton is not split into a
-rectangle; `simp` rewrites `(Set.univ : Set Bool)` to `{false, true}` ahead of the lossless-mass
-rule; the uniform event law is keyed on the `Pr{…}` bind form, which `simp` first normalises into a
-pushforward; and the support/mass bridges are applied by name. Closing one of these retires its
-guard in the same change.
+`grind` has no Dirac or uniform rules; a product singleton is not split into a rectangle; `simp`
+rewrites `(Set.univ : Set Bool)` to `{false, true}` ahead of the lossless-mass rule; and the
+support/mass bridges are applied by name. Closing one of these retires its guard in the same
+change.
 
 **Opting out downstream.** VCVio deliberately extends the *default* `grind` set — the monad laws
 above plus the probability/support bridges — and these tags are inherited by every project that

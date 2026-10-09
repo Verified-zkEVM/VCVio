@@ -17,8 +17,9 @@ public import Mathlib.Tactic.CongrM
 # Experiments with generalized relations
 
 Local registrations separate feasible extensions from the production tactic contract. These
-examples cover game equivalence, postconditions, support-restricted equality, and alternative
-congruence tactics. Local instances and attributes do not escape their sections.
+examples cover support-aware equality in distribution, postconditions, support-restricted
+equality, and alternative congruence tactics. Local instances and attributes do not escape their
+sections.
 -/
 
 public section
@@ -28,41 +29,31 @@ open scoped ENNReal
 
 namespace VCVioTest.GeneralizedRelationsExperiments
 
-/-! ## Game equivalence needs congruence and transitivity -/
+/-! ## Support-aware congruence for equality in distribution is local
+
+`EvalDistEq.bind_congr` is the registered congruence. Registering the support-aware form in its
+place keeps the reachable output in context for the continuation goal. -/
 
 section Games
 
-variable {α β γ : Type} {oa ob oc : ProbComp α}
-variable {f g : α → ProbComp β} {k l : β → ProbComp γ}
+/-- A coin whose negation is taken only on the reachable outputs of the draw. -/
+def negatedCoin : ProbComp Bool := do
+  let b ← $ᵗ Bool
+  pure !b
 
-example (h : GameEquiv oa ob) : GameEquiv (oa >>= f) (ob >>= f) := by
-  -- gap(gcongr, 2026-09-08): bind congruence is available but not registered globally.
-  fail_if_success gcongr
-  exact GameEquiv.bind_congr h fun _ => GameEquiv.rfl
+attribute [local gcongr] OracleComp.EvalDistEq.bind_congr_of_support
 
-attribute [local gcongr] GameEquiv.bind_congr GameEquiv.map_congr
+example {f g : Bool → ProbComp Bool} (h : ∀ b ∈ support ($ᵗ Bool : ProbComp Bool), f b =ᵈ g b) :
+    ($ᵗ Bool : ProbComp Bool) >>= f =ᵈ ($ᵗ Bool : ProbComp Bool) >>= g := by
+  gcongr with b hb
+  guard_hyp hb : b ∈ support ($ᵗ Bool : ProbComp Bool)
+  exact h b hb
 
-example (h : GameEquiv oa ob) : GameEquiv (oa >>= f) (ob >>= f) := by gcongr
-
-example (h : GameEquiv oa ob) : GameEquiv (oa >>= f) (ob >>= f) := by
-  -- gap(grw, 2026-09-08): bind congruence does not supply transitivity of the outer relation.
-  fail_if_success grw [h]
-  gcongr
-
-local instance : IsTrans (ProbComp α) GameEquiv := ⟨fun _ _ _ => GameEquiv.trans⟩
-
-example (h : GameEquiv oa ob) (hbc : GameEquiv ob oc) : GameEquiv oa oc := by grw [h, hbc]
-
-example (h : GameEquiv oa ob) : GameEquiv (oa >>= f) (ob >>= f) := by grw [h]
-
-example (h : GameEquiv oa ob) (p : α → β) : GameEquiv (p <$> oa) (p <$> ob) := by grw [h]
-
-example (h : GameEquiv oa ob) (hfg : ∀ x, GameEquiv (f x) (g x))
-    (hkl : ∀ y, GameEquiv (k y) (l y)) :
-    GameEquiv ((oa >>= f) >>= k) ((ob >>= g) >>= l) := by grw [h, hfg, hkl]
-
-example (h : GameEquiv oa ob) (hfg : ∀ x, GameEquiv (f x) (g x)) :
-    GameEquiv (oa >>= f) (ob >>= g) := by grw [h, hfg]
+example : negatedCoin =ᵈ ($ᵗ Bool : ProbComp Bool) := by
+  unfold negatedCoin
+  simpa only [bind_pure_comp] using
+    SampleableType.map_uniformSample_evalDistEq_of_bijective
+      (Function.Involutive.bijective (f := not) Bool.not_not)
 
 end Games
 

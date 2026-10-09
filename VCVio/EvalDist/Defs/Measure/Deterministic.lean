@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Defs.Measure.Failure
+public import VCVio.EvalDist.ProbabilityNotation
 public import ToMathlib.Control.Except
 public import ToMathlib.Control.Option
 
@@ -113,3 +114,52 @@ instance (priority := 20) instLawfulEvalDistSemanticsExcept {ε : Type u} :
     cases mx with
     | error _ => exact (Measure.bind_zero_left fun x ↦ 𝒟[f x]).symm
     | ok x => exact (Measure.dirac_bind hf x).symm
+
+/-! ## Events of deterministic computations -/
+
+/-- An absent optional result makes every event impossible. -/
+@[simp, grind =]
+theorem Option.prEvent_none : prEvent (none : Option Prop) = 0 := by
+  rw [prEvent_def, Option.evalDist_none, Measure.coe_zero, Pi.zero_apply]
+
+/-- A present optional proposition has probability one exactly when it holds. -/
+@[simp, grind =]
+theorem Option.prEvent_some (P : Prop) [Decidable P] :
+    prEvent (some P) = if P then 1 else 0 :=
+  prEvent_pure_prop (m := Option) P
+
+/-- No event of an absent optional result succeeds. -/
+@[grind =]
+theorem Option.prEvent_map_none {α : Type} (p : α → Prop) :
+    prEvent (p <$> (none : Option α)) = 0 :=
+  Option.prEvent_none
+
+/-- An event of a present optional result has probability one exactly when it holds. -/
+@[grind =]
+theorem Option.prEvent_map_some {α : Type} (p : α → Prop) (x : α) [Decidable (p x)] :
+    prEvent (p <$> some x) = if p x then 1 else 0 :=
+  Option.prEvent_some (p x)
+
+/-- An exceptional result makes every event impossible. -/
+@[simp, grind =]
+theorem Except.prEvent_error {ε : Type u} (error : ε) :
+    prEvent (Except.error error : Except ε Prop) = 0 := by
+  rw [prEvent_def, Except.evalDist_error, Measure.coe_zero, Pi.zero_apply]
+
+/-- A successful exceptional proposition has probability one exactly when it holds. -/
+@[simp, grind =]
+theorem Except.prEvent_ok {ε : Type u} (P : Prop) [Decidable P] :
+    prEvent (Except.ok P : Except ε Prop) = if P then 1 else 0 :=
+  prEvent_pure_prop (m := Except ε) P
+
+/-- No event of an exceptional result succeeds. -/
+@[grind =]
+theorem Except.prEvent_map_error {ε : Type u} {α : Type} (p : α → Prop) (error : ε) :
+    prEvent (p <$> (Except.error error : Except ε α)) = 0 :=
+  Except.prEvent_error error
+
+/-- An event of a successful exceptional result has probability one exactly when it holds. -/
+@[grind =]
+theorem Except.prEvent_map_ok {ε : Type u} {α : Type} (p : α → Prop) (x : α)
+    [Decidable (p x)] : prEvent (p <$> (Except.ok x : Except ε α)) = if p x then 1 else 0 :=
+  Except.prEvent_ok (p x)

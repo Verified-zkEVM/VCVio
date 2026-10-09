@@ -25,7 +25,6 @@ namespace VCVioTest.Unpredictability
 section Generic
 
 variable {ι : Type} [DecidableEq ι] [Inhabited ι] {spec : OracleSpec.{0, 0} ι}
-  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [IsUniformMeasureSpec spec] [∀ t, Fintype (spec.Range t)]
 
 /-- The finite-target bound applies to a genuine fresh query over an arbitrary uniform oracle

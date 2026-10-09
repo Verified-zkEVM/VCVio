@@ -141,11 +141,10 @@ private lemma run'_mOfFn_query_mixed [DecidableEq Stmt] [DecidableEq Commit] [De
                   | none => $ᵗ Fin (2 ^ b)] := by
         intro x c hc
         rw [bind_pure_comp, simulateQ_map, StateT.run'_map']
-        refine (evalDist_map_congr_of_evalDist_eq _ _
-          (ih (fun j => records j.succ)
+        refine (((EvalDistEq.of_evalDist_eq (ih (fun j => records j.succ)
             (fun j₁ j₂ hj => Fin.succ_injective n (hinj hj))
-            (fun j => hits j.succ) (fun j => f j.succ) c hc)
-          (Fin.cons (α := fun _ => β) (f 0 x))).trans ?_
+            (fun j => hits j.succ) (fun j => f j.succ) c hc)).map
+          (Fin.cons (α := fun _ => β) (f 0 x))).evalDist_eq).trans ?_
         rw [Functor.map_map]
         refine congrArg (fun mx => 𝒟[mx]) (congrArg (· <$> _) ?_)
         funext u i
@@ -203,8 +202,9 @@ private lemma run'_mOfFn_query_mixed_bind
             | none => $ᵗ Fin (2 ^ b)) >>= fun u => pure (V fun i => f i (u i))] := by
   let : MeasurableSpace γ := ⊤
   rw [bind_pure_comp V, simulateQ_map, StateT.run'_map']
-  refine (evalDist_map_congr_of_evalDist_eq _ _
-    (run'_mOfFn_query_mixed ρ b M n records hinj hits f cache hcache) V).trans ?_
+  have h := EvalDistEq.of_evalDist_eq
+    (run'_mOfFn_query_mixed ρ b M n records hinj hits f cache hcache)
+  refine ((h.map V).evalDist_eq).trans ?_
   rw [Functor.map_map, bind_pure_comp]
 
 /-- **Mixed-cache verify run.** The Fischlin verifier's `run'` on a cache storing exactly the

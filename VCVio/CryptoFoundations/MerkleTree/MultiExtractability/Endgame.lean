@@ -122,8 +122,7 @@ def HasFreshCheckpointTarget
       MerkleTreeExtractability.CacheAddsValue
         (cacheAt tag attempt.checkpoint) terminalCache target
 
-variable
-  {config : Configuration Cfg Address}
+variable {config : Configuration Cfg Address}
   {model : MerkleTreeExtractability.NodeQueryModel Query Address Y}
   {state : ExtractorState Cfg Query Address Y config}
   {attempts : List (AnyEvaluatedOpeningClaim Cfg Query Address Y config)}

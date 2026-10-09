@@ -778,11 +778,11 @@ private lemma searchVec_run_cache_eq_aux (n : ℕ) (e : Fin n → Fin ρ) (he : 
             (fun i => sc i.succ) (fun i => toSig i.succ)
             (fun j o => htoSig j.succ o) a.2 ha2fresh
           -- The shared outer reconstruction map: prepend the head transcript and read.
-          have key := evalDist_map_congr_of_evalDist_eq _ _ hih
+          have key := ((EvalDistEq.of_evalDist_eq hih).map
             (fun p : (Fin n → Commit × Chal × Resp) × (Fin n → Option (Fin (2 ^ b))) =>
               ((Fin.cons (toSig 0 a.1) p.1 : Fin (n + 1) → Commit × Chal × Resp),
                 (Fin.cons (a.2 (searchRecord ρ M pk msg comList (e 0) a.1)) p.2 :
-                  Fin (n + 1) → Option (Fin (2 ^ b)))))
+                  Fin (n + 1) → Option (Fin (2 ^ b)))))).evalDist_eq
           simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind,
             Function.comp] at key ⊢
           exact key
@@ -794,11 +794,11 @@ private lemma searchVec_run_cache_eq_aux (n : ℕ) (e : Fin n → Fin ρ) (he : 
               (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache =>
             (a.1, a.2 (searchRecord ρ M pk msg comList (e 0) a.1)))
           (g := G)]
-        rw [evalDist_bind_congr_of_evalDist_eq _ _
-          (fischlinSearch_run_cache_eq σ ρ b M pk sk (sc 0) msg comList (e 0)
+        rw [((EvalDistEq.of_evalDist_eq
+            (fischlinSearch_run_cache_eq σ ρ b M pk sk (sc 0) msg comList (e 0)
             (FinEnum.toList Chal) FinEnum.nodup_toList none cache
             (fun ω _ resp => hfresh 0 ω resp) (fun _ => hfresh 0 default default)
-            (fun ω resp h hb => absurd hb (by simp))), bind_map_left]
+            (fun ω resp h hb => absurd hb (by simp)))).bind_left _).evalDist_eq, bind_map_left]
         refine congrArg (fun mx => 𝒟[mx]) (bind_congr (fun best0 => bind_congr (fun tb => ?_)))
         congr 1
         refine Prod.ext (funext fun j => ?_) (funext fun j => ?_)
@@ -949,7 +949,7 @@ private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
         ∀ i, p.2 (⟨pk, msg, List.ofFn comVec, i, (p.1 i).2.1, (p.1 i).2.2⟩ :
           FischlinROInput Stmt Commit Chal Resp ρ M) = (bests i).map fun t => t.2.2 := by
     intro p hp
-    have hmem := (Set.ext_iff.mp (support_eq_of_evalDist_eq hcouple)
+    have hmem := (Set.ext_iff.mp (support_eq_of_evalDistEq (EvalDistEq.of_evalDist_eq hcouple))
       ((fun p => (p.1, fun i => p.2 (⟨pk, msg, List.ofFn comVec, i, (p.1 i).2.1, (p.1 i).2.2⟩ :
         FischlinROInput Stmt Commit Chal Resp ρ M))) p)).mp
       (by rw [support_map]; exact Set.mem_image_of_mem _ hp)
@@ -977,7 +977,7 @@ private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
             (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache =>
           (p.1, fun i => p.2 (⟨pk, msg, List.ofFn comVec, i, (p.1 i).2.1, (p.1 i).2.2⟩ :
             FischlinROInput Stmt Commit Chal Resp ρ M))),
-      evalDist_map_congr_of_evalDist_eq _ _ hcouple V, map_eq_bind_pure_comp, bind_map_left]
+      ((EvalDistEq.of_evalDist_eq hcouple).map V).evalDist_eq, map_eq_bind_pure_comp, bind_map_left]
     refine congrArg (fun mx => 𝒟[mx]) (bind_congr fun bests => ?_)
     simp only [Function.comp]
     refine congrArg pure ?_
@@ -1241,7 +1241,7 @@ private lemma model_reject_le [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
   set minH : (Fin ρ → Option (Chal × Resp × Fin (2 ^ b))) → Fin ρ → ℕ :=
     fun bs i => match bs i with | some (_, _, h) => h.val | none => 0 with hminH
   -- Reduce the rejection event to "the hash sum exceeds `S`".
-  simp only [bind_assoc, pure_bind]
+  simp only [prEvent_norm]
   set bestsComp := Fin.mOfFn ρ
     fun i => fischlinUnifSearch σ pk sk (commits i).2 (FinEnum.toList Chal) none with hbestsComp
   refine le_trans (prEvent_mono_of_support _ _ (fun bs => S < ∑ i, minH bs i)

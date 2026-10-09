@@ -124,7 +124,7 @@ private def mkVCGenPlannedStep (label replayText : String) (run : TacticM Bool) 
   { label, replayText, run }
 
 private def hasProbGoal (target : Expr) : Bool :=
-  (findAppWithHead? ``evalDist target).isSome ||
+  (findAppWithHead? ``prEvent target).isSome || (findAppWithHead? ``evalDist target).isSome ||
     (findAppWithHead? ``probEvent target).isSome || (findAppWithHead? ``probOutput target).isSome
 
 /-- Report why the current weakest-precondition goal admits no selected structural step. -/
@@ -767,9 +767,14 @@ inductive ProbEqAction where
   | rewrite
   | rewriteUnder (depth : Nat)
 
+/-- Bring both sides into the bind shape the swap and congruence laws match: events into the
+normal form of `Pr{…}[…]`, output measures into plain bind chains. -/
 private def normalizeProbEqGoal : TacticM Unit := do
-  discard <| tryEvalTacticSyntax (← `(tactic|
-    simp only [map_eq_bind_pure_comp, bind_assoc]))
+  if (findAppWithHead? ``prEvent (← instantiateMVars (← getMainTarget))).isSome then
+    discard <| tryEvalTacticSyntax (← `(tactic| simp only [prEvent_norm]))
+  else
+    discard <| tryEvalTacticSyntax (← `(tactic|
+      simp only [map_eq_bind_pure_comp, bind_assoc]))
 
 /-- Normalize a probability equality and try swapping adjacent independent binds. -/
 def runProbEqSwap : TacticM Bool := do
@@ -777,6 +782,8 @@ def runProbEqSwap : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic| (
     try simp only [bind_assoc]
     first
+      | (rw [OracleComp.prEvent_bind_bind_swap]; done)
+      | (rw [OracleComp.prEvent_bind_bind_swap_of_uniform]; done)
       | (rw [OracleComp.evalDist_bind_bind_swap]; done)
       | (rw [OracleComp.evalDist_bind_bind_swap_of_uniform]; done)
       | (rw [← probEvent_eq_eq_probOutput, ← probEvent_eq_eq_probOutput]
@@ -814,6 +821,7 @@ quantifies over a reachable prefix output and its support hypothesis. -/
 private def runNativeProbEqCongr : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
     first
+      | refine OracleComp.prEvent_bind_congr_of_support _ _ _ ?_
       | (refine OracleComp.evalDist_bind_apply_congr_of_support _ _ _ ?_ ?_
          · first
              | exact measurableSet_singleton _
@@ -904,6 +912,17 @@ partial def mkNativeSwapUnderProof (uniform : Bool) (depth : Nat) : TacticM (TSy
       let inner ← mkNativeSwapUnderProof uniform depth
       `(term| OracleComp.evalDist_bind_congr_of_support _ _ _ fun _ _ => $inner)
 
+/-- Build an event theorem that swaps adjacent binds under `depth` shared prefixes; `uniform`
+selects the swap law that derives countable responses from a uniform specification. -/
+partial def mkPrEventSwapUnderProof (uniform : Bool) (depth : Nat) : TacticM (TSyntax `term) := do
+  match depth with
+  | 0 =>
+      if uniform then `(term| OracleComp.prEvent_bind_bind_swap_of_uniform _ _ _)
+      else `(term| OracleComp.prEvent_bind_bind_swap _ _ _)
+  | depth + 1 =>
+      let inner ← mkPrEventSwapUnderProof uniform depth
+      `(term| OracleComp.prEvent_bind_congr_of_support _ _ _ fun _ _ => $inner)
+
 /-- Build a theorem that swaps adjacent binds under `depth` shared prefixes. -/
 partial def mkProbSwapUnderProof (depth : Nat) : TacticM (TSyntax `term) := do
   match depth with
@@ -917,6 +936,8 @@ def runProbEqRewrite : TacticM Bool := do
   normalizeProbEqGoal
   tryEvalTacticSyntax (← `(tactic| (
     first
+      | rw [OracleComp.prEvent_bind_bind_swap]
+      | rw [OracleComp.prEvent_bind_bind_swap_of_uniform]
       | rw [OracleComp.evalDist_bind_bind_swap]
       | rw [OracleComp.evalDist_bind_bind_swap_of_uniform]
       | (simp only [← probEvent_eq_eq_probOutput]
@@ -930,8 +951,14 @@ def runProbEqRewriteUnder (depth : Nat) : TacticM Bool := do
   let proof ← mkProbSwapUnderProof depth
   let native ← mkNativeSwapUnderProof false depth
   let nativeUniform ← mkNativeSwapUnderProof true depth
+  let event ← mkPrEventSwapUnderProof false depth
+  let eventUniform ← mkPrEventSwapUnderProof true depth
   tryEvalTacticSyntax (← `(tactic| (
     first
+      | (conv_lhs => rw [show _ from $event])
+      | (conv_rhs => rw [show _ from $event])
+      | (conv_lhs => rw [show _ from $eventUniform])
+      | (conv_rhs => rw [show _ from $eventUniform])
       | (conv_lhs => rw [show _ from $native])
       | (conv_rhs => rw [show _ from $native])
       | (conv_lhs => rw [show _ from $nativeUniform])
@@ -1045,11 +1072,12 @@ private def probEqPlannerActionPlans : List (List ProbEqAction) :=
     , [.swap]
     ]
 
-/-- The observed computation of a `Pr{…}[…]` event is `comp >>= fun x => pure (p x)`; its bind
-depth is that of `comp`. -/
+/-- The observed computation of a `Pr{…}[…]` event is `p <$> comp`, or
+`comp >>= fun x => pure (p x)` once unfolded to its measure; its bind depth is that of `comp`. -/
 private def stripEventObservation (comp : Expr) : Expr :=
   let comp := comp.consumeMData
-  if isBindExpr comp then
+  if comp.isAppOfArity ``Functor.map 6 then comp.appArg!
+  else if isBindExpr comp then
     let args := comp.getAppArgs
     match args.back?, args[args.size - 2]? with
     | some (.lam _ _ body _), some inner =>
@@ -1190,8 +1218,8 @@ def throwVCGenStepRwNormalizeError : TacticM Unit := withMainContext do
 /-- Try to lower a probability goal into a `Triple`, `wp`, or probability-equality goal. -/
 def tryLowerProbGoal : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
-  let isProbEventGoal := (findAppWithHead? ``evalDist target).isSome ||
-    (findAppWithHead? ``probEvent target).isSome
+  let isProbEventGoal := (findAppWithHead? ``prEvent target).isSome ||
+    (findAppWithHead? ``evalDist target).isSome || (findAppWithHead? ``probEvent target).isSome
   let isProbOutputGoal := (findAppWithHead? ``probOutput target).isSome
   unless isProbEventGoal || isProbOutputGoal do return false
   if isProbEqGoal target then
@@ -1216,7 +1244,7 @@ def tryLowerProbGoal : TacticM Bool := do
         rw [OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
       return true
     if ← tryEvalTacticSyntax (← `(tactic|
-        simp only [evalDist_ite_apply, evalDist_dite_apply,
+        simp only [prEvent_ite, prEvent_dite, evalDist_ite_apply, evalDist_dite_apply,
           OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
       return true
   return false

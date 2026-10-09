@@ -162,7 +162,7 @@ the upstream-alignment survey.
 | `bind_mono_right_of_forall`: `AEMeasurable f μ → AEMeasurable g μ → (∀ x, f x ≤ g x) → μ.bind f ≤ μ.bind g` | Resumption observations; arbitrary measurable spaces, explicit side conditions, and kernels tested. | **Adopt helper and attribute.** Mathlib-facing follow-up candidate. |
 | Existing `expectedValue_mono[_of_support]`, `probEvent_mono`, `wp_mono[_of_support]` | Pointwise/support-restricted rewriting, implication, subtraction, and hypotheses tested. | **Keep registrations; improve documentation.** |
 | Existing `supportWhen_mono`, `expectedQuerySlack_mono` and its step rule | Already tagged; support-handler test uses an arbitrary oracle signature without probability classes. | **Keep.** Not missing registrations. |
-| `GameEquiv.bind_congr`, `map_congr`, plus `IsTrans _ GameEquiv` | Local tests compose bind/map and rewrite nested equivalent games. Tags alone allow descent; `grw` also needs transitivity of the outer relation. | **Experimental.** Existing OTP callers need a coupling bijection; the current program-logic walkthrough already has short `rvcgen` proofs. Future composed-game proofs with supplied equivalences are a concrete use. |
+| `EvalDistEq.bind_congr`, `map_congr`, plus `IsTrans (m α) EvalDistEq` | Tests compose bind/map and rewrite nested games equal in distribution. Tags alone allow descent; `grw` also needs transitivity of the outer relation. | **Adopted.** `=ᵈ` is a first-class relation, so its congruences carry `@[gcongr]` and the instance is global. The support-aware `OracleComp.EvalDistEq.bind_congr_of_support` stays a local experiment. |
 | `expectedValue_congr_of_support` | Local equality descent works; direct theorem application already handles current callers. | **Experimental.** Promote when equality under a larger shared context removes repeated manual congruence. |
 | `relTriple_post_mono` | Attribute accepted, facade descent fails; existing `rel_conseq` succeeds. | **Defer.** Address the abbreviation/indexing boundary only with a caller that needs compositional rewriting. |
 | `MeasureProgramLogic.eRelWP_mono`, `CouplingPost.mono` | Local pointwise quantitative/qualitative postcondition tests pass. | **Experimental.** Future measure-native relational proofs can use them; current witness and bridge proofs do not become clearer merely by replacing a direct theorem call. |
@@ -245,9 +245,9 @@ bodies and are excluded.
 
 The caller search also covered Fiat–Shamir with abort, Fujisaki–Okamoto, replay forking, and
 Diffie–Hellman reductions. Short direct theorem applications and proofs requiring substantial
-algebra or case analysis were retained where generalized rewriting did not improve them. No
-existing caller of `GameEquiv.bind_congr` or `GameEquiv.map_congr` was found outside their
-defining module and the new experiments, so their proposed registrations remain local.
+algebra or case analysis were retained where generalized rewriting did not improve them. The
+bind/map congruences of equality in distribution are registered globally for `=ᵈ` from
+`VCVio.EvalDist.EvalDistEq`.
 
 ## Reproduction and validation
 
@@ -326,7 +326,7 @@ only the command's scheduling work gives misleadingly identical before/after cou
 | Upper cost certificate from `ha` and `hab : a ≤ b` | `queryBoundedAboveBy_mono ha hab` | `grw [← hab]; exact ha` | 28 → 37 |
 | Measure bind, measurable continuations and pointwise `h` | `bind_mono_right hf hg (Filter.Eventually.of_forall h)` | `grw [h]` | 56 → 108 |
 | Expectation with support-restricted `h` | `gcongr with x hx; exact h x hx` | `grw [h]; assumption` | 94 → 68 |
-| Two nested binds with game equivalences `h`, `hfg`, `hkl` | `GameEquiv.bind_congr (GameEquiv.bind_congr h hfg) hkl` | `grw [h, hfg, hkl]`, with the experimental local registrations and instance | 68 → 148 |
+| Two nested binds with equalities in distribution `h`, `hfg`, `hkl` | `EvalDistEq.bind_congr (EvalDistEq.bind_congr h hfg) hkl` | `grw [h, hfg, hkl]` | 68 → 148 |
 
 These are synchronous whole-declaration snapshots in user-facing heartbeat units, not permanent
 thresholds. To repeat them, use the corresponding parameterized goals in the corpus and the two
@@ -337,9 +337,8 @@ without a material module-level regression, not a claim that generalized rewriti
 
 ## Follow-up work and upstream distinction
 
-1. **First eligible caller:** when a proof composes existing `GameEquiv` facts under bind/map,
-   promote the tested congruence registrations together with the transitivity instance. Compare
-   against `rvcgen` and direct `GameEquiv.bind_congr` before choosing the proof interface.
+1. **Composed games:** when a proof composes supplied `=ᵈ` facts under bind/map, compare `grw`
+   against `rvcgen` and direct `EvalDistEq.bind_congr` before choosing the proof interface.
 2. **Measure-native relational development:** promote the local postcondition rules when a real
    quantitative/qualitative measure proof benefits. Measurable coupling families and gluing remain
    mathematical prerequisites for sequential rules; congruence cannot synthesize them.
