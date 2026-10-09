@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Relational.SimulateQ
-public import VCVio.StateSeparating.Advantage
+public import VCVio.StateSeparating.Advantage.Measure
 
 /-!
 # State-separating handlers: identical-until-bad

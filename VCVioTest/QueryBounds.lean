@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 
 /-!
 # Allowed-query predicates and adaptive response paths

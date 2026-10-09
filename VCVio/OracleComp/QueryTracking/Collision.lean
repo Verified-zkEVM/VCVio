@@ -5,9 +5,13 @@ Authors: James Waters
 -/
 
 module
-public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ReachableWhen
+public import VCVio.OracleComp.Support
+public import PolyFun.PFunctor.Free.WP
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import ToMathlib.Data.Set.Functor
 public import VCVio.OracleComp.QueryTracking.CachingOracle
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!

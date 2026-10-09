@@ -12,7 +12,7 @@ public import VCVio.CryptoFoundations.SigmaProtocol
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 
 /-!
 # Stateful Fiat-Shamir CMA games

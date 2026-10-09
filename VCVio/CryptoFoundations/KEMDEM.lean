@@ -46,46 +46,52 @@ def composeWithDEM [Monad m]
 
 section Correct
 
-variable [DecidableEq K] [DecidableEq M] [Monad m] [MonadLiftT m SPMF]
-  [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
+variable [DecidableEq K] [DecidableEq M] [Monad m] [LawfulMonad m] [MonadAttach m]
+  [ExactMonadAttach m]
 
-/-- From KEM correctness at the monadic probability level, every reachable decapsulation of an
-honest ciphertext returns the encapsulated key. -/
-private lemma kem_decaps_mem_support
-    [LawfulMonad m]
-    {kem : KEMScheme m K PK SK CKEM}
-    (hkem : Pr[= true | kem.correctnessExperiment] = 1)
-    {pk : PK} {sk : SK} (hks : (pk, sk) ∈ support kem.keygen)
-    {c : CKEM} {k : K} (hck : (c, k) ∈ support (kem.encaps pk))
-    {kOpt : Option K} (hkOpt : kOpt ∈ support (kem.decaps sk c)) :
-    kOpt = some k := by
-  have hmem : decide (kOpt = some k) ∈ support kem.correctnessExperiment := by
-    simp only [KEMScheme.correctnessExperiment, mem_support_bind_iff, support_pure,
-      Set.mem_singleton_iff, decide_eq_decide, Prod.exists]
-    exact ⟨pk, sk, hks, c, k, hck, kOpt, hkOpt, Iff.rfl⟩
-  simpa [((probOutput_eq_one_iff (mx := kem.correctnessExperiment) (x := true)).mp hkem).2]
-    using hmem
-
-variable [LawfulMonadLiftT m SPMF]
-
-/-- If a KEM and externally keyed DEM are both perfectly correct in the concrete probabilistic
-semantics of `m`, then their composition is also perfectly correct. -/
-theorem perfectlyCorrect_composeWithDEM
-    [LawfulMonad m]
+/-- Reachable KEM and DEM round trips that always succeed make every reachable round trip of the
+composed scheme succeed. -/
+theorem support_correctnessExperiment_composeWithDEM
     (kem : KEMScheme m K PK SK CKEM) (dem : DEMScheme m K M CDEM)
-    (hkem : Pr[= true | kem.correctnessExperiment] = 1)
-    (hdem : ∀ k : K, ∀ msg : M, Pr[= true | dem.correctnessExperiment k msg] = 1) :
-    ∀ msg, Pr[= true | (kem.composeWithDEM dem).correctnessExperiment msg] = 1 := by
+    (hkem : ∀ b ∈ support kem.correctnessExperiment, b = true)
+    (hdem : ∀ k msg, ∀ b ∈ support (dem.correctnessExperiment k msg), b = true)
+    (msg : M) :
+    ∀ b ∈ support ((kem.composeWithDEM dem).correctnessExperiment msg), b = true := by
+  intro b hb
+  simp only [AsymmEncAlg.correctnessExperiment, composeWithDEM, mem_support_bind_iff,
+    mem_support_pure_iff, Prod.exists] at hb
+  obtain ⟨pk, sk, hks, c₁, c₂, ⟨c₁', k, hck, c₂', hc₂, hc⟩, msg', ⟨kOpt, hkOpt, hmsg'⟩, rfl⟩ := hb
+  obtain ⟨rfl, rfl⟩ := Prod.ext_iff.mp hc
+  have hk : kOpt = some k := by
+    have hmem : decide (kOpt = some k) ∈ support kem.correctnessExperiment := by
+      simp only [KEMScheme.correctnessExperiment, mem_support_bind_iff, mem_support_pure_iff,
+        Prod.exists]
+      exact ⟨pk, sk, hks, c₁, k, hck, kOpt, hkOpt, rfl⟩
+    simpa using hkem _ hmem
+  subst hk
+  simp only [mem_support_bind_iff, mem_support_pure_iff] at hmsg'
+  obtain ⟨m', hm', rfl⟩ := hmsg'
+  have hmem : decide (m' = msg) ∈ support (dem.correctnessExperiment k msg) := by
+    simp only [DEMScheme.correctnessExperiment, mem_support_bind_iff, mem_support_pure_iff]
+    exact ⟨c₂, hc₂, m', hm', rfl⟩
+  simpa using hdem k msg _ hmem
+
+/-- Perfect correctness composes for oracle computations under uniform measure semantics: a KEM
+and an externally keyed DEM that each succeed with probability `1` give a composed scheme that
+succeeds with probability `1`. -/
+theorem perfectlyCorrect_composeWithDEM {ι : Type} {spec : OracleSpec ι}
+    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [IsUniformMeasureSpec spec]
+    (kem : KEMScheme (OracleComp spec) K PK SK CKEM) (dem : DEMScheme (OracleComp spec) K M CDEM)
+    (hkem : 𝒟[kem.correctnessExperiment] {true} = 1)
+    (hdem : ∀ k : K, ∀ msg : M, 𝒟[dem.correctnessExperiment k msg] {true} = 1) :
+    ∀ msg, 𝒟[(kem.composeWithDEM dem).correctnessExperiment msg] {true} = 1 := by
   intro msg
-  rw [← hkem]
-  simp only [AsymmEncAlg.correctnessExperiment, composeWithDEM, KEMScheme.correctnessExperiment,
-    monad_norm]
-  refine probOutput_bind_congr fun ⟨pk, sk⟩ hks => ?_
-  refine probOutput_bind_congr fun ⟨kc, k⟩ hck => ?_
-  rw [probOutput_bind_bind_swap (mx := dem.encrypt k msg) (my := kem.decaps sk kc)]
-  refine probOutput_bind_congr fun kOpt hkOpt => ?_
-  obtain rfl := kem_decaps_mem_support hkem hks hck hkOpt
-  simpa [DEMScheme.correctnessExperiment, probOutput_pure, monad_norm] using hdem k msg
+  rw [← prEvent_eq_evalDist_singleton _ true] at hkem ⊢
+  rw [prEvent_eq_one_iff] at hkem ⊢
+  exact support_correctnessExperiment_composeWithDEM kem dem hkem
+    (fun k msg => (prEvent_eq_one_iff _ _).1
+      ((prEvent_eq_evalDist_singleton _ true).trans (hdem k msg))) msg
 
 end Correct
 

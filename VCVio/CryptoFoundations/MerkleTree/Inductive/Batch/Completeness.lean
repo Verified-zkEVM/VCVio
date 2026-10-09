@@ -75,13 +75,13 @@ single-index `completeness` theorem reduces to `functional_completeness`.
 theorem batch_completeness [DecidableEq α] [SampleableType α] {s : Skeleton}
     (leaf_data_tree : LeafData α s) (sel : LeafData Bool s) (h : sel.anySelected = true)
     (preexisting_cache : (spec α).QueryCache) :
-    Pr[fun v => v.1 = true | (simulateQ (spec α).randomOracle (do
+    Pr{let v ← (simulateQ (spec α).randomOracle (do
       let cache ← buildMerkleTree leaf_data_tree
       let proof := generateBatchProof cache sel h
       let verified ← (verifyBatchProof (m := OracleComp (spec α))
         (selectedValues leaf_data_tree sel) (cache.getRootValue) proof)
-      return verified)).run preexisting_cache] = 1 := by
-  refine (probEvent_eq_one_simulateQ_randomOracle_run_iff (spec := spec α)
+      return verified)).run preexisting_cache}[v.1 = true] = 1 := by
+  refine (prEvent_eq_one_simulateQ_randomOracle_run_iff (spec := spec α)
     (p := fun b : Bool => b = true) _ _).mpr ?_
   intro f _hf
   simp only [evalWithAnswerFn, verifyBatchProof, simulateQ_bind, simulateQ_pure,

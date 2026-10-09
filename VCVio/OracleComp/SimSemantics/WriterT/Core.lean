@@ -14,7 +14,7 @@ public import ToMathlib.Control.WriterT
 
 Combinators and output-preservation lemmas for writer-instrumented query implementations.
 The combinators here mirror the StateT/ReaderT versions in
-`SimSemantics/StateT/Basic.lean` and `SimSemantics/ReaderT/Basic.lean`.
+`SimSemantics/StateT/Basic/Native.lean` and `SimSemantics/ReaderT/Basic.lean`.
 -/
 
 public section

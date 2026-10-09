@@ -303,10 +303,10 @@ theorem measure_onlineAdaptivePrefixRunFrom_logged_le
             nodeBudget checkpointCount overhead remaining cached hremaining
         · exact zero_le
 
-/-- The predictable-target measure bound read through discrete probability notation. -/
-theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
-    [DecidableEq Query] [Finite Y] [Inhabited Y]
-    [IsUniformSpec (Query →ₒ Y)]
+/-- The predictable-target bound for events under native uniform oracle semantics. -/
+theorem prEvent_onlineAdaptivePrefixRunFrom_logged_le
+    [DecidableEq Query] [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [IsUniformMeasureSpec (Query →ₒ Y)]
     (suffix : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
     (continuation : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) C)
     (win : R → Prop)
@@ -361,39 +361,32 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
       (∀ input value, terminalCache input = some value →
         ∃ entry ∈ terminalLog, entry.1 = input ∧ entry.2 = value) →
       Good terminalCache terminalLog →
-      Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
-          (suffix x terminalLog)).run terminalCache] ≤
+      Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (suffix x terminalLog)).run
+             terminalCache}[win z.1] ≤
         (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
           terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹) :
-    Pr[fun z => win z.1 |
-      adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
-        suffix prefixComp cache log] ≤
+    Pr{let z ← adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R) suffix prefixComp
+           cache log}[win z.1] ≤
       (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
         remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
   classical
-  let : MeasurableSpace Y := ⊤
   let : MeasurableSpace (R × (Query →ₒ Y).QueryCache) := ⊤
-  rw [← evalDist_apply_setOf]
-  refine measure_onlineAdaptivePrefixRunFrom_logged_le (hquery := ?_)
+  rw [prEvent_eq_evalDist_of_discrete]
+  refine measure_onlineAdaptivePrefixRunFrom_logged_le
+    (hquery := fun t => (evalDist_liftM_query t).trans
+      (IsUniformMeasureSpec.toMeasure_eq_uniform t))
     suffix continuation win MeasurableSet.of_discrete targets Good nodeBudget checkpointCount
     overhead prefixComp remaining cached log hbound cache hno hcacheBound hlogCache hcacheLog
     hgood hgoodHit hgoodMiss htargetBound ?_
-  · intro t
-    let : Fintype Y := Fintype.ofFinite Y
-    apply MeasureTheory.Measure.ext_of_singleton
-    intro y
-    rw [evalDist_apply_singleton, probOutput_query, ProbabilityTheory.uniformOn_univ,
-      MeasureTheory.Measure.count_singleton, one_div]
-    simp only [← Nat.card_eq_fintype_card]
-  · intro x terminalRemaining terminalCached terminalCache terminalLog hq hn hb hl hc hg
-    simpa only [evalDist_apply_setOf] using
-      hterminal x terminalRemaining terminalCached terminalCache terminalLog hq hn hb hl hc hg
+  intro x terminalRemaining terminalCached terminalCache terminalLog hq hn hb hl hc hg
+  rw [← prEvent_eq_evalDist_of_discrete]
+  exact hterminal x terminalRemaining terminalCached terminalCache terminalLog hq hn hb hl hc hg
 
 /-- Specialization where structural accounting does not depend on the accumulated log. -/
-theorem probEvent_onlineAdaptivePrefixRunFrom_le
-    [DecidableEq Query] [Finite Y] [Inhabited Y]
-    [IsUniformSpec (Query →ₒ Y)]
+theorem prEvent_onlineAdaptivePrefixRunFrom_le
+    [DecidableEq Query] [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [IsUniformMeasureSpec (Query →ₒ Y)]
     (suffix : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
     (continuation : X → OracleComp (Query →ₒ Y) C)
     (win : R → Prop)
@@ -447,17 +440,16 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_le
       (∀ input value, terminalCache input = some value →
         ∃ entry ∈ terminalLog, entry.1 = input ∧ entry.2 = value) →
       Good terminalCache terminalLog →
-      Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
-          (suffix x terminalLog)).run terminalCache] ≤
+      Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (suffix x terminalLog)).run
+             terminalCache}[win z.1] ≤
         (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
           terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹) :
-    Pr[fun z => win z.1 |
-      adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
-        suffix prefixComp cache log] ≤
+    Pr{let z ← adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R) suffix prefixComp
+           cache log}[win z.1] ≤
       (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
         remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
-  apply probEvent_onlineAdaptivePrefixRunFrom_logged_le suffix
+  apply prEvent_onlineAdaptivePrefixRunFrom_logged_le suffix
     (fun x _ => continuation x) win targets Good nodeBudget checkpointCount overhead
     prefixComp remaining cached log
   · exact (isTotalQueryBound_loggedAccountingBind_const_iff
