@@ -52,7 +52,8 @@ theorem runtimeCoherent_probComp : RuntimeCoherent ProbCompRuntime.probComp wher
   lawful := inferInstance
   evalDist_eq _ := rfl
   lift_evalDist_eq _ := rfl
-  ae_mem_support mx := evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete fun _ hx ↦ hx
+  ae_mem_support mx :=
+    evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete fun _ hx ↦ hx
 
 /-- A structural invariant holds almost surely under the certified runtime. -/
 theorem RuntimeCoherent.ae_of_forall_mem_support {runtime : ProbCompRuntime m}

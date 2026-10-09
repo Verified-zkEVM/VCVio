@@ -349,7 +349,7 @@ structure ChallengeResult (proto : Scheme m K UK TK W) where
 @[expose] noncomputable def boolBiasAdvantage [SampleableType K] [DecidableEq W] [Monad m]
     {proto : Scheme m K UK TK W} (runtime : ProbCompRuntime m)
     (A : Adversary proto) : ℝ :=
-  (runtime.evalDist (Exp runtime.toProbCompLift A)).boolBias
+  (runtime.evalDist (Exp runtime.toProbCompLift A)).boolBias.toReal
 
 /-- The canonical UAKE experiment has full successful-output mass. -/
 instance instIsProbabilityMeasureExp [SampleableType K] [DecidableEq W]
@@ -365,7 +365,10 @@ instance instIsProbabilityMeasureExp [SampleableType K] [DecidableEq W]
 lemma boolBiasAdvantage_eq_two_mul_advantage [SampleableType K] [DecidableEq W] [Monad m]
     {proto : Scheme m K UK TK W} (runtime : ProbCompRuntime m) (A : Adversary proto)
     [MeasureTheory.IsProbabilityMeasure (runtime.evalDist (Exp runtime.toProbCompLift A))] :
-    boolBiasAdvantage runtime A = 2 * advantage runtime A :=
-  MeasureTheory.Measure.boolBias_eq_two_mul_abs_sub_half_of_isProbabilityMeasure _
+    boolBiasAdvantage runtime A = 2 * advantage runtime A := by
+  unfold boolBiasAdvantage advantage
+  rw [MeasureTheory.Measure.boolBias_eq_two_mul_absDiff_half_of_isProbabilityMeasure,
+    ENNReal.toReal_mul, ENNReal.absDiff_toReal (MeasureTheory.measure_ne_top _ _) (by simp)]
+  simp [one_div, ENNReal.toReal_inv]
 
 end AKE.UAKE
