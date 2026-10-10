@@ -50,6 +50,7 @@ public import ToMathlib.MeasureTheory.DiscreteInstances
 public import ToMathlib.MeasureTheory.Function.AEMeasurable
 public import ToMathlib.MeasureTheory.Integral.AbsDiff
 public import ToMathlib.MeasureTheory.Integral.Bounds
+public import ToMathlib.MeasureTheory.Integral.Countable
 public import ToMathlib.MeasureTheory.Integral.Quadratic
 public import ToMathlib.MeasureTheory.MeasurableSpace.Except
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option

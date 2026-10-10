@@ -340,8 +340,14 @@ MODULES: dict[str, list[str]] = {
 
 # Native analogues of the most used discrete lemmas, reported where the legacy name appears.
 LEGACY_HINTS: dict[str, str] = {
-    "probOutput_bind_eq_tsum": "`prEvent_bind_eq_lintegral` (`_of_discrete` for a discrete draw)",
-    "probEvent_bind_eq_tsum": "`prEvent_bind_eq_lintegral` (`_of_discrete` for a discrete draw)",
+    "probOutput_bind_eq_tsum":
+        "`OracleComp.prEvent_bind_eq_tsum`, or `prEvent_bind_eq_lintegral` in another monad",
+    "probEvent_bind_eq_tsum":
+        "`OracleComp.prEvent_bind_eq_tsum`, or `prEvent_bind_eq_lintegral` in another monad",
+    "tsum_probOutput_eq_one": "`OracleComp.tsum_prEvent_eq_one`",
+    "tsum_probOutput_eq_one'": "`OracleComp.tsum_prEvent_eq_one`",
+    "tsum_probOutput_le_one": "`OracleComp.tsum_prEvent_le_one`",
+    "tvDist_bind_left_le": "`OracleComp.measureETVDist_bind_left_le_tsum`",
     "probEvent_bind_eq_expectedValue": "`prEvent_bind_eq_lintegral`",
     "probOutput_def": "`prEvent_def`",
     "probEvent_def": "`prEvent_def`",

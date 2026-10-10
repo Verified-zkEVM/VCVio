@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Relational.SimulateQ.StateDependent
+public import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # Resource-charged and averaged-state bad-event bounds
@@ -190,14 +191,14 @@ same right-hand side as a single `tsum` against `postStepJointM`, and
 free-monad induction consumes. -/
 lemma avgBadM_query_bind_eq
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) [Countable (spec.Range t)] [Countable σ]
+    (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) [∀ t, Finite (spec'.Range t)]
     (cont : spec.Range t → OracleComp spec γ) :
     avgBadM impl ν (query t >>= cont) =
       ∑' p : σ × Bool, ν p *
         ∑' z : spec.Range t × σ × Bool, Pr{let x ← (impl t).run p}[x = z] *
           Pr{let w ← (simulateQ impl (cont z.1)).run z.2}[w.2.2 = true] := by
   simp only [avgBadM, simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-    OracleQuery.cont_query, id_map, StateT.run_bind, prEvent_bind_eq_tsum_of_countable]
+    OracleQuery.cont_query, id_map, StateT.run_bind, OracleComp.prEvent_bind_eq_tsum]
 
 /-- **Post-step joint measure of a query step (bare-measure form).** The measure over
 `(output, post-state)` produced by averaging the per-state step mass
@@ -255,7 +256,7 @@ the inductive hypothesis once per output, at a genuine state *measure* (not a Di
 per-target charge of the post-step measure can be bounded as a measure. -/
 lemma avgBadM_query_bind_eq_tsum_output
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) [Countable (spec.Range t)] [Countable σ]
+    (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) [∀ t, Finite (spec'.Range t)]
     (cont : spec.Range t → OracleComp spec γ) :
     avgBadM impl ν (query t >>= cont) =
       ∑' u : spec.Range t, avgBadM impl (postStepOutM impl ν t u) (cont u) := by
