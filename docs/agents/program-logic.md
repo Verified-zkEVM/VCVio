@@ -141,8 +141,8 @@ classes of probability goals:
 2. **Lower-bound event goals** → stay inside unary VCGen by reusing the same `Triple` shell:
    - `r ≤ Pr{let x ← oa}[p x]` / `Pr{let x ← oa}[p x] ≥ r` → `Triple r oa (fun x => 𝟙⟦p x⟧)`
 
-3. **Probability equalities** (`Pr{...}[...]`, applied `𝒟[...]` masses, or output measures; the
-   retiring `Pr[...]` façade is still accepted):
+3. **Probability equalities** (`Pr{...}[...]`, applied `𝒟[...]` masses, or output measures;
+   goals in the retiring `Pr[...]` notation are not planned, so convert them to `Pr{...}` first):
    - Plain `vcstep` first normalizes common `map`/`bind` surface syntax (`map_eq_bind_pure_comp`,
      `bind_assoc`), then preview-selects the best bounded swap/congruence plan from the fast path
    - `vcstep rw` performs exactly one top-level bind-swap rewrite

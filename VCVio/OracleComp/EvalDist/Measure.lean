@@ -385,6 +385,26 @@ theorem prEvent_bind_const (mx : OracleComp spec α) (my : OracleComp spec Prop)
     prEvent (mx >>= fun _ ↦ my) = prEvent my := by
   rw [prEvent_def, prEvent_def, evalDist_bind_const]
 
+/-- A lossless prefix whose result is unused is equal in distribution to its continuation. -/
+theorem EvalDistEq.bind_const {β : Type} (mx : OracleComp spec α) (my : OracleComp spec β) :
+    (mx >>= fun _ ↦ my) =ᵈ my :=
+  _root_.EvalDistEq.of_forall_prEvent_eq fun p ↦ by
+    rw [map_bind]
+    exact prEvent_bind_const mx (p <$> my)
+
+/-- Discarding the result of a lossless computation leaves the constant. -/
+theorem EvalDistEq.map_const {β : Type} (mx : OracleComp spec α) (c : β) :
+    (fun _ ↦ c) <$> mx =ᵈ (pure c : OracleComp spec β) := by
+  rw [map_eq_bind_pure_comp]
+  exact EvalDistEq.bind_const mx (pure c)
+
+/-- A property of every structurally reachable output holds almost surely. -/
+theorem ae_evalDist_of_forall_mem_support [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : OracleComp spec α) {p : α → Prop} (h : ∀ x ∈ support mx, p x) :
+    ∀ᵐ x ∂𝒟[mx], p x := by
+  rw [MeasureTheory.ae_iff, ← prEvent_eq_evalDist_of_discrete]
+  exact prEvent_eq_zero_of_forall_mem_support mx _ fun x hx hn => hn (h x hx)
+
 /-- An event containing every structurally reachable output has probability one. -/
 theorem prEvent_eq_one_of_forall_mem_support (mx : OracleComp spec α) (p : α → Prop)
     (h : ∀ x ∈ support mx, p x) : Pr{let x ← mx}[p x] = 1 := by

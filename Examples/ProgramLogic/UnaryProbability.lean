@@ -50,33 +50,33 @@ example {oa : OracleComp spec Bool}
 
 end NativeLowering
 
-section CompatibilityEqualities
+section Equalities
 
-variable [IsUniformSpec spec]
+variable [∀ t, Countable (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
 
 /-! ### Probability equality (swap / congr) -/
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
     {f : α → β → OracleComp spec γ} {z : γ} :
-    Pr[= z | mx >>= fun a => my >>= fun b => f a b] =
-    Pr[= z | my >>= fun b => mx >>= fun a => f a b] := by
+    Pr{mx >>= fun a => my >>= fun b => f a b}[= z] =
+    Pr{my >>= fun b => mx >>= fun a => f a b}[= z] := by
   vcstep
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {y : β}
-    (h : ∀ x ∈ support mx, Pr[= y | f x] = Pr[= y | g x]) :
-    Pr[= y | mx >>= f] = Pr[= y | mx >>= g] := by
+    (h : ∀ x ∈ support mx, Pr{f x}[= y] = Pr{g x}[= y]) :
+    Pr{mx >>= f}[= y] = Pr{mx >>= g}[= y] := by
   vcstep rw congr
   exact h _ ‹_›
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
-    (h : ∀ x, Pr[ q | f x] = Pr[ q | g x]) :
-    Pr[ q | mx >>= f] = Pr[ q | mx >>= g] := by
+    (h : ∀ x, Pr{y ← f x}[q y] = Pr{y ← g x}[q y]) :
+    Pr{y ← mx >>= f}[q y] = Pr{y ← mx >>= g}[q y] := by
   vcstep rw congr'
   exact h _
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
-    (h : ∀ x, Pr[ q | f x] = Pr[ q | g x]) :
-    Pr[ q | mx >>= f] = Pr[ q | mx >>= g] := by
+    (h : ∀ x, Pr{y ← f x}[q y] = Pr{y ← g x}[q y]) :
+    Pr{y ← mx >>= f}[q y] = Pr{y ← mx >>= g}[q y] := by
   vcstep rw congr' as ⟨x⟩
   exact h x
 
@@ -87,23 +87,23 @@ info: Try this:
 -/
 #guard_msgs (info) in
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
-    (h : ∀ x, Pr[ q | f x] = Pr[ q | g x]) :
-    Pr[ q | mx >>= f] = Pr[ q | mx >>= g] := by
+    (h : ∀ x, Pr{y ← f x}[q y] = Pr{y ← g x}[q y]) :
+    Pr{y ← mx >>= f}[q y] = Pr{y ← mx >>= g}[q y] := by
   vcstep?
   exact h x
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
     {f g : α → β → OracleComp spec γ} {q : γ → Prop}
-    (h : ∀ x y, Pr[ q | f x y] = Pr[ q | g x y]) :
-    Pr[ q | mx >>= fun x => my >>= fun y => f x y] =
-    Pr[ q | mx >>= fun x => my >>= fun y => g x y] := by
+    (h : ∀ x y, Pr{r ← f x y}[q r] = Pr{r ← g x y}[q r]) :
+    Pr{r ← mx >>= fun x => my >>= fun y => f x y}[q r] =
+    Pr{r ← mx >>= fun x => my >>= fun y => g x y}[q r] := by
   vcstep rw congr' as ⟨x, y⟩
   exact h x y
 
 example : 𝟙⟦(True : Prop)⟧ * 𝟙⟦(True : Prop)⟧ = (1 : ℝ≥0∞) := by
   exp_norm
 
-end CompatibilityEqualities
+end Equalities
 
 section NativeLowering
 

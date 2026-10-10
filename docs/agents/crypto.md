@@ -312,8 +312,8 @@ The reasons are specific to how adversaries are represented here.
 The same applies to every object that the security argument requires to be efficient or
 independent of a secret:
 
-- simulators: `∃ sim ζ_zk, 0 ≤ ζ_zk ∧ HVZK sim ζ_zk` holds with `ζ_zk := 1`, since
-  `tvDist ≤ 1`;
+- simulators: `∃ sim ζ_zk, HVZK sim ζ_zk` holds with `ζ_zk := 1`, since
+  `measureETVDist ≤ 1`;
 - extractors, distinguishers, collision finders, and preimage finders.
 
 Name each one with a definition (`cmaReduction`, `hvzkSimulatorReal`,

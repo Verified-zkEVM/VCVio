@@ -47,7 +47,7 @@ so they stay ours — but stating them measure-first is what would make them con
 | `expectedValue mx g` | `∫⁻ x, g x ∂(denote mx)` | **absent** |
 | `probEvent` | measure application | **defined through `PMF.toOuterMeasure`** |
 | `EvalDist/IndepProduct.lean` | `IndepFun` / `iIndepFun` w.r.t. the denotation | absent |
-| `EvalDist/TVDist.lean` | a measure-level total variation | absent upstream and here |
+| `EvalDist/MeasureTVDist/Basic.lean` | a measure-level total variation | absent upstream; local `Measure.tvDist` |
 | `EvalDist/RenyiDivergence.lean` | via `Measure.rnDeriv`, as `klDiv` is | absent |
 
 Two of these are worth calling out as liabilities rather than gaps.

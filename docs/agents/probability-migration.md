@@ -92,7 +92,10 @@ Native lemmas keep the legacy name with the probability head replaced:
 Other renames: `AdvBound.of_tvDist` → `AdvBound.of_measureETVDist` (and `AdvBound` takes an
 `ℝ≥0∞` bound); root `evalDist_uniformSample` → `SampleableType.evalDist_uniformSample`;
 `relTriple_eqRel_of_evalSPMF_eq` → `relTriple_eqRel_of_evalDistEq`;
-`evalSPMF_eq_of_relTriple_eqRel` → `evalDistEq_of_relTriple_eqRel`.
+`evalSPMF_eq_of_relTriple_eqRel` → `evalDistEq_of_relTriple_eqRel`; in the identical-until-bad
+family `_plus_probEvent_bad` → `_add_prEvent_bad` (for example
+`advantage_le_expectedQuerySlack_add_prEvent_bad_of_inv_preserved`) and `tvDist_simulateQ_…` →
+the `measureETVDist_simulateQ_run…` twins in `Relational/SimulateQ/UntilBad.lean`.
 
 Statements of equality in distribution now use `=ᵈ`:
 - `prEvent_congr_of_evalDist_eq mx my h p` → `(EvalDistEq.of_evalDist_eq h).prEvent_eq p`;
@@ -104,6 +107,29 @@ Statements of equality in distribution now use `=ᵈ`:
 - lemmas whose conclusion was one become `evalDistEq_…`, e.g. `evalDistEq_generateSeed_of_countEq`,
   `evalDistEq_of_forall_prEvent_eq_output`, `SampleableType.evalDistEq_uniformSample_vector_succ`;
 - `AdvBound.of_gameEquiv` → `AdvBound.of_evalDistEq`.
+
+## Converted theorem families
+
+These families changed statement shape as well as names. The codemod renames the declarations;
+callers restate the hypotheses they supply.
+
+| Family | Legacy statement | Native statement |
+|---|---|---|
+| `SigmaProtocol.HVZK`, `IdenSchemeWithAbort.HVZK` | `ζ_zk : ℝ` with `0 ≤ ζ_zk`, and `tvDist real sim ≤ ζ_zk` | `ζ_zk : ℝ≥0∞`, and `measureETVDist real sim ≤ ζ_zk` on the discrete transcript σ-algebra; the nonnegativity hypothesis goes |
+| `PerfectHVZK` | `𝒮[real] = 𝒮[sim]` | `real =ᵈ sim`; `perfectHVZK_iff_hvzk_zero` relates it to `HVZK … 0` |
+| `simCommitPredictability` | `Pr[= c₀ \| Prod.fst <$> simT x] ≤ β` | `Pr{t ← simT x}[t.1 = c₀] ≤ β` |
+| Fiat–Shamir CMA-to-NMA loss (`euf_cma_to_nma`, `euf_cma_bound`) | `ENNReal.ofReal (qS * ζ_zk)` | `qS * ζ_zk` |
+| Charged steps of the per-query slack bounds (`expectedQuerySlack`, `advantage_le_expectedQuerySlack_add_prEvent_bad` and its variants) | `ENNReal.ofReal (tvDist ((h₀ t).run (s, false)) ((h₁ t).run (s, false))) ≤ ε s` | `letI : MeasurableSpace (E.Range t × σ × Bool) := ⊤; measureETVDist … ≤ ε s` |
+| Uncharged steps of the same bounds | `∀ p, (h₀ t).run p = (h₁ t).run p` | `∀ s, (h₀ t).run (s, false) = (h₁ t).run (s, false)`: only good states are compared |
+| `expectedQuerySlack` step | `∑'`-weighted continuation | the unary expectation `wp` of the continuation |
+
+The Fiat–Shamir extraction bounds `nma_to_hard_relation_bound`, `euf_nma_bound` and
+`euf_cma_bound` no longer take the extractor-failure hypothesis `hss_nf`, which holds for every
+`OracleComp`; drop that argument at call sites. Their conclusions and `Fork.advantage` are
+`Pr{…}[= true]` events.
+
+For an aborting identification scheme whose loss is a real-valued formula, keep `ζ_zk : ℝ` and
+pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_bound` does.
 
 ## Modules
 
@@ -118,6 +144,9 @@ Statements of equality in distribution now use `=ᵈ`:
 | `VCVio.OracleComp.Constructions.Fork` | `VCVio.OracleComp.Constructions.Fork.Basic` |
 | `VCVio.CryptoFoundations.ForkMeasure` | `VCVio.CryptoFoundations.ReplayFork`, `VCVio.CryptoFoundations.SeededFork` |
 | `VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility` | `VCVio.CryptoFoundations.SymmEncAlg` |
+| `VCVio.EvalDist.TVDist`, `VCVio.EvalDist.MeasureTVDist` | `VCVio.EvalDist.MeasureTVDist.Basic` (with `.Bind` and `.Event` for composition rules) |
+| `VCVio.EvalDist.TVDist.Positivity` | `VCVio.EvalDist.MeasureTVDist.Positivity` (`positivity` on `measureTVDist`) |
+| `VCVio.ProgramLogic.Relational.SimulateQ.Epsilon` | `VCVio.ProgramLogic.Relational.SimulateQ.UntilBad` |
 | `VCVio.StateSeparating.DistEquiv` | `VCVio.StateSeparating.MeasureDistEquiv` |
 | `VCVio.StateSeparating.Advantage` | `VCVio.StateSeparating.Advantage.Measure` |
 | `VCVio.EvalDist.Monad.Disagreement` | `VCVio.EvalDist.Monad.Disagreement.Measure` |

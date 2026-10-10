@@ -5,13 +5,14 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.TVDist
+
+public import VCVio.EvalDist.MeasureTVDist.Basic
 public meta import Mathlib.Tactic.Positivity.Core
 
 /-!
-# Positivity of monadic total variation distance
+# Positivity of total variation distance
 
-The `positivity` extension for `tvDist` uses its public nonnegativity theorem. It composes
+The `positivity` extension for `measureTVDist` uses its public nonnegativity theorem. It composes
 with arithmetic extensions and does not assert strict positivity or distinguishability.
 -/
 
@@ -21,15 +22,15 @@ open Lean Meta Qq
 
 namespace Mathlib.Meta.Positivity
 
-/-- Monadic total variation distance is nonnegative. -/
-@[positivity tvDist _ _]
-def evalTVDist : PositivityExt where
+/-- Total variation distance between output measures is nonnegative. -/
+@[positivity measureTVDist _ _]
+def evalMeasureTVDist : PositivityExt where
   eval {u α} _ pα? e :=
     match pα? with | none => pure .none | some _ => do
     match u, α, e with
-    | 0, ~q(ℝ), ~q(@tvDist $m $inst $β $mx $my) =>
+    | 0, ~q(ℝ), ~q(@measureTVDist $m $β $inst $ms $mx $my) =>
         assertInstancesCommute
-        return .nonnegative q(@tvDist_nonneg $m $inst $β $mx $my)
-    | _, _, _ => throwError "not a monadic total variation distance"
+        return .nonnegative q(@measureTVDist_nonneg $m $β $inst $ms $mx $my)
+    | _, _, _ => throwError "not a total variation distance"
 
 end Mathlib.Meta.Positivity
