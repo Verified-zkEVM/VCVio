@@ -10,7 +10,7 @@ public import VCVio.CryptoFoundations.SecExp.Measure
 public import VCVio.StateSeparating.MeasureDistEquiv
 public import VCVio.ProgramLogic.Relational.Measure.Bind
 public import VCVio.ProgramLogic.Relational.Measure.Deterministic
-public import VCVio.ProgramLogic.Relational.Measure.Oracle
+public import VCVio.ProgramLogic.Relational.Basic
 public import VCVio.EvalDist.Defs.Measure.Core
 public import VCVio.EvalDist.Defs.Measure.Deterministic
 public import VCVio.EvalDist.Defs.Measure.ExceptT

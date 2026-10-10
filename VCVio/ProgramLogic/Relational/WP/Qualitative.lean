@@ -13,8 +13,8 @@ public import VCVio.ProgramLogic.Relational.Basic
 # Qualitative relational weakest preconditions
 
 `OracleComp.Rel.Qualitative` supplies a scoped interpretation of pairs of computations
-by `CouplingPost`. This is probabilistic coupling, with the probability assumptions
-in each declaration; it is distinct from unary structural reachability.
+by `CouplingPost`, the measure coupling judgment of
+`VCVio.ProgramLogic.Relational.Basic`. It is distinct from unary structural reachability.
 
 Use `open scoped OracleComp.Rel.Qualitative` to select this carrier.
 -/
@@ -28,8 +28,11 @@ open Std.Internal.Do
 namespace OracleComp.Rel.Qualitative
 
 variable {ι₁ ι₂ : Type u}
-variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
+variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
+variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
+  [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
+  [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 variable {α β : Type}
 
 /-- Relational weakest preconditions from probabilistic coupling.

@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Relational.SimulateQ.Basic
+public import VCVio.ProgramLogic.Relational.SimulateQ.UntilBad
 public import VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 public import VCVio.ProgramLogic.Relational.SimulateQ.StateDependent
 public import VCVio.ProgramLogic.Relational.SimulateQ.Resource
@@ -37,11 +38,13 @@ carrying it as an unbounded remainder.
   `relTriple_simulateQ_run'` projects onto output equality alone.
 - `relTriple_simulateQ_run_writerT`: the `WriterT` analogue, transporting a monoid congruence
   on accumulated logs through the whole simulation.
-- `tvDist_simulateQ_le_probEvent_bad`: "identical until bad" — if two oracle implementations
-  agree whenever a "bad" flag is unset, the TV distance between their simulations is bounded by
-  the probability of bad being set. `tvDist_simulateQ_le_probEvent_output_bad` is the variant
-  whose flag lives in the output, and `identical_until_bad_with_flag` packages the common
-  `σ × Bool` shape.
+- `measureETVDist_simulateQ_run'_le_prEvent_bad`: "identical until bad" — if two oracle
+  implementations agree on steps between good states and keep bad states bad, the total variation
+  between their simulations is bounded by the probability of ending in a bad state. The handlers
+  may disagree on the step that sets a bad flag, and `_of_run_eq` / `_of_evalDist_eq` take
+  agreement off bad input states. `tvDist_simulateQ_le_probEvent_bad` states the discrete
+  version, and `tvDist_simulateQ_le_probEvent_output_bad` the one whose flag lives in the
+  output.
 - `tvDist_simulateQ_le_qeps_plus_probEvent_output_bad` and
   `tvDist_simulateQ_le_queryBound_mul_slack_plus_probEvent_bad`: ε-perturbed refinements, where
   the two implementations may differ by up to `ε` on each (charged) query.

@@ -7,6 +7,7 @@ Authors: James Waters
 module
 public import Examples.CommitmentScheme.Hiding.LoggingBounds
 public import VCVio.OracleComp.Coercions.SubSpec
+import VCVio.OracleComp.EvalDist.UniformCompatibility
 
 /-!
 # Hiding for the random-oracle commitment scheme — main theorems

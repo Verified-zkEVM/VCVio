@@ -219,7 +219,7 @@ any challenge value `ch₀`, the joint marginal `Pr[(commit, chal) = (c₀, ch�
 This is a strengthening of `simCommitPredictability` (which only bounds the commit
 marginal). Where the latter says "no commit value is too likely", `simChalUniformGivenCommit`
 says "the challenge is uniform conditional on any commit value", which is exactly the
-hypothesis required by `identical_until_bad_with_flag` when bridging the Fiat-Shamir
+hypothesis required by `measureETVDist_simulateQ_run_le_prEvent_bad` when bridging the Fiat-Shamir
 programming-oracle and no-programming-oracle worlds: cache misses on programmed points
 return the simulator's challenge, and the bridge needs that challenge to be marginally
 uniform conditional on the simulator's commit (which is what gets compared against the

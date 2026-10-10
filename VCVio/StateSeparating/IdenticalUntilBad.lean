@@ -8,6 +8,7 @@ module
 
 public import VCVio.ProgramLogic.Relational.SimulateQ
 public import VCVio.StateSeparating.Advantage.Measure
+import VCVio.OracleComp.EvalDist.UniformCompatibility
 
 /-!
 # State-separating handlers: identical-until-bad

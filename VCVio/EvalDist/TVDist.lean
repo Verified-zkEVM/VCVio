@@ -9,6 +9,7 @@ public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
 public import VCVio.EvalDist.Defs.Basic
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Defs.NeverFails
+public import VCVio.EvalDist.Defs.Instances
 
 /-!
 # Total Variation Distance for SPMFs and Monadic Computations
@@ -397,3 +398,212 @@ lemma abs_probOutput_toReal_sub_le_tvDist
 end bool_tvdist
 
 end
+
+/-! ## Total variation through a public projection
+
+Two computations observed through maps that agree whenever the second output is the public
+projection of the first and is not bad have total variation distance at most that of the public
+projection plus the probability of the bad event. The supporting discrete lemmas collapse
+lossless prefixes and condition a distribution on the fibers of a map. -/
+
+universe u v
+
+namespace OracleComp.ProgramLogic.Relational
+
+universe w in
+lemma spmf_bind_const_of_no_failure {α' β' : Type w}
+    {p : SPMF α'} (hp : Pr[⊥ | p] = 0) (q : SPMF β') :
+    (p >>= fun _ => q) = q := by
+  apply SPMF.ext; intro y
+  have h : Pr[= y | p >>= fun _ => q] = Pr[= y | q] := by
+    rw [probOutput_bind_eq_tsum, ENNReal.tsum_mul_right, tsum_probOutput_eq_sub, hp,
+      tsub_zero, one_mul]
+  simpa only [probOutput_def, evalSPMF_def, monadLift_self] using h
+
+universe w in
+lemma spmf_map_const_of_no_failure {α' β' : Type w}
+    {p : SPMF α'} (hp : Pr[⊥ | p] = 0) (b : β') :
+    ((fun _ : α' => b) <$> p) = (pure b : SPMF β') :=
+  spmf_bind_const_of_no_failure hp (pure b : SPMF β')
+
+universe w in
+lemma spmf_bind_bind_const_of_no_failure {α' β' γ' : Type w}
+    {p : SPMF α'} (hp : Pr[⊥ | p] = 0) (q : α' → SPMF β')
+    (hq : ∀ a, Pr[⊥ | q a] = 0) (r : SPMF γ') :
+    (p >>= fun a => q a >>= fun _ => r) = r := by
+  calc
+    (p >>= fun a => q a >>= fun _ => r)
+        = p >>= fun _ => r := bind_congr fun a => spmf_bind_const_of_no_failure (hq a) r
+    _ = r := spmf_bind_const_of_no_failure hp r
+
+lemma probFailure_evalSPMF_eq_zero
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
+    {α : Type u} (mx : m α) :
+    Pr[⊥ | 𝒮[mx]] = 0 := by
+  simpa only [probFailure_evalSPMF] using probFailure_eq_zero (mx := mx)
+
+namespace PMF
+
+/-- Fiber of a deterministic observation map. -/
+def fiber {α β : Type*} (f : α → β) (b : β) : Set α := {a | f a = b}
+
+/-- Conditional distribution of a PMF along a deterministic observation map.
+
+For an observation value outside the support of `f <$> p`, the choice of
+distribution is irrelevant; we use an arbitrary support point of `p`. -/
+noncomputable def condOnMap {α β : Type*} (p : PMF α) (f : α → β) (b : β) : PMF α := by
+    classical
+    exact
+      if h : ∃ a ∈ fiber f b, a ∈ p.support then
+        p.filter (fiber f b) h
+      else
+        pure p.support_nonempty.some
+
+lemma condOnMap_apply_of_not_mem_fiber {α β : Type*} (p : PMF α) (f : α → β)
+    (b : β) {a : α} (ha : a ∉ fiber f b)
+    (hb : ∃ a ∈ fiber f b, a ∈ p.support) :
+    condOnMap p f b a = 0 := by
+  rw [condOnMap, dite_eq_left hb]
+  exact PMF.filter_apply_eq_zero_of_notMem (p := p) (s := fiber f b) (h := hb) ha
+
+lemma condOnMap_apply_of_mem_support {α β : Type*} (p : PMF α) (f : α → β)
+    {a : α} (ha : a ∈ p.support) :
+    condOnMap p f (f a) a = p a * ((PMF.map f p) (f a))⁻¹ := by
+  classical
+  let : DecidableEq β := Classical.decEq β
+  have hb : ∃ x ∈ fiber f (f a), x ∈ p.support := ⟨a, rfl, ha⟩
+  rw [condOnMap, dite_eq_left hb, PMF.filter_apply,
+    Set.indicator_of_mem (show a ∈ fiber f (f a) from rfl)]
+  simp only [PMF.map_apply, Set.indicator_apply, fiber, Set.mem_ofPred_eq, eq_comm]
+
+lemma map_bind_condOnMap {α β : Type*} (p : PMF α) (f : α → β) :
+    (PMF.map f p).bind (condOnMap p f) = p := by
+  classical
+  ext a
+  rw [PMF.bind_apply]
+  by_cases ha : a ∈ p.support
+  · have hsingle : ∀ b, b ≠ f a → (PMF.map f p) b * condOnMap p f b a = 0 := by
+      intro b hb
+      by_cases hbmem : ∃ x ∈ fiber f b, x ∈ p.support
+      · rw [condOnMap_apply_of_not_mem_fiber p f b (fun h => hb h.symm) hbmem, mul_zero]
+      · rw [show (PMF.map f p) b = 0 by
+          rw [PMF.apply_eq_zero_iff, PMF.mem_support_map_iff]
+          exact fun ⟨x, hx, hfx⟩ => hbmem ⟨x, hfx, hx⟩, zero_mul]
+    rw [tsum_eq_single (f a) hsingle, condOnMap_apply_of_mem_support p f ha, mul_comm, mul_assoc,
+      ENNReal.inv_mul_cancel
+        (by rw [← PMF.mem_support_iff, PMF.mem_support_map_iff]; exact ⟨a, ha, rfl⟩)
+        (PMF.apply_ne_top _ _), mul_one]
+  · rw [(PMF.apply_eq_zero_iff _ _).2 ha, ENNReal.tsum_eq_zero]
+    intro b
+    by_cases hbmem : ∃ x ∈ fiber f b, x ∈ p.support
+    · rw [show condOnMap p f b a = 0 by
+        rw [condOnMap, dite_eq_left hbmem, PMF.filter_apply_eq_zero_iff]; exact Or.inr ha, mul_zero]
+    · rw [show (PMF.map f p) b = 0 by
+        rw [PMF.apply_eq_zero_iff, PMF.mem_support_map_iff]
+        exact fun ⟨x, hx, hfx⟩ => hbmem ⟨x, hfx, hx⟩, zero_mul]
+
+end PMF
+
+namespace PMF
+
+/-- Conditional output kernel induced by a deterministic observation map.
+
+When the observation value is not in the support of `f <$> p`, the fallback
+is used. Since the observation has zero mass there, this does not affect the
+rebuilt distribution, but it makes pointwise continuation equalities easier
+to state. -/
+noncomputable def mapKernelWithFallback {α β γ : Type*}
+    (p : PMF α) (f : α → β) (out : α → γ) (fallback : β → γ) (b : β) : PMF γ := by
+    classical
+    exact
+      if h : ∃ a ∈ fiber f b, a ∈ p.support then
+        PMF.map out (p.filter (fiber f b) h)
+      else
+        pure (fallback b)
+
+lemma map_bind_mapKernelWithFallback {α β γ : Type*}
+    (p : PMF α) (f : α → β) (out : α → γ) (fallback : β → γ) :
+    (PMF.map f p).bind (mapKernelWithFallback p f out fallback) = PMF.map out p := by
+  let K : β → PMF γ := fun b => PMF.map out (condOnMap p f b)
+  have hbind :
+      (PMF.map f p).bind (mapKernelWithFallback p f out fallback) =
+        (PMF.map f p).bind K := by
+    refine PMF.bind_congr (PMF.map f p) _ _ ?_
+    intro b hb
+    obtain ⟨a, ha, hfa⟩ := (PMF.mem_support_map_iff f p b).1 hb
+    have hex : ∃ a ∈ fiber f b, a ∈ p.support := ⟨a, hfa, ha⟩
+    simp only [K, mapKernelWithFallback, condOnMap, dite_eq_left hex]
+  rw [hbind]
+  simp only [K, ← PMF.map_bind, map_bind_condOnMap]
+
+lemma mapKernelWithFallback_eq_pure_of {α β γ : Type*}
+    (p : PMF α) (f : α → β) (out : α → γ) (fallback : β → γ)
+    (bad : β → Prop)
+    (h_eq : ∀ a b, f a = b → ¬ bad b → out a = fallback b)
+    (b : β) (hb : ¬ bad b) :
+    mapKernelWithFallback p f out fallback b = pure (fallback b) := by
+  by_cases hex : ∃ a ∈ fiber f b, a ∈ p.support
+  · rw [mapKernelWithFallback, dite_eq_left hex]
+    refine PMF.eq_pure_of_forall_ne_eq_zero _ (fallback b) ?_
+    intro y hy
+    rw [PMF.apply_eq_zero_iff, PMF.mem_support_map_iff]
+    rintro ⟨a, ha, rfl⟩
+    exact hy (h_eq a b ((PMF.mem_support_filter_iff hex).1 ha).1 hb)
+  · rw [mapKernelWithFallback, dite_eq_right hex]
+
+end PMF
+
+theorem ofReal_tvDist_map_private_right_bad_le
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
+    {α β γ : Type u}
+    (oa : m α) (ob : m β)
+    (pub : α → β) (fa : α → γ) (fb : β → γ) (bad : β → Prop)
+    (h_eq : ∀ a b, pub a = b → ¬ bad b → fa a = fb b) :
+    ENNReal.ofReal (tvDist (fa <$> oa) (fb <$> ob))
+      ≤ ENNReal.ofReal (tvDist (pub <$> oa) ob) + Pr[bad | ob] := by
+  let p : PMF α := liftM oa
+  let q : PMF β := liftM ob
+  let K : β → PMF γ := PMF.mapKernelWithFallback p pub fa fb
+  have hstep : ∀ b, ¬ bad b → 𝒮[K b] = 𝒮[(pure (fb b) : PMF γ)] := fun b hb =>
+    congrArg evalSPMF (PMF.mapKernelWithFallback_eq_pure_of p pub fa fb bad h_eq b hb)
+  have h :=
+    ofReal_tvDist_bind_event_right_le
+      (m := PMF) (mx := PMF.map pub p) (my := q)
+      (f := K) (g := fun b => (pure (fb b) : PMF γ)) bad hstep
+  have hK : (PMF.map pub p).bind K = PMF.map fa p :=
+    PMF.map_bind_mapKernelWithFallback p pub fa fb
+  have hq : q.bind (fun b => (pure (fb b) : PMF γ)) = PMF.map fb q := by
+    simpa [Function.comp_def] using PMF.bind_pure_comp fb q
+  have hp_pub : (liftM (pub <$> oa) : PMF β) = PMF.map pub p :=
+    MonadHom.mmap_map (F := MonadHom.ofLift _ PMF) (x := oa) (g := pub)
+  have hp_fa : (liftM (fa <$> oa) : PMF γ) = PMF.map fa p :=
+    MonadHom.mmap_map (F := MonadHom.ofLift _ PMF) (x := oa) (g := fa)
+  have hq_fb : (liftM (fb <$> ob) : PMF γ) = PMF.map fb q :=
+    MonadHom.mmap_map (F := MonadHom.ofLift _ PMF) (x := ob) (g := fb)
+  have hleft :
+      tvDist (fa <$> oa) (fb <$> ob) =
+        tvDist ((PMF.map pub p).bind K) (q.bind fun b => (pure (fb b) : PMF γ)) := by
+    unfold tvDist
+    rw [evalSPMF_def (fa <$> oa),
+      evalSPMF_def (fb <$> ob),
+      PMF.evalSPMF_eq ((PMF.map pub p).bind K),
+      PMF.evalSPMF_eq (q.bind fun b => (pure (fb b) : PMF γ)),
+      show (liftM (fa <$> oa) : SPMF γ) = liftM ((liftM (fa <$> oa) : PMF γ)) from rfl,
+      show (liftM (fb <$> ob) : SPMF γ) = liftM ((liftM (fb <$> ob) : PMF γ)) from rfl,
+      hp_fa, hq_fb, hK, hq]
+  have hbase :
+      tvDist (pub <$> oa) ob = tvDist (PMF.map pub p) q := by
+    unfold tvDist
+    rw [evalSPMF_def (pub <$> oa),
+      evalSPMF_def ob,
+      PMF.evalSPMF_eq (PMF.map pub p),
+      PMF.evalSPMF_eq q,
+      show (liftM (pub <$> oa) : SPMF β) = liftM ((liftM (pub <$> oa) : PMF β)) from rfl,
+      show (liftM ob : SPMF β) = liftM ((liftM ob : PMF β)) from rfl,
+      hp_pub]
+  have hbad : Pr[bad | q] = Pr[bad | ob] := by
+    rw [probEvent_def, probEvent_def]
+    rfl
+  simpa [hleft, hbase, hbad] using h
+
+end OracleComp.ProgramLogic.Relational

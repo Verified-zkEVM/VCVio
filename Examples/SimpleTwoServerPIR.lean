@@ -208,8 +208,7 @@ probability 1/2 regardless of whether `j = i₀` or not:
 This is one half of the information-theoretic privacy guarantee; the second
 server view is handled by `pir_private_snd`. -/
 theorem pir_private (i₁ i₂ : Fin N) :
-    𝒮[Prod.fst <$> pirQuery i₁] =
-    𝒮[Prod.fst <$> pirQuery i₂] := by
+    ProgramLogic.GameEquiv (Prod.fst <$> pirQuery i₁) (Prod.fst <$> pirQuery i₂) := by
   simp only [pirQuery]
   by_equiv
   rvcstep -- handle map
@@ -236,8 +235,7 @@ The proof uses a coupling argument with four cases depending on whether `j` equa
 both, or neither. When `j` equals exactly one of them, the coupling negates the coin (`b ↦ !b`),
 exploiting the symmetry of the uniform distribution on `Bool`. -/
 theorem pir_private_snd (i₁ i₂ : Fin N) :
-    𝒮[Prod.snd <$> pirQuery i₁] =
-    𝒮[Prod.snd <$> pirQuery i₂] := by
+    ProgramLogic.GameEquiv (Prod.snd <$> pirQuery i₁) (Prod.snd <$> pirQuery i₂) := by
   simp only [pirQuery]
   by_equiv
   rvcstep -- handle map

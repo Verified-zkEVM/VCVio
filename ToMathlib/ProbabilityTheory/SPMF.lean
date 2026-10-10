@@ -44,13 +44,6 @@ protected lemma bind_congr {γ δ : Type*} (p : PMF γ) (f g : γ → PMF δ)
   ext y; simp only [PMF.bind_apply]; congr 1; ext x
   by_cases hx : p x = 0 <;> simp [hx, h x]
 
-/-- If `PMF.map f c = PMF.pure b` and `f a ≠ b`, then `c a = 0`. -/
-lemma map_eq_pure_zero {γ δ : Type*} (f : γ → δ) (c : PMF γ) (b : δ)
-    (h : PMF.map f c = PMF.pure b) (a : γ) (ha : f a ≠ b) : c a = 0 := by
-  have key := congr_fun (congrArg DFunLike.coe h) (f a)
-  simp only [map_apply, pure_apply, ha, ↓reduceIte, ENNReal.tsum_eq_zero, ite_eq_right_iff] at key
-  exact key a rfl
-
 end PMF
 
 /-- A subprobability mass function is a function `α → ℝ≥0∞` such that values have an infinite
@@ -290,18 +283,8 @@ theorem bind_eq_pmf_bind {p : SPMF α} {f : α → SPMF β} :
 @[simp] lemma PMF.map_some_apply_some (p : PMF α) (x : α) : (some <$> p) (some x) = p x := by
   simp [PMF.monad_map_eq_map]
 
-/-- `pure a` in `SPMF` equals `PMF.pure (some a)` as a PMF on `Option α`. -/
-protected lemma pure_eq_pure_some (a : α) :
-    (pure a : SPMF α) = SPMF.mk (PMF.pure (some a)) := rfl
-
 @[simp, grind =]
 lemma toPMF_inj (p q : SPMF α) : p.toPMF = q.toPMF ↔ p = q := by aesop
-
-/-- The functor map for SPMF equals `PMF.map (Option.map f)`. -/
-protected lemma fmap_eq_map (f : α → β) (c : SPMF α) :
-    (f <$> c : SPMF β) = (PMF.map (Option.map f) c) :=
-  show (f <$> c : SPMF β) = SPMF.mk (PMF.map (Option.map f) c.toPMF)
-  by rw [← SPMF.toPMF_inj, SPMF.toPMF_map, SPMF.toPMF_mk, PMF.monad_map_eq_map]
 
 end SPMF
 

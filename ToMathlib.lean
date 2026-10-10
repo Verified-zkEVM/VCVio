@@ -59,6 +59,7 @@ public import ToMathlib.MeasureTheory.Measure.Bounds
 public import ToMathlib.MeasureTheory.Measure.Coupling
 public import ToMathlib.MeasureTheory.Measure.Coupling.Bind
 public import ToMathlib.MeasureTheory.Measure.Coupling.Discard
+public import ToMathlib.MeasureTheory.Measure.Coupling.Maximal
 public import ToMathlib.MeasureTheory.Measure.Coupling.Residual
 public import ToMathlib.MeasureTheory.Measure.Except
 public import ToMathlib.MeasureTheory.Measure.GiryMonad
@@ -86,10 +87,8 @@ public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
 public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
 public import ToMathlib.Probability.TailSums
 public import ToMathlib.Probability.UniformOn
-public import ToMathlib.ProbabilityTheory.Coupling
 public import ToMathlib.ProbabilityTheory.FinRatPMF
 public import ToMathlib.ProbabilityTheory.FinRatPMF.Basic
 public import ToMathlib.ProbabilityTheory.FinRatPMF.Measure
-public import ToMathlib.ProbabilityTheory.OptimalCoupling
 public import ToMathlib.ProbabilityTheory.SPMF
 public import ToMathlib.Topology.Algebra.InfiniteSum.Option

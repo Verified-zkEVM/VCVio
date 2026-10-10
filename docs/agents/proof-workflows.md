@@ -304,7 +304,7 @@ set_option vcvio.vcgen.traceSteps true in
 ```lean
 -- Goal: AdvBound game ε
 by_dist                     -- enters TV distance mode
--- now need to show tvDist ... ≤ ε
+-- now need to show measureETVDist ... ≤ ε
 ```
 
 ```lean
