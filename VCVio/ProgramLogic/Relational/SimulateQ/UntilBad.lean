@@ -11,6 +11,7 @@ public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.EvalDist.MeasureTVDist.Bind
+public import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # Identical until bad for simulations
@@ -148,6 +149,24 @@ theorem prEvent_simulateQ_run_bad_eq
   have hne : Pr{let z ← (simulateQ impl₂ oa).run s₀}[¬bad z.2] ≠ ⊤ :=
     ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one _)
   rw [ENNReal.eq_sub_of_add_eq (hgood ▸ hne) h₁, ENNReal.eq_sub_of_add_eq hne h₂, hgood]
+
+/-- Computations over flagged outputs that give each unflagged output the same mass agree on every
+event of unflagged outputs. This supplies the good-to-good agreement of
+`prEvent_simulateQ_run_bad_eq` and `measureETVDist_simulateQ_run_le_prEvent_bad` for the flag
+`fun p => p.2 = true` from per-output agreement. -/
+theorem prEvent_and_not_flag_eq_of_forall_prEvent_eq [∀ t, Finite (spec'.Range t)] {β : Type}
+    {mx my : OracleComp spec' (β × σ × Bool)}
+    (h : ∀ b s, Pr{let z ← mx}[z = (b, s, false)] = Pr{let z ← my}[z = (b, s, false)])
+    (q : β × σ × Bool → Prop) :
+    Pr{let z ← mx}[q z ∧ ¬z.2.2 = true] = Pr{let z ← my}[q z ∧ ¬z.2.2 = true] := by
+  classical
+  rw [OracleComp.prEvent_eq_tsum_ite, OracleComp.prEvent_eq_tsum_ite]
+  refine tsum_congr fun z => ?_
+  obtain ⟨b, s, f⟩ := z
+  by_cases hq : q (b, s, f) ∧ ¬f = true
+  · obtain rfl : f = false := by simpa using hq.2
+    rw [ite_eq_left hq, ite_eq_left hq, h]
+  · rw [ite_eq_right hq, ite_eq_right hq]
 
 /-- Two simulations whose handlers agree on good-to-good steps and keep bad states bad have
 output-state pairs within the probability of ending in a bad state in total variation. -/

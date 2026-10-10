@@ -105,6 +105,16 @@ theorem evalDist_bind_bind_swap_of_uniform
     Finite.to_countable
   evalDist_bind_bind_swap mx my f
 
+/-- Independent oracle computations commute in distribution under a uniform oracle
+specification. -/
+theorem EvalDistEq.bind_bind_swap
+    {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
+    [OracleSpec.IsUniformMeasureSpec spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec γ) :
+    (mx >>= fun a ↦ my >>= fun b ↦ f a b) =ᵈ (my >>= fun b ↦ mx >>= fun a ↦ f a b) :=
+  let : MeasurableSpace γ := ⊤
+  _root_.EvalDistEq.of_evalDist_eq (evalDist_bind_bind_swap_of_uniform mx my f)
+
 /-- Independent oracle computations commute before an event of their continuation. -/
 theorem prEvent_bind_bind_swap
     {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
@@ -498,6 +508,18 @@ theorem prEvent_pos_iff (mx : OracleComp spec α) (p : α → Prop) :
   rw [pos_iff_ne_zero, ne_eq, prEvent_eq_zero_iff]
   push Not
   rfl
+
+/-- Under uniform oracle semantics, an output is structurally reachable exactly when it has nonzero
+mass. -/
+theorem mem_support_iff_prEvent_ne_zero (mx : OracleComp spec α) (x : α) :
+    x ∈ support mx ↔ Pr{let y ← mx}[y = x] ≠ 0 := by
+  rw [ne_eq, prEvent_eq_zero_iff]
+  simp
+
+/-- Under uniform oracle semantics, a structurally reachable output has nonzero mass. -/
+theorem prEvent_ne_zero_of_mem_support {mx : OracleComp spec α} {x : α} (hx : x ∈ support mx) :
+    Pr{let y ← mx}[y = x] ≠ 0 :=
+  (mem_support_iff_prEvent_ne_zero mx x).1 hx
 
 /-- Under uniform oracle semantics, computations equal in distribution reach the same outputs. -/
 theorem support_eq_of_evalDistEq {mx my : OracleComp spec α} (h : mx =ᵈ my) :

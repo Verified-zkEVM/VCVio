@@ -473,6 +473,14 @@ theorem prEvent_map
     Pr{let y ← f <$> mx}[p y] = Pr{let x ← mx}[p (f x)] := by
   rw [Functor.map_map]
 
+/-- An injective map preserves the mass of each output. -/
+theorem prEvent_map_injective
+    {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+    {α β : Type} (mx : m α) {f : α → β} (hf : Function.Injective f) (x : α) :
+    Pr{let y ← f <$> mx}[y = f x] = Pr{let y ← mx}[y = x] := by
+  rw [prEvent_map]
+  exact prEvent_congr mx _ _ fun _ ↦ hf.eq_iff
+
 /-- An event of a conditional computation is the conditional event. -/
 theorem prEvent_ite {m : Type → Type v} [EvalDistSemantics m] (c : Prop) [Decidable c]
     (mx my : m Prop) : prEvent (if c then mx else my) = if c then prEvent mx else prEvent my := by

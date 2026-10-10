@@ -10,6 +10,7 @@ public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import VCVio.ProgramLogic.Unary.HoareTriple
 public import ToMathlib.MeasureTheory.Measure.Coupling.Maximal
 import ToMathlib.MeasureTheory.Function.AEMeasurable
+import ToMathlib.MeasureTheory.Integral.Countable
 
 /-!
 # Quantitative Relational Program Logic (eRHL)
@@ -53,13 +54,6 @@ universe u v
 open scoped OracleSpec.PrimitiveQuery
 
 namespace OracleComp.ProgramLogic.Relational
-
-/-- Integrals against a measure concentrated on a countable set are sums over that set. -/
-private theorem lintegral_eq_tsum_of_ae_mem_countable {X : Type*} [MeasurableSpace X]
-    [MeasurableSingletonClass X] {μ : Measure X} {s : Set X} (hs : s.Countable)
-    (h : ∀ᵐ x ∂μ, x ∈ s) (f : X → ℝ≥0∞) :
-    ∫⁻ x, f x ∂μ = ∑' x : s, f x * μ {(x : X)} := by
-  rw [← lintegral_countable f hs, Measure.restrict_eq_self_of_ae_mem h]
 
 private lemma Finset_sum_iSup_le_iSup_sum {ι : Type*} {J : ι → Type*}
     [hne : ∀ i, Nonempty (J i)]

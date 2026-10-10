@@ -15,7 +15,8 @@ public import VCVio.EvalDist.ProbabilityBounds
 Two computations that give every event the same probability away from a bad event are within the
 bad event's probability in total variation, after any post-processing of their outputs. Events
 are read through `Pr{…}`, so no measurable structure is needed on the outputs themselves.
-Measurable post-processing never increases total variation.
+Measurable post-processing never increases total variation, and total variation bounds how much
+more likely a measurable event can be under one computation than under the other.
 -/
 
 public section
@@ -27,6 +28,15 @@ universe v
 
 variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
   [LawfulEvalDistSemantics m] {α β : Type}
+
+/-- An event is at most as likely as under another computation plus their extended total
+variation. -/
+theorem prEvent_le_prEvent_add_measureETVDist [MeasurableSpace α] (mx my : m α) (p : α → Prop)
+    (hp : Measurable p) :
+    Pr{let x ← mx}[p x] ≤ Pr{let y ← my}[p y] + measureETVDist mx my := by
+  rw [prEvent_eq_evalDist mx p hp, prEvent_eq_evalDist my p hp]
+  exact (ENNReal.absDiff_le_iff.1
+    (measure_absDiff_apply_le_measureETVDist mx my (measurableSet_setOfPred.2 hp))).1
 
 /-- Measurable post-processing of both computations cannot increase total variation. -/
 theorem measureETVDist_map_le [MeasurableSpace α] [MeasurableSpace β] (mx my : m α) (f : α → β)

@@ -61,6 +61,7 @@ public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.OracleComp.SpecInstanceSearch
 public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
+public import VCVioTest.OracleComp.Sum
 public import VCVioTest.OracleComp.SupportMeasure
 public import VCVioTest.OracleComp.UniformMeasureSpec
 public import VCVioTest.OracleNetwork

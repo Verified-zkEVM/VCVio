@@ -57,7 +57,7 @@ theorem of_forall_prEvent_eq {mx : m α} {my : m' α}
     (h : ∀ p : α → Prop, Pr{let x ← mx}[p x] = Pr{let y ← my}[p y]) : mx =ᵈ my :=
   h
 
-@[refl]
+@[refl, simp]
 theorem refl (mx : m α) : mx =ᵈ mx := fun _ ↦ rfl
 
 protected theorem rfl {mx : m α} : mx =ᵈ mx := refl mx
