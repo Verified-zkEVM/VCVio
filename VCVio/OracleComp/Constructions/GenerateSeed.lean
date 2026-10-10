@@ -7,7 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.QueryTracking.Structures
 public import VCVio.OracleComp.QueryTracking.CostModel
 
@@ -161,8 +161,9 @@ lemma tail_length_of_mem_support_generateSeed
   omega
 
 @[simp] lemma finSupport_generateSeed_ne_empty [DecidableEq (QuerySeed spec)] :
-    finSupport (generateSeed spec qc js) ≠ ∅ :=
-  (finSupport_nonempty_of_liftM_PMF _).ne_empty
+    finSupport (generateSeed spec qc js) ≠ ∅ := by
+  rw [← Finset.nonempty_iff_ne_empty, ← Finset.coe_nonempty, coe_finSupport]
+  exact OracleComp.support_nonempty _
 
 /-- Factor the probability of sampling a fixed `seed` for `j :: js` into the probability of its
 leading `qc j` answers at `j` times the probability of the remaining seed for `js`. The split

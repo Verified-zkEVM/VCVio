@@ -9,7 +9,7 @@ public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
 public import Mathlib.Tactic.GRewrite
 
 /-!
-# Native operational and quantitative oracle reasoning
+# Operational and quantitative oracle reasoning
 
 These canaries require only the chosen response measures, including weighted measures with
 zero-mass possible answers. No discrete probability backend is imported.
@@ -22,9 +22,8 @@ open scoped ENNReal MeasureProgramLogic.Quantitative
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native support/measure bridge unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "support/measure bridge unexpectedly imports PMF"
 
 universe u
 

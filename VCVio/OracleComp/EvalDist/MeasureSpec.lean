@@ -97,12 +97,12 @@ noncomputable def IsUniformMeasureSpec.ofFiniteNonempty (spec : OracleSpec.{u, v
     inferInstance
   toMeasure_eq_uniform _ := rfl
 
-/-- Native uniform measure semantics for the finite-range selection oracle. -/
+/-- Uniform measure semantics for the finite-range selection oracle. -/
 @[reducible]
 noncomputable def IsUniformMeasureSpec.unifSpec : IsUniformMeasureSpec _root_.unifSpec :=
   ofFiniteNonempty _
 
-/-- Native uniform measure semantics for the fair-coin oracle. -/
+/-- Uniform measure semantics for the fair-coin oracle. -/
 @[reducible]
 noncomputable def IsUniformMeasureSpec.coinSpec : IsUniformMeasureSpec _root_.coinSpec :=
   ofFiniteNonempty _

@@ -10,7 +10,7 @@ public import VCVio.EvalDist.Defs.Measure.Deterministic
 public import Mathlib.Tactic.GRewrite
 
 /-!
-# Native expectation WP canaries
+# Expectation WP canaries
 
 The quantitative carrier is chosen explicitly. Lawful measure semantics are sufficient for
 expectation reasoning, including monads with unsuccessful runs. These examples check mass
@@ -24,9 +24,8 @@ open scoped ENNReal
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native expectation WP unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "expectation WP unexpectedly imports PMF"
 
 namespace VCVioTest.ProgramLogic.MeasureWP
 

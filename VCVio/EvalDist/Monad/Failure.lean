@@ -54,3 +54,18 @@ theorem prEvent_failure {m : Type → Type v} [AlternativeMonad m] [LawfulMonad 
     {α : Type} (p : α → Prop) : Pr{let x ← (failure : m α)}[p x] = 0 := by
   rw [prEvent_def, map_eq_bind_pure_comp]
   simp
+
+/-- `failure` always fails. -/
+@[simp, grind =]
+theorem prFail_failure {m : Type → Type v} [AlternativeMonad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] [LawfulFailureEvalDistSemantics m]
+    {α : Type} : prFail (failure : m α) = 1 := by
+  simp [prFail_def]
+
+/-- `guard p` fails exactly when `p` does not hold. -/
+@[simp]
+theorem prFail_guard {m : Type → Type v} [AlternativeMonad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] [LawfulFailureEvalDistSemantics m]
+    (p : Prop) [Decidable p] : prFail (guard p : m Unit) = if p then 0 else 1 := by
+  by_cases hp : p <;> simp [guard, hp]
+

@@ -47,7 +47,7 @@ trace events, so this file makes `PFunctor.Idx` locally reducible in order for
 * `contextFork_propertyTransfer`: postconditions of the main computation transfer to both branches.
 * `sq_prEvent_main_le_contextForkPair`: the squaring step for two independent completions.
 * `le_prEvent_isSome_contextFork`: the replay forking bound, stated with `Pr{…}` events of the
-  native output measures.
+  output measures.
 
 ## References
 
@@ -461,7 +461,7 @@ def contextForkCollision [DecidableEq ι] [∀ t, DecidableEq (spec.Range t)]
     OracleComp spec (Option (Fin (qb i + 1))) :=
   PFunctor.FreeM.withPath main >>= contextForkCollisionCont main qb i cf s
 
-section nativeBounds
+section eventBounds
 
 /-- An event of a mapped raw polynomial program is the pulled-back event. -/
 private theorem prEvent_ofFreeM_map [OracleSpec.IsMeasureSpec spec] {β γ : Type}
@@ -795,7 +795,7 @@ theorem le_prEvent_isSome_contextFork [DecidableEq ι] [∀ t, DecidableEq (spec
             prEvent_guardedContextFork_eq_contextFork_component main qb i cf s
     _ ≤ _ := sum_prEvent_option_map_eq_some_le_isSome _ _
 
-end nativeBounds
+end eventBounds
 
 end quantitative
 

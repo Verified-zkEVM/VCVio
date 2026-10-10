@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.Kernel
-public import VCVio.EvalDist.PFunctorMeasure
+public import VCVio.EvalDist.PFunctorMeasure.Core
 public import Mathlib.InformationTheory.KullbackLeibler.DataProcessing
 
 /-!

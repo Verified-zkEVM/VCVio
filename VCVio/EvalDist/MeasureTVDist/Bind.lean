@@ -11,7 +11,7 @@ public import ToMathlib.MeasureTheory.Measure.TotalVariation.Bind
 public import ToMathlib.Probability.Kernel.TotalVariation
 
 /-!
-# Sequential total variation of native computations
+# Sequential total variation of computations
 
 Measurably parameterized continuations obey Mathlib measure contraction and conditional-majorant
 laws. Prefix failure retains its actual mass; conditional premises need only hold almost
@@ -29,7 +29,7 @@ variable {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
   [LawfulEvalDistSemantics m] {α β : Type u}
   [MeasurableSpace α] [MeasurableSpace β]
 
-/-- A common measurable continuation contracts the native denotational distance. -/
+/-- A common measurable continuation contracts the denotational distance. -/
 theorem measureETVDist_bind_le (mx my : m α) (f : α → m β)
     (hf : Measurable fun a ↦ 𝒟[f a]) :
     measureETVDist (mx >>= f) (my >>= f) ≤ measureETVDist mx my := by
@@ -66,14 +66,14 @@ theorem measureETVDist_bind_bind_le_of_bad (mx : m α) (f g : α → m β)
   exact Measure.etvDist_bind_bind_le_of_bad 𝒟[mx] (fun a ↦ 𝒟[f a]) (fun a ↦ 𝒟[g a])
     hf.aemeasurable hg.aemeasurable hbad ε hgood
 
-/-- A common measurable continuation contracts real native denotational distance. -/
+/-- A common measurable continuation contracts real denotational distance. -/
 theorem measureTVDist_bind_le (mx my : m α) (f : α → m β)
     (hf : Measurable fun a ↦ 𝒟[f a]) :
     measureTVDist (mx >>= f) (my >>= f) ≤ measureTVDist mx my := by
   simp only [measureTVDist, evalDist_bind _ _ hf]
   exact Measure.tvDist_bind_le 𝒟[mx] 𝒟[my] (fun a ↦ 𝒟[f a]) hf
 
-/-- A finite integrated majorant bounds real native conditional distance. -/
+/-- A finite integrated majorant bounds real conditional distance. -/
 theorem measureTVDist_bind_bind_le_lintegral (mx : m α) (f g : α → m β)
     (hf : Measurable fun a ↦ 𝒟[f a]) (hg : Measurable fun a ↦ 𝒟[g a])
     (bound : α → ENNReal) (hbound : ∀ᵐ a ∂𝒟[mx], measureETVDist (f a) (g a) ≤ bound a)

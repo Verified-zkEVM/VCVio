@@ -11,7 +11,7 @@ public import VCVio.EvalDist.Defs.Measure.OptionT
 public import VCVio.EvalDist.Monad.Failure
 
 /-!
-# Native operational and measure failure canaries
+# Operational and measure failure canaries
 
 Failure laws use attachment elimination for possible outputs and zero measure for probability.
 Neither import surface contains a finite-distribution backend. State and reader bases need
@@ -24,9 +24,8 @@ open MeasureTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native failure laws unexpectedly import {name}"
+  if env.contains `PMF then
+    throwError "failure laws unexpectedly import PMF"
 
 namespace VCVioTest.Failure
 

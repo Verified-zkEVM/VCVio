@@ -228,7 +228,7 @@ private lemma evalDist_liftComp_uniformSample {ι₀ : Type} {spec₀ : OracleSp
     𝒟[liftComp ($ᵗ spec₀.Range t) spec₀] = ProbabilityTheory.uniformOn Set.univ :=
   (evalDist_liftComp_uniform _).trans SampleableType.evalDist_uniformSample
 
-section native
+section uniformSeeds
 
 variable {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
   [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀] [unifSpec ˡ⊂ₒ spec₀]
@@ -483,7 +483,7 @@ theorem evalDistEq_liftComp_generateSeed_takeAtIndex_run' (qc : ι₀ → ℕ) (
           QuerySeed.pop_prependValues_singleton]
         exact evalDist_bind_congr _ _ _ fun u => hmap u k fun τ => τ.prependValues [u]
 
-end native
+end uniformSeeds
 
 section queryBounds
 

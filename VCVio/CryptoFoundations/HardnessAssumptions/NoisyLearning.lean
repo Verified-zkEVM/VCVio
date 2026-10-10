@@ -10,7 +10,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import Mathlib.LinearAlgebra.Matrix.DotProduct
 import VCVio.EvalDist.ProbabilityNotation
 

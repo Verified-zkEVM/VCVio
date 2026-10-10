@@ -16,7 +16,7 @@ measure along the measurable embedding `Except.ok`. Errors are therefore missing
 mass, while the effect-preserving denotation remains available by observing `mx.run` directly.
 
 The construction uses Mathlib's `Measure.comap`; no transformer-specific measure operation is
-needed. Native pure, map, and bind laws inherit the base monad's measure laws. Successful-output
+needed. The pure, map, and bind laws inherit the base monad's measure laws. Successful-output
 measurability suffices for the full bind law, without requiring the error family to be measurable.
 -/
 
@@ -39,7 +39,7 @@ noncomputable instance (priority := 20) instEvalDistSemanticsExceptT
       _ ≤ 𝒟[mx.run] Set.univ := measure_mono (Set.subset_univ _)
       _ ≤ 1 := evalDist_apply_univ_le_one mx.run
 
-/-- Unfold the native successful-output semantics to Mathlib's pullback along `Except.ok`. -/
+/-- Unfold the successful-output semantics to Mathlib's pullback along `Except.ok`. -/
 theorem ExceptT.evalDist_eq_comap_ok
     {ε : Type u} [MeasurableSpace ε] {m : Type u → Type v} [EvalDistSemantics m]
     {α : Type u} [MeasurableSpace α] (mx : ExceptT ε m α) :
@@ -71,7 +71,7 @@ theorem ExceptT.evalDist_pure
   rw [ExceptT.evalDist_eq_comap_ok, ExceptT.run_pure, _root_.evalDist_pure,
     Measure.comap_ok_dirac_ok]
 
-/-- Native exceptional semantics preserves pure whenever the base semantics does. -/
+/-- Exceptional semantics preserves pure whenever the base semantics does. -/
 instance (priority := 20) instLawfulPureEvalDistSemanticsExceptT
     {ε : Type u} [MeasurableSpace ε] {m : Type u → Type v}
     [Monad m] [EvalDistSemantics m] [LawfulPureEvalDistSemantics m] :
@@ -119,7 +119,7 @@ theorem ExceptT.evalDist_map
     _root_.evalDist_map mx.run (Except.measurable_map hf), Measure.comap_ok_map _ f hf,
     ExceptT.evalDist_eq_comap_ok]
 
-/-- A measurable family of full run measures suffices to compose native exceptional denotations. -/
+/-- A measurable family of full run measures suffices to compose exceptional denotations. -/
 theorem ExceptT.evalDist_bind
     {ε : Type u} [MeasurableSpace ε] {m : Type u → Type v}
     [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
@@ -167,9 +167,8 @@ theorem ExceptT.evalDist_bind_of_discrete
     𝒟[mx >>= f] = Measure.bind 𝒟[mx] fun x => 𝒟[f x] :=
   ExceptT.evalDist_bind mx f Measurable.of_discrete
 
-/-- Native exceptional semantics satisfies the measurable-bind law for successful-output families.
-The full-run observer refines the source space, whose identity map transports the source measure.
--/
+/-- Exceptional semantics satisfies the measurable-bind law for successful-output families. The
+full-run observer refines the source space, whose identity map transports the source measure. -/
 instance (priority := 20) instLawfulEvalDistSemanticsExceptT
     {ε : Type u} [MeasurableSpace ε] {m : Type u → Type v}
     [Monad m] [LawfulMonad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m] :

@@ -144,8 +144,8 @@ lawful measure semantics and a lawful monad. Oracle quantitative WP delegates to
 under configured answer measures. Native Hoare and simulation owners require neither uniformity
 nor probability compatibility classes; public transformer equations normalize their core WP.
 Chosen-space assertions carry measurability premises, while mapped assertions and state-discarding
-simulation leave hidden outputs and states unmeasured. Explicit coherence equations connect the
-remaining discrete relational and forking consumers in their compatibility owners.
+simulation leave hidden outputs and states unmeasured. The explicit coherence equations that once
+connected discrete relational and forking consumers were removed with the discrete layer.
 
 Core `vcgen` and VCVio's probability/coupling frontend coexist. The latter still owns
 its `@[vcspec]`/`@[wpStep]` dispatch; the older `Std.Do` handler bridge also remains a
@@ -223,7 +223,8 @@ places where VCVio's spelling fights Mathlib's, and concrete integration candida
 leverage. Evidence is `file:line` in the pinned trees; `M:` is Mathlib, `C:` core/Std, `B:`
 Batteries, `Cs:` cslib, `V:` VCVio `main`. Design constraints already accepted
 ([`denotational-probability-semantics.md`](denotational-probability-semantics.md): Measure-primary,
-`Pr[…]` kept as the discrete façade, no global `Monad Measure`) are respected throughout.
+`Pr[…]` then kept as the discrete façade, no global `Monad Measure`) are respected throughout. The
+discrete `SPMF`/`Pr[…]` layer has since been removed, so its items below are snapshot history.
 
 ### Probability and measure theory
 
@@ -337,9 +338,10 @@ bind in `ToMathlib.ProbabilityTheory.FinRatPMF.Measure`. Finite uniform sampling
 with upstream `ProbabilityTheory.uniformOn`. `Raw.lintegral_toMeasure` is a finite weighted sum
 on arbitrary measurable spaces, and `Raw.toMeasure_bind` needs only measurable continuation
 measures. Executable data and quotient monad laws live in a probability-backend-free `Basic`
-module; PMF bridges remain in a separate interoperability module behind the original import
-façade. `OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn` exposes the uniform response equation
-under the public oracle API head for rewriting; the inherited equation already handles `simp`.
+module; the PMF bridges that once sat in a separate interoperability module behind the original
+import façade have been removed. `OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn` exposes the
+uniform response equation under the public oracle API head for rewriting; the inherited equation
+already handles `simp`.
 
 Boolean selector partitions use upstream `Measure.fst_apply`, `measure_union`, and
 `Set.disjoint_prod`. The local `Measure.fst_apply_eq_add` packages those facts for a Boolean
@@ -359,8 +361,8 @@ families: Giry pushforward transports an auxiliary discrete source measure to th
 The shared `Measure.map_bind` and `Measure.bind_map` equations are consequences of upstream
 `Measure.map_map` and `Measure.join_map_map`; they live below the coupling theory so native
 transformer laws reuse them without importing that higher layer. Native transformer semantics is
-primary even when a finite-distribution lift exists; the explicit `ProbComp.DiscreteCompatibility`
-scope selects the adapter at a retiring calibration boundary. Lossless lifts publish
+primary; the explicit `ProbComp.DiscreteCompatibility` scope that once selected a
+finite-distribution adapter has been removed with the discrete layer. Lossless lifts publish
 probability-measure instances, so consumers infer their mass properties from the base computation.
 Generic observation bundles and their native measure observers live in
 `VCVio.EvalDist.Defs.Semantics.Core`.
@@ -382,7 +384,7 @@ packaged as `Measure.dirac_apply_singleton_true` for `simp` and `grind`. Optiona
 operational support uses Lean's `LawfulMonadAttach.eq_of_canReturn_pure`; its elimination law
 needs no `ExactMonadAttach` or numeric lift. Registering this upstream rule for forward `grind`
 lets the short proof work over state and reader bases. The operational support/failure modules
-contain no PMF/SPMF backend, and raw SPMF support uses native attachment without a SetM lift.
+contain no PMF backend.
 `LawfulFailureEvalDistSemantics` separately certifies zero successful-output measure for an
 `Alternative`. The pinned Lean, Batteries, Mathlib, cslib, and PolyFun trees provide no corresponding
 measure-valued failure certificate. Native optional semantics supplies it from the base pure law;
@@ -487,7 +489,7 @@ Mathlib-to-core lattice bridge and the restricted-carrier construction.
    (`:118`) at once; `Fin.mOfFn` (`V:ToMathlib/General.lean:571`) is `traverse` on `flip Vector n`
    (`M:Data/Vector/Basic.lean:709`, `List.Vector.mOfFn` `:387`).
 7. State the `StateT` handler combinators (`withBadFlag`, `withBadUpdate`, `piStateT`,
-   `V:VCVio/OracleComp/SimSemantics/StateT/Basic/Native.lean:117–150`, and the projection lemmas) over
+   `V:VCVio/OracleComp/SimSemantics/StateT/Basic.lean:117–150`, and the projection lemmas) over
    `[MonadStateOf σ m] [LawfulMonadStateOf σ m]` so they apply to `StateT σ (OptionT …)` stacks
    without re-proof.
 8. `QueryImpl unifSpec (RandG g) := fun n => Random.randFin` (`M:Control/Random.lean:38,102`)
@@ -920,7 +922,7 @@ audit before deletion (see Method).
 |---|---|---|
 | 1 `gcongr`/`finiteness` | #636, then #642 | #642 is the smell test: the four `Monad/Disagreement.lean` hop lemmas and four prefix-event bounds re-proved through `expectedValue` + `gcongr`, 22–30 proof lines each down to 6–18 |
 | 2 `negligible` bridge | #635 | merged; the bridges, eventual-domination lemmas, and moved polynomial-bound helpers are available |
-| 3 measure bridge | #637 (reworked), #644, #646 | the `lintegral_countable'_comm` twin was rejected on review and replaced by the one-class `DiscreteEvalDistCompatible` bridge (mass-left by construction, zero `mul_comm`); #644 is the failure measure, #646 `evalDist_mPi = Measure.pi` via `Measure.pi_eq` on boxes |
+| 3 measure bridge | #637 (reworked), #644, #646 | the `lintegral_countable'_comm` twin was rejected on review and replaced by the one-class `DiscreteEvalDistCompatible` bridge (since removed; mass-left by construction, zero `mul_comm`); #644 is the failure measure, #646 `evalDist_mPi = Measure.pi` via `Measure.pi_eq` on boxes |
 | 4 duplicates | this PR (#632) | |
 | 5 lattice | #634 | reviewed and queued; includes the explicit modulus-zero behavior change |
 | 9 hygiene | #647 (C1), #648 (C2) | merged; #648 retains the necessary ML-DSA/ML-KEM equality instances and adds an `Option.elim` measurability lemma |
@@ -975,8 +977,8 @@ The raw bind bound still requires an almost-everywhere measurable measure family
 
 The native WP and sequencing canaries check ordinary imports without PMF/SPMF, mass factors
 for failed draws, automatic probability instances, and `simp`, `grind`, `gcongr`, and `grw`.
-Deprecated discrete definitions remain at the compatibility boundary; their environment-linter
-allowlist in `scripts/nolints.json` tracks migration debt.
+Deprecated discrete definitions then remained at the compatibility boundary, tracked as migration
+debt in the `scripts/nolints.json` environment-linter allowlist; they have since been removed.
 
 ## Native foundation follow-up (2026-09-17)
 
@@ -1004,9 +1006,10 @@ tree's exactness is available. Indexed state/reader judgments and kernel semanti
 initial index. The probability-bounded measure WP restricts the native expectation algebra using
 PolyFun's `MAlgOrdered.restrictIic`; its scopes take precedence over generic transformer algebras.
 
-`VCVio.Native` has an ordinary import canary excluding PMF/SPMF and the retiring compatibility
-classes. Existing imports remain facades for discrete corollaries. The environment-linter
-baseline shrinks; no syntactic probability ratchet is introduced.
+`VCVio.Foundations` has an ordinary import canary excluding `PMF`. At the time, other imports
+remained facades for discrete corollaries; those corollaries, `SPMF`, and the compatibility
+classes have since been removed. The environment-linter baseline shrinks; no syntactic
+probability ratchet is introduced.
 
 ## Native relational and security follow-up (2026-09-17)
 
@@ -1070,4 +1073,5 @@ postcondition. Constructor-specific optional/exceptional lemmas preserve their `
 Native security observations reuse measure-valued Boolean bias/distance, including the generic
 fair-coin identity. One-time-pad privacy uses `Measure.prod_prod` and singleton products instead
 of a point-mass calculation. ElGamal's computational handler identities induce native measure
-equivalence, while existing discrete theorem names remain compatibility corollaries.
+equivalence; the discrete theorem names then kept as compatibility corollaries have since been
+removed.

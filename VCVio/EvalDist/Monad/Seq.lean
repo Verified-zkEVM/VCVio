@@ -9,12 +9,10 @@ public import VCVio.EvalDist.Monad.Map
 public import VCVio.EvalDist.Monad.Seq.Measure
 
 /-!
-# Evaluation Distributions of Computations with `seq`
+# Support of computations with `seq`
 
-File for lemmas about `evalSPMF` and `support` involving the monadic `seq`, `seqLeft`,
-and `seqRight` operations.
-
-TODO: many lemmas should probably have mirrored versions for `bind_map`.
+The support and finite support of the monadic `seq`, `seqLeft`, and `seqRight` operations, and of
+`f <$> mx <*> my`. Their output measures are in `VCVio.EvalDist.Monad.Seq.Measure`.
 -/
 
 @[expose] public section
@@ -48,24 +46,6 @@ lemma finSupport_seq [HasEvalFinset m]
 
 end support
 
-section spmf
-
-variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-
-@[grind norm]
-lemma evalSPMF_seq (mf : m (α → β)) (mx : m α) :
-    𝒮[mf <*> mx] = 𝒮[mf] <*> 𝒮[mx] := by simp [monad_norm]
-
-variable [MonadAttach m] [EvalDistCompatible m]
-
-@[simp, grind =_]
-lemma probFailure_seq (mf : m (α → β)) (mx : m α) :
-    Pr[⊥ | mf <*> mx] = Pr[⊥ | mf] + Pr[⊥ | mx] - Pr[⊥ | mf] * Pr[⊥ | mx] := by
-  rw [seq_eq_bind_map]
-  exact probFailure_bind_of_const' probFailure_ne_top (fun g _ => probFailure_map mx g)
-
-end spmf
-
 end seq
 
 section seqLeft
@@ -81,42 +61,6 @@ lemma support_seqLeft (mx : m α) (my : m β) [Decidable (support my).Nonempty] 
 
 end support
 
-section spmf
-
-variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-
-@[grind norm]
-lemma evalSPMF_seqLeft (mx : m α) (my : m β) :
-    𝒮[mx <* my] = 𝒮[mx] <* 𝒮[my] := by
-  simp [seqLeft_eq]
-
-@[simp, grind =_]
-lemma probOutput_seqLeft (mx : m α) (my : m β) (x : α) :
-    Pr[= x | mx <* my] = (1 - Pr[⊥ | my]) * Pr[= x | mx] := by
-  let : MeasurableSpace α := ⊤
-  let : MeasurableSpace β := ⊤
-  simpa only [MeasureTheory.Measure.smul_apply, smul_eq_mul, evalDist_apply_univ,
-    evalDist_apply_singleton] using
-    congrArg (fun μ : MeasureTheory.Measure α => μ {x}) (evalDist_seqLeft mx my)
-
-@[simp, grind =_]
-lemma probEvent_seqLeft (mx : m α) (my : m β) (p : α → Prop) :
-    Pr[ p | mx <* my] = (1 - Pr[⊥ | my]) * Pr[ p | mx] := by
-  let : MeasurableSpace α := ⊤
-  let : MeasurableSpace β := ⊤
-  simpa only [MeasureTheory.Measure.smul_apply, smul_eq_mul, evalDist_apply_univ,
-    evalDist_apply_setOf] using
-    congrArg (fun μ : MeasureTheory.Measure α => μ {x | p x}) (evalDist_seqLeft mx my)
-
-variable [MonadAttach m] [EvalDistCompatible m]
-
-@[simp, grind =_]
-lemma probFailure_seqLeft (mx : m α) (my : m β) :
-    Pr[⊥ | mx <* my] = Pr[⊥ | mx] + Pr[⊥ | my] - Pr[⊥ | mx] * Pr[⊥ | my] := by
-  rw [seqLeft_eq, probFailure_seq, probFailure_map]
-
-end spmf
-
 end seqLeft
 
 section seqRight
@@ -131,34 +75,6 @@ lemma support_seqRight (mx : m α) (my : m β) [Decidable (support mx).Nonempty]
   rw [seqRight_eq, Set.ext_iff]; aesop
 
 end support
-
-section spmf
-
-variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-
-@[grind norm]
-lemma evalSPMF_seqRight (mx : m α) (my : m β) :
-    𝒮[mx *> my] = 𝒮[mx] *> 𝒮[my] := by
-  simp [seqRight_eq]
-
-variable [MonadAttach m] [EvalDistCompatible m]
-
-@[simp, grind =_]
-lemma probOutput_seqRight (mx : m α) (my : m β) (y : β) :
-    Pr[= y | mx *> my] = (1 - Pr[⊥ | mx]) * Pr[= y | my] := by
-  simp [seqRight_eq, seq_eq_bind_map, probOutput_bind_const]
-
-@[simp, grind =_]
-lemma probFailure_seqRight (mx : m α) (my : m β) :
-    Pr[⊥ | mx *> my] = Pr[⊥ | mx] + Pr[⊥ | my] - Pr[⊥ | mx] * Pr[⊥ | my] := by
-  rw [seqRight_eq, probFailure_seq, probFailure_map]
-
-@[simp, grind =_]
-lemma probEvent_seqRight (mx : m α) (my : m β) (p : β → Prop) :
-    Pr[ p | mx *> my] = (1 - Pr[⊥ | mx]) * Pr[ p | my] := by
-  simp [seqRight_eq, seq_eq_bind_map, probEvent_bind_const]
-
-end spmf
 
 end seqRight
 
@@ -181,42 +97,6 @@ lemma finSupport_seq_map_eq_image2 [HasEvalFinset m]
   ext z; simp [seq_eq_bind_map, Finset.mem_image₂]
 
 end support
-
-section spmf
-
-variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-
-lemma probOutput_seq_map_eq_tsum (z : γ) :
-    Pr[= z | f <$> mx <*> my] = ∑' (x : α) (y : β),
-      Pr[= x | mx] * Pr[= y | my] * Pr[= z | (pure (f x y) : m γ)] := by
-  simp only [monad_norm, Function.comp,
-    probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_left, mul_assoc]
-
-section injective2
-
-lemma probOutput_seq_map_eq_mul_of_injective2 (hf : f.Injective2) (x : α) (y : β) :
-    Pr[= f x y | f <$> mx <*> my] = Pr[= x | mx] * Pr[= y | my] := by
-  rw [probOutput_seq_map_eq_tsum]
-  simp only [probOutput_pure_eq_indicator, Set.indicator, mul_ite, mul_zero]
-  refine (tsum_eq_single x fun x' hx' => ?_).trans ?_
-  · exact ENNReal.tsum_eq_zero.mpr fun b => ite_eq_right fun h' => hx' (hf h').1.symm
-  · refine (tsum_eq_single y fun y' hy' => ?_).trans ?_
-    · exact ite_eq_right fun h' => hy' (hf h').2.symm
-    · simp
-
-end injective2
-
-section swap
-
-lemma probOutput_seq_map_swap (z : γ) :
-    Pr[= z | Function.swap f <$> my <*> mx] = Pr[= z | f <$> mx <*> my] := by
-  simp only [probOutput_seq_map_eq_tsum, Function.swap]
-  rw [ENNReal.tsum_comm]
-  exact tsum_congr fun x' => tsum_congr fun y' => by ring
-
-end swap
-
-end spmf
 
 section operational
 
@@ -242,12 +122,5 @@ lemma finSupport_seq_map_swap [HasEvalFinset m] [DecidableEq γ] :
   simp only [finSupport_seq_map_eq_image2, Finset.image₂_swap f]
 
 end operational
-
-section mixed
-
-variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadAttach m] [EvalDistCompatible m]
-
-end mixed
 
 end seq_map

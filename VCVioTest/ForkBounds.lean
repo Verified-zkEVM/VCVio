@@ -12,8 +12,8 @@ public import VCVio.CryptoFoundations.SeededFork
 # External canaries for the forking bounds
 
 These examples deliberately live outside the defining modules. They lock the public hypotheses and
-result shapes of the native seeded and replay forking bounds, so changes to either cannot silently
-make them unusable by downstream crypto proofs.
+result shapes of the seeded and replay forking bounds, so changes to either cannot silently make
+them unusable by downstream crypto proofs.
 -/
 
 public section
@@ -27,7 +27,7 @@ section seeded
 variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι} {α : Type}
   [OracleSpec.IsUniformMeasureSpec spec]
 
-/-- The native seeded forking bound remains directly consumable from another module. -/
+/-- The seeded forking bound remains directly consumable from another module. -/
 example (main : OracleComp spec α) (qb : ι → ℕ) (js : List ι) (i : ι)
     (cf : α → Option (Fin (qb i + 1)))
     [∀ j, SampleableType (spec.Range j)] [∀ j, DecidableEq (spec.Range j)]
@@ -45,7 +45,7 @@ section replay
 variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι} {α : Type}
   [OracleSpec.IsUniformMeasureSpec spec]
 
-/-- The native replay forking bound retains its reachability premise and success-event shape. -/
+/-- The replay forking bound retains its reachability premise and success-event shape. -/
 example [∀ t, DecidableEq (spec.Range t)]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) [Fintype (spec.Range i)]
     (cf : α → Option (Fin (qb i + 1)))

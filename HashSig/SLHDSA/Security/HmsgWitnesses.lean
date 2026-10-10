@@ -106,8 +106,8 @@ obligation: it cannot be omitted, so the Lean object has to name a computation e
 clone can defer.  The only key distribution in scope is the ambient instance's — without
 `[SampleableType prims.Y]`, `hmsgNarrowItsrProblem`'s `$ᵗ prims.Y` has no instance to sample at; the
 `Primitives` bundle carries no distribution of any kind, its `PRFmsg` being a function rather than a
-sampler, so there is nothing weaker to inherit.  And `SampleableType`'s defining law is `Pr[= x |
-selectElem] = Pr[= y | selectElem]`, which *is* uniformity.  `hmsgItsrProblem` made the same forced
+sampler, so there is nothing weaker to inherit.  And `SampleableType`'s defining law is
+`𝒟[selectElem] = uniformOn Set.univ`, which *is* uniformity.  `hmsgItsrProblem` made the same forced
 choice already, and the two have to agree.  So `hmsgNarrowItsrProblem` fixes the key distribution to
 `$ᵗ prims.Y`, and the narrow problem is the source's shape *up to the key distribution*, which it
 strengthens from an arbitrary lossless one to the uniform one.

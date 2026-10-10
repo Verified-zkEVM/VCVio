@@ -64,7 +64,7 @@ def uniformSample (β : Type) [h : SampleableType β] : ProbComp β := h.selectE
 samples from a collection. -/
 notation:90 "$ᵗ " α:91 => uniformSample α
 
-/-- The canonical sample has uniform output measure under native oracle semantics. -/
+/-- The canonical sample has the uniform output measure. -/
 theorem SampleableType.evalDist_uniformSample {β : Type} [SampleableType β]
     [MeasurableSpace β] [MeasurableSingletonClass β] :
     𝒟[$ᵗ β] = uniformOn Set.univ :=

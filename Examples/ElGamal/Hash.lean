@@ -9,7 +9,7 @@ public import Examples.ElGamal.Common
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Hashed ElGamal Encryption

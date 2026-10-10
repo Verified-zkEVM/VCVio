@@ -491,13 +491,13 @@ reachable empty response type refutes `RunsWithinUnder`. The following bridge
 theorems remain staged:
 
 - quantitative erasure agrees with `simulateQ` and existing support semantics;
-- under `IsProbabilitySpec`, interpreting response events agrees with
-  `evalDist` and `Pr[...]`;
+- under `IsMeasureSpec`, interpreting response events agrees with
+  `evalDist` and `Pr{...}[...]`;
 - current query-bound and weighted-cost results are trace projections;
 - `simulateQ`/interface replacement transforms resource contracts
   compositionally.
 
-`IsProbabilitySpec` says how to interpret a query probabilistically; it says
+`IsMeasureSpec` says how to interpret a query probabilistically; it says
 nothing about efficient sampling. The staged `EfficientSampler` certificates
 have separate constructors for strict, expected-time, and statistically
 approximate coin implementations. Exact finite uniform sampling for a

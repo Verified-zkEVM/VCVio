@@ -14,12 +14,12 @@ public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import Mathlib.Data.LawfulXor.Equiv
 
 /-!
-# A measure-native fair-coin one-time pad
+# A fair-coin one-time pad under measure semantics
 
 This file is an end-to-end feasibility test for the computational-complexity stack. The key
 sampler is fully syntactic `OracleComp coinSpec` code with exactly one oracle interaction per key
-bit. Its semantics is selected independently by `fairCoinMeasureSpec`, which assigns the native
-uniform Mathlib measure to every coin answer.
+bit. Its semantics is selected independently by `fairCoinMeasureSpec`, which assigns the uniform
+Mathlib measure to every coin answer.
 
 The proof deliberately establishes equalities of whole measures. Independent draws are related
 to Mathlib's product measure, finite uniformity is transported through explicit bijections, and
@@ -44,7 +44,7 @@ namespace oneTimePad
 
 /-! ## Explicit fair-bit sampling -/
 
-/-- Native fair-coin measure semantics for the polynomial interface underlying `coinSpec`.
+/-- Fair-coin measure semantics for the polynomial interface underlying `coinSpec`.
 
 This is an explicit semantic choice rather than an instance inferred from finiteness. Callers may
 replace it with another `IsMeasureSpec` when studying a biased or otherwise concrete source. -/
@@ -168,7 +168,7 @@ theorem expectedQueryCount_coinBitVec_eq (n : ℕ) :
 
 /-! ## Uniform measure semantics -/
 
-/-- One fair-coin query denotes the native uniform measure on `Bool`. -/
+/-- One fair-coin query denotes the uniform measure on `Bool`. -/
 @[simp]
 theorem denote_fairCoin :
     PFunctor.FreeM.denote fairCoin.toFreeM = uniformOn (Set.univ : Set Bool) := by

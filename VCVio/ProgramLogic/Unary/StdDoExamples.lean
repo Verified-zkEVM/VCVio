@@ -41,6 +41,6 @@ example (t : spec.Domain) {Q : Std.Do.PostCond (spec.Range t) .pure} :
 
 example (oa : OracleComp spec α) (p : α → Prop) :
     wpProp (spec := spec) oa p ↔ Pr{let x ← oa}[p x] = 1 :=
-  wpProp_iff_probEvent_eq_one (spec := spec) oa p
+  wpProp_iff_prEvent_eq_one (spec := spec) oa p
 
 end OracleComp.ProgramLogic.StdDo

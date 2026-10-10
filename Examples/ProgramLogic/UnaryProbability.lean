@@ -27,7 +27,7 @@ universe u
 variable {ι : Type u} {spec : OracleSpec ι}
 variable {α β γ : Type}
 
-section NativeLowering
+section ProbabilityLowering
 
 variable [OracleSpec.IsMeasureSpec spec]
 
@@ -48,7 +48,7 @@ example {oa : OracleComp spec Bool}
     Pr{let y ← oa}[y = true] = 1 := by
   vcgen
 
-end NativeLowering
+end ProbabilityLowering
 
 section Equalities
 
@@ -58,25 +58,25 @@ variable [∀ t, Countable (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
     {f : α → β → OracleComp spec γ} {z : γ} :
-    Pr{mx >>= fun a => my >>= fun b => f a b}[= z] =
-    Pr{my >>= fun b => mx >>= fun a => f a b}[= z] := by
+    Pr{let x ← mx >>= fun a => my >>= fun b => f a b}[x = z] =
+    Pr{let x ← my >>= fun b => mx >>= fun a => f a b}[x = z] := by
   vcstep
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {y : β}
-    (h : ∀ x ∈ support mx, Pr{f x}[= y] = Pr{g x}[= y]) :
-    Pr{mx >>= f}[= y] = Pr{mx >>= g}[= y] := by
+    (h : ∀ x ∈ support mx, Pr{let z ← f x}[z = y] = Pr{let z ← g x}[z = y]) :
+    Pr{let x ← mx >>= f}[x = y] = Pr{let x ← mx >>= g}[x = y] := by
   vcstep rw congr
   exact h _ ‹_›
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
-    (h : ∀ x, Pr{y ← f x}[q y] = Pr{y ← g x}[q y]) :
-    Pr{y ← mx >>= f}[q y] = Pr{y ← mx >>= g}[q y] := by
+    (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
+    Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
   vcstep rw congr'
   exact h _
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
-    (h : ∀ x, Pr{y ← f x}[q y] = Pr{y ← g x}[q y]) :
-    Pr{y ← mx >>= f}[q y] = Pr{y ← mx >>= g}[q y] := by
+    (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
+    Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
   vcstep rw congr' as ⟨x⟩
   exact h x
 
@@ -87,16 +87,16 @@ info: Try this:
 -/
 #guard_msgs (info) in
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
-    (h : ∀ x, Pr{y ← f x}[q y] = Pr{y ← g x}[q y]) :
-    Pr{y ← mx >>= f}[q y] = Pr{y ← mx >>= g}[q y] := by
+    (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
+    Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
   vcstep?
   exact h x
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
     {f g : α → β → OracleComp spec γ} {q : γ → Prop}
-    (h : ∀ x y, Pr{r ← f x y}[q r] = Pr{r ← g x y}[q r]) :
-    Pr{r ← mx >>= fun x => my >>= fun y => f x y}[q r] =
-    Pr{r ← mx >>= fun x => my >>= fun y => g x y}[q r] := by
+    (h : ∀ x y, Pr{let r ← f x y}[q r] = Pr{let r ← g x y}[q r]) :
+    Pr{let r ← mx >>= fun x => my >>= fun y => f x y}[q r] =
+    Pr{let r ← mx >>= fun x => my >>= fun y => g x y}[q r] := by
   vcstep rw congr' as ⟨x, y⟩
   exact h x y
 
@@ -105,7 +105,7 @@ example : 𝟙⟦(True : Prop)⟧ * 𝟙⟦(True : Prop)⟧ = (1 : ℝ≥0∞) :
 
 end Equalities
 
-section NativeLowering
+section ProbabilityLowering
 
 variable [OracleSpec.IsMeasureSpec spec]
 
@@ -172,4 +172,4 @@ example (oa : OracleComp spec α) (f : α → OracleComp spec Bool)
   · simpa [propInd, hx] using
       triple_zero (oa := f x) (post := fun y => if y = true then 1 else 0)
 
-end NativeLowering
+end ProbabilityLowering

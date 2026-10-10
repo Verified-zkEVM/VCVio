@@ -99,11 +99,11 @@ variable [SampleableType Chal]
 the verifier always accepts. -/
 def Complete (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel) : Prop :=
   ∀ s w, rel s w = true →
-    Pr{do
+    Pr{let x ← (do
       let t? ← ids.honestExecution s w
       return match t? with
         | some (cm, c, z) => ids.verify s cm c z
-        | none => true}[= true] = 1
+        | none => true)}[x = true] = 1
 
 /-- Support-level consequence of completeness: any non-aborting honest transcript in the
 support has an accepting verification. -/

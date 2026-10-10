@@ -10,7 +10,7 @@ public import VCVio.EvalDist.ProbabilityNotation
 import Mathlib.Tactic.NormNum
 
 /-!
-# Native rational sampling canaries
+# Rational sampling canaries
 
 These examples use measure semantics without a discrete probability backend. They exercise
 duplicate and zero-weight tickets, final event checks, continuous result spaces, and measurable

@@ -13,7 +13,7 @@ public import VCVio.EvalDist.Inequalities
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.EvalDist.PFunctorPath
 public import VCVio.EvalDist.Defs.Measure.ExceptT
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Computation probability notation canaries
@@ -196,45 +196,86 @@ example {α : Type} {mx my : ProbComp α} {mz : Option α} (h₁ : mx =ᵈ my) (
   calc mx =ᵈ my := h₁
     _ =ᵈ mz := h₂
 
-example {α : Type} [Countable α] (mx my : ProbComp α) (h : ∀ x, Pr{mx}[= x] = Pr{my}[= x]) :
+example {α : Type} [Countable α] (mx my : ProbComp α)
+    (h : ∀ x, Pr{let y ← mx}[y = x] = Pr{let y ← my}[y = x]) :
     mx =ᵈ my :=
   evalDistEq_iff_forall_prEvent_eq_output.mpr h
 
 /-! ### Event notation
 
-`Pr{…}[…]` elaborates to `prEvent` in the form `simp` maintains, whichever surface form is used,
-and goals display in the draw form. -/
+`Pr{…}[…]` elaborates an ordinary `do` sequence to `prEvent` in the form `simp` maintains, and
+goals display its draws as `let` statements. -/
 
 section eventNotation
 
 variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ)
 
-example : Pr{x ← mx}[x = true] = prEvent ((fun x => x = true) <$> mx) := rfl
+example : Pr{let x ← mx}[x = true] = prEvent ((fun x => x = true) <$> mx) := rfl
 example : Pr{let x ← mx}[x] = prEvent ((fun x => x = true) <$> mx) := rfl
-example : Pr{x ← mx; y ← my x}[y = 3 ∧ x] =
+example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
     prEvent (mx >>= fun x => (fun y => y = 3 ∧ x = true) <$> my x) := rfl
-example : Pr{x ← mx; y ← my x}[y = 3] = Pr{let x ← mx; let y ← my x}[y = 3] := rfl
-example : Pr{x : Bool ← mx}[x] = Pr{x ← mx}[x = true] := rfl
-example : Pr{mz}[= 3] = Pr{z ← mz}[z = 3] := rfl
-example : Pr{{let x ← mx}}[x] = Pr{x ← mx}[x] := rfl
+example : Pr{let x : Bool ← mx}[x] = Pr{let x ← mx}[x = true] := rfl
+example : Pr{let x ← mz}[x = 3] = prEvent ((fun z => z = 3) <$> mz) := rfl
+example : Pr{{let x ← mx}}[x] = Pr{let x ← mx}[x] := rfl
 example : Pr{
     let x ← mz
     let y := x + 1}[y = 3] = prEvent ((fun x => x + 1 = 3) <$> mz) := rfl
 
-/-- A draw's action may continue on the following lines without parentheses. -/
-example (f : ℕ → ℕ → ProbComp ℕ) : Pr{x ← f
-    1 2; y ← f x
-      x}[x = y] = Pr{x ← (f 1 2); y ← (f x x)}[x = y] := rfl
+/-- A draw whose action continues on the following lines is laid out as in a `do` block, or its
+action is parenthesized. -/
+example (f : ℕ → ℕ → ProbComp ℕ) : Pr{
+    let x ← f
+      1 2
+    let y ← f x
+      x}[x = y] = Pr{let x ← f 1 2; let y ← f x x}[x = y] := rfl
+example (f : ℕ → ℕ → ProbComp ℕ) : Pr{let x ← (f
+    1 2)}[x = 1] = Pr{let x ← f 1 2}[x = 1] := rfl
+
+/-- The braces take any `do` sequence, and the event may mention all its bindings: pure `let`s,
+nested actions, branches and `match` on the right of a draw, and `let mut` with loops. -/
+example (f : ℕ → ℕ → ProbComp ℕ) :
+    Pr{let z ← f (← mz) (← mz)}[z = 0] = Pr{let a ← mz; let b ← mz; let z ← f a b}[z = 0] := rfl
+example (m₁ m₂ : ProbComp ℕ) (mo : ProbComp (Option ℕ)) :
+    Pr{let b ← $ᵗ Bool; let x ← if b then m₁ else m₂}[x = 3] ≤ 1 ∧
+      Pr{let o ← mo; let x ← match o with | some a => pure a | none => mz}[x = 1] ≤ 1 :=
+  ⟨by simp, by simp⟩
+example (g : ℕ → ProbComp ℕ) :
+    Pr{let mut s := 0; for i in [1, 2, 3] do s := s + (← g i)}[s = 3] ≤ 1 := by simp
+
+/-! Goals display the draws as `let` statements on one line when they fit; an eta-reduced final
+selector is applied to a name no draw binds. -/
+
+/-- info: Pr{let x ← mx; let y ← my x}[y = 3 ∧ x = true] : ℝ≥0∞ -/
+#guard_msgs in
+#check Pr{let x ← mx; let y ← my x}[y = 3 ∧ x]
+
+variable (q : ℕ → Prop) in
+/-- info: Pr{let x ← mx; let y ← my x}[q y] : ℝ≥0∞ -/
+#guard_msgs in
+#check Pr{let x ← mx; let y ← my x}[q y]
+
+/-- info: Pr{let x ← mz}[x = 3] : ℝ≥0∞ -/
+#guard_msgs in
+#check Pr{let x ← mz}[x = 3]
+
+variable (S : Set ℕ) in
+/-- info: Pr{let x ← mx; let y ← my x}[y ∈ S] : ℝ≥0∞ -/
+#guard_msgs in
+#check Pr{let x ← mx; let y ← my x}[y ∈ S]
+
+/-- info: prFail mz : ℝ≥0∞ -/
+#guard_msgs in
+#check prFail mz
 
 /-- `simp` keeps the notation in normal form and applies laws keyed on the head constant. -/
-example (p : ℕ → Prop) (h : Pr{x ← mz}[p x] = 0) : Pr{x ← mz}[p x] = 0 := by
+example (p : ℕ → Prop) (h : Pr{let x ← mz}[p x] = 0) : Pr{let x ← mz}[p x] = 0 := by
   fail_if_success simp only [bind_pure_comp] at h
   exact h
 
-example (a : ℕ) : Pr{x ← (pure a : ProbComp ℕ)}[x = a] = 1 := by simp
+example (a : ℕ) : Pr{let x ← (pure a : ProbComp ℕ)}[x = a] = 1 := by simp
 
 /-- A derived uniform program is closed by the uniform law after `simp` merges its maps. -/
-example : Pr{x ← (not <$> ($ᵗ Bool : ProbComp Bool))}[x = true] = 2⁻¹ := by
+example : Pr{let x ← (not <$> ($ᵗ Bool : ProbComp Bool))}[x = true] = 2⁻¹ := by
   simp [SampleableType.prEvent_uniformSample, Finset.filter_insert, Finset.filter_singleton]
 
 /-- A final destructuring draw ends the event in a map, whether its action is a term or a nested
@@ -246,8 +287,8 @@ example (mp : ProbComp (ℕ × ℕ)) (init : ProbComp ℕ) (f : ℕ → ProbComp
   ⟨rfl, rfl⟩
 
 /-- Goals display in the draw form. -/
-example : Pr{x ← mx; y ← my x}[y = 3 ∧ x] = Pr{x ← mx; y ← my x}[y = 3 ∧ x] := by
-  guard_target =ₛ Pr{x ← mx; y ← my x}[y = 3 ∧ x] = Pr{x ← mx; y ← my x}[y = 3 ∧ x]
+example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] = Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] := by
+  guard_target =ₛ Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] = Pr{let x ← mx; let y ← my x}[y = 3 ∧ x]
   rfl
 
 end eventNotation

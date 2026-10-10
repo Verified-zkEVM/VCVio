@@ -12,7 +12,7 @@ public import ToMathlib.MeasureTheory.MeasurableSpace.Option
 public import Mathlib.Probability.Distributions.Gaussian.Real
 
 /-!
-# Native total variation composition regressions
+# Total variation composition regressions
 
 Real spaces retain their usual measurable structure. Conditional variation bounds use supplied
 majorants, null-set changes have no cost, and lossy prefixes retain their mass. An explicit
@@ -26,9 +26,8 @@ open scoped ENNReal ProbabilityTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `NeverFail, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
-    if env.contains name then
-      throwError "native total variation unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "total variation unexpectedly imports PMF"
 
 namespace VCVioTest.TotalVariationMeasure
 

@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.Coercions.Add.Basic
-public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
 public import PolyFun.PFunctor.Handler.Stateful
 public import PolyFun.PFunctor.Lens.State

@@ -9,6 +9,7 @@ public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Monad.Support
 public import ToMathlib.MeasureTheory.Integral.Quadratic
 public import ToMathlib.MeasureTheory.Measure.Option
+import Mathlib.MeasureTheory.Integral.Lebesgue.Sub
 
 /-!
 # Probability bounds for computation observations
@@ -460,3 +461,32 @@ theorem prEvent_bind_le_prEvent_add_of_support (mx : m α) (f : α → m β)
     (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one _)) _)
 
 end attach
+
+/-! ## Failure of a bind -/
+
+section prFail
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m] {α β : Type}
+
+/-- A bind fails when its prefix fails, or when the continuation fails after a successful prefix
+output. -/
+theorem prFail_bind_eq_add_lintegral_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : m α) (f : α → m β) :
+    prFail (mx >>= f) = prFail mx + ∫⁻ x, prFail (f x) ∂𝒟[mx] := by
+  have hbind : Pr{let _ ← mx >>= f}[True] = ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] :=
+    prEvent_bind_eq_lintegral_of_discrete mx f (fun _ ↦ True)
+  have hle : ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] ≤ 𝒟[mx] Set.univ :=
+    calc ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] ≤ ∫⁻ _, 1 ∂𝒟[mx] :=
+          lintegral_mono fun x ↦ prEvent_le_one _
+      _ = 𝒟[mx] Set.univ := by simp
+  have hsub : ∫⁻ x, prFail (f x) ∂𝒟[mx] =
+      𝒟[mx] Set.univ - ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] := by
+    simp only [prFail_def]
+    rw [lintegral_sub Measurable.of_discrete (ne_top_of_le_ne_top (measure_ne_top _ _) hle)
+      (Filter.Eventually.of_forall fun x ↦ prEvent_le_one _)]
+    simp
+  rw [prFail_def, prFail_eq_one_sub_evalDist_univ, hsub, hbind]
+  exact (tsub_add_tsub_cancel (evalDist_apply_univ_le_one mx) hle).symm
+
+end prFail

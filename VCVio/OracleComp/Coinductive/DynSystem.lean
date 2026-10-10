@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.OracleComp.EvalDist.Measure
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import VCVio.OracleComp.Coercions.SubSpec.Basic
 public import VCVio.OracleComp.Coercions.SubSpec.Measure

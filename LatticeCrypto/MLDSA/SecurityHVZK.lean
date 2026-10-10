@@ -15,7 +15,7 @@ This file develops the honest-verifier zero-knowledge (HVZK) simulators for the 
 identification scheme and proves `MLDSA.idsWithAbort_hvzk` for a named simulator and a named
 error bound. An existential statement asserting only that *some* simulator with *some*
 nonnegative total-variation error exists would be trivially dischargeable with `ζ_zk := 1`
-(because `tvDist ≤ 1` always, `SPMF.tvDist_le_one`) and would carry no content.
+(because total variation is at most one, `Measure.etvDist_le_one`) and would carry no content.
 
 ## The marginal simulator `hvzkSimulator`
 
@@ -519,7 +519,7 @@ honest prover aborts while the simulator emits a transcript; everywhere else the
 distributions coincide, so this mass is exactly the total-variation distance. -/
 noncomputable def hvzkBadMass [SampleableType (CommitHashBytes p)] (pk : PublicKey p prims)
     (sk : SecretKey p) : ℝ≥0∞ :=
-  Pr{do
+  Pr{let x ← (do
     let y ← $ᵗ (RqVec p.l)
     let cTilde ← $ᵗ (CommitHashBytes p)
     let c := prims.sampleInBall cTilde
@@ -530,7 +530,7 @@ noncomputable def hvzkBadMass [SampleableType (CommitHashBytes p)] (pk : PublicK
     let h := prims.makeHintVec (-ct0) (w - c • sk.s2 + ct0)
     return decide (polyVecNorm z < p.gamma1 - p.beta ∧
       ¬(polyVecNorm r0 < p.gamma2 - p.beta ∧ polyVecNorm ct0 < p.gamma2 ∧
-        prims.hintWeight h ≤ p.omega))}[= true]
+        prims.hintWeight h ≤ p.omega)))}[x = true]
 
 /-- The extra-rejection mass is a probability. -/
 lemma hvzkBadMass_le_one [SampleableType (CommitHashBytes p)] (pk : PublicKey p prims)
@@ -544,7 +544,7 @@ extra-rejection mass as the probability that `hvzkBadIndicator` fires on a direc
 lemma hvzkBadMass_eq_prEvent_indicator [SampleableType (CommitHashBytes p)]
     (pk : PublicKey p prims) (sk : SecretKey p) :
     hvzkBadMass p prims pk sk =
-      Pr{cTilde ← $ᵗ (CommitHashBytes p); z ← $ᵗ (RqVec p.l)}[
+      Pr{let cTilde ← $ᵗ (CommitHashBytes p); let z ← $ᵗ (RqVec p.l)}[
         hvzkBadIndicator p prims pk sk cTilde z = true] := by
   have hnorm : (do
       let y ← $ᵗ (RqVec p.l)

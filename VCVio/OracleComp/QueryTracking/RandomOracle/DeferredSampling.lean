@@ -6,7 +6,7 @@ Authors: Oleksandr Vovkotrub
 
 module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
-public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
 /-!
 # Deferred sampling: tape factorization of answer-irrelevant draws

@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.EvalDist.BitVec.Measure
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 import VCVio.OracleComp.EvalDist.MeasureSpec
 
 /-!
@@ -21,7 +21,7 @@ the message.
 
 open OracleSpec OracleComp ENNReal MeasureTheory ProbabilityTheory
 
-/-- XOR with a sampled uniform bit vector has a native uniform output measure. -/
+/-- XOR with a sampled uniform bit vector has a uniform output measure. -/
 theorem evalDist_xor_uniformSample (sp : ℕ) (msg : BitVec sp) :
     𝒟[(fun k : BitVec sp => k ^^^ msg) <$> ($ᵗ BitVec sp)] = uniformOn Set.univ :=
   evalDist_xor_uniform_right _ msg (SampleableType.evalDist_bitVec sp)
@@ -36,7 +36,7 @@ theorem evalDist_pair_xor_uniformSample (sp : ℕ) (mx : ProbComp (BitVec sp)) :
   evalDist_pair_xor_uniform_right mx ($ᵗ BitVec sp) id
     (SampleableType.evalDist_bitVec sp)
 
-/-- A sampled key gives every ciphertext the native uniform output measure. -/
+/-- A sampled key gives every ciphertext the uniform output measure. -/
 theorem evalDist_cipher_from_pair_uniformSample
     (sp : ℕ) (mx : ProbComp (BitVec sp)) :
     𝒟[do

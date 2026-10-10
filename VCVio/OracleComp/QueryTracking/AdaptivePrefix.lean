@@ -286,7 +286,7 @@ theorem measure_adaptivePrefixRunFrom_le
             targetCount overhead remaining cached hremaining
         · exact zero_le
 
-/-- The adaptive-prefix bound for events under native uniform oracle semantics. -/
+/-- The adaptive-prefix bound for events under uniform oracle semantics. -/
 theorem prEvent_adaptivePrefixRunFrom_le
     [DecidableEq ι] [Finite Y] [IsUniformMeasureSpec (ι →ₒ Y)]
     (suffix : X → (ι →ₒ Y).QueryLog → OracleComp (ι →ₒ Y) R)

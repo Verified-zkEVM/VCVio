@@ -8,7 +8,7 @@ module
 public import LatticeCrypto.MLDSA.Primitives
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # ML-DSA Identification Scheme Core
