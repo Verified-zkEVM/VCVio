@@ -111,7 +111,7 @@ lemma sum_querySaltIndicators_le_logLength [DecidableEq S] [Fintype S]
   exact le_of_eq hcounts
 
 lemma sum_wp_querySaltIndicators_le_queryBound_of_run_logging [DecidableEq S] [Finite C]
-    [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C] [Fintype S]
+    [Inhabited C] [Fintype S]
     {α : Type} {oa : OracleComp (CMOracle M S C) α} {n : ℕ}
     (hbound : IsTotalQueryBound oa n) :
     (∑ s : S,
@@ -297,7 +297,7 @@ theorem run_cached_logging_proj_eq_cachingOracle
             rfl]
           exact ih u (cache₀.cacheQuery t u)
 
-variable [Finite C] [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C]
+variable [Finite C] [Inhabited C]
 
 lemma wp_choose_sumHitIndicators_le_queryBound [Fintype S] [Inhabited S]
     {AUX : Type} {t : ℕ}

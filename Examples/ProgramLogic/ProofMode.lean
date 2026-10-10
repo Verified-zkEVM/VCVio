@@ -27,8 +27,7 @@ universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
 variable [∀ t, Finite (spec.Range t)]
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α β γ : Type}
 
 /-! ## Handler normalization -/
@@ -47,8 +46,8 @@ end HandlerNormalization
 /-! ## `game_trans` -/
 
 example {g₁ g₂ g₃ : OracleComp spec α}
-    (h₁ : g₁ ≡ₚ g₂) (h₂ : g₂ ≡ₚ g₃) :
-    g₁ ≡ₚ g₃ := by
+    (h₁ : g₁ =ᵈ g₂) (h₂ : g₂ =ᵈ g₃) :
+    g₁ =ᵈ g₃ := by
   game_trans g₂
   · exact h₁
   · exact h₂
@@ -58,8 +57,7 @@ example {g₁ g₂ g₃ : OracleComp spec α}
 section ByUpto
 
 variable {σ : Type} {ι : Type} {spec : OracleSpec ι}
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α : Type} [MeasurableSpace α]
 
 example
@@ -87,8 +85,7 @@ section RelSim
 
 variable {σ₁ σ₂ : Type} {ι : Type} {spec : OracleSpec ι}
 variable [∀ t, Finite (spec.Range t)]
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example
@@ -131,16 +128,14 @@ section RelSimDist
 
 variable {σ : Type} {ι : Type} {spec : OracleSpec ι}
 variable [∀ t, Finite (spec.Range t)]
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example
     (impl₁ : QueryImpl spec (StateT σ (OracleComp spec)))
     (impl₂ : QueryImpl spec (StateT σ (OracleComp spec)))
     (oa : OracleComp spec α)
-    (himpl : ∀ (t : spec.Domain) (s : σ),
-      letI : MeasurableSpace (spec.Range t × σ) := ⊤; 𝒟[(impl₁ t).run s] = 𝒟[(impl₂ t).run s])
+    (himpl : ∀ (t : spec.Domain) (s : σ), (impl₁ t).run s =ᵈ (impl₂ t).run s)
     (s₁ s₂ : σ) (hs : s₁ = s₂) :
     ⟪(simulateQ impl₁ oa).run' s₁
      ~ (simulateQ impl₂ oa).run' s₂
@@ -151,25 +146,25 @@ example
 
 end RelSimDist
 
-/-! ## `GameEquiv` / `by_equiv` -/
+/-! ## `=ᵈ` / `by_equiv` -/
 
-section GameEquiv
+section EqualInDistribution
 
 example (oa : OracleComp spec α) :
-    oa ≡ₚ oa := by
+    oa =ᵈ oa := by
   rvcgen
 
 /-
 Using `rvcgen?` can explain the behavior of `rvcgen`:
 
 example (oa : OracleComp spec α) :
-    oa ≡ₚ oa := by
+    oa =ᵈ oa := by
   rvcgen?
 -/
 
 example [SampleableType α]
     (f : α → α) (hf : Function.Bijective f) :
-    (f <$> ($ᵗ α : ProbComp α)) ≡ₚ ($ᵗ α : ProbComp α) := by
+    (f <$> ($ᵗ α : ProbComp α)) =ᵈ ($ᵗ α : ProbComp α) := by
   conv_rhs => rw [← id_map ($ᵗ α : ProbComp α)]
   by_equiv
   rvcstep using f
@@ -181,10 +176,10 @@ example {oa₁ oa₂ : OracleComp spec α}
     {R : RelPost β β}
     (h12 : ⟪oa₁ >>= f₁ ~ oa₂ >>= f₂ | R⟫)
     (h23 : ∀ b₁ b₂, R b₁ b₂ → ⟪g₁ b₁ ~ g₂ b₂ | EqRel γ⟫) :
-    (oa₁ >>= f₁ >>= g₁) ≡ₚ (oa₂ >>= f₂ >>= g₂) := by
+    (oa₁ >>= f₁ >>= g₁) =ᵈ (oa₂ >>= f₂ >>= g₂) := by
   rvcgen using R
 
-end GameEquiv
+end EqualInDistribution
 
 /-! ## `by_dist` -/
 
@@ -204,12 +199,10 @@ end ByDist
 section RelDist
 
 variable {ι : Type} {spec : OracleSpec ι} [∀ t, Finite (spec.Range t)]
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
-example {oa ob : OracleComp spec α}
-    (h : letI : MeasurableSpace α := ⊤; 𝒟[oa] = 𝒟[ob]) :
+example {oa ob : OracleComp spec α} (h : oa =ᵈ ob) :
     ⟪oa ~ ob | EqRel α⟫ := by
   rel_dist
   exact h

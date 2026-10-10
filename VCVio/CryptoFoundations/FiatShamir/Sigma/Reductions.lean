@@ -229,15 +229,9 @@ def nmaReduction
 
 variable [Fintype Chal] [Inhabited Chal]
 
-/-- Discrete response spaces for the uniform replay experiment. -/
-local instance replayResponseMeasurable :
-    ∀ t, MeasurableSpace ((Fork.wrappedSpec Chal).Range t) := fun _ => ⊤
-
-local instance replayResponseDiscrete :
-    ∀ t, DiscreteMeasurableSpace ((Fork.wrappedSpec Chal).Range t) := fun _ => inferInstance
-
-/-- The replay experiment uses native uniform response measures. -/
-noncomputable local instance replayUniformMeasure : IsUniformMeasureSpec (Fork.wrappedSpec Chal) :=
+/-- The replay experiment's challenge oracle answers uniformly; the wrapped specification combines
+it with uniform selection. -/
+noncomputable local instance replayChallengeUniform : IsUniformMeasureSpec (Unit →ₒ Chal) :=
   IsUniformMeasureSpec.ofFiniteNonempty _
 
 omit [DecidableEq Chal] in
@@ -251,9 +245,9 @@ private lemma evalDist_simulateQ_unifChalImpl {α : Type}
   rw [OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]
   rcases t with n | u
   · simp only [QueryImpl.add_apply_inl, QueryImpl.ofLift_eq_id', QueryImpl.id'_apply]
-    exact (evalDist_liftM_query (spec := unifSpec) n).trans
-      (OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn _)
-  · simp only [QueryImpl.add_apply_inr, uniformSampleImpl_apply]
+    exact evalDist_liftM_query_uniform (spec := unifSpec) n
+  · let : MeasurableSpace Chal := ⊤
+    simp only [QueryImpl.add_apply_inr, uniformSampleImpl_apply]
     exact SampleableType.evalDist_uniformSample
 
 /-- At a fixed statement, combine replay forking with the supported special-soundness
@@ -387,7 +381,8 @@ theorem nma_to_hard_relation_bound
         Pr[ fun w : Wit => rel pk w = true |
           nmaReduction σ hr M nmaAdv qH pk] := by
     intro pk
-    simpa only [acc, evalDist_apply_singleton, probOutput_bind_eq_tsum, probOutput_pure,
+    simpa only [acc, prEvent_def, map_eq_bind_pure_comp, Function.comp_def,
+      evalDist_apply_singleton, probOutput_bind_eq_tsum, probOutput_pure,
       probEvent_eq_tsum_ite, Bool.coe_iff_coe, eq_iff_iff, true_iff,
       mul_ite, mul_one, mul_zero] using
       pointwise_extraction_bound σ hr M nmaAdv qH hss pk

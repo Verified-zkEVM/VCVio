@@ -75,7 +75,7 @@ lemma prEvent_uniformSample_fun_eval [SampleableType Digest]
       = 𝒟[do let g ← ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)); pure (g x)] {v} := by
         rw [← prEvent_eq_evalDist_singleton
           (($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>= fun g => pure (g x)) v]
-        simp only [bind_assoc, pure_bind]
+        simp only [prEvent_norm]
     _ = 𝒟[($ᵗ Digest : ProbComp Digest)] {v} := by
         rw [← hmarg, evalDist_bind_congr _ _ (fun u => pure u)
           fun u => OracleComp.evalDist_bind_const _ _, bind_pure]

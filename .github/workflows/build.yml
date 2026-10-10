@@ -61,6 +61,9 @@ jobs:
           python3 scripts/test-spmf-closure.py
           python3 scripts/check-spmf-closure.py
 
+      - name: Test downstream probability codemod
+        run: python3 scripts/test-migrate-native-probability.py
+
       - name: Check optional complexity backend isolation
         run: |
           bash scripts/test-complexity-backend-isolation.sh

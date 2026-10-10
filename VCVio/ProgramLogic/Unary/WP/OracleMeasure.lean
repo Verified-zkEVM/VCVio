@@ -25,7 +25,6 @@ universe u
 namespace MeasureProgramLogic.Quantitative
 
 variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
-  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [OracleSpec.IsMeasureSpec spec]
   {α : Type}
 

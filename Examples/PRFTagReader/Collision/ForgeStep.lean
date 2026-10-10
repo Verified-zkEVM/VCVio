@@ -379,7 +379,7 @@ private lemma prEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableType 
         authRFLookup_mapM_responses_none_preservesInv (TagId := TagId) (Nonce := Nonce)
           (Digest := Digest) t₀ transcript.nonce hnonce (Finset.univ : Finset TagId).toList
       rw [(prEvent_eq_zero_iff _ _).2 fun p hp h => by simp [hpres st hnone p hp] at h, zero_add]
-      exact mul_le_of_le_one_right' (prEvent_le_one _ _)
+      exact mul_le_of_le_one_right' (prEvent_le_one _)
 
 /-- Single-point random-oracle bound: a fixed cache point `t₀` is filled by at most one uniform
 draw over the whole `authRFQueryImpl` simulation, so it ends holding any fixed digest `v₀` with

@@ -60,6 +60,13 @@ theorem run_evalDist_eq {left : Stateful I E σ₀} {right : Stateful I E σ₁}
     {α : Type} [MeasurableSpace α] (client : OracleComp E α) :
     𝒟[left.run s₀ client] = 𝒟[right.run s₁ client] := h client
 
+/-- Equivalent handlers run every client to computations equal in distribution. -/
+theorem run_evalDistEq [LawfulEvalDistSemantics (OracleComp I)] {left : Stateful I E σ₀}
+    {right : Stateful I E σ₁} {s₀ : σ₀} {s₁ : σ₁} (h : MeasureDistEquiv left s₀ right s₁)
+    {α : Type} (client : OracleComp E α) : left.run s₀ client =ᵈ right.run s₁ client :=
+  letI : MeasurableSpace α := ⊤
+  EvalDistEq.of_evalDist_eq (h client)
+
 /-- Equality of all client observations establishes handler equivalence. -/
 theorem of_run_evalDist_eq {left : Stateful I E σ₀} {right : Stateful I E σ₁}
     {s₀ : σ₀} {s₁ : σ₁}
@@ -89,14 +96,13 @@ theorem of_run_eq {left : Stateful I E σ₀} {right : Stateful I E σ₁}
 
 /-- Local equality of the joint response and state measures lifts through every client. -/
 theorem of_step [LawfulEvalDistSemantics (OracleComp I)] {left right : Stateful I E σ}
-    (h : ∀ operation state, ∀ [MeasurableSpace (E.Range operation × σ)],
-      𝒟[(left operation).run state] = 𝒟[(right operation).run state])
+    (h : ∀ operation state, (left operation).run state =ᵈ (right operation).run state)
     (state : σ) : MeasureDistEquiv left state right state := by
   intro α _ client
   let : MeasurableSpace σ := ⊤
   simp only [Stateful.run, StateT.run'_eq, _root_.evalDist_map _ measurable_fst]
   exact congrArg (Measure.map Prod.fst)
-    (evalDist_simulateQ_run_congr_of_forall left right h client state)
+    (evalDist_simulateQ_run_congr left right h client state)
 
 omit [EvalDistSemantics (OracleComp I)] in
 /-- Transporting a handler's state along an equivalence does not change what a client
@@ -119,9 +125,8 @@ private theorem simulateQ_run_transport {left : Stateful I E σ₁} (φ : σ₀ 
 /-- Local measure equality up to a state equivalence lifts through every client. -/
 theorem of_step_bij [LawfulEvalDistSemantics (OracleComp I)] {left : Stateful I E σ₀}
     {right : Stateful I E σ₁} (φ : σ₀ ≃ σ₁)
-    (h : ∀ operation state, ∀ [MeasurableSpace (E.Range operation × σ₀)],
-      𝒟[(left operation).run state] =
-        𝒟[Prod.map id φ.symm <$> (right operation).run (φ state)])
+    (h : ∀ operation state,
+      (left operation).run state =ᵈ Prod.map id φ.symm <$> (right operation).run (φ state))
     (state : σ₀) : MeasureDistEquiv left state right (φ state) := by
   let transported : Stateful I E σ₀ := fun operation ↦ StateT.mk fun s ↦
     Prod.map id φ.symm <$> (right operation).run (φ s)
@@ -185,32 +190,25 @@ theorem link_inner_congr {μ : Type} {M : OracleSpec μ} {τ : Type}
 section parSum
 
 variable {ι₁ ι₂ : Type u} {I₁ : OracleSpec.{u, 0} ι₁} {I₂ : OracleSpec.{u, 0} ι₂}
-  [∀ t, MeasurableSpace (I₁.Range t)] [∀ t, DiscreteMeasurableSpace (I₁.Range t)]
-  [∀ t, MeasurableSpace (I₂.Range t)] [∀ t, DiscreteMeasurableSpace (I₂.Range t)]
   [OracleSpec.IsUniformMeasureSpec I₁] [OracleSpec.IsUniformMeasureSpec I₂]
   {ε₁ ε₂ : Type v} {E₁ : OracleSpec.{v, 0} ε₁} {E₂ : OracleSpec.{v, 0} ε₂}
 
 /-- Parallel composition preserves local measure equality of both factors, over uniform import
 interfaces. -/
 theorem parSum_congr {h₁ h₁' : Stateful I₁ E₁ σ₁} {h₂ h₂' : Stateful I₂ E₂ σ₂}
-    (hh₁ : ∀ operation state, ∀ [MeasurableSpace (E₁.Range operation × σ₁)],
-      𝒟[(h₁ operation).run state] = 𝒟[(h₁' operation).run state])
-    (hh₂ : ∀ operation state, ∀ [MeasurableSpace (E₂.Range operation × σ₂)],
-      𝒟[(h₂ operation).run state] = 𝒟[(h₂' operation).run state])
+    (hh₁ : ∀ operation state, (h₁ operation).run state =ᵈ (h₁' operation).run state)
+    (hh₂ : ∀ operation state, (h₂ operation).run state =ᵈ (h₂' operation).run state)
     (s₁ : σ₁) (s₂ : σ₂) :
     MeasureDistEquiv (h₁.parSum h₂) (s₁, s₂) (h₁'.parSum h₂') (s₁, s₂) := by
   refine of_step (fun operation state ↦ ?_) (s₁, s₂)
-  intro _
   obtain ⟨a, b⟩ := state
   rcases operation with t | t
-  · let : MeasurableSpace (E₁.Range t × σ₁) := ⊤
-    rw [parSum_apply_inl_run, parSum_apply_inl_run, _root_.evalDist_map _ measurable_from_top,
-      _root_.evalDist_map _ measurable_from_top, evalDist_liftComp_uniform,
-      evalDist_liftComp_uniform, hh₁ t a]
-  · let : MeasurableSpace (E₂.Range t × σ₂) := ⊤
-    rw [parSum_apply_inr_run, parSum_apply_inr_run, _root_.evalDist_map _ measurable_from_top,
-      _root_.evalDist_map _ measurable_from_top, evalDist_liftComp_uniform,
-      evalDist_liftComp_uniform, hh₂ t b]
+  · rw [parSum_apply_inl_run, parSum_apply_inl_run]
+    exact EvalDistEq.map (((evalDistEq_liftComp_uniform _).trans (hh₁ t a)).trans
+      (evalDistEq_liftComp_uniform _).symm) _
+  · rw [parSum_apply_inr_run, parSum_apply_inr_run]
+    exact EvalDistEq.map (((evalDistEq_liftComp_uniform _).trans (hh₂ t b)).trans
+      (evalDistEq_liftComp_uniform _).symm) _
 
 end parSum
 

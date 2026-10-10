@@ -46,7 +46,6 @@ namespace OracleComp
 section Unpredictability
 
 variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι}
-  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [IsUniformMeasureSpec spec] [∀ t, Fintype (spec.Range t)]
 
 /-- **Fresh query uniformity**: querying `cachingOracle` at an uncached point
@@ -303,7 +302,7 @@ end Unpredictability
 assumption.  If the query domain is empty, the event is impossible; otherwise this is the
 homogeneous specialization of `prEvent_cache_hits_targets_le_of_noCollision`. -/
 theorem prEvent_cache_hits_targets_le_of_noCollision_homogeneous
-    {ι Y α : Type} [DecidableEq ι] [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    {ι Y α : Type} [DecidableEq ι] [Finite Y]
     [IsUniformMeasureSpec (ι →ₒ Y)]
     (oa : OracleComp (ι →ₒ Y) α)
     (n : ℕ) (hbound : IsTotalQueryBound oa n)

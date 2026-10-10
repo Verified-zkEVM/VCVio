@@ -66,9 +66,7 @@ variable {σ₁ σ₂ α β : Type}
 
 section lifts
 
-variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
-  [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
+variable [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
   [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
 /-! ### Per-call lifts (one transformer layer) -/
@@ -418,8 +416,8 @@ theorem relTriple_simulateQ_run_of_impl_eq_triple
 
 section SmokeTests
 
-variable {ι : Type} {spec : OracleSpec.{0, 0} ι} [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
+  [OracleSpec.IsMeasureSpec spec]
   [∀ t, Finite (spec.Range t)]
 variable [DecidableEq ι]
 

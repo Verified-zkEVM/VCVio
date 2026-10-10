@@ -33,7 +33,7 @@ Unary triples additionally require `open scoped Std.Internal.Do OracleComp.Quant
 - `⦃P⦄ c ⦃Q⦄` — quantitative Hoare triple (`P ≤ wp c Q`)
 
 ### Game-level
-- `g₁ ≡ₚ g₂` — game equivalence (equal output measures)
+- `g₁ =ᵈ g₂` — equality in distribution, from `VCVio.EvalDist.EvalDistEq`
 
 ### Relational (EasyCrypt-inspired)
 - `⟪c₁ ~ c₂ | R⟫` — pRHL coupling triple
@@ -42,7 +42,6 @@ Unary triples additionally require `open scoped Std.Internal.Do OracleComp.Quant
 
 ## Convenience predicates
 
-- `GameEquiv g₁ g₂` — two games have the same output distribution
 - `AdvBound game ε` — advantage of a game is at most `ε`
 -/
 
@@ -55,36 +54,16 @@ universe u
 namespace OracleComp.ProgramLogic
 
 variable {ι₁ : Type u}
-variable {spec₁ : OracleSpec.{u, 0} ι₁} [∀ t, MeasurableSpace (spec₁.Range t)]
+variable {spec₁ : OracleSpec.{u, 0} ι₁}
   [IsMeasureSpec spec₁]
 variable {α β : Type}
 
 /-! ## Convenience predicates -/
 
-/-- Two games have the same output measure, compared in the discrete structure on their output
-type. -/
-def GameEquiv (g₁ g₂ : OracleComp spec₁ α) : Prop :=
-  letI : MeasurableSpace α := ⊤; 𝒟[g₁] = 𝒟[g₂]
-
 /-- Advantage of a Boolean game is at most `ε`, measured as the distance of its `true` mass from
 one half. -/
 def AdvBound (game : OracleComp spec₁ Bool) (ε : ℝ≥0∞) : Prop :=
   ENNReal.absDiff (𝒟[game] {true}) (1 / 2) ≤ ε
-
-@[refl] theorem GameEquiv.rfl {g : OracleComp spec₁ α} : GameEquiv g g := Eq.refl _
-
-@[symm] theorem GameEquiv.symm {g₁ g₂ : OracleComp spec₁ α}
-    (h : GameEquiv g₁ g₂) : GameEquiv g₂ g₁ := Eq.symm h
-
-@[trans] theorem GameEquiv.trans {g₁ g₂ g₃ : OracleComp spec₁ α}
-    (h₁ : GameEquiv g₁ g₂) (h₂ : GameEquiv g₂ g₃) : GameEquiv g₁ g₃ :=
-  Eq.trans h₁ h₂
-
-/-- Equivalent games give every event the same probability. -/
-theorem GameEquiv.prEvent_eq [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-    {g₁ g₂ : OracleComp spec₁ α}
-    (h : GameEquiv g₁ g₂) (p : α → Prop) : Pr{let x ← g₁}[p x] = Pr{let x ← g₂}[p x] :=
-  prEvent_congr_of_evalDist_eq g₁ g₂ h p
 
 /-! ## Notation -/
 
@@ -115,12 +94,6 @@ scoped macro_rules (kind := relWpBracket)
   | `(rwp⟦ $c₁ ~ $c₂ | $post; $epost₁, $epost₂ ⟧) =>
       `(VCVio.ProgramLogic.rwp $c₁ $c₂ $post $epost₁ $epost₂)
 
-/-- Game equivalence: `g₁ ≡ₚ g₂` means the two games have equal output measures.
-Uses `syntax` + `macro_rules` because `≡` conflicts with Mathlib's
-modular equivalence notation (`a ≡ b [MOD n]`). -/
-scoped syntax:50 term:50 " ≡ₚ " term:51 : term
-macro_rules | `($a ≡ₚ $b) => `(GameEquiv $a $b)
-
 /-- pRHL coupling: `⟪c₁ ~ c₂ | R⟫` means `RelTriple c₁ c₂ R`. -/
 scoped notation "⟪" c₁ " ~ " c₂ " | " R "⟫" => Relational.RelTriple c₁ c₂ R
 
@@ -145,20 +118,18 @@ lemma Relational.RelPost.indicator_eq_propInd {α β : Type}
 /-- Almost-sure correctness: `Triple 𝟙⟦True⟧ c (fun x => 𝟙⟦p x⟧)` iff
 `Pr[ p | c] = 1`. -/
 lemma triple_propInd_iff_prEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
+    [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
     Triple (𝟙⟦True⟧ : ℝ≥0∞) oa (fun x => 𝟙⟦p x⟧) ↔
       Pr{let x ← oa}[p x] = 1 := by
   rw [triple_iff_le_wp, propInd_true, ← prEvent_eq_wp_propInd]
   exact ⟨fun h ↦ le_antisymm
     ((MeasureTheory.measure_mono (Set.subset_univ _)).trans
-      (evalDist_apply_univ_le_one (do let x ← oa; pure (p x)))) h, fun h ↦ h.ge⟩
+      (evalDist_apply_univ_le_one (p <$> oa))) h, fun h ↦ h.ge⟩
 
 /-- Lower-bound event goals are exactly quantitative triples with indicator postconditions. -/
 lemma triple_propInd_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
+    [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (r : ℝ≥0∞) :
     Triple r oa (fun x => 𝟙⟦p x⟧) ↔ r ≤ Pr{let x ← oa}[p x] := by
   rw [triple_iff_le_wp, ← prEvent_eq_wp_propInd]
@@ -166,8 +137,8 @@ lemma triple_propInd_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}
 /-! ## Expectation-level bridge lemmas -/
 
 /-- WP of a disjunction indicator is bounded by the sum of individual WP indicators. -/
-theorem wp_propInd_or_le {ι : Type u} {spec : OracleSpec ι} [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
+theorem wp_propInd_or_le {ι : Type u} {spec : OracleSpec ι}
+    [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p q : α → Prop) :
     wp oa (fun x => 𝟙⟦p x ∨ q x⟧) ≤
         wp oa (fun x => 𝟙⟦p x⟧) +
@@ -178,8 +149,8 @@ theorem wp_propInd_or_le {ι : Type u} {spec : OracleSpec ι} [∀ t, Measurable
   by_cases hp : p x <;> by_cases hq : q x <;> simp [propInd, hp, hq]
 
 /-- Markov inequality: if `a ≤ f x` whenever `p x`, then `a * Pr{let x ← oa}[p x] ≤ E[f | oa]`. -/
-theorem markov_bound {ι : Type u} {spec : OracleSpec ι} [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
+theorem markov_bound {ι : Type u} {spec : OracleSpec ι}
+    [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (f : α → ℝ≥0∞) (a : ℝ≥0∞) (p : α → Prop)
     (hf : ∀ x, p x → a ≤ f x) :
     a * Pr{let x ← oa}[p x] ≤ wp oa f := by
@@ -192,8 +163,7 @@ theorem markov_bound {ι : Type u} {spec : OracleSpec ι} [∀ t, MeasurableSpac
 
 /-- `Triple` with precondition `1` and indicator postcondition when the event is almost sure. -/
 theorem triple_propInd_of_support {ι : Type u} {spec : OracleSpec ι}
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
+    [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (h : ∀ x ∈ support oa, p x) :
     Triple (1 : ℝ≥0∞) oa (fun x => 𝟙⟦p x⟧) := by
   apply triple_ofLE
@@ -202,47 +172,7 @@ theorem triple_propInd_of_support {ι : Type u} {spec : OracleSpec ι}
   intro x hx
   simp [propInd, h x hx]
 
-/-! ## Bridge lemmas: game equivalence and advantage -/
-
-/-- Game equivalence from basic pRHL equality coupling. -/
-theorem GameEquiv.of_relTriple [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-    [∀ t, Finite (spec₁.Range t)] {g₁ g₂ : OracleComp spec₁ α}
-    (h : Relational.RelTriple (spec₁ := spec₁) (spec₂ := spec₁) g₁ g₂
-      (Relational.EqRel α)) :
-    GameEquiv g₁ g₂ :=
-  Relational.evalDist_eq_of_relTriple_eqRel h
-
-/-- A bijection on a uniform sample is still uniform.
-This is the key lemma behind OTP-style perfect secrecy proofs. -/
-theorem GameEquiv.map_uniformSample_bij [SampleableType α]
-    {f : α → α} (hf : Function.Bijective f) :
-    GameEquiv (f <$> ($ᵗ α : ProbComp α)) ($ᵗ α : ProbComp α) := by
-  conv_rhs => rw [← id_map ($ᵗ α : ProbComp α)]
-  exact GameEquiv.of_relTriple
-    (Relational.relTriple_map
-      (Relational.relTriple_uniformSample_bij hf _ (fun _ => Eq.refl _)))
-
-/-- Game equivalence is a congruence for bind. -/
-theorem GameEquiv.bind_congr [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-    {g₁ g₂ : OracleComp spec₁ α}
-    {f₁ f₂ : α → OracleComp spec₁ β}
-    (hg : GameEquiv g₁ g₂) (hf : ∀ a, GameEquiv (f₁ a) (f₂ a)) :
-    GameEquiv (g₁ >>= f₁) (g₂ >>= f₂) := by
-  let : MeasurableSpace α := ⊤
-  let : MeasurableSpace β := ⊤
-  change 𝒟[g₁ >>= f₁] = 𝒟[g₂ >>= f₂]
-  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete, show 𝒟[g₁] = 𝒟[g₂] from hg,
-    show (fun a => 𝒟[f₁ a]) = fun a => 𝒟[f₂ a] from funext hf]
-
-/-- Game equivalence is a congruence for map. -/
-theorem GameEquiv.map_congr [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-    {g₁ g₂ : OracleComp spec₁ α} (f : α → β)
-    (hg : GameEquiv g₁ g₂) :
-    GameEquiv (f <$> g₁) (f <$> g₂) := by
-  let : MeasurableSpace α := ⊤
-  let : MeasurableSpace β := ⊤
-  change 𝒟[f <$> g₁] = 𝒟[f <$> g₂]
-  rw [evalDist_map_of_discrete, evalDist_map_of_discrete, show 𝒟[g₁] = 𝒟[g₂] from hg]
+/-! ## Bridge lemmas: advantage -/
 
 /-- Advantage bound via total variation distance. -/
 theorem AdvBound.of_measureETVDist {game₁ game₂ : OracleComp spec₁ Bool} {ε₁ ε₂ : ℝ≥0∞}
@@ -259,12 +189,12 @@ theorem AdvBound.of_measureETVDist {game₁ game₂ : OracleComp spec₁ Bool} {
         (measurableSet_singleton true)).trans htv
     _ = ε₁ + ε₂ := add_comm _ _
 
-/-- Transfer advantage bounds across equivalent games. -/
-theorem AdvBound.of_gameEquiv [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
+/-- Transfer advantage bounds across games equal in distribution. -/
+theorem AdvBound.of_evalDistEq
     {g₁ g₂ : OracleComp spec₁ Bool} {ε : ℝ≥0∞}
-    (heq : GameEquiv g₁ g₂) (hbound : AdvBound g₁ ε) :
+    (heq : g₁ =ᵈ g₂) (hbound : AdvBound g₁ ε) :
     AdvBound g₂ ε := by
   unfold AdvBound at *
-  rwa [← prEvent_eq_evalDist_singleton, ← heq.prEvent_eq, prEvent_eq_evalDist_singleton]
+  rwa [← heq.evalDist_eq]
 
 end OracleComp.ProgramLogic

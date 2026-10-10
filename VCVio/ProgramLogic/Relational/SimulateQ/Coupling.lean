@@ -32,13 +32,9 @@ namespace OracleComp.ProgramLogic.Relational
 variable {ι : Type u} {spec : OracleSpec ι}
 variable {α : Type}
 variable {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
-  [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
   [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
 
 section coupling
-
-variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
 
 variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
@@ -61,7 +57,7 @@ which is what `prEvent_le_of_relTriple_simulateQ_run` consumes to transport an e
 `relTriple_simulateQ_run_mono` weakens `himpl` to let the two handlers return *different* answers,
 paying for it with a self-referential recoupling hypothesis on the continuation.
 `relTriple_simulateQ_run'` is this rule with the state component projected away, keeping only
-output equality, and `relTriple_simulateQ_run'_of_impl_evalDist_eq` specializes that to a shared
+output equality, and `relTriple_simulateQ_run'_of_impl_evalDistEq` specializes that to a shared
 state space with `Eq` as the invariant. -/
 theorem relTriple_simulateQ_run
     {σ₁ σ₂ : Type}
@@ -131,13 +127,13 @@ two simulations of `oa` produce equal outputs, the final states being discarded 
 The hypotheses are exactly those of `relTriple_simulateQ_run`, so all the probabilistic content
 still sits in `himpl`; only the conclusion changes shape, from a relation on `(output, state)`
 pairs to an `EqRel` between two plain computations. That is the form the transport lemmas
-`prEvent_eq_of_relTriple_eqRel` and `evalDist_eq_of_relTriple_eqRel` consume, so reach for it
+`prEvent_eq_of_relTriple_eqRel` and `evalDistEq_of_relTriple_eqRel` consume, so reach for it
 whenever the residual states are bookkeeping the statement should not mention; keep
 `relTriple_simulateQ_run` when the conclusion must still constrain them, since the projection
 cannot be undone. `rvcgen` applies this rule on its own, first specializing `R_state` to `Eq`.
 
-`relTriple_simulateQ_run'_of_impl_evalDist_eq` specializes it to a shared state space with `Eq`
-as the invariant, trading `himpl` for a per-query output-measure equality. -/
+`relTriple_simulateQ_run'_of_impl_evalDistEq` specializes it to a shared state space with `Eq`
+as the invariant, trading `himpl` for a per-query equality in distribution. -/
 theorem relTriple_simulateQ_run'
     {σ₁ σ₂ : Type}
     (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
@@ -213,20 +209,19 @@ equality of distributions rather than of computations.
 `OracleComp.evalDist_simulateQ_run_congr_of_forall` draws the same conclusion as a bare
 output-measure equality on `run`, but only when both implementations also share the ambient
 spec they simulate into. -/
-theorem relTriple_simulateQ_run'_of_impl_evalDist_eq
+theorem relTriple_simulateQ_run'_of_impl_evalDistEq
     {σ : Type}
     (impl₁ : QueryImpl spec (StateT σ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (StateT σ (OracleComp spec₂)))
     (oa : OracleComp spec α)
-    (himpl : ∀ (t : spec.Domain) (s : σ),
-      letI : MeasurableSpace (spec.Range t × σ) := ⊤; 𝒟[(impl₁ t).run s] = 𝒟[(impl₂ t).run s])
+    (himpl : ∀ (t : spec.Domain) (s : σ), (impl₁ t).run s =ᵈ (impl₂ t).run s)
     (s₁ s₂ : σ) (hs : s₁ = s₂) :
     RelTriple
       ((simulateQ impl₁ oa).run' s₁)
       ((simulateQ impl₂ oa).run' s₂)
       (EqRel α) :=
   relTriple_simulateQ_run' impl₁ impl₂ Eq oa
-    (fun t s _ h => h ▸ relTriple_of_evalDist_eq (himpl t s) fun _ => ⟨rfl, rfl⟩) s₁ s₂ hs
+    (fun t s _ h => h ▸ relTriple_of_evalDistEq (himpl t s) fun _ => ⟨rfl, rfl⟩) s₁ s₂ hs
 
 /-! ### `WriterT` analogue -/
 
@@ -399,7 +394,7 @@ already determined by unification against the goal.
 
 The neighbouring rules tie the two state spaces together more loosely — `relTriple_simulateQ_run'`
 through an arbitrary state invariant plus a per-query relational triple, and
-`relTriple_simulateQ_run'_of_impl_evalDist_eq` through per-query output-measure equality on a shared
+`relTriple_simulateQ_run'_of_impl_evalDistEq` through per-query equality in distribution on a shared
 state space. Reach for this one when the second implementation is the first one read through a
 state projection, so that `hproj` is an equality of computations rather than of distributions. -/
 theorem relTriple_simulateQ_run'_of_query_map_eq
@@ -423,7 +418,7 @@ If `oa` satisfies a structural query bound `IsQueryBound budget canQuery cost`, 
 implementations agree on every query that the bound permits, and the second implementation
 preserves a budget-indexed invariant `Inv`, then the full simulated computations have the same
 output-state measure from any initial state satisfying `Inv`. -/
-theorem evalDist_simulateQ_run_eq_of_impl_eq_queryBound
+theorem evalDistEq_simulateQ_run_of_impl_eq_queryBound
     {ι : Type} {spec : OracleSpec ι} {σ : Type} {B : Type _}
     (impl₁ impl₂ : QueryImpl spec (StateT σ ProbComp))
     (Inv : σ → B → Prop)
@@ -437,8 +432,8 @@ theorem evalDist_simulateQ_run_eq_of_impl_eq_queryBound
     (hpres₂ : ∀ (t : spec.Domain) (s : σ) (b : B), Inv s b → canQuery t b →
       ∀ z ∈ support ((impl₂ t).run s), Inv z.2 (cost t b))
     (s : σ) (hs : Inv s budget) :
-    letI : MeasurableSpace (α × σ) := ⊤
-    𝒟[(simulateQ impl₁ oa).run s] = 𝒟[(simulateQ impl₂ oa).run s] := by
+    (simulateQ impl₁ oa).run s =ᵈ (simulateQ impl₂ oa).run s := by
+  refine evalDistEq_iff_evalDist_eq.mpr ?_
   let : MeasurableSpace (α × σ) := ⊤
   induction oa using OracleComp.inductionOn generalizing s budget with
   | pure x => rfl
@@ -482,7 +477,6 @@ that version uses a relation on the two *run distributions*, which applies when 
 states are related only through a coupling over a deferred draw, at the price of also having to
 seed the relation at every `pure` leaf. -/
 theorem prEvent_marginal_simulateQ_mono
-    [∀ t, DiscreteMeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
     {σ₁ σ₂ : Type}
     (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec₂)))

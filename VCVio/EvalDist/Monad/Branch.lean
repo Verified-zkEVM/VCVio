@@ -41,16 +41,11 @@ theorem evalDist_bind_prop {β : Type} [MeasurableSpace β]
 
 variable [LawfulMonad m]
 
-/-- An impossible final observation has zero mass, including after a failed computation. -/
-@[simp↓ high, grind norm↓]
-theorem prEvent_false {α : Type} (mx : m α) : Pr{let _ ← mx}[False] = 0 :=
-  prEvent_eq_zero_of_forall_not mx (fun _ ↦ False) (fun _ ↦ id)
-
 /-- An observation's negation is the false mass of the same propositional selector. -/
 theorem prEvent_not_eq_apply_false {α : Type} (mx : m α) (p : α → Prop) :
     Pr{let x ← mx}[¬p x] = 𝒟[p <$> mx] {False} := by
   calc
-    _ = Pr{let b ← p <$> mx}[¬b] := by simp only [bind_map_left]
+    _ = Pr{let b ← p <$> mx}[¬b] := by rw [Functor.map_map]
     _ = 𝒟[p <$> mx] {b | ¬b} := prEvent_eq_evalDist_of_discrete _ _
     _ = _ := by congr 1; ext b; simp
 
@@ -81,7 +76,7 @@ theorem evalDist_bind_ite {α β : Type} [MeasurableSpace β]
       by_cases hx : p x <;> simp [hx]
     _ = _ := by
       rw [evalDist_bind_prop, prEvent_not_eq_apply_false]
-      simp only [map_eq_bind_pure_comp, Function.comp_def]
+      rfl
 
 /-- Measurable selector measures and branch measures give a measurable conditional family.
 The family can be bundled by `evalDistKernel`; discarded source values need no measurable space.
@@ -120,10 +115,11 @@ theorem prEvent_bind_ite {α β : Type} (mx : m α) (p : α → Prop) [Decidable
     Pr{let y ← mx >>= fun x ↦ if p x then yes else no}[q y] =
       Pr{let x ← mx}[p x] * Pr{let y ← yes}[q y] +
         Pr{let x ← mx}[¬p x] * Pr{let y ← no}[q y] := by
-  rw [bind_assoc]
-  simp_rw [apply_ite (fun x ↦ x >>= fun y ↦ pure (q y))]
+  rw [prEvent_def, map_bind]
+  simp_rw [apply_ite (Functor.map q)]
   rw [evalDist_bind_ite]
-  simp
+  simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul]
+  rfl
 
 /-- A continuation event that is constant on an observed condition and zero otherwise factors
 through that condition's probability. The reference event may have a different output type. -/
@@ -137,13 +133,11 @@ theorem prEvent_bind_eq_mul_of_ite {α β γ : Type}
     Pr{let y ← mx >>= f}[q y] = Pr{let x ← mx}[p x] * Pr{let z ← my}[r z] := by
   calc
     _ = Pr{let b ← mx >>= fun x ↦ if p x then r <$> my else pure False}[b] := by
-      simpa only [id, bind_pure] using
-        prEvent_bind_congr mx f (fun x ↦ if p x then r <$> my else pure False) q id (by
+      rw [prEvent_bind_congr mx f (fun x ↦ if p x then r <$> my else pure False) q id (by
           intro x
           rw [h]
-          split_ifs <;> simp)
+          split_ifs <;> simp), id_map]
     _ = _ := by
-      rw [evalDist_bind_ite]
-      simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul]
-      rw [← prEvent_eq_evalDist_map]
+      rw [prEvent_def, evalDist_bind_ite]
+      simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul, ← prEvent_def]
       simp

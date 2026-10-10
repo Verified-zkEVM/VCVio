@@ -130,7 +130,7 @@ theorem prEvent_replicate_uniformSample {α : Type} [SampleableType α] [_root_.
         fun x' _ hx' => by
           obtain ⟨xs, -, hxs⟩ := (mem_support_bind_iff _ _ _).mp hx'
           exact (List.cons.inj ((mem_support_pure_iff' (m := ProbComp) _ _).mp hxs)).1]
-      simp only [bind_assoc, pure_bind, List.cons.injEq, true_and]
+      simp only [prEvent_norm, List.cons.injEq, true_and]
       rw [prEvent_uniformSample_eq_singleton, ih (by simpa using hlen), pow_succ', Nat.cast_mul,
         ENNReal.mul_inv (Or.inr (ENNReal.natCast_ne_top _)) (Or.inl (ENNReal.natCast_ne_top _))]
 
@@ -188,16 +188,22 @@ section transport
 
 variable {α β γ : Type} [SampleableType α] [SampleableType β]
 
+/-- A bijection of sample spaces carries a uniform sample to a uniform sample. -/
+theorem map_uniformSample_evalDistEq_of_bijective {f : α → β} (hf : Function.Bijective f) :
+    f <$> ($ᵗ α : ProbComp α) =ᵈ ($ᵗ β : ProbComp β) := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  have h : 𝒟[f <$> ($ᵗ α : ProbComp α)] = 𝒟[($ᵗ β : ProbComp β)] := by
+    rw [evalDist_map_of_discrete, evalDist_uniformSample, evalDist_uniformSample]
+    exact map_uniformOn_univ_of_bijective Measurable.of_discrete hf
+  exact EvalDistEq.of_evalDist_eq h
+
 /-- Transport a uniform event along a bijection of sample spaces. -/
 theorem prEvent_uniformSample_comp_of_bijective {f : α → β} (hf : Function.Bijective f)
     (p : β → Prop) :
     Pr{let x ← $ᵗ α}[p (f x)] = Pr{let y ← $ᵗ β}[p y] := by
   rw [← prEvent_map]
-  refine prEvent_congr_of_evalDist_eq _ _ ?_ p
-  let : MeasurableSpace α := ⊤
-  let : MeasurableSpace β := ⊤
-  rw [evalDist_map_of_discrete, evalDist_uniformSample, evalDist_uniformSample]
-  exact map_uniformOn_univ_of_bijective Measurable.of_discrete hf
+  exact (map_uniformSample_evalDistEq_of_bijective hf).prEvent_eq p
 
 /-- Transport a uniform event along an equivalence of sample spaces. -/
 theorem prEvent_uniformSample_equiv (e : α ≃ β) (p : β → Prop) :
@@ -211,10 +217,10 @@ theorem prEvent_uniformSample_pair_of_bijective [SampleableType γ] {g : α → 
   calc Pr{let x ← $ᵗ α; let y ← $ᵗ β}[p (g x y)]
       = Pr{let xy ← (do let x ← $ᵗ α; let y ← $ᵗ β; return (x, y))}[
           p (Function.uncurry g xy)] := by
-        simp only [bind_assoc, pure_bind, Function.uncurry_apply_pair]
+        simp only [prEvent_norm, Function.uncurry_apply_pair]
     _ = Pr{let z ← $ᵗ γ}[p z] := by
         rw [← prEvent_map]
-        refine prEvent_congr_of_evalDist_eq _ _ ?_ p
+        refine (evalDistEq_iff_evalDist_eq.mpr ?_).prEvent_eq p
         let : MeasurableSpace α := ⊤
         let : MeasurableSpace β := ⊤
         let : MeasurableSpace γ := ⊤
@@ -232,10 +238,10 @@ theorem prEvent_uniformSample_prod_le_of_forall_fst (p : α × β → Prop) {ε 
     (h : ∀ x, Pr{let y ← $ᵗ β}[p (x, y)] ≤ ε) :
     Pr{let z ← $ᵗ (α × β)}[p z] ≤ ε := by
   rw [prEvent_uniformSample_prod]
-  simpa only [bind_assoc, pure_bind] using
+  simpa only [prEvent_norm] using
     prEvent_bind_le_of_forall_le ($ᵗ α)
       (fun x => do let y ← $ᵗ β; return (x, y)) p
-      (fun x => by simpa only [bind_assoc, pure_bind] using h x)
+      (fun x => by simpa only [prEvent_norm] using h x)
 
 /-- A uniform bound after fixing the second coordinate bounds an event of a uniform product. -/
 theorem prEvent_uniformSample_prod_le_of_forall_snd (p : α × β → Prop) {ε : ℝ≥0∞}
@@ -243,10 +249,10 @@ theorem prEvent_uniformSample_prod_le_of_forall_snd (p : α × β → Prop) {ε 
     Pr{let z ← $ᵗ (α × β)}[p z] ≤ ε := by
   rw [← prEvent_uniformSample_pair_of_bijective
     (g := fun y x => (x, y)) (Equiv.prodComm β α).bijective]
-  simpa only [bind_assoc, pure_bind] using
+  simpa only [prEvent_norm] using
     prEvent_bind_le_of_forall_le ($ᵗ β)
       (fun y => do let x ← $ᵗ α; return (x, y)) p
-      (fun y => by simpa only [bind_assoc, pure_bind] using h y)
+      (fun y => by simpa only [prEvent_norm] using h y)
 
 /-- The first coordinate of a uniform product draw is a uniform draw. -/
 theorem prEvent_uniformSample_fst (p : α → Prop) :
@@ -258,10 +264,10 @@ theorem prEvent_uniformSample_fst (p : α → Prop) :
 
 /-- A uniform vector of length `N + 1` is a uniform head followed by an independent uniform
 vector of length `N`. -/
-theorem evalDist_uniformSample_vector_succ (N : ℕ) :
-    (letI : MeasurableSpace (List.Vector α (N + 1)) := ⊤;
-      𝒟[($ᵗ (List.Vector α (N + 1)))] =
-        𝒟[(do let a ← $ᵗ α; let rest ← $ᵗ (List.Vector α N); pure (a ::ᵥ rest))]) := by
+theorem evalDistEq_uniformSample_vector_succ (N : ℕ) :
+    ($ᵗ (List.Vector α (N + 1)) : ProbComp _) =ᵈ
+      (do let a ← $ᵗ α; let rest ← $ᵗ (List.Vector α N); pure (a ::ᵥ rest)) := by
+  refine evalDistEq_iff_evalDist_eq.mpr ?_
   let : MeasurableSpace (List.Vector α (N + 1)) := ⊤
   have hbij : Function.Bijective
       (Function.uncurry fun (a : α) (rest : List.Vector α N) => a ::ᵥ rest) :=
@@ -277,7 +283,7 @@ theorem evalDist_uniformSample_vector_succ (N : ℕ) :
   rw [← prEvent_eq_evalDist_of_discrete,
     ← prEvent_eq_evalDist_of_discrete,
     ← prEvent_uniformSample_pair_of_bijective hbij (· ∈ A)]
-  simp only [bind_assoc, pure_bind]
+  simp only [prEvent_norm]
 
 /-- A continuation of the first coordinate of a uniform pair has the output measure of the same
 continuation of a uniform first coordinate. -/
@@ -311,10 +317,10 @@ theorem prEvent_uniformSample_finSnoc_le_add {n : ℕ}
     Pr{let z ← $ᵗ (_root_.Fin (n + 1) → α)}[event z] ≤
       Pr{let y ← $ᵗ (_root_.Fin n → α)}[bad y] + ε := by
   rw [prEvent_uniformSample_finSnoc]
-  simpa only [bind_assoc, pure_bind] using
+  simpa only [prEvent_norm] using
     prEvent_bind_le_prEvent_add ($ᵗ (_root_.Fin n → α))
       (fun y => do let x ← $ᵗ α; return Fin.snoc y x) bad event
-      (fun y hy => by simpa only [bind_assoc, pure_bind] using h y hy)
+      (fun y hy => by simpa only [prEvent_norm] using h y hy)
 
 end transport
 
@@ -393,7 +399,6 @@ namespace uniformSampleImpl
 open OracleSpec OracleComp
 
 variable {ι : Type*} {spec : OracleSpec ι} [∀ t, SampleableType (spec.Range t)]
-  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [OracleSpec.IsUniformMeasureSpec spec]
 
 /-- Answering every query with the canonical uniform sampler preserves the output measure of every
@@ -401,7 +406,15 @@ computation under uniform oracle semantics. -/
 theorem evalDist_simulateQ {α : Type} [MeasurableSpace α] (oa : OracleComp spec α) :
     𝒟[simulateQ uniformSampleImpl oa] = 𝒟[oa] :=
   evalDist_simulateQ_eq_of_forall _ (fun t ↦ by
+    let : MeasurableSpace (spec.Range t) := ⊤
     rw [uniformSampleImpl_apply, SampleableType.evalDist_uniformSample,
       OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]) oa
+
+/-- Answering every query with the canonical uniform sampler gives a probabilistic computation
+equal in distribution to the oracle computation. -/
+theorem evalDistEq_simulateQ {α : Type} (oa : OracleComp spec α) :
+    simulateQ uniformSampleImpl oa =ᵈ oa :=
+  letI : MeasurableSpace α := ⊤
+  EvalDistEq.of_evalDist_eq (evalDist_simulateQ oa)
 
 end uniformSampleImpl

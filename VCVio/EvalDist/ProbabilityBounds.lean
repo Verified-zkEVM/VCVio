@@ -38,15 +38,8 @@ theorem prEvent_bind_sq_le_bind_pair
   have hpair :
       Pr{let x ← source; let a ← f x; let b ← f x}[p a ∧ p b] =
         ∫⁻ x, Pr{let a ← f x}[p a] ^ 2 ∂𝒟[source] := by
-    calc
-      _ = Pr{let z ← (source >>= fun x ↦ do
-              let a ← f x
-              let b ← f x
-              return (a, b))}[p z.1 ∧ p z.2] := by
-        simp only [bind_assoc, pure_bind]
-      _ = _ := by
-        rw [prEvent_bind_eq_lintegral_of_discrete]
-        simp only [bind_assoc, pure_bind, prEvent_bind_bind_and, sq]
+    rw [prEvent_bind_of_discrete]
+    simp only [prEvent_bind_bind_and, sq]
   rw [prEvent_bind_eq_lintegral_of_discrete, hpair]
   exact ENNReal.sq_lintegral_le_lintegral_sq Measurable.of_discrete.aemeasurable
 
@@ -102,7 +95,7 @@ theorem prEvent_isSome_eq_sum {γ : Type} [Fintype γ] (mx : m α) (f : α → O
 theorem sum_prEvent_eq_some_le_one {γ : Type} [Fintype γ] (mx : m α) (f : α → Option γ) :
     ∑ k, Pr{let x ← mx}[f x = some k] ≤ 1 := by
   rw [← prEvent_isSome_eq_sum]
-  exact prEvent_le_one _ _
+  exact prEvent_le_one _
 
 /-- Union bound over a finite type. -/
 theorem prEvent_exists_le {ι : Type} [Fintype ι] (mx : m α) (p : ι → α → Prop) :
@@ -179,7 +172,7 @@ theorem prEvent_le_prEvent_add_of_prEvent_not_and_not_le {β : Type} (mx : m α)
     (h : Pr{let x ← mx}[¬p x ∧ ¬bad x] ≤ Pr{let y ← my}[¬q y]) :
     Pr{let y ← my}[q y] ≤ Pr{let x ← mx}[bad x] + Pr{let x ← mx}[p x] := by
   refine ENNReal.le_of_add_le_add_right (a := Pr{let y ← my}[¬q y])
-    (ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one my _)) ?_
+    (ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one _)) ?_
   rw [prEvent_add_prEvent_not_eq_prEvent_true]
   calc Pr{let _ ← my}[True] ≤ Pr{let _ ← mx}[True] := hmass
     _ = Pr{let x ← mx}[p x] + Pr{let x ← mx}[¬p x] :=
@@ -318,7 +311,7 @@ theorem prEvent_bind_le_prEvent_add_mul_prEvent_not (mx : m α) (f : α → m β
     by_cases hpa : p a
     · rw [Set.indicator_of_mem (show a ∈ {a | p a} from hpa),
         Set.indicator_of_notMem (show a ∉ {a | ¬ p a} from not_not.mpr hpa), add_zero]
-      exact prEvent_le_one _ _
+      exact prEvent_le_one _
     · rw [Set.indicator_of_notMem (show a ∉ {a | p a} from hpa),
         Set.indicator_of_mem (show a ∈ {a | ¬ p a} from hpa), zero_add]
       exact h a hpa
@@ -347,7 +340,7 @@ theorem prEvent_bind_le_prEvent_add (mx : m α) (f : α → m β)
     (h : ∀ a, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
     Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
   (prEvent_bind_le_prEvent_add_mul_prEvent_not mx f p q h).trans
-    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one mx fun a ↦ ¬ p a)) _)
+    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one _)) _)
 
 /-- When an event of the inner draw has the same probability `c` for every value of the outer
 draw, the joint event with a predicate on the outer value factors as `c` times the outer
@@ -365,7 +358,7 @@ theorem prEvent_bind_and_eq_mul (mx : m α) (my : α → m β)
     (fun a => do let b ← my a; pure (q b ∧ p a)) id
   have hbind' : Pr{let a ← mx; let b ← my a}[q b ∧ p a] =
       ∫⁻ a, Pr{let b ← my a}[q b ∧ p a] ∂𝒟[mx] := by
-    simpa only [bind_assoc, pure_bind, id_eq] using hbind
+    simpa only [prEvent_norm, bind_assoc, pure_bind, id_eq] using hbind
   rw [hbind']
   simp_rw [hinner]
   rw [lintegral_indicator_const MeasurableSet.of_discrete, prEvent_eq_evalDist_of_discrete]
@@ -464,6 +457,6 @@ theorem prEvent_bind_le_prEvent_add_of_support (mx : m α) (f : α → m β)
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
     Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
   (prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support mx f p q h).trans
-    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one mx fun a ↦ ¬ p a)) _)
+    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one _)) _)
 
 end attach

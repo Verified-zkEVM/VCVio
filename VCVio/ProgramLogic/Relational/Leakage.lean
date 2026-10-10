@@ -45,9 +45,7 @@ namespace OracleComp.Leakage
 variable {ι₁ : Type u} {ι₂ : Type u} {ι₃ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
   {spec₃ : OracleSpec.{u, 0} ι₃}
-variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
-  [∀ t, MeasurableSpace (spec₃.Range t)]
-  [IsMeasureSpec spec₁] [IsMeasureSpec spec₂] [IsMeasureSpec spec₃]
+variable [IsMeasureSpec spec₁] [IsMeasureSpec spec₂] [IsMeasureSpec spec₃]
 variable {α β γ : Type} {ω : Type}
 
 /-! ### TraceNoninterference -/
@@ -55,8 +53,7 @@ variable {α β γ : Type} {ω : Type}
 /-- Exact trace noninterference: two observed computations produce equal trace components
 along some coupling of their outputs. This is the strongest leakage judgment, corresponding to
 constant-time execution for deterministic channels. -/
-def TraceNoninterference [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
+def TraceNoninterference
     [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
     (oa₁ : OracleComp spec₁ (α × ω))
     (oa₂ : OracleComp spec₂ (β × ω)) : Prop :=
@@ -87,13 +84,11 @@ def LeakageBound (ε : ℝ≥0∞) (oa₁ : OracleComp spec₁ (α × ω))
 /-- Exact trace noninterference implies distributional trace independence:
 if traces always match along a coupling, their distributions must be equal. -/
 theorem traceNoninterference_implies_probLeakFree
-    [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
     [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
     {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : TraceNoninterference oa₁ oa₂) :
     ProbLeakFree oa₁ oa₂ :=
-  ProgramLogic.Relational.evalDist_map_eq_of_relTriple h
+  evalDistEq_iff_evalDist_eq.mp (ProgramLogic.Relational.evalDistEq_map_of_relTriple h)
 
 /-- `ProbLeakFree` is equivalent to `LeakageBound 0`. -/
 theorem probLeakFree_iff_leakageBound_zero
@@ -168,9 +163,6 @@ theorem leakageBound_map_fst
     (h : LeakageBound ε oa₁ oa₂) {δ : Type} (f₁ : α → γ) (f₂ : β → δ) :
     LeakageBound ε (Prod.map f₁ id <$> oa₁) (Prod.map f₂ id <$> oa₂) := by
   simpa only [LeakageBound, Functor.map_map, Function.comp_def, Prod.map, id_eq] using h
-
-variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
 
 /-- Mapping the result component preserves trace noninterference. -/
 theorem traceNoninterference_map_fst

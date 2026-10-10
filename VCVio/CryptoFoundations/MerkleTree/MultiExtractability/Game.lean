@@ -213,7 +213,7 @@ theorem Transcript.HasOpeningOrEqualRootDisagreement.toHasAnyCheckpointExtractio
 /-- Probability of the public textbook event is at most probability of the strongest proof event. -/
 theorem prEvent_hasOpeningOrEqualRootDisagreement_le_hasAnyCheckpointExtractionDisagreement
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [MeasurableSpace Y] [DiscreteMeasurableSpace Y] [OracleSpec.IsMeasureSpec (Query →ₒ Y)]
+    [OracleSpec.IsMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config) :
@@ -230,7 +230,7 @@ weaker textbook event. Downstream corollaries should use this theorem rather tha
 decomposition. -/
 theorem openingOrEqualRootDisagreement_bound_of_anyCheckpointExtractionDisagreement_bound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [MeasurableSpace Y] [DiscreteMeasurableSpace Y] [OracleSpec.IsMeasureSpec (Query →ₒ Y)]
+    [OracleSpec.IsMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config) (bound : ENNReal)

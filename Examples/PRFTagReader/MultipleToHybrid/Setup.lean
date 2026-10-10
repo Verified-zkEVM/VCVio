@@ -186,14 +186,14 @@ lemma evalDist_multipleBad_run'_eq_multipleIdeal
     | inl tag =>
       change RelTriple ((multipleBadQueryImpl _ _ _ _ (Sum.inl tag)) s₁) _ _
       rw [multipleBadQueryImpl_tag_run]
-      refine relTriple_of_evalDist_eq_right (ob := _ >>= pure) (by rw [bind_pure]) ?_
+      refine relTriple_of_evalDistEq_right (ob := _ >>= pure) (by rw [bind_pure]) ?_
       refine relTriple_bind (relTriple_refl _) ?_
       rintro a b rfl
       exact relTriple_pure_pure ⟨rfl, rfl⟩
     | inr transcript =>
       change RelTriple ((multipleBadQueryImpl _ _ _ _ (Sum.inr transcript)) s₁) _ _
       rw [multipleBadQueryImpl_reader_run]
-      refine relTriple_of_evalDist_eq_right (ob := _ >>= pure) (by rw [bind_pure]) ?_
+      refine relTriple_of_evalDistEq_right (ob := _ >>= pure) (by rw [bind_pure]) ?_
       refine relTriple_bind (relTriple_refl _) ?_
       rintro a b rfl
       exact relTriple_pure_pure ⟨rfl, rfl⟩

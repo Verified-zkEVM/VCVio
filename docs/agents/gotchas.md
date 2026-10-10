@@ -8,7 +8,7 @@
 
 **Symptom**: "failed to synthesize instance" mentioning `OracleSpec.IsMeasureSpec`, `IsUniformMeasureSpec`, or, on statements using the deprecated `Pr[...]` notation, `MonadLiftT (OracleComp spec) SPMF`, `IsProbabilitySpec`, `IsUniformSpec`, or `EvalDistCompatible`.
 
-**Fix**: Add `[∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]` with `[OracleSpec.IsMeasureSpec spec]` for arbitrary per-query answer measures, or `[OracleSpec.IsUniformMeasureSpec spec]` for uniform answers. For a concrete spec with finite, nonempty answer types, install a local instance with `IsUniformMeasureSpec.ofFiniteNonempty spec`. Only a statement that still uses the deprecated `Pr[...]` façade takes `[IsProbabilitySpec spec]` or `[IsUniformSpec spec]`.
+**Fix**: Add `[OracleSpec.IsMeasureSpec spec]` for arbitrary per-query answer measures, or `[OracleSpec.IsUniformMeasureSpec spec]` for uniform answers. Answer measures live on the discrete σ-algebra, so answer types need no measurable-space hypotheses. For a concrete spec with finite, nonempty answer types, install a local instance with `IsUniformMeasureSpec.ofFiniteNonempty spec` on that spec; a sum of specs gets its instance from `IsMeasureSpec.add`, so do not declare one on the sum. Only a statement that still uses the deprecated `Pr[...]` façade takes `[IsProbabilitySpec spec]` or `[IsUniformSpec spec]`.
 
 ### 2. `autoImplicit = false` is set globally in `lakefile.lean`
 

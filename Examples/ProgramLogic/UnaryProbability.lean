@@ -29,8 +29,7 @@ variable {α β γ : Type}
 
 section NativeLowering
 
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 
 /-! ### Probability goal lowering -/
 
@@ -108,8 +107,7 @@ end CompatibilityEqualities
 
 section NativeLowering
 
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 
 /-! ### Probability lower bounds -/
 

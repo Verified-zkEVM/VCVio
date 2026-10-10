@@ -84,7 +84,7 @@ end pure
 
 section events
 
-variable {m : Type → Type v} [AlternativeMonad m] [EvalDistSemantics m]
+variable {m : Type → Type v} [AlternativeMonad m] [LawfulMonad m] [EvalDistSemantics m]
   [LawfulEvalDistSemantics m] [LawfulFailureEvalDistSemantics m] {α : Type}
 
 example (p : α → Prop) : Pr{let x ← (failure : m α)}[p x] = 0 := by simp

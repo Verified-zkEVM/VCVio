@@ -175,7 +175,7 @@ theorem prEvent_interleavedInitialCacheBad_le_expectedCharge
     by_cases hc : cache t = none
     · have hk := prEvent_interleavedKey_bad_le_of_initialCache
         oa cache t hc bad error (fun g => hbad t g hc)
-      simpa only [mx, bind_assoc, pure_bind, mem_newQueryKeys, hc, and_true] using hk
+      simpa only [mx, prEvent_norm, mem_newQueryKeys, hc, and_true] using hk
     · have hnone (log : QueryLog (ofFn R)) : t ∉ newQueryKeys cache log := by
         simp [mem_newQueryKeys, hc]
       have hleft : Pr{let p ← mx}[t ∈ newQueryKeys cache p.2.1.2 ∧
@@ -211,8 +211,7 @@ theorem prEvent_interleavedInitialCacheBad_le_expectedCharge
   have hevent :
       Pr{let z ← randomOracleLoggedRun oa cache}[event z.1.1] =
       Pr{let p ← mx}[event p.2.1.1] := by
-    rw [prEvent_congr_of_evalDist_eq _ _ heager]
-    rw [prEvent_map]
+    rw [(EvalDistEq.of_evalDist_eq heager).prEvent_eq (fun z => event z.1.1), prEvent_map]
   have hcharge :
       (∫⁻ p, ∑ t ∈ newQueryKeys cache p.2.1.2, error t ∂𝒟[mx]) =
       expectedNewQueryCharge oa cache error := by

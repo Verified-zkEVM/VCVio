@@ -70,25 +70,25 @@ end Cursor
 
 section answer
 
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
+variable [IsMeasureSpec spec]
 
-/-- The answer marginal of an occurrence completion is its configured query measure. -/
+/-- The answer marginal of an occurrence completion is its configured query measure, trimmed to the
+measurable structure observing the answer. -/
 @[simp↓ high, grind norm↓]
 theorem evalDist_map_answer_completeOccurrence {main : OracleComp spec α} {i : ι} {n : Nat}
-    (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) :
+    (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) {_ : MeasurableSpace (spec.Range i)} :
     𝒟[(fun completion ↦ completion.answer) <$> Cursor.completeOccurrence occurrence] =
-      IsMeasureSpec.toMeasure (spec := spec) i := by
+      @Measure.trim _ _ ⊤ (IsMeasureSpec.toMeasure (spec := spec) i) le_top := by
   simp only [Cursor.completeOccurrence, PFunctor.FreeM.Cursor.Occurrence.complete,
     PFunctor.FreeM.liftBind_eq, ofFreeM_bind, ofFreeM_map, map_bind, Functor.map_map]
   calc
-    _ = 𝒟[(ofFreeM (PFunctor.FreeM.lift (P := spec.toPFunctor) i) :
-        OracleComp spec (spec.Range i)) >>= fun answer ↦ pure answer] := by
+    _ = 𝒟[(liftM (OracleSpec.query i) : OracleComp spec (spec.Range i)) >>=
+        fun answer ↦ pure answer] := by
       apply evalDist_bind_congr
       intro answer
       simp only [OracleComp.evalDist_map_const, evalDist_pure]
     _ = _ := by
-      simpa only [bind_pure] using PFunctor.FreeM.evalDist_lift (P := spec.toPFunctor) i
+      simpa only [bind_pure] using evalDist_liftM_query (spec := spec) i
 
 /-- Events on the answer of an occurrence completion are events of a fresh query. -/
 @[simp↓ high, grind norm↓]
@@ -96,6 +96,7 @@ theorem prEvent_answer_completeOccurrence {main : OracleComp spec α} {i : ι} {
     (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) (p : spec.Range i → Prop) :
     Pr{let completion ← Cursor.completeOccurrence occurrence}[p completion.answer] =
       Pr{let answer ← (query i : OracleComp spec (spec.Range i))}[p answer] := by
+  let : MeasurableSpace (spec.Range i) := ⊤
   rw [← prEvent_map (Cursor.completeOccurrence occurrence) (fun c ↦ c.answer) p,
     prEvent_eq_evalDist_of_discrete, evalDist_map_answer_completeOccurrence,
     prEvent_eq_evalDist_of_discrete, evalDist_query]
@@ -104,9 +105,9 @@ theorem prEvent_answer_completeOccurrence {main : OracleComp spec α} {i : ι} {
 @[simp↓ high, grind norm↓]
 theorem evalDist_map_secondAnswer_fork {main : OracleComp spec α} {i : ι} {n : Nat}
     {path : PFunctor.FreeM.Path main}
-    (located : PFunctor.FreeM.Cursor.Located i main path n) :
+    (located : PFunctor.FreeM.Cursor.Located i main path n) {_ : MeasurableSpace (spec.Range i)} :
     𝒟[(fun view ↦ view.secondAnswer) <$> ofFreeM located.fork] =
-      IsMeasureSpec.toMeasure (spec := spec) i := by
+      @Measure.trim _ _ ⊤ (IsMeasureSpec.toMeasure (spec := spec) i) le_top := by
   rw [PFunctor.FreeM.Cursor.Located.fork_eq_map_complete, ofFreeM_map, Functor.map_map]
   simpa only [Function.comp_def, PFunctor.FreeM.Cursor.ForkView.secondAnswer_mk,
     Cursor.completeOccurrence] using evalDist_map_answer_completeOccurrence located.occurrence
@@ -121,7 +122,9 @@ theorem prEvent_focusCollision_fork {main : OracleComp spec α} {i : ι} {n : Na
   rw [PFunctor.FreeM.Cursor.Located.fork_eq_map_complete, ofFreeM_map, prEvent_map]
   simp only [PFunctor.FreeM.Cursor.ForkView.firstAnswer_mk,
     PFunctor.FreeM.Cursor.ForkView.secondAnswer_mk]
-  rw [prEvent_answer_completeOccurrence, prEvent_eq_evalDist_of_discrete, evalDist_query]
+  let : MeasurableSpace (spec.Range i) := ⊤
+  rw [prEvent_answer_completeOccurrence, prEvent_eq_evalDist_of_discrete, evalDist_query,
+    MeasureTheory.trim_eq_self]
   congr 1
   ext answer
   simp [eq_comm]
@@ -139,7 +142,6 @@ end answer
 
 /-- Under uniform answer measures, a guarded collision is bounded by inverse cardinality. -/
 theorem prEvent_focusCollision_fork_le_of_uniform
-    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [IsUniformMeasureSpec spec] {main : OracleComp spec α} {i : ι} [Fintype (spec.Range i)]
     {n : Nat} {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
@@ -205,7 +207,6 @@ lemma ne_some_of_valid_missing [DecidableEq ι]
 /-- Fixed-index observed success squares under two independent completions of the selected
 occurrence context. Answer measures need not be uniform. -/
 theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
-    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [IsMeasureSpec spec]
     (main : OracleComp spec α) (i : ι) (n : Nat) (observe : α → Option β) (value : β)
     (hselect : OutputSelectsOccurrence main i n observe value) :
@@ -240,7 +241,7 @@ theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
   have hpair :
       Pr{let x ← source; let a ← kernel x; let b ← kernel x}[a = some value ∧ b = some value] =
         Pr{let pair ← source >>= pairKernel}[pair.1 = some value ∧ pair.2 = some value] := by
-    simp only [pairKernel, bind_assoc, pure_bind]
+    simp only [pairKernel, map_bind, bind_pure_comp, Functor.map_map]
   rw [hpair]
   refine prEvent_bind_congr source pairKernel _ _ _ ?_
   rintro ⟨split, hvalid⟩
@@ -255,8 +256,8 @@ theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
       simp only [pairKernel, kernel, Cursor.complete,
         PFunctor.FreeM.Cursor.Split.complete_found,
         PFunctor.FreeM.Cursor.Occurrence.completePath, Cursor.completeOccurrence,
-        ofFreeM_map, bind_assoc, pure_bind, bind_map_left,
-        Option.some.injEq, Prod.mk.injEq,
+        ofFreeM_map, bind_map_left, map_bind, bind_pure_comp,
+        Functor.map_map, Option.some.injEq, Prod.mk.injEq,
         PFunctor.FreeM.Cursor.ForkView.firstPath_mk,
         PFunctor.FreeM.Cursor.ForkView.secondPath_mk,
         observeView, Function.comp_def]

@@ -91,7 +91,6 @@ private lemma ENNReal_tsum_iSup_le {ι : Type*} {J : ι → Type*}
 
 variable {ι₁ : Type u} {ι₂ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
-variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
 variable {α β γ δ : Type}
 
 section measureSpec
@@ -143,9 +142,6 @@ theorem eRelWP_indicator_le_one (oa : OracleComp spec₁ α) (ob : OracleComp sp
   eRelWP_le oa ob _ 1 fun a b => by
     unfold RelPost.indicator
     split_ifs <;> simp
-
-variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
 
 /-- Pure values characterize the quantitative relational weakest precondition. -/
 theorem eRelWP_pure (a : α) (b : β) (post : α → β → ℝ≥0∞) :
@@ -286,13 +282,12 @@ theorem approxRelTriple_eqRel_iff_etvDist_le {oa : OracleComp spec₁ α}
   rw [ApproxRelTriple, etvDist_eq_one_sub_eRelWP_eqRel]
   exact tsub_le_iff_tsub_le
 
-/-- A zero-error approximate equality coupling identifies the two output measures. -/
-theorem evalDist_eq_of_approxRelTriple_zero {oa : OracleComp spec₁ α}
-    {ob : OracleComp spec₂ α} (h : ApproxRelTriple 0 oa ob (EqRel α)) :
-    letI : MeasurableSpace α := ⊤; 𝒟[oa] = 𝒟[ob] := by
+/-- Computations with a zero-error approximate equality coupling are equal in distribution. -/
+theorem evalDistEq_of_approxRelTriple_zero {oa : OracleComp spec₁ α}
+    {ob : OracleComp spec₂ α} (h : ApproxRelTriple 0 oa ob (EqRel α)) : oa =ᵈ ob := by
   let : MeasurableSpace α := ⊤
-  exact Measure.etvDist_eq_zero_iff.1 (nonpos_iff_eq_zero.1
-    (approxRelTriple_eqRel_iff_etvDist_le.1 h))
+  exact EvalDistEq.of_evalDist_eq (Measure.etvDist_eq_zero_iff.1 (nonpos_iff_eq_zero.1
+    (approxRelTriple_eqRel_iff_etvDist_le.1 h)))
 
 /-! ## Relational algebra instance -/
 
@@ -468,7 +463,7 @@ end measureSpec
 
 section oracleQuery
 
-variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)] [IsUniformMeasureSpec spec₁]
+variable [IsUniformMeasureSpec spec₁]
   [∀ t, Finite (spec₁.Range t)]
 
 /-- Quantitative lower bound for two oracle queries coupled by a bijection on the range.

@@ -40,11 +40,10 @@ variable [∀ t, Inhabited (spec.Range t)] [∀ t : spec.Domain, FinEnum (spec.R
 
 section Measure
 
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-
 /-- Executable query sampling has the native uniform response measure. -/
 @[simp]
-lemma evalDist_apply (t : spec.Domain) :
+lemma evalDist_apply (t : spec.Domain) [MeasurableSpace (spec.Range t)]
+    [MeasurableSingletonClass (spec.Range t)] :
     𝒟[finRatImpl (spec := spec) t] = ProbabilityTheory.uniformOn Set.univ :=
   Raw.evalDist_uniform
 
@@ -57,11 +56,11 @@ lemma evalDist_simulateQ {α : Type v} [MeasurableSpace α] (oa : OracleComp spe
   induction oa using OracleComp.inductionOn with
   | pure x => simp
   | query_bind t mx ih =>
+      let : MeasurableSpace (spec.Range t) := ⊤
       simp only [simulateQ_bind, simulateQ_spec_query]
       rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
       simp_rw [ih]
-      rw [evalDist_apply, OracleComp.evalDist_liftM_query,
-        IsMeasureSpec.toMeasure_eq_uniformOn]
+      rw [evalDist_apply, OracleComp.evalDist_liftM_query_uniform]
 
 end Measure
 
@@ -86,14 +85,13 @@ namespace finRatImpl
 
 /-- Final event checks have the same probability under executable and oracle evaluation. -/
 lemma prEvent_simulateQ {ι : Type u} {spec : OracleSpec.{u, 0} ι}
-    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [IsUniformMeasureSpec spec] [∀ t, Inhabited (spec.Range t)]
     [∀ t : spec.Domain, FinEnum (spec.Range t)]
     {α : Type} (oa : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← simulateQ (finRatImpl (spec := spec)) oa}[p x] = Pr{let x ← oa}[p x] := by
-  simpa only [simulateQ_bind, simulateQ_pure] using
-    congrArg (fun μ : MeasureTheory.Measure Prop => μ {True})
-      (evalDist_simulateQ (spec := spec) (oa >>= fun x => pure (p x)))
+  rw [prEvent_def, prEvent_def, ← simulateQ_map]
+  exact congrArg (fun μ : MeasureTheory.Measure Prop => μ {True})
+    (evalDist_simulateQ (spec := spec) (p <$> oa))
 
 end finRatImpl
 

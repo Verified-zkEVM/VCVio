@@ -45,51 +45,33 @@ namespace ProportionalScheduler
 
 /-! ## Denotational relation -/
 
-/-- Equality of output distributions of `ProbComp` computations, compared as measures on the
-discrete measurable structure of the output type. This is the denotational equality used for
-scheduler coherence; on countable outputs `outputRel_rel` reads it as pointwise equality of output
-probabilities. -/
+/-- Equality in distribution of `ProbComp` computations. This is the denotational equality used
+for scheduler coherence; on countable outputs `outputRel_rel` reads it as pointwise equality of
+output probabilities. -/
 noncomputable def outputRel : MonadRelFamily ProbComp where
-  rel := fun {α} left right => letI : MeasurableSpace α := ⊤; 𝒟[left] = 𝒟[right]
-  refl _ := rfl
+  rel := fun left right => left =ᵈ right
+  refl _ := .rfl
   symm h := h.symm
   trans h₁ h₂ := h₁.trans h₂
   map_congr := by
     intro α β f left right h
-    let : MeasurableSpace α := ⊤
-    let : MeasurableSpace β := ⊤
-    change 𝒟[f <$> left] = 𝒟[f <$> right]
-    rw [evalDist_map left Measurable.of_discrete, evalDist_map right Measurable.of_discrete]
-    exact congrArg (MeasureTheory.Measure.map f) h
+    exact EvalDistEq.map h f
   bind_congr := by
     intro α β left right f h
-    let : MeasurableSpace α := ⊤
-    let : MeasurableSpace β := ⊤
-    change 𝒟[left >>= f] = 𝒟[right >>= f]
-    rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
-    exact congrArg (MeasureTheory.Measure.bind · fun x => 𝒟[f x]) h
+    exact EvalDistEq.bind_left h f
 
 /-- On a countable output type, `outputRel` holds exactly when the output probabilities agree
 pointwise. -/
 @[simp]
 theorem outputRel_rel {α : Type} [Countable α] (left right : ProbComp α) :
-    outputRel.rel left right ↔
-      ∀ output, Pr{let x ← left}[x = output] = Pr{let x ← right}[x = output] := by
-  let : MeasurableSpace α := ⊤
-  change 𝒟[left] = 𝒟[right] ↔ _
-  simp only [prEvent_eq_evalDist_singleton]
-  exact ⟨fun h _ => h ▸ rfl, MeasureTheory.Measure.ext_of_singleton⟩
+    outputRel.rel left right ↔ ∀ output, Pr{left}[= output] = Pr{right}[= output] :=
+  evalDistEq_iff_forall_prEvent_eq_output
 
-/-- `outputRel` is a congruence for the continuation of `bind`: the output distribution of
-`x >>= f` is the Giry bind of the output distribution of `x` against those of `f`. -/
+/-- `outputRel` is a congruence for the continuation of `bind`. -/
 instance outputRel_isBindCongr : outputRel.IsBindCongr where
   bind_congr_right := by
     intro α β x f g h
-    let : MeasurableSpace α := ⊤
-    let : MeasurableSpace β := ⊤
-    change 𝒟[x >>= f] = 𝒟[x >>= g]
-    rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
-    exact congrArg (MeasureTheory.Measure.bind 𝒟[x]) (funext h)
+    exact EvalDistEq.bind_right x h
 
 /-- A finite sum over lifted Booleans has exactly its two expected terms. -/
 theorem sum_ulift_bool (f : ULift Bool → ENNReal) :

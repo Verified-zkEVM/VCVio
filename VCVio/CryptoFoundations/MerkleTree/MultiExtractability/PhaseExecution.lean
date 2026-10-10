@@ -49,7 +49,7 @@ is used only for structural query accounting; `suffix` is the computation actual
 after the logged prefix. -/
 theorem prEvent_withQueryLog_stablePhase_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
