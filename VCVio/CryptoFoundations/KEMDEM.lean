@@ -10,7 +10,7 @@ public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
 public import VCVio.CryptoFoundations.KEMDEM.Measure
-public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # KEM + DEM Composition
@@ -76,22 +76,24 @@ theorem support_correctnessExperiment_composeWithDEM
     exact ⟨c₂, hc₂, m', hm', rfl⟩
   simpa using hdem k msg _ hmem
 
-/-- Perfect correctness composes for oracle computations under uniform measure semantics: a KEM
-and an externally keyed DEM that each succeed with probability `1` give a composed scheme that
-succeeds with probability `1`. -/
+/-- Perfect correctness composes for oracle computations whose answer measures give every
+response positive mass: a KEM and an externally keyed DEM that each succeed with probability `1`
+give a composed scheme that succeeds with probability `1`. Uniform answer measures supply the
+full-support hypothesis through `OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos`. -/
 theorem perfectlyCorrect_composeWithDEM {ι : Type} {spec : OracleSpec ι}
     [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-    [IsUniformMeasureSpec spec]
+    [OracleSpec.IsMeasureSpec spec]
+    (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.IsMeasureSpec.toMeasure t {u})
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM) (dem : DEMScheme (OracleComp spec) K M CDEM)
     (hkem : 𝒟[kem.correctnessExperiment] {true} = 1)
     (hdem : ∀ k : K, ∀ msg : M, 𝒟[dem.correctnessExperiment k msg] {true} = 1) :
     ∀ msg, 𝒟[(kem.composeWithDEM dem).correctnessExperiment msg] {true} = 1 := by
+  have key (mx : OracleComp spec Bool) : 𝒟[mx] {true} = 1 ↔ ∀ b ∈ support mx, b = true := by
+    simpa only [Set.ofPred_eq_eq_singleton] using
+      evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport hfull mx (· = true)
   intro msg
-  rw [← prEvent_eq_evalDist_singleton _ true] at hkem ⊢
-  rw [prEvent_eq_one_iff] at hkem ⊢
-  exact support_correctnessExperiment_composeWithDEM kem dem hkem
-    (fun k msg => (prEvent_eq_one_iff _ _).1
-      ((prEvent_eq_evalDist_singleton _ true).trans (hdem k msg))) msg
+  exact (key _).2 <| support_correctnessExperiment_composeWithDEM kem dem ((key _).1 hkem)
+    (fun k msg => (key _).1 (hdem k msg)) msg
 
 end Correct
 
@@ -195,11 +197,11 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
     let dc ← dem.encrypt k (if side then p.2.1 else p.2.2.1)
     adversary.distinguish p.2.2.2 (kc, dc)
   have hcoin (b : Bool) : 𝒟[runtime.liftProbComp ($ᵗ Bool)] {b} = 1 / 2 := by
-    rw [evalDist_eq_runtime, heval_liftProbComp, evalDist_uniformSample,
+    rw [evalDist_eq_runtime, heval_liftProbComp, SampleableType.evalDist_uniformSample,
       ProbabilityTheory.uniformOn_univ_apply_singleton]
     simp [Fintype.card_bool]
   have hkey : 𝒟[runtime.liftProbComp ($ᵗ K)] Set.univ = 1 := by
-    rw [evalDist_eq_runtime, heval_liftProbComp, evalDist_uniformSample]
+    rw [evalDist_eq_runtime, heval_liftProbComp, SampleableType.evalDist_uniformSample]
     simp
   have htotal (real side : Bool) :
       𝒟[KEMDEM.hybrid prepare encaps finish (runtime.liftProbComp ($ᵗ K)) real side] {true} +

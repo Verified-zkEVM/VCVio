@@ -50,7 +50,6 @@ public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Induction
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Potential
-public import VCVio.CryptoFoundations.ForkMeasure
 public import VCVio.CryptoFoundations.FujisakiOkamoto
 public import VCVio.CryptoFoundations.FujisakiOkamoto.Composed
 public import VCVio.CryptoFoundations.FujisakiOkamoto.Defs
@@ -195,7 +194,6 @@ public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Bool
 public import VCVio.EvalDist.Monad.Branch
 public import VCVio.EvalDist.Monad.DependentTable
-public import VCVio.EvalDist.Monad.Disagreement
 public import VCVio.EvalDist.Monad.Disagreement.Measure
 public import VCVio.EvalDist.Monad.Discard
 public import VCVio.EvalDist.Monad.Failure
@@ -364,7 +362,6 @@ public import VCVio.ProgramLogic.Relational.ProgrammingOracle
 public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import VCVio.ProgramLogic.Relational.SimulateQ
-public import VCVio.ProgramLogic.Relational.SimulateQ.Basic
 public import VCVio.ProgramLogic.Relational.SimulateQ.Coupling
 public import VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 public import VCVio.ProgramLogic.Relational.SimulateQ.Resource

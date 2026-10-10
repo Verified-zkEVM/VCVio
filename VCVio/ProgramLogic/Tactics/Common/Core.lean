@@ -532,8 +532,8 @@ def isNativeProbEqGoal (target : Expr) : Bool :=
   else
     false
 
-/-- Check if a goal is an equality with probability expressions on both sides, either native
-measure expressions or the retiring scalar `Pr[…]` façade. -/
+/-- Check if a goal is an equality with probability expressions on both sides, either measure
+expressions or the deprecated `Pr[…]` notation. -/
 def isProbEqGoal (target : Expr) : Bool :=
   let target := target.consumeMData
   if target.isAppOfArity ``Eq 3 then

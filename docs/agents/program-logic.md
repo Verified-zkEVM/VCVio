@@ -90,7 +90,7 @@ before generating the remaining subgoals.
 | `rvcgen?` | same | Runs `rvcgen` and emits the corresponding explicit script |
 | `rel_conseq` | `⟪oa ~ ob \| R'⟫` | Weakens/strengthens postcondition |
 | `rel_inline foo` | `⟪... ~ ... \| R⟫` | Unfolds definitions, simplifies |
-| `rel_dist` | `⟪oa ~ ob \| EqRel α⟫` | Exits relational mode back to `evalSPMF oa = evalSPMF ob` |
+| `rel_dist` | `⟪oa ~ ob \| EqRel α⟫` | Exits relational mode back to `𝒟[oa] = 𝒟[ob]` in the discrete structure |
 
 ### Optional arguments
 
@@ -293,7 +293,7 @@ All probability-equality control now lives under `vcstep`.
 |--------|--------------|
 | `rvcgen` | Exhaustive relational VCGen over all open goals, with automatic lowering from `GameEquiv` / output-measure equality and cheap leaf closure |
 | `rvcfinish` / `rvcgen!` | Opt-in residual search and consequence closing |
-| `rel_dist` | Turns `RelTriple oa ob (EqRel α)` into `evalSPMF oa = evalSPMF ob` |
+| `rel_dist` | Turns `RelTriple oa ob (EqRel α)` into `𝒟[oa] = 𝒟[ob]` in the discrete structure |
 
 ## Probability Equality Guide
 
@@ -488,8 +488,6 @@ Projection and bridge variants:
 | `relTriple_simulateQ_run_writerT` | Whole-program `WriterT` coupling from per-query `RelTriple`s plus a monoid-congruence hypothesis on the accumulated writers |
 | `relTriple_simulateQ_run_writerT'` | Output-projection of `relTriple_simulateQ_run_writerT` (drops the writer component, yielding `EqRel α` on outputs) |
 | `relTriple_simulateQ_run_writerT_of_impl_eq` | `WriterT` analogue of `relTriple_simulateQ_run_of_impl_eq_preservesInv`: two handlers with identical `.run` outputs yield `EqRel (α × ω)` on whole simulations |
-| `probOutput_simulateQ_run_writerT_eq_of_impl_eq` | Output-probability projection of `relTriple_simulateQ_run_writerT_of_impl_eq` |
-| `evalSPMF_simulateQ_run_writerT_eq_of_impl_eq` | `evalSPMF` equality projection of `relTriple_simulateQ_run_writerT_of_impl_eq` |
 | `relTriple_simulateQ_run_writerT_of_triples` | `WriterT` handler-level whole-program lift from unary triples (monoid variant) |
 | `relTriple_simulateQ_run_writerT'_of_triples` | Output-projection of `relTriple_simulateQ_run_writerT_of_triples` |
 | `relTriple_run_of_triple` | Per-call product coupling for `StateT` |

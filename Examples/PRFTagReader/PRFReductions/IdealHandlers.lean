@@ -478,24 +478,6 @@ lemma singleIdealQueryImpl_reader_run
       (fun r => pure (r.1.1, r.1.2, r.2)) = _
   simp [simulateQ_prfIdeal_unlinkToSinglePRFReaderImpl_run transcript s c]
 
-/-- Base case of the multiple-vs-single ideal-world coupling induction: on a `pure`
-adversary the multiple- and single-session ideal handlers return the same bit, so the
-multiple-world success probability is trivially bounded by the single-world one plus the
-bad-event probability. Holds for arbitrary (not necessarily coupled) initial states. -/
-lemma multipleIdeal_le_singleIdeal_add_bad_pure (b : Bool)
-    (sM : UnlinkState TagId × ((TagId × Nonce) →ₒ Digest).QueryCache)
-    (sS : UnlinkState TagId × (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache)
-    (sB : UnlinkBadState TagId Nonce Digest) :
-    Pr[= true | (simulateQ (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (pure b)).run' sM] ≤
-      Pr[= true | (simulateQ (singleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (pure b)).run' sS] +
-      Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad |
-        (simulateQ (unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (pure b)).run sB] := by
-  simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]
-  exact le_add_right (le_refl _)
-
 end UnlinkReduction
 
 end PRFTagReader

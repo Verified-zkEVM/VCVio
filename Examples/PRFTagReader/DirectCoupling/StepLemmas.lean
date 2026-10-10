@@ -25,8 +25,8 @@ reads the realized slot `⟨s.sessionsUsed tag, hslot⟩`, which is non-zero the
 
 * `slotPositive_MFine_tag_step` — the M-Fine tag-step shape at slot-positive states.
 * `slotPositive_S_tag_step` — the S tag-step shape at slot-positive states.
-* `evalSPMF_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant` — Fine-run distributions
-  after a `cacheBad` projection do not depend on the initial state's `cacheBad` field.
+* `simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant` — Fine runs after a `cacheBad`
+  projection do not depend on the initial state's `cacheBad` field.
 -/
 
 @[expose] public section
@@ -127,26 +127,24 @@ lemma slotPositive_slotK_ne_zero {TagId' : Type} {sessionsPerTag' : ℕ}
 /-! ### Fine `cacheBad`-irrelevance bridge -/
 
 /-- **Fine handler is `cacheBad`-irrelevant.** Two initial bad states agreeing off `cacheBad`
-produce identical Fine-run distributions after the projection `with cacheBad := cb`. Composes the
+produce identical Fine runs after the projection `with cacheBad := cb`. Composes the
 pointwise Fine→original bridge (`…_forget_cacheBad_pointwise_eq`) with the original-handler
 irrelevance (`…_multipleBadTableHandler_cacheBad_irrelevant`). Used in the reader case to discard
 the per-step `multipleBadReaderAdvance` perturbation of the initial state before applying the IH. -/
-lemma evalSPMF_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
+lemma simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
     {α : Type} (g : TagId × Nonce → Digest)
     (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (s : UnlinkState TagId) (sB sB' : UnlinkBadState TagId Nonce Digest) (cb : Bool)
     (hSU : sB.sessionsUsed = sB'.sessionsUsed)
     (hR : sB.responses = sB'.responses) (hB : sB.bad = sB'.bad) :
-    𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandlerFine g gFine) oa).run (s, sB)]
-      = 𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandlerFine g gFine) oa).run (s, sB')] := by
-  rw [evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
-        g gFine oa (s, sB),
-      evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
-        g gFine oa (s, sB')]
-  exact evalSPMF_simulateQ_multipleBadTableHandler_cacheBad_irrelevant g oa s sB sB' cb hSU hR hB
+    (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+        (simulateQ (multipleBadTableHandlerFine g gFine) oa).run (s, sB)
+      = (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+        (simulateQ (multipleBadTableHandlerFine g gFine) oa).run (s, sB') := by
+  rw [simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq g gFine oa (s, sB),
+    simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq g gFine oa (s, sB')]
+  exact simulateQ_multipleBadTableHandler_cacheBad_irrelevant g oa s sB sB' cb hSU hR hB
 
 end UnlinkReduction
 

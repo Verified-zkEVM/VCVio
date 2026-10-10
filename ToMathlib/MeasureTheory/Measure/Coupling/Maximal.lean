@@ -62,6 +62,17 @@ private theorem sum_tsub_distrib_of_le {ι : Type*} (s : Finset ι) {f g : ι �
   rw [← Finset.sum_add_distrib]
   exact Finset.sum_congr rfl fun i hi => tsub_add_cancel_of_le (h i hi)
 
+/-- Spreading a mass against weights normalized by their total returns the mass, whenever the
+total is finite and vanishes only together with the mass. -/
+private theorem sum_mul_div_self {ι : Type*} {F : Finset ι} {p : ι → ℝ≥0∞}
+    (htop : ∑ i ∈ F, p i ≠ ⊤) (x : ℝ≥0∞) (hx : ∑ i ∈ F, p i = 0 → x = 0) :
+    ∑ i ∈ F, p i * x / ∑ j ∈ F, p j = x := by
+  simp_rw [div_eq_mul_inv]
+  rw [← Finset.sum_mul, ← Finset.sum_mul, mul_right_comm]
+  by_cases h0 : ∑ i ∈ F, p i = 0
+  · simp [hx h0]
+  · rw [ENNReal.mul_inv_cancel h0 htop, one_mul]
+
 /-- Point masses of a probability measure over a finite set have a finite sum. -/
 private theorem sum_apply_singleton_ne_top (μ : Measure α) [IsProbabilityMeasure μ]
     (s : Finset α) : ∑ a ∈ s, μ {a} ≠ ⊤ := by
@@ -70,11 +81,10 @@ private theorem sum_apply_singleton_ne_top (μ : Measure α) [IsProbabilityMeasu
 
 section overlap
 
-variable {μ ν : Measure α} [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] {F : Finset α}
+variable {μ ν : Measure α} {F : Finset α}
 
-omit [IsProbabilityMeasure ν] in
 /-- One minus the overlap is the total excess of the first measure over the second. -/
-theorem one_sub_sum_min_eq_sum_tsub (hμ : μ (↑F)ᶜ = 0) :
+theorem one_sub_sum_min_eq_sum_tsub [IsProbabilityMeasure μ] (hμ : μ (↑F)ᶜ = 0) :
     1 - ∑ a ∈ F, min (μ {a}) (ν {a}) = ∑ a ∈ F, (μ {a} - ν {a}) := by
   have hfin : ∑ a ∈ F, min (μ {a}) (ν {a}) ≠ ⊤ :=
     ne_top_of_le_ne_top (sum_apply_singleton_ne_top μ F)
@@ -84,14 +94,16 @@ theorem one_sub_sum_min_eq_sum_tsub (hμ : μ (↑F)ᶜ = 0) :
   exact Finset.sum_congr rfl fun a _ => tsub_min
 
 /-- The total excesses of each measure over the other agree. -/
-theorem sum_tsub_comm (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) :
+theorem sum_tsub_comm [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+    (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) :
     ∑ a ∈ F, (ν {a} - μ {a}) = ∑ a ∈ F, (μ {a} - ν {a}) := by
   rw [← one_sub_sum_min_eq_sum_tsub hν, ← one_sub_sum_min_eq_sum_tsub hμ]
   simp only [min_comm]
 
 /-- Total variation between measures concentrated on a common finite set is the total excess of
 the first over the second. -/
-theorem etvDist_eq_sum_tsub (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) :
+theorem etvDist_eq_sum_tsub [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+    (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) :
     μ.etvDist ν = ∑ a ∈ F, (μ {a} - ν {a}) := by
   classical
   have hsymm := sum_tsub_comm hμ hν
@@ -122,7 +134,8 @@ theorem etvDist_eq_sum_tsub (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) :
 
 /-- Total variation between measures concentrated on a common finite set is one minus their
 overlap. -/
-theorem etvDist_eq_one_sub_sum_min (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) :
+theorem etvDist_eq_one_sub_sum_min [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+    (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) :
     μ.etvDist ν = 1 - ∑ a ∈ F, min (μ {a}) (ν {a}) := by
   rw [etvDist_eq_sum_tsub hμ hν, one_sub_sum_min_eq_sum_tsub hμ]
 
@@ -153,29 +166,12 @@ def maximalCoupling (F : Finset α) (μ ν : Measure α) : Measure (α × α) :=
 
 section maximal
 
-variable {μ ν : Measure α} [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] {F : Finset α}
-
-omit [MeasurableSpace α] [MeasurableSingletonClass α] in
-/-- Spreading a mass against weights normalized by their total returns the mass, whenever the
-total is finite and vanishes only together with the mass. -/
-private theorem sum_mul_div_self {p : α → ℝ≥0∞} (htop : ∑ i ∈ F, p i ≠ ⊤) (x : ℝ≥0∞)
-    (hx : ∑ i ∈ F, p i = 0 → x = 0) :
-    ∑ i ∈ F, p i * x / ∑ j ∈ F, p j = x := by
-  simp_rw [div_eq_mul_inv]
-  rw [← Finset.sum_mul, ← Finset.sum_mul, mul_right_comm]
-  by_cases h0 : ∑ i ∈ F, p i = 0
-  · simp [hx h0]
-  · rw [ENNReal.mul_inv_cancel h0 htop, one_mul]
-
-/-- The overlap and the residual reassemble a point mass. -/
-private theorem min_add_tsub_eq (x y : ℝ≥0∞) : min x y + (x - y) = x := by
-  rcases le_total x y with h | h
-  · rw [min_eq_left h, tsub_eq_zero_of_le h, add_zero]
-  · rw [min_eq_right h, add_tsub_cancel_of_le h]
+variable {μ ν : Measure α} {F : Finset α}
 
 /-- The maximal coupling of two probability measures concentrated on a finite set is a
 coupling. -/
-theorem isCoupling_maximalCoupling (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) :
+theorem isCoupling_maximalCoupling [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+    (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) :
     IsCoupling (maximalCoupling F μ ν) μ ν := by
   classical
   have hsymm := sum_tsub_comm hμ hν
@@ -194,7 +190,8 @@ theorem isCoupling_maximalCoupling (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ 
     · simp only [Set.indicator, Set.mem_preimage, has, ↓reduceIte, Pi.one_apply, mul_one]
       simp_rw [mul_comm (μ {a} - ν {a})]
       rw [← hsymm, sum_mul_div_self htop' (μ {a} - ν {a}) fun h0 =>
-          (Finset.sum_eq_zero_iff.1 (hsymm ▸ h0)) a ha, min_add_tsub_eq]
+          (Finset.sum_eq_zero_iff.1 (hsymm ▸ h0)) a ha]
+      exact (add_comm _ _).trans tsub_add_min
     · simp [Set.indicator, has]
   · ext s hs
     rw [Measure.snd_apply hs, apply_eq_sum_indicator_of_compl_eq_zero hν s, maximalCoupling]
@@ -205,11 +202,10 @@ theorem isCoupling_maximalCoupling (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ 
     by_cases hbs : b ∈ s
     · simp only [Set.indicator, Set.mem_preimage, hbs, ↓reduceIte, Pi.one_apply, mul_one]
       rw [sum_mul_div_self htop (ν {b} - μ {b}) fun h0 =>
-          (Finset.sum_eq_zero_iff.1 (hsymm.trans h0)) b hb,
-        min_comm, min_add_tsub_eq]
+          (Finset.sum_eq_zero_iff.1 (hsymm.trans h0)) b hb, min_comm]
+      exact (add_comm _ _).trans tsub_add_min
     · simp [Set.indicator, hbs]
 
-omit [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] in
 /-- The maximal coupling puts at least the overlap on each diagonal point of the set. -/
 theorem min_le_maximalCoupling_apply_diag {a : α} (ha : a ∈ F) :
     min (μ {a}) (ν {a}) ≤ maximalCoupling F μ ν {(a, a)} := by

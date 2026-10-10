@@ -125,7 +125,7 @@ theorem reusedPair_laws_ne : 𝒟[reusedPair false] ≠ 𝒟[reusedPair true] :=
 theorem brokenDecoder_ciphertext_uniform (message : Bool) :
     𝒟[(fun key => brokenDecoder.encrypt key message) <$> ($ᵗ Bool)] = 𝒟[$ᵗ Bool] := by
   simpa [reusedPair, brokenDecoder] using
-    evalDist_reusedPair_snd_of_uniform evalDist_uniformSample message
+    evalDist_reusedPair_snd_of_uniform SampleableType.evalDist_uniformSample message
 
 /-- Ask for true and recognize delivery of the wrong plaintext, as distinct from dropping it. -/
 @[expose] def wrongPlaintextEnvironment : Environment Bool Bool Unit where

@@ -145,11 +145,6 @@ lemma probOutput_bind_map_prod_mk_eq_mul'
     Pr[= z | do let y ← my; (f ·, g y) <$> mx] = Pr[= z.1 | f <$> mx] * Pr[= z.2 | g <$> my] := by
   simpa [monad_norm] using probOutput_seq_map_prod_mk_map_eq_mul' mx my f g z
 
-lemma probOutput_bind_bind_prod_mk_eq_mul'
-    (mx : m α) (my : m β) (f : α → γ) (g : β → δ) (x : γ) (y : δ) :
-    Pr[= (x, y) | do let a ← mx; let b ← my; return (f a, g b)] =
-      Pr[= x | f <$> mx] * Pr[= y | g <$> my] := by simp
-
 @[simp]
 lemma probOutput_prod_mk_fst_map [DecidableEq β] (mx : m α) (y : β) (z : α × β) :
     Pr[= z | (·, y) <$> mx] = if z.2 = y then Pr[= z.1 | mx] else 0 :=

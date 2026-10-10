@@ -34,7 +34,7 @@ The next two lemmas expose `simulateQ … (query_bind t f)` run from a state as 
 `bind`: the per-query handler applied to the head, then the recursive `simulateQ` of the
 continuation threaded through the resulting state. They are pure rewriting facts (`simulateQ` is a
 monad morphism), and they turn the coupling induction into a sequence of `bind`-decomposition
-steps that `probEvent_bind_le_add` / `probEvent_bind_congr_le_add` can attack. -/
+steps that the bind-comparison bounds (such as `prEvent_bind_le_add_bad_disagree`) can attack. -/
 
 /-- `simulateQ multipleIdealQueryImpl` of a `query_bind`, run from a state and projected to its
 output bit, is the per-query handler followed by the recursive simulation of the continuation. -/
@@ -176,16 +176,6 @@ lemma simulateQ_unlinkBad_preserves_bad
       (sessionsPerTag := sessionsPerTag))
     (fun s => s.bad = true) (fun t s h z hz => unlinkBadQueryImpl_step_preserves_bad t s h z hz)
     adv sB hbad
-
-/-- Once the `bad` flag is set, the `Pr[bad]` of the residual `unlinkBadQueryImpl` run is `1`. -/
-lemma probEvent_unlinkBad_bad_eq_one_of_bad
-    (adv : UnlinkAdversary TagId Nonce Digest)
-    (sB : UnlinkBadState TagId Nonce Digest) (hbad : sB.bad = true) :
-    Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad |
-        (simulateQ (unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adv).run sB] = 1 := by
-  rw [probEvent_eq_one_iff]
-  exact ⟨by simp, fun z hz => simulateQ_unlinkBad_preserves_bad adv sB hbad z hz⟩
 
 end UnlinkReduction
 

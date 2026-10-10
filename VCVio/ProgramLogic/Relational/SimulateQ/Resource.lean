@@ -13,8 +13,6 @@ public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
-public import VCVio.ProgramLogic.Relational.SimulateQ.Basic
-import all VCVio.ProgramLogic.Relational.SimulateQ.Basic
 public import VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 import all VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 public import VCVio.ProgramLogic.Relational.SimulateQ.StateDependent
@@ -60,21 +58,6 @@ variable {ι : Type} {spec : OracleSpec ι}
 variable {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
 variable {σ₁ σ₂ : Type}
 
-/-- Bad propagation for an arbitrary state predicate: if `bad` survives every single oracle
-call, then a simulation started from a bad state leaves every reachable output state bad.
-`mem_support_simulateQ_run_of_bad` is the special case of a `σ × Bool` state and a flag. -/
-private lemma mem_support_simulateQ_run_of_bad_general
-    (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁))) (bad : σ₁ → Prop)
-    (hmono : ∀ (t : spec.Domain) (s₁ : σ₁), bad s₁ → ∀ z ∈ support ((impl₁ t).run s₁), bad z.2)
-    (oa : OracleComp spec α) (s₁ : σ₁) (hbad : bad s₁) :
-    ∀ z ∈ support ((simulateQ impl₁ oa).run s₁), bad z.2 := by
-  induction oa using OracleComp.inductionOn generalizing s₁ with
-  | pure x => simpa using hbad
-  | query_bind t cont ih =>
-      simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, mem_support_bind_iff]
-      rintro z ⟨⟨u, s₁'⟩, h_mem, h_z⟩
-      exact ih u s₁' (hmono t s₁ hbad (u, s₁') h_mem) z h_z
-
 /-- A simulation started from a bad state has bad probability exactly `1`. The
 heterogeneous-state analogue of `probEvent_simulateQ_run_bad_eq_one_of_bad`. -/
 private lemma probEvent_bad_simulateQ_run_eq_one_of_bad [IsUniformSpec spec₁]
@@ -85,7 +68,7 @@ private lemma probEvent_bad_simulateQ_run_eq_one_of_bad [IsUniformSpec spec₁]
     (oa : OracleComp spec α) (s₁ : σ₁) (hbad : bad s₁) :
     Pr[ bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₁] = 1 := by
   rw [probEvent_eq_one_iff]
-  exact ⟨by simp, mem_support_simulateQ_run_of_bad_general impl₁ bad hmono oa s₁ hbad⟩
+  exact ⟨by simp, forall_mem_support_simulateQ_run_of_bad impl₁ bad hmono oa hbad⟩
 
 /-- Inductive core of `probOutput_simulateQ_run'_le_add_bad_add_slack`, stated on the
 joint `run` distribution with the event `fun z => z.1 = true`. -/

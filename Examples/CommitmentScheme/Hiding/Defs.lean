@@ -53,7 +53,8 @@ The pair `(hidingImpl₁ s, hidingImpl₂ s)` is identical until `saltCount ≥ 
 (the redirect condition). The pair `(hidingImpl₂ s, hidingImplSim s)` is
 distributionally equal because the underlying random oracle is memoryless,
 so redirecting cache misses does not change marginal output distributions.
-Composing the two gives the per-salt TVD bound `Pr[saltCount ≥ 2]`.
+Composing the two bounds the per-salt total variation by the probability that
+`saltCount ≥ 2`.
 
 ## `Pr[bad]` bound
 

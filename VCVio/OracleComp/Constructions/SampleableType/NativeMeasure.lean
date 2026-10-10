@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.SimSemantics.Measure
 public import ToMathlib.MeasureTheory.DiscreteInstances
@@ -112,6 +113,26 @@ theorem prEvent_uniformSample_eq_singleton {α : Type} [SampleableType α] [_roo
     (a : α) : Pr{let x ← $ᵗ α}[x = a] = (Fintype.card α : ℝ≥0∞)⁻¹ := by
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_singleton, evalDist_uniformSample_singleton]
+
+/-- Each length-`n` list is drawn by `n` independent uniform samples with probability
+`(|α| ^ n)⁻¹`. -/
+theorem prEvent_replicate_uniformSample {α : Type} [SampleableType α] [_root_.Fintype α]
+    {n : ℕ} {xs : List α} (hlen : xs.length = n) :
+    Pr{let v ← OracleComp.replicate n ($ᵗ α)}[v = xs] =
+      ((Fintype.card α ^ n : ℕ) : ℝ≥0∞)⁻¹ := by
+  induction n generalizing xs with
+  | zero =>
+      obtain rfl : xs = [] := List.eq_nil_of_length_eq_zero hlen
+      simp [OracleComp.replicate_zero]
+  | succ n ih =>
+      obtain ⟨y, ys, rfl⟩ := List.exists_cons_of_length_eq_add_one hlen
+      rw [OracleComp.replicate_succ_bind, OracleComp.prEvent_bind_eq_mul_of_unique _ _ y _
+        fun x' _ hx' => by
+          obtain ⟨xs, -, hxs⟩ := (mem_support_bind_iff _ _ _).mp hx'
+          exact (List.cons.inj ((mem_support_pure_iff' (m := ProbComp) _ _).mp hxs)).1]
+      simp only [bind_assoc, pure_bind, List.cons.injEq, true_and]
+      rw [prEvent_uniformSample_eq_singleton, ih (by simpa using hlen), pow_succ', Nat.cast_mul,
+        ENNReal.mul_inv (Or.inr (ENNReal.natCast_ne_top _)) (Or.inl (ENNReal.natCast_ne_top _))]
 
 section counting
 
@@ -234,6 +255,38 @@ theorem prEvent_uniformSample_fst (p : α → Prop) :
   have h := prEvent_bind_bind_and ($ᵗ α) ($ᵗ β) p (fun _ ↦ True)
   simp only [and_true] at h
   rw [h, (prEvent_uniformSample_eq_one_iff (fun _ ↦ True)).mpr (fun _ ↦ trivial), mul_one]
+
+/-- A uniform vector of length `N + 1` is a uniform head followed by an independent uniform
+vector of length `N`. -/
+theorem evalDist_uniformSample_vector_succ (N : ℕ) :
+    (letI : MeasurableSpace (List.Vector α (N + 1)) := ⊤;
+      𝒟[($ᵗ (List.Vector α (N + 1)))] =
+        𝒟[(do let a ← $ᵗ α; let rest ← $ᵗ (List.Vector α N); pure (a ::ᵥ rest))]) := by
+  let : MeasurableSpace (List.Vector α (N + 1)) := ⊤
+  have hbij : Function.Bijective
+      (Function.uncurry fun (a : α) (rest : List.Vector α N) => a ::ᵥ rest) :=
+    ⟨fun ⟨a, v⟩ ⟨b, w⟩ h => by
+      have h₁ := congrArg List.Vector.head h
+      have h₂ := congrArg List.Vector.tail h
+      simp only [Function.uncurry_apply_pair, List.Vector.head_cons,
+        List.Vector.tail_cons] at h₁ h₂
+      rw [h₁, h₂],
+      fun v => ⟨(v.head, v.tail), List.Vector.cons_head_tail v⟩⟩
+  refine Measure.ext fun A _ => ?_
+  change 𝒟[_] {x | x ∈ A} = 𝒟[_] {x | x ∈ A}
+  rw [← prEvent_eq_evalDist_of_discrete,
+    ← prEvent_eq_evalDist_of_discrete,
+    ← prEvent_uniformSample_pair_of_bijective hbij (· ∈ A)]
+  simp only [bind_assoc, pure_bind]
+
+/-- A continuation of the first coordinate of a uniform pair has the output measure of the same
+continuation of a uniform first coordinate. -/
+theorem evalDist_uniformSample_prod_bind_fst {δ : Type} [MeasurableSpace δ]
+    (f : α → ProbComp δ) :
+    𝒟[(do let p ← $ᵗ (α × β); f p.1)] = 𝒟[(do let a ← $ᵗ α; f a)] := by
+  rw [SampleableType.uniformSample_prod_eq_bind]
+  simp only [bind_assoc, pure_bind]
+  exact evalDist_bind_congr _ _ _ fun a => OracleComp.evalDist_bind_const _ _
 
 /-- A uniform draw of a successor-indexed tuple is a uniform tuple followed by a uniform last
 entry. -/

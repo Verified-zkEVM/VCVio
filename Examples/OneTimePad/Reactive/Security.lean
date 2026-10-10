@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 public import Examples.OneTimePad.Reactive
 public import VCVio.EvalDist.Monad.UniformTable
-public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # Perfect simulation of single-use authenticated transmission
@@ -182,7 +182,7 @@ theorem oneTimePad_simulation (width : ℕ)
       ⟨fun key => key ^^^ message, fun key => key ^^^ message,
         fun key => by simp [BitVec.xor_assoc], fun key => by simp [BitVec.xor_assoc]⟩
     simpa only [oneTimePad, e, Equiv.coe_fn_mk] using
-      (evalDist_map_equiv_of_uniform ($ᵗ BitVec width) evalDist_uniformSample e)
+      (evalDist_map_equiv_of_uniform ($ᵗ BitVec width) SampleableType.evalDist_uniformSample e)
   have ht := tokenLaw_simulation (oneTimePad width) ($ᵗ BitVec width) ($ᵗ BitVec width)
     (fun key message => by simp [oneTimePad]) secret adversary env 0
   refine ⟨ht, ?_⟩
