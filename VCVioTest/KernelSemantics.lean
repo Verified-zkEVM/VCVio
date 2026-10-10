@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.Coinductive.Responder
-public import VCVio.EvalDist.FailureMeasure
+public import VCVio.EvalDist.Defs.Measure
 public import VCVio.EvalDist.WithFailure
 public import VCVioTest.MeasureSemantics
 public import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic

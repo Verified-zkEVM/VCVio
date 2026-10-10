@@ -12,7 +12,7 @@ public import VCVio.EvalDist.PFunctorPath
 /-!
 # Expected path bounds for strict PPT witnesses
 
-This module connects VCVio's strict oracle-complexity witnesses to the native measure observer in
+This module connects VCVio's strict oracle-complexity witnesses to the measure observer in
 `VCVio.EvalDist.PFunctorPath`. The underlying path measure, output marginal, exact-length law, and
 worst-case-to-expectation theorem are independent of the selected complexity backend.
 -/

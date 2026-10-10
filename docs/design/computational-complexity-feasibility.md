@@ -153,8 +153,8 @@ The OTP example uses the product and pushforward equalities exactly this way. Re
 construct the random tape law, and the XOR map for a fixed message is a measurable bijection that
 preserves the entire uniform measure. This proof reasons about the complete ciphertext law,
 rather than recovering it from a collection of scalar probability calculations. PMF/evaluation
-lemmas remain a useful compatibility surface for existing discrete proofs, not the semantic
-foundation of the new path.
+lemmas were then a compatibility surface for existing discrete proofs (since removed), not the
+semantic foundation of the new path.
 
 The candidate symmetric-encryption layer packages denotations through a `MeasureSemantics`:
 
@@ -280,7 +280,6 @@ lake env lean VCVioTest/UniformOn.lean
 lake env lean VCVio/EvalDist/PFunctorPath.lean
 lake env lean VCVio/CryptoFoundations/SymmEncAlg/Measure.lean
 lake env lean Examples/OneTimePad/ComputationalComplexity.lean
-lake env lean VCVioTest/CryptoFoundations/MeasureSemantics.lean
 lake env lean VCVioTest/CryptoFoundations/OracleClosure.lean
 lake env lean VCVioTest/OracleComp/SecurityFamily.lean
 lake exe mk_all --lib VCVio --module --check

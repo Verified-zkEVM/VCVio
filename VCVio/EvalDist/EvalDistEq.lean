@@ -35,7 +35,7 @@ variable {m : Type → Type v} {m' : Type → Type v'} [EvalDistSemantics m] [Ev
 /-- Two computations are equal in distribution when every event has the same probability under
 both. -/
 def EvalDistEq (mx : m α) (my : m' α) : Prop :=
-  ∀ p : α → Prop, Pr{x ← mx}[p x] = Pr{y ← my}[p y]
+  ∀ p : α → Prop, Pr{let x ← mx}[p x] = Pr{let y ← my}[p y]
 
 @[inherit_doc] infix:50 " =ᵈ " => EvalDistEq
 
@@ -49,12 +49,12 @@ variable {m : Type → Type v} {m' : Type → Type v'} {m'' : Type → Type v''}
 
 /-- Equality in distribution gives every event the same probability. -/
 theorem prEvent_eq {mx : m α} {my : m' α} (h : mx =ᵈ my) (p : α → Prop) :
-    Pr{x ← mx}[p x] = Pr{y ← my}[p y] :=
+    Pr{let x ← mx}[p x] = Pr{let y ← my}[p y] :=
   h p
 
 /-- Computations whose events all have the same probabilities are equal in distribution. -/
 theorem of_forall_prEvent_eq {mx : m α} {my : m' α}
-    (h : ∀ p : α → Prop, Pr{x ← mx}[p x] = Pr{y ← my}[p y]) : mx =ᵈ my :=
+    (h : ∀ p : α → Prop, Pr{let x ← mx}[p x] = Pr{let y ← my}[p y]) : mx =ᵈ my :=
   h
 
 @[refl]
@@ -109,7 +109,7 @@ theorem _root_.evalDistEq_iff_evalDist_eq {mx : m α} {my : m' α} :
 
 /-- On a countable output type, equality in distribution is equality of every point mass. -/
 theorem _root_.evalDistEq_iff_forall_prEvent_eq_output [Countable α] {mx : m α} {my : m' α} :
-    mx =ᵈ my ↔ ∀ x, Pr{mx}[= x] = Pr{my}[= x] := by
+    mx =ᵈ my ↔ ∀ x, Pr{let y ← mx}[y = x] = Pr{let y ← my}[y = x] := by
   let : MeasurableSpace α := ⊤
   refine ⟨fun h x ↦ h (· = x), fun h ↦ of_evalDist_eq (Measure.ext_of_singleton fun x ↦ ?_)⟩
   rw [← prEvent_eq_evalDist_singleton, ← prEvent_eq_evalDist_singleton]

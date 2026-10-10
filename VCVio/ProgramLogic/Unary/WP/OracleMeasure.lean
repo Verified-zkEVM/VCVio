@@ -28,7 +28,7 @@ variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
   [OracleSpec.IsMeasureSpec spec]
   {α : Type}
 
-/-- Structural postcondition comparison controls native expectation WP. -/
+/-- Structural postcondition comparison controls expectation WP. -/
 @[gcongr]
 theorem wp_mono_of_support (mx : OracleComp spec α) {f g : α → ENNReal}
     (hfg : ∀ x ∈ support mx, f x ≤ g x) : MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g := by
@@ -67,7 +67,7 @@ theorem wp_finsetSum_of_oracle {κ : Type*} (mx : OracleComp spec α) (s : Finse
   have hobs : Measurable obs := comap_measurable obs
   exact wp_finsetSum mx s f fun i _ ↦ (measurable_pi_apply i).comp hobs
 
-/-- A pathwise bound controls native quantitative correctness. -/
+/-- A pathwise bound controls quantitative correctness. -/
 theorem wp_le_const_of_support (mx : OracleComp spec α) {f : α → ENNReal} {c : ENNReal}
     (hf : ∀ x ∈ support mx, f x ≤ c) : MAlgOrdered.wp mx f ≤ c :=
   (wp_mono_of_support mx hf).trans_eq (wp_const_of_oracle mx c)

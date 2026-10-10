@@ -15,10 +15,9 @@ The stack is also intentionally split into:
 - a small `ToMathlib` probability layer for reusable tail-sum facts
 
 The structural instrumentation owners are `Tracing.Core`, `CountingOracle.Core`, and
-`LoggingOracle.Core`. Query bounds, cache/programming handlers, and enforcement import native
-handler machinery; their structural laws need no probability specification. The older tracing,
-counting, and logging module paths additionally export their remaining scalar compatibility
-corollaries. Prefer the native owners or `VCVio.Native` for new proofs.
+`LoggingOracle.Core`. Query bounds, cache/programming handlers, and enforcement build on the same
+handler machinery; their structural laws need no probability specification. `VCVio.Foundations`
+imports these owners together with the measure semantics.
 
 Enforcement event laws use `Pr{...}[...]` and a chosen `IsMeasureSpec`, with discrete query-answer
 spaces to interpret arbitrary oracle continuations. They do not require uniform sampling or
@@ -32,7 +31,7 @@ cache/log induction.
 `measure_adaptivePrefixRunFrom_le` proves this bound for any lawful measure semantics with
 uniform query measures and a measurable terminal event. Its proof uses a bad-event decomposition
 of a Lebesgue integral. `prEvent_adaptivePrefixRunFrom_le` reads it for `Pr{…}` events under
-native uniform oracle semantics. The online-target counterpart is
+uniform oracle answer measures. The online-target counterpart is
 `MerkleTreeMultiExtractability.measure_onlineAdaptivePrefixRunFrom_logged_le`; its target set
 is evaluated on the pre-query log.
 
@@ -219,7 +218,7 @@ probabilistic.
 `ToMathlib/Probability/TailSums.lean` contains the measure-theoretic tail-sum identity for
 measurable Nat observables under arbitrary measures. The query-cost layer specializes it:
 
-- `E[T] = ∑ Pr[i < T]`
+- `∫⁻ a, T a ∂μ = ∑' i, μ {a | i < T a}` (`MeasureTheory.lintegral_coe_nat_eq_tsum`)
 - tail domination implies expectation domination
 
 WriterCost, QueryCost, and CostModel respect the chosen cost measurable space and share the
@@ -441,7 +440,7 @@ The key progression is:
 4. the tail sum is rewritten semantically in terms of abort-prefix probabilities
 5. geometric upper bounds follow from bounds on the one-step abort probability
 
-The native retry API measures the proposition-valued `signAttemptAborts` observation and the
+The retry API measures the proposition-valued `signAttemptAborts` observation and the
 Nat query-count marginal. Commitments, private prover states, and responses need no measurable
 spaces or attachment instances. Abort-prefix powers and geometric upper bounds permit missing
 mass. Exact tail probabilities and finite geometric expectations require

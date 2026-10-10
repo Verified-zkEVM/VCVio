@@ -10,7 +10,7 @@ public import VCVio.EvalDist.Defs.Measure.ExceptT
 public import VCVio.EvalDist.ProbabilityBounds
 
 /-!
-# Native measure laws for optional and exceptional computations
+# Measure laws for optional and exceptional computations
 
 Pure laws inherit only the base pure certificate. Bind laws require measurability of successful
 output measures rather than full run measures. Events of independent transformer computations
@@ -24,9 +24,8 @@ open MeasureTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native transformer laws unexpectedly import {name}"
+  if env.contains `PMF then
+    throwError "transformer laws unexpectedly import PMF"
 
 namespace VCVioTest.Transformers
 

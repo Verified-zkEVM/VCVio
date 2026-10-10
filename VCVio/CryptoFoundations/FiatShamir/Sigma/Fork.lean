@@ -435,7 +435,7 @@ noncomputable def advantage [DecidableEq M] [DecidableEq Commit] [SampleableType
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : ENNReal :=
-  Pr{experiment σ hr M nmaAdv qH}[= true]
+  Pr{let x ← experiment σ hr M nmaAdv qH}[x = true]
 
 /-- Forwarding uniform selection and answering the challenge oracle by uniform sampling
 preserves the distribution of every computation over `wrappedSpec Chal`. -/

@@ -11,7 +11,7 @@ public import PolyFun.PFunctor.Bound
 public import VCVio.OracleComp.Support
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.SimSemantics.Append.Core
-public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 import all VCVio.OracleComp.QueryTracking.QueryBound.Basic
 

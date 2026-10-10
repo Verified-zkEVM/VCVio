@@ -10,7 +10,7 @@ public import VCVio.EvalDist.Defs.Measure.Deterministic
 public import Mathlib.Probability.Distributions.Gaussian.Real
 
 /-!
-# Native observed continuation comparison regressions
+# Observed continuation comparison regressions
 
 Chosen real source spaces admit AE continuation comparisons. Finite references may observe
 different payload types; hidden function-valued prefixes need no measurable space. Lossy
@@ -24,9 +24,8 @@ open scoped ENNReal ProbabilityTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `NeverFail, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
-    if env.contains name then
-      throwError "native disagreement unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "disagreement unexpectedly imports PMF"
 
 namespace VCVioTest.DisagreementMeasure
 

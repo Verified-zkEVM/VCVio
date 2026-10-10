@@ -15,7 +15,7 @@ public import VCVio.ProgramLogic.Unary.WriterTBridge
 # `Std.Do` / `mvcgen` bridge for `OracleComp`
 
 The proposition-level interpretation quantifies over structural outputs, independently of
-probability semantics. Uniform native measures identify this interpretation with probability-one
+probability semantics. Uniform answer measures identify this interpretation with probability-one
 correctness. The transformer bridges retain state and logs in the structural postcondition.
 -/
 
@@ -44,8 +44,8 @@ theorem wpProp_iff_forall_support (oa : OracleComp spec α) (p : α → Prop) :
     wpProp (spec := spec) oa p ↔ ∀ x ∈ support oa, p x :=
   PropLogic.wp_iff_forall_support oa p
 
-/-- Uniform native measures identify probability-one observations with structural correctness. -/
-theorem wpProp_iff_probEvent_eq_one
+/-- Uniform answer measures identify probability-one observations with structural correctness. -/
+theorem wpProp_iff_prEvent_eq_one
     [OracleSpec.IsUniformMeasureSpec spec]
     (oa : OracleComp spec α) (p : α → Prop) :
     wpProp (spec := spec) oa p ↔ Pr{let x ← oa}[p x] = 1 := by

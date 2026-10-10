@@ -11,7 +11,8 @@ public import Mathlib.Control.Monad.Basic
 # Symmetric encryption schemes
 
 This module contains the probability-independent data and experiments for symmetric encryption.
-Semantic notions of correctness and secrecy live in separate compatibility and measure modules.
+Semantic notions of correctness and secrecy live in `VCVio.CryptoFoundations.SymmEncAlg` and
+`VCVio.CryptoFoundations.SymmEncAlg.Measure`.
 -/
 
 @[expose] public section

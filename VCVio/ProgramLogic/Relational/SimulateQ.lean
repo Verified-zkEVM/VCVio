@@ -40,7 +40,7 @@ carrying it as an unbounded remainder.
 - `measureETVDist_simulateQ_run'_le_prEvent_bad`: "identical until bad" — if two oracle
   implementations agree on steps between good states and keep bad states bad, the total variation
   between their simulations is bounded by the probability of ending in a bad state. The handlers
-  may disagree on the step that sets a bad flag, and `_of_run_eq` / `_of_evalDist_eq` take
+  may disagree on the step that sets a bad flag, and `_of_run_eq` / `_of_evalDistEq` take
   agreement off bad input states.
 - `measureETVDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad`: the ε-perturbed
   refinement, where the two implementations may differ by up to `ε` on each charged query.

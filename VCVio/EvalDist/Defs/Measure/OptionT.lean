@@ -12,10 +12,9 @@ public import ToMathlib.MeasureTheory.Measure.Option
 # Successful-output measure semantics for optional computations
 
 An `OptionT` computation denotes the pullback of its underlying `Option`-valued measure along the
-measurable embedding `some`. This effect-native construction supplies the primary semantics;
-finite-distribution lifts remain available for explicit compatibility observations.
+measurable embedding `some`.
 
-Native map and monad laws use the base monad's measure laws. The full bind law only requires
+The map and monad laws use the base monad's measure laws. The full bind law only requires
 measurability of the successful-output family. A pullback space recording the full continuation
 outcomes refines the selected source space, and the map law transports its measure back.
 -/
@@ -38,12 +37,20 @@ noncomputable instance (priority := 20) instEvalDistSemanticsOptionT
       _ ≤ 𝒟[mx.run] Set.univ := measure_mono (Set.subset_univ _)
       _ ≤ 1 := evalDist_apply_univ_le_one mx.run
 
-/-- Unfold the native successful-output semantics to Mathlib's pullback along `some`. -/
+/-- Unfold the successful-output semantics to Mathlib's pullback along `some`. -/
 theorem OptionT.evalDist_eq_comap_some
     {m : Type u → Type v} [EvalDistSemantics m]
     {α : Type u} [MeasurableSpace α] (mx : OptionT m α) :
     𝒟[mx] = (𝒟[mx.run]).comap some := by
   rfl
+
+/-- An `OptionT` computation denotes the `dropNone` of its run: the `none` branch is discarded
+mass, not an output. -/
+theorem OptionT.evalDist_eq_dropNone
+    {m : Type u → Type v} [EvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] (mx : OptionT m α) :
+    𝒟[mx] = (𝒟[mx.run]).dropNone :=
+  (Measure.dropNone_eq_comap_some _).symm
 
 /-- The successful-output measure of an optional computation on an event is the run
 measure of the corresponding `some` outcomes. -/
@@ -73,7 +80,7 @@ theorem OptionT.evalDist_pure
   rw [OptionT.evalDist_eq_comap_some, OptionT.run_pure, _root_.evalDist_pure,
     ← Measure.dropNone_eq_comap_some, Measure.dropNone_dirac_some]
 
-/-- Native optional semantics preserves pure whenever the base semantics does. -/
+/-- Optional semantics preserves pure whenever the base semantics does. -/
 instance (priority := 20) instLawfulPureEvalDistSemanticsOptionT
     {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
     [LawfulPureEvalDistSemantics m] : LawfulPureEvalDistSemantics (OptionT m) where
@@ -87,7 +94,7 @@ theorem OptionT.evalDist_failure
     show (failure : OptionT m α).run = pure none from rfl, _root_.evalDist_pure,
     ← Measure.dropNone_eq_comap_some, Measure.dropNone_dirac_none]
 
-/-- Native optional failure has zero measure whenever the base semantics preserves pure. -/
+/-- Optional failure has zero measure whenever the base semantics preserves pure. -/
 instance (priority := 20) instLawfulFailureEvalDistSemanticsOptionT
     {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
     [LawfulPureEvalDistSemantics m] : LawfulFailureEvalDistSemantics (OptionT m) where
@@ -103,6 +110,15 @@ theorem OptionT.evalDist_lift
   rw [OptionT.evalDist_eq_comap_some, OptionT.run_lift,
     LawfulMonad.bind_pure_comp, _root_.evalDist_map mx Option.measurable_some,
     Option.measurableEmbedding_some.comap_map]
+
+/-- A monadic lift into the optional monad preserves the successful-output measure. -/
+@[simp]
+theorem OptionT.evalDist_liftM
+    {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] (mx : m α) :
+    𝒟[(liftM mx : OptionT m α)] = 𝒟[mx] :=
+  OptionT.evalDist_lift mx
 
 /-- Lifting a lossless computation into the optional monad preserves its probability measure. -/
 instance OptionT.isProbabilityMeasure_evalDist_lift
@@ -131,7 +147,7 @@ theorem OptionT.evalDist_map
   simp only [OptionT.evalDist_eq_comap_some, ← Measure.dropNone_eq_comap_some]
   rw [OptionT.run_map, _root_.evalDist_map mx.run (by fun_prop), Measure.dropNone_map _ f hf]
 
-/-- A measurable family of full run measures suffices to compose native optional denotations. -/
+/-- A measurable family of full run measures suffices to compose optional denotations. -/
 theorem OptionT.evalDist_bind
     {m : Type u → Type v} [Monad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
@@ -166,9 +182,8 @@ theorem OptionT.evalDist_bind_of_discrete
     𝒟[mx >>= f] = Measure.bind 𝒟[mx] fun x => 𝒟[f x] :=
   OptionT.evalDist_bind mx f Measurable.of_discrete
 
-/-- Native optional semantics satisfies the measurable-bind law for successful-output families.
-The full-run observer refines the source space, whose identity map transports the source measure.
--/
+/-- Optional semantics satisfies the measurable-bind law for successful-output families. The
+full-run observer refines the source space, whose identity map transports the source measure. -/
 instance (priority := 20) instLawfulEvalDistSemanticsOptionT
     {m : Type u → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] :
@@ -185,8 +200,8 @@ instance (priority := 20) instLawfulEvalDistSemanticsOptionT
     rw [hmap, @Measure.bind_map α α β mObs mα mβ _ _ _ hId hf]
     exact @OptionT.evalDist_bind m _ _ _ α β mObs mβ mx f hRun
 
-/-- The effect-native successful-output measure of sampling and then guarding is the measure of
-the corresponding Boolean event. This statement is independent of which global `OptionT`
+/-- The successful-output measure of sampling and then guarding is the measure of the
+corresponding Boolean event. This statement is independent of which global `OptionT`
 semantics wins instance synthesis. -/
 @[simp]
 theorem OptionT.dropNone_evalDist_run_bind_guard_apply_univ

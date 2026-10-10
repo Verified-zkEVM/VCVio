@@ -80,12 +80,9 @@ public import ToMathlib.Probability.Kernel.Quadratic
 public import ToMathlib.Probability.Kernel.Subprobability
 public import ToMathlib.Probability.Kernel.TotalVariation
 public import ToMathlib.Probability.NegativeHypergeometric
-public import ToMathlib.Probability.ProbabilityMassFunction.Lemmas
-public import ToMathlib.Probability.ProbabilityMassFunction.Measure
 public import ToMathlib.Probability.TailSums
 public import ToMathlib.Probability.UniformOn
 public import ToMathlib.ProbabilityTheory.FinRatPMF
 public import ToMathlib.ProbabilityTheory.FinRatPMF.Basic
 public import ToMathlib.ProbabilityTheory.FinRatPMF.Measure
-public import ToMathlib.ProbabilityTheory.SPMF
 public import ToMathlib.Topology.Algebra.InfiniteSum.Option

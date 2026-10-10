@@ -22,11 +22,10 @@ open OracleSpec OracleComp QueryImpl.Stateful MeasureTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native stateful handler API unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "stateful handler API unexpectedly imports PMF"
 
-namespace VCVioTest.StateSeparating.NativeMeasure
+namespace VCVioTest.StateSeparating.Measure
 
 abbrev WeightedSpec : OracleSpec (Fin 1) := Fin 1 →ₒ Bool
 
@@ -64,4 +63,4 @@ example (μ : Measure Bool) [IsProbabilityMeasure μ] : μ {true} + μ {false} =
 
 example (μ : Measure Bool) [IsProbabilityMeasure μ] : μ {true} + μ {false} = 1 := by grind
 
-end VCVioTest.StateSeparating.NativeMeasure
+end VCVioTest.StateSeparating.Measure

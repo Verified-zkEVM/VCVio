@@ -8,9 +8,10 @@ module
 public import VCVio.EvalDist.Monad.Basic
 
 /-!
-# Monad Evaluation Semantics Instances
+# Support of `SetM` and `Id` computations
 
-This file defines various instances of evaluation semantics for different monads
+A `SetM` computation's support is its underlying set, and an `Id` computation has its value as
+its only possible output, with the corresponding finite support.
 -/
 
 @[expose] public section
@@ -26,49 +27,7 @@ lemma support_eq_run (s : SetM α) : support s = s.run := rfl
 
 end SetM
 
-namespace SPMF
-
-@[simp, grind =]
-protected lemma evalSPMF_def (p : SPMF α) : evalSPMF p = p := rfl
-
-@[grind =]
-lemma probOutput_eq_apply (p : SPMF α) (x : α) : Pr[= x | p] = p x :=
-  probOutput_def p x
-
-end SPMF
-
-namespace PMF
-
-@[simp] lemma evalSPMF_eq (p : PMF α) : evalSPMF p = liftM p := rfl
-
-@[simp] lemma probOutput_eq_apply (p : PMF α) (x : α) : Pr[= x | p] = p x := by
-  simp [probOutput_def]
-
-end PMF
-
-@[simp] lemma SPMF.evalSPMF_liftM (p : PMF α) :
-    evalSPMF (m := SPMF) (liftM p) = 𝒮[p] := rfl
-
-@[simp] lemma SPMF.probOutput_liftM (p : PMF α) (x : α) :
-    Pr[= x | (liftM p : SPMF α)] = Pr[= x | p] := rfl
-
-@[simp] lemma SPMF.probEvent_liftM (p : PMF α) (e : α → Prop) :
-    Pr[ e | (liftM p : SPMF α)] = Pr[ e | p] := rfl
-
-@[simp] lemma SPMF.probFailure_liftM (p : PMF α) :
-    Pr[⊥ | (liftM p : SPMF α)] = Pr[⊥ | p] := rfl
-
 namespace Id
-
-/-- Lift `Id` into `PMF` (a `pure` of the result), giving `Id` the canonical total denotation. -/
-noncomputable instance : MonadLift Id PMF where
-  monadLift x := pure x.run
-
-noncomputable instance : LawfulMonadLift Id PMF where
-  monadLift_pure _ := rfl
-  monadLift_bind _ _ := by
-    change (PMF.pure _ : PMF _) = (pure _ : PMF _).bind fun x => pure _
-    simp
 
 instance : HasEvalFinset Id where
   finSupport x := {x}
@@ -84,19 +43,5 @@ lemma support_eq_singleton (x : Id α) : support x = {x.run} := by
 
 @[simp, grind =]
 lemma finSupport_eq_singleton [DecidableEq α] (x : Id α) : finSupport x = {x.run} := rfl
-
-@[simp, grind =]
-lemma probOutput_eq_ite [DecidableEq α] (x : Id α) (y : α) :
-    Pr[= y | x] = if y = x.run then 1 else 0 := by
-  rw [← Id.pure_run x, probOutput_pure]
-  rfl
-
-@[simp, grind =]
-lemma probEvent_eq_ite (x : Id α) (p : α → Prop) [DecidablePred p] :
-    Pr[ p | x] = if p x.run then 1 else 0 := by
-  rw [← Id.pure_run x, probEvent_pure]
-  rfl
-
-lemma probFailure_eq_zero (x : Id α) : Pr[⊥ | x] = 0 := probFailure_pure _
 
 end Id

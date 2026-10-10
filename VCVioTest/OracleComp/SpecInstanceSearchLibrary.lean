@@ -6,23 +6,22 @@ Authors: Quang Dao
 
 module
 public import VCVio
-public import VCVio.Native
+public import VCVio.Foundations
 import VCVioTest.OracleComp.SpecInstanceSearch
 
 /-!
 # Instance search under the full library
 
-The clients of `VCVioTest.OracleComp.SpecInstanceSearch`, repeated with the native probability
-surface and the whole library (including its compatibility instances) in scope, followed by the
-routing of `Nonempty`/`Finite` goals around the sampler-derived instances
-`SampleableType.nonempty`/`SampleableType.finite`.
+The clients of `VCVioTest.OracleComp.SpecInstanceSearch`, repeated with `VCVio.Foundations` and
+the whole library in scope, followed by the routing of `Nonempty`/`Finite` goals around the
+sampler-derived instances `SampleableType.nonempty`/`SampleableType.finite`.
 -/
 
 public section
 
 universe u
 
-namespace VCVioTest.OracleComp.SpecInstanceSearchNative
+namespace VCVioTest.OracleComp.SpecInstanceSearchLibrary
 
 set_option synthInstance.maxHeartbeats 2000 in
 -- A reintroduced search loop must fail here rather than eventually succeed (VCVio#772).
@@ -39,8 +38,8 @@ noncomputable example {α : Type u} : DecidableEq α := by
 set_option synthInstance.maxHeartbeats 2000 in
 -- A reintroduced search loop must fail here rather than eventually succeed (VCVio#772).
 /-- Equality on a dependent family under `classical` comes from `Classical.propDecidable`, not
-from a specification invented around the family, even with every compatibility instance of the
-library in scope. -/
+from a specification invented around the family, even with every instance of the library in
+scope. -/
 noncomputable def classicalDepDecEq {α : Type u} {β : α → Type u} (a : α) :
     DecidableEq (β a) := by
   classical
@@ -143,4 +142,4 @@ Hint: Type class instance resolution failures can be inspected with the `set_opt
 set_option synthInstance.maxHeartbeats 2000 in
 example {α : Type} {β : α → Type} (a : α) : Nonempty (β a) := inferInstance
 
-end VCVioTest.OracleComp.SpecInstanceSearchNative
+end VCVioTest.OracleComp.SpecInstanceSearchLibrary

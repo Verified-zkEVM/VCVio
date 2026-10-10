@@ -204,15 +204,14 @@ theorem evalDist_pair {m : Type u → Type v} [Monad m] [LawfulMonad m]
   simp only [h, Measure.prod]
 
 /-- A constant continuation scales the continuation's measure by the success mass
-(`Measure.bind_const`); the measure form of `probOutput_bind_const`. -/
+(`Measure.bind_const`). -/
 @[simp]
 theorem evalDist_bind_const {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
     [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]
     (mx : m α) (my : m β) : 𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my] := by
   rw [evalDist_bind mx (fun _ => my) measurable_const, Measure.bind_const]
 
-/-- A constant map denotes the success mass at a point (`Measure.map_const`); the measure form
-of `probOutput_map_const`. -/
+/-- A constant map denotes the success mass at a point (`Measure.map_const`). -/
 @[simp]
 theorem evalDist_map_const {m : Type u → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
     [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]

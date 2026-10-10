@@ -30,9 +30,8 @@ open scoped ENNReal Std.Internal.Do OracleComp.Quantitative
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
-    if env.contains name then
-      throwError "native generalized rewriting unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "generalized rewriting unexpectedly imports PMF"
 
 namespace VCVioTest.GeneralizedRelations
 

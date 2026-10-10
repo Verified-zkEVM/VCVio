@@ -9,7 +9,7 @@ public import VCVio.OracleComp.Constructions.Fork.Basic
 public import ToMathlib.Probability.Kernel.Quadratic
 
 /-!
-# Native event probability bounds
+# Event probability bounds
 
 These checks exercise conditional-square and selector-partition bounds without a discrete
 probability backend, measurable structures on intermediate values, or uniform answer measures.
@@ -24,9 +24,8 @@ open MeasureTheory ProbabilityTheory OracleSpec
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native probability bounds unexpectedly import {name}"
+  if env.contains `PMF then
+    throwError "probability bounds unexpectedly import PMF"
 
 run_cmd do
   let one ← `(Pr{let x ← (pure 1 : Option Nat)}[x = 1])

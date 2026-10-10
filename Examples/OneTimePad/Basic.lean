@@ -31,7 +31,7 @@ open Mathlib OracleSpec OracleComp ENNReal
 
 /-- The one-time-pad scheme body, parameterized only by its key sampler.
 
-Keeping encryption and decryption here gives the discrete and measure-native examples one shared
+Keeping encryption and decryption here gives the `ProbComp` and fair-coin examples one shared
 scheme implementation. -/
 abbrev oneTimePadOfKeygen {m : Type → Type} [Monad m] (sp : ℕ) (keygen : m (BitVec sp)) :
     SymmEncAlg m (BitVec sp) (BitVec sp) (BitVec sp) where
@@ -47,7 +47,7 @@ def oneTimePad (sp : ℕ) :
 namespace oneTimePad
 
 /-- The one-time-pad experiment has independent message and ciphertext measures under
-the native uniform-oracle interpretation. -/
+the uniform-oracle interpretation. -/
 theorem evalDist_perfectSecrecyExperiment (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
     𝒟[(oneTimePad sp).perfectSecrecyExperiment mgen] =
       𝒟[mgen].prod (ProbabilityTheory.uniformOn Set.univ :

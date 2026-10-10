@@ -10,7 +10,7 @@ public import VCVio.EvalDist.Defs.Measure.Core
 public import ToMathlib.MeasureTheory.Measure.Bool
 
 /-!
-# Boolean guessing experiments under native measure semantics
+# Boolean guessing experiments under measure semantics
 
 A fair hidden bit and two lossless Boolean branches have a guessing bias equal to the branches'
 distinguishing distance. The monad is arbitrary; fairness and losslessness are semantic hypotheses.

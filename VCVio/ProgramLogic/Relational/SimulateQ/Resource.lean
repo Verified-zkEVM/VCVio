@@ -65,16 +65,16 @@ theorem prEvent_bad_simulateQ_run_le_expectedQuerySlack
     [DecidablePred charged] (R : σ → ℝ≥0∞) (ε : ℝ≥0∞)
     (h_charged_step : ∀ (t : spec.Domain) (s : σ), charged t →
       ∀ (k : spec.Range t × σ × Bool → OracleComp spec' (γ × σ × Bool)),
-        Pr{z ← (impl t).run (s, false) >>= k}[z.2.2 = true] ≤ R s * ε +
+        Pr{let z ← (impl t).run (s, false) >>= k}[z.2.2 = true] ≤ R s * ε +
           wp ((impl t).run (s, false)) fun z =>
             if z.2.2 then 0 else Pr{let w ← k z}[w.2.2 = true])
     (h_free_step : ∀ (t : spec.Domain) (s : σ), ¬ charged t →
       ∀ (k : spec.Range t × σ × Bool → OracleComp spec' (γ × σ × Bool)),
-        Pr{z ← (impl t).run (s, false) >>= k}[z.2.2 = true] ≤
+        Pr{let z ← (impl t).run (s, false) >>= k}[z.2.2 = true] ≤
           wp ((impl t).run (s, false)) fun z =>
             if z.2.2 then 0 else Pr{let w ← k z}[w.2.2 = true])
     (oa : OracleComp spec γ) {qS : ℕ} (h_qb : oa.IsQueryBoundP charged qS) (s : σ) :
-    Pr{z ← (simulateQ impl oa).run (s, false)}[z.2.2 = true] ≤
+    Pr{let z ← (simulateQ impl oa).run (s, false)}[z.2.2 = true] ≤
       expectedQuerySlack impl charged (fun s => R s * ε) oa qS (s, false) := by
   induction oa using OracleComp.inductionOn generalizing qS s with
   | pure x => simp
@@ -120,7 +120,7 @@ The fix carried here is to average not over a single fixed state but over a **st
 `ν : σ × Bool → ℝ≥0∞`, the law of the eager handler's slot under the pending upstream draws.
 The averaged bad mass
 
-  `avgBadM impl ν oa := ∑' p, ν p · Pr{z ← (simulateQ impl oa).run p}[z.2.2 = true]`
+  `avgBadM impl ν oa := ∑' p, ν p · Pr{let z ← (simulateQ impl oa).run p}[z.2.2 = true]`
 
 telescopes through the free monad like `expectedQuerySlack`, but the read step's charge is now
 `∑' p, ν p · 1_{mc ∈ slot(p)}`, a probability over the state law.
@@ -144,7 +144,7 @@ by an aborting step. -/
 @[expose] noncomputable def avgBadM
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (ν : σ × Bool → ℝ≥0∞) (oa : OracleComp spec γ) : ℝ≥0∞ :=
-  ∑' p : σ × Bool, ν p * Pr{z ← (simulateQ impl oa).run p}[z.2.2 = true]
+  ∑' p : σ × Bool, ν p * Pr{let z ← (simulateQ impl oa).run p}[z.2.2 = true]
 
 open scoped Classical in
 /-- `avgBadM` at a Dirac (single-point indicator) measure is the plain per-state bad
@@ -153,7 +153,7 @@ lemma avgBadM_pure_state
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (p₀ : σ × Bool) (oa : OracleComp spec γ) :
     avgBadM impl (fun p => if p = p₀ then 1 else 0) oa =
-      Pr{z ← (simulateQ impl oa).run p₀}[z.2.2 = true] := by
+      Pr{let z ← (simulateQ impl oa).run p₀}[z.2.2 = true] := by
   rw [avgBadM, tsum_eq_single p₀ (by intro p hp; rw [ite_eq_right hp, zero_mul]),
     ite_eq_left rfl, one_mul]
 
@@ -183,8 +183,8 @@ lemma avgBadM_pure
 and exposes the post-step joint law, holding for any handler and any measure `ν`.
 
 The right-hand side is the double `tsum`, over the starting state `p` and then the step outcome
-`z`, with the per-state step mass `Pr{(impl t).run p}[= z]` left exposed; apply this form when
-that step law itself has to be manipulated. `avgBadM_telescope_eq_tsum_postStep` regroups the
+`z`, with the per-state step mass `Pr{let x ← (impl t).run p}[x = z]` left exposed; apply this form
+when that step law itself has to be manipulated. `avgBadM_telescope_eq_tsum_postStep` regroups the
 same right-hand side as a single `tsum` against `postStepJointM`, and
 `avgBadM_query_bind_eq_tsum_output` chains the two into the output-indexed form that a
 free-monad induction consumes. -/
@@ -194,18 +194,19 @@ lemma avgBadM_query_bind_eq
     (cont : spec.Range t → OracleComp spec γ) :
     avgBadM impl ν (query t >>= cont) =
       ∑' p : σ × Bool, ν p *
-        ∑' z : spec.Range t × σ × Bool, Pr{(impl t).run p}[= z] *
+        ∑' z : spec.Range t × σ × Bool, Pr{let x ← (impl t).run p}[x = z] *
           Pr{let w ← (simulateQ impl (cont z.1)).run z.2}[w.2.2 = true] := by
   simp only [avgBadM, simulateQ_bind, simulateQ_query, OracleQuery.input_query,
     OracleQuery.cont_query, id_map, StateT.run_bind, prEvent_bind_eq_tsum_of_countable]
 
 /-- **Post-step joint measure of a query step (bare-measure form).** The measure over
-`(output, post-state)` produced by averaging the per-state step mass `Pr{(impl t).run p}[= z]`
-against the state measure `ν`. Stated as a `tsum` since `ν` need not be a probability law. -/
+`(output, post-state)` produced by averaging the per-state step mass
+`Pr{let x ← (impl t).run p}[x = z]` against the state measure `ν`. Stated as a `tsum` since `ν`
+need not be a probability law. -/
 @[expose] noncomputable def postStepJointM
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) (z : spec.Range t × σ × Bool) : ℝ≥0∞ :=
-  ∑' p : σ × Bool, ν p * Pr{(impl t).run p}[= z]
+  ∑' p : σ × Bool, ν p * Pr{let x ← (impl t).run p}[x = z]
 
 open scoped Classical in
 /-- **Output-grouped telescoping of the bare-measure average.** The telescoped one-step
@@ -215,17 +216,17 @@ lemma avgBadM_telescope_eq_tsum_postStep
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) (cont : spec.Range t → OracleComp spec γ) :
     (∑' p : σ × Bool, ν p *
-        ∑' z : spec.Range t × σ × Bool, Pr{(impl t).run p}[= z] *
+        ∑' z : spec.Range t × σ × Bool, Pr{let x ← (impl t).run p}[x = z] *
           Pr{let w ← (simulateQ impl (cont z.1)).run z.2}[w.2.2 = true]) =
       ∑' z : spec.Range t × σ × Bool,
         postStepJointM impl ν t z *
           avgBadM impl (fun p => if p = z.2 then 1 else 0) (cont z.1) := by
   classical
   have hstep : (∑' p : σ × Bool, ν p *
-        ∑' z : spec.Range t × σ × Bool, Pr{(impl t).run p}[= z] *
+        ∑' z : spec.Range t × σ × Bool, Pr{let x ← (impl t).run p}[x = z] *
           Pr{let w ← (simulateQ impl (cont z.1)).run z.2}[w.2.2 = true]) =
       ∑' p : σ × Bool, ∑' z : spec.Range t × σ × Bool,
-          ν p * (Pr{(impl t).run p}[= z] *
+          ν p * (Pr{let x ← (impl t).run p}[x = z] *
             avgBadM impl (fun q => if q = z.2 then 1 else 0) (cont z.1)) := by
     refine tsum_congr fun p => ?_
     rw [← ENNReal.tsum_mul_left]
@@ -278,7 +279,7 @@ lemma tsum_tsum_postStepOutM_mul
     (ν : σ × Bool → ℝ≥0∞) (t : spec.Domain) (F : σ × Bool → ℝ≥0∞) :
     (∑' u : spec.Range t, ∑' s : σ × Bool, postStepOutM impl ν t u s * F s)
       = ∑' p : σ × Bool, ν p *
-          ∑' z : spec.Range t × σ × Bool, Pr{(impl t).run p}[= z] * F z.2 := by
+          ∑' z : spec.Range t × σ × Bool, Pr{let x ← (impl t).run p}[x = z] * F z.2 := by
   rw [← ENNReal.tsum_prod]
   simp only [postStepOutM, postStepJointM, ← ENNReal.tsum_mul_right, mul_assoc]
   exact ENNReal.tsum_comm.trans (tsum_congr fun p => ENNReal.tsum_mul_left)

@@ -10,7 +10,7 @@ public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
 public import VCVio.StateSeparating.IdenticalUntilBad
 
 /-!
-# Native stateful Fiat-Shamir CMA game hops
+# Stateful Fiat-Shamir CMA game hops
 
 The theorems here are stated directly over `QueryImpl.Stateful` handlers and the
 concrete `CmaState` product state.
@@ -96,8 +96,7 @@ abbrev cmaH3Costly :
   IsCostlyQuery (M := M) (Commit := Commit) (Chal := Chal)
     (Resp := Resp) (Stmt := Stmt)
 
-/-- Boolean distinguishing advantage for the native H3 pair from the direct
-initial CMA state. -/
+/-- Boolean distinguishing advantage for the H3 pair from the direct initial CMA state. -/
 noncomputable abbrev cmaH3Advantage
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
@@ -123,7 +122,7 @@ noncomputable abbrev cmaH3ExpectedLoss
     (cmaSignEpsCore M Commit Chal ζ_zk β) A qS
     (cmaInit M Commit Chal Stmt Wit)
 
-/-- Per-query facts for the native H3 hop. -/
+/-- Per-query facts for the H3 hop. -/
 structure CmaH3StepFacts
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
@@ -160,7 +159,7 @@ structure CmaH3StepFacts
       (p : CmaState M Commit Chal Stmt Wit), p.2 = true →
         ∀ z ∈ support (((cmaReal M Commit Chal σ hr) t).run p), z.2.2 = true
 
-/-- Computation-specific facts for applying the native H3 hop. -/
+/-- Computation-specific facts for applying the H3 hop. -/
 structure CmaH3RunFacts
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
@@ -173,8 +172,8 @@ structure CmaH3RunFacts
       (Resp := Resp) (Stmt := Stmt)) qS
   /-- The real game never reaches bad from the initial state. -/
   badZero :
-    Pr{z ← (simulateQ (cmaReal M Commit Chal σ hr) A).run
-      (cmaInit M Commit Chal Stmt Wit)}[z.2.2 = true] = 0
+    Pr{let z ← ((simulateQ (cmaReal M Commit Chal σ hr) A).run
+      (cmaInit M Commit Chal Stmt Wit))}[z.2.2 = true] = 0
   /-- The expected accumulated signing loss is at most the requested bound. -/
   expectedLossLe :
     cmaH3ExpectedLoss M Commit Chal σ hr ζ_zk β A qS ≤ εBound
@@ -309,8 +308,8 @@ theorem cmaReal_prEvent_bad_eq_zero
     (hr : GenerableRelation Stmt Wit rel)
     {α : Type}
     (A : OracleComp (cmaSpec M Commit Chal Resp Stmt) α) :
-    Pr{z ← (simulateQ (cmaReal M Commit Chal σ hr) A).run
-      (cmaInit M Commit Chal Stmt Wit)}[z.2.2 = true] = 0 := by
+    Pr{let z ← ((simulateQ (cmaReal M Commit Chal σ hr) A).run
+      (cmaInit M Commit Chal Stmt Wit))}[z.2.2 = true] = 0 := by
   refine prEvent_eq_zero_of_forall_mem_support _ _ fun z hz hbad => ?_
   have hpres := simulateQ_bad_preserved_of_step
     (impl := cmaReal M Commit Chal σ hr)
@@ -402,7 +401,7 @@ theorem cmaH3ExpectedLoss_le_queryBounds
       (h_qS := h_qS) (h_qH := h_qH)
       (s := cmaDataInit M Commit Chal Stmt Wit)
 
-/-- Build the native H3 run facts from the query bound and expected-loss bound. -/
+/-- Build the H3 run facts from the query bound and expected-loss bound. -/
 theorem cmaH3RunFacts_of_queryBound_expectedLoss
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
@@ -446,7 +445,7 @@ theorem cmaReal_eq_cmaSim_of_not_costly
 
 end H3Obligations
 
-/-! ## Native signing-step TV ingredients -/
+/-! ## Signing-step TV ingredients -/
 
 private structure CmaRealSignGhost
     (Stmt Wit Commit PrvState Chal Resp : Type) where
@@ -702,7 +701,7 @@ private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
     (hCommit : σ.simCommitPredictability simT β)
     (pk : Stmt) (m : M)
     (cache : RoCache M Commit Chal) :
-    Pr{t ← simT pk}[∃ ch, cache (m, t.1) = some ch] ≤ QueryCache.enncard cache * β := by
+    Pr{let t ← simT pk}[∃ ch, cache (m, t.1) = some ch] ≤ QueryCache.enncard cache * β := by
   classical
   let commitDist : ProbComp Commit := Prod.fst <$> simT pk
   let hit : Commit → Prop := fun c => ∃ ch, cache (m, c) = some ch
@@ -715,8 +714,8 @@ private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
     simpa only [QueryCache.enncard, Set.encard_coe_eq_coe_finsetCard, ENat.toENNReal_coe]
       using ENat.toENNReal_mono e.encard_le
   calc
-    Pr{t ← simT pk}[∃ ch, cache (m, t.1) = some ch]
-        = Pr{c ← commitDist}[∃ c' ∈ S, c = c'] := by
+    Pr{let t ← simT pk}[∃ ch, cache (m, t.1) = some ch]
+        = Pr{let c ← commitDist}[∃ c' ∈ S, c = c'] := by
           rw [prEvent_map]
           refine prEvent_congr_of_support _ _ _ fun t ht => ⟨fun h => ⟨t.1, ?_, rfl⟩, ?_⟩
           · refine Finset.mem_filter.mpr ⟨(mem_finSupport_iff_mem_support _ _).mpr ?_, h⟩
@@ -724,7 +723,7 @@ private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
             exact ⟨t, ht, rfl⟩
           · rintro ⟨c', hc', rfl⟩
             exact (Finset.mem_filter.mp hc').2
-    _ ≤ ∑ c ∈ S, Pr{c' ← commitDist}[c' = c] :=
+    _ ≤ ∑ c ∈ S, Pr{let c' ← commitDist}[c' = c] :=
           prEvent_exists_finset_le S commitDist fun c c' => c' = c
     _ ≤ ∑ c ∈ S, β := Finset.sum_le_sum fun c _ => by
           simpa only [commitDist, prEvent_map] using hCommit pk c
@@ -739,7 +738,8 @@ private lemma cmaSimSignPublicBad_prob_le_roCacheCount_mul
     (hCommit : σ.simCommitPredictability simT β)
     (m : M)
     (s : CmaData M Commit Chal Stmt Wit) :
-    Pr{y ← cmaSimSignPublicDist M Commit Chal hr simT s}[cmaSimSignPublicBad M Commit Chal m s y]
+    Pr{let y ← cmaSimSignPublicDist M Commit Chal hr simT s}[
+        cmaSimSignPublicBad M Commit Chal m s y]
       ≤ QueryCache.enncard s.2.1 * β := by
   classical
   rcases s with ⟨log, cache, keypair⟩
@@ -910,8 +910,7 @@ theorem cmaReal_cmaSim_measureETVDist_costly_le_cmaSignEpsCore_of_valid
       M Commit Chal σ hr simT ζ_zk β hHVZK hCommit m s hvalid
   · exact ht.elim
 
-/-- Build the native H3 step facts from HVZK and simulator commit
-predictability. -/
+/-- Build the H3 step facts from HVZK and simulator commit predictability. -/
 theorem cmaH3StepFacts_of_hvzk_predictability
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
@@ -927,9 +926,9 @@ theorem cmaH3StepFacts_of_hvzk_predictability
   stepEqFree := cmaReal_eq_cmaSim_of_not_costly M Commit Chal σ hr simT
   badMono := cmaReal_bad_mono M Commit Chal σ hr
 
-/-! ## Native H3 factoring theorem -/
+/-! ## H3 factoring theorem -/
 
-/-- Native H3 bridge with caller-supplied expected-cost bound.
+/-- H3 bridge with caller-supplied expected-cost bound.
 
 The hypotheses are factored into per-query step facts and computation-specific run facts; no heap
 package or state projection appears in the statement. -/
@@ -963,14 +962,14 @@ theorem cmaReal_cmaSim_advantage_le_H3_bound_of_expectedQuerySlack
             (Resp := Resp) (Stmt := Stmt))
           (cmaSignEpsCore M Commit Chal ζ_zk β) A qS
           (cmaDataInit M Commit Chal Stmt Wit, false)
-        + Pr{z ← (simulateQ (cmaReal M Commit Chal σ hr) A).run
-            (cmaDataInit M Commit Chal Stmt Wit, false)}[z.2.2 = true] := h_bridge
+        + Pr{let z ← ((simulateQ (cmaReal M Commit Chal σ hr) A).run
+            (cmaDataInit M Commit Chal Stmt Wit, false))}[z.2.2 = true] := h_bridge
     _ = cmaH3ExpectedLoss M Commit Chal σ hr ζ_zk β A qS := by
             simp [runFacts.badZero, cmaH3ExpectedLoss]
     _ ≤ εBound := runFacts.expectedLossLe
 
-/-- Fully assembled native H3 bound from HVZK, simulator commit
-predictability, and adversary signing/hash query budgets. -/
+/-- Fully assembled H3 bound from HVZK, simulator commit predictability, and adversary
+signing/hash query budgets. -/
 theorem cmaReal_cmaSim_advantage_le_H3_bound
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)

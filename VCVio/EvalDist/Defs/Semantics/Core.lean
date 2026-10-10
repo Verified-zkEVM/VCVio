@@ -109,13 +109,13 @@ instance evalDist.instIsSubprobabilityMeasure (sem : MeasureSemanticsVia m)
 
 /-- Failure probability is the mass missing from the successful-output measure. -/
 @[expose]
-noncomputable def probFailure (sem : MeasureSemanticsVia m) [MeasurableSpace α]
+noncomputable def prFail (sem : MeasureSemanticsVia m) [MeasurableSpace α]
     (mx : m α) : ENNReal :=
   1 - sem.evalDist mx Set.univ
 
 @[simp]
-theorem probFailure_le_one (sem : MeasureSemanticsVia m) [MeasurableSpace α]
-    (mx : m α) : sem.probFailure mx ≤ 1 :=
+theorem prFail_le_one (sem : MeasureSemanticsVia m) [MeasurableSpace α]
+    (mx : m α) : sem.prFail mx ≤ 1 :=
   tsub_le_self
 
 /-- Package a global `EvalDistSemantics` instance as a local bundled semantics. -/
@@ -166,7 +166,7 @@ instance optionT.instIsProbabilityMeasure [EvalDistSemantics m]
   rw [optionT_evalDist, Measure.dropNone_eq_comap_some, ← OptionT.evalDist_eq_comap_some]
   infer_instance
 
-/-- Bundle the effect-native successful-output semantics of `ExceptT`. Errors remain observable
+/-- Bundle the successful-output semantics of `ExceptT`. Errors remain observable
 in the run measure and are discarded only by the `Except.ok` observation at this boundary. -/
 @[expose]
 protected noncomputable def exceptT (ε : Type u) [MeasurableSpace ε]

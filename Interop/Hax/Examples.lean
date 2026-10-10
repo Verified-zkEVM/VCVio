@@ -9,7 +9,7 @@ import Interop.Rust.Run
 import VCVio.OracleComp.ProbComp
 import VCVio.EvalDist.Instances.ErrorT
 import VCVio.EvalDist.Instances.OptionT
-import VCVio.EvalDist.Fintype
+import VCVio.EvalDist.Monad.Basic
 
 /-!
 # Small end-to-end examples of the hax → VCVio bridge

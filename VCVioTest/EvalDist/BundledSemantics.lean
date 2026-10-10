@@ -14,7 +14,7 @@ public import VCVio.EvalDist.MeasureSemantics
 Local semantics bundles expose their mass certificates to Mathlib's typeclasses and simplifier.
 Successful-output observations retain the distinction between subprobability and losslessness;
 effect-preserving observations of a total base monad remain probability measures.
-The import surface contains no PMF/SPMF backend.
+The import surface contains no `PMF` backend.
 -/
 
 public section
@@ -23,9 +23,8 @@ open MeasureTheory ProbabilityTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "bundled native semantics unexpectedly import {name}"
+  if env.contains `PMF then
+    throwError "bundled semantics unexpectedly import PMF"
 
 namespace VCVioTest.BundledSemantics
 
