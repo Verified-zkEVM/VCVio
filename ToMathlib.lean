@@ -73,7 +73,7 @@ public import ToMathlib.MeasureTheory.Measure.TotalVariation.Bind
 public import ToMathlib.MeasureTheory.Measure.UniformTable
 public import ToMathlib.OrderEnrichedCategory
 public import ToMathlib.Probability.Divergence.Renyi
-public import ToMathlib.Probability.Divergence.RenyiDiscrete
+public import ToMathlib.Probability.Divergence.RenyiTotalVariation
 public import ToMathlib.Probability.Divergence.TotalVariation
 public import ToMathlib.Probability.Kernel.Bounds
 public import ToMathlib.Probability.Kernel.Quadratic
@@ -82,9 +82,6 @@ public import ToMathlib.Probability.Kernel.TotalVariation
 public import ToMathlib.Probability.NegativeHypergeometric
 public import ToMathlib.Probability.ProbabilityMassFunction.Lemmas
 public import ToMathlib.Probability.ProbabilityMassFunction.Measure
-public import ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym
-public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
-public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
 public import ToMathlib.Probability.TailSums
 public import ToMathlib.Probability.UniformOn
 public import ToMathlib.ProbabilityTheory.FinRatPMF

@@ -7,7 +7,8 @@ Authors: Quang Dao
 module
 public import ToMathlib.Analysis.SumIntegralComparisons
 public import Mathlib.Analysis.SpecialFunctions.Gaussian.GaussianIntegral
-public import Mathlib.Probability.ProbabilityMassFunction.Basic
+public import Mathlib.MeasureTheory.Measure.WithDensity
+public import Mathlib.MeasureTheory.Measure.Count
 public import Mathlib.Topology.Algebra.InfiniteSum.Real
 
 /-!
@@ -25,8 +26,8 @@ framework, Falcon) and masking (ML-DSA / Dilithium).
 - `discreteGaussianSum σ μ` — the normalizing constant `∑_{z ∈ ℤ} ρ_{σ,μ}(z)`.
 - `discreteGaussianPMF σ μ` — the probability mass function, defined as
   `ρ_{σ,μ}(z) / ∑_z ρ_{σ,μ}(z)`.
-- `discreteGaussianDist σ μ hσ` — the same distribution as a Mathlib `PMF ℤ`,
-  for use with `PMF.tvDist`, `PMF.renyiDiv`, etc.
+- `discreteGaussianMeasure σ μ` — the same distribution as a probability measure on `ℤ`,
+  for use with `Measure.etvDist`, `InformationTheory.renyiDiv`, etc.
 
 ## References
 
@@ -38,7 +39,7 @@ framework, Falcon) and masking (ML-DSA / Dilithium).
 @[expose] public section
 
 
-open Real
+open Real MeasureTheory
 
 namespace LatticeCrypto
 
@@ -139,23 +140,28 @@ private theorem hasSum_ofReal_discreteGaussian (σ μ : ℝ) (hσ : 0 < σ) :
   exact (ENNReal.ofReal_tsum_of_nonneg (discreteGaussianPMF_nonneg σ μ hσ)
     (discreteGaussianPMF_summable σ μ hσ)).symm
 
-/-- The discrete Gaussian distribution as a Mathlib `PMF ℤ`. -/
-noncomputable def discreteGaussianDist (σ μ : ℝ) (hσ : 0 < σ) : PMF ℤ :=
-  ⟨fun z => ENNReal.ofReal (discreteGaussianPMF σ μ z),
-    by exact hasSum_ofReal_discreteGaussian σ μ hσ⟩
+/-- The discrete Gaussian distribution as a measure on `ℤ`: the density `discreteGaussianPMF`
+against the counting measure. -/
+noncomputable def discreteGaussianMeasure (σ μ : ℝ) : Measure ℤ :=
+  Measure.count.withDensity fun z => ENNReal.ofReal (discreteGaussianPMF σ μ z)
 
 @[simp]
-theorem discreteGaussianDist_apply (σ μ : ℝ) (hσ : 0 < σ) (z : ℤ) :
-    (discreteGaussianDist σ μ hσ z).toReal = discreteGaussianPMF σ μ z :=
-  ENNReal.toReal_ofReal (discreteGaussianPMF_nonneg σ μ hσ z)
+theorem discreteGaussianMeasure_singleton (σ μ : ℝ) (z : ℤ) :
+    discreteGaussianMeasure σ μ {z} = ENNReal.ofReal (discreteGaussianPMF σ μ z) := by
+  rw [discreteGaussianMeasure, withDensity_apply _ (measurableSet_singleton z),
+    Measure.restrict_singleton, Measure.count_singleton, one_smul, lintegral_dirac]
 
-theorem discreteGaussianDist_pos (σ μ : ℝ) (hσ : 0 < σ) (z : ℤ) :
-    0 < discreteGaussianDist σ μ hσ z :=
-  ENNReal.ofReal_pos.mpr (discreteGaussianPMF_pos σ μ hσ z)
+theorem isProbabilityMeasure_discreteGaussianMeasure (σ μ : ℝ) (hσ : 0 < σ) :
+    IsProbabilityMeasure (discreteGaussianMeasure σ μ) := by
+  constructor
+  rw [discreteGaussianMeasure, withDensity_apply _ MeasurableSet.univ, Measure.restrict_univ,
+    lintegral_count]
+  exact (hasSum_ofReal_discreteGaussian σ μ hσ).tsum_eq
 
-theorem discreteGaussianDist_ne_zero (σ μ : ℝ) (hσ : 0 < σ) (z : ℤ) :
-    discreteGaussianDist σ μ hσ z ≠ 0 :=
-  ne_of_gt (discreteGaussianDist_pos σ μ hσ z)
+theorem discreteGaussianMeasure_singleton_pos (σ μ : ℝ) (hσ : 0 < σ) (z : ℤ) :
+    0 < discreteGaussianMeasure σ μ {z} := by
+  rw [discreteGaussianMeasure_singleton]
+  exact ENNReal.ofReal_pos.mpr (discreteGaussianPMF_pos σ μ hσ z)
 
 /-! ## Pointwise Mass Bounds
 
@@ -344,13 +350,13 @@ theorem discreteGaussianPMF_le_one_div_sub_one (σ μ : ℝ) (hσ : 0 < σ)
   rw [discreteGaussianPMF]
   gcongr
 
-/-- The guessing bound for the discrete Gaussian, stated on the Mathlib `PMF`: when
-`1 < σ√(2π)`, every pointwise output mass of `discreteGaussianDist` is at most
-`ENNReal.ofReal (1 / (σ√(2π) - 1))`.  One-dimensional building block for min-entropy
-assumptions on lattice-coset trapdoor samplers. -/
-theorem discreteGaussianDist_apply_le (σ μ : ℝ) (hσ : 0 < σ)
+/-- The guessing bound for the discrete Gaussian, stated on its measure: when `1 < σ√(2π)`,
+every singleton mass of `discreteGaussianMeasure` is at most `ENNReal.ofReal (1 / (σ√(2π) - 1))`.
+One-dimensional building block for min-entropy assumptions on lattice-coset trapdoor samplers. -/
+theorem discreteGaussianMeasure_singleton_le (σ μ : ℝ) (hσ : 0 < σ)
     (hσ' : 1 < σ * Real.sqrt (2 * π)) (z : ℤ) :
-    discreteGaussianDist σ μ hσ z ≤ ENNReal.ofReal (1 / (σ * Real.sqrt (2 * π) - 1)) :=
-  ENNReal.ofReal_le_ofReal (discreteGaussianPMF_le_one_div_sub_one σ μ hσ hσ' z)
+    discreteGaussianMeasure σ μ {z} ≤ ENNReal.ofReal (1 / (σ * Real.sqrt (2 * π) - 1)) := by
+  rw [discreteGaussianMeasure_singleton]
+  exact ENNReal.ofReal_le_ofReal (discreteGaussianPMF_le_one_div_sub_one σ μ hσ hσ' z)
 
 end LatticeCrypto

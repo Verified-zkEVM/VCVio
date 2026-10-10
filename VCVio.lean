@@ -174,8 +174,6 @@ public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Support.Failure
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.EvalDistEq
-public import VCVio.EvalDist.Expectation
-public import VCVio.EvalDist.ExpectationMeasure
 public import VCVio.EvalDist.FailureMeasure
 public import VCVio.EvalDist.Fintype
 public import VCVio.EvalDist.IndepProduct
@@ -218,7 +216,6 @@ public import VCVio.EvalDist.ProbabilityBounds
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.ProbabilityNotation.Attr
 public import VCVio.EvalDist.Prod
-public import VCVio.EvalDist.RenyiDivergence
 public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.WiringKernel
 public import VCVio.EvalDist.WithFailure

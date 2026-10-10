@@ -64,35 +64,6 @@ def IND_CPA_swapLens (encAlg : AsymmEncAlg ProbComp M PK SK C) :
 @[simp] theorem IND_CPA_swapLens_query_right (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (mm : M × M) : encAlg.IND_CPA_swapLens.toFunA (.inr mm) = .inr (mm.2, mm.1) := rfl
 
-/-- Message swapping leaves response values unchanged, so pullback preserves the
-point-separating answer spaces required for executable responder coherence. -/
-instance IND_CPA_swapLens_pullback.instMeasurableSingletonClassRange
-    (encAlg : AsymmEncAlg ProbComp M PK SK C)
-    (R : ProbResponder encAlg.IND_CPA_oracleSpec) [R.IsExecutable] : ∀ t,
-    letI := (R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange t
-    MeasurableSingletonClass (encAlg.IND_CPA_oracleSpec.Range t)
-  | .inl t => by
-      let hSingleton : @MeasurableSingletonClass (unifSpec.Range t)
-          (R.instMeasurableSpaceRange (.inl t)) :=
-        ProbResponder.IsExecutable.instMeasurableSingletonClassRange (R := R) (.inl t)
-      exact @MeasurableSingletonClass.mk _
-        ((R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange (.inl t))
-        (fun x => by
-          change @MeasurableSet (unifSpec.Range t) (R.instMeasurableSpaceRange (.inl t))
-            (id ⁻¹' {x})
-          simpa only [Set.preimage_id] using hSingleton.measurableSet_singleton x)
-  | .inr mm => by
-      let hSingleton : @MeasurableSingletonClass C
-          (R.instMeasurableSpaceRange (.inr (mm.2, mm.1))) :=
-        ProbResponder.IsExecutable.instMeasurableSingletonClassRange
-          (R := R) (.inr (mm.2, mm.1))
-      exact @MeasurableSingletonClass.mk _
-        ((R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange (.inr mm))
-        (fun x => by
-          change @MeasurableSet C (R.instMeasurableSpaceRange (.inr (mm.2, mm.1)))
-            (id ⁻¹' {x})
-          simpa only [Set.preimage_id] using hSingleton.measurableSet_singleton x)
-
 /-- Wrapping an IND-CPA machine with message swapping is exactly executable responder
 pullback along the same PolyFun lens: a one-line specialization of the generic
 wrap/pullback adjunction
@@ -158,23 +129,14 @@ def IND_CPA_queryImpl' (encAlg : AsymmEncAlg ProbComp M PK SK C)
 `IND_CPA_queryImpl'`; the existing `StateT ProbComp` implementation remains the source of truth. -/
 @[reducible] noncomputable def IND_CPA_responder (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (pk : PK) (b : Bool) : ProbResponder encAlg.IND_CPA_oracleSpec :=
-  .ofStateQueryImpl (encAlg.IND_CPA_queryImpl' pk b)
+  .ofQueryImpl (encAlg.IND_CPA_queryImpl' pk b)
 
 @[simp] theorem IND_CPA_responder_state (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (pk : PK) (b : Bool) : (encAlg.IND_CPA_responder pk b).State = encAlg.IND_CPA_Cache := rfl
 
-/-- Running a program against the responder is the evaluation distribution of the existing
-cached `StateT ProbComp` interpretation. -/
-theorem run_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C)
-    (pk : PK) (b : Bool) {γ : Type} (oa : OracleComp encAlg.IND_CPA_oracleSpec γ)
-    (cache : encAlg.IND_CPA_Cache) :
-    (simulateQ (encAlg.IND_CPA_responder pk b).toQueryImpl oa).run cache =
-      𝒮[(simulateQ (encAlg.IND_CPA_queryImpl' pk b) oa).run cache] :=
-  ProbResponder.run_simulateQ_toQueryImpl_ofStateQueryImpl
-    (encAlg.IND_CPA_queryImpl' pk b) oa cache
-
 /-- Machine-level reading of the existing IND-CPA oracle execution: any machine implementing
-the program adversary within fuel `k` has exactly the same joint output/cache distribution. -/
+the program adversary within fuel `k` runs exactly the program's cached interpretation, jointly in
+its output and final cache. -/
 theorem runAgainst_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (adversary : encAlg.IND_CPA_Adversary)
     (machine : OracleMachine encAlg.IND_CPA_oracleSpec PK Bool) {k : ℕ}
@@ -182,16 +144,16 @@ theorem runAgainst_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C
     (cache : encAlg.IND_CPA_Cache) :
     machine.runAgainst (encAlg.IND_CPA_responder pk b) k (cache, machine.init pk) =
       (fun p => (some p.1, p.2)) <$>
-        𝒮[(simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache] :=
+        (simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache :=
   calc machine.runAgainst (encAlg.IND_CPA_responder pk b) k (cache, machine.init pk)
       = (machine.runWithInput (encAlg.IND_CPA_responder pk b).toQueryImpl k pk).run cache :=
         rfl
-    _ = (some <$> simulateQ (encAlg.IND_CPA_responder pk b).toQueryImpl
-          (adversary pk)).run cache := by
+    _ = (some <$> simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache := by
         rw [himp.simulateQ_run_eq (encAlg.IND_CPA_responder pk b).toQueryImpl pk]
+        rfl
     _ = (fun p => (some p.1, p.2)) <$>
-          𝒮[(simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache] := by
-        rw [StateT.run_map, run_IND_CPA_responder_eq]
+          (simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache :=
+        StateT.run_map _ _ _
 
 /-! ## Left/right message swapping as a PolyFun reduction -/
 
