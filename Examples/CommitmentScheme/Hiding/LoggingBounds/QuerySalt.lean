@@ -896,7 +896,7 @@ lemma sum_wp_freshDistinguishIncrement_le_queryResidual_of_choose_support [Finty
           have hcard_top : (Fintype.card C : ℝ≥0∞) ≠ ∞ := by simp
           rw [ENNReal.mul_inv_cancel hcard0 hcard_top, one_mul]
 
-theorem sum_probEvent_hidingBad_le [Fintype S] [Inhabited S] [Finite M] {AUX : Type} {t : ℕ}
+theorem sum_prEvent_hidingBad_le [Fintype S] [Inhabited S] [Finite M] {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     (∑ s : S, Pr{let z ← (
       (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0))}[hidingBad z.2]) ≤ t := by

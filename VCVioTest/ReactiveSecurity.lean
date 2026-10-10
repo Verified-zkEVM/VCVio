@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.Interaction.UC.ReactiveSecurity
-public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # Executed contextual-security counterexamples
@@ -98,7 +98,7 @@ theorem law_server_uniform : law (server ($ᵗ Bool)) (context 5) =
       (2 : ℝ≥0∞)⁻¹ • Measure.dirac false + (2 : ℝ≥0∞)⁻¹ • Measure.dirac true := by
     apply Measure.ext_of_singleton
     intro bit
-    rw [evalDist_uniformSample, ProbabilityTheory.uniformOn_univ]
+    rw [SampleableType.evalDist_uniformSample, ProbabilityTheory.uniformOn_univ]
     cases bit <;> simp
   rw [law_eq_evalDist, experiment_server, evalDist_map_of_discrete, hcoin]
   rw [Measure.map_add _ _ Measurable.of_discrete,

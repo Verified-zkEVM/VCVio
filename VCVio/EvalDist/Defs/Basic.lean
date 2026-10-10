@@ -569,15 +569,6 @@ lemma one_eq_probOutput_iff' [MonadLiftT m SPMF] [MonadAttach m] [EvalDistCompat
   rw [eq_comm, probOutput_eq_one_iff']
 alias ⟨_, one_eq_probOutput'⟩ := one_eq_probOutput_iff'
 
-/-- If a non-failing computation can only return `x`, then it returns `x` with probability one. -/
-lemma probOutput_eq_one_of_support_subset_singleton [MonadLiftT m SPMF]
-    [MonadAttach m] [EvalDistCompatible m]
-    (hnf : Pr[⊥ | mx] = 0) (huniq : ∀ y ∈ support mx, y = x) :
-    Pr[= x | mx] = 1 := by
-  simpa [hnf, tsum_eq_single (f := (Pr[= · | mx])) x
-    fun y hy ↦ (probOutput_eq_zero_iff _ _).mpr fun hmem ↦ hy (huniq y hmem)]
-    using probFailure_add_tsum_probOutput mx
-
 end bounds
 
 section mono_le
@@ -734,15 +725,6 @@ lemma finSupport_nonempty_of_liftM_PMF [MonadAttach m] [EvalDistCompatible m]
   rw [Finset.not_nonempty_iff_eq_empty.mp h, Finset.sum_empty] at hsum
   exact zero_ne_one hsum
 
-lemma probOutput_eq_inv_finSupport_card_of_liftM_PMF [MonadAttach m] [EvalDistCompatible m]
-    [HasEvalFinset m] [DecidableEq α] {mx : m α} {c : ENNReal}
-    (hconst : ∀ x ∈ support mx, Pr[= x | mx] = c) :
-    c = 1 / (finSupport mx).card := by
-  have h := sum_finSupport_probOutput_of_liftM_PMF (m := m) mx
-  rw [Finset.sum_congr rfl fun x hx => hconst x (mem_support_of_mem_finSupport hx),
-    Finset.sum_const, nsmul_eq_mul, mul_comm] at h
-  simpa using ENNReal.eq_inv_of_mul_eq_one_left h
-
 end pmf_denotation
 
 /-! ## Monotonicity and complementation for `probEvent` -/
@@ -898,16 +880,6 @@ theorem expectedValue_add (mx : m α) (g h : α → ℝ≥0∞) :
     expectedValue mx (fun x => g x + h x) = expectedValue mx g + expectedValue mx h := by
   simp only [expectedValue, mul_add]
   exact ENNReal.tsum_add
-
-/-- The expectation of an indicator is the event probability. -/
-theorem expectedValue_ite_one (mx : m α) (p : α → Prop) [DecidablePred p] :
-    expectedValue mx (fun x => if p x then 1 else 0) = Pr[ p | mx] := by
-  simp only [expectedValue_def, probEvent_eq_tsum_ite, mul_ite, mul_one, mul_zero]
-
-/-- A constant factor scales the expectation. -/
-theorem expectedValue_mul_const (mx : m α) (g : α → ℝ≥0∞) (c : ℝ≥0∞) :
-    expectedValue mx (fun x => g x * c) = expectedValue mx g * c := by
-  simp only [expectedValue_def, ← mul_assoc, ENNReal.tsum_mul_right]
 
 variable [MonadAttach m] [EvalDistCompatible m]
 

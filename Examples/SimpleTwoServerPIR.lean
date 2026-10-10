@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
-public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.ProgramLogic.Tactics.Relational
@@ -184,7 +184,7 @@ in `s` plus the XOR of entries in `s'` equals the sum of `a[k]` for all
 `k ≤ j` in the symmetric difference of `s` and `s'`, which is `{i₀} ∩ {0..j}`. -/
 theorem pir_correct (hchar : ∀ x : W, x + x = 0)
     (a : Fin N → W) (i₀ : Fin N) :
-    Pr[= a i₀ | pirMain a i₀] = 1 := by
+    Pr{let y ← pirMain a i₀}[y = a i₀] = 1 := by
   -- Every output of pirMain a i₀ equals a i₀
   have huniq : ∀ y ∈ support (pirMain a i₀), y = a i₀ := by
     intro y hy
@@ -196,8 +196,7 @@ theorem pir_correct (hchar : ∀ x : W, x + x = 0)
       (List.nodup_finRange N) ([], []) ss hss
     simp only [pirResponse, List.foldl_nil, add_zero, List.mem_finRange, ↓reduceIte, zero_add] at h
     exact hy.trans h
-  exact probOutput_eq_one_of_support_subset_singleton
-    (NeverFail.probFailure_eq_zero (mx := pirMain a i₀)) huniq
+  exact prEvent_eq_one_of_forall_mem_support _ _ huniq
 
 /-- Privacy of the first server view: the distribution of the first query set `s`
 is independent of which index is being queried. Intuitively, each index `j` appears in `s` with

@@ -211,9 +211,9 @@ theorem Transcript.HasOpeningOrEqualRootDisagreement.toHasAnyCheckpointExtractio
     transcript.extractorState transcript.attempts transcript.terminalSuffix h
 
 /-- Probability of the public textbook event is at most probability of the strongest proof event. -/
-theorem prob_hasOpeningOrEqualRootDisagreement_le_hasAnyCheckpointExtractionDisagreement
+theorem prEvent_hasOpeningOrEqualRootDisagreement_le_hasAnyCheckpointExtractionDisagreement
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [MeasurableSpace Y] [DiscreteMeasurableSpace Y] [IsUniformMeasureSpec (Query →ₒ Y)]
+    [MeasurableSpace Y] [DiscreteMeasurableSpace Y] [OracleSpec.IsMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config) :
@@ -230,7 +230,7 @@ weaker textbook event. Downstream corollaries should use this theorem rather tha
 decomposition. -/
 theorem openingOrEqualRootDisagreement_bound_of_anyCheckpointExtractionDisagreement_bound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [MeasurableSpace Y] [DiscreteMeasurableSpace Y] [IsUniformMeasureSpec (Query →ₒ Y)]
+    [MeasurableSpace Y] [DiscreteMeasurableSpace Y] [OracleSpec.IsMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config) (bound : ENNReal)
@@ -239,7 +239,7 @@ theorem openingOrEqualRootDisagreement_bound_of_anyCheckpointExtractionDisagreem
              adversary}[Transcript.HasAnyCheckpointExtractionDisagreement model z] ≤ bound) :
     Pr{let z ← extractabilityExperiment model config rounds
            adversary}[Transcript.HasOpeningOrEqualRootDisagreement model z] ≤ bound :=
-  (prob_hasOpeningOrEqualRootDisagreement_le_hasAnyCheckpointExtractionDisagreement
+  (prEvent_hasOpeningOrEqualRootDisagreement_le_hasAnyCheckpointExtractionDisagreement
     model config rounds adversary).trans hstrong
 
 end MerkleTreeMultiExtractability

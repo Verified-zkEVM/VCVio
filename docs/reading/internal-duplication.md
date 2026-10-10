@@ -44,7 +44,7 @@ where the two presentations need care.
 are four presentations of "run the computation and accumulate a cost". `AddWriterT`
 (`VCVio/OracleComp/QueryTracking/WriterCost.lean`) is canonical: `CostModel.expectedCost`
 already delegates to `AddWriterT.expectedCost`. `QueryImpl.withCost`, defined in
-`CountingOracle.lean`, supports arbitrary monoid-valued costs. Its `withCounting` specialization
+`CountingOracle/Core.lean`, supports arbitrary monoid-valued costs. Its `withCounting` specialization
 uses `AddWriterT (QueryCount ι)` with the standard `Multiplicative` tag. Counts remain
 ordinary functions with their pointwise algebra; no custom monoid instance is installed on
 the function type. `AddWriterT.runAdd` exposes untagged counts. The structural bound APIs

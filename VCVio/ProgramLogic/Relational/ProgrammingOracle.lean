@@ -71,6 +71,8 @@ private lemma withCachingTrackingPolicy_mono_pair
   subst hp
   exact QueryImpl.withCachingTrackingPolicy_bad_monotone (so := so) (policy := policy) t cache z hz
 
+section measure
+
 variable [∀ t, MeasurableSpace (spec'.Range t)] [∀ t, DiscreteMeasurableSpace (spec'.Range t)]
   [IsMeasureSpec spec']
 
@@ -207,6 +209,8 @@ theorem programming_collision_bound_qP_qH_β [MeasurableSpace α]
       (qP : ℝ≥0∞) * qH * β :=
   programming_collision_bound oa so policy hBad
 
+end measure
+
 /-! ## Lazy random-oracle state-threading bridge
 
 The specialization to the lazy random oracle `OracleSpec.randomOracle =
@@ -215,8 +219,6 @@ reusable state-threading infrastructure consumed by the GPV hash-and-sign EUF-CM
 replaces the unprogrammed lazy random oracle by a `policy`-programmed one, up to the programming
 bad event. -/
 
-omit [∀ t, MeasurableSpace (spec'.Range t)] [∀ t, DiscreteMeasurableSpace (spec'.Range t)]
-  [IsMeasureSpec spec'] in
 /-- **Random-oracle state-threading bridge.**
 
 For a lazy random oracle over a spec with sampleable ranges, the total variation between the

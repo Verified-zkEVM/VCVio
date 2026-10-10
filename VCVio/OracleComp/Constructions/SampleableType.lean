@@ -145,29 +145,6 @@ lemma probEvent_uniformSample [Fintype α] (p : α → Prop) [DecidablePred p] :
 
 section Marginalization
 
-/-- **Overwriting one coordinate of a uniform function table is measure-preserving.**
-
-Drawing a value `u` uniformly from `R`, then a full function table `g : D → R` uniformly, and
-returning `Function.update g t u` yields the same distribution as drawing the table directly.
-
-This is the `t`-marginal independence of the uniform (product) distribution on `D → R`: the value
-at coordinate `t` is uniform and independent of the others, so replacing it with a fresh
-independent uniform draw leaves the joint distribution unchanged. It is the marginalization step
-behind eager-sampling reformulations of oracle responses. -/
-lemma evalSPMF_uniformSample_bind_update
-    {D R : Type} [Finite D] [DecidableEq D] [Finite R] [Nonempty R]
-    [SampleableType R] [SampleableType (D → R)] (t : D) :
-    𝒮[do let u ← $ᵗ R; let g ← $ᵗ (D → R); pure (Function.update g t u)] =
-      𝒮[$ᵗ (D → R)] := by
-  let : MeasurableSpace R := ⊤
-  let : MeasurableSpace (D → R) := MeasurableSpace.pi
-  apply evalSPMF_ext
-  intro h
-  have hmeasure := evalDist_bind_bind_update ($ᵗ R) ($ᵗ (D → R))
-    SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample t pure
-  simpa only [evalDist_apply_singleton, bind_pure] using
-    congrArg (fun μ : Measure (D → R) => μ {h}) hmeasure
-
 /-- Patch a uniform function table at every point of a list `l`, drawing one fresh uniform value
 per list entry. With `l = []` the table is returned unchanged; with `l = d :: ds` the tail is
 patched first and the head point `d` is then overwritten with a fresh uniform draw.
@@ -218,9 +195,10 @@ theorem evalDist_uniformSample_patchList
 Drawing a uniform table `g : D → R` and then `patchTable l g` — overwriting `g` at every point of
 `l` with independent fresh uniform draws — yields the same distribution as drawing the table
 directly. The points of `l` need not be distinct: each `Function.update` is the outermost
-operation of its recursion step, so `evalSPMF_uniformSample_bind_update` applies regardless of
-overlap. This is the marginalization step behind trace-conditioned eager-table reformulations,
-where the patched points are determined only after the table is sampled. -/
+operation of its recursion step, so single-point resampling (`evalDist_bind_bind_update`)
+applies regardless of overlap. This is the marginalization step behind trace-conditioned
+eager-table reformulations, where the patched points are determined only after the table is
+sampled. -/
 lemma evalSPMF_uniformSample_patchList
     {D R : Type} [Finite D] [DecidableEq D] [Finite R] [Nonempty R]
     [SampleableType R] [SampleableType (D → R)] (l : List D) :

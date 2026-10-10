@@ -6,7 +6,6 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.LoggedRun
-public import VCVio.OracleComp.EvalDist
 
 /-!
 # Expected charges for distinct cached random-oracle queries

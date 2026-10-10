@@ -5,7 +5,8 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.SimSemantics.SimulateQ
 
 /-!
 # Executing Computations

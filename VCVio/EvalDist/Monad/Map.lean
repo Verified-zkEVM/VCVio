@@ -38,11 +38,6 @@ lemma evalSPMF_map_eq_of_evalSPMF_eq [MonadLiftT m SPMF] [LawfulMonadLiftT m SPM
     𝒮[f <$> mx] = 𝒮[f <$> my] := by
   simpa [evalSPMF_map] using congrArg (fun p => f <$> p) h
 
-lemma probOutput_map_eq_of_evalSPMF_eq [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
-    {mx my : m α} (h : 𝒮[mx] = 𝒮[my]) (f : α → β) (y : β) :
-    Pr[= y | f <$> mx] = Pr[= y | f <$> my] :=
-  evalSPMF_ext_iff.mp (evalSPMF_map_eq_of_evalSPMF_eq h f) y
-
 @[simp]
 lemma evalSPMF_comp_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m] (mx : m α) :
     evalSPMF ∘ (fun f => f <$> mx) = fun f : (α → β) => f <$> 𝒮[mx] := by aesop

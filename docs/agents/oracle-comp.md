@@ -323,7 +323,7 @@ simp rule). `Pr[...]` stays a scalar adapter; `evalDist_apply_singleton`, `evalD
 `evalDist_apply_univ` and `lintegral_evalDist` cross that boundary as explicit rewrites. None of
 them is a default `simp` rule, so `simp` keeps a measure goal in measure normal form.
 
-Uniform response semantics are supplied by `[IsUniformSpec spec]`, which bundles `∀ t, Fintype (spec.Range t)`, `∀ t, Inhabited (spec.Range t)`, `[IsProbabilitySpec spec]`, and a proof that `toPMF` is `PMF.uniformOfFintype`. The bridge from `support` to `SPMF.support 𝒮[...]` is `EvalDistCompatible (OracleComp spec)` and also requires `[IsUniformSpec spec]`.
+Deprecated uniform `PMF` response semantics are supplied by `[IsUniformSpec spec]`, which bundles `∀ t, Fintype (spec.Range t)`, `∀ t, Inhabited (spec.Range t)`, `[IsProbabilitySpec spec]`, and a proof that `toPMF` is `PMF.uniformOfFintype`. The bridge from `support` to `SPMF.support 𝒮[...]` is `EvalDistCompatible (OracleComp spec)` and also requires `[IsUniformSpec spec]`.
 
 Distinct from the `PMF`-target `evalSPMF`, there is also a *syntactic* uniform-sampling handler that rewrites queries into `ProbComp` (i.e. target `OracleComp unifSpec`, not `PMF`):
 

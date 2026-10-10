@@ -206,12 +206,12 @@ adapter.
 ### Forking bounds and measure semantics
 
 `VCVio/CryptoFoundations/SeededFork.lean` and `ReplayFork.lean` prove the
-seeded and context-fork success bounds through the established `Pr[...]`
-surface. `ForkMeasure.lean` states the same final bounds as the Mathlib measure
-of the `Option.isSome` event, using the canonical measure semantics induced by
-the oracle specification's existing per-query probability interpretation.
-These are transport corollaries; the forking arguments remain in the two
-original modules.
+seeded and context-fork success bounds natively, as `Pr{…}` bounds on the
+`Option.isSome` event under uniform native answer measures
+(`OracleSpec.IsUniformMeasureSpec`). `FiatShamir/Sigma/Fork.lean` specializes the
+replay bound to the managed random-oracle trace, with the measure instances of
+`wrappedSpec` taken as hypotheses so each caller fixes its own discrete answer
+spaces.
 
 The stateful Fiat–Shamir chain in `FiatShamir/Sigma/Stateful/Chain.lean` classifies each
 logged handler step with the private `ForkStateStep` relation before proving invariants.
@@ -278,7 +278,7 @@ adversary:
 ```lean
 theorem signature_euf_cma ... :
     eps * (eps / (qH + 1) - challengeSpaceInv F) ≤
-      Pr[= true | dlogExperiment g (dlogReduction F G g M adv qH)]
+      𝒟[dlogExperiment g (dlogReduction F G g M adv qH)] {true}
 ```
 
 Do not quantify over the target adversary:
@@ -287,7 +287,7 @@ Do not quantify over the target adversary:
 -- Do not write this.
 theorem signature_euf_cma ... :
     ∃ reduction : DLogAdversary F G,
-      eps * (eps / (qH + 1) - challengeSpaceInv F) ≤ Pr[= true | dlogExperiment g reduction]
+      eps * (eps / (qH + 1) - challengeSpaceInv F) ≤ 𝒟[dlogExperiment g reduction] {true}
 ```
 
 The existential form holds for every source adversary, so it says nothing about the scheme.
@@ -302,7 +302,7 @@ The reasons are specific to how adversaries are represented here.
   adversary does not even need to search. For a `GenerableRelation`, `gen_sound` gives a
   witness for every statement in the support of `gen`, and the reduction
   `fun x => pure (if h : ∃ w, r x w then h.choose else default)` wins `hardRelationExperiment` with
-  probability exactly `1`. Any bound of the form `∃ B, f ≤ Pr[= true | hardRelationExperiment hr B]`
+  probability exactly `1`. Any bound of the form `∃ B, f ≤ 𝒟[hardRelationExperiment hr B] {true}`
   with `f ≤ 1` is then provable without looking at the scheme.
 - **No existing check catches it.** The vacuous theorem is true, `sorry`-free, and depends only
   on the standard axioms, so `#print axioms` does not flag it. Checking that the hypotheses are

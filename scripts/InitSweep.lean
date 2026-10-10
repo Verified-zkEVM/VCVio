@@ -86,9 +86,9 @@ fixtures and the baseline matching rules, not any fixed whole-library count.
     which is the measurement `isLiftedClosedTerm` rests on.
 
   218 + 293 = 511 and 218 + 278 = 496. For one module the correspondence was also checked
-  name by name: for `VCVio.Prelude` the predicate names 9 constants and
-  `.lake/build/ir/VCVio/Prelude.c` performs exactly those 9 evaluations — four `_init_`
-  assignments, four initialiser calls assigning a result, one bare initialiser call.
+  name by name: there the predicate names 9 constants and the module's emitted C performs
+  exactly those 9 evaluations — four `_init_` assignments, four initialiser calls assigning a
+  result, one bare initialiser call.
 
   This is where a `noncomputable` marker acts, and why a source-level rule is the wrong
   instrument: marking an instance `noncomputable` removes the instance's own compiled code

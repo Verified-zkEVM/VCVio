@@ -233,21 +233,20 @@ residual adversary contributes at most `(q - 1) * |TagId| * maxDigestProb`. -/
 private lemma simulateQ_authRF_forge_le
     (adversary : AuthAdversary TagId Nonce Digest)
     (maxDigestProb : ℝ≥0∞)
-    (hmax : ∀ v : Digest, Pr[= v | ($ᵗ Digest : ProbComp Digest)] ≤ maxDigestProb)
+    (hmax : ∀ v : Digest, Pr{let d ← ($ᵗ Digest : ProbComp Digest)}[d = v] ≤ maxDigestProb)
     (q : ℕ)
     (st : AuthIdealState TagId Nonce Digest)
     (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) q)
     (hdistinct : ∀ n : Nonce, OracleComp.IsQueryBoundP adversary (pNonce n) 1)
     (hinv : forgeInv adversary st) :
-    Pr[fun z => z.2.readerForged ≠ ∅ |
-        (simulateQ (authRFQueryImpl TagId Nonce Digest)
-          adversary).run st] ≤
+    Pr{let z ← (simulateQ (authRFQueryImpl TagId Nonce Digest) adversary).run st}[
+      z.2.readerForged ≠ ∅] ≤
       (q : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * maxDigestProb := by
   classical
   induction adversary using OracleComp.inductionOn generalizing st q with
   | pure x =>
     -- No queries: the forgery log is still empty.
-    simp only [simulateQ_pure, StateT.run_pure, probEvent_pure, hinv.1, ne_eq, not_true_eq_false,
+    simp only [simulateQ_pure, StateT.run_pure, prEvent_pure, hinv.1, ne_eq, not_true_eq_false,
       ite_false]
     exact zero_le
   | query_bind t oa ih =>
@@ -258,12 +257,11 @@ private lemma simulateQ_authRF_forge_le
       have hstepRun : (authRFQueryImpl TagId Nonce Digest
           (Sum.inl tag)) = authIdealTagQueryImpl (TagId := TagId) (Nonce := Nonce)
           (Digest := Digest) tag := rfl
-      rw [probEvent_bind_eq_tsum]
+      refine prEvent_bind_le_of_forall_le_of_support _ _ _ fun p hp => ?_
       have hcont : ∀ p ∈ support
           ((authRFQueryImpl TagId Nonce Digest (Sum.inl tag)).run st),
-          Pr[fun z => z.2.readerForged ≠ ∅ |
-              (simulateQ (authRFQueryImpl TagId Nonce Digest)
-                (oa p.1)).run p.2] ≤
+          Pr{let z ← (simulateQ (authRFQueryImpl TagId Nonce Digest) (oa p.1)).run p.2}[
+            z.2.readerForged ≠ ∅] ≤
             (q : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * maxDigestProb := by
         intro p hp
         -- Budgets for the continuation: a tag query satisfies neither predicate.
@@ -295,25 +293,7 @@ private lemma simulateQ_authRF_forge_le
             hinv.1 hcellQ p (by rwa [hstepRun] at hp)
           exact ⟨hpres.1, hpres.2⟩
         exact ih p.1 q p.2 hqcont hdcont hinvcont
-      calc ∑' p, Pr[= p |
-              (authRFQueryImpl TagId Nonce Digest (Sum.inl tag)).run st] *
-            Pr[fun z => z.2.readerForged ≠ ∅ |
-              (simulateQ (authRFQueryImpl TagId Nonce Digest)
-                (oa p.1)).run p.2]
-          ≤ ∑' p, Pr[= p |
-              (authRFQueryImpl TagId Nonce Digest (Sum.inl tag)).run st] *
-              ((q : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * maxDigestProb) := by
-            refine ENNReal.tsum_le_tsum fun p => ?_
-            by_cases hp : p ∈ support
-                ((authRFQueryImpl TagId Nonce Digest (Sum.inl tag)).run st)
-            · exact mul_le_mul' le_rfl (hcont p hp)
-            · rw [probOutput_eq_zero_of_not_mem_support hp, zero_mul, zero_mul]
-        _ = (∑' p, Pr[= p |
-              (authRFQueryImpl TagId Nonce Digest (Sum.inl tag)).run st]) *
-              ((q : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * maxDigestProb) := by
-            rw [ENNReal.tsum_mul_right]
-        _ ≤ (q : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * maxDigestProb := by
-            exact le_trans (mul_le_mul' tsum_probOutput_le_one le_rfl) (le_of_eq (one_mul _))
+      exact hcont p hp
     | inr transcript =>
       -- A reader query: consumes one budget unit. `0 < q` from the reader-query bound.
       have hqsplit := (isQueryBoundP_query_bind_iff (p := fun i => i.isRight)
@@ -347,8 +327,8 @@ private lemma simulateQ_authRF_forge_le
           (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
             transcript).run st := rfl
       have hstepForge :
-          Pr[fun z => ¬ z.2.readerForged = ∅ |
-              (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st] ≤
+          Pr{let z ← (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st}[
+            ¬ z.2.readerForged = ∅] ≤
             (Fintype.card TagId : ℝ≥0∞) * maxDigestProb := by
         rw [hstepRun]
         exact authRFReaderStep_forge_le (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
@@ -357,9 +337,8 @@ private lemma simulateQ_authRF_forge_le
       have hcont : ∀ p ∈ support
           ((authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st),
           p.2.readerForged = ∅ →
-          Pr[fun z => ¬ z.2.readerForged = ∅ |
-              (simulateQ (authRFQueryImpl TagId Nonce Digest)
-                (oa p.1)).run p.2] ≤
+          Pr{let z ← (simulateQ (authRFQueryImpl TagId Nonce Digest) (oa p.1)).run p.2}[
+            ¬ z.2.readerForged = ∅] ≤
             ((q - 1 : ℕ) : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * maxDigestProb := by
         intro p hp hpforged
         -- Budgets for the continuation.
@@ -413,19 +392,17 @@ private lemma simulateQ_authRF_forge_le
               rwa [ite_eq_right hfalse] at this
         exact ih p.1 (q - 1) p.2 hqcont hdcont hinvcont
       -- Combine the step bound and the continuation bound.
-      have hcombine := probEvent_bind_le_add
-        (mx := (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st)
-        (my := fun p => (simulateQ (authRFQueryImpl TagId Nonce Digest) (oa p.1)).run p.2)
-        (p := fun z => z.2.readerForged = ∅)
-        (q := fun y => y.2.readerForged = ∅)
-        (ε₁ := (Fintype.card TagId : ℝ≥0∞) * maxDigestProb)
-        (ε₂ := ((q - 1 : ℕ) : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * maxDigestProb)
-        hstepForge hcont
-      calc Pr[fun z => z.2.readerForged ≠ ∅ |
-              (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st >>= fun p =>
-                (simulateQ (authRFQueryImpl TagId Nonce Digest) (oa p.1)).run p.2]
+      have hcombine := (prEvent_bind_le_prEvent_add_of_support
+        ((authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st)
+        (fun p => (simulateQ (authRFQueryImpl TagId Nonce Digest) (oa p.1)).run p.2)
+        (fun z => ¬ z.2.readerForged = ∅) (fun y => y.2.readerForged ≠ ∅)
+        fun p hp hpf => hcont p hp (not_not.mp hpf)).trans (add_le_add_left hstepForge _)
+      calc Pr{let z ← (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st >>=
+              fun p => (simulateQ (authRFQueryImpl TagId Nonce Digest) (oa p.1)).run p.2}[
+                z.2.readerForged ≠ ∅]
           ≤ (Fintype.card TagId : ℝ≥0∞) * maxDigestProb +
-              ((q - 1 : ℕ) : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * maxDigestProb := hcombine
+              ((q - 1 : ℕ) : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * maxDigestProb := by
+            exact hcombine
         _ = (q : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * maxDigestProb := by
             have hqcast : (1 : ℝ≥0∞) + ((q - 1 : ℕ) : ℝ≥0∞) = (q : ℝ≥0∞) := by
               have : 1 + (q - 1) = q := Nat.add_sub_cancel' (Nat.succ_le_iff.mpr hqpos)
@@ -450,50 +427,27 @@ theorem authRFExperiment_le_collisionBound_of_distinctReaderNonces
     (q : ℕ)
     (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) q)
     (hdistinct : HasDistinctReaderNonces adversary)
-    (maxDigestProb : ℝ)
-    (hmax : ∀ d : Digest,
-      (Pr[= d | ($ᵗ Digest : ProbComp Digest)]).toReal ≤ maxDigestProb) :
-    (Pr[= true | authRFExperiment (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) adversary]).toReal ≤
-      ((q * Fintype.card TagId : ℕ) : ℝ) * maxDigestProb := by
+    (maxDigestProb : ℝ≥0∞)
+    (hmax : ∀ d : Digest, Pr{let x ← ($ᵗ Digest : ProbComp Digest)}[x = d] ≤ maxDigestProb) :
+    𝒟[authRFExperiment (TagId := TagId) (Nonce := Nonce) (Digest := Digest) adversary] {true} ≤
+      ((q * Fintype.card TagId : ℕ) : ℝ≥0∞) * maxDigestProb := by
   -- Pass to the directly-defined random-function experiment.
-  have hmax_ENNReal : ∀ d : Digest,
-      Pr[= d | ($ᵗ Digest : ProbComp Digest)] ≤ ENNReal.ofReal maxDigestProb := by
-    intro d
-    rw [← ENNReal.ofReal_toReal (ne_top_of_le_ne_top one_ne_top probOutput_le_one)]
-    exact ENNReal.ofReal_le_ofReal (hmax d)
-  have hlhs : Pr[= true | authRFExperiment (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) adversary] =
-      Pr[fun z : Unit × AuthIdealState TagId Nonce Digest => z.2.readerForged ≠ ∅ |
-        (simulateQ (authRFQueryImpl TagId Nonce Digest)
-          adversary).run AuthIdealState.init] := by
-    rw [authRFExperiment_eq_authRFDirectExperiment, ← probEvent_eq_eq_probOutput,
-      authRFDirectExperiment, probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
-    simp
-  rw [hlhs]
+  have hlhs : 𝒟[authRFExperiment (TagId := TagId) (Nonce := Nonce)
+        (Digest := Digest) adversary] {true} =
+      Pr{let z ← ((simulateQ (authRFQueryImpl TagId Nonce Digest) adversary).run
+        AuthIdealState.init)}[z.2.readerForged ≠ ∅] := by
+    rw [authRFExperiment_eq_authRFDirectExperiment, ← prEvent_eq_evalDist_singleton,
+      authRFDirectExperiment]
+    simp only [bind_assoc, pure_bind, decide_eq_true_eq]
+  rw [hlhs, Nat.cast_mul]
   -- Apply the inductive collision bound from the initial state.
   have hinit : forgeInv (TagId := TagId) (Nonce := Nonce) (Digest := Digest) adversary
       AuthIdealState.init := by
     refine ⟨rfl, ?_⟩
     intro tag nonce d hcell
     simp [AuthIdealState.init] at hcell
-  have hcore := simulateQ_authRF_forge_le (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-    adversary (ENNReal.ofReal maxDigestProb) hmax_ENNReal q AuthIdealState.init hq hdistinct hinit
-  -- Convert the `ℝ≥0∞` bound to `ℝ`.
-  have hconv : (Pr[fun z : Unit × AuthIdealState TagId Nonce Digest => z.2.readerForged ≠ ∅ |
-        (simulateQ (authRFQueryImpl TagId Nonce Digest)
-          adversary).run AuthIdealState.init]).toReal ≤
-      ((q : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * ENNReal.ofReal maxDigestProb).toReal :=
-    ENNReal.toReal_mono (by simp [ENNReal.mul_eq_top]) hcore
-  have hsupp : (support ($ᵗ Digest : ProbComp Digest)).Nonempty := by
-    rw [Set.nonempty_iff_ne_empty, ne_eq, ← probFailure_eq_one_iff]
-    simp
-  obtain ⟨d0, _⟩ := hsupp
-  have hmax_nonneg : 0 ≤ maxDigestProb := ENNReal.toReal_nonneg.trans (hmax d0)
-  rw [ENNReal.toReal_mul, ENNReal.toReal_mul, ENNReal.toReal_natCast, ENNReal.toReal_natCast,
-    ENNReal.toReal_ofReal hmax_nonneg] at hconv
-  rw [Nat.cast_mul]
-  exact hconv
+  exact simulateQ_authRF_forge_le (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+    adversary maxDigestProb hmax q AuthIdealState.init hq hdistinct hinit
 
 /-- Uniform-`Digest` specialization of `authRFExperiment_le_collisionBound_of_distinctReaderNonces`:
 when `Digest` is finite and sampled uniformly, the per-digest probability is `1 / |Digest|`, so the
@@ -503,16 +457,17 @@ theorem authRFExperiment_le_uniformCollisionBound_of_distinctReaderNonces [Finty
     (q : ℕ)
     (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) q)
     (hdistinct : HasDistinctReaderNonces adversary) :
-    (Pr[= true | authRFExperiment (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) adversary]).toReal ≤
-      ((q * Fintype.card TagId : ℕ) : ℝ) / (Fintype.card Digest : ℝ) := by
+    𝒟[authRFExperiment (TagId := TagId) (Nonce := Nonce) (Digest := Digest) adversary] {true} ≤
+      ((q * Fintype.card TagId : ℕ) : ℝ≥0∞) / (Fintype.card Digest : ℝ≥0∞) := by
   have hmax : ∀ d : Digest,
-      (Pr[= d | ($ᵗ Digest : ProbComp Digest)]).toReal ≤ (Fintype.card Digest : ℝ)⁻¹ := fun d => by
-    simp [probOutput_uniformSample, ENNReal.toReal_inv, ENNReal.toReal_natCast]
-  have h := authRFExperiment_le_collisionBound_of_distinctReaderNonces
+      Pr{let x ← ($ᵗ Digest : ProbComp Digest)}[x = d] ≤ (Fintype.card Digest : ℝ≥0∞)⁻¹ :=
+    fun d => by
+      rw [SampleableType.prEvent_uniformSample, Finset.filter_eq' Finset.univ d]
+      simp
+  rw [ENNReal.div_eq_inv_mul, mul_comm]
+  exact authRFExperiment_le_collisionBound_of_distinctReaderNonces
     (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-    adversary q hq hdistinct ((Fintype.card Digest : ℝ)⁻¹) hmax
-  rwa [div_eq_mul_inv]
+    adversary q hq hdistinct ((Fintype.card Digest : ℝ≥0∞)⁻¹) hmax
 
 /-- Worked specialization showing the proved bound in use: an adversary making at most one reader
 query satisfies the random-function collision bound with no separate distinctness hypothesis. A
@@ -521,9 +476,8 @@ forged-acceptance probability is at most `|TagId| / |Digest|`. -/
 theorem authRFExperiment_le_uniformCollisionBound_of_singleReaderQuery [Fintype Digest]
     (adversary : AuthAdversary TagId Nonce Digest)
     (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) 1) :
-    (Pr[= true | authRFExperiment (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) adversary]).toReal ≤
-      (Fintype.card TagId : ℝ) / (Fintype.card Digest : ℝ) := by
+    𝒟[authRFExperiment (TagId := TagId) (Nonce := Nonce) (Digest := Digest) adversary] {true} ≤
+      (Fintype.card TagId : ℝ≥0∞) / (Fintype.card Digest : ℝ≥0∞) := by
   have h := authRFExperiment_le_uniformCollisionBound_of_distinctReaderNonces
     (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
     adversary 1 hq (hasDistinctReaderNonces_of_readerBound adversary hq)
@@ -544,14 +498,13 @@ theorem authRealExperiment_le_prfAdvantage_add_collisionBound
     (q : ℕ)
     (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) q)
     (hdistinct : HasDistinctReaderNonces adversary)
-    (maxDigestProb : ℝ)
-    (hmax : ∀ d : Digest,
-      (Pr[= d | ($ᵗ Digest : ProbComp Digest)]).toReal ≤ maxDigestProb) :
-    (Pr[= true | authRealExperiment (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) prfs adversary]).toReal ≤
-      (PRFScheme.prfAdvantage prfs.multiplePRFScheme (authToPRFReduction (TagId := TagId)
-        (Nonce := Nonce) (Digest := Digest) adversary)).toReal +
-      ((q * Fintype.card TagId : ℕ) : ℝ) * maxDigestProb := by
+    (maxDigestProb : ℝ≥0∞)
+    (hmax : ∀ d : Digest, Pr{let x ← ($ᵗ Digest : ProbComp Digest)}[x = d] ≤ maxDigestProb) :
+    𝒟[authRealExperiment (TagId := TagId) (Nonce := Nonce) (Digest := Digest) prfs adversary]
+        {true} ≤
+      PRFScheme.prfAdvantage prfs.multiplePRFScheme (authToPRFReduction (TagId := TagId)
+        (Nonce := Nonce) (Digest := Digest) adversary) +
+      ((q * Fintype.card TagId : ℕ) : ℝ≥0∞) * maxDigestProb := by
   refine le_trans (authRealExperiment_le_prfAdvantage_add_authRF prfs adversary) ?_
   gcongr
   exact authRFExperiment_le_collisionBound_of_distinctReaderNonces adversary q hq hdistinct
@@ -567,11 +520,11 @@ theorem authRealExperiment_le_prfAdvantage_add_uniformCollisionBound [Fintype Di
     (q : ℕ)
     (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) q)
     (hdistinct : HasDistinctReaderNonces adversary) :
-    (Pr[= true | authRealExperiment (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) prfs adversary]).toReal ≤
-      (PRFScheme.prfAdvantage prfs.multiplePRFScheme (authToPRFReduction (TagId := TagId)
-        (Nonce := Nonce) (Digest := Digest) adversary)).toReal +
-      ((q * Fintype.card TagId : ℕ) : ℝ) / (Fintype.card Digest : ℝ) := by
+    𝒟[authRealExperiment (TagId := TagId) (Nonce := Nonce) (Digest := Digest) prfs adversary]
+        {true} ≤
+      PRFScheme.prfAdvantage prfs.multiplePRFScheme (authToPRFReduction (TagId := TagId)
+        (Nonce := Nonce) (Digest := Digest) adversary) +
+      ((q * Fintype.card TagId : ℕ) : ℝ≥0∞) / (Fintype.card Digest : ℝ≥0∞) := by
   refine le_trans (authRealExperiment_le_prfAdvantage_add_authRF prfs adversary) ?_
   gcongr
   exact authRFExperiment_le_uniformCollisionBound_of_distinctReaderNonces adversary q hq hdistinct

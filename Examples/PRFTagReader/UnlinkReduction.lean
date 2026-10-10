@@ -64,7 +64,7 @@ times more random-oracle cells than the multiple-session world, an unconditional
 unrelated to nonce collisions. They comprise the reader-cell slacks
 `qReader * Fintype.card TagId / Fintype.card Digest` and
 `qReader * Fintype.card TagId * sessionsPerTag / Fintype.card Digest` (the latter charged at the
-discarded reader step via `probEvent_cacheBadReader_uniformSample_le`), and the nonce-aliasing
+discarded reader step via `prEvent_cacheBadReader_uniformSample_le`), and the nonce-aliasing
 slack `qReader * qTag / Fintype.card Nonce` (charged at slot-positive tag steps via the
 reader-touched-set membership event). There is no tag-side slack.
 

@@ -903,7 +903,7 @@ variable [Finite C] [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass 
 /-- Probability bridge for bad events:
 `Pr[bad]` under `hidingImpl₁ s` is equal to the corresponding event on the
 shared counted run, projected at `s`. -/
-theorem probEvent_hidingBad_eq_countAll {AUX : Type} {t : ℕ}
+theorem prEvent_hidingBad_eq_countAll {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) (s : S) :
     Pr{let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2] =
     Pr{let z ← (
@@ -1005,7 +1005,7 @@ lemma wp_choose_sumCounts_le_queryBound [Fintype S] [Inhabited S]
     (M := M) (S := S) (C := C) A hqchoose
 
 /-- Fixed-salt bridge from the counted bad event to the expected excess count. -/
-lemma probEvent_countAll_bad_le_wp_countPred
+lemma prEvent_countAll_bad_le_wp_countPred
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) (s : S) :
     Pr{let z ← (simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0)}[2 ≤ z.2.2 s] ≤
@@ -1125,7 +1125,7 @@ the challenge `query (m, s)` is redirected → returns fresh uniform, independen
 of `m`. The salt counter is discarded by `run'`.
 
 Using `hidingImplSim` allows direct application of the distributional
-identical-until-bad lemma (`tvDist_simulateQ_le_probEvent_bad_dist`) to bound
+identical-until-bad lemma (`measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDist_eq`) to bound
 the distance between `hidingReal` and `hidingSim`. -/
 def hidingSim [Inhabited M] [Inhabited S]
     {AUX : Type} {t : ℕ} (A : HidingAdversary M S C AUX t) (s : S) :
@@ -1134,9 +1134,6 @@ def hidingSim [Inhabited M] [Inhabited S]
 
 abbrev HidingAvgSpec (M : Type) (S : Type) (C : Type) :=
   (Unit →ₒ S) + CMOracle M S C
-
-noncomputable instance unitArrowSpecIsUniformSpec (S : Type) [Fintype S] [Inhabited S] :
-    IsUniformSpec (Unit →ₒ S) := IsUniformSpec.ofFintypeInhabited _
 
 /-- Uniform sampling of a salt in its chosen finite response space. -/
 noncomputable instance unitArrowSpecIsUniformMeasureSpec (S : Type) [Fintype S] [Inhabited S]

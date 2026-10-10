@@ -217,7 +217,7 @@ theory that a replacement must either preserve or deliberately supersede.
 | Couplings | [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean) | A joint measure with fixed marginals |
 | Expected query cost | [`QueryCost.lean`](../../VCVio/OracleComp/QueryTracking/QueryCost.lean) and [`WriterCost.lean`](../../VCVio/OracleComp/QueryTracking/WriterCost.lean) | Expectations of instrumented runs |
 | Relational logic | [`ProgramLogic/Relational`](../../VCVio/ProgramLogic/Relational) | Coupling existence and quantitative relational WP |
-| Executable finite distributions | [`FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean), [`EvalDist/Instances/FinRatPMF.lean`](../../VCVio/EvalDist/Instances/FinRatPMF.lean) | Array-backed `Raw` representation and its `SameDist` quotient |
+| Executable finite distributions | [`FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean), [`FinRatPMF/Measure.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean) | Array-backed `Raw` representation and its `SameDist` quotient |
 
 The last row deserves emphasis, because it is easy to forget when reasoning about
 "the" backend. `FinRatPMF` is a **third** discrete representation already in tree:
@@ -1343,7 +1343,7 @@ users retain ordinary discrete probability notation.
 - [`VCVio/EvalDist/RenyiDivergence.lean`](../../VCVio/EvalDist/RenyiDivergence.lean)
 - [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean)
 - [`ToMathlib/ProbabilityTheory/FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean)
-- [`VCVio/EvalDist/Instances/FinRatPMF.lean`](../../VCVio/EvalDist/Instances/FinRatPMF.lean)
+- [`ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean)
 - [`ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean)
 - [`ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean)
 - [`ToMathlib/Probability/TailSums.lean`](../../ToMathlib/Probability/TailSums.lean)
@@ -1477,7 +1477,7 @@ read through the GitHub API rather than from PR prose.
 | C4 | §2.5/§12.4 treat `mvcgen` as the upstream tactic | `mvcgen` is deprecated on Lean master in favour of `vcgen` (since 2026-08-21); **not** deprecated at `v4.34.0-rc2`, so it lands in v4.35 | Fetched `Std/Tactic/Do/Syntax.lean` at tag `v4.34.0-rc2` and at master; lean4 PR list for `mvcgen`/`vcgen` |
 | C5 | — (omitted) | `Std.Internal.Do` exists at v4.33/v4.34 with a lattice-generic `WP`; public as `Std.WP` on master, which core's `vcgen` dispatches on | Read `Std/Internal/Do/{Assertion,WP/Basic}.lean` in the toolchain; fetched `Lean/Elab/Tactic/VCGen/WPApp.lean` from master |
 | C6 | — (omitted) | `loom2` is pinned at a Lean `v4.32.0` toolchain and supplies the `Std.Do'` substrate; its design is the one core is absorbing | Read the loom2 checkout's `lean-toolchain` and `Loom/WP/Basic.lean`; compared authorship with `Std/Internal/Do/Assertion.lean` |
-| C7 | — (omitted) | `FinRatPMF` is a third, executable discrete backend with its own lifts | Read `ToMathlib/ProbabilityTheory/FinRatPMF.lean` and `VCVio/EvalDist/Instances/FinRatPMF.lean` |
+| C7 | — (omitted) | `FinRatPMF` is a third, executable discrete backend with its own lifts | Read `ToMathlib/ProbabilityTheory/FinRatPMF.lean` and `ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean` |
 | C8 | §3.2 understates ArkLib's coupling | ArkLib's `Pr_{…}[…]` *elaborates into* `PMF` do-notation; it also pins VCVio `v4.32.2` | Fetched `ArkLib/Data/Probability/Notation.lean` and `lakefile.toml` |
 | C9 | — (omitted) | PolyFun#141–#144 are the companion survey and its follow-through | GitHub API; read each PR body and file list |
 | C10 | §17 omits several in-tree sources | Added `FinRatPMF`, the `ToMathlib/Probability/ProbabilityMassFunction/` files, the `Loom` subtrees, and the Lean-core/loom2 section | Directory listing of the repo |

@@ -172,8 +172,9 @@ Upstream is retiring `PMF`, and this is visible in the pinned tree rather than o
 The core, `toOuterMeasure`, and `toMeasure` are not yet marked, but the family is being dismantled
 construction by construction. The direction is settled; only pacing is open.
 
-Lean marks the locally owned `SPMF` type, `evalSPMF`, and the legacy scalar
-evaluation functions as deprecated. Mathlib owns `PMF`, so a downstream module
+Lean marks the locally owned `SPMF` type, `evalSPMF`, the legacy scalar
+evaluation functions, and the classes that interpret them (`IsProbabilitySpec`, `IsUniformSpec`, `NeverFail`, `EvalDistCompatible`, and `DiscreteEvalDistCompatible`) as
+deprecated. Mathlib owns `PMF`, so a downstream module
 cannot add a `deprecated` attribute to that declaration. VCVio's
 `usesRetiredProbability` environment linter checks declarations for direct
 references to all of these names, including `PMF`. Existing uses are recorded
@@ -237,8 +238,10 @@ The following are implementation questions, not reasons to reopen the architectu
 1. prove the returned-measure fixpoint/continuity laws and formulate almost-sure termination;
 2. formulate the smallest measurable-coalgebra interface that yields finite prefix kernels and an
    Ionescu--Tulcea trace law;
-3. port expectation, independent-product, coupling, total-variation, and Rényi statements to
-   measure-first foundations while retaining discrete corollaries;
+3. finish porting expectation, total-variation, and Rényi statements to measure-first
+   foundations (couplings, independent products, and total-variation composition are native); a
+   discrete statement survives only while an unconverted consumer needs it, and is deleted with
+   its last consumer rather than kept as a compatibility layer (gotcha 18);
 4. connect indicator integrals and kernel composition to the evolving `Std.WP`/`vcgen` surface;
 5. extend the native finite rational measure API to distributional quotient semantics and further
    executable samplers; the raw sampler and uniform oracle evaluator already have direct measure

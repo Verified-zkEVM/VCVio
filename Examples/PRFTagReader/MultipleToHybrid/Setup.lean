@@ -18,7 +18,7 @@ Includes:
   `MultipleBadState`) with its bad-flag advance `multipleBadAdvance` and per-query reductions
   (`multipleBadQueryImpl_tag_run`, `multipleBadQueryImpl_reader_run`);
 * output equivalence with the uninstrumented handler
-  (`probOutput_multipleBad_run'_eq_multipleIdeal`);
+  (`evalDist_multipleBad_run'_eq_multipleIdeal`);
 * monotonicity of the bad flag (`multipleBadQueryImpl_step_preserves_bad`,
   `multipleBadQueryImpl_run_preserves_bad`);
 * structural `query_bind` reductions (`multipleBad_run'_query_bind'`,
@@ -50,7 +50,8 @@ a cell was written by a tag draw or by a reader query, and a collision is histor
 instrumented handler `multipleBadQueryImpl` carries, beside the multiple-ideal state, a full
 bad-world `UnlinkBadState` whose `bad` flag fires exactly on a tag-written cell collision. Its
 *output bit* is identical to `multipleIdealQueryImpl`'s — the instrumentation only threads an extra
-state component — so each `Pr[= out]` is unchanged (`probOutput_multipleBad_run'_eq_multipleIdeal`).
+state component — so the output distribution is unchanged
+(`evalDist_multipleBad_run'_eq_multipleIdeal`).
 The `bad` flag of `multipleBadAdvance` fires exactly when a tag query repeats a within-tag
 `(tag, nonce)` pair (the `responses` cell for that pair is already populated), so its probability
 records the within-tag nonce-collision mass. -/
@@ -159,15 +160,14 @@ lemma multipleBadQueryImpl_reader_run (transcript : TagTranscript Nonce Digest)
 open OracleComp.ProgramLogic.Relational in
 /-- **Multiple-to-hybrid, output equivalence.** The instrumented handler `multipleBadQueryImpl`
 produces the same output distribution as `multipleIdealQueryImpl`: the bad-world component it
-threads beside the multiple-ideal state never feeds back into the output bit. Hence `Pr[= out]` is
-unchanged for each output bit `out`. -/
-lemma probOutput_multipleBad_run'_eq_multipleIdeal
+threads beside the multiple-ideal state never feeds back into the output bit. -/
+lemma evalDist_multipleBad_run'_eq_multipleIdeal
     (adversary : UnlinkAdversary TagId Nonce Digest)
     (s : UnlinkState TagId × ((TagId × Nonce) →ₒ Digest).QueryCache)
-    (sB : UnlinkBadState TagId Nonce Digest) (out : Bool) :
-    Pr[= out | (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run'
+    (sB : UnlinkBadState TagId Nonce Digest) :
+    𝒟[(simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run'
         (s, sB)] =
-      Pr[= out | (simulateQ (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
+      𝒟[(simulateQ (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run' s] := by
   have hrt : RelTriple
       ((simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run' (s, sB))
@@ -197,8 +197,7 @@ lemma probOutput_multipleBad_run'_eq_multipleIdeal
       refine relTriple_bind (relTriple_refl _) ?_
       rintro a b rfl
       exact relTriple_pure_pure ⟨rfl, rfl⟩
-  rw [← evalDist_apply_singleton, ← evalDist_apply_singleton]
-  exact congrArg (· {out}) (evalDist_eq_of_relTriple_eqRel hrt)
+  exact evalDist_eq_of_relTriple_eqRel hrt
 
 /-- The bad flag threaded by `multipleBadQueryImpl` is monotone under a single per-query step:
 started from a `MultipleBadState` whose bad flag is set, every output state still has it set.

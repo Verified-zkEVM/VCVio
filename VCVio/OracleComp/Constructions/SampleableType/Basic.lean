@@ -148,6 +148,15 @@ instance (α β : Type) [SampleableType α] [SampleableType β] : SampleableType
       (@Measurable.of_discrete (α × β) (α × β) Prod.instMeasurableSpace outputSpace
         inferInstance _) ⟨Function.injective_id, Function.surjective_id⟩
 
+/-- A uniform pair is a uniform first coordinate followed by an independent uniform second
+coordinate. -/
+theorem SampleableType.uniformSample_prod_eq_bind (α β : Type) [SampleableType α]
+    [SampleableType β] :
+    ($ᵗ (α × β)) = (do let a ← $ᵗ α; let b ← $ᵗ β; pure (a, b)) := by
+  rw [uniformSample]
+  change ((·, ·) <$> ($ᵗ α) <*> ($ᵗ β)) = _
+  simp [seq_eq_bind_map, map_eq_bind_pure_comp, bind_assoc]
+
 /-- Transport a uniform sampler along an equivalence. -/
 @[expose, reducible] def SampleableType.ofEquiv {α β : Type} [SampleableType α] (e : α ≃ β) :
     SampleableType β where

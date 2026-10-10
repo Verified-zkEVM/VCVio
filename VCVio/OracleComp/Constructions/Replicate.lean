@@ -10,7 +10,7 @@ public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.EvalDist
 public import VCVio.EvalDist.List
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import Init.Data.Vector.Lemmas
 
 /-!
@@ -66,21 +66,13 @@ lemma probOutput_replicate (xs : List α) :
       rw [replicate_succ, probOutput_cons_seq_map_cons_eq_mul oa (replicate n oa) y ys, ih]
       simp
 
+end probability
+
 @[simp]
-lemma mem_finSupport_replicate [DecidableEq α]
+lemma mem_finSupport_replicate [∀ t, Fintype (spec.Range t)] [DecidableEq α]
     (xs : List α) : xs ∈ finSupport (oa.replicate n) ↔
       xs.length = n ∧ ∀ x ∈ xs, x ∈ finSupport oa := by
   simp [mem_finSupport_iff_mem_support]
-
-lemma probOutput_replicate_uniformSample {α : Type} [Fintype α] [SampleableType α]
-    {n : ℕ} {xs : List α} (hlen : xs.length = n) :
-    Pr[= xs | replicate n ($ᵗ α)] = (↑(Fintype.card α ^ n) : ENNReal)⁻¹ := by
-  simp only [probOutput_replicate, hlen, ite_true, probOutput_uniformSample]
-  rw [List.prod_map_const, hlen]
-  simpa [Nat.cast_pow] using
-    (ENNReal.inv_pow (a := (Fintype.card α : ENNReal)) (n := n)).symm
-
-end probability
 
 /-! ## SimulateQ distributivity -/
 
