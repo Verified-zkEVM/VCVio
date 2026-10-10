@@ -1,0 +1,523 @@
+/-
+Copyright (c) 2026 Devon Tuma. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Devon Tuma
+-/
+module
+
+public import ToMathlib.Combinatorics.ChallengeTree
+public import VCVio.EvalDist.Defs.Instances
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.EvalDist.Measure
+
+/-!
+# A coordinate-wise fork over pre-sampled response tables
+
+This module proves the information-theoretic, pre-sampled-table inequality underlying Lemma 7.1 of
+Fenzi–Moghaddas–Nguyen. For a challenge space `ι → S` and a distribution of response tables with
+accepting ratio `ε`, it returns a coordinate-wise `k`-special sound set of accepting transcripts
+with probability at least `ε - ℓ * (k - 1) / N`, where `ℓ = Fintype.card ι` and
+`N = Fintype.card S`.
+
+The averaging layer comes first: `goodSet` is the set of challenges the deterministic core
+succeeds on, `acceptRatio` and `forkSuccOf` are its two aggregates over a distribution of tables,
+and `sub_div_le_lintegral_card_goodSet` is the counting inequality averaged over that
+distribution. It is stated for a general monad because nothing in it is specific to `ProbComp`.
+
+Following `seededFork`, randomness comes first and the core is deterministic: `coordFork` samples
+an *acceptance table* `ρ : (ι → S) → Bool` and a challenge `c₀`, then runs `coordForkCore`. The
+core succeeds exactly when `c₀` accepts and every column of `c₀` holds at least `k` accepting
+values (`coordForkCore_isSome_iff`), which is `goodSet` — so the success
+probability is a cardinality ratio and the bound is the already-proved counting inequality
+averaged over tables.
+
+Prover responses enter as a second layer rather than a generalization of the core: a response
+table `τ : (ι → S) → Y` and a verifier `V : (ι → S) → Y → Bool` induce the acceptance table
+`fun c => V c (τ c)`, so `coordForkT` is `coordFork` composed with `acceptTable`
+(`coordFork_acceptTable`) and its output guarantee `GoodTranscripts` is the paper's output clause:
+at the data level it contains `ℓ(k-1)+1` accepting transcripts whose challenges are
+`SS(S, ℓ, k)`.
+
+Collecting replacements is a *total* lookup here: which `k - 1` accepting values a coordinate
+contributes is irrelevant to the counting argument, so the core takes the first `k - 1` in
+enumeration order. This is not the paper's oracle algorithm: the entire table is already available,
+and neither query order, exhaustion, repeated execution, nor expected cost is represented. The
+paper's expected-query clause therefore remains unproved.
+-/
+
+public section
+
+open Finset CoordinateWise OracleComp MeasureTheory
+
+open scoped ENNReal
+
+namespace OracleComp
+
+variable {ι S : Type} [DecidableEq ι] [Fintype ι] [DecidableEq S] [Fintype S]
+variable {k : ℕ} {ρ : (ι → S) → Bool} {c₀ : ι → S}
+
+/-! ## Averaging the counting bound over a distribution of acceptance tables
+
+An *acceptance table* `ρ : (ι → S) → Bool` records, for every challenge vector, whether the
+table entry is accepted. `goodSet` is the challenges the deterministic core succeeds on, which
+is a predicate on the challenge alone, so its count is the finite counting inequality
+`CoordinateWise.sub_div_le_div_card_filter`. Because that bound holds pointwise in `ρ`, it
+survives averaging over an *arbitrary* distribution `D` of tables, with only the marginals
+`Pr{let ρ ← D}[ρ c]` on the left and no independence hypothesis.
+
+Note what this does *not* say. `forkSuccOf k D` depends on all of `D`, not just its marginals,
+so fixing a particular coupling of the table entries is a modelling decision about the
+extractor's randomness, not a theorem; `VCVioTest/Forking/CoordinateFork.lean` separates two
+couplings with equal marginals and different `forkSuccOf`. These declarations are stated for a
+general `m` because nothing in the averaging argument is specific to `ProbComp`. -/
+
+section Averaging
+
+universe v
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m]
+  [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+
+/-- The challenges a table accepts. -/
+@[expose] def acceptSet (ρ : (ι → S) → Bool) : Finset (ι → S) :=
+  Finset.univ.filter fun c => ρ c
+
+/-- The challenges on which the table core succeeds: accepting, with at least `k` accepting values
+in every column. -/
+@[expose] def goodSet (k : ℕ) (ρ : (ι → S) → Bool) : Finset (ι → S) :=
+  Finset.univ.filter fun c => ρ c ∧ ∀ j, k ≤ columnCount (fun c' => ρ c' = true) j c
+
+/-- The average accepting probability of the table distribution against a uniform challenge. -/
+@[expose] noncomputable def acceptRatio (D : m ((ι → S) → Bool)) : ℝ≥0∞ :=
+  (∑ c : ι → S, Pr{let ρ ← D}[ρ c]) / Fintype.card (ι → S)
+
+/-- The chance that a uniform challenge lands in `goodSet`, averaged over a distribution of
+acceptance tables.
+
+This is the single functional the development computes: the extractor's success probability is
+it at a `ProbComp` table distribution (`prEvent_isSome_coordFork`). Naming it separates the
+averaging argument from the fork that consumes it. -/
+@[expose] noncomputable def forkSuccOf (k : ℕ) (D : m ((ι → S) → Bool)) : ℝ≥0∞ :=
+  ∫⁻ ρ, ((goodSet k ρ).card : ℝ≥0∞) / Fintype.card (ι → S) ∂𝒟[D]
+
+omit [DecidableEq S] in
+/-- The all-accepting table accepts every challenge, so `ε = 1`. Together with a positive
+`ℓ * (k - 1) / N` this is what keeps the truncated subtraction in the headline bounds from
+collapsing to `0 ≤ _`. -/
+@[simp] theorem acceptRatio_pure_const_true [Nonempty S] :
+    acceptRatio (pure (fun _ => true) : m ((ι → S) → Bool)) = 1 := by
+  have hone : ∀ c : ι → S,
+      Pr{let ρ ← (pure (fun _ => true) : m ((ι → S) → Bool))}[ρ c] = 1 := fun c => by
+    rw [prEvent_eq_evalDist_map]
+    simp
+  rw [acceptRatio, Finset.sum_congr rfl fun c _ => hone c, Finset.sum_const, Finset.card_univ,
+    nsmul_eq_mul, mul_one, ENNReal.div_self (by simp) (by finiteness)]
+
+omit [DecidableEq S] in
+/-- The expected number of accepting challenges is the sum of the per-challenge marginals. -/
+theorem lintegral_card_acceptSet (D : m ((ι → S) → Bool)) :
+    ∫⁻ ρ, ((acceptSet ρ).card : ℝ≥0∞) ∂𝒟[D] = ∑ c : ι → S, Pr{let ρ ← D}[ρ c] := by
+  classical
+  have hcard : ∀ ρ : (ι → S) → Bool,
+      ((acceptSet ρ).card : ℝ≥0∞) = ∑ c : ι → S, if ρ c then (1 : ℝ≥0∞) else 0 :=
+    fun ρ => Finset.natCast_card_filter _ _
+  simp_rw [hcard]
+  rw [lintegral_finsetSum _ fun _ _ => Measurable.of_discrete]
+  refine Finset.sum_congr rfl fun c _ => ?_
+  rw [show (fun ρ : (ι → S) → Bool => if ρ c then (1 : ℝ≥0∞) else 0)
+      = Set.indicator {ρ : (ι → S) → Bool | ρ c} (fun _ => 1) from funext fun ρ => by
+        by_cases hρ : ρ c <;> simp [Set.indicator, hρ],
+    lintegral_indicator_const MeasurableSet.of_discrete, one_mul,
+    prEvent_eq_evalDist_of_discrete D fun ρ => ρ c]
+
+omit [DecidableEq S] in
+/-- **The averaging step for coordinate-wise forking.**
+
+The counting bound holds pointwise in the acceptance table, so averaging it over any distribution
+`D` on tables costs nothing beyond the `ℓ * (k - 1) / N` term. Only the marginals of `D` appear on
+the left; independence of the table entries is never used. -/
+theorem le_lintegral_card_goodSet [Nonempty S] (D : m ((ι → S) → Bool)) (k : ℕ)
+    [IsProbabilityMeasure 𝒟[D]] :
+    acceptRatio D
+      ≤ forkSuccOf k D + (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S := by
+  classical
+  rw [acceptRatio, forkSuccOf]
+  set T : ℝ≥0∞ := (Fintype.card (ι → S) : ℝ≥0∞) with hT
+  set δ : ℝ≥0∞ := (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S with hδ
+  have hTne : T ≠ 0 := by rw [hT]; simp [Fintype.card_ne_zero]
+  -- Pointwise: the ToMathlib counting bound, moved to additive form.
+  have hpt : ∀ ρ : (ι → S) → Bool,
+      ((acceptSet ρ).card : ℝ≥0∞) / T ≤ ((goodSet k ρ).card : ℝ≥0∞) / T + δ := fun ρ =>
+    tsub_le_iff_right.mp (sub_div_le_div_card_filter (accept := fun c => ρ c = true) k)
+  calc (∑ c : ι → S, Pr{let ρ ← D}[ρ c]) / T
+      = (∫⁻ ρ, ((acceptSet ρ).card : ℝ≥0∞) ∂𝒟[D]) / T := by rw [lintegral_card_acceptSet]
+    _ = ∫⁻ ρ, ((acceptSet ρ).card : ℝ≥0∞) / T ∂𝒟[D] := by
+        simp_rw [div_eq_mul_inv]
+        rw [lintegral_mul_const' _ _ (ENNReal.inv_ne_top.mpr hTne)]
+    _ ≤ ∫⁻ ρ, (((goodSet k ρ).card : ℝ≥0∞) / T + δ) ∂𝒟[D] := lintegral_mono hpt
+    _ = (∫⁻ ρ, ((goodSet k ρ).card : ℝ≥0∞) / T ∂𝒟[D]) + δ := by
+        rw [lintegral_add_right _ measurable_const, lintegral_const, measure_univ, mul_one]
+
+omit [DecidableEq S] in
+/-- The averaged table-counting bound, in the subtracted form used by Lemma 7.1 of
+Fenzi–Moghaddas–Nguyen. -/
+theorem sub_div_le_lintegral_card_goodSet [Nonempty S] (D : m ((ι → S) → Bool)) (k : ℕ)
+    [IsProbabilityMeasure 𝒟[D]] :
+    acceptRatio D - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
+      ≤ forkSuccOf k D :=
+  tsub_le_iff_right.mpr (le_lintegral_card_goodSet D k)
+
+end Averaging
+
+/-! ## The deterministic core -/
+
+/-- The replacements available at coordinate `j`: values other than the one `c₀` already uses that
+keep the challenge accepting. -/
+@[expose] def hitSet (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) : Finset S :=
+  (Finset.univ.erase (c₀ j)).filter fun x => ρ (Function.update c₀ j x)
+
+/-- The `k - 1` replacements the table core keeps at coordinate `j`. Any choice would do; this one
+takes the first `k - 1` in enumeration order. -/
+@[expose] noncomputable def replacementSet (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S)
+    (j : ι) : Finset S :=
+  ((hitSet ρ c₀ j).toList.take (k - 1)).toFinset
+
+/-- The deterministic table core: abort unless `c₀` accepts and every coordinate offers
+`k - 1` accepting replacements, and otherwise return the challenge family they generate. -/
+@[expose] noncomputable def coordForkCore (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
+    Option (Finset (ι → S)) :=
+  if ρ c₀ ∧ ∀ j, k - 1 ≤ (hitSet ρ c₀ j).card then
+    some (coordFamily c₀ (replacementSet k ρ c₀))
+  else none
+
+/-! ### The core's success condition -/
+
+omit [Fintype ι] in
+/-- An accepting challenge occupies one slot of each of its own columns, so the remaining
+replacements number one fewer than the column count. -/
+theorem card_hitSet_succ (hacc : ρ c₀) (j : ι) :
+    (hitSet ρ c₀ j).card + 1 = columnCount (fun c => ρ c = true) j c₀ := by
+  classical
+  have hmem : c₀ j ∈ Finset.univ.filter fun x : S => ρ (Function.update c₀ j x) :=
+    mem_filter_coord_self (accept := fun c => ρ c = true) hacc j
+  have hpos : 0 < (Finset.univ.filter fun x : S => ρ (Function.update c₀ j x)).card :=
+    Finset.card_pos.mpr ⟨_, hmem⟩
+  rw [hitSet, Finset.filter_erase, Finset.card_erase_of_mem hmem]
+  simp only [columnCount]
+  omega
+
+theorem coordForkCore_isSome_iff :
+    (coordForkCore k ρ c₀).isSome ↔ c₀ ∈ goodSet k ρ := by
+  classical
+  -- Having `k - 1` replacements left over is the same as a column of at least `k` accepting
+  -- values, because the accepting `c₀` itself occupies one slot.
+  have hiff : (ρ c₀ ∧ ∀ j, k - 1 ≤ (hitSet ρ c₀ j).card) ↔
+      (ρ c₀ ∧ ∀ j, k ≤ columnCount (fun c => ρ c = true) j c₀) := by
+    constructor <;>
+      · rintro ⟨hacc, hall⟩
+        refine ⟨hacc, fun j => ?_⟩
+        have h1 := card_hitSet_succ hacc j
+        have h2 := hall j
+        omega
+  rw [coordForkCore]
+  simp only [goodSet, Finset.mem_filter, Finset.mem_univ, true_and, ← hiff]
+  split <;> simp_all
+
+/-- For an accepting centre, membership of `goodSet` is exactly having `k - 1` replacements
+available in every coordinate. This is the form the resampling loop's success condition takes. -/
+theorem mem_goodSet_iff_of_accept (hacc : ρ c₀) :
+    c₀ ∈ goodSet k ρ ↔ ∀ j, k - 1 ≤ (hitSet ρ c₀ j).card := by
+  classical
+  simp only [goodSet, Finset.mem_filter, Finset.mem_univ, true_and]
+  constructor
+  · rintro ⟨-, hall⟩ j
+    have h1 := card_hitSet_succ hacc j
+    have h2 := hall j
+    omega
+  · refine fun hall => ⟨hacc, fun j => ?_⟩
+    have h1 := card_hitSet_succ hacc j
+    have h2 := hall j
+    omega
+
+/-- The set of challenges on which the core succeeds is exactly `goodSet`. -/
+theorem filter_isSome_coordForkCore (k : ℕ) (ρ : (ι → S) → Bool) :
+    (Finset.univ.filter fun c₀ : ι → S => (coordForkCore k ρ c₀).isSome) = goodSet k ρ := by
+  ext c₀
+  simp [coordForkCore_isSome_iff]
+
+/-! ### The core's output -/
+
+omit [Fintype ι] in
+theorem notMem_replacementSet (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) :
+    c₀ j ∉ replacementSet k ρ c₀ j := by
+  classical
+  simp only [replacementSet, List.mem_toFinset]
+  intro hmem
+  have := List.mem_of_mem_take hmem
+  rw [Finset.mem_toList, hitSet, Finset.mem_filter] at this
+  exact (Finset.mem_erase.mp this.1).1 rfl
+
+omit [Fintype ι] in
+theorem card_replacementSet {j : ι} (hcard : k - 1 ≤ (hitSet ρ c₀ j).card) :
+    (replacementSet k ρ c₀ j).card = k - 1 := by
+  classical
+  have hnodup : ((hitSet ρ c₀ j).toList.take (k - 1)).Nodup :=
+    (Finset.nodup_toList _).sublist (List.take_sublist _ _)
+  rw [replacementSet, List.toFinset_card_of_nodup hnodup, List.length_take,
+    Finset.length_toList]
+  omega
+
+omit [Fintype ι] in
+theorem accept_of_mem_replacementSet {j : ι} {x : S} (hx : x ∈ replacementSet k ρ c₀ j) :
+    ρ (Function.update c₀ j x) := by
+  classical
+  simp only [replacementSet, List.mem_toFinset] at hx
+  have := List.mem_of_mem_take hx
+  rw [Finset.mem_toList, hitSet, Finset.mem_filter] at this
+  exact this.2
+
+omit [Fintype S] in
+/-- **The output guarantee, for any admissible family of replacements.** A centre that accepts,
+together with `k - 1` accepting replacements per coordinate none of which is the centre's own
+value, generates a coordinate-wise `k`-special sound set of accepting challenges.
+
+Both the deterministic core and the resampling loop of Figure 11 produce such a family; they
+differ only in which `k - 1` replacements they pick, which the conclusion does not see. -/
+theorem coordFamily_success {R : ι → Finset S} (hacc : ρ c₀)
+    (hnot : ∀ j, c₀ j ∉ R j) (hcards : ∀ j, (R j).card = k - 1)
+    (hR : ∀ j, ∀ x ∈ R j, ρ (Function.update c₀ j x)) :
+    IsCoordSpecialSound k (coordFamily c₀ R) ∧ ∀ c ∈ coordFamily c₀ R, ρ c := by
+  refine ⟨isCoordSpecialSound_coordFamily hnot hcards, fun c hc => ?_⟩
+  rcases mem_coordFamily.mp hc with rfl | ⟨j, u, hu, rfl⟩
+  · exact hacc
+  · exact hR j u hu
+
+/-- **The core's output guarantee.** On success the extractor returns a coordinate-wise
+`k`-special sound set of accepting challenges, of size `ℓ * (k - 1) + 1`. -/
+theorem coordForkCore_success {X : Finset (ι → S)} (h : coordForkCore k ρ c₀ = some X) :
+    IsCoordSpecialSound k X ∧ ∀ c ∈ X, ρ c := by
+  classical
+  rw [coordForkCore] at h
+  split at h
+  · rename_i hcond
+    obtain ⟨hacc, hall⟩ := hcond
+    obtain rfl : X = coordFamily c₀ (replacementSet k ρ c₀) := (Option.some.inj h).symm
+    exact coordFamily_success hacc (notMem_replacementSet k ρ c₀)
+      (fun j => card_replacementSet (hall j)) fun _ _ hu => accept_of_mem_replacementSet hu
+  · exact absurd h (by simp)
+
+/-- The single-round output read as a one-round tree in the challenge-only projection of
+Definition 2.30. This says nothing about prover-message prefix consistency. -/
+theorem isChallengeTree_of_coordForkCore_success {X : Finset (ι → S)}
+    (h : coordForkCore k ρ c₀ = some X) :
+    IsChallengeTree k 1 (X.image fun c => [c]) :=
+  isChallengeTree_one (coordForkCore_success h).1
+
+/-! ## The extractor -/
+
+variable [SampleableType (ι → S)]
+
+/-- The coordinate-wise rewinding extractor: sample an acceptance table and a challenge, then run
+the deterministic core.
+
+The sampled table is returned alongside the challenge set. Without it, "the returned challenges
+accept" could not be stated as a property of the output, and an existential over tables would be
+satisfied by the all-accepting table rather than by the one that actually produced the set. -/
+@[expose] noncomputable def coordFork (k : ℕ) (D : ProbComp ((ι → S) → Bool)) :
+    ProbComp (Option (((ι → S) → Bool) × Finset (ι → S))) := do
+  let ρ ← D
+  let c₀ ← $ᵗ (ι → S)
+  return (coordForkCore k ρ c₀).map fun X => (ρ, X)
+
+/-- What the extractor promises when it succeeds: the challenges it returns form an `SS(S, ℓ, k)`
+set — in particular there are exactly `ℓ * (k - 1) + 1` of them — and every one of them accepts
+under the very table that produced them. -/
+@[expose] def GoodOutput (k : ℕ) (r : Option (((ι → S) → Bool) × Finset (ι → S))) : Prop :=
+  ∃ ρ X, r = some (ρ, X) ∧ IsCoordSpecialSound k X ∧ ∀ c ∈ X, ρ c
+
+/-- Every successful run satisfies `GoodOutput`, with the table bound to the run that produced the
+challenge set. -/
+theorem coordFork_success {k : ℕ} {D : ProbComp ((ι → S) → Bool)}
+    {ρ : (ι → S) → Bool} {X : Finset (ι → S)}
+    (h : some (ρ, X) ∈ support (coordFork k D)) :
+    ρ ∈ support D ∧ (∃ c₀, coordForkCore k ρ c₀ = some X) ∧
+      IsCoordSpecialSound k X ∧ ∀ c ∈ X, ρ c := by
+  simp only [coordFork, support_bind, Set.mem_iUnion, support_pure] at h
+  obtain ⟨ρ', hρ', c₀, -, hX⟩ := h
+  rw [Set.mem_singleton_iff] at hX
+  obtain ⟨Y, hY, hpair⟩ := Option.map_eq_some_iff.mp hX.symm
+  obtain ⟨rfl, rfl⟩ := Prod.mk.injEq .. ▸ hpair
+  exact ⟨hρ', ⟨c₀, hY⟩, coordForkCore_success hY⟩
+
+theorem goodOutput_of_mem_support {k : ℕ} {D : ProbComp ((ι → S) → Bool)}
+    {r : Option (((ι → S) → Bool) × Finset (ι → S))} (h : r ∈ support (coordFork k D))
+    (hr : r.isSome) : GoodOutput k r := by
+  obtain ⟨⟨ρ, X⟩, rfl⟩ := Option.isSome_iff_exists.mp hr
+  obtain ⟨-, -, hss, hacc⟩ := coordFork_success h
+  exact ⟨ρ, X, rfl, hss, hacc⟩
+
+/-- The success probability equals the chance that a uniform challenge lands in `goodSet`,
+averaged over the table distribution. -/
+theorem prEvent_isSome_coordFork (k : ℕ) (D : ProbComp ((ι → S) → Bool)) :
+    Pr{let r ← coordFork k D}[r.isSome] = forkSuccOf k D := by
+  classical
+  rw [coordFork, forkSuccOf, prEvent_bind_eq_lintegral_of_discrete]
+  refine lintegral_congr fun ρ => ?_
+  rw [show (($ᵗ (ι → S)) >>= fun c₀ =>
+        (pure ((coordForkCore k ρ c₀).map fun X => (ρ, X)) : ProbComp _))
+      = (fun c₀ => (coordForkCore k ρ c₀).map fun X => (ρ, X)) <$> ($ᵗ (ι → S)) from by
+        rw [map_eq_bind_pure_comp]; rfl,
+    prEvent_map, SampleableType.prEvent_uniformSample]
+  congr 1
+  rw [← filter_isSome_coordForkCore (k := k) (ρ := ρ)]
+  exact congrArg (Nat.cast ∘ Finset.card) (Finset.filter_congr fun c₀ _ => by simp)
+
+/-- Succeeding and satisfying `GoodOutput` are the same event: every successful run is good. -/
+theorem prEvent_goodOutput_coordFork (k : ℕ) (D : ProbComp ((ι → S) → Bool)) :
+    Pr{let r ← coordFork k D}[GoodOutput k r] = Pr{let r ← coordFork k D}[r.isSome] := by
+  refine le_antisymm (prEvent_mono_of_support _ fun r _ hr => ?_)
+    (prEvent_mono_of_support _ fun r hr hs => ?_)
+  · obtain ⟨ρ, X, rfl, -, -⟩ := hr
+    rfl
+  · exact goodOutput_of_mem_support hr hs
+
+/-- The pre-sampled acceptance-table success and output inequality underlying **Lemma 7.1** of
+Fenzi–Moghaddas–Nguyen: with probability at least `ε - ℓ * (k - 1) / N`, the computation returns an
+`SS(S, ℓ, k)` set of `ℓ * (k - 1) + 1` challenges, all accepting under the sampled table.
+
+Because `GoodOutput` constrains the payload, the bound is sensitive to what the computation
+actually returns — one emitting `some (ρ, ∅)` would fail it.
+
+Not proved here: existence of the paper's oracle extractor or its expected-query clause. This
+object consumes a pre-sampled acceptance table rather than querying an adversary. -/
+theorem sub_div_le_prEvent_goodOutput_coordFork [Nonempty S] (k : ℕ)
+    (D : ProbComp ((ι → S) → Bool)) :
+    acceptRatio D - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
+      ≤ Pr{let r ← coordFork k D}[GoodOutput k r] := by
+  rw [prEvent_goodOutput_coordFork, prEvent_isSome_coordFork]
+  exact sub_div_le_lintegral_card_goodSet D k
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+theorem goodOutput_some_iff (k : ℕ) (ρ' : (ι → S) → Bool) (X : Finset (ι → S)) :
+    GoodOutput k (some (ρ', X)) ↔ IsCoordSpecialSound k X ∧ ∀ c ∈ X, ρ' c := by
+  refine ⟨fun ⟨ρ'', X', hEq, hss, hacc⟩ => ?_, fun ⟨hss, hacc⟩ => ⟨ρ', X, rfl, hss, hacc⟩⟩
+  obtain ⟨rfl, rfl⟩ : ρ'' = ρ' ∧ X' = X := by simpa [eq_comm] using hEq
+  exact ⟨hss, hacc⟩
+
+/-! ## Transcripts
+
+The paper's Lemma 7.1 outputs *pairs* `(cᵢ, yᵢ)` — challenge and prover response — where the
+acceptance table above records only whether a challenge is accepted. Recording the response
+instead, with a verification predicate, recovers that data shape in the table model.
+
+Nothing above needs generalizing: a response table `τ : (ι → S) → Y` together with a verifier
+`V : (ι → S) → Y → Bool` induces the acceptance table `fun c => V c (τ c)`, and at `Y := Bool`
+with `V c y := y` that is the identity. -/
+
+section Transcripts
+
+variable {Y : Type} [DecidableEq Y]
+
+/-- The acceptance table a response table induces under a verifier. -/
+@[expose] noncomputable def acceptTable (V : (ι → S) → Y → Bool) (D : ProbComp ((ι → S) → Y)) :
+    ProbComp ((ι → S) → Bool) :=
+  (fun τ c => V c (τ c)) <$> D
+
+/-- The accepting transcripts carried by a challenge set, read off the response table. -/
+@[expose] def transcripts (τ : (ι → S) → Y) (X : Finset (ι → S)) : Finset ((ι → S) × Y) :=
+  X.image fun c => (c, τ c)
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+theorem mem_transcripts {τ : (ι → S) → Y} {X : Finset (ι → S)} {c : ι → S} {y : Y} :
+    (c, y) ∈ transcripts τ X ↔ c ∈ X ∧ y = τ c := by
+  simp only [transcripts, Finset.mem_image, Prod.mk.injEq]
+  exact ⟨fun ⟨c', hc', h1, h2⟩ => ⟨h1 ▸ hc', by rw [← h2, h1]⟩,
+    fun ⟨hc, hy⟩ => ⟨c, hc, rfl, hy.symm⟩⟩
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+@[simp] theorem image_fst_transcripts (τ : (ι → S) → Y) (X : Finset (ι → S)) :
+    (transcripts τ X).image Prod.fst = X := by
+  ext c; simp [transcripts]
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+theorem card_transcripts (τ : (ι → S) → Y) (X : Finset (ι → S)) :
+    (transcripts τ X).card = X.card :=
+  Finset.card_image_of_injective X fun c c' h => by simpa using congrArg Prod.fst h
+
+/-- What the table computation promises with responses in play: `ℓ(k-1)+1` transcripts, all
+accepted by the verifier, whose challenges form an `SS(S, ℓ, k)` set. -/
+@[expose] def GoodTranscripts (V : (ι → S) → Y → Bool) (k : ℕ)
+    (r : Option (((ι → S) → Y) × Finset (ι → S))) : Prop :=
+  ∃ τ X, r = some (τ, X) ∧ IsCoordSpecialSound k X ∧ ∀ p ∈ transcripts τ X, V p.1 p.2
+
+/-- Reading a response table as its induced acceptance table. -/
+@[expose] def toAcceptPair (V : (ι → S) → Y → Bool)
+    (p : ((ι → S) → Y) × Finset (ι → S)) : ((ι → S) → Bool) × Finset (ι → S) :=
+  (fun c => V c (p.1 c), p.2)
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+theorem goodTranscripts_some_iff (V : (ι → S) → Y → Bool) (k : ℕ) (τ : (ι → S) → Y)
+    (X : Finset (ι → S)) :
+    GoodTranscripts V k (some (τ, X)) ↔ IsCoordSpecialSound k X ∧ ∀ c ∈ X, V c (τ c) := by
+  refine ⟨fun ⟨τ', X', hEq, hss, hacc⟩ => ?_, fun ⟨hss, hacc⟩ =>
+    ⟨τ, X, rfl, hss, fun p hp => by
+      obtain ⟨c, y⟩ := p
+      obtain ⟨h1, rfl⟩ := mem_transcripts.mp hp
+      exact hacc c h1⟩⟩
+  obtain ⟨h1, h2⟩ := Prod.ext_iff.mp (Option.some.inj hEq)
+  subst h1; subst h2
+  exact ⟨hss, fun c hc => hacc (c, τ c) (mem_transcripts.mpr ⟨hc, rfl⟩)⟩
+
+omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
+theorem goodTranscripts_iff_goodOutput (V : (ι → S) → Y → Bool) (k : ℕ)
+    (r : Option (((ι → S) → Y) × Finset (ι → S))) :
+    GoodTranscripts V k r ↔ GoodOutput k (r.map (toAcceptPair V)) := by
+  cases r with
+  | none => simp [GoodTranscripts, GoodOutput]
+  | some p =>
+      obtain ⟨τ, X⟩ := p
+      rw [goodTranscripts_some_iff]
+      exact (goodOutput_some_iff k _ X).symm
+
+/-- The table computation with responses: sample a response table and a challenge, run the core
+against the induced acceptance table, and return the table with the challenge set it found. -/
+@[expose] noncomputable def coordForkT (V : (ι → S) → Y → Bool) (k : ℕ)
+    (D : ProbComp ((ι → S) → Y)) :
+    ProbComp (Option (((ι → S) → Y) × Finset (ι → S))) := do
+  let τ ← D
+  let c₀ ← $ᵗ (ι → S)
+  return (coordForkCore k (fun c => V c (τ c)) c₀).map fun X => (τ, X)
+
+omit [DecidableEq Y] in
+/-- The response-carrying extractor is a faithful relabelling of the acceptance-table one. -/
+theorem coordFork_acceptTable (V : (ι → S) → Y → Bool) (k : ℕ)
+    (D : ProbComp ((ι → S) → Y)) :
+    coordFork k (acceptTable V D) =
+      (fun r => r.map (toAcceptPair V)) <$> coordForkT V k D := by
+  simp only [coordFork, coordForkT, acceptTable, map_eq_bind_pure_comp, bind_assoc, pure_bind,
+    Function.comp_apply]
+  refine bind_congr fun τ => bind_congr fun c₀ => ?_
+  cases coordForkCore k (fun c => V c (τ c)) c₀ <;> rfl
+
+theorem prEvent_goodTranscripts_coordForkT (V : (ι → S) → Y → Bool) (k : ℕ)
+    (D : ProbComp ((ι → S) → Y)) :
+    Pr{let r ← coordForkT V k D}[GoodTranscripts V k r] =
+      Pr{let r ← coordFork k (acceptTable V D)}[GoodOutput k r] := by
+  rw [coordFork_acceptTable, prEvent_map,
+    funext fun r => propext (goodTranscripts_iff_goodOutput V k r)]
+
+/-- The response-table form of the inequality underlying **Lemma 7.1**. With probability at least
+`ε - ℓ(k-1)/N`, it returns `ℓ(k-1)+1` accepting transcripts whose challenges form an
+`SS(S, ℓ, k)` set. -/
+theorem sub_div_le_prEvent_goodTranscripts_coordForkT [Nonempty S] (V : (ι → S) → Y → Bool)
+    (k : ℕ) (D : ProbComp ((ι → S) → Y)) :
+    acceptRatio (acceptTable V D) - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
+      ≤ Pr{let r ← coordForkT V k D}[GoodTranscripts V k r] := by
+  rw [prEvent_goodTranscripts_coordForkT]
+  exact sub_div_le_prEvent_goodOutput_coordFork k _
+
+end Transcripts
+
+end OracleComp
