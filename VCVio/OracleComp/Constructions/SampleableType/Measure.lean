@@ -16,14 +16,14 @@ import VCVio.EvalDist.ProbabilityBounds
 import Mathlib.Logic.Equiv.Bool
 
 /-!
-# Native measure laws for uniform sampling constructions
+# Measure laws for uniform sampling constructions
 
-Finite-range sampling and transport through an equivalence preserve the native
-uniform output measure certified by `SampleableType`. Events of a uniform sample are counting
-statements: comparisons with fractions of the sample space reduce to comparisons of counts,
-probability one and zero are universal and empty events, and independent uniform draws combined
-by a bijection are a single uniform draw. Every uniform sampler of a type denotes the same
-measure, so statements about `$ᵗ α` do not depend on the chosen sampler.
+Finite-range sampling and transport through an equivalence preserve the uniform output measure
+certified by `SampleableType`. Events of a uniform sample are counting statements: comparisons with
+fractions of the sample space reduce to comparisons of counts, probability one and zero are
+universal and empty events, and independent uniform draws combined by a bijection are a single
+uniform draw. Every uniform sampler of a type denotes the same measure, so statements about `$ᵗ α`
+do not depend on the chosen sampler.
 -/
 
 public section
@@ -68,7 +68,7 @@ theorem evalDist_ofEquiv {α β : Type} [SampleableType α]
     𝒟[(SampleableType.ofEquiv e).selectElem] = uniformOn Set.univ :=
   (SampleableType.ofEquiv e).evalDist_selectElem_eq_uniform
 
-/-- Finite enumeration gives a native uniform sampler. -/
+/-- Finite enumeration gives a uniform sampler. -/
 theorem evalDist_finEnum {α : Type} [h : FinEnum α] [_root_.Nonempty α]
     [MeasurableSpace α] [MeasurableSingletonClass α] :
     𝒟[(FinEnum.SampleableType α).selectElem] = uniformOn Set.univ :=
@@ -81,7 +81,7 @@ theorem evalDist_prod {α β : Type} [SampleableType α] [SampleableType β]
     𝒟[$ᵗ (α × β)] = uniformOn Set.univ :=
   SampleableType.evalDist_uniformSample
 
-/-- A sampled bit vector has the native uniform measure. -/
+/-- A sampled bit vector has the uniform measure. -/
 @[simp]
 theorem evalDist_bitVec (n : ℕ) :
     𝒟[$ᵗ BitVec n] = uniformOn Set.univ :=

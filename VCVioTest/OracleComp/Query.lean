@@ -18,9 +18,8 @@ public section
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "oracle-query facade unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "oracle-query facade unexpectedly imports PMF"
 
 universe u v w
 

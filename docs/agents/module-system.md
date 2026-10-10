@@ -35,7 +35,7 @@ VCVio owns cryptographic specialization:
 
 - `OracleSpec`, `OracleQuery`, `OracleComp`, `QueryImpl`, and established
   oracle notation;
-- PMF/SPMF and support semantics, probability lemmas, uniform-oracle policy,
+- measure and support semantics, probability lemmas, uniform-oracle policy,
   query accounting, and program logic;
 - cryptographic games, reductions, and examples; and
 - compatibility names that keep existing oracle-facing developments stable.
@@ -47,11 +47,13 @@ VCVio names. `OracleComp spec` remains definitionally the free monad on
 of the generic handler operations.
 
 Probability semantics are PFunctor-parametric but remain in VCVio: PolyFun is
-domain-independent and should not acquire VCVio's PMF/SPMF policy. The
-`OracleSpec.IsProbabilitySpec` name is a definitional façade over
-`PFunctor.IsProbabilitySpec`; the stronger oracle uniformity bundle keeps its
-existing finite/inhabited oracle instances and has an explicit
-`IsUniformSpec.toPFunctor` conversion.
+domain-independent and should not acquire VCVio's measure policy. The
+`OracleSpec.IsMeasureSpec` name is a definitional abbreviation of
+`PFunctor.IsMeasureSpec` on `spec.toPFunctor` with the discrete σ-algebra on
+answers. `OracleSpec.IsUniformMeasureSpec` is a proposition about those chosen
+measures; it carries no finite or inhabited data, and oracle-level uniform
+interpretations are explicit (`IsUniformMeasureSpec.ofFiniteNonempty`) rather
+than derived from finiteness.
 
 Do not add a conversion instance whose target is headed by the reducible
 expression `spec.toPFunctor`. Such an instance can unify with unrelated
@@ -100,13 +102,13 @@ through an ordinary import after narrowing the boundary.
 The [API-boundary campaign ledger](../reading/api-boundary-campaign.md) records
 consumer evidence, intentional reducers, instance leaks, and upstream blockers.
 
-The definitional identities among the semantic façades (`evalDist`,
-`evalSPMF`, `simulateQ`, `support`, `probOutput`) are an implementation
+The definitional identities among the semantic definitions (`evalDist`,
+`PFunctor.FreeM.denote`, `prEvent`, `support`) are an implementation
 detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. Proofs inside those
 directories may close by `rfl` across them; everywhere else
 (`CryptoFoundations/`, `Examples/`, `LatticeCrypto/`, `HashSig/`, the tests)
 crosses the boundary through the public equation lemmas
-(`evalSPMF_eq_simulateQ`, `probOutput_def`, `support_def`, `PFunctor.FreeM.evalDist_eq_denote`),
+(`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_def`, `PFunctor.FreeM.support_eq_liftM_univ`),
 so the semantics can be re-implemented without touching downstream proofs.
 Existing downstream `rfl` uses are grandfathered rather than a precedent; a
 review may ask a new one to go through the equation lemma.
@@ -189,10 +191,10 @@ instance-implicit argument is checked at `.implicit`, and the comment on the
 attribute names the library proofs that fail without it. It is not there for
 instance synthesis, which finds the semantics instances at the erased
 `PFunctor.mk` literal on its own (`VCVioTest/PFunctorFacade.lean` checks
-this). The `attribute [local implicit_reducible]` lines on `PFunctor.Obj`,
-`PFunctor.Idx`, `FreeMonoid`, `SetM`, and `SPMF` in individual files are the
-same device applied where a single proof needs it; each one was checked to be
-load-bearing before being kept.
+this). The `attribute [local implicit_reducible]` lines on `PFunctor.Idx`,
+`PFunctor.sigma`, `PFunctor.FreeM.bind`, and `FreeMonoid` in individual files
+are the same device applied where a single proof needs it; each one was checked
+to be load-bearing before being kept.
 
 Use `#guard_msgs` only when the test is meant to preserve an expected
 diagnostic; do not wrap a passing regression canary with it.
@@ -291,7 +293,7 @@ Unary carrier interpretations live in `VCVio/ProgramLogic/Unary/WP/` and consume
 live in `VCVio/ProgramLogic/Relational/WP/` and use VCVio's coupling interface. Carrier
 instances are scoped, so importing either layer does not choose a global semantics.
 
-The legacy `Std.Do` handler bridge and the lattice-generic core WP API coexist.
+The `Std.Do` handler bridge and the lattice-generic core WP API coexist.
 See [program-logic.md](program-logic.md#core-wp-and-the-symbolic-rewriter-boundary) for
 selection, tactic boundaries, and the v4.35 tracking links.
 

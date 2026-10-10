@@ -14,6 +14,10 @@
 > PolyFun checkout, and PolyFun's canonical `main`. Unless §20 explicitly supersedes a volatile
 > fact, read it as a claim about the original snapshot rather than current upstream state.
 >
+> The discrete layer the survey treats as current — `SPMF`, `evalSPMF`, `probOutput`/`probEvent`/
+> `probFailure` with `Pr[…]`, `IsProbabilitySpec`/`IsUniformSpec`, and `EvalDistCompatible` — has
+> since been removed; VCVio's probability API is now the Mathlib-measure one.
+>
 > The original repository snapshot used Mathlib/PolyFun `v4.32.2`; implementation findings were
 > rechecked on the then-current Mathlib `v4.33.0` and PolyFun `v4.33.2` pins. Open-PR descriptions
 > and upstream-`master` observations are explicitly identified below.
@@ -132,8 +136,7 @@ for discrete compatible semantics, not the definition of support in the general 
 
 ### 2.1 `SPMF` and observable probabilities
 
-[`ToMathlib/ProbabilityTheory/SPMF.lean`](../../ToMathlib/ProbabilityTheory/SPMF.lean)
-defines
+`ToMathlib/ProbabilityTheory/SPMF.lean` (since removed) defined
 
 ```lean
 def SPMF := OptionT PMF
@@ -154,8 +157,8 @@ This encoding has two useful readings that coincide for finite computations:
 They stop coinciding as explanations once `none` must distinguish explicit failure from
 bounded-run cutoff or divergence.
 
-[`VCVio/EvalDist/Defs/Basic.lean`](../../VCVio/EvalDist/Defs/Basic.lean) exposes the
-current public observation layer. Given `[MonadLiftT m SPMF]`, it provides:
+`VCVio/EvalDist/Defs/Basic.lean` (since removed) exposed the
+then-current public observation layer. Given `[MonadLiftT m SPMF]`, it provided:
 
 - `evalDist mx : SPMF α`;
 - `probOutput mx x` and `Pr[= x | mx]`;
@@ -203,8 +206,9 @@ tied to deprecated PMF APIs.
 
 ### 2.4 Existing quantitative theory
 
-The current SPMF layer is not only an evaluator. It supports a significant body of
-theory that a replacement must either preserve or deliberately supersede.
+At the snapshot, the SPMF layer was not only an evaluator. It supported a significant body of
+theory that a replacement had to either preserve or deliberately supersede; the table lists
+where that theory now lives.
 
 | Capability | Representative source | Backend-sensitive content |
 |---|---|---|
@@ -326,7 +330,7 @@ Representative canaries cover different parts of the API:
 
 - [`Examples/OneTimePad/Basic.lean`](../../Examples/OneTimePad/Basic.lean) exercises
   finite uniform sampling, distribution equality, support, and privacy;
-- [`Examples/EvalDistCompatible/Basic.lean`](../../Examples/EvalDistCompatible/Basic.lean)
+- [`Examples/OptionalFailure/Basic.lean`](../../Examples/OptionalFailure/Basic.lean)
   demonstrates why qualitative and quantitative interpretations must be separately
   supplied through transformers;
 - [`Examples/ProgramLogic/UnaryProbability.lean`](../../Examples/ProgramLogic/UnaryProbability.lean)
@@ -380,7 +384,8 @@ Current VCVio main contains the bridge to PolyFun dynamical computations in
 [`OracleComp/Coinductive`](../../VCVio/OracleComp/Coinductive):
 
 - `Machine.lean` identifies oracle machines with returning `DynComputation`s;
-- `Responder.lean` gives stateful randomized handlers in `SPMF`;
+- `Responder.lean` gave stateful randomized handlers in `SPMF` (now joint subprobability
+  kernels with an optional `ProbComp` handler presentation);
 - `WiredRun.lean` evaluates a machine for a finite fuel budget;
 - `Bridge.lean` embeds finite `OracleComp` syntax into `ITree`.
 
@@ -641,8 +646,8 @@ at the call site, composed, passed around — it is PolyFun's bundled `MonadHom`
 (`m →ᵐ n`), with `MonadHom.ofLift` as the one-way bridge and deliberately no converse
 instance.
 
-That is precisely the shape VCVio's semantics layer already has.
-[`EvalDist/Defs/Basic.lean`](../../VCVio/EvalDist/Defs/Basic.lean) argues at length for
+That is precisely the shape VCVio's semantics layer already had.
+`EvalDist/Defs/Basic.lean` (since removed) argued at length for
 declaring the `SPMF` and `SetM` lifts as `MonadLiftT` rather than `MonadLift`, and
 `SemanticsVia.interpret : m →ᵐ Sem` is the bundled case. §2.2's claim that
 `SemanticsVia` is the right migration seam therefore stops being a local convention and
@@ -996,8 +1001,8 @@ target explicitly as `@Measure α ⊤`. Its laws can include:
 - atomic support agrees with `MonadAttach.support` under an explicit compatibility
   assumption.
 
-This is the measure analogue of the current `MonadLiftT m SPMF` plus
-`EvalDistCompatible` stack.
+This is the measure analogue of the then-current `MonadLiftT m SPMF` plus
+`EvalDistCompatible` stack (since removed).
 
 ### 10.3 General measure capability
 
@@ -1175,8 +1180,9 @@ In the original staging, this phase was intended not to change `evalDist`.
 ### Phase 2: measure bridge without backend replacement
 
 **Current disposition (2026-08-30):** the measure-primary surface and its discrete compatibility
-bridge are on `main`. The bullets below are the original acceptance goals, retained to explain what
-the bridge was required to demonstrate.
+bridge are on `main` (the discrete bridge was later removed with the discrete layer). The
+bullets below are the original acceptance goals, retained to explain what the bridge was
+required to demonstrate.
 
 - Add canonical total-measure and output-submeasure views of SPMF. At the original snapshot, the
   PMF/FreeM measure bridge, point/event correspondence, and option success observer were already
@@ -1196,9 +1202,9 @@ main API during the spikes.
 
 ### Phase 4: backend decision
 
-The accepted design chooses a stratified Measure/Kernel denotational boundary while retaining the
-discrete proof façade. The following remain migration gates rather than reasons to reopen that
-boundary:
+The accepted design chooses a stratified Measure/Kernel denotational boundary; the discrete proof
+façade it initially retained has since been removed. The following remain migration gates rather
+than reasons to reopen that boundary:
 
 - the Mathlib PMF/discrete-measure PRs have a stable outcome;
 - the finite proof and ArkLib canaries are no worse than the current surface;
@@ -1333,8 +1339,6 @@ users retain ordinary discrete probability notation.
 
 ### VCVio and examples
 
-- [`ToMathlib/ProbabilityTheory/SPMF.lean`](../../ToMathlib/ProbabilityTheory/SPMF.lean)
-- [`VCVio/EvalDist/Defs/Basic.lean`](../../VCVio/EvalDist/Defs/Basic.lean)
 - [`VCVio/EvalDist/Defs/Semantics/Core.lean`](../../VCVio/EvalDist/Defs/Semantics/Core.lean)
 - [`VCVio/EvalDist/Defs/Support.lean`](../../VCVio/EvalDist/Defs/Support.lean)
 - [`VCVio/OracleComp/EvalDist.lean`](../../VCVio/OracleComp/EvalDist.lean)
@@ -1352,7 +1356,7 @@ users retain ordinary discrete probability notation.
 - [`VCVio/ProgramLogic/Relational/WP`](../../VCVio/ProgramLogic/Relational/WP)
 - [`VCVio/OracleComp/Coinductive`](../../VCVio/OracleComp/Coinductive)
 - [`Examples/OneTimePad/Basic.lean`](../../Examples/OneTimePad/Basic.lean)
-- [`Examples/EvalDistCompatible/Basic.lean`](../../Examples/EvalDistCompatible/Basic.lean)
+- [`Examples/OptionalFailure/Basic.lean`](../../Examples/OptionalFailure/Basic.lean)
 - [`Examples/OneTimePad/UC.lean`](../../Examples/OneTimePad/UC.lean)
 
 ### Mathlib

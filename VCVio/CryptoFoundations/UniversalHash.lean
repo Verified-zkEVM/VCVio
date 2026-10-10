@@ -6,7 +6,7 @@ Authors: Beneficial AI Foundation
 
 module
 
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import Mathlib.Data.LawfulXor.Basic
 
 /-!

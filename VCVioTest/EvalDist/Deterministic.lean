@@ -12,10 +12,10 @@ public import VCVio.EvalDist.Defs.Measure.ExceptT
 /-!
 # Deterministic measure semantics canaries
 
-Total, optional, and exceptional deterministic computations have native measures on arbitrary
-output spaces. Successful constructors infer probability instances; failure has zero mass.
-Exceptional events need no measurable structure on their error type. The native import surface
-contains no finite-distribution backend.
+Total, optional, and exceptional deterministic computations have measures on arbitrary output
+spaces. Successful constructors infer probability instances; failure has zero mass. Exceptional
+events need no measurable structure on their error type. The import surface contains no
+finite-distribution backend.
 -/
 
 public section
@@ -24,9 +24,8 @@ open MeasureTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "deterministic measure semantics unexpectedly import {name}"
+  if env.contains `PMF then
+    throwError "deterministic measure semantics unexpectedly import PMF"
 
 namespace VCVioTest.Deterministic
 

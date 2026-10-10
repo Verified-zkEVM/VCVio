@@ -44,7 +44,7 @@ The regression module `VCVioTest/ProgramLogic/GCongr.lean` checks the support bi
 explicit raw-WP script, so these examples can be pasted into ordinary-import proofs.
 
 For directional rewriting, explicitly import `Mathlib.Tactic.GRewrite`. With
-`h : ∀ x, f x ≤ g x`, `grw [h]` rewrites through `wp` and native expectation integrals. If `h` is restricted
+`h : ∀ x, f x ≤ g x`, `grw [h]` rewrites through `wp` and expectation integrals `∫⁻ x, f x ∂𝒟[oa]`. If `h` is restricted
 to `support oa`, the rewrite leaves that support premise as a side goal; `grw [h]; assumption`
 closes the direct comparison. `gcongr with x hx` remains useful when the pointwise proof needs
 the support fact explicitly. The [generalized-relation investigation](../reading/generalized-relation-automation.md)
@@ -59,7 +59,7 @@ candidate registrations are experimental.
 | `game_trans g₂` | `g₁ =ᵈ g₃` | Splits into `g₁ =ᵈ g₂` and `g₂ =ᵈ g₃` |
 | `by_dist` | `AdvBound game ε` | Splits into a second game's bound and a `measureETVDist` bound |
 | `by_upto bad` | identical-until-bad `measureETVDist` goals | Applies the `simulateQ` up-to-bad bound |
-| `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters native quantitative WP reasoning, including conditional branches |
+| `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters quantitative WP reasoning, including conditional branches |
 
 `by_equiv` enters the coupling-based `RelTriple` shell, so that `rvcstep` / `rvcgen` can keep
 decomposing the relational goal.
@@ -141,18 +141,17 @@ classes of probability goals:
 2. **Lower-bound event goals** → stay inside unary VCGen by reusing the same `Triple` shell:
    - `r ≤ Pr{let x ← oa}[p x]` / `Pr{let x ← oa}[p x] ≥ r` → `Triple r oa (fun x => 𝟙⟦p x⟧)`
 
-3. **Probability equalities** (`Pr{...}[...]`, applied `𝒟[...]` masses, or output measures;
-   goals in the retiring `Pr[...]` notation are not planned, so convert them to `Pr{...}` first):
+3. **Probability equalities** (`Pr{...}[...]`, applied `𝒟[...]` masses, or output measures):
    - Plain `vcstep` first normalizes common `map`/`bind` surface syntax (`map_eq_bind_pure_comp`,
      `bind_assoc`), then preview-selects the best bounded swap/congruence plan from the fast path
    - `vcstep rw` performs exactly one top-level bind-swap rewrite
    - `vcstep rw under n` rewrites one swap beneath `n` shared outer bind prefixes
    - `vcstep rw normalize` runs the deeper bounded planner used for explicit suggestions
    - `vcstep rw congr` / `vcstep rw congr'` expose one or more shared binds explicitly
-   - Native swaps use `OracleComp.evalDist_bind_bind_swap` (countable responses) or
-     `OracleComp.evalDist_bind_bind_swap_of_uniform`; native congruence uses
-     `OracleComp.evalDist_bind_apply_congr_of_support`, leaving the continuations on the
-     structural support of the shared prefix
+   - Swaps use `OracleComp.prEvent_bind_bind_swap` / `OracleComp.evalDist_bind_bind_swap`
+     (countable responses) or their `_of_uniform` variants; congruence uses
+     `OracleComp.prEvent_bind_congr_of_support` / `OracleComp.evalDist_bind_apply_congr_of_support`,
+     leaving the continuations on the structural support of the shared prefix
 
 4. **Other general `Pr{...}[...]` goals** → rewrite to raw `wp` form and keep stepping structurally
    when a `wp` rule applies. On an already-lowered raw-`wp` goal, `vcstep?` / `vcgen?`
@@ -319,11 +318,13 @@ bind-congruence patterns:
 - **Need a deeper swap than the current bounded automation knows**: peel outer layers manually, or
   use `vcstep?` to see the best bounded replay the planner found before finishing the rest by hand
 
-### Key insight: `probOutput` vs `probEvent`
+### Key insight: events vs output measures
 
-The underlying bind-swap lemma `probEvent_bind_bind_swap` works with `probEvent`.
-Most crypto proofs use `probOutput`. The `vcstep` probability-equality machinery
-bridges between them with `probEvent_eq_eq_probOutput` when needed.
+The underlying bind-swap lemmas are `OracleComp.prEvent_bind_bind_swap` for events and
+`OracleComp.evalDist_bind_bind_swap` for output measures. A point mass `Pr{let y ← oa}[y = x]` is the event
+`(· = x)`, and `Pr{…}[…]` elaborates its final draw as a map, so the `vcstep`
+probability-equality machinery normalizes with `map_eq_bind_pure_comp` / `bind_assoc` before
+matching either shape.
 
 ### Patterns
 
@@ -514,7 +515,7 @@ measureETVDist_simulateQ_run'_le_prEvent_bad :
 ```
 
 The handlers need only agree on good-to-good steps, so they may disagree on the step that sets
-a bad flag; `_of_run_eq` and `_of_evalDist_eq` take agreement off bad input states instead. No
+a bad flag; `_of_run_eq` and `_of_evalDistEq` take agreement off bad input states instead. No
 measurable structure is needed on the state.
 
 ### eRHL (quantitative relational logic)
@@ -718,12 +719,12 @@ stage degrade gracefully.
 Lean v4.34 provides lattice-generic `Std.Internal.Do.WPMonad`, `Triple`, transformer
 instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly:
 
-- `open scoped OracleComp.Quantitative` selects the compatibility oracle facade
-  for expectation in `ℝ≥0∞`.
-- `open scoped MeasureProgramLogic.Quantitative` selects native measure-backed expectation
+- `open scoped OracleComp.Quantitative` selects expectation in `ℝ≥0∞` for `OracleComp spec`
+  under `[OracleSpec.IsMeasureSpec spec]`.
+- `open scoped MeasureProgramLogic.Quantitative` selects measure-backed expectation
   for any lawful monad with `LawfulEvalDistSemantics`. It also selects this carrier over
-  core `Prop` interpretations for monads such as `Option`. The native module is
-  `VCVio.ProgramLogic.Unary.WP.Measure`; its ordinary imports do not load PMF/SPMF.
+  core `Prop` interpretations for monads such as `Option`. Its module is
+  `VCVio.ProgramLogic.Unary.WP.Measure`.
 - `open scoped OracleComp.Qualitative` selects universal structural reachability.
 - `open scoped OracleComp.Probabilistic` selects the restricted algebra on `Set.Iic 1`.
 
@@ -742,7 +743,7 @@ core and PolyFun's WriterT interpretation; VCVio retains its probability rules a
 existing transformer equality lemmas. The scoped `WriterT.MonoidWP` interpretation
 uses multiplication; append-based logs use `WriterT.toWPMonad` with explicit operations.
 
-The `Std.Do` handler bridge remains a separate legacy consumer of core's older SPred API.
+The `Std.Do` handler bridge is a separate consumer of core's older SPred API.
 Its migration to lattice-generic triples is a focused follow-up; it does not require Loom.
 Likewise, replacing the probability tactic's `rw` dispatcher with `Sym.Simp` needs a
 separate proof-application adapter and evidence from the existing automation tests.

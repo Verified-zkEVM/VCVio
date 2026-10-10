@@ -7,7 +7,8 @@ Authors: Devon Tuma
 module
 
 public import Examples.PRFTagReader.Network.Kernel
-public import VCVio.EvalDist.FailureMeasure
+public import VCVio.EvalDist.Defs.Measure
+public import VCVio.EvalDist.WithFailure
 
 /-!
 # PRF reduction under joint-kernel replacement

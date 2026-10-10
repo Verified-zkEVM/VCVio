@@ -39,7 +39,7 @@ section UnlinkReduction
 /-! ### Composed-handler eager-table equivalence
 
 The composed ideal handler `multipleIdealQueryImpl` embeds the lazy random oracle inside a
-stateful handler over `UnlinkOracleSpec`. Structural induction and native uniform-table
+stateful handler over `UnlinkOracleSpec`. Structural induction and uniform-table
 resampling show that running it from `(s, c)` has the same measure as sampling a full table `g`,
 overlaying the cache `c`, and running `multipleTableHandler` against that table. Uniformity of
 the digest and table samplers is explicit in the measure theorem.

@@ -50,7 +50,7 @@ noncomputable def toMAlgOrdered : MAlgOrdered m ENNReal where
 
 namespace Quantitative
 
-/-- Select the native ordered expectation algebra. -/
+/-- Select the ordered expectation algebra of successful-output measures. -/
 noncomputable scoped instance (priority := 1100) instMAlgOrdered : MAlgOrdered m ENNReal :=
   toMAlgOrdered m
 

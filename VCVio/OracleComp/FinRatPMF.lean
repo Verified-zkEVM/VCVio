@@ -14,9 +14,9 @@ public import VCVio.EvalDist.ProbabilityNotation
 /-!
 # Executable `FinRatPMF` Semantics for `OracleComp`
 
-The computable oracle evaluator uses `FinRatPMF.Raw`. Its native output measure agrees with
-uniform oracle semantics, and its positive-weight outputs are exactly the oracle program's
-structurally reachable outputs.
+The computable oracle evaluator uses `FinRatPMF.Raw`. Its output measure agrees with uniform
+oracle semantics, and its positive-weight outputs are exactly the oracle program's structurally
+reachable outputs.
 -/
 
 @[expose] public section
@@ -40,7 +40,7 @@ variable [∀ t, Inhabited (spec.Range t)] [∀ t : spec.Domain, FinEnum (spec.R
 
 section Measure
 
-/-- Executable query sampling has the native uniform response measure. -/
+/-- Executable query sampling has the uniform response measure. -/
 @[simp]
 lemma evalDist_apply (t : spec.Domain) [MeasurableSpace (spec.Range t)]
     [MeasurableSingletonClass (spec.Range t)] :
@@ -49,7 +49,7 @@ lemma evalDist_apply (t : spec.Domain) [MeasurableSpace (spec.Range t)]
 
 variable [IsUniformMeasureSpec spec]
 
-/-- The executable evaluator preserves the native uniform oracle measure. -/
+/-- The executable evaluator preserves the uniform oracle measure. -/
 @[simp]
 lemma evalDist_simulateQ {α : Type v} [MeasurableSpace α] (oa : OracleComp spec α) :
     𝒟[simulateQ (finRatImpl (spec := spec)) oa] = 𝒟[oa] := by

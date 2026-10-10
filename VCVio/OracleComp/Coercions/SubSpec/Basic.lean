@@ -277,7 +277,7 @@ variable {ι : Type u} {τ : Type v}
 
 /-- Support is preserved by `liftComp`: lifting a computation to a larger oracle spec
 does not change which outputs are reachable. This is the support analogue of
-the native uniform-measure lifting law. -/
+the uniform-measure lifting law. -/
 lemma support_liftComp (mx : OracleComp spec α) :
     support (liftComp mx superSpec) = support mx := by
   simp only [liftComp]

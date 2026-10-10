@@ -6,6 +6,10 @@
 > measure-semantics work. That document settles *what the semantic objects are*; this one asks what VCVio's probability
 > statements should **look like** so that Mathlib's library applies to them, and so that the parts
 > worth contributing are shaped to be contributable.
+>
+> The discrete surface assessed below (`SPMF`, `Pr[…]`, `probOutput`, `probEvent`,
+> `probFailure`) has since been removed; VCVio's probability API is now the measure one
+> (`𝒟[…]`, `Pr{…}[…]`).
 
 ## Two directions, often confused
 

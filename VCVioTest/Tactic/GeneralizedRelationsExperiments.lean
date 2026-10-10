@@ -24,7 +24,7 @@ sections.
 
 public section
 
-open OracleComp OracleComp.EvalDist OracleComp.ProgramLogic OracleSpec MeasureTheory
+open OracleComp OracleComp.ProgramLogic OracleSpec MeasureTheory
 open scoped ENNReal
 
 namespace VCVioTest.GeneralizedRelationsExperiments
@@ -119,7 +119,7 @@ example {α β : Type} (oa : ProbComp α) (ob : ProbComp β) (R S : α → β �
 
 end Relational
 
-/-! ## Measure-native postconditions and almost-everywhere bounds -/
+/-! ## Measure postconditions and almost-everywhere bounds -/
 
 section MeasurePosts
 

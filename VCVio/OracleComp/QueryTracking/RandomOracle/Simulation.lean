@@ -384,8 +384,8 @@ theorem prEvent_eq_one_simulateQ_romImpl_run_iff
         oa preexisting_cache a).mpr ⟨cache', ha⟩
     exact (prEvent_eq_one_iff _ _).1 (h f hf) a has
 
-/-- Measure-native probability-one form of the combined uniform-query/random-oracle
-characterization. The visible state is discarded before the output event is measured. -/
+/-- Probability-one form of the combined uniform-query/random-oracle characterization. The
+visible state is discarded before the output event is measured. -/
 theorem evalDist_apply_setOf_simulateQ_romImpl_run'_eq_one_iff
     [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
     [MeasurableSpace α] [DiscreteMeasurableSpace α]

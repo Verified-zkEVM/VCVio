@@ -14,7 +14,7 @@ import Mathlib.Data.Fin.VecNotation
 /-!
 # Additive comparison of observed continuations
 
-Native event probabilities after a common prefix satisfy finite-sum comparison rules.
+Event probabilities after a common prefix satisfy finite-sum comparison rules.
 Measurable continuation observations admit AE premises on the chosen prefix law. Structural
 premises use core attachment and the actual continuation-measure observer; arbitrary hidden
 payloads need no measurable space. Constant allowances retain the prefix's success mass.

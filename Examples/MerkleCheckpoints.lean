@@ -32,7 +32,7 @@ namespace MerkleCheckpoints
 abbrev Query := Bool × Bool
 
 /-- Each fresh oracle address receives a uniform Boolean response. -/
-noncomputable local instance nativeUniform : IsUniformMeasureSpec (Query →ₒ Bool) :=
+noncomputable local instance uniformResponses : IsUniformMeasureSpec (Query →ₒ Bool) :=
   IsUniformMeasureSpec.ofFiniteNonempty (Query →ₒ Bool)
 
 /-- Addressed binary-node query interface with one address. -/

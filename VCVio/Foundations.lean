@@ -29,7 +29,7 @@ public import VCVio.EvalDist.PFunctorKernel
 public import VCVio.OracleComp.Support
 public import PolyFun.Control.Monad.Support.Indexed
 public import VCVio.OracleComp.Traversal
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
 public import VCVio.OracleComp.SimSemantics.Append.Core
 public import VCVio.OracleComp.SimSemantics.WriterT.Core
@@ -65,8 +65,9 @@ public import VCVio.ProgramLogic.Relational.Quantitative
 public import ToMathlib.MeasureTheory.Measure.Coupling.Maximal
 
 /-!
-# Native oracle and probability foundations
+# Oracle and probability foundations
 
 Operational possible outputs, executable sampling, successful-output measures, kernels, event
 probabilities, total variation, and measure weakest preconditions share this public entry point.
+Its import closure excludes Mathlib's `PMF`.
 -/

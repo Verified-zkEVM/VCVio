@@ -8,7 +8,7 @@ module
 
 public import Examples.PRFTagReader.MultipleBadCollision
 public import Examples.PRFTagReader.ReductionBudgets
-import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Unlinkability PRF Reduction

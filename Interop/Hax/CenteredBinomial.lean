@@ -12,7 +12,7 @@ import Hax.Tactic
 import VCVio.OracleComp.ProbComp
 import VCVio.EvalDist.Instances.ErrorT
 import VCVio.EvalDist.Instances.OptionT
-import VCVio.EvalDist.Fintype
+import VCVio.EvalDist.Monad.Basic
 
 /-!
 # End-to-end hax example: centered-binomial sampler (CBD, η = 1)

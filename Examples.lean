@@ -20,7 +20,6 @@ public import Examples.ElGamal.HandlerExecution
 public import Examples.ElGamal.Hash
 public import Examples.ElGamal.ReductionCost
 public import Examples.ElGamal.SSP
-public import Examples.EvalDistCompatible.Basic
 public import Examples.MerkleCheckpoints
 public import Examples.OneTimePad.Basic
 public import Examples.OneTimePad.ComputationalComplexity
@@ -35,6 +34,7 @@ public import Examples.OneTimePad.Separated.Aggregate
 public import Examples.OneTimePad.Separated.Execution
 public import Examples.OneTimePad.Separated.Security
 public import Examples.OneTimePad.UC
+public import Examples.OptionalFailure.Basic
 public import Examples.PRFTagReader
 public import Examples.PRFTagReader.Asymptotic
 public import Examples.PRFTagReader.Auth

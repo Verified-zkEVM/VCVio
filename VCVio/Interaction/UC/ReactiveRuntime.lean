@@ -13,7 +13,7 @@ public import VCVio.OracleComp.ReachableWhen
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Runtime-derived observations of reactive networks

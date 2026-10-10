@@ -5,17 +5,17 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-public import VCVio.EvalDist.PFunctor
-public import VCVio.OracleComp.EvalDist
+public import VCVio.EvalDist.PFunctorMeasure.Core
+public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.QueryTracking.Tracing.Core
 import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 
 /-!
 # PFunctor and OracleSpec Semantics Canaries
 
-These examples exercise the generic polynomial-functor API directly and the
-`OracleSpec` compatibility façade. They ensure that probability semantics and
-handler instrumentation remain usable without unfolding VCVio internals.
+These examples exercise the generic polynomial-functor API directly and its `OracleSpec`
+presentation. They ensure that measure semantics and handler instrumentation remain usable
+without unfolding VCVio internals.
 -/
 
 public section
@@ -25,30 +25,21 @@ namespace VCVioTest.PFunctorFacade
 /-- A one-operation polynomial interface returning one of three directions. -/
 @[expose, reducible] def triPFunctor : PFunctor := ⟨Unit, fun _ => Fin 3⟩
 
-instance (a : triPFunctor.A) : Fintype (triPFunctor.B a) := by infer_instance
-
-instance (a : triPFunctor.A) : Inhabited (triPFunctor.B a) := by infer_instance
-
-noncomputable instance : triPFunctor.IsUniformSpec :=
-  PFunctor.IsUniformSpec.ofFintypeInhabited _
+noncomputable instance : triPFunctor.IsMeasureSpec :=
+  PFunctor.IsMeasureSpec.uniformOfFiniteNonempty _
 
 /-- The direct PFunctor program issuing the three-way operation once. -/
 @[expose]
 def directSample : PFunctor.FreeM triPFunctor (Fin 3) :=
   PFunctor.FreeM.lift ()
 
-example : 𝒮[directSample] =
-    (PFunctor.IsProbabilitySpec.toPMF (P := triPFunctor) () : SPMF (Fin 3)) := by
-  simpa only [directSample] using
-    (PFunctor.FreeM.evalSPMF_lift (P := triPFunctor) ())
+example : 𝒟[directSample] = ProbabilityTheory.uniformOn Set.univ :=
+  PFunctor.FreeM.evalDist_lift (P := triPFunctor) ()
 
-example := PFunctor.FreeM.evalSPMF_lift_eq_uniform (P := triPFunctor) ()
+example : support directSample = Set.univ :=
+  PFunctor.FreeM.support_lift (P := triPFunctor) ()
 
-example : support directSample = Set.univ := by
-  simpa only [directSample] using
-    (PFunctor.FreeM.support_lift_eq_univ (P := triPFunctor) ())
-
-example : EvalDistCompatible (PFunctor.FreeM triPFunctor) := inferInstance
+noncomputable example : EvalDistSemantics (PFunctor.FreeM triPFunctor) := inferInstance
 
 /-- A deterministic handler used to exercise generic instrumentation. -/
 @[expose]
@@ -66,44 +57,21 @@ example : zeroHandler.postInsert (fun _ _ => some ()) () = some 0 := by
 /-- The oracle presentation of the same Boolean interface. -/
 @[expose, reducible] def boolOracleSpec : OracleSpec (Fin 1) := fun _ => Bool
 
-noncomputable instance : IsUniformSpec boolOracleSpec :=
-  OracleSpec.IsUniformSpec.ofFintypeInhabited _
+noncomputable instance : OracleSpec.IsUniformMeasureSpec boolOracleSpec :=
+  .ofFiniteNonempty _
 
-noncomputable example : IsProbabilitySpec boolOracleSpec :=
-  PFunctor.IsProbabilitySpec.mk fun _ => PMF.uniformOfFintype Bool
-
-noncomputable example : MonadLiftT (OracleComp boolOracleSpec) PMF := inferInstance
-
-noncomputable example : LawfulMonadLiftT (OracleComp boolOracleSpec) PMF := inferInstance
-
-example : MonadLiftT (OracleComp boolOracleSpec) SetM := inferInstance
-
-example : LawfulMonadLiftT (OracleComp boolOracleSpec) SetM := inferInstance
-
-noncomputable example : PFunctor.IsProbabilitySpec boolOracleSpec.toPFunctor := inferInstance
-
-noncomputable example : PFunctor.IsUniformSpec boolOracleSpec.toPFunctor :=
-  OracleSpec.IsUniformSpec.toPFunctor
+noncomputable example : EvalDistSemantics (OracleComp boolOracleSpec) := inferInstance
 
 -- Instance synthesis at the erased literal. Tactics that unfold the reducible layers above
--- `OracleSpec` leave a bare `PFunctor.mk` in the goal; the semantics instances are still found
--- there with no transparency help from `OracleSpec` itself (see the comment on its
+-- `OracleSpec` leave a bare `PFunctor.mk` in the goal; the support instances are still found there
+-- with no transparency help from `OracleSpec` itself (see the comment on its
 -- `implicit_reducible` attribute, which serves dependent-type checks, not synthesis).
-noncomputable example : PFunctor.IsProbabilitySpec (PFunctor.mk (Fin 1) fun _ => Bool) :=
-  inferInstance
+example : MonadAttach (PFunctor.FreeM (PFunctor.mk (Fin 1) fun _ => Bool)) := inferInstance
 
-noncomputable example : MonadLiftT (PFunctor.FreeM (PFunctor.mk (Fin 1) fun _ => Bool)) PMF :=
-  inferInstance
-
-example : MonadLiftT (PFunctor.FreeM (PFunctor.mk (Fin 1) fun _ => Bool)) SetM := inferInstance
-
-example (program : OracleComp boolOracleSpec Bool) :
-    𝒮[program] = program.liftM PFunctor.IsProbabilitySpec.toPMF :=
-  PFunctor.FreeM.evalSPMF_eq_liftM program
-
-example (program : OracleComp boolOracleSpec Bool) :
-    𝒮[program] = simulateQ OracleSpec.IsProbabilitySpec.toPMF program :=
-  OracleComp.evalSPMF_eq_simulateQ program
+/-- The uniform answer measure of the oracle presentation is the uniform measure on `Bool`. -/
+example : 𝒟[(liftM (boolOracleSpec.query 0) : OracleComp boolOracleSpec Bool)] =
+    ProbabilityTheory.uniformOn Set.univ :=
+  OracleComp.evalDist_liftM_query_uniform (spec := boolOracleSpec) 0
 
 /-! ## Nested coproduct transparency -/
 
@@ -128,18 +96,18 @@ example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) :
     QueryImpl spec₃ (StateT (List spec₃.Domain) Id) :=
   QueryImpl.appendInputLog (fun t => impl (.inr t))
 
-example [IsProbabilitySpec ((spec₁ + spec₂) + spec₃)] (t : spec₂.Domain)
+example [OracleSpec.IsMeasureSpec ((spec₁ + spec₂) + spec₃)] (t : spec₂.Domain)
     (program : OracleComp ((spec₁ + spec₂) + spec₃)
       ((((spec₁ + spec₂) + spec₃).Range (.inl (.inr t))) × Bool)) :
-    Pr[fun z : spec₂.Range t × Bool => z.2 = true | program] =
-      Pr[fun z : spec₂.Range t × Bool => z.2 = true | program] := by
+    Pr{let z ← program}[(z : spec₂.Range t × Bool).2 = true] =
+      Pr{let z ← program}[(z : spec₂.Range t × Bool).2 = true] := by
   rfl
 
-example [IsProbabilitySpec ((spec₁ + spec₂) + spec₃)] (t : spec₃.Domain)
+example [OracleSpec.IsMeasureSpec ((spec₁ + spec₂) + spec₃)] (t : spec₃.Domain)
     (program : OracleComp ((spec₁ + spec₂) + spec₃)
       ((((spec₁ + spec₂) + spec₃).Range (.inr t)) × Bool)) :
-    Pr[fun z : spec₃.Range t × Bool => z.2 = true | program] =
-      Pr[fun z : spec₃.Range t × Bool => z.2 = true | program] := by
+    Pr{let z ← program}[(z : spec₃.Range t × Bool).2 = true] =
+      Pr{let z ← program}[(z : spec₃.Range t × Bool).2 = true] := by
   rfl
 
 end NestedCoproductTransparency

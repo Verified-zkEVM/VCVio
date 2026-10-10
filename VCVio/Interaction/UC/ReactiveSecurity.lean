@@ -8,9 +8,10 @@ module
 
 public import PolyFun.Interaction.UC.ReactiveNetwork.HandledAssembly
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.EvalDist.MeasureTVDist.Basic
-public import VCVio.EvalDist.FailureMeasure
+public import VCVio.EvalDist.Defs.Measure
+public import VCVio.EvalDist.WithFailure
 
 /-!
 # Graded contextual comparison of executable reactive fragments

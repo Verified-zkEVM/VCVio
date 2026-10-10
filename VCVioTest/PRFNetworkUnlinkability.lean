@@ -9,7 +9,7 @@ module
 public import Examples.PRFTagReader.NetworkUnlinkability
 
 /-!
-# Native network unlinkability through ordinary imports
+# Network unlinkability through ordinary imports
 
 An adaptive tag/reader client instantiates the two named distinguishers, their concrete query
 budgets, and a nontrivial numerical loss bound. The empty-client boundary checks the

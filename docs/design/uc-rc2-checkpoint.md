@@ -121,7 +121,7 @@ the proved constructions in the campaign and semantics ledgers.
 ## Remaining dependency adoption gates
 
 1. Resolve deprecation warnings; run the full VCVio validation sequence, including warning,
-   environment lint, import, PMF/exposure, and axiom budgets. Do not suppress linters or increase
+   environment lint, import, exposure, and axiom budgets. Do not suppress linters or increase
    debt to make the upgrade pass.
 2. Regenerate and validate final manifests from the published pins in a clean checkout.
    Recheck the upstream-alignment ledgers against these exact commits; #184's older audit

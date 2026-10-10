@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.EvalDistEq
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
@@ -209,7 +209,7 @@ The `_σ : SigmaProtocol …` argument is dummy (the predicate only depends on
 def simCommitPredictability
     (_σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (β : ℝ≥0∞) : Prop :=
-  ∀ x : Stmt, ∀ c₀ : Commit, Pr{t ← simTranscript x}[t.1 = c₀] ≤ β
+  ∀ x : Stmt, ∀ c₀ : Commit, Pr{let t ← simTranscript x}[t.1 = c₀] ≤ β
 
 /-- Conditional uniformity of the simulator's challenge given its commitment, expressed
 in product form: for any statement `x` admitting a witness, any commit value `c₀`, and
@@ -238,8 +238,8 @@ def simChalUniformGivenCommit [Fintype Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) : Prop :=
   ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →
     ∀ (c₀ : Commit) (ch₀ : Chal),
-      Pr{t ← simTranscript pk}[t.1 = c₀ ∧ t.2.1 = ch₀] =
-        Pr{t ← simTranscript pk}[t.1 = c₀] * (Fintype.card Chal : ℝ≥0∞)⁻¹
+      Pr{let t ← simTranscript pk}[t.1 = c₀ ∧ t.2.1 = ch₀] =
+        Pr{let t ← simTranscript pk}[t.1 = c₀] * (Fintype.card Chal : ℝ≥0∞)⁻¹
 
 end hvzk
 

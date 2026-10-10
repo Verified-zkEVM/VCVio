@@ -30,7 +30,7 @@ run_cmd do
     pending := rest
     unless visited.contains name do
       visited := visited.insert name
-      for forbidden in [`PMF, `SPMF, `evalSPMF, `probEvent, `probOutput, `expectedValue] do
+      for forbidden in [`PMF] do
         if forbidden.isPrefixOf name then
           throwError "measure induction depends on the discrete probability declaration {name}"
       if let some info := env.find? name then

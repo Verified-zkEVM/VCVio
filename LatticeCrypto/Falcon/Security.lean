@@ -9,7 +9,7 @@ public import LatticeCrypto.Falcon.Scheme
 public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
 public import ToMathlib.Probability.Divergence.Renyi
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.EvalDist.Measure
 
 /-!

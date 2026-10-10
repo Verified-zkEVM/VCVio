@@ -38,7 +38,7 @@ cascade. New monad transformers / combinators become a new
 `tryEvalTacticSyntax` block.
 
 Probability lowering is run opportunistically *before* classification, since
-`Pr[…]` may appear inside `wp …` goals that should ultimately dispatch via
+`Pr{…}[…]` may appear inside `wp …` goals that should ultimately dispatch via
 raw `wp` or `Triple` rules; only goals where lowering actually fires bypass
 the rest of the pipeline. -/
 
@@ -74,7 +74,7 @@ inductive UnaryGoalKind where
 /-- Classify the current goal target as a `UnaryGoalKind`.
 
 Probability lowering is intentionally not a kind here: it runs opportunistically
-in `runVCGenStructuralCore` before classification, so a `wp … = ∑' u, Pr[…] * …`
+in `runVCGenStructuralCore` before classification, so a `wp … = ∑' u, Pr{…}[…] * …`
 goal still classifies as `rawWp` / `tripleOther` rather than getting stuck in a
 non-lowerable prob branch. -/
 def classifyUnaryGoalKind (target : Expr) : MetaM UnaryGoalKind := do

@@ -6,6 +6,9 @@
 > That document surveys the options; this one records what happened when one was built. The
 > resulting accepted design is
 > [`denotational-probability-semantics.md`](denotational-probability-semantics.md).
+>
+> The discrete layer this spike bridged to (`SPMF`, `Pr[…]`, `IsProbabilitySpec`, and the
+> PMF agreement lemmas) has since been removed; statements about it describe the snapshot.
 
 ## What was built
 
@@ -17,8 +20,8 @@ The spike is additive: existing probability declarations and crypto proofs remai
 | [`ToMathlib/MeasureTheory/MeasurableSpace/Option.lean`](../../ToMathlib/MeasureTheory/MeasurableSpace/Option.lean) | Coproduct measurable space for `Option` |
 | [`ToMathlib/MeasureTheory/MeasurableSpace/Except.lean`](../../ToMathlib/MeasureTheory/MeasurableSpace/Except.lean) | Coproduct measurable space for `Except` |
 | [`ToMathlib/MeasureTheory/Measure/Option.lean`](../../ToMathlib/MeasureTheory/Measure/Option.lean) | Success-only `Measure.dropNone` observer |
-| [`ToMathlib/Probability/ProbabilityMassFunction/Measure.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/Measure.lean) | `PMF.toMeasure_bind` |
-| [`VCVio/EvalDist/PFunctorMeasure.lean`](../../VCVio/EvalDist/PFunctorMeasure.lean) | `IsMeasureSpec`, `FreeM.denote`, discrete monad laws, probability preservation, event and PMF agreement |
+| `ToMathlib/Probability/ProbabilityMassFunction/Measure.lean` (since removed) | `PMF.toMeasure_bind` |
+| `VCVio/EvalDist/PFunctorMeasure.lean` (now [`VCVio/EvalDist/PFunctorMeasure/Core.lean`](../../VCVio/EvalDist/PFunctorMeasure/Core.lean); the event and PMF agreement was removed) | `IsMeasureSpec`, `FreeM.denote`, discrete monad laws, probability preservation, event and PMF agreement |
 | [`VCVio/EvalDist/MeasureSemantics.lean`](../../VCVio/EvalDist/MeasureSemantics.lean) | Effect-preserving transformer measures and reader/state Markov kernels |
 | [`VCVio/EvalDist/ResumptionMeasure.lean`](../../VCVio/EvalDist/ResumptionMeasure.lean) | Total truncation measures and success-only output submeasures |
 | [`VCVioTest/MeasureSemantics.lean`](../../VCVioTest/MeasureSemantics.lean) | Continuous, discrete, transformer, kernel, and resumption gates |
@@ -116,5 +119,5 @@ Recorded because a spike that reports only success is not evidence.
 
 The ceiling lifts, the compatibility surface survives, and the transformer/nontermination split
 has a concrete API. Measure and kernel semantics are therefore the baseline for new denotational
-work. Existing clients remain on `Pr[...]` until correspondence lemmas make each migration at least
-as usable as the current discrete proof.
+work. Existing clients were to remain on `Pr[...]` until correspondence lemmas made each migration
+at least as usable as the discrete proof; that migration has since completed.

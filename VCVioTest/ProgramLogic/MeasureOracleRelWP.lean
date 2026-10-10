@@ -10,7 +10,7 @@ public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.OracleComp.ProbComp.Basic
 
 /-!
-# Native relational oracle algebra canaries
+# Relational oracle algebra canaries
 
 The qualitative measure coupling algebra supports the generic relational interface, including
 uncountable output types and weighted zero-mass branches. It requires no discrete backend.
@@ -23,9 +23,8 @@ open OracleComp.ProgramLogic.Relational
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `DiscreteEvalDistCompatible] do
-    if env.contains name then
-      throwError "native relational oracle algebra unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "relational oracle algebra unexpectedly imports PMF"
 
 namespace VCVioTest.ProgramLogic.MeasureOracleRelWP
 

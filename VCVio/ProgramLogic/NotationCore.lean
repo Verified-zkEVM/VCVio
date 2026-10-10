@@ -116,7 +116,7 @@ lemma Relational.RelPost.indicator_eq_propInd {α β : Type}
     Relational.RelPost.indicator R a b = 𝟙⟦R a b⟧ := rfl
 
 /-- Almost-sure correctness: `Triple 𝟙⟦True⟧ c (fun x => 𝟙⟦p x⟧)` iff
-`Pr[ p | c] = 1`. -/
+`Pr{let x ← c}[p x] = 1`. -/
 lemma triple_propInd_iff_prEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :

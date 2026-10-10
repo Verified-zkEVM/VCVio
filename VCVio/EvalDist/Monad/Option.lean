@@ -13,7 +13,7 @@ public import ToMathlib.Control.OptionT
 /-!
 # Events of optional computations
 
-Native successful-output semantics turns a sampled guard into a condition on the sampled value.
+Successful-output semantics turns a sampled guard into a condition on the sampled value.
 The intermediate measurable space is internal to the observation law. Wrapped computations are
 observed through their present values, and sequencing a lossless prefix with continuations that
 succeed on its reachable outputs preserves probability-one events.
@@ -147,5 +147,20 @@ theorem prEvent_mk_bind_le_of_forall_le (mx : m α) (f : α → m (Option β)) (
     h a (mem_support_of_mem_support_lift ha)
 
 end sequencing
+
+/-- Lifting into the optional monad adds no failure. -/
+@[simp]
+theorem prFail_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α) :
+    prFail (OptionT.lift mx) = prFail mx := by
+  let : MeasurableSpace α := ⊤
+  rw [prFail_eq_one_sub_evalDist_univ, prFail_eq_one_sub_evalDist_univ, OptionT.evalDist_lift]
+
+/-- A monadic lift into the optional monad adds no failure. -/
+@[simp]
+theorem prFail_liftM {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α) :
+    prFail (liftM mx : OptionT m α) = prFail mx :=
+  prFail_lift mx
 
 end OptionT

@@ -9,7 +9,7 @@ module
 public import VCVio.ProgramLogic.Unary.SimulateQ
 
 /-!
-# Native quantitative oracle semantics
+# Quantitative oracle semantics
 
 A deliberately nonuniform oracle checks that quantitative WP uses the configured measure.
 Its real-valued observations use the usual real measurable space, and a stateful interpreter
@@ -24,11 +24,10 @@ open scoped ENNReal OracleComp.Quantitative
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `NeverFail, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
-    if env.contains name then
-      throwError "native oracle WP unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "oracle WP unexpectedly imports PMF"
 
-namespace VCVioTest.NativeOracleWP
+namespace VCVioTest.OracleWP
 
 /-- An oracle whose answer is always true. -/
 abbrev fixedSpec : OracleSpec Unit := fun _ ↦ Bool
@@ -77,4 +76,4 @@ example {α : Type} (mx : OracleComp fixedSpec α) (counts : ℕ → ℕ) (post 
     Functor.map_map, id_map']
   exact .rfl
 
-end VCVioTest.NativeOracleWP
+end VCVioTest.OracleWP

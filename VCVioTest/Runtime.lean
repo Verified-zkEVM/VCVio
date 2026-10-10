@@ -7,7 +7,8 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.Runtime
 public import VCVio.EvalDist.WithFailure
-public import VCVio.EvalDist.FailureMeasure
+public import VCVio.EvalDist.Defs.Measure
+public import VCVio.OracleComp.EvalDist.Measure
 
 /-! # Stateful runtime producer regressions
 
@@ -60,15 +61,14 @@ theorem counter_observations :
 
 /-- Returning `none` is a successful return, distinct from missing runtime mass. -/
 theorem returnedNone_is_not_runtimeFailure :
-    evalDistWithFailure (pure none : SPMF (Option Bool)) {some none} = 1 ∧
-      evalDistWithFailure (pure none : SPMF (Option Bool)) {none} = 0 := by
-  simp [evalDistWithFailure_some, evalDistWithFailure_none, evalDist_pure]
+    evalDistWithFailure (pure none : ProbComp (Option Bool)) {some none} = 1 ∧
+      evalDistWithFailure (pure none : ProbComp (Option Bool)) {none} = 0 := by
+  simp [evalDistWithFailure_some, evalDistWithFailure_none]
 
 /-- Runtime failure does not masquerade as a successfully returned `none`. -/
 theorem runtimeFailure_has_no_returnedValue :
-    evalDistWithFailure (failure : SPMF (Option Bool)) {some none} = 0 ∧
-      evalDistWithFailure (failure : SPMF (Option Bool)) {none} = 1 := by
-  simp [evalDistWithFailure_some, evalDistWithFailure_none, evalDist_apply_singleton,
-    evalDist_apply_univ, probOutput_def, probFailure_def]
+    evalDistWithFailure (failure : OptionT ProbComp (Option Bool)) {some none} = 0 ∧
+      evalDistWithFailure (failure : OptionT ProbComp (Option Bool)) {none} = 1 := by
+  simp [evalDistWithFailure_some, evalDistWithFailure_none]
 
 end VCVioTest.Runtime

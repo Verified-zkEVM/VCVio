@@ -7,24 +7,25 @@
 | `A →ₒ B` | Singleton oracle spec (`OracleSpec.ofFn`) | `VCVio/OracleComp/OracleSpec.lean` |
 | `[]ₒ` | Empty oracle spec (`emptySpec`) | `VCVio/OracleComp/OracleSpec.lean` |
 | `spec₁ + spec₂` | PFunctor coproduct (dependent `Sum.rec`) | `VCVio/OracleComp/OracleSpec.lean` |
-| `⊂ₒ` | SubSpec relation | `VCVio/OracleComp/Coercions/SubSpec.lean` |
+| `⊂ₒ` | SubSpec relation | `VCVio/OracleComp/Coercions/SubSpec/Basic.lean` |
+| `ˡ⊂ₒ` | Lawful (fiberwise bijective) SubSpec, `LawfulSubSpec` | `VCVio/OracleComp/Coercions/SubSpec/Basic.lean` |
 | `∘ₛ` | QueryImpl composition | `VCVio/OracleComp/SimSemantics/QueryImpl/Compose.lean` |
 
 ## Probability Notations
 
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
-| `𝒟[mx]` | primary `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure.lean` |
-| `Pr{x ← mx; ...}[event]` | `prEvent`: the `{True}` mass of the computation returning `event`; `let x ← mx` and `do` sequences are also accepted | `VCVio/EvalDist/ProbabilityNotation.lean` |
-| `Pr{mx}[= a]` | `prEvent ((· = a) <$> mx)`: the mass of the single output `a` | `VCVio/EvalDist/ProbabilityNotation.lean` |
-| `𝒮[mx]` | explicit finite adapter, `evalSPMF mx` | `VCVio/EvalDist/Defs/Basic.lean` |
-| `Pr[= x \| mx]` | `probOutput mx x` | `VCVio/EvalDist/Defs/Basic.lean` |
-| `Pr[p \| mx]` | `probEvent mx p` | `VCVio/EvalDist/Defs/Basic.lean` |
-| `Pr[⊥ \| mx]` | `probFailure mx` | `VCVio/EvalDist/Defs/Basic.lean` |
-| `Pr[cond \| var ← src]` | `probEvent src (fun var => cond)` | `VCVio/EvalDist/Defs/Basic.lean` |
+| `𝒟[mx]` | successful-output `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure/Core.lean` |
+| `Pr{let x ← mx; ...}[event]` | `prEvent`: the `{True}` mass of the computation returning `event`; the braces hold an ordinary `do` sequence | `VCVio/EvalDist/ProbabilityNotation.lean` |
 
-Legacy code and comments may still use `[= x | comp]` (without `Pr`). New
-proofs use `Pr{let x ← comp}[x = target]` or apply `𝒟[comp]` to an event.
+The braces take any `do` sequence, with pure `let`s, destructuring, nested `(← e)` actions,
+branches, `match`, `let mut` and loops; see *Writing events with `do` sequences* in
+`probability.md`. A single output is an event like any other, `Pr{let x ← mx}[x = a]`. Failure
+is missing mass: the probability that `mx` fails is `prFail mx = 1 - Pr{let _ ← mx}[True]`, and a
+lossless computation satisfies `IsProbabilityMeasure 𝒟[mx]`. Every `OracleComp spec`
+computation is lossless under `[OracleSpec.IsMeasureSpec spec]`
+(`OracleComp.prEvent_true_eq_one`); failure arises in `OptionT (OracleComp spec)` and similar
+transformers.
 
 Use `Pr{...}[...]` for a probability after a Lean `do` sequence. It needs
 `EvalDistSemantics` for the resulting computation and has the successful-output
@@ -37,11 +38,9 @@ experiment that returns `decide` of the same predicate without requiring a
 measurable structure on intermediate outputs. The notation
 does not require a finite-distribution lift.
 
-`Pr[...]` remains the discrete compatibility notation. Use the named
-`evalDist_apply_singleton`, `evalDist_apply_setOf`, and `evalDist_apply_univ`
-equations at a compatibility boundary. New probability statements should use
-`Pr{...}[...]` or apply `𝒟[...]` directly to a measurable set. There is no
-`Pr_{...}[...]` syntax in VCVio.
+State probabilities with `Pr{...}[...]` or apply `𝒟[...]` directly to a
+measurable set; `prEvent_eq_evalDist_singleton` converts a point mass
+`Pr{let x ← mx}[x = a]` to `𝒟[mx] {a}`. There is no `Pr_{...}[...]` syntax in VCVio.
 See [probability notation and computability](../design/probability-notation-computability.md)
 for the exact finite evaluator boundary and decidability requirements.
 
@@ -49,11 +48,11 @@ for the exact finite evaluator boundary and decidability requirements.
 
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
-| `$ᵗ T` | `uniformSample T` (type-level uniform) | `VCVio/OracleComp/Constructions/SampleableType.lean` |
-| `$ xs` | `uniformSelect xs` (can fail on empty) | `VCVio/OracleComp/ProbComp.lean` |
-| `$! xs` | `uniformSelect! xs` (never fails) | `VCVio/OracleComp/ProbComp.lean` |
-| `$[0..n]` | `uniformFin n` (uniform `Fin (n+1)`) | `VCVio/OracleComp/ProbComp.lean` |
-| `$[n⋯m]` | `uniformRange n m` (uniform over range) | `VCVio/OracleComp/ProbComp.lean` |
+| `$ᵗ T` | `uniformSample T` (type-level uniform) | `VCVio/OracleComp/Constructions/SampleableType/Basic.lean` |
+| `$ xs` | `uniformSelect xs` (can fail on empty) | `VCVio/OracleComp/ProbComp/Basic.lean` |
+| `$! xs` | `uniformSelect! xs` (never fails) | `VCVio/OracleComp/ProbComp/Basic.lean` |
+| `$[0..n]` | `uniformFin n` (uniform `Fin (n+1)`) | `VCVio/OracleComp/ProbComp/Basic.lean` |
+| `$[n⋯m]` | `uniformRange n m` (uniform over range) | `VCVio/OracleComp/ProbComp/Basic.lean` |
 
 ## Program Logic Notations
 
@@ -98,9 +97,15 @@ Each type has `@[simp]` bridge lemmas (e.g., `Raw.hasPar`) that normalize
 
 Precedence ensures `A ∥ B ⊞ C ⊠ K` parses as `((A ∥ B) ⊞ C) ⊠ K`.
 
-## Legacy Notation (Do NOT Use)
+## Removed Notation (Do NOT Use)
 
 | Dead notation | Replacement |
 |---------------|-------------|
-| `[= x \| comp]` | `Pr{let result ← comp}[result = x]` |
+| `Pr[= x \| comp]`, `[= x \| comp]` | `Pr{let y ← comp}[y = x]` |
+| `Pr[p \| comp]`, `Pr[p x \| x ← comp]` | `Pr{let x ← comp}[p x]` |
+| `Pr[⊥ \| comp]` | `prFail comp` |
+| `𝒮[comp]` | `𝒟[comp]` |
 | `++ₒ` | `+` |
+
+To convert code written against the removed discrete probability API, see
+[`probability-migration.md`](probability-migration.md).

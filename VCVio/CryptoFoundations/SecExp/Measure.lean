@@ -11,7 +11,7 @@ public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.Monad.Bool
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Boolean hidden-bit experiments

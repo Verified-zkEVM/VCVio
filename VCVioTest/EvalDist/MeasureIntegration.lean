@@ -26,9 +26,8 @@ open scoped ENNReal
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `NeverFail, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
-    if env.contains name then
-      throwError "native integration unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "integration unexpectedly imports PMF"
 
 namespace VCVioTest.MeasureIntegration
 

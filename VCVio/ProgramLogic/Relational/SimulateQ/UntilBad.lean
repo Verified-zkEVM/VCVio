@@ -8,7 +8,7 @@ module
 
 public import VCVio.EvalDist.MeasureTVDist.Event
 public import VCVio.OracleComp.EvalDist.Measure
-public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.EvalDist.MeasureTVDist.Bind
 
