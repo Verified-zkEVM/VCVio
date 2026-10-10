@@ -139,6 +139,15 @@ RENAMES: dict[str, str] = {
         "advantage_le_expectedQuerySlack_add_prEvent_bad_of_inv_preserved",
     "advantage_le_queryBound_mul_slack_plus_probEvent_bad":
         "advantage_le_queryBound_mul_slack_add_prEvent_bad",
+    # Coinductive responders.
+    "ofStateQueryImpl": "ofQueryImpl",
+    "ofStateQueryImpl_state": "ofQueryImpl_state",
+    "answerSPMF": "answerComp",
+    "answerSPMF_ofSPMF": "answerComp_ofQueryImpl",
+    "answerKernel_eq_toMeasure": "answerKernel_eq_evalDist",
+    "stepAgainstKernel_eq_toMeasure": "stepAgainstKernel_eq_evalDist",
+    "iterateAgainstKernel_eq_toMeasure": "iterateAgainstKernel_eq_evalDist",
+    "probOutput_none_runWithInput": "prEvent_none_runWithInput",
     # Fiat–Shamir and ML-DSA zero knowledge.
     "cmaReal_probEvent_bad_eq_zero": "cmaReal_prEvent_bad_eq_zero",
     "cmaReal_cmaSim_tv_sign_le_cmaSignEpsCore_of_valid":
@@ -255,6 +264,17 @@ MODULES: dict[str, list[str]] = {
     "VCVio.EvalDist.MeasureTVDist": ["VCVio.EvalDist.MeasureTVDist.Basic"],
     "VCVio.ProgramLogic.Relational.SimulateQ.Epsilon":
         ["VCVio.ProgramLogic.Relational.SimulateQ.UntilBad"],
+    "VCVio.EvalDist.Expectation": ["VCVio.ProgramLogic.Unary.HoareTriple"],
+    "VCVio.EvalDist.ExpectationMeasure": ["VCVio.ProgramLogic.Unary.HoareTriple"],
+    "VCVio.EvalDist.RenyiDivergence": ["ToMathlib.Probability.Divergence.Renyi"],
+    "ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence":
+        ["ToMathlib.Probability.Divergence.Renyi"],
+    "ToMathlib.Probability.Divergence.RenyiDiscrete":
+        ["ToMathlib.Probability.Divergence.RenyiTotalVariation"],
+    "ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym":
+        ["ToMathlib.Probability.Divergence.Renyi"],
+    "ToMathlib.Probability.ProbabilityMassFunction.TotalVariation":
+        ["ToMathlib.MeasureTheory.Measure.TotalVariation"],
     "VCVio.StateSeparating.DistEquiv": ["VCVio.StateSeparating.MeasureDistEquiv"],
     "VCVio.StateSeparating.Advantage": ["VCVio.StateSeparating.Advantage.Measure"],
     "VCVio.EvalDist.Monad.Disagreement": ["VCVio.EvalDist.Monad.Disagreement.Measure"],

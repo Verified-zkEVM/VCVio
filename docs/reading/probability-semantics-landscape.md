@@ -210,10 +210,10 @@ theory that a replacement must either preserve or deliberately supersede.
 |---|---|---|
 | Point/event/failure algebra | [`EvalDist/Monad`](../../VCVio/EvalDist/Monad) | Countable sums and point masses |
 | Finite support | [`EvalDist/Defs/Support.lean`](../../VCVio/EvalDist/Defs/Support.lean) | Enumeration and membership bridges |
-| Expectations | [`EvalDist/Expectation.lean`](../../VCVio/EvalDist/Expectation.lean) | `ℝ≥0∞` sums, increasingly close to `lintegral` |
+| Expectations | [`ProgramLogic/Unary/HoareTriple.lean`](../../VCVio/ProgramLogic/Unary/HoareTriple.lean) | `wp` and `∫⁻` against the output measure |
 | Independent products | [`EvalDist/IndepProduct.lean`](../../VCVio/EvalDist/IndepProduct.lean) | Product distributions and factorization |
 | Total variation | [`EvalDist/MeasureTVDist/Basic.lean`](../../VCVio/EvalDist/MeasureTVDist/Basic.lean) | Total variation of output measures |
-| Rényi divergence | [`EvalDist/RenyiDivergence.lean`](../../VCVio/EvalDist/RenyiDivergence.lean) | Discrete density ratios |
+| Rényi divergence | [`Divergence/Renyi.lean`](../../ToMathlib/Probability/Divergence/Renyi.lean) | Measure-level, via `Measure.rnDeriv` |
 | Couplings | [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean) | A joint measure with fixed marginals |
 | Expected query cost | [`QueryCost.lean`](../../VCVio/OracleComp/QueryTracking/QueryCost.lean) and [`WriterCost.lean`](../../VCVio/OracleComp/QueryTracking/WriterCost.lean) | Expectations of instrumented runs |
 | Relational logic | [`ProgramLogic/Relational`](../../VCVio/ProgramLogic/Relational) | Coupling existence and quantitative relational WP |
@@ -1338,14 +1338,14 @@ users retain ordinary discrete probability notation.
 - [`VCVio/EvalDist/Defs/Semantics/Core.lean`](../../VCVio/EvalDist/Defs/Semantics/Core.lean)
 - [`VCVio/EvalDist/Defs/Support.lean`](../../VCVio/EvalDist/Defs/Support.lean)
 - [`VCVio/OracleComp/EvalDist.lean`](../../VCVio/OracleComp/EvalDist.lean)
-- [`VCVio/EvalDist/Expectation.lean`](../../VCVio/EvalDist/Expectation.lean)
+- [`VCVio/ProgramLogic/Unary/HoareTriple.lean`](../../VCVio/ProgramLogic/Unary/HoareTriple.lean)
 - [`VCVio/EvalDist/MeasureTVDist/Basic.lean`](../../VCVio/EvalDist/MeasureTVDist/Basic.lean)
-- [`VCVio/EvalDist/RenyiDivergence.lean`](../../VCVio/EvalDist/RenyiDivergence.lean)
+- [`ToMathlib/Probability/Divergence/Renyi.lean`](../../ToMathlib/Probability/Divergence/Renyi.lean)
 - [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean)
 - [`ToMathlib/ProbabilityTheory/FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean)
 - [`ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean)
-- [`ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean)
-- [`ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean)
+- [`ToMathlib/MeasureTheory/Measure/TotalVariation.lean`](../../ToMathlib/MeasureTheory/Measure/TotalVariation.lean)
+- [`ToMathlib/Probability/Divergence/RenyiTotalVariation.lean`](../../ToMathlib/Probability/Divergence/RenyiTotalVariation.lean)
 - [`ToMathlib/Probability/TailSums.lean`](../../ToMathlib/Probability/TailSums.lean)
 - [`VCVio/ProgramLogic`](../../VCVio/ProgramLogic)
 - [`VCVio/ProgramLogic/Unary/WP`](../../VCVio/ProgramLogic/Unary/WP)

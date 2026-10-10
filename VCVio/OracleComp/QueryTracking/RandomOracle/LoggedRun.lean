@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-public import VCVio.EvalDist.Expectation
+public import VCVio.ProgramLogic.Unary.HoareTriple
 
 /-!
 # Logged runs of interleaved private sampling and a cached random oracle

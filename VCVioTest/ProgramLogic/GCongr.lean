@@ -79,6 +79,15 @@ example (oa : OracleComp spec α) (f g : α → ℝ≥0∞)
   gcongr with x hx
   exact h x hx
 
+/-- Averages of inner averages: after `wp_bind`, `gcongr` descends into the continuation with
+the support hypothesis. -/
+example {β : Type} (oa : OracleComp spec α) (ob ob' : α → OracleComp spec β) (g : β → ℝ≥0∞)
+    (h : ∀ x ∈ support oa, wp (ob x) g ≤ wp (ob' x) g) :
+    wp (oa >>= ob) g ≤ wp (oa >>= ob') g := by
+  rw [wp_bind, wp_bind]
+  gcongr with x hx
+  exact h x hx
+
 example [Finite α] (oa : OracleComp spec α) (post : α → ℝ≥0∞)
     (hpost : ∀ x, post x ≠ ⊤) : wp oa post ≠ ⊤ := by finiteness
 

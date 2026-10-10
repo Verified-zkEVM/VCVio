@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.Expectation
+public import VCVio.EvalDist.Monad.Basic
 public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
@@ -65,15 +65,6 @@ example (mx : m α) (f : α → ℝ≥0∞) (c : ℝ≥0∞) (h : ∀ x, f x ≤
     expectedValue mx f + 1 ≤ c + 1 := by
   gcongr ?_ + 1
   exact expectedValue_le_of_le mx h
-
-/-- Averages of inner averages: after `expectedValue_bind`, `gcongr` descends into the
-continuation with the support hypothesis. -/
-example (mx : m α) (my my' : α → m β) (g : β → ℝ≥0∞)
-    (h : ∀ x ∈ support mx, expectedValue (my x) g ≤ expectedValue (my' x) g) :
-    expectedValue (mx >>= my) g ≤ expectedValue (mx >>= my') g := by
-  rw [expectedValue_bind, expectedValue_bind]
-  gcongr with x hx
-  exact h x hx
 
 /-- The forking-lemma shape: a truncated subtraction of finite sums (Mathlib's
 `tsub_le_tsub_left` and `Finset.sum_le_sum` are `gcongr` lemmas). -/
