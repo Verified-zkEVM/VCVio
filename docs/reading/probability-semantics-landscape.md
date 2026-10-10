@@ -212,7 +212,7 @@ theory that a replacement must either preserve or deliberately supersede.
 | Finite support | [`EvalDist/Defs/Support.lean`](../../VCVio/EvalDist/Defs/Support.lean) | Enumeration and membership bridges |
 | Expectations | [`EvalDist/Expectation.lean`](../../VCVio/EvalDist/Expectation.lean) | `ℝ≥0∞` sums, increasingly close to `lintegral` |
 | Independent products | [`EvalDist/IndepProduct.lean`](../../VCVio/EvalDist/IndepProduct.lean) | Product distributions and factorization |
-| Total variation | [`EvalDist/TVDist.lean`](../../VCVio/EvalDist/TVDist.lean) | Discrete pointwise definition |
+| Total variation | [`EvalDist/MeasureTVDist/Basic.lean`](../../VCVio/EvalDist/MeasureTVDist/Basic.lean) | Total variation of output measures |
 | Rényi divergence | [`EvalDist/RenyiDivergence.lean`](../../VCVio/EvalDist/RenyiDivergence.lean) | Discrete density ratios |
 | Couplings | [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean) | A joint measure with fixed marginals |
 | Expected query cost | [`QueryCost.lean`](../../VCVio/OracleComp/QueryTracking/QueryCost.lean) and [`WriterCost.lean`](../../VCVio/OracleComp/QueryTracking/WriterCost.lean) | Expectations of instrumented runs |
@@ -1339,7 +1339,7 @@ users retain ordinary discrete probability notation.
 - [`VCVio/EvalDist/Defs/Support.lean`](../../VCVio/EvalDist/Defs/Support.lean)
 - [`VCVio/OracleComp/EvalDist.lean`](../../VCVio/OracleComp/EvalDist.lean)
 - [`VCVio/EvalDist/Expectation.lean`](../../VCVio/EvalDist/Expectation.lean)
-- [`VCVio/EvalDist/TVDist.lean`](../../VCVio/EvalDist/TVDist.lean)
+- [`VCVio/EvalDist/MeasureTVDist/Basic.lean`](../../VCVio/EvalDist/MeasureTVDist/Basic.lean)
 - [`VCVio/EvalDist/RenyiDivergence.lean`](../../VCVio/EvalDist/RenyiDivergence.lean)
 - [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean)
 - [`ToMathlib/ProbabilityTheory/FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean)

@@ -7,7 +7,8 @@ Authors: Devon Tuma
 module
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
-public import VCVio.EvalDist.TVDist
+public import VCVio.EvalDist.MeasureTVDist.Basic
+public import VCVio.EvalDist.EvalDistEq
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
 
 /-!
@@ -151,7 +152,9 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 
 section hvzk
 
-variable [SampleableType Chal] [IsUniformSpec unifSpec]
+open scoped ENNReal
+
+variable [SampleableType Chal]
 
 /-- The honest prover's transcript distribution. -/
 def realTranscript (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel)
@@ -163,7 +166,7 @@ def realTranscript (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal R
   return (pc, ω, π)
 
 /-- Honest-verifier zero-knowledge: the real transcript distribution is within total variation
-distance `ζ_zk` of the simulated one.
+distance `ζ_zk` of the simulated one, measured in the discrete structure on transcripts.
 
 The real transcript is `σ.realTranscript x w`.
 The simulated transcript is produced by `simTranscript` given only the statement `x`.
@@ -172,16 +175,16 @@ Note: the `sim` field of `SigmaProtocol` only produces a public commitment. For 
 a full transcript simulator `Stmt → ProbComp (Commit × Chal × Resp)`. We parameterize by this
 simulator, which also keeps the property available on a bare `ChallengeVerifyProtocol`. -/
 def HVZK (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel)
-    (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (ζ_zk : ℝ) : Prop :=
+    (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (ζ_zk : ℝ≥0∞) : Prop :=
   ∀ x w, rel x w = true →
-    tvDist (σ.realTranscript x w) (simTranscript x) ≤ ζ_zk
+    letI : MeasurableSpace (Commit × Chal × Resp) := ⊤
+    measureETVDist (σ.realTranscript x w) (simTranscript x) ≤ ζ_zk
 
-/-- Exact honest-verifier zero-knowledge: the real transcript distribution equals the
+/-- Exact honest-verifier zero-knowledge: the real transcript is equal in distribution to the
 simulated one. -/
 def PerfectHVZK (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) : Prop :=
-  ∀ x w, rel x w = true →
-    𝒮[σ.realTranscript x w] = 𝒮[simTranscript x]
+  ∀ x w, rel x w = true → σ.realTranscript x w =ᵈ simTranscript x
 
 /-- The perfect HVZK property is equivalent to the approximate HVZK property with `ζ_zk = 0`. -/
 @[grind =]
@@ -189,11 +192,9 @@ lemma perfectHVZK_iff_hvzk_zero
     (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) :
     σ.PerfectHVZK simTranscript ↔ σ.HVZK simTranscript 0 := by
-  refine ⟨fun h x w hx => ?_, fun h x w hx => ?_⟩
-  · exact le_of_eq ((tvDist_eq_zero_iff _ _).2 (h x w hx))
-  · exact (tvDist_eq_zero_iff _ _).1 (le_antisymm (h x w hx) (tvDist_nonneg _ _))
+  simp only [PerfectHVZK, HVZK, evalDistEq_iff_evalDist_eq, nonpos_iff_eq_zero,
+    measureETVDist_eq_zero_iff]
 
-open scoped ENNReal in
 /-- The simulator's commitment marginal has predictability at most `β`: no single
 commitment value is output with probability exceeding `β`. Equivalently, the commitment
 has min-entropy at least `-log₂ β`.
@@ -208,13 +209,12 @@ The `_σ : SigmaProtocol …` argument is dummy (the predicate only depends on
 def simCommitPredictability
     (_σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (β : ℝ≥0∞) : Prop :=
-  ∀ x : Stmt, ∀ c₀ : Commit, probOutput (Prod.fst <$> simTranscript x) c₀ ≤ β
+  ∀ x : Stmt, ∀ c₀ : Commit, Pr{t ← simTranscript x}[t.1 = c₀] ≤ β
 
-open scoped ENNReal in
 /-- Conditional uniformity of the simulator's challenge given its commitment, expressed
 in product form: for any statement `x` admitting a witness, any commit value `c₀`, and
-any challenge value `ch₀`, the joint marginal `Pr[(commit, chal) = (c₀, ch₀)]` factors as
-`Pr[commit = c₀] * (1 / |Chal|)`.
+any challenge value `ch₀`, the joint mass of `(commit, chal) = (c₀, ch₀)` factors as the mass
+of `commit = c₀` times `1 / |Chal|`.
 
 This is a strengthening of `simCommitPredictability` (which only bounds the commit
 marginal). Where the latter says "no commit value is too likely", `simChalUniformGivenCommit`
@@ -226,7 +226,7 @@ uniform conditional on the simulator's commit (which is what gets compared again
 random oracle's would-be answer).
 
 The product form `P[(c₀, ch₀)] = P[c₀] * 1/|Chal|` avoids conditional-probability
-ambiguities when `P[c₀] = 0` and is the most directly-usable shape inside the `tvDist`
+ambiguities when `P[c₀] = 0` and is the most directly-usable shape inside the total-variation
 calculation.
 
 The `rel pk sk = true` hypothesis is needed because typical Schnorr-style simulators only
@@ -238,9 +238,8 @@ def simChalUniformGivenCommit [Fintype Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) : Prop :=
   ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →
     ∀ (c₀ : Commit) (ch₀ : Chal),
-      Pr[fun t : Commit × Chal × Resp => t.1 = c₀ ∧ t.2.1 = ch₀ | simTranscript pk] =
-        Pr[fun t : Commit × Chal × Resp => t.1 = c₀ | simTranscript pk] *
-          (Fintype.card Chal : ℝ≥0∞)⁻¹
+      Pr{t ← simTranscript pk}[t.1 = c₀ ∧ t.2.1 = ch₀] =
+        Pr{t ← simTranscript pk}[t.1 = c₀] * (Fintype.card Chal : ℝ≥0∞)⁻¹
 
 end hvzk
 

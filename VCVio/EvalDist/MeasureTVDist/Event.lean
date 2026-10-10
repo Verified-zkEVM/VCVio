@@ -58,3 +58,62 @@ theorem measureETVDist_map_le_prEvent_of_agree [MeasurableSpace β] (mx my : m �
       _ ≤ _ := by rw [add_comm]; exact add_le_add le_add_self le_rfl
   · calc _ ≤ Pr{let x ← mx}[bad x] + Pr{let y ← my}[f y ∈ A.1 ∧ ¬bad y] := add_le_add h₂ le_rfl
       _ ≤ _ := by rw [add_comm]; exact add_le_add le_add_self le_rfl
+
+/-- **Post-processing through a public view.** Suppose the first computation's outputs are read
+through a public view `pub`, and the two post-processings agree whenever that view is a good
+output of the second computation: `fa a = fb b` when `pub a = b` and `b` is not bad. The
+post-processed runs are then within the total variation of the public views plus the second
+computation's bad mass. -/
+theorem measureETVDist_map_le_map_add_prEvent_bad {γ : Type}
+    [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β] [DiscreteMeasurableSpace β]
+    [MeasurableSpace γ]
+    (oa : m α) (ob : m β) (pub : α → β) (fa : α → γ) (fb : β → γ) (bad : β → Prop)
+    (h_eq : ∀ a b, pub a = b → ¬ bad b → fa a = fb b) :
+    measureETVDist (fa <$> oa) (fb <$> ob) ≤
+      measureETVDist (pub <$> oa) ob + Pr{let y ← ob}[bad y] := by
+  refine iSup_le fun A => ?_
+  set T := measureETVDist (pub <$> oa) ob
+  let Bd : Set β := {b | bad b}
+  let G : Set β := {b | ¬ bad b ∧ fb b ∈ A.1}
+  have hT (S : Set β) : ENNReal.absDiff (𝒟[pub <$> oa] S) (𝒟[ob] S) ≤ T :=
+    measure_absDiff_apply_le_measureETVDist _ _ MeasurableSet.of_discrete
+  have hbad : Pr{let y ← ob}[bad y] = 𝒟[ob] Bd := prEvent_eq_evalDist_of_discrete ob bad
+  have hfa : 𝒟[fa <$> oa] A.1 = 𝒟[oa] (fa ⁻¹' A.1) := by
+    rw [evalDist_map oa Measurable.of_discrete, Measure.map_apply Measurable.of_discrete A.2]
+  have hfb : 𝒟[fb <$> ob] A.1 = 𝒟[ob] (fb ⁻¹' A.1) := by
+    rw [evalDist_map ob Measurable.of_discrete, Measure.map_apply Measurable.of_discrete A.2]
+  have hpub (S : Set β) : 𝒟[pub <$> oa] S = 𝒟[oa] (pub ⁻¹' S) := by
+    rw [evalDist_map oa Measurable.of_discrete,
+      Measure.map_apply Measurable.of_discrete MeasurableSet.of_discrete]
+  -- The first run's mass of `A` is squeezed between the public masses of `G` and `G ∪ Bd`.
+  have hlo : 𝒟[pub <$> oa] G ≤ 𝒟[fa <$> oa] A.1 := by
+    rw [hpub, hfa]
+    exact measure_mono fun a ha => show fa a ∈ A.1 from (h_eq a (pub a) rfl ha.1) ▸ ha.2
+  have hhi : 𝒟[fa <$> oa] A.1 ≤ 𝒟[pub <$> oa] (G ∪ Bd) := by
+    rw [hpub, hfa]
+    refine measure_mono fun a ha => ?_
+    by_cases hb : bad (pub a)
+    · exact Or.inr hb
+    · exact Or.inl ⟨hb, show fb (pub a) ∈ A.1 from (h_eq a (pub a) rfl hb) ▸ ha⟩
+  -- The second run's mass of `A` is squeezed between its masses of `G` and `G ∪ Bd`.
+  have hlo' : 𝒟[ob] G ≤ 𝒟[fb <$> ob] A.1 := by
+    rw [hfb]
+    exact measure_mono fun b hb => hb.2
+  have hhi' : 𝒟[fb <$> ob] A.1 ≤ 𝒟[ob] G + 𝒟[ob] Bd := by
+    rw [hfb]
+    refine (measure_mono fun b hb => ?_).trans (measure_union_le G Bd)
+    by_cases hbb : bad b
+    · exact Or.inr hbb
+    · exact Or.inl ⟨hbb, hb⟩
+  rw [hbad]
+  refine ENNReal.absDiff_le_iff.2 ⟨?_, ?_⟩
+  · calc 𝒟[fa <$> oa] A.1 ≤ 𝒟[pub <$> oa] (G ∪ Bd) := hhi
+      _ ≤ 𝒟[ob] (G ∪ Bd) + T := (ENNReal.absDiff_le_iff.1 (hT _)).1
+      _ ≤ (𝒟[ob] G + 𝒟[ob] Bd) + T := add_le_add (measure_union_le G Bd) le_rfl
+      _ ≤ (𝒟[fb <$> ob] A.1 + 𝒟[ob] Bd) + T := add_le_add (add_le_add hlo' le_rfl) le_rfl
+      _ = 𝒟[fb <$> ob] A.1 + (T + 𝒟[ob] Bd) := by ring
+  · calc 𝒟[fb <$> ob] A.1 ≤ 𝒟[ob] G + 𝒟[ob] Bd := hhi'
+      _ ≤ (𝒟[pub <$> oa] G + T) + 𝒟[ob] Bd :=
+        add_le_add (ENNReal.absDiff_le_iff.1 (hT _)).2 le_rfl
+      _ ≤ (𝒟[fa <$> oa] A.1 + T) + 𝒟[ob] Bd := add_le_add (add_le_add hlo le_rfl) le_rfl
+      _ = 𝒟[fa <$> oa] A.1 + (T + 𝒟[ob] Bd) := by ring

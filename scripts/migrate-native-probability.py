@@ -114,6 +114,42 @@ RENAMES: dict[str, str] = {
     "triple_propInd_iff_le_probEvent": "triple_propInd_iff_le_prEvent",
     "triple_propInd_iff_probEvent_eq_one": "triple_propInd_iff_prEvent_eq_one",
     "tvDist_simulateQ_le_probEvent_bad": "measureETVDist_simulateQ_run'_le_prEvent_bad",
+    # Identical-until-bad and per-query slack.
+    "tvDist_simulateQ_run_le_probEvent_output_bad": "measureETVDist_simulateQ_run_le_prEvent_bad",
+    "tvDist_simulateQ_le_qeps_plus_probEvent_output_bad":
+        "measureETVDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad",
+    "tvDist_simulateQ_run_le_queryBound_mul_slack_plus_probEvent_bad":
+        "measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad",
+    "tvDist_simulateQ_le_queryBound_mul_slack_plus_probEvent_bad":
+        "measureETVDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad",
+    "tvDist_simulateQ_run_le_queryBoundP_mul": "measureETVDist_simulateQ_run_le_queryBoundP_mul",
+    "ofReal_tvDist_simulateQ_run_le_expectedQuerySlack_plus_probEvent_output_bad":
+        "measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad",
+    "ofReal_tvDist_simulateQ_le_expectedQuerySlack_plus_probEvent_output_bad":
+        "measureETVDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad",
+    "ofReal_tvDist_simulateQ_run_le_queryBound_mul_slack_plus_probEvent_bad":
+        "measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad",
+    "probEvent_bad_simulateQ_run_le_expectedQuerySlack":
+        "prEvent_bad_simulateQ_run_le_expectedQuerySlack",
+    "advantage_le_expectedQuerySlack_plus_probEvent_bad":
+        "advantage_le_expectedQuerySlack_add_prEvent_bad",
+    "advantage_le_expectedQuerySlack_plus_probEvent_bad_of_inv":
+        "advantage_le_expectedQuerySlack_add_prEvent_bad_of_inv",
+    "advantage_le_expectedQuerySlack_plus_probEvent_bad_of_inv_preserved":
+        "advantage_le_expectedQuerySlack_add_prEvent_bad_of_inv_preserved",
+    "advantage_le_queryBound_mul_slack_plus_probEvent_bad":
+        "advantage_le_queryBound_mul_slack_add_prEvent_bad",
+    # Fiat–Shamir and ML-DSA zero knowledge.
+    "cmaReal_probEvent_bad_eq_zero": "cmaReal_prEvent_bad_eq_zero",
+    "cmaReal_cmaSim_tv_sign_le_cmaSignEpsCore_of_valid":
+        "cmaReal_cmaSim_measureETVDist_sign_le_cmaSignEpsCore_of_valid",
+    "cmaReal_cmaSim_tv_costly_le_cmaSignEpsCore_of_valid":
+        "cmaReal_cmaSim_measureETVDist_costly_le_cmaSignEpsCore_of_valid",
+    "hvzkBoundReal": "hvzkBound",
+    "evalSPMF_uniform_add_right_swap": "uniform_add_right_swap_evalDistEq",
+    "evalSPMF_honest_pregate": "honest_pregate_evalDistEq",
+    "evalSPMF_honestExecution_eq_gated": "honestExecution_evalDistEq_gated",
+    "hvzkBadMass_eq_probOutput_indicator": "hvzkBadMass_eq_prEvent_indicator",
     # Equality in distribution.
     "GameEquiv.prEvent_eq": "EvalDistEq.prEvent_eq",
     "GameEquiv.rfl": "EvalDistEq.rfl",
@@ -214,6 +250,11 @@ MODULES: dict[str, list[str]] = {
         ["VCVio.CryptoFoundations.ReplayFork", "VCVio.CryptoFoundations.SeededFork"],
     "VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility":
         ["VCVio.CryptoFoundations.SymmEncAlg"],
+    "VCVio.EvalDist.TVDist": ["VCVio.EvalDist.MeasureTVDist.Basic"],
+    "VCVio.EvalDist.TVDist.Positivity": ["VCVio.EvalDist.MeasureTVDist.Positivity"],
+    "VCVio.EvalDist.MeasureTVDist": ["VCVio.EvalDist.MeasureTVDist.Basic"],
+    "VCVio.ProgramLogic.Relational.SimulateQ.Epsilon":
+        ["VCVio.ProgramLogic.Relational.SimulateQ.UntilBad"],
     "VCVio.StateSeparating.DistEquiv": ["VCVio.StateSeparating.MeasureDistEquiv"],
     "VCVio.StateSeparating.Advantage": ["VCVio.StateSeparating.Advantage.Measure"],
     "VCVio.EvalDist.Monad.Disagreement": ["VCVio.EvalDist.Monad.Disagreement.Measure"],
