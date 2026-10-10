@@ -47,9 +47,10 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
-noncomputable local instance instIsUniformSpecChalSingleton [Inhabited Chal] [Fintype Chal] :
-    IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
-  IsUniformSpec.ofFintypeInhabited _
+/-- The challenge oracle of the forkable experiment answers uniformly. -/
+noncomputable local instance instIsUniformMeasureSpecChalSingleton [Finite Chal] [Nonempty Chal] :
+    IsUniformMeasureSpec ((Unit →ₒ Chal) : OracleSpec _) :=
+  IsUniformMeasureSpec.ofFiniteNonempty _
 
 private lemma simulateQ_id_add_uniform_query_inl
     {ι : Type*} (spec : OracleSpec ι) [∀ i, SampleableType (spec.Range i)]

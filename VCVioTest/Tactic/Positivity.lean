@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.TVDist.Positivity
+public import VCVio.EvalDist.MeasureTVDist.Positivity
 public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
@@ -18,15 +18,16 @@ public section
 
 namespace VCVioTest.Positivity
 
-example {α : Type} (mx my : ProbComp α) (n : ℕ) : 0 ≤ (n : ℝ) * tvDist mx my := by
+example {α : Type} [MeasurableSpace α] (mx my : ProbComp α) (n : ℕ) :
+    0 ≤ (n : ℝ) * measureTVDist mx my := by
   positivity
 
-example {α : Type} (mx my : ProbComp α) : 0 < tvDist mx my + 1 := by
+example {α : Type} [MeasurableSpace α] (mx my : ProbComp α) : 0 < measureTVDist mx my + 1 := by
   positivity
 
-example {α : Type} (mx : ProbComp α) : tvDist mx mx = 0 := by
-  fail_if_success have : 0 < tvDist mx mx := by positivity
-  fail_if_success have : tvDist mx mx ≠ 0 := by positivity
+example {α : Type} [MeasurableSpace α] (mx : ProbComp α) : measureTVDist mx mx = 0 := by
+  fail_if_success have : 0 < measureTVDist mx mx := by positivity
+  fail_if_success have : measureTVDist mx mx ≠ 0 := by positivity
   simp
 
 end VCVioTest.Positivity

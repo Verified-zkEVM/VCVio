@@ -111,7 +111,7 @@ theorem euf_cma_bound
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
     (ζ_zk : ℝ)
     (hζ : 0 ≤ ζ_zk)
-    (hhvzk : ids.HVZK sim ζ_zk)
+    (hhvzk : ids.HVZK sim (ENNReal.ofReal ζ_zk))
     (recover : Stmt → Chal → Resp → Commit)
     (hcr : ids.CommitmentRecoverable recover)
     (adv : SignatureAlg.UnforgeableAdversary
@@ -121,7 +121,7 @@ theorem euf_cma_bound
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
     ∃ reduction : Stmt → ProbComp Wit,
       SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
-        Pr[= true | hardRelationExperiment hr reduction] +
+        Pr{hardRelationExperiment hr reduction}[= true] +
           ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
   let _ := hc
   let _ := hζ
@@ -149,11 +149,13 @@ theorem euf_cma_bound_perfectHVZK
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
     ∃ reduction : Stmt → ProbComp Wit,
       SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
-        Pr[= true | hardRelationExperiment hr reduction] +
+        Pr{hardRelationExperiment hr reduction}[= true] +
           ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort 0 δ hp) :=
   euf_cma_bound (ids := ids) (M := M) (maxAttempts := maxAttempts)
     (hc := hc) (sim := sim) (ζ_zk := 0) (hζ := le_rfl)
-    (hhvzk := (IdenSchemeWithAbort.perfectHVZK_iff_hvzk_zero ids sim).mp hhvzk)
+    (hhvzk := by
+      simpa only [ENNReal.ofReal_zero] using
+        (IdenSchemeWithAbort.perfectHVZK_iff_hvzk_zero ids sim).mp hhvzk)
     (recover := recover) (hcr := hcr) (adv := adv)
     (qS := qS) (qH := qH) (ε := ε) (p_abort := p_abort) (δ := δ) (hp := hp) (hQ := hQ)
 
