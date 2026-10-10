@@ -12,7 +12,7 @@ import VCVio.EvalDist.TVDist.Positivity
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
-public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 
 /-!
 # Relational simulation and identical-until-bad rules
@@ -232,9 +232,10 @@ The neighbouring rules tie the two state spaces together differently — `relTri
 through an arbitrary state invariant plus a per-query relational triple, and
 `relTriple_simulateQ_run'_of_query_map_eq` through a projection of the first state space onto the
 second. Reach for this one when both simulations share a state space and per-query agreement is an
-equality of distributions rather than of computations. `OracleComp.evalSPMF_simulateQ_run_congr`
-draws the same conclusion as a bare `evalSPMF` equality on `run`, but only when both
-implementations also share the ambient spec they simulate into. -/
+equality of distributions rather than of computations.
+`OracleComp.evalDist_simulateQ_run_congr_of_forall` draws the same conclusion as a bare
+output-measure equality on `run`, but only when both implementations also share the ambient
+spec they simulate into. -/
 theorem relTriple_simulateQ_run'_of_impl_evalSPMF_eq
     {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
     [IsUniformSpec spec₁] [IsUniformSpec spec₂] {σ : Type}

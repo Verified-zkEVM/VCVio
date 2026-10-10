@@ -7,7 +7,6 @@ Authors: XC0R
 module
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
-public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.OracleComp.QueryTracking.Birthday
 
@@ -41,7 +40,7 @@ protocol parameter.
 - `ROMHashSpec X Y` — adversary-facing random-oracle spec; carries no
   probability instances.
 - `ROMHashSpec.cached X Y` — post-simulation companion; defeq to
-  `ROMHashSpec X Y` but with the `IsUniformSpec` instance attached.
+  `ROMHashSpec X Y`, the spec on which uniform answer semantics are attached.
 - `ROMHashSpec.cachingOracle` — `QueryImpl` bridge that consumes pre-spec
   queries and dispatches them through the generic `cachingOracle` on the
   cached spec. The spec transition happens only via `simulateQ`.
@@ -126,7 +125,7 @@ model. A ROM-CR adversary is an oracle computation outputting a candidate
 collision pair `(x, x')`, expressed in the adversary-facing `ROMHashSpec X Y`
 which carries no probability instances. The experiment lifts the adversary
 into the post-simulation companion `ROMHashSpec.cached X Y` (defeq, distinct
-head symbol) where `IsUniformSpec` is in scope, then runs it inside
+head symbol) where uniform answer semantics are attached, then runs it inside
 `cachingOracle` and queries the random oracle on both candidates sharing the
 same cache; it wins iff `x ≠ x'` and the queried outputs coincide.
 
@@ -146,14 +145,10 @@ post-simulation spec `ROMHashSpec.cached` (defeq, distinct head symbol). -/
 @[reducible] def ROMHashSpec (X Y : Type) : OracleSpec X := fun _ => Y
 
 /-- The post-simulation companion to `ROMHashSpec`: definitionally the same
-`OracleSpec X`, but with a distinct head symbol so the `IsUniformSpec`
-instance below is opted into only where probability reasoning is intended.
-The adversary's pre-cache computation is converted into a post-cache
+`OracleSpec X`, but with a distinct head symbol marking where uniform answer semantics are
+intended. The adversary's pre-cache computation is converted into a post-cache
 computation only via `simulateQ ROMHashSpec.cachingOracle`. -/
 @[reducible] def ROMHashSpec.cached (X Y : Type) : OracleSpec X := fun _ => Y
-
-noncomputable instance {X Y : Type} [Fintype Y] [Inhabited Y] :
-    IsUniformSpec (ROMHashSpec.cached X Y) := IsUniformSpec.ofFintypeInhabited _
 
 /-- Bridge caching oracle: a `QueryImpl` that takes adversary-facing
 `ROMHashSpec X Y` queries and dispatches them through the generic
@@ -206,11 +201,15 @@ def romCRExperiment [DecidableEq X] [DecidableEq Y]
     return decide (x ≠ x' ∧ y = y'))).run ∅
 
 /-- ROM collision-resistance advantage: probability that the adversary
-produces a valid collision under the random oracle. -/
+produces a valid collision when every random-oracle answer is uniform on `Y`. The answers carry
+the discrete measurable structure, so every event of the experiment is observed. -/
 noncomputable def romCRAdvantage [DecidableEq X] [DecidableEq Y]
-    [Fintype Y] [Inhabited Y]
+    [Fintype Y] [Nonempty Y]
     {t : ℕ} (A : BoundedROMCRAdversary X Y t) : ℝ≥0∞ :=
-  Pr[fun z => z.1 = true | romCRExperiment A]
+  letI : MeasurableSpace Y := ⊤
+  letI : IsUniformMeasureSpec (ROMHashSpec.cached X Y) :=
+    IsUniformMeasureSpec.ofFiniteNonempty _
+  Pr{let z ← romCRExperiment A}[z.1 = true]
 
 /-- The inner oracle computation of `romCRExperiment`, before `simulateQ`. Lives
 entirely on the pre-cache spec — the spec transition happens at the
@@ -268,11 +267,14 @@ adversary `A` over a hash range `Y`, the advantage is bounded by
 queries account for the experiment's verification queries, which share the
 adversary's cache. -/
 theorem romCRAdvantage_le_birthday [DecidableEq X] [DecidableEq Y] [Fintype Y] [Inhabited X]
-    [Inhabited Y] {t : ℕ} (A : BoundedROMCRAdversary X Y t) :
+    [Nonempty Y] {t : ℕ} (A : BoundedROMCRAdversary X Y t) :
     romCRAdvantage A ≤ (((t + 2) * (t + 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card Y) := by
-  simp only [romCRAdvantage, romCRExperiment_eq]
-  exact (probEvent_mono (romCRWin_implies_collision A)).trans <|
-    probEvent_cacheCollision_le_birthday_total_tight (spec := ROMHashSpec.cached X Y)
+  let : MeasurableSpace Y := ⊤
+  let : IsUniformMeasureSpec (ROMHashSpec.cached X Y) := IsUniformMeasureSpec.ofFiniteNonempty _
+  change Pr{let z ← romCRExperiment A}[z.1 = true] ≤ _
+  rw [romCRExperiment_eq]
+  exact (prEvent_mono_of_support _ _ _ (romCRWin_implies_collision A)).trans <|
+    prEvent_cacheCollision_le_birthday_total_tight (spec := ROMHashSpec.cached X Y)
       (romCRInner A) (t + 2) (romCRInner_totalBound A) fun _ => le_rfl
 
 end CollisionResistance

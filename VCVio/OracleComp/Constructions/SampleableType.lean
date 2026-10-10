@@ -84,16 +84,6 @@ lemma probOutput_map_bijective_uniform_cross
   obtain ⟨x, rfl⟩ := hf.surjective y
   simp [probOutput_map_injective ($ᵗ α) hf.injective x, Fintype.card_of_bijective hf]
 
-/-- Binding after pushing forward uniform sampling along a bijection preserves output
-probabilities. -/
-lemma probOutput_bind_bijective_uniform_cross
-    {β γ : Type} [SampleableType β] [Finite α]
-    (f : α → β) (hf : Function.Bijective f) (g : β → ProbComp γ) (z : γ) :
-    Pr[= z | ($ᵗ α) >>= fun x => g (f x)] =
-      Pr[= z | ($ᵗ β) >>= fun y => g y] := by
-  simp_rw [show (($ᵗ α) >>= fun x => g (f x)) = ((f <$> ($ᵗ α)) >>= g) from by simp [monad_norm],
-    probOutput_bind_eq_tsum, probOutput_map_bijective_uniform_cross (α := α) (β := β) f hf]
-
 /-- Left-translation by a constant in `AddGroup α` preserves the uniform output distribution,
 since `(m + ·)` is a bijection on `α` with inverse `(-m + ·)`. -/
 lemma probOutput_add_left_uniform [AddGroup α] (m x : α) :
@@ -134,36 +124,6 @@ lemma evalSPMF_map_bijective_uniform_cross
     (f : α → β) (hf : Function.Bijective f) :
     𝒮[f <$> ($ᵗ α)] = 𝒮[$ᵗ β] :=
   evalSPMF_ext (probOutput_map_bijective_uniform_cross (α := α) (β := β) f hf)
-
-/-- **Bijective uniform + right-translation gives uniform.** Sampling `x ← $ᵗ α`, transporting
-through a bijection `f : α → β`, and right-adding any fixed `m : β` yields the same distribution
-as sampling `y ← $ᵗ β` directly, as observed by any continuation `cont : β → ProbComp γ`.
-
-This is the "one-time pad" fact underlying many cryptographic reductions: bijective transport
-makes `f x` uniform on `β`, and in any `AddGroup β` right-translation `(· + m)` is a bijection
-on the uniform measure, so the sum is again uniform. -/
-lemma evalSPMF_bind_bijective_add_right_uniform {β γ : Type}
-    [AddGroup β] [SampleableType β] [Finite α]
-    (f : α → β) (hf : Function.Bijective f) (m : β) (cont : β → ProbComp γ) :
-    𝒮[do let x ← ($ᵗ α); cont (f x + m)] =
-      𝒮[do let y ← ($ᵗ β); cont y] := by
-  rw [show (do let x ← ($ᵗ α); cont (f x + m)) = (f <$> ($ᵗ α)) >>= fun y => cont (y + m)
-        from by simp [monad_norm], evalSPMF_bind,
-      evalSPMF_map_bijective_uniform_cross (α := α) (β := β) f hf, ← evalSPMF_bind,
-      show (do let y ← ($ᵗ β); cont (y + m)) = (((· + m) : β → β) <$> ($ᵗ β)) >>= cont
-        from by simp [monad_norm], evalSPMF_bind, evalSPMF_add_right_uniform (α := β) m,
-      ← evalSPMF_bind]
-
-/-- Constant-irrelevance form of `evalSPMF_bind_bijective_add_right_uniform`: sampling through a
-bijection and right-adding a constant has a distribution independent of the constant. Any two
-offsets produce the same evaluation distribution. -/
-lemma evalSPMF_bind_bijective_add_right_eq {β γ : Type}
-    [AddGroup β] [SampleableType β] [Finite α]
-    (f : α → β) (hf : Function.Bijective f) (m₁ m₂ : β) (cont : β → ProbComp γ) :
-    𝒮[do let x ← ($ᵗ α); cont (f x + m₁)] =
-      𝒮[do let x ← ($ᵗ α); cont (f x + m₂)] := by
-  rw [evalSPMF_bind_bijective_add_right_uniform (α := α) (β := β) f hf m₁ cont,
-      ← evalSPMF_bind_bijective_add_right_uniform (α := α) (β := β) f hf m₂ cont]
 
 lemma probFailure_uniformSample : Pr[⊥ | $ᵗ α] = 0 := by aesop
 
@@ -274,24 +234,6 @@ lemma evalSPMF_uniformSample_patchList
 end Marginalization
 
 -- TODO: generalize this lemma
-/-- If the distribution of `f b` is independent of `b`, then guessing a uniformly random
-bit by running `f` has success probability exactly 1/2.
-This is the core lemma behind "all-random hybrid has probability 1/2" arguments. -/
-lemma probOutput_decide_eq_uniformBool_half
-    (f : Bool → ProbComp Bool)
-    (heq : 𝒮[f true] = 𝒮[f false]) :
-    Pr[= true | do let b ← $ᵗ Bool; let b' ← f b; return decide (b = b')] = 1 / 2 := by
-  rw [probOutput_bind_eq_tsum]
-  simp only [tsum_fintype (L := .unconditional _), Fintype.sum_bool,
-    probOutput_uniformSample, Fintype.card_bool]
-  rw [show Pr[= true | f true >>= fun b' => pure (decide (true = b'))] = Pr[= true | f true] by
-        simp,
-    show Pr[= true | f false >>= fun b' => pure (decide (false = b'))] = Pr[= false | f false] by
-        simp,
-    evalSPMF_ext_iff.mp heq true, ← mul_add,
-    show Pr[= true | f false] + Pr[= false | f false] = 1 by simp, mul_one]
-  simp [one_div]
-
 section UniformSampleImpl
 
 open OracleSpec OracleComp

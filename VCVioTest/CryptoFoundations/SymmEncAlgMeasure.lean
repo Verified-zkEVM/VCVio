@@ -7,7 +7,7 @@ Authors: VCVio Contributors
 module
 
 
-public import VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility
+public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 
 /-!
 # Symmetric-encryption measure canaries

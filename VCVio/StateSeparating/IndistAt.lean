@@ -68,13 +68,13 @@ theorem mono
 theorem refl_le {ε : ℝ≥0∞} (h : QueryImpl.Stateful unifSpec E σ) (s : σ) :
     (h, s) ≈ᵈ[ε] (h, s) := mono zero_le (IndistAt.refl h s)
 
-/-! ## Bridge from `DistEquiv` -/
+/-! ## Bridge from measure equivalence -/
 
 theorem of_distEquiv
     {h₀ : QueryImpl.Stateful unifSpec E σ₀} {s₀ : σ₀}
     {h₁ : QueryImpl.Stateful unifSpec E σ₁} {s₁ : σ₁}
     (h : (h₀, s₀) ≡ᵈ (h₁, s₁)) : (h₀, s₀) ≈ᵈ[0] (h₁, s₁) :=
-  fun A => (DistEquiv.advantage_zero h A).le
+  fun A => (MeasureDistEquiv.advantage_eq_zero h A).le
 
 theorem distEquiv_left
     {h₀ : QueryImpl.Stateful unifSpec E σ₀} {s₀ : σ₀}
@@ -83,7 +83,7 @@ theorem distEquiv_left
     (h : (h₀, s₀) ≡ᵈ (h₀', s₀'))
     (hi : (h₀', s₀') ≈ᵈ[ε] (h₁, s₁)) :
     (h₀, s₀) ≈ᵈ[ε] (h₁, s₁) :=
-  fun A => DistEquiv.advantage_left h h₁ s₁ A ▸ hi A
+  fun A => MeasureDistEquiv.advantage_left h h₁ s₁ A ▸ hi A
 
 theorem distEquiv_right
     {h₀ : QueryImpl.Stateful unifSpec E σ₀} {s₀ : σ₀}
@@ -92,7 +92,7 @@ theorem distEquiv_right
     (h : (h₁, s₁) ≡ᵈ (h₁', s₁'))
     (hi : (h₀, s₀) ≈ᵈ[ε] (h₁, s₁)) :
     (h₀, s₀) ≈ᵈ[ε] (h₁', s₁') :=
-  fun A => DistEquiv.advantage_right h₀ s₀ h A ▸ hi A
+  fun A => MeasureDistEquiv.advantage_right h₀ s₀ h A ▸ hi A
 
 /-! ## Bridge to advantage -/
 

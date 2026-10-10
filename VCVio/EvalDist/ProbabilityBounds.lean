@@ -213,6 +213,15 @@ theorem le_prEvent_bind_of_forall_le (mx : m α) (hmx : Pr{let _ ← mx}[True] =
   calc ε = ∫⁻ _, ε ∂𝒟[mx] := by rw [lintegral_const, hmx, mul_one]
     _ ≤ _ := lintegral_mono h
 
+/-- A continuation event with the same probability after every draw keeps that probability after a
+lossless draw. -/
+theorem prEvent_bind_eq_of_forall_eq (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
+    (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
+    (h : ∀ a, Pr{let y ← f a}[q y] = ε) :
+    Pr{let y ← mx >>= f}[q y] = ε :=
+  le_antisymm (prEvent_bind_le_of_forall_le mx f q fun a ↦ (h a).le)
+    (le_prEvent_bind_of_forall_le mx hmx f q fun a ↦ (h a).ge)
+
 /-- Multiplying a lower bound for a prefix event by a uniform conditional lower bound gives a
 lower bound for the event after the bind. -/
 theorem mul_le_prEvent_bind_of_forall (mx : m α) (f : α → m β)
@@ -346,6 +355,19 @@ theorem prEvent_mono_of_support (mx : m α) (p q : α → Prop)
   conv_rhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
   rw [prEvent_map, prEvent_map]
   exact prEvent_mono _ _ _ fun a ha ↦ h a.1 a.2 ha
+
+/-- Events that agree on every structurally reachable output have equal probability. -/
+theorem prEvent_congr_of_support (mx : m α) (p q : α → Prop)
+    (h : ∀ a ∈ support mx, p a ↔ q a) :
+    Pr{let a ← mx}[p a] = Pr{let a ← mx}[q a] :=
+  le_antisymm (prEvent_mono_of_support mx p q fun a ha ↦ (h a ha).1)
+    (prEvent_mono_of_support mx q p fun a ha ↦ (h a ha).2)
+
+/-- An event avoiding every structurally reachable output has probability zero. -/
+theorem prEvent_eq_zero_of_forall_mem_support (mx : m α) (p : α → Prop)
+    (h : ∀ a ∈ support mx, ¬ p a) : Pr{let a ← mx}[p a] = 0 :=
+  (prEvent_congr_of_support mx p (fun _ ↦ False) fun a ha ↦ iff_false_intro (h a ha)).trans
+    (prEvent_eq_zero_of_forall_not mx _ fun _ ↦ id)
 
 /-- A bound on the event of every reachable continuation bounds the event after the draw. -/
 theorem prEvent_bind_le_of_forall_le_of_support (mx : m α) (f : α → m β) (q : β → Prop)

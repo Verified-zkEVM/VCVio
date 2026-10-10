@@ -56,10 +56,6 @@ variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 lemma evalSPMF_seq (mf : m (α → β)) (mx : m α) :
     𝒮[mf <*> mx] = 𝒮[mf] <*> 𝒮[mx] := by simp [monad_norm]
 
-lemma probEvent_seq_eq_tsum (mf : m (α → β)) (mx : m α) (p : β → Prop) :
-    Pr[ p | mf <*> mx] = ∑' f, Pr[= f | mf] * Pr[ p ∘ f | mx] := by
-  simp only [seq_eq_bind_map, probEvent_bind_eq_tsum, probEvent_map]
-
 variable [MonadAttach m] [EvalDistCompatible m]
 
 @[simp, grind =_]
@@ -220,13 +216,6 @@ lemma probOutput_seq_map_swap (z : γ) :
 
 end swap
 
-lemma probEvent_seq_map_eq_probEvent_comp_uncurry (p : γ → Prop) :
-    Pr[ p | f <$> mx <*> my] = Pr[ p ∘ Function.uncurry f | Prod.mk <$> mx <*> my] := by
-  rw [← probEvent_map]
-  congr 1
-  rw [map_seq, Functor.map_map]
-  rfl
-
 end spmf
 
 section operational
@@ -258,28 +247,6 @@ section mixed
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
   [MonadAttach m] [EvalDistCompatible m]
-
-lemma probEvent_seq_map_eq_mul (p : γ → Prop) (q1 : α → Prop) (q2 : β → Prop)
-    (h : ∀ x ∈ support mx, ∀ y ∈ support my, p (f x y) ↔ q1 x ∧ q2 y) :
-    Pr[ p | f <$> mx <*> my] = Pr[ q1 | mx] * Pr[ q2 | my] := by
-  classical
-  rw [show f <$> mx <*> my = mx >>= fun x => f x <$> my by simp [seq_eq_bind_map]]
-  rw [probEvent_bind_eq_tsum]
-  simp only [probEvent_map]
-  suffices hs : ∀ x, Pr[= x | mx] * Pr[ p ∘ f x | my] =
-      (if q1 x then Pr[= x | mx] else 0) * Pr[ q2 | my] by
-    trans (∑' x, (if q1 x then Pr[= x | mx] else 0) * Pr[ q2 | my])
-    · exact tsum_congr hs
-    · rw [ENNReal.tsum_mul_right]; symm; rw [probEvent_eq_tsum_ite]
-  intro x
-  by_cases hx : x ∈ support mx
-  · by_cases hq : q1 x
-    · simp only [ite_eq_left hq]; congr 1
-      exact probEvent_ext fun y hy => (h x hx y hy).trans (by simp [hq])
-    · simp only [ite_eq_right hq, zero_mul]
-      rw [probEvent_eq_zero fun y hy => by
-        simp only [Function.comp_apply, h x hx y hy]; simp [hq], mul_zero]
-  · simp [probOutput_eq_zero_of_not_mem_support hx]
 
 end mixed
 

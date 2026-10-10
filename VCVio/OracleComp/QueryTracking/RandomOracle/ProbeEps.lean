@@ -5,7 +5,8 @@ Authors: Oleksandr Vovkotrub
 -/
 
 module
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # ε-Cell First-Fire Bound
@@ -26,16 +27,16 @@ hit the read points are fixed by the all-miss history and independent of `w`, so
 the single hidden draw — without ever conditioning on the drawn value — bounds the firing
 probability by the union of `q` fixed singletons, each of mass at most `ε`. This models an eager
 run that commits a sampled key at draw time and exposes it only through later membership tests.
-Because the per-outcome bound `∀ r, Pr[= r | oa] ≤ ε` holds unconditionally, the bound is valid
-in every state.
+Because the per-outcome bound `∀ r, Pr{let w ← oa}[w = r] ≤ ε` holds unconditionally, the bound
+is valid in every state.
 
 ## Main results
 
-* `hiddenReadMany` / `probEvent_hiddenReadMany_le` : the single-target adaptive read game and its
+* `hiddenReadMany` / `prEvent_hiddenReadMany_le` : the single-target adaptive read game and its
   first-fire union bound `Pr[fire] ≤ q · ε`.
-* `hiddenReadList` / `probEvent_hiddenReadList_le` : the per-attempt-fresh-target list game and
+* `hiddenReadList` / `prEvent_hiddenReadList_le` : the per-attempt-fresh-target list game and
   its union bound.
-* `probEvent_bind_fire_le_of_gen` : the deferred-sampling fire bound whose marginal is a
+* `prEvent_bind_fire_le_of_gen` : the deferred-sampling fire bound whose marginal is a
   hidden-target read, against an opaque continuation.
 * `drawList` : the explicit i.i.d. front-tape form of the per-attempt draws.
 -/
@@ -64,19 +65,6 @@ noncomputable def drawList (oa : ProbComp R) : ℕ → ProbComp (List R)
       let w ← oa
       let ws ← drawList oa n
       pure (w :: ws)
-
-/-- The front-block draw never fails: it only ever draws from `oa` (which is failure-free) and
-returns, so `drawList oa n` has zero failure mass. -/
-lemma probFailure_drawList (oa : ProbComp R) (n : ℕ) :
-    Pr[⊥ | drawList oa n] = 0 := by
-  induction n with
-  | zero => simp [drawList]
-  | succ n _ => rw [drawList]; simp
-
-/-- Total output mass of the front-block draw is `1` (it never fails). -/
-lemma tsum_probOutput_drawList_eq_one (oa : ProbComp R) (n : ℕ) :
-    (∑' ws : List R, Pr[= ws | drawList oa n]) = 1 :=
-  tsum_probOutput_eq_one' (probFailure_drawList oa n)
 
 variable [DecidableEq R]
 
@@ -140,38 +128,16 @@ by `q` adaptive reads fires with probability at most `q · ε`, whenever every o
 mass at most `ε`. The averaging is over the single hidden draw; we never condition on `w`. Because
 the read points are fixed by the all-miss history (`readMany_true_iff`), the firing event is the
 union of the `q` fixed singletons `{w = σ (replicate j false)}`, each of mass at most `ε`. -/
-theorem probEvent_hiddenReadMany_le {oa : ProbComp R} {ε : ℝ≥0∞}
-    (hε : ∀ r : R, Pr[= r | oa] ≤ ε) (q : ℕ) (σ : List Bool → R) :
-    Pr[ (fun b : Bool => b = true) | hiddenReadMany oa q σ ] ≤ (q : ℝ≥0∞) * ε := by
-  rw [hiddenReadMany, probEvent_bind_eq_tsum]
-  have hstep : ∀ w : R,
-      Pr[= w | oa] * Pr[(fun b => b = true) | (pure (readMany w q σ) : ProbComp Bool)]
-        ≤ ∑ j ∈ Finset.range q,
-            if w = σ (List.replicate j false) then Pr[= w | oa] else 0 := by
-    intro w
-    by_cases hfire : readMany w q σ = true
-    · rw [probEvent_pure]
-      simp only [hfire, ite_true, mul_one]
-      obtain ⟨j, hj, hwj⟩ := (readMany_true_iff w q σ).1 hfire
-      calc Pr[= w | oa]
-          = (if w = σ (List.replicate j false) then Pr[= w | oa] else 0) := by rw [ite_eq_left hwj]
-        _ ≤ ∑ j ∈ Finset.range q,
-              if w = σ (List.replicate j false) then Pr[= w | oa] else 0 :=
-            Finset.single_le_sum
-              (f := fun j => if w = σ (List.replicate j false) then Pr[= w | oa] else 0)
-              (fun i _ => by positivity) (Finset.mem_range.2 hj)
-    · rw [probEvent_pure, ite_eq_right hfire, mul_zero]
-      exact zero_le
-  refine le_trans (ENNReal.tsum_le_tsum hstep) ?_
-  rw [Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
-  calc ∑ j ∈ Finset.range q, ∑' w : R,
-          (if w = σ (List.replicate j false) then Pr[= w | oa] else 0)
-      ≤ ∑ j ∈ Finset.range q, ε := by
-        refine Finset.sum_le_sum fun j _ => ?_
-        rw [tsum_eq_single (σ (List.replicate j false))
-          (by intro b hb; rw [ite_eq_right hb])]
-        rw [ite_eq_left rfl]
-        exact hε _
+theorem prEvent_hiddenReadMany_le {oa : ProbComp R} {ε : ℝ≥0∞}
+    (hε : ∀ r : R, Pr{let w ← oa}[w = r] ≤ ε) (q : ℕ) (σ : List Bool → R) :
+    Pr{let b ← hiddenReadMany oa q σ}[b = true] ≤ (q : ℝ≥0∞) * ε := by
+  calc Pr{let b ← hiddenReadMany oa q σ}[b = true]
+      = Pr{let w ← oa}[∃ j ∈ Finset.range q, w = σ (List.replicate j false)] := by
+        simp only [hiddenReadMany, bind_assoc, pure_bind]
+        exact prEvent_congr _ _ _ fun w => by simp [readMany_true_iff]
+    _ ≤ ∑ j ∈ Finset.range q, Pr{let w ← oa}[w = σ (List.replicate j false)] :=
+        prEvent_exists_finset_le _ _ _
+    _ ≤ ∑ _j ∈ Finset.range q, ε := Finset.sum_le_sum fun j _ => hε _
     _ = (q : ℝ≥0∞) * ε := by rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
 
 /-- The multi-key fixed-target game: a list `ws` of hidden keys, each probed by the same `q`
@@ -184,16 +150,6 @@ noncomputable def readManyList (ws : List R) (q : ℕ) (σ : List Bool → R) : 
 theorem readManyList_true_iff (ws : List R) (q : ℕ) (σ : List Bool → R) :
     readManyList ws q σ = true ↔ ∃ w ∈ ws, readMany w q σ = true := by
   simp [readManyList, List.any_eq_true]
-
-/-- Appending a fixed OR-flag `q` to a Boolean draw raises the firing probability by at most the
-mass of `q` (i.e. `1` when `q = true`, `0` otherwise) over the residual draw. -/
-theorem probEvent_bind_const_or_pure (q : Bool) (mb : ProbComp Bool) :
-    Pr[(fun c : Bool => c = true) | mb >>= fun b => pure (q || b)]
-      ≤ Pr[(fun c : Bool => c = true) | (pure q : ProbComp Bool)]
-        + Pr[(fun c : Bool => c = true) | mb] := by
-  cases q with
-  | true => simp
-  | false => simp
 
 /-- The probabilistic multi-key game: draw `n` hidden targets independently from `oa`, one per
 rejected signing attempt, and probe each by the same `q` adaptive reads; fire iff some read hits
@@ -208,92 +164,70 @@ noncomputable def hiddenReadList (oa : ProbComp R) (q : ℕ) (σ : List Bool →
 
 /-- **Multi-key hidden-target first-fire bound.** Drawing `n` independent hidden targets from `oa`
 (each outcome of mass at most `ε`) and probing each by `q` adaptive reads fires with probability at
-most `n · q · ε`. Proved by induction on `n`: the head key's contribution is the single-target
-bound `probEvent_hiddenReadMany_le` (`≤ q · ε`), the tail's is the inductive hypothesis
-(`≤ n · q · ε`), combined by the OR-append step `probEvent_bind_const_or_pure`. This is the form
-that bounds the eager ghost run's bad probability once the run is factored so that each rejected
-signing attempt's key draw is read off as an independent `hiddenReadMany` target. -/
-theorem probEvent_hiddenReadList_le {oa : ProbComp R} {ε : ℝ≥0∞} (hε : ∀ r : R, Pr[= r | oa] ≤ ε)
-    (q : ℕ) (σ : List Bool → R) (n : ℕ) :
-    Pr[(fun b : Bool => b = true) | hiddenReadList oa q σ n] ≤ (n : ℝ≥0∞) * ((q : ℝ≥0∞) * ε) := by
+most `n · q · ε`. Proved by induction on `n`: the head key fires with probability at most `q · ε`
+(`prEvent_hiddenReadMany_le`), and when it misses, the game is the game on the remaining keys.
+This is the form that bounds the eager ghost run's bad probability once the run is factored so that
+each rejected signing attempt's key draw is read off as an independent `hiddenReadMany` target. -/
+theorem prEvent_hiddenReadList_le {oa : ProbComp R} {ε : ℝ≥0∞}
+    (hε : ∀ r : R, Pr{let w ← oa}[w = r] ≤ ε) (q : ℕ) (σ : List Bool → R) (n : ℕ) :
+    Pr{let b ← hiddenReadList oa q σ n}[b = true] ≤ (n : ℝ≥0∞) * ((q : ℝ≥0∞) * ε) := by
   induction n with
   | zero => simp [hiddenReadList]
   | succ n ih =>
-    rw [hiddenReadList, probEvent_bind_eq_tsum]
-    have hsplit : ∀ w : R,
-        Pr[= w | oa] * Pr[(fun c : Bool => c = true) |
-            hiddenReadList oa q σ n >>= fun b => pure (readMany w q σ || b)]
-          ≤ Pr[= w | oa] * Pr[(fun c : Bool => c = true) | (pure (readMany w q σ) : ProbComp Bool)]
-            + Pr[= w | oa] * Pr[(fun c : Bool => c = true) | hiddenReadList oa q σ n] := by
-      intro w
-      rw [← mul_add]
-      gcongr
-      exact probEvent_bind_const_or_pure (readMany w q σ) (hiddenReadList oa q σ n)
-    refine le_trans (ENNReal.tsum_le_tsum hsplit) ?_
-    rw [ENNReal.tsum_add]
-    have h1 : (∑' w : R, Pr[= w | oa] *
-        Pr[(fun c : Bool => c = true) | (pure (readMany w q σ) : ProbComp Bool)])
-        = Pr[(fun b : Bool => b = true) | hiddenReadMany oa q σ] := by
-      rw [hiddenReadMany, probEvent_bind_eq_tsum]
-    have h2 : (∑' w : R, Pr[= w | oa] *
-        Pr[(fun c : Bool => c = true) | hiddenReadList oa q σ n])
-        ≤ Pr[(fun c : Bool => c = true) | hiddenReadList oa q σ n] := by
-      rw [ENNReal.tsum_mul_right]
-      exact mul_le_of_le_one_left zero_le tsum_probOutput_le_one
-    rw [h1]
-    calc Pr[(fun b : Bool => b = true) | hiddenReadMany oa q σ]
-          + (∑' w : R, Pr[= w | oa] *
-              Pr[(fun c : Bool => c = true) | hiddenReadList oa q σ n])
-        ≤ (q : ℝ≥0∞) * ε + (n : ℝ≥0∞) * ((q : ℝ≥0∞) * ε) :=
-          add_le_add (probEvent_hiddenReadMany_le hε q σ) (le_trans h2 ih)
+    have hhead : Pr{let w ← oa}[readMany w q σ = true] ≤ (q : ℝ≥0∞) * ε := by
+      simpa only [hiddenReadMany, bind_assoc, pure_bind] using prEvent_hiddenReadMany_le hε q σ
+    rw [hiddenReadList]
+    calc Pr{let c ← oa >>= fun w => hiddenReadList oa q σ n >>= fun b =>
+            (pure (readMany w q σ || b) : ProbComp Bool)}[c = true]
+        ≤ Pr{let w ← oa}[readMany w q σ = true] + (n : ℝ≥0∞) * ((q : ℝ≥0∞) * ε) :=
+          prEvent_bind_le_prEvent_add _ _ (fun w => readMany w q σ = true) _ fun w hw => by
+            rw [Bool.not_eq_true] at hw
+            simpa only [hw, Bool.false_or, bind_pure] using ih
+      _ ≤ (q : ℝ≥0∞) * ε + (n : ℝ≥0∞) * ((q : ℝ≥0∞) * ε) := add_le_add hhead le_rfl
       _ = (↑(n + 1) : ℝ≥0∞) * ((q : ℝ≥0∞) * ε) := by push_cast; ring
 
 /-! ## Averaging the key count and the run-factorization bridge
 
-The multi-key bound `probEvent_hiddenReadList_le` is stated for a *fixed* number of keys `n`. In
+The multi-key bound `prEvent_hiddenReadList_le` is stated for a *fixed* number of keys `n`. In
 the intended application the key count is itself random (one ghost key is drawn per *rejected*
 signing attempt), so the closing step averages the bound over a key-count distribution
 `kn : ProbComp ℕ`, yielding `E[n] · q · ε`. The final bridge
-`probEvent_le_of_eq_bind_hiddenReadList`
+`prEvent_le_of_eq_bind_hiddenReadList`
 packages the union-bound side of the *direct route*: once a run's bad marginal is exhibited as a
 `kn >>= hiddenReadList oa q σ` game (the deferred-sampling factorization), the bound is immediate.
 -/
 
 /-- **Averaged multi-key hidden-target bound.** When the number of independently drawn hidden keys
 is itself sampled from `kn : ProbComp ℕ`, the firing probability of the multi-key game is at most
-`E[n] · q · ε`, where `E[n] = ∑' n, Pr[= n | kn] · n` is the expected key count. This is the
-averaging step (`C3`) of the direct route: it folds the fixed-`n` bound
-`probEvent_hiddenReadList_le` against the key-count distribution. Combined with an expected-count
-bound `E[n] ≤ qS / (1 - p)` it gives the target `qS · q · ε / (1 - p)`. -/
-theorem probEvent_bind_hiddenReadList_le {oa : ProbComp R} {ε : ℝ≥0∞}
-    (hε : ∀ r : R, Pr[= r | oa] ≤ ε) (q : ℕ) (σ : List Bool → R) (kn : ProbComp ℕ) :
-    Pr[(fun b : Bool => b = true) | kn >>= fun n => hiddenReadList oa q σ n]
-      ≤ (∑' n : ℕ, Pr[= n | kn] * (n : ℝ≥0∞)) * ((q : ℝ≥0∞) * ε) := by
-  rw [probEvent_bind_eq_tsum, ← ENNReal.tsum_mul_right]
-  refine ENNReal.tsum_le_tsum fun n => ?_
-  rw [mul_assoc]
-  gcongr
-  exact probEvent_hiddenReadList_le hε q σ n
+`E[n] · q · ε`, where `E[n] = ∫⁻ n, n ∂𝒟[kn]` is the expected key count. This is the averaging
+step of the direct route: it folds the fixed-`n` bound `prEvent_hiddenReadList_le` against the
+key-count distribution. Combined with an expected-count bound `E[n] ≤ qS / (1 - p)` it gives the
+target `qS · q · ε / (1 - p)`. -/
+theorem prEvent_bind_hiddenReadList_le {oa : ProbComp R} {ε : ℝ≥0∞}
+    (hε : ∀ r : R, Pr{let w ← oa}[w = r] ≤ ε) (q : ℕ) (σ : List Bool → R) (kn : ProbComp ℕ) :
+    Pr{let b ← kn >>= fun n => hiddenReadList oa q σ n}[b = true]
+      ≤ (∫⁻ n, (n : ℝ≥0∞) ∂𝒟[kn]) * ((q : ℝ≥0∞) * ε) := by
+  rw [prEvent_bind_eq_lintegral_of_discrete,
+    ← MeasureTheory.lintegral_mul_const _ Measurable.of_discrete]
+  exact MeasureTheory.lintegral_mono fun n => prEvent_hiddenReadList_le hε q σ n
 
 /-- **Direct-route union-bound bridge.** If an arbitrary run `run : ProbComp β` with a bad
-event `bad : β → Prop` has its bad marginal exhibited as the averaged multi-key hidden-target game
-`kn >>= hiddenReadList oa q σ` — i.e. the deferred-sampling factorization that pulls the run's
-hidden key draws into an independent front block, reading each off as a `hiddenReadMany` target
-probed by the `q` subsequent adaptive reads — then the run's bad probability is bounded by the
-expected-count union bound `E[n] · q · ε`.
+event `bad : β → Prop` has its bad marginal bounded by the averaged multi-key hidden-target game
+`kn >>= hiddenReadList oa q σ` — the deferred-sampling factorization that pulls the run's hidden key
+draws into an independent front block, reading each off as a `hiddenReadMany` target probed by the
+`q` subsequent adaptive reads — then the run's bad probability is bounded by the expected-count
+union bound `E[n] · q · ε`.
 
-This is the reusable closing lemma of the direct route: the entire remaining content is supplied as
-the hypothesis `hfac`, the distributional equality between the run's bad indicator and the abstract
-game. Establishing `hfac` is the deferred-sampling commutation (factoring the run's per-key draws to
-the front so the pre-first-hit reads become the deterministic strategy `σ`); the union-bound side it
-feeds into is fully discharged here via `probEvent_bind_hiddenReadList_le`. -/
-theorem probEvent_le_of_eq_bind_hiddenReadList {β : Type} {run : ProbComp β} {bad : β → Prop}
-    {oa : ProbComp R} {ε : ℝ≥0∞} (hε : ∀ r : R, Pr[= r | oa] ≤ ε)
+The remaining content is supplied as the hypothesis `hfac`; establishing it is the
+deferred-sampling commutation (factoring the run's per-key draws to the front so the pre-first-hit
+reads become the deterministic strategy `σ`). -/
+theorem prEvent_le_of_eq_bind_hiddenReadList {β : Type} {run : ProbComp β} {bad : β → Prop}
+    {oa : ProbComp R} {ε : ℝ≥0∞} (hε : ∀ r : R, Pr{let w ← oa}[w = r] ≤ ε)
     (q : ℕ) (σ : List Bool → R) (kn : ProbComp ℕ)
-    (hfac : Pr[bad | run]
-      ≤ Pr[(fun b : Bool => b = true) | kn >>= fun n => hiddenReadList oa q σ n]) :
-    Pr[bad | run] ≤ (∑' n : ℕ, Pr[= n | kn] * (n : ℝ≥0∞)) * ((q : ℝ≥0∞) * ε) :=
-  hfac.trans (probEvent_bind_hiddenReadList_le hε q σ kn)
+    (hfac : Pr{let x ← run}[bad x]
+      ≤ Pr{let b ← kn >>= fun n => hiddenReadList oa q σ n}[b = true]) :
+    Pr{let x ← run}[bad x] ≤ (∫⁻ n, (n : ℝ≥0∞) ∂𝒟[kn]) * ((q : ℝ≥0∞) * ε) :=
+  hfac.trans (prEvent_bind_hiddenReadList_le hε q σ kn)
 
 /-! ## Single output-irrelevant draw deferral
 
@@ -310,44 +244,25 @@ continuation `k w` is built from a `w`-free generator `gen` (producing both the 
 the read strategy) with `w` entering only through `readMany w q σ`, has its fire-marginal equal to
 that of the deferred game `gen >>= fun p => oa >>= fun w => …`. Each generated branch is then a
 `hiddenReadMany` game on a *fixed* strategy `p.2`, charged `q · ε` by
-`probEvent_hiddenReadMany_le`. This converts "front-load the draw across the opaque continuation"
+`prEvent_hiddenReadMany_le`. This converts "front-load the draw across the opaque continuation"
 into a local `bind`-commutation, the tractable route. -/
 
 /-- **Bind-commutation for an output-irrelevant draw.** When the continuation `k w` is `gen >>= fun
 p => pure (p.1, readMany w q p.2)` — a `w`-free generator `gen` producing both the visible output
 `p.1` and the read strategy `p.2`, with the hidden draw `w` entering only through the fixed read
 game `readMany w q p.2` — the fire-marginal of the run `oa >>= k` is unchanged by deferring the
-draw of `w` to *after* `gen`. This is the local deferral step that replaces the abstract
-"front-load across the fold" with a `PMF.bind`-commutation, proved here directly at the
-`probEvent` level via `ENNReal.tsum_comm`. -/
-theorem probEvent_bind_fire_eq_defer {α : Type} (oa : ProbComp R)
+draw of `w` to *after* `gen`. This is the local deferral step, an instance of the bind-swap law
+for independent draws. -/
+theorem prEvent_bind_fire_eq_defer {α : Type} (oa : ProbComp R)
     (q : ℕ) (gen : ProbComp (α × (List Bool → R))) (k : R → ProbComp (α × Bool))
     (hk : ∀ w : R, k w = gen >>= fun p => pure (p.1, readMany w q p.2)) :
-    Pr[(fun z : α × Bool => z.2 = true) | oa >>= k]
-      = Pr[(fun z : α × Bool => z.2 = true) |
-          gen >>= fun p => oa >>= fun w =>
-            (pure (p.1, readMany w q p.2) : ProbComp (α × Bool))] := by
-  have hL : Pr[(fun z : α × Bool => z.2 = true) | oa >>= k]
-      = ∑' (w : R) (p : α × (List Bool → R)),
-          Pr[= w | oa] * (Pr[= p | gen] *
-            Pr[(fun z : α × Bool => z.2 = true) |
-              (pure (p.1, readMany w q p.2) : ProbComp (α × Bool))]) := by
-    rw [probEvent_bind_eq_tsum]
-    refine tsum_congr fun w => ?_
-    rw [hk w, probEvent_bind_eq_tsum, ENNReal.tsum_mul_left]
-  have hR : Pr[(fun z : α × Bool => z.2 = true) |
-          gen >>= fun p => oa >>= fun w =>
-            (pure (p.1, readMany w q p.2) : ProbComp (α × Bool))]
-      = ∑' (p : α × (List Bool → R)) (w : R),
-          Pr[= p | gen] * (Pr[= w | oa] *
-            Pr[(fun z : α × Bool => z.2 = true) |
-              (pure (p.1, readMany w q p.2) : ProbComp (α × Bool))]) := by
-    rw [probEvent_bind_eq_tsum]
-    refine tsum_congr fun p => ?_
-    rw [probEvent_bind_eq_tsum, ENNReal.tsum_mul_left]
-  rw [hL, hR, ENNReal.tsum_comm]
-  refine tsum_congr fun p => tsum_congr fun w => ?_
-  ring
+    Pr{let z ← oa >>= k}[z.2 = true]
+      = Pr{let z ← gen >>= fun p => oa >>= fun w =>
+          (pure (p.1, readMany w q p.2) : ProbComp (α × Bool))}[z.2 = true] := by
+  rw [show k = fun w => gen >>= fun p => pure (p.1, readMany w q p.2) from funext hk]
+  refine prEvent_congr_of_evalDist_eq _ _ ?_ _
+  let : MeasurableSpace (α × Bool) := ⊤
+  exact OracleComp.evalDist_bind_bind_swap _ _ _
 
 /-- **Single output-irrelevant draw first-fire bound (structural form).** A run `oa >>= k` that
 draws one hidden value `w ← oa` (each outcome of mass at most `ε`) and feeds it to a continuation
@@ -355,48 +270,30 @@ draws one hidden value `w ← oa` (each outcome of mass at most `ε`) and feeds 
 visible output and the read strategy, with `w` entering *only* through the fixed read game — fires
 with probability at most `q · ε`.
 
-This is the reusable single-draw deferral primitive of the sound route. It formalizes
-"output-irrelevant draw ⇒ the read points are a fixed strategy independent of `w`" by demanding the
-continuation factor through a `w`-free `gen`; the proof defers the draw past `gen`
-(`probEvent_bind_fire_eq_defer`) so each generated branch becomes a `hiddenReadMany` game on a fixed
-strategy `p.2`, charged `q · ε` by `probEvent_hiddenReadMany_le`. Stage B lifts the `n`-interleaved
-draws by induction with `gen` carrying the remaining draws; Stage C instantiates `gen`/`k` for the
-ghost-blind run via the projection `ghostHybridImpl_proj_trans`. -/
-theorem probEvent_bind_fire_le_of_gen {α : Type} {oa : ProbComp R} {ε : ℝ≥0∞}
-    (hε : ∀ r : R, Pr[= r | oa] ≤ ε) (q : ℕ) (gen : ProbComp (α × (List Bool → R)))
+This is the reusable single-draw deferral primitive of the sound route. The proof defers the draw
+past `gen` (`prEvent_bind_fire_eq_defer`), so each generated branch becomes a `hiddenReadMany`
+game on a fixed strategy `p.2`, charged `q · ε` by `prEvent_hiddenReadMany_le`. -/
+theorem prEvent_bind_fire_le_of_gen {α : Type} {oa : ProbComp R} {ε : ℝ≥0∞}
+    (hε : ∀ r : R, Pr{let w ← oa}[w = r] ≤ ε) (q : ℕ) (gen : ProbComp (α × (List Bool → R)))
     (k : R → ProbComp (α × Bool))
     (hk : ∀ w : R, k w = gen >>= fun p => pure (p.1, readMany w q p.2)) :
-    Pr[(fun z : α × Bool => z.2 = true) | oa >>= k] ≤ (q : ℝ≥0∞) * ε := by
-  rw [probEvent_bind_fire_eq_defer oa q gen k hk]
-  refine probEvent_bind_le_of_forall_le fun p _ => ?_
-  have hinner : Pr[(fun z : α × Bool => z.2 = true) |
-        oa >>= fun w => (pure (p.1, readMany w q p.2) : ProbComp (α × Bool))]
-      = Pr[(fun b : Bool => b = true) | hiddenReadMany oa q p.2] := by
-    rw [hiddenReadMany, probEvent_bind_eq_tsum, probEvent_bind_eq_tsum]
-    refine tsum_congr fun w => ?_
-    rw [probEvent_pure, probEvent_pure]
-  rw [hinner]
-  exact probEvent_hiddenReadMany_le hε q p.2
+    Pr{let z ← oa >>= k}[z.2 = true] ≤ (q : ℝ≥0∞) * ε := by
+  rw [prEvent_bind_fire_eq_defer oa q gen k hk]
+  refine prEvent_bind_le_of_forall_le _ _ _ fun p => ?_
+  simpa only [hiddenReadMany, bind_assoc, pure_bind] using prEvent_hiddenReadMany_le hε q p.2
 
 /-- **Single output-irrelevant draw first-fire bound (marginal form).** The convenience special
-case of `probEvent_bind_fire_le_of_gen` for a run `oa >>= k` whose continuation's fire-marginal is,
+case of `prEvent_bind_fire_le_of_gen` for a run `oa >>= k` whose continuation's fire-marginal is,
 for *every* hidden value `w`, exactly that of the fixed read game `readMany w q σ` against a single
 strategy `σ` independent of `w`. Whenever every outcome of `oa` has mass at most `ε`, the run fires
-with probability at most `q · ε`.
-
-Use this form when the deferred read strategy is a *fixed* `σ` (the simplest output-irrelevant
-case); use the structural `probEvent_bind_fire_le_of_gen` when the strategy is itself produced by
-`w`-free randomness. -/
-theorem probEvent_bind_fire_le_of_marginal_eq_readMany {α : Type} {oa : ProbComp R} {ε : ℝ≥0∞}
-    (hε : ∀ r : R, Pr[= r | oa] ≤ ε) (q : ℕ) (σ : List Bool → R) (k : R → ProbComp (α × Bool))
-    (hmarg : ∀ w : R, Pr[(fun z : α × Bool => z.2 = true) | k w]
-      = Pr[(fun b : Bool => b = true) | (pure (readMany w q σ) : ProbComp Bool)]) :
-    Pr[(fun z : α × Bool => z.2 = true) | oa >>= k] ≤ (q : ℝ≥0∞) * ε := by
-  have hcongr : Pr[(fun z : α × Bool => z.2 = true) | oa >>= k]
-      = Pr[(fun b : Bool => b = true) | hiddenReadMany oa q σ] := by
-    rw [hiddenReadMany, probEvent_bind_eq_tsum, probEvent_bind_eq_tsum]
-    exact tsum_congr fun w => by rw [hmarg w]
-  rw [hcongr]
-  exact probEvent_hiddenReadMany_le hε q σ
+with probability at most `q · ε`. -/
+theorem prEvent_bind_fire_le_of_marginal_eq_readMany {α : Type} {oa : ProbComp R} {ε : ℝ≥0∞}
+    (hε : ∀ r : R, Pr{let w ← oa}[w = r] ≤ ε) (q : ℕ) (σ : List Bool → R)
+    (k : R → ProbComp (α × Bool))
+    (hmarg : ∀ w : R, Pr{let z ← k w}[z.2 = true]
+      = Pr{let b ← (pure (readMany w q σ) : ProbComp Bool)}[b = true]) :
+    Pr{let z ← oa >>= k}[z.2 = true] ≤ (q : ℝ≥0∞) * ε := by
+  rw [prEvent_bind_congr oa k (fun w => (pure (readMany w q σ) : ProbComp Bool)) _ _ hmarg]
+  exact prEvent_hiddenReadMany_le hε q σ
 
 end OracleComp

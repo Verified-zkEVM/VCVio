@@ -5,30 +5,24 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.OracleComp.Constructions.SampleableType
-public import VCVio.EvalDist.Instances.OptionT
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.EvalDist.Monad.Option
 
 /-!
-# Compositional probability reasoning via `MonadLiftT`
+# Optional failure as missing mass
 
-This example demonstrates the lift-based design of the `EvalDist` stack.
-`OptionT ProbComp` inherits `support`, `Pr[= _ | _]`, and `Pr[⊥ | _]` by
-composing the standard `MonadLiftT _ SetM` and `MonadLiftT _ SPMF`
-instances from `VCVio.EvalDist.Instances.OptionT` and
-`VCVio.OracleComp.EvalDist`.
+`OptionT ProbComp` carries two separately supplied interpretations: an operational support, for
+qualitative reasoning about which values can be returned, and a successful-output measure, for
+quantitative reasoning. Failure contributes no successful output, so it shows up as mass missing
+from the measure; the failure-completed measure `Measure.withFailure` records that mass at `none`.
 
-No `OptionT`-specific data class is registered. Every probability operation
-routes through `MonadLiftT _ SetM` (for `support`) and `MonadLiftT _ SPMF`
-(for `Pr[…]`), with the propositional `EvalDistCompatible` class connecting
-the two views where needed — and without introducing a diamond.
-
-The example: sample a Boolean uniformly and `guard` on heads, so half of
-the runs succeed with `()` and the other half fail.
+The example samples a Boolean uniformly and `guard`s on heads: half of the runs return `()`, and
+the other half of the mass is missing.
 -/
 
 @[expose] public section
 
-open OracleComp ENNReal
+open OracleComp MeasureTheory ENNReal
 
 namespace EvalDistCompatibleExample
 
@@ -37,30 +31,22 @@ noncomputable def maybeHeads : OptionT ProbComp Unit := do
   let b ← $ᵗ Bool
   guard (b = true)
 
-/-- The success branch has probability `1/2`. The proof routes
-`Pr[…]` through `MonadLiftT (OptionT ProbComp) SPMF` and reduces to the
-generic `OracleComp` lemma `probOutput_uniformSample`. -/
-theorem probOutput_maybeHeads : Pr[= () | maybeHeads] = 1 / 2 := by
-  change Pr[= () | (do
-      let b ← $ᵗ Bool
-      guard (b = true) : OptionT ProbComp Unit)] = _
-  rw [probOutput_bind_eq_tsum]
-  simp only [OptionT.probOutput_liftM, probOutput_guard]
-  rw [tsum_fintype (L := .unconditional _), Fintype.sum_bool]
-  simp [probOutput_uniformSample, Fintype.card_bool]
+/-- The success branch has probability `1/2`. -/
+theorem evalDist_maybeHeads : 𝒟[maybeHeads] {()} = 1 / 2 := by
+  rw [maybeHeads, OptionT.evalDist_liftM_bind_guard, prEvent_eq_evalDist_singleton]
+  simp
 
-/-- The failure mass has probability `1/2`. Because `maybeHeads` returns
-`Unit`, the total support mass at `()` plus the failure mass is `1`. -/
-theorem probFailure_maybeHeads : Pr[⊥ | maybeHeads] = 1 / 2 := by
-  rw [probFailure_eq_sub_tsum,
-      tsum_eq_single () (fun x hx => absurd (Subsingleton.elim x ()) hx),
-      probOutput_maybeHeads, ENNReal.sub_half ENNReal.one_ne_top]
+/-- Since `maybeHeads` returns `Unit`, its whole successful mass is the success probability. -/
+theorem evalDist_maybeHeads_univ : 𝒟[maybeHeads] Set.univ = 1 / 2 := by
+  rw [show (Set.univ : Set Unit) = {()} from Set.univ_unique, evalDist_maybeHeads]
 
-/-- Sanity check: success and failure mass sum to one. The lemma uses no
-`OptionT`-specific machinery — just the generic identity from
-[`tsum_probOutput_add_probFailure`]. -/
-theorem probOutput_add_probFailure_maybeHeads :
-    Pr[= () | maybeHeads] + Pr[⊥ | maybeHeads] = 1 := by
-  rw [probOutput_maybeHeads, probFailure_maybeHeads, ENNReal.add_halves]
+/-- The failure-completed measure puts the missing half at `none`. -/
+theorem withFailure_maybeHeads_none : (𝒟[maybeHeads]).withFailure {none} = 1 / 2 := by
+  rw [Measure.withFailure_apply_none, evalDist_maybeHeads_univ, one_div, ENNReal.one_sub_inv_two]
+
+/-- Qualitatively, `()` is a possible result: the support comes from the operational
+interpretation, independently of how much mass the measure assigns it. -/
+theorem mem_support_maybeHeads : () ∈ support maybeHeads := by
+  simp [maybeHeads]
 
 end EvalDistCompatibleExample

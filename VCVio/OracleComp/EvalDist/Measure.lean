@@ -10,6 +10,7 @@ public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.EvalDist.Monad.Option
 import ToMathlib.Probability.UniformOn
+import ToMathlib.MeasureTheory.Measure.Bounds
 
 /-!
 # Measure reasoning from structural support
@@ -234,18 +235,6 @@ theorem evalDist_bind_apply_eq_one_of_ae
     Measure.bind_apply hevent Measurable.of_discrete.aemeasurable,
     lintegral_congr_ae h, lintegral_const, evalDist_apply_univ_eq_one, one_mul]
 
-/-- Events agreeing on every possible output have equal successful probability. -/
-theorem prEvent_congr_of_support
-    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
-    (mx : OracleComp spec α) (p q : α → Prop)
-    (h : ∀ a ∈ support mx, p a ↔ q a) :
-    Pr{let a ← mx}[p a] = Pr{let a ← mx}[q a] := by
-  exact congrArg (fun μ : Measure Prop ↦ μ {True})
-    (evalDist_bind_congr_of_support mx (pure ∘ p) (pure ∘ q)
-      fun a ha ↦ by simp [propext (h a ha)])
-
 /-- Structural support is positive singleton mass when every oracle response has positive
 singleton mass. The full-support hypothesis belongs to the chosen measure interpretation;
 finiteness alone does not determine it. -/
@@ -371,13 +360,6 @@ theorem prEvent_eq_one_of_forall_mem_support (mx : OracleComp spec α) (p : α �
   rw [prEvent_eq_evalDist_of_discrete, ← MeasureTheory.ae_iff_prob_eq_one Measurable.of_discrete]
   exact evalDist.ae_of_forall_mem_support mx p MeasurableSet.of_discrete h
 
-/-- An event avoiding every structurally reachable output has probability zero. -/
-theorem prEvent_eq_zero_of_forall_mem_support (mx : OracleComp spec α) (p : α → Prop)
-    (h : ∀ x ∈ support mx, ¬ p x) : Pr{let x ← mx}[p x] = 0 := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete]
-  exact evalDist.apply_eq_zero_of_disjoint_support mx MeasurableSet.of_discrete h
-
 end measureSpec
 
 section uniformMeasureSpec
@@ -414,6 +396,24 @@ theorem prEvent_pos_iff (mx : OracleComp spec α) (p : α → Prop) :
   rw [pos_iff_ne_zero, ne_eq, prEvent_eq_zero_iff]
   push Not
   rfl
+
+/-- Under native uniform oracle semantics, an event of a single lifted query has the
+proportion of satisfying responses as its probability. -/
+theorem prEvent_liftM_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t)]
+    (p : spec.Range t → Prop) [DecidablePred p] :
+    Pr{let u ← (liftM (OracleSpec.query t) : OracleComp spec (spec.Range t))}[p u] =
+      ((Finset.univ.filter p).card : ℝ≥0∞) / Fintype.card (spec.Range t) := by
+  rw [prEvent_eq_evalDist_of_discrete, evalDist_liftM_query,
+    show OracleSpec.IsMeasureSpec.toMeasure (spec := spec) t = uniformOn Set.univ from
+      OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform t, uniformOn_univ_apply_setOf]
+
+/-- Under native uniform oracle semantics, an event of a single query has the proportion of
+satisfying responses as its probability. -/
+theorem prEvent_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t)]
+    (p : spec.Range t → Prop) [DecidablePred p] :
+    Pr{let u ← (query t : OracleComp spec (spec.Range t))}[p u] =
+      ((Finset.univ.filter p).card : ℝ≥0∞) / Fintype.card (spec.Range t) := by
+  rw [prEvent_eq_evalDist_of_discrete, evalDist_query_uniform, uniformOn_univ_apply_setOf]
 
 /-- A wrapped optional oracle computation has a probability-one event exactly when every
 structurally reachable output is a present value satisfying the event. -/

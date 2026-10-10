@@ -217,12 +217,6 @@ section NeverFail
 
 variable [IsProbabilitySpec spec]
 
-lemma probFailure_eq_zero_iff (oa : OracleComp spec α) : probFailure oa = 0 ↔ NeverFail oa := by
-  simp [neverFail_iff]
-
-lemma probFailure_pos_iff (oa : OracleComp spec α) : 0 < probFailure oa ↔ ¬ NeverFail oa := by
-  simp [neverFail_iff]
-
 end NeverFail
 
 section evalSPMFConvenience
@@ -269,38 +263,6 @@ lemma support_guard {p : Prop} [Decidable p] :
     simp
 
 variable [IsProbabilitySpec spec]
-
-lemma probOutput_guard {p : Prop} [Decidable p] :
-    Pr[= () | (guard p : OptionT (OracleComp spec) Unit)] = if p then 1 else 0 := by
-  rw [OracleComp.guard_eq]
-  split_ifs with h
-  · exact probOutput_pure_self ()
-  · -- `probOutput_failure ()` would suit, but `LawfulFailure (OptionT (OracleComp spec))` does
-    -- not resolve through `OptionT.instLawfulFailure` due to a universe-inference quirk in the
-    -- post-refactor diamond. Compute directly.
-    simp [OptionT.probOutput_eq, OptionT.run_failure, probOutput_pure]
-
-/-- For any `PUnit`-valued computation in an arbitrary monad with an `SPMF` denotation, the
-probability of returning `()` is the complementary mass of its failure probability. -/
-lemma probOutput_punit_eq_sub_probFailure {m : Type → Type*} [Monad m] [MonadLiftT m SPMF]
-    {oa : m PUnit} :
-    Pr[= () | oa] = 1 - Pr[⊥ | oa] := by
-  have h := tsum_probOutput_add_probFailure oa
-  have hunit : ∑' x : PUnit, Pr[= x | oa] = Pr[= () | oa] :=
-    tsum_eq_single () (fun x hx => absurd (Subsingleton.elim x ()) hx)
-  rw [hunit] at h
-  exact ENNReal.eq_sub_of_add_eq (ne_top_of_le_ne_top one_ne_top probFailure_le_one) h
-
-/-- Guarding a computation `oa` by a decidable predicate `p` and asking for the probability of a
-successful `()` output recovers exactly the event probability `Pr[p | oa]`: the failure mass of the
-`guard` removes precisely the outputs falsifying `p`. Public guard-section API used by failure-based
-security experiments. -/
-lemma probOutput_bind_guard_eq_probEvent {α : Type} (oa : OracleComp spec α)
-    (p : α → Prop) [DecidablePred p] :
-    Pr[= () | (do let a ← oa; guard (p a) : OptionT (OracleComp spec) Unit)] = Pr[ p | oa] := by
-  simp only [probOutput_bind_eq_tsum, OptionT.probOutput_liftM, probOutput_guard,
-    probEvent_eq_tsum_ite]
-  exact tsum_congr fun a => by split_ifs <;> simp
 
 end guard
 

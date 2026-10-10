@@ -418,15 +418,6 @@ lemma evalSPMF_eq_mk_iff [MonadLiftT m SPMF] (mx : m α) (p : PMF (Option α)) :
 lemma evalSPMF_eq_liftM [MonadLiftT m SPMF] {mx : m α} {p : PMF α}
     (h : ∀ x, Pr[= x | mx] = p x) : 𝒮[mx] = liftM p := by aesop
 
-lemma evalSPMF_apply_eq_zero_iff [MonadLiftT m SPMF]
-    [MonadAttach m] [EvalDistCompatible m] (mx : m α) (x : Option α) :
-    (𝒮[mx]).run x = 0 ↔ x.rec (Pr[⊥ | mx] = 0) (· ∉ support mx) := by
-  induction x with
-  | none => simp [probFailure_def]
-  | some y =>
-      simpa [probOutput_def, SPMF.apply_eq_toPMF_some] using
-        (probOutput_eq_zero_iff mx y)
-
 /-! ## Pushing probabilities through `ite`, `dite`, and `Eq.rec` -/
 
 section ite

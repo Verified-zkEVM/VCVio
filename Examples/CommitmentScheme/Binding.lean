@@ -51,8 +51,8 @@ Pr[binding win]
   ≤ t·(t-1) / (2·|C|) + 1/|C|.
 ```
 
-The birthday term uses `probEvent_cacheCollision_le_birthday_total_tight`;
-the unpredictability term uses `probEvent_from_fresh_query_le_inv` from
+The birthday term uses `prEvent_cacheCollision_le_birthday_total_tight`;
+the unpredictability term uses `prEvent_from_fresh_query_le_inv` from
 `Examples/CommitmentScheme/Common.lean`.
 -/
 
@@ -158,15 +158,14 @@ private lemma bindingInner_totalBound {t : ℕ} (A : BindingAdversary M S C t) :
 
 /- In a collision-free cache, a value determines at most one query input. -/
 private lemma binding_rest_noCollision_le_inv [Finite M] [Finite S] [Fintype C]
-      [Inhabited C]
+      [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C]
     (c : C) (m₀ m₁ : M) (s₀ s₁ : S)
     (cache₁ : QueryCache (CMOracle M S C))
     (hno : ¬ CacheHasCollision cache₁) :
-    Pr[fun z => z.1 = true |
-      (simulateQ (CMOracle M S C).cachingOracle do
+    Pr{let z ← (simulateQ (CMOracle M S C).cachingOracle do
         let c₀ ← (CMOracle M S C).query (m₀, s₀)
         let c₁ ← (CMOracle M S C).query (m₁, s₁)
-        return (decide (m₀ ≠ m₁) && (c₀ == c) && (c₁ == c))).run cache₁] ≤
+        return (decide (m₀ ≠ m₁) && (c₀ == c) && (c₁ == c))).run cache₁}[z.1 = true] ≤
       (Fintype.card C : ℝ≥0∞)⁻¹ := by
   have : Fintype M := Fintype.ofFinite M
   have : Fintype S := Fintype.ofFinite S
@@ -177,13 +176,13 @@ private lemma binding_rest_noCollision_le_inv [Finite M] [Finite S] [Fintype C]
       intro hq
       exact hneq (Prod.ext_iff.mp hq).1
     by_cases hq₀_none : cache₁ q₀ = none
-    · simpa [q₀, q₁] using probEvent_from_fresh_query_le_inv
+    · simpa [q₀, q₁] using prEvent_from_fresh_query_le_inv
         (t := q₀) (target := c) (cache₀ := cache₁) hq₀_none
         (cont := fun u => do
           let c₁ ← (CMOracle M S C).query q₁
           return (decide (m₀ ≠ m₁) && (u == c) && (c₁ == c))) (by
           intro u hu
-          apply probEvent_eq_zero
+          refine prEvent_eq_zero_of_forall_mem_support _ _ ?_
           intro z hz hwin
           simp only [simulateQ_bind, simulateQ_pure] at hz
           rw [StateT.run_bind] at hz
@@ -215,7 +214,7 @@ private lemma binding_rest_noCollision_le_inv [Finite M] [Finite S] [Fintype C]
       by_cases hv₀ : v₀ = c
       · by_cases hq₁_none : cache₁ q₁ = none
         · rw [hrun₀]
-          simpa [hv₀, q₁] using probEvent_from_fresh_query_le_inv
+          simpa [hv₀, q₁] using prEvent_from_fresh_query_le_inv
             (t := q₁) (target := c) (cache₀ := cache₁) hq₁_none
             (cont := fun u =>
               pure (decide (m₀ ≠ m₁) && (v₀ == c) && (u == c))) (by
@@ -242,12 +241,15 @@ private lemma binding_rest_noCollision_le_inv [Finite M] [Finite S] [Fintype C]
                 StateT.run_bind, StateT.run_get, hq₁, pure_bind, StateT.run_pure]
             rw [hcache, pure_bind]
             simp [OracleQuery.cont_query, StateT.run_pure]
-          rw [hrun₀]
-          rw [hrun₁]
-          simp [hneq, hv₀, hv₁]
+          rw [hrun₀, hrun₁]
+          refine le_of_eq_of_le (prEvent_eq_zero_of_forall_mem_support _ _
+            fun z hz hwin => ?_) bot_le
+          simp only [support_pure, Set.mem_singleton_iff] at hz
+          subst hz
+          simp [hneq, hv₀, hv₁] at hwin
       · rw [hrun₀]
         refine le_of_eq_of_le ?_ (zero_le)
-        apply probEvent_eq_zero
+        refine prEvent_eq_zero_of_forall_mem_support _ _ ?_
         intro z hz hwin
         simp only [simulateQ_bind, simulateQ_pure] at hz
         rw [StateT.run_bind] at hz
@@ -258,7 +260,7 @@ private lemma binding_rest_noCollision_le_inv [Finite M] [Finite S] [Fintype C]
         rw [hz] at hwin
         simp [hneq, hv₀] at hwin
   · refine le_of_eq_of_le ?_ (zero_le)
-    apply probEvent_eq_zero
+    refine prEvent_eq_zero_of_forall_mem_support _ _ ?_
     intro z hz hwin
     simp only [simulateQ_bind, simulateQ_pure] at hz
     rw [StateT.run_bind] at hz
@@ -282,9 +284,10 @@ private lemma binding_rest_noCollision_le_inv [Finite M] [Finite S] [Fintype C]
  - Case 2 (no collision, fresh query matches `c`): ≤ `1/|C|` by unpredictability -/
 private lemma binding_win_le_advCollision_add_fresh {t : ℕ}
     [Finite M] [Finite S] [Fintype C] [Inhabited C]
+    [MeasurableSpace C] [MeasurableSingletonClass C]
     (A : BindingAdversary M S C t) :
-    Pr[fun z => z.1 = true | bindingExperiment A] ≤
-    Pr[fun z => CacheHasCollision z.2 | (simulateQ cachingOracle A.run).run ∅] +
+    Pr{let z ← bindingExperiment A}[z.1 = true] ≤
+    Pr{let z ← (simulateQ cachingOracle A.run).run ∅}[CacheHasCollision z.2] +
     (Fintype.card C : ℝ≥0∞)⁻¹ := by
   have : Fintype M := Fintype.ofFinite M
   have : Fintype S := Fintype.ofFinite S
@@ -296,18 +299,12 @@ private lemma binding_win_le_advCollision_add_fresh {t : ℕ}
   have hdecomp : bindingInner A = A.run >>= restPart := by
     simp [bindingInner, restPart]
   rw [bindingExperiment_eq, hdecomp, simulateQ_bind, StateT.run_bind]
-  simpa using
-    (probEvent_bind_le_add
-      (mx := (simulateQ cachingOracle A.run).run ∅)
-      (my := fun x => (simulateQ cachingOracle (restPart x.1)).run x.2)
-      (p := fun x => ¬ CacheHasCollision x.2)
-      (q := fun z => z.1 ≠ true)
-      (ε₁ := Pr[fun z => CacheHasCollision z.2 | (simulateQ cachingOracle A.run).run ∅])
-      (ε₂ := (Fintype.card C : ℝ≥0∞)⁻¹)
-      (by simp)
-      (by
-        rintro ⟨⟨c, m₀, s₀, m₁, s₁⟩, cache₁⟩ _ hno
-        simpa [restPart] using binding_rest_noCollision_le_inv c m₀ m₁ s₀ s₁ cache₁ hno))
+  exact prEvent_bind_le_prEvent_add_of_support ((simulateQ cachingOracle A.run).run ∅)
+    (fun x => (simulateQ cachingOracle (restPart x.1)).run x.2)
+    (fun x : (C × M × S × M × S) × QueryCache (CMOracle M S C) => CacheHasCollision x.2)
+    (fun z => z.1 = true)
+    fun ⟨⟨c, m₀, s₀, m₁, s₁⟩, cache₁⟩ _ hno => by
+      simpa [restPart] using binding_rest_noCollision_le_inv c m₀ m₁ s₀ s₁ cache₁ hno
 
 /-- **Binding bound for the ROM commitment scheme (tight, Lemma cm-binding).**
 
@@ -324,27 +321,27 @@ adversary returns.
 Proof: the win event is decomposed by `binding_win_le_advCollision_add_fresh`
 into the adversary's cache already containing a collision (bounded by the
 tight birthday bound `t·(t-1) / (2·|C|)` via
-`probEvent_cacheCollision_le_birthday_total_tight`) plus a fresh
+`prEvent_cacheCollision_le_birthday_total_tight`) plus a fresh
 verification query happening to land on the committed value (bounded by
-`1/|C|` via `probEvent_from_fresh_query_le_inv`).
+`1/|C|` via `prEvent_from_fresh_query_le_inv`).
 
 This is the bound a reader of the textbook lemma should reach for; the
 companion `binding_bound_via_cr_chain` produces the same shape of bound by
 factoring through the standard-model collision-resistance reduction. -/
 theorem binding_bound [Finite M] [Finite S] [Fintype C]
-    [Inhabited M] [Inhabited S] [Inhabited C]
+    [Inhabited M] [Inhabited S] [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C]
     {t : ℕ} (A : BindingAdversary M S C t) :
-    Pr[fun z => z.1 = true | bindingExperiment A] ≤
+    Pr{let z ← bindingExperiment A}[z.1 = true] ≤
     ((t * (t - 1) + 2 : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) := by
   have : Fintype M := Fintype.ofFinite M
   have : Fintype S := Fintype.ofFinite S
-  calc Pr[fun z => z.1 = true | bindingExperiment A]
-      ≤ Pr[fun z => CacheHasCollision z.2 | (simulateQ cachingOracle A.run).run ∅] +
+  calc Pr{let z ← bindingExperiment A}[z.1 = true]
+      ≤ Pr{let z ← (simulateQ cachingOracle A.run).run ∅}[CacheHasCollision z.2] +
         (Fintype.card C : ℝ≥0∞)⁻¹ := binding_win_le_advCollision_add_fresh A
     _ ≤ ((t * (t - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) +
         (Fintype.card C : ℝ≥0∞)⁻¹ := by
         gcongr
-        exact probEvent_cacheCollision_le_birthday_total_tight A.run t A.queryBound
+        exact prEvent_cacheCollision_le_birthday_total_tight A.run t A.queryBound
           (fun _ => le_refl _)
     _ = ((t * (t - 1) + 2 : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) := by
         simpa [Nat.mul_one, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using
@@ -369,17 +366,18 @@ the standard-model `binding ≤ keyed-CR ≤ birthday` chain that runs through
 Proof: a binding-game win implies a collision in the final cache
 (`binding_win_implies_collision`), and the inner game makes at most `t + 2`
 total queries (`bindingInner_totalBound`); apply
-`probEvent_cacheCollision_le_birthday_total_tight` at `n = t + 2`. -/
+`prEvent_cacheCollision_le_birthday_total_tight` at `n = t + 2`. -/
 theorem binding_bound_via_cr_chain [Fintype C] [Inhabited M] [Inhabited S] [Inhabited C]
+    [MeasurableSpace C] [MeasurableSingletonClass C]
     {t : ℕ} (A : BindingAdversary M S C t) :
-    Pr[fun z => z.1 = true | bindingExperiment A] ≤
+    Pr{let z ← bindingExperiment A}[z.1 = true] ≤
     (((t + 2) * (t + 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) := by
   rw [bindingExperiment_eq]
-  calc Pr[fun z => z.1 = true | (simulateQ cachingOracle (bindingInner A)).run ∅]
-      ≤ Pr[fun z => CacheHasCollision z.2 |
-          (simulateQ cachingOracle (bindingInner A)).run ∅] :=
-        probEvent_mono (binding_win_implies_collision A)
+  calc Pr{let z ← (simulateQ cachingOracle (bindingInner A)).run ∅}[z.1 = true]
+      ≤ Pr{let z ← (simulateQ cachingOracle (bindingInner A)).run
+               ∅}[CacheHasCollision z.2] :=
+        prEvent_mono_of_support _ _ _ (binding_win_implies_collision A)
     _ ≤ (((t + 2) * (t + 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) :=
-        probEvent_cacheCollision_le_birthday_total_tight
+        prEvent_cacheCollision_le_birthday_total_tight
           (spec := CMOracle M S C) (bindingInner A) (t + 2)
           (bindingInner_totalBound A) (fun _ => le_refl _)

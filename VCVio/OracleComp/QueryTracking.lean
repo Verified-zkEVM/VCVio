@@ -11,7 +11,7 @@ public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
 public import VCVio.OracleComp.QueryTracking.CachingOracle
 public import VCVio.OracleComp.QueryTracking.Collision
 public import VCVio.OracleComp.QueryTracking.CostModel
-public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.Enforcement
 public import VCVio.OracleComp.QueryTracking.HandlerSimp
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
@@ -27,7 +27,7 @@ public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.QueryTracking.ResourceProfile
 public import VCVio.OracleComp.QueryTracking.SeededOracle
 public import VCVio.OracleComp.QueryTracking.Structures
-public import VCVio.OracleComp.QueryTracking.Tracing
+public import VCVio.OracleComp.QueryTracking.Tracing.Core
 public import VCVio.OracleComp.QueryTracking.Unpredictability
 public import VCVio.OracleComp.QueryTracking.WriterCost
 

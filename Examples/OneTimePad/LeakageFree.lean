@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import Examples.OneTimePad.Basic
-public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.ProgramLogic.Relational.Leakage
 
 /-!

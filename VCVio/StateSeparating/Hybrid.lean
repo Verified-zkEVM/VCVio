@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.StateSeparating.DistEquiv
+public import VCVio.StateSeparating.MeasureDistEquiv
 
 /-!
 # State-separating handlers: hybrid arguments

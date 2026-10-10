@@ -23,8 +23,8 @@ open OracleComp OracleSpec
 
 namespace VCVioTest.MerkleTreeExtractability
 
-noncomputable local instance : IsUniformSpec (InductiveMerkleTree.spec Bool) :=
-  IsUniformSpec.ofFintypeInhabited (InductiveMerkleTree.spec Bool)
+noncomputable local instance : IsUniformMeasureSpec (InductiveMerkleTree.spec Bool) :=
+  IsUniformMeasureSpec.ofFiniteNonempty (InductiveMerkleTree.spec Bool)
 
 def repeatedQuery : OracleComp (InductiveMerkleTree.spec Bool) (Bool × Bool) := do
   let first ← ((InductiveMerkleTree.spec Bool).query (false, false) :
@@ -227,8 +227,8 @@ private lemma depthZeroAdversary_totalBound :
 /-- At depth zero, a query-free two-phase adversary has zero extraction-failure probability.
 This pins the fact that the verifier hashes internal nodes only; it does not hash a raw leaf. -/
 example :
-    Pr[InductiveMerkleTree.OpeningExtractionFailure |
-      InductiveMerkleTree.extractabilityExperiment depthZeroAdversary] = 0 := by
+    Pr{let z ← InductiveMerkleTree.extractabilityExperiment
+           depthZeroAdversary}[InductiveMerkleTree.OpeningExtractionFailure z] = 0 := by
   apply le_antisymm
   · simpa [InductiveMerkleTree.extractabilityROMErrorNumerator,
       MerkleTreeExtractability.extractabilityROMErrorNumerator] using
@@ -250,8 +250,9 @@ private lemma freshHitAdversary_totalBound :
 /-- The public finite-maximum theorem sees the `c = 0` stopping branch and its one reachable
 target, recovering the exact `1 / |Bool| = 1/2` bound for this game. -/
 example :
-    Pr[InductiveMerkleTree.OpeningExtractionFailure |
-      InductiveMerkleTree.extractabilityExperiment freshHitAdversary] ≤ (2 : ENNReal)⁻¹ := by
+    Pr{let z ← InductiveMerkleTree.extractabilityExperiment
+        freshHitAdversary}[InductiveMerkleTree.OpeningExtractionFailure z] ≤
+      (2 : ENNReal)⁻¹ := by
   simpa [InductiveMerkleTree.extractabilityROMErrorNumerator,
     MerkleTreeExtractability.extractabilityROMErrorNumerator, depthOneSkeleton] using
     InductiveMerkleTree.extractability_rom_bound

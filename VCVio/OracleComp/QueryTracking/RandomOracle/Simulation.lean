@@ -44,7 +44,7 @@ does, so a probability-one claim about `romImpl` reduces to the same claim for e
 
 ## Main statements
 
-* `OracleComp.probEvent_eq_one_simulateQ_romImpl_run_iff`: reduces a probability-one claim for
+* `OracleComp.prEvent_eq_one_simulateQ_romImpl_run_iff`: reduces a probability-one claim for
   `romImpl` to all fixed answer tables agreeing with the initial cache
 -/
 
@@ -267,13 +267,6 @@ def unifFwdAnswerImpl (f : QueryImpl spec Id) :
     QueryImpl (unifSpec + spec) ProbComp :=
   unifSpec.passthrough + f.liftTarget ProbComp
 
-/-- The random-oracle simulation of a plain `OracleComp` never fails on any starting cache. -/
-theorem neverFail_simulateQ_randomOracle_run
-    [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
-    (oa : OracleComp spec α) (cache : spec.QueryCache) :
-    NeverFail ((simulateQ randomOracle oa).run cache) := by
-  infer_instance
-
 /-- Running the lazy random oracle on an uncached query `t` and binding the result samples the
 fresh answer uniformly, so the support of the bound computation is the union over all answers of
 the support obtained after caching that answer. -/
@@ -369,33 +362,27 @@ theorem exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff
 
 The combined lazy-oracle simulation satisfies `p` almost surely from `preexisting_cache` iff,
 for every deterministic hash-answer table extending that cache, the computation that keeps fresh
-uniform queries probabilistic and uses that fixed table satisfies `p` almost surely. No separate
-`NeverFail` premise is needed: both interpretations are `ProbComp` computations and hence total. -/
-theorem probEvent_eq_one_simulateQ_romImpl_run_iff
+uniform queries probabilistic and uses that fixed table satisfies `p` almost surely. Both
+interpretations are lossless `ProbComp` computations, so no losslessness premise is needed. -/
+theorem prEvent_eq_one_simulateQ_romImpl_run_iff
     [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
     (oa : OracleComp (unifSpec + spec) α) (preexisting_cache : spec.QueryCache) (p : α → Prop) :
-    Pr[fun v => p v.1 | (simulateQ spec.romImpl oa).run preexisting_cache] = 1
+    Pr{let v ← (simulateQ spec.romImpl oa).run preexisting_cache}[p v.1] = 1
     ↔
     ∀ f : QueryImpl spec Id, preexisting_cache.AgreesWithFn f →
-      Pr[p | simulateQ (unifFwdAnswerImpl f) oa] = 1 := by
+      Pr{let x ← simulateQ (unifFwdAnswerImpl f) oa}[p x] = 1 := by
   classical
-  rw [probEvent_eq_one_iff]
-  constructor
-  · rintro ⟨_, hsupp⟩ f hf
-    rw [probEvent_eq_one_iff]
-    refine ⟨probFailure_eq_zero' (by infer_instance), ?_⟩
-    intro a ha
-    obtain ⟨cache', hcache'⟩ :=
+  rw [prEvent_eq_one_iff]
+  refine ⟨fun hsupp f hf => (prEvent_eq_one_iff _ _).2 fun a ha => ?_, fun h => ?_⟩
+  · obtain ⟨cache', hcache'⟩ :=
       (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff
         oa preexisting_cache a).mp ⟨f, hf, ha⟩
     exact hsupp (a, cache') hcache'
-  · intro h
-    refine ⟨probFailure_eq_zero' (by infer_instance), ?_⟩
-    rintro ⟨a, cache'⟩ ha
+  · rintro ⟨a, cache'⟩ ha
     obtain ⟨f, hf, has⟩ :=
       (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff
         oa preexisting_cache a).mpr ⟨cache', ha⟩
-    exact ((probEvent_eq_one_iff.mp (h f hf)).2 a has)
+    exact (prEvent_eq_one_iff _ _).1 (h f hf) a has
 
 /-- Measure-native probability-one form of the combined uniform-query/random-oracle
 characterization. The visible state is discarded before the output event is measured. -/
@@ -472,20 +459,19 @@ theorem exists_agreesWithFn_evalWithAnswerFn_eq_iff_mem_support
 
 A predicate on the result value holds with probability one under lazy random-oracle simulation
 from `preexisting_cache` iff it holds for every total answer function agreeing with that cache. -/
-theorem probEvent_eq_one_simulateQ_randomOracle_run_iff
+theorem prEvent_eq_one_simulateQ_randomOracle_run_iff
     [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
     (oa : OracleComp spec α) (preexisting_cache : spec.QueryCache) (p : α → Prop) :
-    Pr[fun v => p v.1 | (simulateQ randomOracle oa).run preexisting_cache] = 1
+    Pr{let v ← (simulateQ randomOracle oa).run preexisting_cache}[p v.1] = 1
     ↔
     ∀ f : QueryImpl spec Id, preexisting_cache.AgreesWithFn f → p (evalWithAnswerFn f oa) := by
   classical
-  rw [probEvent_eq_one_iff]
-  refine ⟨fun ⟨_, hsupp⟩ f hf => ?_, fun h => ⟨?_, ?_⟩⟩
+  rw [prEvent_eq_one_iff]
+  refine ⟨fun hsupp f hf => ?_, fun h => ?_⟩
   · obtain ⟨cache', hcache'⟩ :=
       (exists_agreesWithFn_evalWithAnswerFn_eq_iff_mem_support oa preexisting_cache
         (evalWithAnswerFn f oa)).mp ⟨f, hf, rfl⟩
     exact hsupp _ hcache'
-  · exact probFailure_eq_zero' (neverFail_simulateQ_randomOracle_run oa preexisting_cache)
   · rintro ⟨a, cache'⟩ hac
     obtain ⟨f, hf, ha⟩ :=
       (exists_agreesWithFn_evalWithAnswerFn_eq_iff_mem_support oa preexisting_cache a).mpr
