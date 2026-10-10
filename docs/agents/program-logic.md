@@ -14,9 +14,10 @@
 For continuous or otherwise non-discrete denotations, import
 `VCVio.ProgramLogic.Relational.Measure`. Its `MeasureProgramLogic.RelWP` uses an almost-everywhere
 postcondition under a Mathlib `Measure.Coupling`, and `eRelWP` integrates quantitative
-post-expectations with `lintegral`. Unary quantitative tactics use the native measure
-interpretation; the remaining relational compatibility theorem families have separate conversion
-checkpoints.
+post-expectations with `lintegral`. The `OracleComp` relational logic (`RelTriple`, `CouplingPost`,
+`eRelWP`) specializes these to the output measures observed in the discrete structure on each
+output type; its sequential rules need finite response types, and its anchoring and bijection
+rules for queries need uniform response measures.
 
 ## In-Tree Walkthroughs
 
@@ -54,14 +55,14 @@ candidate registrations are experimental.
 
 | Tactic | Goal shape | What it does |
 |--------|-----------|--------------|
-| `by_equiv` | `g₁ ≡ₚ g₂` or `evalSPMF g₁ = evalSPMF g₂` | Enters relational proof mode (`RelTriple`) |
+| `by_equiv` | `g₁ ≡ₚ g₂` or `𝒟[g₁] = 𝒟[g₂]` | Enters relational proof mode (`RelTriple`) |
 | `game_trans g₂` | `g₁ ≡ₚ g₃` | Splits into `g₁ ≡ₚ g₂` and `g₂ ≡ₚ g₃` |
-| `by_dist` | `AdvBound game ε` | Enters TV distance reasoning |
-| `by_upto bad` | identical-until-bad TV-distance goals | Applies the `simulateQ` up-to-bad bound |
+| `by_dist` | `AdvBound game ε` | Splits into a second game's bound and a `measureETVDist` bound |
+| `by_upto bad` | identical-until-bad `measureETVDist` goals | Applies the `simulateQ` up-to-bad bound |
 | `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters native quantitative WP reasoning, including conditional branches |
 
-`by_equiv` enters the coupling-based `RelTriple` shell, not `RelTriple'`, so that
-`rvcstep` / `rvcgen` can keep decomposing the relational goal.
+`by_equiv` enters the coupling-based `RelTriple` shell, so that `rvcstep` / `rvcgen` can keep
+decomposing the relational goal.
 
 `by_dist ε` is the explicit variant that fixes the TV-distance contribution to `ε`
 before generating the remaining subgoals.
@@ -70,7 +71,7 @@ before generating the remaining subgoals.
 
 | Tactic | Goal shape | What it does |
 |--------|-----------|--------------|
-| `rvcstep` | `g₁ ≡ₚ g₂`, `evalSPMF g₁ = evalSPMF g₂`, `⟪oa ~ ob \| R⟫`, or `⦃f⦄ oa ≈ₑ ob ⦃g⦄` | Lowers into relational mode if needed, then applies one obvious relational step |
+| `rvcstep` | `g₁ ≡ₚ g₂`, `𝒟[g₁] = 𝒟[g₂]`, `⟪oa ~ ob \| R⟫`, or `⦃f⦄ oa ≈ₑ ob ⦃g⦄` | Lowers into relational mode if needed, then applies one obvious relational step |
 | `rvcstep using t` | same | Supplies the explicit witness needed by the current shape (bind cut relation, bijection, traversal input relation, or simulation state relation) |
 | `rvcstep with thm` | same | Force one explicit relational theorem/assumption step |
 | `rvcstep left` / `rvcstep right` | raw `VCVio.ProgramLogic.rwp` or folded `VCVio.ProgramLogic.RelTriple` goals | Exposes a controlled one-sided bind step |
@@ -290,7 +291,7 @@ All probability-equality control now lives under `vcstep`.
 
 | Tactic | What it does |
 |--------|--------------|
-| `rvcgen` | Exhaustive relational VCGen over all open goals, with automatic lowering from `GameEquiv` / `evalSPMF` equality and cheap leaf closure |
+| `rvcgen` | Exhaustive relational VCGen over all open goals, with automatic lowering from `GameEquiv` / output-measure equality and cheap leaf closure |
 | `rvcfinish` / `rvcgen!` | Opt-in residual search and consequence closing |
 | `rel_dist` | Turns `RelTriple oa ob (EqRel α)` into `evalSPMF oa = evalSPMF ob` |
 
@@ -384,13 +385,15 @@ Key rules:
 | `relTriple_bind` | Decompose bind on both sides |
 | `relTriple_refl` | Same computation → `EqRel` |
 | `relTriple_eqRel_of_eq` | Definitionally equal → `EqRel` |
-| `relTriple_eqRel_of_evalSPMF_eq` | Same distribution → `EqRel` |
+| `relTriple_eqRel_of_evalDist_eq` | Same output measure (discrete structure) → `EqRel` |
 | `relTriple_query` | Same query → `EqRel` on response |
 | `relTriple_query_bij` | Same query with bijection `f` → `fun a b => f a = b` |
 | `relTriple_uniformSample_bij` | Uniform sampling with bijection |
 | `relTriple_if` | Synchronized conditional |
 | `relTriple_post_mono` | Weaken postcondition |
-| `evalSPMF_eq_of_relTriple_eqRel` | Extract `evalSPMF` equality from `EqRel` triple |
+| `evalDist_eq_of_relTriple_eqRel` | Extract output-measure equality from `EqRel` triple |
+| `prEvent_eq_of_relTriple_eqRel` | Equal event probabilities from `EqRel` triple |
+| `prEvent_le_of_relTriple` | Event inequality from an implication along the coupling |
 
 ### Relational simulateQ
 
@@ -504,13 +507,17 @@ quantifier.
 ### Identical Until Bad
 
 ```lean
-tvDist_simulateQ_le_probEvent_bad :
-  (¬bad s₀) →
-  (∀ t s, ¬bad s → (impl₁ t).run s = (impl₂ t).run s) →
+measureETVDist_simulateQ_run'_le_prEvent_bad :
+  (∀ t s, ¬bad s → ∀ q, Pr{let z ← (impl₁ t).run s}[q z ∧ ¬bad z.2] =
+    Pr{let z ← (impl₂ t).run s}[q z ∧ ¬bad z.2]) →
   (bad monotone for impl₁ and impl₂) →
-  tvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
-    ≤ Pr[bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀].toReal
+  measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
+    ≤ Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2]
 ```
+
+The handlers need only agree on good-to-good steps, so they may disagree on the step that sets
+a bad flag; `_of_run_eq` and `_of_evalDist_eq` take agreement off bad input states instead. No
+measurable structure is needed on the state.
 
 ### eRHL (quantitative relational logic)
 
@@ -525,7 +532,14 @@ def ApproxRelTriple (ε : ℝ≥0∞) (oa ob : ...) (R : RelPost α β) : Prop :
   1 - ε ≤ eRelWP oa ob (RelPost.indicator R)
 ```
 
-pRHL is the special case where `ε = 0` (exact coupling).
+Uniform samples and queries coupled by a bijection `f` have coupled expectation at least the unary
+expectation `wp ($ᵗ α) (fun a => post a (f a))`; a `pure` side collapses `eRelWP` to the unary `wp`
+of the other side.
+
+pRHL is the special case where `ε = 0` (exact coupling). On equality,
+`approxRelTriple_eqRel_iff_etvDist_le` identifies `ApproxRelTriple ε` with a total variation bound
+`ε` between the output measures, through the maximal coupling of
+`ToMathlib/MeasureTheory/Measure/Coupling/Maximal.lean`.
 
 ### Design target
 

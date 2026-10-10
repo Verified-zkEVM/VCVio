@@ -17,6 +17,8 @@ public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.ProgramLogic.Relational.SimulateQ
 public import ToMathlib.Control.StateT
 public import ToMathlib.Data.ENNReal.Gauss
+import VCVio.OracleComp.EvalDist.UniformCompatibility
+import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 
 /-!
 # Asymmetric Encryption Schemes: IND-CPA Oracle Games
@@ -351,7 +353,7 @@ lemma IND_CPA_queryImpl_hybridLR_counted_proj_eq_queryImpl'_false
 /-- The counted real IND-CPA implementation preserves the budget-indexed invariant
 `st.2 + budget ≤ q`: after answering a query that the structural bound permits, the spent counter
 plus the decremented budget still fits under `q`. This is the per-query preservation obligation
-fed to `probOutput_simulateQ_run_eq_of_impl_eq_queryBound`. -/
+fed to `evalDist_simulateQ_run_eq_of_impl_eq_queryBound`. -/
 private lemma IND_CPA_queryImpl'_counted_run_invariant_le
     (pk : PK) (b : Bool) (q : ℕ) (t : encAlg'.IND_CPA_oracleSpec.Domain)
     (st : encAlg'.IND_CPA_CountedState) (budget : ℕ) (hInv : st.2 + budget ≤ q)
@@ -396,8 +398,9 @@ theorem IND_CPA_run'_evalSPMF_eq_queryImpl'_of_bounded_eq [Finite C] [Inhabited 
   have hrun :
       𝒮[(simulateQ (implCounted pk b q) comp).run (cache, n)] =
       𝒮[(simulateQ (encAlg'.IND_CPA_queryImpl'_counted pk b) comp).run (cache, n)] := by
-    refine evalSPMF_ext fun z =>
-      OracleComp.ProgramLogic.Relational.probOutput_simulateQ_run_eq_of_impl_eq_queryBound
+    let : MeasurableSpace (α × encAlg'.IND_CPA_CountedState) := ⊤
+    refine evalSPMF_eq_of_evalDist_eq _ _ <|
+      OracleComp.ProgramLogic.Relational.evalDist_simulateQ_run_eq_of_impl_eq_queryBound
         (impl₁ := implCounted pk b q) (impl₂ := encAlg'.IND_CPA_queryImpl'_counted pk b)
         (Inv := fun st budget => st.2 + budget ≤ q)
         (canQuery := fun t n => ¬ (Sum.isRight t = true) ∨ 0 < n)
@@ -409,7 +412,7 @@ theorem IND_CPA_run'_evalSPMF_eq_queryImpl'_of_bounded_eq [Finite C] [Inhabited 
           | inl _ => trivial
           | inr _ => simp only [Sum.isRight, not_true, false_or] at hcan; omega)).symm)
         (hpres₂ := IND_CPA_queryImpl'_counted_run_invariant_le pk b q)
-        (s := (cache, n)) (hs := hn) (z := z)
+        (s := (cache, n)) (hs := hn)
   have hcounted_run' :
       𝒮[(simulateQ (implCounted pk b q) comp).run' (cache, n)] =
       𝒮[(simulateQ (encAlg'.IND_CPA_queryImpl'_counted pk b) comp).run'

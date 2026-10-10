@@ -132,17 +132,22 @@ private lemma IND_CPA_hybridLR_counted_run'_evalSPMF_eq_above (pk : PK) (k : ℕ
     (st : encAlg'.IND_CPA_CountedState) (hst : k + 1 ≤ st.2) :
     𝒮[(simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk k) oa).run' st] =
       𝒮[(simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk (k + 1)) oa).run' st] := by
-  simp only [StateT.run', evalSPMF_map]
-  exact congrArg (Prod.fst <$> ·) <| evalSPMF_ext fun z =>
-    OracleComp.ProgramLogic.Relational.probOutput_simulateQ_run_eq_of_impl_eq_preservesInv
-      (impl₁ := encAlg'.IND_CPA_queryImpl_hybridLR_counted pk k)
-      (impl₂ := encAlg'.IND_CPA_queryImpl_hybridLR_counted pk (k + 1))
-      (Inv := fun s => k + 1 ≤ s.2) (oa := oa)
-      (himpl_eq := IND_CPA_hybridLR_counted_run_eq_of_le (encAlg' := encAlg') pk k)
-      (hpres₂ := fun t s hs z hz => by
-        have := IND_CPA_hybridLR_counted_counter_le (encAlg' := encAlg') pk (k + 1) t s z hz
-        omega)
-      (s := st) (hs := hst) (z := z)
+  let : MeasurableSpace α := ⊤
+  refine evalSPMF_eq_of_evalDist_eq _ _ ?_
+  simp only [StateT.run']
+  exact OracleComp.ProgramLogic.Relational.evalDist_eq_of_relTriple_eqRel <|
+    OracleComp.ProgramLogic.Relational.relTriple_map <|
+      OracleComp.ProgramLogic.Relational.relTriple_post_mono
+        (OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run_eqRel_of_impl_eq_preservesInv
+          (impl₁ := encAlg'.IND_CPA_queryImpl_hybridLR_counted pk k)
+          (impl₂ := encAlg'.IND_CPA_queryImpl_hybridLR_counted pk (k + 1))
+          (Inv := fun s => k + 1 ≤ s.2) (oa := oa)
+          (himpl_eq := IND_CPA_hybridLR_counted_run_eq_of_le (encAlg' := encAlg') pk k)
+          (hpres₂ := fun t s hs z hz => by
+            have := IND_CPA_hybridLR_counted_counter_le (encAlg' := encAlg') pk (k + 1) t s z hz
+            omega)
+          (s := st) (hs := hst))
+        fun _ _ h => congrArg Prod.fst h
 
 /-- Once the counter has already crossed `k`, the `k` and `if branch then k + 1 else k` counted
 hybrids agree: when `branch` selects the higher index this is the adjacent-hybrid step, otherwise

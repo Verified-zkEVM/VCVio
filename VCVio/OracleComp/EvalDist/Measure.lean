@@ -484,4 +484,26 @@ theorem evalDist_apply_eq_top_apply
       Measurable.of_discrete.aemeasurable]
     exact lintegral_congr fun u ↦ ih u
 
+/-- Under uniform oracle semantics a query, observed in the discrete structure on its response
+type, is the uniform measure. The response type's own measurable structure is discrete, so the
+query law does not depend on which of the two structures observes it. -/
+theorem evalDist_liftM_query_eq_uniformOn_top
+    {ι : Type u} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
+    (t : spec.Domain) :
+    (letI : MeasurableSpace (spec.Range t) := ⊤;
+      𝒟[(liftM (OracleSpec.query t) : OracleComp spec (spec.Range t))] = uniformOn Set.univ) := by
+  have := OracleSpec.IsUniformMeasureSpec.finite_range (spec := spec) t
+  have := OracleSpec.IsUniformMeasureSpec.nonempty_range (spec := spec) t
+  let : Fintype (spec.Range t) := Fintype.ofFinite _
+  have hq (u : spec.Range t) :
+      (letI : MeasurableSpace (spec.Range t) := ⊤;
+        𝒟[(liftM (OracleSpec.query t) : OracleComp spec (spec.Range t))] {u}) =
+        (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ := by
+    rw [← evalDist_apply_eq_top_apply _ MeasurableSet.of_discrete, evalDist_liftM_query,
+      OracleSpec.IsUniformMeasureSpec.toMeasure_singleton]
+  let : MeasurableSpace (spec.Range t) := ⊤
+  exact Measure.ext_of_singleton fun u ↦ by rw [hq, uniformOn_univ_apply_singleton]
+
 end OracleComp

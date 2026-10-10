@@ -28,7 +28,9 @@ open scoped OracleComp.ProgramLogic OracleComp.Rel.Quantitative
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
+variable [∀ t, Finite (spec.Range t)]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α β γ : Type}
 
 /-! ## `rel_conseq` / `rel_inline` / `rel_dist` -/

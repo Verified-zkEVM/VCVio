@@ -255,7 +255,7 @@ def tryLowerRelGoal : TacticM Bool := withMainContext do
       apply OracleComp.ProgramLogic.GameEquiv.of_relTriple))
   else if isEvalDistEqGoal target then
     tryEvalTacticSyntax (← `(tactic|
-      apply OracleComp.ProgramLogic.Relational.evalSPMF_eq_of_relTriple_eqRel))
+      apply OracleComp.ProgramLogic.Relational.evalDist_eq_of_relTriple_eqRel))
   else
     return false
 
@@ -648,7 +648,7 @@ def runRelCondRule : TacticM Bool := do
 /-- Bound simulation distance by the probability of the supplied bad predicate. -/
 def runByUptoRule (bad : TSyntax `term) : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
-    apply OracleComp.ProgramLogic.Relational.tvDist_simulateQ_le_probEvent_bad
+    apply OracleComp.ProgramLogic.Relational.measureETVDist_simulateQ_run'_le_prEvent_bad_of_run_eq
       (bad := $bad)))
 
 /-- Swap the two computations in a relational triple. -/
@@ -739,7 +739,7 @@ def runRelSimDistRule : TacticM Bool := withMainContext do
       if !(hasSimulateQRunLike oa) || !(hasSimulateQRunLike ob) || !isEqRelPost post then
         return false
       tryEvalTacticSyntax (← `(tactic|
-        apply OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run'_of_impl_evalSPMF_eq))
+        apply OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run'_of_impl_evalDist_eq))
   | none => return false
 
 private def rawRelWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
