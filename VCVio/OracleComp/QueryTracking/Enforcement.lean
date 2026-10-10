@@ -86,7 +86,7 @@ theorem prEvent_counting_budget_eq {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : IsPerIndexQueryBound oa qb) (p : α → Prop) :
     Pr{let z ← countingOracle.simulate oa 0}[p z.1 ∧ z.2 ≤ qb] =
       Pr{let x ← oa}[p x] := by
-  rw [OracleComp.prEvent_congr_of_support (countingOracle.simulate oa 0)
+  rw [prEvent_congr_of_support (countingOracle.simulate oa 0)
     (fun z => p z.1 ∧ z.2 ≤ qb) (fun z => p z.1)
     (fun z hz => and_iff_left (h.counting_bounded hz))]
   have hproj : Prod.fst <$> countingOracle.simulate oa 0 = oa := by

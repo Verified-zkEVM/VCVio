@@ -165,68 +165,6 @@ noncomputable def idealCipherObserve (sp : ℕ) (P : BitVec sp → Bool) :
   let c ← $ᵗ BitVec sp
   guard (P c = true)
 
-/-- Local copy of the `OracleComp`-internal lemma relating `Pr[= ()]` on
-a `bind` with a `guard` to a `probEvent`. Kept private here to avoid
-exposing internals of `VCVio.OracleComp.EvalDist`. -/
-private lemma probOutput_liftM_bind_guard
-    {α : Type} (oa : ProbComp α) (p : α → Prop) [DecidablePred p] :
-    Pr[= () | (do let a ← (liftM oa : OptionT ProbComp α)
-                  guard (p a) : OptionT ProbComp Unit)] = Pr[ p | oa] := by
-  rw [probOutput_bind_eq_tsum]
-  simp only [OptionT.probOutput_liftM, probOutput_guard]
-  rw [probEvent_eq_tsum_ite]
-  congr 1; ext a
-  split_ifs <;> simp
-
-/-! ### Success probabilities -/
-
-/-- **Real-world success probability**:
-`#{ k : P (k ⊕ msg) = true } / |BitVec sp|`. -/
-theorem probOutput_realCipherObserve (sp : ℕ) (msg : BitVec sp)
-    (P : BitVec sp → Bool) :
-    Pr[= () | realCipherObserve sp msg P] =
-      (Finset.univ.filter fun k : BitVec sp => P (k ^^^ msg) = true).card /
-        (Fintype.card (BitVec sp) : ℝ≥0∞) := by
-  change Pr[= () | (do
-      let k ← $ᵗ BitVec sp
-      guard (P (k ^^^ msg) = true) : OptionT ProbComp Unit)] = _
-  rw [probOutput_liftM_bind_guard ($ᵗ BitVec sp) (fun k => P (k ^^^ msg) = true),
-      probEvent_uniformSample]
-
-/-- **Ideal-world success probability**:
-`#{ c : P c = true } / |BitVec sp|`. -/
-theorem probOutput_idealCipherObserve (sp : ℕ) (P : BitVec sp → Bool) :
-    Pr[= () | idealCipherObserve sp P] =
-      (Finset.univ.filter fun c : BitVec sp => P c = true).card /
-        (Fintype.card (BitVec sp) : ℝ≥0∞) := by
-  change Pr[= () | (do
-      let c ← $ᵗ BitVec sp
-      guard (P c = true) : OptionT ProbComp Unit)] = _
-  rw [probOutput_liftM_bind_guard ($ᵗ BitVec sp) (fun c => P c = true),
-      probEvent_uniformSample]
-
-/-- **Real-world failure mass** is positive when `P` is not universally
-true on `BitVec sp`: specifically, `1 -` (the real-world success
-probability). Mirrors the ideal failure formula modulo the
-bijection `k ↦ k ⊕ msg`, which is why the two agree as `SPMF`s. -/
-theorem probFailure_realCipherObserve (sp : ℕ) (msg : BitVec sp)
-    (P : BitVec sp → Bool) :
-    Pr[⊥ | realCipherObserve sp msg P] =
-      1 - (Finset.univ.filter fun k : BitVec sp => P (k ^^^ msg) = true).card /
-        (Fintype.card (BitVec sp) : ℝ≥0∞) := by
-  rw [probFailure_eq_sub_tsum,
-      tsum_eq_single () (fun x hx => absurd (Subsingleton.elim x ()) hx),
-      probOutput_realCipherObserve]
-
-/-- **Ideal-world failure mass**: `1 -` (ideal success probability). -/
-theorem probFailure_idealCipherObserve (sp : ℕ) (P : BitVec sp → Bool) :
-    Pr[⊥ | idealCipherObserve sp P] =
-      1 - (Finset.univ.filter fun c : BitVec sp => P c = true).card /
-        (Fintype.card (BitVec sp) : ℝ≥0∞) := by
-  rw [probFailure_eq_sub_tsum,
-      tsum_eq_single () (fun x hx => absurd (Subsingleton.elim x ()) hx),
-      probOutput_idealCipherObserve]
-
 /-! ### OTP perfect secrecy at the observation layer -/
 
 /-- **OTP perfect secrecy (observation form).** For every plaintext
@@ -245,8 +183,11 @@ theorem evalDist_realCipherObserve_eq (sp : ℕ) (msg : BitVec sp)
     prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete,
     evalDist_xor_uniformSample, SampleableType.evalDist_bitVec]
 
-/-- The generalized probability notation reads the OTP success event directly from the
-successful-output measure. -/
+/-! ### Success probabilities -/
+
+/-- **Real-world success probability**: the generalized probability notation reads the OTP
+success event `#{ k : P (k ⊕ msg) = true } / |BitVec sp|` directly from the successful-output
+measure. -/
 theorem probability_realCipherObserve (sp : ℕ) (msg : BitVec sp)
     (P : BitVec sp → Bool) :
     Pr{let x ← realCipherObserve sp msg P}[x = ()] =

@@ -31,8 +31,8 @@ cache/log induction.
 
 `measure_adaptivePrefixRunFrom_le` proves this bound for any lawful measure semantics with
 uniform query measures and a measurable terminal event. Its proof uses a bad-event decomposition
-of a Lebesgue integral. The original `probEvent_adaptivePrefixRunFrom_le` is a compatibility
-corollary. The online-target counterpart is
+of a Lebesgue integral. `prEvent_adaptivePrefixRunFrom_le` reads it for `Pr{…}` events under
+native uniform oracle semantics. The online-target counterpart is
 `MerkleTreeMultiExtractability.measure_onlineAdaptivePrefixRunFrom_logged_le`; its target set
 is evaluated on the pre-query log.
 
@@ -108,17 +108,17 @@ require their own consistency condition.
 
 Almost every `QueryImpl` wrapper in this directory ultimately bottoms out at the
 `preInsert` / `postInsert` combinators in
-`VCVio/OracleComp/SimSemantics/QueryImpl/Constructions.lean`:
+`VCVio/OracleComp/SimSemantics/QueryImpl/Constructions/Core.lean`:
 
 ```
 preInsert / postInsert  (generic combinators + bridge theory)
-  withTraceBefore / withTrace                         (Tracing.lean)
-    withCost                                          (CountingOracle.lean)
-      withCounting                                    (CountingOracle.lean)
+  withTraceBefore / withTrace                         (Tracing/Core.lean)
+    withCost                                          (CountingOracle/Core.lean)
+      withCounting                                    (CountingOracle/Core.lean)
       withAddCost / withUnitCost                      (WriterCost.lean)
-    withTraceAppendBefore / withTraceAppend           (Tracing.lean)
-      withLogging                                     (LoggingOracle.lean)
-      appendInputLog                                  (LoggingOracle.lean)
+    withTraceAppendBefore / withTraceAppend           (Tracing/Core.lean)
+      withLogging                                     (LoggingOracle/Core.lean)
+      appendInputLog                                  (LoggingOracle/Core.lean)
 ```
 
 Read this top-down before adding a new instrumentation wrapper. The rule of thumb:

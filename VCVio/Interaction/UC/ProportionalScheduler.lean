@@ -9,10 +9,8 @@ module
 public import PolyFun.Interaction.UC.OpenProcessQuotient
 public import PolyFun.Interaction.UC.ScheduledSamplerFactorization
 public import PolyFun.Interaction.UC.ScheduledOpenProcessModel
-public import VCVio.EvalDist.Fintype
-public import VCVio.EvalDist.Monad.Map
-public import VCVio.OracleComp.Constructions.SampleableType
-public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.EvalDist.Monad.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 /-!
 # Proportional UC scheduling
@@ -49,7 +47,8 @@ namespace ProportionalScheduler
 
 /-- Equality of output distributions of `ProbComp` computations, compared as measures on the
 discrete measurable structure of the output type. This is the denotational equality used for
-scheduler coherence; `outputRel_rel` reads it as pointwise equality of output probabilities. -/
+scheduler coherence; on countable outputs `outputRel_rel` reads it as pointwise equality of output
+probabilities. -/
 noncomputable def outputRel : MonadRelFamily ProbComp where
   rel := fun {α} left right => letI : MeasurableSpace α := ⊤; 𝒟[left] = 𝒟[right]
   refl _ := rfl
@@ -70,15 +69,16 @@ noncomputable def outputRel : MonadRelFamily ProbComp where
     rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
     exact congrArg (MeasureTheory.Measure.bind · fun x => 𝒟[f x]) h
 
-/-- `outputRel` holds exactly when the output probabilities agree pointwise. -/
+/-- On a countable output type, `outputRel` holds exactly when the output probabilities agree
+pointwise. -/
 @[simp]
-theorem outputRel_rel {α : Type} (left right : ProbComp α) :
+theorem outputRel_rel {α : Type} [Countable α] (left right : ProbComp α) :
     outputRel.rel left right ↔
-      ∀ output, Pr[= output | left] = Pr[= output | right] := by
+      ∀ output, Pr{let x ← left}[x = output] = Pr{let x ← right}[x = output] := by
   let : MeasurableSpace α := ⊤
   change 𝒟[left] = 𝒟[right] ↔ _
-  rw [← evalSPMF_ext_iff]
-  exact ⟨evalSPMF_eq_of_evalDist_eq left right, evalDist_eq_of_evalSPMF_eq left right⟩
+  simp only [prEvent_eq_evalDist_singleton]
+  exact ⟨fun h _ => h ▸ rfl, MeasureTheory.Measure.ext_of_singleton⟩
 
 /-- `outputRel` is a congruence for the continuation of `bind`: the output distribution of
 `x >>= f` is the Giry bind of the output distribution of `x` against those of `f`. -/
@@ -106,7 +106,7 @@ theorem sum_ulift_bool (f : ULift Bool → ENNReal) :
 
 /-- A uniform draw from the positive set of slots represented by `mass`. -/
 noncomputable def drawSlot (mass : ℕ+) : ProbComp (Fin mass.val) :=
-  letI : Nonempty (Fin mass.val) := ⟨⟨0, mass.pos⟩⟩
+  let : Nonempty (Fin mass.val) := ⟨⟨0, mass.pos⟩⟩
   letI := SampleableType.ofFintype (Fin mass.val)
   $ᵗ (Fin mass.val)
 
@@ -148,11 +148,14 @@ theorem card_filter_fin_Ico (lower upper total : Nat)
   simpa using Fintype.card_congr e
 
 /-- A uniform slot draw gives any decidable event its relative cardinality. -/
-theorem probEvent_drawSlot (mass : ℕ+) (p : Fin mass.val → Prop)
+theorem prEvent_drawSlot (mass : ℕ+) (p : Fin mass.val → Prop)
     [DecidablePred p] :
-    Pr[ p | drawSlot mass] =
+    Pr{let slot ← drawSlot mass}[p slot] =
       ((Finset.univ.filter p).card : ENNReal) / mass.val := by
-  simp [drawSlot, probEvent_uniformSample, Fintype.card_fin]
+  unfold drawSlot
+  let : Nonempty (Fin mass.val) := ⟨⟨0, mass.pos⟩⟩
+  rw [@SampleableType.prEvent_uniformSample _ (SampleableType.ofFintype (Fin mass.val)) _ p _,
+    Fintype.card_fin]
 
 /-! ## Binary and flat schedulers -/
 
@@ -163,16 +166,16 @@ noncomputable def binary : BinaryScheduler ProbComp :=
     (fun slot => ULift.up (decide (slot.val < left.val))) <$> drawSlot (left + right)
 
 /-- Point probability of proportional binary scheduling. -/
-theorem probOutput_binary (left right : ℕ+) (choice : ULift Bool) :
-    Pr[= choice | binary left right] =
+theorem prEvent_binary (left right : ℕ+) (choice : ULift Bool) :
+    Pr{let c ← binary left right}[c = choice] =
       if choice.down then
         (left.val : ENNReal) / (left.val + right.val)
       else
         (right.val : ENNReal) / (left.val + right.val) := by
-  rw [binary, probOutput_map]
+  rw [binary, prEvent_map]
   obtain ⟨choice⟩ := choice
   cases choice
-  · rw [probEvent_drawSlot]
+  · rw [prEvent_drawSlot]
     simp only [Bool.false_eq]
     have hevent :
         ((Finset.univ : Finset (Fin (left + right).val)).filter
@@ -192,7 +195,7 @@ theorem probOutput_binary (left right : ℕ+) (choice : ULift Bool) :
       simpa using hpartition
     rw [hcard]
     simp
-  · rw [probEvent_drawSlot]
+  · rw [prEvent_drawSlot]
     have hevent :
         ((Finset.univ : Finset (Fin (left + right).val)).filter
           fun index => ULift.up (decide (index.val < left.val)) = ULift.up true) =
@@ -219,8 +222,8 @@ noncomputable def flat : BinaryScheduler.FlatChoice ProbComp :=
     classifyThree first second <$> drawSlot (first + second + context)
 
 /-- Point probability of the direct three-way scheduler. -/
-theorem probOutput_flat (first second context : ℕ+) (leaf : ULift Leaf) :
-    Pr[= leaf | flat first second context] =
+theorem prEvent_flat (first second context : ℕ+) (leaf : ULift Leaf) :
+    Pr{let l ← flat first second context}[l = leaf] =
       match leaf.down with
       | .first => (first.val : ENNReal) /
           (first.val + second.val + context.val)
@@ -228,10 +231,10 @@ theorem probOutput_flat (first second context : ℕ+) (leaf : ULift Leaf) :
           (first.val + second.val + context.val)
       | .context => (context.val : ENNReal) /
           (first.val + second.val + context.val) := by
-  rw [flat, probOutput_map]
+  rw [flat, prEvent_map]
   obtain ⟨leaf⟩ := leaf
   cases leaf
-  all_goals rw [probEvent_drawSlot]
+  all_goals rw [prEvent_drawSlot]
   · have hevent :
         ((Finset.univ : Finset (Fin (first + second + context).val)).filter
           fun slot => classifyThree first second slot = ULift.up Leaf.first) =
@@ -295,6 +298,18 @@ theorem nested_ratio (selected combined context : Nat) (hcombined : 0 < combined
 
 /-! ## Coherence -/
 
+/-- Flipping a scheduler choice lands on `b` exactly when the choice was the negation of `b`. -/
+theorem flip_eq_up_iff (choice : ULift Bool) (b : Bool) :
+    BinaryScheduler.flip choice = ULift.up b ↔ choice = ULift.up (!b) := by
+  obtain ⟨c⟩ := choice
+  cases b <;> cases c <;> simp [BinaryScheduler.flip]
+
+/-- The three frontier leaves are countable, so their output laws are pointwise. -/
+local instance leafCountable : Countable Leaf :=
+  ⟨⟨fun | .first => 0 | .second => 1 | .context => 2, by
+    intro a b h
+    cases a <;> cases b <;> simp_all⟩⟩
+
 /-- Proportional scheduling factors every hierarchical three-way draw through
 the same direct distribution. -/
 theorem isFlat : BinaryScheduler.IsFlat outputRel binary flat := by
@@ -302,18 +317,19 @@ theorem isFlat : BinaryScheduler.IsFlat outputRel binary flat := by
   · intro left right
     rw [outputRel_rel]
     intro choice
-    rw [probOutput_binary, probOutput_map]
     obtain ⟨choice⟩ := choice
-    cases choice
-    all_goals simp [BinaryScheduler.flip, probOutput_binary,
-      probEvent_eq_tsum_indicator, sum_ulift_bool, add_comm]
+    rw [prEvent_binary, prEvent_map]
+    simp only [flip_eq_up_iff]
+    rw [prEvent_binary]
+    cases choice <;> simp [add_comm]
   · intro first second context
     rw [outputRel_rel]
     intro leaf
     obtain ⟨leaf⟩ := leaf
-    cases leaf
-    all_goals simp [BinaryScheduler.sourceDraw, probOutput_bind_eq_sum_fintype,
-      sum_ulift_bool, probOutput_binary, probOutput_flat, probOutput_pure]
+    rw [prEvent_flat, BinaryScheduler.sourceDraw, prEvent_bind_eq_sum_fintype, sum_ulift_bool]
+    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_bind_eq_sum_fintype,
+      sum_ulift_bool, prEvent_pure]
+    cases leaf <;> simp
     · simpa only [Nat.cast_add] using
         nested_ratio first.val (first.val + second.val) context.val
           (Nat.add_pos_left first.pos _)
@@ -324,10 +340,10 @@ theorem isFlat : BinaryScheduler.IsFlat outputRel binary flat := by
     rw [outputRel_rel]
     intro leaf
     obtain ⟨leaf⟩ := leaf
-    cases leaf
-    all_goals simp [BinaryScheduler.leftDraw, probOutput_bind_eq_sum_fintype,
-      sum_ulift_bool, probOutput_binary, probOutput_flat, probOutput_pure,
-      add_comm, add_assoc]
+    rw [prEvent_flat, BinaryScheduler.leftDraw, prEvent_bind_eq_sum_fintype, sum_ulift_bool]
+    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_bind_eq_sum_fintype,
+      sum_ulift_bool, prEvent_pure]
+    cases leaf <;> simp [add_comm, add_assoc]
     · simpa only [Nat.cast_add, add_comm, add_left_comm, add_assoc] using
         nested_ratio second.val (context.val + second.val) first.val
           (Nat.add_pos_left context.pos _)
@@ -338,10 +354,10 @@ theorem isFlat : BinaryScheduler.IsFlat outputRel binary flat := by
     rw [outputRel_rel]
     intro leaf
     obtain ⟨leaf⟩ := leaf
-    cases leaf
-    all_goals simp [BinaryScheduler.rightDraw, probOutput_bind_eq_sum_fintype,
-      sum_ulift_bool, probOutput_binary, probOutput_flat, probOutput_pure,
-      add_comm, add_left_comm, add_assoc]
+    rw [prEvent_flat, BinaryScheduler.rightDraw, prEvent_bind_eq_sum_fintype, sum_ulift_bool]
+    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_bind_eq_sum_fintype,
+      sum_ulift_bool, prEvent_pure]
+    cases leaf <;> simp [add_comm, add_left_comm, add_assoc]
     · simpa only [Nat.cast_add, add_comm, add_left_comm, add_assoc] using
         nested_ratio first.val (context.val + first.val) second.val
           (Nat.add_pos_left context.pos _)

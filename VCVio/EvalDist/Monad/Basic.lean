@@ -100,16 +100,6 @@ lemma probOutput_pure_self [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (x : α
     Pr[= x | (pure x : m α)] = 1 := by
   aesop (rule_sets := [UnfoldEvalDist])
 
-/-- Boolean monotonicity of `pure` outcome probability into a disjunction: if `win` implies
-`inner ∨ outer`, then the probability of outcome `true` under `pure win` is bounded by the sum of
-the probabilities under `pure inner` and `pure outer`. -/
-lemma probOutput_pure_bool_le_or {m : Type → Type} [Monad m]
-    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (win inner outer : Bool) (h : win = true → inner = true ∨ outer = true) :
-    Pr[= true | (pure win : m Bool)] ≤
-      Pr[= true | (pure inner : m Bool)] + Pr[= true | (pure outer : m Bool)] := by
-  cases win <;> cases inner <;> cases outer <;> simp_all
-
 /-- Fallback when we don't have decidable equality. -/
 @[grind =]
 lemma probOutput_pure_eq_indicator [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (x y : α) :
@@ -397,17 +387,6 @@ section congr_mono
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
   [MonadAttach m] [EvalDistCompatible m]
 
-lemma probFailure_bind_congr (mx : m α)
-    {my : α → m β} {oc : α → m γ}
-    (h : ∀ x ∈ support mx, Pr[⊥ | my x] = Pr[⊥ | oc x]) :
-    Pr[⊥ | mx >>= my] = Pr[⊥ | mx >>= oc] := by
-  simp only [probFailure_bind_eq_add_tsum]
-  congr 1
-  refine tsum_congr fun x => ?_
-  by_cases hx : x ∈ support mx
-  · rw [h x hx]
-  · simp [probOutput_eq_zero_of_not_mem_support hx]
-
 lemma probOutput_bind_congr {mx : m α} {ob₁ ob₂ : α → m β} {y : β}
     (h : ∀ x ∈ support mx, Pr[= y | ob₁ x] = Pr[= y | ob₂ x]) :
     Pr[= y | mx >>= ob₁] = Pr[= y | mx >>= ob₂] := by
@@ -590,14 +569,5 @@ lemma tsum_probOutput_pure_mul (y : α) (f : α → ℝ≥0∞) :
     ∑' z, Pr[= z | (pure y : m α)] * f z = f y := by
   classical
   simp
-
-/-- Tonelli-style rearrangement: the expectation of a nonnegative functional under a
-`bind` is the outer expectation of the inner expectations. -/
-lemma tsum_probOutput_bind_mul (mx : m α) (g : α → m β) (f : β → ℝ≥0∞) :
-    ∑' z, Pr[= z | mx >>= g] * f z =
-      ∑' x, Pr[= x | mx] * ∑' z, Pr[= z | g x] * f z := by
-  simp_rw [probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_right]
-  rw [ENNReal.tsum_comm]
-  simp_rw [mul_assoc, ENNReal.tsum_mul_left]
 
 end tsum_probOutput_mul

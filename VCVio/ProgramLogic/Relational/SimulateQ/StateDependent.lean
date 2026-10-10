@@ -12,7 +12,7 @@ import VCVio.EvalDist.TVDist.Positivity
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
-public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 public import VCVio.ProgramLogic.Relational.SimulateQ.Basic
 import all VCVio.ProgramLogic.Relational.SimulateQ.Basic
 public import VCVio.ProgramLogic.Relational.SimulateQ.Epsilon

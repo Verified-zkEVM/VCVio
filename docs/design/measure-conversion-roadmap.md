@@ -237,6 +237,129 @@ of modules whose imports reach the SPMF backend; this checkpoint takes it from 4
 tracked proof-library modules. Final removal deletes the modules in that closure's core and
 regenerates the umbrellas.
 
+## Leaf example checkpoint
+
+Self-contained examples are native end to end: ElGamal and hashed ElGamal (correctness, the
+real-branch game identity, the uniform-masking random branch, and the IND-CPA bounds), BR93,
+the reactive OTP separation tests, the UC observation success probabilities, and the optional
+failure example. Their game hops use the native bind-swap and support-congruence laws on output
+measures, and several hop lemmas are strengthened from `true`-event equalities to equalities of
+output measures. `simp` evaluates the Boolean sample space `{false, true}` under any probability
+measure. Scalar lemmas that only these examples used are removed with them.
+
+## Symmetric-encryption checkpoint
+
+`SymmEncAlg` states correctness and perfect secrecy with output measures over any lawful measure
+semantics. Correctness is a Dirac round trip; perfect secrecy has the channel form (equal
+ciphertext rows) and the independence form (the joint law of a lossless message sampler is the
+product of its marginals), and equal rows imply independence. Shannon's theorem is ported: a
+uniform key and deterministic encryption that is bijective in the key give uniform, hence equal,
+ciphertext rows. The posterior and joint-factorization restatements of independence are removed,
+as is the compatibility bridge to the scalar predicates. The one-time pad proves both forms
+directly from its measure laws.
+
+## State-separating equivalence checkpoint
+
+State-separating packages compare handlers by `MeasureDistEquiv`: equal output measures for
+every client, with the `≡ᵈ` and `≡ᵈ₀` notation. A handler step that agrees with another after
+transporting its state along a bijection gives an equivalence (`of_step_bij`), and parallel
+composition is congruent in both components under uniform measure specifications
+(`parSum_congr`). Distinguishing advantages are read off equivalences directly, so the scalar
+equivalence and advantage modules are removed. The heap one-time pad proves its single and paired
+encryption equivalences from the uniform-mask bijection, and the ElGamal state-separating proof
+states its random-branch swap as a measure equivalence.
+
+## Cell-frame and instrumentation checkpoint
+
+Support-level cell frames determine event probabilities under any lawful measure semantics:
+a preserved cell changes with probability zero and keeps its value with the full successful
+mass, and the except-event, relational and measured frames give the corresponding event
+bounds. Interpreted handlers reach these through the support frame of the simulation, so the
+per-handler probability restatements are removed. Support-reachability congruence and zero
+events are generic over monads with lawful attachment, replacing their oracle-computation
+copies. The instrumentation combinators document their transfer principle at the projection
+equation, and the scalar corollaries of that equation are removed with their façade module.
+
+## Query-instrumentation checkpoint
+
+Counting, logging and trace instrumentation are covered by their native core modules: the
+projection equations identify the uninstrumented execution, so output measures and events
+transfer by rewriting, and the scalar failure, output and event corollaries are removed with
+their compatibility modules. The lazy random oracle's probability-one characterizations are
+stated as `Pr{…}` events: an event holds almost surely exactly when it holds for every total
+answer table extending the starting cache, and the mixed form keeps uniform queries
+probabilistic. Merkle-tree completeness is stated in that form. The combined-signature
+coercion façade is removed, so modules that only need the canonical inclusions no longer
+import the discrete hubs; the two consumers that use discrete lemmas import them directly.
+
+## Random-oracle collision checkpoint
+
+The random-oracle collision family is native under uniform measure specifications. A single
+uniform query assigns an event the proportion of satisfying answers, which drives the log and
+cache birthday bounds, fresh-query uniformity, and the cache preimage and finite-target hit
+bounds. Collision resistance in the random-oracle model fixes the discrete answer space and the
+uniform specification inside its advantage. The adaptive-prefix, Merkle extractability,
+multi-checkpoint extractability, and commitment binding and extractability bounds are stated as
+`Pr{…}` events with measurable-answer binders. Unpredictability of a sampler is a pointwise
+`Pr{…}` bound. The universe-polymorphic statements are specialized to `Type`, where the event
+form lives, and the vacuous single-oracle collision bounds are removed.
+
+## Diffie-Hellman checkpoint
+
+The discrete-logarithm, CDH and DDH relations are native. The DDH game is a uniform-bit branch
+over its real and random experiments at the level of output measures, the CDH-to-DDH reduction
+runs the CDH experiment exactly in the real branch, and in the random branch it hits the target
+with the uniform baseline probability. The DLog-to-CDH bound squares the success probability
+through two independent DLog attempts. A continuation event with a constant probability keeps it
+after any lossless draw.
+
+## Primitive-notion checkpoint
+
+Correctness spread, commitment hiding and extractor setup consistency are stated with output
+measures: δ-correctness bounds the mass of a failed round trip, γ-spread bounds each ciphertext
+event, and hiding and setup consistency compare distributions under the discrete measurable
+structure. KEM–DEM correctness composes at the level of reachable outputs and transfers to
+probability one under uniform oracle semantics. The Pedersen commitment is perfectly hiding by
+the uniform bijection law and binding by a DLog reduction on a shared base program; the PRF-based
+MAC bound and Falcon's discrete-Gaussian sampler law use native events. The lattice sampling
+instances import only the sampling class, which removes the lattice stack from the discrete
+import closure.
+
+## Second import-closure checkpoint
+
+Modules that use no discrete declarations import the native layer directly. The stateful
+simulation compatibility module is removed, since its one congruence has a native twin; query
+morphisms, bit-vector sampling, and the clean importers of the remaining hubs no longer pull in
+the discrete layer. Together with the lattice sampling change this takes the SPMF import closure
+from 357 to 227 modules, including the random-oracle simulation and the SLH-DSA stack.
+
+## Scheduling checkpoint
+
+Proportional UC scheduling is native: the output relation compares measures under the discrete
+measurable structure and reads, on countable outputs, as pointwise agreement of `Pr{…}` point
+events; slot draws, binary and flat choices, and the coherence laws are computed with finite
+bind sums. The oracle runtime observes the native output measure of the simulated run. Events of
+pure computations and of binds over finite draws have native equations.
+
+## Deferred-sampling checkpoint
+
+The first-fire and deferred-sampling kernels are native. A hidden target probed by `q` adaptive
+reads fires with probability at most `q · ε` by an event union bound, the multi-key game adds one
+such term per key, and averaging over a random key count integrates the count against its output
+measure. The output-irrelevant draw deferral is an instance of the bind-swap law. The list
+multiplicity kernel integrates the count against the key marginal, tape factorization compares
+output measures under the discrete structure, and state-relation transfer is stated for
+lintegrals through simulated runs. Discrete bind laws already covered by native swap, lossless
+prefix and congruence laws are removed.
+
+## Uniform-selection checkpoint
+
+Uniform selection has native event formulas: selecting from a nonempty vector or list vector,
+and through the optional monad from a list, finset or multiset, gives an event its proportion of
+entries, an empty collection contributing no successful mass; a uniform range and a fair coin
+give an event its proportion of admissible values. The discrete selection lemmas remain only
+while the legacy tactic benchmarks exercise them. Two orphaned scalar lemmas are removed.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

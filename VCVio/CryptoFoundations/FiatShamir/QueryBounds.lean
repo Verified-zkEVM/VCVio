@@ -6,7 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 
-public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
@@ -113,13 +113,9 @@ lemma nmaHashQueryBound_bind {α β : Type}
       (oa := oa >>= ob) (Q₁ + Q₂) :=
   OracleComp.isQueryBoundP_bind h1 (fun x _ => h2 x)
 
-lemma nmaHashQueryBound_liftComp_zero [Inhabited Chal] [Finite Chal] {α : Type}
-    (oa : ProbComp α) :
+lemma nmaHashQueryBound_liftComp_zero {α : Type} (oa : ProbComp α) :
     nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (oa := OracleComp.liftComp oa (unifSpec + (M × Commit →ₒ Chal))) 0 := by
-  have : Fintype Chal := Fintype.ofFinite Chal
-  let : IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
-    IsUniformSpec.ofFintypeInhabited _
   rw [nmaHashQueryBound, OracleComp.liftComp_def]
   refine OracleComp.IsQueryBoundP.simulateQ_of_step
     (p := fun _ : ℕ => False)

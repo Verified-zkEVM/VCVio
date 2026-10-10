@@ -80,4 +80,16 @@ example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → Pro
     𝒟[mx >>= fun a => my >>= fun b => f a b] = 𝒟[my >>= fun b => mx >>= fun a => f a b] := by
   vcstep
 
+/-! ## Uniform selection -/
+
+/-- Selecting from a list counts entries with multiplicity. -/
+example : Pr{let x ← ($ ([1, 2, 2] : List ℕ) : OptionT ProbComp ℕ)}[x = 2] = 2 / 3 := by
+  rw [ProbComp.prEvent_uniformSelectList]
+  norm_num
+
+/-- Selecting from an empty list fails, so its events carry no successful mass. -/
+example : Pr{let x ← ($ ([] : List ℕ) : OptionT ProbComp ℕ)}[x = 2] = 0 := by
+  rw [ProbComp.prEvent_uniformSelectList]
+  simp
+
 end VCVioTest.NativeProbabilityTactics

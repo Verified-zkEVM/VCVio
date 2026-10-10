@@ -120,7 +120,7 @@ Reading order:
    [`Examples/CommitmentScheme/Common.lean`](../../Examples/CommitmentScheme/Common.lean)
    defines the random oracle `CMOracle : (M × S) → C`, the scheme algorithms
    `CMCommit` and `CMCheck`, and the basic single-fresh-query unpredictability
-   bound `probEvent_from_fresh_query_le_inv` (`1/|C|`) that all three security
+   bound `prEvent_from_fresh_query_le_inv` (`1/|C|`) that all three security
    proofs reduce to.
 2. **Binding:**
    [`Examples/CommitmentScheme/Binding.lean`](../../Examples/CommitmentScheme/Binding.lean)
@@ -150,7 +150,7 @@ per-salt version is false.
 
 The framework machinery exercised: `cachingOracle`, `loggingOracle`,
 `IsTotalQueryBound`, the birthday bound
-`probEvent_cacheCollision_le_birthday_total_tight`, and the identical-until-bad
+`prEvent_cacheCollision_le_birthday_total_tight`, and the identical-until-bad
 TVD bound `tvDist_simulateQ_le_probEvent_bad_dist`.
 
 ## PRF Tag/Reader Network Unlinkability

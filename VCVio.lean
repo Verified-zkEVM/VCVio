@@ -153,7 +153,6 @@ public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.CryptoFoundations.SymmEncAlg.Deterministic
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
-public import VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash
@@ -241,7 +240,6 @@ public import VCVio.Interaction.UC.Standard
 public import VCVio.Interaction.UC.StdDoBridge
 public import VCVio.Native
 public import VCVio.OracleComp.CanReturn
-public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.Coercions.SubSpec
 public import VCVio.OracleComp.Coercions.SubSpec.Basic
@@ -263,6 +261,7 @@ public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.OracleComp.Constructions.UniformSelectMeasure
 public import VCVio.OracleComp.Constructions.WithoutReplacement
 public import VCVio.OracleComp.Constructions.WithoutReplacement.Basic
 public import VCVio.OracleComp.EvalDist
@@ -286,14 +285,12 @@ public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
 public import VCVio.OracleComp.QueryTracking.CachingOracle
 public import VCVio.OracleComp.QueryTracking.Collision
 public import VCVio.OracleComp.QueryTracking.CostModel
-public import VCVio.OracleComp.QueryTracking.CountingOracle
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.Enforcement
 public import VCVio.OracleComp.QueryTracking.ExpectedQueryCount
 public import VCVio.OracleComp.QueryTracking.HandlerSimp
 public import VCVio.OracleComp.QueryTracking.Iter
 public import VCVio.OracleComp.QueryTracking.ListCache
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.ObservationOracle
 public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
@@ -322,7 +319,6 @@ public import VCVio.OracleComp.QueryTracking.ResourceProfile
 public import VCVio.OracleComp.QueryTracking.SeededOracle
 public import VCVio.OracleComp.QueryTracking.Structures
 public import VCVio.OracleComp.QueryTracking.SubSpec
-public import VCVio.OracleComp.QueryTracking.Tracing
 public import VCVio.OracleComp.QueryTracking.Tracing.Core
 public import VCVio.OracleComp.QueryTracking.Unpredictability
 public import VCVio.OracleComp.QueryTracking.WriterCost
@@ -335,11 +331,9 @@ public import VCVio.OracleComp.SimSemantics.Measure
 public import VCVio.OracleComp.SimSemantics.OptionT.Basic
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
-public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
 public import VCVio.OracleComp.SimSemantics.ReaderT.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
-public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 public import VCVio.OracleComp.SimSemantics.StateT.Measure
@@ -415,10 +409,8 @@ public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.ProgramLogic.Unary.WP.Qualitative
 public import VCVio.ProgramLogic.Unary.WP.Quantitative
 public import VCVio.ProgramLogic.Unary.WriterTBridge
-public import VCVio.StateSeparating.Advantage
 public import VCVio.StateSeparating.Advantage.Measure
 public import VCVio.StateSeparating.CellRef
-public import VCVio.StateSeparating.DistEquiv
 public import VCVio.StateSeparating.Hybrid
 public import VCVio.StateSeparating.IdenticalUntilBad
 public import VCVio.StateSeparating.IndistAt
