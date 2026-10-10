@@ -188,8 +188,10 @@ value/event goal would *saturate and time out*. The saturation is **combinatoria
 saturates alone (a few that sit outside the cycle, e.g. `probEvent_pos_iff` and
 `probFailure_bind_eq_zero_iff`, keep `@[grind =]`); the `probEvent_eq_one_iff` family is the cycle's
 hub. Dropped from the default `grind` set, `grind` instead fails fast. If a `grind` proof genuinely
-needs one, re-supply it: `grind [probEvent_eq_zero_iff]`. The directed single-variable membership
-bridges (`probOutput_eq_zero_iff`, `probOutput_pos_iff`, `mem_finSupport_iff`) stay `@[grind =]`. See
+needs one, re-supply it: `grind [probEvent_eq_zero_iff]`. The native characterization
+`OracleComp.evalDist_apply_setOf_eq_one_iff_forall_mem_support` follows the same rule. The directed
+single-variable membership bridges (`probOutput_eq_zero_iff`, `probOutput_pos_iff`,
+`mem_finSupport_iff`) stay `@[grind =]`. See
 *`grind` vs `simp` on Probability Goals* in [`probability.md`](probability.md) and the benchmarks
 `VCVioTest/ProbabilityTactics.lean` / `VCVioTest/LongChainPrograms.lean`;
 `VCVioTest/GrindFailFast.lean` gates that each dropped lemma stays dropped (and that the opt-in

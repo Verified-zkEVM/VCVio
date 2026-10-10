@@ -35,6 +35,8 @@ public import VCVio.OracleComp.SimSemantics.WriterT.Core
 public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
+public import VCVio.OracleComp.SimSemantics.StateT.Measure
+public import VCVio.OracleComp.SimSemantics.Measure
 public import VCVio.OracleComp.QueryTracking.Tracing.Core
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core

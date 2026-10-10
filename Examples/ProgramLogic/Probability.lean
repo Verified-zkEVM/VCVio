@@ -129,3 +129,54 @@ example {mx : OracleComp spec α} {my : OracleComp spec β}
     Pr[ q | mx >>= fun a => my >>= fun b => f a b] =
     Pr[ q | my >>= fun b => mx >>= fun a => f a b] := by
   vcgen
+
+/-! ## Native event masses
+
+The same planner steps act on the measure-backed notation. Oracle responses carry a chosen discrete
+measure specification; swaps use countable responses, and congruence leaves the continuations on
+the structural support of the shared prefix. -/
+
+section native
+
+variable {ι' : Type} {spec' : OracleSpec ι'}
+  [∀ t, MeasurableSpace (spec'.Range t)] [∀ t, DiscreteMeasurableSpace (spec'.Range t)]
+  [∀ t, Countable (spec'.Range t)] [OracleSpec.IsMeasureSpec spec']
+
+example {mx : OracleComp spec' α} {f g : α → OracleComp spec' β} {q : β → Prop}
+    (h : ∀ x ∈ support mx, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
+    Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
+  vcstep
+  exact h _ ‹_›
+
+example {mx : OracleComp spec' α} {my : OracleComp spec' β}
+    {f : α → β → OracleComp spec' γ} {y : γ} :
+    Pr{let z ← mx >>= fun a => my >>= fun b => f a b}[z = y] =
+    Pr{let z ← my >>= fun b => mx >>= fun a => f a b}[z = y] := by
+  vcstep rw
+
+example {mx : OracleComp spec' α} {my : OracleComp spec' β}
+    {mz : OracleComp spec' γ} {f : α → β → γ → OracleComp spec' δ} {q : δ → Prop} :
+    Pr{let r ← mx >>= fun a => my >>= fun b => mz >>= fun c => f a b c}[q r] =
+    Pr{let r ← mx >>= fun a => mz >>= fun c => my >>= fun b => f a b c}[q r] := by
+  vcstep rw under 1
+
+example {mw : OracleComp spec' α} {mx : OracleComp spec' β}
+    {my : OracleComp spec' γ} {mz : OracleComp spec' δ}
+    {f : α → β → γ → δ → OracleComp spec' ε} {q : ε → Prop} :
+    Pr{let r ← mw >>= fun w => mx >>= fun x => my >>= fun y => mz >>= fun z => f w x y z}[q r] =
+    Pr{let r ← mw >>= fun w => mx >>= fun x => mz >>= fun z => my >>= fun y => f w x y z}[q r] := by
+  vcstep
+
+example {mx : OracleComp spec' α} {f g : α → OracleComp spec' β} {q : β → Prop}
+    (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
+    Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
+  vcstep rw congr'
+  exact h _
+
+example {mx : OracleComp spec' α} {my : OracleComp spec' β}
+    {f : α → β → OracleComp spec' γ} {q : γ → Prop} :
+    Pr{let r ← mx >>= fun a => my >>= fun b => f a b}[q r] =
+    Pr{let r ← my >>= fun b => mx >>= fun a => f a b}[q r] := by
+  vcgen
+
+end native

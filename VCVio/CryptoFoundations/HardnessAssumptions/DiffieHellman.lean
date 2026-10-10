@@ -6,10 +6,12 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
-public import VCVio.CryptoFoundations.SecExp
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist.UniformCompatibility
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.EvalDist.Bool
 
 /-!

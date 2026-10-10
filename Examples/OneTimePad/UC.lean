@@ -264,19 +264,6 @@ theorem probability_idealCipherObserve (sp : ℕ) (P : BitVec sp → Bool) :
   rw [prEvent_eq_evalDist_singleton, idealCipherObserve, OptionT.evalDist_liftM_bind_guard]
   simp
 
-/-- The existing finite-distribution statement follows from equality of successful-output
-measures. -/
-theorem evalSPMF_realCipherObserve_eq (sp : ℕ) (msg : BitVec sp)
-    (P : BitVec sp → Bool) :
-    𝒮[realCipherObserve sp msg P] =
-      𝒮[idealCipherObserve sp P] := by
-  apply evalSPMF_ext
-  intro x
-  simpa only [OptionT.evalDist_apply, Set.image_singleton,
-    evalDist_apply_singleton, OptionT.probOutput_eq] using
-    congrArg (fun μ : MeasureTheory.Measure Unit ↦ μ {x})
-      (evalDist_realCipherObserve_eq sp msg P)
-
 /-! ## Concrete closed processes carrying a plaintext -/
 
 /-- A concrete closed process whose state space is `BitVec sp` and

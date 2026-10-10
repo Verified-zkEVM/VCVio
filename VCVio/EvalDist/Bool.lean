@@ -28,11 +28,6 @@ lemma probOutput_false_add_true (mx : m Bool) :
     Pr[= false | mx] + Pr[= true | mx] = 1 - Pr[⊥ | mx] := by
   rw [add_comm, probOutput_true_add_false]
 
-lemma probOutput_true_eq_sub (mx : m Bool) :
-    Pr[= true | mx] = 1 - Pr[⊥ | mx] - Pr[= false | mx] := by
-  rw [← probOutput_true_add_false]
-  exact (ENNReal.add_sub_cancel_right probOutput_ne_top).symm
-
 lemma probOutput_false_eq_sub (mx : m Bool) :
     Pr[= false | mx] = 1 - Pr[⊥ | mx] - Pr[= true | mx] := by
   rw [← probOutput_false_add_true]
@@ -59,11 +54,3 @@ lemma probEvent_true_eq_probOutput (mx : m Bool) :
 @[grind =]
 lemma probEvent_not_eq_probOutput (mx : m Bool) :
     Pr[ (· = false) | mx] = Pr[= false | mx] := probEvent_eq_eq_probOutput mx false
-
-lemma probOutput_true_bind_map_eq_probEvent [Monad m] [LawfulMonad m] [LawfulMonadLiftT m SPMF]
-    (mx : m α) (my : α → m β) (p : α → β → Bool) :
-    Pr[= true | mx >>= fun x => p x <$> my x] =
-      Pr[fun (x, y) => p x y | do let x ← mx; return (x, ← my x)] := by
-  simp only [probOutput_bind_eq_tsum, probOutput_map_eq_tsum_ite, Bool.true_eq, bind_pure_comp,
-    probEvent_bind_eq_tsum, probEvent_map]
-  grind

@@ -9,7 +9,8 @@ module
 public import HashSig.SLHDSA.Scheme
 public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.OracleComp.ProbCompLift
+public import VCVio.EvalDist.Defs.Semantics.Core
 
 /-!
 # SLH-DSA in the public-hash random-oracle model

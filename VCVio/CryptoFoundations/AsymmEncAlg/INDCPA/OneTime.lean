@@ -6,7 +6,8 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
-public import VCVio.CryptoFoundations.SecExp
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # Asymmetric Encryption Schemes: One-Time IND-CPA

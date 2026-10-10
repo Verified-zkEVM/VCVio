@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.FiatShamir.Sigma
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Spec
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.CryptoFoundations.SigmaProtocol
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.SimSemantics.StateT.Basic

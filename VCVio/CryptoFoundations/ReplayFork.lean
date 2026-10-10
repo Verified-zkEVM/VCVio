@@ -8,8 +8,10 @@ module
 public import PolyFun.PFunctor.Free.Cursor.Fork
 public import ToMathlib.Data.ENNReal.SumSquares
 public import VCVio.EvalDist.Option
-public import VCVio.OracleComp.Constructions.Fork
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.Constructions.Fork.Basic
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
+public import VCVio.EvalDist.Prod
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.Structures
 
 /-!
@@ -512,8 +514,12 @@ theorem sq_probOutput_main_le_contextForkPair [DecidableEq ι] [IsUniformSpec sp
     Pr[= s | cf <$> main] ^ 2 ≤
       Pr[= (some (some s, some s) : Option
             (Option (Fin (qb i + 1)) × Option (Fin (qb i + 1)))) |
-          contextForkPair main qb i cf s] :=
-  sq_probOutput_map_le_observedForkPair main i s cf s (fun path => hreach path s)
+          contextForkPair main qb i cf s] := by
+  let (t : spec.Domain) : MeasurableSpace (spec.Range t) := ⊤
+  have h := prEvent_sq_le_observedForkPair main i s cf s (fun path => hreach path s)
+  rw [← prEvent_map main cf (fun output ↦ output = some s)] at h
+  rw [prEvent_eq_evalDist_singleton, prEvent_eq_evalDist_singleton] at h
+  simpa only [evalDist_apply_singleton, contextForkPair] using h
 
 /-- Fixed-index pair success partitions into a genuine guarded fork or an
 equal-answer collision, all as observations of the same `ForkView`. -/

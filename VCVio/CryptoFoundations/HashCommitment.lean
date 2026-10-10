@@ -8,7 +8,8 @@ module
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.EvalDist.Monad.Measure
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 /-!
 # Hash-Based Commitment Schemes — Binding via Collision Resistance

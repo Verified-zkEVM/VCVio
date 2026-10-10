@@ -8,7 +8,7 @@ module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
-public import VCVio.OracleComp.EvalDist.UniformCompatibility
+public import VCVio.OracleComp.EvalDist.MeasureSpec
 
 /-!
 # Source-final-validity SM-DT-TCR

@@ -80,13 +80,13 @@ example (p q : α → Prop) (h : ∀ x, p x → q x) :
     Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
   -- gap(apply_rw, 2026-09-18): event notation needs its assertion-valued WP normal form.
   fail_if_success apply_rw [h]
-  simp only [probEvent_eq_wp_propInd]
+  simp only [prEvent_eq_wp_propInd]
   apply_rw [h]
 
 example (p q : α → Prop) (h : ∀ x, p x → q x) (c : ℝ≥0∞)
     (hq : Pr{let x ← mx}[q x] ≤ c) : Pr{let x ← mx}[p x] ≤ c := by
   -- The assertion-valued event normal form shares the gap above.
-  simp only [probEvent_eq_wp_propInd] at hq ⊢
+  simp only [prEvent_eq_wp_propInd] at hq ⊢
   apply_rw [h]
   guard_target = wp mx (fun x ↦ propInd (q x)) ≤ c
   exact hq
@@ -105,7 +105,7 @@ example (f' g' : α → ProbComp β) (p : β → Prop)
     Pr{let y ← mx >>= f'}[p y] ≤ Pr{let y ← mx >>= g'}[p y] := by
   -- gap(gcongr, 2026-09-08): bind probability needs the expectation normal form.
   fail_if_success (gcongr; done)
-  simp only [probEvent_eq_wp_propInd, wp_bind] at h ⊢
+  simp only [prEvent_eq_wp_propInd, wp_bind] at h ⊢
   grw [h]
   assumption
 

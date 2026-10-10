@@ -56,29 +56,9 @@ variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 lemma evalSPMF_seq (mf : m (α → β)) (mx : m α) :
     𝒮[mf <*> mx] = 𝒮[mf] <*> 𝒮[mx] := by simp [monad_norm]
 
-lemma probOutput_seq_eq_tsum (mf : m (α → β)) (mx : m α) (y : β) :
-    Pr[= y | mf <*> mx] =
-      ∑' f, ∑' x, Pr[= f | mf] * Pr[= x | mx] * Pr[= y | (pure (f x) : m β)] := by
-  simp [seq_eq_bind_map, probOutput_bind_eq_tsum, probOutput_map_eq_tsum,
-    ← ENNReal.tsum_mul_left, mul_assoc]
-
-lemma probOutput_seq_eq_tsum_ite [DecidableEq β]
-    (mf : m (α → β)) (mx : m α) (y : β) :
-    Pr[= y | mf <*> mx] =
-      ∑' f, ∑' x, if y = f x then Pr[= f | mf] * Pr[= x | mx] else 0 := by
-  simp [seq_eq_bind_map, probOutput_bind_eq_tsum,
-    probOutput_map_eq_tsum_ite, ← ENNReal.tsum_mul_left]
-
 lemma probEvent_seq_eq_tsum (mf : m (α → β)) (mx : m α) (p : β → Prop) :
     Pr[ p | mf <*> mx] = ∑' f, Pr[= f | mf] * Pr[ p ∘ f | mx] := by
   simp only [seq_eq_bind_map, probEvent_bind_eq_tsum, probEvent_map]
-
-lemma probEvent_seq_eq_tsum_ite (mf : m (α → β)) (mx : m α)
-    (p : β → Prop) [DecidablePred p] :
-    Pr[ p | mf <*> mx] = ∑' (f : α → β) (x : α),
-      if p (f x) then Pr[= f | mf] * Pr[= x | mx] else 0 := by
-  simp_rw [probEvent_seq_eq_tsum, probEvent_eq_tsum_ite, ← ENNReal.tsum_mul_left,
-    Function.comp_apply, mul_ite, mul_zero]
 
 variable [MonadAttach m] [EvalDistCompatible m]
 
@@ -210,20 +190,11 @@ section spmf
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
-lemma evalSPMF_seq_map :
-    𝒮[f <$> mx <*> my] = f <$> 𝒮[mx] <*> 𝒮[my] := by
-  rw [evalSPMF_seq, evalSPMF_map]
-
 lemma probOutput_seq_map_eq_tsum (z : γ) :
     Pr[= z | f <$> mx <*> my] = ∑' (x : α) (y : β),
       Pr[= x | mx] * Pr[= y | my] * Pr[= z | (pure (f x y) : m γ)] := by
   simp only [monad_norm, Function.comp,
     probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_left, mul_assoc]
-
-lemma probOutput_seq_map_eq_tsum_ite [DecidableEq γ] (z : γ) :
-    Pr[= z | f <$> mx <*> my] =
-      ∑' (x : α) (y : β), if z = f x y then Pr[= x | mx] * Pr[= y | my] else 0 := by
-  simp only [probOutput_seq_map_eq_tsum, probOutput_pure, mul_ite, mul_one, mul_zero]
 
 section injective2
 
@@ -247,14 +218,6 @@ lemma probOutput_seq_map_swap (z : γ) :
   rw [ENNReal.tsum_comm]
   exact tsum_congr fun x' => tsum_congr fun y' => by ring
 
-lemma evalSPMF_seq_map_swap :
-    𝒮[Function.swap f <$> my <*> mx] = 𝒮[f <$> mx <*> my] :=
-  evalSPMF_ext (probOutput_seq_map_swap mx my f)
-
-lemma probEvent_seq_map_swap (p : γ → Prop) :
-    Pr[ p | Function.swap f <$> my <*> mx] = Pr[ p | f <$> mx <*> my] := by
-  simp only [probEvent_eq_tsum_indicator, probOutput_seq_map_swap]
-
 end swap
 
 lemma probEvent_seq_map_eq_probEvent_comp_uncurry (p : γ → Prop) :
@@ -263,10 +226,6 @@ lemma probEvent_seq_map_eq_probEvent_comp_uncurry (p : γ → Prop) :
   congr 1
   rw [map_seq, Functor.map_map]
   rfl
-
-lemma probEvent_seq_map_eq_probEvent (p : γ → Prop) :
-    Pr[ p | f <$> mx <*> my] = Pr[ fun z => p (f z.1 z.2) | Prod.mk <$> mx <*> my] :=
-  probEvent_seq_map_eq_probEvent_comp_uncurry mx my f p
 
 end spmf
 
@@ -321,12 +280,6 @@ lemma probEvent_seq_map_eq_mul (p : γ → Prop) (q1 : α → Prop) (q2 : β →
       rw [probEvent_eq_zero fun y hy => by
         simp only [Function.comp_apply, h x hx y hy]; simp [hq], mul_zero]
   · simp [probOutput_eq_zero_of_not_mem_support hx]
-
-lemma probOutput_seq_map_eq_mul (x : α) (y : β) (z : γ)
-    (h : ∀ x' ∈ support mx, ∀ y' ∈ support my, z = f x' y' ↔ x' = x ∧ y' = y) :
-    Pr[= z | f <$> mx <*> my] = Pr[= x | mx] * Pr[= y | my] := by
-  simpa only [← probEvent_eq_eq_probOutput] using probEvent_seq_map_eq_mul mx my f
-    (· = z) (· = x) (· = y) fun x' hx' y' hy' => eq_comm.trans (h x' hx' y' hy')
 
 end mixed
 

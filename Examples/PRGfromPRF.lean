@@ -8,7 +8,10 @@ module
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.EvalDist.TVDist
-public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 
 /-!

@@ -6,7 +6,8 @@ Authors: Devon Tuma
 
 module
 public import VCVio.OracleComp.Constructions.Replicate.Basic
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.EvalDist
 public import VCVio.EvalDist.List
 public import VCVio.OracleComp.Constructions.SampleableType
@@ -50,12 +51,6 @@ section probability
 
 variable [IsUniformSpec spec]
 
-lemma probFailure_replicate :
-    Pr[⊥ | oa.replicate n] = 1 - (1 - Pr[⊥ | oa]) ^ n := by
-  induction n with
-  | zero => simp
-  | succ n ih => simp
-
 /-- The probability of getting a list from `replicate` is the product of the chances of
 getting each of the individual elements. -/
 @[simp]
@@ -70,17 +65,6 @@ lemma probOutput_replicate (xs : List α) :
     | cons y ys =>
       rw [replicate_succ, probOutput_cons_seq_map_cons_eq_mul oa (replicate n oa) y ys, ih]
       simp
-
-lemma probEvent_replicate_of_probEvent_cons
-    (p : List α → Prop) (hp : p []) (q : α → Prop) (hq : ∀ x xs, p (x :: xs) ↔ q x ∧ p xs) :
-    Pr[ p | oa.replicate n] = Pr[ q | oa] ^ n := by
-  induction n with
-  | zero => simp [hp]
-  | succ n ih =>
-    rw [replicate_succ,
-      probEvent_seq_map_eq_mul oa (replicate n oa) List.cons p q p
-        (fun x _ xs _ => hq x xs),
-      ih, pow_succ, mul_comm]
 
 @[simp]
 lemma mem_finSupport_replicate [DecidableEq α]

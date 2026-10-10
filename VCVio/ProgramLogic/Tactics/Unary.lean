@@ -376,8 +376,7 @@ elab_rules (kind := vcgenSuggestion) : tactic
             "exact OracleComp.ProgramLogic.triple_zero _ _ | ",
             "(classical exact OracleComp.ProgramLogic.triple_support _) | ",
             "(exact OracleComp.ProgramLogic.triple_propInd_of_support _ _ (by assumption)) | ",
-            "(exact OracleComp.ProgramLogic.triple_probEvent_eq_one _ _ (by assumption)) | ",
-            "(exact OracleComp.ProgramLogic.triple_probOutput_eq_one _ _ (by assumption)) | ",
+            "(exact OracleComp.ProgramLogic.triple_prEvent_eq_one _ _ (by assumption)) | ",
             "exact le_refl _ | (repeat intro; simp only [OracleComp.ProgramLogic.Triple] at *; ",
             "solve_by_elim (maxDepth := 6) [OracleComp.ProgramLogic.wp_mono, le_trans])",
           ]
@@ -429,8 +428,7 @@ macro (name := expNorm) "exp_norm" : tactic =>
 macro (name := byHoare) "by_hoare" : tactic =>
   `(tactic|
     simp only [evalDist_ite_apply, evalDist_dite_apply,
-      OracleComp.ProgramLogic.probEvent_eq_wp_propInd,
-      OracleComp.ProgramLogic.probOutput_eq_wp_indicator,
+      OracleComp.ProgramLogic.prEvent_eq_wp_propInd,
       ← OracleComp.ProgramLogic.propInd_eq_ite])
 
 end OracleComp.ProgramLogic

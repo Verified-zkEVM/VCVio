@@ -111,7 +111,7 @@ before generating the remaining subgoals.
 ### Quantitative VCGen (`vcgen`)
 
 `vcgen` is the primary unary tactic for new proofs. It accepts both `Triple` goals and
-probability goals, automatically lowering `Pr[...]` into the quantitative engine.
+probability goals, automatically lowering `Pr{...}[...]` events into the quantitative engine.
 
 | Tactic | What it does |
 |--------|--------------|
@@ -123,7 +123,7 @@ probability goals, automatically lowering `Pr[...]` into the quantitative engine
 | `vcstep with thm` | Force one explicit unary theorem/assumption step |
 | `vcstep as ⟨x, hx⟩` | Explicit names for binders introduced by the current step |
 | `vcstep inv I` | Explicit loop invariant for `replicate`/`foldlM`/`mapM` |
-| `vcstep rw` | One explicit top-level bind-swap rewrite on a `Pr[...] = Pr[...]` goal |
+| `vcstep rw` | One explicit top-level bind-swap rewrite on a probability equality |
 | `vcstep rw under n` | One bind-swap rewrite under `n` shared outer bind prefixes |
 | `vcstep rw normalize` | Run the bounded probability-equality planner explicitly |
 | `vcstep rw congr` | Expose one or more shared binds plus their support hypotheses |
@@ -133,24 +133,27 @@ probability goals, automatically lowering `Pr[...]` into the quantitative engine
 **Probability-goal handling**: `vcgen` and `vcstep` automatically handle four
 classes of probability goals:
 
-1. **`Pr[...] = 1` lowering** → rewrites into `Triple` form for structural decomposition:
-   - `Pr[p | oa] = 1` → `Triple 1 oa (fun x => 𝟙⟦p x⟧)`
-   - `Pr[= x | oa] = 1` → `Triple 1 oa (fun y => if y = x then 1 else 0)`
+1. **`Pr{...}[...] = 1` lowering** → rewrites into `Triple` form for structural decomposition:
+   - `Pr{let x ← oa}[p x] = 1` → `Triple 1 oa (fun x => 𝟙⟦p x⟧)`; a singleton output
+     `Pr{let y ← oa}[y = x]` is the event `p := (· = x)`
 
-2. **Lower-bound event/output goals** → stay inside unary VCGen by reusing the same `Triple`
-   shell:
-   - `r ≤ Pr[p | oa]` / `Pr[p | oa] ≥ r` → `Triple r oa (fun x => 𝟙⟦p x⟧)`
-   - `r ≤ Pr[= x | oa]` / `Pr[= x | oa] ≥ r` → `Triple r oa (fun y => if y = x then 1 else 0)`
+2. **Lower-bound event goals** → stay inside unary VCGen by reusing the same `Triple` shell:
+   - `r ≤ Pr{let x ← oa}[p x]` / `Pr{let x ← oa}[p x] ≥ r` → `Triple r oa (fun x => 𝟙⟦p x⟧)`
 
-3. **`Pr[...] = Pr[...]` equality**:
+3. **Probability equalities** (`Pr{...}[...]`, applied `𝒟[...]` masses, or output measures; the
+   retiring `Pr[...]` façade is still accepted):
    - Plain `vcstep` first normalizes common `map`/`bind` surface syntax (`map_eq_bind_pure_comp`,
      `bind_assoc`), then preview-selects the best bounded swap/congruence plan from the fast path
    - `vcstep rw` performs exactly one top-level bind-swap rewrite
    - `vcstep rw under n` rewrites one swap beneath `n` shared outer bind prefixes
    - `vcstep rw normalize` runs the deeper bounded planner used for explicit suggestions
    - `vcstep rw congr` / `vcstep rw congr'` expose one or more shared binds explicitly
+   - Native swaps use `OracleComp.evalDist_bind_bind_swap` (countable responses) or
+     `OracleComp.evalDist_bind_bind_swap_of_uniform`; native congruence uses
+     `OracleComp.evalDist_bind_apply_congr_of_support`, leaving the continuations on the
+     structural support of the shared prefix
 
-4. **Other general `Pr[...]` goals** → rewrite to raw `wp` form and keep stepping structurally
+4. **Other general `Pr{...}[...]` goals** → rewrite to raw `wp` form and keep stepping structurally
    when a `wp` rule applies. On an already-lowered raw-`wp` goal, `vcstep?` / `vcgen?`
    will explicitly note that they are continuing in raw `wp` mode.
 
@@ -159,7 +162,7 @@ in `Triple` goals and applies matching invariant hypotheses from context.
 Use `vcstep inv I` to provide an explicit invariant.
 
 **Support-sensitive leaf closure**: `vcgen` final pass tries `triple_support`,
-`triple_propInd_of_support`, `triple_probEvent_eq_one`, and `triple_probOutput_eq_one`
+`triple_propInd_of_support` and `triple_prEvent_eq_one`
 in addition to the standard `triple_pure`, `triple_zero`, and consequence search.
 
 **Naming and suggestions**: plain `vcstep` / `rvcstep` keep the stable execution path.
@@ -276,11 +279,11 @@ All probability-equality control now lives under `vcstep`.
 
 | Tactic | What it does |
 |--------|--------------|
-| `vcstep` | Fast dispatcher for common `Pr[...] = Pr[...]` steps: syntax normalization, swap, congruence, and bounded compositions chosen by preview |
+| `vcstep` | Fast dispatcher for common probability-equality steps: syntax normalization, swap, congruence, and bounded compositions chosen by preview |
 | `vcstep rw` | Rewrites one top-level bind swap without trying to close the goal |
 | `vcstep rw under n` | Rewrites one bind swap under `n` shared outer bind prefixes on one side |
 | `vcstep rw normalize` | Runs the bounded probability-equality planner explicitly, without broadening plain `vcstep` |
-| `vcstep rw congr` | Reduces `Pr[... \| mx >>= f₁] = Pr[... \| mx >>= f₂]` to a pointwise goal, auto-introducing `x` and `hx : x ∈ support mx`; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
+| `vcstep rw congr` | Reduces `Pr{let y ← mx >>= f₁}[q y] = Pr{let y ← mx >>= f₂}[q y]` to a pointwise goal, auto-introducing `x` and `hx : x ∈ support mx`; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
 | `vcstep rw congr'` | Same, but without the support restriction; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
 
 ### Automation
@@ -295,10 +298,10 @@ All probability-equality control now lives under `vcstep`.
 
 ### What plain `vcstep` handles
 
-On `Pr[...] = Pr[...]` goals, plain `vcstep` already tries the common
-`probEvent_bind_bind_swap` / bind-congruence patterns:
+On probability equalities, plain `vcstep` already tries the common bind-swap and
+bind-congruence patterns:
 
-1. **Direct `probOutput` equalities**: `Pr[= x | mx >>= ... >>= ...] = Pr[= x | my >>= ... >>= ...]`
+1. **Direct event equalities**: `Pr{let z ← mx >>= ... >>= ...}[q z] = Pr{let z ← my >>= ... >>= ...}[q z]`
 2. **Nested bounded rewrites**: automatically peels small shared-bind prefixes and prefers a
    closing swap/congruence plan when one is available
 3. **Surface `map` wrappers**: normalizes the common `map_eq_bind_pure_comp` / `bind_assoc` shape

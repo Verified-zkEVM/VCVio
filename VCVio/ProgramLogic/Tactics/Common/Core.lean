@@ -9,7 +9,8 @@ module
 public meta import Lean.Elab.Tactic.Basic
 public meta import Lean.Meta.Match.MatcherApp
 public meta import Lean.Meta.Sym.Pattern
-public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.Replicate.Basic
+public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.ProgramLogic.NotationCore
 
 /-!
@@ -515,7 +516,24 @@ def isEvalDistEqGoal (target : Expr) : Bool :=
   else
     false
 
-/-- Check if a goal is an equality with probability expressions on both sides. -/
+/-- The computation observed by a native measure expression: the argument of `𝒟[…]`, which is
+also the computation of a `Pr{…}[…]` event. -/
+def evalDistComp? (e : Expr) : Option Expr := do
+  let app ← findAppWithHead? ``evalDist e
+  let args ← trailingArgs? app 1
+  args[0]?
+
+/-- Recognize an equality with native measure expressions on both sides: event masses
+`𝒟[mx] s`, including `Pr{…}[…]`, or output measures `𝒟[mx]`. -/
+def isNativeProbEqGoal (target : Expr) : Bool :=
+  let target := target.consumeMData
+  if target.isAppOfArity ``Eq 3 then
+    (evalDistComp? (target.getArg! 1)).isSome && (evalDistComp? (target.getArg! 2)).isSome
+  else
+    false
+
+/-- Check if a goal is an equality with probability expressions on both sides, either native
+measure expressions or the retiring scalar `Pr[…]` façade. -/
 def isProbEqGoal (target : Expr) : Bool :=
   let target := target.consumeMData
   if target.isAppOfArity ``Eq 3 then
@@ -525,7 +543,7 @@ def isProbEqGoal (target : Expr) : Bool :=
                        (findAppWithHead? ``probOutput lhs).isSome
     let rhsHasProb := (findAppWithHead? ``probEvent rhs).isSome ||
                        (findAppWithHead? ``probOutput rhs).isSome
-    lhsHasProb && rhsHasProb
+    (lhsHasProb && rhsHasProb) || isNativeProbEqGoal target
   else
     false
 

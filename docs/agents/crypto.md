@@ -422,7 +422,7 @@ structure CostModel (spec : OracleSpec ι) (ω : Type) [AddCommMonoid ω] where
 | `ExpectedPolyTime family cm val` | Expected poly bound over security parameter |
 
 Key results: `fst_map_costDist` (instrumentation is transparent),
-`probEvent_cost_gt_le_expectedCost_div` (Markov's inequality),
+`prEvent_costDist_gt_le_expectedCost_div` (Markov's inequality),
 `WorstCasePolyTime.toExpectedPolyTime`.
 
 ## Common Gotchas

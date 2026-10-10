@@ -190,17 +190,6 @@ lemma probFailure_lift [LawfulMonad m] (mx : m α) :
     Pr[⊥ | OptionT.lift mx] = Pr[⊥ | mx] :=
   probFailure_liftM mx
 
-/-- Bridge lemma: when two `OptionT` computations have underlying `run`s related by an
-`Option.map` of a function `f`, their probabilities for the events `P` and `P ∘ f` agree. -/
-lemma probEvent_eq_of_run_map_eq [LawfulMonad m]
-    (mx : OptionT m α) (my : OptionT m β) (f : β → α) (P : α → Prop)
-    (h : mx.run = (Option.map f) <$> my.run) :
-    Pr[P | mx] = Pr[P ∘ f | my] := by
-  have hmx : mx = f <$> my := by
-    change mx.run = (f <$> my).run
-    rw [OptionT.run_map]; exact h
-  rw [hmx, probEvent_map]
-
 end EvalSPMF
 
 end OptionT

@@ -129,8 +129,6 @@ section zero
 
 noncomputable instance : Zero (SPMF α) where zero := failure
 
-lemma zero_def : (0 : SPMF α) = failure := rfl
-
 @[simp, grind =]
 lemma toPMF_zero : (0 : SPMF α).toPMF = PMF.pure none := rfl
 

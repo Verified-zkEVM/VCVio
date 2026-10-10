@@ -140,24 +140,24 @@ lemma Relational.RelPost.indicator_eq_propInd {α β : Type}
 
 /-- Almost-sure correctness: `Triple 𝟙⟦True⟧ c (fun x => 𝟙⟦p x⟧)` iff
 `Pr[ p | c] = 1`. -/
-lemma triple_propInd_iff_probEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
+lemma triple_propInd_iff_prEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
     Triple (𝟙⟦True⟧ : ℝ≥0∞) oa (fun x => 𝟙⟦p x⟧) ↔
       Pr{let x ← oa}[p x] = 1 := by
-  rw [triple_iff_le_wp, propInd_true, ← probEvent_eq_wp_propInd]
+  rw [triple_iff_le_wp, propInd_true, ← prEvent_eq_wp_propInd]
   exact ⟨fun h ↦ le_antisymm
     ((MeasureTheory.measure_mono (Set.subset_univ _)).trans
       (evalDist_apply_univ_le_one (do let x ← oa; pure (p x)))) h, fun h ↦ h.ge⟩
 
 /-- Lower-bound event goals are exactly quantitative triples with indicator postconditions. -/
-lemma triple_propInd_iff_le_probEvent {ι : Type u} {spec : OracleSpec ι}
+lemma triple_propInd_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (r : ℝ≥0∞) :
     Triple r oa (fun x => 𝟙⟦p x⟧) ↔ r ≤ Pr{let x ← oa}[p x] := by
-  rw [triple_iff_le_wp, ← probEvent_eq_wp_propInd]
+  rw [triple_iff_le_wp, ← prEvent_eq_wp_propInd]
 
 /-! ## Expectation-level bridge lemmas -/
 
@@ -173,21 +173,13 @@ theorem wp_propInd_or_le {ι : Type u} {spec : OracleSpec ι} [∀ t, Measurable
   intro x
   by_cases hp : p x <;> by_cases hq : q x <;> simp [propInd, hp, hq]
 
-/-- Monotonicity for event probabilities, exposed through the program-logic namespace. -/
-theorem probEvent_mono {ι : Type u} {spec : OracleSpec ι} [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
-    (oa : OracleComp spec α) {p q : α → Prop}
-    (h : ∀ x, p x → q x) :
-    Pr{let x ← oa}[p x] ≤ Pr{let x ← oa}[q x] :=
-  _root_.prEvent_mono oa _ _ h
-
 /-- Markov inequality: if `a ≤ f x` whenever `p x`, then `a * Pr{let x ← oa}[p x] ≤ E[f | oa]`. -/
 theorem markov_bound {ι : Type u} {spec : OracleSpec ι} [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (f : α → ℝ≥0∞) (a : ℝ≥0∞) (p : α → Prop)
     (hf : ∀ x, p x → a ≤ f x) :
     a * Pr{let x ← oa}[p x] ≤ wp oa f := by
-  rw [probEvent_eq_wp_propInd, ← wp_mul_const]
+  rw [prEvent_eq_wp_propInd, ← wp_mul_const]
   refine wp_mono oa fun x => ?_
   unfold propInd
   split_ifs with hp

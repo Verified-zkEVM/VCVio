@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import ToMathlib.Probability.NegativeHypergeometric
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 
 /-!

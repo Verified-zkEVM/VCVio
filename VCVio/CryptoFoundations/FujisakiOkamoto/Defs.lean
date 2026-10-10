@@ -8,7 +8,8 @@ module
 
 public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
 public import VCVio.OracleComp.Coercions.Add
-public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.Coercions.SubSpec.Basic
+public import VCVio.OracleComp.Coercions.SubSpec.Measure
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
@@ -98,7 +99,7 @@ def OW_CPA_Experiment (adversary : pke.OW_CPA_Adversary) : ProbComp Bool := do
 
 /-- OW-CPA advantage is the probability of recovering the sampled challenge plaintext. -/
 noncomputable def OW_CPA_Advantage (adversary : pke.OW_CPA_Adversary) : ℝ≥0∞ :=
-  Pr[= true | pke.OW_CPA_Experiment adversary]
+  𝒟[pke.OW_CPA_Experiment adversary] {true}
 
 end OW_CPA
 

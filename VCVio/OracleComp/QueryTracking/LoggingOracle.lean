@@ -39,8 +39,6 @@ lemma probFailure_run_simulateQ_withLogging [LawfulMonad m] [MonadLiftT m SPMF]
   so.probFailure_run_simulateQ_withTraceAppend
     (fun (t : spec.Domain) u => ([⟨t, u⟩] : QueryLog spec)) mx
 
-
-
 lemma NeverFail_run_simulateQ_withLogging_iff [LawfulMonad m] [MonadLiftT m SPMF]
     [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (mx : OracleComp spec α) :
@@ -48,19 +46,9 @@ lemma NeverFail_run_simulateQ_withLogging_iff [LawfulMonad m] [MonadLiftT m SPMF
   so.neverFail_run_simulateQ_withTraceAppend_iff
     (fun (t : spec.Domain) u => ([⟨t, u⟩] : QueryLog spec)) mx
 
-
 end QueryImpl
 
 namespace loggingOracle
-
-/-- Specialization of `QueryImpl.probFailure_run_simulateQ_withLogging` to `loggingOracle`. -/
-lemma probFailure_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
-    [IsUniformSpec spec]
-    (oa : OracleComp spec α) :
-    Pr[⊥ | (WriterT.run
-        (simulateQ spec.loggingOracle oa) :
-          OracleComp spec (α × spec.QueryLog))] = Pr[⊥ | oa] := by
-  rw [loggingOracle, QueryImpl.probFailure_run_simulateQ_withLogging, simulateQ_ofLift_eq_self]
 
 /-- Specialization of `QueryImpl.NeverFail_run_simulateQ_withLogging_iff` to `loggingOracle`. -/
 @[simp]
@@ -70,8 +58,6 @@ lemma NeverFail_run_simulateQ_iff {spec : OracleSpec.{0, 0} ι} {α : Type}
     NeverFail (simulateQ spec.loggingOracle oa).run ↔ NeverFail oa := by
   rw [loggingOracle, QueryImpl.NeverFail_run_simulateQ_withLogging_iff, simulateQ_ofLift_eq_self]
 
-
-
 @[simp]
 lemma probEvent_fst_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
     [IsUniformSpec spec]
@@ -80,16 +66,12 @@ lemma probEvent_fst_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
   rw [show (fun z : α × spec.QueryLog => p z.1) = p ∘ Prod.fst from rfl,
     ← probEvent_map, fst_map_run_simulateQ]
 
-
-
 lemma probOutput_fst_map_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
     [IsUniformSpec spec]
     (oa : OracleComp spec α) (x : α) :
     Pr[= x | Prod.fst <$> (simulateQ spec.loggingOracle oa).run] =
       Pr[= x | oa] := by
   rw [fst_map_run_simulateQ]
-
-
 
 lemma evalSPMF_fst_map_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
     [IsUniformSpec spec] (oa : OracleComp spec α) :
@@ -107,6 +89,5 @@ lemma probEvent_withQueryLog {ι : Type} {oSpec : OracleSpec ι} [IsUniformSpec 
     (oa : OracleComp oSpec α) (p : α → Prop) :
     Pr[p ∘ Prod.fst | oa.withQueryLog] = Pr[p | oa] :=
   loggingOracle.probEvent_fst_run_simulateQ oa p
-
 
 end OracleComp

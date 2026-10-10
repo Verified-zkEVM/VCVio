@@ -119,16 +119,7 @@ lemma evalSPMF_liftM_toPMF [IsProbabilitySpec spec] (q : OracleQuery spec α) :
       (IsProbabilitySpec.toPMF q.input).map q.cont := by
   simp [evalSPMF_eq_simulateQ, SPMF.liftM_eq_map, PMF.map_comp, PMF.monad_map_eq_map]
 
-/-- `liftM (query t) : OracleComp spec _` evaluates to the per-query distribution
-`IsProbabilitySpec.toPMF t`, lifted to `SPMF`. -/
-lemma evalSPMF_query_toPMF [IsProbabilitySpec spec] (t : spec.Domain) :
-    𝒮[(query t : OracleComp spec _)] =
-      (IsProbabilitySpec.toPMF t : SPMF (spec.Range t)) := by
-  rw [evalSPMF_liftM_toPMF]; simp [PMF.map_id]
-
-
 end evalSPMF_main
-
 
 section evalSPMF
 
@@ -185,19 +176,6 @@ lemma probEvent_query (t : spec.Domain) (p : spec.Range t → Prop) [DecidablePr
       Finset.card {x | p x} / Fintype.card (spec.Range t) := by
   simp [probEvent_liftM_eq_div]; rfl
 
-/-- An event selecting at most one response to a uniform oracle query has
-probability at most the inverse response-space cardinality. -/
-lemma probEvent_query_le_inv_of_unique (t : spec.Domain) (p : spec.Range t → Prop)
-    (hunique : ∀ x y, p x → p y → x = y) :
-    Pr[ p | (query t : OracleComp spec _)] ≤
-      (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ := by
-  classical
-  rw [probEvent_query, div_eq_mul_inv]
-  refine (mul_le_mul' ?_ le_rfl).trans_eq (one_mul _)
-  exact_mod_cast Finset.card_le_one.mpr fun x hx y hy ↦ by
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hx hy
-    exact hunique x y hx hy
-
 end evalSPMF
 
 section supportEvalDist
@@ -245,12 +223,6 @@ lemma probFailure_eq_zero_iff (oa : OracleComp spec α) : probFailure oa = 0 ↔
 lemma probFailure_pos_iff (oa : OracleComp spec α) : 0 < probFailure oa ↔ ¬ NeverFail oa := by
   simp [neverFail_iff]
 
-lemma noFailure_of_probFailure_eq_zero {oa : OracleComp spec α} (h : probFailure oa = 0) :
-    NeverFail oa := by rwa [← probFailure_eq_zero_iff]
-
-lemma not_noFailure_of_probFailure_pos {oa : OracleComp spec α} (h : 0 < probFailure oa) :
-    ¬ NeverFail oa := by rwa [← probFailure_pos_iff]
-
 end NeverFail
 
 section evalSPMFConvenience
@@ -284,15 +256,6 @@ lemma probEvent_congr' {p q : α → Prop} {oa : OracleComp spec α} {oa' : Orac
   · have hz : Pr[= x | oa'] = 0 := congrFun hpr.symm x ▸ probOutput_eq_zero_of_not_mem_support hx
     rw [Set.indicator_apply_eq_zero.2 fun _ => hz, Set.indicator_apply_eq_zero.2 fun _ => hz]
 
-lemma evalSPMF_ext_probEvent {oa : OracleComp spec α} {oa' : OracleComp spec' α}
-    (h : ∀ x, Pr[= x | oa] = Pr[= x | oa']) : (𝒮[oa]).run = (𝒮[oa']).run := by
-  have heval : 𝒮[oa] = 𝒮[oa'] := evalSPMF_ext h
-  simp [heval]
-
-lemma probFailure_eq_sub_probEvent' (oa : OracleComp spec α) :
-    Pr[⊥ | oa] = 1 - Pr[ fun _ => True | oa] :=
-  _root_.probFailure_eq_sub_probEvent oa
-
 end evalSPMFConvenience
 
 section guard
@@ -317,14 +280,6 @@ lemma probOutput_guard {p : Prop} [Decidable p] :
     -- post-refactor diamond. Compute directly.
     simp [OptionT.probOutput_eq, OptionT.run_failure, probOutput_pure]
 
-lemma probFailure_guard {p : Prop} [Decidable p] :
-    Pr[⊥ | (guard p : OptionT (OracleComp spec) Unit)] = if p then 0 else 1 := by
-  rw [OracleComp.guard_eq]
-  split_ifs with h
-  · exact probFailure_pure ()
-  · -- See note above.
-    simp [OptionT.probFailure_eq, OptionT.run_failure]
-
 /-- For any `PUnit`-valued computation in an arbitrary monad with an `SPMF` denotation, the
 probability of returning `()` is the complementary mass of its failure probability. -/
 lemma probOutput_punit_eq_sub_probFailure {m : Type → Type*} [Monad m] [MonadLiftT m SPMF]
@@ -336,13 +291,6 @@ lemma probOutput_punit_eq_sub_probFailure {m : Type → Type*} [Monad m] [MonadL
   rw [hunit] at h
   exact ENNReal.eq_sub_of_add_eq (ne_top_of_le_ne_top one_ne_top probFailure_le_one) h
 
-/-- The `OracleComp` instance of `probOutput_punit_eq_sub_probFailure`: for a `PUnit`-valued
-oracle computation, the probability of returning `()` is the complementary mass of its failure
-probability. -/
-lemma probOutput_eq_sub_probFailure_of_unit {oa : OracleComp spec PUnit} :
-    Pr[= () | oa] = 1 - Pr[⊥ | oa] :=
-  probOutput_punit_eq_sub_probFailure
-
 /-- Guarding a computation `oa` by a decidable predicate `p` and asking for the probability of a
 successful `()` output recovers exactly the event probability `Pr[p | oa]`: the failure mass of the
 `guard` removes precisely the outputs falsifying `p`. Public guard-section API used by failure-based
@@ -353,14 +301,6 @@ lemma probOutput_bind_guard_eq_probEvent {α : Type} (oa : OracleComp spec α)
   simp only [probOutput_bind_eq_tsum, OptionT.probOutput_liftM, probOutput_guard,
     probEvent_eq_tsum_ite]
   exact tsum_congr fun a => by split_ifs <;> simp
-
-lemma probOutput_guard_eq_sub_probOutput_guard_not {α : Type} {oa : OracleComp spec α}
-    [NeverFail oa] {p : α → Prop} [DecidablePred p] :
-    Pr[= () | (do let a ← oa; guard (p a) : OptionT (OracleComp spec) Unit)] =
-      1 - Pr[= () | (do let a ← oa; guard (¬ p a) : OptionT (OracleComp spec) Unit)] := by
-  simp only [probOutput_bind_guard_eq_probEvent]
-  exact ENNReal.eq_sub_of_add_eq (ne_top_of_le_ne_top one_ne_top probEvent_le_one)
-    (by simpa only [probFailure_of_liftM_PMF, tsub_zero] using probEvent_compl oa p)
 
 end guard
 
@@ -424,8 +364,6 @@ lemma evalSPMF_simulateQ_eq_evalSPMF
         OracleQuery.input_query, evalSPMF_bind, ih, h t]
 
 end simulateQ_evalSPMF
-
-
 
 section evalSPMFWhen
 

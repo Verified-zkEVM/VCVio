@@ -96,12 +96,6 @@ lemma probOutput_map_eq_tsum (y : β) :
     Pr[= y | f <$> mx] = ∑' x, Pr[= x | mx] * Pr[= y | (pure (f x) : m β)] := by
   simp [monad_norm, probOutput_bind_eq_tsum]
 
-lemma probOutput_map_eq_tsum_subtype_ite [MonadAttach m] [ExactMonadAttach m]
-    [EvalDistCompatible m] [DecidableEq β] (y : β) :
-    Pr[= y | f <$> mx] = ∑' x : support mx, if y = f x then Pr[= x | mx] else 0 := by
-  simp only [map_eq_bind_pure_comp, probOutput_bind_eq_tsum_subtype, Function.comp_apply,
-    probOutput_pure, mul_ite, mul_one, mul_zero]
-
 @[grind =]
 lemma probOutput_map_eq_tsum_ite [DecidableEq β] (y : β) :
     Pr[= y | f <$> mx] = ∑' x : α, if y = f x then Pr[= x | mx] else 0 := by
@@ -146,13 +140,6 @@ with. -/
 lemma probOutput_map (y : β) : Pr[= y | f <$> mx] = Pr[ fun x => f x = y | mx] := by
   rw [← probEvent_eq_eq_probOutput]
   simpa only [Function.comp_def] using probEvent_map mx f (· = y)
-
-lemma probEvent_comp (q : β → Prop) : Pr[ q ∘ f | mx] = Pr[ q | f <$> mx] :=
-  symm <| probEvent_map mx f q
-
-lemma probFailure_eq_sub_sum_probOutput_map [Fintype β] (mx : m α) (f : α → β) :
-    Pr[⊥ | mx] = 1 - ∑ y : β, Pr[= y | f <$> mx] := by
-  rw [← probFailure_map (f := f), probFailure_eq_sub_tsum, tsum_fintype]
 
 @[aesop unsafe apply]
 lemma probOutput_map_eq_single [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
@@ -208,14 +195,6 @@ lemma probOutput_map_eq_probOutput_of_leftInvOn
     aesop
   · aesop
 
-lemma probOutput_map_eq_probOutput_inverse
-    (hl : Function.LeftInverse g f) (hy : f (g y) = y) :
-    Pr[= y | f <$> mx] = Pr[= g y | mx] := by aesop
-
-lemma probOutput_map_eq_probOutput_apply
-    (hl : f (g y) = y) (hr : ∀ y, g (f y) = y) :
-    Pr[= y | f <$> mx] = Pr[= g y | mx] := by aesop
-
 @[simp, grind =]
 lemma probOutput_map_equiv (e : α ≃ β) (mx : m α) (y : β) :
     Pr[= y | e <$> mx] = Pr[= e.symm y | mx] := by aesop
@@ -233,11 +212,6 @@ lemma probOutput_map_injective (mx : m α) {f : α → β} (hf : f.Injective) (x
     simp only [Function.comp_apply, probOutput_pure_self, mul_one])
   simp only [Function.comp_apply, probOutput_pure, mul_ite, mul_one, mul_zero]
   exact ite_eq_right fun h => hy (hf h.symm)
-
-lemma probOutput_map_eq_probOutput (mx : m α)
-    {f : α → β} (hf : ∀ x x', f x = f x' → x = x') (x : α) :
-    Pr[= f x | f <$> mx] = Pr[= x | mx] :=
-  probOutput_map_injective mx hf x
 
 section support
 

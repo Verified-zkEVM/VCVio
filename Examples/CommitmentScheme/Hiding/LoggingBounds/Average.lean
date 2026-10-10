@@ -349,13 +349,13 @@ theorem sum_probEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited M] [Inhab
         (simulateQ hidingAvgQueryImpl (hidingAvgComp A)).run
           (∅, fun _ => 0))}[2 ≤ z.2.2 z.1.1] := by
   classical
-  rw [OracleComp.ProgramLogic.probEvent_eq_wp_indicator,
+  rw [OracleComp.ProgramLogic.prEvent_eq_wp_indicator,
     run_simulateQ_hidingAvgComp_eq_bind, OracleComp.ProgramLogic.wp_bind,
     ← liftComp_liftM_query (spec := Unit →ₒ S) (superSpec := HidingAvgSpec M S C),
     OracleComp.ProgramLogic.wp_liftComp, OracleComp.ProgramLogic.wp_query_uniform]
   simp_rw [OracleComp.ProgramLogic.wp_map, OracleComp.ProgramLogic.wp_liftComp]
   simp only [Function.comp_def, Prod.map_fst, Prod.map_snd, id_eq]
-  simp_rw [← OracleComp.ProgramLogic.probEvent_eq_wp_indicator]
+  simp_rw [← OracleComp.ProgramLogic.prEvent_eq_wp_indicator]
   rw [Finset.mul_sum]
   apply Finset.sum_congr rfl
   intro s _
@@ -801,7 +801,7 @@ lemma sum_wp_badIndicator_eq_wp_choose [Fintype S]
         refine Finset.sum_congr rfl ?_
         intro s hs
         rw [probEvent_hidingBad_eq_countAll (M := M) (S := S) (C := C) A s,
-          OracleComp.ProgramLogic.probEvent_eq_wp_propInd]
+          OracleComp.ProgramLogic.prEvent_eq_wp_propInd]
     _ =
       OracleComp.ProgramLogic.wp
         ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))
