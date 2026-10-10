@@ -26,8 +26,7 @@ namespace OracleComp.ProgramLogic.Relational
 
 variable {ι₁ : Type u} {ι₂ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
-variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
-  [IsMeasureSpec spec₁] [IsMeasureSpec spec₂]
+variable [IsMeasureSpec spec₁] [IsMeasureSpec spec₂]
 variable {α β : Type}
 
 /-- eRHL-style quantitative relational WP for `OracleComp`.

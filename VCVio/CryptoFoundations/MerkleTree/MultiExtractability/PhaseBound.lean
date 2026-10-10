@@ -31,7 +31,7 @@ cumulative query log produced by the prefix, while the executable phase remains
 `adaptivePrefixRunFrom` with the original suffix. -/
 theorem prEvent_stablePhaseRunFrom_logged_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
@@ -106,7 +106,7 @@ The local target-cardinality obligation is discharged by
 `liveTargetSet_card_le_sharedExtractedLabelCountBound_of_cover`. -/
 theorem prEvent_stablePhaseRunFrom_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
@@ -177,7 +177,7 @@ theorem prEvent_stablePhaseRunFrom_le
 terminal phase that will not record additional checkpoints. -/
 theorem prEvent_stablePhaseRunFrom_exact_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}

@@ -25,8 +25,7 @@ open scoped OracleComp.ProgramLogic Std.Internal.Do OracleComp.Quantitative
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α β γ : Type}
 
 /-! ## `vcstep` on `Triple` goals -/

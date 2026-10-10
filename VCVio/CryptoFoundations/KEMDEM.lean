@@ -81,7 +81,6 @@ response positive mass: a KEM and an externally keyed DEM that each succeed with
 give a composed scheme that succeeds with probability `1`. Uniform answer measures supply the
 full-support hypothesis through `OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos`. -/
 theorem perfectlyCorrect_composeWithDEM {ι : Type} {spec : OracleSpec ι}
-    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [OracleSpec.IsMeasureSpec spec]
     (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.IsMeasureSpec.toMeasure t {u})
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM) (dem : DEMScheme (OracleComp spec) K M CDEM)

@@ -277,7 +277,7 @@ private lemma extractability_rest_win_implies_fresh_cm {t : ℕ}
       rw [hcache_final_eq]
       exact ⟨(m, s), c, hcache₃, hcache₁_none, heq_of_eq hc_eq⟩
 
-variable [Inhabited C] [Finite C] [MeasurableSpace C] [MeasurableSingletonClass C]
+variable [Inhabited C] [Finite C]
 
 attribute [local instance] Fintype.ofFinite
 

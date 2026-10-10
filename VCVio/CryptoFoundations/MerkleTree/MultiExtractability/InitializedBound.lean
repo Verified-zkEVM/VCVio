@@ -40,7 +40,7 @@ log-dependent accounting computation. The executable runner still ends in the in
 `finish`, and the empty initial cache turns the safe potential into the finite-max numerator. -/
 theorem SequentialCommitter.prEvent_runFromEmptyThen_logged_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (committer : SequentialCommitter Cfg Query Y)
     (view : MerkleTreeExtractor.QueryView Query Address Y)

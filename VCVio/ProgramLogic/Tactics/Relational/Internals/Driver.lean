@@ -773,14 +773,14 @@ def runRVCGenPass : TacticM Bool := do
 /-- Explain a failed relational step using the current goal shape and available rules. -/
 def throwRVCGenStepError : TacticM Unit := withMainContext do
   let target ← instantiateMVars (← getMainTarget)
-  if isGameEquivGoal target then
-    throwError "rvcstep: failed to lower the `GameEquiv` goal into relational proof mode."
+  if isEqualInDistGoal target then
+    throwError "rvcstep: failed to lower the `=ᵈ` goal into relational proof mode."
   if isEvalDistEqGoal target then
     throwError "rvcstep: failed to lower the output-measure equality into a `RelTriple` goal."
   match relationalGoalParts? target with
   | none =>
       throwError m!
-        "rvcstep: expected a `GameEquiv`, output-measure equality, `RelTriple`, `RelWP`,\n\
+        "rvcstep: expected a `=ᵈ`, output-measure equality, `RelTriple`, `RelWP`,\n\
         or quantitative `VCVio.ProgramLogic.RelTriple` goal; got:{indentExpr target}"
   | some (oa, ob, post) =>
       let oa ← whnfReducible (← instantiateMVars oa)

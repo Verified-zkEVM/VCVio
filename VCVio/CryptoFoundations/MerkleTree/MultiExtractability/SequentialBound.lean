@@ -148,7 +148,7 @@ that bound at each commitment phase and passes the actual residual bound to the 
 executable computation remains `runCommitmentsThen` with the caller's independent `finish`. -/
 theorem SequentialCommitter.prEvent_runCommitmentsThen_logged_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (committer : SequentialCommitter Cfg Query Y)
     (view : MerkleTreeExtractor.QueryView Query Address Y)

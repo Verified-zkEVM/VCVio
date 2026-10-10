@@ -17,6 +17,7 @@ public import VCVio.EvalDist.Defs.Measure.ExceptT
 public import VCVio.EvalDist.Defs.Measure.OptionT
 public import VCVio.EvalDist.MeasureSemantics
 public import VCVio.EvalDist.ProbabilityNotation
+public import VCVio.EvalDist.EvalDistEq
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.Monad.Branch
 public import VCVio.EvalDist.Monad.Disagreement.Measure

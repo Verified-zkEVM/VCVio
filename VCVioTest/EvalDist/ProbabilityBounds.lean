@@ -117,13 +117,13 @@ noncomputable instance : IsMeasureSpec biasedSpec where
 section fork
 
 variable {ι : Type} {spec : OracleSpec ι} {α : Type}
-  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [IsMeasureSpec spec] {main : OracleComp spec α} {i : ι} {n : Nat}
 
-example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) :
+example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n)
+    {_ : MeasurableSpace (spec.Range i)} :
     𝒟[(fun completion ↦ completion.answer) <$>
       OracleComp.Cursor.completeOccurrence occurrence] =
-      IsMeasureSpec.toMeasure (spec := spec) i := by simp
+      @Measure.trim _ _ ⊤ (IsMeasureSpec.toMeasure (spec := spec) i) le_top := by simp
 
 example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) (p : spec.Range i → Prop) :
     Pr{let completion ← OracleComp.Cursor.completeOccurrence occurrence}[p completion.answer] =
@@ -135,18 +135,21 @@ example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) (p : spec.Range
     Pr{let completion ← OracleComp.Cursor.completeOccurrence occurrence}[p completion.answer] ≤
       bound := by grind
 
-example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) :
+example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n)
+    {_ : MeasurableSpace (spec.Range i)} :
     IsProbabilityMeasure 𝒟[(fun completion ↦ completion.answer) <$>
       OracleComp.Cursor.completeOccurrence occurrence] := inferInstance
 
-example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) :
+example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n)
+    {_ : MeasurableSpace (spec.Range i)} :
     IsSubprobabilityMeasure 𝒟[(fun completion ↦ completion.answer) <$>
       OracleComp.Cursor.completeOccurrence occurrence] := inferInstance
 
 example {path : PFunctor.FreeM.Path main}
-    (located : PFunctor.FreeM.Cursor.Located i main path n) :
+    (located : PFunctor.FreeM.Cursor.Located i main path n)
+    {_ : MeasurableSpace (spec.Range i)} :
     𝒟[(fun view ↦ view.secondAnswer) <$> OracleComp.ofFreeM located.fork] =
-      IsMeasureSpec.toMeasure (spec := spec) i := by simp
+      @Measure.trim _ _ ⊤ (IsMeasureSpec.toMeasure (spec := spec) i) le_top := by simp
 
 example {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) {bound : ENNReal}
@@ -164,7 +167,6 @@ example {path : PFunctor.FreeM.Path main}
 end fork
 
 example {ι : Type} {spec : OracleSpec ι} {α : Type}
-    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [IsUniformMeasureSpec spec] {main : OracleComp spec α} {i : ι} [Fintype (spec.Range i)]
     {n : Nat} {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :

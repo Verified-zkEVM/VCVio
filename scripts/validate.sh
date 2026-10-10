@@ -23,6 +23,7 @@ Default fast checks (shared with per-PR CI):
   - ./scripts/check-imports.sh (generated umbrella modules are current)
   - the boundary checks: PolyFun, broad expose, retiring SPMF import closure,
     complexity backend, Extern and Interop isolation
+  - the fixture tests of the downstream probability codemod
   - the comment-fence rule over every Lean source the repository tracks or would
     track, `third_party/` excluded and both lakefiles included
 
@@ -93,6 +94,7 @@ if [[ -f scripts/check-expose-boundary.sh ]]; then
 fi
 python3 ./scripts/test-spmf-closure.py
 python3 ./scripts/check-spmf-closure.py
+python3 ./scripts/test-migrate-native-probability.py
 bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 bash scripts/check-extern-isolation.sh

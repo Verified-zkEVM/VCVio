@@ -288,8 +288,7 @@ theorem measure_adaptivePrefixRunFrom_le
 
 /-- The adaptive-prefix bound for events under native uniform oracle semantics. -/
 theorem prEvent_adaptivePrefixRunFrom_le
-    [DecidableEq ι] [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
-    [IsUniformMeasureSpec (ι →ₒ Y)]
+    [DecidableEq ι] [Finite Y] [IsUniformMeasureSpec (ι →ₒ Y)]
     (suffix : X → (ι →ₒ Y).QueryLog → OracleComp (ι →ₒ Y) R)
     (continuation : X → OracleComp (ι →ₒ Y) C)
     (win : R → Prop) (targetCount : ℕ → ℕ) (overhead : ℕ)
@@ -323,11 +322,11 @@ theorem prEvent_adaptivePrefixRunFrom_le
       (adaptivePrefixPotential targetCount overhead remaining cached : ENNReal) *
         (Nat.card Y : ENNReal)⁻¹ := by
   classical
+  let : MeasurableSpace Y := ⊤
   let : MeasurableSpace (R × (ι →ₒ Y).QueryCache) := ⊤
   rw [prEvent_eq_evalDist_of_discrete]
   refine measure_adaptivePrefixRunFrom_le
-    (hquery := fun t => (evalDist_liftM_query t).trans
-      (IsUniformMeasureSpec.toMeasure_eq_uniform t)) suffix continuation win
+    (hquery := fun t => evalDist_liftM_query_uniform (spec := ι →ₒ Y) t) suffix continuation win
     MeasurableSet.of_discrete targetCount overhead prefixComp remaining cached hbound
     cache log hno hcacheBound hlogCache hcacheLog ?_
   intro x terminalRemaining terminalCached terminalCache terminalLog hq hn hb hl hc

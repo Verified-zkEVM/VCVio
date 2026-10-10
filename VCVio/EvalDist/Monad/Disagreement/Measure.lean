@@ -38,21 +38,16 @@ No measurability of the allowance is required. -/
 theorem prEvent_bind_le_sum_add_lintegral_ae [Fintype ι] [MeasurableSpace α]
     (mx : m α) (f : α → m β) (p : β → Prop)
     (g : ι → α → m Prop)
-    (hf : Measurable fun a ↦ 𝒟[do let b ← f a; return p b])
+    (hf : Measurable fun a ↦ 𝒟[p <$> f a])
     (hg : ∀ i, Measurable fun a ↦ 𝒟[g i a]) (bound : α → ENNReal)
     (h : ∀ᵐ a ∂𝒟[mx], Pr{let b ← f a}[p b] ≤
       (∑ i, Pr{let q ← g i a}[q]) + bound a) :
     Pr{let b ← mx >>= f}[p b] ≤
       (∑ i, Pr{let q ← mx >>= g i}[q]) + ∫⁻ a, bound a ∂𝒟[mx] := by
-  have hg' (i : ι) : Measurable fun a ↦ Pr{let q ← g i a}[q] := by
-    simpa only [bind_pure, Function.comp_def] using
-      (Measure.measurable_coe (measurableSet_singleton True)).comp (hg i)
+  have hg' (i : ι) : Measurable fun a ↦ Pr{let q ← g i a}[q] :=
+    (Measure.measurable_coe (measurableSet_singleton True)).comp (hg i)
   rw [prEvent_bind_eq_lintegral mx f p hf]
-  have hi (i : ι) : Pr{let q ← mx >>= g i}[q] =
-      ∫⁻ a, Pr{let q ← g i a}[q] ∂𝒟[mx] := by
-    simpa only [id_eq, bind_pure] using prEvent_bind_eq_lintegral mx (g i) id
-      (by simpa only [id_eq, bind_pure] using hg i)
-  simp_rw [hi]
+  simp_rw [prEvent_bind mx _ (hg _)]
   exact lintegral_le_sum_add_lintegral_of_le_ae Finset.univ
     (fun i _ ↦ (hg' i).aemeasurable) h
 
@@ -65,18 +60,16 @@ theorem prEvent_bind_le_sum_add_mul_mass_of_support [Fintype ι] [MonadAttach m]
       (∑ i, Pr{let q ← g i a}[q]) + ε) :
     Pr{let b ← mx >>= f}[p b] ≤ (∑ i, Pr{let q ← mx >>= g i}[q]) +
       ε * Pr{let _a ← mx}[True] := by
-  let obs : α → Measure Prop × (ι → Measure Prop) := fun a ↦
-    (𝒟[do let b ← f a; return p b], fun i ↦ 𝒟[g i a])
+  let obs : α → Measure Prop × (ι → Measure Prop) := fun a ↦ (𝒟[p <$> f a], fun i ↦ 𝒟[g i a])
   let : MeasurableSpace α := MeasurableSpace.comap obs inferInstance
   have hobs : Measurable obs := comap_measurable obs
-  have hf : Measurable fun a ↦ 𝒟[do let b ← f a; return p b] := measurable_fst.comp hobs
+  have hf : Measurable fun a ↦ 𝒟[p <$> f a] := measurable_fst.comp hobs
   have hg (i : ι) : Measurable fun a ↦ 𝒟[g i a] :=
     (measurable_pi_apply i).comp (measurable_snd.comp hobs)
   have hp : Measurable fun a ↦ Pr{let b ← f a}[p b] :=
     (Measure.measurable_coe (measurableSet_singleton True)).comp hf
-  have hq (i : ι) : Measurable fun a ↦ Pr{let q ← g i a}[q] := by
-    simpa only [bind_pure, Function.comp_def] using
-      (Measure.measurable_coe (measurableSet_singleton True)).comp (hg i)
+  have hq (i : ι) : Measurable fun a ↦ Pr{let q ← g i a}[q] :=
+    (Measure.measurable_coe (measurableSet_singleton True)).comp (hg i)
   have hae := evalDist.ae_of_forall_mem_support mx _
     (measurableSet_le hp ((Finset.measurable_sum _ fun i _ ↦ hq i).add_const ε)) h
   have hb := prEvent_bind_le_sum_add_lintegral_ae mx f p g hf hg (fun _ ↦ ε) hae
@@ -91,8 +84,7 @@ theorem prEvent_bind_le_sum_add_of_support [Fintype ι] [MonadAttach m]
       (∑ i, Pr{let q ← g i a}[q]) + ε) :
     Pr{let b ← mx >>= f}[p b] ≤ (∑ i, Pr{let q ← mx >>= g i}[q]) + ε :=
   (prEvent_bind_le_sum_add_mul_mass_of_support mx f p g ε h).trans <|
-    add_le_add le_rfl ((mul_le_mul' le_rfl
-      (measure_le_one 𝒟[do let _a ← mx; return True] {True})).trans_eq (mul_one ε))
+    add_le_add le_rfl ((mul_le_mul' le_rfl (prEvent_le_one _)).trans_eq (mul_one ε))
 
 variable {γ : Type} [MonadAttach m] [WeaklyLawfulMonadAttach m]
 
@@ -109,18 +101,17 @@ theorem prEvent_bind_le_add_of_disagree {mx : m α} {my oc : α → m β}
     ![fun x ↦ q <$> oc x, fun x ↦ pure (D x)] ε₂ (by
       intro x hx
       simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
-        ← prEvent_eq_evalDist_map, evalDist_pure, Measure.dirac_apply_singleton_true]
+        prEvent_pure_prop]
       by_cases hDx : D x
       · simpa only [ite_eq_left hDx] using
-          (measure_le_one 𝒟[do let y ← my x; return q y] {True}).trans
+          (prEvent_le_one _).trans
           (le_add_right (le_add_left le_rfl) : (1 : ENNReal) ≤
             Pr{let y ← oc x}[q y] + 1 + ε₂)
       · simpa only [ite_eq_right hDx, add_zero] using h x hx hDx)
   have hb' : Pr{let y ← mx >>= my}[q y] ≤
       Pr{let y ← mx >>= oc}[q y] + Pr{let x ← mx}[D x] + ε₂ := by
     simpa only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
-      map_eq_bind_pure_comp, Function.comp_def,
-      bind_assoc, pure_bind] using hb
+      map_bind, bind_pure_comp] using hb
   exact hb'.trans (add_le_add (add_le_add le_rfl hD) le_rfl)
 
 /-- A bad world that certainly fires on disagreement absorbs that event's charge. The
@@ -136,17 +127,15 @@ theorem prEvent_bind_le_add_bad_of_disagree' {mx : m α}
   have hb := prEvent_bind_le_sum_add_of_support mx my q
     ![fun x ↦ q <$> oc x, fun x ↦ r <$> ob x] ε (by
       intro x hx
-      simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
-        ← prEvent_eq_evalDist_map]
+      simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one]
       by_cases hDx : D x
       · simpa only [hbad x hx hDx] using
-          (measure_le_one 𝒟[do let y ← my x; return q y] {True}).trans
+          (prEvent_le_one _).trans
             (le_add_right (le_add_left le_rfl) : (1 : ENNReal) ≤
               Pr{let y ← oc x}[q y] + 1 + ε)
       · exact h x hx hDx)
   simpa only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
-      map_eq_bind_pure_comp, Function.comp_def,
-    bind_assoc, pure_bind] using hb
+      map_bind, bind_pure_comp] using hb
 
 /-- A bad world that certainly fires on disagreement pays for the exceptional branches. -/
 theorem prEvent_bind_le_add_bad_of_disagree {mx : m α}
@@ -174,11 +163,10 @@ theorem prEvent_bind_le_add_bad_disagree {mx : m α}
     ![fun x ↦ q <$> oc x, fun x ↦ r <$> ob x, fun x ↦ pure (D x)] ε₂ (by
       intro x hx
       simp only [Fin.sum_univ_three, Matrix.cons_val_zero, Matrix.cons_val_one,
-        Matrix.cons_val_two, Matrix.head_cons, Matrix.tail_cons, ← prEvent_eq_evalDist_map,
-        evalDist_pure, Measure.dirac_apply_singleton_true]
+        Matrix.cons_val_two, Matrix.head_cons, Matrix.tail_cons, prEvent_pure_prop]
       by_cases hDx : D x
       · simpa only [ite_eq_left hDx] using
-          (measure_le_one 𝒟[do let y ← my x; return q y] {True}).trans
+          (prEvent_le_one _).trans
             (le_add_right (le_add_left le_rfl) : (1 : ENNReal) ≤
               (Pr{let y ← oc x}[q y] + Pr{let z ← ob x}[r z]) + 1 + ε₂)
       · simpa only [ite_eq_right hDx, add_zero] using h x hx hDx)
@@ -186,6 +174,5 @@ theorem prEvent_bind_le_add_bad_disagree {mx : m α}
       Pr{let z ← mx >>= ob}[r z] + Pr{let x ← mx}[D x] + ε₂ := by
     simpa only [Fin.sum_univ_three, Matrix.cons_val_zero, Matrix.cons_val_one,
       Matrix.cons_val_two, Matrix.head_cons, Matrix.tail_cons,
-      map_eq_bind_pure_comp, Function.comp_def,
-      bind_assoc, pure_bind, add_assoc] using hb
+      map_bind, bind_pure_comp, add_assoc] using hb
   exact hb'.trans (add_le_add (add_le_add le_rfl hD) le_rfl)

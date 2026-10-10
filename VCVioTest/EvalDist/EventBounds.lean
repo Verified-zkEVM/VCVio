@@ -154,7 +154,6 @@ section oracleUniverse
 universe u w
 
 variable {ι : Type u} {spec : OracleSpec.{u, w + 1} ι}
-  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
 
 /-- The AE sequencing API accepts oracle answers and results strictly above `Type 0`. -/
 example [OracleSpec.IsMeasureSpec spec]

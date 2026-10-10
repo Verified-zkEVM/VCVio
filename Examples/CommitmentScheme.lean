@@ -85,7 +85,7 @@ space, and `|S|` is the size of the salt space.
   `n·(n-1) / (2·|C|)` upper bound on cache collisions used by both the
   binding and extractability proofs.
 * Identical-until-bad bound
-  `measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDist_eq`
+  `measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`
   (`VCVio/ProgramLogic/Relational/SimulateQ/UntilBad.lean`): the per-salt
   distinguishing bound for the
   hiding proof.

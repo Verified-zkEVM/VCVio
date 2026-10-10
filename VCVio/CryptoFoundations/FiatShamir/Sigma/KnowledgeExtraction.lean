@@ -189,14 +189,8 @@ section probability
 
 variable [SampleableType Chal]
 
-/-- Replay's finite response spaces carry their discrete measurable structure. -/
-local instance : ∀ t, MeasurableSpace ((Fork.wrappedSpec Chal).Range t) := fun _ => ⊤
-
-local instance : ∀ t, DiscreteMeasurableSpace ((Fork.wrappedSpec Chal).Range t) :=
-  fun _ => inferInstance
-
 /-- The singleton replay challenge oracle uses uniform challenges. -/
-noncomputable local instance : IsUniformMeasureSpec (Fork.wrappedSpec Chal) :=
+noncomputable local instance : IsUniformMeasureSpec (Unit →ₒ Chal) :=
   IsUniformMeasureSpec.ofFiniteNonempty _
 
 /-- Forkable acceptance equals acceptance of the actual verifier for a bounded ordinary prover. -/
@@ -207,11 +201,8 @@ theorem forkable_acceptance_eq_verification
       let t ← Fork.runTrace σ hr M (proverWithFinalQuery σ hr M prover msg) pk
     }[(Fork.forkPoint _ _ _ M Q t).isSome] =
       Pr{let accepted ← knowledgeVerifyRun σ hr M prover pk msg}[accepted = true] := by
-  rw [knowledgeVerifyRun_eq_trace]
-  simp only [bind_map_left]
-  apply congrArg (fun μ : MeasureTheory.Measure Prop => μ {True})
-  apply evalDist_bind_congr_of_support
-  intro t ht
+  rw [knowledgeVerifyRun_eq_trace, prEvent_map]
+  refine prEvent_congr_of_support _ _ _ fun t ht => ?_
   rw [proverWithFinalQuery_forkable σ hr M prover pk msg Q hQ ht]
 
 /-- The concrete witness finder: execute the existing replay reduction on the ordinary prover

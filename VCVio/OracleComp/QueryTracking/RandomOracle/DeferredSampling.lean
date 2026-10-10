@@ -95,7 +95,7 @@ tape head-first. The outputs carry the discrete measurable structure, so the two
 measures agree on every event.
 
 A scheme establishes this by induction on its adversary computation: at an
-*answer-irrelevant* step the front tape commutes past the query (`evalDist_step_commute_tape`),
+*answer-irrelevant* step the front tape commutes past the query (`evalDistEq_step_commute_tape`),
 and at a *drawing* step the inline draw block is split off the front tape. -/
 def Factorizes {γ τ : Type} (run : ProbComp γ) (tape : ProbComp τ)
     (tapeRun : τ → ProbComp γ) : Prop :=
@@ -136,22 +136,22 @@ Given the per-continuation factorization `hcont` (supplied by the inductive hypo
 answer-irrelevant step commutes past the front draw block: the continuation is rewritten by `hcont`
 under the step bind, the front tape commutes past the answer-irrelevant step, and the inner step
 bind is re-associated into the mapped tape-step form. -/
-theorem evalDist_step_commute_tape {γ S Ans τ ρ : Type}
+theorem evalDistEq_step_commute_tape {γ S Ans τ ρ : Type}
     (step : ProbComp (Ans × S)) (tape : ProbComp τ)
     (proj : γ × ρ → γ × S)
     (defCont : Ans → S → ProbComp (γ × S))
     (tapeCont : Ans → S × τ → ProbComp (γ × ρ))
     (hcont : ∀ (a : Ans) (s' : S),
-      letI : MeasurableSpace (γ × S) := ⊤
-      𝒟[defCont a s'] = 𝒟[tape >>= fun t => proj <$> tapeCont a (s', t)]) :
-    letI : MeasurableSpace (γ × S) := ⊤
-    𝒟[step >>= fun p => defCont p.1 p.2] =
-      𝒟[tape >>= fun t =>
+      defCont a s' =ᵈ (tape >>= fun t => proj <$> tapeCont a (s', t))) :
+    (step >>= fun p => defCont p.1 p.2) =ᵈ
+      (tape >>= fun t =>
           proj <$>
-            (((fun p : Ans × S => (p.1, (p.2, t))) <$> step) >>= fun p => tapeCont p.1 p.2)] := by
+            (((fun p : Ans × S => (p.1, (p.2, t))) <$> step) >>= fun p => tapeCont p.1 p.2)) := by
+  refine evalDistEq_iff_evalDist_eq.mpr ?_
   let : MeasurableSpace (γ × S) := ⊤
   rw [evalDist_bind_congr_of_support step (fun p => defCont p.1 p.2)
-      (fun p => tape >>= fun t => proj <$> tapeCont p.1 (p.2, t)) fun p _ => hcont p.1 p.2,
+      (fun p => tape >>= fun t => proj <$> tapeCont p.1 (p.2, t))
+      fun p _ => (hcont p.1 p.2).evalDist_eq,
     OracleComp.evalDist_bind_bind_swap step tape]
   refine evalDist_bind_congr_of_support tape _ _ fun t _ => ?_
   rw [bind_map_left, map_bind]

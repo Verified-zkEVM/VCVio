@@ -29,8 +29,6 @@ namespace OracleSpec
 /-- The uniform measure interpretation induced by an existing uniform oracle specification. -/
 noncomputable instance (priority := 50) instIsUniformMeasureSpecOfIsUniformSpec
     {ι : Type u} {spec : OracleSpec.{u, v} ι}
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [IsUniformSpec spec] : IsUniformMeasureSpec spec :=
   IsUniformMeasureSpec.ofFiniteNonempty spec
 
@@ -39,13 +37,13 @@ end OracleSpec
 namespace OracleSpec.IsUniformMeasureSpec
 
 variable {ι : Type u} {spec : OracleSpec.{u, v} ι}
-  [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [IsUniformSpec spec] [IsUniformMeasureSpec spec]
 
 /-- Uniform measure and mass-function interpretations agree on every oracle answer type. -/
-instance instCompatible : PFunctor.IsMeasureSpec.Compatible spec.toPFunctor := by
-  refine ⟨fun t => ?_⟩
+instance instCompatible :
+    @PFunctor.IsMeasureSpec.Compatible spec.toPFunctor (fun _ ↦ ⊤) _ _ := by
+  refine @PFunctor.IsMeasureSpec.Compatible.mk spec.toPFunctor (fun _ ↦ ⊤) _ _ fun t => ?_
+  let : MeasurableSpace (spec.Range t) := ⊤
   rw [IsUniformMeasureSpec.toMeasure_eq_uniform t, IsUniformSpec.toPMF_eq_uniform t]
   apply Measure.ext_of_singleton
   intro x

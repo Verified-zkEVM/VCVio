@@ -197,7 +197,7 @@ lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest] (o
     simp only [simulateQ_pure, StateT.run_pure, StateT.run'_eq, map_pure]
     refine le_add_right (le_add_right (le_add_right (le_add_right (le_of_eq ?_))))
     refine prEvent_bind_congr _ _ _ _ _ fun gS => ?_
-    exact prEvent_congr_of_evalDist_eq _ _ (OracleComp.evalDist_bind_const _ _) _
+    exact (EvalDistEq.of_evalDist_eq (OracleComp.evalDist_bind_const _ _)).prEvent_eq _
   | query_bind t k ih =>
     cases t with
     | inl tag =>
@@ -361,8 +361,9 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
   let : MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest) := ⊤
   let : MeasurableSpace (Bool × UnlinkState TagId × UnlinkBadState TagId Nonce Digest) := ⊤
   -- **Step 1.** Replace the multiple-ideal LHS by the multiple-bad LHS (same output measure).
-  rw [← prEvent_congr_of_evalDist_eq _ _ (evalDist_multipleBad_run'_eq_multipleIdeal adversary
-      (UnlinkState.init, (∅ : ((TagId × Nonce) →ₒ Digest).QueryCache)) UnlinkBadState.init)]
+  rw [← (EvalDistEq.of_evalDist_eq (evalDist_multipleBad_run'_eq_multipleIdeal adversary
+      (UnlinkState.init, (∅ : ((TagId × Nonce) →ₒ Digest).QueryCache))
+      UnlinkBadState.init)).prEvent_eq]
   -- **Step 2.** Eagerize the M-side: the lazy `multipleBadQueryImpl` run distribution equals the
   -- `$ᵗ gM`-then-eager-table form, modulo the `(z.1, z.2.2)` map projection.
   have hM := evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending
@@ -381,7 +382,7 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
             (simulateQ (multipleBadTableHandler sessionsPerTag (OracleComp.tableExtending
                 (∅ : ((TagId × Nonce) →ₒ Digest).QueryCache) gM)) adversary).run
               (UnlinkState.init, UnlinkBadState.init))}[b = out] := by
-    have h := prEvent_congr_of_evalDist_eq _ _ hM (fun w => w.1 = out)
+    have h := (EvalDistEq.of_evalDist_eq hM).prEvent_eq (fun w => w.1 = out)
     simp only [StateT.run'_eq, prEvent_map, ← map_bind] at h ⊢
     exact h
   -- M-side bad-term rewrite: factor `z.2.2.bad = (z.2.bad) ∘ (z.1, z.2.2)` and apply `hM`.
@@ -395,12 +396,12 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
           (simulateQ (multipleBadTableHandler sessionsPerTag (OracleComp.tableExtending
               (∅ : ((TagId × Nonce) →ₒ Digest).QueryCache) gM)) adversary).run
             (UnlinkState.init, UnlinkBadState.init))}[z.2.bad] := by
-    have h := prEvent_congr_of_evalDist_eq _ _ hM (fun w => w.2.bad = true)
+    have h := (EvalDistEq.of_evalDist_eq hM).prEvent_eq (fun w => w.2.bad = true)
     rw [prEvent_map] at h
     exact h
   -- **Step 3.** Eagerize the S-side output term to `$ᵗ gS >>= singleTableHandler gS`.
   rw [hMsucc, hMbad,
-    prEvent_congr_of_evalDist_eq _ _ (evalDist_singleIdeal_run'_eq_tableSample adversary)]
+    (EvalDistEq.of_evalDist_eq (evalDist_singleIdeal_run'_eq_tableSample adversary)).prEvent_eq]
   -- Collapse `tableExtending ∅ g = g` on both M (over `TagId × Nonce`) and S (over the
   -- `(TagId × Fin sp) × Nonce` domain) sides.
   simp only [OracleComp.tableExtending_empty]
@@ -423,8 +424,8 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
             fun gS => pure (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)) >>= F := by
       simp
     rw [hR, evalDist_bind_of_discrete _ F, evalDist_bind_of_discrete _ F, hSZ]
-  rw [prEvent_congr_of_evalDist_eq _ _ (@hbridge _ ⊤ _),
-    prEvent_congr_of_evalDist_eq _ _ (@hbridge _ ⊤ _)]
+  rw [(EvalDistEq.of_evalDist_eq (@hbridge _ ⊤ _)).prEvent_eq,
+    (EvalDistEq.of_evalDist_eq (@hbridge _ ⊤ _)).prEvent_eq]
   -- **Step 4b.** Fine-shape bridges. The aux's signature carries an outer
   -- `gFine ← $ᵗ ((TagId × Fin sp) × Nonce → Digest)` binder and the Fine handler
   -- `multipleBadTableHandlerFine ... gFine`. Per-`gS`, marginalizing the Fine run over `gFine`
@@ -463,7 +464,7 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) gFine) adversary).run
                 (UnlinkState.init, UnlinkBadState.init))}[b = out] := by
     refine prEvent_bind_congr _ _ _ _ _ fun gS => ?_
-    have h := prEvent_congr_of_evalDist_eq _ _ (hFineEq gS).symm (fun z => z.1 = out)
+    have h := (EvalDistEq.of_evalDist_eq (hFineEq gS).symm).prEvent_eq (fun z => z.1 = out)
     simpa only [← map_bind, prEvent_map, Function.comp_def] using h
   have hbad_fine :
       Pr{let z ← (do
@@ -482,7 +483,7 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) gFine) adversary).run
                 (UnlinkState.init, UnlinkBadState.init))}[z.2.bad] := by
     refine prEvent_bind_congr _ _ _ _ _ fun gS => ?_
-    have h := prEvent_congr_of_evalDist_eq _ _ (hFineEq gS).symm (fun z => z.2.2.bad = true)
+    have h := (EvalDistEq.of_evalDist_eq (hFineEq gS).symm).prEvent_eq (fun z => z.2.2.bad = true)
     simpa only [← map_bind, prEvent_map, Function.comp_def] using h
   rw [hsucc_fine, hbad_fine]
   -- **Step 5.** Apply the DC aux at `c = ∅`, `s = UnlinkState.init`, `sB = UnlinkBadState.init`.

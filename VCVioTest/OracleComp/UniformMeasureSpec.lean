@@ -33,12 +33,30 @@ namespace VCVioTest.UniformMeasureSpec
 section DerivedMeasureSpec
 
 variable {ι : Type} {spec : OracleSpec ι}
-  [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformSpec spec]
+  [OracleSpec.IsUniformSpec spec]
 
 noncomputable example : OracleSpec.IsUniformMeasureSpec spec := inferInstance
 
 end DerivedMeasureSpec
+
+/-! ### One measure semantics per specification
+
+Every instance path to the measure semantics of `ProbComp`, and to the answer measures of a sum
+of the built-in specifications, agrees at instance transparency, so `rw` and `simp` never meet two
+spellings of one instance. -/
+
+example : (inferInstance : EvalDistSemantics ProbComp) =
+    @OracleComp.instEvalDistSemantics ℕ unifSpec
+      OracleSpec.IsUniformMeasureSpec.unifSpec.toIsMeasureSpec := by
+  with_reducible_and_instances rfl
+
+example : (inferInstance : OracleSpec.IsMeasureSpec (unifSpec + coinSpec)) =
+    OracleSpec.IsMeasureSpec.add (spec := unifSpec) coinSpec := by
+  with_reducible_and_instances rfl
+
+example : (inferInstance : OracleSpec.IsMeasureSpec (unifSpec + coinSpec)) =
+    (OracleSpec.IsUniformMeasureSpec.add (spec := unifSpec) coinSpec).toIsMeasureSpec := by
+  with_reducible_and_instances rfl
 
 example : OracleSpec.IsMeasureSpec.toMeasure (spec := coinSpec) () =
     (uniformOn Set.univ : Measure Bool) :=
@@ -48,8 +66,8 @@ example : 𝒟[(pure true : OracleComp coinSpec Bool)] = Measure.dirac true := b
   simp
 
 example : 𝒟[(HasQuery.query (spec := coinSpec) (m := OracleComp coinSpec) ())] =
-    (uniformOn Set.univ : Measure Bool) := by
-  simp
+    (uniformOn Set.univ : Measure Bool) :=
+  OracleComp.evalDist_query_uniform (spec := coinSpec) ()
 
 example (mx : OracleComp coinSpec Bool) :
     Pr{let b ← mx}[b] = 𝒟[mx] {true} := by

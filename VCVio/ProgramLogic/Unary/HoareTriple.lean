@@ -77,8 +77,6 @@ lemma propInd_not {P : Prop} : propInd (¬P) = 1 - propInd P := by
 
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)]
 variable {α β σ : Type}
 
 section Native
@@ -374,8 +372,7 @@ lemma prEvent_eq_wp_indicator (oa : OracleComp spec α) (p : α → Prop)
 
 /-- Native event probability is WP of its proposition indicator. -/
 lemma prEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι}
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
+    [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← oa}[p x] = wp oa (fun x => propInd (p x)) := by
   classical
@@ -433,13 +430,15 @@ theorem wp_eq_tsum [∀ t, Finite (spec.Range t)] (oa : OracleComp spec α) (pos
 @[game_rule] theorem wp_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp (query t : OracleComp spec (spec.Range t)) post =
       ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := by
-  rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query]
+  let : MeasurableSpace (spec.Range t) := ⊤
+  rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query, trim_eq_self]
 
 /-- Lifting a primitive query has the same native expectation rule. -/
 theorem wp_liftM_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp (liftM (query t) : OracleComp spec (spec.Range t)) post =
       ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := by
-  rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query]
+  let : MeasurableSpace (spec.Range t) := ⊤
+  rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query, trim_eq_self]
 
 /-- The ergonomic query interface integrates the configured answer measure. -/
 @[game_rule] theorem wp_HasQuery_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
@@ -455,6 +454,7 @@ theorem wp_query_uniform [OracleSpec.IsUniformMeasureSpec spec]
     (t : spec.Domain) [Fintype (spec.Range t)] (post : spec.Range t → ℝ≥0∞) :
     wp (query t : OracleComp spec (spec.Range t)) post =
       ∑ u, (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ * post u := by
+  let : MeasurableSpace (spec.Range t) := ⊤
   rw [wp_query, OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]
   rw [lintegral_fintype]
   apply Finset.sum_congr rfl

@@ -16,7 +16,8 @@ public import Mathlib.Tactic.GRewrite
 /-!
 # Generalized congruence and rewriting
 
-Ordinary-import tests for probability, support, cost predicates, and measure bind. Terminal
+Ordinary-import tests for probability, equality in distribution, support, cost predicates, and
+measure bind. Terminal
 examples exercise `gcongr`, `grw`, and `rel`; interactive examples pin the obligations exposed by
 congruence and rewrite normalization. Dated gap pairs distinguish partial progress from closure.
 The companion `GeneralizedRelationsExperiments` module isolates proposed registrations.
@@ -104,7 +105,7 @@ example (f' g' : α → ProbComp β) (p : β → Prop)
     (h : ∀ x ∈ support mx, Pr{let y ← f' x}[p y] ≤ Pr{let y ← g' x}[p y]) :
     Pr{let y ← mx >>= f'}[p y] ≤ Pr{let y ← mx >>= g'}[p y] := by
   -- gap(gcongr, 2026-09-08): bind probability needs the expectation normal form.
-  fail_if_success (gcongr; done)
+  fail_if_success gcongr
   simp only [prEvent_eq_wp_propInd, wp_bind] at h ⊢
   grw [h]
   assumption
@@ -130,6 +131,28 @@ example (a b c d : ℝ≥0∞) (hab : a ≤ b) (hcd : c ≤ d) : a + c ≤ b + d
   rel [hab, hcd]
 
 end Probability
+
+/-! ## Equality in distribution rewrites through congruence and transitivity -/
+
+section EqualInDistribution
+
+variable {α β γ : Type} {oa ob oc : ProbComp α}
+variable {f g : α → ProbComp β} {k l : β → ProbComp γ}
+
+example (h : oa =ᵈ ob) : oa >>= f =ᵈ ob >>= f := by gcongr
+
+example (h : oa =ᵈ ob) (hbc : ob =ᵈ oc) : oa =ᵈ oc := by grw [h, hbc]
+
+example (h : oa =ᵈ ob) : oa >>= f =ᵈ ob >>= f := by grw [h]
+
+example (h : oa =ᵈ ob) (p : α → β) : p <$> oa =ᵈ p <$> ob := by grw [h]
+
+example (h : oa =ᵈ ob) (hfg : ∀ x, f x =ᵈ g x) (hkl : ∀ y, k y =ᵈ l y) :
+    (oa >>= f) >>= k =ᵈ (ob >>= g) >>= l := by grw [h, hfg, hkl]
+
+example (h : oa =ᵈ ob) (hfg : ∀ x, f x =ᵈ g x) : oa >>= f =ᵈ ob >>= g := by grw [h, hfg]
+
+end EqualInDistribution
 
 /-! ## Reachability does not require probability semantics -/
 

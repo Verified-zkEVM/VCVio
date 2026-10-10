@@ -99,8 +99,7 @@ theorem fst_map_costDist [AddCommMonoid ω] (oa : OracleComp spec α) (cm : Cost
 section ExpectedCost
 
 variable [AddCommMonoid ω] [MeasurableSpace ω]
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
+variable [IsMeasureSpec spec]
 
 /-- The expected total cost of `oa` under cost model `cm`, valued by `val : ω → ℝ≥0∞`.
 Computed as the Lebesgue integral `∫⁻ (x, c), val c ∂𝒟[costDist oa cm]`.
@@ -210,8 +209,7 @@ theorem WorstCaseCostBound.bind [AddCommMonoid ω] [PartialOrder ω] [IsOrderedA
 section CostBounds
 
 variable [AddCommMonoid ω] [MeasurableSpace ω]
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
+variable [IsMeasureSpec spec]
 
 /-- The expected cost of `oa` under `cm` (valued by `val`) is at most `bound`. -/
 def ExpectedCostBound (oa : OracleComp spec α) (cm : CostModel spec ω)
@@ -382,8 +380,7 @@ theorem IsPerIndexQueryBound.toWorstCaseCostBound_unit_sum
 worst-case bound `toWorstCaseCostBound_unit_sum`. -/
 theorem IsPerIndexQueryBound.toExpectedCostBound_unit_sum
     [DecidableEq ι] [Fintype ι]
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
+    [IsMeasureSpec spec]
     {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : IsPerIndexQueryBound oa qb) :
     ExpectedCostBound oa CostModel.unit (fun n => (n : ENNReal)) (∑ i, qb i) := by

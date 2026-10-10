@@ -93,7 +93,8 @@ private lemma evalDist_uniformSample_vector_succ_pair [SampleableType S] [Sample
       𝒟[($ᵗ (List.Vector O (N + 1)))] =
         𝒟[(do let p ← $ᵗ (S × O); (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N)))]) := by
   let : MeasurableSpace (List.Vector O (N + 1)) := ⊤
-  rw [SampleableType.evalDist_uniformSample_vector_succ, SampleableType.uniformSample_prod_eq_bind]
+  rw [(SampleableType.evalDistEq_uniformSample_vector_succ N).evalDist_eq,
+    SampleableType.uniformSample_prod_eq_bind]
   simp only [bind_assoc, pure_bind, map_eq_bind_pure_comp, Function.comp_def]
   exact (OracleComp.evalDist_bind_const _ _).symm
 
@@ -219,7 +220,7 @@ private lemma simulateQ_prfReal_reduction [SampleableType S] (k : K) (n : ℕ)
 the real PRF experiment for the reduction adversary, provided the PRF key
 distribution is uniform. -/
 theorem prgRealExperiment_eq_prfRealExperiment [SampleableType K] [SampleableType S]
-    (hkey : (letI : MeasurableSpace K := ⊤; 𝒟[prf.keygen] = 𝒟[$ᵗ K]))
+    (hkey : prf.keygen =ᵈ ($ᵗ K : ProbComp K))
     (adv : PRGAdversary (List.Vector O n)) :
     𝒟[PRGScheme.prgRealExperiment (streamPRG prf n) adv] =
       𝒟[PRFScheme.prfRealExperiment prf (prfReduction (S := S) (O := O) n adv)] := by
@@ -229,7 +230,7 @@ theorem prgRealExperiment_eq_prfRealExperiment [SampleableType K] [SampleableTyp
     fun ks => adv (streamOutputs (prf.eval ks.1) n ks.2)] = _
   simp only [monad_norm, Function.comp_def]
   let : MeasurableSpace K := ⊤
-  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete, hkey]
+  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete, hkey.evalDist_eq]
 
 /-- The ideal PRG experiment for the stream adversary is exactly: sample a uniform output
 vector and run the adversary on it. -/
@@ -559,7 +560,7 @@ theorem prfIdealGap_le_collisionProb (adv : PRGAdversary (List.Vector O n)) :
 bounded by the PRF advantage of the reduction plus the collision probability in the
 ideal random-function world. -/
 theorem security [SampleableType K]
-    (hkey : (letI : MeasurableSpace K := ⊤; 𝒟[prf.keygen] = 𝒟[$ᵗ K]))
+    (hkey : prf.keygen =ᵈ ($ᵗ K : ProbComp K))
     (adv : PRGAdversary (List.Vector O n)) :
     PRGScheme.prgAdvantage (streamPRG prf n) adv ≤
       PRFScheme.prfAdvantage prf (prfReduction (S := S) (O := O) n adv) +
@@ -703,7 +704,7 @@ theorem collisionProb_le_birthday [Fintype S] (n : ℕ) :
 PRF advantage of the reduction plus the birthday term `n·(n-1) / (2·|S|)`, obtained by combining
 `security` with `collisionProb_le_birthday`. -/
 theorem security_birthday [Fintype S] [SampleableType K]
-    (hkey : (letI : MeasurableSpace K := ⊤; 𝒟[prf.keygen] = 𝒟[$ᵗ K]))
+    (hkey : prf.keygen =ᵈ ($ᵗ K : ProbComp K))
     (adv : PRGAdversary (List.Vector O n)) :
     PRGScheme.prgAdvantage (streamPRG prf n) adv ≤
       PRFScheme.prfAdvantage prf (prfReduction (S := S) (O := O) n adv) +

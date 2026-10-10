@@ -31,8 +31,7 @@ namespace OracleComp.Rel.Probabilistic
 
 variable {ι₁ ι₂ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
-variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
-  [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
+variable [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
 variable {α β γ δ : Type}
 
 /-! ## Bound: `eRelWP` on a `Prob`-valued post is always `≤ 1`
@@ -58,9 +57,7 @@ private theorem rwpVal_le_one (oa : OracleComp spec₁ α) (ob : OracleComp spec
     (post : α → β → Prob) : rwpVal oa ob post ≤ 1 :=
   eRelWP_le_one_of_post_le_one oa ob _ (fun a b => (post a b).val_le_one)
 
-variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
-  [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
+variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
 /-- Relational coupling expectations restricted to probability-valued assertions.
 Enable with `open scoped OracleComp.Rel.Probabilistic`. -/

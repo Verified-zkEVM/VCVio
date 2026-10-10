@@ -246,6 +246,28 @@ theorem evalDist_lift (a : P.A) :
     𝒟[(FreeM.lift a : FreeM P (P.B a))] = IsMeasureSpec.toMeasure a :=
   denote_lift a
 
+/-- A one-operation program observed in a coarser measurable structure on its answers denotes the
+configured answer measure trimmed to that structure. -/
+theorem evalDist_lift_of_le (a : P.A) {m : MeasurableSpace (P.B a)}
+    (hm : m ≤ ‹∀ a, MeasurableSpace (P.B a)› a) :
+    @evalDist (FreeM P) _ (P.B a) m (FreeM.lift a) = (IsMeasureSpec.toMeasure a).trim hm := by
+  have hid : Measurable[‹∀ a, MeasurableSpace (P.B a)› a, m] (id : P.B a → P.B a) :=
+    fun _ hs => hm _ hs
+  have hdirac : Measurable[‹∀ a, MeasurableSpace (P.B a)› a]
+      (fun b => @Measure.dirac (P.B a) m b) :=
+    (@Measure.measurable_dirac _ m).comp hid
+  have hcont : AEMeasurable (fun b => @denote P _ _ (P.B a) m (pure b))
+      (IsMeasureSpec.toMeasure a) := by
+    simp only [denote_pure]
+    exact hdirac.aemeasurable
+  change @denote P _ _ (P.B a) m (FreeM.liftBind a pure) = _
+  rw [@denote_liftBind P _ _ (P.B a) m a pure hcont]
+  simp only [denote_pure]
+  ext s hs
+  rw [Measure.bind_apply hs hdirac.aemeasurable, trim_measurableSet_eq hm hs]
+  simp only [Measure.dirac_apply' _ hs]
+  exact lintegral_indicator_one (hm _ hs)
+
 /-- A single operation denotes a probability measure, including for continuous answer spaces. -/
 theorem isProbabilityMeasure_evalDist_lift (a : P.A) :
     IsProbabilityMeasure 𝒟[(FreeM.lift a : FreeM P (P.B a))] := by

@@ -129,8 +129,6 @@ noncomputable abbrev signAttemptAbortProbability
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) : ENNReal :=
   𝒟[signAttemptAborts ids M runtime pk sk msg] {True}
 
-variable [LawfulMonad m]
-
 omit [LawfulEvalDistSemantics m] in
 /-- Single-attempt abort probability is the final event that the attempt returns no response. -/
 @[simp]
@@ -141,6 +139,8 @@ lemma signAttemptAbortProbability_eq_prEvent
         (fun [HasQuery (M × Commit →ₒ Chal) m] ↦
           fsAbortSignAttempt (m := m) ids M pk sk msg) runtime}[attempt.2 = none] :=
   (prEvent_eq_evalDist_map _ _).symm
+
+variable [LawfulMonad m]
 
 private lemma signLoop_probNone_succ
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ) :

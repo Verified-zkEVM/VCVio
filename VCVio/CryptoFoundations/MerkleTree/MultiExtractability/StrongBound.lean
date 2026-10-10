@@ -425,7 +425,7 @@ terminal interface needed by global sequential accounting: earlier commitment ph
 different residual budget on every supported branch. -/
 private theorem Adversary.prEvent_terminalExecution_le_of_freshTarget
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     {config : Configuration Cfg Address}
@@ -515,7 +515,7 @@ and charged separately through `verifierOverhead`. The conclusion bounds the ful
 strong failure event under one shared cached homogeneous random oracle. -/
 theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
@@ -566,7 +566,7 @@ paths cost at most `perClaim` yield the explicit verifier overhead
 `openingCount * perClaim`. -/
 theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound_and_openingCountBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
@@ -592,7 +592,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound_and_openingCount
 `perCheckpoint` nodes contributed by each selected configuration. -/
 theorem anyCheckpointDisagreement_rom_bound_uniformShape
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
@@ -613,7 +613,7 @@ theorem anyCheckpointDisagreement_rom_bound_uniformShape
 and terminal opening bound. -/
 theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
@@ -646,7 +646,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds
 `perClaim`, gives verifier overhead `openingCount * perClaim`. -/
 theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds_and_openingCountBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
@@ -679,7 +679,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds_and_openingCount
 theorem. -/
 theorem openingOrEqualRootDisagreement_rom_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
@@ -703,7 +703,7 @@ theorem openingOrEqualRootDisagreement_rom_bound_of_prefixQueryBound
 /-- Coarse binomial relaxation of the global-adversarial-`q` theorem. -/
 theorem anyCheckpointDisagreement_binomial_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
@@ -727,7 +727,7 @@ theorem anyCheckpointDisagreement_binomial_bound_of_prefixQueryBound
 /-- Quadratic relaxation of the global-adversarial-`q` theorem. -/
 theorem anyCheckpointDisagreement_quadratic_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)

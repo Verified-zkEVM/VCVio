@@ -162,9 +162,10 @@ theorem prEvent_uniformTable_update (t : D) (event : (∀ d, R d) → Prop) :
     Pr{let g ← $ᵗ (∀ d, R d)}[event g] =
       Pr{let u ← $ᵗ (R t); let g ← $ᵗ (∀ d, R d)}[event (Function.update g t u)] := by
   let : ∀ d, MeasurableSpace (R d) := fun _ => ⊤
-  exact congrArg (fun μ : Measure Prop => μ {True})
-    (evalDist_bind_bind_update_map_dependent t ($ᵗ (R t)) ($ᵗ (∀ d, R d))
-      SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample event).symm
+  have h := (evalDist_bind_bind_update_map_dependent t ($ᵗ (R t)) ($ᵗ (∀ d, R d))
+    SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample event).symm
+  simpa only [prEvent_norm, evalDist_singleton_true] using
+    congrArg (fun μ : Measure Prop => μ {True}) h
 
 /-- A pointwise cell-resampling bound remains valid after fixing a cache
 not containing that cell. -/
@@ -176,18 +177,16 @@ theorem prEvent_completeTable_cell_le (c : (OracleSpec.ofFn R).QueryCache) (t : 
   let : MeasurableSpace (∀ d, R d) := ⊤
   rw [prEvent_uniformTable_update t]
   simp_rw [← completeTable_update_of_none c _ hc]
+  let : MeasurableSpace Prop := ⊤
   have hswap := evalDist_bind_bind_swap_of_countable ($ᵗ (R t)) ($ᵗ (∀ d, R d))
     (fun u g => pure (bad t (Function.update (completeTable c g) t u)))
-  change (𝒟[do
-    let u ← $ᵗ (R t)
-    let g ← $ᵗ (∀ d, R d)
-    pure (bad t (Function.update (completeTable c g) t u))]) {True} ≤ ε
-  rw [hswap]
-  simpa only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc,
-              pure_bind, id_eq] using
+  have h' := (EvalDistEq.of_evalDist_eq hswap).prEvent_eq id
+  simp only [prEvent_norm, id_eq] at h'
+  rw [h']
+  simpa only [prEvent_norm, id_eq] using
     (prEvent_bind_le_of_forall_le ($ᵗ (∀ d, R d))
-    (fun g => (fun u => bad t (Function.update (completeTable c g) t u)) <$> ($ᵗ (R t)))
-    id (fun g => by simpa using hbad (completeTable c g)))
+      (fun g => (fun u => bad t (Function.update (completeTable c g) t u)) <$> ($ᵗ (R t)))
+      id (fun g => by simpa only [prEvent_norm, id_eq] using hbad (completeTable c g)))
 
 /-- Expose a fresh response before continuing the actual adaptive computation
 under the extended cache. -/
@@ -261,8 +260,8 @@ theorem prEvent_randomOracle_le_of_bad_queries_finite (oa : OracleComp (ofFn R) 
   let : MeasurableSpace α := ⊤
   have heager := evalDist_simulateQ_randomOracle_run'_eq_completeTable oa ∅
   simp only [completeTable_empty] at heager
-  rw [prEvent_congr_of_evalDist_eq _ _ heager event]
-  simp only [bind_assoc, pure_bind]
+  rw [(EvalDistEq.of_evalDist_eq heager).prEvent_eq event]
+  simp only [prEvent_norm]
   exact (prEvent_mono ($ᵗ (∀ d, R d)) _ _ htrace).trans
     (prEvent_tableQueryLog_bad_le oa n hbound bad ε hbad)
 
@@ -315,8 +314,8 @@ theorem prEvent_randomOracle_le_of_bad_queries_weighted_finite (oa : OracleComp 
   let : MeasurableSpace α := ⊤
   have heager := evalDist_simulateQ_randomOracle_run'_eq_completeTable oa ∅
   simp only [completeTable_empty] at heager
-  rw [prEvent_congr_of_evalDist_eq _ _ heager event]
-  simp only [bind_assoc, pure_bind]
+  rw [(EvalDistEq.of_evalDist_eq heager).prEvent_eq event]
+  simp only [prEvent_norm]
   refine (prEvent_mono ($ᵗ (∀ d, R d)) _ _ htrace).trans ?_
   simpa [freshBadQuery, completeTable_empty] using
     prEvent_freshBadQuery_le_weighted oa error B hbound ∅ bad hbad

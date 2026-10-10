@@ -78,7 +78,6 @@ theorem fst_map_run_simulateQ {oa : OracleComp spec α} {qb : ι → ℕ}
 section Probability
 
 variable {ι : Type} {spec : OracleSpec ι} {α : Type} [DecidableEq ι]
-  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [IsMeasureSpec spec]
 
 /-- A structural query bound makes its budget check redundant in the counting event. -/

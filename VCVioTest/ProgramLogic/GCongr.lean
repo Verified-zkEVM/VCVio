@@ -35,8 +35,7 @@ namespace VCVioTest.ProgramLogicGCongr
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
-  [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+  [OracleSpec.IsMeasureSpec spec]
 
 example (P Q : Prop) (h : P → Q) : propInd P ≤ propInd Q := by apply_rw [h]
 

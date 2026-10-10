@@ -72,8 +72,7 @@ lemma run_nil {t : spec₀.Domain} {seed : QuerySeed spec₀} (h : seed t = []) 
     (eagerRandomOracle t).run seed = (·, seed) <$> ($ᵗ spec₀.Range t) := by
   rw [apply_eq, StateT.run_mk, h]
 
-variable [∀ t, MeasurableSpace (spec₀.Range t)] [∀ t, DiscreteMeasurableSpace (spec₀.Range t)]
-  [OracleSpec.IsUniformMeasureSpec spec₀]
+variable [OracleSpec.IsUniformMeasureSpec spec₀]
 
 /-- With an empty seed, the eager random oracle reduces to uniform sampling: every query falls
 through to a fresh uniform answer with no state change. -/
@@ -82,6 +81,7 @@ theorem evalDist_simulateQ_run'_empty {α : Type} [MeasurableSpace α] (oa : Ora
   induction oa using OracleComp.inductionOn with
   | pure a => simp [simulateQ_pure]
   | query_bind t f ih =>
+    let : MeasurableSpace (spec₀.Range t) := ⊤
     rw [simulateQ_bind,
       show simulateQ eagerRandomOracle (liftM (query t)) = eagerRandomOracle t by
         rw [simulateQ_query]; simp [OracleQuery.cont_query, OracleQuery.input_query, id_map]]
@@ -138,7 +138,6 @@ This is the analog of `seededOracle.evalDist_liftComp_generateSeed_bind_simulate
 theorem eagerRandomOracle_evalDist_generateSeed_bind {ι₀ : Type} [DecidableEq ι₀]
     {spec₀ : OracleSpec.{0, 0} ι₀}
     [∀ t : spec₀.Domain, SampleableType (spec₀.Range t)]
-    [∀ t, MeasurableSpace (spec₀.Range t)] [∀ t, DiscreteMeasurableSpace (spec₀.Range t)]
     [OracleSpec.IsUniformMeasureSpec spec₀]
     {α : Type} [MeasurableSpace α] (oa : OracleComp spec₀ α) (qc : ι₀ → ℕ) (js : List ι₀) :
     𝒟[do
@@ -149,6 +148,7 @@ theorem eagerRandomOracle_evalDist_generateSeed_bind {ι₀ : Type} [DecidableEq
   induction oa using OracleComp.inductionOn with
   | pure a => intro qc js; simp
   | query_bind t f ih =>
+    let : MeasurableSpace (spec₀.Range t) := ⊤
     intro qc js
     have hsimQ : ∀ seed : QuerySeed spec₀,
         (simulateQ eagerRandomOracle (liftM (query t) >>= f)).run' seed =
@@ -167,8 +167,7 @@ theorem eagerRandomOracle_evalDist_generateSeed_bind {ι₀ : Type} [DecidableEq
         fun u => ih u qc js
     · -- Every generated seed starts with a uniform answer at `t`, consumed by the query.
       have hpos : 0 < qc t * js.count t := Nat.pos_of_ne_zero hcount
-      rw [evalDist_bind_congr_of_evalDist_eq _ _
-        (evalDist_generateSeed_eq_prependValues spec₀ qc js hpos)]
+      rw [((evalDistEq_generateSeed_prependValues spec₀ qc js hpos).bind_left _).evalDist_eq]
       simp only [bind_assoc, pure_bind]
       refine evalDist_bind_eq_query_bind_of_uniform t _ SampleableType.evalDist_uniformSample _ f
         fun u => ?_

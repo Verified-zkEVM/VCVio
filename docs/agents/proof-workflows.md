@@ -4,7 +4,7 @@
 
 **What are you trying to prove?**
 
-1. **Two games have the same distribution** (`g₁ ≡ₚ g₂`):
+1. **Two games have the same distribution** (`g₁ =ᵈ g₂`):
    → `by_equiv` to enter relational mode, then use `rvcstep` / `rvcgen`
    → Add `using ...` when the current relational step needs an explicit witness
 
@@ -22,7 +22,7 @@
    → Use `simp` with project simp lemmas
    → Use `vcstep`, `vcstep rw`, or `vcstep rw congr'` for probability equalities
 
-4. **Multi-hop security proof** (`g₁ ≡ₚ gₙ`):
+4. **Multi-hop security proof** (`g₁ =ᵈ gₙ`):
    → `game_trans g₂` to split into two goals, repeat
 
 5. **Need to swap sampling order**:
@@ -87,7 +87,7 @@ def hybrid (adversary : ...) (k : ℕ) : ProbComp Bool := do
 
 ```lean
   game_trans (hybrid adversary 1)
-  · -- prove hybrid 0 ≡ₚ hybrid 1
+  · -- prove hybrid 0 =ᵈ hybrid 1
     by_equiv
     ...
   · game_trans (hybrid adversary 2)
@@ -147,7 +147,7 @@ examples under `Examples/ProgramLogic/`.
 ### `by_equiv` + relational decomposition
 
 ```lean
--- Goal: g₁ ≡ₚ g₂
+-- Goal: g₁ =ᵈ g₂
 by_equiv                    -- now: ⟪g₁ ~ g₂ | EqRel α⟫
 rvcstep using R         -- if needed, provide the bind cut relation
 · rvcstep using f       -- couples the sampling step with a bijection

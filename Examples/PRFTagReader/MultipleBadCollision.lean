@@ -68,16 +68,19 @@ lemma multipleBadStep_bad_le
     Pr{let z ← ((multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inl tag))
       ((s, c), sB))}[z.2.2.bad = true] ≤ (sB.sessionsUsed tag : ℝ≥0∞) * maxNonceProb := by
   rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)]
-  simp only [bind_assoc, pure_bind]
   by_cases hslot : s.sessionsUsed tag < sessionsPerTag
   · rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot]
+    -- The run's answer type is the tag oracle's range only up to unfolding the specification.
+    erw [bind_assoc]
     -- `bad` fires exactly when the fresh nonce is already cached for this tag.
     refine (prEvent_bind_le_prEvent_add_of_support _ _
       (fun nonce => (sB.responses (tag, nonce)).isSome = true) _
       fun nonce _ hcached => le_of_eq (prEvent_eq_zero_of_forall_mem_support _ _
         fun z hz => ?_)).trans ?_
-    · obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-      subst hz
+    · obtain ⟨r, hr, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
+      obtain ⟨step, _, hr⟩ := (mem_support_bind_iff _ _ _).mp hr
+      erw [support_pure, Set.mem_singleton_iff] at hr
+      subst hz hr
       simp [multipleBadAdvance, hbad, Bool.eq_false_iff.mpr hcached]
     rw [add_zero]
     obtain ⟨S, hScard, hS⟩ := hbounded tag
@@ -315,7 +318,7 @@ theorem multipleBad_bad_le_sessionCollisionBound
       ((sessionsPerTag ^ 2 * Fintype.card TagId : ℕ) : ℝ) * maxNonceProb := by
   have hmax_ENNReal : ∀ n : Nonce,
       Pr{let x ← ($ᵗ Nonce : ProbComp Nonce)}[x = n] ≤ ENNReal.ofReal maxNonceProb := fun n =>
-    (ENNReal.le_ofReal_iff_toReal_le (ne_top_of_le_ne_top one_ne_top (prEvent_le_one _ _))
+    (ENNReal.le_ofReal_iff_toReal_le (ne_top_of_le_ne_top one_ne_top (prEvent_le_one _))
       (ENNReal.toReal_nonneg.trans (hmax n))).2 (hmax n)
   rw [← prEvent_eq_evalDist_singleton, prEvent_map]
   have hcore := simulateQ_multipleBad_prob_le (sessionsPerTag := sessionsPerTag)

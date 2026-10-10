@@ -29,8 +29,7 @@ open ENNReal OracleComp.ProgramLogic OracleComp.ProgramLogic.PropLogic
 namespace OracleComp.WP.Coherence
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
+variable [OracleSpec.IsUniformMeasureSpec spec]
 variable {α : Type}
 
 /-! ## Probabilistic ↔ Quantitative

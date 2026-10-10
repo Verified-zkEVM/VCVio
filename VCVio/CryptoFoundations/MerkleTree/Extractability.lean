@@ -424,7 +424,7 @@ private lemma extractability_rest_win_implies_fresh_target_of_invariants [Decida
 opening budget. Its hypotheses are precisely the log/cache invariants maintained by the
 combined caching-and-logging interpreter used in the stopping-time proof below. -/
 private lemma extractability_rest_noCollision_le_of_opening_bound [DecidableEq Query]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
@@ -481,7 +481,7 @@ combined adversary budget; a miss additionally pays for the at most `cached` res
 would create a collision. When the commit stops, the suffix theorem pays for at most
 `targetCount * (remaining + depth)` fresh-target opportunities. -/
 private lemma extractabilityRunFrom_le_potential [DecidableEq Query]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address) (𝒜 : Adversary Query Y s)
@@ -545,7 +545,7 @@ private lemma extractabilityRunFrom_le_potential [DecidableEq Query]
 /-- Initialize the stopping-time induction at the empty cache and empty log, then transport
 the combined caching/logging semantics back to `extractabilityExperiment`. -/
 private lemma extractability_win_le_stopping_bound [DecidableEq Query]
-    [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
@@ -592,7 +592,7 @@ The finite maximum tracks fresh commit inputs rather than conditioning on a real
 length. The proof is therefore valid when the adversary adaptively decides when to stop its
 commit phase and when it repeats cached queries. -/
 theorem extractability_rom_bound [DecidableEq Query]
-    [Fintype Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Fintype Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
@@ -681,7 +681,7 @@ private lemma extractabilityROMErrorNumerator_le_coarse (s : Skeleton) (qb : ℕ
 /-- Unconditional two-endpoint relaxation of the unrelaxed finite maximum. This is the direct
 counterpart of the maximum appearing before the final case split in the source proof. -/
 theorem extractability_rom_bound_coarse [DecidableEq Query]
-    [Fintype Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Fintype Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
@@ -697,7 +697,7 @@ theorem extractability_rom_bound_coarse [DecidableEq Query]
 
 /-- Once `qb ≥ 2T + 1`, the birthday endpoint dominates the other coarse endpoint. -/
 theorem extractability_rom_bound_birthday_dominates [DecidableEq Query]
-    [Fintype Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Fintype Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
@@ -721,7 +721,7 @@ theorem extractability_rom_bound_birthday_dominates [DecidableEq Query]
 `2·T·depth ≤ qb`; these two explicit conditions are weaker than the convenient single
 condition used in the Chiesa–Yogev presentation. -/
 theorem extractability_rom_bound_quadratic [DecidableEq Query]
-    [Fintype Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [Fintype Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)

@@ -128,8 +128,7 @@ example (answer : Bool) : (coinMachine 0).head (some answer) = Sum.inl answer :=
 
 /-- The certified query has the canonical fair-coin distribution under native measures. -/
 example (n : ℕ) (answer : Bool) : 𝒟[coinProgram n ()] {answer} = (2 : ℝ≥0∞)⁻¹ := by
-  simp only [coinProgram, OracleComp.evalDist_liftM_query,
-    OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn,
+  simp only [coinProgram, OracleComp.evalDist_liftM_query_uniform (spec := coinSpec) (),
     ProbabilityTheory.uniformOn_univ_apply_singleton]
   norm_num
 

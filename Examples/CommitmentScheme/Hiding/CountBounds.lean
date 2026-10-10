@@ -898,7 +898,7 @@ lemma bad_indicator_le_queryBound_of_mem_support_run_hidingImplCountAll
 The bounds below evaluate probabilities and weakest preconditions over `CMOracle M S C`, whose
 uniform interpretation needs a finite inhabited commitment type with measurable singletons. -/
 
-variable [Finite C] [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C]
+variable [Finite C] [Inhabited C]
 
 /-- Probability bridge for bad events:
 `Pr[bad]` under `hidingImpl₁ s` is equal to the corresponding event on the
@@ -1136,8 +1136,7 @@ abbrev HidingAvgSpec (M : Type) (S : Type) (C : Type) :=
   (Unit →ₒ S) + CMOracle M S C
 
 /-- Uniform sampling of a salt in its chosen finite response space. -/
-noncomputable instance unitArrowSpecIsUniformMeasureSpec (S : Type) [Fintype S] [Inhabited S]
-    [MeasurableSpace S] [MeasurableSingletonClass S] :
+noncomputable instance unitArrowSpecIsUniformMeasureSpec (S : Type) [Fintype S] [Inhabited S] :
     OracleSpec.IsUniformMeasureSpec (Unit →ₒ S) :=
   OracleSpec.IsUniformMeasureSpec.ofFiniteNonempty _
 
