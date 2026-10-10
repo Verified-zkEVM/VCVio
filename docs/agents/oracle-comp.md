@@ -319,8 +319,8 @@ noncomputable instance [IsProbabilitySpec spec] : MonadLiftT (OracleComp spec) P
 The primary `evalDist` / `𝒟[…]` façade is the successful-output Mathlib measure. Whenever an
 `IsMeasureSpec` is installed, `FreeM.evalDist_eq_denote` identifies it definitionally with the
 direct recursive measure fold (`𝒟[…]` stays the public head; the lemma is a transport, not a
-simp rule). `Pr[...]` stays a scalar adapter; `evalDist_apply_singleton`, `evalDist_apply_setOf`,
-`evalDist_apply_univ` and `lintegral_evalDist` cross that boundary as explicit rewrites. None of
+simp rule). `Pr[...]` stays a scalar adapter; `evalDist_apply_singleton`, `evalDist_apply_setOf`
+and `evalDist_apply_univ` cross that boundary as explicit rewrites. None of
 them is a default `simp` rule, so `simp` keeps a measure goal in measure normal form.
 
 Deprecated uniform `PMF` response semantics are supplied by `[IsUniformSpec spec]`, which bundles `∀ t, Fintype (spec.Range t)`, `∀ t, Inhabited (spec.Range t)`, `[IsProbabilitySpec spec]`, and a proof that `toPMF` is `PMF.uniformOfFintype`. The bridge from `support` to `SPMF.support 𝒮[...]` is `EvalDistCompatible (OracleComp spec)` and also requires `[IsUniformSpec spec]`.
