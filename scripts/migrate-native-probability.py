@@ -272,6 +272,40 @@ RENAMES: dict[str, str] = {
     "MeasureProgramLogic": "ExpectationWP",
     "OracleComp.Qualitative": "OracleComp.Necessary",
     "OracleComp.Quantitative": "OracleComp.Lower",
+    # Event lemmas whose measure twins are stated on the singleton shapes the discrete lemmas had.
+    "probOutput_bind_eq_tsum": "OracleComp.prEvent_bind_eq_tsum",
+    "probEvent_bind_eq_tsum": "OracleComp.prEvent_bind_eq_tsum",
+    "tsum_probOutput_eq_one": "OracleComp.tsum_prEvent_eq_one",
+    "tsum_probOutput_eq_one'": "OracleComp.tsum_prEvent_eq_one",
+    "tsum_probOutput_le_one": "OracleComp.tsum_prEvent_le_one",
+    "tsum_probOutput_mul_of_const_on_support": "OracleComp.tsum_prEvent_mul_of_const_on_support",
+    "tsum_probOutput_mul_le_add_of_le": "OracleComp.tsum_prEvent_mul_le_add_of_le",
+    "probOutput_eq_zero_of_not_mem_support": "prEvent_eq_zero_of_not_mem_support",
+    "probOutput_ne_top": "prEvent_ne_top",
+    "probEvent_ne_top": "prEvent_ne_top",
+    "probOutput_le_one": "prEvent_le_one",
+    "probEvent_le_one": "prEvent_le_one",
+    "probOutput_pure": "prEvent_pure",
+    "probEvent_pure": "prEvent_pure",
+    "probOutput_map": "prEvent_map",
+    "probEvent_map": "prEvent_map",
+    "probOutput_map_injective": "prEvent_map_injective",
+    "probOutput_def": "prEvent_eq_evalDist_singleton",
+    "probOutput_bind_bind_swap": "OracleComp.prEvent_bind_bind_swap",
+    "probEvent_bind_bind_swap": "OracleComp.prEvent_bind_bind_swap",
+    "probOutput_bind_const": "prEvent_bind_const",
+    "probEvent_eq_tsum_ite": "OracleComp.prEvent_eq_tsum_ite",
+    "probEvent_bind_le_of_forall_le": "prEvent_bind_le_of_forall_le",
+    "probFailure_eq_zero": "OracleComp.prFail_eq_zero",
+    # Output measures and equality in distribution.
+    "evalSPMF_bind": "evalDist_bind_of_discrete",
+    "evalSPMF_map": "evalDist_map_of_discrete",
+    "evalSPMF_pure": "evalDist_pure",
+    "evalSPMF_map_eq_of_evalSPMF_eq": "EvalDistEq.map",
+    "evalDist_map_eq_of_evalDist_eq": "EvalDistEq.map",
+    "evalSPMF_bind_congr_left": "EvalDistEq.bind_right",
+    "evalDist_bind_congr_left": "EvalDistEq.bind_right",
+    "SPMFSemantics": "SemanticsVia",
 }
 
 # Declarations whose replacement changes the argument shape; reported, not rewritten.
@@ -395,63 +429,54 @@ MODULES: dict[str, list[str]] = {
 
 # Native analogues of the most used discrete lemmas, reported where the legacy name appears.
 LEGACY_HINTS: dict[str, str] = {
-    "probOutput_bind_eq_tsum":
-        "`OracleComp.prEvent_bind_eq_tsum`, or `prEvent_bind_eq_lintegral` in another monad",
-    "probEvent_bind_eq_tsum":
-        "`OracleComp.prEvent_bind_eq_tsum`, or `prEvent_bind_eq_lintegral` in another monad",
-    "tsum_probOutput_eq_one": "`OracleComp.tsum_prEvent_eq_one`",
-    "tsum_probOutput_eq_one'": "`OracleComp.tsum_prEvent_eq_one`",
-    "tsum_probOutput_le_one": "`OracleComp.tsum_prEvent_le_one`",
-    "tvDist_bind_left_le": "`OracleComp.measureETVDist_bind_left_le_tsum`",
+    "tvDist_bind_left_le":
+        "`OracleComp.measureTVDist_bind_left_le_tsum` (real) or `OracleComp.measureETVDist_bind_left_le_tsum`",
     "probEvent_bind_eq_expectedValue": "`prEvent_bind_eq_lintegral`",
-    "probOutput_def": "`prEvent_def`",
     "probEvent_def": "`prEvent_def`",
     "evalSPMF_def": "`𝒟[mx]` is primitive; unfold events with `prEvent_def`",
-    "evalSPMF_bind": "`evalDist_bind` or `evalDist_bind_of_discrete`",
-    "evalSPMF_map": "`evalDist_map`",
-    "evalSPMF_pure": "`evalDist_pure`",
     "evalSPMF_ext": "`EvalDistEq.of_forall_prEvent_eq`, or `Measure.ext` on `𝒟[…]`",
     "evalSPMF_eq_of_evalDist_eq":
         "state the result with `𝒟[…]` or `=ᵈ` (`EvalDistEq.of_evalDist_eq`)",
     "probEvent_eq_eq_probOutput":
         "`Pr{let y ← mx}[y = x]` is the singleton event; `prEvent_eq_evalDist_singleton`",
-    "probEvent_map": "`prEvent_map`",
-    "probOutput_map": "`prEvent_map`",
-    "probEvent_eq_tsum_ite": "`prEvent_eq_evalDist_of_discrete`, then Mathlib's `Measure` sums",
     "probEvent_eq_tsum_indicator":
         "`prEvent_eq_evalDist_of_discrete`, then Mathlib's `Measure` sums",
-    "probOutput_eq_zero_of_not_mem_support": "`prEvent_eq_zero_of_forall_mem_support`",
     "probOutput_eq_zero_iff": "`prEvent_eq_zero_iff`",
     "probEvent_eq_zero_iff": "`prEvent_eq_zero_iff`",
     "probEvent_eq_one_iff":
         "`prEvent_eq_one_iff` (uniform answers) or `prEvent_eq_one_of_forall_mem_support`",
-    "probFailure_eq_zero": "`OracleComp.prFail_eq_zero`, or `prFail_eq_zero_iff` in another monad",
     "probFailure_def": "`prFail_def`",
     "probFailure_bind_eq_add_tsum": "`prFail_bind_eq_add_lintegral_of_discrete`",
-    "probOutput_pure": "`prEvent_pure` or `evalDist_pure`",
-    "probEvent_pure": "`prEvent_pure`",
     "probOutput_uniformSample":
         "`SampleableType.evalDist_uniformSample` or `prEvent_uniformSample`",
     "probOutput_query": "`evalDist_liftM_query_apply` or `prEvent_query_eq_card_div`",
-    "probOutput_le_one": "`prEvent_le_one`",
-    "probEvent_le_one": "`prEvent_le_one`",
-    "tsum_probOutput_le_one": "`prEvent_le_one` or `measure_univ`",
-    "probOutput_ne_top": "`prEvent_ne_top`",
-    "probEvent_ne_top": "`prEvent_ne_top`",
-    "probOutput_congr": "`prEvent_congr_of_support`",
+    "probOutput_congr": "`EvalDistEq.prEvent_eq h p`: an `=ᵈ` hypothesis gives every event",
     "probEvent_congr'": "`prEvent_congr_of_support`",
     "probOutput_bind_congr'": "`prEvent_bind_congr` or `evalDist_bind_congr_of_support`",
     "probEvent_bind_congr'": "`prEvent_bind_congr` or `prEvent_bind_congr_of_support`",
-    "probOutput_bind_bind_swap": "`prEvent_bind_bind_swap`",
-    "probEvent_bind_bind_swap": "`prEvent_bind_bind_swap`",
-    "probOutput_bind_const": "`prEvent_bind_const` or `evalDist_bind_const`",
-    "tvDist_le_one": "`measureETVDist_le_one`",
-    "tvDist_map_le": "`measureETVDist_map_le`",
-    "tvDist_eq_zero_iff": "`measureETVDist_eq_zero_iff`",
-    "tvDist_triangle": "`measureETVDist_triangle`",
-    "tvDist_self": "`measureETVDist_self`",
-    "tvDist_comm": "`measureETVDist_comm`",
-    "tvDist_nonneg": "nothing: `measureETVDist` is `ℝ≥0∞`-valued",
+    "tvDist_le_one": "`measureTVDist_le_one` (real) or `measureETVDist_le_one`",
+    "tvDist_map_le": "`measureTVDist_map_le` (real) or `measureETVDist_map_le`",
+    "tvDist_eq_zero_iff": "`measureTVDist_eq_zero_iff` (real) or `measureETVDist_eq_zero_iff`",
+    "tvDist_triangle": "`measureTVDist_triangle` (real) or `measureETVDist_triangle`",
+    "tvDist_self": "`measureTVDist_self` (real) or `measureETVDist_self`",
+    "tvDist_comm": "`measureTVDist_comm` (real) or `measureETVDist_comm`",
+    "tvDist_nonneg": "`measureTVDist_nonneg` (real); `measureETVDist` is `ℝ≥0∞`-valued",
+    "tvDist_bind_right_le":
+        "`OracleComp.measureTVDist_bind_right_le` (real) or `OracleComp.measureETVDist_bind_right_le`",
+    "abs_probOutput_toReal_sub_le_tvDist": "`abs_prEvent_toReal_sub_le_measureTVDist`",
+    "probOutput_bind_mono":
+        "`OracleComp.prEvent_bind_mono_of_support` on the continuations' events",
+    "probEvent_bind_eq_tsum_subtype": "`OracleComp.prEvent_bind_eq_tsum`, then `tsum_subtype`",
+    "probEvent_eq_zero": "`prEvent_eq_zero_of_forall_mem_support`",
+    "probEvent_compl": "`OracleComp.prEvent_not_eq_one_sub`",
+    "evalSPMF_bind_congr": "`EvalDistEq.bind_right`, or `EvalDistEq.bind_congr_of_support`",
+    "evalSPMF_bind_congr'": "`EvalDistEq.bind_right`, or `EvalDistEq.bind_congr_of_support`",
+    "probFailure_uniformSample": "`OracleComp.prFail_eq_zero`: `OracleComp` never fails",
+    "probFailure_drawList": "`OracleComp.prFail_eq_zero`: `OracleComp` never fails",
+    "probFailure_bind_eq_zero_iff": "`OracleComp.prFail_eq_zero`: `OracleComp` never fails",
+    "neverFail_bind_iff": "delete: `OracleComp` never fails",
+    "neverFail_iff": "delete: `OracleComp` never fails",
+    "NeverFail.bind_of_forall": "delete: `OracleComp` never fails",
 }
 
 # Legacy forms left for a person, with the guide section that converts them.
@@ -459,7 +484,7 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"(?<![\w'])evalSPMF(?![\w'])|𝒮\[", "`𝒟[mx]`; see *Notation and definitions*"),
     (r"(?<![\w'.])probOutput(?![\w'])", "`Pr{let y ← mx}[y = x]` or `𝒟[mx] {x}`"),
     (r"(?<![\w'.])probEvent(?![\w'])", "`Pr{let x ← mx}[p x]`"),
-    (r"(?<![\w'.])tvDist(?![\w'])", "`measureETVDist`"),
+    (r"(?<![\w'.])tvDist(?![\w'])", "`measureTVDist` (real) or `measureETVDist` (`ℝ≥0∞`)"),
     (r"(?<![\w'.])expectedValue(?![\w'])", "`∫⁻ x, f x ∂𝒟[mx]`"),
     (r"(?<![\w'.])NeverFail(?![\w'])", "nothing on `OracleComp`; see *Classes and binders*"),
     (r"EvalDistCompatible", "operational support lemmas; see *Classes and binders*"),
@@ -915,9 +940,17 @@ RENAME_PATTERNS = sorted(((rename_pattern(old), new) for old, new in RENAMES.ite
                          key=lambda p: -len(p[0].pattern))
 
 
+# Namespaces the renamed declarations moved into: a qualified occurrence of a retired name keeps
+# its qualifier, so the qualifier appears twice after the rename and is collapsed.
+NAMESPACE_PREFIXES = sorted({new.rsplit(".", 1)[0] + "." for new in RENAMES.values() if "." in new},
+                            key=len, reverse=True)
+
+
 def rewrite_names(text: str) -> str:
     for pattern, new in RENAME_PATTERNS:
         text = pattern.sub(new, text)
+    for prefix in NAMESPACE_PREFIXES:
+        text = text.replace(prefix + prefix, prefix)
     # `prEvent_le_one` takes the event computation alone.
     text = re.sub(r"(?<![\w'.])prEvent_le_one _ _(?![\w'])", "prEvent_le_one _", text)
     return text.replace("≡ₚ", "=ᵈ")

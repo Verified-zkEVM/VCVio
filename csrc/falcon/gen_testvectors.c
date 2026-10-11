@@ -1,6 +1,6 @@
 /*
  * Generate Falcon test vectors from c-fn-dsa for the Lean test suite.
- * Compile: cc -std=c99 -O2 -I../../third_party/c-fn-dsa gen_testvectors.c ../../csrc/falcon/fndsa_native.c -o gen_testvectors
+ * Compile: cc -std=c99 -O2 -I../../third_party/c-fn-dsa gen_testvectors.c ../../csrc/falcon/fndsa.c -o gen_testvectors
  * (run from csrc/falcon/)
  */
 

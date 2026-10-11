@@ -438,10 +438,10 @@ theorem Primitives.ffSampling_support_ofCoeffs {p : Params} (prims : Primitives 
         ∃ a b : Fin (2 * 2 ^ κ) → ℤ,
           z.1 = RealFFTPoly.ofCoeffs κ (fun i => (a i : ℝ)) ∧
           z.2 = RealFFTPoly.ofCoeffs κ (fun i => (b i : ℝ))
-  | 0, (t₀, t₁), .leaf σ, z, hz => by
+  | 0, (t₀, t₁), .leaf σ₀ σ₁ l01Re l01Im, z, hz => by
     simp only [Primitives.ffSampling, mem_support_bind_iff, support_pure,
       Set.mem_singleton_iff] at hz
-    obtain ⟨z₀Re, -, z₀Im, -, z₁Re, -, z₁Im, -, rfl⟩ := hz
+    obtain ⟨z₁Re, -, z₁Im, -, z₀Re, -, z₀Im, -, rfl⟩ := hz
     refine ⟨fun i => if i.1 = 0 then z₀Re else z₀Im, fun i => if i.1 = 0 then z₁Re else z₁Im,
       ?_, ?_⟩ <;> simp [RealFFTPoly.ofCoeffs]
   | k + 1, (t₀, t₁), .node ℓ left right, z, hz => by

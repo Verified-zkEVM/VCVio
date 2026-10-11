@@ -111,20 +111,24 @@ theorem leafPack_inj {a b a' b' : ℤ} (h : leafPack a b = leafPack a' b') : a =
 
 /-! ## Leaf standard deviations -/
 
-/-- Every leaf of the Falcon tree carries a standard deviation of at least `σmin`. -/
+/-- Every leaf of the Falcon tree carries two standard deviations of at least `σmin`. -/
 def FalconTree.LeavesGE : {κ : ℕ} → FalconTree κ → ℝ → Prop
-  | _, .leaf σ, σmin => σmin ≤ σ
+  | _, .leaf σ₀ σ₁ _ _, σmin => σmin ≤ σ₀ ∧ σmin ≤ σ₁
   | _, .node _ left right, σmin => left.LeavesGE σmin ∧ right.LeavesGE σmin
 
 /-! ## The product bound -/
 
 theorem Primitives.ffSampling_leaf {p : Params} (prims : Primitives p) (t₀ t₁ : RealFFTPoly 0)
-    (σ : ℝ) :
-    prims.ffSampling 0 (t₀, t₁) (.leaf σ) =
-      (prims.samplerZ (t₀.re ⟨0, by norm_num⟩) σ >>= fun a =>
-        prims.samplerZ (t₀.im ⟨0, by norm_num⟩) σ >>= fun b =>
-          prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
-            prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
+    (σ₀ σ₁ l01Re l01Im : ℝ) :
+    prims.ffSampling 0 (t₀, t₁) (.leaf σ₀ σ₁ l01Re l01Im) =
+      (prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ₁ >>= fun c =>
+        prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ₁ >>= fun d =>
+          prims.samplerZ (t₀.re ⟨0, by norm_num⟩ +
+            ((t₁.re ⟨0, by norm_num⟩ - c) * l01Re - (t₁.im ⟨0, by norm_num⟩ - d) * l01Im))
+            σ₀ >>= fun a =>
+            prims.samplerZ (t₀.im ⟨0, by norm_num⟩ +
+              ((t₁.re ⟨0, by norm_num⟩ - c) * l01Im + (t₁.im ⟨0, by norm_num⟩ - d) * l01Re))
+              σ₀ >>= fun b =>
               pure (leafPack a b, leafPack c d)) := rfl
 
 theorem Primitives.ffSampling_node {p : Params} (prims : Primitives p) {k : ℕ}
@@ -136,6 +140,69 @@ theorem Primitives.ffSampling_node {p : Params} (prims : Primitives p) {k : ℕ}
           left >>= fun s₀ =>
           pure (Primitives.mergeFFT s₀.1 s₀.2, Primitives.mergeFFT s₁.1 s₁.2)) := rfl
 
+/-- Four chained integer draws packed into a leaf pair: the output's pointwise mass is at most
+the product of the draws' pointwise mass bounds, since the packing is injective in each draw.
+The later draws may depend on the earlier ones, as the corrected `t₀`-coordinate of a leaf of
+`Primitives.ffSampling` depends on the sampled `t₁`-coordinate. -/
+private theorem leafDraws_pointMass_le (mc md : ProbComp ℤ) (ma mb : ℤ → ℤ → ProbComp ℤ)
+    (z : FFTPair 0) {M : ℝ≥0∞}
+    (hc : ∀ v, Pr{let x ← mc}[x = v] ≤ M) (hd : ∀ v, Pr{let x ← md}[x = v] ≤ M)
+    (ha : ∀ c d v, Pr{let x ← ma c d}[x = v] ≤ M)
+    (hb : ∀ c d v, Pr{let x ← mb c d}[x = v] ≤ M) :
+    Pr{let outcome ← (mc >>= fun c => md >>= fun d => ma c d >>= fun a => mb c d >>= fun b =>
+      pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤
+      M * (M * (M * (M * 1))) := by
+  have hmem : ∀ {a b c d : ℤ} {w : FFTPair 0},
+      w ∈ support (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0)) →
+        w = (leafPack a b, leafPack c d) := by
+    intro a b c d w hw
+    simpa using hw
+  have h4 : ∀ c d a : ℤ,
+      Pr{let outcome ← (mb c d >>= fun b =>
+        pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤ M * 1 := by
+    intro c d a
+    refine pointMass_bind_le_mul _ _ z (hb c d) (fun _ => measure_le_one _ _) ?_
+    intro b₁ b₂ h₁ h₂
+    rw [ne_eq, pointMass_eq_zero_iff, not_not] at h₁ h₂
+    exact (leafPack_inj (Prod.mk.inj ((hmem h₁).symm.trans (hmem h₂))).1).2
+  have h3 : ∀ c d : ℤ,
+      Pr{let outcome ← (ma c d >>= fun a => mb c d >>= fun b =>
+        pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤
+        M * (M * 1) := by
+    intro c d
+    refine pointMass_bind_le_mul _ _ z (ha c d) (fun a => h4 c d a) ?_
+    intro a₁ a₂ h₁ h₂
+    rw [ne_eq, pointMass_eq_zero_iff, not_not, mem_support_bind_iff] at h₁ h₂
+    obtain ⟨b₁, -, h₁⟩ := h₁
+    obtain ⟨b₂, -, h₂⟩ := h₂
+    exact (leafPack_inj (Prod.mk.inj ((hmem h₁).symm.trans (hmem h₂))).1).1
+  have h2 : ∀ c : ℤ,
+      Pr{let outcome ← (md >>= fun d => ma c d >>= fun a => mb c d >>= fun b =>
+        pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤
+        M * (M * (M * 1)) := by
+    intro c
+    refine pointMass_bind_le_mul _ _ z hd (fun d => h3 c d) ?_
+    intro d₁ d₂ h₁ h₂
+    rw [ne_eq, pointMass_eq_zero_iff, not_not, mem_support_bind_iff] at h₁ h₂
+    obtain ⟨a₁, -, h₁⟩ := h₁
+    obtain ⟨a₂, -, h₂⟩ := h₂
+    rw [mem_support_bind_iff] at h₁ h₂
+    obtain ⟨b₁, -, h₁⟩ := h₁
+    obtain ⟨b₂, -, h₂⟩ := h₂
+    exact (leafPack_inj (Prod.mk.inj ((hmem h₁).symm.trans (hmem h₂))).2).2
+  refine pointMass_bind_le_mul _ _ z hc h2 ?_
+  intro c₁ c₂ h₁ h₂
+  rw [ne_eq, pointMass_eq_zero_iff, not_not, mem_support_bind_iff] at h₁ h₂
+  obtain ⟨d₁, -, h₁⟩ := h₁
+  obtain ⟨d₂, -, h₂⟩ := h₂
+  rw [mem_support_bind_iff] at h₁ h₂
+  obtain ⟨a₁, -, h₁⟩ := h₁
+  obtain ⟨a₂, -, h₂⟩ := h₂
+  rw [mem_support_bind_iff] at h₁ h₂
+  obtain ⟨b₁, -, h₁⟩ := h₁
+  obtain ⟨b₂, -, h₂⟩ := h₂
+  exact (leafPack_inj (Prod.mk.inj ((hmem h₁).symm.trans (hmem h₂))).2).1
+
 /-- **Min-entropy of `ffSampling` from the min-entropy of `samplerZ`.** If every call of the
 one-dimensional sampler at a standard deviation of at least `σmin` has pointwise mass at most
 `M`, then every output of `ffSampling` on a tree whose leaves are at least `σmin` has pointwise
@@ -145,74 +212,11 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
       Pr{let outcome ← prims.samplerZ μ σ'}[outcome = v] ≤ M) :
     ∀ (κ : ℕ) (t : FFTPair κ) (tree : FalconTree κ), tree.LeavesGE σmin →
       ∀ z : FFTPair κ, Pr{let outcome ← prims.ffSampling κ t tree}[outcome = z] ≤ M ^ (4 * 2 ^ κ)
-  | 0, (t₀, t₁), .leaf σ, hl, z => by
+  | 0, (t₀, t₁), .leaf σ₀ σ₁ l01Re l01Im, hl, z => by
     rw [Primitives.ffSampling_leaf]
-    have hM' : ∀ (μ : ℝ) (v : ℤ),
-        Pr{let outcome ← prims.samplerZ μ σ}[outcome = v] ≤ M := fun μ v => hZ μ σ hl v
-    have hmem : ∀ {a b c d : ℤ} {w : FFTPair 0},
-        w ∈ support (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0)) →
-          w = (leafPack a b, leafPack c d) := by
-      intro a b c d w hw
-      simpa using hw
-    have h4 : ∀ a b c : ℤ,
-        Pr{let outcome ← (prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
-          pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤ M * 1 := by
-      intro a b c
-      refine pointMass_bind_le_mul _ _ z (hM' _) (fun _ => measure_le_one _ _) ?_
-      intro d₁ d₂ h₁ h₂
-      rw [ne_eq, pointMass_eq_zero_iff, not_not] at h₁ h₂
-      have e := (hmem h₁).symm.trans (hmem h₂)
-      exact (leafPack_inj (Prod.mk.inj e).2).2
-    have h3 : ∀ a b : ℤ,
-        Pr{let outcome ← (prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
-          prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
-            pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤
-          M * (M * 1) := by
-      intro a b
-      refine pointMass_bind_le_mul _ _ z (hM' _) (fun c => h4 a b c) ?_
-      intro c₁ c₂ h₁ h₂
-      rw [ne_eq, pointMass_eq_zero_iff, not_not, mem_support_bind_iff] at h₁ h₂
-      obtain ⟨d₁, -, h₁⟩ := h₁
-      obtain ⟨d₂, -, h₂⟩ := h₂
-      have e := (hmem h₁).symm.trans (hmem h₂)
-      exact (leafPack_inj (Prod.mk.inj e).2).1
-    have h2 : ∀ a : ℤ,
-        Pr{let outcome ← (prims.samplerZ (t₀.im ⟨0, by norm_num⟩) σ >>= fun b =>
-          prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
-            prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
-              pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤
-          M * (M * (M * 1)) := by
-      intro a
-      refine pointMass_bind_le_mul _ _ z (hM' _) (fun b => h3 a b) ?_
-      intro b₁ b₂ h₁ h₂
-      rw [ne_eq, pointMass_eq_zero_iff, not_not, mem_support_bind_iff] at h₁ h₂
-      obtain ⟨c₁, -, h₁⟩ := h₁
-      obtain ⟨c₂, -, h₂⟩ := h₂
-      rw [mem_support_bind_iff] at h₁ h₂
-      obtain ⟨d₁, -, h₁⟩ := h₁
-      obtain ⟨d₂, -, h₂⟩ := h₂
-      have e := (hmem h₁).symm.trans (hmem h₂)
-      exact (leafPack_inj (Prod.mk.inj e).1).2
-    have h1 : Pr{let outcome ← (prims.samplerZ (t₀.re ⟨0, by norm_num⟩) σ >>= fun a =>
-        prims.samplerZ (t₀.im ⟨0, by norm_num⟩) σ >>= fun b =>
-          prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
-            prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
-              pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤
-          M * (M * (M * (M * 1))) := by
-      refine pointMass_bind_le_mul _ _ z (hM' _) (fun a => h2 a) ?_
-      intro a₁ a₂ h₁ h₂
-      rw [ne_eq, pointMass_eq_zero_iff, not_not, mem_support_bind_iff] at h₁ h₂
-      obtain ⟨b₁, -, h₁⟩ := h₁
-      obtain ⟨b₂, -, h₂⟩ := h₂
-      rw [mem_support_bind_iff] at h₁ h₂
-      obtain ⟨c₁, -, h₁⟩ := h₁
-      obtain ⟨c₂, -, h₂⟩ := h₂
-      rw [mem_support_bind_iff] at h₁ h₂
-      obtain ⟨d₁, -, h₁⟩ := h₁
-      obtain ⟨d₂, -, h₂⟩ := h₂
-      have e := (hmem h₁).symm.trans (hmem h₂)
-      exact (leafPack_inj (Prod.mk.inj e).1).1
-    calc Pr{let outcome ← _}[outcome = z] ≤ M * (M * (M * (M * 1))) := h1
+    calc Pr{let outcome ← _}[outcome = z] ≤ M * (M * (M * (M * 1))) :=
+          leafDraws_pointMass_le _ _ _ _ z (fun v => hZ _ σ₁ hl.2 v) (fun v => hZ _ σ₁ hl.2 v)
+            (fun _ _ v => hZ _ σ₀ hl.1 v) (fun _ _ v => hZ _ σ₀ hl.1 v)
       _ = M ^ (4 * 2 ^ 0) := by ring
   | k + 1, (t₀, t₁), .node ℓ left right, hl, z => by
     rw [Primitives.ffSampling_node]
