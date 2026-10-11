@@ -39,7 +39,7 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 | `Pr{mx}[= a]` (earlier measure API) | `Pr{let x ← mx}[x = a]` |
 | `Pr{x ← mx}[p x]` (a bare draw) | `Pr{let x ← mx}[p x]`: the braces hold an ordinary `do` sequence |
 | `evalSPMF mx`, `𝒮[mx]`, `SPMF α` | `𝒟[mx] : Measure α`; `evalDistWithFailure mx : Measure (Option α)` records the failure mass at `none` |
-| `tvDist mx my` | `measureETVDist mx my`; `Measure.etvDist` on measures |
+| `tvDist mx my` | `measureTVDist mx my` (real) or `measureETVDist mx my` (`ℝ≥0∞`); `Measure.tvDist` and `Measure.etvDist` on measures |
 | `expectedValue mx f` | `∫⁻ x, f x ∂𝒟[mx]` |
 | `NeverFail mx` | nothing on `OracleComp`; `IsProbabilityMeasure 𝒟[mx]` for failing monads |
 | `RelTriple'` | `RelTriple` |
@@ -92,7 +92,7 @@ Replacement lemmas keep the removed name with the probability head replaced:
 | `probEvent_` | `prEvent_` | `le_probEvent_isSome_contextFork` → `le_prEvent_isSome_contextFork` |
 | `probOutput_` | `prEvent_` or `evalDist_` | `IND_CPA_Game_probOutput_eq_branch` → `IND_CPA_Game_evalDist_eq_branch` |
 | `evalSPMF_` | `evalDist_` | `evalSPMF_simulateQ_run_congr` → `evalDist_simulateQ_run_congr` |
-| `tvDist_` | `measureETVDist_` | `tvDist_simulateQ_le_probEvent_bad` → `measureETVDist_simulateQ_run'_le_prEvent_bad` |
+| `tvDist_` | `measureETVDist_` (`ℝ≥0∞`) or `measureTVDist_` (real) | `tvDist_simulateQ_le_probEvent_bad` → `measureETVDist_simulateQ_run'_le_prEvent_bad` |
 
 Other renames: `AdvBound.of_tvDist` → `AdvBound.of_measureETVDist` (and `AdvBound` takes an
 `ℝ≥0∞` bound); root `evalDist_uniformSample` → `SampleableType.evalDist_uniformSample`;
@@ -139,7 +139,15 @@ the output type. The sum forms follow from it:
   `tsum_prEvent_map_mul`;
 - `tsum_prEvent_mul_of_const_on_support` and `tsum_prEvent_mul_le_add_of_le`;
 - `tvDist_bind_left_le` → `measureETVDist_bind_left_le_tsum`, where `measureETVDist` takes the
-  place of `ENNReal.ofReal (tvDist …)`.
+  place of `ENNReal.ofReal (tvDist …)`, or `measureTVDist_bind_left_le_tsum` for a real bound.
+
+Real-valued total variation keeps the real arithmetic of a proof: `tvDist_bind_right_le` →
+`measureTVDist_bind_right_le` (`measureETVDist_bind_right_le` in `ℝ≥0∞`; `measureTVDist_bind_le`
+for a measurable continuation in any monad), `tvDist_map_le` → `measureTVDist_map_le`,
+`tvDist_nonneg`/`tvDist_triangle`/`tvDist_le_one` → `measureTVDist_nonneg`/`measureTVDist_triangle`/
+`measureTVDist_le_one`, `abs_probOutput_toReal_sub_le_tvDist` →
+`abs_prEvent_toReal_sub_le_measureTVDist`, and `measureTVDist_eq_toReal_measureETVDist` moves
+between the two forms. The complement of an event is `prEvent_not_eq_one_sub` on `OracleComp`.
 
 ## Converted theorem families
 

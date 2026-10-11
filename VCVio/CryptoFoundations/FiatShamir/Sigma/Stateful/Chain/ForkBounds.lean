@@ -46,7 +46,7 @@ attribute [fs_simp]
   simulatedNmaImpl
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 attribute [local instance] instUniformAnswerMeasureChalSingleton
@@ -64,7 +64,7 @@ variable (Chal) in
     (uniformSampleImpl (spec := (Unit →ₒ Chal)))
 
 @[fs_simp] private noncomputable def forkVerifyFreshComp [DecidableEq M]
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (pk : Stmt) (x : M × (Commit × Resp))
     (s : ForkBaseState M Commit Chal × List M) :
     OracleComp (Fork.wrappedSpec Chal) Bool := do
@@ -105,7 +105,7 @@ private lemma forkVerifyFreshComp_project [DecidableEq M] [SampleableType Chal]
 variable [DecidableEq M] [DecidableEq Commit]
 
 private noncomputable def forkFinalQueryTrace
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (pk : Stmt) (x : M × (Commit × Resp))
     (s : ForkBaseState M Commit Chal × List M) :
     OracleComp (Fork.wrappedSpec Chal)

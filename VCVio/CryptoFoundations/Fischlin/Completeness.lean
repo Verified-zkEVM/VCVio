@@ -170,7 +170,7 @@ private lemma minUnifAux_prEvent_gt_none (b k t : ℕ) :
       = ((↑(2 ^ b - (k + 1)) : ℝ≥0∞) / ↑(2 ^ b)) ^ t := by
   rw [minUnifAux_prEvent_gt, ite_eq_left (by simp), one_mul]
 
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
   (hr : GenerableRelation Stmt Wit rel)
   (ρ b S : ℕ) (M : Type)
 
@@ -202,7 +202,7 @@ uniform draw from `Fin (2^b)`, and the full best triple `(challenge, response, h
 (on early exit at hash `0`, the current `(ω, resp, h)` is returned). -/
 private def fischlinUnifSearch {Stmt Wit Commit PrvState Chal Resp : Type}
     {rel : Stmt → Wit → Bool} {b : ℕ}
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (pk : Stmt) (sk : Wit) (sc : PrvState) :
     List Chal → Option (Chal × Resp × Fin (2 ^ b)) →
       ProbComp (Option (Chal × Resp × Fin (2 ^ b)))
@@ -224,7 +224,7 @@ discarded by the hash projection, and they can only lose probability mass throug
 hash-only model `minUnifAux` dominates. Proved by induction on the challenge list. -/
 private lemma fischlinUnifSearch_prEvent_minGt_le
     {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool} {b : ℕ}
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (pk : Stmt) (sk : Wit) (sc : PrvState) (k : ℕ)
     (cs : List Chal) (best : Option (Chal × Resp × Fin (2 ^ b))) :
     Pr{let o ← fischlinUnifSearch σ pk sk sc cs best}[minGt k
@@ -1101,7 +1101,7 @@ challenge drawn from the search list `cs` (or from the seed `best`), and its res
 support of `σ.respond pk sk sc ω`. This lets perfect completeness apply to the chosen transcript. -/
 private lemma fischlinUnifSearch_mem_support {Stmt Wit Commit PrvState Chal Resp : Type}
     {rel : Stmt → Wit → Bool} {b : ℕ}
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (pk : Stmt) (sk : Wit) (sc : PrvState) :
     ∀ (cs : List Chal) (best : Option (Chal × Resp × Fin (2 ^ b)))
       (ω : Chal) (resp : Resp) (h : Fin (2 ^ b)),
@@ -1144,11 +1144,10 @@ private lemma fischlinUnifSearch_mem_support {Stmt Wit Commit PrvState Chal Resp
 
 /-- Pointwise corollary of perfect completeness: on a valid `(pk, sk)` pair, for any commitment
 `(pc, sc)` in the support of `σ.commit`, any challenge `ω`, and any response `resp` in the support
-of `σ.respond _ _ sc ω`, the verifier accepts. The uniform challenge ranges over all of `Chal`. -/
+of `σ.respond _ _ sc ω`, the verifier accepts. -/
 private lemma verify_of_perfectlyComplete
     {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
-    [SampleableType Chal]
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (hc : σ.PerfectlyComplete) (pk : Stmt) (sk : Wit) (hrel : rel pk sk = true)
     (pc : Commit) (sc : PrvState) (hpc : (pc, sc) ∈ support (σ.commit pk sk))
     (ω : Chal) (resp : Resp) (hresp : resp ∈ support (σ.respond pk sk sc ω)) :
@@ -1172,8 +1171,7 @@ the search over a non-empty challenge list returns `some (ω, resp, _)` whose re
 (perfect completeness applied to the chosen transcript). The `none` branch never arises. -/
 private lemma fischlinUnifSearch_match_verify
     {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool} {b : ℕ}
-    [SampleableType Chal]
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (hc : σ.PerfectlyComplete) (pk : Stmt) (sk : Wit) (hrel : rel pk sk = true)
     (pc : Commit) (sc : PrvState) (hpc : (pc, sc) ∈ support (σ.commit pk sk))
     (cs : List Chal) (hcs : cs ≠ [])
@@ -1221,7 +1219,7 @@ minimum hashes exceeds `S`. By pigeonhole some repetition's minimum exceeds `⌊
 bound over the `ρ` repetitions together with the per-repetition tail bound
 `minUnifAux_prEvent_gt_none` yields the result. -/
 private lemma model_reject_le [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
-    [SampleableType Chal] (_hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (_msg : M) :
+    (_hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (_msg : M) :
     𝒟[modelGame σ hr ρ b S] {false} ≤ completenessError ρ b S (FinEnum.card Chal) := by
   rw [← prEvent_eq_evalDist_singleton, modelGame]
   -- Peel the key-generation and commitment phases; on the support `rel pk sk` holds.
@@ -1306,7 +1304,7 @@ Unlike the Fiat-Shamir transform (which is perfectly complete), the Fischlin tra
 has a non-zero completeness error because the prover's proof-of-work search may fail
 to find hash values whose sum is at most `S`. -/
 theorem almostComplete [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal]
-    [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
+    [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
     [DecidableEq M] (hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (msg : M) :
     (runtime ρ b M).evalDist (do
       let (pk, sk) ←

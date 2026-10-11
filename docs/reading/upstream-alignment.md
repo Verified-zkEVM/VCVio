@@ -304,7 +304,7 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
    `cond_apply` `:216`, Bayes `cond_mul_eq_inter` `:264`, total probability `cond_add_cond_compl_eq`
    `:268`): the hand-rolled divide-by-`Pr` family (`probEvent_bind_congr_div_const`
    `V:VCVio/EvalDist/Monad/Basic.lean:413`) and the Σ-protocol comment
-   (`V:VCVio/CryptoFoundations/SigmaProtocol.lean:220–227`, "avoids conditional probability").
+   (`V:VCVio/CryptoFoundations/SigmaProtocol.lean:344–346`, "avoids conditional probability").
 6. Upstream the local `Option` and `Except` coproduct measurable embeddings
    (`V:ToMathlib/MeasureTheory/MeasurableSpace/{Option,Except}.lean`). They now prove
    `Measure.dropNone μ = μ.comap some`, support native `OptionT` and `ExceptT` successful-output

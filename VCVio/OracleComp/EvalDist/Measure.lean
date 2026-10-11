@@ -390,6 +390,13 @@ theorem prEvent_true_eq_one (mx : OracleComp spec α) : Pr{let _ ← mx}[True] =
   rw [prEvent_eq_evalDist_of_discrete]
   simp
 
+/-- The complement of an event has the remaining probability: oracle computations never fail. -/
+theorem prEvent_not_eq_one_sub (mx : OracleComp spec α) (p : α → Prop) :
+    Pr{let x ← mx}[¬ p x] = 1 - Pr{let x ← mx}[p x] := by
+  have h := prEvent_add_prEvent_not_eq_prEvent_true mx p
+  rw [prEvent_true_eq_one] at h
+  exact ENNReal.eq_sub_of_add_eq (prEvent_ne_top _) (by rw [add_comm]; exact h)
+
 /-- Oracle computations with a measure interpretation never fail. -/
 @[simp, grind =]
 theorem prFail_eq_zero (mx : OracleComp spec α) : prFail mx = 0 := by

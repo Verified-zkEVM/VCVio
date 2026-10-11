@@ -38,6 +38,18 @@ theorem evalDist_ae_mem_support [MeasurableSpace α] [DiscreteMeasurableSpace α
     (oa : OracleComp spec α) : ∀ᵐ x ∂𝒟[oa], x ∈ support oa :=
   evalDist.ae_of_forall_mem_support oa (· ∈ support oa) MeasurableSet.of_discrete fun _ h ↦ h
 
+/-- A common continuation contracts extended total variation; the prefix type is discrete. -/
+theorem measureETVDist_bind_right_le [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    [MeasurableSpace β] (oa ob : OracleComp spec α) (f : α → OracleComp spec β) :
+    measureETVDist (oa >>= f) (ob >>= f) ≤ measureETVDist oa ob :=
+  measureETVDist_bind_le oa ob f .of_discrete
+
+/-- A common continuation contracts real total variation; the prefix type is discrete. -/
+theorem measureTVDist_bind_right_le [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    [MeasurableSpace β] (oa ob : OracleComp spec α) (f : α → OracleComp spec β) :
+    measureTVDist (oa >>= f) (ob >>= f) ≤ measureTVDist oa ob :=
+  measureTVDist_bind_le oa ob f .of_discrete
+
 variable [∀ t, Finite (spec.Range t)]
 
 /-- An integral against the output measure is the sum of the singleton masses times the
@@ -153,5 +165,26 @@ theorem measureETVDist_bind_left_le_tsum [MeasurableSpace β] (oa : OracleComp s
   rw [← lintegral_evalDist_eq_tsum]
   exact measureETVDist_bind_bind_le_lintegral oa f g .of_discrete .of_discrete _
     (Filter.Eventually.of_forall fun _ ↦ le_rfl)
+
+/-- The real total variation after a common prefix is at most the prefix-weighted sum of the
+continuations' real total variations. -/
+theorem measureTVDist_bind_left_le_tsum [MeasurableSpace β] (oa : OracleComp spec α)
+    (f g : α → OracleComp spec β) :
+    measureTVDist (oa >>= f) (oa >>= g) ≤
+      ∑' x, (Pr{let y ← oa}[y = x]).toReal * measureTVDist (f x) (g x) := by
+  have hfin : ∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x) ≠ ⊤ := by
+    refine ne_top_of_le_ne_top ENNReal.one_ne_top ?_
+    calc ∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x)
+        ≤ ∑' x, Pr{let y ← oa}[y = x] * 1 :=
+          ENNReal.tsum_le_tsum fun x ↦ mul_le_mul' le_rfl (measureETVDist_le_one _ _)
+      _ = 1 := by simp only [mul_one, tsum_prEvent_eq_one]
+  rw [measureTVDist_eq_toReal_measureETVDist]
+  calc (measureETVDist (oa >>= f) (oa >>= g)).toReal
+      ≤ (∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x)).toReal :=
+        ENNReal.toReal_mono hfin (measureETVDist_bind_left_le_tsum oa f g)
+    _ = ∑' x, (Pr{let y ← oa}[y = x]).toReal * measureTVDist (f x) (g x) := by
+        rw [ENNReal.tsum_toReal_eq fun x ↦
+          ENNReal.mul_ne_top (prEvent_ne_top _) (measureETVDist_ne_top _ _)]
+        simp only [ENNReal.toReal_mul, measureTVDist_eq_toReal_measureETVDist]
 
 end OracleComp

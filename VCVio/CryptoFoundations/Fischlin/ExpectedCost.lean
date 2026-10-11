@@ -29,7 +29,7 @@ namespace Fischlin
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 variable [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel) (ρ b : ℕ)
+variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp) (ρ b : ℕ)
   (M : Type) [DecidableEq M]
 
 /-- The actual search's output, additive query counter, and final random-oracle cache. -/
