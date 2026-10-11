@@ -14,6 +14,8 @@ public import VCVio.CryptoFoundations.Asymptotics.PathSemantics
 public import VCVio.CryptoFoundations.Asymptotics.RankedRun
 public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
+public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Basic
+public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.DataEncapMech.RealOrRandom
@@ -155,6 +157,8 @@ public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash
+public import VCVio.CryptoFoundations.VectorCommitment.Basic
+public import VCVio.CryptoFoundations.VectorCommitment.MerkleTree
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Measure

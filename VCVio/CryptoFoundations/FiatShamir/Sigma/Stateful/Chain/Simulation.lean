@@ -44,7 +44,7 @@ attribute [fs_simp]
   simulatedNmaImpl
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 /-- The challenge oracle of the forkable experiment answers uniformly. -/
@@ -218,7 +218,7 @@ private abbrev SimLoggedState (M Commit Chal : Type)
   (fsRoSpec M Commit Chal).QueryCache × List M
 
 @[fs_simp] private noncomputable def simLoggedVerifyFreshComp
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
     (pk : Stmt) (x : M × (Commit × Resp))
     (s : SimLoggedState M Commit Chal) : ProbComp Bool := do
   let msg := x.1

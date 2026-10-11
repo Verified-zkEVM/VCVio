@@ -162,10 +162,10 @@ class NameTests(unittest.TestCase):
         self.assertEqual(out, "h : EvalDistEq g₁ g₂\nh' : g₁ =ᵈ g₂\nexact EvalDistEq.symm h")
 
     def test_legacy_names_are_reported_with_hints(self):
-        _, items = migrate("theorem t : True := by\n  rw [probOutput_bind_eq_tsum]\n  exact h")
+        _, items = migrate("theorem t : True := by\n  rw [probOutput_congr rfl h]\n  exact h")
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0][1], 2)
-        self.assertIn("prEvent_bind_eq_lintegral", items[0][2])
+        self.assertIn("EvalDistEq.prEvent_eq", items[0][2])
 
 
 class ReportTests(unittest.TestCase):
@@ -269,6 +269,43 @@ class FirstReleaseTests(unittest.TestCase):
                          [])
         self.assertEqual([old for old, targets in codemod.MODULES.items()
                           if old in targets or any(t in codemod.MODULES for t in targets)], [])
+
+
+class EventLemmaTests(unittest.TestCase):
+    """The discrete event lemmas land on the measure lemmas stated on the same singleton shapes."""
+
+    def assertMigrates(self, source, expected):
+        self.assertEqual(migrate(source)[0], expected)
+
+    def test_singleton_shapes(self):
+        self.assertMigrates("rw [probOutput_bind_eq_tsum, tsum_probOutput_eq_one', probOutput_ne_top]",
+                            "rw [OracleComp.prEvent_bind_eq_tsum, OracleComp.tsum_prEvent_eq_one, "
+                            "prEvent_ne_top]")
+        self.assertMigrates("probOutput_eq_zero_of_not_mem_support hx, probEvent_le_one, probOutput_pure",
+                            "prEvent_eq_zero_of_not_mem_support hx, prEvent_le_one, prEvent_pure")
+        self.assertMigrates("evalSPMF_bind, evalSPMF_map, evalSPMF_bind_congr_left oa f g h",
+                            "evalDist_bind_of_discrete, evalDist_map_of_discrete, "
+                            "EvalDistEq.bind_right oa f g h")
+        self.assertMigrates("SPMFSemantics.withStateOracle, SPMFSemantics m, "
+                            "evalSPMF_map_eq_of_evalSPMF_eq h f",
+                            "SemanticsVia.withStateOracle, SemanticsVia m, EvalDistEq.map h f")
+
+    def test_qualified_occurrences_keep_one_namespace(self):
+        self.assertMigrates("OracleComp.probOutput_bind_eq_tsum oa g p",
+                            "OracleComp.prEvent_bind_eq_tsum oa g p")
+        self.assertMigrates("OracleComp.tsum_probOutput_bind_mul", "OracleComp.tsum_prEvent_bind_mul")
+
+    def test_real_total_variation_is_reported(self):
+        _, items = migrate("le_trans (tvDist_bind_right_le k a b) (tvDist_nonneg _ _)")
+        self.assertEqual(sorted(name for _, _, name in items),
+                         sorted(["`tvDist_bind_right_le`: `OracleComp.measureTVDist_bind_right_le` "
+                                 "(real) or `OracleComp.measureETVDist_bind_right_le`",
+                                 "`tvDist_nonneg`: `measureTVDist_nonneg` (real); `measureETVDist` "
+                                 "is `ℝ≥0∞`-valued"]))
+
+    def test_no_name_is_both_renamed_and_reported(self):
+        self.assertEqual([k for k in codemod.RENAMES if k in codemod.LEGACY_HINTS], [])
+        self.assertEqual([k for k in codemod.RENAMES if k in codemod.REPORT_NAMES], [])
 
 
 class RepositoryTests(unittest.TestCase):

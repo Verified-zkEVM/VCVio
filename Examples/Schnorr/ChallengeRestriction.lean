@@ -44,14 +44,14 @@ variable [SampleableType G] [DecidableEq G]
 /-- Schnorr's original algorithms, with challenges encoded in the scalar field. -/
 @[expose]
 def restrictedSigma (g : G) (encode : C → F) :
-    SigmaProtocol G F G F C F (fun pk sk => decide (sk • g = pk)) :=
+    SigmaProtocol G F G F C F (fun pk sk => decide (sk • g = pk)) ProbComp :=
   (sigma F G g).restrictChallenges encode
 
 @[simp] theorem restrictedSigma_id (g : G) :
     restrictedSigma F G g id = sigma F G g := rfl
 
 /-- Honest Schnorr responses verify for every challenge policy. -/
-theorem restrictedSigma_complete [SampleableType C] (g : G) (encode : C → F) :
+theorem restrictedSigma_complete (g : G) (encode : C → F) :
     (restrictedSigma F G g encode).PerfectlyComplete :=
   (sigma_complete F G g).restrictChallenges encode
 
@@ -104,7 +104,7 @@ theorem restrictedSigma_hvzk [SampleableType C]
       exact ⟨(z - encode c * sk, c), by simp [changeVars]⟩
   have hmap := map_uniformOn_univ_of_bijective
     (Measurable.of_discrete : Measurable changeVars) hbij
-  simp only [ChallengeVerifyProtocol.realTranscript, restrictedSigma,
+  simp only [ChallengeVerifyProtocol.realTranscript_probComp, restrictedSigma,
     SigmaProtocol.restrictChallenges, ChallengeVerifyProtocol.restrictChallenges,
     sigma, restrictedSimTranscript, monad_norm]
   rw [evalDist_uniformPair_map, evalDist_uniformPair_map, ← hmap,

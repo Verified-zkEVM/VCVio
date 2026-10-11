@@ -84,7 +84,7 @@ variable (G : Type) [AddCommGroup G] [Module F G] [SampleableType G] [DecidableE
 /-- Standard Schnorr Σ-protocol for knowledge of discrete log.
 Challenge space is the full scalar field `F`. -/
 def sigma (g : G) : SigmaProtocol G F G F F F
-    (fun pk sk => decide (sk • g = pk)) where
+    (fun pk sk => decide (sk • g = pk)) ProbComp where
   commit _pk _sk := do
     let r ← $ᵗ F
     return (r • g, r)
@@ -102,7 +102,7 @@ and (perfect) honest-verifier zero-knowledge. -/
 an accepting transcript. Follows from `add_smul` and `mul_smul`. -/
 theorem sigma_complete (g : G) :
     (sigma F G g).PerfectlyComplete := by
-  intro pk sk h
+  intro pk sk h ω
   rw [← prEvent_eq_evalDist_singleton]
   have h_eq : sk • g = pk := of_decide_eq_true h
   simp only [sigma, monad_norm]
@@ -145,7 +145,7 @@ private lemma realTranscript_eq_indep (g : G) (pk : G) (sk : F) :
         let r ← $ᵗ F
         let c ← $ᵗ F
         pure ((r • g, c, r + c * sk) : G × F × F)) := by
-  simp only [ChallengeVerifyProtocol.realTranscript, sigma, monad_norm]
+  simp only [ChallengeVerifyProtocol.realTranscript_probComp, sigma, monad_norm]
 
 open OracleComp.ProgramLogic OracleComp.ProgramLogic.Relational in
 /-- Honest-verifier zero-knowledge: the real transcript distribution equals the simulated one.
