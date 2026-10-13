@@ -60,10 +60,10 @@ implementation or a concrete deployed hash instantiation.
 ## Validation and review
 
 The tests under `HashSigTest/GXMSS/` check concrete chain and Merkle conventions, retry failure
-and missing mass, checksum and target-sum examples, and imported security theorem types,
-compiler origins, and transitive axioms. The synchronized-signature tests under `VCVioTest/`
+and missing mass, checksum and target-sum examples, and applications of the public security
+theorems. The synchronized-signature tests under `VCVioTest/`
 distinguish regular from strong freshness, replay from alternative valid signatures, and failed
-signing from an unused epoch. The repository axiom sweep covers the new proof modules.
+signing from an unused epoch. The repository axiom sweep checks the proof modules for axiom and `sorry` dependencies.
 
 Review the scheme and the statement of each bound first, then the encoding or game component
 of interest. A successful build checks the Lean statements; choosing the intended encoding,

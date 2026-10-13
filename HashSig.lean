@@ -18,6 +18,8 @@ public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 public import HashSig.GXMSS.Security.Auxiliary.TCRSimulation
 public import HashSig.GXMSS.Security.Reductions.ChainHybrid
 public import HashSig.GXMSS.Security.Reductions.CollisionReductions
+public import HashSig.GXMSS.Security.Reductions.EncodingCollision
+public import HashSig.GXMSS.Security.Reductions.EncodingComposition
 public import HashSig.GXMSS.Security.Reductions.EncodingTargetCollisionReduction
 public import HashSig.GXMSS.Security.Reductions.FirstChainCollision
 public import HashSig.GXMSS.Security.Reductions.GuessingGames
