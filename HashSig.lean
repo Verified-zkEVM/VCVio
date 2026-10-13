@@ -1,5 +1,37 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import HashSig.GXMSS.Chain
+public import HashSig.GXMSS.Completeness
+public import HashSig.GXMSS.Encoding.Basic
+public import HashSig.GXMSS.Encoding.Error
+public import HashSig.GXMSS.Encoding.Incomparable
+public import HashSig.GXMSS.Encoding.Retry
+public import HashSig.GXMSS.Encoding.TargetSum
+public import HashSig.GXMSS.Encoding.Winternitz
+public import HashSig.GXMSS.HashInstance
+public import HashSig.GXMSS.Merkle
+public import HashSig.GXMSS.Scheme
+public import HashSig.GXMSS.Security.ChainWitnesses
+public import HashSig.GXMSS.Security.Encoding
+public import HashSig.GXMSS.Security.EncodingSpecializedUnforgeability
+public import HashSig.GXMSS.Security.EncodingTargetCollisionReduction
+public import HashSig.GXMSS.Security.HashWitnesses
+public import HashSig.GXMSS.Security.MerkleWitnesses
+public import HashSig.GXMSS.Security.ReductionGames
+public import HashSig.GXMSS.Security.ReductionGames.ChainHybrid
+public import HashSig.GXMSS.Security.ReductionGames.CollisionReductions
+public import HashSig.GXMSS.Security.ReductionGames.GuessingGames
+public import HashSig.GXMSS.Security.ReductionGames.JointReductions
+public import HashSig.GXMSS.Security.ReductionGames.SourceGames
+public import HashSig.GXMSS.Security.ReductionGames.SplicedChain
+public import HashSig.GXMSS.Security.TCRSimulation
+public import HashSig.GXMSS.Security.TargetSumEncodingTargetCollision
+public import HashSig.GXMSS.Security.Unforgeability
+public import HashSig.GXMSS.Security.Unforgeability.FirstChainCollision
+public import HashSig.GXMSS.Security.Unforgeability.MerkleCollision
+public import HashSig.GXMSS.Security.Unforgeability.ReductionBound
+public import HashSig.GXMSS.Security.Unforgeability.SecondChainCollision
+public import HashSig.GXMSS.Security.WinternitzEncodingTargetCollision
 public import HashSig.SLHDSA.Address
 public import HashSig.SLHDSA.C13.Concrete
 public import HashSig.SLHDSA.C13.ForsC
