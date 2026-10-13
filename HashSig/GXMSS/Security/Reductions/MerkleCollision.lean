@@ -5,8 +5,6 @@ Authors: Matthias Meijers
 -/
 
 module
-import Lean.Elab.Command
-import Lean.Util.CollectAxioms
 public import HashSig.GXMSS.Completeness
 public import HashSig.GXMSS.Security.Auxiliary.Encoding
 public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
@@ -155,7 +153,7 @@ theorem sourceStrongWinningMass_le_gameOne_add_merkleDifference
     cases Reductions.merkleDifferenceObservation hash enc K out <;>
     simp
 
-/-- The exact universally closed Merkle-forgery proposition audited below. -/
+/-- A valid forgery with a different raw opening yields an honest-first Merkle collision. -/
 @[expose]
 def ValidForgeryYieldsMerkleCollisionStatement [SampleableType H] [SampleableType R]
     [DecidableEq H]

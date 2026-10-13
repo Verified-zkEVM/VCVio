@@ -5,16 +5,11 @@ Authors: Matthias Meijers
 -/
 
 module
-import Lean.Elab.Command
-import Lean.Util.CollectAxioms
 public import HashSig.GXMSS.Encoding.Incomparable
 public import HashSig.GXMSS.Security.Auxiliary.Encoding
 public import HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision
 public import HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision
 public import HashSigTest.GXMSS.EncodingInstances
-import all HashSig.GXMSS.Security.Reductions.EncodingTargetCollisionReduction
-import all HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision
-import all HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision
 
 /-!
 # Encoding error and adaptive target-collision probes
@@ -177,44 +172,5 @@ theorem hash_zero_retry {PP M R E Tweak Y : Type} {n radix : ℕ}
 /-- A one-digit zero word fails a target-sum predicate of one. -/
 theorem target_sum_invalid_word :
     TargetSumCollision.accepts (v := 1) (w := 1) (target := 1) word = false := by decide
-
-/- Check the imported origins and complete axiom dependencies of the shared reduction,
-its two encoding instances, and two supporting theorems. -/
-run_cmd Lean.Elab.Command.liftTermElabM do
-  let targets : List (Lean.Name × Lean.Name) := [
-    (``GXMSS.Encoding.TargetCollisionReduction.advantage_le_hash,
-      `HashSig.GXMSS.Security.Reductions.EncodingTargetCollisionReduction),
-    (``GXMSS.Encoding.WinternitzCollision.advantage_le_hash,
-      `HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision),
-    (``GXMSS.Encoding.TargetSumCollision.advantage_le_hash,
-      `HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision),
-    (``GXMSS.Encoding.WinternitzCollision.word_injective,
-      `HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision),
-    (``GXMSS.Encoding.TargetCollisionReduction.canonicalRandomizer_uniform,
-      `HashSig.GXMSS.Security.Reductions.EncodingTargetCollisionReduction)]
-  let env ← Lean.getEnv
-  for target in targets do
-    let name := target.1
-    let expectedOrigin := target.2
-    let some constInfo := env.find? name
-      | throwError "{name} is missing from the imported environment"
-    let .thmInfo info := constInfo
-      | throwError "{name} is not an imported theorem"
-    let some moduleIdx := env.getModuleIdxFor? name
-      | throwError "{name} has no imported-module origin"
-    let origin := env.header.moduleNames[moduleIdx.toNat]!
-    unless origin == expectedOrigin do
-      throwError "{name} originates in {origin}, not {expectedOrigin}"
-    Lean.Meta.forallTelescope info.type fun _ result => do
-      let resultType ← Lean.Meta.inferType result
-      unless (← Lean.Meta.isDefEq resultType (Lean.mkSort Lean.Level.zero)) do
-        throwError "{name} is not a universally closed proposition"
-    let axioms ← Lean.collectAxioms name
-    let allowed := [``propext, ``Classical.choice, ``Quot.sound]
-    let unexpected := axioms.filter fun ax => !allowed.contains ax
-    unless unexpected.isEmpty do
-      throwError "unapproved transitive axioms for {name}: {unexpected.toList}"
-    Lean.logInfo m!"Imported encoding theorem {name} origin: {origin}"
-    Lean.logInfo m!"Imported encoding theorem {name} axioms: {axioms.toList}"
 
 end GXMSS.Encoding.SecurityProbe

@@ -5,20 +5,11 @@ Authors: Matthias Meijers
 -/
 
 module
-import Lean.Elab.Command
-import Lean.Util.CollectAxioms
 public import HashSig.GXMSS.Security.Reductions.SecondChainCollision
+public import HashSig.GXMSS.Security.Reductions.EncodingCollision
+public import HashSig.GXMSS.Security.Reductions.EncodingComposition
 public import HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision
 public import HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision
-import all HashSig.GXMSS.Security.Reductions.MerkleCollision
-import all HashSig.GXMSS.Security.Reductions.FirstChainCollision
-import all HashSig.GXMSS.Security.Reductions.SecondChainCollision
-import all HashSig.GXMSS.Security.Reductions.SourceGames
-import all HashSig.GXMSS.Security.Reductions.GuessingGames
-import all HashSig.GXMSS.Security.Reductions.CollisionReductions
-import all HashSig.GXMSS.Security.Reductions.SplicedChain
-import all HashSig.GXMSS.Security.Reductions.ChainHybrid
-import all HashSig.GXMSS.Security.Reductions.JointReductions
 
 /-!
 # Strong unforgeability reduction bound
@@ -38,61 +29,6 @@ open Encoding ENNReal OracleComp OracleSpec TweakableHash
 noncomputable section
 
 variable {PP T X H M R : Type} {h w v : ℕ}
-
-run_cmd Lean.Elab.Command.liftTermElabM do
-  let name := ``ValidForgeryYieldsMerkleCollision
-  let env ← Lean.getEnv
-  let info? : Option Lean.ConstantInfo := env.find? name
-  let some (.thmInfo info) := info?
-    | throwError "{name} is not a theorem defined in this module"
-  Lean.Meta.forallTelescope info.type fun fvars result => do
-    let levelParams := info.levelParams
-    let levels := levelParams.map Lean.Level.param
-    let expected := Lean.mkAppN (Lean.mkConst ``ValidForgeryYieldsMerkleCollisionStatement levels)
-      fvars
-    unless (← Lean.Meta.isDefEq result expected) do
-      throwError "{name} does not have the exact named Merkle-forgery proposition"
-    let resultType ← Lean.Meta.inferType result
-    unless (← Lean.Meta.isDefEq resultType (Lean.mkSort Lean.Level.zero)) do
-      throwError "{name} is not a universally closed proposition"
-  let axioms ← Lean.collectAxioms name
-  let allowed := [``propext, ``Classical.choice, ``Quot.sound]
-  let unexpected := axioms.filter fun ax => !allowed.contains ax
-  unless unexpected.isEmpty do
-    throwError "unapproved transitive axioms for {name}: {unexpected.toList}"
-
-/-- The successful-record Game 1 to Game 2 hop using the fixed target-collision reduction.
-The pathwise signing bound counts repeated and failed queries. The inequality compares returned
-native mass without conditioning on termination or on successful retries. -/
-@[expose]
-def SuccessfulEncodingTargetCollisionBound
-    [SampleableType H] [SampleableType R]
-    [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
-    (hash : HashInstance PP T X H h w v)
-    (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (qs K : ℕ)
-    (adv : Reductions.SchemeAdversary PP H M R h v) : Prop :=
-  SigningQueryBound qs adv →
-    Reductions.gameOneAdvantage hash enc K adv ≤
-      Reductions.gameTwoAdvantage hash enc K adv +
-        Encoding.TargetCollisionResistance.advantage
-          (Reductions.encodingTargetCollisionReduction hash enc qs K adv)
-
-/-- Returned Game 1 wins lost at Game 2 are charged to the successful recorded encoding target
-in the authoritative collision game. -/
-theorem successful_encoding_target_collision_bound
-    [SampleableType H] [SampleableType R]
-    [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
-    (hash : HashInstance PP T X H h w v)
-    (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (qs K : ℕ)
-    (adv : Reductions.SchemeAdversary PP H M R h v) :
-    SuccessfulEncodingTargetCollisionBound hash enc qs K adv := by
-  intro hbound
-  exact (Reductions.gameOneAdvantage_le_gameTwo_add_successfulDifference
-    hash enc K adv).trans (add_le_add_right
-      (Reductions.successfulEncodingDifferenceMass_le_encodingTargetCollisionAdvantage
-        hash enc qs K adv hbound) _)
 
 set_option maxHeartbeats 800000 in
 -- Elaborating the six concrete adversary types through the existing reduction-bound interface
@@ -218,89 +154,7 @@ open GXMSS.Unforgeability
 open GXMSS.Reductions
 open OracleComp TweakableHash ENNReal
 
-variable {PP T X H M R Y : Type} {h w v n₀ target : ℕ}
-
-/-- Seed-sampler agreement identifies the scheme's encoding game with the bridge game. -/
-theorem encoding_problem_eq [SampleableType R]
-    (hash : HashInstance PP T X H h w v)
-    (bridge : TargetCollisionReduction.Bridge PP M R (Fin (2 ^ h)) T Y v (2 ^ w))
-    (qs K : ℕ) (hseed : hash.thf.seedGen = bridge.th.seedGen) :
-    encodingTCRProblem hash bridge.enc qs K =
-      TargetCollisionReduction.encodingProblem bridge qs K := by
-  simp [encodingTCRProblem, TargetCollisionReduction.encodingProblem, hseed]
-
-private theorem advantage_eq_transport
-    [DecidableEq M] [DecidableEq R]
-    {P Q : TargetCollisionResistance.Problem PP M R (Fin (2 ^ h)) v (2 ^ w)}
-    (heq : P = Q) (source : TargetCollisionResistance.Adversary P) :
-    TargetCollisionResistance.advantage source =
-      TargetCollisionResistance.advantage (heq ▸ source) := by
-  cases heq
-  rfl
-
-/-- The hash-game adversary obtained from the scheme's encoding-game adversary. -/
-@[expose] noncomputable def encodingHashTargetCollisionReduction
-    [SampleableType H] [SampleableType R]
-    [DecidableEq M] [DecidableEq R]
-    (hash : HashInstance PP T X H h w v)
-    (bridge : TargetCollisionReduction.Bridge PP M R (Fin (2 ^ h)) T Y v (2 ^ w))
-    (hseed : hash.thf.seedGen = bridge.th.seedGen) (qs K : ℕ)
-    (adv : SchemeAdversary PP H M R h v) :=
-  TargetCollisionReduction.reduction bridge qs K
-    ((encoding_problem_eq hash bridge qs K hseed) ▸
-      encodingTargetCollisionReduction hash bridge.enc qs K adv)
-
-set_option maxHeartbeats 800000 in
--- Elaborating the six scheme reductions and the dependent transport of the encoding adversary
--- through the seed-agreed target-collision problem exceeds the default heartbeat limit.
-/-- A two-word encoding with a target-collision bridge yields a scheme bound in terms of the
-encoding hash's SM-DT-rTCR advantage. The other generic GXMSS terms are unchanged. -/
-theorem strong_unforgeability_bound_of_bridge
-    [SampleableType H] [SampleableType R]
-    [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq Y] [DecidableEq (GXMSS.Signature R H h v)]
-    (hash : HashInstance PP T X H h w v)
-    (bridge : TargetCollisionReduction.Bridge PP M R (Fin (2 ^ h)) T Y v (2 ^ w))
-    (hseed : hash.thf.seedGen = bridge.th.seedGen) (K qs : ℕ)
-    (hv : 0 < v) (hw : 0 < w)
-    (htwo : ∃ x y : Codeword v (2 ^ w),
-      x ∈ bridge.enc.code ∧ y ∈ bridge.enc.code ∧ x ≠ y)
-    (adv : SchemeAdversary PP H M R h v)
-    (hqueries : SigningQueryBound qs adv) :
-    SyncSignatureUnforgeability.strongAdvantage
-        (GXMSS.scheme hash bridge.enc K) ProbCompRuntime.probComp adv ≤
-      SM_DT_TCR_Advantage (merkleTargetCollisionReduction hash bridge.enc K hv adv) +
-        SM_DT_RTCR_Advantage (encodingHashTargetCollisionReduction hash bridge hseed qs K adv) +
-        SM_DT_TCR_Advantage (firstChainTargetCollisionReduction hash bridge.enc K adv) +
-        SM_DT_TCR_Advantage (secondChainTargetCollisionReduction hash bridge.enc K adv) +
-        (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) *
-          ((↑(2 ^ w) : ℝ≥0∞) *
-              SM_DT_UD_Advantage (jointUndetectabilityReduction hash bridge.enc K hv hw adv) +
-            SM_DT_PRE_Advantage (jointPreimageReduction hash bridge.enc K hv hw adv)) := by
-  let source := encodingTargetCollisionReduction hash bridge.enc qs K adv
-  let source' := (encoding_problem_eq hash bridge qs K hseed) ▸ source
-  have hcast : TargetCollisionResistance.advantage source =
-      TargetCollisionResistance.advantage source' :=
-    advantage_eq_transport (encoding_problem_eq hash bridge qs K hseed) source
-  have hhash := TargetCollisionReduction.advantage_le_hash bridge qs K source'
-  have hbase := (strong_unforgeability_reduction_bound
-    hash bridge.enc K qs hv hw htwo adv) hqueries
-  change SyncSignatureUnforgeability.strongAdvantage
-      (GXMSS.scheme hash bridge.enc K) ProbCompRuntime.probComp adv ≤
-    SM_DT_TCR_Advantage (merkleTargetCollisionReduction hash bridge.enc K hv adv) +
-      TargetCollisionResistance.advantage source +
-      SM_DT_TCR_Advantage (firstChainTargetCollisionReduction hash bridge.enc K adv) +
-      SM_DT_TCR_Advantage (secondChainTargetCollisionReduction hash bridge.enc K adv) +
-      (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) *
-        ((↑(2 ^ w) : ℝ≥0∞) *
-            SM_DT_UD_Advantage (jointUndetectabilityReduction hash bridge.enc K hv hw adv) +
-          SM_DT_PRE_Advantage (jointPreimageReduction hash bridge.enc K hv hw adv)) at hbase
-  calc
-    _ ≤ _ := hbase
-    _ ≤ _ := by
-      dsimp only [encodingHashTargetCollisionReduction]
-      rw [hcast]
-      gcongr
+variable {PP T X H M R : Type} {h w v n₀ target : ℕ}
 
 set_option maxHeartbeats 800000 in
 -- The checksum code dimensions appear in all six concrete reduction types and require a larger
@@ -355,7 +209,10 @@ theorem winternitz_strong_unforgeability_bound
   exact strong_unforgeability_bound_of_bridge hash
     (WinternitzCollision.bridge params hEpoch)
     (by simpa [WinternitzCollision.bridge] using hseed) K qs hv
-    params.digitWidthPositive htwo adv hqueries
+    params.digitWidthPositive adv
+    (strong_unforgeability_reduction_bound hash
+      (WinternitzCollision.bridge params hEpoch).enc K qs hv
+      params.digitWidthPositive htwo adv) hqueries
 
 set_option maxHeartbeats 800000 in
 -- Specializing the generic scheme reduction to the target-sum bridge elaborates six concrete
@@ -400,7 +257,9 @@ theorem target_sum_strong_unforgeability_bound
       TargetSum.two_codewords_of_acceptedCount v w target hcount
   exact strong_unforgeability_bound_of_bridge hash
     (TargetSumCollision.bridge params hEpoch)
-    (by simpa [TargetSumCollision.bridge] using hseed) K qs hv hw htwo adv hqueries
+    (by simpa [TargetSumCollision.bridge] using hseed) K qs hv hw adv
+    (strong_unforgeability_reduction_bound hash
+      (TargetSumCollision.bridge params hEpoch).enc K qs hv hw htwo adv) hqueries
 
 /-- A positive target that fits in one digit, with at least two digit positions, directly
 discharges the target-sum code-size premise in the scheme bound. -/

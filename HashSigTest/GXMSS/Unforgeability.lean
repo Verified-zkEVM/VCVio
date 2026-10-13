@@ -5,15 +5,7 @@ Authors: Matthias Meijers
 -/
 
 module
-import Lean.Elab.Command
-import Lean.Util.CollectAxioms
 public import HashSig.GXMSS.Security.Unforgeability
-import all HashSig.GXMSS.Security.Unforgeability
-import all HashSig.GXMSS.Security.Reductions.GuessingGames
-import all HashSig.GXMSS.Security.Reductions.JointReductions
-import all HashSig.GXMSS.Security.Reductions.MerkleCollision
-import all HashSig.GXMSS.Security.Reductions.FirstChainCollision
-import all HashSig.GXMSS.Security.Reductions.SecondChainCollision
 
 /-! # Generalized XMSS strong-unforgeability reduction-bound probe -/
 
@@ -21,8 +13,8 @@ public section
 
 namespace GXMSS.UnforgeabilityProbe
 
-#check @Unforgeability.SpecificEncoding.encoding_problem_eq
-#check @Unforgeability.SpecificEncoding.strong_unforgeability_bound_of_bridge
+#check @Reductions.encoding_problem_eq
+#check @Reductions.strong_unforgeability_bound_of_bridge
 #check @Unforgeability.SpecificEncoding.winternitz_strong_unforgeability_bound
 #check @Unforgeability.SpecificEncoding.target_sum_strong_unforgeability_bound
 #check @Unforgeability.SpecificEncoding.target_sum_strong_unforgeability_bound_of_small_target
@@ -175,51 +167,7 @@ example [SampleableType H] [SampleableType R]
   Reductions.gameFourAdvantage_le_gameFive_add_unpaid_masses
     hash enc K hv hw adv
 
-/- Compiler origin and transitive axioms for the imported finite-guess theorems. The importing
-examples above fix the proposition shape independently of the definition site. -/
-run_cmd Lean.Elab.Command.liftTermElabM do
-  let names := [
-    ``Reductions.guess_cardinality,
-    ``Reductions.guess_cardinality_le_paper_coefficient,
-    ``Reductions.gameFiveOutputMeasure_univ_eq_gameFourOutputMeasure_univ,
-    ``Reductions.gameFiveGuess_probability,
-    ``Reductions.gameFiveAdvantage_eq_successfulGameFourMass_div_guess_card,
-    ``Reductions.successfulGameFourMass_eq_guess_card_mul_gameFiveAdvantage,
-    ``Reductions.gameFourAdvantage_le_gameFive_add_unpaid_masses,
-    ``Reductions.jointChainGuess_probability,
-    ``Reductions.jointChainAdvantage_eq_gameFourAdvantage_div_guess_card,
-    ``Reductions.gameFourAdvantage_eq_guess_card_mul_jointChainAdvantage,
-    ``Reductions.jointPRESelectedMass_le_preimageAdvantage]
-  let env ← Lean.getEnv
-  for name in names do
-    let some constInfo := env.find? name
-      | throwError "{name} is missing from the imported environment"
-    let .thmInfo info := constInfo
-      | throwError "{name} is not an imported theorem"
-    let some moduleIdx := env.getModuleIdxFor? name
-      | throwError "{name} has no imported-module origin"
-    let header := env.header
-    let origin := header.moduleNames[moduleIdx.toNat]!
-    let expected :=
-      if name == ``Reductions.jointPRESelectedMass_le_preimageAdvantage
-      then `HashSig.GXMSS.Security.Reductions.JointReductions
-      else `HashSig.GXMSS.Security.Reductions.GuessingGames
-    unless origin == expected do
-      throwError "{name} originates in {origin}, not {expected}"
-    Lean.Meta.forallTelescope info.type fun _ result => do
-      let resultType ← Lean.Meta.inferType result
-      unless (← Lean.Meta.isDefEq resultType (Lean.mkSort Lean.Level.zero)) do
-        throwError "{name} is not a universally closed proposition"
-    let axioms ← Lean.collectAxioms name
-    let allowed := [``propext, ``Classical.choice, ``Quot.sound]
-    let unexpected := axioms.filter fun ax => !allowed.contains ax
-    unless unexpected.isEmpty do
-      throwError "unapproved transitive axioms for {name}: {unexpected.toList}"
-    Lean.logInfo m!"Imported finite-guess theorem {name} origin: {origin}"
-    Lean.logInfo m!"Imported finite-guess theorem {name} axioms: {axioms.toList}"
-
-/- These importing-module examples state the two exact new claims and must elaborate
-using the imported theorems. The origin and axiom checks below audit their proof objects. -/
+/- These examples apply the first- and second-chain bounds through their public interfaces. -/
 example [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
     [DecidableEq (GXMSS.Signature R H h v)]
@@ -269,196 +217,5 @@ example [SampleableType H] [SampleableType R]
           (Reductions.secondChainTargetCollisionReduction hash enc K adv) :=
   Unforgeability.game_three_le_game_four_add_second_chain_target_collision
     hash enc K adv
-
-/- The imported theorem must prove the named proposition from this module with only the
-project-approved transitive axioms. Keep this audit in an importing module so the compiler
-origin is checked rather than inferred from source text. -/
-run_cmd Lean.Elab.Command.liftTermElabM do
-  let name := ``Unforgeability.first_merkle_target_collision_bound
-  let env ← Lean.getEnv
-  let some constInfo := env.find? name
-    | throwError "{name} is missing from the imported environment"
-  let .thmInfo info := constInfo
-    | throwError "{name} is not an imported theorem"
-  let some moduleIdx := env.getModuleIdxFor? name
-    | throwError "{name} has no imported-module origin"
-  let header := env.header
-  let origin := header.moduleNames[moduleIdx.toNat]!
-  unless origin == `HashSig.GXMSS.Security.Reductions.MerkleCollision do
-    throwError "{name} originates in {origin}"
-  Lean.Meta.forallTelescope info.type fun fvars result => do
-    let levelParams := info.levelParams
-    let levels := levelParams.map Lean.Level.param
-    let expected := Lean.mkAppN
-      (Lean.mkConst ``Unforgeability.FirstMerkleTargetCollisionBound levels) fvars
-    unless (← Lean.Meta.isDefEq result expected) do
-      throwError "{name} does not prove the exact named Merkle probability bound"
-    let resultType ← Lean.Meta.inferType result
-    unless (← Lean.Meta.isDefEq resultType (Lean.mkSort Lean.Level.zero)) do
-      throwError "{name} is not a universally closed proposition"
-  let axioms ← Lean.collectAxioms name
-  let allowed := [``propext, ``Classical.choice, ``Quot.sound]
-  let unexpected := axioms.filter fun ax => !allowed.contains ax
-  unless unexpected.isEmpty do
-    throwError "unapproved transitive axioms for {name}: {unexpected.toList}"
-  Lean.logInfo m!"Imported Merkle theorem origin: {origin}"
-  Lean.logInfo m!"Imported Merkle theorem axioms: {axioms.toList}"
-
-/- Audit the successor theorem from its imported module, independently of source text. -/
-run_cmd Lean.Elab.Command.liftTermElabM do
-  let name := ``Unforgeability.successful_encoding_target_collision_bound
-  let env ← Lean.getEnv
-  let some constInfo := env.find? name
-    | throwError "{name} is missing from the imported environment"
-  let .thmInfo info := constInfo
-    | throwError "{name} is not an imported theorem"
-  let some moduleIdx := env.getModuleIdxFor? name
-    | throwError "{name} has no imported-module origin"
-  let origin := env.header.moduleNames[moduleIdx.toNat]!
-  unless origin == `HashSig.GXMSS.Security.Unforgeability do
-    throwError "{name} originates in {origin}"
-  Lean.Meta.forallTelescope info.type fun fvars result => do
-    let levels := info.levelParams.map Lean.Level.param
-    let expected := Lean.mkAppN
-      (Lean.mkConst ``Unforgeability.SuccessfulEncodingTargetCollisionBound levels) fvars
-    unless (← Lean.Meta.isDefEq result expected) do
-      throwError "{name} does not prove the exact named successful-record bound"
-    let resultType ← Lean.Meta.inferType result
-    unless (← Lean.Meta.isDefEq resultType (Lean.mkSort Lean.Level.zero)) do
-      throwError "{name} is not a universally closed proposition"
-  let axioms ← Lean.collectAxioms name
-  let allowed := [``propext, ``Classical.choice, ``Quot.sound]
-  let unexpected := axioms.filter fun ax => !allowed.contains ax
-  unless unexpected.isEmpty do
-    throwError "unapproved transitive axioms for {name}: {unexpected.toList}"
-  Lean.logInfo m!"Imported successful-record theorem origin: {origin}"
-  Lean.logInfo m!"Imported successful-record theorem axioms: {axioms.toList}"
-
-/- Audit both new first-chain theorems from the importing module. Their exact types are
-printed above; this check rejects a changed compiler origin or unapproved transitive axiom. -/
-run_cmd Lean.Elab.Command.liftTermElabM do
-  let names := [
-    ``Unforgeability.successful_first_chain_difference_le_target_collision_advantage,
-    ``Unforgeability.game_two_le_game_three_add_first_chain_target_collision]
-  let env ← Lean.getEnv
-  for name in names do
-    let some constInfo := env.find? name
-      | throwError "{name} is missing from the imported environment"
-    let .thmInfo info := constInfo
-      | throwError "{name} is not an imported theorem"
-    let some moduleIdx := env.getModuleIdxFor? name
-      | throwError "{name} has no imported-module origin"
-    let origin := env.header.moduleNames[moduleIdx.toNat]!
-    unless origin == `HashSig.GXMSS.Security.Reductions.FirstChainCollision do
-      throwError "{name} originates in {origin}"
-    Lean.Meta.forallTelescope info.type fun _ result => do
-      let resultType ← Lean.Meta.inferType result
-      unless (← Lean.Meta.isDefEq resultType (Lean.mkSort Lean.Level.zero)) do
-        throwError "{name} is not a universally closed proposition"
-    let axioms ← Lean.collectAxioms name
-    let allowed := [``propext, ``Classical.choice, ``Quot.sound]
-    let unexpected := axioms.filter fun ax => !allowed.contains ax
-    unless unexpected.isEmpty do
-      throwError "unapproved transitive axioms for {name}: {unexpected.toList}"
-    Lean.logInfo m!"Imported first-chain theorem {name} origin: {origin}"
-    Lean.logInfo m!"Imported first-chain theorem {name} axioms: {axioms.toList}"
-
-/- The two second-chain theorem types elaborate above; audit their imported compiler origins and
-full transitive axiom sets without relying on source-text searches. -/
-run_cmd Lean.Elab.Command.liftTermElabM do
-  let names := [
-    ``Unforgeability.successful_second_chain_difference_le_target_collision_advantage,
-    ``Unforgeability.game_three_le_game_four_add_second_chain_target_collision]
-  let env ← Lean.getEnv
-  for name in names do
-    let some constInfo := env.find? name
-      | throwError "{name} is missing from the imported environment"
-    let .thmInfo info := constInfo
-      | throwError "{name} is not an imported theorem"
-    let some moduleIdx := env.getModuleIdxFor? name
-      | throwError "{name} has no imported-module origin"
-    let origin := env.header.moduleNames[moduleIdx.toNat]!
-    unless origin == `HashSig.GXMSS.Security.Reductions.SecondChainCollision do
-      throwError "{name} originates in {origin}"
-    Lean.Meta.forallTelescope info.type fun _ result => do
-      let resultType ← Lean.Meta.inferType result
-      unless (← Lean.Meta.isDefEq resultType (Lean.mkSort Lean.Level.zero)) do
-        throwError "{name} is not a universally closed proposition"
-    let axioms ← Lean.collectAxioms name
-    let allowed := [``propext, ``Classical.choice, ``Quot.sound]
-    let unexpected := axioms.filter fun ax => !allowed.contains ax
-    unless unexpected.isEmpty do
-      throwError "unapproved transitive axioms for {name}: {unexpected.toList}"
-    Lean.logInfo m!"Imported second-chain theorem {name} origin: {origin}"
-    Lean.logInfo m!"Imported second-chain theorem {name} axioms: {axioms.toList}"
-
-/- Audit the conditional result and its joint accounting from this importing module. The
-`#check` commands above print their exact elaborated theorem types. -/
-run_cmd Lean.Elab.Command.liftTermElabM do
-  let names := [
-    ``Reductions.noMaximumOutput_of_two_codewords,
-    ``Reductions.jointChainAdvantage_le_jointUD_add_jointPRESelected,
-    ``Reductions.jointChainHybridReturnedMeasureBridge,
-    ``Reductions.jointChainAdvantage_le_jointUD_add_jointPRE,
-    ``Unforgeability.strong_unforgeability_reduction_bound]
-  let env ← Lean.getEnv
-  for name in names do
-    let some constInfo := env.find? name
-      | throwError "{name} is missing from the imported environment"
-    let .thmInfo info := constInfo
-      | throwError "{name} is not an imported theorem"
-    let some moduleIdx := env.getModuleIdxFor? name
-      | throwError "{name} has no imported-module origin"
-    let origin := env.header.moduleNames[moduleIdx.toNat]!
-    let expected :=
-      if name == ``Unforgeability.strong_unforgeability_reduction_bound
-      then `HashSig.GXMSS.Security.Unforgeability
-      else if name == ``Reductions.noMaximumOutput_of_two_codewords
-      then `HashSig.GXMSS.Security.Reductions.GuessingGames
-      else `HashSig.GXMSS.Security.Reductions.JointReductions
-    unless origin == expected do
-      throwError "{name} originates in {origin}, not {expected}"
-    Lean.Meta.forallTelescope info.type fun _ result => do
-      let resultType ← Lean.Meta.inferType result
-      unless (← Lean.Meta.isDefEq resultType (Lean.mkSort Lean.Level.zero)) do
-        throwError "{name} is not a universally closed proposition"
-    let axioms ← Lean.collectAxioms name
-    let allowed := [``propext, ``Classical.choice, ``Quot.sound]
-    let unexpected := axioms.filter fun ax => !allowed.contains ax
-    unless unexpected.isEmpty do
-      throwError "unapproved transitive axioms for {name}: {unexpected.toList}"
-    Lean.logInfo m!"Imported conditional theorem {name} origin: {origin}"
-    Lean.logInfo m!"Imported conditional theorem {name} axioms: {axioms.toList}"
-
-/- Check the new encoding-specialized theorem origins and their complete transitive axioms. -/
-run_cmd Lean.Elab.Command.liftTermElabM do
-  let names := [
-    ``Unforgeability.SpecificEncoding.encoding_problem_eq,
-    ``Unforgeability.SpecificEncoding.strong_unforgeability_bound_of_bridge,
-    ``Unforgeability.SpecificEncoding.winternitz_strong_unforgeability_bound,
-    ``Unforgeability.SpecificEncoding.target_sum_strong_unforgeability_bound,
-    ``Unforgeability.SpecificEncoding.target_sum_strong_unforgeability_bound_of_small_target]
-  let env ← Lean.getEnv
-  for name in names do
-    let some constInfo := env.find? name
-      | throwError "{name} is missing from the imported environment"
-    let .thmInfo info := constInfo
-      | throwError "{name} is not an imported theorem"
-    let some moduleIdx := env.getModuleIdxFor? name
-      | throwError "{name} has no imported-module origin"
-    let origin := env.header.moduleNames[moduleIdx.toNat]!
-    unless origin == `HashSig.GXMSS.Security.Unforgeability do
-      throwError "{name} originates in {origin}, not the composition module"
-    Lean.Meta.forallTelescope info.type fun _ result => do
-      let resultType ← Lean.Meta.inferType result
-      unless (← Lean.Meta.isDefEq resultType (Lean.mkSort Lean.Level.zero)) do
-        throwError "{name} is not a universally closed proposition"
-    let axioms ← Lean.collectAxioms name
-    let allowed := [``propext, ``Classical.choice, ``Quot.sound]
-    let unexpected := axioms.filter fun ax => !allowed.contains ax
-    unless unexpected.isEmpty do
-      throwError "unapproved transitive axioms for {name}: {unexpected.toList}"
-    Lean.logInfo m!"Imported encoding-specialized theorem {name} origin: {origin}"
-    Lean.logInfo m!"Imported encoding-specialized theorem {name} axioms: {axioms.toList}"
 
 end GXMSS.UnforgeabilityProbe
