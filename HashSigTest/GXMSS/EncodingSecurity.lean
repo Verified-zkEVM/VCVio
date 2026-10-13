@@ -8,13 +8,13 @@ module
 import Lean.Elab.Command
 import Lean.Util.CollectAxioms
 public import HashSig.GXMSS.Encoding.Incomparable
-public import HashSig.GXMSS.Security.Encoding
-public import HashSig.GXMSS.Security.WinternitzEncodingTargetCollision
-public import HashSig.GXMSS.Security.TargetSumEncodingTargetCollision
+public import HashSig.GXMSS.Security.Auxiliary.Encoding
+public import HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision
+public import HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision
 public import HashSigTest.GXMSS.EncodingInstances
-import all HashSig.GXMSS.Security.EncodingTargetCollisionReduction
-import all HashSig.GXMSS.Security.WinternitzEncodingTargetCollision
-import all HashSig.GXMSS.Security.TargetSumEncodingTargetCollision
+import all HashSig.GXMSS.Security.Reductions.EncodingTargetCollisionReduction
+import all HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision
+import all HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision
 
 /-!
 # Encoding error and adaptive target-collision probes
@@ -183,15 +183,15 @@ its two encoding instances, and two supporting theorems. -/
 run_cmd Lean.Elab.Command.liftTermElabM do
   let targets : List (Lean.Name × Lean.Name) := [
     (``GXMSS.Encoding.TargetCollisionReduction.advantage_le_hash,
-      `HashSig.GXMSS.Security.EncodingTargetCollisionReduction),
+      `HashSig.GXMSS.Security.Reductions.EncodingTargetCollisionReduction),
     (``GXMSS.Encoding.WinternitzCollision.advantage_le_hash,
-      `HashSig.GXMSS.Security.WinternitzEncodingTargetCollision),
+      `HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision),
     (``GXMSS.Encoding.TargetSumCollision.advantage_le_hash,
-      `HashSig.GXMSS.Security.TargetSumEncodingTargetCollision),
+      `HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision),
     (``GXMSS.Encoding.WinternitzCollision.word_injective,
-      `HashSig.GXMSS.Security.WinternitzEncodingTargetCollision),
+      `HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision),
     (``GXMSS.Encoding.TargetCollisionReduction.canonicalRandomizer_uniform,
-      `HashSig.GXMSS.Security.EncodingTargetCollisionReduction)]
+      `HashSig.GXMSS.Security.Reductions.EncodingTargetCollisionReduction)]
   let env ← Lean.getEnv
   for target in targets do
     let name := target.1

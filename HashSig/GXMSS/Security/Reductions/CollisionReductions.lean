@@ -5,9 +5,9 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.ReductionGames.GuessingGames
-import all HashSig.GXMSS.Security.ReductionGames.SourceGames
-import all HashSig.GXMSS.Security.ReductionGames.GuessingGames
+public import HashSig.GXMSS.Security.Reductions.GuessingGames
+import all HashSig.GXMSS.Security.Reductions.SourceGames
+import all HashSig.GXMSS.Security.Reductions.GuessingGames
 
 /-!
 # Target collision reductions
@@ -19,7 +19,7 @@ and charges only differences backed by a successful source record.
 
 public section
 
-namespace GXMSS.ReductionGames
+namespace GXMSS.Reductions
 
 open Encoding ENNReal OracleComp OracleSpec Security TweakableHash
 
@@ -1229,4 +1229,4 @@ private theorem encodingTargetExperiment_eq_coupled
   simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc, pure_bind]
   rfl
 
-end GXMSS.ReductionGames
+end GXMSS.Reductions

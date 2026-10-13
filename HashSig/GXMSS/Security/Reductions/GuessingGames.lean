@@ -5,8 +5,8 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.ReductionGames.SourceGames
-import all HashSig.GXMSS.Security.ReductionGames.SourceGames
+public import HashSig.GXMSS.Security.Reductions.SourceGames
+import all HashSig.GXMSS.Security.Reductions.SourceGames
 
 /-!
 # Guessed Game 5 and Game 6
@@ -18,7 +18,7 @@ separate residual events.
 
 public section
 
-namespace GXMSS.ReductionGames
+namespace GXMSS.Reductions
 
 open Encoding ENNReal OracleComp OracleSpec Security TweakableHash
 
@@ -903,4 +903,4 @@ theorem gameFourAdvantage_le_gameFive_add_unpaid_masses
         hash enc K hv hw adv]
       ac_rfl
 
-end GXMSS.ReductionGames
+end GXMSS.Reductions

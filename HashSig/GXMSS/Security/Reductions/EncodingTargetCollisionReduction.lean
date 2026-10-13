@@ -5,7 +5,7 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Encoding
+public import HashSig.GXMSS.Security.Auxiliary.Encoding
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTRTCR
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection

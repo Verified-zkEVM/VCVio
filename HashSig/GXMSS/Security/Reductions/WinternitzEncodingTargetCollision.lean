@@ -5,7 +5,7 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.EncodingTargetCollisionReduction
+public import HashSig.GXMSS.Security.Reductions.EncodingTargetCollisionReduction
 public import HashSig.GXMSS.Encoding.Winternitz
 
 /-!
