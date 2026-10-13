@@ -175,6 +175,10 @@ public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.CryptoFoundations.SymmEncAlg.Deterministic
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
+public import VCVio.CryptoFoundations.SyncMultiSignatureAlg
+public import VCVio.CryptoFoundations.SyncMultiSignatureAlg.Security
+public import VCVio.CryptoFoundations.SyncSignatureAlg
+public import VCVio.CryptoFoundations.SyncSignatureAlg.Security
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash
 public import VCVio.EvalDist.BitVec.Measure

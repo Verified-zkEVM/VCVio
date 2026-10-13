@@ -73,10 +73,11 @@ build boundaries and the staged consolidation.
 - `ToMathlib/`: local Mathlib-facing utilities and lemmas intended to remain below the framework layer.
 - `Extern/`: native FFI surface — the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them. No proof library may import it; the backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
 - `LatticeCrypto/`: lattice-specific algebra, hardness assumptions, scheme definitions, security theorems, and concrete implementations.
-- `HashSig/`: hash-based signatures — SLH-DSA (SPHINCS+, FIPS 205) proof-level specs,
-  component-level FIPS conformance results, and security-facing interfaces (no unforgeability
-  theorem or complete FIPS conformance result yet). Peer of `LatticeCrypto/`; depends on
-  `VCVio`/`ToMathlib` but nothing in those imports it back.
+- `HashSig/`: hash-based signatures. GXMSS has specification, completeness, and concrete
+  strong-unforgeability bounds under explicit assumptions; see `docs/reading/gxmss.md`.
+  SLH-DSA (SPHINCS+, FIPS 205) has proof-level specs, component-level FIPS conformance results,
+  and security-facing interfaces (no unforgeability theorem or complete FIPS conformance result
+  yet). Peer of `LatticeCrypto/`; depends on `VCVio`/`ToMathlib` but nothing in those imports it back.
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
 - `VCVioWidgets/`: optional widget experiments and visualizations.
