@@ -5,12 +5,12 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.ReductionGames.ChainHybrid
-import all HashSig.GXMSS.Security.ReductionGames.SourceGames
-import all HashSig.GXMSS.Security.ReductionGames.GuessingGames
-import all HashSig.GXMSS.Security.ReductionGames.CollisionReductions
-import all HashSig.GXMSS.Security.ReductionGames.SplicedChain
-import all HashSig.GXMSS.Security.ReductionGames.ChainHybrid
+public import HashSig.GXMSS.Security.Reductions.ChainHybrid
+import all HashSig.GXMSS.Security.Reductions.SourceGames
+import all HashSig.GXMSS.Security.Reductions.GuessingGames
+import all HashSig.GXMSS.Security.Reductions.CollisionReductions
+import all HashSig.GXMSS.Security.Reductions.SplicedChain
+import all HashSig.GXMSS.Security.Reductions.ChainHybrid
 
 /-!
 # Joint undetectability and preimage reductions
@@ -22,7 +22,7 @@ winning measures without conditioning on termination.
 
 public section
 
-namespace GXMSS.ReductionGames
+namespace GXMSS.Reductions
 
 open Encoding ENNReal OracleComp OracleSpec Security TweakableHash
 
@@ -1019,4 +1019,4 @@ theorem jointChainAdvantage_le_jointUD_add_jointPRE
       gcongr
       exact jointPRESelectedMass_le_preimageAdvantage hash enc K hv hw adv
 
-end GXMSS.ReductionGames
+end GXMSS.Reductions

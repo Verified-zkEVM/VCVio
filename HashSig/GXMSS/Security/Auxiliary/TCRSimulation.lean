@@ -5,10 +5,10 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.ReductionGames
-import all HashSig.GXMSS.Security.ReductionGames
-import all HashSig.GXMSS.Security.ReductionGames.CollisionReductions
-import all HashSig.GXMSS.Security.MerkleWitnesses
+public import HashSig.GXMSS.Security.Reductions.JointReductions
+import all HashSig.GXMSS.Security.Reductions.JointReductions
+import all HashSig.GXMSS.Security.Reductions.CollisionReductions
+import all HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 import all HashSig.GXMSS.Merkle
 
 /-!
@@ -20,7 +20,7 @@ target-collision reductions.  It does not compare winning probabilities or prove
 
 public section
 
-namespace GXMSS.ReductionGames
+namespace GXMSS.Reductions
 
 open OracleComp OracleSpec TweakableHash
 
@@ -1214,4 +1214,4 @@ theorem merkleOpeningTarget_registeredIndex_spec [DecidableEq T] [DecidableEq X]
   exact registeredIndex_spec _ _ _ _
     (merkleOpeningTarget_mem_registeredHistory hash pp starts endpoints ep target hmem) hcap
 
-end GXMSS.ReductionGames
+end GXMSS.Reductions

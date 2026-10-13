@@ -5,12 +5,12 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.HashWitnesses
-public import HashSig.GXMSS.Security.ChainWitnesses
-public import HashSig.GXMSS.Security.MerkleWitnesses
-public import HashSig.GXMSS.Security.TCRSimulation
-import all HashSig.GXMSS.Security.MerkleWitnesses
-import all HashSig.GXMSS.Security.ChainWitnesses
+public import HashSig.GXMSS.Security.Auxiliary.HashWitnesses
+public import HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
+public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
+public import HashSig.GXMSS.Security.Auxiliary.TCRSimulation
+import all HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
+import all HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
 import all HashSig.GXMSS.Chain
 public import HashSig.GXMSS.HashInstance
 public import HashSig.GXMSS.Chain
@@ -27,30 +27,30 @@ public section
 
 namespace GXMSS.SecurityWitnessProbe
 
-#check @ReductionGames.tcrEval_run_of_fresh
-#check @ReductionGames.tcrFullChain_run
-#check @ReductionGames.tcrFullChain_fallback_irrelevant
-#check @ReductionGames.endpointTargets_length
-#check @ReductionGames.chainTarget_mem_endpointTargets
-#check @ReductionGames.tcrEndpoints_run_empty
-#check @ReductionGames.tcrChainSetup_run
-#check @ReductionGames.merkleTargets_length
-#check @ReductionGames.merkleTargets_tweaks_nodup
+#check @Reductions.tcrEval_run_of_fresh
+#check @Reductions.tcrFullChain_run
+#check @Reductions.tcrFullChain_fallback_irrelevant
+#check @Reductions.endpointTargets_length
+#check @Reductions.chainTarget_mem_endpointTargets
+#check @Reductions.tcrEndpoints_run_empty
+#check @Reductions.tcrChainSetup_run
+#check @Reductions.merkleTargets_length
+#check @Reductions.merkleTargets_tweaks_nodup
 #check @HashInstance.mem_merkleOpeningQueries_honest_shape
-#check @ReductionGames.merkleOpeningTarget_mem_merkleTargets
-#check @ReductionGames.tcrMerkleRoot_run
-#check @ReductionGames.merkleOpeningTarget_mem_registeredHistory
-#check @ReductionGames.tcrKeySetup_run
-#check @ReductionGames.mem_honestOpeningTargets
-#check @ReductionGames.TCRKeyState.keys_eq
-#check @ReductionGames.tcrKeySetup_keys_run
-#check @ReductionGames.tcrKeySetup_observe_run
-#check @ReductionGames.tcrKeySetup_observe_evalDist
-#check @ReductionGames.chainProblem_capacity
-#check @ReductionGames.merkleProblem_capacity
-#check @ReductionGames.registeredIndex_spec
-#check @ReductionGames.chainTarget_registeredIndex_spec
-#check @ReductionGames.merkleOpeningTarget_registeredIndex_spec
+#check @Reductions.merkleOpeningTarget_mem_merkleTargets
+#check @Reductions.tcrMerkleRoot_run
+#check @Reductions.merkleOpeningTarget_mem_registeredHistory
+#check @Reductions.tcrKeySetup_run
+#check @Reductions.mem_honestOpeningTargets
+#check @Reductions.TCRKeyState.keys_eq
+#check @Reductions.tcrKeySetup_keys_run
+#check @Reductions.tcrKeySetup_observe_run
+#check @Reductions.tcrKeySetup_observe_evalDist
+#check @Reductions.chainProblem_capacity
+#check @Reductions.merkleProblem_capacity
+#check @Reductions.registeredIndex_spec
+#check @Reductions.chainTarget_registeredIndex_spec
+#check @Reductions.merkleOpeningTarget_registeredIndex_spec
 
 /-- Disjoint constructors preserve each raw input form. -/
 abbrev Input := ℕ ⊕ ((ℕ × ℕ) ⊕ (Fin 1 → ℕ))

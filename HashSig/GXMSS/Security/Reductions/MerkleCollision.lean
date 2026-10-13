@@ -8,22 +8,21 @@ module
 import Lean.Elab.Command
 import Lean.Util.CollectAxioms
 public import HashSig.GXMSS.Completeness
-public import HashSig.GXMSS.Security.Encoding
-public import HashSig.GXMSS.Security.MerkleWitnesses
-public import HashSig.GXMSS.Security.ReductionGames
-import all HashSig.GXMSS.Security.ReductionGames
-public import HashSig.GXMSS.Security.TCRSimulation
+public import HashSig.GXMSS.Security.Auxiliary.Encoding
+public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
+public import HashSig.GXMSS.Security.Reductions.JointReductions
+import all HashSig.GXMSS.Security.Reductions.JointReductions
+public import HashSig.GXMSS.Security.Auxiliary.TCRSimulation
 public import VCVio.CryptoFoundations.SyncSignatureAlg.Security
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUD
 
-import all HashSig.GXMSS.Security.ReductionGames.SourceGames
-import all HashSig.GXMSS.Security.ReductionGames.GuessingGames
-import all HashSig.GXMSS.Security.ReductionGames.CollisionReductions
-import all HashSig.GXMSS.Security.ReductionGames.SplicedChain
-import all HashSig.GXMSS.Security.ReductionGames.ChainHybrid
-import all HashSig.GXMSS.Security.ReductionGames.JointReductions
+import all HashSig.GXMSS.Security.Reductions.SourceGames
+import all HashSig.GXMSS.Security.Reductions.GuessingGames
+import all HashSig.GXMSS.Security.Reductions.CollisionReductions
+import all HashSig.GXMSS.Security.Reductions.SplicedChain
+import all HashSig.GXMSS.Security.Reductions.ChainHybrid
 
 /-!
 # Merkle target collision bound
@@ -46,7 +45,7 @@ variable {PP T X H M R : Type} {h w v : ℕ}
 calls and calls answered with failure count; ambient uniform calls do not. -/
 @[expose]
 def SigningQueryBound (qs : ℕ)
-    (adv : ReductionGames.SchemeAdversary PP H M R h v) : Prop :=
+    (adv : Reductions.SchemeAdversary PP H M R h v) : Prop :=
   ∀ pk, (adv.forge pk).IsQueryBoundP (fun q => q.isRight = true) qs
 
 /-- The concrete separate-term reduction inequality underlying Theorem 1. The parameter `qs`
@@ -124,8 +123,8 @@ def FirstMerkleTargetCollisionBound
   SyncSignatureUnforgeability.strongAdvantage (GXMSS.scheme hash enc K)
       ProbCompRuntime.probComp advGXMSS ≤
     SM_DT_TCR_Advantage
-        (ReductionGames.merkleTargetCollisionReduction hash enc K hv advGXMSS) +
-      ReductionGames.gameOneAdvantage hash enc K advGXMSS
+        (Reductions.merkleTargetCollisionReduction hash enc K hv advGXMSS) +
+      Reductions.gameOneAdvantage hash enc K advGXMSS
 
 /-- The source winning mass is bounded by the two disjoint observations on the same partial
 interaction. This statement preserves the runtime's unreturned mass. -/
@@ -134,26 +133,26 @@ theorem sourceStrongWinningMass_le_gameOne_add_merkleDifference
     [DecidableEq H] [DecidableEq M] [DecidableEq (GXMSS.Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K : ℕ)
-    (adv : ReductionGames.SchemeAdversary PP H M R h v) :
-    ReductionGames.sourceStrongOutputMeasure hash enc K adv {true} ≤
-      ReductionGames.gameOneAdvantage hash enc K adv +
+    (adv : Reductions.SchemeAdversary PP H M R h v) :
+    Reductions.sourceStrongOutputMeasure hash enc K adv {true} ≤
+      Reductions.gameOneAdvantage hash enc K adv +
         ProbCompRuntime.probComp.evalDist
-          (ReductionGames.merkleDifferenceObservation hash enc K <$>
-            ReductionGames.sourceProgram hash enc K adv) {true} := by
-  simp only [ReductionGames.sourceStrongOutputMeasure,
-    ReductionGames.gameOneAdvantage, ReductionGames.gameOneOutputMeasure,
-    ReductionGames.gameOne, ProbCompRuntime.probComp_evalDist]
+          (Reductions.merkleDifferenceObservation hash enc K <$>
+            Reductions.sourceProgram hash enc K adv) {true} := by
+  simp only [Reductions.sourceStrongOutputMeasure,
+    Reductions.gameOneAdvantage, Reductions.gameOneOutputMeasure,
+    Reductions.gameOne, ProbCompRuntime.probComp_evalDist]
   simp only [map_eq_bind_pure_comp]
   apply OracleComp.evalDist_bind_apply_le_add_of_support
-    (ReductionGames.sourceProgram hash enc K adv)
-    (fun out => pure (ReductionGames.sourceStrongObservation hash enc K out))
-    (fun out => pure (ReductionGames.gameOneObservation hash enc K out))
-    (fun out => pure (ReductionGames.merkleDifferenceObservation hash enc K out))
+    (Reductions.sourceProgram hash enc K adv)
+    (fun out => pure (Reductions.sourceStrongObservation hash enc K out))
+    (fun out => pure (Reductions.gameOneObservation hash enc K out))
+    (fun out => pure (Reductions.merkleDifferenceObservation hash enc K out))
     (by measurability)
   intro out _
-  rw [ReductionGames.sourceStrongObservation_eq_gameOne_or_merkleDifference]
-  cases ReductionGames.gameOneObservation hash enc K out <;>
-    cases ReductionGames.merkleDifferenceObservation hash enc K out <;>
+  rw [Reductions.sourceStrongObservation_eq_gameOne_or_merkleDifference]
+  cases Reductions.gameOneObservation hash enc K out <;>
+    cases Reductions.merkleDifferenceObservation hash enc K out <;>
     simp
 
 /-- The exact universally closed Merkle-forgery proposition audited below. -/
@@ -246,11 +245,11 @@ theorem merkleCollision_registeredTarget_wins
       hash.findMerkleCollision pp ep ((GXMSS.endpoints hash pp starts) ep)
         forgedLeaf (hash.authPath pp (GXMSS.endpoints hash pp starts) ep) forgedPath =
           some collision ∧
-      let history := ReductionGames.endpointTargets hash pp starts ++
-        ReductionGames.merkleTargets hash pp (GXMSS.endpoints hash pp starts)
-      let j := ReductionGames.registeredIndex history collision.tweak collision.first
+      let history := Reductions.endpointTargets hash pp starts ++
+        Reductions.merkleTargets hash pp (GXMSS.endpoints hash pp starts)
+      let j := Reductions.registeredIndex history collision.tweak collision.first
       j < history.length ∧ history[j]? = some (collision.tweak, collision.first) ∧
-        j < (ReductionGames.merkleTCRProblem hash).numTargets ∧
+        j < (Reductions.merkleTCRProblem hash).numTargets ∧
         decide (collision.second ≠ collision.first ∧
           (HashInstance.thf hash).eval pp collision.tweak collision.second =
             (HashInstance.thf hash).eval pp collision.tweak collision.first) = true := by
@@ -259,13 +258,13 @@ theorem merkleCollision_registeredTarget_wins
   obtain ⟨collision, hcollision⟩ := Option.isSome_iff_exists.mp hisSome
   have hsound := hash.findMerkleCollision_sound pp ep _ _ _ _ hcollision
   have hmem := (hash.findMerkleCollision_mem_queries pp ep _ _ _ _ hcollision).1
-  have hspec := ReductionGames.merkleOpeningTarget_registeredIndex_spec
+  have hspec := Reductions.merkleOpeningTarget_registeredIndex_spec
     hash pp starts (GXMSS.endpoints hash pp starts) ep
     (collision.tweak, collision.first) hmem
-    (ReductionGames.merkleTCRProblem hash).numTargets (by
-      simpa only [List.length_append, ReductionGames.endpointTargets_length,
-        ReductionGames.merkleTargets_length] using
-          ReductionGames.merkleProblem_capacity hash hv)
+    (Reductions.merkleTCRProblem hash).numTargets (by
+      simpa only [List.length_append, Reductions.endpointTargets_length,
+        Reductions.merkleTargets_length] using
+          Reductions.merkleProblem_capacity hash hv)
   refine ⟨collision, hcollision, ?_⟩
   dsimp only
   obtain ⟨hindex, hlookup, hcapacity⟩ := hspec
@@ -276,20 +275,20 @@ theorem merkleCollision_registeredTarget_wins
 private def merkleCandidate [DecidableEq T] [DecidableEq X] [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (state : ReductionGames.TCRKeyState PP T X H h v) (pp : PP)
-    (out : ReductionGames.Result PP H M R h v) : ℕ × X :=
+    (state : Reductions.TCRKeyState PP T X H h v) (pp : PP)
+    (out : Reductions.Result PP H M R h v) : ℕ × X :=
   let forgery := out.forgery
   let epoch := forgery.1
   let messageAndSignature := forgery.2
   let signature := messageAndSignature.2
-  match ReductionGames.forgedLeaf? hash enc out with
+  match Reductions.forgedLeaf? hash enc out with
   | none => (0, hash.vectorInput (state.endpoints 0))
   | some forgedLeaf =>
     match hash.findMerkleCollision pp epoch (state.endpoints epoch)
       forgedLeaf (hash.authPath pp state.endpoints epoch) signature.path with
     | none => (0, hash.vectorInput (state.endpoints 0))
     | some collision =>
-      (ReductionGames.registeredIndex state.targets collision.tweak collision.first,
+      (Reductions.registeredIndex state.targets collision.tweak collision.first,
         collision.second)
 
 private def merkleCandidateWins [DecidableEq X] [DecidableEq H]
@@ -319,44 +318,44 @@ private theorem merkleCandidateWins_of_difference
       (GXMSS.Signature R H h v))
     (history : SyncSignatureUnforgeability.History (Fin (2 ^ h)) M
       (GXMSS.Signature R H h v))
-    (hdiff : ReductionGames.merkleDifferenceObservation hash enc K
+    (hdiff : Reductions.merkleDifferenceObservation hash enc K
       ⟨(GXMSS.keys hash pp starts).1, (GXMSS.keys hash pp starts).2,
         forgery, history⟩ = true) :
     let endpoints := GXMSS.endpoints hash pp starts
-    let registered := ReductionGames.endpointTargets hash pp starts ++
-      ReductionGames.merkleTargets hash pp endpoints
-    let state : ReductionGames.TCRKeyState PP T X H h v :=
+    let registered := Reductions.endpointTargets hash pp starts ++
+      Reductions.merkleTargets hash pp endpoints
+    let state : Reductions.TCRKeyState PP T X H h v :=
       ⟨starts, endpoints, hash.merkleRoot pp endpoints, registered, fallback⟩
-    let out : ReductionGames.Result PP H M R h v :=
+    let out : Reductions.Result PP H M R h v :=
       ⟨(GXMSS.keys hash pp starts).1, (GXMSS.keys hash pp starts).2,
         forgery, history⟩
     merkleCandidateWins hash pp registered (merkleCandidate hash enc state pp out) = true := by
   let endpoints := GXMSS.endpoints hash pp starts
-  let registered := ReductionGames.endpointTargets hash pp starts ++
-    ReductionGames.merkleTargets hash pp endpoints
-  let state : ReductionGames.TCRKeyState PP T X H h v :=
+  let registered := Reductions.endpointTargets hash pp starts ++
+    Reductions.merkleTargets hash pp endpoints
+  let state : Reductions.TCRKeyState PP T X H h v :=
     ⟨starts, endpoints, hash.merkleRoot pp endpoints, registered, fallback⟩
-  let out : ReductionGames.Result PP H M R h v :=
+  let out : Reductions.Result PP H M R h v :=
     ⟨(GXMSS.keys hash pp starts).1, (GXMSS.keys hash pp starts).2,
       forgery, history⟩
   let epoch := forgery.1
   let messageAndSignature := forgery.2
   let message := messageAndSignature.1
   let signature := messageAndSignature.2
-  have hleaf : ∃ leaf, ReductionGames.forgedLeaf? hash enc out = some leaf := by
-    cases h : ReductionGames.forgedLeaf? hash enc out with
-    | none => simp [ReductionGames.merkleDifferenceObservation, out, h] at hdiff
+  have hleaf : ∃ leaf, Reductions.forgedLeaf? hash enc out = some leaf := by
+    cases h : Reductions.forgedLeaf? hash enc out with
+    | none => simp [Reductions.merkleDifferenceObservation, out, h] at hdiff
     | some leaf => exact ⟨leaf, rfl⟩
   obtain ⟨leaf, hleaf⟩ := hleaf
   have hsplit := hdiff
-  simp only [ReductionGames.merkleDifferenceObservation,
+  simp only [Reductions.merkleDifferenceObservation,
     Bool.and_eq_true] at hsplit
   have hne : (endpoints epoch, hash.authPath pp endpoints epoch) ≠
       (leaf, signature.path) := by
     let publicKey := out.pk
     let secretKey := out.sk
     have hne' := hsplit.2
-    change (match ReductionGames.forgedLeaf? hash enc out with
+    change (match Reductions.forgedLeaf? hash enc out with
       | none => false
       | some leaf => decide ((secretKey.endpoints epoch,
           hash.authPath publicKey.seed secretKey.endpoints epoch) ≠
@@ -364,23 +363,23 @@ private theorem merkleCandidateWins_of_difference
     rw [hleaf] at hne'
     simpa only [publicKey, secretKey, out, GXMSS.keys, endpoints] using
       (of_decide_eq_true hne')
-  have hstrong : ReductionGames.sourceStrongObservation hash enc K out = true := by
+  have hstrong : Reductions.sourceStrongObservation hash enc K out = true := by
     exact hsplit.1
   have hverify : GXMSS.verify hash enc (GXMSS.keys hash pp starts).1
       epoch message signature = true := by
     have hstrong' := hstrong
-    simp only [ReductionGames.sourceStrongObservation,
-      ReductionGames.sourceObservation,
+    simp only [Reductions.sourceStrongObservation,
+      Reductions.sourceObservation,
       SyncSignatureUnforgeability.strongValid, GXMSS.scheme,
       Bool.and_eq_true] at hstrong'
     exact hstrong'.1
   obtain ⟨word, hword, hleafValue⟩ := Option.map_eq_some_iff.mp hleaf
   have hword' : enc.value pp message signature.randomizer epoch =
       some word := by
-    simpa only [out, ReductionGames.forgedLeaf?, GXMSS.keys] using hword
+    simpa only [out, Reductions.forgedLeaf?, GXMSS.keys] using hword
   have hleafValue' : (fun i => hash.chain pp epoch i (word i)
       (2 ^ w - 1 - (word i).val) (signature.ots i)) = leaf := by
-    simpa only [out, ReductionGames.forgedLeaf?, GXMSS.keys] using hleafValue
+    simpa only [out, Reductions.forgedLeaf?, GXMSS.keys] using hleafValue
   have hroot : hash.recoverRoot pp epoch leaf signature.path =
       hash.merkleRoot pp endpoints := by
     have hverify' : hash.recoverRoot pp epoch
@@ -402,30 +401,30 @@ private def merkleCoupledProgram [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K : ℕ)
-    (adv : ReductionGames.SchemeAdversary PP H M R h v) : ProbComp Bool := do
+    (adv : Reductions.SchemeAdversary PP H M R h v) : ProbComp Bool := do
   let pp ← (HashInstance.thf hash).seedGen
   let fallback ← ($ᵗ H : ProbComp H)
   let starts ← GXMSS.sampleStarts H h v
   let endpoints := GXMSS.endpoints hash pp starts
-  let registered := ReductionGames.endpointTargets hash pp starts ++
-    ReductionGames.merkleTargets hash pp endpoints
-  let state : ReductionGames.TCRKeyState PP T X H h v :=
+  let registered := Reductions.endpointTargets hash pp starts ++
+    Reductions.merkleTargets hash pp endpoints
+  let state : Reductions.TCRKeyState PP T X H h v :=
     ⟨starts, endpoints, hash.merkleRoot pp endpoints, registered, fallback⟩
   let (pk, sk) := GXMSS.keys hash pp starts
-  let out ← ReductionGames.runWithKeys hash enc K adv pk sk
+  let out ← Reductions.runWithKeys hash enc K adv pk sk
   pure (merkleCandidateWins hash pp registered (merkleCandidate hash enc state pp out))
 
 private def merkleCoupledDifferenceProgram [SampleableType H] [SampleableType R]
     [DecidableEq H] [DecidableEq M] [DecidableEq (GXMSS.Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K : ℕ)
-    (adv : ReductionGames.SchemeAdversary PP H M R h v) : ProbComp Bool := do
+    (adv : Reductions.SchemeAdversary PP H M R h v) : ProbComp Bool := do
   let pp ← (HashInstance.thf hash).seedGen
   let _fallback ← ($ᵗ H : ProbComp H)
   let starts ← GXMSS.sampleStarts H h v
   let (pk, sk) := GXMSS.keys hash pp starts
-  let out ← ReductionGames.runWithKeys hash enc K adv pk sk
-  pure (ReductionGames.merkleDifferenceObservation hash enc K out)
+  let out ← Reductions.runWithKeys hash enc K adv pk sk
+  pure (Reductions.merkleDifferenceObservation hash enc K out)
 
 /-- The extra private fallback draw is lossless and invisible to the source difference
 observation, so it preserves the full native Boolean measure. -/
@@ -434,11 +433,11 @@ private theorem merkleCoupledDifference_evalDist_eq_source
     [DecidableEq H] [DecidableEq M] [DecidableEq (GXMSS.Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K : ℕ)
-    (adv : ReductionGames.SchemeAdversary PP H M R h v) :
+    (adv : Reductions.SchemeAdversary PP H M R h v) :
     𝒟[merkleCoupledDifferenceProgram hash enc K adv] =
-      𝒟[ReductionGames.merkleDifferenceObservation hash enc K <$>
-        ReductionGames.sourceProgram hash enc K adv] := by
-  unfold merkleCoupledDifferenceProgram ReductionGames.sourceProgram GXMSS.keygen
+      𝒟[Reductions.merkleDifferenceObservation hash enc K <$>
+        Reductions.sourceProgram hash enc K adv] := by
+  unfold merkleCoupledDifferenceProgram Reductions.sourceProgram GXMSS.keygen
   simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind]
   apply OracleComp.evalDist_bind_congr_of_support
   intro pp _
@@ -447,8 +446,8 @@ private theorem merkleCoupledDifference_evalDist_eq_source
       (do
         let starts ← GXMSS.sampleStarts H h v
         let (pk, sk) := GXMSS.keys hash pp starts
-        let out ← ReductionGames.runWithKeys hash enc K adv pk sk
-        pure (ReductionGames.merkleDifferenceObservation hash enc K out)))
+        let out ← Reductions.runWithKeys hash enc K adv pk sk
+        pure (Reductions.merkleDifferenceObservation hash enc K out)))
 
 /-- The authoritative Merkle TCR experiment is the faithful coupled execution, including its
 private fallback draw and exact ordered challenge history. -/
@@ -457,32 +456,32 @@ private theorem merkleExperiment_eq_coupled
     [DecidableEq T] [DecidableEq X] [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K : ℕ)
-    (hv : 0 < v) (adv : ReductionGames.SchemeAdversary PP H M R h v) :
+    (hv : 0 < v) (adv : Reductions.SchemeAdversary PP H M R h v) :
     SM_DT_TCR_Experiment
-      (ReductionGames.merkleTargetCollisionReduction hash enc K hv adv) =
+      (Reductions.merkleTargetCollisionReduction hash enc K hv adv) =
         merkleCoupledProgram hash enc K adv := by
-  have hcap := ReductionGames.merkleProblem_capacity hash hv
+  have hcap := Reductions.merkleProblem_capacity hash hv
   unfold SM_DT_TCR_Experiment merkleCoupledProgram
-  simp only [ReductionGames.merkleTargetCollisionReduction]
+  simp only [Reductions.merkleTargetCollisionReduction]
   have hsetup (pp : PP) :
-      (simulateQ (SM_DT_TCR_oracles (ReductionGames.merkleTCRProblem hash) pp)
-        (ReductionGames.tcrKeySetup hash
+      (simulateQ (SM_DT_TCR_oracles (Reductions.merkleTCRProblem hash) pp)
+        (Reductions.tcrKeySetup hash
           (2 * (2 ^ h) * v * (2 ^ w)))).run ([], []) = (do
           let fallback ← ($ᵗ H : ProbComp H)
           let starts ← GXMSS.sampleStarts H h v
           let endpoints := GXMSS.endpoints hash pp starts
-          let registered := ReductionGames.endpointTargets hash pp starts ++
-            ReductionGames.merkleTargets hash pp endpoints
+          let registered := Reductions.endpointTargets hash pp starts ++
+            Reductions.merkleTargets hash pp endpoints
           pure ((⟨starts, endpoints, hash.merkleRoot pp endpoints, registered,
-              fallback⟩ : ReductionGames.TCRKeyState PP T X H h v),
+              fallback⟩ : Reductions.TCRKeyState PP T X H h v),
             registered, ([] : List T))) := by
     change (simulateQ
       (SM_DT_TCR_oracles (SM_DT_TCR_Problem.standalone hash.thf
         (2 * (2 ^ h) * v * (2 ^ w))) pp)
-      (ReductionGames.tcrKeySetup hash
+      (Reductions.tcrKeySetup hash
         (2 * (2 ^ h) * v * (2 ^ w)))).run ([], []) = _
-    exact ReductionGames.tcrKeySetup_run hash _ pp (by
-      simpa only [ReductionGames.merkleTCRProblem,
+    exact Reductions.tcrKeySetup_run hash _ pp (by
+      simpa only [Reductions.merkleTCRProblem,
         SM_DT_TCR_Problem.standalone] using hcap)
   apply bind_congr
   intro pp
@@ -498,12 +497,12 @@ private theorem merkleExperiment_eq_coupled
   let epoch := forgery.1
   let messageAndSignature := forgery.2
   let signature := messageAndSignature.2
-  cases hleaf : ReductionGames.forgedLeaf? hash enc out with
+  cases hleaf : Reductions.forgedLeaf? hash enc out with
   | none =>
     simp only [merkleCandidate, merkleCandidateWins, hleaf,
-      ReductionGames.merkleTCRProblem, ne_eq, Bool.decide_and, decide_not,
-      pure_bind, List.length_append, ReductionGames.endpointTargets_length,
-      ReductionGames.merkleTargets_length, add_pos_iff,
+      Reductions.merkleTCRProblem, ne_eq, Bool.decide_and, decide_not,
+      pure_bind, List.length_append, Reductions.endpointTargets_length,
+      Reductions.merkleTargets_length, add_pos_iff,
       CanonicallyOrderedAdd.mul_pos, Order.lt_two_iff, zero_le, pow_pos,
       true_and, tsub_pos_iff_lt, Nat.one_lt_two_pow_iff,
       Nat.add_eq_zero_iff, one_ne_zero, and_false, not_false_eq_true,
@@ -518,9 +517,9 @@ private theorem merkleExperiment_eq_coupled
     | none =>
       dsimp only [epoch, signature, messageAndSignature, forgery] at hcollision
       simp only [merkleCandidate, merkleCandidateWins, hleaf, hcollision,
-        ReductionGames.merkleTCRProblem, ne_eq, Bool.decide_and, decide_not,
-        pure_bind, List.length_append, ReductionGames.endpointTargets_length,
-        ReductionGames.merkleTargets_length, add_pos_iff,
+        Reductions.merkleTCRProblem, ne_eq, Bool.decide_and, decide_not,
+        pure_bind, List.length_append, Reductions.endpointTargets_length,
+        Reductions.merkleTargets_length, add_pos_iff,
         CanonicallyOrderedAdd.mul_pos, Order.lt_two_iff, zero_le, pow_pos,
         true_and, tsub_pos_iff_lt, Nat.one_lt_two_pow_iff,
         Nat.add_eq_zero_iff, one_ne_zero, and_false, not_false_eq_true,
@@ -530,14 +529,14 @@ private theorem merkleExperiment_eq_coupled
     | some collision =>
       dsimp only [epoch, signature, messageAndSignature, forgery] at hcollision
       simp only [merkleCandidate, merkleCandidateWins, hleaf, hcollision,
-        ReductionGames.merkleTCRProblem, ne_eq, Bool.decide_and, decide_not,
+        Reductions.merkleTCRProblem, ne_eq, Bool.decide_and, decide_not,
         pure_bind]
-      cases hlookup : (ReductionGames.endpointTargets hash pp starts ++
-          ReductionGames.merkleTargets hash pp
+      cases hlookup : (Reductions.endpointTargets hash pp starts ++
+          Reductions.merkleTargets hash pp
             (GXMSS.endpoints hash pp starts))[
-          ReductionGames.registeredIndex
-            (ReductionGames.endpointTargets hash pp starts ++
-              ReductionGames.merkleTargets hash pp
+          Reductions.registeredIndex
+            (Reductions.endpointTargets hash pp starts ++
+              Reductions.merkleTargets hash pp
                 (GXMSS.endpoints hash pp starts))
             collision.tweak collision.first]? with
       | none => rfl
@@ -552,13 +551,13 @@ private theorem runWithKeys_support_keys
     [SampleableType H] [SampleableType R] [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K : ℕ)
-    (adv : ReductionGames.SchemeAdversary PP H M R h v)
+    (adv : Reductions.SchemeAdversary PP H M R h v)
     (pk : GXMSS.PublicKey PP H) (sk : GXMSS.SecretKey PP H h v)
-    (out : ReductionGames.Result PP H M R h v)
+    (out : Reductions.Result PP H M R h v)
     (hout : out ∈ support
-      (ReductionGames.runWithKeys hash enc K adv pk sk)) :
+      (Reductions.runWithKeys hash enc K adv pk sk)) :
     out.pk = pk ∧ out.sk = sk := by
-  simp only [ReductionGames.runWithKeys, mem_support_bind_iff] at hout
+  simp only [Reductions.runWithKeys, mem_support_bind_iff] at hout
   obtain ⟨pair, _, hret⟩ := hout
   simp only [support_pure] at hret
   subst out
@@ -572,7 +571,7 @@ private theorem merkleCoupledDifference_le_win
     [DecidableEq (GXMSS.Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K : ℕ)
-    (hv : 0 < v) (adv : ReductionGames.SchemeAdversary PP H M R h v) :
+    (hv : 0 < v) (adv : Reductions.SchemeAdversary PP H M R h v) :
     𝒟[merkleCoupledDifferenceProgram hash enc K adv] {true} ≤
       𝒟[merkleCoupledProgram hash enc K adv] {true} := by
   unfold merkleCoupledDifferenceProgram merkleCoupledProgram
@@ -586,7 +585,7 @@ private theorem merkleCoupledDifference_le_win
     (GXMSS.sampleStarts H h v) _ _ (by measurability)
   intro starts _
   apply OracleComp.evalDist_bind_apply_mono_of_support
-    (ReductionGames.runWithKeys hash enc K adv
+    (Reductions.runWithKeys hash enc K adv
       (GXMSS.keys hash pp starts).1 (GXMSS.keys hash pp starts).2)
     _ _ (by measurability)
   intro out hout
@@ -597,13 +596,13 @@ private theorem merkleCoupledDifference_le_win
     dsimp at hpk hsk
     subst pk
     subst sk
-    by_cases hdiff : ReductionGames.merkleDifferenceObservation hash enc K
+    by_cases hdiff : Reductions.merkleDifferenceObservation hash enc K
         ⟨(GXMSS.keys hash pp starts).1, (GXMSS.keys hash pp starts).2,
           forgery, history⟩ = true
     · have hwin := merkleCandidateWins_of_difference hash enc K hv pp starts
         fallback forgery history hdiff
       simp [hdiff, hwin]
-    · have hfalse : ReductionGames.merkleDifferenceObservation hash enc K
+    · have hfalse : Reductions.merkleDifferenceObservation hash enc K
           ⟨(GXMSS.keys hash pp starts).1, (GXMSS.keys hash pp starts).2,
             forgery, history⟩ = false := Bool.eq_false_iff.mpr hdiff
       simp [hfalse]
@@ -624,30 +623,30 @@ theorem first_merkle_target_collision_bound
   change SyncSignatureUnforgeability.strongUnforgeableExp (GXMSS.scheme hash enc K)
       ProbCompRuntime.probComp adv {true} ≤
     SM_DT_TCR_Advantage
-        (ReductionGames.merkleTargetCollisionReduction hash enc K hv adv) +
-      ReductionGames.gameOneAdvantage hash enc K adv
-  rw [← ReductionGames.sourceStrongOutputMeasure_eq_strongUnforgeableExp]
+        (Reductions.merkleTargetCollisionReduction hash enc K hv adv) +
+      Reductions.gameOneAdvantage hash enc K adv
+  rw [← Reductions.sourceStrongOutputMeasure_eq_strongUnforgeableExp]
   have hdiff : ProbCompRuntime.probComp.evalDist
-        (ReductionGames.merkleDifferenceObservation hash enc K <$>
-          ReductionGames.sourceProgram hash enc K adv) {true} ≤
+        (Reductions.merkleDifferenceObservation hash enc K <$>
+          Reductions.sourceProgram hash enc K adv) {true} ≤
       SM_DT_TCR_Advantage
-        (ReductionGames.merkleTargetCollisionReduction hash enc K hv adv) := by
+        (Reductions.merkleTargetCollisionReduction hash enc K hv adv) := by
     rw [ProbCompRuntime.probComp_evalDist,
       ← merkleCoupledDifference_evalDist_eq_source]
     change 𝒟[merkleCoupledDifferenceProgram hash enc K adv] {true} ≤
       𝒟[SM_DT_TCR_Experiment
-        (ReductionGames.merkleTargetCollisionReduction hash enc K hv adv)] {true}
+        (Reductions.merkleTargetCollisionReduction hash enc K hv adv)] {true}
     rw [merkleExperiment_eq_coupled]
     exact merkleCoupledDifference_le_win hash enc K hv adv
   calc
-    _ ≤ ReductionGames.gameOneAdvantage hash enc K adv +
+    _ ≤ Reductions.gameOneAdvantage hash enc K adv +
         ProbCompRuntime.probComp.evalDist
-          (ReductionGames.merkleDifferenceObservation hash enc K <$>
-            ReductionGames.sourceProgram hash enc K adv) {true} :=
+          (Reductions.merkleDifferenceObservation hash enc K <$>
+            Reductions.sourceProgram hash enc K adv) {true} :=
       sourceStrongWinningMass_le_gameOne_add_merkleDifference hash enc K adv
-    _ ≤ ReductionGames.gameOneAdvantage hash enc K adv +
+    _ ≤ Reductions.gameOneAdvantage hash enc K adv +
         SM_DT_TCR_Advantage
-          (ReductionGames.merkleTargetCollisionReduction hash enc K hv adv) :=
+          (Reductions.merkleTargetCollisionReduction hash enc K hv adv) :=
       add_le_add_right hdiff _
     _ = _ := add_comm _ _
 

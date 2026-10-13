@@ -5,10 +5,10 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.ReductionGames.CollisionReductions
-import all HashSig.GXMSS.Security.ReductionGames.SourceGames
-import all HashSig.GXMSS.Security.ReductionGames.GuessingGames
-import all HashSig.GXMSS.Security.ReductionGames.CollisionReductions
+public import HashSig.GXMSS.Security.Reductions.CollisionReductions
+import all HashSig.GXMSS.Security.Reductions.SourceGames
+import all HashSig.GXMSS.Security.Reductions.GuessingGames
+import all HashSig.GXMSS.Security.Reductions.CollisionReductions
 
 /-!
 # Spliced chain simulation
@@ -19,7 +19,7 @@ track which successful source events survive that splice.
 
 public section
 
-namespace GXMSS.ReductionGames
+namespace GXMSS.Reductions
 
 open Encoding ENNReal OracleComp OracleSpec Security TweakableHash
 
@@ -1102,4 +1102,4 @@ private theorem runSpliced_selectedMass_eq_filtered
     intro x
     cases x.2 <;> rfl
 
-end GXMSS.ReductionGames
+end GXMSS.Reductions

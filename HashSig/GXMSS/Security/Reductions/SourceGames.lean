@@ -6,9 +6,9 @@ Authors: Matthias Meijers
 
 module
 public import HashSig.GXMSS.Completeness
-public import HashSig.GXMSS.Security.Encoding
-public import HashSig.GXMSS.Security.ChainWitnesses
-public import HashSig.GXMSS.Security.MerkleWitnesses
+public import HashSig.GXMSS.Security.Auxiliary.Encoding
+public import HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
+public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 public import VCVio.CryptoFoundations.SyncSignatureAlg.Security
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
@@ -28,7 +28,7 @@ The Game 3 to Game 4 partition charges only successful-record second-chain diffe
 
 public section
 
-namespace GXMSS.ReductionGames
+namespace GXMSS.Reductions
 
 open Encoding ENNReal OracleComp OracleSpec Security TweakableHash
 
@@ -1281,4 +1281,4 @@ theorem nonSuccessGameFourMass_le_unused_add_failedConsumed
   cases unusedGameFourObservation hash enc K out <;>
     cases failedConsumedGameFourObservation hash enc K out <;> simp
 
-end GXMSS.ReductionGames
+end GXMSS.Reductions

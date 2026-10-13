@@ -20,13 +20,13 @@ is outside this development.
 | Generic security notions | [Single](../../VCVio/CryptoFoundations/SyncSignatureAlg/Security.lean), [multi](../../VCVio/CryptoFoundations/SyncMultiSignatureAlg/Security.lean) | Regular and strong single-signature security, and regular multi-signature security. |
 | Encodings | [Incomparable encoding](../../HashSig/GXMSS/Encoding/Incomparable.lean), [retry](../../HashSig/GXMSS/Encoding/Retry.lean) | A global incomparable code, randomized encoding with failure, and retry laws retaining returned failure and missing mass. |
 | Scheme | [Construction](../../HashSig/GXMSS/Scheme.lean), [completeness](../../HashSig/GXMSS/Completeness.lean) | Independent chain starts, bounded encoding retries, chain verification, and Merkle authentication. |
-| General security | [Reduction games](../../HashSig/GXMSS/Security/ReductionGames.lean), [bound](../../HashSig/GXMSS/Security/Unforgeability.lean) | Explicit reductions to the authoritative tweakable-hash and encoding target-collision games. |
+| General security | [Reduction games](../../HashSig/GXMSS/Security/Reductions/JointReductions.lean), [bound](../../HashSig/GXMSS/Security/Unforgeability.lean) | Explicit reductions to the authoritative tweakable-hash and encoding target-collision games. |
 | Encoding instances | [Checksum](../../HashSig/GXMSS/Encoding/Winternitz.lean), [target sum](../../HashSig/GXMSS/Encoding/TargetSum.lean) | Incomparability, error bounds under the stated distribution premises, and code-size facts. |
-| Specialized security | [Encoding-specific bounds](../../HashSig/GXMSS/Security/EncodingSpecializedUnforgeability.lean) | Composition with reductions from encoding collisions to the message hash's SM-DT-rTCR game. |
+| Specialized security | [Encoding-specific bounds](../../HashSig/GXMSS/Security/Unforgeability.lean) | Composition with reductions from encoding collisions to the message hash's SM-DT-rTCR game. |
 
 ## Security statement
 
-`GXMSS.Unforgeability.strong_unforgeability_reduction_bound_of_two_codewords` bounds the
+`GXMSS.Unforgeability.strong_unforgeability_reduction_bound` bounds the
 strong-unforgeability advantage of the ideal scheme by the advantages of named reductions.
 It assumes positive chain count and digit width, two distinct members of the global code,
 and `GXMSS.Unforgeability.SigningQueryBound`. This last premise counts every signing call
@@ -46,7 +46,7 @@ It compares unnormalized returned-output measures. The encoding target-collision
 capacity for the stated signing-query bound. The proof retains unused, successfully used,
 and failed-but-consumed epochs. No running-time or reduction-query complexity theorem is asserted.
 
-`GXMSS.Encoding.SpecializedUnforgeability.winternitz_strong_unforgeability_bound` discharges
+`GXMSS.Unforgeability.SpecificEncoding.winternitz_strong_unforgeability_bound` discharges
 the two-codeword premise using the checksum parameters. The target-sum theorem uses the exact
 condition that at least two words meet the target, with a sufficient small-target corollary.
 Both instances require injective epoch-to-tweak addressing and agreement of the encoding and

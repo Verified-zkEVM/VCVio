@@ -5,7 +5,7 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.HashWitnesses
+public import HashSig.GXMSS.Security.Auxiliary.HashWitnesses
 public import HashSig.GXMSS.Chain
 
 /-!

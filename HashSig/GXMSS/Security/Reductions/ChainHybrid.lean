@@ -5,11 +5,11 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.ReductionGames.SplicedChain
-import all HashSig.GXMSS.Security.ReductionGames.SourceGames
-import all HashSig.GXMSS.Security.ReductionGames.GuessingGames
-import all HashSig.GXMSS.Security.ReductionGames.CollisionReductions
-import all HashSig.GXMSS.Security.ReductionGames.SplicedChain
+public import HashSig.GXMSS.Security.Reductions.SplicedChain
+import all HashSig.GXMSS.Security.Reductions.SourceGames
+import all HashSig.GXMSS.Security.Reductions.GuessingGames
+import all HashSig.GXMSS.Security.Reductions.CollisionReductions
+import all HashSig.GXMSS.Security.Reductions.SplicedChain
 
 /-!
 # Chain hybrid measure bridges
@@ -20,7 +20,7 @@ the chain hybrid. The undetectability reductions sample their challenge before s
 
 public section
 
-namespace GXMSS.ReductionGames
+namespace GXMSS.Reductions
 
 open Encoding ENNReal OracleComp OracleSpec Security TweakableHash
 
@@ -1219,4 +1219,4 @@ noncomputable def jointUndetectabilityReduction [SampleableType H] [SampleableTy
         return jointChainObservation hash enc K (state.guess, out)
     else return false }
 
-end GXMSS.ReductionGames
+end GXMSS.Reductions
