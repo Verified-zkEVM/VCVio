@@ -16,8 +16,7 @@ is outside this development.
 
 | Component | Entry point | Content |
 | --- | --- | --- |
-| Generic signature interfaces | [Single](../../VCVio/CryptoFoundations/SyncSignatureAlg.lean), [multi](../../VCVio/CryptoFoundations/SyncMultiSignatureAlg.lean) | Captured configuration, abstract epochs, optional signing failure, deterministic verification, and completeness. |
-| Generic security notions | [Single](../../VCVio/CryptoFoundations/SyncSignatureAlg/Security.lean), [multi](../../VCVio/CryptoFoundations/SyncMultiSignatureAlg/Security.lean) | Regular and strong single-signature security, and regular multi-signature security. |
+| Generic signature foundations | [Single](../../VCVio/CryptoFoundations/SyncSignatureAlg.lean), [multi](../../VCVio/CryptoFoundations/SyncMultiSignatureAlg.lean) | Algorithms, completeness, regular and strong single-signature security, and regular multi-signature security. |
 | Encodings | [Incomparable encoding](../../HashSig/GXMSS/Encoding/Incomparable.lean), [retry](../../HashSig/GXMSS/Encoding/Retry.lean) | A global incomparable code, randomized encoding with failure, and retry laws retaining returned failure and missing mass. |
 | Scheme | [Construction](../../HashSig/GXMSS/Scheme.lean), [completeness](../../HashSig/GXMSS/Completeness.lean) | Independent chain starts, bounded encoding retries, chain verification, and Merkle authentication. |
 | General security | [Reduction games](../../HashSig/GXMSS/Security/Reductions/JointReductions.lean), [bound](../../HashSig/GXMSS/Security/Unforgeability.lean) | Explicit reductions to the authoritative tweakable-hash and encoding target-collision games. |

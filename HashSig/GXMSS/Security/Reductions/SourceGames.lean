@@ -9,7 +9,7 @@ public import HashSig.GXMSS.Completeness
 public import HashSig.GXMSS.Security.Auxiliary.Encoding
 public import HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
 public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
-public import VCVio.CryptoFoundations.SyncSignatureAlg.Security
+public import VCVio.CryptoFoundations.SyncSignatureAlg
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUD
