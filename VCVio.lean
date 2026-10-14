@@ -395,6 +395,11 @@ public import VCVio.Quantum.DSubInstrument
 public import VCVio.Quantum.MatrixMap
 public import VCVio.Quantum.MatrixMap.Family
 public import VCVio.Quantum.Observe
+public import VCVio.Quantum.Pure.Instrument
+public import VCVio.Quantum.Pure.Norm
+public import VCVio.Quantum.Pure.State
+public import VCVio.Quantum.Pure.Tensor
+public import VCVio.Quantum.Pure.Vector
 public import VCVio.Quantum.Semantics
 public import VCVio.Quantum.SubInstrument
 public import VCVio.StateSeparating.Advantage.Measure
