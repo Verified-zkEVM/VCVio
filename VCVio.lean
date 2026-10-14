@@ -121,6 +121,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Uniqueness
+public import VCVio.CryptoFoundations.MerkleTree.Instability
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.DelayedObservation
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Endgame
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Evolution
@@ -274,6 +275,8 @@ public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.Enforcement
 public import VCVio.OracleComp.QueryTracking.ExpectedQueryCount
 public import VCVio.OracleComp.QueryTracking.HandlerSimp
+public import VCVio.OracleComp.QueryTracking.Instability.Basic
+public import VCVio.OracleComp.QueryTracking.Instability.Collision
 public import VCVio.OracleComp.QueryTracking.Iter
 public import VCVio.OracleComp.QueryTracking.ListCache
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
@@ -399,15 +402,20 @@ public import VCVio.Quantum.Comp.Simulation
 public import VCVio.Quantum.DSubInstrument
 public import VCVio.Quantum.MatrixMap
 public import VCVio.Quantum.MatrixMap.Family
+public import VCVio.Quantum.MatrixMap.OpNorm
+public import VCVio.Quantum.MatrixMap.Pinching
 public import VCVio.Quantum.Observe
 public import VCVio.Quantum.Oracle.Basis
 public import VCVio.Quantum.Oracle.Classical
 public import VCVio.Quantum.Oracle.Comb
 public import VCVio.Quantum.Oracle.Compressed.Action
 public import VCVio.Quantum.Oracle.Compressed.Basic
+public import VCVio.Quantum.Oracle.Compressed.CommutatorBound
 public import VCVio.Quantum.Oracle.Compressed.Equivalence
+public import VCVio.Quantum.Oracle.Compressed.Instability
 public import VCVio.Quantum.Oracle.Compressed.Measurement
 public import VCVio.Quantum.Oracle.Compressed.Oracle
+public import VCVio.Quantum.Oracle.Compressed.Phase
 public import VCVio.Quantum.Oracle.Compressed.Size
 public import VCVio.Quantum.Oracle.Compressed.Truncation
 public import VCVio.Quantum.Oracle.Model
