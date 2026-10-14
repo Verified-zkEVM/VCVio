@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.Quantum.Pure.Tensor
+public import VCVioTest.Quantum.Basic
 
 /-!
 # Pure-state regression tests
@@ -14,7 +15,9 @@ A Hadamard gate followed by the computational-basis measurement of one qubit, st
 `|0⟩`, reports each outcome with weight `1 / 2`: once through the Born rule on vectors, and once
 through the density matrix `|+⟩⟨+|`, which the vector route reaches. The remaining checks
 instantiate the commutator bounds on Pauli matrices, the hybrid bound at one query, and the norm
-of a gate on one of two qubits.
+of a gate on one of two qubits. Last, the geometric instrument, which has infinitely many
+outcomes, is written in Kraus form, and the Born rule on vectors gives outcome `n` the weight
+`2^{-(n+1)} ‖ψ‖ ^ 2`.
 -/
 
 public section
@@ -207,5 +210,47 @@ example (χ : EuclideanSpace ℂ (Fin 2)) (h : ‖ket0 ⊗ᵥ χ‖ ≤ 1)
     ((SubInstrument.ofUnitary hadamardGate).frame (Fin 2)).post (.ofVector (ket0 ⊗ᵥ χ) h)
       PUnit.unit = .ofVector ((hadamard •ᵥ ket0) ⊗ᵥ χ) h' :=
   SubInstrument.post_frame_ofContraction_ofVector_tensorVec ..
+
+/-! ## A measurement with infinitely many outcomes -/
+
+/-- The amplitude `√(2^{-(n+1)})` of the outcome `n` of the geometric instrument. -/
+noncomputable def geomAmp (n : ℕ) : ℂ :=
+  ((√(QuantumBasic.geomWeight n) : ℝ) : ℂ)
+
+/-- Each branch of the geometric instrument is the Kraus map of a multiple of the identity. -/
+theorem geometric_branch_eq_conj (n : ℕ) :
+    QuantumBasic.geometric.branch n =
+      MatrixMap.conj (geomAmp n • (1 : Matrix (Fin 2) (Fin 2) ℂ)) := by
+  have hc : star (geomAmp n) = geomAmp n := Complex.conj_ofReal _
+  have hw : geomAmp n * geomAmp n = (QuantumBasic.geomWeight n : ℂ) := by
+    rw [geomAmp, ← Complex.ofReal_mul, Real.mul_self_sqrt (QuantumBasic.geomWeight_nonneg n)]
+  refine LinearMap.ext fun ρ ↦ ?_
+  simp only [QuantumBasic.geometric_branch_apply, MatrixMap.conj_apply, conjTranspose_smul,
+    conjTranspose_one, Matrix.smul_mul, Matrix.mul_smul, Matrix.one_mul, Matrix.mul_one,
+    smul_smul, hc, hw]
+
+/-- Born rule on vectors for the geometric instrument, whose outcomes are all of `ℕ`: on the pure
+substate of `ψ`, outcome `n` has weight `2^{-(n+1)} ‖ψ‖ ^ 2`. -/
+example (ψ : EuclideanSpace ℂ (Fin 2)) (hψ : ‖ψ‖ ≤ 1) (n : ℕ) :
+    QuantumBasic.geometric.outcomeMeasure (.ofVector ψ hψ) {n} =
+      ENNReal.ofReal (QuantumBasic.geomWeight n * ‖ψ‖ ^ 2) := by
+  rw [SubInstrument.outcomeMeasure_ofVector_singleton_of_branch_eq_conj _
+    (geometric_branch_eq_conj n)]
+  congr 1
+  rw [map_smul, LinearMap.smul_apply, one_applyVec, norm_smul, mul_pow, geomAmp,
+    Complex.norm_real, Real.norm_eq_abs, sq_abs,
+    Real.sq_sqrt (QuantumBasic.geomWeight_nonneg n)]
+
+/-- After outcome `n` of the geometric instrument, the pure substate of `ψ` is that of the
+rescaled vector `√(2^{-(n+1)}) • ψ`. -/
+example (ψ : EuclideanSpace ℂ (Fin 2)) (hψ : ‖ψ‖ ≤ 1) (n : ℕ) :
+    ∃ h, QuantumBasic.geometric.post (.ofVector ψ hψ) n = .ofVector (geomAmp n • ψ) h := by
+  refine ⟨?_, (SubInstrument.post_ofVector_of_branch_eq_conj _
+    (geometric_branch_eq_conj n) ψ hψ).trans ?_⟩
+  · exact ((QuantumBasic.geometric.norm_applyVec_le_of_branch_eq_conj
+      (geometric_branch_eq_conj n) ψ).trans hψ).trans_eq' (by
+        rw [map_smul, LinearMap.smul_apply, one_applyVec])
+  · congr 1
+    rw [map_smul, LinearMap.smul_apply, one_applyVec]
 
 end VCVioTest.QuantumPure

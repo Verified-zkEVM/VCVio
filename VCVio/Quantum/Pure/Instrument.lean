@@ -29,6 +29,17 @@ vectors, the outcome weights of two input vectors differ on every event by at mo
 * `Quantum.SubInstrument.ofProjective P hP hsum`: the measurement with a complete family of star
   projections.
 * `Quantum.SubInstrument.ofUnitary U`: the subinstrument applying a unitary to a register.
+
+## Kraus-form branches
+
+The Born rule holds branch by branch, for subinstruments and dependent subinstruments with any
+outcome type: if the branch at `a` is the Kraus map of `K`, the pure substate of `ψ` goes to
+that of `K •ᵥ ψ` with weight `‖K •ᵥ ψ‖ ^ 2`
+(`Quantum.SubInstrument.post_ofVector_of_branch_eq_conj`,
+`Quantum.SubInstrument.outcomeMeasure_ofVector_singleton_of_branch_eq_conj` and the
+`Quantum.DSubInstrument` versions). This covers measurements with infinitely many outcomes, and
+dependent Kraus measurements whose output system depends on the outcome
+(`Quantum.DSubInstrument.post_ofKraus_ofVector`).
 -/
 
 public section
@@ -339,7 +350,125 @@ theorem outcomeMeasure_ofProjective_ofVector_singleton_eq_inner [MeasurableSpace
 
 end ofProjective
 
+/-! ## Kraus-form branches over any outcome type
+
+A branch of the form `MatrixMap.conj K` sends the pure substate of `ψ` to that of `K •ᵥ ψ`, with
+weight `‖K •ᵥ ψ‖ ^ 2`. This holds for subinstruments with any outcome type, also when infinitely
+many branches are nonzero; the Kraus measurements above are the case of finitely many outcomes.
+-/
+
+section branchConj
+
+variable [DecidableEq A]
+
+/-- If the branch of a subinstrument at `a` is the Kraus map of `K`, then `K` does not increase
+the norm of vectors: `‖K •ᵥ ψ‖ ^ 2` is the trace of the branch on `|ψ⟩⟨ψ|`. -/
+theorem norm_applyVec_le_of_branch_eq_conj (p : SubInstrument A B α) {a : α} {K : Matrix B A ℂ}
+    (hK : p.branch a = MatrixMap.conj K) (ψ : EuclideanSpace ℂ A) : ‖K •ᵥ ψ‖ ≤ ‖ψ‖ := by
+  refine (sq_le_sq₀ (norm_nonneg _) (norm_nonneg _)).mp ?_
+  have h := p.isCPTNIFamily.isTNI a (ketBra ψ ψ) (posSemidef_ketBra_self ψ)
+  rwa [hK, conj_ketBra_self, trace_re_ketBra_self, trace_re_ketBra_self] at h
+
+/-- If the branch of a subinstrument at `a` is the Kraus map of `K`, then after outcome `a` the
+pure substate of `ψ` becomes the pure substate of `K •ᵥ ψ`. -/
+theorem post_ofVector_of_branch_eq_conj (p : SubInstrument A B α) {a : α} {K : Matrix B A ℂ}
+    (hK : p.branch a = MatrixMap.conj K) (ψ : EuclideanSpace ℂ A) (hψ : ‖ψ‖ ≤ 1) :
+    p.post (.ofVector ψ hψ) a =
+      .ofVector (K •ᵥ ψ) ((p.norm_applyVec_le_of_branch_eq_conj hK ψ).trans hψ) :=
+  SubState.ext <| by
+    rw [matrix_post, hK, SubState.matrix_ofVector, SubState.matrix_ofVector, conj_ketBra_self]
+
+/-- Born rule for a Kraus-form branch: if the branch at `a` is the Kraus map of `K`, then on the
+pure substate of `ψ` the outcome `a` has weight `‖K •ᵥ ψ‖ ^ 2`. -/
+theorem outcomeMeasure_ofVector_singleton_of_branch_eq_conj [MeasurableSpace α]
+    [MeasurableSingletonClass α] (p : SubInstrument A B α) {a : α} {K : Matrix B A ℂ}
+    (hK : p.branch a = MatrixMap.conj K) (ψ : EuclideanSpace ℂ A) (hψ : ‖ψ‖ ≤ 1) :
+    p.outcomeMeasure (.ofVector ψ hψ) {a} = ENNReal.ofReal (‖K •ᵥ ψ‖ ^ 2) := by
+  rw [outcomeMeasure_apply_singleton, hK, SubState.matrix_ofVector, conj_ketBra_self,
+    trace_re_ketBra_self]
+
+/-- Born rule for a subinstrument whose branches are all Kraus maps, over any outcome type: on the
+pure substate of `ψ`, the outcome measure is the sum of the point masses at the outcomes `a` with
+weights `‖K a •ᵥ ψ‖ ^ 2`. -/
+theorem outcomeMeasure_ofVector_of_forall_branch_eq_conj [MeasurableSpace α]
+    (p : SubInstrument A B α) {K : α → Matrix B A ℂ}
+    (hK : ∀ a, p.branch a = MatrixMap.conj (K a)) (ψ : EuclideanSpace ℂ A) (hψ : ‖ψ‖ ≤ 1) :
+    p.outcomeMeasure (.ofVector ψ hψ) =
+      Measure.sum fun a ↦ ENNReal.ofReal (‖K a •ᵥ ψ‖ ^ 2) • Measure.dirac a := by
+  rw [outcomeMeasure_eq_sum]
+  simp only [hK, SubState.matrix_ofVector, conj_ketBra_self, trace_re_ketBra_self]
+
+end branchConj
+
 end SubInstrument
+
+/-! ## Dependent subinstruments on pure substates -/
+
+namespace DSubInstrument
+
+variable {A : Type*} [Fintype A] [DecidableEq A] {ι : Type*} {B : ι → Type*}
+  [∀ i, Fintype (B i)]
+
+/-- If the branch of a dependent subinstrument at `i` is the Kraus map of `K`, then `K` does not
+increase the norm of vectors. -/
+theorem norm_applyVec_le_of_branch_eq_conj (p : DSubInstrument A ι B) {i : ι}
+    {K : Matrix (B i) A ℂ} (hK : p.branch i = MatrixMap.conj K) (ψ : EuclideanSpace ℂ A) :
+    ‖K •ᵥ ψ‖ ≤ ‖ψ‖ := by
+  refine (sq_le_sq₀ (norm_nonneg _) (norm_nonneg _)).mp ?_
+  have h := p.isCPTNIFamily.isTNI i (ketBra ψ ψ) (posSemidef_ketBra_self ψ)
+  rwa [hK, conj_ketBra_self, trace_re_ketBra_self, trace_re_ketBra_self] at h
+
+/-- If the branch of a dependent subinstrument at `i` is the Kraus map of `K`, then after outcome
+`i` the pure substate of `ψ` becomes the pure substate of `K •ᵥ ψ` on the system `B i`. -/
+theorem post_ofVector_of_branch_eq_conj (p : DSubInstrument A ι B) {i : ι}
+    {K : Matrix (B i) A ℂ} (hK : p.branch i = MatrixMap.conj K) (ψ : EuclideanSpace ℂ A)
+    (hψ : ‖ψ‖ ≤ 1) :
+    p.post (.ofVector ψ hψ) i =
+      .ofVector (K •ᵥ ψ) ((p.norm_applyVec_le_of_branch_eq_conj hK ψ).trans hψ) :=
+  SubState.ext <| by
+    rw [matrix_post, hK, SubState.matrix_ofVector, SubState.matrix_ofVector, conj_ketBra_self]
+
+/-- Born rule for a Kraus-form branch of a dependent subinstrument. -/
+theorem outcomeMeasure_ofVector_singleton_of_branch_eq_conj [MeasurableSpace ι]
+    [MeasurableSingletonClass ι] (p : DSubInstrument A ι B) {i : ι} {K : Matrix (B i) A ℂ}
+    (hK : p.branch i = MatrixMap.conj K) (ψ : EuclideanSpace ℂ A) (hψ : ‖ψ‖ ≤ 1) :
+    p.outcomeMeasure (.ofVector ψ hψ) {i} = ENNReal.ofReal (‖K •ᵥ ψ‖ ^ 2) := by
+  rw [outcomeMeasure_apply_singleton, hK, SubState.matrix_ofVector, conj_ketBra_self,
+    trace_re_ketBra_self]
+
+/-- Born rule for a dependent subinstrument whose branches are all Kraus maps, over any outcome
+type. -/
+theorem outcomeMeasure_ofVector_of_forall_branch_eq_conj [MeasurableSpace ι]
+    (p : DSubInstrument A ι B) {K : (i : ι) → Matrix (B i) A ℂ}
+    (hK : ∀ i, p.branch i = MatrixMap.conj (K i)) (ψ : EuclideanSpace ℂ A) (hψ : ‖ψ‖ ≤ 1) :
+    p.outcomeMeasure (.ofVector ψ hψ) =
+      Measure.sum fun i ↦ ENNReal.ofReal (‖K i •ᵥ ψ‖ ^ 2) • Measure.dirac i := by
+  rw [outcomeMeasure_eq_sum]
+  simp only [hK, SubState.matrix_ofVector, conj_ketBra_self, trace_re_ketBra_self]
+
+section ofKraus
+
+variable [Fintype ι] (K : (i : ι) → Matrix (B i) A ℂ) (hK : ∑ i, (K i)ᴴ * K i = 1)
+
+/-- After a dependent Kraus measurement reports `i` on the pure substate of `ψ`, the substate is
+the pure substate of `K i •ᵥ ψ` on the system `B i`. -/
+theorem post_ofKraus_ofVector (ψ : EuclideanSpace ℂ A) (hψ : ‖ψ‖ ≤ 1) (i : ι) :
+    (ofKraus K hK).post (.ofVector ψ hψ) i =
+      .ofVector (K i •ᵥ ψ)
+        (((ofKraus K hK).norm_applyVec_le_of_branch_eq_conj (branch_ofKraus_apply K hK i) ψ).trans
+          hψ) :=
+  post_ofVector_of_branch_eq_conj _ (branch_ofKraus_apply K hK i) ψ hψ
+
+/-- Born rule for a dependent Kraus measurement: on the pure substate of `ψ`, outcome `i` has
+weight `‖K i •ᵥ ψ‖ ^ 2`. -/
+theorem outcomeMeasure_ofKraus_ofVector_singleton [MeasurableSpace ι]
+    [MeasurableSingletonClass ι] (ψ : EuclideanSpace ℂ A) (hψ : ‖ψ‖ ≤ 1) (i : ι) :
+    (ofKraus K hK).outcomeMeasure (.ofVector ψ hψ) {i} = ENNReal.ofReal (‖K i •ᵥ ψ‖ ^ 2) :=
+  outcomeMeasure_ofVector_singleton_of_branch_eq_conj _ (branch_ofKraus_apply K hK i) ψ hψ
+
+end ofKraus
+
+end DSubInstrument
 
 /-! ## Unitaries on a fixed register -/
 
