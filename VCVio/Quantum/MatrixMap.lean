@@ -21,6 +21,9 @@ operators on `A` to the operators on `B`.
 
 * `Quantum.MatrixMap.amplify Φ R`: the blockwise application `Φ ⊗ id_R` on a system extended by
   an ancilla with basis `R`.
+* `Quantum.MatrixMap.amplifyLeft V A`: the blockwise application `id_A ⊗ V` on the right factor
+  of `A × R`. It commutes with `amplify` (`Quantum.MatrixMap.amplify_comp_amplifyLeft`).
+* `Quantum.MatrixMap.traceRight A R`: the partial trace over the right factor of `A × R`.
 * `Quantum.MatrixMap.IsCP`: complete positivity, as positivity of every finite amplification.
 * `Quantum.MatrixMap.IsTP`, `Quantum.MatrixMap.IsTNI`: trace preservation, and trace
   nonincrease on positive semidefinite inputs.
@@ -129,6 +132,158 @@ theorem amplify_amplify_apply (Φ : MatrixMap A B) (ρ : Matrix ((A × R) × S) 
         (Equiv.prodAssoc A R S).symm)).submatrix (Equiv.prodAssoc B R S)
         (Equiv.prodAssoc B R S) :=
   rfl
+
+/-! ## Amplification on the left -/
+
+/-- The amplification `id_A ⊗ V` of a matrix map `V` on the right factor of `A × R`: the block of
+the output at indices `(a, a')` of `A` is `V` applied to the block of the input at `(a, a')`. -/
+@[expose]
+def amplifyLeft (V : MatrixMap R S) (A : Type*) : MatrixMap (A × R) (A × S) where
+  toFun ρ := Matrix.of fun x y ↦ V (ρ.submatrix (x.1, ·) (y.1, ·)) x.2 y.2
+  map_add' ρ σ := by
+    ext x y
+    simp [Matrix.submatrix_add]
+  map_smul' c ρ := by
+    ext x y
+    simp [Matrix.submatrix_smul]
+
+/-- The entry of a left amplification at `(x, y)` is the entry at `(x.2, y.2)` of the map
+applied to the block of the input at `(x.1, y.1)`. -/
+@[simp]
+theorem amplifyLeft_apply (V : MatrixMap R S) (ρ : Matrix (A × R) (A × R) ℂ) (x y : A × S) :
+    V.amplifyLeft A ρ x y = V (ρ.submatrix (x.1, ·) (y.1, ·)) x.2 y.2 :=
+  rfl
+
+/-- The block of a left amplification at `(a, a')` is the map applied to the block of the input
+at `(a, a')`. -/
+theorem amplifyLeft_apply_submatrix (V : MatrixMap R S) (ρ : Matrix (A × R) (A × R) ℂ)
+    (a a' : A) : (V.amplifyLeft A ρ).submatrix (a, ·) (a', ·) = V (ρ.submatrix (a, ·) (a', ·)) :=
+  rfl
+
+/-- Amplifying the identity map on the left gives the identity map. -/
+@[simp]
+theorem amplifyLeft_id : amplifyLeft (LinearMap.id : MatrixMap R R) A = LinearMap.id :=
+  rfl
+
+/-- Amplifying the zero map on the left gives the zero map. -/
+@[simp]
+theorem amplifyLeft_zero : amplifyLeft (0 : MatrixMap R S) A = 0 :=
+  rfl
+
+/-- Left amplification is additive. -/
+theorem amplifyLeft_add (V W : MatrixMap R S) :
+    amplifyLeft (V + W) A = V.amplifyLeft A + W.amplifyLeft A :=
+  rfl
+
+/-- Left amplification commutes with composition. -/
+theorem amplifyLeft_comp (W : MatrixMap S C) (V : MatrixMap R S) :
+    amplifyLeft (W ∘ₗ V) A = W.amplifyLeft A ∘ₗ V.amplifyLeft A :=
+  rfl
+
+/-- A matrix map on a finite system is determined by its values on the matrix units:
+`Φ ρ = ∑ a a', ρ a a' • Φ (single a a' 1)`. -/
+theorem apply_eq_sum_single [Fintype A] [DecidableEq A] (Φ : MatrixMap A B)
+    (ρ : Matrix A A ℂ) : Φ ρ = ∑ a, ∑ a', ρ a a' • Φ (Matrix.single a a' 1) := by
+  conv_lhs => rw [Matrix.matrix_eq_sum_single ρ]
+  simp only [map_sum]
+  refine Finset.sum_congr rfl fun a _ ↦ Finset.sum_congr rfl fun a' _ ↦ ?_
+  rw [← map_smul, Matrix.smul_single, smul_eq_mul, mul_one]
+
+/-- Maps on different tensor factors commute: `(Φ ⊗ id) ∘ (id ⊗ V) = (id ⊗ V) ∘ (Φ ⊗ id)`. -/
+theorem amplify_comp_amplifyLeft [Finite A] (Φ : MatrixMap A B) (V : MatrixMap R S) :
+    Φ.amplify S ∘ₗ V.amplifyLeft A = V.amplifyLeft B ∘ₗ Φ.amplify R := by
+  classical
+  have := Fintype.ofFinite A
+  refine LinearMap.ext fun ρ ↦ ?_
+  ext ⟨b, s⟩ ⟨b', s'⟩
+  have hN : (Φ.amplify R ρ).submatrix (b, ·) (b', ·) =
+      ∑ a, ∑ a', Φ (Matrix.single a a' 1) b b' • ρ.submatrix (a, ·) (a', ·) := by
+    ext r r'
+    simp only [Matrix.submatrix_apply, amplify_apply]
+    rw [apply_eq_sum_single Φ]
+    simp [Matrix.sum_apply, mul_comm]
+  simp only [LinearMap.comp_apply, amplify_apply, amplifyLeft_apply]
+  rw [hN, apply_eq_sum_single Φ]
+  simp [Matrix.sum_apply, map_sum, map_smul, mul_comm]
+
+/-- An amplification acts on a product operator through its left factor:
+`(Φ ⊗ id) (ρ ⊗ σ) = Φ ρ ⊗ σ`. -/
+theorem amplify_kronecker (Φ : MatrixMap A B) (ρ : Matrix A A ℂ) (σ : Matrix R R ℂ) :
+    Φ.amplify R (ρ ⊗ₖ σ) = Φ ρ ⊗ₖ σ := by
+  ext ⟨b, r⟩ ⟨b', r'⟩
+  have h : (ρ ⊗ₖ σ).submatrix (·, r) (·, r') = σ r r' • ρ := by
+    ext a a'
+    simp [mul_comm]
+  rw [amplify_apply, h, map_smul]
+  simp [mul_comm]
+
+/-- A left amplification acts on a product operator through its right factor:
+`(id ⊗ V) (ρ ⊗ σ) = ρ ⊗ V σ`. -/
+theorem amplifyLeft_kronecker (V : MatrixMap R S) (ρ : Matrix A A ℂ) (σ : Matrix R R ℂ) :
+    V.amplifyLeft A (ρ ⊗ₖ σ) = ρ ⊗ₖ V σ := by
+  ext ⟨a, s⟩ ⟨a', s'⟩
+  have h : (ρ ⊗ₖ σ).submatrix (a, ·) (a', ·) = ρ a a' • σ := by
+    ext r r'
+    simp
+  rw [amplifyLeft_apply, h, map_smul]
+  simp
+
+/-! ## Partial trace -/
+
+/-- The partial trace over the right factor of `A × R`: the entry at `(a, a')` sums the diagonal
+of the block at `(a, a')`. -/
+@[expose]
+def traceRight (A R : Type*) [Fintype R] : MatrixMap (A × R) A where
+  toFun ρ := Matrix.of fun a a' ↦ ∑ r, ρ (a, r) (a', r)
+  map_add' ρ σ := by
+    ext a a'
+    simp [Finset.sum_add_distrib]
+  map_smul' c ρ := by
+    ext a a'
+    simp [Finset.mul_sum]
+
+section traceRight
+
+variable [Fintype R]
+
+/-- The entry of a partial trace at `(a, a')` is the trace of the block at `(a, a')`. -/
+@[simp]
+theorem traceRight_apply (ρ : Matrix (A × R) (A × R) ℂ) (a a' : A) :
+    traceRight A R ρ a a' = ∑ r, ρ (a, r) (a', r) :=
+  rfl
+
+/-- The partial trace sums the diagonal blocks over the traced-out factor. -/
+theorem traceRight_eq_sum_submatrix (ρ : Matrix (A × R) (A × R) ℂ) :
+    traceRight A R ρ = ∑ r, ρ.submatrix (·, r) (·, r) := by
+  ext a a'
+  simp [Matrix.sum_apply]
+
+/-- The partial trace preserves the trace. -/
+theorem trace_traceRight [Fintype A] (ρ : Matrix (A × R) (A × R) ℂ) :
+    (traceRight A R ρ).trace = ρ.trace := by
+  simp [Matrix.trace, Fintype.sum_prod_type]
+
+/-- The partial trace of a positive semidefinite matrix is positive semidefinite. -/
+theorem _root_.Matrix.PosSemidef.traceRight {ρ : Matrix (A × R) (A × R) ℂ}
+    (hρ : ρ.PosSemidef) : (traceRight A R ρ).PosSemidef := by
+  rw [traceRight_eq_sum_submatrix]
+  exact Matrix.posSemidef_sum _ fun r _ ↦ hρ.submatrix _
+
+/-- The partial trace of a product operator: `tr_R (ρ ⊗ σ) = tr σ • ρ`. -/
+theorem traceRight_kronecker (ρ : Matrix A A ℂ) (σ : Matrix R R ℂ) :
+    traceRight A R (ρ ⊗ₖ σ) = σ.trace • ρ := by
+  ext a a'
+  simp [Matrix.trace, Finset.mul_sum, mul_comm]
+
+/-- The partial trace over `R` commutes with a map acting on the left factor. -/
+theorem traceRight_comp_amplify (Φ : MatrixMap A B) :
+    traceRight B R ∘ₗ Φ.amplify R = Φ ∘ₗ traceRight A R := by
+  refine LinearMap.ext fun ρ ↦ ?_
+  rw [LinearMap.comp_apply, LinearMap.comp_apply, traceRight_eq_sum_submatrix,
+    traceRight_eq_sum_submatrix, map_sum]
+  rfl
+
+end traceRight
 
 /-! ## Complete positivity -/
 
@@ -355,6 +510,16 @@ theorem isTNI_conj [DecidableEq A] {K : Matrix B A ℂ} (h : (1 - Kᴴ * K).PosS
   rw [Matrix.sub_mul, Matrix.one_mul, Matrix.trace_sub, Complex.sub_re] at this
   rw [trace_conj_apply]
   exact sub_nonneg.mp this
+
+omit [Fintype A] in
+/-- Tracing out the right factor discards a trace-preserving map acting on it. -/
+theorem traceRight_comp_amplifyLeft [Fintype R] [Fintype S] {V : MatrixMap R S} (hV : V.IsTP) :
+    traceRight A S ∘ₗ V.amplifyLeft A = traceRight A R := by
+  refine LinearMap.ext fun ρ ↦ ?_
+  ext a a'
+  have h := hV (ρ.submatrix (a, ·) (a', ·))
+  simp only [Matrix.trace, Matrix.diag_apply, Matrix.submatrix_apply] at h
+  simpa [LinearMap.comp_apply] using h
 
 end Trace
 
