@@ -417,6 +417,11 @@ theorem lossless_ofKraus [Fintype ι] [DecidableEq A] (K : (i : ι) → Matrix (
   simp_rw [branch_ofKraus_apply, MatrixMap.trace_conj_apply]
   rw [← Matrix.trace_sum, ← Finset.sum_mul, hK, Matrix.one_mul]
 
+/-- Every branch of a dependent subinstrument is a sum of Kraus maps. -/
+theorem exists_kraus_branch (p : DSubInstrument A ι B) (i : ι) :
+    ∃ K : B i × A → Matrix (B i) A ℂ, p.branch i = ∑ k, MatrixMap.conj (K k) :=
+  p.isCPTNIFamily.exists_kraus i
+
 /-! ### Restricting the outcomes -/
 
 /-- The restriction of a dependent subinstrument along an injective map `f : κ → ι` of outcomes:

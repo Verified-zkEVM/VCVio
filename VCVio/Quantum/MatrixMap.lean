@@ -21,6 +21,7 @@ operators on `A` to the operators on `B`.
 
 * `Quantum.MatrixMap.amplify Φ R`: the blockwise application `Φ ⊗ id_R` on a system extended by
   an ancilla with basis `R`.
+* `Quantum.MatrixMap.traceRight A R`: the partial trace over the right factor of `A × R`.
 * `Quantum.MatrixMap.IsCP`: complete positivity, as positivity of every finite amplification.
 * `Quantum.MatrixMap.IsTP`, `Quantum.MatrixMap.IsTNI`: trace preservation, and trace
   nonincrease on positive semidefinite inputs.
@@ -129,6 +130,63 @@ theorem amplify_amplify_apply (Φ : MatrixMap A B) (ρ : Matrix ((A × R) × S) 
         (Equiv.prodAssoc A R S).symm)).submatrix (Equiv.prodAssoc B R S)
         (Equiv.prodAssoc B R S) :=
   rfl
+
+/-! ## Partial trace -/
+
+/-- The partial trace over the right factor of `A × R`: the entry at `(a, a')` sums the diagonal
+of the block at `(a, a')`. -/
+@[expose]
+def traceRight (A R : Type*) [Fintype R] : MatrixMap (A × R) A where
+  toFun ρ := Matrix.of fun a a' ↦ ∑ r, ρ (a, r) (a', r)
+  map_add' ρ σ := by
+    ext a a'
+    simp [Finset.sum_add_distrib]
+  map_smul' c ρ := by
+    ext a a'
+    simp [Finset.mul_sum]
+
+section traceRight
+
+variable [Fintype R]
+
+/-- The entry of a partial trace at `(a, a')` is the trace of the block at `(a, a')`. -/
+@[simp]
+theorem traceRight_apply (ρ : Matrix (A × R) (A × R) ℂ) (a a' : A) :
+    traceRight A R ρ a a' = ∑ r, ρ (a, r) (a', r) :=
+  rfl
+
+/-- The partial trace sums the diagonal blocks over the traced-out factor. -/
+theorem traceRight_eq_sum_submatrix (ρ : Matrix (A × R) (A × R) ℂ) :
+    traceRight A R ρ = ∑ r, ρ.submatrix (·, r) (·, r) := by
+  ext a a'
+  simp [Matrix.sum_apply]
+
+/-- The partial trace preserves the trace. -/
+theorem trace_traceRight [Fintype A] (ρ : Matrix (A × R) (A × R) ℂ) :
+    (traceRight A R ρ).trace = ρ.trace := by
+  simp [Matrix.trace, Fintype.sum_prod_type]
+
+/-- The partial trace of a positive semidefinite matrix is positive semidefinite. -/
+theorem _root_.Matrix.PosSemidef.traceRight {ρ : Matrix (A × R) (A × R) ℂ}
+    (hρ : ρ.PosSemidef) : (traceRight A R ρ).PosSemidef := by
+  rw [traceRight_eq_sum_submatrix]
+  exact Matrix.posSemidef_sum _ fun r _ ↦ hρ.submatrix _
+
+/-- The partial trace of a product operator: `tr_R (ρ ⊗ σ) = tr σ • ρ`. -/
+theorem traceRight_kronecker (ρ : Matrix A A ℂ) (σ : Matrix R R ℂ) :
+    traceRight A R (ρ ⊗ₖ σ) = σ.trace • ρ := by
+  ext a a'
+  simp [Matrix.trace, Finset.mul_sum, mul_comm]
+
+/-- The partial trace over `R` commutes with a map acting on the left factor. -/
+theorem traceRight_comp_amplify (Φ : MatrixMap A B) :
+    traceRight B R ∘ₗ Φ.amplify R = Φ ∘ₗ traceRight A R := by
+  refine LinearMap.ext fun ρ ↦ ?_
+  rw [LinearMap.comp_apply, LinearMap.comp_apply, traceRight_eq_sum_submatrix,
+    traceRight_eq_sum_submatrix, map_sum]
+  rfl
+
+end traceRight
 
 /-! ## Complete positivity -/
 
