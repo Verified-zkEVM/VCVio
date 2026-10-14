@@ -29,7 +29,8 @@ composite are the content of `Quantum.SubInstrument.bind`.
 * `Quantum.SubInstrument.ofMap`, `Quantum.SubInstrument.ofKraus`: a single completely positive
   map, and the measurement given by a complete family of Kraus operators.
 * `Quantum.SubInstrument.frame`: the action on a system extended by an untouched ancilla.
-* `Quantum.QuantumComp M α`: subinstruments from a register `M` to itself, as a lawful monad.
+* `Quantum.SubInstrument M M`: subinstruments from a register `M` to itself form a lawful monad,
+  the semantic domain of quantum programs on that register.
 -/
 
 public section
@@ -385,46 +386,43 @@ end frame
 
 end SubInstrument
 
-/-! ## Quantum computations on a fixed register -/
+/-! ## The monad of subinstruments on a fixed register -/
 
-/-- A quantum computation on a register with basis `M` returning a classical value in `α`: a
-subinstrument from `M` to itself. Sequencing is `Quantum.SubInstrument.bind`. -/
-abbrev QuantumComp (M : Type*) [Fintype M] (α : Type*) := SubInstrument M M α
-
-namespace QuantumComp
+namespace SubInstrument
 
 variable {M : Type u} [Fintype M] {α β : Type w}
 
-/-- Quantum computations on a fixed register form a monad under `Quantum.SubInstrument.pure`
-and `Quantum.SubInstrument.bind`, with `Quantum.SubInstrument.map` as functorial action. -/
-noncomputable instance : Monad (QuantumComp M) where
+/-- Subinstruments from a register `M` to itself form a monad under
+`Quantum.SubInstrument.pure` and `Quantum.SubInstrument.bind`, with `Quantum.SubInstrument.map`
+as functorial action. This monad is the semantic domain of quantum programs on `M`. -/
+noncomputable instance : Monad (SubInstrument M M) where
   pure := SubInstrument.pure
   bind := SubInstrument.bind
   map := SubInstrument.map
 
-/-- Monadic `pure` on `QuantumComp M` is `Quantum.SubInstrument.pure`. -/
+/-- Monadic `pure` on `SubInstrument M M` is `Quantum.SubInstrument.pure`. -/
 @[simp]
-theorem pure_eq (a : α) : (pure a : QuantumComp M α) = SubInstrument.pure a :=
+theorem pure_eq (a : α) : (pure a : SubInstrument M M α) = SubInstrument.pure a :=
   rfl
 
-/-- Monadic bind on `QuantumComp M` is `Quantum.SubInstrument.bind`. -/
+/-- Monadic bind on `SubInstrument M M` is `Quantum.SubInstrument.bind`. -/
 @[simp]
-theorem bind_eq (p : QuantumComp M α) (k : α → QuantumComp M β) : p >>= k = p.bind k :=
+theorem bind_eq (p : SubInstrument M M α) (k : α → SubInstrument M M β) : p >>= k = p.bind k :=
   rfl
 
-/-- Functorial map on `QuantumComp M` is `Quantum.SubInstrument.map`. -/
+/-- Functorial map on `SubInstrument M M` is `Quantum.SubInstrument.map`. -/
 @[simp]
-theorem map_eq (f : α → β) (p : QuantumComp M α) : f <$> p = p.map f :=
+theorem map_eq (f : α → β) (p : SubInstrument M M α) : f <$> p = p.map f :=
   rfl
 
-/-- The monad of quantum computations on a fixed register is lawful. -/
-instance : LawfulMonad (QuantumComp M) :=
+/-- The monad of subinstruments on a fixed register is lawful. -/
+instance : LawfulMonad (SubInstrument M M) :=
   LawfulMonad.mk' _
     (id_map := SubInstrument.map_id)
     (pure_bind := SubInstrument.pure_bind)
     (bind_assoc := SubInstrument.bind_assoc)
     (bind_pure_comp := fun f p ↦ (SubInstrument.map_eq_bind_pure f p).symm)
 
-end QuantumComp
+end SubInstrument
 
 end Quantum

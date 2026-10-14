@@ -17,7 +17,7 @@ measures and post-branch substates can be computed with vectors.
 A contraction `K` gives the one-outcome subinstrument `Quantum.SubInstrument.ofContraction K`,
 which sends the pure substate of `ψ` to that of `K •ᵥ ψ`; it is lossless when `K` is an isometry,
 and sequencing two of them multiplies the operators. A unitary on a fixed register is the special
-case `Quantum.QuantumComp.ofUnitary`. For a measurement `Quantum.SubInstrument.ofKraus K`, the
+case `Quantum.SubInstrument.ofUnitary`. For a measurement `Quantum.SubInstrument.ofKraus K`, the
 Born rule `Quantum.SubInstrument.outcomeMeasure_ofKraus_ofVector` gives outcome `a` the weight
 `‖K a •ᵥ ψ‖ ^ 2` and the post-branch substate of `K a •ᵥ ψ`. Combined with the norm estimates for
 vectors, the outcome weights of two input vectors differ on every event by at most
@@ -28,7 +28,7 @@ vectors, the outcome weights of two input vectors differ on every event by at mo
 * `Quantum.SubInstrument.ofContraction K hK`: the subinstrument `ρ ↦ K * ρ * Kᴴ` of a contraction.
 * `Quantum.SubInstrument.ofProjective P hP hsum`: the measurement with a complete family of star
   projections.
-* `Quantum.QuantumComp.ofUnitary U`: the computation applying a unitary to the register.
+* `Quantum.SubInstrument.ofUnitary U`: the subinstrument applying a unitary to a register.
 -/
 
 public section
@@ -349,14 +349,14 @@ end SubInstrument
 
 /-! ## Unitaries on a fixed register -/
 
-namespace QuantumComp
+namespace SubInstrument
 
 variable {M : Type u} [Fintype M] [DecidableEq M]
 
-/-- The quantum computation that applies the unitary `U` to the register and returns the unique
+/-- The subinstrument that applies the unitary `U` to the register and returns the unique
 value. -/
 @[expose]
-noncomputable def ofUnitary (U : Matrix.unitaryGroup M ℂ) : QuantumComp M PUnit.{w + 1} :=
+noncomputable def ofUnitary (U : Matrix.unitaryGroup M ℂ) : SubInstrument M M PUnit.{w + 1} :=
   SubInstrument.ofContraction (U : Matrix M M ℂ) (l2_opNorm_le_one_of_mem_unitaryGroup U.2)
 
 /-- Applying a unitary is lossless. -/
@@ -394,13 +394,13 @@ theorem outcomeMeasure_ofUnitary_ofVector (U : Matrix.unitaryGroup M ℂ)
 starts by applying `U`, on the pure substate of `ψ`, is the outcome measure of the rest on the
 pure substate of `U •ᵥ ψ`. -/
 theorem outcomeMeasure_ofUnitary_bind_ofVector {β : Type w} [MeasurableSpace β]
-    (U : Matrix.unitaryGroup M ℂ) (k : PUnit → QuantumComp M β) (ψ : EuclideanSpace ℂ M)
+    (U : Matrix.unitaryGroup M ℂ) (k : PUnit → SubInstrument M M β) (ψ : EuclideanSpace ℂ M)
     (hψ : ‖ψ‖ ≤ 1) :
     (ofUnitary.{u, w} U >>= k).outcomeMeasure (.ofVector ψ hψ) =
       (k PUnit.unit).outcomeMeasure (.ofVector ((U : Matrix M M ℂ) •ᵥ ψ)
         ((norm_applyVec_of_mem_unitaryGroup U.2 ψ).le.trans hψ)) :=
   SubInstrument.outcomeMeasure_ofContraction_bind_ofVector ..
 
-end QuantumComp
+end SubInstrument
 
 end Quantum

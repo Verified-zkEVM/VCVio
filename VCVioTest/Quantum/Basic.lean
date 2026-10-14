@@ -34,7 +34,7 @@ theorem sum_conjTranspose_proj_mul_proj : ∑ i, (proj i)ᴴ * proj i = 1 := by
     simp [proj, Matrix.sum_apply, Matrix.single_apply]
 
 /-- Measurement of a qubit in the computational basis. -/
-noncomputable def measureZ : QuantumComp (Fin 2) (Fin 2) :=
+noncomputable def measureZ : SubInstrument (Fin 2) (Fin 2) (Fin 2) :=
   SubInstrument.ofKraus proj sum_conjTranspose_proj_mul_proj
 
 /-- The computational-basis measurement is lossless. -/
@@ -50,7 +50,7 @@ example (a b : Fin 2) (h : a ≠ b) :
     (do
       let x ← measureZ
       let y ← measureZ
-      pure (x, y) : QuantumComp (Fin 2) (Fin 2 × Fin 2)).branch (a, b) = 0 := by
+      pure (x, y) : SubInstrument (Fin 2) (Fin 2) (Fin 2 × Fin 2)).branch (a, b) = 0 := by
   fin_cases a <;> fin_cases b <;>
     simp [measureZ, SubInstrument.branch_bind_apply_univ, Fin.sum_univ_two,
       Finsupp.single_apply, ← MatrixMap.conj_mul, proj] at h ⊢
@@ -79,8 +79,8 @@ example (a : Fin 2) : measureZ.outcomeMeasure plus {a} = ENNReal.ofReal (1 / 2) 
   fin_cases a <;> simp [measureZ, proj, plus, Matrix.trace]
 
 /-- Under the bundled semantics started from `|+⟩⟨+|`, the measurement has total mass one. -/
-example : (QuantumComp.semanticsVia plus).evalDist measureZ Set.univ = 1 := by
-  rw [QuantumComp.semanticsVia_evalDist, lossless_measureZ.outcomeMeasure_apply_univ]
+example : (SubInstrument.semanticsVia plus).evalDist measureZ Set.univ = 1 := by
+  rw [SubInstrument.semanticsVia_evalDist, lossless_measureZ.outcomeMeasure_apply_univ]
   simp [plus, Matrix.trace]
 
 end VCVioTest.QuantumBasic

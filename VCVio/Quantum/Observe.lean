@@ -21,9 +21,9 @@ failure so far. The outcome measure therefore has total mass at most one, and th
 `Quantum.SubInstrument.outcomeMeasure_bind` expresses the outcome measure of a composite through
 the post-branch substates of its first part, with no renormalization.
 
-`Quantum.QuantumComp.semanticsVia` packages the outcome measure from a fixed initial substate as a
-bundled `SemanticsVia`. Observation fixes the initial state and discards the final one, so it is
-not a monad morphism.
+`Quantum.SubInstrument.semanticsVia` packages the outcome measure from a fixed initial substate
+as a bundled `SemanticsVia` on the monad `SubInstrument M M`. Observation fixes the initial state
+and discards the final one, so it is not a monad morphism.
 -/
 
 public section
@@ -190,28 +190,28 @@ end SubInstrument
 
 /-! ## Bundled semantics -/
 
-namespace QuantumComp
+namespace SubInstrument
 
 variable {M : Type u} [Fintype M]
 
-/-- The bundled semantics of quantum computations on the register `M` started from the substate
-`ρ₀`: a computation is observed through the measure of its classical results, and the final
-state of the register is discarded. -/
+/-- The bundled semantics of subinstruments on the register `M` started from the substate `ρ₀`:
+a subinstrument is observed through the measure of its classical results, and the final state
+of the register is discarded. -/
 @[expose]
-noncomputable def semanticsVia (ρ₀ : SubState M) : SemanticsVia (QuantumComp.{u, w} M) where
-  Sem := QuantumComp M
+noncomputable def semanticsVia (ρ₀ : SubState M) : SemanticsVia (SubInstrument.{u, u, w} M M) where
+  Sem := SubInstrument M M
   instMonadSem := inferInstance
-  interpret := MonadHom.id (QuantumComp M)
+  interpret := MonadHom.id (SubInstrument M M)
   observe := fun p ↦ p.outcomeMeasure ρ₀
   observe_apply_univ_le_one := fun p ↦ p.outcomeMeasure_apply_univ_le_one ρ₀
 
-/-- The denotation of a quantum computation under `Quantum.QuantumComp.semanticsVia ρ₀` is its
+/-- The denotation of a subinstrument under `Quantum.SubInstrument.semanticsVia ρ₀` is its
 outcome measure from `ρ₀`. -/
 @[simp]
 theorem semanticsVia_evalDist (ρ₀ : SubState M) {α : Type w} [MeasurableSpace α]
-    (p : QuantumComp M α) : (semanticsVia ρ₀).evalDist p = p.outcomeMeasure ρ₀ :=
+    (p : SubInstrument M M α) : (semanticsVia ρ₀).evalDist p = p.outcomeMeasure ρ₀ :=
   rfl
 
-end QuantumComp
+end SubInstrument
 
 end Quantum

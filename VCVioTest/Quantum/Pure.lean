@@ -36,7 +36,7 @@ theorem sum_conjTranspose_proj_mul_proj : ∑ i, (proj i)ᴴ * proj i = 1 := by
     simp [proj, Matrix.sum_apply, Matrix.single_apply]
 
 /-- Measurement of a qubit in the computational basis. -/
-noncomputable def measureZ : QuantumComp (Fin 2) (Fin 2) :=
+noncomputable def measureZ : SubInstrument (Fin 2) (Fin 2) (Fin 2) :=
   SubInstrument.ofKraus proj sum_conjTranspose_proj_mul_proj
 
 /-- The density matrix `|+⟩⟨+|`. -/
@@ -101,8 +101,8 @@ theorem hadamard_applyVec_ket0 : hadamard •ᵥ ket0 = toLp 2 ![amp, amp] := by
   fin_cases i <;> simp [hadamard, ket0, Matrix.mulVec, dotProduct, Fin.sum_univ_two]
 
 /-- The Hadamard gate followed by the computational-basis measurement. -/
-noncomputable def hadamardThenMeasure : QuantumComp (Fin 2) (Fin 2) :=
-  QuantumComp.ofUnitary hadamardGate >>= fun _ ↦ measureZ
+noncomputable def hadamardThenMeasure : SubInstrument (Fin 2) (Fin 2) (Fin 2) :=
+  SubInstrument.ofUnitary hadamardGate >>= fun _ ↦ measureZ
 
 /-- Each computational-basis component of `|+⟩` has squared norm `1 / 2`. -/
 theorem norm_sq_proj_applyVec_hadamard_applyVec_ket0 (a : Fin 2) :
@@ -115,7 +115,7 @@ theorem norm_sq_proj_applyVec_hadamard_applyVec_ket0 (a : Fin 2) :
 example (a : Fin 2) :
     hadamardThenMeasure.outcomeMeasure (.ofVector ket0 norm_ket0_le_one) {a} =
       ENNReal.ofReal (1 / 2) := by
-  rw [hadamardThenMeasure, QuantumComp.outcomeMeasure_ofUnitary_bind_ofVector, measureZ,
+  rw [hadamardThenMeasure, SubInstrument.outcomeMeasure_ofUnitary_bind_ofVector, measureZ,
     SubInstrument.outcomeMeasure_ofKraus_ofVector_singleton]
   exact congrArg ENNReal.ofReal (norm_sq_proj_applyVec_hadamard_applyVec_ket0 a)
 
@@ -132,7 +132,7 @@ measure of the measurement on `|+⟩⟨+|`. -/
 theorem outcomeMeasure_hadamardThenMeasure_ket0 :
     hadamardThenMeasure.outcomeMeasure (.ofVector ket0 norm_ket0_le_one) =
       measureZ.outcomeMeasure plus := by
-  rw [hadamardThenMeasure, QuantumComp.outcomeMeasure_ofUnitary_bind_ofVector]
+  rw [hadamardThenMeasure, SubInstrument.outcomeMeasure_ofUnitary_bind_ofVector]
   exact congrArg _ (ofVector_hadamard_applyVec_ket0 _)
 
 /-- The two routes give the same weight `1 / 2`. -/
@@ -204,7 +204,7 @@ example : ‖hadamard ⊗ₖ (1 : Matrix (Fin 2) (Fin 2) ℂ)‖ ≤ 1 :=
 `|+⟩ ⊗ χ`. -/
 example (χ : EuclideanSpace ℂ (Fin 2)) (h : ‖ket0 ⊗ᵥ χ‖ ≤ 1)
     (h' : ‖(hadamard •ᵥ ket0) ⊗ᵥ χ‖ ≤ 1) :
-    ((QuantumComp.ofUnitary hadamardGate).frame (Fin 2)).post (.ofVector (ket0 ⊗ᵥ χ) h)
+    ((SubInstrument.ofUnitary hadamardGate).frame (Fin 2)).post (.ofVector (ket0 ⊗ᵥ χ) h)
       PUnit.unit = .ofVector ((hadamard •ᵥ ket0) ⊗ᵥ χ) h' :=
   SubInstrument.post_frame_ofContraction_ofVector_tensorVec ..
 
