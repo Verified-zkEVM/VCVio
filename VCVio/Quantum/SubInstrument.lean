@@ -452,7 +452,7 @@ theorem branch_frame_apply (p : SubInstrument A B α) (a : α) :
 /-- The total map of a framed subinstrument is the amplified total map. -/
 @[simp]
 theorem total_frame (p : SubInstrument A B α) : (p.frame R).total = p.total.amplify R :=
-  (MatrixMap.amplify_familySum p.summable_branch_apply R).symm
+  (MatrixMap.amplify_familySum p.branch R).symm
 
 /-- Framing `pure a` gives `pure a` on the extended system. -/
 @[simp]
@@ -467,8 +467,7 @@ theorem frame_pure (a : α) :
 /-- Framing commutes with sequencing. -/
 theorem frame_bind (p : SubInstrument A B α) (k : α → SubInstrument B C β) :
     (p.bind k).frame R = (p.frame R).bind fun a ↦ (k a).frame R :=
-  SubInstrument.ext <| MatrixMap.familyBind_mapRange_amplify R p.isCPTNIFamily
-    fun a ↦ (k a).isCPTNIFamily
+  SubInstrument.ext <| MatrixMap.familyBind_mapRange_amplify R p.branch fun a ↦ (k a).branch
 
 /-- Framing commutes with relabelling outcomes. -/
 theorem frame_map (f : α → β) (p : SubInstrument A B α) :

@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import VCVio.Quantum.DSubInstrument
 public import VCVio.Quantum.SubInstrument
 
@@ -26,9 +26,8 @@ failure so far. The outcome measure therefore has total mass at most one, and th
 `Quantum.SubInstrument.outcomeMeasure_bind` expresses the outcome measure of a composite through
 the post-branch substates of its first part, with no renormalization.
 
-`Quantum.SubInstrument.semanticsVia` packages the outcome measure from a fixed initial substate
-as a bundled `SemanticsVia` on the monad `SubInstrument M M`. Observation fixes the initial state
-and discards the final one, so it is not a monad morphism.
+The bundled semantics built from the outcome measure, `Quantum.SubInstrument.semanticsVia`, is
+in `VCVio.Quantum.Semantics`.
 
 Dependent subinstruments are observed in the same way. `Quantum.DSubInstrument.post` is the
 family of post-branch substates, one on the system `B i` for each outcome `i`, and
@@ -42,8 +41,6 @@ public section
 
 open MeasureTheory
 open scoped ComplexOrder
-
-universe u w
 
 namespace Quantum
 
@@ -374,32 +371,6 @@ theorem post_toD (p : SubInstrument A B α) (ρ : SubState A) (a : α) :
 @[simp]
 theorem outcomeMeasure_toD [MeasurableSpace α] (p : SubInstrument A B α) (ρ : SubState A) :
     (toD p).outcomeMeasure ρ = p.outcomeMeasure ρ :=
-  rfl
-
-end SubInstrument
-
-/-! ## Bundled semantics -/
-
-namespace SubInstrument
-
-variable {M : Type u} [Fintype M]
-
-/-- The bundled semantics of subinstruments on the register `M` started from the substate `ρ₀`:
-a subinstrument is observed through the measure of its classical results, and the final state
-of the register is discarded. -/
-@[expose]
-noncomputable def semanticsVia (ρ₀ : SubState M) : SemanticsVia (SubInstrument.{u, u, w} M M) where
-  Sem := SubInstrument M M
-  instMonadSem := inferInstance
-  interpret := MonadHom.id (SubInstrument M M)
-  observe := fun p ↦ p.outcomeMeasure ρ₀
-  observe_apply_univ_le_one := fun p ↦ p.outcomeMeasure_apply_univ_le_one ρ₀
-
-/-- The denotation of a subinstrument under `Quantum.SubInstrument.semanticsVia ρ₀` is its
-outcome measure from `ρ₀`. -/
-@[simp]
-theorem semanticsVia_evalDist (ρ₀ : SubState M) {α : Type w} [MeasurableSpace α]
-    (p : SubInstrument M M α) : (semanticsVia ρ₀).evalDist p = p.outcomeMeasure ρ₀ :=
   rfl
 
 end SubInstrument

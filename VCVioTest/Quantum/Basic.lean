@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.Quantum.Observe
+public import VCVio.Quantum.Semantics
 
 /-!
 # Qubit measurement regression tests
@@ -24,6 +24,13 @@ constant-codomain equivalence keeps its losslessness and its outcome law.
 Outcomes need not be finitely many: the instrument on a qubit that reports `n : ℕ` with weight
 `2^{-(n+1)}` and leaves the state unchanged, built directly as a summable family, is lossless,
 and on `|+⟩⟨+|` it gives the outcome `n` mass `2^{-(n+1)}`.
+
+Relabelling it into the reals gives an instrument with an uncountable outcome type and countably
+many nonzero branches; relabelling it to a single outcome sums an infinite fibre, giving the
+identity map; and its outcomes may live in a higher universe, also as a dependent subinstrument.
+
+The laws of Kleisli composition of families of matrix maps need only the convergence of the sums
+involved: associativity holds for a finite family that is not trace nonincreasing.
 -/
 
 public section
@@ -256,5 +263,76 @@ example (n : ℕ) : geometric.outcomeMeasure plus {n} = ENNReal.ofReal ((1 / 2) 
 example : geometric.outcomeMeasure plus Set.univ = 1 := by
   rw [lossless_geometric.outcomeMeasure_apply_univ]
   simp [plus, Matrix.trace]
+
+/-! ## Family laws beyond subinstruments -/
+
+/-- Twice the identity map on a qubit, as a one-member family. It is not trace nonincreasing. -/
+noncomputable def twice : Unit → MatrixMap (Fin 2) (Fin 2) :=
+  fun _ ↦ (2 : ℂ) • LinearMap.id
+
+/-- Kleisli composition of families of matrix maps is associative whenever the sums involved
+converge, with no positivity or trace condition: here every family is finite. -/
+example :
+    MatrixMap.familyBind (MatrixMap.familyBind twice fun _ ↦ twice) (fun _ ↦ twice) =
+      MatrixMap.familyBind twice fun _ ↦ MatrixMap.familyBind twice fun _ ↦ twice :=
+  MatrixMap.familyBind_assoc_of_summable (fun _ _ ↦ .of_finite) (fun _ _ _ ↦ .of_finite)
+    fun _ _ ↦ .of_finite
+
+/-! ## Uncountable, infinite-fibre and higher-universe outcomes -/
+
+/-- The geometric instrument relabelled into the reals: an uncountable outcome type. -/
+noncomputable def geometricReal : SubInstrument (Fin 2) (Fin 2) ℝ :=
+  geometric.map fun n : ℕ ↦ (n : ℝ)
+
+/-- Relabelling keeps the geometric instrument lossless on the reals. -/
+example : geometricReal.Lossless :=
+  lossless_geometric.map _
+
+/-- Only countably many real outcomes carry a nonzero branch. -/
+example : (Function.support geometricReal.branch).Countable :=
+  geometricReal.countable_support_branch
+
+/-- A real outcome off the range of the relabelling, here `-1`, has the zero branch. -/
+example : geometricReal.branch (-1) = 0 := by
+  refine LinearMap.ext fun ρ ↦ ?_
+  have h : (fun n : ℕ ↦ (n : ℝ)) ⁻¹' {-1} = ∅ :=
+    Set.eq_empty_of_forall_notMem fun n (hn : (n : ℝ) = -1) ↦ by
+      have := Nat.cast_nonneg (α := ℝ) n
+      linarith
+  rw [geometricReal, SubInstrument.branch_map_apply, h, tsum_empty, LinearMap.zero_apply]
+
+/-- As a dependent subinstrument on the reals, the relabelled instrument also has countably many
+nonzero branches. -/
+example : {x : ℝ | (SubInstrument.toD geometricReal).branch x ≠ 0}.Countable :=
+  (SubInstrument.toD geometricReal).countable_support_branch
+
+/-- Relabelling the geometric instrument to a single outcome sums the infinite fibre `ℕ`: the
+branch at that outcome is the identity map. -/
+example : (geometric.map fun _ : ℕ ↦ ()).branch () = LinearMap.id := by
+  refine LinearMap.ext fun ρ ↦ ?_
+  have h : (fun _ : ℕ ↦ ()) ⁻¹' {()} = Set.univ := Set.eq_univ_of_forall fun _ ↦ rfl
+  have hs : HasSum (fun n ↦ (geomWeight n : ℂ) • ρ) (((1 : ℝ) : ℂ) • ρ) :=
+    (Complex.hasSum_ofReal.mpr hasSum_geomWeight).smul_const ρ
+  rw [SubInstrument.branch_map_apply, h, tsum_univ (f := fun n ↦ geometric.branch n ρ)]
+  simp only [geometric_branch_apply]
+  rw [hs.tsum_eq, Complex.ofReal_one, one_smul, LinearMap.id_apply]
+
+/-- The geometric instrument with outcomes in the higher universe `Type 1`. -/
+noncomputable def geometricULift : SubInstrument (Fin 2) (Fin 2) (ULift.{1} ℕ) :=
+  geometric.map ULift.up
+
+/-- Relabelling into a higher universe keeps the instrument lossless. -/
+example : geometricULift.Lossless :=
+  lossless_geometric.map _
+
+/-- The dependent geometric instrument with outcomes in `Type 1`, restricted back to `ℕ` along
+the bijection `ULift.up`, is lossless. -/
+example : ((SubInstrument.toD geometricULift).comap ULift.up ULift.up_injective).Lossless :=
+  (SubInstrument.lossless_toD_iff.mpr (lossless_geometric.map _)).comap ULift.up_bijective
+
+/-- The dependent geometric instrument with outcomes in `Type 1` has countably many nonzero
+branches. -/
+example : {x : ULift.{1} ℕ | (SubInstrument.toD geometricULift).branch x ≠ 0}.Countable :=
+  (SubInstrument.toD geometricULift).countable_support_branch
 
 end VCVioTest.QuantumBasic

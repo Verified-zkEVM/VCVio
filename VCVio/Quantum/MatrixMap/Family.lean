@@ -43,9 +43,16 @@ topology is put on spaces of linear maps.
   nonincreasing finite partial sums is summable on every matrix.
 * `Quantum.MatrixMap.isCP_familySum`, `Quantum.MatrixMap.IsCPTNIFamily.isTNI_familySum`: the sum
   of such a family is completely positive and trace nonincreasing.
-* `Quantum.MatrixMap.IsCPTNIFamily.countable_support`: such a family has countable support.
-* `Quantum.MatrixMap.familyBind_assoc`, `Quantum.MatrixMap.single_id_familyBind`,
-  `Quantum.MatrixMap.familyBind_single_id`: the monad laws for Kleisli composition.
+* `Quantum.MatrixMap.IsCPTNIFamily.countable_support`: such a family has countable support, also
+  when its codomain depends on the label.
+* `Quantum.MatrixMap.familyBind_assoc_of_summable`, `Quantum.MatrixMap.single_id_familyBind`,
+  `Quantum.MatrixMap.familyBind_single_id`: the monad laws for Kleisli composition. The unit laws
+  hold for all families. Associativity, and the formulas `familySum_familyBind_of_summable` and
+  `familyTrace_familyBind_of_summable`, hold for all families with the summability that makes
+  their sums pointwise and lets the two sums be exchanged; completely positive families with
+  trace-nonincreasing partial sums have it (`Quantum.MatrixMap.familyBind_assoc` and the like).
+* `Quantum.MatrixMap.amplify_familySum`, `Quantum.MatrixMap.familyBind_mapRange_amplify`:
+  amplification commutes with sums and with Kleisli composition, for all families.
 -/
 
 public section
@@ -240,6 +247,39 @@ theorem summable_trace_apply (h : IsCPTNIFamily Φ) (ρ : Matrix A A ℂ) :
   exact (Complex.summable_ofReal.mpr (h.summable_trace_re_apply hρ)).congr fun i ↦
     (h.posSemidef_apply i hρ).ofReal_trace_re
 
+/-- A member whose trace vanishes on every input is zero: it maps positive semidefinite inputs to
+positive semidefinite matrices of trace zero, and these span all inputs. -/
+theorem eq_zero_of_trace_apply_eq_zero (h : IsCPTNIFamily Φ) {i : ι}
+    (h0 : ∀ ρ : Matrix A A ℂ, (Φ i ρ).trace = 0) : Φ i = 0 :=
+  LinearMap.ext fun ρ ↦ by
+    rw [LinearMap.zero_apply]
+    induction ρ using Matrix.induction_on_posSemidef with
+    | posSemidef ρ hρ => exact (h.posSemidef_apply i hρ).trace_eq_zero_iff.mp (h0 ρ)
+    | add ρ σ hρ hσ => rw [map_add, hρ, hσ, add_zero]
+    | smul c ρ hρ => rw [map_smul, hρ, smul_zero]
+
+/-- **Countable support.** A completely positive family with trace-nonincreasing partial sums,
+whose codomain may depend on the label, has countable support: only countably many members are
+nonzero. For a common codomain the set is `Function.support Φ`. A nonzero member has nonzero
+trace on some matrix unit, and on each of the finitely many matrix units the traces of the
+members form a summable family. -/
+theorem countable_support (h : IsCPTNIFamily Φ) : {i | Φ i ≠ 0}.Countable := by
+  classical
+  have key : {i | Φ i ≠ 0} ⊆ ⋃ x : A × A,
+      Function.support fun i ↦ (Φ i (Matrix.single x.1 x.2 1)).trace := by
+    intro i (hi : Φ i ≠ 0)
+    by_contra hcon
+    simp only [Set.mem_iUnion, Function.mem_support, not_exists, not_not] at hcon
+    have h0 : ∀ r s, (Φ i (Matrix.single r s 1)).trace = 0 := fun r s ↦ hcon (r, s)
+    refine hi (h.eq_zero_of_trace_apply_eq_zero fun ρ ↦ ?_)
+    have hρ : ρ = ∑ r, ∑ s, ρ r s • Matrix.single r s (1 : ℂ) := by
+      simp only [Matrix.smul_single, smul_eq_mul, mul_one]
+      exact Matrix.matrix_eq_sum_single ρ
+    rw [hρ]
+    simp only [map_sum, map_smul, Matrix.trace_sum, Matrix.trace_smul, h0, smul_zero,
+      Finset.sum_const_zero]
+  exact (Set.countable_iUnion fun x ↦ (h.summable_trace_apply _).countable_support).mono key
+
 /-- The real part of the sum of the traces of the members is the sum of their real parts. -/
 theorem re_tsum_trace_apply (h : IsCPTNIFamily Φ) (ρ : Matrix A A ℂ) :
     (∑' i, (Φ i ρ).trace).re = ∑' i, (Φ i ρ).trace.re :=
@@ -381,26 +421,6 @@ theorem summable_apply (h : IsCPTNIFamily Φ) (ρ : Matrix A A ℂ) : Summable f
     (h.summable_trace_re_apply hρ).of_norm_bounded fun i ↦
       (h.posSemidef_apply i hρ).norm_apply_le_trace_re x y
 
-/-- A completely positive family with trace-nonincreasing partial sums has countable support. -/
-theorem countable_support (h : IsCPTNIFamily Φ) : (Function.support Φ).Countable := by
-  classical
-  have key : Function.support Φ ⊆ ⋃ x : A × A × B × B,
-      Function.support fun i ↦ Φ i (Matrix.single x.1 x.2.1 1) x.2.2.1 x.2.2.2 := by
-    intro i hi
-    by_contra hcon
-    simp only [Set.mem_iUnion, Function.mem_support, not_exists, not_not] at hcon
-    have h0 : ∀ r s, Φ i (Matrix.single r s 1) = 0 := fun r s ↦ by
-      ext x y
-      exact hcon (r, s, x, y)
-    refine hi (LinearMap.ext fun ρ ↦ ?_)
-    have hρ : ρ = ∑ r, ∑ s, ρ r s • Matrix.single r s (1 : ℂ) := by
-      simp only [Matrix.smul_single, smul_eq_mul, mul_one]
-      exact Matrix.matrix_eq_sum_single ρ
-    rw [LinearMap.zero_apply, hρ]
-    simp only [map_sum, map_smul, h0, smul_zero, Finset.sum_const_zero]
-  refine (Set.countable_iUnion fun x ↦ ?_).mono key
-  exact (Pi.summable.mp (Pi.summable.mp (h.summable_apply _) x.2.2.1) x.2.2.2).countable_support
-
 end IsCPTNIFamily
 
 /-! ### The sum of a family -/
@@ -465,21 +485,43 @@ theorem summable_amplify_apply {Φ : ι → MatrixMap A B} (h : ∀ ρ, Summable
   Matrix.summable_of_apply_apply fun x y ↦
     Pi.summable.mp (Pi.summable.mp (h (ρ.submatrix (·, x.2) (·, y.2))) x.1) y.1
 
-/-- Amplification commutes with the sum of a family summable on every input. -/
-theorem amplify_familySum {Φ : ι → MatrixMap A B} (h : ∀ ρ, Summable fun i ↦ Φ i ρ)
-    (R : Type*) : (familySum Φ).amplify R = familySum fun i ↦ (Φ i).amplify R := by
-  refine LinearMap.ext fun ρ ↦ ?_
-  ext x y
-  rw [amplify_apply, familySum_apply h, familySum_apply (summable_amplify_apply h R),
-    Matrix.tsum_apply_apply (h _), Matrix.tsum_apply_apply (summable_amplify_apply h R ρ)]
-  rfl
+/-- Conversely, a family whose amplification by a nonempty ancilla is summable on every input is
+itself summable on every input: a matrix `ρ` is a diagonal block of `ρ.submatrix Prod.fst Prod.fst`.
+-/
+theorem summable_apply_of_summable_amplify_apply {R : Type*} [Nonempty R] {Φ : ι → MatrixMap A B}
+    (h : ∀ ρ, Summable fun i ↦ (Φ i).amplify R ρ) (ρ : Matrix A A ℂ) :
+    Summable fun i ↦ Φ i ρ := by
+  obtain ⟨r⟩ := ‹Nonempty R›
+  exact Matrix.summable_of_apply_apply fun x y ↦
+    Pi.summable.mp (Pi.summable.mp (h (ρ.submatrix Prod.fst Prod.fst)) (x, r)) (y, r)
+
+/-- Amplification commutes with the sum of every family of matrix maps. When the family is not
+summable on some input, neither is the amplified family (for a nonempty ancilla), and both sides
+are zero. -/
+theorem amplify_familySum (Φ : ι → MatrixMap A B) (R : Type*) :
+    (familySum Φ).amplify R = familySum fun i ↦ (Φ i).amplify R := by
+  by_cases h : ∀ ρ, Summable fun i ↦ Φ i ρ
+  · refine LinearMap.ext fun ρ ↦ ?_
+    ext x y
+    rw [amplify_apply, familySum_apply h, familySum_apply (summable_amplify_apply h R),
+      Matrix.tsum_apply_apply (h _), Matrix.tsum_apply_apply (summable_amplify_apply h R ρ)]
+    rfl
+  · rcases isEmpty_or_nonempty R with hR | hR
+    · refine LinearMap.ext fun ρ ↦ ?_
+      ext x
+      exact isEmptyElim x.2
+    · have h' : ¬ ∀ ρ, Summable fun i ↦ (Φ i).amplify R ρ := fun h' ↦
+        h (summable_apply_of_summable_amplify_apply h')
+      have e : familySum Φ = 0 := by rw [familySum, dite_eq_right h]
+      have e' : familySum (fun i ↦ (Φ i).amplify R) = 0 := by rw [familySum, dite_eq_right h']
+      rw [e, e', amplify_zero]
 
 /-- The sum of a family of completely positive maps is completely positive. -/
 theorem isCP_familySum [Finite B] {Φ : ι → MatrixMap A B} (hcp : ∀ i, (Φ i).IsCP) :
     (familySum Φ).IsCP := by
   by_cases h : ∀ ρ, Summable fun i ↦ Φ i ρ
   · intro k ρ hρ
-    rw [amplify_familySum h, familySum_apply (summable_amplify_apply h _)]
+    rw [amplify_familySum, familySum_apply (summable_amplify_apply h _)]
     exact Matrix.PosSemidef.tsum fun i ↦ hcp i k ρ hρ
   · rw [familySum, dite_eq_right h]
     exact .zero
@@ -700,6 +742,96 @@ theorem familyBind_single_id [DecidableEq ι] (Φ : (i : ι) → MatrixMap A (B 
       rw [Pi.single_eq_of_ne (Ne.symm (Finset.notMem_singleton.mp hi)), LinearMap.zero_comp],
       Finset.sum_singleton, Pi.single_eq_same, LinearMap.id_comp]
 
+/-- Amplifying every member of a Kleisli composite by `R` gives the Kleisli composite of the
+amplified families. This holds for all families. -/
+theorem familyBind_mapRange_amplify (R : Type*) (Φ : (i : ι) → MatrixMap A (B i))
+    (Ψ : (i : ι) → (c : κ) → MatrixMap (B i) (C c)) :
+    (fun c ↦ (familyBind Φ Ψ c).amplify R) =
+      familyBind (fun i ↦ (Φ i).amplify R) fun i c ↦ (Ψ i c).amplify R :=
+  funext fun c ↦ by
+    rw [familyBind, amplify_familySum]
+    rfl
+
+/-! ### Summable Kleisli composites
+
+The laws below hold for all families of matrix maps whose composites are summable as needed.
+Their hypotheses say exactly which sums must converge: those that make the sums in the statement
+pointwise sums, and the joint summability over pairs of labels that justifies exchanging two
+sums. Completely positive families with trace-nonincreasing partial sums satisfy all of them, and
+the corresponding laws for such families follow below. -/
+
+/-- The member of a Kleisli composite at `c` is the pointwise sum `ρ ↦ ∑' i, Ψ i c (Φ i ρ)` when
+these sums converge on every input. -/
+theorem familyBind_apply_of_summable {Φ : (i : ι) → MatrixMap A (B i)}
+    {Ψ : (i : ι) → (c : κ) → MatrixMap (B i) (C c)} {c : κ}
+    (h : ∀ ρ, Summable fun i ↦ Ψ i c (Φ i ρ)) (ρ : Matrix A A ℂ) :
+    familyBind Φ Ψ c ρ = ∑' i, Ψ i c (Φ i ρ) :=
+  familySum_apply (Φ := fun i ↦ Ψ i c ∘ₗ Φ i) h ρ
+
+/-- **Associativity** of Kleisli composition of summable families. The hypotheses are that each
+member of the first composite is a pointwise sum (`hΦΨ`), that each member of the second
+composite is a pointwise sum (`hΨΧ`), and that the three-step composites are jointly summable
+over pairs of labels (`hΦΨΧ`), which justifies exchanging the two sums. -/
+theorem familyBind_assoc_of_summable [∀ c, Finite (C c)] {Φ : (i : ι) → MatrixMap A (B i)}
+    {Ψ : (i : ι) → (c : κ) → MatrixMap (B i) (C c)} {Χ : (c : κ) → (m : μ) → MatrixMap (C c) (E m)}
+    (hΦΨ : ∀ c ρ, Summable fun i ↦ Ψ i c (Φ i ρ))
+    (hΨΧ : ∀ i m σ, Summable fun c ↦ Χ c m (Ψ i c σ))
+    (hΦΨΧ : ∀ m ρ, Summable fun x : ι × κ ↦ Χ x.2 m (Ψ x.1 x.2 (Φ x.1 ρ))) :
+    familyBind (familyBind Φ Ψ) Χ = familyBind Φ fun i ↦ familyBind (Ψ i) Χ := by
+  funext m
+  have hL : ∀ ρ c, Χ c m (familyBind Φ Ψ c ρ) = ∑' i, Χ c m (Ψ i c (Φ i ρ)) := fun ρ c ↦ by
+    rw [familyBind_apply_of_summable (Φ := Φ) (Ψ := Ψ) (hΦΨ c), map_tsum (Χ c m) (hΦΨ c ρ)]
+  have hR : ∀ ρ i, familyBind (Ψ i) Χ m (Φ i ρ) = ∑' c, Χ c m (Ψ i c (Φ i ρ)) := fun ρ i ↦
+    familyBind_apply_of_summable (Φ := Ψ i) (Ψ := Χ) (hΨΧ i m) (Φ i ρ)
+  refine LinearMap.ext fun ρ ↦ ?_
+  rw [familyBind, familySum_apply (Φ := fun c ↦ Χ c m ∘ₗ familyBind Φ Ψ c)
+      (fun ρ ↦ (hΦΨΧ m ρ).prod_symm.prod.congr fun c ↦ (hL ρ c).symm),
+    familyBind, familySum_apply (Φ := fun i ↦ familyBind (Ψ i) Χ m ∘ₗ Φ i)
+      (fun ρ ↦ (hΦΨΧ m ρ).prod.congr fun i ↦ (hR ρ i).symm)]
+  simp only [LinearMap.comp_apply, hL, hR]
+  exact Summable.tsum_comm (f := fun i c ↦ Χ c m (Ψ i c (Φ i ρ))) (hΦΨΧ m ρ)
+
+/-- The sum of a Kleisli composite with a common final codomain sums, over the members of the
+first family, the sum of the continuation after that member. The hypotheses are that each member
+of the composite is a pointwise sum (`hΦΨ`), that each continuation is summable on every input
+(`hΨ`), and that the composites are jointly summable over pairs of labels (`hΦΨ'`). -/
+theorem familySum_familyBind_of_summable {D : Type*} {Φ : (i : ι) → MatrixMap A (B i)}
+    {Ψ : (i : ι) → κ → MatrixMap (B i) D} (hΦΨ : ∀ c ρ, Summable fun i ↦ Ψ i c (Φ i ρ))
+    (hΨ : ∀ i σ, Summable fun c ↦ Ψ i c σ)
+    (hΦΨ' : ∀ ρ, Summable fun x : ι × κ ↦ Ψ x.1 x.2 (Φ x.1 ρ)) :
+    familySum (familyBind Φ Ψ) = familySum fun i ↦ familySum (Ψ i) ∘ₗ Φ i := by
+  have hL : ∀ ρ c, familyBind Φ Ψ c ρ = ∑' i, Ψ i c (Φ i ρ) := fun ρ c ↦
+    familyBind_apply_of_summable (Φ := Φ) (Ψ := Ψ) (hΦΨ c) ρ
+  have hR : ∀ ρ i, familySum (Ψ i) (Φ i ρ) = ∑' c, Ψ i c (Φ i ρ) := fun ρ i ↦
+    familySum_apply (Φ := Ψ i) (hΨ i) (Φ i ρ)
+  refine LinearMap.ext fun ρ ↦ ?_
+  rw [familySum_apply (Φ := familyBind Φ Ψ)
+      (fun ρ ↦ (hΦΨ' ρ).prod_symm.prod.congr fun c ↦ (hL ρ c).symm),
+    familySum_apply (Φ := fun i ↦ familySum (Ψ i) ∘ₗ Φ i)
+      (fun ρ ↦ (hΦΨ' ρ).prod.congr fun i ↦ (hR ρ i).symm)]
+  simp only [LinearMap.comp_apply, hL, hR]
+  exact Summable.tsum_comm (f := fun i c ↦ Ψ i c (Φ i ρ)) (hΦΨ' ρ)
+
+/-- The trace functional of a Kleisli composite sums, over the members of the first family, the
+trace functional of the continuation after that member. The hypotheses are that each member of
+the composite is a pointwise sum (`hΦΨ`), that the traces of each continuation are summable on
+every input (`hΨ`), and that the traces of the composites are jointly summable over pairs of
+labels (`hΦΨ'`). -/
+theorem familyTrace_familyBind_of_summable [∀ c, Fintype (C c)] {Φ : (i : ι) → MatrixMap A (B i)}
+    {Ψ : (i : ι) → (c : κ) → MatrixMap (B i) (C c)}
+    (hΦΨ : ∀ c ρ, Summable fun i ↦ Ψ i c (Φ i ρ))
+    (hΨ : ∀ i σ, Summable fun c ↦ (Ψ i c σ).trace)
+    (hΦΨ' : ∀ ρ, Summable fun x : ι × κ ↦ (Ψ x.1 x.2 (Φ x.1 ρ)).trace) (ρ : Matrix A A ℂ) :
+    familyTrace (familyBind Φ Ψ) ρ = ∑' i, familyTrace (Ψ i) (Φ i ρ) := by
+  have hL : ∀ ρ c, (familyBind Φ Ψ c ρ).trace = ∑' i, (Ψ i c (Φ i ρ)).trace := fun ρ c ↦ by
+    rw [familyBind_apply_of_summable (Φ := Φ) (Ψ := Ψ) (hΦΨ c), Matrix.trace_tsum (hΦΨ c ρ)]
+  rw [familyTrace_apply (Φ := familyBind Φ Ψ)
+      (fun ρ ↦ (hΦΨ' ρ).prod_symm.prod.congr fun c ↦ (hL ρ c).symm),
+    tsum_congr (hL ρ), tsum_congr fun i ↦ familyTrace_apply (Φ := Ψ i) (hΨ i) (Φ i ρ)]
+  exact Summable.tsum_comm (f := fun i c ↦ (Ψ i c (Φ i ρ)).trace) (hΦΨ' ρ)
+
+/-! ### Completely positive families -/
+
 variable [Fintype A] [∀ i, Fintype (B i)] [∀ c, Fintype (C c)] [∀ m, Fintype (E m)]
 
 /-- The member of a Kleisli composite of completely positive families with trace-nonincreasing
@@ -741,60 +873,38 @@ theorem IsCPTNIFamily.familyBind {Φ : (i : ι) → MatrixMap A (B i)}
       _ ≤ ρ.trace.re := hΦ.tsum_trace_re_apply_le hρ
 
 /-- Associativity of Kleisli composition of completely positive families with
-trace-nonincreasing partial sums. -/
+trace-nonincreasing partial sums. Such families satisfy the summability hypotheses of
+`Quantum.MatrixMap.familyBind_assoc_of_summable`; the joint summability over pairs of labels comes
+from `Quantum.MatrixMap.IsCPTNIFamily.prod`. -/
 theorem familyBind_assoc {Φ : (i : ι) → MatrixMap A (B i)}
     {Ψ : (i : ι) → (c : κ) → MatrixMap (B i) (C c)} {Χ : (c : κ) → (m : μ) → MatrixMap (C c) (E m)}
     (hΦ : IsCPTNIFamily Φ) (hΨ : ∀ i, IsCPTNIFamily (Ψ i)) (hΧ : ∀ c, IsCPTNIFamily (Χ c)) :
-    familyBind (familyBind Φ Ψ) Χ = familyBind Φ fun i ↦ familyBind (Ψ i) Χ := by
-  funext m
-  refine LinearMap.ext fun ρ ↦ ?_
-  rw [familyBind_apply (hΦ.familyBind hΨ) hΧ, familyBind_apply hΦ fun i ↦ (hΨ i).familyBind hΧ]
-  simp only [familyBind_apply hΦ hΨ, familyBind_apply (hΨ _) hΧ]
-  rw [tsum_congr fun c ↦ map_tsum (Χ c m) (f := fun i ↦ Ψ i c (Φ i ρ))
-    ((hΦ.comp_eval hΨ c).summable_apply ρ)]
-  exact Summable.tsum_comm' (f := fun i c ↦ Χ c m (Ψ i c (Φ i ρ)))
-    (((hΦ.prod hΨ).comp_eval (fun x ↦ hΧ x.2) m).summable_apply ρ)
-    (fun i ↦ ((hΨ i).comp_eval hΧ m).summable_apply (Φ i ρ))
-    (fun c ↦ summable_comp (Χ c m) ((hΦ.comp_eval hΨ c).summable_apply ρ))
+    familyBind (familyBind Φ Ψ) Χ = familyBind Φ fun i ↦ familyBind (Ψ i) Χ :=
+  familyBind_assoc_of_summable (fun c ↦ (hΦ.comp_eval hΨ c).summable_apply)
+    (fun i m ↦ ((hΨ i).comp_eval hΧ m).summable_apply)
+    fun m ↦ ((hΦ.prod hΨ).comp_eval (fun x ↦ hΧ x.2) m).summable_apply
 
-/-- The sum of a Kleisli composite with a common final codomain sums, over the members of the
-first family, the sum of the continuation after that member. -/
+/-- The sum of a Kleisli composite of completely positive families with trace-nonincreasing
+partial sums and a common final codomain sums, over the members of the first family, the sum of
+the continuation after that member. This is `Quantum.MatrixMap.familySum_familyBind_of_summable`
+for such families. -/
 theorem familySum_familyBind {D : Type*} [Fintype D] {Φ : (i : ι) → MatrixMap A (B i)}
     {Ψ : (i : ι) → κ → MatrixMap (B i) D} (hΦ : IsCPTNIFamily Φ)
     (hΨ : ∀ i, IsCPTNIFamily (Ψ i)) :
-    familySum (familyBind Φ Ψ) = familySum fun i ↦ familySum (Ψ i) ∘ₗ Φ i := by
-  have hc : IsCPTNIFamily fun i ↦ familySum (Ψ i) ∘ₗ Φ i :=
-    hΦ.comp (fun i ↦ isCP_familySum (hΨ i).isCP) fun i ↦ (hΨ i).isTNI_familySum
-  refine LinearMap.ext fun ρ ↦ ?_
-  rw [(hΦ.familyBind hΨ).familySum_apply, hc.familySum_apply]
-  simp only [familyBind_apply hΦ hΨ, LinearMap.comp_apply, (hΨ _).familySum_apply]
-  exact Summable.tsum_comm' (f := fun i c ↦ Ψ i c (Φ i ρ)) ((hΦ.prod hΨ).summable_apply ρ)
-    (fun i ↦ (hΨ i).summable_apply (Φ i ρ)) (fun c ↦ (hΦ.comp_eval hΨ c).summable_apply ρ)
+    familySum (familyBind Φ Ψ) = familySum fun i ↦ familySum (Ψ i) ∘ₗ Φ i :=
+  familySum_familyBind_of_summable (fun c ↦ (hΦ.comp_eval hΨ c).summable_apply)
+    (fun i ↦ (hΨ i).summable_apply) (hΦ.prod hΨ).summable_apply
 
-/-- The trace functional of a Kleisli composite sums, over the members of the first family, the
-trace functional of the continuation after that member. -/
+/-- The trace functional of a Kleisli composite of completely positive families with
+trace-nonincreasing partial sums sums, over the members of the first family, the trace
+functional of the continuation after that member. This is
+`Quantum.MatrixMap.familyTrace_familyBind_of_summable` for such families. -/
 theorem familyTrace_familyBind {Φ : (i : ι) → MatrixMap A (B i)}
     {Ψ : (i : ι) → (c : κ) → MatrixMap (B i) (C c)} (hΦ : IsCPTNIFamily Φ)
     (hΨ : ∀ i, IsCPTNIFamily (Ψ i)) (ρ : Matrix A A ℂ) :
-    familyTrace (familyBind Φ Ψ) ρ = ∑' i, familyTrace (Ψ i) (Φ i ρ) := by
-  rw [(hΦ.familyBind hΨ).familyTrace_apply]
-  simp only [(hΨ _).familyTrace_apply, familyBind_apply hΦ hΨ]
-  rw [tsum_congr fun c ↦ Matrix.trace_tsum (f := fun i ↦ Ψ i c (Φ i ρ))
-    ((hΦ.comp_eval hΨ c).summable_apply ρ)]
-  exact Summable.tsum_comm' (f := fun i c ↦ (Ψ i c (Φ i ρ)).trace)
-    ((hΦ.prod hΨ).summable_trace_apply ρ) (fun i ↦ (hΨ i).summable_trace_apply (Φ i ρ))
-    (fun c ↦ (hΦ.comp_eval hΨ c).summable_trace_apply ρ)
-
-/-- Amplifying every member of a Kleisli composite by `R` gives the Kleisli composite of the
-amplified families. -/
-theorem familyBind_mapRange_amplify (R : Type*) {Φ : (i : ι) → MatrixMap A (B i)}
-    {Ψ : (i : ι) → (c : κ) → MatrixMap (B i) (C c)} (hΦ : IsCPTNIFamily Φ)
-    (hΨ : ∀ i, IsCPTNIFamily (Ψ i)) :
-    (fun c ↦ (familyBind Φ Ψ c).amplify R) =
-      familyBind (fun i ↦ (Φ i).amplify R) fun i c ↦ (Ψ i c).amplify R :=
-  funext fun c ↦ by
-    rw [familyBind, amplify_familySum (hΦ.comp_eval hΨ c).summable_apply]
-    rfl
+    familyTrace (familyBind Φ Ψ) ρ = ∑' i, familyTrace (Ψ i) (Φ i ρ) :=
+  familyTrace_familyBind_of_summable (fun c ↦ (hΦ.comp_eval hΨ c).summable_apply)
+    (fun i ↦ (hΨ i).summable_trace_apply) (hΦ.prod hΨ).summable_trace_apply ρ
 
 end familyBind
 
