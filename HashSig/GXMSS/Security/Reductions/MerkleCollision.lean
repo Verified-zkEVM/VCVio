@@ -11,7 +11,7 @@ public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 public import HashSig.GXMSS.Security.Reductions.JointReductions
 import all HashSig.GXMSS.Security.Reductions.JointReductions
 public import HashSig.GXMSS.Security.Auxiliary.TCRSimulation
-public import VCVio.CryptoFoundations.SyncSignatureAlg.Security
+public import VCVio.CryptoFoundations.SyncSignatureAlg
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUD
