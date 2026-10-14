@@ -16,8 +16,7 @@ public import HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision
 
 The separate-term inequality for Theorem 1 in ePrint 2025/055 combines the Merkle,
 encoding and two chain target-collision hops with one joint UD/PRE charge. It assumes
-two distinct global codewords. The unrestricted bound, paper coefficient-two comparison,
-footnote 11, source-query admissibility and reduction resource bounds remain open.
+two distinct global codewords.
 -/
 
 public section
@@ -34,8 +33,7 @@ set_option maxHeartbeats 800000 in
 -- Elaborating the six concrete adversary types through the existing reduction-bound interface
 -- exceeds the default heartbeat limit; the proof itself is a finite chain of inequalities.
 /-- The separate-term strong-unforgeability reduction for a global code containing two distinct
-words. The premise supplies the non-maximum output property needed by the single-selector
-accounting. The unrestricted `StrongUnforgeabilityReductionBound` remains a proposition. -/
+words. -/
 theorem strong_unforgeability_reduction_bound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
@@ -160,7 +158,7 @@ set_option maxHeartbeats 800000 in
 -- The checksum code dimensions appear in all six concrete reduction types and require a larger
 -- elaboration budget when the generic composition theorem is specialized.
 /-- The checksum-word instance has two global codewords from its positive payload length and
-digit width. Its scheme bound charges encoding collisions to the message hash's SM-DT-rTCR game. -/
+digit width. -/
 theorem winternitz_strong_unforgeability_bound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
