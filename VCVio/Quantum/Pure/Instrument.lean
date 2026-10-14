@@ -50,21 +50,21 @@ variable {A B C : Type*} [Fintype A] [Fintype B] [Fintype C] {α β : Type*}
 /-- On the zero substate every outcome has weight zero. -/
 theorem outcomeMeasure_eq_zero_of_matrix_eq_zero [MeasurableSpace α] (p : SubInstrument A B α)
     {ρ : SubState A} (hρ : ρ.matrix = 0) : p.outcomeMeasure ρ = 0 := by
-  rw [outcomeMeasure_eq_sum]
-  exact Finset.sum_eq_zero fun a _ ↦ by simp [hρ]
+  ext s hs
+  simp [outcomeMeasure_apply _ _ hs, hρ]
 
 /-- Each branch of a composite that starts with a single map is the branch of the continuation
 after that map. -/
 theorem branch_ofMap_bind_apply (Φ : MatrixMap A B) (hcp : Φ.IsCP) (htni : Φ.IsTNI)
     (k : PUnit → SubInstrument B C β) (b : β) :
     ((ofMap Φ hcp htni).bind k).branch b = (k PUnit.unit).branch b ∘ₗ Φ := by
-  rw [branch_bind, branch_ofMap, Finsupp.lbind_apply,
-    Finsupp.sum_single_index (h := fun a φ ↦ (k a).branch b ∘ₗ φ) (LinearMap.comp_zero _)]
+  rw [branch_bind_apply_univ, Fintype.sum_unique]
+  rfl
 
 /-- After the unique outcome of a single map, the substate is the image under the map. -/
 theorem matrix_post_ofMap (Φ : MatrixMap A B) (hcp : Φ.IsCP) (htni : Φ.IsTNI) (ρ : SubState A)
     (u : PUnit) : ((ofMap Φ hcp htni).post ρ u).matrix = Φ ρ.matrix := by
-  rw [matrix_post, branch_ofMap, Finsupp.single_eq_same]
+  rw [matrix_post, branch_ofMap]
 
 /-- The post-branch substates of a composite that starts with a single map are those of the
 continuation on the image of the substate. -/
@@ -82,14 +82,9 @@ theorem outcomeMeasure_ofMap_bind [MeasurableSpace β] (Φ : MatrixMap A B) (hcp
     (htni : Φ.IsTNI) (k : PUnit.{v + 1} → SubInstrument B C β) (ρ : SubState A) :
     ((ofMap Φ hcp htni).bind k).outcomeMeasure ρ =
       (k PUnit.unit).outcomeMeasure ((ofMap Φ hcp htni).post ρ PUnit.unit.{v + 1}) := by
-  classical
-  have hs : ((ofMap Φ hcp htni).bind k).branch.support ⊆ (k PUnit.unit).branch.support := by
-    intro b hb
-    rw [Finsupp.mem_support_iff, branch_ofMap_bind_apply] at hb
-    exact Finsupp.mem_support_iff.mpr fun h ↦ hb (by rw [h, LinearMap.zero_comp])
-  rw [outcomeMeasure_eq_sum_of_subset _ _ hs, outcomeMeasure_eq_sum]
-  refine Finset.sum_congr rfl fun b _ ↦ ?_
-  rw [branch_ofMap_bind_apply, matrix_post_ofMap, LinearMap.comp_apply]
+  ext s hs
+  rw [outcomeMeasure_apply _ _ hs, outcomeMeasure_apply _ _ hs]
+  simp only [branch_ofMap_bind_apply, matrix_post_ofMap, LinearMap.comp_apply]
 
 /-! ## Contractions -/
 
@@ -109,7 +104,7 @@ noncomputable def ofContraction (K : Matrix B A ℂ) (hK : ‖K‖ ≤ 1) : SubI
 outcome. -/
 @[simp]
 theorem branch_ofContraction (K : Matrix B A ℂ) (hK : ‖K‖ ≤ 1) :
-    (ofContraction K hK).branch = Finsupp.single PUnit.unit (MatrixMap.conj K) :=
+    (ofContraction K hK).branch = fun _ ↦ MatrixMap.conj K :=
   rfl
 
 /-- The total map of the subinstrument of a contraction is its Kraus map. -/
@@ -127,7 +122,9 @@ theorem lossless_ofContraction {K : Matrix B A ℂ} (hK : ‖K‖ ≤ 1) (h : K�
 unchanged. -/
 theorem ofContraction_one (h : ‖(1 : Matrix A A ℂ)‖ ≤ 1) :
     ofContraction (1 : Matrix A A ℂ) h = SubInstrument.pure PUnit.unit :=
-  SubInstrument.ext <| by rw [branch_ofContraction, MatrixMap.conj_one, branch_pure]
+  SubInstrument.ext <| funext fun u ↦ by
+    cases u
+    rw [branch_ofContraction, MatrixMap.conj_one, branch_pure_self]
 
 /-- Each branch of a composite that starts with a contraction is the branch of the continuation
 after the Kraus map of the contraction. -/
@@ -142,9 +139,9 @@ theorem ofContraction_bind_ofContraction [DecidableEq B] (K : Matrix B A ℂ) (h
     (L : Matrix C B ℂ) (hL : ‖L‖ ≤ 1) :
     ((ofContraction K hK).bind fun _ ↦ ofContraction L hL) =
       ofContraction (L * K) (l2_opNorm_mul_le_one hL hK) :=
-  SubInstrument.ext <| Finsupp.ext fun u ↦ by
+  SubInstrument.ext <| funext fun u ↦ by
     rw [branch_ofContraction_bind_apply, branch_ofContraction, branch_ofContraction,
-      Finsupp.single_eq_same, Finsupp.single_eq_same, MatrixMap.conj_mul]
+      MatrixMap.conj_mul]
 
 /-- The subinstrument of a contraction `K` sends the pure substate of `ψ` to the pure substate
 of `K •ᵥ ψ`. -/
@@ -162,7 +159,7 @@ theorem outcomeMeasure_ofContraction_ofVector (K : Matrix B A ℂ) (hK : ‖K‖
     (ψ : EuclideanSpace ℂ A) (hψ : ‖ψ‖ ≤ 1) :
     (ofContraction K hK).outcomeMeasure (.ofVector ψ hψ) =
       ENNReal.ofReal (‖K •ᵥ ψ‖ ^ 2) • Measure.dirac PUnit.unit := by
-  rw [outcomeMeasure, branch_ofContraction, Finsupp.sum_single_index (by simp),
+  rw [outcomeMeasure_eq_sum_univ, Fintype.sum_unique, PUnit.default_eq_unit, branch_ofContraction,
     SubState.matrix_ofVector, conj_ketBra_self, trace_re_ketBra_self]
 
 /-- Vector form of the chain rule for a contraction: the outcome measure of a composite that
@@ -209,11 +206,8 @@ theorem outcomeMeasure_ofKraus_bind_ofVector {β : Type*} [MeasurableSpace β]
     ((ofKraus K hK).bind k).outcomeMeasure (.ofVector ψ hψ) =
       ∑ a, (k a).outcomeMeasure (.ofVector (K a •ᵥ ψ)
         ((norm_applyVec_le_of_sum_conjTranspose_mul_self hK a ψ).trans hψ)) := by
-  rw [outcomeMeasure_bind]
-  simp_rw [← post_ofKraus_ofVector K hK ψ hψ]
-  refine Finset.sum_subset (Finset.subset_univ _) fun a _ ha ↦ ?_
-  refine outcomeMeasure_eq_zero_of_matrix_eq_zero _ ?_
-  rw [matrix_post, Finsupp.notMem_support_iff.mp ha, LinearMap.zero_apply]
+  rw [outcomeMeasure_bind, Measure.sum_fintype]
+  simp_rw [post_ofKraus_ofVector K hK ψ hψ]
 
 variable [MeasurableSpace α]
 

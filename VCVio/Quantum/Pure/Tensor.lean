@@ -228,9 +228,8 @@ variable [Fintype A] [Fintype B] [DecidableEq A] (R) [Fintype R] [DecidableEq R]
 theorem frame_ofContraction (K : Matrix B A ℂ) (hK : ‖K‖ ≤ 1) :
     (ofContraction K hK).frame R =
       ofContraction (K ⊗ₖ (1 : Matrix R R ℂ)) ((l2_opNorm_kronecker_one_le K).trans hK) :=
-  SubInstrument.ext <| by
-    rw [branch_ofContraction, ← MatrixMap.amplify_conj]
-    exact Finsupp.mapRange_single (hf := MatrixMap.amplify_zero)
+  SubInstrument.ext <| funext fun u ↦ by
+    rw [branch_frame_apply, branch_ofContraction, branch_ofContraction, MatrixMap.amplify_conj]
 
 omit [Fintype A] in
 /-- The operators `K a ⊗ₖ 1` of a complete family of Kraus operators form a complete family. -/
@@ -248,7 +247,7 @@ theorem frame_ofKraus [Fintype α] (K : α → Matrix B A ℂ) (hK : ∑ a, (K a
     (ofKraus K hK).frame R =
       ofKraus (fun a ↦ K a ⊗ₖ (1 : Matrix R R ℂ))
         (sum_conjTranspose_kronecker_one_mul_self R hK) :=
-  SubInstrument.ext <| Finsupp.ext fun a ↦ by
+  SubInstrument.ext <| funext fun a ↦ by
     rw [branch_frame_apply, branch_ofKraus_apply, branch_ofKraus_apply, MatrixMap.amplify_conj]
 
 omit [DecidableEq R] in
