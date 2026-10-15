@@ -83,6 +83,8 @@ public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.ProgramLogic.OracleWP
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.Quantum.Basic
+public import VCVioTest.Quantum.Hybrid
+public import VCVioTest.Quantum.Kraus
 public import VCVioTest.Quantum.Oracle
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom

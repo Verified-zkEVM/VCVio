@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.Quantum.MatrixMap.Family
+public import VCVio.Quantum.MatrixMap.Kraus
 
 /-!
 # Subinstruments and quantum computations
@@ -424,6 +425,40 @@ theorem lossless_ofKraus [Fintype α] [DecidableEq A] (K : α → Matrix B A ℂ
     (hK : ∑ a, (K a)ᴴ * K a = 1) : (ofKraus K hK).Lossless := by
   rw [Lossless, total_ofKraus]
   exact MatrixMap.isTP_sum_conj hK
+
+/-! ## Kraus operators of the branches -/
+
+/-- Every branch of a subinstrument is a sum of Kraus maps. -/
+theorem exists_kraus_branch (p : SubInstrument A B α) (a : α) :
+    ∃ K : B × A → Matrix B A ℂ, p.branch a = ∑ k, MatrixMap.conj (K k) :=
+  p.isCPTNIFamily.exists_kraus a
+
+/-- The branches of a subinstrument with finitely many outcomes have Kraus operators, with
+`1 - ∑ a, ∑ k, (K a k)ᴴ * K a k` positive semidefinite. -/
+theorem exists_kraus_of_fintype [Fintype α] [DecidableEq A] (p : SubInstrument A B α) :
+    ∃ K : α → B × A → Matrix B A ℂ, (∀ a, p.branch a = ∑ k, MatrixMap.conj (K a k)) ∧
+      (1 - ∑ a, ∑ k, (K a k)ᴴ * K a k).PosSemidef :=
+  p.isCPTNIFamily.exists_kraus_of_fintype
+
+/-- The branches of a lossless subinstrument with finitely many outcomes have Kraus operators
+satisfying the completeness relation `∑ a, ∑ k, (K a k)ᴴ * K a k = 1`. -/
+theorem Lossless.exists_kraus [Fintype α] [DecidableEq A] {p : SubInstrument A B α}
+    (hp : p.Lossless) :
+    ∃ K : α → B × A → Matrix B A ℂ, (∀ a, p.branch a = ∑ k, MatrixMap.conj (K a k)) ∧
+      ∑ a, ∑ k, (K a k)ᴴ * K a k = 1 :=
+  MatrixMap.exists_kraus_of_isTP_sum p.isCP_branch (p.total_eq_sum_univ ▸ hp)
+
+/-- Kraus operators along the paths of a sequence with finitely many intermediate outcomes: if
+`p.branch a = ∑ i, conj (K a i)` and `(k a).branch b = ∑ j, conj (L a b j)`, the branch of
+`p.bind k` at `b` is the sum over the paths `(a, i, j)` of `conj (L a b j * K a i)`. -/
+theorem branch_bind_eq_sum_conj_mul [Fintype α] {ι κ : Type*} [Fintype ι] [Fintype κ]
+    (p : SubInstrument A B α) (k : α → SubInstrument B C β) {K : α → ι → Matrix B A ℂ}
+    {L : α → β → κ → Matrix C B ℂ} (hK : ∀ a, p.branch a = ∑ i, MatrixMap.conj (K a i))
+    (hL : ∀ a b, (k a).branch b = ∑ j, MatrixMap.conj (L a b j)) (b : β) :
+    (p.bind k).branch b = ∑ x : α × ι × κ, MatrixMap.conj (L x.1 b x.2.2 * K x.1 x.2.1) := by
+  simp only [branch_bind_apply_univ, Fintype.sum_prod_type, MatrixMap.conj_mul, hK, hL]
+  refine Finset.sum_congr rfl fun a _ ↦ LinearMap.ext fun ρ ↦ ?_
+  simp only [LinearMap.comp_apply, LinearMap.sum_apply, map_sum]
 
 /-! ## Framing by an ancilla -/
 

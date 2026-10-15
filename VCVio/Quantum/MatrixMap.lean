@@ -382,6 +382,14 @@ theorem amplify_conj [Fintype A] [Fintype R] [DecidableEq R] (K : Matrix B A ℂ
   ext ⟨b, r⟩ ⟨b', s⟩
   simp [Matrix.mul_apply, Fintype.sum_prod_type, Matrix.one_apply, apply_ite (starRingEnd ℂ)]
 
+/-- Amplifying a Kraus map on the left is the Kraus map of the Kronecker product of the identity
+with its operator: `id_A ⊗ conj K = conj (1 ⊗ K)`. -/
+theorem amplifyLeft_conj [Fintype R] [Fintype A] [DecidableEq A] (K : Matrix S R ℂ) :
+    (conj K).amplifyLeft A = conj ((1 : Matrix A A ℂ) ⊗ₖ K) := by
+  refine LinearMap.ext fun ρ ↦ ?_
+  ext ⟨a, s⟩ ⟨a', s'⟩
+  simp [Matrix.mul_apply, Fintype.sum_prod_type, Matrix.one_apply, apply_ite (starRingEnd ℂ)]
+
 /-- Kraus maps are completely positive. -/
 theorem isCP_conj [Fintype A] [Finite B] (K : Matrix B A ℂ) : (conj K).IsCP := fun k ρ hρ ↦ by
   rw [amplify_conj, conj_apply]
