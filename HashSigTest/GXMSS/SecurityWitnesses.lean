@@ -8,7 +8,7 @@ module
 public import HashSig.GXMSS.Security.Auxiliary.HashWitnesses
 public import HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
 public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
-public import HashSig.GXMSS.Security.Auxiliary.TCRSimulation
+public import HashSig.GXMSS.Security.Reductions.TCRSimulation
 import all HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 import all HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
 import all HashSig.GXMSS.Chain

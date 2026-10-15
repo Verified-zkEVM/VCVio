@@ -14,13 +14,12 @@ public section
 namespace GXMSS.UnforgeabilityProbe
 
 #check @Reductions.encoding_problem_eq
-#check @Reductions.strong_unforgeability_bound_of_bridge
+#check @Reductions.encodingTargetCollisionAdvantage_le_hash
 #check @Unforgeability.SpecificEncoding.winternitz_strong_unforgeability_bound
 #check @Unforgeability.SpecificEncoding.target_sum_strong_unforgeability_bound
 #check @Unforgeability.SpecificEncoding.target_sum_strong_unforgeability_bound_of_small_target
 
 #check @Unforgeability.StrongUnforgeabilityReductionBound
-#check @Unforgeability.CorrectnessFailureBound
 #check @Unforgeability.FirstMerkleTargetCollisionBound
 #check @Unforgeability.first_merkle_target_collision_bound
 #check @Unforgeability.SuccessfulEncodingTargetCollisionBound

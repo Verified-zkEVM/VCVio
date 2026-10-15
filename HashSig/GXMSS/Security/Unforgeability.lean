@@ -29,6 +29,54 @@ noncomputable section
 
 variable {PP T X H M R : Type} {h w v : ℕ}
 
+/-- Every execution path of the source adversary has at most `qs` signing calls.  Repeated
+calls and calls answered with failure count; ambient uniform calls do not. -/
+@[expose]
+def SigningQueryBound (qs : ℕ)
+    (adv : Reductions.SchemeAdversary PP H M R h v) : Prop :=
+  ∀ pk, (adv.forge pk).IsQueryBoundP (fun q => q.isRight = true) qs
+
+/-- The concrete separate-term reduction inequality underlying Theorem 1. The parameter `qs`
+controls the encoding target-collision transcript, and `K` controls its retry law. The source
+adversary has the explicit pathwise signing-query bound; the authoritative adversary types preserve
+their own sampling, seed-reveal and oracle disciplines. This proposition does not claim
+reduction-query or running-time bounds. -/
+@[expose]
+def StrongUnforgeabilityReductionBound
+    [SampleableType H] [SampleableType R]
+    [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
+    [DecidableEq (GXMSS.Signature R H h v)]
+    (hash : HashInstance PP T X H h w v)
+    (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K qs : ℕ)
+    (advGXMSS : SyncSignatureUnforgeability.Adversary unifSpec (GXMSS.PublicKey PP H)
+      (Fin (2 ^ h)) M (GXMSS.Signature R H h v))
+    (advMerkleTCR : SM_DT_TCR_Adversary
+      (SM_DT_TCR_Problem.standalone hash.thf (2 * (2 ^ h) * v * (2 ^ w))))
+    (advEncodingTCR : Encoding.TargetCollisionResistance.Adversary
+  (Encoding.TargetCollisionResistance.Problem.mk enc
+    (HashInstance.thf hash).seedGen ($ᵗ R) qs K))
+    (advFirstChainTCR : SM_DT_TCR_Adversary
+      (SM_DT_TCR_Problem.standalone hash.thf ((2 ^ h) * v * (2 ^ w))))
+    (advSecondChainTCR : SM_DT_TCR_Adversary
+      (SM_DT_TCR_Problem.standalone hash.thf ((2 ^ h) * v * (2 ^ w))))
+    (advUD : SM_DT_UD_Adversary
+  (SM_DT_UD_Problem.standalone (HashInstance.thf hash) (HashInstance.digestInput hash)
+    (HashInstance.digestInput hash).injective
+        ($ᵗ H) ($ᵗ H) 1))
+    (advPRE : SM_DT_PRE_Adversary
+  (SM_DT_PRE_Problem.standalone (HashInstance.thf hash) (HashInstance.digestInput hash)
+    (HashInstance.digestInput hash).injective 1)) :
+    Prop :=
+  SigningQueryBound qs advGXMSS →
+  SyncSignatureUnforgeability.strongAdvantage (GXMSS.scheme hash enc K)
+      ProbCompRuntime.probComp advGXMSS ≤
+    SM_DT_TCR_Advantage advMerkleTCR +
+      Encoding.TargetCollisionResistance.advantage advEncodingTCR +
+      SM_DT_TCR_Advantage advFirstChainTCR + SM_DT_TCR_Advantage advSecondChainTCR +
+      (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) *
+        ((↑(2 ^ w) : ℝ≥0∞) * SM_DT_UD_Advantage advUD +
+          SM_DT_PRE_Advantage advPRE)
+
 set_option maxHeartbeats 800000 in
 -- Elaborating the six concrete adversary types through the existing reduction-bound interface
 -- exceeds the default heartbeat limit; the proof itself is a finite chain of inequalities.
@@ -204,13 +252,14 @@ theorem winternitz_strong_unforgeability_bound
         y ∈ (WinternitzCollision.bridge params hEpoch).enc.code ∧ x ≠ y := by
     simpa only [WinternitzCollision.bridge, Winternitz.encoding] using
       Winternitz.two_codewords params
-  exact strong_unforgeability_bound_of_bridge hash
+  have hbase := strong_unforgeability_reduction_bound hash
+    (WinternitzCollision.bridge params hEpoch).enc K qs hv
+    params.digitWidthPositive htwo adv hqueries
+  have hencoding := encodingTargetCollisionAdvantage_le_hash hash
     (WinternitzCollision.bridge params hEpoch)
-    (by simpa [WinternitzCollision.bridge] using hseed) K qs hv
-    params.digitWidthPositive adv
-    (strong_unforgeability_reduction_bound hash
-      (WinternitzCollision.bridge params hEpoch).enc K qs hv
-      params.digitWidthPositive htwo adv) hqueries
+    (by simpa [WinternitzCollision.bridge] using hseed) qs K adv
+  exact hbase.trans (add_le_add (add_le_add
+    (add_le_add (add_le_add le_rfl hencoding) le_rfl) le_rfl) le_rfl)
 
 set_option maxHeartbeats 800000 in
 -- Specializing the generic scheme reduction to the target-sum bridge elaborates six concrete
@@ -253,11 +302,13 @@ theorem target_sum_strong_unforgeability_bound
         y ∈ (TargetSumCollision.bridge params hEpoch).enc.code ∧ x ≠ y := by
     simpa only [TargetSumCollision.bridge, TargetSum.encoding] using
       TargetSum.two_codewords_of_acceptedCount v w target hcount
-  exact strong_unforgeability_bound_of_bridge hash
+  have hbase := strong_unforgeability_reduction_bound hash
+    (TargetSumCollision.bridge params hEpoch).enc K qs hv hw htwo adv hqueries
+  have hencoding := encodingTargetCollisionAdvantage_le_hash hash
     (TargetSumCollision.bridge params hEpoch)
-    (by simpa [TargetSumCollision.bridge] using hseed) K qs hv hw adv
-    (strong_unforgeability_reduction_bound hash
-      (TargetSumCollision.bridge params hEpoch).enc K qs hv hw htwo adv) hqueries
+    (by simpa [TargetSumCollision.bridge] using hseed) qs K adv
+  exact hbase.trans (add_le_add (add_le_add
+    (add_le_add (add_le_add le_rfl hencoding) le_rfl) le_rfl) le_rfl)
 
 /-- A positive target that fits in one digit, with at least two digit positions, directly
 discharges the target-sum code-size premise in the scheme bound. -/

@@ -25,44 +25,6 @@ open Encoding ENNReal OracleComp OracleSpec Security TweakableHash
 
 variable {PP T X H M R E S : Type} {h w v n radix : ℕ}
 
-/-- Native winning mass of the successful-record Game 1 to Game 2 difference is bounded by
-the exact authoritative target-collision experiment. The unused and failed-consumed cases
-contribute no mass to this event; any unreturned mass remains unconditioned. -/
-theorem successfulEncodingDifferenceMass_le_encodingTargetCollisionAdvantage
-    [SampleableType H] [SampleableType R]
-    [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
-    (hash : HashInstance PP T X H h w v)
-    (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (qs K : ℕ)
-    (adv : SchemeAdversary PP H M R h v)
-    (hbound : ∀ pk, (adv.forge pk).IsQueryBoundP (fun q => q.isRight = true) qs) :
-    successfulEncodingDifferenceMass hash enc K adv ≤
-      TargetCollisionResistance.advantage
-        (encodingTargetCollisionReduction hash enc qs K adv) := by
-  have hprogram :
-      (successfulEncodingDifference hash enc K <$> sourceProgram hash enc K adv) =
-        (fun z => successfulEncodingDifference hash enc K z.1) <$>
-          encodingSourceCoupledProgram hash enc K adv := by
-    rw [← encodingSourceCoupledProgram_proj hash enc K adv]
-    simp only [Functor.map_map]
-  unfold successfulEncodingDifferenceMass TargetCollisionResistance.advantage
-    TargetCollisionResistance.outputMeasure
-  rw [hprogram, encodingTargetExperiment_eq_coupled hash enc qs K adv hbound]
-  simp only [map_eq_bind_pure_comp, Function.comp_def]
-  apply OracleComp.evalDist_bind_apply_mono_of_support
-    (encodingSourceCoupledProgram hash enc K adv)
-    (fun z => pure (successfulEncodingDifference hash enc K z.1))
-    (encodingTargetTail hash enc qs K) (measurableSet_singleton true)
-  intro out hout
-  by_cases hdiff : successfulEncodingDifference hash enc K out.1 = true
-  · obtain ⟨hseed, hrecords⟩ :=
-      encodingSourceCoupledProgram_support hash enc K adv out hout
-    rw [encodingTargetTail_successfulDifference hash enc qs K out hseed hrecords hdiff]
-    simp [hdiff]
-  · have hfalse : successfulEncodingDifference hash enc K out.1 = false := by
-      cases h : successfulEncodingDifference hash enc K out.1 <;> simp_all
-    simp [hfalse]
-
 private structure SingleTargetState (H : Type) (h w v : ℕ) where
   guess : Guess h w v
   answer : Option H
@@ -761,7 +723,9 @@ private theorem splicedSigningOracle_preserves_successfulHistoryEncodes
     subst out
     exact hinv
 
-private def runSpliced [SampleableType R]
+/-- Run the source adversary with a challenge image spliced into one chain, retaining the
+ordinary epoch-consumption policy and bounded encoding retries. -/
+def runSpliced [SampleableType R]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K : ℕ)
     (adv : SchemeAdversary PP H M R h v) (pp : PP) (guess : Guess h w v)

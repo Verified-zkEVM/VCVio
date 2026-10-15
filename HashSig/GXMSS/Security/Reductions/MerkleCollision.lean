@@ -10,7 +10,7 @@ public import HashSig.GXMSS.Security.Auxiliary.Encoding
 public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 public import HashSig.GXMSS.Security.Reductions.JointReductions
 import all HashSig.GXMSS.Security.Reductions.JointReductions
-public import HashSig.GXMSS.Security.Auxiliary.TCRSimulation
+public import HashSig.GXMSS.Security.Reductions.TCRSimulation
 public import VCVio.CryptoFoundations.SyncSignatureAlg
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
@@ -38,70 +38,6 @@ open Encoding ENNReal OracleComp OracleSpec TweakableHash
 noncomputable section
 
 variable {PP T X H M R : Type} {h w v : ℕ}
-
-/-- Every execution path of the source adversary has at most `qs` signing calls.  Repeated
-calls and calls answered with failure count; ambient uniform calls do not. -/
-@[expose]
-def SigningQueryBound (qs : ℕ)
-    (adv : Reductions.SchemeAdversary PP H M R h v) : Prop :=
-  ∀ pk, (adv.forge pk).IsQueryBoundP (fun q => q.isRight = true) qs
-
-/-- The concrete separate-term reduction inequality underlying Theorem 1. The parameter `qs`
-controls the encoding target-collision transcript, and `K` controls its retry law. The source
-adversary has the explicit pathwise signing-query bound; the authoritative adversary types preserve
-their own sampling, seed-reveal and oracle disciplines. This proposition does not claim
-reduction-query or running-time bounds. -/
-@[expose]
-def StrongUnforgeabilityReductionBound
-    [SampleableType H] [SampleableType R]
-    [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
-    (hash : HashInstance PP T X H h w v)
-    (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K qs : ℕ)
-    (advGXMSS : SyncSignatureUnforgeability.Adversary unifSpec (GXMSS.PublicKey PP H)
-      (Fin (2 ^ h)) M (GXMSS.Signature R H h v))
-    (advMerkleTCR : SM_DT_TCR_Adversary
-      (SM_DT_TCR_Problem.standalone hash.thf (2 * (2 ^ h) * v * (2 ^ w))))
-    (advEncodingTCR : Encoding.TargetCollisionResistance.Adversary
-  (Encoding.TargetCollisionResistance.Problem.mk enc
-    (HashInstance.thf hash).seedGen ($ᵗ R) qs K))
-    (advFirstChainTCR : SM_DT_TCR_Adversary
-      (SM_DT_TCR_Problem.standalone hash.thf ((2 ^ h) * v * (2 ^ w))))
-    (advSecondChainTCR : SM_DT_TCR_Adversary
-      (SM_DT_TCR_Problem.standalone hash.thf ((2 ^ h) * v * (2 ^ w))))
-    (advUD : SM_DT_UD_Adversary
-  (SM_DT_UD_Problem.standalone (HashInstance.thf hash) (HashInstance.digestInput hash)
-    (HashInstance.digestInput hash).injective
-        ($ᵗ H) ($ᵗ H) 1))
-    (advPRE : SM_DT_PRE_Adversary
-  (SM_DT_PRE_Problem.standalone (HashInstance.thf hash) (HashInstance.digestInput hash)
-    (HashInstance.digestInput hash).injective 1)) :
-    Prop :=
-  SigningQueryBound qs advGXMSS →
-  SyncSignatureUnforgeability.strongAdvantage (GXMSS.scheme hash enc K)
-      ProbCompRuntime.probComp advGXMSS ≤
-    SM_DT_TCR_Advantage advMerkleTCR +
-      Encoding.TargetCollisionResistance.advantage advEncodingTCR +
-      SM_DT_TCR_Advantage advFirstChainTCR + SM_DT_TCR_Advantage advSecondChainTCR +
-      (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) *
-        ((↑(2 ^ w) : ℝ≥0∞) * SM_DT_UD_Advantage advUD +
-          SM_DT_PRE_Advantage advPRE)
-
-/-- Separate correctness obligation from Lemma 3. The pointwise one-attempt failure is `q`, exact
-independent retry failure is `q ^ K`, and `δ ^ K` is only the uniform upper bound and resulting
-correctness loss. None of these quantities is added to the security inequality above. -/
-@[expose]
-def CorrectnessFailureBound [SampleableType H] [SampleableType R]
-    [Fintype R] [DecidableEq H]
-    (hash : HashInstance PP T X H h w v)
-    (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K : ℕ)
-    (q : PP → M → Fin (2 ^ h) → ℝ≥0∞) (δ : ℝ≥0∞) : Prop :=
-  enc.UniformErrorAtMost ProbCompRuntime.probComp ($ᵗ R) δ ∧
-    (∀ pp msg ep, q pp msg ep = enc.failureMass ProbCompRuntime.probComp ($ᵗ R) pp msg ep) ∧
-    (∀ pp msg ep, IncomparableEncoding.Retry.failureMass enc ProbCompRuntime.probComp
-      ($ᵗ R) pp msg ep K = (q pp msg ep) ^ K) ∧
-    (∀ pp msg ep, (q pp msg ep) ^ K ≤ δ ^ K) ∧
-    (GXMSS.scheme hash enc K).Complete ProbCompRuntime.probComp (δ ^ K)
 
 /-- The exact Game 0-to-Game 1 Merkle target-collision inequality.  The left side is the adopted
 post-runtime strong-unforgeability winning mass, `gameOneAdvantage` observes the actual Game 1

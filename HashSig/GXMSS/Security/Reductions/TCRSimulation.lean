@@ -5,8 +5,7 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Reductions.JointReductions
-import all HashSig.GXMSS.Security.Reductions.JointReductions
+public import HashSig.GXMSS.Security.Reductions.CollisionReductions
 import all HashSig.GXMSS.Security.Reductions.CollisionReductions
 import all HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 import all HashSig.GXMSS.Merkle
