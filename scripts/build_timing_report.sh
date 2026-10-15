@@ -97,6 +97,8 @@ render_report() {
   local results_file="$1"
 
   python3 - "$results_file" <<'PY'
+from __future__ import annotations
+
 import json
 import os
 import pathlib
@@ -263,6 +265,23 @@ for module, entry in shown:
     baseline_time = fmt_entry(baseline_entry) if baseline_entry else "-"
     delta = fmt_entry_delta(entry, baseline_entry) if baseline_entry else "-"
     print(f"| {fmt_entry(entry)} | {baseline_time} | {delta} | `{source_path(module)}` |")
+
+if base_table is not None and current_table is not None:
+    from compare_module_times import (DEFAULT_BUDGET_ABS, DEFAULT_BUDGET_REL, DEFAULT_TOTAL_REL,
+                                      compare, render_markdown)
+
+    budget_abs = float(os.environ.get("BUILD_TIMING_BUDGET_ABS") or DEFAULT_BUDGET_ABS)
+    budget_rel = float(os.environ.get("BUILD_TIMING_BUDGET_REL") or DEFAULT_BUDGET_REL)
+    total_rel = float(os.environ.get("BUILD_TIMING_TOTAL_REL") or DEFAULT_TOTAL_REL)
+    print()
+    print("### Modules Over Budget")
+    print()
+    print(render_markdown(compare(base_table, current_table), budget_abs, budget_rel, total_rel))
+    print()
+    print(
+        "These times were measured under the run's parallel load, so a module over budget is a "
+        "pointer for a sequential profile (`lake env lean -Dprofiler=true <file>`), not a verdict."
+    )
 PY
 }
 

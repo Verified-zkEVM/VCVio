@@ -13,7 +13,7 @@ public import Mathlib.Probability.Distributions.Uniform
 
 Extended-nonnegative-real arithmetic identities whose proofs bridge through `ENNReal.toReal`
 and invoke `push_cast`, `ring`, `nlinarith`, or `aesop`. These proofs are several times more
-expensive to elaborate than the general-purpose helpers in `ToMathlib.General`, so they live
+expensive to elaborate than general-purpose `ENNReal` helpers, so they live
 in a separate module that only the files that need them pull in.
 
 ## Contents

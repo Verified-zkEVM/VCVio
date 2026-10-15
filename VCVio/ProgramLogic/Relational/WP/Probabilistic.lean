@@ -15,7 +15,7 @@ public import VCVio.ProgramLogic.Relational.Quantitative
 
 `OracleComp.Rel.Probabilistic` supplies a scoped interpretation of `eRelWP` in
 `Prob`, Mathlib's interval `Set.Iic (1 : ℝ≥0∞)`. A coupling expectation of a
-probability-valued postcondition stays below one.
+probability-valued postcondition is at most one.
 
 Use `open scoped OracleComp.Rel.Probabilistic` to select this carrier.
 -/
@@ -87,9 +87,9 @@ noncomputable scoped instance instRelWP_prob :
 
 /-! ## Definitional alignment with `eRelWP` (Prob)
 
-The keystone lemma confirms that the underlying `ℝ≥0∞` value of
-`VCVio.ProgramLogic.rwp` agrees with the quantitative `eRelWP` on the nose, so
-quantitative theorems still apply after coercing through `.val`. -/
+`rwp_val_eq_eRelWP` states that the `ℝ≥0∞` value of `VCVio.ProgramLogic.rwp` is
+`eRelWP` by definition, so the theorems about `eRelWP` apply after coercing
+through `.val`. -/
 
 theorem rwp_val_eq_eRelWP
     (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (post : α → β → Prob) :

@@ -6,8 +6,8 @@
 - VCVio validation toolchain: Lean and Mathlib `v4.35.0`
 
 The direct Git dependency is tested with VCVio as a path dependency and with the nested package's
-direct Mathlib `v4.35.0` requirement taking precedence over inherited pins. The direct compatibility
-canary imports:
+direct Mathlib `v4.35.0` requirement taking precedence over inherited pins. The direct
+compatibility canary imports:
 
 - `Complexitylib.Models.TuringMachine`;
 - `Complexitylib.Classes.P.Cobham.Defs`.

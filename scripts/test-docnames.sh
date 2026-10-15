@@ -45,9 +45,9 @@ EMPTY_ALLOWLIST="$FIXTURE_TMP/empty.txt"
 cat > "$FIXTURE_TMP/good.md" <<'DOC'
 `OracleComp.prEvent_bind_eq_tsum` is a declaration, `OracleComp.Lower` a namespace,
 `VCVio.ProgramLogic.Tactics` a module, `linter.style.whitespace` and `weak.linter.style.longFile`
-options, `prEvent_norm` a simp set, `gcongr` an attribute, `HasUnpredictableSample.uniformSample` a suffix,
+options, `expect_norm` a simp set, `gcongr` an attribute, `Spec.uniformSample` a suffix,
 `Tracing.Core` a module segment, `spec.toPFunctor` a field access, `.run'` a field, `by_dist` a
-tactic keyword, `Necessary` a namespace suffix and `Prop` a sort; `lake build`, `extern_lib` and
+tactic keyword, `Dispatch` a namespace suffix and `Prop` a sort; `lake build`, `extern_lib` and
 `Pr{let x ← oa}[p x]` are not checked.
 DOC
 

@@ -24,18 +24,14 @@ open Lean Elab Meta
 namespace OracleComp.ProgramLogic
 
 /-- Broad category of a `@[vcspec]` rule, derived from the head of the
-theorem's statement (`Triple`, `wp`, `RelTriple`, `RelWP`). -/
+theorem's statement (`RelTriple` or `RelWP`). -/
 inductive VCSpecKind where
-  | unaryTriple
-  | unaryWP
   | relTriple
   | relWP
   deriving Inhabited, BEq, Repr
 
-/-- Coarse lookup shape used to route a rule into the right discrimination
-tree partition (unary vs relational) at registration time. -/
+/-- Coarse lookup shape of a rule: the head constants of its two computations. -/
 inductive VCSpecLookupKey where
-  | unary (head : Name)
   | relational (leftHead rightHead : Name)
   deriving Inhabited, BEq, Repr
 
@@ -55,10 +51,8 @@ inductive VCSpecCompForm where
   | other
   deriving Inhabited, BEq, Repr
 
-/-- Combined comp-form of a rule's computation slot(s). Unary rules record
-a single form; relational rules record both sides. -/
+/-- Combined comp-form of a rule's two computation slots. -/
 inductive VCSpecCompPattern where
-  | unary (form : VCSpecCompForm)
   | relational (leftForm rightForm : VCSpecCompForm)
   deriving Inhabited, BEq, Repr
 
@@ -96,12 +90,6 @@ def classifyVCSpecCompForm (comp : Expr) : VCSpecCompForm :=
     .query
   else
     .other
-
-/-- Wrap the `classifyVCSpecCompForm` summary of a single computation slot into
-a `.unary` `VCSpecCompPattern`, the comp-pattern shape used by non-relational
-(unary) `@[vcspec]` rules. -/
-def classifyUnaryCompPattern (comp : Expr) : VCSpecCompPattern :=
-  .unary (classifyVCSpecCompForm comp)
 
 /-- Pair the `classifyVCSpecCompForm` summaries of the two computation slots
 `oa`/`ob` into a `.relational` `VCSpecCompPattern`, the comp-pattern shape used

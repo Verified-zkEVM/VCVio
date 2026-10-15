@@ -149,6 +149,6 @@ theorem prEvent_none_runWithInput {ι : Type} {spec : OracleSpec.{0, 0} ι} {α 
     (h : M.ImplementsWithin program k) (impl : ProbHandler spec) (x : α) :
     Pr{let y ← M.runWithInput impl k x}[y = none] = 0 := by
   rw [h.simulateQ_run_eq impl x]
-  simp [prEvent_norm]
+  simp [expect_norm]
 
 end PFunctor.DynSystem.DynComputation.ImplementsWithin

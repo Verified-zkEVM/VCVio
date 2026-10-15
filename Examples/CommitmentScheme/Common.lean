@@ -118,7 +118,7 @@ lemma prEvent_from_fresh_query_le_inv
       rfl
     rw [hstep, bind_assoc]
     simp [OracleQuery.cont_query]
-  rw [hrun]
+  rw [hrun, prEvent_bind]
   refine (prEvent_bind_le_prEvent_of_forall_eq_zero _ _ (fun u => u = target) _
     fun u hu => hzero u hu).trans (le_of_eq ?_)
   rw [prEvent_liftM_query_eq_card_div t, Finset.filter_eq' Finset.univ target]

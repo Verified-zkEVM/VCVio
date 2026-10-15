@@ -24,7 +24,7 @@ DOC_FILES = source_files(REPO_ROOT, "*.md")
 PROGRAM_LOGIC_DIR = REPO_ROOT / "VCVio" / "ProgramLogic"
 VCVIO_DIR = REPO_ROOT / "VCVio"
 
-TACTIC_MACRO_RE = re.compile(r'(?:macro|syntax)\s+"([\w\']+)".*:\s*tactic')
+TACTIC_MACRO_RE = re.compile(r'(?:macro|syntax)(?:\s+\([^()]*\))*\s+"([\w\']+)".*:\s*tactic')
 
 NOTATION_RE = re.compile(
     r'(?:scoped\s+)?notation(?:\s*:\s*\d+)?\s+'

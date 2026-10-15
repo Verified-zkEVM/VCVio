@@ -50,7 +50,8 @@ main_base="$(git -C "$repo" merge-base origin/main "$base")"
 ours_changed="$(git -C "$repo" diff --name-only "$main_base" "$base")"
 kept=(lean-toolchain lake-manifest.json lakefile.lean scripts/axiom_baseline.json
   scripts/nolints.json scripts/nolints-style.txt scripts/init_sweep_baseline.json
-  scripts/expose_boundary_baseline.tsv scripts/doc_names_allowlist.txt)
+  scripts/expose_boundary_baseline.tsv scripts/doc_names_allowlist.txt
+  scripts/spec_coverage_baseline.json scripts/lifted_law_parity_baseline.json)
 library_roots='^(ToMathlib|VCVio|VCVioCslib|LatticeCrypto|HashSig|Examples|Extern|VCVioWidgets|VCVioTest|LatticeCryptoTest|HashSigTest)/'
 
 mkdir -p "$out"

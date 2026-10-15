@@ -6,23 +6,21 @@ Authors: Quang Dao
 
 module
 
-public import PolyFun.Control.Do.Spec
+public import VCVio.ProgramLogic.Unary.SimulateQSpecs
 public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
 public import VCVio.OracleComp.QueryTracking.CachingOracle
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.SeededOracle
-public import VCVio.ProgramLogic.Unary.WP.Necessary
-public import ToMathlib.Control.WriterT.WP
 
 /-!
 # Handler specifications for `OracleComp` simulators
 
 Core `Std.WP` Hoare triples for the query-tracking handlers `cachingOracle`, `seededOracle`,
 `loggingOracle`, `countingOracle`, `costOracle`, and `cachingLoggingOracle`, under the
-necessary reading of `OracleComp` (`open scoped OracleComp.Necessary`): a triple
-`⦃ pre ⦄ handler t ⦃ post ⦄` says that from every state satisfying `pre`, every reachable
-result and final state satisfy `post`. Core's `StateT` interpretation lifts the structural
+necessary reading of `OracleComp` (the global instance): a triple
+`⦃ pre ⦄ handler t ⦃ post ⦄` says that from every state satisfying `pre`, every possible
+result and final state satisfy `post`. Core's `StateT` interpretation lifts the necessary
 reading to the stateful handlers. The writer handlers read their log as accumulated state:
 `WriterT.MonoidWP` for the monoid logs of `countingOracle` and `costOracle`, and
 `WriterT.AppendWP` for the list log of `loggingOracle`.
@@ -36,12 +34,11 @@ reading to the stateful handlers. The writer handlers read their log as accumula
   `grind`. Specifications with a single canonical postcondition are `@[spec]`-tagged.
 * *Composite programs* are handled by `vcgen` from the per-query specifications: the worked
   examples below compose two-, three-, and four-query bind chains.
-* *Whole simulations*: `simulateQ_triple_preserves_invariant` and its `WriterT` analogue
-  lift a per-query invariant to `simulateQ handler oa` by induction on `oa` with
-  `Std.WP.Triple.pure` and `Std.WP.Triple.bind`.
-* `triple_stateT_iff_forall_support` and its writer analogues read a triple as a statement
-  about the support of the run, the form consumed by the relational lifts in
-  `VCVio.ProgramLogic.Relational.HandlerFromUnary`.
+* *Whole simulations* go through the generic layer `VCVio.ProgramLogic.Unary.SimulateQSpecs`:
+  `Spec.simulateQ` with a handler invariant, the whole-program lifts
+  `simulateQ_triple_preserves_invariant` and their `WriterT` analogues, the ranked
+  `simulateQ_triple_ranked`, the sum-handler rules and the statements of a triple against the
+  support of its run.
 
 ## Ghost parameters
 
@@ -63,7 +60,7 @@ The product-state representation matches the Fiat-Shamir and forking proofs in
 ## Limitations
 
 * `seededOracle` is defined with `StateT.mk`, for which core registers no `vcgen` rule;
-  `triple_stateT_mk` supplies it to the proofs of the seeded specifications.
+  `Std.WP.Spec.mk_StateT` supplies it.
 * `seededOracle_triple_of_cons` and `seededOracle_triple_of_nil` are not `@[spec]`-tagged.
   `vcgen` applies the highest-priority registered rule that fits a program, and these rules
   fit every call of `seededOracle` while holding only under their seed hypothesis, so
@@ -74,9 +71,7 @@ The product-state representation matches the Fiat-Shamir and forking proofs in
 
 open OracleSpec OracleComp Std.WP
 
-open scoped OracleComp.Necessary WriterT.MonoidWP WriterT.AppendWP
-
-set_option experimental.vcgen true
+open scoped WriterT.MonoidWP WriterT.AppendWP
 
 namespace OracleComp.ProgramLogic
 
@@ -86,99 +81,6 @@ needs them in `Type v`; both universes are pinned to `Type`. -/
 variable {ι : Type}
 variable {spec : OracleSpec.{0, 0} ι}
 
-/-- `StateT.mk f` runs `f` at the incoming state. -/
-theorem triple_stateT_mk {m : Type → Type} [Monad m] {Pred EPred : Type}
-    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred]
-    {σ α : Type} (f : σ → m (α × σ)) (post : α → σ → Pred) (epost : EPred) :
-    Std.WP.Triple (StateT.mk f : StateT σ m α)
-      (fun s => wp (f s) (fun p => post p.1 p.2) epost) post epost :=
-  ⟨fun _ => Lean.Order.PartialOrder.rel_refl⟩
-
-/-! ## Reading triples against the support -/
-
-/-- A triple for a `StateT` computation over `OracleComp` constrains every value-state pair
-that its run can reach from a state satisfying the precondition. -/
-theorem triple_stateT_iff_forall_support {σ α : Type}
-    (mx : StateT σ (OracleComp spec) α) (P : σ → Prop) (Q : α → σ → Prop)
-    (epost : EStack⟨⟩) :
-    Std.WP.Triple mx P Q epost ↔
-      ∀ s, P s → ∀ a s', (a, s') ∈ support (mx.run s) → Q a s' :=
-  Std.WP.Triple.iff.trans <| forall_congr' fun s => imp_congr_right fun _ => by
-    rw [StateT.wp_apply_eq, OracleComp.Necessary.wp_iff_forall_support]
-    exact ⟨fun h a s' => h (a, s'), fun h p => h p.1 p.2⟩
-
-/-- A triple for an append-based `WriterT` computation over `OracleComp`, read by
-`WriterT.AppendWP`, constrains every value the run can return together with the incoming log
-extended by the log written alongside it. -/
-theorem triple_writerT_iff_forall_support {ω α : Type}
-    [EmptyCollection ω] [Append ω] [LawfulAppend ω]
-    (mx : WriterT ω (OracleComp spec) α) (P : ω → Prop) (Q : α → ω → Prop)
-    (epost : EStack⟨⟩) :
-    Std.WP.Triple mx P Q epost ↔
-      ∀ s, P s → ∀ a w, (a, w) ∈ support mx.run → Q a (s ++ w) :=
-  Std.WP.Triple.iff.trans <| forall_congr' fun s => imp_congr_right fun _ => by
-    rw [WriterT.wpInstOf_apply_eq, OracleComp.Necessary.wp_iff_forall_support]
-    exact ⟨fun h a w => h (a, w), fun h p => h p.1 p.2⟩
-
-/-- `Monoid` variant of `triple_writerT_iff_forall_support`, read by `WriterT.MonoidWP`: the
-written log is multiplied onto the incoming one. -/
-theorem triple_writerT_iff_forall_support_monoid {ω α : Type} [Monoid ω]
-    (mx : WriterT ω (OracleComp spec) α) (P : ω → Prop) (Q : α → ω → Prop)
-    (epost : EStack⟨⟩) :
-    Std.WP.Triple mx P Q epost ↔
-      ∀ s, P s → ∀ a w, (a, w) ∈ support mx.run → Q a (s * w) :=
-  Std.WP.Triple.iff.trans <| forall_congr' fun s => imp_congr_right fun _ => by
-    rw [WriterT.wp_apply_eq, OracleComp.Necessary.wp_iff_forall_support]
-    exact ⟨fun h a w => h (a, w), fun h p => h p.1 p.2⟩
-
-/-! ## Generic invariant preservation for `simulateQ` -/
-
-/-- Generic simulation triple: if every handler call `handler t` preserves an invariant `I` on
-the simulation state, then `simulateQ handler oa` preserves `I` for any `oa : OracleComp spec α`.
-
-The invariant-only form (same `I` as pre- and postcondition, independent of the return value) is
-the most common case; stronger per-call specifications follow by instantiating `I` or by the
-consequence rules of `Std.WP.Triple`. -/
-theorem simulateQ_triple_preserves_invariant {σ α : Type}
-    (handler : QueryImpl spec (StateT σ (OracleComp spec)))
-    (I : σ → Prop)
-    (hhandler : ∀ t : spec.Domain, ⦃ fun s => I s ⦄ handler t ⦃ fun _ s' => I s' ⦄)
-    (oa : OracleComp spec α) :
-    ⦃ fun s => I s ⦄ (simulateQ handler oa : StateT σ (OracleComp spec) α)
-      ⦃ fun _ s' => I s' ⦄ := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => exact Std.WP.Triple.pure x fun _ h => h
-  | query_bind t oa ih =>
-    rw [simulateQ_query_bind]
-    exact Std.WP.Triple.bind _ _ _ (hhandler t) ih
-
-/-- Specialized simulation triple: combine a starting-state precondition `s = s₀` with an
-invariant that holds of `s₀`. The invariant is threaded through the entire simulation. -/
-theorem simulateQ_triple_of_state_and_invariant {σ α : Type}
-    (handler : QueryImpl spec (StateT σ (OracleComp spec)))
-    (I : σ → Prop)
-    (hhandler : ∀ t : spec.Domain, ⦃ fun s => I s ⦄ handler t ⦃ fun _ s' => I s' ⦄)
-    (oa : OracleComp spec α) (s₀ : σ) (hI : I s₀) :
-    ⦃ fun s => s = s₀ ⦄ (simulateQ handler oa : StateT σ (OracleComp spec) α)
-      ⦃ fun _ s' => I s' ⦄ :=
-  ⟨fun _ hs => hs ▸ (simulateQ_triple_preserves_invariant handler I hhandler oa).le_wp s₀ hI⟩
-
-/-- `WriterT` analogue of `simulateQ_triple_preserves_invariant`: if every per-query handler
-call preserves an invariant `I` on the accumulated writer log, then the whole simulation
-`simulateQ handler oa` preserves `I`. Typical `handler` values are `countingOracle` and
-`costOracle costFn`. -/
-theorem simulateQ_writerT_triple_preserves_invariant {ω α : Type} [Monoid ω]
-    (handler : QueryImpl spec (WriterT ω (OracleComp spec)))
-    (I : ω → Prop)
-    (hhandler : ∀ t : spec.Domain, ⦃ fun s => I s ⦄ handler t ⦃ fun _ s' => I s' ⦄)
-    (oa : OracleComp spec α) :
-    ⦃ fun s => I s ⦄ (simulateQ handler oa : WriterT ω (OracleComp spec) α)
-      ⦃ fun _ s' => I s' ⦄ := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => exact Std.WP.Triple.pure x fun _ h => h
-  | query_bind t oa ih =>
-    rw [simulateQ_query_bind]
-    exact Std.WP.Triple.bind _ _ _ (hhandler t) ih
 
 section cachingOracle
 
@@ -256,7 +158,7 @@ theorem seededOracle_triple (t : spec.Domain) (seed₀ : QuerySeed spec) :
     ⦃ fun v seed' => (seed₀ t = [] ∧ seed' = seed₀) ∨
         ∃ us, seed₀ t = v :: us ∧ seed' = Function.update seed₀ t us ⦄ := by
   rw [seededOracle.apply_eq]
-  vcgen [triple_stateT_mk] <;> grind [QuerySeed.update]
+  vcgen <;> grind [QuerySeed.update]
 
 /-- Specialized specification: if the seed has at least one value at `t`, `seededOracle t`
 deterministically pops the head and updates the state. -/
@@ -267,7 +169,7 @@ theorem seededOracle_triple_of_cons (t : spec.Domain)
       (seededOracle t : StateT (QuerySeed spec) (OracleComp spec) (spec.Range t))
     ⦃ fun v seed' => v = u ∧ seed' = seed₀.update t us ⦄ := by
   rw [seededOracle.apply_eq]
-  vcgen [triple_stateT_mk] with finish
+  vcgen with finish
 
 /-- Specialized specification: if the seed is empty at `t`, `seededOracle t` makes a live
 query and leaves the state untouched. -/
@@ -277,7 +179,7 @@ theorem seededOracle_triple_of_nil (t : spec.Domain) (seed₀ : QuerySeed spec)
       (seededOracle t : StateT (QuerySeed spec) (OracleComp spec) (spec.Range t))
     ⦃ fun _ seed' => seed' = seed₀ ⦄ := by
   rw [seededOracle.apply_eq]
-  vcgen [triple_stateT_mk] with finish
+  vcgen with finish
 
 /-- `vcgen` example: two consecutive `seededOracle` calls from a seed that is empty at both
 indices fall through to live queries, leaving the seed unchanged. The two hypotheses on the

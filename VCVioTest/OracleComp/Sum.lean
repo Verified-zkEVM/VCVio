@@ -40,13 +40,14 @@ example (oa : ProbComp ℕ) :
 
 example (f : Bool → ProbComp Bool) (p : Bool → Prop) :
     Pr{let y ← ($ᵗ Bool : ProbComp Bool) >>= f}[p y] =
-      ∑' b, Pr{let z ← ($ᵗ Bool : ProbComp Bool)}[z = b] * Pr{let y ← f b}[p y] :=
-  prEvent_bind_eq_tsum _ f p
+      ∑' b, Pr{let z ← ($ᵗ Bool : ProbComp Bool)}[z = b] * Pr{let y ← f b}[p y] := by
+  rw [prEvent_bind]
+  exact prEvent_bind_eq_tsum _ f p
 
 example (f : Bool → ProbComp Bool) :
     Pr{let b ← ($ᵗ Bool : ProbComp Bool); let y ← f b}[y = true] =
       ∑' b, Pr{let z ← ($ᵗ Bool : ProbComp Bool)}[z = b] * Pr{let y ← f b}[y = true] :=
-  prEvent_bind_eq_tsum_prEvent _ _
+  prEvent_bind_eq_tsum _ _ _
 
 example (a : ℕ) (w : ℕ → ℝ≥0∞) :
     ∑' n, Pr{let y ← (pure a : ProbComp ℕ)}[y = n] * w n = w a := by simp

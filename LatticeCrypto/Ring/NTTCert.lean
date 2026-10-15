@@ -26,13 +26,13 @@ The first part below retains the reusable `basis`, `applyMatrix`, `idMatrix`,
 and composition / identity / additivity lemmas for developments that use that
 route.
 
-The structural route, now used by both ML-KEM and ML-DSA, avoids a dense matrix
-certificate. A
-`ButterflyLayout` records a proof-relevant partition of a coefficient index
-type into pairs. This lets concrete loop developments separate the indexing
-proof (that an array loop implements a layout) from the small ring calculation
-showing that matching forward and inverse butterflies cancel. `ScaledStage`
-then composes those local facts and tracks the final normalization factor.
+The structural route, which both ML-KEM and ML-DSA use, avoids a dense
+matrix certificate. A `ButterflyLayout` records a proof-relevant partition
+of a coefficient index type into pairs. This lets concrete loop
+developments separate the indexing proof (that an array loop implements a
+layout) from the small ring calculation showing that matching forward and
+inverse butterflies cancel. `ScaledStage` then composes those local facts
+and tracks the final normalization factor.
 -/
 
 @[expose] public section

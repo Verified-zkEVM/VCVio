@@ -18,8 +18,8 @@ acceptance bits; `verifyOpeningClaims` computes every bit through the query-para
 batch verifier. The terminal adversary log is snapshotted before honest verification, keeping
 terminal checkpoint evolution and fresh verifier queries as separate proof obligations.
 
-The executable game currently lives in `Type 0`, matching the probability and total-query-bound
-infrastructure it uses. The structural `Configuration`, checkpoint, and extractor-state APIs remain
+The executable game lives in `Type 0`, matching the probability and total-query-bound
+infrastructure it uses. The `Configuration`, checkpoint, and extractor-state APIs are
 universe-polymorphic; lifting this game layer is an explicit interface generalization, not an
 implicit security assumption.
 

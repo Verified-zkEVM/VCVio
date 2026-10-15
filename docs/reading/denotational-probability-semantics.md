@@ -173,7 +173,7 @@ New code follows these rules:
 Upstream is retiring `PMF`, and this is visible in the pinned tree rather than only in a proposal:
 `Mathlib/Probability/ProbabilityMassFunction/` deprecates `PMF.bernoulli` and `PMF.binomial` in
 favour of `ProbabilityTheory.bernoulliMeasure` and `ProbabilityTheory.binomial`. The core,
-`toOuterMeasure`, and `toMeasure` are not marked as of Mathlib `v4.35.0-rc3`; mathlib4#42821
+`toOuterMeasure`, and `toMeasure` are not marked at the `v4.35.0-rc3` pin; mathlib4#42821
 ("chore: deprecate PMF") was open on 2026-10-03. The direction is settled; only pacing is open.
 
 VCVio's own discrete layer is retired. The `SPMF` type, `evalSPMF`, the scalar evaluation
@@ -194,7 +194,7 @@ removing `PMF` from a theorem does.
 The `ToMathlib` surface is intentionally small. Each entry below was checked against the pinned
 Mathlib tree, and each carries the condition under which it should be deleted.
 
-| Local declaration | Upstream status (checked 2026-10-03 against Mathlib `v4.35.0-rc3`) | Delete when |
+| Local declaration | Upstream status (checked 2026-10-03, Mathlib `v4.35.0-rc3`) | Delete when |
 |---|---|---|
 | `BitVec` discrete instances | `MeasurableSpace/Instances.lean` covers `Bool`, `ℕ`, `ℤ`, `ℚ`, `Fin n`, `ZMod n`; not `BitVec` | `BitVec` joins that file |
 | `Option` coproduct measurable space | Mathlib has `Sum.instMeasurableSpace`; no `Option` counterpart found | an `Option` instance lands upstream |

@@ -14,7 +14,7 @@ public import VCVio.EvalDist.PFunctorMeasure.Core
 The transcript implication is independent of the probabilities assigned to sampling queries.
 These checks state the result using the direct free-program measure fold, including a
 nonuniform interpretation that always returns the first answer. The computation frontend
-still uses `SampleableType`; its uniformity certificates do not calibrate this bound.
+uses `SampleableType`, whose uniformity certificates do not calibrate this bound.
 -/
 
 public section

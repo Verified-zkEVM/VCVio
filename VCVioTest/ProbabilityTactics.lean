@@ -16,7 +16,7 @@ Families of outcome, event, success-mass and distribution facts, stated with `�
 and the tactic contract* in `docs/agents/probability.md`. Where a fact closes by both `simp` and
 `grind` both are kept; where only one closes, a dated `fail_if_success` guard records the gap and
 expires when the set improves. One guard covers a family of same-shaped entries when the family is
-named in the section note. Bind-swap and shared-prefix congruence go through the `vcstep` planner.
+named in the section note. Bind-swap and shared-prefix congruence go through `prrw`.
 
 Two gaps recur across the file and are named once here. `grind` does no `ℝ≥0∞` or cardinality
 arithmetic and has no measure-side rules for Dirac or uniform masses, so beyond the lossless
@@ -190,14 +190,12 @@ example (α : Type) [SampleableType α] : Pr{let _ ← ($ᵗ α : ProbComp α)}[
 example (α : Type) [SampleableType α] : Pr{let _ ← ($ᵗ α : ProbComp α)}[True] ≠ 0 := by simp
 example (mx : ProbComp (Fin 3)) : IsProbabilityMeasure 𝒟[mx] := inferInstance
 
--- target(simp): the uniform event law fires first and leaves the arithmetic `2 / 2 = 1`.
-example : Pr{let _ ← ($ᵗ Bool : ProbComp Bool)}[True] = 1 :=
-  OracleComp.prEvent_true_eq_one _
+example : Pr{let _ ← ($ᵗ Bool : ProbComp Bool)}[True] = 1 := by simp
 
 /-! ### Selection and abort (`OptionT ProbComp`)
 Selecting from the empty list and `failure` carry no successful mass.
 
-gap(simp): the list-selection event law leaves `2 / 2` for a nonempty list. -/
+gap(simp): the success mass of a selection from a nonempty list stays unevaluated. -/
 
 example : 𝒟[(failure : OptionT ProbComp Bool)] = 0 := by simp
 example : 𝒟[(failure : OptionT ProbComp Bool)] = 0 := by grind
@@ -207,7 +205,6 @@ example (mx : OptionT ProbComp Bool) :
     𝒟[mx >>= fun _ => (failure : OptionT ProbComp Bool)] = 0 := by simp
 
 example : Pr{let _ ← (($ ([true, false] : List Bool)) : OptionT ProbComp Bool)}[True] = 1 := by
-  fail_if_success simp  -- gap(simp, 2026-09-26): no rule reaches the unevaluated selection
   rw [ProbComp.prEvent_uniformSelectList]; simp [ENNReal.div_self]
 
 /-- Selecting from a list counts entries with multiplicity. -/
@@ -261,7 +258,7 @@ example (msg k : ZMod 2) :
       Pr{let c ← ($ᵗ (ZMod 2) : ProbComp (ZMod 2))}[c = k] := by
   fail_if_success (simp; done)  -- gap(simp, 2026-09-26): translation invariance
   fail_if_success grind  -- gap(grind, 2026-09-26): translation invariance
-  rw [prEvent_map]; exact SampleableType.prEvent_uniformSample_equiv (Equiv.addLeft msg) (· = k)
+  exact SampleableType.prEvent_uniformSample_equiv (Equiv.addLeft msg) (· = k)
 
 /-! ## 6. The shape of `do`
 Pure `let :=` steps, nested blocks, pattern-matching binds, branches and long chains, over
@@ -333,13 +330,18 @@ example : 𝒟[coinPadded] {true} = 𝒟[($ᵗ Bool : ProbComp Bool)] {true} := 
 example : support coinPadded = support ($ᵗ Bool : ProbComp Bool) := by simp [coinPadded]
 example : (false : Bool) ∈ support chain12 := by simp [chain12]
 
-/-! ### Outcome values of multi-step programs — `target(simp+grind)`
+/-! ### Outcome values of multi-step programs
 
-The uniform event law is keyed on the `Pr{…}` bind form, while `simp` first normalises a bind
-into a pushforward, so an event of a derived uniform program such as `coinThenNeg` stops at
-`𝒟[(fun a => a = true) <$> ($ᵗ Bool)] {True}`. Concrete outcome values of long chains
-(`𝒟[chain12] {true} = (2 ^ 12)⁻¹`) and the abort mass of a guarded `OptionT` program are
-recorded here as targets rather than carried as multi-step proofs. -/
+An event of a derived uniform program such as `coinThenNeg` normalizes to an event of its one
+draw, which the uniform event law counts (the counting gap of the header). A long chain stops at a
+nest of expectations over its uniform draws, which neither set evaluates: concrete outcome values
+of long chains (`𝒟[chain12] {true} = (2 ^ 12)⁻¹`) and the abort mass of a guarded `OptionT`
+program are recorded here as `target(simp+grind)` rather than carried as multi-step proofs. -/
+
+example : Pr{let x ← coinThenNeg}[x = true] = 2⁻¹ := by
+  fail_if_success (simp [coinThenNeg]; done)  -- gap(simp, 2026-09-30): counting, see header
+  fail_if_success grind [coinThenNeg]  -- gap(grind, 2026-09-30): counting, see header
+  simp [coinThenNeg, Finset.filter_eq']
 
 /-! ## 7. Cryptography prerequisites
 Guessing a uniform secret, collision probability, and masses summing to one. -/
@@ -374,37 +376,65 @@ example (x y : α) :
 example (z : α × β) :
     Pr{let w ← ((·, ·) <$> ($ᵗ α) <*> ($ᵗ β) : ProbComp (α × β))}[w = z] =
       Pr{let a ← ($ᵗ α : ProbComp α)}[a = z.1] * Pr{let b ← ($ᵗ β : ProbComp β)}[b = z.2] := by
-  simp only [seq_eq_bind_map, prEvent_norm, Prod.ext_iff]
+  simp only [expect_norm, Prod.ext_iff]
   exact prEvent_bind_bind_and _ _ _ _
 
 end abstract
 
-/-! ## 9. Swaps and congruence through the planner -/
+/-! ## 9. Swaps and congruence through `prrw` -/
 
 example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → ProbComp Bool) :
     Pr{let r ← mx >>= fun a => my >>= fun b => f a b}[r = true] =
       Pr{let r ← my >>= fun b => mx >>= fun a => f a b}[r = true] := by
-  vcstep
+  prrw
 
 example (mx : ProbComp Bool) (f g : Bool → ProbComp (Fin 3)) (y : Fin 3)
     (h : ∀ b ∈ support mx, 𝒟[f b] {y} = 𝒟[g b] {y}) :
     𝒟[mx >>= f] {y} = 𝒟[mx >>= g] {y} := by
-  vcstep
+  prrw congr
   exact h _ ‹_›
 
 example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → ProbComp Bool) :
     𝒟[mx >>= fun a => my >>= fun b => f a b] = 𝒟[my >>= fun b => mx >>= fun a => f a b] := by
-  vcstep
+  prrw
+
+/-- `prrw move i j` sinks the draw at depth `i` of the left-hand side to depth `j` by adjacent
+swaps, and closes the goal once the sides agree. -/
+example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (mz : ProbComp (Fin 5))
+    (f : Bool → Fin 3 → Fin 5 → ProbComp Bool) :
+    𝒟[do let a ← mx; let b ← my; let c ← mz; f a b c] =
+      𝒟[do let b ← my; let c ← mz; let a ← mx; f a b c] := by
+  prrw move 0 2
+
+/-- A lift: the draw at depth `2` rises to the top. -/
+example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (mz : ProbComp (Fin 5))
+    (f : Bool → Fin 3 → Fin 5 → ProbComp Bool) :
+    Pr{let r ← do let b ← my; let c ← mz; let a ← mx; f a b c}[r = true] =
+      Pr{let r ← do let a ← mx; let b ← my; let c ← mz; f a b c}[r = true] := by
+  prrw move 2 0
+
+/-- A move stops at a draw that depends on the one being moved. -/
+example (mx : ProbComp Bool) (my : Bool → ProbComp (Fin 3)) (mz : ProbComp (Fin 5))
+    (f : Bool → Fin 3 → Fin 5 → ProbComp Bool) :
+    𝒟[do let a ← mx; let b ← my a; let c ← mz; f a b c] =
+      𝒟[do let a ← mx; let c ← mz; let b ← my a; f a b c] := by
+  fail_if_success prrw move 0 2
+  prrw under 1
 
 /-! ## 10. Events whose continuation destructures its input
 
-An event computation written as a destructuring `do` block keeps a `match` around the returned
-proposition, so it stays in bind form; implication between the returned propositions is
-transported below the bind. -/
+The notation turns a destructuring draw into projections of the drawn pair, so the event is a
+predicate on the draw and implication between the returned propositions is `prEvent_mono`. A draw
+of a destructuring `do` block normalizes to the same event. -/
 
 example (mx : ProbComp (Bool × Bool)) :
-    prEvent (do let (a, b) ← mx; pure (a = true ∧ b = true)) ≤
-      prEvent (do let (a, _) ← mx; pure (a = true)) :=
-  prEvent_bind_mono_of_support _ _ _ fun ⟨_, _⟩ _ => prEvent_pure_mono And.left
+    Pr{let (a, b) ← mx}[a = true ∧ b = true] ≤ Pr{let (a, _) ← mx}[a = true] :=
+  prEvent_mono mx _ _ fun _ => And.left
+
+example (mx : ProbComp (Bool × Bool)) :
+    Pr{let b ← do let (a, b) ← mx; pure (a = true ∧ b = true)}[b] ≤
+      Pr{let b ← do let (a, _) ← mx; pure (a = true)}[b] := by
+  simp only [expect_norm]
+  exact prEvent_mono mx _ _ fun _ => And.left
 
 end VCVioTest.ProbabilityTactics

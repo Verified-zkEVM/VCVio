@@ -14,7 +14,9 @@ Rewrites:
 - singleton events `Pr{mx}[= a]` of earlier versions become `Pr{let x ← mx}[x = a]`;
 - bare draws `Pr{x ← e}[…]` become the `do` statements `Pr{let x ← e}[…]`, parenthesizing a
   right-hand side that spans several lines;
-- `GameEquiv` becomes `EvalDistEq` and `≡ₚ` becomes `=ᵈ`;
+- `GameEquiv` becomes `EvalDistEq` and `≡ₚ` becomes `=ᵈ`, and an equation of output
+  distributions `𝒮[A] = 𝒮[B]` becomes `A =ᵈ B`, parenthesizing a side that is not an
+  application;
 - oracle answer-type binders `[∀ t, MeasurableSpace (spec.Range t)]`,
   `[∀ t, DiscreteMeasurableSpace (spec.Range t)]` and `[∀ t, MeasurableSingletonClass …]` are
   deleted, with the `omit … in` and `variable` lines they leave empty;
@@ -27,8 +29,11 @@ Rewrites:
   `Qualitative` and `Quantitative` readings), and removed or moved modules (`MODULES`).
 
 Everything the script cannot rewrite is reported as `path:line: …` with a pointer into
-`docs/agents/probability-migration.md`. The exit status is 0 whether or not anything was
-reported; the build is the judge of the result.
+`docs/agents/probability-migration.md`. A name in the discrete API's style (`probOutput_…`,
+`evalSPMF_…`) that one of the given files declares is the project's own and is not reported at its
+uses; a declaration of such a name that VCVio has a replacement for is reported once, where it is
+declared. The exit status is 0 whether or not anything was reported; the build is the judge of the
+result.
 """
 
 from __future__ import annotations
@@ -44,10 +49,29 @@ GUIDE = "docs/agents/probability-migration.md"
 # Declarations renamed between the discrete API and the measure API, keyed by the old name.
 # A chain of renames is recorded by its final name.
 RENAMES: dict[str, str] = {
+    # Answer measures and the reading scopes.
+    "IsUniformMeasureSpec": "UniformAnswerMeasure",
+    "IsMeasureSpec": "AnswerMeasure",
+    "OracleComp.Qualitative": "OracleComp.Necessary",
+    "OracleComp.Angelic": "OracleComp.Possible",
+    "OracleComp.Quantitative": "OracleComp.Lower",
+    "ExpectationWP.Quantitative": "ExpectationWP.Lower",
+    # The expectation interpretation and its laws.
+    "MeasureProgramLogic.measureWP": "ExpectationWP.wpMonad",
+    "MeasureProgramLogic.toMAlgOrdered": "ExpectationWP.algebra",
+    "MeasureProgramLogic": "ExpectationWP",
+    # The same scopes written relative to an opened `OracleComp`.
+    "Qualitative.Spec": "Necessary.Spec",
+    "Qualitative.prEvent_eq_one_iff_triple": "Necessary.prEvent_eq_one_iff_triple",
+    "Angelic.Spec": "Possible.Spec",
+    "Quantitative.Spec": "Lower.Spec",
+    "exp_norm": "expect_arith",
+    "game_rule": "expect_norm, expect_eval",
     # Probability heads.
-    "AdvBound.of_tvDist": "AdvBound.of_measureETVDist",
+    "AdvBound.of_tvDist":
+        "AdvBound.of_measureETVDist",
     "AdvBound.of_gameEquiv": "AdvBound.of_evalDistEq",
-    "wpProp_iff_probEvent_eq_one": "wpProp_iff_prEvent_eq_one",
+    "wpProp_iff_probEvent_eq_one": "OracleComp.Necessary.prEvent_eq_one_iff_triple",
     # Failure probability.
     "probFailure": "prFail",
     "probFailure_le_one": "prFail_le_one",
@@ -120,22 +144,36 @@ RENAMES: dict[str, str] = {
     "probOutput_xor_uniform": "evalDist_xor_uniform",
     "probOutput_pair_xor_uniform": "evalDist_pair_xor_uniform",
     "sum_probEvent_option_map_eq_some_le_isSome": "sum_prEvent_option_map_eq_some_le_isSome",
+    # Root-level lemmas of the discrete API whose counterparts are stated for oracle computations
+    # or uniform draws, in those namespaces; same arguments.
+    "tsum_probOutput_bind_mul": "OracleComp.tsum_prEvent_bind_mul",
+    "tsum_probOutput_pure_mul": "OracleComp.tsum_prEvent_pure_mul",
+    "tsum_probOutput_map_mul": "OracleComp.tsum_prEvent_map_mul",
+    "probOutput_ne_zero_of_mem_support": "OracleComp.prEvent_ne_zero_of_mem_support",
+    "probEvent_uniformSample": "SampleableType.prEvent_uniformSample",
+    "probEvent_or_le": "prEvent_or_le",
+    "probEvent_le_of_eq_bind_hiddenReadList": "prEvent_le_of_eq_bind_hiddenReadList",
+    "probEvent_bind_fire_le_of_gen": "prEvent_bind_fire_le_of_gen",
+    "SPMFSemantics.withStateOracle": "MeasureSemanticsVia.withStateOracle",
     "triple_probEvent_eq_one": "triple_prEvent_eq_one",
     "triple_probEvent_indicator": "triple_prEvent_indicator",
     "triple_probOutput_eq_one": "triple_prEvent_eq_one",
     "triple_probOutput_indicator": "triple_prEvent_indicator",
     "triple_propInd_iff_le_probEvent": "triple_propInd_iff_le_prEvent",
     "triple_propInd_iff_probEvent_eq_one": "triple_propInd_iff_prEvent_eq_one",
-    "tvDist_simulateQ_le_probEvent_bad": "measureETVDist_simulateQ_run'_le_prEvent_bad",
+    "tvDist_simulateQ_le_probEvent_bad":
+        "measureETVDist_simulateQ_run'_le_prEvent_bad",
     # Identical-until-bad and per-query slack.
-    "tvDist_simulateQ_run_le_probEvent_output_bad": "measureETVDist_simulateQ_run_le_prEvent_bad",
+    "tvDist_simulateQ_run_le_probEvent_output_bad":
+        "measureETVDist_simulateQ_run_le_prEvent_bad",
     "tvDist_simulateQ_le_qeps_plus_probEvent_output_bad":
         "measureETVDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad",
     "tvDist_simulateQ_run_le_queryBound_mul_slack_plus_probEvent_bad":
         "measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad",
     "tvDist_simulateQ_le_queryBound_mul_slack_plus_probEvent_bad":
         "measureETVDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad",
-    "tvDist_simulateQ_run_le_queryBoundP_mul": "measureETVDist_simulateQ_run_le_queryBoundP_mul",
+    "tvDist_simulateQ_run_le_queryBoundP_mul":
+        "measureETVDist_simulateQ_run_le_queryBoundP_mul",
     "ofReal_tvDist_simulateQ_run_le_expectedQuerySlack_plus_probEvent_output_bad":
         "measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad",
     "ofReal_tvDist_simulateQ_le_expectedQuerySlack_plus_probEvent_output_bad":
@@ -260,6 +298,8 @@ RENAMES: dict[str, str] = {
     "measureComplete_toSymmEncAlg": "completeWith_toSymmEncAlg",
     "coinOneTimePad_measureComplete": "coinOneTimePad_completeWith",
     "measurePerfectSecrecyAt": "ciphertextRowsEqualWith",
+    "measurePerfectSecrecyAt_iff_ciphertextRowsEqualAt":
+        "ciphertextRowsEqualWith_iff_ciphertextRowsEqualAt",
     "measurePerfectSecrecyAt_iff_kernel_rows_eq": "ciphertextRowsEqualWith_iff_kernel_rows_eq",
     "measurePerfectSecrecyAt_of_constant": "ciphertextRowsEqualWith_of_constant",
     "coinOneTimePad_measurePerfectSecrecyAt": "coinOneTimePad_ciphertextRowsEqualWith",
@@ -337,9 +377,6 @@ REPORT_NAMES: dict[str, str] = {
         "the per-query hypothesis is now `=ᵈ` (see *Query and handler laws*)",
     "evalDist_liftM_query":
         "now gives `(toMeasure t).trim le_top` (see *Query and handler laws*)",
-    "prEvent_bind_congr_of_support":
-        "now stated for continuations `f g : α → m Prop`; pass `_ _ _ h` and let unification "
-        "choose them",
     "prEvent_le_one": "now takes the event computation `mx : m Prop` alone",
     "evalDist_apply_singleton":
         "targets the removed `Pr[= x | mx]`; `prEvent_eq_evalDist_singleton` relates "
@@ -350,10 +387,18 @@ REPORT_NAMES: dict[str, str] = {
     "evalDist_apply_univ":
         "targets the removed `Pr[⊥ | mx]`; `prFail_eq_one_sub_evalDist_univ` relates "
         "`prFail mx` and `𝒟[mx] Set.univ`",
+
 }
 
 # Modules removed from VCVio, keyed by the old module name.
 MODULES: dict[str, list[str]] = {
+    "VCVio.ProgramLogic.Unary.WP.Qualitative": ["VCVio.ProgramLogic.Unary.WP.Necessary"],
+    "VCVio.ProgramLogic.Unary.WP.QualitativeSpecs":
+        ["VCVio.ProgramLogic.Unary.WP.NecessarySpecs"],
+    "VCVio.ProgramLogic.Unary.WP.Angelic": ["VCVio.ProgramLogic.Unary.WP.Possible"],
+    "VCVio.ProgramLogic.Unary.WP.Quantitative": ["VCVio.ProgramLogic.Unary.WP.Lower"],
+    "VCVio.ProgramLogic.Unary.WP.QuantitativeSpecs": ["VCVio.ProgramLogic.Unary.WP.LowerSpecs"],
+    "VCVio.EvalDist.ProbabilityNotation.Attr": ["VCVio.Prelude.Core"],
     "VCVio.OracleComp.QueryTracking.LoggingOracle":
         ["VCVio.OracleComp.QueryTracking.LoggingOracle.Core"],
     "VCVio.OracleComp.QueryTracking.CountingOracle":
@@ -369,12 +414,11 @@ MODULES: dict[str, list[str]] = {
         ["VCVio.CryptoFoundations.ReplayFork", "VCVio.CryptoFoundations.SeededFork"],
     "VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility":
         ["VCVio.CryptoFoundations.SymmEncAlg"],
-    "VCVio.EvalDist.TVDist": ["VCVio.EvalDist.MeasureTVDist.Basic"],
+    "VCVio.EvalDist.TVDist": ["VCVio.EvalDist.EvalDistTV"],
     "VCVio.EvalDist.TVDist.Positivity": ["VCVio.EvalDist.MeasureTVDist.Positivity"],
     "VCVio.EvalDist.MeasureTVDist": ["VCVio.EvalDist.MeasureTVDist.Basic"],
     "VCVio.ProgramLogic.Relational.SimulateQ.Epsilon":
         ["VCVio.ProgramLogic.Relational.SimulateQ.UntilBad"],
-    "VCVio.EvalDist.Expectation": ["VCVio.ProgramLogic.Unary.HoareTriple"],
     "VCVio.EvalDist.ExpectationMeasure": ["VCVio.ProgramLogic.Unary.HoareTriple"],
     "VCVio.EvalDist.RenyiDivergence": ["ToMathlib.Probability.Divergence.Renyi"],
     "ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence":
@@ -438,14 +482,12 @@ MODULES: dict[str, list[str]] = {
 
 # Native analogues of the most used discrete lemmas, reported where the legacy name appears.
 LEGACY_HINTS: dict[str, str] = {
-    "tvDist_bind_left_le":
-        "`OracleComp.measureTVDist_bind_left_le_tsum` (real) or "
-        "`OracleComp.measureETVDist_bind_left_le_tsum`",
     "probEvent_bind_eq_expectedValue": "`prEvent_bind_eq_lintegral`",
-    "probEvent_def": "`prEvent_def`",
-    "evalSPMF_def": "`𝒟[mx]` is primitive; unfold events with `prEvent_def`",
-    "evalSPMF_ext":
-        "`OracleComp.evalDistEq_of_forall_prEvent_eq_output` pointwise, or `EvalDistEq.of_forall_prEvent_eq`",
+    "probEvent_def": "`prEvent_eq_evalDist_of_discrete`, or `prEvent_eq_evalDist_map` on the output "
+                     "measure",
+    "evalSPMF_def": "`𝒟[mx]` is primitive; an event is an expectation, and "
+                    "`prEvent_eq_evalDist_of_discrete` reaches the measure",
+    "evalSPMF_ext": "`EvalDistEq.of_forall_prEvent_eq`, or `Measure.ext` on `𝒟[…]`",
     "evalSPMF_eq_of_evalDist_eq":
         "state the result with `𝒟[…]` or `=ᵈ` (`EvalDistEq.of_evalDist_eq`)",
     "probEvent_eq_eq_probOutput":
@@ -466,29 +508,51 @@ LEGACY_HINTS: dict[str, str] = {
     "probOutput_congr": "`EvalDistEq.prEvent_eq h p`: an `=ᵈ` hypothesis gives every event",
     "probEvent_congr'": "`prEvent_congr _ _ q (fun z => …)`, or `prEvent_congr_of_support`",
     "probOutput_bind_congr'": "`prEvent_bind_congr` or `evalDist_bind_congr_of_support`",
-    "probEvent_bind_congr'": "`prEvent_bind_congr` or `prEvent_bind_congr_of_support`",
-    "tvDist_le_one": "`measureTVDist_le_one` (real) or `measureETVDist_le_one`",
-    "tvDist_map_le": "`measureTVDist_map_le` (real) or `measureETVDist_map_le`",
-    "tvDist_eq_zero_iff": "`measureTVDist_eq_zero_iff` (real) or `measureETVDist_eq_zero_iff`",
-    "tvDist_triangle": "`measureTVDist_triangle` (real) or `measureETVDist_triangle`",
-    "tvDist_self": "`measureTVDist_self` (real) or `measureETVDist_self`",
-    "tvDist_comm": "`measureTVDist_comm` (real) or `measureETVDist_comm`",
-    "tvDist_nonneg": "`measureTVDist_nonneg` (real); `measureETVDist` is `ℝ≥0∞`-valued",
+    "probEvent_bind_congr'": "`prEvent_bind_congr`, or `wp_congr_of_support` on the `expect_norm` "
+                             "normal form",
+    "evalSPMF_bind_congr": "`evalDist_bind_congr_of_support` for a hypothesis on the support, "
+                           "`evalDist_bind_congr mx f g h` for one at every output, or "
+                           "`EvalDistEq.bind_congr_of_support` for `=ᵈ`",
+    "evalSPMF_bind_congr'": "`evalDist_bind_congr mx f g h`: the continuations are explicit",
+    "evalSPMF_bind_congr_left":
+        "`EvalDistEq.bind_right mx hfg`, or `EvalDistEq.bind_congr_of_support` for a support "
+        "premise",
+    "evalSPMF_bind_const_neverFails": "`EvalDistEq.bind_const`: an oracle computation never "
+                                      "fails, so the failure-mass hypothesis goes",
+    "evalSPMF_bind_comm": "`evalDist_bind_bind_swap`, or `EvalDistEq.bind_bind_swap` for `=ᵈ`; "
+                          "`prrw` swaps adjacent binds inside an event",
+    "probOutput_bind_mono": "`prEvent_bind_mono_of_forall_le_of_support mx f g p q h`, with the "
+                            "events as predicates",
+    "probFailure_uniformSample": "`OracleComp.prFail_eq_zero`: an oracle computation never fails",
+    "probEvent_bind_congr": "`prEvent_bind_congr mx f g p q h` for a hypothesis at every output; "
+                            "on the support, `wp_congr_of_support` after `prEvent_bind`",
+    "probOutput_bind_congr": "`prEvent_bind_congr mx f g (· = y) (· = y) h` for a hypothesis at "
+                             "every output; on the support, `wp_congr_of_support`",
+    "withStateOracle_evalSPMF_bind_pure": "`withStateOracle_evalDist_bind_pure`, with measurable "
+                                          "spaces on the outputs and the map's measurability",
+    "withStateOracle_evalSPMF_map": "`withStateOracle_evalDist_map`, with the map's measurability",
+    "abs_probOutput_toReal_sub_le_tvDist":
+        "`abs_prEvent_toReal_sub_le_measureTVDist` for real measure distance, or "
+        "`absDiff_prEvent_le_etvDist` for extended event distance",
     "tvDist_bind_right_le":
-        "`OracleComp.measureTVDist_bind_right_le` (real) or "
-        "`OracleComp.measureETVDist_bind_right_le`",
-    "abs_probOutput_toReal_sub_le_tvDist": "`abs_prEvent_toReal_sub_le_measureTVDist`",
-    "probOutput_bind_mono":
-        "`prEvent_bind_mono_of_forall_le_of_support`, or `OracleComp.prEvent_bind_mono_of_support` "
-        "once the event is inside the bind",
+        "`tvDist_bind_le mx my f` (`etvDist_bind_le` in `ℝ≥0∞`), or "
+        "`OracleComp.measureTVDist_bind_right_le` / `OracleComp.measureETVDist_bind_right_le` "
+        "with an output measurable space",
+    "tvDist_bind_left_le_const": "`etvDist_bind_bind_le_wp_of_support` with a constant bound, "
+                                 "then `wp_le_of_forall_le`",
+    "tvDist_bind_left_le_const'": "`etvDist_bind_bind_le_wp` with a constant bound, then "
+                                  "`wp_le_of_forall_le`",
+    "toSPMFSemantics":
+        "the field `toSemanticsVia`, together with `evalDist_map_eq`",
+    "tvDist_bind_left_le":
+        "`OracleComp.etvDist_bind_left_le_tsum` for event distance, or "
+        "`OracleComp.measureTVDist_bind_left_le_tsum` (real) / "
+        "`OracleComp.measureETVDist_bind_left_le_tsum` with an output measurable space",
     "probEvent_bind_eq_tsum_subtype":
         "`prEvent_bind_mono_of_forall_le_of_support` for a bound; "
         "`OracleComp.prEvent_bind_eq_tsum` for the sum",
     "probEvent_eq_zero": "`prEvent_eq_zero_of_forall_mem_support`",
     "probEvent_compl": "`OracleComp.prEvent_not_eq_one_sub`",
-    "evalSPMF_bind_congr": "`EvalDistEq.bind_right`, or `EvalDistEq.bind_congr_of_support`",
-    "evalSPMF_bind_congr'": "`EvalDistEq.bind_right`, or `EvalDistEq.bind_congr_of_support`",
-    "probFailure_uniformSample": "`OracleComp.prFail_eq_zero`: `OracleComp` never fails",
     "probFailure_drawList": "`OracleComp.prFail_eq_zero`: `OracleComp` never fails",
     "probFailure_bind_eq_zero_iff": "`OracleComp.prFail_eq_zero`: `OracleComp` never fails",
     "neverFail_bind_iff": "delete: `OracleComp` never fails",
@@ -500,24 +564,18 @@ LEGACY_HINTS: dict[str, str] = {
         "`DeferredSampling.lintegral_count_le`, then `lintegral_evalDist_eq_tsum` and "
         "`OracleComp.tsum_prEvent_map_mul`",
     "evalSPMF_bind_comm_probComp": "`OracleComp.EvalDistEq.bind_bind_swap`",
-    "evalSPMF_bind_comm": "`OracleComp.EvalDistEq.bind_bind_swap`",
-    "evalSPMF_bind_const_neverFails": "`OracleComp.EvalDistEq.bind_const`",
     "probEvent_output_bad_eq":
         "`prEvent_simulateQ_run_bad_eq` with the flag event `fun p => p.2 = true` and start state "
         "`(s₀, false)`",
-    "probEvent_bind_congr":
-        "`OracleComp.prEvent_bind_congr_of_support`, or `congr 2` and `bind_congr`",
-    "evalSPMF_bind_congr_left":
-        "`EvalDistEq.bind_right mx hfg`: the computation explicit, the continuations implicit, and "
-        "`hfg : ∀ a, f a =ᵈ g a`",
     "evalDist_bind_congr_left":
         "`EvalDistEq.bind_right mx hfg`: the computation explicit, the continuations implicit, and "
         "`hfg : ∀ a, f a =ᵈ g a`",
     "tsum_probOutput_simulateQ_run_mul_of_rel":
-        "`DeferredSampling.lintegral_simulateQ_run_eq_of_rel`, then `lintegral_evalDist_eq_tsum`",
+        "`DeferredSampling.wp_simulateQ_run_eq_of_rel`, then `OracleComp.wp_eq_tsum`",
     "probOutput_map_eq_tsum_ite":
         "`prEvent_map`, then `prEvent_congr` or `prEvent_eq_zero_of_forall_not`",
-    "probOutput_pure_eq_indicator": "`prEvent_pure`, whose condition reads `if v = x`",
+    "probOutput_pure_eq_indicator":
+        "`prEvent_pure`, whose result is the indicator `propInd (v = x)`",
     "mem_support_evalSPMF_iff": "`support_eq_of_evalDistEq` from an `=ᵈ` hypothesis",
     "tvDist_bind_le_of_forall_le": "`OracleComp.measureTVDist_bind_left_le_of_forall_le`",
     "probEvent_bind_le_add": "`prEvent_bind_le_prEvent_add_of_support`",
@@ -530,7 +588,12 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"(?<![\w'])evalSPMF(?![\w'])|𝒮\[", "`𝒟[mx]`; see *Notation and definitions*"),
     (r"(?<![\w'.])probOutput(?![\w'])", "`Pr{let y ← mx}[y = x]` or `𝒟[mx] {x}`"),
     (r"(?<![\w'.])probEvent(?![\w'])", "`Pr{let x ← mx}[p x]`"),
-    (r"(?<![\w'.])tvDist(?![\w'])", "`measureTVDist` (real) or `measureETVDist` (`ℝ≥0∞`)"),
+    (r"(?<![\w'.])(?:tvDist_bind_left_le_const'?|tvDist_bind_right_le)(?![\w'])",
+     "an `etvDist` bound; see *Lemma names*"),
+    (r"(?<![\w'.])(?:SPMFSemantics|toSPMFSemantics)(?![\w'])",
+     "the measure semantics; see *Classes and binders*"),
+    (r"(?<![\w'.])tvDist_bind_left_le(?![\w'])",
+     "`OracleComp.etvDist_bind_left_le_tsum`, with `etvDist` in place of `ENNReal.ofReal (tvDist …)`"),
     (r"(?<![\w'.])expectedValue(?![\w'])", "`∫⁻ x, f x ∂𝒟[mx]`"),
     (r"(?<![\w'.])NeverFail(?![\w'])", "nothing on `OracleComp`; see *Classes and binders*"),
     (r"EvalDistCompatible", "operational support lemmas; see *Classes and binders*"),
@@ -544,8 +607,10 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"@(?:OracleSpec\.)?UniformAnswerMeasure\.ofFiniteNonempty\b",
      "takes the specification and its `Finite` and `Nonempty` instances only"),
     (r"(?<![\w'.])SPMF(?![\w'])", "`Measure`; see *Notation and definitions*"),
-    (r"(?<![\w'.])(?![\w'.]*Measure\.e?tvDist)[\w'.]*?(?:evalSPMF|probOutput|probEvent|probFailure|"
-     r"(?<!e)tvDist)_[\w'.]*",
+    (r"(?<![\w'.])(?![\w'.]*Measure\.e?tvDist)"
+     r"(?!(?:[\w']+\.)*tvDist_(?:self|comm|nonneg|triangle|le_one|eq_zero_iff|map_le|"
+     r"le_sum_tvDist_succ|bind_le|eq_measureTVDist)(?![\w']))"
+     r"[\w'.]*?(?:evalSPMF|probOutput|probEvent|probFailure|(?<!e)tvDist)_[\w'.]*",
      "a legacy lemma name; see *Lemma names*"),
 ]
 
@@ -565,22 +630,35 @@ class Report:
             self.items.append(item)
 
 
+CHAR_LITERAL = re.compile(r"'(?:\\(?:u\{[0-9a-fA-F]+\}|x[0-9a-fA-F]{2}|.)|[^\\'\n])'")
+
+
+def skip_literal(s: str, j: int) -> int:
+    """The offset after a string, character literal or comment starting at `s[j]`, or `j`."""
+    if s[j] == '"':
+        return skip_string(s, j)
+    if s[j] == "'" and (j == 0 or not (s[j - 1].isalnum() or s[j - 1] in "_'.")):
+        m = CHAR_LITERAL.match(s, j)
+        if m:
+            return m.end()
+    if s.startswith("--", j):
+        nl = s.find("\n", j)
+        return len(s) if nl < 0 else nl
+    if s.startswith("/-", j):
+        return skip_block_comment(s, j)
+    return j
+
+
 def match_close(s: str, i: int) -> int:
-    """Index of the bracket closing the one at `s[i]`, skipping strings and comments."""
+    """Index of the bracket closing the one at `s[i]`, skipping literals and comments."""
     stack = [s[i]]
     j = i + 1
     while j < len(s):
+        k = skip_literal(s, j)
+        if k != j:
+            j = k
+            continue
         c = s[j]
-        if c == '"':
-            j = skip_string(s, j)
-            continue
-        if s.startswith("--", j):
-            nl = s.find("\n", j)
-            j = len(s) if nl < 0 else nl
-            continue
-        if s.startswith("/-", j):
-            j = skip_block_comment(s, j)
-            continue
         if c in OPEN:
             stack.append(c)
         elif c in CLOSE:
@@ -617,10 +695,15 @@ def skip_block_comment(s: str, j: int) -> int:
 
 
 def top_level(s: str, token: str) -> int:
-    """Offset of the first occurrence of `token` outside brackets, or -1."""
+    """Offset of the first occurrence of `token` outside brackets, literals and comments, or
+    -1."""
     depth = 0
     j = 0
     while j < len(s):
+        k = skip_literal(s, j)
+        if k != j:
+            j = k
+            continue
         c = s[j]
         if c in OPEN:
             depth += 1
@@ -633,10 +716,17 @@ def top_level(s: str, token: str) -> int:
 
 
 def split_top_level(s: str, sep: str) -> list[str]:
+    """`s` split at each `sep` outside brackets, literals and comments."""
     parts: list[str] = []
     depth = 0
     start = 0
-    for j, c in enumerate(s):
+    j = 0
+    while j < len(s):
+        k = skip_literal(s, j)
+        if k != j:
+            j = k
+            continue
+        c = s[j]
         if c in OPEN:
             depth += 1
         elif c in CLOSE:
@@ -644,6 +734,7 @@ def split_top_level(s: str, sep: str) -> list[str]:
         elif c == sep and depth == 0:
             parts.append(s[start:j])
             start = j + 1
+        j += 1
     parts.append(s[start:])
     return parts
 
@@ -655,9 +746,9 @@ def strip_parens(term: str) -> str:
     return term
 
 
-FUN_TYPED_BINDER = (r"fun\s+\(\s*([^\s():]+)\s*:[^()]*(?:\([^()]*\)[^()]*)*\)"
+FUN_TYPED_BINDER = (r"fun\s+\(\s*(⟨[^⟩]*⟩|[^\s():]+)\s*:\s*([^()]*(?:\([^()]*\)[^()]*)*?)\s*\)"
                     r"\s*(?:=>|↦)\s*(.+)")
-FUN_BINDER = r"fun\s+(⟨[^⟩]*⟩|[^\s:()]+)(?:\s*:\s*[^=↦]+?)?\s*(?:=>|↦)\s*(.+)"
+FUN_BINDER = r"fun\s+(⟨[^⟩]*⟩|[^\s:()]+)(?:\s*:\s*([^=↦]+?))?\s*(?:=>|↦)\s*(.+)"
 
 
 def is_atomic(term: str) -> bool:
@@ -686,10 +777,93 @@ def draw(x: str, comp: str) -> str:
     return f"let {x} ← {comp}"
 
 
+def result_ascription(term: str) -> str | None:
+    """An outer type ascription `(e : T)`, without inferring the type of an unannotated term.
+
+    Only a parenthesized term can be an ascription; a colon after a binder keyword (`if h : c`,
+    `fun x : T`, `∀ x : T`, …) is not one."""
+    if not is_parenthesized(term.strip()):
+        return None
+    inner = strip_parens(term)
+    colon, j = -1, 0
+    while j < len(inner):
+        if inner[j] == '"':
+            j = skip_string(inner, j)
+        elif (inner[j] == "'" and (j == 0 or not re.fullmatch(IDENT_CHARS, inner[j - 1]))
+              and (literal := re.match(r"'(?:\\.|[^'\\])+'", inner[j:]))):
+            j += literal.end()
+        elif inner.startswith("--", j):
+            newline = inner.find("\n", j)
+            j = len(inner) if newline < 0 else newline + 1
+        elif inner.startswith("/-", j):
+            j = skip_block_comment(inner, j)
+        elif inner[j] in OPEN:
+            j = match_close(inner, j) + 1
+        elif inner[j] == ":":
+            colon = j
+            break
+        else:
+            j += 1
+    if colon < 0 or inner[colon:colon + 2] == ":=":
+        return None
+    if re.match(r"(?:fun|let|have|show|if|match|do|by|for)\b|[λ∀∃Σ∑∏]", inner):
+        return None
+    ty = inner[colon + 1:].strip()
+    return ty if ty else None
+
+
+def singleton_value(event: str) -> str | None:
+    """The value of a singleton event in either legacy spelling."""
+    m = re.fullmatch(r"=\s*(.+)", event.strip(), re.S)
+    if m:
+        return m.group(1).strip()
+    m = re.fullmatch(r"·\s*=\s*(.+)", strip_parens(event), re.S)
+    return m.group(1).strip() if m and "·" not in m.group(1) else None
+
+
 def singleton(comp: str, value: str) -> str:
-    """`Pr{let x ← comp}[x = value]`, with `x` fresh for `comp` and `value`."""
+    """A fresh draw preserving an outer type ascription on the singleton value."""
     x = fresh_name(comp, value)
-    return f"Pr{{{draw(x, comp)}}}[{x} = {value}]"
+    ty = result_ascription(value)
+    binder = f"{x} : {ty}" if ty else x
+    return f"Pr{{{draw(binder, comp)}}}[{x} = {value}]"
+
+
+def explicit_type(ty: str | None) -> bool:
+    """Whether `ty` is a written type with no hole `_` or `?m`."""
+    return ty is not None and not re.search(r"(?<![\w'])_(?![\w'])|(?<![\w'])\?", ty)
+
+
+def event_binder_type(event: str) -> str | None:
+    """The result type a legacy event writes for the drawn value: the outer ascription of a
+    singleton value, or the binder type of a typed `fun`."""
+    value = singleton_value(event)
+    if value is not None:
+        return result_ascription(value)
+    m = (re.fullmatch(FUN_TYPED_BINDER, strip_parens(event), re.S)
+         or re.fullmatch(FUN_BINDER, strip_parens(event), re.S))
+    return m.group(2).strip() if m and m.group(2) else None
+
+
+def report_result_type(comp: str, ty: str | None, report: Report, path: str,
+                       text: str, offset: int) -> None:
+    """Report an event rewrite whose computation's result type is not explicit.
+
+    The legacy `Pr[e | mx]` elaborated the event and the computation together, so a singleton
+    value, a section or a predicate could fix the computation's result type; the native draw is
+    elaborated before its observation. A numeral then defaults, as `(pure 2 : ProbComp _)`
+    observed by `(· < (1 : Fin 2))` changes from `Fin 2` to `ℕ`."""
+    if not explicit_type(ty) and not explicit_type(result_ascription(comp)):
+        report.add(path, text, offset,
+                   "rewrite needs a result-type check: the old event could supply the "
+                   "computation's result type; add `let x : T ← ...` or ascribe the "
+                   "computation explicitly; see *Notation and definitions*")
+
+
+def report_singleton_type(comp: str, value: str, report: Report, path: str,
+                          text: str, offset: int) -> None:
+    """Report singleton rewrites whose original expected result type is not explicit."""
+    report_result_type(comp, result_ascription(value), report, path, text, offset)
 
 
 def convert_legacy_event(event: str, comp: str, prose: bool = False) -> str | None:
@@ -713,9 +887,11 @@ def convert_legacy_event(event: str, comp: str, prose: bool = False) -> str | No
     m = (re.fullmatch(FUN_TYPED_BINDER, inner, re.S)
          or re.fullmatch(FUN_BINDER, inner, re.S))
     if m:
-        binder, body = m.group(1), m.group(2).strip()
+        binder, ty, body = m.group(1), m.group(2), m.group(3).strip()
         if SIMPLE_BINDER.fullmatch(binder) or binder.startswith("⟨"):
-            return f"Pr{{{draw(binder, comp)}}}[{body}]"
+            # The binder's type is kept: a numeral in the event would otherwise default to `ℕ`.
+            lhs = f"{binder} : {ty.strip()}" if ty else binder
+            return f"Pr{{{draw(lhs, comp)}}}[{body}]"
         return None
     if "·" in inner:
         # A section `(· op e)` with one hole: substitute a fresh name for the hole.
@@ -784,7 +960,7 @@ def rewrite_spmf_equations(text: str) -> str:
         i = close2 + 1
 
 
-def rewrite_eq_events(text: str) -> str:
+def rewrite_eq_events(text: str, report: Report, path: str) -> str:
     """Write the singleton events `Pr{mx}[= a]` and `Pr{mx}[(· = a)]` of earlier versions of the
     measure API as `Pr{let x ← mx}[x = a]`."""
     out: list[str] = []
@@ -820,6 +996,8 @@ def rewrite_eq_events(text: str) -> str:
                 continue
             value = value[:-1].strip()
         comp = text[k + 3:close].strip()
+        if not in_spans(k, comment_spans(text)):
+            report_singleton_type(comp, value, report, path, text, k)
         out.append(f"{text[i:k]}{singleton(comp, value)}")
         i = end + 1
 
@@ -875,6 +1053,9 @@ def rewrite_legacy_events(text: str, report: Report, path: str) -> str:
                            "legacy event left as is; see *Notation and definitions*")
             out.append(text[k:close + 1])
         else:
+            if not in_spans(k, spans) and body[:bar].strip() != "⊥":
+                report_result_type(body[bar + 1:], event_binder_type(body[:bar]),
+                                   report, path, text, k)
             out.append(native)
         i = close + 1
 
@@ -1060,14 +1241,36 @@ def rewrite_opens(text: str) -> str:
     return "\n".join(out)
 
 
-def report_legacy(text: str, report: Report, path: str) -> None:
+DECLARATION = re.compile(
+    r"^[ \t]*(?:@\[[^\]\n]*\][ \t]*)?(?:(?:private|protected|noncomputable|nonrec|partial)\s+)*"
+    r"(?:theorem|lemma|def|abbrev|instance|structure|class|inductive)\s+([^\s:({\[]+)", re.M)
+
+
+def declared_names(texts: list[str]) -> frozenset[str]:
+    """The last components of the names the given sources declare."""
+    return frozenset(m.group(1).rsplit(".", 1)[-1]
+                     for text in texts for m in DECLARATION.finditer(text))
+
+
+def report_legacy(text: str, report: Report, path: str,
+                  local: frozenset[str] = frozenset()) -> None:
+    """Report the legacy forms left in `text`. A name in `local`, which the migrated sources declare
+    themselves, is reported only where `text` declares it, and only when VCVio has a replacement."""
     spans = comment_spans(text)
+    declared_at = {m.start(1) + len(m.group(1)) - len(m.group(1).rsplit(".", 1)[-1])
+                   for m in DECLARATION.finditer(text)}
     for regex, hint in LEGACY_TOKENS:
         for m in re.finditer(regex, text):
-            # A pattern names the reported token `tok` when it also matches context.
+            # Context-sensitive patterns name the actual reported token `tok`.
             tok = "tok" if "tok" in m.re.groupindex else 0
             if not in_spans(m.start(tok), spans):
                 name = m.group(tok).rsplit(".", 1)[-1]
+                if name in local:
+                    start = m.start(tok) + len(m.group(tok)) - len(name)
+                    if start in declared_at and name in LEGACY_HINTS:
+                        report.add(path, text, m.start(tok),
+                                   f"`{name}` is declared here; VCVio has {LEGACY_HINTS[name]}")
+                    continue
                 report.add(path, text, m.start(tok),
                            f"`{m.group(tok)}`: {LEGACY_HINTS.get(name, hint)}")
     for name, hint in REPORT_NAMES.items():
@@ -1079,17 +1282,17 @@ def report_legacy(text: str, report: Report, path: str) -> None:
                 report.add(path, text, m.start(), f"`{name}`: {hint}")
 
 
-def migrate(text: str, path: str, report: Report) -> str:
+def migrate(text: str, path: str, report: Report, local: frozenset[str] = frozenset()) -> str:
     text = rewrite_imports(text)
     text = rewrite_opens(text)
     text = rewrite_legacy_events(text, report, path)
-    text = rewrite_eq_events(text)
+    text = rewrite_eq_events(text, report, path)
     text = rewrite_spmf_equations(text)
     text = rewrite_draw_items(text, report, path)
     text = delete_answer_binders(text)
     text = rewrite_classes(text, report, path)
     text = rewrite_names(text)
-    report_legacy(text, report, path)
+    report_legacy(text, report, path, local)
     return text
 
 
@@ -1110,9 +1313,12 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     report = Report()
     changed = 0
-    for path in lean_files(args.paths):
-        old = path.read_text()
-        new = migrate(old, str(path), report)
+    files = lean_files(args.paths)
+    sources = {path: path.read_text() for path in files}
+    local = declared_names(list(sources.values()))
+    for path in files:
+        old = sources[path]
+        new = migrate(old, str(path), report, local)
         if new == old:
             continue
         changed += 1

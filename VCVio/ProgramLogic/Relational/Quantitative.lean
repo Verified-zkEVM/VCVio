@@ -8,9 +8,9 @@ module
 
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import VCVio.ProgramLogic.Unary.HoareTriple
+public import VCVio.EvalDist.EvalDistTV
 public import ToMathlib.MeasureTheory.Measure.Coupling.Maximal
 import ToMathlib.MeasureTheory.Function.AEMeasurable
-import ToMathlib.MeasureTheory.Integral.Countable
 
 /-!
 # Quantitative Relational Program Logic (eRHL)
@@ -23,9 +23,9 @@ The core idea (from Avanzini-Barthe-Gregoire-Davoli, POPL 2025) is to make pre/p
 `ℝ≥0∞`-valued instead of `Prop`-valued. This subsumes both pRHL (exact coupling, via indicator
 postconditions) and apRHL (ε-approximate coupling, via threshold preconditions).
 
-Output measures of oracle computations with finite response types concentrate on finite
-structural supports, so coupled expectations are finite sums; this supplies the exchange of the
-coupling supremum with the sum behind the bind rule.
+Output measures of oracle computations with finite answer types concentrate on their finite
+supports, so coupled expectations are finite sums; this supplies the exchange of the coupling
+supremum with the sum behind the bind rule.
 
 ## Main results in this file
 
@@ -149,6 +149,38 @@ theorem eRelWP_pure_le (a : α) (b : β) (post : α → β → ℝ≥0∞) :
     post a b ≤ eRelWP (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) post :=
   (eRelWP_pure a b post).ge
 
+/-- Scaling a coupled expectation by a finite constant. -/
+theorem eRelWP_const_mul (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
+    (post : α → β → ℝ≥0∞) {c : ℝ≥0∞} (hc : c ≠ ⊤) :
+    c * eRelWP oa ob post = eRelWP oa ob fun a b => c * post a b := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  change c * ⨆ k : Measure.Coupling 𝒟[oa] 𝒟[ob], ∫⁻ z, post z.1 z.2 ∂k.joint =
+    ⨆ k : Measure.Coupling 𝒟[oa] 𝒟[ob], ∫⁻ z, c * post z.1 z.2 ∂k.joint
+  rw [ENNReal.mul_iSup]
+  exact iSup_congr fun k => (lintegral_const_mul' c _ hc).symm
+
+/-! ## Approximate relational triples -/
+
+/-- Returned values related by `R` are related with any error. -/
+theorem approxRelTriple_pure (a : α) (b : β) {R : RelPost α β} (h : R a b) (ε : ℝ≥0∞) :
+    ApproxRelTriple ε (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) R := by
+  unfold ApproxRelTriple
+  rw [eRelWP_pure]
+  simp [RelPost.indicator, h]
+
+/-- Weakening the relation and the error. -/
+theorem approxRelTriple_mono {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    {R R' : RelPost α β} {ε ε' : ℝ≥0∞} (h : ApproxRelTriple ε oa ob R)
+    (hR : ∀ a b, R a b → R' a b) (hε : ε ≤ ε') : ApproxRelTriple ε' oa ob R' :=
+  (tsub_le_tsub_left hε 1).trans (h.trans (eRelWP_mono fun a b => by
+    unfold RelPost.indicator
+    split_ifs with h₁ h₂
+    · exact le_rfl
+    · exact absurd (hR a b h₁) h₂
+    · exact zero_le
+    · exact le_rfl))
+
 section finite
 
 variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
@@ -177,8 +209,11 @@ theorem eRelWP_bind_le
     have : IsProbabilityMeasure 𝒟[fa z.1.1] := ⟨evalDist_apply_univ_eq_one _⟩
     have : IsProbabilityMeasure 𝒟[fb z.1.2] := ⟨evalDist_apply_univ_eq_one _⟩
     exact ⟨Measure.Coupling.prod _ _⟩
+  -- `c.joint` is concentrated on the countable set `S`, so its integrals are sums over `S`.
+  have hsum (g : α × β → ℝ≥0∞) : ∫⁻ z, g z ∂c.joint = ∑' z : S, g z * c.joint {(z : α × β)} := by
+    rw [← lintegral_countable g hS, Measure.restrict_eq_self_of_ae_mem hcS]
   change ∫⁻ z, eRelWP (fa z.1) (fb z.2) post ∂c.joint ≤ _
-  rw [lintegral_eq_tsum_of_ae_mem_countable hS hcS]
+  rw [hsum]
   calc ∑' z : S, eRelWP (fa z.1.1) (fb z.1.2) post * c.joint {(z : α × β)}
       = ∑' z : S, ⨆ d : Measure.Coupling 𝒟[fa z.1.1] 𝒟[fb z.1.2],
           (∫⁻ w, post w.1 w.2 ∂d.joint) * c.joint {(z : α × β)} :=
@@ -203,7 +238,7 @@ theorem eRelWP_bind_le
       (ae_mem_support_prod C) _
   refine le_trans (le_of_eq ?_) (le_eRelWP_of_isCoupling post C)
   change _ = ∫⁻ w, post w.1 w.2 ∂(c.joint.bind j)
-  rw [Measure.lintegral_bind hj hpost, lintegral_eq_tsum_of_ae_mem_countable hS hcS]
+  rw [Measure.lintegral_bind hj hpost, hsum]
   exact tsum_congr fun z => by simp only [j, dite_eq_left z.2]
 
 /-- Bind/sequential composition rule for quantitative relational WP. -/
@@ -226,10 +261,10 @@ maximal coupling. -/
 /-- Total variation between two output measures is the complement of the best coupled
 probability of equal outputs. -/
 theorem etvDist_eq_one_sub_eRelWP_eqRel (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ α) :
-    (letI : MeasurableSpace α := ⊤; 𝒟[oa].etvDist 𝒟[ob]) =
-      1 - eRelWP oa ob (RelPost.indicator (EqRel α)) := by
+    etvDist oa ob = 1 - eRelWP oa ob (RelPost.indicator (EqRel α)) := by
   classical
   let : MeasurableSpace α := ⊤
+  rw [etvDist_eq_evalDist_etvDist]
   let F : Finset α := (PFunctor.FreeM.support_finite oa).toFinset ∪
     (PFunctor.FreeM.support_finite ob).toFinset
   have hμ : 𝒟[oa] (↑F)ᶜ = 0 := by
@@ -251,7 +286,12 @@ theorem etvDist_eq_one_sub_eRelWP_eqRel (oa : OracleComp spec₁ α) (ob : Oracl
       exact ae_iff.1 (c.isCoupling.ae_mem_prod F.measurableSet F.measurableSet
         (measure_eq_zero_iff_ae_notMem.1 hμ |>.mono fun _ h => not_not.1 h)
         (measure_eq_zero_iff_ae_notMem.1 hν |>.mono fun _ h => not_not.1 h))
-    rw [Measure.lintegral_eq_sum_of_compl_eq_zero hc, Finset.sum_product]
+    have hmem : ∀ᵐ z ∂c.joint, z ∈ (↑(F ×ˢ F) : Set (α × α)) :=
+      (measure_eq_zero_iff_ae_notMem.1 hc).mono fun _ h => not_not.1 h
+    have hint : ∫⁻ z, RelPost.indicator (EqRel α) z.1 z.2 ∂c.joint =
+        ∑ z ∈ F ×ˢ F, RelPost.indicator (EqRel α) z.1 z.2 * c.joint {z} := by
+      rw [← lintegral_finset, Measure.restrict_eq_self_of_ae_mem hmem]
+    rw [hint, Finset.sum_product]
     refine Finset.sum_congr rfl fun a ha => ?_
     rw [Finset.sum_eq_single a (fun b _ hba => by simp [RelPost.indicator, EqRel, Ne.symm hba])
       (fun h => absurd ha h)]
@@ -271,17 +311,49 @@ theorem etvDist_eq_one_sub_eRelWP_eqRel (oa : OracleComp spec₁ α) (ob : Oracl
 between the two output measures. -/
 theorem approxRelTriple_eqRel_iff_etvDist_le {oa : OracleComp spec₁ α}
     {ob : OracleComp spec₂ α} {ε : ℝ≥0∞} :
-    ApproxRelTriple ε oa ob (EqRel α) ↔
-      (letI : MeasurableSpace α := ⊤; 𝒟[oa].etvDist 𝒟[ob]) ≤ ε := by
+    ApproxRelTriple ε oa ob (EqRel α) ↔ etvDist oa ob ≤ ε := by
   rw [ApproxRelTriple, etvDist_eq_one_sub_eRelWP_eqRel]
   exact tsub_le_iff_tsub_le
 
 /-- Computations with a zero-error approximate equality coupling are equal in distribution. -/
 theorem evalDistEq_of_approxRelTriple_zero {oa : OracleComp spec₁ α}
-    {ob : OracleComp spec₂ α} (h : ApproxRelTriple 0 oa ob (EqRel α)) : oa =ᵈ ob := by
-  let : MeasurableSpace α := ⊤
-  exact EvalDistEq.of_evalDist_eq (Measure.etvDist_eq_zero_iff.1 (nonpos_iff_eq_zero.1
-    (approxRelTriple_eqRel_iff_etvDist_le.1 h)))
+    {ob : OracleComp spec₂ α} (h : ApproxRelTriple 0 oa ob (EqRel α)) : oa =ᵈ ob :=
+  (etvDist_eq_zero_iff oa ob).1 (nonpos_iff_eq_zero.1 (approxRelTriple_eqRel_iff_etvDist_le.1 h))
+
+private lemma one_tsub_add_le_mul (a b : ℝ≥0∞) : 1 - (a + b) ≤ (1 - b) * (1 - a) := by
+  rw [add_comm, ← tsub_tsub, ENNReal.mul_sub fun _ _ => ENNReal.sub_ne_top ENNReal.one_ne_top,
+    mul_one]
+  exact tsub_le_tsub_left (mul_le_of_le_one_left zero_le tsub_le_self) _
+
+/-- Sequential composition of approximate relational triples: the errors add. The error of the
+continuations is paid on the coupled mass where the prefixes are related. -/
+theorem approxRelTriple_bind {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    {fa : α → OracleComp spec₁ γ} {fb : β → OracleComp spec₂ δ} {R : RelPost α β}
+    {S : RelPost γ δ} {ε₁ ε₂ : ℝ≥0∞} (h₁ : ApproxRelTriple ε₁ oa ob R)
+    (h₂ : ∀ a b, R a b → ApproxRelTriple ε₂ (fa a) (fb b) S) :
+    ApproxRelTriple (ε₁ + ε₂) (oa >>= fa) (ob >>= fb) S := by
+  unfold ApproxRelTriple at *
+  refine le_trans ?_ (eRelWP_bind_le oa ob fa fb (RelPost.indicator S))
+  calc 1 - (ε₁ + ε₂) ≤ (1 - ε₂) * (1 - ε₁) := one_tsub_add_le_mul ε₁ ε₂
+    _ ≤ (1 - ε₂) * eRelWP oa ob (RelPost.indicator R) := mul_le_mul_right h₁ _
+    _ = eRelWP oa ob (fun a b => (1 - ε₂) * RelPost.indicator R a b) :=
+        eRelWP_const_mul oa ob _ (ENNReal.sub_ne_top ENNReal.one_ne_top)
+    _ ≤ eRelWP oa ob (fun a b => eRelWP (fa a) (fb b) (RelPost.indicator S)) :=
+        eRelWP_mono fun a b => by
+          rw [RelPost.indicator]
+          split_ifs with hab
+          · simpa using h₂ a b hab
+          · simp
+
+/-- Approximate equality is transitive, with the errors adding. -/
+theorem approxRelTriple_eqRel_trans {ι₃ : Type u} {spec₃ : OracleSpec.{u, 0} ι₃}
+    [AnswerMeasure spec₃] [∀ t, Finite (spec₃.Range t)]
+    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α} {oc : OracleComp spec₃ α}
+    {ε₁ ε₂ : ℝ≥0∞} (h₁ : ApproxRelTriple ε₁ oa ob (EqRel α))
+    (h₂ : ApproxRelTriple ε₂ ob oc (EqRel α)) :
+    ApproxRelTriple (ε₁ + ε₂) oa oc (EqRel α) := by
+  rw [approxRelTriple_eqRel_iff_etvDist_le] at *
+  exact (etvDist_triangle oa ob oc).trans (add_le_add h₁ h₂)
 
 /-! ## Relational algebra instance -/
 
@@ -302,7 +374,7 @@ private theorem lintegral_coupling_pure_left (a : α) (y : OracleComp spec₂ β
     (c : letI : MeasurableSpace α := ⊤; letI : MeasurableSpace β := ⊤;
       Measure.Coupling 𝒟[(pure a : OracleComp spec₁ α)] 𝒟[y]) :
     letI : MeasurableSpace α := ⊤; letI : MeasurableSpace β := ⊤;
-      ∫⁻ z, post z.1 z.2 ∂c.joint = wp y (post a) := by
+      ∫⁻ z, post z.1 z.2 ∂c.joint = wp⟦y⟧ (post a) := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
   have hmeas : MeasurableSet {x : α | x = a} := measurableSet_singleton a
@@ -315,14 +387,14 @@ private theorem lintegral_coupling_pure_left (a : α) (y : OracleComp spec₂ β
         lintegral_congr_ae (hfst.mono fun z hz => by simp only [hz])
     _ = ∫⁻ b, post a b ∂c.joint.map Prod.snd :=
         (lintegral_map Measurable.of_discrete measurable_snd).symm
-    _ = wp y (post a) := by
+    _ = wp⟦y⟧ (post a) := by
         rw [show c.joint.map Prod.snd = 𝒟[y] from c.isCoupling.snd_eq,
           wp_eq_lintegral y (post a) Measurable.of_discrete]
 
 /-- A pure first computation collapses the coupled expectation to the unary expectation of the
 second computation. -/
 theorem eRelWP_pure_left (a : α) (y : OracleComp spec₂ β) (post : α → β → ℝ≥0∞) :
-    eRelWP (pure a : OracleComp spec₁ α) y post = wp y (post a) := by
+    eRelWP (pure a : OracleComp spec₁ α) y post = wp⟦y⟧ (post a) := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
   have : IsProbabilityMeasure 𝒟[y] := ⟨evalDist_apply_univ_eq_one y⟩
@@ -335,7 +407,7 @@ theorem eRelWP_pure_left (a : α) (y : OracleComp spec₂ β) (post : α → β 
 /-- A pure second computation collapses the coupled expectation to the unary expectation of the
 first computation. -/
 theorem eRelWP_pure_right (x : OracleComp spec₁ α) (b : β) (post : α → β → ℝ≥0∞) :
-    eRelWP x (pure b : OracleComp spec₂ β) post = wp x (fun a => post a b) := by
+    eRelWP x (pure b : OracleComp spec₂ β) post = wp⟦x⟧ (fun a => post a b) := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
   have : IsProbabilityMeasure 𝒟[x] := ⟨evalDist_apply_univ_eq_one x⟩
@@ -433,7 +505,7 @@ variable [SampleableType α]
 /-- Quantitative lower bound for two uniform samples coupled by a bijection. -/
 theorem eRelWP_uniformSample_bij_ge
     {f : α → α} (hf : Function.Bijective f) (post : α → α → ℝ≥0∞) :
-    wp ($ᵗ α : ProbComp α) (fun a => post a (f a))
+    wp⟦($ᵗ α : ProbComp α)⟧ (fun a => post a (f a))
       ≤ eRelWP ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post := by
   let : MeasurableSpace α := ⊤
   have hgraph : Measurable fun a : α => (a, f a) := Measurable.of_discrete
@@ -448,7 +520,7 @@ relational WP lower-bound for two uniform samples. -/
 theorem eRelWP_uniformSample_bij
     {f : α → α} (hf : Function.Bijective f) (post : α → α → ℝ≥0∞)
     {pre : ℝ≥0∞}
-    (hpre : pre ≤ wp ($ᵗ α : ProbComp α) (fun a => post a (f a))) :
+    (hpre : pre ≤ wp⟦($ᵗ α : ProbComp α)⟧ (fun a => post a (f a))) :
     pre ≤ eRelWP ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post :=
   hpre.trans (eRelWP_uniformSample_bij_ge hf post)
 
@@ -469,7 +541,7 @@ theorem eRelWP_query_bij_ge (t : spec₁.Domain)
     {f : spec₁.Range t → spec₁.Range t}
     (hf : Function.Bijective f)
     (post : spec₁.Range t → spec₁.Range t → ℝ≥0∞) :
-    wp (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) (fun a => post a (f a))
+    wp⟦(liftM (query t) : OracleComp spec₁ (spec₁.Range t))⟧ (fun a => post a (f a))
       ≤ eRelWP (spec₁ := spec₁) (spec₂ := spec₁)
           (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
           (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) post := by
@@ -490,7 +562,7 @@ theorem eRelWP_query_bij (t : spec₁.Domain)
     (post : spec₁.Range t → spec₁.Range t → ℝ≥0∞)
     {pre : ℝ≥0∞}
     (hpre : pre ≤
-      wp (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) (fun a => post a (f a))) :
+      wp⟦(liftM (query t) : OracleComp spec₁ (spec₁.Range t))⟧ (fun a => post a (f a))) :
     pre ≤ eRelWP (spec₁ := spec₁) (spec₂ := spec₁)
       (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
       (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) post :=
@@ -508,7 +580,7 @@ practice.
 bijection-shifted average is realised by the bijection coupling. -/
 example [SampleableType α]
     {f : α → α} (hf : Function.Bijective f) (post : α → α → ℝ≥0∞) :
-    wp ($ᵗ α : ProbComp α) (fun a => post a (f a))
+    wp⟦($ᵗ α : ProbComp α)⟧ (fun a => post a (f a))
       ≤ eRelWP ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post :=
   eRelWP_uniformSample_bij hf post le_rfl
 

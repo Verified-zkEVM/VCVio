@@ -20,8 +20,8 @@ This file builds the reduction infrastructure for the ML-DSA EUF-NMA analysis:
    uniform-matrix MLWE under an explicit `ExpandA` idealization.
 2. **Seed-derived scaffolding.** `keygen0` and `keygen1` describe the concrete seed-derived and
    uniform-`t` key distributions. The generic lemma `nmaExperiment_eq_keygen_bind` factors either
-   key-generator prefix out of the NMA runtime. The older full-ring `mldsaMLWE` definitions remain
-   useful scaffolding, but do not identify `keygen0` with a literature MLWE distribution.
+   key-generator prefix out of the NMA runtime. The full-ring `mldsaMLWE` definitions serve as
+   scaffolding, but do not identify `keygen0` with a literature MLWE distribution.
 3. **SelfTargetMSIS extraction (`nmaAdvantage_keygen1_le_stmsis`).** Once `t` is uniform the key
    carries no secret, so a forgery is a short vector satisfying the *tailored* SelfTargetMSIS
    relation of `mldsaSTMSIS` (see *Tailored vs. standard SelfTargetMSIS* below); the extractor

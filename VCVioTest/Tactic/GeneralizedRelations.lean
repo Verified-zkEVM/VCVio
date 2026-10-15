@@ -17,16 +17,17 @@ public import Mathlib.Tactic.GRewrite
 # Generalized congruence and rewriting
 
 Ordinary-import tests for probability, equality in distribution, support, cost predicates, and
-measure bind. Terminal
-examples exercise `gcongr`, `grw`, and `rel`; interactive examples pin the obligations exposed by
-congruence and rewrite normalization. Dated gap pairs distinguish partial progress from closure.
-The companion `GeneralizedRelationsExperiments` module isolates proposed registrations.
+measure bind. Terminal examples exercise `gcongr`, `grw`, and `rel`; interactive examples pin the
+obligations exposed by congruence and rewrite normalization. Dated gap pairs distinguish partial
+progress from closure. The companion `GeneralizedRelationsExperiments` module isolates proposed
+registrations.
 -/
 
 public section
 
 open OracleComp OracleComp.ProgramLogic OracleSpec MeasureTheory
-open scoped ENNReal Std.WP OracleComp.Lower
+open scoped ENNReal Std.WP
+open scoped OracleComp.Lower
 
 run_cmd do
   let env ← Lean.getEnv
@@ -35,16 +36,16 @@ run_cmd do
 
 namespace VCVioTest.GeneralizedRelations
 
-/-! ## Existing expectation and event rules -/
+/-! ## Expectation and event rules -/
 
 section Probability
 
 variable {α β : Type} (mx : ProbComp α) (f g : α → ℝ≥0∞)
 
-example (h : ∀ x, f x ≤ g x) : wp mx f ≤ wp mx g := by grw [h]
+example (h : ∀ x, f x ≤ g x) : wp⟦mx⟧ f ≤ wp⟦mx⟧ g := by grw [h]
 
 example (h : ∀ x ∈ support mx, f x ≤ g x) :
-    wp mx f ≤ wp mx g := by
+    wp⟦mx⟧ f ≤ wp⟦mx⟧ g := by
   -- gap(gcongr, 2026-09-08): the support-restricted hypothesis needs an explicit application.
   fail_if_success (gcongr; done)
   gcongr with x hx
@@ -54,14 +55,14 @@ example (h : ∀ x ∈ support mx, f x ≤ g x) :
 
 /-- A rewrite theorem's own support premise remains a side goal. -/
 example (h : ∀ x ∈ support mx, f x ≤ g x) :
-    wp mx f ≤ wp mx g := by
+    wp⟦mx⟧ f ≤ wp⟦mx⟧ g := by
   -- gap(grw, 2026-09-08): the rewrite's support premise needs an explicit closer.
   fail_if_success (grw [h]; done)
   grw [h]
   assumption
 
 -- Support-restricted `grw` on WP and nested expectations shares the gap above.
-example (h : ∀ x ∈ support mx, f x ≤ g x) : wp mx f ≤ wp mx g := by
+example (h : ∀ x ∈ support mx, f x ≤ g x) : wp⟦mx⟧ f ≤ wp⟦mx⟧ g := by
   grw [h]
   assumption
 
@@ -85,35 +86,33 @@ example (p q : α → Prop) (h : ∀ x, p x → q x) (c : ℝ≥0∞)
   -- The assertion-valued event normal form shares the gap above.
   simp only [prEvent_eq_wp_propInd] at hq ⊢
   apply_rw [h]
-  guard_target = wp mx (fun x ↦ propInd (q x)) ≤ c
+  guard_target = wp⟦mx⟧ (fun x ↦ propInd (q x)) ≤ c
   exact hq
 
-example (h : ∀ x, g x ≤ f x) : 1 - wp mx f ≤ 1 - wp mx g := by
+example (h : ∀ x, g x ≤ f x) : 1 - wp⟦mx⟧ f ≤ 1 - wp⟦mx⟧ g := by
   grw [h]
 
-example (h : ∀ x, f x ≤ g x) (c : ℝ≥0∞) (hf : c ≤ wp mx f) :
-    c ≤ wp mx g := by
+example (h : ∀ x, f x ≤ g x) (c : ℝ≥0∞) (hf : c ≤ wp⟦mx⟧ f) :
+    c ≤ wp⟦mx⟧ g := by
   grw [h] at hf
-  guard_hyp hf : c ≤ wp mx g
+  guard_hyp hf : c ≤ wp⟦mx⟧ g
   exact hf
 
 example (f' g' : α → ProbComp β) (p : β → Prop)
     (h : ∀ x ∈ support mx, Pr{let y ← f' x}[p y] ≤ Pr{let y ← g' x}[p y]) :
-    Pr{let y ← mx >>= f'}[p y] ≤ Pr{let y ← mx >>= g'}[p y] := by
-  -- gap(gcongr, 2026-09-08): bind probability needs the expectation normal form.
-  fail_if_success gcongr
-  simp only [prEvent_eq_wp_propInd, wp_bind] at h ⊢
-  grw [h]
-  assumption
+    Pr{let x ← mx; let y ← f' x}[p y] ≤ Pr{let x ← mx; let y ← g' x}[p y] := by
+  -- The event is an expectation over the common draw, so congruence descends into it.
+  gcongr with x hx
+  exact h x hx
 
 example (my : α → ProbComp β) (u v : α → β → ℝ≥0∞)
     (h : ∀ x ∈ support mx, ∀ y ∈ support (my x), u x y ≤ v x y) :
-    wp mx (fun x => wp (my x) (u x)) ≤
-      wp mx (fun x => wp (my x) (v x)) := by
+    wp⟦mx⟧ (fun x => wp⟦my x⟧ (u x)) ≤
+      wp⟦mx⟧ (fun x => wp⟦my x⟧ (v x)) := by
   grw [h] <;> assumption
 
 example (h : ∀ x, f x ≤ g x) :
-    wp mx f + wp mx f ≤ wp mx g + wp mx f := by
+    wp⟦mx⟧ f + wp⟦mx⟧ f ≤ wp⟦mx⟧ g + wp⟦mx⟧ f := by
   -- gap(nth_grw, 2026-09-08): occurrence abstraction does not eta-expand the function argument.
   fail_if_success nth_grw 1 [h]
   nth_grw 1 [wp_mono mx h]

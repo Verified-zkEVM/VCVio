@@ -1,0 +1,11 @@
+{
+  "uncovered": [
+    "OracleComp.ProgramLogic.cachingLoggingOracle_triple",
+    "OracleComp.ProgramLogic.cachingOracle_triple",
+    "OracleComp.ProgramLogic.costOracle_triple",
+    "OracleComp.ProgramLogic.countingOracle_triple",
+    "OracleComp.ProgramLogic.seededOracle_triple",
+    "WriterT.AppendWP.Spec.monadLift",
+    "WriterT.AppendWP.Spec.tell"
+  ]
+}

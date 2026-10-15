@@ -235,9 +235,9 @@ adversary-environment pair through the zig-zag identity
 `wire_idWire_right`.
 
 This is the content of Canetti's dummy-adversary theorem (cf. Canetti
-'01, Thm 4.16). The non-formalized structural decomposition is now an
-explicit reusable assumption, `HasDummyAdversaryFactor`, rather than a
-local proof hole.
+'01, Thm 4.16). The structural decomposition, which is not formalized
+here, enters as the explicit reusable assumption
+`HasDummyAdversaryFactor`.
 -/
 theorem ucSecure_toObservedCompUCSecure_dummy
     [HasDummyAdversaryFactor T]

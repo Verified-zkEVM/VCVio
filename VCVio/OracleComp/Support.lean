@@ -12,8 +12,8 @@ public import PolyFun.PFunctor.Free.Support
 /-!
 # Possible outputs of oracle programs
 
-Oracle-facing equations for PolyFun's attachment semantics. Possible outputs are
-structural: this API imposes no probabilistic interpretation or positivity assumption on answers.
+Oracle-facing equations for PolyFun's attachment semantics. Possible outputs are defined without
+probabilities: this API imposes no probabilistic interpretation or positivity assumption on answers.
 -/
 
 public section

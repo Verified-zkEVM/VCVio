@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.EvalDist.MeasureTVDist.Basic
+public import VCVio.EvalDist.EvalDistTV
 public import VCVio.EvalDist.EvalDistEq
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.Constructions.SampleableType
@@ -111,9 +111,10 @@ lemma verify_of_complete (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Cha
     (hc : ids.Complete) {s : Stmt} {w : Wit} (hrel : rel s w = true)
     {cm : Commit} {c : Chal} {z : Resp}
     (h_mem : some (cm, c, z) ∈ support (ids.honestExecution s w)) :
-    ids.verify s cm c z = true :=
-  (OracleComp.prEvent_eq_one_iff _ _).1 (hc s w hrel) _
-    ((mem_support_bind_iff _ _ _).2 ⟨_, h_mem, by simp⟩)
+    ids.verify s cm c z = true := by
+  have hc' := hc s w hrel
+  simp only [expect_norm] at hc'
+  exact (OracleComp.prEvent_eq_one_iff _ _).1 hc' _ h_mem
 
 end Completeness
 
@@ -130,9 +131,7 @@ Both distributions are over `Option (Commit × Chal × Resp)`, where `none` repr
 The parameter `ζ_zk` captures both transcript mismatch and abort-probability mismatch. -/
 def HVZK (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp))) (ζ_zk : ℝ≥0∞) : Prop :=
-  ∀ s w, rel s w = true →
-    letI : MeasurableSpace (Option (Commit × Chal × Resp)) := ⊤
-    measureETVDist (ids.honestExecution s w) (sim s) ≤ ζ_zk
+  ∀ s w, rel s w = true → etvDist (ids.honestExecution s w) (sim s) ≤ ζ_zk
 
 /-- Exact honest-verifier zero-knowledge for an identification scheme with aborts:
 the honest prover's transcript is equal in distribution to the simulator's. -/
@@ -146,8 +145,7 @@ lemma perfectHVZK_iff_hvzk_zero
     (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp))) :
     ids.PerfectHVZK sim ↔ ids.HVZK sim 0 := by
-  simp only [PerfectHVZK, HVZK, evalDistEq_iff_evalDist_eq, nonpos_iff_eq_zero,
-    measureETVDist_eq_zero_iff]
+  simp only [PerfectHVZK, HVZK, nonpos_iff_eq_zero, etvDist_eq_zero_iff]
 
 end HVZK
 

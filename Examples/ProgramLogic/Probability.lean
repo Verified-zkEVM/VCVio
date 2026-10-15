@@ -9,13 +9,14 @@ module
 public import VCVio.ProgramLogic.Tactics.Unary
 
 /-!
-# Probability Rewrite Tactic Examples
+# Program-equality examples
 
-This file validates probability-rewrite tactics from
-`VCVio.ProgramLogic.Tactics`: `vcstep rw`, `vcstep rw under`, `vcstep rw normalize`,
-`vcstep rw congr'`, and the exhaustive `vcgen` driver on equalities of `Pr{…}[…]` events.
-Oracle responses carry a chosen discrete measure specification; swaps use countable responses,
-and congruence leaves the continuations at the possible outputs of the shared prefix.
+`prrw` proves equalities between the `Pr{…}[…]` events of two programs: `prrw` swaps adjacent
+independent binds, `prrw under n` swaps them under `n` shared prefixes, `prrw congr` and
+`prrw congr'` reduce a shared prefix, and `prrw normalize` searches for a sequence of these steps
+that closes the goal. The oracle answers carry chosen answer measures (`OracleSpec.AnswerMeasure`);
+swaps need countable answer types, and congruence leaves the continuations to compare on the
+support of the shared prefix.
 -/
 
 @[expose] public section
@@ -33,7 +34,7 @@ variable {α β γ δ ε ζ : Type}
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
     (h : ∀ x ∈ support mx, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
     Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
-  vcstep
+  prrw congr
   exact h _ ‹_›
 
 /-! ## Bind swap -/
@@ -42,15 +43,23 @@ example {mx : OracleComp spec α} {my : OracleComp spec β}
     {f : α → β → OracleComp spec γ} {y : γ} :
     Pr{let x ← mx >>= fun a => my >>= fun b => f a b}[x = y] =
     Pr{let x ← my >>= fun b => mx >>= fun a => f a b}[x = y] := by
-  vcstep rw
+  prrw
 
-/-! ## `rw under` -/
+/-! ## One draw past several others -/
+
+example {mx : OracleComp spec α} {my : OracleComp spec β}
+    {mz : OracleComp spec γ} {f : α → β → γ → OracleComp spec δ} {q : δ → Prop} :
+    Pr{let r ← mx >>= fun a => my >>= fun b => mz >>= fun c => f a b c}[q r] =
+    Pr{let r ← my >>= fun b => mz >>= fun c => mx >>= fun a => f a b c}[q r] := by
+  prrw move 0 2
+
+/-! ## Swaps under a shared prefix -/
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
     {mz : OracleComp spec γ} {f : α → β → γ → OracleComp spec δ} {q : δ → Prop} :
     Pr{let r ← mx >>= fun a => my >>= fun b => mz >>= fun c => f a b c}[q r] =
     Pr{let r ← mx >>= fun a => mz >>= fun c => my >>= fun b => f a b c}[q r] := by
-  vcstep rw under 1
+  prrw under 1
 
 example {mw : OracleComp spec α} {mx : OracleComp spec β}
     {my : OracleComp spec γ} {mz : OracleComp spec δ}
@@ -59,18 +68,16 @@ example {mw : OracleComp spec α} {mx : OracleComp spec β}
         v = out] =
     Pr{let v ← mw >>= fun w => mx >>= fun x => mz >>= fun z => my >>= fun y => f w x y z}[
         v = out] := by
-  vcstep rw under 2
+  prrw under 2
 
-/-! ## Auto swap detection -/
+/-! ## Searching for the swaps -/
 
 example {mw : OracleComp spec α} {mx : OracleComp spec β}
     {my : OracleComp spec γ} {mz : OracleComp spec δ}
     {f : α → β → γ → δ → OracleComp spec ε} {q : ε → Prop} :
     Pr{let r ← mw >>= fun w => mx >>= fun x => my >>= fun y => mz >>= fun z => f w x y z}[q r] =
     Pr{let r ← mw >>= fun w => mx >>= fun x => mz >>= fun z => my >>= fun y => f w x y z}[q r] := by
-  vcstep
-
-/-! ## Explicit normalization -/
+  prrw normalize
 
 example {mv : OracleComp spec α} {mw : OracleComp spec β}
     {mx : OracleComp spec γ} {my : OracleComp spec δ} {mz : OracleComp spec ε}
@@ -79,7 +86,7 @@ example {mv : OracleComp spec α} {mw : OracleComp spec β}
         f v w x y z)}[u = out] =
     Pr{let u ← (mv >>= fun v => mw >>= fun w => mx >>= fun x => mz >>= fun z => my >>= fun y =>
         f v w x y z)}[u = out] := by
-  vcstep rw normalize
+  prrw normalize
 
 example {mw : OracleComp spec α} {mx : OracleComp spec β}
     {my : OracleComp spec γ} {mz : OracleComp spec δ}
@@ -92,26 +99,18 @@ example {mw : OracleComp spec α} {mx : OracleComp spec β}
         let z ← mz
         let y ← my
         f w x y z))}[b = true] := by
-  vcstep
+  prrw normalize
 
 example {mw : OracleComp spec α} {mx : OracleComp spec β} {my : OracleComp spec γ}
     {f : α → β → γ → δ} {out : δ} :
     Pr{let w ← mw; let x ← mx; let z ← f w x <$> my}[z = out] =
     Pr{let x ← mx; let w ← mw; let z ← f w x <$> my}[z = out] := by
-  vcstep
+  prrw normalize
 
-/-! ## `rw congr'` -/
+/-! ## Congruence without support hypotheses -/
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
     (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
     Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
-  vcstep rw congr'
+  prrw congr'
   exact h _
-
-/-! ## Exhaustive `vcgen` on probability equalities -/
-
-example {mx : OracleComp spec α} {my : OracleComp spec β}
-    {f : α → β → OracleComp spec γ} {q : γ → Prop} :
-    Pr{let r ← mx >>= fun a => my >>= fun b => f a b}[q r] =
-    Pr{let r ← my >>= fun b => mx >>= fun a => f a b}[q r] := by
-  vcgen

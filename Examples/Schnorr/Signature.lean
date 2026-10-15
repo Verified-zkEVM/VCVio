@@ -156,7 +156,7 @@ private theorem hardRelationExperiment_dlogGenerable_eq_dlogExperiment [Decidabl
         let w ← red (x • g)
         pure (decide (w • g = x • g)))}[y = true] by
     simp [hardRelationExperiment, dlogGenerable]]
-  simp [dlogExperiment, prEvent_norm, hg.1.eq_iff]
+  simp [dlogExperiment, expect_norm, hg.1.eq_iff]
 
 variable [DecidableEq F] [SampleableType G]
 

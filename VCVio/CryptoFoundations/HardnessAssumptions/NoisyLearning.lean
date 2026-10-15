@@ -39,8 +39,8 @@ assumptions:
 The experiments (`experiment`, `advantage`, `searchExperiment`,
 `searchAdvantage`) are stated once, generically. Lattice-specific
 instantiations live downstream (e.g. `LatticeCrypto.HardnessAssumptions`,
-which re-exports this namespace under its historical `LearningWithErrors`
-name).
+which re-exports this namespace as the `LearningWithErrors` namespace of the
+lattice schemes' security statements).
 -/
 
 @[expose] public section

@@ -58,11 +58,8 @@ def excPostBoth
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
     Except ε₁ α → Except ε₂ β → l := fun ea eb =>
-  match ea, eb with
-  | Except.ok a, Except.ok b => postOO a b
-  | Except.error e, Except.ok b => postEO e b
-  | Except.ok a, Except.error e => postOE a e
-  | Except.error e₁, Except.error e₂ => postEE e₁ e₂
+  Lean.Order.pushExcept (fun a => Lean.Order.pushExcept (postOO a) (postOE a) eb)
+    (fun e => Lean.Order.pushExcept (postEO e) (postEE e) eb) ea
 
 /-- Honest two-sided exception relational weakest precondition: takes one postcondition
 per (left ok/error × right ok/error) corner and tracks them all separately, rather than
@@ -80,9 +77,7 @@ def rwpExcCases
 returned `ok` or `error`, leaving the right's `β` untouched. -/
 def excPostLeft (postOk : α → β → l) (postErr : ε → β → l) :
     Except ε α → β → l := fun ea b =>
-  match ea with
-  | Except.ok a => postOk a b
-  | Except.error e => postErr e b
+  Lean.Order.pushExcept (postOk · b) (postErr · b) ea
 
 /-- Honest left-side exception relational WP: only the left side carries an `ExceptT`,
 and we record separate success and failure postconditions for the left side while
@@ -95,9 +90,7 @@ def rwpExcLeft (x : ExceptT ε m₁ α) (y : m₂ β)
 the right's `Except`. -/
 def excPostRight (postOk : α → β → l) (postErr : α → ε → l) :
     α → Except ε β → l := fun a eb =>
-  match eb with
-  | Except.ok b => postOk a b
-  | Except.error e => postErr a e
+  Lean.Order.pushExcept (postOk a) (postErr a) eb
 
 /-- Honest right-side exception relational WP: only the right side carries an
 `ExceptT`. -/
@@ -112,11 +105,8 @@ def optPostBoth
     (postSS : α → β → l) (postSN : α → l)
     (postNS : β → l) (postNN : l) :
     Option α → Option β → l := fun oa ob =>
-  match oa, ob with
-  | some a, some b => postSS a b
-  | some a, none => postSN a
-  | none, some b => postNS b
-  | none, none => postNN
+  Lean.Order.pushOption (fun a => Lean.Order.pushOption (postSS a) (fun _ => postSN a) ob)
+    (fun _ => Lean.Order.pushOption postNS (fun _ => postNN) ob) oa
 
 /-- Honest two-sided `Option` relational WP. -/
 def rwpOpt
@@ -131,9 +121,7 @@ def rwpOpt
 /-- Left-only `Option` postcondition. -/
 def optPostLeft (postSome : α → β → l) (postNone : β → l) :
     Option α → β → l := fun oa b =>
-  match oa with
-  | some a => postSome a b
-  | none => postNone b
+  Lean.Order.pushOption (postSome · b) (fun _ => postNone b) oa
 
 /-- Honest left-side `Option` relational WP. -/
 def rwpOptLeft (x : OptionT m₁ α) (y : m₂ β)
@@ -143,9 +131,7 @@ def rwpOptLeft (x : OptionT m₁ α) (y : m₂ β)
 /-- Right-only `Option` postcondition. -/
 def optPostRight (postSome : α → β → l) (postNone : α → l) :
     α → Option β → l := fun a ob =>
-  match ob with
-  | some b => postSome a b
-  | none => postNone a
+  Lean.Order.pushOption (postSome a) (fun _ => postNone a) ob
 
 /-- Honest right-side `Option` relational WP. -/
 def rwpOptRight (x : m₁ α) (y : OptionT m₂ β)
@@ -441,10 +427,6 @@ theorem rwpExcCases_pure_left (a : α) (y : ExceptT ε₂ m₂ β)
   rw [show (pure a : ExceptT ε₁ m₁ α).run = pure (Except.ok a) from ExceptT.run_pure a]
   rw [Anchored.rwp_pure_left]
   congr 1
-  funext eb
-  cases eb with
-  | ok b => rfl
-  | error e => rfl
 
 /-- When the left side is a `throw e`, the two-sided honest exception WP collapses to
 the core `ExceptT` weakest precondition of the right side, with postconditions specialized at
@@ -459,10 +441,6 @@ theorem rwpExcCases_throw_left (e : ε₁) (y : ExceptT ε₂ m₂ β)
   rw [show (throw e : ExceptT ε₁ m₁ α).run = pure (Except.error e) from ExceptT.run_throw]
   rw [Anchored.rwp_pure_left]
   congr 1
-  funext eb
-  cases eb with
-  | ok b => rfl
-  | error e' => rfl
 
 /-- Symmetric to `rwpExcCases_pure_left` on the right side. -/
 theorem rwpExcCases_pure_right (x : ExceptT ε₁ m₁ α) (b : β)
@@ -475,10 +453,6 @@ theorem rwpExcCases_pure_right (x : ExceptT ε₁ m₁ α) (b : β)
   rw [show (pure b : ExceptT ε₂ m₂ β).run = pure (Except.ok b) from ExceptT.run_pure b]
   rw [Anchored.rwp_pure_right]
   congr 1
-  funext ea
-  cases ea with
-  | ok a => rfl
-  | error e => rfl
 
 /-- Symmetric to `rwpExcCases_throw_left` on the right side. -/
 theorem rwpExcCases_throw_right (x : ExceptT ε₁ m₁ α) (e : ε₂)
@@ -491,10 +465,6 @@ theorem rwpExcCases_throw_right (x : ExceptT ε₁ m₁ α) (e : ε₂)
   rw [show (throw e : ExceptT ε₂ m₂ β).run = pure (Except.error e) from ExceptT.run_throw]
   rw [Anchored.rwp_pure_right]
   congr 1
-  funext ea
-  cases ea with
-  | ok a => rfl
-  | error e' => rfl
 
 /-! ### `rwpExcLeft` / `rwpExcRight` pure-side reductions -/
 
@@ -553,10 +523,6 @@ theorem rwpOpt_pure_left (a : α) (y : OptionT m₂ β)
   rw [show (pure a : OptionT m₁ α).run = pure (some a) from OptionT.run_pure a]
   rw [Anchored.rwp_pure_left]
   congr 1
-  funext ob
-  cases ob with
-  | some b => rfl
-  | none => rfl
 
 /-- When the left side is `OptionT.mk (pure none)`, the two-sided honest option WP
 collapses to the core `OptionT` weakest precondition of the right side, with postconditions
@@ -571,10 +537,6 @@ theorem rwpOpt_fail_left (y : OptionT m₂ β)
     (optPostBoth postSS postSN postNS postNN) = _
   rw [Anchored.rwp_pure_left]
   congr 1
-  funext ob
-  cases ob with
-  | some b => rfl
-  | none => rfl
 
 /-- Symmetric to `rwpOpt_pure_left` on the right side. -/
 theorem rwpOpt_pure_right (x : OptionT m₁ α) (b : β)
@@ -586,10 +548,6 @@ theorem rwpOpt_pure_right (x : OptionT m₁ α) (b : β)
   rw [show (pure b : OptionT m₂ β).run = pure (some b) from OptionT.run_pure b]
   rw [Anchored.rwp_pure_right]
   congr 1
-  funext oa
-  cases oa with
-  | some a => rfl
-  | none => rfl
 
 /-- Symmetric to `rwpOpt_fail_left` on the right side. -/
 theorem rwpOpt_fail_right (x : OptionT m₁ α)
@@ -602,10 +560,6 @@ theorem rwpOpt_fail_right (x : OptionT m₁ α)
     (optPostBoth postSS postSN postNS postNN) = _
   rw [Anchored.rwp_pure_right]
   congr 1
-  funext oa
-  cases oa with
-  | some a => rfl
-  | none => rfl
 
 /-! ### `rwpOptLeft` / `rwpOptRight` pure-side reductions -/
 
@@ -755,15 +709,13 @@ theorem rwpExcCases_bind_le
   let MID : Except ε₁ α → Except ε₂ β → l := fun ea eb =>
     MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (ExceptT.bindCont f ea) (ExceptT.bindCont g eb)
       (excPostBoth postOO postEO postOE postEE)
-  let LHSpost : Except ε₁ α → Except ε₂ β → l := fun ea eb =>
-    match ea, eb with
-    | Except.ok a, Except.ok b =>
-        MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (f a).run (g b).run
-          (excPostBoth postOO postEO postOE postEE)
-    | Except.error e, Except.ok b => wp (g b) (postEO e) estack⟨postEE e⟩
-    | Except.ok a, Except.error e =>
-        wp (f a) (fun c => postOE c e) estack⟨fun e₁ => postEE e₁ e⟩
-    | Except.error e₁, Except.error e₂ => postEE e₁ e₂
+  let LHSpost : Except ε₁ α → Except ε₂ β → l :=
+    excPostBoth
+      (fun a b => MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (f a).run (g b).run
+        (excPostBoth postOO postEO postOE postEE))
+      (fun e b => wp (g b) (postEO e) estack⟨postEE e⟩)
+      (fun a e => wp (f a) (fun c => postOE c e) estack⟨fun e₁ => postEE e₁ e⟩)
+      postEE
   have hpost : LHSpost = MID := by
     funext ea eb
     cases ea with
@@ -778,10 +730,6 @@ theorem rwpExcCases_bind_le
             rw [Anchored.rwp_pure_right]
             rw [ExceptT.wp_apply_eq]
             congr 1
-            funext ec
-            cases ec with
-            | ok c => rfl
-            | error e₁ => rfl
     | error e =>
         cases eb with
         | ok b =>
@@ -791,10 +739,6 @@ theorem rwpExcCases_bind_le
             rw [Anchored.rwp_pure_left]
             rw [ExceptT.wp_apply_eq]
             congr 1
-            funext ed
-            cases ed with
-            | ok d => rfl
-            | error e₂ => rfl
         | error e' =>
             change postEE e e' =
               MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂)
@@ -943,10 +887,6 @@ theorem rwpOpt_bind_le
             rw [Anchored.rwp_pure_right]
             rw [OptionT.wp_apply_eq]
             congr 1
-            funext oc
-            cases oc with
-            | some c => rfl
-            | none => rfl
     | none =>
         cases ob with
         | some b =>
@@ -956,10 +896,6 @@ theorem rwpOpt_bind_le
             rw [Anchored.rwp_pure_left]
             rw [OptionT.wp_apply_eq]
             congr 1
-            funext od
-            cases od with
-            | some d => rfl
-            | none => rfl
         | none =>
             change postNN =
               MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (pure none) (pure none)

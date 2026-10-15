@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Pedersen Commitment Scheme
@@ -59,13 +60,9 @@ variable {g : G}
 
 theorem correct [SampleableType F] [DecidableEq G] :
     (pedersenCommit (F := F) g).PerfectlyCorrect := by
-  intro pp _hpp m cd hmem
-  have hmem' : cd ∈ support (do
-      let d ← ($ᵗ F); pure ((d : F) • g + m • pp, d)) := hmem
-  simp only [support_bind, support_pure, Set.mem_iUnion,
-             Set.mem_singleton_iff] at hmem'
-  obtain ⟨d', -, rfl, rfl⟩ := hmem'
-  change decide ((d' : F) • g + m • pp = d' • g + m • pp) = true
+  intro pp _hpp m
+  dsimp only [pedersenCommit]
+  prvcgen
   simp
 
 /-! ## Perfect hiding -/
@@ -105,7 +102,8 @@ theorem perfectlyHiding [SampleableType F] [SampleableType G] [DecidableEq G]
         SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample
         _ (commit_fst_bijective hg pp m) pure
   intro pp _hpp m₁ m₂
-  rw [commit_fst_eq_map, commit_fst_eq_map, huniform, huniform]
+  rw [commit_fst_eq_map, commit_fst_eq_map]
+  exact EvalDistEq.of_evalDist_eq ((huniform m₁ pp).trans (huniform m₂ pp).symm)
 
 /-! ## Computational binding reduces to DLog -/
 

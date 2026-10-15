@@ -5,309 +5,286 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.Defs.Measure.Core
-public import VCVio.EvalDist.ProbabilityNotation.Attr
-public meta import Lean.PrettyPrinter.Formatter
-public meta import Lean.PrettyPrinter.Delaborator.Basic
+public import VCVio.EvalDist.Expectation
+public import VCVio.Prelude.Core
+public import VCVio.EvalDist.ProbabilityNotation.Elab
+public import VCVio.EvalDist.ProbabilityNotation.Delab
+public import Mathlib.Tactic.Basify
 
 /-!
-# Event probabilities of computations
+# Event probabilities and expectations of computations
 
-`prEvent mx` is the mass that the successful-output measure of `mx : m Prop` puts on `True`.
-`Pr{…}[…]` is its notation. The braces hold an ordinary Lean `do` sequence, such as
-`let x ← mx; let y ← my x`, laid out as in a `do` block, and the brackets the event over its
-bindings; `Pr{let x ← mx}[x = a]` is the probability that `mx` returns `a`. The notation elaborates
-to the form `simp` maintains: the final draw becomes a map,
-`Pr{let x ← mx}[p x] = prEvent (p <$> mx)`, so event laws keyed on `prEvent` apply to derived
-programs.
+`𝔼{…}[…]` is the expectation of a nonnegative value after a `do`-style sequence of draws, and
+`Pr{…}[…]` the probability of an event, the expectation of its indicator: `Pr{items}[t]` is
+`𝔼{items}[propInd t]`, and `Pr{let x ← mx}[x = a]` is the probability that `mx` returns `a`.
+Both are translations of the sequence into nested core weakest preconditions under the expectation
+interpretation `ExpectationWP` of each draw's monad
+(`VCVio.EvalDist.ProbabilityNotation.Elab`):
+```
+Pr{let x ← mx; let y ← my x}[p x y] = wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd fun y => p x y)
+```
+The term is the translation and nothing is rewritten at elaboration; a draw written as a bind, a
+map or a `do` block stays as written, and `simp only [expect_norm]` brings it to the normal form
+of a draw chain (below). Because the predicate is an argument of `predInd`, `simp` keys, `grind`
+patterns and `gcongr` see it. Neither notation needs measurable structure on the outputs;
+`prEvent_eq_evalDist_map` relates an event to the mass its selector puts on `True`.
+
+The display inverts the translation (`VCVio.EvalDist.ProbabilityNotation.Delab`): an expectation
+prints as the notation it elaborates from, `Pr{…}[…]` when it observes an indicator and
+`𝔼{…}[…]` otherwise, so what is displayed elaborates back to the term displayed.
 
 `prFail mx` is the probability that `mx` fails or does not terminate: the mass its
 successful-output measure is missing.
-
-The equations below identify an event with the measure of a set when the event is measurable.
 -/
 
 public section
 
 open MeasureTheory
+open scoped Std.WP
 open scoped ENNReal
 
 universe v
 
-/-- The probability that a computation returns a true proposition: the mass its successful-output
-measure puts on `True`. -/
-@[expose] noncomputable def prEvent {m : Type → Type v} [EvalDistSemantics m] (mx : m Prop) :
-    ℝ≥0∞ :=
-  𝒟[mx] {True}
+/-! ## Normal form
 
-theorem prEvent_def {m : Type → Type v} [EvalDistSemantics m] (mx : m Prop) :
-    prEvent mx = 𝒟[mx] {True} := rfl
+`simp only [expect_norm]` brings an expectation to the normal form of a draw chain, one nested
+expectation per draw: PolyFun's exact `wp` equations for program structure
+(`ExactWPMonad.wp_bind`, …), with the following pre-procedures for `bind` and `map`, which name
+each new binder after the program's own, and the fold of an indicator observation into
+`predInd`. A multi-draw `Pr{…}[…]` elaborates to this form directly; a draw written as a bind, a
+map or a `do` block reaches it by this simp set. -/
 
-/-- The mass a proposition-valued computation puts on `True` is its event probability, the form
-the event laws are stated in. -/
+public meta section Rewriting
+
+open Lean Meta
+
+namespace VCVio.ProbabilityNotation
+
+/-- Rewrite `e` with the equation `thm`, whose instance arguments not determined by unification
+are synthesized. Returns the right side and the proof. -/
+def rewriteWith? (thm : Name) (e : Expr) : MetaM (Option (Expr × Expr)) := do
+  let pf ← mkConstWithFreshMVarLevels thm
+  let (xs, bis, ty) ← forallMetaTelescopeReducing (← inferType pf)
+  let some (_, lhs, rhs) := ty.eq? | return none
+  unless ← isDefEq lhs e do return none
+  for x in xs, bi in bis do
+    if bi.isInstImplicit && !(← x.mvarId!.isAssigned) then
+      let some inst ← synthInstance? (← inferType x) | return none
+      unless ← isDefEq x inst do return none
+  return some (← instantiateMVars rhs, ← instantiateMVars (mkAppN pf xs))
+
+/-- Name the binder of the `i`-th argument of `e`, a `fun`, after `n`. -/
+def renameArg (e : Expr) (i : Nat) (n : Name) : Expr :=
+  let args := e.getAppArgs
+  match args[i]? with
+  | some (.lam _ ty b bi) => mkAppN e.getAppFn (args.set! i (.lam n ty b bi))
+  | _ => e
+
+/-- The binder name of `f`, when it is a `fun`. Names that `do` generates, such as the
+discriminant of a destructuring draw or a lifted action, become `x`. -/
+def lamName? (f : Expr) : Option Name :=
+  match f.cleanupAnnotations with
+  | .lam n .. => some (if n.eraseMacroScopes.toString.startsWith "__" then `x else n)
+  | _ => none
+
+/-- Rewrite `e` with `thm` and name the binder of the `i`-th argument of the result, a `fun`, after
+the first binder among `src`, or `x` when none of them is a `fun`. -/
+def namedStep (thm : Name) (e : Expr) (i : Nat) (src : Array Expr) : SimpM Simp.Step := do
+  let some (rhs, pf) ← rewriteWith? thm e | return .continue
+  let rhs := renameArg rhs i ((src.findSome? lamName?).getD `x)
+  return .visit { expr := ← Core.betaReduce rhs, proof? := pf }
+
+end VCVio.ProbabilityNotation
+
+end Rewriting
+
+open Lean Meta Simp VCVio.ProbabilityNotation in
+/-- `ExactWPMonad.wp_bind`, naming the new binder after the continuation's. -/
+simproc ↓ [simp, expect_norm] wp_bind_named
+    (@Std.WP.WP.wp _ _ _ _ _ _ ?_ (_ >>= _) _ _) := fun e => do
+  unless e.isAppOfArity ``Std.WP.WP.wp 10 do return .continue
+  let mb := e.getArg! 7
+  unless mb.isAppOfArity ``Bind.bind 6 do return .continue
+  namedStep ``ExactWPMonad.wp_bind e 8 #[mb.getArg! 5]
+
+open Lean Meta Simp VCVio.ProbabilityNotation in
+/-- `ExactWPMonad.wp_map`, naming the observation's binder after the map's. -/
+simproc ↓ [simp, expect_norm] wp_map_named
+    (@Std.WP.WP.wp _ _ _ _ _ _ ?_ (_ <$> _) _ _) := fun e => do
+  unless e.isAppOfArity ``Std.WP.WP.wp 10 do return .continue
+  let mb := e.getArg! 7
+  unless mb.isAppOfArity ``Functor.map 6 do return .continue
+  namedStep ``ExactWPMonad.wp_map e 8 #[mb.getArg! 4, e.getArg! 8]
+
+open Lean Meta Simp in
+/-- An indicator observation `fun x => propInd t` is the indicator `predInd (fun x => t)` of its
+predicate, eta-reduced, so that an event's predicate is an argument of its observation; the
+observation `propInd` of a proposition-valued computation is `predInd (fun b => b)`. The two are
+equal by definition. -/
+simproc [simp, expect_norm] wp_predInd_fold
+    (@Std.WP.WP.wp _ _ _ _ _ _ ?_ _ _ _) := fun e => do
+  unless e.isAppOfArity ``Std.WP.WP.wp 10 do return .continue
+  let some pred := VCVio.ProbabilityNotation.indicatorPred? (e.getArg! 8) | return .continue
+  let obs ← mkAppM ``predInd #[pred]
+  return .visit { expr := mkAppN e.getAppFn (e.getAppArgs.set! 8 obs) }
+
+/-- An indicator observation is the indicator of its predicate, by definition. `simp` folds it
+through the simproc `wp_predInd_fold`; `grind` normalizes with this lemma. -/
+@[grind norm]
+theorem wp_fun_propInd {m : Type → Type v} [Monad m] {EPred : Type} [Std.WP.Assertion EPred]
+    [ExpectationWP m EPred] {α : Type} (mx : m α) (p : α → Prop) :
+    wp⟦mx⟧ (fun a => propInd (p a)) = wp⟦mx⟧ (predInd p) := rfl
+
+attribute [expect_norm] ExactWPMonad.wp_pure ExactWPMonad.wp_bind ExactWPMonad.wp_map
+  ExactWPMonad.wp_seq ExactWPMonad.wp_seqLeft ExactWPMonad.wp_seqRight ExactWPMonad.wp_ite
+  ExactWPMonad.wp_dite ExactWPMonad.wp_option_elim ExactWPMonad.wp_sum_elim predInd_apply
+
+/-! ## Events through program structure
+
+An event is the expectation of the indicator `predInd p` of its predicate, so PolyFun's exact `wp`
+equations move it through program structure; `simp` applies them. The following state what they
+give for events. -/
+
+section Structure
+
+variable {m : Type → Type v} [Monad m] {EPred : Type} [Std.WP.Assertion EPred]
+  [ExpectationWP m EPred] {α β : Type}
+
+/-- An event after a bind is the expectation, over the first computation, of the event after
+each continuation. -/
+theorem prEvent_bind (mx : m α) (f : α → m β) (p : β → Prop) :
+    wp⟦mx >>= f⟧ (predInd p) = Pr{let x ← mx; let y ← f x}[p y] :=
+  ExpectationWP.wp_bind mx f _
+
+/-- An event of mapped outputs is the event of the composed predicate. -/
+theorem prEvent_map (mx : m α) (f : α → β) (p : β → Prop) :
+    wp⟦f <$> mx⟧ (predInd p) = Pr{let x ← mx}[p (f x)] :=
+  ExpectationWP.wp_map f mx _
+
+/-- An injective map preserves the probability of each corresponding output. -/
+theorem prEvent_map_injective (mx : m α) {f : α → β} (hf : Function.Injective f) (x : α) :
+    Pr{let y ← f <$> mx}[y = f x] = Pr{let y ← mx}[y = x] := by
+  simp only [expect_norm, hf.eq_iff]
+
+/-- An event of a returned value is the indicator of the predicate at that value. -/
+theorem prEvent_pure (a : α) (p : α → Prop) :
+    wp⟦(pure a : m α)⟧ (predInd p) = propInd (p a) :=
+  ExpectationWP.wp_pure a _
+
+/-- An event of a conditional computation is the conditional event. -/
+theorem prEvent_ite (c : Prop) [Decidable c] (mx my : m α) (p : α → Prop) :
+    wp⟦if c then mx else my⟧ (predInd p) =
+      if c then Pr{let x ← mx}[p x] else Pr{let x ← my}[p x] := by
+  split <;> rfl
+
+/-- An event of a dependent conditional computation is the dependent conditional event. -/
+theorem prEvent_dite (c : Prop) [Decidable c] (mx : c → m α) (my : ¬c → m α) (p : α → Prop) :
+    wp⟦if h : c then mx h else my h⟧ (predInd p) =
+      if h : c then Pr{let x ← mx h}[p x] else Pr{let x ← my h}[p x] := by
+  split <;> rfl
+
+/-- Pointwise equivalent predicates have the same probability after a common computation. -/
+theorem prEvent_congr (mx : m α) (p q : α → Prop) (h : ∀ x, p x ↔ q x) :
+    Pr{let x ← mx}[p x] = Pr{let x ← mx}[q x] := by
+  rw [show p = q from funext fun x ↦ propext (h x)]
+
+/-- Pointwise equality of observed continuation probabilities gives equality after a common
+draw. -/
+theorem prEvent_bind_congr (mx : m α) (f : α → m β) {γ : Type} (g : α → m γ) (p : β → Prop)
+    (q : γ → Prop)
+    (h : ∀ x, Pr{let y ← f x}[p y] = Pr{let z ← g x}[q z]) :
+    Pr{let x ← mx; let y ← f x}[p y] = Pr{let x ← mx; let z ← g x}[q z] :=
+  ExpectationWP.wp_congr mx h
+
+end Structure
+
+/-! ## Constants and indicators -/
+
+section Indicators
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m] {α : Type}
+
+/-- A constant observation has the expectation of the constant times the success mass. -/
+@[simp]
+theorem wp_const (mx : m α) (c : ℝ≥0∞) : wp⟦mx⟧ (fun _ => c) = c * Pr{let _ ← mx}[True] := by
+  simpa only [predInd_apply, propInd_true, mul_one] using ExpectationWP.wp_const_mul mx c
+    (predInd fun _ ↦ True)
+
+/-- An independent continuation event is weighted by the successful mass of its prefix. -/
+theorem prEvent_bind_const (mx : m α) (my : m Prop) :
+    Pr{let p ← mx >>= fun _ ↦ my}[p] = Pr{let _ ← mx}[True] * Pr{let p ← my}[p] := by
+  simp only [expect_norm, wp_const, mul_comm]
+
+/-- An indicator observation scaled on the right is the scaled event. -/
+@[simp]
+theorem wp_propInd_mul (mx : m α) (p : α → Prop) (c : ℝ≥0∞) :
+    wp⟦mx⟧ (fun a => propInd (p a) * c) = Pr{let x ← mx}[p x] * c :=
+  ExpectationWP.wp_mul_const mx _ c
+
+/-- An indicator observation scaled on the left is the scaled event. -/
+@[simp]
+theorem wp_mul_propInd (mx : m α) (p : α → Prop) (c : ℝ≥0∞) :
+    wp⟦mx⟧ (fun a => c * propInd (p a)) = c * Pr{let x ← mx}[p x] :=
+  ExpectationWP.wp_const_mul mx c _
+
+end Indicators
+
+
+/-! ## Events as measures -/
+
+section Measures
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m] {α β : Type}
+
+/-- An event is the mass its propositional selector puts on `True`. It needs no measurable
+structure on the outputs. -/
+theorem prEvent_eq_evalDist_map (mx : m α) (p : α → Prop) :
+    Pr{let x ← mx}[p x] = 𝒟[p <$> mx] {True} := by
+  have hind : (propInd : Prop → ℝ≥0∞) = Set.indicator {True} 1 := by
+    classical
+    funext b
+    by_cases hb : b <;> simp [propInd, hb]
+  change wp⟦mx⟧ (fun x ↦ propInd (p x)) = _
+  rw [← ExpectationWP.wp_map p mx propInd,
+    ExpectationWP.wp_eq_lintegral (p <$> mx) propInd Measurable.of_discrete, hind,
+    lintegral_indicator_one (measurableSet_singleton True)]
+
+/-- A family of events is measurable when the measures of its selectors are. -/
+theorem measurable_prEvent {ρ : Type*} [MeasurableSpace ρ] {f : ρ → m α} {p : α → Prop}
+    (hf : Measurable fun r ↦ 𝒟[p <$> f r]) : Measurable fun r ↦ Pr{let x ← f r}[p x] := by
+  simpa only [prEvent_eq_evalDist_map, Function.comp_def] using
+    (Measure.measurable_coe (measurableSet_singleton True)).comp hf
+
+/-- The mass a proposition-valued computation puts on `True` is the event that it returns a true
+proposition. -/
 @[simp, grind norm]
-theorem evalDist_singleton_true {m : Type → Type v} [EvalDistSemantics m] (mx : m Prop) :
-    𝒟[mx] {True} = prEvent mx := rfl
-
-/-- The probability that a computation fails or does not terminate: the mass its successful-output
-measure is missing. -/
-@[expose] noncomputable def prFail {m : Type → Type v} [Monad m] [EvalDistSemantics m]
-    {α : Type} (mx : m α) : ℝ≥0∞ :=
-  1 - prEvent ((fun _ ↦ True) <$> mx)
-
-attribute [prEvent_norm] map_bind bind_pure_comp Functor.map_map Function.comp_def map_pure
-  bind_assoc pure_bind bind_map_left id_map'
-
-/-- Probability of a successful event after an ordinary Lean `do` sequence, as in
-`Pr{let x ← mx; let y ← my x}[p y]`. -/
-syntax (name := prEventStx) "Pr{" doSeq "}[" term "]" : term
-
-public meta section Formatting
-
-open Lean PrettyPrinter Formatter Syntax.MonadTraverser
-
-/-- Format an event sequence directly after its opening delimiter, its statements separated by
-`; ` and soft line breaks, so that a short sequence stays on one line. Explicitly braced sequences
-keep the ordinary Lean formatter, and explicit line breaks after the opening delimiter are
-preserved. -/
-@[formatter prEventStx]
-def prEventFormatter : Formatter := do
-  let stx ← getCur
-  let multiline := match stx[0].getTailInfo with
-    | .original _ _ trailing _ => trailing.contains '\n'
-    | _ => false
-  visitArgs do
-    symbolNoAntiquot.formatter "]"
-    categoryParser.formatter `term
-    symbolNoAntiquot.formatter "}["
-    let seq ← getCur
-    if seq.isOfKind ``Lean.Parser.Term.doSeqIndent then
-      let n := seq[0].getArgs.size
-      group <| indent <| visitArgs <| visitArgs do
-        for i in [:n] do
-          visitArgs do
-            optionalNoAntiquot.formatter (symbolNoAntiquot.formatter "; ")
-            categoryParser.formatter `doElem
-          if i + 1 < n then pushLine
-    else
-      formatterForKind seq.getKind
-    if multiline then
-      pushWhitespace "\n"
-    symbolNoAntiquot.formatter "Pr{"
-
-end Formatting
-
-public meta section Elaboration
-
-open Lean Elab Term Meta
-
-/-- Rewrite the final `a >>= fun x => pure b` of a chain of binds to `(fun x => b) <$> a`, the form
-that `simp` maintains: the selector is eta-reduced and an identity selector is dropped. Other
-shapes are returned unchanged. Instances are left to later synthesis, so elaboration problems
-inside the computation may still be pending. -/
-partial def prEventNormalize (e : Expr) : TermElabM Expr := do
-  -- `do` binds the continuation of an `if` as a join point before pushing it into both branches.
-  let e := zetaHead (← instantiateMVars e)
-  if e.isAppOfArity ``ite 5 then
-    let yes ← prEventNormalize (e.getArg! 3)
-    let no ← prEventNormalize (e.getArg! 4)
-    return mkAppN e.getAppFn (e.getAppArgs.set! 3 yes |>.set! 4 no)
-  if e.isAppOfArity ``dite 5 then
-    let branch (f : Expr) : TermElabM Expr := do
-      let .lam n ty body bi := f.cleanupAnnotations | return f
-      withLocalDecl n bi ty fun h => do
-        mkLambdaFVars #[h] (← prEventNormalize (body.instantiate1 h))
-    return mkAppN e.getAppFn (e.getAppArgs.set! 3 (← branch (e.getArg! 3))
-      |>.set! 4 (← branch (e.getArg! 4)))
-  let some (m, α, β, a, k) := bindParts? e | return e
-  let .lam n ty body bi := k.cleanupAnnotations | return e
-  let body := zetaHead body
-  if let some b := pureArg? body then
-    if b == .bvar 0 then return a
-    -- Take the functor from the monad, as `simp`'s `bind_pure_comp` does.
-    let monad ← mkInstMVar (← mkAppM ``Monad #[m])
-    let inst ← mkAppOptM ``Applicative.toFunctor
-      #[m, ← mkAppOptM ``Monad.toApplicative #[m, monad]]
-    return ← mkAppOptM ``Functor.map #[m, inst, α, β, (Expr.lam n ty b bi).eta, a]
-  withLocalDecl n bi ty fun x => do
-    let rest ← prEventNormalize (body.instantiate1 x)
-    let k' ← mkLambdaFVars #[x] rest
-    return mkAppN e.getAppFn (e.getAppArgs.set! 5 k')
-where
-  /-- Local definitions of the sequence are substituted into what follows them. -/
-  zetaHead (e : Expr) : Expr :=
-    match e.cleanupAnnotations.headBeta with
-    | .letE _ _ value body _ => zetaHead (body.instantiate1 value)
-    | e => e
-  bindParts? (e : Expr) : Option (Expr × Expr × Expr × Expr × Expr) :=
-    if e.isAppOfArity ``Bind.bind 6 then
-      let args := e.getAppArgs
-      some (args[0]!, args[2]!, args[3]!, args[4]!, args[5]!)
-    else none
-  pureArg? (e : Expr) : Option Expr :=
-    if e.isAppOfArity ``Pure.pure 4 then some e.appArg! else none
-
-/-- Internal form of the event notation: the computation's `do` sequence and its final event. -/
-syntax (name := prEventElabStx) "prEvent% " "{" doSeq "}[" term "]" : term
-
-/-- The monad of an event sequence, when its own terms determine it: the type of the first draw
-`let x ← e` or, failing that, of the whole sequence elaborated on its own. The probe's elaboration
-is discarded. -/
-def prEventMonad? (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (body : Term) :
-    TermElabM (Option Expr) := do
-  let firstDraw? : Option Syntax := do
-    let elem := (← items[0]?).raw[0]
-    guard <| elem.isOfKind ``Lean.Parser.Term.doLetArrow
-    let action := elem[3][3]
-    guard <| action.isOfKind ``Lean.Parser.Term.doExpr
-    return action[0]
-  let saved ← saveState
-  let m? ← try
-      let m? ← if let some action := firstDraw? then
-          let ty ← instantiateMVars (← whnfR (← inferType (← elabTerm action none)))
-          pure <| if ty.isApp && !ty.appFn!.hasExprMVar then some ty.appFn! else none
-        else
-          -- `do` infers its monad from the sequence when the expected type leaves it open.
-          let m ← mkFreshExprMVar (← mkArrow (mkSort Level.one) (mkSort (← mkFreshLevelMVar).succ))
-          discard <| elabTerm body (mkApp m (mkSort .zero))
-          synthesizeSyntheticMVarsNoPostponing
-          let m ← instantiateMVars m
-          pure <| if m.hasExprMVar then none else some m
-      m?.mapM fun m => (abstractMVars m : MetaM _)
-    catch _ => pure none
-  saved.restore
-  -- Universe metavariables of the discarded probe are reopened as fresh ones.
-  m?.mapM fun m => return (← openAbstractMVarsResult m).2.2
-
-/-- A final destructuring draw `let pat ← e` becomes a plain draw whose event matches on `pat`,
-so the event still ends in a map of its selector. -/
-def splitFinalPattern (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (t : Term) :
-    TermElabM (Array (TSyntax ``Lean.Parser.Term.doSeqItem) × Term) := do
-  let some item := items.back? | return (items, t)
-  let elem := item.raw[0]
-  unless elem.isOfKind ``Lean.Parser.Term.doLetArrow && elem[1].isNone do return (items, t)
-  let decl := elem[3]
-  unless decl.isOfKind ``Lean.Parser.Term.doPatDecl && decl[4].isNone && decl[1].isNone do
-    return (items, t)
-  let action := decl[3]
-  -- The draw is a term, or a nested `do` block that is kept as one.
-  let e : Term ← if action.isOfKind ``Lean.Parser.Term.doExpr then pure ⟨action[0]⟩
-    else if action.isOfKind ``Lean.Parser.Term.doNested then `((do $(⟨action[1]⟩):doSeq))
-    else return (items, t)
-  let pat : Term := ⟨decl[0]⟩
-  let last ← `(Lean.Parser.Term.doSeqItem| let z ← $e:term)
-  -- A discarded result binds nothing the event could mention.
-  if pat.raw.isOfKind ``Lean.Parser.Term.hole then return (items.pop.push last, t)
-  return (items.pop.push last, ← `(match z with | $pat => $t))
-
-/-- Elaborate the event of a `do` sequence as `prEvent` in normal form. The sequence is elaborated
-against the monad of its first draw when that is known; otherwise elaboration is postponed, and
-the notation ascribes `ℝ≥0∞` so the placeholder keeps that type. -/
-def elabPrEventDo (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (t : Term) :
-    TermElabM Expr := do
-  let (items, t) ← splitFinalPattern items t
-  let body ← `(do $items:doSeqItem* return ($t : Prop))
-  let expected? := (← prEventMonad? items body).map (mkApp · (mkSort .zero))
-  let e ← instantiateMVars (← elabTerm body expected?)
-  if e.getAppFn.isMVar then tryPostpone
-  let e ← prEventNormalize e
-  let ty ← whnfR (← inferType e)
-  unless ty.isApp do
-    throwError m!"an event expects a computation in a monad, got{indentExpr ty}"
-  let inst ← mkInstMVar (← mkAppM ``EvalDistSemantics #[ty.appFn!])
-  mkAppOptM ``prEvent #[ty.appFn!, inst, e]
-
-elab_rules : term
-  | `(prEvent% {$items*}[$t]) => elabPrEventDo items t
-
-end Elaboration
-
-macro_rules (kind := prEventStx)
-  | `(Pr{{$items*}}[$t]) => `((prEvent% {$items*}[$t] : ENNReal))
-  | `(Pr{$items*}[$t]) => `((prEvent% {$items*}[$t] : ENNReal))
-
-public meta section Delaboration
-
-open Lean Meta PrettyPrinter Delaborator SubExpr
-
-/-- The draws of a normalized event, as `let x ← a` statements: a chain of binds ending in a map
-of the final selector. An eta-reduced selector `f` is displayed applied to the first of `x`, `y`,
-`z`, `w` that no enclosing draw binds, so that `Membership.mem S` reads `x ∈ S`. -/
-partial def delabPrEventDraws :
-    DelabM (Array (TSyntax ``Lean.Parser.Term.doSeqItem) × Term) := do
-  let e ← getExpr
-  if e.isAppOfArity ``Bind.bind 6 then
-    let a ← withNaryArg 4 delab
-    withNaryArg 5 do
-      unless (← getExpr).isLambda do failure
-      withBindingBodyUnusedName fun x => do
-        let (draws, t) ← delabPrEventDraws
-        return (#[← `(Lean.Parser.Term.doSeqItem| let $(⟨x⟩):ident ← $a:term;)] ++ draws, t)
-  else if e.isAppOfArity ``Functor.map 6 then
-    let a ← withNaryArg 5 delab
-    withNaryArg 4 do
-      let f ← getExpr
-      if f.isLambda then
-        withBindingBodyUnusedName fun x => do
-          return (#[← `(Lean.Parser.Term.doSeqItem| let $(⟨x⟩):ident ← $a:term)], ← delab)
-      else
-        let .forallE _ dom _ _ ← whnf (← inferType f) | failure
-        let lctx ← getLCtx
-        let name := ([`x, `y, `z, `w].find? fun n => (lctx.findFromUserName? n).isNone).getD
-          (lctx.getUnusedName `x)
-        withLocalDeclD name dom fun x => do
-          let t ← withTheReader SubExpr (fun sub => { sub with expr := mkApp f x }) delab
-          return (#[← `(Lean.Parser.Term.doSeqItem| let $(mkIdent name):ident ← $a:term)], t)
-  else failure
-
-/-- Display `prEvent` in the notation it elaborates from. -/
-@[delab app.prEvent]
-def delabPrEvent : Delab := whenPPOption getPPNotation <| withOverApp 3 do
-  withNaryArg 2 do
-    let (draws, t) ← delabPrEventDraws
-    `(Pr{$draws*}[$t])
-
-end Delaboration
-
-/-- An event is the true mass of its propositional selector. -/
-theorem prEvent_eq_evalDist_map
-    {m : Type → Type v} [Monad m] [EvalDistSemantics m]
-    {α : Type} (mx : m α) (p : α → Prop) :
-    Pr{let x ← mx}[p x] = 𝒟[p <$> mx] {True} := rfl
+theorem evalDist_singleton_true (mx : m Prop) : 𝒟[mx] {True} = Pr{let b ← mx}[b] := by
+  have h := prEvent_eq_evalDist_map mx fun b ↦ b
+  rw [id_map'] at h
+  exact h.symm
 
 /-- A measurable predicate returned by a computation has the probability of its event. -/
-theorem prEvent_eq_evalDist {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} [MeasurableSpace α] (mx : m α) (p : α → Prop)
-    (hp : Measurable p) :
+theorem prEvent_eq_evalDist [MeasurableSpace α] (mx : m α) (p : α → Prop) (hp : Measurable p) :
     Pr{let x ← mx}[p x] = 𝒟[mx] {x | p x} := by
   rw [prEvent_eq_evalDist_map, evalDist_map_apply mx hp (measurableSet_singleton True)]
   simp
 
 /-- On a discrete output space every predicate is a measurable event. -/
-theorem prEvent_eq_evalDist_of_discrete
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
-    (mx : m α) (p : α → Prop) :
-    Pr{let x ← mx}[p x] = 𝒟[mx] {x | p x} :=
+theorem prEvent_eq_evalDist_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : m α) (p : α → Prop) : Pr{let x ← mx}[p x] = 𝒟[mx] {x | p x} :=
   prEvent_eq_evalDist mx p Measurable.of_discrete
 
 /-- Equality to one output has its singleton mass whenever singletons are measurable. -/
-theorem prEvent_eq_evalDist_singleton
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} [MeasurableSpace α] [MeasurableSingletonClass α] (mx : m α) (a : α) :
-    Pr{let x ← mx}[x = a] = 𝒟[mx] {a} := by
+theorem prEvent_eq_evalDist_singleton [MeasurableSpace α] [MeasurableSingletonClass α]
+    (mx : m α) (a : α) : Pr{let x ← mx}[x = a] = 𝒟[mx] {a} := by
   simpa only [Set.ofPred_eq_eq_singleton] using
     prEvent_eq_evalDist mx (fun x ↦ x = a) (measurableSet_singleton a).mem
 
 /-- A final decidable event has the same success mass whether it is returned as a proposition
 or decided to a Boolean; no measurable structure on intermediate values is needed. -/
-theorem prEvent_eq_evalDist_decide
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m α) (p : α → Prop) [DecidablePred p] :
+theorem prEvent_eq_evalDist_decide (mx : m α) (p : α → Prop) [DecidablePred p] :
     Pr{let x ← mx}[p x] = 𝒟[do let x ← mx; return decide (p x)] {true} := by
   classical
   calc
@@ -327,29 +304,54 @@ theorem prEvent_eq_evalDist_decide
       intro x
       by_cases hx : p x <;> simp [hx]
 
-/-- Pointwise equivalent predicates have the same probability after a common computation. -/
-theorem prEvent_congr
-    {m : Type → Type v} [Monad m] [EvalDistSemantics m]
-    {α : Type} (mx : m α) (p q : α → Prop) (h : ∀ x, p x ↔ q x) :
-    Pr{let x ← mx}[p x] = Pr{let x ← mx}[q x] := by
-  have hpq : p = q := funext fun x ↦ propext (h x)
-  rw [hpq]
+/-- The trivially true event is the successful mass of the computation, in any measurable
+structure on its outputs. -/
+theorem prEvent_true_eq_evalDist_apply_univ [MeasurableSpace α] (mx : m α) :
+    Pr{let _ ← mx}[True] = 𝒟[mx] Set.univ := by
+  rw [prEvent_eq_evalDist_map,
+    evalDist_map_apply mx measurable_const (measurableSet_singleton True)]
+  simp
+
+end Measures
+
+/-! ## Order and bounds -/
+
+section Bounds
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m] {α β γ : Type}
+
+/-- Every event probability is at most one. -/
+@[simp]
+theorem prEvent_le_one (mx : m α) {p : α → Prop} : Pr{let x ← mx}[p x] ≤ 1 := by
+  rw [prEvent_eq_evalDist_map]
+  exact evalDist_apply_le_one _ _
+
+/-- Every event probability is finite. -/
+@[simp, aesop (rule_sets := [finiteness]) safe apply]
+theorem prEvent_ne_top (mx : m α) {p : α → Prop} : Pr{let x ← mx}[p x] ≠ ⊤ :=
+  ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one mx)
+
+/-- Every event probability is finite. -/
+@[simp]
+theorem prEvent_lt_top (mx : m α) {p : α → Prop} : Pr{let x ← mx}[p x] < ⊤ :=
+  (prEvent_ne_top mx).lt_top
+
+/-- A true constant event after a lossless draw has probability one. -/
+theorem prEvent_const_of_lossless (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1) {c : Prop}
+    (hc : c) : Pr{let _ ← mx}[c] = 1 := by
+  rw [← hmx]
+  exact prEvent_congr mx _ _ fun _ ↦ by simp [hc]
 
 /-- Measurable predicates agreeing almost everywhere have equal event probabilities. -/
-theorem prEvent_congr_ae
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} [MeasurableSpace α] (mx : m α) (p q : α → Prop)
+theorem prEvent_congr_ae [MeasurableSpace α] (mx : m α) (p q : α → Prop)
     (hp : Measurable p) (hq : Measurable q) (h : ∀ᵐ x ∂𝒟[mx], p x ↔ q x) :
     Pr{let x ← mx}[p x] = Pr{let x ← mx}[q x] := by
   rw [prEvent_eq_evalDist mx p hp, prEvent_eq_evalDist mx q hq]
   exact measure_congr (h.mono fun _ hx ↦ propext hx)
 
 /-- An event that never occurs has probability zero. -/
-theorem prEvent_eq_zero_of_forall_not
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m α) (p : α → Prop) (h : ∀ x, ¬p x) :
+theorem prEvent_eq_zero_of_forall_not (mx : m α) (p : α → Prop) (h : ∀ x, ¬p x) :
     Pr{let x ← mx}[p x] = 0 := by
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_of_discrete]
@@ -357,269 +359,148 @@ theorem prEvent_eq_zero_of_forall_not
 
 /-- An impossible final observation has zero mass, including after a failed computation. -/
 @[simp↓ high, grind norm↓]
-theorem prEvent_false
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m α) : Pr{let _ ← mx}[False] = 0 :=
+theorem prEvent_false (mx : m α) : Pr{let _ ← mx}[False] = 0 :=
   prEvent_eq_zero_of_forall_not mx (fun _ ↦ False) (fun _ ↦ id)
 
+/-- A false constant event has probability zero. -/
+theorem prEvent_const_of_not (mx : m α) {c : Prop} (hc : ¬ c) : Pr{let _ ← mx}[c] = 0 :=
+  prEvent_eq_zero_of_forall_not mx _ fun _ ↦ hc
+
 /-- Almost-everywhere implication bounds probabilities of measurable events. -/
-theorem prEvent_mono_ae
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} [MeasurableSpace α] (mx : m α) (p q : α → Prop)
+theorem prEvent_mono_ae [MeasurableSpace α] (mx : m α) (p q : α → Prop)
     (hp : Measurable p) (hq : Measurable q) (hpq : ∀ᵐ x ∂𝒟[mx], p x → q x) :
     Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
   rw [prEvent_eq_evalDist mx p hp, prEvent_eq_evalDist mx q hq]
   exact measure_mono_ae hpq
 
-/-- Implication between events bounds their probabilities on a discrete output space. -/
-theorem prEvent_mono_of_discrete
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
-    (mx : m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) :
-    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
-  rw [prEvent_eq_evalDist_of_discrete,
-    prEvent_eq_evalDist_of_discrete]
-  exact measure_mono (Set.ofPred_subset_ofPred.mpr hpq)
+/-- Implication between events bounds their probabilities. -/
+theorem prEvent_mono (mx : m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) :
+    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] :=
+  ExpectationWP.wp_mono mx fun x ↦ propInd_mono (hpq x)
 
-/-- Implication between final events bounds their probabilities without a measurable-space
-argument on the intermediate values. -/
-theorem prEvent_mono
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) :
-    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
-  let obs : α → Prop × Prop := fun x ↦ (p x, q x)
-  let : MeasurableSpace α := MeasurableSpace.comap obs inferInstance
-  have hobs : Measurable obs := comap_measurable obs
-  exact prEvent_mono_ae mx p q (measurable_fst.comp hobs) (measurable_snd.comp hobs)
-    (Filter.Eventually.of_forall hpq)
-
-/-- An observed bind integrates the event probability of each measurable continuation.
-Only the common draw needs a selected measurable space; the continuation is observed in `Prop`.
--/
-theorem prEvent_bind_eq_lintegral
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α β : Type} [MeasurableSpace α] (mx : m α) (f : α → m β) (p : β → Prop)
-    (hf : Measurable fun x ↦ 𝒟[p <$> f x]) :
-    Pr{let y ← mx >>= f}[p y] = ∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx] := by
-  rw [prEvent_def, map_bind, evalDist_bind _ _ hf,
-    Measure.bind_apply (measurableSet_singleton True) hf.aemeasurable]
-  rfl
-
-/-- A bind of event computations integrates the continuation's event over a measurable source. -/
-theorem prEvent_bind
-    {m : Type → Type v} [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} [MeasurableSpace α] (mx : m α) (f : α → m Prop)
-    (hf : Measurable fun x ↦ 𝒟[f x]) :
-    prEvent (mx >>= f) = ∫⁻ x, prEvent (f x) ∂𝒟[mx] := by
-  rw [prEvent_def, evalDist_bind _ _ hf,
-    Measure.bind_apply (measurableSet_singleton True) hf.aemeasurable]
-  rfl
-
-/-- A bind of event computations integrates the continuation's event over a discrete source. -/
-theorem prEvent_bind_of_discrete
-    {m : Type → Type v} [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α] (mx : m α) (f : α → m Prop) :
-    prEvent (mx >>= f) = ∫⁻ x, prEvent (f x) ∂𝒟[mx] :=
-  prEvent_bind mx f Measurable.of_discrete
-
-/-- A discrete common draw discharges the observed continuation's measurability. -/
-theorem prEvent_bind_eq_lintegral_of_discrete
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α β : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
-    (mx : m α) (f : α → m β) (p : β → Prop) :
-    Pr{let y ← mx >>= f}[p y] = ∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx] :=
-  prEvent_bind_eq_lintegral mx f p Measurable.of_discrete
-
-/-- AE equality of measurable observed continuation probabilities gives equality after a draw. -/
-theorem prEvent_bind_congr_ae
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α β γ : Type} [MeasurableSpace α] (mx : m α) (f : α → m β) (g : α → m γ)
-    (p : β → Prop) (q : γ → Prop)
-    (hf : Measurable fun x ↦ 𝒟[p <$> f x])
-    (hg : Measurable fun x ↦ 𝒟[q <$> g x])
-    (h : ∀ᵐ x ∂𝒟[mx], Pr{let y ← f x}[p y] = Pr{let z ← g x}[q z]) :
-    Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] := by
-  rw [prEvent_bind_eq_lintegral mx f p hf, prEvent_bind_eq_lintegral mx g q hg]
-  exact lintegral_congr_ae h
-
-/-- Pointwise equality of observed continuation probabilities gives equality after a common
-draw. Neither the draw nor the continuation outputs need a measurable-space argument. -/
-theorem prEvent_bind_congr
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α β γ : Type} (mx : m α) (f : α → m β) (g : α → m γ)
-    (p : β → Prop) (q : γ → Prop)
-    (h : ∀ x,
-      Pr{let y ← f x}[p y] = Pr{let z ← g x}[q z]) :
-    Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] := by
-  let obs : α → Measure Prop × Measure Prop := fun x ↦ (𝒟[p <$> f x], 𝒟[q <$> g x])
-  let : MeasurableSpace α := MeasurableSpace.comap obs inferInstance
-  have hobs : Measurable obs := comap_measurable obs
-  exact prEvent_bind_congr_ae mx f g p q (measurable_fst.comp hobs)
-    (measurable_snd.comp hobs) (Filter.Eventually.of_forall h)
-
-/-- An output map composes the final event with that map. -/
-@[grind norm]
-theorem prEvent_map
-    {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
-    {α β : Type} (mx : m α) (f : α → β) (p : β → Prop) :
-    Pr{let y ← f <$> mx}[p y] = Pr{let x ← mx}[p (f x)] := by
-  rw [Functor.map_map]
-
-/-- An injective map preserves the mass of each output. -/
-theorem prEvent_map_injective
-    {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
-    {α β : Type} (mx : m α) {f : α → β} (hf : Function.Injective f) (x : α) :
-    Pr{let y ← f <$> mx}[y = f x] = Pr{let y ← mx}[y = x] := by
-  rw [prEvent_map]
-  exact prEvent_congr mx _ _ fun _ ↦ hf.eq_iff
-
-/-- An event of a conditional computation is the conditional event. -/
-theorem prEvent_ite {m : Type → Type v} [EvalDistSemantics m] (c : Prop) [Decidable c]
-    (mx my : m Prop) : prEvent (if c then mx else my) = if c then prEvent mx else prEvent my := by
-  split_ifs <;> rfl
-
-/-- An event of a dependent conditional computation is the dependent conditional event. -/
-theorem prEvent_dite {m : Type → Type v} [EvalDistSemantics m] (c : Prop) [Decidable c]
-    (mx : c → m Prop) (my : ¬c → m Prop) :
-    prEvent (if h : c then mx h else my h) = if h : c then prEvent (mx h) else prEvent (my h) := by
-  split_ifs <;> rfl
-
-/-- A returned proposition has probability one exactly when it holds. -/
-@[simp, grind =]
-theorem prEvent_pure_prop
-    {m : Type → Type v} [Monad m] [EvalDistSemantics m] [LawfulPureEvalDistSemantics m]
-    (P : Prop) [Decidable P] :
-    prEvent (pure P : m Prop) = if P then 1 else 0 := by
-  rw [prEvent_def, evalDist_pure]
-  by_cases h : P <;> simp [h]
-
-/-- Returned propositions are ordered by implication. A continuation that destructures its input
-with `match` keeps its event in this form, below a bind. -/
-theorem prEvent_pure_mono
-    {m : Type → Type v} [Monad m] [EvalDistSemantics m] [LawfulPureEvalDistSemantics m]
-    {P Q : Prop} (h : P → Q) :
-    prEvent (pure P : m Prop) ≤ prEvent (pure Q : m Prop) := by
+/-- A constant event conjoined on the left factors out as its indicator. -/
+theorem prEvent_const_and_left (mx : m α) (P : Prop) (q : α → Prop) :
+    Pr{let x ← mx}[P ∧ q x] = propInd P * Pr{let x ← mx}[q x] := by
   classical
-  rw [prEvent_pure_prop, prEvent_pure_prop]
-  split_ifs <;> simp_all
+  by_cases hP : P
+  · simp [hP]
+  · simp [hP]
 
-/-- An event of a pure computation has probability one exactly when it holds. -/
-@[grind =]
-theorem prEvent_pure
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulPureEvalDistSemantics m]
-    {α : Type} (a : α) (p : α → Prop) [Decidable (p a)] :
-    Pr{let x ← (pure a : m α)}[p x] = if p a then 1 else 0 := by
-  rw [map_pure, prEvent_pure_prop]
-
-/-- After a draw from a finite type, an event is the finite sum of the draw's point masses times
-the conditional event probabilities. -/
-theorem prEvent_bind_eq_sum_fintype
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α β : Type} [Fintype α] (mx : m α) (f : α → m β) (p : β → Prop) :
-    Pr{let y ← mx >>= f}[p y] = ∑ a, Pr{let x ← mx}[x = a] * Pr{let y ← f a}[p y] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_bind_eq_lintegral_of_discrete, MeasureTheory.lintegral_fintype]
-  refine Finset.sum_congr rfl fun a _ => ?_
-  rw [mul_comm, prEvent_eq_evalDist_singleton]
-
-/-- After a draw from a countable type, an event is the sum of the draw's point masses times the
-conditional event probabilities. -/
-theorem prEvent_bind_eq_tsum_of_countable
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α β : Type} [Countable α] (mx : m α) (f : α → m β) (p : β → Prop) :
-    Pr{let y ← mx >>= f}[p y] = ∑' a, Pr{let x ← mx}[x = a] * Pr{let y ← f a}[p y] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_bind_eq_lintegral_of_discrete, MeasureTheory.lintegral_countable']
-  refine tsum_congr fun a => ?_
-  rw [mul_comm, ← prEvent_eq_evalDist_singleton]
+/-- A constant event conjoined on the right factors out as its indicator. -/
+theorem prEvent_const_and_right (mx : m α) (P : Prop) (q : α → Prop) :
+    Pr{let x ← mx}[q x ∧ P] = Pr{let x ← mx}[q x] * propInd P := by
+  rw [mul_comm, ← prEvent_const_and_left]
+  exact prEvent_congr mx _ _ fun _ ↦ and_comm
 
 /-- Events of independent draws have the product of their probabilities. -/
 @[simp↓ high, grind norm↓]
-theorem prEvent_bind_bind_and
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α β : Type} (mx : m α) (my : m β) (p : α → Prop) (q : β → Prop) :
-    Pr{let x ← mx; let y ← my}[p x ∧ q y] =
-      Pr{let x ← mx}[p x] * Pr{let y ← my}[q y] := by
-  calc
-    _ = Pr{let z ← (do
-          let x ← p <$> mx
-          let y ← q <$> my
-          return (x, y))}[z.1 ∧ z.2] := by
-      simp only [map_bind, bind_map_left, bind_pure_comp, Functor.map_map]
-    _ = (𝒟[p <$> mx].prod 𝒟[q <$> my]) ({True} ×ˢ {True}) := by
-      rw [prEvent_eq_evalDist_of_discrete, evalDist_pair]
-      congr 1
-      ext z
-      simp [Prod.ext_iff, eq_iff_iff]
-    _ = _ := by
-      rw [Measure.prod_prod]
-      rfl
+theorem prEvent_bind_bind_and (mx : m α) (my : m β) (p : α → Prop) (q : β → Prop) :
+    Pr{let x ← mx; let y ← my}[p x ∧ q y] = Pr{let x ← mx}[p x] * Pr{let y ← my}[q y] := by
+  simp only [prEvent_const_and_left, wp_propInd_mul]
 
-/-- Every event probability is at most one. -/
-@[simp]
-theorem prEvent_le_one {m : Type → Type v} [EvalDistSemantics m] (mx : m Prop) :
-    prEvent mx ≤ 1 :=
-  evalDist_apply_le_one _ _
+/-- An expectation of an observation bounded by a constant is at most that constant. -/
+theorem wp_le_of_forall_le (mx : m α) {g : α → ℝ≥0∞} {c : ℝ≥0∞} (h : ∀ x, g x ≤ c) :
+    wp⟦mx⟧ g ≤ c :=
+  (ExpectationWP.wp_mono mx h).trans <| by
+    rw [wp_const]
+    exact mul_le_of_le_one_right' (prEvent_le_one mx)
 
-/-- Every event probability is finite. -/
-@[simp, aesop (rule_sets := [finiteness]) safe apply]
-theorem prEvent_ne_top {m : Type → Type v} [EvalDistSemantics m] (mx : m Prop) :
-    prEvent mx ≠ ⊤ :=
-  ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one mx)
+/-- After a lossless computation, an observation bounded below by a constant has at least that
+expectation. -/
+theorem le_wp_of_forall_le (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1) {g : α → ℝ≥0∞}
+    {c : ℝ≥0∞} (h : ∀ x, c ≤ g x) : c ≤ wp⟦mx⟧ g :=
+  le_of_eq_of_le (by rw [wp_const, hmx, mul_one]) (ExpectationWP.wp_mono mx h)
 
-/-- Every event probability is finite. -/
-@[simp]
-theorem prEvent_lt_top {m : Type → Type v} [EvalDistSemantics m] (mx : m Prop) :
-    prEvent mx < ⊤ :=
-  (prEvent_ne_top mx).lt_top
+/-- An expectation after a bind is at most the bound on each continuation's expectation. -/
+theorem wp_le_prEvent_add (mx : m α) (bad : α → Prop) (g : α → ℝ≥0∞) {ε : ℝ≥0∞}
+    (hg : ∀ x, ¬bad x → g x ≤ ε) (hle : ∀ x, g x ≤ 1) :
+    wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + ε := by
+  calc wp⟦mx⟧ g ≤ wp⟦mx⟧ fun x => propInd (bad x) + ε :=
+        ExpectationWP.wp_mono mx fun x => by
+          classical
+          by_cases h : bad x
+          · simpa [h] using (hle x).trans le_self_add
+          · simpa [h] using hg x h
+    _ ≤ Pr{let x ← mx}[bad x] + ε := by
+        rw [ExpectationWP.wp_add, wp_const]
+        exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one mx))
 
-/-- The trivially true event is the successful mass of the computation, in any measurable
-structure on its outputs. -/
-theorem prEvent_true_eq_evalDist_apply_univ
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} [MeasurableSpace α]
-    (mx : m α) : Pr{let _ ← mx}[True] = 𝒟[mx] Set.univ := by
-  rw [prEvent_eq_evalDist_map,
-    evalDist_map_apply mx measurable_const (measurableSet_singleton True)]
-  simp
+/-- An expectation splits along an event: on the event the observation, at most one, is charged
+in full, and off it the observation is kept. -/
+theorem wp_le_prEvent_add_wp (mx : m α) (bad : α → Prop) (g : α → ℝ≥0∞) (hle : ∀ x, g x ≤ 1) :
+    wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + wp⟦mx⟧ (fun x => propInd (¬bad x) * g x) := by
+  classical
+  calc wp⟦mx⟧ g ≤ wp⟦mx⟧ fun x => propInd (bad x) + propInd (¬bad x) * g x :=
+        ExpectationWP.wp_mono mx fun x => by
+          by_cases h : bad x
+          · simpa [h] using hle x
+          · simp [h]
+    _ = _ := ExpectationWP.wp_add mx _ _
 
-/-- A prefix whose result is unused scales the event by its successful mass. -/
-@[simp]
-theorem prEvent_bind_const
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α) (my : m Prop) :
-    prEvent (mx >>= fun _ ↦ my) = Pr{let _ ← mx}[True] * prEvent my := by
+end Bounds
+
+/-! ## Integrals and sums -/
+
+section Sums
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m] {α β γ : Type}
+
+/-- An expectation over a finite type is the finite sum of the point masses times the
+observation. -/
+theorem wp_eq_sum_fintype [Fintype α] (mx : m α) (g : α → ℝ≥0∞) :
+    wp⟦mx⟧ g = ∑ a, Pr{let x ← mx}[x = a] * g a := by
   let : MeasurableSpace α := ⊤
-  rw [prEvent_true_eq_evalDist_apply_univ]
-  change 𝒟[mx >>= fun _ ↦ my] {True} = 𝒟[mx] Set.univ * 𝒟[my] {True}
-  rw [evalDist_bind_const, Measure.smul_apply, smul_eq_mul]
+  rw [ExpectationWP.wp_eq_lintegral mx g Measurable.of_discrete, lintegral_fintype]
+  refine Finset.sum_congr rfl fun a _ => ?_
+  rw [mul_comm, prEvent_eq_evalDist_singleton]
 
-/-- A true constant event after a lossless draw has probability one. -/
-theorem prEvent_const_of_lossless
-    {m : Type → Type v} [Monad m] [EvalDistSemantics m] {α : Type}
-    (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1) {c : Prop} (hc : c) :
-    Pr{let _ ← mx}[c] = 1 := by
-  rw [← hmx]
-  exact prEvent_congr mx _ _ fun _ ↦ by simp [hc]
+/-- An expectation over a countable type is the sum of the point masses times the
+observation. -/
+theorem wp_eq_tsum_of_countable [Countable α] (mx : m α) (g : α → ℝ≥0∞) :
+    wp⟦mx⟧ g = ∑' a, Pr{let x ← mx}[x = a] * g a := by
+  let : MeasurableSpace α := ⊤
+  rw [ExpectationWP.wp_eq_lintegral mx g Measurable.of_discrete, lintegral_countable']
+  refine tsum_congr fun a => ?_
+  rw [mul_comm, prEvent_eq_evalDist_singleton]
 
-/-- A false constant event has probability zero. -/
-theorem prEvent_const_of_not
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type}
-    (mx : m α) {c : Prop} (hc : ¬ c) : Pr{let _ ← mx}[c] = 0 :=
-  prEvent_eq_zero_of_forall_not mx _ fun _ ↦ hc
+/-- An event after a bind integrates the event probability of each measurable continuation.
+Only the common draw needs a selected measurable space; the continuation is observed in `Prop`.
+-/
+theorem prEvent_bind_eq_lintegral [MeasurableSpace α] (mx : m α) (f : α → m β) (p : β → Prop)
+    (hf : Measurable fun x ↦ 𝒟[p <$> f x]) :
+    Pr{let x ← mx; let y ← f x}[p y] = ∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx] :=
+  ExpectationWP.wp_eq_lintegral mx _ (measurable_prEvent hf)
+
+/-- A discrete common draw discharges the observed continuation's measurability. -/
+theorem prEvent_bind_eq_lintegral_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : m α) (f : α → m β) (p : β → Prop) :
+    Pr{let x ← mx; let y ← f x}[p y] = ∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx] :=
+  prEvent_bind_eq_lintegral mx f p Measurable.of_discrete
+
+/-- AE equality of measurable observed continuation probabilities gives equality after a draw. -/
+theorem prEvent_bind_congr_ae [MeasurableSpace α] (mx : m α) (f : α → m β) (g : α → m γ)
+    (p : β → Prop) (q : γ → Prop) (hf : Measurable fun x ↦ 𝒟[p <$> f x])
+    (hg : Measurable fun x ↦ 𝒟[q <$> g x])
+    (h : ∀ᵐ x ∂𝒟[mx], Pr{let y ← f x}[p y] = Pr{let z ← g x}[q z]) :
+    Pr{let x ← mx; let y ← f x}[p y] = Pr{let x ← mx; let z ← g x}[q z] := by
+  rw [prEvent_bind_eq_lintegral mx f p hf, prEvent_bind_eq_lintegral mx g q hg]
+  exact lintegral_congr_ae h
+
+/-- After a draw from a finite type, an event is the finite sum of the draw's point masses times
+the conditional event probabilities. -/
+theorem prEvent_bind_eq_sum_fintype [Fintype α] (mx : m α) (f : α → m β) (p : β → Prop) :
+    Pr{let x ← mx; let y ← f x}[p y] = ∑ a, Pr{let x ← mx}[x = a] * Pr{let y ← f a}[p y] :=
+  wp_eq_sum_fintype mx _
+
+/-- After a draw from a countable type, an event is the sum of the draw's point masses times the
+conditional event probabilities. -/
+theorem prEvent_bind_eq_tsum_of_countable [Countable α] (mx : m α) (f : α → m β)
+    (p : β → Prop) :
+    Pr{let x ← mx; let y ← f x}[p y] = ∑' a, Pr{let x ← mx}[x = a] * Pr{let y ← f a}[p y] :=
+  wp_eq_tsum_of_countable mx _
+
+end Sums
 
 /-! ## Failure
 
@@ -628,9 +509,46 @@ theorem prEvent_const_of_not
 
 section prFail
 
-variable {m : Type → Type v} [Monad m] [EvalDistSemantics m] {α : Type}
+variable {m : Type → Type v} [Monad m] {EPred : Type} [Std.WP.Assertion EPred]
+  [ExpectationWP m EPred] {α : Type}
+
+/-- The probability that a computation fails or does not terminate: the mass its successful-output
+measure is missing, under the expectation interpretation of its monad. -/
+@[expose] noncomputable def prFail {α : Type} (mx : m α) : ℝ≥0∞ :=
+  1 - Pr{let _ ← mx}[True]
 
 theorem prFail_def (mx : m α) : prFail mx = 1 - Pr{let _ ← mx}[True] := rfl
+
+@[simp]
+theorem prFail_le_one (mx : m α) : prFail mx ≤ 1 := tsub_le_self
+
+@[simp, aesop (rule_sets := [finiteness]) safe apply]
+theorem prFail_ne_top (mx : m α) : prFail mx ≠ ⊤ :=
+  ne_top_of_le_ne_top ENNReal.one_ne_top (prFail_le_one mx)
+
+/-- A pure computation never fails. -/
+@[simp, grind =]
+theorem prFail_pure (a : α) : prFail (pure a : m α) = 0 := by
+  simp [prFail_def]
+
+/-- The failure probability of a branch is that of the branch taken. -/
+@[simp]
+theorem prFail_ite (c : Prop) [Decidable c] (mx my : m α) :
+    prFail (if c then mx else my) = if c then prFail mx else prFail my := by
+  split_ifs <;> rfl
+
+/-- Mapping the outputs does not change the failure probability. -/
+@[simp, grind =]
+theorem prFail_map {β : Type} (f : α → β) (mx : m α) : prFail (f <$> mx) = prFail mx := by
+  rw [prFail_def, prFail_def, prEvent_map]
+
+end prFail
+
+section prFailMeasure
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m] {α : Type}
+
 
 /-- Success and failure masses add up to one. -/
 @[simp]
@@ -641,13 +559,6 @@ theorem prEvent_true_add_prFail (mx : m α) : Pr{let _ ← mx}[True] + prFail mx
 @[simp]
 theorem prFail_add_prEvent_true (mx : m α) : prFail mx + Pr{let _ ← mx}[True] = 1 := by
   rw [add_comm, prEvent_true_add_prFail]
-
-@[simp]
-theorem prFail_le_one (mx : m α) : prFail mx ≤ 1 := tsub_le_self
-
-@[simp, aesop (rule_sets := [finiteness]) safe apply]
-theorem prFail_ne_top (mx : m α) : prFail mx ≠ ⊤ :=
-  ne_top_of_le_ne_top ENNReal.one_ne_top (prFail_le_one mx)
 
 /-- A computation never fails exactly when it succeeds with probability one. -/
 theorem prFail_eq_zero_iff (mx : m α) : prFail mx = 0 ↔ Pr{let _ ← mx}[True] = 1 := by
@@ -660,27 +571,9 @@ theorem prFail_eq_one_iff (mx : m α) : prFail mx = 1 ↔ Pr{let _ ← mx}[True]
   by_contra hne
   exact (ENNReal.sub_lt_self ENNReal.one_ne_top one_ne_zero hne).ne h
 
-/-- A pure computation never fails. -/
-@[simp, grind =]
-theorem prFail_pure [LawfulMonad m] [LawfulPureEvalDistSemantics m] (a : α) :
-    prFail (pure a : m α) = 0 := by
-  simp [prFail_def]
-
-/-- The failure probability of a branch is that of the branch taken. -/
-@[simp]
-theorem prFail_ite (c : Prop) [Decidable c] (mx my : m α) :
-    prFail (if c then mx else my) = if c then prFail mx else prFail my := by
-  split_ifs <;> rfl
-
-/-- Mapping the outputs does not change the failure probability. -/
-@[simp, grind =]
-theorem prFail_map [LawfulMonad m] {β : Type} (f : α → β) (mx : m α) :
-    prFail (f <$> mx) = prFail mx := by
-  rw [prFail, prFail, Functor.map_map]
-
 /-- The failure probability is the mass missing from the output measure. -/
-theorem prFail_eq_one_sub_evalDist_univ [LawfulMonad m] [LawfulEvalDistSemantics m]
-    [MeasurableSpace α] (mx : m α) : prFail mx = 1 - 𝒟[mx] Set.univ := by
+theorem prFail_eq_one_sub_evalDist_univ [MeasurableSpace α] (mx : m α) :
+    prFail mx = 1 - 𝒟[mx] Set.univ := by
   rw [prFail_def, prEvent_true_eq_evalDist_apply_univ]
 
-end prFail
+end prFailMeasure

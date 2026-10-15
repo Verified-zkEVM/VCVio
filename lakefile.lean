@@ -17,7 +17,8 @@ computations, probability semantics, program logic, and lattice- and hash-based 
     ⟨`weak.linter.redundantVisibility, true⟩,
     -- Use Mathlib's 1500-line limit downstream too; split files before exceeding it.
     ⟨`weak.linter.style.longFile, .ofNat 1500⟩,
-    -- Acknowledge the experimental core VC generator used by the program logic.
+    -- Core's `vcgen` is experimental in Lean v4.35 and warns unless acknowledged; the
+    -- program logic runs on it, so the package acknowledges it once. Drop when core does.
     ⟨`experimental.vcgen, true⟩,
     -- Disable the unicode allowlist linter: VCVio docstrings legitimately use
     -- FIPS-204 math notation (combining tilde `c̃`) and cited author names with
@@ -41,14 +42,14 @@ script lint (args) do
   child.wait
 
 /-
-Interop backends are intentionally disabled for the Lean 4.35 baseline. Their
+Interop backends are intentionally disabled for the repository's toolchain. Their
 source remains under `Interop/`, isolated from the trusted libraries by
 `scripts/check-interop-isolation.sh`, but the aggregate module and CI do not
 build it. Re-enable a backend only once its upstream Lean library supports the
 repository's Lean version without a local compatibility layer.
 
-The pinned Hax revision still targets Lean 4.29.0-rc1 and is not part of the
-Lean 4.35 build. Subdirectory: `hax-lib/proof-libs/lean`.
+The pinned Hax revision targets Lean 4.29.0-rc1 and is not part of the build.
+Subdirectory: `hax-lib/proof-libs/lean`.
 -/
 -- require Hax from git
 --   "https://github.com/cryspen/hax" @
@@ -108,7 +109,7 @@ Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but no
 /-- Dormant Interop bridges to Rust verification frontends (hax, aeneas).
 Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
 `Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
-excluded from the Lean 4.35 baseline build. -/
+excluded from the default build. -/
 lean_lib Interop
 
 /-

@@ -63,12 +63,10 @@ def PerfectlyCorrect (cs : CommitmentScheme PP M C D) : Prop :=
 
 /-- A commitment scheme is perfectly hiding if, for every honestly generated
 public parameter, the commitment (first component) has the same distribution
-regardless of the committed message. The commitments carry the discrete measurable structure,
-so the distributions agree on every event. -/
+regardless of the committed message: the two commitments agree on every event. -/
 def PerfectlyHiding (cs : CommitmentScheme PP M C D) : Prop :=
-  letI : MeasurableSpace C := ⊤
   ∀ pp, pp ∈ support cs.setup →
-    ∀ m₁ m₂, 𝒟[Prod.fst <$> cs.commit pp m₁] = 𝒟[Prod.fst <$> cs.commit pp m₂]
+    ∀ m₁ m₂, Prod.fst <$> cs.commit pp m₁ =ᵈ Prod.fst <$> cs.commit pp m₂
 
 /-! ### Computational hiding -/
 
@@ -137,8 +135,7 @@ the scheme's normal setup. Required for reductions that swap in the
 trapdoor setup without the adversary noticing. -/
 def TrapdoorExtractor.SetupConsistent {TD : Type} (extractor : TrapdoorExtractor PP TD C M)
     (cs : CommitmentScheme PP M C D) : Prop :=
-  letI : MeasurableSpace PP := ⊤
-  𝒟[Prod.fst <$> extractor.setupExtract] = 𝒟[cs.setup]
+  Prod.fst <$> extractor.setupExtract =ᵈ cs.setup
 
 /-- Extraction experiment: generate parameters with trapdoor, honestly commit
 to message `m`, then check whether the extractor recovers `m` from the commitment.

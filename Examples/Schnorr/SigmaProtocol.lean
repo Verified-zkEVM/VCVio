@@ -10,6 +10,7 @@ public import VCVio.EvalDist.Monad.Branch
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.ProgramLogic.Tactics.Unary
 public import VCVio.ProgramLogic.Tactics.Relational
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Schnorr Σ-protocol
@@ -104,11 +105,9 @@ theorem sigma_complete (g : G) :
     (sigma F G g).PerfectlyComplete := by
   intro pk sk h
   rw [← prEvent_eq_evalDist_singleton]
-  have h_eq : sk • g = pk := of_decide_eq_true h
-  simp only [sigma, monad_norm]
-  have hverify : ∀ (r c : F), (r + c * sk) • g = r • g + c • pk := by
-    intro r c; rw [add_smul, mul_smul, h_eq]
-  simp [hverify]
+  dsimp only [sigma]
+  prvcgen
+  simp_all [add_smul, mul_smul]
 
 /-- Special soundness: from two accepting transcripts `(R, c₁, z₁)` and `(R, c₂, z₂)` with
 `c₁ ≠ c₂`, the extracted witness `(z₁ - z₂) * (c₁ - c₂)⁻¹` satisfies the relation. -/
@@ -207,8 +206,9 @@ theorem sigma_simCommitPredictability [Fintype F] (g : G)
       (f := fun z : F => z • g - c • pk) ((Equiv.subRight (c • pk)).bijective.comp hg)
       (· = c₀)).trans
       ((SampleableType.prEvent_uniformSample_eq_singleton c₀).trans (by rw [hcard_FG]))
+  rw [simTranscript, prEvent_bind]
   refine prEvent_bind_le_of_forall_le ($ᵗ F) _ (fun t : G × F × F => t.1 = c₀) fun c => ?_
-  simpa only [prEvent_norm] using (h_inner c).le
+  simpa only [expect_norm] using (h_inner c).le
 
 /-- **Simulator-challenge uniformity given commit, for Schnorr.** For any commit value
 `c₀ : G` and challenge value `ch₀ : F`, the simulator's joint marginal on
@@ -226,16 +226,17 @@ theorem sigma_simChalUniformGivenCommit [Fintype F] (g : G) :
   classical
   intro pk sk hsk c₀ ch₀
   have hHVZK := sigma_hvzk F G g pk sk hsk
-  rw [← hHVZK.prEvent_eq, ← hHVZK.prEvent_eq, realTranscript_eq_indep]
+  rw [← hHVZK.prEvent_eq, ← hHVZK.prEvent_eq, realTranscript_eq_indep, prEvent_bind,
+    prEvent_bind]
   let cont : F → ProbComp (G × F × F) := fun r => do
     let c ← $ᵗ F
     pure (r • g, c, r + c * sk)
   have hjoint := prEvent_bind_eq_mul_of_ite ($ᵗ F) cont (fun r => r • g = c₀)
     (fun t => t.1 = c₀ ∧ t.2.1 = ch₀) ($ᵗ F) (· = ch₀) fun r => by
-      by_cases hr : r • g = c₀ <;> simp [cont, hr, prEvent_norm]
+      by_cases hr : r • g = c₀ <;> simp [cont, hr]
   have hmarg := prEvent_bind_eq_mul_of_ite ($ᵗ F) cont (fun r => r • g = c₀)
     (fun t => t.1 = c₀) (pure () : ProbComp Unit) (fun _ => True) fun r => by
-      by_cases hr : r • g = c₀ <;> simp [cont, hr, prEvent_norm]
+      by_cases hr : r • g = c₀ <;> simp [cont, hr]
   simp only [cont] at hjoint hmarg
   rw [hjoint, hmarg, SampleableType.prEvent_uniformSample_eq_singleton]
   simp

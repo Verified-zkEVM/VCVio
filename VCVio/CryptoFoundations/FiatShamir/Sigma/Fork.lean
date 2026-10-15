@@ -10,6 +10,8 @@ public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 public import VCVio.CryptoFoundations.FiatShamir.Sigma
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.SeededFork
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 /-!
 # Fiat-Shamir forking infrastructure
@@ -326,6 +328,10 @@ lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_none_iff
   · rintro ⟨v, hz⟩
     exact ⟨v, support_wrapped_query_inr ▸ Set.mem_univ v, hz⟩
 
+section HandlerTriples
+
+open Std.WP OracleComp.ProgramLogic
+
 /-- Running the inner `unifForward + roImpl` simulator against a source computation with
 an `nmaHashQueryBound Q` can grow the internal `queryLog` by at most `Q`.
 
@@ -338,55 +344,26 @@ theorem queryLog_length_le_of_nmaHashQueryBound
     (st : SimState M Commit Chal) {z : α × SimState M Commit Chal}
     (hz : z ∈ support ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) oa).run st)) :
     z.2.2.length ≤ st.2.length + Q := by
-  induction oa using OracleComp.inductionOn generalizing Q st z with
-  | pure x =>
-      obtain rfl : z = (x, st) := by
-        simpa [simulateQ_pure, StateT.run_pure, support_pure] using hz
-      simp
-  | query_bind t mx ih =>
-      rw [nmaHashQueryBound_query_bind_iff (M := M) (Commit := Commit) (Chal := Chal)] at hQ
-      rw [simulateQ_query_bind, StateT.run_bind, support_bind] at hz
-      simp only [Set.mem_iUnion] at hz
-      obtain ⟨us, hus, hz'⟩ := hz
-      cases t with
-      | inl n =>
-          change unifSpec.Range n × SimState M Commit Chal at us
-          rcases st with ⟨cache, log⟩
-          rcases us with ⟨u, usState⟩
-          have hstate := (mem_support_unifForward_run_iff
-            (M := M) (Commit := Commit) (Chal := Chal)
-            n (cache, log) (u, usState)).mp hus
-          change usState = (cache, log) at hstate
-          subst usState
-          simpa using ih u (hQ.2 u) (cache, log) hz'
-      | inr mc =>
-          change Chal × SimState M Commit Chal at us
-          rcases st with ⟨cache, log⟩
-          cases hcache : cache mc with
-          | some v =>
-              have hus' : us ∈ ({(v, cache, log)} : Set _) := by
-                change us ∈ support ((roImpl M Commit Chal mc).run (cache, log)) at hus
-                rw [roImpl_run_some (M := M) (Commit := Commit) (Chal := Chal)
-                  mc cache log v hcache] at hus
-                simpa only [support_pure] using hus
-              obtain rfl := Set.mem_singleton_iff.mp hus'
-              have hrec : z.2.2.length ≤ log.length + (Q - 1) := by
-                simpa using ih v (hQ.2 v) (cache, log) hz'
-              exact le_trans hrec (Nat.add_le_add_left (Nat.sub_le _ _) _)
-          | none =>
-              obtain ⟨u, rfl⟩ : us ∈ Set.range (fun u : Chal =>
-                  (u, cache.cacheQuery mc u, log ++ [mc])) := by
-                change us ∈ support ((roImpl M Commit Chal mc).run (cache, log)) at hus
-                rw [roImpl_run_none (M := M) (Commit := Commit) (Chal := Chal)
-                  mc cache log hcache, support_bind, support_wrapped_query_inr] at hus
-                simpa [support_bind] using hus
-              have hrec : z.2.2.length ≤ (log ++ [mc]).length + (Q - 1) := by
-                simpa using
-                  ih u (hQ.2 u)
-                    ((cache.cacheQuery mc u : (M × Commit →ₒ Chal).QueryCache), log ++ [mc]) hz'
-              have hQpos : 0 < Q := hQ.1
-              simp only [List.length_append, List.length_singleton] at hrec ⊢
-              lia
+  have h := simulateQ_triple_ranked_of_queryBoundP
+    (unifForward M Commit Chal + roImpl M Commit Chal) _
+    (fun k (s : SimState M Commit Chal) => s.2.length + k ≤ st.2.length + Q)
+    (fun t k ht => by
+      rcases t with n | mc
+      · exact absurd ht (by simp)
+      · vcgen [roImpl, Spec.lift_StateT, Necessary.Spec.ofSupport (wrappedChallengeQuery Chal)]
+        all_goals simp_all
+        all_goals omega)
+    (fun t k ht => by
+      rcases t with n | mc
+      · refine (triple_stateT_iff_forall_support _ _ _ ⊥).2 fun s hs a s' hmem => ?_
+        have hs' : s' = s := (mem_support_unifForward_run_iff (M := M) (Commit := Commit)
+          (Chal := Chal) n s (a, s')).1 hmem
+        exact hs' ▸ hs
+      · exact absurd (by simp) ht)
+    (fun k s hs => by simp only at hs ⊢; omega) oa Q hQ
+  simpa using (triple_stateT_iff_forall_support _ _ _ ⊥).1 h st (by simp) z.1 z.2 hz
+
+end HandlerTriples
 
 /-- Replay a managed-RO NMA adversary against a single counted challenge oracle, keeping both
 the adversary-returned cache and the live query log that the forking lemma can rewind.

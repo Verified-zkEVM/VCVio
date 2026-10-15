@@ -63,7 +63,7 @@ def Adversary.openingAccountingFinish
   let _claims ← adversary.opening privateState extractorState
   pure ()
 
-/-- The residual accounting runner is exactly the previously exposed whole-adversary prefix
+/-- The residual accounting runner is exactly the exposed whole-adversary prefix
 program. Consequently, clients state one ordinary global query bound and never mention the
 proof-only logged runner. -/
 theorem Adversary.runCommitmentsThenAccounting_opening_eq_prefixProgram

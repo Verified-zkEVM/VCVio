@@ -29,13 +29,14 @@ universe v v' v''
 
 section defs
 
-variable {m : Type → Type v} {m' : Type → Type v'} [EvalDistSemantics m] [EvalDistSemantics m']
-  [Monad m] [Monad m'] {α : Type}
+variable {m : Type → Type v} {m' : Type → Type v'} [Monad m] [Monad m'] [LawfulMonad m]
+  [LawfulMonad m'] [EvalDistSemantics m] [EvalDistSemantics m'] [LawfulEvalDistSemantics m]
+  [LawfulEvalDistSemantics m'] {α : Type}
 
 /-- Two computations are equal in distribution when every event has the same probability under
 both. -/
 def EvalDistEq (mx : m α) (my : m' α) : Prop :=
-  ∀ p : α → Prop, Pr{let x ← mx}[p x] = Pr{let y ← my}[p y]
+  ∀ p : α → Prop, Pr{let x ← mx}[p x] = Pr{let x ← my}[p x]
 
 @[inherit_doc] infix:50 " =ᵈ " => EvalDistEq
 
@@ -44,17 +45,19 @@ end defs
 namespace EvalDistEq
 
 variable {m : Type → Type v} {m' : Type → Type v'} {m'' : Type → Type v''}
-  [Monad m] [Monad m'] [Monad m''] [EvalDistSemantics m] [EvalDistSemantics m']
-  [EvalDistSemantics m''] {α β : Type}
+  [Monad m] [Monad m'] [Monad m''] [LawfulMonad m] [LawfulMonad m'] [LawfulMonad m'']
+  [EvalDistSemantics m] [EvalDistSemantics m'] [EvalDistSemantics m'']
+  [LawfulEvalDistSemantics m] [LawfulEvalDistSemantics m'] [LawfulEvalDistSemantics m'']
+  {α β : Type}
 
 /-- Equality in distribution gives every event the same probability. -/
 theorem prEvent_eq {mx : m α} {my : m' α} (h : mx =ᵈ my) (p : α → Prop) :
-    Pr{let x ← mx}[p x] = Pr{let y ← my}[p y] :=
+    Pr{let x ← mx}[p x] = Pr{let x ← my}[p x] :=
   h p
 
 /-- Computations whose events all have the same probabilities are equal in distribution. -/
 theorem of_forall_prEvent_eq {mx : m α} {my : m' α}
-    (h : ∀ p : α → Prop, Pr{let x ← mx}[p x] = Pr{let y ← my}[p y]) : mx =ᵈ my :=
+    (h : ∀ p : α → Prop, Pr{let x ← mx}[p x] = Pr{let x ← my}[p x]) : mx =ᵈ my :=
   h
 
 @[refl, simp]
@@ -69,23 +72,22 @@ theorem trans {mx : m α} {my : m' α} {mz : m'' α} (h₁ : mx =ᵈ my) (h₂ :
     mx =ᵈ mz :=
   fun p ↦ (h₁ p).trans (h₂ p)
 
+/-- Equalities in distribution chain in `calc` blocks, across monads. -/
 instance : @Trans (m α) (m' α) (m'' α) EvalDistEq EvalDistEq EvalDistEq := ⟨trans⟩
 
+/-- Equality in distribution is reflexive. -/
 instance : Std.Refl (α := m α) EvalDistEq := ⟨refl⟩
 
+/-- Equality in distribution is symmetric. -/
 instance : Std.Symm (α := m α) EvalDistEq := ⟨fun _ _ ↦ symm⟩
 
+/-- Equality in distribution is transitive. -/
 instance : IsTrans (m α) EvalDistEq := ⟨fun _ _ _ ↦ trans⟩
 
 /-- A common map preserves equality in distribution. -/
-theorem map [LawfulMonad m] [LawfulMonad m'] {mx : m α} {my : m' α} (h : mx =ᵈ my) (f : α → β) :
+theorem map {mx : m α} {my : m' α} (h : mx =ᵈ my) (f : α → β) :
     f <$> mx =ᵈ f <$> my :=
   fun p ↦ by simpa only [prEvent_map] using h fun x ↦ p (f x)
-
-section lawful
-
-variable [LawfulMonad m] [LawfulMonad m'] [LawfulEvalDistSemantics m]
-  [LawfulEvalDistSemantics m']
 
 /-- Computations equal in distribution have the same output measure in every measurable
 structure on their outputs. -/
@@ -115,25 +117,25 @@ theorem _root_.evalDistEq_iff_forall_prEvent_eq_output [Countable α] {mx : m α
   rw [← prEvent_eq_evalDist_singleton, ← prEvent_eq_evalDist_singleton]
   exact h x
 
+/-- Computations equal in distribution give every observation the same expectation. -/
+theorem wp_eq {mx : m α} {my : m' α} (h : mx =ᵈ my) (g : α → ℝ≥0∞) : wp⟦mx⟧ g = wp⟦my⟧ g := by
+  let : MeasurableSpace α := ⊤
+  rw [ExpectationWP.wp_eq_lintegral mx g Measurable.of_discrete,
+    ExpectationWP.wp_eq_lintegral my g Measurable.of_discrete, h.evalDist_eq]
+
 /-- Binds of computations and continuations equal in distribution are equal in distribution. -/
 theorem bind {mx : m α} {my : m' α} (h : mx =ᵈ my) {f : α → m β} {g : α → m' β}
-    (hfg : ∀ a, f a =ᵈ g a) : mx >>= f =ᵈ my >>= g := by
-  let : MeasurableSpace α := ⊤
-  intro p
-  rw [map_bind, map_bind, prEvent_bind_of_discrete, prEvent_bind_of_discrete, h.evalDist_eq]
-  exact lintegral_congr fun a ↦ hfg a p
-
-end lawful
+    (hfg : ∀ a, f a =ᵈ g a) : mx >>= f =ᵈ my >>= g := fun p ↦ by
+  rw [prEvent_bind, prEvent_bind, h.wp_eq]
+  exact ExpectationWP.wp_congr my fun a ↦ hfg a p
 
 section sameMonad
 
 /-- A common map is a congruence for equality in distribution within one monad. -/
 @[gcongr]
-theorem map_congr [LawfulMonad m] (f : α → β) {mx my : m α} (h : mx =ᵈ my) :
+theorem map_congr (f : α → β) {mx my : m α} (h : mx =ᵈ my) :
     f <$> mx =ᵈ f <$> my :=
   h.map f
-
-variable [LawfulMonad m] [LawfulEvalDistSemantics m]
 
 /-- Bind is a congruence for equality in distribution within one monad. -/
 @[gcongr]

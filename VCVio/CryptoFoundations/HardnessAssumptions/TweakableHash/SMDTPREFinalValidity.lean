@@ -19,9 +19,9 @@ declared subspace for every query, returns the corresponding image, and records 
 target cap and tweak-separation conditions enter the final winning condition through the shared
 sticky monitor.
 
-`TweakableHash.SM_DT_PRE_Experiment` is the live rejection-on-arrival experiment. The declarations
-in `TweakableHash.SM_DT_PRE_SourceFinalValidity` name a distinct adaptive game and leave that
-experiment unchanged, with a proved bridge between the two views:
+`TweakableHash.SM_DT_PRE_Experiment` is the rejection-on-arrival experiment. The declarations
+in `TweakableHash.SM_DT_PRE_SourceFinalValidity` name a distinct adaptive game, separate from
+that experiment, with a proved bridge between the two views:
 `TweakableHash.SM_DT_PRE_advantage_toSourceFinalValidity` converts an adversary against that
 experiment into one against this game at the same advantage.
 

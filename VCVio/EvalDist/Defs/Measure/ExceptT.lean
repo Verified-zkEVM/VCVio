@@ -13,7 +13,7 @@ public import ToMathlib.MeasureTheory.Measure.Except
 
 An `ExceptT ε m` computation denotes the pullback of its underlying `Except ε α`-valued
 measure along the measurable embedding `Except.ok`. Errors are therefore missing successful
-mass, while the effect-preserving denotation remains available by observing `mx.run` directly.
+mass, while the effect-preserving denotation is available by observing `mx.run` directly.
 
 The construction uses Mathlib's `Measure.comap`; no transformer-specific measure operation is
 needed. The pure, map, and bind laws inherit the base monad's measure laws. Successful-output

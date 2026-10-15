@@ -11,8 +11,8 @@ public import VCVio.StateSeparating.DistEquiv
 /-!
 # Weighted stateful-handler measure equivalence
 
-A weighted handler can be observationally equivalent to a constant handler while still having
-more possible outputs. Equivalence lifts through every adaptive client without
+A weighted handler can be observationally equivalent to a constant handler while having more
+possible outputs. Equivalence lifts through every adaptive client without
 uniformity or positive mass on each operational branch.
 -/
 

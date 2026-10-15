@@ -226,10 +226,11 @@ hidden counter state, real-valued outputs, and different continuation output typ
 
 ## Native probability-equality planner checkpoint
 
-The `vcstep` probability-equality planner recognizes native goals: equalities of `Pr{…}[…]`
-events, of applied `𝒟[…]` masses, and of output measures. Swaps rewrite with the native bind-swap
-laws, under shared prefixes through measure congruence, and congruence leaves the continuations
-on the structural support of the shared prefix. The retiring scalar goals keep their existing
+The probability-equality planner of `pvcstep`, whose steps are the `prrw` family today,
+recognizes native goals: equalities of `Pr{…}[…]` events, of applied `𝒟[…]` masses, and of output
+measures. Swaps rewrite with the native bind-swap laws, under shared prefixes through measure
+congruence, and congruence leaves the continuations on the structural support of the shared
+prefix. The retiring scalar goals keep their existing
 actions. Native Hoare lowering lemmas use `prEvent` names, and the singleton-output variants,
 which are the events `(· = x)`, are removed. `VCVioTest/ProbabilityTactics.lean` gates the
 native `simp` and planner contract and records the remaining `simp` gaps.
@@ -276,14 +277,14 @@ directly from its measure laws.
 
 ## State-separating equivalence checkpoint
 
-State-separating packages compare handlers by `MeasureDistEquiv`: equal output measures for
+State-separating packages compare handlers by `DistEquiv`: equal event probabilities for
 every client, with the `≡ᵈ` and `≡ᵈ₀` notation. A handler step that agrees with another after
 transporting its state along a bijection gives an equivalence (`of_step_bij`), and parallel
 composition is congruent in both components under uniform measure specifications
 (`parSum_congr`). Distinguishing advantages are read off equivalences directly, so the scalar
 equivalence and advantage modules are removed. The heap one-time pad proves its single and paired
 encryption equivalences from the uniform-mask bijection, and the ElGamal state-separating proof
-states its random-branch swap as a measure equivalence.
+states its random-branch swap as a distribution equivalence.
 
 ## Cell-frame and instrumentation checkpoint
 
@@ -527,7 +528,7 @@ The per-query `PMF` interpretations are deprecated: `OracleSpec.IsProbabilitySpe
 `OracleSpec.IsMeasureSpec`, `OracleSpec.IsUniformMeasureSpec`, and
 `IsUniformMeasureSpec.ofFiniteNonempty`; the polynomial-functor forms point to
 `PFunctor.IsMeasureSpec` and `PFunctor.IsMeasureSpec.uniformOfFiniteNonempty`. `NeverFail`, `EvalDistCompatible`, and
-`DiscreteEvalDistCompatible` were already deprecated. The `usesRetiredProbability` linter now
+`DiscreteEvalDistCompatible` were already deprecated. The `usesPMF` linter now
 reports direct uses of all seven classes as well as the scalar API, which enrolled thirty
 declarations that used a class without the scalar functions: the class fields and
 constructors themselves, the uniform instances and the bridge instance they feed, the

@@ -58,7 +58,7 @@ slot-positive case. They form the structural foundation of the slot-positive tag
 
 Both step lemmas are direct corollaries of `multipleTableHandler_tag_run_of_lt` and
 `singleTableHandler_tag_run_of_lt`, specialized to the slot-positive case where the
-zero-slot rewrite `Fin.ext hzero` of the slot-zero tag case no longer applies. -/
+zero-slot rewrite `Fin.ext hzero` of the slot-zero tag case does not apply. -/
 
 /-- **S tag step at slot-positive.** Under `hslot : s.sessionsUsed tag < sessionsPerTag`,
 the `singleTableHandler` `Sum.inl tag` branch on `tableExtending c gS` samples a fresh nonce and

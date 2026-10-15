@@ -91,10 +91,10 @@ lemma finSupport_uniformSelectArray [DecidableEq α] :
     finSupport ($ xs) = xs.toList.toFinset := by
   simp [finSupport_eq_iff_support_eq_coe, support_uniformSelectArray]
 
--- TODO: `prEvent_uniformSelectArray` analogous to `prEvent_uniformSelectList`. It needs a
--- careful `Fin (xs.size - 1 + 1) ≃ Fin xs.size` reindexing that the present helpers don't cleanly
--- factor. Bridging through `xs.toList` once a clean `($ xs : OptionT ProbComp α) = $ xs.toList`
--- lemma lands is probably the right path.
+-- TODO: prove `prEvent_uniformSelectArray`, the event law of an array draw that matches
+-- `prEvent_uniformSelectList`. A direct proof reindexes along
+-- `Fin (xs.size - 1 + 1) ≃ Fin xs.size`, which the available helpers do not factor cleanly. A lemma
+-- `($ xs : OptionT ProbComp α) = $ xs.toList` would instead reduce it to the list law.
 
 end uniformSelectArray
 

@@ -64,9 +64,8 @@ bounded traversals, bind decomposition, or random/query coupling.
 - `simulateQ` state relation
 
 `rvcstep left` and `rvcstep right` expose controlled one-sided bind steps for
-raw `VCVio.ProgramLogic.rwp` and folded `VCVio.ProgramLogic.RelTriple` goals. They do not
-run as part
-of default relational automation, because choosing an asynchronous split fixes a
+raw `VCVio.ProgramLogic.rwp` and folded `VCVio.ProgramLogic.RelTriple` goals. They are not part
+of the default relational automation, because choosing an asynchronous split fixes a
 coupling frontier.
 
 `rvcstep sym` swaps the two sides of a qualitative `RelTriple` goal and swaps
@@ -281,7 +280,7 @@ macro "rel_inline" ids:ident* : tactic =>
   if ids.size > 0 then
     `(tactic|
       (unfold $ids*
-       try simp only [game_rule]
+       try simp only [expect_norm, expect_eval]
        try first
          | exact OracleComp.ProgramLogic.Relational.relTriple_true _ _
          | (refine OracleComp.ProgramLogic.Relational.relTriple_post_const ?_
@@ -292,7 +291,7 @@ macro "rel_inline" ids:ident* : tactic =>
          | (apply OracleComp.ProgramLogic.Relational.relTriple_pure_pure; assumption)))
   else
     `(tactic|
-      (simp only [game_rule]
+      (simp only [expect_norm, expect_eval]
        try first
          | exact OracleComp.ProgramLogic.Relational.relTriple_true _ _
          | (refine OracleComp.ProgramLogic.Relational.relTriple_post_const ?_
@@ -341,16 +340,32 @@ macro_rules
       refine EvalDistEq.trans (my := $g) ?_ ?_)
 
 /-- `by_dist` transforms an advantage bound goal into an advantage bound for a second game
-together with a total variation bound between the two games. -/
+together with a total variation bound between the two games. `by_dist hybrid games n` runs a
+hybrid argument instead: the bound of `games n` and the distance of each consecutive pair
+`games i`, `games (i + 1)` for `i < n`, through `AdvBound.of_hybrid`. -/
 syntax "by_dist" (term)? : tactic
+
+@[inherit_doc tacticBy_dist_, tactic_alt tacticBy_dist_]
+syntax (priority := high) "by_dist" &"hybrid" term:max term:max : tactic
 
 macro_rules
   | `(tactic| by_dist) =>
     `(tactic|
-      apply OracleComp.ProgramLogic.AdvBound.of_measureETVDist)
+      apply OracleComp.ProgramLogic.AdvBound.of_etvDist)
   | `(tactic| by_dist $eps) =>
     `(tactic|
-      (apply OracleComp.ProgramLogic.AdvBound.of_measureETVDist (ε₂ := $eps)))
+      (apply OracleComp.ProgramLogic.AdvBound.of_etvDist (ε₂ := $eps)))
+  | `(tactic| by_dist hybrid $games $n) =>
+    `(tactic|
+      (apply OracleComp.ProgramLogic.AdvBound.of_hybrid (games := $games) (n := $n)))
+
+/-- `by_approx` reduces an approximate relational triple `ApproxRelTriple ε oa ob R` to two
+goals: the quantitative `RelTriple` of the indicator postcondition from an open precondition,
+which `rvcstep` / `rvcgen` decompose with the rules of the quantitative carrier and so compute,
+then the comparison of that precondition with `1 - ε`
+(`OracleComp.Rel.Quantitative.approxRelTriple_of_relTriple`). -/
+macro (name := byApprox) "by_approx" : tactic =>
+  `(tactic| apply OracleComp.Rel.Quantitative.approxRelTriple_of_relTriple)
 
 /-- `by_upto bad` applies the "identical until bad" total-variation theorem for `simulateQ`.
 It leaves the standard three subgoals: agreement off bad states, and bad-state monotonicity for
@@ -363,7 +378,7 @@ elab_rules : tactic
         return
       let target ← instantiateMVars (← getMainTarget)
       throwError
-        "by_upto: expected a `measureETVDist` goal for two `simulateQ ... run'` computations\n\
+        "by_upto: expected an `etvDist` goal for two `simulateQ ... run'` computations\n\
         bounded by\n\
         the probability of a bad event on the left simulation;\n\
         got:{indentExpr target}"

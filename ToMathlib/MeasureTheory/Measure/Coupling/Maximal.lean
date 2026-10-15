@@ -9,6 +9,7 @@ module
 public import ToMathlib.MeasureTheory.Measure.Coupling
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import Mathlib.MeasureTheory.Measure.Dirac.Basic
+public import ToMathlib.MeasureTheory.Measure.FinsetConcentrated
 
 /-!
 # Maximal couplings of finitely supported measures
@@ -28,24 +29,6 @@ open ENNReal
 namespace MeasureTheory.Measure
 
 variable {α : Type*} [MeasurableSpace α] [MeasurableSingletonClass α]
-
-/-- A measure concentrated on a finite set gives each event the mass of its points in that set. -/
-theorem apply_eq_sum_indicator_of_compl_eq_zero {μ : Measure α} {F : Finset α}
-    (hF : μ (↑F)ᶜ = 0) (s : Set α) : μ s = ∑ a ∈ F, s.indicator (fun a => μ {a}) a := by
-  classical
-  have hset : s ∩ ↑F = ↑(F.filter (· ∈ s)) := by
-    ext x
-    simp [and_comm]
-  rw [← measure_inter_conull hF, hset, ← sum_measure_singleton, Finset.sum_filter]
-  exact Finset.sum_congr rfl fun a _ => by simp [Set.indicator_apply]
-
-/-- Measures concentrated on a common finite set agree when they agree on its points. -/
-theorem ext_of_compl_eq_zero {μ ν : Measure α} {F : Finset α} (hμ : μ (↑F)ᶜ = 0)
-    (hν : ν (↑F)ᶜ = 0) (h : ∀ a ∈ F, μ {a} = ν {a}) : μ = ν :=
-  ext fun s _ => by
-    rw [apply_eq_sum_indicator_of_compl_eq_zero hμ, apply_eq_sum_indicator_of_compl_eq_zero hν]
-    refine Finset.sum_congr rfl fun a ha => ?_
-    by_cases has : a ∈ s <;> simp [has, h a ha]
 
 /-- A probability measure concentrated on a finite set has point masses summing to one. -/
 theorem sum_apply_singleton_eq_one {μ : Measure α} [IsProbabilityMeasure μ] {F : Finset α}
@@ -158,7 +141,8 @@ theorem IsCoupling.apply_diag_le {μ ν : Measure α} {c : Measure (α × α)}
       _ = ν {a} := by rw [← Measure.snd_apply (measurableSet_singleton a), hc.snd_eq]
 
 /-- The maximal coupling of two measures on a finite set: the overlap `min (μ {a}) (ν {a})` sits
-on the diagonal, and the residual masses are spread independently. -/
+on the diagonal, and the residual masses are spread independently. It is a coupling of `μ` and `ν`
+when both are probability measures concentrated on `F` (`isCoupling_maximalCoupling`). -/
 def maximalCoupling (F : Finset α) (μ ν : Measure α) : Measure (α × α) :=
   (∑ a ∈ F, min (μ {a}) (ν {a}) • dirac (a, a)) +
     ∑ a ∈ F, ∑ b ∈ F,

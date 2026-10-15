@@ -20,7 +20,7 @@ query; reusing it with different children produces distinct complete queries.
 The probability proof, stopping-time argument, extractor, and error numerator are inherited from
 the generic owner. This file deliberately exposes no parallel proof kernel.
 
-`Address` and `Y` are currently `Type` because `NodeQuery Address Y` is the homogeneous query type
+`Address` and `Y` live in `Type` because `NodeQuery Address Y` is the homogeneous query type
 passed to the Type-0 birthday-bound machinery. This is an inherited framework boundary, not a
 mathematical restriction of addressed extraction.
 -/

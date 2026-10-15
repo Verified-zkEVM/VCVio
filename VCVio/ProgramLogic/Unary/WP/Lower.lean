@@ -17,18 +17,23 @@ public import PolyFun.Control.Monad.Algebra.WP
 public import PolyFun.Control.Do.Spec
 
 /-!
-# Quantitative weakest preconditions
+# The lower reading: expectations as weakest preconditions
 
-The expectation algebra on `OracleComp spec` gives a core `WPMonad` interpretation
-with `ℝ≥0∞` assertions. Enable it with `open scoped OracleComp.Lower`.
-The algebra-to-WP bridge and lattice instances come from PolyFun. The transformer
-lemmas describe expectation after running state, reader, option, exception, and writer layers.
+The expectation algebra on `OracleComp spec` is a core `WPMonad` interpretation with `ℝ≥0∞`
+assertions. `open scoped OracleComp.Lower` selects it as the lower reading: `wp oa post ⊥`, core
+triples and `vcgen` then read expectations, and a triple `⦃ pre ⦄ oa ⦃ post ⦄` states the lower
+bound `pre ≤ wp⟦oa⟧ post`. The notations `Pr{…}[…]`, `𝔼{…}[…]` and `wp⟦oa⟧ g` name this
+interpretation explicitly, so they mean the expectation in every scope. The algebra-to-WP bridge
+and lattice instances come from PolyFun. The transformer lemmas describe expectation after running
+state, reader, option, exception, and writer layers.
 
-This interpretation is quantitative. Structural reachability and its qualitative
-interpretation are independent of the choice of probability semantics.
+Core selects one interpretation per program type, since its assertion carriers are output
+parameters: the global reading of `OracleComp` is the necessary one (`OracleComp.Necessary`), and
+this scope, like `OracleComp.Possible`, `OracleComp.Upper` and `OracleComp.Probabilistic`, takes
+precedence while it is open.
 -/
 
-@[expose] public section
+public section
 
 open ENNReal MeasureTheory
 open Lean.Order
@@ -50,7 +55,7 @@ noncomputable instance instMAlgOrdered : MAlgOrdered (OracleComp spec) ℝ≥0�
   ExpectationWP.algebra (OracleComp spec)
 
 /-- The expectation of the identity under the configured oracle answer measures. -/
-noncomputable def μ (oa : OracleComp spec ℝ≥0∞) : ℝ≥0∞ :=
+@[expose] noncomputable def μ (oa : OracleComp spec ℝ≥0∞) : ℝ≥0∞ :=
   MAlgOrdered.μ oa
 
 end OracleComp.ProgramLogic
@@ -63,11 +68,18 @@ variable {ι : Type u} {spec : OracleSpec ι}
 variable [OracleSpec.AnswerMeasure spec]
 variable {α β : Type}
 
-/-- Core weakest preconditions from the quantitative expectation algebra.
-Enable with `open scoped OracleComp.Lower`. -/
-noncomputable scoped instance instWP :
+/-- Core weakest preconditions under the configured oracle answer measures: the expectation
+interpretation `ExpectationWP.wpMonad`, so `wp oa post ⊥` is `wp⟦oa⟧ post`. Opening the
+scope selects it over the global necessary reading. -/
+noncomputable scoped instance (priority := 1100) instWP :
     Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ EStack⟨⟩ :=
-  MAlgOrdered.toWPMonad
+  ExpectationWP.wpMonad (OracleComp spec)
+
+/-- The lower reading as a direct `WP` instance on programs, at the scope's priority, so that no
+direct instance of another scope outranks it while this one is open. -/
+noncomputable scoped instance (priority := 1100) wpInst :
+    Std.WP.WP (OracleComp spec α) α ℝ≥0∞ EStack⟨⟩ :=
+  (instWP (spec := spec)).toWP α
 
 /-! ## `StateT (OracleComp spec)` WP normalization -/
 

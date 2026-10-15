@@ -9,6 +9,7 @@ public import VCVio.EvalDist.Defs.Measure.Failure
 public import VCVio.EvalDist.ProbabilityNotation
 public import ToMathlib.Control.Except
 public import ToMathlib.Control.Option
+public import ToMathlib.Control.Monad.Algebra
 
 /-!
 # Successful-output measures for deterministic computations
@@ -115,51 +116,74 @@ instance (priority := 20) instLawfulEvalDistSemanticsExcept {ε : Type u} :
     | error _ => exact (Measure.bind_zero_left fun x ↦ 𝒟[f x]).symm
     | ok x => exact (Measure.dirac_bind hf x).symm
 
-/-! ## Events of deterministic computations -/
+/-! ## Expectations and events of deterministic computations
+
+The expectation laws are stated for every observation, so `simp` applies them to events too; the
+event forms follow. -/
+
+/-- An absent optional result has expectation zero. -/
+@[simp, grind =]
+theorem Option.wp_none {α : Type} (g : α → ENNReal) : wp⟦(none : Option α)⟧ g = 0 := by
+  let : MeasurableSpace α := ⊤
+  rw [ExpectationWP.wp_eq_lintegral _ g Measurable.of_discrete, Option.evalDist_none,
+    lintegral_zero_measure]
 
 /-- An absent optional result makes every event impossible. -/
-@[simp, grind =]
-theorem Option.prEvent_none : prEvent (none : Option Prop) = 0 := by
-  rw [prEvent_def, Option.evalDist_none, Measure.coe_zero, Pi.zero_apply]
+theorem Option.prEvent_none {α : Type} (p : α → Prop) : Pr{let x ← (none : Option α)}[p x] = 0 :=
+  Option.wp_none _
 
-/-- A present optional proposition has probability one exactly when it holds. -/
-@[simp, grind =]
-theorem Option.prEvent_some (P : Prop) [Decidable P] :
-    prEvent (some P) = if P then 1 else 0 :=
-  prEvent_pure_prop (m := Option) P
-
-/-- No event of an absent optional result succeeds. -/
+/-- The expectation of a present optional result is the observation at that result. `simp`
+applies PolyFun's `ExactWPMonad.wp_some`. -/
 @[grind =]
-theorem Option.prEvent_map_none {α : Type} (p : α → Prop) :
-    prEvent (p <$> (none : Option α)) = 0 :=
-  Option.prEvent_none
+theorem Option.wp_some {α : Type} (x : α) (g : α → ENNReal) : wp⟦some x⟧ g = g x :=
+  ExpectationWP.wp_pure (m := Option) x g
 
-/-- An event of a present optional result has probability one exactly when it holds. -/
-@[grind =]
-theorem Option.prEvent_map_some {α : Type} (p : α → Prop) (x : α) [Decidable (p x)] :
-    prEvent (p <$> some x) = if p x then 1 else 0 :=
-  Option.prEvent_some (p x)
+/-- An event of a present optional result is the indicator of the event at that result. -/
+theorem Option.prEvent_some {α : Type} (x : α) (p : α → Prop) :
+    Pr{let y ← some x}[p y] = propInd (p x) :=
+  Option.wp_some x _
+
+/-- An exceptional result has expectation zero. -/
+@[simp, grind =]
+theorem Except.wp_error {ε : Type u} {α : Type} (error : ε) (g : α → ENNReal) :
+    wp⟦(Except.error error : Except ε α)⟧ g = 0 := by
+  let : MeasurableSpace α := ⊤
+  rw [ExpectationWP.wp_eq_lintegral _ g Measurable.of_discrete, Except.evalDist_error,
+    lintegral_zero_measure]
 
 /-- An exceptional result makes every event impossible. -/
-@[simp, grind =]
-theorem Except.prEvent_error {ε : Type u} (error : ε) :
-    prEvent (Except.error error : Except ε Prop) = 0 := by
-  rw [prEvent_def, Except.evalDist_error, Measure.coe_zero, Pi.zero_apply]
+theorem Except.prEvent_error {ε : Type u} {α : Type} (error : ε) (p : α → Prop) :
+    Pr{let x ← (Except.error error : Except ε α)}[p x] = 0 :=
+  Except.wp_error error _
 
-/-- A successful exceptional proposition has probability one exactly when it holds. -/
+/-- The expectation of a successful exceptional result is the observation at that result. -/
 @[simp, grind =]
-theorem Except.prEvent_ok {ε : Type u} (P : Prop) [Decidable P] :
-    prEvent (Except.ok P : Except ε Prop) = if P then 1 else 0 :=
-  prEvent_pure_prop (m := Except ε) P
+theorem Except.wp_ok {ε : Type u} {α : Type} (x : α) (g : α → ENNReal) :
+    wp⟦(Except.ok x : Except ε α)⟧ g = g x :=
+  ExpectationWP.wp_pure (m := Except ε) x g
+
+/-- An event of a successful exceptional result is the indicator of the event at that result. -/
+theorem Except.prEvent_ok {ε : Type u} {α : Type} (x : α) (p : α → Prop) :
+    Pr{let y ← (Except.ok x : Except ε α)}[p y] = propInd (p x) :=
+  Except.wp_ok x _
+
+/-- No event of an absent optional result succeeds. -/
+theorem Option.prEvent_map_none {α : Type} (p : α → Prop) :
+    Pr{let q ← p <$> (none : Option α)}[q] = 0 := by
+  simp
+
+/-- An event of a present optional result has probability one exactly when it holds. -/
+theorem Option.prEvent_map_some {α : Type} (p : α → Prop) (x : α) [Decidable (p x)] :
+    Pr{let q ← p <$> some x}[q] = if p x then 1 else 0 := by
+  simp [propInd]
 
 /-- No event of an exceptional result succeeds. -/
-@[grind =]
 theorem Except.prEvent_map_error {ε : Type u} {α : Type} (p : α → Prop) (error : ε) :
-    prEvent (p <$> (Except.error error : Except ε α)) = 0 :=
-  Except.prEvent_error error
+    Pr{let q ← p <$> (Except.error error : Except ε α)}[q] = 0 := by
+  simp
 
 /-- An event of a successful exceptional result has probability one exactly when it holds. -/
-@[grind =]
 theorem Except.prEvent_map_ok {ε : Type u} {α : Type} (p : α → Prop) (x : α)
-    [Decidable (p x)] : prEvent (p <$> (Except.ok x : Except ε α)) = if p x then 1 else 0 :=
-  Except.prEvent_ok (p x)
+    [Decidable (p x)] :
+    Pr{let q ← p <$> (Except.ok x : Except ε α)}[q] = if p x then 1 else 0 := by
+  simp [propInd]

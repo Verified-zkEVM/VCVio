@@ -5,9 +5,11 @@ Generates markdown tables for:
 1. Tactic declarations (from ProgramLogic/)
 2. Notation declarations (from VCVio/)
 3. Simp lemma catalog (from EvalDist/Monad/)
+4. Registered `@[spec]` rules of the program logic, by namespace
 
 Usage:
   python scripts/extract-doc-fragments.py           # print fragments
+  python scripts/extract-doc-fragments.py --write   # splice the fragments into docs/agents
   python scripts/extract-doc-fragments.py --check    # check if docs are up to date
 """
 
@@ -36,6 +38,17 @@ SIMP_LEMMA_RE = re.compile(
     r'(?:protected\s+)?(?:theorem|lemma|def)\s+(\w+)'
 )
 
+SPEC_RULE_DIRS = [
+    PROGRAM_LOGIC_DIR,
+    REPO_ROOT / "ToMathlib" / "Control" / "WriterT",
+    REPO_ROOT / "ToMathlib" / "Control" / "Monad" / "Fold",
+]
+SPEC_ATTR_RE = re.compile(
+    r'@\[([^\]]*)\]\s*(?:protected\s+)?(?:theorem|lemma)\s+([\w.\'!?₀-₉ₐ-ₜᵢ-ᵪ]+)'
+)
+SPEC_TOKEN_RE = re.compile(r'^spec(?:\s+(?:high|low|mid)(?:\s*[+-]\s*\d+)?)?$')
+SPEC_ATTRIBUTE_CMD_RE = re.compile(r'^attribute\s+\[(spec[^\]]*)\]\s+([\w.\'!?₀-₉ₐ-ₜᵢ-ᵪ]+)', re.M)
+NAMESPACE_RE = re.compile(r'^(namespace|end)\s+([\w.\'₀-₉ₐ-ₜᵢ-ᵪ]+)\s*$', re.M)
 BEGIN_AUTO_RE = re.compile(r'<!--\s*BEGIN AUTO:(\w+)\s*-->')
 END_AUTO_RE = re.compile(r'<!--\s*END AUTO:(\w+)\s*-->')
 
@@ -94,6 +107,94 @@ def format_notation_table(notations: list[tuple[str, str, str]]) -> str:
     return "\n".join(lines)
 
 
+def namespace_at(text: str, position: int) -> str:
+    """The namespace open at `position`, from the `namespace`/`end` commands before it."""
+    stack: list[str] = []
+    for m in NAMESPACE_RE.finditer(text, 0, position):
+        if m.group(1) == "namespace":
+            stack.append(m.group(2))
+        elif stack and stack[-1] == m.group(2):
+            stack.pop()
+    return ".".join(stack)
+
+
+EXPECT_SETS = ("expect_norm", "expect_eval", "expect_arith")
+EXPECT_SET_DIRS = [VCVIO_DIR, REPO_ROOT / "ToMathlib"]
+EXPECT_ATTR_RE = re.compile(
+    r'@\[([^\]]*)\]\s*(?:protected\s+)?(?:theorem|lemma|def)\s+([\w.\'!?₀-₉ₐ-ₜᵢ-ᵪ]+)')
+EXPECT_ATTRIBUTE_CMD_RE = re.compile(
+    r'^attribute\s+\[([^\]]*)\]((?:[^\n]*)(?:\n[ \t]+[^\n]+)*)', re.M)
+
+
+def extract_expect_sets() -> dict[str, list[tuple[str, str]]]:
+    """The members of the expectation simp sets, as tagged in the sources: set ↦ [(name, file)]."""
+    sets: dict[str, list[tuple[str, str]]] = {name: [] for name in EXPECT_SETS}
+    for base in EXPECT_SET_DIRS:
+        for lean_file in sorted(base.rglob("*.lean")):
+            text = lean_file.read_text()
+            rel_path = str(lean_file.relative_to(REPO_ROOT))
+            for m in EXPECT_ATTR_RE.finditer(text):
+                tokens = [t.strip().split(" ")[0] for t in m.group(1).split(",")]
+                ns = namespace_at(text, m.start())
+                raw = m.group(2)
+                name = raw.removeprefix("_root_.") if raw.startswith("_root_.") else (
+                    f"{ns}.{raw}" if ns else raw)
+                for token in tokens:
+                    if token in sets:
+                        sets[token].append((name, rel_path))
+            for m in EXPECT_ATTRIBUTE_CMD_RE.finditer(text):
+                tokens = [t.strip().split(" ")[0] for t in m.group(1).split(",")]
+                names = [n for n in re.split(r"\s+", m.group(2).strip()) if n]
+                for token in tokens:
+                    if token in sets:
+                        sets[token].extend((name, rel_path) for name in names)
+    return {name: sorted(set(members)) for name, members in sets.items()}
+
+
+def format_expect_sets(sets: dict[str, list[tuple[str, str]]]) -> str:
+    lines = []
+    for name in EXPECT_SETS:
+        lines.append(f"`{name}` ({len(sets[name])} lemmas):\n")
+        lines.append("| Lemma | Tagged in |")
+        lines.append("|-------|-----------|")
+        for lemma, source in sets[name]:
+            lines.append(f"| `{lemma}` | `{source}` |")
+        lines.append("")
+    return "\n".join(lines).rstrip("\n")
+
+
+def extract_spec_rules() -> list[tuple[str, str, str, str]]:
+    """Registered `@[spec]` rules: (namespace, full name, attribute, source file)."""
+    rules = []
+    for base in SPEC_RULE_DIRS:
+        for lean_file in sorted(base.rglob("*.lean")):
+            text = lean_file.read_text()
+            rel_path = str(lean_file.relative_to(REPO_ROOT))
+            for m in SPEC_ATTR_RE.finditer(text):
+                tokens = [t.strip() for t in m.group(1).split(",")]
+                attr = next((t for t in tokens if SPEC_TOKEN_RE.match(t)), None)
+                if attr is None:
+                    continue
+                ns = namespace_at(text, m.start())
+                raw = m.group(2)
+                name = raw.removeprefix("_root_.") if raw.startswith("_root_.") else (
+                    f"{ns}.{raw}" if ns else raw)
+                rules.append((ns, name, attr, rel_path))
+            for m in SPEC_ATTRIBUTE_CMD_RE.finditer(text):
+                ns = namespace_at(text, m.start())
+                rules.append((ns, m.group(2), m.group(1), rel_path))
+    return sorted(set(rules))
+
+
+def format_spec_rules(rules: list[tuple[str, str, str, str]]) -> str:
+    lines = ["| Namespace | Rule | Attribute | Defined in |",
+             "|-----------|------|-----------|------------|"]
+    for _, name, attr, source in rules:
+        ns = name.rpartition(".")[0]
+        lines.append(f"| `{ns or '(root)'}` | `{name}` | `@[{attr}]` | `{source}` |")
+    return "\n".join(lines)
+
+
 def format_simp_catalog(lemmas: list[tuple[str, str]]) -> str:
     lines = ["| Lemma | Defined in |", "|-------|------------|"]
     for name, source in lemmas:
@@ -132,16 +233,29 @@ def splice_auto_sections(filepath: Path, fragments: dict[str, str]) -> str | Non
 
 def main():
     check_mode = "--check" in sys.argv
+    write_mode = "--write" in sys.argv
 
     tactics = extract_tactics()
     notations = extract_notations()
     simp_lemmas = extract_simp_lemmas()
+    spec_rules = extract_spec_rules()
 
     fragments = {
         "tacticTable": format_tactic_table(tactics),
         "notationTable": format_notation_table(notations),
         "simpCatalog": format_simp_catalog(simp_lemmas),
+        "specRules": format_spec_rules(spec_rules),
+        "expectSets": format_expect_sets(extract_expect_sets()),
     }
+
+    if write_mode:
+        docs_dir = REPO_ROOT / "docs" / "agents"
+        for doc_file in sorted(docs_dir.glob("*.md")):
+            new_content = splice_auto_sections(doc_file, fragments)
+            if new_content is not None:
+                doc_file.write_text(new_content)
+                print(f"updated {doc_file.relative_to(REPO_ROOT)}")
+        return
 
     if not check_mode:
         print("## Tactic Declarations\n")
@@ -155,6 +269,10 @@ def main():
         print("## Simp/Grind Lemmas (EvalDist/Monad/)\n")
         print(fragments["simpCatalog"])
         print(f"\n({len(simp_lemmas)} lemmas found)\n")
+
+        print("## Registered `@[spec]` rules\n")
+        print(fragments["specRules"])
+        print(f"\n({len(spec_rules)} rules found)\n")
         return
 
     docs_dir = REPO_ROOT / "docs" / "agents"

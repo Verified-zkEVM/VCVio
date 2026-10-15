@@ -96,11 +96,11 @@ end probComp
 
 /-! ## Structural additions to the default `grind` set
 
-Capability gates for the confluent structural rewrites tagged `@[grind =]` beyond the original
-monad-law block: `replicate` unfolds, `Functor.map_map`, and the `simulateQ` routing layer
-(`QueryImpl.add` / instrumentation wrappers). Each example is a shape bare `grind` could not close
-before the corresponding tag (the routing example previously *saturated* — it is also a fail-fast
-gate). -/
+Capability gates for the confluent structural rewrites tagged `@[grind =]` beyond the monad-law
+block: `replicate` unfolds, `Functor.map_map`, and the `simulateQ` routing layer
+(`QueryImpl.add` / instrumentation wrappers). Each example is a shape that bare `grind` closes only
+through the corresponding tag. Without its tags `grind` *saturates* on the routing example, which
+is therefore also a fail-fast gate. -/
 
 section structural
 
@@ -128,8 +128,8 @@ variable {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec
   {m : Type → Type} [Monad m] [LawfulMonad m]
   (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
 
--- formerly a saturating shape: bare `grind` timed out here before
--- `simulateQ_add_liftComp_left` was tagged `@[grind =]`
+-- a saturating shape: bare `grind` times out here unless
+-- `simulateQ_add_liftComp_left` is tagged `@[grind =]`
 example (oa : OracleComp spec₁ α) :
     simulateQ (impl₁ + impl₂) (do let x ← liftComp oa (spec₁ + spec₂); pure x) =
       simulateQ impl₁ oa := by grind

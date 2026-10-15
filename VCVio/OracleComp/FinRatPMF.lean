@@ -15,8 +15,8 @@ public import VCVio.EvalDist.ProbabilityNotation
 # Executable `FinRatPMF` Semantics for `OracleComp`
 
 The computable oracle evaluator uses `FinRatPMF.Raw`. Its output measure agrees with uniform
-oracle semantics, and its positive-weight outputs are exactly the oracle program's structurally
-reachable outputs.
+oracle semantics, and its positive-weight outputs are exactly the oracle program's possible
+outputs.
 -/
 
 @[expose] public section
@@ -89,7 +89,7 @@ lemma prEvent_simulateQ {ι : Type u} {spec : OracleSpec.{u, 0} ι}
     [∀ t : spec.Domain, FinEnum (spec.Range t)]
     {α : Type} (oa : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← simulateQ (finRatImpl (spec := spec)) oa}[p x] = Pr{let x ← oa}[p x] := by
-  rw [prEvent_def, prEvent_def, ← simulateQ_map]
+  rw [prEvent_eq_evalDist_map, prEvent_eq_evalDist_map, ← simulateQ_map]
   exact congrArg (fun μ : MeasureTheory.Measure Prop => μ {True})
     (evalDist_simulateQ (spec := spec) (p <$> oa))
 

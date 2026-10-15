@@ -215,7 +215,11 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
     refine bind_congr fun gS => ?_
     rw [hSstep gS]; rfl
   have hBAD_eq := hM_eq (fun z => (z.1, z.2.2))
-  rw [hLHS_eq, hRHS_eq, hBAD_eq]
+  have hLHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hLHS_eq
+  have hRHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hRHS_eq
+  have hBAD_ev := congrArg (fun mx => Pr{let z ← mx}[z.2.bad = true]) hBAD_eq
+  simp only [expect_norm] at hLHS_ev hRHS_ev hBAD_ev ⊢
+  rw [hLHS_ev, hRHS_ev, hBAD_ev]
   classical
   -- **C1: slot-0 column lazification.** Cache every slot-0 cell of the queried column.
   set cells : List ((TagId × Fin sessionsPerTag) × Nonce) :=
@@ -289,9 +293,11 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
   let : MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest) := ⊤
   have hBAD_lazify := hM_lazify (fun z => (z.1, z.2.2))
   -- Rewrite all three terms to their lazified forms.
-  rw [(EvalDistEq.of_evalDist_eq hLHS_lazify).prEvent_eq,
-    (EvalDistEq.of_evalDist_eq hRHS_lazify).prEvent_eq,
-    (EvalDistEq.of_evalDist_eq hBAD_lazify).prEvent_eq]
+  have hLHS_lz := (EvalDistEq.of_evalDist_eq hLHS_lazify).prEvent_eq fun b => b = out
+  have hRHS_lz := (EvalDistEq.of_evalDist_eq hRHS_lazify).prEvent_eq fun b => b = out
+  have hBAD_lz := (EvalDistEq.of_evalDist_eq hBAD_lazify).prEvent_eq fun z => z.2.bad = true
+  simp only [expect_norm] at hLHS_lz hRHS_lz hBAD_lz
+  rw [hLHS_lz, hRHS_lz, hBAD_lz]
   -- **Per-rs coupling.** All three terms now share the `idealCacheMapM cells c` head; couple
   -- them via the empty-`D` disagreement bound (mirroring the tag cases' `$ᵗ Nonce` coupling).
   -- The slacks are charged entirely in the per-rs obligation (closed in C2/C3); here `ε₁ = 0`,
@@ -299,8 +305,9 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
   -- Regroup the RHS so the three slacks become a single trailing `ε₂` and insert `ε₁ = 0`.
   rw [show ∀ a b c d e : ℝ≥0∞, a + b + c + d + e = a + b + 0 + (c + d + e) from
         fun a b c d e => by ring]
-  refine prEvent_bind_le_add_bad_disagree (mx := idealCacheMapM (Digest := Digest) cells c)
-    (D := fun _ => False) (by simp) ?_
+  refine wp_le_add_add_of_disagree (mx := idealCacheMapM (Digest := Digest) cells c)
+    (D := fun _ => False) (by simp) (fun _ => wp_le_of_forall_le _ fun _ =>
+      wp_le_of_forall_le _ fun _ => prEvent_le_one _) ?_
   intro rs hrs _
   -- **C2: per-rs facts.** Set `c₀′ := rs.2`, the cache with the slot-0 column cached.
   set c₀ := rs.2 with hc₀
@@ -410,18 +417,17 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool true))).run
               (s, sB)))}[b = out] := by
-      refine prEvent_bind_congr _ _ _ _ _ fun gS => ?_
-      refine prEvent_bind_congr _ _ _ _ _ fun gFine => ?_
+      simp only [expect_norm]
+      refine ExpectationWP.wp_congr _ fun gS =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       -- The output bool ignores `cacheBad`, so the `cacheBad` projection leaves it unchanged.
       have hirr := simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
           (OracleComp.tableExtending c₀ gS)) gFine (k (ReaderReply.ofBool true)) s
         (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB) sB
         sB.cacheBad rfl rfl rfl
-      rw [prEvent_map, prEvent_map]
       have h := congrArg (fun X => Pr{let z ← X}[z.1 = out]) hirr
-      simp only at h
-      rw [prEvent_map, prEvent_map] at h
+      simp only [prEvent_map] at h
       exact h
     have hBAD_irr :
         Pr{let z ← ((do
@@ -443,23 +449,25 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool true))).run
               (s, sB)))}[z.2.bad = true] := by
-      refine prEvent_bind_congr _ _ _ _ _ fun gS => ?_
-      refine prEvent_bind_congr _ _ _ _ _ fun gFine => ?_
+      simp only [expect_norm]
+      refine ExpectationWP.wp_congr _ fun gS =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       -- The bad flag ignores `cacheBad`, so the `cacheBad` projection leaves it unchanged.
       have hirr := simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
           (OracleComp.tableExtending c₀ gS)) gFine (k (ReaderReply.ofBool true)) s
         (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB) sB
         sB.cacheBad rfl rfl rfl
-      rw [prEvent_map, prEvent_map]
       have h := congrArg (fun X => Pr{let z ← X}[z.2.2.bad = true]) hirr
-      simp only at h
-      rw [prEvent_map, prEvent_map] at h
+      simp only [prEvent_map] at h
       exact h
     -- Rewrite LHS-output and BAD to the unperturbed `(s, sB)` state, then apply the IH.
+    simp only [expect_norm] at hLHS_irr hBAD_irr
     rw [hLHS_irr, hBAD_irr]
-    refine (ih (ReaderReply.ofBool true) qR' qT s c₀ sB R'
-      (hqRk _) (hqTk _) hqRle' hc₀Inv hRespInv').trans ?_
+    have hih := ih (ReaderReply.ofBool true) qR' qT s c₀ sB R'
+      (hqRk _) (hqTk _) hqRle' hc₀Inv hRespInv'
+    simp only [expect_norm] at hih
+    refine hih.trans ?_
     rw [show ∀ a b c d : ℝ≥0∞, a + (b + c + d) = a + b + c + d from
           fun a b c d => by ring]
     gcongr <;> exact Nat.le_succ _
@@ -535,18 +543,17 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool false))).run
               (s, sB)))}[b = out] := by
-      refine prEvent_bind_congr _ _ _ _ _ fun gS => ?_
-      refine prEvent_bind_congr _ _ _ _ _ fun gFine => ?_
+      simp only [expect_norm]
+      refine ExpectationWP.wp_congr _ fun gS =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       -- The output bool ignores `cacheBad`, so the `cacheBad` projection leaves it unchanged.
       have hirr := simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
           (OracleComp.tableExtending c₀ gS)) gFine (k (ReaderReply.ofBool false)) s
         (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB) sB
         sB.cacheBad rfl rfl rfl
-      rw [prEvent_map, prEvent_map]
       have h := congrArg (fun X => Pr{let z ← X}[z.1 = out]) hirr
-      simp only at h
-      rw [prEvent_map, prEvent_map] at h
+      simp only [prEvent_map] at h
       exact h
     have hBAD_irr :
         Pr{let z ← ((do
@@ -568,22 +575,24 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool false))).run
               (s, sB)))}[z.2.bad = true] := by
-      refine prEvent_bind_congr _ _ _ _ _ fun gS => ?_
-      refine prEvent_bind_congr _ _ _ _ _ fun gFine => ?_
+      simp only [expect_norm]
+      refine ExpectationWP.wp_congr _ fun gS =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       -- The bad flag ignores `cacheBad`, so the `cacheBad` projection leaves it unchanged.
       have hirr := simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
           (OracleComp.tableExtending c₀ gS)) gFine (k (ReaderReply.ofBool false)) s
         (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB) sB
         sB.cacheBad rfl rfl rfl
-      rw [prEvent_map, prEvent_map]
       have h := congrArg (fun X => Pr{let z ← X}[z.2.2.bad = true]) hirr
-      simp only at h
-      rw [prEvent_map, prEvent_map] at h
+      simp only [prEvent_map] at h
       exact h
+    simp only [expect_norm] at hLHS_irr hBAD_irr
     rw [hLHS_irr, hBAD_irr]
-    refine (ih (ReaderReply.ofBool false) qR' qT s c₀ sB R'
-      (hqRk _) (hqTk _) hqRle' hc₀Inv hRespInv').trans ?_
+    have hih := ih (ReaderReply.ofBool false) qR' qT s c₀ sB R'
+      (hqRk _) (hqTk _) hqRle' hc₀Inv hRespInv'
+    simp only [expect_norm] at hih
+    refine hih.trans ?_
     -- **Asymmetric discard.** Replace the S reader bit `false` by its actual value
     -- `cacheBadReader gS`. For every `gS` with `cacheBadReader gS = false` the bit is `false`
     -- and the two S-runs coincide; for the rest, drop the `false`-run summand (≤ 1) and charge
@@ -608,21 +617,12 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
             b = out] +
           ((Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
             (Fintype.card Digest : ℝ≥0∞) := by
-      let : MeasurableSpace ((TagId × Fin sessionsPerTag) × Nonce → Digest) := ⊤
-      rw [prEvent_eq_evalDist_singleton, prEvent_eq_evalDist_singleton]
-      refine (evalDist_bind_apply_le_of_discard _ _
-        (fun gS => (simulateQ (singleTableHandler (OracleComp.tableExtending c₀ gS))
-          (k (ReaderReply.ofBool (cacheBadReader
-            (sessionsPerTag := sessionsPerTag) gS transcript)))).run' s) measurable_from_top
-        measurable_from_top (bad := {gS | cacheBadReader
-          (sessionsPerTag := sessionsPerTag) gS transcript = true})
-        MeasurableSet.of_discrete ?_ (measurableSet_singleton out)).trans ?_
-      · exact Filter.Eventually.of_forall fun gS hg => by
-          have hcb : cacheBadReader (sessionsPerTag := sessionsPerTag) gS transcript = false :=
-            by simpa only [Set.mem_ofPred_eq, Bool.not_eq_true] using hg
-          rw [hcb]
-      · apply add_le_add le_rfl
-        rwa [prEvent_eq_evalDist_of_discrete] at hEmass
+      simp only [expect_norm]
+      refine (prEvent_bind_le_add_of_disagree (ε₂ := 0) hEmass fun gS _ hg => ?_).trans_eq
+        (add_zero _)
+      have hcb : cacheBadReader (sessionsPerTag := sessionsPerTag) gS transcript = false := by
+        simpa only [Bool.not_eq_true] using hg
+      rw [hcb, add_zero]
     -- Flatten the right-hand slack and split the `(qR'+1)` units so the discard's `T·sp/|D|`
     -- and the `≤`-monotone `qR' ≤ qR'+1` headroom land in their own summands.
     have hsplitR : ((qR' + 1) * Fintype.card TagId : ℕ) =
@@ -633,24 +633,25 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
     rw [hsplitC, hsplitR, Nat.cast_add, Nat.cast_add, ENNReal.add_div, ENNReal.add_div]
     -- The discard's `T·sp/|D|` charge pairs with the `qR'+1 = qR'+1` headroom unit on the
     -- `C`-slack; the extra `T/|D|` unit on the `A`-slack is pure (≥ 0) headroom.
-    set S0 : ℝ≥0∞ := Pr{let b ← (do
+    -- The goal is in normal form, so the abbreviations are its draw chains; `hDiscard` is
+    -- brought to the same form so that it names them.
+    simp only [expect_norm] at hDiscard
+    set S0 : ℝ≥0∞ := Pr{
         let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-        (simulateQ (singleTableHandler (OracleComp.tableExtending c₀ gS))
-          (k (ReaderReply.ofBool false))).run' s)}[b = out] with hS0
-    set Scb : ℝ≥0∞ := Pr{let b ← (do
+        let b ← (simulateQ (singleTableHandler (OracleComp.tableExtending c₀ gS))
+          (k (ReaderReply.ofBool false))).run' s}[b = out] with hS0
+    set Scb : ℝ≥0∞ := Pr{
         let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-        (simulateQ (singleTableHandler (OracleComp.tableExtending c₀ gS))
+        let b ← (simulateQ (singleTableHandler (OracleComp.tableExtending c₀ gS))
           (k (ReaderReply.ofBool
-            (cacheBadReader (sessionsPerTag := sessionsPerTag) gS transcript)))).run' s)}[
+            (cacheBadReader (sessionsPerTag := sessionsPerTag) gS transcript)))).run' s}[
         b = out] with hScb
-    set BADt : ℝ≥0∞ := Pr{let z ← ((do
+    set BADt : ℝ≥0∞ := Pr{
         let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-        (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-            (z.1, z.2.2)) <$>
-          (simulateQ (multipleBadTableHandlerFine (slotZeroSubTable (sessionsPerTag :=
+        let z ← (simulateQ (multipleBadTableHandlerFine (slotZeroSubTable (sessionsPerTag :=
             sessionsPerTag) (OracleComp.tableExtending c₀ gS)) gFine)
-            (k (ReaderReply.ofBool false))).run (s, sB)))}[z.2.bad = true] with hBADt
+            (k (ReaderReply.ofBool false))).run (s, sB)}[z.2.2.bad = true] with hBADt
     set Tsp : ℝ≥0∞ := ((Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
       (Fintype.card Digest : ℝ≥0∞) with hTsp
     set A : ℝ≥0∞ := ((qR' * Fintype.card TagId : ℕ) : ℝ≥0∞) /

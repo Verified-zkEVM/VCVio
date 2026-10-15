@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.MeasureTVDist.Basic
+public import VCVio.EvalDist.EvalDistTV
 public meta import Mathlib.Tactic.Positivity.Core
 
 /-!
@@ -31,6 +32,17 @@ def evalMeasureTVDist : PositivityExt where
     | 0, ~q(ℝ), ~q(@measureTVDist $m $β $inst $ms $mx $my) =>
         assertInstancesCommute
         return .nonnegative q(@measureTVDist_nonneg $m $β $inst $ms $mx $my)
+    | _, _, _ => throwError "not a total variation distance"
+
+/-- The event-keyed total variation distance between computations is nonnegative. -/
+@[positivity tvDist _ _]
+def evalTVDist : PositivityExt where
+  eval {u α} _ pα? e :=
+    match pα? with | none => pure .none | some _ => do
+    match u, α, e with
+    | 0, ~q(ℝ), ~q(@tvDist $m $m' $β $i1 $i2 $i3 $i4 $j1 $j2 $j3 $j4 $mx $my) =>
+        assertInstancesCommute
+        return .nonnegative q(@tvDist_nonneg $m $m' $β $i1 $i2 $i3 $i4 $j1 $j2 $j3 $j4 $mx $my)
     | _, _, _ => throwError "not a total variation distance"
 
 end Mathlib.Meta.Positivity

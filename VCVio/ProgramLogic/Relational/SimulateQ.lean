@@ -37,14 +37,14 @@ carrying it as an unbounded remainder.
   `relTriple_simulateQ_run'` projects onto output equality alone.
 - `relTriple_simulateQ_run_writerT`: the `WriterT` analogue, transporting a monoid congruence
   on accumulated logs through the whole simulation.
-- `measureETVDist_simulateQ_run'_le_prEvent_bad`: "identical until bad" — if two oracle
+- `etvDist_simulateQ_run'_le_prEvent_bad`: "identical until bad" — if two oracle
   implementations agree on steps between good states and keep bad states bad, the total variation
   between their simulations is bounded by the probability of ending in a bad state. The handlers
   may disagree on the step that sets a bad flag, and `_of_run_eq` / `_of_evalDistEq` take
   agreement off bad input states.
-- `measureETVDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad`: the ε-perturbed
+- `etvDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad`: the ε-perturbed
   refinement, where the two implementations may differ by up to `ε` on each charged query.
-- `measureETVDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad`: the state-dependent
+- `etvDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad`: the state-dependent
   refinement, where the per-step gap is `ε s` and the bound is `expectedQuerySlack`.
 - `prEvent_bad_simulateQ_run_le_expectedQuerySlack`: a single-world accumulator bounding the
   bad-flag mass directly by a resource-weighted query slack.

@@ -129,9 +129,9 @@ noncomputable abbrev signAttemptAbortProbability
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) : ENNReal :=
   𝒟[signAttemptAborts ids M runtime pk sk msg] {True}
 
-omit [LawfulEvalDistSemantics m] in
+variable [LawfulMonad m]
+
 /-- Single-attempt abort probability is the final event that the attempt returns no response. -/
-@[simp]
 lemma signAttemptAbortProbability_eq_prEvent
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) :
     signAttemptAbortProbability ids M runtime pk sk msg = Pr{
@@ -139,8 +139,6 @@ lemma signAttemptAbortProbability_eq_prEvent
         (fun [HasQuery (M × Commit →ₒ Chal) m] ↦
           fsAbortSignAttempt (m := m) ids M pk sk msg) runtime}[attempt.2 = none] :=
   (prEvent_eq_evalDist_map _ _).symm
-
-variable [LawfulMonad m]
 
 private lemma signLoop_probNone_succ
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ) :
@@ -154,7 +152,7 @@ private lemma signLoop_probNone_succ
             (fun [HasQuery (M × Commit →ₒ Chal) m] ↦
               fsAbortSignLoop (m := m) ids M pk sk msg n) runtime}[sig = none] := by
   classical
-  rw [signLoop_inRuntime_succ, signAttemptAbortProbability_eq_prEvent]
+  rw [signLoop_inRuntime_succ, prEvent_bind, signAttemptAbortProbability_eq_prEvent]
   apply prEvent_bind_eq_mul_of_ite
   intro attempt
   cases attempt.2 <;> simp
@@ -171,7 +169,7 @@ private lemma signLoop_queryTailProbability_succ
             (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] ↦
               fsAbortSignLoop (m := AddWriterT ℕ m) ids M pk sk msg n) runtime}[i < q] := by
   classical
-  rw [signLoop_queryCountDist_succ, signAttemptAbortProbability_eq_prEvent]
+  rw [signLoop_queryCountDist_succ, prEvent_bind, signAttemptAbortProbability_eq_prEvent]
   apply prEvent_bind_eq_mul_of_ite
   intro attempt
   cases attempt.2 <;> simp
@@ -210,9 +208,7 @@ private lemma signLoop_queryTailProbability_zero
   have hzero : 𝒟[HasQuery.queryCountDist
       (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] ↦
         fsAbortSignLoop (m := AddWriterT ℕ m) ids M pk sk msg (n + 1)) runtime] {0} = 0 := by
-    rw [← prEvent_eq_evalDist_singleton, signLoop_queryCountDist_succ_ite,
-      prEvent_bind_ite]
-    simp only [prEvent_map, Nat.succ_ne_zero, prEvent_false, mul_zero, zero_add]
+    rw [← prEvent_eq_evalDist_singleton, signLoop_queryCountDist_succ_ite]
     simp
   have hset : {q : ℕ | 0 < q} = ({0} : Set ℕ)ᶜ := by ext q; simp [Nat.pos_iff_ne_zero]
   rw [hset, MeasureTheory.measure_compl (measurableSet_singleton 0)
@@ -379,7 +375,7 @@ theorem sign_queryTailProbability_le_signAttemptAbortProbability_pow
   induction i generalizing maxAttempts with
   | zero =>
       rw [pow_zero]
-      apply MeasureTheory.measure_le_one
+      exact prEvent_le_one _
   | succ i ih =>
       cases maxAttempts with
       | zero =>

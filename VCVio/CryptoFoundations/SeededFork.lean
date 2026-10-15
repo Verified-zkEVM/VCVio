@@ -57,6 +57,7 @@ the truncated seed.
 @[expose] public section
 
 open OracleSpec OracleComp OracleComp.ProgramLogic ENNReal Function Finset
+open scoped OracleComp.Lower
 
 namespace OracleComp
 
@@ -230,10 +231,10 @@ private lemma expectedQueryCount_seededForkWithSeedValue_le_aux
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) {seed : QuerySeed spec}
     (hmain : IsPerIndexQueryBound main qb) (hseed : ∀ t, qb t ≤ (seed t).length) :
-    wp ($ᵗ spec.Range i) (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u)
+    wp⟦$ᵗ spec.Range i⟧ (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u)
       CostModel.unit (fun n : ℕ => (n : ENNReal))) ≤ qb i := by
   let : Fintype ι := Fintype.ofFinite ι
-  rw [← wp_const ($ᵗ spec.Range i) (qb i : ENNReal)]
+  rw [← ExpectationWP.wp_const_of_oracle ($ᵗ spec.Range i) (qb i : ENNReal)]
   refine wp_mono _ fun u => ?_
   have hbound := isPerIndexQueryBound_seededForkWithSeedValue
     (main := main) (qb := qb) (i := i) (cf := cf) (u := u) hmain hseed
@@ -249,16 +250,16 @@ theorem expectedQueryCount_seededForkWithSeedValue_le
     (main : OracleComp spec α) (qb : ι → ℕ) (js : List ι) (i : ι)
     (cf : α → Option (Fin (qb i + 1)))
     (hmain : IsPerIndexQueryBound main qb) (hjs : SeedListCovers qb js) :
-    wp (generateSeed spec qb js) (fun seed => wp ($ᵗ spec.Range i)
+    wp⟦generateSeed spec qb js⟧ (fun seed => wp⟦$ᵗ spec.Range i⟧
       (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u) CostModel.unit
         (fun n : ℕ => (n : ENNReal)))) ≤ qb i := by
   calc
-    _ ≤ wp (generateSeed spec qb js) (fun _ => (qb i : ENNReal)) := by
+    _ ≤ wp⟦generateSeed spec qb js⟧ (fun _ => (qb i : ENNReal)) := by
       apply wp_mono_of_support
       intro seed hseed
       exact expectedQueryCount_seededForkWithSeedValue_le_aux main qb i cf hmain
         (generateSeed_covers_queryBound (spec := spec) qb js hjs hseed)
-    _ = _ := wp_const _ _
+    _ = _ := ExpectationWP.wp_const_of_oracle _ _
 
 section forkRuntime
 
@@ -285,9 +286,9 @@ theorem seededForkExpectedQueryWork_le
     AddWriterT.expectedCostNat (probCompUnitQueryRun (generateSeed spec qb js)) +
       AddWriterT.expectedCostNat
         (probCompUnitQueryRun ($ᵗ spec.Range i : ProbComp (spec.Range i))) +
-      wp (generateSeed spec qb js)
+      wp⟦generateSeed spec qb js⟧
         (fun seed =>
-          wp ($ᵗ spec.Range i)
+          wp⟦$ᵗ spec.Range i⟧
             (fun u =>
               expectedCost
                 (seededForkWithSeedValue main qb i cf seed u)
@@ -338,30 +339,23 @@ private lemma prEvent_noGuard_le_fork_add_collision
           let u ← liftComp ($ᵗ spec.Range i) spec
           return (a, (σ i)[s]?, u))}[cf r.1 = some s ∧ r.2.1 = some r.2.2] := by
   unfold seededFork
-  simp only []
-  refine prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun σ => ?_
-  refine prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun a => ?_
+  simp only [expect_norm]
+  rw [← ExpectationWP.wp_add]
+  refine ExpectationWP.wp_mono _ fun σ => ?_
+  rw [← ExpectationWP.wp_add]
+  refine ExpectationWP.wp_mono _ fun a => ?_
   by_cases hcf : cf a = some s
   · simp only [hcf]
-    refine prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun u => ?_
+    rw [prEvent_bind, ← ExpectationWP.wp_add]
+    refine ExpectationWP.wp_mono _ fun u => ?_
     by_cases hu : (σ i)[s]? = some u
-    · have h3 : Pr{let y ← (pure (a, (σ i)[s]?, u) :
-          OracleComp spec (α × Option (spec.Range i) × spec.Range i))}[
-          cf y.1 = some s ∧ y.2.1 = some y.2.2] = 1 := by
-        rw [prEvent_pure]; exact ite_eq_left ⟨hcf, hu⟩
-      rw [h3]
+    · simp only [hu, predInd_apply, true_and, propInd_true]
       exact (prEvent_le_one _).trans le_add_self
-    · have h3 : Pr{let y ← (pure (a, (σ i)[s]?, u) :
-          OracleComp spec (α × Option (spec.Range i) × spec.Range i))}[
-          cf y.1 = some s ∧ y.2.1 = some y.2.2] = 0 := by
-        rw [prEvent_pure]; exact ite_eq_right fun h => hu h.2
-      rw [h3, add_zero, ite_eq_right hu]
-      refine prEvent_bind_mono_of_forall_le _ _ _ _ _ fun b => ?_
+    · simp only [hu, ↓reduceIte, predInd_apply, and_false, propInd_false, add_zero,
+        prEvent_bind]
+      refine ExpectationWP.wp_mono _ fun b => ?_
       by_cases hb : cf b = some s <;> simp [hb, hcf]
   · refine (le_of_eq ?_).trans zero_le
-    refine prEvent_eq_zero_of_forall_mem_support _ _ fun r hr => ?_
-    simp only [mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hr
-    obtain ⟨u, _, b, _, rfl⟩ := hr
     simp [hcf]
 
 section forkingBound
@@ -378,10 +372,9 @@ private lemma prEvent_main_eq_takeAtIndex (s : Fin (qb i + 1)) :
   let : MeasurableSpace α := ⊤
   rw [(EvalDistEq.of_evalDist_eq
       (seededOracle.evalDist_liftComp_generateSeed_bind_simulateQ_run' qb js main).symm).prEvent_eq]
-  have h := (EvalDistEq.of_evalDist_eq
-      (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run' qb js i s main)).prEvent_eq
-    (fun w => cf w.2 = some s)
-  simpa only [prEvent_norm] using h
+  have h := (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run'
+    qb js i s main).prEvent_eq (fun w => cf w.2 = some s)
+  simpa only [expect_norm] using h
 
 /-- Two runs on a shared seed, the second truncated after the `s`-th answer at `i`, have the
 distribution of two runs on the truncated seed. -/
@@ -396,12 +389,12 @@ private lemma prEvent_pair_eq_takeAtIndex_pair (s : Fin (qb i + 1)) :
         let a ← (simulateQ seededOracle main).run' (σ.takeAtIndex i s)
         let b ← (simulateQ seededOracle main).run' (σ.takeAtIndex i s)
         return (a, b))}[cf r.1 = some s ∧ cf r.2 = some s] := by
-  let : MeasurableSpace (α × α) := ⊤
-  have h := ((EvalDistEq.of_evalDist_eq
-      (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run' qb js i s main)).bind_left
-    (fun w => (simulateQ seededOracle main).run' w.1 >>= fun b => pure (w.2, b))).evalDist_eq
+  have h := (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run'
+    qb js i s main).bind_left
+    (fun w => (simulateQ seededOracle main).run' w.1 >>= fun b => pure (w.2, b))
   simp only [bind_assoc, pure_bind] at h
-  exact (EvalDistEq.of_evalDist_eq h).prEvent_eq _
+  simpa only [expect_norm] using h.prEvent_eq
+    (fun r : α × α => cf r.1 = some s ∧ cf r.2 = some s)
 
 /-- Resampling the forked answer after truncation leaves the second run distributed as a run on
 the truncated seed. -/
@@ -417,13 +410,13 @@ private lemma prEvent_noGuard_eq_pair (s : Fin (qb i + 1)) :
         let a ← (simulateQ seededOracle main).run' σ
         let b ← (simulateQ seededOracle main).run' (σ.takeAtIndex i s)
         return (a, b))}[cf r.1 = some s ∧ cf r.2 = some s] := by
-  refine (evalDistEq_iff_evalDist_eq.mpr ?_).prEvent_eq _
-  let : MeasurableSpace (α × α) := ⊤
-  refine evalDist_bind_congr _ _ _ fun σ => evalDist_bind_congr _ _ _ fun a => ?_
+  simp only [expect_norm]
+  refine ExpectationWP.wp_congr _ fun σ => ExpectationWP.wp_congr _ fun a => ?_
   let : MeasurableSpace α := ⊤
-  simpa only [bind_assoc] using ((EvalDistEq.of_evalDist_eq
-      (seededOracle.evalDist_liftComp_uniformSample_bind_simulateQ_run'_addValue
-      (σ.takeAtIndex i s) i main)).bind_left (fun b => pure (a, b))).evalDist_eq
+  rw [← prEvent_bind]
+  exact (EvalDistEq.of_evalDist_eq
+    (seededOracle.evalDist_liftComp_uniformSample_bind_simulateQ_run'_addValue
+      (σ.takeAtIndex i s) i main)).prEvent_eq _
 
 /-- The collision between the resampled answer and the seeded one is rare: it has probability at
 most the fork-index probability divided by `|spec.Range i|`. -/
@@ -437,16 +430,15 @@ private lemma prEvent_collision_le [Fintype (spec.Range i)] (s : Fin (qb i + 1))
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace (QuerySeed spec) := ⊤
   rw [(EvalDistEq.of_evalDist_eq
-      (seededOracle.evalDist_liftComp_generateSeed_bind_simulateQ_run' qb js main).symm).prEvent_eq,
-    prEvent_bind_eq_lintegral_of_discrete _ _ (fun x => cf x = some s),
-    prEvent_bind_eq_lintegral_of_discrete _ _
-      (fun r : α × Option (spec.Range i) × spec.Range i => cf r.1 = some s ∧ r.2.1 = some r.2.2),
+      (seededOracle.evalDist_liftComp_generateSeed_bind_simulateQ_run' qb js main).symm).prEvent_eq]
+  simp only [expect_norm]
+  rw [ExpectationWP.wp_eq_lintegral (liftComp (generateSeed spec qb js) spec) _
+      Measurable.of_discrete,
+    ExpectationWP.wp_eq_lintegral (liftComp (generateSeed spec qb js) spec) _
+      Measurable.of_discrete,
     div_eq_mul_inv, ← MeasureTheory.lintegral_mul_const' _ _ (ENNReal.inv_ne_top.mpr (by simp))]
   refine MeasureTheory.lintegral_mono fun σ => ?_
-  have h := prEvent_bind_bind_and ((simulateQ seededOracle main).run' σ)
-    (liftComp ($ᵗ spec.Range i) spec) (fun a => cf a = some s) (fun u => (σ i)[s]? = some u)
-  simp only [prEvent_norm] at h ⊢
-  rw [h]
+  rw [prEvent_bind_bind_and]
   exact mul_le_mul' le_rfl (prEvent_seedSlot_le_inv qb i s σ)
 
 /-- Key bound of the forking lemma: the probability that both runs succeed with fork point `s`
@@ -468,7 +460,7 @@ theorem le_prEvent_seededFork [∀ i, DecidableEq (spec.Range i)] [Fintype (spec
       prEvent_main_eq_takeAtIndex main qb js i cf s]
     have hjensen := prEvent_bind_sq_le_bind_pair (liftComp (generateSeed spec qb js) spec)
       (fun σ => (simulateQ seededOracle main).run' (σ.takeAtIndex i s)) (fun x => cf x = some s)
-    simpa only [prEvent_norm] using hjensen
+    simpa only [expect_norm] using hjensen
   refine le_trans (tsub_le_tsub
     (hsq.trans (prEvent_noGuard_le_fork_add_collision main qb js i cf s))
     (prEvent_collision_le main qb js i cf s)) ?_

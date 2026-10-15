@@ -26,6 +26,7 @@ open OracleComp.ProgramLogic.Relational
 open Lean.Order
 open Std.WP
 open scoped OracleComp.ProgramLogic
+open scoped OracleComp.Lower
 
 universe u
 
@@ -250,7 +251,7 @@ example [SampleableType α] {my : ProbComp β}
   · exact hf
 
 example [SampleableType α] (post : α → α → ℝ≥0∞) :
-    ⦃wp ($ᵗ α : ProbComp α) (fun a => post a a)⦄
+    ⦃wp⟦($ᵗ α : ProbComp α)⟧ (fun a => post a a)⦄
       ($ᵗ α : ProbComp α) ≈ₑ ($ᵗ α : ProbComp α)
     ⦃post⦄ := by
   rvcstep
@@ -262,7 +263,7 @@ variable {ι' : Type} {spec' : OracleSpec.{0, 0} ι'}
   [∀ t, Finite (spec'.Range t)]
 
 example (t : spec'.Domain) (post : spec'.Range t → spec'.Range t → ℝ≥0∞) :
-    ⦃wp (query t : OracleComp spec' (spec'.Range t)) (fun a => post a a)⦄
+    ⦃wp⟦(query t : OracleComp spec' (spec'.Range t))⟧ (fun a => post a a)⦄
       (query t : OracleComp spec' (spec'.Range t)) ≈ₑ
       (query t : OracleComp spec' (spec'.Range t))
     ⦃post⦄ := by
@@ -386,11 +387,11 @@ example {oa : OracleComp spec α} {f : α → OracleComp spec β} {g : β → Or
 Not an idiomatic-usage example. The deliberately unfocused `rvcstep` below
 exercises the corner case where `rvcstep` is invoked with sibling goals visible
 in the goal list (the pattern `linter.style.multiGoal` discourages on style
-grounds, but which must still behave *correctly* when used). Previously, when
-the sample subgoal of `relTriple_bind` auto-closed, an unconditional
-swap-and-close pass could pull a trailing sibling ahead of the bind continuation
-and silently discharge it. The fix in `closeSampleAndReorderBindGoals` keeps
-`rest` untouched at the tail. -/
+grounds, but which must still behave *correctly* when used). When the sample
+subgoal of `relTriple_bind` closes by itself, `closeSampleAndReorderBindGoals`
+keeps the sibling goals `rest` untouched at the tail, so no swap-and-close pass
+pulls a trailing sibling ahead of the bind continuation and discharges it
+silently. -/
 
 example {oa : OracleComp spec α} {f g : α → OracleComp spec β}
     (ob : OracleComp spec α)

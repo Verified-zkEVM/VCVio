@@ -109,7 +109,7 @@ lemma add_def {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
 
 /-- Deliberately not `@[simp]`: `toPFunctor` occurs inside the (instance-carrying)
 type of an `OracleComp`, so rewriting with this under a `simulateQ`/`liftM` strands
-the goal in a form the `simulateQ_query` family can no longer match. -/
+the goal in a form the `simulateQ_query` family cannot match. -/
 lemma toPFunctor_add {ι : Type u} {ι' : Type u'}
     (spec : OracleSpec ι) (spec' : OracleSpec ι') :
     (spec + spec').toPFunctor = spec.toPFunctor + spec'.toPFunctor := rfl

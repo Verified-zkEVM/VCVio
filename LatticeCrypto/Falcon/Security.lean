@@ -11,6 +11,7 @@ public import ToMathlib.Probability.Divergence.Renyi
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.EvalDist.Measure
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Falcon Security
@@ -25,8 +26,10 @@ This file states the high-level security theorems for the Falcon signature schem
 
 ## EUF-CMA Security
 
-The main security theorem reduces EUF-CMA to a Falcon-PSF collision problem sampled
-from the same key distribution as the scheme. The precise
+The main security theorem states a reduction of EUF-CMA to a Falcon-PSF collision problem
+sampled from the same key distribution as the scheme. **It is not proved:** `euf_cma_security`
+ends in `sorry`, its reductions are the placeholder reductions of `GPVHashAndSign`, and
+`euf_cma_security_bytes40` inherits both. The precise
 bound follows [FGdG+25] Theorem 1 (first concrete proof for Falcon+), refined by
 [Jia+26] (basis-specific Rényi analysis that eliminates the 7-bit security loss).
 
@@ -127,63 +130,39 @@ theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p) (msg : List By
         (falconPSF p prims).eval pk x = c)
     (hsig : some sig ∈ support (sign p prims pk sk msg maxAttempts)) :
     verify p prims pk msg sig = true := by
+  suffices h : ∀ r ∈ support (sign p prims pk sk msg maxAttempts), ∀ sig, r = some sig →
+      verify p prims pk msg sig = true from h _ hsig sig rfl
+  clear sig hsig
   induction maxAttempts with
-  | zero =>
-    simp only [sign, support_pure, Set.mem_singleton_iff] at hsig
-    exact absurd hsig (by simp)
+  | zero => simp [sign]
   | succ k ih =>
-    rw [sign, mem_support_bind_iff] at hsig
-    obtain ⟨salt, _hsalt, hsig⟩ := hsig
-    rw [mem_support_bind_iff] at hsig
-    obtain ⟨r, hr, hsig⟩ := hsig
-    match r, hr, hsig with
-    | none, _hr, hsig => exact ih hsig
-    | some (s₁, s₂), hr, hsig =>
-      dsimp only at hsig
-      cases hcomp : prims.compress (rqToIntPolyCentered s₂) p.sbytelen with
-      | none =>
-        rw [hcomp] at hsig
-        exact ih hsig
-      | some comp =>
-        rw [hcomp] at hsig
-        simp only [support_pure, Set.mem_singleton_iff, Option.some.injEq] at hsig
-        subst hsig
-        -- The accepting attempt is a `trapdoorSample` output that passed the norm check.
-        set c := prims.hashToPointForPublicKey pk.h salt msg with hc
-        rw [signAttempt, mem_support_bind_iff] at hr
-        obtain ⟨x, hx, hr⟩ := hr
-        have hshort_eval :
-            (s₁, s₂) ∈ support ((falconPSF p prims).trapdoorSample pk sk c) ∧
-              (falconPSF p prims).isShort (s₁, s₂) = true := by
-          by_cases hshort : (falconPSF p prims).isShort x = true
-          · rw [ite_eq_left hshort, support_pure, Set.mem_singleton_iff, Option.some.injEq] at hr
-            subst hr
-            exact ⟨hx, hshort⟩
-          · rw [ite_eq_right hshort, support_pure, Set.mem_singleton_iff] at hr
-            exact absurd hr (by simp)
-        obtain ⟨hmem, hshort⟩ := hshort_eval
-        have heval : (falconPSF p prims).eval pk (s₁, s₂) = c := hpreimage c (s₁, s₂) hmem
-        -- `verify` decompresses to the same `s₂`, recomputes the same `s₁`, and runs the norm
-        -- check the attempt already passed.
-        have hdec := hcompress _ _ _ hcomp
-        unfold verify
-        simp only [hdec]
-        rw [toRq_rqToIntPolyCentered]
-        have hs1 : c - negacyclicMul s₂ pk.h = s₁ := by
-          rw [← heval]
-          change s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h = s₁
-          apply LatticeCrypto.Poly.ext_get_eq
-          intro i
-          calc (s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h).get i
-              = (s₁ + negacyclicMul s₂ pk.h).get i - (negacyclicMul s₂ pk.h).get i :=
-                LatticeCrypto.NegacyclicRing.coeff_sub (coeffRing p.n) _ _ i
-            _ = s₁.get i + (negacyclicMul s₂ pk.h).get i - (negacyclicMul s₂ pk.h).get i :=
-                congrArg (· - (negacyclicMul s₂ pk.h).get i)
-                  (LatticeCrypto.NegacyclicRing.coeff_add (coeffRing p.n) _ _ i)
-            _ = s₁.get i := add_sub_cancel_right _ _
-        change decide (pairL2NormSq (c - negacyclicMul s₂ pk.h) s₂ ≤ p.betaSquared) = true
-        rw [hs1]
-        exact hshort
+    prvcgen [sign, signAttempt, OracleComp.Necessary.Spec.ofSupport (sign p prims pk sk msg k),
+      OracleComp.Necessary.Spec.ofSupport ((falconPSF p prims).trapdoorSample pk sk _)]
+    -- A rejected attempt, or one that does not compress, retries.
+    case vc2 | vc3 => rename_i r hr sig hsig; exact ih r hr sig hsig
+    -- The accepting attempt is a `trapdoorSample` output that passed the norm check.
+    rename_i hx hshort comp hcomp sig hsig
+    cases hsig
+    obtain ⟨s₁, s₂⟩ := x
+    set c := prims.hashToPointForPublicKey pk.h salt msg
+    -- `verify` decompresses to the same `s₂`, recomputes the same `s₁`, and runs the norm
+    -- check the attempt already passed.
+    have hs1 : c - negacyclicMul s₂ pk.h = s₁ := by
+      rw [← hpreimage c (s₁, s₂) hx]
+      change s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h = s₁
+      apply LatticeCrypto.Poly.ext_get_eq
+      intro i
+      calc (s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h).get i
+          = (s₁ + negacyclicMul s₂ pk.h).get i - (negacyclicMul s₂ pk.h).get i :=
+            LatticeCrypto.NegacyclicRing.coeff_sub (coeffRing p.n) _ _ i
+        _ = s₁.get i + (negacyclicMul s₂ pk.h).get i - (negacyclicMul s₂ pk.h).get i :=
+            congrArg (· - (negacyclicMul s₂ pk.h).get i)
+              (LatticeCrypto.NegacyclicRing.coeff_add (coeffRing p.n) _ _ i)
+        _ = s₁.get i := add_sub_cancel_right _ _
+    simp only [verify, hcompress _ _ _ hcomp, toRq_rqToIntPolyCentered]
+    change decide (pairL2NormSq (c - negacyclicMul s₂ pk.h) s₂ ≤ p.betaSquared) = true
+    rw [hs1]
+    exact hshort
 
 /-! ### NTRU-SIS Hardness Assumption -/
 
@@ -357,7 +336,11 @@ With exact arithmetic (infinite precision), `r_p = 1` and the sampler loss vanis
    sampled from the same key distribution.
 3. Leave the exact-match branch explicit in the theorem statement until it is discharged by
    a Falcon-specific min-entropy / one-way lemma.
-4. Account for finite-precision via the sampler quality hypothesis. -/
+4. Account for finite-precision via the sampler quality hypothesis.
+
+**Admitted.** The proof is `sorry`, and the reductions in the bound
+(`GPVHashAndSign.reduction`, `GPVHashAndSign.programmedPreimageReduction`) are placeholders, so
+the statement certifies nothing yet. -/
 theorem euf_cma_security
     (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt]
     [DecidableEq (Rq p.n)]
@@ -394,7 +377,10 @@ theorem euf_cma_security
 (320-bit) salt.
 
 The collision term specializes to `qSign² / (2 · 2^320)`. For the Falcon-specified
-maximum of `qSign = 2^64` signing queries, this is `≤ 2^{-193}`. -/
+maximum of `qSign = 2^64` signing queries, this is `≤ 2^{-193}`.
+
+**Admitted.** This specializes the admitted `euf_cma_security` and inherits its `sorry` and
+placeholder reductions. -/
 theorem euf_cma_security_bytes40
     [DecidableEq (Rq p.n)]
     (hr : GenerableRelation (PublicKey p) (SecretKey p)

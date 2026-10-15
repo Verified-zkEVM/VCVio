@@ -2,22 +2,19 @@
 # one per line with an optional `# reason`. An entry that resolves, or is no longer cited, is
 # obsolete and fails the check, so this list only shrinks.
 AlternatingFaceMapComplex.obj # Mathlib example in the module-system guide, outside the import closure
-clean_build # workflow input of the scheduled build
-complexity_backend # CI job name
 CURRENT_YEAR # placeholder in the header template of CONTRIBUTING.md
 Experiment # a name part of the security-notion naming convention
+HeapM # core's test synonym, cited from core's own test suite
+TickT # core's test synonym, cited from core's own test suite
+Std.WP.Tactic # upstream namespace of a later toolchain, in the stability note
+WP.trans # upstream rename of a later toolchain, in the stability note
+UpperCamelCase # naming style
+lowerCamelCase # naming style
+snake_case # naming style
+clean_build # workflow input of the scheduled build
+complexity_backend # CI job name
 grandfatheredNativeTrust # constant of scripts/AxiomSweep.lean, outside the proof libraries
 hss_nf # retired argument name of the Fiat–Shamir extraction bounds
-isPPT # parameter name of the asynchronous UC security notions
-Lean.Meta.Sym.DiscrTree # core symbolic discrimination tree, cited in the SymM stability note
-Lean.Meta.Sym.DiscrTree.getMatch # core lookup cited in the SymM stability note
-lowerCamelCase # naming style
-maxAttempts # parameter name of the with-aborts signer
 merge_action # GitHub merge-queue event
 merge_queue # GitHub merge-queue event
-possibleOutputs # binder name of the reachability lemmas
-snake_case # naming style
-superSpec # variable name in the sub-specification relation
-Sym.DiscrTree # core namespace cited by its short name in the SymM stability note
-Sym.DiscrTree.getMatch # core function cited by its short name in the SymM stability note
-UpperCamelCase # naming style
+query_bind # case name of OracleComp.inductionOn

@@ -12,7 +12,7 @@ public import VCVio.CryptoFoundations.KeyEncapMech
 # ML-KEM Top-Level KEM
 
 This file packages the probabilistic top-level algorithms from FIPS 203 Section 7 on top of the
-deterministic internal algorithms from `Examples.MLKEM.Internal`.
+deterministic internal algorithms from `LatticeCrypto.MLKEM.Internal`.
 -/
 
 @[expose] public section

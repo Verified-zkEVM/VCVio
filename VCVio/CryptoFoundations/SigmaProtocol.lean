@@ -176,9 +176,7 @@ a full transcript simulator `Stmt → ProbComp (Commit × Chal × Resp)`. We par
 simulator, which also keeps the property available on a bare `ChallengeVerifyProtocol`. -/
 def HVZK (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (ζ_zk : ℝ≥0∞) : Prop :=
-  ∀ x w, rel x w = true →
-    letI : MeasurableSpace (Commit × Chal × Resp) := ⊤
-    measureETVDist (σ.realTranscript x w) (simTranscript x) ≤ ζ_zk
+  ∀ x w, rel x w = true → etvDist (σ.realTranscript x w) (simTranscript x) ≤ ζ_zk
 
 /-- Exact honest-verifier zero-knowledge: the real transcript is equal in distribution to the
 simulated one. -/
@@ -192,8 +190,7 @@ lemma perfectHVZK_iff_hvzk_zero
     (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) :
     σ.PerfectHVZK simTranscript ↔ σ.HVZK simTranscript 0 := by
-  simp only [PerfectHVZK, HVZK, evalDistEq_iff_evalDist_eq, nonpos_iff_eq_zero,
-    measureETVDist_eq_zero_iff]
+  simp only [PerfectHVZK, HVZK, nonpos_iff_eq_zero, etvDist_eq_zero_iff]
 
 /-- The simulator's commitment marginal has predictability at most `β`: no single
 commitment value is output with probability exceeding `β`. Equivalently, the commitment
@@ -219,7 +216,7 @@ of `commit = c₀` times `1 / |Chal|`.
 This is a strengthening of `simCommitPredictability` (which only bounds the commit
 marginal). Where the latter says "no commit value is too likely", `simChalUniformGivenCommit`
 says "the challenge is uniform conditional on any commit value", which is exactly the
-hypothesis required by `measureETVDist_simulateQ_run_le_prEvent_bad` when bridging the Fiat-Shamir
+hypothesis required by `etvDist_simulateQ_run_le_prEvent_bad` when bridging the Fiat-Shamir
 programming-oracle and no-programming-oracle worlds: cache misses on programmed points
 return the simulator's challenge, and the bridge needs that challenge to be marginally
 uniform conditional on the simulator's commit (which is what gets compared against the

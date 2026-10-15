@@ -175,7 +175,7 @@ theorem prEvent_interleavedInitialCacheBad_le_expectedCharge
     by_cases hc : cache t = none
     · have hk := prEvent_interleavedKey_bad_le_of_initialCache
         oa cache t hc bad error (fun g => hbad t g hc)
-      simpa only [mx, prEvent_norm, mem_newQueryKeys, hc, and_true] using hk
+      simpa only [mx, expect_norm, mem_newQueryKeys, hc, and_true] using hk
     · have hnone (log : QueryLog (ofFn R)) : t ∉ newQueryKeys cache log := by
         simp [mem_newQueryKeys, hc]
       have hleft : Pr{let p ← mx}[t ∈ newQueryKeys cache p.2.1.2 ∧

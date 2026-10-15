@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Routing
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Input aliasing changes a random-oracle observation
@@ -50,40 +51,15 @@ theorem aliasing_changes_observation :
 theorem separated_probability :
     𝒟[(fun table : Bool → Bool => (table false == table true)) <$> ($ᵗ (Bool → Bool))]
       {true} = (1 : ENNReal) / 2 := by
-  rw [evalDist_map_apply_of_discrete _ _ (MeasurableSet.singleton true),
-    SampleableType.evalDist_uniformSample]
-  have hevent : (fun table : Bool → Bool => (table false == table true)) ⁻¹' {true} =
-      {fun _ => false} ∪ {fun _ => true} := by
-    ext table
-    simp only [Set.mem_preimage, Set.mem_union, Set.mem_singleton_iff, beq_iff_eq]
-    constructor
-    · intro h
-      cases hf : table false with
-      | false =>
-          left
-          funext b
-          cases b
-          · exact hf
-          · exact h.symm.trans hf
-      | true =>
-          right
-          funext b
-          cases b
-          · exact hf
-          · exact h.symm.trans hf
-    · rintro (rfl | rfl) <;> rfl
-  rw [hevent, measure_union]
-  · simp only [uniformOn_univ_apply_singleton, Fintype.card_fun, Fintype.card_bool]
-    have h : (4 : NNReal)⁻¹ + (4 : NNReal)⁻¹ = (2 : NNReal)⁻¹ := by norm_num
-    norm_num only [Nat.reducePow, Nat.cast_ofNat, one_div]
-    have h' := congrArg (fun x : NNReal => (x : ENNReal)) h
-    simpa only [ENNReal.coe_add, ENNReal.coe_inv (by norm_num : (4 : NNReal) ≠ 0),
-      ENNReal.coe_inv (by norm_num : (2 : NNReal) ≠ 0), ENNReal.coe_ofNat] using h'
-  · simp only [Set.disjoint_singleton]
-    intro h
-    have := congrFun h false
-    contradiction
-  · exact MeasurableSet.singleton _
+  have hcard : (Finset.univ.filter fun table : Bool → Bool => table false = table true).card = 2 :=
+    by decide
+  rw [← prEvent_eq_evalDist_singleton]
+  prvcgen [OracleComp.Upper.Spec.uniformSample_avg, OracleComp.Lower.Spec.uniformSample_sum]
+  all_goals
+    simp only [propInd_eq_ite, beq_iff_eq, Finset.sum_boole, hcard, Fintype.card_fun,
+      Fintype.card_bool, Nat.cast_ofNat, one_div]
+    rw [← ENNReal.toReal_le_toReal (by finiteness) (by finiteness)]
+    norm_num [ENNReal.toReal_div, ENNReal.toReal_inv]
 
 /-- Aliasing makes the equality test accept under every sampled target table. -/
 theorem aliased_probability :
@@ -91,8 +67,8 @@ theorem aliased_probability :
       evalWithAnswerFn (QueryImpl.ofFn table) (route (fun _ : Bool => ()) equalAnswers))
       <$> ($ᵗ (Unit → Bool))] {true} = 1 := by
   simp only [aliased_answers]
-  rw [evalDist_map_of_discrete, SampleableType.evalDist_uniformSample]
-  simp
+  rw [← prEvent_eq_evalDist_singleton]
+  prvcgen
 
 /-- The initially empty lazy oracle gives the same one-half acceptance probability. -/
 theorem separated_lazy_probability :

@@ -59,6 +59,11 @@ jobs:
       - name: Test downstream probability codemod
         run: python3 scripts/test-migrate-native-probability.py
 
+      - name: Check the generated notation differential tests are current
+        run: python3 scripts/gen-notation-differential.py --check
+
+      - name: Test the reading-citation checker
+        run: python3 scripts/test-check-reading-citations.py
       # The classifier of a migration dry run (`scripts/migration-dry-run.sh`).
       - name: Test migration dry-run classifier
         run: python3 scripts/test-classify-migration-errors.py
@@ -89,6 +94,13 @@ jobs:
         run: |
           bash scripts/test-comment-fences.sh
           python3 scripts/check-comment-fences.py
+
+      # The compile-time tables, their budget comparison and the timing report's budget section.
+      - name: Test the build timing scripts
+        run: python3 scripts/test-module-times.py
+      # The classifier of a migration dry run (`scripts/migration-dry-run.sh`).
+      - name: Test the migration error classifier
+        run: python3 scripts/test-classify-migration-errors.py
 
       # Regenerates every umbrella with scripts/update-lib.sh and fails if any of them changes.
       - name: Check generated umbrella modules
@@ -435,6 +447,20 @@ jobs:
       # `scripts/InitSweep.lean` records precisely what that leaves uncovered.
       - name: Init sweep (test libraries)
         run: lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
+      # Every registered `@[spec]` rule of the program logic fires in some test: core's `vcgen`
+      # trace over the program-logic test files, gated against the list of rules known to be
+      # uncovered (`scripts/spec_coverage_baseline.json`), which only shrinks.
+      - name: Test the spec-coverage ratchet
+        run: python3 scripts/test-spec-coverage.py
+      - name: Spec coverage
+        run: python3 scripts/spec-coverage.py --check
+      # The event and expectation laws of the flat interpretation and their `OptionT` / `ExceptT`
+      # twins, with the twins' rewriting attributes, gated against
+      # `scripts/lifted_law_parity_baseline.json`, which only shrinks. It reads the sources only.
+      - name: Test the lifted-law parity ratchet
+        run: python3 scripts/test-lifted-law-parity.py
+      - name: Lifted-law parity
+        run: python3 scripts/check-lifted-law-parity.py --check
       - name: Record module times
         run: |
           python3 scripts/module_times.py update .lake/build/vcvio-module-times.json \
@@ -462,7 +488,7 @@ jobs:
             !.lake/build/**/*.setup.json
           key: vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}-${{ github.run_id }}
       - name: Prepare timing artifact
-        if: always()
+        if: always() && env.BUILD_TIMING_ARTIFACT_DIR != ''
         run: |
           rm -rf "$BUILD_TIMING_ARTIFACT_DIR"
           mkdir -p "$BUILD_TIMING_ARTIFACT_DIR"
@@ -481,7 +507,7 @@ jobs:
             cp .lake/build/vcvio-module-times.json "$BUILD_TIMING_ARTIFACT_DIR/module-times.json"
           fi
       - name: Upload timing artifact
-        if: always()
+        if: always() && env.BUILD_TIMING_ARTIFACT_DIR != ''
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.BUILD_TIMING_ARTIFACT_NAME }}
@@ -491,7 +517,7 @@ jobs:
       # The per-module baseline is the module table restored with the build cache, so no other
       # run's artifact is needed.
       - name: Render build timing report
-        if: always()
+        if: always() && env.BUILD_TIMING_ARTIFACT_DIR != ''
         run: |
           BUILD_TIMING_LOG_DIR="$BUILD_TIMING_ARTIFACT_DIR" bash scripts/build_timing_report.sh \
             render "$BUILD_TIMING_ARTIFACT_DIR/results.jsonl" > "$BUILD_TIMING_REPORT"

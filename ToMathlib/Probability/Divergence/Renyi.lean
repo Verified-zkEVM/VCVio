@@ -77,7 +77,9 @@ theorem renyiMGF_self (a : ℝ) (μ : Measure α) [IsProbabilityMeasure μ] :
 /-! ### The Renyi divergence
 
 `renyiDiv` normalises the MGF so that it is one for equal measures and monotone in the order. The
-`a ≤ 1` guard matches the discrete definition, which uses it as a trivial bound. -/
+exponent `(a - 1)⁻¹` is meaningful only at orders `a > 1`; at orders `a ≤ 1` the divergence is set
+to `1`, its value on equal measures, so that it is defined at every order. Every substantive
+result below assumes `1 < a`. -/
 
 open scoped Classical in
 /-- The multiplicative Renyi divergence of order `a`. -/

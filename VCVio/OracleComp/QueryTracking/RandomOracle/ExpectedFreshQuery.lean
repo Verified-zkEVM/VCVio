@@ -179,7 +179,8 @@ theorem prEvent_fixedTableLoggedRun_queries_mem_update [DecidableEq D]
             simp only [bind_map_left, List.nil_append, Prod.mk.eta]
             simp
           rw [hrun, hrun]
-          apply prEvent_bind_congr
+          simp only [ExpectationWP.wp_bind]
+          apply ExpectationWP.wp_congr
           intro x
           exact ih x cache
       | inr s =>
@@ -204,7 +205,8 @@ theorem prEvent_fixedTableLoggedRun_queries_mem_update [DecidableEq D]
                     Pr{let z ← run}[True] := by
                   dsimp [run]
                   rw [hrun]
-                  apply prEvent_bind_congr
+                  simp only [ExpectationWP.wp_bind]
+                  apply ExpectationWP.wp_congr
                   intro p
                   simp
                 _ = 1 := by
@@ -228,7 +230,8 @@ theorem prEvent_fixedTableLoggedRun_queries_mem_update [DecidableEq D]
               · rw [QueryImpl.withCaching_run_some _ hc,
                   QueryImpl.withCaching_run_some _ hc]
             rw [hhandler]
-            apply prEvent_bind_congr
+            simp only [ExpectationWP.wp_bind]
+            apply ExpectationWP.wp_congr
             intro p
             rw [prEvent_map, prEvent_map]
             have hts : t ≠ s := Ne.symm hst
@@ -280,7 +283,7 @@ theorem prEvent_interleavedKey_bad_le_of_initialCache
       ($ᵗ (∀ d, R d)) SampleableType.evalDist_uniformSample
       SampleableType.evalDist_uniformSample f
     have h' := (EvalDistEq.of_evalDist_eq h.symm).prEvent_eq id
-    simpa only [f, prEvent_norm, id_eq] using h'
+    simpa only [f, expect_norm, id_eq] using h'
   have hcell (g : ∀ d, R d) :
       Pr{let u ← $ᵗ (R t);
          let z ← (fixedTableLoggedRun oa
@@ -321,7 +324,7 @@ theorem prEvent_interleavedKey_bad_le_of_initialCache
         t ∈ freshKeysOfLog z.1.2 ∧ bad t (completeTable cache (Function.update g t u))] := by
     let : MeasurableSpace Prop := ⊤
     have h' := (EvalDistEq.of_evalDist_eq hswap).prEvent_eq id
-    simpa only [prEvent_norm, id_eq] using h'
+    simpa only [expect_norm, id_eq] using h'
   rw [hresample, hswap']
   let : MeasurableSpace (∀ d, R d) := ⊤
   have hleft :
@@ -337,7 +340,7 @@ theorem prEvent_interleavedKey_bad_le_of_initialCache
         t ∈ freshKeysOfLog z.1.2 ∧
           bad t (completeTable cache (Function.update g t u))]
         ∂𝒟[$ᵗ (∀ d, R d)] := by
-    simpa only [prEvent_norm, bind_assoc, pure_bind, id_eq] using
+    simpa only [expect_norm, bind_assoc, pure_bind, id_eq] using
       (prEvent_bind_eq_lintegral_of_discrete ($ᵗ (∀ d, R d))
         (fun g => do
           let u ← $ᵗ (R t)
@@ -351,7 +354,7 @@ theorem prEvent_interleavedKey_bad_le_of_initialCache
         t ∈ freshKeysOfLog z.1.2] =
       ∫⁻ g, Pr{let z ← (fixedTableLoggedRun oa (completeTable cache g) cache)}[
         t ∈ freshKeysOfLog z.1.2] ∂𝒟[$ᵗ (∀ d, R d)] := by
-    simpa only [prEvent_norm, bind_assoc, pure_bind, id_eq] using
+    simpa only [expect_norm, bind_assoc, pure_bind, id_eq] using
       (prEvent_bind_eq_lintegral_of_discrete ($ᵗ (∀ d, R d))
         (fun g => do
           let z ← fixedTableLoggedRun oa (completeTable cache g) cache
@@ -449,7 +452,7 @@ theorem prEvent_tableFreshKey_bad_le
         bad t (Function.update g t u)] := by
     let : MeasurableSpace Prop := ⊤
     have h' := (EvalDistEq.of_evalDist_eq hswap).prEvent_eq id
-    simpa only [prEvent_norm, id_eq] using h'
+    simpa only [expect_norm, id_eq] using h'
   rw [hswap']
   have hinner (g : ∀ d, R d) :
       Pr{let u ← $ᵗ (R t)}[t ∈ tableFreshKeys oa g ∧
@@ -471,7 +474,7 @@ theorem prEvent_tableFreshKey_bad_le
         bad t (Function.update g t u)] =
       ∫⁻ g, Pr{let u ← $ᵗ (R t)}[t ∈ tableFreshKeys oa g ∧
         bad t (Function.update g t u)] ∂𝒟[$ᵗ (∀ d, R d)] := by
-    simpa only [prEvent_norm, bind_assoc, pure_bind, id_eq] using hbind
+    simpa only [expect_norm, bind_assoc, pure_bind, id_eq] using hbind
   rw [hbind']
   calc
     ∫⁻ g, Pr{let u ← $ᵗ (R t)}[t ∈ tableFreshKeys oa g ∧
@@ -532,7 +535,7 @@ theorem prEvent_interleavedFreshBad_le_expectedCharge
   have hkey (t : D) :
       Pr{let p ← mx}[t ∈ freshKeysOfLog p.2.1.2 ∧ bad t p.1] ≤
       Pr{let p ← mx}[t ∈ freshKeysOfLog p.2.1.2] * error t := by
-    simpa only [mx, prEvent_norm] using
+    simpa only [mx, expect_norm] using
       prEvent_interleavedFreshKey_bad_le oa t bad error (hbad t)
   have hunion := prEvent_bad_in_freshKeys_le_expectedCharge mx
     (fun p => freshKeysOfLog p.2.1.2) (fun t p => bad t p.1) error hkey

@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Unary.HoareTriple
-public import VCVio.EvalDist.MeasureTVDist.Basic
+public import VCVio.EvalDist.EvalDistTV
 public import VCVio.ProgramLogic.Relational.Basic
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import ToMathlib.Control.Monad.RelWP
@@ -28,9 +28,11 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 
 ### Unary (core WP)
 
-Unary triples additionally require `open scoped Std.WP OracleComp.Lower`.
-- `wp⟦c⟧` — quantitative WP (partial application, use as `wp⟦c⟧ post`)
-- `⦃P⦄ c ⦃Q⦄` — quantitative Hoare triple (`P ≤ wp c Q`)
+Unary triples additionally require `open scoped Std.WP`.
+- `wp⟦c⟧ post` — expectation of `post` over the outputs of `c` (global, from
+  `VCVio.EvalDist.Expectation`)
+- `⦃ P ⦄ c ⦃ Q ⦄` — core's Hoare triple `Std.WP.Triple c P Q ⊥`, which states `P ≤ wp⟦c⟧ Q`
+  under the lower reading (`open scoped OracleComp.Lower`)
 
 ### Game-level
 - `g₁ =ᵈ g₂` — equality in distribution, from `VCVio.EvalDist.EvalDistEq`
@@ -48,6 +50,8 @@ Unary triples additionally require `open scoped Std.WP OracleComp.Lower`.
 @[expose] public section
 
 open ENNReal OracleSpec OracleComp
+open scoped Std.WP
+open scoped OracleComp.Lower
 
 universe u
 
@@ -70,17 +74,6 @@ def AdvBound (game : OracleComp spec₁ Bool) (ε : ℝ≥0∞) : Prop :=
 /-- Numeric proposition indicator: `𝟙⟦P⟧ = 1` if `P` holds, `0` otherwise.
 The true branch is the numeric value `1`, including for the unbounded expectation carrier. -/
 scoped notation "𝟙⟦" P "⟧" => propInd P
-
-/-- Quantitative WP notation. `wp⟦c⟧ post` directly elaborates to
-`wp c post`; `wp⟦c⟧` standalone elaborates to
-the lambda `fun post => wp c post` for partial
-application sites (e.g. `change wp⟦c⟧` or composition with `≤`). -/
-scoped syntax:max (name := wpBracket) "wp⟦" term "⟧" : term
-scoped syntax:max (name := wpBracketApp) "wp⟦" term "⟧" term:max : term
-
-scoped macro_rules
-  | `(wp⟦ $c ⟧ $post:term) => `(wp $c $post)
-  | `(wp⟦ $c ⟧)            => `(fun post => wp $c post)
 
 /-- Raw relational WP notation.
 `rwp⟦c₁ ~ c₂ | post; epost₁, epost₂⟧` elaborates to `VCVio.ProgramLogic.rwp`.
@@ -108,31 +101,28 @@ macro_rules
   | `(⦃$f⦄ $c₁ ≈ₑ $c₂ ⦃$g⦄) =>
       `(VCVio.ProgramLogic.RelTriple $f $c₁ $c₂ $g Lean.Order.bot Lean.Order.bot)
 
-/-! ## Bridge lemmas: numeric indicators and existing API -/
+/-! ## Bridge lemmas: numeric indicators and events -/
 
 /-- `RelPost.indicator` is pointwise `𝟙⟦_⟧`. -/
 lemma Relational.RelPost.indicator_eq_propInd {α β : Type}
     (R : Relational.RelPost α β) (a : α) (b : β) :
     Relational.RelPost.indicator R a b = 𝟙⟦R a b⟧ := rfl
 
-/-- Almost-sure correctness: `Triple 𝟙⟦True⟧ c (fun x => 𝟙⟦p x⟧)` iff
+/-- Almost-sure correctness: `⦃ 𝟙⟦True⟧ ⦄ c ⦃ fun x => 𝟙⟦p x⟧ ⦄` iff
 `Pr{let x ← c}[p x] = 1`. -/
 lemma triple_propInd_iff_prEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.AnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
-    Triple (𝟙⟦True⟧ : ℝ≥0∞) oa (fun x => 𝟙⟦p x⟧) ↔
-      Pr{let x ← oa}[p x] = 1 := by
-  rw [triple_iff_le_wp, propInd_true, ← prEvent_eq_wp_propInd]
-  exact ⟨fun h ↦ le_antisymm
-    ((MeasureTheory.measure_mono (Set.subset_univ _)).trans
-      (evalDist_apply_univ_le_one (p <$> oa))) h, fun h ↦ h.ge⟩
+    ⦃ (𝟙⟦True⟧ : ℝ≥0∞) ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ ↔ Pr{let x ← oa}[p x] = 1 := by
+  rw [Std.WP.Triple.iff, propInd_true]
+  exact ⟨fun h ↦ le_antisymm (prEvent_le_one oa) h, fun h ↦ h.ge⟩
 
 /-- Lower-bound event goals are exactly quantitative triples with indicator postconditions. -/
 lemma triple_propInd_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.AnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (r : ℝ≥0∞) :
-    Triple r oa (fun x => 𝟙⟦p x⟧) ↔ r ≤ Pr{let x ← oa}[p x] := by
-  rw [triple_iff_le_wp, ← prEvent_eq_wp_propInd]
+    ⦃ r ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ ↔ r ≤ Pr{let x ← oa}[p x] :=
+  Std.WP.Triple.iff
 
 /-! ## Expectation-level bridge lemmas -/
 
@@ -140,10 +130,10 @@ lemma triple_propInd_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}
 theorem wp_propInd_or_le {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.AnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) (p q : α → Prop) :
-    wp oa (fun x => 𝟙⟦p x ∨ q x⟧) ≤
-        wp oa (fun x => 𝟙⟦p x⟧) +
-          wp oa (fun x => 𝟙⟦q x⟧) := by
-  rw [← wp_add]
+    wp⟦oa⟧ (fun x => 𝟙⟦p x ∨ q x⟧) ≤
+        wp⟦oa⟧ (fun x => 𝟙⟦p x⟧) +
+          wp⟦oa⟧ (fun x => 𝟙⟦q x⟧) := by
+  rw [← ExpectationWP.wp_add]
   apply wp_mono
   intro x
   by_cases hp : p x <;> by_cases hq : q x <;> simp [propInd, hp, hq]
@@ -153,21 +143,23 @@ theorem markov_bound {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.AnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) (f : α → ℝ≥0∞) (a : ℝ≥0∞) (p : α → Prop)
     (hf : ∀ x, p x → a ≤ f x) :
-    a * Pr{let x ← oa}[p x] ≤ wp oa f := by
-  rw [prEvent_eq_wp_propInd, ← wp_mul_const]
+    a * Pr{let x ← oa}[p x] ≤ wp⟦oa⟧ f := by
+  rw [← ExpectationWP.wp_const_mul]
   refine wp_mono oa fun x => ?_
+  rw [predInd_apply]
   unfold propInd
   split_ifs with hp
   · simpa using hf x hp
   · simp
 
-/-- `Triple` with precondition `1` and indicator postcondition when the event is almost sure. -/
+/-- A triple with precondition `1` and indicator postcondition when the event holds on the
+support. -/
 theorem triple_propInd_of_support {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.AnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (h : ∀ x ∈ support oa, p x) :
-    Triple (1 : ℝ≥0∞) oa (fun x => 𝟙⟦p x⟧) := by
-  apply triple_ofLE
-  rw [← wp_const oa 1]
+    ⦃ (1 : ℝ≥0∞) ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ := by
+  refine ⟨?_⟩
+  rw [← ExpectationWP.wp_const_of_oracle oa 1]
   apply wp_mono_of_support
   intro x hx
   simp [propInd, h x hx]
@@ -175,8 +167,8 @@ theorem triple_propInd_of_support {ι : Type u} {spec : OracleSpec ι}
 /-! ## Bridge lemmas: advantage -/
 
 /-- Advantage bound via total variation distance. -/
-theorem AdvBound.of_measureETVDist {game₁ game₂ : OracleComp spec₁ Bool} {ε₁ ε₂ : ℝ≥0∞}
-    (hbound : AdvBound game₁ ε₁) (htv : measureETVDist game₁ game₂ ≤ ε₂) :
+theorem AdvBound.of_etvDist {game₁ game₂ : OracleComp spec₁ Bool} {ε₁ ε₂ : ℝ≥0∞}
+    (hbound : AdvBound game₁ ε₁) (htv : etvDist game₁ game₂ ≤ ε₂) :
     AdvBound game₂ (ε₁ + ε₂) := by
   unfold AdvBound at *
   calc ENNReal.absDiff (𝒟[game₂] {true}) (1 / 2)
@@ -184,10 +176,25 @@ theorem AdvBound.of_measureETVDist {game₁ game₂ : OracleComp spec₁ Bool} {
           ENNReal.absDiff (𝒟[game₁] {true}) (1 / 2) := ENNReal.absDiff_triangle _ _ _
     _ ≤ ε₂ + ε₁ := by
       refine add_le_add ?_ hbound
-      rw [ENNReal.absDiff_comm]
-      exact (measure_absDiff_apply_le_measureETVDist game₁ game₂
-        (measurableSet_singleton true)).trans htv
+      rw [ENNReal.absDiff_comm, ← prEvent_eq_evalDist_singleton, ← prEvent_eq_evalDist_singleton]
+      exact (absDiff_prEvent_le_etvDist game₁ game₂ _).trans htv
     _ = ε₁ + ε₂ := add_comm _ _
+
+/-- Advantage bound via total variation distance. -/
+theorem AdvBound.of_measureETVDist {game₁ game₂ : OracleComp spec₁ Bool} {ε₁ ε₂ : ℝ≥0∞}
+    (hbound : AdvBound game₁ ε₁) (htv : measureETVDist game₁ game₂ ≤ ε₂) :
+    AdvBound game₂ (ε₁ + ε₂) := by
+  exact AdvBound.of_etvDist hbound (by simpa only [← etvDist_eq_measureETVDist] using htv)
+
+/-- Advantage bound through a hybrid chain of games: the bound of the last game plus the
+distances of the consecutive steps. -/
+theorem AdvBound.of_hybrid {games : ℕ → OracleComp spec₁ Bool} {n : ℕ} {ε : ℝ≥0∞}
+    (hbound : AdvBound (games n) ε) {step : ℕ → ℝ≥0∞}
+    (hstep : ∀ i < n, etvDist (games i) (games (i + 1)) ≤ step i) :
+    AdvBound (games 0) (ε + ∑ i ∈ Finset.range n, step i) :=
+  hbound.of_etvDist <| (etvDist_comm _ _).trans_le <|
+    (etvDist_le_sum_etvDist_succ games n).trans
+      (Finset.sum_le_sum fun i hi => hstep i (Finset.mem_range.1 hi))
 
 /-- Transfer advantage bounds across games equal in distribution. -/
 theorem AdvBound.of_evalDistEq

@@ -39,7 +39,6 @@ example (p : Prob) : (wp (none : Option Nat) (fun _ ↦ p) Lean.Order.bot).val =
   simp
 
 example (p : Prob) : (wp (some 7 : Option Nat) (fun _ ↦ p) Lean.Order.bot).val = p.val := by
-  rw [ExpectationWP.Probabilistic.wp_val]
   simp
 
 universe v

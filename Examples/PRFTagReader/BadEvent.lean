@@ -206,20 +206,14 @@ private lemma unlinkBadTagStep_bad_le
       z.2.bad = true] ≤ (st.sessionsUsed tag : ℝ≥0∞) * maxNonceProb := by
   by_cases hslot : st.sessionsUsed tag < sessionsPerTag
   · rw [unlinkBadTagQueryImpl_run_of_lt (sessionsPerTag := sessionsPerTag) tag st hslot]
+    simp only [expect_norm]
     -- `bad` fires exactly when the fresh nonce is already cached for this tag.
-    have hinner : ∀ nonce ∈ support ($ᵗ Nonce : ProbComp Nonce),
-        ¬ (st.responses (tag, nonce)).isSome = true →
-          Pr{let z ← ($ᵗ Digest : ProbComp Digest) >>= fun auth =>
-              pure (some ({ nonce := nonce, auth := auth } : TagTranscript Nonce Digest),
-                unlinkBadTagNext tag st nonce auth)}[z.2.bad = true] ≤ 0 := by
-      intro nonce _ hcached
-      refine le_of_eq (prEvent_eq_zero_of_forall_mem_support _ _ fun z hz => ?_)
-      rw [mem_support_bind_iff] at hz
-      obtain ⟨auth, _, hz⟩ := hz
-      simp only [support_pure, Set.mem_singleton_iff] at hz
-      subst hz
-      simp [unlinkBadTagNext, hbad, Bool.eq_false_iff.mpr hcached]
-    refine (prEvent_bind_le_prEvent_add_of_support _ _ _ _ hinner).trans ?_
+    have hinner : ∀ nonce, ¬ (st.responses (tag, nonce)).isSome = true →
+        Pr{let auth ← ($ᵗ Digest : ProbComp Digest)}[
+          (unlinkBadTagNext tag st nonce auth).bad = true] ≤ 0 := fun nonce hcached =>
+      le_of_eq <| prEvent_eq_zero_of_forall_not _ _ fun _ => by
+        simp [unlinkBadTagNext, hbad, Bool.eq_false_iff.mpr hcached]
+    refine (wp_le_prEvent_add _ _ _ hinner fun _ => prEvent_le_one _).trans ?_
     rw [add_zero]
     obtain ⟨S, hScard, hS⟩ := hbounded tag
     calc Pr{let nonce ← ($ᵗ Nonce : ProbComp Nonce)}[(st.responses (tag, nonce)).isSome = true]
@@ -255,10 +249,11 @@ private lemma simulateQ_unlinkBad_prob_le
   induction adversary using OracleComp.inductionOn generalizing st with
   | pure b =>
     simp only [simulateQ_pure, StateT.run_pure, prEvent_pure, hbad, Bool.false_eq_true,
-      ite_false]
+      propInd_false]
     exact zero_le
   | query_bind t oa ih =>
-    simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind, monadLift_self]
+    simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind, monadLift_self,
+      prEvent_bind]
     cases t with
     | inl tag =>
       simp only [unlinkBadQueryImpl, QueryImpl.add_apply_inl]
@@ -292,7 +287,7 @@ private lemma simulateQ_unlinkBad_prob_le
               (unlinkBadTagNext_sessionsUsed_le (sessionsPerTag := sessionsPerTag)
                 tag st nonce auth hslot hused)
         calc
-          Pr{let z ← step >>= cont}[z.2.bad = true]
+          Pr{let x ← step; let z ← cont x}[z.2.bad = true]
               ≤ (sessionsPerTag : ℝ≥0∞) * maxNonceProb +
                   ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st - 1 : ℕ) :
                     ℝ≥0∞) * ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) :=
@@ -306,8 +301,8 @@ private lemma simulateQ_unlinkBad_prob_le
                   exact_mod_cast Nat.add_sub_cancel' (Nat.succ_le_iff.mpr hRpos)
                 nth_rw 1 [← one_mul ((sessionsPerTag : ℝ≥0∞) * maxNonceProb)]
                 rw [← add_mul, hRcast]
-      · change Pr{let z ← ((unlinkBadTagQueryImpl tag).run st >>= fun p =>
-              (simulateQ unlinkBadQueryImpl (oa p.1)).run p.2)}[z.2.bad = true] ≤ _
+      · change Pr{let p ← (unlinkBadTagQueryImpl tag).run st;
+                  let z ← (simulateQ unlinkBadQueryImpl (oa p.1)).run p.2}[z.2.bad = true] ≤ _
         rw [unlinkBadTagQueryImpl_run_of_not_lt (sessionsPerTag := sessionsPerTag) tag st hslot]
         simpa using ih none st hbounded hbad hused
     | inr transcript =>
@@ -328,7 +323,7 @@ theorem unlinkBadExperiment_le_sessionCollisionBound
       Pr{let z ← ((simulateQ (unlinkBadQueryImpl (sessionsPerTag := sessionsPerTag)) adversary).run
         UnlinkBadState.init)}[z.2.bad = true] := by
     rw [← prEvent_eq_evalDist_singleton, unlinkBadExperiment]
-    simp only [prEvent_norm]
+    simp only [expect_norm]
   rw [hlhs]
   have hremaining :
       unlinkBadRemaining (sessionsPerTag := sessionsPerTag)

@@ -97,7 +97,7 @@ example {α β ε : Type} (a : α) (y : OracleComp spec₂ β)
     (postOk : α → β → ℝ≥0∞) (postErr : ε → β → ℝ≥0∞) :
     rwpExcLeft (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (pure a : ExceptT ε (OracleComp spec₁) α) y postOk postErr =
-      wp y (postOk a) :=
+      wp⟦y⟧ (postOk a) :=
   rwpExcLeft_pure_left a y postOk postErr
 
 /-- A `throw` on the left in `rwpExcLeft` collapses to a unary WP using the error
@@ -106,7 +106,7 @@ example {α β ε : Type} (e : ε) (y : OracleComp spec₂ β)
     (postOk : α → β → ℝ≥0∞) (postErr : ε → β → ℝ≥0∞) :
     rwpExcLeft (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (throw e : ExceptT ε (OracleComp spec₁) α) y postOk postErr =
-      wp y (postErr e) :=
+      wp⟦y⟧ (postErr e) :=
   rwpExcLeft_throw_left e y postOk postErr
 
 /-! ## OptionT combinators -/

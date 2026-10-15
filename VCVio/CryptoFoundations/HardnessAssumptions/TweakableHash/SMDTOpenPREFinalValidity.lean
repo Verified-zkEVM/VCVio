@@ -26,8 +26,8 @@ target/collection disjointness. Taking the bounded prefix is source semantics: a
 list is truncated, not rejected and not used to poison the game.
 
 The declarations live in `TweakableHash.SM_DT_OpenPRE_SourceFinalValidity`. This explicit namespace
-keeps this source-final-predicate game distinct from the rejection-on-arrival assumptions already
-present in the repository.
+keeps this source-final-predicate game distinct from the repository's rejection-on-arrival
+assumptions.
 
 The phase types enforce the information boundary. `pick` has no seed, images, or opening oracle;
 `find` receives the seed and images and has only private randomness and the opening oracle.

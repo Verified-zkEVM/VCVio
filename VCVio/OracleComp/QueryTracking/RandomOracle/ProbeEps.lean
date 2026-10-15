@@ -33,7 +33,7 @@ is valid in every state.
 ## Main results
 
 * `hiddenReadMany` / `prEvent_hiddenReadMany_le` : the single-target adaptive read game and its
-  first-fire union bound `Pr[fire] ≤ q · ε`.
+  first-fire union bound: it fires with probability at most `q · ε`.
 * `hiddenReadList` / `prEvent_hiddenReadList_le` : the per-attempt-fresh-target list game and
   its union bound.
 * `prEvent_bind_fire_le_of_gen` : the deferred-sampling fire bound whose marginal is a
@@ -52,10 +52,10 @@ variable {R : Type}
 
 /-! ## Iterated draws: the explicit front-block key list
 
-Stage A defers a *single* output-irrelevant draw. `drawList` lifts this to `n` interleaved draws
-by collecting them into an explicit front block: draw a list of `n` independent keys up front,
-against which a run's hidden draws can be exhibited and then charged by the abstract
-`hiddenReadList` union bound. -/
+The deferral primitive defers a *single* output-irrelevant draw. `drawList` lifts this to `n`
+interleaved draws by collecting them into an explicit front block: draw a list of `n` independent
+keys up front, against which a run's hidden draws can be exhibited and then charged by the
+abstract `hiddenReadList` union bound. -/
 
 /-- Draw a list of `n` independent keys from `oa` (the front block of the deferred-sampling
 factorization). The keys are the hidden targets; the list length is the key count `n`. -/
@@ -133,7 +133,7 @@ theorem prEvent_hiddenReadMany_le {oa : ProbComp R} {ε : ℝ≥0∞}
     Pr{let b ← hiddenReadMany oa q σ}[b = true] ≤ (q : ℝ≥0∞) * ε := by
   calc Pr{let b ← hiddenReadMany oa q σ}[b = true]
       = Pr{let w ← oa}[∃ j ∈ Finset.range q, w = σ (List.replicate j false)] := by
-        simp only [hiddenReadMany, prEvent_norm]
+        simp only [hiddenReadMany, expect_norm]
         exact prEvent_congr _ _ _ fun w => by simp [readMany_true_iff]
     _ ≤ ∑ j ∈ Finset.range q, Pr{let w ← oa}[w = σ (List.replicate j false)] :=
         prEvent_exists_finset_le _ _ _
@@ -175,14 +175,14 @@ theorem prEvent_hiddenReadList_le {oa : ProbComp R} {ε : ℝ≥0∞}
   | zero => simp [hiddenReadList]
   | succ n ih =>
     have hhead : Pr{let w ← oa}[readMany w q σ = true] ≤ (q : ℝ≥0∞) * ε := by
-      simpa only [hiddenReadMany, prEvent_norm] using prEvent_hiddenReadMany_le hε q σ
-    rw [hiddenReadList]
-    calc Pr{let c ← oa >>= fun w => hiddenReadList oa q σ n >>= fun b =>
-            (pure (readMany w q σ || b) : ProbComp Bool)}[c = true]
-        ≤ Pr{let w ← oa}[readMany w q σ = true] + (n : ℝ≥0∞) * ((q : ℝ≥0∞) * ε) :=
-          prEvent_bind_le_prEvent_add _ _ (fun w => readMany w q σ = true) _ fun w hw => by
+      simpa only [hiddenReadMany, expect_norm] using prEvent_hiddenReadMany_le hε q σ
+    calc Pr{let c ← hiddenReadList oa q σ (n + 1)}[c = true]
+        = Pr{let w ← oa; let b ← hiddenReadList oa q σ n}[(readMany w q σ || b) = true] := by
+          simp only [hiddenReadList, expect_norm]
+      _ ≤ Pr{let w ← oa}[readMany w q σ = true] + (n : ℝ≥0∞) * ((q : ℝ≥0∞) * ε) :=
+          wp_le_prEvent_add oa (fun w => readMany w q σ = true) _ (fun w hw => by
             rw [Bool.not_eq_true] at hw
-            simpa only [hw, Bool.false_or, bind_pure] using ih
+            simpa only [hw, Bool.false_or] using ih) fun _ => prEvent_le_one _
       _ ≤ (q : ℝ≥0∞) * ε + (n : ℝ≥0∞) * ((q : ℝ≥0∞) * ε) := add_le_add hhead le_rfl
       _ = (↑(n + 1) : ℝ≥0∞) * ((q : ℝ≥0∞) * ε) := by push_cast; ring
 
@@ -207,7 +207,7 @@ theorem prEvent_bind_hiddenReadList_le {oa : ProbComp R} {ε : ℝ≥0∞}
     (hε : ∀ r : R, Pr{let w ← oa}[w = r] ≤ ε) (q : ℕ) (σ : List Bool → R) (kn : ProbComp ℕ) :
     Pr{let b ← kn >>= fun n => hiddenReadList oa q σ n}[b = true]
       ≤ (∫⁻ n, (n : ℝ≥0∞) ∂𝒟[kn]) * ((q : ℝ≥0∞) * ε) := by
-  rw [prEvent_bind_eq_lintegral_of_discrete,
+  rw [prEvent_bind, prEvent_bind_eq_lintegral_of_discrete,
     ← MeasureTheory.lintegral_mul_const _ Measurable.of_discrete]
   exact MeasureTheory.lintegral_mono fun n => prEvent_hiddenReadList_le hε q σ n
 
@@ -232,7 +232,7 @@ theorem prEvent_le_of_eq_bind_hiddenReadList {β : Type} {run : ProbComp β} {ba
 /-! ## Single output-irrelevant draw deferral
 
 The lemmas above take the read strategy `σ` (and, in `hiddenReadList`, the key count) as already
-*extracted* data. The genuine new content of the sound route is the **deferral primitive**: lifting
+*extracted* data. The substantive content of the sound route is the **deferral primitive**: lifting
 a single hidden draw out of an arbitrary run when that draw is used *only output-irrelevantly* —
 i.e. it influences neither the run's visible output nor the read points, only the boolean "fire"
 flag computed by membership tests against an adaptive read sequence.
@@ -259,10 +259,8 @@ theorem prEvent_bind_fire_eq_defer {α : Type} (oa : ProbComp R)
     Pr{let z ← oa >>= k}[z.2 = true]
       = Pr{let z ← gen >>= fun p => oa >>= fun w =>
           (pure (p.1, readMany w q p.2) : ProbComp (α × Bool))}[z.2 = true] := by
-  rw [show k = fun w => gen >>= fun p => pure (p.1, readMany w q p.2) from funext hk]
-  refine (evalDistEq_iff_evalDist_eq.mpr ?_).prEvent_eq _
-  let : MeasurableSpace (α × Bool) := ⊤
-  exact OracleComp.evalDist_bind_bind_swap _ _ _
+  simp only [hk, expect_norm]
+  exact wp_swap_of_uniform oa gen _
 
 /-- **Single output-irrelevant draw first-fire bound (structural form).** A run `oa >>= k` that
 draws one hidden value `w ← oa` (each outcome of mass at most `ε`) and feeds it to a continuation
@@ -279,8 +277,9 @@ theorem prEvent_bind_fire_le_of_gen {α : Type} {oa : ProbComp R} {ε : ℝ≥0�
     (hk : ∀ w : R, k w = gen >>= fun p => pure (p.1, readMany w q p.2)) :
     Pr{let z ← oa >>= k}[z.2 = true] ≤ (q : ℝ≥0∞) * ε := by
   rw [prEvent_bind_fire_eq_defer oa q gen k hk]
-  refine prEvent_bind_le_of_forall_le _ _ _ fun p => ?_
-  simpa only [hiddenReadMany, prEvent_norm] using prEvent_hiddenReadMany_le hε q p.2
+  simp only [expect_norm]
+  refine wp_le_of_forall_le gen fun p => ?_
+  simpa only [hiddenReadMany, expect_norm] using prEvent_hiddenReadMany_le hε q p.2
 
 /-- **Single output-irrelevant draw first-fire bound (marginal form).** The convenience special
 case of `prEvent_bind_fire_le_of_gen` for a run `oa >>= k` whose continuation's fire-marginal is,
@@ -293,7 +292,7 @@ theorem prEvent_bind_fire_le_of_marginal_eq_readMany {α : Type} {oa : ProbComp 
     (hmarg : ∀ w : R, Pr{let z ← k w}[z.2 = true]
       = Pr{let b ← (pure (readMany w q σ) : ProbComp Bool)}[b = true]) :
     Pr{let z ← oa >>= k}[z.2 = true] ≤ (q : ℝ≥0∞) * ε := by
-  rw [prEvent_bind_congr oa k (fun w => (pure (readMany w q σ) : ProbComp Bool)) _ _ hmarg]
-  exact prEvent_hiddenReadMany_le hε q σ
+  rw [prEvent_bind, ExpectationWP.wp_congr oa hmarg]
+  simpa only [hiddenReadMany, expect_norm] using prEvent_hiddenReadMany_le hε q σ
 
 end OracleComp

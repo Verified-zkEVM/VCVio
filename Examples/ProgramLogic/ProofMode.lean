@@ -70,7 +70,7 @@ example
       ∀ x ∈ support ((impl₁ t).run s), bad x.2)
     (h_mono₂ : ∀ (t : spec.Domain) (s : σ), bad s →
       ∀ x ∈ support ((impl₂ t).run s), bad x.2) :
-    measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
+    etvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
       ≤ Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2] := by
   by_upto bad
   · exact h_agree
@@ -186,7 +186,7 @@ end EqualInDistribution
 section ByDist
 
 example {game₁ game₂ : OracleComp spec Bool} {ε₁ ε₂ : ℝ≥0∞}
-    (hbound : AdvBound game₁ ε₁) (htv : measureETVDist game₁ game₂ ≤ ε₂) :
+    (hbound : AdvBound game₁ ε₁) (htv : etvDist game₁ game₂ ≤ ε₂) :
     AdvBound game₂ (ε₁ + ε₂) := by
   by_dist ε₂
   · exact hbound

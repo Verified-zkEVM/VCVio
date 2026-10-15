@@ -67,7 +67,7 @@ example (mx : m α) (my : m β) (p : α → Prop) (q : β → Prop) {bound : ENN
     Pr{let x ← mx; let y ← my}[p x ∧ q y] ≤ bound := by grind
 
 example (source : m α) (f : α → m β) (p : β → Prop) :
-    Pr{let y ← source >>= f}[p y] ^ 2 ≤
+    Pr{let x ← source; let y ← f x}[p y] ^ 2 ≤
       Pr{let x ← source; let a ← f x; let b ← f x}[p a ∧ p b] :=
   prEvent_bind_sq_le_bind_pair source f p
 

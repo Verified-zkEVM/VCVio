@@ -42,15 +42,14 @@ threads each channel's uniform sampling through its own slot.
 
 ## Why no operational reduction here
 
-The previous version of this file proved the two-channel statement
-operationally, by walking `simulateQ` over `encOncePair`'s
-query-bind chain and discharging each `liftComp` shell from
-`QueryImpl.Stateful.parSum`'s sum-spec import by hand. That worked, but it
-reproved the OTP cryptographic core (XOR with uniform is uniform)
-inside the `parSum`-composite, which scales poorly to deeper
-compositions and is unnecessary now that:
+An operational proof of the two-channel statement would walk
+`simulateQ` over `encOncePair`'s query-bind chain and discharge each
+`liftComp` shell from `QueryImpl.Stateful.parSum`'s sum-spec import by
+hand. It would reprove the OTP cryptographic core (XOR with uniform is
+uniform) inside the `parSum` composite, which scales poorly to deeper
+compositions. The proof here needs none of that, because
 
-* `realImpl_impl_evalDistEq_idealImpl` (in `HeapBasic.lean`) handlers
+* `realImpl_impl_evalDistEq_idealImpl` (in `HeapBasic.lean`) handles
   the OTP cryptographic core as a *per-(query, heap) handler
   equality* between the gated real and ideal single-channel
   handlers, and

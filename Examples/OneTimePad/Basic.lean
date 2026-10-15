@@ -67,8 +67,9 @@ theorem evalDist_completenessExperiment (sp : ℕ) (msg : BitVec sp) :
   simp
 
 /-- Encryption and decryption are inverses for any OTP key. -/
-lemma complete (sp : ℕ) : (oneTimePad sp).Complete :=
-  evalDist_completenessExperiment sp
+lemma complete (sp : ℕ) : (oneTimePad sp).Complete := fun msg => by
+  rw [prEvent_eq_evalDist_singleton, evalDist_completenessExperiment,
+    MeasureTheory.Measure.dirac_apply_of_mem (Set.mem_singleton _)]
 
 /-- The one-time-pad ciphertext has a uniform measure for every message sampler. -/
 theorem evalDist_perfectSecrecyCipherExperiment (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
@@ -102,5 +103,10 @@ lemma ciphertextRowsEqual (sp : ℕ) : (oneTimePad sp).ciphertextRowsEqualAt :=
   fun msg₀ msg₁ => EvalDistEq.of_evalDist_eq
     ((evalDist_perfectSecrecyCipherGivenMsgExperiment sp msg₀).trans
       (evalDist_perfectSecrecyCipherGivenMsgExperiment sp msg₁).symm)
+
+/-- The independence form of the one-time pad's perfect secrecy gives back its equal ciphertext
+rows through the `ProbComp` converse. -/
+example (sp : ℕ) : (oneTimePad sp).ciphertextRowsEqualAt :=
+  (oneTimePad sp).ciphertextRowsEqualAt_of_perfectSecrecyAt_probComp (perfectSecrecyAt sp)
 
 end oneTimePad

@@ -206,13 +206,13 @@ def decodeApprovedSignature (set : FipsParameterSet) (raw : List Byte) :
     decodeApprovedSignature set (encodeApprovedSignature set signature) = .ok signature :=
   SLHDSA.decodeSignature_encode set.validatedParams (approvedWireCodec set) signature
 
-/-! ## Agreement with the legacy SLH-DSA-SHA2-128-24 decoder
+/-! ## Agreement with the fixed-offset SLH-DSA-SHA2-128-24 decoder
 
-`SLHDSA.Concrete.decodeSignature` (`HashSig.SLHDSA.Concrete.Instance`) predates the strict
-codec: it reads the 3856-byte SLH-DSA-SHA2-128-24 wire at hard-coded offsets, without a width
-check. The theorems below reconcile the two byte boundaries: on every canonical wire — in
-particular on every input the strict checked decoder accepts — the legacy decoder produces
-exactly the same structured signature, so main hosts one FIPS byte layout, stated once. -/
+`SLHDSA.Concrete.decodeSignature` (`HashSig.SLHDSA.Concrete.Instance`) reads the 3856-byte
+SLH-DSA-SHA2-128-24 wire at hard-coded offsets, without the strict codec's width check. The
+theorems below reconcile the two byte boundaries: on every canonical wire — in particular on
+every input the strict checked decoder accepts — the fixed-offset decoder produces exactly the
+same structured signature, so the library has one FIPS byte layout, stated once. -/
 
 /-- The validated SLH-DSA-SHA2-128-24 parameter bundle, with a reducible `params` projection so
 codec statements over `sha128_24Vp.params` unify with the concrete bundle's `slhdsaSha2_128_24`
@@ -304,9 +304,10 @@ private theorem xmssAuth_off (j : ℕ) :
       = 16 + 6 * ((1 + 24) * 16) + 0 * ((68 + 22) * 16) + (68 + j) * 16
   ring
 
-/-- **Strict-encode / legacy-decode identity.** Decoding a canonical strict SLH-DSA-SHA2-128-24
-signature wire with the legacy fixed-offset decoder recovers exactly the encoded signature, so
-the legacy byte layout agrees with the strict FIPS codec on every well-formed wire. -/
+/-- **Strict-encode / fixed-offset-decode identity.** Decoding a canonical strict
+SLH-DSA-SHA2-128-24 signature wire with the fixed-offset decoder recovers exactly the encoded
+signature, so the fixed-offset byte layout agrees with the strict FIPS codec on every well-formed
+wire. -/
 theorem decodeSignature_encodeSignature
     (sig : SignatureCore slhdsaSha2_128_24 shaPrimitives.core) :
     Concrete.decodeSignature
@@ -355,7 +356,7 @@ theorem decodeSignature_encodeSignature
           ⟨j, hj22⟩)
         (by omega)
 
-/-- Whenever the strict checked decoder accepts a byte string, the legacy fixed-offset
+/-- Whenever the strict checked decoder accepts a byte string, the fixed-offset
 SLH-DSA-SHA2-128-24 decoder produces exactly the same structured signature. -/
 theorem decodeSignature_eq_of_strict_ok {raw : List Byte}
     {sig : SignatureCore slhdsaSha2_128_24 shaPrimitives.core}

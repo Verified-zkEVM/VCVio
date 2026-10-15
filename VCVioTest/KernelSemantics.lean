@@ -121,6 +121,12 @@ example (E₁ E₂ : togglingResponder.IsExecutable) (state : Bool) :
     𝒟[E₁.answerComp state PUnit.unit] = 𝒟[E₂.answerComp state PUnit.unit] :=
   ProbResponder.IsExecutable.evalDist_answerComp_eq togglingResponder E₁ E₂ state PUnit.unit
 
+/-- Any two executable witnesses for one responder are equal in distribution, so they play
+every wired game the same way. -/
+example (E₁ E₂ : togglingResponder.IsExecutable) (state : Bool) :
+    E₁.answerComp state PUnit.unit =ᵈ E₂.answerComp state PUnit.unit :=
+  ProbResponder.IsExecutable.answerComp_evalDistEq togglingResponder E₁ E₂ state PUnit.unit
+
 example : IsSubprobabilityKernel
     (togglingResponder.answerKernel PUnit.unit) := by
   unfold togglingResponder
@@ -171,6 +177,13 @@ example (p : Bool × Bool) :
       pure (p.1, !p.1) := by
   simp [OracleStrategy.iterateAgainst_succ, OracleStrategy.stepAgainst_apply,
     togglingResponder, echoStrategy]
+
+/-- The wired run against any two executable witnesses for one responder is the same
+distribution. -/
+example (E₁ E₂ : togglingResponder.IsExecutable) (n : ℕ) (p : Bool × Bool) :
+    (letI := E₁; OracleStrategy.iterateAgainst echoStrategy togglingResponder n p) =ᵈ
+      (letI := E₂; OracleStrategy.iterateAgainst echoStrategy togglingResponder n p) :=
+  OracleStrategy.iterateAgainst_evalDistEq echoStrategy togglingResponder E₁ E₂ n p
 
 example (p : Bool × Bool) : togglingIterKernel 0 p = Measure.dirac p := by
   rw [togglingIterKernel, OracleStrategy.iterateAgainstKernel_eq_evalDist]

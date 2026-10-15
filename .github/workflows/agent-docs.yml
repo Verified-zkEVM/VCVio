@@ -21,5 +21,7 @@ jobs:
           python scripts/check-agent-docs.py
       - name: Check auto-generated doc fragments
         run: python scripts/extract-doc-fragments.py --check
+      - name: Check reading citations
+        run: python scripts/check-reading-citations.py
       - name: Check documentation names for retired declarations
         run: python scripts/check-doc-names.py

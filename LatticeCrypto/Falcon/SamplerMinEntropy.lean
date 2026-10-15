@@ -47,32 +47,24 @@ theorem pointMass_bind_le_mul {α β : Type} (mx : ProbComp α) (my : α → Pro
     (hB : ∀ x, Pr{let b ← my x}[b = y] ≤ B)
     (huniq : ∀ x₁ x₂, Pr{let b ← my x₁}[b = y] ≠ 0 →
       Pr{let b ← my x₂}[b = y] ≠ 0 → x₁ = x₂) :
-    Pr{let b ← mx >>= my}[b = y] ≤ M * B := by
+    Pr{let x ← mx; let b ← my x}[b = y] ≤ M * B := by
   classical
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_bind_eq_lintegral_of_discrete]
   rcases Classical.em (∀ x, Pr{let b ← my x}[b = y] = 0) with h | h
-  · simp only [h, lintegral_const, zero_mul, zero_le]
+  · simp [h]
   · obtain ⟨x₀, hx₀⟩ := not_forall.mp h
-    calc
-      _ ≤ ∫⁻ x, ({x₀} : Set α).indicator (fun _ => B) x ∂𝒟[mx] := by
-        apply lintegral_mono
-        intro x
-        change Pr{let b ← my x}[b = y] ≤ ({x₀} : Set α).indicator (fun _ => B) x
-        rcases Classical.em (x = x₀) with hx | hx
-        · subst x
-          simpa only [Set.indicator_of_mem (Set.mem_singleton x₀)] using hB x₀
-        · have hz : Pr{let b ← my x}[b = y] = 0 := by
-            by_contra hy
-            exact hx (huniq x x₀ hy hx₀)
-          rw [hz, Set.indicator_of_notMem
-            (show x ∉ ({x₀} : Set α) from hx)]
-      _ = B * Pr{let x ← mx}[x = x₀] := by
-        rw [lintegral_indicator_const (measurableSet_singleton x₀),
-          prEvent_eq_evalDist_singleton]
-      _ ≤ M * B := by
-        rw [mul_comm B]
-        exact mul_le_mul (hM x₀) le_rfl zero_le zero_le
+    calc Pr{let x ← mx; let b ← my x}[b = y]
+        ≤ wp⟦mx⟧ (fun x => B * propInd (x = x₀)) := by
+          gcongr with x _
+          by_cases hx : x = x₀
+          · subst hx
+            simpa [propInd_eq_ite] using hB x
+          · have hz : Pr{let b ← my x}[b = y] = 0 := by
+              by_contra hy
+              exact hx (huniq x x₀ hy hx₀)
+            simp [hz, propInd_eq_ite, hx]
+      _ = B * Pr{let x ← mx}[x = x₀] := ExpectationWP.wp_const_mul _ _ _
+      _ ≤ B * M := by gcongr; exact hM x₀
+      _ = M * B := mul_comm _ _
 
 private theorem pointMass_eq_zero_iff {α : Type} (mx : ProbComp α) (x : α) :
     Pr{let a ← mx}[a = x] = 0 ↔ x ∉ support mx := by
@@ -155,20 +147,23 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
       intro a b c d w hw
       simpa using hw
     have h4 : ∀ a b c : ℤ,
-        Pr{let outcome ← (prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
-          pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤ M * 1 := by
+        wp⟦prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
+          (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))⟧
+          (predInd (· = z)) ≤ M * 1 := by
       intro a b c
-      refine pointMass_bind_le_mul _ _ z (hM' _) (fun _ => measure_le_one _ _) ?_
+      rw [prEvent_bind]
+      refine pointMass_bind_le_mul _ _ z (hM' _) (fun _ => prEvent_le_one _) ?_
       intro d₁ d₂ h₁ h₂
       rw [ne_eq, pointMass_eq_zero_iff, not_not] at h₁ h₂
       have e := (hmem h₁).symm.trans (hmem h₂)
       exact (leafPack_inj (Prod.mk.inj e).2).2
     have h3 : ∀ a b : ℤ,
-        Pr{let outcome ← (prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
+        wp⟦prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
           prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
-            pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤
-          M * (M * 1) := by
+            (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))⟧
+            (predInd (· = z)) ≤ M * (M * 1) := by
       intro a b
+      rw [prEvent_bind]
       refine pointMass_bind_le_mul _ _ z (hM' _) (fun c => h4 a b c) ?_
       intro c₁ c₂ h₁ h₂
       rw [ne_eq, pointMass_eq_zero_iff, not_not, mem_support_bind_iff] at h₁ h₂
@@ -177,12 +172,13 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
       have e := (hmem h₁).symm.trans (hmem h₂)
       exact (leafPack_inj (Prod.mk.inj e).2).1
     have h2 : ∀ a : ℤ,
-        Pr{let outcome ← (prims.samplerZ (t₀.im ⟨0, by norm_num⟩) σ >>= fun b =>
+        wp⟦prims.samplerZ (t₀.im ⟨0, by norm_num⟩) σ >>= fun b =>
           prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
             prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
-              pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤
-          M * (M * (M * 1)) := by
+              (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))⟧
+            (predInd (· = z)) ≤ M * (M * (M * 1)) := by
       intro a
+      rw [prEvent_bind]
       refine pointMass_bind_le_mul _ _ z (hM' _) (fun b => h3 a b) ?_
       intro b₁ b₂ h₁ h₂
       rw [ne_eq, pointMass_eq_zero_iff, not_not, mem_support_bind_iff] at h₁ h₂
@@ -193,40 +189,36 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
       obtain ⟨d₂, -, h₂⟩ := h₂
       have e := (hmem h₁).symm.trans (hmem h₂)
       exact (leafPack_inj (Prod.mk.inj e).1).2
-    have h1 : Pr{let outcome ← (prims.samplerZ (t₀.re ⟨0, by norm_num⟩) σ >>= fun a =>
-        prims.samplerZ (t₀.im ⟨0, by norm_num⟩) σ >>= fun b =>
-          prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
-            prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
-              pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤
-          M * (M * (M * (M * 1))) := by
-      refine pointMass_bind_le_mul _ _ z (hM' _) (fun a => h2 a) ?_
-      intro a₁ a₂ h₁ h₂
-      rw [ne_eq, pointMass_eq_zero_iff, not_not, mem_support_bind_iff] at h₁ h₂
-      obtain ⟨b₁, -, h₁⟩ := h₁
-      obtain ⟨b₂, -, h₂⟩ := h₂
-      rw [mem_support_bind_iff] at h₁ h₂
-      obtain ⟨c₁, -, h₁⟩ := h₁
-      obtain ⟨c₂, -, h₂⟩ := h₂
-      rw [mem_support_bind_iff] at h₁ h₂
-      obtain ⟨d₁, -, h₁⟩ := h₁
-      obtain ⟨d₂, -, h₂⟩ := h₂
-      have e := (hmem h₁).symm.trans (hmem h₂)
-      exact (leafPack_inj (Prod.mk.inj e).1).1
-    calc Pr{let outcome ← _}[outcome = z] ≤ M * (M * (M * (M * 1))) := h1
+    rw [prEvent_bind]
+    calc _ ≤ M * (M * (M * (M * 1))) := by
+          refine pointMass_bind_le_mul _ _ z (hM' _) (fun a => h2 a) ?_
+          intro a₁ a₂ h₁ h₂
+          rw [ne_eq, pointMass_eq_zero_iff, not_not, mem_support_bind_iff] at h₁ h₂
+          obtain ⟨b₁, -, h₁⟩ := h₁
+          obtain ⟨b₂, -, h₂⟩ := h₂
+          rw [mem_support_bind_iff] at h₁ h₂
+          obtain ⟨c₁, -, h₁⟩ := h₁
+          obtain ⟨c₂, -, h₂⟩ := h₂
+          rw [mem_support_bind_iff] at h₁ h₂
+          obtain ⟨d₁, -, h₁⟩ := h₁
+          obtain ⟨d₂, -, h₂⟩ := h₂
+          have e := (hmem h₁).symm.trans (hmem h₂)
+          exact (leafPack_inj (Prod.mk.inj e).1).1
       _ = M ^ (4 * 2 ^ 0) := by ring
   | k + 1, (t₀, t₁), .node ℓ left right, hl, z => by
-    rw [Primitives.ffSampling_node]
+    rw [Primitives.ffSampling_node, prEvent_bind]
     obtain ⟨hlL, hlR⟩ := hl
     have ihR := fun t => Primitives.ffSampling_pointMass_le prims hZ k t right hlR
     have ihL := fun t => Primitives.ffSampling_pointMass_le prims hZ k t left hlL
     have hinner : ∀ s₁ : FFTPair k,
-        Pr{let outcome ← (prims.ffSampling k
+        wp⟦prims.ffSampling k
           (Primitives.splitFFT (t₀ + Primitives.adjustTarget ℓ t₁ (Primitives.mergeFFT s₁.1 s₁.2)))
           left >>= fun s₀ =>
-          pure (Primitives.mergeFFT s₀.1 s₀.2, Primitives.mergeFFT s₁.1 s₁.2) :
-            ProbComp (FFTPair (k + 1)))}[outcome = z] ≤ M ^ (4 * 2 ^ k) * 1 := by
+          (pure (Primitives.mergeFFT s₀.1 s₀.2, Primitives.mergeFFT s₁.1 s₁.2) :
+            ProbComp (FFTPair (k + 1)))⟧ (predInd (· = z)) ≤ M ^ (4 * 2 ^ k) * 1 := by
       intro s₁
-      refine pointMass_bind_le_mul _ _ z (ihL _) (fun _ => measure_le_one _ _) ?_
+      rw [prEvent_bind]
+      refine pointMass_bind_le_mul _ _ z (ihL _) (fun _ => prEvent_le_one _) ?_
       intro s₀ s₀' h₁ h₂
       rw [ne_eq, pointMass_eq_zero_iff, not_not, support_pure, Set.mem_singleton_iff] at h₁ h₂
       have e := Prod.mk.inj (h₁.symm.trans h₂)

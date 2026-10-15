@@ -27,9 +27,9 @@ oracle, `ζ_zk + |s.cache| · β`, is of the second kind.
 
 ## Main results
 
-- `measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad`: total variation of the
+- `etvDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad`: total variation of the
   joint runs is at most the expected slack plus the probability of a bad final state.
-- `measureETVDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad`: the same on outputs.
+- `etvDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad`: the same on outputs.
 -/
 
 public section
@@ -47,8 +47,8 @@ variable {α : Type} {σ : Type}
 
 /-- A lossless computation has the constant expectation of a constant. -/
 private lemma wp_const_eq {β : Type} (oa : OracleComp spec' β) (c : ℝ≥0∞) :
-    (wp oa fun _ => c) = c :=
-  wp_const oa c
+    (wp⟦oa⟧ fun _ => c) = c :=
+  ExpectationWP.wp_const_of_oracle oa c
 
 /-- Per-`query_bind` step of `expectedQuerySlack`. Given the handler, the charged-query predicate
 `S`, the per-state query slack `ε`, the query symbol `t`, and the continuation
@@ -70,10 +70,10 @@ state `p` with budget `qS`:
   else
     if S t then
       if 0 < qS then
-        ε p.1 + wp ((impl t).run (p.1, false)) fun z => k z.1 (qS - 1) z.2
+        ε p.1 + wp⟦(impl t).run (p.1, false)⟧ fun z => k z.1 (qS - 1) z.2
       else 0
     else
-      wp ((impl t).run (p.1, false)) fun z => k z.1 qS z.2
+      wp⟦(impl t).run (p.1, false)⟧ fun z => k z.1 qS z.2
 
 /-- Expected accumulated query slack over the charged queries fired during
 `(simulateQ impl oa).run p`, defined by recursion on `oa` via `OracleComp.construct`. -/
@@ -154,7 +154,7 @@ lemma expectedQuerySlackStep_costly_pos
     (k : spec.Range t → ℕ → (σ × Bool) → ℝ≥0∞)
     (qS : ℕ) (s : σ) (hS : S t) (hqS : 0 < qS) :
     expectedQuerySlackStep impl S ε t k qS (s, false) =
-      ε s + wp ((impl t).run (s, false)) fun z => k z.1 (qS - 1) z.2 := by
+      ε s + wp⟦(impl t).run (s, false)⟧ fun z => k z.1 (qS - 1) z.2 := by
   simp [expectedQuerySlackStep, hS, hqS]
 
 /-- Unfolding of `expectedQuerySlackStep` at an *uncharged* query (`¬ S t`) reached with the
@@ -171,7 +171,7 @@ lemma expectedQuerySlackStep_free
     (k : spec.Range t → ℕ → (σ × Bool) → ℝ≥0∞)
     (qS : ℕ) (s : σ) (hS : ¬ S t) :
     expectedQuerySlackStep impl S ε t k qS (s, false) =
-      wp ((impl t).run (s, false)) fun z => k z.1 qS z.2 := by
+      wp⟦(impl t).run (s, false)⟧ fun z => k z.1 qS z.2 := by
   simp [expectedQuerySlackStep, hS]
 
 /-! ### Monotonicity and congruence
@@ -271,6 +271,81 @@ a good state `(s, false)`, and must coincide on uncharged queries from good stat
 handler keeps bad states bad. The joint runs of a computation making at most `queryBudget`
 charged queries then stay within its expected accumulated slack plus the probability that the
 first run ends in a bad state. -/
+theorem etvDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad
+    (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
+    (chargedQuery : spec.Domain → Prop) [DecidablePred chargedQuery]
+    (querySlack : σ → ℝ≥0∞)
+    (h_step_charged : ∀ (t : spec.Domain), chargedQuery t → ∀ (s : σ),
+      etvDist ((impl₁ t).run (s, false)) ((impl₂ t).run (s, false)) ≤ querySlack s)
+    (h_step_uncharged : ∀ (t : spec.Domain), ¬ chargedQuery t → ∀ (s : σ),
+      (impl₁ t).run (s, false) = (impl₂ t).run (s, false))
+    (h_mono₁ : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = true →
+      ∀ z ∈ support ((impl₁ t).run p), z.2.2 = true)
+    (oa : OracleComp spec α) {queryBudget : ℕ}
+    (h_qb : oa.IsQueryBoundP chargedQuery queryBudget) (p : σ × Bool) :
+    etvDist ((simulateQ impl₁ oa).run p) ((simulateQ impl₂ oa).run p) ≤
+      expectedQuerySlack impl₁ chargedQuery querySlack oa queryBudget p +
+        Pr{let z ← (simulateQ impl₁ oa).run p}[z.2.2 = true] := by
+  induction oa using OracleComp.inductionOn generalizing queryBudget p with
+  | pure a => simp
+  | query_bind t k ih =>
+    rcases p with ⟨s, b⟩
+    cases b with
+    | true =>
+      rw [prEvent_eq_one_of_forall_mem_support _ _ fun z hz =>
+        forall_mem_support_simulateQ_run_of_bad impl₁ (fun p : σ × Bool => p.2 = true)
+          h_mono₁ _ rfl z hz]
+      exact (etvDist_le_one _ _).trans le_add_self
+    | false =>
+      rw [isQueryBoundP_query_bind_iff] at h_qb
+      obtain ⟨h_can, h_cont⟩ := h_qb
+      rw [expectedQuerySlack_query_bind]
+      simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
+        OracleQuery.cont_query, id_map, StateT.run_bind]
+      set q' := if chargedQuery t then queryBudget - 1 else queryBudget
+      have hswap : etvDist ((impl₁ t).run (s, false) >>= fun us =>
+            (simulateQ impl₂ (k us.1)).run us.2)
+          ((impl₂ t).run (s, false) >>= fun us => (simulateQ impl₂ (k us.1)).run us.2) ≤
+          if chargedQuery t then querySlack s else 0 := by
+        refine (etvDist_bind_le _ _ _).trans ?_
+        split_ifs with hS
+        · exact h_step_charged t hS s
+        · rw [h_step_uncharged t hS s, etvDist_self]
+      have hcont : etvDist ((impl₁ t).run (s, false) >>= fun us =>
+            (simulateQ impl₁ (k us.1)).run us.2)
+          ((impl₁ t).run (s, false) >>= fun us => (simulateQ impl₂ (k us.1)).run us.2) ≤
+          (wp⟦(impl₁ t).run (s, false)⟧ fun us =>
+              expectedQuerySlack impl₁ chargedQuery querySlack (k us.1) q' us.2) +
+            Pr{let z ← ((impl₁ t).run (s, false) >>= fun us =>
+              (simulateQ impl₁ (k us.1)).run us.2)}[z.2.2 = true] := by
+        refine (etvDist_bind_bind_le_wp _ _ _ (fun us =>
+            expectedQuerySlack impl₁ chargedQuery querySlack (k us.1) q' us.2 +
+              Pr{let z ← (simulateQ impl₁ (k us.1)).run us.2}[z.2.2 = true])
+          fun us => ih us.1 (h_cont us.1) us.2).trans_eq ?_
+        rw [ExpectationWP.wp_add, prEvent_bind]
+      calc _ ≤ _ := etvDist_triangle _ _ _
+        _ ≤ ((wp⟦(impl₁ t).run (s, false)⟧ fun us =>
+                expectedQuerySlack impl₁ chargedQuery querySlack (k us.1) q' us.2) +
+              Pr{let z ← ((impl₁ t).run (s, false) >>= fun us =>
+                (simulateQ impl₁ (k us.1)).run us.2)}[z.2.2 = true]) +
+              if chargedQuery t then querySlack s else 0 :=
+            add_le_add hcont hswap
+        _ = _ := by
+          split_ifs with hS
+          · have hpos : 0 < queryBudget := h_can.resolve_left (not_not.2 hS)
+            rw [expectedQuerySlackStep_costly_pos _ _ _ _ _ _ _ hS hpos]
+            simp only [q', hS, ↓reduceIte]
+            ring
+          · rw [expectedQuerySlackStep_free _ _ _ _ _ _ _ hS]
+            simp only [q', hS, ↓reduceIte, add_zero]
+
+/-- **State-dependent ε-perturbed identical until bad**, on answer-state pairs.
+
+The handlers may differ in total variation by `querySlack s` on each charged query answered from
+a good state `(s, false)`, and must coincide on uncharged queries from good states; the first
+handler keeps bad states bad. The joint runs of a computation making at most `queryBudget`
+charged queries then stay within its expected accumulated slack plus the probability that the
+first run ends in a bad state. -/
 theorem measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad
     [MeasurableSpace (α × σ × Bool)]
     (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
@@ -288,61 +363,31 @@ theorem measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad
     measureETVDist ((simulateQ impl₁ oa).run p) ((simulateQ impl₂ oa).run p) ≤
       expectedQuerySlack impl₁ chargedQuery querySlack oa queryBudget p +
         Pr{let z ← (simulateQ impl₁ oa).run p}[z.2.2 = true] := by
-  induction oa using OracleComp.inductionOn generalizing queryBudget p with
-  | pure a => simp
-  | query_bind t k ih =>
-    rcases p with ⟨s, b⟩
-    cases b with
-    | true =>
-      rw [prEvent_eq_one_of_forall_mem_support _ _ fun z hz =>
-        forall_mem_support_simulateQ_run_of_bad impl₁ (fun p : σ × Bool => p.2 = true)
-          h_mono₁ _ rfl z hz]
-      exact (measureETVDist_le_one _ _).trans le_add_self
-    | false =>
-      rw [isQueryBoundP_query_bind_iff] at h_qb
-      obtain ⟨h_can, h_cont⟩ := h_qb
-      rw [expectedQuerySlack_query_bind]
-      simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind]
-      let : MeasurableSpace (spec.Range t × σ × Bool) := ⊤
-      set q' := if chargedQuery t then queryBudget - 1 else queryBudget
-      have hswap : measureETVDist ((impl₁ t).run (s, false) >>= fun us =>
-            (simulateQ impl₂ (k us.1)).run us.2)
-          ((impl₂ t).run (s, false) >>= fun us => (simulateQ impl₂ (k us.1)).run us.2) ≤
-          if chargedQuery t then querySlack s else 0 := by
-        refine (measureETVDist_bind_le _ _ _ Measurable.of_discrete).trans ?_
-        split_ifs with hS
-        · exact h_step_charged t hS s
-        · rw [h_step_uncharged t hS s, measureETVDist_self]
-      have hcont : measureETVDist ((impl₁ t).run (s, false) >>= fun us =>
-            (simulateQ impl₁ (k us.1)).run us.2)
-          ((impl₁ t).run (s, false) >>= fun us => (simulateQ impl₂ (k us.1)).run us.2) ≤
-          (wp ((impl₁ t).run (s, false)) fun us =>
-              expectedQuerySlack impl₁ chargedQuery querySlack (k us.1) q' us.2) +
-            Pr{let z ← ((impl₁ t).run (s, false) >>= fun us =>
-              (simulateQ impl₁ (k us.1)).run us.2)}[z.2.2 = true] := by
-        refine (measureETVDist_bind_bind_le_lintegral _ _ _ Measurable.of_discrete
-          Measurable.of_discrete (fun us =>
-            expectedQuerySlack impl₁ chargedQuery querySlack (k us.1) q' us.2 +
-              Pr{let z ← (simulateQ impl₁ (k us.1)).run us.2}[z.2.2 = true])
-          (Filter.Eventually.of_forall fun us => ih us.1 (h_cont us.1) us.2)).trans_eq ?_
-        rw [lintegral_add_left Measurable.of_discrete, prEvent_bind_eq_lintegral_of_discrete,
-          wp_eq_lintegral _ _ Measurable.of_discrete]
-      calc _ ≤ _ := measureETVDist_triangle _ _ _
-        _ ≤ ((wp ((impl₁ t).run (s, false)) fun us =>
-                expectedQuerySlack impl₁ chargedQuery querySlack (k us.1) q' us.2) +
-              Pr{let z ← ((impl₁ t).run (s, false) >>= fun us =>
-                (simulateQ impl₁ (k us.1)).run us.2)}[z.2.2 = true]) +
-              if chargedQuery t then querySlack s else 0 :=
-            add_le_add hcont hswap
-        _ = _ := by
-          split_ifs with hS
-          · have hpos : 0 < queryBudget := h_can.resolve_left (not_not.2 hS)
-            rw [expectedQuerySlackStep_costly_pos _ _ _ _ _ _ _ hS hpos]
-            simp only [q', hS, ↓reduceIte]
-            ring
-          · rw [expectedQuerySlackStep_free _ _ _ _ _ _ _ hS]
-            simp only [q', hS, ↓reduceIte, add_zero]
+  exact (measureETVDist_le_etvDist _ _).trans <|
+    etvDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad impl₁ impl₂ chargedQuery
+      querySlack (by simpa only [← etvDist_eq_measureETVDist] using h_step_charged)
+      h_step_uncharged h_mono₁ oa h_qb p
+
+/-- **State-dependent ε-perturbed identical until bad**, on outputs. -/
+theorem etvDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad
+    (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
+    (chargedQuery : spec.Domain → Prop) [DecidablePred chargedQuery]
+    (querySlack : σ → ℝ≥0∞)
+    (h_step_charged : ∀ (t : spec.Domain), chargedQuery t → ∀ (s : σ),
+      etvDist ((impl₁ t).run (s, false)) ((impl₂ t).run (s, false)) ≤ querySlack s)
+    (h_step_uncharged : ∀ (t : spec.Domain), ¬ chargedQuery t → ∀ (s : σ),
+      (impl₁ t).run (s, false) = (impl₂ t).run (s, false))
+    (h_mono₁ : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = true →
+      ∀ z ∈ support ((impl₁ t).run p), z.2.2 = true)
+    (oa : OracleComp spec α) {queryBudget : ℕ}
+    (h_qb : oa.IsQueryBoundP chargedQuery queryBudget) (p : σ × Bool) :
+    etvDist ((simulateQ impl₁ oa).run' p) ((simulateQ impl₂ oa).run' p) ≤
+      expectedQuerySlack impl₁ chargedQuery querySlack oa queryBudget p +
+        Pr{let z ← (simulateQ impl₁ oa).run p}[z.2.2 = true] := by
+  simp only [StateT.run'_eq]
+  exact (etvDist_map_le _ _ Prod.fst).trans
+    (etvDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad impl₁ impl₂
+      chargedQuery querySlack h_step_charged h_step_uncharged h_mono₁ oa h_qb p)
 
 /-- **State-dependent ε-perturbed identical until bad**, on outputs. -/
 theorem measureETVDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad
@@ -362,11 +407,10 @@ theorem measureETVDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad
     measureETVDist ((simulateQ impl₁ oa).run' p) ((simulateQ impl₂ oa).run' p) ≤
       expectedQuerySlack impl₁ chargedQuery querySlack oa queryBudget p +
         Pr{let z ← (simulateQ impl₁ oa).run p}[z.2.2 = true] := by
-  let : MeasurableSpace (α × σ × Bool) := ⊤
-  simp only [StateT.run'_eq]
-  exact (measureETVDist_map_le _ _ Prod.fst Measurable.of_discrete).trans
-    (measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad impl₁ impl₂
-      chargedQuery querySlack h_step_charged h_step_uncharged h_mono₁ oa h_qb p)
+  exact (measureETVDist_le_etvDist _ _).trans <|
+    etvDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad impl₁ impl₂ chargedQuery
+      querySlack (by simpa only [← etvDist_eq_measureETVDist] using h_step_charged)
+      h_step_uncharged h_mono₁ oa h_qb p
 
 /-! ### Closed-form bounds on the expected slack -/
 
@@ -447,7 +491,7 @@ lemma expectedQuerySlack_resource_le
       obtain ⟨hcanS, hcontS⟩ := h_qS
       obtain ⟨hcanH, hcontH⟩ := h_qH
       let qH' : ℕ := if growthQuery t then qH - 1 else qH
-      let slackSum : ℕ → ℝ≥0∞ := fun n => wp ((impl t).run (s, false)) fun z =>
+      let slackSum : ℕ → ℝ≥0∞ := fun n => wp⟦(impl t).run (s, false)⟧ fun z =>
         expectedQuerySlack impl chargedQuery (fun s => ζ + R s * β) (cont z.1) n z.2
       set B : ℝ≥0∞ := R s + qS + qH with hB
       suffices h_tail : ∀ (n : ℕ),
@@ -522,7 +566,7 @@ lemma expectedQuerySlack_expected_resource_le
     [DecidablePred chargedQuery] [DecidablePred growthQuery]
     (R : σ → ℝ≥0∞) (ζ β g : ℝ≥0∞)
     (h_charged : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = false → chargedQuery t →
-      (wp ((impl t).run p) fun z => R z.2.1) ≤ R p.1 + g)
+      (wp⟦(impl t).run p⟧ fun z => R z.2.1) ≤ R p.1 + g)
     (h_growth : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = false →
       ¬ chargedQuery t → growthQuery t →
       ∀ z ∈ support ((impl t).run p), R z.2.1 ≤ R p.1 + 1)
@@ -570,19 +614,19 @@ lemma expectedQuerySlack_expected_resource_le
                 gcongr
               refine hIH.trans (le_of_eq ?_)
               ring
-        have h_wp : (wp ((impl t).run (s, false)) fun z =>
+        have h_wp : (wp⟦(impl t).run (s, false)⟧ fun z =>
               expectedQuerySlack impl chargedQuery (fun s => ζ + R s * β) (cont z.1) m z.2)
             ≤ ((m : ℝ≥0∞) * ζ +
                 ((m : ℝ≥0∞) * (qH : ℝ≥0∞) + (m.choose 2 : ℝ≥0∞) * g) * β)
               + (m : ℝ≥0∞) * β * (R s + g) := by
           refine (wp_mono _ h_pt).trans ?_
-          rw [wp_add, wp_mul_const, wp_const_eq]
+          rw [ExpectationWP.wp_add, ExpectationWP.wp_const_mul, wp_const_eq]
           exact add_le_add le_rfl (mul_le_mul_right (h_charged t (s, false) rfl hSt) _)
         have hch : (((m + 1).choose 2 : ℕ) : ℝ≥0∞) = (m : ℝ≥0∞) + (m.choose 2 : ℝ≥0∞) := by
           have hch_nat : (m + 1).choose 2 = m + m.choose 2 := by
             rw [Nat.choose_succ_succ', Nat.choose_one_right]
           exact_mod_cast hch_nat
-        calc ζ + R s * β + (wp ((impl t).run (s, false)) fun z =>
+        calc ζ + R s * β + (wp⟦(impl t).run (s, false)⟧ fun z =>
               expectedQuerySlack impl chargedQuery (fun s => ζ + R s * β) (cont z.1) m z.2)
             ≤ ζ + R s * β
               + (((m : ℝ≥0∞) * ζ +
@@ -662,7 +706,7 @@ lemma expectedQuerySlack_charged_read_expected_growth_le
       ∀ z ∈ support ((impl t).run p), R z.2.1 ≤ R p.1)
     (h_growth : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = false →
       ¬ chargedQuery t → growthQuery t →
-      (wp ((impl t).run p) fun z => R z.2.1) ≤ R p.1 + g)
+      (wp⟦(impl t).run p⟧ fun z => R z.2.1) ≤ R p.1 + g)
     (h_free : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = false →
       ¬ chargedQuery t → ¬ growthQuery t →
       ∀ z ∈ support ((impl t).run p), R z.2.1 ≤ R p.1)
@@ -688,7 +732,7 @@ lemma expectedQuerySlack_charged_read_expected_growth_le
         simp only [Nat.add_sub_cancel] at hcontS ⊢
         -- A charged query is not a growth query budget-wise: continuation keeps budget `qH`.
         have hqH'_le : (if growthQuery t then qH - 1 else qH) ≤ qH := by split_ifs <;> omega
-        have h_wp_le : (wp ((impl t).run (s, false)) fun z =>
+        have h_wp_le : (wp⟦(impl t).run (s, false)⟧ fun z =>
               expectedQuerySlack impl chargedQuery (fun s => R s * β) (cont z.1) m z.2)
             ≤ (m : ℝ≥0∞) * (R s + (qH : ℝ≥0∞) * g) * β := by
           apply wp_le_const_of_support
@@ -699,7 +743,7 @@ lemma expectedQuerySlack_charged_read_expected_growth_le
               refine (ih u (hcontS u) (hcontH u) s').trans ?_
               have hRs' : R s' ≤ R s := h_charged t (s, false) rfl hSt _ hz
               gcongr
-        calc R s * β + (wp ((impl t).run (s, false)) fun z =>
+        calc R s * β + (wp⟦(impl t).run (s, false)⟧ fun z =>
                 expectedQuerySlack impl chargedQuery (fun s => R s * β) (cont z.1) m z.2)
             ≤ R s * β + (m : ℝ≥0∞) * (R s + (qH : ℝ≥0∞) * g) * β := by gcongr
           _ ≤ (R s + (qH : ℝ≥0∞) * g) * β + (m : ℝ≥0∞) * (R s + (qH : ℝ≥0∞) * g) * β := by
@@ -715,9 +759,9 @@ lemma expectedQuerySlack_charged_read_expected_growth_le
           obtain ⟨h, rfl⟩ : ∃ h, qH = h + 1 := ⟨qH - 1, by omega⟩
           simp only [hHt, ite_true] at hcontH
           simp only [Nat.add_sub_cancel] at hcontH
-          calc (wp ((impl t).run (s, false)) fun z =>
+          calc (wp⟦(impl t).run (s, false)⟧ fun z =>
                 expectedQuerySlack impl chargedQuery (fun s => R s * β) (cont z.1) qS z.2)
-              ≤ wp ((impl t).run (s, false)) fun z =>
+              ≤ wp⟦(impl t).run (s, false)⟧ fun z =>
                   (qS : ℝ≥0∞) * β * (R z.2.1 + (h : ℝ≥0∞) * g) :=
                 wp_mono _ fun z => by
                   obtain ⟨u, s', bad'⟩ := z
@@ -725,8 +769,8 @@ lemma expectedQuerySlack_charged_read_expected_growth_le
                   | true => simp
                   | false => exact (ih u (hcontS u) (hcontH u) s').trans (le_of_eq (by ring))
             _ = (qS : ℝ≥0∞) * β *
-                  ((wp ((impl t).run (s, false)) fun z => R z.2.1) + (h : ℝ≥0∞) * g) := by
-                rw [wp_mul_const, wp_add, wp_const_eq]
+                  ((wp⟦(impl t).run (s, false)⟧ fun z => R z.2.1) + (h : ℝ≥0∞) * g) := by
+                rw [ExpectationWP.wp_const_mul, ExpectationWP.wp_add, wp_const_eq]
             _ ≤ (qS : ℝ≥0∞) * β * ((R s + g) + (h : ℝ≥0∞) * g) := by
                 gcongr
                 exact h_growth t (s, false) rfl hSt hHt

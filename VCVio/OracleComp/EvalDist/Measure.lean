@@ -12,19 +12,20 @@ public import VCVio.EvalDist.Monad.Option
 public import VCVio.EvalDist.EvalDistEq
 import ToMathlib.Probability.UniformOn
 import ToMathlib.MeasureTheory.Measure.Bounds
+import ToMathlib.MeasureTheory.Measure.FinsetConcentrated
 
 /-!
 # Measure reasoning from possible outputs
 
-Continuations that denote the same measure on all syntactically reachable outputs may
-be interchanged. The proof inducts on the free program, so no probability/support bridge
-or positivity assumption on query answers is necessary.
+Continuations that denote the same measure at every possible output of a computation may replace
+one another after it. The proof inducts on the free program, so it needs neither a bridge between
+probability and support nor a positivity assumption on query answers.
 
-If every query answer has positive singleton mass, a second induction identifies the possible
-outputs with positive output mass. Uniform oracle specifications satisfy that condition, so their
-events of probability one, zero, or positive probability are exactly the events holding on all,
-none, or some possible outputs; wrapped optional computations are observed through their present
-values.
+If every query answer has positive singleton mass, a second induction shows that the possible
+outputs are exactly the outputs of positive mass. Uniform oracle specifications satisfy that
+condition, so under them an event has probability one, zero or positive probability exactly when
+it holds at all, none or some of the possible outputs. A wrapped optional computation is observed
+through its present values.
 -/
 
 public section
@@ -36,7 +37,7 @@ universe u v
 
 namespace OracleComp
 
-/-- Equal continuation measures at every possible output give equal composed measures. -/
+/-- Continuations with equal measures at every possible output give equal composed measures. -/
 theorem evalDist_bind_congr_of_support {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
     [MeasurableSpace β]
     [EvalDistSemantics (OracleComp spec)] [LawfulEvalDistSemantics (OracleComp spec)]
@@ -115,18 +116,46 @@ theorem EvalDistEq.bind_bind_swap
   let : MeasurableSpace γ := ⊤
   _root_.EvalDistEq.of_evalDist_eq (evalDist_bind_bind_swap_of_uniform mx my f)
 
-/-- Independent oracle computations commute before an event of their continuation. -/
-theorem prEvent_bind_bind_swap
+/-- The expectation after two draws is the expectation of the identity after returning the
+observation. -/
+private theorem wp_wp_eq_wp_bind_bind {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [OracleSpec.AnswerMeasure spec] (mx : OracleComp spec α) (my : OracleComp spec β)
+    (g : α → β → ℝ≥0∞) :
+    (wp⟦mx⟧ fun a ↦ wp⟦my⟧ fun b ↦ g a b) =
+      ∫⁻ y, y ∂𝒟[mx >>= fun a ↦ my >>= fun b ↦ (pure (g a b) : OracleComp spec ℝ≥0∞)] := by
+  rw [← ExpectationWP.wp_eq_lintegral _ (fun y : ℝ≥0∞ ↦ y) measurable_id']
+  simp only [ExpectationWP.wp_bind, ExpectationWP.wp_pure]
+
+/-- Independent oracle computations commute inside an expectation. -/
+theorem wp_swap
     {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
     [∀ t, Countable (spec.Range t)]
     [OracleSpec.AnswerMeasure spec]
-    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec Prop) :
-    prEvent (mx >>= fun a ↦ my >>= fun b ↦ f a b) =
-      prEvent (my >>= fun b ↦ mx >>= fun a ↦ f a b) := by
-  rw [prEvent_def, prEvent_def, evalDist_bind_bind_swap]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (g : α → β → ℝ≥0∞) :
+    (wp⟦mx⟧ fun a ↦ wp⟦my⟧ fun b ↦ g a b) = wp⟦my⟧ fun b ↦ wp⟦mx⟧ fun a ↦ g a b := by
+  rw [wp_wp_eq_wp_bind_bind, wp_wp_eq_wp_bind_bind, evalDist_bind_bind_swap]
 
-/-- Independent oracle computations commute inside an event of their two outputs, the normal
-form of `Pr{let a ← mx; let b ← my}[p a b]`, a bind followed by a map of the selector. Only the
+/-- Independent oracle computations commute inside an expectation under a uniform oracle
+specification. -/
+theorem wp_swap_of_uniform
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [OracleSpec.UniformAnswerMeasure spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (g : α → β → ℝ≥0∞) :
+    (wp⟦mx⟧ fun a ↦ wp⟦my⟧ fun b ↦ g a b) = wp⟦my⟧ fun b ↦ wp⟦mx⟧ fun a ↦ g a b := by
+  rw [wp_wp_eq_wp_bind_bind, wp_wp_eq_wp_bind_bind, evalDist_bind_bind_swap_of_uniform]
+
+/-- Independent oracle computations commute before an event of their continuation. -/
+theorem prEvent_bind_bind_swap
+    {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, Countable (spec.Range t)]
+    [OracleSpec.AnswerMeasure spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec γ)
+    (p : γ → Prop) :
+    Pr{let a ← mx; let b ← my; let c ← f a b}[p c] =
+      Pr{let b ← my; let a ← mx; let c ← f a b}[p c] :=
+  wp_swap mx my _
+
+/-- Independent oracle computations commute inside an event of their two outputs. Only the
 query answers must be countable; the two output types need neither countability nor a
 measurable structure. -/
 theorem prEvent_bind_map_swap
@@ -134,22 +163,23 @@ theorem prEvent_bind_map_swap
     [∀ t, Countable (spec.Range t)]
     [OracleSpec.AnswerMeasure spec]
     (mx : OracleComp spec α) (my : OracleComp spec β) (p : α → β → Prop) :
-    Pr{let a ← mx; let b ← my}[p a b] = Pr{let b ← my; let a ← mx}[p a b] := by
-  simp only [← bind_pure_comp]
-  exact prEvent_bind_bind_swap mx my fun a b ↦ pure (p a b)
+    Pr{let a ← mx; let b ← my}[p a b] = Pr{let b ← my; let a ← mx}[p a b] :=
+  wp_swap mx my _
 
 /-- Independent oracle computations commute before an event of their continuation under a uniform
 oracle specification. -/
 theorem prEvent_bind_bind_swap_of_uniform
-    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
     [OracleSpec.UniformAnswerMeasure spec]
-    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec Prop) :
-    prEvent (mx >>= fun a ↦ my >>= fun b ↦ f a b) =
-      prEvent (my >>= fun b ↦ mx >>= fun a ↦ f a b) := by
-  rw [prEvent_def, prEvent_def, evalDist_bind_bind_swap_of_uniform]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec γ)
+    (p : γ → Prop) :
+    Pr{let a ← mx; let b ← my; let c ← f a b}[p c] =
+      Pr{let b ← my; let a ← mx; let c ← f a b}[p c] :=
+  wp_swap_of_uniform mx my _
 
-/-- Compare measurable valuations of continuation outputs at every possible output. The common
-computation's unobserved intermediate result needs no measurable-space instance. -/
+/-- If the integral of a measurable valuation under one continuation is at most that of another
+at every possible output, the same holds after the common computation. The result type of the
+common computation needs no measurable-space instance. -/
 theorem lintegral_evalDist_bind_mono_of_support
     {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
     [OracleSpec.AnswerMeasure spec]
@@ -167,9 +197,10 @@ theorem lintegral_evalDist_bind_mono_of_support
     exact lintegral_mono fun u ↦ ih u fun a ha ↦
       hfg a (MonadAttach.mem_support_bind.mpr ⟨u, by simp, ha⟩)
 
-/-- Compare event masses after a common oracle computation when the continuation bound only
-needs to hold on possible outputs. This is the operational specialization of
-`evalDist_bind_apply_mono`: structural reachability supplies its almost-everywhere premise. -/
+/-- If one continuation's event mass is at most another's at every possible output of a common
+oracle computation, the same holds after the computation. This specializes
+`evalDist_bind_apply_mono`, whose almost-everywhere premise follows from the premise at the
+possible outputs. -/
 theorem evalDist_bind_apply_mono_of_support
     {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
     [OracleSpec.AnswerMeasure spec]
@@ -188,8 +219,8 @@ theorem evalDist_bind_apply_mono_of_support
     exact lintegral_mono fun u ↦ ih u fun a ha ↦
       hfg a (MonadAttach.mem_support_bind.mpr ⟨u, by simp, ha⟩)
 
-/-- Additive continuation bounds on reachable outputs lift through a common oracle computation.
-No measurable space is required on the hidden common result type. -/
+/-- An additive bound on continuation event masses at every possible output lifts through a common
+oracle computation. No measurable space is required on the hidden common result type. -/
 theorem evalDist_bind_apply_le_add_of_support
     {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
     [OracleSpec.AnswerMeasure spec]
@@ -210,8 +241,8 @@ theorem evalDist_bind_apply_le_add_of_support
           hfg a (MonadAttach.mem_support_bind.mpr ⟨x, by simp, ha⟩)
       _ = _ := lintegral_add_left Measurable.of_discrete _
 
-/-- A uniform lower bound on reachable continuation events bounds their composed event.
-The common computation need not carry a measurable-space instance on its output type. -/
+/-- A constant lower bound on the continuation's event mass at every possible output bounds the
+composed event mass. The common computation needs no measurable space on its output type. -/
 theorem le_evalDist_bind_apply_of_support
     {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
     [OracleSpec.AnswerMeasure spec]
@@ -232,8 +263,8 @@ theorem le_evalDist_bind_apply_of_support
       _ ≤ _ := lintegral_mono fun u ↦ ih u fun a ha ↦
         h a (MonadAttach.mem_support_bind.mpr ⟨u, by simp, ha⟩)
 
-/-- Continuations whose event masses agree on possible outputs give equal composed
-event masses. No measurable space is needed on the hidden common result type. -/
+/-- Continuations whose event masses agree at every possible output give equal composed event
+masses. No measurable space is needed on the hidden common result type. -/
 theorem evalDist_bind_apply_congr_of_support
     {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
     [OracleSpec.AnswerMeasure spec]
@@ -246,36 +277,36 @@ theorem evalDist_bind_apply_congr_of_support
     (evalDist_bind_apply_mono_of_support mx f g hevent fun a ha ↦ (h a ha).le)
     (evalDist_bind_apply_mono_of_support mx g f hevent fun a ha ↦ (h a ha).ge)
 
-/-- Comparing the events of continuations on every possible output compares the
-composed events. -/
+/-- Comparing continuation events on possible outputs compares the composed events. -/
 theorem prEvent_bind_mono_of_support
     {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
     [OracleSpec.AnswerMeasure spec]
     (mx : OracleComp spec α) (f g : α → OracleComp spec Prop)
-    (h : ∀ a ∈ support mx, prEvent (f a) ≤ prEvent (g a)) :
-    prEvent (mx >>= f) ≤ prEvent (mx >>= g) :=
-  evalDist_bind_apply_mono_of_support mx f g (measurableSet_singleton True) h
+    (h : ∀ a ∈ support mx, Pr{let p ← f a}[p] ≤ Pr{let p ← g a}[p]) :
+    Pr{let p ← mx >>= f}[p] ≤ Pr{let p ← mx >>= g}[p] := by
+  simp only [expect_norm]
+  exact wp_mono_of_support mx h
 
-/-- Continuation events with equal probability on every possible output give equal
-composed event probabilities. The common result needs no measurable space. -/
+/-- Equal continuation event probabilities on possible outputs give equal composed events. -/
 theorem prEvent_bind_congr_of_support
     {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
     [OracleSpec.AnswerMeasure spec]
     (mx : OracleComp spec α) (f g : α → OracleComp spec Prop)
-    (h : ∀ a ∈ support mx, prEvent (f a) = prEvent (g a)) :
-    prEvent (mx >>= f) = prEvent (mx >>= g) :=
-  evalDist_bind_apply_congr_of_support mx f g (measurableSet_singleton True) h
+    (h : ∀ a ∈ support mx, Pr{let p ← f a}[p] = Pr{let p ← g a}[p]) :
+    Pr{let p ← mx >>= f}[p] = Pr{let p ← mx >>= g}[p] := by
+  simp only [expect_norm]
+  exact wp_congr_of_support mx h
 
-/-- Continuations equal in distribution on every possible output of a common draw
-give binds equal in distribution. -/
+/-- Continuations equal in distribution at every possible output of a common draw give binds
+equal in distribution. -/
 theorem EvalDistEq.bind_congr_of_support
     {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
     [OracleSpec.AnswerMeasure spec]
     (mx : OracleComp spec α) {f g : α → OracleComp spec β}
     (h : ∀ a ∈ support mx, f a =ᵈ g a) : mx >>= f =ᵈ mx >>= g :=
   _root_.EvalDistEq.of_forall_prEvent_eq fun p ↦ by
-    rw [map_bind, map_bind]
-    exact prEvent_bind_congr_of_support mx _ _ fun a ha ↦ (h a ha).prEvent_eq p
+    rw [prEvent_bind, prEvent_bind]
+    exact wp_congr_of_support mx fun a ha ↦ (h a ha).prEvent_eq p
 
 /-- Almost-sure probability-one continuation events remain probability one after sequencing a
 lossless oracle computation. -/
@@ -291,9 +322,9 @@ theorem evalDist_bind_apply_eq_one_of_ae
     Measure.bind_apply hevent Measurable.of_discrete.aemeasurable,
     lintegral_congr_ae h, lintegral_const, evalDist_apply_univ_eq_one, one_mul]
 
-/-- The possible outputs are exactly those of positive singleton mass when every oracle response has
-positive singleton mass. The full-support hypothesis belongs to the chosen measure interpretation;
-finiteness alone does not determine it. -/
+/-- If every oracle response has positive singleton mass, an output is possible exactly when it
+has positive singleton mass. That hypothesis concerns the chosen measure interpretation: finite
+answer types alone do not give it. -/
 theorem mem_support_iff_evalDist_singleton_pos_of_fullSupport
     {ι : Type u} {spec : OracleSpec.{u, v} ι}
     [OracleSpec.AnswerMeasure spec]
@@ -343,8 +374,8 @@ theorem mem_support_iff_evalDist_singleton_pos_of_fullSupport
         obtain ⟨u, hu⟩ := hs
         exact ⟨u, mem_support_query t u, (ih u).2 (pos_iff_ne_zero.mpr hu)⟩
 
-/-- An event has probability one exactly when it contains every possible output,
-provided every oracle response has positive singleton mass. -/
+/-- An event has probability one exactly when it contains every possible output, provided every
+oracle response has positive singleton mass. -/
 theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport
     {ι : Type u} {α : Type v} {spec : OracleSpec.{u, v} ι}
     [OracleSpec.AnswerMeasure spec]
@@ -366,7 +397,8 @@ theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport
       ((mem_support_iff_evalDist_singleton_pos_of_fullSupport hfull mx x).mp hx)) hxzero
   · exact evalDist.ae_of_forall_mem_support mx p MeasurableSet.of_discrete
 
-/-- Under uniform oracle semantics, structural reachability is positive singleton mass. -/
+/-- Under uniform oracle semantics, an output is possible exactly when it has positive singleton
+mass. -/
 theorem mem_support_iff_evalDist_singleton_pos
     {ι : Type u} {spec : OracleSpec.{u, v} ι}
     [OracleSpec.UniformAnswerMeasure spec]
@@ -377,8 +409,8 @@ theorem mem_support_iff_evalDist_singleton_pos
     (fun t u => OracleSpec.UniformAnswerMeasure.toMeasure_singleton_pos t u) mx x
 
 /-- Under uniform oracle semantics, an event has probability one exactly when it contains every
-possible output. It is not a default `grind` rule: its unbounded support quantifier
-saturates `grind`. -/
+possible output. It is not a default `grind` rule: its unbounded support quantifier saturates
+`grind`. -/
 theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support
     {ι : Type u} {α : Type v} {spec : OracleSpec.{u, v} ι}
     [OracleSpec.UniformAnswerMeasure spec]
@@ -397,35 +429,43 @@ variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
 
 /-- Oracle computations with a measure interpretation are lossless. The law takes precedence
 over the event laws of particular computations, such as the uniform counting law. -/
-@[simp↓ high + 1, grind =]
+@[simp high + 1, grind =]
 theorem prEvent_true_eq_one (mx : OracleComp spec α) : Pr{let _ ← mx}[True] = 1 := by
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_of_discrete]
   simp
 
-/-- The complement of an event has the remaining probability: oracle computations never fail. -/
+/-- An independent continuation event is unchanged by a lossless oracle prefix. -/
+theorem prEvent_bind_const (mx : OracleComp spec α) (my : OracleComp spec Prop) :
+    Pr{let p ← mx >>= fun _ ↦ my}[p] = Pr{let p ← my}[p] := by
+  rw [_root_.prEvent_bind_const, prEvent_true_eq_one, one_mul]
+
+/-- The complement of an event has the remaining probability, since oracle computations
+are lossless. -/
 theorem prEvent_not_eq_one_sub (mx : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← mx}[¬ p x] = 1 - Pr{let x ← mx}[p x] := by
   have h := prEvent_add_prEvent_not_eq_prEvent_true mx p
   rw [prEvent_true_eq_one] at h
   exact ENNReal.eq_sub_of_add_eq (prEvent_ne_top _) (by rw [add_comm]; exact h)
 
+/-- A constant observation of an oracle computation has that constant as its expectation, since
+oracle computations are lossless. It applies once the observation is simplified to a constant,
+ahead of the expectation laws of particular computations such as the uniform average. -/
+@[simp high]
+theorem _root_.ExpectationWP.wp_const_of_oracle (mx : OracleComp spec α) (c : ℝ≥0∞) :
+    wp⟦mx⟧ (fun _ ↦ c) = c := by
+  rw [_root_.wp_const, prEvent_true_eq_one, mul_one]
+
 /-- Oracle computations with a measure interpretation never fail. -/
 @[simp, grind =]
 theorem prFail_eq_zero (mx : OracleComp spec α) : prFail mx = 0 := by
   simp [prFail_def]
 
-/-- A lossless prefix whose result is unused leaves the event unchanged. -/
-theorem prEvent_bind_const (mx : OracleComp spec α) (my : OracleComp spec Prop) :
-    prEvent (mx >>= fun _ ↦ my) = prEvent my := by
-  rw [prEvent_def, prEvent_def, evalDist_bind_const]
-
 /-- A lossless prefix whose result is unused is equal in distribution to its continuation. -/
 theorem EvalDistEq.bind_const {β : Type} (mx : OracleComp spec α) (my : OracleComp spec β) :
     (mx >>= fun _ ↦ my) =ᵈ my :=
   _root_.EvalDistEq.of_forall_prEvent_eq fun p ↦ by
-    rw [map_bind]
-    exact prEvent_bind_const mx (p <$> my)
+    rw [prEvent_bind, wp_const, prEvent_true_eq_one, mul_one]
 
 /-- Discarding the result of a lossless computation leaves the constant. -/
 theorem EvalDistEq.map_const {β : Type} (mx : OracleComp spec α) (c : β) :
@@ -447,15 +487,15 @@ theorem prEvent_eq_one_of_forall_mem_support (mx : OracleComp spec α) (p : α �
   rw [prEvent_eq_evalDist_of_discrete, ← MeasureTheory.ae_iff_prob_eq_one Measurable.of_discrete]
   exact evalDist.ae_of_forall_mem_support mx p MeasurableSet.of_discrete h
 
-/-- When `x` is the only reachable intermediate value that can lead to `y`, the point mass of a
-bind at `y` factors as the point mass of the first draw at `x` times that of its continuation. -/
+/-- When `x` is the only possible intermediate value from which `y` is possible, the point mass of
+a bind at `y` factors as the point mass of the first draw at `x` times that of its continuation. -/
 theorem prEvent_bind_eq_mul_of_unique {β : Type} (mx : OracleComp spec α)
     (my : α → OracleComp spec β) (x : α) (y : β)
     (h : ∀ x' ∈ support mx, y ∈ support (my x') → x' = x) :
-    Pr{let z ← mx >>= my}[z = y] = Pr{let z ← mx}[z = x] * Pr{let z ← my x}[z = y] := by
+    Pr{let a ← mx; let z ← my a}[z = y] = Pr{let z ← mx}[z = x] * Pr{let z ← my x}[z = y] := by
   classical
   let : MeasurableSpace α := ⊤
-  calc Pr{let z ← mx >>= my}[z = y]
+  calc Pr{let a ← mx; let z ← my a}[z = y]
       = ∫⁻ a, Pr{let z ← my a}[z = y] ∂𝒟[mx] := prEvent_bind_eq_lintegral_of_discrete mx my _
     _ = ∫⁻ a, ({x} : Set α).indicator (fun _ => Pr{let z ← my x}[z = y]) a ∂𝒟[mx] := by
         refine lintegral_congr_ae ((evalDist.ae_of_forall_mem_support mx (· ∈ support mx)
@@ -479,19 +519,13 @@ theorem evalDistEq_of_forall_prEvent_eq_output [∀ t, Finite (spec.Range t)]
   classical
   let : MeasurableSpace α := ⊤
   let T : Finset α := ((support_finite mx).union (support_finite my)).toFinset
-  have key : ∀ oz : OracleComp spec α, support oz ⊆ ↑T → ∀ s : Set α,
-      𝒟[oz] s = ∑ x ∈ T.filter (· ∈ s), Pr{let z ← oz}[z = x] := by
-    intro oz hsub s
-    simp_rw [prEvent_eq_evalDist_singleton]
-    rw [MeasureTheory.sum_measure_singleton]
-    refine measure_congr ((evalDist.ae_of_forall_mem_support oz (· ∈ support oz)
-      MeasurableSet.of_discrete fun _ ha => ha).mono fun a ha => ?_)
-    have haT : a ∈ T := hsub ha
-    change (a ∈ s) = (a ∈ (↑(T.filter (· ∈ s)) : Set α))
-    simp [haT]
-  ext s -
-  rw [key mx (fun a ha => by simp [T, ha]) s, key my (fun a ha => by simp [T, ha]) s]
-  exact Finset.sum_congr rfl fun x _ => h x
+  have hT (oz : OracleComp spec α) (hsub : support oz ⊆ ↑T) : 𝒟[oz] (↑T)ᶜ = 0 :=
+    ae_iff.1 (evalDist.ae_of_forall_mem_support oz (· ∈ (↑T : Set α))
+      MeasurableSet.of_discrete fun _ ha => hsub ha)
+  refine Measure.ext_of_compl_eq_zero (hT mx fun a ha => by simp [T, ha])
+    (hT my fun a ha => by simp [T, ha]) fun x _ => ?_
+  rw [← prEvent_eq_evalDist_singleton, ← prEvent_eq_evalDist_singleton]
+  exact h x
 
 end measureSpec
 
@@ -500,7 +534,7 @@ section uniformAnswerMeasure
 variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
   [OracleSpec.UniformAnswerMeasure spec] {α : Type}
 
-/-- Under uniform oracle semantics, an event has probability one exactly when it holds on every
+/-- Under uniform oracle semantics, an event has probability one exactly when it holds at every
 possible output. -/
 theorem prEvent_eq_one_iff (mx : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← mx}[p x] = 1 ↔ ∀ x ∈ support mx, p x := by
@@ -508,7 +542,7 @@ theorem prEvent_eq_one_iff (mx : OracleComp spec α) (p : α → Prop) :
   rw [prEvent_eq_evalDist_of_discrete]
   exact evalDist_apply_setOf_eq_one_iff_forall_mem_support mx p
 
-/-- Under uniform oracle semantics, an event has probability zero exactly when it fails on every
+/-- Under uniform oracle semantics, an event has probability zero exactly when it fails at every
 possible output. -/
 theorem prEvent_eq_zero_iff (mx : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← mx}[p x] = 0 ↔ ∀ x ∈ support mx, ¬ p x := by
@@ -521,16 +555,15 @@ theorem prEvent_eq_zero_iff (mx : OracleComp spec α) (p : α → Prop) :
   rw [h] at hle
   exact absurd (le_antisymm hle bot_le) (ne_of_gt hpos)
 
-/-- Under uniform oracle semantics, an event has positive probability exactly when some structurally
-reachable output satisfies it. -/
+/-- Under uniform oracle semantics, an event has positive probability exactly when some possible
+output satisfies it. -/
 theorem prEvent_pos_iff (mx : OracleComp spec α) (p : α → Prop) :
     0 < Pr{let x ← mx}[p x] ↔ ∃ x ∈ support mx, p x := by
   rw [pos_iff_ne_zero, ne_eq, prEvent_eq_zero_iff]
   push Not
   rfl
 
-/-- Under uniform oracle semantics, an output is possible exactly when it has nonzero
-mass. -/
+/-- Under uniform oracle semantics, an output is possible exactly when it has nonzero mass. -/
 theorem mem_support_iff_prEvent_ne_zero (mx : OracleComp spec α) (x : α) :
     x ∈ support mx ↔ Pr{let y ← mx}[y = x] ≠ 0 := by
   rw [ne_eq, prEvent_eq_zero_iff]
@@ -541,7 +574,8 @@ theorem prEvent_ne_zero_of_mem_support {mx : OracleComp spec α} {x : α} (hx : 
     Pr{let y ← mx}[y = x] ≠ 0 :=
   (mem_support_iff_prEvent_ne_zero mx x).1 hx
 
-/-- Under uniform oracle semantics, computations equal in distribution reach the same outputs. -/
+/-- Under uniform oracle semantics, computations equal in distribution have the same possible
+outputs. -/
 theorem support_eq_of_evalDistEq {mx my : OracleComp spec α} (h : mx =ᵈ my) :
     support mx = support my := by
   let : MeasurableSpace α := ⊤
@@ -566,6 +600,23 @@ theorem prEvent_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t)]
       ((Finset.univ.filter p).card : ℝ≥0∞) / Fintype.card (spec.Range t) := by
   let : MeasurableSpace (spec.Range t) := ⊤
   rw [prEvent_eq_evalDist_of_discrete, evalDist_query_uniform, uniformOn_univ_apply_setOf]
+
+/-- Under uniform oracle semantics, the expectation over a single query is the average of the
+observation over the responses. It is stated on the lifted query, the form a query takes in the
+normal form of `Pr{…}[…]` and `𝔼{…}[…]`, so `simp` averages the queries of a normalized event. -/
+@[simp]
+theorem wp_monadLift_query_uniform (t : spec.Domain) [Fintype (spec.Range t)]
+    (g : spec.Range t → ℝ≥0∞) :
+    wp⟦(MonadLift.monadLift (OracleSpec.query t) : OracleComp spec (spec.Range t))⟧ g =
+      ∑ u, (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ * g u := by
+  classical
+  let : MeasurableSpace (spec.Range t) := ⊤
+  refine (wp_eq_sum_fintype _ g).trans (Finset.sum_congr rfl fun u _ => ?_)
+  congr 1
+  have h := prEvent_liftM_query_eq_card_div (spec := spec) t (· = u)
+  rw [Finset.filter_eq' Finset.univ u, ite_eq_left (Finset.mem_univ u), Finset.card_singleton,
+    Nat.cast_one, one_div] at h
+  exact h
 
 /-- A wrapped optional oracle computation has a probability-one event exactly when every
 possible output is a present value satisfying the event. -/
@@ -596,7 +647,8 @@ theorem OptionT.prEvent_mk_pos_iff (mx : OracleComp spec (Option α)) (p : α �
   push Not
   rfl
 
-/-- A wrapped optional oracle computation is lossless exactly when `none` is unreachable. -/
+/-- A wrapped optional oracle computation is lossless exactly when `none` is not a possible
+output. -/
 theorem OptionT.isProbabilityMeasure_mk_iff (mx : OracleComp spec (Option α))
     [MeasurableSpace α] [DiscreteMeasurableSpace α] :
     IsProbabilityMeasure 𝒟[OptionT.mk mx] ↔ none ∉ support mx := by

@@ -17,9 +17,9 @@ public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 
 `Prob` is Mathlib's lower interval `Set.Iic (1 : ℝ≥0∞)`. Restricting the expectation
 algebra to this interval gives a core `WPMonad` interpretation with probability-valued
-assertions. Enable it with `open scoped OracleComp.Probabilistic`.
+assertions. `open scoped OracleComp.Probabilistic` selects it.
 
-The underlying value agrees with the quantitative expectation by `wp_val_eq_wp`.
+Its value is the expectation of the postcondition's values in `ℝ≥0∞`, by `wp_val_eq_wp`.
 -/
 
 @[expose] public section
@@ -38,10 +38,11 @@ variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 /-- Oracle expectation preserves the probability bound. -/
 theorem wp_one_le (oa : OracleComp spec α) :
     MAlgOrdered.μ (oa >>= fun _ => pure (1 : ℝ≥0∞)) ≤ 1 :=
-  (OracleComp.ProgramLogic.wp_const oa 1).le
+  (ExpectationWP.wp_const_of_oracle oa 1).le
 
 /-- The expectation algebra restricted to probability-valued assertions. -/
-noncomputable scoped instance instMAlgOrdered : MAlgOrdered (OracleComp spec) Prob :=
+noncomputable scoped instance (priority := 1100) instMAlgOrdered :
+    MAlgOrdered (OracleComp spec) Prob :=
   ExpectationWP.Probabilistic.algebra (OracleComp spec)
 
 /-- Core weakest preconditions for probability-valued assertions. -/
@@ -49,10 +50,16 @@ noncomputable scoped instance (priority := 1100) instWP_prob :
     Std.WP.WPMonad (OracleComp spec) Prob EStack⟨⟩ :=
   MAlgOrdered.toWPMonad
 
-/-- Forgetting the bound recovers quantitative expectation. -/
+/-- The probability-bounded reading as a direct `WP` instance on programs, at the scope's
+priority, so that no direct instance of another scope outranks it while this one is open. -/
+noncomputable scoped instance (priority := 1100) wpInst :
+    Std.WP.WP (OracleComp spec α) α Prob EStack⟨⟩ :=
+  (instWP_prob (spec := spec)).toWP α
+
+/-- Forgetting the bound recovers the expectation in `ℝ≥0∞`. -/
 theorem wp_val_eq_wp (oa : OracleComp spec α) (post : α → Prob) (epost : EStack⟨⟩) :
     (Std.WP.wp oa post epost).val =
-      (OracleComp.ProgramLogic.wp (oa)) (fun a => (post a).val) :=
+      wp⟦oa⟧ (fun a => (post a).val) :=
   ExpectationWP.Probabilistic.wp_val oa post epost
 
 end OracleComp.Probabilistic
