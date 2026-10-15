@@ -1,0 +1,7 @@
+packages: cryptol-lean-export.cabal
+source-repository-package
+  type: git
+  location: https://github.com/GaloisInc/cryptol.git
+  tag: 61dd17b0c45ddf8c5c1e952afd5e789c4dc4ec4b
+package cryptol
+  flags: -ffi -relocatable

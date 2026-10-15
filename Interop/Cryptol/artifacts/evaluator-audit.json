@@ -1,0 +1,820 @@
+{
+  "foundation_revision": "7d0528bd998682788f4e23661f2829298f9e47db",
+  "integer_disagreement": "https://github.com/GaloisInc/cryptol/issues/2060",
+  "portable_theta": "separate test variant using (x+4)%5; original source unchanged",
+  "meaning": "Versioned executable observations, not Haskell correctness proofs",
+  "evaluators": [
+    {
+      "revision": "61dd17b0c45ddf8c5c1e952afd5e789c4dc4ec4b",
+      "version": "Cryptol 3.6.0",
+      "observations": [
+        {
+          "expression": "(((\\x -> error \"left-result\") + (error \"right-function\")) : Integer -> Integer) 0",
+          "mode": "reference",
+          "result": "error:left-result"
+        },
+        {
+          "expression": "(((\\x -> error \"left-result\") + (error \"right-function\")) : Integer -> Integer) 0",
+          "mode": "normal",
+          "result": "error:right-function"
+        },
+        {
+          "expression": "(((\\x -> error \"left-result\") ^ (error \"right-function\")) : Integer -> Bit) 0",
+          "mode": "reference",
+          "result": "error:right-function"
+        },
+        {
+          "expression": "(((\\x -> error \"left-result\") ^ (error \"right-function\")) : Integer -> Bit) 0",
+          "mode": "normal",
+          "result": "error:right-function"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1], y <- [x, x + 10]] : [4]Integer) @ 1",
+          "mode": "reference",
+          "result": "10"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1], y <- [x, x + 10]] : [4]Integer) @ 1",
+          "mode": "normal",
+          "result": "10"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1], y <- [x, x + 10]] : [4]Integer) @ 2",
+          "mode": "reference",
+          "result": "2"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1], y <- [x, x + 10]] : [4]Integer) @ 2",
+          "mode": "normal",
+          "result": "2"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1] | y <- [10, 11, error \"tail\"]] : [2]Integer) @ 1",
+          "mode": "reference",
+          "result": "12"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1] | y <- [10, 11, error \"tail\"]] : [2]Integer) @ 1",
+          "mode": "normal",
+          "result": "12"
+        },
+        {
+          "expression": "([23 | x <- (error \"left\" : [2]Integer) | y <- (error \"right\" : [inf]Integer)] : [2]Integer) @ 1",
+          "mode": "reference",
+          "result": "23"
+        },
+        {
+          "expression": "([23 | x <- (error \"left\" : [2]Integer) | y <- (error \"right\" : [inf]Integer)] : [2]Integer) @ 1",
+          "mode": "normal",
+          "result": "error:right"
+        },
+        {
+          "expression": "([23 | x <- (error \"left\" : [2]Integer) | y <- (error \"right\" : [3]Integer)] : [2]Integer) @ 1",
+          "mode": "reference",
+          "result": "23"
+        },
+        {
+          "expression": "([23 | x <- (error \"left\" : [2]Integer) | y <- (error \"right\" : [3]Integer)] : [2]Integer) @ 1",
+          "mode": "normal",
+          "result": "23"
+        },
+        {
+          "expression": "([False, error \"late\"] : [2]) == [True, False]",
+          "mode": "reference",
+          "result": "False"
+        },
+        {
+          "expression": "([False, error \"late\"] : [2]) == [True, False]",
+          "mode": "normal",
+          "result": "error:late"
+        },
+        {
+          "expression": "toInteger (update ([False, True] : [2]) (-1 : Integer) True)",
+          "mode": "reference",
+          "result": "1"
+        },
+        {
+          "expression": "toInteger (update ([False, True] : [2]) (-1 : Integer) True)",
+          "mode": "normal",
+          "result": "invalid"
+        },
+        {
+          "expression": "toInteger ((0x9 : [4]) <<< (-1 : Integer))",
+          "mode": "reference",
+          "result": "12"
+        },
+        {
+          "expression": "toInteger ((0x9 : [4]) <<< (-1 : Integer))",
+          "mode": "normal",
+          "result": "12"
+        },
+        {
+          "expression": "((error \"source\" : [4]) << (4 : Integer)) @ 0",
+          "mode": "reference",
+          "result": "False"
+        },
+        {
+          "expression": "((error \"source\" : [4]) << (4 : Integer)) @ 0",
+          "mode": "normal",
+          "result": "error:source"
+        },
+        {
+          "expression": "(update (error \"source\" : [2]) (0 : Integer) True) @ 0",
+          "mode": "reference",
+          "result": "True"
+        },
+        {
+          "expression": "(update (error \"source\" : [2]) (0 : Integer) True) @ 0",
+          "mode": "normal",
+          "result": "error:source"
+        },
+        {
+          "expression": "foldl (error \"function\" : Integer -> Integer -> Integer) (7 : Integer) (error \"sequence\" : [0]Integer)",
+          "mode": "reference",
+          "result": "7"
+        },
+        {
+          "expression": "foldl (error \"function\" : Integer -> Integer -> Integer) (7 : Integer) (error \"sequence\" : [0]Integer)",
+          "mode": "normal",
+          "result": "error:sequence"
+        },
+        {
+          "expression": "foldl (\\a b -> 7 : Integer) (error \"initial\" : Integer) (error \"sequence\" : [3]Integer)",
+          "mode": "reference",
+          "result": "7"
+        },
+        {
+          "expression": "foldl (\\a b -> 7 : Integer) (error \"initial\" : Integer) (error \"sequence\" : [3]Integer)",
+          "mode": "normal",
+          "result": "error:sequence"
+        },
+        {
+          "expression": "(error \"left\" : Integer) <= (error \"right\" : Integer)",
+          "mode": "reference",
+          "result": "error:left"
+        },
+        {
+          "expression": "(error \"left\" : Integer) <= (error \"right\" : Integer)",
+          "mode": "normal",
+          "result": "error:left"
+        },
+        {
+          "expression": "(error \"left\" : [0][8]) + ([] : [0][8])",
+          "mode": "reference",
+          "result": "error:left"
+        },
+        {
+          "expression": "(error \"left\" : [0][8]) + ([] : [0][8])",
+          "mode": "normal",
+          "result": "error:left"
+        },
+        {
+          "expression": "([] : [0][8]) + (error \"right\" : [0][8])",
+          "mode": "reference",
+          "result": "error:right"
+        },
+        {
+          "expression": "([] : [0][8]) + (error \"right\" : [0][8])",
+          "mode": "normal",
+          "result": "error:right"
+        },
+        {
+          "expression": "(zero : Integer -> Bit) (error \"argument\" : Integer)",
+          "mode": "reference",
+          "result": "False"
+        },
+        {
+          "expression": "(zero : Integer -> Bit) (error \"argument\" : Integer)",
+          "mode": "normal",
+          "result": "False"
+        },
+        {
+          "expression": "(zero : [inf]Integer) @ (100000 : Integer)",
+          "mode": "reference",
+          "result": "0"
+        },
+        {
+          "expression": "(zero : [inf]Integer) @ (100000 : Integer)",
+          "mode": "normal",
+          "result": "0"
+        },
+        {
+          "expression": "map (\\x -> 7 : Integer) (error \"generator\" : [3]Integer)",
+          "mode": "reference",
+          "result": "[7, 7, 7]"
+        },
+        {
+          "expression": "map (\\x -> 7 : Integer) (error \"generator\" : [3]Integer)",
+          "mode": "normal",
+          "result": "[7, 7, 7]"
+        },
+        {
+          "expression": "((xs : [inf]Integer) @ 12 where xs = [0] # [x + 1 | x <- xs])",
+          "mode": "reference",
+          "result": "12"
+        },
+        {
+          "expression": "((xs : [inf]Integer) @ 12 where xs = [0] # [x + 1 | x <- xs])",
+          "mode": "normal",
+          "result": "12"
+        },
+        {
+          "expression": "(([] : [0]) >>> (3 : Integer)) == []",
+          "mode": "reference",
+          "result": "True"
+        },
+        {
+          "expression": "(([] : [0]) >>> (3 : Integer)) == []",
+          "mode": "normal",
+          "result": "True"
+        },
+        {
+          "expression": "(7 : Integer) / (3 : Integer)",
+          "mode": "reference",
+          "result": "2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) / (3 : Integer)",
+          "mode": "normal",
+          "result": "2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) % (3 : Integer)",
+          "mode": "reference",
+          "result": "1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) % (3 : Integer)",
+          "mode": "normal",
+          "result": "1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) / (3 : Integer)",
+          "mode": "reference",
+          "result": "-2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) / (3 : Integer)",
+          "mode": "normal",
+          "result": "-3",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) % (3 : Integer)",
+          "mode": "reference",
+          "result": "-1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) % (3 : Integer)",
+          "mode": "normal",
+          "result": "2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) / (-3 : Integer)",
+          "mode": "reference",
+          "result": "-2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) / (-3 : Integer)",
+          "mode": "normal",
+          "result": "-3",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) % (-3 : Integer)",
+          "mode": "reference",
+          "result": "1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) % (-3 : Integer)",
+          "mode": "normal",
+          "result": "-2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) / (-3 : Integer)",
+          "mode": "reference",
+          "result": "2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) / (-3 : Integer)",
+          "mode": "normal",
+          "result": "2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) % (-3 : Integer)",
+          "mode": "reference",
+          "result": "-1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) % (-3 : Integer)",
+          "mode": "normal",
+          "result": "-1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-1 : Integer) / (5 : Integer)",
+          "mode": "reference",
+          "result": "0",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-1 : Integer) / (5 : Integer)",
+          "mode": "normal",
+          "result": "-1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-1 : Integer) % (5 : Integer)",
+          "mode": "reference",
+          "result": "-1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-1 : Integer) % (5 : Integer)",
+          "mode": "normal",
+          "result": "4",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(1 : Integer) / 0",
+          "mode": "reference",
+          "result": "division by 0"
+        },
+        {
+          "expression": "(1 : Integer) / 0",
+          "mode": "normal",
+          "result": "division by 0"
+        },
+        {
+          "expression": "(1 : Integer) % 0",
+          "mode": "reference",
+          "result": "division by 0"
+        },
+        {
+          "expression": "(1 : Integer) % 0",
+          "mode": "normal",
+          "result": "division by 0"
+        },
+        {
+          "expression": "~((Theta::\u03b8`{1} zero) @ 0 @ 0 @ 0)",
+          "mode": "reference",
+          "result": "invalid sequence index: -1"
+        },
+        {
+          "expression": "(Portable::\u03b8`{1} zero) == zero",
+          "mode": "reference",
+          "result": "True"
+        },
+        {
+          "expression": "(Portable::\u03b8`{8} zero) == zero",
+          "mode": "reference",
+          "result": "True"
+        },
+        {
+          "expression": "(Portable::\u03b8`{64} zero) == zero",
+          "mode": "reference",
+          "result": "True"
+        },
+        {
+          "expression": "~((Theta::\u03b8`{1} zero) @ 0 @ 0 @ 0)",
+          "mode": "normal",
+          "result": "True"
+        },
+        {
+          "expression": "(Portable::\u03b8`{1} zero) == zero",
+          "mode": "normal",
+          "result": "True"
+        },
+        {
+          "expression": "(Portable::\u03b8`{8} zero) == zero",
+          "mode": "normal",
+          "result": "True"
+        },
+        {
+          "expression": "(Portable::\u03b8`{64} zero) == zero",
+          "mode": "normal",
+          "result": "True"
+        }
+      ]
+    },
+    {
+      "revision": "51405420cb90cf9959ca4349eea0ae8b77487855",
+      "version": "Cryptol 3.6.0.99",
+      "observations": [
+        {
+          "expression": "(((\\x -> error \"left-result\") + (error \"right-function\")) : Integer -> Integer) 0",
+          "mode": "reference",
+          "result": "error:left-result"
+        },
+        {
+          "expression": "(((\\x -> error \"left-result\") + (error \"right-function\")) : Integer -> Integer) 0",
+          "mode": "normal",
+          "result": "error:right-function"
+        },
+        {
+          "expression": "(((\\x -> error \"left-result\") ^ (error \"right-function\")) : Integer -> Bit) 0",
+          "mode": "reference",
+          "result": "error:right-function"
+        },
+        {
+          "expression": "(((\\x -> error \"left-result\") ^ (error \"right-function\")) : Integer -> Bit) 0",
+          "mode": "normal",
+          "result": "error:right-function"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1], y <- [x, x + 10]] : [4]Integer) @ 1",
+          "mode": "reference",
+          "result": "10"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1], y <- [x, x + 10]] : [4]Integer) @ 1",
+          "mode": "normal",
+          "result": "10"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1], y <- [x, x + 10]] : [4]Integer) @ 2",
+          "mode": "reference",
+          "result": "2"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1], y <- [x, x + 10]] : [4]Integer) @ 2",
+          "mode": "normal",
+          "result": "2"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1] | y <- [10, 11, error \"tail\"]] : [2]Integer) @ 1",
+          "mode": "reference",
+          "result": "12"
+        },
+        {
+          "expression": "([x + y | x <- [0, 1] | y <- [10, 11, error \"tail\"]] : [2]Integer) @ 1",
+          "mode": "normal",
+          "result": "12"
+        },
+        {
+          "expression": "([23 | x <- (error \"left\" : [2]Integer) | y <- (error \"right\" : [inf]Integer)] : [2]Integer) @ 1",
+          "mode": "reference",
+          "result": "23"
+        },
+        {
+          "expression": "([23 | x <- (error \"left\" : [2]Integer) | y <- (error \"right\" : [inf]Integer)] : [2]Integer) @ 1",
+          "mode": "normal",
+          "result": "error:right"
+        },
+        {
+          "expression": "([23 | x <- (error \"left\" : [2]Integer) | y <- (error \"right\" : [3]Integer)] : [2]Integer) @ 1",
+          "mode": "reference",
+          "result": "23"
+        },
+        {
+          "expression": "([23 | x <- (error \"left\" : [2]Integer) | y <- (error \"right\" : [3]Integer)] : [2]Integer) @ 1",
+          "mode": "normal",
+          "result": "23"
+        },
+        {
+          "expression": "([False, error \"late\"] : [2]) == [True, False]",
+          "mode": "reference",
+          "result": "False"
+        },
+        {
+          "expression": "([False, error \"late\"] : [2]) == [True, False]",
+          "mode": "normal",
+          "result": "error:late"
+        },
+        {
+          "expression": "toInteger (update ([False, True] : [2]) (-1 : Integer) True)",
+          "mode": "reference",
+          "result": "1"
+        },
+        {
+          "expression": "toInteger (update ([False, True] : [2]) (-1 : Integer) True)",
+          "mode": "normal",
+          "result": "invalid"
+        },
+        {
+          "expression": "toInteger ((0x9 : [4]) <<< (-1 : Integer))",
+          "mode": "reference",
+          "result": "12"
+        },
+        {
+          "expression": "toInteger ((0x9 : [4]) <<< (-1 : Integer))",
+          "mode": "normal",
+          "result": "12"
+        },
+        {
+          "expression": "((error \"source\" : [4]) << (4 : Integer)) @ 0",
+          "mode": "reference",
+          "result": "False"
+        },
+        {
+          "expression": "((error \"source\" : [4]) << (4 : Integer)) @ 0",
+          "mode": "normal",
+          "result": "error:source"
+        },
+        {
+          "expression": "(update (error \"source\" : [2]) (0 : Integer) True) @ 0",
+          "mode": "reference",
+          "result": "True"
+        },
+        {
+          "expression": "(update (error \"source\" : [2]) (0 : Integer) True) @ 0",
+          "mode": "normal",
+          "result": "error:source"
+        },
+        {
+          "expression": "foldl (error \"function\" : Integer -> Integer -> Integer) (7 : Integer) (error \"sequence\" : [0]Integer)",
+          "mode": "reference",
+          "result": "7"
+        },
+        {
+          "expression": "foldl (error \"function\" : Integer -> Integer -> Integer) (7 : Integer) (error \"sequence\" : [0]Integer)",
+          "mode": "normal",
+          "result": "error:sequence"
+        },
+        {
+          "expression": "foldl (\\a b -> 7 : Integer) (error \"initial\" : Integer) (error \"sequence\" : [3]Integer)",
+          "mode": "reference",
+          "result": "7"
+        },
+        {
+          "expression": "foldl (\\a b -> 7 : Integer) (error \"initial\" : Integer) (error \"sequence\" : [3]Integer)",
+          "mode": "normal",
+          "result": "error:sequence"
+        },
+        {
+          "expression": "(error \"left\" : Integer) <= (error \"right\" : Integer)",
+          "mode": "reference",
+          "result": "error:left"
+        },
+        {
+          "expression": "(error \"left\" : Integer) <= (error \"right\" : Integer)",
+          "mode": "normal",
+          "result": "error:left"
+        },
+        {
+          "expression": "(error \"left\" : [0][8]) + ([] : [0][8])",
+          "mode": "reference",
+          "result": "error:left"
+        },
+        {
+          "expression": "(error \"left\" : [0][8]) + ([] : [0][8])",
+          "mode": "normal",
+          "result": "error:left"
+        },
+        {
+          "expression": "([] : [0][8]) + (error \"right\" : [0][8])",
+          "mode": "reference",
+          "result": "error:right"
+        },
+        {
+          "expression": "([] : [0][8]) + (error \"right\" : [0][8])",
+          "mode": "normal",
+          "result": "error:right"
+        },
+        {
+          "expression": "(zero : Integer -> Bit) (error \"argument\" : Integer)",
+          "mode": "reference",
+          "result": "False"
+        },
+        {
+          "expression": "(zero : Integer -> Bit) (error \"argument\" : Integer)",
+          "mode": "normal",
+          "result": "False"
+        },
+        {
+          "expression": "(zero : [inf]Integer) @ (100000 : Integer)",
+          "mode": "reference",
+          "result": "0"
+        },
+        {
+          "expression": "(zero : [inf]Integer) @ (100000 : Integer)",
+          "mode": "normal",
+          "result": "0"
+        },
+        {
+          "expression": "map (\\x -> 7 : Integer) (error \"generator\" : [3]Integer)",
+          "mode": "reference",
+          "result": "[7, 7, 7]"
+        },
+        {
+          "expression": "map (\\x -> 7 : Integer) (error \"generator\" : [3]Integer)",
+          "mode": "normal",
+          "result": "[7, 7, 7]"
+        },
+        {
+          "expression": "((xs : [inf]Integer) @ 12 where xs = [0] # [x + 1 | x <- xs])",
+          "mode": "reference",
+          "result": "12"
+        },
+        {
+          "expression": "((xs : [inf]Integer) @ 12 where xs = [0] # [x + 1 | x <- xs])",
+          "mode": "normal",
+          "result": "12"
+        },
+        {
+          "expression": "(([] : [0]) >>> (3 : Integer)) == []",
+          "mode": "reference",
+          "result": "True"
+        },
+        {
+          "expression": "(([] : [0]) >>> (3 : Integer)) == []",
+          "mode": "normal",
+          "result": "True"
+        },
+        {
+          "expression": "(7 : Integer) / (3 : Integer)",
+          "mode": "reference",
+          "result": "2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) / (3 : Integer)",
+          "mode": "normal",
+          "result": "2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) % (3 : Integer)",
+          "mode": "reference",
+          "result": "1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) % (3 : Integer)",
+          "mode": "normal",
+          "result": "1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) / (3 : Integer)",
+          "mode": "reference",
+          "result": "-2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) / (3 : Integer)",
+          "mode": "normal",
+          "result": "-3",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) % (3 : Integer)",
+          "mode": "reference",
+          "result": "-1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) % (3 : Integer)",
+          "mode": "normal",
+          "result": "2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) / (-3 : Integer)",
+          "mode": "reference",
+          "result": "-2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) / (-3 : Integer)",
+          "mode": "normal",
+          "result": "-3",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) % (-3 : Integer)",
+          "mode": "reference",
+          "result": "1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(7 : Integer) % (-3 : Integer)",
+          "mode": "normal",
+          "result": "-2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) / (-3 : Integer)",
+          "mode": "reference",
+          "result": "2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) / (-3 : Integer)",
+          "mode": "normal",
+          "result": "2",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) % (-3 : Integer)",
+          "mode": "reference",
+          "result": "-1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-7 : Integer) % (-3 : Integer)",
+          "mode": "normal",
+          "result": "-1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-1 : Integer) / (5 : Integer)",
+          "mode": "reference",
+          "result": "0",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-1 : Integer) / (5 : Integer)",
+          "mode": "normal",
+          "result": "-1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-1 : Integer) % (5 : Integer)",
+          "mode": "reference",
+          "result": "-1",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(-1 : Integer) % (5 : Integer)",
+          "mode": "normal",
+          "result": "4",
+          "upstream_issue": "https://github.com/GaloisInc/cryptol/issues/2060"
+        },
+        {
+          "expression": "(1 : Integer) / 0",
+          "mode": "reference",
+          "result": "division by 0"
+        },
+        {
+          "expression": "(1 : Integer) / 0",
+          "mode": "normal",
+          "result": "division by 0"
+        },
+        {
+          "expression": "(1 : Integer) % 0",
+          "mode": "reference",
+          "result": "division by 0"
+        },
+        {
+          "expression": "(1 : Integer) % 0",
+          "mode": "normal",
+          "result": "division by 0"
+        },
+        {
+          "expression": "~((Theta::\u03b8`{1} zero) @ 0 @ 0 @ 0)",
+          "mode": "reference",
+          "result": "invalid sequence index: -1"
+        },
+        {
+          "expression": "(Portable::\u03b8`{1} zero) == zero",
+          "mode": "reference",
+          "result": "True"
+        },
+        {
+          "expression": "(Portable::\u03b8`{8} zero) == zero",
+          "mode": "reference",
+          "result": "True"
+        },
+        {
+          "expression": "(Portable::\u03b8`{64} zero) == zero",
+          "mode": "reference",
+          "result": "True"
+        },
+        {
+          "expression": "~((Theta::\u03b8`{1} zero) @ 0 @ 0 @ 0)",
+          "mode": "normal",
+          "result": "True"
+        },
+        {
+          "expression": "(Portable::\u03b8`{1} zero) == zero",
+          "mode": "normal",
+          "result": "True"
+        },
+        {
+          "expression": "(Portable::\u03b8`{8} zero) == zero",
+          "mode": "normal",
+          "result": "True"
+        },
+        {
+          "expression": "(Portable::\u03b8`{64} zero) == zero",
+          "mode": "normal",
+          "result": "True"
+        }
+      ]
+    }
+  ]
+}

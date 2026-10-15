@@ -1,6 +1,16 @@
-# Interop with Rust verification frontends (hax, aeneas)
+# Interop with language and verification frontends
 
-`Interop/` is an experimental sibling to `LatticeCrypto/` whose job is to
+`Interop/Cryptol` is an active, optional development within the root project.
+Its model, translation, bridge, and test targets share the root toolchain and
+manifest. See [the Cryptol guide](../../Interop/Cryptol/README.md) for commands,
+coverage, and the trusted extraction boundary. Imports flow from Bridge through
+Translation to Model; only Bridge imports VCVio and HashSig. Core libraries and
+tests, including HashSig, never import an interoperability layer.
+
+The remaining material describes the dormant Rust backends. Their separate
+`Interop` aggregate excludes Cryptol and is not in the default build.
+
+`Interop/Rust`, `Interop/Hax`, and `Interop/Aeneas` are experimental siblings to `LatticeCrypto/` whose job is to
 let VCVio reason about Lean code emitted by Rust verification frontends:
 
 - [hax](https://github.com/cryspen/hax): MIR → Lean/F\*/Coq/EasyCrypt/ProVerif/SSProve via a
@@ -32,11 +42,11 @@ The contract is therefore enforced at three levels:
 
 1. **Lake**: `Interop` is its own `lean_lib` in `lakefile.lean`, sibling
    to `LatticeCrypto`/`Examples`. Cross-library imports are physical.
-2. **CI**: `scripts/check-interop-isolation.sh` greps for forbidden
+2. **CI**: `scripts/check-interop-isolation.sh` checks all import modifiers for forbidden
    imports. `.github/workflows/interop-isolation.yml` runs it on every PR
    and on pushes to `main`. The script also runs without a Lean toolchain,
    so it is fast and never blocks on Mathlib cache or build flakiness.
-3. **Reverse direction**: `Interop/**` may import from `VCVio/**`,
+3. **Rust reverse direction**: the dormant backend directories may import from `VCVio/**`,
    `ToMathlib/**`, `Hax.…`, and `Aeneas.…`, but **not** from
    `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `Extern/**`,
    `VCVioWidgets/**`, or `VCVioTest/**`.

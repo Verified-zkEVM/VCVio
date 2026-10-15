@@ -63,7 +63,7 @@ randomness, and polynomial cost preservation are all proved.
 General categorical closure is intentionally uninhabited: the pinned complexitylib composition
 stack does not compile at VCVio's toolchain, and this package does not replace it with an
 extensional Lean composition or a synthetic cost counter. Any future implementation must provide
-PolyFun's `QuantitativeStepClass.HasCategory` mixin directly; the specialized unit machines do not
+PolyFun's `QuantitativeStepClass.HasComposition` mixin directly; the specialized unit machines do not
 establish that universally quantified interface.
 
 The representation grammar keeps its own pairing codec. It encodes the empty pair as `[true]`,

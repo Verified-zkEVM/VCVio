@@ -71,9 +71,17 @@ declaration order, so this keeps the direct Mathlib requirement authoritative
 over PolyFun's inherited pin and makes `lake update --keep-toolchain`
 idempotent.
 -/
-require PolyFun from git
-  "https://github.com/Verified-zkEVM/PolyFun" @
-  "v4.35.0-patch1"
+/-- The published dependency, with an explicit local foundation-development override. -/
+@[package_dep] def PolyFun : Dependency := {
+  name := `PolyFun
+  scope := ""
+  version := .none
+  opts := {}
+  src? := some <| match get_config? polyfunPath with
+    | some path => .path (System.FilePath.mk path) false
+    | none => .git "https://github.com/Verified-zkEVM/PolyFun"
+        (some "c026908c752879cd08bf5fdc079162d543795476") none
+}
 
 require "leanprover-community" / "mathlib" @ git "v4.35.0"
 
@@ -96,7 +104,8 @@ those libraries may import `Extern`. -/
 
 /-- Hash-based signatures: SLH-DSA (SPHINCS+, FIPS 205) proof-level specs and security.
 Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but nothing in
-`VCVio`/`ToMathlib`/`Extern`/`Interop` may import it. -/
+`VCVio`/`ToMathlib`/`Extern` may import it. Shared hashes are owned by
+`VCVio.Algorithms`; scheme code and optional conformance proofs consume them. -/
 @[default_target] lean_lib HashSig
 
 /-- Example constructions of cryptographic primitives. -/
@@ -110,7 +119,33 @@ Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but no
 Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
 `Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
 excluded from the default build. -/
-lean_lib Interop
+lean_lib Interop where
+  roots := #[`Interop]
+  globs := #[.one `Interop, .submodules `Interop.Hax, .submodules `Interop.Rust,
+    .submodules `Interop.Aeneas]
+
+/-- Optional resolved Cryptol semantics, independent of cryptographic libraries. -/
+lean_lib CryptolModel where
+  roots := #[`Interop.Cryptol.Model]
+  globs := #[.one `Interop.Cryptol.Model, .submodules `Interop.Cryptol.Model]
+
+/-- Checked descriptions, compilation, and source export. -/
+lean_lib CryptolTranslation where
+  roots := #[`Interop.Cryptol.Translation]
+  globs := #[.one `Interop.Cryptol.Translation, .submodules `Interop.Cryptol.Translation]
+
+/-- Foundation correspondence and VCVio specification transfer. -/
+lean_lib CryptolBridge where
+  roots := #[`Interop.Cryptol.Bridge]
+  globs := #[.one `Interop.Cryptol.Bridge, .submodules `Interop.Cryptol.Bridge]
+
+/-- Independent semantic, API, and executable regression cases. -/
+lean_lib CryptolTests where
+  globs := #[.submodules `Interop.Cryptol.Tests]
+
+/-- Import, observation, export, and correspondence workflows. -/
+lean_exe «cryptol-interop» where
+  root := `Interop.Cryptol.Main
 
 /-
 The four `extern_lib` targets below compile C sources that live in git

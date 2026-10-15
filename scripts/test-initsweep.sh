@@ -92,6 +92,13 @@ lake exe initsweep --root VCVioInitSweepTestFixtures.Clean --out "$CLEAN_REPORT"
 lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard --out "$HAZARD_REPORT"
 lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard --out "$HAZARD_REPORT_2"
 
+# A dependency directory with the same namespace must not shadow this package's artifacts.
+mkdir -p "$FIXTURE_TMP/shadow/VCVioInitSweepTestFixtures"
+lake env bash -c 'export LEAN_PATH="$1:$LEAN_PATH"; exec .lake/build/bin/initsweep \
+  --root VCVioInitSweepTestFixtures.Clean --out "$2"' \
+  _ "$FIXTURE_TMP/shadow" "$FIXTURE_TMP/shadow.json"
+cmp "$CLEAN_REPORT" "$FIXTURE_TMP/shadow.json"
+
 # The sweep must be deterministic: same build, byte-identical report.
 cmp "$HAZARD_REPORT" "$HAZARD_REPORT_2"
 

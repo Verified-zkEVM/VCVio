@@ -72,18 +72,29 @@ build boundaries and the staged consolidation.
   `docs/design/slh-dsa-status-and-roadmap.md`.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
-- `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr.
-- `Interop/` contains experimental bridges to Rust verification frontends such as hax and Aeneas.
-- `csrc/` contains C FFI bridges for the native ML-DSA, ML-KEM, and Falcon implementations used in tests.
-- `third_party/` contains the native backends as git submodules, used by the `Extern` FFI layer and differential tests.
-- `ToMathlib/` contains supporting constructions that may eventually move to a separate project.
+- [`Interop/Cryptol/`](Interop/Cryptol/README.md) contains the optional Cryptol
+  language model, native translation, and Foundation/VCVio bridge in one project.
+  Its proof and CLI targets share the root toolchain and dependency pins;
+  default libraries do not import it.
 
 For agent-oriented repo guidance, see [`AGENTS.md`](AGENTS.md) and the focused docs in
 [`docs/agents/`](docs/agents/), especially [`docs/agents/lattice.md`](docs/agents/lattice.md)
 for lattice-specific entry points and workflows.
 
+The [placement policy](AGENTS.md#placement-policy) keeps reusable algorithms and
+named constructions within the core library, with examples as consumers and
+interop as a downstream conformance layer. Existing scheme libraries migrate in
+dependency-complete slices.
+
 External papers and project references cited in this repo are centralized in
 [`REFERENCES.md`](REFERENCES.md).
+
+The pure hash API is in `VCVio.Algorithms.Sha2` and
+`VCVio.Algorithms.Keccak`. SHA-512/224 and SHA-512/256 are
+`sha512Trunc224` and `sha512Trunc256`; SHA3 variants are
+`sha3Digest224`, `sha3Digest256`, `sha3Digest384`, and `sha3Digest512`.
+The names identify algorithms; Foundation conformance is stated separately
+in the optional [Cryptol coverage catalogue](Interop/Cryptol/docs/coverage.md).
 
 ## End-to-end examples
 

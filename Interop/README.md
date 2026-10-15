@@ -1,40 +1,22 @@
 # Interop
 
-Experimental bridges that let VCVio reason about Lean code emitted by Rust
-verification frontends (currently [hax](https://github.com/cryspen/hax) and
-[aeneas](https://github.com/AeneasVerif/aeneas)).
+Optional language and verification bridges. The active
+[Cryptol development](Cryptol/README.md) shares VCVio's root toolchain and
+manifest. The Rust/hax/aeneas bridges remain dormant and are excluded from the
+default build; their source checks still run.
 
-> **Lean 4.31 baseline:** Interop is dormant. Neither backend is resolved by
-> Lake, and CI intentionally excludes the `Interop` aggregate target. Hax does
-> not yet support Lean 4.31; Aeneas does, but its VCVio bridge has not been
-> revalidated. Source and TCB-isolation checks remain in place.
+## Import boundaries
 
-## TCB Isolation Contract
+Core proof and test libraries, including `HashSig`, never import `Interop`,
+`Hax`, or `Aeneas`. Cryptol has separate optional `CryptolModel`,
+`CryptolTranslation`, `CryptolBridge`, and `CryptolTests` Lake targets.
+`Interop.lean` aggregates only the dormant Rust backends.
 
-The single most important property of this library is that **nothing in core
-VCVio depends on it**. Pulling hax / aeneas into the build adds a sizeable
-trusted computing base (extraction frontend, Charon, the backend's own
-runtime axioms), and we never want a routine `lake build` of the core
-framework to inherit that.
-
-The contract is enforced at three levels:
-
-1. **Lake**: `Interop` is its own `lean_lib` in `lakefile.lean`, sibling to
-   `LatticeCrypto`/`Examples`. Cross-library imports are physical: a file
-   under `VCVio/`, `LatticeCrypto/`, `LatticeCryptoTest/`, `Examples/`,
-   `ToMathlib/`, `FFI/`, `VCVioWidgets/`, or `VCVioTest/` must never
-   `import Interop.…`, `import Hax.…`, or `import Aeneas.…`.
-2. **CI**: `scripts/check-interop-isolation.sh` greps for forbidden imports
-   and exits non-zero on violation. `.github/workflows/interop-isolation.yml`
-   runs it on every PR and on pushes to `main`.
-3. **Reverse direction**: `Interop/**` is allowed to depend on `VCVio/**`,
-   `ToMathlib/**`, hax (`Hax.…`), and aeneas (`Aeneas.…`), but **not** on
-   `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `FFI/**`,
-   `VCVioWidgets/**`, or `VCVioTest/**`.
-   Those are themselves clients of VCVio. The same script checks this.
-
-If you need to share infrastructure between Interop and another library,
-move the shared piece into `VCVio/` first.
+Inside Cryptol, imports flow `Bridge → Translation → Model → PolyFun/CSLib`.
+Only Bridge may use VCVio, ToMathlib, and HashSig. Model and Translation carry
+no probability semantics. Rust backends do not import Cryptol, and Cryptol
+does not import them. `scripts/check-interop-isolation.sh` checks ordinary,
+public, meta, and `import all` forms; its negative fixtures cover each boundary.
 
 ## Layout
 

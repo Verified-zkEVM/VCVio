@@ -1,0 +1,71 @@
+name: Optional Cryptol bridge
+
+on:
+  pull_request:
+    paths:
+      - 'Interop/Cryptol/**'
+      - 'VCVio/Algorithms/**'
+      - 'VCVioTest/Algorithms/**'
+      - 'lakefile.lean'
+      - 'lake-manifest.json'
+      - 'lean-toolchain'
+      - 'scripts/check-interop-isolation.sh'
+      - 'scripts/test-interop-isolation.py'
+      - '.github/workflows/cryptol.yml'
+  workflow_dispatch:
+    inputs:
+      polyfun_ref:
+        description: Optional PolyFun revision override (empty uses the committed dependency pin)
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      polyfun_ref:
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cryptol-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      POLYFUN_PATH: ${{ inputs.polyfun_ref != '' && format('{0}/PolyFun', github.workspace) || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: VCVio
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        if: inputs.polyfun_ref != ''
+        with:
+          repository: Verified-zkEVM/PolyFun
+          ref: ${{ inputs.polyfun_ref }}
+          path: PolyFun
+      - name: Set up Lean
+        uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+          lake-package-directory: VCVio
+      - name: Resolve the optional package and fetch Mathlib cache
+        working-directory: VCVio
+        run: |
+          lake_cmd=(lake)
+          if [[ -n "$POLYFUN_PATH" ]]; then
+            lake_cmd+=(-R -K "polyfunPath=$POLYFUN_PATH")
+            "${lake_cmd[@]}" update PolyFun --keep-toolchain
+          fi
+          "${lake_cmd[@]}" exe cache get
+          "${lake_cmd[@]}" build mathlib/lint-style
+      - name: Check proofs, consumers, axioms, native execution and rejection cases
+        working-directory: VCVio
+        run: bash Interop/Cryptol/scripts/validate.sh --lint --test --axioms

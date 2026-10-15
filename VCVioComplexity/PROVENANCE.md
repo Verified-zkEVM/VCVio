@@ -78,7 +78,7 @@ patching the blocked upstream `TuringMachine.Internal` module. The file preserve
 attribution; no declaration is copied into the `Complexity` namespace.
 
 The direct identity/composition acceptance test is PolyFun's
-`polynomialQuantitativeStepClass.HasCategory` mixin itself. It has no exported inhabitant. Filling
+`polynomialQuantitativeStepClass.HasComposition` mixin itself. It has no exported inhabitant. Filling
 it requires total exact machines on all words, represented semantic correctness, polynomial run
 certificates, and a proved inequality for connection overhead. The failing upstream modules
 prevent reusing `copyInputToOutputTM` and `compositionTM` at this toolchain; no closure witness
@@ -97,7 +97,7 @@ for second-order quantification, not evidence that the fixed two-bit coin answer
 needs a growing response modulus.
 
 For arbitrary exact `Code` values, the corresponding interface is
-`quantitativeStepClass.HasCategory`; PolyFun's `HasExactCategory` remains the separate, strictly
+`quantitativeStepClass.HasComposition`; PolyFun's `HasExactComposition` remains the separate, strictly
 stronger refinement for exact cost equations. This avoids making exact additive accounting a
 prerequisite for sound polynomial closure.
 
