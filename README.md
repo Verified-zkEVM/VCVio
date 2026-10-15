@@ -61,9 +61,11 @@ infrastructure and some tooling and automation remain under active development.
 - `VCVio/` contains the oracle-computation framework, probability semantics, program logic, and generic crypto abstractions.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
 - `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
-- `HashSig/` contains hash-based signatures: proof-level specifications, component-level FIPS 205
-  conformance results, and security-facing interfaces for SLH-DSA. Neither an unforgeability
-  theorem nor a complete FIPS conformance result is proved yet; see
+- `HashSig/` contains hash-based signatures. Generalized XMSS has a specification, completeness
+  proofs, and concrete strong-unforgeability reduction bounds under explicit assumptions; see
+  [the GXMSS guide](docs/reading/gxmss.md). SLH-DSA has proof-level specifications,
+  component-level FIPS 205 conformance results, and security-facing interfaces; its unforgeability
+  theorem and complete FIPS conformance remain open, as described in
   `docs/design/slh-dsa-status-and-roadmap.md`.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
