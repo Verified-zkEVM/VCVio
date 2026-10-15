@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import Examples.Schnorr.ChallengeRestriction
+public import VCVio.Schemes.Schnorr.ChallengeRestriction
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.KnowledgeExtraction
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.ExtractionCost

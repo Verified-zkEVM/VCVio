@@ -217,7 +217,9 @@ Security notions, experiments, games, and advantages follow
 
 - Compact modern crypto proof: `Examples/OneTimePad/Basic.lean`
 - ElGamal IND-CPA via the generic one-time DDH lift: `Examples/ElGamal/Basic.lean`
-- Schnorr sigma protocol (completeness, soundness, HVZK): `Examples/Schnorr/SigmaProtocol.lean`
+- Schnorr sigma protocol (completeness, soundness, HVZK): `VCVio/Schemes/Schnorr/SigmaProtocol.lean`
+- Concrete transcript and commitment walkthroughs: `Examples/Schnorr/Basic.lean`,
+  `Examples/Pedersen.lean`
 - Oracle computation core: `VCVio/OracleComp/OracleComp.lean`
 - Probability lemmas: `VCVio/EvalDist/ProbabilityNotation.lean`, `VCVio/EvalDist/ProbabilityBounds.lean`, `VCVio/OracleComp/EvalDist/Measure.lean`
 - Equality in distribution across monads (`mx =ᵈ my`): `VCVio/EvalDist/EvalDistEq.lean`

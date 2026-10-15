@@ -18,7 +18,7 @@ import VCVio.ProgramLogic.Tactics.PrVCGen
 Standard Schnorr Σ-protocol for proof of knowledge of discrete logarithm
 over a cyclic group, formalized using `Module F G`. This file is the
 σ-protocol layer of the end-to-end EUF-CMA proof for the Schnorr signature
-in `Examples/Schnorr/Signature.lean`; everything proven here is fed verbatim into
+in `VCVio/Schemes/Schnorr/Signature.lean`; everything proven here is fed verbatim into
 `FiatShamir.euf_cma_bound`.
 
 ## Mathematical setup

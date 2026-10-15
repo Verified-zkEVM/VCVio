@@ -6,9 +6,9 @@ Authors: Devon Tuma
 
 module
 
-public import Examples.Schnorr.Transforms
-public import Examples.Schnorr.Signature
-public import Examples.Schnorr.BoundedChallenges
+public import VCVio.Schemes.Schnorr.Transforms
+public import VCVio.Schemes.Schnorr.Signature
+public import VCVio.Schemes.Schnorr.BoundedChallenges
 public import Mathlib.Algebra.Field.ZMod
 public import VCVio.CryptoFoundations.Fischlin.ExtractionCost
 

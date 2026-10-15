@@ -6,7 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 
-public import Examples.Schnorr.SigmaProtocol
+public import VCVio.Schemes.Schnorr.SigmaProtocol
 public import VCVio.CryptoFoundations.SigmaProtocol.ChallengeRestriction
 
 /-!

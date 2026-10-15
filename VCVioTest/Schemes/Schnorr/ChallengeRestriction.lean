@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import Examples.Schnorr.BoundedChallenges
+public import VCVio.Schemes.Schnorr.BoundedChallenges
 public import Mathlib.Algebra.Field.ZMod
 
 /-!

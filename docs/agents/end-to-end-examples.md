@@ -6,12 +6,12 @@ layers compose on concrete schemes.
 ## Schnorr Signature EUF-CMA
 
 An end-to-end EUF-CMA reduction for the Schnorr digital signature lives in
-[`Examples/Schnorr/Signature.lean`](../../Examples/Schnorr/Signature.lean). It is a compact
+[`VCVio/Schemes/Schnorr/Signature.lean`](../../VCVio/Schemes/Schnorr/Signature.lean). It is a compact
 illustration of how the main composition layers of the framework fit together
 on a single concrete scheme. Reading order:
 
 1. **Σ-protocol:**
-   [`Examples/Schnorr/SigmaProtocol.lean`](../../Examples/Schnorr/SigmaProtocol.lean) defines
+   [`VCVio/Schemes/Schnorr/SigmaProtocol.lean`](../../VCVio/Schemes/Schnorr/SigmaProtocol.lean) defines
    `Schnorr.sigma` and proves perfect completeness, special soundness, and perfect HVZK, plus the
    two simulator-distribution facts the Fiat-Shamir reduction needs (`sigma_simCommitPredictability`
    and `sigma_simChalUniformGivenCommit`).
@@ -89,14 +89,14 @@ transports perfect completeness and unique responses along any challenge map, an
 soundness along an injective map. The retained commitment simulator does not by itself certify
 the distribution of full transcripts after changing the challenge policy.
 
-[`Examples/Schnorr/ChallengeRestriction.lean`](../../Examples/Schnorr/ChallengeRestriction.lean)
+[`VCVio/Schemes/Schnorr/ChallengeRestriction.lean`](../../VCVio/Schemes/Schnorr/ChallengeRestriction.lean)
 proves equality of the honest and simulated transcript measures for the actual restricted
 challenge distribution. That simulation theorem allows noninjective encodings.
-[`Examples/Schnorr/BoundedChallenges.lean`](../../Examples/Schnorr/BoundedChallenges.lean)
+[`VCVio/Schemes/Schnorr/BoundedChallenges.lean`](../../VCVio/Schemes/Schnorr/BoundedChallenges.lean)
 embeds `Fin c` into `ZMod p` injectively when `c ≤ p`; primality of `p` is a separate
 requirement for instantiating Schnorr over a field.
 
-[`VCVioTest/SigmaChallengeRestriction.lean`](../../VCVioTest/SigmaChallengeRestriction.lean)
+[`VCVioTest/Schemes/Schnorr/ChallengeRestriction.lean`](../../VCVioTest/Schemes/Schnorr/ChallengeRestriction.lean)
 checks the field-of-order-seven instance, the empty and full-size embedding boundaries,
 aliasing above the modulus, and a noninjective restriction that destroys special soundness.
 These are algebraic fixtures, not concrete security parameters.
@@ -218,7 +218,7 @@ change to the oracle's stateful behavior.
 
 ## Bounded Schnorr transform guarantees
 
-`Examples/Schnorr/Transforms.lean` instantiates the Fiat–Shamir and Fischlin extraction bounds
+`VCVio/Schemes/Schnorr/Transforms.lean` instantiates the Fiat–Shamir and Fischlin extraction bounds
 with one challenge-restricted Schnorr protocol. An injective scalar encoding gives special
 soundness; an injective scalar action by the generator also supplies Fischlin's unique-response
 hypothesis. The theorems name their actual extractors and preserve the generic error terms.
@@ -227,5 +227,5 @@ Fiat–Shamir uses a finite, sampleable challenge type and has a pathwise replay
 `2 * (Q + 1)` fresh challenge requests. Fischlin additionally enumerates challenges for its
 honest signing search and inherits the exact finite-geometric expected hash-call formula.
 Completeness uses the bundled Fischlin runtime over actual keygen/sign/verify code.
-`VCVioTest/SchnorrTransforms.lean` checks these interfaces with three challenges in `ZMod 7`,
+`VCVioTest/Schemes/Schnorr/Transforms.lean` checks these interfaces with three challenges in `ZMod 7`,
 including a concrete accepting transcript pair that recovers scalar `3` after one log inspection.

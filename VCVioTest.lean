@@ -129,9 +129,9 @@ public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SampleableType
-public import VCVioTest.SchnorrTransforms
+public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
+public import VCVioTest.Schemes.Schnorr.Transforms
 public import VCVioTest.SeparatedOTP
-public import VCVioTest.SigmaChallengeRestriction
 public import VCVioTest.Smoke
 public import VCVioTest.StateSeparating.Measure
 public import VCVioTest.StateTLift

@@ -1,194 +1,36 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Devon Tuma
 -/
 
 module
-public import VCVio.CryptoFoundations.CommitmentScheme
-public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
-import VCVio.ProgramLogic.Tactics.PrVCGen
+public import VCVio.Schemes.Pedersen
+public import Mathlib.Algebra.Field.ZMod
 
 /-!
-# Pedersen Commitment Scheme
+# Opening a Pedersen commitment
 
-This file defines the Pedersen commitment scheme and proves:
-1. **Correctness**: honestly generated commitments verify.
-2. **Perfect hiding**: the commitment distribution is independent of the message
-   (via a bijection argument, same pattern as one-time pad).
-3. **Computational binding**: a successful double-opener yields a DLog solver.
-
-## Mathematical Setup
-
-Uses the same additive `Module F G` notation as `DiffieHellman.lean`:
-- `F` is the scalar field (exponents), `G` is the group
-- `g : G` is a fixed generator with `Function.Bijective (· • g : F → G)`
-- Public parameter: `h = x • g` for secret random `x : F`
-- Commitment to message `m : F`: sample `d ← $ᵗ F`, output `(d • g + m • h, d)`
-- Verification: check `c = d • g + m • h`
+In the additive group modulo 101, take generator 1 and public parameter 9. Committing to
+message 3 with randomness 7 gives 34. Checking the opening is deterministic; correctness
+also holds for the scheme's randomly sampled commitments. This small arithmetic example
+provides no computational binding guarantee. The general reduction is in
+`VCVio/Schemes/Pedersen.lean`.
 -/
 
-@[expose] public section
+public section
 
-open OracleComp OracleSpec ENNReal DiffieHellman CommitmentScheme
+namespace Examples.Pedersen
 
-variable {F : Type} [Field F] {G : Type} [AddCommGroup G] [Module F G]
+local instance : Fact (Nat.Prime 101) := ⟨by decide⟩
 
-/-! ## Definition -/
+example : (pedersenCommit (F := ZMod 101) (1 : ZMod 101)).verify 9 3 34 7 = true := by
+  decide
 
-/-- The Pedersen commitment scheme over a cyclic group with generator `g`.
+example : (pedersenCommit (F := ZMod 101) (1 : ZMod 101)).verify 9 4 34 7 = false := by
+  decide
 
-| Component | Definition |
-|-----------|-----------|
-| Setup | Sample `x ← $ᵗ F`, return `h = x • g` |
-| Commit(h, m) | Sample `d ← $ᵗ F`, return `(d • g + m • h, d)` |
-| Verify(h, m, c, d) | Check `d • g + m • h = c` |
--/
-def pedersenCommit [SampleableType F] [DecidableEq G] (g : G) : CommitmentScheme G F G F where
-  setup := do let x ← $ᵗ F; return (x • g)
-  commit pp m := do
-    let d ← $ᵗ F
-    return (d • g + m • pp, d)
-  verify pp m c d := decide (d • g + m • pp = c)
+example : (pedersenCommit (F := ZMod 101) (1 : ZMod 101)).PerfectlyCorrect :=
+  pedersenCommit.correct
 
-namespace pedersenCommit
-
-variable {F : Type} [Field F] {G : Type} [AddCommGroup G] [Module F G]
-variable {g : G}
-
-/-! ## Correctness -/
-
-theorem correct [SampleableType F] [DecidableEq G] :
-    (pedersenCommit (F := F) g).PerfectlyCorrect := by
-  intro pp _hpp m
-  dsimp only [pedersenCommit]
-  prvcgen
-  simp
-
-/-! ## Perfect hiding -/
-
-private lemma commit_fst_bijective (hg : Function.Bijective (· • g : F → G))
-    (pp : G) (m : F) : Function.Bijective (fun d : F => d • g + m • pp) := by
-  change Function.Bijective ((· + m • pp) ∘ (· • g : F → G))
-  exact Function.Bijective.comp
-    ⟨fun a b h => add_right_cancel h,
-     fun y => ⟨y - m • pp, sub_add_cancel y (m • pp)⟩⟩
-    hg
-
-/-- Rewrite the commitment distribution as a mapped uniform sample. -/
-private lemma commit_fst_eq_map [SampleableType F] [DecidableEq G] (pp : G) (m : F) :
-    Prod.fst <$> (pedersenCommit (F := F) g).commit pp m =
-    (fun d : F => d • g + m • pp) <$> ($ᵗ F) := by
-  simp [pedersenCommit]
-
-/-- The Pedersen commitment scheme is perfectly hiding: the commitment distribution
-is independent of the committed message.
-
-The proof uses the same bijection-coupling idea as the one-time pad: composing
-the generator bijection `d ↦ d • g` with translation `· + c` gives a bijection
-`F → G`, so the pushforward of uniform on `F` is uniform on `G` regardless of `c`. -/
-theorem perfectlyHiding [SampleableType F] [SampleableType G] [DecidableEq G]
-    [Finite F] (hg : Function.Bijective (· • g : F → G)) :
-    (pedersenCommit (F := F) g).PerfectlyHiding := by
-  let : MeasurableSpace F := ⊤
-  let : MeasurableSpace G := ⊤
-  have : Finite G := Finite.of_surjective _ hg.2
-  have : Nonempty F := ⟨0⟩
-  have : Nonempty G := ⟨0⟩
-  have huniform (m : F) (pp : G) :
-      𝒟[(fun d : F => d • g + m • pp) <$> ($ᵗ F)] = 𝒟[$ᵗ G] := by
-    simpa only [map_eq_bind_pure_comp, Function.comp_def, bind_pure] using
-      evalDist_bind_bijective_uniform_cross ($ᵗ F) ($ᵗ G)
-        SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample
-        _ (commit_fst_bijective hg pp m) pure
-  intro pp _hpp m₁ m₂
-  rw [commit_fst_eq_map, commit_fst_eq_map]
-  exact EvalDistEq.of_evalDist_eq ((huniform m₁ pp).trans (huniform m₂ pp).symm)
-
-/-! ## Computational binding reduces to DLog -/
-
-/-- Given a binding adversary for Pedersen, construct a DLog adversary.
-If the binder produces two valid openings `(m₁, d₁)` and `(m₂, d₂)` to the same
-commitment `c` with `m₁ ≠ m₂`, extract the discrete log as `(d₁ - d₂) / (m₂ - m₁)`. -/
-def dlogReduction [DecidableEq F] [DecidableEq G]
-    (binder : BindingAdversary G F G F) : DLogAdversary F G :=
-  fun gen h => do
-    let (c, m₁, d₁, m₂, d₂) ← binder h
-    return if decide (m₁ ≠ m₂ ∧ d₁ • gen + m₁ • h = c ∧ d₂ • gen + m₂ • h = c) then
-      (d₁ - d₂) / (m₂ - m₁)
-    else 0
-
-private lemma extractedLog_eq_dlog (hg : Function.Bijective (· • g : F → G))
-    {x m₁ d₁ m₂ d₂ : F} {c : G}
-    (hm : m₁ ≠ m₂)
-    (h₁ : d₁ • g + m₁ • (x • g) = c)
-    (h₂ : d₂ • g + m₂ • (x • g) = c) :
-    (d₁ - d₂) / (m₂ - m₁) = x := by
-  have hmul : d₁ - d₂ = (m₂ - m₁) * x := by
-    have hcoeff : d₁ + m₁ * x = d₂ + m₂ * x := by
-      apply hg.1
-      calc
-        (d₁ + m₁ * x) • g = d₁ • g + m₁ • (x • g) := by rw [add_smul, mul_smul]
-        _ = c := h₁
-        _ = d₂ • g + m₂ • (x • g) := h₂.symm
-        _ = (d₂ + m₂ * x) • g := by rw [add_smul, mul_smul]
-    have hcoeff' := congrArg (fun t : F => t - d₂ - m₁ * x) hcoeff
-    ring_nf at hcoeff' ⊢
-    exact hcoeff'
-  have hneq : m₂ - m₁ ≠ 0 := sub_ne_zero.mpr hm.symm
-  calc
-    (d₁ - d₂) / (m₂ - m₁)
-        = ((m₂ - m₁) * x) / (m₂ - m₁) := by rw [hmul]
-    _ = x := by
-      field_simp [hneq]
-
-private lemma bindingWin_implies_dlogWin [DecidableEq F] [DecidableEq G]
-    (hg : Function.Bijective (· • g : F → G))
-    {x m₁ d₁ m₂ d₂ : F} {c : G}
-    (hwin : m₁ ≠ m₂ ∧ d₁ • g + m₁ • (x • g) = c ∧ d₂ • g + m₂ • (x • g) = c) :
-    (if decide (m₁ ≠ m₂ ∧ d₁ • g + m₁ • (x • g) = c ∧ d₂ • g + m₂ • (x • g) = c) then
-      (d₁ - d₂) / (m₂ - m₁)
-    else 0) = x := by
-  rcases hwin with ⟨hm, h₁, h₂⟩
-  have hdec : decide (m₁ ≠ m₂ ∧ d₁ • g + m₁ • (x • g) = c ∧ d₂ • g + m₂ • (x • g) = c) = true := by
-    simp [hm, h₁, h₂]
-  simp [hdec, extractedLog_eq_dlog hg hm h₁ h₂]
-
-/-- Computational binding: a successful Pedersen binding adversary yields a
-successful DLog solver. Specifically, `Pr[binding wins] ≤ Pr[DLog wins]`. -/
-theorem binding_le_dlog [DecidableEq F] [SampleableType F] [DecidableEq G]
-    (hg : Function.Bijective (· • g : F → G))
-    (binder : BindingAdversary G F G F) :
-    𝒟[(pedersenCommit g).bindingExperiment binder] {true} ≤
-    𝒟[dlogExperiment g (dlogReduction binder)] {true} := by
-  let base : ProbComp (F × (G × F × F × F × F)) := do
-    let x ← $ᵗ F
-    let out ← binder (x • g)
-    return (x, out)
-  let bindingWin : F × (G × F × F × F × F) → Prop := fun
-    | (x, (c, m₁, d₁, m₂, d₂)) =>
-        m₁ ≠ m₂ ∧ d₁ • g + m₁ • (x • g) = c ∧ d₂ • g + m₂ • (x • g) = c
-  let dlogWin : F × (G × F × F × F × F) → Prop := fun
-    | (x, (c, m₁, d₁, m₂, d₂)) =>
-        (if decide (m₁ ≠ m₂ ∧ d₁ • g + m₁ • (x • g) = c ∧ d₂ • g + m₂ • (x • g) = c) then
-          (d₁ - d₂) / (m₂ - m₁)
-        else 0) = x
-  have hbinding :
-      𝒟[(pedersenCommit g).bindingExperiment binder] {true} = Pr{let z ← base}[bindingWin z] := by
-    rw [show (pedersenCommit g).bindingExperiment binder =
-        (fun z => decide (bindingWin z)) <$> base by
-      simp [CommitmentScheme.bindingExperiment, pedersenCommit, base, bindingWin, Bool.and_assoc],
-      ← prEvent_eq_evalDist_singleton _ true, prEvent_map]
-    simp only [decide_eq_true_eq]
-  have hdlog :
-      𝒟[dlogExperiment g (dlogReduction binder)] {true} = Pr{let z ← base}[dlogWin z] := by
-    rw [show dlogExperiment g (dlogReduction binder) = (fun z => decide (dlogWin z)) <$> base by
-      simp [DiffieHellman.dlogExperiment, dlogReduction, base, dlogWin],
-      ← prEvent_eq_evalDist_singleton _ true, prEvent_map]
-    simp only [decide_eq_true_eq]
-  rw [hbinding, hdlog]
-  exact prEvent_mono _ _ _ fun z hwin => by
-    rcases z with ⟨x, ⟨c, m₁, d₁, m₂, d₂⟩⟩
-    simpa [bindingWin, dlogWin] using bindingWin_implies_dlogWin (g := g) hg hwin
-
-end pedersenCommit
+end Examples.Pedersen

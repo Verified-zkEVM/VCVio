@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import Examples.Schnorr.SigmaProtocol
+public import VCVio.Schemes.Schnorr.SigmaProtocol
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Security
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 
@@ -16,7 +16,7 @@ An end-to-end EUF-CMA reduction for the Schnorr digital signature, exercising
 the main composition layers of the VCVio framework on a single concrete
 scheme:
 
-* a Σ-protocol (`Examples/Schnorr/SigmaProtocol.lean`),
+* a Σ-protocol (`VCVio/Schemes/Schnorr/SigmaProtocol.lean`),
 * the generic Fiat-Shamir transform
   (`VCVio/CryptoFoundations/FiatShamir/Sigma.lean`),
 * the replay-based forking lemma

@@ -73,6 +73,8 @@ build boundaries and the staged consolidation.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
 - `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr.
+- `VCVio/Schemes/` owns reusable Schnorr and Pedersen definitions and their security reductions;
+  `Examples/` includes small consumers of these APIs.
 - `Interop/` contains experimental bridges to Rust verification frontends such as hax and Aeneas.
 - `csrc/` contains C FFI bridges for the native ML-DSA, ML-KEM, and Falcon implementations used in tests.
 - `third_party/` contains the native backends as git submodules, used by the `Extern` FFI layer and differential tests.

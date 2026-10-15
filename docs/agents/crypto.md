@@ -39,10 +39,10 @@ analogue.
 
 For an end-to-end EUF-CMA reduction worked through the framework (Σ-protocol →
 Fiat-Shamir transform → managed-RO NMA → replay forking → DLog), see
-[`Examples/Schnorr/Signature.lean`](../../Examples/Schnorr/Signature.lean) and the
+[`VCVio/Schemes/Schnorr/Signature.lean`](../../VCVio/Schemes/Schnorr/Signature.lean) and the
 [Schnorr signature walkthrough](end-to-end-examples.md#schnorr-signature-euf-cma).
 The Schnorr-specific σ-protocol facts that feed in live in
-[`Examples/Schnorr/SigmaProtocol.lean`](../../Examples/Schnorr/SigmaProtocol.lean).
+[`VCVio/Schemes/Schnorr/SigmaProtocol.lean`](../../VCVio/Schemes/Schnorr/SigmaProtocol.lean).
 
 ### Commitment schemes (`CommitmentScheme`)
 

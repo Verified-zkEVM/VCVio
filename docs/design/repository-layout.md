@@ -10,7 +10,7 @@ Status: current placement policy; the migration table distinguishes planned move
 | `VCVio/` | Oracle computations, probability, program logic, crypto interfaces and reusable constructions | Main public library |
 | `VCVio/Algorithms/` | Pure implementations, encodings and functional-correctness results | May use Mathlib, ToMathlib, generic PolyFun/CSLib and sibling algorithms |
 | `VCVio/CryptoFoundations/` | Cryptographic interfaces, assumptions, games and generic reduction theory | Uses the framework; does not import concrete schemes |
-| `VCVio/Schemes/` | Named constructions with their correctness and security proofs | Planned destination; uses algorithms and foundations, never Examples or widgets |
+| `VCVio/Schemes/` | Named constructions with their correctness and security proofs | Uses algorithms and foundations, never Examples or widgets |
 | `LatticeCrypto/`, `HashSig/` | Existing lattice and hash-signature libraries | Peers above VCVio; migrate only in dependency-complete slices |
 | `VCVioCslib/` | Optional non-uniform complexity facade | Separate non-default Lake target |
 | `VCVioComplexity/` | Optional concrete machine backend | Separate Lake package with coordinated pins |
@@ -61,7 +61,7 @@ DAG. The source check needs the pinned Lean toolchain but no built modules or La
 | Slice | Current location | Planned destination and prerequisites |
 |---|---|---|
 | Shared hashes | `VCVio/Algorithms/` | Extracted; pure tests and vector provenance in VCVioTest; SLH-DSA profile tests remain with HashSigTest |
-| Schnorr and Pedersen | Examples | Schemes in VCVio, including the complete proof and test groups; keep instructional consumers |
+| Schnorr and Pedersen | `VCVio/Schemes/` | Extracted with the complete proof and test groups; instructional consumers remain in Examples |
 | KEM–DEM and MAC-from-PRF | CryptoFoundations | Schemes in VCVio, including the measure component and security reductions |
 | One-time pad | Examples | Separate its widget presentation before moving the reusable implementation |
 | ElGamal | Examples | Move definitions, proofs, cost certificates and handler execution together after their dependency audit |
