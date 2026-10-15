@@ -8,7 +8,7 @@ Status: current placement policy; the migration table distinguishes planned move
 |---|---|---|
 | `ToMathlib/` | General mathematical utilities intended for Mathlib | Below the cryptographic framework |
 | `VCVio/` | Oracle computations, probability, program logic, crypto interfaces and reusable constructions | Main public library |
-| `VCVio/Algorithms/` | Pure implementations, encodings and functional-correctness results | Planned destination; may use Mathlib, ToMathlib, generic PolyFun/CSLib and sibling algorithms |
+| `VCVio/Algorithms/` | Pure implementations, encodings and functional-correctness results | May use Mathlib, ToMathlib, generic PolyFun/CSLib and sibling algorithms |
 | `VCVio/CryptoFoundations/` | Cryptographic interfaces, assumptions, games and generic reduction theory | Uses the framework; does not import concrete schemes |
 | `VCVio/Schemes/` | Named constructions with their correctness and security proofs | Planned destination; uses algorithms and foundations, never Examples or widgets |
 | `LatticeCrypto/`, `HashSig/` | Existing lattice and hash-signature libraries | Peers above VCVio; migrate only in dependency-complete slices |
@@ -60,7 +60,7 @@ DAG. The source check needs the pinned Lean toolchain but no built modules or La
 
 | Slice | Current location | Planned destination and prerequisites |
 |---|---|---|
-| Shared hashes | HashSig's SLH-DSA concrete modules | Algorithms in VCVio; pure tests and vector provenance in VCVioTest; retain SLH-DSA profile tests with HashSigTest |
+| Shared hashes | `VCVio/Algorithms/` | Extracted; pure tests and vector provenance in VCVioTest; SLH-DSA profile tests remain with HashSigTest |
 | Schnorr and Pedersen | Examples | Schemes in VCVio, including the complete proof and test groups; keep instructional consumers |
 | KEM–DEM and MAC-from-PRF | CryptoFoundations | Schemes in VCVio, including the measure component and security reductions |
 | One-time pad | Examples | Separate its widget presentation before moving the reusable implementation |
@@ -70,6 +70,23 @@ DAG. The source check needs the pinned Lean toolchain but no built modules or La
 
 The first three slices are the current consolidation. Later rows record dependencies, not
 claims that those moves or new proofs are already complete.
+
+## Shared hash API
+
+Import `VCVio.Algorithms.Sha2` or `VCVio.Algorithms.Keccak` for the shared implementations;
+`VCVio.Algorithms.Encoding` owns the fixed-width big-endian natural encoding. The SHA-256
+implementation exposes its round state, schedule expansion and feed-forward operations for
+functional-correctness proofs. These modules have no oracle, scheme or interop imports.
+
+The former SLH-DSA hash namespaces move to `VCVio.Algorithms.Sha2` and
+`VCVio.Algorithms.Keccak`. Digest names follow the repository naming convention:
+`sha512Trunc224`, `sha512Trunc256`, and `sha3Digest224` through `sha3Digest512`.
+SLH-DSA adapters remain in HashSig and consume these implementations directly.
+
+`lake exe algorithm_tests` runs the pure regressions and checks the pinned shared corpus in
+`VCVioTest/Algorithms/HashVectors/`. `slhdsa_primitive_tests` checks the scheme's address
+boundary and twelve profile fingerprints. The corpus split preserves the input/output bytes,
+source hashes and evidence classifications; it does not regenerate expected answers.
 
 ## Documentation checks
 

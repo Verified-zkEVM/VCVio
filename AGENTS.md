@@ -66,6 +66,8 @@ See the [repository ownership map](docs/design/repository-layout.md) for placeme
 build boundaries and the staged consolidation.
 
 - `VCVio/`: generic oracle-computation framework, program logic, crypto abstractions, and generic reductions.
+- `VCVio/Algorithms/` contains shared pure SHA-2, HMAC, MGF1, SHA-3 and SHAKE implementations;
+  their independent regressions run with `lake exe algorithm_tests`.
 - `VCVioCslib/`: optional cslib-backed non-uniform P/poly adapters; it is a separate Lake library
   so core `VCVio` remains backend-neutral.
 - `ToMathlib/`: local Mathlib-facing utilities and lemmas intended to remain below the framework layer.

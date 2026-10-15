@@ -6,6 +6,7 @@ Authors: Nicolas Consigny, Alexander Hicks
 
 module
 public import HashSig.SLHDSA.Params
+public import VCVio.Algorithms.Encoding
 
 /-!
 # SLH-DSA Integer / Byte / Base Helpers
@@ -45,7 +46,7 @@ def toInt (x : List Byte) : ℕ :=
 
 /-- `toByte(x, len)`: big-endian `len`-byte serialization of `x` (FIPS 205 Alg 3). -/
 def toByte (x len : ℕ) : List Byte :=
-  (List.range len).map (fun i => UInt8.ofNat (x / 256 ^ (len - 1 - i) % 256))
+  VCVio.Algorithms.Encoding.natToBytesBE x len
 
 /-- Decode a list only when its length is exactly the requested wire width. -/
 def decodeExact (n : ℕ) (raw : List Byte) : Except CodecError (Bytes n) :=

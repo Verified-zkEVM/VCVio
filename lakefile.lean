@@ -366,11 +366,16 @@ collide. -/
 lean_lib HashSigTest where
   globs := #[.submodules `HashSigTest]
 
+/-- Pure hash regressions, independent of scheme and FFI test runners. -/
+lean_exe algorithm_tests where
+  srcDir := "scripts"
+  root := `AlgorithmTests
+
 /-- Smoke test: imports VCVio and prints OK. -/
 lean_exe smoke_test where
   root := `VCVioTest.Smoke
 
-/-- `lake test`: build the three test libraries, then run the smoke test and the SLH-DSA test
+/-- `lake test`: build the three test libraries, then run the smoke, pure algorithm and SLH-DSA test
 executables. `lake test -- --ffi` additionally builds and runs the native-backed ML-KEM / ML-DSA /
 Falcon executables, which compile the vendored C backends under `third_party/`; that path is what
 the nightly FFI workflow runs and is never part of the per-PR CI. -/
@@ -383,6 +388,7 @@ script test (args) do
   let mut steps : Array (Array String) := #[
     #["build", "VCVioTest", "LatticeCryptoTest", "HashSigTest"],
     #["exe", "smoke_test"],
+    #["exe", "algorithm_tests"],
     #["exe", "slhdsa_kat"],
     #["exe", "slhdsa_c13_kat"],
     #["exe", "slhdsa_data_codec_tests"],
