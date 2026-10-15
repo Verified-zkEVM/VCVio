@@ -3,16 +3,16 @@
 - Upstream: <https://github.com/SamuelSchlesinger/complexitylib>
 - Revision: `b6738219a3a3c50967d6bd16cba9487887ca6b66`
 - Upstream toolchain at that revision: Lean `v4.30.0`
-- VCVio validation toolchain: Lean and Mathlib `v4.34.0`
+- VCVio validation toolchain: Lean and Mathlib `v4.35.0`
 
 The direct Git dependency is tested with VCVio as a path dependency and with the nested package's
-direct Mathlib `v4.34.0` requirement taking precedence over inherited pins. The direct compatibility
+direct Mathlib `v4.35.0` requirement taking precedence over inherited pins. The direct compatibility
 canary imports:
 
 - `Complexitylib.Models.TuringMachine`;
 - `Complexitylib.Classes.P.Cobham.Defs`.
 
-Both modules compile unchanged at Lean/Mathlib `v4.35.0-rc3`. The transitive import
+Both modules compile unchanged at Lean/Mathlib `v4.35.0`. The transitive import
 `Complexitylib.Asymptotics` does not: its imports do not expose `Polynomial.natDegree` or
 `Polynomial.eval_eq_sum_range` under that Mathlib. It fails with exactly six diagnostics at this
 polynomial boundary and no other errors, which the preflight checks. Consequently,
@@ -38,7 +38,7 @@ coexist with the direct implementation.
 
 ## Concrete TM adapter compatibility
 
-`Complexitylib.Models.TuringMachine` compiles unchanged on Lean and Mathlib `v4.35.0-rc3`. It
+`Complexitylib.Models.TuringMachine` compiles unchanged on Lean and Mathlib `v4.35.0`. It
 supplies the concrete deterministic TM, exact `TM.reachesIn`, delimited `Tape.HasOutput`, and
 `TM.ComputesInTime` used by `VCVioComplexity.Backend.TuringMachine`.
 

@@ -389,7 +389,7 @@ def stdDoRelTripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr × E
 private def findWpApp? (target : Expr) : Option (Expr × Nat) := do
   if let some app := findAppWithHead? ``OracleComp.ProgramLogic.wp target then
     some (app, 2)
-  else if let some app := findAppWithHead? ``Std.Internal.Do.wp target then
+  else if let some app := findAppWithHead? ``Std.WP.wp target then
     some (app, 3)
   else
     none
@@ -420,7 +420,7 @@ def rawWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
 private def findTripleApp? (target : Expr) : Option (Expr × Nat) := do
   if let some app := findAppWithHead? ``OracleComp.ProgramLogic.Triple target then
     some (app, 3)
-  else if let some app := findAppWithHead? ``Std.Internal.Do.Triple target then
+  else if let some app := findAppWithHead? ``Std.WP.Triple target then
     some (app, 5)
   else
     none

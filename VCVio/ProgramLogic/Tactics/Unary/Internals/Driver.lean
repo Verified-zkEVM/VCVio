@@ -338,12 +338,10 @@ def runVCGenStep : TacticM Bool := do
       return true
   let cheapCloseState ← saveState
   if ← tryEvalTacticSyntax (← `(tactic|
-      (refine Std.Internal.Do.Triple.intro ?_
+      (refine Std.WP.Triple.intro ?_
        repeat intro _
        simp [Lean.Order.PartialOrder.rel, MonadLift.monadLift,
-         OracleComp.Lower.wp_eq_mAlgOrdered_wp,
-         OracleComp.Lower.wp_eq_mAlgOrdered_wp_epost,
-         MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
+         ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
          one_mul, mul_one]))) then
     if (← getGoals).isEmpty then
       return true

@@ -10,7 +10,7 @@ public import Std.Tactic.Do
 public import VCVio.ProgramLogic.Unary.StdDoBridge
 
 /-!
-# `Std.Do` / `mvcgen` examples for `OracleComp`
+# `Std.Do` proof-mode examples for `OracleComp`
 -/
 
 @[expose] public section
@@ -18,8 +18,6 @@ public import VCVio.ProgramLogic.Unary.StdDoBridge
 open Std.Do
 
 universe u
-
-set_option mvcgen.warning false
 
 namespace OracleComp.ProgramLogic.StdDo
 
@@ -29,7 +27,8 @@ variable {α : Type}
 
 example (x : α) :
     Std.Do.Triple (pure x : OracleComp spec α) (spred(⌜True⌝)) (⇓ y => ⌜y = x⌝) := by
-  mvcgen
+  mintro _
+  mspec
 
 example (t : spec.Domain) {Q : Std.Do.PostCond (spec.Range t) .pure} :
     Std.Do.Triple (HasQuery.query t : OracleComp spec (spec.Range t))

@@ -29,7 +29,7 @@ follows for free since every element is already `≤ 1`).
 
 /-- The closed unit interval `[0, 1]` as a subtype of `ℝ≥0∞`.
 
-Used as the carrier for the probabilistic `Std.Internal.Do.WP` interpretation of
+Used as the carrier for the probabilistic `Std.WP.WP` interpretation of
 `OracleComp` (see `OracleComp.Probabilistic.instWP_prob`). The
 `Subtype.val` coercion to `ℝ≥0∞` is free, so probabilistic statements
 re-export to the quantitative carrier without duplication. -/

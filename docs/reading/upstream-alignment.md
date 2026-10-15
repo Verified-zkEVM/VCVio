@@ -137,25 +137,21 @@ Mathlib kernel composition delegates to the measure rules. Parameterized expecte
 `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` and
 `ToMathlib/Probability/Kernel/TotalVariation.lean`.
 
-**Program logic: core lattice-generic WP on v4.34.** Unary carriers consume
-`Std.Internal.Do.WPMonad` through PolyFun's `MAlgOrdered.toWPMonad`. Quantitative,
-qualitative, and probability-bounded interpretations are scoped. `Prob` uses Mathlib's
-`Set.Iic 1` with `MAlgOrdered.restrictIic`; no local lattice bridge is needed. The
-relational coupling interface belongs to VCVio and uses core assertion lattices.
-Loom2 is no longer a dependency. The generic native expectation algebra lives in
-`VCVio.ProgramLogic.Unary.WP.Measure`; its scoped core interpretation needs only
-lawful measure semantics and a lawful monad. Oracle quantitative WP delegates to that algebra
-under configured answer measures. Native Hoare and simulation owners require neither uniformity
-nor probability compatibility classes; public transformer equations normalize their core WP.
-Chosen-space assertions carry measurability premises, while mapped assertions and state-discarding
-simulation leave hidden outputs and states unmeasured. The explicit coherence equations that once
-connected discrete relational and forking consumers were removed with the discrete layer.
+**Program logic: core lattice-generic WP on v4.35.** Unary carriers consume `Std.WP.WPMonad`
+and core exception stacks through PolyFun's `MAlgOrdered.toWPMonad`. PolyFun's `ExactWPMonad`
+provides equality laws for pure, bind and map; its parallel ordered-algebra WP/triple API is
+removed. VCVio's expectation, necessary and probability-bounded interpretations remain scoped.
+The measure scopes also provide direct `WP` instances so that concrete-monad instances do not
+select a different carrier. The handler catalogue consumes core `@[spec]` rules and `vcgen`.
+VCVio's probability/coupling frontend still owns `@[vcspec]`/`@[wpStep]` dispatch.
 
-Core `vcgen` and VCVio's probability/coupling frontend coexist. The latter still owns
-its `@[vcspec]`/`@[wpStep]` dispatch; the older `Std.Do` handler bridge also remains a
-separate consumer. See the [program-logic guide](../agents/program-logic.md#core-wp-and-the-symbolic-rewriter-boundary)
-for these boundaries and the v4.35 tracking links. The source-count survey below
-records the earlier snapshot; its control/WP recommendations are superseded here.
+The upgrade uses published Mathlib v4.35.0 and PolyFun v4.35.0-patch1. Mathlib's measurable
+`map_bind` API replaces the local copy, with explicit measurability premises; measure-product
+proofs use `prod_eq_of_sfinite`. Batteries' `Except` module and PolyFun's interaction
+Open/Execution modules are consumed at their new paths. Lean's source import parser is reused
+for the repository's coarse isolation checks. The probability notation redesign is separate
+from this compatibility port. See the [program-logic guide](../agents/program-logic.md#core-wp-and-the-symbolic-rewriter-boundary).
+The source-count survey below records the earlier snapshot.
 
 **Transparency.** `attribute [implicit_reducible] OracleSpec` (`VCVio/OracleComp/OracleSpec.lean:44`)
 was documented in the survey snapshot as helping instance synthesis, but at the pin

@@ -572,8 +572,8 @@ This import direction is conceptually sound: VCVio-specific interaction is an
 instantiation over a general concrete machine library. Compatibility of the
 higher machine-combinator stack is a blocker for general closure, not a layering
 problem. The cited complexitylib revision pins Lean and Mathlib 4.30, while
-VCVio pins 4.34. The completed preflight used VCVio's toolchain and made the
-direct Mathlib 4.34 pin authoritative. No file in the checked-out complexitylib
+VCVio pins 4.35. The compatibility preflight uses VCVio's toolchain and makes the
+direct Mathlib 4.35 pin authoritative. No file in the checked-out complexitylib
 dependency was edited.
 
 The preflight found two separate incompatibilities. The upstream asymptotics

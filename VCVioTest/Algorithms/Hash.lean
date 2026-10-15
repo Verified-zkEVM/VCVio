@@ -8,7 +8,7 @@ module
 
 public import VCVio.Algorithms.Sha2
 public import VCVio.Algorithms.Keccak
-import Batteries.Lean.Except
+import Batteries.Data.Except
 import Lean.Data.Json.Parser
 
 /-!

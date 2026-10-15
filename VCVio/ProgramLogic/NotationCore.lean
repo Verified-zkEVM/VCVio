@@ -28,7 +28,7 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 
 ### Unary (core WP)
 
-Unary triples additionally require `open scoped Std.Internal.Do OracleComp.Lower`.
+Unary triples additionally require `open scoped Std.WP OracleComp.Lower`.
 - `wp⟦c⟧` — quantitative WP (partial application, use as `wp⟦c⟧ post`)
 - `⦃P⦄ c ⦃Q⦄` — quantitative Hoare triple (`P ≤ wp c Q`)
 

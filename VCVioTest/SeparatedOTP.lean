@@ -21,7 +21,7 @@ public section
 
 namespace OneTimePad.Separated.Tests
 
-open PFunctor Interaction.UC OracleComp MeasureTheory
+open PFunctor Interaction Interaction.Open Interaction.UC OracleComp MeasureTheory
 
 @[expose] def encoding : Encoding Bool Bool Bool Bool Bool where
   shares _ key := (key, key)

@@ -53,6 +53,7 @@ instance : zeroBackend.HasSum where
 instance : zeroBackend.HasOption where
   map _ := PUnit.unit
   none _ _ := PUnit.unit
+  some _ := PUnit.unit
   bindContext _ := PUnit.unit
 
 instance : zeroBackend.IsDistributive where

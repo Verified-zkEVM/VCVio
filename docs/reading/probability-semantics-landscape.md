@@ -4,7 +4,7 @@
 > use [`denotational-probability-semantics.md`](denotational-probability-semantics.md) and
 > [`docs/agents/probability.md`](../agents/probability.md).
 >
-> Current v4.34 implementation: Loom2 has been removed; unary carriers use core WP,
+> Current v4.35 implementation: Loom2 has been removed; unary carriers use core WP,
 > shared algebra/transformer constructions come from PolyFun, and coupling remains local.
 > See [upstream alignment](upstream-alignment.md) and the
 > [program-logic guide](../agents/program-logic.md) for the implemented boundary.

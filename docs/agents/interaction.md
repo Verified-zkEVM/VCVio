@@ -16,7 +16,7 @@ Generic protocol theory lives in PolyFun:
   environment actions, and leakage scaffolding: `PolyFun.Interaction.Open.*`
 - Reactive processes, networks, and their execution: `PolyFun.Interaction.Execution.*`
 
-For conceptual background, read [PolyFun's interaction guide](https://github.com/Verified-zkEVM/PolyFun/blob/3710d71b28404a151b8d1f0ce080ea448778dec0/docs/wiki/interaction.md) and the module docstrings in
+For conceptual background, read [PolyFun's interaction guide](https://github.com/Verified-zkEVM/PolyFun/blob/bf635d02d7070022c986f8646992e5dba176a96e/docs/guides/interaction.md) and the module docstrings in
 the PolyFun dependency. VCVio should only document how those generic APIs are instantiated with
 probabilistic semantics, oracle computations, and crypto examples.
 
@@ -134,7 +134,7 @@ and that uniform ciphertext marginals do not justify key reuse.
 `VCVioTest/ReactiveNetworkAdversarial.lean` checks insufficient fuel, missing deliveries,
 a reachable nonempty serial queue, and shared-state reply dependence.
 
-`PolyFun.Interaction.UC.ReactiveNetwork.Assembly` compiles raw open syntax to finite typed
+`PolyFun.Interaction.Execution.ReactiveNetwork.Assembly` compiles raw open syntax to finite typed
 diagrams; select the single global environment after composition. `Factorization` and
 `Factorization.Right` prove all four parallel/wired closure factorizations under explicit
 node bijections, retaining the original machines. The generic `runToken_reindex_cast` and

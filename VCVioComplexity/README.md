@@ -7,7 +7,7 @@ does not add complexitylib to ordinary VCVio consumers.
 The package provides:
 
 - direct compatibility canaries for `Complexitylib.Models.TuringMachine` and
-  `Complexitylib.Classes.P.Cobham.Defs` at VCVio's Lean/Mathlib `v4.35.0-rc3` pin;
+  `Complexitylib.Classes.P.Cobham.Defs` at VCVio's Lean/Mathlib `v4.35.0` pin;
 - a closed grammar of word, empty, unit, Boolean, unary-natural, fixed-width `BitVec`, product,
   dependent-pair, sum, and option representations, with proved codecs rather than
   caller-selected injective encodings;

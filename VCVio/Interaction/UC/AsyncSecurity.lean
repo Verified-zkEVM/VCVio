@@ -85,6 +85,8 @@ open OracleComp ProbComp ENNReal
 namespace Interaction
 namespace UC
 
+open Interaction.Open
+
 /-! ## Async runs -/
 
 /--

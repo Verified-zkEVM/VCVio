@@ -406,8 +406,8 @@ their executable modules contain colliding root-level `main` declarations.
 
 ### 26. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.34.0`: `lean-toolchain` pins `leanprover/lean4:v4.34.0` and
-`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.34.0"`.
+Both currently `v4.35.0`: `lean-toolchain` pins `leanprover/lean4:v4.35.0` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.35.0"`.
 When upgrading, update both lines simultaneously.
 
 ### 27. Use public references in shared docs

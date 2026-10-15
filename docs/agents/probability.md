@@ -264,7 +264,7 @@ its `MAlgOrdered` and core `WPMonad` interpretations; no oracle uniformity is re
 scope takes precedence over core `Prop` interpretations, including `Option`.
 `wp_eq_lintegral` is an explicit bridge to Mathlib integration. `simp` preserves the WP head
 through addition and scaling, and constants keep the successful-mass factor:
-`MAlgOrdered.wp mx (fun _ ↦ c) = c * 𝒟[mx] Set.univ`. Finite sums, monotone suprema, and
+`Std.WP.wp mx (fun _ ↦ c) Lean.Order.bot = c * 𝒟[mx] Set.univ`. Finite sums, monotone suprema, and
 almost-everywhere comparisons have their own laws. `gcongr` and `grw` compare pointwise
 postconditions. `wp_le_const_mul_mass_add` retains the mass factor for lossy computations;
 `IsProbabilityMeasure` simplifies it to one automatically. The oracle quantitative facade
@@ -929,7 +929,7 @@ conclusion is the unrestricted `Measurable f`.
 
 For a sum of oracle `wp` bounds, rewrite with `← OracleComp.ProgramLogic.wp_finsetSum`,
 then apply `wp_le_const_of_support`. Use `wp_le_const_add_of_support` for a constant allowance
-plus another postcondition. Both the oracle facade and `MAlgOrdered.wp` expose support membership
+plus another postcondition. The oracle facade exposes support membership
 to `gcongr`; callers need no preparatory `change`.
 
 See the [generalized-relation investigation](../reading/generalized-relation-automation.md) for

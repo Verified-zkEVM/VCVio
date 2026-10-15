@@ -289,7 +289,7 @@ intentional documented API may still use `rfl` directly.
 ## The program-logic import boundary
 
 Unary carrier interpretations live in `VCVio/ProgramLogic/Unary/WP/` and consume core's
-`Std.Internal.Do` API through PolyFun's algebra bridge. Relational carrier interpretations
+`Std.WP` API through PolyFun's algebra bridge. Relational carrier interpretations
 live in `VCVio/ProgramLogic/Relational/WP/` and use VCVio's coupling interface. Carrier
 instances are scoped, so importing either layer does not choose a global semantics.
 

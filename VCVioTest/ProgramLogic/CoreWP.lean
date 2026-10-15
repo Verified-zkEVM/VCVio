@@ -20,22 +20,24 @@ example uses core's tactic directly, without VCVio's probability-tactic frontend
 
 public section
 
-open Std.Internal.Do
+open Std.WP
 open scoped ENNReal
 
 namespace VCVioTest.ProgramLogic.CoreWP
 
 example : True := by
   fail_if_success
-    let _ := (inferInstance : WPMonad ProbComp ℝ≥0∞ EPost.Nil)
+    let _ := (inferInstance : WPMonad ProbComp ℝ≥0∞ EStack⟨⟩)
   trivial
 
 section Necessary
 open scoped OracleComp.Necessary
 
+noncomputable example : WPMonad ProbComp Prop EStack⟨⟩ := inferInstance
+
 example {ι : Type} {spec : OracleSpec ι} {α : Type} (oa : OracleComp spec α)
     (post : α → Prop) :
-    wp oa post EPost.Nil.mk ↔ ∀ a ∈ support oa, post a :=
+    wp oa post estack⟨⟩ ↔ ∀ a ∈ support oa, post a :=
   OracleComp.Necessary.wp_iff_forall_support oa post
 
 end Necessary
@@ -44,9 +46,10 @@ section Lower
 open scoped OracleComp.Lower
 
 /--
-warning: The `vcgen` tactic is an experimental drop-in replacement for `mvcgen` that will eventually replace it. Avoid using it in production projects.
+warning: The `vcgen` tactic is an experimental drop-in replacement for `mvcgen` that will eventually replace it; `set_option experimental.vcgen true` acknowledges its experimental status and silences this warning.
 -/
 #guard_msgs in
+set_option experimental.vcgen false in
 example (post : Nat → Nat → ℝ≥0∞) :
     ⦃ fun n => post n (n + 1) ⦄
       (do
@@ -56,7 +59,7 @@ example (post : Nat → Nat → ℝ≥0∞) :
     ⦃ post ⦄ := by
   vcgen
 
-noncomputable local instance : WPMonad (WriterT (List Nat) ProbComp) (List Nat → ℝ≥0∞) EPost.Nil :=
+noncomputable local instance : WPMonad (WriterT (List Nat) ProbComp) (List Nat → ℝ≥0∞) EStack⟨⟩ :=
   WriterT.wpMonadOf [] (· ++ ·) List.append_nil List.append_assoc
 
 example (post : PUnit.{1} → List Nat → ℝ≥0∞) :
@@ -65,7 +68,7 @@ example (post : PUnit.{1} → List Nat → ℝ≥0∞) :
     ⦃ post ⦄ := by
   refine Triple.intro ?_
   intro log
-  simp [WriterT.run_bind, WriterT.run_tell, MAlgOrdered.wp_pure]
+  simp [WriterT.run_bind, WriterT.run_tell]
 
 end Lower
 
@@ -73,9 +76,9 @@ section Probabilistic
 open scoped OracleComp.Probabilistic
 
 example (oa : ProbComp Nat) (post : Nat → Prob) :
-    (wp oa post EPost.Nil.mk).val =
-      MAlgOrdered.wp (l := ℝ≥0∞) oa (fun a => (post a).val) :=
-  OracleComp.Probabilistic.wp_val_eq_mAlgOrdered_wp oa post
+    (wp oa post estack⟨⟩).val =
+      (OracleComp.ProgramLogic.wp (oa)) (fun a => (post a).val) :=
+  OracleComp.Probabilistic.wp_val_eq_wp oa post _
 
 end Probabilistic
 

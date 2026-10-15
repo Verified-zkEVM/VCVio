@@ -10,6 +10,8 @@ public import Mathlib.Data.FinEnum
 public import Mathlib.Algebra.Order.Ring.NNRat
 public import Mathlib.Data.NNRat.BigOperators
 public import Mathlib.Algebra.BigOperators.Ring.List
+import Mathlib.Algebra.Order.BigOperators.Group.List
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Std.Data.HashMap.Lemmas
 
 /-!

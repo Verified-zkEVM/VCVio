@@ -30,16 +30,16 @@ universe u v
 /-! ## `vcspec_simp` normalization set
 
 Centralized registration of the transformer-`wp` peel lemmas, `*.run`
-projections, monadic-algebra rewrites, and the `Lower.wp_eq_mAlgOrdered_wp`
-bridges that the unary tactic uses to expose spec-applicable goal shapes.
+projections, and the exact `ExactWPMonad` equations for `pure`, `bind`, and `map`
+that the unary tactic uses to expose spec-applicable goal shapes.
 The single simp set is consumed by `runVCSpecSimp`. New normalization rewrites
 should be tagged here (or at definition) rather than inserted into a
 tactic-local `simp only [...]` list. -/
 
 attribute [vcspec_simp]
-  -- `Std.Internal.Do` transformer apply_wp / `*.run` peeling
-  Std.Internal.Do.StateT.wp_apply_eq
-  Std.Internal.Do.ReaderT.wp_apply_eq
+  -- `Std.WP` transformer apply_wp / `*.run` peeling
+  Std.WP.StateT.wp_apply_eq
+  Std.WP.ReaderT.wp_apply_eq
   WriterT.wp_apply_eq
   StateT.run_bind StateT.run_pure StateT.run_get StateT.run_set
   StateT.run_modifyGet StateT.run_monadLift StateT.run_map StateT.run_lift
@@ -51,10 +51,8 @@ attribute [vcspec_simp]
   OptionT.run_map
   ExceptT.run_bind ExceptT.run_pure ExceptT.run_lift ExceptT.run_throw
   ExceptT.run_map
-  -- VCVio expectation bridges and the underlying quantitative `MAlgOrdered.wp`
-  OracleComp.Lower.wp_eq_mAlgOrdered_wp
-  OracleComp.Lower.wp_eq_mAlgOrdered_wp_epost
-  MAlgOrdered.wp_bind MAlgOrdered.wp_pure MAlgOrdered.wp_map
+  -- PolyFun's exact equations on core `wp`
+  ExactWPMonad.wp_bind ExactWPMonad.wp_pure ExactWPMonad.wp_map
   -- VCVio per-transformer `Lower.wp_*` peeling lemmas
   OracleComp.Lower.wp_StateT_bind
   OracleComp.Lower.wp_StateT_bind'
@@ -76,7 +74,7 @@ attribute [vcspec_simp]
   OracleComp.Lower.wp_ReaderT_bind
   OracleComp.Lower.wp_ReaderT_pure
   OracleComp.Lower.wp_ReaderT_read
-  OracleComp.Lower.wp_ReaderT_monadLift
+  Std.WP.WPMonad.wp_monadLift_ReaderT_apply_eq
   OracleComp.Lower.WriterT.wp_bind
   OracleComp.Lower.WriterT.wp_pure
   OracleComp.Lower.WriterT.wp_tell
@@ -90,11 +88,11 @@ attribute [vcspec_simp]
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_set_layer
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_run_set_layer
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_run_set_layer'
-  OracleComp.ProgramLogic.TacticInternals.Unary.mAlgOrdered_wp_OptionT_run_StateT_get
-  OracleComp.ProgramLogic.TacticInternals.Unary.mAlgOrdered_wp_OptionT_run_StateT_set
-  OracleComp.ProgramLogic.TacticInternals.Unary.mAlgOrdered_wp_OptionT_run_lift
-  mAlgOrdered_wp_OptionT_run_StateT_monadLift_lift
-  mAlgOrdered_wp_OptionT_run_StateT_monadLift_lift_map
+  OracleComp.ProgramLogic.TacticInternals.Unary.wp_OptionT_run_StateT_get
+  OracleComp.ProgramLogic.TacticInternals.Unary.wp_OptionT_run_StateT_set
+  OracleComp.ProgramLogic.TacticInternals.Unary.wp_OptionT_run_lift
+  wp_OptionT_run_StateT_monadLift_lift
+  wp_OptionT_run_StateT_monadLift_lift_map
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_OptionT_monadLift_lift
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_map_layer
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_ReaderT_read_layer
@@ -102,9 +100,9 @@ attribute [vcspec_simp]
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_ReaderT_run_read_layer
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_ReaderT_run_read_layer'
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_ReaderT_map_layer
-  -- Algebraic monad/`EPost`/scalar rewrites used by both peel and close passes
-  Std.Internal.Do.EPost.Cons.pushOption
-  Std.Internal.Do.EPost.Cons.pushExcept
+  -- Algebraic monad/exception-postcondition/scalar rewrites used by both peel and close passes
+  Lean.Order.pushOption
+  Lean.Order.pushExcept
   Option.elimM
   pure_bind
   bind_pure_comp
@@ -224,7 +222,7 @@ private def tryCloseNormalizedTransformerWP : TacticM Bool := do
   -- Overloaded operations such as `MonadStateOf.get` may not expose their
   -- concrete transformer type until the triple theorem has been applied.
   -- Speculate cheaply, then restore if the layer peeler cannot close.
-  if ← tryEvalTacticSyntax (← `(tactic| refine Std.Internal.Do.Triple.intro ?_)) then
+  if ← tryEvalTacticSyntax (← `(tactic| refine Std.WP.Triple.intro ?_)) then
     discard <| tryEvalTacticSyntax (← `(tactic| repeat intro _))
     runVCSpecCloseUnfolds
     runVCSpecSimp
@@ -273,12 +271,12 @@ def tryCloseSpecGoalImmediate : TacticM Bool := do
     OracleComp.ProgramLogic.TacticInternals.Unary.stdDoTriple_StateT_get_of_rel)) <||>
   tryApplySpecThenPeel (← `(tactic| apply
     OracleComp.ProgramLogic.TacticInternals.Unary.stdDoTriple_ReaderT_read_of_rel)) <||>
-  tryApplySpecThenPeel (← `(tactic| apply Std.Internal.Do.Spec.get_StateT)) <||>
-  tryApplySpecThenPeel (← `(tactic| apply Std.Internal.Do.Spec.set_StateT)) <||>
-  tryApplySpecThenPeel (← `(tactic| apply Std.Internal.Do.Spec.modifyGet_StateT)) <||>
-  tryApplySpecThenPeel (← `(tactic| apply Std.Internal.Do.Spec.monadLift_StateT)) <||>
-  tryApplySpecThenPeel (← `(tactic| apply Std.Internal.Do.Spec.read_ReaderT)) <||>
-  tryApplySpecThenPeel (← `(tactic| apply Std.Internal.Do.Spec.monadLift_ReaderT)) <||>
+  tryApplySpecThenPeel (← `(tactic| apply Std.WP.Spec.get_StateT)) <||>
+  tryApplySpecThenPeel (← `(tactic| apply Std.WP.Spec.set_StateT)) <||>
+  tryApplySpecThenPeel (← `(tactic| apply Std.WP.Spec.modifyGet_StateT)) <||>
+  tryApplySpecThenPeel (← `(tactic| apply Std.WP.Spec.monadLift_StateT)) <||>
+  tryApplySpecThenPeel (← `(tactic| apply Std.WP.Spec.read_ReaderT)) <||>
+  tryApplySpecThenPeel (← `(tactic| apply Std.WP.Spec.monadLift_ReaderT)) <||>
   tryEvalTacticSyntax (← `(tactic| assumption)) <||>
   tryEvalTacticSyntax (← `(tactic| solve_by_elim (maxDepth := 2))) <||>
   tryEvalTacticSyntax (← `(tactic|
@@ -407,7 +405,7 @@ def tryCloseSpecGoal : TacticM Bool := do
 VCVio's carrier-specific facade before applying its probability rules. -/
 private def normalizeStdDoTripleGoal : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
-  unless (findAppWithHead? ``Std.Internal.Do.Triple target).isSome do
+  unless (findAppWithHead? ``Std.WP.Triple target).isSome do
     return false
   tryEvalTacticSyntax (← `(tactic| change OracleComp.ProgramLogic.Triple _ _ _))
 
@@ -474,7 +472,7 @@ def tryBindImmediate (comp : Expr) : TacticM Bool := do
     evalTactic (← `(tactic|
       first
         | apply OracleComp.ProgramLogic.triple_bind
-        | apply Std.Internal.Do.Triple.bind))
+        | apply Std.WP.Triple.bind))
     unless ← tryCloseSpecGoalImmediate do throwError "" with
   | some _ => return true
   | none => return false

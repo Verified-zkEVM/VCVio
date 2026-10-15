@@ -88,7 +88,7 @@ theorem evalDist_simulateQ_run'_eq_of_forall
     simp only [simulateQ_bind, simulateQ_spec_query, StateT.run'_eq, StateT.run_bind, map_bind]
     rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete,
       ← (h operation state).evalDist_eq, StateT.run'_eq, evalDist_map _ hfst,
-      Measure.bind_map _ hfst Measurable.of_discrete]
+      Measure.bind_map hfst.aemeasurable Measurable.of_discrete.aemeasurable]
     exact Measure.bind_congr_right (Filter.Eventually.of_forall fun output ↦ by
       simpa only [StateT.run'_eq] using ih output.1 output.2)
 
