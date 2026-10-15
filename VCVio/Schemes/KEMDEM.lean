@@ -9,7 +9,7 @@ module
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
-public import VCVio.CryptoFoundations.KEMDEM.Measure
+public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
@@ -160,7 +160,7 @@ bounded by two KEM IND-CPA advantages plus one DEM IND-CPA advantage, using the 
 left/right and DEM reductions defined above.
 
 The probability-free games and shared hybrid argument live in
-`VCVio.CryptoFoundations.KEMDEM.Measure`. This theorem calibrates them to the bundled runtime.
+`VCVio.Schemes.KEMDEM.Measure`. This theorem calibrates them to the bundled runtime.
 
 The runtime coherence hypotheses state directly that its measures preserve `pure` and measurable
 binds, agree with the canonical `ProbComp` measure on lifted public randomness, and are total on

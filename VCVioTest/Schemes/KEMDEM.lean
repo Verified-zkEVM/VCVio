@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.CryptoFoundations.KEMDEM.Measure
+public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.EvalDist.PFunctorMeasure.Core
 public import VCVio.EvalDist.WithFailure
 import Mathlib.Tactic.NormNum

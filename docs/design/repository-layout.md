@@ -62,14 +62,14 @@ DAG. The source check needs the pinned Lean toolchain but no built modules or La
 |---|---|---|
 | Shared hashes | `VCVio/Algorithms/` | Extracted; pure tests and vector provenance in VCVioTest; SLH-DSA profile tests remain with HashSigTest |
 | Schnorr and Pedersen | `VCVio/Schemes/` | Extracted with the complete proof and test groups; instructional consumers remain in Examples |
-| KEM–DEM and MAC-from-PRF | CryptoFoundations | Schemes in VCVio, including the measure component and security reductions |
+| KEM–DEM and MAC-from-PRF | `VCVio/Schemes/` | Extracted with the measure component, security reductions and regression tests; generic KEM, DEM, PRF and MAC interfaces remain in CryptoFoundations |
 | One-time pad | Examples | Separate its widget presentation before moving the reusable implementation |
 | ElGamal | Examples | Move definitions, proofs, cost certificates and handler execution together after their dependency audit |
 | GPV hash-and-sign | CryptoFoundations | Separate the generic preimage-sampling interface from the named construction, then update Falcon's consumer |
 | HashSig and LatticeCrypto | Existing peer libraries | Later scheme-by-scheme moves with tests, FFI consumers and import updates; no wholesale relocation in this pass |
 
-The first three slices are the current consolidation. Later rows record dependencies, not
-claims that those moves or new proofs are already complete.
+The first three slices complete the current consolidation. Later rows record prerequisites
+for future moves.
 
 ## Shared hash API
 

@@ -190,7 +190,7 @@ so programs the oracle at the cached points. `romImpl` is reducibly
 
 ### KEM–DEM hybrid composition
 
-`VCVio.CryptoFoundations.KEMDEM.Measure` defines the preparation, encapsulation, and final
+`VCVio.Schemes.KEMDEM.Measure` defines the preparation, encapsulation, and final
 observation games independently of probability. `KEMDEM.bias_compose_le` proves the
 composition bound on output measures. Both KEM message branches use `evalDist_kemGame`;
 `evalDist_demGame` performs independent-key interchange. Supply a fair coin, a lossless key

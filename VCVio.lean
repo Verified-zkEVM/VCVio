@@ -83,11 +83,8 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.ToFinalV
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.ToFinalValidity.Core
 public import VCVio.CryptoFoundations.HashCommitment
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
-public import VCVio.CryptoFoundations.KEMDEM
-public import VCVio.CryptoFoundations.KEMDEM.Measure
 public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.MacAlg
-public import VCVio.CryptoFoundations.MacFromPRF
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Extractor
@@ -397,6 +394,9 @@ public import VCVio.ProgramLogic.Unary.WP.Probabilistic
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.ProgramLogic.Unary.WP.Readback
 public import VCVio.ProgramLogic.Unary.WP.Upper
+public import VCVio.Schemes.KEMDEM
+public import VCVio.Schemes.KEMDEM.Measure
+public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.Pedersen
 public import VCVio.Schemes.Schnorr.BoundedChallenges
 public import VCVio.Schemes.Schnorr.ChallengeRestriction
