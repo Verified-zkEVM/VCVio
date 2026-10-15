@@ -25,6 +25,11 @@ is outside this development.
 
 ## Security statement
 
+`Security/Unforgeability.lean` contains the signing-query predicate, the complete
+reduction-bound proposition, and the generic and encoding-specific final theorems.
+The modules under `Security/Reductions` establish the individual reduction bounds
+and encoding-advantage comparisons used in their proofs.
+
 `GXMSS.Unforgeability.strong_unforgeability_reduction_bound` bounds the
 strong-unforgeability advantage of the ideal scheme by the advantages of named reductions.
 It assumes positive chain count and digit width, two distinct members of the global code,
