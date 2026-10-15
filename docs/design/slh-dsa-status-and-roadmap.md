@@ -196,9 +196,9 @@ The G9 and G10 branches, `feat/slhdsa-g9-efficient-execution-20260831` (tip `052
 predate the merged G4–G8 and carry stale pre-merge copies of those files, so neither can be
 rebased. Use the tip commits as idea sources and re-slice only the owned changes:
 
-- **G9**: a single PR carrying `HashSig/SLHDSA/Execution.lean` (the `treeHash`,
+- **G9**: a proposed PR carrying `HashSig/SLHDSA/Execution.lean` (the `treeHash`,
   `authenticationPath`, and `*_eq_spec` refinement theorems restated against the merged
-  `GeneralScheme`, `Codec`, and `External` APIs) plus `HashSigTest/SLHDSA/Execution.lean` and a
+  `GeneralScheme`, `Codec`, and `External` APIs) plus the proposed `HashSigTest/SLHDSA/Execution.lean` and a
   benchmark record for the six numerical shapes.
 - **G10**: first a corpus-import PR (schema, strict JSON parser, lossless corpus, manifest pinned
   to ACVP-Server `975de31e`, provenance check script), then a runner PR that executes

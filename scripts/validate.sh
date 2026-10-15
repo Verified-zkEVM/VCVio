@@ -98,6 +98,7 @@ python3 ./scripts/test-classify-migration-errors.py
 bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 bash scripts/check-extern-isolation.sh
+python3 scripts/test-interop-isolation.py
 bash scripts/check-interop-isolation.sh
 bash scripts/test-comment-fences.sh
 python3 ./scripts/check-comment-fences.py
@@ -113,6 +114,7 @@ lake lint -- --style-only
 
 echo ""
 echo "# Checking the agent documentation"
+python3 ./scripts/test-agent-docs.py
 python3 ./scripts/check-agent-docs.py
 python3 ./scripts/extract-doc-fragments.py --check
 bash scripts/test-docnames.sh

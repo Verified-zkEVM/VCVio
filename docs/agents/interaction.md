@@ -16,7 +16,7 @@ Generic protocol theory lives in PolyFun:
   environment actions, and leakage scaffolding: `PolyFun.Interaction.Open.*`
 - Reactive processes, networks, and their execution: `PolyFun.Interaction.Execution.*`
 
-For conceptual background, read PolyFun's `docs/guides/interaction.md` and the module docstrings in
+For conceptual background, read [PolyFun's interaction guide](https://github.com/Verified-zkEVM/PolyFun/blob/3710d71b28404a151b8d1f0ce080ea448778dec0/docs/wiki/interaction.md) and the module docstrings in
 the PolyFun dependency. VCVio should only document how those generic APIs are instantiated with
 probabilistic semantics, oracle computations, and crypto examples.
 

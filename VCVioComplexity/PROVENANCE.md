@@ -104,12 +104,12 @@ prerequisite for sound polynomial closure.
 All compatibility work remains local to VCVio and PolyFun for this phase. No PR or issue is opened
 in complexitylib, CSLib, or Mathlib.
 
-Run `scripts/compatibility-preflight.sh` from this package to reproduce the supported build and
+Run `VCVioComplexity/scripts/compatibility-preflight.sh` from this package to reproduce the supported build and
 classify both the four recorded composition failures and the six recorded `Asymptotics.lean`
 failures.
 Its default reporting mode accepts only the recorded source diagnostics;
 `--require-upstream-stack` exits nonzero while either surface remains unavailable. That strict
 mode tests upstream compatibility only: it does not construct VCVio's closure gates or resolve
-the pair-codec mismatch. Run `scripts/test.sh` for the aggregate canaries, guarded axiom reports,
+the pair-codec mismatch. Run `VCVioComplexity/scripts/test.sh` for the aggregate canaries, guarded axiom reports,
 proof-escape scan, and compatibility report. Both scripts treat an unexpected dependency revision
 or changed failure mode as a preflight error and never modify dependency sources.

@@ -62,6 +62,9 @@ The repo also includes a first-class lattice cryptography library under `Lattice
 
 ## Repo Map
 
+See the [repository ownership map](docs/design/repository-layout.md) for placement rules,
+build boundaries and the staged consolidation.
+
 - `VCVio/`: generic oracle-computation framework, program logic, crypto abstractions, and generic reductions.
 - `VCVioCslib/`: optional cslib-backed non-uniform P/poly adapters; it is a separate Lake library
   so core `VCVio` remains backend-neutral.
@@ -83,6 +86,17 @@ The repo also includes a first-class lattice cryptography library under `Lattice
 - `Interop/`: experimental bridges to Rust verification frontends (hax, aeneas). **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
 - `csrc/`: C FFI shims used for differential testing against native ML-DSA, ML-KEM, and Falcon code.
 - `third_party/`: native backends as git submodules; when they are not checked out (fresh clones, Lake dependency checkouts), the native `extern_lib` targets build as empty stub archives.
+
+## Placement policy
+
+The [repository ownership map](docs/design/repository-layout.md) defines current roots and
+planned migration slices. Shared pure implementations belong in `VCVio/Algorithms/`, named
+constructions and their proofs in `VCVio/Schemes/`, and cryptographic interfaces, assumptions,
+games and generic reduction theory in `VCVio/CryptoFoundations/`. Examples are instructional
+consumers. Existing HashSig and LatticeCrypto peers migrate only in dependency-complete slices.
+Keep implementations unique, preserve the FFI/test boundary, and add a separate library only
+for a dependency, trust or build-isolation requirement. The import guards enforce pure-algorithm independence,
+optional interop isolation and the FFI boundary; other placement rules guide review.
 
 ## Module Layering
 
@@ -190,9 +204,9 @@ Security notions, experiments, games, and advantages follow
   `VCVioComplexity/VCVioComplexity/Backend/TuringMachine.lean`
 - Complexitylib polynomial adapter and end-to-end pure canary:
   `VCVioComplexity/VCVioComplexity/Backend/Polynomial.lean`,
-  `VCVioComplexity/VCVioComplexity/Backend/PureCanary.lean`
+  `VCVioComplexity/VCVioComplexityTest/Backend/PureCanary.lean`
 - End-to-end complexitylib canary with one enabled fair-coin query:
-  `VCVioComplexity/VCVioComplexity/Backend/OracleCanary.lean`
+  `VCVioComplexity/VCVioComplexityTest/Backend/OracleCanary.lean`
 - Asymptotic security games: `VCVio/CryptoFoundations/Asymptotics/Security.lean`
 - Negligible function algebra: `VCVio/CryptoFoundations/Asymptotics/Negligible.lean`
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`

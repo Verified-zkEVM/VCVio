@@ -26,7 +26,7 @@ class ValidationTests(unittest.TestCase):
                      "check-interop-isolation", "test-axiomsweep",
                      "test-comment-fences", "test-initsweep", "test-docnames"):
             self.script(scripts / f"{name}.sh", 'exit 0\n')
-        for name in ("test-check-imports.py", "test-validation.py", "test-lint.py", "check-agent-docs.py",
+        for name in ("test-agent-docs.py", "test-interop-isolation.py", "test-check-imports.py", "test-validation.py", "test-lint.py", "check-agent-docs.py",
                      "extract-doc-fragments.py", "test-migrate-native-probability.py",
                      "test-classify-migration-errors.py", "check-doc-names.py"):
             (scripts / name).write_text("pass\n")

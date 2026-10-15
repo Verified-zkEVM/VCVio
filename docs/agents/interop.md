@@ -150,7 +150,7 @@ hax's WP shape (`.except Error (.except PUnit .pure)`) inside the
 equivalent VCVio shape, since `ExceptT Error (OptionT _)` composes to
 exactly that PostShape.
 
-For aeneas, `Interop/Aeneas/Bridge.lean` will pattern-match on `Result`:
+For aeneas, the proposed `Interop/Aeneas/Bridge.lean` will pattern-match on `Result`:
 
 ```lean
 def errorOfAeneas : Aeneas.Std.Error → Interop.Rust.Error := ...

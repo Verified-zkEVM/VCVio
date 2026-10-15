@@ -65,6 +65,9 @@ When in doubt, prefer:
 
 ## Documentation Expectations
 
+See the [repository ownership map](docs/design/repository-layout.md) for placement rules,
+build boundaries and the staged consolidation.
+
 - Every ordinary Lean source file should have a module docstring near the top using `/-! ... -/`.
 - Import-only umbrella modules such as `VCVio.lean`, `LatticeCrypto.lean`, and `Examples.lean`, along with `lakefile.lean`, should stay bare.
 - Public definitions and major theorems should have declaration docstrings using `/-- ... -/`.

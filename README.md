@@ -58,6 +58,9 @@ infrastructure and some tooling and automation remain under active development.
 
 ## Repository Map
 
+See the [repository ownership map](docs/design/repository-layout.md) for placement rules,
+build boundaries and the staged consolidation.
+
 - `VCVio/` contains the oracle-computation framework, probability semantics, program logic, and generic crypto abstractions.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
 - `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
