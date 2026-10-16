@@ -113,6 +113,7 @@ public import VCVioTest.SMDTTCR
 public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
+public import VCVioTest.SaltedMerkle
 public import VCVioTest.SampleableType
 public import VCVioTest.SchnorrTransforms
 public import VCVioTest.SeparatedOTP

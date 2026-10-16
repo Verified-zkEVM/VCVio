@@ -138,6 +138,9 @@ public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.SequentialB
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Stateful
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.StrongBound
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Targets
+public import VCVio.CryptoFoundations.MerkleTree.Salted.Defs
+public import VCVio.CryptoFoundations.MerkleTree.Salted.Extract
+public import VCVio.CryptoFoundations.MerkleTree.Salted.HalfPreimage
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
@@ -156,6 +159,7 @@ public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash
+public import VCVio.CryptoFoundations.VectorCommitment
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Measure
@@ -423,6 +427,8 @@ public import VCVio.Quantum.Oracle.Unitary
 public import VCVio.Quantum.Register
 public import VCVio.Quantum.Semantics
 public import VCVio.Quantum.SubInstrument
+public import VCVio.Quantum.VC.MultiExtractor
+public import VCVio.Quantum.VC.Tuples
 public import VCVio.StateSeparating.Advantage.Measure
 public import VCVio.StateSeparating.CellRef
 public import VCVio.StateSeparating.DistEquiv
