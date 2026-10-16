@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.Quantum.VC.MultiExtractor
-public import VCVio.Quantum.Oracle.Compressed.CommutatorBound
+public import VCVio.Quantum.Oracle.Compressed.CommutatorSharp
 public import VCVio.Quantum.Oracle.Emulated
 
 /-!

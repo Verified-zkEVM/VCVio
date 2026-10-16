@@ -37,6 +37,12 @@ Chiesa, Manohar and Spooner (TCC 2019, Lemma 5.10) and of Don, Fehr, Majenz and 
   tensoring by the identity of the second.
 * `Matrix.labelControlled_mem_unitaryGroup`, `Matrix.labelControlled_mul_pinch`.
 * `Matrix.l2_opNorm_commutator_labelControlled_le`.
+* `Matrix.isStarProjection_labelProjector`, `Matrix.mul_labelProjector_eq_labelProjector_mul`:
+  label projectors are orthogonal projections, intertwined by block-preserving operators.
+* `Matrix.l2_opNorm_sub_pinch_le_max_bool` and
+  `Matrix.l2_opNorm_labelProjector_commutator_le_max_bool`: for two labels, both the pinching
+  distance and the commutator with a label projector are at most the larger norm of the two
+  off-diagonal blocks.
 -/
 
 public section
@@ -218,6 +224,120 @@ theorem labelControlled_mul_pinch [DecidableEq κ] [Fintype n] [NonUnitalCommSem
   rw [hl, hr, hA]
 
 end labelControlled
+
+/-! ## Label projectors -/
+
+section labelProjector
+
+variable [DecidableEq κ] [DecidableEq n]
+
+/-- An operator that sends each block into the block of the same label intertwines the label
+projectors. -/
+theorem mul_labelProjector_eq_labelProjector_mul [Fintype n] [Fintype m] [DecidableEq m]
+    [NonAssocSemiring α] (βm : m → κ) (βn : n → κ) {U : Matrix m n α}
+    (hU : ∀ a b, U a b ≠ 0 → βm a = βn b) (i : κ) :
+    U * (labelProjector βn i : Matrix n n α) = (labelProjector βm i : Matrix m m α) * U := by
+  ext a b
+  simp only [labelProjector, mul_diagonal, diagonal_mul]
+  by_cases h : U a b = 0
+  · simp [h]
+  · rw [hU a b h]
+    split_ifs <;> simp
+
+/-- A label projector is an orthogonal projection. -/
+theorem isStarProjection_labelProjector [Fintype n] [Semiring α] [StarRing α]
+    (β : n → κ) (i : κ) : IsStarProjection (labelProjector β i : Matrix n n α) := by
+  refine ⟨?_, ?_⟩
+  · change labelProjector β i * labelProjector β i = labelProjector β i
+    rw [labelProjector, diagonal_mul_diagonal]
+    congr 1
+    funext a
+    split_ifs <;> simp
+  · change star (labelProjector β i) = labelProjector β i
+    rw [star_eq_conjTranspose, labelProjector, diagonal_conjTranspose]
+    congr 1
+    funext a
+    split_ifs <;> simp [*]
+
+/-- A label projector has norm at most one. -/
+theorem l2_opNorm_labelProjector_le_one {𝕜 : Type*} [RCLike 𝕜] [Fintype n]
+    (β : n → κ) (i : κ) : ‖(labelProjector β i : Matrix n n 𝕜)‖ ≤ 1 := by
+  rw [labelProjector, l2_opNorm_diagonal]
+  refine (pi_norm_le_iff_of_nonneg zero_le_one).mpr fun a ↦ ?_
+  split_ifs <;> simp
+
+/-- For a labelling by `Bool`, the projectors onto the two labels sum to the identity. -/
+theorem one_sub_labelProjector_bool [Ring α] (β : n → Bool) (b : Bool) :
+    (1 - labelProjector β b : Matrix n n α) = labelProjector β (!b) := by
+  ext a c
+  by_cases h : a = c
+  · subst h
+    simp only [labelProjector, sub_apply, one_apply_eq, diagonal_apply_eq]
+    cases β a <;> cases b <;> simp
+  · simp [labelProjector, one_apply_ne h, diagonal_apply_ne _ h]
+
+variable [Fintype n]
+
+/-- For a labelling by `Bool`, the part of `A` removed by pinching is the sum of the two
+off-diagonal blocks. -/
+theorem sub_pinch_bool [Ring α] (β : n → Bool) (A : Matrix n n α) :
+    A - pinch β A = labelProjector β true * A * labelProjector β false +
+      labelProjector β false * A * labelProjector β true := by
+  ext a c
+  simp only [sub_apply, pinch_apply, add_apply, labelProjector, mul_diagonal, diagonal_mul]
+  cases β a <;> cases β c <;> simp
+
+/-- For a labelling by `Bool`, the commutator of `A` with a label projector is the difference of
+the two off-diagonal blocks. -/
+theorem labelProjector_mul_sub_mul_labelProjector_bool [Ring α] (β : n → Bool) (b : Bool)
+    (A : Matrix n n α) :
+    labelProjector β b * A - A * labelProjector β b =
+      labelProjector β b * A * labelProjector β (!b) -
+        labelProjector β (!b) * A * labelProjector β b := by
+  ext a c
+  simp only [sub_apply, labelProjector, mul_diagonal, diagonal_mul]
+  cases β a <;> cases β c <;> cases b <;> simp
+
+variable {𝕜 : Type*} [RCLike 𝕜]
+
+omit [DecidableEq n] in
+private theorem mul_mul_mul_mul_eq_of_idempotent {P R : Matrix n n 𝕜}
+    (hP : P * P = P) (hR : R * R = R) (A : Matrix n n 𝕜) : P * (P * A * R) * R = P * A * R := by
+  simp only [← Matrix.mul_assoc, hP]
+  rw [Matrix.mul_assoc (P * A) R R, hR]
+
+/-- **The pinching distance for two labels.** For a labelling by `Bool`, the off-diagonal blocks
+have orthogonal domains and ranges, so `‖A - pinch β A‖` is at most the larger of their norms. -/
+theorem l2_opNorm_sub_pinch_le_max_bool (β : n → Bool) (A : Matrix n n 𝕜) :
+    ‖A - pinch β A‖ ≤ max ‖labelProjector β true * A * labelProjector β false‖
+      ‖labelProjector β false * A * labelProjector β true‖ := by
+  have ht := isStarProjection_labelProjector (α := 𝕜) β true
+  have hf := isStarProjection_labelProjector (α := 𝕜) β false
+  rw [sub_pinch_bool]
+  refine l2_opNorm_add_le_max_of_isStarProjection ht hf
+    (mul_mul_mul_mul_eq_of_idempotent ht.isIdempotentElem.eq hf.isIdempotentElem.eq _) ?_
+  rw [one_sub_labelProjector_bool, one_sub_labelProjector_bool]
+  exact mul_mul_mul_mul_eq_of_idempotent hf.isIdempotentElem.eq ht.isIdempotentElem.eq _
+
+/-- **The commutator with a label projector, for two labels.** For a labelling by `Bool`, the
+commutator `[P b, A]` is the difference of two blocks with orthogonal domains and ranges, so its
+norm is at most the larger of their norms. -/
+theorem l2_opNorm_labelProjector_commutator_le_max_bool (β : n → Bool) (b : Bool)
+    (A : Matrix n n 𝕜) :
+    ‖labelProjector β b * A - A * labelProjector β b‖ ≤
+      max ‖labelProjector β b * A * labelProjector β (!b)‖
+        ‖labelProjector β (!b) * A * labelProjector β b‖ := by
+  have hb := isStarProjection_labelProjector (α := 𝕜) β b
+  have hb' := isStarProjection_labelProjector (α := 𝕜) β (!b)
+  rw [labelProjector_mul_sub_mul_labelProjector_bool, sub_eq_add_neg,
+    ← norm_neg (labelProjector β (!b) * A * labelProjector β b)]
+  refine l2_opNorm_add_le_max_of_isStarProjection hb hb'
+    (mul_mul_mul_mul_eq_of_idempotent hb.isIdempotentElem.eq hb'.isIdempotentElem.eq _) ?_
+  rw [one_sub_labelProjector_bool, one_sub_labelProjector_bool, Bool.not_not, Matrix.mul_neg,
+    Matrix.neg_mul, mul_mul_mul_mul_eq_of_idempotent hb'.isIdempotentElem.eq
+      hb.isIdempotentElem.eq]
+
+end labelProjector
 
 /-! ## The commutator bound -/
 

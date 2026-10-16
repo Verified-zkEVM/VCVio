@@ -43,6 +43,8 @@ The partition instability is stated for `X Y : Type` because VCVio's query cache
   instability.
 * `Quantum.Database.instability_const`, `Quantum.Database.instability_zero`: a constant labelling
   and the query bound `0` give instability `0`.
+* `Quantum.Database.instability_comp_le`: coarsening a labelling does not increase the
+  instability, for every answer measure and arbitrary `X`, `Y`.
 -/
 
 public section
@@ -160,6 +162,25 @@ theorem instability_const (i₀ : ι) (t : ℕ) : instability (fun _ : Database 
       ext c
       simp [h]
     rw [this, QueryCache.flip_empty_left]
+
+/-- **Coarsening a labelling does not increase the instability.** An answer that changes the
+label `f (π D)` also changes the label `π D`. This holds for every answer measure and for
+arbitrary (possibly infinite) `X` and `Y`. -/
+theorem instability_comp_le {κ : Type*} (f : ι → κ) (π : Database X Y → ι) (t : ℕ) :
+    instability (f ∘ π) t ≤ instability π t := by
+  rw [instability_eq_iSup_flip_compl, instability_eq_iSup_flip_compl]
+  refine iSup_le fun k ↦ QueryCache.flip_le_iff.mpr fun D hD hlt x hx ↦ ?_
+  refine le_iSup_of_le (π (equivQueryCache.symm D)) <|
+    (QueryCache.extendProb_mono D x fun c hc ↦ ?_).trans
+      (QueryCache.extendProb_le_flip rfl hlt hx)
+  simp only [Set.mem_compl_iff, mem_labelPartition, Function.comp_apply] at hD hc ⊢
+  exact fun h ↦ hc (h ▸ hD)
+
+/-- The instability of the labelling `D ↦ decide (π D = i)`, which only records whether the label
+is `i`, is at most that of `π`, for every answer measure. -/
+theorem instability_decide_eq_le [DecidableEq ι] (π : Database X Y → ι) (i : ι) (t : ℕ) :
+    instability (fun D ↦ decide (π D = i)) t ≤ instability π t :=
+  instability_comp_le (fun j ↦ decide (j = i)) π t
 
 end instability
 
