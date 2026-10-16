@@ -425,6 +425,7 @@ public import VCVio.Quantum.Observe
 public import VCVio.Quantum.Oracle.Basis
 public import VCVio.Quantum.Oracle.Classical
 public import VCVio.Quantum.Oracle.ClassicalCalls
+public import VCVio.Quantum.Oracle.ClassicalRepeatability
 public import VCVio.Quantum.Oracle.Comb
 public import VCVio.Quantum.Oracle.Compressed.Action
 public import VCVio.Quantum.Oracle.Compressed.Basic
@@ -454,6 +455,7 @@ public import VCVio.Quantum.VC.MultiExtractable
 public import VCVio.Quantum.VC.MultiExtractor
 public import VCVio.Quantum.VC.Proof.Commutativity
 public import VCVio.Quantum.VC.Proof.Extraction
+public import VCVio.Quantum.VC.Proof.Repeatability
 public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
 public import VCVio.StateSeparating.Advantage.Measure
