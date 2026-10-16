@@ -86,6 +86,7 @@ public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.Quantum.Basic
 public import VCVioTest.Quantum.Compressed
 public import VCVioTest.Quantum.Emulated
+public import VCVioTest.Quantum.Hadamard
 public import VCVioTest.Quantum.Hybrid
 public import VCVioTest.Quantum.InstabilityBound
 public import VCVioTest.Quantum.Kraus
