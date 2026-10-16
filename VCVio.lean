@@ -392,6 +392,7 @@ public import VCVio.ProgramLogic.Unary.WP.Probabilistic
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.ProgramLogic.Unary.WriterTBridge
 public import VCVio.Quantum.Comp.Basic
+public import VCVio.Quantum.Comp.Combinators
 public import VCVio.Quantum.Comp.Hybrid
 public import VCVio.Quantum.Comp.HybridIndex
 public import VCVio.Quantum.Comp.HybridMeasure
@@ -411,6 +412,8 @@ public import VCVio.Quantum.Observe
 public import VCVio.Quantum.Oracle.Basis
 public import VCVio.Quantum.Oracle.Classical
 public import VCVio.Quantum.Oracle.Comb
+public import VCVio.Quantum.Oracle.Emulated
+public import VCVio.Quantum.Oracle.EmulatedTensor
 public import VCVio.Quantum.Oracle.Model
 public import VCVio.Quantum.Oracle.Unitary
 public import VCVio.Quantum.Register
