@@ -597,7 +597,7 @@ theorem lossless_queryKeepOrDiscard : queryKeepOrDiscard.Lossless .instruments :
       ⟨lossless_measureAnc, fun _ ↦ trivial⟩
 
 /-- The program that keeps or discards the ancilla makes one call. -/
-example : queryKeepOrDiscard.IsQueryBound fun _ ↦ 1 :=
+theorem isQueryBound_queryKeepOrDiscard : queryKeepOrDiscard.IsQueryBound fun _ ↦ 1 :=
   (QuantumComp.isQueryBound_queryBind_iff (spec := qrom2) _ _ _ _ _).mpr
     ⟨Nat.one_pos, fun _ ↦ QuantumComp.isQueryBound_prim _ _⟩
 

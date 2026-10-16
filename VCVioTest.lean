@@ -50,6 +50,7 @@ public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MerkleTreeExtractability
 public import VCVioTest.MerkleTreeHashForest
 public import VCVioTest.MerkleTreeHashing
+public import VCVioTest.MerkleTreeInstability
 public import VCVioTest.MerkleTreeMonadic
 public import VCVioTest.MerkleTreeMultiExtractability
 public import VCVioTest.ModuleAPI.Cache
@@ -83,11 +84,16 @@ public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.ProgramLogic.OracleWP
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.Quantum.Basic
+public import VCVioTest.Quantum.Compressed
 public import VCVioTest.Quantum.Emulated
 public import VCVioTest.Quantum.Hybrid
+public import VCVioTest.Quantum.InstabilityBound
 public import VCVioTest.Quantum.Kraus
+public import VCVioTest.Quantum.MultiExtractableModule
 public import VCVioTest.Quantum.Oracle
+public import VCVioTest.Quantum.VectorCommitmentQuantum
 public import VCVioTest.QueryBounds
+public import VCVioTest.QueryCacheInstability
 public import VCVioTest.QueryHom
 public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleFreshQuery
@@ -112,6 +118,7 @@ public import VCVioTest.SMDTTCR
 public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
+public import VCVioTest.SaltedMerkle
 public import VCVioTest.SampleableType
 public import VCVioTest.SchnorrTransforms
 public import VCVioTest.SeparatedOTP
