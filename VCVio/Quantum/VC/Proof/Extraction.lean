@@ -19,6 +19,10 @@ k compressed oracles `Quantum.compressedVCOracle` under the algebraic conditions
 (`Quantum.Conditions`), following the proof of Lemma 9.3 (pp. 59–61) in the sharper form of
 item 2 of eq. (27) and eqs. (38)–(39) of the bounds notes.
 
+`extractionCorrect_compressedVCOracle_of_openingQueryBound` uses a budget `q` only for proofs
+produced by opening, giving `1 - (1 - 1/N)^(2 n q)`. The `q2` form follows from
+`openingQueryBound_q2`; schemes with shared opening cells can supply a smaller budget.
+
 1. **Extraction outcomes.** The P3 challenger measures `MultiExtract(tic, ·)` on the databases
    (game G0, p. 59; `Quantum.run₂_extractQuery_branch`), so each outcome `tdm` leaves a substate
    supported on it. The weights of the outcomes are combined by
@@ -651,14 +655,14 @@ theorem checkOn_lookup_of_checkOn {i : Fin k} {D : Database X Y} {cm : Cm}
     rw [Database.lookup_apply, h p hp]
     rfl
 
-/-- **The pass projector against its compressed conjugate** (eq. (27), item 2, of the notes on
-ePrint 2025/2166; the paper's p. 61). For `|W| ≤ n`, `P (C P C) P = a P` with
-`a ≥ (1 - 1/N)^{2 n q2}`, where `C` compresses every database. When every check on `W` parses,
-`P` is the product of the consistency projectors of the prescriptions on each database, and `a`
-is `(1 - 1/N)^{2d}` for the number `d ≤ n q2` of prescribed cells (eq. (26)); otherwise `P = 0`. -/
-theorem exists_le_checkPassProjector_conj (n : ℕ) (W : Finset (Fin k)) (hW : W.card ≤ n)
-    (idx : Fin k → Fin k) (cm : Fin k → Cm) (ans : ∀ i, PartialVec (ℓ i) Msg) (pf : ∀ i, Pf i) :
-    ∃ a : ℝ, (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io) ≤ a ∧
+/-- The pass projector against its compressed conjugate, with an explicit bound `q` on
+these proofs' output lists: the acceptance factor is at least `(1 - 1/N)^(2 n q)`. -/
+theorem exists_le_checkPassProjector_conj_of_length_le (n : ℕ) (W : Finset (Fin k))
+    (hW : W.card ≤ n)
+    (idx : Fin k → Fin k) (cm : Fin k → Cm) (ans : ∀ i, PartialVec (ℓ i) Msg) (pf : ∀ i, Pf i)
+    (q : ℕ)
+    (hlen : ∀ i, (((io i).outputIO (cm i) (ans i) (pf i)).getD []).length ≤ q) :
+    ∃ a : ℝ, (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q) ≤ a ∧
       checkPassProjector io W idx cm ans pf *
           (compressDatabases k X Y * checkPassProjector io W idx cm ans pf *
             compressDatabases k X Y) * checkPassProjector io W idx cm ans pf =
@@ -705,12 +709,7 @@ theorem exists_le_checkPassProjector_conj (n : ℕ) (W : Finset (Fin k)) (hW : W
       · obtain ⟨j, hj⟩ := Function.ne_iff.mp hD
         simp only [hD, ↓reduceIte]
         exact (Finset.prod_eq_zero (Finset.mem_univ j) (by simp [hj])).symm
-    have hlen : ∀ i, (((io i).outputIO (cm i) (ans i) (pf i)).getD []).length ≤ q2 io := by
-      intro i
-      cases h : (io i).outputIO (cm i) (ans i) (pf i) with
-      | none => simp
-      | some Li => exact ((io i).length_le _ _ _ _ h).trans (qVC_card_dom_le_q2 io i (ans i))
-    have hcells : ∑ j, (ioCells (L j)).card ≤ n * q2 io :=
+    have hcells : ∑ j, (ioCells (L j)).card ≤ n * q :=
       calc ∑ j, (ioCells (L j)).card
           ≤ ∑ j, (L j).length := Finset.sum_le_sum fun j _ ↦ card_ioCells_le_length _
         _ = ∑ i ∈ W, (((io i).outputIO (cm i) (ans i) (pf i)).getD []).length := by
@@ -719,9 +718,9 @@ theorem exists_le_checkPassProjector_conj (n : ℕ) (W : Finset (Fin k)) (hW : W
             simp only [Finset.sum_ite_mem, Finset.univ_inter]
             rw [Finset.sum_comm]
             simp
-        _ ≤ ∑ i ∈ W, q2 io := Finset.sum_le_sum fun i _ ↦ hlen i
-        _ = W.card * q2 io := by rw [Finset.sum_const, smul_eq_mul]
-        _ ≤ n * q2 io := Nat.mul_le_mul_right _ hW
+        _ ≤ ∑ i ∈ W, q := Finset.sum_le_sum fun i _ ↦ hlen i
+        _ = W.card * q := by rw [Finset.sum_const, smul_eq_mul]
+        _ ≤ n * q := Nat.mul_le_mul_right _ hW
     refine ⟨(1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * ∑ j, (ioCells (L j)).card),
       pow_le_pow_of_le_one hN hN1 (by rw [Nat.mul_assoc]; exact Nat.mul_le_mul_left 2 hcells), ?_⟩
     have hCPC : compressDatabases k X Y * piKron (fun j ↦ checkProjector Y (L j)) *
@@ -741,6 +740,24 @@ theorem exists_le_checkPassProjector_conj (n : ℕ) (W : Finset (Fin k)) (hW : W
       have := h i hi
       simp [VectorCommitment.CheckIOForm.checkOn, Option.not_isSome_iff_eq_none.mp hn] at this
     exact ⟨_, le_rfl, by simp [hP0]⟩
+
+/-- **The pass projector against its compressed conjugate** (eq. (27), item 2, of the notes on
+ePrint 2025/2166; the paper's p. 61). For `|W| ≤ n`, `P (C P C) P = a P` with
+`a ≥ (1 - 1/N)^{2 n q2}`, where `C` compresses every database. When every check on `W` parses,
+`P` is the product of the consistency projectors of the prescriptions on each database, and `a`
+is `(1 - 1/N)^{2d}` for the number `d ≤ n q2` of prescribed cells (eq. (26)); otherwise `P = 0`. -/
+theorem exists_le_checkPassProjector_conj (n : ℕ) (W : Finset (Fin k)) (hW : W.card ≤ n)
+    (idx : Fin k → Fin k) (cm : Fin k → Cm) (ans : ∀ i, PartialVec (ℓ i) Msg) (pf : ∀ i, Pf i) :
+    ∃ a : ℝ, (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io) ≤ a ∧
+      checkPassProjector io W idx cm ans pf *
+          (compressDatabases k X Y * checkPassProjector io W idx cm ans pf *
+            compressDatabases k X Y) * checkPassProjector io W idx cm ans pf =
+        (a : ℂ) • checkPassProjector io W idx cm ans pf := by
+  apply exists_le_checkPassProjector_conj_of_length_le io n W hW idx cm ans pf (q2 io)
+  intro i
+  cases h : (io i).outputIO (cm i) (ans i) (pf i) with
+  | none => simp
+  | some L => exact ((io i).length_le _ _ _ _ h).trans (qVC_card_dom_le_q2 io i (ans i))
 
 end passProjector
 
@@ -862,14 +879,9 @@ variable {k : ℕ} {X Y Msg Cm Z : Type} [Fintype X] [DecidableEq X] [Fintype Y]
   (ME : MultiExtractor k Cm (DmOf ℓ Msg Td) (compressedVCOracle k X Y).S)
   (code : TpDCode k (DmOf ℓ Msg Td) Z) {tdBot : ∀ i, Td i} {Pgood : Set (Database X Y)}
 
-/-- **The checks after extraction** (ePrint 2025/2166, p. 61; eqs. (38)–(39) of the
-notes). On a substate supported on the extraction outcome `tdm`, and for openings `pf` in the
-support of `VC_i.Open(Dom(m_i), td_i)`, the checks on `W` fail with the event's other conditions
-holding with weight at most `1 - (1 - 1/N)^{2 n q2}` times the trace. By condition 3 the substate
-lies under the pass projector `P` of the checks on the partial tables, while the checks run
-against the compressed oracles accept on `C P' C` with `P ≤ P'`; eq. (27), item 2, bounds the
-acceptance from below. -/
-theorem outcomeMeasure_run₂_checks_le [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
+/-- The checks after extraction with an opening-specific cell budget. -/
+theorem outcomeMeasure_run₂_checks_le_of_openingQueryBound [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
+    (q : ℕ) (hq : OpeningQueryBound io q)
     (hC : Conditions VC io ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
     {B : QReg} (tdm : TpDLen k (DmOf ℓ Msg Td) (TpIC.full hk c.idx c.cm).1) (pf : ∀ i, Pf i)
     (hpf : ∀ i, pf i ∈ support ((VC i).opening (tdm i).1.dom (tdm i).2))
@@ -881,7 +893,7 @@ theorem outcomeMeasure_run₂_checks_le [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
           (pf i)).bind fun b ↦ QuantumComp₂.pure
             (!b && decide (c.W.card ≤ n) && decide (Function.Injective c.idx)))).outcomeMeasure
         ρ {true} ≤
-      ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io)) *
+      ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q)) *
         ENNReal.ofReal ρ.matrix.trace.re := by
   rw [QuantumRuntime.run₂_bind, SubInstrument.outcomeMeasure_apply_singleton,
     SubInstrument.branch_bind_apply_univ, Fintype.sum_bool]
@@ -903,8 +915,12 @@ theorem outcomeMeasure_run₂_checks_le [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
         (c.cm i) (tdm i).1 (pf i)) fun i _ ↦ lossless_checkAt _ _ _ _ _ _)
       (EmulatedOracle.lossless_toRuntime_step _)
     have hsum := SubInstrument.trace_re_branch_add_of_lossless hloss ρ.matrix
-    obtain ⟨a, ha0, ha⟩ := exists_le_checkPassProjector_conj io n c.W hW c.idx c.cm
-      (fun i ↦ (tdm i).1) pf
+    obtain ⟨a, ha0, ha⟩ := exists_le_checkPassProjector_conj_of_length_le io n c.W hW c.idx c.cm
+      (fun i ↦ (tdm i).1) pf q (by
+        intro i
+        cases hL : (io i).outputIO (c.cm i) (tdm i).1 (pf i) with
+        | none => simp
+        | some L => exact hq i (c.cm i) (tdm i).1 (tdm i).2 (pf i) (hpf i) L hL)
     -- the checks on the partial tables pass under the extraction outcome (condition 3)
     have hPQ : checkPassProjector io c.W c.idx c.cm (fun i ↦ (tdm i).1) pf *
         (diagonal fun D : Fin k → Database X Y ↦
@@ -947,7 +963,7 @@ theorem outcomeMeasure_run₂_checks_le [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
       exact trace_re_conj_one_kronecker_ge_of_conj (conjTranspose_compressDatabases k X Y) hCC
         (conjTranspose_diagonal_ite _) (diagonal_ite_mul_self _) (conjTranspose_diagonal_ite _)
         (diagonal_ite_mul_self _) hle ha hPQ ρ.posSemidef hρ
-    have hmono : (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io) * ρ.matrix.trace.re ≤
+    have hmono : (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q) * ρ.matrix.trace.re ≤
         a * ρ.matrix.trace.re := mul_le_mul_of_nonneg_right ha0 ρ.trace_re_nonneg
     rw [← ENNReal.ofReal_mul (sub_nonneg.mpr (pow_le_one₀ hN hN1))]
     refine ENNReal.ofReal_le_ofReal ?_
@@ -957,6 +973,62 @@ theorem outcomeMeasure_run₂_checks_le [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
     rw [hf, SubInstrument.branch_pure_of_ne (by decide), LinearMap.zero_comp,
       LinearMap.zero_apply, Matrix.trace_zero, Complex.zero_re, ENNReal.ofReal_zero]
     exact zero_le
+
+/-- **The checks after extraction** (ePrint 2025/2166, p. 61; eqs. (38)–(39) of the
+notes). On a substate supported on the extraction outcome `tdm`, and for openings `pf` in the
+support of `VC_i.Open(Dom(m_i), td_i)`, the checks on `W` fail with the event's other conditions
+holding with weight at most `1 - (1 - 1/N)^{2 n q2}` times the trace. By condition 3 the substate
+lies under the pass projector `P` of the checks on the partial tables, while the checks run
+against the compressed oracles accept on `C P' C` with `P ≤ P'`; eq. (27), item 2, bounds the
+acceptance from below. -/
+theorem outcomeMeasure_run₂_checks_le [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
+    (hC : Conditions VC io ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
+    {B : QReg} (tdm : TpDLen k (DmOf ℓ Msg Td) (TpIC.full hk c.idx c.cm).1) (pf : ∀ i, Pf i)
+    (hpf : ∀ i, pf i ∈ support ((VC i).opening (tdm i).1.dom (tdm i).2))
+    (ρ : SubState (B × ((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime.D))
+    (hρ : MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ diagonal fun D : Fin k → Database X Y ↦
+      if ME.extract (TpIC.full hk c.idx c.cm) D = tdm then 1 else 0) ρ.matrix = ρ.matrix) :
+    (((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime.run₂ .instruments
+        ((QComp.allIn c.W fun i ↦ checkAt (Z := Z) VC B i (c.idx i) (c.cm i) (tdm i).1
+          (pf i)).bind fun b ↦ QuantumComp₂.pure
+            (!b && decide (c.W.card ≤ n) && decide (Function.Injective c.idx)))).outcomeMeasure
+        ρ {true} ≤
+      ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io)) *
+        ENNReal.ofReal ρ.matrix.trace.re :=
+  outcomeMeasure_run₂_checks_le_of_openingQueryBound io ME code (q2 io)
+    (openingQueryBound_q2 io) hC hk n c tdm pf hpf ρ hρ
+
+/-- The openings and checks after extraction with an opening-specific cell budget. -/
+theorem outcomeMeasure_run₂_openings_le_of_openingQueryBound [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
+    (q : ℕ) (hq : OpeningQueryBound io q)
+    (hC : Conditions VC io ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
+    {B : QReg} (tdm : TpDLen k (DmOf ℓ Msg Td) (TpIC.full hk c.idx c.cm).1)
+    (φ : SubState (B × ((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime.D))
+    (hφ : MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ diagonal fun D : Fin k → Database X Y ↦
+      if ME.extract (TpIC.full hk c.idx c.cm) D = tdm then 1 else 0) φ.matrix = φ.matrix) :
+    (((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime.run₂ .instruments
+        ((QComp.pi fun i : Fin k ↦ openAt VC B i (tdm i).1.dom (tdm i).2).bind fun pf ↦
+          (QComp.allIn c.W fun i ↦ checkAt (Z := Z) VC B i (c.idx i) (c.cm i) (tdm i).1
+            (pf i)).bind fun b ↦ QuantumComp₂.pure
+              (!b && decide (c.W.card ≤ n) && decide (Function.Injective c.idx)))).outcomeMeasure
+        φ {true} ≤
+      ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q)) *
+        ENNReal.ofReal φ.matrix.trace.re := by
+  rw [QuantumRuntime.run₂_bind]
+  refine SubInstrument.outcomeMeasure_bind_le _ _ _ (measurableSet_singleton _) fun pf ↦ ?_
+  obtain ⟨c₀, hc₀, hz⟩ := exists_branch_run₂_pi_eq_smul
+    ((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime
+    (fun i ↦ openAt VC B i (tdm i).1.dom (tdm i).2)
+    (fun i ↦ support ((VC i).opening (tdm i).1.dom (tdm i).2))
+    (fun i b ↦ exists_branch_run₂_toQuantumAt_coinImpl_eq_smul _ _ b) pf
+  by_cases hs : ∃ i, pf i ∉ support ((VC i).opening (tdm i).1.dom (tdm i).2)
+  · rw [SubInstrument.outcomeMeasure_eq_zero_of_matrix_eq_zero _ (by
+      rw [SubInstrument.matrix_post, hc₀, hz hs, zero_smul, LinearMap.zero_apply])]
+    exact zero_le
+  · refine outcomeMeasure_run₂_checks_le_of_openingQueryBound io ME code q hq hC hk n c tdm pf
+      (fun i ↦ Classical.byContradiction fun h ↦ hs ⟨i, h⟩) _ ?_
+    rw [SubInstrument.matrix_post, hc₀, LinearMap.smul_apply, LinearMap.id_apply]
+    exact (LinearMap.map_smul _ c₀ φ.matrix).trans (congrArg (c₀ • ·) hφ)
 
 /-- **The openings and checks after extraction.** On a substate supported on the extraction
 outcome `tdm`, opening every position and running the checks on `W` reports the P3 event with
@@ -975,22 +1047,37 @@ theorem outcomeMeasure_run₂_openings_le [∀ i, DecidableEq (DmOf ℓ Msg Td i
               (!b && decide (c.W.card ≤ n) && decide (Function.Injective c.idx)))).outcomeMeasure
         φ {true} ≤
       ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io)) *
-        ENNReal.ofReal φ.matrix.trace.re := by
-  rw [QuantumRuntime.run₂_bind]
-  refine SubInstrument.outcomeMeasure_bind_le _ _ _ (measurableSet_singleton _) fun pf ↦ ?_
-  obtain ⟨c₀, hc₀, hz⟩ := exists_branch_run₂_pi_eq_smul
-    ((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime
-    (fun i ↦ openAt VC B i (tdm i).1.dom (tdm i).2)
-    (fun i ↦ support ((VC i).opening (tdm i).1.dom (tdm i).2))
-    (fun i b ↦ exists_branch_run₂_toQuantumAt_coinImpl_eq_smul _ _ b) pf
-  by_cases hs : ∃ i, pf i ∉ support ((VC i).opening (tdm i).1.dom (tdm i).2)
-  · rw [SubInstrument.outcomeMeasure_eq_zero_of_matrix_eq_zero _ (by
-      rw [SubInstrument.matrix_post, hc₀, hz hs, zero_smul, LinearMap.zero_apply])]
-    exact zero_le
-  · refine outcomeMeasure_run₂_checks_le io ME code hC hk n c tdm pf
-      (fun i ↦ Classical.byContradiction fun h ↦ hs ⟨i, h⟩) _ ?_
-    rw [SubInstrument.matrix_post, hc₀, LinearMap.smul_apply, LinearMap.id_apply]
-    exact (LinearMap.map_smul _ c₀ φ.matrix).trans (congrArg (c₀ • ·) hφ)
+        ENNReal.ofReal φ.matrix.trace.re :=
+  outcomeMeasure_run₂_openings_le_of_openingQueryBound io ME code (q2 io)
+    (openingQueryBound_q2 io) hC hk n c tdm φ hφ
+
+/-- The extraction challenger with an opening-specific cell budget. -/
+theorem outcomeMeasure_run₂_extractChallenger_le_of_openingQueryBound
+    (q : ℕ) (hq : OpeningQueryBound io q)
+    (hC : Conditions VC io ME tdBot Pgood)
+    (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm) {B : QReg}
+    (σ : SubState (B × ((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime.D)) :
+    (((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime.run₂ .instruments
+        (extractChallenger VC code hk n c B)).outcomeMeasure σ {true} ≤
+      ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q)) *
+        ENNReal.ofReal σ.matrix.trace.re := by
+  let _ : ∀ i, DecidableEq (DmOf ℓ Msg Td i) := fun _ ↦ Classical.decEq _
+  rw [extractChallenger, QuantumRuntime.run₂_bind]
+  refine SubInstrument.outcomeMeasure_bind_le _ _ _ (measurableSet_singleton _) fun o ↦ ?_
+  cases o with
+  | none =>
+    rw [QuantumRuntime.run₂_pure, SubInstrument.outcomeMeasure_pure]
+    simp
+  | some tdm =>
+    refine outcomeMeasure_run₂_openings_le_of_openingQueryBound io ME code q hq hC hk n c tdm _ ?_
+    rw [SubInstrument.matrix_post,
+      run₂_extractQuery_branch (compressedVCOracle k X Y) ME code B]
+    have hK := (mul_kronecker_mul (1 : Matrix B B ℂ) (1 : Matrix B B ℂ)
+      (extractProj ME (TpIC.full hk c.idx c.cm) tdm)
+      (extractProj ME (TpIC.full hk c.idx c.cm) tdm)).symm.trans
+      (congrArg₂ (· ⊗ₖ ·) (Matrix.one_mul 1) (extractProj_mul_self ME _ tdm))
+    exact (LinearMap.congr_fun (MatrixMap.conj_mul _ _) σ.matrix).symm.trans
+      (congrArg (fun M ↦ MatrixMap.conj M σ.matrix) hK)
 
 /-- **The P3 challenger against the compressed oracles, leaf by leaf** (ePrint 2025/2166,
 pp. 59–61). From every joint substate of the adversary's register and the databases, the P3
@@ -1003,26 +1090,22 @@ theorem outcomeMeasure_run₂_extractChallenger_le (hC : Conditions VC io ME tdB
     (((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime.run₂ .instruments
         (extractChallenger VC code hk n c B)).outcomeMeasure σ {true} ≤
       ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io)) *
-        ENNReal.ofReal σ.matrix.trace.re := by
-  let _ : ∀ i, DecidableEq (DmOf ℓ Msg Td i) := fun _ ↦ Classical.decEq _
-  rw [extractChallenger, QuantumRuntime.run₂_bind]
-  refine SubInstrument.outcomeMeasure_bind_le _ _ _ (measurableSet_singleton _) fun o ↦ ?_
-  cases o with
-  | none =>
-    rw [QuantumRuntime.run₂_pure, SubInstrument.outcomeMeasure_pure]
-    simp
-  | some tdm =>
-    refine outcomeMeasure_run₂_openings_le io ME code hC hk n c tdm _ ?_
-    rw [SubInstrument.matrix_post,
-      run₂_extractQuery_branch (compressedVCOracle k X Y) ME code B]
-    have hK := (mul_kronecker_mul (1 : Matrix B B ℂ) (1 : Matrix B B ℂ)
-      (extractProj ME (TpIC.full hk c.idx c.cm) tdm)
-      (extractProj ME (TpIC.full hk c.idx c.cm) tdm)).symm.trans
-      (congrArg₂ (· ⊗ₖ ·) (Matrix.one_mul 1) (extractProj_mul_self ME _ tdm))
-    exact (LinearMap.congr_fun (MatrixMap.conj_mul _ _) σ.matrix).symm.trans
-      (congrArg (fun M ↦ MatrixMap.conj M σ.matrix) hK)
+        ENNReal.ofReal σ.matrix.trace.re :=
+  outcomeMeasure_run₂_extractChallenger_le_of_openingQueryBound io ME code (q2 io)
+    (openingQueryBound_q2 io) hC hk n c σ
 
 /-! ## Lemma 9.3 -/
+
+/-- P3 with error `1 - (1 - 1/N)^(2 n q)` when opening outputs use at most `q` cells. -/
+theorem extractionCorrect_compressedVCOracle_of_openingQueryBound
+    (q : ℕ) (hq : OpeningQueryBound io q)
+    (hC : Conditions VC io ME tdBot Pgood) :
+    ExtractionCorrect.{v, w} VC (compressedVCOracle k X Y) ME code
+      fun _ _ _ n ↦ ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q)) := by
+  intro hk t n wVC wME A W x claim ρ _ _ _ _
+  exact outcomeLawWith_experiment_true_le _ x _ ρ fun u y σ ↦
+    outcomeMeasure_run₂_extractChallenger_le_of_openingQueryBound
+      io ME code q hq hC hk n (claim u y) σ
 
 /-- **Lemma 9.3 of ePrint 2025/2166, exact form** (pp. 59–61): `EO^(Ext)` for the `k`
 compressed oracles is multi-extraction correct (P3, `Quantum.ExtractionCorrect`) under the
@@ -1039,10 +1122,9 @@ checks accept on `C P' C` with `P ≤ P'`, and `P (C P C) P = a P` with `a ≥ (
 weight at most `1 - a` times the trace. -/
 theorem extractionCorrect_compressedVCOracle (hC : Conditions VC io ME tdBot Pgood) :
     ExtractionCorrect.{v, w} VC (compressedVCOracle k X Y) ME code
-      fun _ _ _ n ↦ extractError io n := by
-  intro hk t n wVC wME A W x claim ρ _ _ _ _
-  exact outcomeLawWith_experiment_true_le _ x _ ρ fun u y σ ↦
-    outcomeMeasure_run₂_extractChallenger_le io ME code hC hk n (claim u y) σ
+      fun _ _ _ n ↦ extractError io n :=
+  extractionCorrect_compressedVCOracle_of_openingQueryBound io ME code (q2 io)
+    (openingQueryBound_q2 io) hC
 
 /-- **Lemma 9.3 of ePrint 2025/2166, leading order**: P3 with error `2 n q2 / N`, a corollary of
 `Quantum.extractionCorrect_compressedVCOracle`. -/

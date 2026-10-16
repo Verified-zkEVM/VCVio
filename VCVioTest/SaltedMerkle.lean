@@ -6,7 +6,8 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.CryptoFoundations.MerkleTree.Salted.HalfPreimage
+public import VCVio.CryptoFoundations.MerkleTree.Salted.Commutativity
+public import VCVio.CryptoFoundations.MerkleTree.Salted.Extraction
 
 /-!
 # Tests for salted Merkle trees
@@ -16,7 +17,8 @@ messages and salts and tagged oracle inputs:
 
 * depths `d = 0` and `d = 1`, with their `CheckIO` forms and perfect completeness;
 * an honest commitment for an explicit hash function, opened and checked by evaluation;
-* `MTExtract` evaluated on a small explicit database, its validity, and Lemma 8.6 on it.
+* `MTExtract` evaluated on a small explicit database, its validity, and Lemma 8.6 on it;
+* `Conditions` at depths one and two, concrete P2, sharp P3, and the seven-cell extraction bound.
 -/
 
 public section
@@ -61,6 +63,84 @@ example : (checkIOForm (Msg := Bool) enc 1).qVC 2 = 4 := rfl
 example (rt : Bool) (ans : PartialVec 1 Bool) (td : Td Bool Bool 0) (io : List (X × Bool))
     (h : outputIO enc 0 rt ans (opening 0 ans.dom td) = some io) : io.length ≤ 1 :=
   length_outputIO_opening_le enc rt ans _ td io h
+
+/-! ## Conditions and the extraction cell bound -/
+
+/-- The sufficient conditions elaborate for two trees of depths one and two. -/
+example : Conditions (fun i : Fin 2 ↦ (scheme enc (![1, 2] i)).toVectorCommitment)
+    (fun i ↦ checkIOForm enc (![1, 2] i)) (multiExtract enc ![1, 2])
+    (fun _ ↦ tdBot) collisionFree := conditions enc ![1, 2]
+
+/-- The depth-two extraction bound is seven cells, while arbitrary paths allow twelve. -/
+example : 2 * 2 ^ 2 - 1 = 7 ∧ (checkIOForm enc 2).qVC 4 = 12 := by decide
+
+/-- The seven-cell bound applies to every proof read from one depth-two trapdoor. -/
+example (rt : Bool) (ans : PartialVec 4 Bool) (td : Td Bool Bool 2) (io : List (X × Bool))
+    (h : outputIO enc 2 rt ans (opening 2 ans.dom td) = some io) : io.length ≤ 7 :=
+  length_outputIO_opening_le enc rt ans _ td io h
+
+/-! ## Concrete P2 -/
+
+/-- A tagged encoding with three possible hash outputs. -/
+def enc3 : Encoding ((ZMod 3 × ZMod 3) ⊕ (Bool × Bool)) (ZMod 3) Bool Bool where
+  node := Sum.inl
+  leaf := Sum.inr
+  node_injective := Sum.inl_injective
+  leaf_injective := Sum.inr_injective
+
+noncomputable local instance :
+    OracleSpec.UniformAnswerMeasure (((ZMod 3 × ZMod 3) ⊕ (Bool × Bool)) →ₒ ZMod 3) :=
+  OracleSpec.UniformAnswerMeasure.ofFiniteNonempty _
+
+local instance : LinearOrder (ZMod 3) := inferInstanceAs (LinearOrder (Fin 3))
+
+/-- P2 elaborates for two depth-one trees and every valid encoding of their extractions. -/
+example {Z : Type} [Fintype Z] [DecidableEq Z] [AddGroup Z]
+    (code : TpDCode 2 (DmOf (fun _ ↦ 2 ^ 1) Bool fun _ ↦ Td (ZMod 3) Bool 1) Z) :
+    ComBound.{0, 0} (compressedVCOracle 2 ((ZMod 3 × ZMod 3) ⊕ (Bool × Bool)) (ZMod 3))
+      (multiExtract enc3 (fun _ ↦ 1)) code
+      (SaltedMerkle.comErrorBound (Y := ZMod 3)) :=
+  SaltedMerkle.comBound (k := 2) (Z := Z) enc3 (fun _ ↦ 1) code
+
+/-- The universal cap is active for three possible hash outputs. -/
+example : SaltedMerkle.comErrorBound (Y := ZMod 3) 0 = 4 := by
+  norm_num [SaltedMerkle.comErrorBound, ZMod.card]
+  norm_num [← div_eq_mul_inv, ENNReal.le_div_iff_mul_le]
+
+/-- With 97 outputs and no prior calls the constant-24 estimate is active. -/
+example : SaltedMerkle.comErrorBound (Y := ZMod 97) 0 = 24 / 97 := by
+  norm_num [SaltedMerkle.comErrorBound, ZMod.card]
+  rw [← div_eq_mul_inv, min_eq_right]
+  norm_num [ENNReal.div_le_iff]
+
+/-! ## Sharp P3 -/
+
+/-- P3 for two depth-two trees uses seven cells per opening, with exponent `14n`. -/
+example {Z : Type} [Fintype Z] [DecidableEq Z] [AddGroup Z]
+    (code : TpDCode 2 (DmOf (fun _ ↦ 2 ^ 2) Bool fun _ ↦ Td (ZMod 3) Bool 2) Z) :
+    ExtractionCorrect.{0, 0} (fun _ : Fin 2 ↦ (scheme enc3 2).toVectorCommitment)
+      (compressedVCOracle 2 ((ZMod 3 × ZMod 3) ⊕ (Bool × Bool)) (ZMod 3))
+      (multiExtract enc3 (fun _ ↦ 2)) code
+      (fun _ _ _ n ↦ ENNReal.ofReal (1 - (1 - (3 : ℝ)⁻¹) ^ (2 * n * 7))) :=
+  extractionCorrect_uniformDepth enc3 2 code
+
+/-- The same sharp bound permits a family with different depths and at most four leaves each. -/
+example {Z : Type} [Fintype Z] [DecidableEq Z] [AddGroup Z]
+    (code : TpDCode 2 (DmOf (fun i ↦ 2 ^ (![1, 2] i)) Bool
+      fun i ↦ Td (ZMod 3) Bool (![1, 2] i)) Z) :
+    ExtractionCorrect.{0, 0} (fun i : Fin 2 ↦ (scheme enc3 (![1, 2] i)).toVectorCommitment)
+      (compressedVCOracle 2 ((ZMod 3 × ZMod 3) ⊕ (Bool × Bool)) (ZMod 3))
+      (multiExtract enc3 ![1, 2]) code
+      (fun _ _ _ n ↦ SaltedMerkle.extractErrorBound (Y := ZMod 3) 4 n) :=
+  extractionCorrect enc3 ![1, 2] code 4 (by intro i; fin_cases i <;> decide)
+
+/-- One depth-one opening with three possible outputs has exact bound `1 - (2/3)^6`. -/
+example : SaltedMerkle.extractErrorBound (Y := ZMod 3) 2 1 = ENNReal.ofReal (665 / 729) := by
+  norm_num [SaltedMerkle.extractErrorBound, ZMod.card]
+
+/-- Checking no openings incurs zero extraction error. -/
+example (L : ℕ) : SaltedMerkle.extractErrorBound (Y := ZMod 3) L 0 = 0 := by
+  simp [SaltedMerkle.extractErrorBound]
 
 /-! ## An honest commitment, opened and checked -/
 
