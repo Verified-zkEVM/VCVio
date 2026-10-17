@@ -2,6 +2,7 @@ module  -- shake: keep-all --deprecated_module: ignore
 
 public import VCVioTest.Algorithms.Hash
 public import VCVioTest.Asymptotics.Negligible
+public import VCVioTest.ComposedService
 public import VCVioTest.Computability
 public import VCVioTest.CryptoFoundations.BR93Measure
 public import VCVioTest.CryptoFoundations.ComplexityAdapters
@@ -144,5 +145,6 @@ public import VCVioTest.Tactic.Positivity
 public import VCVioTest.ToFinalValidity
 public import VCVioTest.ToMathlib.AbsDiff
 public import VCVioTest.UniformOn
+public import VCVioTest.UniformThreshold
 public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability

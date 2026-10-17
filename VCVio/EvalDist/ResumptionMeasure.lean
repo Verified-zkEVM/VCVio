@@ -195,7 +195,7 @@ theorem outputMeasure_toResumption (c : FreeM P α) {k : ℕ}
   rw [Resumption.outputMeasure, truncateMeasure_toResumption c h, Measure.dropNone_map_some]
 
 /-- The limiting output measure agrees with the denotation of a uniformly bounded program. -/
-theorem returnedMeasure_toResumption (c : FreeM P α) {k : ℕ}
+theorem returnedMeasure_toResumption_of_bound (c : FreeM P α) {k : ℕ}
     (h : c.IsTotalRollBound k) :
     Resumption.returnedMeasure (FreeM.toResumption c) = FreeM.denote c := by
   apply le_antisymm

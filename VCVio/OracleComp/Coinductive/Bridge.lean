@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.OracleComp
-public import PolyFun.ITree.Basic
+public import PolyFun.ITree.Free
 
 /-! # Bridge between `OracleComp` and `ITree`
 
@@ -39,20 +39,20 @@ namespace OracleComp
 
 variable {ι : Type u} {spec : OracleSpec.{u, u} ι} {α β : Type u}
 
-/-- Embed an `OracleComp spec α` into the corresponding `ITree`. Each `pure x`
-becomes `ITree.pure x`; each `queryBind t k` becomes `ITree.query t (toITree ∘ k)`.
-The recursion is structural on `OracleComp` (which is an inductive free monad),
-so productivity is automatic. -/
+/-- The canonical polynomial free-program embedding into interaction trees. -/
 def toITree (oa : OracleComp spec α) : ITree spec.toPFunctor α :=
-  oa.recOn (motive := fun _ => ITree spec.toPFunctor α)
-    ITree.pure
-    (fun t _k ih => ITree.query (F := spec.toPFunctor) t ih)
+  PFunctor.FreeM.toITree oa
 
 @[simp] theorem toITree_pure (x : α) :
-    toITree (pure x : OracleComp spec α) = ITree.pure x := rfl
+    toITree (pure x : OracleComp spec α) = ITree.pure x :=
+  PFunctor.FreeM.toITree_pure x
 
 theorem toITree_queryBind (t : spec.Domain) (k : spec.Range t → OracleComp spec α) :
     toITree (queryBind t k) = ITree.query (F := spec.toPFunctor) t (fun u => toITree (k u)) :=
-  rfl
+  PFunctor.FreeM.toITree_liftBind (E := spec.toPFunctor) t k
+
+/-- The oracle-computation bridge is the canonical free-program bridge. -/
+theorem toITree_eq_freeM (oa : OracleComp spec α) :
+    toITree oa = PFunctor.FreeM.toITree oa := rfl
 
 end OracleComp
