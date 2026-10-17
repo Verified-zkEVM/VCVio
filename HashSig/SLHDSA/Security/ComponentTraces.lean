@@ -25,6 +25,8 @@ handled by the generic address-tracking lemmas `PerfectMerkleTree.merkleRootM_pr
 `intrinsicAuthPathM_pred_of_tree`, and `climbM_pred_of_ancestors`, instantiated at the
 construction predicate; the leaf and node addresses those lemmas surface are placed in the FORS
 ledgers by `mem_forsLeafAddresses`, `mem_forsTreeAddresses`, and `mem_forsRootAddresses`.
+The `*_mem_constructionAddresses` lemmas restate the role-ledger memberships of reachable FORS,
+WOTS+ and XMSS addresses as union-ledger memberships, in the construction's own vocabulary.
 
 The XMSS programs are certified inside a reachable tree, given either as a `LayerTreeCoord` or as
 the tree containing a `LayerPosition`.  A subtree root `xmssNodeM` at `(z, t)` with `z ≤ hp` and
@@ -128,10 +130,14 @@ theorem QueriesWithinConstructionTargets.climbM {Y : Type}
 
 /-! ## FORS addresses of a reachable bottom position -/
 
+/-- The global index of the leaf of FORS tree `i` that the digest `md` opens. -/
+abbrev forsLeafIndex (p : Params) (md : List Byte) (i : ℕ) : ℕ :=
+  i * 2 ^ p.a + forsIdx p md i
+
 /-- The height-`a` tree containing the leaf `forsSignWith` selects in FORS tree `i` is tree `i`. -/
 theorem forsLeafIndex_div (p : Params) (md : List Byte) (i : ℕ) :
-    (i * 2 ^ p.a + forsIdx p md i) / 2 ^ p.a = i := by
-  rw [Nat.add_comm, Nat.add_mul_div_right _ _ (by positivity),
+    forsLeafIndex p md i / 2 ^ p.a = i := by
+  rw [forsLeafIndex, Nat.add_comm, Nat.add_mul_div_right _ _ (by positivity),
     Nat.div_eq_of_lt (forsIdx_lt p md i), Nat.zero_add]
 
 /-- Every leaf of FORS tree `tree` at a reachable bottom position is a union-ledger target. -/
@@ -319,6 +325,22 @@ theorem forsPkFromSigM_traceContract (sig : ForsSigCore vp.params core) (md : Li
         (vp.params.k * (vp.params.a + 1) + 1) :=
   ⟨forsPkFromSigM_queriesWithinConstructionTargets core sig md pkSeed pos,
     forsPkFromSigM_isTotalQueryBound core sig md pkSeed pos.forsAdrs⟩
+
+/-! ## WOTS+ addresses of a reachable instance -/
+
+/-- Every hash step below `w - 1` on a chain of a reachable WOTS+ instance is a union-ledger
+target. -/
+theorem wotsChainAdrs_setHashAddress_mem_constructionAddresses (pos : LayerPosition vp)
+    (i : Fin vp.params.len) {t : ℕ} (ht : t < vp.params.w - 1) :
+    (wotsChainAdrs (wotsInstanceAdrs pos) i.val).setHashAddress t ∈ constructionAddresses vp := by
+  rw [mem_constructionAddresses_iff]
+  exact Or.inr (Or.inr (Or.inr (Or.inl (mem_wotsStepAddresses vp (pos, i) ⟨t, ht⟩))))
+
+/-- The public-key compression of a reachable WOTS+ instance is a union-ledger target. -/
+theorem wotsPkAdrs_mem_constructionAddresses (pos : LayerPosition vp) :
+    wotsPkAdrs (wotsInstanceAdrs pos) ∈ constructionAddresses vp := by
+  rw [mem_constructionAddresses_iff]
+  exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl (mem_wotsPkAddresses vp pos)))))
 
 /-! ## XMSS addresses of a reachable tree -/
 

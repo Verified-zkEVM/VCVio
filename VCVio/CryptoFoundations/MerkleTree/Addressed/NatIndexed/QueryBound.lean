@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.QueryBound
+import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Sibling
 
 /-!
 # Query bounds for effectful natural-number-indexed Merkle trees
@@ -251,10 +252,6 @@ variable {m : Type u → Type w} [Monad m]
   (Q : ∀ {α : Type u}, m α → Prop)
   (hpure : ∀ {α : Type u} (x : α), Q (pure x))
   (hbind : ∀ {α β : Type u} (oa : m α) (ob : α → m β), Q oa → (∀ x, Q (ob x)) → Q (oa >>= ob))
-
-private theorem div_pow_eq_div_pow_div_pow (i s z : ℕ) (hsz : s ≤ z) :
-    i / 2 ^ z = i / 2 ^ s / 2 ^ (z - s) := by
-  rw [Nat.div_div_eq_div_mul, ← pow_add, Nat.add_sub_cancel' hsz]
 
 include hbind in
 /-- `Q` holds of `merkleRootM leaf nodeHash z t` as soon as it holds of `leaf i` at every leaf of

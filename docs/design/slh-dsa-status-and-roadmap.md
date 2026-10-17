@@ -5,12 +5,17 @@ the plan in [`slh-dsa-fips205-generalization.md`](slh-dsa-fips205-generalization
 the target architecture, milestone definitions, acceptance gates, and merge protocol established
 on 2026-08-30. This document records what has merged since, what is open, where the plan's snapshot
 statements are now stale, and the ordered slices that remain. For the `main` snapshot identified in
-the milestone ledger below, use this document rather than the plan's older status statements.
+the milestone ledger below, use this document rather than the plan's older status statements. The
+accounting of the classical random-oracle bound, and its relation to the 127-bit proof in
+`leanEthereum/leanVM`, are recorded in
+[`slh-dsa-classical-rom-bound.md`](slh-dsa-classical-rom-bound.md).
 
 A capability is listed as DONE only when its source and validation are on `main`. Open pull
 requests are named as such. Conditional EUF-CMA composition, the SUF residual bound and the
 SP 800-230 profile corollary are on `main`. They leave the scheme-to-game reductions as
-hypotheses and do not prove a small concrete bound or bound the same-message SUF residual.
+hypotheses and do not prove a small concrete bound or bound the same-message SUF residual. The
+open pull request #766 proves an unconditional EUF-CMA bound in the classical random-oracle model
+([below](#classical-random-oracle-bound-open-766)).
 
 ## Where the work lives
 
@@ -28,6 +33,7 @@ hypotheses and do not prove a small concrete bound or bound the same-message SUF
 | Security lane, slices 1–5 (on `main`) | `Security/TargetCounts.lean`, `Security/ReachableTargets.lean` (#630); `Security/EncodedTargets.lean` (#631); `WotsInjectivity.lean` (#665); `Security/TraceTargets.lean` (#666); the consolidated second-round review fixes for those four, including `VCVio/OracleComp/QueryTracking/{QueryBound,LoggingOracle}.lean`'s `AllQueriesSatisfy` (#680, `0a1ff722`); `Security/ComponentTraces.lean` (#682, `630301f3`) | `slhdsa_target_ledger_tests`, `slhdsa_encoded_ledger_tests`, `slhdsa_trace_target_tests`, `slhdsa_component_trace_tests` |
 | Security lane, slice 6 (on `main`) | `Security/CanonicalGames.lean` (#683) | `slhdsa_canonical_game_tests` |
 | Security lane, slices 7–8 | `Security/{WotsWitnesses,ForsWitnesses,XmssWitnesses,HypertreeWitnesses,SchemeWitnesses,HmsgWitnesses,SufResidual,SchemeGames,Composition,SufBound}.lean` (#685–#718, on `main`); `Security/LimitedProfile.lean` (#723) | Owning witness, residual, scheme-game, composition, SUF-bound and profile executables in `lake test` |
+| Byte-level SHAKE model (#766) | `Security/RomConformance.lean`, `Security/ByteModel.lean`, `Security/ByteConformance.lean` | `slhdsa_byte_model_tests` (+ `ByteModelVectors/`) |
 | Generic hash games consumed | `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/*.lean`, `KeyedHash/ITSR.lean`, `VCVio/CryptoFoundations/SignatureAlg.lean` | `VCVioTest/SMDT*.lean` |
 
 Every SLH-DSA test executable is registered in the `@[test_driver] script test` of `lakefile.lean`
@@ -117,6 +123,46 @@ pushed, so a quoted one goes stale without notice.
   Neither same-message SUF residual arm is bounded. The profile fixes parameters and
   coefficients; it does not discharge these obligations or enforce the signing limit.
 - **General-`d` security gate: not started**, and correctly claimed nowhere.
+- **Classical random-oracle EUF-CMA bound: proved on the open pull request #766**, at general
+  `d`, in the three-oracle model; not on `main`. See the next section.
+
+## Classical random-oracle bound (open, #766)
+
+#766 proves EUF-CMA security of SLH-DSA in the classical random-oracle model in which the
+tweakable hash (with `PRF` as the tweakable hash at the PRF address types), `H_msg` and `PRF_msg`
+are three independent oracles (`hashSpec`, `romScheme` in `Security/Target.lean`), for every
+validated parameter set and both signing modes. The accounting and the levels it reaches are in
+[`slh-dsa-classical-rom-bound.md`](slh-dsa-classical-rom-bound.md).
+
+| Result | Theorem | Module |
+|---|---|---|
+| The security target at `c = 2`, `r = 1`, per public seed | `securityTarget_two_one` | `Security/CoverageBound.lean` |
+| The same bound for every distribution of the public seed, the uniform one included | `unforgeableAdvantage_romScheme_le_securityBound` | `Security/CoverageBound.lean` |
+| The joint target-collision, hidden-value and seed-guess term `2 (q_h + V) / \|Y\|` | `prEvent_romSchemeRun_runTargetCollision_or_runHiddenHit_le` | `Security/JointBound.lean` |
+| Interleaved-target coverage in the ideal hidden-seed game, at most `(q_h + 1) · weightedTargetCoverBound h a k q_s q_h (q_s / \|Y\|)` | `prEvent_idealDraw_runItsrCovered_le` | `Security/CoverageBound.lean` |
+| The target at every SHAKE and FIPS SHA-2 bundle whose address fields fit their widths, and so at all twelve parameter sets | `securityTarget_shake`, `securityTarget_sha2` | `HashSigTest/SLHDSA/CoverageBound.lean` |
+
+The hypotheses are the byte laws, the key discipline (`CorePrimitives.KeyDiscipline`) and
+`|Y| ≤ |SK.prf|`; all three are discharged at every FIPS 205 bundle. The adversary's budget counts
+its own hash queries `q_h` and signing queries `q_s`; key generation, signing and verification are
+not charged.
+
+#766 also states the byte-level model of the SHAKE parameter sets and identifies it with FIPS 205:
+
+| Result | Theorem | Module |
+|---|---|---|
+| SLH-DSA over one SHAKE256 random oracle on byte strings with `m`-byte answers, every hash a query at its FIPS 205 §11.1 layout; the advantage, and its averaging over the public seed | `shakeRomScheme`, `shakeAdvantage`, `shakeAdvantage_le_lintegral` | `Security/ByteModel.lean` |
+| Answering that oracle with SHAKE256 gives the library's FIPS 205 SHAKE internal algorithms, in both signing modes and for every public-seed distribution | `shakeRomScheme_map_shakeAnswer`, `shakeRomScheme_map_shakeAnswer_validatedParams` | `Security/ByteConformance.lean` |
+| Those internal algorithms reproduce NIST ACVP-Server vectors (commit `975de31e`) at SLH-DSA-SHAKE-128f: keyGen test case 31, internal-interface sigGen test cases 137 (deterministic) and 448 (hedged), sigVer test cases 223 and 219 | `slhdsa_byte_model_tests` | `HashSigTest/SLHDSA/ByteModel.lean`, `ByteModelVectors/vectors.json` |
+
+The single oracle caps a forger's outputs at `m` bytes, a modelling restriction whose losslessness
+is not proved. Not proved: a forgery bound in the single-oracle model, that is, the faithfulness
+step relating the three-oracle bound to `shakeAdvantage`, with its losses, among them
+`q_s / 2^{8n}` in both signing modes and, at `n = 32`, a weak-key term of about `2^{−172}` that
+holds the averaged byte-level level of the 256-bit sets near 236 bits at `q_h = q_s = 2^64`; any
+byte-level model of the SHA-2 sets; a strong-unforgeability bound; and the external interfaces
+(Algorithms 21–25), which the theorem does not reach. There is no complete FIPS conformance
+result.
 
 ## Security lane: slices, status, and source correspondence
 
@@ -170,10 +216,11 @@ hypotheses and resource/domain conditions not encoded by the current theorem:
 - the same-randomizer half of the strong-unforgeability residual, which has no counterpart in the
   source at all and no bound anywhere in this repository.
 
-Reduction traps recorded in issue #629 apply to every slice from 6 onward: the zero fallbacks of
-`sha2AdrsKey` and `checkedNodeOrZero` alias reachable values, so future reductions must establish
-approved query domains before using `sha2AdrsKey_injective_of_domain`; and `SameMessageBinding` is
-unbounded, so the SUF residual uses `advantage_eq_euf_add_sameMessage`.
+Reduction traps recorded in issue #629 apply to every slice from 6 onward: the zero fallback of
+`checkedNodeOrZero` aliases reachable values, and the type-tagged fallback of `sha2AdrsKey` is the
+key of no checked-domain address but collapses rejected addresses of one type class, so future
+reductions must establish approved query domains before using `sha2AdrsKey_injective_of_domain`;
+and `SameMessageBinding` is unbounded, so the SUF residual uses `advantage_eq_euf_add_sameMessage`.
 
 ### Conventions the lane follows
 
@@ -295,7 +342,8 @@ longer true on `main`:
   §10 external functions (21–25), §11 parameter sets (§11.2 compressed address `ADRSc`,
   Figure 18, Table 3).
 - M. Barbosa, F. Dupressoir, A. Hülsing, M. Meijers, P.-Y. Strub, *A Tight Security Proof for
-  SPHINCS+, Formally Verified*, ASIACRYPT 2023; EasyCrypt development `FV-SPHINCSPLUS-EC`.
+  SPHINCS+, Formally Verified*, Cryptology ePrint Archive, Report 2024/910; EasyCrypt
+  development `FV-SPHINCSPLUS-EC`.
 - D. J. Bernstein, A. Hülsing, S. Kölbl, R. Niederhagen, J. Rijneveld, P. Schwabe, *The SPHINCS+
   Signature Framework*, CCS 2019; SPHINCS+ round-3.1 specification (2022) and NIST submission
   package (reference implementation).

@@ -29,7 +29,8 @@ TV-distance content, and so live at the `SimSemantics` layer alongside `StateT.l
 - `QueryImpl.fixSndStateT` + `OracleComp.simulateQ_run_eq_of_snd_invariant`: support-based
   decomposition for product state spaces where one component is invariant.
 - `QueryImpl.extendState` + `OracleComp.extendState_run_proj_eq`: auxiliary-state lift, the
-  inverse direction of `fixSndStateT`.
+  inverse direction of `fixSndStateT`. `QueryImpl.mem_support_extendState_run_iff` reads the
+  outcomes of one step of the lift off the outcomes of the base step.
 
 ## Layering
 
@@ -326,6 +327,26 @@ def extendState
     (t : spec.Domain) (s : σ × Q) :
     (extendState so aux t).run s =
       ((so t).run s.1 >>= fun p => pure (p.1, (p.2, aux t s.1 p.1 p.2 s.2))) := rfl
+
+/-- The outcomes of one step of `extendState so aux` are the outcomes of the step of `so`, each
+beside the auxiliary value `aux` computes from the states before and after the step and its
+answer. -/
+lemma mem_support_extendState_run_iff
+    {ι : Type u} {spec : OracleSpec ι} {σ Q : Type u} {m : Type u → Type v} [Monad m]
+    [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+    (so : QueryImpl spec (StateT σ m))
+    (aux : (t : spec.Domain) → σ → spec.Range t → σ → Q → Q)
+    (t : spec.Domain) (s : σ × Q) (y : spec.Range t × σ × Q) :
+    y ∈ support ((extendState so aux t).run s) ↔
+      (y.1, y.2.1) ∈ support ((so t).run s.1) ∧ y.2.2 = aux t s.1 y.1 y.2.1 s.2 := by
+  rw [extendState_apply, mem_support_bind_iff]
+  constructor
+  · rintro ⟨v, hv, hy⟩
+    rw [support_pure, Set.mem_singleton_iff] at hy
+    subst hy
+    exact ⟨hv, rfl⟩
+  · rintro ⟨hv, hy⟩
+    exact ⟨_, hv, by rw [support_pure, Set.mem_singleton_iff, ← hy]⟩
 
 /-- Extend a stateful query implementation with an auxiliary component on the
 left of the product state. This is the same construction as `extendState`, but

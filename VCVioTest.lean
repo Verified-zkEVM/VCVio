@@ -1,6 +1,7 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
 public import VCVioTest.Asymptotics.Negligible
+public import VCVioTest.CachedPointsBound
 public import VCVioTest.Computability
 public import VCVioTest.CryptoFoundations.BR93Measure
 public import VCVioTest.CryptoFoundations.ComplexityAdapters
@@ -9,9 +10,12 @@ public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.CslibPPolyUniverses
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.KEMDEMMeasure
+public import VCVioTest.CryptoFoundations.KeyedHashCovering
 public import VCVioTest.CryptoFoundations.OracleClosure
 public import VCVioTest.CryptoFoundations.PRFTableMeasure
 public import VCVioTest.CryptoFoundations.SignatureAlg
+public import VCVioTest.CryptoFoundations.SignatureAlgBudget
+public import VCVioTest.CryptoFoundations.SignatureAlgRouted
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.CryptoFoundations.UniversalHash
 public import VCVioTest.EvalDist.BundledSemantics
@@ -42,6 +46,7 @@ public import VCVioTest.GrindFailFast
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
+public import VCVioTest.LoggedRunInvariant
 public import VCVioTest.LongChainPrograms
 public import VCVioTest.MeasurabilityBoundary
 public import VCVioTest.MeasureSemantics
@@ -57,6 +62,8 @@ public import VCVioTest.ModuleAPI.Counting
 public import VCVioTest.ModuleAPI.Heap
 public import VCVioTest.MonadProbability
 public import VCVioTest.OracleComp.AdaptiveMeasure
+public import VCVioTest.OracleComp.BudgetedPotential
+public import VCVioTest.OracleComp.EqDistTriple
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.SecurityFamily
@@ -84,9 +91,20 @@ public import VCVioTest.ProgramLogic.OracleWP
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
+public import VCVioTest.RandomOracleClassIndexedTape
 public import VCVioTest.RandomOracleControls
+public import VCVioTest.RandomOracleDefer
+public import VCVioTest.RandomOracleEncoded
 public import VCVioTest.RandomOracleFreshQuery
+public import VCVioTest.RandomOracleHiddenSeed
+public import VCVioTest.RandomOracleHiddenSeedCollapse
+public import VCVioTest.RandomOracleHitPotential
+public import VCVioTest.RandomOracleJointPotential
+public import VCVioTest.RandomOracleReadSet
+public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting
+public import VCVioTest.RandomOracleSettled
+public import VCVioTest.RandomOracleTouchRead
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
 public import VCVioTest.ReactiveNetwork

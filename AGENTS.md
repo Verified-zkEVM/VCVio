@@ -69,9 +69,15 @@ The repo also includes a first-class lattice cryptography library under `Lattice
 - `Extern/`: native FFI surface — the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them. No proof library may import it; the backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
 - `LatticeCrypto/`: lattice-specific algebra, hardness assumptions, scheme definitions, security theorems, and concrete implementations.
 - `HashSig/`: hash-based signatures — SLH-DSA (SPHINCS+, FIPS 205) proof-level specs,
-  component-level FIPS conformance results, and security-facing interfaces (no unforgeability
-  theorem or complete FIPS conformance result yet). Peer of `LatticeCrypto/`; depends on
-  `VCVio`/`ToMathlib` but nothing in those imports it back.
+  component-level FIPS conformance results, and an EUF-CMA bound in the classical random-oracle
+  model with three oracles (the tweakable hash, `Hmsg`, `PRFmsg`): `securityTarget_two_one`,
+  per public seed and averaged over seed distributions. A model of the SHAKE parameter sets over a
+  single SHAKE256 random oracle on byte strings is stated (`shakeRomScheme`); answering its oracle
+  with SHAKE256 gives the library's FIPS 205 SHAKE internal algorithms
+  (`shakeRomScheme_map_shakeAnswer`), which are checked against pinned NIST ACVP vectors at
+  SLH-DSA-SHAKE-128f. There is no forgery bound in that single-oracle model yet (the faithfulness
+  step), no SUF-CMA bound and no complete FIPS conformance result.
+  Peer of `LatticeCrypto/`; depends on `VCVio`/`ToMathlib` but nothing in those imports it back.
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
 - `VCVioWidgets/`: optional widget experiments and visualizations.
@@ -430,6 +436,8 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
   [`docs/design/slh-dsa-fips205-generalization.md`](docs/design/slh-dsa-fips205-generalization.md)
 - **SLH-DSA implementation status, stale-plan corrections, and remaining slices**:
   [`docs/design/slh-dsa-status-and-roadmap.md`](docs/design/slh-dsa-status-and-roadmap.md)
+- **SLH-DSA classical random-oracle bound, its accounting, and leanVM's 127-bit proof**:
+  [`docs/design/slh-dsa-classical-rom-bound.md`](docs/design/slh-dsa-classical-rom-bound.md)
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
 - **Converting code written against the removed discrete `Pr[…]` API**: [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)

@@ -62,8 +62,14 @@ infrastructure and some tooling and automation remain under active development.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
 - `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
 - `HashSig/` contains hash-based signatures: proof-level specifications, component-level FIPS 205
-  conformance results, and security-facing interfaces for SLH-DSA. Neither an unforgeability
-  theorem nor a complete FIPS conformance result is proved yet; see
+  conformance results, and security results for SLH-DSA. SLH-DSA has a proved quantitative EUF-CMA
+  bound in the classical random-oracle model with three oracles (the tweakable hash, `Hmsg` and
+  `PRFmsg`), per public seed and averaged over seed distributions (`securityTarget_two_one`). A
+  model of the SHAKE parameter sets over a single SHAKE256 random oracle on byte strings is stated
+  (`shakeRomScheme`); answering its oracle with SHAKE256 gives the library's FIPS 205 SHAKE internal
+  algorithms (`shakeRomScheme_map_shakeAnswer`), which are checked against pinned NIST ACVP vectors
+  at SLH-DSA-SHAKE-128f. A forgery bound in that single-oracle model (the faithfulness step), an
+  SUF-CMA bound and a complete FIPS conformance result are not proved; see
   `docs/design/slh-dsa-status-and-roadmap.md`.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
