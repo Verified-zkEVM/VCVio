@@ -1,19 +1,18 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
 
-public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.BodyResampling
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.DrawCollectingBody
 
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: DeferredCoupling
 
-The deferred-coupling reduction: the ghost-blind bad event is dominated by the
-deferred-draw run, whose drawn and signed prefixes, expected length and attempt
-count are bounded here (the attempt-count law).
+The deferred-coupling reduction: the ghost-blind bad event is dominated by the bad
+event of the deferred-draw run (`ghostBlind_bad_le_deferredDraw`).
 
 Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
 transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` assembles
@@ -45,12 +44,12 @@ variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
 variable (adv : SignatureAlg.UnforgeableAdversary
   (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
-/-! ### Stage 3a: the deferred-coupling reduction (Piece A)
+/-! ### The deferred-coupling reduction
 
 The eager ghost-blind bad marginal reduces, through the deferred-draw handler `deferredDrawImpl`,
 to the deferred run's bad marginal:
 
-* **Piece A** (`ghostBlind_bad_le_deferredDraw`): a *pointwise coupling* of the eager ghost-blind
+* `ghostBlind_bad_le_deferredDraw` is a *pointwise coupling* of the eager ghost-blind
   run with the deferred-draw run, established on the pointwise mono skeleton
   `relTriple_simulateQ_run_mono` carrying the state invariant `deferredCoupleInv` (real cache and
   signed list equal; ghost domain covered by the drawn-commitment list; bad-flag ordered). The
@@ -200,7 +199,7 @@ theorem deferredCouple_run {γ : Type} (pk : Stmt) (sk : Wit)
       exact ih p₂.1 p₁.2 p₂.2 hinv'
 
 omit [SampleableType Stmt] in
-/-- **Piece A: the ghost-blind → deferred coupling.** The ghost-blind run's bad marginal is at most
+/-- **Ghost-blind → deferred coupling.** The ghost-blind run's bad marginal is at most
 the deferred-draw run's bad marginal, from any pair of `deferredCoupleInv`-related start states.
 
 Reads off the bad-flag ordering component of the invariant from the run coupling
@@ -216,22 +215,6 @@ theorem ghostBlind_bad_le_deferredDraw {γ : Type}
   OracleComp.ProgramLogic.Relational.prEvent_le_of_relTriple
     (deferredCouple_run ids M maxAttempts pk sk oa s₁ s₂ hinv)
     (fun _ _ hp => hp.2.2.2)
-
-/-! ### Attempt-count law: the tight redraft of the deferral count
-
-The firing event tests reads against the *actual* (rejected) drawn list, whose draws are skewed by
-the rejection conditioning `commit | reject`. The `drawList`-game RHS, by contrast, draws *raw*
-`Prod.fst <$> ids.commit pk sk`. A reject-count `kn = drawnlist.length` is therefore *too small* to
-dominate the firing (the residual was false-as-stated with that `kn`). The sound count is the total
-*attempt* count, which over-counts each query's rejected draws by the accepting attempt's one fresh
-raw draw and whose mean is exactly `qSrem/(1-p)`.
-
-The attempt count is recovered *without a new state field* as `(drawn-list growth) + (signed-list
-growth)`: every signing query increments the signed-message list by exactly one (in
-`deferredDrawImpl`'s sign branch) and the drawn list by its rejected-attempt count. Their sum
-dominates the per-query attempt count and has the clean charge `∑_{a≤maxAttempts} p^a ≤ 1/(1-p)`,
-combining the tight reject bound (`tsum_prEvent_run_ghostSignDrawBody_mul_length_le_tight`, the
-`∑_{a<n} p^(a+1)` rejects) with the unconditional `+1` (signed list). -/
 
 end scaffold
 

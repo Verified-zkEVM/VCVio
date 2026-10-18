@@ -12,9 +12,8 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Projectio
 # Ghost-layer machinery for Fiat-Shamir with aborts: BodyBounds
 
 Real-versus-reprogrammed signing-body bounds: the within-signing-query
-collision budget, per-attempt collision and abort bounds, the deferred-sampling
-(lazy) ghost read step and handler, the two body-level cores of the Sign → Prog
-hop, and the per-target ghost-membership charge route.
+collision budget, per-attempt collision and abort bounds, and the two body-level cores of
+the Sign → Prog hop.
 
 Part of the hybrid signing-body development for the CMA-to-NMA reduction;
 `VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Bodies` opens the
@@ -220,35 +219,6 @@ lemma prEvent_commit_hit_le (pk : Stmt) (sk : Wit) {ε : ℝ}
     _ ≤ ∑ w ∈ S, ENNReal.ofReal ε := h_sum_le
     _ = (S.card : ℝ≥0∞) * ENNReal.ofReal ε := by simp [Finset.sum_const, nsmul_eq_mul]
     _ ≤ QueryCache.enncard c * ENNReal.ofReal ε := mul_le_mul' h_card_le le_rfl
-
-/-! ### Deferred-sampling read step (lazy ghost firing)
-
-The eager ghost handler `ghostHybridImpl … true` pre-populates the ghost cache during
-signing and reads it deterministically, so an adversarial read at a ghost point flips the
-bad flag with mass `1`. That deterministic flip is *not* amortized by `enncard · ε`, which
-is why the charged-step premise of `prEvent_bad_simulateQ_run_le_expectedQuerySlack`
-fails for the eager run.
-
-The fix is deferred sampling: postpone each rejected attempt's commitment draw to read
-time. A read at point `(msg, w')` then redraws the `pending` deferred commitments and fires
-iff one of them equals `w'`. Under the pointwise guessing bound `hGuess`, each redraw lands
-on `w'` with probability `≤ ε`, so the union bound over `pending` redraws gives the per-read
-charge `pending · ε` — exactly the `R s · ε` shape the accumulator's charged-step premise
-demands, with `R s := enncard (ghost cache) = pending`. `lazyGhostFire` is that read step
-and `prEvent_lazyGhostFire_true_le` is its charge bound. -/
-
-/-! ### Deferred-sampling (lazy) ghost-instrumented hybrid handler
-
-`lazyGhostHybridImpl` is the deferred-sampling counterpart of `ghostHybridImpl … true`.
-It carries the *same* layered-cache-plus-flag state `GhostState`, and signs with the same
-`ghostSignBody` (so the ghost layer records the same per-attempt programmings and grows by
-the same amount). The only change is the adversarial random-oracle read step: instead of
-the eager deterministic ghost lookup that flips the bad flag with mass `1`, the read draws
-`lazyGhostFire` over the *pending count* `enncard (ghost cache)` and fires the bad flag with
-probability `≤ enncard (ghost cache) · ε` (the deferred-sampling charge
-`prEvent_lazyGhostFire_true_le_enncard`). The answer to the adversary is taken from the
-real layer via `roStep`, independently of the fire draw. This is the handler for which the
-charged-step premise of `prEvent_bad_simulateQ_run_le_expectedQuerySlack` holds. -/
 
 /-! ### The two body-level cores of the Sign → Prog hop -/
 
@@ -503,20 +473,5 @@ lemma tsum_prEvent_run_progSignBody_mul_enncard_le (pk : Stmt) (sk : Wit) (msg :
             add_le_add_right this _
         _ = QueryCache.enncard c + (1 + ENNReal.ofReal p_abort * S) := by
             rw [add_assoc]
-
-/-! ### Charge route: per-target ghost-membership increment (sign step)
-
-The eager bad event fires when an adversarial read hits the ghost cache. The charge route
-bounds the bad probability by the *averaged* ghost-membership charge of a *fixed* read
-target `mc`, tracked inductively across the run. The signing step is the only step that
-writes to the ghost layer, and the lemma below is its effect on that per-target charge.
-
-The key correctness move (the one that removes the rejection skew of the eager↔lazy
-comparison) is to **drop the rejection event**: a rejected attempt writes `(msg, ws.1)` to
-the ghost layer, so it creates a *new* hit at `mc` only when `ws.1 = mc.2` and `msg = mc.1`;
-charging that draw against `hGuess` directly gives `Pr{let ws ← commit}[ws.1 = mc.2] ≤ ε` (no
-`1/Pr{…}[reject]` conditioning). An *accepted* attempt only `uncacheQuery`-removes a ghost point, so
-it can only *decrease* the membership charge. Summed over the `≤ ∑_{a<n} pᵃ` expected attempts the
-charge rises by `≤ (∑_{a<n} pᵃ) · ε` above the starting `gh`-membership. -/
 
 end FiatShamirWithAbort

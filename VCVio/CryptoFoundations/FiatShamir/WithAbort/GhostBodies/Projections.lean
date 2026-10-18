@@ -12,8 +12,7 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.GhostLaye
 # Ghost-layer machinery for Fiat-Shamir with aborts: Projections
 
 Projections of the ghost-instrumented run onto both hybrid games
-(`ghostHybridImpl_proj_prog`, `ghostHybridImpl_proj_trans`), ghost-value
-independence of the ghost-blind step, and the ghost-domain invariant
+(`ghostHybridImpl_proj_prog`, `ghostHybridImpl_proj_trans`) and the ghost-domain invariant
 `ghostHybridImpl_preserves_signed_inv`.
 
 Part of the hybrid signing-body development for the CMA-to-NMA reduction;
@@ -126,17 +125,6 @@ lemma ghostHybridImpl_run_sign (progSide : Bool) (pk : Stmt) (sk : Wit)
           ((M × Commit →ₒ Chal).QueryCache × (M × Commit →ₒ Chal).QueryCache) =>
         (alc.1, ((alc.2, msg :: s.1.2), s.2))) <$>
         (ghostSignBody ids M pk sk msg maxAttempts).run s.1.1 := rfl
-
-/-! ### Ghost-value independence of the ghost-blind step (the value-free foundation)
-
-The single structural fact powering the read-bound spine: in the ghost-blind
-run the stored ghost *values* are pure write-only side-data. `blindStepProj` forgets exactly
-the ghost layer, retaining the run's observable component — the step output, the real cache,
-the signed-message list, and the bad flag. `blindStepProj_map_ghostBlindImpl_indep` proves
-that this observable projection of one ghost-blind step is *independent of the ghost-layer
-values*: any two input ghost layers with the same key domain (same `none`-pattern) produce the
-same projected step. The bad flag, the only ghost-derived datum that survives the projection,
-fires on ghost-cache *membership* alone, so it depends on the domain, never on the values. -/
 
 omit [SampleableType Stmt] in
 /-- Per-step overlay projection: each step of the Prog-side ghost-instrumented handler

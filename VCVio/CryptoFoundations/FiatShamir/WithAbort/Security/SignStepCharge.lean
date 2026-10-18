@@ -1,19 +1,19 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
 
-public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.TapeFactorization
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.ValueFreeCharge
 
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: SignStepCharge
 
 The per-signing-step coincidence charges: the constant-length body charge of
 `ghostSignDrawBody` (its `succ` step and the continuation form), and the charge of a
-non-tape signing step against the read multiplicity of its rejected draws.
+signing step of the read-recording run against the read multiplicity of its rejected draws.
 
 Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
 transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` assembles
@@ -47,7 +47,7 @@ variable (adv : SignatureAlg.UnforgeableAdversary
   (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
 omit [SampleableType Stmt] in
-/-- **One step of the constant-length body charge (the genuine per-attempt induction step).** The
+/-- **One step of the constant-length body charge (the per-attempt induction step).** The
 `succ` case of `ghostSignDrawBody_continuation_charge`: peel the head commit draw `ws` (kept
 *averaged* — the head `ε`-kernel needs the full `ids.commit` marginal, a per-`ws` bound is false),
 the challenge and the response, and case on the accept/reject branch. On *accept* the body records
@@ -511,7 +511,7 @@ Proved by induction on `n`:
     gate (`1[reject] ≤ 1`) — necessary because `ws.1` and the reject decision `f(ws.2, c)` are
     *correlated* (the prover state `ws.2` determines both the commit and the accept decision), so a
     gated kernel would skew the `ws.1` marginal. After value-substitution
-    (`deferredDrawRead_run_sum_count_dl_invariant` moves `ws.1` out of the continuation's drawn
+    (`deferredDrawRead_run_count_dl_invariant` moves `ws.1` out of the continuation's drawn
     list) and the marginal `ε`-kernel `tsum_prEvent_commit_mul_count_le`, the ungated head is
     `≤ ε · z'.readlist.length ≤ ε · (rl.length + qH)`, paid by the unconditional `+1`;
   * the **recursive** charge `Σ_{ws} commit(ws) · 1[reject(ws.2)] · (rec body charge)` *keeps* the
@@ -557,7 +557,7 @@ theorem ghostSignDrawBody_continuation_charge {γ : Type}
 omit [SampleableType Stmt] in
 /-- **The sign-step value-free charge — the probabilistic core of the ghost-read bound.**
 This is the single-query step of the inline-run induction
-`readRecord_expected_pairs_nontape_general` at a *signing* query `Sum.inr msg`. The signing body
+`readRecord_expected_pairs_general` at a *signing* query `Sum.inr msg`. The signing body
 `ghostSignDrawBody` draws `maxAttempts` fresh commitments inline, records the *rejected* ones into
 the drawn list, and runs the continuation `ob` from the post-body state; the goal bounds the
 resulting expected pair count by the `s`-based pre-existing term plus `ε` times the `s`-based
@@ -581,8 +581,7 @@ value-substitution lemma `deferredDrawRead_run_count_dl_invariant` makes this pr
 continuation's expected `readlist.count w` is invariant under the start drawn list, so the read list
 is independent of every rejected draw's *value*. Combined with the body's draws being independent of
 *reach* (a position is reached iff the earlier attempts rejected, which is determined by the earlier
-draws — the body tape factorization `evalDistEq_ghostSignDrawBody_eq_drawList_tapeSignBody` exhibits
-this), each rejected draw charges its continuation read-multiplicity at the full marginal
+draws), each rejected draw charges its continuation read-multiplicity at the full marginal
 `Pr{let x ← Prod.fst <$> commit}[x = ·] ≤ ε` (drop the reject indicator `≤ 1` on the
 value-substituted, hence fixed, read list — no rejection-conditioning skew). The body's single
 unconditional signing query (`+1`) pays the full-marginal head charge, and the read list `⊥` the
@@ -601,7 +600,7 @@ prefix monotonicities `deferredDrawRead_run_drawn_prefix` / `deferredDrawRead_ru
 the gap between the start slack and the post-body slack is exactly `alc.1.2.length + 1` (the body's
 rejected draws plus the single signing query), which the body's `+1` term covers. The continuation
 run's full mass (`OracleComp.tsum_prEvent_eq_one`) makes the constant-length factor `L₀` exact. -/
-theorem nontape_signStep_charge {γ : Type}
+theorem signStep_pair_charge {γ : Type}
     (qH : ℕ) (ε p_abort : ℝ) (_hp₀ : 0 ≤ p_abort) (_hp : p_abort < 1) (hε : 0 ≤ ε)
     (pk : Stmt) (sk : Wit)
     (hGuess : ∀ cm : Commit, Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = cm] ≤ ENNReal.ofReal ε)

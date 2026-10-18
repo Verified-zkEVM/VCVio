@@ -12,7 +12,7 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.BodyBound
 # Ghost-layer machinery for Fiat-Shamir with aborts: NMAHandler
 
 The layered ghost-tagged NMA handler, programming accepted transcripts
-into the ghost layer, with the live-read / sign-program collision event.
+into the ghost layer, and its overlay projection onto the single-cache hybrid.
 
 Part of the hybrid signing-body development for the CMA-to-NMA reduction;
 `VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Bodies` opens the
@@ -37,10 +37,10 @@ variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
 /-! ## Layered ghost-tagged NMA handler
 
 The NMA bridge (`hybridSimRun_le_managedRun_verify`) couples the single-cache simulated
-hybrid against the linked managed run.  The obstruction recorded there is that the single
+hybrid against the linked managed run.  The difficulty is that the single
 hybrid cache does not, on its own, record whether a point entered by a *live RO read* or by
-the *signing simulation's programming* (`signProgramCont`).  We resolve this exactly as in
-the Prog → Trans hop: run the hybrid on an enriched, layered cache state
+the *signing simulation's programming* (`signProgramCont`).  As in the Prog → Trans hop,
+the bridge runs the hybrid on an enriched, layered cache state
 `((baseCache, ghostCache), signed)` that tags each entry as live-read (base) vs
 signing-programmed (ghost).  The base oracles write live RO reads to `baseCache`; the
 signing body's `signProgramCont` writes the accepted-transcript programming to `ghostCache`.
@@ -49,7 +49,8 @@ On that layered state the partition *is* a function of the state, so the overlay
 `((base, ghost), signed) ↦ (overlayCache base ghost, signed)` back to the plain single-cache
 hybrid is a per-step state projection in the sense of
 `OracleComp.map_run_simulateQ_eq_of_query_map_eq`.  This section builds the layered handler
-and proves that overlay projection (sub-lemma (a) of the bridge). -/
+and proves that overlay projection; the projection onto the linked managed run is in
+`Security/NMAReduction.lean`. -/
 
 /-- Ghost-layer programming continuation: like `signProgramCont`, but the accepted
 transcript's challenge is written to the *ghost* layer of a `(base, ghost)` cache pair.
@@ -145,7 +146,7 @@ abbrev NmaGhostState (M Commit Chal : Type) : Type :=
 the linked managed run, which is keyed by the sum spec `unifSpec + (M × Commit →ₒ Chal)`. The
 uniform-query slots are empty (the runtime forwards uniform queries through `unifFwdImpl`
 without caching), and the random-oracle slots carry the base entries. This is the left
-component of the linked-run projection `proj₂` for sub-lemma (b). -/
+component of the linked-run projection `proj2`. -/
 @[expose] def baseEmbed (base : (M × Commit →ₒ Chal).QueryCache) :
     (unifSpec + (M × Commit →ₒ Chal)).QueryCache :=
   QueryCache.ofFn fun
@@ -243,7 +244,7 @@ every ghost-layer entry's message component has been recorded in the signed list
 NMA analogue of `ghostHybridImpl_preserves_signed_inv`: the base oracles never write the ghost
 layer, and the signing oracle records the signed message before programming the ghost layer at
 a point whose message component equals that signed message (`simGhostSignBody_support_ghost`).
-This invariant is the gate for the linked-run coupling (sub-lemma (b)): it certifies that on a
+This invariant is the gate for the linked-run coupling: it certifies that on a
 random-oracle step a live read hits the base/outer layer, while the ghost layer only carries
 signing-programmed points. -/
 lemma ghostNmaImpl_preserves_signed_inv (pk : Stmt) (sk : Wit)
@@ -296,7 +297,7 @@ lemma ghostNmaImpl_run_signed_inv (pk : Stmt) (sk : Wit) {β : Type}
   exact absurd rfl hq
 
 omit [SampleableType Stmt] in
-/-- **Sub-lemma (a): overlay projection of the layered NMA handler.** Each step of the
+/-- **Overlay projection of the layered NMA handler.** Each step of the
 layered ghost-tagged handler `ghostNmaImpl`, projected by overlaying the ghost layer onto the
 base layer, equals the corresponding step of the plain single-cache hybrid handler
 `hybridBaseImpl + hybridSignImpl simSignBody`. -/
@@ -343,29 +344,8 @@ lemma ghostNmaImpl_proj_hybrid (pk : Stmt) (sk : Wit)
     · exact (hybridSignImpl_run M (simSignBody M maxAttempts sim pk sk) msg
         (overlayCache M s.1.1 s.1.2) s.2).symm
 
-/-! ### Live-read / sign-program collision event (sub-lemma (b) reframe)
-
-The per-step state-projection equality `hproj2_sign` is *provably impossible*: a
-sign-programmed transcript point `(msg, w)` can coincide with a point already written into the
-base (live-read) layer by a prior adversary random-oracle query, and the projection
-`proj₂ ((base, ghost), signed) = (baseEmbed base, overlayCache base ghost)` cannot recover the
-linked managed handler's separate inner/outer cache split from `(base, ghost)` alone at such a
-point (a `(msg, w)` in the overlay could have arrived via a live read — present in the outer
-cache — or via signing — absent from the outer cache — and the layered state records no flag
-distinguishing the two).
-
-`signLiveCollisionState` is the exact state-level event distinguishing the two runs: at the
-*start of a sign step* for message `msg`, the simulator's accepted commitment `w` lands on a
-point `(msg, w)` already live in the base layer. Off this event (`base (msg, w) = none` for the
-drawn `w`), the sign step's projection *is* a function of the state and the per-step coupling is
-exact. On this event the two runs diverge, and — because the headline bound
-`hybridSimRun_le_managedRun_verify` is an *inequality* (`≤`) — the divergence may be paid on the
-bad side via the commit-guessing charge `prEvent_commit_hit_le` (the base layer's live-read
-count times the per-commit guessing bound `ε`), exactly the charge class already used for the
-ghost-read collision in `prEvent_ghostRead_bad_le`. -/
-
 omit [SampleableType Stmt] in
-/-- **Sub-lemma (a), full-run form.** The full simulated run of the layered ghost-tagged NMA
+/-- **Overlay projection, full-run form.** The full simulated run of the layered ghost-tagged NMA
 handler `ghostNmaImpl`, projected by overlaying the ghost layer onto the base layer, equals
 the plain single-cache simulated hybrid run.  This lifts the per-step projection
 `ghostNmaImpl_proj_hybrid` through `OracleComp.map_run_simulateQ_eq_of_query_map_eq`. -/
@@ -387,7 +367,7 @@ lemma map_run_simulateQ_ghostNmaImpl_overlay {β : Type} (pk : Stmt) (sk : Wit)
     (ghostNmaImpl_proj_hybrid M maxAttempts sim pk sk) oa s
 
 omit [SampleableType Stmt] in
-/-- **Sub-lemma (a) at the initial empty layered state.** Starting from the empty layered
+/-- **Overlay projection at the initial empty layered state.** Starting from the empty layered
 cache `((∅, ∅), [])`, the overlay-projected layered run equals the plain single-cache hybrid
 run started from `(∅, [])` (using `overlayCache _ ∅ = id` to simplify the projected initial
 state). -/

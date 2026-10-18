@@ -1,19 +1,20 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
 
-public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.CouplingEngine
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.GhostBlindReduction
 
 /-!
-# EUF-CMA for Fiat-Shamir with aborts: BodyResampling
+# EUF-CMA for Fiat-Shamir with aborts: DrawCollectingBody
 
-The per-body half of the tape factorization: a signing body's attempt draws
-resample as a pre-drawn list consumed by `tapeSignBody`, with the expected-length
-bounds of the ghost draw body and the body-level coupling `signBody_couple`.
+The signing-body layer of the deferred-draw coupling: the expected number of
+commitments recorded by the draw-collecting body `ghostSignDrawBody`, the deferred-draw
+handler `deferredDrawImpl`, and the body-level coupling `signBody_couple` between the eager
+ghost signing body and the draw-collecting one.
 
 Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
 transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` assembles
@@ -45,41 +46,19 @@ variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
 variable (adv : SignatureAlg.UnforgeableAdversary
   (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
-/-! ### Body-level tape resampling (the per-body half of the tape factorization)
+/-! ### Draw-collecting signing body
 
-The draw-collecting signing body `ghostSignDrawBody` draws each attempt's commitment *inline*. The
-genuine fold-lift content of the ghost-read bound is to front-load every interleaved per-attempt
-draw into one independent block, so the drawn *values* factor away from the value-free adversarial
-read points. The body-level half of that program — recasting one signing body's inline draws as
-consumption from a *pre-drawn* tape — is proved here as a distributional equality
-`evalDistEq_ghostSignDrawBody_eq_drawList_tapeSignBody`:
-
-`((ghostSignDrawBody … n).run re) =ᵈ (drawList (ids.commit pk sk) n >>= tapeSignBody … tape)`.
-
-Pre-drawing the `n`-block of full `(Commit × PrvState)` commitment draws and consuming them
-head-first (`tapeSignBody`) is distributionally identical to drawing them inline: the control flow
-(accept/reject, via the inline `uniformSample`/`respond`) reads the *same* tape values, and the
-unused suffix on an early accept is discarded. The proof is a structural induction on `n` that, at
-each attempt, commutes the recursive front block `drawList n` past the inline
-`uniformSample`/`respond` draws (`OracleComp.EvalDistEq.bind_bind_swap`, the i.i.d. resampling
-step) and matches the reject-branch recursion to the inductive hypothesis.
-
-This is the local, per-body `bind`-commutation. Its lift across the *opaque adversary*
-`simulateQ (oa)` fold — the interleaved per-query draw blocks all commuting to the front, past the
-adaptive read points — is `evalDistEq_deferredDrawRead_eq_drawList_tapeDrawRead` in
-`Security/TapeFactorization.lean`. -/
+`ghostSignDrawBody` draws each attempt's commitment inline and records the rejected ones.
+The bound below controls how many it records on average; `signBody_couple` matches its draws
+with those of the eager ghost signing body `ghostSignBody`. -/
 
 omit [SampleableType Stmt] in
-/-- **Tight expected drawn-list length of the draw-collecting signing body.** Sharper companion to
-`tsum_prEvent_run_ghostSignDrawBody_mul_length_le`: the expected number of *recorded* (rejected)
-commitments of one `ghostSignDrawBody` run is at most the *reject-gated* geometric sum
-`∑_{a<n} ofReal p^(a+1)` (each summand starts at `p^1`, not `p^0`). The first attempt's commitment
-is recorded only on a *rejection* (probability `≤ p`); the accepting attempt records nothing. This
-is the tight reject-count bound — `∑_{a<n} p^(a+1) ≤ p/(1-p)` — that the attempt-count law of the
-redrafted residual needs: combined with the unconditional `+1` per signing query (the signed-message
-list always grows by one), it gives the clean per-query charge `∑_{a≤n} p^a ≤ 1/(1-p)`, whereas the
-loose bound `∑_{a<n} p^a` already saturates `1/(1-p)` for the rejects alone and cannot absorb the
-extra `+1`. -/
+/-- **Expected drawn-list length of the draw-collecting signing body.** The expected number
+of recorded (rejected) commitments of one `ghostSignDrawBody` run is at most the
+reject-gated geometric sum `∑_{a<n} ofReal p^(a+1)`: an attempt's commitment is recorded only
+on a rejection (probability `≤ p`), and the accepting attempt records nothing. Together with
+the one signed message each signing query adds, this gives the per-query attempt-count
+charge `∑_{a≤n} p^a ≤ 1/(1-p)`. -/
 lemma tsum_prEvent_run_ghostSignDrawBody_mul_length_le_tight (pk : Stmt) (sk : Wit) (msg : M)
     {p_abort : ℝ}
     (hAbort : Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort) :

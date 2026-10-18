@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
@@ -9,12 +9,12 @@ module
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.FirstMoment
 
 /-!
-# EUF-CMA for Fiat-Shamir with aborts: TapeFactorization
+# EUF-CMA for Fiat-Shamir with aborts: ValueFreeCharge
 
-The fold-level tape factorization: every interleaved signing query's attempt-draw
-block commutes to the front of the opaque adversary fold, so the run distributes as
-a pre-drawn tape followed by a tape-consuming run. Also the count invariants of the
-deferred draw-and-read run.
+The two value-free ingredients of the per-pair charge: the atomic charge of one fresh
+commitment draw against a list independent of it (`tsum_prEvent_commit_mul_count_le`),
+and the invariance of the recorded read list of the deferred draw-and-read run under its
+start drawn list (`deferredDrawRead_run_count_dl_invariant`).
 
 Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
 transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` assembles
@@ -46,34 +46,15 @@ variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
 variable (adv : SignatureAlg.UnforgeableAdversary
   (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
-/-! ### Fold-level tape factorization (reusable front-loading infrastructure)
+/-! ### Value-free charge ingredients
 
-The body-level half of the tape factorization
-(`evalDistEq_ghostSignDrawBody_eq_drawList_tapeSignBody`)
-recasts *one* signing body's inline attempt draws as consumption from a pre-drawn tape. The
-*fold-level* half — built here — lifts that across the opaque adversary `simulateQ (oa)` fold: every
-interleaved signing query's draw block commutes to the very front, so the whole run distributes as
-
-  `drawList (ids.commit pk sk) L >>= fun tape => (simulateQ tapeDrawReadImpl oa).run (s, tape)`,
-
-a single independent front draw block of `L := maxAttempts · #signing-queries` commitments followed
-by a tape-*consuming* run. Once the draws are front-loaded, the recorded drawn list is a function of
-the tape and the value-free read list is a function of the non-tape randomness, so the read list is
-independent of the tape.
-
-The tape-consuming handler `tapeDrawReadImpl` carries a draw tape in its state; a signing query
-consumes the first `maxAttempts` tape entries (running `tapeSignBody` on them and dropping them)
-instead of drawing inline, while reads/uniform behave exactly as `deferredDrawReadImpl`. The
-fold equality is proved by `inductionOn oa`: at a read/uniform step the answer is independent of the
-tape so the front draw block commutes trivially; at a signing step the per-body factorization
-splices in the body's `drawList maxAttempts` block, which then commutes to the front of the
-remaining tape via the i.i.d. resampling commute `OracleComp.EvalDistEq.bind_bind_swap`.
-
-This representation is an alternative to the inline (non-tape) charge that the headline uses; see
-`readRecord_expected_pairs_tape_le` and `readRecord_expected_pairs_le`. -/
+A fresh commitment draw contributes at most `ε` per slot of any list independent of it. The
+recorded read list of the read-recording run is such a list: its reads answer via `roStep` on
+the real layer and never from the drawn (rejected) values, so its law does not depend on the
+drawn list. -/
 
 omit [SampleableType Stmt] in
-/-- **The atomic value-free charge (the irreducible probabilistic kernel).** One fresh raw
+/-- **The atomic value-free charge.** One fresh raw
 commitment draw `w ← ids.commit pk sk`, *independent of* a value-free list `rl`, contributes
 expected multiplicity `E[rl.count w.1] ≤ ε · rl.length`: each of the `rl.length` slots of `rl` is
 hit by the fresh draw with probability `Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = slot] ≤ ε`
@@ -81,8 +62,8 @@ hit by the fresh draw with probability `Pr{let x ← Prod.fst <$> ids.commit pk 
 
 This is the single source of the `ε` in the ghost-read bound. It is purely the per-draw mass bound
 combined with the independence of the draw from the (value-free) read list; the structural content
-of the full charge is to exhibit each recorded rejected draw of the tape run in exactly this
-independent-of-the-readlist position (the value-substitution at rejected tape positions). -/
+of the full charge is to exhibit each recorded rejected draw in exactly this
+independent-of-the-read-list position. -/
 lemma tsum_prEvent_commit_mul_count_le {C P : Type} [DecidableEq C]
     (commit : ProbComp (C × P)) (rl : List C) (ε : ℝ)
     (hGuess : ∀ cm : C, Pr{let x ← Prod.fst <$> commit}[x = cm] ≤ ENNReal.ofReal ε) :

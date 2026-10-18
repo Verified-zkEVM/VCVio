@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
@@ -11,10 +11,9 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.ReadRecordin
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: FirstMoment
 
-The first-moment reduction scaffolding for the coincidence-count bound: expected
-drawn-list and attempt-count bounds for the deferred draw-and-read handler, its
-never-fail and prefix invariants, and the list-counting identities the later charges
-use.
+Supporting bounds for the coincidence-count bound: the deterministic read-list length
+bound and the expected attempt count of the deferred draw-and-read handler, its never-fail
+and prefix invariants, and the list-counting identities the later charges use.
 
 Part of the CMA-to-NMA security development for the Fiat-Shamir-with-aborts
 transform; `VCVio.CryptoFoundations.FiatShamir.WithAbort.Security` assembles
@@ -46,31 +45,28 @@ variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
 variable (adv : SignatureAlg.UnforgeableAdversary
   (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
-/-! ### First-moment reduction scaffolding for the coincidence-count bound
+/-! ### Supporting bounds for the coincidence-count bound
 
-The numeric residual `readRecord_expected_coincidences_le` reduces, by elementary arithmetic, to a
-single value-free cross-term atom. The reduction chain:
+`readRecord_expected_coincidences_le` reduces, by elementary arithmetic, to a single
+value-free per-pair charge:
 
 * the coincidence count is dominated by the pair count
-  `Σ_{rc ∈ readlist} drawnlist.count rc` (`List.countP_le_sum_count_mem`);
-* the *number of recorded reads* is bounded **deterministically** by the read-query budget `qH`
-  (`deferredDrawReadImpl_run_readlist_length_le`), so the read-recording run's readlist length is at
-  most `s.readlist.length + qH`;
-* the expected drawn-list length of the read-recording run is at most
-  `s.drawnlist.length + qSrem · (1/(1-p))` (`deferredDrawRead_run_expected_drawnlist_length_le`, the
-  read-recording counterpart of `deferredDraw_run_expected_length_le`);
-* the genuine content is then the **value-free per-pair atom**
-  `readRecord_expected_pairs_nontape_le`: the expected pair count is at most `ε` times the expected
-  `readlist.length · drawnlist.length`, because each recorded drawn commit is a fresh raw
-  `Prod.fst <$> ids.commit` draw (mass `≤ ε`) and is independent of the value-free recorded
-  read-commit list.
+  `Σ_{rc ∈ readlist} drawnlist.count rc` (`countP_mem_le_sum_count`);
+* the number of recorded reads is bounded deterministically by the read-query budget `qH`
+  (`deferredDrawReadImpl_run_readlist_length_le`);
+* the expected attempt count `drawnlist.length + (signedlist.length - l.length)` of the
+  read-recording run is at most `qSrem · (1/(1-p))` (`deferredDrawRead_attemptKn_mean_le`);
+* the value-free per-pair charge `readRecord_expected_pairs_le` bounds the expected
+  pair count by `ε` times the read budget times the expected attempt count, because each
+  recorded drawn commit is a fresh raw `Prod.fst <$> ids.commit` draw (mass `≤ ε`) independent
+  of the value-free recorded read-commit list.
 
-`readRecord_expected_coincidences_le` chains these with the deterministic read bound
-(`readlist.length ≤ qH+1` from the empty start) and the final-arithmetic conversion.
-
-The tape factorization (`tapeDrawReadImpl`, `evalDistEq_deferredDrawRead_eq_drawList_tapeDrawRead`,
-`readRecord_expected_pairs_tape_le`, `readRecord_expected_pairs_le`) is a separate, reusable
-front-loading representation of the same run; it is not on the live path of the chain above. -/
+The attempt count, not the reject count `drawnlist.length`, is the one that dominates the pair
+count: the drawn values are rejection-conditioned, while the per-pair charge draws raw
+commitments, so each signing query's accepting attempt must be counted as well. The attempt
+count is recovered without a new state field as drawn-list growth plus signed-list growth
+(each signing query adds exactly one signed message), and its per-query charge is
+`∑_{a≤maxAttempts} p^a ≤ 1/(1-p)`. -/
 
 omit [SampleableType Stmt] in
 /-- **General geometric attempt-count fold.** For any number of terms `n`, the geometric sum
@@ -201,9 +197,7 @@ omit [SampleableType Stmt] in
 /-- **Per-step expected attempt-count growth of the read-recording handler.** One step of
 `deferredDrawReadImpl` grows the expected combined size `drawnlist.length + signedlist.length` by at
 most `1/(1-p)` on a signing query and by `0` on a uniform or random-oracle-read query (which leave
-both lists untouched). The read-recording counterpart of
-`deferredDrawImpl_step_expected_attemptCount_le`; the recorded read-commit list never affects the
-drawn or signed lists, so the charge is identical. -/
+both lists untouched); the recorded read-commit list never affects the drawn or signed lists. -/
 lemma deferredDrawReadImpl_step_expected_attemptCount_le (pk : Stmt) (sk : Wit)
     {p_abort : ℝ} (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (hAbort : Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort)
@@ -277,8 +271,7 @@ omit [SampleableType Stmt] in
 /-- **Run-level expected attempt count of the read-recording run.** By induction on `oa`, the
 expected combined size `drawnlist.length + signedlist.length` of the read-recording run from a start
 state `s` is at most `(s.drawnlist.length + s.signedlist.length) + qSrem · (1/(1-p))`, where `qSrem`
-bounds the number of signing queries. The read-recording counterpart of
-`deferredDraw_run_expected_attemptCount_le`. Subtracting the start signed-list length `l.length`
+bounds the number of signing queries. Subtracting the start signed-list length `l.length`
 gives the attempt-count mean `≤ qSrem/(1-p)` used by the sound `#attempts`-form coincidence
 bound. -/
 theorem deferredDrawRead_run_expected_attemptCount_le {γ : Type} (pk : Stmt) (sk : Wit)
@@ -448,8 +441,8 @@ omit [SampleableType Stmt] in
 /-- **Read-recording attempt-count mean.** The constructed attempt count
 `(drawnlist.length) + (signedlist.length - l.length)` (= #rejects + #signing-queries, the count that
 soundly dominates the consumed-attempt positions) of the read-recording run from the empty-draw
-start `((((re, l), []), false), [])` has mean at most `qSrem/(1-p)`. Mirrors
-`deferredDraw_attemptKn_mean_le`: recover the total combined size by adding back `l.length`, valid
+start `((((re, l), []), false), [])` has mean at most `qSrem/(1-p)`. Proof: recover the total
+combined size by adding back `l.length`, valid
 because `l` is a signed-list prefix (`deferredDrawRead_run_signed_prefix`); bound by the run-level
 attempt-count fold `deferredDrawRead_run_expected_attemptCount_le`, then cancel `l.length` (the
 run has mass `1`, `OracleComp.tsum_prEvent_eq_one`). -/
