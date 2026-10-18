@@ -59,6 +59,10 @@ jobs:
       - name: Test downstream probability codemod
         run: python3 scripts/test-migrate-native-probability.py
 
+      # The classifier of a migration dry run (`scripts/migration-dry-run.sh`).
+      - name: Test migration dry-run classifier
+        run: python3 scripts/test-classify-migration-errors.py
+
       - name: Check optional complexity backend isolation
         run: |
           bash scripts/test-complexity-backend-isolation.sh

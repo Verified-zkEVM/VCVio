@@ -125,6 +125,19 @@ theorem prEvent_bind_bind_swap
       prEvent (my >>= fun b ↦ mx >>= fun a ↦ f a b) := by
   rw [prEvent_def, prEvent_def, evalDist_bind_bind_swap]
 
+/-- Independent oracle computations commute inside an event of their two outputs, the normal
+form of `Pr{let a ← mx; let b ← my}[p a b]`, a bind followed by a map of the selector. Only the
+query answers must be countable; the two output types need neither countability nor a
+measurable structure. -/
+theorem prEvent_bind_map_swap
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, Countable (spec.Range t)]
+    [OracleSpec.AnswerMeasure spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (p : α → β → Prop) :
+    Pr{let a ← mx; let b ← my}[p a b] = Pr{let b ← my; let a ← mx}[p a b] := by
+  simp only [← bind_pure_comp]
+  exact prEvent_bind_bind_swap mx my fun a b ↦ pure (p a b)
+
 /-- Independent oracle computations commute before an event of their continuation under a uniform
 oracle specification. -/
 theorem prEvent_bind_bind_swap_of_uniform
