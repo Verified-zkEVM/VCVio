@@ -281,9 +281,9 @@ satisfy:
 
 **Term 1: `Adv^{collision}_{Falcon-PSF}(B_coll)`.**
 The GPV reduction is tight on the distinct-preimage branch: `B_coll` runs the ideal-scheme
-adversary `A'` internally with a simulated signing oracle (sign-then-hash strategy) and extracts two distinct short
-Falcon preimages for the same programmed random-oracle value. There is no `Q_hash` loss
-factor in this collision-style target.
+adversary `A'` internally with a simulated signing oracle (sign-then-hash strategy) and
+extracts two distinct short Falcon preimages for the same programmed random-oracle value. There
+is no `Q_hash` loss factor in this collision-style target.
 
 **Term 2: `(qSign + qHash) · Adv^{exact-match}_{Falcon-PSF}(B_exact)`.**
 The explicit multi-target loss for the exact-match branch. The reduction guesses one of
