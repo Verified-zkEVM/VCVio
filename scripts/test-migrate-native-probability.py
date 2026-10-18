@@ -278,22 +278,41 @@ class EventLemmaTests(unittest.TestCase):
         self.assertEqual(migrate(source)[0], expected)
 
     def test_singleton_shapes(self):
-        self.assertMigrates("rw [probOutput_bind_eq_tsum, tsum_probOutput_eq_one', probOutput_ne_top]",
+        self.assertMigrates("rw [probOutput_bind_eq_tsum, tsum_probOutput_eq_one', "
+                            "probOutput_ne_top]",
                             "rw [OracleComp.prEvent_bind_eq_tsum, OracleComp.tsum_prEvent_eq_one, "
-                            "prEvent_ne_top]")
-        self.assertMigrates("probOutput_eq_zero_of_not_mem_support hx, probEvent_le_one, probOutput_pure",
-                            "prEvent_eq_zero_of_not_mem_support hx, prEvent_le_one, prEvent_pure")
-        self.assertMigrates("evalSPMF_bind, evalSPMF_map, evalSPMF_bind_congr_left oa f g h",
-                            "evalDist_bind_of_discrete, evalDist_map_of_discrete, "
-                            "EvalDistEq.bind_right oa f g h")
+                            "(prEvent_ne_top _)]")
+        self.assertMigrates("probOutput_eq_zero_of_not_mem_support hx, probEvent_le_one, "
+                            "probOutput_pure",
+                            "(prEvent_eq_zero_of_not_mem_support _) hx, (prEvent_le_one _), "
+                            "prEvent_pure")
+
+    def test_explicit_computation_renames(self):
+        self.assertMigrates("exact le_antisymm probEvent_le_one h",
+                            "exact le_antisymm (prEvent_le_one _) h")
+        self.assertMigrates("probEvent_le_one.trans h", "(prEvent_le_one _).trans h")
+        self.assertMigrates("-- see `probOutput_ne_top`", "-- see `prEvent_ne_top`")
+        self.assertMigrates("rw [probOutput_bind_eq_sum_fintype]", "rw [(prEvent_bind_eq_sum_fintype _)]")
+        self.assertMigrates("evalSPMF_bind, evalSPMF_map",
+                            "evalDist_bind_of_discrete, evalDist_map_of_discrete")
+        # A replacement whose arguments differ is reported, never rewritten: the qualified,
+        # four-argument call would otherwise turn into a name that does not exist.
+        out, items = migrate("OracleComp.DeferredSampling.evalSPMF_bind_congr_left _ _ _ h")
+        self.assertEqual(out, "OracleComp.DeferredSampling.evalSPMF_bind_congr_left _ _ _ h")
+        self.assertIn("EvalDistEq.bind_right mx hfg", items[0][2])
         self.assertMigrates("SPMFSemantics.withStateOracle, SPMFSemantics m, "
                             "evalSPMF_map_eq_of_evalSPMF_eq h f",
                             "SemanticsVia.withStateOracle, SemanticsVia m, EvalDistEq.map h f")
 
+    def test_relational_event_bound(self):
+        self.assertMigrates("probEvent_le_of_relTriple_imp h himp",
+                            "prEvent_le_of_relTriple h himp")
+
     def test_qualified_occurrences_keep_one_namespace(self):
         self.assertMigrates("OracleComp.probOutput_bind_eq_tsum oa g p",
                             "OracleComp.prEvent_bind_eq_tsum oa g p")
-        self.assertMigrates("OracleComp.tsum_probOutput_bind_mul", "OracleComp.tsum_prEvent_bind_mul")
+        self.assertMigrates("OracleComp.tsum_probOutput_bind_mul",
+                            "OracleComp.tsum_prEvent_bind_mul")
 
     def test_real_total_variation_is_reported(self):
         _, items = migrate("le_trans (tvDist_bind_right_le k a b) (tvDist_nonneg _ _)")
@@ -303,9 +322,25 @@ class EventLemmaTests(unittest.TestCase):
                                  "`tvDist_nonneg`: `measureTVDist_nonneg` (real); `measureETVDist` "
                                  "is `ℝ≥0∞`-valued"]))
 
+    def test_only_structures_on_every_answer_type_are_reported(self):
+        _, items = migrate("theorem t {_ : MeasurableSpace (spec.Range u)} [h : ∀ t,\n"
+                           "    MeasurableSpace (spec.Range t)] : True := by\n"
+                           "  let _ : MeasurableSpace (spec.Range u) := ⊤\n"
+                           "  · letI : MeasurableSpace (unifSpec.Range n) := ⊤\n    trivial")
+        self.assertEqual([line for _, line, _ in items], [2])
+
+    def test_mathlib_total_variation_is_not_a_legacy_name(self):
+        _, items = migrate("exact Measure.tvDist_triangle _ _ _ h₁ h₂ h₃ |>.trans "
+                           "(MeasureTheory.Measure.etvDist_le_one _ _ h₁ h₂)")
+        self.assertEqual(items, [])
+
     def test_no_name_is_both_renamed_and_reported(self):
-        self.assertEqual([k for k in codemod.RENAMES if k in codemod.LEGACY_HINTS], [])
-        self.assertEqual([k for k in codemod.RENAMES if k in codemod.REPORT_NAMES], [])
+        renamed = {**codemod.RENAMES, **codemod.EXPLICIT_COMPUTATION_RENAMES}
+        self.assertEqual(len(renamed),
+                         len(codemod.RENAMES) + len(codemod.EXPLICIT_COMPUTATION_RENAMES))
+        self.assertEqual([k for k in renamed if k in codemod.LEGACY_HINTS], [])
+        self.assertEqual([k for k in renamed if k in codemod.REPORT_NAMES], [])
+        self.assertEqual([k for k, v in renamed.items() if v in renamed], [])
 
 
 class RepositoryTests(unittest.TestCase):
