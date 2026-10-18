@@ -280,6 +280,35 @@ theorem euf_cma_to_nma
   gcongr
   exact prEvent_hybridExp_sim_le_managedRoNmaAdvantage ids hr M maxAttempts sim adv
 
+omit [SampleableType Stmt] in
+/-- **CMA-to-NMA reduction for Fiat-Shamir with aborts**, at the plain EUF-NMA interface:
+under the hypotheses of `euf_cma_to_nma`, the CMA advantage is bounded by the EUF-NMA
+advantage of the cache-forgetting reduction `simulatedEufNmaAdv` plus `cmaToNmaLoss`. This
+is `euf_cma_to_nma` composed with the bridge
+`managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment`, and it is the form consumed
+by a scheme-specific EUF-NMA hardness reduction. -/
+theorem euf_cma_to_eufNma
+    (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk) (hhvzk : ids.HVZK sim (ENNReal.ofReal ζ_zk))
+    (qS qH : ℕ) (ε p_abort δ : ℝ)
+    (hε : 0 ≤ ε) (hδ : 0 ≤ δ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
+    (Good : Stmt → Wit → Prop)
+    (hGood : Pr{let xw ← hr.gen}[¬ Good xw.1 xw.2] ≤ ENNReal.ofReal δ)
+    (hGuess : ∀ pk sk, Good pk sk → ∀ cm : Commit,
+      Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = cm] ≤ ENNReal.ofReal ε)
+    (hAbort : ∀ pk sk, Good pk sk →
+      Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort)
+    (hQ : ∀ pk, FiatShamir.signHashQueryBound M
+      (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
+    SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
+      SignatureAlg.eufNmaAdvantage (runtime M)
+        (simulatedEufNmaAdv ids hr M maxAttempts sim adv) +
+      ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
+  have h := euf_cma_to_nma ids hr M maxAttempts sim adv ζ_zk hζ hhvzk qS qH ε p_abort δ
+    hε hδ hp₀ hp Good hGood hGuess hAbort hQ
+  rwa [SignatureAlg.managedRoNmaAdvantage,
+    managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment,
+    ← SignatureAlg.eufNmaAdvantage] at h
+
 omit [SampleableType Stmt] [SampleableType Chal] in
 /-- Cache-invariant companion to `simulatedNmaAdv`: the reduction issues at most `qH`
 live hash queries (the signing simulation samples transcripts using only uniform
