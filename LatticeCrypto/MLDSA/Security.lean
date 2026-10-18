@@ -31,7 +31,12 @@ The two computational assumptions are:
 
 The statistical loss `L` from the CMA-to-NMA reduction via Fiat-Shamir with aborts is:
 
-  `L = 2·qS·(qH + qS + 1)·ε/(1-p) + qS·ε·(qS+1)/(2·(1-p)²) + qS·ζ_zk + δ`
+  `L = 2·qS·(qH + qS + 1)·ε/(1-p) + qS·ε·(qS+1)/(2·(1-p)²) + qS·ζ_zk/(1-p) + δ`
+
+This is the loss of `FiatShamirWithAbort.cmaToNmaLoss` for a per-attempt HVZK simulator
+(`IdenSchemeWithAbort.HVZK`). The `1/(1-p)` factor on the `qS·ζ_zk` term comes from gluing that
+simulator across the restart loop; with a simulator for the accepted-transcript distribution
+(the paper's acHVZK notion) the term is `qS·ζ_zk`, as in the paper's Theorem 4.
 
 The proof follows the structure:
 1. EUF-CMA → EUF-NMA via the Fiat-Shamir with aborts CMA-to-NMA reduction (Theorem 3)
@@ -277,7 +282,7 @@ effective random-oracle budget, yielding:
 
   `L = 2·qS·(qH + qS + 1)·ε/(1-p)
      + qS·ε·(qS+1)/(2·(1-p)²)
-     + qS·ζ_zk
+     + qS·ζ_zk/(1-p)
      + δ`
 
 This is exactly `FiatShamirWithAbort.cmaToNmaLoss qS (qH + qS) ...`. -/
@@ -297,11 +302,11 @@ variable [nttOps : NTTRingOps] [DecidableEq prims.High] {M : Type}
 open scoped Classical in
 /-- MLWE distinguisher of the ML-DSA EUF-CMA reduction (Theorem 4 with Lemma 7, CRYPTO 2023).
 
-**Placeholder.** The intended construction answers the adversary's signing queries with the HVZK
-simulator `sim` (the with-aborts CMA-to-NMA step) and feeds the resulting NMA forger to the key-swap
-distinguisher `distinguisherBShort` of `LatticeCrypto.MLDSA.SecurityNMA`. That construction is
-typed against the concrete problem `mldsaMLWEShort`, so the problem argument here will be
-specialized once the with-aborts CMA-to-NMA simulator exists. -/
+**Placeholder.** The intended construction feeds the with-aborts CMA-to-NMA reduction
+`FiatShamirWithAbort.simulatedEufNmaAdv` (which answers the adversary's signing queries with the
+HVZK simulator `sim`) to the key-swap distinguisher `distinguisherBShort` of
+`LatticeCrypto.MLDSA.SecurityNMA`. That distinguisher is typed against the concrete problem
+`mldsaMLWEShort`, so the construction needs the problem argument specialized to it. -/
 noncomputable def eufCmaMLWEReduction
     (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
     (maxAttempts : ℕ)
@@ -319,11 +324,11 @@ open scoped Classical in
 /-- SelfTargetMSIS adversary of the ML-DSA EUF-CMA reduction (Theorem 4 with Lemma 7,
 CRYPTO 2023).
 
-**Placeholder.** The intended construction answers the adversary's signing queries with the HVZK
-simulator `sim` (the with-aborts CMA-to-NMA step) and runs the extractor `extractorC` of
-`LatticeCrypto.MLDSA.SecurityNMA` on the resulting NMA forger. That extractor is typed against the
-concrete problem `mldsaSTMSIS`, so the problem argument here will be specialized once the
-with-aborts CMA-to-NMA simulator exists. -/
+**Placeholder.** The intended construction runs the extractor `extractorC` of
+`LatticeCrypto.MLDSA.SecurityNMA` on the with-aborts CMA-to-NMA reduction
+`FiatShamirWithAbort.simulatedEufNmaAdv` (which answers the adversary's signing queries with the
+HVZK simulator `sim`). That extractor is typed against the concrete problem `mldsaSTMSIS`, so the
+construction needs the problem argument specialized to it. -/
 noncomputable def eufCmaSTMSISReduction
     (stmsis : SelfTargetMSIS.Problem
       (TqMatrix p.k p.l) (Response p prims)
@@ -342,22 +347,27 @@ noncomputable def eufCmaSTMSISReduction
 open scoped Classical in
 /-- **Main Security Theorem (EUF-CMA, Theorem 4, CRYPTO 2023).**
 
-**WARNING: this is a placeholder statement with no security content.** Two defects must be
+**WARNING: this is a placeholder statement with no security content.** Three defects must be
 fixed before it is proved:
 
 1. The bound is stated for the named reductions `eufCmaMLWEReduction` and
    `eufCmaSTMSISReduction`, which are `sorry` placeholders over arbitrary MLWE and
    SelfTargetMSIS problems. The final statement must specialize the problems to `mldsaMLWEShort`
    and `mldsaSTMSIS` of `LatticeCrypto.MLDSA.SecurityNMA` and define the reductions as
-   `distinguisherBShort` and `extractorC` applied to an explicit with-aborts CMA-to-NMA
-   simulator, which does not exist yet.
+   `distinguisherBShort` and `extractorC` applied to the with-aborts CMA-to-NMA simulator
+   `FiatShamirWithAbort.simulatedEufNmaAdv`.
 2. `ε`, `p_abort`, and `δ : ℝ` are unconstrained signed reals (only `hp : p_abort < 1` is
    assumed). Inherited from `FiatShamirWithAbort.cmaToNmaLoss`, the loss term
-   `2qS(qH+1)ε/(1-p) + qS·ε(qS+1)/(2(1-p)²) + qS·ζ_zk + δ` can be made arbitrarily negative
+   `2qS(qH+1)ε/(1-p) + qS·ε(qS+1)/(2(1-p)²) + qS·ζ_zk/(1-p) + δ` can be made arbitrarily negative
    by taking `ε`, `δ` very negative; `ENNReal.ofReal` then clamps it to `0`. In the final
    statement `ε`, `p_abort`, `δ` should be nonnegative and identified with the concrete
    commitment guessing probability, abort probability, and regularity failure probability of
    the ML-DSA identification scheme.
+3. The statement carries none of the hypotheses under which the with-aborts reduction
+   `FiatShamirWithAbort.euf_cma_to_eufNma` holds: `qS` and `qH` do not bound the queries of
+   `adv` (no `FiatShamir.signHashQueryBound` hypothesis), and there is no good-key event with
+   its failure bound `δ`, commitment-guessing bound `ε` and honest abort bound `p_abort`.
+   These must be added, or derived for the ML-DSA parameters, before the reduction applies.
 
 The proof is intentionally deferred. The statement also needs to be specialized to the
 actual ML-DSA parameters (eliminating the explicit quantitative HVZK simulator hypothesis)
@@ -370,7 +380,7 @@ oracle queries, with `B := eufCmaMLWEReduction … A` (against MLWE) and
   `Adv^{EUF-CMA}_{ML-DSA}(A) ≤ Adv^{MLWE}_{k,l,Sη}(B) + Adv^{SelfTargetMSIS}_{G,k,l+1,ζ}(C) + L`
 
 where:
-- `L = 2·qS·(qH+qS+1)·ε/(1-p) + qS·ε·(qS+1)/(2·(1-p)²) + qS·ζ_zk + δ` is
+- `L = 2·qS·(qH+qS+1)·ε/(1-p) + qS·ε·(qS+1)/(2·(1-p)²) + qS·ζ_zk/(1-p) + δ` is
   `MLDSA.cmaToNmaLoss`
 - `ε` is the commitment guessing probability
 - `p` is the effective abort probability

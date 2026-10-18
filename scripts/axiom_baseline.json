@@ -2,8 +2,6 @@
  ["Falcon.euf_cma_security",
   "Falcon.euf_cma_security_bytes40",
   "Falcon.keyGenFromSeed",
-  "FiatShamirWithAbort.euf_cma_bound",
-  "FiatShamirWithAbort.euf_cma_bound_perfectHVZK",
   "GPVHashAndSign.euf_cma_collision_bound",
   "GPVHashAndSign.euf_cma_split_bound",
   "GPVHashAndSign.forgery_yields_collision",
