@@ -328,12 +328,10 @@ such as `SecurityGame.secureAgainst_of_reduction`, take the reduction as a funct
 `reduce : Adv → Adv'` with an efficiency hypothesis `isPPT A → isPPT' (reduce A)`. That hypothesis
 cannot be stated for an adversary that exists only inside an existential.
 
-When the reduction is not implemented yet, do not fall back to `∃`. Either:
-
-- define it as a `sorry` placeholder and state the bound for that definition, as
-  `GPVHashAndSign.reduction` does; or
-- leave the theorem as a placeholder whose docstring warns that the statement has no security
-  content until a reduction is named.
+When the reduction is not implemented yet, do not fall back to `∃`, and do not state a
+placeholder theorem whose docstring concedes it has no security content. Define the reduction as
+a `sorry` placeholder and state the bound for that definition, as `GPVHashAndSign.reduction`
+does.
 
 `∃` remains appropriate for mathematical objects that the argument does not need to be efficient,
 such as a witness in a relation, an index in a support, or a key pair in the image of key
