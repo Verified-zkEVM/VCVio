@@ -273,12 +273,15 @@ noncomputable def verify (pk : PublicKey p) (msg : List Byte) (sig : Signature) 
 /-- The Falcon signature scheme as a `GPVHashAndSign` instantiation, parameterized by
 a salt type `Salt`.
 
-This connects Falcon to the generic GPV framework, enabling the generic EUF-CMA
-security theorem to be applied. The message type is `List Byte` and the random oracle
-maps `(salt, message)` to elements of `R_q`.
+The GPV construction draws one salt per signing query, queries the random oracle at
+`(salt, message)`, and answers with a single draw of `falconPSF.trapdoorSample`, with no norm
+check and no retry. The message type is `List Byte` and the random oracle maps
+`(salt, message)` to elements of `R_q`; the hash is not bound to the public key.
 
-The GPV construction internally samples a fresh salt per signing query and queries
-the random oracle at `(salt, message)`, matching the Falcon+ convention.
+The generic GPV EUF-CMA endpoints need trapdoor-sampler correctness `CorrectAt`, which the
+non-rejecting `falconPSF` does not meet, so the EUF-CMA theorems of
+`LatticeCrypto.Falcon.Security` apply to this scheme through an ideal PSF and a
+sampler-transport hypothesis.
 
 The Falcon specification uses `Salt = Bytes 40` (40 random bytes = 320 bits),
 chosen as `λ + log₂(Q_s)` for `λ = 256` and `Q_s = 2^64` (Section 2.2.2). -/

@@ -367,6 +367,14 @@ The drawing loop and its measure-valued length integrals live in
 integrating: the pool's value type needs no measurable space. The stopping and exhaustion laws
 use the same negative-hypergeometric recursion.
 
+First-success rejection loops live in `VCVio.OracleComp.Constructions.RetryLoop`:
+`ProbComp.firstSome attempt n` runs an `Option`-valued attempt up to `n` times and
+`ProbComp.retryToDefault` totalizes it. `ProbComp.measureTVDist_firstSome_le_geometric`
+accumulates a per-attempt total-variation gap over the expected retry count, and
+`ProbComp.measureTVDist_retryToDefault_le_pow` bounds a loop whose attempt resamples its
+accept-conditional (`ProbComp.ResamplesTo`) by the exhaustion mass `q ^ n`. Distances are real
+total variation `measureTVDist` under a discrete measurable structure on the outputs.
+
 `ToMathlib.MeasureTheory.Integral.Quadratic` specializes upstream Hölder to Cauchy–Schwarz,
 retaining the total-mass factor for arbitrary measures and bounding it for subprobability
 measures. Its quadratic bound requires only almost-everywhere measurable acceptance and

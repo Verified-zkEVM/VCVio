@@ -261,8 +261,8 @@ monolithically. The attempt-level headline `euf_cma_security` is the quantitativ
 form; see the module docstring.
 
 For any EUF-CMA adversary `A` making at most `qSign` signing queries and `qHash`
-random-oracle queries against the Falcon+ signature scheme with salt type `Salt`, and
-any ideal-scheme adversary `A'` to which `A` transports at cost `ε_sampler` (the
+random-oracle queries against the single-draw GPV scheme `falconSignatureAlg` with salt type
+`Salt`, and any ideal-scheme adversary `A'` to which `A` transports at cost `ε_sampler` (the
 `hTransport` hypothesis), the GPV reductions of `A'` at the domain sampler `domainSample`,
 
 - `B_coll = GPVHashAndSign.reduction idealPSF hr (List Byte) Salt A' domainSample` for the
@@ -272,23 +272,25 @@ any ideal-scheme adversary `A'` to which `A` transports at cost `ε_sampler` (th
 
 satisfy:
 
-  `Adv^{EUF-CMA}_{Falcon+}(A)`
+  `Adv^{EUF-CMA}_{falconSignatureAlg}(A)`
   `  ≤ Adv^{collision}_{Falcon-PSF}(B_coll)`
   `    + (qSign + qHash) · Adv^{exact-match}_{Falcon-PSF}(B_exact)`
   `    + (qSign + qHash)² / (2 · |Salt|) + ε_sampler`
 
 ### Error terms
 
-**Term 1: `Adv^{collision}_{Falcon-PSF}(B)`.**
-The GPV reduction is tight on the distinct-preimage branch: `B` runs `A` internally with
-a simulated signing oracle (sign-then-hash strategy) and extracts two distinct short
+**Term 1: `Adv^{collision}_{Falcon-PSF}(B_coll)`.**
+The GPV reduction is tight on the distinct-preimage branch: `B_coll` runs the ideal-scheme
+adversary `A'` internally with a simulated signing oracle (sign-then-hash strategy) and extracts two distinct short
 Falcon preimages for the same programmed random-oracle value. There is no `Q_hash` loss
 factor in this collision-style target.
 
 **Term 2: `(qSign + qHash) · Adv^{exact-match}_{Falcon-PSF}(B_exact)`.**
 The explicit multi-target loss for the exact-match branch. The reduction guesses one of
-the programmed random-oracle entries and tries to show that reproducing the simulator's
-hidden short preimage there is hard.
+the programmed random-oracle entries and tries to reproduce the challenger's hidden short
+preimage there. Its advantage is at most the ideal sampler's guessing probability for every
+reduction (`GPVHashAndSign.programmedPreimageAdvantage_le_trapdoorGuessingProbability`), which
+`euf_cma_collision_security` uses to replace it by `idealSamplerGuessBound`.
 
 **Term 3: `(qSign + qHash)² / (2 · |Salt|)`.**
 Salt collision probability over every salt appearing in a signing query or a
@@ -309,8 +311,8 @@ vacuous at Falcon's query budget.
    and a birthday collision term.
 2. Reinterpret the collision branch as an adversary for the Falcon PSF collision problem
    sampled from the same key distribution (`collisionFindingAdvantage_eq_ntruPSF`).
-3. Leave the exact-match branch explicit in the theorem statement until it is discharged by
-   a Falcon-specific min-entropy / one-way lemma.
+3. Leave the exact-match branch explicit in the theorem statement; it is bounded by the ideal
+   sampler's min-entropy, not by a hardness assumption.
 4. Account for finite precision via the `hTransport` sampler-transport hypothesis.
 
 **On the GPV laws (`hCorrect`/`hReg`).** These are taken on the support of `hr.gen` (honestly
