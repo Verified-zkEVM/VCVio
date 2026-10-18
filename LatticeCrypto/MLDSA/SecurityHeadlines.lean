@@ -347,8 +347,6 @@ theorem euf_cma_security_of_nma_short
     (hAbort : ∀ pk sk, Good pk sk →
       Pr{let x ← (identificationSchemeShort p prims).honestExecution pk sk}[x = none] ≤
         ENNReal.ofReal p_abort)
-    (hAbortSim : ∀ pk sk, Good pk sk →
-      Pr{let x ← sim pk}[x = none] ≤ ENNReal.ofReal p_abort)
     (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts))
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
@@ -376,29 +374,15 @@ theorem euf_cma_security_of_nma_short
         ENNReal.ofReal
           (FiatShamirWithAbort.cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
   classical
-  -- Step 1: CMA advantage ≤ managed-RO NMA success of `simulatedNmaAdv` + loss.
-  have hcma := FiatShamirWithAbort.euf_cma_to_nma (identificationSchemeShort p prims) hr M
+  -- CMA advantage ≤ plain EUF-NMA advantage of `simulatedEufNmaAdv` + loss.
+  have hcma := FiatShamirWithAbort.euf_cma_to_eufNma (identificationSchemeShort p prims) hr M
     maxAttempts sim adv ζ_zk hζ hhvzk qS qH ε p_abort δ hε hδ hp₀ hp Good hGood hGuess
-    hAbort hAbortSim hQ
-  -- Step 2 (Option B bridge): managed-RO NMA success = plain EUF-NMA advantage of the
-  -- cache-forgetting reduction `simulatedEufNmaAdv`.
-  have hbridge := FiatShamirWithAbort.managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment
-    (identificationSchemeShort p prims) hr M maxAttempts sim adv
-  -- Step 3 (Lemma 7, short model): the plain EUF-NMA advantage is bounded by MLWE + STMSIS.
+    hAbort hQ
+  -- Lemma 7, short model: the plain EUF-NMA advantage is bounded by MLWE + STMSIS.
   have hnma := nma_security_short p prims mlwe maxAttempts hr hGen εbridge bridge hMlweBridge
     (FiatShamirWithAbort.simulatedEufNmaAdv (identificationSchemeShort p prims) hr M
       maxAttempts sim adv)
-  -- Assemble: advantage ≤ (managed = eufNma advantage ≤ MLWE + STMSIS) + loss.
-  refine le_trans hcma ?_
-  have hmanaged : SignatureAlg.managedRoNmaAdvantage (FiatShamirWithAbort.runtime M)
-        (FiatShamirWithAbort.simulatedNmaAdv (identificationSchemeShort p prims) hr M
-          maxAttempts sim adv) =
-      SignatureAlg.eufNmaAdvantage (FiatShamirWithAbort.runtime M)
-        (FiatShamirWithAbort.simulatedEufNmaAdv (identificationSchemeShort p prims) hr M
-          maxAttempts sim adv) := by
-    rw [SignatureAlg.managedRoNmaAdvantage, SignatureAlg.eufNmaAdvantage, hbridge]
-  rw [hmanaged]
-  exact add_le_add hnma le_rfl
+  exact le_trans hcma (add_le_add hnma le_rfl)
 
 open scoped Classical in
 /-- **EUF-CMA security of the commitment-carrying ML-DSA signature over seed-derived keys.**
@@ -438,8 +422,6 @@ theorem euf_cma_security_of_nma_fips
     (hAbort : ∀ pk sk, Good pk sk →
       Pr{let x ← (identificationScheme p prims).honestExecution pk sk}[x = none] ≤
         ENNReal.ofReal p_abort)
-    (hAbortSim : ∀ pk sk, Good pk sk →
-      Pr{let x ← sim pk}[x = none] ≤ ENNReal.ofReal p_abort)
     (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts))
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
@@ -468,36 +450,23 @@ theorem euf_cma_security_of_nma_fips
         ENNReal.ofReal
           (FiatShamirWithAbort.cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
   classical
-  -- Step 1: CMA advantage ≤ managed-RO NMA success of `simulatedNmaAdv` + loss.
-  have hcma := FiatShamirWithAbort.euf_cma_to_nma (identificationScheme p prims) hr M
+  -- CMA advantage ≤ plain EUF-NMA advantage of `simulatedEufNmaAdv` + loss.
+  have hcma := FiatShamirWithAbort.euf_cma_to_eufNma (identificationScheme p prims) hr M
     maxAttempts sim adv ζ_zk hζ hhvzk qS qH ε p_abort δ hε hδ hp₀ hp Good hGood hGuess
-    hAbort hAbortSim hQ
-  -- Step 2 (Option B bridge): managed-RO NMA success = plain EUF-NMA advantage.
-  have hbridge := FiatShamirWithAbort.managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment
-    (identificationScheme p prims) hr M maxAttempts sim adv
-  -- Step 3 (seed model): the plain EUF-NMA advantage is bounded by MLWE + STMSIS + PRG.
+    hAbort hQ
+  -- Seed model: the plain EUF-NMA advantage is bounded by MLWE + STMSIS + PRG.
   have hnma := nma_security_fips p prims mlwe maxAttempts hr hGen hrS hGenS εPRG hPRG εbridge
     bridge hMlweBridge
     (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims) hr M
       maxAttempts sim adv)
-  refine le_trans hcma ?_
-  have hmanaged : SignatureAlg.managedRoNmaAdvantage (FiatShamirWithAbort.runtime M)
-        (FiatShamirWithAbort.simulatedNmaAdv (identificationScheme p prims) hr M
-          maxAttempts sim adv) =
-      SignatureAlg.eufNmaAdvantage (FiatShamirWithAbort.runtime M)
-        (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims) hr M
-          maxAttempts sim adv) := by
-    rw [SignatureAlg.managedRoNmaAdvantage, SignatureAlg.eufNmaAdvantage, hbridge]
-  rw [hmanaged]
-  exact add_le_add hnma le_rfl
+  exact le_trans hcma (add_le_add hnma le_rfl)
 
 open scoped Classical in
 /-- `euf_cma_security_of_nma_fips` with the HVZK hypothesis discharged by the proved
 seed-model simulator: under the primitive laws `h_laws`, `idsWithAbort_hvzk` gives
 `hvzkSimulatorReal` at the bound `hvzkBound`, so the HVZK term of the loss is the proved
 quantity `(hvzkBound p prims).toReal` (the bound is a supremum of probabilities, hence finite)
-rather than a hypothesis, and the only simulator-side hypothesis left is the abort rate
-`hAbortSim` of `hvzkSimulatorReal` on good keys. -/
+rather than a hypothesis. -/
 theorem euf_cma_security_of_nma_fips_hvzkReal
     (h_laws : Primitives.Laws prims nttOps)
     (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
@@ -518,8 +487,6 @@ theorem euf_cma_security_of_nma_fips_hvzkReal
     (hAbort : ∀ pk sk, Good pk sk →
       Pr{let x ← (identificationScheme p prims).honestExecution pk sk}[x = none] ≤
         ENNReal.ofReal p_abort)
-    (hAbortSim : ∀ pk sk, Good pk sk →
-      Pr{let x ← hvzkSimulatorReal p prims pk}[x = none] ≤ ENNReal.ofReal p_abort)
     (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts))
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
@@ -553,7 +520,7 @@ theorem euf_cma_security_of_nma_fips_hvzkReal
     εPRG hPRG (hvzkSimulatorReal p prims) (hvzkBound p prims).toReal ENNReal.toReal_nonneg
     (by rw [ENNReal.ofReal_toReal hne]; exact idsWithAbort_hvzk p prims h_laws)
     qS qH ε p_abort δ hε hδ hp₀ hp Good hGood hGuess
-    hAbort hAbortSim adv hQ εbridge bridge hMlweBridge
+    hAbort adv hQ εbridge bridge hMlweBridge
 
 /-! ## Numerical EUF-CMA closure under uniform advantage bounds
 
@@ -735,8 +702,6 @@ theorem euf_cma_security_short_of_uniform_advantage_bounds
     (hAbort : ∀ n, ∀ pk sk, Good n pk sk →
       Pr{let x ← (identificationSchemeShort (p' n) (prims' n)).honestExecution pk sk}[x = none] ≤
         ENNReal.ofReal p_abort)
-    (hAbortSim : ∀ n, ∀ pk sk, Good n pk sk →
-      Pr{let x ← sim n pk}[x = none] ≤ ENNReal.ofReal p_abort)
     (adv : ∀ n, SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationSchemeShort (p' n) (prims' n)) (hr n) M'
         (maxAttempts n)))
@@ -780,7 +745,7 @@ theorem euf_cma_security_short_of_uniform_advantage_bounds
         (mlwe n) (maxAttempts n) (hr n) (hGen n)
         (sim n) (ζ_zk n) (hζ n) (hhvzk n)
         (qS n) (qH n) (ε n) p_abort (δ n) (hε n) (hδ n) hp₀ hp (Good n) (hGood n) (hGuess n)
-        (hAbort n) (hAbortSim n) (adv n) (hQ n) (εbridge n)
+        (hAbort n) (adv n) (hQ n) (εbridge n)
         (fun main => (hMlweBridge n main).choose) (fun main => (hMlweBridge n main).choose_spec)
     exact le_trans hb (add_le_add (add_le_add (add_le_add (hMlweBound n _) le_rfl)
       (hStmsisBound n _)) le_rfl)

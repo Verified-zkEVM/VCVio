@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
@@ -52,8 +52,7 @@ reduction (after Theorem 3, CRYPTO 2023), for a per-attempt HVZK simulator:
 where:
 - `qS` / `qH`: signing-oracle / adversarial random-oracle query bounds;
 - `ε`: per-key commitment-guessing probability bound (on good keys);
-- `p`: per-key, per-attempt abort probability bound (on good keys), for both the honest
-  prover and the simulator;
+- `p`: per-key, per-attempt abort probability bound of the honest prover (on good keys);
 - `ζ_zk`: total-variation error of the HVZK simulator for one signing **attempt**, over
   optional transcripts (`none` = abort), as in `IdenSchemeWithAbort.HVZK`;
 - `δ`: probability that key generation falls outside the good-key event.
@@ -63,8 +62,9 @@ the all-attempts-reprogram hybrid and in the accepted-only-reprogram hybrid, hen
 factor 2; the `qH + 1` accounts for the final verification query). The second term pays
 for collisions among the signing oracle's own commitments. The third term glues the
 per-attempt simulator across the restart loop, whose expected length is at most
-`1/(1-p)` (see `measureTVDist_firstSome_le_geometric`); a simulator for the accepted-transcript
-distribution itself (the paper's acHVZK notion) would shave this `1/(1-p)` factor. -/
+`1/(1-p)` (see `measureTVDist_firstSome_le_geometric`, applied with the honest loop's abort
+probability); a simulator for the accepted-transcript distribution itself (the paper's
+acHVZK notion) would shave this `1/(1-p)` factor. -/
 @[expose] noncomputable def cmaToNmaLoss (qS qH : ℕ) (ε p ζ_zk δ : ℝ) (_hp : p < 1) : ℝ :=
   2 * qS * (qH + 1) * ε / (1 - p) +
   qS * ε * (qS + 1) / (2 * (1 - p) ^ 2) +

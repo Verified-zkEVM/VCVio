@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
@@ -51,16 +51,19 @@ omit [SampleableType Stmt] in
 the accepted-only-reprogramming body and the simulated body are within total-variation
 distance `ζ_zk · (1 + q + ⋯ + q^(maxAttempts-1)) ≤ ζ_zk / (1 - q)` on their joint
 output-and-cache distribution, where `ζ_zk` bounds the per-attempt HVZK error and `q`
-the simulator's per-attempt abort probability.
+the honest prover's per-attempt abort probability.
 
 The cache programming is the same deterministic continuation on both sides
 (`signProgramCont`), so the bound reduces to `measureTVDist_firstSome_le_geometric` on the
-private restart loops. -/
+private restart loops. Total variation is symmetric, so the geometric factor may be
+driven by the abort probability of either loop; the honest one is used, so no separate
+abort bound on the simulator is needed. -/
 lemma measureTVDist_run_transSignBody_simSignBody_le
     [MeasurableSpace (Option (Commit × Resp) × (M × Commit →ₒ Chal).QueryCache)]
     (pk : Stmt) (sk : Wit) (hrel : rel pk sk = true) (msg : M)
     {ζ_zk : ℝ} (hζ : 0 ≤ ζ_zk) (hhvzk : ids.HVZK sim (ENNReal.ofReal ζ_zk))
-    {q : ℝ} (hq : Pr{let x ← sim pk}[x = none].toReal ≤ q) (hq0 : 0 ≤ q)
+    {q : ℝ} (hq : Pr{let x ← ids.honestExecution pk sk}[x = none].toReal ≤ q)
+    (hq0 : 0 ≤ q)
     (s : (M × Commit →ₒ Chal).QueryCache) :
     measureTVDist (StateT.run (transSignBody ids M maxAttempts pk sk msg) s)
         (StateT.run (simSignBody M maxAttempts sim pk sk msg) s) ≤
@@ -71,9 +74,10 @@ lemma measureTVDist_run_transSignBody_simSignBody_le
     exact ENNReal.toReal_mono ENNReal.ofReal_ne_top (hhvzk pk sk hrel)
   have hcore : measureTVDist (firstSome (ids.honestExecution pk sk) maxAttempts)
       (firstSome (sim pk) maxAttempts) ≤
-        ζ_zk * ∑ j ∈ Finset.range maxAttempts, q ^ j :=
-    measureTVDist_firstSome_le_geometric (ids.honestExecution pk sk) (sim pk)
-      hzk hq hq0 maxAttempts
+        ζ_zk * ∑ j ∈ Finset.range maxAttempts, q ^ j := by
+    rw [measureTVDist_comm]
+    exact measureTVDist_firstSome_le_geometric (sim pk) (ids.honestExecution pk sk)
+      (by rw [measureTVDist_comm]; exact hzk) hq hq0 maxAttempts
   have hrw : ∀ (loop : ProbComp (Option (Commit × Chal × Resp))),
       StateT.run (liftM loop >>= signProgramCont M msg) s =
         loop >>= fun r => StateT.run (signProgramCont M msg r) s := by
