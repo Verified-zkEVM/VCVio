@@ -24,8 +24,8 @@ pin fixes an exact value that a specific class of silent drift in the engine wou
   query, hashes one point twice, signs one message and forges on another, so that caching
   a uniform answer, forwarding a hash miss without caching, or programming the signing
   transcript at the wrong point moves the returned cache;
-* the Option-B erasure of the forgery's own verification point, both on the returned cache
-  of the probe and on the managed-RO NMA success of a replay adversary.
+* the erasure of the forgery's own verification point by `simulatedNmaAdv`, both on the
+  returned cache of the probe and on the managed-RO NMA success of a replay adversary.
 
 Every pin is a closed probability obtained by normalisation; nothing here is a security
 statement.
@@ -236,7 +236,7 @@ theorem probeRun_pin_sign_true :
 
 /-- The simulator accepts at commitment `false` (`1/4`): the transcript is programmed at
 `(false, false)`, and the forgery point `(true, false)` coincides with the cached live read,
-which Option B erases regardless of the live answer. -/
+which `simulatedNmaAdv` erases from the returned cache regardless of the live answer. -/
 theorem probeRun_pin_sign_false_erases :
     Pr{let x ← probeRun}[x = ⟨true, some (false, true), none, none, some true, none, none⟩]
       = 1 / 4 := by

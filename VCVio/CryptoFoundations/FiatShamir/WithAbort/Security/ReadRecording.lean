@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
@@ -48,8 +48,8 @@ variable (adv : SignatureAlg.UnforgeableAdversary
 /-! ### Read-recording handler: bad as a final-state predicate
 
 The deferred-draw run's bad flag is set at *read time*: a read fires when its target commitment is
-in the drawn list **as it stands at that read**. Because the drawn list only grows
-(`deferredDraw_run_drawn_prefix`), a read that hits the drawn-so-far list certainly hits the *final*
+in the drawn list **as it stands at that read**. Because the drawn list only grows, a read that hits
+the drawn-so-far list certainly hits the *final*
 drawn list, so the bad event is dominated by the final-state predicate "some recorded read-commit
 is in the final drawn list". The handler `deferredDrawReadImpl` records, in an extra `List Commit`
 component, the commitment `mc.2` of every adversarial read; its read step is otherwise identical to
@@ -59,7 +59,7 @@ it converts the *read-time* bad flag into the *final-state* membership predicate
 `∃ rc ∈ readlist, rc ∈ drawnlist`, which removes the read-time/final-state mismatch that obstructs a
 direct expectation bound. The recorded read commits are **value-free** (answers come from the real
 layer via `roStep`; the drawn *values* never feed the read points), which is what
-`Security/TapeFactorization.lean` charges against the recorded draws.
+`Security/ReadRecordBound.lean` charges against the recorded draws.
 
 Why a bespoke handler rather than generic query instrumentation. The framework's generic
 `QueryImpl` decorations (`withLogging`, `withTrace`/`withTraceBefore`, and cursor/path-style
@@ -238,7 +238,7 @@ read-hit predicate `∃ rc ∈ readlist, rc ∈ drawnlist` has probability at mo
 coincidence count* `E[#{ rc ∈ readlist : rc ∈ drawnlist }]`, the first moment of the number of
 recorded read-commits that lie in the drawn list.
 
-This is the elementary first-moment (Markov) step of the per-position route: a firing run has at
+This is the elementary first-moment (Markov) step: a firing run has at
 least one coincidence, so the indicator of the firing event is dominated by the (nonnegative,
 integer-valued) coincidence count, so the firing probability is at most the expected count by
 the Markov core `prEvent_le_tsum_prEvent_mul_cost`. The probabilistic content — bounding `E[count]`

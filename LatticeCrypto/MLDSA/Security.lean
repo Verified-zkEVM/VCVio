@@ -35,6 +35,11 @@ The statistical loss `L` from the CMA-to-NMA reduction via Fiat-Shamir with abor
 
   `L = 2·qS·(qH + qS + 1)·ε/(1-p) + qS·ε·(qS+1)/(2·(1-p)²) + qS·ζ_zk/(1-p) + δ`
 
+This is the loss of `FiatShamirWithAbort.cmaToNmaLoss` for a per-attempt HVZK simulator
+(`IdenSchemeWithAbort.HVZK`). The `1/(1-p)` factor on the `qS·ζ_zk` term comes from gluing that
+simulator across the restart loop; with a simulator for the accepted-transcript distribution
+(the paper's acHVZK notion) the term is `qS·ζ_zk`, as in the paper's Theorem 4.
+
 The proof follows the structure:
 1. EUF-CMA → EUF-NMA via the Fiat-Shamir with aborts CMA-to-NMA reduction (Theorem 3)
    plus `qS` extra random-oracle queries to convert standard `(w₁, z, h)` signatures into
@@ -303,6 +308,5 @@ reduction (at the loss `cmaToNmaLoss` above) with the EUF-NMA bound:
 
 Both are stated with nonnegativity side conditions on the statistical-loss parameters, so the
 bound cannot collapse. -/
-
 
 end MLDSA

@@ -12,8 +12,8 @@ public import LatticeCrypto.MLDSA.SecurityHeadlines
 
 `MLDSA.euf_cma_security_of_nma_short` is a conditional theorem.  Its hypothesis frontier bundles
 the key-generation pin (`hGen`), the HVZK simulator data (`sim`, `ζ_zk`, `hζ`,
-`hhvzk`), the good-key package (`Good`, `hGood`, `hGuess`, `hAbort`, `hAbortSim` at some
-`p_abort < 1`), the query bounds (`qS`, `qH`, `hQ`) on a CMA adversary, and the MLWE bridge
+`hhvzk`), the good-key package (`Good`, `hGood`, `hGuess`, `hAbort` at some `p_abort < 1`),
+the query bounds (`qS`, `qH`, `hQ`) on a CMA adversary, and the MLWE bridge
 (`εbridge`, `bridge`, `hMlweBridge`).  A conditional theorem asserts nothing if its hypotheses
 are jointly uninhabitable; this file rules that out by discharging every hypothesis
 **simultaneously**, at
@@ -33,8 +33,8 @@ The witness values are:
 * `sim := neverAbortSim` (constant non-`none` transcript) with `ζ_zk = 1`, discharged by
   `measureETVDist_le_one`;
 * `Good := honestNoAbortGood` — the pairs at which the honest prover never aborts — with
-  `p_abort = 0`: `hAbort` holds by definition of the event and `hAbortSim` because the simulator
-  never aborts; `hGood` holds at the trivial regularity budget `δ = 1`.  Whether
+  `p_abort = 0`: `hAbort` holds by definition of the event; `hGood` holds at the trivial
+  regularity budget `δ = 1`.  Whether
   `honestNoAbortGood` is satisfiable at a given parameter set is a quantitative completeness
   question (cf. `idsWithAbort_complete`) that the frontier does not require;
 * `ε = 1` for the commitment-guessing bound (`prEvent_le_one`);
@@ -66,8 +66,8 @@ variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
 /-! ## The witness data: simulator, good event, and trivial adversary -/
 
 /-- The never-aborting HVZK simulator: output the default transcript with probability one.  It
-discharges `hAbortSim` at `p_abort = 0` (`prEvent_none_neverAbortSim`) and the HVZK hypothesis
-at the trivial budget `ζ_zk = 1` (`neverAbortSim_hvzk`); it carries no zero-knowledge content. -/
+discharges the HVZK hypothesis at the trivial budget `ζ_zk = 1` (`neverAbortSim_hvzk`); it
+carries no zero-knowledge content. -/
 noncomputable def neverAbortSim :
     PublicKey p prims →
       ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)) :=
@@ -103,13 +103,6 @@ lemma neverAbortSim_hvzk :
       ⊤
     exact measureETVDist_le_one _ _
 
-omit nttOps [DecidableEq prims.High]
-  [SampleableType (CommitHashBytes p)] in
-/-- The never-aborting simulator indeed never aborts: the probability of `none` is zero. -/
-lemma prEvent_none_neverAbortSim (pk : PublicKey p prims) :
-    Pr{let x ← neverAbortSim p prims pk}[x = none] = 0 :=
-  prEvent_eq_zero_of_not_mem_support _ (by simp [neverAbortSim])
-
 omit [DecidableEq M] [Inhabited (Commitment p prims)]
   [Inhabited (Response p prims)]
   [SampleableType (CommitHashBytes p)] in
@@ -140,8 +133,8 @@ instances), any message type `M`, and any retry budget, every explicit hypothesi
 short-model CMA headline holds simultaneously at the witness values listed in the module
 docstring: the pinned generable relation (`hGen`), the
 HVZK package at `ζ_zk = 1`, the nonnegativity side conditions with `p_abort = 0 < 1`, the
-good-key package (`hGood` at `δ = 1`, `hGuess` at `ε = 1`, `hAbort`/`hAbortSim` at
-`p_abort = 0`), the query bounds `qS = qH = 0` on the trivial forger, and the MLWE bridge at
+good-key package (`hGood` at `δ = 1`, `hGuess` at `ε = 1`, `hAbort` at `p_abort = 0`), the
+query bounds `qS = qH = 0` on the trivial forger, and the MLWE bridge at
 `εbridge = 1` through the proven seed-to-matrix reduction.  The hypothesis conjunction of the
 headline is therefore jointly inhabitable; this witness carries no quantitative security
 content. -/
@@ -164,9 +157,6 @@ theorem mldsa_short_cma_hyps_inhabited (maxAttempts : ℕ) :
     (∀ pk sk, honestNoAbortGood p prims pk sk →
       Pr{let x ← (identificationSchemeShort p prims).honestExecution pk sk}[x = none] ≤
         ENNReal.ofReal 0) ∧
-    -- hAbortSim at p_abort = 0
-    (∀ pk sk, honestNoAbortGood p prims pk sk →
-      Pr{let x ← neverAbortSim p prims pk}[x = none] ≤ ENNReal.ofReal 0) ∧
     -- hQ at qS = qH = 0
     (∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commitment p prims × Response p prims))
@@ -186,8 +176,6 @@ theorem mldsa_short_cma_hyps_inhabited (maxAttempts : ℕ) :
     by rw [ENNReal.ofReal_one]; exact prEvent_le_one _,
     fun _pk _sk _h _cm => by rw [ENNReal.ofReal_one]; exact prEvent_le_one _,
     fun _pk _sk h => by rw [ENNReal.ofReal_zero]; exact h.le,
-    fun pk _sk _h => by
-      rw [ENNReal.ofReal_zero]; exact (prEvent_none_neverAbortSim p prims pk).le,
     trivialForger_signHashQueryBound p prims M maxAttempts,
     fun _ => advantage_mldsaMLWEShort_le_matrix p prims (expandAIdealization_one p prims) _⟩
 
@@ -219,8 +207,6 @@ theorem trivial_euf_cma_security_of_nma_short (maxAttempts : ℕ) :
     (by rw [ENNReal.ofReal_one]; exact prEvent_le_one _)
     (fun _pk _sk _h _cm => by rw [ENNReal.ofReal_one]; exact prEvent_le_one _)
     (fun _pk _sk h => by rw [ENNReal.ofReal_zero]; exact h.le)
-    (fun pk _sk _h => by
-      rw [ENNReal.ofReal_zero]; exact (prEvent_none_neverAbortSim p prims pk).le)
     (trivialForger p prims M maxAttempts)
     (trivialForger_signHashQueryBound p prims M maxAttempts)
     1

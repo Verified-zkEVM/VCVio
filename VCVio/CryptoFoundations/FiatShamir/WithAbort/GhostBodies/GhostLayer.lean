@@ -76,23 +76,6 @@ lemma overlayCache_cacheQuery_uncacheQuery
   · simp [overlayCache, uncacheQuery, hq]
 
 omit [SampleableType Chal] in
-/-- Removing a point from a cache does not increase its live-entry count: the support set
-of `uncacheQuery cache q` is a subset of that of `cache`. -/
-lemma toSet_uncacheQuery_subset (cache : (M × Commit →ₒ Chal).QueryCache) (q : M × Commit) :
-    (uncacheQuery M cache q).toSet ⊆ cache.toSet := by
-  rintro ⟨t', u'⟩ hmem
-  rw [QueryCache.mem_toSet] at hmem ⊢
-  by_cases ht : t' = q
-  · subst ht; simp [uncacheQuery] at hmem
-  · simpa [uncacheQuery, ht] using hmem
-
-omit [SampleableType Chal] in
-/-- `uncacheQuery` does not increase the `enncard` resource. -/
-lemma enncard_uncacheQuery_le (cache : (M × Commit →ₒ Chal).QueryCache) (q : M × Commit) :
-    QueryCache.enncard (uncacheQuery M cache q) ≤ QueryCache.enncard cache :=
-  ENat.toENNReal_mono (Set.encard_le_encard (toSet_uncacheQuery_subset M cache q))
-
-omit [SampleableType Chal] in
 lemma overlayCache_cacheQuery_ghost
     (re gh : (M × Commit →ₒ Chal).QueryCache) (q : M × Commit) (c : Chal) :
     overlayCache M re (gh.cacheQuery q c) = (overlayCache M re gh).cacheQuery q c := by

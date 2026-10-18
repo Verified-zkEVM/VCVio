@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
@@ -332,16 +332,18 @@ Distributional content (identical-until-bad): the two games agree unless some si
 attempt commits to a point `(msg, w)` already present in the cache. Conditioned on good
 keys, each attempt's commitment is `ε`-guessable (`hGuess`), the cache holds at most
 `qH + 1` adversarial entries plus the entries of previous signing attempts, and the
-expected number of attempts per signing query is at most `1/(1-p)` (`hAbort`, via
-`sign_expectedQueries_le_geometric`). Intended vehicle:
-`measureETVDist_simulateQ_run'_le_prEvent_bad` (the fundamental lemma in
-`ProgramLogic/Relational/SimulateQ.lean`) with the bad event tracked on the hybrid
-state, plus the expected-attempt-count machinery of `WithAbort/ExpectedCost.lean`.
+expected number of attempts per signing query is at most `1/(1-p)` (`hAbort`). The proof
+applies the expected-slack form of the identical-until-bad lemma,
+`measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad`: each signing
+step is charged its within-query collision budget (`signCollisionBound`, against the
+current cache size), the expected cache growth is bounded through
+`expectedQuerySlack_expected_resource_le`, and the resulting double geometric sum is
+collapsed by `sum_natCast_mul_pow_le_sq_sum_pow`.
 
 The abort probability is assumed to lie in `[0, 1)` (`hp₀`, `hp`). Nonnegativity is what
 keeps the geometric factors `1/(1 - p_abort)` at least `1`, so that the claimed loss
-dominates the adversarial-collision gap `qS·qH·ε` already present in an abort-free scheme;
-the bound `0 ≤ p_abort` is available at every call site from the good-key event. -/
+dominates the adversarial-collision gap `qS·qH·ε` already present in an abort-free scheme.
+It is a separate hypothesis of the headline, not a consequence of the good-key event. -/
 lemma prEvent_hybridExpAtKey_real_le_prog
     (qS qH : ℕ) (ε p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
@@ -848,7 +850,7 @@ loop by the per-attempt HVZK simulator loop costs at most `qS·ζ_zk/(1-p)`.
 Distributional content: per signing query, `transSignBody` and `simSignBody` differ only
 in the optional sampler driving `firstSome`; `measureTVDist_firstSome_le_geometric` bounds the
 per-query gap by `ζ_zk · (1 + p + ⋯) ≤ ζ_zk/(1-p)` using `ids.HVZK sim ζ_zk` (`hhvzk`)
-and the simulator abort bound (`hAbortSim`), uniformly in the shared starting cache
+and the honest abort bound (`hAbort`), uniformly in the shared starting cache
 (`measureTVDist_run_transSignBody_simSignBody_le`). The per-query total-variation budget is
 accumulated across the at-most-`qS` signing queries of the adversary run by
 `measureETVDist_simulateQ_run_le_queryBoundP_mul`, the two hybrid handlers agreeing exactly on
@@ -859,7 +861,7 @@ lemma prEvent_hybridExpAtKey_trans_le_sim
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH)
     (pk : Stmt) (sk : Wit) (hrel : rel pk sk = true)
-    (hAbortSim : Pr{let x ← sim pk}[x = none] ≤ ENNReal.ofReal p_abort) :
+    (hAbort : Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort) :
     Pr{let x ← (hybridExpAtKey ids hr M maxAttempts adv
         (transSignBody ids M maxAttempts pk sk) pk)}[x = true] ≤
       Pr{let x ← (hybridExpAtKey ids hr M maxAttempts adv
@@ -869,9 +871,9 @@ lemma prEvent_hybridExpAtKey_trans_le_sim
   have hε_nonneg : 0 ≤ ε :=
     mul_nonneg hζ (Finset.sum_nonneg fun j _ => pow_nonneg hp₀ j)
   have h1p : (0 : ℝ) < 1 - p_abort := by linarith
-  -- The simulator abort bound, in real form.
-  have hq_toReal : Pr{let x ← sim pk}[x = none].toReal ≤ p_abort := by
-    have h := ENNReal.toReal_mono ENNReal.ofReal_ne_top hAbortSim
+  -- The honest abort bound, in real form.
+  have hq_toReal : Pr{let x ← ids.honestExecution pk sk}[x = none].toReal ≤ p_abort := by
+    have h := ENNReal.toReal_mono ENNReal.ofReal_ne_top hAbort
     rwa [ENNReal.toReal_ofReal hp₀] at h
   -- Per-signing-query step bound, uniform over the hybrid state.
   have h_step : ∀ (msg : M) (s : (M × Commit →ₒ Chal).QueryCache × List M),

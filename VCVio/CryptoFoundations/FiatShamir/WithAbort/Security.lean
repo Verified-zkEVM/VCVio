@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
@@ -14,10 +14,10 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.NMAReduction
 Statistical CMA-to-NMA reduction for the Fiat-Shamir-with-aborts transform,
 following Theorem 3 of Barbosa et al. (CRYPTO 2023, ePrint 2023/246).
 Instantiates `FiatShamir.signHashQueryBound` at the with-aborts signature type
-and exposes `cmaToNmaLoss` plus `euf_cma_to_nma` (the managed-RO NMA interface),
-together with the hybrid game chain (`hybridExpAtKey` over the signing bodies
-`realSignBody`, `progSignBody`, `transSignBody`, `simSignBody`) that structures
-the proof.
+and exposes `cmaToNmaLoss`, `euf_cma_to_nma` (the managed-RO NMA interface) and
+`euf_cma_to_eufNma` (the plain EUF-NMA interface), together with the hybrid game
+chain (`hybridExpAtKey` over the signing bodies `realSignBody`, `progSignBody`,
+`transSignBody`, `simSignBody`) that structures the proof.
 
 The quantitative parameters `ε` (per-key commitment-guessing probability),
 `p_abort` (per-attempt abort probability), and `δ` (key-regularity failure
@@ -27,20 +27,22 @@ the probability that key generation falls outside the event, and `ε`/`p_abort`
 bound the per-key quantities pointwise on it.
 
 The scheme-specific NMA-to-hard-problem reduction lives with each concrete
-scheme (e.g. `MLDSA.nma_security_short`).
+scheme and consumes the EUF-NMA advantage of `simulatedEufNmaAdv`.
 
 ## Module layout
 
 The development is split along its proof phases, each module publicly
 importing its predecessor: `Loss` (the loss functions), `BodyHops` (the
-per-query Trans → Sim hop core and the verification tail), `GhostReadCharge`,
-`HiddenReadFold`, `CouplingEngine`, `BodyResampling` and `DeferredCoupling`
-(reusable measure-level coupling infrastructure, off the live path),
-`ReadRecording`, `FirstMoment`, `TapeFactorization`, `SignStepCharge`,
-`ReadRecordBound`, `HopLemmas`, and `NMAReduction`. This module closes the chain: the bridge from
-the managed-RO NMA experiment to the plain EUF-NMA interface (Option B: the
-forgery's own verification point is discarded from the returned cache), and
-the assembled headline `euf_cma_to_nma`.
+per-query Trans → Sim hop core and the verification tail), `GhostBlindReduction`
+(the ghost-blind reduction of the ghost-read bad event), `DrawCollectingBody` and
+`DeferredCoupling` (the coupling of the ghost-blind run with the deferred-draw run),
+`ReadRecording`, `FirstMoment`, `ValueFreeCharge`, `SignStepCharge` and
+`ReadRecordBound` (the first-moment bound on the ghost-read bad event), `HopLemmas`
+(the hybrid hops), and `NMAReduction` (the managed NMA simulation and its coupling with
+the final hybrid). This module closes the chain: the bridge from the managed-RO NMA
+experiment to the plain EUF-NMA interface (the forgery's own verification point is
+discarded from the returned cache), and the assembled headlines `euf_cma_to_nma` and
+`euf_cma_to_eufNma`.
 -/
 
 @[expose] public section
@@ -70,8 +72,8 @@ variable (adv : SignatureAlg.UnforgeableAdversary
 
 /-! ## Bridge to the plain EUF-NMA interface
 
-Option B makes `simulatedNmaAdv` discard the forgery's own verification point from the
-returned managed cache. The single hash query issued by `FiatShamirWithAbort.verify`
+`simulatedNmaAdv` discards the forgery's own verification point from the returned
+managed cache. The single hash query issued by `FiatShamirWithAbort.verify`
 therefore always *misses* in the overlay and falls through to the live oracle, so the
 overlay verification coincides — as an `OracleComp` — with the plain verification. This
 collapses the managed-RO NMA experiment onto the plain EUF-NMA experiment of the
@@ -80,7 +82,8 @@ cache-forgetting adversary `simulatedEufNmaAdv`, making the bound
 
 /-- The plain EUF-NMA adversary underlying `simulatedNmaAdv`: run the same managed
 simulation of the CMA adversary, but forget the returned cache and verify in the plain
-random-oracle model. By Option B (`withCacheOverlay_verify_eq_of_miss`) the managed-RO NMA
+random-oracle model. Since `simulatedNmaAdv` erases the forgery's verification point from
+the returned cache (`withCacheOverlay_verify_eq_of_miss`), the managed-RO NMA
 experiment of `simulatedNmaAdv` coincides with the plain EUF-NMA experiment of this
 adversary. -/
 noncomputable def simulatedEufNmaAdv :
@@ -89,12 +92,12 @@ noncomputable def simulatedEufNmaAdv :
   main pk := Prod.fst <$> (simulatedNmaAdv ids hr M maxAttempts sim adv).main pk
 
 omit [SampleableType Stmt] [SampleableType Chal] in
-/-- **Soundness of the managed-RO → plain EUF-NMA bridge** (Option B). The managed-RO NMA
+/-- **Soundness of the managed-RO → plain EUF-NMA bridge.** The managed-RO NMA
 success probability of `simulatedNmaAdv` equals the plain EUF-NMA success probability of
-`simulatedEufNmaAdv`. The Option B post-processing erases the forgery's own verification
-point from the returned cache, so `withCacheOverlay` agrees with the plain live verifier
-on every forgery (`withCacheOverlay_verify_eq_of_miss`); in particular a replayed signed
-forgery no longer wins through a programmed challenge. -/
+`simulatedEufNmaAdv`. The post-processing in `simulatedNmaAdv` erases the forgery's own
+verification point from the returned cache, so `withCacheOverlay` agrees with the plain live
+verifier on every forgery (`withCacheOverlay_verify_eq_of_miss`); in particular a replayed
+signed forgery does not win through a programmed challenge. -/
 lemma managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment :
     SignatureAlg.managedRoNmaExperiment (simulatedNmaAdv ids hr M maxAttempts sim adv) =
       SignatureAlg.eufNmaExperiment (simulatedEufNmaAdv ids hr M maxAttempts sim adv) := by
@@ -109,7 +112,7 @@ lemma managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment :
     (Prod.fst <$> (simulatedNmaAdv ids hr M maxAttempts sim adv).main pksk.1) >>= fun ms =>
       (FiatShamirWithAbort ids hr M maxAttempts).verify pksk.1 ms.1 ms.2
   rw [map_eq_bind_pure_comp, bind_assoc]
-  -- Unfold `.main` to expose the inner managed run followed by the Option-B
+  -- Unfold `.main` to expose the inner managed run followed by the
   -- post-processing, then `bind_congr` over the inner run.
   simp only [simulatedNmaAdv, bind_assoc, pure_bind, Function.comp_apply]
   refine bind_congr fun r => ?_
@@ -143,8 +146,6 @@ theorem euf_cma_to_nma
       Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = cm] ≤ ENNReal.ofReal ε)
     (hAbort : ∀ pk sk, Good pk sk →
       Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort)
-    (hAbortSim : ∀ pk sk, Good pk sk →
-      Pr{let x ← sim pk}[x = none] ≤ ENNReal.ofReal p_abort)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
     SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
@@ -177,7 +178,7 @@ theorem euf_cma_to_nma
     have step2 := prEvent_hybridExpAtKey_prog_le_trans ids hr M maxAttempts adv qS qH ε p_abort
       hp₀ hp hε hQ pk sk (hGuess pk sk hgood) (hAbort pk sk hgood)
     have step3 := prEvent_hybridExpAtKey_trans_le_sim ids hr M maxAttempts sim adv ζ_zk hζ hhvzk
-      qS qH p_abort hp₀ hp hQ pk sk hrel (hAbortSim pk sk hgood)
+      qS qH p_abort hp₀ hp hQ pk sk hrel (hAbort pk sk hgood)
     -- Chain the three hops and collapse the `ofReal` sums (slack pieces nonneg).
     calc Pr{let x ← (hybridExpAtKey ids hr M maxAttempts adv
             (realSignBody ids M maxAttempts pk sk) pk)}[x = true]
@@ -281,6 +282,35 @@ theorem euf_cma_to_nma
   rw [cmaToNmaLoss_eq_perKeyLoss_add, ENNReal.ofReal_add hPK hδ, add_assoc]
   gcongr
   exact prEvent_hybridExp_sim_le_managedRoNmaAdvantage ids hr M maxAttempts sim adv
+
+omit [SampleableType Stmt] in
+/-- **CMA-to-NMA reduction for Fiat-Shamir with aborts**, at the plain EUF-NMA interface:
+under the hypotheses of `euf_cma_to_nma`, the CMA advantage is bounded by the EUF-NMA
+advantage of the cache-forgetting reduction `simulatedEufNmaAdv` plus `cmaToNmaLoss`. This
+is `euf_cma_to_nma` composed with the bridge
+`managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment`, and it is the form consumed
+by a scheme-specific EUF-NMA hardness reduction. -/
+theorem euf_cma_to_eufNma
+    (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk) (hhvzk : ids.HVZK sim (ENNReal.ofReal ζ_zk))
+    (qS qH : ℕ) (ε p_abort δ : ℝ)
+    (hε : 0 ≤ ε) (hδ : 0 ≤ δ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
+    (Good : Stmt → Wit → Prop)
+    (hGood : Pr{let xw ← hr.gen}[¬ Good xw.1 xw.2] ≤ ENNReal.ofReal δ)
+    (hGuess : ∀ pk sk, Good pk sk → ∀ cm : Commit,
+      Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = cm] ≤ ENNReal.ofReal ε)
+    (hAbort : ∀ pk sk, Good pk sk →
+      Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort)
+    (hQ : ∀ pk, FiatShamir.signHashQueryBound M
+      (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
+    SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
+      SignatureAlg.eufNmaAdvantage (runtime M)
+        (simulatedEufNmaAdv ids hr M maxAttempts sim adv) +
+      ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
+  have h := euf_cma_to_nma ids hr M maxAttempts sim adv ζ_zk hζ hhvzk qS qH ε p_abort δ
+    hε hδ hp₀ hp Good hGood hGuess hAbort hQ
+  rwa [SignatureAlg.managedRoNmaAdvantage,
+    managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment,
+    ← SignatureAlg.eufNmaAdvantage] at h
 
 omit [SampleableType Stmt] [SampleableType Chal] in
 /-- Cache-invariant companion to `simulatedNmaAdv`: the reduction issues at most `qH`
@@ -402,7 +432,7 @@ lemma simulatedNmaAdv_nmaHashQueryBound
     simpa [sigSim, StateT.run_bind] using hbind
   -- The run-level managed simulation issues at most `qH` live hash queries; the final
   -- pure post-processing (erasing the forgery's own verification point from the returned
-  -- cache, Option B) issues none, so the total bound is `qH + 0 = qH`.
+  -- cache) issues none, so the total bound is `qH + 0 = qH`.
   have hrun : FiatShamir.nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (oa := (simulateQ ((unifSim + roSim) + sigSim) (adv.main pk)).run ∅) qH := by
     unfold FiatShamir.nmaHashQueryBound
