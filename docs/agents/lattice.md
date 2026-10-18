@@ -95,7 +95,22 @@ instantiating those abstractions for a lattice scheme.
 - `LatticeCrypto/Falcon/Primitives.lean`: abstract primitive operations such as sampling, hashing,
   and compression.
 - `LatticeCrypto/Falcon/Scheme.lean`: scheme semantics and the GPV bridge.
-- `LatticeCrypto/Falcon/Security.lean`: high-level security statements.
+- `LatticeCrypto/Falcon/Security.lean`: Falcon EUF-CMA in an idealized GPV model, read off the
+  generic endpoints in `VCVio/CryptoFoundations/GPVHashAndSign/` through an ideal PSF. The
+  attempt-level headlines `euf_cma_security` and `euf_cma_collision_security` are about the
+  same-salt rejection-loop scheme `falconRetrySignatureAlg`, not the fresh-salt `Falcon.sign`;
+  `euf_cma_security_oneShot` is the single-draw form for `falconSignatureAlg`, whose per-draw
+  budget carries no content at Falcon's query budget. Also `verify_sign_correct` (conditional on
+  `hcompress` and `hpreimage`), `ntruPSFCollisionProblem` and `ntruSISProblem`. The collision
+  term is a hardness assumption only when the free forward sampler `domainSample` needs no
+  trapdoor; see the module docstring.
+- `LatticeCrypto/Falcon/SISBridge.lean`: translation of the Falcon-PSF collision term into the
+  keyed kernel-vector problem `ntruSISProblemKeyed` (challenge drawn from `hr.gen`), and the
+  headlines `euf_cma_security_oneShot_ntruSIS` and `euf_cma_collision_security_ntruSIS`.
+- `LatticeCrypto/Falcon/NonVacuity.lean`: a witness that the attempt-level hypotheses are jointly
+  satisfiable at a degree-2 NTRU key with a genuinely rejecting sampler, with the loss pinned
+  numerically. It uses a trapdoor domain sampler and `ε_step = 0`, so it claims neither that the
+  collision term is hard nor that any precision gap is small.
 - `LatticeCrypto/Falcon/Concrete/`: executable NTT, floating-point emulation (FPR/FXR), encodings,
   and the NTRU solver.
 - `Extern/Falcon/`: FFI bindings plus the SHAKE-backed sampler, FFT, keygen, signing, and instance

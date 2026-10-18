@@ -331,7 +331,7 @@ cannot be stated for an adversary that exists only inside an existential.
 When the reduction is not implemented yet, do not fall back to `∃`. Either:
 
 - define it as a `sorry` placeholder and state the bound for that definition, as
-  `GPVHashAndSign.reduction` does; or
+  `MLDSA.eufCmaMLWEReduction` does; or
 - leave the theorem as a placeholder whose docstring warns that the statement has no security
   content until a reduction is named, as `FiatShamirWithAbort.euf_cma_bound` does.
 
