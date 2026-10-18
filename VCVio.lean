@@ -49,8 +49,6 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.BodyResampli
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.CouplingEngine
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.DeferredCoupling
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.FirstMoment
-public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.GhostReadCharge
-public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.HiddenReadFold
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.HopLemmas
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.Loss
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.NMAReduction

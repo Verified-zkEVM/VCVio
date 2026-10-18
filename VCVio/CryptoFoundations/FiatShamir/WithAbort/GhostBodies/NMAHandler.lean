@@ -364,25 +364,6 @@ bad side via the commit-guessing charge `prEvent_commit_hit_le` (the base layer'
 count times the per-commit guessing bound `ε`), exactly the charge class already used for the
 ghost-read collision in `prEvent_ghostRead_bad_le`. -/
 
-omit [SampleableType Stmt] [SampleableType Chal] in
-/-- The live-read / sign-program collision predicate at a sign step. For a base (live-read)
-cache `base` and a drawn accepted commitment `w` for message `msg`, the collision fires iff the
-sign-programmed point `(msg, w)` is already present in the base layer (i.e. the simulator's
-commitment landed on a previously live-read random-oracle point). This is the *exact* event off
-which the layered NMA run and the linked managed run agree: when `base (msg, w) = none` the
-sign-step projection `proj₂` is a function of the state, so the per-step coupling is an exact
-equality; when it holds the two runs diverge and the gap is charged by
-`prEvent_commit_hit_le`. -/
-def signLiveCollision (base : (M × Commit →ₒ Chal).QueryCache) (msg : M) (w : Commit) : Prop :=
-  base (msg, w) ≠ none
-
-omit [SampleableType Stmt] [SampleableType Chal] [DecidableEq Commit] [DecidableEq M] in
-/-- The collision is decidable and its negation is exactly the no-collision hypothesis
-`base (msg, w) = none` under which the sign-step projection is exact. -/
-lemma not_signLiveCollision_iff (base : (M × Commit →ₒ Chal).QueryCache) (msg : M) (w : Commit) :
-    ¬ signLiveCollision M base msg w ↔ base (msg, w) = none := by
-  simp [signLiveCollision]
-
 omit [SampleableType Stmt] in
 /-- **Sub-lemma (a), full-run form.** The full simulated run of the layered ghost-tagged NMA
 handler `ghostNmaImpl`, projected by overlaying the ghost layer onto the base layer, equals
