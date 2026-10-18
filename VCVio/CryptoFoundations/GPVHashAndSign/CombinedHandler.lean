@@ -769,7 +769,7 @@ lemma evalDistEq_progGameRunImplCombined_step_eq_trap
         map_bind, map_pure, bind_assoc] using h
 
 omit [DecidableEq Range] [Fintype Salt] in
-/-- **Lemma A — write-only-table deferral / `eval→trapdoor-recording` run rewrite.** For *any*
+/-- **Write-only-table deferral / `eval→trapdoor-recording` run rewrite.** For *any*
 adaptive computation `oa` and any start state `s`, the full simulated run of the combined handler
 `progGameRunImplCombined` over `oa` is *equidistributed* with the run of the trapdoor-recording
 handler `progGameRunImplCombinedTrap`, under GPV regularity `hreg` at `(pk, sk)`.

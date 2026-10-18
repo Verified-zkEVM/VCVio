@@ -24,15 +24,23 @@ This file collects the security-facing definitions for the Falcon signature sche
 
 ## EUF-CMA Security
 
-Falcon is the GPV hash-and-sign construction instantiated with `falconPSF`, so its
-EUF-CMA security is read off the generic GPV endpoints
+No Falcon EUF-CMA theorem is stated in this tree. `falconSignatureAlg` is the GPV
+hash-and-sign construction instantiated with `falconPSF`, and the generic GPV endpoints
 `GPVHashAndSign.euf_cma_split_bound_of_queryBound` and
-`GPVHashAndSign.euf_cma_collision_bound_of_queryBound`. They bound the unforgeability
-advantage of `falconSignatureAlg` by the PSF collision advantage of the GPV reduction, an
-exact-match term, and the salt-collision term `(qSign + qHash + 1)² / (2 · |Salt|)`, under
-trapdoor-sampler correctness and regularity at the chosen forward sampler. This file
-provides the Falcon-side collision target `ntruPSFCollisionProblem` for the collision branch,
-together with the kernel-vector formulation `ntruSISProblem`.
+`GPVHashAndSign.euf_cma_collision_bound_of_queryBound` would bound its unforgeability
+advantage once their hypotheses are discharged for `falconPSF`. None of them is:
+
+* trapdoor-sampler correctness `CorrectAt` asks every `trapdoorSample` output to be a short
+  preimage, but `falconPSF.trapdoorSample` is a single `ffSampling` attempt with no norm
+  check (the norm check and retry live in `signAttempt` / `sign`, and `verify_sign_correct`
+  still takes the coset obligation as the explicit hypothesis `hpreimage`), so `CorrectAt`
+  is not expected to hold for `falconPSF` as defined;
+* the regularity equation is not established for `falconPSF`;
+* no lemma relates the collision advantage of the GPV reduction for `falconPSF` to
+  `SIS.advantage` of `ntruPSFCollisionProblem`.
+
+This file provides the Falcon-side collision target `ntruPSFCollisionProblem` intended for
+that collision branch, together with the kernel-vector formulation `ntruSISProblem`.
 
 The published concrete bounds ([FGdG+25] Theorem 1, refined by [Jia+26]) additionally
 charge the finite-precision loss of `ffSampling` through Rényi divergences

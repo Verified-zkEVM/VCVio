@@ -84,7 +84,7 @@ experiment's WriterT handler stack `baseW + signingOracle pk sk` (via `writerTMa
 WriterT handler `baseW' + withLogging signBody` over `StateT QueryCache ProbComp`, where the
 public/random-oracle base re-emits its query through the cache (`baseW'`) and the signing body is
 the real GPV signing computation run on the cache (`signBody msg = gpvRealImpl … (Sum.inr msg)`).
-This is the GPV analogue of the FiatShamir `hHandler` step. -/
+-/
 lemma gpvOuter_writerTMapBase_implW (pk : PK) (sk : SK) :
     (gpvOuter M Salt).writerTMapBase
         ((HasQuery.toQueryImpl (spec := unifSpec + (Salt × M →ₒ Range))
@@ -115,8 +115,7 @@ lemma gpvOuter_writerTMapBase_implW (pk : PK) (sk : SK) :
     -- `gpvRealImpl … (Sum.inr msg) = simulateQ gpvOuter ((GPVHashAndSign …).sign pk sk msg)` holds
     -- definitionally (the `∘ₛ` definition), so expanding both `withLogging` bodies and commuting
     -- the monad-morphism `simulateQ gpvOuter` through the `sign >>= fun u => (u, [⟨sq, u⟩])` bind
-    -- aligns the two runs.  Mirrors the FiatShamir `fsBaseImpl_writerTMapBase_signingOracle_eq`
-    -- signing case.
+    -- aligns the two runs.
     simp [QueryImpl.writerTMapBase, SignatureAlg.signingOracle, QueryImpl.withLogging_apply,
       GPVHashAndSign, gpvRealImpl, gpvOuter, QueryImpl.compose, realGameRunImplNoLog,
       QueryImpl.add_apply_inr, StateT.run_bind, StateT.run_pure,
@@ -134,7 +133,7 @@ non-signing query both leave the signed-set untouched and evolve the cache throu
 a signing query `appendInputLog` appends `msg` to the list (`l ++ [msg]`) while `gpvRealImplFresh`
 inserts it into the signed-set, reconciled by `(l ++ [msg]).toFinset = insert msg l.toFinset` (the
 list-order is invisible to the `Finset`).  This is the per-query hypothesis of the state-projection
-transport `map_run_simulateQ_eq_of_query_map_eq`, the GPV analogue of the FiatShamir `hmatch`. -/
+transport `map_run_simulateQ_eq_of_query_map_eq`. -/
 lemma flattenAppendLog_proj_gpvRealImplFresh (pk : PK) (sk : SK)
     (t : ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))).Domain)
     (s : List M × (Salt × M →ₒ Range).QueryCache) :
@@ -640,7 +639,9 @@ fire-on-miss.
 salt-draw / random-oracle-query streams of the salt-inclusive signing run: each of the `qSign`
 fresh salts is checked against the recorded cache slice of size `≤ j + qHash`, which is precisely
 the `saltSeq` process. Once `hcouple` is discharged by the coupling, this lemma yields the loss-free
-`measureTVDist ≤ (collisionBound Salt qSign qHash).toReal` consumed by the four GPV theorems.
+`measureTVDist ≤ (collisionBound Salt qSign qHash).toReal`. It is a surface statement off the
+headline path: the headline bounds use `gpv_measureTVDist_real_programmed_le_collisionBound`,
+proved by the inline-salt flag route.
 
 The proof is loss-free: chain `hcouple` (TV distance ≤ `saltSeq` collision) with the
 salt-averaged telescope `prEvent_saltSeq_le_collisionBound` (`saltSeq` collision ≤
@@ -688,7 +689,8 @@ coupling headline over the tape is not established.
    `Pr{let x ← unforgeableExperiment (runtime) adv}[x = true]`, whose body runs `simulateQ impl
    (adv.main pk)` with each fresh signing salt drawn inline at an adversary-chosen point.
    `prEvent_unforgeableExp_eq_keygen_average` rewrites it as the keygen average of the per-key
-   verify game over `realGameRun`, and
+   WriterT signing-log experiment, which `signedSet_eq_wasQueried` identifies with the per-key
+   signed-set game `realGameVerifyFresh` (`advantage_eq_keygen_average_realGameVerifyFresh`), and
    `gpv_advantage_le_progGameVerifyFreshAvg_add_collisionBound` transfers the run-level bound of
    `gpv_measureTVDist_real_programmed_le_collisionBound` through the verification post-processing,
    so no front-loading of the adaptive salt draws is needed.

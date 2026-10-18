@@ -200,7 +200,8 @@ where `εpp` bounds the programmed-preimage advantage of the named reduction
 `programmedPreimageReduction psf hr M Salt A domainSample qSign qHash` (`hMinEntropy`). The
 distinct-preimage branch gives the collision term; the exact-match branch the
 `(qSign + qHash) · εpp` term. This is the same statement as `forgery_yields_collision`, under the
-name used for the headline bound, and is derived from `euf_cma_split_bound`. The exact-match term
+name used for the headline bound, and is derived from `forgery_yields_collision_or_exact_match`
+(via `forgery_yields_collision`). The exact-match term
 is bounded rather than dropped, since the best programmed-preimage adversary generally has
 positive advantage (see `trapdoorGuessingProbability`).
 

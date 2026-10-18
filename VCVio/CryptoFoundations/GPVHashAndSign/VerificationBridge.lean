@@ -92,11 +92,10 @@ theorem gpv_realGameVerify_le_progGameVerify_add_collisionBound
 
 open Classical in
 omit [Fintype Salt] in
-/-- **Keygen-averaging peel of the GPV unforgeability experiment (sub-build (3) of the
-game identification).** The success probability of the GPV unforgeability experiment is the
-success probability of drawing the key pair `(pk, sk) ← hr.gen` and running the per-key
-verify-extended WriterT signing-log experiment under the bundled `withStateOracle` random-oracle
-semantics.
+/-- **Keygen-averaging peel of the GPV unforgeability experiment.** The success probability of
+the GPV unforgeability experiment is the success probability of drawing the key pair
+`(pk, sk) ← hr.gen` and running the per-key verify-extended WriterT signing-log experiment under
+the bundled `withStateOracle` random-oracle semantics.
 
 The GPV `keygen` is `liftM hr.gen`, a public-randomness prefix that touches neither the
 random-oracle cache nor the hidden state; the keygen-peel `withStateOracle_run'_liftM_bind`

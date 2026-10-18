@@ -73,9 +73,11 @@ point was set by the reduction, so the hidden programmed preimage and the forged
 land at the same image under `psf.eval`.
 
 The trapdoor sampler is never called: all preimages come from the caller-chosen
-`domainSample`, and the simulation matches the real game exactly when the GPV regularity
-condition `hreg` holds for that `domainSample` (the joint law of `(psf.eval pk s, s)` under
-`domainSample pk` equals that of a uniform target and its trapdoor preimage). -/
+`domainSample`, and the simulation matches the real game away from the salt-collision event
+(charged by `collisionBound`), provided the GPV regularity condition `hreg` holds for that
+`domainSample` (the joint law of `(psf.eval pk s, s)` under `domainSample pk` equals that of a
+uniform target and its trapdoor preimage). On a salt collision the simulated signer overwrites
+the cached entry, while the real signer answers from it. -/
 @[expose] noncomputable def reduction
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -496,8 +498,7 @@ omit [Fintype Salt] in
 /-- **Discarding the `signRunF` salt prefix.** The `signRunF` recursion is lossless, so binding a
 *value-irrelevant* continuation `k` after it leaves the distribution of `k`: the salt-draw prefix is
 discarded from the output distribution (`OracleComp.EvalDistEq.bind_const`). It is the move that
-drops the over-provisioned front salt tape once the genuine content has been spliced out, the
-analogue of the `drawList` suffix discard in the worked Fiat–Shamir factorization. -/
+drops the over-provisioned front salt tape once the genuine content has been spliced out. -/
 theorem evalDistEq_signRunF_bind_const {St γ : Type}
     (step : ℕ → St → Salt → ProbComp St) (c : ℕ → Finset Salt)
     (n : ℕ) (sb : St × Bool) (k : ProbComp γ) :
