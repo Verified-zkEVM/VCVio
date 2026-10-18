@@ -304,8 +304,8 @@ QuantitativeRealization.toRealization : Realization C boundary
 A `Realizer` is backend code indexed by the function it computes.
 `QuantitativeStepClass` supplies its admissibility erasure, a pinned size
 function, and a backend-relative exact cost. Identity and sequential composition
-are deliberately optional: `HasCategory` supplies executable code, connection
-overhead, and a sound cost inequality, while `HasExactCategory` and
+are deliberately optional: `HasComposition` supplies executable code, connection
+overhead, and a sound cost inequality, while `HasExactComposition` and
 `ExactCategory` record an optional exact equation. Landed Type-valued mixins
 retain executable product, sum, option, and distributivity code. The induced
 qualitative `StepClass.Hom` merely forgets the witness.

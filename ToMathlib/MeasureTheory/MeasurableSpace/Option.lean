@@ -7,6 +7,7 @@ module
 
 public import Mathlib.MeasureTheory.MeasurableSpace.Constructions
 public import Mathlib.MeasureTheory.MeasurableSpace.Embedding
+public import Mathlib.MeasureTheory.MeasurableSpace.Prod
 
 /-!
 # The measurable coproduct structure on `Option`
@@ -90,6 +91,22 @@ theorem measurableSet_isSome [MeasurableSpace α] :
     MeasurableSet ((fun _ : Unit => (none : Option α)) ⁻¹'
       {value : Option α | value.isSome})
   simp
+
+/-- Optional outcomes have measurable equality when returned values do. -/
+instance instMeasurableEq [MeasurableSpace α] [MeasurableEq α] : MeasurableEq (Option α) where
+  measurableSet_diagonal := by
+    have hsome :=
+      (measurableEmbedding_some.prodMap measurableEmbedding_some).measurableSet_image.mpr
+      (measurableSet_diagonal (α := α))
+    have hnone : MeasurableSet ({(none, none)} : Set (Option α × Option α)) := by
+      simpa only [Set.singleton_prod_singleton] using
+        (@measurableSet_none α _).prod (@measurableSet_none α _)
+    have heq : Set.diagonal (Option α) = {(none, none)} ∪
+        Prod.map some some '' Set.diagonal α := by
+      ext pair
+      rcases pair with ⟨_ | a, _ | b⟩ <;> simp [Set.diagonal]
+    rw [heq]
+    exact hnone.union hsome
 
 /-- A function out of `Option α` is measurable when its `none` and `some` branches are. -/
 theorem measurable_elim [MeasurableSpace α] [MeasurableSpace β] {f : Option α → β}

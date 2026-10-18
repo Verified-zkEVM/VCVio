@@ -2,6 +2,7 @@ module  -- shake: keep-all --deprecated_module: ignore
 
 public import VCVioTest.Algorithms.Hash
 public import VCVioTest.Asymptotics.Negligible
+public import VCVioTest.ComposedService
 public import VCVioTest.Computability
 public import VCVioTest.CryptoFoundations.BR93Measure
 public import VCVioTest.CryptoFoundations.ComplexityAdapters
@@ -18,6 +19,7 @@ public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.CryptoFoundations.UniversalHash
 public import VCVioTest.ENNRealNumerals
 public import VCVioTest.EvalDist.BundledSemantics
+public import VCVioTest.EvalDist.Categorical
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.DisagreementMeasure
 public import VCVioTest.EvalDist.EvalDistTV
@@ -27,6 +29,9 @@ public import VCVioTest.EvalDist.Failure
 public import VCVioTest.EvalDist.FinRatPMF
 public import VCVioTest.EvalDist.IndepProductMeasure
 public import VCVioTest.EvalDist.IndependentDraws
+public import VCVioTest.EvalDist.KernelCoinductive
+public import VCVioTest.EvalDist.KernelExcept
+public import VCVioTest.EvalDist.MachinePath
 public import VCVioTest.EvalDist.MeasureGate
 public import VCVioTest.EvalDist.MeasureIntegration
 public import VCVioTest.EvalDist.NotationDifferential.Cases1
@@ -114,6 +119,7 @@ public import VCVioTest.ReactiveNetwork
 public import VCVioTest.ReactiveNetworkAdversarial
 public import VCVioTest.ReactiveSecurity
 public import VCVioTest.ReactiveWorld
+public import VCVioTest.RejectionTiming
 public import VCVioTest.ReplayCheckpoint
 public import VCVioTest.ResumptionCompatibility
 public import VCVioTest.RoundByRound.OneRound
@@ -144,5 +150,6 @@ public import VCVioTest.Tactic.Positivity
 public import VCVioTest.ToFinalValidity
 public import VCVioTest.ToMathlib.AbsDiff
 public import VCVioTest.UniformOn
+public import VCVioTest.UniformThreshold
 public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability

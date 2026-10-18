@@ -6,12 +6,14 @@ Authors: Devon Tuma
 
 module
 public import Mathlib.Init
+public import Mathlib.Basic.Countable.Basic
 
 /-!
-# Exceptional monad constructor equations
+# Exceptional monad equations and countability
 
 Binding a successful result runs its continuation; binding an error preserves that error.
 Both equations normalize exceptional programs with `simp` and `grind`.
+Countable error and value types give a countable exceptional outcome type.
 -/
 
 public section
@@ -21,6 +23,14 @@ namespace Except
 universe u v
 
 variable {ε : Type u} {α β : Type v}
+
+/-- Exceptions over countable error and value types are countable. -/
+instance [Countable ε] [Countable α] : Countable (Except ε α) :=
+  Function.Injective.countable (f := fun x : Except ε α => match x with
+    | .error err => (Sum.inl err : ε ⊕ α)
+    | .ok value => Sum.inr value) (by
+      intro x y h
+      cases x <;> cases y <;> simp_all)
 
 /-- Pure exceptional computations are successful results. -/
 @[simp, grind =]

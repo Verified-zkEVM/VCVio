@@ -8,6 +8,7 @@ module
 
 public import Mathlib.Algebra.Group.TypeTags.Basic
 public import Mathlib.MeasureTheory.MeasurableSpace.Constructions
+public import Mathlib.MeasureTheory.Group.Arithmetic
 
 /-!
 # Measurable spaces on additive and multiplicative type tags
@@ -36,6 +37,12 @@ theorem measurable_ofAdd : Measurable (ofAdd : α → Multiplicative α) := meas
 @[fun_prop]
 theorem measurable_toAdd : Measurable (toAdd : Multiplicative α → α) := measurable_id
 
+/-- Addition becomes jointly measurable multiplication under the type tag. -/
+instance [Add α] [MeasurableAdd₂ α] : MeasurableMul₂ (Multiplicative α) where
+  measurable_mul := by
+    change Measurable (fun pair : α × α => pair.1 + pair.2)
+    exact measurable_add
+
 end Multiplicative
 
 namespace Additive
@@ -53,5 +60,11 @@ theorem measurable_ofMul : Measurable (ofMul : α → Additive α) := measurable
 
 @[fun_prop]
 theorem measurable_toMul : Measurable (toMul : Additive α → α) := measurable_id
+
+/-- Multiplication becomes jointly measurable addition under the type tag. -/
+instance [Mul α] [MeasurableMul₂ α] : MeasurableAdd₂ (Additive α) where
+  measurable_add := by
+    change Measurable (fun pair : α × α => pair.1 * pair.2)
+    exact measurable_mul
 
 end Additive

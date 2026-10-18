@@ -45,7 +45,7 @@ theorem illegal_reply_not_conforming
     (direction : p.B position) (hillegal : ¬model.allows position direction) :
     ¬(ExecutionTrace.query (R := R) view_eq direction
       (ExecutionTrace.nil (R := R) (next direction))).Conforms model.allows := by
-  simpa [ExecutionTrace.Conforms] using hillegal
+  simpa using hillegal
 
 /-- Every reply admitted by the contract is charged even when a later probabilistic semantics
 assigns that reply probability zero. The probability distribution is deliberately not an input to
