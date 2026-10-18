@@ -143,8 +143,6 @@ theorem euf_cma_to_nma
       Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = cm] ≤ ENNReal.ofReal ε)
     (hAbort : ∀ pk sk, Good pk sk →
       Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort)
-    (hAbortSim : ∀ pk sk, Good pk sk →
-      Pr{let x ← sim pk}[x = none] ≤ ENNReal.ofReal p_abort)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
     SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
@@ -177,7 +175,7 @@ theorem euf_cma_to_nma
     have step2 := prEvent_hybridExpAtKey_prog_le_trans ids hr M maxAttempts adv qS qH ε p_abort
       hp₀ hp hε hQ pk sk (hGuess pk sk hgood) (hAbort pk sk hgood)
     have step3 := prEvent_hybridExpAtKey_trans_le_sim ids hr M maxAttempts sim adv ζ_zk hζ hhvzk
-      qS qH p_abort hp₀ hp hQ pk sk hrel (hAbortSim pk sk hgood)
+      qS qH p_abort hp₀ hp hQ pk sk hrel (hAbort pk sk hgood)
     -- Chain the three hops and collapse the `ofReal` sums (slack pieces nonneg).
     calc Pr{let x ← (hybridExpAtKey ids hr M maxAttempts adv
             (realSignBody ids M maxAttempts pk sk) pk)}[x = true]

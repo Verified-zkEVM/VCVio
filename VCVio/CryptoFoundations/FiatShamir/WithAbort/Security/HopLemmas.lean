@@ -848,7 +848,7 @@ loop by the per-attempt HVZK simulator loop costs at most `qS·ζ_zk/(1-p)`.
 Distributional content: per signing query, `transSignBody` and `simSignBody` differ only
 in the optional sampler driving `firstSome`; `measureTVDist_firstSome_le_geometric` bounds the
 per-query gap by `ζ_zk · (1 + p + ⋯) ≤ ζ_zk/(1-p)` using `ids.HVZK sim ζ_zk` (`hhvzk`)
-and the simulator abort bound (`hAbortSim`), uniformly in the shared starting cache
+and the honest abort bound (`hAbort`), uniformly in the shared starting cache
 (`measureTVDist_run_transSignBody_simSignBody_le`). The per-query total-variation budget is
 accumulated across the at-most-`qS` signing queries of the adversary run by
 `measureETVDist_simulateQ_run_le_queryBoundP_mul`, the two hybrid handlers agreeing exactly on
@@ -859,7 +859,7 @@ lemma prEvent_hybridExpAtKey_trans_le_sim
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH)
     (pk : Stmt) (sk : Wit) (hrel : rel pk sk = true)
-    (hAbortSim : Pr{let x ← sim pk}[x = none] ≤ ENNReal.ofReal p_abort) :
+    (hAbort : Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort) :
     Pr{let x ← (hybridExpAtKey ids hr M maxAttempts adv
         (transSignBody ids M maxAttempts pk sk) pk)}[x = true] ≤
       Pr{let x ← (hybridExpAtKey ids hr M maxAttempts adv
@@ -869,9 +869,9 @@ lemma prEvent_hybridExpAtKey_trans_le_sim
   have hε_nonneg : 0 ≤ ε :=
     mul_nonneg hζ (Finset.sum_nonneg fun j _ => pow_nonneg hp₀ j)
   have h1p : (0 : ℝ) < 1 - p_abort := by linarith
-  -- The simulator abort bound, in real form.
-  have hq_toReal : Pr{let x ← sim pk}[x = none].toReal ≤ p_abort := by
-    have h := ENNReal.toReal_mono ENNReal.ofReal_ne_top hAbortSim
+  -- The honest abort bound, in real form.
+  have hq_toReal : Pr{let x ← ids.honestExecution pk sk}[x = none].toReal ≤ p_abort := by
+    have h := ENNReal.toReal_mono ENNReal.ofReal_ne_top hAbort
     rwa [ENNReal.toReal_ofReal hp₀] at h
   -- Per-signing-query step bound, uniform over the hybrid state.
   have h_step : ∀ (msg : M) (s : (M × Commit →ₒ Chal).QueryCache × List M),
