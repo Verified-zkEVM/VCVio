@@ -31,23 +31,18 @@ variable {PK SK Domain Range : Type}
 
 /-! ## Front-loading the adaptive salt draws into `signRunF`
 
-The remaining content of `AdaptiveFactorizesSignRunF` against the concrete handlers above is the
-pair of run-equalities together with the cache-growth bound on the recorded slices. These facts are
-*not* structural: they assert that the adaptive real / programmed game runs
-`simulateQ impl (adv.main pk)` (where each signing query draws a fresh salt at an
-adversary-chosen point and queries the random oracle at it) factor through the *fixed* `qSign`-step
-`signRunF` recursion with the concrete `gpvStepReal` / `gpvStepProg` handlers and a common recorded
-cache sequence `c` with `card (c j) ≤ j + qHash`.
-
-Establishing this is the deferred-sampling fold-level coupling: every fresh salt draw, currently
-issued inside the signing oracle at an adversarially-chosen point in an adaptively-interleaved query
-stream, is *commuted to the front* of a clean `qSign`-step draw sequence (the salts are fresh
-uniform and independent of the adversary view until revealed; the interleaved hash queries are
-answer-irrelevant w.r.t. the salt draws and so commute). This is the GPV instance of the
-Fiat–Shamir-with-abort fold-level tape factorization: an induction on `adv.main pk` via
+Identifying the adaptive real / programmed game runs `simulateQ impl (adv.main pk)` (where each
+signing query draws a fresh salt at an adversary-chosen point and queries the random oracle at it)
+with the *fixed* `qSign`-step `signRunF` recursion over the concrete `gpvStepReal` / `gpvStepProg`
+handlers is a deferred-sampling fold-level coupling: every fresh salt draw is *commuted to the
+front* of a clean `qSign`-step draw sequence (the salts are fresh uniform and independent of the
+adversary view until revealed; the interleaved hash queries are answer-irrelevant with respect to
+the salt draws and so commute). The natural proof is an induction on `adv.main pk` via
 `OracleComp.inductionOn`, with the uniform / hash-read steps handled by the generic
-`OracleComp.DeferredSampling.evalDistEq_step_commute_tape` answer-irrelevant commute and the signing
-step handled by a bespoke per-body salt splice. -/
+answer-irrelevant commute `OracleComp.DeferredSampling.evalDistEq_step_commute_tape` and the
+signing step by a per-body salt splice. This file and `TapeFactorization.lean` build the
+ingredients; the headline bounds do not depend on them, since the sign-then-hash hop is proved by
+the inline-salt flag route of `FlagHandlers.lean`. -/
 
 /-! ### The pinned GPV game runs
 
@@ -72,8 +67,8 @@ model the two worlds of the sign-then-hash hop:
   randomized sign-then-hash game rather than a deterministic point-mass programming policy.
 
 The total-variation distance between these two runs is the sign-then-hash hop bounded by
-`collisionBound`; the coupling factors both through the `signRunF` presentation so that
-`factorized_advantage_le_collisionBound` delivers the bound. -/
+`collisionBound` in `gpv_measureTVDist_real_programmed_le_collisionBound`, via the inline-salt flag
+route of `FlagHandlers.lean`. -/
 
 open Classical in
 /-- **The real GPV EUF-CMA game run** of `adv.main pk` at key pair `(pk, sk)`.
@@ -82,8 +77,7 @@ The adversary's main computation is simulated under the real ambient oracle forw
 random oracle supplied by the `runtime` bundle) together with the real GPV signing oracle
 (`SignatureAlg.signingOracle`), and the resulting forgery `(msg, σ)` is extracted. This is exactly
 the inner run of `SignatureAlg.unforgeableNoFreshExperiment` for the GPV scheme: it is the
-real-world side
-of the sign-then-hash hop, the coupling's `realRun`. -/
+real-world side of the sign-then-hash hop, the coupling's `realRun`. -/
 noncomputable def realGameRun
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -520,14 +514,13 @@ theorem realGameRun_eq_run'_implReal
 
 /-! ### GPV tape-consuming impls
 
-The front-tape factorization follows the Fiat–Shamir-with-abort fold-level tape factorization: an
-`OracleComp.inductionOn` over `adv.main pk` that front-loads every signing query's fresh salt draw
-into a single front draw block `OracleComp.drawList ($ᵗ Salt) qSign`, leaving a *tape-consuming* run
-whose signing steps read their salt off the pre-drawn tape rather than drawing it inline.
+The front-tape factorization is a deferred-sampling argument: an `OracleComp.inductionOn`
+over `adv.main pk` that front-loads every signing query's fresh salt draw into a single front draw
+block `OracleComp.drawList ($ᵗ Salt) qSign`, leaving a *tape-consuming* run whose signing steps read
+their salt off the pre-drawn tape rather than drawing it inline.
 
-This section builds the GPV tape-consuming handlers — the analogues of Fiat–Shamir's
-`tapeDrawReadImpl` — and their per-query `.run` unfolding lemmas (the analogues of
-`tapeDrawReadImpl_run_unif` / `_read` / `_sign`). Each handler carries the random-oracle
+This section builds the GPV tape-consuming handlers and their per-query `.run` unfolding lemmas.
+Each handler carries the random-oracle
 `QueryCache` *plus a salt tape* `List Salt` in its state: a signing query consumes the head salt of
 the tape (running the rest of the inline signing body on it) instead of drawing `r ← $ᵗ Salt`, while
 uniform and random-oracle-read queries leave the tape untouched. These are concrete definitions and
@@ -543,8 +536,8 @@ The salt-tape analogue of `gpvRealImpl`: its state is the random-oracle `QueryCa
 returns `(r, s)` while advancing the tape by one; uniform and random-oracle-read queries behave
 exactly as the real handler and leave the tape untouched. The tape is over-provisioned (length
 `qSign`, one salt per signing query); a missing head (empty tape) defaults to the inline draw so the
-handler is total. This is the GPV analogue of Fiat–Shamir's `tapeDrawReadImpl`; its per-query
-unfoldings are recorded by `gpvRealImplTape_run_unif` / `_read` / `_sign` below. -/
+handler is total. Its per-query unfoldings are recorded by `gpvRealImplTape_run_unif` / `_read` /
+`_sign` below. -/
 @[expose] noncomputable def gpvRealImplTape (pk : PK) (sk : SK) :
     QueryImpl ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain)))
       (StateT ((Salt × M →ₒ Range).QueryCache × List Salt) ProbComp) :=
@@ -590,9 +583,8 @@ lemma gpvRealImplTape_run_read (pk : PK) (sk : SK) (mc : Salt × M)
 omit [Fintype Salt] [DecidableEq Range] in
 /-- **One-step unfolding of `gpvRealImplTape` on a signing query with a non-empty tape.** The head
 salt `r` is consumed off the tape (the tape advances to its tail `tl`), the random oracle is queried
-at `(r, msg)`, a trapdoor preimage is drawn, and `(r, s)` is returned. This is the GPV analogue of
-`tapeDrawReadImpl_run_sign`: the inline salt draw `r ← $ᵗ Salt` is *replaced* by consuming the
-pre-drawn tape head. -/
+at `(r, msg)`, a trapdoor preimage is drawn, and `(r, s)` is returned: the inline salt draw
+`r ← $ᵗ Salt` is *replaced* by consuming the pre-drawn tape head. -/
 lemma gpvRealImplTape_run_sign_cons (pk : PK) (sk : SK) (msg : M) (r : Salt) (tl : List Salt)
     (cache : (Salt × M →ₒ Range).QueryCache) :
     (gpvRealImplTape psf M Salt pk sk (.inr msg)).run (cache, r :: tl) =
@@ -672,10 +664,9 @@ omit [Fintype Salt] [DecidableEq Range] in
 step on a consed tape `r :: tl`, at a *missing* cache key `(r, msgs n) = none`, is distributed
 exactly as the concrete `signRunF` real step `gpvStepReal` at the consumed head salt `r`.
 
-This is the GPV analogue of Fiat–Shamir's per-body splice (the signing-step case of the fold
-factorization): it relates the tape-consuming signing step to the `signRunF` handler of the
-sequenced coupling `signRunF_measureTVDist_le_collisionBound`. It is *pinned* to the concrete
-`gpvRealImplTape` and
+This is the per-body splice (the signing-step case of the fold factorization): it relates the
+tape-consuming signing step to the `signRunF` handler of the sequenced coupling
+`signRunF_measureTVDist_le_collisionBound`. It is *pinned* to the concrete `gpvRealImplTape` and
 `gpvStepReal`, and reduces (via `gpvRealImplTape_run_sign_cons`) to the inline splice
 `evalDistEq_gpvSignBody_run_eq_gpvStepReal`: with the head salt `r` already supplied (front-loaded
 out of the tape), the tape signing step is exactly one real signing body run through the lazy random
@@ -770,8 +761,8 @@ theorem evalDistEq_gpvImplTape_run_sign_miss_eq (pk : PK) (sk : SK)
 
 /-! ### Flag-instrumented tape handlers (the identical-until-bad collision flag)
 
-A per-tape identical-until-bad coupling over the front salt tape would be established, in the
-Fiat–Shamir template, by instrumenting the two tape handlers with a collision *flag*: a `Bool`
+A per-tape identical-until-bad coupling over the front salt tape would be established by
+instrumenting the two tape handlers with a collision *flag*: a `Bool`
 threaded through the state, set the first time a consumed signing tape head salt `r` is already a
 key of the running random-oracle cache. Off the flag (no salt has yet collided) the two handlers
 agree in distribution by the `hreg` first marginal; once the flag fires it stays set
@@ -1078,9 +1069,8 @@ lemma prEvent_flagTag_false {α' σ' : Type}
 
 These lemmas relate one query-step of the tape-consuming impls `gpvRealImplTape` /
 `progGameRunImplTape` to one query-step of the unified impls `gpvRealImpl` /
-`progGameRunImplNoRec`, all on a common per-query `.run`. They are the analogues of
-Fiat–Shamir's per-query relating lemmas. The full `inductionOn (adv.main pk)` factorization
-(relating `simulateQ gpvRealImpl` to the front-tape
+`progGameRunImplNoRec`, all on a common per-query `.run`. The full `inductionOn (adv.main pk)`
+factorization (relating `simulateQ gpvRealImpl` to the front-tape
 `drawList ($ᵗ Salt) qSign >>= simulateQ gpvRealImplTape`) and the `drawList`↔`signRunF` step bridge
 are carried out in the front-tape factorization below.
 

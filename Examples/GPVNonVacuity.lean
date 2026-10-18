@@ -9,7 +9,7 @@ module
 public import VCVio.CryptoFoundations.GPVHashAndSign
 
 /-!
-# GPV #188 EUF-CMA: hypothesis-consistency witness
+# GPV EUF-CMA: hypothesis-consistency witness
 
 The GPV hash-and-sign EUF-CMA bounds (`GPVHashAndSign.forgery_yields_collision_or_exact_match`
 and the `euf_cma_*` corollaries) are stated under side conditions — PSF correctness and regularity,
@@ -29,8 +29,14 @@ and then forges at that same point, so its forgery key is constant and always ca
 * `bijPSF_correct` / `bijPSF_regularity` — the PSF-side conditions.
 * `bijPSF_hForge` — the forger queries its forgery point, for *every* domain sampler.
 * `adv_signHashQueryBound` — the adversary makes `0` signing and `1` random-oracle queries.
-* `gpv188_hyps_inhabited` — all four side conditions hold for the single instance
-  `(bijPSF, hr, adv)`, in exactly the shape the headline bounds consume them.
+* `gpv_hyps_inhabited` — all four side conditions hold for the single instance
+  `(bijPSF, hr, adv)`. The PSF-side conjuncts are the global forms `Correct` and `Regularity`,
+  which imply the per-key `hcorrect` and the `hreg` equation at the regularity witness that the
+  headline bounds take.
+
+At this instance the bounds are trivially met: the PSF is bijective, so every collision advantage
+is `0`, while `|Salt| = 1` makes the salt-collision term at least `1 / 2`. The witness therefore
+shows joint satisfiability of the hypotheses and nothing about the size of the bound.
 -/
 
 public section
@@ -119,16 +125,17 @@ theorem bijPSF_regularity : bijPSF.Regularity := by
   refine ⟨domainSample, fun pk sk => ?_⟩
   simp only [bijPSF, domainSample, pure_bind, EvalDistEq.refl]
 
-/-- **Consistency (inhabitance) witness for the GPV #188 headline hypotheses.** For the concrete
+/-- **Consistency (inhabitance) witness for the GPV headline hypotheses.** For the concrete
 bijective PSF, the generable relation `hr`, and the query-then-forge adversary `adv`, all the
 standard GPV side conditions hold simultaneously: the forger queries its forgery point for every
 domain sampler (`ForgesQueriedPoint`), the adversary makes `0` signing and `1` random-oracle queries
-(`signHashQueryBound`), the PSF is correct (`Correct`), and the PSF is regular (`Regularity`). Each
-conjunct is stated in the exact shape the headline bounds `GPVHashAndSign.euf_cma_split_bound` and
-`GPVHashAndSign.euf_cma_collision_bound` consume, with `ForgesQueriedPoint` proved for every domain
+(`signHashQueryBound`), the PSF is correct (`Correct`), and the PSF is regular (`Regularity`).
+`Correct` and `Regularity` imply the per-key correctness and the regularity equation at a fixed
+domain sampler taken by `GPVHashAndSign.euf_cma_split_bound` and
+`GPVHashAndSign.euf_cma_collision_bound`, and `ForgesQueriedPoint` is proved for every domain
 sampler, so their hypothesis conjunction is inhabitable. This witness carries no quantitative
 security content. -/
-theorem gpv188_hyps_inhabited :
+theorem gpv_hyps_inhabited :
     (∀ ds : Unit → ProbComp Bool,
       GPVHashAndSign.ForgesQueriedPoint bijPSF hr Unit Unit adv ds) ∧
     (∀ pk : Unit, GPVHashAndSign.signHashQueryBound Unit Unit (adv.main pk) 0 1) ∧

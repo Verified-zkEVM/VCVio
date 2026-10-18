@@ -30,26 +30,23 @@ variable {PK SK Domain Range : Type}
 /-! ### Front salt-tape factorization
 
 With the per-query tape↔unified bridges in place, the front-tape factorization of each
-game run is the `OracleComp.inductionOn (adv.main pk)` mirroring the Fiat–Shamir-with-abort
-fold-level tape factorization. Each game run distributes
+game run is proved by `OracleComp.inductionOn (adv.main pk)`. Each game run distributes
 as a single front draw block `OracleComp.drawList ($ᵗ Salt) qSign` of fresh signing salts followed
 by the corresponding *tape-consuming* run (`gpvRealImplTape` / `progGameRunImplTape`) reading each
 signing query's salt off the tape head, with the spent tape suffix projected away on output.
 
-Unlike the Fiat–Shamir instance (where each signing query consumes a `maxAttempts`-block), every GPV
-signing query consumes *exactly one* salt off the tape head, so the front block has length `qSign`
-and the per-signing-query split peels off a single leading salt (`drawList ($ᵗ Salt) 1`). The
-non-signing (uniform / random-oracle-read) steps consume *zero* tape and commute trivially past the
-front block (the generic answer-irrelevant commute
+Every GPV signing query consumes *exactly one* salt off the tape head, so the front block has length
+`qSign` and the per-signing-query split peels off a single leading salt (`drawList ($ᵗ Salt) 1`).
+The non-signing (uniform / random-oracle-read) steps consume *zero* tape and commute trivially past
+the front block (the generic answer-irrelevant commute
 `OracleComp.DeferredSampling.evalDistEq_step_commute_tape`, fed by the tape↔unified
 bridges). -/
 
 omit [Fintype Salt] [DecidableEq Salt] in
 /-- **Front salt-tape splits as a leading salt followed by the remaining block.** Drawing a
 `drawList ($ᵗ Salt) (n + 1)` front block is the same as drawing one leading salt and then the
-remaining `n`-block, consing the leading salt onto the front. This is the GPV (one-salt-per-signing
-step) analogue of `FiatShamirWithAbort.drawList_commit_add` at `m = 1`; it peels the head salt that
-a single signing query consumes off the over-provisioned front tape. -/
+remaining `n`-block, consing the leading salt onto the front. It peels the head salt that a single
+signing query consumes off the over-provisioned front tape. -/
 lemma drawList_salt_succ (n : ℕ) :
     OracleComp.drawList ($ᵗ Salt : ProbComp Salt) (n + 1) =
       (do let r ← ($ᵗ Salt : ProbComp Salt)
@@ -146,7 +143,7 @@ theorem evalDistEq_gpvSignStep_commute_real {γ : Type} (pk : PK) (sk : SK) (msg
     exact EvalDistEq.bind_right _ (fun tl => (congrArg (· =ᵈ _) (hflat tl)).mpr EvalDistEq.rfl)
 
 omit [Fintype Salt] in
-/-- **Real-side front salt-tape factorization (the Fiat–Shamir-template headline, real side).** By
+/-- **Real-side front salt-tape factorization (real side).** By
 `OracleComp.inductionOn` on the adversary computation `oa`, the unified real run distributes as a
 single front draw block `drawList ($ᵗ Salt) qSrem` of fresh signing salts followed by the
 tape-consuming real run `gpvRealImplTape`, the spent-tape suffix projected away on output:
@@ -340,7 +337,7 @@ theorem evalDistEq_gpvSignStep_commute_prog {γ : Type} (domainSample : PK → P
       EvalDistEq.rfl
 
 omit [Fintype Salt] [DecidableEq Range] [SampleableType Range] in
-/-- **Prog-side front salt-tape factorization (the Fiat–Shamir-template headline, prog side).**
+/-- **Prog-side front salt-tape factorization (prog side).**
 By `OracleComp.inductionOn` on the adversary computation `oa`, the unified programmed run
 distributes as a single front draw block `drawList ($ᵗ Salt) qSrem` of fresh signing salts followed
 by the tape-consuming programmed run `progGameRunImplTape`, the spent-tape suffix projected away on

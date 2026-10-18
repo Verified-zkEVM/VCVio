@@ -1,7 +1,5 @@
 {"sorry":
- ["Falcon.euf_cma_security",
-  "Falcon.euf_cma_security_bytes40",
-  "Falcon.keyGenFromSeed",
+ ["Falcon.keyGenFromSeed",
   "FiatShamirWithAbort.euf_cma_bound",
   "FiatShamirWithAbort.euf_cma_bound_perfectHVZK",
   "MLDSA.eufCmaMLWEReduction",

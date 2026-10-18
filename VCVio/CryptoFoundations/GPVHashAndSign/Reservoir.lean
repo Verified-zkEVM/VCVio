@@ -125,7 +125,8 @@ lemma reservoir_embed_commute_winner_floorFree [DecidableEq Domain] [Inhabited R
   -- `progGameRunImplCombinedTrapCount` draws the *same* fresh `v` and records
   -- `table(forged) = trapdoorSample pk sk v` with `idx(forged) = some j`).  Matching the trap event
   -- `table(forged) = trapdoorSample (cache(forged))` to the embed event `output = trapdoorSample
-  -- (cache(forged))` is the final N4-style same-randomness coupling
+  -- (cache(forged))` is the final same-randomness coupling of
+  -- `evalDistEq_run_embedAtIndexImpl_eq_embedTrap`
   -- (`evalDistEq_simulateQ_run` after projecting to the common
   -- `embedTrapFreshImpl` cache/counter state) and the trapdoor draw `x`.
   --
@@ -655,10 +656,11 @@ lemma gpv_perKey_exactMatch_le_reservoir [DecidableEq Domain] [Inhabited Range]
   --   `∑' y, (qSign + qHash) * (Pr{let x ← $ᵗ Range}[x = y] * Pr[per-y exact-match win])`.
   rw [programmedPreimage_perKey_eq_tsum psf hr M Salt domainSample pk sk qSign qHash adv,
     ← ENNReal.tsum_mul_left]
-  -- **N4 rewrite.**  Inside every per-target factor `P_y`, replace the pre-sampled-index
-  -- handler `embedAtIndexImpl` by its trapdoor-uniform sibling `embedTrapImpl` (N4); after this the
-  -- embed run has an all-uniform cache (modulo `y` at the winner slot), matching the cache marginal
-  -- of the trapdoor-recording combined run.
+  -- **Embed-to-trap rewrite.**  Inside every per-target factor `P_y`, replace the pre-sampled-index
+  -- handler `embedAtIndexImpl` by its trapdoor-uniform sibling `embedTrapImpl`
+  -- (`evalDistEq_run_embedAtIndexImpl_eq_embedTrap`); after this the embed run has an all-uniform
+  -- cache (modulo `y` at the winner slot), matching the cache marginal of the trapdoor-recording
+  -- combined run.
   have hN4 : ∀ y : Range,
       Pr{let z ← (do
         let x ← psf.trapdoorSample pk sk y
@@ -676,13 +678,15 @@ lemma gpv_perKey_exactMatch_le_reservoir [DecidableEq Domain] [Inhabited Range]
     simp only [programmedPreimageReduction_eq_run, bind_assoc, pure_bind]
     refine EvalDistEq.bind_right _ fun x => ?_
     refine EvalDistEq.bind_right _ fun wOpt => ?_
-    -- The remaining `run >>= pure ∘ decide` factor is equidistributed under N4.
+    -- The remaining `run >>= pure ∘ decide` factor is equidistributed by
+    -- `evalDistEq_run_embedAtIndexImpl_eq_embedTrap`.
     exact (evalDistEq_run_embedAtIndexImpl_eq_embedTrap psf M Salt domainSample pk sk
       (wOpt.getD (qSign + qHash)) y hreg (adv.main pk)
       ((∅ : (Salt × M →ₒ Range).QueryCache), (0 : ℕ))).bind_left _
-  -- **N4 applied.**  Replace every per-target embed run by its all-uniform-cache trap
-  -- sibling `embedTrapImpl`, so the goal RHS is the reservoir/target average of the *trap-sibling*
-  -- embedding run, matching the cache marginal of the trapdoor-recording combined run.
+  -- **Embed-to-trap rewrite applied.**  Replace every per-target embed run by its all-uniform-cache
+  -- trap sibling `embedTrapImpl`, so the goal RHS is the reservoir/target average of the
+  -- *trap-sibling* embedding run, matching the cache marginal of the trapdoor-recording combined
+  -- run.
   simp only [hN4]
   -- **M1 (Lemma A — write-only-table deferral).**  Push the verify-stripped LHS exact-match mass
   -- off the eval-caching combined run `progGameRunImplCombined` onto its trapdoor-recording sibling

@@ -29,7 +29,7 @@ variable {PK SK Domain Range : Type}
   (hr : GenerableRelation PK SK p)
   (M Salt : Type) [DecidableEq M] [DecidableEq Salt] [SampleableType Salt] [Fintype Salt]
 
-/-! ### Stage-4 combined handler: programmed game ⊕ collision reduction
+/-! ### Combined handler: programmed game ⊕ collision reduction
 
 The distinct-collision transfer needs to relate the programmed freshness game handler
 `progGameRunImplNoRecFlagFresh` (state `((cache × signedSet) × flag)`) to the collision
@@ -107,12 +107,14 @@ lemma reduction_eq_run_reductionImpl
         | some sHidden => pure (sHidden, sStar)
         | none => pure (sStar, sStar)) := rfl
 
-/-- **Pre-sampled-index programmed-preimage handler.** Embeds the external target `y` at the
-`w`-th programmed random-oracle entry (counting RO-query programming steps), caching `psf.eval pk s`
-at every other entry and at every signing entry, and NEVER overwriting an already-cached slot. The
-embed index `w` is fixed before the run, so the simulated random oracle is consistent under
-re-query. Signing entries always return a valid signature `(r, s)` with `psf.eval pk s` the cached
-value. -/
+/-- **Pre-sampled-index programmed-preimage handler.** Counts programming steps (random-oracle
+misses and signing queries) and embeds the external target `y` at the random-oracle miss with
+index `w`, caching `psf.eval pk s` for a forward sample `s ← domainSample pk` at every other miss
+and at every signing query. A random-oracle query never overwrites a cached slot: a hit returns the
+cached value. A signing query writes `(r, msg)` unconditionally, so on a salt collision with an
+earlier recorded input it overwrites that entry; this is the event charged by `collisionBound`.
+The embed index `w` is fixed before the run, so the simulated random oracle is consistent under
+re-query. Signing queries return `(r, s)` with `psf.eval pk s` the value cached at `(r, msg)`. -/
 @[expose] noncomputable def embedAtIndexImpl (domainSample : PK → ProbComp Domain) (pk : PK)
     (w : ℕ) (y : Range) :
     QueryImpl ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain)))
@@ -295,7 +297,7 @@ lemma embedTrapImpl_run_inr (pk : PK) (sk : SK)
     StateT.run_get, Function.comp_apply, pure_bind, StateT.run_set, StateT.run_pure]
 
 omit [DecidableEq Range] [Fintype Salt] in
-/-- **N3 — per-step equidistribution of `embedAtIndexImpl` and `embedTrapImpl`.** For every query
+/-- **Per-step equidistribution of `embedAtIndexImpl` and `embedTrapImpl`.** For every query
 `t` and every embed state `s`, the two handlers produce *equal output distributions* on the same
 state `s`, under GPV regularity `hreg` at `(pk, sk)`.
 
@@ -379,7 +381,7 @@ lemma evalDistEq_embedAtIndex_step_eq_embedTrap
               rw [map_eq_bind_pure_comp]; rfl
 
 omit [DecidableEq Range] [Fintype Salt] in
-/-- **N4 — run-level equidistribution of `embedAtIndexImpl` and `embedTrapImpl`.** For *any*
+/-- **Run-level equidistribution of `embedAtIndexImpl` and `embedTrapImpl`.** For *any*
 adaptive computation `oa` and any start embed state `s`, the full simulated run of the
 pre-sampled-index handler `embedAtIndexImpl` over `oa` is *equidistributed* with the run of its
 trapdoor-uniform sibling `embedTrapImpl`, under GPV regularity `hreg`.

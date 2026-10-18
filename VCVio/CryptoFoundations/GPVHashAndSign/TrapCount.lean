@@ -10,7 +10,7 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
 
 /-! # GPV Hash-and-Sign: The Counter-Augmented Trap Run
 
-The N5 counter-augmented trap run tagging the forged point with its programming
+The counter-augmented trap run tagging the forged point with its programming
 index, and its agreement with the untagged run.
 -/
 
@@ -27,7 +27,7 @@ variable {PK SK Domain Range : Type}
   (hr : GenerableRelation PK SK p)
   (M Salt : Type) [DecidableEq M] [DecidableEq Salt] [SampleableType Salt] [Fintype Salt]
 
-/-! #### N5. Counter-augmented trap run: tagging the forged point's programming index
+/-! #### Counter-augmented trap run: tagging the forged point's programming index
 
 The trapdoor-recording combined run `progGameRunImplCombinedTrap` carries an *unordered* hidden
 preimage table `(Salt × M) → Option Domain`, so it does not expose the *order* in which programmed
@@ -44,7 +44,7 @@ trajectory the forged point — being in the preimage table — has a well-defin
 index, which drives the trap-mass index partition `∑' j, g j = trap`. -/
 
 open Classical in
-/-- **N5 — the counter-augmented trapdoor-recording combined handler.** Identical to
+/-- **The counter-augmented trapdoor-recording combined handler.** Identical to
 `progGameRunImplCombinedTrap` on its first state component, but additionally threads a passive
 `(idxTable, counter)` instrument: a running `ℕ` programming counter and an insertion-index table
 `(Salt × M) → Option ℕ`.  At each programming event (random-oracle miss or signing step) it records
@@ -121,8 +121,8 @@ lemma progGameRunImplCombinedTrapCount_run_inr (pk : PK) (sk : SK) (msg : M)
             ((fun t' => if t' = (r, msg) then some s.2.2 else s.2.1 t'), s.2.2 + 1)))) := rfl
 
 omit [DecidableEq Range] [Fintype Salt] in
-/-- **N5 per-query projection.** Dropping the `(idxTable, counter)` instrument from one
-`progGameRunImplCombinedTrapCount` query step recovers the corresponding
+/-- **Counter-augmented trap run: per-query projection.** Dropping the `(idxTable, counter)`
+instrument from one `progGameRunImplCombinedTrapCount` query step recovers the corresponding
 `progGameRunImplCombinedTrap` step.  This is the per-query hypothesis of the state-projection
 transport `map_run_simulateQ_eq_of_query_map_eq`, witnessing that the instrument is passive. -/
 lemma progGameRunImplCombinedTrapCount_proj (pk : PK) (sk : SK)
@@ -151,10 +151,10 @@ lemma progGameRunImplCombinedTrapCount_proj (pk : PK) (sk : SK)
       simp only [map_bind, map_pure, Prod.map, id_eq]
 
 omit [DecidableEq Range] [Fintype Salt] in
-/-- **N5 run-level projection (passive augmentation).** Dropping the `(idxTable, counter)`
-instrument from the full simulated run of `progGameRunImplCombinedTrapCount` over `oa` recovers the
-run of `progGameRunImplCombinedTrap` from the projected start state.  Transports the per-query
-`progGameRunImplCombinedTrapCount_proj` through the whole computation via
+/-- **Counter-augmented trap run: run-level projection (passive augmentation).** Dropping the
+`(idxTable, counter)` instrument from the full simulated run of `progGameRunImplCombinedTrapCount`
+over `oa` recovers the run of `progGameRunImplCombinedTrap` from the projected start state.
+Transports the per-query `progGameRunImplCombinedTrapCount_proj` through the whole computation via
 `map_run_simulateQ_eq_of_query_map_eq`: the instrument is distributionally passive, so the
 counter and the insertion-index table do not change the trap event mass. -/
 lemma map_run_progGameRunImplCombinedTrapCount_proj (pk : PK) (sk : SK)
@@ -174,15 +174,15 @@ lemma map_run_progGameRunImplCombinedTrapCount_proj (pk : PK) (sk : SK)
     (progGameRunImplCombinedTrapCount_proj psf M Salt pk sk) oa s
 
 omit [DecidableEq Range] [Fintype Salt] in
-/-- **N5 lockstep-domain invariant.** Starting from a state whose insertion-index table and hidden
-preimage table agree on which keys are recorded, every state reachable in the counter-augmented run
-preserves that agreement: a key has a recorded preimage iff it has a recorded insertion index.  The
-two tables are written by the *same* conditional update at each programming event (random-oracle
-miss or signing step) and are both untouched on uniform queries and cache hits, so the per-key
-`isSome` status of the two tables stays in lockstep through the whole adaptive fold.  This is the
-support-level fact that lets the trap-mass index partition over recorded insertion indices recover
-the full trap mass: every trap-winning trajectory, having its forged point in the preimage table,
-has a well-defined recorded forged-point insertion index. -/
+/-- **Counter-augmented trap run: lockstep-domain invariant.** Starting from a state whose
+insertion-index table and hidden preimage table agree on which keys are recorded, every state
+reachable in the counter-augmented run preserves that agreement: a key has a recorded preimage iff
+it has a recorded insertion index.  The two tables are written by the *same* conditional update at
+each programming event (random-oracle miss or signing step) and are both untouched on uniform
+queries and cache hits, so the per-key `isSome` status of the two tables stays in lockstep through
+the whole adaptive fold.  This is the support-level fact that lets the trap-mass index partition
+over recorded insertion indices recover the full trap mass: every trap-winning trajectory, having
+its forged point in the preimage table, has a well-defined recorded forged-point insertion index. -/
 lemma progGameRunImplCombinedTrapCount_idx_iff_table (pk : PK) (sk : SK) :
     ∀ {β : Type}
       (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β)
@@ -275,12 +275,12 @@ theorem prEvent_eq_tsum_prEvent_index_aux {ι : Type} (mx : ProbComp ι) (P : ι
     exact ENNReal.tsum_eq_zero.mpr fun j => ite_eq_right (fun h => hPx h.1)
 
 omit [DecidableEq Range] [Fintype Salt] in
-/-- **N5 counter bound.** From any start state, every final state of the counter-augmented trap run
-of an adversary `oa` bounded by `(qS, qH)` (signing / hash queries) has its running programming
-counter at most `s.counter + qS + qH`: the counter is incremented exactly once per programming event
-(random-oracle miss or signing step), each charged against the corresponding query budget; uniform
-queries and random-oracle cache hits leave the counter fixed.  This is the trapCount-run dual of
-`embedAtIndexImpl_run_count_le`. -/
+/-- **Counter-augmented trap run: counter bound.** From any start state, every final state of the
+counter-augmented trap run of an adversary `oa` bounded by `(qS, qH)` (signing / hash queries) has
+its running programming counter at most `s.counter + qS + qH`: the counter is incremented exactly
+once per programming event (random-oracle miss or signing step), each charged against the
+corresponding query budget; uniform queries and random-oracle cache hits leave the counter fixed.
+This is the trapCount-run dual of `embedAtIndexImpl_run_count_le`. -/
 lemma progGameRunImplCombinedTrapCount_run_count_le (pk : PK) (sk : SK) :
     ∀ {β : Type}
       (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β)
@@ -351,12 +351,12 @@ lemma progGameRunImplCombinedTrapCount_run_count_le (pk : PK) (sk : SK) :
         rw [hc] at this; exact le_trans this (by omega)
 
 omit [DecidableEq Range] [Fintype Salt] in
-/-- **N5 recorded-index range.** From a start state whose insertion-index table only records indices
-strictly below the running counter, every state reachable in the counter-augmented trap run
-preserves that bound: every recorded insertion index is `< counter`.  Each programming event records
-the *current* counter value and then increments the counter, so the freshly recorded index is `<`
-the new counter; previously recorded indices stay below the (only larger) counter; uniform queries
-and cache hits leave both unchanged. -/
+/-- **Counter-augmented trap run: recorded-index range.** From a start state whose insertion-index
+table only records indices strictly below the running counter, every state reachable in the
+counter-augmented trap run preserves that bound: every recorded insertion index is `< counter`.
+Each programming event records the *current* counter value and then increments the counter, so the
+freshly recorded index is `<` the new counter; previously recorded indices stay below the (only
+larger) counter; uniform queries and cache hits leave both unchanged. -/
 lemma progGameRunImplCombinedTrapCount_idx_lt_count (pk : PK) (sk : SK) :
     ∀ {β : Type}
       (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β)
@@ -430,11 +430,12 @@ lemma progGameRunImplCombinedTrapCount_idx_lt_count (pk : PK) (sk : SK) :
           exact Nat.lt_succ_of_lt (hs k i hki)
 
 omit [DecidableEq Range] [Fintype Salt] in
-/-- **N5 recorded-index budget.** From the empty/zero start state, every recorded insertion index of
-the counter-augmented trap run of an adversary obeying `signHashQueryBound` is `< qSign + qHash`:
-the index is `< counter` (`progGameRunImplCombinedTrapCount_idx_lt_count`) and the counter is
-`≤ qSign + qHash` (`progGameRunImplCombinedTrapCount_run_count_le`).  This bounds the realized
-programming index that the reservoir winner `reservoirWinnerIndex (qSign + qHash)` samples over. -/
+/-- **Counter-augmented trap run: recorded-index budget.** From the empty/zero start state, every
+recorded insertion index of the counter-augmented trap run of an adversary obeying
+`signHashQueryBound` is `< qSign + qHash`: the index is `< counter`
+(`progGameRunImplCombinedTrapCount_idx_lt_count`) and the counter is `≤ qSign + qHash`
+(`progGameRunImplCombinedTrapCount_run_count_le`).  This bounds the realized programming index that
+the reservoir winner `reservoirWinnerIndex (qSign + qHash)` samples over. -/
 lemma progGameRunImplCombinedTrapCount_idx_lt_budget (pk : PK) (sk : SK) (qSign qHash : ℕ)
     {β : Type} (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β)
     (hQ : signHashQueryBound (S' := Salt × Domain) (α := β)
@@ -455,7 +456,7 @@ lemma progGameRunImplCombinedTrapCount_idx_lt_budget (pk : PK) (sk : SK) (qSign 
   omega
 
 omit [DecidableEq Range] [Fintype Salt] in
-/-- **N4 (scaffold) — off-slot target independence of the trap-sibling embed step.** The embedded
+/-- **Off-slot target independence of the trap-sibling embed step.** The embedded
 target `y` enters the trap-sibling handler `embedTrapImpl … j y` at *exactly one* query step: the
 random-oracle **miss** whose running count equals the winner slot `j`.  Everywhere else — uniform
 queries, random-oracle cache hits, off-`j` random-oracle misses (`s.2 ≠ j`), and signing steps — the

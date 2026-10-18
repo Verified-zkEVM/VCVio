@@ -37,9 +37,10 @@ The EUF-CMA security proof proceeds by a game-hopping argument:
 signing oracle (trapdoor sampler).
 
 **Game 1**: Replace signing with "sign-then-hash": for each signing query on message `m`,
-sample a short preimage `s ← D_short`, set `c := psf.eval pk s`, program the RO at
-`(r, m) := c`, and return `(r, s)`. This is indistinguishable from Game 0 when the PSF
-sampler is correct (the output distribution conditioned on the target is the same).
+sample a preimage `s ← domainSample pk`, set `c := psf.eval pk s`, program the RO at
+`(r, m) := c`, and return `(r, s)`. Away from the bad event below this matches Game 0 when the
+regularity condition `hreg` holds: the pair `(psf.eval pk s, s)` for `s ← domainSample pk` has the
+same law as a uniform target together with its trapdoor preimage.
 
 **Bad event**: A fresh signing salt lands on a `(salt, message)` pair already recorded in the
 random oracle, by a prior signing query or an adversary hash query. Under the birthday bound,
@@ -58,11 +59,11 @@ below.
 /-- The collision-branch GPV reduction adversary. Given a public key `pk`,
 the reduction internally simulates the CMA experiment for the adversary:
 
-1. Program a lazy random oracle, storing for each entry the hidden short preimage used to
-   define that entry.
-2. Answer signing queries using the sign-then-hash strategy: sample a short preimage
-   `s` via `trapdoorSample`, compute `c = psf.eval pk s`, and program the RO at
-   `(r, msg) := c`. Return `(r, s)` as the signature.
+1. Program a lazy random oracle: on a miss, forward-sample `s ← domainSample pk`, cache
+   `psf.eval pk s`, and record `s` as the hidden preimage of that entry.
+2. Answer signing queries using the sign-then-hash strategy: sample a fresh salt `r` and
+   `s ← domainSample pk`, program the RO at `(r, msg) := psf.eval pk s`, record `s`, and
+   return `(r, s)` as the signature.
 3. Run the adversary and, on a successful fresh forgery, return the simulator's hidden
    programmed preimage together with the forged preimage as a candidate collision.
 
@@ -71,8 +72,10 @@ RO table. If the adversary forges on a fresh `(r*, msg*)` pair, the RO value at 
 point was set by the reduction, so the hidden programmed preimage and the forged preimage
 land at the same image under `psf.eval`.
 
-The detailed construction simulates the adversary's oracle interactions by maintaining
-a programmable RO state, using PSF correctness to ensure consistency. -/
+The trapdoor sampler is never called: all preimages come from the caller-chosen
+`domainSample`, and the simulation matches the real game exactly when the GPV regularity
+condition `hreg` holds for that `domainSample` (the joint law of `(psf.eval pk s, s)` under
+`domainSample pk` equals that of a uniform target and its trapdoor preimage). -/
 @[expose] noncomputable def reduction
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -379,7 +382,7 @@ against the recorded inputs `c j` of size `≤ j + qHash`, collides with probabi
 `collisionBound Salt qSign qHash`. This is the salt-AVERAGED combined "draw salt, then check" step
 that a per-query `withProgramming` framework cannot express.
 
-The `withProgramming` fire-on-miss bad event bounded by the U2 core
+The `withProgramming` fire-on-miss bad event bounded by the sign-then-hash up-to-bad core
 `measureTVDist_runtime_real_programmed_le_bad` cannot be supplied from this telescope at that
 statement's
 granularity, for two independent structural reasons:
@@ -400,11 +403,10 @@ granularity, for two independent structural reasons:
    so the `card / |Salt|` averaging that the telescope performs over the fresh draw is structurally
    absent from `ob`'s granularity.
 
-The U2 *re-statement* `measureTVDist_runtime_real_programmed_le_collisionBound_saltInclusive`
-(below)
-states U2 over the salt-inclusive signing run with the bad event instrumented as the cache-HIT salt
-collision `saltSeq c qSign`, and discharges the loss-free `measureTVDist ≤ collisionBound.toReal`
-conclusion *given* the up-to-bad coupling
+The *re-statement* `measureTVDist_runtime_real_programmed_le_collisionBound_saltInclusive`
+(below) states the sign-then-hash hop bound over the salt-inclusive signing run with the bad event
+instrumented as the cache-HIT salt collision `saltSeq c qSign`, and discharges the loss-free
+`measureTVDist ≤ collisionBound.toReal` conclusion *given* the up-to-bad coupling
 `hcouple : measureTVDist(real, programmed) ≤ Pr[saltSeq c qSign = true]`. It does **not** route
 through the
 fire-on-miss bad event (which, per reason 1 above, would require the false inequality
@@ -662,8 +664,9 @@ into two parts:
   `prEvent_saltSeq_succ`.
 
 Chaining this result with the telescope `prEvent_saltSeq_le_collisionBound`
-(`Pr[saltSeq] ≤ collisionBound`) yields the salt-inclusive coupling that discharges the U2
-hypothesis `hcouple`, once the GPV reduction handlers and per-step caches `c j` are instantiated. -/
+(`Pr[saltSeq] ≤ collisionBound`) yields the salt-inclusive coupling that discharges the
+sign-then-hash hypothesis `hcouple`, once the GPV reduction handlers and per-step caches `c j` are
+instantiated. -/
 theorem signRunF_measureTVDist_le_saltSeq {St : Type} [MeasurableSpace (St × Bool)] [Finite Salt]
     (stepReal stepProg : ℕ → St → Salt → ProbComp St)
     (c : ℕ → Finset Salt)
@@ -675,16 +678,15 @@ theorem signRunF_measureTVDist_le_saltSeq {St : Type} [MeasurableSpace (St × Bo
   signRunF_measureTVDist_le_saltSeq_aux (Salt := Salt) (St := St)
     stepReal stepProg c h_step n st false
 
-/-- **U2, re-stated over the salt-inclusive signing run (unconditional).**
+/-- **Sign-then-hash hop bound, re-stated over the salt-inclusive signing run (unconditional).**
 
-This is the salt-inclusive U2: it bounds the total-variation distance between the real and
-programmed *signing runs* directly by `collisionBound`, with **no coupling hypothesis**. Unlike the
-hash-only `measureTVDist_runtime_real_programmed_le_collisionBound_saltInclusive` (which takes the
-coupling
-as the typed hypothesis `hcouple`), this lemma is phrased over the salt-inclusive vehicle
-`signRunF` — where each of the `qSign` fresh signing salts `r ← $ᵗ Salt` is an explicit step of the
-recursion — so the salt-collision averaging is *structurally visible* and the coupling discharges it
-outright.
+This is the salt-inclusive sign-then-hash bound: it bounds the total-variation distance between the
+real and programmed *signing runs* directly by `collisionBound`, with **no coupling hypothesis**.
+Unlike the hash-only `measureTVDist_runtime_real_programmed_le_collisionBound_saltInclusive`
+(which takes the coupling as the typed hypothesis `hcouple`), this lemma is phrased over the
+salt-inclusive vehicle `signRunF` — where each of the `qSign` fresh signing salts `r ← $ᵗ Salt` is
+an explicit step of the recursion — so the salt-collision averaging is *structurally visible* and
+the coupling discharges it outright.
 
 The proof chains two results with no loss:
 * the multi-step coupling `signRunF_measureTVDist_le_saltSeq`
@@ -698,12 +700,11 @@ regularity-supplied programmed answer); `h_step` is the off-collision branch agr
 PSF regularity (`psf.Regularity`); `c j` is the recorded random-oracle cache slice seen by the
 `j`-th signing query, with the standard growth bound `card (c j) ≤ j + qHash` (`hcache`).
 
-Feeding the four GPV theorems additionally requires the adaptive→`signRunF` factorization: matching
-the real adversary run `simulateQ impl (adv.main pk)` — which interleaves the `qSign` signing
-queries (each drawing a fresh salt) with up to `qHash` adversary hash queries *adaptively* — to this
-fixed `qSign`-step `signRunF` recursion. That factorization is the deferred-sampling joint coupling
-packaged as `AdaptiveFactorizesSignRunF` (see the *Adaptive→signRunF factorization* section
-below). -/
+Applying this to the adaptive adversary run `simulateQ impl (adv.main pk)`, which interleaves
+the `qSign` signing queries (each drawing a fresh salt) with up to `qHash` hash queries, would
+require a deferred-sampling factorization onto this fixed `qSign`-step recursion. The headline
+bounds do not take that route: their sign-then-hash hop is proved by the inline-salt flag route
+(`gpv_measureTVDist_orig_run_le_prEvent_flag`, `gpv_orig_flag_le_collisionBound`). -/
 theorem signRunF_measureTVDist_le_collisionBound {St : Type} [MeasurableSpace (St × Bool)]
     [Finite Salt] [Nonempty Salt]
     (stepReal stepProg : ℕ → St → Salt → ProbComp St)

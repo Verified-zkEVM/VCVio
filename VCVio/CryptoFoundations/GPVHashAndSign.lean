@@ -27,10 +27,10 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.SamplerTransport
 /-!
 # GPV Hash-and-Sign Framework
 
-This file defines a generic hash-and-sign signature scheme following the GPV (Gentry–Peikert–
-Vaikuntanathan) framework [GPV08]. The construction is parameterized by a *preimage sampleable
-function* (PSF), a many-to-one function equipped with a probabilistic trapdoor that samples
-short preimages.
+This umbrella module collects the generic hash-and-sign signature scheme following the GPV
+(Gentry–Peikert–Vaikuntanathan) framework [GPV08], defined in `GPVHashAndSign.Basic`. The
+construction is parameterized by a *preimage sampleable function* (PSF), a many-to-one function
+equipped with a probabilistic trapdoor that samples short preimages.
 
 The GPV framework is the hash-and-sign analogue of the Fiat-Shamir transform:
 
@@ -67,8 +67,9 @@ The proof decomposes into:
 - `GPVHashAndSign.reduction`: the collision-finding adversary (sign-then-hash simulation)
 - `GPVHashAndSign.programmedPreimageReduction`: the exact-match branch reduction
 - `GPVHashAndSign.collisionBound`: the salt-collision birthday bound
-- `GPVHashAndSign.forgery_yields_collision`: the core distinct-preimage game-hop
 - `GPVHashAndSign.forgery_yields_collision_or_exact_match`: the explicit split bound
+- `GPVHashAndSign.forgery_yields_collision`: the split bound with the exact-match term bounded by
+  a caller-supplied bound on the programmed-preimage reduction's advantage
 
 ## Public endpoints
 
@@ -97,10 +98,9 @@ The development is split along its proof phases: `Basic` (the PSF abstraction an
 the scheme), `MinEntropy` (the guessing-probability bound for the programmed-preimage
 experiment), `CollisionTelescope`, `Factorization`, `GameRuns`, `TapeFactorization`,
 `FlagHandlers`, `CombinedHandler`, `GameIdentification`, `VerificationBridge`,
-`TrapCount`, `EmbedIndex`, `Security` (the headline EUF-CMA bounds),
-`AppendQuery` (the append-forgery-query compiler discharging `ForgesQueriedPoint`), and
-`SamplerTransport` (the adaptive trapdoor-sampler-swap accumulation).
+`TrapCount`, `EmbedIndex`, `TrapProjection` (trapdoor-recording run projections),
+`Reservoir` (the reservoir extraction for the exact-match branch), `Security` (the headline
+EUF-CMA bounds), `AppendQuery` (the append-forgery-query compiler discharging
+`ForgesQueriedPoint`), and `SamplerTransport` (the adaptive trapdoor-sampler-swap accumulation).
 This umbrella module re-exports all of them.
 -/
-
-@[expose] public section

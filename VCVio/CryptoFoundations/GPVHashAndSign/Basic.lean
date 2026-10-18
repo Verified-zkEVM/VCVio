@@ -193,7 +193,7 @@ unrestricted.
 
 Defined as the conjunction of two predicate-targeted query bounds `IsQueryBoundP`, one per
 counted oracle. Because the two index predicates are disjoint, the conjunction is
-equivalent to the prior single-vector `IsQueryBound` formulation. -/
+equivalent to a single `IsQueryBound` over the vector budget `(qSign, qHash)`. -/
 @[expose] def signHashQueryBound {S' α : Type}
     (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ S')) α)
     (qSign qHash : ℕ) : Prop :=
