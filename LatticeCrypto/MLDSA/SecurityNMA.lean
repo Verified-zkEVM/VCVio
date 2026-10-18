@@ -453,10 +453,12 @@ noncomputable def distinguisherB
 /-! ### Short-secret MLWE problems and the seed-to-matrix bridge
 
 The idealized short-key model states its Module-LWE assumption over short `(s₁, s₂)`
-(`mldsaMLWEShort`, seed-based; `mldsaMatrixMLWE`, uniform-matrix form). The seed-based problem
-reduces to the standard matrix form under the `expandAIdealization` XOF assumption
-(`advantage_mldsaMLWEShort_le_matrix`), and `distinguisherBShort` is the induced distinguisher
-whose advantage the short key-swap hop bounds. -/
+(`mldsaMLWEShort`, seed-based; `mldsaMatrixMLWE`, uniform-matrix form). The bridge lemma
+`advantage_mldsaMLWEShort_le_matrix` relates the two under `expandAIdealization`, which holds
+only at `εA ≈ 1`, so the bridge carries no quantitative content; the uniform-matrix problem is
+reached with no idealization slack by `MLDSA.NMA.nma_security_rom`, which models `ExpandA` as a
+random oracle. `distinguisherBShort` is the induced distinguisher whose advantage the short
+key-swap hop bounds. -/
 
 /-- **The short-secret Module-LWE problem for ML-DSA** (seed-based form). The public
 challenge is the matrix seed `ρ` itself (uniform), the secret `s₁` and the additive
@@ -464,9 +466,9 @@ error `s₂` are uniform on the `η`-bounded box (`sampleShortVec`), and the dec
 target is `t = ExpandA(ρ) · s₁ + s₂` versus uniform `t`. This is the distribution the
 ML-DSA literature states its MLWE assumption over; unlike a uniform-error variant it
 is not information-theoretically trivial, since `ExpandA(ρ) · s₁ + s₂` with short
-`(s₁, s₂)` is far from uniform. Bridging the seed-based challenge to the standard
-uniform-matrix form is `advantage_mldsaMLWEShort_le_matrix`, under the explicit
-`expandAIdealization` assumption. -/
+`(s₁, s₂)` is far from uniform. The bridge lemma `advantage_mldsaMLWEShort_le_matrix` to the
+uniform-matrix form holds only at `εA ≈ 1` (see `expandAIdealization`); the uniform-matrix
+problem is reached quantitatively by `MLDSA.NMA.nma_security_rom`. -/
 noncomputable def mldsaMLWEShort (p : Params) (prims : Primitives p) :
     LearningWithErrors.Problem (Bytes 32) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := $ᵗ (Bytes 32)
@@ -478,8 +480,9 @@ noncomputable def mldsaMLWEShort (p : Params) (prims : Primitives p) :
 /-- **The matrix-based short Module-LWE problem for ML-DSA.** The standard form: the
 public challenge is a uniform matrix `A`, the secret and error are uniform on the
 `η`-bounded box, and the decision target is `A · s₁ + s₂` versus uniform. This is the
-literature-facing hardness assumption; `mldsaMLWEShort` reduces to it under
-`expandAIdealization` (`advantage_mldsaMLWEShort_le_matrix`). -/
+literature-facing hardness assumption. `advantage_mldsaMLWEShort_le_matrix` bounds
+`mldsaMLWEShort` by it only at `εA ≈ 1`; `MLDSA.NMA.nma_security_rom` reaches it with no
+idealization slack by modelling `ExpandA` as a random oracle. -/
 noncomputable def mldsaMatrixMLWE (p : Params) :
     LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := $ᵗ (TqMatrix p.k p.l)
@@ -488,7 +491,7 @@ noncomputable def mldsaMatrixMLWE (p : Params) :
   noiseless := fun s1 A => A * s1
   sampleUniform := $ᵗ (RqVec p.k)
 
-/-- **ExpandA idealization (quantified XOF-as-random-matrix step).** For every
+/-- **ExpandA idealization.** For every
 distinguisher `D` receiving both the seed and the matrix, the pair
 `(ρ, ExpandA(ρ))` for uniform `ρ` is `εA`-indistinguishable from `(ρ, A)` with `A`
 uniform and independent of `ρ`.
@@ -498,8 +501,8 @@ uniform and independent of `ρ`.
 branch with probability `1` and the ideal branch with probability `1 / |TqMatrix|`, so the
 inequality forces `εA` to be essentially `1`. Restricting to bounded distinguishers would not
 change that: recomputing `ExpandA(ρ)` is the same efficient evaluation that key generation and
-verification themselves perform. Consequently `nma_security_short_matrix`, the only consumer,
-is non-quantitative scaffolding.
+verification themselves perform. Consequently `nma_security_short_matrix`, the only headline
+that consumes it, is non-quantitative scaffolding.
 
 Reaching the uniform-matrix problem requires *modelling* `ExpandA` as a random oracle rather
 than assuming a property of a fixed function. That model is
@@ -549,12 +552,15 @@ def matrixLift
 
 end Distinguisher
 
-/-- **Seed-to-matrix bridge.** Under `expandAIdealization`, any adversary against the
-seed-based short problem yields one against the standard uniform-matrix problem: the
-matrix adversary runs the seed adversary on a freshly sampled seed and the challenged
-target vector. The uniform branches agree exactly (both present an independent uniform
-`t`), and the real branches differ by one application of the idealization at the
-distinguisher `D ρ A := s₁ ← S_η^ℓ; s₂ ← S_η^k; B (ρ, A·s₁ + s₂)`.
+/-- **Seed-to-matrix bound at the idealization slack.** Under `expandAIdealization p prims εA`,
+the advantage of an adversary against the seed-based short problem is at most that of its
+`matrixLift` against the uniform-matrix problem plus `εA`: the matrix adversary runs the seed
+adversary on a freshly sampled seed and the challenged target vector. Since
+`expandAIdealization` holds only at `εA ≈ 1`, the bound is vacuous as a reduction;
+`MLDSA.NMA.nma_security_rom` is the quantitative route to the uniform-matrix problem. The
+uniform branches agree exactly (both present an independent uniform `t`), and the real branches
+differ by one application of the idealization at the distinguisher
+`D ρ A := s₁ ← S_η^ℓ; s₂ ← S_η^k; B (ρ, A·s₁ + s₂)`.
 
 Proof recipe: rewrite both advantages via `NoisyLearning.advantage_eq_boolDist` and
 `Measure.boolDist`; the `randomExperiment` branches are identified by stripping the
