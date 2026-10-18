@@ -29,6 +29,11 @@ The codemod is textual: it never needs a build and is idempotent, so it can be r
 further repin. It does not convert proofs; a proof that computed with `probOutput` sums, `SPMF`
 equalities or `tvDist` follows the *Standard proof conversion* table of the roadmap.
 
+Maintainers converting an open pull request: `scripts/migration-dry-run.sh --worktree DIR --out OUT
+PR...` merges each pull request onto the current commit in a built worktree, runs the codemod over
+its Lean files and builds their modules; `python3 scripts/classify-migration-errors.py OUT` sorts the
+remaining build errors by kind, file scope and whether the codemod knows the name.
+
 ## Notation and definitions
 
 | Removed | Replacement |
@@ -55,9 +60,9 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 | `OracleSpec.addRangeMeasurableSpace`, `OracleSpec.addRangeDiscreteMeasurableSpace` | delete them; no replacement is needed |
 | `IsUniformSpec.ofFintypeInhabited spec` | `UniformAnswerMeasure.ofFiniteNonempty spec`, as a local instance; it needs only `Finite` and `Nonempty` answers |
 | `PFunctor.IsProbabilitySpec`, `PFunctor.IsUniformSpec` | `PFunctor.AnswerMeasure`, `PFunctor.AnswerMeasure.uniformOfFiniteNonempty` |
-| `EvalDistCompatible`, `DiscreteEvalDistCompatible` | operational support lemmas and the `𝒟` equations; no class |
-| `[MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]` | `[EvalDistSemantics m] [LawfulEvalDistSemantics m]` |
-| `[MonadLiftT m SetM] [LawfulMonadLiftT m SetM]` for `support` | `[MonadAttach m] [ExactMonadAttach m]` |
+| `EvalDistCompatible`, `DiscreteEvalDistCompatible` | no class: from possible outputs to the measure, `evalDist.ae_of_forall_mem_support`; in a general monad the converse (`support` of a lift inside the source's `support`, a positive mass from a possible output) is a hypothesis of the statement that needs it, which holds by `rfl` or by the oracle lemmas at `ProbComp` and `OracleComp spec` |
+| `[MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]` | `[EvalDistSemantics m]` on definitions, adding `[LawfulEvalDistSemantics m]` on the lemmas that decompose a run (the environment linter rejects an unused one on a definition) |
+| `[MonadLiftT m SetM] [LawfulMonadLiftT m SetM]` for `support` | `[MonadAttach m]`, with `[LawfulMonadAttach m]` for proofs that eliminate a membership (`LawfulMonadAttach.canReturn_bind_imp'`, `eq_of_canReturn_pure`) and `[ExactMonadAttach m]` for the converse |
 | `open scoped ProbComp.DiscreteCompatibility` | delete it |
 
 `unifSpec` and `coinSpec` carry global uniform measure instances. For a concrete specification
@@ -141,13 +146,24 @@ the output type. The sum forms follow from it:
 - `tvDist_bind_left_le` → `measureETVDist_bind_left_le_tsum`, where `measureETVDist` takes the
   place of `ENNReal.ofReal (tvDist …)`, or `measureTVDist_bind_left_le_tsum` for a real bound.
 
+`prEvent_le_one`, `prEvent_ne_top`, `prEvent_eq_zero_of_not_mem_support` and the oracle-computation
+sums `tsum_prEvent_le_one` and `tsum_prEvent_eq_one` take the computation explicitly where the
+removed lemmas left it implicit; the codemod writes `(prEvent_le_one _)`, and a never-fail argument
+of the removed form is dropped. A real-valued distance inside a definition needs its discrete
+structure in the body (`letI : MeasurableSpace X := ⊤; measureTVDist …`), and so does every term
+that inhabits it.
+
 Real-valued total variation keeps the real arithmetic of a proof: `tvDist_bind_right_le` →
 `measureTVDist_bind_right_le` (`measureETVDist_bind_right_le` in `ℝ≥0∞`; `measureTVDist_bind_le`
 for a measurable continuation in any monad), `tvDist_map_le` → `measureTVDist_map_le`,
 `tvDist_nonneg`/`tvDist_triangle`/`tvDist_le_one` → `measureTVDist_nonneg`/`measureTVDist_triangle`/
 `measureTVDist_le_one`, `abs_probOutput_toReal_sub_le_tvDist` →
 `abs_prEvent_toReal_sub_le_measureTVDist`, and `measureTVDist_eq_toReal_measureETVDist` moves
-between the two forms. The complement of an event is `prEvent_not_eq_one_sub` on `OracleComp`.
+between the two forms. After a common prefix, a uniform bound on the continuations gives
+`measureTVDist_bind_left_le_of_forall_le`, and continuations equal in distribution off a bad
+prefix event give `measureTVDist_bind_left_le_prEvent_of_evalDistEq` (both with `ℝ≥0∞` forms).
+The complement of an event is `prEvent_not_eq_one_sub` on `OracleComp`, and independent draws
+commute inside a two-draw event by `prEvent_bind_map_swap`.
 
 ## Converted theorem families
 
@@ -249,15 +265,28 @@ replaced. The codemod maps both spellings to the final names.
 
 | Symptom | Fix |
 |---|---|
-| failed to synthesize `OracleSpec.IsMeasureSpec spec` | add the binder from *Classes and binders*, or the local instance for a concrete specification |
+| failed to synthesize `OracleSpec.AnswerMeasure spec` | add the binder from *Classes and binders*, or the local instance for a concrete specification |
 | failed to synthesize `MeasurableSpace (spec.Range t)` inside a proof | `let : MeasurableSpace (spec.Range t) := ⊤` (use `let`, not `letI`, in a proposition-valued goal); in a statement, state the fact with `=ᵈ` or `Pr{…}[…]`, or take `{_ : MeasurableSpace (spec.Range t)}` |
 | `rw`/`simp` does not find a query law such as `evalDist_liftM_query_apply` when the answer type appears reduced (`Bool` rather than `spec.Range t`) | name the specification: `evalDist_liftM_query_apply (spec := S) t hs` |
-| two instances for a sum specification disagree (e.g. a local `IsUniformMeasureSpec (A + B)`) | declare the local instance on the components and let `AnswerMeasure.add` build the sum |
+| two instances for a sum specification disagree (e.g. a local `UniformAnswerMeasure (A + B)`) | declare the local instance on the components and let `AnswerMeasure.add` build the sum |
 | failed to synthesize `MeasurableSingletonClass α` for `𝒟[mx] {x}` | state the event as `Pr{let y ← mx}[y = x]` |
 | `rw` fails on a `𝒟[…]` term whose measurable-space instance is equal but spelled differently (e.g. Mathlib's `Fin` instance against a local `⊤`) | close with `exact`, `.trans` or `convert`, which unify up to definitional equality |
 | a goal shows `(toMeasure t).trim le_top` | `MeasureTheory.trim_eq_self` when the answer's measurable space is `⊤` by definition; otherwise evaluate measurable sets with `evalDist_liftM_query_apply` or `trim_measurableSet_eq` |
 | `unexpected …; expected '}['` in a `Pr{…}` whose action continues on the next line | the braces hold a `do` sequence: indent the continuation past its `let`, start the sequence on its own line as in a `do` block, or parenthesize the action |
 | two events that should agree differ only in how their binds and maps are arranged | `simp only [prEvent_norm]` brings both into the normal form of `Pr{…}[…]` |
+| `simp only [bind_assoc, pure_bind]` no longer normalizes a multi-draw event | an event is a bind followed by a map of the selector: `simp only [prEvent_norm]`; on a single `pure` draw, `simp only [map_pure]` or `prEvent_pure`; `bind_map_left` becomes `Functor.map_map` |
+| `prEvent_bind_bind_swap` does not match a two-draw event `Pr{let a ← mx; let b ← my}[p a b]` | `OracleComp.prEvent_bind_map_swap`, its statement in the event normal form |
+| a proof turned a measure equation `h : 𝒟[mx] = 𝒟[my]` into an event equation | `(EvalDistEq.of_evalDist_eq h).prEvent_eq p` after `let _ : MeasurableSpace α := ⊤`, or `(evalDistEq_iff_evalDist_eq.mpr h).prEvent_eq p` when `h` is stated under `letI … := ⊤` |
+| `prEvent_mono_of_support _ fun …` reports a type mismatch | the computation and both events are explicit: `prEvent_mono_of_support _ _ _ fun …` |
+| a helper about `Pr{let x ← A >>= K}[x = true]` no longer matches after `simp only [map_bind]` | the goal became the sequence `Pr{let a ← A; let x ← K a}[x = true]`: state the helper in that form, or fold back with `rw [← map_bind (f := fun x => x = true)]` (an unrestricted `← map_bind` also unfolds `set` variables) |
+| `rw [map_eq_bind_pure_comp]` on a `Pr{…}` goal rewrites the event's own map first | rewrite the inner draw with `bind_map_left`, or state the step with `prEvent_map` |
+| `rw` with an `=ᵈ` fact fails | `=ᵈ` is not an equation: transport events with `h.prEvent_eq p`, measures with `h.evalDist_eq`, and chain with `.trans`, `EvalDistEq.bind_left`/`bind_right`/`map` |
+| `𝒟[(liftM mx : m β)] = 𝒟[mx]` for an arbitrary `β` fails to synthesize `MeasurableSpace β` | state the faithfulness of a lift as `(liftM mx : m β) =ᵈ mx` and read events with `(h _).prEvent_eq` |
+| a derivation of a lift's `support` from the equality of its measures no longer typechecks in a general monad | that used the removed compatibility class: take `support (liftM mx : m β) ⊆ support mx` as a hypothesis (it holds by `rfl` at `ProbComp`) |
+| `prEvent_pure_prop` fails to synthesize `Decidable` | it needs a decidable proposition; outputs that hold caches or functions need `classical` first |
+| `simp` loops on `prEvent_bind_eq_tsum_prEvent` | do not put `map_eq_bind_pure_comp` in the same simp set |
+| a lemma that synthesizes a measurable structure on an output (`measureETVDist_map_le`) fails although a `letI : MeasurableSpace X := ⊤` appears in the `have` statement | a `letI` in a statement is inlined: introduce it with `let` in the proof, or pass the type explicitly `(β := X)` |
+| the oracle-computation `tsum` lemmas (`tsum_prEvent_eq_one`, `tsum_prEvent_mul_of_const_on_support`) ask for the computation and no never-fail proof | they take the computation explicitly; drop the old `(by simp)` never-fail argument and its second bullet |
 | a lemma about `Pr{let y ← mx >>= f}[q y]` no longer matches after `simp` pushed the event into the bind | apply the lemma before `simp`, or state it for `prEvent (mx >>= g)` with `g : α → m Prop` |
 | a proof relied on `Pr{…}[…]` unfolding to `𝒟[… >>= fun x => pure …] {True}` | `simp only [prEvent_def, map_eq_bind_pure_comp, Function.comp_def]` recovers that form; better, use the laws keyed on `prEvent` |
 | `simp [prEvent_def]` loops | `simp` rewrites `𝒟[mx] {True}` back to `prEvent mx`; use `rw [prEvent_def]` or `simp only` |
@@ -265,7 +294,7 @@ replaced. The codemod maps both spellings to the final names.
 | `simp only [f]` leaves a partially applied predicate `f a b` in an event | the event selector is eta-reduced; `unfold f` instead |
 | an event selector `p ∘ f` does not match `fun x => p (f x)` | the selector is eta-reduced; `simp only [Function.comp_def]` |
 | an event computation that destructures its input (`let (a, b) ← mx` in a `do` block) stays in bind form, so `prEvent_mono` does not apply | `prEvent_bind_mono_of_support _ _ _ fun ⟨a, b⟩ _ => prEvent_pure_mono h`, or `prEvent_bind_congr_of_support` for equalities |
-| `prEvent_le_one mx p` no longer applies | it takes the event computation alone: `prEvent_le_one _` |
+| `prEvent_le_one mx p` no longer applies | it takes the event computation alone: `prEvent_le_one _`, or `prEvent_le_one (p <$> mx)` when `_` leaves `EvalDistSemantics ?m` unsolved; `prEvent_ne_top` for finiteness |
 | `simp` leaves `Pr{let a ← mx; let b ← f a}[True]` (or `[False]`) on `OracleComp` | `simp` pushes the constant selector into the binds; `simp [-map_bind]` keeps it outside, where `OracleComp.prEvent_true_eq_one` and `prEvent_false` apply |
 | laws about `pure` (`prEvent_pure`, `map_pure`) do not fire on `pure v` written with an `OracleComp` ascription | that `pure` elaborates through `PFunctor.FreeM.instPure` rather than the monad; `erw [prEvent_pure]`, or state the term through the `do` block that produced it |
 | measurability hypotheses of the `_ae` and `lintegral` event laws | they take the map form `Measurable fun x => 𝒟[p <$> f x]` |
