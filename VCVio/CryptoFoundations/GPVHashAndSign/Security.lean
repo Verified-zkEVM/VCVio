@@ -81,9 +81,10 @@ theorem gpv_progGameVerifyFreshAvg_le_collisionAdv_add_preimageAdv [DecidableEq 
           programmedPreimageAdvantage (psf := psf) (hr := hr)
             (programmedPreimageReduction psf hr M Salt adv domainSample qSign qHash) := by
   classical
-  -- Reduce the keygen-average to a per-key `(pk, sk)` bound via the averaging skeleton SL-A,
-  -- then discharge that per-key bound (the distinct-collision transfer + the reservoir exact-match
-  -- bound) — the Step-2 collision extraction.
+  -- Reduce the keygen-average to a per-key `(pk, sk)` bound via
+  -- `gpv_progGameVerifyFreshAvg_le_of_perKey`, then discharge that per-key bound (the
+  -- distinct-collision transfer + the reservoir exact-match bound) — the Step-2 collision
+  -- extraction.
   refine gpv_progGameVerifyFreshAvg_le_of_perKey psf hr M Salt qSign qHash adv domainSample ?_
   intro pksk hmem
   -- Lift the game success onto the combined run, split into the distinct and exact-match branches,
@@ -147,18 +148,19 @@ theorem forgery_yields_collision_or_exact_match [DecidableEq Domain]
   exact gpv_progGameVerifyFreshAvg_le_collisionAdv_add_preimageAdv psf hr M Salt
     hcorrect qSign qHash adv domainSample hreg hForge hQ
 
-/-- **Collision-only specialization of the GPV split bound under a PSF preimage min-entropy
-bound.**  This is `forgery_yields_collision_or_exact_match` with the exact-match
-(programmed-preimage) branch controlled by an explicit preimage min-entropy / one-wayness bound
-`εpp`: the adversary's chance of reproducing the simulator's hidden short preimage at a programmed
-point is at most `εpp` (`hMinEntropy`), so the multi-target exact-match contribution is at most
-`(qSign + qHash) · εpp`.  It is *derived* from the split bound and carries no independent proof
-obligation.
+/-- **Collision-style form of the GPV split bound with the exact-match branch bounded by `εpp`.**
+This is `forgery_yields_collision_or_exact_match` with the exact-match (programmed-preimage) term
+replaced by an upper bound `εpp` on the advantage of the named reduction
+`programmedPreimageReduction psf hr M Salt adv domainSample qSign qHash` (`hMinEntropy`), so the
+multi-target exact-match contribution is at most `(qSign + qHash) · εpp`.  It is derived from the
+split bound and carries no independent proof obligation; `hMinEntropy` is a bound on that one
+reduction, not a property of the PSF.
 
-The exact-match term is *bounded*, not eliminated: `programmedPreimageAdvantage ≥ 1 / |Domain| > 0`
-for a finite domain (reproducing a sampled preimage is always possible with nonzero probability),
-so a clean collision-only bound (`εpp = 0`) is unsatisfiable.  Specializing `εpp` to a concrete PSF
-preimage min-entropy bound (e.g. for Falcon) yields the quantitative collision bound. -/
+A PSF-level way to discharge `hMinEntropy` is the trapdoor guessing probability:
+`programmedPreimageAdvantage_le_trapdoorGuessingProbability` bounds the advantage of every
+programmed-preimage adversary by the largest pointwise output mass of `psf.trapdoorSample` at an
+honest key.  The exact-match term cannot be dropped in general: an adversary that outputs the most
+likely trapdoor output wins the programmed-preimage experiment with positive probability. -/
 theorem forgery_yields_collision [DecidableEq Domain]
     [Inhabited Range] [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk) (qSign qHash : ℕ)
@@ -194,12 +196,14 @@ the collision-finding reduction `B = reduction psf hr M Salt A domainSample` sat
 
   `Adv^{EUF-CMA}(A) ≤ Adv^{collision}(B) + (qSign + qHash) · εpp + (qSign + qHash)² / (2 · |Salt|)`
 
-where `εpp` bounds the exact-match (programmed-preimage) branch: the chance that an adversary
-reproduces the simulator's hidden short preimage at a programmed point is at most `εpp`
-(`hMinEntropy`), the PSF preimage min-entropy / one-wayness assumption. The distinct-preimage
-branch gives the collision term; the exact-match branch the `(qSign + qHash) · εpp` term. This is a
-specialization of `euf_cma_split_bound` and is derived from it; the exact-match term is *bounded*,
-not dropped, since `programmedPreimageAdvantage ≥ 1 / |Domain| > 0` for a finite domain.
+where `εpp` bounds the programmed-preimage advantage of the named reduction
+`programmedPreimageReduction psf hr M Salt A domainSample qSign qHash` (`hMinEntropy`). The
+distinct-preimage branch gives the collision term; the exact-match branch the
+`(qSign + qHash) · εpp` term. This is the same statement as `forgery_yields_collision`, under the
+name used for the headline bound, and is derived from `forgery_yields_collision_or_exact_match`
+(via `forgery_yields_collision`). The exact-match term
+is bounded rather than dropped, since the best programmed-preimage adversary generally has
+positive advantage (see `trapdoorGuessingProbability`).
 
 The salt-collision term `(qSign + qHash)² / (2 · |Salt|)` is `collisionBound`, the closed birthday
 form of the union sum `∑_{j < qSign} (j + qHash) / |Salt|` the telescope establishes: a fresh

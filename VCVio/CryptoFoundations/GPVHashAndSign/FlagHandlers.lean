@@ -497,8 +497,8 @@ theorem gpv_measureTVDist_orig_run_le_prEvent_flag [MeasurableSpace (M × (Salt 
 
 /-- **Finset of salts already keyed in the random-oracle cache.** The salts `r` for which some
 random-oracle key `(r, m)` is already recorded (`saltKeyed`).  Its cardinality is the size of the
-cache slice the inline signing salt is charged against in the `(A2)` telescope: a fresh uniform salt
-lands in it with probability `card / |Salt|` (`prEvent_mem_uniformSample`). -/
+cache slice the inline signing salt is charged against in the cardinality telescope: a fresh uniform
+salt lands in it with probability `card / |Salt|` (`prEvent_mem_uniformSample`). -/
 noncomputable def keyedSalts (cache : (Salt × M →ₒ Range).QueryCache) : Finset Salt :=
   Finset.univ.filter (fun r : Salt => saltKeyed M Salt cache r)
 
@@ -506,7 +506,7 @@ omit [DecidableEq Range] [SampleableType Range] [SampleableType Salt] in
 /-- **Cache-slice growth on one recorded random-oracle answer.** Recording a single random-oracle
 entry `(r, msg) ↦ v` enlarges the keyed-salt slice by at most one element (the salt `r`): every
 other salt's keyed status is unchanged, since `cacheQuery` only updates the key `(r, msg)`.  This is
-the per-step cache-growth bound that drives the `(A2)` cardinality telescope (`card (cache j) ≤
+the per-step cache-growth bound that drives the cardinality telescope (`card (cache j) ≤
 j + qHash`). -/
 lemma keyedSalts_cacheQuery_card_le (cache : (Salt × M →ₒ Range).QueryCache)
     (r : Salt) (msg : M) (v : Range) :
@@ -550,7 +550,7 @@ lemma keyedSalts_randomOracle_run_card_le (mc : Salt × M)
     exact Nat.le_succ _
 
 open Classical in
-/-- **(A2) cardinality-telescope auxiliary (general motive).**
+/-- **Cardinality-telescope auxiliary (general motive).**
 
 The general-motive inductive core behind `gpv_orig_flag_le_collisionBound`: over an arbitrary
 adversary computation `oa`, the run-level collision-flag probability of `gpvRealImplFlag` started
@@ -672,7 +672,7 @@ theorem gpv_orig_flag_le_collisionBound_aux
             htail r hr (not_not.mp hnr)).trans (add_le_add_left hhead _)
 
 open Classical in
-/-- **(A2) Original-run cardinality telescope: the run-level collision flag of the inline-salt real
+/-- **Original-run cardinality telescope: the run-level collision flag of the inline-salt real
 handler is bounded by `collisionBound`.**
 
 The run-level collision-flag probability of the flag-instrumented *original* real run of

@@ -360,15 +360,14 @@ already priced by the trapdoor sampler's min-entropy.** For *any* adversary obey
   `Adv^collision(B) + (qSign + qHash + 1) · trapdoorGuessingProbability + collisionBound`
 
 for the collision-finding reduction `B` built from the compiled adversary
-
-at hash budget `qHash + 1`.  Both structural side conditions of `euf_cma_collision_bound` are
-discharged here rather than assumed: the forger-queries-its-forgery-point convention by the
-append-forgery-query compiler (`euf_cma_split_bound_of_queryBound`), and the exact-match parameter
-`εpp` by the generic guessing-probability bound
-`programmedPreimageAdvantage_le_trapdoorGuessingProbability`, which prices the programmed-preimage
-branch at the largest pointwise output mass `psf.trapdoorSample` assigns at an honest key.  What
-remains for a concrete PSF is to bound `trapdoorGuessingProbability` — for a discrete-Gaussian
-trapdoor sampler above the smoothing parameter this is negligible. -/
+`appendForgeQuery psf hr M Salt adv` at hash budget `qHash + 1`.  Both structural side conditions of
+`euf_cma_collision_bound` are discharged here rather than assumed: the
+forger-queries-its-forgery-point convention by the append-forgery-query compiler
+(`euf_cma_split_bound_of_queryBound`), and the exact-match parameter `εpp` by the generic
+guessing-probability bound `programmedPreimageAdvantage_le_trapdoorGuessingProbability`, which
+prices the programmed-preimage branch at the largest pointwise output mass `psf.trapdoorSample`
+assigns at an honest key.  What remains for a concrete PSF is to bound `trapdoorGuessingProbability`
+— for a discrete-Gaussian trapdoor sampler above the smoothing parameter this is negligible. -/
 theorem euf_cma_collision_bound_of_queryBound [DecidableEq Domain]
     [Inhabited Range] [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)

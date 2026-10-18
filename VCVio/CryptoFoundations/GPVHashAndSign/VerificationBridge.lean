@@ -10,8 +10,8 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.GameIdentification
 
 /-! # GPV Hash-and-Sign: The Verification Bridge
 
-The O1 data-processing bridge from Step-1 to the post-processed verification
-game, the forger-queries-its-forgery-point predicate, and the programmed
+The data-processing bridge from the sign-then-hash hop to the post-processed
+verification game, the forger-queries-its-forgery-point predicate, and the programmed
 verify-game machinery it feeds.
 -/
 
@@ -28,7 +28,7 @@ variable {PK SK Domain Range : Type}
   (hr : GenerableRelation PK SK p)
   (M Salt : Type) [DecidableEq M] [DecidableEq Salt] [SampleableType Salt] [Fintype Salt]
 
-/-! ## O1: the data-processing bridge from Step-1 to a post-processed (verification) game
+/-! ## The data-processing bridge from the sign-then-hash hop to a verification game
 
 Step-1 (`gpv_measureTVDist_real_programmed_le_collisionBound`) bounds the total-variation distance
 between the *forgery* distributions `realGameRun` and `progGameRun` (both `ProbComp (M × (Salt ×
@@ -92,16 +92,14 @@ theorem gpv_realGameVerify_le_progGameVerify_add_collisionBound
 
 open Classical in
 omit [Fintype Salt] in
-/-- **Keygen-averaging peel of the GPV unforgeability experiment (sub-build (3) of the
-game-identification (N)(a)).** The success probability of the GPV unforgeability experiment is the
-success probability of drawing the key pair `(pk, sk) ← hr.gen` and running the per-key
-verify-extended WriterT signing-log experiment under the bundled `withStateOracle` random-oracle
-semantics.
+/-- **Keygen-averaging peel of the GPV unforgeability experiment.** The success probability of
+the GPV unforgeability experiment is the success probability of drawing the key pair
+`(pk, sk) ← hr.gen` and running the per-key verify-extended WriterT signing-log experiment under
+the bundled `withStateOracle` random-oracle semantics.
 
 The GPV `keygen` is `liftM hr.gen`, a public-randomness prefix that touches neither the
 random-oracle cache nor the hidden state; the keygen-peel `withStateOracle_run'_liftM_bind`
-commutes its draw straight out of the bundled `withStateOracle` semantics. This is the GPV-runtime
-analogue of the Fiat–Shamir `roSim.run'_liftM_bind`-style averaging step; it isolates the keygen
+commutes its draw straight out of the bundled `withStateOracle` semantics. It isolates the keygen
 average so the remaining game-identification work is a per-key WriterT-log → signed-set
 reconstruction. -/
 theorem prEvent_unforgeableExp_eq_keygen_average
@@ -194,7 +192,7 @@ lemma simulateQ_writerImpl_verify_fold (pk : PK) (sk : SK)
 
 open Classical in
 omit [Fintype Salt] in
-/-- **Per-key game-identification (N)(a): WriterT-log unforgeability experiment ≡ freshness
+/-- **Per-key game identification: WriterT-log unforgeability experiment ≡ freshness
 verify-Bool game.**
 The per-key body of the GPV unforgeability experiment (the keygen-peel summand of
 `prEvent_unforgeableExp_eq_keygen_average`) — running `adv.main pk` under the WriterT signing-log
@@ -202,7 +200,7 @@ handler stack, then `verify`, then masking with the WriterT-log freshness check
 `!log.wasQueried msg` — coincides with the freshness verify-Bool game `realGameVerifyFresh`, whose
 winning Bool reads the `Finset M` signed-set carried by `gpvRealImplFlagFresh`.  This identifies the
 WriterT signing log with the reconstructed signed-set across the WriterT/StateT divide, folding in
-the verification continuation; it is the per-key bridge of the game-identification (N)(a). -/
+the verification continuation; it is the per-key bridge of the game identification. -/
 lemma signedSet_eq_wasQueried
     (pk : PK) (sk : SK)
     (adv : SignatureAlg.UnforgeableAdversary
@@ -306,7 +304,7 @@ lemma signedSet_eq_wasQueried
   simp only [Functor.map_map, Prod.map, id_eq]
 
 open Classical in
-/-- **Game-identification (N): the GPV EUF-CMA advantage is bounded by the keygen-averaged
+/-- **Game identification: the GPV EUF-CMA advantage is bounded by the keygen-averaged
 programmed freshness verify-Bool game plus `collisionBound`.** Chains the keygen-averaging peel
 `prEvent_unforgeableExp_eq_keygen_average`, the per-key WriterT-log → signed-set reconstruction
 `signedSet_eq_wasQueried`, and the real↔programmed coupling hop
@@ -407,7 +405,7 @@ programmed-preimage reduction observes. -/
     z.2.1.1 (z.1.2.1, z.1.1) ≠ none
 
 omit [Fintype Salt] in
-/-- **SL-C: the collision-finding advantage unfolds to an averaged collision-event
+/-- **The collision-finding advantage unfolds to an averaged collision-event
 probability.** The success probability of the collision reduction in the keyed collision game is
 exactly the chance, over a freshly generated public key `pk` and the reduction's candidate pair
 `(x₁, x₂)`, that the pair is a genuine `psf.eval`-collision of two distinct short preimages.  This
@@ -1141,14 +1139,15 @@ theorem programmedPreimageAdvantage_reduction_eq [DecidableEq Domain]
 
 open Classical in
 omit [Fintype Salt] in
-/-- **SL-A: the 3-term averaging reduction skeleton.** Reduces the Step-2 keygen-averaged
+/-- **The three-term averaging reduction.** Reduces the Step-2 keygen-averaged
 programmed-game bound to a single per-key `(pk, sk)` bound by expanding all three advantage terms
 over the common keygen mass of `hr.gen`.  Given a per-key hypothesis `h` bounding the programmed
 freshness game at `pk` by the reduction's collision event at `pk` plus the multi-target factor
 `qSign + qHash` times the exact-match event at `(pk, sk)`, averaging `h` over `(pk, sk) ← hr.gen`
-re-folds the right-hand averages into `collisionFindingAdvantage (reduction …)` (via SL-C, whose
-`Prod.fst` keygen pushforward matches the full keygen mass) and `programmedPreimageAdvantage
-(programmedPreimageReduction …)` (via its preimage analog). -/
+re-folds the right-hand averages into `collisionFindingAdvantage (reduction …)` (via
+`collisionFindingAdvantage_reduction_eq`, whose `Prod.fst` keygen pushforward matches the full
+keygen mass) and `programmedPreimageAdvantage (programmedPreimageReduction …)` (via its preimage
+analog). -/
 theorem gpv_progGameVerifyFreshAvg_le_of_perKey [DecidableEq Domain]
     (qSign qHash : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary
@@ -1260,7 +1259,7 @@ lemma gpv_perKey_exactMatch_verifyStrip_le
       ((st.1.1.1 (r, msg)).getD (psf.eval pk s)) st hhit, prEvent_pure, prEvent_pure]
 
 omit [DecidableEq Range] [SampleableType Range] [Fintype Salt] in
-/-- **N2 — embed-index handler counter bound.** Over any adversary computation `oa` making at most
+/-- **Embed-index handler counter bound.** Over any adversary computation `oa` making at most
 `qS` signing queries and `qH` random-oracle queries, every final state of the pre-sampled-index
 embedding run `embedAtIndexImpl … w y` advances the running programming counter `.2` by at most
 `qS + qH`: uniform steps and random-oracle cache hits leave it untouched, while each signing step
@@ -1339,7 +1338,7 @@ lemma embedAtIndexImpl_run_count_le (domainSample : PK → ProbComp Domain) (pk 
         exact le_trans (ih pv pst (qS - 1) qH hbS hbH z hz) (by omega)
 
 omit [DecidableEq Range] [SampleableType Range] [Fintype Salt] in
-/-- **N2 (corollary) — embed-index counter bounded by the reservoir budget.** From the empty start
+/-- **Embed-index counter bounded by the reservoir budget.** From the empty start
 state `(∅, 0)`, every final state of the pre-sampled-index embedding run of an adversary `oa`
 obeying `signHashQueryBound` has running programming counter at most `qSign + qHash`.  This is the
 budget the reservoir winner index `reservoirWinnerIndex (qSign + qHash)` samples over. -/

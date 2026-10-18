@@ -12,7 +12,7 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.CombinedHandler
 
 The cross-monad WriterT-log to signed-set run reconstruction, the verify-Bool
 games on the freshness-tracking vehicle, the state-threading bridge from the
-runtime to the bare random oracle, the U2 sign-then-hash hop up to the
+runtime to the bare random oracle, the sign-then-hash hop up to the
 programming bad event, and the Step-1 wiring toward the headline bounds.
 -/
 
@@ -37,8 +37,7 @@ The unforgeability experiment runs the adversary under the WriterT signing-log h
 `!log.wasQueried msg` off the WriterT log.  The freshness vehicle `gpvRealImplFresh` instead
 threads a `Finset M` signed-set through the random-oracle `StateT QueryCache ProbComp` surface.
 The lemmas in this block reconstruct the WriterT log as that signed-set, identifying the two runs
-across the WriterT/StateT monad divide.  The route mirrors the Fiat–Shamir-with-abort
-unforgeability-to-hybrid kernel: fuse the inner WriterT pass
+across the WriterT/StateT monad divide.  The route: fuse the inner WriterT pass
 with the outer cache simulation (`writerTMapBase`), replay the WriterT log into a `StateT (List M)`
 input log (`appendInputLog`), flatten the nested `StateT` (`flattenStateT`), and project the
 flattened handler onto `gpvRealImplFresh` with the signed-set reconstructed as the logged messages'
@@ -47,9 +46,9 @@ flattened handler onto `gpvRealImplFresh` with the signed-set reconstructed as t
 /-- **The fused real WriterT handler over the random-oracle cache.** The signing handler of the
 unforgeability experiment, with the public/random-oracle base simulated by the runtime's
 `withStateOracle` interpreter (`outerLift + randomOracle` over `StateT QueryCache ProbComp`).  This
-is the GPV analogue of FiatShamir's fused `base.writerTMapBase implW`: it equals
+is the fused `writerTMapBase` form of the signing-log handler: it equals
 `baseW + withLogging signBody`, where `signBody msg = gpvRealImpl … (Sum.inr msg)` is the real GPV
-signing body run on the cache (`reconstructImplW_eq`). -/
+signing body run on the cache (`gpvOuter_writerTMapBase_implW`). -/
 @[expose] noncomputable def gpvOuter :
     QueryImpl (unifSpec + (Salt × M →ₒ Range))
       (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) :=
@@ -85,7 +84,7 @@ experiment's WriterT handler stack `baseW + signingOracle pk sk` (via `writerTMa
 WriterT handler `baseW' + withLogging signBody` over `StateT QueryCache ProbComp`, where the
 public/random-oracle base re-emits its query through the cache (`baseW'`) and the signing body is
 the real GPV signing computation run on the cache (`signBody msg = gpvRealImpl … (Sum.inr msg)`).
-This is the GPV analogue of the FiatShamir `hHandler` step. -/
+-/
 lemma gpvOuter_writerTMapBase_implW (pk : PK) (sk : SK) :
     (gpvOuter M Salt).writerTMapBase
         ((HasQuery.toQueryImpl (spec := unifSpec + (Salt × M →ₒ Range))
@@ -116,8 +115,7 @@ lemma gpvOuter_writerTMapBase_implW (pk : PK) (sk : SK) :
     -- `gpvRealImpl … (Sum.inr msg) = simulateQ gpvOuter ((GPVHashAndSign …).sign pk sk msg)` holds
     -- definitionally (the `∘ₛ` definition), so expanding both `withLogging` bodies and commuting
     -- the monad-morphism `simulateQ gpvOuter` through the `sign >>= fun u => (u, [⟨sq, u⟩])` bind
-    -- aligns the two runs.  Mirrors the FiatShamir `fsBaseImpl_writerTMapBase_signingOracle_eq`
-    -- signing case.
+    -- aligns the two runs.
     simp [QueryImpl.writerTMapBase, SignatureAlg.signingOracle, QueryImpl.withLogging_apply,
       GPVHashAndSign, gpvRealImpl, gpvOuter, QueryImpl.compose, realGameRunImplNoLog,
       QueryImpl.add_apply_inr, StateT.run_bind, StateT.run_pure,
@@ -135,7 +133,7 @@ non-signing query both leave the signed-set untouched and evolve the cache throu
 a signing query `appendInputLog` appends `msg` to the list (`l ++ [msg]`) while `gpvRealImplFresh`
 inserts it into the signed-set, reconciled by `(l ++ [msg]).toFinset = insert msg l.toFinset` (the
 list-order is invisible to the `Finset`).  This is the per-query hypothesis of the state-projection
-transport `map_run_simulateQ_eq_of_query_map_eq`, the GPV analogue of the FiatShamir `hmatch`. -/
+transport `map_run_simulateQ_eq_of_query_map_eq`. -/
 lemma flattenAppendLog_proj_gpvRealImplFresh (pk : PK) (sk : SK)
     (t : ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))).Domain)
     (s : List M × (Salt × M →ₒ Range).QueryCache) :
@@ -188,11 +186,9 @@ interpreting its base random-oracle queries through the runtime's `withStateOrac
 freshness vehicle `gpvRealImplFresh` run started from `(∅, ∅), false`, projected to drop the passive
 collision flag.
 
-This is the kernel of the freshness game-identification (N)(a): it identifies the WriterT signing
-log of `unforgeableExperiment` with the `Finset M` signed-set carried by `gpvRealImplFresh`,
-across the
-WriterT/StateT monad divide.  The proof chains the reconstruction pieces, mirroring the
-Fiat–Shamir-with-abort unforgeability-to-hybrid kernel:
+This is the kernel of the freshness game identification: it identifies the WriterT signing
+log of `unforgeableExperiment` with the `Finset M` signed-set carried by `gpvRealImplFresh`, across
+the WriterT/StateT monad divide.  The proof chains the reconstruction pieces:
 `simulateQ_writerTMapBase_run` + `gpvOuter_writerTMapBase_implW` (fuse the inner WriterT pass with
 the outer cache simulation into `baseW' + withLogging signBody`),
 `map_run_withLogging_inputs_eq_run_appendInputLog` (replay the WriterT log into a `StateT (List M)`
@@ -458,7 +454,7 @@ theorem simulateQ_ofLift_liftTarget_run {σ : Type} {α : Type} (oa : ProbComp �
     simp [map_eq_bind_pure_comp]
 
 /-- **Keygen-averaging peel for the bundled `withStateOracle` semantics (reconstruction piece of the
-game-identification (N)(a)).** A surface computation that begins by lifting a public-randomness
+game identification).** A surface computation that begins by lifting a public-randomness
 `ProbComp` prefix `oa` (e.g. the GPV key generation `liftM hr.gen`) into the oracle world and then
 continues with `rest` runs, under the bundled `withStateOracle hashImpl ∅` semantics from the
 empty cache, as `oa` followed by the run of the continuation.
@@ -467,8 +463,7 @@ The public-randomness prefix touches neither the random-oracle cache nor the hid
 simulated by the lifted identity implementation (`QueryImpl.simulateQ_add_liftComp_left` drops the
 `hashImpl` summand on the lifted sub-computation, `simulateQ_ofLift_liftTarget_run` runs it as
 `(·, ∅) <$> oa`), so its draws commute straight out of the bundle. This is the GPV-runtime keygen
-peel of the game-identification (N)(a) — the analogue of the FiatShamir
-`roSim.run'_liftM_bind`-style averaging step. -/
+peel of the game identification. -/
 theorem withStateOracle_run'_liftM_bind {ι : Type} {hashSpec : OracleSpec ι}
     (hashImpl : QueryImpl hashSpec (StateT hashSpec.QueryCache ProbComp))
     {α β : Type} (oa : ProbComp α)
@@ -489,7 +484,7 @@ theorem withStateOracle_run'_liftM_bind {ι : Type} {hashSpec : OracleSpec ι}
 /-- **Step 1 (sign-then-hash ≡ real) TV bound, over the pinned GPV game runs.**
 
 This is the salt-inclusive sign-then-hash hop *over the pinned GPV game runs*, with the run-level
-coupling supplied by the original-run cardinality telescope `(A2)`
+coupling supplied by the original-run cardinality telescope
 `gpv_orig_flag_le_collisionBound`.
 The real run `realGameRun … adv pk sk` (the real EUF-CMA game) and the programmed run
 `progGameRun … adv domainSample pk` (the randomized sign-then-hash game of the collision reduction)
@@ -497,7 +492,7 @@ are the two distributions of the sign-then-hash hop; given the query bound `hQ` 
 `hreg`, their total-variation distance is bounded by
 `(collisionBound Salt qSign qHash).toReal` on any σ-algebra of the forgeries.
 
-It is the GPV instance of the U2 surface
+It is the GPV instance of the sign-then-hash surface
 `measureTVDist_runtime_real_programmed_le_collisionBound_saltInclusive`, but unconditional and over
 the actual game run.
 
@@ -505,7 +500,7 @@ the actual game run.
 reduction `gpv_measureTVDist_orig_run_le_prEvent_flag` — which bounds the Step-1 TV directly by the
 run-level collision-flag probability of the flag-instrumented *original* (inline-salt) real handler
 `gpvRealImplFlag` (consuming the universal off-bad agreement `gpvImplFlag_h_agree_good` and the
-bad-monotonicity `h_mono`s) — with the original-run cardinality telescope `(A2)`
+bad-monotonicity `h_mono`s) — with the original-run cardinality telescope
 `gpv_orig_flag_le_collisionBound`, which bounds that flag probability by
 `(collisionBound …).toReal`.  Because each signing salt is drawn inline at its step, this route
 avoids the upfront-tape re-interleaving that a coupling over the front-loaded salt tape
@@ -529,7 +524,7 @@ theorem gpv_measureTVDist_real_programmed_le_collisionBound
   -- Original-run route: the identical-until-bad reduction bounds the Step-1 TV by the
   -- run-level collision-flag probability of the inline-salt flag handler
   -- (`gpv_measureTVDist_orig_run_le_prEvent_flag`), which the original-run cardinality telescope
-  -- `(A2)` `gpv_orig_flag_le_collisionBound` bounds by `(collisionBound …).toReal`.
+  -- `gpv_orig_flag_le_collisionBound` bounds by `(collisionBound …).toReal`.
   refine le_trans
     (gpv_measureTVDist_orig_run_le_prEvent_flag psf hr M Salt pk sk adv domainSample hreg) ?_
   exact gpv_orig_flag_le_collisionBound psf hr M Salt pk sk adv qSign qHash hQ
@@ -564,7 +559,7 @@ theorem runtimeRun_liftComp {α : Type} (ob : OracleComp (Salt × M →ₒ Range
   classical
   rw [runtimeRun_eq_run'_simulateQ, QueryImpl.simulateQ_add_liftComp_right]
 
-/-! ## U2: sign-then-hash ≡ real, up to the programming bad event
+/-! ## Sign-then-hash ≡ real, up to the programming bad event
 
 The "sign-then-hash ≡ real" hop replaces the real lazy random oracle by a `policy`-programmed one
 (the simulator programs each fresh signing target with `psf.eval pk s` for a freshly sampled short
@@ -575,7 +570,7 @@ core of the hop: the total-variation distance between the real-runtime output an
 programmed-run output is bounded by the probability that the programming bad flag fires. -/
 
 omit [DecidableEq Range] [SampleableType Salt] [Fintype Salt] in
-/-- **U2 core: sign-then-hash up-to-bad TV bound.**
+/-- **Sign-then-hash up-to-bad TV bound.**
 
 For any random-oracle-only sub-computation `ob` and any programming `policy`, the total-variation
 distance between the *real* GPV runtime output and the *programmed* (sign-then-hash) output is
@@ -602,7 +597,7 @@ theorem measureTVDist_runtime_real_programmed_le_bad {α : Type} [MeasurableSpac
     (measureETVDist_simulateQ_randomOracle_withProgramming_le_prEvent_bad
       (spec := (Salt × M →ₒ Range)) policy ob ∅)
 
-/-! ## U2 (re-stated, salt-inclusive cache-hit bad event)
+/-! ## Sign-then-hash hop bound (re-stated, salt-inclusive cache-hit bad event)
 
 The up-to-bad core `measureTVDist_runtime_real_programmed_le_bad` above bounds the sign-then-hash TV
 distance by the `withProgramming` *fire-on-miss* bad event over the random-oracle-only computation
@@ -618,13 +613,13 @@ the fresh signing salts — drawn in `unifSpec`, one step *before* each random-o
 invisible at `ob`'s granularity, so the `card / |Salt|` averaging is structurally absent from the
 fire-on-miss flag.
 
-`measureTVDist_runtime_real_programmed_le_collisionBound_saltInclusive` re-states U2 so its bad
-event is the genuine GPV salt-collision: a fresh signing salt drawn in `unifSpec` landing in the
-recorded random-oracle cache restricted to its message slice (a cache *hit* at a programmed point),
-modelled by the salt-averaged process `saltSeq c qSign` of the telescope section. The per-step
-caches `c j` are the recorded random-oracle inputs seen by the `j`-th signing query; the standard
-GPV cache-growth bound `card (c j) ≤ j + qHash` (the `j` prior signing salts plus the up to `qHash`
-adversary hash queries) is supplied as `hcache`.
+`measureTVDist_runtime_real_programmed_le_collisionBound_saltInclusive` re-states the
+sign-then-hash hop bound so its bad event is the genuine GPV salt-collision: a fresh signing salt
+drawn in `unifSpec` landing in the recorded random-oracle cache restricted to its message slice (a
+cache *hit* at a programmed point), modelled by the salt-averaged process `saltSeq c qSign` of the
+telescope section. The per-step caches `c j` are the recorded random-oracle inputs seen by the
+`j`-th signing query; the standard GPV cache-growth bound `card (c j) ≤ j + qHash` (the `j` prior
+signing salts plus the up to `qHash` adversary hash queries) is supplied as `hcache`.
 
 Crucially, the lemma does **not** route through the fire-on-miss bad event; it takes the
 genuine *up-to-bad* coupling directly as `hcouple`: the total-variation distance between the real
@@ -644,7 +639,9 @@ fire-on-miss.
 salt-draw / random-oracle-query streams of the salt-inclusive signing run: each of the `qSign`
 fresh salts is checked against the recorded cache slice of size `≤ j + qHash`, which is precisely
 the `saltSeq` process. Once `hcouple` is discharged by the coupling, this lemma yields the loss-free
-`measureTVDist ≤ (collisionBound Salt qSign qHash).toReal` consumed by the four GPV theorems.
+`measureTVDist ≤ (collisionBound Salt qSign qHash).toReal`. It is a surface statement off the
+headline path: the headline bounds use `gpv_measureTVDist_real_programmed_le_collisionBound`,
+proved by the inline-salt flag route.
 
 The proof is loss-free: chain `hcouple` (TV distance ≤ `saltSeq` collision) with the
 salt-averaged telescope `prEvent_saltSeq_le_collisionBound` (`saltSeq` collision ≤
@@ -680,7 +677,7 @@ by the *original-run* route, with every signing salt drawn inline at its step: t
 identical-until-bad reduction `gpv_measureTVDist_orig_run_le_prEvent_flag` bounds the salt-inclusive
 sign-then-hash hop `measureTVDist realRun progRun` by the run-level collision-flag probability of
 the flag-instrumented real handler `gpvRealImplFlag`, and the original-run cardinality telescope
-`(A2)` `gpv_orig_flag_le_collisionBound` bounds that flag probability by `collisionBound`. The
+`gpv_orig_flag_le_collisionBound` bounds that flag probability by `collisionBound`. The
 front-tape factorization of `TapeFactorization.lean` (both game runs as `drawList ($ᵗ Salt) qSign`
 followed by a tape-consuming run) is not on this path: it is reusable infrastructure whose own
 coupling headline over the tape is not established.
@@ -690,16 +687,15 @@ coupling headline over the tape is not established.
 
 1. *Game identification.* The headline LHS `SignatureAlg.unforgeableAdvantage (runtime) adv` is
    `Pr{let x ← unforgeableExperiment (runtime) adv}[x = true]`, whose body runs `simulateQ impl
-   (adv.main pk)` — the
-   signing oracle draws each fresh salt *internally* at an adversary-chosen point over the sum spec
-   `unifSpec + (Salt × M →ₒ Range)`. Connecting this to the *pinned* hash-only run `ob` of
-   `gpv_measureTVDist_real_programmed_le_collisionBound` (so that
-   `abs_prEvent_toReal_sub_le_measureTVDist` converts the run-level
-   `measureTVDist ≤ collisionBound` into
-   `realAdv ≤ progAdv + collisionBound`) is the same deferred-sampling factorization as the
-   front-tape coupling, now over the adversary's *adaptive* control flow rather than a fixed `ob`.
-   2. *Step 2 (collision extraction).* In the programmed sign-then-hash game every random-oracle
-   entry carries the simulator's hidden short preimage; a fresh forgery on a programmed point with a
+   (adv.main pk)` with each fresh signing salt drawn inline at an adversary-chosen point.
+   `prEvent_unforgeableExp_eq_keygen_average` rewrites it as the keygen average of the per-key
+   WriterT signing-log experiment, which `signedSet_eq_wasQueried` identifies with the per-key
+   signed-set game `realGameVerifyFresh` (`advantage_eq_keygen_average_realGameVerifyFresh`), and
+   `gpv_advantage_le_progGameVerifyFreshAvg_add_collisionBound` transfers the run-level bound of
+   `gpv_measureTVDist_real_programmed_le_collisionBound` through the verification post-processing,
+   so no front-loading of the adaptive salt draws is needed.
+2. *Step 2 (collision extraction).* In the programmed sign-then-hash game every random-oracle entry
+   carries the simulator's hidden short preimage; a fresh forgery on a programmed point with a
    *distinct* preimage is a collision under `psf.eval`, bounding `progAdv` by
    `collisionFindingAdvantage (reduction …)`. This is stated *pinned and true* over the concrete
    programmed forgery game and the concrete `reduction` body, with the exact-match branch handled by
