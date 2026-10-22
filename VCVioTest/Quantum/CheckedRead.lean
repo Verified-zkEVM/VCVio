@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.Quantum.VC.CheckedRead
+public import VCVio.Quantum.VC.Proof.CheckerDistance
 
 /-!
 # Checked-read channel tests
@@ -17,9 +17,55 @@ databases. Equalities compare projector products and complete residual channels.
 public section
 
 open Quantum Quantum.CompressedReplay Matrix
-open scoped Kronecker ENNReal
+open scoped Kronecker ENNReal Matrix.Norms.L2Operator
 
 namespace VCVioTest.QuantumCheckedRead
+
+/-- A repeated prescription across two oracle databases, touching only one cell. -/
+abbrev repeated : List ((Fin 2 × Bool) × ZMod 3) :=
+  [((0, true), 1), ((0, true), 1)]
+
+/-- Duplicate checks retain the one-cell squared discrepancy `5/9`. -/
+example : ‖filledCheck repeated - partialCheck repeated‖ ^ 2 = 5 / 9 := by
+  have hc : ConsistentIO repeated := by
+    intro p hp q hq _
+    simp only [repeated, List.mem_cons, List.not_mem_nil, or_false, or_self] at hp hq
+    subst p
+    subst q
+    rfl
+  rw [filled_partial_distance_sq repeated hc]
+  norm_num [ioCells, repeated, ZMod.card]
+
+/-- Equal addresses in distinct databases count as two cells, giving `65/81`. -/
+example :
+    ‖filledCheck ([((0, true), 1), ((1, true), 1)] : List ((Fin 2 × Bool) × ZMod 3)) -
+      partialCheck [((0, true), 1), ((1, true), 1)]‖ ^ 2 = 65 / 81 := by
+  have hc : ConsistentIO
+      ([((0, true), 1), ((1, true), 1)] : List ((Fin 2 × Bool) × ZMod 3)) := by
+    intro p hp q hq _
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hp hq
+    rcases hp with rfl | rfl <;> rcases hq with rfl | rfl <;> rfl
+  rw [filled_partial_distance_sq _ hc]
+  norm_num [ioCells, ZMod.card]
+
+/-- Conflicting prescriptions vanish even if one is the special zero answer. -/
+example :
+    filledCheck ([((0, true), 0), ((0, true), 1)] : List ((Fin 2 × Bool) × ZMod 3)) = 0 ∧
+    partialCheck ([((0, true), 0), ((0, true), 1)] : List ((Fin 2 × Bool) × ZMod 3)) = 0 := by
+  apply filled_partial_eq_zero_of_conflict
+  intro h
+  have he := h ((0, true), 0) (by simp) ((0, true), 1) (by simp) rfl
+  exact (by decide : (0 : ZMod 3) ≠ 1) he
+
+/-- The singleton answer alphabet has unit distance on a prescribed cell. -/
+example : ‖filledCheck ([((0, true), 0)] : List ((Fin 1 × Bool) × ZMod 1)) -
+    partialCheck [((0, true), 0)]‖ ^ 2 = 1 := by
+  rw [filled_partial_distance_sq _ (consistentIO_singleton _)]
+  norm_num [ioCells, ZMod.card]
+
+/-- An empty list has zero checker distance, including for a singleton alphabet. -/
+example : ‖filledCheck ([] : List ((Fin 1 × Bool) × ZMod 1)) - partialCheck []‖ = 0 := by
+  simp [filledCheck_nil, partialCheck]
 
 local notation "E" => compressedVCOracle 2 Bool (ZMod 2)
 local notation "Q" => compressedReadProjector 2 Bool (ZMod 2)

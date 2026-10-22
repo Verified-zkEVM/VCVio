@@ -448,6 +448,7 @@ public import VCVio.Quantum.MatrixMap.Norm
 public import VCVio.Quantum.MatrixMap.OpNorm
 public import VCVio.Quantum.MatrixMap.Pinching
 public import VCVio.Quantum.MatrixMap.ProjectorEvent
+public import VCVio.Quantum.MatrixMap.ProjectorPair
 public import VCVio.Quantum.Observe
 public import VCVio.Quantum.Oracle.Basis
 public import VCVio.Quantum.Oracle.Classical
@@ -461,6 +462,7 @@ public import VCVio.Quantum.Oracle.Compressed.CheckedRead
 public import VCVio.Quantum.Oracle.Compressed.CheckedReadBound
 public import VCVio.Quantum.Oracle.Compressed.CommutatorBound
 public import VCVio.Quantum.Oracle.Compressed.CommutatorSharp
+public import VCVio.Quantum.Oracle.Compressed.Consistency
 public import VCVio.Quantum.Oracle.Compressed.Equivalence
 public import VCVio.Quantum.Oracle.Compressed.Instability
 public import VCVio.Quantum.Oracle.Compressed.Measurement
@@ -487,6 +489,9 @@ public import VCVio.Quantum.VC.Conditions
 public import VCVio.Quantum.VC.Emulated
 public import VCVio.Quantum.VC.MultiExtractable
 public import VCVio.Quantum.VC.MultiExtractor
+public import VCVio.Quantum.VC.Proof.CheckerDistance
+public import VCVio.Quantum.VC.Proof.Commutativity
+public import VCVio.Quantum.VC.Proof.Extraction
 public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
 public import VCVio.Schemes.KEMDEM
