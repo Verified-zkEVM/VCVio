@@ -86,6 +86,7 @@ public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.ProgramLogic.OracleWP
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.Quantum.Basic
+public import VCVioTest.Quantum.CheckedRead
 public import VCVioTest.Quantum.CheckedReadAlgebra
 public import VCVioTest.Quantum.Compressed
 public import VCVioTest.Quantum.Emulated
@@ -96,6 +97,7 @@ public import VCVioTest.Quantum.MultiExtractableModule
 public import VCVioTest.Quantum.Oracle
 public import VCVioTest.Quantum.Pure
 public import VCVioTest.Quantum.Subsystem
+public import VCVioTest.Quantum.VCCompressed
 public import VCVioTest.Quantum.VectorCommitmentQuantum
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryCacheInstability
