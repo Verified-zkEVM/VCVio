@@ -2,9 +2,13 @@
 # one per line with an optional `# reason`. An entry that resolves, or is no longer cited, is
 # obsolete and fails the check, so this list only shrinks.
 AlternatingFaceMapComplex.obj # Mathlib example in the module-system guide, outside the import closure
+ArityTree # ArkLib scaffolding cited in docs/agents/forking.md
+ArityTree.Data # ArkLib scaffolding cited in docs/agents/forking.md
 clean_build # workflow input of the scheduled build
+coinFlipAdv # declaration of VCVioTest/Forking/CoordinateFork.lean, outside the resolver's proof-library roots
 complexity_backend # CI job name
 CURRENT_YEAR # placeholder in the header template of CONTRIBUTING.md
+expectedDraws_ne_closedForm_of_exhaustion # declaration of VCVioTest/Forking/WithoutReplacement.lean, outside the resolver's proof-library roots
 Experiment # a name part of the security-notion naming convention
 grandfatheredNativeTrust # constant of scripts/AxiomSweep.lean, outside the proof libraries
 hss_nf # retired argument name of the Fiat–Shamir extraction bounds
@@ -15,8 +19,15 @@ lowerCamelCase # naming style
 maxAttempts # parameter name of the with-aborts signer
 merge_action # GitHub merge-queue event
 merge_queue # GitHub merge-queue event
+ModuleSIS # ArkLib declaration cited in docs/agents/forking.md
+multiForkOp # planned definition described in docs/agents/forking.md
+multiForkOpW # planned definition described in docs/agents/forking.md
+outputToModuleSIS_valid_of_verified # ArkLib theorem cited in docs/agents/forking.md
 possibleOutputs # binder name of the reachability lemmas
+prEvent_coord_mOfFn_failFactor # declaration of VCVioTest/Forking/CoordinateFork.lean, outside the resolver's proof-library roots
 snake_case # naming style
+sum_goodSet_anticorrelated # declaration of VCVioTest/Forking/CoordinateFork.lean, outside the resolver's proof-library roots
+sum_goodSet_correlated # declaration of VCVioTest/Forking/CoordinateFork.lean, outside the resolver's proof-library roots
 superSpec # variable name in the sub-specification relation
 Sym.DiscrTree # core namespace cited by its short name in the SymM stability note
 Sym.DiscrTree.getMatch # core function cited by its short name in the SymM stability note
