@@ -21,6 +21,7 @@ is outside this development.
 | Scheme | [Construction](../../HashSig/GXMSS/Scheme.lean), [completeness](../../HashSig/GXMSS/Completeness.lean) | Independent chain starts, bounded encoding retries, chain verification, and Merkle authentication. |
 | General security | [Reduction games](../../HashSig/GXMSS/Security/Reductions/JointReductions.lean), [bound](../../HashSig/GXMSS/Security/Unforgeability.lean) | Explicit reductions to the authoritative tweakable-hash and encoding target-collision games. |
 | Encoding instances | [Checksum](../../HashSig/GXMSS/Encoding/Winternitz.lean), [target sum](../../HashSig/GXMSS/Encoding/TargetSum.lean) | Incomparability, error bounds under the stated distribution premises, and code-size facts. |
+| PRF-derived sibling | [Derived construction](../../HashSig/GXMSS/PRFDerived.lean), [conditional strong bound](../../HashSig/GXMSS/Security/PRFDerived.lean) | One abstract keyed evaluator supplies the public parameter, chain starts, and retry randomizers; a named PRF reduction connects its strong game to the ideal scheme. |
 | Specialized security | [Encoding-specific bounds](../../HashSig/GXMSS/Security/Unforgeability.lean) | Composition with reductions from encoding collisions to the message hash's SM-DT-rTCR game. |
 
 ## Security statement
@@ -58,14 +59,52 @@ scheme public-seed samplers. Their encoding term is charged to a named SM-DT-rTC
 
 Completeness is separate from this security inequality. Under the stated lossless sampling laws
 and a one-attempt error bound `δ`, the retry completeness loss is bounded by `δ^K`.
-The model samples chain starts independently; it does not claim security of a PRF-derived
-implementation or a concrete deployed hash instantiation.
+The paper construction samples chain starts independently. The abstract PRF-derived sibling below
+has a separate conditional reduction. Neither development establishes a concrete deployed hash
+instantiation.
+
+## Abstract PRF-derived sibling
+
+`GXMSS.PRFDerived.scheme` captures one evaluator of type `Key → Query PP M h v → Response`
+and an `Interpretation` of the common abstract response. The query constructors separate
+`publicSeed`, parameter-indexed chain starts, and parameter/epoch/message/attempt-indexed retries.
+Key generation samples only the evaluator key. Its distinguished response determines the public
+parameter used by all later queries and the public root; the secret key is the evaluator key.
+The arbitrary incomparable encoding and the ordinary GXMSS verifier remain shared.
+
+`GXMSS.PRFDerived.Security.randgenPRFReduction` queries the public parameter and starts once,
+retains the resulting signing material, forwards the source adversary's ambient sampling, and
+answers each first signing request with its full finite retry-query budget. Duplicate epochs make
+no function queries. A first request that returns signing failure still consumes its epoch. The
+strong observation checks the exact message/signature pair against the complete signing history.
+The ideal PRF experiment retains one persistent random-function cache across this interaction.
+The signing operation records its first-success consumed prefix; the reduction's function-query
+count charges the complete queried retry budget even when signing succeeds earlier.
+
+The final `strong_reduction_bound_of_two_codewords` adds the advantage of this named PRF
+reduction to every generic hardness term above, with the same target counts and coefficients.
+Its explicit premises are `PRFScheme.UniformKey`, `PublicSeedSamplingLaw`,
+`ChainStartSamplingLaw`, `RetrySamplingLaw`, the generic signing-query bound, positive chain count
+and digit width, and two distinct global codewords. The three projection laws identify a uniform
+abstract response with the THF public-parameter law, uniform chain starts, and uniform retry
+randomizers respectively. They are obligations for an instantiation. The real-game theorem
+identifies the full oracle program; the ideal correspondence compares unnormalized returned-output
+measures, preserving returned failure and missing mass.
+
+`randgenPRFReduction_functionQuery_bound` separately bounds right-summand function calls on every
+path by `1 + 2^h * v + qs * budget`. It bounds this reduction's calls, and does not provide a
+running-time or PPT transfer. The conditional strong theorem supplies no concrete PRF bound,
+Ethereum encoding or filler-tree result, Rust correspondence, or implementation-security transfer.
+It retains the generic two-codeword restriction and does not remove the paper proof's stated limits.
 
 ## Validation and review
 
 The tests under `HashSigTest/GXMSS/` check concrete chain and Merkle conventions, retry failure
 and missing mass, checksum and target-sum examples, and applications of the public security
-theorems. The synchronized-signature tests under `VCVioTest/`
+theorems. The PRF-derived importing tests additionally check typed query separation, seed-only
+keys, indexed retries and consumed prefixes, the five public security theorem statements, and
+compiler origins and transitive axioms across the complete PRF security module family.
+The synchronized-signature tests under `VCVioTest/`
 distinguish regular from strong freshness, replay from alternative valid signatures, and failed
 signing from an unused epoch. The repository axiom sweep checks the proof modules for axiom and `sorry` dependencies.
 
