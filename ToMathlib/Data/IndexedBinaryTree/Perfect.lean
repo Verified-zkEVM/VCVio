@@ -77,7 +77,6 @@ def SkeletonInternalIndex.natAddr :
   | _ + 1, t, .ofLeft a => natAddr (2 * t) a
   | _ + 1, t, .ofRight a => natAddr (2 * t + 1) a
 
-@[simp]
 theorem SkeletonLeafIndex.depth_ofNat (z i : ℕ) : (SkeletonLeafIndex.ofNat z i).depth = z := by
   induction z with
   | zero => rfl
@@ -134,6 +133,46 @@ theorem SkeletonLeafIndex.natIndex_div_pow {z : ℕ} (t : ℕ)
     | ofRight l =>
       simp only [SkeletonLeafIndex.natIndex]
       rw [Nat.pow_succ, ← Nat.div_div_eq_div_mul, ih]; omega
+
+/-- Reading a leaf's horizontal index recovers its typed position. -/
+@[simp]
+theorem SkeletonLeafIndex.ofNat_natIndex {z : ℕ} (t : ℕ)
+    (l : SkeletonLeafIndex (Skeleton.perfect z)) : ofNat z (l.natIndex t) = l := by
+  induction z generalizing t with
+  | zero => cases l; rfl
+  | succ z ih =>
+    cases l with
+    | ofLeft l =>
+      simp [ofNat, natIndex, natIndex_div_pow, ih]
+    | ofRight l =>
+      simp [ofNat, natIndex, natIndex_div_pow, ih]
+
+/-- Left-to-right leaf numbering of a perfect tree, with the most significant bit first. -/
+def SkeletonLeafIndex.perfectEquiv (z : ℕ) :
+    Fin (2 ^ z) ≃ SkeletonLeafIndex (Skeleton.perfect z) where
+  toFun i := ofNat z i
+  invFun l := ⟨l.natIndex 0, by
+    have := natIndex_div_pow 0 l
+    exact (Nat.div_eq_zero_iff.mp this).resolve_left (Nat.ne_of_gt (Nat.two_pow_pos z))⟩
+  left_inv i := by
+    apply Fin.ext
+    have h := natIndex_ofNat z i
+    simpa [Nat.div_eq_of_lt i.isLt] using h
+  right_inv l := ofNat_natIndex 0 l
+
+theorem SkeletonLeafIndex.perfectEquiv_apply (z : ℕ) (i : Fin (2 ^ z)) :
+    perfectEquiv z i = ofNat z i := rfl
+
+@[simp]
+theorem SkeletonLeafIndex.depth_perfect {z : ℕ} (l : SkeletonLeafIndex (Skeleton.perfect z)) :
+    l.depth = z := by
+  rw [← ofNat_natIndex 0 l, depth_ofNat]
+
+@[simp]
+theorem Skeleton.leafCount_perfect (z : ℕ) : (perfect z).leafCount = 2 ^ z := by
+  induction z with
+  | zero => rfl
+  | succ z ih => simp [leafCount, ih, Nat.pow_succ, Nat.mul_two]
 
 /-- The horizontal index of an internal node lying on the root path of a leaf is the leaf's
 horizontal index shifted down by the node's height: ancestors are determined by `(leaf, height)`

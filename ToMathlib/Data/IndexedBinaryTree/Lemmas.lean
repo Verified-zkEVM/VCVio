@@ -230,4 +230,24 @@ theorem SkeletonNodeIndex.depth_le_skeleton_depth :
 
 end Size
 
+/-- Mapping labels commutes with lookup at a typed node. -/
+@[simp]
+theorem FullData.get_map {α β : Type*} {s : Skeleton} (f : α → β)
+    (t : FullData α s) (i : SkeletonNodeIndex s) : (t.map f).get i = f (t.get i) := by
+  induction i with
+  | ofLeaf => cases t; rfl
+  | ofInternal => cases t; rfl
+  | ofLeft i ih => cases t; simp [FullData.map, ih]
+  | ofRight i ih => cases t; simp [FullData.map, ih]
+
+/-- Bottom-up population retains the given leaf values. -/
+@[simp]
+theorem get_populateUp_leaf {α : Type*} {s : Skeleton} (t : LeafData α s)
+    (f : α → α → α) (i : SkeletonLeafIndex s) :
+    (populateUp t f).get i.toNodeIndex = t.get i := by
+  induction i with
+  | ofLeaf => cases t; rfl
+  | ofLeft i ih => cases t; simp [populateUp, SkeletonLeafIndex.toNodeIndex, ih]
+  | ofRight i ih => cases t; simp [populateUp, SkeletonLeafIndex.toNodeIndex, ih]
+
 end BinaryTree

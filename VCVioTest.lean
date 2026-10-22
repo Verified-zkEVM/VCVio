@@ -92,9 +92,11 @@ public import VCVioTest.Quantum.Emulated
 public import VCVioTest.Quantum.Hybrid
 public import VCVioTest.Quantum.InstabilityBound
 public import VCVioTest.Quantum.Kraus
+public import VCVioTest.Quantum.MultiExtractableModule
 public import VCVioTest.Quantum.Oracle
 public import VCVioTest.Quantum.Pure
 public import VCVioTest.Quantum.Subsystem
+public import VCVioTest.Quantum.VectorCommitmentQuantum
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryCacheInstability
 public import VCVioTest.QueryHom
@@ -121,6 +123,7 @@ public import VCVioTest.SMDTTCR
 public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
+public import VCVioTest.SaltedMerkle
 public import VCVioTest.SampleableType
 public import VCVioTest.Schemes.KEMDEM
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
