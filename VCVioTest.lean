@@ -98,6 +98,7 @@ public import VCVioTest.Quantum.Oracle
 public import VCVioTest.Quantum.Pure
 public import VCVioTest.Quantum.Subsystem
 public import VCVioTest.Quantum.VCCompressed
+public import VCVioTest.Quantum.VCOffline
 public import VCVioTest.Quantum.VCProof
 public import VCVioTest.Quantum.VectorCommitmentQuantum
 public import VCVioTest.QueryBounds
