@@ -95,7 +95,11 @@ instantiating those abstractions for a lattice scheme.
 - `LatticeCrypto/Falcon/Primitives.lean`: abstract primitive operations such as sampling, hashing,
   and compression.
 - `LatticeCrypto/Falcon/Scheme.lean`: scheme semantics and the GPV bridge.
-- `LatticeCrypto/Falcon/Security.lean`: high-level security statements.
+- `LatticeCrypto/Falcon/Security.lean`: the NTRU collision and SIS targets intended for a Falcon
+  EUF-CMA bound. No such theorem is stated: the generic GPV endpoints in
+  `VCVio/CryptoFoundations/GPVHashAndSign/` need `CorrectAt` (every single-attempt sampler output
+  short), which the non-rejecting `falconPSF` sampler does not meet, plus regularity and a bridge
+  from the reduction's collision advantage to `ntruPSFCollisionProblem`.
 - `LatticeCrypto/Falcon/Concrete/`: executable NTT, floating-point emulation (FPR/FXR), encodings,
   and the NTRU solver.
 - `Extern/Falcon/`: FFI bindings plus the SHAKE-backed sampler, FFT, keygen, signing, and instance

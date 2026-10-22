@@ -183,7 +183,7 @@ rest about reach.
   (2 ^ 40)` carries its size in the diff that introduces it. This is a boundary, not a claim of
   safety: `Finset.range (2 ^ 40)` is the same hazard, and `def n := 2 ^ 40` in another file hides
   its numeral just as well. Over the load-time population of this tree: `List.range` occurs once
-  (`SLHDSA.Concrete.Keccak.piLUT`, `List.range 5`), `Array.replicate` three times
+  (`VCVio.Algorithms.Keccak.piLUT`, `List.range 5`), `Array.replicate` three times
   (`SLHDSA.Concrete.zeros48`, `SLHDSA.C13.Concrete.zeros16`, `SLHDSA.C13.Concrete.ffWord`), and
   `Finset.range`, `Multiset.range`, `List.finRange`, `List.replicate` not at all. Gating that class
   would mean enumerating every size-taking constructor in the library, which has no principled

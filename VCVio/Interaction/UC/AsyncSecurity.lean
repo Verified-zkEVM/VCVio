@@ -85,6 +85,8 @@ open OracleComp ProbComp ENNReal
 namespace Interaction
 namespace UC
 
+open Interaction.Open
+
 /-! ## Async runs -/
 
 /--
@@ -177,7 +179,7 @@ structure Ticketed
   /-- The stable obligation type. -/
   Ticket : Type
   /-- The stable ticket assigned to each complete process-step path. -/
-  ticket : toEnvProcess.process.toProcess.Tickets Ticket
+  ticket : toEnvProcess.process.toProcess.TicketMap Ticket
 
 namespace Ticketed
 

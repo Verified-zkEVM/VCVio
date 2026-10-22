@@ -28,7 +28,7 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 
 ### Unary (core WP)
 
-Unary triples additionally require `open scoped Std.Internal.Do OracleComp.Lower`.
+Unary triples additionally require `open scoped Std.WP OracleComp.Lower`.
 - `wp⟦c⟧` — quantitative WP (partial application, use as `wp⟦c⟧ post`)
 - `⦃P⦄ c ⦃Q⦄` — quantitative Hoare triple (`P ≤ wp c Q`)
 
@@ -76,6 +76,7 @@ scoped notation "𝟙⟦" P "⟧" => propInd P
 the lambda `fun post => wp c post` for partial
 application sites (e.g. `change wp⟦c⟧` or composition with `≤`). -/
 scoped syntax:max (name := wpBracket) "wp⟦" term "⟧" : term
+/-- `wp⟦c⟧ post`, the bracket notation applied to a postcondition. -/
 scoped syntax:max (name := wpBracketApp) "wp⟦" term "⟧" term:max : term
 
 scoped macro_rules

@@ -58,7 +58,12 @@ infrastructure and some tooling and automation remain under active development.
 
 ## Repository Map
 
+See the [repository ownership map](docs/design/repository-layout.md) for placement rules,
+build boundaries and the staged consolidation.
+
 - `VCVio/` contains the oracle-computation framework, probability semantics, program logic, and generic crypto abstractions.
+- `VCVio/Algorithms/` contains shared pure SHA-2, HMAC, MGF1, SHA-3 and SHAKE implementations;
+  their independent regressions run with `lake exe algorithm_tests`.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
 - `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
 - `HashSig/` contains hash-based signatures. Generalized XMSS has a specification, completeness
@@ -70,6 +75,8 @@ infrastructure and some tooling and automation remain under active development.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
 - `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr.
+- `VCVio/Schemes/` owns reusable Schnorr, Pedersen, KEM–DEM and MAC-from-PRF constructions;
+  `Examples/` includes small consumers of these APIs.
 - `Interop/` contains experimental bridges to Rust verification frontends such as hax and Aeneas.
 - `csrc/` contains C FFI bridges for the native ML-DSA, ML-KEM, and Falcon implementations used in tests.
 - `third_party/` contains the native backends as git submodules, used by the `Extern` FFI layer and differential tests.
@@ -81,6 +88,10 @@ for lattice-specific entry points and workflows.
 
 External papers and project references cited in this repo are centralized in
 [`REFERENCES.md`](REFERENCES.md).
+
+For the quantum layer (`VCVio/Quantum/`), [`docs/quantum/`](docs/quantum/README.md) has a tutorial
+for readers new to quantum computing, a guide to the layer's definitions and theorems, and
+reference pages; the design record is [`docs/design/quantum-layer.md`](docs/design/quantum-layer.md).
 
 ## End-to-end examples
 

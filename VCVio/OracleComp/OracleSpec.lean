@@ -96,7 +96,7 @@ reducible-transparency tactic matching. -/
 instance {ι ι'} :
     HAdd (OracleSpec ι) (OracleSpec ι') (OracleSpec (ι ⊕ ι')) where
   hAdd spec spec' :=
-    OracleSpec.ofPFunctor (PFunctor.sum spec.toPFunctor spec'.toPFunctor)
+    OracleSpec.ofPFunctor (PFunctor.add spec.toPFunctor spec'.toPFunctor)
 
 lemma add_def {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
     spec + spec' = Sum.elim spec spec' := rfl

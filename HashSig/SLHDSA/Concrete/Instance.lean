@@ -6,12 +6,12 @@ Authors: Nicolas Consigny, Alexander Hicks
 
 module
 public import HashSig.SLHDSA.RandomOracle
-public import HashSig.SLHDSA.Concrete.Sha2
+public import VCVio.Algorithms.Sha2
 
 /-!
 # Concrete SLH-DSA-SHA2-128-24 instantiation
 
-Wires pure-Lean SHA-256 (`HashSig.SLHDSA.Concrete.Sha2`) into the abstract `Primitives` bundle
+Wires pure-Lean SHA-256 (`VCVio.Algorithms.Sha2`) into the abstract `Primitives` bundle
 to make the proof-level scheme executable at the SLH-DSA-SHA2-128-24 parameter set, following
 the FIPS 205 §11.2.1 SHA-2 (category-1) instantiation:
 
@@ -38,7 +38,7 @@ FORS trees — ~`10^9` hashes); `verify` is ~`400` hashes and is the executable 
 
 namespace SLHDSA.Concrete
 
-open SLHDSA Sha2
+open SLHDSA VCVio.Algorithms.Sha2
 
 /-! ### Byte conversions -/
 

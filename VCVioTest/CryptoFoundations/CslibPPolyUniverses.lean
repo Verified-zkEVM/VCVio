@@ -51,7 +51,7 @@ head observation, and enabled answer transition code. Its two answers produce di
 returned values, and its certified query budget is exactly one.
 -/
 
-open ToCslib.Computability PFunctor
+open ComplexityBackends.CslibSingleTape PFunctor
 
 noncomputable instance : Fintype coinSpec.toPFunctor.Idx :=
   Fintype.ofFinite ((_: Unit) × Bool)
@@ -71,7 +71,7 @@ noncomputable def coinStateEncoding : StrEncFam fun _ => Option Bool :=
       | some answer => Sum.inl answer)
     (fun _ => none)
 
-noncomputable def coinRealization : CslibPPoly.Realization coinBoundary where
+noncomputable def coinRealization : PPoly.Realization coinBoundary where
   machine := coinMachine
   rounds := .C 1
   state := coinStateEncoding
@@ -102,13 +102,13 @@ def coinProgram (_n : ℕ) (_value : Unit) : OracleComp coinSpec Bool :=
 
 noncomputable def coinWitness : NonuniformPPTWitness coinBoundary coinProgram where
   realization := coinRealization
-  implements := CslibPPoly.Realization.Implements.intro fun _ _ => by
+  implements := PPoly.Realization.Implements.intro fun _ _ => by
     simp only [coinRealization, Polynomial.eval_C]
     rfl
   progress _ _ := by
-    change CslibPPoly.ProgramProgress (FreeM.liftBind (P := coinSpec.toPFunctor) () FreeM.pure)
-    rw [CslibPPoly.programProgress_liftBind]
-    exact ⟨⟨false⟩, fun answer => CslibPPoly.programProgress_pure answer⟩
+    change FreeM.ProgramProgress (FreeM.liftBind (P := coinSpec.toPFunctor) () FreeM.pure)
+    rw [FreeM.programProgress_liftBind_iff]
+    exact ⟨⟨false⟩, fun answer => FreeM.programProgress_pure answer⟩
 
 example : IsNonuniformPPTBy coinBoundary coinProgram :=
   IsNonuniformPPTBy.intro coinWitness

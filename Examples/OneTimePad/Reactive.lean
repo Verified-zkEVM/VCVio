@@ -26,7 +26,8 @@ public section
 
 namespace OneTimePad.Reactive
 
-open PFunctor Interaction.UC ReactiveProcess ReactiveNetwork ReactiveRuntime
+open PFunctor Interaction Interaction.UC Interaction.Execution
+  Interaction.Execution.ReactiveProcess Interaction.Execution.ReactiveNetwork ReactiveRuntime
   DynSystem OracleComp MeasureTheory ProbabilityTheory
 
 attribute [local implicit_reducible] signature Response
@@ -160,7 +161,7 @@ theorem tokenExperiment_eq (env : Environment Message Cipher Memory)
   funext state
   simp only [network, environmentProgram, FreeM.pure_eq_pure, serviceProgram, runToken,
     activate, initial, DynComputation.ofFreeM_init, DynComputation.view_ofFreeM_liftBind,
-    DynComputation.ofFreeM_State, StateT.run, implementation, zero_add, bind_pure_comp,
+    DynComputation.ofFreeM_state, StateT.run, implementation, zero_add, bind_pure_comp,
     Functor.map_map, dispatch, bind_pure, bind_map_left, Function.update, ↓reduceDIte,
     Function.update_idem, List.nil_append, Nat.reduceAdd, pure_bind, Bool.true_eq_false,
     Function.update_eq_self, outcome, map_bind, conversation]
@@ -171,7 +172,7 @@ theorem tokenExperiment_eq (env : Environment Message Cipher Memory)
   apply bind_congr
   rintro ⟨permitted, state⟩
   cases permitted <;>
-    simp only [DynComputation.view_ofFreeM_liftBind, DynComputation.ofFreeM_State,
+    simp only [DynComputation.view_ofFreeM_liftBind, DynComputation.ofFreeM_state,
       pure_bind, bind_map_left, Function.update, ↓reduceDIte, Function.update_idem,
       List.nil_append, Nat.reduceAdd, Bool.false_eq_true, Function.update_eq_self,
       Functor.map_map, DynComputation.view_ofFreeM_pure, ↓reduceIte, map_bind] <;> rfl
@@ -193,7 +194,7 @@ theorem fifoExperiment_eq (env : Environment Message Cipher Memory)
   funext state
   simp only [network, environmentProgram, FreeM.pure_eq_pure, serviceProgram, fifoSchedule,
     initial, runFIFO, fifoStep, activate, DynComputation.ofFreeM_init,
-    DynComputation.view_ofFreeM_liftBind, DynComputation.ofFreeM_State, StateT.run,
+    DynComputation.view_ofFreeM_liftBind, DynComputation.ofFreeM_state, StateT.run,
     implementation, zero_add, bind_pure_comp, Functor.map_map, deliver, dispatch, bind_pure,
     pure_bind, bind_map_left, Function.update, ↓reduceDIte, Function.update_idem,
     List.nil_append, Nat.reduceAdd, Bool.true_eq_false, Function.update_eq_self,
@@ -205,7 +206,7 @@ theorem fifoExperiment_eq (env : Environment Message Cipher Memory)
   apply bind_congr
   rintro ⟨permitted, state⟩
   cases permitted <;>
-    simp only [DynComputation.view_ofFreeM_liftBind, DynComputation.ofFreeM_State,
+    simp only [DynComputation.view_ofFreeM_liftBind, DynComputation.ofFreeM_state,
       pure_bind, bind_map_left, Function.update, ↓reduceDIte, Function.update_idem,
       List.nil_append, Nat.reduceAdd, Bool.false_eq_true, Function.update_eq_self,
       Functor.map_map, DynComputation.view_ofFreeM_pure, ↓reduceIte, map_bind] <;> rfl

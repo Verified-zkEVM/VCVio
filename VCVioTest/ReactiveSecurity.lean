@@ -20,7 +20,8 @@ public section
 
 namespace Interaction.UC.ReactiveSecurity.Tests
 
-open PFunctor OracleComp ReactiveProcess ReactiveNetwork DynSystem MeasureTheory
+open PFunctor OracleComp Interaction.Execution.ReactiveProcess Interaction.Execution.ReactiveNetwork
+  DynSystem MeasureTheory
 open scoped ENNReal
 
 @[expose] def bitEffect : PFunctor.{0, 0} := ⟨Unit, fun _ => Bool⟩
@@ -62,7 +63,7 @@ theorem experiment_server (draw : ProbComp Bool) :
     Diagram.plug, Diagram.map, Diagram.wire, Diagram.atom,
     runToken, activate, initial, DynComputation.ofFreeM_init,
     DynComputation.view_ofFreeM_liftBind, DynComputation.view_ofFreeM_pure,
-    DynComputation.ofFreeM_State, FreeM.pure_eq_pure, StateT.run,
+    DynComputation.ofFreeM_state, FreeM.pure_eq_pure, StateT.run,
     pure_bind, bind_pure, bind_map_left,
     Functor.map_map, outcome, Function.update, ↓reduceDIte, dispatch, zero_add,
     Function.update_idem, List.nil_append, Nat.reduceAdd, Function.update_eq_self,

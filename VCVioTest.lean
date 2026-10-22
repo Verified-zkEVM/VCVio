@@ -1,5 +1,8 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import VCVioTest.AKE.UAKE.ExperimentFixtures
+public import VCVioTest.AKE.UAKE.TranscriptFixtures
+public import VCVioTest.Algorithms.Hash
 public import VCVioTest.Asymptotics.Negligible
 public import VCVioTest.Computability
 public import VCVioTest.CryptoFoundations.BR93Measure
@@ -8,7 +11,6 @@ public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.CslibPPolyUniverses
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
-public import VCVioTest.CryptoFoundations.KEMDEMMeasure
 public import VCVioTest.CryptoFoundations.OracleClosure
 public import VCVioTest.CryptoFoundations.PRFTableMeasure
 public import VCVioTest.CryptoFoundations.SignatureAlg
@@ -50,6 +52,7 @@ public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MerkleTreeExtractability
 public import VCVioTest.MerkleTreeHashForest
 public import VCVioTest.MerkleTreeHashing
+public import VCVioTest.MerkleTreeInstability
 public import VCVioTest.MerkleTreeMonadic
 public import VCVioTest.MerkleTreeMultiExtractability
 public import VCVioTest.ModuleAPI.Cache
@@ -82,7 +85,16 @@ public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.ProgramLogic.OracleWP
 public import VCVioTest.ProgramLogic.UntilBad
+public import VCVioTest.Quantum.Basic
+public import VCVioTest.Quantum.CheckedReadAlgebra
+public import VCVioTest.Quantum.Compressed
+public import VCVioTest.Quantum.InstabilityBound
+public import VCVioTest.Quantum.Kraus
+public import VCVioTest.Quantum.Oracle
+public import VCVioTest.Quantum.Pure
+public import VCVioTest.Quantum.Subsystem
 public import VCVioTest.QueryBounds
+public import VCVioTest.QueryCacheInstability
 public import VCVioTest.QueryHom
 public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleFreshQuery
@@ -108,9 +120,10 @@ public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SampleableType
-public import VCVioTest.SchnorrTransforms
+public import VCVioTest.Schemes.KEMDEM
+public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
+public import VCVioTest.Schemes.Schnorr.Transforms
 public import VCVioTest.SeparatedOTP
-public import VCVioTest.SigmaChallengeRestriction
 public import VCVioTest.Smoke
 public import VCVioTest.StateSeparating.Measure
 public import VCVioTest.StateTLift

@@ -21,7 +21,7 @@ hypotheses and do not prove a small concrete bound or bound the same-message SUF
 | General hypertree and scheme | `HypertreeGeneral.lean` (+ `QueryBound.lean`), `GeneralScheme.lean`, `GeneralSchemeQueryBound.lean`, `DepthOneCompatibility.lean` | `slhdsa_hypertree_tests`, `HashSigTest/SLHDSA/HypertreeGeneral.lean`, `GeneralScheme.lean` |
 | Depth-one compatibility scheme | `Hypertree.lean`, `Scheme.lean`, `RandomOracle.lean`, `Oracle.lean` | `HashSigTest/SLHDSA/Hypertree.lean`, `Oracle.lean`, `Scheme.lean` |
 | Wire codecs | `Codec.lean`, `Concrete/Codec.lean` | `slhdsa_data_codec_tests` |
-| Concrete primitives (12 FIPS sets) | `Concrete/Sha2.lean`, `Concrete/Keccak.lean`, `Concrete/FIPS.lean`, `Concrete/Instance.lean`, `Concrete/Prehash.lean` | `slhdsa_primitive_tests` (+ `PrimitiveVectors/`), `slhdsa_kat` |
+| Concrete primitives (12 FIPS sets) | `VCVio/Algorithms/Sha2.lean`, `VCVio/Algorithms/Keccak.lean`, `Concrete/FIPS.lean`, `Concrete/Instance.lean`, `Concrete/Prehash.lean` | `algorithm_tests` (+ `VCVioTest/Algorithms/HashVectors/`), `slhdsa_primitive_tests` (+ `PrimitiveVectors/`), `slhdsa_kat` |
 | C13 variant (WOTS+C/FORS+C, keccak256, `d = 2`) | `C13/{Params,Primitives,WotsC,ForsC,Xmss,Hypertree,Scheme,Concrete}.lean` | `slhdsa_c13_kat` |
 | External interfaces (Alg. 21–25) | `External.lean` | `slhdsa_external_tests` |
 | Security packaging | `Security.lean` (primitive families as `TweakableHash`/`PRFScheme`), `MerkleExtractor.lean` | — |
@@ -82,7 +82,7 @@ pushed, so a quoted one goes stale without notice.
 | G4 general hypertree | DONE | #603 | `GeneralHypertree.signM/rootM/pkFromSigM/verifyM`, `verify_sign`, `HypertreeGeneral/QueryBound.lean` | none |
 | G5 general internal scheme | DONE | #617 | `keygenInternalM/signInternalM/verifyInternalM`, `verifyInternal_signInternal`, `DepthOneCompatibility` | the depth-one bridge for signing, `signInternalM_toOneLayer_eq`, is not an equality with `slhSignInternalM`: the general signer's trace carries one additional, discarded XMSS recovery. Consumers must use that form |
 | G6 exact wire codecs | DONE | #619 | `WireCodec`, `signatureCodec`, `WireLayout.*` slice theorems, `Concrete.approvedWireCodec`, legacy-decoder reconciliation | same-length tamper test at 128f only (issue #629 item 3) |
-| G7 SHA2 and SHAKE suites | DONE | #626 | `sha2Primitives`, `shakePrimitives`, `approvedPrimitives`, `Sha2Address`, `sha2AdrsKey_injective_of_domain`, `compressSha2_injective_of_fits` | several primitives, among them SHA-384, SHA-512/224, SHA-512/256, and both MGF1 variants, are regression-pinned rather than covered by independent NIST vectors (`PrimitiveVectors/NOTICE.md`); abstract `F`/`T₁` identification at arity 1 (#629 item 1) |
+| G7 SHA2 and SHAKE suites | DONE | #626 | `sha2Primitives`, `shakePrimitives`, `approvedPrimitives`, `Sha2Address`, `sha2AdrsKey_injective_of_domain`, `compressSha2_injective_of_fits` | several primitives, among them SHA-384, SHA-512/224, SHA-512/256, and both MGF1 variants, are regression-pinned rather than covered by independent NIST vectors (`VCVioTest/Algorithms/HashVectors/NOTICE.md`); abstract `F`/`T₁` identification at arity 1 (#629 item 1) |
 | FORS and hypertree conformance ports | DONE | #627, #628 | `ForsConformance.lean`, `HypertreeConformance.lean`, typed trajectory traces, concrete address bounds | none |
 | G8 external interfaces and prehash | DONE | #611 | `External.lean` (`requireContext`, `signPure*`, `verifyPure*`, prehash variants), `Concrete/Prehash.lean` (12 ACVP names, OIDs), pinned `opt_rand = PK.seed` | "ACVP uses supplied randomness exactly when requested" is untestable until G10 |
 | G9 efficient refinement-linked execution | NOT MERGED | frozen branch `feat/slhdsa-g9-efficient-execution-20260831`, tip `0529cefa` (still hosted) | branch-only `HashSig/SLHDSA/Execution.lean` with the full `*_eq_spec` refinement chain | the frozen branch carries stale pre-merge copies of the G4–G8 files; re-slice it instead of rebasing the whole branch (see below) |
@@ -196,9 +196,9 @@ The G9 and G10 branches, `feat/slhdsa-g9-efficient-execution-20260831` (tip `052
 predate the merged G4–G8 and carry stale pre-merge copies of those files, so neither can be
 rebased. Use the tip commits as idea sources and re-slice only the owned changes:
 
-- **G9**: a single PR carrying `HashSig/SLHDSA/Execution.lean` (the `treeHash`,
+- **G9**: a proposed PR carrying `HashSig/SLHDSA/Execution.lean` (the `treeHash`,
   `authenticationPath`, and `*_eq_spec` refinement theorems restated against the merged
-  `GeneralScheme`, `Codec`, and `External` APIs) plus `HashSigTest/SLHDSA/Execution.lean` and a
+  `GeneralScheme`, `Codec`, and `External` APIs) plus the proposed `HashSigTest/SLHDSA/Execution.lean` and a
   benchmark record for the six numerical shapes.
 - **G10**: first a corpus-import PR (schema, strict JSON parser, lossless corpus, manifest pinned
   to ACVP-Server `975de31e`, provenance check script), then a runner PR that executes
@@ -261,7 +261,7 @@ longer true on `main`:
   by `signInternalM_toOneLayer_eq`. The plan forbids keeping both indefinitely; the compatibility
   scheme should be retired once slice 7 consumes `GeneralScheme` directly.
 - Independent NIST vectors for the regression-pinned primitives listed in
-  `HashSigTest/SLHDSA/PrimitiveVectors/NOTICE.md`.
+  `VCVioTest/Algorithms/HashVectors/NOTICE.md`.
 - Deferred cleanup: the `XmssSig` alias of `XmssSigCore`, the dead `pk` parameter of
   `recoverFromPositionWith`, the unused `FipsParameterSet.category`, and the smaller items
   recorded on #605–#611.

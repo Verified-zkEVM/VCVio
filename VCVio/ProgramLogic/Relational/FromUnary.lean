@@ -25,7 +25,7 @@ This file provides the "unary → relational" bridge:
 
 Both specialize `relTriple_prod`, which takes `support`-style postconditions.
 
-These lemmas let proofs established against the stateful `Std.Do`/`mvcgen` proof mode
+These lemmas let proofs established in the stateful `Std.Do` proof mode
 be composed into relational arguments (e.g. game-hopping reductions) without redoing
 the underlying analysis.
 -/
