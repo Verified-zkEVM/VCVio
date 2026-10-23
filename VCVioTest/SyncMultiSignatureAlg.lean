@@ -65,8 +65,7 @@ theorem accepts_all_some {m : Type → Type} [Monad m] {M PK SK S A E : Type}
 theorem honest_success (E : Type) (k : ℕ) (keys : Fin k → Unit × Unit)
     (ep : E) (msg : Unit) :
     (honest E).successMass ProbCompRuntime.probComp keys ep msg = 1 := by
-  simp [successMass, honest,
-    sequence_pure, accepts_all_some]
+  simp [successMass, honest, accepts_all_some]
 
 /-- The native independent-signing theorem includes the empty ordered tuple. -/
 theorem honest_independent_signing_empty (E : Type) (ep : E) :
@@ -235,8 +234,7 @@ theorem ordered_generated_iff (E : Type) (cfg : Bool) (ks : Bool × Bool) :
 theorem ordered_success (E : Type) (cfg : Bool) (k : ℕ) (keys : Fin k → Bool × Bool)
     (hkeys : ∀ i, (keys i).1 = (keys i).2) (ep : E) (msg : Unit) :
     (ordered E cfg).successMass ProbCompRuntime.probComp keys ep msg = 1 := by
-  simp [successMass, ordered,
-    sequence_pure, accepts_all_some, hkeys]
+  simp [successMass, ordered, accepts_all_some, hkeys]
 
 /-- Every configuration has zero error for every producible tuple and arbitrary epoch type. -/
 theorem ordered_complete_zero (E : Type) :

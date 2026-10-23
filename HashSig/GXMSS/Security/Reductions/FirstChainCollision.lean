@@ -97,8 +97,6 @@ private theorem firstChain_pureDecision [DecidableEq X] [DecidableEq H]
     rcases pair with ⟨t, first⟩
     simp only [Reductions.chainTCRProblem, SM_DT_TCR_Problem.standalone]
     congr 1
-    exact tcrDecision_eq second first
-      (hash.thf.eval pp t second = hash.thf.eval pp t first)
 
 /-- The first unequal OTS coordinate yields a registered honest-first collision target. -/
 private theorem firstChain_registeredTarget_wins
