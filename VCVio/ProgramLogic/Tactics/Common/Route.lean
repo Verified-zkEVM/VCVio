@@ -211,10 +211,21 @@ partial def carrierOf (t : Expr) : Carrier :=
     | some `OrderDual => .dual (carrierOf t.consumeMData.appArg!)
     | _ => .other
 
-/-- The interpretation of a `WP` instance: the first known reading among the instance's head
-and, to a bounded depth, its arguments. A goal's instance is typically core's generic instance
-applied to the reading's `WPMonad` instance, so the reading is found among the arguments. -/
-partial def interpOf (e : Expr) (depth : Nat := 3) : Interp :=
+/-- The body of a definition, under its lambdas. -/
+def defBody? (env : Environment) (n : Name) : Option Expr :=
+  match env.find? n with
+  | some (.defnInfo d) =>
+    let rec strip : Expr → Expr
+      | .lam _ _ b _ => strip b
+      | e => e
+    some (strip d.value)
+  | _ => none
+
+/-- The interpretation of a `WP` instance: the first known reading among the instance's head,
+its arguments and, for an instance constant of the caller's own (such as a scoped instance built
+from `ExactWPMonad.dual`), its definition, to a bounded depth. A goal's instance is typically
+core's generic instance applied to the reading's `WPMonad` instance. -/
+partial def interpOf (env : Environment) (e : Expr) (depth : Nat := 3) : Interp :=
   match headConst? e with
   | none => .none
   | some n =>
@@ -222,11 +233,14 @@ partial def interpOf (e : Expr) (depth : Nat := 3) : Interp :=
     else if (`Std.Do).isPrefixOf n then .stdDo
     else if depth == 0 then .unknown n
     else
-      let found := e.consumeMData.getAppArgs.reverse.findSome? fun a ↦
-        match interpOf a (depth - 1) with
+      let known (i : Interp) : Option Interp :=
+        match i with
         | .none | .unknown _ => none
         | i => some i
-      found.getD (.unknown n)
+      let fromArgs := e.consumeMData.getAppArgs.reverse.findSome? fun a ↦
+        known (interpOf env a (depth - 1))
+      let fromDef := (defBody? env n).bind fun b ↦ known (interpOf env b (depth - 1))
+      (fromArgs <|> fromDef).getD (.unknown n)
 
 /-- Positions of the arguments routing reads, from the binders of `c`'s type: the assertion
 type (`Pred`), the program type (`Prog`), the program (`x`/`oa`/`mx`), the precondition (`pre`)
@@ -267,7 +281,7 @@ def readTriple (key : RouteKey) (e : Expr) (c : Name) : MetaM RouteKey := do
   let pos ← argPos c
   let mut key := key
   if let some p := argAt? e pos.pred? then key := { key with carrier := carrierOf p }
-  if let some inst := argAt? e pos.inst? then key := { key with interp := interpOf inst }
+  if let some inst := argAt? e pos.inst? then key := { key with interp := interpOf (← getEnv) inst }
   if let some prog := argAt? e pos.prog? then
     key := { key with monad := (headConst? prog).getD .anonymous }
   if let some x := argAt? e pos.comp? then

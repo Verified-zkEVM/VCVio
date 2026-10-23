@@ -86,6 +86,12 @@ public import VCVioTest.ProgramLogic.MeasureOracleRelWP
 public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.ProgramLogic.OracleWP
+public import VCVioTest.ProgramLogic.Probes.P1Support
+public import VCVioTest.ProgramLogic.Probes.P2Swap
+public import VCVioTest.ProgramLogic.Probes.P3Upper
+public import VCVioTest.ProgramLogic.Probes.P4QueryBound
+public import VCVioTest.ProgramLogic.Probes.P5ElGamal
+public import VCVioTest.ProgramLogic.Probes.P6FreshDraw
 public import VCVioTest.ProgramLogic.Route
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.ProgramLogic.VCGenCoreDelegation

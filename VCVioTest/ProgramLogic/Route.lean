@@ -16,6 +16,8 @@ regressions for goals the `find?`-based classifiers misroute: a triple among the
 triples over a `Prop` carrier.
 -/
 
+public section
+
 open OracleSpec OracleComp OracleComp.ProgramLogic ENNReal
 
 namespace VCVioTest.ProgramLogic.Route
@@ -91,6 +93,21 @@ section
 open scoped OracleComp.Lower Std.WP
 #guard_route ∀ (oa : ProbComp Bool),
     ⦃ (1 : ℝ≥0∞) ⦄ oa ⦃ fun b ↦ propInd (b = true) ⦄ => "core:lower"
+end
+
+-- a reading of the caller's own, built on `ExactWPMonad.dual`, is the upper reading
+namespace UpperTest
+open scoped OracleComp.Lower in
+noncomputable scoped instance (priority := 1300) instWP :
+    Std.WP.WPMonad (OracleComp unifSpec) ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ :=
+  ExactWPMonad.dual
+end UpperTest
+
+section
+open scoped Std.WP UpperTest
+#guard_route ∀ (oa : ProbComp Bool),
+    ⦃ OrderDual.toDual (2⁻¹ : ℝ≥0∞) ⦄ oa ⦃ fun b ↦ OrderDual.toDual (propInd (b = true)) ⦄
+      => "core:upper"
 end
 
 /-! ## Handlers and query bounds -/

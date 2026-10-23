@@ -80,8 +80,10 @@ elab_rules (kind := OracleComp.ProgramLogic.vcgenBasic) : tactic
       -- caller's scope and options. If core fails, VCVio's pipeline takes the goal.
       let saved ← saveState
       try evalTactic (← `(tactic| vcgen (errorOnMissingSpec := true)))
-      catch _ =>
+      catch ex =>
         saved.restore
+        if vcvio.route.trace.get (← getOptions) then
+          logInfo m!"core vcgen failed, handing the goal to VCVio's pipeline: {ex.toMessageData}"
         throwUnsupportedSyntax
     | _ => throwUnsupportedSyntax
 
