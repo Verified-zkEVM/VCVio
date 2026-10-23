@@ -121,7 +121,7 @@ needs an instance-synthesis check, not a grep.
 | `VCVio/OracleComp/Constructions/SampleableType.lean:300–308` `FinEnum (ZMod n)`, `FinEnum USize`, `FinEnum ISize`; `arrayVectorEquivFin`, `instFintypeVector` | `Mathlib/Data/FinEnum.lean`; `Mathlib/Data/Fintype/Vector.lean` (which covers `List.Vector` only, `:27`) | grep of core/Batteries/Mathlib for `Vector α n ≃ (Fin n → α)` forms empty |
 | `ToMathlib/General.lean` core-`Vector` `cases`/`induction`/`cases₂`/`induction₂` | core `Init/Data/Vector/` | core has only `elimAsArray`/`elimAsList` (`Init/Data/Vector/Basic.lean:71,78`) |
 | `ToMathlib/Control/WriterT.lean:30` `LawfulAppend` | core (or just use `Monoid`) | no `LawfulAppend` in core/Batteries/Mathlib |
-| `ToMathlib/Control/Lawful/MonadFunctor.lean:20,31`, `MonadControl.lean:23,39` `LawfulMonadFunctor(T)`, `LawfulMonadControl(T)` | core `Init/Control/Lawful/` next to `LawfulMonadLift(T)` (`Init/Control/Lawful/MonadLift/Basic.lean:29,44`, the exact template) | class-keyword grep across five trees |
+| `LawfulMonadFunctor(T)`, `LawfulMonadControl(T)`, now in PolyFun's `PolyFun/Control/Lawful/MonadFunctor.lean` and `MonadControl.lean` | core `Init/Control/Lawful/` next to `LawfulMonadLift(T)` (`Init/Control/Lawful/MonadLift/Basic.lean:29,44`, the exact template) | class-keyword grep across five trees |
 | `HashSig/SLHDSA/WotsChecksum.lean` `Forall₂.eq_of_sum_eq` | `Mathlib/Data/List/Forall2.lean` | no statement of this shape upstream |
 | `ToMathlib/Data/Set/Functor.lean` `SetM.run_*`; `BitVec.xor_self_xor` | Mathlib / core | see Keep |
 
@@ -468,7 +468,7 @@ Batteries' `LawfulAlternativeLift` and `LawfulMonadStateOf` (`B:Control/LawfulMo
 exist, the latter with 0 VCVio uses. `support` (a monad morphism into `SetM`) corresponds to core's
 `MonadAttach.CanReturn` (`C:Init/Control/MonadAttach.lean:30`, lawful instances for
 `ReaderT/StateT/ExceptT/OptionT`) and to `Functor.Liftp`/`Functor.supp` (`M:Control/Functor.lean:238,251`);
-no bridge exists in either direction. `OrderedMonad` (`V:ToMathlib/Control/Monad/Ordered.lean:52`,
+no bridge exists in either direction. `OrderedMonad` (PolyFun's `PolyFun/Control/Monad/Ordered.lean`,
 Mathlib `Preorder`) is the twin of core's `MonoBind` (`C:Init/Internal/Order/Basic.lean:879`,
 `Lean.Order`), likewise unbridged.
 
@@ -925,7 +925,7 @@ audit before deletion (see Method).
 | Surface | Verdict |
 |---|---|
 | `ToMathlib/Control/Monad/Commutative.lean` (whole file, ~200 lines) | no consumer; either restate over `CommApplicative` or delete |
-| `ToMathlib/Control/Monad/Ordered.lean` `pointwiseRelation`, `Proper` | delete |
+| `ToMathlib/Control/Monad/Ordered.lean` `pointwiseRelation`, `Proper` | **done**: the file is deleted, and PolyFun owns `OrderedMonad` (see *PolyFun repin*) |
 | `ToMathlib/General.lean:419,156,165,280` | delete (see Adopt) |
 | `Examples/Regev.lean`, `Examples/FrankingProtocol.lean` | delete (fully commented out) |
 | `Examples/OneTimePad/Basic.lean:12` `public import Mathlib.Data.Vector.Zip` | no `Vector` use in the file; delete |
@@ -1169,3 +1169,28 @@ lower reading leave the expectation of the rest of the program in the verificati
 - cslib: `PFunctor.add` stays implicit-reducible, so the coproduct answer-type workarounds of the
   v4.35 port stay.
 
+## PolyFun repin (2026-10-23)
+
+PolyFun `5670109c` → `ecac686f` (`main`, through PolyFun #349). Mathlib, cslib, Batteries and the
+other transitive pins are unchanged. The new commits (#340–#349) add features; VCVio needed no
+source change for them.
+
+- **Copies of PolyFun's files.** PolyFun already shipped these at `5670109c`, so the VCVio copies
+  are deleted, with their 71 `scripts/nolints.json` rows:
+  - the monad theory of PolyFun #333: `ToMathlib/Control/Lawful/{MonadControl,MonadFunctor,MonadState}.lean`
+    and `Monad/{Dijkstra,Graded,Ordered,Relation,Relative}.lean`, now under
+    `PolyFun/Control/{Lawful,Monad}/`;
+  - `ToMathlib/Control/AlternativeMonad.lean`.
+  None of them was imported outside the group.
+- **`AlternativeMonad.lean`'s lemmas.** Its `monadLift_guard`, `monadLift_optional` and
+  `Option.monadLift_elimM` are PolyFun's (`PolyFun/Control/Monad/AlternativeLift.lean`). Its `liftM`
+  forms (`liftM_failure`, `liftM_orElse`, `liftM_guard`, `liftM_optional`, `Option.liftM_elimM`)
+  had no consumers. Core's `liftM` abbreviates `monadLift`, so Batteries' `monadLift_failure` and
+  `monadLift_orElse` and PolyFun's lemmas already state them.
+- **`WriterT.AppendWP`.** It is PolyFun's `PolyFun/Control/Monad/WriterT/WP.lean`, with its `@[spec]`
+  rules in `PolyFun/Control/Do/Spec.lean`, and `ToMathlib/Control/WriterT/WP.lean` is deleted. The
+  scoped `Std.Associative` and `Std.LawfulIdentity` instances for `LawfulAppend` logs
+  (`ToMathlib/Control/WriterT.lean`, scope `WriterT.AppendWP`) feed PolyFun's reading. The
+  `LawfulAppend` row above stays deferred.
+- **Init sweep.** `VCVioTest.PFunctorFacade.instFintypeTriPFunctor` is no longer flagged, so its
+  baseline entry goes.
