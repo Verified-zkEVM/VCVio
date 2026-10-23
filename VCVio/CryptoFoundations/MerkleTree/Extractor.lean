@@ -34,6 +34,11 @@ universe u v w
 
 variable {Query : Type u} {Address : Type v} {Y : Type w}
 
+/-- Recover a payload at a reached leaf of a partial digest tree. -/
+def recoverLeaf {Payload : Type*} {s : Skeleton} (resolve : Y → Option Payload)
+    (t : FullData (Option Y) s) (i : SkeletonLeafIndex s) : Option Payload :=
+  (t.get i.toNodeIndex).bind resolve
+
 /-- Projection from an oracle query to the address key and ordered children used by extraction. -/
 structure QueryView (Query : Type u) (Address : Type v) (Y : Type w) where
   /-- Actual oracle address/key of the query. -/
@@ -65,30 +70,109 @@ def opening {s : Skeleton} (tree : FullData (Option Y) s)
     (idx : SkeletonLeafIndex s) :
     (opening tree idx).proof = generateProof tree idx := rfl
 
-variable [DecidableEq Address] [DecidableEq Y]
-
 /-- Recover the ordered children of `root` at `address` from the first matching logged query. -/
-def children (view : QueryView Query Address Y) (log : QueryLog Query Y)
+def children [DecidableEq Address] [DecidableEq Y] (view : QueryView Query Address Y)
+    (log : QueryLog Query Y)
     (address : Address) (root : Y) : Option (Y × Y) :=
   match log.find? fun entry => view.address entry.1 == address && entry.2 == root with
   | none => none
   | some entry => some (view.input entry.1)
 
-/-- Reconstruct a subtree while mapping each typed internal position to its actual oracle key. -/
-def treeAt (view : QueryView Query Address Y) : (subtree : Skeleton) →
-    (SkeletonInternalIndex subtree → Address) →
-    QueryLog Query Y → Y → FullData (Option Y) subtree
-  | .leaf, _, _, root => .leaf (some root)
-  | .internal left right, addressKey, log, root =>
-      match children view log (addressKey .ofInternal) root with
+/-- Reconstruct a partial tree using an address-indexed resolver for child labels. -/
+@[simp]
+def treeWith (resolve : Address → Y → Option (Y × Y)) : (subtree : Skeleton) →
+    (SkeletonInternalIndex subtree → Address) → Y → FullData (Option Y) subtree
+  | .leaf, _, root => .leaf (some root)
+  | .internal left right, addressKey, root =>
+      match resolve (addressKey .ofInternal) root with
       | none =>
           .internal (some root)
             (populateDown left (fun _ : Option Y => (none, none)) none)
             (populateDown right (fun _ : Option Y => (none, none)) none)
       | some (leftRoot, rightRoot) =>
           .internal (some root)
-            (treeAt view left (fun address => addressKey (.ofLeft address)) log leftRoot)
-            (treeAt view right (fun address => addressKey (.ofRight address)) log rightRoot)
+            (treeWith resolve left (fun address => addressKey (.ofLeft address)) leftRoot)
+            (treeWith resolve right (fun address => addressKey (.ofRight address)) rightRoot)
+
+/-- The claimed label is retained at the root even when no children are recovered. -/
+@[simp]
+theorem treeWith_getRootValue (resolve : Address → Y → Option (Y × Y)) (s : Skeleton)
+    (addressKey : SkeletonInternalIndex s → Address) (root : Y) :
+    (treeWith resolve s addressKey root).getRootValue = some root := by
+  cases s <;> simp [treeWith]
+  split <;> rfl
+
+/-- Enumerate labels reached by an address-indexed child resolver. -/
+def targetsWith (resolve : Address → Y → Option (Y × Y)) : (subtree : Skeleton) →
+    (SkeletonInternalIndex subtree → Address) → Y → List Y
+  | .leaf, _, root => [root]
+  | .internal left right, addressKey, root =>
+      root :: match resolve (addressKey .ofInternal) root with
+        | none => []
+        | some (leftRoot, rightRoot) =>
+            targetsWith resolve left (fun address => addressKey (.ofLeft address)) leftRoot ++
+              targetsWith resolve right (fun address => addressKey (.ofRight address)) rightRoot
+
+/-- Present labels of a partial tree in root-left-right order. -/
+def presentLabels : {s : Skeleton} → FullData (Option Y) s → List Y
+  | _, .leaf value => value.toList
+  | _, .internal value l r => value.toList ++ (presentLabels l ++ presentLabels r)
+
+/-- An entirely unknown tree contributes no present labels. -/
+@[simp]
+theorem presentLabels_none (s : Skeleton) :
+    presentLabels (populateDown s (fun _ : Option Y => (none, none)) none) = [] := by
+  induction s with
+  | leaf => rfl
+  | internal l r ihl ihr => simp [populateDown, presentLabels, ihl, ihr]
+
+/-- Resolver targets enumerate exactly the labels in the reconstructed partial tree. -/
+theorem targetsWith_eq_presentLabels (resolve : Address → Y → Option (Y × Y))
+    (s : Skeleton) (addressKey : SkeletonInternalIndex s → Address) (root : Y) :
+    targetsWith resolve s addressKey root = presentLabels (treeWith resolve s addressKey root) := by
+  induction s generalizing root with
+  | leaf => rfl
+  | internal l r ihl ihr =>
+      simp only [targetsWith, treeWith]
+      cases h : resolve (addressKey .ofInternal) root with
+      | none => simp [presentLabels]
+      | some c =>
+          rcases c with ⟨a, b⟩
+          simp only [presentLabels, Option.toList_some, List.singleton_append]
+          rw [ihl, ihr]
+
+/-- A resolver reaches at most one label per vertex of the skeleton. -/
+theorem targetsWith_length_le (resolve : Address → Y → Option (Y × Y)) (subtree : Skeleton)
+    (addressKey : SkeletonInternalIndex subtree → Address) (root : Y) :
+    (targetsWith resolve subtree addressKey root).length ≤ 2 * subtree.leafCount - 1 := by
+  induction subtree generalizing root with
+  | leaf => simp [targetsWith]
+  | internal left right ihLeft ihRight =>
+      simp only [targetsWith, List.length_cons]
+      cases hchildren : resolve (addressKey .ofInternal) root with
+      | none =>
+          simp only [List.length_nil]
+          have hl := Skeleton.leafCount_pos left
+          have hr := Skeleton.leafCount_pos right
+          simp only [Skeleton.leafCount_internal]
+          omega
+      | some pair =>
+          obtain ⟨leftRoot, rightRoot⟩ := pair
+          simp only [List.length_append]
+          have hl := ihLeft (fun address => addressKey (.ofLeft address)) leftRoot
+          have hr := ihRight (fun address => addressKey (.ofRight address)) rightRoot
+          have hsl := Skeleton.leafCount_pos left
+          have hsr := Skeleton.leafCount_pos right
+          simp only [Skeleton.leafCount_internal]
+          omega
+
+variable [DecidableEq Address] [DecidableEq Y]
+
+/-- Reconstruct a subtree while mapping each typed internal position to its actual oracle key. -/
+def treeAt (view : QueryView Query Address Y) (subtree : Skeleton)
+    (addressKey : SkeletonInternalIndex subtree → Address) (log : QueryLog Query Y) (root : Y) :
+    FullData (Option Y) subtree :=
+  treeWith (children view log) subtree addressKey root
 
 /-- Reconstruct a partial tree from a claimed root and homogeneous oracle log. -/
 def tree (view : QueryView Query Address Y) (s : Skeleton)
@@ -97,15 +181,10 @@ def tree (view : QueryView Query Address Y) (s : Skeleton)
   treeAt view s addressKey log root
 
 /-- Enumerate the non-dummy labels reached by the extraction recurrence. -/
-def targets (view : QueryView Query Address Y) : (subtree : Skeleton) →
-    (SkeletonInternalIndex subtree → Address) → QueryLog Query Y → Y → List Y
-  | .leaf, _, _, root => [root]
-  | .internal left right, addressKey, log, root =>
-      root :: match children view log (addressKey .ofInternal) root with
-        | none => []
-        | some (leftRoot, rightRoot) =>
-            targets view left (fun address => addressKey (.ofLeft address)) log leftRoot ++
-              targets view right (fun address => addressKey (.ofRight address)) log rightRoot
+def targets (view : QueryView Query Address Y) (subtree : Skeleton)
+    (addressKey : SkeletonInternalIndex subtree → Address) (log : QueryLog Query Y) (root : Y) :
+    List Y :=
+  targetsWith (children view log) subtree addressKey root
 
 /-- Collision-freedom on the finite transcript, in the orientation used by extraction. -/
 def ResponseInjectiveOn (log : QueryLog Query Y) : Prop :=
@@ -138,7 +217,7 @@ theorem treeAt_getRootValue (view : QueryView Query Address Y) (subtree : Skelet
     (addressKey : SkeletonInternalIndex subtree → Address)
     (log : QueryLog Query Y) (root : Y) :
     (treeAt view subtree addressKey log root).getRootValue = some root := by
-  cases subtree <;> simp [treeAt]
+  cases subtree <;> simp [treeAt, treeWith]
   split <;> simp
 
 @[simp]
@@ -152,14 +231,14 @@ theorem root_mem_targets (view : QueryView Query Address Y) (s : Skeleton)
     (addressKey : SkeletonInternalIndex s → Address)
     (log : QueryLog Query Y) (root : Y) :
     root ∈ targets view s addressKey log root := by
-  cases s <;> simp [targets]
+  cases s <;> simp [targets, targetsWith]
 
 theorem targets_internal_of_children_eq_none (view : QueryView Query Address Y)
     (left right : Skeleton) (addressKey : SkeletonInternalIndex (.internal left right) → Address)
     (log : QueryLog Query Y) (root : Y)
     (hchildren : children view log (addressKey .ofInternal) root = none) :
     targets view (.internal left right) addressKey log root = [root] := by
-  simp [targets, hchildren]
+  simp [targets, targetsWith, hchildren]
 
 theorem targets_internal_of_children_eq_some (view : QueryView Query Address Y)
     (left right : Skeleton) (addressKey : SkeletonInternalIndex (.internal left right) → Address)
@@ -169,33 +248,14 @@ theorem targets_internal_of_children_eq_some (view : QueryView Query Address Y)
       root ::
         (targets view left (fun address => addressKey (.ofLeft address)) log leftRoot ++
           targets view right (fun address => addressKey (.ofRight address)) log rightRoot) := by
-  simp [targets, hchildren]
+  simp [targets, targetsWith, hchildren]
 
 /-- A full binary skeleton with `L` leaves exposes at most `2L - 1` extractor targets. -/
 private theorem targets_length_le_aux (view : QueryView Query Address Y) (subtree : Skeleton)
     (addressKey : SkeletonInternalIndex subtree → Address)
     (log : QueryLog Query Y) (root : Y) :
-    (targets view subtree addressKey log root).length ≤ 2 * subtree.leafCount - 1 := by
-  induction subtree generalizing root with
-  | leaf => simp [targets]
-  | internal left right ihLeft ihRight =>
-      simp only [targets, List.length_cons]
-      cases hchildren : children view log (addressKey .ofInternal) root with
-      | none =>
-          simp only [List.length_nil]
-          have hl := Skeleton.leafCount_pos left
-          have hr := Skeleton.leafCount_pos right
-          simp only [Skeleton.leafCount_internal]
-          omega
-      | some pair =>
-          obtain ⟨leftRoot, rightRoot⟩ := pair
-          simp only [List.length_append]
-          have hl := ihLeft (fun address => addressKey (.ofLeft address)) leftRoot
-          have hr := ihRight (fun address => addressKey (.ofRight address)) rightRoot
-          have hsl := Skeleton.leafCount_pos left
-          have hsr := Skeleton.leafCount_pos right
-          simp only [Skeleton.leafCount_internal]
-          omega
+    (targets view subtree addressKey log root).length ≤ 2 * subtree.leafCount - 1 :=
+  targetsWith_length_le (children view log) subtree addressKey root
 
 /-- The public target-list cardinality bound. -/
 theorem targets_length_le (view : QueryView Query Address Y) (s : Skeleton)
@@ -231,10 +291,10 @@ private theorem mem_targets_root_or_log_input_aux (view : QueryView Query Addres
       ∃ entry ∈ log, target = (view.input entry.1).1 ∨ target = (view.input entry.1).2 := by
   induction subtree generalizing root with
   | leaf =>
-      simp only [targets, List.mem_singleton] at htarget
+      simp only [targets, targetsWith, List.mem_singleton] at htarget
       exact Or.inl htarget
   | internal left right ihLeft ihRight =>
-      simp only [targets, List.mem_cons] at htarget
+      simp only [targets, targetsWith, List.mem_cons] at htarget
       rcases htarget with hroot | htarget
       · exact Or.inl hroot
       · cases hchildren : children view log (addressKey .ofInternal) root with
@@ -319,9 +379,9 @@ theorem opening_eq_of_chainInLogAt
         exact children_eq_some_of_mem_of_responseInjectiveOn view log
           (addressKey .ofInternal) root query haddress hmem hinj
       have hrec := ih (fun address => addressKey (.ofLeft address)) ancestor proof.tail htail
-      simp only [treeAt, hchildren]
+      simp only [treeAt, treeWith, hchildren]
       constructor
-      · simpa only [SkeletonLeafIndex.toNodeIndex, FullData.get_internal_ofLeft] using
+      · simpa only [treeAt, SkeletonLeafIndex.toNodeIndex, FullData.get_internal_ofLeft] using
           hrec.1
       · calc
           (generateProof
@@ -347,9 +407,9 @@ theorem opening_eq_of_chainInLogAt
         exact children_eq_some_of_mem_of_responseInjectiveOn view log
           (addressKey .ofInternal) root query haddress hmem hinj
       have hrec := ih (fun address => addressKey (.ofRight address)) ancestor proof.tail htail
-      simp only [treeAt, hchildren]
+      simp only [treeAt, treeWith, hchildren]
       constructor
-      · simpa only [SkeletonLeafIndex.toNodeIndex, FullData.get_internal_ofRight] using
+      · simpa only [treeAt, SkeletonLeafIndex.toNodeIndex, FullData.get_internal_ofRight] using
           hrec.1
       · calc
           (generateProof
