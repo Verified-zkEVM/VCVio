@@ -77,7 +77,7 @@ Foxglove (a Bluebell-style probabilistic separation logic on iris-lean) for the
 -/
 require foxglove from git
   "/home/dtumad/Documents/Foxglove" @
-  "85ab456f6f61e396c698743d7699aeb5c9060350"
+  "3bd934bd6067d5b59ba9e41675bc3a69f1453201"
 
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun" @

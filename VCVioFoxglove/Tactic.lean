@@ -43,18 +43,19 @@ macro "fox_leaf" : tactic => `(tactic| with_reducible first
   | exact Foxglove.wp_pure_law _
   | exact Foxglove.wp_lawPMF _)
 
-/-- One step on an independence goal `⊢ wp oa ⦃X, (fst ∘ X) ~ μ ∗ (snd ∘ X) ~ ν⦄`. -/
+/-- One step on an independence goal `⊢ wp oa ⦃X, (fst ∘ X) ~ μ ∗ (snd ∘ X) ~ ν⦄`. `refine'`
+leaves laws still to be found as goals, for the leaf steps to fill. -/
 macro "fox_indep" : tactic => `(tactic| with_reducible first
-  | refine Foxglove.wp_bind_pair_sep_of_evalDist_eq ?_ fun _ ↦ ?_
-  | refine Foxglove.wp_bind_pair_sep ?_ fun _ ↦ ?_
-  | refine Foxglove.wp_bind_sep_bind ?_ (fun _ ↦ ?_) (fun _ ↦ ?_))
+  | refine' Foxglove.wp_bind_pair_sep_of_evalDist_eq ?_ fun _ ↦ ?_
+  | refine' Foxglove.wp_bind_pair_sep ?_ fun _ ↦ ?_
+  | refine' Foxglove.wp_bind_sep_bind ?_ (fun _ ↦ ?_) (fun _ ↦ ?_))
 
-/-- Event goals that independence decides, reduced to independence goals. The laws of the
-components are left as metavariables for the independence steps to find. -/
-macro "fox_event" : tactic => `(tactic| first
+/-- Event goals that independence decides, reduced to independence goals. Laws the goal does not
+state are left as metavariables for the independence steps to find. -/
+macro "fox_event" : tactic => `(tactic| with_reducible first
   | rw [Foxglove.evalDist_decide_bind_bind]
   | apply Eq.trans (Foxglove.prEvent_eq_of_wp_sep_uniform ?_)
-  | apply Foxglove.prEvent_and_of_wp_sep
+  | apply Eq.trans (Foxglove.prEvent_and_of_wp_sep ?_ _ _)
   | apply Foxglove.evalDist_eq_product_of_wp_sep)
 
 /-- Side conditions: equal output measures across a binder, and numerals. -/
@@ -71,15 +72,25 @@ macro "fox_step" : tactic => `(tactic| first | fox_leaf | fox_indep | fox_event)
 def mentionsFoxgloveWP (e : Expr) : Bool :=
   (e.find? fun e ↦ e.isConstOf ``Foxglove.wp).isSome
 
+/-- Whether `e` may be an event goal the Foxglove routes decide: an equation whose left side
+mentions `Pr{…}[…]` or `𝒟[·]`. A cheap syntactic filter, so that other goals (triples, raw `wp`)
+skip the routes entirely. -/
+def isEventCandidate (e : Expr) : Bool :=
+  e.isAppOfArity ``Eq 3 &&
+    ((e.getArg! 1).find? fun e ↦ e.isConstOf ``prEvent || e.isConstOf ``evalDist).isSome
+
 /-- The option that marks a `vcgen` call made from inside the Foxglove routes, which goes
 straight to VCVio's `vcgen`. -/
 def innerOption : Name := `foxglove.vcgen.inner
 
-/-- Run the Foxglove routes to a fixpoint, close side conditions, and hand every goal that is
-left to VCVio's `vcgen`. -/
-def run : TacticM Unit := withOptions (·.setBool innerOption true) do
+/-- Run the Foxglove routes to a fixpoint and close side conditions. -/
+def runRoutes : TacticM Unit := do
   evalTactic (← `(tactic| repeat' fox_step))
   evalTactic (← `(tactic| all_goals try fox_close))
+
+/-- On a Foxglove goal: the routes, then VCVio's `vcgen` on whatever is left. -/
+def run : TacticM Unit := withOptions (·.setBool innerOption true) do
+  runRoutes
   evalTactic (← `(tactic| all_goals try vcgen))
 
 elab_rules (kind := OracleComp.ProgramLogic.vcgenBasic) : tactic
@@ -89,13 +100,16 @@ elab_rules (kind := OracleComp.ProgramLogic.vcgenBasic) : tactic
     let target ← instantiateMVars (← getMainTarget)
     if mentionsFoxgloveWP target then
       run
+    else if !isEventCandidate target then
+      throwUnsupportedSyntax
     else
-      -- an event goal: through Foxglove only if that closes it
+      -- An event goal goes through Foxglove only if the routes alone close it. VCVio's `vcgen`
+      -- is not run inside the attempt, so a failed attempt costs only the routes.
       let saved ← saveState
       let closed ← try
           evalTactic (← `(tactic| fox_event))
-          run
-          pure (← getGoals).isEmpty
+          withOptions (·.setBool innerOption true) runRoutes
+          pure (← getUnsolvedGoals).isEmpty
         catch _ => pure false
       unless closed do
         saved.restore
