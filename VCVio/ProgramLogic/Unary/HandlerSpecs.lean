@@ -13,7 +13,7 @@ public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.SeededOracle
 public import VCVio.ProgramLogic.Unary.WP.Necessary
-public import ToMathlib.Control.WriterT.WP
+public import PolyFun.Control.Monad.WriterT.WP
 
 /-!
 # Handler specifications for `OracleComp` simulators
