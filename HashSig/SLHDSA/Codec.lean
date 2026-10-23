@@ -321,6 +321,8 @@ end WireLayout
 
 /-! ## Structured key and signature codecs -/
 
+/-- The equivalence between a structured public key and its fields `(PK.seed, PK.root)`, listed
+in the wire order of FIPS 205 Figure 16. -/
 def publicKeyFieldsEquiv {p : Params} {core : CorePrimitives p} :
     PublicKeyCore core ≃ core.PkSeed × core.Y where
   toFun key := (key.pkSeed, key.pkRoot)
@@ -328,6 +330,8 @@ def publicKeyFieldsEquiv {p : Params} {core : CorePrimitives p} :
   left_inv := by intro key; cases key; rfl
   right_inv := by intro fields; cases fields; rfl
 
+/-- The equivalence between a structured secret key and its fields
+`(SK.seed, SK.prf, PK.seed, PK.root)`, listed in the wire order of FIPS 205 Figure 15. -/
 def secretKeyFieldsEquiv {p : Params} {core : CorePrimitives p} :
     SecretKeyCore core ≃ core.SkSeed × (core.SkPrf × (core.PkSeed × core.Y)) where
   toFun key := (key.skSeed, key.skPrf, key.pkSeed, key.pkRoot)
@@ -335,6 +339,8 @@ def secretKeyFieldsEquiv {p : Params} {core : CorePrimitives p} :
   left_inv := by intro key; cases key; rfl
   right_inv := by intro fields; rcases fields with ⟨_, _, _, _⟩; rfl
 
+/-- The equivalence between one FORS tree signature and its revealed secret value paired with
+its `a` authentication nodes, listed in the wire order `FORS.sk || FORS.auth[a]`. -/
 def forsTreeFieldsEquiv {p : Params} {core : CorePrimitives p} :
     ForsTreeSigCore p core ≃ core.Y × Vector core.Y p.a where
   toFun signature := (signature.sk, signature.auth)
@@ -342,6 +348,8 @@ def forsTreeFieldsEquiv {p : Params} {core : CorePrimitives p} :
   left_inv := by intro signature; cases signature; rfl
   right_inv := by intro fields; cases fields; rfl
 
+/-- The equivalence between one XMSS signature and its `len` WOTS+ chain values paired with its
+`h'` authentication nodes, listed in the wire order `WOTS[len] || XMSS.auth[h']`. -/
 def xmssFieldsEquiv {p : Params} {core : CorePrimitives p} :
     XmssSigCore p core ≃ Vector core.Y p.len × Vector core.Y p.hp where
   toFun signature := (signature.wots, signature.auth)
@@ -349,6 +357,8 @@ def xmssFieldsEquiv {p : Params} {core : CorePrimitives p} :
   left_inv := by intro signature; cases signature; rfl
   right_inv := by intro fields; cases fields; rfl
 
+/-- The equivalence between a structured signature and its components
+`(R, SIG_FORS, SIG_HT)`, listed in the wire order of FIPS 205 Figure 17. -/
 def signatureFieldsEquiv {p : Params} {core : CorePrimitives p} :
     SignatureCore p core ≃ core.Y × (ForsSigCore p core × HtSigCore p core) where
   toFun signature := (signature.randomness, signature.fors, signature.hypertree)

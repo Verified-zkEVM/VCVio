@@ -916,12 +916,16 @@ private theorem compressVec_bound {d k : Nat} (hpow : (1 <<< d) < modulus) (v : 
   intro poly coeff
   simpa [compressVec] using compressPoly_bound (d := d) hpow (f := v[poly.val]) coeff
 
+/-- `ByteEncode_1` (FIPS 203 Algorithm 5 with `d = 1`) into a 32-byte message: the low bit of
+each of the 256 coefficients, packed into bytes in little-endian bit order. -/
 def byteEncode1Msg (f : Rq) : Message :=
   let bits : Array Nat := Array.ofFn fun idx : Fin ringDegree =>
     (((f.get idx : Coeff).val) % 2)
   let ba := bitsToBytes bits
   Vector.ofFn fun ⟨i, _⟩ => ba[i]!
 
+/-- `ByteDecode_1` (FIPS 203 Algorithm 6 with `d = 1`) from a 32-byte message: the 256 bits of
+the message, read in little-endian bit order, become coefficients in `{0, 1}`. -/
 def byteDecode1Msg (msg : Message) : Rq :=
   let bits := bytesToBits (ByteArray.mk msg.toArray)
   Vector.ofFn fun idx =>

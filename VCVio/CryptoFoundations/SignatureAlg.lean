@@ -47,8 +47,11 @@ where `M` is the space of messages, `PK`/`SK` are the spaces of the public/priva
 and `S` is the type of the final signature. -/
 @[ext]
 structure SignatureAlg (m : Type → Type v) [Monad m] (M PK SK S : Type) where
+  /-- Sample a public/secret key pair. -/
   keygen : m (PK × SK)
+  /-- Sign a message using the secret key, with the matching public key also available. -/
   sign (pk : PK) (sk : SK) (msg : M) : m S
+  /-- Check whether a signature is valid for a message under a public key. -/
   verify (pk : PK) (msg : M) (σ : S) : m Bool
 
 namespace SignatureAlg

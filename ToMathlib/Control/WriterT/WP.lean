@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import PolyFun.Control.Monad.WriterT.WP
+public import PolyFun.Control.Do.Spec
 public import ToMathlib.Control.WriterT
 
 /-!
@@ -13,8 +13,9 @@ public import ToMathlib.Control.WriterT
 
 `open scoped WriterT.AppendWP` interprets `WriterT ω m` whose log is combined by `++` from `∅`
 (`LawfulAppend ω`, such as a list) through PolyFun's `WriterT.wpMonadOf`: the postcondition is
-told the log accumulated so far. The scope also registers the `vcgen` rules for `tell` and for a
-lifted base computation. PolyFun's `WriterT.MonoidWP` is the counterpart for monoid logs.
+told the log accumulated so far. The `vcgen` rules for `tell` and a lifted base computation
+allow independent universes for the normal and exceptional assertion carriers.
+PolyFun's `WriterT.MonoidWP` is the counterpart for monoid logs.
 -/
 
 public section
@@ -28,12 +29,6 @@ universe u v w z
 variable {m : Type u → Type v} {ω : Type u} {Pred : Type w} {EPred : Type z}
   [Assertion Pred] [Assertion EPred] [EmptyCollection ω] [Append ω] [LawfulAppend ω]
   [Monad m] [WPMonad m Pred EPred]
-
-/-- Opt-in `Std.WP` interpretation of a writer whose log is combined by `++` with unit `∅`, such
-as a list: the postcondition is told the log accumulated so far. -/
-scoped instance instWPMonad : WPMonad (WriterT ω m) (ω → Pred) EPred :=
-  WriterT.wpMonadOf ∅ (· ++ ·) LawfulAppend.append_empty
-    fun a b c => (LawfulAppend.append_assoc a b c).symm
 
 /-- Writing to an append-based log extends the accumulated log on the right. -/
 @[spec]

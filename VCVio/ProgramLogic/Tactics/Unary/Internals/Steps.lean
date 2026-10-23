@@ -1164,12 +1164,31 @@ def tryLowerProbGoal : TacticM Bool := do
   if ← tryEvalTacticSyntax (← `(tactic|
       rw [ge_iff_le, ← OracleComp.ProgramLogic.triple_propInd_iff_le_prEvent])) then
     return true
+  -- An event over several draws is the probability of a proposition-valued computation.
+  if ← tryEvalTacticSyntax (← `(tactic|
+      rw [← OracleComp.ProgramLogic.triple_propInd_self_iff_prEvent_eq_one];
+      simp only [OracleComp.ProgramLogic.propInd_true])) then
+    return true
+  if ← tryEvalTacticSyntax (← `(tactic|
+      rw [eq_comm (a := 1),
+          ← OracleComp.ProgramLogic.triple_propInd_self_iff_prEvent_eq_one];
+      simp only [OracleComp.ProgramLogic.propInd_true])) then
+    return true
+  if ← tryEvalTacticSyntax (← `(tactic|
+      rw [← OracleComp.ProgramLogic.triple_propInd_self_iff_le_prEvent])) then
+    return true
+  if ← tryEvalTacticSyntax (← `(tactic|
+      rw [ge_iff_le, ← OracleComp.ProgramLogic.triple_propInd_self_iff_le_prEvent])) then
+    return true
   if ← tryEvalTacticSyntax (← `(tactic|
       rw [OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
     return true
   if ← tryEvalTacticSyntax (← `(tactic|
       simp only [prEvent_ite, prEvent_dite, evalDist_ite_apply, evalDist_dite_apply,
         OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
+    return true
+  if ← tryEvalTacticSyntax (← `(tactic|
+      rw [OracleComp.ProgramLogic.prEvent_eq_wp])) then
     return true
   return false
 

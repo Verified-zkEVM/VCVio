@@ -200,7 +200,9 @@ structure StateOrnament
     {σ τ : Type _}
     (decorated : QueryImpl spec (StateT σ (OracleComp spec')))
     (base : QueryImpl spec (StateT τ (OracleComp spec'))) where
+  /-- The invariant on decorated states under which the projection commutes with queries. -/
   inv : σ → Prop
+  /-- The map forgetting the bookkeeping in a decorated state, leaving the base state. -/
   proj : σ → τ
   preserves_inv :
     ∀ t s, inv s →

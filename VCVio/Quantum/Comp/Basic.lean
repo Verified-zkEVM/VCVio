@@ -239,20 +239,17 @@ def queryBind (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In i × E)
     QuantumComp L spec X A :=
   IFreeM.liftBind (P := toIPFunctor L spec) (.query i E ℓ) (onDown k)
 
-/-- Sequencing on the underlying trees, by recursion on the first tree. Unlike PolyFun's
-`IPFunctor.IFreeM.bind`, the two leaf families may lie in different universes. -/
-@[expose]
-def bindAux (k : ∀ u, X u → QuantumComp L spec Y u) :
-    {A : QReg} → IFreeM (toIPFunctor L spec) X A → QuantumComp L spec Y A
-  | _, .pure x => k _ x
-  | _, .liftBind c r => IFreeM.liftBind c fun b ↦ bindAux k (r b)
-
 /-- **Sequencing.** Run `x`, and at each leaf `y : X u` continue with `k u y` from the register
 `u` on which the leaf sits. The leaf families of `x` and `k` may lie in different universes. -/
 @[expose]
 protected def bind (x : QuantumComp L spec X A) (k : ∀ u, X u → QuantumComp L spec Y u) :
     QuantumComp L spec Y A :=
-  bindAux k x
+  IFreeM.bind x k
+
+/-- Sequencing is PolyFun's `IPFunctor.IFreeM.bind`, also across leaf universes. -/
+theorem bind_eq_iFreeM_bind (x : QuantumComp L spec X A)
+    (k : ∀ u, X u → QuantumComp L spec Y u) : x.bind k = IFreeM.bind x k :=
+  rfl
 
 /-- The local operation `o`, stopping with its outcome on the register it leaves. -/
 @[expose]
@@ -319,33 +316,19 @@ protected theorem inductionOn {motive : ∀ A : QReg, QuantumComp L spec X A →
       | query i E ℓ => exact queryBind s i E ℓ (fun b ↦ r (ULift.up b)) fun b ↦ ih (ULift.up b))
     x
 
-/-- On programs whose leaf families share a universe, sequencing is PolyFun's
-`IPFunctor.IFreeM.bind`. -/
-theorem bind_eq_iFreeM_bind {Y : QReg → Type w} (x : QuantumComp L spec X A)
-    (k : ∀ u, X u → QuantumComp L spec Y u) : x.bind k = IFreeM.bind x k := by
-  induction x using IFreeM.inductionOn with
-  | pure _ _ => rfl
-  | liftBind _ c r ih => exact congrArg (IFreeM.liftBind c) (funext ih)
-
 /-! ## Monad laws -/
 
 /-- Right unit law. -/
 @[simp]
 protected theorem bind_pure (x : QuantumComp L spec X A) :
-    x.bind (fun _ y ↦ QuantumComp.pure y) = x := by
-  induction x using QuantumComp.inductionOn with
-  | pure _ _ => rfl
-  | primBind _ o k ih => exact congrArg (primBind o) (funext ih)
-  | queryBind _ i E ℓ k ih => exact congrArg (queryBind i E ℓ) (funext ih)
+    x.bind (fun _ y ↦ QuantumComp.pure y) = x :=
+  IFreeM.bind_pure_right x
 
 /-- Sequencing of programs is associative. -/
 protected theorem bind_assoc (x : QuantumComp L spec X A) (k : ∀ u, X u → QuantumComp L spec Y u)
     (l : ∀ u, Y u → QuantumComp L spec Z u) :
-    (x.bind k).bind l = x.bind fun u y ↦ (k u y).bind l := by
-  induction x using QuantumComp.inductionOn with
-  | pure _ _ => rfl
-  | primBind _ o k' ih => exact congrArg (primBind o) (funext ih)
-  | queryBind _ i E ℓ k' ih => exact congrArg (queryBind i E ℓ) (funext ih)
+    (x.bind k).bind l = x.bind fun u y ↦ (k u y).bind l :=
+  IFreeM.bind_assoc x k l
 
 end QuantumComp
 
@@ -471,31 +454,22 @@ protected theorem pure_bind (a : α) (k : α → QuantumComp₂ L spec A B β) :
 
 /-- Right unit law. -/
 @[simp]
-protected theorem bind_pure (x : QuantumComp₂ L spec A B α) : x.bind QuantumComp₂.pure = x := by
-  induction x using QuantumComp₂.inductionOn with
-  | pure _ _ => rfl
-  | primBind _ _ o k ih => exact congrArg (QuantumComp₂.primBind o) (funext ih)
-  | queryBind _ _ i E ℓ k ih => exact congrArg (QuantumComp₂.queryBind i E ℓ) (funext ih)
+protected theorem bind_pure (x : QuantumComp₂ L spec A B α) : x.bind QuantumComp₂.pure = x :=
+  ibind_ipure (M := FreeM₂ (QuantumComp.toIPFunctor L spec)) x
 
 /-- Sequencing of programs is associative. -/
 protected theorem bind_assoc (x : QuantumComp₂ L spec A B α) (k : α → QuantumComp₂ L spec B C β)
     (l : β → QuantumComp₂ L spec C D γ) :
     (x.bind k).bind l = x.bind fun a ↦ (k a).bind l := by
-  refine QuantumComp₂.inductionOn (motive := fun _ B x ↦ ∀ k : α → QuantumComp₂ L spec B C β,
-    (x.bind k).bind l = x.bind fun a ↦ (k a).bind l) (fun _ _ _ ↦ rfl) ?_ ?_ x k
-  · intro _ _ o _ ih k
-    exact congrArg (QuantumComp₂.primBind o) (funext fun b ↦ ih b k)
-  · intro _ _ i E ℓ _ ih k
-    exact congrArg (QuantumComp₂.queryBind i E ℓ) (funext fun r ↦ ih r k)
+  refine (IFreeM.bind_assoc x _ _).trans (congrArg (IFreeM.bind x) ?_)
+  funext u ⟨h, a⟩
+  cases h
+  rfl
 
 /-- On value types in one universe, sequencing is PolyFun's `IPFunctor.FreeM₂.bind`. -/
 theorem bind_eq_freeM₂_bind {β : Type w} (x : QuantumComp₂ L spec A B α)
-    (k : α → QuantumComp₂ L spec B C β) : x.bind k = FreeM₂.bind x k := by
-  induction x using IFreeM.inductionOn with
-  | pure _ y =>
-    obtain ⟨rfl, _⟩ := y
-    rfl
-  | liftBind _ c r ih => exact congrArg (IFreeM.liftBind c) (funext ih)
+    (k : α → QuantumComp₂ L spec B C β) : x.bind k = FreeM₂.bind x k :=
+  rfl
 
 /-- Applying `f` to the return value is sequencing with `fun a ↦ pure (f a)`. -/
 theorem map_eq_bind_pure (f : α → β) (x : QuantumComp₂ L spec A B α) :

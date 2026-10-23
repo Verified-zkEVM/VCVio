@@ -227,9 +227,25 @@ variable {Y}
 
 omit [DecidableEq Y] in
 /-- The values of a nontrivial character sum to zero. -/
-theorem sum_apply_eq_zero_of_ne_zero {χ : AddChar Y ℂ} (hχ : χ ≠ 0) : ∑ y, χ y = 0 := by
-  rw [AddChar.sum_eq_ite]
-  simp [hχ]
+theorem sum_apply_eq_zero_of_ne_zero {χ : AddChar Y ℂ} (hχ : χ ≠ 0) : ∑ y, χ y = 0 :=
+  AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
+
+omit [DecidableEq Y] in
+/-- A unit-modulus multiple of a nontrivial character has the same quadratic sum law. -/
+theorem sum_norm_sub_signed_char_sq {χ : AddChar Y ℂ} (hχ : χ ≠ 0)
+    {ε : ℂ} (hε : ‖ε‖ = 1) (c : ℂ) :
+    ∑ w, ‖c - ε * χ w‖ ^ 2 = Fintype.card Y * (‖c‖ ^ 2 + 1) := by
+  have hs := sum_apply_eq_zero_of_ne_zero hχ
+  have e : ∀ w, ‖c - ε * χ w‖ ^ 2 =
+      (‖c‖ ^ 2 + 1) - 2 * (c * conj (ε * χ w)).re := fun w ↦ by
+    rw [Complex.sq_norm, Complex.sq_norm, Complex.normSq_sub,
+      ← Complex.sq_norm (ε * χ w), norm_mul, hε, AddChar.norm_apply]
+    ring
+  simp_rw [e]
+  rw [Finset.sum_sub_distrib, Finset.sum_const, Finset.card_univ, nsmul_eq_mul,
+    ← Finset.mul_sum, ← Complex.re_sum, ← Finset.mul_sum, ← map_sum,
+    ← Finset.mul_sum, hs]
+  simp
 
 theorem phaseCell_none_none {χ : AddChar Y ℂ} (hχ : χ ≠ 0) : phaseCell Y χ none none = 0 := by
   have hs := sum_apply_eq_zero_of_ne_zero hχ

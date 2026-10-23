@@ -50,8 +50,10 @@ structure OpeningKernelEvidence
     {config : Configuration Cfg Address} {tag : Cfg}
     (attempt : EvaluatedOpeningClaim Query Y config tag)
     (terminalCache : (Query →ₒ Y).QueryCache) where
+  /-- The selected leaf of the opening whose accepted path is witnessed. -/
   index : SkeletonLeafIndex (config.skeleton tag)
   selected : attempt.opening.selector.get index = true
+  /-- The sibling values along the path from the root down to the leaf `index`. -/
   proof : List.Vector Y index.depth
   chain : MerkleTreeExtractability.ChainInCache model (config.addressKey tag) terminalCache
     (selectedValueAt attempt.opening.values index selected) attempt.checkpoint.root index proof

@@ -24,10 +24,17 @@ namespace OracleComp.ProgramLogic
 /-- Cached VCVio wrapper around Lean's symbolic backward rule. The source
 entry is kept for diagnostics and replay text. -/
 structure VCSpecBackwardRule where
+  /-- The registered `@[vcspec]` entry the rule was built from. -/
   source : VCSpecEntry
+  /-- Whether the rule targets goals already in raw `≤`/`⊑` weakest-precondition form, as
+  opposed to folded triple goals. -/
   rawGoal : Bool
+  /-- The normalized proof with its metavariables abstracted, reopened with fresh
+  metavariables at each application. -/
   proof : AbstractMVarsResult
+  /-- The auxiliary lemma declared with the abstracted proof as its body. -/
   declName : Name
+  /-- The symbolic backward rule built from the lemma `declName`. -/
   rule : Lean.Meta.Sym.BackwardRule
 
 /-- Cache key for global `@[vcspec]` backward rules.
