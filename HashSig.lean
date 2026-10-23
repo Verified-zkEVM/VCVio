@@ -37,6 +37,9 @@ public import HashSig.SLHDSA.Params
 public import HashSig.SLHDSA.Position
 public import HashSig.SLHDSA.Primitives
 public import HashSig.SLHDSA.RandomOracle
+public import HashSig.SLHDSA.SHAKE128s.Bridge.Encodings
+public import HashSig.SLHDSA.SHAKE128s.Bridge.PaperGame
+public import HashSig.SLHDSA.SHAKE128s.Bridge.Transfer
 public import HashSig.SLHDSA.SHAKE128s.Generic.ExactQueryCount
 public import HashSig.SLHDSA.SHAKE128s.Proof.AddressBounds
 public import HashSig.SLHDSA.SHAKE128s.Proof.AdversaryQueries
@@ -258,6 +261,8 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.WotsEntry
 public import HashSig.SLHDSA.SHAKE128s.Proof.WotsResidueReduction
 public import HashSig.SLHDSA.SHAKE128s.Proof.WriterState
 public import HashSig.SLHDSA.SHAKE128s.Statement.BitSecurity
+public import HashSig.SLHDSA.SHAKE128s.Statement.FIPS205
+public import HashSig.SLHDSA.SHAKE128s.Statement.Game
 public import HashSig.SLHDSA.SHAKE128s.Statement.RandomOracleModel
 public import HashSig.SLHDSA.SHAKE128s.Statement.Scheme
 public import HashSig.SLHDSA.SHAKE128s.Statement.Security
