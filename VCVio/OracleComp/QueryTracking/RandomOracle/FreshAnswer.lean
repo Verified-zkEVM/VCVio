@@ -6,55 +6,105 @@ Authors: Alexander Hicks
 
 module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
+public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.WriterCost
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.ProbabilityNotation
 
 /-!
-# The potential engine for random-oracle runs
+# The fresh-answer bound for a shared lazy random oracle
 
-A bad event of a random-oracle run is typically a predicate on the state that, once it holds,
-keeps holding, and that a step makes fire with mass at most what the step adds to a potential: a
-*fresh* answer of a lazy random oracle, for instance, pays `ε` to the cache-size potential
-`enncard · * ε`.  This module turns such per-step charges into a bound on a whole run followed by
-a continuation.
+A bad event of a random-oracle run is typically a predicate on the answer table that, once it
+holds, keeps holding, and that a *fresh* answer makes fire with mass at most `ε` whatever the
+query and whatever the not-yet-firing table.  This module turns that per-answer bound into a
+bound on the whole run: along a run of `unifFwdImpl spec + spec.randomOracle` started from the
+empty cache, such a predicate holds of the final cache with mass at most `q * ε` on the paths
+whose final cache has at most `q` entries (`evalDist_run_setOf_le_of_fresh_bound`).
 
-A handler `so : QueryImpl spec (StateT σ ProbComp)` charges a state predicate `P` to a potential
-`Φ` (`IsPotentialStep so P Φ`) when no step lowers `Φ` and every step out of a non-firing state is
-either deterministic and still non-firing, or a sample whose firing mass is at most the increment
-of `Φ` that the step pays.  The engine is `evalDist_bind_apply_setOf_and_le_of_potential`: the run
-is followed by a terminal continuation `g` on its final output and state, charged by its own
+The engine is `evalDist_apply_setOf_and_le_of_potential`: for an arbitrary
+`QueryImpl spec (StateT σ ProbComp)`, an arbitrary state predicate `P` and an arbitrary potential
+`Φ` that never decreases along a step, if every step out of a non-firing state is either
+deterministic and still non-firing, or a sample whose firing mass is at most the increment of `Φ`
+that the step pays, then the mass of the paths that fire with `Φ ≤ K` is at most `K - Φ s`.  The
+cache-size potential `enncard · * ε` instantiates this, since a fresh answer pays exactly `ε`.
+
+The engine is the instance `g = pure` of `evalDist_bind_apply_setOf_and_le_of_potential`, which
+follows the run by a terminal continuation `g` on its final output and state, charged by its own
 hypothesis: from a final state where `P` fails, `g` fires its event below the budget `K` with mass
-at most `K - Φ`, and never lowers the potential.  Then from a state `s` where `P` fails, the run
-followed by `g` fires below `K` with mass at most `K - Φ s`.  Taking `g` to be an independent draw
+at most `K - Φ`, and never lowers the potential.  Taking `g` to be an independent draw
 `x ← mx`, whose hazard `H x` fires at each final state with probability at most a weight `c`,
-gives `prEvent_bind_draw_and_le_of_potential`, which charges the draw `c` on top of the potential.
+gives `prEvent_bind_draw_and_le_of_potential`, which charges the draw `c` on top of the
+potential.  The continuation and draw forms take the engine's step condition as one hypothesis
+`IsPotentialStep so P Φ`, which `IsPotentialStep.of_evalDist` builds from the engine's two
+unfolded hypotheses.
+
+Under a budget of `q` public-hash queries (`IsQueryBoundP oa (·.isRight) q`), every final cache
+of a run from the empty cache has at most `q` entries
+(`enncard_le_of_mem_support_run_unifFwdImpl_add_randomOracle`), so the cache-size conjunct of the
+fresh-answer bound is discharged and the bad predicate holds of the final cache with probability
+at most `q * ε` (`prEvent_run_le_of_fresh_bound_of_isQueryBoundP`).  The private-sampling
+queries of `unifSpec` are free: the adversary may use arbitrarily many private coins.
 
 ## Scope
 
-* No bad event is defined here and no union bound over several bad events is taken.  `P` is an
-  arbitrary predicate on the state and `Φ` an arbitrary `ℝ≥0∞`-valued potential.
+* No bad event is defined here and no union bound over several bad events is taken.  For the
+  engine, `P` is an arbitrary predicate on the state and `Φ` an arbitrary `ℝ≥0∞`-valued
+  potential; for the fresh-answer bound, `P` is an arbitrary predicate on the cache, and the only
+  thing assumed of it is that it does not hold of the empty cache and that a fresh answer makes
+  it fire with mass at most `ε`.
+* Unlike `OracleComp.prEvent_randomOracle_le_of_bad_queries`, the budgeted fresh-answer bound
+  allows private coins.  Unlike `OracleComp.prEvent_randomOracle_le_expectedFreshQueryCharge`, it
+  is pathwise (`q * ε` under `IsQueryBoundP`) rather than an expected charge, and it bounds a
+  predicate of the final cache rather than an event of the output.
+* `hfresh` demands one `ε` uniformly over every non-firing cache, so the theorem bounds
+  *target-hitting* events: those whose set of firing fresh answers stays small however full the
+  cache already is.  A bad event whose fresh-answer bad set grows with the cache — any collision
+  event — admits no `ε < 1`, because an injective cache covering the range does not yet fire
+  while every fresh answer makes it fire.  Such an event must carry the budget in the predicate
+  itself, as `P c := … ∧ QueryCache.enncard c ≤ q`, which then satisfies `hfresh` with an `ε`
+  proportional to `q` over the size of the range.
 * The measurable-space arguments of the `𝒟[…] {z | …}` statements are pinned to `⊤` by a `letI`
   inside the statement rather than taken as instance arguments: the induction of the engine
-  changes the result type, so no instance argument could be fixed across it.  Pinning `⊤` is
-  lossless wherever `DiscreteMeasurableSpace` holds, since that instance makes every set
-  measurable and so equals `⊤`; the statement is therefore the one a
+  changes the result type, so no instance argument could be fixed across it.  The continuation
+  forms pin `⊤` on their result type as well, so that their `g = pure` instance is the engine's
+  statement.  Pinning `⊤` is lossless wherever `DiscreteMeasurableSpace` holds, since that
+  instance makes every set measurable and so equals `⊤`; the statement is therefore the one a
   `[MeasurableSpace] [DiscreteMeasurableSpace]` formulation would give, and strictly stronger in
   general.  A consumer must fix `⊤` as well, and rewriting a set equality under such a `𝒟[…]`
   needs `simp [h]` rather than `rw [h]`, since the instance is not syntactically the ambient one.
   The `prEvent_…` forms state the same bounds with the events observed in `Prop` by
   `Pr{…}[…]`, and take no measurable-space argument at all.
-* Nothing here is quantum: the handlers are classical stateful samplers.
+* `ε` is an arbitrary `ℝ≥0∞ ≠ ⊤`.  The uniform instance `ε = k / |spec.Range t|` for a bad set of
+  at most `k` answers is `SampleableType.evalDist_uniformSample_le_of_encard_le`.
+* Nothing here is quantum: `spec.randomOracle` is a classical lazily-sampled table and `enncard`
+  is a classical query count.
 
 ## Labels
 
-Five declarations.
+Thirteen declarations.
+
+*The potential engine*:
 
 * `OracleComp.le_of_mem_support_run_simulateQ_of_step`, `OracleComp.IsPotentialStep`,
+  `OracleComp.IsPotentialStep.of_evalDist`,
   `OracleComp.evalDist_bind_apply_setOf_and_le_of_potential`,
-  `OracleComp.prEvent_bind_and_le_of_potential`,
+  `OracleComp.evalDist_apply_setOf_and_le_of_potential`,
+  `OracleComp.prEvent_and_le_of_potential`, `OracleComp.prEvent_bind_and_le_of_potential`,
   `OracleComp.prEvent_bind_draw_and_le_of_potential`.
+
+*Step shapes of the shared lazy oracle*:
+
+* `OracleComp.exists_run_unifFwdImpl_add_randomOracle_inl`.
+
+*The fresh-answer bound*:
+
+* `OracleComp.evalDist_run_setOf_le_of_fresh_bound`, `OracleComp.prEvent_run_le_of_fresh_bound`.
+
+*The fresh-answer bound under a query budget*:
+
+* `OracleComp.enncard_le_of_mem_support_run_unifFwdImpl_add_randomOracle`,
+  `OracleComp.prEvent_run_le_of_fresh_bound_of_isQueryBoundP`.
 -/
 
 public section
@@ -94,6 +144,26 @@ structure IsPotentialStep (so : QueryImpl spec (StateT σ ProbComp)) (P : σ →
       (so t).run s = (fun u => (u, upd u)) <$> samp ∧
       Pr{let u ← samp}[P (upd u)] ≤ w ∧
       ∀ u, w + Φ s ≤ Φ (upd u))
+
+/-- A handler charges `P` to `Φ` as soon as no step lowers `Φ` and every step out of a state
+where `P` fails is either deterministic and lands again where `P` fails, or a sample `samp` with
+state update `upd` whose firing mass `𝒟[samp] {u | P (upd u)}` is at most a weight `w` that the
+step adds to `Φ`. -/
+theorem IsPotentialStep.of_evalDist {so : QueryImpl spec (StateT σ ProbComp)} {P : σ → Prop}
+    {Φ : σ → ℝ≥0∞}
+    (hmono : ∀ (t : spec.Domain) (s : σ), ∀ z ∈ support ((so t).run s), Φ s ≤ Φ z.2)
+    (hstep : ∀ (t : spec.Domain) (s : σ), ¬ P s →
+      (∃ a s', (so t).run s = pure (a, s') ∧ ¬ P s') ∨
+      (∃ (samp : ProbComp (spec.Range t)) (upd : spec.Range t → σ) (w : ℝ≥0∞),
+        (so t).run s = (fun u => (u, upd u)) <$> samp ∧
+        (letI : MeasurableSpace (spec.Range t) := ⊤; 𝒟[samp] {u | P (upd u)} ≤ w) ∧
+        ∀ u, w + Φ s ≤ Φ (upd u))) :
+    IsPotentialStep so P Φ where
+  mono := hmono
+  step t s hs := (hstep t s hs).imp id fun ⟨samp, upd, w, hrun, hw, hΦ⟩ =>
+    ⟨samp, upd, w, hrun, by
+      let _ : MeasurableSpace (spec.Range t) := ⊤
+      rwa [prEvent_eq_evalDist_of_discrete], hΦ⟩
 
 /-- **The potential-charged first-fire bound with a terminal continuation.**  The handler `so`
 charges the bad predicate `P` to the potential `Φ` (`IsPotentialStep`).  The run is followed by a
@@ -215,6 +285,195 @@ theorem prEvent_bind_draw_and_le_of_potential {so : QueryImpl spec (StateT σ Pr
     · rw [prEvent_eq_zero_of_forall_not _ _ fun x hx => hle hx.2]
       exact zero_le
 
+/-- **The potential-charged first-fire bound.**  `P` is a predicate on the state and `Φ` a
+potential that never decreases along a step.  If every step out of a state where `P` fails is
+either deterministic and lands again where `P` fails, or a sample `samp` with state update `upd`
+whose firing mass `𝒟[samp] {u | P (upd u)}` is at most a weight `w` that the step adds to `Φ`,
+then from a state where `P` fails the mass of the paths whose final state fires `P` with
+`Φ ≤ K` is at most `K - Φ s`.
+
+The measurable-space instance on `α × σ` is pinned to `⊤` inside the statement because the
+induction that proves it changes `α`; a consumer must fix `⊤` too. -/
+theorem evalDist_apply_setOf_and_le_of_potential (so : QueryImpl spec (StateT σ ProbComp))
+    (P : σ → Prop) (Φ : σ → ℝ≥0∞)
+    (hmono : ∀ (t : spec.Domain) (s : σ), ∀ z ∈ support ((so t).run s), Φ s ≤ Φ z.2)
+    (hstep : ∀ (t : spec.Domain) (s : σ), ¬ P s →
+      (∃ a s', (so t).run s = pure (a, s') ∧ ¬ P s') ∨
+      (∃ (samp : ProbComp (spec.Range t)) (upd : spec.Range t → σ) (w : ℝ≥0∞),
+        (so t).run s = (fun u => (u, upd u)) <$> samp ∧
+        (letI : MeasurableSpace (spec.Range t) := ⊤; 𝒟[samp] {u | P (upd u)} ≤ w) ∧
+        ∀ u, w + Φ s ≤ Φ (upd u)))
+    (oa : OracleComp spec α) (K : ℝ≥0∞) (hK' : K ≠ ⊤) :
+    ∀ s : σ, ¬ P s →
+      (letI : MeasurableSpace (α × σ) := ⊤;
+        𝒟[(simulateQ so oa).run s] {z | P z.2 ∧ Φ z.2 ≤ K} ≤ K - Φ s) := by
+  let _ : MeasurableSpace (α × σ) := ⊤
+  intro s hs
+  rw [← bind_pure ((simulateQ so oa).run s)]
+  refine evalDist_bind_apply_setOf_and_le_of_potential (.of_evalDist hmono hstep) pure
+    (fun z => P z.2) (fun z => Φ z.2) K hK' (fun z y hy => ?_) (fun z hz => ?_) oa s hs
+  · rw [support_pure, Set.mem_singleton_iff] at hy
+    rw [hy]
+  · rw [evalDist_pure, Measure.dirac_apply' _ MeasurableSet.of_discrete,
+      Set.indicator_of_notMem (fun h => hz h.1)]
+    exact zero_le
+
+/-- **The potential-charged first-fire bound, as an event probability.**  `P` is a predicate on
+the state and `Φ` a potential that never decreases along a step.  If every step out of a state
+where `P` fails is either deterministic and lands again where `P` fails, or a sample `samp` with
+state update `upd` that fires `P` with probability at most a weight `w` that the step adds to
+`Φ`, then from a state where `P` fails the run ends in a state firing `P` with `Φ ≤ K` with
+probability at most `K - Φ s`. -/
+theorem prEvent_and_le_of_potential (so : QueryImpl spec (StateT σ ProbComp))
+    (P : σ → Prop) (Φ : σ → ℝ≥0∞)
+    (hmono : ∀ (t : spec.Domain) (s : σ), ∀ z ∈ support ((so t).run s), Φ s ≤ Φ z.2)
+    (hstep : ∀ (t : spec.Domain) (s : σ), ¬ P s →
+      (∃ a s', (so t).run s = pure (a, s') ∧ ¬ P s') ∨
+      (∃ (samp : ProbComp (spec.Range t)) (upd : spec.Range t → σ) (w : ℝ≥0∞),
+        (so t).run s = (fun u => (u, upd u)) <$> samp ∧
+        Pr{let u ← samp}[P (upd u)] ≤ w ∧
+        ∀ u, w + Φ s ≤ Φ (upd u)))
+    (oa : OracleComp spec α) (K : ℝ≥0∞) (hK' : K ≠ ⊤) (s : σ) (hs : ¬ P s) :
+    Pr{let z ← (simulateQ so oa).run s}[P z.2 ∧ Φ z.2 ≤ K] ≤ K - Φ s := by
+  let _ : MeasurableSpace (α × σ) := ⊤
+  have := prEvent_bind_and_le_of_potential ⟨hmono, hstep⟩ pure (fun z => P z.2)
+    (fun z => Φ z.2) K hK' (fun z y hy => ?_) (fun z hz => ?_) oa s hs
+  · simpa only [map_pure, bind_pure_comp] using this
+  · rw [support_pure, Set.mem_singleton_iff] at hy
+    rw [hy]
+  · simp [hz]
+
 end Potential
+
+/-! ## Step shapes of the shared lazy oracle -/
+
+section Steps
+
+variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι}
+  [∀ t : spec.Domain, SampleableType (spec.Range t)]
+
+/-- A private-sampling step of the shared lazy oracle is a sample that leaves the cache
+untouched. -/
+theorem exists_run_unifFwdImpl_add_randomOracle_inl (i : unifSpec.Domain)
+    (c : spec.QueryCache) :
+    ∃ samp : ProbComp (unifSpec.Range i),
+      ((unifFwdImpl spec + spec.randomOracle) (Sum.inl i)).run c =
+        (fun u => (u, c)) <$> samp :=
+  ⟨liftM (OracleSpec.query i), by simp [unifFwdImpl]⟩
+
+/-! ## The fresh-answer bound -/
+
+/-- **The fresh-answer bound for a shared lazy random oracle.**  `P` is a predicate on the
+public-hash cache that fails of the empty cache, and `ε` bounds, uniformly in the query and in
+the not-yet-firing cache, the mass of the fresh answers that make `P` fire.  Then along a whole
+run of `unifFwdImpl spec + spec.randomOracle` from the empty cache, `P` holds of the final cache
+with mass at most `q * ε` on the paths whose final cache has at most `q` entries.
+
+The measurable-space instance on `α × spec.QueryCache` is pinned to `⊤` inside the statement, so
+a consumer must fix `⊤` too. -/
+theorem evalDist_run_setOf_le_of_fresh_bound (P : spec.QueryCache → Prop) (hP : ¬ P ∅)
+    (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
+    (hfresh : ∀ (t : spec.Domain) (c : spec.QueryCache), ¬ P c → c t = none →
+      (letI : MeasurableSpace (spec.Range t) := ⊤;
+        𝒟[($ᵗ spec.Range t : ProbComp (spec.Range t))] {u | P (c.cacheQuery t u)} ≤ ε))
+    {α : Type} (oa : OracleComp (unifSpec + spec) α) (q : ℕ) :
+    (letI : MeasurableSpace (α × spec.QueryCache) := ⊤;
+      𝒟[(simulateQ (unifFwdImpl spec + spec.randomOracle) oa).run ∅]
+        {z | P z.2 ∧ QueryCache.enncard z.2 ≤ (q : ℝ≥0∞)} ≤ (q : ℝ≥0∞) * ε) := by
+  let _ : MeasurableSpace (α × spec.QueryCache) := ⊤
+  have hmono : ∀ (t : (unifSpec + spec).Domain) (c : spec.QueryCache),
+      ∀ z ∈ support (((unifFwdImpl spec + spec.randomOracle) t).run c),
+        QueryCache.enncard c * ε ≤ QueryCache.enncard z.2 * ε := by
+    intro t c z hz
+    have hle : c ≤ z.2 := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl
+      (liftM (OracleSpec.query t) : OracleComp (unifSpec + spec) ((unifSpec + spec).Range t))
+      (by simpa using hz)
+    gcongr
+    exact QueryCache.enncard_mono hle
+  have hstep : ∀ (t : (unifSpec + spec).Domain) (c : spec.QueryCache), ¬ P c →
+      (∃ a c', (((unifFwdImpl spec + spec.randomOracle) t).run c) = pure (a, c') ∧ ¬ P c') ∨
+      (∃ (samp : ProbComp ((unifSpec + spec).Range t))
+        (upd : (unifSpec + spec).Range t → spec.QueryCache) (w : ℝ≥0∞),
+        (((unifFwdImpl spec + spec.randomOracle) t).run c) = (fun u => (u, upd u)) <$> samp ∧
+        (letI : MeasurableSpace ((unifSpec + spec).Range t) := ⊤;
+          𝒟[samp] {u | P (upd u)} ≤ w) ∧
+        ∀ u, w + QueryCache.enncard c * ε ≤ QueryCache.enncard (upd u) * ε) := by
+    rintro (i | t) c hc
+    · obtain ⟨samp, hsamp⟩ := exists_run_unifFwdImpl_add_randomOracle_inl (spec := spec) i c
+      exact Or.inr ⟨samp, fun _ => c, 0, hsamp, by simp [hc], fun _ => by simp⟩
+    · rcases h : c t with _ | u
+      · exact Or.inr ⟨$ᵗ spec.Range t, fun u => c.cacheQuery t u, ε,
+          QueryImpl.withCaching_run_none _ h, hfresh t c hc h,
+          fun u => by rw [QueryCache.enncard_cacheQuery c t u h, add_mul, one_mul, add_comm]⟩
+      · exact Or.inl ⟨u, c, QueryImpl.withCaching_run_some _ h, hc⟩
+  have key := evalDist_apply_setOf_and_le_of_potential
+    (unifFwdImpl spec + spec.randomOracle) P (fun c => QueryCache.enncard c * ε) hmono hstep oa
+    ((q : ℝ≥0∞) * ε) (ENNReal.mul_ne_top (by simp) hε) ∅ hP
+  rw [QueryCache.enncard_empty, zero_mul, tsub_zero] at key
+  refine le_trans (measure_mono fun z hz => ?_) key
+  exact ⟨hz.1, by have := hz.2; gcongr⟩
+
+/-- **The fresh-answer bound for a shared lazy random oracle, as an event probability.**  `P` is
+a predicate on the public-hash cache that fails of the empty cache, and `ε` bounds, uniformly in
+the query and in the not-yet-firing cache, the probability that a fresh answer makes `P` fire.
+Then a whole run of `unifFwdImpl spec + spec.randomOracle` from the empty cache ends with a cache
+of at most `q` entries satisfying `P` with probability at most `q * ε`. -/
+theorem prEvent_run_le_of_fresh_bound (P : spec.QueryCache → Prop) (hP : ¬ P ∅)
+    (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
+    (hfresh : ∀ (t : spec.Domain) (c : spec.QueryCache), ¬ P c → c t = none →
+      Pr{let u ← ($ᵗ spec.Range t : ProbComp (spec.Range t))}[P (c.cacheQuery t u)] ≤ ε)
+    {α : Type} (oa : OracleComp (unifSpec + spec) α) (q : ℕ) :
+    Pr{let z ← (simulateQ (unifFwdImpl spec + spec.randomOracle) oa).run ∅}[
+      P z.2 ∧ QueryCache.enncard z.2 ≤ (q : ℝ≥0∞)] ≤ (q : ℝ≥0∞) * ε := by
+  let _ : MeasurableSpace (α × spec.QueryCache) := ⊤
+  rw [prEvent_eq_evalDist_of_discrete]
+  refine evalDist_run_setOf_le_of_fresh_bound P hP ε hε (fun t c hc ht => ?_) oa q
+  let _ : MeasurableSpace (spec.Range t) := ⊤
+  rw [← prEvent_eq_evalDist_of_discrete]
+  exact hfresh t c hc ht
+
+/-! ## The fresh-answer bound under a query budget -/
+
+/-- A run of the shared lazy oracle from the empty cache, of a computation making at most `q`
+public-hash queries, ends with at most `q` cache entries. -/
+theorem enncard_le_of_mem_support_run_unifFwdImpl_add_randomOracle {α : Type}
+    {oa : OracleComp (unifSpec + spec) α} {q : ℕ}
+    (h : IsQueryBoundP oa (fun t => t.isRight = true) q) {z : α × spec.QueryCache}
+    (hz : z ∈ support ((simulateQ (unifFwdImpl spec + spec.randomOracle) oa).run ∅)) :
+    QueryCache.enncard z.2 ≤ q := by
+  have key := h.resource_le_add_of_mem_support_run_simulateQ (fun c => c.toSet.encard)
+    (fun t c w hw => ?_) hz
+  · simpa [QueryCache.enncard] using key
+  rcases t with i | t
+  · obtain ⟨samp, hsamp⟩ := exists_run_unifFwdImpl_add_randomOracle_inl (spec := spec) i c
+    rw [hsamp, support_map] at hw
+    obtain ⟨u, -, rfl⟩ := hw
+    simp
+  · rw [QueryImpl.add_apply_inr] at hw
+    rcases hc : c t with _ | u
+    · rw [QueryImpl.withCaching_run_none _ hc, support_map] at hw
+      obtain ⟨u, -, rfl⟩ := hw
+      simpa using QueryCache.toSet_encard_cacheQuery_le c t u
+    · rw [QueryImpl.withCaching_run_some _ hc] at hw
+      simp_all
+
+/-- **The fresh-answer bound under a query budget.**  `P` is a predicate on the public-hash cache
+that fails of the empty cache, and `ε` bounds, uniformly in the query and in the not-yet-firing
+cache, the probability that a fresh answer makes `P` fire.  Then a run of
+`unifFwdImpl spec + spec.randomOracle` from the empty cache, of a computation making at most `q`
+public-hash queries, ends with a cache satisfying `P` with probability at most `q * ε`. -/
+theorem prEvent_run_le_of_fresh_bound_of_isQueryBoundP (P : spec.QueryCache → Prop) (hP : ¬ P ∅)
+    (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
+    (hfresh : ∀ (t : spec.Domain) (c : spec.QueryCache), ¬ P c → c t = none →
+      Pr{let u ← ($ᵗ spec.Range t : ProbComp (spec.Range t))}[P (c.cacheQuery t u)] ≤ ε)
+    {α : Type} (oa : OracleComp (unifSpec + spec) α) {q : ℕ}
+    (h : IsQueryBoundP oa (fun t => t.isRight = true) q) :
+    Pr{let z ← (simulateQ (unifFwdImpl spec + spec.randomOracle) oa).run ∅}[P z.2] ≤
+      (q : ℝ≥0∞) * ε :=
+  le_trans (prEvent_mono_of_support _ _ _ fun _ hz hPz =>
+      ⟨hPz, enncard_le_of_mem_support_run_unifFwdImpl_add_randomOracle h hz⟩)
+    (prEvent_run_le_of_fresh_bound P hP ε hε hfresh oa q)
+
+end Steps
 
 end OracleComp

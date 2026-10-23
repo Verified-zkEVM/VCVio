@@ -55,9 +55,9 @@ interleave with the hash callbacks, and nothing here bounds that traffic.
 
 ## Labels
 
-Fifty-six declarations: the secret-key address predicate, its decidability instance and its two
-builder lemmas, nineteen provider-parametric programs, sixteen specialisation equations, and
-seventeen naturality theorems. There is no private declaration: the monadic-vector naturality step
+Sixty declarations: the secret-key address predicate, its decidability instance and its two
+builder lemmas, nineteen provider-parametric programs, eighteen specialisation equations, and
+nineteen naturality theorems. There is no private declaration: the monadic-vector naturality step
 the WOTS+ and FORS twins need is `Vector.ofFnM_natural` of `ToMathlib.Data.Vector`.
 
 *Secret-key addresses*: `Adrs.IsSecretKey`, `Adrs.isSecretKey_wotsSkAdrs`,
@@ -79,7 +79,8 @@ the WOTS+ and FORS twins need is `Vector.ofFnM_natural` of `ToMathlib.Data.Vecto
   `wotsPkGenWithSecret_eq_wotsPkGenWith`;
 * `xmssLeafWithSecret_eq_xmssLeafWith`, `xmssNodeWithSecret_eq_xmssNodeWith`,
   `xmssSignWithSecret_eq_xmssSignWith`, `xmssRootWithSecret_eq_xmssRootWith`;
-* `forsLeafWithSecret_eq_forsLeafWith`, `forsSignWithSecret_eq_forsSignWith`,
+* `forsLeafWithSecret_eq_forsLeafWith`, `forsRootWithSecret_eq_forsRootWith`,
+  `forsPkGenWithSecret_eq_forsPkGenWith`, `forsSignWithSecret_eq_forsSignWith`,
   `forsSignWithSecretM_eq_forsSignM`;
 * `signFromPositionWithSecret_eq_signFromPositionWith`, `signWithSecret_eq_signWith`,
   `rootWithSecret_eq_rootWith`, `signWithSecretM_eq_signM`, `rootWithSecretM_eq_rootM`;
@@ -90,10 +91,11 @@ the WOTS+ and FORS twins need is `Vector.ofFnM_natural` of `ToMathlib.Data.Vecto
 provider at secret-key addresses, commutes with the twin, named after it:
 `wotsPkGenTopsWithSecret_natural`, `wotsSignWithSecret_natural`, `wotsPkGenWithSecret_natural`,
 `xmssLeafWithSecret_natural`, `xmssNodeWithSecret_natural`, `xmssRootWithSecret_natural`,
-`xmssSignWithSecret_natural`, `forsLeafWithSecret_natural`, `forsSignWithSecret_natural`,
-`forsSignWithSecretM_natural`, `signFromPositionWithSecret_natural`, `signWithSecret_natural`,
-`rootWithSecret_natural`, `signWithSecretM_natural`, `rootWithSecretM_natural`,
-`keygenInternalWithSecretM_natural`, `signInternalWithSecretRandomizerM_natural`.
+`xmssSignWithSecret_natural`, `forsLeafWithSecret_natural`, `forsRootWithSecret_natural`,
+`forsPkGenWithSecret_natural`, `forsSignWithSecret_natural`, `forsSignWithSecretM_natural`,
+`signFromPositionWithSecret_natural`, `signWithSecret_natural`, `rootWithSecret_natural`,
+`signWithSecretM_natural`, `rootWithSecretM_natural`, `keygenInternalWithSecretM_natural`,
+`signInternalWithSecretRandomizerM_natural`.
 
 ## References
 
@@ -298,6 +300,29 @@ indexed leaf's `FORS_PRF` address. -/
     let sk ← secret (forsSkAdrs adrs idx)
     return ⟨sk, path⟩
 
+/-- At the honest provider the provider-parametric FORS root is `forsRootWith`. -/
+theorem forsRootWithSecret_eq_forsRootWith {m : Type → Type*} [Monad m] [LawfulMonad m]
+    (hash : Adrs → core.Y → m core.Y) (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (i : ℕ) :
+    forsRootWithSecret core hash nodeHash (fun a => pure (core.PRF pk sk a)) adrs i =
+      forsRootWith core hash nodeHash sk pk adrs i := by
+  have hleaf : forsLeafWithSecret core hash (fun a => pure (core.PRF pk sk a)) adrs =
+      forsLeafWith core hash sk pk adrs :=
+    funext fun t => forsLeafWithSecret_eq_forsLeafWith core hash sk pk adrs t
+  rw [forsRootWithSecret, forsRootWith, hleaf]
+
+/-- At the honest provider the provider-parametric FORS public key is `forsPkGenWith`. -/
+theorem forsPkGenWithSecret_eq_forsPkGenWith {m : Type → Type*} [Monad m] [LawfulMonad m]
+    (hash : Adrs → core.Y → m core.Y) (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (compress : Adrs → List core.Y → m core.Y)
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
+    forsPkGenWithSecret core hash nodeHash compress (fun a => pure (core.PRF pk sk a)) adrs =
+      forsPkGenWith core hash nodeHash compress sk pk adrs := by
+  rw [forsPkGenWithSecret, forsPkGenWith]
+  congr 1
+  exact congrArg Vector.ofFnM
+    (funext fun i => forsRootWithSecret_eq_forsRootWith core hash nodeHash sk pk adrs i.val)
+
 /-- At the honest provider provider-parametric FORS signing is `forsSignWith`. -/
 theorem forsSignWithSecret_eq_forsSignWith {m : Type → Type*} [Monad m] [LawfulMonad m]
     (hash : Adrs → core.Y → m core.Y) (nodeHash : Adrs → core.Y → core.Y → m core.Y)
@@ -471,6 +496,43 @@ theorem forsLeafWithSecret_natural {m n : Type → Type*} [Monad m] [Monad n] (F
   rw [forsLeafWithSecret, forsLeafWithSecret, F.mmap_bind,
     hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)]
   exact bind_congr fun x => hhash _ _
+
+/-- A monad morphism commutes with a provider-parametric FORS tree root when it commutes with the
+leaf and node callbacks and with the provider at secret-key addresses. -/
+theorem forsRootWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hsecret : ∀ a, a.IsSecretKey → F (secretm a) = secretn a) (adrs : Adrs) (i : ℕ) :
+    F (forsRootWithSecret core hashm nodeHashm secretm adrs i) =
+      forsRootWithSecret core hashn nodeHashn secretn adrs i :=
+  PerfectMerkleTree.merkleRootM_natural F _ _ _ _
+    (fun t => forsLeafWithSecret_natural core F hashm hashn secretm secretn hhash hsecret adrs t)
+    (fun z t l r => forsNodeHashWith_natural F nodeHashm nodeHashn hnode adrs z t l r) _ _
+
+/-- A monad morphism commutes with provider-parametric FORS public-key generation when it
+commutes with every callback and with the provider at secret-key addresses. -/
+theorem forsPkGenWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (compressm : Adrs → List core.Y → m core.Y) (compressn : Adrs → List core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hsecret : ∀ a, a.IsSecretKey → F (secretm a) = secretn a) (adrs : Adrs) :
+    F (forsPkGenWithSecret core hashm nodeHashm compressm secretm adrs) =
+      forsPkGenWithSecret core hashn nodeHashn compressn secretn adrs := by
+  rw [forsPkGenWithSecret, forsPkGenWithSecret, F.mmap_bind,
+    Vector.ofFnM_natural F _ _ (fun i : Fin p.k => forsRootWithSecret_natural core F hashm hashn
+      nodeHashm nodeHashn secretm secretn hhash hnode hsecret adrs i.val)]
+  exact bind_congr fun roots => hcompress _ _
 
 /-- A monad morphism commutes with provider-parametric FORS signing when it commutes with the
 leaf and node callbacks and with the provider at secret-key addresses. -/

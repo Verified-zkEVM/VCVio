@@ -60,12 +60,12 @@ raised with probability at most `ε` times that expected count
 (`SecretEncoding.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount`). The count is one
 of the ideal game, which does not depend on the secret, so other bounds charged against the
 `p`-queries of the same ideal run share it. A pathwise budget `IsQueryBoundP oa p q` bounds the
-expected count by `q` (`OracleComp.mul_expectedSimulatedQueryCount_le_of_isQueryBoundP`), so the
-flag bound is then at most `q * ε`. The bound is attained: a single public query at a point
-encoded under half of the secrets raises the flag with probability `1 / 2`, which is `ε` times its
-expected count of one. The same reading of the flag gives the event form of the coupling,
-with no loss term: an event of the real game is at most the event, read on the merged cache, or
-an encoded point in the final public cache, in the ideal game
+expected count by `q` (`OracleComp.mul_expectedSimulatedQueryCount_le_of_isQueryBoundP`) and
+gives the flag bound `q * ε` (`SecretEncoding.prEvent_flaggedIdealImpl_le_mul`). The bound
+`q * ε` is attained: a single public query at a point encoded under half of the secrets raises
+the flag with probability `1 / 2 = q * ε`. The same reading of the flag gives the event form of
+the coupling, with no loss term: an event of the real game is at most the event, read on the
+merged cache, or an encoded point in the final public cache, in the ideal game
 (`SecretEncoding.prEvent_realImpl_le_or`).
 
 ## Main statements
@@ -86,8 +86,11 @@ an encoded point in the final public cache, in the ideal game
   a set containing every encoded point.
 - `SecretEncoding.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount`: the flag bound
   `ε` times the expected count.
-- `SecretEncoding.prEvent_coupledImpl_le_add`: the fixed-secret bound, charging the flag
-  probability of the flagged ideal game.
+- `SecretEncoding.prEvent_realImpl_le_add_mul`, `SecretEncoding.prEvent_coupledImpl_le_add_mul`
+  and `SecretEncoding.prEvent_flaggedIdealImpl_le_mul`: the same bounds under the budget, with
+  the loss `q * ε`.
+- `SecretEncoding.prEvent_realImpl_le_add` and `SecretEncoding.prEvent_coupledImpl_le_add`: the
+  fixed-secret bounds, charging the flag probability of the flagged ideal game.
 - `SecretEncoding.agreeUntilBad_coupledImpl_flaggedIdealImpl`: the coupled real game and the
   flagged ideal game agree until the flag.
 - `SecretEncoding.deriveImpl_comp_withDerivationsLift` and
@@ -536,6 +539,19 @@ theorem prEvent_coupledImpl_le_add (s : S) {α : Type}
   exact (E.agreeUntilBad_coupledImpl_flaggedIdealImpl s).prEvent_simulateQ_run_le_add_bad_right
     (E.flaggedIdealImpl_preservesInv s) oa _ fun z ↦ P (z.1, z.2.1)
 
+/-- Real game against the ideal game, for a fixed secret: an event of the real game is at most
+the event, read on the merged cache, in the ideal game, plus the chance that the flagged ideal
+game makes a public query at an encoded point. -/
+theorem prEvent_realImpl_le_add (s : S) {α : Type} (oa : OracleComp (pub.withDerivations X R) α)
+    (P : α × pub.QueryCache → Prop) :
+    Pr{let z ← (simulateQ (E.realImpl s) oa).run ∅}[P z] ≤
+      Pr{let z ← (simulateQ (idealImpl pub X R) oa).run (∅, ∅)}[P (z.1, E.merge s z.2)] +
+        Pr{let z ← (simulateQ (E.flaggedIdealImpl s) oa).run ((∅, ∅), false)}[z.2.2 = true] := by
+  have h := E.map_run_simulateQ_coupledImpl s oa ((∅, ∅), false)
+  rw [merge_empty] at h
+  rw [← h, prEvent_map]
+  exact E.prEvent_coupledImpl_le_add s oa fun z ↦ P (z.1, E.merge s z.2)
+
 /-! ## The flag and the public cache -/
 
 /-- A step of the ideal game caches a public point exactly when the point was cached before the
@@ -737,6 +753,22 @@ theorem prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount {ms : ProbCo
         gcongr
         exact lintegral_encard_inter_setOf_isSome_le_expectedSimulatedQueryCount hD oa
 
+/-- Under a query budget charging every public query at an encodable point, the flagged ideal
+game run under a secret drawn from `ms` raises its flag with probability at most `q * ε`, where
+`ε` bounds, for every public point, the chance that it encodes some derivation under the
+secret. -/
+theorem prEvent_flaggedIdealImpl_le_mul {ms : ProbComp S} {ε : ℝ≥0∞}
+    (hε : ∀ t, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] ≤ ε)
+    {p : (pub.withDerivations X R).Domain → Prop} [DecidablePred p]
+    (hp : ∀ s x, p (.inl (.inr (E.enc s x)))) {α : Type}
+    {oa : OracleComp (pub.withDerivations X R) α} {q : ℕ} (h : IsQueryBoundP oa p q) :
+    Pr{
+      let s ← ms
+      let z ← (simulateQ (E.flaggedIdealImpl s) oa).run ((∅, ∅), false)}[z.2.2 = true] ≤
+      q * ε :=
+  (E.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount hε hp oa).trans <|
+    mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ p h _ ε
+
 /-- Coupled real game against the ideal game, for a secret drawn from `ms`: an event of the secret
 and of the coupled game's output and split state, with the flag forgotten, is at most the same
 event in the ideal game plus `ε` times the expected number of `p`-queries of the ideal game, where
@@ -758,6 +790,26 @@ theorem prEvent_coupledImpl_le_add_mul_expectedSimulatedQueryCount {ms : ProbCom
   simp only [prEvent_bind_bind_eq_lintegral_of_discrete]
   exact (lintegral_mono fun s ↦ E.prEvent_coupledImpl_le_add s oa (P s)).trans
     (lintegral_add_left Measurable.of_discrete _).le
+
+/-- Coupled real game against the ideal game, for a secret drawn from `ms` and under a query
+budget charging every public query at an encodable point: an event of the secret and of the
+coupled game's output and split state, with the flag forgotten, is at most the same event in the
+ideal game plus `q * ε`, where `ε` bounds, for every public point, the chance that it encodes some
+derivation under the secret. -/
+theorem prEvent_coupledImpl_le_add_mul {ms : ProbComp S} {ε : ℝ≥0∞}
+    (hε : ∀ t, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] ≤ ε)
+    {p : (pub.withDerivations X R).Domain → Prop} [DecidablePred p]
+    (hp : ∀ s x, p (.inl (.inr (E.enc s x)))) {α : Type}
+    {oa : OracleComp (pub.withDerivations X R) α} {q : ℕ} (h : IsQueryBoundP oa p q)
+    (P : S → α × SplitCache pub X R → Prop) :
+    Pr{
+      let s ← ms
+      let z ← (simulateQ (E.coupledImpl s) oa).run ((∅, ∅), false)}[P s (z.1, z.2.1)] ≤
+      Pr{let s ← ms; let z ← (simulateQ (idealImpl pub X R) oa).run (∅, ∅)}[P s z] +
+        q * ε :=
+  (E.prEvent_coupledImpl_le_add_mul_expectedSimulatedQueryCount hε hp oa P).trans <|
+    add_le_add le_rfl <|
+      mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ p h _ ε
 
 /-- Real game against the ideal game, for a secret drawn from `ms`: an event of the secret and of
 the real game is at most the event, read on the merged cache, in the ideal game, plus `ε` times
@@ -781,6 +833,25 @@ theorem prEvent_realImpl_le_add_mul_expectedSimulatedQueryCount {ms : ProbComp S
   simp only [hs, Functor.map_map]
   exact E.prEvent_coupledImpl_le_add_mul_expectedSimulatedQueryCount hε hp oa
     fun s z ↦ P s (z.1, E.merge s z.2)
+
+/-- Real game against the ideal game, for a secret drawn from `ms` and under a query budget
+charging every public query at an encodable point: an event of the secret and of the real game is
+at most the event, read on the merged cache, in the ideal game, plus `q * ε`, where `ε` bounds,
+for every public point, the chance that it encodes some derivation under the secret. -/
+theorem prEvent_realImpl_le_add_mul {ms : ProbComp S} {ε : ℝ≥0∞}
+    (hε : ∀ t, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] ≤ ε)
+    {p : (pub.withDerivations X R).Domain → Prop} [DecidablePred p]
+    (hp : ∀ s x, p (.inl (.inr (E.enc s x)))) {α : Type}
+    {oa : OracleComp (pub.withDerivations X R) α} {q : ℕ} (h : IsQueryBoundP oa p q)
+    (P : S → α × pub.QueryCache → Prop) :
+    Pr{let s ← ms; let z ← (simulateQ (E.realImpl s) oa).run ∅}[P s z] ≤
+      Pr{
+        let s ← ms
+        let z ← (simulateQ (idealImpl pub X R) oa).run (∅, ∅)}[P s (z.1, E.merge s z.2)] +
+        q * ε :=
+  (E.prEvent_realImpl_le_add_mul_expectedSimulatedQueryCount hε hp oa P).trans <|
+    add_le_add le_rfl <|
+      mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ p h _ ε
 
 end SecretEncoding
 
