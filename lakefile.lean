@@ -70,6 +70,15 @@ declaration order, so this keeps the direct Mathlib requirement authoritative
 over PolyFun's inherited pin and makes `lake update --keep-toolchain`
 idempotent.
 -/
+/-
+Foxglove (a Bluebell-style probabilistic separation logic on iris-lean) for the
+`VCVioFoxglove` bridge. Only `VCVioFoxglove` may import it
+(`scripts/check-foxglove-isolation.sh`). Spike: pinned to a local commit.
+-/
+require foxglove from git
+  "/home/dtumad/Documents/Foxglove" @
+  "76cc1b95f09a9c1c1dc1484514f5f7b74c61d3a3"
+
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun" @
   "ecac686fd8a3b4763d3df2e738c91947bdec40d6"
@@ -78,6 +87,10 @@ require "leanprover-community" / "mathlib" @ git "v4.35.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
+
+/-- Foxglove bridge: VCVio's measure semantics and program logic for Foxglove's separation
+logic. Kept outside the default targets so core VCVio does not build iris-lean or Foxglove. -/
+lean_lib VCVioFoxglove
 
 /-- Optional cslib-backed non-uniform complexity adapters. Kept outside the
 default `VCVio` umbrella so core VCVio remains backend-neutral. -/
@@ -357,6 +370,9 @@ extern_lib leanfalcon pkg := do
 
 /-- Test support modules (helpers, vectors). -/
 lean_lib VCVioTest
+
+/-- Tests and the goal corpus of the Foxglove bridge. -/
+lean_lib VCVioFoxgloveTest
 
 /-- Lattice crypto test support modules (helpers, ACVP vectors). -/
 lean_lib LatticeCryptoTest
