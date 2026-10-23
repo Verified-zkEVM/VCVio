@@ -70,7 +70,7 @@ theorem map_recordedAfterSeeds (adversary : Adversary) (sds : Digest Ã— Digest Ã
   rw [map_bind,
     show ((simulateQ
         (((QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld))).withAddCost
-            fun input => Counts.single QueryKind.hash (hashCost input)) +
+            fun input => Counts.single Game.QueryKind.hash (hashCost input)) +
           Security.signingOracle sk) (adversary.main pk)).run).run [] =
       (fun step => ((step.1.1, forget step.1.2), step.2)) <$>
         ((simulateQ (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk))
@@ -78,7 +78,7 @@ theorem map_recordedAfterSeeds (adversary : Adversary) (sds : Digest Ã— Digest Ã
       rw [run_simulateQ_map_writer forget forget_one forget_mul
         (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk))
         (((QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld))).withAddCost
-            fun input => Counts.single QueryKind.hash (hashCost input)) +
+            fun input => Counts.single Game.QueryKind.hash (hashCost input)) +
           Security.signingOracle sk)
         (fun t => by
           rcases t with world | request

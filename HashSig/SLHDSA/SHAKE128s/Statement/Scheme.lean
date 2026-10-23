@@ -6,7 +6,7 @@ Authors: Tom Wambsgans
 
 module
 
-public import HashSig.SLHDSA.SHAKE128s.Statement.RandomOracleModel
+public import HashSig.SLHDSA.SHAKE128s.Statement.Game
 public import Mathlib.Data.BitVec
 public import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 
@@ -39,13 +39,10 @@ def checksumDigits : Nat := 3
 def chains : Nat := messageDigits + checksumDigits
 /-- Output length of `H_msg`, in bytes. -/
 def messageDigestBytes : Nat := 30
-/-- At most `2 ^ 64` signatures per key. -/
-def signingLimit : Nat := 2 ^ 64
 def signatureBytes : Nat := (1 + forsTrees * (1 + forsHeight) + totalHeight + layers * chains) * n
 
 /-! ## Data -/
 
-abbrev Bytes := List UInt8
 abbrev Digest := BitVec (8 * n)
 abbrev HashOutput := BitVec (8 * messageDigestBytes)
 
@@ -60,11 +57,6 @@ structure SecretKey where
   publicKey : PublicKey
 deriving DecidableEq
 
-/-- A signing request: message and context. -/
-structure Message where
-  message : Bytes
-  context : Bytes
-deriving DecidableEq
 
 /-- Big-endian encoding (Algorithm 3). -/
 def bytesBE (byteCount : Nat) (value : BitVec (8 * byteCount)) : Bytes :=

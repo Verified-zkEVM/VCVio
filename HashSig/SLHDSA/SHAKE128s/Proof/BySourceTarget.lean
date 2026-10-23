@@ -50,11 +50,11 @@ theorem answerBound (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adv
   have hpublic : ¬ HashSeparation.Possible ((keyAt walk).seed, (keyAt walk).root) :=
     AnswerSide.not_possible_generatedKey hwalk hgood.2
   set split := SplitTail.splitCarrierTail (CombinedCharge.IsMessageInput (keyAt walk))
-    QueryKind.hash QueryKind.verification keep127 adversary walk with hsplitDef
+    Game.QueryKind.hash Game.QueryKind.verification keep127 adversary walk with hsplitDef
   have hmap : Prod.fst <$> split = carrierTail keep127 adversary walk :=
     SplitTail.map_splitCarrierTail _ AnswerFired.hash_ne_verification keep127 adversary walk
   have hmapR := SplitCarrierTail.forget_splitCarrierTail
-    (CombinedCharge.IsMessageInput (keyAt walk)) QueryKind.hash QueryKind.verification keep127
+    (CombinedCharge.IsMessageInput (keyAt walk)) Game.QueryKind.hash Game.QueryKind.verification keep127
     adversary walk
   have hfst : ∀ z ∈ support split, z.1 ∈ support (carrierTail keep127 adversary walk) := by
     intro z hz
@@ -101,7 +101,7 @@ theorem answerBound (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adv
     have hprob : Pr{let z ← split}[GrowthCharge.Bad (AnswerSide.CanonicalBad walk.1.1.2.2 walk.1.2)
             (z.1.1, z.1.2.1)] =
         Pr{let x ← ((simulateQ KeygenUniform.rom (countQueries (ClassGrowth.splitCost
-            (CombinedCharge.IsMessageInput (keyAt walk)) QueryKind.hash QueryKind.verification)
+            (CombinedCharge.IsMessageInput (keyAt walk)) Game.QueryKind.hash Game.QueryKind.verification)
             (RecordedTail.recordedAfterSeeds adversary walk.1.1))).run walk.2)}[
           (GrowthCharge.Bad (AnswerSide.CanonicalBad walk.1.1.2.2 walk.1.2)) x] := by
       rw [← hmapR, prEvent_map]

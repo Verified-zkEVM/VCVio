@@ -381,7 +381,7 @@ theorem keep127_class (walk : Walk) (input : Bytes) (view : HandlerCarrier.State
   AnswerCarrier.carrierRightKeep_class walk input view hkeep.1
 
 /-- The two counter slots the split tail uses. -/
-theorem hash_ne_verification : QueryKind.hash ≠ QueryKind.verification := by decide
+theorem hash_ne_verification : Game.QueryKind.hash ≠ Game.QueryKind.verification := by decide
 
 /-! ## The defects' arithmetic -/
 

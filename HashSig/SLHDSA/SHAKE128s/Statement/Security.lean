@@ -27,29 +27,23 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.Security
 
-abbrev SigningSpec : OracleSpec Message := Message →ₒ Option Bytes
-abbrev SigningLog := QueryLog SigningSpec
+/-- The signing oracle's interface. -/
+abbrev SigningSpec : OracleSpec Message := Game.SigningSpec
+/-- The signing log. -/
+abbrev SigningLog := Game.SigningLog
 
-structure Forgery where
-  message : Message
-  signature : Bytes
-deriving DecidableEq
+/-- A claimed forgery. -/
+abbrev Forgery := Game.Forgery
 
-structure Adversary where
-  main : PublicKey → OracleComp (OracleWorld + SigningSpec) Forgery
+/-- An adversary against SLH-DSA-SHAKE-128s. -/
+abbrev Adversary := Game.Adversary HashOutput PublicKey
 
 /-! ## The experiment -/
 
 /-- What the adversary's phase counts: its signing requests, its hash calls and verification's. -/
-inductive QueryKind where
-  | signing | hash | verification
-deriving DecidableEq
+abbrev QueryKind := Game.QueryKind
 
-instance : Fintype QueryKind where
-  elems := {.signing, .hash, .verification}
-  complete := by intro kind; cases kind <;> decide
-
-abbrev Counts := QueryKind → Nat
+export Game (Counts)
 
 def Counts.single (kind : QueryKind) (count : Nat) : Counts := Pi.single kind count
 
@@ -77,11 +71,8 @@ def signingOracle (sk : SecretKey) : QueryImpl SigningSpec CountedRun := fun req
     StateT SigningLog (OracleComp OracleWorld) Unit)
   return answer
 
-structure Outcome where
-  forgery : Forgery
-  signed : SigningLog
-  verified : Bool
-  counts : Counts
+/-- The result of one run of the experiment. -/
+abbrev Outcome := Game.Outcome
 
 /-- The adversary's phase and the verification of its forgery. -/
 noncomputable def afterKeygen (adversary : Adversary) (keys : SecretKey × PublicKey) :

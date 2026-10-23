@@ -39,8 +39,7 @@ end MessageDigest
 
 namespace Security
 
-/-- The two hash-query sources charged to `q` besides signing requests. -/
-def Counts.work (counts : Counts) : Nat := counts .hash + counts .verification
+export Game (Counts.work)
 
 /-- Key generation, then the adversary's phase and verification. -/
 noncomputable def experiment (adversary : Adversary) : OracleComp OracleWorld Outcome := do

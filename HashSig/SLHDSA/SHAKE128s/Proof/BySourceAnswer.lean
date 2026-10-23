@@ -204,7 +204,7 @@ theorem fresh_add_right_le (adversary : Adversary) {walk : Walk}
     (hwalk : walk ∈ support WarmedGame.graphWalk) (hgood : Target.GoodWalk walk)
     (z : (((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState) × Counts)
     (hz : z ∈ support (SplitTail.splitCarrierTail
-      (CombinedCharge.IsMessageInput (keyAt walk)) QueryKind.hash QueryKind.verification
+      (CombinedCharge.IsMessageInput (keyAt walk)) Game.QueryKind.hash Game.QueryKind.verification
       keep127 adversary walk)) :
     freshMass (Deviating walk) walk.2 z.1.2.1 + (z.1.2.2.2.length : ℝ≥0∞) ≤
       ((z.1.1.1.1.counts.work + z.1.1.1.1.counts .signing : Nat) : ℝ≥0∞) := by
@@ -212,7 +212,7 @@ theorem fresh_add_right_le (adversary : Adversary) {walk : Walk}
   -- The run, read at the recorded tail.
   have hcounted : ((z.1.1.1, z.2), z.1.2.1) ∈ support ((simulateQ KeygenUniform.rom
       (countQueries (ClassGrowth.splitCost (CombinedCharge.IsMessageInput (keyAt walk))
-        QueryKind.hash QueryKind.verification)
+        Game.QueryKind.hash Game.QueryKind.verification)
         (RecordedTail.recordedAfterSeeds adversary walk.1.1))).run walk.2) := by
     rw [← SplitCarrierTail.forget_splitCarrierTail _ _ _ keep127 adversary walk, support_map]
     exact ⟨z, hz, rfl⟩
