@@ -22,6 +22,8 @@ families follow the routes of `VCVioFoxglove.Tactic`:
 * **Negatives:** dependent draws, where independence must not be claimed.
 -/
 
+public section
+
 open OracleComp OracleSpec Foxglove Interp
 open scoped ENNReal
 

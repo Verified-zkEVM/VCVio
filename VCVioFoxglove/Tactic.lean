@@ -43,6 +43,9 @@ macro "fox_leaf" : tactic => `(tactic| with_reducible first
   | exact Foxglove.wp_pure_law _
   | exact Foxglove.wp_lawPMF _)
 
+-- `refine'` rather than `refine`: the laws a step introduces may still be unknown (the goal's
+-- laws are metavariables), and `refine'` makes them goals for the leaf steps to fill.
+set_option linter.style.refine false in
 /-- One step on an independence goal `⊢ wp oa ⦃X, (fst ∘ X) ~ μ ∗ (snd ∘ X) ~ ν⦄`. `refine'`
 leaves laws still to be found as goals, for the leaf steps to fill. -/
 macro "fox_indep" : tactic => `(tactic| with_reducible first
