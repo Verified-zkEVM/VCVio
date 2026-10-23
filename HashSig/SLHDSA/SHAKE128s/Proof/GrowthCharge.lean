@@ -46,7 +46,7 @@ theorem cache_value_persists {α : Type} (computation : OracleComp OracleWorld �
       rcases queried with coin | queried
       · have hcache : middleCache = initialCache := by
           symm
-          simpa [KeygenUniform.rom, Xmss.RandomOracleModel.impl, unifFwdImpl] using hquery
+          simpa [KeygenUniform.rom, RandomOracleModel.impl, unifFwdImpl] using hquery
         exact hcache ▸ hentry
       · change (answer, middleCache) ∈ support ((randomOracle queried).run initialCache) at hquery
         cases hqueried : initialCache queried with

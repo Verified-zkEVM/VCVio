@@ -50,7 +50,7 @@ def signingLimit : Nat := 2 ^ 64
 namespace Game
 
 /-- The world of the scheme: private uniform sampling and the shared hash oracle on byte strings. -/
-abbrev World (Output : Type) := Xmss.RandomOracleModel.World Bytes Output
+abbrev World (Output : Type) := RandomOracleModel.World Bytes Output
 
 /-- A pure-mode signature scheme over one hash oracle with answers in `Output`, public keys `PK`
 and secret keys `SK`. Signatures and messages are byte strings; signing returns `none` when it
@@ -109,7 +109,7 @@ abbrev CountedRun (Output : Type) :=
 
 /-- One unit per hash call; nothing per uniform sample. -/
 def hashCost : (World Output).Domain → Nat :=
-  Xmss.RandomOracleModel.hashCost Bytes Output
+  RandomOracleModel.hashCost Bytes Output
 
 /-- Run a computation, and also return the sum of `cost` over its queries. -/
 def countQueries {α : Type} (cost : (World Output).Domain → Counts)
@@ -179,7 +179,7 @@ instance (outcome : Outcome) : Decidable (Wins outcome) := by
 
 /-- The counts by source; the signer's calls are what remains after key generation. -/
 def sourceCounts (outcome : Outcome) (keygenHashes laterHashes : Nat) :
-    Xmss.Unforgeability.QueryCounts
+    Unforgeability.QueryCounts
   | .sign => outcome.counts .signing
   | .hash => outcome.counts .hash
   | .keygen => keygenHashes
@@ -189,7 +189,7 @@ def sourceCounts (outcome : Outcome) (keygenHashes laterHashes : Nat) :
 /-- Key generation, then the adversary's phase and verification, with the counts by source. -/
 noncomputable def experimentBySource (scheme : ExternalScheme Output PK SK)
     (adversary : Adversary Output PK) :
-    OracleComp (World Output) (Outcome × Xmss.Unforgeability.QueryCounts) := do
+    OracleComp (World Output) (Outcome × Unforgeability.QueryCounts) := do
   let (keys, keygenHashes) ← countAllHashes scheme.keygen
   let (outcome, laterHashes) ← countAllHashes (afterKeygen scheme adversary keys)
   return (outcome, sourceCounts outcome keygenHashes laterHashes)
@@ -199,12 +199,12 @@ variable [SampleableType Output]
 /-- All parties share one random oracle, starting empty. -/
 noncomputable def runBySource (scheme : ExternalScheme Output PK SK)
     (adversary : Adversary Output PK) :
-    ProbComp (Outcome × Xmss.Unforgeability.QueryCounts) :=
-  Xmss.RandomOracleModel.run (experimentBySource scheme adversary)
+    ProbComp (Outcome × Unforgeability.QueryCounts) :=
+  RandomOracleModel.run (experimentBySource scheme adversary)
 
 /-- The strong unforgeability game of `scheme`: the winning bit and the counts by source. -/
 noncomputable def securityGame (scheme : ExternalScheme Output PK SK) :
-    Xmss.SecurityGame Unit Xmss.Unforgeability.QueryKind where
+    SecurityGame Unit Unforgeability.QueryKind where
   Adversary := Adversary Output PK
   experiment := fun _ adversary =>
     (fun result => (decide (Wins result.1), result.2)) <$> runBySource scheme adversary
@@ -216,7 +216,7 @@ def WithinSigningLimit (scheme : ExternalScheme Output PK SK)
 
 /-- `bits` bits of security in counting mode `Z`, for adversaries within the signing limit. -/
 def HasSecurityBits (scheme : ExternalScheme Output PK SK)
-    (Z : Finset Xmss.Unforgeability.QueryKind) (bits : Nat) : Prop :=
+    (Z : Finset Unforgeability.QueryKind) (bits : Nat) : Prop :=
   ∀ q, 1 ≤ q → ∀ adversary : Adversary Output PK, WithinSigningLimit scheme adversary →
     (securityGame scheme).HasQueryBound () Z adversary q →
     (securityGame scheme).advantage () adversary ≤ q / ((2 ^ bits : Nat) : ℝ≥0∞)
@@ -225,7 +225,7 @@ def HasSecurityBits (scheme : ExternalScheme Output PK SK)
 - its signing requests (+1 per request, at most `2^64`),
 - its hash calls (+1 per call it makes to the random oracle),
 - the hash calls of verifying its forgery (+1 per call). -/
-def adversaryWork : Finset Xmss.Unforgeability.QueryKind := {.sign, .hash, .verifier}
+def adversaryWork : Finset Unforgeability.QueryKind := {.sign, .hash, .verifier}
 
 end Game
 

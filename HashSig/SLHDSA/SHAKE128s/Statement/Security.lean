@@ -50,7 +50,7 @@ def Counts.single (kind : QueryKind) (count : Nat) : Counts := Pi.single kind co
 abbrev CountedRun := AddWriterT Counts (StateT SigningLog (OracleComp OracleWorld))
 
 def hashCost : OracleWorld.Domain → Nat :=
-  Xmss.RandomOracleModel.hashCost Bytes HashOutput
+  RandomOracleModel.hashCost Bytes HashOutput
 
 def countQueries {α : Type} (cost : OracleWorld.Domain → Counts)
     (computation : OracleComp OracleWorld α) : OracleComp OracleWorld (α × Counts) :=
@@ -109,7 +109,7 @@ instance (outcome : Outcome) : Decidable (Wins outcome) := by
 
 /-- The counts by source; the signer's calls are what remains after key generation. -/
 def sourceCounts (outcome : Outcome) (keygenHashes laterHashes : Nat) :
-    Xmss.Unforgeability.QueryCounts
+    Unforgeability.QueryCounts
   | .sign => outcome.counts .signing
   | .hash => outcome.counts .hash
   | .keygen => keygenHashes
@@ -117,17 +117,17 @@ def sourceCounts (outcome : Outcome) (keygenHashes laterHashes : Nat) :
   | .verifier => outcome.counts .verification
 
 noncomputable def experimentBySource (adversary : Adversary) :
-    OracleComp OracleWorld (Outcome × Xmss.Unforgeability.QueryCounts) := do
+    OracleComp OracleWorld (Outcome × Unforgeability.QueryCounts) := do
   let (keys, keygenHashes) ← countAllHashes Scheme.keygen
   let (outcome, laterHashes) ← countAllHashes (afterKeygen adversary keys)
   return (outcome, sourceCounts outcome keygenHashes laterHashes)
 
 /-- All parties share one random oracle, starting empty. -/
 noncomputable def runBySource (adversary : Adversary) :
-    ProbComp (Outcome × Xmss.Unforgeability.QueryCounts) :=
-  Xmss.RandomOracleModel.run (experimentBySource adversary)
+    ProbComp (Outcome × Unforgeability.QueryCounts) :=
+  RandomOracleModel.run (experimentBySource adversary)
 
-noncomputable def securityGame : Xmss.SecurityGame Unit Xmss.Unforgeability.QueryKind where
+noncomputable def securityGame : SecurityGame Unit Unforgeability.QueryKind where
   Adversary := Adversary
   experiment := fun _ adversary =>
     (fun result => (decide (Wins result.1), result.2)) <$> runBySource adversary
@@ -139,7 +139,7 @@ def WithinSigningLimit (adversary : Adversary) : Prop :=
   Pr{let result ← securityGame.experiment () adversary}[result.2 .sign ≤ signingLimit] = 1
 
 /-- `bits` bits of security in counting mode `Z`, for adversaries within the signing limit. -/
-def HasSecurityBits (Z : Finset Xmss.Unforgeability.QueryKind) (bits : Nat) : Prop :=
+def HasSecurityBits (Z : Finset Unforgeability.QueryKind) (bits : Nat) : Prop :=
   ∀ q, 1 ≤ q → ∀ adversary : Adversary, WithinSigningLimit adversary →
     securityGame.HasQueryBound () Z adversary q →
     securityGame.advantage () adversary ≤ q / ((2 ^ bits : Nat) : ℝ≥0∞)
@@ -148,6 +148,6 @@ def HasSecurityBits (Z : Finset Xmss.Unforgeability.QueryKind) (bits : Nat) : Pr
 - its signing requests (+1 per request, at most `2^64`),
 - its hash calls (+1 per call it makes to the random oracle),
 - the hash calls of verifying its forgery (+1 per call). -/
-def adversaryWork : Finset Xmss.Unforgeability.QueryKind := {.sign, .hash, .verifier}
+def adversaryWork : Finset Unforgeability.QueryKind := {.sign, .hash, .verifier}
 
 end SlhDsaSecurity.Security

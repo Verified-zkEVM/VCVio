@@ -195,7 +195,7 @@ theorem prob_bad_le_expected_fresh (inClass : Bytes → Prop) (bad : Bytes → H
         intro step hstep
         have hform : step ∈
             Set.range (fun value : OracleWorld.Range (Sum.inl coin) => (value, initial)) := by
-          simpa [KeygenUniform.rom, Xmss.RandomOracleModel.impl, unifFwdImpl] using hstep
+          simpa [KeygenUniform.rom, RandomOracleModel.impl, unifFwdImpl] using hstep
         obtain ⟨value, hvalue⟩ := hform
         rw [← hvalue]
       refine ENNReal.tsum_le_tsum fun step => ?_

@@ -68,9 +68,9 @@ theorem experimentBySource_eq (adversary : Adversary) :
 
 /-- Running a reshaped computation in the random-oracle model reshapes its run. -/
 theorem run_map {α β : Type} (reshape : α → β) (computation : OracleComp OracleWorld α) :
-    Xmss.RandomOracleModel.run (reshape <$> computation) =
-      reshape <$> Xmss.RandomOracleModel.run computation := by
-  unfold Xmss.RandomOracleModel.run
+    RandomOracleModel.run (reshape <$> computation) =
+      reshape <$> RandomOracleModel.run computation := by
+  unfold RandomOracleModel.run
   rw [simulateQ_map, StateT.run'_eq, StateT.run'_eq, StateT.run_map, Functor.map_map,
     Functor.map_map]
 
@@ -83,7 +83,7 @@ theorem map_fst_runBySource (adversary : Adversary) :
 /-- **The framework's advantage is the total advantage.** -/
 theorem advantage_securityGame (adversary : Adversary) :
     securityGame.advantage () adversary = totalAdvantage adversary := by
-  unfold Xmss.SecurityGame.advantage totalAdvantage
+  unfold SecurityGame.advantage totalAdvantage
   change Pr{let result ← ((fun result => (decide (Wins result.1), result.2)) <$>
       runBySource adversary)}[result.1 = true] = _
   calc Pr{let result ← ((fun result => (decide (Wins result.1), result.2)) <$>
@@ -128,7 +128,7 @@ theorem keygen_count_ge (cache : QueryCache HashSpec)
 /-- **Every result of the game counted by source carries the outcome's own counts**, and a key
 generation count of at least its top tree. -/
 theorem exists_sourceCounts (adversary : Adversary)
-    (result : Outcome × Xmss.Unforgeability.QueryCounts)
+    (result : Outcome × Unforgeability.QueryCounts)
     (hresult : result ∈ support (runBySource adversary)) :
     ∃ keygenHashes laterHashes : Nat,
       result.2 = sourceCounts result.1 keygenHashes laterHashes ∧
@@ -136,7 +136,7 @@ theorem exists_sourceCounts (adversary : Adversary)
   rw [runBySource, experimentBySource_eq, run_map, support_map] at hresult
   obtain ⟨pair, hpair, rfl⟩ := hresult
   refine ⟨pair.1.2, pair.2.2, rfl, ?_⟩
-  unfold Xmss.RandomOracleModel.run at hpair
+  unfold RandomOracleModel.run at hpair
   rw [StateT.run'_eq, support_map] at hpair
   obtain ⟨full, hfull, rfl⟩ := hpair
   change full ∈ support ((simulateQ KeygenUniform.rom (joint adversary)).run ∅) at hfull
@@ -160,7 +160,7 @@ def TailBudgetW (adversary : Adversary) (q : Nat) : Prop :=
       result.1.1.counts.work + result.1.1.counts .signing ≤ q
 
 /-- The `adversaryWork` total of a tally is its `sign`, `hash` and `verifier` counts. -/
-theorem sum_adversaryWork (counts : Xmss.Unforgeability.QueryCounts) :
+theorem sum_adversaryWork (counts : Unforgeability.QueryCounts) :
     ∑ kind ∈ adversaryWork, counts kind = counts .sign + (counts .hash + counts .verifier) := by
   simp [adversaryWork, Finset.sum_insert]
 

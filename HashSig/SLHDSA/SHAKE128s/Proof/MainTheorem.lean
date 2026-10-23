@@ -38,7 +38,7 @@ so an event about the value alone has the same probability either way. -/
 theorem probEvent_runAll (adversary : Adversary) (event : Outcome × Nat → Prop) :
     Pr{let x ← runAll adversary}[event x] =
       Pr{let result ← WholeGameStructural.instrumentedRun adversary}[event result.1] := by
-  rw [runAll, Xmss.RandomOracleModel.run, WholeGameStructural.instrumentedRun,
+  rw [runAll, RandomOracleModel.run, WholeGameStructural.instrumentedRun,
     show (simulateQ KeygenUniform.rom (countAllHashes (experiment adversary))).run' ∅ =
       Prod.fst <$> (simulateQ KeygenUniform.rom (countAllHashes (experiment adversary))).run ∅
       from rfl, prEvent_map]

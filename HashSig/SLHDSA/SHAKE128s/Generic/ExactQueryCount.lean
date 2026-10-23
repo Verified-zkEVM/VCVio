@@ -19,7 +19,7 @@ queries. It is closed under `bind` and `map`.
 
 open OracleComp OracleSpec
 
-namespace Xmss.Generic
+namespace SlhDsaSecurity.Generic
 
 variable {ι : Type} {spec : OracleSpec ι} {α β : Type}
 
@@ -56,4 +56,4 @@ theorem map {computation : OracleComp spec α} {count : Nat}
 
 end ExactQueryCount
 
-end Xmss.Generic
+end SlhDsaSecurity.Generic

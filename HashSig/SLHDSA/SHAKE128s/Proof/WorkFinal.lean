@@ -102,7 +102,7 @@ costs that many. -/
 theorem advantage_eq_zero (adversary : Adversary) (q : Nat) (hq : q < 569)
     (hbound : securityGame.HasQueryBound () adversaryWork adversary q) :
     securityGame.advantage () adversary = 0 := by
-  unfold Xmss.SecurityGame.advantage
+  unfold SecurityGame.advantage
   refine prEvent_eq_zero_of_forall_mem_support _ _ fun result hresult hwin => ?_
   change result ∈ support ((fun result => (decide (Wins result.1), result.2)) <$>
     runBySource adversary) at hresult

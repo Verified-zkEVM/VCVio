@@ -20,7 +20,7 @@ probability one wins with probability at most `q / 2^bits`.
 
 open OracleComp OracleSpec ENNReal
 
-namespace Xmss
+namespace SlhDsaSecurity
 
 /-- A security game for schemes of type `Scheme`, counting queries of the kinds in `Kind`. -/
 structure SecurityGame (Scheme : Type) (Kind : Type) where
@@ -53,4 +53,4 @@ def HasExactClassicalSecurityBits (Z : Finset Kind) (bits : ℕ) : Prop :=
 
 end SecurityGame
 
-end Xmss
+end SlhDsaSecurity

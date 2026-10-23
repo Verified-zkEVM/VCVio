@@ -17,7 +17,7 @@ A counting mode selects which kinds are the adversary's work.
 
 @[expose] public section
 
-namespace Xmss.Unforgeability
+namespace SlhDsaSecurity.Unforgeability
 
 /-- The kinds of queries counted by the experiment. -/
 inductive QueryKind where
@@ -43,4 +43,4 @@ abbrev QueryCounts := QueryKind → ℕ
 /-- `n` queries of kind `kind`, and none of the other kinds. -/
 def QueryCounts.single (kind : QueryKind) (n : ℕ) : QueryCounts := Pi.single kind n
 
-end Xmss.Unforgeability
+end SlhDsaSecurity.Unforgeability

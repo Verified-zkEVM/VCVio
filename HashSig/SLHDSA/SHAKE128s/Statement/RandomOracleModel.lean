@@ -20,7 +20,7 @@ repeated inputs; private uniform sampling is free. Each experiment starts with a
 
 open OracleComp OracleSpec
 
-namespace Xmss.RandomOracleModel
+namespace SlhDsaSecurity.RandomOracleModel
 
 variable (Input Output : Type) [DecidableEq Input] [SampleableType Output]
 
@@ -50,4 +50,4 @@ noncomputable def run {α : Type} (computation : OracleComp (World Input Output)
     ProbComp α :=
   (simulateQ (impl Input Output) computation).run' ∅
 
-end Xmss.RandomOracleModel
+end SlhDsaSecurity.RandomOracleModel

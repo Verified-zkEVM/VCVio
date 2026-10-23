@@ -96,8 +96,8 @@ def Address.setTypeAndClear (address : Address) (kind : AddressType) : Address :
 
 /-! ## Hashing (Section 11.1, as one random oracle) -/
 
-abbrev HashSpec := Xmss.RandomOracleModel.HashSpec Bytes HashOutput
-abbrev OracleWorld := Xmss.RandomOracleModel.World Bytes HashOutput
+abbrev HashSpec := RandomOracleModel.HashSpec Bytes HashOutput
+abbrev OracleWorld := RandomOracleModel.World Bytes HashOutput
 
 namespace Hashing
 

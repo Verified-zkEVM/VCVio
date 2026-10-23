@@ -103,7 +103,7 @@ theorem verificationCount_lift (computation : OracleComp HashSpec α) :
     rw [countQueries_query]
     simp only [ih, bind_assoc, pure_bind, counted_query_bind]
     simp [map_eq_bind_pure_comp,
-      verificationCost, Security.hashCost, Xmss.RandomOracleModel.hashCost,
+      verificationCost, Security.hashCost, RandomOracleModel.hashCost,
       Counts.single, Pi.single_add, bind_assoc]
     rfl
 
@@ -114,11 +114,11 @@ theorem verification_count_bounds (pk : PublicKey) (request : Message) (wire : B
     (hframe : request.frame = some message) (hparse : Signature.fromBytes? wire = some signature)
     (cache : QueryCache HashSpec) (result : Bool × Counts)
     (hresult : result ∈ support
-      ((simulateQ (Xmss.RandomOracleModel.impl Bytes HashOutput)
+      ((simulateQ (RandomOracleModel.impl Bytes HashOutput)
         (countQueries verificationCost (Scheme.verify pk request wire))).run' cache)) :
     569 ≤ result.2 .verification ∧ result.2 .verification ≤ 3824 := by
   rw [verify_lift, verificationCount_lift] at hresult
-  rw [Xmss.RandomOracleModel.impl, QueryImpl.simulateQ_add_liftComp_right,
+  rw [RandomOracleModel.impl, QueryImpl.simulateQ_add_liftComp_right,
     simulateQ_map, StateT.run'_map', support_map, Set.mem_image] at hresult
   obtain ⟨trace, htrace, rfl⟩ := hresult
   simpa only [Counts.single, Pi.single_eq_same] using
@@ -130,7 +130,7 @@ theorem verification_count_bounds (pk : PublicKey) (request : Message) (wire : B
 theorem verification_accepted_count_bounds (pk : PublicKey) (request : Message) (wire : Bytes)
     (cache : QueryCache HashSpec) (result : Bool × Counts)
     (hresult : result ∈ support
-      ((simulateQ (Xmss.RandomOracleModel.impl Bytes HashOutput)
+      ((simulateQ (RandomOracleModel.impl Bytes HashOutput)
         (countQueries verificationCost (Scheme.verify pk request wire))).run' cache))
     (haccept : result.1 = true) :
     569 ≤ result.2 .verification ∧ result.2 .verification ≤ 3824 := by
@@ -155,7 +155,7 @@ theorem verification_accepted_count_bounds (pk : PublicKey) (request : Message) 
 theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)
     (houtcome : outcome ∈ support (Security.run adversary)) (haccept : outcome.verified = true) :
     569 ≤ outcome.counts.work := by
-  unfold Security.run Xmss.RandomOracleModel.run Security.experiment at houtcome
+  unfold Security.run RandomOracleModel.run Security.experiment at houtcome
   rw [simulateQ_bind, StateT.run'_bind', mem_support_bind_iff] at houtcome
   obtain ⟨⟨⟨sk, pk⟩, keygenCache⟩, _hkeygen, hafterKeygen⟩ := houtcome
   dsimp only at hafterKeygen
@@ -170,7 +170,7 @@ theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)
     support_pure, Set.mem_singleton_iff] at hpure
   subst outcome
   have hverifier' : (verified, verifierCounts) ∈ support
-      ((simulateQ (Xmss.RandomOracleModel.impl Bytes HashOutput)
+      ((simulateQ (RandomOracleModel.impl Bytes HashOutput)
         (countQueries verificationCost (Scheme.verify pk forgery.message forgery.signature))).run'
           adversaryCache) := by
     rw [StateT.run'_eq, support_map, Set.mem_image]

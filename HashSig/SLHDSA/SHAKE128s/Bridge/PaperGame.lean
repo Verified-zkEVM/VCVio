@@ -35,7 +35,7 @@ noncomputable def model : Game.ExternalScheme HashOutput PublicKey SecretKey whe
 theorem securityGame_model : Security.securityGame = Game.securityGame model := rfl
 
 /-- The proof's bit-security statement is the generic one at `model`. -/
-theorem hasSecurityBits_model_iff (Z : Finset Xmss.Unforgeability.QueryKind) (bits : Nat) :
+theorem hasSecurityBits_model_iff (Z : Finset Unforgeability.QueryKind) (bits : Nat) :
     Security.HasSecurityBits Z bits ↔ Game.HasSecurityBits model Z bits := Iff.rfl
 
 end SlhDsaSecurity.Bridge

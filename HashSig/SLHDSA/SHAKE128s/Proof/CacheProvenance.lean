@@ -256,7 +256,7 @@ theorem queried_of_fresh_step (queried : OracleWorld.Domain)
     simp] at hstep
   rcases queried with coin | input
   · obtain ⟨value, hvalue⟩ : step ∈ Set.range fun answer => (answer, initialCache) := by
-      simpa [KeygenUniform.rom, Xmss.RandomOracleModel.impl, unifFwdImpl] using hstep
+      simpa [KeygenUniform.rom, RandomOracleModel.impl, unifFwdImpl] using hstep
     exact absurd (show step.2 probe = none from by rw [← hvalue]; exact hfresh) hpresent
   · have hrom : step ∈ support ((randomOracle input).run initialCache) := hstep
     rcases step_shape input initialCache step hrom with hshape | hshape

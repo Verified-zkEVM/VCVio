@@ -28,7 +28,7 @@ open scoped BigOperators
 
 namespace SlhDsaSecurity.VerificationQueries
 
-open Xmss.Generic (ExactQueryCount)
+open Generic (ExactQueryCount)
 
 variable {ι : Type} {spec : OracleSpec ι} {α β : Type}
 

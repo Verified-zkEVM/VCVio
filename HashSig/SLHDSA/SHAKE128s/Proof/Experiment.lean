@@ -66,11 +66,11 @@ noncomputable def experiment (adversary : Adversary) : OracleComp OracleWorld Ou
 
 /-- The experiment run against a lazily sampled random oracle. -/
 noncomputable def run (adversary : Adversary) : ProbComp Outcome :=
-  Xmss.RandomOracleModel.run (experiment adversary)
+  RandomOracleModel.run (experiment adversary)
 
 /-- The experiment with its total hash count. -/
 noncomputable def runAll (adversary : Adversary) : ProbComp (Outcome × Nat) :=
-  Xmss.RandomOracleModel.run (countAllHashes (experiment adversary))
+  RandomOracleModel.run (countAllHashes (experiment adversary))
 
 /-- The probability that the adversary wins the experiment, read off `runAll`. -/
 noncomputable def totalAdvantage (adversary : Adversary) : ℝ≥0∞ :=

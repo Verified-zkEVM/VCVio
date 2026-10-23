@@ -312,7 +312,7 @@ law. -/
 /-- **Security bits transfer from the paper model to FIPS 205**: every security bit of the paper
 model, in any counting mode, is one of FIPS 205's SLH-DSA-SHAKE-128s over one SHAKE256 random
 oracle. -/
-theorem hasSecurityBits_fips205 {Z : Finset Xmss.Unforgeability.QueryKind} {bits : ℕ}
+theorem hasSecurityBits_fips205 {Z : Finset Unforgeability.QueryKind} {bits : ℕ}
     (h : Game.HasSecurityBits model Z bits) : Game.HasSecurityBits FIPS205.scheme Z bits :=
   hasSecurityBits_of_bridge schemeBridge map_answerEquiv_uniformSample h
 

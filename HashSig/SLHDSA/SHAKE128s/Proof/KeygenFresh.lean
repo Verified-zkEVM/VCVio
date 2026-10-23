@@ -40,6 +40,6 @@ instance (seed : Digest) (payload : Bytes) : DecidablePred (RootQuery seed paylo
 /-- The random-oracle implementation of the oracle world: uniform sampling is forwarded, and
 the shared hash answers fresh inputs uniformly and repeated inputs from its cache. -/
 noncomputable abbrev rom : QueryImpl OracleWorld (StateT (QueryCache HashSpec) ProbComp) :=
-  Xmss.RandomOracleModel.impl Bytes HashOutput
+  RandomOracleModel.impl Bytes HashOutput
 
 end SlhDsaSecurity.KeygenUniform

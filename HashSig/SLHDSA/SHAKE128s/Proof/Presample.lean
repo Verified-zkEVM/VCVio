@@ -331,7 +331,7 @@ theorem countAllHashes_liftM_probComp {γ : Type} (sample : ProbComp γ) :
       rw [liftM_bind]
       rfl
     rw [hlift, GrowthBudget.countAllHashes_query_bind]
-    simp only [ih, Security.hashCost, Xmss.RandomOracleModel.hashCost,
+    simp only [ih, Security.hashCost, RandomOracleModel.hashCost,
       map_eq_bind_pure_comp, Function.comp_def, bind_assoc, pure_bind, Nat.zero_add]
 
 /-- The counter passes through a purely-sampling prefix untouched. -/

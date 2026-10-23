@@ -87,7 +87,7 @@ theorem simulateQ_unlabel_relabel (e : A ≃ B) {α : Type} (P : OracleComp (Gam
 /-! ## The random oracle under relabelling -/
 
 /-- The cache of the random oracle with answers in `Output`. -/
-abbrev Cache (Output : Type) := (Xmss.RandomOracleModel.HashSpec Bytes Output).QueryCache
+abbrev Cache (Output : Type) := (RandomOracleModel.HashSpec Bytes Output).QueryCache
 
 /-- The cache whose entries are those of `cache` mapped through `e`. -/
 @[expose] def mapCache (e : A ≃ B) (cache : Cache A) : Cache B :=
@@ -136,11 +136,11 @@ the query answered by `A`'s random oracle with its final cache mapped, provided 
 uniform sampler of `A` to that of `B`. -/
 theorem relabel_step (e : A ≃ B) (he : (e <$> ($ᵗ A : ProbComp A)) =ᵈ ($ᵗ B : ProbComp B))
     (t : (Game.World A).Domain) (cache : Cache A) :
-    (simulateQ (Xmss.RandomOracleModel.impl Bytes B) (relabel e t)).run (mapCache e cache) =ᵈ
-      Prod.map id (mapCache e) <$> (Xmss.RandomOracleModel.impl Bytes A t).run cache := by
+    (simulateQ (RandomOracleModel.impl Bytes B) (relabel e t)).run (mapCache e cache) =ᵈ
+      Prod.map id (mapCache e) <$> (RandomOracleModel.impl Bytes A t).run cache := by
   rcases t with n | x
-  · simp [Xmss.RandomOracleModel.impl, unifFwdImpl]
-  · simp only [relabel, Xmss.RandomOracleModel.impl, simulateQ_map, StateT.run_map,
+  · simp [RandomOracleModel.impl, unifFwdImpl]
+  · simp only [relabel, RandomOracleModel.impl, simulateQ_map, StateT.run_map,
       QueryImpl.add_apply_inr]
     rw [simulateQ_spec_query, QueryImpl.add_apply_inr, randomOracle.run_eq,
       randomOracle.run_eq]
@@ -162,10 +162,10 @@ program run against `A`'s random oracle, with its final cache mapped. -/
 theorem run_simulateQ_relabel_from (e : A ≃ B)
     (he : (e <$> ($ᵗ A : ProbComp A)) =ᵈ ($ᵗ B : ProbComp B))
     {α : Type} (P : OracleComp (Game.World A) α) (cache : Cache A) :
-    (simulateQ (Xmss.RandomOracleModel.impl Bytes B) (simulateQ (relabel e) P)).run
+    (simulateQ (RandomOracleModel.impl Bytes B) (simulateQ (relabel e) P)).run
         (mapCache e cache) =ᵈ
       Prod.map id (mapCache e) <$>
-        (simulateQ (Xmss.RandomOracleModel.impl Bytes A) P).run cache := by
+        (simulateQ (RandomOracleModel.impl Bytes A) P).run cache := by
   rw [← QueryImpl.simulateQ_compose]
   exact simulateQ_run_evalDistEq_map _ _ (mapCache e) (fun t s => relabel_step e he t s) P cache
 
@@ -175,10 +175,10 @@ original. -/
 theorem run_simulateQ_relabel (e : A ≃ B)
     (he : (e <$> ($ᵗ A : ProbComp A)) =ᵈ ($ᵗ B : ProbComp B))
     {α : Type} (P : OracleComp (Game.World A) α) :
-    Xmss.RandomOracleModel.run (simulateQ (relabel e) P) =ᵈ Xmss.RandomOracleModel.run P := by
+    RandomOracleModel.run (simulateQ (relabel e) P) =ᵈ RandomOracleModel.run P := by
   have h := (run_simulateQ_relabel_from e he P ∅).map Prod.fst
   rw [mapCache_empty] at h
-  simpa [Xmss.RandomOracleModel.run, StateT.run'_eq, Functor.map_map] using h
+  simpa [RandomOracleModel.run, StateT.run'_eq, Functor.map_map] using h
 
 end Uniform
 
@@ -268,9 +268,9 @@ structure SchemeBridge (e : A ≃ B) [SampleableType B] {PKA SKA PKB SKB : Type}
   /-- Relabelled key generation, with its keys mapped and its hash calls counted, followed by any
   continuation, has the law of the `B` scheme's key generation followed by that continuation. -/
   keygen : ∀ {γ : Type} (k : SKB × PKB → ℕ → OracleComp (Game.World B) γ),
-    Xmss.RandomOracleModel.run (Game.countAllHashes (simulateQ (relabel e) SA.keygen) >>=
+    RandomOracleModel.run (Game.countAllHashes (simulateQ (relabel e) SA.keygen) >>=
         fun r => k (sk r.1.1, pk r.1.2) r.2) =ᵈ
-      Xmss.RandomOracleModel.run (Game.countAllHashes SB.keygen >>= fun r => k r.1 r.2)
+      RandomOracleModel.run (Game.countAllHashes SB.keygen >>= fun r => k r.1 r.2)
 
 /-- Counting the hash calls of a mapped program maps the output of the counted program. -/
 theorem countAllHashes_map {Output α β : Type} (f : α → β)
@@ -285,9 +285,9 @@ theorem keygen_of_map_eq [SampleableType B] {e : A ≃ B} {PKA SKA PKB SKB : Typ
     (pk : PKA → PKB) (sk : SKA → SKB)
     (h : Prod.map sk pk <$> simulateQ (relabel e) SA.keygen = SB.keygen)
     {γ : Type} (k : SKB × PKB → ℕ → OracleComp (Game.World B) γ) :
-    Xmss.RandomOracleModel.run (Game.countAllHashes (simulateQ (relabel e) SA.keygen) >>=
+    RandomOracleModel.run (Game.countAllHashes (simulateQ (relabel e) SA.keygen) >>=
         fun r => k (sk r.1.1, pk r.1.2) r.2) =ᵈ
-      Xmss.RandomOracleModel.run (Game.countAllHashes SB.keygen >>= fun r => k r.1 r.2) := by
+      RandomOracleModel.run (Game.countAllHashes SB.keygen >>= fun r => k r.1 r.2) := by
   rw [← h, countAllHashes_map, bind_map_left]
   rfl
 
@@ -310,7 +310,7 @@ theorem run_simulateQ_addCostOracle_liftM {Output α : Type} (oa : ProbComp α) 
     simp only [simulateQ_bind, WriterT.run_bind, ih, map_bind]
     simp only [simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query, id_map,
       liftM_unifSpec_query]
-    simp [addCostOracle, QueryImpl.withAddCost, Game.hashCost, Xmss.RandomOracleModel.hashCost]
+    simp [addCostOracle, QueryImpl.withAddCost, Game.hashCost, RandomOracleModel.hashCost]
 
 /-- Counting the hash calls of a program that begins with a uniform draw counts those of its
 continuation. -/
@@ -325,9 +325,9 @@ theorem countAllHashes_liftM_bind {Output α β : Type} (oa : ProbComp α)
 followed by the run of the continuation from the empty cache. -/
 theorem run_liftM_bind {Output α β : Type} [SampleableType Output] (oa : ProbComp α)
     (f : α → OracleComp (Game.World Output) β) :
-    Xmss.RandomOracleModel.run ((liftM oa : OracleComp (Game.World Output) α) >>= f) =
-      oa >>= fun a => Xmss.RandomOracleModel.run (f a) := by
-  simp only [Xmss.RandomOracleModel.run, Xmss.RandomOracleModel.impl, simulateQ_bind,
+    RandomOracleModel.run ((liftM oa : OracleComp (Game.World Output) α) >>= f) =
+      oa >>= fun a => RandomOracleModel.run (f a) := by
+  simp only [RandomOracleModel.run, RandomOracleModel.impl, simulateQ_bind,
     QueryImpl.simulateQ_add_liftM_left, StateT.run'_eq, StateT.run_bind,
     unifFwdImpl.simulateQ_run, bind_map_left, map_bind]
 
@@ -345,19 +345,19 @@ theorem keygen_of_seeds [SampleableType B] {e : A ≃ B} {PKA SKA PKB SKB : Type
     (hB : SB.keygen = (liftM sB : OracleComp (Game.World B) Y) >>= H)
     (hGH : ∀ x, Prod.map sk pk <$> G x = H (φ x))
     {γ : Type} (k : SKB × PKB → ℕ → OracleComp (Game.World B) γ) :
-    Xmss.RandomOracleModel.run (Game.countAllHashes (simulateQ (relabel e) SA.keygen) >>=
+    RandomOracleModel.run (Game.countAllHashes (simulateQ (relabel e) SA.keygen) >>=
         fun r => k (sk r.1.1, pk r.1.2) r.2) =ᵈ
-      Xmss.RandomOracleModel.run (Game.countAllHashes SB.keygen >>= fun r => k r.1 r.2) := by
+      RandomOracleModel.run (Game.countAllHashes SB.keygen >>= fun r => k r.1 r.2) := by
   rw [hA, hB, countAllHashes_liftM_bind, countAllHashes_liftM_bind, bind_assoc, bind_assoc,
     run_liftM_bind, run_liftM_bind]
-  have hx : ∀ x, Xmss.RandomOracleModel.run (Game.countAllHashes (G x) >>=
+  have hx : ∀ x, RandomOracleModel.run (Game.countAllHashes (G x) >>=
       fun r => k (sk r.1.1, pk r.1.2) r.2) =
-      Xmss.RandomOracleModel.run (Game.countAllHashes (H (φ x)) >>= fun r => k r.1 r.2) := by
+      RandomOracleModel.run (Game.countAllHashes (H (φ x)) >>= fun r => k r.1 r.2) := by
     intro x
     rw [← hGH, countAllHashes_map, bind_map_left]
     rfl
   simp only [hx]
-  rw [← bind_map_left φ sA (fun y => Xmss.RandomOracleModel.run
+  rw [← bind_map_left φ sA (fun y => RandomOracleModel.run
     (Game.countAllHashes (H y) >>= fun r => k r.1 r.2))]
   exact hφ.bind fun _ => EvalDistEq.rfl
 
@@ -391,7 +391,7 @@ variable {PKA SKA PKB SKB : Type}
 generation's hash count. -/
 @[expose] noncomputable def afterKeygenBySource (scheme : Game.ExternalScheme B PKB SKB)
     (adversary : Game.Adversary B PKB) (keys : SKB × PKB) (keygenHashes : ℕ) :
-    OracleComp (Game.World B) (Game.Outcome × Xmss.Unforgeability.QueryCounts) := do
+    OracleComp (Game.World B) (Game.Outcome × Unforgeability.QueryCounts) := do
   let (outcome, laterHashes) ← Game.countAllHashes (Game.afterKeygen scheme adversary keys)
   return (outcome, Game.sourceCounts outcome keygenHashes laterHashes)
 
@@ -475,12 +475,12 @@ theorem runBySource_evalDistEq (b : SchemeBridge e SA SB)
     (adversary : Game.Adversary B PKB) :
     Game.runBySource SB adversary =ᵈ Game.runBySource SA (adapt b adversary) := by
   calc Game.runBySource SB adversary
-      = Xmss.RandomOracleModel.run (Game.countAllHashes SB.keygen >>= fun r =>
+      = RandomOracleModel.run (Game.countAllHashes SB.keygen >>= fun r =>
           afterKeygenBySource SB adversary r.1 r.2) := rfl
-    _ =ᵈ Xmss.RandomOracleModel.run (Game.countAllHashes (simulateQ (relabel e) SA.keygen) >>=
+    _ =ᵈ RandomOracleModel.run (Game.countAllHashes (simulateQ (relabel e) SA.keygen) >>=
           fun r => afterKeygenBySource SB adversary (b.sk r.1.1, b.pk r.1.2) r.2) :=
         (b.keygen _).symm
-    _ = Xmss.RandomOracleModel.run
+    _ = RandomOracleModel.run
           (simulateQ (relabel e) (Game.experimentBySource SA (adapt b adversary))) := by
         rw [simulateQ_relabel_experimentBySource]
     _ =ᵈ Game.runBySource SA (adapt b adversary) := run_simulateQ_relabel e he _
@@ -499,7 +499,7 @@ of `B` and the two schemes are bridged along `e`, every security bit of the `A` 
 the `B` scheme, in every counting mode. -/
 theorem hasSecurityBits_of_bridge (b : SchemeBridge e SA SB)
     (he : (e <$> ($ᵗ A : ProbComp A)) =ᵈ ($ᵗ B : ProbComp B))
-    {Z : Finset Xmss.Unforgeability.QueryKind} {bits : ℕ}
+    {Z : Finset Unforgeability.QueryKind} {bits : ℕ}
     (h : Game.HasSecurityBits SA Z bits) : Game.HasSecurityBits SB Z bits := by
   intro q hq adversary hlimit hbound
   have hE := experiment_evalDistEq b he adversary

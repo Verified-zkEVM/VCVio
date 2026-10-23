@@ -245,7 +245,7 @@ theorem accepted_ge (w : Bool × VerifyState)
     rw [rom_verify_eq, support_map]
     exact ⟨w, hw, rfl⟩
   have hcount : (w.1, (Multiplicative.toAdd w.2.1).1) ∈ support
-      ((simulateQ (Xmss.RandomOracleModel.impl Bytes HashOutput)
+      ((simulateQ (RandomOracleModel.impl Bytes HashOutput)
         (countQueries VerificationBudget.verificationCost
           (Scheme.verify (m := OracleComp OracleWorld) pk request wire))).run' cache) := by
     rw [show countQueries VerificationBudget.verificationCost
