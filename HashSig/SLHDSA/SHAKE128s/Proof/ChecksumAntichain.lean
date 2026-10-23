@@ -9,21 +9,31 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.Checksum
 public import Mathlib.Data.BitVec
 
-/-! The standard checksum prevents obtaining a different message by advancing every chain. -/
+/-!
+# The WOTS+ encoding is an antichain
+
+The WOTS+ checksum makes the encodings of distinct messages incomparable in the componentwise
+order: if every chain value of one encoding is at least the corresponding value of another, the
+two messages are equal (`eq_of_encode_le`). Hence a forgery on a different message must use an
+earlier value on some chain than the signed one (`exists_decreased_digit`).
+-/
 
 @[expose] public section
 
 namespace SlhDsaSecurity.Checksum
 
+/-- The first `messageDigits` entries of the encoding are the message's base-16 digits. -/
 theorem encode_messageDigit (message : Digest) (i : Fin messageDigits) :
     encode message (Fin.castAdd checksumDigits i) = messageDigit message i := by
-  simp only [encode, Fin.val_castAdd, dif_pos i.isLt]
+  simp only [encode, Fin.val_castAdd, dite_eq_left i.isLt]
 
+/-- The last `checksumDigits` entries of the encoding are the base-16 digits of the checksum. -/
 theorem encode_checksumDigit (message : Digest) (i : Fin checksumDigits) :
     encode message (Fin.natAdd messageDigits i) =
       checksumDigit (checksum (messageDigit message)) i := by
   simp [encode]
 
+/-- A message digest is determined by its base-16 digits. -/
 theorem messageDigit_injective : Function.Injective messageDigit := by
   intro left right hdigits
   apply BitVec.eq_of_getLsbD_eq
@@ -43,6 +53,8 @@ theorem messageDigit_injective : Function.Injective messageDigit := by
   simpa only [BitVec.getLsbD_extractLsb', show winternitzBits = 4 from rfl,
     decide_eq_true hoffsetBit, Bool.true_and, hoffset] using hlocalBit
 
+/-- A value below `w ^ checksumDigits` is the base-16 number formed by its three checksum
+digits. -/
 theorem checksum_eq_digits (csum : Nat) (hcsum : csum < w ^ checksumDigits) :
     csum = w ^ 2 * (checksumDigit csum ⟨0, by decide⟩).val +
       w * (checksumDigit csum ⟨1, by decide⟩).val +
@@ -50,6 +62,8 @@ theorem checksum_eq_digits (csum : Nat) (hcsum : csum < w ^ checksumDigits) :
   norm_num [checksumDigit, checksumDigits, w, winternitzBits] at *
   omega
 
+/-- Among values below `w ^ checksumDigits`, the componentwise order on checksum digits implies
+the order on values. -/
 theorem checksum_le_of_digits_le {left right : Nat}
     (hleft : left < w ^ checksumDigits) (hright : right < w ^ checksumDigits)
     (hdigits : ∀ j, checksumDigit left j ≤ checksumDigit right j) : left ≤ right := by

@@ -75,7 +75,6 @@ theorem handler_claims_run (lenient : Bool) (setup : Setup) (forgery : Forgery) 
     ((handler lenient setup) (Sum.inr forgery)).run p =
       (pure ((), claimsStep setup p forgery) : ProbComp (Unit × (St × Bool))) := rfl
 
-set_option maxHeartbeats 1000000 in
 /-- **The lenient game is its adversary's phase, then the verifier, then the claims.** -/
 theorem lenient_eq (setup : Setup) (adversary : Adversary) (limit : Nat) :
     (simulateQ (handler true setup) (shareComp adversary limit setup.pk)).run (St.start, false) =
@@ -122,7 +121,6 @@ theorem rel_start (setup : Setup) : Rel setup (1, [], setup.warm) (St.start, fal
   log := rfl
   record := by simp
 
-set_option maxHeartbeats 2000000 in
 /-- **The capped real game and the lenient game, coupled.** -/
 theorem couple_whole (setup : Setup) (hgood : setup.Good) (adversary : Adversary) (limit : Nat) :
     RelTriple (SharePresent.realFlat (ShareRealCap.capAdv adversary limit) (setup.sk, setup.pk)
@@ -137,7 +135,8 @@ theorem couple_whole (setup : Setup) (hgood : setup.Good) (adversary : Adversary
   obtain ⟨⟨hforgery, hrel⟩, ha⟩ := hza
   have hinvA : Inv setup a.2 := SignedWatch.run_invariant (ShareFlag.advImpl true setup)
     (Inv setup) (inv_adv setup hgood) _ (St.start, false) (inv_start setup) a ha
-  have hstartV : RelV setup a.2.1.log a.2.1.served (Multiplicative.toAdd z.2.1).2 (1, z.2.2.2) a.2 :=
+  have hstartV :
+      RelV setup a.2.1.log a.2.1.served (Multiplicative.toAdd z.2.1).2 (1, z.2.2.2) a.2 :=
     ⟨hrel.cache, rfl, rfl, hrel.record, by simp⟩
   rw [hforgery]
   refine relTriple_bind (relTriple_support_right (relTriple_simulateQ_run

@@ -53,7 +53,6 @@ def ForgetsAlong (π : S → S') (outer : QueryImpl OracleWorld (StateT S ProbCo
     (fun z : β × S => (z.1, π z.2)) <$> (simulateQ outer computation).run state =
       (simulateQ outer' computation).run (π state)
 
-set_option maxHeartbeats 1000000 in
 /-- **One step of the bracketed phase is one step of the unbracketed one, through `π`.** The
 adversary's step is the fused step unchanged; the signing step brackets, and `π` cannot see
 the bracket. -/
@@ -73,15 +72,15 @@ theorem run_fuseServing_step_map (π : S → S')
       ((fuseServing outer inner before after) queried).run (accumulated, log, state) =
       ((fuse outer' inner) queried).run (accumulated, log, π state) := by
   rcases queried with world | request
-  · show (fun step : (OracleWorld + SigningSpec).Range (Sum.inl world) × (ω × SigningLog × S) =>
-        (step.1, (step.2.1, step.2.2.1, π step.2.2.2))) <$>
+  · change (fun step : (OracleWorld + SigningSpec).Range (Sum.inl world) ×
+        (ω × SigningLog × S) => (step.1, (step.2.1, step.2.2.1, π step.2.2.2))) <$>
       ((fuse outer inner) (Sum.inl world)).run (accumulated, log, state) = _
     rw [fuse_run, fuse_run, map_eq_bind_pure_comp, bind_assoc,
       ← hforget (((inner (Sum.inl world)).run).run log) state, map_eq_bind_pure_comp, bind_assoc]
     refine bind_congr fun step => ?_
     simp [Function.comp_def]
-  · show (fun step : (OracleWorld + SigningSpec).Range (Sum.inr request) × (ω × SigningLog × S) =>
-        (step.1, (step.2.1, step.2.2.1, π step.2.2.2))) <$>
+  · change (fun step : (OracleWorld + SigningSpec).Range (Sum.inr request) ×
+        (ω × SigningLog × S) => (step.1, (step.2.1, step.2.2.1, π step.2.2.2))) <$>
       ((simulateQ outer (((inner (Sum.inr request)).run).run log)).run (before request state) >>=
         fun step => (pure (step.1.1.1, (accumulated * step.1.1.2, step.1.2, after step.2)) :
           ProbComp _)) = _
@@ -91,7 +90,6 @@ theorem run_fuseServing_step_map (π : S → S')
       ← hforget (((inner (Sum.inr request)).run).run log) (before request state)]
     simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
 
-set_option maxHeartbeats 1000000 in
 /-- **And therefore the whole phase.** -/
 theorem run_fuseServing_map (π : S → S')
     (outer : QueryImpl OracleWorld (StateT S ProbComp))
@@ -131,7 +129,6 @@ on the other side, rather than to collapse it, and concludes at `fuseServing` on
 `run_fuseServing_map` is the case where both target brackets are the identity.
 -/
 
-set_option maxHeartbeats 1000000 in
 /-- **One step of the bracketed phase, with the brackets carried through `π`.** -/
 theorem run_fuseServing_step_conj (π : S → S')
     (outer : QueryImpl OracleWorld (StateT S ProbComp))
@@ -151,7 +148,7 @@ theorem run_fuseServing_step_conj (π : S → S')
       ((fuseServing outer inner before after) queried).run (accumulated, log, state) =
       ((fuseServing outer' inner before' after') queried).run (accumulated, log, π state) := by
   rcases queried with world | request
-  · show (fun step : (OracleWorld + SigningSpec).Range (Sum.inl world) ×
+  · change (fun step : (OracleWorld + SigningSpec).Range (Sum.inl world) ×
         (ω × SigningLog × S) =>
         (step.1, (step.2.1, step.2.2.1, π step.2.2.2))) <$>
       ((fuse outer inner) (Sum.inl world)).run (accumulated, log, state) =
@@ -161,7 +158,7 @@ theorem run_fuseServing_step_conj (π : S → S')
       bind_assoc]
     refine bind_congr fun step => ?_
     simp [Function.comp_def]
-  · show (fun step : (OracleWorld + SigningSpec).Range (Sum.inr request) ×
+  · change (fun step : (OracleWorld + SigningSpec).Range (Sum.inr request) ×
         (ω × SigningLog × S) =>
         (step.1, (step.2.1, step.2.2.1, π step.2.2.2))) <$>
       ((simulateQ outer (((inner (Sum.inr request)).run).run log)).run (before request state) >>=
@@ -174,7 +171,6 @@ theorem run_fuseServing_step_conj (π : S → S')
       ← hforget (((inner (Sum.inr request)).run).run log) (before request state)]
     simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def, hafter]
 
-set_option maxHeartbeats 1000000 in
 /-- **And therefore the whole phase, with the brackets carried.** -/
 theorem run_fuseServing_conj (π : S → S')
     (outer : QueryImpl OracleWorld (StateT S ProbComp))

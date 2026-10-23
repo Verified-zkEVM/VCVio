@@ -32,28 +32,36 @@ def WithinBounds (address : Address) : Prop :=
   address.keyPair.toNat < 2 ^ 9 ∧ address.chainOrHeight.toNat < 2 ^ 6 ∧
   address.hashOrIndex.toNat < 2 ^ 16
 
-/-- Includes unused type code 7 and a few unused indices, to keep counting simple. -/
+/-- The field widths of a bounded address: layer, tree, type code, key pair, chain or height,
+and hash or index. It includes the unused type code 7 and a few unused indices, to keep counting
+simple. -/
 abbrev Prefix := BitVec 3 × BitVec 54 × BitVec 3 × BitVec 9 × BitVec 6 × BitVec 16
 
+/-- The byte encoding of a bounded address, each field zero-extended to its full width. -/
 def prefixBytes (parts : Prefix) : Bytes :=
   bytesBE 4 (parts.1.setWidth 32) ++ bytesBE 12 (parts.2.1.setWidth 96) ++
     bytesBE 4 (parts.2.2.1.setWidth 32) ++ bytesBE 4 (parts.2.2.2.1.setWidth 32) ++
     bytesBE 4 (parts.2.2.2.2.1.setWidth 32) ++ bytesBE 4 (parts.2.2.2.2.2.setWidth 32)
 
+/-- The concatenated bytes of a public seed and public root. -/
 def publicBytes (pair : Digest × Digest) : Bytes := bytesBE n pair.1 ++ bytesBE n pair.2
 
-def Possible (pair : Digest × Digest) : Prop := ∃ parts : Prefix, publicBytes pair = prefixBytes parts
+/-- A public seed and root whose concatenation is the encoding of some bounded address. -/
+def Possible (pair : Digest × Digest) : Prop :=
+  ∃ parts : Prefix, publicBytes pair = prefixBytes parts
 
 private theorem restore_width {wide narrow : Nat} (value : BitVec wide)
     (h : value.toNat < 2 ^ narrow) : (value.setWidth narrow).setWidth wide = value := by
   apply BitVec.eq_of_toNat_eq
   simp only [BitVec.toNat_setWidth, Nat.mod_eq_of_lt h, Nat.mod_eq_of_lt value.isLt]
 
+/-- Every address within the bounds is encoded as some `Prefix`. -/
 theorem bounded_address_has_prefix (address : Address) (h : WithinBounds address) :
     ∃ parts : Prefix, address.toBytes = prefixBytes parts := by
   have hkind : address.kind.code.toNat < 2 ^ 3 := by cases address.kind <;> decide
   refine ⟨(address.layer.setWidth 3, address.tree.setWidth 54, address.kind.code.setWidth 3,
-    address.keyPair.setWidth 9, address.chainOrHeight.setWidth 6, address.hashOrIndex.setWidth 16), ?_⟩
+    address.keyPair.setWidth 9, address.chainOrHeight.setWidth 6,
+    address.hashOrIndex.setWidth 16), ?_⟩
   simp only [prefixBytes, restore_width _ h.1, restore_width _ h.2.1, restore_width _ hkind,
     restore_width _ h.2.2.1, restore_width _ h.2.2.2.1, restore_width _ h.2.2.2.2]
   rfl
@@ -67,9 +75,12 @@ theorem message_tweakable_overlap {randomizer seed : Digest} {pk : PublicKey}
       bytesBE n seed ++ (address.toBytes ++ payload) := by
     simpa only [Hashing.messageInput, Hashing.tweakableInput, List.append_assoc] using h
   obtain ⟨hrandomizer, hrest⟩ := List.append_inj heq (by simp)
-  obtain ⟨haddress, hmessage⟩ := List.append_inj hrest (by rw [List.length_append, length_bytesBE, length_bytesBE]; simp [n])
+  obtain ⟨haddress, hmessage⟩ := List.append_inj hrest
+    (by rw [List.length_append, length_bytesBE, length_bytesBE]; simp [n])
   exact ⟨bytesBE_injective n hrandomizer, haddress, hmessage⟩
 
+/-- A message input never equals a tweakable input at a bounded address, unless the public seed
+and root are `Possible`. -/
 theorem message_tweakable_ne {randomizer seed : Digest} {pk : PublicKey}
     {message payload : Bytes} {address : Address}
     (hpublic : ¬Possible (pk.seed, pk.root)) (haddress : WithinBounds address) :
@@ -81,18 +92,21 @@ theorem message_tweakable_ne {randomizer seed : Digest} {pk : PublicKey}
 /-- PRF_msg and structural hashing are disjoint whenever their first seed blocks differ. -/
 theorem randomizer_tweakable_ne {prf seed publicSeed : Digest}
     {message payload : Bytes} {address : Address} (hne : prf ≠ publicSeed) :
-    Hashing.randomizerInput prf seed message ≠ Hashing.tweakableInput publicSeed address payload := by
+    Hashing.randomizerInput prf seed message ≠
+      Hashing.tweakableInput publicSeed address payload := by
   intro heq
   have h : bytesBE n prf ++ (bytesBE n seed ++ message) =
       bytesBE n publicSeed ++ (address.toBytes ++ payload) := by
     simpa only [Hashing.randomizerInput, Hashing.tweakableInput, List.append_assoc] using heq
   exact hne (bytesBE_injective n (List.append_inj h (by simp)).1)
 
+/-- `publicBytes` is injective. -/
 theorem publicBytes_injective : Function.Injective publicBytes := by
   rintro ⟨seed, root⟩ ⟨seed', root'⟩ h
   obtain ⟨hseed, hroot⟩ := List.append_inj h (by simp)
   exact Prod.ext (bytesBE_injective n hseed) (bytesBE_injective n hroot)
 
+/-- A uniform seed and root hit any fixed byte string with probability at most `2 ^ -256`. -/
 theorem prob_publicBytes_eq_le (target : Bytes) :
     Pr{let pair ← ($ᵗ (Digest × Digest) : ProbComp _)}[publicBytes pair = target] ≤
       1 / ((2 ^ 256 : Nat) : ℝ≥0∞) := by

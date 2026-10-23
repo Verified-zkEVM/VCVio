@@ -70,7 +70,7 @@ theorem mem_record_countRecorded {α : Type} (computation : OracleComp OracleWor
     have hcache : result.2 = inner.2 := by rw [← heq]
     have hrecord : result.1.2 = verifierCost queried + inner.1.2 := by rw [← heq]
     rw [hrecord]
-    show probe ∈ (verifierCost queried).2 + inner.1.2.2
+    change probe ∈ (verifierCost queried).2 + inner.1.2.2
     by_cases hstepfresh : step.2 probe = none
     · exact Multiset.mem_add.mpr (Or.inr
         (ih step.1 step.2 inner hinner probe hstepfresh (by rw [← hcache]; exact hpresent)))
@@ -80,7 +80,6 @@ theorem mem_record_countRecorded {α : Type} (computation : OracleComp OracleWor
           queried_of_fresh_step queried cache step (by simpa using hstep) probe hfresh hstepfresh]
       simp [recordOf]
 
-set_option maxHeartbeats 800000 in
 /-- **An entry the verifier's phase files as a target is one of its own queries**, hence in the
 record it keeps. Who asked is a question the record answers, so this projects the sub-run to the
 shared oracle and asks it there — the recorder is needed only where the recording itself is the
@@ -115,10 +114,12 @@ Key generation's last line builds the pair, so its secret key carries the seed i
 the public key beside it. Both are definitional, and both are stated before the phase splits
 make `Scheme.keygenInternal` opaque. -/
 
+/-- Replayed key generation keeps the drawn `prfSeed` as the secret key's `prf`. -/
 theorem keygen_prf (cache : QueryCache HashSpec) (secretSeed prfSeed publicSeed : Digest) :
     (@Scheme.keygenInternal Id Id.instMonad (replayQuery cache)
       secretSeed prfSeed publicSeed).1.prf = prfSeed := rfl
 
+/-- Replayed key generation stores the public key it returns inside the secret key. -/
 theorem keygen_publicKey (cache : QueryCache HashSpec) (secretSeed prfSeed publicSeed : Digest) :
     (@Scheme.keygenInternal Id Id.instMonad (replayQuery cache)
         secretSeed prfSeed publicSeed).1.publicKey =
@@ -134,7 +135,6 @@ it installed is already in the record the run's value carries. -/
 attribute [local irreducible] Scheme.keygenInternal Scheme.verify Scheme.sign
   Security.signingOracle Security.countQueries
 
-set_option maxHeartbeats 1000000 in
 /-- **An entry the recorded game installed is the adversary's or the verifier's own query, key
 generation's, or a signing sub-run's.** The record is the one the run's own value carries. -/
 theorem provenance_recordedAfterSeeds (adversary : Adversary) (sds : Digest × Digest × Digest)
@@ -215,7 +215,6 @@ message-class" and "in the `PRF_msg` class at the real seed" are predicates on b
 settled by replay at the final cache. The digest case reads the **state**, and is read at the
 step the query was made at, from the signer's own sub-run. -/
 
-set_option maxHeartbeats 1000000 in
 /-- **Every target-recorded input is a query the record holds**, with no hypothesis.
 
 The game splits at its three sequencing points and each branch asks its question of the object
@@ -311,7 +310,7 @@ theorem hrecord (adversary : Adversary) :
         exact keygen_publicKey walk.2 walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2
       rcases hsource with hrecMem |
         ⟨framed, hrandomiser | ⟨mid, answer, hmid, -, -, hkeep, hqueries⟩⟩
-      · show entry.1 ∈ result.1.1.2
+      · change entry.1 ∈ result.1.1.2
         rw [show result.1.1.2 = (Multiplicative.toAdd phase.1.2).2 + verified.2.2 from by
           rw [houtcome]]
         exact Multiset.mem_add.mpr (Or.inl hrecMem)
@@ -330,7 +329,7 @@ theorem hrecord (adversary : Adversary) :
           · rw [hprf, hpk] at hmid
             exact hmid
           · rw [hdigest, hpk]
-  · show entry.1 ∈ result.1.1.2
+  · change entry.1 ∈ result.1.1.2
     rw [show result.1.1.2 = (Multiplicative.toAdd phase.1.2).2 + verified.2.2 from by
       rw [houtcome]]
     exact Multiset.mem_add.mpr (Or.inr hrec)

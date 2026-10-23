@@ -14,43 +14,56 @@ public import VCVio.OracleComp.Constructions.SampleableType.Measure
 /-!
 # Disclosures from an independent digest-view tape
 
-The experiment samples a uniform finite tape of full parsed digest views. These
-lemmas connect its actual disclosure sets to the occupancy and prefix-cap
-probability bounds. Coupling this experiment to an adaptive shared random oracle
-is a separate obligation.
+The experiment samples a uniform finite tape of full parsed digest views. These lemmas connect
+its actual disclosure sets to the occupancy and prefix-cap probability bounds: every disclosure
+set is bounded by the load of its instance (`disclosures_card_le_loads`), and the law of the
+loads of a uniform tape is exactly `ForsConcentration.uniformLoads` (`loads_probability`).
+Coupling this experiment to an adaptive shared random oracle is a separate obligation.
 -/
 
 @[expose] public section
 
 open OracleComp OracleSpec MeasureTheory ProbabilityTheory
-open scoped ENNReal Classical
+open scoped ENNReal
 
 noncomputable section
 
 namespace SlhDsaSecurity.ForsDisclosureTape
 
+/-- The parsed FORS view of a message digest. -/
 abbrev View := ForsCoverage.View
+/-- The FORS instance selected by a message digest. -/
 abbrev Instance := ForsCoverage.Instance
+/-- The index of one of the fourteen FORS trees. -/
 abbrev Tree := ForsCoverage.Tree
+/-- A leaf index inside one FORS tree. -/
 abbrev Leaf := ForsCoverage.Leaf
+/-- A tape of one digest view per signing request. -/
 abbrev Tape (requests : Nat) := Fin requests → View
+/-- The instances selected by each request. -/
 abbrev InstanceWord (requests : Nat) := Fin requests → Instance
+/-- The leaves selected by each request in every tree. -/
 abbrev LeafWord (requests : Nat) := Fin requests → Tree → Leaf
 
+/-- The instance word of a tape. -/
 def instanceWord {requests : Nat} (tape : Tape requests) : InstanceWord requests :=
   fun j => (tape j).1
 
+/-- The number of requests on a tape that select instance `i`. -/
 def loads {requests : Nat} (tape : Tape requests) (i : Instance) : Nat :=
   (Finset.univ.filter (fun j => (tape j).1 = i)).card
 
+/-- The leaves a tape discloses in each tree of each instance. -/
 def disclosures {requests : Nat} (tape : Tape requests) : ForsCoverage.Disclosures :=
   fun i tree => (Finset.univ.filter (fun j => (tape j).1 = i)).image
     (fun j => (tape j).2 tree)
 
+/-- An instance discloses at most as many leaves per tree as it has requests. -/
 theorem disclosures_card_le_loads {requests : Nat} (tape : Tape requests)
     (i : Instance) (tree : Tree) : (disclosures tape i tree).card ≤ loads tape i :=
   Finset.card_image_le
 
+/-- The loads of a tape are the word loads of its instance word. -/
 theorem loads_eq_wordLoads {requests : Nat} (tape : Tape requests) :
     loads tape = ForsConcentration.wordLoads (instanceWord tape) := by
   funext i
@@ -58,12 +71,14 @@ theorem loads_eq_wordLoads {requests : Nat} (tape : Tape requests) :
     Finsupp.finsetSum_apply, Finsupp.single_apply, Finset.card_eq_sum_ones,
     Finset.sum_filter, instanceWord]
 
+/-- A tape splits into its instance word and its leaf word. -/
 def splitTape (requests : Nat) : Tape requests ≃ InstanceWord requests × LeafWord requests where
   toFun tape := (instanceWord tape, fun j => (tape j).2)
   invFun pair j := (pair.1 j, pair.2 j)
   left_inv := by intro tape; rfl
   right_inv := by intro pair; rfl
 
+/-- The instance word of a uniform tape is a uniform instance word. -/
 theorem evalDist_instanceWord_uniform (requests : Nat) :
     (instanceWord <$> ($ᵗ Tape requests : ProbComp (Tape requests))) =ᵈ
       ($ᵗ InstanceWord requests : ProbComp (InstanceWord requests)) := by

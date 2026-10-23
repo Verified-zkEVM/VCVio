@@ -10,16 +10,26 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ForsDisclosureTape
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsAdaptiveTargets
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 
-/-! A smaller load cap improves fresh-target coverage to 2^-129, at a larger tail cost. -/
+/-!
+# A sharper FORS load cap
+
+A smaller cap on the FORS load potential, `∑ i, loads i ^ 14 ≤ 2 ^ 102`, improves the
+fresh-target coverage bound to `2 ^ -129` (`ForsCoverage.fresh_coverage_le_sharper`), at a larger
+tail cost: the cap fails with probability at most `2 ^ -127` under Poisson loads
+(`ForsConcentration.poisson_load_tail_sharper`, by a sixth-moment Markov bound around the exact
+mean), hence at most `2 ^ -126` for up to `5 * 2 ^ 62` uniform choices
+(`ForsConcentration.uniform_load_tail_sharper_of_le`) and for the disclosure tape
+(`ForsDisclosureTape.bad_load_probability_sharper`).
+-/
 
 @[expose] public section
 
 open MeasureTheory ProbabilityTheory OracleComp OracleSpec
-open scoped NNReal ENNReal Classical
+open scoped NNReal ENNReal
 
 namespace SlhDsaSecurity.ForsConcentration
 
-set_option maxRecDepth 10000 in
+/-- The Touchard polynomial value `T₁₄(3)`, the exact fourteenth moment of a `Poisson(3)` load. -/
 theorem touchard_fourteen_three : ForsMoments.touchard 14 3 = 461101962108 := by
   rw [ForsMoments.touchard_eq_cached]
   decide +kernel
@@ -102,7 +112,8 @@ end SlhDsaSecurity.ForsConcentration
 
 namespace SlhDsaSecurity.ForsCoverage
 
-/-- Smaller load cap for use when the joint query accounting needs a smaller coverage coefficient. -/
+/-- Smaller load cap for use when the joint query accounting needs a smaller coverage
+coefficient. -/
 theorem fresh_coverage_le_sharper (revealed : Disclosures) (loads : Instance → Nat)
     (hload : ∀ index tree, (revealed index tree).card ≤ loads index)
     (hmoment : ∑ index, loads index ^ 14 ≤ 2 ^ 102) :
@@ -111,7 +122,7 @@ theorem fresh_coverage_le_sharper (revealed : Disclosures) (loads : Instance →
   have hcount : (∑ index : Instance, ∏ tree : Tree, (revealed index tree).card) ≤ 2 ^ 102 := by
     apply le_trans (Finset.sum_le_sum fun index _ => ?_) hmoment
     calc
-      _ ≤ ∏ _ : Tree, loads index := Finset.prod_le_prod' (fun tree _ => hload index tree)
+      _ ≤ ∏ _ : Tree, loads index := Finset.prod_le_prod (fun tree _ => hload index tree)
       _ = loads index ^ 14 := by
         rw [Finset.prod_const, Finset.card_univ, Fintype.card_fin]
         rfl
@@ -127,15 +138,13 @@ end SlhDsaSecurity.ForsCoverage
 
 namespace SlhDsaSecurity.ForsDisclosureTape
 
+/-- A disclosure tape of at most `5 * 2 ^ 62` requests exceeds the smaller load cap with
+probability at most `2 ^ -126`. -/
 theorem bad_load_probability_sharper (requests : Nat) (hrequests : requests ≤ 5 * 2 ^ 62) :
-    Pr{let tape ← ($ᵗ Tape requests : ProbComp (Tape requests))}[2 ^ 102 < ∑ i, loads tape i ^ 14] ≤ (1 : ℝ≥0∞) / 2 ^ 126 := by
+    Pr{let tape ← ($ᵗ Tape requests : ProbComp (Tape requests))}[
+        2 ^ 102 < ∑ i, loads tape i ^ 14] ≤
+      (1 : ℝ≥0∞) / 2 ^ 126 := by
   rw [loads_probability (fun counts => 2 ^ 102 < ∑ i, counts i ^ 14)]
   exact ForsConcentration.uniform_load_tail_sharper_of_le requests hrequests
 
 end SlhDsaSecurity.ForsDisclosureTape
-
-namespace SlhDsaSecurity.ForsLeaveOneOut
-
-open ForsAdaptiveTargets
-
-end SlhDsaSecurity.ForsLeaveOneOut

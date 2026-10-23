@@ -38,6 +38,7 @@ open Security
 /-- The hash calls, among the game's oracle queries. -/
 def IsHash (queried : OracleWorld.Domain) : Prop := queried.isRight = true
 
+/-- Whether a query is a hash call is decidable. -/
 instance : DecidablePred IsHash := fun queried => by unfold IsHash; infer_instance
 
 /-! ## Upper bounds, structurally -/

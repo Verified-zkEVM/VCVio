@@ -13,9 +13,10 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ReplayGate
 # The walk, as a drawn table
 
 The walk is a uniform draw of a cells-and-padding pair:
-`CanonicalGraph.Programming.warmup_seed_uniform` says so, and `walkOfTable` is the walk that pair determines. Its secret seed is the table's own
-`secretSeed` cell, its cells are the table's cells, and its cache is the canonical entries of
-them. `evalDist_graphWalk` is the whole of what the shape change costs: one equality of laws
+`CanonicalGraph.Programming.warmup_seed_uniform` says so, and `walkOfTable` is the walk that
+pair determines. Its secret seed is the table's own `secretSeed` cell, its cells are the
+table's cells, and its cache is the canonical entries of them. `evalDist_graphWalk` is the
+whole of what the shape change costs: one equality of laws
 `𝒟[graphWalk] = 𝒟[tableWalk]`, after which the walk's randomness is a `$ᵗ (Cells × Padding)` a
 charge that draws its table itself can consume.
 

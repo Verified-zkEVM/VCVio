@@ -56,6 +56,7 @@ noncomputable def fuse (outer : QueryImpl OracleWorld (StateT S ProbComp))
     let step ← (simulateQ outer (((inner queried).run).run state.2.1)).run state.2.2
     pure (step.1.1.1, (state.1 * step.1.1.2, step.1.2, step.2))
 
+/-- One step of the fused handler, unfolded. -/
 theorem fuse_run (outer : QueryImpl OracleWorld (StateT S ProbComp))
     (inner : QueryImpl (OracleWorld + SigningSpec)
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld))))
@@ -64,7 +65,6 @@ theorem fuse_run (outer : QueryImpl OracleWorld (StateT S ProbComp))
       (simulateQ outer (((inner queried).run).run state.2.1)).run state.2.2 >>= fun step =>
         pure (step.1.1.1, (state.1 * step.1.1.2, step.1.2, step.2)) := rfl
 
-set_option maxHeartbeats 1000000 in
 /-- **The fusion is an equality of computations.** Running the phase's two handlers one after the
 other is running the fused one, with the writer's accumulation multiplied onto what the state
 came in with. -/

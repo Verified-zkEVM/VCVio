@@ -9,12 +9,21 @@ module
 public import Mathlib.Data.Nat.Bitwise
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 
-/-! Ordered authentication paths recover the root of any deterministic binary tree. -/
+/-!
+# Authentication paths in binary trees
+
+For any binary tree given by a node function `nodes height index` whose parents are computed
+from their two children, folding an ordered authentication path from a leaf upwards recovers the
+node above that leaf at every height (`recover_path`). The remaining lemmas are the index
+arithmetic this uses, together with `foldlM_id`, which reads a monadic fold in `Id` as a plain
+fold.
+-/
 
 @[expose] public section
 
 namespace SlhDsaSecurity.Correctness
 
+/-- A monadic left fold in `Id` is the plain left fold. -/
 theorem foldlM_id {α β : Type} (f : α → β → Id α) (initial : α) (items : List β) :
     items.foldlM f initial = items.foldl (fun value item => f value item) initial := by
   induction items generalizing initial with
@@ -22,6 +31,8 @@ theorem foldlM_id {α β : Type} (f : α → β → Id α) (initial : α) (items
   | cons item items ih =>
       simpa only [List.foldlM_cons, List.foldl_cons, bind] using ih (f initial item)
 
+/-- Folding over `List.finRange size` a step that advances `values j` to `values (j + 1)`
+reaches `values size`. -/
 theorem finRange_foldl {α : Type} (size : Nat) (values : Nat → α)
     (step : α → Fin size → α)
     (hstep : ∀ j, step (values j.val) j = values (j.val + 1)) :
@@ -34,6 +45,8 @@ theorem finRange_foldl {α : Type} (size : Nat) (values : Nat → α)
       rw [ih (fun value j => step value j.castSucc) (fun j => hstep j.castSucc)]
       exact hstep (Fin.last size)
 
+/-- Combining a node with its sibling, in the order given by the parity of its index,
+reconstructs its parent. -/
 theorem parent_reconstruction {α : Type} (nodes : Nat → Nat → α)
     (combine : Nat → Nat → α → α → α)
     (hnodes : ∀ height index, nodes (height + 1) index =
@@ -47,20 +60,23 @@ theorem parent_reconstruction {α : Type} (nodes : Nat → Nat → α)
   rw [hnodes]
   by_cases heven : index % 2 = 0
   · have hxor : Nat.xor index 1 = index + 1 := Nat.xor_one_of_even (Nat.even_iff.mpr heven)
-    rw [if_pos heven, hxor]
+    rw [ite_eq_left heven, hxor]
     have hindex : index = 2 * (index / 2) := by omega
     rw [← hindex]
   · have hodd : index % 2 = 1 := by omega
     have hxor : Nat.xor index 1 = index - 1 := Nat.xor_one_of_odd (Nat.odd_iff.mpr hodd)
-    rw [if_neg heven, hxor]
+    rw [ite_eq_right heven, hxor]
     have hindex : index = 2 * (index / 2) + 1 := by omega
     have hsibling : index - 1 = 2 * (index / 2) := by omega
     rw [hsibling, ← hindex]
 
+/-- The ancestor index one level higher is half the current ancestor index. -/
 theorem div_pow_succ (index height : Nat) :
     index / 2 ^ (height + 1) = (index / 2 ^ height) / 2 := by
   rw [pow_succ, Nat.div_div_eq_div_mul]
 
+/-- Shifting the index of a leaf in tree `tree` of a forest of height-`height` trees down by
+`level ≤ height` levels shifts the tree offset and the local leaf index separately. -/
 theorem offset_div_pow (tree leaf height level : Nat) (hle : level ≤ height) :
     (tree * 2 ^ height + leaf) / 2 ^ level =
       tree * 2 ^ (height - level) + leaf / 2 ^ level := by
@@ -69,12 +85,14 @@ theorem offset_div_pow (tree leaf height level : Nat) (hle : level ≤ height) :
   rw [hp, ← Nat.mul_assoc, Nat.add_comm, Nat.add_mul_div_right _ _ (Nat.pow_pos (by decide))]
   omega
 
+/-- A tree offset strictly below the top level is even. -/
 theorem offset_even (tree height level : Nat) (hlt : level < height) :
     (tree * 2 ^ (height - level)) % 2 = 0 := by
   obtain ⟨remaining, hremaining⟩ := Nat.exists_eq_succ_of_ne_zero
     (show height - level ≠ 0 by omega)
   rw [hremaining, pow_succ, ← Nat.mul_assoc, Nat.mul_mod_left]
 
+/-- Flipping the low bit commutes with adding an even offset. -/
 theorem xor_add_even (offset index : Nat) (heven : offset % 2 = 0) :
     Nat.xor (offset + index) 1 = offset + Nat.xor index 1 := by
   have hmod : (offset + index) % 2 = index % 2 := by
@@ -93,7 +111,8 @@ theorem xor_add_even (offset index : Nat) (heven : offset % 2 = 0) :
     rw [hleft, hright]
     omega
 
-/-- The full fold is the actual verifier's increasing-height path traversal. -/
+/-- Folding the authentication path of leaf `index` in increasing height, as the verifier does,
+recovers its ancestor at height `height`. -/
 theorem recover_path {α : Type} (nodes : Nat → Nat → α)
     (combine : Nat → Nat → α → α → α)
     (hnodes : ∀ height index, nodes (height + 1) index =

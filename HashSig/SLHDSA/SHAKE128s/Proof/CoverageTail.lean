@@ -36,8 +36,6 @@ secret-bearing `PRF` input directly — an input-side event, charged elsewhere.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.CoverageTail
 
 open Security CanonicalGraph WarmedGame
@@ -87,8 +85,8 @@ theorem parse_instance_eq_iff (left right : HashOutput) :
           (MessageDigest.treeIndex right ++ MessageDigest.leafIndex right).getLsbD
             (bit + subtreeHeight) := by rw [happend]
       rw [BitVec.getLsbD_append, BitVec.getLsbD_append,
-        if_neg (Nat.not_lt.mpr (Nat.le_add_left subtreeHeight bit)),
-        if_neg (Nat.not_lt.mpr (Nat.le_add_left subtreeHeight bit)),
+        ite_eq_right (Nat.not_lt.mpr (Nat.le_add_left subtreeHeight bit)),
+        ite_eq_right (Nat.not_lt.mpr (Nat.le_add_left subtreeHeight bit)),
         Nat.add_sub_cancel] at hb
       exact hb
     · apply BitVec.eq_of_getLsbD_eq
@@ -96,10 +94,11 @@ theorem parse_instance_eq_iff (left right : HashOutput) :
       have hb : (MessageDigest.treeIndex left ++ MessageDigest.leafIndex left).getLsbD bit =
           (MessageDigest.treeIndex right ++ MessageDigest.leafIndex right).getLsbD bit := by
         rw [happend]
-      rw [BitVec.getLsbD_append, BitVec.getLsbD_append, if_pos hbit, if_pos hbit] at hb
+      rw [BitVec.getLsbD_append, BitVec.getLsbD_append, ite_eq_left hbit, ite_eq_left hbit] at hb
       exact hb
   · rintro ⟨htree, hleaf⟩
-    simp [MessageDigest.parse, htree, hleaf]
+    unfold MessageDigest.parse
+    rw [htree, hleaf]
 
 /-! ## No message input predates the tail
 

@@ -59,7 +59,6 @@ theorem romWithSplit_run (inClass : Bytes → Prop) (inside outside : QueryKind)
         (pure (step.1, (step.2, state.2 + splitCost inClass inside outside queried)) :
           ProbComp (OracleWorld.Range queried × (QueryCache HashSpec × Counts))) := rfl
 
-set_option maxHeartbeats 1000000 in
 /-- **Its slots are `countQueries (splitCost …)`'s count.** `CountedHandler.run_romWithCount_count`
 with the pair in place of the number; the counter the run started at is carried so that the
 tail's three stages add up. -/
@@ -87,7 +86,7 @@ theorem run_romWithSplit_count (inClass : Bytes → Prop) (inside outside : Quer
     refine congrArg (fun f => f <$> (simulateQ KeygenUniform.rom
       (countQueries (splitCost inClass inside outside) (next inner.1))).run inner.2)
       (funext fun result => ?_)
-    show ((result.1.1, state.2 + splitCost inClass inside outside queried + result.1.2),
+    change ((result.1.1, state.2 + splitCost inClass inside outside queried + result.1.2),
         result.2) =
       ((result.1.1, state.2 + (splitCost inClass inside outside queried + result.1.2)),
         result.2)
@@ -112,7 +111,7 @@ theorem splitHandlerAt_step_forget (inClass : Bytes → Prop) (inside outside : 
       (romWithSplit inClass inside outside queried).run (state.1.cache, state.2.2) := by
   rw [SplitTail.splitHandlerAt, SplitCounted.splitCarrierRecorder, SplitCounted.withSplit_run,
     romWithSplit_run, map_eq_bind_pure_comp, bind_assoc]
-  show _ = (KeygenUniform.rom queried).run
+  change _ = (KeygenUniform.rom queried).run
       (CacheView.cacheOf (σ := HandlerCarrier.State) (state.1, state.2.1).1) >>= _
   rw [← CarrierFiles.noticingRecorderOf_forget_step (keyAt walk) (rightKeep walk) queried
       (state.1, state.2.1), map_eq_bind_pure_comp, bind_assoc]
@@ -167,10 +166,12 @@ theorem rom_middle_forget {α : Type} (inClass : Bytes → Prop) (inside outside
       (simulateQ (fuse (romWithSplit inClass inside outside) inner) computation).run
         (accumulated, log, (state.1.cache, state.2.2)) :=
   ServingForget.run_fuseServing_map (fun s : SplitCountedState => (s.1.cache, s.2.2))
-    (SplitTail.splitHandlerAt inClass inside outside rightKeep walk) (romWithSplit inClass inside outside)
+    (SplitTail.splitHandlerAt inClass inside outside rightKeep walk)
+    (romWithSplit inClass inside outside)
     inner ServedAgreement.startServingOn ServedAgreement.stopServingOn
     startServingOn_cacheSplit stopServingOn_cacheSplit
-    (forgetsAlong_romWithSplit inClass inside outside rightKeep walk) computation accumulated log state
+    (forgetsAlong_romWithSplit inClass inside outside rightKeep walk) computation accumulated log
+    state
 
 /-! ## The three stages as binds -/
 
@@ -196,7 +197,6 @@ theorem rom_first_stage_bind (inClass : Bytes → Prop) (inside outside : QueryK
     map_eq_bind_pure_comp]
   rfl
 
-set_option maxHeartbeats 1000000 in
 theorem rom_middle_stage_bind (inClass : Bytes → Prop) (inside outside : QueryKind)
     (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) (walk : Walk)
     (adversary : Adversary) (keys : (SecretKey × PublicKey) × SplitCountedState) :
@@ -218,7 +218,6 @@ theorem rom_middle_stage_bind (inClass : Bytes → Prop) (inside outside : Query
       (adversary.main keys.1.2) 1 [] keys.2, Functor.map_map, map_eq_bind_pure_comp]
   rfl
 
-set_option maxHeartbeats 1000000 in
 theorem rom_last_stage_bind (inClass : Bytes → Prop) (inside outside : QueryKind)
     (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) (walk : Walk)
     (pk : PublicKey) (forgery : Forgery) (state : SplitCountedState) :
@@ -246,7 +245,6 @@ handler. -/
 attribute [local irreducible] RecordedTail.recordedAfterSeeds Scheme.keygenInternal
   Scheme.verify Scheme.sign Security.countQueries
 
-set_option maxHeartbeats 1000000 in
 /-- **The split-counted shared oracle's slots are `countQueries (splitCost …)`'s**, at the run
 the tail is compared against. `CarrierTail.recordedTail_eq_counted` at the pair: the run starts
 at an empty counter, so the counter it started from adds nothing. -/
@@ -264,7 +262,6 @@ theorem run_romWithSplit_recorded (inClass : Bytes → Prop) (inside outside : Q
         ((r.1.1, (0 : Counts) + r.1.2), r.2)) = id from funext fun r => by rw [zero_add]; rfl,
     id_map]
 
-set_option maxHeartbeats 1000000 in
 /-- **The split tail is a split-counted run of the shared oracle**, once its recordings are
 dropped and its slots are read out of the state. `CarrierTail.forget_carrierTail` at the pair,
 matched stage for stage by the three bind laws above. -/

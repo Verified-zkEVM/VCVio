@@ -103,12 +103,14 @@ the way `CarrierRecordings.step_right_mem` reports its entry's caching alongside
 def LeftServed (state : CountedState) : Prop :=
   ∀ entry ∈ state.2.1.1, HandlerCarrier.Served state.1 entry.1
 
+/-- The empty recording at a fresh carrier is served. -/
 theorem leftServed_start (cache : QueryCache HashSpec) :
     LeftServed (startAt cache, (([], []), 0)) := by
   intro entry hentry
   exact absurd hentry (by simp)
 
 open scoped Classical in
+/-- A step of the counted carrier recorder keeps the disclosing recording served. -/
 theorem step_leftServed (rightKeep : Bytes → HandlerCarrier.State → Prop)
     (queried : OracleWorld.Domain) (state : CountedState)
     (step : OracleWorld.Range queried × CountedState)
@@ -123,6 +125,7 @@ theorem step_leftServed (rightKeep : Bytes → HandlerCarrier.State → Prop)
       hstep).2 entry.1 (hinv entry hprior)
   · exact hserved
 
+/-- Starting to serve a request keeps the disclosing recording served. -/
 theorem leftServed_startServingOn (request : Message) (state : CountedState)
     (hinv : LeftServed state) :
     LeftServed (ServedAgreement.startServingOn request state) := by
@@ -131,11 +134,11 @@ theorem leftServed_startServingOn (request : Message) (state : CountedState)
   | none => exact hinv
   | some framed => exact hinv
 
+/-- Stopping serving keeps the disclosing recording served. -/
 theorem leftServed_stopServingOn (state : CountedState) (hinv : LeftServed state) :
     LeftServed (ServedAgreement.stopServingOn state) := hinv
 
-set_option maxHeartbeats 1000000 in
-/-- **And every disclosing entry of the carrier tail is served by the carrier the tail ends
+/-- **Every disclosing entry of the carrier tail is served by the carrier the tail ends
 at.** Stated before the projection, because that carrier is what the containment reads. -/
 theorem leftServed_carrierTail (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (adversary : Adversary) (walk : Walk)
@@ -175,8 +178,8 @@ The served set contains every disclosing entry (`leftServed_carrierTail`), and
 theorem below is the decomposition with the three facts about the walk: the key the run
 generates, the good walk's separation, and the quiet start. -/
 
-set_option maxHeartbeats 2000000 in
-set_option linter.constructorNameAsVariable false in
+set_option maxHeartbeats 1000000 in
+-- Unfolding the carrier tail's three-stage run into its stages is slow.
 /-- **Every disclosing entry of the carrier tail is in the signed log.** The served-agreement
 hypothesis, with nothing assumed but a supported run and a good walk. -/
 theorem servedLog_leftRecord_carrierTail

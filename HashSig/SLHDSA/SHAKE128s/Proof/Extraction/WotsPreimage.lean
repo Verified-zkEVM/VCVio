@@ -9,14 +9,17 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.Extraction.Wots
 public import HashSig.SLHDSA.SHAKE128s.Proof.ChecksumAntichain
 
-/-! The WOTS one-wayness witness for a hypertree layer transition.
+/-!
+# Honest WOTS signature values as chains
 
-When a layer's canonical branch forces `sig.wots = Wots.sign forged` for a message
-`forged` that differs from the honestly signed message `signed` at the same WOTS key,
-the checksum antichain yields a chain where the forged value is a strict chain-ancestor
-of the honestly revealed value: advancing the forged value reaches the honest one. This
-is a pure chain-arithmetic witness, feeding the ROM preimage probability charge. No
-one-wayness is assumed here. -/
+When a layer's canonical branch forces `sig.wots = Wots.sign forged` for a message `forged` that
+differs from the honestly signed message `signed` at the same WOTS key, the checksum antichain
+gives a chain on which the forged value is a strict chain-ancestor of the honestly revealed
+value: advancing the forged value reaches the honest one. This file supplies the chain-arithmetic
+ingredient of that witness: `chainAddress` names the per-chain address, and `sign_eq_chain`
+writes each honest signature value as the chain started from the derived secret and advanced to
+its message digit. No one-wayness is assumed here.
+-/
 
 @[expose] public section
 
@@ -32,7 +35,8 @@ def chainAddress (address : Address) (i : Fin chains) : Address :=
 
 /-- Each honest WOTS signature value is the chain started from the derived secret,
 advanced to the message digit. -/
-theorem sign_eq_chain (message secretSeed publicSeed : Digest) (address : Address) (i : Fin chains) :
+theorem sign_eq_chain (message secretSeed publicSeed : Digest) (address : Address)
+    (i : Fin chains) :
     SlhDsaSecurity.Wots.sign (m := Id) message secretSeed publicSeed address i =
       SlhDsaSecurity.Wots.chain (m := Id) publicSeed (chainAddress address i)
         0 (Checksum.encode message i).val

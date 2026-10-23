@@ -19,8 +19,6 @@ its own input, and `CleanBad` is its negation at a cache. -/
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.GrowthCharge
 
 /-- Cache entries are never *overwritten*: an installed answer persists verbatim.
@@ -86,6 +84,7 @@ def Bad {α : Type} (bad : Bytes → HashOutput → Prop) :
 def CleanBad (bad : Bytes → HashOutput → Prop) (cache : QueryCache HashSpec) : Prop :=
   ∀ input output, cache input = some output → ¬ bad input output
 
+/-- Installing an answer that is not bad for its input keeps a clean cache clean. -/
 theorem CleanBad.cacheQuery {bad : Bytes → HashOutput → Prop} {cache : QueryCache HashSpec}
     (hclean : CleanBad bad cache) {input : Bytes} {output : HashOutput}
     (hmiss : ¬ bad input output) : CleanBad bad (cache.cacheQuery input output) := by

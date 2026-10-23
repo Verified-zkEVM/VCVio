@@ -60,7 +60,8 @@ open scoped Classical in
 /-- **A coin step changes nothing.** -/
 theorem step_inl (rightKeep : Bytes → State → Prop) (coin : unifSpec.Domain)
     (state : StateOf State) (step : OracleWorld.Range (Sum.inl coin) × StateOf State)
-    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) (Sum.inl coin)).run state)) :
+    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+      rightKeep) (Sum.inl coin)).run state)) :
     step.2 = state := by
   classical
   rw [@noticingRecorderOf_run_inl State (servingView pk) (disclosingKeep pk) rightKeep coin state,
@@ -74,7 +75,8 @@ open scoped Classical in
 /-- **A hash step, in the two shapes it can have.** -/
 theorem step_inr_cases (rightKeep : Bytes → State → Prop) (input : Bytes)
     (state : StateOf State) (step : OracleWorld.Range (Sum.inr input) × StateOf State)
-    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) (Sum.inr input)).run state)) :
+    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+      rightKeep) (Sum.inr input)).run state)) :
     (cacheOf state.1 input = some step.1 ∧ step.2.1 = servingNotice pk state.1 input) ∨
       (cacheOf state.1 input = none ∧
         step.2.1 = cacheAnswer (servingNotice pk state.1 input) input step.1) := by
@@ -97,12 +99,13 @@ open scoped Classical in
 /-- **A hash step leaves its own input cached.** -/
 theorem step_cached (rightKeep : Bytes → State → Prop) (input : Bytes)
     (state : StateOf State) (step : OracleWorld.Range (Sum.inr input) × StateOf State)
-    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) (Sum.inr input)).run state)) :
+    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+      rightKeep) (Sum.inr input)).run state)) :
     step.2.1.cache input = some step.1 := by
   classical
   rcases step_inr_cases pk rightKeep input state step hstep with ⟨hcached, hstate⟩ | ⟨-, hstate⟩
   · rw [hstate]
-    show cacheOf (servingNotice pk state.1 input) input = some step.1
+    change cacheOf (servingNotice pk state.1 input) input = some step.1
     rw [cacheOf_servingNotice]
     exact hcached
   · rw [hstate]
@@ -112,7 +115,8 @@ open scoped Classical in
 /-- **A hash step leaves the framing alone.** -/
 theorem step_framing (rightKeep : Bytes → State → Prop) (input : Bytes)
     (state : StateOf State) (step : OracleWorld.Range (Sum.inr input) × StateOf State)
-    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) (Sum.inr input)).run state)) :
+    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+      rightKeep) (Sum.inr input)).run state)) :
     step.2.1.framing = state.1.framing := by
   classical
   rcases step_inr_cases pk rightKeep input state step hstep with ⟨-, hstate⟩ | ⟨-, hstate⟩
@@ -123,7 +127,8 @@ open scoped Classical in
 /-- **A hash step grows the carrier.** -/
 theorem step_grows (rightKeep : Bytes → State → Prop) (input : Bytes)
     (state : StateOf State) (step : OracleWorld.Range (Sum.inr input) × StateOf State)
-    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) (Sum.inr input)).run state)) :
+    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+      rightKeep) (Sum.inr input)).run state)) :
     Grows state.1 step.2.1 := by
   classical
   rcases step_inr_cases pk rightKeep input state step hstep with ⟨-, hstate⟩ | ⟨hfresh, hstate⟩
@@ -131,7 +136,7 @@ theorem step_grows (rightKeep : Bytes → State → Prop) (input : Bytes)
   · rw [hstate]
     exact Grows.trans (grows_servingNotice pk state.1 input)
       (grows_cacheAnswer _ input step.1
-        (by show cacheOf (servingNotice pk state.1 input) input = none
+        (by change cacheOf (servingNotice pk state.1 input) input = none
             rw [cacheOf_servingNotice]; exact hfresh))
 
 open scoped Classical in
@@ -139,7 +144,8 @@ open scoped Classical in
 exists for, and it holds on a cache hit exactly as on a miss. -/
 theorem step_served_self (rightKeep : Bytes → State → Prop) (input : Bytes)
     (state : StateOf State) (step : OracleWorld.Range (Sum.inr input) × StateOf State)
-    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) (Sum.inr input)).run state))
+    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+      rightKeep) (Sum.inr input)).run state))
     (hfiles : FilesLeft pk state.1 input) : Served step.2.1 input := by
   classical
   have hnotice : Served (servingNotice pk state.1 input) input :=
@@ -152,7 +158,8 @@ open scoped Classical in
 /-- **A hash step serves nothing but its own input.** -/
 theorem step_served (rightKeep : Bytes → State → Prop) (input : Bytes)
     (state : StateOf State) (step : OracleWorld.Range (Sum.inr input) × StateOf State)
-    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) (Sum.inr input)).run state))
+    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+      rightKeep) (Sum.inr input)).run state))
     (probe : Bytes) (hserved : Served step.2.1 probe) :
     Served state.1 probe ∨ probe = input := by
   classical
@@ -175,7 +182,8 @@ open scoped Classical in
 /-- **A step grows the carrier**, at either kind of query. -/
 theorem stepGrows (rightKeep : Bytes → State → Prop) (queried : OracleWorld.Domain)
     (state : StateOf State) (step : OracleWorld.Range queried × StateOf State)
-    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) queried).run state)) :
+    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+      rightKeep) queried).run state)) :
     Grows state.1 step.2.1 := by
   rcases queried with coin | input
   · rw [step_inl pk rightKeep coin state step hstep]
@@ -187,7 +195,8 @@ open scoped Classical in
 theorem runGrows (rightKeep : Bytes → State → Prop) {α : Type}
     (computation : OracleComp OracleWorld α) :
     ∀ (state : StateOf State) (z : α × StateOf State),
-      z ∈ support ((simulateQ (@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) computation).run state) →
+      z ∈ support ((simulateQ (@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+          rightKeep) computation).run state) →
         Grows state.1 z.2.1 := by
   induction computation using OracleComp.inductionOn with
   | pure value =>
@@ -205,7 +214,8 @@ open scoped Classical in
 /-- **A step leaves the framing alone.** -/
 theorem stepFraming (rightKeep : Bytes → State → Prop) (queried : OracleWorld.Domain)
     (state : StateOf State) (step : OracleWorld.Range queried × StateOf State)
-    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) queried).run state)) :
+    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+      rightKeep) queried).run state)) :
     step.2.1.framing = state.1.framing := by
   rcases queried with coin | input
   · rw [step_inl pk rightKeep coin state step hstep]
@@ -216,7 +226,8 @@ open scoped Classical in
 theorem runFraming (rightKeep : Bytes → State → Prop) {α : Type}
     (computation : OracleComp OracleWorld α) :
     ∀ (state : StateOf State) (z : α × StateOf State),
-      z ∈ support ((simulateQ (@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) computation).run state) →
+      z ∈ support ((simulateQ (@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+          rightKeep) computation).run state) →
         z.2.1.framing = state.1.framing := by
   induction computation using OracleComp.inductionOn with
   | pure value =>
@@ -238,7 +249,8 @@ theorem stepInvariant (rightKeep : Bytes → State → Prop) (Inv : State → Pr
       Inv carrier → FilesLeft pk carrier input → Inv (file carrier input))
     (queried : OracleWorld.Domain) (state : StateOf State)
     (step : OracleWorld.Range queried × StateOf State)
-    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) queried).run state))
+    (hstep : step ∈ support (((@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+      rightKeep) queried).run state))
     (hinv : Inv state.1) : Inv step.2.1 := by
   classical
   rcases queried with coin | input
@@ -262,7 +274,8 @@ theorem runInvariant (rightKeep : Bytes → State → Prop) (Inv : State → Pro
       Inv carrier → FilesLeft pk carrier input → Inv (file carrier input))
     {α : Type} (computation : OracleComp OracleWorld α) :
     ∀ (state : StateOf State) (z : α × StateOf State),
-      z ∈ support ((simulateQ (@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) computation).run state) →
+      z ∈ support ((simulateQ (@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+          rightKeep) computation).run state) →
         Inv state.1 → Inv z.2.1 := by
   induction computation using OracleComp.inductionOn with
   | pure value =>
@@ -282,19 +295,22 @@ open scoped Classical in
 theorem queryStep (rightKeep : Bytes → State → Prop) {α : Type} (input : Bytes)
     (next : OracleWorld.Range (Sum.inr input) → OracleComp OracleWorld α)
     (state : StateOf State) (result : α × StateOf State)
-    (hresult : result ∈ support ((simulateQ (@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep)
+    (hresult : result ∈ support ((simulateQ
+        (@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep)
       ((query (spec := OracleWorld) (Sum.inr input) :
         OracleComp OracleWorld (OracleWorld.Range (Sum.inr input))) >>= next)).run state)) :
     ∃ (answer : HashOutput) (mid : StateOf State),
       mid.1.cache input = some answer ∧ mid.1.framing = state.1.framing ∧
         Grows state.1 mid.1 ∧ (FilesLeft pk state.1 input → Served mid.1 input) ∧
-        result ∈ support ((simulateQ (@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) (next answer)).run mid) := by
+        result ∈ support ((simulateQ (@noticingRecorderOf State (servingView pk) (disclosingKeep pk)
+            rightKeep) (next answer)).run mid) := by
   classical
   rw [simulateQ_bind,
     show simulateQ (@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep)
         (query (spec := OracleWorld) (Sum.inr input) :
           OracleComp OracleWorld (OracleWorld.Range (Sum.inr input))) =
-      (@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) (Sum.inr input) from by simp,
+      (@noticingRecorderOf State (servingView pk) (disclosingKeep pk) rightKeep) (Sum.inr input)
+        from by simp,
     StateT.run_bind, mem_support_bind_iff] at hresult
   obtain ⟨step, hstep, hrest⟩ := hresult
   exact ⟨step.1, step.2, step_cached pk rightKeep input state step hstep,

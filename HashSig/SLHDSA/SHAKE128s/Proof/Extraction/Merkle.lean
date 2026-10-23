@@ -9,7 +9,14 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.Extraction.BinaryPath
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Merkle
 
-/-! Extraction from the actual height-nine XMSS verifier. -/
+/-!
+# Collision extraction from XMSS verification
+
+Extraction from the height-nine XMSS verifier. `root_eq_canonical_or_collision` shows that a
+signature whose recovered root is the genuine subtree root either reproduces the genuine WOTS
+public key and all nine authentication siblings, or exhibits a `BinaryPath.Collision` at a
+concrete height of its authentication path.
+-/
 
 @[expose] public section
 
@@ -17,14 +24,14 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.Extraction.Merkle
 
-set_option backward.isDefEq.respectTransparency false
-
 variable [HasQuery HashSpec Id]
 
+/-- The authentication siblings of an XMSS signature, padded with zero past the subtree height. -/
 def siblings (signature : XmssSignature) (height : Nat) : Digest :=
   if h : height < subtreeHeight then signature.authentication ⟨height, h⟩ else 0
 
 set_option maxRecDepth 10000 in
+-- `congr 1` on the nine-step verifier fold recurses past the default depth
 /-- Reaching the genuine root with changed authentication data gives a collision
 on this verifier path. Otherwise its recovered WOTS key and all nine siblings
 are exactly the genuine values. -/
@@ -33,9 +40,11 @@ theorem root_eq_canonical_or_collision (secretSeed publicSeed message : Digest)
     (hroot : SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) index signature
       message publicSeed address = SlhDsaSecurity.Merkle.node (m := Id)
         secretSeed publicSeed address subtreeHeight 0) :
-    let nodes : Nat → Nat → Digest := SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed address
-    let combine : Nat → Nat → Digest → Digest → Digest := fun height nodeIndex left right => Hashing.tweakable (m := Id)
-      publicSeed (SlhDsaSecurity.Merkle.nodeAddress address height nodeIndex)
+    let nodes : Nat → Nat → Digest :=
+      SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed address
+    let combine : Nat → Nat → Digest → Digest → Digest := fun height nodeIndex left right =>
+      Hashing.tweakable (m := Id) publicSeed
+        (SlhDsaSecurity.Merkle.nodeAddress address height nodeIndex)
         (BinaryPath.pairBytes (left, right))
     let leaf : Digest := Wots.publicKeyFromSignature (m := Id) signature.wots message publicSeed
       (SlhDsaSecurity.Merkle.wotsAddress address index.val)
@@ -44,9 +53,11 @@ theorem root_eq_canonical_or_collision (secretSeed publicSeed message : Digest)
     ∃ j < subtreeHeight,
       BinaryPath.Collision nodes combine index.val leaf (siblings signature) j := by
   dsimp only
-  let nodes : Nat → Nat → Digest := SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed address
-  let combine : Nat → Nat → Digest → Digest → Digest := fun height nodeIndex left right => Hashing.tweakable (m := Id)
-    publicSeed (SlhDsaSecurity.Merkle.nodeAddress address height nodeIndex)
+  let nodes : Nat → Nat → Digest :=
+    SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed address
+  let combine : Nat → Nat → Digest → Digest → Digest := fun height nodeIndex left right =>
+    Hashing.tweakable (m := Id) publicSeed
+      (SlhDsaSecurity.Merkle.nodeAddress address height nodeIndex)
       (BinaryPath.pairBytes (left, right))
   let leaf : Digest := Wots.publicKeyFromSignature (m := Id) signature.wots message publicSeed
     (SlhDsaSecurity.Merkle.wotsAddress address index.val)
@@ -57,14 +68,14 @@ theorem root_eq_canonical_or_collision (secretSeed publicSeed message : Digest)
     simp only [SlhDsaSecurity.Merkle.publicKeyFromSignature, bind, Correctness.foldlM_id]
     congr 1
     funext current j
-    simp only [siblings, dif_pos j.isLt, BinaryPath.ordered]
+    simp only [siblings, dite_eq_left j.isLt, BinaryPath.ordered]
     split <;> rfl
   have hpath := BinaryPath.canonical_or_collision nodes combine (fun _ _ => rfl)
     index.val leaf (siblings signature) subtreeHeight (by
       rw [hfold, hroot, Nat.div_eq_of_lt index.isLt])
   rcases hpath with ⟨hleaf, hsiblings⟩ | hcollision
   · refine Or.inl ⟨hleaf, fun j => ?_⟩
-    simpa only [siblings, dif_pos j.isLt] using hsiblings j.val j.isLt
+    simpa only [siblings, dite_eq_left j.isLt] using hsiblings j.val j.isLt
   · exact Or.inr hcollision
 
 end SlhDsaSecurity.Extraction.Merkle

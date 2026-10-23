@@ -61,7 +61,6 @@ def tailValue (_keys : (SecretKey × PublicKey)) (forgery : Forgery)
        counts := (Multiplicative.toAdd accumulated).1 + final.2.1 } : Outcome),
     (Multiplicative.toAdd accumulated).2 + final.2.2), carrier.2)
 
-set_option maxHeartbeats 2000000 in
 /-- **The carrier tail is a three-stage recorder run at the re-encoded state.** Three
 applications of the bind-form transports, one per stage, and then the two pure results agree
 because `FusedTape.forgetView` of the re-association is `BracketedRun.forgetCarrier`. -/

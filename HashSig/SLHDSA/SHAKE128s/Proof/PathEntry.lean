@@ -20,8 +20,7 @@ The scheme has two such paths and they have the same shape, so this is stated on
 arbitrary `addressOf`. The hypertree's Merkle path instantiates it at
 `Merkle.nodeAddress address` and `subtreeHeight`; a FORS tree's path, which
 `Extraction.Fors.recoveredRoot` folds, instantiates it at `Fors.nodeAddress address` and
-`forsHeight`. Writing it once was not foresight — the Merkle version came first and the FORS
-path turned out to reuse it unchanged.
+`forsHeight`.
 
 Three identifications do it. `CacheReplay.queriesUnder_foldlM_get` says the `k`-th step
 consults its input at the value `replayFold` has reached; `CacheReplay.replayFold_eq_foldl`

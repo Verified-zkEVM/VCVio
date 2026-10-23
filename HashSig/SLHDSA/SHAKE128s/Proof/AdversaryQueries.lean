@@ -37,23 +37,28 @@ open Security
 
 /-! ## Charged work, as a number -/
 
+/-- Charged work is additive. -/
 theorem work_add (left right : Counts) :
     (left + right).work = left.work + right.work := by
   simp only [Counts.work, Pi.add_apply]
   omega
 
+/-- A hash charge counts fully towards the work. -/
 theorem work_single_hash (count : Nat) : (Counts.single .hash count).work = count := by
   simp [Counts.work, Counts.single, Pi.single_eq_same, Pi.single_eq_of_ne]
 
+/-- A verification charge counts fully towards the work. -/
 theorem work_single_verification (count : Nat) :
     (Counts.single .verification count).work = count := by
   simp [Counts.work, Counts.single, Pi.single_eq_same, Pi.single_eq_of_ne]
 
+/-- A signing charge contributes no work. -/
 theorem work_single_signing (count : Nat) : (Counts.single .signing count).work = 0 := by
   simp [Counts.work, Counts.single, Pi.single_eq_of_ne]
 
 /-! ## Splitting a counted run, keeping both counts -/
 
+/-- Counting the hashes of a mapped computation maps the value and keeps the count. -/
 theorem countAllHashes_map {α β : Type} (computation : OracleComp OracleWorld α) (f : α → β) :
     countAllHashes (f <$> computation) =
       (fun result => (f result.1, result.2)) <$> countAllHashes computation := by
@@ -97,7 +102,8 @@ theorem run_adversaryImpl (queried : OracleWorld.Domain) (log : SigningLog) :
     ((WriterT.run (adversaryImpl queried)).run log) =
       (fun value =>
         ((value, Multiplicative.ofAdd (Counts.single .hash (hashCost queried))), log)) <$>
-        (liftM (OracleWorld.query queried) : OracleComp OracleWorld (OracleWorld.Range queried)) := by
+        (liftM (OracleWorld.query queried) :
+          OracleComp OracleWorld (OracleWorld.Range queried)) := by
   simp only [adversaryImpl, QueryImpl.withAddCost_apply, QueryImpl.ofLift_apply, WriterT.run_bind,
     AddWriterT.run_addTell, StateT.run_bind, StateT.run_pure, pure_bind,
     StrippedGame.run_liftM_state, StateT.run_monadLift, map_eq_bind_pure_comp, bind_assoc,
@@ -114,6 +120,7 @@ since the answer it records is `some` exactly when the frame was. -/
 def servedCount (log : SigningLog) : Nat :=
   (log.filter fun entry => entry.2.isSome).length
 
+/-- Appending an entry adds one served request exactly when its answer is `some`. -/
 theorem servedCount_append (log : SigningLog) (request : Message) (answer : Option Bytes) :
     servedCount (log ++ [⟨request, answer⟩]) =
       servedCount log + (if answer.isSome then 1 else 0) := by

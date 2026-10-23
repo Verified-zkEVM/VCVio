@@ -56,8 +56,10 @@ open RecordedQueries RecorderView CarriedWitness HandlerCarrier
 def Quiet (carrier : HandlerCarrier.State) : Prop :=
   carrier.framing = none ∧ carrier.served = 0
 
+/-- A fresh carrier over any cache is quiet. -/
 theorem quiet_startAt (cache : QueryCache HashSpec) : Quiet (startAt cache) := ⟨rfl, rfl⟩
 
+/-- Caching an answer keeps a carrier quiet. -/
 theorem quiet_cacheAnswer (carrier : HandlerCarrier.State) (input : Bytes)
     (answer : HashOutput) (hquiet : Quiet carrier) :
     Quiet (HandlerCarrier.cacheAnswer carrier input answer) :=
@@ -90,7 +92,7 @@ theorem left_appendedOf_of_not_left {σ : Type} [CacheView σ]
     (answer : HashOutput) (hleft : ¬ leftKeep input state.1) :
     (appendedOf leftKeep rightKeep input state answer).1 = state.2.1 := by
   classical
-  rw [appendedOf, if_neg (fun hboth => hleft hboth.2)]
+  rw [appendedOf, ite_eq_right (fun hboth => hleft hboth.2)]
   split_ifs <;> rfl
 
 open scoped Classical in
@@ -118,15 +120,15 @@ theorem leftFixed_step (rightKeep : Walk → Bytes → HandlerCarrier.State → 
   · have hnotice :
         @CacheView.onQuery HandlerCarrier.State (servingView (keyAt walk)) state.1 input =
           state.1 := by
-      show servingNotice (keyAt walk) state.1 input = state.1
+      change servingNotice (keyAt walk) state.1 input = state.1
       rw [servingNotice,
-        if_neg (HandlerCarrier.not_filesLeft_of_clear (keyAt walk) state.1 hclear input)]
+        ite_eq_right (HandlerCarrier.not_filesLeft_of_clear (keyAt walk) state.1 hclear input)]
     set view : StateOf HandlerCarrier.State :=
       (@CacheView.onQuery HandlerCarrier.State (servingView (keyAt walk))
         (state.1, state.2.1).1 input, (state.1, state.2.1).2) with hview
     have hleft : ¬ disclosingKeep (keyAt walk) input view.1 := by
       rw [hview]
-      show ¬ disclosingKeep (keyAt walk) input
+      change ¬ disclosingKeep (keyAt walk) input
         (@CacheView.onQuery HandlerCarrier.State (servingView (keyAt walk)) state.1 input)
       rw [hnotice]
       exact HandlerCarrier.not_filesLeft_of_clear (keyAt walk) state.1 hclear input
@@ -207,7 +209,7 @@ theorem step_left_shape (rightKeep : Walk → Bytes → HandlerCarrier.State →
       hsame | ⟨hshape, hfresh, hleft⟩
     · exact Or.inl hsame
     · refine Or.inr ⟨input, inner.1, rfl, hshape, ?_, hleft, ?_⟩
-      · show HandlerCarrier.cacheOf state.1 input = none
+      · change HandlerCarrier.cacheOf state.1 input = none
         rw [← cacheOf_servingNotice (keyAt walk) state.1 input]
         exact hfresh
       · rw [← hvalue]
@@ -224,7 +226,7 @@ the rest of the state untouched. -/
 def LeftCached (state : CountedState) : Prop :=
   ∀ entry ∈ state.2.1.1, state.1.cache entry.1 ≠ none
 
-/-- And the recording holds each input once. -/
+/-- Every disclosing-recorded input is cached, and the recording holds each input once. -/
 def LeftFreshNodup (state : CountedState) : Prop :=
   LeftCached state ∧ (state.2.1.1.map Prod.fst).Nodup
 
@@ -232,13 +234,16 @@ def LeftFreshNodup (state : CountedState) : Prop :=
 def LeftServed (state : CountedState) : Prop :=
   ∀ entry ∈ state.2.1.1, HandlerCarrier.Served state.1 entry.1
 
+/-- The empty recording at a fresh carrier is cached and duplicate-free. -/
 theorem leftFreshNodup_startAt (cache : QueryCache HashSpec) :
     LeftFreshNodup (startAt cache, (([], []), 0)) :=
   ⟨fun entry hentry => absurd hentry (by simp), by simp⟩
 
+/-- The empty recording at a fresh carrier is served. -/
 theorem leftServed_startAt (cache : QueryCache HashSpec) :
     LeftServed (startAt cache, (([], []), 0)) := fun entry hentry => absurd hentry (by simp)
 
+/-- A bracket keeps the disclosing recording cached and duplicate-free. -/
 theorem leftFreshNodup_bracket {f : CountedState → CountedState} (hf : Bracket f)
     (state : CountedState) (hinv : LeftFreshNodup state) : LeftFreshNodup (f state) := by
   refine ⟨fun entry hentry => ?_, ?_⟩
@@ -248,6 +253,7 @@ theorem leftFreshNodup_bracket {f : CountedState → CountedState} (hf : Bracket
     exact hinv.2
 
 open scoped Classical in
+/-- A step of the tail's handler keeps every disclosing-recorded input cached. -/
 theorem step_leftCached (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) (walk : Walk)
     (queried : OracleWorld.Domain) (state : CountedState)
     (step : OracleWorld.Range queried × CountedState)
@@ -270,11 +276,13 @@ theorem step_leftCached (rightKeep : Walk → Bytes → HandlerCarrier.State →
       rw [hgrows.1 entry.1 value hvalue]
       exact Option.some_ne_none value
     · rw [List.mem_singleton.mp hself]
-      show step.2.1.cache input ≠ none
+      change step.2.1.cache input ≠ none
       rw [hcached]
       exact Option.some_ne_none answer
 
 open scoped Classical in
+/-- A step of the tail's handler keeps the disclosing recording cached and
+duplicate-free. -/
 theorem step_leftFreshNodup (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) (queried : OracleWorld.Domain) (state : CountedState)
     (step : OracleWorld.Range queried × CountedState)
@@ -322,14 +330,16 @@ theorem step_leftServed (rightKeep : Walk → Bytes → HandlerCarrier.State →
   rw [hcarrier]
   exact hserved entry (by rw [← hcarried]; exact hentry)
 
+/-- A bracket that leaves the served set alone keeps the disclosing recording served. -/
 theorem leftServed_bracket {f : CountedState → CountedState} (hf : Bracket f)
     (hframing : ∀ state : CountedState, (f state).1.served = state.1.served)
     (state : CountedState) (hinv : LeftServed state) : LeftServed (f state) := by
   intro entry hentry
-  show entry.1 ∈ (f state).1.served
+  change entry.1 ∈ (f state).1.served
   rw [hframing state]
   exact hinv entry (by rw [← (hf state).2]; exact hentry)
 
+/-- Starting to serve a request leaves the served set alone. -/
 theorem served_startServingOn (request : Message) (state : CountedState) :
     (ServedAgreement.startServingOn request state).1.served = state.1.served := by
   rw [ServedAgreement.startServingOn]
@@ -337,6 +347,7 @@ theorem served_startServingOn (request : Message) (state : CountedState) :
   | none => rfl
   | some framed => rfl
 
+/-- Stopping serving leaves the served set alone. -/
 theorem served_stopServingOn (state : CountedState) :
     (ServedAgreement.stopServingOn state).1.served = state.1.served := rfl
 
@@ -350,6 +361,7 @@ for the only reason it ever holds there: there is nothing served to be logged.
 `ServedAgreement.carrierLogged_run_with` and `logFiled_run_with` are general in the starting
 state, so this is their composition at a quiet start. -/
 
+/-- A quiet carrier is logged against any signing log: nothing in it is served. -/
 theorem carrierLogged_of_quiet (sk : SecretKey) (warm : QueryCache HashSpec)
     (log : SigningLog) (carrier : HandlerCarrier.State) (hquiet : Quiet carrier) :
     ServedAgreement.CarrierLogged sk warm log carrier := by
@@ -357,7 +369,6 @@ theorem carrierLogged_of_quiet (sk : SecretKey) (warm : QueryCache HashSpec)
   exact absurd (show input ∈ carrier.served from hserved)
     (by rw [hquiet.2]; simp)
 
-set_option maxHeartbeats 1000000 in
 /-- **The agreement at the tail's middle stage.** -/
 theorem agreesWithLog_quiet (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) (sk : SecretKey) (hpk : sk.publicKey = keyAt walk)
@@ -399,6 +410,7 @@ is a hypothesis, read at the outcome the tail returns — which is where the log
 consumer can discharge it without reaching into a stage. -/
 
 set_option maxHeartbeats 1000000 in
+-- Unfolding the carrier tail's three-stage run into its stages is slow.
 /-- **The disclosing recording of the carrier tail is inside the concentration's cap.** -/
 theorem leftRecord_length_le_cap_carrierTail
     (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
@@ -472,6 +484,7 @@ theorem leftRecord_length_le_cap_carrierTail
     middle.2.2.2.2.1.1 hnodupMiddle.2 hservedMiddle (by rw [hsigned]; exact hlimit)
 
 set_option maxHeartbeats 1000000 in
+-- Elaborating the carrier tail's support in the statement is slow.
 /-- **The cap in the form a consumer wants it**: quantified over the support of the tail. -/
 theorem leftRecord_le_cap_carrierTail
     (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)

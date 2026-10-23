@@ -45,8 +45,8 @@ entry and tells one unit of `.signing`, the hash half appends nothing and tells 
 game writes it, factored by `WarmedSplit.mem_support_counted_bind`, with
 `StrippedGame.countedRun` and `countedRun_bind` as the vehicle, and the two handler cases
 proved as separate lemmas stated at the *summand's* index and applied at the sum's — the only
-shape that survives the semireducible gap between `(OracleWorld + SigningSpec).Range (Sum.inl t)` and
-`OracleWorld.Range t`. `LinkedGame`'s `recordedAfterSeedsAt_eq` is the tidier presentation, but
+shape that survives the semireducible gap between `(OracleWorld + SigningSpec).Range (Sum.inl t)`
+and `OracleWorld.Range t`. `LinkedGame`'s `recordedAfterSeedsAt_eq` is the tidier presentation, but
 it is about the *stripped* signer `StrippedGame.strippedSign` and reaches the game only through
 an equality of laws; a support membership in `WarmedGame.tail` would have to be transported
 across that, and transported back to read the log out. The nested route needs none of it.
@@ -90,10 +90,12 @@ theorem FaithfulFrom.mono {sk : SecretKey} {cache cache' : QueryCache HashSpec}
     (hgrow : CacheAvailability.Persists cache cache') : FaithfulFrom sk cache' log :=
   fun later hlater => hfaithful later (hgrow.trans hlater)
 
+/-- The empty log is faithful at any cache. -/
 theorem faithfulFrom_nil (sk : SecretKey) (cache : QueryCache HashSpec) :
     FaithfulFrom sk cache ([] : SigningLog) :=
   fun _ _ entry hentry => absurd hentry (List.not_mem_nil (a := entry))
 
+/-- Two logs faithful at the same cache concatenate to a faithful log. -/
 theorem FaithfulFrom.append {sk : SecretKey} {cache : QueryCache HashSpec}
     {log log' : SigningLog} (hleft : FaithfulFrom sk cache log)
     (hright : FaithfulFrom sk cache log') : FaithfulFrom sk cache (log ++ log') := by
@@ -238,15 +240,18 @@ def RandomiserCachedFrom (sk : SecretKey) (cache : QueryCache HashSpec) (log : S
     ∀ entry ∈ log, ∀ framed : Bytes, entry.1.frame = some framed →
       later (Hashing.randomizerInput sk.prf sk.publicKey.seed framed) ≠ none
 
+/-- A log whose randomisers are cached stays so as the cache grows. -/
 theorem RandomiserCachedFrom.mono {sk : SecretKey} {cache cache' : QueryCache HashSpec}
     {log : SigningLog} (hcached : RandomiserCachedFrom sk cache log)
     (hgrow : CacheAvailability.Persists cache cache') : RandomiserCachedFrom sk cache' log :=
   fun later hlater => hcached later (hgrow.trans hlater)
 
+/-- The empty log has its randomisers cached at any cache. -/
 theorem randomiserCachedFrom_nil (sk : SecretKey) (cache : QueryCache HashSpec) :
     RandomiserCachedFrom sk cache ([] : SigningLog) :=
   fun _ _ entry hentry => absurd hentry (List.not_mem_nil (a := entry))
 
+/-- Two logs with randomisers cached at a cache concatenate to such a log. -/
 theorem RandomiserCachedFrom.append {sk : SecretKey} {cache : QueryCache HashSpec}
     {log log' : SigningLog} (hleft : RandomiserCachedFrom sk cache log)
     (hright : RandomiserCachedFrom sk cache log') :
@@ -392,7 +397,7 @@ theorem length_le_signing_countedRun (sk : SecretKey) {α : Type}
     have htail := ih step.1.1.1 step.1.2 step.2 inner hinner
     rw [show result.1.2 = inner.1.2 from by rw [← hvalue],
       show result.1.1.2 = step.1.1.2 * inner.1.1.2 from by rw [← hvalue], toAdd_mul]
-    show inner.1.2.length ≤ (Multiplicative.toAdd step.1.1.2) .signing +
+    change inner.1.2.length ≤ (Multiplicative.toAdd step.1.1.2) .signing +
       (Multiplicative.toAdd inner.1.1.2) .signing + log.length
     omega
 
@@ -425,9 +430,10 @@ theorem signing_countQueries_eq_zero (cost : OracleWorld.Domain → Counts)
     obtain ⟨inner, hinner, heq⟩ := hrest
     have htail := ih step.1 step.2 inner hinner
     rw [show result.1.2 = cost queried + inner.1.2 from by rw [← heq]]
-    show cost queried .signing + inner.1.2 .signing = 0
+    change cost queried .signing + inner.1.2 .signing = 0
     rw [hcost, htail]
 
+/-- A verification charge tells no signing requests. -/
 theorem verifierCost_signing (input : OracleWorld.Domain) :
     (Counts.single .verification (hashCost input)) .signing = 0 := by
   simp [Counts.single, Pi.single_eq_of_ne]
@@ -495,7 +501,7 @@ theorem split_phase (adversary : Adversary) (sds : Digest × Digest × Digest)
       (GrowthCharge.cache_value_persists _ keyCache advCache _ hadv input output hentry)
   · rw [hvalue]
   · rw [hvalue]
-    show (Multiplicative.toAdd value.1.2) .signing + verified.2 .signing =
+    change (Multiplicative.toAdd value.1.2) .signing + verified.2 .signing =
       (Multiplicative.toAdd value.1.2) .signing
     rw [hverifierSigning, Nat.add_zero]
 

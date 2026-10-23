@@ -31,8 +31,6 @@ verifier is hash-only, which is why the statement is about it and not about the 
 
 open OracleComp OracleSpec
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.CacheReplay
 
 /-- A finished cache, read as a total hash function. -/
@@ -167,6 +165,7 @@ collisions can be read off the cache the game itself left behind. -/
 @[reducible] def replayQuery (cache : QueryCache HashSpec) : HasQuery HashSpec Id :=
   ⟨fun input => ((cache input).getD default : Id HashOutput)⟩
 
+/-- A hash call reads the cached answer at its input. -/
 theorem hash_replayQuery (cache : QueryCache HashSpec) (input : Bytes) (output : HashOutput)
     (hentry : cache input = some output) :
     @Hashing.hash Id (replayQuery cache) input = output := by
@@ -178,8 +177,7 @@ theorem tweakable_replayQuery (cache : QueryCache HashSpec) (publicSeed : Digest
     (hentry : cache (Hashing.tweakableInput publicSeed address payload) = some output) :
     @Hashing.tweakable Id _ (replayQuery cache) publicSeed address payload =
       Hashing.truncate output := by
-  simp only [Hashing.tweakable, Hashing.shortHash, Hashing.hash
-    ]
+  simp only [Hashing.tweakable, Hashing.shortHash, Hashing.hash]
   simp [Functor.map, hentry]
 
 /-- The same for a bare `shortHash`, which the FORS compression collision is stated with. -/
@@ -207,8 +205,10 @@ values are cache values, and the inputs behind them are cache entries.
 /-- The inputs a hash-only computation consults when answered from `cache`. -/
 inductive QueriesUnder (cache : QueryCache HashSpec) :
     {α : Type} → OracleComp HashSpec α → Bytes → Prop where
+  /-- A query consults its own input. -/
   | head {α : Type} (input : Bytes) (next : HashOutput → OracleComp HashSpec α) :
       QueriesUnder cache (query (spec := HashSpec) input >>= next) input
+  /-- A query's continuation, run on the cache's answer, consults whatever it consults. -/
   | tail {α : Type} (input probe : Bytes) (next : HashOutput → OracleComp HashSpec α) :
       QueriesUnder cache (next (replay cache input)) probe →
         QueriesUnder cache (query (spec := HashSpec) input >>= next) probe
@@ -250,6 +250,7 @@ is among those it consults. The verifier is a fold of hash calls, so two closure
 suffice: a hash call consults its own input, and anything the prefix of a bind consults the
 whole bind consults too. Peeling a fold with these recovers each step's input in turn. -/
 
+/-- A hash call consults its own input. -/
 theorem queriesUnder_hash {α : Type} (cache : QueryCache HashSpec) (input : Bytes)
     (next : HashOutput → OracleComp HashSpec α) :
     QueriesUnder cache
@@ -299,6 +300,7 @@ The truncation is where `shortHash` shows through: a tweakable call hashes and t
 first sixteen bytes, so the value the fold carries forward is `Hashing.truncate` of the raw
 oracle answer, not the answer itself. -/
 
+/-- The first step of a hash fold consults its input at the fold's initial value. -/
 theorem queriesUnder_foldlM_head {ι : Type} (cache : QueryCache HashSpec)
     (inputOf : Digest → ι → Bytes) (x : ι) (xs : List ι) (init : Digest) :
     QueriesUnder cache
@@ -308,6 +310,8 @@ theorem queriesUnder_foldlM_head {ι : Type} (cache : QueryCache HashSpec)
   rw [List.foldlM_cons]
   exact queriesUnder_shortHash cache (inputOf init x) _
 
+/-- What the rest of a hash fold consults, started from the truncated replayed answer of the
+first step, the whole fold consults. -/
 theorem queriesUnder_foldlM_tail {ι : Type} (cache : QueryCache HashSpec)
     (inputOf : Digest → ι → Bytes) (x : ι) (xs : List ι) (init : Digest) (probe : Bytes)
     (hquery : QueriesUnder cache
@@ -393,6 +397,8 @@ elements are `Fin n`, while `Extraction.BinaryPath.value` recurses on a bare `Na
 different types but the same indices, and every step here uses only `Fin.val`, so the folds
 agree once both are pushed through to `List.range`. -/
 
+/-- A fold over the first `k` elements of `List.finRange n` that uses only the indices' values is
+the same fold over `List.finRange k`. -/
 theorem foldl_finRange_take {α : Type} (n k : Nat) (hk : k ≤ n) (step : α → Nat → α)
     (init : α) :
     (((List.finRange n).take k).foldl (fun value j => step value j.val) init) =
@@ -413,6 +419,7 @@ applied to it, which is what `run_eq_replay` identifies with the oracle run's re
 So this closes the remaining direction, and with it any call in a hash-only computation is
 reachable: `queriesUnder_bind` to descend into a prefix, this to step over one. -/
 
+/-- What the continuation consults on the prefix's replayed result, the whole bind consults. -/
 theorem queriesUnder_bind_right {α β : Type} (cache : QueryCache HashSpec)
     (computation : OracleComp HashSpec α) (next : α → OracleComp HashSpec β) (probe : Bytes)
     (hquery : QueriesUnder cache (next (simulateQ (replay cache) computation)) probe) :
@@ -484,7 +491,7 @@ theorem simulateQ_replay_congr {α : Type} (computation : OracleComp HashSpec α
       hagree input (QueriesUnder.head (cache := left) input next)
     have hanswer : replay left input = replay right input := by
       rw [replay, replay, hhead]
-    show (simulateQ (replay left) (next (replay left input)) : Id α) =
+    change (simulateQ (replay left) (next (replay left input)) : Id α) =
       (simulateQ (replay right) (next (replay right input)) : Id α)
     rw [← hanswer]
     exact ih (replay left input) left right fun probe hprobe =>

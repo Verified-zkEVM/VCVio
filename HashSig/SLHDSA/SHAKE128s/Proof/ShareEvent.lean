@@ -16,10 +16,14 @@ At the end of the coupling, the shared half's event on the real side — a sensi
 `PRF_msg` guess at `SK.prf` in the record, or the signer's randomiser hitting `SK.prf` — has
 raised the lenient game's flag. This file proves it in pieces.
 
-This first part is about the real cache, which the coupling says is the view of the lenient
-state: it is the table's union cache over the lenient entries, so the key it generates is the
+The real cache, which the coupling says is the view of the lenient state, is the table's union
+cache over the lenient entries (`realView_eq_unionCache`), so the key it generates is the
 setup's, and the digits its replay reveals are at most the table's (`ShareCells.revealedOf`) —
-which is what makes the real game's availability contain the lenient game's.
+which is what makes the real game's availability contain the lenient game's (`available_mono`,
+`disclosed_subset`). Off the flag, the real cache agrees with the visible one at every filed
+probe (`realView_eq_visible`), and every probe of the real verifier is in its record
+(`verify_probes_recorded`). The three parts of the event then raise the flag:
+`flag_of_prfHit`, `flag_of_signerHit` and `flag_of_inputBad`.
 -/
 
 @[expose] public section
@@ -34,8 +38,10 @@ open Security CanonicalGraph ShareGame ShareCouple ShareInv
 
 /-! ## The real cache is the table's union cache -/
 
+/-- **The real cache is the table's union cache** over the merged lenient entries. -/
 theorem realView_eq_unionCache (setup : Setup) (state : St) :
-    realView setup state = RedrawCell.unionCache setup.publicSeed setup.table (merged setup state) := by
+    realView setup state =
+      RedrawCell.unionCache setup.publicSeed setup.table (merged setup state) := by
   ext input : 1
   rw [realView, RedrawCell.unionCache, QueryCache.ofFn_apply, QueryCache.ofFn_apply,
     RedrawCell.openCache_total]
@@ -46,9 +52,10 @@ theorem generatedKey_realView (setup : Setup) (state : St) :
     SplitCharged.generatedKey (setup.table.1 Node.secretSeed) setup.prf setup.publicSeed
       (realView setup state) = setup.pk := by
   rw [realView_eq_unionCache]
-  show (⟨setup.publicSeed, @Scheme.keygenInternal Id Id.instMonad
+  change (⟨setup.publicSeed, @Scheme.keygenInternal Id Id.instMonad
       (CacheReplay.replayQuery (RedrawCell.unionCache setup.publicSeed setup.table
-        (merged setup state))) (setup.table.1 Node.secretSeed) setup.prf setup.publicSeed |>.2.root⟩ :
+        (merged setup state))) (setup.table.1 Node.secretSeed) setup.prf setup.publicSeed
+          |>.2.root⟩ :
       PublicKey) = ⟨setup.publicSeed, setup.table.1 (.structural topRoot)⟩
   rw [@keygen_root_cell (CacheReplay.replayQuery (RedrawCell.unionCache setup.publicSeed
     setup.table (merged setup state))), RedrawCell.value_unionCache]
@@ -59,7 +66,8 @@ theorem generatedKey_realView (setup : Setup) (state : St) :
 theorem honestMessage_unionCache (publicSeed : Digest) (table : Cells × Padding)
     (cache : QueryCache HashSpec) (key : WotsKey) (node : StructuralNode)
     (hnode : ShareCells.messageNode key = some node) :
-    @GraphStakes.honestMessage (CacheReplay.replayQuery (RedrawCell.unionCache publicSeed table cache))
+    @GraphStakes.honestMessage
+        (CacheReplay.replayQuery (RedrawCell.unionCache publicSeed table cache))
         (table.1 Node.secretSeed) publicSeed key = table.1 (.structural node) := by
   unfold ShareCells.messageNode at hnode
   split at hnode
@@ -71,14 +79,18 @@ theorem honestMessage_unionCache (publicSeed : Digest) (table : Cells × Padding
     split_ifs at hnode with hl ht
     cases hnode
     simp only [GraphStakes.honestMessage, hlayer]
-    show @Merkle.node Id _ (CacheReplay.replayQuery (RedrawCell.unionCache publicSeed table cache))
+    change @Merkle.node Id _
+        (CacheReplay.replayQuery (RedrawCell.unionCache publicSeed table cache))
         (table.1 Node.secretSeed) publicSeed
         (⟨⟨layer, hl⟩, ⟨_, ht⟩⟩ : Tree).address subtreeHeight 0 = _
     rw [HonestProbes.subtree_root_cell, RedrawCell.replayCells_unionCache]
 
+/-- The digits a WOTS key's honest signature reveals, replayed at a union cache, are at most
+the table's. -/
 theorem honestRevealed_le_revealedOf (publicSeed : Digest) (table : Cells × Padding)
     (cache : QueryCache HashSpec) (key : WotsKey) (chain : Fin chains) :
-    @GraphStakes.honestRevealed (CacheReplay.replayQuery (RedrawCell.unionCache publicSeed table cache))
+    @GraphStakes.honestRevealed
+        (CacheReplay.replayQuery (RedrawCell.unionCache publicSeed table cache))
         (table.1 Node.secretSeed) publicSeed key chain ≤
       ShareCells.revealedOf table.1 key chain := by
   unfold ShareCells.revealedOf
@@ -101,12 +113,12 @@ theorem available_mono (revealed revealed' : WotsKey → Fin chains → Nat)
     cases parent with
     | wotsPrf key chain =>
       have h : revealed key chain = 0 := havailable
-      show revealed' key chain = 0
+      change revealed' key chain = 0
       have := hrevealed key chain
       omega
     | wotsHash key chain step =>
       have h : revealed key chain ≤ step.val + 1 := havailable
-      show revealed' key chain ≤ step.val + 1
+      change revealed' key chain ≤ step.val + 1
       exact (hrevealed key chain).trans h
     | forsPrf key index => exact hsigned key havailable
     | wotsPk key => exact True.intro
@@ -187,15 +199,18 @@ noncomputable def realCoinImpl :
     QueryImpl unifSpec (StateT SharePresent.VerifyState ProbComp) :=
   fun coin => SharePresent.realWorldImpl (Sum.inl coin)
 
+/-- The real verifier handler is the sum of its coin and hash parts. -/
 theorem realWorldImpl_eq_add :
     SharePresent.realWorldImpl = realCoinImpl + realHashImpl := by
   funext queried
   rcases queried with coin | input <;> rfl
 
+/-- The flattened verifier at a hash input charges the verifier cost and runs the random
+oracle on the cache. -/
 theorem realHashImpl_run (input : Bytes) (state : SharePresent.VerifyState) :
     (realHashImpl input).run state =
-      (fun z => (z.1, (state.1 * Multiplicative.ofAdd (RecordedQueries.verifierCost (Sum.inr input)),
-        z.2))) <$>
+      (fun z => (z.1,
+          (state.1 * Multiplicative.ofAdd (RecordedQueries.verifierCost (Sum.inr input)), z.2))) <$>
         (KeygenUniform.rom (Sum.inr input)).run state.2 := rfl
 
 /-- One flattened verifier step at a hash input: charged, stored, and nothing lost. -/
@@ -203,7 +218,8 @@ theorem realHash_step (input : Bytes) (tally : Multiplicative RecordedQueries.Ta
     (cache : QueryCache HashSpec) (z : HashOutput × SharePresent.VerifyState)
     (hz : z ∈ support ((realHashImpl input).run (tally, cache))) :
     z.2.1 = tally * Multiplicative.ofAdd (RecordedQueries.verifierCost (Sum.inr input)) ∧
-      z.2.2 input = some z.1 ∧ ∀ other value, cache other = some value → z.2.2 other = some value := by
+      z.2.2 input = some z.1 ∧
+        ∀ other value, cache other = some value → z.2.2 other = some value := by
   rw [realHashImpl_run] at hz
   obtain ⟨inner, hinner, rfl⟩ := ShareRealCap.exists_of_mem_support_map _ _ _ hz
   refine ⟨rfl, ?_⟩
@@ -217,7 +233,7 @@ theorem realHash_step (input : Bytes) (tally : Multiplicative RecordedQueries.Ta
     rw [CoverageCount.rom_run_inr_none input cache hc] at hinner
     obtain ⟨v, -, rfl⟩ := ShareRealCap.exists_of_mem_support_map _ _ _ hinner
     refine ⟨QueryCache.cacheQuery_self _ _ _, fun other w h => ?_⟩
-    show cache.cacheQuery input v other = some w
+    change cache.cacheQuery input v other = some w
     by_cases ho : other = input
     · subst ho; rw [hc] at h; cases h
     · rw [QueryCache.cacheQuery_of_ne _ _ ho]; exact h
@@ -351,12 +367,11 @@ theorem keyOf_realPair (setup : Setup)
       SigningLog) × QueryCache HashSpec)
     (p : St × Bool) (hcache : real.2 = realView setup p.1) :
     RoutedSplit.keyOf (SharedJoin.recordedTraceOf (realPair setup real)) = setup.pk := by
-  show SplitCharged.generatedKey (setup.table.1 Node.secretSeed) setup.prf setup.publicSeed real.2 =
-    setup.pk
+  change SplitCharged.generatedKey (setup.table.1 Node.secretSeed) setup.prf setup.publicSeed
+    real.2 = setup.pk
   rw [hcache]
   exact generatedKey_realView setup p.1
 
-set_option maxHeartbeats 2000000 in
 open scoped Classical in
 /-- **A sensitive claim of the real game raises the lenient flag at the claims.** The real output
 is assembled from a phase state `zs` and a verifier run `w` from the phase's cache; the phase
@@ -413,12 +428,12 @@ theorem flag_of_inputBad (setup : Setup)
     obtain ⟨node, hunavailable, hinput⟩ := hsens
     refine ⟨node, fun havailable => hunavailable ?_, hinput⟩
     refine available_mono _ _ _ _ (fun key chain => ?_) (fun key => ?_) _ havailable
-    · show @GraphStakes.honestRevealed (CacheReplay.replayQuery real.2)
+    · change @GraphStakes.honestRevealed (CacheReplay.replayQuery real.2)
           (setup.table.1 Node.secretSeed) setup.publicSeed key chain ≤ _
       rw [hcache, realView_eq_unionCache]
       exact honestRevealed_le_revealedOf setup.publicSeed setup.table _ key chain
     · exact disclosed_subset setup p hinv _ hlog hcache key
-  show (p.2 || decide (¬ setup.Good ∨
+  change (p.2 || decide (¬ setup.Good ∨
     ∃ candidate ∈ claimsOf setup p.1 real.1.1.1.1, Guess setup p.1.served candidate)) = true
   rw [hclaims]
   simp only [Bool.or_eq_true, decide_eq_true_eq]

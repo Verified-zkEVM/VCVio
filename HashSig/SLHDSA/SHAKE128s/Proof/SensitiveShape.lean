@@ -151,7 +151,7 @@ theorem available_of_alwaysAvailable (hrevealed : ∀ key chain, revealed key ch
     cases parent with
     | wotsPrf key chain => exact halways.elim
     | wotsHash key chain step =>
-      show revealed key chain ≤ step.val + 1
+      change revealed key chain ≤ step.val + 1
       rw [show step.val = w - 2 from halways]
       exact le_trans (hrevealed key chain) (by omega)
     | forsPrf key index => exact halways.elim
@@ -179,10 +179,10 @@ theorem not_available_wotsPosition (key : WotsKey) (chain : Fin chains) (positio
   rw [wotsPosition]
   split
   · rename_i hzero
-    show ¬ revealed key chain = 0
+    change ¬ revealed key chain = 0
     omega
   · rename_i hzero
-    show ¬ revealed key chain ≤ position.val - 1 + 1
+    change ¬ revealed key chain ≤ position.val - 1 + 1
     omega
 
 /-! ## Availability is closed under the structure
@@ -206,15 +206,15 @@ theorem available_of_children_available {parent : StructuralNode}
     Available revealed signed (.structural parent) := by
   cases parent with
   | wotsPrf key chain =>
-    exact (hchildren .secretSeed (by rw [StructuralNode.children]; exact List.mem_singleton_self _)
-      : Available revealed signed .secretSeed).elim
+    exact (hchildren .secretSeed
+      (by rw [StructuralNode.children]; exact List.mem_singleton_self _) :
+        Available revealed signed .secretSeed).elim
   | wotsHash key chain step =>
-    show revealed key chain ≤ step.val + 1
+    change revealed key chain ≤ step.val + 1
     rw [StructuralNode.children] at hchildren
     split at hchildren
     · rename_i hzero
       have := hchildren _ (List.mem_singleton_self _)
-      show revealed key chain ≤ step.val + 1
       have hprf : revealed key chain = 0 := this
       omega
     · rename_i hzero
@@ -224,8 +224,9 @@ theorem available_of_children_available {parent : StructuralNode}
   | wotsPk key => exact True.intro
   | tree location height index => exact True.intro
   | forsPrf key index =>
-    exact (hchildren .secretSeed (by rw [StructuralNode.children]; exact List.mem_singleton_self _)
-      : Available revealed signed .secretSeed).elim
+    exact (hchildren .secretSeed
+      (by rw [StructuralNode.children]; exact List.mem_singleton_self _) :
+        Available revealed signed .secretSeed).elim
   | forsTree key height index => exact True.intro
   | forsRoots key => exact True.intro
 

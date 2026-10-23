@@ -55,8 +55,8 @@ open CanonicalGraph SensitiveQuery
 
 `SensitiveQuery.Stakes` wants a node type on which `stake` is total and `inputOf` takes exactly
 one cell. A bare `StructuralNode` is neither: a node with two children has no single cell at
-stake. So the node type carries its own witness of having exactly one child, which is where the whole
-single-unavailable-child hypothesis is spent. -/
+stake. So the node type carries its own witness of having exactly one child, which is where the
+whole single-unavailable-child hypothesis is spent. -/
 
 /-- A structural node together with the single child a sensitive node has. -/
 structure SensitiveNode where
@@ -67,6 +67,8 @@ structure SensitiveNode where
   /-- Having only that child. -/
   children_eq : parent.children = [child]
 
+/-- Two sensitive nodes with the same structural node are equal: the child is determined by the
+node's children list. -/
 theorem SensitiveNode.ext {left right : SensitiveNode} (hparent : left.parent = right.parent) :
     left = right := by
   obtain ⟨leftParent, leftChild, leftEq⟩ := left
@@ -102,12 +104,13 @@ noncomputable def locate (input : Bytes) : Option SensitiveNode :=
   if hsome : ∃ node : SensitiveNode, ∃ cell : Cell, inputOf publicSeed node cell = input
     then some hsome.choose else none
 
+/-- `locate` reads a canonical input's node back. -/
 theorem locate_inputOf (node : SensitiveNode) (cell : Cell) :
     locate publicSeed (inputOf publicSeed node cell) = some node := by
   classical
   have hsome : ∃ other : SensitiveNode, ∃ value : Cell,
       inputOf publicSeed other value = inputOf publicSeed node cell := ⟨node, cell, rfl⟩
-  rw [locate, dif_pos hsome]
+  rw [locate, dite_eq_left hsome]
   obtain ⟨value, hvalue⟩ := hsome.choose_spec
   exact congrArg some (inputOf_inj publicSeed hvalue).1
 
@@ -164,6 +167,8 @@ key and the seeds alone: the honest node one layer down, or — at the bottom la
 FORS public key at that leaf. So the revealed digit is fixed before the adversary runs, which is
 what lets the WOTS clause be read off the walk rather than off the signing log. -/
 
+section HonestDigit
+
 variable [HasQuery HashSpec Id]
 
 /-- The message the honest key at `key` signs. -/
@@ -178,7 +183,17 @@ discloses. -/
 def honestRevealed (secretSeed publicSeed : Digest) (key : WotsKey) (chain : Fin chains) : Nat :=
   (Checksum.encode (honestMessage secretSeed publicSeed key) chain).val
 
-omit [HasQuery HashSpec Id] in
+/-- A revealed digit never exceeds `w - 1`, which is the only thing the rate needs of it. -/
+theorem honestRevealed_le (secretSeed publicSeed : Digest) :
+    ∀ (key : WotsKey) (chain : Fin chains),
+      honestRevealed secretSeed publicSeed key chain ≤ w - 1 := by
+  intro key chain
+  have := (Checksum.encode (honestMessage secretSeed publicSeed key) chain).isLt
+  simp only [honestRevealed, w, winternitzBits] at this ⊢
+  omega
+
+end HonestDigit
+
 /-- **The chain value a signature discloses is available.** The position it opens is the digit
 the key's own message encodes, and that digit is what `revealed` records — so the cell at that
 position is one the signature has made available, whether it is the chain's start or a value
@@ -196,20 +211,11 @@ theorem available_wotsPosition (revealed : WotsKey → Fin chains → Nat)
   rw [CanonicalGraph.wotsPosition]
   split
   · rename_i hzero
-    show revealed key chain = 0
+    change revealed key chain = 0
     omega
   · rename_i hzero
-    show revealed key chain ≤ (position.val - 1) + 1
+    change revealed key chain ≤ (position.val - 1) + 1
     omega
-
-/-- A revealed digit never exceeds `w - 1`, which is the only thing the rate needs of it. -/
-theorem honestRevealed_le (secretSeed publicSeed : Digest) :
-    ∀ (key : WotsKey) (chain : Fin chains),
-      honestRevealed secretSeed publicSeed key chain ≤ w - 1 := by
-  intro key chain
-  have := (Checksum.encode (honestMessage secretSeed publicSeed key) chain).isLt
-  simp only [honestRevealed, w, winternitzBits] at this ⊢
-  omega
 
 /-! ## The FORS disclosure is coverage or a sensitive query
 
@@ -221,7 +227,6 @@ either, so the run reached it by a query at a sensitive node.
 
 Nothing here decides which; it is the honest statement of the fork. -/
 
-omit [HasQuery HashSpec Id] in
 /-- **An unsigned FORS secret is not obtainable.** -/
 theorem not_obtainable_forsPrf (state : State) (key : ForsKey)
     (index : Fin (forsTrees * 2 ^ forsHeight)) (hunsigned : index ∉ signedAt state key) :
@@ -241,7 +246,6 @@ def forsIndex (indices : SlhDsaSecurity.Fors.Indices) (tree : Fin forsTrees) :
       omega
     exact lt_of_lt_of_le hstep (Nat.mul_le_mul_right _ htree)⟩
 
-omit [HasQuery HashSpec Id] in
 /-- **The FORS disclosure, position by position: signed, or not obtainable.** -/
 theorem forsSecret_signed_or_not_obtainable (cache : QueryCache HashSpec)
     (secretSeed : Digest) (key : ForsKey) (indices : SlhDsaSecurity.Fors.Indices)
@@ -298,9 +302,8 @@ chain consults its canonical input at the chain's own partial value. -/
 def forsLeafNode (key : ForsKey) (index : Fin (forsTrees * 2 ^ forsHeight)) : SensitiveNode :=
   ⟨.forsTree key ⟨0, by omega⟩ ⟨index.val, by simp [index.isLt]⟩,
     .structural (.forsPrf key index), by
-      rw [StructuralNode.children, dif_pos rfl]⟩
+      rw [StructuralNode.children, dite_eq_left rfl]⟩
 
-omit [HasQuery HashSpec Id] in
 /-- **A claim at an unavailable cell is a sensitive candidate.** -/
 theorem sensitive_inputOf (node : SensitiveNode) (table : Cells) (state : State) (value : Cell)
     (hunavailable : unavailableAt revealed signedAt state node.child)
@@ -309,7 +312,6 @@ theorem sensitive_inputOf (node : SensitiveNode) (table : Cells) (state : State)
       (inputOf publicSeed node value) :=
   ⟨node, hunavailable, by rw [hvalue]; rfl⟩
 
-omit [HasQuery HashSpec Id] in
 /-- **A chain value the forgery claims below the revealed digit is a sensitive candidate.** -/
 theorem sensitive_wotsClaim (table : Cells) (state : State) (key : WotsKey)
     (chain : Fin chains) (step : Fin (w - 1)) (value : Cell)
@@ -321,7 +323,6 @@ theorem sensitive_wotsClaim (table : Cells) (state : State) (key : WotsKey)
   sensitive_inputOf publicSeed revealed signedAt _ table state value
     (not_available_wotsPosition revealed (signedAt state) key chain _ hbelow) hvalue
 
-omit [HasQuery HashSpec Id] in
 /-- **A FORS secret the forgery claims at an unsigned position is a sensitive candidate.** -/
 theorem sensitive_forsClaim (table : Cells) (state : State) (key : ForsKey)
     (index : Fin (forsTrees * 2 ^ forsHeight)) (value : Cell)

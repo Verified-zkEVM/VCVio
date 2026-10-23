@@ -58,8 +58,11 @@ open Security CanonicalGraph
 
 /-- **What the game is played at**: the two seeds the table does not carry, and the table. -/
 structure Setup where
+  /-- The secret key's `PRF_msg` seed. -/
   prf : Digest
+  /-- The public seed. -/
   publicSeed : Digest
+  /-- The drawn table: the graph's cells and the padding. -/
   table : Cells × Padding
 
 namespace Setup

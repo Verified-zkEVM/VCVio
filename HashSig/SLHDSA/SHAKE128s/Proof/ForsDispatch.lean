@@ -47,8 +47,6 @@ namespace SlhDsaSecurity.ForsDispatch
 
 open CanonicalGraph Extraction
 
-set_option backward.isDefEq.respectTransparency false
-
 /-! ## A two-child node, charged
 
 `CollisionToDeviating.deviatingCollision_of_tree_pair` is the pair-shaped join, but it names
@@ -377,6 +375,8 @@ The one arithmetic fact the dispatch needs about FORS indices: the global leaf i
 and the rest is the leaf index being below `2 ^ forsHeight`. -/
 
 omit [HasQuery HashSpec Id] in
+/-- The global leaf index of FORS tree `i`, shifted down by `level`, lies inside the rectangle of
+nodes at that height. -/
 theorem leafIndex_div_lt (indices : SlhDsaSecurity.Fors.Indices) (i : Fin forsTrees)
     (level : Nat) (hlevel : level ≤ forsHeight) :
     Extraction.Fors.leafIndex indices i / 2 ^ level < forsTrees * 2 ^ (forsHeight - level) := by

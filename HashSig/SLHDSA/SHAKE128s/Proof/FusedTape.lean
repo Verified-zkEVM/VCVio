@@ -52,6 +52,8 @@ components the map cannot reach. -/
 def onCarrierTape (f : σ → σ) (state : SplitTapeState σ) : SplitTapeState σ :=
   (f state.1, state.2)
 
+/-- A world query to the fused handler is one nested run of the outer handler, with the
+writer value accumulated. -/
 theorem fuseServing_run_inl {S : Type} (outer : QueryImpl OracleWorld (StateT S ProbComp))
     (inner : QueryImpl (OracleWorld + SigningSpec)
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld))))
@@ -62,6 +64,8 @@ theorem fuseServing_run_inl {S : Type} (outer : QueryImpl OracleWorld (StateT S 
         fun step => (pure (step.1.1.1, (state.1 * step.1.1.2, step.1.2, step.2)) :
           ProbComp _) := rfl
 
+/-- A signing request to the fused handler is one nested run of the outer handler, opened by
+`before` and closed by `after` on the outer state. -/
 theorem fuseServing_run_inr {S : Type} (outer : QueryImpl OracleWorld (StateT S ProbComp))
     (inner : QueryImpl (OracleWorld + SigningSpec)
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld))))
@@ -73,7 +77,6 @@ theorem fuseServing_run_inr {S : Type} (outer : QueryImpl OracleWorld (StateT S 
         (pure (step.1.1.1, (state.1 * step.1.1.2, step.1.2, after step.2)) :
           ProbComp _) := rfl
 
-set_option maxHeartbeats 1000000 in
 open scoped Classical in
 /-- **The fused handler's run factorises through blocks drawn once**, with an arbitrary
 continuation on each side. Every case is one application of
@@ -163,7 +166,6 @@ def forgetView (state : StateOf σ) : SplitPrefix.SplitState :=
 def forgetViewTape (state : SplitTapeState σ) : SplitPrefix.SplitState :=
   (CacheView.cacheOf state.1, state.2.2)
 
-set_option maxHeartbeats 1000000 in
 open scoped Classical in
 /-- **A three-stage bracketed run factorises through one pair of blocks drawn at the top.** -/
 theorem evalDist_threeStage (leftKeep rightKeep : Bytes → σ → Prop)
@@ -359,7 +361,6 @@ Two applications of the continuation form. No invariant appears in either: each 
 own recording and its own block.
 -/
 
-set_option maxHeartbeats 2000000 in
 open scoped Classical in
 /-- **Each recorded target answer is the block cell it was read from, at the fused handler.** -/
 theorem fusedRightOf_getElem?_cont (leftKeep rightKeep : Bytes → σ → Prop)
@@ -436,7 +437,6 @@ theorem fusedRightOf_getElem?_cont (leftKeep rightKeep : Bytes → σ → Prop)
         exact ih z.1.1.1 (accumulated * z.1.1.2) z.1.2 (afterMap z.2.1) z.2.2.1.1 z.2.2.1.2
           z.2.2.2.1 z.2.2.2.2 v hv idx hreach hcl
 
-set_option maxHeartbeats 4000000 in
 open scoped Classical in
 /-- **Each recorded target answer is the block cell it was read from, across all three stages.**
 The innermost layer is vacuous rather than `rfl` this time: the final `pure` adds nothing to the
@@ -558,7 +558,6 @@ theorem fusedLeftOf_prefix (leftKeep rightKeep : Bytes → σ → Prop)
       exact noticingLeftOf_prefix leftKeep rightKeep _
         (onCarrierTape (before request) state.2.2) z hz
 
-set_option maxHeartbeats 2000000 in
 open scoped Classical in
 /-- **Each recorded disclosing answer is the block cell it was read from, at the fused handler.** -/
 theorem fusedLeftOf_getElem?_cont (leftKeep rightKeep : Bytes → σ → Prop)
@@ -634,7 +633,6 @@ theorem fusedLeftOf_getElem?_cont (leftKeep rightKeep : Bytes → σ → Prop)
         rw [pure_bind] at hv
         exact ih z.1.1.1 (accumulated * z.1.1.2) z.1.2 (afterMap z.2.1) z.2.2.1.1 z.2.2.1.2
           z.2.2.2.1 z.2.2.2.2 v hv idx hreach hcl
-set_option maxHeartbeats 4000000 in
 open scoped Classical in
 /-- **Each recorded disclosing answer is the block cell it was read from, across all three stages.**
 The innermost layer is vacuous rather than `rfl` this time: the final `pure` adds nothing to the
@@ -743,6 +741,8 @@ noncomputable def threeStageHandlerRun (leftKeep rightKeep : Bytes → σ → Pr
           :
           ProbComp (δ × SplitPrefix.SplitState))
 
+/-- Forgetting the drawn blocks of the three-stage block run leaves the three-stage run with two
+freshly drawn blocks. -/
 theorem threeStage_blockRunOf_snd (leftKeep rightKeep : Bytes → σ → Prop)
     {β α γ δ : Type}
     (inner : β → QueryImpl (OracleWorld + SigningSpec)

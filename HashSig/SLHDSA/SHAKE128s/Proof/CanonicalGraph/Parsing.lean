@@ -9,6 +9,8 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Input
 
 /-!
+# Parsing canonical inputs
+
 An input-only parser for the canonical graph. The parser uses only the public seed and
 query bytes. Its candidate table is a witness reconstructed from those bytes, not the
 secret table. Values at coordinates outside the parsed parent's children are irrelevant.
@@ -19,17 +21,25 @@ The parser is noncomputable because efficiency is immaterial for the query-count
 
 namespace SlhDsaSecurity.CanonicalGraph
 
+/-- A reading of a byte string as a canonical input: the structural node it is the input of, and
+cells from which it is formed. -/
 structure ParsedInput where
+  /-- The structural node whose canonical input the bytes are. -/
   parent : StructuralNode
+  /-- A cell assignment whose values at the parent's children form the input's payload. -/
   candidates : Cells
 
+/-- The bytes are the canonical input of some structural node, under some cell assignment. -/
 def HasParse (publicSeed : Digest) (input : Bytes) : Prop :=
   ∃ parsed : ParsedInput, canonicalInput publicSeed parsed.candidates parsed.parent = input
 
+/-- A chosen parse of the bytes as a canonical input under the given public seed, or `none` if
+they are not one. -/
 noncomputable def parseInput (publicSeed : Digest) (input : Bytes) : Option ParsedInput := by
   classical
   exact if h : HasParse publicSeed input then some h.choose else none
 
+/-- A parse reproduces its input. -/
 theorem parseInput_sound {publicSeed : Digest} {input : Bytes} {parsed : ParsedInput}
     (hparse : parseInput publicSeed input = some parsed) :
     canonicalInput publicSeed parsed.candidates parsed.parent = input := by
@@ -42,11 +52,14 @@ theorem parseInput_sound {publicSeed : Digest} {input : Bytes} {parsed : ParsedI
     exact hexists.choose_spec
   · contradiction
 
+/-- The parser fails exactly on bytes that are not a canonical input. -/
 theorem parseInput_none_iff (publicSeed : Digest) (input : Bytes) :
     parseInput publicSeed input = none ↔ ¬ HasParse publicSeed input := by
   classical
   simp [parseInput]
 
+/-- A canonical input parses to its own parent, with candidate cells agreeing with the original
+cells on the parent's children. -/
 theorem parseInput_canonical (publicSeed : Digest) (cells : Cells) (parent : StructuralNode) :
     ∃ parsed, parseInput publicSeed (canonicalInput publicSeed cells parent) = some parsed ∧
       parsed.parent = parent ∧

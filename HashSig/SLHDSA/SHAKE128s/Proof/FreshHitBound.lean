@@ -42,13 +42,12 @@ Uniform-coin queries are free: they never touch the cache and never consume budg
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.FreshHitBound
 
 /-- The charged queries: those addressed to the shared hash oracle. -/
 def HashQuery : OracleWorld.Domain → Prop := fun query => query.isRight = true
 
+/-- Whether a query is charged is decided by its oracle index. -/
 instance : DecidablePred HashQuery := fun _ => inferInstanceAs (Decidable (_ = _))
 
 /-- The final cache holds an answer truncating to the target of its own input.
@@ -67,7 +66,8 @@ def Clean (targetOf : Bytes → Option Digest) (cache : QueryCache HashSpec) : P
 
 /-- One fresh hash answer truncates to a value fixed in advance with probability `2 ^ -128`. -/
 theorem prob_truncate_eq (target : Digest) :
-    Pr{let output ← ($ᵗ HashOutput : ProbComp HashOutput)}[Hashing.truncate output = target] = 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
+    Pr{let output ← ($ᵗ HashOutput : ProbComp HashOutput)}[Hashing.truncate output = target] =
+      1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   have hmap : Pr{let output ← ($ᵗ HashOutput : ProbComp HashOutput)}[
         Hashing.truncate output = target] =
       Pr{let digest ← (Hashing.truncate <$> ($ᵗ HashOutput : ProbComp HashOutput))}[
@@ -82,7 +82,9 @@ theorem prob_truncate_eq (target : Digest) :
 /-- One fresh answer matches the optional target of its own input with probability at most
 `2 ^ -128`; an input with no target can never match. -/
 theorem prob_target_match_le (optionalTarget : Option Digest) :
-    Pr{let output ← ($ᵗ HashOutput : ProbComp HashOutput)}[some (Hashing.truncate output) = optionalTarget] ≤ 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
+    Pr{let output ← ($ᵗ HashOutput : ProbComp HashOutput)}[
+        some (Hashing.truncate output) = optionalTarget] ≤
+      1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   cases optionalTarget with
   | none =>
     refine le_of_eq_of_le (b := 0) ?_ (by simp)

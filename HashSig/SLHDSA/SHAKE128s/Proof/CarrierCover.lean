@@ -92,6 +92,7 @@ theorem mem_support_dropCount_run {α : Type}
   rw [← forgetsAlong_dropCount pk rightKeep computation state, support_map]
   exact ⟨result, hmem, rfl⟩
 
+/-- Dropping the counter commutes with opening a signing bracket. -/
 theorem dropCount_startServingOn (request : Message)
     (state : HandlerCarrier.State × ((DigestTape.Record × DigestTape.Record) × Nat)) :
     dropCount (startServingOn request state) = startServingOn request (dropCount state) := by
@@ -100,6 +101,7 @@ theorem dropCount_startServingOn (request : Message)
   | none => rfl
   | some framed => rfl
 
+/-- Dropping the counter commutes with closing a signing bracket. -/
 theorem dropCount_stopServingOn
     (state : HandlerCarrier.State × ((DigestTape.Record × DigestTape.Record) × Nat)) :
     dropCount (stopServingOn state) = stopServingOn (dropCount state) := rfl
@@ -143,7 +145,8 @@ With the cover unconditional, `FusedCover`'s signing obligation `hsub` is discha
 a signing sub-run is a plain noticing run at the view the opening bracket produced, and the
 bracket keeps the cache, so `NoticingCover.mem_recordOf_of_cache_reaches` answers it. -/
 
-set_option maxHeartbeats 1000000 in
+set_option maxHeartbeats 400000 in
+-- The three-stage case split unfolds the fused handler's state tuple at every stage.
 open scoped Classical in
 /-- **A query the carrier tail ends holding is recorded on one side or the other.** The cover
 lemma, reached through all three stages. -/
@@ -160,7 +163,7 @@ theorem cover_carrierTail
     (hfinal : result.2.1 input = some answer) :
     (input, answer) ∈ result.2.2.1 ∨ (input, answer) ∈ result.2.2.2 := by
   classical
-  letI : CacheView HandlerCarrier.State := servingView (keyAt walk)
+  let : CacheView HandlerCarrier.State := servingView (keyAt walk)
   have hbeforeRecord : ∀ (request : Message)
       (state : RecorderView.StateOf HandlerCarrier.State),
       (startServingOn request state).2 = state.2 := by

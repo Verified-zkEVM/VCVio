@@ -39,21 +39,24 @@ attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenI
 jointly capped real game is at most the blind flag of the jointly capped game. -/
 def SetupBound (adversary : Adversary) (limit : Nat) : Prop :=
   ∀ setup : Setup, setup.Good →
-    Pr{let r ← ShareJoint.realFlatJ adversary limit (setup.sk, setup.pk) setup.warm}[ShareFinal.RealEvent setup r ∧ r.1.1.2.1 = true] ≤
+    Pr{let r ← ShareJoint.realFlatJ adversary limit (setup.sk, setup.pk) setup.warm}[
+        ShareFinal.RealEvent setup r ∧ r.1.1.2.1 = true] ≤
       Pr{let z ← ShareBound.flagRun (ShareJoint.shareCompJ adversary limit) setup}[z.2.2 = true]
 
-set_option maxHeartbeats 4000000 in
 /-- **At one walk, the shared event on an accepted forgery is at most the blind flag.** -/
 theorem walk_bound {adversary : Adversary} {q : Nat} (hbudget : TailBudgetW adversary q)
     (hsetup : SetupBound adversary (q - 569))
     (prfSeed publicSeed : Digest) (table : Cells × Padding) :
-    Pr{let result ← RecordedTail.recordedTail adversary (WalkTable.walkOfTable prfSeed publicSeed table)}[Target.GoodWalk (WalkTable.walkOfTable prfSeed publicSeed table) ∧
+    Pr{let result ← RecordedTail.recordedTail adversary
+          (WalkTable.walkOfTable prfSeed publicSeed table)}[
+        Target.GoodWalk (WalkTable.walkOfTable prfSeed publicSeed table) ∧
         (RoutedSplit.InputBad (SharedJoin.recordedTraceOf
             (WalkTable.walkOfTable prfSeed publicSeed table, result)) ∨
           Target127.Late (WalkTable.walkOfTable prfSeed publicSeed table, result)) ∧
         result.1.1.1.verified = true] ≤
       Pr{let z ← (ShareBound.flagRun (ShareJoint.shareCompJ adversary (q - 569))
-          (ShareFinal.setupOf prfSeed publicSeed table))}[(ShareFinal.setupOf prfSeed publicSeed table).Good ∧ z.2.2 = true] := by
+          (ShareFinal.setupOf prfSeed publicSeed table))}[
+        (ShareFinal.setupOf prfSeed publicSeed table).Good ∧ z.2.2 = true] := by
   classical
   by_cases hgood : (ShareFinal.setupOf prfSeed publicSeed table).Good
   · refine le_trans (prEvent_mono _ _ _ fun result hevent => hevent.2) ?_
@@ -75,7 +78,6 @@ theorem walk_bound {adversary : Adversary} {q : Nat} (hbudget : TailBudgetW adve
       hgood ((ShareFinal.goodWalk_iff prfSeed publicSeed table).mp hevent.1))) (by simp)
 
 open BlindCharge in
-set_option maxHeartbeats 4000000 in
 /-- **The shared half on accepted forgeries, key generation's and the signer's calls free.** -/
 theorem hshared (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adversary q)
     (hq : 569 ≤ q) (hsetup : SetupBound adversary (q - 569))

@@ -91,6 +91,7 @@ theorem probEvent_forget {fused : FusedTail} {adversary : Adversary}
 
 /-! ## Supports of the paired run -/
 
+/-- A paired run's result is a walk in the graph walk's support beside a tail result at it. -/
 theorem mem_support_pairedOf {fused : FusedTail} {adversary : Adversary} {pair : SplitPair}
     (hpair : pair ∈ support (pairedOf fused adversary)) :
     ∃ walk ∈ support WarmedGame.graphWalk, ∃ result ∈ support (fused adversary walk),

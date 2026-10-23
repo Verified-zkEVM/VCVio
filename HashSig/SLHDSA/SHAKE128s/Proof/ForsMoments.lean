@@ -22,7 +22,9 @@ Poisson coupling, a concentration theorem, or a bound for adaptive signing trans
 
 namespace SlhDsaSecurity.ForsMoments
 
-/-- A finite row avoids expanding the Stirling recurrence exponentially during kernel checks. -/
+/-- Row `n` of the triangle of Stirling numbers of the second kind, `S(n, 0), …, S(n, n)`,
+computed row by row so that kernel evaluation does not unfold the two-term recurrence
+exponentially. -/
 def stirlingRow : Nat → List Nat
   | 0 => [1]
   | n + 1 =>
@@ -33,6 +35,8 @@ def stirlingRow : Nat → List Nat
           | 0 => 0
           | j + 1 => previous.getD j 0
 
+/-- Entry `k` of `stirlingRow n` is the Stirling number `S(n, k)`, and entries past the row are
+zero. -/
 theorem stirlingRow_getD (n k : Nat) :
     (stirlingRow n).getD k 0 = Nat.stirlingSecond n k := by
   induction n generalizing k with
@@ -50,13 +54,19 @@ theorem stirlingRow_getD (n k : Nat) :
           dite_false, Option.getD_none]
         exact (Nat.stirlingSecond_eq_zero_of_lt (by omega)).symm
 
+/-- The Touchard polynomial of the given degree evaluated at `mean`,
+`∑ k ≤ degree, S(degree, k) * mean ^ k`: the raw moment of that degree of a Poisson variable
+with integer mean `mean`. -/
 def touchard (degree mean : Nat) : Nat :=
   ∑ k ∈ Finset.range (degree + 1), Nat.stirlingSecond degree k * mean ^ k
 
+/-- `touchard` with its Stirling coefficients read from the precomputed `stirlingRow`, the form
+used for kernel evaluation. -/
 def cachedTouchard (degree mean : Nat) : Nat :=
   let row := stirlingRow degree
   ∑ k ∈ Finset.range (degree + 1), row.getD k 0 * mean ^ k
 
+/-- The cached evaluation agrees with `touchard`. -/
 theorem touchard_eq_cached (degree mean : Nat) :
     touchard degree mean = cachedTouchard degree mean := by
   simp only [touchard, cachedTouchard, stirlingRow_getD]

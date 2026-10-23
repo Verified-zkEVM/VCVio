@@ -12,8 +12,12 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Wots
 /-!
 # Faithful fixed-hash evaluation
 
-Every cell below is an existing concrete algorithm output. The recurrence theorem connects
-these actual computations to the canonical DAG; it does not posit component security.
+Every cell below is an existing concrete algorithm output under a fixed hash function:
+`structuralValue` assigns to each structural node the WOTS+, Merkle or FORS value the algorithms
+compute for it, and `value` extends it by the secret seed. The recurrence theorem
+`value_equation` connects these actual computations to the canonical DAG: each node's value is the
+hash of its canonical input. `value_unique` shows that the evaluation is the only cell assignment
+satisfying these equations. Nothing here posits component security.
 -/
 
 @[expose] public section
@@ -24,6 +28,8 @@ namespace SlhDsaSecurity.CanonicalGraph
 
 variable [HasQuery HashSpec Id]
 
+/-- The value the SLH-DSA algorithms compute at a structural node, for fixed seeds and a fixed
+hash function. -/
 def structuralValue (secretSeed publicSeed : Digest) : StructuralNode → Digest
   | .wotsPrf key chain => Hashing.derive (m := Id) publicSeed secretSeed
       (Wots.secretAddress key.address chain)
@@ -44,15 +50,20 @@ def structuralValue (secretSeed publicSeed : Digest) : StructuralNode → Digest
         (digestArrayBytes fun i : Fin forsTrees =>
           Fors.node (m := Id) secretSeed publicSeed key.address forsHeight i.val)
 
+/-- The actual evaluation of the canonical graph: the secret seed at its node and the computed
+value at every structural node. -/
 def value (secretSeed publicSeed : Digest) : Cells
   | .secretSeed => secretSeed
   | .structural node => structuralValue secretSeed publicSeed node
 
 omit [HasQuery HashSpec Id] in
+/-- The child encoding of a list of children given by a function is the corresponding digest
+array encoding. -/
 theorem childBytes_ofFn {size : Nat} (cells : Cells) (children : Fin size → Node) :
     childBytes cells (List.ofFn children) = digestArrayBytes (fun i => cells (children i)) := by
   simp only [childBytes, List.map_ofFn, digestArrayBytes, Function.comp_def]
 
+/-- The value at a Merkle node is the Merkle algorithm's node value. -/
 theorem value_merkleNode (secretSeed publicSeed : Digest) (tree : Tree)
     (height : Nat) (hheight : height ≤ subtreeHeight)
     (index : Fin (2 ^ (subtreeHeight - height))) :
@@ -67,6 +78,7 @@ theorem value_merkleNode (secretSeed publicSeed : Digest) (tree : Tree)
     simp only [value, structuralValue]
     rw [Nat.sub_add_cancel (by omega : 1 ≤ height)]
 
+/-- The value at a Merkle child is the Merkle algorithm's value at the child position. -/
 theorem value_merkleChild (secretSeed publicSeed : Digest) (tree : Tree)
     (height : Fin subtreeHeight)
     (index : Fin (2 ^ (subtreeHeight - (height.val + 1)))) (side : Fin 2) :
@@ -75,9 +87,11 @@ theorem value_merkleChild (secretSeed publicSeed : Digest) (tree : Tree)
         (2 * index.val + side.val) :=
   value_merkleNode _ _ _ _ _ _
 
+/-- Each structural value is the hash of the node's canonical input under the evaluation. -/
 theorem structuralValue_equation (secretSeed publicSeed : Digest) (parent : StructuralNode) :
     structuralValue secretSeed publicSeed parent =
-      Hashing.shortHash (m := Id) (canonicalInput publicSeed (value secretSeed publicSeed) parent) := by
+      Hashing.shortHash (m := Id)
+        (canonicalInput publicSeed (value secretSeed publicSeed) parent) := by
   change @Eq (Id Digest) (structuralValue secretSeed publicSeed parent)
     (Hashing.shortHash (m := Id) (canonicalInput publicSeed (value secretSeed publicSeed) parent))
   cases parent with
@@ -122,9 +136,11 @@ theorem structuralValue_equation (secretSeed publicSeed : Digest) (parent : Stru
       simp only [structuralValue, canonicalInput, StructuralNode.children,
         childBytes_ofFn, value, StructuralNode.address, Hashing.tweakable]
 
+/-- The evaluation at each structural node is the hash of its canonical input. -/
 theorem value_equation (secretSeed publicSeed : Digest) (parent : StructuralNode) :
     value secretSeed publicSeed (.structural parent) =
-      Hashing.shortHash (m := Id) (canonicalInput publicSeed (value secretSeed publicSeed) parent) :=
+      Hashing.shortHash (m := Id)
+        (canonicalInput publicSeed (value secretSeed publicSeed) parent) :=
   structuralValue_equation _ _ _
 
 /-- A cell table satisfying these concrete hash equations is the actual algorithm evaluation. -/

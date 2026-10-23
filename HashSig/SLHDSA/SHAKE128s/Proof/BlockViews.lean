@@ -69,7 +69,8 @@ theorem evalDist_padding_eq_ofFn (length : Nat) :
         fun _ => ([] : List HashOutput) from by funext word; simp]
     simp
   | succ remaining ih =>
-    have hbijection := SampleableType.map_uniformSample_evalDistEq_of_bijective (cons_bijective remaining)
+    have hbijection :=
+      SampleableType.map_uniformSample_evalDistEq_of_bijective (cons_bijective remaining)
     calc padding (remaining + 1)
         = (($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
             padding remaining >>= fun rest => (pure (value :: rest) : ProbComp _)) := rfl
@@ -98,7 +99,8 @@ theorem evalDist_padding_eq_ofFn (length : Nat) :
 theorem evalDist_parse_uniform :
     (MessageDigest.parse <$> ($ᵗ HashOutput : ProbComp HashOutput)) =ᵈ
       ($ᵗ MessageDigest.View : ProbComp MessageDigest.View) := by
-  have hsplit := SampleableType.map_uniformSample_evalDistEq_of_bijective MessageDigest.split_bijective
+  have hsplit :=
+    SampleableType.map_uniformSample_evalDistEq_of_bijective MessageDigest.split_bijective
   calc MessageDigest.parse <$> ($ᵗ HashOutput : ProbComp HashOutput)
       = Prod.fst <$> (MessageDigest.split <$> ($ᵗ HashOutput : ProbComp HashOutput)) := by
         rw [Functor.map_map]

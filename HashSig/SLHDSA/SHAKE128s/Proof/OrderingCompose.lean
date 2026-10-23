@@ -27,6 +27,9 @@ open Security PhaseFusion
 
 variable {σ : Type} {ω : Type} [Monoid ω]
 
+/-- **The fused handler on a world query**: run the inner handler's step under the outer
+handler, multiply its count into the running one, and leave the bracket state as the outer
+handler leaves it. -/
 theorem fuseServing_run_inl (outer : QueryImpl OracleWorld (StateT σ ProbComp))
     (inner : QueryImpl (OracleWorld + SigningSpec)
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld))))
@@ -37,6 +40,9 @@ theorem fuseServing_run_inl (outer : QueryImpl OracleWorld (StateT σ ProbComp))
         fun step => (pure (step.1.1.1, (state.1 * step.1.1.2, step.1.2, step.2)) :
           ProbComp _) := rfl
 
+/-- **The fused handler on a signing request**: advance the bracket state by `before`, run the
+inner handler's step under the outer handler, multiply its count into the running one, and
+close the bracket with `after`. -/
 theorem fuseServing_run_inr (outer : QueryImpl OracleWorld (StateT σ ProbComp))
     (inner : QueryImpl (OracleWorld + SigningSpec)
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld))))

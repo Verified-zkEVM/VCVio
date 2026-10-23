@@ -37,6 +37,7 @@ open Security ShareGame
 
 /-! ## The routing leaves the bookkeeping alone -/
 
+/-- A plain oracle step leaves the served list, the record and the log alone. -/
 theorem plain_mem_support (state : St) (input : Bytes) (z : HashOutput × St)
     (hz : z ∈ support (plain state input)) :
     z.2.served = state.served ∧ z.2.record = state.record ∧ z.2.log = state.log := by
@@ -51,6 +52,7 @@ theorem plain_mem_support (state : St) (input : Bytes) (z : HashOutput × St)
     rw [hz]
     exact ⟨rfl, rfl, rfl⟩
 
+/-- A `PRF_msg` step leaves the served list, the record and the log alone. -/
 theorem prfAt_mem_support (state : St) (frame : Bytes) (z : HashOutput × St)
     (hz : z ∈ support (prfAt state frame)) :
     z.2.served = state.served ∧ z.2.record = state.record ∧ z.2.log = state.log := by
@@ -65,6 +67,7 @@ theorem prfAt_mem_support (state : St) (frame : Bytes) (z : HashOutput × St)
     rw [hz]
     exact ⟨rfl, rfl, rfl⟩
 
+/-- A routed hash query leaves the served list, the record and the log alone. -/
 theorem route_mem_support (lenient : Bool) (setup : Setup) (state : St) (input : Bytes)
     (z : HashOutput × St) (hz : z ∈ support (route lenient setup state input)) :
     z.2.served = state.served ∧ z.2.record = state.record ∧ z.2.log = state.log := by
@@ -250,19 +253,19 @@ theorem reportsCost (lenient : Bool) (setup : Setup) :
   rcases queried with (coin | input) | request
   · simp only [advImpl, QueryImpl.apply_compose, splitter, worldQuery] at hz
     have := length_step lenient setup (Sum.inl (Sum.inl (Sum.inl (Sum.inl coin)))) state z
-      (by simp at hz; exact hz)
+      (by simpa using hz)
     simpa [weight, added] using this
   · simp only [advImpl, QueryImpl.apply_compose, splitter, worldQuery] at hz
     have := length_step lenient setup (Sum.inl (Sum.inl (Sum.inl (Sum.inr input)))) state z
-      (by simp at hz; exact hz)
+      (by simpa using hz)
     simpa [weight, added] using this
   · simp only [advImpl, QueryImpl.apply_compose, splitter] at hz
     rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
     obtain ⟨step, hstep, hz⟩ := hz
     have hdraw := length_step lenient setup (Sum.inl (Sum.inl (Sum.inr request))) state step
-      (by simp at hstep; exact hstep)
+      (by simpa using hstep)
     have hassemble := length_step lenient setup (Sum.inl (Sum.inr (request, step.1))) step.2 z
-      (by simp at hz; exact hz)
+      (by simpa using hz)
     simp only [weight, added] at hdraw hassemble ⊢
     omega
 

@@ -39,7 +39,9 @@ open Security CanonicalGraph ShareGame ShareCouple
 /-- **One state extends another**: the frame table and the plain cache only gain entries, and
 nothing else of the state moves. -/
 structure Extends (old new : St) : Prop where
+  /-- Every frame-table entry of the old state is kept in the new one. -/
   prfs : ∀ frame value, old.prfs frame = some value → new.prfs frame = some value
+  /-- Every plain-cache entry of the old state is kept in the new one. -/
   cache : ∀ input value, old.cache input = some value → new.cache input = some value
 
 theorem Extends.refl (state : St) : Extends state state := ⟨fun _ _ h => h, fun _ _ h => h⟩
@@ -129,19 +131,27 @@ theorem route_spec (setup : Setup) (state : St) (input : Bytes) (z : HashOutput 
 
 /-- **What the lenient game keeps true.** -/
 structure Inv (setup : Setup) (p : St × Bool) : Prop where
+  /-- A recorded guess has raised the flag. -/
   closed : ∀ entry ∈ p.1.record, Guess setup entry.2 entry.1 → p.2 = true
+  /-- Every framed request in the log has its `PRF_msg` answer in the frame table and its
+  digest input filed in the record. -/
   signer : ∀ entry ∈ p.1.log, ∀ framed, entry.1.frame = some framed →
     ∃ value, p.1.prfs framed = some value ∧
       ∃ filed ∈ p.1.record,
         filed.1 = Hashing.messageInput (Hashing.truncate value) setup.pk framed
+  /-- Every served digest comes with its log entry, its randomiser and its entry in the real
+  view of the state. -/
   served : ∀ digest ∈ p.1.served, ∃ entry ∈ p.1.log, ∃ framed, entry.1.frame = some framed ∧
     ∃ value, p.1.prfs framed = some value ∧
       entry.2 = some (ShareSigner.cellSig setup.warm setup.sk (Hashing.truncate value)
         digest).toBytes ∧
       realView setup p.1 (Hashing.messageInput (Hashing.truncate value) setup.pk framed) =
         some digest
+  /-- The plain cache holds no input of the warm table and no `PRF_msg` input at the real
+  seed. -/
   cacheOff : ∀ input value, p.1.cache input = some value →
     setup.warm input = none ∧ ¬ IsPrfInput setup input
+  /-- The digests snapshotted with each record entry are a prefix of the served digests. -/
   snapshot : ∀ entry ∈ p.1.record, entry.2 <+: p.1.served
 
 theorem inv_start (setup : Setup) : Inv setup (St.start, false) where
@@ -235,7 +245,6 @@ theorem prfs_of_realView (setup : Setup) (hgood : setup.Good) (state : St) (fram
     prfFrame_randomizerInput] at hview
   exact hview
 
-set_option maxHeartbeats 1000000 in
 open scoped Classical in
 /-- **A framed signing request keeps the invariant.** -/
 theorem inv_sign_framed (setup : Setup) (hgood : setup.Good) (request : Message) (framed : Bytes)
@@ -330,7 +339,8 @@ theorem inv_sign_unframed (setup : Setup) (request : Message)
     Inv setup z.2 := by
   classical
   obtain ⟨state, flag⟩ := p
-  have hz' : z ∈ support ((pure (none, ({ state with log := state.log ++ [⟨request, none⟩] }, flag)) :
+  have hz' : z ∈ support ((pure (none,
+      ({ state with log := state.log ++ [⟨request, none⟩] }, flag)) :
       ProbComp (Option Bytes × (St × Bool)))) := by
     have h := hz
     rw [advImpl_sign_run] at h

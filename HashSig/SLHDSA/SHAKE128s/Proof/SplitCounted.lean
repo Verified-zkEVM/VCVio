@@ -52,6 +52,8 @@ noncomputable def withSplit (inClass : Bytes → Prop) (inside outside : QueryKi
     QueryImpl OracleWorld (StateT (HandlerCarrier.State × (τ × Counts)) ProbComp) :=
   withExtra impl (fun queried counts => counts + splitCost inClass inside outside queried)
 
+/-- One step of the split-counted handler: the handler's step, with the query's split
+cost added to the counts. -/
 theorem withSplit_run (inClass : Bytes → Prop) (inside outside : QueryKind)
     (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (queried : OracleWorld.Domain) (state : HandlerCarrier.State × (τ × Counts)) :
@@ -69,7 +71,6 @@ to their sum and the whole run becomes `withCount`'s, started at the summed coun
 to left it builds a split run over the existing one; read left to right it carries any event or
 expectation of the split run down to the counted one. -/
 
-set_option maxHeartbeats 400000 in
 /-- **The split-counted run is the counted run, with the counter split.** -/
 theorem run_withSplit_withCount (inClass : Bytes → Prop) {inside outside : QueryKind}
     (hne : inside ≠ outside)
@@ -124,6 +125,7 @@ the request's frame. That is the last hypothesis a split tail needs over the cou
 with it the three stages chain by `bind_of_forgetsAlong` and `bind_of_fuseServing_conj` with no
 new induction. -/
 
+/-- Summing the slots commutes with opening a signing bracket. -/
 theorem sumSlots_startServingOn (inside outside : QueryKind) (request : Message)
     (state : HandlerCarrier.State × (τ × Counts)) :
     sumSlots inside outside (startServingOn request state) =
@@ -133,6 +135,7 @@ theorem sumSlots_startServingOn (inside outside : QueryKind) (request : Message)
   | none => rfl
   | some framed => rfl
 
+/-- Summing the slots commutes with closing a signing bracket. -/
 theorem sumSlots_stopServingOn (inside outside : QueryKind)
     (state : HandlerCarrier.State × (τ × Counts)) :
     sumSlots inside outside (stopServingOn state) =

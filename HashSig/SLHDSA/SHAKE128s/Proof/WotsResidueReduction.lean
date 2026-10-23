@@ -33,13 +33,14 @@ existentially quantified except the chain index, and that is pinned by the equat
 Two readings follow. `exists_held_value_of_residue` names the layer explicitly, through
 accumulators that follow the recursion step for step, and names the message that layer signs
 rather than quantifying it: the witness the recursion produces *is* `forgedAt`, which is what
-lets the position a claimed chain value sits at be computed from the forgery. `heldValue_eq_cell` reads the held value as
-a cell of the canonical graph, which is the vocabulary the charge indexes by: the forgery holds
+lets the position a claimed chain value sits at be computed from the forgery.
+`heldValue_eq_cell` reads the held value as a cell of the canonical graph, which is the
+vocabulary the charge indexes by: the forgery holds
 `wotsPosition key chainIndex (Checksum.encode forged chainIndex)`, a node strictly below the one
 the honest signature revealed.
 
-What that possession costs is not settled here, and deliberately so — it needs an invariant along
-the adversary's execution that does not yet exist. This file is the deterministic half.
+What that possession costs is a probabilistic question about the adversary's execution, charged
+in `WotsCharge`; this file is the deterministic half.
 -/
 
 @[expose] public section
@@ -157,6 +158,7 @@ def forgedAt (publicSeed : Digest) :
           publicSeed (SlhDsaSecurity.Hypertree.address layer tree)) i
 
 omit [HasQuery HashSpec Id] in
+/-- The layer rises by one per step. -/
 theorem layerAt_eq (layer : Nat) : ∀ i : Nat, layerAt layer i = layer + i := by
   intro i
   induction i generalizing layer with
@@ -164,6 +166,7 @@ theorem layerAt_eq (layer : Nat) : ∀ i : Nat, layerAt layer i = layer + i := b
   | succ i ih => rw [layerAt, ih (layer + 1)]; omega
 
 omit [HasQuery HashSpec Id] in
+/-- The subtree index only shrinks along the recursion. -/
 theorem treeAt_le (tree : Nat) : ∀ i : Nat, treeAt tree i ≤ tree := by
   intro i
   induction i generalizing tree with

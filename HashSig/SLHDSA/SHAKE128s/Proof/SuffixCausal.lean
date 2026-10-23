@@ -28,7 +28,6 @@ past the head too, so both drop by one together.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.SuffixCausal
 
@@ -38,7 +37,6 @@ open DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedTape
 
 variable {σ : Type} [CacheView σ]
 
-set_option maxHeartbeats 2000000 in
 open scoped Classical in
 /-- **Overwriting a cell at or after the selected one does not move the selection**, with a
 continuation. -/
@@ -51,11 +49,13 @@ theorem probEvent_length_setGe_cont (leftKeep rightKeep : Bytes → σ → Prop)
     (hafter : ∀ (index cell : Nat), index ≤ cell → ∀ (newValue : HashOutput)
         (z : α × SplitTapeState σ),
       Pr{let w ← after z}[(rightOf z.2).length + index < (finalRight w).length] =
-        Pr{let w ← after (z.1, (z.2.1, (z.2.2.1.1, z.2.2.1.2.set cell newValue), z.2.2.2))}[(rightOf z.2).length + index < (finalRight w).length]) :
+        Pr{let w ← after (z.1, (z.2.1, (z.2.2.1.1, z.2.2.1.2.set cell newValue), z.2.2.2))}[
+          (rightOf z.2).length + index < (finalRight w).length]) :
     ∀ (index cell : Nat), index ≤ cell → ∀ (newValue : HashOutput) (cache : σ)
       (leftTape rightTape : List HashOutput) (leftRecord rightRecord : Record),
       Pr{let w ← ((simulateQ (noticingSplitTapeRecorder leftKeep rightKeep) computation).run
-            (cache, (leftTape, rightTape), (leftRecord, rightRecord)) >>= after)}[rightRecord.length + index < (finalRight w).length] =
+            (cache, (leftTape, rightTape), (leftRecord, rightRecord)) >>= after)}[
+          rightRecord.length + index < (finalRight w).length] =
         Pr{let w ← ((simulateQ (noticingSplitTapeRecorder leftKeep rightKeep) computation).run
             (cache, (leftTape, rightTape.set cell newValue), (leftRecord, rightRecord))
               >>= after)}[rightRecord.length + index < (finalRight w).length] := by
@@ -153,7 +153,6 @@ theorem probEvent_length_setGe_cont (leftKeep rightKeep : Bytes → σ → Prop)
 
 variable {ω : Type} [Monoid ω]
 
-set_option maxHeartbeats 2000000 in
 open scoped Classical in
 /-- **The same, at the fused handler.** -/
 theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop)
@@ -170,18 +169,21 @@ theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop
     (hcont : ∀ (index cell : Nat), index ≤ cell → ∀ (newValue : HashOutput)
         (z : α × (ω × Security.SigningLog × SplitTapeState σ)),
       Pr{let w ← cont z}[(rightOf z.2.2.2).length + index < (finalRight w).length] =
-        Pr{let w ← cont (z.1, (z.2.1, z.2.2.1, setRightTape cell newValue z.2.2.2))}[(rightOf z.2.2.2).length + index < (finalRight w).length]) :
+        Pr{let w ← cont (z.1, (z.2.1, z.2.2.1, setRightTape cell newValue z.2.2.2))}[
+          (rightOf z.2.2.2).length + index < (finalRight w).length]) :
     ∀ (index cell : Nat), index ≤ cell → ∀ (newValue : HashOutput) (accumulated : ω)
       (log : Security.SigningLog)
       (cache : σ) (leftTape rightTape : List HashOutput) (leftRecord rightRecord : Record),
       Pr{let w ← ((simulateQ (fuseServing (noticingSplitTapeRecorder leftKeep rightKeep) inner
             (fun request => onCarrierTape (before request)) (onCarrierTape afterMap))
             phase).run (accumulated, log, (cache, (leftTape, rightTape),
-              (leftRecord, rightRecord))) >>= cont)}[rightRecord.length + index < (finalRight w).length] =
+              (leftRecord, rightRecord))) >>= cont)}[
+          rightRecord.length + index < (finalRight w).length] =
         Pr{let w ← ((simulateQ (fuseServing (noticingSplitTapeRecorder leftKeep rightKeep) inner
             (fun request => onCarrierTape (before request)) (onCarrierTape afterMap))
             phase).run (accumulated, log, (cache, (leftTape, rightTape.set cell newValue),
-              (leftRecord, rightRecord))) >>= cont)}[rightRecord.length + index < (finalRight w).length] := by
+              (leftRecord, rightRecord))) >>= cont)}[
+          rightRecord.length + index < (finalRight w).length] := by
   classical
   induction phase using OracleComp.inductionOn with
   | pure value =>
@@ -229,7 +231,6 @@ theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop
           (afterMap z.2.1) z.2.2.1.1 z.2.2.1.2 z.2.2.2.1 z.2.2.2.2)
         index cell hle newValue (before request cache) leftTape rightTape leftRecord rightRecord
 
-set_option maxHeartbeats 4000000 in
 open scoped Classical in
 /-- **Across all three stages.** -/
 theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ → Prop)
@@ -243,10 +244,12 @@ theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ →
     (value : β → α → ω → Security.SigningLog → γ → σ → δ)
     (index cell : Nat) (hle : index ≤ cell) (newValue : HashOutput) (cache : σ)
     (leftRecord rightRecord : Record) (leftTape rightTape : List HashOutput) :
-    Pr{let w ← (threeStageTapeRun leftKeep rightKeep inner before afterMap first phase last value cache
-          leftRecord rightRecord leftTape rightTape)}[rightRecord.length + index < w.2.2.2.length] =
-      Pr{let w ← (threeStageTapeRun leftKeep rightKeep inner before afterMap first phase last value cache
-          leftRecord rightRecord leftTape (rightTape.set cell newValue))}[rightRecord.length + index < w.2.2.2.length] := by
+    Pr{let w ← (threeStageTapeRun leftKeep rightKeep inner before afterMap first phase last value
+          cache leftRecord rightRecord leftTape rightTape)}[
+        rightRecord.length + index < w.2.2.2.length] =
+      Pr{let w ← (threeStageTapeRun leftKeep rightKeep inner before afterMap first phase last value
+          cache leftRecord rightRecord leftTape (rightTape.set cell newValue))}[
+        rightRecord.length + index < w.2.2.2.length] := by
   classical
   rw [threeStageTapeRun, threeStageTapeRun]
   refine probEvent_length_setGe_cont leftKeep rightKeep first
@@ -317,10 +320,10 @@ theorem threeStageCausalGe (leftKeep rightKeep : Bytes → σ → Prop)
     (value : β → α → ω → Security.SigningLog → γ → σ → δ)
     (cache : σ) (index cell : Nat) (leftTape rightTape : List HashOutput)
     (newValue : HashOutput) (hle : index ≤ cell) :
-    Pr{let w ← (threeStageTapeRun leftKeep rightKeep inner before afterMap first phase last value cache
-          [] [] leftTape (rightTape.set cell newValue))}[index < w.2.2.2.length] =
-      Pr{let w ← (threeStageTapeRun leftKeep rightKeep inner before afterMap first phase last value cache
-          [] [] leftTape rightTape)}[index < w.2.2.2.length] := by
+    Pr{let w ← (threeStageTapeRun leftKeep rightKeep inner before afterMap first phase last value
+          cache [] [] leftTape (rightTape.set cell newValue))}[index < w.2.2.2.length] =
+      Pr{let w ← (threeStageTapeRun leftKeep rightKeep inner before afterMap first phase last value
+          cache [] [] leftTape rightTape)}[index < w.2.2.2.length] := by
   have h := probEvent_length_setGe_threeStage leftKeep rightKeep inner before afterMap first phase
     last value index cell hle newValue cache [] [] leftTape rightTape
   simpa only [List.length_nil, Nat.zero_add] using h.symm

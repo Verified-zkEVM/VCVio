@@ -8,7 +8,14 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 
-/-! Deterministic correctness of the standard WOTS+ algorithms under any fixed hash. -/
+/-!
+# WOTS+ correctness
+
+Deterministic correctness of the standard WOTS+ algorithms under any fixed hash, run in `Id`:
+`Wots.chain_add` splits a hash chain into two consecutive segments, and
+`Wots.publicKeyFromSignature_sign` shows that recovering the public key from an honest
+signature returns the public key.
+-/
 
 @[expose] public section
 
@@ -16,6 +23,7 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.Correctness
 
+/-- In the identity monad, sequencing a family of computations returns the family itself. -/
 @[simp] theorem sequenceFin_id {α : Type} (size : Nat) (f : Fin size → Id α) :
     sequenceFin size f = f := by
   induction size with
@@ -46,7 +54,7 @@ theorem chain_add (publicSeed : Digest) (address : Address)
           (Hashing.tweakable (m := Id) publicSeed
             { address with hashOrIndex := BitVec.ofNat 32 start } (bytesBE n value))
 
-/-- Recovering the public key from an honest WOTS signature always succeeds. -/
+/-- Recovering the public key from an honest WOTS signature returns the WOTS public key. -/
 theorem publicKeyFromSignature_sign (message secretSeed publicSeed : Digest)
     (address : Address) :
     SlhDsaSecurity.Wots.publicKeyFromSignature (m := Id)

@@ -114,7 +114,7 @@ theorem step_right_shape (rightKeep : Bytes → HandlerCarrier.State → Prop)
       rightKeep input _ inner.1 with hsame | ⟨hshape, hfresh, hright⟩
     · exact Or.inl hsame
     · refine Or.inr ⟨input, inner.1, rfl, hshape, ?_, hright, ?_⟩
-      · show HandlerCarrier.cacheOf state.1 input = none
+      · change HandlerCarrier.cacheOf state.1 input = none
         rw [← cacheOf_servingNotice pk state.1 input]
         exact hfresh
       · rw [← hvalue]
@@ -130,6 +130,7 @@ def RecordClass (narrow : Bytes → Prop) (state : CountedState) : Prop :=
 def RecordCached (state : CountedState) : Prop :=
   ∀ entry ∈ state.2.1.2, state.1.cache entry.1 ≠ none
 
+/-- A bracket keeps every target-recorded input in the narrowed class. -/
 theorem recordClass_bracket (narrow : Bytes → Prop) {f : CountedState → CountedState}
     (hf : Bracket f) (state : CountedState) (hinv : RecordClass narrow state) :
     RecordClass narrow (f state) := by
@@ -137,6 +138,7 @@ theorem recordClass_bracket (narrow : Bytes → Prop) {f : CountedState → Coun
   rw [(hf state).2] at hentry
   exact hinv entry hentry
 
+/-- A bracket keeps every target-recorded input cached. -/
 theorem recordCached_bracket {f : CountedState → CountedState} (hf : Bracket f)
     (state : CountedState) (hinv : RecordCached state) : RecordCached (f state) := by
   intro entry hentry
@@ -192,6 +194,7 @@ two halves travel together for the same reason the step fact reports both. -/
 def RecordFreshNodup (state : CountedState) : Prop :=
   RecordCached state ∧ (state.2.1.2.map Prod.fst).Nodup
 
+/-- A bracket keeps the target recording cached and free of duplicates. -/
 theorem recordFreshNodup_bracket {f : CountedState → CountedState} (hf : Bracket f)
     (state : CountedState) (hinv : RecordFreshNodup state) : RecordFreshNodup (f state) := by
   refine ⟨recordCached_bracket hf state hinv.1, ?_⟩

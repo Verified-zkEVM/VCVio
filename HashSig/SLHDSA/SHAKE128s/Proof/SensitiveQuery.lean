@@ -52,8 +52,6 @@ unit of `2 ^ -128` per candidate it issued.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.SensitiveQuery
 
 /-- The value a graph cell carries: the bits a hash answer is truncated to. -/
@@ -142,7 +140,6 @@ cell is one coordinate of the uniform table. -/
 
 variable [Fintype Index] [DecidableEq Index]
 
-open scoped Classical in
 /-- A single coordinate of a uniform table of cells is a uniform cell. -/
 theorem coordinate_uniform (index : Index) :
     ((fun table : Index → Cell => table index) <$>
@@ -162,7 +159,8 @@ theorem coordinate_uniform (index : Index) :
 
 /-- A fixed coordinate of a uniform table takes a fixed value with probability `2 ^ -128`. -/
 theorem prob_coordinate_eq (index : Index) (value : Cell) :
-    Pr{let table ← ($ᵗ (Index → Cell) : ProbComp (Index → Cell))}[table index = value] = 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
+    Pr{let table ← ($ᵗ (Index → Cell) : ProbComp (Index → Cell))}[table index = value] =
+      1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   classical
   calc Pr{let table ← ($ᵗ (Index → Cell) : ProbComp (Index → Cell))}[table index = value]
       = Pr{let cell ← (fun table : Index → Cell => table index) <$>
@@ -181,7 +179,9 @@ the node before any cell is read, and the node names the one cell at stake, so a
 a guess at a single coordinate of the table. -/
 theorem prob_sensitive_le (stakes : Stakes Node Index)
     (unavailable : State → Index → Prop) (state : State) (candidate : Bytes) :
-    Pr{let table ← ($ᵗ (Index → Cell) : ProbComp (Index → Cell))}[Sensitive stakes unavailable table state candidate] ≤ 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
+    Pr{let table ← ($ᵗ (Index → Cell) : ProbComp (Index → Cell))}[
+        Sensitive stakes unavailable table state candidate] ≤
+      1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   classical
   cases hlocate : stakes.locate candidate with
   | none =>

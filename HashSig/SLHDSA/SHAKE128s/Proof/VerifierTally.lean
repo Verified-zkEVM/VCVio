@@ -33,8 +33,6 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.VerifierTally
 
-variable {α : Type}
-
 open Security RecordedQueries SharePresent ShareEvent
 
 /-! ## Every input is charged or free -/
@@ -60,6 +58,7 @@ theorem sum_charged_add_sum_free (publicSeed : Digest) (inputs : Multiset Bytes)
 
 /-! ## One step of the tally -/
 
+/-- One step multiplies the tally by the query's cost, which adds it additively. -/
 theorem toAdd_step (tally : Multiplicative Tally) (queried : OracleWorld.Domain) :
     Multiplicative.toAdd (tally * Multiplicative.ofAdd (verifierCost queried)) =
       Multiplicative.toAdd tally + verifierCost queried := rfl
@@ -68,14 +67,17 @@ theorem toAdd_step (tally : Multiplicative Tally) (queried : OracleWorld.Domain)
 def Balanced (tally : Multiplicative Tally) : Prop :=
   Multiset.card (Multiplicative.toAdd tally).2 = (Multiplicative.toAdd tally).1 .verification
 
+/-- The empty tally is balanced. -/
 theorem balanced_one : Balanced 1 := rfl
 
+/-- One step of the tally preserves balance. -/
 theorem balanced_step (tally : Multiplicative Tally) (queried : OracleWorld.Domain)
     (h : Balanced tally) : Balanced (tally * Multiplicative.ofAdd (verifierCost queried)) := by
   unfold Balanced at h ⊢
   rw [toAdd_step, Prod.snd_add, Prod.fst_add, Multiset.card_add, Pi.add_apply, h]
   congr 1
-  show Multiset.card (recordOf queried) = Counts.single .verification (hashCost queried) .verification
+  change Multiset.card (recordOf queried) =
+    Counts.single .verification (hashCost queried) .verification
   rw [card_recordOf]
   simp [Counts.single]
 
@@ -120,10 +122,12 @@ theorem state_of_verify_pure (w : Bool × VerifyState)
   subst hw
   rfl
 
+/-- The verifier on an unframed request is `pure false`. -/
 theorem verify_eq_pure_of_frame (hframe : request.frame = none) :
     (Scheme.verify (m := OracleComp OracleWorld) pk request wire) = pure false := by
   simp only [Scheme.verify, hframe]
 
+/-- The verifier on an unparsed signature is `pure false`. -/
 theorem verify_eq_pure_of_parse (hparse : Signature.fromBytes? wire = none) :
     (Scheme.verify (m := OracleComp OracleWorld) pk request wire) = pure false := by
   cases hframe : request.frame with
@@ -136,6 +140,7 @@ theorem verify_eq_pure_of_parse (hparse : Signature.fromBytes? wire = none) :
 noncomputable def freeSum (publicSeed : Digest) (tally : Multiplicative Tally) : Nat :=
   ((Multiplicative.toAdd tally).2.map (VerifyFree.freeCost publicSeed)).sum
 
+/-- A hash step adds the input's free cost to the free sum. -/
 theorem freeSum_step (publicSeed : Digest) (tally : Multiplicative Tally) (input : Bytes) :
     freeSum publicSeed (tally * Multiplicative.ofAdd (verifierCost (Sum.inr input))) =
       freeSum publicSeed tally + VerifyFree.freeCost publicSeed input := by
@@ -192,7 +197,7 @@ theorem free_ge (message : Bytes) (signature : Signature)
   obtain ⟨r, hr, hsum⟩ := freeCounted_witness pk.seed _ (1, cache) w hw
   have h239 := (VerifyFree.verify_free pk request wire message signature hframe hparse).simulated
     realHashImpl (1, cache) r hr
-  show 239 ≤ freeSum pk.seed w.2.1
+  change 239 ≤ freeSum pk.seed w.2.1
   rw [hsum]
   exact h239.trans (Nat.le_add_left _ _)
 

@@ -38,7 +38,6 @@ open Security CanonicalGraph ShareGame ShareInv ShareWhole ShareEvent WarmedGame
 
 /-! ## The per-setup link -/
 
-set_option maxHeartbeats 2000000 in
 /-- **At a good setup, the jointly capped real event with an accepted forgery is at most the
 blind flag.** -/
 theorem setupBound (adversary : Adversary) (limit : Nat) :
@@ -72,7 +71,8 @@ theorem verifierFiles (setup : Setup) : ShareJointBound.VerifierFiles setup :=
 /-- The shared half on accepted forgeries, at the refined paired run. -/
 theorem hsharedFused (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adversary q)
     (hq : 569 ≤ q) :
-    Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[GoodWalk pair.1 ∧
+    Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[
+        GoodWalk pair.1 ∧
         (InputBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1),
           (FinalAssembly.forgetFused pair.2).2) ∨ Target127.late pair) ∧
         (FinalAssembly.forgetFused pair.2).1.1.verified = true] ≤
@@ -92,12 +92,11 @@ theorem hsharedFused (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW ad
 attribute [local irreducible] Scheme.keygenInternal Scheme.keygen Scheme.verify Scheme.sign
   afterKeygen Security.countQueries WarmedGame.afterSeeds
 
+/-- Forgetting the hash counts of `runAll` gives `run`. -/
 theorem map_fst_runAll (adversary : Adversary) :
     Prod.fst <$> runAll adversary = run adversary := by
   rw [runAll, run, ← BySourceBridge.run_map, RecordedBudget.map_countAllHashes]
 
-set_option maxHeartbeats 1000000 in
-set_option linter.constructorNameAsVariable false in
 /-- **Below `569` counted calls, nothing wins**: an accepted forgery's verification alone
 costs that many. -/
 theorem advantage_eq_zero (adversary : Adversary) (q : Nat) (hq : q < 569)

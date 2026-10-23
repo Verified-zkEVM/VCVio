@@ -23,10 +23,10 @@ address — already the single-child shape, so the composition is the direct ana
 other branch is the one that matters for the budget: if there is no collision then the forged
 secret *is* the honest secret.
 
-That branch is not yet the coverage avenue, and the difference is not a formality. Holding the
-honest secret is possession, not disclosure: `Fors.secret` is the oracle's answer at an input
-carrying `SK.seed` in the clear, so a run can hold it by asking for it rather than by being
-given it. The step from possession to "that FORS position was signed" is a *disjunction* —
+That branch is not by itself the coverage avenue, and the difference is not a formality.
+Holding the honest secret is possession, not disclosure: `Fors.secret` is the oracle's answer at
+an input carrying `SK.seed` in the clear, so a run can hold it by asking for it rather than by
+being given it. The step from possession to "that FORS position was signed" is a *disjunction* —
 signed, or the run made a sensitive query — and the second branch belongs to the input half.
 It is the FORS counterpart of the WOTS residue, and nothing in this file proves it.
 

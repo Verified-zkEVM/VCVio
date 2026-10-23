@@ -144,7 +144,6 @@ theorem realFlat_eq (adversary : Adversary) (keys : SecretKey × PublicKey)
       advRun adversary keys warm >>= fun z => verRun keys z >>= fun w => pure (assemble z w) :=
   rfl
 
-set_option maxHeartbeats 1000000 in
 /-- **An event of the real game with an accepted forgery is at most as likely in the jointly
 capped one**, given that an accepted forgery's adversary stays within `limit` and that, within
 it, the verifier stays within its cap. -/

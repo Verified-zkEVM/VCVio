@@ -38,8 +38,13 @@ public import HashSig.SLHDSA.Position
 public import HashSig.SLHDSA.Primitives
 public import HashSig.SLHDSA.RandomOracle
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Encodings
+public import HashSig.SLHDSA.SHAKE128s.Bridge.Fors
+public import HashSig.SLHDSA.SHAKE128s.Bridge.Hypertree
 public import HashSig.SLHDSA.SHAKE128s.Bridge.PaperGame
+public import HashSig.SLHDSA.SHAKE128s.Bridge.Scheme
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Transfer
+public import HashSig.SLHDSA.SHAKE128s.Bridge.Wots
+public import HashSig.SLHDSA.SHAKE128s.Bridge.Xmss
 public import HashSig.SLHDSA.SHAKE128s.Generic.ExactQueryCount
 public import HashSig.SLHDSA.SHAKE128s.Proof.AddressBounds
 public import HashSig.SLHDSA.SHAKE128s.Proof.AdversaryQueries
@@ -87,6 +92,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierSignRecord
 public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierTail
 public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierTailRecordings
 public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierThin
+public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierThinStages
 public import HashSig.SLHDSA.SHAKE128s.Proof.ChargedProbe
 public import HashSig.SLHDSA.SHAKE128s.Proof.Checksum
 public import HashSig.SLHDSA.SHAKE128s.Proof.ChecksumAntichain
@@ -147,6 +153,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.Hashing
 public import HashSig.SLHDSA.SHAKE128s.Proof.HonestGrowth
 public import HashSig.SLHDSA.SHAKE128s.Proof.HonestMessage
 public import HashSig.SLHDSA.SHAKE128s.Proof.HonestProbes
+public import HashSig.SLHDSA.SHAKE128s.Proof.HonestProbes.Keygen
 public import HashSig.SLHDSA.SHAKE128s.Proof.HypertreeDispatch
 public import HashSig.SLHDSA.SHAKE128s.Proof.JointBudget
 public import HashSig.SLHDSA.SHAKE128s.Proof.KeygenCost

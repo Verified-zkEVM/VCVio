@@ -53,8 +53,6 @@ the flag alone, so the weights are taken under the real run.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.BlindCharge
 
 open CanonicalGraph SensitiveQuery
@@ -115,6 +113,7 @@ open scoped Classical in
 noncomputable def raise (charged : Bytes × K → Prop) (p : σ × Bool) (next : σ) : Bool :=
   p.2 || decide (∃ entry ∈ (record next).drop (record p.1).length, charged entry)
 
+/-- The flag is raised exactly when it was up or a newly filed entry is charged. -/
 theorem raise_iff (charged : Bytes × K → Prop) (p : σ × Bool) (next : σ) :
     raise record charged p next = true ↔
       p.2 = true ∨ ∃ entry ∈ (record next).drop (record p.1).length, charged entry := by
@@ -126,23 +125,27 @@ noncomputable def flagged (charged : Bytes × K → Prop) (impl : QueryImpl spec
     QueryImpl spec (StateT (σ × Bool) ProbComp) :=
   fun t p => (fun z => (z.1, (z.2, raise record charged p z.2))) <$> (impl t).run p.1
 
+/-- One step of the flagged handler runs the handler and updates the flag. -/
 theorem flagged_run (charged : Bytes × K → Prop) (impl : QueryImpl spec (StateT σ ProbComp))
     (t : spec.Domain) (p : σ × Bool) :
     ((flagged record charged impl) t).run p =
       (fun z => (z.1, (z.2, raise record charged p z.2))) <$> (impl t).run p.1 := rfl
 
+/-- Forgetting the flag recovers the underlying handler's step. -/
 theorem flagged_proj (charged : Bytes × K → Prop) (impl : QueryImpl spec (StateT σ ProbComp))
     (t : spec.Domain) (p : σ × Bool) :
     (fun z => (z.1, z.2.1)) <$> ((flagged record charged impl) t).run p = (impl t).run p.1 := by
   rw [flagged_run, Functor.map_map]
   exact id_map _
 
+/-- The flagged handler never fails when the underlying handler never fails. -/
 theorem flagged_neverFails (charged : Bytes × K → Prop) (impl : QueryImpl spec (StateT σ ProbComp))
     (hfail : ∀ (t : spec.Domain) (s : σ), prFail ((impl t).run s) = 0)
     (t : spec.Domain) (p : σ × Bool) : prFail (((flagged record charged impl) t).run p) = 0 := by
   rw [flagged_run, prFail_map]
   exact hfail t p.1
 
+/-- A supported step of the flagged handler is a supported step of the handler. -/
 theorem mem_support_flagged (charged : Bytes × K → Prop) (impl : QueryImpl spec (StateT σ ProbComp))
     (t : spec.Domain) (p : σ × Bool) (z : spec.Range t × (σ × Bool))
     (hz : z ∈ support (((flagged record charged impl) t).run p)) :
@@ -197,14 +200,17 @@ noncomputable def stalledFree (impl : QueryImpl spec (StateT σ ProbComp)) (Froz
   fun t s => if Frozen s then pure (stall t, s) else (impl t).run s
 
 open scoped Classical in
+/-- One step of the stalled handler: the stall answer when frozen, else the handler. -/
 theorem stalledFree_run (impl : QueryImpl spec (StateT σ ProbComp)) (Frozen : σ → Prop)
     (stall : (t : spec.Domain) → spec.Range t) (t : spec.Domain) (s : σ) :
     ((stalledFree impl Frozen stall) t).run s =
       if Frozen s then pure (stall t, s) else (impl t).run s := rfl
 
+/-- Stalling a handler that files keeps it a handler that files. -/
 theorem files_stalledFree (impl : QueryImpl spec (StateT σ ProbComp))
     (hfiles : Files record now impl) (Frozen : σ → Prop)
-    (stall : (t : spec.Domain) → spec.Range t) : Files record now (stalledFree impl Frozen stall) := by
+    (stall : (t : spec.Domain) → spec.Range t) :
+    Files record now (stalledFree impl Frozen stall) := by
   classical
   intro t s z hz
   rw [stalledFree_run] at hz
@@ -220,7 +226,7 @@ theorem stalled_flagged (charged : Bytes × K → Prop) (impl : QueryImpl spec (
       flagged record charged (stalledFree impl Frozen stall) := by
   classical
   funext t p
-  show (StalledRun.stalled (flagged record charged impl) Frozen stall t).run p =
+  change (StalledRun.stalled (flagged record charged impl) Frozen stall t).run p =
     ((flagged record charged (stalledFree impl Frozen stall)) t).run p
   by_cases hp : Frozen p.1
   · rw [StalledRun.stalled_run_of_frozen _ Frozen stall t p hp, flagged_run, stalledFree_run,
@@ -241,7 +247,8 @@ theorem probEvent_record_stalled (charged : Bytes × K → Prop)
     (hquiet : ∀ s : σ, Frozen s → ∀ input : Bytes, ¬ charged (input, now s))
     {α : Type} (oa : OracleComp spec α) (s : σ) (hs : ¬ ∃ entry ∈ record s, charged entry) :
     Pr{let z ← (simulateQ impl oa).run s}[∃ entry ∈ record z.2, charged entry] =
-      Pr{let z ← (simulateQ (stalledFree impl Frozen stall) oa).run s}[∃ entry ∈ record z.2, charged entry] := by
+      Pr{let z ← (simulateQ (stalledFree impl Frozen stall) oa).run s}[
+        ∃ entry ∈ record z.2, charged entry] := by
   classical
   rw [probEvent_record_eq_flag record now charged impl hfiles oa s hs,
     probEvent_record_eq_flag record now charged _ (files_stalledFree record now impl hfiles
@@ -313,27 +320,33 @@ end Flag
 noncomputable def ex {β : Type} (mx : ProbComp β) (f : β → ℝ≥0∞) : ℝ≥0∞ :=
   ∑' x, Pr{let y ← mx}[y = x] * f x
 
+/-- The expectation over a bind is the iterated expectation. -/
 theorem ex_bind {β γ : Type} (mx : ProbComp β) (g : β → ProbComp γ) (f : γ → ℝ≥0∞) :
     ex (mx >>= g) f = ex mx fun x => ex (g x) f :=
   tsum_prEvent_bind_mul mx g f
 
+/-- The expectation over a mapped computation is the expectation of the composite. -/
 theorem ex_map {β γ : Type} (mx : ProbComp β) (g : β → γ) (f : γ → ℝ≥0∞) :
     ex (g <$> mx) f = ex mx (f ∘ g) :=
   tsum_prEvent_map_mul mx g f
 
+/-- The expectation is monotone in the integrand. -/
 theorem ex_mono {β : Type} (mx : ProbComp β) {f g : β → ℝ≥0∞} (h : ∀ x, f x ≤ g x) :
     ex mx f ≤ ex mx g :=
   ENNReal.tsum_le_tsum fun x => mul_le_mul' le_rfl (h x)
 
+/-- The expectation depends only on the integrand's values. -/
 theorem ex_congr {β : Type} (mx : ProbComp β) {f g : β → ℝ≥0∞} (h : ∀ x, f x = g x) :
     ex mx f = ex mx g :=
   tsum_congr fun x => by rw [h x]
 
+/-- Dividing the integrand by a constant divides the expectation by it. -/
 theorem ex_div_const {β : Type} (mx : ProbComp β) (f : β → ℝ≥0∞) (c : ℝ≥0∞) :
     ex mx (fun x => f x / c) = ex mx f / c := by
   simp only [ex, div_eq_mul_inv, ← mul_assoc]
   exact ENNReal.tsum_mul_right
 
+/-- The probability of an event after a bind is the expected conditional probability. -/
 theorem probEvent_eq_ex_bind {β γ : Type} (mx : ProbComp β) (g : β → ProbComp γ)
     (event : γ → Prop) : Pr{let x ← mx >>= g}[event x] = ex mx fun x => Pr{let y ← g x}[event y] :=
   OracleComp.prEvent_bind_eq_tsum mx g event
@@ -350,6 +363,7 @@ noncomputable def experiment (auxiliary : ProbComp Aux)
   let z ← run cells aux
   pure (z, cells, aux)
 
+/-- An event of the experiment, as an iterated expectation over table and randomness. -/
 theorem probEvent_experiment (auxiliary : ProbComp Aux) (run : Cells → Aux → ProbComp (α × σ))
     (event : (α × σ) × Cells × Aux → Prop) :
     Pr{let x ← experiment auxiliary run}[event x] =
@@ -361,6 +375,7 @@ theorem probEvent_experiment (auxiliary : ProbComp Aux) (run : Cells → Aux →
   refine ex_congr _ fun aux => ?_
   rw [bind_pure_comp, prEvent_map]
 
+/-- An expectation over the experiment, iterated over table and auxiliary randomness. -/
 theorem ex_experiment (auxiliary : ProbComp Aux) (run : Cells → Aux → ProbComp (α × σ))
     (f : (α × σ) × Cells × Aux → ℝ≥0∞) :
     ex (experiment auxiliary run) f =
@@ -392,6 +407,7 @@ def AimsAt (unavail : K → Index → Prop) (index : Index) (entry : Bytes × K)
   ∃ node : Target, stakes.stake node = index ∧ unavail entry.2 index ∧
     stakes.locate entry.1 = some node
 
+/-- An entry charged against a cell aims at that cell's index. -/
 theorem aimsAt_of_chargedAt (unavail : K → Index → Prop) (index : Index) (cell : Cell)
     (entry : Bytes × K) (hcharged : ChargedAt stakes unavail index cell entry) :
     AimsAt stakes unavail index entry := by
@@ -421,7 +437,8 @@ open scoped Classical in
 /-- **A list of entries against a fresh cell**: one guess per entry aiming at it. -/
 theorem prob_list_chargedAt_le (unavail : K → Index → Prop) (index : Index)
     (entries : List (Bytes × K)) :
-    Pr{let cell ← ($ᵗ Cell : ProbComp Cell)}[∃ entry ∈ entries, ChargedAt stakes unavail index cell entry] ≤
+    Pr{let cell ← ($ᵗ Cell : ProbComp Cell)}[
+        ∃ entry ∈ entries, ChargedAt stakes unavail index cell entry] ≤
       ((entries.countP fun entry => decide (AimsAt stakes unavail index entry) : Nat) : ℝ≥0∞) /
         ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   classical
@@ -451,7 +468,6 @@ variable {Target : Type} (stakes : Stakes Target Node)
 def AgreeOff (index : Node) (cells other : Cells) : Prop :=
   ∀ node, node ≠ index → cells node = other node
 
-set_option maxHeartbeats 1000000 in
 open scoped Classical in
 /-- **The charge against one cell**: the chance that some entry is charged against it is at most
 the expected number of entries aiming at it, over `2 ^ 128`. -/
@@ -469,7 +485,8 @@ theorem prob_index_le (auxiliary : ProbComp Aux)
     (hunavail : ∀ cells other aux, AgreeOff index cells other → ∀ k,
       unavail cells aux k index ↔ unavail other aux k index)
     (hcomp : ∀ cells other aux, AgreeOff index cells other → comp cells aux = comp other aux) :
-    Pr{let w ← experiment auxiliary fun cells aux => (simulateQ (impl cells aux) (comp cells aux)).run start}[∃ entry ∈ record w.1.2,
+    Pr{let w ← experiment auxiliary fun cells aux =>
+        (simulateQ (impl cells aux) (comp cells aux)).run start}[∃ entry ∈ record w.1.2,
         ChargedAt stakes (unavail w.2.1 w.2.2) index (w.2.1 index) entry] ≤
       ex (experiment auxiliary fun cells aux =>
           (simulateQ (impl cells aux) (comp cells aux)).run start)
@@ -523,7 +540,7 @@ theorem prob_index_le (auxiliary : ProbComp Aux)
     have hU : (fun k => unavail cells aux k index) = (fun k => unavail other aux k index) :=
       funext fun k => propext (hunavail cells other aux hagree k)
     have hrun : stalledRun cells aux =ᵈ stalledRun other aux := by
-      show (simulateQ (stalledFree (impl cells aux) (Frozen cells aux) stall)
+      change (simulateQ (stalledFree (impl cells aux) (Frozen cells aux) stall)
           (comp cells aux)).run start =ᵈ
         (simulateQ (stalledFree (impl other aux) (Frozen other aux) stall)
           (comp other aux)).run start
@@ -532,8 +549,6 @@ theorem prob_index_le (auxiliary : ProbComp Aux)
         (fun table => stalledFree (impl table aux) (Frozen table aux) stall)
         (fun left right => AgreeOff index left right) (fun t st left right hlr => ?_)
         (comp other aux) cells other hagree start
-      show ((stalledFree (impl left aux) (Frozen left aux) stall) t).run st =ᵈ
-        ((stalledFree (impl right aux) (Frozen right aux) stall) t).run st
       rw [stalledFree_run, stalledFree_run]
       have hiff : Frozen left aux st ↔ Frozen right aux st :=
         not_congr (hunavail left right aux hlr (now st))
@@ -541,7 +556,7 @@ theorem prob_index_le (auxiliary : ProbComp Aux)
       · rw [ite_eq_left hfrozen, ite_eq_left (hiff.mp hfrozen)]
       · rw [ite_eq_right hfrozen, ite_eq_right fun h => hfrozen (hiff.mpr h)]
         exact hblind left right aux hlr t st (not_not.mp hfrozen)
-    show (fun z => (z, fun k => unavail cells aux k index)) <$> stalledRun cells aux =ᵈ
+    change (fun z => (z, fun k => unavail cells aux k index)) <$> stalledRun cells aux =ᵈ
       (fun z => (z, fun k => unavail other aux k index)) <$> stalledRun other aux
     rw [hU]
     exact hrun.map _
@@ -589,9 +604,6 @@ section Sum
 
 variable {Target : Type}
 
-set_option maxHeartbeats 4000000 in
-set_option maxRecDepth 1000000 in
-set_option linter.constructorNameAsVariable false in
 open scoped Classical in
 /-- **An entry aims at one cell at most, and only if it locates a node.** -/
 theorem sum_countP_aimsAt_le {Index : Type} [Fintype Index] (stakes : Stakes Target Index)
@@ -626,9 +638,6 @@ theorem sum_countP_aimsAt_le {Index : Type} [Fintype Index] (stakes : Stakes Tar
 
 variable (stakes : Stakes Target Node) (record : σ → List (Bytes × K)) (now : σ → K)
 
-set_option maxHeartbeats 4000000 in
-set_option maxRecDepth 1000000 in
-set_option linter.constructorNameAsVariable false in
 open scoped Classical in
 /-- **The charge**: the chance that some entry of the record is sensitive is at most the
 expected number of entries that locate a node, over `2 ^ 128`. -/
@@ -649,7 +658,8 @@ theorem prob_sensitive_le (auxiliary : ProbComp Aux)
       ∀ k, unavail cells aux k index ↔ unavail other aux k index)
     (hcomp : ∀ index, Chargeable index → ∀ cells other aux, AgreeOff index cells other →
       comp cells aux = comp other aux) :
-    Pr{let w ← experiment auxiliary fun cells aux => (simulateQ (impl cells aux) (comp cells aux)).run start}[∃ entry ∈ record w.1.2,
+    Pr{let w ← experiment auxiliary fun cells aux =>
+        (simulateQ (impl cells aux) (comp cells aux)).run start}[∃ entry ∈ record w.1.2,
         Sensitive stakes (unavail w.2.1 w.2.2) w.2.1 entry.2 entry.1] ≤
       ex (experiment auxiliary fun cells aux =>
           (simulateQ (impl cells aux) (comp cells aux)).run start)

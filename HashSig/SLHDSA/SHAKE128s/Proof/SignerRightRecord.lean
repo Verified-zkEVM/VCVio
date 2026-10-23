@@ -67,6 +67,7 @@ the hash-only computation, so that `CacheProvenance.queriesUnder_of_fresh_liftM`
 inputs it consulted. The naturality is `Correctness.Naturality.signInternal_simulate` without
 its first line. -/
 
+/-- Simulating the signer by a handler that forwards every hash query is the signer. -/
 theorem signInternalAt_simulate {m : Type → Type} [Monad m] [LawfulMonad m] [HasQuery HashSpec m]
     (impl : QueryImpl HashSpec m)
     (himpl : ∀ input, impl input = (query (spec := HashSpec) input : m HashOutput))
@@ -95,7 +96,6 @@ theorem simulateQ_hash {σ : Type} (impl : QueryImpl OracleWorld (StateT σ Prob
   change simulateQ impl (liftM (OracleSpec.query (spec := OracleWorld) (Sum.inr input))) = _
   simp
 
-set_option maxHeartbeats 800000 in
 /-- **The signer, cut at its randomiser query, under the recorder.** -/
 theorem run_signInternal (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (sk : SecretKey) (message : Bytes) (state : SplitState) :
@@ -112,7 +112,6 @@ theorem run_signInternal (leftKeep rightKeep : Bytes → QueryCache HashSpec →
     simulateQ_bind, StateT.run_bind, simulateQ_hash]
   rfl
 
-set_option maxHeartbeats 800000 in
 /-- **Every entry a signing sub-run files as a target comes with the randomiser entry already
 cached** — or is the `PRF_msg` input itself, which the narrowing removes.
 
@@ -193,7 +192,6 @@ theorem signInternal_right_record (leftKeep rightKeep : Bytes → QueryCache Has
 its `signInternal` files and a rejected one files nothing. These are stated at the request, which
 is the step provenance attributes. -/
 
-set_option maxHeartbeats 800000 in
 /-- **A rejected request files nothing**, because it makes no query. -/
 theorem sign_right_record_none (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (sk : SecretKey) (request : Message) (hframe : request.frame = none)
@@ -205,7 +203,6 @@ theorem sign_right_record_none (leftKeep rightKeep : Bytes → QueryCache HashSp
   rw [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hresult
   rw [hresult]
 
-set_option maxHeartbeats 800000 in
 /-- **A served request files what its `signInternal` files.** -/
 theorem sign_right_record (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (sk : SecretKey) (request : Message) (framed : Bytes)

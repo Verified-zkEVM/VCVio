@@ -95,7 +95,7 @@ theorem run_unchargedPhase_inr (signer : Message → OracleComp OracleWorld (Opt
     (request : Message) (log : SigningLog) :
     ((unchargedPhase signer (Sum.inr request)).run log) =
       signer request >>= fun answer => pure (answer, log ++ [⟨request, answer⟩]) := by
-  show ((unchargedSigner signer request).run log) = _
+  change ((unchargedSigner signer request).run log) = _
   rw [unchargedSigner]
   simp only [StateT.run_bind, StateT.run_liftM, StateT.run_modify, StateT.run_pure,
     bind_assoc, pure_bind]
@@ -112,7 +112,7 @@ theorem phase_eq (signer : Message → OracleComp OracleWorld (Option Bytes)) :
     rfl
   | inr request =>
     funext log
-    show (WriterT.run (recordedSigningOracle signer request)).run log =
+    change (WriterT.run (recordedSigningOracle signer request)).run log =
       (WriterT.run (((unchargedPhase signer).withAddCost phaseCost) (Sum.inr request))).run log
     rw [QueryImpl.withAddCost, QueryImpl.withCost_apply, run_recordedSigningOracle,
       run_tell_liftM, run_unchargedPhase_inr]

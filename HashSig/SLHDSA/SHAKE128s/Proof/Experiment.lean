@@ -9,10 +9,14 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Statement.Security
 
 /-!
-# Definitions the proof works with
+# The forgery experiment and its counted views
 
-The whole experiment in one computation, its total hash count, and two views of the scheme
-used by the charges.
+The definitions the security proof works with: `Security.experiment`, the whole SUF-CMA
+experiment (key generation, the adversary's phase with its signing oracle, and verification of
+the forgery) as one oracle computation; its random-oracle runs `Security.run` and
+`Security.runAll`, the latter with the total hash count; and the views of the scheme used by the
+charges, namely the count `Checksum.chainVerificationCalls` of chain steps in Algorithm 8 and
+the parse `MessageDigest.parse` of a message digest into a FORS instance and its indices.
 -/
 
 @[expose] public section
@@ -28,7 +32,9 @@ def Checksum.chainVerificationCalls (digits : MessageDigits) : Nat :=
 
 namespace MessageDigest
 
+/-- A FORS instance, identified by its 63-bit hypertree tree-and-leaf index. -/
 abbrev Instance := Fin (2 ^ totalHeight)
+/-- What a message digest selects: a FORS instance and a leaf index in each of its trees. -/
 abbrev View := Instance × (ForsTree → ForsLeaf)
 
 /-- The 63-bit FORS-instance index and the FORS indices. -/
@@ -58,6 +64,7 @@ noncomputable def experiment (adversary : Adversary) : OracleComp OracleWorld Ou
     verified := verified
     counts := Multiplicative.toAdd adversaryCounts + verifierCounts }
 
+/-- The experiment run against a lazily sampled random oracle. -/
 noncomputable def run (adversary : Adversary) : ProbComp Outcome :=
   Xmss.RandomOracleModel.run (experiment adversary)
 
@@ -65,6 +72,7 @@ noncomputable def run (adversary : Adversary) : ProbComp Outcome :=
 noncomputable def runAll (adversary : Adversary) : ProbComp (Outcome × Nat) :=
   Xmss.RandomOracleModel.run (countAllHashes (experiment adversary))
 
+/-- The probability that the adversary wins the experiment, read off `runAll`. -/
 noncomputable def totalAdvantage (adversary : Adversary) : ℝ≥0∞ :=
   Pr{let result ← runAll adversary}[Wins result.1]
 

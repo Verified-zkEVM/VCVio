@@ -32,14 +32,12 @@ open Security CanonicalGraph WarmedGame Target RoutedSplit BracketedRun CarrierT
 attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal
   Scheme.sign Security.signingOracle Security.countQueries
 
-set_option maxHeartbeats 4000000 in
-set_option linter.constructorNameAsVariable false in
-open scoped Classical in
 /-- **The answer half at `127`, the signer's calls free.** -/
 theorem answerBound (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adversary q)
     (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWalk) (hgood : Target.GoodWalk walk) :
-    Pr{let result ← carrierTail keep127 adversary walk}[RoutedSplit.AnswerBad ((walk.1, (FinalAssembly.forgetFused result).1),
-          (FinalAssembly.forgetFused result).2) ∧ ¬ Target127.late (walk, result)] ≤
+    Pr{let result ← carrierTail keep127 adversary walk}[RoutedSplit.AnswerBad
+          ((walk.1, (FinalAssembly.forgetFused result).1), (FinalAssembly.forgetFused result).2) ∧
+        ¬ Target127.late (walk, result)] ≤
       (q : ℝ≥0∞) / ((2 ^ 128 : Nat) : ℝ≥0∞) + (1 : ℝ≥0∞) / 2 ^ 126 := by
   classical
   by_cases hq : 2 ^ 128 ≤ q
@@ -54,8 +52,8 @@ theorem answerBound (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adv
   have hmap : Prod.fst <$> split = carrierTail keep127 adversary walk :=
     SplitTail.map_splitCarrierTail _ AnswerFired.hash_ne_verification keep127 adversary walk
   have hmapR := SplitCarrierTail.forget_splitCarrierTail
-    (CombinedCharge.IsMessageInput (keyAt walk)) Game.QueryKind.hash Game.QueryKind.verification keep127
-    adversary walk
+    (CombinedCharge.IsMessageInput (keyAt walk)) Game.QueryKind.hash Game.QueryKind.verification
+    keep127 adversary walk
   have hfst : ∀ z ∈ support split, z.1 ∈ support (carrierTail keep127 adversary walk) := by
     intro z hz
     rw [← hmap, support_map]
@@ -101,7 +99,8 @@ theorem answerBound (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adv
     have hprob : Pr{let z ← split}[GrowthCharge.Bad (AnswerSide.CanonicalBad walk.1.1.2.2 walk.1.2)
             (z.1.1, z.1.2.1)] =
         Pr{let x ← ((simulateQ KeygenUniform.rom (countQueries (ClassGrowth.splitCost
-            (CombinedCharge.IsMessageInput (keyAt walk)) Game.QueryKind.hash Game.QueryKind.verification)
+            (CombinedCharge.IsMessageInput (keyAt walk)) Game.QueryKind.hash
+            Game.QueryKind.verification)
             (RecordedTail.recordedAfterSeeds adversary walk.1.1))).run walk.2)}[
           (GrowthCharge.Bad (AnswerSide.CanonicalBad walk.1.1.2.2 walk.1.2)) x] := by
       rw [← hmapR, prEvent_map]

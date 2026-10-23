@@ -60,6 +60,7 @@ noncomputable def forgeryDigestRecord (pk : PublicKey) (forgery : Forgery) : Mul
     | none => 0
     | some parsed => {Hashing.messageInput parsed.randomizer pk framed}
 
+/-- A parsed forgery's own digest input is in its digest record. -/
 theorem mem_forgeryDigestRecord (pk : PublicKey) (forgery : Forgery) (framed : Bytes)
     (parsed : Signature) (hframe : forgery.message.frame = some framed)
     (hparsed : Signature.fromBytes? forgery.signature = some parsed) :

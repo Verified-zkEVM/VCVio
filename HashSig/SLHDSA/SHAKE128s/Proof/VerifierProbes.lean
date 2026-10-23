@@ -60,6 +60,7 @@ def forsKeyOf (cache : QueryCache HashSpec) (pk : PublicKey) (message : Bytes)
     parsed.fors (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed
     (Scheme.forsAddress (digestOf cache pk message parsed))
 
+/-- Replaying the message-digest computation against a cache yields `digestOf`. -/
 theorem simulateQ_messageDigest (cache : QueryCache HashSpec) (pk : PublicKey) (message : Bytes)
     (parsed : Signature) :
     (simulateQ (CacheReplay.replay cache)
@@ -144,7 +145,8 @@ theorem fors_pathInput (signature : ForsSignature)
             bytesBE n value ++ bytesBE n ((signature i).authentication step)
           else bytesBE n ((signature i).authentication step) ++ bytesBE n value) =
       PathEntry.pathInput publicSeed (SlhDsaSecurity.Fors.nodeAddress address)
-        (Extraction.Fors.leafIndex indices i) (Extraction.Fors.siblings signature i) value step := by
+        (Extraction.Fors.leafIndex indices i) (Extraction.Fors.siblings signature i) value
+        step := by
   have hparity : Extraction.Fors.leafIndex indices i / 2 ^ step.val % 2 =
       (indices i).val / 2 ^ step.val % 2 := by
     have heven := Correctness.offset_even i.val forsHeight step.val step.isLt
@@ -152,7 +154,7 @@ theorem fors_pathInput (signature : ForsSignature)
       Correctness.offset_div_pow _ _ _ _ (Nat.le_of_lt step.isLt)]
     simp [Nat.add_mod, heven]
   simp only [PathEntry.pathInput, BinaryPath.pairBytes, BinaryPath.ordered, hparity,
-    Extraction.Fors.siblings, dif_pos step.isLt, Fin.eta]
+    Extraction.Fors.siblings, dite_eq_left step.isLt, Fin.eta]
   split <;> rfl
 
 /-- One FORS tree's root recovery: compress the revealed secret, then climb the authentication
@@ -215,7 +217,8 @@ theorem simulateQ_forsTrees (cache : QueryCache HashSpec) (signature : ForsSigna
           Id (Fin forsTrees → Digest)) =
       @Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache) signature indices publicSeed
         address := by
-  rw [VerifierNaturality.sequenceFin_simulate (CacheReplay.replay cache), Correctness.sequenceFin_id]
+  rw [VerifierNaturality.sequenceFin_simulate (CacheReplay.replay cache),
+    Correctness.sequenceFin_id]
   funext i
   exact simulateQ_forsTreeRoot cache signature indices publicSeed address i
 
@@ -354,7 +357,7 @@ theorem cached_fors_leaf_probe (cache initialCache : QueryCache HashSpec)
 
 /-! ## The charges, supplied
 
-Both halves of the split now close against a single verification run: whatever the charge asks
+Both halves of the split close against a single verification run: whatever the charge asks
 to find in the cache, the verifier put there. -/
 
 /-- **A hypertree fault of a verified forgery is charged or leaves the WOTS residue.** -/

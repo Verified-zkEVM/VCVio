@@ -34,8 +34,6 @@ is not indexed by prefixes of the run.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.TableBlind
 
 open SensitiveQuery

@@ -86,6 +86,8 @@ noncomputable def splitCarrierTail (inClass : Bytes → Prop) (inside outside : 
 
 /-! ## The three stages, each written once as a bind -/
 
+/-- **The first stage, split.** The carrier's run is the split carrier's run with the two
+slots summed. -/
 theorem split_first_stage_bind (inClass : Bytes → Prop) {inside outside : QueryKind}
     (hne : inside ≠ outside) (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) {α : Type} (computation : OracleComp OracleWorld α) :
@@ -101,7 +103,8 @@ theorem split_first_stage_bind (inClass : Bytes → Prop) {inside outside : Quer
   rw [← hforget, map_eq_bind_pure_comp]
   rfl
 
-set_option maxHeartbeats 1000000 in
+/-- **The middle stage, split.** The bracketed fused phase over the carrier's handler is
+the one over the split carrier's handler with the two slots summed. -/
 theorem split_middle_stage_bind (inClass : Bytes → Prop) {inside outside : QueryKind}
     (hne : inside ≠ outside) (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) (adversary : Adversary)
@@ -128,6 +131,8 @@ theorem split_middle_stage_bind (inClass : Bytes → Prop) {inside outside : Que
       1 [] keys.2, map_eq_bind_pure_comp]
   rfl
 
+/-- **The last stage, split.** The carrier's run of the counted verifier is the split
+carrier's run with the two slots summed. -/
 theorem split_last_stage_bind (inClass : Bytes → Prop) {inside outside : QueryKind}
     (hne : inside ≠ outside) (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) (pk : PublicKey) (forgery : Forgery)
@@ -144,7 +149,6 @@ theorem split_last_stage_bind (inClass : Bytes → Prop) {inside outside : Query
       (Scheme.verify pk forgery.message forgery.signature)) state, map_eq_bind_pure_comp]
   rfl
 
-set_option maxHeartbeats 1000000 in
 /-- **The split tail's first component is the tail.** Three stages matched one for one, as in
 `CarrierTail.forget_carrierTail`, and no induction added. -/
 theorem map_splitCarrierTail (inClass : Bytes → Prop) {inside outside : QueryKind}

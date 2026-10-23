@@ -37,7 +37,6 @@ they use:
 
 open OracleComp OracleSpec ENNReal
 
-set_option linter.constructorNameAsVariable false
 namespace SlhDsaSecurity.WarmedCharges
 
 open Security CanonicalGraph WarmedGame

@@ -85,7 +85,6 @@ theorem clear_phase (walk : Walk) (sk : SecretKey) {α : Type}
 Stated at the tail's own decomposition, so that a consumer reading one stage's `reaches` gets it
 without unfolding anything. -/
 
-set_option maxHeartbeats 800000 in
 /-- **Every stage of the carrier tail is entered with nothing in flight**, and the tail is left
 that way. -/
 theorem clear_stages (adversary : Adversary) (walk : Walk)

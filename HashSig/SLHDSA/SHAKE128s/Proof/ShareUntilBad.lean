@@ -36,6 +36,7 @@ open Security CanonicalGraph ShareGame
 
 /-! ## The open table inside the full one -/
 
+/-- An entry of the open table is an entry of the warm cache. -/
 theorem openAt_le_warm (setup : Setup) (served : List HashOutput) (input : Bytes)
     (answer : HashOutput) (hopen : openAt setup served input = some answer) :
     setup.warm input = some answer := by
@@ -79,6 +80,7 @@ theorem sens_of_closed (setup : Setup) (served : List HashOutput) (input : Bytes
 
 /-! ## Off the flag, the routing agrees -/
 
+/-- A `SK.prf` input of the setup lies in the `SK.prf` class of its key. -/
 theorem prfClass_of_isPrfInput (setup : Setup) (input : Bytes)
     (hprf : IsPrfInput setup input) : RandomizerGate.PrfClass setup.prf input :=
   ⟨setup.publicSeed, prfFrame input, hprf⟩
@@ -107,6 +109,7 @@ theorem route_eq (setup : Setup) (state : St) (input : Bytes)
 
 /-! ## A good walk keeps the digest input cold -/
 
+/-- On a good setup, the warm cache holds no message-digest input. -/
 theorem warm_messageInput (setup : Setup) (hgood : setup.Good) (randomizer : Digest)
     (framed : Bytes) : setup.warm (Hashing.messageInput randomizer setup.pk framed) = none := by
   by_contra hsome
@@ -117,6 +120,7 @@ theorem warm_messageInput (setup : Setup) (hgood : setup.Good) (randomizer : Dig
     (message := framed) (seed := setup.publicSeed) hgood.2 (withinBounds_structural parent)
     hparent
 
+/-- On a good setup, the open table holds no message-digest input. -/
 theorem openAt_messageInput (setup : Setup) (hgood : setup.Good) (served : List HashOutput)
     (randomizer : Digest) (framed : Bytes) :
     openAt setup served (Hashing.messageInput randomizer setup.pk framed) = none :=
@@ -140,7 +144,8 @@ open scoped Classical in
 theorem agree_good (setup : Setup) (queried : ShareSpec.Domain) (state : St)
     (answer : ShareSpec.Range queried) (next : St) :
     Pr{let x ← ((handler true setup) queried).run (state, false)}[x = (answer, (next, false))] =
-      Pr{let x ← ((handler false setup) queried).run (state, false)}[x = (answer, (next, false))] := by
+      Pr{let x ← ((handler false setup) queried).run (state, false)}[
+        x = (answer, (next, false))] := by
   classical
   rcases queried with ((world | request) | ⟨request, drawn⟩) | forgery
   · rcases world with coin | input
@@ -149,7 +154,8 @@ theorem agree_good (setup : Setup) (queried : ShareSpec.Domain) (state : St)
       · -- both raise the flag
         have hzero : ∀ lenient : Bool,
             Pr{let x ← (((handler lenient setup)
-              (Sum.inl (Sum.inl (Sum.inl (Sum.inr input))))).run (state, false))}[x = (answer, (next, false))] = 0 := by
+              (Sum.inl (Sum.inl (Sum.inl (Sum.inr input))))).run (state, false))}[
+                x = (answer, (next, false))] = 0 := by
           intro lenient
           refine (prEvent_eq_zero_of_not_mem_support _) fun hmem => ?_
           simp only [handler, StateT.run, mem_support_bind_iff, support_pure,

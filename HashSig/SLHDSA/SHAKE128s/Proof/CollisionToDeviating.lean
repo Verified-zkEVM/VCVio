@@ -136,11 +136,11 @@ with one child: the forged secret differs from the honest one, yet hashing it un
 address gives the same value. The join is the same, and simpler — one child means the
 deviating assignment is just the honest cells with that child overwritten. -/
 
+/-- The canonical graph's child encoding of a one-child node is the child's cell bytes. -/
 theorem childBytes_single (cells : Cells) (child : Node) :
     childBytes cells [child] = bytesBE n (cells child) := by
   simp [childBytes]
 
-open scoped Classical in
 /-- **A single-child collision is a charged structural event.** -/
 theorem deviatingCollision_of_single_child {α : Type} (publicSeed : Digest) (cells : Cells)
     (parent : StructuralNode) (child : Node) (actual : Digest)
@@ -165,7 +165,6 @@ roots, whose children are given by `List.ofFn` and whose payload is `digestArray
 than a flattened pair. The content is the same as the other two joins; only the byte-level
 step differs, and `CanonicalGraph.Evaluation`'s `childBytes_ofFn` already supplies it. -/
 
-open scoped Classical in
 /-- **An array-node collision is a charged structural event.** -/
 theorem deviatingCollision_of_array {α : Type} {size : Nat} (publicSeed : Digest)
     (cells : Cells) (parent : StructuralNode) (children : Fin size → Node)
@@ -184,7 +183,7 @@ theorem deviatingCollision_of_array {α : Type} {size : Nat} (publicSeed : Diges
   have hvalue : ∀ index, candidates (children index) = actual index := by
     intro index
     have hexists : ∃ probe, children probe = children index := ⟨index, rfl⟩
-    simp only [hcand, dif_pos hexists]
+    simp only [hcand, dite_eq_left hexists]
     rw [hinj hexists.choose_spec]
   refine ⟨candidates, parent, output, ?_, ?_, hcollision⟩
   · obtain ⟨index, hindex⟩ := hne

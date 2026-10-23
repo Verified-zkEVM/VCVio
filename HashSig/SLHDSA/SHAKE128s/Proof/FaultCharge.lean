@@ -90,7 +90,7 @@ theorem merkle_eq_wots_bind_fold (index : Fin (2 ^ subtreeHeight)) (signature : 
   refine congrArg (fun body => (List.finRange subtreeHeight).foldlM
     (m := OracleComp HashSpec) body leaf) (funext fun value => funext fun j => ?_)
   simp only [PathEntry.pathInput, Hashing.tweakable, BinaryPath.pairBytes, BinaryPath.ordered,
-    Extraction.Merkle.siblings, dif_pos j.isLt, Fin.eta]
+    Extraction.Merkle.siblings, dite_eq_left j.isLt, Fin.eta]
   split <;> rfl
 
 /-- The replay implementation agrees with the replay instance, by definition. -/
@@ -228,7 +228,8 @@ theorem endpoints_sign_eq_cells (cache : QueryCache HashSpec)
       fun chainIndex => @value (CacheReplay.replayQuery cache) secretSeed publicSeed
         (.structural (.wotsHash key chainIndex ⟨w - 2, by decide⟩)) := by
   funext chainIndex
-  have hdigit : (Checksum.encode message chainIndex).val < w := (Checksum.encode message chainIndex).isLt
+  have hdigit : (Checksum.encode message chainIndex).val < w :=
+    (Checksum.encode message chainIndex).isLt
   have hsplit : (Checksum.encode message chainIndex).val +
       (w - 1 - (Checksum.encode message chainIndex).val) = w - 1 := by
     simp only [w, winternitzBits] at hdigit ⊢

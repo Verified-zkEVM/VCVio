@@ -42,12 +42,13 @@ attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenI
 
 /-! ## The recorded tail is the linked run -/
 
-set_option maxHeartbeats 1000000 in
 /-- **The recorded tail at a drawn table is the linked game**, the record carried. -/
 theorem probEvent_recordedTail_linked (adversary : Adversary) (prfSeed publicSeed : Digest)
     (table : Cells × Padding) (event : (Outcome × Multiset Bytes) × QueryCache HashSpec → Prop) :
-    Pr{let result ← RecordedTail.recordedTail adversary (walkOfTable prfSeed publicSeed table)}[event (result.1.1, result.2)] =
-      Pr{let result ← linkedRun adversary prfSeed publicSeed table}[event (LinkedGame.outcomeOf result.1, result.2)] := by
+    Pr{let result ← RecordedTail.recordedTail adversary (walkOfTable prfSeed publicSeed table)}[
+        event (result.1.1, result.2)] =
+      Pr{let result ← linkedRun adversary prfSeed publicSeed table}[
+        event (LinkedGame.outcomeOf result.1, result.2)] := by
   have hmap : (simulateQ KeygenUniform.rom (RecordedTail.recordedAfterSeeds adversary
         (walkOfTable prfSeed publicSeed table).1.1)).run (walkOfTable prfSeed publicSeed table).2 =
       (fun result : ((Outcome × Multiset Bytes) × Nat) × QueryCache HashSpec =>
@@ -151,7 +152,6 @@ theorem run_addCost_query_bind {ι : Type} {spec : OracleSpec ι} {ω : Type} [A
     QueryImpl.withCost]
   simp [map_bind, bind_map_left]
 
-set_option maxHeartbeats 1000000 in
 /-- **The phase's three layers are one handler.** -/
 theorem run_flat (signer : Message → OracleComp OracleWorld (Option Bytes)) {α : Type}
     (computation : OracleComp (OracleWorld + SigningSpec) α) :
@@ -206,7 +206,6 @@ theorem realWorldImpl_run (world : OracleWorld.Domain) (state : VerifyState) :
       (fun z => (z.1, (state.1 * Multiplicative.ofAdd (verifierCost world), z.2))) <$>
         (KeygenUniform.rom world).run state.2 := rfl
 
-set_option maxHeartbeats 1000000 in
 /-- **The verifier's two layers are one handler.** -/
 theorem run_flatVerify {α : Type} (computation : OracleComp OracleWorld α) :
     ∀ (tally : Multiplicative Tally) (cache : QueryCache HashSpec),
@@ -264,11 +263,11 @@ noncomputable def realFlat (adversary : Adversary) (keys : SecretKey × PublicKe
     (1, z.2.2.2)
   pure ((((z.1, z.2.1), (w.1, Multiplicative.toAdd w.2.1)), z.2.2.1), w.2.2)
 
-set_option maxHeartbeats 1000000 in
 theorem linkedRun_eq (adversary : Adversary) (prfSeed publicSeed : Digest)
     (table : Cells × Padding) :
     linkedRun adversary prfSeed publicSeed table =
-      realFlat adversary (keysOf prfSeed publicSeed table) (walkOfTable prfSeed publicSeed table).2 := by
+      realFlat adversary (keysOf prfSeed publicSeed table)
+        (walkOfTable prfSeed publicSeed table).2 := by
   rw [linkedRun, LinkedGame.linkedAfterSeeds, simulateQ_bind, StateT.run_bind, simulateQ_bind,
     StateT.run_bind, rom_phase_eq, realFlat, bind_map_left]
   refine bind_congr fun z => ?_

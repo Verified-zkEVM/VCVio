@@ -30,7 +30,6 @@ signature reads only the cells it discloses.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.RedrawCell
 
@@ -132,6 +131,7 @@ noncomputable def unionCache (publicSeed : Digest) (table : Cells × Padding)
     | some answer => some answer
     | none => cache input
 
+/-- The union cache answers a programmed input with the programmed entry. -/
 theorem unionCache_of_open (publicSeed : Digest) (table : Cells × Padding)
     (cache : QueryCache HashSpec) (input : Bytes) (answer : HashOutput)
     (hopen : openCache publicSeed (fun _ => True) table input = some answer) :

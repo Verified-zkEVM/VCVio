@@ -9,34 +9,31 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.Hashing
 
 /-!
-# What a handler carries, declared where a handler can see it
+# The state a signing handler carries
 
 `ServingCarrier` reads a disclosed set off a handler's state, and `ServedDisclosure` states the
-notion the reading obeys. Neither can declare the *type*: `ServedDisclosure` is stated over
-`CacheAvailability`, which is above `OpenCache` — so the files that
-state the notion sit above the handler that has to carry it. The type and the operations on it
-are therefore here, below all of them, and everything that needs the notion stays above.
+notion the reading obeys. That notion is stated over `CacheAvailability`, which sits above
+`OpenCache`, so the files stating it sit above the handler that has to carry it. The carrier
+type `State` and its operations therefore live here, below all of them, and everything that needs
+the notion stays above.
 
 **The framing carries a frame and the served set carries digest inputs**, and the two sorts are
 kept apart deliberately. Indexing the served set by the message would let an adversary pick its
 own randomiser for a message the signer did sign and have its own digest's positions counted as
-disclosed — the fiction the cache proxy allowed, in a new place. Indexing by the input pins the
-randomiser and the message together through `Hashing.messageInput_injective`.
+disclosed. Indexing by the input pins the randomiser and the message together through
+`Hashing.messageInput_injective`.
 
 **Filing happens at the query, not at completion.** The digest input is not known when a request
 arrives — it depends on the randomiser the oracle has yet to answer — so the handler sets the
-framing while it serves and files an input when a query matches it. That the filing and the
-caching happen in the *same step* is the whole repair: disclosure begins exactly where the
-answer does. A design that filed at completion would disclose *after* the signer's FORS reads,
-which is the failure being repaired; "the framing moves from in-flight to served" is the natural
-way to describe it and is wrong.
+framing while it serves and files an input when a query matches it. Filing and caching happen in
+the *same step*, so disclosure begins exactly where the answer does. Filing at completion would
+disclose only *after* the signer's FORS reads.
 
 **`FilesLeft` does not ask for freshness, and must not.** A request whose digest input is
 already cached when the signer asks is still served, and if it were not filed the signer's own
-reads would be unavailable at the carrier — the stalled run reading a cell it must be blind to,
-which is exactly what the repair exists to prevent. The freshness rule belongs to the *coverage
-recorder's* list, where a block of answers has to be a block of fresh draws; it is a different
-object and it does not transfer here.
+reads would be unavailable at the carrier: the stalled run would read a cell it must be blind to.
+The freshness rule belongs to the *coverage recorder's* list, where a block of answers has to be
+a block of fresh draws; it is a different object and it does not transfer here.
 -/
 
 @[expose] public section
@@ -48,8 +45,11 @@ namespace SlhDsaSecurity.HandlerCarrier
 /-- What a handler carries: the cache, the digest inputs the signer has served, and the framing
 of the request it is serving. -/
 structure State where
+  /-- The random-oracle cache. -/
   cache : QueryCache HashSpec
+  /-- The digest inputs filed as served by the signer. -/
   served : Multiset Bytes
+  /-- The framed message of the signing request in flight, if any. -/
   framing : Option Bytes
 
 /-- The digest inputs a state has served. -/
@@ -70,8 +70,10 @@ def Grows (left right : State) : Prop :=
       left.cache input = some answer → right.cache input = some answer) ∧
     ∀ input : Bytes, Served left input → Served right input
 
+/-- Every state grows into itself. -/
 theorem Grows.refl (state : State) : Grows state state := ⟨fun _ _ h => h, fun _ h => h⟩
 
+/-- Growth is transitive. -/
 theorem Grows.trans {left middle right : State} (hfirst : Grows left middle)
     (hsecond : Grows middle right) : Grows left right :=
   ⟨fun input answer hentry => hsecond.1 input answer (hfirst.1 input answer hentry),
@@ -82,7 +84,7 @@ theorem Grows.trans {left middle right : State} (hfirst : Grows left middle)
 /-- Set the framing of the request being served. -/
 def setFraming (state : State) (framed : Bytes) : State := { state with framing := some framed }
 
-/-- Clear it when the request is done. -/
+/-- Clear the framing when the request is done. -/
 def clearFraming (state : State) : State := { state with framing := none }
 
 /-- File a digest input the signer has served. -/
@@ -107,22 +109,26 @@ completing step — which takes a request out of flight — is growth like every
 theorem grows_of_framing (state : State) (framing : Option Bytes) :
     Grows state { state with framing := framing } := Grows.refl state
 
+/-- Setting the framing is growth. -/
 theorem grows_setFraming (state : State) (framed : Bytes) :
     Grows state (setFraming state framed) := grows_of_framing state (some framed)
 
+/-- Clearing the framing is growth. -/
 theorem grows_clearFraming (state : State) : Grows state (clearFraming state) :=
   grows_of_framing state none
 
+/-- Filing a served input is growth. -/
 theorem grows_file (state : State) (input : Bytes) : Grows state (file state input) :=
   ⟨fun _ _ h => h, fun _ hprobe => Multiset.mem_cons_of_mem hprobe⟩
 
+/-- Caching an answer at a fresh input is growth. -/
 theorem grows_cacheAnswer (state : State) (input : Bytes) (answer : HashOutput)
     (hfresh : state.cache input = none) : Grows state (cacheAnswer state input answer) := by
   refine ⟨fun probe value hvalue => ?_, fun _ h => h⟩
   by_cases hequal : probe = input
   · rw [hequal, hfresh] at hvalue
     exact absurd hvalue (by simp)
-  · show (state.cache.cacheQuery input answer) probe = some value
+  · change (state.cache.cacheQuery input answer) probe = some value
     rw [QueryCache.cacheQuery_of_ne state.cache answer hequal]
     exact hvalue
 

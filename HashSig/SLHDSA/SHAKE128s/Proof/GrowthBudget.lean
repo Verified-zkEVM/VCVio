@@ -24,18 +24,19 @@ sequencing (`countAllHashes_bind`).
 
 open OracleComp OracleSpec
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.GrowthBudget
 
 variable {α β : Type}
 
 open Security GrowthCharge
 
+/-- A pure computation makes no hash queries. -/
 @[simp] theorem countAllHashes_pure {α : Type} (value : α) :
     countAllHashes (pure value : OracleComp OracleWorld α) = pure (value, 0) := by
   simp [countAllHashes]
 
+/-- A query followed by a continuation is charged its `hashCost` on top of the continuation's
+count. -/
 theorem countAllHashes_query_bind {α : Type} (queried : OracleWorld.Domain)
     (next : OracleWorld.Range queried → OracleComp OracleWorld α) :
     countAllHashes (liftM (OracleWorld.query queried) >>= next) =
@@ -46,6 +47,7 @@ theorem countAllHashes_query_bind {α : Type} (queried : OracleWorld.Domain)
     QueryImpl.withAddCost, QueryImpl.withCost]
   simp [Functor.map_map, map_bind, bind_map_left]
 
+/-- A single query is charged exactly its `hashCost`. -/
 theorem countAllHashes_query (queried : OracleWorld.Domain) :
     countAllHashes (liftM (OracleWorld.query queried)) =
       liftM (OracleWorld.query queried) >>= fun answer =>

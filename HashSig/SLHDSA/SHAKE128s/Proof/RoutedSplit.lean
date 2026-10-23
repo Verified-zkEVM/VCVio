@@ -229,7 +229,6 @@ attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenI
   Scheme.sign Security.signingOracle Security.countQueries
 
 omit [HasQuery HashSpec Id] in
-set_option maxHeartbeats 1000000 in
 /-- **The forgery's message digest is in the run's own cache**, holding the value the replayed
 verifier reads. -/
 theorem cached_digest (adversary : Adversary)
@@ -265,7 +264,6 @@ theorem cached_digest (adversary : Adversary)
       (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2) message) answer hanswer).symm
 
 omit [HasQuery HashSpec Id] in
-set_option maxHeartbeats 1000000 in
 /-- **The canonical branch forks across both halves.** Each of the fourteen positions the
 forgery's digest selects is either undisclosed, which makes the secret it claims a sensitive
 entry of the record, or disclosed; and if all fourteen are disclosed then either the forgery's
@@ -308,7 +306,8 @@ theorem cases_of_canonical (adversary : Adversary)
           (forsKeyOfDigest (digestOf result.2
             (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2) message parsed)).address
           (Extraction.Fors.leafIndex (MessageDigest.forsIndices (digestOf result.2
-            (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2) message parsed)) tree) := by
+            (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2) message parsed))
+            tree) := by
       intro tree
       rw [hcanonical.2.1, @ForsDispatch.sign_apply (replayQuery result.2)]
       rfl
@@ -328,7 +327,6 @@ theorem cases_of_canonical (adversary : Adversary)
         mem_claimedCandidates_fors _ _ _ _ _ _ tree, hsensitive⟩)
 
 omit [HasQuery HashSpec Id] in
-set_option maxHeartbeats 1000000 in
 /-- **A win is the answer side, the input side, or the signer's own signature.** -/
 theorem cases_of_win_routed (adversary : Adversary)
     {walk : ((Digest × Digest × Digest) × Cells) × QueryCache HashSpec}

@@ -49,6 +49,7 @@ def signAfter (randomizer : Digest) (sk : SecretKey) (digest : HashOutput) : m S
     (MessageDigest.treeIndex digest) (MessageDigest.leafIndex digest).toFin
   return { randomizer, fors, hypertree }
 
+/-- Signing at a randomiser is the digest query followed by `signAfter`. -/
 theorem signInternalAt_eq (randomizer : Digest) (sk : SecretKey) (message : Bytes) :
     SignerRandomiser.signInternalAt (m := m) randomizer sk message =
       Hashing.messageDigest randomizer sk.publicKey message >>= signAfter randomizer sk := rfl
@@ -136,7 +137,6 @@ noncomputable def cellSig (cache : QueryCache HashSpec) (sk : SecretKey) (random
     (digest : HashOutput) : Signature :=
   @signAfter Id _ (replayQuery cache) randomizer sk digest
 
-set_option maxHeartbeats 1000000 in
 /-- **The stripped signer at the walk's warm cache draws its two inputs and then reads the
 table.** -/
 theorem strippedSign_eq_draw (sk : SecretKey) (outputs : Programming.Outputs)

@@ -124,6 +124,7 @@ def startServingOn {τ : Type} (request : Message) (state : HandlerCarrier.State
 def stopServingOn {τ : Type} (state : HandlerCarrier.State × τ) : HandlerCarrier.State × τ :=
   (HandlerCarrier.clearFraming state.1, state.2)
 
+/-- Stopping serving clears the framing. -/
 @[simp] theorem framing_stopServingOn {τ : Type} (state : HandlerCarrier.State × τ) :
     (stopServingOn state).1.framing = none := rfl
 
@@ -280,7 +281,8 @@ open scoped Classical in
 theorem servingPhaseWith_persists (pk : PublicKey)
     {τ : Type} (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (hfiles : Files pk impl)
-    (signer : Message → OracleComp OracleWorld (Option Bytes)) (queried : (OracleWorld + SigningSpec).Domain)
+    (signer : Message → OracleComp OracleWorld (Option Bytes))
+    (queried : (OracleWorld + SigningSpec).Domain)
     (state : Multiplicative Tally × SigningLog × (HandlerCarrier.State × τ))
     (step : (OracleWorld + SigningSpec).Range queried ×
       (Multiplicative Tally × SigningLog × (HandlerCarrier.State × τ)))
@@ -479,7 +481,8 @@ theorem LogFiled.mono {sk : SecretKey} {log : SigningLog} {left right : HandlerC
     (hinv : LogFiled sk log left) (hgrow : HandlerCarrier.Grows left right) :
     LogFiled sk log right := by
   intro entry hentry framed hframe
-  obtain ⟨seed, signature, hcached, hanswer, hrandomizer, hserved⟩ := hinv entry hentry framed hframe
+  obtain ⟨seed, signature, hcached, hanswer, hrandomizer, hserved⟩ :=
+    hinv entry hentry framed hframe
   exact ⟨seed, signature, hgrow.1 _ _ hcached, hanswer, hrandomizer, hgrow.2 _ hserved⟩
 
 /-- **And it survives a log that only grows.** -/
@@ -505,7 +508,8 @@ carrier; a signing step appends one entry and files exactly that entry's digest 
 theorem logFiled_step_with (pk : PublicKey)
     {τ : Type} (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (hfiles : Files pk impl)
-    (signer : Message → OracleComp OracleWorld (Option Bytes)) (sk : SecretKey) (hpk : sk.publicKey = pk)
+    (signer : Message → OracleComp OracleWorld (Option Bytes)) (sk : SecretKey)
+    (hpk : sk.publicKey = pk)
     (hshape : SignerShape sk signer)
     (hfaithful : SignerFaithful pk impl hfiles sk signer)
     (queried : (OracleWorld + SigningSpec).Domain)
@@ -570,7 +574,8 @@ open scoped Classical in
 theorem logFiled_run_with (pk : PublicKey)
     {τ : Type} (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (hfiles : Files pk impl)
-    (signer : Message → OracleComp OracleWorld (Option Bytes)) (sk : SecretKey) (hpk : sk.publicKey = pk)
+    (signer : Message → OracleComp OracleWorld (Option Bytes)) (sk : SecretKey)
+    (hpk : sk.publicKey = pk)
     (hshape : SignerShape sk signer)
     (hfaithful : SignerFaithful pk impl hfiles sk signer) {α : Type}
     (computation : OracleComp (OracleWorld + SigningSpec) α) :
@@ -589,7 +594,8 @@ theorem logFiled_run_with (pk : PublicKey)
     rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, mem_support_bind_iff] at hz
     obtain ⟨step, hstep, hrest⟩ := hz
     exact ih step.1 step.2
-      (logFiled_step_with pk impl hfiles signer sk hpk hshape hfaithful queried state step hstep hinv) z hrest
+      (logFiled_step_with pk impl hfiles signer sk hpk hshape hfaithful queried state step hstep
+        hinv) z hrest
 
 /-- **Nothing is logged at the start**, so the invariant holds there for free. -/
 theorem logFiled_nil (sk : SecretKey) (carrier : HandlerCarrier.State) :
@@ -629,8 +635,9 @@ the crossing together. -/
 
 Closing the randomiser question means getting from "the handler filed this while running the
 signer" to "the signer consults this", which is the crossing
-`ServedBridge.sign_messageShape_randomizer` is stated on the far side of: `CacheReplay.QueriesUnder`,
-the replay path, against a run of `Scheme.sign` at a different instantiation of its monad.
+`ServedBridge.sign_messageShape_randomizer` is stated on the far side of:
+`CacheReplay.QueriesUnder`, the replay path, against a run of `Scheme.sign` at a different
+instantiation of its monad.
 
 `StrippedGame.sign_lift` does the instantiation: signing in the game's monad is the lift of
 signing in the hash-only one. `served_queriesUnder` does the crossing by induction on the run:
@@ -690,7 +697,8 @@ theorem served_queriesUnder_lift (pk : PublicKey)
     (hashSigner : Message → OracleComp HashSpec (Option Bytes))
     (hlift : ∀ request : Message,
       signer request = OracleComp.liftComp (hashSigner request) OracleWorld)
-    (request : Message) (state : (HandlerCarrier.State × τ)) (z : Option Bytes × (HandlerCarrier.State × τ))
+    (request : Message) (state : (HandlerCarrier.State × τ))
+    (z : Option Bytes × (HandlerCarrier.State × τ))
     (hz : z ∈ support ((simulateQ impl
       (signer request)).run state))
     (later : QueryCache HashSpec)
@@ -814,6 +822,7 @@ def CarrierLogged (sk : SecretKey) (warm : QueryCache HashSpec) (log : SigningLo
     ∀ input : Bytes, HandlerCarrier.Served carrier input →
       ServingCarrier.logServed sk later log input
 
+/-- An input the log serves is still served once the log is extended. -/
 theorem logServed_append (sk : SecretKey) (cache : QueryCache HashSpec) (log : SigningLog)
     (entry : (_ : Message) × Option Bytes) (input : Bytes)
     (hlog : ServingCarrier.logServed sk cache log input) :
@@ -916,7 +925,8 @@ theorem carrierLogged_step_with (pk : PublicKey)
     | some framed =>
       rcases servedLog_signer pk impl hfiles signer sk hpk hshape warm hpins
         request framed hframe
-        (startServingOn request state.2.2) (by simp only [startServingOn, hframe]; rfl) signStep hsign
+        (startServingOn request state.2.2) (by simp only [startServingOn, hframe]; rfl) signStep
+        hsign
         later hwarm hlaterSign input hservedSign with hbefore | hinput
       · exact hold hbefore
       · exact ⟨⟨request, signStep.1⟩,
@@ -947,8 +957,8 @@ theorem carrierLogged_run_with (pk : PublicKey)
     obtain ⟨step, hstep, hrest⟩ := hz
     exact ih step.1 step.2
       (framing_clear_step_with pk impl hfiles signer queried state hclear step hstep)
-      (carrierLogged_step_with pk impl hfiles signer sk hpk hshape warm hpins queried state step hstep
-        hclear hinv) z hrest
+      (carrierLogged_step_with pk impl hfiles signer sk hpk hshape warm hpins queried state step
+        hstep hclear hinv) z hrest
 
 /-! ## How long the disclosing recording is
 

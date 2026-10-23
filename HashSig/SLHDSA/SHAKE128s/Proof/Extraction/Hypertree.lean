@@ -10,7 +10,8 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.Extraction.Merkle
 public import HashSig.SLHDSA.SHAKE128s.Proof.Extraction.Wots
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 
-/-! Extraction from one hypertree layer.
+/-!
+# Extraction from one hypertree layer
 
 Recovering the canonical root of a single XMSS subtree from a forged layer signature
 either reproduces, for the incoming message, the canonical WOTS signature and all nine
@@ -26,8 +27,6 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.Extraction.Hypertree
 
-set_option backward.isDefEq.respectTransparency false
-
 variable [HasQuery HashSpec Id]
 
 /-- The WOTS key-pair address of leaf `l` in the subtree at `(layer, tree)`. -/
@@ -41,20 +40,23 @@ def LayerCollision (secretSeed publicSeed message : Digest) (layer tree : Nat)
     (l : SlhDsaSecurity.Hypertree.LeafIndex) (xsig : XmssSignature) : Prop :=
   let address := SlhDsaSecurity.Hypertree.address layer tree
   let wa := wotsAddress layer tree l
-  let nodes : Nat → Nat → Digest := SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed address
+  let nodes : Nat → Nat → Digest :=
+    SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed address
   let combine : Nat → Nat → Digest → Digest → Digest := fun height nodeIndex left right =>
     Hashing.tweakable (m := Id) publicSeed
       (SlhDsaSecurity.Merkle.nodeAddress address height nodeIndex)
       (BinaryPath.pairBytes (left, right))
-  let leaf : Digest := SlhDsaSecurity.Wots.publicKeyFromSignature (m := Id) xsig.wots message publicSeed wa
-  let canonicalWots : WotsSignature := SlhDsaSecurity.Wots.sign (m := Id) message secretSeed publicSeed wa
-  (∃ j < subtreeHeight, BinaryPath.Collision nodes combine l.val leaf (Merkle.siblings xsig) j) ∨
+  let leaf : Digest :=
+    SlhDsaSecurity.Wots.publicKeyFromSignature (m := Id) xsig.wots message publicSeed wa
+  let canonicalWots : WotsSignature :=
+    SlhDsaSecurity.Wots.sign (m := Id) message secretSeed publicSeed wa
+  (∃ j < subtreeHeight,
+      BinaryPath.Collision nodes combine l.val leaf (Merkle.siblings xsig) j) ∨
     Wots.CompressionCollision xsig.wots canonicalWots message publicSeed wa ∨
     ∃ i : Fin chains, ∃ offset < w - 1 - (Checksum.encode message i).val,
       Wots.ChainCollision publicSeed { wa with chainOrHeight := BitVec.ofNat 32 i.val }
         (Checksum.encode message i).val (xsig.wots i) (canonicalWots i) offset
 
-set_option maxRecDepth 10000 in
 /-- A forged layer signature recovering the canonical subtree root either equals, for
 its incoming message, the canonical WOTS signature with all canonical authentication
 siblings, or contains a concrete collision at one of this layer's hash calls. -/

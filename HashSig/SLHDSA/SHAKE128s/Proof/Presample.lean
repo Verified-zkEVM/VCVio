@@ -26,20 +26,22 @@ In the lazy random-oracle model this is intuitively obvious — the entry would 
 sampled with the same law on first use, and never used entries are never observed — but it is
 exactly the fact a presampling argument needs, and VCVio does not carry it.
 
-`evalDist_prepend_fresh` is that statement. Note the `Prod.fst`: the two runs end with
-*different caches*, since one has an extra entry, so only the value can be compared. That is
-all any later step needs, because the caches agree wherever the entry is not involved.
+`evalDist_prepend_fresh_world` is that statement, in the experiment's oracle world. Note the
+`Prod.fst`: the two runs end with *different caches*, since one has an extra entry, so only the
+value can be compared. That is all any later step needs, because the caches agree wherever the
+entry is not involved.
+
+Iterating it along an adaptive traversal gives `evalDist_prepend_worldEvaluate`; specialised to
+the honest warmup `worldWarmup` it gives `evalDist_prepend_warmup` and
+`evalDist_prepend_warmup_after`, and `evalDist_counted_warmed` places the warmup outside the
+hash counter so that the query budget is unaffected.
 -/
 
 @[expose] public section
 
 open OracleComp OracleSpec
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.Presample
-
-variable {α γ : Type}
 
 /-- Writing two different keys commutes. -/
 theorem cacheQuery_comm (cache : QueryCache HashSpec) {left right : Bytes}
@@ -49,36 +51,11 @@ theorem cacheQuery_comm (cache : QueryCache HashSpec) {left right : Bytes}
   simp only [QueryCache.cacheQuery, QueryCache.toFn_ofFn]
   exact congrArg QueryCache.ofFn (Function.update_comm hne _ _ _)
 
-/-! ## Pre-sampling a whole table
-
-Iterating the step over a duplicate-free list of inputs that are all still empty: the entire
-table may be drawn before the run instead of during it. `CanonicalGraph.Programming.order` is
-such a list — it is `Nodup` by `order_nodup` — so this is what fixes the honest cells ahead of
-the adversary, which is what every charge is parameterised by. -/
-
-/-! ## Prepending a traversal
-
-`prefill` draws a fixed list of entries, but the honest parties' queries are not a fixed list:
-each node's byte input is built from its children's cells, so it depends on the answers given
-earlier. That is why `CanonicalGraph.Programming.warmup` is a traversal rather than a flat
-table write.
-
-Prepending such a traversal is still free, and for the same reason: each of its queries lands
-on an input that is still empty, so by `evalDist_prepend_fresh` the value it draws could have
-been drawn in advance. The difference from `evalDist_prefill` is that the next input is chosen
-using the value just drawn, so the induction peels one query at a time rather than quantifying
-over a list of targets fixed up front.
-
-With this, the experiment may be rewritten as *traverse the graph, then run* — and
-`GraphFreshSampling.evalDist_evaluate_eq_uniform_program` turns that traversal into a uniform
-table and a programmed cache, which is what fixes the honest cells ahead of the adversary. -/
-
-/-! ## The same, in the game's oracle world
+/-! ## Pre-sampling one entry in the game's oracle world
 
 The experiment is `OracleComp OracleWorld` — hash calls and coin flips together — so the step
-has to be available there too. A coin flip does not touch the hash cache, so it commutes with
-the prepended draw exactly as a hash query at a different input does; that is the only new
-case.
+is stated there. A coin flip does not touch the hash cache, so it commutes with the prepended
+draw exactly as a hash query at a different input does.
 
 One detail decides whether this goes through. The prepended draw puts the right-hand side
 under a binder, and `rw` does not rewrite under binders: unfolding the query step with `rw`
@@ -86,6 +63,8 @@ rewrites only the left, after which the two sides no longer match and every late
 on a `Range` mismatch that is really just the untouched side. Using `simp only` for that first
 unfolding, which does go under binders, removes the whole difficulty. -/
 
+/-- **Pre-sampling an empty hash entry is free.** Filling an entry the cache does not yet hold
+with a uniform value, before the run, leaves the law of the run's value unchanged. -/
 theorem evalDist_prepend_fresh_world {α : Type} (computation : OracleComp OracleWorld α) :
     ∀ (cache : QueryCache HashSpec) (target : Bytes), cache target = none →
       (Prod.fst <$> (simulateQ KeygenUniform.rom computation).run cache) =ᵈ
@@ -170,6 +149,9 @@ noncomputable def worldEvaluate {State Index : Type} (input : Index → State �
         OracleComp OracleWorld HashOutput)
       worldEvaluate input step nodes (step node state output)
 
+/-- **Prepending a fresh traversal is free.** Running an adaptive traversal whose inputs are
+pairwise separated and still empty in the cache before a computation leaves the law of the
+computation's value unchanged. -/
 theorem evalDist_prepend_worldEvaluate {α State Index : Type}
     (computation : OracleComp OracleWorld α) (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State)
@@ -300,6 +282,7 @@ So everything already proved about the warmup in the hash-only world transfers: 
 `CanonicalGraph.Programming.warmup_uniform`, which gives the traversal's exact law as a uniform
 table and a programmed cache. That is what turns the prepended warmup into *fixed cells*. -/
 
+/-- The world traversal is the hash-only traversal, lifted into the experiment's oracle world. -/
 theorem worldEvaluate_eq_liftM {State Index : Type} (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State) (nodes : List Index) (state : State) :
     worldEvaluate input step nodes state =

@@ -9,7 +9,7 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.DigestTape
 
 /-!
-# Two recordings at once, and the invariant that keeps them independent
+# A random oracle keeping two recordings
 
 The coverage charge needs its disclosing digests to occupy a fixed *index block* of the tape
 and its targets to occupy the rest, because the leave-one-out resampling needs the disclosure
@@ -17,30 +17,23 @@ set to be a function of the index rather than of the run. A single recording can
 that: the two kinds of query interleave, so their positions are run-dependent. Two recordings
 can, each padded to its own length and laid end to end.
 
-What has to be true of the pair is the lazy-sampling invariant, and it has to be true of the
-pair *jointly*: two words fixed in advance are the beginnings of the two recordings with
-probability at most `|HashOutput| ^ -(n₁ + n₂)`. That cannot be assembled from the one-list
-invariant. Knowing each word separately bounds its own recording leaves the joint event bounded
-only by a union over the ways the two could interleave, and that union costs a binomial factor
-which swallows the whole bound. So the induction is done once, with both targets carried: each
-fresh recorded answer advances exactly one of them, and the letter it has to match costs its
-own factor of `|HashOutput| ^ -1`.
+`recorder` is the shared random oracle of `DigestTape` with its state doubled: alongside the
+cache it keeps a left and a right recording of fresh answers. The decision to record is taken
+on the input *and the cache in force* (`appended`). That generality is free — the decision is
+made before the answer is drawn, so it is a function of the past — and it is what lets "the
+signer randomised this input" be the left-hand test, since that is a question about the cache
+rather than about bytes. The two tests are made exclusive by priority rather than assumed
+disjoint, so one fresh answer never advances both recordings at once.
 
-The recorder is the one from `DigestTape` with its state doubled, and with the decision to
-record taken on the input *and the cache in force*. That generality is free here — the decision
-is made before the answer is drawn, so it is a function of the past, which is all the induction
-uses — and it is what lets "the signer randomised this input" be the left-hand test, since that
-is a question about the cache rather than about bytes.
+The lemmas here read the instrumented run back:
 
-Nothing here depends on what the two tests are. They are made exclusive by priority rather than
-assumed disjoint, so that one fresh answer never advances both recordings at once, which is
-what the counting needs.
-
-`leftTrials` and `rightTrials` are the lengths of the two padding blocks, and nothing here
-reads them as a budget. The padding exists so that a short recording still extends to a word of
-a fixed length; how long a recording the run actually produces is a property of the run, not a
-limit it is held to, and a charge stated against these lemmas must carry that length as the
-variable it is.
+* `appended_of_cached`, `appended_of_left`, `appended_of_right` and `appended_of_neither` say
+  which recording a single answer goes to;
+* `mem_support_rom` says the recordings are invisible: dropping them lands in the support of the
+  plain run;
+* `recorder_cache_value_persists` says cache entries persist along a recorded run;
+* `right_record_class` and `right_record_suffix` describe what the right recording holds, and
+  the cache at which each of its entries was filed.
 -/
 
 @[expose] public section
@@ -80,14 +73,15 @@ noncomputable def recorder (leftKeep rightKeep : Bytes → QueryCache HashSpec �
         let step ← (randomOracle input).run state.1
         pure (step.1, (step.2, appended leftKeep rightKeep input state step.1))
 
-open scoped Classical in
+/-- A coin query to the recorder samples uniformly and leaves the state untouched. -/
 theorem recorder_run_inl (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (coin : unifSpec.Domain) (state : SplitState) :
     ((recorder leftKeep rightKeep) (Sum.inl coin)).run state =
       ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _) >>= fun value =>
         (pure (value, state) : ProbComp _) := rfl
 
-open scoped Classical in
+/-- A hash query to the recorder runs the caching random oracle and files the answer with
+`appended`. -/
 theorem recorder_run_inr (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (input : Bytes) (state : SplitState) :
     ((recorder leftKeep rightKeep) (Sum.inr input)).run state =
@@ -97,21 +91,25 @@ theorem recorder_run_inr (leftKeep rightKeep : Bytes → QueryCache HashSpec →
 
 /-! ## Reading the two tests -/
 
+/-- A cached input is recorded nowhere. -/
 theorem appended_of_cached (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (input : Bytes) (state : SplitState) (answer cached : HashOutput)
     (hcached : state.1 input = some cached) :
     appended leftKeep rightKeep input state answer = state.2 := by
   classical
-  rw [appended, if_neg (by rw [hcached]; simp), if_neg (by rw [hcached]; simp)]
+  rw [appended, ite_eq_right (by rw [hcached]; simp), ite_eq_right (by rw [hcached]; simp)]
 
+/-- A fresh input passing the left test goes to the left recording. -/
 theorem appended_of_left (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (input : Bytes) (state : SplitState) (answer : HashOutput)
     (hfresh : state.1 input = none) (hleft : leftKeep input state.1) :
     appended leftKeep rightKeep input state answer =
       (state.2.1 ++ [(input, answer)], state.2.2) := by
   classical
-  rw [appended, if_pos ⟨hfresh, hleft⟩]
+  rw [appended, ite_eq_left ⟨hfresh, hleft⟩]
 
+/-- A fresh input failing the left test and passing the right one goes to the right recording.
+-/
 theorem appended_of_right (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (input : Bytes) (state : SplitState) (answer : HashOutput)
     (hfresh : state.1 input = none) (hleft : ¬ leftKeep input state.1)
@@ -119,14 +117,16 @@ theorem appended_of_right (leftKeep rightKeep : Bytes → QueryCache HashSpec �
     appended leftKeep rightKeep input state answer =
       (state.2.1, state.2.2 ++ [(input, answer)]) := by
   classical
-  rw [appended, if_neg (fun hboth => hleft hboth.2), if_pos ⟨hfresh, hright⟩]
+  rw [appended, ite_eq_right (fun hboth => hleft hboth.2), ite_eq_left ⟨hfresh, hright⟩]
 
+/-- An input passing neither test is recorded nowhere. -/
 theorem appended_of_neither (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (input : Bytes) (state : SplitState) (answer : HashOutput)
     (hleft : ¬ leftKeep input state.1) (hright : ¬ rightKeep input state.1) :
     appended leftKeep rightKeep input state answer = state.2 := by
   classical
-  rw [appended, if_neg (fun hboth => hleft hboth.2), if_neg (fun hboth => hright hboth.2)]
+  rw [appended, ite_eq_right (fun hboth => hleft hboth.2),
+    ite_eq_right (fun hboth => hright hboth.2)]
 
 /-! ## The instrumentation is invisible
 
@@ -167,10 +167,9 @@ theorem mem_support_rom {α : Type} (leftKeep rightKeep : Bytes → QueryCache H
       rw [hshape]
       exact hinner
 
-/-! ## Both recordings only grow -/
-
 /-! ## The cache along a recorded run -/
 
+/-- **Cache entries persist along a recorded run.** -/
 theorem recorder_cache_value_persists {α : Type}
     (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (computation : OracleComp OracleWorld α) (state : SplitState) (result : α × SplitState)
@@ -203,7 +202,7 @@ theorem recorder_cache_value_persists {α : Type}
         obtain ⟨sampled, -, hpair⟩ := hinner
         have hmid : inner.2 = state.1.cacheQuery queried sampled :=
           (Prod.ext_iff.mp hpair).2.symm
-        show inner.2 input = some answer
+        change inner.2 input = some answer
         rw [hmid]
         have hne : input ≠ queried := by
           intro hsame
@@ -214,20 +213,9 @@ theorem recorder_cache_value_persists {α : Type}
       | some cached =>
         rw [QueryImpl.withCaching_run_some _ hqueried, support_pure,
           Set.mem_singleton_iff] at hinner
-        show inner.2 input = some answer
+        change inner.2 input = some answer
         rw [hinner]
         exact hentry
-
-/-! ## Every class answer the run installed was recorded, on one side or the other
-
-The two tests cover the class between them, so a fresh class answer goes into one of the two
-recordings. Which one is decided by the cache in force at the time, which is what the ordering
-between a `PRF_msg` entry and the digest query that reads it turns on. -/
-
-/-! ## Each recording is paid for by the growth of its own class
-
-The length of a recording is a property of the run, read off the run that produced it. These
-lemmas say what it is bounded by; they do not fix it. -/
 
 /-! ## What each recording holds
 
@@ -236,6 +224,8 @@ entries satisfy at the end of the run. The left test is checked at the cache in 
 survives to the final cache is what the test is monotone in; the right test's byte part survives
 unconditionally. -/
 
+/-- **Every right-recorded input is in the class the right test implies**, provided the
+starting recording already was. -/
 theorem right_record_class {α : Type}
     (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop) (inClass : Bytes → Prop)
     (hrightClass : ∀ (input : Bytes) (cache : QueryCache HashSpec),
@@ -293,18 +283,6 @@ theorem right_record_class {α : Type}
               exact hrightClass input state.1 hright
           · rw [hrecStep, appended_of_neither leftKeep rightKeep input state answer hleft hright]
             exact hstart
-
-/-! ## The right recording holds each input once
-
-A right entry is filed only at a *fresh* query, and the step that files it caches it. So every
-entry the right recording holds is cached from then on, and no later query at the same input is
-fresh enough to be filed again. The two facts are proved together because the second needs the
-first at the step where it is used: the input being filed is absent from the cache, and every
-entry already recorded is present in it.
-
-This is what lets the recording be read as a multiset without losing its length. A containment
-stated against a record counts multiplicities, and `Multiset.le_iff_subset` turns it into a
-membership question exactly when the left side is duplicate-free. -/
 
 /-! ## When a right-recorded entry was recorded
 
@@ -420,12 +398,5 @@ theorem right_record_suffix {α : Type}
           · refine ⟨suffix, ?_, hshift⟩
             rw [hsuffix, hrecStep,
               appended_of_neither leftKeep rightKeep input state answer hleft hright]
-
-/-! ## Two independent draws, two events
-
-The run's own answers are what the induction charges; the two padding blocks are drawn
-afterwards and independently, so the event they settle factors. -/
-
-/-! ## The joint invariant -/
 
 end SlhDsaSecurity.SplitPrefix

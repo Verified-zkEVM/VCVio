@@ -10,7 +10,18 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 public import HashSig.SLHDSA.SHAKE128s.Proof.VerificationQueries
 public import HashSig.SLHDSA.SHAKE128s.Proof.VerifierNaturality
 
-/-! Relating verifier call counts to the concrete game's verification-cost coordinate. -/
+/-!
+# The verification budget
+
+The concrete experiment charges every hash query of the final verification to the `verification`
+coordinate of its cost vector. This file relates that coordinate to the verifier's own query
+count: the verifier only queries the hash oracle (`verify_lift`), so counting its queries in the
+experiment's oracle world agrees with counting them in the hash-only world
+(`verificationCount_lift`). The verifier's per-run query bounds then become bounds on the
+verification coordinate (`verification_count_bounds`, `verification_accepted_count_bounds`), and
+an accepted forgery costs the experiment at least `569` charged hashes
+(`accepted_outcome_work`).
+-/
 
 @[expose] public section
 
@@ -22,19 +33,25 @@ variable {α β : Type}
 
 open Security VerificationQueries
 
+/-- The cost vector of a query made during the final verification: its hash cost, charged to
+the `verification` coordinate. -/
 def verificationCost (input : OracleWorld.Domain) : Counts :=
   Counts.single .verification (Security.hashCost input)
 
+/-- The verifier in the experiment's oracle world is the hash-only verifier, lifted. -/
 theorem verify_lift (pk : PublicKey) (request : Message) (signature : Bytes) :
     (Scheme.verify pk request signature : OracleComp OracleWorld Bool) =
-      OracleComp.liftComp (Scheme.verify pk request signature : OracleComp HashSpec Bool) OracleWorld := by
+      OracleComp.liftComp (Scheme.verify pk request signature : OracleComp HashSpec Bool)
+        OracleWorld := by
   exact (VerifierNaturality.verify_simulate
     (fun input => query (spec := HashSpec) input : QueryImpl HashSpec (OracleComp OracleWorld))
     (fun _ => rfl) pk request signature).symm
 
+/-- Counting the queries of a pure computation records no cost. -/
 theorem countQueries_pure (cost : OracleWorld.Domain → Counts) (value : α) :
     countQueries cost (pure value) = pure (value, 0) := rfl
 
+/-- Query counting is additive over sequencing. -/
 theorem countQueries_bind (cost : OracleWorld.Domain → Counts)
     (first : OracleComp OracleWorld α) (next : α → OracleComp OracleWorld β) :
     countQueries cost (first >>= next) = (do
@@ -44,6 +61,7 @@ theorem countQueries_bind (cost : OracleWorld.Domain → Counts)
   simp [countQueries, simulateQ_bind, WriterT.run_bind, bind_assoc,
     map_eq_bind_pure_comp]
 
+/-- A single query is charged its cost. -/
 theorem countQueries_query (cost : OracleWorld.Domain → Counts) (input : OracleWorld.Domain) :
     countQueries cost (liftM (OracleWorld.query input)) = (do
       let output ← liftM (OracleWorld.query input)
@@ -51,8 +69,12 @@ theorem countQueries_query (cost : OracleWorld.Domain → Counts) (input : Oracl
   simp [countQueries, addCostOracle, QueryImpl.withAddCost, QueryImpl.withCost,
     map_eq_bind_pure_comp]
 
-theorem counted_pure (value : α) : counted (pure value) = pure (value, Multiplicative.ofAdd 0) := rfl
+/-- The unit-cost count of a pure computation is zero. -/
+theorem counted_pure (value : α) :
+    counted (pure value) = pure (value, Multiplicative.ofAdd 0) := rfl
 
+/-- The unit-cost count of a query followed by a continuation is one more than the
+continuation's count. -/
 theorem counted_query_bind (input : HashSpec.Domain)
     (next : HashSpec.Range input → OracleComp HashSpec α) :
     counted (liftM (HashSpec.query input) >>= next) = (do
@@ -63,6 +85,8 @@ theorem counted_query_bind (input : HashSpec.Domain)
     QueryImpl.withAddCost, QueryImpl.withCost, WriterT.run_bind,
     bind_assoc, map_eq_bind_pure_comp]
 
+/-- Counting the verification cost of a lifted hash-only computation is its unit-cost count,
+placed in the `verification` coordinate. -/
 theorem verificationCount_lift (computation : OracleComp HashSpec α) :
     countQueries verificationCost (OracleComp.liftComp computation OracleWorld) =
       OracleComp.liftComp ((fun result =>
@@ -83,6 +107,8 @@ theorem verificationCount_lift (computation : OracleComp HashSpec α) :
       Counts.single, Pi.single_add, bind_assoc]
     rfl
 
+/-- On a well-framed request with a parseable signature, a run of the verifier charges between
+`569` and `3824` hashes to the `verification` coordinate. -/
 theorem verification_count_bounds (pk : PublicKey) (request : Message) (wire : Bytes)
     (message : Bytes) (signature : Signature)
     (hframe : request.frame = some message) (hparse : Signature.fromBytes? wire = some signature)
@@ -99,6 +125,8 @@ theorem verification_count_bounds (pk : PublicKey) (request : Message) (wire : B
     (verify_bounds pk request wire message signature hframe hparse).simulated
       randomOracle cache trace htrace
 
+/-- An accepting run of the verifier charges between `569` and `3824` hashes to the
+`verification` coordinate. -/
 theorem verification_accepted_count_bounds (pk : PublicKey) (request : Message) (wire : Bytes)
     (cache : QueryCache HashSpec) (result : Bool × Counts)
     (hresult : result ∈ support
@@ -120,7 +148,8 @@ theorem verification_accepted_count_bounds (pk : PublicKey) (request : Message) 
       subst result
       contradiction
     | some signature =>
-      exact verification_count_bounds pk request wire message signature hframe hparse cache result hresult
+      exact verification_count_bounds pk request wire message signature hframe hparse cache result
+        hresult
 
 /-- The concrete experiment cannot accept a final forgery with fewer than 569 charged hashes. -/
 theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)

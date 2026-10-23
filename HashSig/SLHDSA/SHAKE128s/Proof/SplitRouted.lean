@@ -56,7 +56,6 @@ attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenI
 
 /-! ## The structural branch -/
 
-set_option maxHeartbeats 1000000 in
 /-- **The structural event, at the cells the charge is stated against.** The extraction names
 the cells this run's final cache computes; they are the walk's own. -/
 theorem deviatingCollision_at_walk_cells (adversary : Adversary)
@@ -100,8 +99,6 @@ theorem forgedKey_coords (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
       (ClaimedProbes.forgedKey tree leaf layer).leaf = leafAt leaf tree.val layer.val :=
   ⟨rfl, rfl, rfl⟩
 
-set_option maxHeartbeats 1000000 in
-set_option maxRecDepth 8000 in
 /-- **The digit the honest key at that layer discloses**, whichever layer the residue stopped
 at: the message the residue threads for the honest side is the message the key really signs. -/
 theorem honestRevealed_eq_revealedAt (secretSeed publicSeed : Digest)
@@ -132,7 +129,6 @@ theorem honestRevealed_eq_revealedAt (secretSeed publicSeed : Digest)
       (by rw [hlayer, hstep, layerAt_eq]; omega) (by rw [htree, hstep])
       (by rw [hleaf, hstep]) chain
 
-set_option maxHeartbeats 1000000 in
 /-- **The residue names a claim the record already holds, and it is sensitive.** -/
 theorem sensitive_of_residue {State : Type} (secretSeed publicSeed : Digest)
     (signedAt : State → ForsKey → Finset (Fin (forsTrees * 2 ^ forsHeight))) (state : State)

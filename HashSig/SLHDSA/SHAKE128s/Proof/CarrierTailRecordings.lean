@@ -38,18 +38,19 @@ variable (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
 
 /-! ## Both invariants hold where the tail starts -/
 
+/-- The starting state records nothing, so every target-recorded input is in the class. -/
 theorem recordClass_startAt (narrow : Bytes → Prop) (cache : QueryCache HashSpec) :
     RecordClass narrow (startAt cache, (([], []), 0)) := by
   intro entry hentry
   exact absurd hentry (by simp)
 
+/-- The starting state's target recording is empty, hence cached and free of duplicates. -/
 theorem recordFreshNodup_startAt (cache : QueryCache HashSpec) :
     RecordFreshNodup (startAt cache, (([], []), 0)) :=
   ⟨fun entry hentry => absurd hentry (by simp), by simp⟩
 
 /-! ## And are carried across the three phases -/
 
-set_option maxHeartbeats 800000 in
 /-- **Every target-recorded input of the tail is of the narrowed class.** -/
 theorem recordClass_carrierTail (narrow : Walk → Bytes → Prop)
     (hnarrow : ∀ (walk : Walk) (input : Bytes) (view : HandlerCarrier.State),
@@ -83,7 +84,6 @@ theorem recordClass_carrierTail (narrow : Walk → Bytes → Prop)
   rw [show result.2 = forgetCarrier final.2 from by rw [hpure]] at hentry
   exact hentry
 
-set_option maxHeartbeats 800000 in
 /-- **And the tail's target recording is cached and holds each input once.** -/
 theorem recordFreshNodup_carrierTail (adversary : Adversary) (walk : Walk)
     (result : ((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState)

@@ -58,8 +58,10 @@ open scoped Classical in
 ones.** -/
 theorem probEvent_bind_pair_split_le {α β : Type} (first : ProbComp α) (rest : α → ProbComp β)
     (event : α → β → Prop) (bad : α → Prop) (bound : ℝ≥0∞)
-    (hrest : ∀ value ∈ support first, ¬ bad value → Pr{let x ← rest value}[(event value) x] ≤ bound) :
-    Pr{let pair ← (do let value ← first; let result ← rest value; pure (value, result))}[event pair.1 pair.2] ≤
+    (hrest : ∀ value ∈ support first, ¬ bad value →
+      Pr{let x ← rest value}[(event value) x] ≤ bound) :
+    Pr{let pair ← (do let value ← first; let result ← rest value; pure (value, result))}[
+        event pair.1 pair.2] ≤
       bound + Pr{let x ← first}[bad x] := by
   rw [add_comm]
   refine prEvent_bind_le_prEvent_add_of_support first _ bad _ fun value hmem hbad => ?_
@@ -151,13 +153,15 @@ omit [HasQuery HashSpec Id] in
 The seed is the walk's own and the root is one of its cells, drawn afterwards and
 independently. -/
 theorem prob_possible_walk :
-    Pr{let walk ← graphWalk}[HashSeparation.Possible (walk.1.1.2.2, walk.1.2 (.structural topNode))] ≤
+    Pr{let walk ← graphWalk}[
+        HashSeparation.Possible (walk.1.1.2.2, walk.1.2 (.structural topNode))] ≤
       1 / ((2 ^ 165 : Nat) : ℝ≥0∞) := by
   classical
   have hroot : ∀ publicSeed : Digest,
       Pr{let outputs ← ($ᵗ Programming.Outputs : ProbComp Programming.Outputs)}[
           HashSeparation.Possible (publicSeed, Hashing.truncate (outputs topNode))] =
-        Pr{let root ← ($ᵗ Digest : ProbComp Digest)}[HashSeparation.Possible (publicSeed, root)] := by
+        Pr{let root ← ($ᵗ Digest : ProbComp Digest)}[
+          HashSeparation.Possible (publicSeed, root)] := by
     intro publicSeed
     have h := (outputs_coordinate_uniform topNode).prEvent_eq
       (fun root => HashSeparation.Possible (publicSeed, root))

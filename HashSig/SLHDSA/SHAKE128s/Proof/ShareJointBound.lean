@@ -39,6 +39,7 @@ open Security CanonicalGraph ShareGame ShareFlag ShareBound ShareBlindFacts Shar
 
 /-! ## The charged count -/
 
+/-- Filing one more input adds its own charge to the charged count. -/
 theorem charged_append_single (publicSeed : Digest) (record : List (Bytes × List HashOutput))
     (input : Bytes) (served : List HashOutput) :
     charged publicSeed (record ++ [(input, served)]) =
@@ -50,6 +51,7 @@ theorem charged_append_single (publicSeed : Digest) (record : List (Bytes × Lis
     by_cases hprefixed : Target127.SeedPrefixed publicSeed input <;>
       simp [hlocate, hprefixed] <;> omega
 
+/-- Filing further inputs adds at most their number to the charged count. -/
 theorem charged_append_le (publicSeed : Digest) (record extra : List (Bytes × List HashOutput)) :
     charged publicSeed (record ++ extra) ≤ charged publicSeed record + extra.length := by
   classical
@@ -95,7 +97,7 @@ theorem reportsCost_charged (lenient : Bool) (setup : Setup) :
     CapComp.ReportsCost (worldImpl lenient setup) (chargedWeight setup.pk.seed)
       (fun p : St × Bool => charged setup.publicSeed p.1.record) := by
   intro queried p z hz
-  show charged setup.publicSeed z.2.1.record = charged setup.publicSeed p.1.record + _
+  change charged setup.publicSeed z.2.1.record = charged setup.publicSeed p.1.record + _
   rw [record_world_step lenient setup queried p z hz]
   rcases queried with coin | input
   · simp [chargedWeight]
@@ -114,7 +116,6 @@ def VerifierFiles (setup : Setup) : Prop :=
         (Scheme.verify (m := OracleComp HashSpec) setup.pk request wire) probe →
         (probe, p.1.served) ∈ w.2.1.record
 
-open scoped Classical in
 /-- **The claims that are not already filed are among those the verifier does not query.** -/
 theorem length_unfiled_claims_le (setup : Setup) (state : St) (forgery : Forgery)
     (hfiled : ∀ probe, ∀ message parsed, forgery.message.frame = some message →
@@ -135,8 +136,6 @@ theorem length_unfiled_claims_le (setup : Setup) (state : St) (forgery : Forgery
     exact fun hqueried => hcandidate (hfiled candidate message parsed hframe hparsed hqueried)
   · simp [unfiled]
 
-set_option maxHeartbeats 2000000 in
-open scoped Classical in
 /-- **The jointly capped game's filing runs file at most `limit + verifierAllowance + 231`
 charged entries.** -/
 theorem charged_filing_shareCompJ (setup : Setup) (hfiles : VerifierFiles setup)

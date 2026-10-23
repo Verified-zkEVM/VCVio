@@ -30,7 +30,10 @@ namespace SlhDsaSecurity.Averaging
 theorem probEvent_bind_pair_le {α β : Type} (first : ProbComp α) (rest : α → ProbComp β)
     (event : α → β → Prop) (bound : ℝ≥0∞)
     (hrest : ∀ value ∈ support first, Pr{let x ← rest value}[(event value) x] ≤ bound) :
-    Pr{let pair ← (do let value ← first; let result ← rest value; pure (value, result))}[event pair.1 pair.2] ≤ bound := by
+    Pr{let pair ← (do
+        let value ← first
+        let result ← rest value
+        pure (value, result))}[event pair.1 pair.2] ≤ bound := by
   refine prEvent_bind_le_of_forall_le_of_support first _ _ fun value hvalue => ?_
   rw [bind_pure_comp, prEvent_map]
   exact hrest value hvalue

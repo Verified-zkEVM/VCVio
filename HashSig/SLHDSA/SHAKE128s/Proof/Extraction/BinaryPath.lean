@@ -9,8 +9,16 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.BinaryPath
 public import HashSig.SLHDSA.SHAKE128s.Proof.Hashing
 
-/-! A changed authentication path that reaches the canonical root contains a
-collision at one of its own hash calls. The witness keeps the path position. -/
+/-!
+# Collision extraction along a binary authentication path
+
+A changed authentication path that reaches the canonical root contains a collision at one of its
+own hash calls. `value` is the generic increasing-height fold that both the FORS and the XMSS
+verifiers perform, `canonicalPair` is the pair of genuine children at a height, and
+`canonical_or_collision` shows that a path reaching the canonical root either agrees with the
+canonical nodes everywhere or exhibits a `Collision` at a concrete height. The witness keeps the
+path position, so it names a concrete hash input.
+-/
 
 @[expose] public section
 
@@ -18,15 +26,20 @@ namespace SlhDsaSecurity.Extraction.BinaryPath
 
 variable {α : Type}
 
+/-- The ordered pair of a path value and its sibling at `height`: the value goes on the left
+exactly when bit `height` of the leaf `index` is zero. -/
 def ordered (index height : Nat) (value sibling : α) : α × α :=
   if index / 2 ^ height % 2 = 0 then (value, sibling) else (sibling, value)
 
+/-- `ordered` is injective in the pair it orders. -/
 theorem ordered_eq_iff (index height : Nat) (value sibling value' sibling' : α) :
     ordered index height value sibling = ordered index height value' sibling' ↔
       value = value' ∧ sibling = sibling' := by
   unfold ordered
   split <;> simp [and_comm]
 
+/-- The value at `height` recomputed from the leaf and the supplied siblings, combining at each
+level with `combine height nodeIndex left right`. -/
 def value (combine : Nat → Nat → α → α → α) (index : Nat)
     (leaf : α) (siblings : Nat → α) : Nat → α
   | 0 => leaf
@@ -34,10 +47,13 @@ def value (combine : Nat → Nat → α → α → α) (index : Nat)
     let pair := ordered index height (value combine index leaf siblings height) (siblings height)
     combine (height + 1) (index / 2 ^ (height + 1)) pair.1 pair.2
 
+/-- The canonical ordered pair of children at `height` on the path of leaf `index`, read off the
+genuine node table `nodes height nodeIndex`. -/
 def canonicalPair (nodes : Nat → Nat → α) (index height : Nat) : α × α :=
   ordered index height (nodes height (index / 2 ^ height))
     (nodes height (Nat.xor (index / 2 ^ height) 1))
 
+/-- Combining the canonical pair at `height` yields the canonical parent at `height + 1`. -/
 theorem canonical_step (nodes : Nat → Nat → α)
     (combine : Nat → Nat → α → α → α)
     (hnodes : ∀ height index, nodes (height + 1) index =
@@ -49,8 +65,10 @@ theorem canonical_step (nodes : Nat → Nat → α)
   have h := Correctness.parent_reconstruction nodes combine hnodes height (index / 2 ^ height)
   by_cases hparity : index / 2 ^ height % 2 = 0 <;>
     simpa only [canonicalPair, ordered, Correctness.div_pow_succ, hparity,
-      if_true, if_false, Prod.fst, Prod.snd] using h
+      ite_true, ite_false, Prod.fst, Prod.snd] using h
 
+/-- A collision at `height` on the path of leaf `index`: the recomputed ordered pair differs from
+the canonical one, yet both combine to the same parent. -/
 def Collision (nodes : Nat → Nat → α) (combine : Nat → Nat → α → α → α)
     (index : Nat) (leaf : α) (siblings : Nat → α) (height : Nat) : Prop :=
   let actual := ordered index height (value combine index leaf siblings height) (siblings height)
@@ -74,7 +92,8 @@ theorem canonical_or_collision (nodes : Nat → Nat → α)
   induction height with
   | zero => exact Or.inl ⟨by simpa [value] using hroot, by omega⟩
   | succ height ih =>
-      let actual := ordered index height (value combine index leaf siblings height) (siblings height)
+      let actual :=
+        ordered index height (value combine index leaf siblings height) (siblings height)
       by_cases hpair : actual = canonicalPair nodes index height
       · have hvalues := (ordered_eq_iff index height _ _ _ _).mp hpair
         rcases ih hvalues.1 with hcanonical | ⟨j, hj, hcollision⟩
@@ -99,6 +118,7 @@ theorem value_eq_fold (combine : Nat → Nat → α → α → α)
   exact Correctness.finRange_foldl height (value combine index leaf siblings)
     _ (fun _ => rfl)
 
+/-- The byte encoding of an ordered pair of digests, as hashed by an internal tree node. -/
 def pairBytes (pair : Digest × Digest) : Bytes := bytesBE n pair.1 ++ bytesBE n pair.2
 
 end SlhDsaSecurity.Extraction.BinaryPath

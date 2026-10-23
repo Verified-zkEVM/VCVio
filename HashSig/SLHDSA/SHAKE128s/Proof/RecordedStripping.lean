@@ -43,6 +43,8 @@ noncomputable def writerRun {ω : Type} [Monoid ω] {α : Type}
     ProbComp (((α × ω) × SigningLog) × QueryCache HashSpec) :=
   (simulateQ KeygenUniform.rom ((WriterT.run x).run log)).run current
 
+/-- `writerRun` of a bind runs the first part and then the continuation, multiplying the
+writer values in order. -/
 theorem writerRun_bind {ω : Type} [Monoid ω] {α β : Type}
     (x : WriterT ω (StateT SigningLog (OracleComp OracleWorld)) α)
     (next : α → WriterT ω (StateT SigningLog (OracleComp OracleWorld)) β)
@@ -105,7 +107,6 @@ theorem evalDist_writerRun_signingOracle (warm : QueryCache HashSpec) (sk : Secr
         run_strippedSign warm sk request current hsub]
     rw [heq]
 
-set_option maxHeartbeats 1000000 in
 /-- **Stripping the honest phase changes nothing about the law of the recorded run.** -/
 theorem evalDist_run_recordedAfterSeeds (adversary : Adversary)
     (sds : Digest × Digest × Digest) (warm current : QueryCache HashSpec)

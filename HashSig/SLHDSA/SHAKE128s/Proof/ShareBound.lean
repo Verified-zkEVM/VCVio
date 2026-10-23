@@ -49,11 +49,13 @@ noncomputable def worldImpl (lenient : Bool) (setup : Setup) :
   QueryImpl.compose (handler lenient setup) fun world =>
     (query (spec := ShareSpec) (worldQuery world) : OracleComp ShareSpec (OracleWorld.Range world))
 
+/-- The game's verifier under the handler is the scheme's verifier under `worldImpl`. -/
 theorem verifyShare_run (lenient : Bool) (setup : Setup) (pk : PublicKey) (forgery : Forgery)
     (p : St × Bool) :
     (simulateQ (handler lenient setup) (verifyShare pk forgery)).run p =
       (simulateQ (worldImpl lenient setup)
-        (Scheme.verify (m := OracleComp OracleWorld) pk forgery.message forgery.signature)).run p := by
+        (Scheme.verify (m := OracleComp OracleWorld) pk forgery.message
+          forgery.signature)).run p := by
   exact congrArg (StateT.run · p) (QueryImpl.simulateQ_compose (handler lenient setup)
     (fun world => (query (spec := ShareSpec) (worldQuery world) :
       OracleComp ShareSpec (OracleWorld.Range world)))
@@ -97,9 +99,11 @@ theorem compose_world_of (impl : QueryImpl ShareSpec (StateT (St × Bool) ProbCo
 
 /-! ## The blind step never reads `SK.prf` -/
 
+/-- The public key does not depend on `SK.prf`. -/
 theorem pk_prf (publicSeed : Digest) (cells : Cells) (prf prf' : Digest) (pad : Padding) :
     (setupOf publicSeed cells (prf, pad)).pk = (setupOf publicSeed cells (prf', pad)).pk := rfl
 
+/-- The strict hash route does not depend on `SK.prf`. -/
 theorem route_prf (publicSeed : Digest) (cells : Cells) (prf prf' : Digest) (pad : Padding)
     (state : St) (input : Bytes) :
     route false (setupOf publicSeed cells (prf, pad)) state input =
@@ -110,6 +114,7 @@ theorem route_prf (publicSeed : Digest) (cells : Cells) (prf prf' : Digest) (pad
     ite_eq_right (fun h => Bool.false_ne_true h.1), ite_eq_right (fun h => Bool.false_ne_true h.1)]
   rfl
 
+/-- The cell signer does not depend on `SK.prf`. -/
 theorem cellSig_prf (publicSeed : Digest) (cells : Cells) (prf prf' : Digest) (pad : Padding)
     (randomizer : Digest) (digest : HashOutput) :
     ShareSigner.cellSig (setupOf publicSeed cells (prf, pad)).warm
@@ -119,6 +124,7 @@ theorem cellSig_prf (publicSeed : Digest) (cells : Cells) (prf prf' : Digest) (p
   ShareSignCongr.cellSig_congr publicSeed prf prf' (cells, pad) (cells, pad)
     (fun _ => Finset.univ) (fun _ _ => rfl) randomizer digest (fun _ => Finset.mem_univ _)
 
+/-- The claims do not depend on `SK.prf`. -/
 theorem claimsOf_prf (publicSeed : Digest) (cells : Cells) (prf prf' : Digest) (pad : Padding)
     (state : St) (forgery : Forgery) :
     claimsOf (setupOf publicSeed cells (prf, pad)) state forgery =
@@ -148,6 +154,7 @@ theorem blindStep_prf (publicSeed : Digest) (cells : Cells) (prf prf' : Digest) 
 
 /-! ## Expectations, on the support -/
 
+/-- The expectation is monotone in a functional, pointwise on the support. -/
 theorem ex_mono_support {β : Type} (mx : ProbComp β) {f g : β → ℝ≥0∞}
     (h : ∀ x ∈ support mx, f x ≤ g x) : BlindCharge.ex mx f ≤ BlindCharge.ex mx g := by
   refine ENNReal.tsum_le_tsum fun x => ?_
@@ -155,12 +162,14 @@ theorem ex_mono_support {β : Type} (mx : ProbComp β) {f g : β → ℝ≥0∞}
   · exact mul_le_mul' le_rfl (h x hx)
   · rw [(prEvent_eq_zero_of_not_mem_support _) hx, zero_mul, zero_mul]
 
+/-- The expectation of a constant is at most that constant. -/
 theorem ex_const_le {β : Type} (mx : ProbComp β) (c : ℝ≥0∞) :
     BlindCharge.ex mx (fun _ => c) ≤ c := by
   unfold BlindCharge.ex
   rw [ENNReal.tsum_mul_right]
   exact le_trans (mul_le_mul' (OracleComp.tsum_prEvent_le_one _) le_rfl) (by rw [one_mul])
 
+/-- The expectation is additive in the functional. -/
 theorem ex_add {β : Type} (mx : ProbComp β) (f g : β → ℝ≥0∞) :
     BlindCharge.ex mx f + BlindCharge.ex mx g = BlindCharge.ex mx (fun x => f x + g x) := by
   unfold BlindCharge.ex
@@ -169,13 +178,15 @@ theorem ex_add {β : Type} (mx : ProbComp β) (f g : β → ℝ≥0∞) :
 
 /-- A draw nothing after it reads leaves an event's chance alone. -/
 theorem probEvent_bind_const {β γ : Type} (mx : ProbComp β) (f : β → ProbComp γ)
-    (event : γ → Prop) (c : ℝ≥0∞) (h : ∀ x, Pr{let y ← f x}[event y] = c) : Pr{let x ← mx >>= f}[event x] = c := by
+    (event : γ → Prop) (c : ℝ≥0∞) (h : ∀ x, Pr{let y ← f x}[event y] = c) :
+    Pr{let x ← mx >>= f}[event x] = c := by
   rw [OracleComp.prEvent_bind_eq_tsum]
   simp only [h]
   rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one, one_mul]
 
 /-! ## A located entry is prefixed by the public seed -/
 
+/-- An input locating a node is prefixed by the public seed. -/
 theorem seedPrefixed_of_locate (publicSeed : Digest) (input : Bytes)
     (hlocate : ((GraphStakes.stakes publicSeed).locate input).isSome) :
     Target127.SeedPrefixed publicSeed input := by
@@ -217,13 +228,13 @@ theorem countP_located_add_le (publicSeed : Digest) (entries : List (Bytes × Li
 /-! ## The two games at a public seed -/
 
 /-- The blind run at a setup, flag carried. -/
-noncomputable def flagRun (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) (setup : Setup) :
-    ProbComp ((Forgery × Bool) × (St × Bool)) :=
+noncomputable def flagRun (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool))
+    (setup : Setup) : ProbComp ((Forgery × Bool) × (St × Bool)) :=
   (simulateQ (handler false setup) (comp setup.pk)).run (St.start, false)
 
 /-- The blind run at a setup, flag dropped. -/
-noncomputable def blindRun (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) (setup : Setup) :
-    ProbComp ((Forgery × Bool) × St) :=
+noncomputable def blindRun (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool))
+    (setup : Setup) : ProbComp ((Forgery × Bool) × St) :=
   (simulateQ (blindStep setup) (comp setup.pk)).run St.start
 
 /-- The blind run at a setup in its filing form, flag carried. -/
@@ -231,22 +242,25 @@ noncomputable def filingRun (comp : PublicKey → OracleComp ShareSpec (Forgery 
     (setup : Setup) : ProbComp ((Forgery × Bool) × (St × Bool)) :=
   (simulateQ (filing setup) (comp setup.pk)).run (St.start, false)
 
+/-- The filing run, flag dropped, is the blind run. -/
 theorem map_filingRun (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) (setup : Setup) :
     (fun z => (z.1, z.2.1)) <$> filingRun comp setup = blindRun comp setup :=
   map_run_filing setup _ St.start false
 
-theorem blindRun_prf (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) (publicSeed prf prf' : Digest)
-    (table : Cells × Padding) :
+/-- The blind run does not depend on `SK.prf`. -/
+theorem blindRun_prf (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool))
+    (publicSeed prf prf' : Digest) (table : Cells × Padding) :
     blindRun comp ⟨prf, publicSeed, table⟩ =
       blindRun comp ⟨prf', publicSeed, table⟩ := by
-  show (simulateQ (blindStep (setupOf publicSeed table.1 (prf, table.2)))
+  change (simulateQ (blindStep (setupOf publicSeed table.1 (prf, table.2)))
       (comp (setupOf publicSeed table.1 (prf, table.2)).pk)).run St.start =
     (simulateQ (blindStep (setupOf publicSeed table.1 (prf', table.2)))
       (comp (setupOf publicSeed table.1 (prf', table.2)).pk)).run St.start
   rw [blindStep_prf publicSeed table.1 prf prf' table.2, pk_prf publicSeed table.1 prf prf' table.2]
 
 /-- **The blind game at a public seed**: `SK.prf` and the table drawn, the run beside them. -/
-noncomputable def flagGame (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
+noncomputable def flagGame (publicSeed : Digest)
+    (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
     ProbComp (Setup × ((Forgery × Bool) × (St × Bool))) := do
   let prf ← ($ᵗ Digest : ProbComp Digest)
   let table ← ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding))
@@ -254,7 +268,8 @@ noncomputable def flagGame (publicSeed : Digest) (comp : PublicKey → OracleCom
   pure (⟨prf, publicSeed, table⟩, z)
 
 /-- The same, flag dropped. -/
-noncomputable def blindGame (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
+noncomputable def blindGame (publicSeed : Digest)
+    (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
     ProbComp (Setup × ((Forgery × Bool) × St)) := do
   let prf ← ($ᵗ Digest : ProbComp Digest)
   let table ← ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding))
@@ -270,6 +285,7 @@ noncomputable def filingGame (publicSeed : Digest)
   let z ← filingRun comp ⟨prf, publicSeed, table⟩
   pure (⟨prf, publicSeed, table⟩, z)
 
+/-- The filing game, flag dropped, is the blind game. -/
 theorem map_filingGame (publicSeed : Digest)
     (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
     (fun w => (w.1, (w.2.1, w.2.2.1))) <$> filingGame publicSeed comp =
@@ -300,7 +316,8 @@ theorem probEvent_flagGame_eq (publicSeed : Digest)
   exact probEvent_flagRun_eq comp _
 
 /-- The blind run at a drawn table, `SK.prf` fixed at a default. -/
-noncomputable def tableGame (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
+noncomputable def tableGame (publicSeed : Digest)
+    (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
     ProbComp ((Cells × Padding) × ((Forgery × Bool) × St)) := do
   let table ← ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding))
   let z ← blindRun comp ⟨default, publicSeed, table⟩
@@ -338,7 +355,6 @@ def stall : (queried : ShareSpec.Domain) → ShareSpec.Range queried
   | Sum.inl (Sum.inr _) => none
   | Sum.inr _ => ()
 
-set_option maxHeartbeats 1000000 in
 /-- **The cell guesses cost one unit per locating entry.** -/
 theorem sens_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
     Pr{let w ← blindGame publicSeed comp}[∃ entry ∈ w.2.2.record, Sens w.1 entry.2 entry.1] ≤
@@ -395,8 +411,8 @@ theorem sens_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec
 open scoped Classical in
 /-- **Against a fresh `SK.prf`, an entry not prefixed by the public seed is one guess.** -/
 theorem prob_prf_list_le (publicSeed : Digest) (entries : List (Bytes × List HashOutput)) :
-    Pr{let prf ← ($ᵗ Digest : ProbComp Digest)}[∃ entry ∈ entries, ¬ Target127.SeedPrefixed publicSeed entry.1 ∧
-        RandomizerGate.PrfClass prf entry.1] ≤
+    Pr{let prf ← ($ᵗ Digest : ProbComp Digest)}[∃ entry ∈ entries,
+        ¬ Target127.SeedPrefixed publicSeed entry.1 ∧ RandomizerGate.PrfClass prf entry.1] ≤
       ((entries.countP fun entry => decide (¬ Target127.SeedPrefixed publicSeed entry.1) : Nat) :
         ℝ≥0∞) / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   classical
@@ -420,8 +436,8 @@ theorem prob_prf_list_le (publicSeed : Digest) (entries : List (Bytes × List Ha
 open scoped Classical in
 /-- **The `SK.prf` guesses cost one unit per entry not prefixed by the public seed.** -/
 theorem prf_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
-    Pr{let w ← blindGame publicSeed comp}[∃ entry ∈ w.2.2.record, ¬ Target127.SeedPrefixed publicSeed entry.1 ∧
-          RandomizerGate.PrfClass w.1.prf entry.1] ≤
+    Pr{let w ← blindGame publicSeed comp}[∃ entry ∈ w.2.2.record,
+        ¬ Target127.SeedPrefixed publicSeed entry.1 ∧ RandomizerGate.PrfClass w.1.prf entry.1] ≤
       BlindCharge.ex (tableGame publicSeed comp) (fun tz =>
         ((tz.2.2.record.countP fun entry =>
           decide (¬ Target127.SeedPrefixed publicSeed entry.1) : Nat) : ℝ≥0∞)) /
@@ -442,7 +458,8 @@ theorem prf_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec 
           let table ← ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding))
           let z ← blindRun comp ⟨default, publicSeed, table⟩
           pure (table, z)) >>= fun tz =>
-            (pure (⟨prf, publicSeed, tz.1⟩, tz.2) : ProbComp (Setup × ((Forgery × Bool) × St))) := by
+            (pure (⟨prf, publicSeed, tz.1⟩, tz.2) :
+              ProbComp (Setup × ((Forgery × Bool) × St))) := by
       intro prf
       simp only [bind_assoc, pure_bind]
     simp only [hshape]
@@ -461,14 +478,13 @@ noncomputable def charged (publicSeed : Digest) (record : List (Bytes × List Ha
   record.countP (fun entry => ((GraphStakes.stakes publicSeed).locate entry.1).isSome) +
     record.countP (fun entry => decide (¬ Target127.SeedPrefixed publicSeed entry.1))
 
+/-- The charged entries are at most the record's length. -/
 theorem charged_le_length (publicSeed : Digest) (record : List (Bytes × List HashOutput)) :
     charged publicSeed record ≤ record.length := by
   classical
   unfold charged
   convert countP_located_add_le publicSeed record
 
-set_option maxRecDepth 100000 in
-set_option linter.constructorNameAsVariable false in
 /-- **The blind game's flag, off a bad walk, is at most the charged entries over `2 ^ 128`**,
 for any game whose blind runs keep the charged entries within `bound`. -/
 theorem blind_bound_of (publicSeed : Digest)

@@ -20,11 +20,7 @@ law.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.LazyBridge
-
-variable {ι : Type} {spec : OracleSpec ι} {σ : Type}
 
 /-- **Bind congruence.** Binding a common continuation after two computations of the same law
 gives the same law. -/

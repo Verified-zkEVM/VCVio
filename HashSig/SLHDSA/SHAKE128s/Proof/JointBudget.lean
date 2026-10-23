@@ -38,7 +38,6 @@ open Security CanonicalGraph WarmedGame WalkTable TableTail RecordedQueries Reco
 attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal
   Security.countQueries
 
-set_option maxHeartbeats 2000000 in
 /-- **On every path, the adversary's weight and the verifier's count are within the budget.** -/
 theorem cost_add_verification_le {adversary : Adversary} {q : Nat}
     (hbudget : TailBudgetW adversary q) (prfSeed publicSeed : Digest) (table : Cells × Padding) :

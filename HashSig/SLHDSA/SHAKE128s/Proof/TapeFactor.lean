@@ -33,8 +33,6 @@ one cell of a block, and the correspondence between recorded entries and block c
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.TapeFactor
 
 open DigestTape
@@ -73,11 +71,14 @@ Both factorisations read their blocks head-first, so the two shapes a block take
 are worth having as rewrites that go under a binder: a spent block disappears, and a block with
 one more answer splits into that answer and the rest. -/
 
+/-- A spent block disappears from the head of a bind. -/
 theorem padding_zero_bind {γ : Type} (continuation : List HashOutput → ProbComp γ) :
     padding 0 >>= continuation = continuation [] := by
   rw [padding]
   simp only [pure_bind]
 
+/-- A block of `length + 1` answers under a bind splits into one fresh answer and a block of
+`length` more. -/
 theorem padding_succ_bind {γ : Type} (length : Nat)
     (continuation : List HashOutput → ProbComp γ) :
     padding (length + 1) >>= continuation =
@@ -181,6 +182,7 @@ noncomputable def splitTapeRecorder
 /-! ### The step shapes -/
 
 open scoped Classical in
+/-- A coin query to the block recorder draws a uniform value and leaves the state unchanged. -/
 theorem splitTapeRecorder_run_inl
     (leftKeep rightKeep : Bytes → σ → Prop) (coin : unifSpec.Domain)
     (state : SplitTapeState σ) :
@@ -189,6 +191,8 @@ theorem splitTapeRecorder_run_inl
         (pure (value, state) : ProbComp _) := rfl
 
 open scoped Classical in
+/-- A fresh query on the left test takes the head of the left block, installs it, and appends it
+to the disclosing recording. -/
 theorem splitTapeRecorder_run_left_cons
     (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (cache : σ) (head : HashOutput) (rest rightTape : List HashOutput)
@@ -203,6 +207,8 @@ theorem splitTapeRecorder_run_left_cons
   rw [ite_eq_left ⟨hfresh, hleft⟩]
 
 open scoped Classical in
+/-- A fresh query on the left test, with the left block spent, draws an answer, installs it, and
+appends it to the disclosing recording. -/
 theorem splitTapeRecorder_run_left_nil
     (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (cache : σ) (rightTape : List HashOutput)
@@ -211,13 +217,16 @@ theorem splitTapeRecorder_run_left_nil
     ((splitTapeRecorder leftKeep rightKeep) (Sum.inr input)).run
         (cache, ([], rightTape), (leftRecord, rightRecord)) =
       ($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
-        (pure (value, (RecorderView.CacheView.update cache input value, (([] : List HashOutput), rightTape),
+        (pure (value, (RecorderView.CacheView.update cache input value,
+          (([] : List HashOutput), rightTape),
           (leftRecord ++ [(input, value)], rightRecord))) : ProbComp _) := by
   classical
   simp only [splitTapeRecorder, StateT.run]
   rw [ite_eq_left ⟨hfresh, hleft⟩]
 
 open scoped Classical in
+/-- A fresh query failing the left test and passing the right one takes the head of the right
+block, installs it, and appends it to the target recording. -/
 theorem splitTapeRecorder_run_right_cons
     (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (cache : σ) (leftTape : List HashOutput) (head : HashOutput)
@@ -233,6 +242,8 @@ theorem splitTapeRecorder_run_right_cons
   rw [ite_eq_right (fun h => hleft h.2), ite_eq_left ⟨hfresh, hright⟩]
 
 open scoped Classical in
+/-- A fresh query failing the left test and passing the right one, with the right block spent,
+draws an answer, installs it, and appends it to the target recording. -/
 theorem splitTapeRecorder_run_right_nil
     (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (cache : σ) (leftTape : List HashOutput)
@@ -242,13 +253,16 @@ theorem splitTapeRecorder_run_right_nil
     ((splitTapeRecorder leftKeep rightKeep) (Sum.inr input)).run
         (cache, (leftTape, []), (leftRecord, rightRecord)) =
       ($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
-        (pure (value, (RecorderView.CacheView.update cache input value, (leftTape, ([] : List HashOutput)),
+        (pure (value, (RecorderView.CacheView.update cache input value,
+          (leftTape, ([] : List HashOutput)),
           (leftRecord, rightRecord ++ [(input, value)]))) : ProbComp _) := by
   classical
   simp only [splitTapeRecorder, StateT.run]
   rw [ite_eq_right (fun h => hleft h.2), ite_eq_left ⟨hfresh, hright⟩]
 
 open scoped Classical in
+/-- A query that neither block answers is a `plainStep`, leaving blocks and recordings
+unchanged. -/
 theorem splitTapeRecorder_run_other
     (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (cache : σ) (tapes : List HashOutput × List HashOutput)
@@ -265,6 +279,8 @@ theorem splitTapeRecorder_run_other
 /-! ### The same shapes for the drawing recorder -/
 
 open scoped Classical in
+/-- The drawing recorder at a fresh query on the left test draws an answer, installs it, and
+appends it to the disclosing recording. -/
 theorem splitRecorder_run_left
     (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (cache : σ) (leftRecord rightRecord : Record)
@@ -283,6 +299,8 @@ theorem splitRecorder_run_left
     hfresh hleft]
 
 open scoped Classical in
+/-- The drawing recorder at a fresh query failing the left test and passing the right one draws
+an answer, installs it, and appends it to the target recording. -/
 theorem splitRecorder_run_right
     (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (cache : σ) (leftRecord rightRecord : Record)
@@ -302,6 +320,8 @@ theorem splitRecorder_run_right
     hfresh hleft hright]
 
 open scoped Classical in
+/-- The drawing recorder at a query neither test files is a `plainStep`, leaving the recordings
+unchanged. -/
 theorem splitRecorder_run_other
     (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (cache : σ) (records : Record × Record)
@@ -319,10 +339,12 @@ if-else chains and nothing in the types enforces it, so an input that is fresh a
 *both* tests is where a future edit could make them disagree — and the disagreement would not be
 a failure, it would be two different recordings with the same law everywhere else.
 
-The two lemmas below are that case, named. They are instances of the branch lemmas above with
-`rightKeep` **present** rather than absent, which is the whole point: a reader can see that the
-contested case was considered, and an edit that reversed either priority stops here instead of
-inside the factorisation's induction. -/
+The branch lemmas above pin the shared priority down: the right-branch lemmas of both recorders
+(`splitTapeRecorder_run_right_cons`, `splitTapeRecorder_run_right_nil`, `splitRecorder_run_right`)
+assume `¬ leftKeep input cache`, while the left-branch lemmas assume nothing about `rightKeep`.
+So an input accepted by both tests is covered by the left-branch lemmas of both recorders, and an
+edit that reversed either priority breaks one of them rather than the factorisation's induction.
+-/
 
 /-! ### The two blocks commute past an irrelevant draw -/
 
@@ -434,10 +456,11 @@ theorem splitTapeRecorder_step (leftKeep rightKeep : Bytes → σ → Prop)
 
 /-! ## Resampling one cell of the target block
 
-The charge on one cell is the leave-one-out step, moved to the run. Three things make it go through, and each is proved above rather than assumed:
-the disclosures sit on the *other* block, so overwriting a target cell cannot move them; the
-cell's own value is what the coverage test reads, so overwriting it replaces that value by a
-fresh one; and the selection does not see the cell.
+The charge on one cell is the leave-one-out step, moved to the run. Three things make it go
+through, and each is proved above rather than assumed: the disclosures sit on the *other*
+block, so overwriting a target cell cannot move them; the cell's own value is what the coverage
+test reads, so overwriting it replaces that value by a fresh one; and the selection does not see
+the cell.
 
 What comes out is the per-cell factor the expectation form needs: the charge on cell `index` is
 the probability that the run *got that far*, times the rate — and summing those probabilities
@@ -526,10 +549,10 @@ theorem getElem?_of_prefix {β : Type} {short long : List β} (hprefix : short <
 
 /-! ## The disclosing recording is its own block, cell for cell
 
-The mirror of the target recording's correspondence, for the other head. The charge reads the disclosures off the
-whole left *block*, including the part no query reached; the game's event is witnessed by the
-left *recording*. They agree where the block still has a cell, which — the block being drawn as
-long as the signing limit allows — is everywhere the recording reaches. -/
+The mirror of the target recording's correspondence, for the other head. The charge reads the
+disclosures off the whole left *block*, including the part no query reached; the game's event
+is witnessed by the left *recording*. They agree where the block still has a cell, which — the
+block being drawn as long as the signing limit allows — is everywhere the recording reaches. -/
 
 /-- The disclosing recording of a state. -/
 def leftOf (state : SplitTapeState σ) : Record := state.2.2.1

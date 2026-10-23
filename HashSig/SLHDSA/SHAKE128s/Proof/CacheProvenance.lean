@@ -216,20 +216,10 @@ theorem sign_randomizer_answer (sk : SecretKey) (request : Message) (framed : By
 /-- **And leaves its answer in the cache**, read at any cache extending the one it left. The
 presence-only reading of `sign_randomizer_answer`.
 
-**Which consumers need which**, so that this entry is annotated rather than re-reported:
-
-* `ServedRandomised.signerRandomised_of_served` needs **presence only**. It wants "cached with
-  some value" and recovers the value itself by `Option.ne_none_iff_exists'`, so the drop costs
-  it nothing.
-* `PhaseProvenance.SignerMade`'s second conjunct, and through it the provenance hypothesis,
-  needed the **value**. It compares the signer's *published* randomiser against what
-  `CacheReplay.replay` returns, and `replay` answers a miss with `default` — so a statement
-  carried on presence alone said something about `Hashing.truncate default` for messages never
-  signed, and a one-query adversary refuted it. That is what `sign_randomizer_answer` fixes.
-
-So a presence-only conclusion is a defect **when a consumer must relate the value to something
-else**, and merely conservative when the consumer can recover it. The `≠ none` grep finds the
-candidates; only a consumer says which are live. -/
+Presence suffices for a consumer that recovers the value itself, by
+`Option.ne_none_iff_exists'`. A consumer that must relate the value to something else — the
+signer's *published* randomiser against what `CacheReplay.replay` returns — needs
+`sign_randomizer_answer` instead, since `replay` answers a miss with `default`. -/
 theorem sign_randomizer_cached (sk : SecretKey) (request : Message) (framed : Bytes)
     (hframe : request.frame = some framed)
     (initialCache finalCache laterCache : QueryCache HashSpec) (answer : Option Bytes)
@@ -243,14 +233,6 @@ theorem sign_randomizer_cached (sk : SecretKey) (request : Message) (framed : By
       hmem hlater
   rw [hvalue]
   exact Option.some_ne_none value
-
-/-! ## The signer's own digest query
-
-The randomiser's query is the signer's first; the digest's is its second, and it is the one that
-decides **which FORS positions the signature opens**. A disclosure claim read off the signing log
-needs both entries present, not merely the returned bytes: `CacheReplay.replay` answers `default`
-at an absent input, so an equation between replayed signatures says nothing about what the cache
-holds, and `CacheAvailability.signedAt` is a statement about what the cache holds. -/
 
 /-! ## One query of the game's own world
 

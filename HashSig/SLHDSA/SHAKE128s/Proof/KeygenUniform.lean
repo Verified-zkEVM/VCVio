@@ -9,19 +9,28 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.KeygenFresh
 import VCVio.OracleComp.Constructions.SampleableType.Measure
 
-/-! Distribution of the actual public key under the initially empty shared oracle. -/
+/-!
+# Truncating a uniform hash output
+
+A uniformly random `HashOutput` truncated to its leading `Digest` is a uniformly random `Digest`.
+The proof splits a hash output bijectively into its leading digest and its trailing `112` bits
+(`splitOutput`, `splitOutput_bijective`), so the first component of the split of a uniform output
+is uniform (`truncate_uniform`). This is the distributional fact behind the uniformity of the
+public-key root drawn from a fresh oracle at key generation.
+-/
 
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.KeygenUniform
 
+/-- Splits a hash output into its leading `Digest` (the truncation used throughout the scheme)
+and its trailing `112` bits. -/
 def splitOutput (output : HashOutput) : Digest × BitVec 112 :=
   (Hashing.truncate output, output.extractLsb' 0 112)
 
+/-- Splitting a hash output into digest and remainder loses no information. -/
 theorem splitOutput_bijective : Function.Bijective splitOutput := by
   apply (Fintype.bijective_iff_injective_and_card _).2
   constructor
@@ -34,6 +43,7 @@ theorem splitOutput_bijective : Function.Bijective splitOutput := by
     exact congrArg₂ HAppend.hAppend (congrArg Prod.fst h) (congrArg Prod.snd h)
   · norm_num [HashOutput, Digest, messageDigestBytes, n, Fintype.card_prod, Fintype.card_bitVec]
 
+/-- The truncation of a uniform hash output is a uniform digest. -/
 theorem truncate_uniform :
     (Hashing.truncate <$> ($ᵗ HashOutput : ProbComp HashOutput)) =ᵈ
       ($ᵗ Digest : ProbComp Digest) := by
@@ -41,11 +51,10 @@ theorem truncate_uniform :
       Prod.fst <$> (splitOutput <$> ($ᵗ HashOutput : ProbComp HashOutput)) := by
     simp [Functor.map_map, splitOutput]
   rw [hmap]
-  refine ((SampleableType.map_uniformSample_evalDistEq_of_bijective splitOutput_bijective).map Prod.fst).trans ?_
+  refine ((SampleableType.map_uniformSample_evalDistEq_of_bijective
+    splitOutput_bijective).map Prod.fst).trans ?_
   refine EvalDistEq.of_forall_prEvent_eq fun p => ?_
   rw [prEvent_map]
   exact SampleableType.prEvent_uniformSample_fst p
-
-attribute [local irreducible] Scheme.keygenInternal
 
 end SlhDsaSecurity.KeygenUniform

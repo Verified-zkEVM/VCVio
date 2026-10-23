@@ -14,7 +14,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.CanonicalSignature
 
 `SplitCharged.cases_of_win_charged` ends its third branch at the forgery's FORS *secrets*, and
 that is not enough to say anything about the forgery as a whole: two different signatures can
-open the same secrets. Both dichotomies now pin more than that — the hypertree chain's
+open the same secrets. Both dichotomies pin more than that — the hypertree chain's
 fault-free branch gives the whole signature array and the FORS dichotomy gives the whole FORS
 part — so the branch can end where it has to, at the forgery being the signature the signer
 writes for that message.
@@ -38,7 +38,8 @@ open Security CacheReplay Extraction CanonicalGraph VerifierProbes SplitCharged
 attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.sign
   Security.signingOracle Security.countQueries
 
-set_option maxHeartbeats 2000000 in
+set_option maxHeartbeats 400000 in
+-- Unifying the verifier's digest and FORS-key terms across both dichotomies is expensive.
 /-- **A win in the warmed tail is a charged structural collision, a WOTS one-wayness residue, or
 a forgery whose FORS part and hypertree are both the signer's own.** -/
 theorem cases_of_win_canonical (adversary : Adversary)

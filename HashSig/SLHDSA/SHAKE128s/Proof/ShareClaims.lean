@@ -69,7 +69,7 @@ theorem forgedAt_congr (publicSeed : Digest) :
         refine simulateQ_replay_congr _ left right fun probe hprobe => hagree probe ?_
         simp only [Hypertree.rootFromSignature]
         exact queriesUnder_bind left _ _ probe hprobe
-      show @WotsResidueReduction.forgedAt (replayQuery left) publicSeed remaining
+      change @WotsResidueReduction.forgedAt (replayQuery left) publicSeed remaining
           (fun j => signatures j.succ) (layer + 1) (tree / 2 ^ subtreeHeight)
           (Hypertree.nextLeaf tree)
           (@Merkle.publicKeyFromSignature Id _ (replayQuery left) leaf (signatures 0) message
@@ -107,7 +107,8 @@ theorem claimedCandidatesOf_congr (publicSeed : Digest) (left right : QueryCache
       (Scheme.verify (m := OracleComp HashSpec) pk request signature) probe →
         left probe = right probe) :
     @ClaimedProbes.claimedCandidatesOf (replayQuery left) publicSeed left pk message parsed =
-      @ClaimedProbes.claimedCandidatesOf (replayQuery right) publicSeed right pk message parsed := by
+      @ClaimedProbes.claimedCandidatesOf (replayQuery right) publicSeed right pk message
+        parsed := by
   subst hseed
   have hdig : digestOf left pk message parsed = digestOf right pk message parsed := by
     rw [← simulateQ_messageDigest, ← simulateQ_messageDigest]

@@ -10,12 +10,12 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.BlockViews
 public import HashSig.SLHDSA.SHAKE128s.Proof.ClassGrowth
 
 /-!
-# The shared oracle's run, at a general cache view
+# The shared oracle's run on a hash input
 
-Two small facts about `KeygenUniform.rom` at a general `RecorderView.CacheView` state: a hit
-returns the cached answer and leaves the carrier, and a miss draws a fresh uniform answer and
-installs it. The carrier may carry whatever else it likes, such as a flag or a served set, and
-stay invisible to every event about the result and the cache.
+Two small facts about `KeygenUniform.rom` at a hash input: a hit returns the cached answer and
+leaves the cache unchanged (`rom_run_inr_some`), and a miss draws a fresh uniform answer and
+installs it (`rom_run_inr_none`). Both are stated at the answer type the world's query carries,
+so they rewrite a step of a simulated game run directly.
 -/
 
 @[expose] public section
@@ -25,8 +25,6 @@ open OracleComp OracleSpec ENNReal
 namespace SlhDsaSecurity.CoverageCount
 
 open Security DigestTape ClassGrowth
-
-variable {σ : Type} [RecorderView.CacheView σ]
 
 /-! ## The shared oracle's two branches -/
 

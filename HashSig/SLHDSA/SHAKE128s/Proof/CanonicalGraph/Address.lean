@@ -9,26 +9,38 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Nodes
 public import Mathlib.Tactic.NormNum
 
-/-! Canonical structural addresses identify their parent coordinates uniquely. -/
+/-!
+# Injectivity of canonical structural addresses
+
+Canonical structural addresses identify their node coordinates uniquely. Both a structural node
+and an address are flattened to a tuple of six numeric coordinates; the two flattenings agree on
+every canonical node, and the node flattening is injective, so `StructuralNode.address_injective`
+follows.
+-/
 
 @[expose] public section
 
 namespace SlhDsaSecurity.CanonicalGraph
 
+/-- Six numeric address coordinates: layer, tree, type, key pair, chain or height, and hash or
+index. -/
 private abbrev Code := Nat × Nat × AddressType × Nat × Nat × Nat
 
+/-- The coordinates of a structural node, read from its typed fields. -/
 private def code : StructuralNode → Code
   | .wotsPrf key chain =>
       (key.tree.layer.val, key.tree.tree.val, .wotsPrf, key.leaf.val, chain.val, 0)
   | .wotsHash key chain step =>
       (key.tree.layer.val, key.tree.tree.val, .wotsHash, key.leaf.val, chain.val, step.val)
   | .wotsPk key => (key.tree.layer.val, key.tree.tree.val, .wotsPk, key.leaf.val, 0, 0)
-  | .tree location height index => (location.layer.val, location.tree.val, .tree, 0, height.val + 1, index.val)
+  | .tree location height index =>
+      (location.layer.val, location.tree.val, .tree, 0, height.val + 1, index.val)
   | .forsPrf key index => (0, key.tree.val, .forsPrf, key.leaf.val, 0, index.val)
   | .forsTree key height index =>
       (0, key.tree.val, .forsTree, key.leaf.val, height.val, index.val)
   | .forsRoots key => (0, key.tree.val, .forsRoots, key.leaf.val, 0, 0)
 
+/-- The coordinates of an address, read from its numeric fields. -/
 private def addressCode (address : Address) : Code :=
   (address.layer.toNat, address.tree.toNat, address.kind, address.keyPair.toNat,
     address.chainOrHeight.toNat, address.hashOrIndex.toNat)
@@ -94,6 +106,7 @@ private theorem code_injective : Function.Injective code := by
     simp_all only [Fin.val_inj]
     aesop (add safe apply [tree_ext, wots_ext, fors_ext, Fin.ext])
 
+/-- Distinct structural nodes have distinct addresses. -/
 theorem StructuralNode.address_injective : Function.Injective StructuralNode.address := by
   intro left right h
   apply code_injective

@@ -11,14 +11,20 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.Checksum
 public import HashSig.SLHDSA.SHAKE128s.Generic.ExactQueryCount
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
-/-! Oracle-call accounting for the concrete SLH-DSA verifier. -/
+/-!
+# Oracle-call accounting for the SLH-DSA verifier
+
+Exact and bounded hash-call counts for the concrete SLH-DSA verifier. `ExactQueryCount` facts are
+derived for the hash, chain, WOTS and FORS verifiers; `Bounds` packages lower and upper bounds on
+the cost of every reachable trace under every oracle implementation, and `verify_bounds` shows
+that verification makes between 569 and 3824 hash calls. `Bounds.simulated` transfers those
+bounds through any stateful implementation, such as a cached random oracle.
+-/
 
 @[expose] public section
 
 open OracleComp OracleSpec
 open scoped BigOperators
-
-set_option maxRecDepth 2000
 
 namespace SlhDsaSecurity.VerificationQueries
 
@@ -26,7 +32,7 @@ open Xmss.Generic (ExactQueryCount)
 
 variable {ι : Type} {spec : OracleSpec ι} {α β : Type}
 
-/-- The generic XMSS lemma carries an unused `Code` instance; this version does not. -/
+/-- Exact query counts add along a bind whose continuation has a uniform exact count. -/
 theorem exact_bind {computation : OracleComp spec α} {count : Nat}
     (h : ExactQueryCount computation count) (next : α → OracleComp spec β)
     (nextCount : Nat) (hnext : ∀ value, ExactQueryCount (next value) nextCount) :
@@ -39,25 +45,30 @@ theorem exact_bind {computation : OracleComp spec α} {count : Nat}
       ExactQueryCount.query input (fun output => rest output >>= next)
         (restCount + nextCount) ih
 
+/-- Mapping over a computation preserves its exact query count. -/
 theorem exact_map {computation : OracleComp spec α} {count : Nat}
     (h : ExactQueryCount computation count) (f : α → β) :
     ExactQueryCount (f <$> computation) count := by
   simpa [map_eq_bind_pure_comp] using
     exact_bind h (fun value => pure (f value)) 0 (fun value => .pure (f value))
 
+/-- One hash call makes exactly one query. -/
 theorem hash_exact (input : Bytes) :
     ExactQueryCount (Hashing.hash input : OracleComp HashSpec HashOutput) 1 := by
   exact .query input (fun output => pure output) 0 (fun output => .pure output)
 
+/-- A truncated hash call makes exactly one query. -/
 theorem shortHash_exact (input : Bytes) :
     ExactQueryCount (Hashing.shortHash input : OracleComp HashSpec Digest) 1 := by
   simpa [Hashing.shortHash, map_eq_bind_pure_comp] using
     exact_map (hash_exact input) Hashing.truncate
 
+/-- A tweakable hash call makes exactly one query. -/
 theorem tweakable_exact (seed : Digest) (address : Address) (payload : Bytes) :
     ExactQueryCount (Hashing.tweakable seed address payload : OracleComp HashSpec Digest) 1 :=
   shortHash_exact _
 
+/-- Advancing a WOTS chain by `steps` makes exactly `steps` queries. -/
 theorem chain_exact (publicSeed : Digest) (address : Address) (start steps : Nat)
     (value : Digest) :
     ExactQueryCount (Wots.chain publicSeed address start steps value : OracleComp HashSpec Digest)
@@ -69,6 +80,7 @@ theorem chain_exact (publicSeed : Digest) (address : Address) (start steps : Nat
     simpa only [Nat.add_comm] using
       exact_bind (tweakable_exact _ _ _) _ steps (fun next => ih (start + 1) next)
 
+/-- Sequencing a family of computations adds their exact query counts. -/
 theorem sequenceFin_exact {size : Nat} (f : Fin size → OracleComp HashSpec α)
     (count : Fin size → Nat) (hcount : ∀ i, ExactQueryCount (f i) (count i)) :
     ExactQueryCount (sequenceFin size f) (∑ i, count i) := by
@@ -81,6 +93,7 @@ theorem sequenceFin_exact {size : Nat} (f : Fin size → OracleComp HashSpec α)
         exact_map (ih (fun i => f i.succ) (fun i => count i.succ) (fun i => hcount i.succ))
           (fun rest => (Fin.cases first rest : Fin (size + 1) → α)))
 
+/-- A monadic fold whose step makes `count` queries makes `length * count` queries. -/
 theorem foldlM_exact (items : List α) (f : β → α → OracleComp HashSpec β)
     (count : Nat) (hcount : ∀ value item, ExactQueryCount (f value item) count) (initial : β) :
     ExactQueryCount (items.foldlM f initial) (items.length * count) := by
@@ -90,6 +103,7 @@ theorem foldlM_exact (items : List α) (f : β → α → OracleComp HashSpec β
     simpa only [List.foldlM_cons, List.length_cons, Nat.add_mul, Nat.one_mul, Nat.add_comm] using
       exact_bind (hcount initial item) _ (items.length * count) (fun value => ih value)
 
+/-- The remaining chain steps over the encoded message are the verifier's chain-call count. -/
 theorem encoded_chain_steps (message : Digest) :
     (∑ i : Fin chains, (w - 1 - (Checksum.encode message i).val)) =
       Checksum.chainVerificationCalls (Checksum.messageDigit message) := by
@@ -97,20 +111,24 @@ theorem encoded_chain_steps (message : Digest) :
   rw [Fin.sum_univ_add]
   rfl
 
+/-- WOTS public-key recovery makes its chain calls plus one compression call. -/
 theorem wots_exact (signature : WotsSignature) (message publicSeed : Digest)
     (address : Address) :
     ExactQueryCount
-      (Wots.publicKeyFromSignature signature message publicSeed address : OracleComp HashSpec Digest)
+      (Wots.publicKeyFromSignature signature message publicSeed address :
+        OracleComp HashSpec Digest)
       (Checksum.chainVerificationCalls (Checksum.messageDigit message) + 1) := by
   unfold Wots.publicKeyFromSignature
   rw [← encoded_chain_steps message]
   exact exact_bind (sequenceFin_exact _ _ (fun i => chain_exact _ _ _ _ _)) _ 1
     (fun _ => tweakable_exact _ _ _)
 
+/-- FORS public-key recovery makes exactly 183 hash calls. -/
 theorem fors_exact (signature : ForsSignature) (indices : Fors.Indices)
     (publicSeed : Digest) (address : Address) :
     ExactQueryCount
-      (Fors.publicKeyFromSignature signature indices publicSeed address : OracleComp HashSpec Digest)
+      (Fors.publicKeyFromSignature signature indices publicSeed address :
+        OracleComp HashSpec Digest)
       183 := by
   unfold Fors.publicKeyFromSignature
   have hroots : ∀ i : Fin forsTrees, ExactQueryCount
@@ -245,6 +263,7 @@ theorem exact_cost {m : Type → Type} [Monad m] [LawfulMonad m]
     AddWriterT.QueryBoundedBelowBy (simulateQ impl.withUnitCost computation) lower ∧
       AddWriterT.QueryBoundedAboveBy (simulateQ impl.withUnitCost computation) upper
 
+/-- An exact query count lies within any enclosing bounds. -/
 theorem Bounds.of_exact {computation : OracleComp HashSpec α} {count lower upper : Nat}
     (hexact : ExactQueryCount computation count) (hlower : lower ≤ count) (hupper : count ≤ upper) :
     Bounds computation lower upper := by
@@ -254,6 +273,7 @@ theorem Bounds.of_exact {computation : OracleComp HashSpec α} {count lower uppe
   exact ⟨AddWriterT.queryBoundedBelowBy_mono h.toBelow hlower,
     AddWriterT.queryBoundedAboveBy_mono h.toAbove hupper⟩
 
+/-- Bounds add along a bind. -/
 theorem Bounds.bind {computation : OracleComp HashSpec α} {next : α → OracleComp HashSpec β}
     {lower upper nextLower nextUpper : Nat} (h : Bounds computation lower upper)
     (hnext : ∀ value, Bounds (next value) nextLower nextUpper) :
@@ -264,12 +284,14 @@ theorem Bounds.bind {computation : OracleComp HashSpec α} {next : α → Oracle
   exact ⟨queryBoundedBelowBy_bind' (h m impl).1 (fun value => (hnext value m impl).1),
     queryBoundedAboveBy_bind' (h m impl).2 (fun value => (hnext value m impl).2)⟩
 
+/-- Mapping over a computation preserves its bounds. -/
 theorem Bounds.map {computation : OracleComp HashSpec α} {lower upper : Nat}
     (h : Bounds computation lower upper) (f : α → β) :
     Bounds (f <$> computation) lower upper := by
   simpa [map_eq_bind_pure_comp] using
     h.bind (fun value => Bounds.of_exact (.pure (f value)) le_rfl le_rfl)
 
+/-- XMSS root recovery makes between 55 and 520 hash calls. -/
 theorem merkle_bounds (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignature)
     (message publicSeed : Digest) (address : Address) :
     Bounds (Merkle.publicKeyFromSignature index signature message publicSeed address) 55 520 := by
@@ -285,6 +307,8 @@ theorem merkle_bounds (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignatu
         foldlM_exact (List.finRange subtreeHeight) _ 1 (fun _ _ => tweakable_exact _ _ _) leaf)
     le_rfl le_rfl)
 
+/-- Hypertree root recovery over `remaining` layers makes between `remaining * 55` and
+`remaining * 520` hash calls. -/
 theorem hypertree_root_bounds (publicSeed : Digest) (remaining : Nat)
     (signatures : Fin remaining → XmssSignature) (layer tree : Nat) (leaf : Hypertree.LeafIndex)
     (message : Digest) :
@@ -299,6 +323,7 @@ theorem hypertree_root_bounds (publicSeed : Digest) (remaining : Nat)
         (fun root => ih (fun i => signatures i.succ) (layer + 1)
           (tree / 2 ^ subtreeHeight) (Hypertree.nextLeaf tree) root)
 
+/-- Internal verification makes between 569 and 3824 hash calls. -/
 theorem verifyInternal_bounds (pk : PublicKey) (message : Bytes) (signature : Signature) :
     Bounds (Scheme.verifyInternal pk message signature) 569 3824 := by
   have hh : Bounds
@@ -313,7 +338,8 @@ theorem verifyInternal_bounds (pk : PublicKey) (message : Bytes) (signature : Si
           (MessageDigest.treeIndex digest) (MessageDigest.leafIndex digest).toFin)
       (183 + 385) (183 + 3640) := by
     have hf := Bounds.of_exact
-      (fors_exact signature.fors (MessageDigest.forsIndices digest) pk.seed (Scheme.forsAddress digest))
+      (fors_exact signature.fors (MessageDigest.forsIndices digest) pk.seed
+        (Scheme.forsAddress digest))
       le_rfl le_rfl
     refine hf.bind (fun forsKey => ?_)
     unfold Hypertree.verify
@@ -323,6 +349,7 @@ theorem verifyInternal_bounds (pk : PublicKey) (message : Bytes) (signature : Si
         (fun root => root == pk.root)
   exact hh.bind htail
 
+/-- Verifying a well-framed, parsable request makes between 569 and 3824 hash calls. -/
 theorem verify_bounds (pk : PublicKey) (request : Message) (wire : Bytes)
     (message : Bytes) (signature : Signature)
     (hframe : request.frame = some message) (hparse : Signature.fromBytes? wire = some signature) :

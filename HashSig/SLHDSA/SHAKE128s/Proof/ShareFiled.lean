@@ -112,7 +112,7 @@ theorem routed_step (setup : Setup) (state : St) (input : Bytes) (routed : HashO
     | none =>
       rw [hopen] at hx
       simp only at hx ⊢
-      show routed.2.cache x = some v
+      change routed.2.cache x = some v
       rcases route_false_cases setup state input routed hrouted with
         ⟨-, h⟩ | ⟨-, -, h⟩ | ⟨-, hcached, h⟩
       · rw [h]; exact hx
@@ -130,10 +130,10 @@ theorem routed_step (setup : Setup) (state : St) (input : Bytes) (routed : HashO
       ⟨hopen, -⟩ | ⟨hopen, hcached, h⟩ | ⟨hopen, -, h⟩
     · rw [hopen]
     · rw [hopen]
-      show routed.2.cache input = some routed.1
+      change routed.2.cache input = some routed.1
       rw [h]; exact hcached
     · rw [hopen]
-      show routed.2.cache input = some routed.1
+      change routed.2.cache input = some routed.1
       rw [h]; exact QueryCache.cacheQuery_self _ _ _
 
 /-- **One step of a handler that routes blindly and files.** -/
@@ -228,7 +228,7 @@ theorem worldImpl_run (lenient : Bool) (setup : Setup) (world : OracleWorld.Doma
     (p : St × Bool) :
     ((ShareBound.worldImpl lenient setup) world).run p =
       ((handler lenient setup) (worldQuery world)).run p := by
-  show (simulateQ (handler lenient setup) (query (spec := ShareSpec) (worldQuery world) :
+  change (simulateQ (handler lenient setup) (query (spec := ShareSpec) (worldQuery world) :
     OracleComp ShareSpec (OracleWorld.Range world))).run p = _
   erw [simulateQ_spec_query]
 
@@ -251,7 +251,7 @@ theorem hashImpl_run (setup : Setup) (input : Bytes) (p : St × Bool) :
       let step ← route false setup p.1 input
       pure (step.1, ({ step.2 with record := p.1.record ++ [(input, p.1.served)] },
         p.2 || decide (¬ setup.Good ∨ Guess setup p.1.served input)))) := by
-  show ((ShareBound.worldImpl false setup) (Sum.inr input)).run p = _
+  change ((ShareBound.worldImpl false setup) (Sum.inr input)).run p = _
   rw [worldImpl_run]
   rfl
 

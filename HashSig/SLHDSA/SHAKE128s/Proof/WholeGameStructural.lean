@@ -24,8 +24,6 @@ one run. `mem_support_runAll_of_mem_support` ties its support back to `runAll`.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.WholeGameStructural
 
 open Security CanonicalGraph
@@ -35,6 +33,8 @@ noncomputable def instrumentedRun (adversary : Adversary) :
     ProbComp ((Outcome × Nat) × QueryCache HashSpec) :=
   (simulateQ KeygenUniform.rom (countAllHashes (experiment adversary))).run ∅
 
+/-- Every outcome of the instrumented run, with the count projected away, is a possible outcome
+of `runAll`. -/
 theorem mem_support_runAll_of_mem_support {adversary : Adversary}
     {result : (Outcome × Nat) × QueryCache HashSpec}
     (hmem : result ∈ support (instrumentedRun adversary)) :

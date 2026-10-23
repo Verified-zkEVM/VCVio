@@ -9,7 +9,14 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 public import VCVio.OracleComp.Constructions.SampleableType
 
-/-! The full parsed digest has the independent uniform distribution used in FORS counting. -/
+/-!
+# Parsing the message digest
+
+The parse `parse` of a 30-byte `H_msg` output into a FORS instance and its FORS indices discards
+nine bits. Keeping those bits makes the parse a bijection (`split_bijective`), so a uniform digest
+parses to an independent, uniform instance and index tuple, the distribution used in FORS
+counting.
+-/
 
 @[expose] public section
 
@@ -17,10 +24,12 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.MessageDigest
 
-/-- Retaining the discarded bits makes the standard parser a bijection. -/
+/-- The parse of a message digest together with the bits it discards: two bits above the tree
+index and seven bits above the leaf index. -/
 def split (output : HashOutput) : View × (BitVec 2 × BitVec 7) :=
   (parse output, output.extractLsb' 70 2, output.extractLsb' 9 7)
 
+/-- Distinct digests have distinct splits. -/
 theorem split_injective : Function.Injective split := by
   intro left right heq
   have hinstance : treeIndex left ++ leafIndex left = treeIndex right ++ leafIndex right :=
@@ -47,7 +56,7 @@ theorem split_injective : Function.Injective split := by
     have hnotlow : ¬ bit - 7 < 9 := by omega
     have hlocal : bit - 7 - 9 < 54 := by omega
     have hposition : 16 + (bit - 7 - 9) = bit := by omega
-    simpa only [subtreeHeight, if_neg hnotlow, treeIndex,
+    simpa only [subtreeHeight, ite_eq_right hnotlow, treeIndex,
       totalHeight, Nat.reduceSub, BitVec.getLsbD_extractLsb', hlocal, decide_true,
       Bool.true_and, hposition] using h
   by_cases htreePad : bit < 72
@@ -67,6 +76,7 @@ theorem split_injective : Function.Injective split := by
     simpa only [forsHeight, forsTrees, BitVec.getLsbD_extractLsb', hlocal, decide_true,
       Bool.true_and, hposition] using h
 
+/-- `split` is a bijection between digests and parsed views with their discarded bits. -/
 theorem split_bijective : Function.Bijective split := by
   apply (Fintype.bijective_iff_injective_and_card _).2
   refine ⟨split_injective, ?_⟩

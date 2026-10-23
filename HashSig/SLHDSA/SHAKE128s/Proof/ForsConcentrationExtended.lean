@@ -11,14 +11,16 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ForsConcentrationOccupancy
 /-!
 # Additional uniform choices for the shared-oracle exceptional branch
 
-This extends the independent occupancy experiment to five halves of the number
-of instances. It does not assert a coupling to the adaptive ROM game.
+`poisson_count_tail_extended_half` shows, by Chebyshev's inequality, that a Poisson count of
+rate `3 * 2^63` reaches `5 * 2^62` with probability at least one half. This is the
+de-Poissonization denominator that extends the independent occupancy experiment to five halves
+of the number of instances. It does not assert a coupling to the adaptive random-oracle game.
 -/
 
 @[expose] public section
 
 open MeasureTheory ProbabilityTheory
-open scoped NNReal Classical
+open scoped NNReal
 
 namespace SlhDsaSecurity.ForsConcentration
 
@@ -62,7 +64,7 @@ theorem poisson_count_tail_extended_half :
         1 - (poissonMeasure (rate : ℝ≥0)).real {n | n < 5 * 2 ^ 62} := by
       linarith only [hsmall]
     rw [← hrest] at hle
-    simpa only [Set.compl_setOf, Nat.not_lt] using hle
+    simpa only [Set.compl_ofPred, Nat.not_lt] using hle
   apply (ENNReal.toReal_le_toReal (by finiteness) (by finiteness)).mp
   simpa only [measureReal_def, ENNReal.toReal_div, ENNReal.toReal_one,
     ENNReal.toReal_ofNat] using htail

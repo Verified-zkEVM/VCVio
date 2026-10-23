@@ -11,29 +11,37 @@ public import Mathlib.Algebra.MvPolynomial.Coeff
 public import Mathlib.Probability.Distributions.Uniform
 
 /-!
-# Fixed-count FORS load concentration
+# Fixed-count FORS load occupancy
 
-Uniform instance words give the exact correlated multinomial occupancy law.
-The product-Poisson law is proved equal to a Poisson-weighted mixture of those
-laws, and increasing events are monotone in the word length. These facts and
-the Poisson count's second moment transfer `poisson_load_tail` to at most 2^64
-independent uniform instance choices, with error at most 2^-141.
+The occupancy law `uniformLoads bins requests` of the loads produced by `requests` independent
+uniform choices among `bins` instances, and its relation to the independent Poisson loads
+`poissonLoads`:
 
-This theorem concerns independent uniform choices. Connecting adaptive ROM
-signing transcripts to this experiment remains a separate security obligation.
+* `wordCounts_fiber_card` and `uniformLoads_singleton` give the exact, correlated multinomial
+  law, computed from coefficients of a multinomial expansion;
+* `poissonLoads_eq_mixture` writes the product-Poisson law as a Poisson-weighted mixture of the
+  occupancy laws;
+* `uniformLoads_monotone` shows that increasing events become more likely as choices are added;
+* `uniformLoads_mul_poisson_tail_le` combines the two into a de-Poissonization inequality, and
+  `poisson_integral_square_sub` gives the Poisson variance used to control its denominator.
+
+These facts concern independent uniform choices only; connecting adaptive random-oracle signing
+transcripts to this experiment is a separate obligation.
 -/
 
 @[expose] public section
 
 open MeasureTheory ProbabilityTheory
-open scoped NNReal Classical
+open scoped NNReal
 
 namespace SlhDsaSecurity.ForsConcentration
 
 /-- The full vector of instance multiplicities in a word of uniformly sampled indices. -/
-noncomputable def wordCounts {bins requests : Nat} (word : Fin requests → Fin bins) : Fin bins →₀ Nat :=
+noncomputable def wordCounts {bins requests : Nat} (word : Fin requests → Fin bins) :
+    Fin bins →₀ Nat :=
   ∑ j, Finsupp.single (word j) 1
 
+/-- The monomial of a word is the monomial of its multiplicity vector. -/
 lemma wordCounts_polynomial {bins requests : Nat} (word : Fin requests → Fin bins) :
     (∏ j, MvPolynomial.X (word j) : MvPolynomial (Fin bins) Nat) =
       MvPolynomial.monomial (wordCounts word) 1 := by
@@ -55,9 +63,12 @@ theorem wordCounts_fiber_card (bins requests : Nat) (counts : Fin bins →₀ Na
   simp only [MvPolynomial.coeff_sum, MvPolynomial.coeff_monomial] at hc
   simpa only [Finset.card_eq_sum_ones, Finset.sum_filter, eq_comm, Nat.cast_id] using hc.symm
 
+/-- The multiplicity vector of a word, as a plain function. -/
 noncomputable def wordLoads {bins requests : Nat} (word : Fin requests → Fin bins) :
     Fin bins → Nat := wordCounts word
 
+/-- `wordCounts_fiber_card` for plain load functions: the number of words with given loads is
+the multinomial coefficient when the loads sum to the word length, and zero otherwise. -/
 lemma wordLoads_fiber_card (bins requests : Nat) (counts : Fin bins → Nat) :
     (Finset.univ.filter (fun word : Fin requests → Fin bins => wordLoads word = counts)).card =
       if (∑ i, counts i) = requests then Nat.multinomial Finset.univ counts else 0 := by
@@ -81,11 +92,14 @@ lemma wordLoads_fiber_card (bins requests : Nat) (counts : Fin bins → Nat) :
 noncomputable def uniformLoads (bins requests : Nat) [NeZero bins] : Measure (Fin bins → Nat) :=
   (uniformOn (Set.univ : Set (Fin requests → Fin bins))).map wordLoads
 
-instance (bins requests : Nat) [NeZero bins] : IsProbabilityMeasure (uniformLoads bins requests) := by
+/-- The occupancy law is a probability measure. -/
+instance (bins requests : Nat) [NeZero bins] :
+    IsProbabilityMeasure (uniformLoads bins requests) := by
   unfold uniformLoads
   exact (Measure.isProbabilityMeasure_map_iff (Measurable.aemeasurable .of_discrete)).mpr
     inferInstance
 
+/-- The occupancy law is the multinomial law. -/
 lemma uniformLoads_singleton (bins requests : Nat) [NeZero bins] (counts : Fin bins → Nat) :
     uniformLoads bins requests {counts} =
       (if (∑ i, counts i) = requests then
@@ -101,6 +115,7 @@ lemma uniformLoads_singleton (bins requests : Nat) [NeZero bins] (counts : Fin b
   rw [wordLoads_fiber_card]
   split_ifs <;> simp_all [Fintype.card_fin]
 
+/-- The probability of a load vector under independent rate-three Poisson loads. -/
 lemma poissonLoads_real_singleton (bins : Nat) (counts : Fin bins → Nat) :
     (poissonLoads bins).real {counts} =
       Real.exp (-(3 * (bins : ℝ))) * 3 ^ (∑ i, counts i) /
@@ -115,6 +130,7 @@ lemma poissonLoads_real_singleton (bins : Nat) (counts : Fin bins → Nat) :
   congr 2
   ring_nf
 
+/-- `uniformLoads_singleton` for real-valued probabilities. -/
 lemma uniformLoads_real_singleton (bins requests : Nat) [NeZero bins] (counts : Fin bins → Nat) :
     (uniformLoads bins requests).real {counts} =
       (if (∑ i, counts i) = requests then
@@ -122,6 +138,8 @@ lemma uniformLoads_real_singleton (bins requests : Nat) [NeZero bins] (counts : 
   rw [measureReal_def, uniformLoads_singleton]
   split_ifs <;> simp
 
+/-- The Poisson probability of a load vector factors as the probability of its total under the
+total Poisson count times its occupancy probability given that total. -/
 lemma poissonLoads_singleton_factor (bins : Nat) [NeZero bins] (counts : Fin bins → Nat) :
     poissonLoads bins {counts} =
       poissonMeasure (3 * (bins : ℝ≥0)) {∑ i, counts i} *
@@ -157,12 +175,15 @@ theorem poissonLoads_eq_mixture (bins : Nat) [NeZero bins] :
   · intro requests hne
     simp [Ne.symm hne]
 
+/-- Prepending a choice to a word adds one to the load of the chosen instance. -/
 lemma wordLoads_cons {bins requests : Nat} (head : Fin bins) (word : Fin requests → Fin bins) :
     wordLoads (Fin.cons head word) = fun i => (if head = i then 1 else 0) + wordLoads word i := by
   classical
   funext i
   simp [wordLoads, wordCounts, Fin.sum_univ_succ, Finsupp.single_apply]
 
+open scoped Classical in
+/-- The occupancy probability of an event is the fraction of words whose loads lie in it. -/
 lemma uniformLoads_real_apply (bins requests : Nat) [NeZero bins] (event : Set (Fin bins → Nat)) :
     (uniformLoads bins requests).real event =
       (Fintype.card {word : Fin requests → Fin bins // wordLoads word ∈ event} : ℝ) /
@@ -227,6 +248,7 @@ theorem uniformLoads_mul_poisson_tail_le (bins requests : Nat) [NeZero bins]
     exact mul_le_mul_right (uniformLoads_monotone bins event hup h) _
   · simp
 
+/-- The variance of a Poisson variable with integer rate `rate` is `rate`. -/
 lemma poisson_integral_square_sub (rate : Nat) :
     (∫ n : Nat, ((n : ℝ) - rate) ^ 2 ∂poissonMeasure (rate : ℝ≥0)) = rate := by
   have h1 : Integrable (fun n : Nat => (n : ℝ)) (poissonMeasure (rate : ℝ≥0)) := by

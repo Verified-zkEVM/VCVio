@@ -41,8 +41,6 @@ What the stall costs is nothing, because the flag is sticky and the frozen tail 
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.StalledRun
 
 variable {ι : Type} {spec : OracleSpec ι} {σ : Type}
@@ -58,6 +56,8 @@ noncomputable def stalled (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
   fun t p => if Frozen p.1 then pure (stall t, p) else impl t p
 
 open scoped Classical in
+/-- Once the state is frozen, the stalled implementation answers with the stall value and
+leaves the state unchanged. -/
 theorem stalled_run_of_frozen (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
     (Frozen : σ → Prop) (stall : (t : spec.Domain) → spec.Range t)
     (t : spec.Domain) (p : σ × Bool) (hp : Frozen p.1) :
@@ -66,6 +66,7 @@ theorem stalled_run_of_frozen (impl : QueryImpl spec (StateT (σ × Bool) ProbCo
   exact ite_eq_left hp
 
 open scoped Classical in
+/-- Before the state is frozen, the stalled implementation is the original one. -/
 theorem stalled_run_of_not_frozen (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
     (Frozen : σ → Prop) (stall : (t : spec.Domain) → spec.Range t)
     (t : spec.Domain) (p : σ × Bool) (hp : ¬ Frozen p.1) :
@@ -225,7 +226,8 @@ theorem expectation_frozen {γ : Type} (impl : QueryImpl spec (StateT (σ × Boo
     (hquiet : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
       ∀ z ∈ support ((impl t).run p), weight z.2 = weight p)
     (oa : OracleComp spec γ) (p : σ × Bool) (hp : Frozen p.1) :
-    (∑' z : γ × (σ × Bool), Pr{let x ← (simulateQ impl oa).run p}[x = z] * weight z.2) = weight p := by
+    (∑' z : γ × (σ × Bool), Pr{let x ← (simulateQ impl oa).run p}[x = z] * weight z.2) =
+      weight p := by
   let : MeasurableSpace (γ × (σ × Bool)) := ⊤
   rw [← lintegral_evalDist_eq_tsum_probComp]
   exact lintegral_frozen impl Frozen weight hfrozen hquiet oa p hp

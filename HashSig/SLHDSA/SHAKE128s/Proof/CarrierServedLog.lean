@@ -127,7 +127,7 @@ theorem cache_persists_run (rightKeep : Walk → Bytes → HandlerCarrier.State 
     (hresult : result ∈ support ((simulateQ (handlerAt rightKeep walk) computation).run state))
     (input : Bytes) (value : HashOutput) (hentry : state.1.cache input = some value) :
     result.2.1.cache input = some value := by
-  letI : RecorderView.CacheView HandlerCarrier.State := servingView (keyAt walk)
+  let : RecorderView.CacheView HandlerCarrier.State := servingView (keyAt walk)
   exact NoticingCover.cache_value_persists (disclosingKeep (keyAt walk)) (rightKeep walk)
     computation (CarrierCover.dropCount state) (result.1, CarrierCover.dropCount result.2)
     (CarrierCover.mem_support_dropCount_run (keyAt walk) (rightKeep walk) computation state

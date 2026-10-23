@@ -56,6 +56,7 @@ noncomputable def splitCost (inClass : Bytes → Prop) (inside outside : QueryKi
   | .inr input => if inClass input then Counts.single inside 1 else Counts.single outside 1
 
 open scoped Classical in
+/-- A coin query is charged nothing. -/
 theorem splitCost_inl (inClass : Bytes → Prop) (inside outside : QueryKind)
     (coin : unifSpec.Domain) : splitCost inClass inside outside (Sum.inl coin) = 0 := rfl
 
@@ -73,9 +74,9 @@ theorem splitCost_add_eq_hashCost (inClass : Bytes → Prop) {inside outside : Q
     rfl
   · rw [splitCost]
     by_cases hmember : inClass input
-    · rw [if_pos hmember, Counts.single, Pi.single_eq_same, Pi.single_eq_of_ne hne.symm]
+    · rw [ite_eq_left hmember, Counts.single, Pi.single_eq_same, Pi.single_eq_of_ne hne.symm]
       rfl
-    · rw [if_neg hmember, Counts.single, Pi.single_eq_of_ne hne, Pi.single_eq_same]
+    · rw [ite_eq_right hmember, Counts.single, Pi.single_eq_of_ne hne, Pi.single_eq_same]
       rfl
 
 /-! ## The split counter is the total counter

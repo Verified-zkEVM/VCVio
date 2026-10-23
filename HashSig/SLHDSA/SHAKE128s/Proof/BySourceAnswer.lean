@@ -52,10 +52,13 @@ def Targeted (walk : Walk) (input : Bytes) : Prop :=
   CombinedCharge.IsMessageInput (keyAt walk) input ∧
     ¬ RandomizerGate.PrfClass walk.1.1.2.1 input
 
+/-- An input the target record keeps is a targeted input. -/
 theorem targeted_of_keep127 (walk : Walk) (input : Bytes) (view : HandlerCarrier.State)
     (hkeep : keep127 walk input view) : Targeted walk input :=
   ⟨AnswerFired.keep127_class walk input view hkeep, hkeep.2⟩
 
+/-- A canonical input is never targeted, when the walk's public-key bytes cannot be read as a
+tweakable-hash prefix. -/
 theorem not_targeted_canonical (walk : Walk)
     (hpublic : ¬ HashSeparation.Possible ((keyAt walk).seed, (keyAt walk).root))
     (publicSeed : Digest) (cells : Cells) (parent : StructuralNode) :
@@ -64,12 +67,14 @@ theorem not_targeted_canonical (walk : Walk)
   exact HashSeparation.message_tweakable_ne hpublic (withinBounds_structural parent)
     hmessage.symm
 
+/-- A targeted input is never deviating: the two classes are disjoint. -/
 theorem not_deviating_of_targeted (walk : Walk)
     (hpublic : ¬ HashSeparation.Possible ((keyAt walk).seed, (keyAt walk).root))
     (input : Bytes) (htargeted : Targeted walk input) : ¬ Deviating walk input :=
   fun hdeviating => hdeviating (CombinedCharge.separated_of_not_possible walk.1.1.2.2 (keyAt walk)
     walk.1.2 hpublic withinBounds_structural input htargeted.1)
 
+/-- On a good walk, a `PRF_msg` input at the walk's seed is never deviating. -/
 theorem not_deviating_randomizerInput (walk : Walk) (hgood : Target.GoodWalk walk)
     (seed : Digest) (message : Bytes) :
     ¬ Deviating walk (Hashing.randomizerInput walk.1.1.2.1 seed message) := by
@@ -99,6 +104,8 @@ theorem replayCells_of_extends {walk : Walk} (hwalk : walk ∈ support WarmedGam
   rw [hcache, hcells]
   exact hentry
 
+/-- A canonical input, built from the cells replayed at an extending cache, is never
+deviating. -/
 theorem not_deviating_canonical {walk : Walk} (hwalk : walk ∈ support WarmedGame.graphWalk)
     (final : QueryCache HashSpec)
     (hextends : ∀ (input : Bytes) (output : HashOutput), walk.2 input = some output →
@@ -123,9 +130,6 @@ theorem keygen_seeds (cache : QueryCache HashSpec) (secretSeed prfSeed publicSee
 attribute [local irreducible] Scheme.keygenInternal Scheme.verify Scheme.sign
   Security.signingOracle Security.countQueries RecordedTail.recordedAfterSeeds
 
-set_option maxHeartbeats 2000000 in
-set_option linter.constructorNameAsVariable false in
-open scoped Classical in
 /-- **The fresh faults and target-class entries are the record's and one digest per request.** -/
 theorem freshMass_le_work_add_signed (adversary : Adversary) {walk : Walk}
     (hwalk : walk ∈ support WarmedGame.graphWalk) (hgood : Target.GoodWalk walk)
@@ -152,7 +156,7 @@ theorem freshMass_le_work_add_signed (adversary : Adversary) {walk : Walk}
         keys.1.publicKey framed
   let holder : Finset Bytes := result.1.1.2.toFinset ∪ digests.toFinset
   have hcard : holder.card ≤ result.1.1.1.counts.work + result.1.1.1.signed.length := by
-    show (result.1.1.2.toFinset ∪ digests.toFinset).card ≤ _
+    change (result.1.1.2.toFinset ∪ digests.toFinset).card ≤ _
     have hrecord := RecordedTail.card_toFinset_le_count adversary hresult
     have hunion := Finset.card_union_le result.1.1.2.toFinset digests.toFinset
     have hdigests : digests.toFinset.card ≤ result.1.1.1.signed.length :=
@@ -195,9 +199,6 @@ theorem freshMass_le_work_add_signed (adversary : Adversary) {walk : Walk}
 
 attribute [local irreducible] WarmedGame.afterSeeds
 
-set_option maxHeartbeats 2000000 in
-set_option linter.constructorNameAsVariable false in
-open scoped Classical in
 /-- **The fresh faults and the target record together are within the work and the requests**,
 on every run of the split tail. -/
 theorem fresh_add_right_le (adversary : Adversary) {walk : Walk}

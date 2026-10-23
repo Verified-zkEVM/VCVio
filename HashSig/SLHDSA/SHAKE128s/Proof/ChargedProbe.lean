@@ -22,9 +22,6 @@ expectation over run results, used when per-cell charges are summed under one me
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-set_option maxRecDepth 40000
-
 namespace SlhDsaSecurity.ChargedProbe
 
 open CanonicalGraph SensitiveQuery OpenCache

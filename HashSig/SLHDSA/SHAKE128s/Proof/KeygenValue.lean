@@ -32,8 +32,8 @@ carries every field of the outcome and the record as literally the same values.
 exactly because the law says nothing about the outer total, which it does change; used under
 `Security.countAllHashes` it would be claiming something false.
 
-What it buys beyond unblocking the move: the key is now `⟨sds.1, sds.2.1, ⟨sds.2.2, root⟩⟩`,
-whose only table coordinates are the secret seed and the honest root.
+The substitution also makes the key explicit: it is `⟨sds.1, sds.2.1, ⟨sds.2.2, root⟩⟩`, whose
+only table coordinates are the secret seed and the honest root.
 -/
 
 @[expose] public section

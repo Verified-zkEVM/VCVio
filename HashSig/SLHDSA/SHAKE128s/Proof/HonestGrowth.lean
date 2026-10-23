@@ -30,6 +30,10 @@ rather than one path through it: every leaf ends in a compression call, so a sub
 give only `h + 1`, which covers the charges' defects but not the forgery's own claimed cells —
 the input half records one candidate per claimed cell, a few hundred of them, and that is what
 the larger constant pays for.
+
+This file holds `walk_cache_eq_warmCache`, which identifies the walk's cache with the warm cache,
+and the per-call counts `count_query` and `one_le_count_tweakable` that `KeygenCost` sums over the
+recursion.
 -/
 
 @[expose] public section
@@ -51,15 +55,12 @@ theorem walk_cache_eq_warmCache
 
 /-! ## How much key generation spends
 
-The exact number is not needed — the defects the charges carry sum to less than `2 ^ -125`, and
-four units of budget at `2 ^ -127` apiece already exceed that.
-
-What is proved is `pow_le_count_keygen : 2 ^ subtreeHeight ≤ count`, and the `4` of
-`growth_le_count_sub_four` is that weakened by `omega`; it is not read off the recursion. The
-*power* is, and the recursion doubles rather than adds: a node of height `h + 1` costs its two
-children and one compression call, so a subtree of height `subtreeHeight = 9` costs at least
-`2 ^ 9 = 512` — one call per **leaf**, not one per level. `pow_le_count_merkleNode` is that
-induction. -/
+The exact number is not needed: the defects the charges carry are small, and a few units of
+budget at `2 ^ -127` apiece already exceed them. The bound itself, `KeygenCost.count_keygen_ge`,
+is read off the Merkle recursion, which doubles rather than adds: a node of height `h + 1` costs
+its two children and one compression call, so a subtree of height `subtreeHeight` costs at least
+`(chains + 1) * 2 ^ subtreeHeight` — one WOTS public key per **leaf**, not one per level.
+`KeygenCost.count_merkleNode_ge` is that induction; the per-call counts below are what it sums. -/
 
 /-- A single query is charged its own cost. -/
 theorem count_query (queried : OracleWorld.Domain) (cache : QueryCache HashSpec)

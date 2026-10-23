@@ -89,7 +89,8 @@ theorem sensitive_forgedClaim (publicSeed : Digest) {State : Type}
     (hrevealed : ∀ key chain, revealed key chain ≤ w - 1)
     (table : Cells) (state : State) (key : WotsKey) (chain : Fin chains)
     (remaining : Nat) (signatures : Fin remaining → XmssSignature) (layer tree : Nat)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message : Digest) (i : Nat) (value : SensitiveQuery.Cell)
+    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message : Digest) (i : Nat)
+    (value : SensitiveQuery.Cell)
     (hdigit : (Checksum.encode
       (forgedAt publicSeed remaining signatures layer tree leaf message i) chain).val <
       revealed key chain)

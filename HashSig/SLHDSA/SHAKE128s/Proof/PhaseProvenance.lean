@@ -54,6 +54,8 @@ noncomputable def recordedRun {α : Type} (x : RecordedRun α) (log : SigningLog
     ProbComp (((α × Multiplicative Tally) × SigningLog) × QueryCache HashSpec) :=
   (simulateQ KeygenUniform.rom ((WriterT.run x).run log)).run cache
 
+/-- The recorded run of a bind is that of its first half, followed by that of the continuation,
+with the two tallies multiplied. -/
 theorem recordedRun_bind {α β : Type} (x : RecordedRun α) (next : α → RecordedRun β)
     (log : SigningLog) (cache : QueryCache HashSpec) :
     recordedRun (x >>= next) log cache =
@@ -78,6 +80,7 @@ Each handler either leaves the log alone or appends one entry, so the log a sub-
 a prefix of the one it leaves. That is what lets a request named in the middle of the phase be
 found in the log the phase finally reports. -/
 
+/-- The adversary's own handler leaves the log alone. -/
 theorem log_eq_recordedAdversaryImpl (queried : OracleWorld.Domain) (log : SigningLog)
     (cache : QueryCache HashSpec)
     (outer : ((OracleWorld.Range queried × Multiplicative Tally) × SigningLog) ×
@@ -89,6 +92,7 @@ theorem log_eq_recordedAdversaryImpl (queried : OracleWorld.Domain) (log : Signi
   obtain ⟨step, -, hstep⟩ := houter
   rw [← hstep]
 
+/-- The signing oracle appends exactly one entry, for the request it served, to the log. -/
 theorem log_eq_recordedSigningOracle
     (signer : Message → OracleComp OracleWorld (Option Bytes)) (request : Message)
     (log : SigningLog) (cache : QueryCache HashSpec)

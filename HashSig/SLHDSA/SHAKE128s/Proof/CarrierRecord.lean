@@ -26,7 +26,8 @@ namespace SlhDsaSecurity.CarrierRecord
 open Security BracketedRun CarrierFiles CarrierRecordings CarrierSignRecord
   CarriedWitness CarrierTail RecordedQueries AnswerCarrier
 
-set_option maxHeartbeats 1000000 in
+/-- **The carrier tail's keys are the replayed keys**: key generation at the walk's warm cache
+is a `pure`, so the generated key pair is `keygenInternal` replayed at that cache. -/
 theorem keys_eq_replay (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) (walk : Walk)
     (hwalk : walk ∈ support WarmedGame.graphWalk)
     (keys : (SecretKey × PublicKey) × CountedState)
@@ -43,7 +44,9 @@ theorem keys_eq_replay (rightKeep : Walk → Bytes → HandlerCarrier.State → 
   rw [hwarm]
   exact (Prod.ext_iff.mp hrom).1
 
-set_option maxHeartbeats 1000000 in
+set_option maxHeartbeats 400000 in
+-- Unfolding the replayed `keygenInternal` to its public key exceeds the default budget.
+/-- **The carrier tail's public key is `keyAt walk`.** -/
 theorem keys_publicKey (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) (walk : Walk)
     (hwalk : walk ∈ support WarmedGame.graphWalk)
     (keys : (SecretKey × PublicKey) × CountedState)

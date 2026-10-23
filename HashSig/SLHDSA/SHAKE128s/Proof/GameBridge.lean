@@ -49,7 +49,8 @@ theorem verify_eq_replay (pk : PublicKey) (request : Message) (signature : Bytes
     (hmem : (verified, finalCache) ∈
       support ((simulateQ randomOracle
         (Scheme.verify (m := OracleComp HashSpec) pk request signature)).run initialCache)) :
-    verified = @Scheme.verify Id Id.instMonad (CacheReplay.replayQuery finalCache) pk request signature := by
+    verified =
+      @Scheme.verify Id Id.instMonad (CacheReplay.replayQuery finalCache) pk request signature := by
   rw [CacheReplay.run_eq_replay _ initialCache finalCache verified hmem]
   exact @VerifierNaturality.verify_simulate Id Id.instMonad _
     (CacheReplay.replay finalCache) (CacheReplay.replayQuery finalCache)
@@ -70,9 +71,10 @@ theorem keygen_publicKey (secretSeed prfSeed publicSeed : Digest)
 /-! ## Identifying the cells the game produced
 
 Every charge is parameterised by the honest cells, and in the experiment those are whatever
-key generation and signing wrote into the oracle. `CanonicalGraph.Programming.value_eq_of_cache_agreement`
-says a cell table is *the* graph evaluation as soon as the cache agrees with it at the
-canonical inputs — which is exactly what a run that made those queries leaves behind.
+key generation and signing wrote into the oracle.
+`CanonicalGraph.Programming.value_eq_of_cache_agreement` says a cell table is *the* graph
+evaluation as soon as the cache agrees with it at the canonical inputs — which is exactly what a
+run that made those queries leaves behind.
 
 Read under `CacheReplay.replayQuery`, a hash call is a cache lookup, so the agreement
 hypothesis becomes a statement purely about the game's own cache. -/
@@ -91,7 +93,7 @@ theorem value_eq_cellsOfOutputs (publicSeed secretSeed : Digest)
     (CacheReplay.replayQuery cache) publicSeed secretSeed outputs ?_
   intro input output hentry
   have hcache := hagrees input output hentry
-  show ((cache input).getD default : Id HashOutput) = output
+  change ((cache input).getD default : Id HashOutput) = output
   rw [hcache]
   rfl
 
@@ -141,16 +143,5 @@ theorem hypertree_of_verifyInternal (pk : PublicKey) (message : Bytes) (parsed :
         (MessageDigest.leafIndex
           (Hashing.messageDigest (m := Id) parsed.randomizer pk message)).toFin = true :=
   haccept
-
-/-! ## The chain, composed
-
-Everything above joins into one implication: a forgery the *game* accepted, against the key
-the game generated, yields one of the three things the charges pay for. No step here is
-probabilistic — it is the structural reduction of SLH-DSA verification, carried from
-`Security.experiment`'s own verifier down to events about the oracle's answers.
-
-The honest FORS key is left existentially quantified because it is whatever the genuine
-secrets produce at the address the forgery's digest selects; the FORS side of the argument
-(`ForsDispatch.forsCollision_or_canonical_secrets`) takes it from there. -/
 
 end SlhDsaSecurity.GameBridge

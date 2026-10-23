@@ -40,8 +40,6 @@ most `2 ^ -165` under actual key generation. `IsMessageInput` is the message cla
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.CombinedCharge
 
 open CanonicalGraph

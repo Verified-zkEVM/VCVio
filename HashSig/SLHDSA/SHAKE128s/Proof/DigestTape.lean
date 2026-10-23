@@ -36,8 +36,6 @@ because the coverage charge needs two tape coordinates to be *distinct*.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.DigestTape
 
 /-! ## The recording oracle -/
@@ -171,7 +169,7 @@ theorem recorder_cache_value_persists {α : Type} (keep : Bytes → Prop)
         obtain ⟨sampled, -, hpair⟩ := hinner
         have hmid : inner.2 = state.1.cacheQuery queried sampled :=
           (Prod.ext_iff.mp hpair).2.symm
-        show inner.2 input = some answer
+        change inner.2 input = some answer
         rw [hmid]
         have hne : input ≠ queried := by
           intro hsame
@@ -182,7 +180,7 @@ theorem recorder_cache_value_persists {α : Type} (keep : Bytes → Prop)
       | some cached =>
         rw [QueryImpl.withCaching_run_some _ hqueried, support_pure,
           Set.mem_singleton_iff] at hinner
-        show inner.2 input = some answer
+        change inner.2 input = some answer
         rw [hinner]
         exact hentry
 

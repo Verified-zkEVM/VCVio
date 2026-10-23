@@ -87,6 +87,7 @@ noncomputable def carrierTail
 touches the cache and neither touches either recording, which is all `BracketedRun.Bracket`
 asks and all `ServingForget.run_fuseServing_map` asks. -/
 
+/-- Opening a signing bracket is a bracket: it keeps the cache and the recordings. -/
 theorem bracket_startServingOn (request : Message) :
     Bracket (ServedAgreement.startServingOn (τ := (DigestTape.Record × DigestTape.Record) × Nat)
       request) := by
@@ -96,6 +97,7 @@ theorem bracket_startServingOn (request : Message) :
   | none => exact ⟨rfl, rfl⟩
   | some framed => exact ⟨rfl, rfl⟩
 
+/-- Closing a signing bracket is a bracket: it keeps the cache and the recordings. -/
 theorem bracket_stopServingOn :
     Bracket (ServedAgreement.stopServingOn
       (τ := (DigestTape.Record × DigestTape.Record) × Nat)) :=
@@ -119,6 +121,8 @@ same map the brackets preserve — and that map has to keep the **count** as wel
 because the count is what the middle stage contributes to the tail's value. So the handler on
 the far side is `CountedHandler.romWithCount`, and this is the law. -/
 
+/-- One step of the carrier's handler, read through its cache and counter, is a step of
+the counted shared oracle. -/
 theorem handlerAt_step_forget (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) (queried : OracleWorld.Domain) (state : CountedState) :
     (fun z : OracleWorld.Range queried × CountedState => (z.1, (z.2.1.cache, z.2.2.2))) <$>
@@ -126,7 +130,7 @@ theorem handlerAt_step_forget (rightKeep : Walk → Bytes → HandlerCarrier.Sta
       (CountedHandler.romWithCount queried).run (state.1.cache, state.2.2) := by
   rw [handlerAt, CarrierFiles.countedCarrierRecorder, CountedHandler.withCount_run,
     CountedHandler.romWithCount_run, map_eq_bind_pure_comp, bind_assoc]
-  show _ = (KeygenUniform.rom queried).run
+  change _ = (KeygenUniform.rom queried).run
       (CacheView.cacheOf (σ := HandlerCarrier.State) (state.1, state.2.1).1) >>= _
   rw [← CarrierFiles.noticingRecorderOf_forget_step (keyAt walk) (rightKeep walk) queried
       (state.1, state.2.1), map_eq_bind_pure_comp, bind_assoc]
@@ -134,6 +138,7 @@ theorem handlerAt_step_forget (rightKeep : Walk → Bytes → HandlerCarrier.Sta
   simp only [Function.comp_def, pure_bind]
   rfl
 
+/-- The carrier's handler forgets to the counted shared oracle along the cache and counter. -/
 theorem forgetsAlong_counted (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) :
     ServingForget.ForgetsAlong (fun state : CountedState => (state.1.cache, state.2.2))
@@ -163,6 +168,7 @@ theorem startServingOn_cacheCount (request : Message) (state : CountedState) :
   | none => rfl
   | some framed => rfl
 
+/-- Closing a signing bracket keeps the cache and the counter. -/
 theorem stopServingOn_cacheCount (state : CountedState) :
     ((ServedAgreement.stopServingOn state).1.cache,
       (ServedAgreement.stopServingOn (τ := (DigestTape.Record × DigestTape.Record) × Nat)
@@ -200,7 +206,6 @@ computation, into the handler's own state, which is where the carrier tail keeps
 the two sides differ only in the handler, and the three stages are matched by the two laws
 already proved. -/
 
-set_option maxHeartbeats 1000000 in
 /-- **The recorded game splits at its three sequencing points**, under any handler. The split is
 the definition read out: `simulateQ` distributes over the `do` block's binds and `StateT.run`
 distributes over those. -/
@@ -227,7 +232,6 @@ theorem run_recordedAfterSeeds_split {S : Type}
 attribute [local irreducible] RecordedTail.recordedAfterSeeds Scheme.keygenInternal
   Scheme.verify Scheme.sign Security.countQueries
 
-set_option maxHeartbeats 1000000 in
 /-- **The recorded tail is a counted run of the shared oracle.** Nothing changes but where the
 count is kept: `countAllHashes` wraps the computation, the counted handler carries it in the
 state, and `run_romWithCount_count` says the two agree. -/
@@ -256,7 +260,6 @@ theorem first_stage_forget (rightKeep : Walk → Bytes → HandlerCarrier.State 
       (simulateQ CountedHandler.romWithCount computation).run (walk.2, 0) :=
   forgetsAlong_counted rightKeep walk computation (startAt walk.2, (([], []), 0))
 
-set_option maxHeartbeats 1000000 in
 /-- The middle stage's projection, named at the state it is used at. Same reason as
 `first_stage_forget`, one step later: `PhaseFusion.run_phase_fused`'s writer and state are
 determined only once the previous stage's rewrite has landed, so a rewrite that has to find them
@@ -280,7 +283,6 @@ theorem middle_stage_forget (rightKeep : Walk → Bytes → HandlerCarrier.State
       (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
       (adversary.main keys.1.2) 1 [] keys.2, Functor.map_map]
 
-set_option maxHeartbeats 1000000 in
 /-- The third stage's projection, named the same way. -/
 theorem last_stage_forget (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) (pk : PublicKey) (forgery : Forgery) (state : CountedState) :
@@ -300,6 +302,8 @@ them as a bind once is what lets the chain be normalised in one step instead of 
 with everything a bind, `bind_assoc` flattens both sides to the same shape and `bind_congr`
 walks them together. -/
 
+/-- **The first stage, projected.** The counted shared oracle's run is the carrier's run
+read through its cache and counter. -/
 theorem first_stage_bind (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) (walk : Walk)
     {α : Type} (computation : OracleComp OracleWorld α) :
     (simulateQ CountedHandler.romWithCount computation).run (walk.2, 0) =
@@ -309,7 +313,9 @@ theorem first_stage_bind (rightKeep : Walk → Bytes → HandlerCarrier.State �
   rw [← first_stage_forget rightKeep walk computation, map_eq_bind_pure_comp]
   rfl
 
-set_option maxHeartbeats 1000000 in
+/-- **The middle stage, projected.** The counted shared oracle's run of the recorded
+adversary is the bracketed fused phase over the carrier's handler, read through its cache and
+counter. -/
 theorem middle_stage_bind (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) (adversary : Adversary)
     (keys : (SecretKey × PublicKey) × CountedState) :
@@ -326,7 +332,8 @@ theorem middle_stage_bind (rightKeep : Walk → Bytes → HandlerCarrier.State �
   rw [middle_stage_forget rightKeep walk adversary keys, map_eq_bind_pure_comp]
   rfl
 
-set_option maxHeartbeats 1000000 in
+/-- **The last stage, projected.** The counted shared oracle's run of the counted verifier
+is the carrier's run, read through its cache and counter. -/
 theorem last_stage_bind (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) (pk : PublicKey) (forgery : Forgery) (state : CountedState) :
     (simulateQ CountedHandler.romWithCount (countRecorded verifierCost
@@ -339,7 +346,6 @@ theorem last_stage_bind (rightKeep : Walk → Bytes → HandlerCarrier.State →
   rw [← last_stage_forget rightKeep walk pk forgery state, map_eq_bind_pure_comp]
   rfl
 
-set_option maxHeartbeats 1000000 in
 /-- **The carrier tail forgets to the recorded tail.** Both sides are three-stage runs of a
 counted handler over the same computation — `recordedTail_eq_counted` is what put them there —
 and the three stages are matched one for one by the three bind laws above. -/
@@ -363,7 +369,6 @@ theorem forget_carrierTail (rightKeep : Walk → Bytes → HandlerCarrier.State 
   refine bind_congr fun final => ?_
   rfl
 
-set_option maxHeartbeats 1000000 in
 /-- **And so at the paired run**, which is both conjuncts of `LateProbes.ForgetsTo`. Forgetting
 is an equality of computations and not merely of distributions — the brackets and the filing
 change the recordings and nothing the projection keeps. -/

@@ -13,8 +13,8 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.FreshHitBound
 # The canonical target of a structural query
 
 `FreshHitBound.Hit` is the event that a query's answer matches an optional target chosen for
-each byte input. This file supplies the target that the structural extraction produces: a query whose
-bytes parse as a canonical graph input at some parent node is charged against *that node's
+each byte input. This file supplies the target that the structural extraction produces: a query
+whose bytes parse as a canonical graph input at some parent node is charged against *that node's
 own canonical cell value*, and only when the child values carried by the query deviate from
 the honest ones.
 
@@ -46,6 +46,7 @@ open CanonicalGraph
 def Honest (cells : Cells) (parsed : ParsedInput) : Prop :=
   ∀ child ∈ parsed.parent.children, parsed.candidates child = cells child
 
+/-- Honesty of a parsed query is decided child by child. -/
 instance (cells : Cells) (parsed : ParsedInput) : Decidable (Honest cells parsed) :=
   List.decidableBAll _ _
 
@@ -64,7 +65,7 @@ theorem canonicalTarget_canonical (publicSeed : Digest) (cells : Cells)
   have hhonest : Honest cells parsed := by
     intro child hchild
     exact hvalues child (hparent ▸ hchild)
-  simp only [canonicalTarget, hparse, if_pos hhonest]
+  simp only [canonicalTarget, hparse, ite_eq_left hhonest]
 
 /-- A cache all of whose inputs are honest canonical queries is clean for this target. -/
 theorem clean_of_canonical_cache (publicSeed : Digest) (cells : Cells)
@@ -97,7 +98,7 @@ theorem canonicalTarget_deviating (publicSeed : Digest) (cells candidates : Cell
       rw [← hvalues child hchild']
       exact hhonest child hchild'
     rw [canonicalTarget, hparse]
-    simp only [if_neg hnotHonest, hparent]
+    simp only [ite_eq_right hnotHonest, hparent]
 
 /-- The bridge from an extracted structural fault to a charged hit: a deviating query whose
 answer truncates to the canonical parent cell is an instance of `FreshHitBound.Hit`. -/

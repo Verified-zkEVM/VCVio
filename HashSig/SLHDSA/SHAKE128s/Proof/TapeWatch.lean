@@ -32,7 +32,6 @@ three-stage forms follow because the brackets do not touch the cache or the reco
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.TapeWatch
 
@@ -70,7 +69,8 @@ theorem expect_run_bind_le {ι : Type} {spec : OracleSpec ι} {S γ : Type}
     {α : Type} (computation : OracleComp spec α) (state : S)
     (cont : α × S → ProbComp γ) (final : γ → ℝ≥0∞)
     (hcont : ∀ z, ∑' w, Pr{let x ← cont z}[x = w] * final w ≤ value z.2) :
-    ∑' w, Pr{let x ← (simulateQ impl computation).run state >>= cont}[x = w] * final w ≤ value state := by
+    ∑' w, Pr{let x ← (simulateQ impl computation).run state >>= cont}[x = w] * final w ≤
+      value state := by
   rw [FiredCoverage.tsum_probOutput_bind]
   calc ∑' z, Pr{let x ← (simulateQ impl computation).run state}[x = z] *
         ∑' w, Pr{let x ← cont z}[x = w] * final w
@@ -189,8 +189,10 @@ theorem watchValue_step_le (leftKeep rightKeep : Bytes → σ → Prop) (target 
           exact mul_le_of_le_one_left' (OracleComp.tsum_prEvent_le_one _)
   · by_cases hsame : input = target
     swap
-    · calc ∑' z, Pr{let x ← ((noticingSplitTapeRecorder leftKeep rightKeep) (Sum.inr input)).run state}[x = z] * watchValue target hits z.2
-          = ∑' z, Pr{let x ← ((noticingSplitTapeRecorder leftKeep rightKeep) (Sum.inr input)).run state}[x = z] * watchValue target hits state := by
+    · calc ∑' z, Pr{let x ← ((noticingSplitTapeRecorder leftKeep rightKeep)
+              (Sum.inr input)).run state}[x = z] * watchValue target hits z.2
+          = ∑' z, Pr{let x ← ((noticingSplitTapeRecorder leftKeep rightKeep)
+              (Sum.inr input)).run state}[x = z] * watchValue target hits state := by
             refine tsum_congr fun z => ?_
             by_cases hz : z ∈ support (((noticingSplitTapeRecorder leftKeep rightKeep)
               (Sum.inr input)).run state)
@@ -224,7 +226,8 @@ theorem watchValue_step_le (leftKeep rightKeep : Bytes → σ → Prop) (target 
       exact le_rfl
     | none =>
       have hfresh : CacheView.cacheOf noticed input = none := by rw [hcacheNoticed, hcached]
-      have hstart : watchValue input hits (carrier, (leftTape, rightTape), (leftRecord, rightRecord)) =
+      have hstart :
+          watchValue input hits (carrier, (leftTape, rightTape), (leftRecord, rightRecord)) =
           Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[hits x] := by
         simp only [watchValue, hcached]
       rw [hstart]
@@ -294,6 +297,7 @@ theorem watchValue_onCarrierTape (target : Bytes) (hits : HashOutput → Prop) (
     (state : SplitTapeState σ) :
     watchValue target hits (onCarrierTape f state) = watchValue target hits state := by
   simp only [watchValue, onCarrierTape, hf]
+  rfl
 
 variable {ω : Type} [Monoid ω]
 

@@ -9,26 +9,15 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 
 /-!
-# A writer the handler cannot read is a piece of the state
+# Moving a query cost from the handler into the computation
 
-The adversary's phase of the experiment runs in `Security.CountedRun`, a writer of `Counts`
-over a state of signing requests over the game's world. The charge, on the other side, wants a
-handler in `StateT σ ProbComp`, because that is the only shape `QueryImpl.Stateful` — and with
-it the frame machinery that puts two handlers side by side on one state — admits. The writer is
-in the way.
-
-It need not be. A writer accumulates a monoid and the handler **cannot read it back**: that is
-not an assumption about `Counts`, it is what `WriterT`'s type says, since the only thing a
-`WriterT ω m` computation receives is an `m`-value and the only thing it can do with the
-accumulated value is multiply more onto it. So the accumulation can equally well be carried in
-the state, and `toStateful` does exactly that: the same handler, with its output multiplied
-into a state component instead of told to a writer.
-
-`run_toStateful` is the transport, and it is an equality of computations rather than of laws:
-running the restated handler from `(w, s)` is running the original from `s` and multiplying `w`
-onto whatever it accumulated. Nothing about the experiment changes — `CountedRun` and
-`Security.signingOracle` are the experiment and stay exactly as they are — which is the point
-of proving the transport rather than redefining them.
+The adversary's phase of the experiment charges each hash query through a handler wrapped with
+`QueryImpl.withAddCost`, which tells the cost to a writer as it answers. A handler cannot read
+back what its writer has accumulated, so the same count can be produced by the computation
+itself: `run_simulateQ_withAddCost` shows that running a computation under the cost-wrapped
+handler equals first rewriting it with `addCostOracle` into one that carries its own count and
+then answering it with the uncharged handler. This is an equality of computations, not only of
+their laws; `run_withAddCost_apply` is the single-query case.
 -/
 
 @[expose] public section
@@ -36,9 +25,6 @@ of proving the transport rather than redefining them.
 open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.WriterState
-
-variable {ι : Type} {E : OracleSpec ι} {ω σ : Type} [Monoid ω]
-  {M : Type → Type} [Monad M] [LawfulMonad M]
 
 /-! ## Counting before answering, and counting after
 
@@ -54,6 +40,7 @@ alongside. That is why the experiment's counts are moved into the computation be
 are put under one handler, and why they come out as the same values afterwards.
 -/
 
+/-- Running one cost-wrapped query answers it and pairs the answer with its cost. -/
 theorem run_withAddCost_apply {ι : Type} {spec : OracleSpec ι} {ω : Type} [AddCommMonoid ω]
     {m : Type → Type} [Monad m] [LawfulMonad m] (impl : QueryImpl spec m)
     (costFn : spec.Domain → ω) (queried : spec.Domain) :
@@ -79,12 +66,5 @@ theorem run_simulateQ_withAddCost {ι : Type} {spec : OracleSpec ι} {ω : Type}
     refine bind_congr fun value => ?_
     simp only []
     rw [ih value, simulateQ_map, addCostOracle]
-
-/-! ## The experiment's own signing oracle
-
-The transport applies to it as it stands: `Security.CountedRun` is a writer of `Counts` — a
-monoid in its multiplicative guise — over a state of signing requests, so its counts and its log
-sit side by side in one state, which is the shape a stateful handler takes. The oracle itself is
-untouched; this is the same handler read differently. -/
 
 end SlhDsaSecurity.WriterState

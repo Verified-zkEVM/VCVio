@@ -32,15 +32,15 @@ Three things the shape is chosen to preserve, each of which would be a silent fa
   its queries in the record, and the adversary's are recorded by `phaseCost` where it stands.
   The honest phase is recorded by neither, which is what the stripping bought.
 
-**On the lift, which is not as innocent as it looks.** There are at least three terms denoting
-"a world computation in the phase's spec" — the coercion as this file's elaborator synthesizes
-it, the coercion as VCVio's `QueryImpl.simulateQ_add_liftComp_left` is stated at, and the left injection
-written out by hand — and *no two of them are definitionally equal*. Checking that is one `rfl`,
-and it fails. So `liftWorld` pins the one the upstream lemma uses, by supplying the instance
-argument, and is the only place in this development that supplies it; everything else goes
-through `liftWorld`. Nothing is taken on trust by doing so: `recordedAfterSeedsAt` contains no
-lift at all, so `recordedAfterSeedsAt_eq` never asks two lifts to agree, and it is that law
-rather than the lift's identity that says the construction is the game.
+**On the lift, which is not as innocent as it looks.** There are at least three terms denoting "a
+world computation in the phase's spec" — the coercion as this file's elaborator synthesizes it, the
+coercion as VCVio's `QueryImpl.simulateQ_add_liftComp_left` is stated at, and the left injection
+written out by hand — and *no two of them are definitionally equal*. Checking that is one `rfl`, and
+it fails. So `liftWorld` pins the one the upstream lemma uses, by supplying the instance argument,
+and is the only place in this development that supplies it; everything else goes through
+`liftWorld`. Nothing is taken on trust by doing so: `recordedAfterSeedsAt` contains no lift at all,
+so `recordedAfterSeedsAt_eq` never asks two lifts to agree, and it is that law rather than the
+lift's identity that says the construction is the game.
 
 What the signer gains by moving is what the whole exercise is for: it is something the handler
 does, so its reads of the cell table are frozen when the run is stalled.

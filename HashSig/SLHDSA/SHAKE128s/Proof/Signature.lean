@@ -11,13 +11,18 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.Hashing
 public import Mathlib.Tactic.IntervalCases
 
 /-!
-# Signature
+# Signature serialization round trip
+
+Byte-level facts about the SLH-DSA signature encoding: the serialized lengths of each component,
+the positions at which `readDigest` finds every field of `Signature.toBytes`, and
+`Signature.fromBytes_toBytes`, which states that parsing an encoded signature returns it.
 -/
 
 @[expose] public section
 
 namespace SlhDsaSecurity
 
+/-- FORS tree signatures with equal fields are equal. -/
 theorem ForsTreeSignature.ext {left right : ForsTreeSignature}
     (hsecret : left.secret = right.secret)
     (hauthentication : left.authentication = right.authentication) : left = right := by
@@ -25,6 +30,7 @@ theorem ForsTreeSignature.ext {left right : ForsTreeSignature}
   cases right
   simp_all
 
+/-- XMSS signatures with equal fields are equal. -/
 theorem XmssSignature.ext {left right : XmssSignature}
     (hwots : left.wots = right.wots)
     (hauthentication : left.authentication = right.authentication) : left = right := by
@@ -32,6 +38,7 @@ theorem XmssSignature.ext {left right : XmssSignature}
   cases right
   simp_all
 
+/-- A serialized array of `size` digests has `size * n` bytes. -/
 @[simp] theorem digestArrayBytes_length {size : Nat} (values : Fin size → Digest) :
     (digestArrayBytes values).length = size * n := by
   induction size with
@@ -43,14 +50,17 @@ theorem XmssSignature.ext {left right : XmssSignature}
     rw [ih]
     simp [Nat.succ_mul, Nat.add_comm]
 
+/-- A serialized XMSS signature has `(chains + subtreeHeight) * n` bytes. -/
 @[simp] theorem XmssSignature.toBytes_length (signature : XmssSignature) :
     signature.toBytes.length = (chains + subtreeHeight) * n := by
   simp [XmssSignature.toBytes, Nat.add_mul]
 
+/-- A serialized FORS tree signature has `(1 + forsHeight) * n` bytes. -/
 @[simp] theorem ForsTreeSignature.toBytes_length (signature : ForsTreeSignature) :
     signature.toBytes.length = (1 + forsHeight) * n := by
   simp [ForsTreeSignature.toBytes, Nat.add_mul]
 
+/-- A serialized signature has `signatureBytes` bytes. -/
 @[simp] theorem Signature.toBytes_length (signature : Signature) :
     signature.toBytes.length = signatureBytes := by
   simp only [Signature.toBytes, List.length_append, length_bytesBE, List.length_flatten,
@@ -60,8 +70,6 @@ theorem XmssSignature.ext {left right : XmssSignature}
   simp [signatureBytes, layers, totalHeight, subtreeHeight, forsTrees,
     forsHeight, chains, messageDigits, checksumDigits, winternitzBits, n]
 
-set_option maxRecDepth 10000 in
-set_option maxHeartbeats 2000000 in
 /-- The big-endian fold of the sixteen bytes of a `128`-bit value rebuilds that value. -/
 private theorem foldl_bytes128 (value : BitVec 128) :
     ((List.ofFn fun i : Fin 16 => UInt8.ofBitVec (value.extractLsb' (8 * i.val) 8)).reverse).foldl
@@ -82,18 +90,19 @@ private theorem foldl_bytes128 (value : BitVec 128) :
     simp only [BitVec.getLsbD_or, BitVec.getLsbD_shiftLeft, BitVec.getLsbD_setWidth,
       BitVec.getLsbD_extractLsb'] <;> simp
 
-set_option maxRecDepth 10000 in
-set_option maxHeartbeats 2000000 in
+/-- Reading a digest from its own big-endian encoding returns it. -/
 theorem Signature.readDigest_bytesBE (value : Digest) :
     readDigest (bytesBE n value) 0 = value := by
   unfold readDigest
   rw [List.drop_zero, List.take_of_length_le (by simp)]
   exact foldl_bytes128 value
 
+/-- Reading past a prefix reads from the remainder. -/
 theorem Signature.readDigest_append_prefix (front input : Bytes) (offset : Nat) :
     readDigest (front ++ input) (front.length + offset) = readDigest input offset := by
   simp only [readDigest, ← List.drop_drop, List.drop_append_length]
 
+/-- A read that fits inside the input ignores any suffix. -/
 theorem Signature.readDigest_append_suffix (input suffix : Bytes) (offset : Nat)
     (h : offset + n ≤ input.length) :
     readDigest (input ++ suffix) offset = readDigest input offset := by
@@ -101,6 +110,7 @@ theorem Signature.readDigest_append_suffix (input suffix : Bytes) (offset : Nat)
   rw [List.drop_append_of_le_length (by omega),
     List.take_append_of_le_length (by simp only [List.length_drop]; omega)]
 
+/-- Reading the leading digest field returns it. -/
 theorem Signature.readDigest_field (value : Digest) (suffix : Bytes) :
     readDigest (bytesBE n value ++ suffix) 0 = value := by
   rw [readDigest_append_suffix _ _ _ (by simp), readDigest_bytesBE]
@@ -127,6 +137,7 @@ theorem Signature.readDigest_flatten {size : Nat} (blocks : Fin size → Bytes)
       rw [readDigest_append_prefix]
       exact ih (fun j => blocks j.succ) (fun j => hlen j.succ) j
 
+/-- Reading at position `i * n` of a serialized digest array returns its `i`-th digest. -/
 theorem Signature.readDigest_digestArray {size : Nat} (values : Fin size → Digest)
     (i : Fin size) (suffix : Bytes) :
     readDigest (digestArrayBytes values ++ suffix) (i.val * n) = values i := by
@@ -134,11 +145,13 @@ theorem Signature.readDigest_digestArray {size : Nat} (values : Fin size → Dig
     (by omega) suffix
   simpa only [digestArrayBytes, Nat.add_zero, readDigest_bytesBE] using h
 
+/-- The first digest of an encoded signature is its randomizer. -/
 theorem Signature.readDigest_randomizer (signature : Signature) :
     readDigest signature.toBytes 0 = signature.randomizer := by
   simp only [Signature.toBytes, List.append_assoc]
   exact readDigest_field _ _
 
+/-- Reads inside the `i`-th FORS block of an encoded signature are reads of that block. -/
 theorem Signature.readDigest_fors (signature : Signature) (i : Fin forsTrees)
     (offset : Nat) (hoffset : offset + n ≤ (1 + forsHeight) * n) :
     readDigest signature.toBytes (n + i.val * ((1 + forsHeight) * n) + offset) =
@@ -151,6 +164,7 @@ theorem Signature.readDigest_fors (signature : Signature) (i : Fin forsTrees)
   exact readDigest_flatten (fun j => (signature.fors j).toBytes) ((1 + forsHeight) * n)
     (by simp) i offset hoffset _
 
+/-- Reads inside the `i`-th XMSS block of an encoded signature are reads of that block. -/
 theorem Signature.readDigest_hypertree (signature : Signature) (i : Fin layers)
     (offset : Nat) (hoffset : offset + n ≤ (chains + subtreeHeight) * n) :
     readDigest signature.toBytes
@@ -171,6 +185,7 @@ theorem Signature.readDigest_hypertree (signature : Signature) (i : Fin layers)
     (fun j => (signature.hypertree j).toBytes) ((chains + subtreeHeight) * n)
     (by simp) i offset hoffset []
 
+/-- The encoded signature holds the secret of FORS tree `i` at its offset. -/
 theorem Signature.readDigest_fors_secret (signature : Signature) (i : Fin forsTrees) :
     readDigest signature.toBytes (n * (1 + i.val * (1 + forsHeight))) =
       (signature.fors i).secret := by
@@ -179,6 +194,7 @@ theorem Signature.readDigest_fors_secret (signature : Signature) (i : Fin forsTr
   rw [readDigest_fors _ _ _ (by decide)]
   exact readDigest_field _ _
 
+/-- The encoded signature holds each FORS authentication digest at its offset. -/
 theorem Signature.readDigest_fors_auth (signature : Signature) (i : Fin forsTrees)
     (j : Fin forsHeight) :
     readDigest signature.toBytes (n * (2 + i.val * (1 + forsHeight) + j.val)) =
@@ -191,6 +207,7 @@ theorem Signature.readDigest_fors_auth (signature : Signature) (i : Fin forsTree
   rw [readDigest_append_prefix]
   simpa only [List.append_nil] using readDigest_digestArray (signature.fors i).authentication j []
 
+/-- The encoded signature holds each WOTS signature value at its offset. -/
 theorem Signature.readDigest_wots (signature : Signature) (i : Fin layers) (j : Fin chains) :
     readDigest signature.toBytes
         (n * (1 + forsTrees * (1 + forsHeight) + i.val * (chains + subtreeHeight) + j.val)) =
@@ -207,12 +224,15 @@ theorem Signature.readDigest_wots (signature : Signature) (i : Fin layers) (j : 
     omega)]
   exact readDigest_digestArray _ j _
 
+/-- The encoded signature holds each XMSS authentication digest at its offset. -/
 theorem Signature.readDigest_xmss_auth (signature : Signature) (i : Fin layers)
     (j : Fin subtreeHeight) :
     readDigest signature.toBytes
-        (n * (1 + forsTrees * (1 + forsHeight) + i.val * (chains + subtreeHeight) + chains + j.val)) =
+        (n * (1 + forsTrees * (1 + forsHeight) + i.val * (chains + subtreeHeight) + chains +
+          j.val)) =
       (signature.hypertree i).authentication j := by
-  rw [show n * (1 + forsTrees * (1 + forsHeight) + i.val * (chains + subtreeHeight) + chains + j.val) =
+  rw [show n * (1 + forsTrees * (1 + forsHeight) + i.val * (chains + subtreeHeight) + chains +
+      j.val) =
     n + forsTrees * ((1 + forsHeight) * n) + i.val * ((chains + subtreeHeight) * n) +
       (chains * n + j.val * n) by
         dsimp [n, forsHeight, forsTrees, chains, subtreeHeight, messageDigits, checksumDigits,
@@ -229,6 +249,7 @@ theorem Signature.readDigest_xmss_auth (signature : Signature) (i : Fin layers)
   simpa only [List.append_nil] using
     readDigest_digestArray (signature.hypertree i).authentication j []
 
+/-- Parsing an encoded signature returns it. -/
 @[simp] theorem Signature.fromBytes_toBytes (signature : Signature) :
     fromBytes? signature.toBytes = some signature := by
   simp only [fromBytes?, toBytes_length, ↓reduceIte, Option.some.injEq]

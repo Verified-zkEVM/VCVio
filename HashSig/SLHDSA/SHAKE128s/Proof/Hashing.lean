@@ -9,17 +9,25 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 
 /-!
-# Hashing
+# Injectivity of the hash input encodings
+
+The byte encodings fed to the hash are injective: big-endian byte strings (`bytesBE_injective`),
+ADRS addresses (`Address.toBytes_injective`), the inputs of `PRF_msg`, `H_msg` and the tweakable
+hashes (`Hashing.randomizerInput_injective`, `Hashing.messageInput_injective`,
+`Hashing.tweakableInput_injective`), and the pure-mode message framing
+(`Message.frame_injective`). Distinct hash calls therefore query the random oracle at distinct
+points.
 -/
 
 @[expose] public section
 
 namespace SlhDsaSecurity
 
+/-- The big-endian encoding of a `count`-byte value has `count` bytes. -/
 @[simp] theorem length_bytesBE (count : Nat) (value : BitVec (8 * count)) :
     (bytesBE count value).length = count := by simp [bytesBE]
 
-/-- The byte-order reversal of the existing XMSS bit-extraction argument. -/
+/-- The big-endian byte encoding is injective. -/
 theorem bytesBE_injective (count : Nat) : Function.Injective (bytesBE count) := by
   intro left right heq
   have hbytes := List.ofFn_injective (List.reverse_inj.mp heq)
@@ -32,13 +40,16 @@ theorem bytesBE_injective (count : Nat) : Function.Injective (bytesBE count) := 
   have hposition : 8 * (bit / 8) + bit % 8 = bit := by omega
   simpa [byte, BitVec.getLsbD_extractLsb', hmod, hposition] using hlocal
 
+/-- Distinct address types have distinct codes. -/
 theorem AddressType.code_injective : Function.Injective AddressType.code := by
   intro left right h
   cases left <;> cases right <;> simp_all [AddressType.code]
 
+/-- An encoded address is 32 bytes long. -/
 @[simp] theorem Address.toBytes_length (address : Address) : address.toBytes.length = 32 := by
   simp [Address.toBytes]
 
+/-- The byte encoding of addresses is injective. -/
 theorem Address.toBytes_injective : Function.Injective Address.toBytes := by
   intro left right heq
   simp only [Address.toBytes] at heq
@@ -59,6 +70,7 @@ theorem Address.toBytes_injective : Function.Injective Address.toBytes := by
 
 namespace Hashing
 
+/-- The `PRF_msg` input determines its key, seed and message. -/
 theorem randomizerInput_injective {prf prf' seed seed' : Digest} {message message' : Bytes}
     (h : randomizerInput prf seed message = randomizerInput prf' seed' message') :
     prf = prf' ∧ seed = seed' ∧ message = message' := by
@@ -67,6 +79,7 @@ theorem randomizerInput_injective {prf prf' seed seed' : Digest} {message messag
   obtain ⟨hprf, hseed⟩ := List.append_inj hprefix (by simp)
   exact ⟨bytesBE_injective n hprf, bytesBE_injective n hseed, hmessage⟩
 
+/-- The `H_msg` input determines its randomizer, public key and message. -/
 theorem messageInput_injective {randomizer randomizer' : Digest} {pk pk' : PublicKey}
     {message message' : Bytes}
     (h : messageInput randomizer pk message = messageInput randomizer' pk' message') :
@@ -82,6 +95,7 @@ theorem messageInput_injective {randomizer randomizer' : Digest} {pk pk' : Publi
   cases pk'
   simp_all
 
+/-- The tweakable-hash input determines its public seed, address and payload. -/
 theorem tweakableInput_injective {seed seed' : Digest} {address address' : Address}
     {payload payload' : Bytes}
     (h : tweakableInput seed address payload = tweakableInput seed' address' payload') :

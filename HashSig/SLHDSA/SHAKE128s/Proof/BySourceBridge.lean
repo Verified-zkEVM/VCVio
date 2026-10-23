@@ -48,21 +48,25 @@ noncomputable def joint (adversary : Adversary) :
     countAllHashes (afterKeygen adversary first.1) >>= fun second =>
       pure (first, second)
 
+/-- The experiment is key generation followed by the phase after it. -/
 theorem experiment_eq_keygen_bind (adversary : Adversary) :
     experiment adversary = Scheme.keygen >>= afterKeygen adversary := rfl
 
+/-- Counting the whole experiment is the joint run with its two counts added. -/
 theorem countAllHashes_experiment (adversary : Adversary) :
     countAllHashes (experiment adversary) =
       (fun pair => (pair.2.1, pair.1.2 + pair.2.2)) <$> joint adversary := by
   rw [experiment_eq_keygen_bind, GrowthBudget.countAllHashes_bind, joint]
   simp [map_bind]
 
+/-- The experiment counted by source is the joint run with its two counts kept apart. -/
 theorem experimentBySource_eq (adversary : Adversary) :
     experimentBySource adversary =
       (fun pair => (pair.2.1, sourceCounts pair.2.1 pair.1.2 pair.2.2)) <$> joint adversary := by
   unfold experimentBySource joint
   simp [map_bind]
 
+/-- Running a reshaped computation in the random-oracle model reshapes its run. -/
 theorem run_map {α β : Type} (reshape : α → β) (computation : OracleComp OracleWorld α) :
     Xmss.RandomOracleModel.run (reshape <$> computation) =
       reshape <$> Xmss.RandomOracleModel.run computation := by
@@ -94,6 +98,7 @@ theorem advantage_securityGame (adversary : Adversary) :
 
 /-! ## Key generation's count -/
 
+/-- Key generation draws the warmed game's seeds and then runs `Scheme.keygenInternal`. -/
 theorem keygen_eq_seeds_bind :
     (Scheme.keygen : OracleComp OracleWorld (SecretKey × PublicKey)) =
       (liftM WarmedGame.seeds : OracleComp OracleWorld _) >>= fun sds =>
@@ -106,8 +111,6 @@ theorem keygen_eq_seeds_bind :
 attribute [local irreducible] Scheme.keygenInternal Scheme.keygen Scheme.verify Scheme.sign
   afterKeygen Security.countQueries
 
-set_option maxHeartbeats 1000000 in
-set_option linter.constructorNameAsVariable false in
 /-- **Key generation spends its whole top tree, on every run.** -/
 theorem keygen_count_ge (cache : QueryCache HashSpec)
     (result : ((SecretKey × PublicKey) × Nat) × QueryCache HashSpec)
@@ -122,8 +125,6 @@ theorem keygen_count_ge (cache : QueryCache HashSpec)
   simp only at h
   omega
 
-set_option maxHeartbeats 1000000 in
-set_option linter.constructorNameAsVariable false in
 /-- **Every result of the game counted by source carries the outcome's own counts**, and a key
 generation count of at least its top tree. -/
 theorem exists_sourceCounts (adversary : Adversary)
@@ -158,12 +159,11 @@ def TailBudgetW (adversary : Adversary) (q : Nat) : Prop :=
     result.1.1.counts .signing ≤ signingLimit ∧
       result.1.1.counts.work + result.1.1.counts .signing ≤ q
 
+/-- The `adversaryWork` total of a tally is its `sign`, `hash` and `verifier` counts. -/
 theorem sum_adversaryWork (counts : Xmss.Unforgeability.QueryCounts) :
     ∑ kind ∈ adversaryWork, counts kind = counts .sign + (counts .hash + counts .verifier) := by
   simp [adversaryWork, Finset.sum_insert]
 
-set_option maxHeartbeats 1000000 in
-set_option linter.constructorNameAsVariable false in
 /-- **The framework's hypotheses at `adversaryWork` give the tail budget.** -/
 theorem tailBudgetW_of {adversary : Adversary} {q : Nat}
     (hlimit : WithinSigningLimit adversary)

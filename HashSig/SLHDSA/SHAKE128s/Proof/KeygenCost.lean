@@ -108,8 +108,6 @@ theorem count_merkleNode_ge (secretSeed publicSeed : Digest) (address : Address)
 
 attribute [local irreducible] SlhDsaSecurity.Merkle.node
 
-set_option linter.constructorNameAsVariable false in
-set_option maxHeartbeats 1000000 in
 /-- **Key generation costs at least `36 · 2 ^ subtreeHeight` calls.** -/
 theorem count_keygen_ge (secretSeed prfSeed publicSeed : Digest)
     (cache : QueryCache HashSpec)

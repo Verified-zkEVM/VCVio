@@ -150,7 +150,6 @@ theorem cache_value_persists (leftKeep rightKeep : Bytes → σ → Prop)
 
 /-! ## The cover across the phase -/
 
-set_option maxHeartbeats 2000000 in
 open scoped Classical in
 /-- **A query whose answer the phase ends holding is recorded on one side or the other.**
 

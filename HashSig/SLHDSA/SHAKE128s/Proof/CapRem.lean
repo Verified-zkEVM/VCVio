@@ -48,9 +48,12 @@ noncomputable def capCompRem (weight : ι → Nat) (fallback : α) :
         liftM (spec.query t) >>= fun answer => rest answer (remaining - weight t)
       else pure (fallback, 0)) oa limit
 
+/-- The remainder-reporting cap returns a pure value with the whole budget left. -/
 theorem capCompRem_pure (weight : ι → Nat) (fallback : α) (limit : Nat) (value : α) :
     capCompRem weight fallback limit (pure value : OracleComp spec α) = pure (value, limit) := rfl
 
+/-- The remainder-reporting cap pays for a query it can afford, else returns the fallback with
+nothing left. -/
 theorem capCompRem_query_bind (weight : ι → Nat) (fallback : α) (limit : Nat) (t : ι)
     (next : spec.Range t → OracleComp spec α) :
     capCompRem weight fallback limit (liftM (spec.query t) >>= next) =
@@ -99,7 +102,8 @@ theorem probEvent_le_capCompRem (impl : QueryImpl spec (StateT S ProbComp)) (wei
       Pr{let p ← ((simulateQ impl oa).run state >>= fun z =>
             (fun b => (z, b)) <$> next ((z.1, cost state + limit - cost z.2), z.2) :
             ProbComp ((α × S) × β))}[cost p.1.2 ≤ cost state + limit ∧ event p.2] ≤
-        Pr{let x ← (simulateQ impl (capCompRem weight fallback limit oa)).run state >>= next}[event x] := by
+        Pr{let x ← (simulateQ impl (capCompRem weight fallback limit oa)).run state >>= next}[
+          event x] := by
   intro oa
   induction oa using OracleComp.inductionOn with
   | pure value =>
@@ -146,9 +150,11 @@ noncomputable def capCompOpt (weight : ι → Nat) :
         liftM (spec.query t) >>= fun answer => rest answer (remaining - weight t)
       else pure none) oa limit
 
+/-- The option-reporting cap returns a pure value as `some`. -/
 theorem capCompOpt_pure (weight : ι → Nat) (limit : Nat) (value : α) :
     capCompOpt weight limit (pure value : OracleComp spec α) = pure (some value) := rfl
 
+/-- The option-reporting cap pays for a query it can afford, else returns `none`. -/
 theorem capCompOpt_query_bind (weight : ι → Nat) (limit : Nat) (t : ι)
     (next : spec.Range t → OracleComp spec α) :
     capCompOpt weight limit (liftM (spec.query t) >>= next) =

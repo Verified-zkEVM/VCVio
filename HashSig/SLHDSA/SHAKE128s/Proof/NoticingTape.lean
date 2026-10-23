@@ -35,7 +35,6 @@ two blocks it read kept beside its result.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.NoticingTape
 
@@ -57,11 +56,13 @@ noncomputable def noticingSplitTapeRecorder (leftKeep rightKeep : Bytes → σ �
         ((splitTapeRecorder leftKeep rightKeep) (Sum.inr input)).run
           (CacheView.onQuery state.1 input, state.2)
 
+/-- A coin query to the noticing recorder is the tape recorder's coin step. -/
 theorem noticingSplitTapeRecorder_run_inl (leftKeep rightKeep : Bytes → σ → Prop)
     (coin : unifSpec.Domain) (state : SplitTapeState σ) :
     ((noticingSplitTapeRecorder leftKeep rightKeep) (Sum.inl coin)).run state =
       ((splitTapeRecorder leftKeep rightKeep) (Sum.inl coin)).run state := rfl
 
+/-- A hash query to the noticing recorder is the tape recorder's step at the noticed carrier. -/
 theorem noticingSplitTapeRecorder_run_inr (leftKeep rightKeep : Bytes → σ → Prop)
     (input : Bytes) (state : SplitTapeState σ) :
     ((noticingSplitTapeRecorder leftKeep rightKeep) (Sum.inr input)).run state =
@@ -162,7 +163,6 @@ noncomputable def blockRunOf {ρ : Type} (run : List HashOutput → List HashOut
     padding rightLength >>= fun rightTape =>
       (fun result => ((leftTape, rightTape), result)) <$> run leftTape rightTape
 
-set_option maxHeartbeats 2000000 in
 open scoped Classical in
 /-- **The charge on one target cell**, at the repaired recorder. -/
 theorem prob_selected_hit_le_of_causal {ρ : Type}
@@ -176,9 +176,11 @@ theorem prob_selected_hit_le_of_causal {ρ : Type}
     (hcausal : ∀ (leftTape rightTape : List HashOutput) (value : HashOutput),
       Pr{let z ← run leftTape (rightTape.set index value)}[index < (rightOfResult z).length] =
         Pr{let z ← run leftTape rightTape}[index < (rightOfResult z).length]) :
-    Pr{let outcome ← blockRunOf run leftLength rightLength}[index < (rightOfResult outcome.2).length ∧ goodBlock outcome.1.1 ∧
+    Pr{let outcome ← blockRunOf run leftLength rightLength}[
+          index < (rightOfResult outcome.2).length ∧ goodBlock outcome.1.1 ∧
           ∃ value, outcome.1.2[index]? = some value ∧ hit outcome.1.1 value] ≤
-      Pr{let outcome ← blockRunOf run leftLength rightLength}[index < (rightOfResult outcome.2).length] * rate := by
+      Pr{let outcome ← blockRunOf run leftLength rightLength}[
+          index < (rightOfResult outcome.2).length] * rate := by
   classical
   set target : List HashOutput → List HashOutput → ℝ≥0∞ := fun leftTape rightTape =>
     Pr{let result ← run leftTape rightTape}[index < (rightOfResult result).length] with htarget
@@ -267,7 +269,8 @@ theorem sum_prob_selected_le_expected_of {ρ : Type}
     (rightOfResult : ρ → Record)
     (leftLength rightLength : Nat) :
     (∑ index : Fin rightLength,
-        Pr{let outcome ← blockRunOf run leftLength rightLength}[index.val < (rightOfResult outcome.2).length]) ≤
+        Pr{let outcome ← blockRunOf run leftLength rightLength}[
+          index.val < (rightOfResult outcome.2).length]) ≤
       ∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
         (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞) := by
   classical
@@ -297,7 +300,6 @@ theorem sum_prob_selected_le_expected_of {ρ : Type}
           (fun left _ right _ hvalue => Fin.val_injective hvalue)
         simpa using hinject
 
-set_option maxHeartbeats 1000000 in
 open scoped Classical in
 /-- **The coverage charge, as an expectation**, at the repaired recorder. This is what the
 carrier's answer run composes with. -/
@@ -313,7 +315,8 @@ theorem prob_exists_hit_le_expected_of_causal {ρ : Type}
         (value : HashOutput),
       Pr{let z ← run leftTape (rightTape.set index value)}[index < (rightOfResult z).length] =
         Pr{let z ← run leftTape rightTape}[index < (rightOfResult z).length]) :
-    Pr{let outcome ← blockRunOf run leftLength rightLength}[∃ index : Fin rightLength, index.val < (rightOfResult outcome.2).length ∧
+    Pr{let outcome ← blockRunOf run leftLength rightLength}[
+            ∃ index : Fin rightLength, index.val < (rightOfResult outcome.2).length ∧
             goodBlock outcome.1.1 ∧
             ∃ value, outcome.1.2[index.val]? = some value ∧ hit outcome.1.1 value] ≤
       (∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
@@ -355,7 +358,6 @@ step in `sum_prob_selected_le_expected_of` would be summing over a different thi
 once and threaded, the index set stays `Fin rightLength` over one block and the rate stays the
 per-cell one. -/
 
-set_option maxHeartbeats 1000000 in
 open scoped Classical in
 /-- **The tape factorisation with an arbitrary continuation on each side.** The hypothesis is
 the conclusion's own shape at the continuation, which is what lets this be used at a nested run:
@@ -417,8 +419,9 @@ theorem evalDist_noticingSplitTapeRun_cont (leftKeep rightKeep : Bytes → σ �
               splitTapeRecorder_run_left_nil leftKeep rightKeep input noticed _ leftRecord
                 rightRecord hfresh hleft, bind_assoc, pure_bind]
             refine (EvalDistEq.bind_right _
-              (fun value : HashOutput => ih value 0 rightLength (CacheView.update noticed input value)
-                (leftRecord ++ [(input, value)]) rightRecord)).trans ?_
+              (fun value : HashOutput =>
+                ih value 0 rightLength (CacheView.update noticed input value)
+                  (leftRecord ++ [(input, value)]) rightRecord)).trans ?_
             simp only [padding_zero_bind]
             exact OracleComp.EvalDistEq.bind_bind_swap _ (padding rightLength) _
           | succ remaining =>
@@ -438,8 +441,9 @@ theorem evalDist_noticingSplitTapeRun_cont (leftKeep rightKeep : Bytes → σ �
                 splitTapeRecorder_run_right_nil leftKeep rightKeep input noticed _ leftRecord
                   rightRecord hfresh hleft hright, bind_assoc, pure_bind]
               refine (EvalDistEq.bind_right _
-                (fun value : HashOutput => ih value leftLength 0 (CacheView.update noticed input value)
-                  leftRecord (rightRecord ++ [(input, value)]))).trans ?_
+                (fun value : HashOutput =>
+                  ih value leftLength 0 (CacheView.update noticed input value)
+                    leftRecord (rightRecord ++ [(input, value)]))).trans ?_
               simp only [padding_zero_bind]
               exact OracleComp.EvalDistEq.bind_bind_swap _ (padding leftLength) _
             | succ remaining =>
@@ -466,21 +470,22 @@ theorem evalDist_noticingSplitTapeRun_cont (leftKeep rightKeep : Bytes → σ �
             (leftRecord, rightRecord) (fun h => hfresh h.1) (fun h => hfresh h.1),
           bind_assoc, pure_bind]
         refine (EvalDistEq.bind_right _
-          (fun step : HashOutput × σ => ih step.1 leftLength rightLength step.2 leftRecord rightRecord)).trans ?_
+          (fun step : HashOutput × σ =>
+            ih step.1 leftLength rightLength step.2 leftRecord rightRecord)).trans ?_
         exact evalDist_comm_blocks _ leftLength rightLength _
 
 /-! ## The selection's causality, with a continuation
 
 A run's selection of a target cell must not see that cell's value. The bracketed tail is three
 runs, and after the first stage the two sides are in different states, so the second stage's
-probability is not the same object on both sides. The continuation is a parameter, and what is asked of it is **the conclusion's own shape** — that its selection does
-not see the cell either — plus two facts that compose by themselves: it never fails, and it
-never shortens the target recording. The `pure` case is then the continuation's own causality
-rather than a termination, and the step that *reads* the cell is settled on both sides by the
-recording already being long enough, exactly as before.
+probability is not the same object on both sides. The continuation is a parameter, and what is
+asked of it is **the conclusion's own shape** — that its selection does not see the cell either —
+plus two facts that compose by themselves: it never fails, and it never shortens the target
+recording. The `pure` case is then the continuation's own causality rather than a termination,
+and the step that *reads* the cell is settled on both sides by the recording already being long
+enough, exactly as before.
 -/
 
-set_option maxHeartbeats 1000000 in
 open scoped Classical in
 /-- **Once the recording is long enough the whole rest of the run keeps it so.** The
 continuation form of the single-run statement: the run only grows the recording and the
@@ -495,7 +500,8 @@ theorem probEvent_length_eq_one_cont (leftKeep rightKeep : Bytes → σ → Prop
     (leftRecord rightRecord : Record) (entry : Bytes × HashOutput) (bound : Nat)
     (hbound : bound < (rightRecord ++ [entry]).length) :
     Pr{let w ← ((simulateQ (noticingSplitTapeRecorder leftKeep rightKeep) computation).run
-          (cache, tapes, (leftRecord, rightRecord ++ [entry])) >>= after)}[bound < (finalRight w).length] = 1 := by
+          (cache, tapes, (leftRecord, rightRecord ++ [entry])) >>= after)}[
+        bound < (finalRight w).length] = 1 := by
   classical
   refine prEvent_eq_one_of_forall_mem_support _ _ fun w hw => ?_
   rw [mem_support_bind_iff] at hw
@@ -516,7 +522,6 @@ ones to the final, and nothing has to count how many cells the first stage ate.
 /-- The unread remainder of the target block. -/
 def rightTapeOf (state : SplitTapeState σ) : List HashOutput := state.2.1.2
 
-set_option maxHeartbeats 2000000 in
 open scoped Classical in
 /-- **Each recorded target answer is the block cell it was read from**, with a continuation. -/
 theorem rightOf_getElem?_cont (leftKeep rightKeep : Bytes → σ → Prop)
@@ -622,7 +627,6 @@ theorem rightOf_getElem?_cont (leftKeep rightKeep : Bytes → σ → Prop)
 /-- The unread remainder of the disclosing block. -/
 def leftTapeOf (state : SplitTapeState σ) : List HashOutput := state.2.1.1
 
-set_option maxHeartbeats 2000000 in
 open scoped Classical in
 /-- **Each recorded disclosing answer is the block cell it was read from**, with a continuation.
 The mirror of `rightOf_getElem?_cont`. The two sides are not one lemma: the recorder's branches

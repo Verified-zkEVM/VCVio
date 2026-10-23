@@ -28,8 +28,6 @@ handler-level recorders already have:
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.TapeRunFacts
 
 variable {α β γ : Type}

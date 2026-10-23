@@ -27,8 +27,6 @@ open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
 namespace SlhDsaSecurity.ShareFinal
 
-variable {α β : Type}
-
 open Security CanonicalGraph ShareGame ShareCouple ShareInv ShareWhole ShareEvent
 
 /-! ## At one setup -/
@@ -49,6 +47,7 @@ attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenI
 def setupOf (prfSeed publicSeed : Digest) (table : Cells × Padding) : Setup :=
   ⟨prfSeed, publicSeed, table⟩
 
+/-- A drawn walk is good exactly when the setup it is is good. -/
 theorem goodWalk_iff (prfSeed publicSeed : Digest) (table : Cells × Padding) :
     Target.GoodWalk (WalkTable.walkOfTable prfSeed publicSeed table) ↔
       (setupOf prfSeed publicSeed table).Good := Iff.rfl
@@ -56,6 +55,7 @@ theorem goodWalk_iff (prfSeed publicSeed : Digest) (table : Cells × Padding) :
 /-! ## Expectations commute -/
 
 open BlindCharge in
+/-- Expectations over two independent computations commute. -/
 theorem ex_comm {α β : Type} (mx : ProbComp α) (my : ProbComp β) (f : α → β → ℝ≥0∞) :
     ex mx (fun a => ex my (f a)) = ex my (fun b => ex mx (fun a => f a b)) := by
   unfold ex

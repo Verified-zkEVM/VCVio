@@ -24,7 +24,8 @@ security bits transfer from one to the other when the schemes agree up to that b
 * Relabelling issues one hash query per hash query, so it commutes with hash counting
   (`simulateQ_relabel_countAllHashes`, `simulateQ_relabel_countQueries`).
 * A `SchemeBridge` records that signing and verification agree through `relabel e` and that the
-  two key generations, followed by any continuation, have the same law. An adversary against the
+  two key generations, followed by any continuation, have the same law; `keygen_of_seeds` derives
+  the latter from equal-in-law seed draws followed by equal programs. An adversary against the
   `B` scheme then becomes one against the `A` scheme (`adapt`) whose experiment has the same law
   (`experiment_evalDistEq`), so security bits transfer (`hasSecurityBits_of_bridge`).
 -/
@@ -289,6 +290,76 @@ theorem keygen_of_map_eq [SampleableType B] {e : A ≃ B} {PKA SKA PKB SKB : Typ
       Xmss.RandomOracleModel.run (Game.countAllHashes SB.keygen >>= fun r => k r.1 r.2) := by
   rw [← h, countAllHashes_map, bind_map_left]
   rfl
+
+/-! ## Key generations that draw their seeds first -/
+
+/-- A uniform query lifted from `unifSpec` is the uniform query of the world. -/
+theorem liftM_unifSpec_query {Output : Type} (t : ℕ) :
+    (liftM (unifSpec.query t) : OracleComp (Game.World Output) _) =
+      liftM ((Game.World Output).query (.inl t)) := rfl
+
+/-- Uniform draws cost nothing when hash calls are counted. -/
+theorem run_simulateQ_addCostOracle_liftM {Output α : Type} (oa : ProbComp α) :
+    (simulateQ (addCostOracle (spec := Game.World Output) Game.hashCost)
+      (liftM oa : OracleComp (Game.World Output) α)).run =
+      (fun a => (a, 1)) <$> (liftM oa : OracleComp (Game.World Output) α) := by
+  rw [← liftComp_eq_liftM, liftComp_def]
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t k ih =>
+    simp only [simulateQ_bind, WriterT.run_bind, ih, map_bind]
+    simp only [simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query, id_map,
+      liftM_unifSpec_query]
+    simp [addCostOracle, QueryImpl.withAddCost, Game.hashCost, Xmss.RandomOracleModel.hashCost]
+
+/-- Counting the hash calls of a program that begins with a uniform draw counts those of its
+continuation. -/
+theorem countAllHashes_liftM_bind {Output α β : Type} (oa : ProbComp α)
+    (f : α → OracleComp (Game.World Output) β) :
+    Game.countAllHashes ((liftM oa : OracleComp (Game.World Output) α) >>= f) =
+      (liftM oa : OracleComp (Game.World Output) α) >>= fun a => Game.countAllHashes (f a) := by
+  simp only [Game.countAllHashes, simulateQ_bind, WriterT.run_bind,
+    run_simulateQ_addCostOracle_liftM, bind_map_left, map_bind, Functor.map_map, one_mul]
+
+/-- In the random-oracle model, a uniform draw at the start of a program is the draw itself,
+followed by the run of the continuation from the empty cache. -/
+theorem run_liftM_bind {Output α β : Type} [SampleableType Output] (oa : ProbComp α)
+    (f : α → OracleComp (Game.World Output) β) :
+    Xmss.RandomOracleModel.run ((liftM oa : OracleComp (Game.World Output) α) >>= f) =
+      oa >>= fun a => Xmss.RandomOracleModel.run (f a) := by
+  simp only [Xmss.RandomOracleModel.run, Xmss.RandomOracleModel.impl, simulateQ_bind,
+    QueryImpl.simulateQ_add_liftM_left, StateT.run'_eq, StateT.run_bind,
+    unifFwdImpl.simulateQ_run, bind_map_left, map_bind]
+
+/-- The key-generation field of a `SchemeBridge` holds when both key generations first draw their
+seeds, relabelled key generation from `sA` and continuing with `G`, the `B` scheme's from `sB` and
+continuing with `H`, when `φ` carries the law of `sA` to that of `sB`, and when `G x` with its keys
+mapped is `H (φ x)`. -/
+theorem keygen_of_seeds [SampleableType B] {e : A ≃ B} {PKA SKA PKB SKB : Type}
+    {SA : Game.ExternalScheme A PKA SKA} {SB : Game.ExternalScheme B PKB SKB}
+    (pk : PKA → PKB) (sk : SKA → SKB) {X Y : Type} (sA : ProbComp X) (sB : ProbComp Y)
+    (φ : X → Y) (hφ : φ <$> sA =ᵈ sB)
+    (G : X → OracleComp (Game.World B) (SKA × PKA))
+    (H : Y → OracleComp (Game.World B) (SKB × PKB))
+    (hA : simulateQ (relabel e) SA.keygen = (liftM sA : OracleComp (Game.World B) X) >>= G)
+    (hB : SB.keygen = (liftM sB : OracleComp (Game.World B) Y) >>= H)
+    (hGH : ∀ x, Prod.map sk pk <$> G x = H (φ x))
+    {γ : Type} (k : SKB × PKB → ℕ → OracleComp (Game.World B) γ) :
+    Xmss.RandomOracleModel.run (Game.countAllHashes (simulateQ (relabel e) SA.keygen) >>=
+        fun r => k (sk r.1.1, pk r.1.2) r.2) =ᵈ
+      Xmss.RandomOracleModel.run (Game.countAllHashes SB.keygen >>= fun r => k r.1 r.2) := by
+  rw [hA, hB, countAllHashes_liftM_bind, countAllHashes_liftM_bind, bind_assoc, bind_assoc,
+    run_liftM_bind, run_liftM_bind]
+  have hx : ∀ x, Xmss.RandomOracleModel.run (Game.countAllHashes (G x) >>=
+      fun r => k (sk r.1.1, pk r.1.2) r.2) =
+      Xmss.RandomOracleModel.run (Game.countAllHashes (H (φ x)) >>= fun r => k r.1 r.2) := by
+    intro x
+    rw [← hGH, countAllHashes_map, bind_map_left]
+    rfl
+  simp only [hx]
+  rw [← bind_map_left φ sA (fun y => Xmss.RandomOracleModel.run
+    (Game.countAllHashes (H y) >>= fun r => k r.1 r.2))]
+  exact hφ.bind fun _ => EvalDistEq.rfl
 
 /-- Answer a query of the `B` world and signing oracle in the `A` world and signing oracle:
 world queries are unlabelled, signing requests pass through. -/

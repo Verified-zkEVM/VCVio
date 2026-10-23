@@ -10,21 +10,27 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.Extraction.BinaryPath
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Fors
 public import HashSig.SLHDSA.SHAKE128s.Proof.Extraction.Wots
 
-/-! Extraction from the actual FORS verifier, one tree at a time.
+/-!
+# Collision extraction from FORS verification
 
-Recovering the genuine root of a single FORS tree with changed authentication data
-contains a collision at one of that tree's own hash calls. Otherwise the recovered
-secret leaf and all twelve siblings are exactly the genuine canonical values. This
-mirrors `Extraction.Merkle.root_eq_canonical_or_collision` for the FORS trees. The
-collision witness keeps the path position, so it names a concrete queried input. -/
+Extraction from the FORS verifier, one tree at a time. Recovering the genuine root of a single
+FORS tree with changed authentication data exhibits a collision at one of that tree's own hash
+calls; otherwise the recovered secret leaf and all twelve siblings are exactly the genuine
+canonical values (`root_eq_canonical_or_collision`, the FORS counterpart of
+`Extraction.Merkle.root_eq_canonical_or_collision`). The collision witness keeps the path
+position, so it names a concrete queried input.
+
+`publicKey_eq_canonical_roots_or_collision` handles the final compression of the fourteen roots,
+`publicKey_canonical_decomposition` combines both levels, and
+`recoveredLeaf_canonical_secret_or_collision` separates a disclosed secret from a leaf
+collision.
+-/
 
 @[expose] public section
 
 open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.Extraction.Fors
-
-set_option backward.isDefEq.respectTransparency false
 
 variable [HasQuery HashSpec Id]
 
@@ -57,6 +63,7 @@ def recoveredRoot (signature : ForsSignature) (indices : SlhDsaSecurity.Fors.Ind
     (recoveredLeaf signature indices publicSeed address i)
 
 set_option maxRecDepth 10000 in
+-- `congr 1` on the twelve-step verifier fold recurses past the default depth
 /-- Reaching the genuine FORS tree root with changed authentication data gives a
 collision on this verifier path. Otherwise its recovered secret leaf and all twelve
 siblings are exactly the genuine values. -/
@@ -98,7 +105,7 @@ theorem root_eq_canonical_or_collision (secretSeed publicSeed : Digest)
       rw [hindex, leafIndex,
         SlhDsaSecurity.Correctness.offset_div_pow _ _ _ _ (Nat.le_of_lt hj)]
       simp [Nat.add_mod, heven]
-    simp only [siblings, dif_pos hj, BinaryPath.ordered, hparity]
+    simp only [siblings, dite_eq_left hj, BinaryPath.ordered, hparity]
     split <;> rfl
   -- The canonical FORS node recurrence matches the `combine` operation.
   have hpath := BinaryPath.canonical_or_collision nodes combine (fun _ _ => rfl)
@@ -110,7 +117,7 @@ theorem root_eq_canonical_or_collision (secretSeed publicSeed : Digest)
         Nat.sub_self, pow_zero, Nat.mul_one, Nat.div_eq_of_lt (indices i).isLt, Nat.add_zero])
   rcases hpath with ⟨hleaf, hsiblings⟩ | hcollision
   · refine Or.inl ⟨hleaf, fun j => ?_⟩
-    simpa only [siblings, dif_pos j.isLt] using hsiblings j.val j.isLt
+    simpa only [siblings, dite_eq_left j.isLt] using hsiblings j.val j.isLt
   · exact Or.inr hcollision
 
 /-- The address of the final FORS root-compression call. -/
@@ -148,7 +155,8 @@ canonical tree root, or has a collision at its root-compression call. No collisi
 resistance is assumed. -/
 theorem publicKey_eq_canonical_roots_or_collision (secretSeed publicSeed : Digest)
     (address : Address) (indices : SlhDsaSecurity.Fors.Indices) (signature : ForsSignature)
-    (hpk : SlhDsaSecurity.Fors.publicKeyFromSignature (m := Id) signature indices publicSeed address =
+    (hpk : SlhDsaSecurity.Fors.publicKeyFromSignature (m := Id) signature indices publicSeed
+        address =
       Hashing.tweakable (m := Id) publicSeed (rootAddress address)
         (digestArrayBytes (canonicalRoots secretSeed publicSeed address))) :
     recoveredRoot signature indices publicSeed address =
@@ -163,7 +171,6 @@ theorem publicKey_eq_canonical_roots_or_collision (secretSeed publicSeed : Diges
     exact SlhDsaSecurity.Extraction.Wots.digestArrayBytes_injective forsTrees
       (Hashing.tweakableInput_injective hinput).2.2
 
-set_option maxRecDepth 10000 in
 /-- Full FORS structural decomposition: a FORS signature recovering the genuine FORS public
 key either collides at the root compression, or for every one of the fourteen trees it
 collides on that tree's authentication path or reproduces the canonical secret leaf and all
@@ -171,7 +178,8 @@ twelve siblings. This composes the compression and per-tree extractions; no coll
 resistance is assumed. -/
 theorem publicKey_canonical_decomposition (secretSeed publicSeed : Digest) (address : Address)
     (indices : SlhDsaSecurity.Fors.Indices) (signature : ForsSignature)
-    (hpk : SlhDsaSecurity.Fors.publicKeyFromSignature (m := Id) signature indices publicSeed address =
+    (hpk : SlhDsaSecurity.Fors.publicKeyFromSignature (m := Id) signature indices publicSeed
+        address =
       Hashing.tweakable (m := Id) publicSeed (rootAddress address)
         (digestArrayBytes (canonicalRoots secretSeed publicSeed address))) :
     CompressionCollision (recoveredRoot signature indices publicSeed address)

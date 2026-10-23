@@ -37,7 +37,6 @@ open Security BracketedRun CarrierFiles CarrierRecordings SignerRightRecord Coun
 
 variable (pk : PublicKey)
 
-set_option maxHeartbeats 1000000 in
 /-- **A carrier run projects onto the shared oracle's**, by the equality the handler was given. -/
 theorem mem_support_rom_of_carrier (rightKeep : Bytes → HandlerCarrier.State → Prop)
     {α : Type} (computation : OracleComp OracleWorld α) (state : CountedState)

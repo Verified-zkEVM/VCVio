@@ -56,7 +56,7 @@ theorem revealedOf_succ (cells : Cells) (layer : Nat) (hl : layer < layers)
     exact Nat.div_add_mod tree (2 ^ subtreeHeight)
   have hrange : (tree / 2 ^ subtreeHeight) * 2 ^ subtreeHeight +
       (Hypertree.nextLeaf tree).val < 2 ^ (totalHeight - subtreeHeight) := by
-    show (tree / 2 ^ subtreeHeight) * 2 ^ subtreeHeight + tree % 2 ^ subtreeHeight < _
+    change (tree / 2 ^ subtreeHeight) * 2 ^ subtreeHeight + tree % 2 ^ subtreeHeight < _
     rw [hsum]
     exact htree
   have hfin : (⟨(tree / 2 ^ subtreeHeight) * 2 ^ subtreeHeight + (Hypertree.nextLeaf tree).val,
@@ -101,7 +101,7 @@ theorem signLayers_congr_cells (publicSeed : Digest) (cache : QueryCache HashSpe
           message (left.1 Node.secretSeed) publicSeed (Hypertree.address layer tree) leaf =
         @Merkle.sign Id _ (CacheReplay.replayQuery (unionCache publicSeed right cache))
           message (right.1 Node.secretSeed) publicSeed (Hypertree.address layer tree) leaf := by
-      show @Merkle.sign Id _ (CacheReplay.replayQuery (unionCache publicSeed left cache))
+      change @Merkle.sign Id _ (CacheReplay.replayQuery (unionCache publicSeed left cache))
           message (left.1 Node.secretSeed) publicSeed
           (⟨⟨layer, hl⟩, ⟨tree, htree⟩⟩ : Tree).address leaf =
         @Merkle.sign Id _ (CacheReplay.replayQuery (unionCache publicSeed right cache))
@@ -121,7 +121,7 @@ theorem signLayers_congr_cells (publicSeed : Digest) (cache : QueryCache HashSpe
     have hrootLeft : @Merkle.node Id _ (CacheReplay.replayQuery (unionCache publicSeed left cache))
           (left.1 Node.secretSeed) publicSeed (Hypertree.address layer tree) subtreeHeight 0 =
         left.1 (.structural (HonestProbes.subtreeRootNode ⟨⟨layer, hl⟩, ⟨tree, htree⟩⟩)) := by
-      show @Merkle.node Id _ (CacheReplay.replayQuery (unionCache publicSeed left cache))
+      change @Merkle.node Id _ (CacheReplay.replayQuery (unionCache publicSeed left cache))
           (left.1 Node.secretSeed) publicSeed
           (⟨⟨layer, hl⟩, ⟨tree, htree⟩⟩ : Tree).address subtreeHeight 0 = _
       rw [HonestProbes.subtree_root_cell _ _ _ ⟨⟨layer, hl⟩, ⟨tree, htree⟩⟩,
@@ -131,7 +131,7 @@ theorem signLayers_congr_cells (publicSeed : Digest) (cache : QueryCache HashSpe
         @Merkle.node Id _ (CacheReplay.replayQuery (unionCache publicSeed right cache))
           (right.1 Node.secretSeed) publicSeed (Hypertree.address layer tree) subtreeHeight 0 := by
       rw [hrootLeft]
-      show _ = @Merkle.node Id _ (CacheReplay.replayQuery (unionCache publicSeed right cache))
+      change _ = @Merkle.node Id _ (CacheReplay.replayQuery (unionCache publicSeed right cache))
           (right.1 Node.secretSeed) publicSeed
           (⟨⟨layer, hl⟩, ⟨tree, htree⟩⟩ : Tree).address subtreeHeight 0
       rw [HonestProbes.subtree_root_cell _ _ _ ⟨⟨layer, hl⟩, ⟨tree, htree⟩⟩,
@@ -194,7 +194,7 @@ theorem cellSig_congr (publicSeed prfLeft prfRight : Digest) (left right : Cells
   refine signature_mk_eq rfl ?_ ?_
   · exact fors_sign_congr publicSeed ∅ left right (SplitCharged.forsKeyOfDigest digest)
       (MessageDigest.forsIndices digest) hdisclose
-  · show @Hypertree.signLayers Id _ (CacheReplay.replayQuery (unionCache publicSeed left ∅))
+  · change @Hypertree.signLayers Id _ (CacheReplay.replayQuery (unionCache publicSeed left ∅))
         (left.1 Node.secretSeed) publicSeed layers 0 (MessageDigest.treeIndex digest).toNat
         (MessageDigest.leafIndex digest).toFin _ =
       @Hypertree.signLayers Id _ (CacheReplay.replayQuery (unionCache publicSeed right ∅))

@@ -13,10 +13,10 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.GameBridge
 # An accepted forgery in a warmed tail, read at the walk's own honest key
 
 `GameBridge` and `HypertreeDispatch.cases_of_accepted` are the structural reduction, but they
-speak about `Id`-level operations under `CacheReplay.replayQuery` of a single cache. `WarmedGame.tail` is a probabilistic
-run of the whole game. This file is the passage from one to the other: an accepted forgery in a
-warmed tail yields the three extraction cases, stated against *this* run's final cache and *this*
-walk's seeds.
+speak about `Id`-level operations under `CacheReplay.replayQuery` of a single cache.
+`WarmedGame.tail` is a probabilistic run of the whole game. This file is the passage from one
+to the other: an accepted forgery in a warmed tail yields the three extraction cases, stated
+against *this* run's final cache and *this* walk's seeds.
 
 Three things have to be arranged, and each is a lemma here.
 
@@ -30,9 +30,10 @@ Three things have to be arranged, and each is a lemma here.
 * **Which cache each phase ends at.** Verification is the last phase that queries anything, so its
   final cache *is* the run's final cache — that is what `GameBridge.verify_eq_replay` needs, and the
   trailing `pure` is what supplies it. Key generation ends much earlier, at a cache the adversary
-  and the verifier then extend. Entries never change along a run (`GrowthCharge.cache_value_persists`),
-  so `run_eq_replay_of_subset` — `CacheReplay.run_eq_replay` relaxed to replay against any cache
-  extending the run's own — recovers the generated key from the *final* cache all the same.
+  and the verifier then extend. Entries never change along a run
+  (`GrowthCharge.cache_value_persists`), so `run_eq_replay_of_subset` —
+  `CacheReplay.run_eq_replay` relaxed to replay against any cache extending the run's own —
+  recovers the generated key from the *final* cache all the same.
 
 * **Crossing from the game's world to the hash-only one.** The scheme's operations are written
   against `[HasQuery HashSpec m]`, so in the game's world they are the hash-only ones lifted
@@ -289,7 +290,6 @@ array, rather than a flattened "some layer collides" — a predicate that forget
 is about can be satisfied by building one, and cannot supply the cache entry every charge
 composition requires. -/
 
-set_option maxHeartbeats 2000000 in
 /-- **An accepted forgery in a warmed tail is canonical at the walk's own honest key,
 or the hypertree carries a fault.** -/
 theorem cases_of_win (adversary : Adversary)
@@ -317,17 +317,20 @@ theorem cases_of_win (adversary : Adversary)
                       walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2).2 message)) = honestForsKey ∨
               @Extraction.HypertreeChain.HypertreeFault (CacheReplay.replayQuery result.2)
                 walk.1.1.1 walk.1.1.2.2 layers parsed.hypertree 0
-                (MessageDigest.treeIndex (@Hashing.messageDigest Id (CacheReplay.replayQuery result.2)
+                (MessageDigest.treeIndex
+                  (@Hashing.messageDigest Id (CacheReplay.replayQuery result.2)
                   parsed.randomizer
                   (@Scheme.keygenInternal Id Id.instMonad (CacheReplay.replayQuery result.2)
                     walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2).2 message)).toNat
-                (MessageDigest.leafIndex (@Hashing.messageDigest Id (CacheReplay.replayQuery result.2)
+                (MessageDigest.leafIndex
+                  (@Hashing.messageDigest Id (CacheReplay.replayQuery result.2)
                   parsed.randomizer
                   (@Scheme.keygenInternal Id Id.instMonad (CacheReplay.replayQuery result.2)
                     walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2).2 message)).toFin
                 (@SlhDsaSecurity.Fors.publicKeyFromSignature Id Id.instMonad
                 (CacheReplay.replayQuery result.2) parsed.fors
-                (MessageDigest.forsIndices (@Hashing.messageDigest Id (CacheReplay.replayQuery result.2)
+                (MessageDigest.forsIndices
+                  (@Hashing.messageDigest Id (CacheReplay.replayQuery result.2)
                   parsed.randomizer
                   (@Scheme.keygenInternal Id Id.instMonad (CacheReplay.replayQuery result.2)
                     walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2).2 message))

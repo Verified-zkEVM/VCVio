@@ -133,8 +133,6 @@ and the forgery's digest input is named as a member of the record. -/
 
 attribute [local irreducible] Scheme.keygenInternal Scheme.sign
 
-set_option linter.constructorNameAsVariable false in
-set_option maxHeartbeats 1000000 in
 /-- **Where an entry the recorded game installed came from**, with the record the run itself
 returns, and in which the forgery's digest input is a member. -/
 theorem provenance_recordedAfterSeeds (adversary : Adversary) (sds : Digest × Digest × Digest)
@@ -252,7 +250,6 @@ def RecordMeetsPrfClass (prfSeed : Digest)
 attribute [local irreducible] WarmedGame.afterSeeds WarmedGame.tail
   RecordedTail.recordedAfterSeeds RecordedTail.recordedTail
 
-set_option maxHeartbeats 1000000 in
 /-- **The forgery's digest input is in the charged record.** So the answer side's residue — the
 forgery's randomiser being `SK.prf`, which makes its digest input a `PRF_msg` input at the real
 seed — is charged here, with nothing said about the signing log. -/

@@ -52,21 +52,23 @@ position the other way round, and in both cases `2 * (index / 2 ^ (height + 1))`
 child's index.
 -/
 
+/-- The left entry of the canonical pair at a path position is the left graph child. -/
 theorem canonicalPair_fst (nodes : Nat → Nat → Digest) (index height : Nat) :
     (BinaryPath.canonicalPair nodes index height).1 =
       nodes height (2 * (index / 2 ^ (height + 1))) := by
   have hhalf : index / 2 ^ (height + 1) = (index / 2 ^ height) / 2 :=
     Correctness.div_pow_succ index height
   by_cases heven : index / 2 ^ height % 2 = 0
-  · simp only [BinaryPath.canonicalPair, BinaryPath.ordered, if_pos heven]
+  · simp only [BinaryPath.canonicalPair, BinaryPath.ordered, ite_eq_left heven]
     congr 1
     omega
   · have hxor : Nat.xor (index / 2 ^ height) 1 = index / 2 ^ height - 1 :=
       Nat.xor_one_of_odd (Nat.odd_iff.mpr (by omega))
-    simp only [BinaryPath.canonicalPair, BinaryPath.ordered, if_neg heven, hxor]
+    simp only [BinaryPath.canonicalPair, BinaryPath.ordered, ite_eq_right heven, hxor]
     congr 1
     omega
 
+/-- The right entry of the canonical pair at a path position is the right graph child. -/
 theorem canonicalPair_snd (nodes : Nat → Nat → Digest) (index height : Nat) :
     (BinaryPath.canonicalPair nodes index height).2 =
       nodes height (2 * (index / 2 ^ (height + 1)) + 1) := by
@@ -75,10 +77,10 @@ theorem canonicalPair_snd (nodes : Nat → Nat → Digest) (index height : Nat) 
   by_cases heven : index / 2 ^ height % 2 = 0
   · have hxor : Nat.xor (index / 2 ^ height) 1 = index / 2 ^ height + 1 :=
       Nat.xor_one_of_even (Nat.even_iff.mpr heven)
-    simp only [BinaryPath.canonicalPair, BinaryPath.ordered, if_pos heven, hxor]
+    simp only [BinaryPath.canonicalPair, BinaryPath.ordered, ite_eq_left heven, hxor]
     congr 1
     omega
-  · simp only [BinaryPath.canonicalPair, BinaryPath.ordered, if_neg heven]
+  · simp only [BinaryPath.canonicalPair, BinaryPath.ordered, ite_eq_right heven]
     congr 1
     omega
 
@@ -119,7 +121,6 @@ theorem deviatingCollision_of_pathCollision {α : Type} (publicSeed : Digest) (c
           (BinaryPath.ordered index height
             (BinaryPath.value combine index leaf siblings height) (siblings height)))) =
       some output) :
-
     StructuralTerm.DeviatingCollision publicSeed cells result := by
   obtain ⟨hdiffers, hjoins⟩ := hcollision
   set actual := BinaryPath.ordered index height

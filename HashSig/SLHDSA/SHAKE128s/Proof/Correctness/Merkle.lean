@@ -10,7 +10,13 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Wots
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.BinaryPath
 
-/-! Correctness of an XMSS subtree under a fixed hash, including its actual path fold. -/
+/-!
+# XMSS subtree correctness
+
+Correctness of an XMSS subtree under a fixed hash, including its actual path fold:
+`publicKeyFromSignature_sign` shows that the root recovered from an honest XMSS signature is the
+subtree root computed by `Merkle.node`.
+-/
 
 @[expose] public section
 
@@ -20,6 +26,7 @@ namespace SlhDsaSecurity.Correctness.Merkle
 
 variable [HasQuery HashSpec Id]
 
+/-- Verifying an honest XMSS signature recovers the subtree root. -/
 theorem publicKeyFromSignature_sign (message secretSeed publicSeed : Digest)
     (address : Address) (index : Fin (2 ^ subtreeHeight)) :
     SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) index

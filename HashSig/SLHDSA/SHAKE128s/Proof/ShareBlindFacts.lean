@@ -111,6 +111,8 @@ noncomputable def filing (setup : Setup) : QueryImpl ShareSpec (StateT (St × Bo
   fun queried state => (fun z => (z.1, (z.2.1, state.2 || z.2.2))) <$>
     ((handler false setup) queried).run (state.1, false)
 
+/-- One step of the filing handler: the flag-down step of the flag handler, with the flag
+raised if it was up before. -/
 theorem filing_run (setup : Setup) (queried : ShareSpec.Domain) (state : St × Bool) :
     ((filing setup) queried).run state = (fun z => (z.1, (z.2.1, state.2 || z.2.2))) <$>
       ((handler false setup) queried).run (state.1, false) := rfl
@@ -212,6 +214,7 @@ theorem filing_witness (setup : Setup) {α : Type} (computation : OracleComp Sha
 
 /-! ## The step files its record -/
 
+/-- The blind handler files what it records, against the served list. -/
 theorem files_blindStep (setup : Setup) :
     BlindCharge.Files St.record St.served (blindStep setup) := by
   intro queried state z hz
@@ -222,6 +225,7 @@ theorem files_blindStep (setup : Setup) :
   rw [← hzw]
   exact hrecord
 
+/-- A blind step only extends the served list. -/
 theorem served_prefix (setup : Setup) (queried : ShareSpec.Domain) (state : St)
     (z : ShareSpec.Range queried × St) (hz : z ∈ support (((blindStep setup) queried).run state)) :
     state.served <+: z.2.served := by
@@ -266,7 +270,7 @@ theorem available_congr (publicSeed : Digest) (cells other : Cells) (aux : Diges
     (hagree : ∀ node, AlwaysAvailable node → cells node = other node) :
     available (setupOf publicSeed cells aux) = available (setupOf publicSeed other aux) := by
   funext served node
-  show Available (ShareCells.revealedOf cells) (disclosed served) node =
+  change Available (ShareCells.revealedOf cells) (disclosed served) node =
     Available (ShareCells.revealedOf other) (disclosed served) node
   rw [ShareCells.revealedOf_congr cells other hagree]
 
@@ -277,13 +281,15 @@ theorem agree_alwaysAvailable (index : Node) (hindex : ¬ AlwaysAvailable index)
     ∀ node, AlwaysAvailable node → cells node = other node :=
   fun node hnode => hagree node fun heq => hindex (heq ▸ hnode)
 
+/-- The top root is always available. -/
 theorem topRoot_alwaysAvailable : AlwaysAvailable (.structural topRoot) := True.intro
 
 /-- The public key reads only the root, which is always available. -/
 theorem pk_congr (publicSeed : Digest) (index : Node) (hindex : ¬ AlwaysAvailable index)
-    (cells other : Cells) (aux : Digest × Padding) (hagree : BlindCharge.AgreeOff index cells other) :
+    (cells other : Cells) (aux : Digest × Padding)
+    (hagree : BlindCharge.AgreeOff index cells other) :
     (setupOf publicSeed cells aux).pk = (setupOf publicSeed other aux).pk := by
-  show (⟨publicSeed, cells (.structural topRoot)⟩ : PublicKey) =
+  change (⟨publicSeed, cells (.structural topRoot)⟩ : PublicKey) =
     ⟨publicSeed, other (.structural topRoot)⟩
   rw [agree_alwaysAvailable index hindex cells other hagree _ topRoot_alwaysAvailable]
 
@@ -291,9 +297,10 @@ theorem pk_congr (publicSeed : Digest) (index : Node) (hindex : ¬ AlwaysAvailab
 theorem openAt_congr (publicSeed : Digest) (index : Node) (cells other : Cells)
     (aux : Digest × Padding) (hagree : BlindCharge.AgreeOff index cells other)
     (served : List HashOutput) (hindex : ¬ available (setupOf publicSeed cells aux) served index) :
-    openAt (setupOf publicSeed cells aux) served = openAt (setupOf publicSeed other aux) served := by
+    openAt (setupOf publicSeed cells aux) served =
+      openAt (setupOf publicSeed other aux) served := by
   have hnot := not_alwaysAvailable_of_unavailable _ served index hindex
-  show OpenCache.openCache publicSeed (available (setupOf publicSeed cells aux) served)
+  change OpenCache.openCache publicSeed (available (setupOf publicSeed cells aux) served)
       (cells, aux.2) =
     OpenCache.openCache publicSeed (available (setupOf publicSeed other aux) served) (other, aux.2)
   rw [← available_congr publicSeed cells other aux
@@ -306,7 +313,8 @@ theorem openAt_congr (publicSeed : Digest) (index : Node) (cells other : Cells)
 theorem visible_congr (publicSeed : Digest) (index : Node) (cells other : Cells)
     (aux : Digest × Padding) (hagree : BlindCharge.AgreeOff index cells other) (state : St)
     (hindex : ¬ available (setupOf publicSeed cells aux) state.served index) :
-    visible (setupOf publicSeed cells aux) state = visible (setupOf publicSeed other aux) state := by
+    visible (setupOf publicSeed cells aux) state =
+      visible (setupOf publicSeed other aux) state := by
   unfold visible
   rw [openAt_congr publicSeed index cells other aux hagree state.served hindex]
 
@@ -331,7 +339,7 @@ theorem blindStep_congr (publicSeed : Digest) (index : Node) (cells other : Cell
   rcases queried with ((world | request) | ⟨request, drawn⟩) | forgery
   · rcases world with coin | input
     · exact EvalDistEq.rfl
-    · show (do
+    · change (do
           let step ← route false (setupOf publicSeed cells aux) state input
           pure (step.1, { step.2 with record := state.record ++ [(input, state.served)] })) =ᵈ
         (do

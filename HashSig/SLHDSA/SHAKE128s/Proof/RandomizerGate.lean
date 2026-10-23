@@ -57,6 +57,7 @@ noncomputable def prfGuess (input : Bytes) : Digest :=
   if hformat : ∃ (prf seed : Digest) (message : Bytes),
     input = Hashing.randomizerInput prf seed message then hformat.choose else default
 
+/-- The seed read off a `PRF_msg` input is the `SK.prf` it was formed with. -/
 theorem prfGuess_randomizerInput (prf seed : Digest) (message : Bytes) :
     prfGuess (Hashing.randomizerInput prf seed message) = prf := by
   classical
@@ -119,7 +120,8 @@ def PrfClass (prfSeed : Digest) (input : Bytes) : Prop :=
 
 /-- **A fresh answer truncates to a fixed digest with probability `2 ^ -128`.** -/
 theorem prob_truncate_eq (target : Digest) :
-    Pr{let answer ← ($ᵗ HashOutput : ProbComp HashOutput)}[Hashing.truncate answer = target] = 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
+    Pr{let answer ← ($ᵗ HashOutput : ProbComp HashOutput)}[Hashing.truncate answer = target] =
+      1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   have hmap : Pr{let answer ← ($ᵗ HashOutput : ProbComp HashOutput)}[
         Hashing.truncate answer = target] =
       Pr{let digest ← (Hashing.truncate <$> ($ᵗ HashOutput : ProbComp HashOutput))}[

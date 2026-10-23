@@ -38,10 +38,10 @@ theorem toShare_run (lenient : Bool) (setup : Setup) {α : Type}
     (computation : OracleComp OracleWorld α) (p : St × Bool) :
     (simulateQ (handler lenient setup) (toShare computation)).run p =
       (simulateQ (ShareBound.worldImpl lenient setup) computation).run p := by
-  rw [toShare, QueryImpl.simulateQ_simulateQ_eq_of_apply (impl := ShareBound.worldImpl lenient setup)
-    (fun _ => rfl)]
+  rw [toShare,
+    QueryImpl.simulateQ_simulateQ_eq_of_apply (impl := ShareBound.worldImpl lenient setup)
+      (fun _ => rfl)]
 
-set_option maxHeartbeats 1000000 in
 /-- **The jointly capped lenient game is its adversary's phase, then the capped verifier, then
 the claims if the verifier finished.** -/
 theorem lenient_eq (setup : Setup) (adversary : Adversary) (limit : Nat) :
@@ -92,7 +92,6 @@ def FinalJ (setup : Setup)
                 real.1.1.1.1.signature)).run (1, zs.2.2)) ∧
             real = ((((real.1.1.1.1, zs.1), (w.1, Multiplicative.toAdd w.2.1)), zs.2.1), w.2.2))
 
-set_option maxHeartbeats 2000000 in
 /-- **The jointly capped real game and the jointly capped lenient game, coupled.** -/
 theorem couple_whole (setup : Setup) (hgood : setup.Good) (adversary : Adversary) (limit : Nat) :
     RelTriple (realFlatJ adversary limit (setup.sk, setup.pk) setup.warm)
@@ -106,7 +105,8 @@ theorem couple_whole (setup : Setup) (hgood : setup.Good) (adversary : Adversary
   obtain ⟨⟨hforgery, hrel⟩, ha⟩ := hza
   have hinvA : Inv setup a.2 := SignedWatch.run_invariant (ShareFlag.advImpl true setup)
     (Inv setup) (inv_adv setup hgood) _ (St.start, false) (inv_start setup) a ha
-  have hstartV : RelV setup a.2.1.log a.2.1.served (Multiplicative.toAdd z.2.1).2 (1, z.2.2.2) a.2 :=
+  have hstartV :
+      RelV setup a.2.1.log a.2.1.served (Multiplicative.toAdd z.2.1).2 (1, z.2.2.2) a.2 :=
     ⟨hrel.cache, rfl, rfl, hrel.record, by simp⟩
   rw [hforgery]
   refine relTriple_bind (relTriple_support_left (relTriple_support_right (relTriple_simulateQ_run

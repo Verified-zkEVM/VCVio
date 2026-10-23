@@ -50,6 +50,7 @@ def revealedOf (cells : Cells) (key : WotsKey) (chain : Fin chains) : Nat :=
   | some node => (Checksum.encode (cells (.structural node)) chain).val
   | none => w - 1
 
+/-- A revealed digit is at most `w - 1`. -/
 theorem revealedOf_le (cells : Cells) (key : WotsKey) (chain : Fin chains) :
     revealedOf cells key chain ≤ w - 1 := by
   unfold revealedOf

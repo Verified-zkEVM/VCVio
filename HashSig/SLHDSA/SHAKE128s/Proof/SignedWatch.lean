@@ -37,8 +37,6 @@ supermartingale (`watchPair_step_le`).
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.SignedWatch
 
 variable {α β γ : Type}
@@ -88,8 +86,10 @@ theorem add_le_of_two {a b p q v c : ℝ≥0∞} (hb : b ≠ ⊤) (hfirst : a + 
 theorem tsum_add_le_of_support {β : Type} (computation : ProbComp β)
     (left right : β → ℝ≥0∞) (outerLeft outerRight : β → ℝ≥0∞)
     (h : ∀ z ∈ support computation, left z + outerLeft z ≤ right z + outerRight z) :
-    (∑' z, Pr{let x ← computation}[x = z] * left z) + ∑' z, Pr{let x ← computation}[x = z] * outerLeft z ≤
-      (∑' z, Pr{let x ← computation}[x = z] * right z) + ∑' z, Pr{let x ← computation}[x = z] * outerRight z := by
+    (∑' z, Pr{let x ← computation}[x = z] * left z) +
+        ∑' z, Pr{let x ← computation}[x = z] * outerLeft z ≤
+      (∑' z, Pr{let x ← computation}[x = z] * right z) +
+        ∑' z, Pr{let x ← computation}[x = z] * outerRight z := by
   rw [← ENNReal.tsum_add, ← ENNReal.tsum_add]
   refine ENNReal.tsum_le_tsum fun z => ?_
   by_cases hz : z ∈ support computation
@@ -109,7 +109,8 @@ theorem expect_run_signed_le {ι : Type} {spec : OracleSpec ι} {S : Type}
         value state + ∑' z, Pr{let x ← (impl queried).run state}[x = z] * bound z.2)
     {α : Type} (computation : OracleComp spec α) (state : S) (hstate : Inv state) :
     (∑' z, Pr{let x ← (simulateQ impl computation).run state}[x = z] * value z.2) + bound state ≤
-      value state + ∑' z, Pr{let x ← (simulateQ impl computation).run state}[x = z] * bound z.2 := by
+      value state +
+        ∑' z, Pr{let x ← (simulateQ impl computation).run state}[x = z] * bound z.2 := by
   induction computation using OracleComp.inductionOn generalizing state with
   | pure result =>
     rw [simulateQ_pure, StateT.run_pure, FiredCoverage.tsum_probOutput_pure,
@@ -117,7 +118,8 @@ theorem expect_run_signed_le {ι : Type} {spec : OracleSpec ι} {S : Type}
   | query_bind queried next ih =>
     rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
       FiredCoverage.tsum_probOutput_bind, FiredCoverage.tsum_probOutput_bind]
-    refine add_le_of_two (b := ∑' step, Pr{let x ← (impl queried).run state}[x = step] * bound step.2)
+    refine add_le_of_two
+      (b := ∑' step, Pr{let x ← (impl queried).run state}[x = step] * bound step.2)
       (p := ∑' step, Pr{let x ← (impl queried).run state}[x = step] * value step.2)
       (ne_top_of_le_ne_top one_ne_top (tsum_bound_le_one _ bound hbound)) ?_
       (hstep queried state hstate)
@@ -141,7 +143,8 @@ theorem expect_bind_signed_le {ι : Type} {spec : OracleSpec ι} {S γ : Type}
     (∑' w, Pr{let x ← (simulateQ impl computation).run state >>= cont}[x = w] * final w) +
         bound state ≤
       value state +
-        ∑' w, Pr{let x ← (simulateQ impl computation).run state >>= cont}[x = w] * finalBound w := by
+        ∑' w, Pr{let x ← (simulateQ impl computation).run state >>= cont}[x = w] *
+          finalBound w := by
   rw [FiredCoverage.tsum_probOutput_bind, FiredCoverage.tsum_probOutput_bind]
   refine add_le_of_two
     (b := ∑' z, Pr{let x ← (simulateQ impl computation).run state}[x = z] * bound z.2)

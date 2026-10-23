@@ -76,7 +76,7 @@ theorem step_counted (pk : PublicKey) (rightKeep : Bytes → HandlerCarrier.Stat
   classical
   rw [CarrierFiles.countedCarrierRecorder, CountedHandler.withCount_run]
   rcases queried with coin | input
-  · show (fun z : OracleWorld.Range (Sum.inl coin) × _ => (z.1, reassociate z.2)) <$>
+  · change (fun z : OracleWorld.Range (Sum.inl coin) × _ => (z.1, reassociate z.2)) <$>
         ((@recorderOf HandlerCarrier.State (servingView pk) (disclosingKeep pk) rightKeep
             (Sum.inl coin)).run (state.1, state.2.1) >>= fun step =>
           (pure (step.1, (step.2.1, (step.2.2, state.2.2 + 0))) : ProbComp _)) =
@@ -87,7 +87,7 @@ theorem step_counted (pk : PublicKey) (rightKeep : Bytes → HandlerCarrier.Stat
       @recorderOf_run_inl Counted (countedView pk) _ _ coin (reassociate state)]
     simp only [map_bind, bind_assoc, pure_bind, map_pure]
     rfl
-  · show (fun z : OracleWorld.Range (Sum.inr input) × _ => (z.1, reassociate z.2)) <$>
+  · change (fun z : OracleWorld.Range (Sum.inr input) × _ => (z.1, reassociate z.2)) <$>
         ((@recorderOf HandlerCarrier.State (servingView pk) (disclosingKeep pk) rightKeep
             (Sum.inr input)).run (servingNotice pk state.1 input, state.2.1) >>= fun step =>
           (pure (step.1, (step.2.1, (step.2.2, state.2.2 + 1))) : ProbComp _)) =

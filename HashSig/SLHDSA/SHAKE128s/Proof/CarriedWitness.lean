@@ -101,7 +101,7 @@ open scoped Classical in
 theorem served_servingNotice_self (state : State) (input : Bytes)
     (hfiles : FilesLeft pk state input) : Served (servingNotice pk state input) input := by
   classical
-  rw [servingNotice, if_pos hfiles]
+  rw [servingNotice, ite_eq_left hfiles]
   exact Multiset.mem_cons_self _ _
 
 open scoped Classical in

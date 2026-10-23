@@ -10,7 +10,13 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Wots
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.BinaryPath
 
-/-! Every honest FORS path reconstructs its indexed tree root under any fixed hash. -/
+/-!
+# FORS correctness
+
+Deterministic correctness of FORS under any fixed hash, run in `Id`: every authentication path
+of an honest FORS signature reconstructs the root of its indexed tree, so
+`Fors.publicKeyFromSignature_sign` recovers the compressed FORS public key.
+-/
 
 @[expose] public section
 
@@ -20,6 +26,8 @@ namespace SlhDsaSecurity.Correctness.Fors
 
 variable [HasQuery HashSpec Id]
 
+/-- Recovering the FORS public key from an honest signature returns the compression of the
+`forsTrees` tree roots. -/
 theorem publicKeyFromSignature_sign (indices : SlhDsaSecurity.Fors.Indices)
     (secretSeed publicSeed : Digest) (address : Address) :
     SlhDsaSecurity.Fors.publicKeyFromSignature (m := Id)

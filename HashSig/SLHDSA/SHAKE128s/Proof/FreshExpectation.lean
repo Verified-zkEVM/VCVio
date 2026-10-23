@@ -158,7 +158,6 @@ theorem tsum_mul_le_const {β : Type} (run : ProbComp β) (value : β → ℝ≥
 
 /-! ## The charge -/
 
-set_option maxHeartbeats 1000000 in
 open scoped Classical in
 /-- **The bad event is charged at the class's expected fresh entries.** If an answer can be bad
 only at an input of the class, and is bad there with probability at most `rate`, then a run

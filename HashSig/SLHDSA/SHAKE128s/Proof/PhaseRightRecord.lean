@@ -54,6 +54,7 @@ noncomputable def recorderRun (leftKeep rightKeep : Bytes → QueryCache HashSpe
     ProbComp (((α × Multiplicative Tally) × SigningLog) × SplitState) :=
   (simulateQ (recorder leftKeep rightKeep) ((WriterT.run x).run log)).run state
 
+/-- A recorder run of a bind is the two runs in sequence, with their tallies multiplied. -/
 theorem recorderRun_bind (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     {α β : Type} (x : RecordedRun α) (next : α → RecordedRun β)
     (log : SigningLog) (state : SplitState) :
@@ -83,7 +84,6 @@ theorem simulateQ_worldQuery {σ : Type} (impl : QueryImpl OracleWorld (StateT �
       OracleComp OracleWorld (OracleWorld.Range queried)) = impl queried := by
   simp
 
-set_option maxHeartbeats 800000 in
 /-- **A hash step files at most its own input, and its own input is what it records.** -/
 theorem right_record_adversaryImpl (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (queried : OracleWorld.Domain) (log : SigningLog) (state : SplitState)
@@ -116,7 +116,7 @@ theorem right_record_adversaryImpl (leftKeep rightKeep : Bytes → QueryCache Ha
     · exact Or.inl hprior
     · refine Or.inr ?_
       rw [hrecord, toAdd_ofAdd, hself]
-      show input ∈ recordOf (Sum.inr input)
+      change input ∈ recordOf (Sum.inr input)
       simp [recordOf]
 
 /-! ## The game's own sequencing, at the recorder
@@ -126,7 +126,6 @@ the shared oracle, and its proof uses nothing about the oracle — `countAllHash
 equality of computations and the rest is the monad's own algebra — so it carries with the
 recorder substituted. The count rides on the value and the recorder never reads it. -/
 
-set_option maxHeartbeats 800000 in
 /-- **The count comes off**, leaving the run that produced it. The count rides on the value and
 never reaches the state, so this is `WarmedSplit.mem_support_of_countAllHashes` with the oracle
 substituted and nothing else changed.
@@ -160,7 +159,6 @@ theorem mem_support_of_countAllHashes (leftKeep rightKeep : Bytes → QueryCache
     rw [show result.1.1 = inner.1.1 from by rw [← heq], show result.2 = inner.2 from by rw [← heq]]
     exact ih step.1 step.2 inner hinner
 
-set_option maxHeartbeats 800000 in
 /-- **A counted bind splits at the recorder**, with the recorder's state threaded through. -/
 theorem mem_support_counted_bind (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     {α β : Type} (computation : OracleComp OracleWorld α) (next : α → OracleComp OracleWorld β)
@@ -202,6 +200,7 @@ def RightSource (sk : SecretKey) (rightKeep : Bytes → QueryCache HashSpec → 
                 QueriesUnder final (SignerRandomiser.signInternalAt
                   (m := OracleComp HashSpec) (Hashing.truncate answer) sk framed) entry.1
 
+/-- A source stays a source when the adversary's record grows on the left. -/
 theorem RightSource.mono_record_right {sk : SecretKey}
     {rightKeep : Bytes → QueryCache HashSpec → Prop} {record extra : Multiset Bytes}
     {final : QueryCache HashSpec} {entry : Bytes × HashOutput}
@@ -211,7 +210,6 @@ theorem RightSource.mono_record_right {sk : SecretKey}
   · exact Or.inl (Multiset.mem_add.mpr (Or.inr hmem))
   · exact Or.inr hsigner
 
-set_option maxHeartbeats 1000000 in
 /-- **Every entry the phase files as a target is the adversary's own query, or a signing
 sub-run's.** The record is the one the phase's own value carries. -/
 theorem right_record_phase (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
@@ -311,7 +309,9 @@ generation's question is about an input's **shape**, which the shared oracle can
 projects with `SplitPrefix.mem_support_rom` and asks it there rather than redoing anything at
 the recorder. -/
 
-set_option maxHeartbeats 800000 in
+set_option maxHeartbeats 600000 in
+-- Checking the `mem_support_rom` argument against the recorder run of `keygenInternal`
+-- needs a `whnf` reduction of that run beyond the default budget.
 /-- **An entry key generation files as a target is one of its own probes.** -/
 theorem keygen_right_record (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (secretSeed prfSeed publicSeed : Digest) (state : SplitState)

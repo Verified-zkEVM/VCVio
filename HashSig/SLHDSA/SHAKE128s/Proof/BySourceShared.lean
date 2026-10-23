@@ -30,6 +30,7 @@ open Security CanonicalGraph WarmedGame WalkTable TableTail RecordedQueries Reco
 attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal
   Security.countQueries
 
+/-- **The number of served requests is at most the length of the signing log.** -/
 theorem servedCount_le_length (log : SigningLog) :
     AdversaryQueries.servedCount log ≤ log.length :=
   List.length_filter_le _ _

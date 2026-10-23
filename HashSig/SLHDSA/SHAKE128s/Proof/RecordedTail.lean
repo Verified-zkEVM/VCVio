@@ -57,8 +57,6 @@ noncomputable def recordedAfterSeeds (adversary : Adversary) (sds : Digest × Di
     counts := (Multiplicative.toAdd adversaryTally).1 + verifierTally.1 },
     (Multiplicative.toAdd adversaryTally).2 + verifierTally.2)
 
-set_option linter.constructorNameAsVariable false in
-set_option maxHeartbeats 1000000 in
 /-- **The recording is invisible.** Forgetting it returns the game exactly. -/
 theorem map_recordedAfterSeeds (adversary : Adversary) (sds : Digest × Digest × Digest) :
     Prod.fst <$> recordedAfterSeeds adversary sds = WarmedGame.afterSeeds adversary sds := by
@@ -96,8 +94,6 @@ theorem map_recordedAfterSeeds (adversary : Adversary) (sds : Digest × Digest �
 
 /-! ## The record is as big as the charge, here too -/
 
-set_option linter.constructorNameAsVariable false in
-set_option maxHeartbeats 1000000 in
 /-- **The record is exactly as big as the work the game charges.** -/
 theorem card_eq_work (adversary : Adversary) (sds : Digest × Digest × Digest)
     (cache : QueryCache HashSpec)

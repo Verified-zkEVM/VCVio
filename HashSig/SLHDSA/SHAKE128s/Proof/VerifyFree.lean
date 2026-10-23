@@ -34,8 +34,6 @@ stateful implementation (`FreeBounds.simulated`), in particular the game's rando
 open OracleComp OracleSpec
 open scoped BigOperators
 
-set_option maxRecDepth 2000
-
 namespace SlhDsaSecurity.VerifyFree
 
 variable {α β : Type}
@@ -52,6 +50,7 @@ open scoped Classical in
 noncomputable def freeCost (publicSeed : Digest) (input : Bytes) : Nat :=
   if Free publicSeed input then 1 else 0
 
+/-- A free query costs one unit. -/
 theorem freeCost_of_free {publicSeed : Digest} {input : Bytes} (h : Free publicSeed input) :
     freeCost publicSeed input = 1 := by
   classical
@@ -114,16 +113,19 @@ private theorem queryBoundedBelowBy_withAddCost_of_lawful {m : Type → Type} [M
 
 variable {publicSeed : Digest}
 
+/-- Every computation has at least zero free queries. -/
 theorem FreeBounds.zero (computation : OracleComp HashSpec α) :
     FreeBounds publicSeed computation 0 := by
   unfold FreeBounds
   intro m _ _ _ _ impl result _
   exact Nat.zero_le _
 
+/-- A pure computation has at least zero free queries. -/
 theorem FreeBounds.pure (value : α) :
     FreeBounds publicSeed (pure value : OracleComp HashSpec α) 0 :=
   FreeBounds.zero _
 
+/-- Free-query lower bounds add along a bind. -/
 theorem FreeBounds.bind {computation : OracleComp HashSpec α} {next : α → OracleComp HashSpec β}
     {lower nextLower : Nat} (h : FreeBounds publicSeed computation lower)
     (hnext : ∀ value, FreeBounds publicSeed (next value) nextLower) :
@@ -133,12 +135,15 @@ theorem FreeBounds.bind {computation : OracleComp HashSpec α} {next : α → Or
   rw [simulateQ_bind]
   exact queryBoundedBelowBy_bind_of_lawful (h m impl) (fun value => hnext value m impl)
 
+/-- Mapping the result keeps a free-query lower bound. -/
 theorem FreeBounds.map {computation : OracleComp HashSpec α} {lower : Nat}
     (h : FreeBounds publicSeed computation lower) (f : α → β) :
     FreeBounds publicSeed (f <$> computation) lower := by
   simpa [map_eq_bind_pure_comp] using
     h.bind (fun value => FreeBounds.pure (publicSeed := publicSeed) (f value))
 
+/-- A query followed by a continuation adds the query's free cost to the continuation's
+lower bound. -/
 theorem FreeBounds.query_bind (input : Bytes) {next : HashOutput → OracleComp HashSpec α}
     {lower : Nat} (hnext : ∀ output, FreeBounds publicSeed (next output) lower) :
     FreeBounds publicSeed (liftM (HashSpec.query input) >>= next)
@@ -150,6 +155,7 @@ theorem FreeBounds.query_bind (input : Bytes) {next : HashOutput → OracleComp 
     (queryBoundedBelowBy_withAddCost_of_lawful impl (freeCost publicSeed) input)
     (fun output => hnext output m impl)
 
+/-- A tweakable hash of a payload whose length is not `n` makes one free query. -/
 theorem tweakable_free (address : Address) (payload : Bytes) (hlength : payload.length ≠ n) :
     FreeBounds publicSeed
       (Hashing.tweakable publicSeed address payload : OracleComp HashSpec Digest) 1 := by
@@ -160,6 +166,7 @@ theorem tweakable_free (address : Address) (payload : Bytes) (hlength : payload.
   rw [freeCost_of_free (free_tweakableInput publicSeed address payload hlength)] at h
   exact h
 
+/-- Free-query lower bounds add along `sequenceFin`. -/
 theorem sequenceFin_free {size : Nat} (f : Fin size → OracleComp HashSpec α)
     (lower : Fin size → Nat) (hlower : ∀ i, FreeBounds publicSeed (f i) (lower i)) :
     FreeBounds publicSeed (sequenceFin size f) (∑ i, lower i) := by
@@ -172,6 +179,7 @@ theorem sequenceFin_free {size : Nat} (f : Fin size → OracleComp HashSpec α)
         (ih (fun i => f i.succ) (fun i => lower i.succ) (fun i => hlower i.succ)).map
           (fun rest => (Fin.cases first rest : Fin (size + 1) → α)))
 
+/-- A fold makes at least the per-step lower bound once per item. -/
 theorem foldlM_free (items : List α) (f : β → α → OracleComp HashSpec β)
     (lower : Nat) (hlower : ∀ value item, FreeBounds publicSeed (f value item) lower)
     (initial : β) :
@@ -237,6 +245,8 @@ theorem merkle_free (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignature
       foldlM_free (List.finRange subtreeHeight) _ 1 (fun value j => tweakable_free _ _ (by
         split_ifs <;> exact length_pair _ _)) leaf)
 
+/-- Recomputing a hypertree root over `remaining` layers makes at least ten free queries
+per layer. -/
 theorem hypertree_root_free (remaining : Nat)
     (signatures : Fin remaining → XmssSignature) (layer tree : Nat) (leaf : Hypertree.LeafIndex)
     (message : Digest) :
@@ -252,6 +262,7 @@ theorem hypertree_root_free (remaining : Nat)
         (fun root => ih (fun i => signatures i.succ) (layer + 1)
           (tree / 2 ^ subtreeHeight) (Hypertree.nextLeaf tree) root)
 
+/-- **Verification makes at least `239` free queries.** -/
 theorem verifyInternal_free (pk : PublicKey) (message : Bytes) (signature : Signature) :
     FreeBounds pk.seed (Scheme.verifyInternal pk message signature : OracleComp HashSpec Bool)
       239 := by
@@ -305,6 +316,7 @@ private theorem mem_support_of_mem_support_simulateQ_run {ι : Type} {spec : Ora
     obtain ⟨⟨u, s'⟩, -, hrest⟩ := LawfulMonadAttach.canReturn_bind_imp' hz
     exact (mem_support_bind_iff _ _ _).2 ⟨u, mem_support_query t u, ih u s' hrest⟩
 
+/-- A result of a stateful simulation is a result of the simulated computation. -/
 private theorem mem_support_of_mem_support_simulateQ_run' {ι : Type} {spec : OracleSpec ι}
     {m : Type → Type} [Monad m] [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m]
     {σ γ : Type} (impl : QueryImpl spec (StateT σ m)) (oa : OracleComp spec γ) (s : σ) {x : γ}
@@ -320,7 +332,8 @@ theorem FreeBounds.simulated {m : Type → Type} [Monad m] [LawfulMonad m]
     {σ : Type} {computation : OracleComp HashSpec α} {lower : Nat}
     (h : FreeBounds publicSeed computation lower) (impl : QueryImpl HashSpec (StateT σ m))
     (initial : σ) (result : α × Multiplicative Nat)
-    (hresult : result ∈ support ((simulateQ impl (freeCounted publicSeed computation)).run' initial)) :
+    (hresult : result ∈
+      support ((simulateQ impl (freeCounted publicSeed computation)).run' initial)) :
     lower ≤ Multiplicative.toAdd result.2 := by
   have hfree := mem_support_of_mem_support_simulateQ_run' impl
     (freeCounted publicSeed computation) initial hresult
@@ -329,10 +342,13 @@ theorem FreeBounds.simulated {m : Type → Type} [Monad m] [LawfulMonad m]
 
 /-! ## The `OracleWorld` verifier under the game's random oracle -/
 
+/-- The free-query counter of a pure computation counts zero. -/
 theorem freeCounted_pure (value : α) :
     freeCounted publicSeed (pure value : OracleComp HashSpec α) =
       pure (value, Multiplicative.ofAdd 0) := rfl
 
+/-- The free-query counter of a query followed by a continuation adds the query's free
+cost. -/
 theorem freeCounted_query_bind (input : HashSpec.Domain)
     (next : HashSpec.Range input → OracleComp HashSpec α) :
     freeCounted publicSeed (liftM (HashSpec.query input) >>= next) = (do

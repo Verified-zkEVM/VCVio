@@ -118,7 +118,7 @@ theorem cache_value_persists {α : Type} (leftKeep rightKeep : Bytes → σ → 
       refine recorderOf_step_persists leftKeep rightKeep probe
         (CacheView.onQuery state.1 probe, state.2) step
         (step_inr leftKeep rightKeep probe state step hstep) input answer ?_
-      show CacheView.cacheOf (CacheView.onQuery state.1 probe) input = some answer
+      change CacheView.cacheOf (CacheView.onQuery state.1 probe) input = some answer
       rw [cacheOf_onQuery]
       exact hentry
 
@@ -157,7 +157,6 @@ theorem reaches_run {α : Type} (leftKeep rightKeep : Bytes → σ → Prop) (re
 
 /-! ## The cover, at the views a run of the noticing recorder passes through -/
 
-set_option maxHeartbeats 1000000 in
 open scoped Classical in
 /-- **A query whose answer the run ends holding is recorded on one side or the other.**
 The cover lemma for the recorder that notices.

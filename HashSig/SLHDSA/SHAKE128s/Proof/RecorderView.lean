@@ -89,6 +89,7 @@ instance : CacheView HandlerCarrier.State where
 
 variable {σ : Type} [CacheView σ]
 
+/-- Noticing a query leaves the view's cache unchanged. -/
 theorem cacheOf_onQuery (state : σ) (input : Bytes) :
     CacheView.cacheOf (CacheView.onQuery state input) = CacheView.cacheOf state :=
   CacheView.cache_onQuery state input
@@ -107,6 +108,7 @@ noncomputable def appendedOf (leftKeep rightKeep : Bytes → σ → Prop) (input
     (state.2.1, state.2.2 ++ [(input, answer)])
   else state.2
 
+/-- A step only extends the disclosing recording: the old one is a prefix of the new. -/
 theorem left_prefix_appendedOf (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) (answer : HashOutput) :
     state.2.1 <+: (appendedOf leftKeep rightKeep input state answer).1 := by
@@ -118,6 +120,7 @@ theorem left_prefix_appendedOf (leftKeep rightKeep : Bytes → σ → Prop) (inp
     · exact List.prefix_rfl
     · exact List.prefix_rfl
 
+/-- A step only extends the target recording: the old one is a prefix of the new. -/
 theorem right_prefix_appendedOf (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) (answer : HashOutput) :
     state.2.2 <+: (appendedOf leftKeep rightKeep input state answer).2 := by
@@ -132,6 +135,7 @@ theorem right_prefix_appendedOf (leftKeep rightKeep : Bytes → σ → Prop) (in
 /-! ### Reading the two tests -/
 
 open scoped Classical in
+/-- A cached query leaves both recordings unchanged. -/
 theorem appendedOf_of_cached (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) (answer cached : HashOutput)
     (hcached : CacheView.cacheOf state.1 input = some cached) :
@@ -140,6 +144,7 @@ theorem appendedOf_of_cached (leftKeep rightKeep : Bytes → σ → Prop) (input
   rw [appendedOf, ite_eq_right (by rw [hcached]; simp), ite_eq_right (by rw [hcached]; simp)]
 
 open scoped Classical in
+/-- A fresh query passing the left test is appended to the disclosing recording. -/
 theorem appendedOf_of_left (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) (answer : HashOutput)
     (hfresh : CacheView.cacheOf state.1 input = none) (hleft : leftKeep input state.1) :
@@ -149,6 +154,8 @@ theorem appendedOf_of_left (leftKeep rightKeep : Bytes → σ → Prop) (input :
   rw [appendedOf, ite_eq_left ⟨hfresh, hleft⟩]
 
 open scoped Classical in
+/-- A fresh query failing the left test and passing the right one is appended to the target
+recording. -/
 theorem appendedOf_of_right (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) (answer : HashOutput)
     (hfresh : CacheView.cacheOf state.1 input = none) (hleft : ¬ leftKeep input state.1)
@@ -159,6 +166,7 @@ theorem appendedOf_of_right (leftKeep rightKeep : Bytes → σ → Prop) (input 
   rw [appendedOf, ite_eq_right (fun hboth => hleft hboth.2), ite_eq_left ⟨hfresh, hright⟩]
 
 open scoped Classical in
+/-- A query passing neither test leaves both recordings unchanged. -/
 theorem appendedOf_of_neither (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) (answer : HashOutput) (hleft : ¬ leftKeep input state.1)
     (hright : ¬ rightKeep input state.1) :
@@ -258,6 +266,7 @@ noncomputable def recorderOf (leftKeep rightKeep : Bytes → σ → Prop) :
               ($ᵗ HashOutput : ProbComp _)
 
 open scoped Classical in
+/-- A coin query draws a uniform value and leaves the state unchanged. -/
 theorem recorderOf_run_inl (leftKeep rightKeep : Bytes → σ → Prop) (coin : unifSpec.Domain)
     (state : StateOf σ) :
     ((recorderOf leftKeep rightKeep) (Sum.inl coin)).run state =
@@ -265,6 +274,7 @@ theorem recorderOf_run_inl (leftKeep rightKeep : Bytes → σ → Prop) (coin : 
         (pure (value, state) : ProbComp _) := rfl
 
 open scoped Classical in
+/-- A cached hash query returns the cached answer and updates only the recordings. -/
 theorem recorderOf_run_inr_some (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) (cached : HashOutput)
     (hcached : CacheView.cacheOf state.1 input = some cached) :
@@ -272,13 +282,14 @@ theorem recorderOf_run_inr_some (leftKeep rightKeep : Bytes → σ → Prop) (in
       (pure (cached, (state.1, appendedOf leftKeep rightKeep input state cached)) :
         ProbComp (OracleWorld.Range (Sum.inr input) × StateOf σ)) := by
   classical
-  show (match CacheView.cacheOf state.1 input with
+  change (match CacheView.cacheOf state.1 input with
     | some cached => (pure (cached, (state.1, appendedOf leftKeep rightKeep input state cached)) :
         ProbComp _)
     | none => _) = _
   rw [hcached]
 
 open scoped Classical in
+/-- A fresh hash query draws an answer, installs it, and updates the recordings. -/
 theorem recorderOf_run_inr_none (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) (hfresh : CacheView.cacheOf state.1 input = none) :
     ((recorderOf leftKeep rightKeep) (Sum.inr input)).run state =
@@ -288,7 +299,7 @@ theorem recorderOf_run_inr_none (leftKeep rightKeep : Bytes → σ → Prop) (in
         ($ᵗ HashOutput : ProbComp _)) :
           ProbComp (OracleWorld.Range (Sum.inr input) × StateOf σ)) := by
   classical
-  show (match CacheView.cacheOf state.1 input with
+  change (match CacheView.cacheOf state.1 input with
     | some cached => (pure (cached, (state.1, appendedOf leftKeep rightKeep input state cached)) :
         ProbComp _)
     | none => _) = _
@@ -300,6 +311,7 @@ So nothing proved there has to move, and the generalisation is a widening rather
 replacement. -/
 
 open scoped Classical in
+/-- At the cache itself, `appendedOf` is `SplitPrefix.appended`. -/
 theorem appendedOf_cache (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (input : Bytes) (state : SplitState) (answer : HashOutput) :
     appendedOf leftKeep rightKeep input state answer =
@@ -313,7 +325,7 @@ theorem recorderOf_cache (leftKeep rightKeep : Bytes → QueryCache HashSpec →
   funext queried state
   rcases queried with coin | input
   · rfl
-  · show ((recorderOf leftKeep rightKeep) (Sum.inr input)).run state =
+  · change ((recorderOf leftKeep rightKeep) (Sum.inr input)).run state =
       ((recorder leftKeep rightKeep) (Sum.inr input)).run state
     rw [SplitPrefix.recorder_run_inr]
     cases hcached : state.1 input with
@@ -334,10 +346,12 @@ The law is read in exactly two ways, and every proof below goes through those tw
 rather than through `CacheView.update` itself. That is the point of keeping the law single: a
 second one would have to be paid for here and again at every instantiation. -/
 
+/-- After installing an answer, the view's cache holds it at that input. -/
 theorem cacheOf_update_self (state : σ) (input : Bytes) (answer : HashOutput) :
     CacheView.cacheOf (CacheView.update state input answer) input = some answer := by
   rw [CacheView.cache_update, QueryCache.cacheQuery_self]
 
+/-- Installing an answer leaves the view's cache unchanged at every other input. -/
 theorem cacheOf_update_of_ne (state : σ) (input probe : Bytes) (answer : HashOutput)
     (hne : probe ≠ input) :
     CacheView.cacheOf (CacheView.update state input answer) probe =
@@ -514,12 +528,14 @@ noncomputable def noticingRecorderOf (leftKeep rightKeep : Bytes → σ → Prop
           (CacheView.onQuery state.1 input, state.2)
 
 open scoped Classical in
+/-- At a coin query, the noticing recorder is `recorderOf`. -/
 theorem noticingRecorderOf_run_inl (leftKeep rightKeep : Bytes → σ → Prop)
     (coin : unifSpec.Domain) (state : StateOf σ) :
     ((noticingRecorderOf leftKeep rightKeep) (Sum.inl coin)).run state =
       ((recorderOf leftKeep rightKeep) (Sum.inl coin)).run state := rfl
 
 open scoped Classical in
+/-- At a hash query, the noticing recorder notices the query and then runs `recorderOf`. -/
 theorem noticingRecorderOf_run_inr (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) :
     ((noticingRecorderOf leftKeep rightKeep) (Sum.inr input)).run state =
@@ -533,6 +549,8 @@ difference from `recorderOf`'s is in the **cached** one: where that oracle retur
 untouched, this one returns the noticed state. -/
 
 open scoped Classical in
+/-- A cached hash query to the noticing recorder returns the cached answer, notices the
+query, and updates the recordings. -/
 theorem noticingRecorderOf_run_inr_some (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) (cached : HashOutput)
     (hcached : CacheView.cacheOf state.1 input = some cached) :
@@ -546,6 +564,8 @@ theorem noticingRecorderOf_run_inr_some (leftKeep rightKeep : Bytes → σ → P
     (CacheView.onQuery state.1 input, state.2) cached (by rw [cacheOf_onQuery]; exact hcached)
 
 open scoped Classical in
+/-- A fresh hash query to the noticing recorder notices the query, then draws, installs and
+records an answer. -/
 theorem noticingRecorderOf_run_inr_none (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) (hfresh : CacheView.cacheOf state.1 input = none) :
     ((noticingRecorderOf leftKeep rightKeep) (Sum.inr input)).run state =

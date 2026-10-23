@@ -125,8 +125,6 @@ attribute [local irreducible] WarmedGame.afterSeeds WarmedGame.graphWalk WarmedG
   WarmedGame.warmedRun Scheme.keygenInternal Scheme.verify Scheme.sign
   Security.signingOracle Security.countQueries
 
-set_option linter.constructorNameAsVariable false in
-set_option maxHeartbeats 1000000 in
 /-- **A win on a good walk is the answer side or the input side.** -/
 theorem cases_of_win_charged (adversary : Adversary)
     {walk : ((Digest × Digest × Digest) × Cells) × QueryCache HashSpec}

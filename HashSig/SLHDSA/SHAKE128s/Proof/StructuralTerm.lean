@@ -27,8 +27,6 @@ budget and independent of how many honest node values exist.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.StructuralTerm
 
 open CanonicalGraph

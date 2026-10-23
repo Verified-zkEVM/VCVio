@@ -48,6 +48,7 @@ noncomputable def withCount
     let step ← (impl queried).run (state.1, state.2.1)
     pure (step.1, (step.2.1, (step.2.2, state.2.2 + hashCost queried)))
 
+/-- One step of `withCount`: the wrapped step, then the counter bumped by the query's cost. -/
 theorem withCount_run (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (queried : OracleWorld.Domain) (state : HandlerCarrier.State × (τ × Nat)) :
     ((withCount impl) queried).run state =
@@ -90,6 +91,7 @@ noncomputable def withExtra {ω : Type}
     let step ← (impl queried).run (state.1, state.2.1)
     pure (step.1, (step.2.1, (step.2.2, update queried state.2.2)))
 
+/-- One step of `withExtra`: the wrapped step, then the extra component updated. -/
 theorem withExtra_run {ω : Type}
     (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (update : OracleWorld.Domain → ω → ω)
@@ -271,6 +273,7 @@ carrier and the counter is not in it.
 wrapper puts the step underneath back unchanged — so the counter's projection law is the
 wrapper's, at `ω := Nat`, and any other extra component inherits it. -/
 
+/-- Forgetting the extra component of a `withExtra` step returns the wrapped step. -/
 theorem withExtra_step_map {ω : Type}
     (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (update : OracleWorld.Domain → ω → ω)
@@ -281,6 +284,7 @@ theorem withExtra_step_map {ω : Type}
   rw [withExtra_run, map_eq_bind_pure_comp, bind_assoc]
   simp [Function.comp_def]
 
+/-- Forgetting the extra component of a `withExtra` run returns the wrapped run. -/
 theorem run_withExtra_map {ω : Type} {α : Type}
     (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (update : OracleWorld.Domain → ω → ω)
@@ -341,13 +345,13 @@ noncomputable def romWithCount :
     let step ← (KeygenUniform.rom queried).run state.1
     pure (step.1, (step.2, state.2 + hashCost queried))
 
+/-- One step of `romWithCount`: the shared oracle's step, then the counter bumped. -/
 theorem romWithCount_run (queried : OracleWorld.Domain) (state : QueryCache HashSpec × Nat) :
     (romWithCount queried).run state =
       (KeygenUniform.rom queried).run state.1 >>= fun step =>
         (pure (step.1, (step.2, state.2 + hashCost queried)) :
           ProbComp (OracleWorld.Range queried × (QueryCache HashSpec × Nat))) := rfl
 
-set_option maxHeartbeats 1000000 in
 /-- **Its counter is `countAllHashes`'s count.** The statement carries the counter the run
 started at, because a handler's counter accumulates while `countAllHashes` begins at zero; the
 tail's three stages add up only because each equation says what it started from. -/
@@ -372,7 +376,7 @@ theorem run_romWithCount_count {α : Type} (computation : OracleComp OracleWorld
       StateT.run_map, Functor.map_map]
     refine congrArg (fun f => f <$> (simulateQ KeygenUniform.rom
       (countAllHashes (next inner.1))).run inner.2) (funext fun result => ?_)
-    show ((result.1.1, state.2 + hashCost queried + result.1.2), result.2) =
+    change ((result.1.1, state.2 + hashCost queried + result.1.2), result.2) =
       ((result.1.1, state.2 + (hashCost queried + result.1.2)), result.2)
     rw [Nat.add_assoc]
 

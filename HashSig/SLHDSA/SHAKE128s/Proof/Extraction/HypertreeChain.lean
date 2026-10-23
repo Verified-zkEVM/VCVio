@@ -10,23 +10,25 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.Extraction.Hypertree
 public import HashSig.SLHDSA.SHAKE128s.Proof.Extraction.WotsPreimage
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Merkle
 
-/-! Chaining the structural extraction across all hypertree layers.
+/-!
+# Chaining the structural extraction across all hypertree layers
 
 A forged hypertree signature recovering the honest top root either contains a concrete
 structural fault at some layer — a layer collision, or a WOTS signature on a message
-differing from the honest input at that layer (which yields a chain preimage witness) — or the bottom layer's incoming message equals
-the honest input threaded through every layer. Threaded to the full hypertree, the
-fault-free branch forces the recovered FORS public key to equal the honest one, handing
-the FORS coverage argument its input. No collision or one-wayness is assumed; every fault
-is a concrete witness whose ROM probability is charged elsewhere in the proof. -/
+differing from the honest input at that layer (which yields a chain preimage witness) — or the
+bottom layer's incoming message equals the honest input threaded through every layer
+(`rootFromSignature_fault_or_signed`). Threaded to the full hypertree, the fault-free branch
+forces the recovered FORS public key to equal the honest one, and the whole signature to be the
+one the honest signer writes (`verify_fault_or_fors_signed`), handing the FORS coverage argument
+its input. No collision or one-wayness is assumed; every fault is a concrete witness whose ROM
+probability is charged elsewhere in the proof.
+-/
 
 @[expose] public section
 
 open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.Extraction.HypertreeChain
-
-set_option backward.isDefEq.respectTransparency false
 
 variable [HasQuery HashSpec Id]
 
@@ -111,7 +113,6 @@ theorem xmss_eq_sign (secretSeed publicSeed message : Digest) (layer tree : Nat)
   simp only [XmssSignature.mk.injEq]
   exact ⟨hwots, funext hauth⟩
 
-set_option maxRecDepth 10000 in
 /-- **The seven-layer structural soundness chain.** Either a concrete fault occurs at some
 layer, or the segment's incoming message equals the honest input threaded through it *and* every
 layer carries the signature the honest signer writes there. The second conjunct is what the
@@ -216,7 +217,8 @@ theorem verify_fault_or_fors_signed (secretSeed publicSeed : Digest) (pk : Publi
       have htree : tree.toNat / 2 ^ (subtreeHeight * (layers - 1)) = 0 := by
         apply Nat.div_eq_of_lt
         have := tree.isLt
-        simpa only [show totalHeight - subtreeHeight = subtreeHeight * (layers - 1) from rfl] using this
+        simpa only [show totalHeight - subtreeHeight = subtreeHeight * (layers - 1) from rfl]
+          using this
       rw [Nat.zero_add, htree] at h
       exact h
     rw [hfold, hroot]

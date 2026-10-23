@@ -73,6 +73,8 @@ noncomputable def disclosedByLog (pk : PublicKey)
       ∃ tree : Fin forsTrees,
         GraphStakes.forsIndex (MessageDigest.forsIndices answer) tree = index
 
+/-- Membership in `disclosedByLog`: some served digest input caches an answer that selects the
+position in that FORS key. -/
 theorem mem_disclosedByLog (pk : PublicKey)
     (result : (Outcome × Nat) × QueryCache HashSpec) (key : CanonicalGraph.ForsKey)
     (index : Fin (forsTrees * 2 ^ forsHeight)) :

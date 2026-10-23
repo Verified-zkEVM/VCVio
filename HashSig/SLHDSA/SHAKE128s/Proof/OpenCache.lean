@@ -48,8 +48,6 @@ state where cell `i` is unavailable, the entries this handler may serve do not m
 
 open OracleComp OracleSpec
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.OpenCache
 
 open CanonicalGraph CanonicalGraph.Programming
@@ -83,6 +81,7 @@ noncomputable def openNodes : List StructuralNode :=
   Programming.order.filter (fun parent => decide (∀ child ∈ parent.children, available child))
 
 open scoped Classical in
+/-- A node is open exactly when all of its children's cells are available. -/
 theorem mem_openNodes (parent : StructuralNode) :
     parent ∈ openNodes available ↔ ∀ child ∈ parent.children, available child := by
   rw [openNodes, List.mem_filter, decide_eq_true_eq]

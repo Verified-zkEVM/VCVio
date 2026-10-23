@@ -25,7 +25,7 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.GraphFreshSampling
 
-variable {Index State : Type} [DecidableEq Index]
+variable {Index State : Type}
 
 /-- Run the actual shared hash oracle while carrying the partially computed graph. -/
 def evaluate (input : Index → State → Bytes) (step : Index → State → HashOutput → State) :
@@ -53,16 +53,19 @@ def program (input : Index → State → Bytes) (step : Index → State → Hash
       program input step outputs nodes (step node state (outputs node))
         (cache.cacheQuery (input node state) (outputs node))
 
-/-- Byte-input separation is uniform over the payload states on both sides. -/
+/-- Distinct coordinates have distinct byte inputs, whatever the payload states on either
+side. -/
 def Separated (input : Index → State → Bytes) : Prop :=
   ∀ left right, left ≠ right → ∀ leftState rightState,
     input left leftState ≠ input right rightState
 
+/-- No byte input of a coordinate in `nodes`, in any state, has been cached yet. -/
 def FreshFor (input : Index → State → Bytes) (nodes : List Index)
     (cache : QueryCache HashSpec) : Prop :=
   ∀ node ∈ nodes, ∀ state, cache (input node state) = none
 
-omit [DecidableEq Index] in
+/-- On separated inputs, evaluating a duplicate-free traversal against the lazily sampled random
+oracle from a fresh cache is sampling an independent answer at each coordinate. -/
 theorem evaluate_eq_sample (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State) (hseparated : Separated input)
     (nodes : List Index) (hnodup : nodes.Nodup) (state : State) (cache : QueryCache HashSpec)
@@ -88,7 +91,7 @@ theorem evaluate_eq_sample (input : Index → State → Bytes)
         (hseparated other node (by intro h; subst other; exact hnot hother) otherState state)]
       exact hfresh other (by simp [hother]) otherState
 
-omit [DecidableEq Index] in
+/-- Programming a traversal depends only on the answers at its coordinates. -/
 theorem program_congr (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State) (left right : Index → HashOutput)
     (nodes : List Index) (hagrees : ∀ node ∈ nodes, left node = right node)
@@ -100,6 +103,10 @@ theorem program_congr (input : Index → State → Bytes)
       simp only [program, hagrees node (by simp)]
       exact ih (fun other hother => hagrees other (by simp [hother])) _ _
 
+variable [DecidableEq Index]
+
+/-- Changing the answer at a coordinate outside the traversal does not change its
+programming. -/
 theorem program_update_outside (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State) (outputs : Index → HashOutput)
     (nodes : List Index) (node : Index) (hnot : node ∉ nodes) (output : HashOutput)

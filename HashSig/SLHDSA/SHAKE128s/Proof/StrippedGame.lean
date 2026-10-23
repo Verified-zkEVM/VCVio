@@ -45,8 +45,10 @@ Two things have to be proved, and one of them is new.
   unchanged, since those count only the adversary's own calls, the verifier's, and the number of
   signing requests. The outer `Security.countAllHashes` is left outside the statement.
 
-What comes out is `honest_probes_not_in_warm_cache`: the stripped honest phase never consults an
-input the walk's table answers, hence never a canonical one, hence never a sensitive one.
+The main declarations are `strippedKeygen`, `strippedSign` and `strippedSigningOracle`, their
+run equalities `run_strippedKeygen` and `run_strippedSign`, and the stripped experiment
+`strippedAfterSeeds`. The stripped honest phase never consults an input the walk's table answers,
+hence never a canonical one, hence never a sensitive one.
 -/
 
 @[expose] public section
@@ -63,6 +65,7 @@ open Security CacheReplay
 def Extends (warm current : QueryCache HashSpec) : Prop :=
   ∀ (input : Bytes) (value : HashOutput), warm input = some value → current input = some value
 
+/-- Every cache extends itself. -/
 theorem Extends.refl (cache : QueryCache HashSpec) : Extends cache cache := fun _ _ h => h
 
 /-- **A run of the game's world only ever adds entries.** -/
@@ -138,11 +141,15 @@ Three definitional unfoldings of the transformer stack, so that the oracle's own
 off: lifting a world computation into the counted run leaves the log alone and records nothing,
 a counted bind is the underlying bind, and appending to the log is a pure step. -/
 
+/-- Lifting a world computation into the counted run leaves the log alone and records no
+count. -/
 theorem run_liftM_counted {α : Type} (x : OracleComp OracleWorld α) (log : SigningLog) :
     ((WriterT.run (liftM x : CountedRun α)).run log) =
       (fun value => ((value, (1 : Multiplicative Counts)), log)) <$> x := by
   simp [liftM, monadLift, MonadLift.monadLift]
 
+/-- Lifting a logged world computation into the counted run records no count and threads the
+log. -/
 theorem run_liftM_state {α : Type} (x : StateT SigningLog (OracleComp OracleWorld) α)
     (log : SigningLog) :
     ((WriterT.run (liftM x : CountedRun α)).run log) =
@@ -197,6 +204,8 @@ noncomputable def countedRun {α : Type} (x : CountedRun α) (log : SigningLog)
     ProbComp (((α × Multiplicative Counts) × SigningLog) × QueryCache HashSpec) :=
   (simulateQ KeygenUniform.rom ((WriterT.run x).run log)).run current
 
+/-- The counted run of a bind is the counted run of its first half, followed by that of the
+continuation, with the two counts multiplied. -/
 theorem countedRun_bind {α β : Type} (x : CountedRun α) (next : α → CountedRun β)
     (log : SigningLog) (current : QueryCache HashSpec) :
     countedRun (x >>= next) log current =
@@ -234,7 +243,7 @@ attribute [local irreducible] WarmedGame.afterSeeds strippedAfterSeeds
 The honest phase, stripped, asks only at inputs the warm table cannot answer. Since the walk's
 table holds an entry at every canonical input, the stripped honest parties never consult one —
 so in particular never consult a sensitive one, whatever region of the table the input half
-chooses to strip. That is the single reason the earlier, PRF-only version of the comparison
-said nothing: the honest parties walked straight through the region themselves. -/
+chooses to strip. Without the surgery the honest parties would walk straight through the region
+themselves, and the comparison would bound nothing. -/
 
 end SlhDsaSecurity.StrippedGame

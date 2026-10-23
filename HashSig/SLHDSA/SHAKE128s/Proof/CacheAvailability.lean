@@ -19,12 +19,12 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.RecordedBudget
 positions they disclose. This file supplies the instance, and the two halves are supplied for
 quite different reasons.
 
-**The WOTS half does not depend on the run at all.** Each WOTS key of the hypertree signs
-exactly one message — the honest node one layer below it — so the digit a signature on that key
-discloses is a function of the seeds, not of which messages were requested.
-`GraphStakes.honestRevealed` is that digit. Treating a chain as revealed up to that digit before any signature is issued is
-an over-approximation of availability, and the residue reduction is unaffected: it leaves the
-forgery holding a value *strictly below* that digit, which is unavailable either way.
+**The WOTS half does not depend on the run at all.** Each WOTS key of the hypertree signs exactly
+one message — the honest node one layer below it — so the digit a signature on that key discloses is
+a function of the seeds, not of which messages were requested. `GraphStakes.honestRevealed` is that
+digit. Treating a chain as revealed up to that digit before any signature is issued is an
+over-approximation of availability, and the residue reduction is unaffected: it leaves the forgery
+holding a value *strictly below* that digit, which is unavailable either way.
 
 **The FORS half is about the signing log, which the cache does not carry — but it determines
 it.** Signing a message puts that message's `H_msg` input in the cache, and the digest cached
@@ -61,8 +61,10 @@ stronger than the growth of the cache's domain. -/
 def Persists (left right : QueryCache HashSpec) : Prop :=
   ∀ (probe : Bytes) (value : HashOutput), left probe = some value → right probe = some value
 
+/-- Every cache persists into itself. -/
 theorem Persists.refl (cache : QueryCache HashSpec) : Persists cache cache := fun _ _ h => h
 
+/-- Persistence composes. -/
 theorem Persists.trans {left middle right : QueryCache HashSpec} (hfirst : Persists left middle)
     (hsecond : Persists middle right) : Persists left right :=
   fun probe value hvalue => hsecond probe value (hfirst probe value hvalue)

@@ -62,6 +62,7 @@ def HelpedBy (revealed : Disclosures) (target helper : View) : Prop :=
   helper.1 = target.1 ∧
     ∀ tree, target.2 tree ∈ revealed target.1 tree ∨ helper.2 tree = target.2 tree
 
+/-- Whether a helper view covers a target is decidable. -/
 instance (revealed : Disclosures) (target helper : View) :
     Decidable (HelpedBy revealed target helper) := by
   unfold HelpedBy
@@ -71,6 +72,7 @@ instance (revealed : Disclosures) (target helper : View) :
 def LeafPairs (shown : Finset Leaf) : Type :=
   {pair : Leaf × Leaf // pair.1 ∈ shown ∨ pair.2 = pair.1}
 
+/-- The leaf pairs of one tree form a finite type. -/
 instance (shown : Finset Leaf) : Fintype (LeafPairs shown) := by
   unfold LeafPairs
   infer_instance
@@ -130,7 +132,8 @@ theorem card_helped_le (revealed : Disclosures) (loads : Instance → Nat)
   calc ∏ tree : Tree, Fintype.card (LeafPairs (revealed index tree))
       ≤ ∏ _tree : Tree, 2 ^ 12 * (loads index + 1) :=
         Finset.prod_le_prod fun tree _ =>
-          le_trans (card_leafPairs_le _) (Nat.mul_le_mul_left _ (Nat.succ_le_succ (hload index tree)))
+          le_trans (card_leafPairs_le _)
+            (Nat.mul_le_mul_left _ (Nat.succ_le_succ (hload index tree)))
     _ = (2 ^ 12) ^ 14 * (loads index + 1) ^ 14 := by
         have htree : Fintype.card ForsCoverage.Tree = 14 := by
           unfold ForsCoverage.Tree MessageDigest.ForsTree forsTrees; exact Fintype.card_fin _
@@ -151,7 +154,8 @@ independent uniform helper at its own instance with probability at most `2 ^ -17
 theorem prob_helpedBy_le (revealed : Disclosures) (loads : Instance → Nat)
     (hload : ∀ index tree, (revealed index tree).card ≤ loads index)
     (hmoment : ∑ index, loads index ^ 14 ≤ 2 ^ 102) :
-    Pr{let pair ← ($ᵗ (View × View) : ProbComp (View × View))}[HelpedBy revealed pair.1 pair.2] ≤ 1 / ((2 ^ 177 : Nat) : ℝ≥0∞) := by
+    Pr{let pair ← ($ᵗ (View × View) : ProbComp (View × View))}[HelpedBy revealed pair.1 pair.2] ≤
+      1 / ((2 ^ 177 : Nat) : ℝ≥0∞) := by
   classical
   have hsum : ∑ index : Instance, (2 ^ 12) ^ 14 * (loads index + 1) ^ 14 ≤ 2 ^ 285 := by
     have hone : ∑ index : Instance, (2 ^ 12) ^ 14 * (loads index + 1) ^ 14 ≤
@@ -202,8 +206,8 @@ theorem prob_instance_eq (index : Instance) :
         rfl
     rw [hset, Finset.card_image_of_injective _ (fun left right h => (Prod.mk.inj h).2),
       Finset.card_univ]
-    norm_num [ForsCoverage.Tree, Leaf, MessageDigest.ForsTree, MessageDigest.ForsLeaf, Fintype.card_fun,
-      Fintype.card_fin, forsHeight, forsTrees]
+    norm_num [ForsCoverage.Tree, Leaf, MessageDigest.ForsTree, MessageDigest.ForsLeaf,
+      Fintype.card_fun, Fintype.card_fin, forsHeight, forsTrees]
   have hcard : Fintype.card View = 2 ^ 231 := by
     norm_num [View, Instance, ForsCoverage.Tree, Leaf, MessageDigest.View, MessageDigest.Instance,
       MessageDigest.ForsTree, MessageDigest.ForsLeaf, Fintype.card_prod, Fintype.card_fun,
@@ -219,7 +223,8 @@ theorem prob_instance_eq (index : Instance) :
 theorem tsum_probOutput_bind {α β : Type} (outer : ProbComp α) (inner : α → ProbComp β)
     (f : β → ℝ≥0∞) :
     ∑' out, Pr{let x ← outer >>= inner}[x = out] * f out =
-      ∑' value, Pr{let x ← outer}[x = value] * ∑' out, Pr{let x ← inner value}[x = out] * f out := by
+      ∑' value, Pr{let x ← outer}[x = value] *
+        ∑' out, Pr{let x ← inner value}[x = out] * f out := by
   exact tsum_prEvent_bind_mul outer inner f
 
 /-- **An expectation against a point mass is the value at the point.** -/
@@ -233,7 +238,8 @@ theorem tsum_padding_set (length cell : Nat) (hcell : cell < length)
     (f : List HashOutput → ℝ≥0∞) :
     ∑' tape, Pr{let x ← padding length}[x = tape] * f tape =
       ∑' tape, Pr{let x ← padding length}[x = tape] *
-        ∑' value, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = value] * f (tape.set cell value) := by
+        ∑' value, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = value] *
+          f (tape.set cell value) := by
   classical
   have hlaw := TapeFactor.evalDist_padding_set length cell hcell
     (fun tape => (pure tape : ProbComp (List HashOutput)))
@@ -266,7 +272,8 @@ open scoped Classical in
 /-- **A block event beside the selection is a reach mass.** -/
 theorem probEvent_reach_and_eq (leftLength rightLength index : Nat)
     (event : List HashOutput → List HashOutput → Prop) :
-    Pr{let outcome ← blockRunOf run leftLength rightLength}[index < len outcome.2 ∧ event outcome.1.1 outcome.1.2] =
+    Pr{let outcome ← blockRunOf run leftLength rightLength}[
+        index < len outcome.2 ∧ event outcome.1.1 outcome.1.2] =
       reachMass run len leftLength rightLength index
         (fun leftTape rightTape => if event leftTape rightTape then 1 else 0) := by
   classical
@@ -346,7 +353,8 @@ theorem prob_thin_le (leftLength rightLength index : Nat) (thinned : ρ → Prop
       rate * Pr{let z ← run leftTape rightTape}[index < len z])
     (event : List HashOutput → List HashOutput → Prop)
     [∀ leftTape rightTape, Decidable (event leftTape rightTape)] :
-    Pr{let outcome ← blockRunOf run leftLength rightLength}[thinned outcome.2 ∧ event outcome.1.1 outcome.1.2] ≤
+    Pr{let outcome ← blockRunOf run leftLength rightLength}[
+        thinned outcome.2 ∧ event outcome.1.1 outcome.1.2] ≤
       rate * reachMass run len leftLength rightLength index
         (fun leftTape rightTape => if event leftTape rightTape then 1 else 0) := by
   classical
@@ -723,7 +731,6 @@ theorem second_order_constants :
     ENNReal.toReal_ofNat]
   norm_num
 
-set_option maxHeartbeats 4000000 in
 open scoped Classical in
 /-- **The coverage charge with fired cells admitted as witnesses.**
 
@@ -742,10 +749,12 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
         1 / ((2 ^ 128 : Nat) : ℝ≥0∞) *
           Pr{let z ← run leftTape rightTape}[index < (rightOfResult z).length])
     (hthin2 : ∀ (first second : Nat) (leftTape rightTape : List HashOutput), first < second →
-      Pr{let z ← run leftTape rightTape}[second < (rightOfResult z).length ∧ fired z first ∧ fired z second] ≤
+      Pr{let z ← run leftTape rightTape}[second < (rightOfResult z).length ∧ fired z first ∧
+          fired z second] ≤
         1 / ((2 ^ 256 : Nat) : ℝ≥0∞) *
           Pr{let z ← run leftTape rightTape}[first < (rightOfResult z).length]) :
-    Pr{let x ← blockRunOf run leftLength rightLength}[(FiredCovered (fun z => (rightOfResult z).length) fired leftLength rightLength) x] ≤
+    Pr{let x ← blockRunOf run leftLength rightLength}[
+        (FiredCovered (fun z => (rightOfResult z).length) fired leftLength rightLength) x] ≤
       (1 : ℝ≥0∞) / 2 ^ 126 +
         (∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
             (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞)) *

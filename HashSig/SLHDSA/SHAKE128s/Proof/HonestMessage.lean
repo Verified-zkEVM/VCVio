@@ -46,7 +46,7 @@ theorem treeAt_succ_add_leafAt (tree : Nat) :
   induction i generalizing tree with
   | zero =>
     intro leaf
-    show tree / 2 ^ subtreeHeight * 2 ^ subtreeHeight + tree % 2 ^ subtreeHeight = tree
+    change tree / 2 ^ subtreeHeight * 2 ^ subtreeHeight + tree % 2 ^ subtreeHeight = tree
     rw [Nat.mul_comm]
     exact Nat.div_add_mod tree (2 ^ subtreeHeight)
   | succ i ih =>

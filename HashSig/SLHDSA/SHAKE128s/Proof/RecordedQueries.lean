@@ -67,6 +67,8 @@ The homomorphism is taken as a bare function with its two laws, rather than as a
 `MonoidHom`, so that it can be instantiated at a `Multiplicative` projection without instance
 hunting. -/
 
+/-- **Mapping a writer along a monoid homomorphism.** Simulating with a handler whose writer is
+the image of another's gives the image of that simulation. -/
 theorem run_simulateQ_map_writer {ι : Type} {spec : OracleSpec ι} {M : Type → Type} [Monad M]
     [LawfulMonad M] {ω₁ ω₂ : Type} [Monoid ω₁] [Monoid ω₂] (φ : ω₁ → ω₂)
     (hone : φ 1 = 1) (hmul : ∀ left right : ω₁, φ (left * right) = φ left * φ right)
@@ -118,6 +120,7 @@ def recordOf : OracleWorld.Domain → Multiset Bytes
   | .inl _ => 0
   | .inr input => {input}
 
+/-- A query records as many inputs as it is charged hashes. -/
 theorem card_recordOf (queried : OracleWorld.Domain) :
     Multiset.card (recordOf queried) = hashCost queried := by
   rcases queried with _ | _ <;> rfl
@@ -126,8 +129,10 @@ theorem card_recordOf (queried : OracleWorld.Domain) :
 def forget : Multiplicative Tally → Multiplicative Counts :=
   fun tally => Multiplicative.ofAdd (Multiplicative.toAdd tally).1
 
+/-- Forgetting the record preserves the unit. -/
 theorem forget_one : forget 1 = 1 := rfl
 
+/-- Forgetting the record preserves multiplication. -/
 theorem forget_mul (left right : Multiplicative Tally) :
     forget (left * right) = forget left * forget right := rfl
 
@@ -150,17 +155,21 @@ theorem run_adversaryImpl_map (queried : OracleWorld.Domain) :
 
 /-! ### The signing oracle at the recording writer -/
 
+/-- Mapping over a logged world computation, applied to a log. -/
 theorem stateT_map_apply {α β : Type} (f : α → β)
     (x : StateT SigningLog (OracleComp OracleWorld) α) (log : SigningLog) :
     (f <$> x) log = (fun step => (f step.1, step.2)) <$> x log :=
   StateT.run_map f x log
 
+/-- Lifting a world computation into a writer over the logged run records nothing and leaves
+the log alone. -/
 theorem run_liftM_base {ω : Type} [Monoid ω] {α : Type} (x : OracleComp OracleWorld α)
     (log : SigningLog) :
     ((WriterT.run (liftM x : WriterT ω (StateT SigningLog (OracleComp OracleWorld)) α)).run
       log) = (fun value => ((value, (1 : ω)), log)) <$> x := by
   simp [liftM, monadLift, MonadLift.monadLift]
 
+/-- Lifting a logged world computation into a writer over it records nothing. -/
 theorem run_liftM_inner {ω : Type} [Monoid ω] {α : Type}
     (x : StateT SigningLog (OracleComp OracleWorld) α) (log : SigningLog) :
     ((WriterT.run (liftM x : WriterT ω (StateT SigningLog (OracleComp OracleWorld)) α)).run
@@ -178,6 +187,8 @@ noncomputable def recordedSigningOracle
     StateT SigningLog (OracleComp OracleWorld) Unit)
   return answer
 
+/-- **The recording signing oracle's run**: it calls the signer once, charges the request,
+records nothing, and appends the answer to the log. -/
 theorem run_recordedSigningOracle
     (signer : Message → OracleComp OracleWorld (Option Bytes)) (request : Message)
     (log : SigningLog) :
@@ -258,8 +269,6 @@ noncomputable def recordedAfterSeeds (adversary : Adversary) (sds : Digest × Di
     counts := (Multiplicative.toAdd adversaryTally).1 + verifierTally.1 },
     (Multiplicative.toAdd adversaryTally).2 + verifierTally.2)
 
-set_option linter.constructorNameAsVariable false in
-set_option maxHeartbeats 1000000 in
 /-- **The recording is invisible.** Forgetting it returns the stripped game exactly. -/
 theorem map_recordedAfterSeeds (adversary : Adversary) (sds : Digest × Digest × Digest)
     (warm : QueryCache HashSpec) :
@@ -308,15 +317,19 @@ That is the whole advantage of recording in the writer rather than at the oracle
 def Faithful (cost : OracleWorld.Domain → Tally) : Prop :=
   ∀ queried, Multiset.card (cost queried).2 = ((cost queried).1).work
 
+/-- The adversary's cost is faithful. -/
 theorem faithful_adversaryCost :
-    Faithful (fun input => (Counts.single .hash (hashCost input), recordOf input)) := fun queried => by
+    Faithful (fun input => (Counts.single .hash (hashCost input), recordOf input)) :=
+  fun queried => by
   rw [AdversaryQueries.work_single_hash]
   exact card_recordOf queried
 
+/-- The verifier's cost is faithful. -/
 theorem faithful_verifierCost : Faithful verifierCost := fun queried => by
   rw [verifierCost, AdversaryQueries.work_single_verification]
   exact card_recordOf queried
 
+/-- The run of a writer bind over the logged world, from a log. -/
 theorem run_writer_bind {ω : Type} [Monoid ω] {α β : Type}
     (x : WriterT ω (StateT SigningLog (OracleComp OracleWorld)) α)
     (next : α → WriterT ω (StateT SigningLog (OracleComp OracleWorld)) β) (log : SigningLog) :
@@ -326,6 +339,7 @@ theorem run_writer_bind {ω : Type} [Monoid ω] {α β : Type}
           (WriterT.run (next outer.1.1)).run outer.2 := by
   simp only [WriterT.run_bind, StateT.run_bind, StateT.run_map]
 
+/-- The recording adversary oracle, as the run it performs. -/
 theorem run_recordedAdversaryImpl (queried : OracleWorld.Domain) (log : SigningLog) :
     ((WriterT.run (recordedAdversaryImpl queried)).run log) =
       (fun value => ((value, Multiplicative.ofAdd
@@ -367,7 +381,6 @@ theorem card_eq_work_signingOracle (signer : Message → OracleComp OracleWorld 
       ((Counts.single .signing 1 : Counts), (0 : Multiset Bytes)) from by rw [hstep]]
   rfl
 
-set_option maxHeartbeats 1000000 in
 /-- **The adversary's phase records exactly what it charges.** -/
 theorem card_eq_work_adversary (signer : Message → OracleComp OracleWorld (Option Bytes))
     {α : Type} (computation : OracleComp (OracleWorld + SigningSpec) α) :
@@ -404,14 +417,16 @@ theorem card_eq_work_adversary (signer : Message → OracleComp OracleWorld (Opt
     have hvalue : result.1.1.2 = outer.1.1.2 * inner.1.1.2 := by
       rw [← congrArg (fun z => z.1.1.2) heq]
     rw [hvalue, toAdd_mul]
-    show Multiset.card ((Multiplicative.toAdd outer.1.1.2).2 +
+    change Multiset.card ((Multiplicative.toAdd outer.1.1.2).2 +
       (Multiplicative.toAdd inner.1.1.2).2) =
         ((Multiplicative.toAdd outer.1.1.2).1 + (Multiplicative.toAdd inner.1.1.2).1).work
     rw [Multiset.card_add, AdversaryQueries.work_add, hhead, htail]
 
+/-- A pure computation records and charges nothing. -/
 theorem countRecorded_pure {α : Type} (cost : OracleWorld.Domain → Tally) (value : α) :
     countRecorded cost (pure value) = pure (value, 0) := rfl
 
+/-- A query followed by a continuation adds the query's cost to the continuation's tally. -/
 theorem countRecorded_query_bind {α : Type} (cost : OracleWorld.Domain → Tally)
     (queried : OracleWorld.Domain)
     (next : OracleWorld.Range queried → OracleComp OracleWorld α) :
@@ -446,14 +461,15 @@ theorem card_eq_work_countRecorded (cost : OracleWorld.Domain → Tally) (hcost 
     obtain ⟨inner, hinner, heq⟩ := hrest
     have htail := ih step.1 step.2 inner hinner
     rw [show result.1.2 = cost queried + inner.1.2 from by rw [← heq]]
-    show Multiset.card ((cost queried).2 + inner.1.2.2) =
+    change Multiset.card ((cost queried).2 + inner.1.2.2) =
       ((cost queried).1 + inner.1.2.1).work
     rw [Multiset.card_add, AdversaryQueries.work_add, hcost queried, htail]
 
 /-! ## The deliverable -/
 
-set_option linter.constructorNameAsVariable false in
-set_option maxHeartbeats 1000000 in
+attribute [local irreducible] recordedAfterSeeds StrippedGame.strippedAfterSeeds
+  WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal Security.countQueries
+
 /-- **The record is exactly as big as the work the game charges.** -/
 theorem card_eq_work (adversary : Adversary) (sds : Digest × Digest × Digest)
     (warm cache : QueryCache HashSpec)
@@ -478,9 +494,6 @@ theorem card_eq_work (adversary : Adversary) (sds : Digest × Digest × Digest)
     show result.1.1.counts = (Multiplicative.toAdd advTally).1 + verifierTally.1 from by
       rw [hmem],
     Multiset.card_add, AdversaryQueries.work_add, hadvCard, hverifyCard]
-
-attribute [local irreducible] recordedAfterSeeds StrippedGame.strippedAfterSeeds
-  WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal Security.countQueries
 
 /-- **The recorded set is no bigger than the charged work.** -/
 theorem card_toFinset_le_work (adversary : Adversary) (sds : Digest × Digest × Digest)

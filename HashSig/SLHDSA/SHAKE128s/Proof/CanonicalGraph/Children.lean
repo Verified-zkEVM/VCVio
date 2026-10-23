@@ -8,12 +8,21 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Nodes
 
-/-! Ordered child coordinates and a strictly decreasing rank for every dependency. -/
+/-!
+# Children of canonical structural nodes
+
+Ordered child coordinates and a strictly decreasing rank for every dependency.
+`StructuralNode.children` lists the nodes each structural hash call reads, in the order of its
+input, and `StructuralNode.child_rank_lt` shows every child has strictly smaller rank, so the
+canonical graph is well founded.
+-/
 
 @[expose] public section
 
 namespace SlhDsaSecurity.CanonicalGraph
 
+/-- The node at `height` and `index` of an XMSS tree: a WOTS public key at height zero, an
+internal tree node above it. -/
 def merkleNode (tree : Tree) (height : Nat) (hheight : height ≤ subtreeHeight)
     (index : Fin (2 ^ (subtreeHeight - height))) : StructuralNode :=
   if hzero : height = 0 then
@@ -22,6 +31,7 @@ def merkleNode (tree : Tree) (height : Nat) (hheight : height ≤ subtreeHeight)
     .tree tree ⟨height - 1, by omega⟩
       ⟨index.val, by simpa only [Nat.sub_add_cancel (by omega : 1 ≤ height)] using index.isLt⟩
 
+/-- An XMSS tree node at `height` has rank `17 + height`. -/
 theorem merkleNode_rank (tree : Tree) (height : Nat) (hheight : height ≤ subtreeHeight)
     (index : Fin (2 ^ (subtreeHeight - height))) :
     (merkleNode tree height hheight index).rank = 17 + height := by
@@ -29,6 +39,7 @@ theorem merkleNode_rank (tree : Tree) (height : Nat) (hheight : height ≤ subtr
   split <;> simp_all [StructuralNode.rank]
   omega
 
+/-- A child index `2 * index + side` stays inside the level one below. -/
 theorem child_index_lt (height level count : Nat) (hlt : level < height)
     (index : Fin (count * 2 ^ (height - (level + 1)))) (side : Fin 2) :
     2 * index.val + side.val < count * 2 ^ (height - level) := by
@@ -38,6 +49,7 @@ theorem child_index_lt (height level count : Nat) (hlt : level < height)
   have := side.isLt
   omega
 
+/-- The `side` child of the internal XMSS node at `height + 1` and `index`. -/
 def merkleChild (tree : Tree) (height : Fin subtreeHeight)
     (index : Fin (2 ^ (subtreeHeight - (height.val + 1)))) (side : Fin 2) : StructuralNode :=
   merkleNode tree height.val (Nat.le_of_lt height.isLt)
@@ -46,11 +58,13 @@ def merkleChild (tree : Tree) (height : Fin subtreeHeight)
         ⟨index.val, by simp [index.isLt]⟩ side
       simpa using h⟩
 
+/-- A child of an XMSS node at height `height + 1` has rank `17 + height`. -/
 theorem merkleChild_rank (tree : Tree) (height : Fin subtreeHeight)
     (index : Fin (2 ^ (subtreeHeight - (height.val + 1)))) (side : Fin 2) :
     (merkleChild tree height index side).rank = 17 + height.val :=
   merkleNode_rank _ _ _ _
 
+/-- The `side` child of the FORS node at positive `height` and `index`. -/
 def forsChild (key : ForsKey) (height : Fin (forsHeight + 1))
     (hpos : 0 < height.val)
     (index : Fin (forsTrees * 2 ^ (forsHeight - height.val))) (side : Fin 2) : StructuralNode :=
@@ -61,6 +75,7 @@ def forsChild (key : ForsKey) (height : Fin (forsHeight + 1))
       exact child_index_lt forsHeight (height.val - 1) forsTrees hlevel
         ⟨index.val, by simpa only [hback] using index.isLt⟩ side⟩
 
+/-- The nodes a structural hash call reads, in input order. -/
 def StructuralNode.children : StructuralNode → List Node
   | .wotsPrf _ _ => [.secretSeed]
   | .wotsHash key chain step =>
@@ -69,7 +84,8 @@ def StructuralNode.children : StructuralNode → List Node
   | .wotsPk key =>
       List.ofFn fun chain : Fin chains => .structural (.wotsHash key chain ⟨w - 2, by decide⟩)
   | .tree location height index =>
-      [.structural (merkleChild location height index 0), .structural (merkleChild location height index 1)]
+      [.structural (merkleChild location height index 0),
+        .structural (merkleChild location height index 1)]
   | .forsPrf _ _ => [.secretSeed]
   | .forsTree key height index =>
       if hzero : height.val = 0 then
@@ -81,6 +97,7 @@ def StructuralNode.children : StructuralNode → List Node
       List.ofFn fun tree : Fin forsTrees =>
         .structural (.forsTree key ⟨forsHeight, by omega⟩ ⟨tree.val, by simp [tree.isLt]⟩)
 
+/-- Every child has strictly smaller rank than its parent. -/
 theorem StructuralNode.child_rank_lt (parent : StructuralNode) (child : Node)
     (hchild : child ∈ parent.children) : child.rank < parent.rank := by
   cases parent with

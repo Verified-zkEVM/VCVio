@@ -40,8 +40,6 @@ run's own.
 
 open OracleComp OracleSpec ENNReal
 
-set_option backward.isDefEq.respectTransparency false
-
 namespace SlhDsaSecurity.AnswerFired
 
 open Security DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedTape TapeWatch
@@ -50,6 +48,7 @@ open Security DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedT
 
 /-! ## Units -/
 
+/-- The square of the `2 ^ -128` unit is `2 ^ -256`. -/
 theorem unit128_sq_eq : unit128 * unit128 = 1 / ((2 ^ 256 : Nat) : ℝ≥0∞) := by
   unfold unit128
   simp only [one_div]
@@ -95,6 +94,7 @@ theorem cellView_of_getElem? {tape : List HashOutput} {index : Nat} {answer : Ha
   rfl
 
 set_option maxHeartbeats 4000000 in
+-- Unifying the three-stage run's long block-tape types in the cell correspondences is slow.
 open scoped Classical in
 /-- **The coverage charge with fired witnesses, at the carrier tail.** -/
 theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
@@ -108,7 +108,8 @@ theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
       (1 : ℝ≥0∞) / 2 ^ 126 +
         (∑' result, Pr{let x ← carrierTail keep127 adversary walk}[x = result] *
             ((result.2.2.2.length : Nat) : ℝ≥0∞)) *
-          (1 / ((2 ^ 129 : Nat) : ℝ≥0∞) + (rightLength : ℝ≥0∞) * (1 / ((2 ^ 303 : Nat) : ℝ≥0∞))) := by
+          (1 / ((2 ^ 129 : Nat) : ℝ≥0∞) +
+            (rightLength : ℝ≥0∞) * (1 / ((2 ^ 303 : Nat) : ℝ≥0∞))) := by
   classical
   have hlaw : carrierTail keep127 adversary walk =ᵈ
       Prod.snd <$> blockRunOf (tapeRun adversary walk) leftLength rightLength := by
@@ -225,8 +226,6 @@ attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenI
 
 /-! ## The join -/
 
-set_option maxHeartbeats 1000000 in
-set_option linter.constructorNameAsVariable false in
 /-- **A served input is a logged request's digest input at the `PRF_msg` answer the cache
 holds.** -/
 theorem servedLog_logged (adversary : Adversary) (walk : Walk)
@@ -294,8 +293,6 @@ theorem cover_keep127 (walk : Walk) (probe : Bytes) (view : HandlerCarrier.State
   · exact Or.inl hleft
   · exact Or.inr ⟨hright, hclass.2⟩
 
-set_option maxHeartbeats 4000000 in
-set_option linter.constructorNameAsVariable false in
 open scoped Classical in
 /-- **The join.** Off `late`, the answer half's event is a structural hit or coverage with fired
 witnesses, at every supported result of the carrier tail. -/
@@ -347,7 +344,7 @@ theorem join_carrierTail (adversary : Adversary) (walk : Walk)
     have hkey2 : keyAt walk = RoutedSplit.keyOf ((walk.1, (w.1.1.1, w.1.2)), w.2.1) := hkey
     refine RandomiserRecord.recordMeetsPrfClass_of_forgeryDigest adversary hrecorded message
       parsed hframe hparsed ?_
-    show RandomizerGate.PrfClass walk.1.1.2.1 (Hashing.messageInput parsed.randomizer
+    change RandomizerGate.PrfClass walk.1.1.2.1 (Hashing.messageInput parsed.randomizer
       (RoutedSplit.keyOf ((walk.1, (w.1.1.1, w.1.2)), w.2.1)) message)
     rw [← hkey2]
     exact hprf
@@ -376,6 +373,7 @@ theorem join_carrierTail (adversary : Adversary) (walk : Walk)
 
 /-! ## The keep predicate's class -/
 
+/-- An input the `keep127` predicate keeps is a message-digest input under the walk's key. -/
 theorem keep127_class (walk : Walk) (input : Bytes) (view : HandlerCarrier.State)
     (hkeep : keep127 walk input view) : CombinedCharge.IsMessageInput (keyAt walk) input :=
   AnswerCarrier.carrierRightKeep_class walk input view hkeep.1
@@ -386,6 +384,7 @@ theorem hash_ne_verification : Game.QueryKind.hash ≠ Game.QueryKind.verificati
 /-! ## The defects' arithmetic -/
 
 set_option exponentiation.threshold 1024 in
+/-- The target defects at a `2 ^ -126` charge are at most six `2 ^ -128` units. -/
 theorem defects_le : Target.defectsAt ((1 : ℝ≥0∞) / 2 ^ 126) ≤
     ((6 : Nat) : ℝ≥0∞) / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   unfold Target.defectsAt

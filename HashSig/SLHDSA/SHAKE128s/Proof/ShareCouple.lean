@@ -18,7 +18,12 @@ everything else — and `realView` puts them back together. This file couples th
 by step, with the real cache equal to the view of the lenient state, and with every input the
 real game records also filed in the lenient record.
 
-This first part is one hash query: the real oracle at the view, against the lenient routing.
+The coupling is built up one oracle step at a time: `couple_hash` is one hash query (the real
+oracle at the view, against the lenient routing); `real_sign_framed` and
+`advImpl_sign_framed_run` unfold a framed signing request on either side into two such queries
+and a table read; `couple_adv` couples one adversary step under the invariant `Rel`; and
+`couple_verify` couples one verifier step under `RelV`, which also keeps the digests the
+adversary's phase served.
 -/
 
 @[expose] public section
@@ -45,10 +50,12 @@ noncomputable def realView (setup : Setup) (state : St) : QueryCache HashSpec :=
   | some answer => some answer
   | none => merged setup state input
 
+/-- The view at a warm-table input is the table's answer. -/
 theorem realView_of_warm (setup : Setup) (state : St) (input : Bytes) (answer : HashOutput)
     (hwarm : setup.warm input = some answer) : realView setup state input = some answer := by
   simp [realView, hwarm]
 
+/-- Off the warm table, the view is the merged cache. -/
 theorem realView_of_not_warm (setup : Setup) (state : St) (input : Bytes)
     (hwarm : setup.warm input = none) :
     realView setup state input = merged setup state input := by
@@ -63,7 +70,8 @@ theorem eq_of_isPrfInput (setup : Setup) {input other : Bytes}
 /-- **Answering a `PRF_msg` input from the frame table is caching it.** -/
 theorem realView_prfs_update (setup : Setup) (state : St) (input : Bytes)
     (hwarm : setup.warm input = none) (hprf : IsPrfInput setup input) (answer : HashOutput) :
-    realView setup { state with prfs := Function.update state.prfs (prfFrame input) (some answer) } =
+    realView setup
+        { state with prfs := Function.update state.prfs (prfFrame input) (some answer) } =
       (realView setup state).cacheQuery input answer := by
   classical
   ext other
@@ -99,7 +107,8 @@ theorem realView_cache_update (setup : Setup) (state : St) (input : Bytes)
       simp only
       by_cases hprfOther : IsPrfInput setup other
       · rw [ite_eq_left hprfOther, ite_eq_left hprfOther]
-      · rw [ite_eq_right hprfOther, ite_eq_right hprfOther, QueryCache.cacheQuery_of_ne _ _ hother]
+      · rw [ite_eq_right hprfOther, ite_eq_right hprfOther,
+          QueryCache.cacheQuery_of_ne _ _ hother]
 
 /-! ## One hash query -/
 
@@ -128,7 +137,8 @@ theorem couple_hash (setup : Setup) (state : St) (input : Bytes) :
     · cases hcached : state.prfs (prfFrame input) with
       | some answer =>
         have hview : realView setup state input = some answer := by
-          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply, ite_eq_left hprf, hcached]
+          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply,
+            ite_eq_left hprf, hcached]
         rw [CoverageCount.rom_run_inr_some input _ answer hview]
         have hroute : route true setup state input = pure (answer, state) := by
           simp [route, hwarm, hprf, prfAt, hcached]
@@ -136,7 +146,8 @@ theorem couple_hash (setup : Setup) (state : St) (input : Bytes) :
         exact relTriple_pure_pure ⟨rfl, rfl, rfl, rfl, rfl⟩
       | none =>
         have hview : realView setup state input = none := by
-          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply, ite_eq_left hprf, hcached]
+          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply,
+            ite_eq_left hprf, hcached]
         rw [CoverageCount.rom_run_inr_none input _ hview]
         have hroute : route true setup state input =
             (($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
@@ -151,7 +162,8 @@ theorem couple_hash (setup : Setup) (state : St) (input : Bytes) :
     · cases hcached : state.cache input with
       | some answer =>
         have hview : realView setup state input = some answer := by
-          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply, ite_eq_right hprf, hcached]
+          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply,
+            ite_eq_right hprf, hcached]
         rw [CoverageCount.rom_run_inr_some input _ answer hview]
         have hroute : route true setup state input = pure (answer, state) := by
           simp [route, hwarm, hprf, plain, hcached]
@@ -159,7 +171,8 @@ theorem couple_hash (setup : Setup) (state : St) (input : Bytes) :
         exact relTriple_pure_pure ⟨rfl, rfl, rfl, rfl, rfl⟩
       | none =>
         have hview : realView setup state input = none := by
-          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply, ite_eq_right hprf, hcached]
+          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply,
+            ite_eq_right hprf, hcached]
         rw [CoverageCount.rom_run_inr_none input _ hview]
         have hroute : route true setup state input =
             (($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
@@ -173,17 +186,20 @@ theorem couple_hash (setup : Setup) (state : St) (input : Bytes) :
 
 /-! ## The signer's `PRF_msg` query is a routed query -/
 
+/-- The frame of a `PRF_msg` input is the framed message it was built from. -/
 theorem prfFrame_randomizerInput (prf seed : Digest) (framed : Bytes) :
     prfFrame (Hashing.randomizerInput prf seed framed) = framed := by
   unfold prfFrame Hashing.randomizerInput
   rw [List.append_assoc, two_mul, ← List.drop_drop, List.drop_left' (length_bytesBE n prf),
     List.drop_left' (length_bytesBE n seed)]
 
+/-- The signer's `PRF_msg` input at the real seeds is a `PRF_msg` input. -/
 theorem isPrfInput_randomizerInput (setup : Setup) (framed : Bytes) :
     IsPrfInput setup (Hashing.randomizerInput setup.prf setup.publicSeed framed) := by
   unfold IsPrfInput
   rw [prfFrame_randomizerInput]
 
+/-- On a good walk, the warm table holds no `PRF_msg` input. -/
 theorem warm_randomizerInput (setup : Setup) (hgood : setup.Good) (framed : Bytes) :
     setup.warm (Hashing.randomizerInput setup.prf setup.publicSeed framed) = none := by
   by_contra hsome
@@ -203,16 +219,17 @@ theorem prfAt_eq_route (setup : Setup) (hgood : setup.Good) (state : St) (framed
 
 /-! ## The real signer, one framed request -/
 
+/-- The setup's warm table is the honest probes' warm cache at its table. -/
 theorem warm_eq_warmCache (setup : Setup) :
     setup.warm = HonestProbes.warmCache setup.publicSeed (setup.table.1 Node.secretSeed)
       (fullOutput setup.table.1 setup.table.2) :=
   TableTail.walkOfTable_cache setup.prf setup.publicSeed setup.table
 
-set_option maxHeartbeats 1000000 in
 /-- **The real signer at a framed request is two oracle steps and a table read.** -/
 theorem real_sign_framed (setup : Setup) (hgood : setup.Good) (request : Message)
     (framed : Bytes) (hframe : request.frame = some framed) (cache : QueryCache HashSpec) :
-    (simulateQ KeygenUniform.rom (StrippedGame.strippedSign setup.warm setup.sk request)).run cache =
+    (simulateQ KeygenUniform.rom (StrippedGame.strippedSign setup.warm setup.sk request)).run
+        cache =
       (KeygenUniform.rom (Sum.inr (Hashing.randomizerInput setup.prf setup.publicSeed framed))).run
           cache >>= fun p =>
         (KeygenUniform.rom (Sum.inr (Hashing.messageInput (Hashing.truncate p.1) setup.pk
@@ -244,6 +261,7 @@ theorem real_sign_framed (setup : Setup) (hgood : setup.Good) (request : Message
 
 /-! ## The lenient handler at the adversary's oracles -/
 
+/-- The lenient adversary handler at a world query is the lenient handler at it. -/
 theorem advImpl_world_run (lenient : Bool) (setup : Setup) (world : OracleWorld.Domain)
     (p : St × Bool) :
     ((ShareFlag.advImpl lenient setup) (Sum.inl world)).run p =
@@ -252,6 +270,8 @@ theorem advImpl_world_run (lenient : Bool) (setup : Setup) (world : OracleWorld.
     HasQuery.instOfMonadLift_query]
   erw [simulateQ_spec_query]
 
+/-- The lenient adversary handler at a signing request is the handler's request step
+followed by its response step. -/
 theorem advImpl_sign_run (lenient : Bool) (setup : Setup) (request : Message) (p : St × Bool) :
     ((ShareFlag.advImpl lenient setup) (Sum.inr request)).run p =
       ((handler lenient setup) (Sum.inl (Sum.inl (Sum.inr request)))).run p >>= fun q =>
@@ -265,15 +285,21 @@ theorem advImpl_sign_run (lenient : Bool) (setup : Setup) (request : Message) (p
 lenient state, the logs agree, and every input the real game records is filed in the lenient
 record. -/
 structure Rel (setup : Setup) (real : SharePresent.RealState) (lenient : St × Bool) : Prop where
+  /-- The real cache is the view of the lenient state. -/
   cache : real.2.2 = realView setup lenient.1
+  /-- The real signing log is the lenient one. -/
   log : real.2.1 = lenient.1.log
+  /-- Every input the real game records is filed in the lenient record. -/
   record : ∀ input ∈ (Multiplicative.toAdd real.1).2, ∃ entry ∈ lenient.1.record, entry.1 = input
 
-theorem realView_with_record (setup : Setup) (state : St) (record : List (Bytes × List HashOutput)) :
+/-- The view ignores the lenient record. -/
+theorem realView_with_record (setup : Setup) (state : St)
+    (record : List (Bytes × List HashOutput)) :
     realView setup { state with record := record } = realView setup state := rfl
 
 /-! ## One adversary step, coupled -/
 
+/-- The real signer at an unframed request answers `none` and leaves the cache alone. -/
 theorem real_sign_unframed (warm : QueryCache HashSpec) (sk : SecretKey) (request : Message)
     (hframe : request.frame = none) (cache : QueryCache HashSpec) :
     (simulateQ KeygenUniform.rom (StrippedGame.strippedSign warm sk request)).run cache =
@@ -282,6 +308,8 @@ theorem real_sign_unframed (warm : QueryCache HashSpec) (sk : SecretKey) (reques
   simp [hframe]
 
 open scoped Classical in
+/-- The lenient handler at a hash query routes it, files it in the record at the current
+served digests, and raises the flag on a bad setup or a guess. -/
 theorem handler_hash_run (lenient : Bool) (setup : Setup) (input : Bytes) (state : St)
     (flag : Bool) :
     ((handler lenient setup) (Sum.inl (Sum.inl (Sum.inl (Sum.inr input))))).run (state, flag) =
@@ -311,22 +339,24 @@ theorem advImpl_sign_framed_run (setup : Setup) (hgood : setup.Good) (request : 
   rw [advImpl_sign_run]
   simp [handler, StateT.run, hframe, ← prfAt_eq_route setup hgood, bind_assoc]
 
+/-- After a hash query, every input of the real record is filed in the lenient record extended
+by that query's entry. -/
 theorem rel_record_hash (setup : Setup) (real : SharePresent.RealState) (lenient : St × Bool)
     (hrel : Rel setup real lenient) (input : Bytes) :
     ∀ x ∈ (Multiplicative.toAdd (real.1 * Multiplicative.ofAdd
         (RecordedPhase.phaseCost (Sum.inl (Sum.inr input))))).2,
       ∃ entry ∈ (lenient.1.record ++ [(input, lenient.1.served)]), entry.1 = x := by
   intro x hx
-  simp only [toAdd_mul, toAdd_ofAdd, Prod.snd_add, RecordedPhase.phaseCost, RecordedQueries.recordOf,
-    Multiset.mem_add, Multiset.mem_singleton] at hx
+  simp only [toAdd_mul, toAdd_ofAdd, Prod.snd_add, RecordedPhase.phaseCost,
+    RecordedQueries.recordOf, Multiset.mem_add, Multiset.mem_singleton] at hx
   rcases hx with hold | rfl
   · obtain ⟨entry, hentry, hx⟩ := hrel.record x hold
     exact ⟨entry, List.mem_append_left _ hentry, hx⟩
   · exact ⟨(x, lenient.1.served), List.mem_append_right _ (List.mem_singleton_self _), rfl⟩
 
-set_option maxHeartbeats 2000000 in
 /-- **One adversary step, coupled.** -/
-theorem couple_adv (setup : Setup) (hgood : setup.Good) (queried : (OracleWorld + SigningSpec).Domain)
+theorem couple_adv (setup : Setup) (hgood : setup.Good)
+    (queried : (OracleWorld + SigningSpec).Domain)
     (real : SharePresent.RealState) (lenient : St × Bool) (hrel : Rel setup real lenient) :
     RelTriple ((SharePresent.realImpl (StrippedGame.strippedSign setup.warm setup.sk) queried).run
         real)
@@ -337,7 +367,7 @@ theorem couple_adv (setup : Setup) (hgood : setup.Good) (queried : (OracleWorld 
   rcases queried with (coin | input) | request
   · rw [SharePresent.realImpl_world_run, advImpl_world_run, DigestTape.rom_run_inl]
     simp only [map_bind, map_pure]
-    show RelTriple _ (($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _) >>= fun value =>
+    change RelTriple _ (($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _) >>= fun value =>
       (pure (value, (lstate, flag)) : ProbComp _)) _
     refine relTriple_bind relTriple_uniformSample_refl fun a b hab => ?_
     cases hab
@@ -382,11 +412,12 @@ theorem couple_adv (setup : Setup) (hgood : setup.Good) (queried : (OracleWorld 
 
 /-! ## One verifier step, coupled -/
 
+/-- The lenient verifier handler at a world query is the lenient handler at it. -/
 theorem worldImpl_run (lenient : Bool) (setup : Setup) (world : OracleWorld.Domain)
     (p : St × Bool) :
     ((ShareBound.worldImpl lenient setup) world).run p =
       ((handler lenient setup) (worldQuery world)).run p := by
-  show (simulateQ (handler lenient setup) (liftM (ShareSpec.query (worldQuery world)))).run p = _
+  change (simulateQ (handler lenient setup) (liftM (ShareSpec.query (worldQuery world)))).run p = _
   rw [simulateQ_spec_query]
 
 /-- **The coupling's invariant at the verifier**: the cache is still the view, the lenient log
@@ -395,14 +426,18 @@ every input the verifier records is filed at those digests. -/
 structure RelV (setup : Setup) (log : SigningLog) (served : List HashOutput)
     (adversaryRecord : Multiset Bytes) (real : SharePresent.VerifyState) (lenient : St × Bool) :
     Prop where
+  /-- The real cache is the view of the lenient state. -/
   cache : real.2 = realView setup lenient.1
+  /-- The lenient log is the one the adversary's phase left. -/
   logEq : lenient.1.log = log
+  /-- The lenient served digests are those the adversary's phase left. -/
   servedEq : lenient.1.served = served
+  /-- What the adversary's phase recorded is still filed in the lenient record. -/
   adversary : ∀ input ∈ adversaryRecord, ∃ entry ∈ lenient.1.record, entry.1 = input
+  /-- Every input the verifier records is filed at the adversary phase's served digests. -/
   verifier : ∀ input ∈ (Multiplicative.toAdd real.1).2,
     ∃ entry ∈ lenient.1.record, entry.1 = input ∧ entry.2 = served
 
-set_option maxHeartbeats 1000000 in
 /-- **One verifier step, coupled.** -/
 theorem couple_verify (setup : Setup) (log : SigningLog) (served : List HashOutput)
     (adversaryRecord : Multiset Bytes) (queried : OracleWorld.Domain)
@@ -416,7 +451,7 @@ theorem couple_verify (setup : Setup) (log : SigningLog) (served : List HashOutp
   rcases queried with coin | input
   · rw [SharePresent.realWorldImpl_run, worldImpl_run, DigestTape.rom_run_inl]
     simp only [map_bind, map_pure]
-    show RelTriple _ (($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _) >>= fun value =>
+    change RelTriple _ (($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _) >>= fun value =>
       (pure (value, (lstate, flag)) : ProbComp _)) _
     refine relTriple_bind relTriple_uniformSample_refl fun a b hab => ?_
     cases hab

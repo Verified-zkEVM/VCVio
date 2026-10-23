@@ -26,19 +26,24 @@ open scoped NNReal Nat
 
 namespace SlhDsaSecurity.ForsConcentration
 
+/-- Shifting a Poisson weight by `k`: the weight of `n + k` times `(n + k)! / n!` is `rate ^ k`
+times the weight of `n`. -/
 lemma poisson_factorial_shift (rate : ℝ≥0) (k n : Nat) :
     (Real.exp (-rate) * (rate : ℝ) ^ (n + k) / ((n + k).factorial : ℝ)) *
         ((n + k).descFactorial k : ℝ) =
       (rate : ℝ) ^ k * (Real.exp (-rate) * (rate : ℝ) ^ n / (n.factorial : ℝ)) := by
   have hf : (n.factorial : ℝ) * ((n + k).descFactorial k : ℝ) =
       ((n + k).factorial : ℝ) := by
-    exact_mod_cast (by simpa using (Nat.factorial_mul_descFactorial (n := n + k) (k := k) (by omega)) : n.factorial * (n + k).descFactorial k = (n + k).factorial)
+    exact_mod_cast (by
+      simpa using (Nat.factorial_mul_descFactorial (n := n + k) (k := k) (by omega)) :
+        n.factorial * (n + k).descFactorial k = (n + k).factorial)
   rw [pow_add, ← hf]
   have hn : (n.factorial : ℝ) ≠ 0 := by positivity
   have hk : ((n + k).descFactorial k : ℝ) ≠ 0 := by
     exact_mod_cast (Nat.descFactorial_pos.mpr (by omega : k ≤ n + k)).ne'
   field_simp
 
+/-- The `k`-th factorial moment of a Poisson variable of rate `rate` is `rate ^ k`, as a sum. -/
 lemma poisson_hasSum_descFactorial (rate : ℝ≥0) (k : Nat) :
     HasSum (fun n : Nat =>
       (Real.exp (-rate) * (rate : ℝ) ^ n / (n.factorial : ℝ)) *
@@ -54,8 +59,8 @@ lemma poisson_hasSum_descFactorial (rate : ℝ≥0) (k : Nat) :
   apply (hasSum_nat_add_iff' k).mp
   simpa only [poisson_factorial_shift, hz, sub_zero] using hs
 
-/-- The falling-factorial expansion is adapted from the generic argument in
-`SphincsSecurity/Proof/Base/BinomialMoments.lean` of the lean-sphincs formalization. -/
+/-- Multiplying a falling factorial by its base raises its order by one, up to a correction:
+`c * c^(d) = c^(d+1) + d * c^(d)`. -/
 theorem mul_descFactorial_eq (count degree : Nat) :
     count * count.descFactorial degree =
       count.descFactorial (degree + 1) + degree * count.descFactorial degree := by
@@ -64,6 +69,8 @@ theorem mul_descFactorial_eq (count degree : Nat) :
   · rw [Nat.descFactorial_eq_zero_iff_lt.mpr (by omega), Nat.mul_zero,
       Nat.descFactorial_eq_zero_iff_lt.mpr (by omega), Nat.mul_zero, Nat.add_zero]
 
+/-- A power expands in falling factorials with Stirling numbers of the second kind as
+coefficients. -/
 theorem power_eq_stirling_descFactorial (count degree : Nat) :
     count ^ degree = ∑ order ∈ Finset.range (degree + 1),
       Nat.stirlingSecond degree order * count.descFactorial order := by
@@ -71,7 +78,8 @@ theorem power_eq_stirling_descFactorial (count degree : Nat) :
   | zero => simp
   | succ degree ih =>
       rw [pow_succ, ih, Finset.sum_mul,
-        Finset.sum_range_succ' (fun order => Nat.stirlingSecond (degree + 1) order * count.descFactorial order)]
+        Finset.sum_range_succ'
+          (fun order => Nat.stirlingSecond (degree + 1) order * count.descFactorial order)]
       simp only [Nat.stirlingSecond_succ_zero, Nat.zero_mul, Nat.add_zero,
         Nat.stirlingSecond_succ_succ, Nat.add_mul, Finset.sum_add_distrib]
       have hshift :
@@ -96,27 +104,32 @@ theorem power_eq_stirling_descFactorial (count degree : Nat) :
         _ = Nat.stirlingSecond degree order * (count * count.descFactorial order) := by ring
         _ = _ := by rw [mul_descFactorial_eq]; ring
 
+/-- Falling factorials are integrable against a Poisson distribution. -/
 lemma poisson_integrable_descFactorial (rate : ℝ≥0) (k : Nat) :
     Integrable (fun n : Nat => (n.descFactorial k : ℝ)) (poissonMeasure rate) := by
   rw [integrable_poissonMeasure_iff]
   simpa only [Real.norm_natCast] using (poisson_hasSum_descFactorial rate k).summable
 
+/-- The `k`-th factorial moment of a Poisson distribution of rate `rate` is `rate ^ k`. -/
 lemma poisson_integral_descFactorial (rate : ℝ≥0) (k : Nat) :
     (∫ n : Nat, (n.descFactorial k : ℝ) ∂poissonMeasure rate) = (rate : ℝ) ^ k := by
   rw [integral_poissonMeasure]
   simpa only [smul_eq_mul] using (poisson_hasSum_descFactorial rate k).tsum_eq
 
+/-- `power_eq_stirling_descFactorial`, cast to the reals. -/
 lemma power_eq_stirling_descFactorial_real (n degree : Nat) :
     (n : ℝ) ^ degree = ∑ k ∈ Finset.range (degree + 1),
       (Nat.stirlingSecond degree k : ℝ) * (n.descFactorial k : ℝ) := by
   exact_mod_cast power_eq_stirling_descFactorial n degree
 
+/-- Powers are integrable against a Poisson distribution. -/
 lemma poisson_integrable_power (rate : ℝ≥0) (degree : Nat) :
     Integrable (fun n : Nat => (n : ℝ) ^ degree) (poissonMeasure rate) := by
   simp_rw [power_eq_stirling_descFactorial_real]
   exact integrable_finsetSum _ (fun k _ =>
     (poisson_integrable_descFactorial rate k).const_mul _)
 
+/-- The raw moment of a Poisson distribution is its Touchard polynomial evaluated at the rate. -/
 lemma poisson_integral_power (rate : ℝ≥0) (degree : Nat) :
     (∫ n : Nat, (n : ℝ) ^ degree ∂poissonMeasure rate) =
       ∑ k ∈ Finset.range (degree + 1),
@@ -126,6 +139,7 @@ lemma poisson_integral_power (rate : ℝ≥0) (degree : Nat) :
     (poisson_integrable_descFactorial rate k).const_mul _)]
   simp_rw [integral_const_mul, poisson_integral_descFactorial]
 
+/-- For an integer rate, the raw moment of a Poisson distribution is `ForsMoments.touchard`. -/
 lemma poisson_integral_power_nat (rate degree : Nat) :
     (∫ n : Nat, (n : ℝ) ^ degree ∂poissonMeasure (rate : ℝ≥0)) =
       (ForsMoments.touchard degree rate : ℝ) := by
@@ -133,12 +147,14 @@ lemma poisson_integral_power_nat (rate degree : Nat) :
   simp only [ForsMoments.touchard, Nat.cast_sum, Nat.cast_mul, Nat.cast_pow,
     NNReal.coe_natCast]
 
-/-- Exact centered moment of the fourteenth power of a rate-three Poisson load. -/
+/-- The exact `order`-th centered moment of `N ^ 14` for a rate-three Poisson load `N`, expressed
+through Touchard polynomials. -/
 def centeredMoment (order : Nat) : ℤ :=
   ∑ k ∈ Finset.range (order + 1),
     (ForsMoments.touchard (14 * k) 3 : ℤ) *
       (-(ForsMoments.touchard 14 3 : ℤ)) ^ (order - k) * order.choose k
 
+/-- Centered powers of powers are integrable against a Poisson distribution. -/
 lemma poisson_integrable_centered_power (rate : ℝ≥0) (degree order : Nat) (center : ℝ) :
     Integrable (fun n : Nat => ((n : ℝ) ^ degree - center) ^ order)
       (poissonMeasure rate) := by
@@ -146,6 +162,7 @@ lemma poisson_integrable_centered_power (rate : ℝ≥0) (degree order : Nat) (c
   exact integrable_finsetSum _ (fun k _ =>
     ((poisson_integrable_power rate (degree * k)).mul_const _).mul_const _)
 
+/-- The centered moments of `N ^ 14` for a rate-three Poisson load `N` are `centeredMoment`. -/
 lemma poisson_integral_centered_power (order : Nat) :
     (∫ n : Nat, ((n : ℝ) ^ 14 - (ForsMoments.touchard 14 3 : ℝ)) ^ order
       ∂poissonMeasure 3) = (centeredMoment order : ℝ) := by
@@ -160,8 +177,8 @@ lemma poisson_integral_centered_power (order : Nat) :
   simp only [hf, centeredMoment, Int.cast_sum, Int.cast_mul, Int.cast_pow,
     Int.cast_neg, Int.cast_natCast]
 
-set_option maxRecDepth 10000 in
-set_option maxHeartbeats 4000000 in
+/-- The centered moments of orders `0` to `4` and `6` of `N ^ 14` for a rate-three Poisson load,
+with the bounds used in the concentration argument. -/
 theorem centeredMoment_bounds :
     centeredMoment 0 = 1 ∧ centeredMoment 1 = 0 ∧
     0 ≤ centeredMoment 2 ∧ centeredMoment 2 < 2 ^ 92 ∧
