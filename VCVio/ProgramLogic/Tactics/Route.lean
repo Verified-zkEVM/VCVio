@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public meta import VCVio.ProgramLogic.Tactics.Common.Route
+public meta import VCVio.ProgramLogic.Tactics.Unary
 
 /-!
 # Route diagnostics
@@ -13,6 +14,13 @@ public meta import VCVio.ProgramLogic.Tactics.Common.Route
 * `#route_decl n`: the route of the statement of `n`, and its key;
 * `route?`: the route of the main goal, and its key;
 * `#guard_route t => "tag"`: check that the proposition `t` routes to `tag` (for tests).
+
+It also puts the classifier in front of `vcgen`. An explicit core triple (`Std.WP.Triple` or
+`⊑ wp`) with a known reading goes straight to core `vcgen`, as the caller wrote it; VCVio's
+pipeline would otherwise send it through its `ℝ≥0∞`-specific steps, whatever its carrier. If core
+fails, the pipeline takes the goal. Every other goal falls through (`throwUnsupportedSyntax`) to
+that pipeline unchanged. `set_option vcvio.route.trace
+true` reports each goal's route.
 -/
 
 public meta section
@@ -50,5 +58,31 @@ elab_rules : command
     let k ← classify e
     unless k.tag == tag.getString do
       throwError "expected route {tag.getString}, got {describe k}"
+
+register_option vcvio.route.enabled : Bool := {
+  defValue := true
+  descr := "Route `vcgen` goals through the classifier (`false`: VCVio's pipeline only)."
+}
+
+register_option vcvio.route.trace : Bool := {
+  defValue := false
+  descr := "Report the route of each `vcgen` goal."
+}
+
+elab_rules (kind := OracleComp.ProgramLogic.vcgenBasic) : tactic
+  | `(tactic| vcgen) => do
+    if (← getGoals).isEmpty || !vcvio.route.enabled.get (← getOptions) then throwUnsupportedSyntax
+    let k ← classifyGoal (← getMainGoal)
+    if vcvio.route.trace.get (← getOptions) then logInfo (describe k)
+    match k.route with
+    | .coreVCGen _ =>
+      -- An explicit core triple: core `vcgen`, with its default configuration, under the
+      -- caller's scope and options. If core fails, VCVio's pipeline takes the goal.
+      let saved ← saveState
+      try evalTactic (← `(tactic| vcgen (errorOnMissingSpec := true)))
+      catch _ =>
+        saved.restore
+        throwUnsupportedSyntax
+    | _ => throwUnsupportedSyntax
 
 end OracleComp.ProgramLogic.Route

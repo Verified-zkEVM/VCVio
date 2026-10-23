@@ -10,6 +10,7 @@ public meta import VCVio.ProgramLogic.Tactics.Handler
 public meta import VCVio.EvalDist.MeasureTVDist.Positivity
 public meta import VCVio.ProgramLogic.Tactics.Unary
 public meta import VCVio.ProgramLogic.Tactics.Relational
+public meta import VCVio.ProgramLogic.Tactics.Route
 
 /-!
 # VCGen Tactics for Probabilistic Program Logic

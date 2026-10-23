@@ -20,10 +20,14 @@ open OracleSpec OracleComp OracleComp.ProgramLogic ENNReal
 
 namespace VCVioTest.ProgramLogic.Route
 
+-- the route checks are `#guard_route` commands
+set_option linter.hashCommand false
+
 /-! ## Names -/
 
 -- every constant the classifier names exists
-example : List Lean.Name := [``Std.WP.Triple, ``Std.WP.WP.wp, ``Std.WP.WPMonad.toWP, ``Lean.Order.PartialOrder.rel,
+example : List Lean.Name := [``Std.WP.Triple, ``Std.WP.WP.wp, ``Std.WP.WPMonad.toWP,
+  ``Lean.Order.PartialOrder.rel,
   ``OracleComp.ProgramLogic.Triple, ``OracleComp.ProgramLogic.wp,
   ``OracleComp.ProgramLogic.Relational.RelTriple, ``VCVio.ProgramLogic.RelTriple,
   ``OracleComp.ProgramLogic.Relational.RelWP, ``OracleComp.ProgramLogic.Relational.CouplingPost,
@@ -60,16 +64,18 @@ example : List Lean.Name := [``Std.WP.Triple, ``Std.WP.WP.wp, ``Std.WP.WPMonad.t
 #guard_route ∀ (oa : ProbComp Bool), wp oa (fun b ↦ propInd (b = true)) ≤ 2⁻¹ => "upper"
 
 -- an equation of programs in a generic monad, through a handler
-#guard_route ∀ {m : Type → Type} [Monad m] (impl : QueryImpl unifSpec m) (oc : OracleComp unifSpec Bool),
-    simulateQ impl oc = simulateQ impl oc => "handler"
+#guard_route ∀ {m : Type → Type} [Monad m] (impl : QueryImpl unifSpec m)
+    (oc : OracleComp unifSpec Bool), simulateQ impl oc = simulateQ impl oc => "handler"
 
 /-! ## Relational -/
 
-#guard_route ∀ (oa ob : ProbComp Bool), Pr{let b ← oa}[b = true] = Pr{let b ← ob}[b = true] => "relational"
+#guard_route ∀ (oa ob : ProbComp Bool),
+    Pr{let b ← oa}[b = true] = Pr{let b ← ob}[b = true] => "relational"
 #guard_route ∀ (oa ob : ProbComp Bool), 𝒟[oa] = 𝒟[ob] => "relational"
 #guard_route ∀ (oa ob : ProbComp Bool), oa =ᵈ ob => "relational"
 #guard_route ∀ (oa ob : ProbComp Bool), Relational.RelTriple oa ob (fun a b ↦ a = b) => "relational"
-#guard_route ∀ (oa ob : ProbComp Bool), Relational.ApproxRelTriple (2⁻¹) oa ob (fun a b ↦ a = b) => "eRHL"
+#guard_route ∀ (oa ob : ProbComp Bool),
+    Relational.ApproxRelTriple (2⁻¹) oa ob (fun a b ↦ a = b) => "eRHL"
 #guard_route ∀ (oa ob : ProbComp Bool), measureETVDist oa ob ≤ 2⁻¹ => "upToBad"
 
 /-! ## Triples, by carrier and interpretation -/
@@ -83,7 +89,8 @@ end
 
 section
 open scoped OracleComp.Lower Std.WP
-#guard_route ∀ (oa : ProbComp Bool), ⦃ (1 : ℝ≥0∞) ⦄ oa ⦃ fun b ↦ propInd (b = true) ⦄ => "core:lower"
+#guard_route ∀ (oa : ProbComp Bool),
+    ⦃ (1 : ℝ≥0∞) ⦄ oa ⦃ fun b ↦ propInd (b = true) ⦄ => "core:lower"
 end
 
 /-! ## Handlers and query bounds -/
