@@ -67,32 +67,9 @@ build boundaries and the staged consolidation.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
 - `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
 - `HashSig/` contains hash-based signatures: proof-level specifications, component-level FIPS 205
-  conformance results, and security results for SLH-DSA. SLH-DSA has a proved quantitative SUF-CMA
-  bound (strong unforgeability: no valid message-signature pair the signer never returned, which
-  gives EUF-CMA at the same bound) in the classical random-oracle model with three oracles (the
-  tweakable hash, `Hmsg` and `PRFmsg`), per public seed and averaged over seed distributions
-  (`securityTarget_two_one`). A model of the SHAKE parameter sets over a single SHAKE256 random
-  oracle on byte strings is stated (`shakeRomScheme`); answering its oracle with SHAKE256 gives the
-  library's FIPS 205 SHAKE internal algorithms (`shakeRomScheme_map_shakeAnswer`), which are checked
-  against pinned NIST ACVP vectors at SLH-DSA-SHAKE-128f. In that model the SUF-CMA bound is proved
-  at the six SHAKE parameter sets: the three-oracle bound plus `(q_s + 1) / 2^{8n}` and a weak-key
-  term, which over the uniform public seed is at most `|A_hon| / 2^256`, about `2^{−172}` or less,
-  and at `n = 32` only the weak seeds' share of a bound that holds at every seed
-  (`shakeStrongAdvantage_le_securityBound_validatedParams`); in hedged signing the second term is
-  `1 / 2^{8n} + q_s (q_h + q_s + 1) / 2^{16n}`
-  (`shakeStrongAdvantage_pure_le_securityBound_hedged_validatedParams`,
-  `shakeStrongAdvantage_le_securityBound_hedged_validatedParams`), which reaches the three-oracle
-  level per public seed (at `n = 32`, for every seed outside the weak set) and over the uniform
-  public seed. Every EUF-CMA form follows from its SUF-CMA one through
-  `shakeAdvantage_le_shakeStrongAdvantage`; the named EUF-CMA forms are the six
-  `shakeAdvantage_*_validatedParams` theorems (`shakeAdvantage_le_securityBound_validatedParams`)
-  and `shakeAdvantage_le_securityBound`, `shakeAdvantage_pure_le_securityBound` and
-  `shakeAdvantage_le_securityBound_hedged`. The bounds are over the structured
-  signatures of FIPS 205's internal functions; SUF-CMA over byte strings at the external API, which
-  also needs the signature encoding to parse one-to-one, is not proved. The SHA-2 parameter sets
-  have no single-oracle model. A complete FIPS conformance result is not proved; see
-  `docs/design/slh-dsa-status-and-roadmap.md` and, for the accounting and levels,
-  `docs/design/slh-dsa-classical-rom-bound.md`.
+  conformance results, and security-facing interfaces for SLH-DSA. Neither an unforgeability
+  theorem nor a complete FIPS conformance result is proved yet; see
+  `docs/design/slh-dsa-status-and-roadmap.md`.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
 - `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr.

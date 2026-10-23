@@ -5,6 +5,7 @@ AlternatingFaceMapComplex.obj # Mathlib example in the module-system guide, outs
 clean_build # workflow input of the scheduled build
 complexity_backend # CI job name
 CURRENT_YEAR # placeholder in the header template of CONTRIBUTING.md
+Experiment # a name part of the security-notion naming convention
 grandfatheredNativeTrust # constant of scripts/AxiomSweep.lean, outside the proof libraries
 hss_nf # retired argument name of the Fiat–Shamir extraction bounds
 isPPT # parameter name of the asynchronous UC security notions
