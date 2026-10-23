@@ -29,6 +29,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.RecordedBudget
 
+variable {α : Type}
+
 open Security WarmedGame
 
 /-- **Forgetting the count returns the computation.** -/

@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.TapeFactor
 public import HashSig.SLHDSA.SHAKE128s.Proof.CoverageCount
+import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # The tape factorisation at the recorder that notices
@@ -37,6 +38,8 @@ open OracleComp OracleSpec ENNReal
 set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.NoticingTape
+
+variable {α γ : Type}
 
 open DigestTape TapeFactor RecorderView
 
@@ -92,14 +95,7 @@ theorem noticingSplitTapeRun_neverFails (leftKeep rightKeep : Bytes → σ → P
     {α : Type} (computation : OracleComp OracleWorld α) (state : SplitTapeState σ) :
     prFail ((simulateQ (noticingSplitTapeRecorder leftKeep rightKeep) computation).run state)
       = 0 := by
-  classical
-  induction computation using OracleComp.inductionOn generalizing state with
-  | pure value => simp
-  | query_bind queried next ih =>
-    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-    exact probFailure_bind_eq_zero_iff _ _ |>.mpr
-      ⟨(noticingSplitTapeRecorder_step leftKeep rightKeep queried state).1,
-        fun step _ => ih step.1 step.2⟩
+  exact prFail_eq_zero _
 
 open scoped Classical in
 /-- **The target recording only grows**, at the repaired recorder. -/
@@ -187,30 +183,32 @@ theorem prob_selected_hit_le_of_causal {ρ : Type}
   set target : List HashOutput → List HashOutput → ℝ≥0∞ := fun leftTape rightTape =>
     Pr{let result ← run leftTape rightTape}[index < (rightOfResult result).length] with htarget
   -- The selection alone, with the blocks forgotten.
-  have hright : Pr{let outcome ← blockRunOf run leftLength rightLength}[index < (rightOfResult outcome.2).length] =
+  have hright : Pr{let outcome ← blockRunOf run leftLength rightLength}[
+        index < (rightOfResult outcome.2).length] =
       ∑' leftTape, Pr{let x ← padding leftLength}[x = leftTape] *
-        ∑' rightTape, Pr{let x ← padding rightLength}[x = rightTape] * target leftTape rightTape := by
+        ∑' rightTape, Pr{let x ← padding rightLength}[x = rightTape] *
+          target leftTape rightTape := by
     rw [blockRunOf, OracleComp.prEvent_bind_eq_tsum]
     refine tsum_congr fun leftTape => congrArg _ ?_
     rw [OracleComp.prEvent_bind_eq_tsum]
     refine tsum_congr fun rightTape => congrArg _ ?_
     rw [prEvent_map]
-    rfl
   -- The charged event, after one cell of the target block is redrawn.
-  have hleft : Pr{let outcome ← blockRunOf run leftLength rightLength}[index < (rightOfResult outcome.2).length ∧ goodBlock outcome.1.1 ∧
+  have hleft : Pr{let outcome ← blockRunOf run leftLength rightLength}[
+        index < (rightOfResult outcome.2).length ∧ goodBlock outcome.1.1 ∧
           ∃ value, outcome.1.2[index]? = some value ∧ hit outcome.1.1 value] =
       ∑' leftTape, Pr{let x ← padding leftLength}[x = leftTape] *
         ∑' rightTape, Pr{let x ← padding rightLength}[x = rightTape] *
           ∑' value, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = value] *
-            Pr{let result ← run leftTape (rightTape.set index value)}[index < (rightOfResult result).length ∧ goodBlock leftTape ∧
+            Pr{let result ← run leftTape (rightTape.set index value)}[
+                index < (rightOfResult result).length ∧ goodBlock leftTape ∧
                   ∃ other, (rightTape.set index value)[index]? = some other ∧
                     hit leftTape other] := by
     rw [blockRunOf]
-    rw [probEvent_congr' (fun _ _ => Iff.rfl)
-      (OracleComp.DeferredSampling.evalDist_bind_congr_left (padding leftLength) _ _
-        fun leftTape => evalDist_padding_set rightLength index hindex
-          fun rightTape => (fun result => ((leftTape, rightTape), result)) <$>
-            run leftTape rightTape)]
+    refine ((EvalDistEq.bind_right (padding leftLength) fun leftTape =>
+      evalDist_padding_set rightLength index hindex
+        fun rightTape => (fun result => ((leftTape, rightTape), result)) <$>
+          run leftTape rightTape).prEvent_eq _).trans ?_
     rw [OracleComp.prEvent_bind_eq_tsum]
     refine tsum_congr fun leftTape => congrArg _ ?_
     rw [OracleComp.prEvent_bind_eq_tsum]
@@ -218,7 +216,6 @@ theorem prob_selected_hit_le_of_causal {ρ : Type}
     rw [OracleComp.prEvent_bind_eq_tsum]
     refine tsum_congr fun value => congrArg _ ?_
     rw [prEvent_map]
-    rfl
   rw [hleft, hright, ← ENNReal.tsum_mul_right]
   refine ENNReal.tsum_le_tsum fun leftTape => ?_
   rw [mul_assoc, ← ENNReal.tsum_mul_right]
@@ -227,22 +224,23 @@ theorem prob_selected_hit_le_of_causal {ρ : Type}
   refine mul_le_mul' le_rfl ?_
   -- The cell's own draw is all that is left to charge.
   calc ∑' value, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = value] *
-        Pr{let result ← run leftTape (rightTape.set index value)}[index < (rightOfResult result).length ∧ goodBlock leftTape ∧
+        Pr{let result ← run leftTape (rightTape.set index value)}[
+            index < (rightOfResult result).length ∧ goodBlock leftTape ∧
               ∃ other, (rightTape.set index value)[index]? = some other ∧ hit leftTape other]
       ≤ ∑' value, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = value] *
           (if goodBlock leftTape ∧ hit leftTape value then target leftTape rightTape else 0) := by
         refine ENNReal.tsum_le_tsum fun value => mul_le_mul' le_rfl ?_
-        refine le_trans (prEvent_mono (q := fun result : ρ =>
+        refine le_trans (prEvent_mono _ _ (fun result : ρ =>
           (goodBlock leftTape ∧ hit leftTape value) ∧
             index < (rightOfResult result).length) ?_) ?_
-        · rintro result - ⟨hselected, hgood, other, hread, hhit⟩
+        · rintro result ⟨hselected, hgood, other, hread, hhit⟩
           exact ⟨⟨hgood, (eq_of_getElem?_set rightTape index value other hread) ▸ hhit⟩,
             hselected⟩
         · rw [probEvent_const_and]
           by_cases hcase : goodBlock leftTape ∧ hit leftTape value
-          · rw [if_pos hcase, if_pos hcase, htarget]
+          · rw [ite_eq_left hcase, ite_eq_left hcase, htarget]
             exact le_of_eq (hcausal leftTape rightTape value)
-          · rw [if_neg hcase, if_neg hcase]
+          · rw [ite_eq_right hcase, ite_eq_right hcase]
     _ ≤ target leftTape rightTape * rate := by
         by_cases hgood : goodBlock leftTape
         · simp only [hgood, true_and]
@@ -253,12 +251,15 @@ theorem prob_selected_hit_le_of_causal {ρ : Type}
                   target leftTape rightTape := by
                 rw [← ENNReal.tsum_mul_right]
                 refine tsum_congr fun value => ?_
-                by_cases hhit : hit leftTape value <;> simp [hhit]
+                by_cases hhit : hit leftTape value
+                · rw [ite_eq_left hhit, ite_eq_left hhit]
+                · rw [ite_eq_right hhit, ite_eq_right hhit, zero_mul, mul_zero]
             _ ≤ rate * target leftTape rightTape := by
                 rw [← OracleComp.prEvent_eq_tsum_ite]
                 exact mul_le_mul' (hrate leftTape hgood) le_rfl
             _ = _ := mul_comm _ _
-        · simp [hgood]
+        · simp only [hgood, false_and, ↓reduceIte, mul_zero, tsum_zero]
+          exact zero_le
 
 /-- The sum of the per-cell selection probabilities is an expected recording length. -/
 theorem sum_prob_selected_le_expected_of {ρ : Type}
@@ -271,17 +272,16 @@ theorem sum_prob_selected_le_expected_of {ρ : Type}
         (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞) := by
   classical
   calc ∑ index : Fin rightLength,
-        Pr{let outcome ← blockRunOf run leftLength rightLength}[index.val < (rightOfResult outcome.2).length]
+        Pr{let outcome ← blockRunOf run leftLength rightLength}[
+          index.val < (rightOfResult outcome.2).length]
       = ∑ index : Fin rightLength, ∑' outcome,
           (if index.val < (rightOfResult outcome.2).length then
-            Pr{let x ← (blockRunOf run leftLength
-              rightLength)}[x = outcome]
+            Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome]
           else 0) :=
         Finset.sum_congr rfl fun index _ => OracleComp.prEvent_eq_tsum_ite _ _
     _ = ∑' outcome, ∑ index : Fin rightLength,
           (if index.val < (rightOfResult outcome.2).length then
-            Pr{let x ← (blockRunOf run leftLength
-              rightLength)}[x = outcome]
+            Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome]
           else 0) := sum_tsum_comm Finset.univ _
     _ ≤ ∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
           (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞) := by
@@ -319,14 +319,14 @@ theorem prob_exists_hit_le_expected_of_causal {ρ : Type}
       (∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
         (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞)) * rate := by
   classical
-  refine le_trans (prEvent_mono (q := fun outcome => ∃ index ∈ (Finset.univ :
+  refine le_trans (prEvent_mono _ _ (fun outcome => ∃ index ∈ (Finset.univ :
       Finset (Fin rightLength)), index.val < (rightOfResult outcome.2).length ∧
       goodBlock outcome.1.1 ∧
       ∃ value, outcome.1.2[index.val]? = some value ∧ hit outcome.1.1 value)
-    fun outcome _ hhit => by
+    fun outcome hhit => by
       obtain ⟨index, hindex⟩ := hhit
       exact ⟨index, Finset.mem_univ index, hindex⟩) ?_
-  refine le_trans (probEvent_exists_finset_le_sum _ _ _) ?_
+  refine le_trans (prEvent_exists_finset_le _ _ _) ?_
   refine le_trans (Finset.sum_le_sum fun index _ =>
     prob_selected_hit_le_of_causal run rightOfResult leftLength rightLength
       index.val
@@ -365,16 +365,16 @@ theorem evalDist_noticingSplitTapeRun_cont (leftKeep rightKeep : Bytes → σ �
     (handlerAfter : α × StateOf σ → ProbComp γ)
     (tapeAfter : α × SplitTapeState σ → ProbComp γ)
     (hafter : ∀ (leftLength rightLength : Nat) (z : α × StateOf σ),
-      𝒟[handlerAfter z] =
-        𝒟[padding leftLength >>= fun leftTape => padding rightLength >>= fun rightTape =>
-            tapeAfter (z.1, (z.2.1, (leftTape, rightTape), z.2.2))]) :
+      handlerAfter z =ᵈ
+        (padding leftLength >>= fun leftTape => padding rightLength >>= fun rightTape =>
+            tapeAfter (z.1, (z.2.1, (leftTape, rightTape), z.2.2)))) :
     ∀ (leftLength rightLength : Nat) (cache : σ) (leftRecord rightRecord : Record),
-      𝒟[(simulateQ (noticingRecorderOf leftKeep rightKeep) computation).run
-          (cache, leftRecord, rightRecord) >>= handlerAfter] =
-        𝒟[padding leftLength >>= fun leftTape =>
+      (simulateQ (noticingRecorderOf leftKeep rightKeep) computation).run
+          (cache, leftRecord, rightRecord) >>= handlerAfter =ᵈ
+        (padding leftLength >>= fun leftTape =>
             padding rightLength >>= fun rightTape =>
               (simulateQ (noticingSplitTapeRecorder leftKeep rightKeep) computation).run
-                  (cache, (leftTape, rightTape), (leftRecord, rightRecord)) >>= tapeAfter] := by
+                  (cache, (leftTape, rightTape), (leftRecord, rightRecord)) >>= tapeAfter) := by
   classical
   induction computation using OracleComp.inductionOn with
   | pure value =>
@@ -387,8 +387,8 @@ theorem evalDist_noticingSplitTapeRun_cont (leftKeep rightKeep : Bytes → σ �
     rcases queried with coin | input
     · simp only [noticingRecorderOf_run_inl, noticingSplitTapeRecorder_run_inl,
         RecorderView.recorderOf_run_inl, splitTapeRecorder_run_inl, bind_assoc, pure_bind]
-      refine Eq.trans (OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _
-        (fun value => ih value leftLength rightLength cache leftRecord rightRecord)) ?_
+      refine (EvalDistEq.bind_right _
+        (fun value => ih value leftLength rightLength cache leftRecord rightRecord)).trans ?_
       exact evalDist_comm_blocks _ leftLength rightLength _
     · rw [noticingRecorderOf_run_inr leftKeep rightKeep input (cache, leftRecord, rightRecord)]
       rw [show (fun leftTape : List HashOutput => padding rightLength >>= fun rightTape =>
@@ -416,17 +416,17 @@ theorem evalDist_noticingSplitTapeRun_cont (leftKeep rightKeep : Bytes → σ �
             simp only [padding_zero_bind,
               splitTapeRecorder_run_left_nil leftKeep rightKeep input noticed _ leftRecord
                 rightRecord hfresh hleft, bind_assoc, pure_bind]
-            refine Eq.trans (OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _
-              (fun value => ih value 0 rightLength (CacheView.update noticed input value)
-                (leftRecord ++ [(input, value)]) rightRecord)) ?_
+            refine (EvalDistEq.bind_right _
+              (fun value : HashOutput => ih value 0 rightLength (CacheView.update noticed input value)
+                (leftRecord ++ [(input, value)]) rightRecord)).trans ?_
             simp only [padding_zero_bind]
-            exact OracleComp.DeferredSampling.evalDist_bind_comm _ (padding rightLength) _
+            exact OracleComp.EvalDistEq.bind_bind_swap _ (padding rightLength) _
           | succ remaining =>
             simp only [padding_succ_bind,
               splitTapeRecorder_run_left_cons leftKeep rightKeep input noticed _ _ _ leftRecord
                 rightRecord hfresh hleft, pure_bind]
-            exact OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _
-              fun value => ih value remaining rightLength
+            exact EvalDistEq.bind_right _
+              fun value : HashOutput => ih value remaining rightLength
                 (CacheView.update noticed input value)
                 (leftRecord ++ [(input, value)]) rightRecord
         · by_cases hright : rightKeep input noticed
@@ -437,36 +437,36 @@ theorem evalDist_noticingSplitTapeRun_cont (leftKeep rightKeep : Bytes → σ �
               simp only [padding_zero_bind,
                 splitTapeRecorder_run_right_nil leftKeep rightKeep input noticed _ leftRecord
                   rightRecord hfresh hleft hright, bind_assoc, pure_bind]
-              refine Eq.trans (OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _
-                (fun value => ih value leftLength 0 (CacheView.update noticed input value)
-                  leftRecord (rightRecord ++ [(input, value)]))) ?_
+              refine (EvalDistEq.bind_right _
+                (fun value : HashOutput => ih value leftLength 0 (CacheView.update noticed input value)
+                  leftRecord (rightRecord ++ [(input, value)]))).trans ?_
               simp only [padding_zero_bind]
-              exact OracleComp.DeferredSampling.evalDist_bind_comm _ (padding leftLength) _
+              exact OracleComp.EvalDistEq.bind_bind_swap _ (padding leftLength) _
             | succ remaining =>
               simp only [padding_succ_bind,
                 splitTapeRecorder_run_right_cons leftKeep rightKeep input noticed _ _ _
                   leftRecord rightRecord hfresh hleft hright, pure_bind]
-              refine Eq.trans (OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _
-                (fun value => ih value leftLength remaining
+              refine (EvalDistEq.bind_right _
+                (fun value : HashOutput => ih value leftLength remaining
                   (CacheView.update noticed input value)
-                  leftRecord (rightRecord ++ [(input, value)]))) ?_
-              exact OracleComp.DeferredSampling.evalDist_bind_comm _ (padding leftLength) _
+                  leftRecord (rightRecord ++ [(input, value)]))).trans ?_
+              exact OracleComp.EvalDistEq.bind_bind_swap _ (padding leftLength) _
           · simp only [splitRecorder_run_other leftKeep rightKeep input noticed
               (leftRecord, rightRecord) (fun h => hleft h.2) (fun h => hright h.2),
               splitTapeRecorder_run_other leftKeep rightKeep input noticed _
                 (leftRecord, rightRecord) (fun h => hleft h.2) (fun h => hright h.2),
               bind_assoc, pure_bind]
-            refine Eq.trans (OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _
-              (fun step => ih step.1 leftLength rightLength step.2 leftRecord
-                rightRecord)) ?_
+            refine (EvalDistEq.bind_right _
+              (fun step : HashOutput × σ => ih step.1 leftLength rightLength step.2 leftRecord
+                rightRecord)).trans ?_
             exact evalDist_comm_blocks _ leftLength rightLength _
       · simp only [splitRecorder_run_other leftKeep rightKeep input noticed
           (leftRecord, rightRecord) (fun h => hfresh h.1) (fun h => hfresh h.1),
           splitTapeRecorder_run_other leftKeep rightKeep input noticed _
             (leftRecord, rightRecord) (fun h => hfresh h.1) (fun h => hfresh h.1),
           bind_assoc, pure_bind]
-        refine Eq.trans (OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _
-          (fun step => ih step.1 leftLength rightLength step.2 leftRecord rightRecord)) ?_
+        refine (EvalDistEq.bind_right _
+          (fun step : HashOutput × σ => ih step.1 leftLength rightLength step.2 leftRecord rightRecord)).trans ?_
         exact evalDist_comm_blocks _ leftLength rightLength _
 
 /-! ## The selection's causality, with a continuation
@@ -497,17 +497,12 @@ theorem probEvent_length_eq_one_cont (leftKeep rightKeep : Bytes → σ → Prop
     Pr{let w ← ((simulateQ (noticingSplitTapeRecorder leftKeep rightKeep) computation).run
           (cache, tapes, (leftRecord, rightRecord ++ [entry])) >>= after)}[bound < (finalRight w).length] = 1 := by
   classical
-  refine probEvent_eq_one ?_
-  constructor
-  · refine probFailure_bind_eq_zero_iff _ _ |>.mpr
-      ⟨noticingSplitTapeRun_neverFails leftKeep rightKeep computation _,
-        fun z _ => hfail z⟩
-  · intro w hw
-    rw [mem_support_bind_iff] at hw
-    obtain ⟨z, hz, hafterMem⟩ := hw
-    have hprefix := noticingRightOf_prefix leftKeep rightKeep computation
-      (cache, tapes, (leftRecord, rightRecord ++ [entry])) z hz
-    exact lt_of_lt_of_le (lt_of_lt_of_le hbound hprefix.length_le) (hgrow z w hafterMem)
+  refine prEvent_eq_one_of_forall_mem_support _ _ fun w hw => ?_
+  rw [mem_support_bind_iff] at hw
+  obtain ⟨z, hz, hafterMem⟩ := hw
+  have hprefix := noticingRightOf_prefix leftKeep rightKeep computation
+    (cache, tapes, (leftRecord, rightRecord ++ [entry])) z hz
+  exact lt_of_lt_of_le (lt_of_lt_of_le hbound hprefix.length_le) (hgrow z w hafterMem)
 
 /-! ## The cell correspondence, with a continuation
 

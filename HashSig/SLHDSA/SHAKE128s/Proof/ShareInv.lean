@@ -52,11 +52,12 @@ theorem Extends.realView {setup : Setup} {old new : St} (h : Extends old new) (i
     (value : HashOutput) (hold : realView setup old input = some value) :
     realView setup new input = some value := by
   classical
-  unfold ShareCouple.realView merged at *
   cases hw : setup.warm input with
-  | some a => simp only [hw] at hold ⊢; exact hold
+  | some a =>
+    rw [realView_of_warm setup _ input a hw] at hold ⊢
+    exact hold
   | none =>
-    simp only [hw] at hold ⊢
+    rw [realView_of_not_warm setup _ input hw, merged, QueryCache.ofFn_apply] at hold ⊢
     split_ifs at hold ⊢
     · exact h.prfs _ _ hold
     · exact h.cache _ _ hold
@@ -74,21 +75,22 @@ theorem route_spec (setup : Setup) (state : St) (input : Bytes) (z : HashOutput 
   unfold route at hz
   cases hwarm : setup.warm input with
   | some answer =>
-    simp only [if_true, hwarm, support_pure, Set.mem_singleton_iff] at hz
+    simp only [ite_true, hwarm, support_pure, Set.mem_singleton_iff] at hz
     subst hz
     exact ⟨Extends.refl _, ⟨rfl, rfl, rfl⟩, realView_of_warm setup _ input answer hwarm,
       fun _ _ h => Or.inl h⟩
   | none =>
-    simp only [if_true, hwarm, true_and] at hz
+    simp only [ite_true, hwarm, true_and] at hz
     by_cases hprf : IsPrfInput setup input
-    · rw [if_pos hprf] at hz
+    · rw [ite_eq_left hprf] at hz
       unfold prfAt at hz
       cases hcached : state.prfs (prfFrame input) with
       | some answer =>
         simp only [hcached, support_pure, Set.mem_singleton_iff] at hz
         subst hz
         refine ⟨Extends.refl _, ⟨rfl, rfl, rfl⟩, ?_, fun _ _ h => Or.inl h⟩
-        rw [realView_of_not_warm setup _ input hwarm, merged, if_pos hprf, hcached]
+        rw [realView_of_not_warm setup _ input hwarm, merged, QueryCache.ofFn_apply,
+          ite_eq_left hprf, hcached]
       | none =>
         simp only [hcached, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hz
         obtain ⟨value, -, rfl⟩ := hz
@@ -96,16 +98,18 @@ theorem route_spec (setup : Setup) (state : St) (input : Bytes) (z : HashOutput 
         · by_cases hf : f = prfFrame input
           · subst hf; rw [hcached] at h; cases h
           · simpa [Function.update_of_ne hf] using h
-        · rw [realView_of_not_warm setup _ input hwarm, merged, if_pos hprf]
+        · rw [realView_of_not_warm setup _ input hwarm, merged, QueryCache.ofFn_apply,
+            ite_eq_left hprf]
           simp
-    · rw [if_neg hprf] at hz
+    · rw [ite_eq_right hprf] at hz
       unfold plain at hz
       cases hcached : state.cache input with
       | some answer =>
         simp only [hcached, support_pure, Set.mem_singleton_iff] at hz
         subst hz
         refine ⟨Extends.refl _, ⟨rfl, rfl, rfl⟩, ?_, fun _ _ h => Or.inl h⟩
-        rw [realView_of_not_warm setup _ input hwarm, merged, if_neg hprf, hcached]
+        rw [realView_of_not_warm setup _ input hwarm, merged, QueryCache.ofFn_apply,
+          ite_eq_right hprf, hcached]
       | none =>
         simp only [hcached, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hz
         obtain ⟨value, -, rfl⟩ := hz
@@ -113,7 +117,8 @@ theorem route_spec (setup : Setup) (state : St) (input : Bytes) (z : HashOutput 
         · by_cases hx : x = input
           · subst hx; rw [hcached] at h; cases h
           · simpa [QueryCache.cacheQuery_of_ne _ _ hx] using h
-        · rw [realView_of_not_warm setup _ input hwarm, merged, if_neg hprf]
+        · rw [realView_of_not_warm setup _ input hwarm, merged, QueryCache.ofFn_apply,
+            ite_eq_right hprf]
           simp [QueryCache.cacheQuery_self]
         · by_cases hx : other = input
           · exact Or.inr ⟨hx, rfl, hprf⟩
@@ -226,7 +231,8 @@ theorem prfs_of_realView (setup : Setup) (hgood : setup.Good) (state : St) (fram
       some value) : state.prfs framed = some value := by
   classical
   rw [realView_of_not_warm setup state _ (warm_randomizerInput setup hgood framed), merged,
-    if_pos (isPrfInput_randomizerInput setup framed), prfFrame_randomizerInput] at hview
+    QueryCache.ofFn_apply, ite_eq_left (isPrfInput_randomizerInput setup framed),
+    prfFrame_randomizerInput] at hview
   exact hview
 
 set_option maxHeartbeats 1000000 in

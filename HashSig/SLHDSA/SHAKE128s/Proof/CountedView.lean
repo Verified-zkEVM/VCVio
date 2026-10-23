@@ -35,6 +35,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CountedView
 
+variable {β : Type}
+
 open Security RecorderView HandlerCarrier CarriedWitness
 
 /-- The carrier with its hash counter beside it. -/
@@ -126,6 +128,7 @@ theorem forgetsAlong_counted (pk : PublicKey)
     rw [← step_counted pk rightKeep queried state]
     simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
     refine bind_congr fun step => ?_
-    exact ih step.1 step.2
+    rw [← ih step.1 step.2, map_eq_bind_pure_comp]
+    rfl
 
 end SlhDsaSecurity.CountedView

@@ -7,6 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.KeygenFresh
+import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-! Distribution of the actual public key under the initially empty shared oracle. -/
 
@@ -31,18 +32,19 @@ theorem splitOutput_bijective : Function.Bijective splitOutput := by
       BitVec.extractLsb'_append_extractLsb'
     rw [← hleft, ← hright]
     exact congrArg₂ HAppend.hAppend (congrArg Prod.fst h) (congrArg Prod.snd h)
-  · norm_num [HashOutput, Digest, messageDigestBytes, n, Fintype.card_prod, card_bitVec]
+  · norm_num [HashOutput, Digest, messageDigestBytes, n, Fintype.card_prod, Fintype.card_bitVec]
 
 theorem truncate_uniform :
-    𝒟[Hashing.truncate <$> ($ᵗ HashOutput : ProbComp HashOutput)] =
-      𝒟[($ᵗ Digest : ProbComp Digest)] := by
+    (Hashing.truncate <$> ($ᵗ HashOutput : ProbComp HashOutput)) =ᵈ
+      ($ᵗ Digest : ProbComp Digest) := by
   have hmap : Hashing.truncate <$> ($ᵗ HashOutput : ProbComp HashOutput) =
       Prod.fst <$> (splitOutput <$> ($ᵗ HashOutput : ProbComp HashOutput)) := by
     simp [Functor.map_map, splitOutput]
-  have hsplit := evalDist_map_bijective_uniform_cross (α := HashOutput)
-    (β := Digest × BitVec 112) splitOutput splitOutput_bijective
-  rw [hmap, evalDist_map, hsplit, ← evalDist_map]
-  exact evalDist_map_fst_uniformSample_prod
+  rw [hmap]
+  refine ((SampleableType.map_uniformSample_evalDistEq_of_bijective splitOutput_bijective).map Prod.fst).trans ?_
+  refine EvalDistEq.of_forall_prEvent_eq fun p => ?_
+  rw [prEvent_map]
+  exact SampleableType.prEvent_uniformSample_fst p
 
 attribute [local irreducible] Scheme.keygenInternal
 

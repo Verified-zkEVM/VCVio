@@ -11,6 +11,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierCoverage
 public import HashSig.SLHDSA.SHAKE128s.Proof.Target127
 public import HashSig.SLHDSA.SHAKE128s.Proof.AnswerCarrier
 public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierLeftRecord
+import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # The fired cells are thinned by a fresh `PRF_msg` answer
@@ -45,6 +46,8 @@ open OracleComp OracleSpec ENNReal
 set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.CarrierThin
+
+variable {β : Type}
 
 open Security DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedTape TapeWatch
   SignedWatch TapeRunFacts CountedView CarriedWitness RecordedQueries BracketedRun CarrierTail
@@ -96,11 +99,11 @@ theorem prob_hitsOf_le (pk : PublicKey) (input : Bytes) :
   classical
   by_cases hsome : ∃ first, HitsOf pk input first
   · obtain ⟨first, hfirst⟩ := hsome
-    refine le_trans (prEvent_mono fun answer _ hanswer => ?_)
+    refine le_trans (prEvent_mono _ _ _ fun answer hanswer => ?_)
       (le_of_eq (RandomizerGate.prob_truncate_eq (Hashing.truncate first)))
     exact (Hashing.messageInput_injective (hanswer.trans hfirst.symm)).1
-  · refine le_trans (le_of_eq (probEvent_eq_zero fun answer _ hanswer => hsome ⟨answer, hanswer⟩))
-      zero_le
+  · refine le_trans (le_of_eq (prEvent_eq_zero_of_forall_mem_support _ _
+      fun answer _ hanswer => hsome ⟨answer, hanswer⟩)) zero_le
 
 /-! ## The run, at fixed blocks -/
 
@@ -435,15 +438,8 @@ abbrev recordF (walk : Walk) (state : FState walk) : Multiset Bytes :=
 
 /-- **A fused step never fails.** -/
 theorem fused_step_neverFails (walk : Walk) (queried : (OracleWorld + SigningSpec).Domain)
-    (state : FState walk) : prFail (((fusedAt walk) queried).run state) = 0 := by
-  classical
-  rcases queried with world | request
-  · rw [fusedAt, FusedTape.fuseServing_run_inl]
-    exact probFailure_bind_eq_zero_iff _ _ |>.mpr
-      ⟨noticingSplitTapeRun_neverFails _ _ _ _, fun _ _ => by simp⟩
-  · rw [fusedAt, FusedTape.fuseServing_run_inr]
-    exact probFailure_bind_eq_zero_iff _ _ |>.mpr
-      ⟨noticingSplitTapeRun_neverFails _ _ _ _, fun _ _ => by simp⟩
+    (state : FState walk) : prFail (((fusedAt walk) queried).run state) = 0 :=
+  OracleComp.prFail_eq_zero _
 
 /-- A request with no frame makes no query. -/
 theorem sign_none_run (walk : Walk) (request : Message) (hframe : request.frame = none)
@@ -702,7 +698,7 @@ theorem tsum_le_of_support {β : Type} (computation : ProbComp β) (left right :
 theorem tsum_const_of_neverFails {β : Type} (computation : ProbComp β)
     (hfail : prFail computation = 0) (constant : ℝ≥0∞) :
     ∑' z, Pr{let x ← computation}[x = z] * constant = constant := by
-  rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one hfail, one_mul]
+  rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one, one_mul]
 
 open scoped Classical in
 /-- **Right after a cell is filed, its watched value is one fresh coin's mass — unless its
@@ -731,7 +727,7 @@ theorem filing_watch_le (walk : Walk) (state : SplitTapeState (CountedAt (keyAt 
     · exact Or.inr ((signerRandomised_iff _ _ _ input).mpr ⟨answer, hcached, hhits⟩)
     · refine Or.inl (le_trans (watchValue_le_of_cache _ _ step.2 answer
         (by rw [hsame, hcached])) ?_)
-      rw [if_neg hhits]
+      rw [ite_eq_right hhits]
       exact zero_le
 
 set_option maxHeartbeats 4000000 in
@@ -767,13 +763,13 @@ theorem stage2_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWalk
       · unfold watchAt
         rw [hgetZ]
       · unfold bound2
-        rw [if_pos (List.getElem?_eq_some_iff.mp hgetZ).1]
+        rw [ite_eq_left (List.getElem?_eq_some_iff.mp hgetZ).1]
     have hvalueStart : value2 walk index state =
         watchValue target hits state.2.2 * (if Late2 walk state then 0 else 1) := by
       unfold value2 watchAt
       rw [hget]
     have hboundStart : bound2 walk index state = unit128 := by
-      unfold bound2; rw [if_pos hreached]
+      unfold bound2; rw [ite_eq_left hreached]
     rw [hvalueStart, hboundStart]
     have hboundEnd : ∑' z, Pr{let x ← step}[x = z] * bound2 walk index z.2 = unit128 := by
       rw [show (∑' z, Pr{let x ← step}[x = z] * bound2 walk index z.2) =
@@ -792,8 +788,8 @@ theorem stage2_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWalk
           rw [(hwatch z hz).1]
           refine mul_le_mul' le_rfl ?_
           by_cases hlate : Late2 walk state
-          · rw [if_pos (late2_step walk queried state z hz hlate), if_pos hlate]
-          · rw [if_neg hlate]; split_ifs <;> simp
+          · rw [ite_eq_left (late2_step walk queried state z hz hlate), ite_eq_left hlate]
+          · rw [ite_eq_right hlate]; split_ifs <;> simp
       _ = (∑' z, Pr{let x ← step}[x = z] * watchValue target hits z.2.2.2) *
             (if Late2 walk state then 0 else 1) := by
           rw [← ENNReal.tsum_mul_right]
@@ -814,7 +810,7 @@ theorem stage2_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWalk
       rw [List.getElem?_eq_none (Nat.le_of_not_lt hreached)]
       simp
     have hboundStart : bound2 walk index state = 0 := by
-      unfold bound2; rw [if_neg hreached]
+      unfold bound2; rw [ite_eq_right hreached]
     rw [hvalueStart, hboundStart, add_zero, zero_add]
     refine tsum_le_of_support step _ _ fun z hz => ?_
     by_cases hreachedZ : index < z.2.2.2.2.2.2.length
@@ -823,7 +819,7 @@ theorem stage2_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWalk
       rw [List.getElem?_eq_none (Nat.le_of_not_lt hreachedZ)]
       simp
     unfold bound2
-    rw [if_pos hreachedZ]
+    rw [ite_eq_left hreachedZ]
     rcases queried with world | request
     · obtain ⟨inner, hinner, hz2⟩ := adversary_step_shape walk world state z hz
       have hrightZ : z.2.2.2.2.2.2 = inner.2.2.2.2 := by rw [hz2]
@@ -857,7 +853,7 @@ theorem stage2_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWalk
           · rcases hinv.1 input hsigner with hpresent | hlate
             · exact absurd (by rw [← CacheView.cache_onQuery state.2.2.1 input]; exact hfresh)
                 hpresent
-            · rw [if_pos (late2_step walk _ state z hz hlate), mul_zero]
+            · rw [ite_eq_left (late2_step walk _ state z hz hlate), mul_zero]
               exact zero_le
         · rw [hrightZ, hst] at hreachedZ; exact absurd hreachedZ hreached
     · rw [signing_step_right walk hwalk hgood request state z hz] at hreachedZ
@@ -1029,14 +1025,14 @@ theorem stage3_step (walk : Walk) (index : Nat) (phaseLate : Prop)
       · unfold watchAt
         rw [hgetZ]
       · unfold bound3
-        rw [if_pos (List.getElem?_eq_some_iff.mp hgetZ).1]
+        rw [ite_eq_left (List.getElem?_eq_some_iff.mp hgetZ).1]
     have hvalueStart : value3 walk index phaseLate phaseCache state =
         watchValue target hits state *
           (if Late3 walk phaseLate phaseCache state then 0 else 1) := by
       unfold value3 watchAt
       rw [hget]
     have hboundStart : bound3 walk index state = unit128 := by
-      unfold bound3; rw [if_pos hreached]
+      unfold bound3; rw [ite_eq_left hreached]
     rw [hvalueStart, hboundStart]
     have hboundEnd : ∑' z, Pr{let x ← step}[x = z] * bound3 walk index z.2 = unit128 := by
       rw [show (∑' z, Pr{let x ← step}[x = z] * bound3 walk index z.2) =
@@ -1056,9 +1052,9 @@ theorem stage3_step (walk : Walk) (index : Nat) (phaseLate : Prop)
           rw [(hwatch z hz).1]
           refine mul_le_mul' le_rfl ?_
           by_cases hlate : Late3 walk phaseLate phaseCache state
-          · rw [if_pos (late3_step walk phaseLate phaseCache queried state z hz hlate),
-              if_pos hlate]
-          · rw [if_neg hlate]; split_ifs <;> simp
+          · rw [ite_eq_left (late3_step walk phaseLate phaseCache queried state z hz hlate),
+              ite_eq_left hlate]
+          · rw [ite_eq_right hlate]; split_ifs <;> simp
       _ = (∑' z, Pr{let x ← step}[x = z] * watchValue target hits z.2) *
             (if Late3 walk phaseLate phaseCache state then 0 else 1) := by
           rw [← ENNReal.tsum_mul_right]
@@ -1071,7 +1067,7 @@ theorem stage3_step (walk : Walk) (index : Nat) (phaseLate : Prop)
       rw [List.getElem?_eq_none (Nat.le_of_not_lt hreached)]
       simp
     have hboundStart : bound3 walk index state = 0 := by
-      unfold bound3; rw [if_neg hreached]
+      unfold bound3; rw [ite_eq_right hreached]
     rw [hvalueStart, hboundStart, add_zero, zero_add]
     refine tsum_le_of_support step _ _ fun z hz => ?_
     by_cases hreachedZ : index < z.2.2.2.2.length
@@ -1080,7 +1076,7 @@ theorem stage3_step (walk : Walk) (index : Nat) (phaseLate : Prop)
       rw [List.getElem?_eq_none (Nat.le_of_not_lt hreachedZ)]
       simp
     unfold bound3
-    rw [if_pos hreachedZ]
+    rw [ite_eq_left hreachedZ]
     rcases queried with coin | input
     · rw [tapeStep_inl _ _ coin state z hz] at hreachedZ
       exact absurd hreachedZ hreached
@@ -1108,7 +1104,7 @@ theorem stage3_step (walk : Walk) (index : Nat) (phaseLate : Prop)
         · rcases hinv.1 input hsigner with hpresent | hlate
           · exact absurd (by rw [← CacheView.cache_onQuery state.1 input]; exact hfresh)
               hpresent
-          · rw [if_pos (late3_step walk phaseLate phaseCache _ state z hz hlate), mul_zero]
+          · rw [ite_eq_left (late3_step walk phaseLate phaseCache _ state z hz hlate), mul_zero]
             exact zero_le
       · rw [hst] at hreachedZ; exact absurd hreachedZ hreached
 
@@ -1243,13 +1239,13 @@ theorem end_condition (adversary : Adversary) (walk : Walk)
   obtain ⟨answer, hcached, hhits⟩ := (signerRandomised_iff _ _ _ entry.1).mp hsigner
   have hgetFinal : final.2.2.2.2[index]? = some entry := by rw [← hrightW]; exact hget
   unfold value3 watchAt
-  rw [hgetFinal, if_neg hnotLate3, mul_one]
+  rw [hgetFinal, ite_eq_right hnotLate3, mul_one]
   dsimp only
   unfold watchValue
   rw [show CacheView.cacheOf final.2.1 (targetOf walk.1.1.2.1 (keyAt walk) entry.1) =
     some answer from hcached]
   dsimp only
-  rw [if_pos]
+  rw [ite_eq_left]
   refine ⟨hhits, ?_, ?_⟩
   · -- not in the disclosing recording: that would be the signer's coincidence
     intro hleft
@@ -1338,7 +1334,7 @@ theorem thin1 (adversary : Adversary) (walk : Walk) (hwalk : walk ∈ support Wa
   dsimp only
   have hstart := inv2_start walk hwalk hgood keyState hcache1 hright1
   have hb0 : bound2 walk index ((1 : Multiplicative Tally), ([] : SigningLog), keyState) = 0 := by
-    unfold bound2; rw [if_neg]; show ¬ index < keyState.2.2.2.length; rw [hright1]; simp
+    unfold bound2; rw [ite_eq_right]; show ¬ index < keyState.2.2.2.length; rw [hright1]; simp
   have hv0 : value2 walk index ((1 : Multiplicative Tally), ([] : SigningLog), keyState) = 0 := by
     unfold value2 watchAt
     rw [show keyState.2.2.2[index]? = none by rw [hright1]; simp]
@@ -1382,9 +1378,9 @@ theorem thin1 (adversary : Adversary) (walk : Walk) (hwalk : walk ∈ support Wa
     unfold value3 value2
     refine mul_le_mul' le_rfl ?_
     by_cases hlate : Late2 walk middle.2
-    · rw [if_pos (show Late3 walk (Late2 walk middle.2) (cacheF walk middle.2) middle.2.2.2 from
-        Or.inl hlate), if_pos hlate]
-    · rw [if_neg hlate]; split_ifs <;> simp
+    · rw [ite_eq_left (show Late3 walk (Late2 walk middle.2) (cacheF walk middle.2) middle.2.2.2 from
+        Or.inl hlate), ite_eq_left hlate]
+    · rw [ite_eq_right hlate]; split_ifs <;> simp
   intro final hfinal
   have hinvFinal := run_invariant (noticingSplitTapeRecorder (leftAt walk) (rightAt walk))
     (Inv3 walk (Late2 walk middle.2) (cacheF walk middle.2))
@@ -1552,7 +1548,7 @@ theorem watch_after_filing (walk : Walk) (state : SplitTapeState (CountedAt (key
     · exact Or.inr ((signerRandomised_iff _ _ _ input).mpr ⟨answer, hcached, hhits⟩)
     · refine Or.inl (le_trans (watchValue_le_of_cache _ _ state answer
         (by rw [hcache, hcached])) ?_)
-      rw [if_neg hhits]
+      rw [ite_eq_right hhits]
       exact zero_le
 
 /-- **A fused step that reaches a cell files it, at a watched value of one coin — or `late`.** -/
@@ -1689,8 +1685,8 @@ theorem getElem?_of_prefix {record longer : Record} (hprefix : record <+: longer
 theorem ite_late_le {p q : Prop} [Decidable p] [Decidable q] (h : p → q) :
     (if q then (0 : ℝ≥0∞) else 1) ≤ if p then 0 else 1 := by
   by_cases hp : p
-  · rw [if_pos hp, if_pos (h hp)]
-  · rw [if_neg hp]; split_ifs <;> simp
+  · rw [ite_eq_left hp, ite_eq_left (h hp)]
+  · rw [ite_eq_right hp]; split_ifs <;> simp
 
 theorem ite_late_le_one {p : Prop} [Decidable p] : (if p then (0 : ℝ≥0∞) else 1) ≤ 1 := by
   split_ifs <;> simp
@@ -1736,7 +1732,7 @@ theorem stage2P_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWal
     have hboundZ : ∀ z ∈ support step, bound2P walk first z.2 = unit128 * unit128 := by
       intro z hz
       unfold bound2P
-      rw [if_pos (List.getElem?_eq_some_iff.mp (hz1 z hz)).1]
+      rw [ite_eq_left (List.getElem?_eq_some_iff.mp (hz1 z hz)).1]
     have hboundEnd : ∑' z, Pr{let x ← step}[x = z] * bound2P walk first z.2 = unit128 * unit128 := by
       rw [show (∑' z, Pr{let x ← step}[x = z] * bound2P walk first z.2) =
           ∑' z, Pr{let x ← step}[x = z] * (unit128 * unit128) from tsum_congr fun z => by
@@ -1745,7 +1741,7 @@ theorem stage2P_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWal
             · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]]
       exact tsum_const_of_neverFails step hfail _
     have hboundStart : bound2P walk first state = unit128 * unit128 := by
-      unfold bound2P; rw [if_pos hA]
+      unfold bound2P; rw [ite_eq_left hA]
     rw [hboundEnd, hboundStart]
     refine add_le_add ?_ le_rfl
     by_cases hB : second < state.2.2.2.2.2.length
@@ -1807,7 +1803,7 @@ theorem stage2P_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWal
               rcases hcase with hle | hlate
               · exact mul_le_mul' (mul_le_mul' le_rfl hle)
                   (ite_late_le (late2_step walk queried state z hz))
-              · rw [if_pos hlate, mul_zero]; exact zero_le
+              · rw [ite_eq_left hlate, mul_zero]; exact zero_le
             · unfold secondFactor
               rw [List.getElem?_eq_none (Nat.le_of_not_lt hBz)]
               exact mul_le_mul' le_rfl (ite_late_le (late2_step walk queried state z hz))
@@ -1822,7 +1818,7 @@ theorem stage2P_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWal
     have hvalueStart : value2P walk first second state = 0 := by
       unfold value2P pairAt; rw [hgetNone]; simp
     have hboundStart : bound2P walk first state = 0 := by
-      unfold bound2P; rw [if_neg hA]
+      unfold bound2P; rw [ite_eq_right hA]
     rw [hvalueStart, hboundStart, add_zero, zero_add]
     refine tsum_le_of_support step _ _ fun z hz => ?_
     by_cases hAz : first < z.2.2.2.2.2.2.length
@@ -1835,7 +1831,7 @@ theorem stage2P_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWal
     have hBz : ¬ second < z.2.2.2.2.2.2.length := by
       have := hlen z hz; omega
     unfold bound2P
-    rw [if_pos hAz]
+    rw [ite_eq_left hAz]
     unfold value2P pairAt secondFactor
     rw [hgetZ, List.getElem?_eq_none (Nat.le_of_not_lt hBz)]
     dsimp only
@@ -1844,7 +1840,7 @@ theorem stage2P_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWal
             z.2.2.2 * unit128 * (if Late2 walk z.2 then 0 else 1)
           ≤ unit128 * unit128 * 1 := mul_le_mul' (mul_le_mul' hle le_rfl) ite_late_le_one
         _ = unit128 * unit128 := mul_one _
-    · rw [if_pos hlate, mul_zero]; exact zero_le
+    · rw [ite_eq_left hlate, mul_zero]; exact zero_le
 
 open scoped Classical in
 noncomputable def value3P (walk : Walk) (first second : Nat) (phaseLate : Prop)
@@ -1912,7 +1908,7 @@ theorem stage3P_step (walk : Walk) (first second : Nat) (hlt : first < second)
     have hboundZ : ∀ z ∈ support step, bound3P walk first z.2 = unit128 * unit128 := by
       intro z hz
       unfold bound3P
-      rw [if_pos (List.getElem?_eq_some_iff.mp (hz1 z hz)).1]
+      rw [ite_eq_left (List.getElem?_eq_some_iff.mp (hz1 z hz)).1]
     have hboundEnd : ∑' z, Pr{let x ← step}[x = z] * bound3P walk first z.2 = unit128 * unit128 := by
       rw [show (∑' z, Pr{let x ← step}[x = z] * bound3P walk first z.2) =
           ∑' z, Pr{let x ← step}[x = z] * (unit128 * unit128) from tsum_congr fun z => by
@@ -1921,7 +1917,7 @@ theorem stage3P_step (walk : Walk) (first second : Nat) (hlt : first < second)
             · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]]
       exact tsum_const_of_neverFails step hfail _
     have hboundStart : bound3P walk first state = unit128 * unit128 := by
-      unfold bound3P; rw [if_pos hA]
+      unfold bound3P; rw [ite_eq_left hA]
     rw [hboundEnd, hboundStart]
     refine add_le_add ?_ le_rfl
     by_cases hB : second < state.2.2.2.length
@@ -1973,7 +1969,7 @@ theorem stage3P_step (walk : Walk) (first second : Nat) (hlt : first < second)
               dsimp only
               rcases hcase with hle | hlateZ
               · exact mul_le_mul' (mul_le_mul' le_rfl hle) (ite_late_le (hlate z hz))
-              · rw [if_pos hlateZ, mul_zero]; exact zero_le
+              · rw [ite_eq_left hlateZ, mul_zero]; exact zero_le
             · unfold secondFactor
               rw [List.getElem?_eq_none (Nat.le_of_not_lt hBz)]
               exact mul_le_mul' le_rfl (ite_late_le (hlate z hz))
@@ -1988,7 +1984,7 @@ theorem stage3P_step (walk : Walk) (first second : Nat) (hlt : first < second)
     have hvalueStart : value3P walk first second phaseLate phaseCache state = 0 := by
       unfold value3P pairAt; rw [hgetNone]; simp
     have hboundStart : bound3P walk first state = 0 := by
-      unfold bound3P; rw [if_neg hA]
+      unfold bound3P; rw [ite_eq_right hA]
     rw [hvalueStart, hboundStart, add_zero, zero_add]
     refine tsum_le_of_support step _ _ fun z hz => ?_
     by_cases hAz : first < z.2.2.2.2.length
@@ -2001,7 +1997,7 @@ theorem stage3P_step (walk : Walk) (first second : Nat) (hlt : first < second)
     have hBz : ¬ second < z.2.2.2.2.length := by
       have := hlen z hz; omega
     unfold bound3P
-    rw [if_pos hAz]
+    rw [ite_eq_left hAz]
     unfold value3P pairAt secondFactor
     rw [hgetZ, List.getElem?_eq_none (Nat.le_of_not_lt hBz)]
     dsimp only
@@ -2010,7 +2006,7 @@ theorem stage3P_step (walk : Walk) (first second : Nat) (hlt : first < second)
             z.2 * unit128 * (if Late3 walk phaseLate phaseCache z.2 then 0 else 1)
           ≤ unit128 * unit128 * 1 := mul_le_mul' (mul_le_mul' hle le_rfl) ite_late_le_one
         _ = unit128 * unit128 := mul_one _
-    · rw [if_pos hlateZ, mul_zero]; exact zero_le
+    · rw [ite_eq_left hlateZ, mul_zero]; exact zero_le
 
 set_option maxHeartbeats 4000000 in
 open scoped Classical in
@@ -2043,8 +2039,8 @@ theorem end_conditionP (adversary : Adversary) (walk : Walk)
     hinv hw
   have hv2 := end_condition adversary walk hwalk hgood second leftTape rightTape middle final
     hfinal hinv hw
-  rw [if_pos ⟨hreach1, hfired1⟩] at hv1
-  rw [if_pos ⟨hreach2, hfired2⟩] at hv2
+  rw [ite_eq_left ⟨hreach1, hfired1⟩] at hv1
+  rw [ite_eq_left ⟨hreach2, hfired2⟩] at hv2
   obtain ⟨e1, hget1, -⟩ := hfired1
   obtain ⟨e2, hget2, -⟩ := hfired2
   have hget1' : final.2.2.2.2[first]? = some e1 := hget1
@@ -2056,9 +2052,9 @@ theorem end_conditionP (adversary : Adversary) (walk : Walk)
   rw [hget1', hget2']
   dsimp only at hv1 hv2 ⊢
   by_cases hlate : Late3 walk (Late2 walk middle.2) (cacheF walk middle.2) final.2
-  · rw [if_pos hlate, mul_zero] at hv1
+  · rw [ite_eq_left hlate, mul_zero] at hv1
     exact absurd hv1 (by simp)
-  · rw [if_neg hlate, mul_one] at hv1 hv2 ⊢
+  · rw [ite_eq_right hlate, mul_one] at hv1 hv2 ⊢
     calc (1 : ℝ≥0∞) = 1 * 1 := (mul_one 1).symm
       _ ≤ _ := mul_le_mul' hv1 hv2
 
@@ -2105,7 +2101,7 @@ theorem thin2 (adversary : Adversary) (walk : Walk) (hwalk : walk ∈ support Wa
         rw [hright1] at this; exact absurd this (by simp),
        by show (keyState.2.2.2.map Prod.fst).Nodup; rw [hright1]; simp⟩⟩
   have hb0 : bound2P walk first ((1 : Multiplicative Tally), ([] : SigningLog), keyState) = 0 := by
-    unfold bound2P; rw [if_neg]; show ¬ first < keyState.2.2.2.length; rw [hright1]; simp
+    unfold bound2P; rw [ite_eq_right]; show ¬ first < keyState.2.2.2.length; rw [hright1]; simp
   have hv0 : value2P walk first second
       ((1 : Multiplicative Tally), ([] : SigningLog), keyState) = 0 := by
     unfold value2P pairAt

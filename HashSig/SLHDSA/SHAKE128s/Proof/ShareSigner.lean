@@ -29,6 +29,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.ShareSigner
 
+variable {α : Type}
+
 open Security CacheReplay HonestProbes CanonicalGraph
 
 /-! ## The signer after its digest -/

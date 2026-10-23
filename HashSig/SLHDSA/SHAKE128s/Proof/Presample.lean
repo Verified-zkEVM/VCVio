@@ -39,13 +39,15 @@ set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.Presample
 
+variable {α γ : Type}
+
 /-- Writing two different keys commutes. -/
 theorem cacheQuery_comm (cache : QueryCache HashSpec) {left right : Bytes}
     (hne : left ≠ right) (leftValue rightValue : HashOutput) :
     (cache.cacheQuery left leftValue).cacheQuery right rightValue =
       (cache.cacheQuery right rightValue).cacheQuery left leftValue := by
-  simp only [QueryCache.cacheQuery]
-  exact Function.update_comm hne _ _ _
+  simp only [QueryCache.cacheQuery, QueryCache.toFn_ofFn]
+  exact congrArg QueryCache.ofFn (Function.update_comm hne _ _ _)
 
 /-! ## Pre-sampling a whole table
 
@@ -86,16 +88,16 @@ unfolding, which does go under binders, removes the whole difficulty. -/
 
 theorem evalDist_prepend_fresh_world {α : Type} (computation : OracleComp OracleWorld α) :
     ∀ (cache : QueryCache HashSpec) (target : Bytes), cache target = none →
-      𝒟[Prod.fst <$> (simulateQ KeygenUniform.rom computation).run cache] =
-        𝒟[(do
+      (Prod.fst <$> (simulateQ KeygenUniform.rom computation).run cache) =ᵈ
+        (do
           let value ← ($ᵗ HashOutput : ProbComp HashOutput)
           Prod.fst <$> (simulateQ KeygenUniform.rom computation).run
-            (cache.cacheQuery target value))] := by
+            (cache.cacheQuery target value)) := by
   induction computation using OracleComp.inductionOn with
   | pure result =>
     intro cache target _
     simp only [simulateQ_pure, StateT.run_pure, map_pure]
-    exact (OracleComp.DeferredSampling.evalDist_bind_const_neverFails _ (by simp) _).symm
+    exact (OracleComp.EvalDistEq.bind_const _ _).symm
   | query_bind queried next ih =>
     intro cache target hfresh
     simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, map_bind]
@@ -105,9 +107,9 @@ theorem evalDist_prepend_fresh_world {α : Type} (computation : OracleComp Oracl
             (fun value => (value, probe)) <$>
               ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _) := fun _ => rfl
       simp only [hcoin, bind_map_left]
-      refine (OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _
+      refine (EvalDistEq.bind_right _
         (fun value => ih value cache target hfresh)).trans ?_
-      exact OracleComp.DeferredSampling.evalDist_bind_comm _ _ _
+      exact OracleComp.EvalDistEq.bind_bind_swap _ _ _
     · have hmissAt : ∀ probe : QueryCache HashSpec, probe input = none →
           (KeygenUniform.rom (Sum.inr input)).run probe =
             (fun value => (value, probe.cacheQuery input value)) <$>
@@ -125,24 +127,26 @@ theorem evalDist_prepend_fresh_world {α : Type} (computation : OracleComp Oracl
       by_cases hsame : input = target
       · subst hsame
         simp only [hmissAt cache hfresh, bind_map_left]
-        refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ (fun value => ?_)
+        refine EvalDistEq.bind_right _ (fun value => ?_)
         simp only [hhitAt (cache.cacheQuery input value) value
           (QueryCache.cacheQuery_self cache input value), pure_bind]
+        exact EvalDistEq.rfl
       · cases hlookup : cache input with
         | some cached =>
           simp only [hhitAt cache cached hlookup, pure_bind]
           refine (ih cached cache target hfresh).trans
-            (OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ (fun value => ?_))
+            (EvalDistEq.bind_right _ (fun value => ?_))
           simp only [hhitAt (cache.cacheQuery target value) cached
             (by rw [QueryCache.cacheQuery_of_ne cache value hsame]; exact hlookup), pure_bind]
+          exact EvalDistEq.rfl
         | none =>
           simp only [hmissAt cache hlookup, bind_map_left]
-          refine (OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _
+          refine (EvalDistEq.bind_right _
             (fun value => ih value (cache.cacheQuery input value) target
               (by rw [QueryCache.cacheQuery_of_ne cache value (Ne.symm hsame)];
                   exact hfresh))).trans ?_
-          refine (OracleComp.DeferredSampling.evalDist_bind_comm _ _ _).trans ?_
-          refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ (fun extra => ?_)
+          refine (OracleComp.EvalDistEq.bind_bind_swap _ _ _).trans ?_
+          refine EvalDistEq.bind_right _ (fun extra => ?_)
           simp only [hmissAt (cache.cacheQuery target extra)
             (by rw [QueryCache.cacheQuery_of_ne cache extra hsame]; exact hlookup),
             bind_map_left, cacheQuery_comm cache hsame]
@@ -172,9 +176,9 @@ theorem evalDist_prepend_worldEvaluate {α State Index : Type}
     (hseparated : GraphFreshSampling.Separated input) :
     ∀ (nodes : List Index) (state : State) (cache : QueryCache HashSpec), nodes.Nodup →
       GraphFreshSampling.FreshFor input nodes cache →
-      𝒟[Prod.fst <$> (simulateQ KeygenUniform.rom computation).run cache] =
-        𝒟[Prod.fst <$> (simulateQ KeygenUniform.rom
-          (worldEvaluate input step nodes state >>= fun _ => computation)).run cache] := by
+      (Prod.fst <$> (simulateQ KeygenUniform.rom computation).run cache) =ᵈ
+        (Prod.fst <$> (simulateQ KeygenUniform.rom
+          (worldEvaluate input step nodes state >>= fun _ => computation)).run cache) := by
   intro nodes
   induction nodes with
   | nil =>
@@ -187,18 +191,18 @@ theorem evalDist_prepend_worldEvaluate {α State Index : Type}
     have hhead : cache (input node state) = none := hfresh node (by simp) state
     refine (evalDist_prepend_fresh_world computation cache (input node state) hhead).trans ?_
     have hstep : ∀ value : HashOutput,
-        𝒟[Prod.fst <$> (simulateQ KeygenUniform.rom computation).run
-            (cache.cacheQuery (input node state) value)] =
-          𝒟[Prod.fst <$> (simulateQ KeygenUniform.rom
+        (Prod.fst <$> (simulateQ KeygenUniform.rom computation).run
+            (cache.cacheQuery (input node state) value)) =ᵈ
+          (Prod.fst <$> (simulateQ KeygenUniform.rom
             (worldEvaluate input step rest (step node state value) >>=
-              fun _ => computation)).run (cache.cacheQuery (input node state) value)] := by
+              fun _ => computation)).run (cache.cacheQuery (input node state) value)) := by
       intro value
       refine ih (step node state value) (cache.cacheQuery (input node state) value) hrest ?_
       intro other hother otherState
       rw [QueryCache.cacheQuery_of_ne cache value
         (hseparated other node (fun hsame => hnotMem (hsame ▸ hother)) otherState state)]
       exact hfresh other (by simp [hother]) otherState
-    refine (OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ hstep).trans ?_
+    refine (EvalDistEq.bind_right _ hstep).trans ?_
     have hmiss : (KeygenUniform.rom (Sum.inr (input node state))).run cache =
         (fun value => (value, cache.cacheQuery (input node state) value)) <$>
           ($ᵗ (OracleWorld.Range (Sum.inr (input node state))) : ProbComp _) := by
@@ -235,9 +239,9 @@ noncomputable def worldWarmup (publicSeed secretSeed : Digest) :
 /-- **The warmup may be prepended to any run from the empty cache.** -/
 theorem evalDist_prepend_warmup {α : Type} (computation : OracleComp OracleWorld α)
     (publicSeed secretSeed : Digest) :
-    𝒟[Prod.fst <$> (simulateQ KeygenUniform.rom computation).run ∅] =
-      𝒟[Prod.fst <$> (simulateQ KeygenUniform.rom
-        (worldWarmup publicSeed secretSeed >>= fun _ => computation)).run ∅] :=
+    (Prod.fst <$> (simulateQ KeygenUniform.rom computation).run ∅) =ᵈ
+      (Prod.fst <$> (simulateQ KeygenUniform.rom
+        (worldWarmup publicSeed secretSeed >>= fun _ => computation)).run ∅) :=
   evalDist_prepend_worldEvaluate computation _ _
     (CanonicalGraph.Programming.input_separated publicSeed)
     CanonicalGraph.Programming.order
@@ -275,13 +279,13 @@ theorem run_liftM_probComp {γ : Type} (sample : ProbComp γ) (cache : QueryCach
 /-- **The warmup may be inserted after the seeds are sampled.** -/
 theorem evalDist_prepend_warmup_after {α γ : Type} (sample : ProbComp γ)
     (rest : γ → OracleComp OracleWorld α) (publicSeed secretSeed : γ → Digest) :
-    𝒟[Prod.fst <$> (simulateQ KeygenUniform.rom
-        ((liftM sample : OracleComp OracleWorld γ) >>= rest)).run ∅] =
-      𝒟[Prod.fst <$> (simulateQ KeygenUniform.rom
+    (Prod.fst <$> (simulateQ KeygenUniform.rom
+        ((liftM sample : OracleComp OracleWorld γ) >>= rest)).run ∅) =ᵈ
+      (Prod.fst <$> (simulateQ KeygenUniform.rom
         ((liftM sample : OracleComp OracleWorld γ) >>= fun value =>
-          worldWarmup (publicSeed value) (secretSeed value) >>= fun _ => rest value)).run ∅] := by
+          worldWarmup (publicSeed value) (secretSeed value) >>= fun _ => rest value)).run ∅) := by
   simp only [simulateQ_bind, StateT.run_bind, map_bind, run_liftM_probComp, bind_map_left]
-  refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ (fun value => ?_)
+  refine EvalDistEq.bind_right _ (fun value => ?_)
   simpa only [simulateQ_bind, StateT.run_bind, map_bind] using
     evalDist_prepend_warmup (rest value) (publicSeed value) (secretSeed value)
 
@@ -362,12 +366,12 @@ counted run's value unchanged — the warmup is outside the counter, so it costs
 the seeds are coin queries, so pulling them out of the counter costs nothing either. -/
 theorem evalDist_counted_warmed {α γ : Type} (sample : ProbComp γ)
     (rest : γ → OracleComp OracleWorld α) (publicSeed secretSeed : γ → Digest) :
-    𝒟[Prod.fst <$> (simulateQ KeygenUniform.rom
-        (Security.countAllHashes ((liftM sample : OracleComp OracleWorld γ) >>= rest))).run ∅] =
-      𝒟[Prod.fst <$> (simulateQ KeygenUniform.rom
+    (Prod.fst <$> (simulateQ KeygenUniform.rom
+        (Security.countAllHashes ((liftM sample : OracleComp OracleWorld γ) >>= rest))).run ∅) =ᵈ
+      (Prod.fst <$> (simulateQ KeygenUniform.rom
         ((liftM sample : OracleComp OracleWorld γ) >>= fun value =>
           worldWarmup (publicSeed value) (secretSeed value) >>= fun _ =>
-            Security.countAllHashes (rest value))).run ∅] := by
+            Security.countAllHashes (rest value))).run ∅) := by
   rw [countAllHashes_liftM_bind]
   exact evalDist_prepend_warmup_after sample
     (fun value => Security.countAllHashes (rest value)) publicSeed secretSeed

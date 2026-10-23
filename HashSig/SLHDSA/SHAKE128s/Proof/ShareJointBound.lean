@@ -157,7 +157,9 @@ theorem charged_filing_shareCompJ (setup : Setup) (hfiles : VerifierFiles setup)
   have hchargedA := charged_le_length setup.publicSeed a.2.1.record
   rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
   obtain ⟨v, hv, hz⟩ := hz
-  rw [toShare, ← QueryImpl.simulateQ_compose,
+  rw [toShare, ← QueryImpl.simulateQ_compose (filing setup) (fun world =>
+      (query (spec := ShareSpec) (worldQuery world) :
+        OracleComp ShareSpec (OracleWorld.Range world))),
     compose_world_of (filing setup) false setup (filing_inl setup)] at hv
   have hverify := cost_capCompOpt_le (worldImpl false setup) (chargedWeight setup.pk.seed)
     (fun p : St × Bool => charged setup.publicSeed p.1.record) (reportsCost_charged false setup)

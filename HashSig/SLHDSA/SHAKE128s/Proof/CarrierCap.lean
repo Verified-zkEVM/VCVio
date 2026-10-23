@@ -45,6 +45,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CarrierCap
 
+variable {α : Type}
+
 open Security BracketedRun CarrierFiles CarrierTail PhaseFusion RecordInvariant
 open RecordedQueries RecorderView CarriedWitness HandlerCarrier
 
@@ -371,9 +373,9 @@ theorem agreesWithLog_quiet (rightKeep : Walk → Bytes → HandlerCarrier.State
   constructor
   · exact ServedAgreement.carrierLogged_run_with (keyAt walk) (handlerAt rightKeep walk)
       (files_countedCarrierRecorder (keyAt walk) (rightKeep walk)) (Scheme.sign sk) sk hpk
-      (ServedAgreement.signerShape_sign sk) (fun _ => none)
+      (ServedAgreement.signerShape_sign sk) ∅
       (ServedAgreement.signerPins_sign sk hpublic) computation (accumulated, [], carrier)
-      hquiet.1 (carrierLogged_of_quiet sk (fun _ => none) [] carrier.1 hquiet) z hz
+      hquiet.1 (carrierLogged_of_quiet sk ∅ [] carrier.1 hquiet) z hz
       z.2.2.2.1.cache (fun _ _ hvalue => hvalue)
       (fun _ _ hvalue => absurd hvalue (by simp)) input
   · exact ServedAgreement.logServed_subset_served sk z.2.2.1 z.2.2.2.1

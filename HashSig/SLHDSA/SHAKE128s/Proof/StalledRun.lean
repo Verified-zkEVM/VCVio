@@ -63,7 +63,7 @@ theorem stalled_run_of_frozen (impl : QueryImpl spec (StateT (σ × Bool) ProbCo
     (t : spec.Domain) (p : σ × Bool) (hp : Frozen p.1) :
     ((stalled impl Frozen stall) t).run p = (pure (stall t, p) : ProbComp _) := by
   simp only [stalled, StateT.run]
-  exact if_pos hp
+  exact ite_eq_left hp
 
 open scoped Classical in
 theorem stalled_run_of_not_frozen (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
@@ -71,9 +71,87 @@ theorem stalled_run_of_not_frozen (impl : QueryImpl spec (StateT (σ × Bool) Pr
     (t : spec.Domain) (p : σ × Bool) (hp : ¬ Frozen p.1) :
     ((stalled impl Frozen stall) t).run p = (impl t).run p := by
   simp only [stalled, StateT.run]
-  exact if_neg hp
+  exact ite_eq_right hp
 
 /-! ## A run that can no longer change the flag does not change it -/
+
+/-- An integral against the output measure of a sampling computation is the sum of its singleton
+masses times the integrand. -/
+private theorem lintegral_evalDist_eq_tsum_probComp {β : Type} (run : ProbComp β)
+    (weight : β → ℝ≥0∞) :
+    letI : MeasurableSpace β := ⊤
+    ∫⁻ value, weight value ∂𝒟[run] = ∑' value, Pr{let x ← run}[x = value] * weight value := by
+  let : MeasurableSpace β := ⊤
+  have hae : ∀ᵐ value ∂𝒟[run], value ∈ support run :=
+    evalDist.ae_of_forall_mem_support run (· ∈ support run) MeasurableSet.of_discrete
+      fun _ h ↦ h
+  rw [← MeasureTheory.Measure.restrict_eq_self_of_ae_mem hae,
+    MeasureTheory.lintegral_countable weight (support_finite run).countable,
+    ← tsum_subtype_eq_of_support_subset (s := support run)
+      (f := fun value ↦ Pr{let x ← run}[x = value] * weight value)]
+  · simp only [prEvent_eq_evalDist_singleton, mul_comm]
+  · intro value hvalue
+    by_contra hnot
+    refine hvalue ?_
+    simp only
+    rw [prEvent_eq_evalDist_singleton,
+      MeasureTheory.measure_mono_null (Set.singleton_subset_iff.2 hnot)
+        (MeasureTheory.ae_iff.1 hae), zero_mul]
+
+/-- After a draw whose every outcome leads to the same value, the integral is that value. -/
+private theorem lintegral_const_of_support {β : Type} (run : ProbComp β) (value : β → ℝ≥0∞)
+    (c : ℝ≥0∞) (h : ∀ y ∈ support run, value y = c) :
+    letI : MeasurableSpace β := ⊤
+    ∫⁻ y, value y ∂𝒟[run] = c := by
+  let : MeasurableSpace β := ⊤
+  rw [MeasureTheory.lintegral_congr_ae (g := fun _ => c)
+    (evalDist.ae_of_forall_mem_support run (fun y => value y = c) MeasurableSet.of_discrete h),
+    MeasureTheory.lintegral_const, evalDist_apply_univ_eq_one, mul_one]
+
+/-! ## Stalling in integral form -/
+
+/-- `expectation_frozen` as an integral. -/
+private theorem lintegral_frozen {γ : Type}
+    (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
+    (Frozen : σ → Prop) (weight : σ × Bool → ℝ≥0∞)
+    (hfrozen : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
+      ∀ z ∈ support ((impl t).run p), Frozen z.2.1)
+    (hquiet : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
+      ∀ z ∈ support ((impl t).run p), weight z.2 = weight p)
+    (oa : OracleComp spec γ) (p : σ × Bool) (hp : Frozen p.1) :
+    letI : MeasurableSpace (γ × (σ × Bool)) := ⊤
+    ∫⁻ z, weight z.2 ∂𝒟[(simulateQ impl oa).run p] = weight p := by
+  let : MeasurableSpace (γ × (σ × Bool)) := ⊤
+  induction oa using OracleComp.inductionOn generalizing p with
+  | pure value =>
+    rw [simulateQ_pure, StateT.run_pure, evalDist_pure,
+      MeasureTheory.lintegral_dirac' _ Measurable.of_discrete]
+  | query_bind t next ih =>
+    let : MeasurableSpace (spec.Range t × (σ × Bool)) := ⊤
+    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+      lintegral_evalDist_bind_of_discrete _ _ Measurable.of_discrete]
+    exact lintegral_const_of_support _ _ _ fun y hmem => by
+      rw [ih y.1 y.2 (hfrozen t p hp y hmem), hquiet t p hp y hmem]
+
+/-- `probEvent_flag_frozen`, from a run that keeps its flag while frozen. -/
+private theorem prEvent_flag_frozen_aux {γ : Type}
+    (impl : QueryImpl spec (StateT (σ × Bool) ProbComp)) (Frozen : σ → Prop)
+    (hfrozen : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
+      ∀ z ∈ support ((impl t).run p), Frozen z.2.1)
+    (hquiet : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
+      ∀ z ∈ support ((impl t).run p), z.2.2 = p.2)
+    (oa : OracleComp spec γ) (p : σ × Bool) (hp : Frozen p.1) :
+    Pr{let z ← (simulateQ impl oa).run p}[z.2.2 = true] =
+      (if p.2 = true then 1 else 0) := by
+  induction oa using OracleComp.inductionOn generalizing p with
+  | pure value =>
+    rw [simulateQ_pure, StateT.run_pure, prEvent_pure]
+  | query_bind t next ih =>
+    let : MeasurableSpace (spec.Range t × (σ × Bool)) := ⊤
+    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+      prEvent_bind_eq_lintegral_of_discrete]
+    exact lintegral_const_of_support _ _ _ fun y hmem => by
+      rw [ih y.1 y.2 (hfrozen t p hp y hmem), hquiet t p hp y hmem]
 
 /-- **A frozen run keeps the flag it started with.** -/
 theorem probEvent_flag_frozen {γ : Type} (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
@@ -86,24 +164,7 @@ theorem probEvent_flag_frozen {γ : Type} (impl : QueryImpl spec (StateT (σ × 
     (oa : OracleComp spec γ) (p : σ × Bool) (hp : Frozen p.1) :
     Pr{let z ← (simulateQ impl oa).run p}[z.2.2 = true] =
       (if p.2 = true then 1 else 0) := by
-  induction oa using OracleComp.inductionOn generalizing p with
-  | pure value =>
-    rw [simulateQ_pure, StateT.run_pure, prEvent_pure]
-  | query_bind t next ih =>
-    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, OracleComp.prEvent_bind_eq_tsum]
-    calc ∑' z, Pr{let x ← (impl t).run p}[x = z] *
-          Pr{let w ← (simulateQ impl (next z.1)).run z.2}[w.2.2 = true]
-        = ∑' z, Pr{let x ← (impl t).run p}[x = z] * (if p.2 = true then 1 else 0) := by
-          refine tsum_congr fun z => ?_
-          by_cases hmem : z ∈ support ((impl t).run p)
-          · rw [ih z.1 z.2 (hfrozen t p hp z hmem), hquiet t p hp z hmem]
-          · rw [(prEvent_eq_zero_of_not_mem_support _) hmem]
-            simp
-      _ = (if p.2 = true then 1 else 0) := by
-          rw [ENNReal.tsum_mul_right]
-          have hmass := probFailure_add_tsum_probOutput ((impl t).run p)
-          rw [hfail t p, zero_add] at hmass
-          rw [hmass, one_mul]
+  exact prEvent_flag_frozen_aux impl Frozen hfrozen hquiet oa p hp
 
 open scoped Classical in
 /-- **Stalling does not change the flag.** Once the flag can no longer change, stopping the run
@@ -120,12 +181,6 @@ theorem probEvent_flag_stalled_eq {γ : Type}
     Pr{let z ← (simulateQ impl oa).run p}[z.2.2 = true] =
       Pr{let z ← (simulateQ (stalled impl Frozen stall) oa).run p}[z.2.2 = true] := by
   classical
-  have hstalledFail : ∀ (t : spec.Domain) (q : σ × Bool),
-      prFail (((stalled impl Frozen stall) t).run q) = 0 := by
-    intro t q
-    by_cases hq : Frozen q.1
-    · rw [stalled_run_of_frozen impl Frozen stall t q hq]; simp
-    · rw [stalled_run_of_not_frozen impl Frozen stall t q hq]; exact hfail t q
   have hstalledFrozen : ∀ (t : spec.Domain) (q : σ × Bool), Frozen q.1 →
       ∀ z ∈ support (((stalled impl Frozen stall) t).run q), Frozen z.2.1 := by
     intro t q hq z hz
@@ -144,14 +199,15 @@ theorem probEvent_flag_stalled_eq {γ : Type}
     rw [simulateQ_pure, StateT.run_pure, simulateQ_pure, StateT.run_pure]
   | query_bind t next ih =>
     by_cases hp : Frozen p.1
-    · rw [probEvent_flag_frozen impl Frozen hfail hfrozen hquiet _ p hp,
-        probEvent_flag_frozen (stalled impl Frozen stall) Frozen hstalledFail hstalledFrozen
+    · rw [prEvent_flag_frozen_aux impl Frozen hfrozen hquiet _ p hp,
+        prEvent_flag_frozen_aux (stalled impl Frozen stall) Frozen hstalledFrozen
           hstalledQuiet _ p hp]
-    · rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+    · let : MeasurableSpace (spec.Range t × (σ × Bool)) := ⊤
+      rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
         simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
         stalled_run_of_not_frozen impl Frozen stall t p hp,
-        OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_bind_eq_tsum]
-      exact tsum_congr fun z => congrArg _ (ih z.1 z.2)
+        prEvent_bind_eq_lintegral_of_discrete, prEvent_bind_eq_lintegral_of_discrete]
+      exact MeasureTheory.lintegral_congr fun z => ih z.1 z.2
 
 /-! ## Stalling preserves more than a flag
 
@@ -170,24 +226,9 @@ theorem expectation_frozen {γ : Type} (impl : QueryImpl spec (StateT (σ × Boo
       ∀ z ∈ support ((impl t).run p), weight z.2 = weight p)
     (oa : OracleComp spec γ) (p : σ × Bool) (hp : Frozen p.1) :
     (∑' z : γ × (σ × Bool), Pr{let x ← (simulateQ impl oa).run p}[x = z] * weight z.2) = weight p := by
-  induction oa using OracleComp.inductionOn generalizing p with
-  | pure value =>
-    rw [simulateQ_pure, StateT.run_pure, OracleComp.tsum_prEvent_pure_mul]
-  | query_bind t next ih =>
-    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, OracleComp.tsum_prEvent_bind_mul]
-    calc ∑' y, Pr{let x ← (impl t).run p}[x = y] *
-          ∑' z : γ × (σ × Bool), Pr{let x ← (simulateQ impl (next y.1)).run y.2}[x = z] * weight z.2
-        = ∑' y, Pr{let x ← (impl t).run p}[x = y] * weight p := by
-          refine tsum_congr fun y => ?_
-          by_cases hmem : y ∈ support ((impl t).run p)
-          · rw [ih y.1 y.2 (hfrozen t p hp y hmem), hquiet t p hp y hmem]
-          · rw [(prEvent_eq_zero_of_not_mem_support _) hmem]
-            simp
-      _ = weight p := by
-          rw [ENNReal.tsum_mul_right]
-          have hmass := probFailure_add_tsum_probOutput ((impl t).run p)
-          rw [hfail t p, zero_add] at hmass
-          rw [hmass, one_mul]
+  let : MeasurableSpace (γ × (σ × Bool)) := ⊤
+  rw [← lintegral_evalDist_eq_tsum_probComp]
+  exact lintegral_frozen impl Frozen weight hfrozen hquiet oa p hp
 
 open scoped Classical in
 /-- **Stalling preserves the expectation of a quantity that cannot change while frozen.**
@@ -206,12 +247,6 @@ theorem expectation_stalled_eq {γ : Type}
       ∑' z : γ × (σ × Bool),
         Pr{let x ← (simulateQ (stalled impl Frozen stall) oa).run p}[x = z] * weight z.2 := by
   classical
-  have hstalledFail : ∀ (t : spec.Domain) (q : σ × Bool),
-      prFail (((stalled impl Frozen stall) t).run q) = 0 := by
-    intro t q
-    by_cases hq : Frozen q.1
-    · rw [stalled_run_of_frozen impl Frozen stall t q hq]; simp
-    · rw [stalled_run_of_not_frozen impl Frozen stall t q hq]; exact hfail t q
   have hstalledFrozen : ∀ (t : spec.Domain) (q : σ × Bool), Frozen q.1 →
       ∀ z ∈ support (((stalled impl Frozen stall) t).run q), Frozen z.2.1 := by
     intro t q hq z hz
@@ -225,19 +260,23 @@ theorem expectation_stalled_eq {γ : Type}
     rw [stalled_run_of_frozen impl Frozen stall t q hq, support_pure,
       Set.mem_singleton_iff] at hz
     rw [hz]
+  let : MeasurableSpace (γ × (σ × Bool)) := ⊤
+  rw [← lintegral_evalDist_eq_tsum_probComp, ← lintegral_evalDist_eq_tsum_probComp]
   induction oa using OracleComp.inductionOn generalizing p with
   | pure value =>
     rw [simulateQ_pure, StateT.run_pure, simulateQ_pure, StateT.run_pure]
   | query_bind t next ih =>
     by_cases hp : Frozen p.1
-    · rw [expectation_frozen impl Frozen weight hfail hfrozen hquiet _ p hp,
-        expectation_frozen (stalled impl Frozen stall) Frozen weight hstalledFail
-          hstalledFrozen hstalledQuiet _ p hp]
-    · rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+    · rw [lintegral_frozen impl Frozen weight hfrozen hquiet _ p hp,
+        lintegral_frozen (stalled impl Frozen stall) Frozen weight hstalledFrozen
+          hstalledQuiet _ p hp]
+    · let : MeasurableSpace (spec.Range t × (σ × Bool)) := ⊤
+      rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
         simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
         stalled_run_of_not_frozen impl Frozen stall t p hp,
-        OracleComp.tsum_prEvent_bind_mul, OracleComp.tsum_prEvent_bind_mul]
-      exact tsum_congr fun y => congrArg _ (ih y.1 y.2)
+        lintegral_evalDist_bind_of_discrete _ _ Measurable.of_discrete,
+        lintegral_evalDist_bind_of_discrete _ _ Measurable.of_discrete]
+      exact MeasureTheory.lintegral_congr fun z => ih z.1 z.2
 
 /-! ## A quantity that is not frozen but zero
 

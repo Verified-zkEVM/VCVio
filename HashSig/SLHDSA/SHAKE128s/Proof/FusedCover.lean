@@ -45,6 +45,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.FusedCover
 
+variable {α : Type}
+
 open Security RecorderView SplitPrefix PhaseFusion DigestTape
 
 variable {σ : Type} [CacheView σ] {ω : Type} [Monoid ω]

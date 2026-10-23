@@ -68,13 +68,16 @@ def Clean (targetOf : Bytes → Option Digest) (cache : QueryCache HashSpec) : P
 /-- One fresh hash answer truncates to a value fixed in advance with probability `2 ^ -128`. -/
 theorem prob_truncate_eq (target : Digest) :
     Pr{let output ← ($ᵗ HashOutput : ProbComp HashOutput)}[Hashing.truncate output = target] = 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
-  have hmap : Pr{let output ← ($ᵗ HashOutput : ProbComp HashOutput)}[Hashing.truncate output = target] =
-      Pr{let digest ← (Hashing.truncate <$> ($ᵗ HashOutput : ProbComp HashOutput))}[digest = target] := by
+  have hmap : Pr{let output ← ($ᵗ HashOutput : ProbComp HashOutput)}[
+        Hashing.truncate output = target] =
+      Pr{let digest ← (Hashing.truncate <$> ($ᵗ HashOutput : ProbComp HashOutput))}[
+        digest = target] := by
     rw [prEvent_map]
-    rfl
-  rw [hmap, probEvent_congr' (fun _ _ => Iff.rfl) KeygenUniform.truncate_uniform,
-    probEvent_eq_eq_probOutput]
-  simp [probOutput_uniformSample, Digest, n]
+  let _ : MeasurableSpace Digest := ⊤
+  rw [hmap, KeygenUniform.truncate_uniform.prEvent_eq, prEvent_eq_evalDist_singleton,
+    SampleableType.evalDist_uniformSample, ProbabilityTheory.uniformOn_univ_apply_singleton,
+    Fintype.card_bitVec, one_div]
+  rfl
 
 /-- One fresh answer matches the optional target of its own input with probability at most
 `2 ^ -128`; an input with no target can never match. -/
@@ -83,10 +86,9 @@ theorem prob_target_match_le (optionalTarget : Option Digest) :
   cases optionalTarget with
   | none =>
     refine le_of_eq_of_le (b := 0) ?_ (by simp)
-    exact probEvent_eq_zero fun _ _ hmatch => by simp at hmatch
+    exact prEvent_eq_zero_of_forall_mem_support _ _ fun _ _ hmatch => by simp at hmatch
   | some target =>
     refine le_of_eq_of_le ?_ (le_of_eq (prob_truncate_eq target))
-    refine probEvent_congr' (fun output _ => ?_) rfl
-    exact ⟨fun hmatch => Option.some.inj hmatch, fun hmatch => by rw [hmatch]⟩
+    exact prEvent_congr _ _ _ fun _ => Option.some_inj
 
 end SlhDsaSecurity.FreshHitBound

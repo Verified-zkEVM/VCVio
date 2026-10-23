@@ -42,13 +42,15 @@ noncomputable def recordedTableRun (adversary : Adversary) (prfSeed publicSeed :
 
 /-- **The recorded paired run draws its table.** -/
 theorem evalDist_recordedPairedRun (adversary : Adversary) :
-    𝒟[RandomiserRecord.recordedPairedRun adversary] =
-      𝒟[(do
+    RandomiserRecord.recordedPairedRun adversary =ᵈ
+      (do
         let prfSeed ← ($ᵗ Digest : ProbComp Digest)
         let publicSeed ← ($ᵗ Digest : ProbComp Digest)
-        recordedTableRun adversary prfSeed publicSeed)] := by
-  rw [RandomiserRecord.recordedPairedRun, evalDist_bind, evalDist_graphWalk, ← evalDist_bind,
-    tableWalk]
+        recordedTableRun adversary prfSeed publicSeed) := by
+  rw [RandomiserRecord.recordedPairedRun]
+  refine (EvalDistEq.bind_left evalDist_graphWalk _).trans ?_
+  rw [tableWalk]
   simp only [recordedTableRun, bind_assoc, pure_bind]
+  exact EvalDistEq.refl _
 
 end SlhDsaSecurity.RecordedWalkTable

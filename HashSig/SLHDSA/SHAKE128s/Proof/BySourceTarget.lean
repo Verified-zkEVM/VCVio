@@ -93,16 +93,17 @@ theorem answerBound (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adv
       Pr{let z ← split}[RoutedSplit.AnswerBad ((walk.1, (FinalAssembly.forgetFused z.1).1),
             (FinalAssembly.forgetFused z.1).2) ∧ ¬ Target127.late (walk, z.1)] := by
     rw [← hmap, prEvent_map]
-    rfl
   -- The structural faults, per fresh entry.
-  have hbad : Pr{let z ← split}[GrowthCharge.Bad (AnswerSide.CanonicalBad walk.1.1.2.2 walk.1.2) (z.1.1, z.1.2.1)] ≤
+  have hbad : Pr{let z ← split}[GrowthCharge.Bad (AnswerSide.CanonicalBad walk.1.1.2.2 walk.1.2)
+        (z.1.1, z.1.2.1)] ≤
       (∑' z, Pr{let x ← split}[x = z] * freshMass (Deviating walk) walk.2 z.1.2.1) *
         (1 / ((2 ^ 128 : Nat) : ℝ≥0∞)) := by
     have hprob : Pr{let z ← split}[GrowthCharge.Bad (AnswerSide.CanonicalBad walk.1.1.2.2 walk.1.2)
             (z.1.1, z.1.2.1)] =
         Pr{let x ← ((simulateQ KeygenUniform.rom (countQueries (ClassGrowth.splitCost
             (CombinedCharge.IsMessageInput (keyAt walk)) QueryKind.hash QueryKind.verification)
-            (RecordedTail.recordedAfterSeeds adversary walk.1.1))).run walk.2)}[(GrowthCharge.Bad (AnswerSide.CanonicalBad walk.1.1.2.2 walk.1.2)) x] := by
+            (RecordedTail.recordedAfterSeeds adversary walk.1.1))).run walk.2)}[
+          (GrowthCharge.Bad (AnswerSide.CanonicalBad walk.1.1.2.2 walk.1.2)) x] := by
       rw [← hmapR, prEvent_map]
       rfl
     rw [hprob]
@@ -124,7 +125,6 @@ theorem answerBound (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adv
     have hprob : Pr{let z ← split}[AnswerFired.FiredCoveredRec walk z.1] =
         Pr{let x ← carrierTail keep127 adversary walk}[(AnswerFired.FiredCoveredRec walk) x] := by
       rw [← hmap, prEvent_map]
-      rfl
     have hexpect : (∑' result, Pr{let x ← carrierTail keep127 adversary walk}[x = result] *
           ((result.2.2.2.length : Nat) : ℝ≥0∞)) =
         ∑' z, Pr{let x ← split}[x = z] * (z.1.2.2.2.length : ℝ≥0∞) := by
@@ -142,9 +142,10 @@ theorem answerBound (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adv
   rw [hevent]
   calc Pr{let z ← split}[RoutedSplit.AnswerBad ((walk.1, (FinalAssembly.forgetFused z.1).1),
             (FinalAssembly.forgetFused z.1).2) ∧ ¬ Target127.late (walk, z.1)]
-      ≤ Pr{let z ← split}[GrowthCharge.Bad (AnswerSide.CanonicalBad walk.1.1.2.2 walk.1.2) (z.1.1, z.1.2.1) ∨
+      ≤ Pr{let z ← split}[GrowthCharge.Bad (AnswerSide.CanonicalBad walk.1.1.2.2 walk.1.2)
+            (z.1.1, z.1.2.1) ∨
             AnswerFired.FiredCoveredRec walk z.1] :=
-        prEvent_mono fun z hz hev =>
+        prEvent_mono_of_support _ _ _ fun z hz hev =>
           AnswerFired.join_carrierTail adversary walk hwalk hgood z.1 (hfst z hz) hev.1 hev.2
     _ ≤ _ := prEvent_or_le _ _ _
     _ ≤ (∑' z, Pr{let x ← split}[x = z] * freshMass (Deviating walk) walk.2 z.1.2.1) *

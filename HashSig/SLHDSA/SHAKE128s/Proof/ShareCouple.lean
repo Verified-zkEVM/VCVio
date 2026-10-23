@@ -34,11 +34,13 @@ open Security CanonicalGraph ShareGame
 open scoped Classical in
 /-- The oracle's entries off the table: the signer's `PRF_msg` answers at their inputs, and
 everything else from the plain cache. -/
-noncomputable def merged (setup : Setup) (state : St) : QueryCache HashSpec := fun input =>
+noncomputable def merged (setup : Setup) (state : St) : QueryCache HashSpec :=
+  QueryCache.ofFn fun input =>
   if IsPrfInput setup input then state.prfs (prfFrame input) else state.cache input
 
 /-- **The real oracle's cache**, read off the lenient state. -/
-noncomputable def realView (setup : Setup) (state : St) : QueryCache HashSpec := fun input =>
+noncomputable def realView (setup : Setup) (state : St) : QueryCache HashSpec :=
+  QueryCache.ofFn fun input =>
   match setup.warm input with
   | some answer => some answer
   | none => merged setup state input
@@ -64,20 +66,20 @@ theorem realView_prfs_update (setup : Setup) (state : St) (input : Bytes)
     realView setup { state with prfs := Function.update state.prfs (prfFrame input) (some answer) } =
       (realView setup state).cacheQuery input answer := by
   classical
-  funext other
+  ext other
   by_cases hother : other = input
   · subst hother
     simp [realView, hwarm, merged, hprf, QueryCache.cacheQuery_self]
   · rw [QueryCache.cacheQuery_of_ne _ _ hother]
-    unfold realView merged
+    simp only [realView, merged, QueryCache.ofFn_apply]
     cases hw : setup.warm other with
     | some a => rfl
     | none =>
       simp only
       by_cases hprfOther : IsPrfInput setup other
-      · rw [if_pos hprfOther, if_pos hprfOther, Function.update_of_ne]
+      · rw [ite_eq_left hprfOther, ite_eq_left hprfOther, Function.update_of_ne]
         exact fun hframe => hother (eq_of_isPrfInput setup hprfOther hprf hframe)
-      · rw [if_neg hprfOther, if_neg hprfOther]
+      · rw [ite_eq_right hprfOther, ite_eq_right hprfOther]
 
 /-- **Answering any other input from the plain cache is caching it.** -/
 theorem realView_cache_update (setup : Setup) (state : St) (input : Bytes)
@@ -85,19 +87,19 @@ theorem realView_cache_update (setup : Setup) (state : St) (input : Bytes)
     realView setup { state with cache := state.cache.cacheQuery input answer } =
       (realView setup state).cacheQuery input answer := by
   classical
-  funext other
+  ext other
   by_cases hother : other = input
   · subst hother
     simp [realView, hwarm, merged, hprf, QueryCache.cacheQuery_self]
   · rw [QueryCache.cacheQuery_of_ne _ _ hother]
-    unfold realView merged
+    simp only [realView, merged, QueryCache.ofFn_apply]
     cases hw : setup.warm other with
     | some a => rfl
     | none =>
       simp only
       by_cases hprfOther : IsPrfInput setup other
-      · rw [if_pos hprfOther, if_pos hprfOther]
-      · rw [if_neg hprfOther, if_neg hprfOther, QueryCache.cacheQuery_of_ne _ _ hother]
+      · rw [ite_eq_left hprfOther, ite_eq_left hprfOther]
+      · rw [ite_eq_right hprfOther, ite_eq_right hprfOther, QueryCache.cacheQuery_of_ne _ _ hother]
 
 /-! ## One hash query -/
 
@@ -126,7 +128,7 @@ theorem couple_hash (setup : Setup) (state : St) (input : Bytes) :
     · cases hcached : state.prfs (prfFrame input) with
       | some answer =>
         have hview : realView setup state input = some answer := by
-          rw [realView_of_not_warm setup state input hwarm, merged, if_pos hprf, hcached]
+          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply, ite_eq_left hprf, hcached]
         rw [CoverageCount.rom_run_inr_some input _ answer hview]
         have hroute : route true setup state input = pure (answer, state) := by
           simp [route, hwarm, hprf, prfAt, hcached]
@@ -134,7 +136,7 @@ theorem couple_hash (setup : Setup) (state : St) (input : Bytes) :
         exact relTriple_pure_pure ⟨rfl, rfl, rfl, rfl, rfl⟩
       | none =>
         have hview : realView setup state input = none := by
-          rw [realView_of_not_warm setup state input hwarm, merged, if_pos hprf, hcached]
+          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply, ite_eq_left hprf, hcached]
         rw [CoverageCount.rom_run_inr_none input _ hview]
         have hroute : route true setup state input =
             (($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
@@ -149,7 +151,7 @@ theorem couple_hash (setup : Setup) (state : St) (input : Bytes) :
     · cases hcached : state.cache input with
       | some answer =>
         have hview : realView setup state input = some answer := by
-          rw [realView_of_not_warm setup state input hwarm, merged, if_neg hprf, hcached]
+          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply, ite_eq_right hprf, hcached]
         rw [CoverageCount.rom_run_inr_some input _ answer hview]
         have hroute : route true setup state input = pure (answer, state) := by
           simp [route, hwarm, hprf, plain, hcached]
@@ -157,7 +159,7 @@ theorem couple_hash (setup : Setup) (state : St) (input : Bytes) :
         exact relTriple_pure_pure ⟨rfl, rfl, rfl, rfl, rfl⟩
       | none =>
         have hview : realView setup state input = none := by
-          rw [realView_of_not_warm setup state input hwarm, merged, if_neg hprf, hcached]
+          rw [realView_of_not_warm setup state input hwarm, merged, QueryCache.ofFn_apply, ite_eq_right hprf, hcached]
         rw [CoverageCount.rom_run_inr_none input _ hview]
         have hroute : route true setup state input =
             (($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
@@ -249,7 +251,6 @@ theorem advImpl_world_run (lenient : Bool) (setup : Setup) (world : OracleWorld.
   simp only [ShareFlag.advImpl, QueryImpl.apply_compose, splitter, worldQuery,
     HasQuery.instOfMonadLift_query]
   erw [simulateQ_spec_query]
-  rfl
 
 theorem advImpl_sign_run (lenient : Bool) (setup : Setup) (request : Message) (p : St × Bool) :
     ((ShareFlag.advImpl lenient setup) (Sum.inr request)).run p =
@@ -257,9 +258,6 @@ theorem advImpl_sign_run (lenient : Bool) (setup : Setup) (request : Message) (p
         ((handler lenient setup) (Sum.inl (Sum.inr (request, q.1)))).run q.2 := by
   simp only [ShareFlag.advImpl, QueryImpl.apply_compose, splitter,
     HasQuery.instOfMonadLift_query, simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-  refine bind_congr fun q => ?_
-  erw [simulateQ_spec_query]
-  rfl
 
 /-! ## The relation -/
 
@@ -388,9 +386,8 @@ theorem worldImpl_run (lenient : Bool) (setup : Setup) (world : OracleWorld.Doma
     (p : St × Bool) :
     ((ShareBound.worldImpl lenient setup) world).run p =
       ((handler lenient setup) (worldQuery world)).run p := by
-  simp only [ShareBound.worldImpl, QueryImpl.apply_compose, HasQuery.instOfMonadLift_query]
-  erw [simulateQ_spec_query]
-  rfl
+  show (simulateQ (handler lenient setup) (liftM (ShareSpec.query (worldQuery world)))).run p = _
+  rw [simulateQ_spec_query]
 
 /-- **The coupling's invariant at the verifier**: the cache is still the view, the lenient log
 and digests are those the adversary's phase left, what that phase recorded is still filed, and

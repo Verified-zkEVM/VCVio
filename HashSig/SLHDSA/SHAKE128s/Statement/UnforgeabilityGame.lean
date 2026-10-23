@@ -31,7 +31,11 @@ inductive QueryKind where
   | signer
   /-- `q_Verify`: the hash queries of the verification of the forgery. -/
   | verifier
-deriving DecidableEq, Fintype, Repr
+deriving DecidableEq, Repr
+
+instance : Fintype QueryKind where
+  elems := {.sign, .hash, .keygen, .signer, .verifier}
+  complete := by intro kind; cases kind <;> decide
 
 /-- A count per kind of query. -/
 abbrev QueryCounts := QueryKind → ℕ

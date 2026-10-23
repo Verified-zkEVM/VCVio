@@ -109,25 +109,22 @@ theorem probEvent_le_capCompRem (impl : QueryImpl spec (StateT S ProbComp)) (wei
       pure_bind, pure_bind, prEvent_map]
     dsimp only
     rw [h]
-    exact prEvent_mono fun (b : β) _ hb => hb.2
+    exact prEvent_mono _ _ _ fun (b : β) hb => hb.2
   | query_bind t next ih =>
     intro limit state cont
     rw [capCompRem_query_bind]
     split_ifs with hweight
-    · simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, bind_assoc]
-      rw [OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_bind_eq_tsum]
-      refine ENNReal.tsum_le_tsum fun step => ?_
-      by_cases hstep : step ∈ support ((impl t).run state)
-      · refine mul_le_mul' le_rfl ?_
-        have hstepCost := hcost t state step hstep
-        have hih := ih step.1 (limit - weight t) step.2 cont
-        have hlimit : cost step.2 + (limit - weight t) = cost state + limit := by omega
-        rw [hlimit] at hih
-        exact hih
-      · rw [(prEvent_eq_zero_of_not_mem_support _) hstep, zero_mul, zero_mul]
+    · rw [simulateQ_bind, simulateQ_bind, simulateQ_spec_query, StateT.run_bind, StateT.run_bind,
+        bind_assoc, bind_assoc]
+      refine prEvent_bind_mono_of_forall_le_of_support _ _ _ _ _ fun step hstep => ?_
+      have hstepCost := hcost t state step hstep
+      have hih := ih step.1 (limit - weight t) step.2 cont
+      have hlimit : cost step.2 + (limit - weight t) = cost state + limit := by omega
+      rw [hlimit] at hih
+      exact hih
     · -- the cap fires here: every uncapped run from this query is already over the limit
       refine le_of_eq_of_le (b := 0) ?_ zero_le
-      refine probEvent_eq_zero fun p hp hev => ?_
+      refine prEvent_eq_zero_of_forall_mem_support _ _ fun p hp hev => ?_
       simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, bind_assoc,
         mem_support_bind_iff, support_map, Set.mem_image] at hp
       obtain ⟨step, hstep, z, hz, b, -, rfl⟩ := hp
@@ -195,8 +192,8 @@ theorem evalDist_capCompOpt (impl : QueryImpl spec (StateT S ProbComp)) (weight 
     (hfail : ∀ (t : ι) (state : S), prFail ((impl t).run state) = 0) :
     ∀ (oa : OracleComp spec α) (limit : Nat) (state : S),
       (∀ z ∈ support ((simulateQ impl oa).run state), cost z.2 ≤ cost state + limit) →
-        𝒟[(simulateQ impl (capCompOpt weight limit oa)).run state] =
-          𝒟[(fun z => (some z.1, z.2)) <$> (simulateQ impl oa).run state] := by
+        (simulateQ impl (capCompOpt weight limit oa)).run state =ᵈ
+          ((fun z => (some z.1, z.2)) <$> (simulateQ impl oa).run state) := by
   intro oa
   induction oa using OracleComp.inductionOn with
   | pure value =>

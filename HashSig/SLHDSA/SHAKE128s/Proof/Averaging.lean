@@ -31,26 +31,14 @@ theorem probEvent_bind_pair_le {α β : Type} (first : ProbComp α) (rest : α �
     (event : α → β → Prop) (bound : ℝ≥0∞)
     (hrest : ∀ value ∈ support first, Pr{let x ← rest value}[(event value) x] ≤ bound) :
     Pr{let pair ← (do let value ← first; let result ← rest value; pure (value, result))}[event pair.1 pair.2] ≤ bound := by
-  rw [OracleComp.prEvent_bind_eq_tsum]
-  calc ∑' value, Pr{let x ← first}[x = value] *
-        Pr{let pair ← rest value >>= fun result => pure (value, result)}[event pair.1 pair.2]
-      = ∑' value, Pr{let x ← first}[x = value] * Pr{let x ← rest value}[(event value) x] :=
-        tsum_congr fun value => congrArg _ (by rw [bind_pure_comp, prEvent_map]; rfl)
-    _ ≤ ∑' value, Pr{let x ← first}[x = value] * bound := by
-        refine ENNReal.tsum_le_tsum fun value => ?_
-        by_cases hmem : value ∈ support first
-        · exact mul_le_mul' le_rfl (hrest value hmem)
-        · rw [(prEvent_eq_zero_of_not_mem_support _) hmem, zero_mul]
-          exact zero_le
-    _ = (∑' value, Pr{let x ← first}[x = value]) * bound := ENNReal.tsum_mul_right
-    _ ≤ 1 * bound := mul_le_mul' (OracleComp.tsum_prEvent_le_one _) le_rfl
-    _ = bound := one_mul bound
+  refine prEvent_bind_le_of_forall_le_of_support first _ _ fun value hvalue => ?_
+  rw [bind_pure_comp, prEvent_map]
+  exact hrest value hvalue
 
 /-- Equal laws have equal supports — the one thing needed to read a support off a
 presampling identity. -/
 theorem support_eq_of_evalDistEq {α : Type} {left right : ProbComp α}
-    (hlaw : 𝒟[left] = 𝒟[right]) : support left = support right := by
-  ext value
-  rw [mem_support_iff, mem_support_iff, prEvent_eq_evalDist_singleton, prEvent_eq_evalDist_singleton, hlaw]
+    (hlaw : left =ᵈ right) : support left = support right :=
+  OracleComp.support_eq_of_evalDistEq hlaw
 
 end SlhDsaSecurity.Averaging

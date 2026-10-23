@@ -40,6 +40,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CarrierServedLog
 
+variable {α : Type}
+
 open Security BracketedRun CarrierFiles CarrierTail PhaseFusion RecordInvariant
 open RecordedQueries RecorderView CarriedWitness HandlerCarrier
 
@@ -105,12 +107,12 @@ theorem carrierLogged_phase (rightKeep : Walk → Bytes → HandlerCarrier.State
     (z : α × (Multiplicative Tally × SigningLog × CountedState))
     (hz : z ∈ support ((simulateQ (ServedAgreement.servingPhaseWith (handlerAt rightKeep walk)
       (Scheme.sign sk)) phase).run (accumulated, [], state))) :
-    ServedAgreement.CarrierLogged sk (fun _ => none) z.2.2.1 z.2.2.2.1 :=
+    ServedAgreement.CarrierLogged sk ∅ z.2.2.1 z.2.2.2.1 :=
   ServedAgreement.carrierLogged_run_with (keyAt walk) (handlerAt rightKeep walk)
     (files_countedCarrierRecorder (keyAt walk) (rightKeep walk)) (Scheme.sign sk) sk hpk
-    (ServedAgreement.signerShape_sign sk) (fun _ => none)
+    (ServedAgreement.signerShape_sign sk) ∅
     (ServedAgreement.signerPins_sign sk hpublic) phase (accumulated, [], state) hclear
-    (carrierLogged_of_served_zero sk (fun _ => none) [] state.1 hserved) z hz
+    (carrierLogged_of_served_zero sk ∅ [] state.1 hserved) z hz
 
 /-! ## And it survives the verifier's stage
 
@@ -205,7 +207,7 @@ filed. No recorder, no stages, no run: the two invariants are the whole of it. -
 theorem carrierBelowLog_of_invariants (sk : SecretKey) (pk : PublicKey)
     (hpk : sk.publicKey = pk) (log : SigningLog) (carrier : HandlerCarrier.State)
     (hfiled : ServedAgreement.LogFiled sk log carrier)
-    (hlogged : ServedAgreement.CarrierLogged sk (fun _ => none) log carrier)
+    (hlogged : ServedAgreement.CarrierLogged sk ∅ log carrier)
     (result : (Outcome × Nat) × QueryCache HashSpec)
     (hsigned : result.1.1.signed = log)
     (hcache : ∀ (input : Bytes) (value : HashOutput), carrier.cache input = some value →

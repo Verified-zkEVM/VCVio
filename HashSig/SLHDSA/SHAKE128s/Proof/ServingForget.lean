@@ -39,6 +39,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.ServingForget
 
+variable {α β γ : Type}
+
 open Security PhaseFusion
 
 variable {ω : Type} [Monoid ω] {S S' : Type}

@@ -7,6 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.FusedTape
+import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # Reaching a target cell does not read any cell at or after it
@@ -30,6 +31,8 @@ open OracleComp OracleSpec ENNReal
 set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.SuffixCausal
+
+variable {α β γ : Type}
 
 open DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedTape
 
@@ -204,9 +207,7 @@ theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop
           obtain ⟨r, hr, hw2⟩ := hw
           exact le_trans (fusedRightOf_prefix leftKeep rightKeep inner before afterMap _
             (accumulated * z.1.1.2, z.1.2, z.2) r hr).length_le (hgrow r w hw2))
-        (fun z => probFailure_bind_eq_zero_iff _ _ |>.mpr
-          ⟨fusedSplitTapeRun_neverFails leftKeep rightKeep inner before afterMap _ _,
-            fun r _ => hfail r⟩)
+        (fun _ => prFail_eq_zero _)
         (fun idx c hc v z => ih z.1.1.1 idx c hc v (accumulated * z.1.1.2) z.1.2 z.2.1
           z.2.2.1.1 z.2.2.1.2 z.2.2.2.1 z.2.2.2.2)
         index cell hle newValue cache leftTape rightTape leftRecord rightRecord
@@ -223,9 +224,7 @@ theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop
           exact le_trans (fusedRightOf_prefix leftKeep rightKeep inner before afterMap _
             (accumulated * z.1.1.2, z.1.2, onCarrierTape afterMap z.2) r hr).length_le
             (hgrow r w hw2))
-        (fun z => probFailure_bind_eq_zero_iff _ _ |>.mpr
-          ⟨fusedSplitTapeRun_neverFails leftKeep rightKeep inner before afterMap _ _,
-            fun r _ => hfail r⟩)
+        (fun _ => prFail_eq_zero _)
         (fun idx c hc v z => ih z.1.1.1 idx c hc v (accumulated * z.1.1.2) z.1.2
           (afterMap z.2.1) z.2.2.1.1 z.2.2.1.2 z.2.2.2.1 z.2.2.2.2)
         index cell hle newValue (before request cache) leftTape rightTape leftRecord rightRecord
@@ -271,11 +270,7 @@ theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ →
       (1, [], z.2) middle hmiddle).length_le ?_
     exact (noticingRightOf_prefix leftKeep rightKeep _ middle.2.2.2 final hfinal).length_le
   · intro z
-    refine probFailure_bind_eq_zero_iff _ _ |>.mpr
-      ⟨fusedSplitTapeRun_neverFails leftKeep rightKeep (inner z.1) before afterMap _ _,
-        fun middle _ => ?_⟩
-    exact probFailure_bind_eq_zero_iff _ _ |>.mpr
-      ⟨noticingSplitTapeRun_neverFails leftKeep rightKeep _ _, fun _ _ => by simp⟩
+    exact prFail_eq_zero _
   · intro idx c hc v z
     refine probEvent_length_setGe_fused leftKeep rightKeep (inner z.1) before afterMap
       (phase z.1)
@@ -294,8 +289,7 @@ theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ →
       rw [hpure]
       exact (noticingRightOf_prefix leftKeep rightKeep _ y.2.2.2 final hfinal).length_le
     · intro y
-      exact probFailure_bind_eq_zero_iff _ _ |>.mpr
-        ⟨noticingSplitTapeRun_neverFails leftKeep rightKeep _ _, fun _ _ => by simp⟩
+      exact prFail_eq_zero _
     · intro idx2 c2 hc2 v2 y
       refine probEvent_length_setGe_cont leftKeep rightKeep (last z.1 y.1)
         (fun final => (pure (value z.1 y.1 y.2.1 y.2.2.1 final.1 final.2.1,
@@ -307,7 +301,7 @@ theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ →
         rw [hw]
         exact le_rfl
       · intro t
-        simp
+        exact prFail_eq_zero _
       · intro idx3 c3 hc3 v3 t
         rfl
 

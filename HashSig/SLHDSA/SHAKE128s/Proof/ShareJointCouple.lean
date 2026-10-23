@@ -28,6 +28,8 @@ open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
 namespace SlhDsaSecurity.ShareJointCouple
 
+variable {α : Type}
+
 open Security CanonicalGraph ShareGame ShareCouple ShareInv ShareWhole ShareJoint CapRem
 
 /-! ## The lenient game, phase by phase -/
@@ -36,8 +38,8 @@ theorem toShare_run (lenient : Bool) (setup : Setup) {α : Type}
     (computation : OracleComp OracleWorld α) (p : St × Bool) :
     (simulateQ (handler lenient setup) (toShare computation)).run p =
       (simulateQ (ShareBound.worldImpl lenient setup) computation).run p := by
-  rw [toShare, ← QueryImpl.simulateQ_compose]
-  rfl
+  rw [toShare, QueryImpl.simulateQ_simulateQ_eq_of_apply (impl := ShareBound.worldImpl lenient setup)
+    (fun _ => rfl)]
 
 set_option maxHeartbeats 1000000 in
 /-- **The jointly capped lenient game is its adversary's phase, then the capped verifier, then

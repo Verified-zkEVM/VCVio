@@ -47,10 +47,14 @@ theorem messageDigits_eq : messageDigits = 32 := by decide
 theorem encode_first_checksum_lt (message : Digest) :
     (Checksum.encode message ⟨32, by rw [chains_eq]; omega⟩).val < w - 1 := by
   have hle := Checksum.checksum_le (Checksum.messageDigit message)
-  simp only [Checksum.encode, messageDigits_eq, lt_irrefl, dite_false, Checksum.checksumDigit,
-    checksumDigits, w, winternitzBits]
-  norm_num
-  omega
+  unfold Checksum.encode
+  split
+  · rename_i h
+    rw [messageDigits_eq] at h
+    exact absurd h (lt_irrefl 32)
+  · simp only [Checksum.checksumDigit, messageDigits_eq, checksumDigits, w, winternitzBits]
+    norm_num
+    omega
 
 /-- If every message digit is at the top, the checksum is zero. -/
 theorem checksum_eq_zero_of_all_top (message : Digest)
@@ -158,7 +162,8 @@ theorem queriesUnder_root_chain (cache : QueryCache HashSpec) (publicSeed : Dige
     | zero =>
       refine @HypertreeDispatch.queriesUnder_rootFromSignature_head cache publicSeed remaining
         signatures layer tree leaf message _ ?_
-      refine FaultCharge.queriesUnder_merkle_wots cache leaf (signatures 0) message publicSeed _ _ ?_
+      refine FaultCharge.queriesUnder_merkle_wots cache leaf (signatures 0) message publicSeed
+        _ _ ?_
       have h := FaultCharge.queriesUnder_wots_chain cache (signatures 0).wots message publicSeed
         (Merkle.wotsAddress (Hypertree.address layer tree) leaf.val) chain 0
         (by
@@ -239,7 +244,7 @@ theorem card_unqueried_claims_le (cache : QueryCache HashSpec) (pk : PublicKey)
     simpa using queriesUnder_verify_forsClaim cache pk request wire message parsed hframe hparsed
       tree
   rw [hfors, Nat.zero_add]
-  refine (List.sum_le_card_nsmul _ 33 ?_).trans (by simp [layers])
+  refine (List.sum_le_length_nsmul _ 33 ?_).trans (by simp [layers])
   intro count hcount
   obtain ⟨layer, -, rfl⟩ := List.mem_map.mp hcount
   simp only [Function.comp_apply, List.countP_map]

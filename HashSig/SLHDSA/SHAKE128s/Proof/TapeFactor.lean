@@ -200,7 +200,7 @@ theorem splitTapeRecorder_run_left_cons
         (leftRecord ++ [(input, head)], rightRecord))) : ProbComp _) := by
   classical
   simp only [splitTapeRecorder, StateT.run]
-  rw [if_pos ⟨hfresh, hleft⟩]
+  rw [ite_eq_left ⟨hfresh, hleft⟩]
 
 open scoped Classical in
 theorem splitTapeRecorder_run_left_nil
@@ -215,7 +215,7 @@ theorem splitTapeRecorder_run_left_nil
           (leftRecord ++ [(input, value)], rightRecord))) : ProbComp _) := by
   classical
   simp only [splitTapeRecorder, StateT.run]
-  rw [if_pos ⟨hfresh, hleft⟩]
+  rw [ite_eq_left ⟨hfresh, hleft⟩]
 
 open scoped Classical in
 theorem splitTapeRecorder_run_right_cons
@@ -230,7 +230,7 @@ theorem splitTapeRecorder_run_right_cons
         (leftRecord, rightRecord ++ [(input, head)]))) : ProbComp _) := by
   classical
   simp only [splitTapeRecorder, StateT.run]
-  rw [if_neg (fun h => hleft h.2), if_pos ⟨hfresh, hright⟩]
+  rw [ite_eq_right (fun h => hleft h.2), ite_eq_left ⟨hfresh, hright⟩]
 
 open scoped Classical in
 theorem splitTapeRecorder_run_right_nil
@@ -246,7 +246,7 @@ theorem splitTapeRecorder_run_right_nil
           (leftRecord, rightRecord ++ [(input, value)]))) : ProbComp _) := by
   classical
   simp only [splitTapeRecorder, StateT.run]
-  rw [if_neg (fun h => hleft h.2), if_pos ⟨hfresh, hright⟩]
+  rw [ite_eq_right (fun h => hleft h.2), ite_eq_left ⟨hfresh, hright⟩]
 
 open scoped Classical in
 theorem splitTapeRecorder_run_other
@@ -260,7 +260,7 @@ theorem splitTapeRecorder_run_other
         (pure (step.1, (step.2, tapes, records)) : ProbComp _) := by
   classical
   simp only [splitTapeRecorder, StateT.run]
-  rw [if_neg hskip, if_neg hskip']
+  rw [ite_eq_right hskip, ite_eq_right hskip']
 
 /-! ### The same shapes for the drawing recorder -/
 
@@ -330,16 +330,15 @@ inside the factorisation's induction. -/
 theorem evalDist_comm_blocks {β γ : Type} (draw : ProbComp β)
     (leftLength rightLength : Nat)
     (continuation : β → List HashOutput → List HashOutput → ProbComp γ) :
-    𝒟[draw >>= fun value => padding leftLength >>= fun leftTape =>
-        padding rightLength >>= fun rightTape => continuation value leftTape rightTape] =
-      𝒟[padding leftLength >>= fun leftTape => padding rightLength >>= fun rightTape =>
-        draw >>= fun value => continuation value leftTape rightTape] := by
-  rw [OracleComp.DeferredSampling.evalDist_bind_comm draw (padding leftLength)
+    (draw >>= fun value => padding leftLength >>= fun leftTape =>
+        padding rightLength >>= fun rightTape => continuation value leftTape rightTape) =ᵈ
+      (padding leftLength >>= fun leftTape => padding rightLength >>= fun rightTape =>
+        draw >>= fun value => continuation value leftTape rightTape) := by
+  refine (OracleComp.EvalDistEq.bind_bind_swap draw (padding leftLength)
     (fun value leftTape => padding rightLength >>= fun rightTape =>
-      continuation value leftTape rightTape)]
-  refine OracleComp.DeferredSampling.evalDist_bind_congr_left (padding leftLength) _ _
-    fun leftTape => ?_
-  exact OracleComp.DeferredSampling.evalDist_bind_comm draw (padding rightLength)
+      continuation value leftTape rightTape)).trans ?_
+  refine EvalDistEq.bind_right (padding leftLength) fun leftTape => ?_
+  exact OracleComp.EvalDistEq.bind_bind_swap draw (padding rightLength)
     fun value rightTape => continuation value leftTape rightTape
 
 /-! ## Overwriting an unread block cell
@@ -448,10 +447,10 @@ over the cells is an expected recording length, not a block length. -/
 theorem evalDist_padding_set {γ : Type} :
     ∀ (length index : Nat), index < length →
       ∀ (continuation : List HashOutput → ProbComp γ),
-        𝒟[padding length >>= continuation] =
-          𝒟[padding length >>= fun tape =>
+        padding length >>= continuation =ᵈ
+          (padding length >>= fun tape =>
               ($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
-                continuation (tape.set index value)] := by
+                continuation (tape.set index value)) := by
   intro length
   induction length with
   | zero => intro index hindex; exact absurd hindex (by omega)
@@ -460,13 +459,12 @@ theorem evalDist_padding_set {γ : Type} :
     cases index with
     | zero =>
       simp only [padding_succ_bind, List.set_cons_zero]
-      refine Eq.trans (OracleComp.DeferredSampling.evalDist_bind_comm _ (padding remaining)
-        fun value rest => continuation (value :: rest)) ?_
-      exact (OracleComp.DeferredSampling.evalDist_bind_const_neverFails
-        ($ᵗ HashOutput : ProbComp HashOutput) (by simp) _).symm
+      refine (OracleComp.EvalDistEq.bind_bind_swap _ (padding remaining)
+        fun value rest => continuation (value :: rest)).trans ?_
+      exact (OracleComp.EvalDistEq.bind_const ($ᵗ HashOutput : ProbComp HashOutput) _).symm
     | succ smaller =>
       simp only [padding_succ_bind, List.set_cons_succ]
-      refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun head => ?_
+      refine EvalDistEq.bind_right _ fun head => ?_
       exact ih smaller (by omega) fun rest => continuation (head :: rest)
 
 /-- A cell read back after it was overwritten is the value it was overwritten with. -/
@@ -486,10 +484,10 @@ theorem probEvent_const_and {γ : Type} (run : ProbComp γ) (constant : Prop)
       if constant then Pr{let x ← run}[event x] else 0 := by
   classical
   by_cases hconstant : constant
-  · rw [if_pos hconstant]
-    exact probEvent_congr' (fun _ _ => ⟨fun h => h.2, fun h => ⟨hconstant, h⟩⟩) rfl
-  · rw [if_neg hconstant]
-    exact probEvent_eq_zero fun _ _ h => hconstant h.1
+  · rw [ite_eq_left hconstant]
+    exact prEvent_congr run _ _ fun _ => ⟨fun h => h.2, fun h => ⟨hconstant, h⟩⟩
+  · rw [ite_eq_right hconstant]
+    exact prEvent_eq_zero_of_forall_not run _ fun _ h => hconstant h.1
 
 /-! ## The charge over all the cells
 

@@ -66,6 +66,30 @@ theorem forsKeyOfDigest_address (digest : HashOutput) :
 attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.sign
   Security.signingOracle Security.countQueries
 
+attribute [local irreducible] Scheme.keygenInternal in
+/-- The warmed tail's verification sub-run, at the key the walk's seeds generate, read from the
+tail's own final cache. -/
+private theorem mem_support_verify_of_tail (adversary : Adversary)
+    {walk : ((Digest × Digest × Digest) × CanonicalGraph.Cells) × QueryCache HashSpec}
+    {result : (Outcome × Nat) × QueryCache HashSpec}
+    (hresult : result ∈ support (WarmedGame.tail adversary walk)) :
+    ∃ verifyCache : QueryCache HashSpec,
+      (result.1.1.verified, result.2) ∈ support ((simulateQ randomOracle
+        (Scheme.verify (m := OracleComp HashSpec)
+          (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2)
+          result.1.1.forgery.message result.1.1.forgery.signature)).run verifyCache) := by
+  have hrun : result ∈ support ((simulateQ KeygenUniform.rom
+      (countAllHashes (WarmedGame.afterSeeds adversary walk.1.1))).run walk.2) := by
+    rw [WarmedGame.tail] at hresult
+    exact hresult
+  obtain ⟨keys, keyCache, verifyCache, hkeys, hpersist, hverify⟩ :=
+    WarmedSplit.split_afterSeeds adversary walk.1.1 walk.2 result hrun
+  rw [WarmedSplit.keygenInternal_liftM, WarmedSplit.run_rom_liftM] at hkeys
+  rw [WarmedSplit.verify_liftM, WarmedSplit.run_rom_liftM] at hverify
+  rw [WarmedSplit.keygenInternal_eq_replay_of_subset walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 walk.2
+    keyCache result.2 keys hkeys hpersist] at hverify
+  exact ⟨verifyCache, hverify⟩
+
 /-- **A win in the warmed tail is a charged structural collision, a WOTS one-wayness residue,
 or a disclosure of the honest FORS secrets.** -/
 theorem cases_of_win_charged (adversary : Adversary)
@@ -104,14 +128,7 @@ theorem cases_of_win_charged (adversary : Adversary)
     WarmedSplit.cases_of_win adversary hresult hverified
   refine ⟨message, parsed, hframe, hparsed, ?_⟩
   -- The verification sub-run, at the key the walk's seeds generated.
-  have hrun : result ∈ support ((simulateQ KeygenUniform.rom
-      (countAllHashes (WarmedGame.afterSeeds adversary walk.1.1))).run walk.2) := hresult
-  obtain ⟨keys, keyCache, verifyCache, hkeys, hpersist, hverify⟩ :=
-    WarmedSplit.split_afterSeeds adversary walk.1.1 walk.2 result hrun
-  rw [WarmedSplit.keygenInternal_liftM, WarmedSplit.run_rom_liftM] at hkeys
-  rw [WarmedSplit.verify_liftM, WarmedSplit.run_rom_liftM] at hverify
-  rw [WarmedSplit.keygenInternal_eq_replay_of_subset _ _ _ walk.2 keyCache result.2 keys hkeys
-    hpersist] at hverify
+  obtain ⟨verifyCache, hverify⟩ := mem_support_verify_of_tail adversary hresult
   -- The honest FORS public key at the address this forgery's digest selects.
   rcases hcases (honestForsKey walk.1.1.1 walk.1.1.2.2 result.2
     (Scheme.forsAddress (digestOf result.2

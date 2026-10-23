@@ -7,6 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.ClassGrowth
+import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # The per-class charge, paid per fresh entry
@@ -31,6 +32,8 @@ expectation of an infinite count is simply `⊤`, and the bound is then trivial.
 open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.FreshExpectation
+
+variable {α β γ : Type}
 
 open Security GrowthCharge
 
@@ -59,7 +62,7 @@ theorem freshMass_cacheQuery (inClass : Bytes → Prop) (initial final : QueryCa
     by_cases hother : other = input
     · subst hother
       simp
-    · rw [if_neg hother, QueryCache.cacheQuery_of_ne _ _ hother]
+    · rw [ite_eq_right hother, QueryCache.cacheQuery_of_ne _ _ hother]
 
 open scoped Classical in
 /-- **The fresh mass is at most the size of any set holding the fresh inputs.** -/
@@ -79,8 +82,8 @@ theorem freshMass_le_card (inClass : Bytes → Prop) (initial final : QueryCache
         · exact zero_le
         · exact le_rfl
     _ = ∑ input ∈ holder, (1 : ℝ≥0∞) := by
-        rw [tsum_eq_sum (s := holder) (fun input hinput => if_neg hinput)]
-        exact Finset.sum_congr rfl fun input hinput => if_pos hinput
+        rw [tsum_eq_sum (s := holder) (fun input hinput => ite_eq_right hinput)]
+        exact Finset.sum_congr rfl fun input hinput => ite_eq_left hinput
     _ = (holder.card : ℝ≥0∞) := by simp
 
 open scoped Classical in
@@ -113,7 +116,7 @@ theorem length_le_freshMass (inClass : Bytes → Prop) (initial final : QueryCac
           (if inClass input ∧ initial input = none ∧ final input ≠ none then (1 : ℝ≥0∞)
             else 0) :=
         Finset.sum_congr rfl fun input hinput =>
-          (if_pos (hfresh input (List.mem_toFinset.mp hinput))).symm
+          (ite_eq_left (hfresh input (List.mem_toFinset.mp hinput))).symm
     _ ≤ _ := ENNReal.sum_le_tsum _
 
 /-! ## Expectations of a value -/
@@ -122,36 +125,21 @@ theorem length_le_freshMass (inClass : Bytes → Prop) (initial final : QueryCac
 theorem tsum_bind_mul {β γ : Type} (run : ProbComp β) (next : β → ProbComp γ)
     (value : γ → ℝ≥0∞) :
     ∑' output, Pr{let x ← run >>= next}[x = output] * value output =
-      ∑' middle, Pr{let x ← run}[x = middle] * ∑' output, Pr{let x ← next middle}[x = output] * value output := by
-  calc ∑' output, Pr{let x ← run >>= next}[x = output] * value output
-      = ∑' output, (∑' middle, Pr{let x ← run}[x = middle] * Pr{let x ← next middle}[x = output]) *
-          value output :=
-        tsum_congr fun output => by rw [OracleComp.prEvent_bind_eq_tsum]
-    _ = ∑' output, ∑' middle, Pr{let x ← run}[x = middle] * Pr{let x ← next middle}[x = output] *
-          value output :=
-        tsum_congr fun output => ENNReal.tsum_mul_right.symm
-    _ = ∑' middle, ∑' output, Pr{let x ← run}[x = middle] *
-          (Pr{let x ← next middle}[x = output] * value output) := by
-        rw [ENNReal.tsum_comm]
-        exact tsum_congr fun middle => tsum_congr fun output => by ring
-    _ = _ := tsum_congr fun middle => ENNReal.tsum_mul_left
+      ∑' middle, Pr{let x ← run}[x = middle] *
+        ∑' output, Pr{let x ← next middle}[x = output] * value output :=
+  OracleComp.tsum_prEvent_bind_mul run next value
 
 /-- **An expectation splits along a map.** -/
 theorem tsum_map_mul {β γ : Type} (run : ProbComp β) (reshape : β → γ) (value : γ → ℝ≥0∞) :
     ∑' output, Pr{let x ← reshape <$> run}[x = output] * value output =
-      ∑' middle, Pr{let x ← run}[x = middle] * value (reshape middle) := by
-  classical
-  rw [map_eq_bind_pure_comp, tsum_bind_mul]
-  refine tsum_congr fun middle => ?_
-  classical
-  rw [Function.comp_apply, tsum_eq_single (reshape middle) fun other hother => by
-    rw [(prEvent_eq_zero_of_not_mem_support _) (by simp [hother]), zero_mul],
-    probOutput_pure_self, one_mul]
+      ∑' middle, Pr{let x ← run}[x = middle] * value (reshape middle) :=
+  OracleComp.tsum_prEvent_map_mul run reshape value
 
 /-- **A pointwise bound on the support bounds the expectation.** -/
 theorem tsum_mul_le {β : Type} (run : ProbComp β) (left right : β → ℝ≥0∞)
     (hle : ∀ value ∈ support run, left value ≤ right value) :
-    ∑' value, Pr{let x ← run}[x = value] * left value ≤ ∑' value, Pr{let x ← run}[x = value] * right value := by
+    ∑' value, Pr{let x ← run}[x = value] * left value ≤
+      ∑' value, Pr{let x ← run}[x = value] * right value := by
   refine ENNReal.tsum_le_tsum fun value => ?_
   by_cases hmem : value ∈ support run
   · exact mul_le_mul' le_rfl (hle value hmem)
@@ -165,7 +153,7 @@ theorem tsum_mul_le_const {β : Type} (run : ProbComp β) (value : β → ℝ≥
   calc ∑' output, Pr{let x ← run}[x = output] * value output
       ≤ ∑' output, Pr{let x ← run}[x = output] * bound := tsum_mul_le run _ _ hle
     _ = (∑' output, Pr{let x ← run}[x = output]) * bound := ENNReal.tsum_mul_right
-    _ ≤ 1 * bound := mul_le_mul' (OracleComp.tsum_prEvent_le_one _) le_rfl
+    _ ≤ 1 * bound := mul_le_mul' (OracleComp.tsum_prEvent_le_one run) le_rfl
     _ = bound := one_mul bound
 
 /-! ## The charge -/
@@ -178,7 +166,8 @@ started clean ends with a bad cached answer with probability at most `rate` time
 number of inputs of the class it installed. -/
 theorem prob_bad_le_expected_fresh (inClass : Bytes → Prop) (bad : Bytes → HashOutput → Prop)
     (rate : ℝ≥0∞)
-    (hrate : ∀ input, Pr{let answer ← ($ᵗ HashOutput : ProbComp HashOutput)}[bad input answer] ≤ rate)
+    (hrate : ∀ input,
+      Pr{let answer ← ($ᵗ HashOutput : ProbComp HashOutput)}[bad input answer] ≤ rate)
     (hclass : ∀ input answer, bad input answer → inClass input)
     {α : Type} (computation : OracleComp OracleWorld α) :
     ∀ (initial : QueryCache HashSpec), CleanBad bad initial →
@@ -191,7 +180,7 @@ theorem prob_bad_le_expected_fresh (inClass : Bytes → Prop) (bad : Bytes → H
     intro initial hclean
     refine le_of_eq_of_le (b := 0) ?_ zero_le
     rw [simulateQ_pure, StateT.run_pure]
-    refine probEvent_eq_zero fun result hresult hbad => ?_
+    refine prEvent_eq_zero_of_forall_mem_support _ _ fun result hresult hbad => ?_
     rw [support_pure, Set.mem_singleton_iff] at hresult
     subst hresult
     obtain ⟨input, output, hanswer, hbadness⟩ := hbad
@@ -214,7 +203,7 @@ theorem prob_bad_le_expected_fresh (inClass : Bytes → Prop) (bad : Bytes → H
       by_cases hmem : step ∈ support ((KeygenUniform.rom (Sum.inl coin)).run initial)
       · rw [mul_assoc, hstep step hmem]
         exact mul_le_mul' le_rfl (ih step.1 initial hclean)
-      · rw [(prEvent_eq_zero_of_not_mem_support _) hmem]
+      · rw [prEvent_eq_zero_of_not_mem_support _ hmem]
         simp
     · cases hcached : initial input with
       | some cached =>
@@ -238,14 +227,16 @@ theorem prob_bad_le_expected_fresh (inClass : Bytes → Prop) (bad : Bytes → H
         -- After a miss, the tail's fresh mass is the step's own unit plus the tail's.
         have htail : ∀ answer : HashOutput,
             ∑' result, Pr{let x ← ((simulateQ KeygenUniform.rom (next answer)).run
-                (initial.cacheQuery input answer))}[x = result] * freshMass inClass initial result.2 =
+                (initial.cacheQuery input answer))}[x = result] *
+                freshMass inClass initial result.2 =
               (if inClass input then 1 else 0) +
                 ∑' result, Pr{let x ← ((simulateQ KeygenUniform.rom (next answer)).run
-                  (initial.cacheQuery input answer))}[x = result] *
+                    (initial.cacheQuery input answer))}[x = result] *
                   freshMass inClass (initial.cacheQuery input answer) result.2 := by
           intro answer
           calc ∑' result, Pr{let x ← ((simulateQ KeygenUniform.rom (next answer)).run
-                (initial.cacheQuery input answer))}[x = result] * freshMass inClass initial result.2
+              (initial.cacheQuery input answer))}[x = result] *
+                freshMass inClass initial result.2
               = ∑' result, Pr{let x ← ((simulateQ KeygenUniform.rom (next answer)).run
                   (initial.cacheQuery input answer))}[x = result] *
                   ((if inClass input then 1 else 0) +
@@ -258,29 +249,30 @@ theorem prob_bad_le_expected_fresh (inClass : Bytes → Prop) (bad : Bytes → H
                     (QueryCache.cacheQuery_self _ _ _)
                   rw [freshMass_cacheQuery inClass initial result.2 input answer hcached
                     (by rw [hpersist]; simp)]
-                · rw [(prEvent_eq_zero_of_not_mem_support _) hmem, zero_mul, zero_mul]
+                · rw [prEvent_eq_zero_of_not_mem_support _ hmem, zero_mul, zero_mul]
             _ = (∑' result, Pr{let x ← ((simulateQ KeygenUniform.rom (next answer)).run
-                  (initial.cacheQuery input answer))}[x = result] * (if inClass input then 1 else 0)) +
+                (initial.cacheQuery input answer))}[x = result] *
+                  (if inClass input then 1 else 0)) +
                 ∑' result, Pr{let x ← ((simulateQ KeygenUniform.rom (next answer)).run
-                  (initial.cacheQuery input answer))}[x = result] *
+                    (initial.cacheQuery input answer))}[x = result] *
                   freshMass inClass (initial.cacheQuery input answer) result.2 := by
                 rw [← ENNReal.tsum_add]
                 exact tsum_congr fun result => mul_add _ _ _
             _ = _ := by
-                rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one (by simp), one_mul]
+                rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one, one_mul]
         simp_rw [htail]
         have hpointwise : ∀ answer : HashOutput,
             Pr{let x ← ((simulateQ KeygenUniform.rom (next answer)).run
-                (initial.cacheQuery input answer))}[(Bad bad) x] ≤
+                (initial.cacheQuery input answer))}[Bad bad x] ≤
               (if bad input answer then 1 else 0) +
                 (∑' result, Pr{let x ← ((simulateQ KeygenUniform.rom (next answer)).run
-                  (initial.cacheQuery input answer))}[x = result] *
+                    (initial.cacheQuery input answer))}[x = result] *
                   freshMass inClass (initial.cacheQuery input answer) result.2) * rate := by
           intro answer
           by_cases hbadness : bad input answer
-          · rw [if_pos hbadness]
+          · rw [ite_eq_left hbadness]
             exact le_add_right (prEvent_le_one _)
-          · rw [if_neg hbadness, zero_add]
+          · rw [ite_eq_right hbadness, zero_add]
             exact ih answer (initial.cacheQuery input answer) (hclean.cacheQuery hbadness)
         refine le_trans (ENNReal.tsum_le_tsum fun answer =>
           mul_le_mul' le_rfl (hpointwise answer)) ?_
@@ -293,19 +285,20 @@ theorem prob_bad_le_expected_fresh (inClass : Bytes → Prop) (bad : Bytes → H
               Pr{let answer ← ($ᵗ HashOutput : ProbComp HashOutput)}[bad input answer] := by
             rw [OracleComp.prEvent_eq_tsum_ite]
             refine tsum_congr fun answer => ?_
-            by_cases hbadness : bad input answer <;> simp [hbadness]
+            split_ifs <;> simp only [mul_one, mul_zero]
           erw [hbadMass]
           calc Pr{let answer ← ($ᵗ HashOutput : ProbComp HashOutput)}[bad input answer]
               ≤ (if inClass input then 1 else 0) * rate := by
                 by_cases hmember : inClass input
-                · rw [if_pos hmember, one_mul]
+                · rw [ite_eq_left hmember, one_mul]
                   exact hrate input
-                · rw [if_neg hmember, zero_mul]
-                  exact le_of_eq (probEvent_eq_zero fun answer _ hbadness =>
-                    hmember (hclass input answer hbadness))
-            _ = (∑' answer : HashOutput, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = answer] *
+                · rw [ite_eq_right hmember, zero_mul]
+                  exact le_of_eq (prEvent_eq_zero_of_forall_mem_support _ _
+                    fun answer _ hbadness => hmember (hclass input answer hbadness))
+            _ = (∑' answer : HashOutput,
+                  Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = answer] *
                   (if inClass input then 1 else 0)) * rate := by
-                rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one (by simp), one_mul]
+                rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one, one_mul]
         · rw [← ENNReal.tsum_mul_right]
           refine le_of_eq (tsum_congr fun answer => ?_)
           ring

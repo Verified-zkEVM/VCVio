@@ -38,6 +38,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.FusedTape
 
+variable {α β γ : Type}
+
 open Security DigestTape TapeFactor NoticingTape RecorderView PhaseFusion
 
 variable {σ : Type} [CacheView σ] {ω : Type} [Monoid ω]
@@ -87,22 +89,22 @@ theorem evalDist_fusedSplitTapeRun_cont (leftKeep rightKeep : Bytes → σ → P
       α × (ω × SigningLog × SplitTapeState σ) → ProbComp γ)
     (hafter : ∀ (leftLength rightLength : Nat)
         (z : α × (ω × SigningLog × StateOf σ)),
-      𝒟[handlerAfter z] =
-        𝒟[padding leftLength >>= fun leftTape => padding rightLength >>= fun rightTape =>
+      handlerAfter z =ᵈ
+        (padding leftLength >>= fun leftTape => padding rightLength >>= fun rightTape =>
             tapeAfter (z.1, (z.2.1, z.2.2.1,
-              (z.2.2.2.1, (leftTape, rightTape), z.2.2.2.2)))]) :
+              (z.2.2.2.1, (leftTape, rightTape), z.2.2.2.2))))) :
     ∀ (leftLength rightLength : Nat) (accumulated : ω) (log : SigningLog)
       (cache : σ) (leftRecord rightRecord : Record),
-      𝒟[(simulateQ (fuseServing (noticingRecorderOf leftKeep rightKeep) inner
+      ((simulateQ (fuseServing (noticingRecorderOf leftKeep rightKeep) inner
             (fun request => onCarrier (before request)) (onCarrier after)) phase).run
-            (accumulated, log, (cache, leftRecord, rightRecord)) >>= handlerAfter] =
-        𝒟[padding leftLength >>= fun leftTape =>
+            (accumulated, log, (cache, leftRecord, rightRecord)) >>= handlerAfter) =ᵈ
+        (padding leftLength >>= fun leftTape =>
             padding rightLength >>= fun rightTape =>
               (simulateQ (fuseServing (noticingSplitTapeRecorder leftKeep rightKeep) inner
                   (fun request => onCarrierTape (before request)) (onCarrierTape after))
                 phase).run
                   (accumulated, log, (cache, (leftTape, rightTape), (leftRecord, rightRecord)))
-                >>= tapeAfter] := by
+                >>= tapeAfter) := by
   classical
   induction phase using OracleComp.inductionOn with
   | pure value =>
@@ -115,7 +117,7 @@ theorem evalDist_fusedSplitTapeRun_cont (leftKeep rightKeep : Bytes → σ → P
     simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, bind_assoc]
     rcases queried with world | request
     · simp only [fuseServing_run_inl, bind_assoc, pure_bind]
-      refine Eq.trans (evalDist_noticingSplitTapeRun_cont leftKeep rightKeep
+      refine EvalDistEq.trans (evalDist_noticingSplitTapeRun_cont leftKeep rightKeep
         (((inner (Sum.inl world)).run).run log)
         (fun z => (simulateQ (fuseServing (noticingRecorderOf leftKeep rightKeep) inner
             (fun r => onCarrier (before r)) (onCarrier after)) (next z.1.1.1)).run
@@ -125,9 +127,9 @@ theorem evalDist_fusedSplitTapeRun_cont (leftKeep rightKeep : Bytes → σ → P
             (accumulated * z.1.1.2, z.1.2, z.2) >>= tapeAfter)
         (fun lL rL z => ih z.1.1.1 lL rL (accumulated * z.1.1.2) z.1.2 z.2.1 z.2.2.1 z.2.2.2)
         leftLength rightLength cache leftRecord rightRecord) ?_
-      rfl
+      exact EvalDistEq.rfl
     · simp only [fuseServing_run_inr, bind_assoc, pure_bind]
-      refine Eq.trans (evalDist_noticingSplitTapeRun_cont leftKeep rightKeep
+      refine EvalDistEq.trans (evalDist_noticingSplitTapeRun_cont leftKeep rightKeep
         (((inner (Sum.inr request)).run).run log)
         (fun z => (simulateQ (fuseServing (noticingRecorderOf leftKeep rightKeep) inner
             (fun r => onCarrier (before r)) (onCarrier after)) (next z.1.1.1)).run
@@ -138,7 +140,7 @@ theorem evalDist_fusedSplitTapeRun_cont (leftKeep rightKeep : Bytes → σ → P
         (fun lL rL z => ih z.1.1.1 lL rL (accumulated * z.1.1.2) z.1.2 (after z.2.1) z.2.2.1
           z.2.2.2)
         leftLength rightLength (before request cache) leftRecord rightRecord) ?_
-      rfl
+      exact EvalDistEq.rfl
 
 /-! ## The three stages, factorised through one pair of blocks
 
@@ -174,7 +176,7 @@ theorem evalDist_threeStage (leftKeep rightKeep : Bytes → σ → Prop)
     (last : β → α → OracleComp OracleWorld γ)
     (value : β → α → ω → SigningLog → γ → σ → δ)
     (leftLength rightLength : Nat) (cache : σ) (leftRecord rightRecord : Record) :
-    𝒟[(simulateQ (noticingRecorderOf leftKeep rightKeep) first).run
+    ((simulateQ (noticingRecorderOf leftKeep rightKeep) first).run
           (cache, leftRecord, rightRecord) >>= fun keys =>
         (simulateQ (fuseServing (noticingRecorderOf leftKeep rightKeep) (inner keys.1)
             (fun request => onCarrier (before request)) (onCarrier after))
@@ -184,8 +186,8 @@ theorem evalDist_threeStage (leftKeep rightKeep : Bytes → σ → Prop)
             (pure (value keys.1 middle.1 middle.2.1 middle.2.2.1 final.1 final.2.1,
               forgetView final.2)
               :
-              ProbComp (δ × SplitPrefix.SplitState))] =
-      𝒟[padding leftLength >>= fun leftTape =>
+              ProbComp (δ × SplitPrefix.SplitState))) =ᵈ
+      (padding leftLength >>= fun leftTape =>
           padding rightLength >>= fun rightTape =>
             (simulateQ (noticingSplitTapeRecorder leftKeep rightKeep) first).run
                 (cache, (leftTape, rightTape), (leftRecord, rightRecord)) >>= fun keys =>
@@ -196,7 +198,7 @@ theorem evalDist_threeStage (leftKeep rightKeep : Bytes → σ → Prop)
                     (last keys.1 middle.1)).run middle.2.2.2 >>= fun final =>
                   (pure (value keys.1 middle.1 middle.2.1 middle.2.2.1 final.1 final.2.1,
                     forgetViewTape final.2) :
-                    ProbComp (δ × SplitPrefix.SplitState))] := by
+                    ProbComp (δ × SplitPrefix.SplitState))) := by
   classical
   refine evalDist_noticingSplitTapeRun_cont leftKeep rightKeep first
     (fun keys => (simulateQ (fuseServing (noticingRecorderOf leftKeep rightKeep) (inner keys.1)
@@ -247,10 +249,8 @@ theorem evalDist_threeStage (leftKeep rightKeep : Bytes → σ → Prop)
       pure (value keys.1 middle.1 middle.2.1 middle.2.2.1 final.1 final.2.1, forgetView final.2) :=
     fun _ _ => rfl
   simp only [hconst]
-  rw [OracleComp.DeferredSampling.evalDist_bind_const_neverFails (padding lastLeft)
-      (padding_neverFails lastLeft),
-    OracleComp.DeferredSampling.evalDist_bind_const_neverFails (padding lastRight)
-      (padding_neverFails lastRight)]
+  exact ((EvalDistEq.bind_right _ fun _ => OracleComp.EvalDistEq.bind_const _ _).trans
+    (OracleComp.EvalDistEq.bind_const _ _)).symm
 
 /-! ## The two facts the charge composes by itself
 
@@ -271,20 +271,7 @@ theorem fusedSplitTapeRun_neverFails (leftKeep rightKeep : Bytes → σ → Prop
       prFail ((simulateQ (fuseServing (noticingSplitTapeRecorder leftKeep rightKeep) inner
         (fun request => onCarrierTape (before request)) (onCarrierTape afterMap)) phase).run
           state) = 0 := by
-  classical
-  induction phase using OracleComp.inductionOn with
-  | pure value => intro state; simp
-  | query_bind queried next ih =>
-    intro state
-    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-    refine probFailure_bind_eq_zero_iff _ _ |>.mpr ⟨?_, fun step _ => ih step.1 step.2⟩
-    rcases queried with world | request
-    · rw [fuseServing_run_inl]
-      exact probFailure_bind_eq_zero_iff _ _ |>.mpr
-        ⟨noticingSplitTapeRun_neverFails leftKeep rightKeep _ _, fun _ _ => by simp⟩
-    · rw [fuseServing_run_inr]
-      exact probFailure_bind_eq_zero_iff _ _ |>.mpr
-        ⟨noticingSplitTapeRun_neverFails leftKeep rightKeep _ _, fun _ _ => by simp⟩
+  exact fun _ => prFail_eq_zero _
 
 open scoped Classical in
 /-- **The target recording only grows under the fused run.** -/
@@ -785,10 +772,10 @@ theorem evalDist_threeStageHandlerRun_eq (leftKeep rightKeep : Bytes → σ → 
     (last : β → α → OracleComp OracleWorld γ)
     (value : β → α → ω → SigningLog → γ → σ → δ)
     (cache : σ) (leftRecord rightRecord : Record) (leftLength rightLength : Nat) :
-    𝒟[threeStageHandlerRun leftKeep rightKeep inner before afterMap first phase last value
-        cache leftRecord rightRecord] =
-      𝒟[Prod.snd <$> NoticingTape.blockRunOf (threeStageTapeRun leftKeep rightKeep inner before
-        afterMap first phase last value cache leftRecord rightRecord) leftLength rightLength] := by
+    threeStageHandlerRun leftKeep rightKeep inner before afterMap first phase last value
+        cache leftRecord rightRecord =ᵈ
+      (Prod.snd <$> NoticingTape.blockRunOf (threeStageTapeRun leftKeep rightKeep inner before
+        afterMap first phase last value cache leftRecord rightRecord) leftLength rightLength) := by
   rw [threeStage_blockRunOf_snd, threeStageHandlerRun]
   exact evalDist_threeStage leftKeep rightKeep inner before afterMap first phase last value
     leftLength rightLength cache leftRecord rightRecord

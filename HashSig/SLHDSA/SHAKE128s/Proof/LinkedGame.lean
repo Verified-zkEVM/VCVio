@@ -52,6 +52,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.LinkedGame
 
+variable {α : Type}
+
 open Security RecordedQueries RecordedPhase KeygenValue
 
 /-! ## The lift, pinned -/

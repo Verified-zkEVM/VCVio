@@ -39,6 +39,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.RecordInvariant
 
+variable {α : Type}
+
 open Security BracketedRun PhaseFusion
 
 variable {ω : Type} [Monoid ω] {S : Type}

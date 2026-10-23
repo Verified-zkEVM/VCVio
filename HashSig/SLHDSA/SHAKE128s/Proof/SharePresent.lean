@@ -33,6 +33,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.SharePresent
 
+variable {α : Type}
+
 open Security CanonicalGraph WarmedGame WalkTable TableTail RecordedQueries RecordedPhase
 
 attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal
@@ -55,29 +57,24 @@ theorem probEvent_recordedTail_linked (adversary : Adversary) (prfSeed publicSee
       (walkOfTable prfSeed publicSeed table).1.1)]
     rw [simulateQ_map, StateT.run_map]
     rfl
-  rw [show Pr{let result ← RecordedTail.recordedTail adversary (walkOfTable prfSeed publicSeed table)}[event (result.1.1, result.2)] =
-      Pr{let x ← ((fun result : ((Outcome × Multiset Bytes) × Nat) × QueryCache HashSpec =>
-        (result.1.1, result.2)) <$>
-          RecordedTail.recordedTail adversary (walkOfTable prfSeed publicSeed table))}[event x] from
-      (prEvent_map _ _ _).symm, ← hmap,
-    ← probEvent_congr' (fun _ _ => Iff.rfl)
-      (RecordedStripping.evalDist_run_recordedAfterSeeds adversary
-        (walkOfTable prfSeed publicSeed table).1.1 (walkOfTable prfSeed publicSeed table).2
-        (walkOfTable prfSeed publicSeed table).2
-        (StrippedGame.Extends.refl _)),
-    show (simulateQ KeygenUniform.rom (RecordedQueries.recordedAfterSeeds adversary
+  have hstrip := RecordedStripping.evalDist_run_recordedAfterSeeds adversary
+    (walkOfTable prfSeed publicSeed table).1.1 (walkOfTable prfSeed publicSeed table).2
+    (walkOfTable prfSeed publicSeed table).2 (StrippedGame.Extends.refl _)
+  have hkeys : (simulateQ KeygenUniform.rom (RecordedQueries.recordedAfterSeeds adversary
         ((walkOfTable prfSeed publicSeed table).1.1)
         (walkOfTable prfSeed publicSeed table).2)).run
           (walkOfTable prfSeed publicSeed table).2 =
       (simulateQ KeygenUniform.rom (KeygenValue.recordedAfterSeedsAt adversary
         (keysOf prfSeed publicSeed table)
         (walkOfTable prfSeed publicSeed table).2)).run
-          (walkOfTable prfSeed publicSeed table).2 from by
-      rw [walkOfTable_cache prfSeed publicSeed table]
-      exact KeygenValue.run_recordedAfterSeeds adversary
-        (table.1 Node.secretSeed, prfSeed, publicSeed) (fullOutput table.1 table.2),
+          (walkOfTable prfSeed publicSeed table).2 := by
+    rw [walkOfTable_cache prfSeed publicSeed table]
+    exact KeygenValue.run_recordedAfterSeeds adversary
+      (table.1 Node.secretSeed, prfSeed, publicSeed) (fullOutput table.1 table.2)
+  rw [← prEvent_map (RecordedTail.recordedTail adversary (walkOfTable prfSeed publicSeed table))
+      (fun result : ((Outcome × Multiset Bytes) × Nat) × QueryCache HashSpec =>
+        (result.1.1, result.2)) event, ← hmap, ← hstrip.prEvent_eq event, hkeys,
     LinkedGame.recordedAfterSeedsAt_eq, simulateQ_map, StateT.run_map, prEvent_map, linkedRun]
-  rfl
 
 /-! ## The adversary's phase, flattened -/
 

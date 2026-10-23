@@ -56,7 +56,7 @@ theorem walk_bound {adversary : Adversary} {q : Nat} (hbudget : TailBudgetW adve
           (ShareFinal.setupOf prfSeed publicSeed table))}[(ShareFinal.setupOf prfSeed publicSeed table).Good ∧ z.2.2 = true] := by
   classical
   by_cases hgood : (ShareFinal.setupOf prfSeed publicSeed table).Good
-  · refine le_trans (prEvent_mono fun result _ hevent => hevent.2) ?_
+  · refine le_trans (prEvent_mono _ _ _ fun result hevent => hevent.2) ?_
     have hlinked := SharePresent.probEvent_recordedTail_linked adversary prfSeed publicSeed table
       (fun x => (RoutedSplit.InputBad (SharedJoin.recordedTraceOf
           (WalkTable.walkOfTable prfSeed publicSeed table, ((x.1, 0), x.2))) ∨
@@ -67,11 +67,11 @@ theorem walk_bound {adversary : Adversary} {q : Nat} (hbudget : TailBudgetW adve
     refine le_trans (le_trans ?_ (JointBudget.probEvent_realFlat_le hbudget prfSeed publicSeed
       table (fun r => ShareFinal.RealEvent (ShareFinal.setupOf prfSeed publicSeed table) r ∧
         r.1.1.2.1 = true))) ?_
-    · exact prEvent_mono fun r _ h => ⟨h, h.2⟩
+    · exact prEvent_mono _ _ _ fun r h => ⟨h, h.2⟩
     · rw [TouchedKeys.keysOf_eq]
       exact le_trans (hsetup (ShareFinal.setupOf prfSeed publicSeed table) hgood)
-        (prEvent_mono fun z _ hz => ⟨hgood, hz⟩)
-  · refine le_trans (le_of_eq (probEvent_eq_zero fun result _ hevent =>
+        (prEvent_mono _ _ _ fun z hz => ⟨hgood, hz⟩)
+  · refine le_trans (le_of_eq (prEvent_eq_zero_of_forall_mem_support _ _ fun result _ hevent =>
       hgood ((ShareFinal.goodWalk_iff prfSeed publicSeed table).mp hevent.1))) (by simp)
 
 open BlindCharge in
@@ -85,17 +85,19 @@ theorem hshared (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adversa
         pair.2.1.1.1.verified = true] ≤
       ((q - 8 : Nat) : ℝ≥0∞) / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   classical
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) (RecordedWalkTable.evalDist_recordedPairedRun adversary)]
+  rw [(RecordedWalkTable.evalDist_recordedPairedRun adversary).prEvent_eq]
   calc Pr{let pair ← (do
           let prfSeed ← ($ᵗ Digest : ProbComp Digest)
           let publicSeed ← ($ᵗ Digest : ProbComp Digest)
-          RecordedWalkTable.recordedTableRun adversary prfSeed publicSeed)}[Target.GoodWalk pair.1 ∧
+          RecordedWalkTable.recordedTableRun adversary prfSeed publicSeed)}[
+          Target.GoodWalk pair.1 ∧
           (RoutedSplit.InputBad (SharedJoin.recordedTraceOf pair) ∨ Target127.Late pair) ∧
           pair.2.1.1.1.verified = true]
       = ex ($ᵗ Digest : ProbComp Digest) fun prfSeed => ex ($ᵗ Digest : ProbComp Digest)
           fun publicSeed => ex ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding)) fun table =>
-            Pr{let result ← (RecordedTail.recordedTail adversary
-                (WalkTable.walkOfTable prfSeed publicSeed table))}[Target.GoodWalk (WalkTable.walkOfTable prfSeed publicSeed table) ∧
+            Pr{let result ← RecordedTail.recordedTail adversary
+                (WalkTable.walkOfTable prfSeed publicSeed table)}[
+              Target.GoodWalk (WalkTable.walkOfTable prfSeed publicSeed table) ∧
                 (RoutedSplit.InputBad (SharedJoin.recordedTraceOf
                     (WalkTable.walkOfTable prfSeed publicSeed table, result)) ∨
                   Target127.Late (WalkTable.walkOfTable prfSeed publicSeed table, result)) ∧
@@ -107,20 +109,22 @@ theorem hshared (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adversa
         rw [RecordedWalkTable.recordedTableRun, probEvent_eq_ex_bind]
         refine ex_congr _ fun table => ?_
         rw [bind_pure_comp, prEvent_map]
-        rfl
     _ ≤ ex ($ᵗ Digest : ProbComp Digest) fun prfSeed => ex ($ᵗ Digest : ProbComp Digest)
           fun publicSeed => ex ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding)) fun table =>
-            Pr{let z ← (ShareBound.flagRun (ShareJoint.shareCompJ adversary (q - 569))
-                (ShareFinal.setupOf prfSeed publicSeed table))}[(ShareFinal.setupOf prfSeed publicSeed table).Good ∧ z.2.2 = true] :=
+            Pr{let z ← ShareBound.flagRun (ShareJoint.shareCompJ adversary (q - 569))
+                (ShareFinal.setupOf prfSeed publicSeed table)}[
+              (ShareFinal.setupOf prfSeed publicSeed table).Good ∧ z.2.2 = true] :=
         ex_mono _ fun prfSeed => ex_mono _ fun publicSeed => ex_mono _ fun table =>
           walk_bound hbudget hsetup prfSeed publicSeed table
     _ = ex ($ᵗ Digest : ProbComp Digest) fun publicSeed => ex ($ᵗ Digest : ProbComp Digest)
           fun prfSeed => ex ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding)) fun table =>
-            Pr{let z ← (ShareBound.flagRun (ShareJoint.shareCompJ adversary (q - 569))
-                (ShareFinal.setupOf prfSeed publicSeed table))}[(ShareFinal.setupOf prfSeed publicSeed table).Good ∧ z.2.2 = true] :=
+            Pr{let z ← ShareBound.flagRun (ShareJoint.shareCompJ adversary (q - 569))
+                (ShareFinal.setupOf prfSeed publicSeed table)}[
+              (ShareFinal.setupOf prfSeed publicSeed table).Good ∧ z.2.2 = true] :=
         ShareFinal.ex_comm _ _ _
     _ = ex ($ᵗ Digest : ProbComp Digest) fun publicSeed =>
-          Pr{let w ← ShareBound.flagGame publicSeed (ShareJoint.shareCompJ adversary (q - 569))}[w.1.Good ∧ w.2.2.2 = true] := by
+          Pr{let w ← ShareBound.flagGame publicSeed (ShareJoint.shareCompJ adversary (q - 569))}[
+            w.1.Good ∧ w.2.2.2 = true] := by
         refine ex_congr _ fun publicSeed => ?_
         rw [ShareBound.flagGame, probEvent_eq_ex_bind]
         refine ex_congr _ fun prfSeed => ?_

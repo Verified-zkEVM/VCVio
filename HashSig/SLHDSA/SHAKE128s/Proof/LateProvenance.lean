@@ -38,6 +38,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.LateProvenance
 
+variable {α : Type}
+
 open Security CacheReplay RecordedQueries CacheProvenance PhaseProvenance
 
 /-! ## The verifier records what it asks -/

@@ -63,7 +63,7 @@ theorem prfGuess_randomizerInput (prf seed : Digest) (message : Bytes) :
   have hformat : ∃ (candidate other : Digest) (payload : Bytes),
       Hashing.randomizerInput prf seed message =
         Hashing.randomizerInput candidate other payload := ⟨prf, seed, message, rfl⟩
-  rw [prfGuess, dif_pos hformat]
+  rw [prfGuess, dite_eq_left hformat]
   obtain ⟨other, payload, hspec⟩ := hformat.choose_spec
   exact (randomizerInput_prf_inj hspec).symm
 
@@ -120,11 +120,15 @@ def PrfClass (prfSeed : Digest) (input : Bytes) : Prop :=
 /-- **A fresh answer truncates to a fixed digest with probability `2 ^ -128`.** -/
 theorem prob_truncate_eq (target : Digest) :
     Pr{let answer ← ($ᵗ HashOutput : ProbComp HashOutput)}[Hashing.truncate answer = target] = 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
-  rw [show (fun answer : HashOutput => Hashing.truncate answer = target) =
-      (fun value : Digest => value = target) ∘ Hashing.truncate from rfl, ← prEvent_map,
-    probEvent_congr' (fun _ _ => Iff.rfl) KeygenUniform.truncate_uniform,
-    show (fun value : Digest => value = target) = (fun value : Digest => target = value) from by
-      funext value; exact propext ⟨Eq.symm, Eq.symm⟩]
-  exact SecretGuessCharge.prob_single_guess target
+  have hmap : Pr{let answer ← ($ᵗ HashOutput : ProbComp HashOutput)}[
+        Hashing.truncate answer = target] =
+      Pr{let digest ← (Hashing.truncate <$> ($ᵗ HashOutput : ProbComp HashOutput))}[
+        digest = target] := by
+    rw [prEvent_map]
+  let _ : MeasurableSpace Digest := ⊤
+  rw [hmap, KeygenUniform.truncate_uniform.prEvent_eq, prEvent_eq_evalDist_singleton,
+    SampleableType.evalDist_uniformSample, ProbabilityTheory.uniformOn_univ_apply_singleton,
+    Fintype.card_bitVec, one_div]
+  rfl
 
 end SlhDsaSecurity.RandomizerGate

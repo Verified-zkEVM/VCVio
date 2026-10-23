@@ -54,6 +54,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CarrierCover
 
+variable {α : Type}
+
 open Security RecorderView CarriedWitness PhaseFusion RecordedQueries BracketedRun
 open CarrierTail ServedAgreement
 

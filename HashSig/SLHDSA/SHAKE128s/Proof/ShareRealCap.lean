@@ -26,6 +26,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.ShareRealCap
 
+variable {α β : Type}
+
 open Security CanonicalGraph WarmedGame WalkTable TableTail RecordedQueries RecordedPhase
   SharePresent
 
@@ -102,12 +104,12 @@ theorem exists_recordedTail_of_linked (adversary : Adversary) (prfSeed publicSee
     ∃ result ∈ support (RecordedTail.recordedTail adversary (walkOfTable prfSeed publicSeed table)),
       result.1.1 = LinkedGame.outcomeOf r.1 ∧ result.2 = r.2 := by
   classical
-  have hpos : Pr{let result ← linkedRun adversary prfSeed publicSeed table}[(LinkedGame.outcomeOf result.1, result.2) =
-      (LinkedGame.outcomeOf r.1, r.2)] ≠ 0 :=
-    probEvent_ne_zero_iff.mpr ⟨r, hr, rfl⟩
+  have hpos : 0 < Pr{let result ← linkedRun adversary prfSeed publicSeed table}[
+      (LinkedGame.outcomeOf result.1, result.2) = (LinkedGame.outcomeOf r.1, r.2)] :=
+    (prEvent_pos_iff _ _).mpr ⟨r, hr, rfl⟩
   rw [← probEvent_recordedTail_linked adversary prfSeed publicSeed table
     (fun x => x = (LinkedGame.outcomeOf r.1, r.2))] at hpos
-  obtain ⟨result, hresult, heq⟩ := probEvent_ne_zero_iff.mp hpos
+  obtain ⟨result, hresult, heq⟩ := (prEvent_pos_iff _ _).mp hpos
   exact ⟨result, hresult, congrArg Prod.fst heq, congrArg Prod.snd heq⟩
 
 end SlhDsaSecurity.ShareRealCap

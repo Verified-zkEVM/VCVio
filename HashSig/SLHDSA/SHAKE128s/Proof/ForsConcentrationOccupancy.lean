@@ -50,7 +50,7 @@ theorem wordCounts_fiber_card (bins requests : Nat) (counts : Fin bins →₀ Na
       ∑ word : Fin requests → Fin bins, MvPolynomial.monomial (wordCounts word) 1 := by
     rw [Fintype.sum_pow]
     exact Finset.sum_congr rfl (fun word _ => wordCounts_polynomial word)
-  have hc := congrArg (MvPolynomial.coeff counts) hg
+  have hc := congrArg (fun p : MvPolynomial (Fin bins) Nat => p.coeff counts) hg
   rw [MvPolynomial.coeff_sum_X_pow_of_fintype] at hc
   simp only [MvPolynomial.coeff_sum, MvPolynomial.coeff_monomial] at hc
   simpa only [Finset.card_eq_sum_ones, Finset.sum_filter, eq_comm, Nat.cast_id] using hc.symm
@@ -79,23 +79,25 @@ lemma wordLoads_fiber_card (bins requests : Nat) (counts : Fin bins → Nat) :
 
 /-- The concrete multinomial occupancy measure obtained from independent uniform choices. -/
 noncomputable def uniformLoads (bins requests : Nat) [NeZero bins] : Measure (Fin bins → Nat) :=
-  (PMF.uniformOfFintype (Fin requests → Fin bins)).toMeasure.map wordLoads
+  (uniformOn (Set.univ : Set (Fin requests → Fin bins))).map wordLoads
 
 instance (bins requests : Nat) [NeZero bins] : IsProbabilityMeasure (uniformLoads bins requests) := by
   unfold uniformLoads
-  exact Measure.isProbabilityMeasure_map (Measurable.aemeasurable .of_discrete)
+  exact (Measure.isProbabilityMeasure_map_iff (Measurable.aemeasurable .of_discrete)).mpr
+    inferInstance
 
 lemma uniformLoads_singleton (bins requests : Nat) [NeZero bins] (counts : Fin bins → Nat) :
     uniformLoads bins requests {counts} =
       (if (∑ i, counts i) = requests then
         (Nat.multinomial Finset.univ counts : ENNReal) / (bins : ENNReal) ^ requests else 0) := by
   classical
-  rw [uniformLoads, Measure.map_apply .of_discrete (measurableSet_singleton _),
-    PMF.toMeasure_uniformOfFintype_apply _ (MeasurableSet.of_discrete)]
-  rw [Fintype.card_subtype]
-  simp only [Set.mem_preimage, Set.mem_singleton_iff]
-  change ((Finset.univ.filter (fun word : Fin requests → Fin bins => wordLoads word = counts)).card :
-    ENNReal) / Fintype.card (Fin requests → Fin bins) = _
+  rw [uniformLoads, Measure.map_apply .of_discrete (measurableSet_singleton _), uniformOn_univ]
+  have hpre : (wordLoads ⁻¹' {counts} : Set (Fin requests → Fin bins)) =
+      ((Finset.univ.filter (fun word : Fin requests → Fin bins => wordLoads word = counts) :
+        Finset (Fin requests → Fin bins)) : Set (Fin requests → Fin bins)) := by
+    ext word
+    simp
+  rw [hpre, Measure.count_apply_finset]
   rw [wordLoads_fiber_card]
   split_ifs <;> simp_all [Fintype.card_fin]
 
@@ -130,7 +132,7 @@ lemma poissonLoads_singleton_factor (bins : Nat) [NeZero bins] (counts : Fin bin
     (poissonMeasure (3 * (bins : ℝ≥0))).real {∑ i, counts i} *
       (uniformLoads bins (∑ i, counts i)).real {counts}
   rw [poissonLoads_real_singleton, poissonMeasure_real_singleton, uniformLoads_real_singleton,
-    if_pos rfl]
+    ite_eq_left rfl]
   simp only [NNReal.coe_mul, NNReal.coe_ofNat, NNReal.coe_natCast, mul_pow, Nat.cast_prod]
   have hb : (bins : ℝ) ≠ 0 := by exact_mod_cast (NeZero.ne bins)
   have hf : (∏ i, ((counts i).factorial : ℝ)) * (Nat.multinomial Finset.univ counts : ℝ) =
@@ -166,10 +168,11 @@ lemma uniformLoads_real_apply (bins requests : Nat) [NeZero bins] (event : Set (
       (Fintype.card {word : Fin requests → Fin bins // wordLoads word ∈ event} : ℝ) /
         (bins : ℝ) ^ requests := by
   classical
-  rw [measureReal_def, uniformLoads, Measure.map_apply .of_discrete .of_discrete,
-    PMF.toMeasure_uniformOfFintype_apply _ .of_discrete]
+  rw [measureReal_def, uniformLoads, Measure.map_apply .of_discrete .of_discrete, uniformOn_univ,
+    Measure.count_apply_finite' (Set.toFinite _) .of_discrete]
   simp only [ENNReal.toReal_div, ENNReal.toReal_natCast, Fintype.card_fun,
     Fintype.card_fin, Nat.cast_pow]
+  rw [Set.Finite.card_toFinset, ENNReal.toReal_pow, ENNReal.toReal_natCast]
   rfl
 
 /-- Monotone events become more likely as independent uniform choices are appended. -/
@@ -218,7 +221,7 @@ theorem uniformLoads_mul_poisson_tail_le (bins requests : Nat) [NeZero bins]
     ← ENNReal.tsum_mul_left]
   apply ENNReal.tsum_le_tsum
   intro n
-  simp only [Set.indicator_apply, Set.mem_setOf_eq, Measure.smul_apply, smul_eq_mul]
+  simp only [Set.indicator_apply, Set.mem_ofPred_eq, Measure.smul_apply, smul_eq_mul]
   split_ifs with h
   · rw [mul_comm]
     exact mul_le_mul_right (uniformLoads_monotone bins event hup h) _

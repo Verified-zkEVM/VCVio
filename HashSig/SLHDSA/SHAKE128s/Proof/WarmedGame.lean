@@ -117,8 +117,8 @@ theorem map_warmedRun (adversary : Adversary) :
 
 /-- **The outcome's law is unchanged by warming.** -/
 theorem evalDist_outcome (adversary : Adversary) :
-    𝒟[(fun result => result.1.2) <$> warmedRun adversary] =
-      𝒟[Prod.fst <$> WholeGameStructural.instrumentedRun adversary] := by
+    ((fun result => result.1.2) <$> warmedRun adversary) =ᵈ
+      (Prod.fst <$> WholeGameStructural.instrumentedRun adversary) := by
   rw [map_warmedRun, WholeGameStructural.instrumentedRun, experiment_eq]
   exact (Presample.evalDist_counted_warmed seeds (afterSeeds adversary)
     (fun sds => sds.2.2) (fun sds => sds.1)).symm
@@ -128,13 +128,9 @@ outcome, so warming — which changes the cache, and only the cache — leaves i
 theorem probEvent_warmed (adversary : Adversary) (event : Outcome × Nat → Prop) :
     Pr{let result ← WholeGameStructural.instrumentedRun adversary}[event result.1] =
       Pr{let result ← warmedRun adversary}[event result.1.2] := by
-  rw [show (fun result : (Outcome × Nat) × QueryCache HashSpec => event result.1) =
-      event ∘ Prod.fst from rfl,
-    show (fun result : (((Digest × Digest × Digest) × Cells) × (Outcome × Nat)) ×
-        QueryCache HashSpec => event result.1.2) =
-      event ∘ (fun result => result.1.2) from rfl,
-    ← prEvent_map, ← prEvent_map]
-  exact (probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_outcome adversary)).symm
+  rw [← prEvent_map (WholeGameStructural.instrumentedRun adversary) Prod.fst event,
+    ← prEvent_map (warmedRun adversary) (fun result => result.1.2) event]
+  exact ((evalDist_outcome adversary).prEvent_eq event).symm
 
 /-! ## Splitting the warmed run at the adversary
 

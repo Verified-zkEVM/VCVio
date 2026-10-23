@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.FusedTape
 public import HashSig.SLHDSA.SHAKE128s.Proof.FiredCoverage
+import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # Watching one input of a tape run
@@ -34,6 +35,8 @@ open OracleComp OracleSpec ENNReal
 set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.TapeWatch
+
+variable {α γ : Type}
 
 open DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedTape
 
@@ -186,15 +189,13 @@ theorem watchValue_step_le (leftKeep rightKeep : Bytes → σ → Prop) (target 
           exact mul_le_of_le_one_left' (OracleComp.tsum_prEvent_le_one _)
   · by_cases hsame : input = target
     swap
-    · calc ∑' z, Pr{let x ← (((noticingSplitTapeRecorder leftKeep rightKeep) (Sum.inr input)).run
-            state)}[x = z] * watchValue target hits z.2
-          = ∑' z, Pr{let x ← (((noticingSplitTapeRecorder leftKeep rightKeep) (Sum.inr input)).run
-              state)}[x = z] * watchValue target hits state := by
+    · calc ∑' z, Pr{let x ← ((noticingSplitTapeRecorder leftKeep rightKeep) (Sum.inr input)).run state}[x = z] * watchValue target hits z.2
+          = ∑' z, Pr{let x ← ((noticingSplitTapeRecorder leftKeep rightKeep) (Sum.inr input)).run state}[x = z] * watchValue target hits state := by
             refine tsum_congr fun z => ?_
             by_cases hz : z ∈ support (((noticingSplitTapeRecorder leftKeep rightKeep)
               (Sum.inr input)).run state)
             · rw [watchValue_step_ne leftKeep rightKeep target hits input hsame state z hz]
-            · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]
+            · rw [prEvent_eq_zero_of_not_mem_support _ hz, zero_mul, zero_mul]
         _ ≤ watchValue target hits state := by
             rw [ENNReal.tsum_mul_right]
             exact mul_le_of_le_one_left' (OracleComp.tsum_prEvent_le_one _)
@@ -237,13 +238,13 @@ theorem watchValue_step_le (leftKeep rightKeep : Bytes → σ → Prop) (target 
           refine le_trans (ENNReal.tsum_le_tsum fun answer => mul_le_mul' le_rfl
             (le_of_eq (FiredCoverage.tsum_probOutput_pure _ _))) ?_
           simp only [watchValue, hupdate, hrecorded, not_true_eq_false, false_and, and_false,
-            if_false, mul_zero, tsum_zero]
+            ite_false, mul_zero, tsum_zero]
           exact zero_le
         | cons head rest =>
           rw [splitTapeRecorder_run_left_cons leftKeep rightKeep input noticed head rest
             rightTape leftRecord rightRecord hfresh hleft, FiredCoverage.tsum_probOutput_pure]
           simp only [watchValue, hupdate, hrecorded, not_true_eq_false, false_and, and_false,
-            if_false]
+            ite_false]
           exact zero_le
       · by_cases hright : rightKeep input noticed
         · cases rightTape with
@@ -253,12 +254,12 @@ theorem watchValue_step_le (leftKeep rightKeep : Bytes → σ → Prop) (target 
             refine le_trans (ENNReal.tsum_le_tsum fun answer => mul_le_mul' le_rfl
               (le_of_eq (FiredCoverage.tsum_probOutput_pure _ _))) ?_
             simp only [watchValue, hupdate, hrecorded, not_true_eq_false, and_false,
-              if_false, mul_zero, tsum_zero]
+              ite_false, mul_zero, tsum_zero]
             exact zero_le
           | cons head rest =>
             rw [splitTapeRecorder_run_right_cons leftKeep rightKeep input noticed leftTape head
               rest leftRecord rightRecord hfresh hleft hright, FiredCoverage.tsum_probOutput_pure]
-            simp only [watchValue, hupdate, hrecorded, not_true_eq_false, and_false, if_false]
+            simp only [watchValue, hupdate, hrecorded, not_true_eq_false, and_false, ite_false]
             exact zero_le
         · rw [splitTapeRecorder_run_other leftKeep rightKeep input noticed _ _
             (fun h => hleft h.2) (fun h => hright h.2), plainStep, hfresh,
@@ -274,10 +275,11 @@ theorem watchValue_step_le (leftKeep rightKeep : Bytes → σ → Prop) (target 
           · unfold watchValue
             rw [hupdate]
             dsimp only
-            by_cases hh : hits answer
-            · rw [if_pos hh]
-              split_ifs <;> simp
-            · rw [if_neg hh, if_neg (fun h => hh h.1)]
+            split_ifs with h1 h2 h2
+            · exact le_rfl
+            · exact absurd h1.1 h2
+            · exact zero_le
+            · exact le_rfl
           · exact le_of_eq (FiredCoverage.tsum_ite_eq_probEvent _ _)
 
 /-! ## The watched value across the fused phase

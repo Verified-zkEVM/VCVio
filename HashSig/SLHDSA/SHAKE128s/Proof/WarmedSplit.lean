@@ -51,6 +51,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.WarmedSplit
 
+variable {α β : Type}
+
 open Security
 
 /-! ## From the game's world to the hash-only one -/

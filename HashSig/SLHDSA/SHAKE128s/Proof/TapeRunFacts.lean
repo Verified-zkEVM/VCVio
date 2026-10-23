@@ -32,6 +32,8 @@ set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.TapeRunFacts
 
+variable {α β γ : Type}
+
 open DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedTape SignedWatch
 
 variable {σ : Type} [CacheView σ]

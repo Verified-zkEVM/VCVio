@@ -42,6 +42,5 @@ theorem probEvent_runAll (adversary : Adversary) (event : Outcome × Nat → Pro
     show (simulateQ KeygenUniform.rom (countAllHashes (experiment adversary))).run' ∅ =
       Prod.fst <$> (simulateQ KeygenUniform.rom (countAllHashes (experiment adversary))).run ∅
       from rfl, prEvent_map]
-  rfl
 
 end SlhDsaSecurity.MainTheorem

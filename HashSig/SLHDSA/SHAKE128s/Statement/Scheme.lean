@@ -441,11 +441,11 @@ def signLayers (secretSeed publicSeed : Digest) :
     (remaining : Nat) → Nat → Nat → LeafIndex → Digest →
       m (Fin remaining → XmssSignature)
   | 0, _, _, _, _ => pure Fin.elim0
-  | remaining + 1, layer, tree, leaf, message => do
-    let signature ← Merkle.sign message secretSeed publicSeed (address layer tree) leaf
+  | remaining + 1, layer, tree, leaf, message =>
+    Merkle.sign message secretSeed publicSeed (address layer tree) leaf >>= fun signature =>
     match remaining with
     | 0 => return Fin.cases signature Fin.elim0
-    | remaining + 1 =>
+    | remaining + 1 => do
       let root ← Merkle.publicKeyFromSignature leaf signature message publicSeed
         (address layer tree)
       let rest ← signLayers secretSeed publicSeed (remaining + 1) (layer + 1)

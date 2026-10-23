@@ -31,7 +31,7 @@ abbrev TreeTape (requests : Nat) := Fin requests → Leaf
 abbrev InstanceTape (requests : Nat) := Fin 10 → TreeTape requests
 abbrev Tape {ι : Type*} (loads : ι → Nat) := (i : ι) → InstanceTape (loads i)
 
-def leafMeasure : Measure Leaf := (PMF.uniformOfFintype Leaf).toMeasure
+def leafMeasure : Measure Leaf := uniformOn Set.univ
 def treeMeasure (requests : Nat) : Measure (TreeTape requests) :=
   Measure.pi (fun _ => leafMeasure)
 def instanceMeasure (requests : Nat) : Measure (InstanceTape requests) :=

@@ -37,7 +37,6 @@ theorem rom_run_inr_some (input : Bytes) (cache : QueryCache HashSpec) (cached :
       (pure (cached, cache) :
         ProbComp (OracleWorld.Range (Sum.inr input) × QueryCache HashSpec)) := by
   rw [DigestTape.rom_run_inr, QueryImpl.withCaching_run_some _ hcached]
-  rfl
 
 /-- The shared oracle's miss branch, likewise. -/
 theorem rom_run_inr_none (input : Bytes) (cache : QueryCache HashSpec)

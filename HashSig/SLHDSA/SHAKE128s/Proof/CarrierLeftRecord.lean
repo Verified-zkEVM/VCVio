@@ -39,6 +39,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CarrierLeftRecord
 
+variable {γ : Type}
+
 open Security RecorderView HandlerCarrier CarriedWitness PhaseFusion RecordedQueries
 open BracketedRun CarrierTail
 
@@ -206,8 +208,8 @@ theorem servedLog_leftRecord_carrierTail
       (CarrierCap.quiet_startAt walk.2)
   have hclearMiddle : middle.2.2.2.1.framing = none :=
     CarrierClearFraming.clear_phase rightKeep walk keys.1.1 _ 1 [] keys.2 middle hmiddle hquiet.1
-  have hlogged : ServedAgreement.CarrierLogged keys.1.1 (fun _ => none) middle.2.2.1 final.2.1 :=
-    CarrierServedLog.carrierLogged_run keys.1.1 (fun _ => none) middle.2.2.1 rightKeep walk _
+  have hlogged : ServedAgreement.CarrierLogged keys.1.1 ∅ middle.2.2.1 final.2.1 :=
+    CarrierServedLog.carrierLogged_run keys.1.1 ∅ middle.2.2.1 rightKeep walk _
       middle.2.2.2 final hlast hclearMiddle
       (CarrierServedLog.carrierLogged_phase rightKeep walk keys.1.1 hpk hpublic _ 1 keys.2
         hquiet.1 hquiet.2 middle hmiddle)

@@ -33,6 +33,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.VerifierTally
 
+variable {α : Type}
+
 open Security RecordedQueries SharePresent ShareEvent
 
 /-! ## Every input is charged or free -/

@@ -9,6 +9,7 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsCoverage
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsConcentrationExtended
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsPrefixCapacity
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Disclosures from an independent digest-view tape
@@ -64,36 +65,45 @@ def splitTape (requests : Nat) : Tape requests ≃ InstanceWord requests × Leaf
   right_inv := by intro pair; rfl
 
 theorem evalDist_instanceWord_uniform (requests : Nat) :
-    𝒟[instanceWord <$> ($ᵗ Tape requests : ProbComp (Tape requests))] =
-      𝒟[($ᵗ InstanceWord requests : ProbComp (InstanceWord requests))] := by
-  have hmap : instanceWord <$> ($ᵗ Tape requests : ProbComp (Tape requests)) =
-      Prod.fst <$> (splitTape requests <$> ($ᵗ Tape requests)) := by
-    simp [Functor.map_map, splitTape]
-  rw [hmap, evalDist_map,
-    evalDist_map_bijective_uniform_cross (α := Tape requests)
-      (splitTape requests) (splitTape requests).bijective,
-    ← evalDist_map]
-  exact evalDist_map_fst_uniformSample_prod
+    (instanceWord <$> ($ᵗ Tape requests : ProbComp (Tape requests))) =ᵈ
+      ($ᵗ InstanceWord requests : ProbComp (InstanceWord requests)) := by
+  refine EvalDistEq.of_forall_prEvent_eq fun p => ?_
+  rw [prEvent_map]
+  calc Pr{let tape ← ($ᵗ Tape requests : ProbComp (Tape requests))}[p (instanceWord tape)]
+      = Pr{let tape ← ($ᵗ Tape requests : ProbComp (Tape requests))}[
+          p (splitTape requests tape).1] := rfl
+    _ = Pr{let z ← ($ᵗ (InstanceWord requests × LeafWord requests) :
+          ProbComp (InstanceWord requests × LeafWord requests))}[p z.1] :=
+        SampleableType.prEvent_uniformSample_equiv (splitTape requests) (fun z => p z.1)
+    _ = _ := SampleableType.prEvent_uniformSample_fst p
 
 /-- VCVio's uniform sampler and the finite uniform probability measure agree on all events. -/
 theorem uniform_prob_eq_measure {α : Type} [Fintype α] [Nonempty α]
     [SampleableType α] [MeasurableSpace α] [DiscreteMeasurableSpace α]
     (event : α → Prop) :
-    Pr{let x ← ($ᵗ α : ProbComp α)}[event x] = (PMF.uniformOfFintype α).toMeasure {x | event x} := by
-  rw [SampleableType.prEvent_uniformSample, PMF.toMeasure_uniformOfFintype_apply _ MeasurableSet.of_discrete]
-  simp only [Fintype.card_subtype, Set.mem_setOf_eq]
+    Pr{let x ← ($ᵗ α : ProbComp α)}[event x] = uniformOn (Set.univ : Set α) {x | event x} := by
+  classical
+  rw [SampleableType.prEvent_uniformSample, uniformOn_univ]
+  have hset : {x | event x} = ((Finset.univ.filter event : Finset α) : Set α) := by
+    ext x; simp
+  rw [hset, Measure.count_apply_finset]
 
 /-- Exact identification of the full-view tape's load law with the proved occupancy law. -/
 theorem loads_probability {requests : Nat} (event : (Instance → Nat) → Prop) :
     Pr{let tape ← ($ᵗ Tape requests : ProbComp (Tape requests))}[event (loads tape)] =
       ForsConcentration.uniformLoads (2 ^ 63) requests {counts | event counts} := by
-  simp_rw [loads_eq_wordLoads]
-  rw [show (fun tape : Tape requests => event (ForsConcentration.wordLoads (instanceWord tape))) =
-    (fun word => event (ForsConcentration.wordLoads word)) ∘ instanceWord from rfl,
-    ← prEvent_map]
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_instanceWord_uniform requests)]
-  rw [uniform_prob_eq_measure, ForsConcentration.uniformLoads,
-    Measure.map_apply Measurable.of_discrete MeasurableSet.of_discrete]
-  rfl
+  calc Pr{let tape ← ($ᵗ Tape requests : ProbComp (Tape requests))}[event (loads tape)]
+      = Pr{let w ← instanceWord <$> ($ᵗ Tape requests : ProbComp (Tape requests))}[
+          event (ForsConcentration.wordLoads w)] := by
+        rw [prEvent_map]; simp_rw [loads_eq_wordLoads]
+    _ = Pr{let w ← ($ᵗ InstanceWord requests : ProbComp (InstanceWord requests))}[
+          event (ForsConcentration.wordLoads w)] :=
+        (evalDist_instanceWord_uniform requests).prEvent_eq _
+    _ = uniformOn (Set.univ : Set (InstanceWord requests))
+          {w | event (ForsConcentration.wordLoads w)} := uniform_prob_eq_measure _
+    _ = _ := by
+        rw [ForsConcentration.uniformLoads,
+          Measure.map_apply Measurable.of_discrete MeasurableSet.of_discrete]
+        rfl
 
 end SlhDsaSecurity.ForsDisclosureTape

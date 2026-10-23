@@ -7,6 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.TapeWatch
+import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # A watched value that is paid for as it is earned
@@ -39,6 +40,8 @@ open OracleComp OracleSpec ENNReal
 set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.SignedWatch
+
+variable {α β γ : Type}
 
 open DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedTape TapeWatch
 
@@ -327,10 +330,11 @@ theorem watchValue_le_of_cache (target : Bytes) (hits : HashOutput → Prop)
   unfold watchValue
   rw [hcache]
   dsimp only
-  by_cases hh : hits answer
-  · rw [if_pos hh]
-    split_ifs <;> simp
-  · rw [if_neg hh, if_neg (fun h => hh h.1)]
+  split_ifs with h1 h2 h2
+  · exact le_rfl
+  · exact absurd h1.1 h2
+  · exact zero_le
+  · exact le_rfl
 
 open scoped Classical in
 /-- **The product of two watched values is a supermartingale**, when the two are at different
@@ -352,7 +356,7 @@ theorem watchPair_step_le (leftKeep rightKeep : Bytes → σ → Prop) (first se
   · refine le_trans (le_of_eq (tsum_congr fun z => ?_)) (hconst _)
     by_cases hz : z ∈ support step
     · rw [tapeStep_inl leftKeep rightKeep coin state z hz]
-    · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]
+    · rw [prEvent_eq_zero_of_not_mem_support _ hz, zero_mul, zero_mul]
   · by_cases hfirst : input = first
     · by_cases hsecond : input = second
       · -- one input, two disjoint sets
@@ -366,17 +370,17 @@ theorem watchPair_step_le (leftKeep rightKeep : Bytes → σ → Prop) (first se
             by_cases h1 : firstHits z.1
             · by_cases h2 : secondHits z.1
               · exact absurd (hdisjoint hsecond z.1 h1 h2) id
-              · rw [if_neg h2] at hle2
+              · rw [ite_eq_right_iff.mpr (fun h => absurd h h2)] at hle2
                 rw [nonpos_iff_eq_zero.mp hle2, mul_zero, mul_zero]
-            · rw [if_neg h1] at hle1
+            · rw [ite_eq_right_iff.mpr (fun h => absurd h h1)] at hle1
               rw [nonpos_iff_eq_zero.mp hle1, zero_mul, mul_zero]
-          · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul]
+          · rw [prEvent_eq_zero_of_not_mem_support _ hz, zero_mul]
         · refine le_trans (le_of_eq (tsum_congr fun z => ?_)) (hconst _)
           by_cases hz : z ∈ support step
           · rw [watchValue_step_cached leftKeep rightKeep input firstHits input state hcached z hz,
               watchValue_step_cached leftKeep rightKeep second secondHits input state hcached z
                 hz]
-          · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]
+          · rw [prEvent_eq_zero_of_not_mem_support _ hz, zero_mul, zero_mul]
       · -- only the first moves
         calc ∑' z, Pr{let x ← step}[x = z] *
               (watchValue first firstHits z.2 * watchValue second secondHits z.2)
@@ -386,7 +390,7 @@ theorem watchPair_step_le (leftKeep rightKeep : Bytes → σ → Prop) (first se
               by_cases hz : z ∈ support step
               · rw [watchValue_step_ne leftKeep rightKeep second secondHits input hsecond state z
                   hz, mul_assoc]
-              · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul, zero_mul]
+              · rw [prEvent_eq_zero_of_not_mem_support _ hz, zero_mul, zero_mul, zero_mul]
           _ ≤ watchValue first firstHits state * watchValue second secondHits state := by
               rw [ENNReal.tsum_mul_right]
               exact mul_le_mul' (watchValue_step_le leftKeep rightKeep first firstHits _ state)
@@ -401,7 +405,7 @@ theorem watchPair_step_le (leftKeep rightKeep : Bytes → σ → Prop) (first se
               by_cases hz : z ∈ support step
               · rw [watchValue_step_ne leftKeep rightKeep first firstHits input hfirst state z
                   hz, mul_assoc, mul_comm (watchValue first firstHits state)]
-              · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul, zero_mul]
+              · rw [prEvent_eq_zero_of_not_mem_support _ hz, zero_mul, zero_mul, zero_mul]
           _ ≤ watchValue first firstHits state * watchValue second secondHits state := by
               rw [ENNReal.tsum_mul_right, mul_comm]
               exact mul_le_mul' le_rfl
@@ -411,7 +415,7 @@ theorem watchPair_step_le (leftKeep rightKeep : Bytes → σ → Prop) (first se
         by_cases hz : z ∈ support step
         · rw [watchValue_step_ne leftKeep rightKeep first firstHits input hfirst state z hz,
             watchValue_step_ne leftKeep rightKeep second secondHits input hsecond state z hz]
-        · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]
+        · rw [prEvent_eq_zero_of_not_mem_support _ hz, zero_mul, zero_mul]
 
 /-! ## Any recorder supermartingale, across the fused phase -/
 

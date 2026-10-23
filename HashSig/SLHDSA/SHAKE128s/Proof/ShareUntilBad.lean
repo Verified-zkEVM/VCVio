@@ -30,6 +30,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.ShareUntilBad
 
+variable {α : Type}
+
 open Security CanonicalGraph ShareGame
 
 /-! ## The open table inside the full one -/
@@ -42,8 +44,9 @@ theorem openAt_le_warm (setup : Setup) (served : List HashOutput) (input : Bytes
   obtain ⟨parent, rfl⟩ := Programming.cacheFrom_empty_canonical _ _ _ _ input hne
   rw [openAt, OpenCache.openCache, Programming.cacheFrom_lookup] at hopen
   split_ifs at hopen with hmem
-  · rw [Setup.warm, Programming.cacheFrom_lookup, if_pos (Programming.mem_order parent)]
+  · rw [Setup.warm, Programming.cacheFrom_lookup, ite_eq_left (Programming.mem_order parent)]
     exact hopen
+  · simp at hopen
 
 /-- The revealed digits never exceed the last chain position. -/
 theorem revealed_le (setup : Setup) (key : WotsKey) (chain : Fin chains) :
@@ -60,7 +63,7 @@ theorem sens_of_closed (setup : Setup) (served : List HashOutput) (input : Bytes
     (by rw [Setup.warm] at hwarm; rw [hwarm]; simp)
   have hnotOpen : parent ∉ OpenCache.openNodes (available setup served) := by
     intro hmem
-    rw [openAt, OpenCache.openCache, Programming.cacheFrom_lookup, if_pos hmem] at hclosed
+    rw [openAt, OpenCache.openCache, Programming.cacheFrom_lookup, ite_eq_left hmem] at hclosed
     exact absurd hclosed (by simp)
   rw [OpenCache.mem_openNodes] at hnotOpen
   push Not at hnotOpen
@@ -97,7 +100,7 @@ theorem route_eq (setup : Setup) (state : St) (input : Bytes)
       | some answer =>
         exact (hnotSens (sens_of_closed setup state.served input answer hwarm hopen)).elim
   unfold route
-  rw [if_pos rfl, if_neg Bool.false_ne_true, hsame]
+  rw [ite_eq_left rfl, ite_eq_right Bool.false_ne_true, hsame]
   cases openAt setup state.served input with
   | some value => rfl
   | none => simp [hnotPrf]
@@ -127,8 +130,8 @@ theorem route_digest_eq (setup : Setup) (hgood : setup.Good) (state : St)
     route true setup state (Hashing.messageInput randomizer setup.pk framed) =
       route false setup state (Hashing.messageInput randomizer setup.pk framed) := by
   classical
-  simp only [route, if_true, warm_messageInput setup hgood, Bool.false_eq_true, false_and,
-    if_false, true_and, hnotPrf, openAt_messageInput setup hgood]
+  simp only [route, ite_true, warm_messageInput setup hgood, Bool.false_eq_true, false_and,
+    ite_false, true_and, hnotPrf, openAt_messageInput setup hgood]
 
 /-! ## The step law off the flag -/
 
@@ -224,10 +227,14 @@ theorem probEvent_bad_eq (setup : Setup) {α : Type} (computation : OracleComp S
     (start : St) :
     Pr{let z ← (simulateQ (handler true setup) computation).run (start, false)}[z.2.2 = true] =
       Pr{let z ← (simulateQ (handler false setup) computation).run (start, false)}[z.2.2 = true] :=
-  OracleComp.ProgramLogic.Relational.probEvent_output_bad_eq' _ _
-    (fun queried state answer next => agree_good setup queried state answer next)
+  OracleComp.ProgramLogic.Relational.prEvent_simulateQ_run_bad_eq _ _ (fun s => s.2 = true)
+    (fun queried state hgood q => by
+      obtain ⟨inner, flag⟩ := state
+      obtain rfl : flag = false := by simpa using hgood
+      exact OracleComp.ProgramLogic.Relational.prEvent_and_not_flag_eq_of_forall_prEvent_eq
+        (fun answer next => agree_good setup queried inner answer next) q)
     (fun queried state hbad z hz => mono true setup queried state hbad z hz)
     (fun queried state hbad z hz => mono false setup queried state hbad z hz)
-    computation start
+    computation (start, false)
 
 end SlhDsaSecurity.ShareUntilBad

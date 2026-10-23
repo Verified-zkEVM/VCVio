@@ -91,7 +91,7 @@ theorem step_cached (input : Bytes) (initialCache : QueryCache HashSpec)
       obtain ⟨value, -, hpair⟩ := hstep
       have hcache : initialCache.cacheQuery input value = initialCache :=
         (congrArg Prod.snd hpair).trans hshape
-      have := congrFun hcache input
+      have := congrArg (fun cache : QueryCache HashSpec => cache input) hcache
       rw [QueryCache.cacheQuery_self, hcached] at this
       simp at this
 

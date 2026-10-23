@@ -44,6 +44,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.PhaseProvenance
 
+variable {α β : Type}
+
 open Security CacheReplay RecordedQueries CacheProvenance
 
 /-- The adversary's phase, run from a log and a cache, recording as it goes. -/

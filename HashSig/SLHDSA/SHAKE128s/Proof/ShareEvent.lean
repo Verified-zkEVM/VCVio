@@ -28,14 +28,17 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.ShareEvent
 
+variable {α : Type}
+
 open Security CanonicalGraph ShareGame ShareCouple ShareInv
 
 /-! ## The real cache is the table's union cache -/
 
 theorem realView_eq_unionCache (setup : Setup) (state : St) :
     realView setup state = RedrawCell.unionCache setup.publicSeed setup.table (merged setup state) := by
-  funext input
-  rw [RedrawCell.unionCache, RedrawCell.openCache_total]
+  ext input : 1
+  rw [realView, RedrawCell.unionCache, QueryCache.ofFn_apply, QueryCache.ofFn_apply,
+    RedrawCell.openCache_total]
   rfl
 
 /-- **The key the real cache generates is the setup's.** -/
@@ -148,6 +151,7 @@ theorem realView_eq_visible (setup : Setup) (p : St × Bool) (hinv : Inv setup p
     rw [hflag] at this
     cases this
   unfold visible
+  rw [QueryCache.ofFn_apply]
   cases hwarm : setup.warm input with
   | some answer =>
     rw [realView_of_warm setup p.1 input answer hwarm]
@@ -160,10 +164,10 @@ theorem realView_eq_visible (setup : Setup) (p : St × Bool) (hinv : Inv setup p
       exact absurd (Or.inl (ShareUntilBad.sens_of_closed setup p.1.served input answer hwarm hopen))
         hnot
   | none =>
-    rw [realView_of_not_warm setup p.1 input hwarm, merged]
+    rw [realView_of_not_warm setup p.1 input hwarm, merged, QueryCache.ofFn_apply]
     have hprf : ¬ IsPrfInput setup input := fun h =>
       hnot (Or.inr (ShareUntilBad.prfClass_of_isPrfInput setup input h))
-    rw [if_neg hprf]
+    rw [ite_eq_right hprf]
     cases hopen : openAt setup p.1.served input with
     | none => rfl
     | some b =>

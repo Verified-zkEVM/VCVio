@@ -38,6 +38,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CarrierFiles
 
+variable {α : Type}
+
 open Security RecorderView HandlerCarrier CarriedWitness ServedAgreement
 
 variable (pk : PublicKey)
@@ -369,8 +371,9 @@ theorem run_noticingRecorderOf_forget (rightKeep : Bytes → State → Prop) {α
     rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, map_bind, simulateQ_bind,
       simulateQ_spec_query, StateT.run_bind,
       ← noticingRecorderOf_forget_step pk rightKeep queried state]
-    simp only [map_eq_bind_pure_comp, bind_assoc]
-    exact bind_congr fun step => ih step.1 step.2
+    simp only [map_eq_bind_pure_comp, bind_assoc, Function.comp_apply, pure_bind]
+    refine bind_congr fun step => ?_
+    simpa only [map_eq_bind_pure_comp] using ih step.1 step.2
 
 /-- **The law `ServingForget` asks of the handler under a bracketed phase.** -/
 theorem forgetsAlong_carrierRecorder (rightKeep : Bytes → State → Prop) :

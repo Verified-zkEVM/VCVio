@@ -42,6 +42,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.PhaseRightRecord
 
+variable {α β : Type}
+
 open Security CacheReplay RecordedQueries SplitPrefix SignerRightRecord
 
 /-! ## The phase, run under the recorder -/

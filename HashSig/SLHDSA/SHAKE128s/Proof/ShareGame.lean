@@ -138,7 +138,8 @@ noncomputable def openAt (setup : Setup) (served : List HashOutput) : QueryCache
 /-- The cache the claims are read off: the open table, and then the oracle's entries. The open
 table comes first, as it does in the blind router (`route false`): an input the oracle cached
 while it was closed and that has since opened reads as the table answers it now. -/
-noncomputable def visible (setup : Setup) (state : St) : QueryCache HashSpec := fun input =>
+noncomputable def visible (setup : Setup) (state : St) : QueryCache HashSpec :=
+  QueryCache.ofFn fun input =>
   match openAt setup state.served input with
   | some value => some value
   | none => state.cache input

@@ -31,6 +31,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.AdversaryQueries
 
+variable {α β : Type}
+
 open Security
 
 /-! ## Charged work, as a number -/

@@ -86,12 +86,8 @@ theorem probEvent_forget {fused : FusedTail} {adversary : Adversary}
     (hforget : ForgetsTo fused adversary) (event : SharedJoin.RecordedPair → Prop) :
     Pr{let pair ← pairedOf fused adversary}[event (forgetRecordings pair)] =
       Pr{let x ← RandomiserRecord.recordedPairedRun adversary}[event x] := by
-  classical
-  have hmap : Pr{let pair ← pairedOf fused adversary}[event (forgetRecordings pair)] =
-      Pr{let x ← forgetRecordings <$> pairedOf fused adversary}[event x] :=
-    (prEvent_map (pairedOf fused adversary) forgetRecordings event).symm
-  rw [hmap, OracleComp.prEvent_eq_tsum_ite, OracleComp.prEvent_eq_tsum_ite]
-  exact tsum_congr fun pair => by rw [hforget.1 pair]
+  rw [← prEvent_map (pairedOf fused adversary) forgetRecordings event]
+  exact (evalDistEq_of_forall_prEvent_eq_output hforget.1).prEvent_eq event
 
 /-! ## Supports of the paired run -/
 

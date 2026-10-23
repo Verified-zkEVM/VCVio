@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.Hashing
 public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Message inputs versus bounded structural addresses
@@ -66,7 +67,7 @@ theorem message_tweakable_overlap {randomizer seed : Digest} {pk : PublicKey}
       bytesBE n seed ++ (address.toBytes ++ payload) := by
     simpa only [Hashing.messageInput, Hashing.tweakableInput, List.append_assoc] using h
   obtain ⟨hrandomizer, hrest⟩ := List.append_inj heq (by simp)
-  obtain ⟨haddress, hmessage⟩ := List.append_inj hrest (by simp [n])
+  obtain ⟨haddress, hmessage⟩ := List.append_inj hrest (by rw [List.length_append, length_bytesBE, length_bytesBE]; simp [n])
   exact ⟨bytesBE_injective n hrandomizer, haddress, hmessage⟩
 
 theorem message_tweakable_ne {randomizer seed : Digest} {pk : PublicKey}
@@ -95,43 +96,25 @@ theorem publicBytes_injective : Function.Injective publicBytes := by
 theorem prob_publicBytes_eq_le (target : Bytes) :
     Pr{let pair ← ($ᵗ (Digest × Digest) : ProbComp _)}[publicBytes pair = target] ≤
       1 / ((2 ^ 256 : Nat) : ℝ≥0∞) := by
-  classical
-  by_cases hexists : ∃ pair, publicBytes pair = target
-  · obtain ⟨chosen, hchosen⟩ := hexists
-    have hevent : (fun pair => publicBytes pair = target) = (fun pair => pair = chosen) := by
-      funext pair
-      apply propext
-      exact ⟨fun h => publicBytes_injective (h.trans hchosen.symm), fun h => h ▸ hchosen⟩
-    rw [hevent, probEvent_eq_eq_probOutput, probOutput_uniformSample]
-    have hsize : Fintype.card (Digest × Digest) = 2 ^ 256 := by
-      norm_num [Digest, n, Fintype.card_prod, card_bitVec]
-    rw [hsize, one_div]
-  · have hevent : (fun pair => publicBytes pair = target) = (fun _ => False) := by
-      funext pair
-      apply propext
-      exact ⟨fun h => hexists ⟨pair, h⟩, False.elim⟩
-    rw [hevent]
-    simp
+  refine (SampleableType.prEvent_uniformSample_apply_eq_le publicBytes_injective target).trans
+    (le_of_eq ?_)
+  have hsize : Fintype.card (Digest × Digest) = 2 ^ 256 := by
+    norm_num [Digest, n, Fintype.card_prod, Fintype.card_bitVec]
+  rw [Nat.card_eq_fintype_card, hsize, one_div]
 
 /-- A distributional input-separation bound, before connecting it to key generation. -/
 theorem prob_possible_le :
     Pr{let x ← ($ᵗ (Digest × Digest) : ProbComp _)}[Possible x] ≤
       1 / ((2 ^ 165 : Nat) : ℝ≥0∞) := by
   classical
-  have hexists : Possible = fun pair => ∃ parts ∈ (Finset.univ : Finset Prefix),
-      publicBytes pair = prefixBytes parts := by funext pair; simp [Possible]
-  rw [hexists]
-  calc
-    _ ≤ ∑ parts : Prefix,
-        Pr{let pair ← ($ᵗ (Digest × Digest) : ProbComp _)}[publicBytes pair = prefixBytes parts] :=
-      probEvent_exists_finset_le_sum _ _ _
-    _ ≤ ∑ _ : Prefix, (1 / ((2 ^ 256 : Nat) : ℝ≥0∞)) :=
-      Finset.sum_le_sum fun parts _ => prob_publicBytes_eq_le (prefixBytes parts)
-    _ = 1 / ((2 ^ 165 : Nat) : ℝ≥0∞) := by
-      have hcard : Fintype.card Prefix = 2 ^ 91 := by
-        norm_num [Prefix, Fintype.card_prod, card_bitVec]
-      simp only [Finset.sum_const, Finset.card_univ, hcard, nsmul_eq_mul]
-      apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
-      norm_num
+  refine le_trans (prEvent_exists_le_card_mul _
+    (fun (parts : Prefix) (pair : Digest × Digest) => publicBytes pair = prefixBytes parts)
+    fun parts => prob_publicBytes_eq_le (prefixBytes parts)) ?_
+  have hcard : Fintype.card Prefix = 2 ^ 91 := by
+    norm_num [Prefix, Fintype.card_prod, Fintype.card_bitVec]
+  rw [hcard]
+  apply le_of_eq
+  apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
+  norm_num
 
 end SlhDsaSecurity.HashSeparation

@@ -62,6 +62,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.SigningFaithful
 
+variable {α : Type}
+
 open Security CacheReplay StrippedGame AdversaryQueries
 
 /-- The pair of handlers the adversary's phase runs against. -/

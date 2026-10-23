@@ -16,7 +16,7 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.VerifierNaturality
 
-variable {m : Type → Type} [Monad m] [LawfulMonad m]
+variable {m : Type → Type} [Monad m] [LawfulMonad m] {α β : Type}
 variable (impl : QueryImpl HashSpec m)
 
 theorem sequenceFin_simulate {size : Nat} (f : Fin size → OracleComp HashSpec α) :

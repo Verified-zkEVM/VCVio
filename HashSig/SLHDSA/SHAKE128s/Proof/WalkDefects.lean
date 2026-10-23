@@ -30,6 +30,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.WalkDefects
 
+variable {α β : Type}
+
 open Security CanonicalGraph WarmedGame
 
 /-! ## Averaging -/
@@ -37,14 +39,8 @@ open Security CanonicalGraph WarmedGame
 /-- **A bound that holds after every prefix holds over the bind.** -/
 theorem probEvent_bind_le {α β : Type} (run : ProbComp α) (next : α → ProbComp β)
     (event : β → Prop) (bound : ℝ≥0∞) (hnext : ∀ value, Pr{let x ← next value}[event x] ≤ bound) :
-    Pr{let x ← run >>= next}[event x] ≤ bound := by
-  rw [OracleComp.prEvent_bind_eq_tsum]
-  calc ∑' value, Pr{let x ← run}[x = value] * Pr{let x ← next value}[event x]
-      ≤ ∑' value, Pr{let x ← run}[x = value] * bound :=
-        ENNReal.tsum_le_tsum fun value => mul_le_mul' le_rfl (hnext value)
-    _ = (∑' value, Pr{let x ← run}[x = value]) * bound := ENNReal.tsum_mul_right
-    _ ≤ 1 * bound := mul_le_mul' (OracleComp.tsum_prEvent_le_one _) le_rfl
-    _ = bound := one_mul _
+    Pr{let x ← run >>= next}[event x] ≤ bound :=
+  prEvent_bind_le_of_forall_le run next event hnext
 
 open scoped Classical in
 /-- **An event settled by the prefix costs what it costs there.** Whatever the continuation
@@ -52,20 +48,10 @@ does, an outcome in the event comes from a prefix in the prefix's event. -/
 theorem probEvent_bind_le_of_prefix {α β : Type} (run : ProbComp α) (next : α → ProbComp β)
     (event : β → Prop) (prefixEvent : α → Prop)
     (hprefix : ∀ value, ∀ result ∈ support (next value), event result → prefixEvent value) :
-    Pr{let x ← run >>= next}[event x] ≤ Pr{let x ← run}[prefixEvent x] := by
-  classical
-  rw [OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_eq_tsum_ite]
-  refine ENNReal.tsum_le_tsum fun value => ?_
-  by_cases hvalue : prefixEvent value
-  · rw [if_pos hvalue]
-    calc Pr{let x ← run}[x = value] * Pr{let x ← next value}[event x]
-        ≤ Pr{let x ← run}[x = value] * 1 := by
-          refine mul_le_mul' (le_refl (Pr{let x ← run}[x = value])) ?_
-          exact (prEvent_le_one _)
-      _ = Pr{let x ← run}[x = value] := mul_one _
-  · rw [if_neg hvalue,
-      probEvent_eq_zero fun result hresult hevent => hvalue (hprefix value result hresult hevent),
-      mul_zero]
+    Pr{let x ← run >>= next}[event x] ≤ Pr{let x ← run}[prefixEvent x] :=
+  prEvent_bind_le_prEvent_of_forall_eq_zero run next prefixEvent event fun value hvalue =>
+    prEvent_eq_zero_of_forall_mem_support _ _ fun result hresult hevent =>
+      hvalue (hprefix value result hresult hevent)
 
 open scoped Classical in
 /-- **A bound that holds after every good prefix holds over the pair, at the cost of the bad
@@ -75,33 +61,10 @@ theorem probEvent_bind_pair_split_le {α β : Type} (first : ProbComp α) (rest 
     (hrest : ∀ value ∈ support first, ¬ bad value → Pr{let x ← rest value}[(event value) x] ≤ bound) :
     Pr{let pair ← (do let value ← first; let result ← rest value; pure (value, result))}[event pair.1 pair.2] ≤
       bound + Pr{let x ← first}[bad x] := by
-  classical
-  rw [OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_eq_tsum_ite]
-  calc ∑' value, Pr{let x ← first}[x = value] *
-        Pr{let pair ← rest value >>= fun result => pure (value, result)}[event pair.1 pair.2]
-      = ∑' value, Pr{let x ← first}[x = value] * Pr{let x ← rest value}[(event value) x] :=
-        tsum_congr fun value => congrArg _ (by rw [bind_pure_comp, prEvent_map]; rfl)
-    _ ≤ ∑' value, (Pr{let x ← first}[x = value] * bound +
-          (if bad value then Pr{let x ← first}[x = value] else 0)) := by
-        refine ENNReal.tsum_le_tsum fun value => ?_
-        by_cases hbad : bad value
-        · rw [if_pos hbad]
-          calc Pr{let x ← first}[x = value] * Pr{let x ← rest value}[(event value) x]
-              ≤ Pr{let x ← first}[x = value] * 1 := by
-                refine mul_le_mul' (le_refl (Pr{let x ← first}[x = value])) ?_
-                exact (prEvent_le_one _)
-            _ = Pr{let x ← first}[x = value] := mul_one _
-            _ ≤ Pr{let x ← first}[x = value] * bound + Pr{let x ← first}[x = value] := le_add_self
-        · rw [if_neg hbad, add_zero]
-          by_cases hmem : value ∈ support first
-          · exact mul_le_mul' le_rfl (hrest value hmem hbad)
-          · rw [(prEvent_eq_zero_of_not_mem_support _) hmem, zero_mul, zero_mul]
-    _ = (∑' value, Pr{let x ← first}[x = value] * bound) +
-          ∑' value, (if bad value then Pr{let x ← first}[x = value] else 0) := ENNReal.tsum_add
-    _ ≤ bound + ∑' value, (if bad value then Pr{let x ← first}[x = value] else 0) := by
-        gcongr
-        rw [ENNReal.tsum_mul_right]
-        exact le_trans (mul_le_mul' (OracleComp.tsum_prEvent_le_one _) le_rfl) (le_of_eq (one_mul _))
+  rw [add_comm]
+  refine prEvent_bind_le_prEvent_add_of_support first _ bad _ fun value hmem hbad => ?_
+  rw [bind_pure_comp, prEvent_map]
+  exact hrest value hmem hbad
 
 /-! ## The seeds differ -/
 
@@ -155,13 +118,13 @@ theorem value_topNode (secretSeed publicSeed : Digest) :
 omit [HasQuery HashSpec Id] in
 /-- **A coordinate of the walk's output table, truncated, is a uniform digest.** -/
 theorem outputs_coordinate_uniform (parent : StructuralNode) :
-    𝒟[(fun outputs : Programming.Outputs => Hashing.truncate (outputs parent)) <$>
-        ($ᵗ Programming.Outputs : ProbComp Programming.Outputs)] =
-      𝒟[($ᵗ Digest : ProbComp Digest)] := by
+    ((fun outputs : Programming.Outputs => Hashing.truncate (outputs parent)) <$>
+        ($ᵗ Programming.Outputs : ProbComp Programming.Outputs)) =ᵈ
+      ($ᵗ Digest : ProbComp Digest) := by
   classical
-  have hcoordinate : 𝒟[(fun outputs : Programming.Outputs => outputs parent) <$>
-      ($ᵗ Programming.Outputs : ProbComp Programming.Outputs)] =
-      𝒟[($ᵗ HashOutput : ProbComp HashOutput)] := by
+  have hcoordinate : ((fun outputs : Programming.Outputs => outputs parent) <$>
+      ($ᵗ Programming.Outputs : ProbComp Programming.Outputs)) =ᵈ
+      ($ᵗ HashOutput : ProbComp HashOutput) := by
     let split : Programming.Outputs ≃ HashOutput × ({other // other ≠ parent} → HashOutput) :=
       Equiv.funSplitAt parent HashOutput
     have hmap : (fun outputs : Programming.Outputs => outputs parent) <$>
@@ -169,20 +132,19 @@ theorem outputs_coordinate_uniform (parent : StructuralNode) :
         Prod.fst <$> (split <$> ($ᵗ Programming.Outputs : ProbComp Programming.Outputs)) := by
       rw [Functor.map_map]
       congr 1
-    have hinner : 𝒟[split <$> ($ᵗ Programming.Outputs : ProbComp Programming.Outputs)] =
-        𝒟[($ᵗ (HashOutput × ({other // other ≠ parent} → HashOutput)) :
-          ProbComp (HashOutput × ({other // other ≠ parent} → HashOutput)))] :=
-      evalDist_map_bijective_uniform_cross (α := Programming.Outputs)
-        (β := HashOutput × ({other // other ≠ parent} → HashOutput)) split split.bijective
-    rw [hmap, evalDist_map, hinner, ← evalDist_map]
-    exact evalDist_map_fst_uniformSample_prod
+    rw [hmap]
+    refine ((SampleableType.map_uniformSample_evalDistEq_of_bijective
+      split.bijective).map Prod.fst).trans ?_
+    refine EvalDistEq.of_forall_prEvent_eq fun p => ?_
+    rw [prEvent_map]
+    exact SampleableType.prEvent_uniformSample_fst p
   have hcomp : (fun outputs : Programming.Outputs => Hashing.truncate (outputs parent)) <$>
         ($ᵗ Programming.Outputs : ProbComp Programming.Outputs) =
       Hashing.truncate <$> ((fun outputs : Programming.Outputs => outputs parent) <$>
         ($ᵗ Programming.Outputs : ProbComp Programming.Outputs)) := by
     rw [Functor.map_map]
-  rw [hcomp, evalDist_map, hcoordinate, ← evalDist_map]
-  exact KeygenUniform.truncate_uniform
+  rw [hcomp]
+  exact (hcoordinate.map Hashing.truncate).trans KeygenUniform.truncate_uniform
 
 omit [HasQuery HashSpec Id] in
 /-- **The two halves of the public key form an address prefix with probability `2 ^ -165`.**
@@ -192,34 +154,28 @@ theorem prob_possible_walk :
     Pr{let walk ← graphWalk}[HashSeparation.Possible (walk.1.1.2.2, walk.1.2 (.structural topNode))] ≤
       1 / ((2 ^ 165 : Nat) : ℝ≥0∞) := by
   classical
-  have hjoint : 𝒟[(do
-        let seed ← ($ᵗ Digest : ProbComp Digest)
-        (fun root => (seed, root)) <$> ($ᵗ Digest : ProbComp Digest))] =
-      𝒟[($ᵗ (Digest × Digest) : ProbComp (Digest × Digest))] := rfl
-  have hsum : ∑' publicSeed : Digest, Pr{let x ← ($ᵗ Digest : ProbComp Digest)}[x = publicSeed] *
-        Pr{let root ← ($ᵗ Digest : ProbComp Digest)}[HashSeparation.Possible (publicSeed, root)] ≤ 1 / ((2 ^ 165 : Nat) : ℝ≥0∞) := by
-    refine le_trans (le_of_eq ?_) HashSeparation.prob_possible_le
-    rw [← probEvent_congr' (fun _ _ => Iff.rfl) hjoint, OracleComp.prEvent_bind_eq_tsum]
-    exact tsum_congr fun publicSeed => congrArg _ (by rw [prEvent_map]; rfl)
+  have hroot : ∀ publicSeed : Digest,
+      Pr{let outputs ← ($ᵗ Programming.Outputs : ProbComp Programming.Outputs)}[
+          HashSeparation.Possible (publicSeed, Hashing.truncate (outputs topNode))] =
+        Pr{let root ← ($ᵗ Digest : ProbComp Digest)}[HashSeparation.Possible (publicSeed, root)] := by
+    intro publicSeed
+    have h := (outputs_coordinate_uniform topNode).prEvent_eq
+      (fun root => HashSeparation.Possible (publicSeed, root))
+    rwa [prEvent_map] at h
   rw [graphWalk_eq, seeds]
   simp only [bind_assoc, pure_bind]
-  refine probEvent_bind_le _ _ _ _ fun secretSeed => ?_
-  refine probEvent_bind_le _ _ _ _ fun prfSeed => ?_
-  rw [OracleComp.prEvent_bind_eq_tsum]
-  refine le_trans (le_of_eq (tsum_congr fun publicSeed => congrArg _ ?_)) hsum
-  have hlaw : 𝒟[(simulateQ randomOracle
-        (Programming.warmup publicSeed secretSeed)).run ∅ >>=
-        fun result => pure (((secretSeed, prfSeed, publicSeed), result.1), result.2)] =
-      𝒟[((fun outputs : Programming.Outputs =>
-            (Programming.cellsOfOutputs secretSeed outputs,
-              Programming.cacheFrom publicSeed (Programming.cellsOfOutputs secretSeed outputs)
-                outputs Programming.order ∅)) <$>
-          ($ᵗ Programming.Outputs : ProbComp Programming.Outputs)) >>=
-        fun result => pure (((secretSeed, prfSeed, publicSeed), result.1), result.2)] := by
-    rw [evalDist_bind, evalDist_bind, Programming.warmup_uniform]
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) hlaw, bind_map_left, bind_pure_comp, prEvent_map]
-  rw [← probEvent_congr' (fun _ _ => Iff.rfl) (outputs_coordinate_uniform topNode),
-    prEvent_map]
-  rfl
+  refine prEvent_bind_le_of_forall_le _ _ _ fun secretSeed => ?_
+  refine prEvent_bind_le_of_forall_le _ _ _ fun prfSeed => ?_
+  have hwarm := EvalDistEq.bind_right ($ᵗ Digest : ProbComp Digest) fun publicSeed =>
+    (Programming.warmup_uniform publicSeed secretSeed).bind_left
+      (fun result => (pure (((secretSeed, prfSeed, publicSeed), result.1), result.2) :
+        ProbComp (((Digest × Digest × Digest) × Cells) × QueryCache HashSpec)))
+  rw [hwarm.prEvent_eq]
+  simp only [prEvent_norm]
+  refine le_trans (le_of_eq ?_) HashSeparation.prob_possible_le
+  rw [SampleableType.prEvent_uniformSample_prod]
+  let _ : MeasurableSpace Digest := ⊤
+  rw [prEvent_bind_of_discrete, prEvent_bind_of_discrete]
+  exact MeasureTheory.lintegral_congr fun publicSeed => hroot publicSeed
 
 end SlhDsaSecurity.WalkDefects

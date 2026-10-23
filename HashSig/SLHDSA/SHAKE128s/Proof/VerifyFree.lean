@@ -38,6 +38,8 @@ set_option maxRecDepth 2000
 
 namespace SlhDsaSecurity.VerifyFree
 
+variable {α β : Type}
+
 open VerificationQueries
 
 /-- An input is **free** at a public seed: it locates no sensitive node, and it is prefixed by
@@ -54,7 +56,7 @@ theorem freeCost_of_free {publicSeed : Digest} {input : Bytes} (h : Free publicS
     freeCost publicSeed input = 1 := by
   classical
   unfold freeCost
-  rw [if_pos h]
+  exact ite_eq_left h
 
 /-- **A tweakable input whose payload is not one cell is free.** -/
 theorem free_tweakableInput (publicSeed : Digest) (address : Address) (payload : Bytes)
@@ -64,7 +66,7 @@ theorem free_tweakableInput (publicSeed : Digest) (address : Address) (payload :
   refine ⟨?_, ⟨address.toBytes ++ payload, by simp [Hashing.tweakableInput, List.append_assoc]⟩⟩
   change GraphStakes.locate publicSeed _ = none
   unfold GraphStakes.locate
-  rw [dif_neg]
+  rw [dite_eq_right]
   rintro ⟨node, cell, hinput⟩
   have hpayload := (Hashing.tweakableInput_injective hinput).2.2
   apply hlength
@@ -72,15 +74,41 @@ theorem free_tweakableInput (publicSeed : Digest) (address : Address) (payload :
 
 /-- A two-cell payload, in either order. -/
 theorem length_pair (first second : Digest) : (bytesBE n first ++ bytesBE n second).length ≠ n := by
+  rw [List.length_append, length_bytesBE, length_bytesBE]
   simp [n]
 
 /-! ## Handler-independent lower bounds on free queries -/
+
+/-- Lower bounds compose along `bind` using only the elimination rules of a lawful attachment. -/
+private theorem queryBoundedBelowBy_bind_of_lawful {m : Type → Type} [Monad m] [LawfulMonad m]
+    [MonadAttach m] [LawfulMonadAttach m] {oa : AddWriterT ℕ m α} {f : α → AddWriterT ℕ m β}
+    {n₁ n₂ : ℕ} (h₁ : AddWriterT.QueryBoundedBelowBy oa n₁)
+    (h₂ : ∀ a, AddWriterT.QueryBoundedBelowBy (f a) n₂) :
+    AddWriterT.QueryBoundedBelowBy (oa >>= f) (n₁ + n₂) := by
+  intro z hz
+  rw [WriterT.run_bind] at hz
+  obtain ⟨⟨a, wa⟩, haw, hz⟩ := LawfulMonadAttach.canReturn_bind_imp' hz
+  obtain ⟨⟨b, wb⟩, hbw, rfl⟩ := LawfulMonadAttach.canReturn_map_imp' hz
+  simpa using add_le_add (h₁ (a, wa) haw) (h₂ a (b, wb) hbw)
+
+/-- One instrumented query carries its own cost, using only a lawful attachment. -/
+private theorem queryBoundedBelowBy_withAddCost_of_lawful {m : Type → Type} [Monad m]
+    [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m] (impl : QueryImpl HashSpec m)
+    (cost : Bytes → ℕ) (input : Bytes) :
+    AddWriterT.QueryBoundedBelowBy (impl.withAddCost cost input) (cost input) := by
+  intro z hz
+  have hrun : (impl.withAddCost cost input).run =
+      (fun a => (a, Multiplicative.ofAdd (cost input))) <$> impl input := by
+    simp [QueryImpl.withAddCost_apply, AddWriterT.addTell, WriterT.run_bind]
+  rw [hrun] at hz
+  obtain ⟨a, -, rfl⟩ := LawfulMonadAttach.canReturn_map_imp' hz
+  exact le_refl _
 
 /-- Every reachable trace makes at least `lower` free queries, under every oracle implementation. -/
 @[irreducible] def FreeBounds (publicSeed : Digest) (computation : OracleComp HashSpec α)
     (lower : Nat) : Prop :=
   ∀ (m : Type → Type) [Monad m] [LawfulMonad m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] (impl : QueryImpl HashSpec m),
+    [MonadAttach m] [LawfulMonadAttach m] (impl : QueryImpl HashSpec m),
     AddWriterT.QueryBoundedBelowBy
       (simulateQ (impl.withAddCost (freeCost publicSeed)) computation) lower
 
@@ -103,7 +131,7 @@ theorem FreeBounds.bind {computation : OracleComp HashSpec α} {next : α → Or
   unfold FreeBounds at h hnext ⊢
   intro m _ _ _ _ impl
   rw [simulateQ_bind]
-  exact AddWriterT.queryBoundedBelowBy_bind (h m impl) (fun value => hnext value m impl)
+  exact queryBoundedBelowBy_bind_of_lawful (h m impl) (fun value => hnext value m impl)
 
 theorem FreeBounds.map {computation : OracleComp HashSpec α} {lower : Nat}
     (h : FreeBounds publicSeed computation lower) (f : α → β) :
@@ -118,13 +146,9 @@ theorem FreeBounds.query_bind (input : Bytes) {next : HashOutput → OracleComp 
   unfold FreeBounds at hnext ⊢
   intro m _ _ _ _ impl
   rw [simulateQ_bind, simulateQ_spec_query]
-  have hquery : AddWriterT.QueryBoundedBelowBy
-      (impl.withAddCost (freeCost publicSeed) input) (freeCost publicSeed input) := by
-    rw [QueryImpl.withAddCost_apply]
-    simpa only [Nat.add_zero] using AddWriterT.queryBoundedBelowBy_bind
-      (AddWriterT.queryBoundedBelowBy_addTell (m := m) (freeCost publicSeed input))
-      (fun _ => AddWriterT.queryBoundedBelowBy_monadLift (impl input))
-  exact AddWriterT.queryBoundedBelowBy_bind hquery (fun output => hnext output m impl)
+  exact queryBoundedBelowBy_bind_of_lawful
+    (queryBoundedBelowBy_withAddCost_of_lawful impl (freeCost publicSeed) input)
+    (fun output => hnext output m impl)
 
 theorem tweakable_free (address : Address) (payload : Bytes) (hlength : payload.length ≠ n) :
     FreeBounds publicSeed
@@ -264,17 +288,42 @@ noncomputable def freeCounted (publicSeed : Digest) (computation : OracleComp Ha
   (simulateQ ((QueryImpl.ofLift HashSpec (OracleComp HashSpec)).withAddCost (freeCost publicSeed))
     computation).run
 
+/-- Simulation through a stateful implementation can only shrink the support, using only the
+elimination rules of a lawful attachment on the base monad. -/
+private theorem mem_support_of_mem_support_simulateQ_run {ι : Type} {spec : OracleSpec ι}
+    {m : Type → Type} [Monad m] [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m]
+    {σ γ : Type} (impl : QueryImpl spec (StateT σ m)) (oa : OracleComp spec γ) (s : σ)
+    {z : γ × σ} (hz : MonadAttach.CanReturn ((simulateQ impl oa).run s) z) :
+    z.1 ∈ support oa := by
+  induction oa using OracleComp.inductionOn generalizing s z with
+  | pure y =>
+    simp only [simulateQ_pure, StateT.run_pure] at hz
+    have := LawfulMonadAttach.eq_of_canReturn_pure hz
+    simp [← this]
+  | query_bind t k ih =>
+    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind] at hz
+    obtain ⟨⟨u, s'⟩, -, hrest⟩ := LawfulMonadAttach.canReturn_bind_imp' hz
+    exact (mem_support_bind_iff _ _ _).2 ⟨u, mem_support_query t u, ih u s' hrest⟩
+
+private theorem mem_support_of_mem_support_simulateQ_run' {ι : Type} {spec : OracleSpec ι}
+    {m : Type → Type} [Monad m] [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m]
+    {σ γ : Type} (impl : QueryImpl spec (StateT σ m)) (oa : OracleComp spec γ) (s : σ) {x : γ}
+    (hx : x ∈ support ((simulateQ impl oa).run' s)) : x ∈ support oa := by
+  rw [StateT.run'_eq] at hx
+  obtain ⟨z, hz, rfl⟩ := LawfulMonadAttach.canReturn_map_imp' hx
+  exact mem_support_of_mem_support_simulateQ_run impl oa s hz
+
 /-- The bound survives any stateful implementation and any initial state, including a
 random-oracle cache: instrumentation precedes the implementation. -/
 theorem FreeBounds.simulated {m : Type → Type} [Monad m] [LawfulMonad m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    [MonadAttach m] [LawfulMonadAttach m]
     {σ : Type} {computation : OracleComp HashSpec α} {lower : Nat}
     (h : FreeBounds publicSeed computation lower) (impl : QueryImpl HashSpec (StateT σ m))
     (initial : σ) (result : α × Multiplicative Nat)
     (hresult : result ∈ support ((simulateQ impl (freeCounted publicSeed computation)).run' initial)) :
     lower ≤ Multiplicative.toAdd result.2 := by
-  have hfree := OracleComp.support_simulateQ_run'_subset impl (freeCounted publicSeed computation)
-    initial hresult
+  have hfree := mem_support_of_mem_support_simulateQ_run' impl
+    (freeCounted publicSeed computation) initial hresult
   unfold FreeBounds at h
   exact h (OracleComp HashSpec) (QueryImpl.ofLift HashSpec (OracleComp HashSpec)) result hfree
 

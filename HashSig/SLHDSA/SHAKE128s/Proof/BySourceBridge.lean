@@ -35,6 +35,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.BySourceBridge
 
+variable {α β : Type}
+
 open Security
 
 /-! ## One run, counted twice -/
@@ -78,15 +80,17 @@ theorem map_fst_runBySource (adversary : Adversary) :
 theorem advantage_securityGame (adversary : Adversary) :
     securityGame.advantage () adversary = totalAdvantage adversary := by
   unfold Xmss.SecurityGame.advantage totalAdvantage
-  change Pr{let result ← (fun result => (decide (Wins result.1), result.2)) <$> runBySource adversary}[result.1 = true] = _
-  calc Pr{let result ← (fun result => (decide (Wins result.1), result.2)) <$> runBySource adversary}[result.1 = true]
-      = Pr{let x ← Prod.fst <$> runBySource adversary}[Wins x] := by
+  change Pr{let result ← ((fun result => (decide (Wins result.1), result.2)) <$>
+      runBySource adversary)}[result.1 = true] = _
+  calc Pr{let result ← ((fun result => (decide (Wins result.1), result.2)) <$>
+        runBySource adversary)}[result.1 = true]
+      = Pr{let outcome ← (Prod.fst <$> runBySource adversary)}[Wins outcome] := by
         rw [prEvent_map, prEvent_map]
-        exact probEvent_congr' (fun result _ => by simp) rfl
-    _ = Pr{let x ← Prod.fst <$> runAll adversary}[Wins x] := by rw [map_fst_runBySource]
+        exact prEvent_congr _ _ _ fun result => by simp
+    _ = Pr{let outcome ← (Prod.fst <$> runAll adversary)}[Wins outcome] := by
+        rw [map_fst_runBySource]
     _ = Pr{let result ← runAll adversary}[Wins result.1] := by
         rw [prEvent_map]
-        rfl
 
 /-! ## Key generation's count -/
 
@@ -187,8 +191,8 @@ theorem tailBudgetW_of {adversary : Adversary} {q : Nat}
       runBySource adversary)
     rw [support_map]
     exact ⟨bySource, hbySource, rfl⟩
-  have hsign := (probEvent_eq_one_iff.mp hlimit).2 _ hgame
-  have hsum := (probEvent_eq_one_iff.mp hbound).2 _ hgame
+  have hsign := (prEvent_eq_one_iff _ _).mp hlimit _ hgame
+  have hsum := (prEvent_eq_one_iff _ _).mp hbound _ hgame
   simp only at hsign hsum
   rw [sum_adversaryWork, hcounts] at hsum
   rw [hcounts] at hsign

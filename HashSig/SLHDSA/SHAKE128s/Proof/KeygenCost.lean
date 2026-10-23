@@ -25,6 +25,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.KeygenCost
 
+variable {α : Type}
+
 open Security
 
 /-- **A `sequenceFin` whose every entry costs at least `k` costs at least `size · k`.** -/

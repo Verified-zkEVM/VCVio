@@ -37,6 +37,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.ShareBound
 
+variable {β γ : Type}
+
 open Security CanonicalGraph ShareGame ShareFlag ShareBlindFacts
 
 /-! ## The record's length -/
@@ -52,8 +54,10 @@ theorem verifyShare_run (lenient : Bool) (setup : Setup) (pk : PublicKey) (forge
     (simulateQ (handler lenient setup) (verifyShare pk forgery)).run p =
       (simulateQ (worldImpl lenient setup)
         (Scheme.verify (m := OracleComp OracleWorld) pk forgery.message forgery.signature)).run p := by
-  rw [verifyShare, ← QueryImpl.simulateQ_compose]
-  rfl
+  exact congrArg (StateT.run · p) (QueryImpl.simulateQ_compose (handler lenient setup)
+    (fun world => (query (spec := ShareSpec) (worldQuery world) :
+      OracleComp ShareSpec (OracleWorld.Range world)))
+    (Scheme.verify (m := OracleComp OracleWorld) pk forgery.message forgery.signature)).symm
 
 /-- A world query, at a handler that is the game's away from the claims. -/
 theorem simulateQ_inl_query (impl : QueryImpl ShareSpec (StateT (St × Bool) ProbComp))
@@ -102,8 +106,8 @@ theorem route_prf (publicSeed : Digest) (cells : Cells) (prf prf' : Digest) (pad
       route false (setupOf publicSeed cells (prf', pad)) state input := by
   classical
   unfold route
-  rw [if_neg Bool.false_ne_true, if_neg Bool.false_ne_true,
-    if_neg (fun h => Bool.false_ne_true h.1), if_neg (fun h => Bool.false_ne_true h.1)]
+  rw [ite_eq_right Bool.false_ne_true, ite_eq_right Bool.false_ne_true,
+    ite_eq_right (fun h => Bool.false_ne_true h.1), ite_eq_right (fun h => Bool.false_ne_true h.1)]
   rfl
 
 theorem cellSig_prf (publicSeed : Digest) (cells : Cells) (prf prf' : Digest) (pad : Padding)
@@ -168,7 +172,7 @@ theorem probEvent_bind_const {β γ : Type} (mx : ProbComp β) (f : β → ProbC
     (event : γ → Prop) (c : ℝ≥0∞) (h : ∀ x, Pr{let y ← f x}[event y] = c) : Pr{let x ← mx >>= f}[event x] = c := by
   rw [OracleComp.prEvent_bind_eq_tsum]
   simp only [h]
-  rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one (by simp), one_mul]
+  rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one, one_mul]
 
 /-! ## A located entry is prefixed by the public seed -/
 
@@ -198,13 +202,13 @@ theorem countP_located_add_le (publicSeed : Digest) (entries : List (Bytes × Li
     by_cases hlocate : ((GraphStakes.stakes publicSeed).locate entry.1).isSome
     · have hprefixed := seedPrefixed_of_locate publicSeed entry.1 hlocate
       have h1 : (if ((GraphStakes.stakes publicSeed).locate entry.1).isSome = true then 1 else 0)
-          = 1 := if_pos hlocate
+          = 1 := ite_eq_left hlocate
       have h2 : (if decide (¬ Target127.SeedPrefixed publicSeed entry.1) = true then 1 else 0)
-          = 0 := if_neg (by simpa using hprefixed)
+          = 0 := ite_eq_right (by simpa using hprefixed)
       rw [h1, h2]
       omega
     · have h1 : (if ((GraphStakes.stakes publicSeed).locate entry.1).isSome = true then 1 else 0)
-          = 0 := if_neg hlocate
+          = 0 := ite_eq_right hlocate
       have h2 : (if decide (¬ Target127.SeedPrefixed publicSeed entry.1) = true then 1 else 0)
           ≤ 1 := by split_ifs <;> omega
       rw [h1]
@@ -312,7 +316,7 @@ theorem flag_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec
           (∃ entry ∈ w.2.2.record, ¬ Target127.SeedPrefixed publicSeed entry.1 ∧
             RandomizerGate.PrfClass w.1.prf entry.1)] := by
   rw [probEvent_flagGame_eq, ← map_filingGame, prEvent_map]
-  refine prEvent_mono fun w hw hevent => ?_
+  refine prEvent_mono_of_support _ _ _ fun w hw hevent => ?_
   obtain ⟨hgood, hflag⟩ := hevent
   simp only [filingGame, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hw
   obtain ⟨prf, -, table, -, z, hz, rfl⟩ := hw
@@ -342,8 +346,10 @@ theorem sens_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec
         ((tz.2.2.record.countP fun entry =>
           ((GraphStakes.stakes publicSeed).locate entry.1).isSome : Nat) : ℝ≥0∞)) /
         ((2 ^ 128 : Nat) : ℝ≥0∞) := by
-  have hmarginal : Pr{let w ← blindGame publicSeed comp}[∃ entry ∈ w.2.2.record, Sens w.1 entry.2 entry.1] =
-      Pr{let tz ← tableGame publicSeed comp}[∃ entry ∈ tz.2.2.record, Sens ⟨default, publicSeed, tz.1⟩ entry.2 entry.1] := by
+  have hmarginal : Pr{let w ← blindGame publicSeed comp}[∃ entry ∈ w.2.2.record,
+        Sens w.1 entry.2 entry.1] =
+      Pr{let tz ← tableGame publicSeed comp}[∃ entry ∈ tz.2.2.record,
+        Sens ⟨default, publicSeed, tz.1⟩ entry.2 entry.1] := by
     unfold blindGame
     refine probEvent_bind_const _ _ _ _ fun prf => ?_
     unfold tableGame
@@ -369,7 +375,7 @@ theorem sens_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec
       served node) stall (fun index => ¬ AlwaysAvailable index)
     (fun cells pad served index hunavailable =>
       not_alwaysAvailable_of_unavailable _ served index hunavailable)
-    (fun _ _ _ _ => OracleComp.prFail_eq_zero)
+    (fun _ _ _ _ => OracleComp.prFail_eq_zero _)
     (fun cells pad => files_blindStep _)
     (fun index _ cells pad t st hst z hz hunavailable => hunavailable
       (available_mono _ (fun digest hdigest => (served_prefix _ t st z hz).subset hdigest) index
@@ -394,16 +400,16 @@ theorem prob_prf_list_le (publicSeed : Digest) (entries : List (Bytes × List Ha
       ((entries.countP fun entry => decide (¬ Target127.SeedPrefixed publicSeed entry.1) : Nat) :
         ℝ≥0∞) / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   classical
-  refine le_trans (prEvent_mono (q := fun prf : Digest =>
+  refine le_trans (prEvent_mono _ _ (fun prf : Digest =>
     ∃ entry ∈ (entries.filter fun entry =>
         decide (¬ Target127.SeedPrefixed publicSeed entry.1)).toFinset,
       RandomizerGate.prfGuess entry.1 = prf) ?_) ?_
-  · rintro prf - ⟨entry, hentry, hprefixed, hclass⟩
+  · rintro prf ⟨entry, hentry, hprefixed, hclass⟩
     refine ⟨entry, List.mem_toFinset.mpr (List.mem_filter.mpr ⟨hentry, by simpa using hprefixed⟩),
       ?_⟩
     obtain ⟨seed, message, hinput⟩ := hclass
     rw [hinput, RandomizerGate.prfGuess_randomizerInput]
-  refine le_trans (probEvent_exists_finset_le_sum _ _ _) ?_
+  refine le_trans (prEvent_exists_finset_le _ _ _) ?_
   refine le_trans (Finset.sum_le_sum fun entry _ =>
     le_of_eq (SecretGuessCharge.prob_single_guess (RandomizerGate.prfGuess entry.1))) ?_
   rw [Finset.sum_const, nsmul_eq_mul, mul_one_div]
@@ -421,10 +427,10 @@ theorem prf_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec 
           decide (¬ Target127.SeedPrefixed publicSeed entry.1) : Nat) : ℝ≥0∞)) /
         ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   classical
-  have hlaw : 𝒟[blindGame publicSeed comp] =
-      𝒟[tableGame publicSeed comp >>= fun tz =>
+  have hlaw : blindGame publicSeed comp =ᵈ
+      (tableGame publicSeed comp >>= fun tz =>
         ($ᵗ Digest : ProbComp Digest) >>= fun prf =>
-          (pure (⟨prf, publicSeed, tz.1⟩, tz.2) : ProbComp (Setup × ((Forgery × Bool) × St)))] := by
+          (pure (⟨prf, publicSeed, tz.1⟩, tz.2) : ProbComp (Setup × ((Forgery × Bool) × St)))) := by
     unfold blindGame tableGame
     simp only [blindRun_prf comp publicSeed _ default]
     have hshape : ∀ prf : Digest,
@@ -440,9 +446,8 @@ theorem prf_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec 
       intro prf
       simp only [bind_assoc, pure_bind]
     simp only [hshape]
-    exact OracleComp.DeferredSampling.evalDist_bind_comm _ _ _
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) hlaw, BlindCharge.probEvent_eq_ex_bind,
-    ← BlindCharge.ex_div_const]
+    exact OracleComp.EvalDistEq.bind_bind_swap _ _ _
+  rw [hlaw.prEvent_eq, BlindCharge.probEvent_eq_ex_bind, ← BlindCharge.ex_div_const]
   refine BlindCharge.ex_mono _ fun tz => ?_
   rw [bind_pure_comp, prEvent_map]
   exact prob_prf_list_le publicSeed tz.2.2.record

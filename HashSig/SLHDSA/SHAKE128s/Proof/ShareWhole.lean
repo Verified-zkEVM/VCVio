@@ -25,40 +25,39 @@ open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
 namespace SlhDsaSecurity.ShareWhole
 
+variable {α β : Type}
+
 open Security CanonicalGraph ShareGame ShareCouple ShareInv
 
 /-! ## Couplings that remember where they came from -/
 
 variable {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-  [OracleSpec.UniformAnswerMeasure spec₁] [OracleSpec.UniformAnswerMeasure spec₂] {α β : Type}
+  [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
+  [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)] {α β : Type}
 
 /-- **A coupling's right side lies in the right computation's support.** -/
 theorem relTriple_support_right {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     {R : RelPost α β} (h : RelTriple oa ob R) :
     RelTriple oa ob (fun a b => R a b ∧ b ∈ support ob) := by
   rw [relTriple_iff_relWP, relWP_iff_couplingPost] at h ⊢
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
   obtain ⟨c, hc⟩ := h
-  refine ⟨c, fun z hz => ⟨hc z hz, ?_⟩⟩
-  have hmem : z.2 ∈ support (Prod.snd <$> c.1) := by
-    rw [support_map]
-    exact ⟨z, hz, rfl⟩
-  rw [c.2.map_snd] at hmem
-  rw [show support ob = support 𝒟[ob] from support_eq_SPMF_support ob]
-  exact hmem
+  refine ⟨c, ?_⟩
+  filter_upwards [hc, ae_mem_support_prod c] with z hz hmem
+  exact ⟨hz, hmem.2⟩
 
 /-- **A coupling's left side lies in the left computation's support.** -/
 theorem relTriple_support_left {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     {R : RelPost α β} (h : RelTriple oa ob R) :
     RelTriple oa ob (fun a b => R a b ∧ a ∈ support oa) := by
   rw [relTriple_iff_relWP, relWP_iff_couplingPost] at h ⊢
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
   obtain ⟨c, hc⟩ := h
-  refine ⟨c, fun z hz => ⟨hc z hz, ?_⟩⟩
-  have hmem : z.1 ∈ support (Prod.fst <$> c.1) := by
-    rw [support_map]
-    exact ⟨z, hz, rfl⟩
-  rw [c.2.map_fst] at hmem
-  rw [show support oa = support 𝒟[oa] from support_eq_SPMF_support oa]
-  exact hmem
+  refine ⟨c, ?_⟩
+  filter_upwards [hc, ae_mem_support_prod c] with z hz hmem
+  exact ⟨hz, hmem.1⟩
 
 /-! ## The lenient game, phase by phase -/
 
@@ -115,7 +114,7 @@ def Final (setup : Setup)
 
 theorem rel_start (setup : Setup) : Rel setup (1, [], setup.warm) (St.start, false) where
   cache := by
-    funext input
+    refine QueryCache.ext fun input => ?_
     unfold realView merged St.start
     cases h : setup.warm input with
     | some a => simp [h]

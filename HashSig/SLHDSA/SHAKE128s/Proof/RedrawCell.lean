@@ -9,6 +9,7 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.ChargedProbe
 public import HashSig.SLHDSA.SHAKE128s.Proof.LazyBridge
 public import HashSig.SLHDSA.SHAKE128s.Proof.AddressBounds
+import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 
 /-!
 # A cell a run cannot read may be drawn after it
@@ -33,6 +34,8 @@ set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.RedrawCell
 
+variable {γ : Type}
+
 open CanonicalGraph SensitiveQuery
 
 /-- **A coordinate a run cannot read may be redrawn.** -/
@@ -40,71 +43,40 @@ theorem evalDist_redraw_coordinate {γ Aux : Type} (index : CanonicalGraph.Node)
     (auxiliary : ProbComp Aux) (run : Cells → Aux → ProbComp γ)
     (hcongr : ∀ (cells other : Cells) (aux : Aux),
       (∀ node, node ≠ index → cells node = other node) →
-        𝒟[run cells aux] = 𝒟[run other aux]) :
-    𝒟[do
+        run cells aux =ᵈ run other aux) :
+    (do
         let cells ← ($ᵗ Cells : ProbComp Cells)
         let aux ← auxiliary
         let result ← run cells aux
-        pure (result, cells index)] =
-      𝒟[do
+        pure (result, cells index)) =ᵈ
+      (do
         let cells ← ($ᵗ Cells : ProbComp Cells)
         let aux ← auxiliary
         let result ← run cells aux
         let cell ← ($ᵗ Cell : ProbComp Cell)
-        pure (result, cell)] := by
+        pure (result, cell)) := by
   classical
-  have hupdate := evalDist_uniformSample_bind_update
-    (D := CanonicalGraph.Node) (R := Cell) index
-  calc 𝒟[do
-        let cells ← ($ᵗ Cells : ProbComp Cells)
-        let aux ← auxiliary
-        let result ← run cells aux
-        pure (result, cells index)]
-      = 𝒟[(do
-            let cell ← ($ᵗ Cell : ProbComp Cell)
-            let cells ← ($ᵗ Cells : ProbComp Cells)
-            pure (Function.update cells index cell)) >>= fun cells => do
-          let aux ← auxiliary
-          let result ← run cells aux
-          pure (result, cells index)] :=
-        (LazyBridge.evalDist_bind_congr_right hupdate _).symm
-    _ = 𝒟[do
-          let cell ← ($ᵗ Cell : ProbComp Cell)
-          let cells ← ($ᵗ Cells : ProbComp Cells)
-          let aux ← auxiliary
-          let result ← run (Function.update cells index cell) aux
-          pure (result, cell)] := by
-        simp only [bind_assoc, pure_bind, Function.update_self]
-    _ = 𝒟[do
-          let cell ← ($ᵗ Cell : ProbComp Cell)
-          let cells ← ($ᵗ Cells : ProbComp Cells)
-          let aux ← auxiliary
-          let result ← run cells aux
-          pure (result, cell)] := by
-        refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun cell => ?_
-        refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun cells => ?_
-        refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun aux => ?_
-        refine LazyBridge.evalDist_bind_congr_right ?_ _
-        exact hcongr _ _ aux fun node hnode => Function.update_of_ne hnode _ _
-    _ = 𝒟[do
-          let cells ← ($ᵗ Cells : ProbComp Cells)
-          let cell ← ($ᵗ Cell : ProbComp Cell)
-          let aux ← auxiliary
-          let result ← run cells aux
-          pure (result, cell)] :=
-        OracleComp.DeferredSampling.evalDist_bind_comm _ _ _
-    _ = 𝒟[do
-          let cells ← ($ᵗ Cells : ProbComp Cells)
-          let aux ← auxiliary
-          let cell ← ($ᵗ Cell : ProbComp Cell)
-          let result ← run cells aux
-          pure (result, cell)] := by
-        refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun cells => ?_
-        exact OracleComp.DeferredSampling.evalDist_bind_comm _ _ _
-    _ = _ := by
-        refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun cells => ?_
-        refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun aux => ?_
-        exact OracleComp.DeferredSampling.evalDist_bind_comm _ _ _
+  have hupdate : (do
+      let cell ← ($ᵗ Cell : ProbComp Cell)
+      let cells ← ($ᵗ Cells : ProbComp Cells)
+      pure (Function.update cells index cell)) =ᵈ ($ᵗ Cells : ProbComp Cells) := by
+    let _ : MeasurableSpace Cell := ⊤
+    refine EvalDistEq.of_evalDist_eq ?_
+    have h := OracleComp.evalDist_uniformSample_bind_update_map (D := CanonicalGraph.Node)
+      (R := Cell) (SampleableType.evalDist_uniformSample) (SampleableType.evalDist_uniformSample)
+      index (fun cells => cells)
+    simpa only [bind_pure] using h
+  refine EvalDistEq.trans (LazyBridge.evalDist_bind_congr_right hupdate _).symm ?_
+  simp only [bind_assoc, pure_bind, Function.update_self]
+  refine EvalDistEq.trans (EvalDistEq.bind_right _ fun cell => EvalDistEq.bind_right _ fun cells =>
+    EvalDistEq.bind_right _ fun aux => EvalDistEq.bind_left
+      (hcongr (Function.update cells index cell) cells aux
+        (fun node hnode => Function.update_of_ne hnode _ _)) _) ?_
+  refine EvalDistEq.trans (OracleComp.EvalDistEq.bind_bind_swap _ _ _) ?_
+  refine EvalDistEq.bind_right _ fun cells => ?_
+  refine EvalDistEq.trans (OracleComp.EvalDistEq.bind_bind_swap _ _ _) ?_
+  refine EvalDistEq.bind_right _ fun aux => ?_
+  exact OracleComp.EvalDistEq.bind_bind_swap _ _ _
 
 open ChargedProbe
 
@@ -155,7 +127,7 @@ theorem splitTable_fullOutput (table : Cells × Padding) :
 /-- The programmed entries, with whatever the handler has drawn beside them. -/
 noncomputable def unionCache (publicSeed : Digest) (table : Cells × Padding)
     (cache : QueryCache HashSpec) : QueryCache HashSpec :=
-  fun input =>
+  QueryCache.ofFn fun input =>
     match openCache publicSeed (fun _ => True) table input with
     | some answer => some answer
     | none => cache input
@@ -164,7 +136,7 @@ theorem unionCache_of_open (publicSeed : Digest) (table : Cells × Padding)
     (cache : QueryCache HashSpec) (input : Bytes) (answer : HashOutput)
     (hopen : openCache publicSeed (fun _ => True) table input = some answer) :
     unionCache publicSeed table cache input = some answer := by
-  rw [unionCache, hopen]
+  simp [unionCache, hopen]
 
 /-- **The cells the union cache computes are the table's own.** The programmed entries answer
 every canonical input, so replaying the graph through this cache returns the cells it was

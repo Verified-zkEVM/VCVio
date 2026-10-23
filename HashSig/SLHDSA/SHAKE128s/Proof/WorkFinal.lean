@@ -44,7 +44,7 @@ blind flag.** -/
 theorem setupBound (adversary : Adversary) (limit : Nat) :
     ShareJointShared.SetupBound adversary limit := by
   intro setup hgood
-  refine le_trans (prEvent_le_of_relTriple (Q := fun lenient => lenient.2.2 = true)
+  refine le_trans (prEvent_le_of_relTriple (q := fun lenient => lenient.2.2 = true)
     (relTriple_support_left (ShareJointCouple.couple_whole setup hgood adversary limit)) ?_) ?_
   · rintro real lenient ⟨hfinal, -⟩ ⟨hevent, hverified⟩
     obtain ⟨hforgery, -, stateV, hinv, hcache, hlog, hadv, hver, hacc⟩ := hfinal
@@ -104,13 +104,13 @@ theorem advantage_eq_zero (adversary : Adversary) (q : Nat) (hq : q < 569)
     (hbound : securityGame.HasQueryBound () adversaryWork adversary q) :
     securityGame.advantage () adversary = 0 := by
   unfold Xmss.SecurityGame.advantage
-  refine probEvent_eq_zero fun result hresult hwin => ?_
+  refine prEvent_eq_zero_of_forall_mem_support _ _ fun result hresult hwin => ?_
   change result ∈ support ((fun result => (decide (Wins result.1), result.2)) <$>
     runBySource adversary) at hresult
   rw [support_map] at hresult
   obtain ⟨bySource, hbySource, rfl⟩ := hresult
   have hwins : Wins bySource.1 := by simpa using hwin
-  have hsum := (probEvent_eq_one_iff.mp hbound).2 _ (by
+  have hsum := (OracleComp.prEvent_eq_one_iff _ _).mp hbound _ (by
     change _ ∈ support ((fun result => (decide (Wins result.1), result.2)) <$>
       runBySource adversary)
     rw [support_map]

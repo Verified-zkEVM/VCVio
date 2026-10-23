@@ -219,10 +219,10 @@ theorem padding_neverFails (trials : Nat) : prFail (padding trials) = 0 := by
 
 /-- Coordinatewise, a uniform word of answers has a uniform tape of parsed views. -/
 theorem viewTape_uniform (trials : Nat) :
-    𝒟[(fun word index => MessageDigest.parse (word index)) <$>
-        ($ᵗ (Fin trials → HashOutput) : ProbComp (Fin trials → HashOutput))] =
-      𝒟[($ᵗ (ForsDisclosureTape.Tape trials) :
-        ProbComp (ForsDisclosureTape.Tape trials))] := by
+    ((fun word index => MessageDigest.parse (word index)) <$>
+        ($ᵗ (Fin trials → HashOutput) : ProbComp (Fin trials → HashOutput))) =ᵈ
+      ($ᵗ (ForsDisclosureTape.Tape trials) :
+        ProbComp (ForsDisclosureTape.Tape trials)) := by
   classical
   let coordinate : HashOutput ≃ MessageDigest.View × (BitVec 2 × BitVec 7) :=
     Equiv.ofBijective MessageDigest.split MessageDigest.split_bijective
@@ -238,14 +238,14 @@ theorem viewTape_uniform (trials : Nat) :
         ProbComp (Fin trials → HashOutput))) := by
     rw [Functor.map_map]
     rfl
-  have hinner : 𝒟[regroup <$> ($ᵗ (Fin trials → HashOutput) :
-        ProbComp (Fin trials → HashOutput))] =
-      𝒟[($ᵗ (ForsDisclosureTape.Tape trials × (Fin trials → BitVec 2 × BitVec 7)) :
-        ProbComp (ForsDisclosureTape.Tape trials × (Fin trials → BitVec 2 × BitVec 7)))] :=
-    evalDist_map_bijective_uniform_cross (α := (Fin trials → HashOutput))
-      (β := ForsDisclosureTape.Tape trials × (Fin trials → BitVec 2 × BitVec 7))
-      regroup regroup.bijective
-  rw [hmap, evalDist_map, hinner, ← evalDist_map]
-  exact evalDist_map_fst_uniformSample_prod
+  have hinner : regroup <$> ($ᵗ (Fin trials → HashOutput) :
+        ProbComp (Fin trials → HashOutput)) =ᵈ
+      ($ᵗ (ForsDisclosureTape.Tape trials × (Fin trials → BitVec 2 × BitVec 7)) :
+        ProbComp (ForsDisclosureTape.Tape trials × (Fin trials → BitVec 2 × BitVec 7))) :=
+    SampleableType.map_uniformSample_evalDistEq_of_bijective regroup.bijective
+  rw [hmap]
+  refine (hinner.map Prod.fst).trans (EvalDistEq.of_forall_prEvent_eq fun p => ?_)
+  rw [prEvent_map]
+  exact SampleableType.prEvent_uniformSample_fst p
 
 end SlhDsaSecurity.DigestTape

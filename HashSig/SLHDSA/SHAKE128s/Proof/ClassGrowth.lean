@@ -26,6 +26,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.ClassGrowth
 
+variable {α : Type}
+
 open Security GrowthCharge
 
 open scoped Classical in

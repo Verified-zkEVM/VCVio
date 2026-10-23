@@ -35,6 +35,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.ShareFiled
 
+variable {α : Type}
+
 open Security CanonicalGraph ShareGame
 
 /-! ## The cold cache -/
@@ -49,14 +51,14 @@ theorem route_false_cases (setup : Setup) (state : St) (input : Bytes) (z : Hash
           z.2 = { state with cache := state.cache.cacheQuery input z.1 }) := by
   classical
   unfold route at hz
-  rw [if_neg Bool.false_ne_true] at hz
+  rw [ite_eq_right Bool.false_ne_true] at hz
   cases hopen : openAt setup state.served input with
   | some answer =>
     simp only [hopen, support_pure, Set.mem_singleton_iff] at hz
     subst hz
     exact Or.inl ⟨rfl, rfl⟩
   | none =>
-    simp only [hopen, Bool.false_eq_true, false_and, if_false] at hz
+    simp only [hopen, Bool.false_eq_true, false_and, ite_false] at hz
     unfold plain at hz
     cases hcached : state.cache input with
     | some answer =>
@@ -101,6 +103,7 @@ theorem routed_step (setup : Setup) (state : St) (input : Bytes) (routed : HashO
   refine ⟨hserved', rfl, ?_, ?_⟩
   · intro x v hx
     unfold visible at hx ⊢
+    rw [QueryCache.ofFn_apply] at hx ⊢
     rw [hserved']
     cases hopen : openAt setup state.served x with
     | some answer =>
@@ -121,6 +124,7 @@ theorem routed_step (setup : Setup) (state : St) (input : Bytes) (routed : HashO
           cases hx
         · simpa [QueryCache.cacheQuery_of_ne _ _ hxi] using hx
   · unfold visible
+    rw [QueryCache.ofFn_apply]
     rw [hserved']
     rcases route_false_cases setup state input routed hrouted with
       ⟨hopen, -⟩ | ⟨hopen, hcached, h⟩ | ⟨hopen, -, h⟩
@@ -224,9 +228,9 @@ theorem worldImpl_run (lenient : Bool) (setup : Setup) (world : OracleWorld.Doma
     (p : St × Bool) :
     ((ShareBound.worldImpl lenient setup) world).run p =
       ((handler lenient setup) (worldQuery world)).run p := by
-  simp only [ShareBound.worldImpl, QueryImpl.apply_compose, HasQuery.instOfMonadLift_query]
+  show (simulateQ (handler lenient setup) (query (spec := ShareSpec) (worldQuery world) :
+    OracleComp ShareSpec (OracleWorld.Range world))).run p = _
   erw [simulateQ_spec_query]
-  rfl
 
 /-- The blind world handler at a hash input. -/
 noncomputable def hashImpl (setup : Setup) : QueryImpl HashSpec (StateT (St × Bool) ProbComp) :=

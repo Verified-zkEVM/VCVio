@@ -47,7 +47,7 @@ def Honest (cells : Cells) (parsed : ParsedInput) : Prop :=
   ∀ child ∈ parsed.parent.children, parsed.candidates child = cells child
 
 instance (cells : Cells) (parsed : ParsedInput) : Decidable (Honest cells parsed) :=
-  inferInstanceAs (Decidable (∀ _ ∈ _, _))
+  List.decidableBAll _ _
 
 /-- Charge a deviating structural query against its own parent's canonical cell. -/
 noncomputable def canonicalTarget (publicSeed : Digest) (cells : Cells)

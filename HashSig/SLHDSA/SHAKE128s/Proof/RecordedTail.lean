@@ -35,6 +35,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.RecordedTail
 
+variable {α β : Type}
+
 open Security RecordedQueries
 
 /-! ## The game, recording the adversary's and the verifier's own inputs -/

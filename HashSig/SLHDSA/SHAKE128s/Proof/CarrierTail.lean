@@ -41,6 +41,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CarrierTail
 
+variable {α β : Type}
+
 open Security RecorderView CarriedWitness PhaseFusion RecordedQueries BracketedRun
 
 /-- The carrier a run starts from: the walk's cache, nothing served, nothing in flight. -/

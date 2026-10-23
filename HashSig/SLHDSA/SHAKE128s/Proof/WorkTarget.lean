@@ -27,6 +27,8 @@ namespace SlhDsaSecurity.WorkTarget
 open Security CanonicalGraph WarmedGame Target RoutedSplit BracketedRun CarrierTail CarrierThin
   BySourceBridge
 
+attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal
+
 set_option linter.constructorNameAsVariable false in
 set_option maxHeartbeats 2000000 in
 /-- **The adversary's-work budget bounds the win by the three terms**, the shared one read with
@@ -44,38 +46,47 @@ theorem warmed_le (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adver
   rw [WarmedGame.warmedRun_eq, prEvent_map,
     show (do let walk ← graphWalk; let result ← tail adversary walk; pure (walk, result)) =
       pairedRun adversary from rfl,
-    pairedRun_eq_map_pairedFused adversary (CarrierTail.carrierTail CarrierThin.keep127 adversary) FinalAssembly.forgetFused (CarrierTail.forgetFused_carrierTail CarrierThin.keep127 adversary),
+    pairedRun_eq_map_pairedFused adversary (CarrierTail.carrierTail CarrierThin.keep127 adversary)
+      FinalAssembly.forgetFused (CarrierTail.forgetFused_carrierTail CarrierThin.keep127 adversary),
     prEvent_map]
   have hgoodAnswer :
-      Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[GoodWalk pair.1 ∧
-          AnswerBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1), (FinalAssembly.forgetFused pair.2).2) ∧ ¬ Target127.late pair] ≤
+      Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[
+        GoodWalk pair.1 ∧
+          AnswerBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1),
+            (FinalAssembly.forgetFused pair.2).2) ∧ ¬ Target127.late pair] ≤
         (q : ℝ≥0∞) / ((2 ^ 128 : Nat) : ℝ≥0∞) + (1 : ℝ≥0∞) / 2 ^ 126 := by
-    refine Averaging.probEvent_bind_pair_le graphWalk (CarrierTail.carrierTail CarrierThin.keep127 adversary)
+    refine Averaging.probEvent_bind_pair_le graphWalk
+      (CarrierTail.carrierTail CarrierThin.keep127 adversary)
       (fun walk result => GoodWalk walk ∧
-        AnswerBad ((walk.1, (FinalAssembly.forgetFused result).1), (FinalAssembly.forgetFused result).2) ∧ ¬ Target127.late (walk, result)) _
+        AnswerBad ((walk.1, (FinalAssembly.forgetFused result).1),
+          (FinalAssembly.forgetFused result).2) ∧ ¬ Target127.late (walk, result)) _
       fun walk hwalk => ?_
     by_cases hgood : GoodWalk walk
-    · exact le_trans (prEvent_mono fun result _ hbad => hbad.2)
+    · exact le_trans (prEvent_mono _ _ _ fun result hbad => hbad.2)
         (BySourceTarget.answerBound q adversary hbudget walk hwalk hgood)
-    · rw [show (fun result => GoodWalk walk ∧
-        AnswerBad ((walk.1, (FinalAssembly.forgetFused result).1), (FinalAssembly.forgetFused result).2) ∧
-          ¬ Target127.late (walk, result)) = fun _ => False from by funext _; simp [hgood]]
-      simp
-  calc Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[Wins (FinalAssembly.forgetFused pair.2).1.1]
-      ≤ Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[(GoodWalk pair.1 ∧
-            AnswerBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1), (FinalAssembly.forgetFused pair.2).2) ∧ ¬ Target127.late pair) ∨
+    · exact le_trans (le_of_eq (prEvent_eq_zero_of_forall_mem_support _ _
+        fun result _ hbad => hgood hbad.1)) bot_le
+  calc Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[
+          Wins (FinalAssembly.forgetFused pair.2).1.1]
+      ≤ Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[
+          (GoodWalk pair.1 ∧
+            AnswerBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1),
+              (FinalAssembly.forgetFused pair.2).2) ∧ ¬ Target127.late pair) ∨
           ((GoodWalk pair.1 ∧
-            (InputBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1), (FinalAssembly.forgetFused pair.2).2) ∨ Target127.late pair) ∧
+            (InputBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1),
+              (FinalAssembly.forgetFused pair.2).2) ∨ Target127.late pair) ∧
               (FinalAssembly.forgetFused pair.2).1.1.verified = true) ∨
               ¬ GoodWalk pair.1)] := by
-        refine prEvent_mono fun pair hpair hwin => ?_
+        refine prEvent_mono_of_support _ _ _ fun pair hpair hwin => ?_
         by_cases hgood : GoodWalk pair.1
         · obtain ⟨walk, hwalk, result, hresult, hpair⟩ : ∃ walk ∈ support graphWalk,
-              ∃ result ∈ support (CarrierTail.carrierTail CarrierThin.keep127 adversary walk), (walk, result) = pair := by
+              ∃ result ∈ support (CarrierTail.carrierTail CarrierThin.keep127 adversary walk),
+                (walk, result) = pair := by
             simpa [pairedFused, eq_comm] using hpair
           subst hpair
           have hforgetMem : FinalAssembly.forgetFused result ∈ support (tail adversary walk) := by
-            rw [← CarrierTail.forgetFused_carrierTail CarrierThin.keep127 adversary walk, support_map]
+            rw [← CarrierTail.forgetFused_carrierTail CarrierThin.keep127 adversary walk,
+              support_map]
             exact ⟨result, hresult, rfl⟩
           by_cases hlate : Target127.late (walk, result)
           · exact Or.inr (Or.inl ⟨hgood, Or.inr hlate, hwin.1⟩)
@@ -84,18 +95,27 @@ theorem warmed_le (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adver
             · exact Or.inl ⟨hgood, hAnswerBad, hlate⟩
             · exact Or.inr (Or.inl ⟨hgood, Or.inl hInputBad, hwin.1⟩)
         · exact Or.inr (Or.inr hgood)
-    _ ≤ Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[GoodWalk pair.1 ∧
-            AnswerBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1), (FinalAssembly.forgetFused pair.2).2) ∧ ¬ Target127.late pair] +
-          Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[(GoodWalk pair.1 ∧
-            (InputBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1), (FinalAssembly.forgetFused pair.2).2) ∨ Target127.late pair) ∧
+    _ ≤ Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[
+            GoodWalk pair.1 ∧
+            AnswerBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1),
+              (FinalAssembly.forgetFused pair.2).2) ∧ ¬ Target127.late pair] +
+          Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[
+            (GoodWalk pair.1 ∧
+            (InputBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1),
+              (FinalAssembly.forgetFused pair.2).2) ∨ Target127.late pair) ∧
               (FinalAssembly.forgetFused pair.2).1.1.verified = true) ∨
               ¬ GoodWalk pair.1] := prEvent_or_le _ _ _
-    _ ≤ Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[GoodWalk pair.1 ∧
-            AnswerBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1), (FinalAssembly.forgetFused pair.2).2) ∧ ¬ Target127.late pair] +
-          (Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[GoodWalk pair.1 ∧
-              (InputBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1), (FinalAssembly.forgetFused pair.2).2) ∨ Target127.late pair) ∧
+    _ ≤ Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[
+            GoodWalk pair.1 ∧
+            AnswerBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1),
+              (FinalAssembly.forgetFused pair.2).2) ∧ ¬ Target127.late pair] +
+          (Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[
+              GoodWalk pair.1 ∧
+              (InputBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1),
+                (FinalAssembly.forgetFused pair.2).2) ∨ Target127.late pair) ∧
               (FinalAssembly.forgetFused pair.2).1.1.verified = true] +
-            Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[¬ GoodWalk pair.1]) :=
+            Pr{let pair ← pairedFused (CarrierTail.carrierTail CarrierThin.keep127 adversary)}[
+              ¬ GoodWalk pair.1]) :=
         add_le_add le_rfl (prEvent_or_le _ _ _)
     _ ≤ ((q : ℝ≥0∞) / ((2 ^ 128 : Nat) : ℝ≥0∞) + (1 : ℝ≥0∞) / 2 ^ 126) +
           (shared +

@@ -38,6 +38,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.ShareJoint
 
+variable {α : Type}
+
 open Security CanonicalGraph ShareGame SharePresent RecordedQueries CapComp CapRem
 
 /-! ## The weights -/
@@ -174,42 +176,37 @@ theorem probEvent_realFlat_le (adversary : Adversary) (limit : Nat)
     (adversary.main keys.2) limit (1, [], warm) capped
   rw [hJ]
   refine le_trans ?_ hstep
-  rw [realCost_start, Nat.zero_add, realFlat_eq, OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_bind_eq_tsum]
-  refine ENNReal.tsum_le_tsum fun z => ?_
-  by_cases hz : z ∈ support (advRun adversary keys warm)
-  · refine mul_le_mul' le_rfl ?_
-    rw [prEvent_map]
-    by_cases hcost : ShareRealCap.realCost z.2 ≤ limit
-    · -- within the cap, the capped verifier is the verifier
-      have hlaw : 𝒟[(simulateQ realWorldImpl
-            (cappedVerify keys.2 (limit - ShareRealCap.realCost z.2 + verifierAllowance) z.1)).run
-            (1, z.2.2.2)] =
-          𝒟[(fun w => (some w.1, w.2)) <$> verRun keys z] := by
-        refine evalDist_capCompOpt realWorldImpl (chargedWeight keys.2.seed)
-          (verifyCost keys.2.seed) (reportsCost_verify keys.2.seed) (fun _ _ => OracleComp.prFail_eq_zero)
-          _ _ (1, z.2.2.2) fun w hw => ?_
-        rw [verifyCost_one, Nat.zero_add]
-        exact hverify z hz hcost w hw
-      have hbind : 𝒟[capped ((z.1, limit - ShareRealCap.realCost z.2), z.2)] =
-          𝒟[verRun keys z >>= fun w => pure (assemble z w)] := by
-        show 𝒟[(simulateQ realWorldImpl
-            (cappedVerify keys.2 (limit - ShareRealCap.realCost z.2 + verifierAllowance) z.1)).run
-              (1, z.2.2.2) >>= _] = _
-        rw [evalDist_bind, hlaw, ← evalDist_bind, bind_map_left]
-        rfl
-      calc Pr{let r ← verRun keys z >>= fun w => pure (assemble z w)}[event r ∧ r.1.1.2.1 = true]
-          ≤ Pr{let x ← verRun keys z >>= fun w => pure (assemble z w)}[event x] :=
-            prEvent_mono fun r _ h => h.1
-        _ = Pr{let x ← capped ((z.1, limit - ShareRealCap.realCost z.2), z.2)}[event x] :=
-            (probEvent_congr' (fun _ _ => Iff.rfl) hbind).symm
-        _ = Pr{let x ← capped ((z.1, limit - ShareRealCap.realCost z.2), z.2)}[((fun p : (Forgery × RealState) × _ =>
-              ShareRealCap.realCost p.1.2 ≤ limit ∧ event p.2) ∘ fun b => (z, b)) x] :=
-            probEvent_congr' (fun b _ => by simp [hcost]) rfl
-    · -- beyond the cap the forgery is not accepted
-      refine le_of_eq_of_le (b := 0) (probEvent_eq_zero fun r hr hev => ?_) zero_le
-      simp only [mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hr
-      obtain ⟨w, hw, rfl⟩ := hr
-      exact hcost (haccepted z hz w hw hev.2)
-  · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]
+  rw [realCost_start, Nat.zero_add, realFlat_eq]
+  refine prEvent_bind_mono_of_forall_le_of_support _ _ _ _ _ fun z hz => ?_
+  rw [prEvent_map]
+  by_cases hcost : ShareRealCap.realCost z.2 ≤ limit
+  · -- within the cap, the capped verifier is the verifier
+    have hlaw : (simulateQ realWorldImpl
+          (cappedVerify keys.2 (limit - ShareRealCap.realCost z.2 + verifierAllowance) z.1)).run
+          (1, z.2.2.2) =ᵈ
+        (fun w => (some w.1, w.2)) <$> verRun keys z := by
+      refine evalDist_capCompOpt realWorldImpl (chargedWeight keys.2.seed)
+        (verifyCost keys.2.seed) (reportsCost_verify keys.2.seed)
+        (fun _ _ => prFail_eq_zero _) _ _ (1, z.2.2.2) fun w hw => ?_
+      rw [verifyCost_one, Nat.zero_add]
+      exact hverify z hz hcost w hw
+    have hbind : capped ((z.1, limit - ShareRealCap.realCost z.2), z.2) =ᵈ
+        (verRun keys z >>= fun w => pure (assemble z w)) := by
+      refine (hlaw.bind_left _).trans ?_
+      rw [bind_map_left]
+      rfl
+    calc Pr{let r ← verRun keys z >>= fun w => pure (assemble z w)}[
+            event r ∧ r.1.1.2.1 = true]
+        ≤ Pr{let r ← verRun keys z >>= fun w => pure (assemble z w)}[event r] :=
+          prEvent_mono _ _ _ fun r h => h.1
+      _ = Pr{let r ← capped ((z.1, limit - ShareRealCap.realCost z.2), z.2)}[event r] :=
+          (hbind.prEvent_eq event).symm
+      _ = _ := prEvent_congr _ _ _ fun b => by simp [hcost]
+  · -- beyond the cap the forgery is not accepted
+    refine le_of_eq_of_le (b := 0) (prEvent_eq_zero_of_forall_mem_support _ _ fun r hr hev => ?_)
+      zero_le
+    simp only [mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hr
+    obtain ⟨w, hw, rfl⟩ := hr
+    exact hcost (haccepted z hz w hw hev.2)
 
 end SlhDsaSecurity.ShareJoint

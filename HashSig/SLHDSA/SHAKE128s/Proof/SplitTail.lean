@@ -37,6 +37,8 @@ open scoped ENNReal
 
 namespace SlhDsaSecurity.SplitTail
 
+variable {α : Type}
+
 open Security RecorderView CarriedWitness PhaseFusion RecordedQueries BracketedRun
 open SplitCounted CarrierTail
 

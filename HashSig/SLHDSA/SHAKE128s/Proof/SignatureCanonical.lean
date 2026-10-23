@@ -42,14 +42,14 @@ theorem Signature.card : Fintype.card Signature = 2 ^ (8 * signatureBytes) := by
   have hxmss : Fintype.card XmssSignature = (2 ^ (8 * n)) ^ (chains + subtreeHeight) := by
     rw [Fintype.card_congr xmssFields]
     simp only [WotsSignature, Fintype.card_prod, Fintype.card_fun, Fintype.card_fin,
-      Digest, card_bitVec, pow_add]
+      Digest, Fintype.card_bitVec, pow_add]
   have hfors : Fintype.card ForsTreeSignature = (2 ^ (8 * n)) ^ (1 + forsHeight) := by
     rw [Fintype.card_congr forsFields]
     simp only [Fintype.card_prod, Fintype.card_fun, Fintype.card_fin,
-      Digest, card_bitVec, pow_add, pow_one]
+      Digest, Fintype.card_bitVec, pow_add, pow_one]
   rw [Fintype.card_congr signatureFields]
   simp only [ForsSignature, HypertreeSignature, Fintype.card_prod, Fintype.card_fun,
-    Fintype.card_fin, hxmss, hfors, Digest, card_bitVec, ← pow_mul, ← pow_add]
+    Fintype.card_fin, hxmss, hfors, Digest, Fintype.card_bitVec, ← pow_mul, ← pow_add]
   apply congrArg (fun exponent : Nat => 2 ^ exponent)
   rfl
 

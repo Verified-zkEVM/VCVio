@@ -28,8 +28,8 @@ variable {ι : Type} {spec : OracleSpec ι} {σ : Type}
 
 /-- **Bind congruence.** Binding a common continuation after two computations of the same law
 gives the same law. -/
-theorem evalDist_bind_congr_right {α β : Type} {oa ob : ProbComp α} (hlaw : 𝒟[oa] = 𝒟[ob])
-    (k : α → ProbComp β) : 𝒟[oa >>= k] = 𝒟[ob >>= k] := by
-  rw [evalDist_bind, evalDist_bind, hlaw]
+theorem evalDist_bind_congr_right {α β : Type} {oa ob : ProbComp α} (hlaw : oa =ᵈ ob)
+    (k : α → ProbComp β) : oa >>= k =ᵈ ob >>= k := by
+  exact hlaw.bind_left k
 
 end SlhDsaSecurity.LazyBridge

@@ -74,36 +74,17 @@ theorem cost_run_ge (impl : QueryImpl spec (StateT S ProbComp)) (weight : ι →
 /-- A run of a handler that never fails never fails. -/
 theorem run_neverFails (impl : QueryImpl spec (StateT S ProbComp))
     (hfail : ∀ (t : ι) (state : S), prFail ((impl t).run state) = 0) :
-    ∀ (oa : OracleComp spec α) (state : S), prFail ((simulateQ impl oa).run state) = 0 := by
-  intro oa
-  induction oa using OracleComp.inductionOn with
-  | pure value => intro state; simp
-  | query_bind t next ih =>
-    intro state
-    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-    exact probFailure_bind_eq_zero_iff _ _ |>.mpr ⟨hfail t state, fun step _ => ih _ _⟩
+    ∀ (oa : OracleComp spec α) (state : S), prFail ((simulateQ impl oa).run state) = 0 :=
+  fun _ _ => OracleComp.prFail_eq_zero _
 
 /-- A computation that never fails has an outcome. -/
 theorem exists_mem_support {β : Type} (mx : ProbComp β) (hfail : prFail mx = 0) :
-    ∃ x, x ∈ support mx := by
-  by_contra hnone
-  simp only [not_exists] at hnone
-  have hone := OracleComp.tsum_prEvent_eq_one hfail
-  rw [show (∑' x, Pr{let y ← mx}[y = x]) = ∑' x, (0 : ℝ≥0∞) from
-    tsum_congr fun x => (prEvent_eq_zero_of_not_mem_support _) (hnone x), tsum_zero] at hone
-  exact zero_ne_one hone
+    ∃ x, x ∈ support mx :=
+  OracleComp.support_nonempty mx
 
 /-- A bind is determined by its continuation on the support. -/
 theorem evalDist_bind_congr_support {β γ : Type} (oa : ProbComp β) (f g : β → ProbComp γ)
-    (h : ∀ a ∈ support oa, 𝒟[f a] = 𝒟[g a]) : 𝒟[oa >>= f] = 𝒟[oa >>= g] := by
-  refine SPMF.ext fun x => ?_
-  rw [show 𝒟[oa >>= f] x = Pr{let y ← oa >>= f}[y = x] from (prEvent_eq_evalDist_singleton _ _).symm,
-    show 𝒟[oa >>= g] x = Pr{let y ← oa >>= g}[y = x] from (prEvent_eq_evalDist_singleton _ _).symm,
-    OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_bind_eq_tsum]
-  refine tsum_congr fun a => ?_
-  by_cases hmem : a ∈ support oa
-  · rw [show Pr{let y ← f a}[y = x] = Pr{let y ← g a}[y = x] from by
-      rw [prEvent_eq_evalDist_singleton, prEvent_eq_evalDist_singleton, h a hmem]]
-  · rw [(prEvent_eq_zero_of_not_mem_support _) hmem, zero_mul, zero_mul]
+    (h : ∀ a ∈ support oa, f a =ᵈ g a) : oa >>= f =ᵈ oa >>= g :=
+  OracleComp.EvalDistEq.bind_congr_of_support oa h
 
 end SlhDsaSecurity.CapComp

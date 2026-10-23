@@ -53,29 +53,42 @@ theorem XmssSignature.ext {left right : XmssSignature}
 
 @[simp] theorem Signature.toBytes_length (signature : Signature) :
     signature.toBytes.length = signatureBytes := by
-  simp [Signature.toBytes, signatureBytes, layers, totalHeight, subtreeHeight, forsTrees,
+  simp only [Signature.toBytes, List.length_append, length_bytesBE, List.length_flatten,
+    List.map_ofFn, Function.comp_def, ForsTreeSignature.toBytes_length,
+    XmssSignature.toBytes_length, List.sum_ofFn, Finset.sum_const, Finset.card_univ,
+    Fintype.card_fin, smul_eq_mul]
+  simp [signatureBytes, layers, totalHeight, subtreeHeight, forsTrees,
     forsHeight, chains, messageDigits, checksumDigits, winternitzBits, n]
 
 set_option maxRecDepth 10000 in
 set_option maxHeartbeats 2000000 in
-theorem Signature.readDigest_bytesBE (value : Digest) :
-    readDigest (bytesBE n value) 0 = value := by
-  change BitVec 128 at value
-  simp only [readDigest, bytesBE, n, List.drop_zero, List.ofFn_succ, List.ofFn_zero,
-    List.reverse_cons, List.reverse_nil, List.nil_append, List.cons_append,
-    List.take_succ_cons, List.take_nil, List.foldl_cons, List.foldl_nil,
-    UInt8.toNat_ofBitVec, Fin.val_zero, Fin.val_succ, Nat.reduceAdd, Nat.reduceMul]
-  have widen (byte : BitVec 8) : BitVec.ofNat 128 byte.toNat = byte.setWidth 128 := by
+/-- The big-endian fold of the sixteen bytes of a `128`-bit value rebuilds that value. -/
+private theorem foldl_bytes128 (value : BitVec 128) :
+    ((List.ofFn fun i : Fin 16 => UInt8.ofBitVec (value.extractLsb' (8 * i.val) 8)).reverse).foldl
+      (fun (acc : BitVec 128) (byte : UInt8) => (acc <<< 8) ||| BitVec.ofNat 128 byte.toNat) 0 =
+      value := by
+  simp only [List.ofFn_succ, List.ofFn_zero, List.reverse_cons, List.reverse_nil, List.nil_append,
+    List.cons_append, List.foldl_cons, List.foldl_nil, Fin.val_zero, Fin.val_succ, Nat.reduceAdd,
+    Nat.reduceMul]
+  have widen (byte : BitVec 8) :
+      BitVec.ofNat 128 (UInt8.ofBitVec byte).toNat = byte.setWidth 128 := by
     apply BitVec.eq_of_toNat_eq
     simp
   simp only [widen]
   clear widen
-  dsimp (config := { instances := true }) only [n, Digest] at *
   apply BitVec.eq_of_getLsbD_eq
   intro bit hbit
   interval_cases bit <;>
     simp only [BitVec.getLsbD_or, BitVec.getLsbD_shiftLeft, BitVec.getLsbD_setWidth,
       BitVec.getLsbD_extractLsb'] <;> simp
+
+set_option maxRecDepth 10000 in
+set_option maxHeartbeats 2000000 in
+theorem Signature.readDigest_bytesBE (value : Digest) :
+    readDigest (bytesBE n value) 0 = value := by
+  unfold readDigest
+  rw [List.drop_zero, List.take_of_length_le (by simp)]
+  exact foldl_bytes128 value
 
 theorem Signature.readDigest_append_prefix (front input : Bytes) (offset : Nat) :
     readDigest (front ++ input) (front.length + offset) = readDigest input offset := by

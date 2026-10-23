@@ -28,9 +28,13 @@ namespace SlhDsaSecurity.SecretGuessCharge
 theorem prob_single_guess (guess : Digest) :
     Pr{let secret ← ($ᵗ Digest : ProbComp Digest)}[guess = secret] =
       1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
-  rw [show (fun secret : Digest => guess = secret) = (fun secret => secret = guess) from by
-    funext secret; exact propext ⟨Eq.symm, Eq.symm⟩]
-  rw [probEvent_eq_eq_probOutput]
-  simp [probOutput_uniformSample, Digest, n]
+  have h : Pr{let secret ← ($ᵗ Digest : ProbComp Digest)}[guess = secret] =
+      Pr{let secret ← ($ᵗ Digest : ProbComp Digest)}[secret = guess] := by
+    exact prEvent_congr _ _ _ fun _ => eq_comm
+  let _ : MeasurableSpace Digest := ⊤
+  rw [h, prEvent_eq_evalDist_singleton, SampleableType.evalDist_uniformSample,
+    ProbabilityTheory.uniformOn_univ_apply_singleton]
+  rw [Fintype.card_bitVec, one_div]
+  rfl
 
 end SlhDsaSecurity.SecretGuessCharge

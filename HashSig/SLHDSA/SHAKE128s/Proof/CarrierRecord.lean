@@ -43,6 +43,7 @@ theorem keys_eq_replay (rightKeep : Walk → Bytes → HandlerCarrier.State → 
   rw [hwarm]
   exact (Prod.ext_iff.mp hrom).1
 
+set_option maxHeartbeats 1000000 in
 theorem keys_publicKey (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) (walk : Walk)
     (hwalk : walk ∈ support WarmedGame.graphWalk)
     (keys : (SecretKey × PublicKey) × CountedState)

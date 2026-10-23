@@ -18,6 +18,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.VerificationBudget
 
+variable {α β : Type}
+
 open Security VerificationQueries
 
 def verificationCost (input : OracleWorld.Domain) : Counts :=

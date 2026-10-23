@@ -59,67 +59,55 @@ theorem cons_bijective (length : Nat) :
 /-- **A block of independent draws is a uniform word.** `padding` draws one answer at a time;
 the FORS machinery wants a function off `Fin length`. They agree. -/
 theorem evalDist_padding_eq_ofFn (length : Nat) :
-    𝒟[padding length] =
-      𝒟[List.ofFn <$> ($ᵗ (Fin length → HashOutput) :
-        ProbComp (Fin length → HashOutput))] := by
+    padding length =ᵈ
+      (List.ofFn <$> ($ᵗ (Fin length → HashOutput) :
+        ProbComp (Fin length → HashOutput))) := by
   induction length with
   | zero =>
+    refine evalDistEq_iff_evalDist_eq.mpr ?_
     rw [padding, show (List.ofFn : (Fin 0 → HashOutput) → List HashOutput) =
-        fun _ => ([] : List HashOutput) from by funext word; simp, map_eq_bind_pure_comp]
-    exact (OracleComp.DeferredSampling.evalDist_bind_const_neverFails _ (by simp) _).symm
+        fun _ => ([] : List HashOutput) from by funext word; simp]
+    simp
   | succ remaining ih =>
-    have hbijection : 𝒟[(fun pair : HashOutput × (Fin remaining → HashOutput) =>
-          Fin.cons pair.1 pair.2) <$>
-        ($ᵗ (HashOutput × (Fin remaining → HashOutput)) : ProbComp _)] =
-        𝒟[($ᵗ (Fin (remaining + 1) → HashOutput) : ProbComp _)] :=
-      evalDist_map_bijective_uniform_cross
-        (α := HashOutput × (Fin remaining → HashOutput))
-        (β := Fin (remaining + 1) → HashOutput) _ (cons_bijective remaining)
-    calc 𝒟[padding (remaining + 1)]
-        = 𝒟[($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
-            padding remaining >>= fun rest => (pure (value :: rest) : ProbComp _)] := rfl
-      _ = 𝒟[($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
+    have hbijection := SampleableType.map_uniformSample_evalDistEq_of_bijective (cons_bijective remaining)
+    calc padding (remaining + 1)
+        = (($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
+            padding remaining >>= fun rest => (pure (value :: rest) : ProbComp _)) := rfl
+      _ =ᵈ (($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
             (List.ofFn <$> ($ᵗ (Fin remaining → HashOutput) : ProbComp _)) >>= fun rest =>
-              (pure (value :: rest) : ProbComp _)] := by
-          refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun value => ?_
-          rw [evalDist_bind, evalDist_bind, ih]
-      _ = 𝒟[(fun pair : HashOutput × (Fin remaining → HashOutput) =>
+              (pure (value :: rest) : ProbComp _)) :=
+          EvalDistEq.bind_right _ fun _ => ih.bind_left _
+      _ = (fun pair : HashOutput × (Fin remaining → HashOutput) =>
               pair.1 :: List.ofFn pair.2) <$>
-            ($ᵗ (HashOutput × (Fin remaining → HashOutput)) : ProbComp _)] := by
+            ($ᵗ (HashOutput × (Fin remaining → HashOutput)) : ProbComp _) := by
           rw [uniformSample_prod_eq_bind]
           simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
-      _ = 𝒟[List.ofFn <$> ($ᵗ (Fin (remaining + 1) → HashOutput) : ProbComp _)] := by
-          have hmap : 𝒟[List.ofFn <$>
-                ((fun pair : HashOutput × (Fin remaining → HashOutput) =>
-                  Fin.cons pair.1 pair.2) <$>
-                    ($ᵗ (HashOutput × (Fin remaining → HashOutput)) : ProbComp _))] =
-              𝒟[List.ofFn <$> ($ᵗ (Fin (remaining + 1) → HashOutput) : ProbComp _)] := by
-            rw [evalDist_map, hbijection, evalDist_map]
-          refine Eq.trans ?_ hmap
+      _ = List.ofFn <$> ((fun pair : HashOutput × (Fin remaining → HashOutput) =>
+              (Fin.cons pair.1 pair.2 : Fin (remaining + 1) → HashOutput)) <$>
+            ($ᵗ (HashOutput × (Fin remaining → HashOutput)) : ProbComp _)) := by
           rw [Functor.map_map]
-          refine congrArg evalDist (congrArg (fun step =>
-            step <$> ($ᵗ (HashOutput × (Fin remaining → HashOutput)) : ProbComp _)) ?_)
+          congr 1
           funext pair
           simp [List.ofFn_succ]
+      _ =ᵈ List.ofFn <$> ($ᵗ (Fin (remaining + 1) → HashOutput) : ProbComp _) :=
+          hbijection.map _
 
 /-! ## The block as a tape -/
 
 /-- **A fresh answer parses to a uniform view.** -/
 theorem evalDist_parse_uniform :
-    𝒟[MessageDigest.parse <$> ($ᵗ HashOutput : ProbComp HashOutput)] =
-      𝒟[($ᵗ MessageDigest.View : ProbComp MessageDigest.View)] := by
-  have hsplit : 𝒟[MessageDigest.split <$> ($ᵗ HashOutput : ProbComp HashOutput)] =
-      𝒟[($ᵗ (MessageDigest.View × (BitVec 2 × BitVec 7)) : ProbComp _)] :=
-    evalDist_map_bijective_uniform_cross (α := HashOutput)
-      (β := MessageDigest.View × (BitVec 2 × BitVec 7))
-      MessageDigest.split MessageDigest.split_bijective
-  calc 𝒟[MessageDigest.parse <$> ($ᵗ HashOutput : ProbComp HashOutput)]
-      = 𝒟[Prod.fst <$> (MessageDigest.split <$> ($ᵗ HashOutput : ProbComp HashOutput))] := by
+    (MessageDigest.parse <$> ($ᵗ HashOutput : ProbComp HashOutput)) =ᵈ
+      ($ᵗ MessageDigest.View : ProbComp MessageDigest.View) := by
+  have hsplit := SampleableType.map_uniformSample_evalDistEq_of_bijective MessageDigest.split_bijective
+  calc MessageDigest.parse <$> ($ᵗ HashOutput : ProbComp HashOutput)
+      = Prod.fst <$> (MessageDigest.split <$> ($ᵗ HashOutput : ProbComp HashOutput)) := by
         rw [Functor.map_map]
         rfl
-    _ = 𝒟[Prod.fst <$> ($ᵗ (MessageDigest.View × (BitVec 2 × BitVec 7)) : ProbComp _)] := by
-        rw [evalDist_map, hsplit, ← evalDist_map]
-    _ = _ := evalDist_map_fst_uniformSample_prod
+    _ =ᵈ Prod.fst <$> ($ᵗ (MessageDigest.View × (BitVec 2 × BitVec 7)) : ProbComp _) :=
+        hsplit.map _
+    _ =ᵈ _ := EvalDistEq.of_forall_prEvent_eq fun p => by
+        rw [prEvent_map]
+        exact SampleableType.prEvent_uniformSample_fst p
 
 /-- A block of answers, read as a tape of parsed FORS views. Cells past the block's end read as
 a default, which never happens where the charge looks: it reads cell `index` only when the run
@@ -129,22 +117,21 @@ def blockTape (length : Nat) (block : List HashOutput) : ForsDisclosureTape.Tape
 
 /-- **A drawn block is a uniform tape.** -/
 theorem evalDist_blockTape (length : Nat) :
-    𝒟[blockTape length <$> padding length] =
-      𝒟[($ᵗ (ForsDisclosureTape.Tape length) :
-        ProbComp (ForsDisclosureTape.Tape length))] := by
-  calc 𝒟[blockTape length <$> padding length]
-      = 𝒟[blockTape length <$>
-          (List.ofFn <$> ($ᵗ (Fin length → HashOutput) : ProbComp _))] := by
-        rw [evalDist_map, evalDist_padding_eq_ofFn length, ← evalDist_map]
-    _ = 𝒟[(fun word index => MessageDigest.parse (word index)) <$>
-          ($ᵗ (Fin length → HashOutput) : ProbComp _)] := by
+    (blockTape length <$> padding length) =ᵈ
+      ($ᵗ (ForsDisclosureTape.Tape length) :
+        ProbComp (ForsDisclosureTape.Tape length)) := by
+  calc blockTape length <$> padding length
+      =ᵈ blockTape length <$>
+          (List.ofFn <$> ($ᵗ (Fin length → HashOutput) : ProbComp _)) :=
+        (evalDist_padding_eq_ofFn length).map _
+    _ = (fun word index => MessageDigest.parse (word index)) <$>
+          ($ᵗ (Fin length → HashOutput) : ProbComp _) := by
         rw [Functor.map_map]
-        refine congrArg evalDist (congrArg (fun step =>
-          step <$> ($ᵗ (Fin length → HashOutput) : ProbComp _)) ?_)
+        congr 1
         funext word
         funext index
         simp [blockTape, List.getD_eq_getElem?_getD]
-    _ = _ := viewTape_uniform length
+    _ =ᵈ _ := viewTape_uniform length
 
 /-! ## The hit relation the game needs -/
 
@@ -155,26 +142,38 @@ def BlockHit (length : Nat) (block : List HashOutput) (value : HashOutput) : Pro
 
 variable {σ : Type} [RecorderView.CacheView σ]
 
+/-- An integral against the output measure of a sampling computation is the sum of its singleton
+masses times the integrand. -/
+private theorem lintegral_evalDist_eq_tsum_probComp {β : Type} (run : ProbComp β)
+    (weight : β → ℝ≥0∞) :
+    letI : MeasurableSpace β := ⊤
+    ∫⁻ value, weight value ∂𝒟[run] = ∑' value, Pr{let x ← run}[x = value] * weight value := by
+  let : MeasurableSpace β := ⊤
+  have hae : ∀ᵐ value ∂𝒟[run], value ∈ support run :=
+    evalDist.ae_of_forall_mem_support run (· ∈ support run) MeasurableSet.of_discrete
+      fun _ h ↦ h
+  rw [← MeasureTheory.Measure.restrict_eq_self_of_ae_mem hae,
+    MeasureTheory.lintegral_countable weight (support_finite run).countable,
+    ← tsum_subtype_eq_of_support_subset (s := support run)
+      (f := fun value ↦ Pr{let x ← run}[x = value] * weight value)]
+  · simp only [prEvent_eq_evalDist_singleton, mul_comm]
+  · intro value hvalue
+    by_contra hnot
+    refine hvalue ?_
+    simp only
+    rw [prEvent_eq_evalDist_singleton,
+      MeasureTheory.measure_mono_null (Set.singleton_subset_iff.2 hnot)
+        (MeasureTheory.ae_iff.1 hae), zero_mul]
+
 open scoped Classical in
 /-- Expectations move through a reshaping of the outcome. -/
 theorem tsum_probOutput_map {β γ : Type} [DecidableEq γ] (run : ProbComp β) (reshape : β → γ)
     (weight : γ → ℝ≥0∞) :
     ∑' value, Pr{let x ← reshape <$> run}[x = value] * weight value =
       ∑' value, Pr{let x ← run}[x = value] * weight (reshape value) := by
-  classical
-  calc ∑' value, Pr{let x ← reshape <$> run}[x = value] * weight value
-      = ∑' value, (∑' source, if value = reshape source then Pr{let x ← run}[x = source] else 0) *
-          weight value :=
-        tsum_congr fun value => by rw [probOutput_map_eq_tsum_ite]
-    _ = ∑' value, ∑' source,
-          (if value = reshape source then Pr{let x ← run}[x = source] else 0) * weight value :=
-        tsum_congr fun value => ENNReal.tsum_mul_right.symm
-    _ = ∑' source, ∑' value,
-          (if value = reshape source then Pr{let x ← run}[x = source] else 0) * weight value :=
-        ENNReal.tsum_comm
-    _ = ∑' source, Pr{let x ← run}[x = source] * weight (reshape source) :=
-        tsum_congr fun source => by
-          rw [tsum_eq_single (reshape source)
-            (fun other hother => by rw [if_neg hother, zero_mul]), if_pos rfl]
+  let : MeasurableSpace β := ⊤
+  let : MeasurableSpace γ := ⊤
+  rw [← lintegral_evalDist_eq_tsum_probComp, ← lintegral_evalDist_eq_tsum_probComp,
+    lintegral_evalDist_map_of_discrete]
 
 end SlhDsaSecurity.BlockViews

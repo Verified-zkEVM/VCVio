@@ -110,8 +110,8 @@ theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
             ((result.2.2.2.length : Nat) : ℝ≥0∞)) *
           (1 / ((2 ^ 129 : Nat) : ℝ≥0∞) + (rightLength : ℝ≥0∞) * (1 / ((2 ^ 303 : Nat) : ℝ≥0∞))) := by
   classical
-  have hlaw : 𝒟[carrierTail keep127 adversary walk] =
-      𝒟[Prod.snd <$> blockRunOf (tapeRun adversary walk) leftLength rightLength] := by
+  have hlaw : carrierTail keep127 adversary walk =ᵈ
+      Prod.snd <$> blockRunOf (tapeRun adversary walk) leftLength rightLength := by
     rw [CarrierCoverage.carrierTail_eq_threeStage]
     exact evalDist_threeStageHandlerRun_eq (σ := CountedAt (keyAt walk)) (leftAt walk)
       (rightAt walk) innerAt ServedAgreement.startServingOn ServedAgreement.stopServingOn
@@ -124,21 +124,22 @@ theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
       support (Prod.snd <$> blockRunOf (tapeRun adversary walk) leftLength rightLength) :=
     Averaging.support_eq_of_evalDistEq hlaw
   have hevent : Pr{let x ← carrierTail keep127 adversary walk}[(FiredCoveredRec walk) x] =
-      Pr{let outcome ← blockRunOf (tapeRun adversary walk) leftLength rightLength}[FiredCoveredRec walk outcome.2] := by
-    rw [probEvent_congr' (fun _ _ => Iff.rfl) hlaw, prEvent_map]
-    rfl
+      Pr{let outcome ← blockRunOf (tapeRun adversary walk) leftLength rightLength}[
+        FiredCoveredRec walk outcome.2] := by
+    rw [hlaw.prEvent_eq, prEvent_map]
   have hexpect : (∑' result, Pr{let x ← carrierTail keep127 adversary walk}[x = result] *
         ((result.2.2.2.length : Nat) : ℝ≥0∞)) =
-      ∑' outcome, Pr{let x ← blockRunOf (tapeRun adversary walk) leftLength rightLength}[x = outcome] *
-        ((outcome.2.2.2.2.length : Nat) : ℝ≥0∞) := by
+      ∑' outcome, Pr{let x ← blockRunOf (tapeRun adversary walk) leftLength rightLength}[
+          x = outcome] * ((outcome.2.2.2.2.length : Nat) : ℝ≥0∞) := by
     rw [show (∑' result, Pr{let x ← carrierTail keep127 adversary walk}[x = result] *
           ((result.2.2.2.length : Nat) : ℝ≥0∞)) =
-        ∑' result, Pr{let x ← Prod.snd <$> blockRunOf (tapeRun adversary walk) leftLength rightLength}[x = result] *
+        ∑' result, Pr{let x ←
+            Prod.snd <$> blockRunOf (tapeRun adversary walk) leftLength rightLength}[x = result] *
           ((result.2.2.2.length : Nat) : ℝ≥0∞) from
-      tsum_congr fun result => by rw [prEvent_eq_evalDist_singleton, prEvent_eq_evalDist_singleton, hlaw]]
+      tsum_congr fun result => by rw [hlaw.prEvent_eq (fun x => x = result)]]
     exact BlockViews.tsum_probOutput_map _ Prod.snd _
   rw [hevent, hexpect]
-  refine le_trans (prEvent_mono (q := FiredCoverage.FiredCovered
+  refine le_trans (prEvent_mono_of_support _ _ (FiredCoverage.FiredCovered
       (fun w : ((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState => w.2.2.2.length)
       (Fired walk) leftLength rightLength) ?_) ?_
   · rintro outcome hmem ⟨target, targetEntry, htarget, htrees⟩
@@ -216,10 +217,8 @@ theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
         rw [← unit128_sq_eq]
         exact thin2 adversary walk hwalk hgood first second hlt leftTape rightTape)
     refine le_trans hcharge (le_of_eq ?_)
-    rw [mul_add, add_assoc]
-    congr 1
-    congr 1
-    ring
+    rw [mul_add, add_assoc, mul_assoc (rightLength : ℝ≥0∞),
+      mul_left_comm _ (rightLength : ℝ≥0∞)]
 
 attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal
   Scheme.sign Security.signingOracle Security.countQueries

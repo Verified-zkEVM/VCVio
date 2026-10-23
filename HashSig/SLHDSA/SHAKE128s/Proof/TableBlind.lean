@@ -44,21 +44,20 @@ open SensitiveQuery
 
 /-- Two computations of the same law with continuations of the same law bind to the same law. -/
 theorem evalDist_bind_congr {α β : Type} {oa ob : ProbComp α} {f g : α → ProbComp β}
-    (hlaw : 𝒟[oa] = 𝒟[ob]) (hcont : ∀ a, 𝒟[f a] = 𝒟[g a]) : 𝒟[oa >>= f] = 𝒟[ob >>= g] := by
-  rw [evalDist_bind, evalDist_bind, hlaw]
-  exact congrArg _ (funext hcont)
+    (hlaw : oa =ᵈ ob) (hcont : ∀ a, f a =ᵈ g a) : oa >>= f =ᵈ ob >>= g :=
+  hlaw.bind hcont
 
 /-- **Blindness lifts from a step to a run.** If altering the table within `Agree` leaves every
 step's law alone, it leaves the whole run's law alone. -/
 theorem evalDist_run_congr_of_step {ι : Type} {spec : OracleSpec ι} {σ Table : Type}
     (impl : Table → QueryImpl spec (StateT σ ProbComp)) (Agree : Table → Table → Prop)
     (hstep : ∀ (t : spec.Domain) (s : σ) (left right : Table), Agree left right →
-      𝒟[(impl left t).run s] = 𝒟[(impl right t).run s])
+      (impl left t).run s =ᵈ (impl right t).run s)
     {γ : Type} (oa : OracleComp spec γ) (left right : Table) (hagree : Agree left right)
     (s : σ) :
-    𝒟[(simulateQ (impl left) oa).run s] = 𝒟[(simulateQ (impl right) oa).run s] := by
+    (simulateQ (impl left) oa).run s =ᵈ (simulateQ (impl right) oa).run s := by
   induction oa using OracleComp.inductionOn generalizing s with
-  | pure value => simp only [simulateQ_pure, StateT.run_pure]
+  | pure value => simp only [simulateQ_pure, StateT.run_pure]; exact EvalDistEq.rfl
   | query_bind t next ih =>
     simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
     exact evalDist_bind_congr (hstep t s left right hagree) fun p => ih p.1 p.2

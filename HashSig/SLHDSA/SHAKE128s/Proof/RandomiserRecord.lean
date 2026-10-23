@@ -33,6 +33,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.RandomiserRecord
 
+variable {α : Type}
+
 open Security CacheReplay RecordedQueries PhaseProvenance CacheProvenance RecordedTail
 
 /-! ## The verifier's instrumentation is invisible to the cache -/

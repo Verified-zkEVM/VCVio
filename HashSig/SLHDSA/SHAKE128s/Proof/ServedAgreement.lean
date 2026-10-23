@@ -42,6 +42,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.ServedAgreement
 
+variable {α β : Type}
+
 open Security OpenCache CanonicalGraph RecordedQueries
 
 variable (publicSeed : Digest)
@@ -1049,7 +1051,7 @@ theorem signerShape_sign (sk : SecretKey) : SignerShape sk (Scheme.sign sk) :=
 stripped, so the pin holds at every cache and the table is empty. -/
 theorem signerPins_sign (sk : SecretKey)
     (hpublic : ¬ HashSeparation.Possible (sk.publicKey.seed, sk.publicKey.root)) :
-    SignerPins sk (fun _ => none) (Scheme.sign sk) :=
+    SignerPins sk ∅ (Scheme.sign sk) :=
   ⟨fun request => Scheme.sign (m := OracleComp HashSpec) sk request,
     fun request => StrippedGame.sign_lift sk request,
     fun request framed hframe later _ randomizer hquery =>

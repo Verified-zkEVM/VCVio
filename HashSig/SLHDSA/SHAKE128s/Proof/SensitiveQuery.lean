@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.SecretGuessCharge
 public import HashSig.SLHDSA.SHAKE128s.Proof.GrowthCharge
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Querying a node whose child's cell is unavailable
@@ -144,36 +145,34 @@ variable [Fintype Index] [DecidableEq Index]
 open scoped Classical in
 /-- A single coordinate of a uniform table of cells is a uniform cell. -/
 theorem coordinate_uniform (index : Index) :
-    𝒟[(fun table : Index → Cell => table index) <$>
-        ($ᵗ (Index → Cell) : ProbComp (Index → Cell))] =
-      𝒟[($ᵗ Cell : ProbComp Cell)] := by
+    ((fun table : Index → Cell => table index) <$>
+        ($ᵗ (Index → Cell) : ProbComp (Index → Cell))) =ᵈ
+      ($ᵗ Cell : ProbComp Cell) := by
   classical
   let split : (Index → Cell) ≃ Cell × ({other // other ≠ index} → Cell) :=
     Equiv.funSplitAt index Cell
-  have hmap : (fun table : Index → Cell => table index) <$>
-        ($ᵗ (Index → Cell) : ProbComp (Index → Cell)) =
-      Prod.fst <$> (split <$> ($ᵗ (Index → Cell) : ProbComp (Index → Cell))) := by
-    rw [Functor.map_map]
-    congr 1
-  have hinner : 𝒟[split <$> ($ᵗ (Index → Cell) : ProbComp (Index → Cell))] =
-      𝒟[($ᵗ (Cell × ({other // other ≠ index} → Cell)) :
-        ProbComp (Cell × ({other // other ≠ index} → Cell)))] :=
-    evalDist_map_bijective_uniform_cross (α := (Index → Cell))
-      (β := Cell × ({other // other ≠ index} → Cell)) split split.bijective
-  rw [hmap, evalDist_map, hinner, ← evalDist_map]
-  exact evalDist_map_fst_uniformSample_prod
+  refine EvalDistEq.of_forall_prEvent_eq fun p => ?_
+  rw [prEvent_map]
+  calc Pr{let table ← ($ᵗ (Index → Cell) : ProbComp (Index → Cell))}[p (table index)]
+      = Pr{let table ← ($ᵗ (Index → Cell) : ProbComp (Index → Cell))}[p (split table).1] := rfl
+    _ = Pr{let z ← ($ᵗ (Cell × ({other // other ≠ index} → Cell)) :
+          ProbComp (Cell × ({other // other ≠ index} → Cell)))}[p z.1] :=
+        SampleableType.prEvent_uniformSample_equiv split (fun z => p z.1)
+    _ = _ := SampleableType.prEvent_uniformSample_fst p
 
 /-- A fixed coordinate of a uniform table takes a fixed value with probability `2 ^ -128`. -/
 theorem prob_coordinate_eq (index : Index) (value : Cell) :
     Pr{let table ← ($ᵗ (Index → Cell) : ProbComp (Index → Cell))}[table index = value] = 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   classical
-  rw [show (fun table : Index → Cell => table index = value) =
-    (fun cell : Cell => cell = value) ∘ (fun table : Index → Cell => table index) from rfl,
-    ← prEvent_map]
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) (coordinate_uniform index)]
-  rw [show (fun cell : Cell => cell = value) = (fun cell : Cell => value = cell) from by
-    funext cell; exact propext ⟨Eq.symm, Eq.symm⟩]
-  exact SecretGuessCharge.prob_single_guess value
+  calc Pr{let table ← ($ᵗ (Index → Cell) : ProbComp (Index → Cell))}[table index = value]
+      = Pr{let cell ← (fun table : Index → Cell => table index) <$>
+          ($ᵗ (Index → Cell) : ProbComp (Index → Cell))}[cell = value] := by
+        rw [prEvent_map]
+    _ = Pr{let cell ← ($ᵗ Cell : ProbComp Cell)}[cell = value] :=
+        (coordinate_uniform index).prEvent_eq _
+    _ = Pr{let cell ← ($ᵗ Cell : ProbComp Cell)}[value = cell] := by
+        simp only [eq_comm]
+    _ = _ := SecretGuessCharge.prob_single_guess value
 
 /-! ## The per-candidate rate -/
 
@@ -187,7 +186,8 @@ theorem prob_sensitive_le (stakes : Stakes Node Index)
   cases hlocate : stakes.locate candidate with
   | none =>
     -- No address, so no node: the event is empty.
-    refine le_of_eq_of_le (b := 0) (probEvent_eq_zero fun table _ hbad => ?_) (by simp)
+    refine le_of_eq_of_le (b := 0)
+      (prEvent_eq_zero_of_forall_mem_support _ _ fun table _ hbad => ?_) (by simp)
     obtain ⟨node, -, hinput⟩ := hbad
     rw [← hinput, stakes.locate_inputOf] at hlocate
     simp at hlocate
@@ -195,16 +195,17 @@ theorem prob_sensitive_le (stakes : Stakes Node Index)
     -- The address names this node, and the input then determines its cell.
     by_cases hpreimage : ∃ cell : Cell, stakes.inputOf node cell = candidate
     · obtain ⟨value, hvalue⟩ := hpreimage
-      refine le_of_le_of_eq (prEvent_mono (q := fun table : Index → Cell =>
+      refine le_of_le_of_eq (prEvent_mono _ _ (fun table : Index → Cell =>
         table (stakes.stake node) = value) ?_) (prob_coordinate_eq _ value)
-      rintro table - ⟨other, -, hinput⟩
+      rintro table ⟨other, -, hinput⟩
       have hsame : other = node := by
         have hother : stakes.locate candidate = some other := by
           rw [← hinput, stakes.locate_inputOf]
         exact Option.some.inj (hother.symm.trans hlocate)
       subst hsame
       exact stakes.inputOf_injective other (hinput.trans hvalue.symm)
-    · refine le_of_eq_of_le (b := 0) (probEvent_eq_zero fun table _ hbad => ?_) (by simp)
+    · refine le_of_eq_of_le (b := 0)
+        (prEvent_eq_zero_of_forall_mem_support _ _ fun table _ hbad => ?_) (by simp)
       obtain ⟨other, -, hinput⟩ := hbad
       have hother : stakes.locate candidate = some other := by
         rw [← hinput, stakes.locate_inputOf]

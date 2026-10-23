@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
+import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 
 /-!
 # Sampling distinct structural coordinates in the shared byte oracle
@@ -119,46 +120,49 @@ independent complete full-output table and programming the same traversal. -/
 theorem evalDist_sample_eq_uniform_program (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State) (nodes : List Index)
     (hnodup : nodes.Nodup) (state : State) (cache : QueryCache HashSpec) :
-    𝒟[sample input step nodes state cache] =
-      𝒟[(fun outputs => program input step outputs nodes state cache) <$>
-        ($ᵗ (Index → HashOutput) : ProbComp (Index → HashOutput))] := by
+    sample input step nodes state cache =ᵈ
+      ((fun outputs => program input step outputs nodes state cache) <$>
+        ($ᵗ (Index → HashOutput) : ProbComp (Index → HashOutput))) := by
   induction nodes generalizing state cache with
   | nil =>
-      rw [sample]
-      symm
-      simp only [program, map_eq_bind_pure_comp, Function.comp_def]
-      exact OracleComp.DeferredSampling.evalDist_bind_const_neverFails
-        ($ᵗ (Index → HashOutput)) (probFailure_eq_zero' inferInstance) (pure (state, cache))
+      exact (OracleComp.EvalDistEq.map_const _ _).symm
   | cons node nodes ih =>
       have hnot : node ∉ nodes := (List.nodup_cons.mp hnodup).1
       have hnodes : nodes.Nodup := (List.nodup_cons.mp hnodup).2
-      have hdist := evalDist_uniformSample_bind_update (R := HashOutput) node
-      calc
-        _ = 𝒟[do
-            let output ← $ᵗ HashOutput
-            (fun outputs => program input step outputs nodes (step node state output)
-              (cache.cacheQuery (input node state) output)) <$>
-                ($ᵗ (Index → HashOutput) : ProbComp (Index → HashOutput))] := by
-          rw [sample]
-          apply OracleComp.DeferredSampling.evalDist_bind_congr_left
-          intro output
-          exact ih hnodes _ _
-        _ = 𝒟[(fun outputs => program input step outputs (node :: nodes) state cache) <$>
-            (do let output ← $ᵗ HashOutput
-                let outputs ← $ᵗ (Index → HashOutput)
-                pure (Function.update outputs node output))] := by
-          simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def, program,
-            Function.update_self, program_update_outside input step _ nodes node hnot]
-        _ = _ := by rw [evalDist_map, hdist, ← evalDist_map]
+      have hstep : sample input step (node :: nodes) state cache =ᵈ (do
+          let output ← $ᵗ HashOutput
+          (fun outputs => program input step outputs nodes (step node state output)
+            (cache.cacheQuery (input node state) output)) <$>
+              ($ᵗ (Index → HashOutput) : ProbComp (Index → HashOutput))) :=
+        EvalDistEq.bind_right _ fun output => ih hnodes _ _
+      have hprog : (do
+          let output ← $ᵗ HashOutput
+          (fun outputs => program input step outputs nodes (step node state output)
+            (cache.cacheQuery (input node state) output)) <$>
+              ($ᵗ (Index → HashOutput) : ProbComp (Index → HashOutput))) = (do
+          let output ← $ᵗ HashOutput
+          let outputs ← $ᵗ (Index → HashOutput)
+          pure ((fun outputs => program input step outputs (node :: nodes) state cache)
+            (Function.update outputs node output))) := by
+        simp only [map_eq_bind_pure_comp, Function.comp_def, program,
+          Function.update_self, program_update_outside input step _ nodes node hnot]
+      refine (hprog ▸ hstep).trans ?_
+      let _ : MeasurableSpace HashOutput := ⊤
+      let _ : MeasurableSpace (State × QueryCache HashSpec) := ⊤
+      refine EvalDistEq.of_evalDist_eq ?_
+      rw [map_eq_bind_pure_comp]
+      exact OracleComp.evalDist_uniformSample_bind_update_map (D := Index) (R := HashOutput)
+        (SampleableType.evalDist_uniformSample) (SampleableType.evalDist_uniformSample) node
+        (fun outputs => program input step outputs (node :: nodes) state cache)
 
 /-- Full state-and-cache law for a traversal in the actual shared random oracle. -/
 theorem evalDist_evaluate_eq_uniform_program (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State) (hseparated : Separated input)
     (nodes : List Index) (hnodup : nodes.Nodup) (state : State) (cache : QueryCache HashSpec)
     (hfresh : FreshFor input nodes cache) :
-    𝒟[(simulateQ randomOracle (evaluate input step nodes state)).run cache] =
-      𝒟[(fun outputs => program input step outputs nodes state cache) <$>
-        ($ᵗ (Index → HashOutput) : ProbComp (Index → HashOutput))] := by
+    (simulateQ randomOracle (evaluate input step nodes state)).run cache =ᵈ
+      ((fun outputs => program input step outputs nodes state cache) <$>
+        ($ᵗ (Index → HashOutput) : ProbComp (Index → HashOutput))) := by
   rw [evaluate_eq_sample input step hseparated nodes hnodup state cache hfresh]
   exact evalDist_sample_eq_uniform_program input step nodes hnodup state cache
 

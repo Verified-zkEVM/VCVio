@@ -9,6 +9,7 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.NoticingTape
 public import HashSig.SLHDSA.SHAKE128s.Proof.BlockViews
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsConcentrationSharper
+import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # Coverage when a served target may also disclose
@@ -49,6 +50,8 @@ pair of blocks so they are facts about the run rather than about the blocks' law
 open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.FiredCoverage
+
+variable {α β : Type}
 
 open DigestTape NoticingTape BlockViews ForsCoverage
 
@@ -91,24 +94,24 @@ def helpedEquiv (revealed : Disclosures) :
     subst hindex
     rfl
 
-set_option linter.constructorNameAsVariable false in
 /-- Pairs at one tree: every leaf of the shown set with any helper leaf, and every other leaf with
 an equal helper leaf. -/
 theorem card_leafPairs_le (shown : Finset Leaf) :
     Fintype.card (LeafPairs shown) ≤ 2 ^ 12 * (shown.card + 1) := by
   classical
-  unfold LeafPairs
-  rw [Fintype.card_subtype]
-  have hsplit : (Finset.univ.filter fun pair : Leaf × Leaf => pair.1 ∈ shown ∨ pair.2 = pair.1) ⊆
-      (shown ×ˢ (Finset.univ : Finset Leaf)) ∪
-        (Finset.univ.image fun leaf : Leaf => (leaf, leaf)) := by
-    intro pair hpair
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hpair
+  let cover : Finset (Leaf × Leaf) :=
+    (shown ×ˢ (Finset.univ : Finset Leaf)) ∪ (Finset.univ.image fun leaf : Leaf => (leaf, leaf))
+  have hmem : ∀ pair : LeafPairs shown, pair.val ∈ cover := by
+    rintro ⟨pair, hpair⟩
     rcases hpair with hshown | hsame
     · exact Finset.mem_union_left _ (Finset.mem_product.mpr ⟨hshown, Finset.mem_univ _⟩)
     · refine Finset.mem_union_right _ (Finset.mem_image.mpr ⟨pair.1, Finset.mem_univ _, ?_⟩)
       exact Prod.ext rfl hsame.symm
-  refine le_trans (Finset.card_le_card hsplit) (le_trans (Finset.card_union_le _ _) ?_)
+  have hinj : Fintype.card (LeafPairs shown) ≤ Fintype.card cover :=
+    Fintype.card_le_of_injective (fun pair => ⟨pair.val, hmem pair⟩)
+      (fun left right h => Subtype.ext (congrArg Subtype.val h :))
+  rw [Fintype.card_coe] at hinj
+  refine le_trans hinj (le_trans (Finset.card_union_le _ _) ?_)
   rw [Finset.card_product, Finset.card_univ]
   refine le_trans (Nat.add_le_add_left Finset.card_image_le _) ?_
   have hleaf : Fintype.card Leaf = 2 ^ 12 := by
@@ -126,7 +129,7 @@ theorem card_helped_le (revealed : Disclosures) (loads : Instance → Nat)
   rw [Fintype.card_pi]
   calc ∏ tree : Tree, Fintype.card (LeafPairs (revealed index tree))
       ≤ ∏ _tree : Tree, 2 ^ 12 * (loads index + 1) :=
-        Finset.prod_le_prod' fun tree _ =>
+        Finset.prod_le_prod fun tree _ =>
           le_trans (card_leafPairs_le _) (Nat.mul_le_mul_left _ (Nat.succ_le_succ (hload index tree)))
     _ = (2 ^ 12) ^ 14 * (loads index + 1) ^ 14 := by
         have htree : Fintype.card ForsCoverage.Tree = 14 := by
@@ -167,10 +170,9 @@ theorem prob_helpedBy_le (revealed : Disclosures) (loads : Instance → Nat)
       _ ≤ 2 ^ 285 := by norm_num
   rw [SampleableType.prEvent_uniformSample]
   have hcard : Fintype.card (View × View) = 2 ^ 462 := by
-    simp only [View, MessageDigest.View,
-      MessageDigest.Instance, MessageDigest.ForsTree, MessageDigest.ForsLeaf,
-      totalHeight, forsHeight, forsTrees]
-    norm_num
+    norm_num [View, Instance, ForsCoverage.Tree, Leaf, MessageDigest.View, MessageDigest.Instance,
+      MessageDigest.ForsTree, MessageDigest.ForsLeaf, Fintype.card_prod, Fintype.card_fun,
+      Fintype.card_fin, totalHeight, forsHeight, forsTrees]
   rw [hcard]
   calc ((Finset.univ.filter fun pair : View × View => HelpedBy revealed pair.1 pair.2).card :
         ℝ≥0∞) / ((2 ^ 462 : Nat) : ℝ≥0∞)
@@ -190,7 +192,7 @@ theorem prob_instance_eq (index : Instance) :
   rw [SampleableType.prEvent_uniformSample]
   have hcount : (Finset.univ.filter fun view : View => view.1 = index).card = 2 ^ 168 := by
     have hset : (Finset.univ.filter fun view : View => view.1 = index) =
-        Finset.univ.image fun leaves : Tree → Leaf => (index, leaves) := by
+        Finset.univ.image fun leaves : ForsCoverage.Tree → Leaf => (index, leaves) := by
       ext view
       simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
       constructor
@@ -200,14 +202,12 @@ theorem prob_instance_eq (index : Instance) :
         rfl
     rw [hset, Finset.card_image_of_injective _ (fun left right h => (Prod.mk.inj h).2),
       Finset.card_univ]
-    simp only [ForsCoverage.Tree, Leaf, MessageDigest.ForsTree, MessageDigest.ForsLeaf,
-      forsHeight, forsTrees]
-    norm_num
+    norm_num [ForsCoverage.Tree, Leaf, MessageDigest.ForsTree, MessageDigest.ForsLeaf, Fintype.card_fun,
+      Fintype.card_fin, forsHeight, forsTrees]
   have hcard : Fintype.card View = 2 ^ 231 := by
-    simp only [View, MessageDigest.View,
-      MessageDigest.Instance, MessageDigest.ForsTree, MessageDigest.ForsLeaf,
-      totalHeight, forsHeight, forsTrees]
-    norm_num
+    norm_num [View, Instance, ForsCoverage.Tree, Leaf, MessageDigest.View, MessageDigest.Instance,
+      MessageDigest.ForsTree, MessageDigest.ForsLeaf, Fintype.card_prod, Fintype.card_fun,
+      Fintype.card_fin, totalHeight, forsHeight, forsTrees]
   rw [hcount, hcard]
   apply le_of_eq
   apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
@@ -220,21 +220,12 @@ theorem tsum_probOutput_bind {α β : Type} (outer : ProbComp α) (inner : α �
     (f : β → ℝ≥0∞) :
     ∑' out, Pr{let x ← outer >>= inner}[x = out] * f out =
       ∑' value, Pr{let x ← outer}[x = value] * ∑' out, Pr{let x ← inner value}[x = out] * f out := by
-  calc ∑' out, Pr{let x ← outer >>= inner}[x = out] * f out
-      = ∑' out, ∑' value, Pr{let x ← outer}[x = value] * Pr{let x ← inner value}[x = out] * f out :=
-        tsum_congr fun out => by rw [OracleComp.prEvent_bind_eq_tsum, ENNReal.tsum_mul_right]
-    _ = ∑' value, ∑' out, Pr{let x ← outer}[x = value] * Pr{let x ← inner value}[x = out] * f out :=
-        ENNReal.tsum_comm
-    _ = _ := tsum_congr fun value => by
-        rw [← ENNReal.tsum_mul_left]
-        exact tsum_congr fun out => by rw [mul_assoc]
+  exact tsum_prEvent_bind_mul outer inner f
 
 /-- **An expectation against a point mass is the value at the point.** -/
 theorem tsum_probOutput_pure {β : Type} (point : β) (f : β → ℝ≥0∞) :
     ∑' out, Pr{let x ← (pure point : ProbComp β)}[x = out] * f out = f point := by
-  rw [tsum_eq_single point (fun other hother => by
-    rw [(prEvent_eq_zero_of_not_mem_support _) (by simpa using hother), zero_mul]),
-    probOutput_pure_self, one_mul]
+  exact tsum_prEvent_pure_mul point f
 
 /-- **Redrawing one cell of a padded block keeps any expectation.** The expectation form of
 `TapeFactor.evalDist_padding_set`. -/
@@ -248,15 +239,15 @@ theorem tsum_padding_set (length cell : Nat) (hcell : cell < length)
     (fun tape => (pure tape : ProbComp (List HashOutput)))
   simp only [bind_pure] at hlaw
   calc ∑' tape, Pr{let x ← padding length}[x = tape] * f tape
-      = ∑' out, Pr{let x ← (padding length >>= fun tape =>
+      = ∑' out, Pr{let x ← padding length >>= fun tape =>
           ($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
-            (pure (tape.set cell value) : ProbComp (List HashOutput)))}[x = out] * f out :=
-        tsum_congr fun out => by rw [prEvent_eq_evalDist_singleton, prEvent_eq_evalDist_singleton, hlaw]
+            (pure (tape.set cell value) : ProbComp (List HashOutput))}[x = out] * f out :=
+        tsum_congr fun out => by rw [hlaw.prEvent_eq (fun x => x = out)]
     _ = _ := by
-        rw [tsum_probOutput_bind]
+        rw [tsum_prEvent_bind_mul]
         refine tsum_congr fun tape => congrArg _ ?_
-        rw [tsum_probOutput_bind]
-        exact tsum_congr fun value => by rw [tsum_probOutput_pure]
+        rw [tsum_prEvent_bind_mul]
+        exact tsum_congr fun value => by rw [tsum_prEvent_pure_mul]
 
 section Tape
 
@@ -279,17 +270,13 @@ theorem probEvent_reach_and_eq (leftLength rightLength index : Nat)
       reachMass run len leftLength rightLength index
         (fun leftTape rightTape => if event leftTape rightTape then 1 else 0) := by
   classical
-  rw [blockRunOf, OracleComp.prEvent_bind_eq_tsum, reachMass]
+  rw [blockRunOf, prEvent_bind_eq_tsum, reachMass]
   refine tsum_congr fun leftTape => congrArg _ ?_
-  rw [OracleComp.prEvent_bind_eq_tsum]
+  rw [prEvent_bind_eq_tsum]
   refine tsum_congr fun rightTape => congrArg _ ?_
   rw [prEvent_map]
-  have hswap : Pr{let x ← run leftTape rightTape}[((fun outcome : (List HashOutput × List HashOutput) × ρ =>
-        index < len outcome.2 ∧ event outcome.1.1 outcome.1.2) ∘
-          (fun result => ((leftTape, rightTape), result))) x] =
-      Pr{let z ← run leftTape rightTape}[event leftTape rightTape ∧ index < len z] :=
-    probEvent_congr' (fun z _ => and_comm) rfl
-  rw [hswap, TapeFactor.probEvent_const_and]
+  rw [prEvent_congr _ _ (fun z => event leftTape rightTape ∧ index < len z) fun z => and_comm,
+    TapeFactor.probEvent_const_and]
   split <;> simp
 
 /-- The selection alone is the reach mass of the unit weight. -/
@@ -298,7 +285,7 @@ theorem probEvent_reach_eq (leftLength rightLength index : Nat) :
       reachMass run len leftLength rightLength index (fun _ _ => 1) := by
   classical
   have h := probEvent_reach_and_eq run len leftLength rightLength index (fun _ _ => True)
-  simp only [and_true, if_true] at h
+  simp only [and_true, ite_true] at h
   exact h
 
 /-- **The blocked run's events, as a double expectation over the two blocks.** -/
@@ -308,12 +295,11 @@ theorem probEvent_blockRunOf_eq (leftLength rightLength : Nat)
       ∑' leftTape, Pr{let x ← padding leftLength}[x = leftTape] *
         ∑' rightTape, Pr{let x ← padding rightLength}[x = rightTape] *
           Pr{let z ← run leftTape rightTape}[event ((leftTape, rightTape), z)] := by
-  rw [blockRunOf, OracleComp.prEvent_bind_eq_tsum]
+  rw [blockRunOf, prEvent_bind_eq_tsum]
   refine tsum_congr fun leftTape => congrArg _ ?_
-  rw [OracleComp.prEvent_bind_eq_tsum]
+  rw [prEvent_bind_eq_tsum]
   refine tsum_congr fun rightTape => congrArg _ ?_
   rw [prEvent_map]
-  rfl
 
 /-- **A constant comes out of a reach mass.** -/
 theorem reachMass_const_mul (leftLength rightLength index : Nat) (constant : ℝ≥0∞)
@@ -349,7 +335,7 @@ theorem reachMass_mono_index (leftLength rightLength : Nat) {early late : Nat}
       reachMass run len leftLength rightLength early weight := by
   refine ENNReal.tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
   refine ENNReal.tsum_le_tsum fun rightTape => mul_le_mul' le_rfl ?_
-  exact mul_le_mul' le_rfl (prEvent_mono fun z _ hlate => lt_of_le_of_lt horder hlate)
+  exact mul_le_mul' le_rfl (prEvent_mono _ _ _ fun z hlate => lt_of_le_of_lt horder hlate)
 
 /-- **A thinning, integrated over the blocks.** An event of the run whose probability, for every
 pair of blocks, is at most `rate` times that of reaching cell `index` costs `rate` times the reach
@@ -368,11 +354,11 @@ theorem prob_thin_le (leftLength rightLength index : Nat) (thinned : ρ → Prop
   refine ENNReal.tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
   refine ENNReal.tsum_le_tsum fun rightTape => mul_le_mul' le_rfl ?_
   by_cases hevent : event leftTape rightTape
-  · rw [if_pos hevent, mul_one]
-    refine le_trans (le_of_eq (probEvent_congr' (fun z _ => ?_) rfl)) (hthin leftTape rightTape)
+  · rw [ite_eq_left hevent, mul_one]
+    refine le_trans (le_of_eq (prEvent_congr _ _ _ fun z => ?_)) (hthin leftTape rightTape)
     simp [hevent]
-  · rw [if_neg hevent, mul_zero, zero_mul]
-    exact le_of_eq (probEvent_eq_zero fun z _ hz => hevent hz.2)
+  · rw [ite_eq_right hevent, mul_zero, zero_mul]
+    exact le_of_eq (prEvent_eq_zero_of_forall_not _ _ fun z hz => hevent hz.2)
 
 /-- **A weight bounded on the padded blocks costs its bound times the reach probability.** The
 padded blocks have their lengths, so a bound need only hold there. -/
@@ -498,17 +484,17 @@ theorem tsum_ite_eq_probEvent {α : Type} (computation : ProbComp α) (event : �
     [DecidablePred event] :
     ∑' value, Pr{let x ← computation}[x = value] * (if event value then 1 else 0) =
       Pr{let x ← computation}[event x] := by
-  rw [OracleComp.prEvent_eq_tsum_ite]
+  rw [prEvent_eq_tsum_ite]
   refine tsum_congr fun value => ?_
   split <;> simp
 
 /-- **Two fresh answers parse to two independent uniform views.** -/
 theorem evalDist_parse_pair :
-    𝒟[(fun pair : HashOutput × HashOutput =>
+    ((fun pair : HashOutput × HashOutput =>
         (MessageDigest.parse pair.1, MessageDigest.parse pair.2)) <$>
-      ($ᵗ (HashOutput × HashOutput) : ProbComp (HashOutput × HashOutput))] =
-      𝒟[($ᵗ (View × View) : ProbComp (View × View))] := by
-  rw [uniformSample_prod_eq_bind, uniformSample_prod_eq_bind]
+      ($ᵗ (HashOutput × HashOutput) : ProbComp (HashOutput × HashOutput))) =ᵈ
+      ($ᵗ (View × View) : ProbComp (View × View)) := by
+  rw [SampleableType.uniformSample_prod_eq_bind, SampleableType.uniformSample_prod_eq_bind]
   have hshape : ((fun pair : HashOutput × HashOutput =>
         (MessageDigest.parse pair.1, MessageDigest.parse pair.2)) <$>
       (do let left ← ($ᵗ HashOutput : ProbComp HashOutput)
@@ -517,11 +503,9 @@ theorem evalDist_parse_pair :
       (do let left ← MessageDigest.parse <$> ($ᵗ HashOutput : ProbComp HashOutput)
           let right ← MessageDigest.parse <$> ($ᵗ HashOutput : ProbComp HashOutput)
           pure (left, right)) := by
-    simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind,
-      Function.comp_def]
-  rw [hshape, evalDist_bind, evalDist_parse_uniform, evalDist_bind]
-  refine congrArg _ (funext fun left => ?_)
-  rw [evalDist_bind, evalDist_parse_uniform, evalDist_bind]
+    simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
+  rw [hshape]
+  exact evalDist_parse_uniform.bind fun _ => evalDist_parse_uniform.bind fun _ => .rfl
 
 open scoped Classical in
 /-- **The pair rate at fresh answers**: two fresh answers parse to a helped pair with probability
@@ -538,17 +522,20 @@ theorem tsum_pair_helpedBy_le (revealed : Disclosures) (loads : Instance → Nat
       ∑' second, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = second] *
         (if HelpedBy revealed (MessageDigest.parse first) (MessageDigest.parse second)
           then 1 else 0)) =
-      Pr{let pair ← ($ᵗ (HashOutput × HashOutput) : ProbComp (HashOutput × HashOutput))}[HelpedBy revealed (MessageDigest.parse pair.1) (MessageDigest.parse pair.2)] := by
-    rw [uniformSample_prod_eq_bind, OracleComp.prEvent_bind_eq_tsum]
+      Pr{let pair ← ($ᵗ (HashOutput × HashOutput) : ProbComp (HashOutput × HashOutput))}[
+        HelpedBy revealed (MessageDigest.parse pair.1) (MessageDigest.parse pair.2)] := by
+    rw [SampleableType.uniformSample_prod_eq_bind, prEvent_bind_eq_tsum]
     refine tsum_congr fun first => congrArg _ ?_
-    rw [OracleComp.prEvent_bind_eq_tsum]
+    rw [prEvent_bind_eq_tsum]
     refine tsum_congr fun second => congrArg _ ?_
     rw [prEvent_pure]
   rw [hdouble]
-  have hmap : Pr{let pair ← ($ᵗ (HashOutput × HashOutput) : ProbComp (HashOutput × HashOutput))}[HelpedBy revealed (MessageDigest.parse pair.1) (MessageDigest.parse pair.2)] =
-      Pr{let pair ← ($ᵗ (View × View) : ProbComp (View × View))}[HelpedBy revealed pair.1 pair.2] := by
-    rw [← probEvent_congr' (fun _ _ => Iff.rfl) evalDist_parse_pair, prEvent_map]
-    rfl
+  have hmap : Pr{let pair ← ($ᵗ (HashOutput × HashOutput) : ProbComp (HashOutput × HashOutput))}[
+        HelpedBy revealed (MessageDigest.parse pair.1) (MessageDigest.parse pair.2)] =
+      Pr{let pair ← ($ᵗ (View × View) : ProbComp (View × View))}[
+        HelpedBy revealed pair.1 pair.2] :=
+    (prEvent_map _ _ (fun pair : View × View => HelpedBy revealed pair.1 pair.2)).symm.trans
+      (evalDist_parse_pair.prEvent_eq _)
   rw [hmap]
   exact prob_helpedBy_le revealed loads hload hmoment
 
@@ -560,10 +547,11 @@ theorem tsum_instance_eq_le (index : Instance) :
       1 / ((2 ^ 63 : Nat) : ℝ≥0∞) := by
   classical
   rw [tsum_ite_eq_probEvent]
-  have hmap : Pr{let value ← ($ᵗ HashOutput : ProbComp HashOutput)}[(MessageDigest.parse value).1 = index] =
-      Pr{let view ← ($ᵗ View : ProbComp View)}[view.1 = index] := by
-    rw [← probEvent_congr' (fun _ _ => Iff.rfl) evalDist_parse_uniform, prEvent_map]
-    rfl
+  have hmap : Pr{let value ← ($ᵗ HashOutput : ProbComp HashOutput)}[
+        (MessageDigest.parse value).1 = index] =
+      Pr{let view ← ($ᵗ View : ProbComp View)}[view.1 = index] :=
+    (prEvent_map _ _ (fun view : View => view.1 = index)).symm.trans
+      (evalDist_parse_uniform.prEvent_eq _)
   rw [hmap]
   exact prob_instance_eq index
 
@@ -622,7 +610,8 @@ theorem reachMass_helped_le (leftLength rightLength target helper : Nat)
       exact tsum_pair_helpedBy_le (leftDisclosures leftLength leftTape)
         (ForsDisclosureTape.loads (blockTape leftLength leftTape))
         (fun part tree => ForsDisclosureTape.disclosures_card_le_loads _ part tree) hgood
-    · simp [hgood]
+    · simp only [hgood, false_and, ↓reduceIte, mul_zero, tsum_zero]
+      exact zero_le
   rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
   · -- the target is the earlier cell
     rw [reachMass_resample run len leftLength rightLength helper helper hhelper
@@ -701,11 +690,15 @@ theorem prob_not_goodLeft_le {ρ : Type} (run : List HashOutput → List HashOut
       (1 : ℝ≥0∞) / 2 ^ 126 := by
     have hevent : Pr{let block ← padding leftLength}[¬ GoodLeft leftLength block] =
         Pr{let tape ← ($ᵗ (ForsDisclosureTape.Tape leftLength) :
-            ProbComp (ForsDisclosureTape.Tape leftLength))}[2 ^ 102 < ∑ part, ForsDisclosureTape.loads tape part ^ 14] := by
-      rw [← probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_blockTape leftLength),
-        prEvent_map]
-      exact probEvent_congr' (fun block _ => by
-        simp only [Function.comp_def, GoodLeft, not_le]) rfl
+            ProbComp (ForsDisclosureTape.Tape leftLength))}[
+          2 ^ 102 < ∑ part, ForsDisclosureTape.loads tape part ^ 14] := by
+      refine (prEvent_congr _ _
+        (fun block => 2 ^ 102 < ∑ part,
+          ForsDisclosureTape.loads (blockTape leftLength block) part ^ 14)
+        fun block => by simp only [GoodLeft, not_le]).trans ?_
+      exact (prEvent_map _ _ (fun tape : ForsDisclosureTape.Tape leftLength =>
+        2 ^ 102 < ∑ part, ForsDisclosureTape.loads tape part ^ 14)).symm.trans
+        ((evalDist_blockTape leftLength).prEvent_eq _)
     rw [hevent]
     exact ForsDisclosureTape.bad_load_probability_sharper leftLength hcap
   refine le_trans ?_ hblock
@@ -713,12 +706,9 @@ theorem prob_not_goodLeft_le {ρ : Type} (run : List HashOutput → List HashOut
   refine ENNReal.tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
   by_cases hgood : GoodLeft leftLength leftTape
   · simp [hgood]
-  · simp only [hgood, not_false_eq_true, if_true]
-    calc ∑' rightTape, Pr{let x ← padding rightLength}[x = rightTape] *
-          Pr{let _ ← run leftTape rightTape}[True]
-        ≤ ∑' rightTape, Pr{let x ← padding rightLength}[x = rightTape] :=
-          ENNReal.tsum_le_tsum fun _ => mul_le_of_le_one_right' (prEvent_le_one _)
-      _ ≤ 1 := (OracleComp.tsum_prEvent_le_one _)
+  · rw [ite_eq_left hgood]
+    exact le_trans (ENNReal.tsum_le_tsum fun _ => mul_le_of_le_one_right' (prEvent_le_one _))
+      (tsum_prEvent_le_one _)
 
 set_option exponentiation.threshold 1024 in
 /-- The constants of the second-order terms fit under `2 ^ -303`. -/
@@ -790,12 +780,13 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
         ((pair.2.val < len outcome.2 ∧ fired outcome.2 pair.1.val ∧ fired outcome.2 pair.2.val) ∧
           (cellView outcome.1.2 pair.1.val).1 = (cellView outcome.1.2 pair.2.val).1)
     with heventC
-  have hsplit : Pr{let x ← blockRunOf run leftLength rightLength}[(FiredCovered len fired leftLength rightLength) x] ≤
+  have hsplit : Pr{let x ← blockRunOf run leftLength rightLength}[
+        FiredCovered len fired leftLength rightLength x] ≤
       Pr{let outcome ← blockRunOf run leftLength rightLength}[¬ GoodLeft leftLength outcome.1.1] +
         (Pr{let x ← blockRunOf run leftLength rightLength}[eventA x] +
           (Pr{let x ← blockRunOf run leftLength rightLength}[eventB x] +
             Pr{let x ← blockRunOf run leftLength rightLength}[eventC x])) := by
-    refine le_trans (prEvent_mono (q := fun outcome =>
+    refine le_trans (prEvent_mono_of_support _ _ (fun outcome =>
       ¬ GoodLeft leftLength outcome.1.1 ∨ (eventA outcome ∨ (eventB outcome ∨ eventC outcome)))
       fun outcome hmem hcovered => ?_) ?_
     · have hlength := padding_length rightLength outcome.1.2
@@ -828,8 +819,9 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
           (ForsDisclosureTape.disclosures (blockTape leftLength leftTape))
           (ForsDisclosureTape.loads (blockTape leftLength leftTape))
           (fun part tree => ForsDisclosureTape.disclosures_card_le_loads _ part tree) hgood)
-        rw [← probEvent_congr' (fun _ _ => Iff.rfl) evalDist_parse_uniform, prEvent_map]
-        rfl)
+        exact (prEvent_map _ _ (fun view : View => Covered
+          (ForsDisclosureTape.disclosures (blockTape leftLength leftTape)) view)).symm.trans
+          (evalDist_parse_uniform.prEvent_eq _))
       (fun index leftTape rightTape value => hcausal index index leftTape rightTape value le_rfl)
   -- One fired helper.
   set pairRate : ℝ≥0∞ := 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) * (1 / ((2 ^ 177 : Nat) : ℝ≥0∞))
@@ -837,16 +829,16 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
   have hhelped : Pr{let x ← blockRunOf run leftLength rightLength}[eventB x] ≤
       ∑ pair : Fin rightLength × Fin rightLength,
         pairRate * (reach pair.1.val + reach pair.2.val) := by
-    refine le_trans (probEvent_exists_finset_le_sum _ _ _) (Finset.sum_le_sum fun pair _ => ?_)
+    refine le_trans (prEvent_exists_finset_le _ _ _) (Finset.sum_le_sum fun pair _ => ?_)
     by_cases hsame : pair.1.val = pair.2.val
-    · rw [probEvent_eq_zero fun outcome _ hevent => hevent.1 hsame]
-      exact bot_le
-    · rw [probEvent_congr' (q := fun outcome : (List HashOutput × List HashOutput) × ρ =>
+    · rw [prEvent_eq_zero_of_forall_not _ _ fun outcome hevent => hevent.1 hsame]
+      exact zero_le
+    · rw [prEvent_congr _ _ (fun outcome : (List HashOutput × List HashOutput) × ρ =>
           (pair.2.val < len outcome.2 ∧ fired outcome.2 pair.2.val) ∧
             (GoodLeft leftLength outcome.1.1 ∧
               HelpedBy (leftDisclosures leftLength outcome.1.1)
                 (cellView outcome.1.2 pair.1.val) (cellView outcome.1.2 pair.2.val)))
-          (fun outcome _ => ⟨fun h => h.2, fun h => ⟨hsame, h⟩⟩) rfl]
+          (fun outcome => ⟨fun h => h.2, fun h => ⟨hsame, h⟩⟩)]
       refine le_trans (prob_thin_le run len leftLength rightLength pair.2.val
         (fun z => pair.2.val < len z ∧ fired z pair.2.val) _
         (fun leftTape rightTape => hthin1 pair.2.val leftTape rightTape)
@@ -861,13 +853,13 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
     with htwoRate
   have htwo : Pr{let x ← blockRunOf run leftLength rightLength}[eventC x] ≤
       ∑ pair : Fin rightLength × Fin rightLength, twoRate * reach pair.1.val := by
-    refine le_trans (probEvent_exists_finset_le_sum _ _ _) (Finset.sum_le_sum fun pair _ => ?_)
+    refine le_trans (prEvent_exists_finset_le _ _ _) (Finset.sum_le_sum fun pair _ => ?_)
     by_cases horder : pair.1.val < pair.2.val
-    · rw [probEvent_congr' (q := fun outcome : (List HashOutput × List HashOutput) × ρ =>
+    · rw [prEvent_congr _ _ (fun outcome : (List HashOutput × List HashOutput) × ρ =>
           (pair.2.val < len outcome.2 ∧ fired outcome.2 pair.1.val ∧
               fired outcome.2 pair.2.val) ∧
             (cellView outcome.1.2 pair.1.val).1 = (cellView outcome.1.2 pair.2.val).1)
-          (fun outcome _ => ⟨fun h => h.2, fun h => ⟨horder, h⟩⟩) rfl]
+          (fun outcome => ⟨fun h => h.2, fun h => ⟨horder, h⟩⟩)]
       refine le_trans (prob_thin_le run len leftLength rightLength pair.1.val
         (fun z => pair.2.val < len z ∧ fired z pair.1.val ∧ fired z pair.2.val) _
         (fun leftTape rightTape => hthin2 pair.1.val pair.2.val leftTape rightTape horder)
@@ -876,8 +868,8 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
       rw [htwoRate, mul_assoc]
       exact mul_le_mul' le_rfl (reachMass_sameInstance_le run len leftLength rightLength
         pair.1.val pair.2.val pair.2.isLt horder hcausal)
-    · rw [probEvent_eq_zero fun outcome _ hevent => horder hevent.1]
-      exact bot_le
+    · rw [prEvent_eq_zero_of_forall_not _ _ fun outcome hevent => horder hevent.1]
+      exact zero_le
   -- Summing the pairs.
   have hpairs : ∑ pair : Fin rightLength × Fin rightLength,
         pairRate * (reach pair.1.val + reach pair.2.val) +
@@ -901,7 +893,8 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
       _ ≤ (1 / ((2 ^ 303 : Nat) : ℝ≥0∞)) * ((rightLength : ℝ≥0∞) * expectation) :=
           mul_le_mul' second_order_constants (mul_le_mul' le_rfl hsum)
       _ = (rightLength : ℝ≥0∞) * expectation * (1 / ((2 ^ 303 : Nat) : ℝ≥0∞)) := by ring
-  calc Pr{let x ← blockRunOf run leftLength rightLength}[(FiredCovered len fired leftLength rightLength) x]
+  calc Pr{let x ← blockRunOf run leftLength rightLength}[
+        FiredCovered len fired leftLength rightLength x]
       ≤ _ := hsplit
     _ ≤ (1 : ℝ≥0∞) / 2 ^ 126 + (expectation * (1 / ((2 ^ 129 : Nat) : ℝ≥0∞)) +
           ((rightLength : ℝ≥0∞) * expectation * (1 / ((2 ^ 303 : Nat) : ℝ≥0∞)))) :=

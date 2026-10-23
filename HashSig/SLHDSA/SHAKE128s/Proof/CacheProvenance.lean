@@ -41,6 +41,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CacheProvenance
 
+variable {α : Type}
+
 open Security CacheReplay
 
 /-- **A hash-only run that ends holding an entry it did not start with consulted that input**,

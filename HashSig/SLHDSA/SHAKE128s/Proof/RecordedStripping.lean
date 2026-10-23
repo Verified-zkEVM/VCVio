@@ -30,6 +30,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.RecordedStripping
 
+variable {α β : Type}
+
 open Security RecordedQueries StrippedGame
 
 /-! ## The writer's run, over an arbitrary monoid -/
@@ -59,28 +61,22 @@ theorem evalDist_writerRun_congr {ω : Type} [Monoid ω] (warm : QueryCache Hash
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld))))
     (hagree : ∀ (t : (OracleWorld + SigningSpec).Domain) (log : SigningLog)
       (current : QueryCache HashSpec), Extends warm current →
-      𝒟[writerRun (impl t) log current] = 𝒟[writerRun (impl' t) log current])
+      writerRun (impl t) log current =ᵈ writerRun (impl' t) log current)
     {α : Type} (computation : OracleComp (OracleWorld + SigningSpec) α) :
     ∀ (log : SigningLog) (current : QueryCache HashSpec), Extends warm current →
-      𝒟[writerRun (simulateQ impl computation) log current] =
-        𝒟[writerRun (simulateQ impl' computation) log current] := by
+      writerRun (simulateQ impl computation) log current =ᵈ
+        writerRun (simulateQ impl' computation) log current := by
   induction computation using OracleComp.inductionOn with
-  | pure value => intro _ _ _; rfl
+  | pure value => intro _ _ _; simp only [simulateQ_pure]; exact .rfl
   | query_bind t next ih =>
     intro log current hsub
     rw [simulateQ_bind, simulateQ_bind, simulateQ_spec_query, simulateQ_spec_query,
       writerRun_bind, writerRun_bind]
-    have hmid : 𝒟[writerRun (impl t) log current >>= fun outer =>
-          (fun inner => (((inner.1.1.1, outer.1.1.2 * inner.1.1.2), inner.1.2), inner.2)) <$>
-            writerRun (simulateQ impl (next outer.1.1.1)) outer.1.2 outer.2] =
-        𝒟[writerRun (impl t) log current >>= fun outer =>
-          (fun inner => (((inner.1.1.1, outer.1.1.2 * inner.1.1.2), inner.1.2), inner.2)) <$>
-            writerRun (simulateQ impl' (next outer.1.1.1)) outer.1.2 outer.2] :=
-      evalDist_bind_congr (fun outer houter => by
-        rw [evalDist_map, evalDist_map, ih outer.1.1.1 outer.1.2 outer.2
-          (extends_of_mem_support ((WriterT.run (impl t)).run log) warm current hsub outer
-            houter)])
-    rw [hmid, evalDist_bind, evalDist_bind, hagree t log current hsub]
+    refine (OracleComp.EvalDistEq.bind_congr_of_support _ fun outer houter => ?_).trans
+      ((hagree t log current hsub).bind_left _)
+    exact (ih outer.1.1.1 outer.1.2 outer.2
+      (extends_of_mem_support ((WriterT.run (impl t)).run log) warm current hsub outer
+        houter)).map _
 
 /-! ## The recorded game, stripped -/
 
@@ -88,41 +84,45 @@ theorem evalDist_writerRun_congr {ω : Type} [Monoid ω] (warm : QueryCache Hash
 theorem evalDist_writerRun_signingOracle (warm : QueryCache HashSpec) (sk : SecretKey)
     (t : (OracleWorld + SigningSpec).Domain) (log : SigningLog)
     (current : QueryCache HashSpec) (hsub : Extends warm current) :
-    𝒟[writerRun ((recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk)) t) log
-        current] =
-      𝒟[writerRun ((recordedAdversaryImpl +
-        recordedSigningOracle (StrippedGame.strippedSign warm sk)) t) log current] := by
+    writerRun ((recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk)) t) log
+        current =ᵈ
+      writerRun ((recordedAdversaryImpl +
+        recordedSigningOracle (StrippedGame.strippedSign warm sk)) t) log current := by
   rcases t with world | request
-  · rfl
-  · refine congrArg _ ?_
-    show (simulateQ KeygenUniform.rom
-        (((recordedSigningOracle (Scheme.sign sk) request).run).run log)).run current =
-      (simulateQ KeygenUniform.rom
-        (((recordedSigningOracle (StrippedGame.strippedSign warm sk) request).run).run
-          log)).run current
-    rw [run_recordedSigningOracle, run_recordedSigningOracle, simulateQ_bind, simulateQ_bind,
-      StateT.run_bind, StateT.run_bind,
-      run_strippedSign warm sk request current hsub]
+  · exact .rfl
+  · have heq : writerRun ((recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk))
+          (.inr request)) log current =
+        writerRun ((recordedAdversaryImpl +
+          recordedSigningOracle (StrippedGame.strippedSign warm sk)) (.inr request)) log
+          current := by
+      change (simulateQ KeygenUniform.rom
+          (((recordedSigningOracle (Scheme.sign sk) request).run).run log)).run current =
+        (simulateQ KeygenUniform.rom
+          (((recordedSigningOracle (StrippedGame.strippedSign warm sk) request).run).run
+            log)).run current
+      rw [run_recordedSigningOracle, run_recordedSigningOracle, simulateQ_bind, simulateQ_bind,
+        StateT.run_bind, StateT.run_bind,
+        run_strippedSign warm sk request current hsub]
+    rw [heq]
 
 set_option maxHeartbeats 1000000 in
 /-- **Stripping the honest phase changes nothing about the law of the recorded run.** -/
 theorem evalDist_run_recordedAfterSeeds (adversary : Adversary)
     (sds : Digest × Digest × Digest) (warm current : QueryCache HashSpec)
     (hsub : Extends warm current) :
-    𝒟[(simulateQ KeygenUniform.rom
-        (RecordedQueries.recordedAfterSeeds adversary sds warm)).run current] =
-      𝒟[(simulateQ KeygenUniform.rom
-        (RecordedTail.recordedAfterSeeds adversary sds)).run current] := by
+    (simulateQ KeygenUniform.rom
+        (RecordedQueries.recordedAfterSeeds adversary sds warm)).run current =ᵈ
+      (simulateQ KeygenUniform.rom
+        (RecordedTail.recordedAfterSeeds adversary sds)).run current := by
   unfold RecordedQueries.recordedAfterSeeds RecordedTail.recordedAfterSeeds
   rw [simulateQ_bind, simulateQ_bind, StateT.run_bind, StateT.run_bind,
     run_strippedKeygen warm sds current hsub]
-  refine evalDist_bind_congr ?_
+  refine OracleComp.EvalDistEq.bind_congr_of_support _ ?_
   rintro ⟨⟨sk, pk⟩, cache⟩ hstep
   have hcache : Extends warm cache :=
     extends_of_mem_support _ warm current hsub ((sk, pk), cache) hstep
-  rw [simulateQ_bind, simulateQ_bind, StateT.run_bind, StateT.run_bind, evalDist_bind,
-    evalDist_bind]
-  refine congrArg (fun head => head >>= _) ?_
+  rw [simulateQ_bind, simulateQ_bind, StateT.run_bind, StateT.run_bind]
+  refine EvalDistEq.bind_left ?_ _
   exact evalDist_writerRun_congr warm _ _
     (fun t log inner hinner =>
       (evalDist_writerRun_signingOracle warm sk t log inner hinner).symm)

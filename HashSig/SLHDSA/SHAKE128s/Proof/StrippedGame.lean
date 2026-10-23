@@ -55,6 +55,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.StrippedGame
 
+variable {α β : Type}
+
 open Security CacheReplay
 
 /-- Every entry of the first cache is still present in the second. -/
@@ -139,14 +141,13 @@ a counted bind is the underlying bind, and appending to the log is a pure step. 
 theorem run_liftM_counted {α : Type} (x : OracleComp OracleWorld α) (log : SigningLog) :
     ((WriterT.run (liftM x : CountedRun α)).run log) =
       (fun value => ((value, (1 : Multiplicative Counts)), log)) <$> x := by
-  show (fun step : α × SigningLog => ((step.1, (1 : Multiplicative Counts)), step.2)) <$>
-    (x >>= fun value => pure (value, log)) = _
-  simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
+  simp [liftM, monadLift, MonadLift.monadLift]
 
 theorem run_liftM_state {α : Type} (x : StateT SigningLog (OracleComp OracleWorld) α)
     (log : SigningLog) :
     ((WriterT.run (liftM x : CountedRun α)).run log) =
-      (fun step => ((step.1, (1 : Multiplicative Counts)), step.2)) <$> x.run log := rfl
+      (fun step => ((step.1, (1 : Multiplicative Counts)), step.2)) <$> x.run log := by
+  simp [liftM, monadLift, MonadLift.monadLift]
 
 /-- The counted signing oracle with its signer left as a parameter: charge one request, call the
 signer, and append the answer to the log. -/

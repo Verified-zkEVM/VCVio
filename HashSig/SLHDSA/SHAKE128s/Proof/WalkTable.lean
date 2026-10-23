@@ -43,6 +43,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.WalkTable
 
+variable {α β : Type}
+
 open Security CanonicalGraph WarmedGame
 
 /-! ## A support-wise congruence under a bind
@@ -52,16 +54,8 @@ be allowed to use where the run can be. -/
 
 /-- **Continuations that agree where the run can be give the same law.** -/
 theorem evalDist_bind_congr_support {α β : Type} (oa : ProbComp α) (f g : α → ProbComp β)
-    (h : ∀ a ∈ support oa, 𝒟[f a] = 𝒟[g a]) : 𝒟[oa >>= f] = 𝒟[oa >>= g] := by
-  refine SPMF.ext fun x => ?_
-  rw [show 𝒟[oa >>= f] x = Pr{let y ← oa >>= f}[y = x] from (prEvent_eq_evalDist_singleton _ _).symm,
-    show 𝒟[oa >>= g] x = Pr{let y ← oa >>= g}[y = x] from (prEvent_eq_evalDist_singleton _ _).symm,
-    OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_bind_eq_tsum]
-  refine tsum_congr fun a => ?_
-  by_cases hmem : a ∈ support oa
-  · rw [show Pr{let y ← f a}[y = x] = Pr{let y ← g a}[y = x] from by
-      rw [prEvent_eq_evalDist_singleton, prEvent_eq_evalDist_singleton, h a hmem]]
-  · rw [(prEvent_eq_zero_of_not_mem_support _) hmem, zero_mul, zero_mul]
+    (h : ∀ a ∈ support oa, f a =ᵈ g a) : oa >>= f =ᵈ oa >>= g :=
+  OracleComp.EvalDistEq.bind_congr_of_support oa h
 
 /-! ## The walk a table determines -/
 
@@ -123,31 +117,33 @@ theorem secretSeed_of_mem_support (publicSeed secretSeed : Digest)
 
 /-- **The walk at fixed seeds is a drawn table.** -/
 theorem evalDist_warmup_table (prfSeed publicSeed : Digest) :
-    𝒟[(do
+    (do
         let secretSeed ← ($ᵗ Digest : ProbComp Digest)
         let result ← (simulateQ randomOracle (Programming.warmup publicSeed secretSeed)).run ∅
-        pure (((secretSeed, prfSeed, publicSeed), result.1), result.2))] =
-      𝒟[(do
+        pure (((secretSeed, prfSeed, publicSeed), result.1), result.2)) =ᵈ
+      (do
         let table ← ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding))
-        pure (walkOfTable prfSeed publicSeed table))] := by
+        pure (walkOfTable prfSeed publicSeed table)) := by
   classical
-  have hseed : 𝒟[(do
+  have hseed : (do
       let secretSeed ← ($ᵗ Digest : ProbComp Digest)
       let result ← (simulateQ randomOracle (Programming.warmup publicSeed secretSeed)).run ∅
-      pure (((secretSeed, prfSeed, publicSeed), result.1), result.2))] =
-    𝒟[(do
+      pure (((secretSeed, prfSeed, publicSeed), result.1), result.2)) =ᵈ
+    (do
       let secretSeed ← ($ᵗ Digest : ProbComp Digest)
       let result ← (simulateQ randomOracle (Programming.warmup publicSeed secretSeed)).run ∅
-      pure (((result.1 Node.secretSeed, prfSeed, publicSeed), result.1), result.2))] := by
-    refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun secretSeed => ?_
+      pure (((result.1 Node.secretSeed, prfSeed, publicSeed), result.1), result.2)) := by
+    refine EvalDistEq.bind_right _ fun secretSeed => ?_
     refine evalDist_bind_congr_support _ _ _ fun result hresult => ?_
     rw [secretSeed_of_mem_support publicSeed secretSeed result hresult]
-  rw [hseed, ← bind_assoc, evalDist_bind, Programming.warmup_seed_uniform publicSeed,
-    ← evalDist_bind, bind_map_left]
-  rfl
+  refine hseed.trans ?_
+  rw [← bind_assoc]
+  refine ((Programming.warmup_seed_uniform publicSeed).bind_left _).trans ?_
+  rw [bind_map_left]
+  exact EvalDistEq.rfl
 
 /-- **The walk is a drawn table.** -/
-theorem evalDist_graphWalk : 𝒟[graphWalk] = 𝒟[tableWalk] := by
+theorem evalDist_graphWalk : graphWalk =ᵈ tableWalk := by
   classical
   have hwalk : graphWalk = (do
       let secretSeed ← ($ᵗ Digest : ProbComp Digest)
@@ -158,30 +154,10 @@ theorem evalDist_graphWalk : 𝒟[graphWalk] = 𝒟[tableWalk] := by
     rw [graphWalk_eq, seeds]
     simp only [bind_assoc, pure_bind]
   rw [hwalk, tableWalk]
-  calc 𝒟[(do
-        let secretSeed ← ($ᵗ Digest : ProbComp Digest)
-        let prfSeed ← ($ᵗ Digest : ProbComp Digest)
-        let publicSeed ← ($ᵗ Digest : ProbComp Digest)
-        let result ← (simulateQ randomOracle (Programming.warmup publicSeed secretSeed)).run ∅
-        pure (((secretSeed, prfSeed, publicSeed), result.1), result.2))]
-      = 𝒟[(do
-        let prfSeed ← ($ᵗ Digest : ProbComp Digest)
-        let secretSeed ← ($ᵗ Digest : ProbComp Digest)
-        let publicSeed ← ($ᵗ Digest : ProbComp Digest)
-        let result ← (simulateQ randomOracle (Programming.warmup publicSeed secretSeed)).run ∅
-        pure (((secretSeed, prfSeed, publicSeed), result.1), result.2))] :=
-        OracleComp.DeferredSampling.evalDist_bind_comm _ _ _
-    _ = 𝒟[(do
-        let prfSeed ← ($ᵗ Digest : ProbComp Digest)
-        let publicSeed ← ($ᵗ Digest : ProbComp Digest)
-        let secretSeed ← ($ᵗ Digest : ProbComp Digest)
-        let result ← (simulateQ randomOracle (Programming.warmup publicSeed secretSeed)).run ∅
-        pure (((secretSeed, prfSeed, publicSeed), result.1), result.2))] := by
-        refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun prfSeed => ?_
-        exact OracleComp.DeferredSampling.evalDist_bind_comm _ _ _
-    _ = _ := by
-        refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun prfSeed => ?_
-        refine OracleComp.DeferredSampling.evalDist_bind_congr_left _ _ _ fun publicSeed => ?_
-        exact evalDist_warmup_table prfSeed publicSeed
+  refine (OracleComp.EvalDistEq.bind_bind_swap _ _ _).trans ?_
+  refine EvalDistEq.bind_right _ fun prfSeed => ?_
+  refine (OracleComp.EvalDistEq.bind_bind_swap _ _ _).trans ?_
+  refine EvalDistEq.bind_right _ fun publicSeed => ?_
+  exact evalDist_warmup_table prfSeed publicSeed
 
 end SlhDsaSecurity.WalkTable

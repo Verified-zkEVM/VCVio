@@ -51,6 +51,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.RecordedQueries
 
+variable {α β : Type}
+
 open Security
 
 /-! ## Mapping a writer along a monoid homomorphism
@@ -150,20 +152,20 @@ theorem run_adversaryImpl_map (queried : OracleWorld.Domain) :
 
 theorem stateT_map_apply {α β : Type} (f : α → β)
     (x : StateT SigningLog (OracleComp OracleWorld) α) (log : SigningLog) :
-    (f <$> x) log = (fun step => (f step.1, step.2)) <$> x log := rfl
+    (f <$> x) log = (fun step => (f step.1, step.2)) <$> x log :=
+  StateT.run_map f x log
 
 theorem run_liftM_base {ω : Type} [Monoid ω] {α : Type} (x : OracleComp OracleWorld α)
     (log : SigningLog) :
     ((WriterT.run (liftM x : WriterT ω (StateT SigningLog (OracleComp OracleWorld)) α)).run
       log) = (fun value => ((value, (1 : ω)), log)) <$> x := by
-  show (fun step : α × SigningLog => ((step.1, (1 : ω)), step.2)) <$>
-    (x >>= fun value => pure (value, log)) = _
-  simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
+  simp [liftM, monadLift, MonadLift.monadLift]
 
 theorem run_liftM_inner {ω : Type} [Monoid ω] {α : Type}
     (x : StateT SigningLog (OracleComp OracleWorld) α) (log : SigningLog) :
     ((WriterT.run (liftM x : WriterT ω (StateT SigningLog (OracleComp OracleWorld)) α)).run
-      log) = (fun step => ((step.1, (1 : ω)), step.2)) <$> x.run log := rfl
+      log) = (fun step => ((step.1, (1 : ω)), step.2)) <$> x.run log := by
+  simp [liftM, monadLift, MonadLift.monadLift]
 
 /-- The signing oracle, recording nothing: the signer is honest, so its calls are not charged
 and must not be recorded. -/
@@ -195,11 +197,9 @@ theorem run_signingOracle_map
     (StrippedGame.signingOracleWith signer request).run =
       (fun step => (step.1, forget step.2)) <$> (recordedSigningOracle signer request).run := by
   funext log
-  show ((StrippedGame.signingOracleWith signer request).run).run log =
-    (fun step : (Option Bytes × Multiplicative Tally) × SigningLog =>
-      ((step.1.1, forget step.1.2), step.2)) <$>
-        ((recordedSigningOracle signer request).run).run log
-  rw [StrippedGame.run_signingOracleWith, run_recordedSigningOracle]
+  change ((StrippedGame.signingOracleWith signer request).run).run log =
+    ((fun step => (step.1, forget step.2)) <$> (recordedSigningOracle signer request).run).run log
+  rw [StateT.run_map, StrippedGame.run_signingOracleWith, run_recordedSigningOracle]
   simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
   rfl
 

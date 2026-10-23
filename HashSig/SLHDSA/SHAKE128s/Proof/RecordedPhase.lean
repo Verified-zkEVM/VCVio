@@ -58,6 +58,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.RecordedPhase
 
+variable {α : Type}
+
 open Security RecordedQueries
 
 /-- What the adversary's phase charges and records, query by query. -/
@@ -104,7 +106,10 @@ theorem phase_eq (signer : Message → OracleComp OracleWorld (Option Bytes)) :
       (unchargedPhase signer).withAddCost phaseCost := by
   funext queried
   cases queried with
-  | inl input => rfl
+  | inl input =>
+    rw [QueryImpl.add_apply_inl, recordedAdversaryImpl, QueryImpl.withAddCost_apply,
+      QueryImpl.withAddCost_apply]
+    rfl
   | inr request =>
     funext log
     show (WriterT.run (recordedSigningOracle signer request)).run log =

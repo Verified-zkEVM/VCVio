@@ -34,6 +34,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CountedHandler
 
+variable {α β : Type}
+
 open Security HandlerCarrier ServedAgreement
 
 variable (pk : PublicKey) {τ : Type}

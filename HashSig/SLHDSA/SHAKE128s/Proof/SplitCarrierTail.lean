@@ -34,6 +34,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.SplitCarrierTail
 
+variable {α β : Type}
+
 open Security RecorderView CarriedWitness PhaseFusion RecordedQueries BracketedRun
 open CarrierTail ClassGrowth SplitCounted
 

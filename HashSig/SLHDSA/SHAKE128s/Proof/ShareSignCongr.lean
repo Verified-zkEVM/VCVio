@@ -34,8 +34,8 @@ open CanonicalGraph RedrawCell ShareGame
 /-- **The walk's warm cache is the table's union cache over nothing.** -/
 theorem warm_eq_unionCache (setup : Setup) :
     setup.warm = unionCache setup.publicSeed setup.table ∅ := by
-  funext input
-  rw [unionCache, openCache_total]
+  ext input
+  rw [unionCache, QueryCache.ofFn_apply, openCache_total]
   cases h : Programming.cacheFrom setup.publicSeed setup.table.1
     (fullOutput setup.table.1 setup.table.2) Programming.order ∅ input with
   | none => rw [Setup.warm, h]; rfl
@@ -63,7 +63,7 @@ theorem revealedOf_succ (cells : Cells) (layer : Nat) (hl : layer < layers)
       hrange⟩ : Fin (2 ^ (totalHeight - subtreeHeight))) = ⟨tree, htree⟩ :=
     Fin.ext (by simpa [Hypertree.nextLeaf] using hsum)
   unfold ShareCells.revealedOf ShareCells.messageNode
-  simp only [dif_pos hl, dif_pos hrange, hfin]
+  simp only [dite_eq_left hl, dite_eq_left hrange, hfin]
 
 /-- The digit a bottom-layer key reveals is the one its FORS public key encodes. -/
 theorem revealedOf_zero (cells : Cells) (hl : 0 < layers) (tree : Nat)

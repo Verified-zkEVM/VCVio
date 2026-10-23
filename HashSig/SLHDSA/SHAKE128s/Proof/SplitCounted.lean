@@ -38,6 +38,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.SplitCounted
 
+variable {α : Type}
+
 open Security RecorderView HandlerCarrier CarriedWitness ServedAgreement
 open CountedHandler ClassGrowth
 

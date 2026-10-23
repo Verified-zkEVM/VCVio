@@ -137,7 +137,7 @@ theorem appendedOf_of_cached (leftKeep rightKeep : Bytes → σ → Prop) (input
     (hcached : CacheView.cacheOf state.1 input = some cached) :
     appendedOf leftKeep rightKeep input state answer = state.2 := by
   classical
-  rw [appendedOf, if_neg (by rw [hcached]; simp), if_neg (by rw [hcached]; simp)]
+  rw [appendedOf, ite_eq_right (by rw [hcached]; simp), ite_eq_right (by rw [hcached]; simp)]
 
 open scoped Classical in
 theorem appendedOf_of_left (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
@@ -146,7 +146,7 @@ theorem appendedOf_of_left (leftKeep rightKeep : Bytes → σ → Prop) (input :
     appendedOf leftKeep rightKeep input state answer =
       (state.2.1 ++ [(input, answer)], state.2.2) := by
   classical
-  rw [appendedOf, if_pos ⟨hfresh, hleft⟩]
+  rw [appendedOf, ite_eq_left ⟨hfresh, hleft⟩]
 
 open scoped Classical in
 theorem appendedOf_of_right (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
@@ -156,7 +156,7 @@ theorem appendedOf_of_right (leftKeep rightKeep : Bytes → σ → Prop) (input 
     appendedOf leftKeep rightKeep input state answer =
       (state.2.1, state.2.2 ++ [(input, answer)]) := by
   classical
-  rw [appendedOf, if_neg (fun hboth => hleft hboth.2), if_pos ⟨hfresh, hright⟩]
+  rw [appendedOf, ite_eq_right (fun hboth => hleft hboth.2), ite_eq_left ⟨hfresh, hright⟩]
 
 open scoped Classical in
 theorem appendedOf_of_neither (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
@@ -164,7 +164,8 @@ theorem appendedOf_of_neither (leftKeep rightKeep : Bytes → σ → Prop) (inpu
     (hright : ¬ rightKeep input state.1) :
     appendedOf leftKeep rightKeep input state answer = state.2 := by
   classical
-  rw [appendedOf, if_neg (fun hboth => hleft hboth.2), if_neg (fun hboth => hright hboth.2)]
+  rw [appendedOf, ite_eq_right (fun hboth => hleft hboth.2),
+    ite_eq_right (fun hboth => hright hboth.2)]
 
 open scoped Classical in
 /-- **The target recording after a step, as a list**: unchanged, or this query's own entry
@@ -276,7 +277,6 @@ theorem recorderOf_run_inr_some (leftKeep rightKeep : Bytes → σ → Prop) (in
         ProbComp _)
     | none => _) = _
   rw [hcached]
-  rfl
 
 open scoped Classical in
 theorem recorderOf_run_inr_none (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
@@ -392,8 +392,8 @@ theorem recorderOf_step_record (leftKeep rightKeep : Bytes → σ → Prop) (inp
     (state : StateOf σ) (step : OracleWorld.Range (Sum.inr input) × StateOf σ)
     (hstep : step ∈ support (((recorderOf leftKeep rightKeep) (Sum.inr input)).run state)) :
     step.2.2 = appendedOf leftKeep rightKeep input state step.1 := by
-  rcases recorderOf_step leftKeep rightKeep input state step hstep with ⟨-, hshape⟩ | ⟨-, hshape⟩ <;>
-    rw [hshape]
+  rcases recorderOf_step leftKeep rightKeep input state step hstep with
+    ⟨-, hshape⟩ | ⟨-, hshape⟩ <;> rw [hshape]
 
 open scoped Classical in
 /-- **After its own query the answer is in the cache**, whichever branch the step took: a hit
@@ -484,7 +484,6 @@ theorem recorderOf_forget_step (leftKeep rightKeep : Bytes → σ → Prop)
     | some cached =>
       rw [recorderOf_run_inr_some leftKeep rightKeep input state cached hcached,
         QueryImpl.withCaching_run_some _ hcached, map_pure]
-      rfl
     | none =>
       rw [recorderOf_run_inr_none leftKeep rightKeep input state hcached,
         QueryImpl.withCaching_run_none _ hcached]

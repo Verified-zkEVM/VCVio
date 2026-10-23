@@ -27,6 +27,8 @@ open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
 namespace SlhDsaSecurity.ShareFinal
 
+variable {α β : Type}
+
 open Security CanonicalGraph ShareGame ShareCouple ShareInv ShareWhole ShareEvent
 
 /-! ## At one setup -/

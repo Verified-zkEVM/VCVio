@@ -39,6 +39,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.ShareBlindFacts
 
+variable {α : Type}
+
 open Security CanonicalGraph ShareGame
 
 /-! ## The step without its flag -/
@@ -172,11 +174,15 @@ theorem probEvent_filing_eq (setup : Setup) {α : Type} (computation : OracleCom
     (start : St) :
     Pr{let z ← (simulateQ (filing setup) computation).run (start, false)}[z.2.2 = true] =
       Pr{let z ← (simulateQ (handler false setup) computation).run (start, false)}[z.2.2 = true] :=
-  OracleComp.ProgramLogic.Relational.probEvent_output_bad_eq' _ _
-    (fun queried state answer next => by rw [filing_run_false])
+  OracleComp.ProgramLogic.Relational.prEvent_simulateQ_run_bad_eq _ _ (fun s => s.2 = true)
+    (fun queried state hgood q => by
+      obtain ⟨inner, flag⟩ := state
+      simp only [Bool.not_eq_true] at hgood
+      subst hgood
+      rw [filing_run_false])
     (fun queried state hbad z hz => filing_mono setup queried state hbad z hz)
     (fun queried state hbad z hz => ShareUntilBad.mono false setup queried state hbad z hz)
-    computation start
+    computation (start, false)
 
 /-- **A raised flag of the filing handler is witnessed by its record.** -/
 theorem filing_witness (setup : Setup) {α : Type} (computation : OracleComp ShareSpec α)
@@ -309,8 +315,8 @@ theorem blindStep_congr (publicSeed : Digest) (index : Node) (cells other : Cell
     (aux : Digest × Padding) (hagree : BlindCharge.AgreeOff index cells other)
     (queried : ShareSpec.Domain) (state : St)
     (hindex : ¬ available (setupOf publicSeed cells aux) state.served index) :
-    𝒟[((blindStep (setupOf publicSeed cells aux)) queried).run state] =
-      𝒟[((blindStep (setupOf publicSeed other aux)) queried).run state] := by
+    ((blindStep (setupOf publicSeed cells aux)) queried).run state =ᵈ
+      ((blindStep (setupOf publicSeed other aux)) queried).run state := by
   classical
   have hnot := not_alwaysAvailable_of_unavailable _ state.served index hindex
   have hpk := pk_congr publicSeed index hnot cells other aux hagree
@@ -319,18 +325,18 @@ theorem blindStep_congr (publicSeed : Digest) (index : Node) (cells other : Cell
         route false (setupOf publicSeed other aux) st input := by
     intro st input hst
     unfold route
-    rw [if_neg Bool.false_ne_true, if_neg Bool.false_ne_true, hst,
+    rw [ite_eq_right Bool.false_ne_true, ite_eq_right Bool.false_ne_true, hst,
       openAt_congr publicSeed index cells other aux hagree state.served hindex]
     rfl
   rcases queried with ((world | request) | ⟨request, drawn⟩) | forgery
   · rcases world with coin | input
-    · rfl
-    · show 𝒟[(do
+    · exact EvalDistEq.rfl
+    · show (do
           let step ← route false (setupOf publicSeed cells aux) state input
-          pure (step.1, { step.2 with record := state.record ++ [(input, state.served)] }))] =
-        𝒟[(do
+          pure (step.1, { step.2 with record := state.record ++ [(input, state.served)] })) =ᵈ
+        (do
           let step ← route false (setupOf publicSeed other aux) state input
-          pure (step.1, { step.2 with record := state.record ++ [(input, state.served)] }))]
+          pure (step.1, { step.2 with record := state.record ++ [(input, state.served)] }))
       rw [hroute state input rfl]
   · cases hframe : request.frame with
     | none => simp [blindStep, StateT.run, hframe]
@@ -340,27 +346,30 @@ theorem blindStep_congr (publicSeed : Digest) (index : Node) (cells other : Cell
       obtain ⟨hserved, -, -⟩ := ShareFlag.prfAt_mem_support state framed seed hseed
       rw [hroute seed.2 _ hserved]
   · cases drawn with
-    | none => rfl
+    | none => exact EvalDistEq.rfl
     | some pair =>
       obtain ⟨randomizer, digest⟩ := pair
       by_cases hserved : digest ∈ state.served
       · have hsig : ShareSigner.cellSig (setupOf publicSeed cells aux).warm
             (setupOf publicSeed cells aux).sk randomizer digest =
-          ShareSigner.cellSig (setupOf publicSeed other aux).warm
-            (setupOf publicSeed other aux).sk randomizer digest := by
+            ShareSigner.cellSig (setupOf publicSeed other aux).warm
+              (setupOf publicSeed other aux).sk randomizer digest := by
           refine ShareSignCongr.cellSig_congr publicSeed aux.1 aux.1 (cells, aux.2)
             (other, aux.2) (disclosed state.served) (fun node hnode => ?_) randomizer digest
             (fun tree => ?_)
           · exact hagree node fun heq => hindex (heq ▸ hnode)
           · simp only [disclosed, Finset.mem_filter, Finset.mem_univ, true_and]
             exact ⟨digest, hserved, rfl, tree, Fin.ext rfl⟩
-        simp only [blindStep, StateT.run, if_pos hserved, hsig]
-      · simp only [blindStep, StateT.run, if_neg hserved]
+        simp only [blindStep, StateT.run, hserved, ite_true, hsig]
+        exact EvalDistEq.rfl
+      · simp only [blindStep, StateT.run, hserved, ite_false]
+        exact EvalDistEq.rfl
   · have hclaims : claimsOf (setupOf publicSeed cells aux) state forgery =
         claimsOf (setupOf publicSeed other aux) state forgery := by
       unfold claimsOf
       rw [visible_congr publicSeed index cells other aux hagree state hindex, hpk]
       rfl
     simp only [blindStep, StateT.run, hclaims]
+    exact EvalDistEq.rfl
 
 end SlhDsaSecurity.ShareBlindFacts

@@ -28,6 +28,8 @@ set_option backward.isDefEq.respectTransparency false
 
 namespace SlhDsaSecurity.GrowthBudget
 
+variable {α β : Type}
+
 open Security GrowthCharge
 
 @[simp] theorem countAllHashes_pure {α : Type} (value : α) :

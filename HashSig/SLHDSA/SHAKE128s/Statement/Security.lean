@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Statement.Scheme
 public import HashSig.SLHDSA.SHAKE128s.Statement.UnforgeabilityGame
+public import HashSig.SLHDSA.SHAKE128s.Statement.BitSecurity
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.CostModel
 
@@ -42,7 +43,11 @@ structure Adversary where
 /-- What the adversary's phase counts: its signing requests, its hash calls and verification's. -/
 inductive QueryKind where
   | signing | hash | verification
-deriving DecidableEq, Fintype
+deriving DecidableEq
+
+instance : Fintype QueryKind where
+  elems := {.signing, .hash, .verification}
+  complete := by intro kind; cases kind <;> decide
 
 abbrev Counts := QueryKind → Nat
 

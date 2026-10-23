@@ -28,6 +28,8 @@ open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.Target
 
+variable {γ : Type}
+
 open Security CanonicalGraph WarmedGame
 
 /-- A walk the three charges can be read against: its two seeds differ, and its public key is
@@ -41,9 +43,9 @@ theorem prob_bad_walk :
     Pr{let walk ← graphWalk}[¬ GoodWalk walk] ≤
       1 / ((2 ^ 128 : Nat) : ℝ≥0∞) + 1 / ((2 ^ 165 : Nat) : ℝ≥0∞) := by
   classical
-  refine le_trans (prEvent_mono (q := fun walk => walk.1.1.2.1 = walk.1.1.2.2 ∨
+  refine le_trans (prEvent_mono graphWalk _ (fun walk => walk.1.1.2.1 = walk.1.1.2.2 ∨
     HashSeparation.Possible (walk.1.1.2.2, walk.1.2 (.structural WalkDefects.topNode)))
-    fun walk _ hbad => ?_) ?_
+    fun walk hbad => ?_) ?_
   · by_cases hseeds : walk.1.1.2.1 = walk.1.1.2.2
     · exact Or.inl hseeds
     · exact Or.inr (by_contra fun hpossible => hbad ⟨hseeds, hpossible⟩)

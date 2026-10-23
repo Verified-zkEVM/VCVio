@@ -30,6 +30,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CarrierSignRecord
 
+variable {α : Type}
+
 open Security BracketedRun CarrierFiles CarrierRecordings SignerRightRecord CountedHandler
   CarriedWitness RecordedQueries
 

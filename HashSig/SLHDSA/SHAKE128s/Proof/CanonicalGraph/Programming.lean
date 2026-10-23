@@ -10,6 +10,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Input
 public import HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Evaluation
 public import HashSig.SLHDSA.SHAKE128s.Proof.GraphFreshSampling
 public import Mathlib.Data.List.Sort
+import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Rank-order programming of the actual structural byte oracle
@@ -137,23 +138,29 @@ theorem input_separated (publicSeed : Digest) :
 
 /-- Exact law under the actual full-output shared random oracle, including its cache. -/
 theorem warmup_uniform (publicSeed secretSeed : Digest) :
-    𝒟[(simulateQ randomOracle (warmup publicSeed secretSeed)).run ∅] =
-      𝒟[(fun outputs : Outputs =>
+    (simulateQ randomOracle (warmup publicSeed secretSeed)).run ∅ =ᵈ
+      ((fun outputs : Outputs =>
         (cellsOfOutputs secretSeed outputs,
           cacheFrom publicSeed (cellsOfOutputs secretSeed outputs) outputs order ∅)) <$>
-        ($ᵗ Outputs : ProbComp Outputs)] := by
-  rw [warmup, GraphFreshSampling.evalDist_evaluate_eq_uniform_program
+        ($ᵗ Outputs : ProbComp Outputs)) := by
+  rw [warmup]
+  refine (GraphFreshSampling.evalDist_evaluate_eq_uniform_program
     (input publicSeed) assign (input_separated publicSeed) order order_nodup
-      (initialCells secretSeed) ∅ (by intro _ _ _; rfl)]
-  congr 2
-  funext outputs
-  apply program_eq_cacheFrom publicSeed outputs order order_pairwise
-  · constructor
-    · rfl
-    · intro parent hnot
-      exact (hnot (mem_order parent)).elim
-  · intro parent
-    rfl
+      (initialCells secretSeed) ∅ (by intro _ _ _; rfl)).trans ?_
+  have hprogram : (fun outputs : Outputs => GraphFreshSampling.program (input publicSeed) assign
+        outputs order (initialCells secretSeed) ∅) =
+      (fun outputs : Outputs =>
+        (cellsOfOutputs secretSeed outputs,
+          cacheFrom publicSeed (cellsOfOutputs secretSeed outputs) outputs order ∅)) := by
+    funext outputs
+    apply program_eq_cacheFrom publicSeed outputs order order_pairwise
+    · constructor
+      · rfl
+      · intro parent hnot
+        exact (hnot (mem_order parent)).elim
+    · intro parent
+      rfl
+  rw [hprogram]
 
 /-- Every canonical coordinate has its full 240-bit answer installed. -/
 theorem cacheFrom_lookup (publicSeed : Digest) (cells : Cells) (outputs : Outputs)
@@ -255,10 +262,9 @@ theorem splitTable_bijective : Function.Bijective splitTable := by
       exact BitVec.extractLsb'_append_eq_right
 
 theorem splitTable_uniform :
-    𝒟[splitTable <$> ($ᵗ (Digest × Outputs) : ProbComp (Digest × Outputs))] =
-      𝒟[($ᵗ (Cells × Padding) : ProbComp (Cells × Padding))] :=
-  evalDist_map_bijective_uniform_cross (α := Digest × Outputs) (β := Cells × Padding)
-    splitTable splitTable_bijective
+    (splitTable <$> ($ᵗ (Digest × Outputs) : ProbComp (Digest × Outputs))) =ᵈ
+      ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding)) :=
+  SampleableType.map_uniformSample_evalDistEq_of_bijective splitTable_bijective
 
 private theorem uniformSample_prod_eq_bind {α β : Type}
     [SampleableType α] [SampleableType β] :
@@ -272,35 +278,33 @@ private theorem uniformSample_prod_eq_bind {α β : Type}
 independent uniform cell table and an independent uniform suffix table. Its cache
 still contains the full 240-bit answers at the real seed-dependent byte inputs. -/
 theorem warmup_seed_uniform (publicSeed : Digest) :
-    𝒟[(do
+    (do
       let secretSeed ← $ᵗ Digest
-      (simulateQ randomOracle (warmup publicSeed secretSeed)).run ∅)] =
-      𝒟[(fun table : Cells × Padding =>
+      (simulateQ randomOracle (warmup publicSeed secretSeed)).run ∅) =ᵈ
+      ((fun table : Cells × Padding =>
         (table.1, cacheFrom publicSeed table.1 (fullOutput table.1 table.2) order ∅)) <$>
-        ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding))] := by
+        ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding))) := by
   let result := fun table : Cells × Padding =>
     (table.1, cacheFrom publicSeed table.1 (fullOutput table.1 table.2) order ∅)
-  calc
-    _ = 𝒟[(do
-        let secretSeed ← $ᵗ Digest
-        (fun outputs : Outputs =>
-          (cellsOfOutputs secretSeed outputs,
-            cacheFrom publicSeed (cellsOfOutputs secretSeed outputs) outputs order ∅)) <$>
-              ($ᵗ Outputs : ProbComp Outputs))] := by
-      apply OracleComp.DeferredSampling.evalDist_bind_congr_left
-      intro secretSeed
-      exact warmup_uniform _ _
-    _ = 𝒟[result <$> (splitTable <$>
-        ($ᵗ (Digest × Outputs) : ProbComp (Digest × Outputs)))] := by
-      have hfull : ∀ secretSeed outputs,
-          fullOutput (cellsOfOutputs secretSeed outputs)
-            (fun parent => (outputs parent).extractLsb' 0 112) = outputs := by
-        intro secretSeed outputs
-        funext parent
-        exact BitVec.extractLsb'_append_extractLsb'
-      rw [uniformSample_prod_eq_bind]
-      simp only [result, splitTable, map_eq_bind_pure_comp, Function.comp_def,
-        bind_assoc, pure_bind, hfull]
-    _ = _ := by rw [evalDist_map, splitTable_uniform, ← evalDist_map]
+  have hstep := EvalDistEq.bind_right ($ᵗ Digest : ProbComp Digest)
+    (fun secretSeed => warmup_uniform publicSeed secretSeed)
+  have hprog : (do
+      let secretSeed ← $ᵗ Digest
+      (fun outputs : Outputs =>
+        (cellsOfOutputs secretSeed outputs,
+          cacheFrom publicSeed (cellsOfOutputs secretSeed outputs) outputs order ∅)) <$>
+            ($ᵗ Outputs : ProbComp Outputs)) =
+      result <$> (splitTable <$> ($ᵗ (Digest × Outputs) : ProbComp (Digest × Outputs))) := by
+    have hfull : ∀ secretSeed outputs,
+        fullOutput (cellsOfOutputs secretSeed outputs)
+          (fun parent => (outputs parent).extractLsb' 0 112) = outputs := by
+      intro secretSeed outputs
+      funext parent
+      exact BitVec.extractLsb'_append_extractLsb'
+    rw [uniformSample_prod_eq_bind]
+    simp only [result, splitTable, map_eq_bind_pure_comp, Function.comp_def,
+      bind_assoc, pure_bind, hfull]
+  rw [hprog] at hstep
+  exact hstep.trans (splitTable_uniform.map result)
 
 end SlhDsaSecurity.CanonicalGraph.Programming

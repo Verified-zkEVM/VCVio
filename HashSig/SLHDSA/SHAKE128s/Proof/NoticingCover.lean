@@ -37,6 +37,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.NoticingCover
 
+variable {α : Type}
+
 open Security RecorderView SplitPrefix DigestTape
 
 variable {σ : Type} [CacheView σ]

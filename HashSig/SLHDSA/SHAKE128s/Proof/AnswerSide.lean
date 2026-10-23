@@ -44,7 +44,7 @@ noncomputable def CanonicalBad (publicSeed : Digest) (cells : Cells) :
 /-- **Off the message class the rate is one unit of `2 ^ -128`.** -/
 theorem prob_canonicalBad_le (publicSeed : Digest) (cells : Cells) (input : Bytes) :
     Pr{let answer ← ($ᵗ HashOutput : ProbComp HashOutput)}[CanonicalBad publicSeed cells input answer] ≤ 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) :=
-  le_trans (prEvent_mono fun _ _ hbad => hbad.symm)
+  le_trans (prEvent_mono _ _ _ fun _ hbad => hbad.symm)
     (FreshHitBound.prob_target_match_le (CanonicalTarget.canonicalTarget publicSeed cells input))
 
 /-! ## The key the charge is stated at

@@ -71,7 +71,7 @@ theorem split_bijective : Function.Bijective split := by
   apply (Fintype.bijective_iff_injective_and_card _).2
   refine ⟨split_injective, ?_⟩
   norm_num [HashOutput, messageDigestBytes, View, Instance, ForsTree, ForsLeaf,
-    Fintype.card_prod, Fintype.card_fun, Fintype.card_fin, card_bitVec,
+    Fintype.card_prod, Fintype.card_fun, Fintype.card_fin, Fintype.card_bitVec,
     totalHeight, forsHeight, forsTrees]
 
 end SlhDsaSecurity.MessageDigest

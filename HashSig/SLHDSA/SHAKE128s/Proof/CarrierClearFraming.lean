@@ -28,6 +28,8 @@ open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CarrierClearFraming
 
+variable {α : Type}
+
 open Security BracketedRun CarrierFiles CarrierTail PhaseFusion RecordInvariant RecordedQueries
 
 variable (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
