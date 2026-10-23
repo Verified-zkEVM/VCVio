@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
-public import VCVioFoxglove.Adequacy
+public import VCVioFoxglove.Specs
 public import Foxglove.Rules.Independence
 
 /-!
@@ -76,6 +76,26 @@ theorem prEvent_eq_of_wp_sep_uniform [Fintype β] {oa : OracleComp oSpec (β × 
   simp only [Set.indicator_apply, Set.mem_ofPred_eq, product_apply, PMF.uniformOfFintype'_apply]
   rw [tsum_congr fun b ↦ (tsum_eq_single b fun c hc ↦ ite_eq_right (Ne.symm hc)).trans
     (ite_eq_left rfl), ENNReal.tsum_mul_left, PMF.tsum_coe, mul_one]
+
+omit [Countable β] in
+/-- **A sample and a sampler whose output measure does not depend on it are independent**,
+the second with its own tape law. -/
+theorem wp_bind_pair_sep_of_evalDist_eq [MeasurableSpace γ] [MeasurableSingletonClass γ]
+    {C : OracleComp oSpec β} {F : β → OracleComp oSpec γ} (hC : ⊢ wp C ⦃X, X ~ μ⦄)
+    (hF : ∀ b, 𝒟[F b] = 𝒟[F default]) :
+    ⊢ wp (C >>= fun b ↦ F b >>= fun c ↦ pure (b, c)) ⦃Z, (Prod.fst ∘ Z) ~ μ ∗
+      (Prod.snd ∘ Z) ~ lawPMF (BernoulliInterpretable.interp (F default))⦄ :=
+  wp_bind_pair_sep hC fun b ↦ wp_of_evalDist_eq (hF b) (wp_lawPMF _)
+
+omit [BernoulliImpl oSpec] [LawfulBernoulliImpl oSpec] in
+/-- **A decided event of two draws is an event of the pair of draws**: the shape in which the
+independence lemmas apply. -/
+theorem evalDist_decide_bind_bind {α δ : Type} (A : OracleComp oSpec α)
+    (B : α → OracleComp oSpec δ) (p : α → δ → Prop) [∀ a d, Decidable (p a d)] :
+    𝒟[do let a ← A; let d ← B a; return decide (p a d)] {true}
+      = Pr{let x ← (do let a ← A; let d ← B a; pure (a, d))}[p x.1 x.2] := by
+  rw [prEvent_eq_evalDist_decide]
+  simp only [bind_assoc, pure_bind]
 
 end
 
