@@ -93,11 +93,12 @@ theorem evalDist_instanceWord_uniform (requests : Nat) :
     _ = _ := SampleableType.prEvent_uniformSample_fst p
 
 /-- VCVio's uniform sampler and the finite uniform probability measure agree on all events. -/
-theorem uniform_prob_eq_measure {α : Type} [Fintype α] [Nonempty α]
+theorem uniform_prob_eq_measure {α : Type}
     [SampleableType α] [MeasurableSpace α] [DiscreteMeasurableSpace α]
     (event : α → Prop) :
     Pr{let x ← ($ᵗ α : ProbComp α)}[event x] = uniformOn (Set.univ : Set α) {x | event x} := by
   classical
+  have : Fintype α := Fintype.ofFinite α
   rw [SampleableType.prEvent_uniformSample, uniformOn_univ]
   have hset : {x | event x} = ((Finset.univ.filter event : Finset α) : Set α) := by
     ext x; simp

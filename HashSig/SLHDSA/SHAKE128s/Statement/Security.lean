@@ -13,12 +13,15 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.CostModel
 
 /-!
-# Strong unforgeability of SLH-DSA
+# Strong unforgeability of SLH-DSA-SHAKE-128s
 
-The adversary gets the public key, the random oracle and a signing oracle, and outputs a forgery.
-It wins if the forgery verifies and was not returned by the signing oracle. Every hash call is
-counted by its source: the adversary's own, key generation's, the signer's and the final
-verification's; signing requests are counted too.
+The strong unforgeability game of the SLH-DSA-SHAKE-128s scheme of `Statement/Scheme.lean`, over
+the oracle world `OracleWorld`. The adversary gets the public key, the random oracle and a
+signing oracle, and outputs a forgery. It wins if the forgery verifies and was not returned by
+the signing oracle (`Wins`). Every hash call is counted by its source: the adversary's own, key
+generation's, the signer's and the final verification's; signing requests are counted too
+(`securityGame`). `HasSecurityBits Z bits` bounds the advantage of every adversary within the
+signing limit and of at most `q ≥ 1` counted queries of the kinds in `Z` by `q / 2 ^ bits`.
 -/
 
 @[expose] public section
@@ -29,6 +32,7 @@ namespace SlhDsaSecurity.Security
 
 /-- The signing oracle's interface. -/
 abbrev SigningSpec : OracleSpec Message := Game.SigningSpec
+
 /-- The signing log. -/
 abbrev SigningLog := Game.SigningLog
 
@@ -45,19 +49,23 @@ abbrev QueryKind := Game.QueryKind
 
 export Game (Counts)
 
+/-- `count` queries of kind `kind`, and none of the others. -/
 def Counts.single (kind : QueryKind) (count : Nat) : Counts := Pi.single kind count
 
+/-- The adversary's phase: counts, and the signing log, over the oracle world. -/
 abbrev CountedRun := AddWriterT Counts (StateT SigningLog (OracleComp OracleWorld))
 
+/-- One unit per hash call; nothing per uniform sample. -/
 def hashCost : OracleWorld.Domain → Nat :=
   RandomOracleModel.hashCost Bytes HashOutput
 
+/-- Run a computation, and also return the sum of `cost` over its queries. -/
 def countQueries {α : Type} (cost : OracleWorld.Domain → Counts)
     (computation : OracleComp OracleWorld α) : OracleComp OracleWorld (α × Counts) :=
   (fun result => (result.1, Multiplicative.toAdd result.2)) <$>
     (simulateQ (addCostOracle cost) computation).run
 
-/-- One unit for every hash call. -/
+/-- Run a computation, and also return its number of hash calls. -/
 def countAllHashes {α : Type} (computation : OracleComp OracleWorld α) :
     OracleComp OracleWorld (α × Nat) :=
   (fun result => (result.1, Multiplicative.toAdd result.2)) <$>
@@ -96,12 +104,15 @@ noncomputable def afterKeygen (adversary : Adversary) (keys : SecretKey × Publi
 def Fresh (signed : SigningLog) (forgery : Forgery) : Prop :=
   ¬∃ entry ∈ signed, entry.1 = forgery.message ∧ entry.2 = some forgery.signature
 
+/-- The adversary wins: its forgery verifies and is new. -/
 def Wins (outcome : Outcome) : Prop :=
   outcome.verified = true ∧ Fresh outcome.signed outcome.forgery
 
+/-- Freshness of a forgery is decidable. -/
 instance (signed : SigningLog) (forgery : Forgery) : Decidable (Fresh signed forgery) := by
   unfold Fresh; infer_instance
 
+/-- Winning is decidable. -/
 instance (outcome : Outcome) : Decidable (Wins outcome) := by
   unfold Wins; infer_instance
 
@@ -116,6 +127,7 @@ def sourceCounts (outcome : Outcome) (keygenHashes laterHashes : Nat) :
   | .signer => laterHashes - outcome.counts .hash - outcome.counts .verification
   | .verifier => outcome.counts .verification
 
+/-- Key generation, then the adversary's phase and verification, with the counts by source. -/
 noncomputable def experimentBySource (adversary : Adversary) :
     OracleComp OracleWorld (Outcome × Unforgeability.QueryCounts) := do
   let (keys, keygenHashes) ← countAllHashes Scheme.keygen
@@ -127,6 +139,8 @@ noncomputable def runBySource (adversary : Adversary) :
     ProbComp (Outcome × Unforgeability.QueryCounts) :=
   RandomOracleModel.run (experimentBySource adversary)
 
+/-- The strong unforgeability game of SLH-DSA-SHAKE-128s: the winning bit and the counts by
+source. -/
 noncomputable def securityGame : SecurityGame Unit Unforgeability.QueryKind where
   Adversary := Adversary
   experiment := fun _ adversary =>

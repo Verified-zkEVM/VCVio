@@ -21,9 +21,8 @@ the run at the cell's release, redrawing the cell after the stalled run, and wei
 redrawn cell by the probes aiming at it. It is stated for an arbitrary oracle spec and handler
 state.
 
-What a handler has to supply is four facts, each a property of one step:
+What a handler has to supply is three facts, each a property of one step:
 
-* it never fails (`hfail`);
 * it **files** what it records: a step appends entries, each beside the snapshot `now` of the
   state it started from (`hfiles`);
 * availability only grows along a step (`hmono`);
@@ -138,13 +137,6 @@ theorem flagged_proj (charged : Bytes × K → Prop) (impl : QueryImpl spec (Sta
   rw [flagged_run, Functor.map_map]
   exact id_map _
 
-/-- The flagged handler never fails when the underlying handler never fails. -/
-theorem flagged_neverFails (charged : Bytes × K → Prop) (impl : QueryImpl spec (StateT σ ProbComp))
-    (hfail : ∀ (t : spec.Domain) (s : σ), prFail ((impl t).run s) = 0)
-    (t : spec.Domain) (p : σ × Bool) : prFail (((flagged record charged impl) t).run p) = 0 := by
-  rw [flagged_run, prFail_map]
-  exact hfail t p.1
-
 /-- A supported step of the flagged handler is a supported step of the handler. -/
 theorem mem_support_flagged (charged : Bytes × K → Prop) (impl : QueryImpl spec (StateT σ ProbComp))
     (t : spec.Domain) (p : σ × Bool) (z : spec.Range t × (σ × Bool))
@@ -240,7 +232,6 @@ theorem stalled_flagged (charged : Bytes × K → Prop) (impl : QueryImpl spec (
 /-- **Stalling leaves the record's verdict alone**, once nothing filed can be charged. -/
 theorem probEvent_record_stalled (charged : Bytes × K → Prop)
     (impl : QueryImpl spec (StateT σ ProbComp))
-    (hfail : ∀ (t : spec.Domain) (s : σ), prFail ((impl t).run s) = 0)
     (hfiles : Files record now impl) (Frozen : σ → Prop)
     (stall : (t : spec.Domain) → spec.Range t)
     (hfrozen : ∀ (t : spec.Domain) (s : σ), Frozen s → ∀ z ∈ support ((impl t).run s), Frozen z.2)
@@ -254,7 +245,7 @@ theorem probEvent_record_stalled (charged : Bytes × K → Prop)
     probEvent_record_eq_flag record now charged _ (files_stalledFree record now impl hfiles
       Frozen stall) oa s hs, ← stalled_flagged]
   refine StalledRun.probEvent_flag_stalled_eq _ Frozen stall
-    (flagged_neverFails record charged impl hfail) (fun t p hp z hz => ?_)
+    (fun t p hp z hz => ?_)
     (fun t p hp z hz => ?_) oa (s, false)
   · obtain ⟨w, hw, rfl⟩ := mem_support_flagged record charged impl t p z hz
     exact hfrozen t p.1 hp w hw
@@ -274,7 +265,6 @@ open scoped Classical in
 /-- **Stalling leaves the expected count alone**, once nothing filed can be counted. -/
 theorem expect_count_stalled (count : Bytes × K → Prop)
     (impl : QueryImpl spec (StateT σ ProbComp))
-    (hfail : ∀ (t : spec.Domain) (s : σ), prFail ((impl t).run s) = 0)
     (hfiles : Files record now impl) (Frozen : σ → Prop)
     (stall : (t : spec.Domain) → spec.Range t)
     (hfrozen : ∀ (t : spec.Domain) (s : σ), Frozen s → ∀ z ∈ support ((impl t).run s), Frozen z.2)
@@ -296,7 +286,7 @@ theorem expect_count_stalled (count : Bytes × K → Prop)
   rw [← hleft, ← hright, ← stalled_flagged]
   refine StalledRun.expectation_stalled_eq _ Frozen stall
     (fun p => (((record p.1).countP fun entry => decide (count entry) : Nat) : ℝ≥0∞))
-    (flagged_neverFails record count impl hfail) (fun t p hp z hz => ?_)
+    (fun t p hp z hz => ?_)
     (fun t p hp z hz => ?_) oa (s, false)
   · obtain ⟨w, hw, rfl⟩ := mem_support_flagged record count impl t p z hz
     exact hfrozen t p.1 hp w hw
@@ -476,7 +466,6 @@ theorem prob_index_le (auxiliary : ProbComp Aux)
     (comp : Cells → Aux → OracleComp spec α) (start : σ) (hstart : record start = [])
     (unavail : Cells → Aux → K → Node → Prop) (index : Node)
     (stall : (t : spec.Domain) → spec.Range t)
-    (hfail : ∀ cells aux t s, prFail ((impl cells aux t).run s) = 0)
     (hfiles : ∀ cells aux, Files record now (impl cells aux))
     (hmono : ∀ cells aux t s, ¬ unavail cells aux (now s) index →
       ∀ z ∈ support ((impl cells aux t).run s), ¬ unavail cells aux (now z.2) index)
@@ -515,7 +504,7 @@ theorem prob_index_le (auxiliary : ProbComp Aux)
     refine ex_congr _ fun cells => ex_congr _ fun aux => ?_
     exact probEvent_record_stalled record now
       (fun entry => ChargedAt stakes (unavail cells aux) index (cells index) entry)
-      (impl cells aux) (hfail cells aux) (hfiles cells aux) (Frozen cells aux) stall
+      (impl cells aux) (hfiles cells aux) (Frozen cells aux) stall
       (fun t s hs z hz => hmono cells aux t s hs z hz)
       (fun s hs input ⟨_, _, hu, _⟩ => hs hu) (comp cells aux) start (hempty _)
   -- The stalled run, with the cell's unavailability carried beside it.
@@ -592,7 +581,7 @@ theorem prob_index_le (auxiliary : ProbComp Aux)
   congr 1
   exact (expect_count_stalled record now
     (fun entry => AimsAt stakes (unavail cells aux) index entry) (impl cells aux)
-    (hfail cells aux) (hfiles cells aux) (Frozen cells aux) stall
+    (hfiles cells aux) (Frozen cells aux) stall
     (fun t s hs z hz => hmono cells aux t s hs z hz)
     (fun s hs input ⟨_, _, hu, _⟩ => hs hu) (comp cells aux) start).symm
 
@@ -647,7 +636,6 @@ theorem prob_sensitive_le (auxiliary : ProbComp Aux)
     (unavail : Cells → Aux → K → Node → Prop) (stall : (t : spec.Domain) → spec.Range t)
     (Chargeable : Node → Prop)
     (hcharge : ∀ cells aux k index, unavail cells aux k index → Chargeable index)
-    (hfail : ∀ cells aux t s, prFail ((impl cells aux t).run s) = 0)
     (hfiles : ∀ cells aux, Files record now (impl cells aux))
     (hmono : ∀ index, Chargeable index → ∀ cells aux t s, ¬ unavail cells aux (now s) index →
       ∀ z ∈ support ((impl cells aux t).run s), ¬ unavail cells aux (now z.2) index)
@@ -686,7 +674,7 @@ theorem prob_sensitive_le (auxiliary : ProbComp Aux)
     intro index
     by_cases hc : Chargeable index
     · exact prob_index_le stakes record now auxiliary impl comp start hstart unavail index stall
-        hfail hfiles (hmono index hc) (hblind index hc) (hunavail index hc) (hcomp index hc)
+        hfiles (hmono index hc) (hblind index hc) (hunavail index hc) (hcomp index hc)
     · refine le_trans (le_of_eq (prEvent_eq_zero_of_forall_not _ _ ?_)) (by simp)
       rintro w ⟨entry, -, node, -, hunavailable, -⟩
       exact hc (hcharge _ _ _ _ hunavailable)

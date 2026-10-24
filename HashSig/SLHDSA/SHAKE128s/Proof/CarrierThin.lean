@@ -639,7 +639,6 @@ theorem stage2P_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWal
         ∑' z, Pr{let x ← ((fusedAt walk) queried).run state}[x = z] * bound2P walk first z.2 := by
   classical
   set step := ((fusedAt walk) queried).run state with hstepDef
-  have hfail : prFail step = 0 := fused_step_neverFails walk queried state
   have hprefix : ∀ z ∈ support step, state.2.2.2.2.2 <+: z.2.2.2.2.2.2 :=
     fun z hz => (fused_step_grows walk queried state z hz).2.2.2
   have hlen : ∀ z ∈ support step, z.2.2.2.2.2.2.length ≤ state.2.2.2.2.2.length + 1 := by
@@ -675,7 +674,7 @@ theorem stage2P_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWal
             by_cases hz : z ∈ support step
             · rw [hboundZ z hz]
             · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]]
-      exact tsum_const_of_neverFails step hfail _
+      exact tsum_prEvent_mul_const step _
     have hboundStart : bound2P walk first state = unit128 * unit128 := by
       unfold bound2P; rw [ite_eq_left hA]
     rw [hboundEnd, hboundStart]
@@ -829,10 +828,8 @@ theorem stage3P_step (walk : Walk) (first second : Nat) (hlt : first < second)
   classical
   set step := ((noticingSplitTapeRecorder (leftAt walk) (rightAt walk)) queried).run state
     with hstepDef
-  have hfail : prFail step = 0 :=
-    (noticingSplitTapeRecorder_step (leftAt walk) (rightAt walk) queried state).1
   have hprefix : ∀ z ∈ support step, state.2.2.2 <+: z.2.2.2.2 :=
-    fun z hz => (noticingSplitTapeRecorder_step (leftAt walk) (rightAt walk) queried state).2 z hz
+    fun z hz => noticingSplitTapeRecorder_step (leftAt walk) (rightAt walk) queried state z hz
   have hlen : ∀ z ∈ support step, z.2.2.2.2.length ≤ state.2.2.2.length + 1 := by
     intro z hz
     rcases tapeStep_right_shape walk queried state z hz with hsame | ⟨input, answer, -, happend, -⟩
@@ -857,7 +854,7 @@ theorem stage3P_step (walk : Walk) (first second : Nat) (hlt : first < second)
             by_cases hz : z ∈ support step
             · rw [hboundZ z hz]
             · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]]
-      exact tsum_const_of_neverFails step hfail _
+      exact tsum_prEvent_mul_const step _
     have hboundStart : bound3P walk first state = unit128 * unit128 := by
       unfold bound3P; rw [ite_eq_left hA]
     rw [hboundEnd, hboundStart]

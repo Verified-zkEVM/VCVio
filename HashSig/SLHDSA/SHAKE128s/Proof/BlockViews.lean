@@ -169,7 +169,7 @@ private theorem lintegral_evalDist_eq_tsum_probComp {β : Type} (run : ProbComp 
 
 open scoped Classical in
 /-- Expectations move through a reshaping of the outcome. -/
-theorem tsum_probOutput_map {β γ : Type} [DecidableEq γ] (run : ProbComp β) (reshape : β → γ)
+theorem tsum_probOutput_map {β γ : Type} (run : ProbComp β) (reshape : β → γ)
     (weight : γ → ℝ≥0∞) :
     ∑' value, Pr{let x ← reshape <$> run}[x = value] * weight value =
       ∑' value, Pr{let x ← run}[x = value] * weight (reshape value) := by

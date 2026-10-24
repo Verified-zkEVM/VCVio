@@ -71,17 +71,6 @@ theorem cost_run_ge (impl : QueryImpl spec (StateT S ProbComp)) (weight : ι →
     have hstepCost := hcost t state step hstep
     omega
 
-/-- A run of a handler that never fails never fails. -/
-theorem run_neverFails (impl : QueryImpl spec (StateT S ProbComp))
-    (hfail : ∀ (t : ι) (state : S), prFail ((impl t).run state) = 0) :
-    ∀ (oa : OracleComp spec α) (state : S), prFail ((simulateQ impl oa).run state) = 0 :=
-  fun _ _ => OracleComp.prFail_eq_zero _
-
-/-- A computation that never fails has an outcome. -/
-theorem exists_mem_support {β : Type} (mx : ProbComp β) (hfail : prFail mx = 0) :
-    ∃ x, x ∈ support mx :=
-  OracleComp.support_nonempty mx
-
 /-- A bind is determined by its continuation on the support. -/
 theorem evalDist_bind_congr_support {β γ : Type} (oa : ProbComp β) (f g : β → ProbComp γ)
     (h : ∀ a ∈ support oa, f a =ᵈ g a) : oa >>= f =ᵈ oa >>= g :=

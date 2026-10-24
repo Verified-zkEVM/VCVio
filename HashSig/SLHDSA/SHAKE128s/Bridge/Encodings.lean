@@ -99,8 +99,8 @@ theorem drop_toByte (x a b : ℕ) : (toByte x (a + b)).drop a = toByte x b := by
     simp at h₂
     omega
 
-/-- The paper's `bytesBE k` emits `k` bytes. -/
-@[simp] theorem length_bytesBE (k : ℕ) (v : BitVec (8 * k)) : (bytesBE k v).length = k := by
+/-- The big-endian encoding of a `k`-byte value has `k` bytes. -/
+theorem length_bytesBE (k : ℕ) (v : BitVec (8 * k)) : (bytesBE k v).length = k := by
   simp [bytesBE]
 
 /-- The paper's big-endian bytes read back as the value. -/

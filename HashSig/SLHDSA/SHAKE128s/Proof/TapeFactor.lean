@@ -384,18 +384,17 @@ the event has already come true, and a recording that only grows keeps it true. 
 def rightOf (state : SplitTapeState σ) : Record := state.2.2.2
 
 open scoped Classical in
-/-- **One step never fails and appends at most one target entry.** Both halves of this are what
-the selection argument needs, and both are read off the same case split. -/
+/-- **One step only extends the target recording.** This is what the selection argument needs,
+read off the recorder's case split. -/
 theorem splitTapeRecorder_step (leftKeep rightKeep : Bytes → σ → Prop)
     (queried : OracleWorld.Domain) (state : SplitTapeState σ) :
-    prFail (((splitTapeRecorder leftKeep rightKeep) queried).run state) = 0 ∧
-      ∀ step ∈ support (((splitTapeRecorder leftKeep rightKeep) queried).run state),
-        rightOf state <+: rightOf step.2 := by
+    ∀ step ∈ support (((splitTapeRecorder leftKeep rightKeep) queried).run state),
+      rightOf state <+: rightOf step.2 := by
   classical
   obtain ⟨cache, ⟨leftTape, rightTape⟩, ⟨leftRecord, rightRecord⟩⟩ := state
   rcases queried with coin | input
   · rw [splitTapeRecorder_run_inl]
-    refine ⟨by simp, fun step hstep => ?_⟩
+    intro step hstep
     rw [mem_support_bind_iff] at hstep
     obtain ⟨value, -, hpure⟩ := hstep
     rw [support_pure, Set.mem_singleton_iff] at hpure
@@ -406,7 +405,7 @@ theorem splitTapeRecorder_step (leftKeep rightKeep : Bytes → σ → Prop)
         | nil =>
           rw [splitTapeRecorder_run_left_nil leftKeep rightKeep input cache rightTape
             leftRecord rightRecord hfresh hleft]
-          refine ⟨by simp, fun step hstep => ?_⟩
+          intro step hstep
           rw [mem_support_bind_iff] at hstep
           obtain ⟨value, -, hpure⟩ := hstep
           rw [support_pure, Set.mem_singleton_iff] at hpure
@@ -415,7 +414,7 @@ theorem splitTapeRecorder_step (leftKeep rightKeep : Bytes → σ → Prop)
         | cons head rest =>
           rw [splitTapeRecorder_run_left_cons leftKeep rightKeep input cache head rest
             rightTape leftRecord rightRecord hfresh hleft]
-          refine ⟨by simp, fun step hstep => ?_⟩
+          intro step hstep
           rw [support_pure, Set.mem_singleton_iff] at hstep
           rw [hstep]
           exact List.prefix_rfl
@@ -424,7 +423,7 @@ theorem splitTapeRecorder_step (leftKeep rightKeep : Bytes → σ → Prop)
           | nil =>
             rw [splitTapeRecorder_run_right_nil leftKeep rightKeep input cache leftTape
               leftRecord rightRecord hfresh hleft hright]
-            refine ⟨by simp, fun step hstep => ?_⟩
+            intro step hstep
             rw [mem_support_bind_iff] at hstep
             obtain ⟨value, -, hpure⟩ := hstep
             rw [support_pure, Set.mem_singleton_iff] at hpure
@@ -433,13 +432,13 @@ theorem splitTapeRecorder_step (leftKeep rightKeep : Bytes → σ → Prop)
           | cons head rest =>
             rw [splitTapeRecorder_run_right_cons leftKeep rightKeep input cache leftTape head
               rest leftRecord rightRecord hfresh hleft hright]
-            refine ⟨by simp, fun step hstep => ?_⟩
+            intro step hstep
             rw [support_pure, Set.mem_singleton_iff] at hstep
             rw [hstep]
             exact List.prefix_append _ _
         · rw [splitTapeRecorder_run_other leftKeep rightKeep input cache (leftTape, rightTape)
             (leftRecord, rightRecord) (fun h => hleft h.2) (fun h => hright h.2)]
-          refine ⟨by simp, fun step hstep => ?_⟩
+          intro step hstep
           rw [mem_support_bind_iff] at hstep
           obtain ⟨value, -, hpure⟩ := hstep
           rw [support_pure, Set.mem_singleton_iff] at hpure
@@ -447,7 +446,7 @@ theorem splitTapeRecorder_step (leftKeep rightKeep : Bytes → σ → Prop)
           exact List.prefix_rfl
     · rw [splitTapeRecorder_run_other leftKeep rightKeep input cache (leftTape, rightTape)
         (leftRecord, rightRecord) (fun h => hfresh h.1) (fun h => hfresh h.1)]
-      refine ⟨by simp, fun step hstep => ?_⟩
+      intro step hstep
       rw [mem_support_bind_iff] at hstep
       obtain ⟨value, -, hpure⟩ := hstep
       rw [support_pure, Set.mem_singleton_iff] at hpure
@@ -522,10 +521,11 @@ in the sense that a run cannot reach past the block, and that is a cap on the *c
 the charge. -/
 
 /-- A finite sum and a `tsum` over `ℝ≥0∞` may be exchanged. -/
-theorem sum_tsum_comm {Index Result : Type} [DecidableEq Index] (indices : Finset Index)
+theorem sum_tsum_comm {Index Result : Type} (indices : Finset Index)
     (summand : Index → Result → ℝ≥0∞) :
     ∑ index ∈ indices, ∑' result : Result, summand index result =
       ∑' result : Result, ∑ index ∈ indices, summand index result := by
+  classical
   refine Finset.induction_on indices ?_ ?_
   · simp
   · intro head rest hhead ih

@@ -89,7 +89,7 @@ lemma wordLoads_fiber_card (bins requests : Nat) (counts : Fin bins → Nat) :
   exact hc
 
 /-- The concrete multinomial occupancy measure obtained from independent uniform choices. -/
-noncomputable def uniformLoads (bins requests : Nat) [NeZero bins] : Measure (Fin bins → Nat) :=
+noncomputable def uniformLoads (bins requests : Nat) : Measure (Fin bins → Nat) :=
   (uniformOn (Set.univ : Set (Fin requests → Fin bins))).map wordLoads
 
 /-- The occupancy law is a probability measure. -/
@@ -100,7 +100,7 @@ instance (bins requests : Nat) [NeZero bins] :
     inferInstance
 
 /-- The occupancy law is the multinomial law. -/
-lemma uniformLoads_singleton (bins requests : Nat) [NeZero bins] (counts : Fin bins → Nat) :
+lemma uniformLoads_singleton (bins requests : Nat) (counts : Fin bins → Nat) :
     uniformLoads bins requests {counts} =
       (if (∑ i, counts i) = requests then
         (Nat.multinomial Finset.univ counts : ENNReal) / (bins : ENNReal) ^ requests else 0) := by
@@ -131,7 +131,7 @@ lemma poissonLoads_real_singleton (bins : Nat) (counts : Fin bins → Nat) :
   ring_nf
 
 /-- `uniformLoads_singleton` for real-valued probabilities. -/
-lemma uniformLoads_real_singleton (bins requests : Nat) [NeZero bins] (counts : Fin bins → Nat) :
+lemma uniformLoads_real_singleton (bins requests : Nat) (counts : Fin bins → Nat) :
     (uniformLoads bins requests).real {counts} =
       (if (∑ i, counts i) = requests then
         (Nat.multinomial Finset.univ counts : ℝ) / (bins : ℝ) ^ requests else 0) := by
@@ -184,7 +184,7 @@ lemma wordLoads_cons {bins requests : Nat} (head : Fin bins) (word : Fin request
 
 open scoped Classical in
 /-- The occupancy probability of an event is the fraction of words whose loads lie in it. -/
-lemma uniformLoads_real_apply (bins requests : Nat) [NeZero bins] (event : Set (Fin bins → Nat)) :
+lemma uniformLoads_real_apply (bins requests : Nat) (event : Set (Fin bins → Nat)) :
     (uniformLoads bins requests).real event =
       (Fintype.card {word : Fin requests → Fin bins // wordLoads word ∈ event} : ℝ) /
         (bins : ℝ) ^ requests := by

@@ -105,7 +105,7 @@ lemma sumMoment_succ (m : Nat → ℝ) (hm0 : m 0 = 1) (hm1 : m 1 = 0)
 
 /-- The moments up to order six of a finite sum of independent variables with common moments
 `m` are given by `sumMoment`, and the corresponding powers of the sum are integrable. -/
-lemma independent_sum_moments {ι : Type*} [DecidableEq ι] [IsProbabilityMeasure μ]
+lemma independent_sum_moments {ι : Type*} [IsProbabilityMeasure μ]
     (X : ι → Ω → ℝ) (hi : iIndepFun X μ) (hX : ∀ i, Measurable (X i))
     (m : Nat → ℝ) (hm0 : m 0 = 1) (hm1 : m 1 = 0)
     (hInt : ∀ i k, k ≤ 6 → Integrable (fun ω => X i ω ^ k) μ)
@@ -113,6 +113,7 @@ lemma independent_sum_moments {ι : Type*} [DecidableEq ι] [IsProbabilityMeasur
     (s : Finset ι) :
     ∀ k, k ≤ 6 → Integrable (fun ω => (∑ i ∈ s, X i ω) ^ k) μ ∧
       (∫ ω, (∑ i ∈ s, X i ω) ^ k ∂μ) = sumMoment m s.card k := by
+  classical
   induction s using Finset.induction_on with
   | empty =>
       intro k hk

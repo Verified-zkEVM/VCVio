@@ -185,8 +185,7 @@ theorem probEvent_realFlat_le (adversary : Adversary) (limit : Nat)
           (1, z.2.2.2) =ᵈ
         (fun w => (some w.1, w.2)) <$> verRun keys z := by
       refine evalDist_capCompOpt realWorldImpl (chargedWeight keys.2.seed)
-        (verifyCost keys.2.seed) (reportsCost_verify keys.2.seed)
-        (fun _ _ => prFail_eq_zero _) _ _ (1, z.2.2.2) fun w hw => ?_
+        (verifyCost keys.2.seed) (reportsCost_verify keys.2.seed) _ _ (1, z.2.2.2) fun w hw => ?_
       rw [verifyCost_one, Nat.zero_add]
       exact hverify z hz hcost w hw
     have hbind : capped ((z.1, limit - ShareRealCap.realCost z.2), z.2) =ᵈ

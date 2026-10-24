@@ -57,8 +57,8 @@ local notation "ask" x =>
 
 /-! ## One hash query -/
 
-/-- A relabelled paper hash query is the single oracle's query, read back by `answerEquiv.symm`.
--/
+/-- A relabelled paper hash query is the single oracle's query, read back by
+`answerEquiv.symm`. -/
 theorem simulateQ_relabel_hash (input : Bytes) :
     simulateQ (relabel answerEquiv) (Hashing.hash input : PaperComp HashOutput) =
       answerEquiv.symm <$> ask input := by

@@ -65,7 +65,8 @@ with the internal signer, returning the canonical byte encoding of the signature
 the context is too long; verification frames the request, decodes the signature and runs the
 internal verifier (Algorithm 24), rejecting a request it cannot frame or a string it cannot
 decode. -/
-noncomputable def scheme : Game.ExternalScheme Answer (PublicKeyCore core) (SecretKeyCore core) where
+noncomputable def scheme :
+    Game.ExternalScheme Answer (PublicKeyCore core) (SecretKeyCore core) where
   keygen := (fun keys => (keys.2, keys.1)) <$> internal.keygen
   sign sk request :=
     match encodePureMessage request.context request.message with

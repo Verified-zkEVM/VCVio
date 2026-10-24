@@ -263,19 +263,6 @@ carrier and nothing else, so the recordings it leaves are the ones it was given.
 -/
 
 open scoped Classical in
-/-- **The fused tape-reading run never fails.** -/
-theorem fusedSplitTapeRun_neverFails (leftKeep rightKeep : Bytes → σ → Prop)
-    (inner : QueryImpl (OracleWorld + SigningSpec)
-      (WriterT ω (StateT SigningLog (OracleComp OracleWorld))))
-    (before : Message → σ → σ) (afterMap : σ → σ)
-    {α : Type} (phase : OracleComp (OracleWorld + SigningSpec) α) :
-    ∀ state : ω × SigningLog × SplitTapeState σ,
-      prFail ((simulateQ (fuseServing (noticingSplitTapeRecorder leftKeep rightKeep) inner
-        (fun request => onCarrierTape (before request)) (onCarrierTape afterMap)) phase).run
-          state) = 0 := by
-  exact fun _ => prFail_eq_zero _
-
-open scoped Classical in
 /-- **The target recording only grows under the fused run.** -/
 theorem fusedRightOf_prefix (leftKeep rightKeep : Bytes → σ → Prop)
     (inner : QueryImpl (OracleWorld + SigningSpec)

@@ -391,7 +391,6 @@ theorem sens_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec
       served node) stall (fun index => ¬ AlwaysAvailable index)
     (fun cells pad served index hunavailable =>
       not_alwaysAvailable_of_unavailable _ served index hunavailable)
-    (fun _ _ _ _ => OracleComp.prFail_eq_zero _)
     (fun cells pad => files_blindStep _)
     (fun index _ cells pad t st hst z hz hunavailable => hunavailable
       (available_mono _ (fun digest hdigest => (served_prefix _ t st z hz).subset hdigest) index

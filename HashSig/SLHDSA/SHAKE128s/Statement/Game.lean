@@ -87,9 +87,15 @@ structure Adversary (Output PK : Type) where
 
 /-- What the adversary's phase counts: its signing requests, its hash calls and verification's. -/
 inductive QueryKind where
-  | signing | hash | verification
+  /-- A request to the signing oracle. -/
+  | signing
+  /-- A hash call the adversary makes directly. -/
+  | hash
+  /-- A hash call of the verification of the forgery. -/
+  | verification
 deriving DecidableEq
 
+/-- The three query kinds of the adversary's phase. -/
 instance : Fintype QueryKind where
   elems := {.signing, .hash, .verification}
   complete := by intro kind; cases kind <;> decide
@@ -171,9 +177,11 @@ def Fresh (signed : SigningLog) (forgery : Forgery) : Prop :=
 def Wins (outcome : Outcome) : Prop :=
   outcome.verified = true ∧ Fresh outcome.signed outcome.forgery
 
+/-- Freshness of a forgery is decidable. -/
 instance (signed : SigningLog) (forgery : Forgery) : Decidable (Fresh signed forgery) := by
   unfold Fresh; infer_instance
 
+/-- Winning is decidable. -/
 instance (outcome : Outcome) : Decidable (Wins outcome) := by
   unfold Wins; infer_instance
 

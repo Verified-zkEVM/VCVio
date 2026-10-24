@@ -157,7 +157,6 @@ private theorem prEvent_flag_frozen_aux {γ : Type}
 /-- **A frozen run keeps the flag it started with.** -/
 theorem probEvent_flag_frozen {γ : Type} (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
     (Frozen : σ → Prop)
-    (hfail : ∀ (t : spec.Domain) (p : σ × Bool), prFail ((impl t).run p) = 0)
     (hfrozen : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
       ∀ z ∈ support ((impl t).run p), Frozen z.2.1)
     (hquiet : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
@@ -173,7 +172,6 @@ there leaves its law alone. -/
 theorem probEvent_flag_stalled_eq {γ : Type}
     (impl : QueryImpl spec (StateT (σ × Bool) ProbComp)) (Frozen : σ → Prop)
     (stall : (t : spec.Domain) → spec.Range t)
-    (hfail : ∀ (t : spec.Domain) (p : σ × Bool), prFail ((impl t).run p) = 0)
     (hfrozen : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
       ∀ z ∈ support ((impl t).run p), Frozen z.2.1)
     (hquiet : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
@@ -220,7 +218,6 @@ weights of a charge across the stall. -/
 /-- **A frozen run leaves a quantity it cannot change where it found it.** -/
 theorem expectation_frozen {γ : Type} (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
     (Frozen : σ → Prop) (weight : σ × Bool → ℝ≥0∞)
-    (hfail : ∀ (t : spec.Domain) (p : σ × Bool), prFail ((impl t).run p) = 0)
     (hfrozen : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
       ∀ z ∈ support ((impl t).run p), Frozen z.2.1)
     (hquiet : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
@@ -239,7 +236,6 @@ while unfrozen is the case this is wanted for. -/
 theorem expectation_stalled_eq {γ : Type}
     (impl : QueryImpl spec (StateT (σ × Bool) ProbComp)) (Frozen : σ → Prop)
     (stall : (t : spec.Domain) → spec.Range t) (weight : σ × Bool → ℝ≥0∞)
-    (hfail : ∀ (t : spec.Domain) (p : σ × Bool), prFail ((impl t).run p) = 0)
     (hfrozen : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
       ∀ z ∈ support ((impl t).run p), Frozen z.2.1)
     (hquiet : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →

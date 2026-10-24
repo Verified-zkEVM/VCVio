@@ -194,8 +194,7 @@ theorem cost_capCompOpt_le (impl : QueryImpl spec (StateT S ProbComp)) (weight :
 
 /-- **Where the uncapped run stays within the limit, the capped one never fires.** -/
 theorem evalDist_capCompOpt (impl : QueryImpl spec (StateT S ProbComp)) (weight : ι → Nat)
-    (cost : S → Nat) (hcost : ReportsCost impl weight cost)
-    (hfail : ∀ (t : ι) (state : S), prFail ((impl t).run state) = 0) :
+    (cost : S → Nat) (hcost : ReportsCost impl weight cost) :
     ∀ (oa : OracleComp spec α) (limit : Nat) (state : S),
       (∀ z ∈ support ((simulateQ impl oa).run state), cost z.2 ≤ cost state + limit) →
         (simulateQ impl (capCompOpt weight limit oa)).run state =ᵈ
@@ -220,8 +219,8 @@ theorem evalDist_capCompOpt (impl : QueryImpl spec (StateT S ProbComp)) (weight 
       have hstepCost := hcost t state step hstep
       omega
     · exfalso
-      obtain ⟨step, hstep⟩ := exists_mem_support _ (hfail t state)
-      obtain ⟨z, hz⟩ := exists_mem_support _ (run_neverFails impl hfail (next step.1) step.2)
+      obtain ⟨step, hstep⟩ := OracleComp.support_nonempty ((impl t).run state)
+      obtain ⟨z, hz⟩ := OracleComp.support_nonempty ((simulateQ impl (next step.1)).run step.2)
       have hwhole : z ∈ support ((simulateQ impl (liftM (spec.query t) >>= next)).run state) := by
         rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, mem_support_bind_iff]
         exact ⟨step, hstep, hz⟩

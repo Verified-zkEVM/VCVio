@@ -45,7 +45,6 @@ theorem probEvent_length_setGe_cont (leftKeep rightKeep : Bytes → σ → Prop)
     (after : α × SplitTapeState σ → ProbComp γ) (finalRight : γ → Record)
     (hgrow : ∀ (z : α × SplitTapeState σ) (w : γ), w ∈ support (after z) ->
       (rightOf z.2).length ≤ (finalRight w).length)
-    (hfail : ∀ z, prFail (after z) = 0)
     (hafter : ∀ (index cell : Nat), index ≤ cell → ∀ (newValue : HashOutput)
         (z : α × SplitTapeState σ),
       Pr{let w ← after z}[(rightOf z.2).length + index < (finalRight w).length] =
@@ -104,11 +103,11 @@ theorem probEvent_length_setGe_cont (leftKeep rightKeep : Bytes → σ → Prop)
                     splitTapeRecorder_run_right_cons leftKeep rightKeep input noticed leftTape _ _
                       leftRecord rightRecord hfresh hleft hright, pure_bind, Nat.add_zero]
                   rw [probEvent_length_eq_one_cont leftKeep rightKeep (next head) after
-                      finalRight hgrow hfail (CacheView.update noticed input head)
+                      finalRight hgrow (CacheView.update noticed input head)
                       (leftTape, rest) leftRecord rightRecord (input, head) rightRecord.length
                       (by simp),
                     probEvent_length_eq_one_cont leftKeep rightKeep (next newValue) after
-                      finalRight hgrow hfail (CacheView.update noticed input newValue)
+                      finalRight hgrow (CacheView.update noticed input newValue)
                       (leftTape, rest) leftRecord rightRecord (input, newValue)
                       rightRecord.length (by simp)]
                 | succ later =>
@@ -116,11 +115,11 @@ theorem probEvent_length_setGe_cont (leftKeep rightKeep : Bytes → σ → Prop)
                     splitTapeRecorder_run_right_cons leftKeep rightKeep input noticed leftTape _ _
                       leftRecord rightRecord hfresh hleft hright, pure_bind, Nat.add_zero]
                   rw [probEvent_length_eq_one_cont leftKeep rightKeep (next head) after
-                      finalRight hgrow hfail (CacheView.update noticed input head)
+                      finalRight hgrow (CacheView.update noticed input head)
                       (leftTape, rest) leftRecord rightRecord (input, head) rightRecord.length
                       (by simp),
                     probEvent_length_eq_one_cont leftKeep rightKeep (next head) after
-                      finalRight hgrow hfail (CacheView.update noticed input head)
+                      finalRight hgrow (CacheView.update noticed input head)
                       (leftTape, rest.set later newValue) leftRecord rightRecord (input, head)
                       rightRecord.length (by simp)]
               | succ remaining =>
@@ -165,7 +164,6 @@ theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop
     (hgrow : ∀ (z : α × (ω × Security.SigningLog × SplitTapeState σ))
         (w : γ), w ∈ support (cont z) ->
       (rightOf z.2.2.2).length ≤ (finalRight w).length)
-    (hfail : ∀ z, prFail (cont z) = 0)
     (hcont : ∀ (index cell : Nat), index ≤ cell → ∀ (newValue : HashOutput)
         (z : α × (ω × Security.SigningLog × SplitTapeState σ)),
       Pr{let w ← cont z}[(rightOf z.2.2.2).length + index < (finalRight w).length] =
@@ -209,7 +207,6 @@ theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop
           obtain ⟨r, hr, hw2⟩ := hw
           exact le_trans (fusedRightOf_prefix leftKeep rightKeep inner before afterMap _
             (accumulated * z.1.1.2, z.1.2, z.2) r hr).length_le (hgrow r w hw2))
-        (fun _ => prFail_eq_zero _)
         (fun idx c hc v z => ih z.1.1.1 idx c hc v (accumulated * z.1.1.2) z.1.2 z.2.1
           z.2.2.1.1 z.2.2.1.2 z.2.2.2.1 z.2.2.2.2)
         index cell hle newValue cache leftTape rightTape leftRecord rightRecord
@@ -226,7 +223,6 @@ theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop
           exact le_trans (fusedRightOf_prefix leftKeep rightKeep inner before afterMap _
             (accumulated * z.1.1.2, z.1.2, onCarrierTape afterMap z.2) r hr).length_le
             (hgrow r w hw2))
-        (fun _ => prFail_eq_zero _)
         (fun idx c hc v z => ih z.1.1.1 idx c hc v (accumulated * z.1.1.2) z.1.2
           (afterMap z.2.1) z.2.2.1.1 z.2.2.1.2 z.2.2.2.1 z.2.2.2.2)
         index cell hle newValue (before request cache) leftTape rightTape leftRecord rightRecord
@@ -260,7 +256,7 @@ theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ →
             (last keys.1 middle.1)).run middle.2.2.2 >>= fun final =>
           (pure (value keys.1 middle.1 middle.2.1 middle.2.2.1 final.1 final.2.1,
             forgetViewTape final.2) : ProbComp (δ × SplitPrefix.SplitState)))
-    (fun w => w.2.2.2) ?_ ?_ ?_ index cell hle newValue cache leftTape rightTape leftRecord
+    (fun w => w.2.2.2) ?_ ?_ index cell hle newValue cache leftTape rightTape leftRecord
       rightRecord
   · intro z w hw
     rw [mem_support_bind_iff] at hw
@@ -272,8 +268,6 @@ theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ →
     refine le_trans (fusedRightOf_prefix leftKeep rightKeep (inner z.1) before afterMap _
       (1, [], z.2) middle hmiddle).length_le ?_
     exact (noticingRightOf_prefix leftKeep rightKeep _ middle.2.2.2 final hfinal).length_le
-  · intro z
-    exact prFail_eq_zero _
   · intro idx c hc v z
     refine probEvent_length_setGe_fused leftKeep rightKeep (inner z.1) before afterMap
       (phase z.1)
@@ -283,7 +277,7 @@ theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ →
             forgetViewTape final.2)
             :
             ProbComp (δ × SplitPrefix.SplitState)))
-      (fun w => w.2.2.2) ?_ ?_ ?_ idx c hc v 1 [] z.2.1 z.2.2.1.1 z.2.2.1.2 z.2.2.2.1
+      (fun w => w.2.2.2) ?_ ?_ idx c hc v 1 [] z.2.1 z.2.2.1.1 z.2.2.1.2 z.2.2.2.1
       z.2.2.2.2
     · intro y w hw
       rw [mem_support_bind_iff] at hw
@@ -291,20 +285,16 @@ theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ →
       rw [support_pure, Set.mem_singleton_iff] at hpure
       rw [hpure]
       exact (noticingRightOf_prefix leftKeep rightKeep _ y.2.2.2 final hfinal).length_le
-    · intro y
-      exact prFail_eq_zero _
     · intro idx2 c2 hc2 v2 y
       refine probEvent_length_setGe_cont leftKeep rightKeep (last z.1 y.1)
         (fun final => (pure (value z.1 y.1 y.2.1 y.2.2.1 final.1 final.2.1,
           forgetViewTape final.2) : ProbComp (δ × SplitPrefix.SplitState)))
-        (fun w => w.2.2.2) ?_ ?_ ?_ idx2 c2 hc2 v2 y.2.2.2.1 y.2.2.2.2.1.1 y.2.2.2.2.1.2
+        (fun w => w.2.2.2) ?_ ?_ idx2 c2 hc2 v2 y.2.2.2.1 y.2.2.2.2.1.1 y.2.2.2.2.1.2
         y.2.2.2.2.2.1 y.2.2.2.2.2.2
       · intro t w hw
         rw [support_pure, Set.mem_singleton_iff] at hw
         rw [hw]
         exact le_rfl
-      · intro t
-        exact prFail_eq_zero _
       · intro idx3 c3 hc3 v3 t
         rfl
 

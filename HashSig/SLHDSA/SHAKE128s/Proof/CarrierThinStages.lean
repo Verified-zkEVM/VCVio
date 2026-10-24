@@ -437,11 +437,6 @@ abbrev rightF (walk : Walk) (state : FState walk) : Record := state.2.2.2.2.2
 abbrev recordF (walk : Walk) (state : FState walk) : Multiset Bytes :=
   (Multiplicative.toAdd state.1).2
 
-/-- **A fused step never fails.** -/
-theorem fused_step_neverFails (walk : Walk) (queried : (OracleWorld + SigningSpec).Domain)
-    (state : FState walk) : prFail (((fusedAt walk) queried).run state) = 0 :=
-  OracleComp.prFail_eq_zero _
-
 /-- A request with no frame makes no query. -/
 theorem sign_none_run (walk : Walk) (request : Message) (hframe : request.frame = none)
     (state : SplitTapeState (CountedAt (keyAt walk)))
@@ -479,7 +474,7 @@ theorem fused_step_grows (walk : Walk) (queried : (OracleWorld + SigningSpec).Do
     rw [hz2]
     refine ⟨by dsimp only [recordF]; rw [toAdd_mul_record]; exact Multiset.le_add_right _ _,
       fun entry h => h, ?_,
-      (noticingSplitTapeRecorder_step _ _ world state.2.2).2 step hstep⟩
+      noticingSplitTapeRecorder_step _ _ world state.2.2 step hstep⟩
     intro input answer hcached
     rcases world with coin | queriedInput
     · rw [tapeStep_inl _ _ coin state.2.2 step hstep]
@@ -696,9 +691,8 @@ theorem tsum_le_of_support {β : Type} (computation : ProbComp β) (left right :
   · exact mul_le_mul' le_rfl (h z hz)
   · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]
 
-/-- A constant, averaged over a computation that never fails. -/
-theorem tsum_const_of_neverFails {β : Type} (computation : ProbComp β)
-    (hfail : prFail computation = 0) (constant : ℝ≥0∞) :
+/-- A constant, averaged over the outcomes of a computation, is itself. -/
+theorem tsum_prEvent_mul_const {β : Type} (computation : ProbComp β) (constant : ℝ≥0∞) :
     ∑' z, Pr{let x ← computation}[x = z] * constant = constant := by
   rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one, one_mul]
 
@@ -744,7 +738,6 @@ theorem stage2_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWalk
         ∑' z, Pr{let x ← ((fusedAt walk) queried).run state}[x = z] * bound2 walk index z.2 := by
   classical
   set step := ((fusedAt walk) queried).run state with hstepDef
-  have hfail : prFail step = 0 := fused_step_neverFails walk queried state
   by_cases hreached : index < state.2.2.2.2.2.length
   · -- the cell is already filed: a supermartingale, and the bound does not move
     set entry := state.2.2.2.2.2[index] with hentry
@@ -778,7 +771,7 @@ theorem stage2_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWalk
             by_cases hz : z ∈ support step
             · rw [(hwatch z hz).2]
             · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]]
-      exact tsum_const_of_neverFails step hfail unit128
+      exact tsum_prEvent_mul_const step unit128
     rw [hboundEnd]
     refine add_le_add ?_ le_rfl
     calc ∑' z, Pr{let x ← step}[x = z] * value2 walk index z.2
@@ -1005,8 +998,6 @@ theorem stage3_step (walk : Walk) (index : Nat) (phaseLate : Prop)
   classical
   set step := ((noticingSplitTapeRecorder (leftAt walk) (rightAt walk)) queried).run state
     with hstepDef
-  have hfail : prFail step = 0 :=
-    (noticingSplitTapeRecorder_step (leftAt walk) (rightAt walk) queried state).1
   by_cases hreached : index < state.2.2.2.length
   · set entry := state.2.2.2[index] with hentry
     have hget : state.2.2.2[index]? = some entry := List.getElem?_eq_getElem hreached
@@ -1015,8 +1006,8 @@ theorem stage3_step (walk : Walk) (index : Nat) (phaseLate : Prop)
     have hwatch : ∀ z ∈ support step, watchAt walk index z.2 = watchValue target hits z.2 ∧
         bound3 walk index z.2 = unit128 := by
       intro z hz
-      have hprefix := (noticingSplitTapeRecorder_step (leftAt walk) (rightAt walk) queried
-        state).2 z hz
+      have hprefix := noticingSplitTapeRecorder_step (leftAt walk) (rightAt walk) queried
+        state z hz
       have hgetZ : z.2.2.2.2[index]? = some entry := by
         obtain ⟨tail, htail⟩ := hprefix
         change (rightOf z.2)[index]? = some entry
@@ -1041,7 +1032,7 @@ theorem stage3_step (walk : Walk) (index : Nat) (phaseLate : Prop)
             by_cases hz : z ∈ support step
             · rw [(hwatch z hz).2]
             · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]]
-      exact tsum_const_of_neverFails step hfail unit128
+      exact tsum_prEvent_mul_const step unit128
     rw [hboundEnd]
     refine add_le_add ?_ le_rfl
     calc ∑' z, Pr{let x ← step}[x = z] * value3 walk index phaseLate phaseCache z.2

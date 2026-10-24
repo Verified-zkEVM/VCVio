@@ -77,26 +77,17 @@ is why the lemmas below are applications of the cache version rather than copies
 each is a statement about the recordings, and the notice is invisible to them. -/
 
 open scoped Classical in
-/-- **One step of the repaired recorder never fails and appends at most one target entry.** -/
+/-- **One step of the repaired recorder only extends the target recording.** -/
 theorem noticingSplitTapeRecorder_step (leftKeep rightKeep : Bytes → σ → Prop)
     (queried : OracleWorld.Domain) (state : SplitTapeState σ) :
-    prFail (((noticingSplitTapeRecorder leftKeep rightKeep) queried).run state) = 0 ∧
-      ∀ step ∈ support (((noticingSplitTapeRecorder leftKeep rightKeep) queried).run state),
-        rightOf state <+: rightOf step.2 := by
+    ∀ step ∈ support (((noticingSplitTapeRecorder leftKeep rightKeep) queried).run state),
+      rightOf state <+: rightOf step.2 := by
   classical
   rcases queried with coin | input
   · exact splitTapeRecorder_step leftKeep rightKeep (Sum.inl coin) state
   · rw [noticingSplitTapeRecorder_run_inr]
     exact splitTapeRecorder_step leftKeep rightKeep (Sum.inr input)
       (CacheView.onQuery state.1 input, state.2)
-
-open scoped Classical in
-/-- The repaired tape-reading run never fails. -/
-theorem noticingSplitTapeRun_neverFails (leftKeep rightKeep : Bytes → σ → Prop)
-    {α : Type} (computation : OracleComp OracleWorld α) (state : SplitTapeState σ) :
-    prFail ((simulateQ (noticingSplitTapeRecorder leftKeep rightKeep) computation).run state)
-      = 0 := by
-  exact prFail_eq_zero _
 
 open scoped Classical in
 /-- **The target recording only grows**, at the repaired recorder. -/
@@ -115,7 +106,7 @@ theorem noticingRightOf_prefix (leftKeep rightKeep : Bytes → σ → Prop)
     rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, mem_support_bind_iff] at hmem
     obtain ⟨step, hstep, hrest⟩ := hmem
     exact List.IsPrefix.trans
-      ((noticingSplitTapeRecorder_step leftKeep rightKeep queried state).2 step hstep)
+      (noticingSplitTapeRecorder_step leftKeep rightKeep queried state step hstep)
       (ih step.1 step.2 result hrest)
 
 open scoped Classical in
@@ -143,11 +134,10 @@ theorem noticingLeftOf_prefix (leftKeep rightKeep : Bytes → σ → Prop)
 
 /-! ## The charge, with the run a parameter
 
-The three lemmas the coverage charge is assembled from use only four things about the run: that
-one cell of the target block may be redrawn, that the run's *selection* of that cell does not
-see its value, that a recorded entry is the block cell it came from, and that the whole thing
-never fails. Only the second mentions the run at all, and it is the one a new presentation has
-to prove.
+The three lemmas the coverage charge is assembled from use only three things about the run:
+that one cell of the target block may be redrawn, that the run's *selection* of that cell does
+not see its value, and that a recorded entry is the block cell it came from. Only the second
+mentions the run at all, and it is the one a new presentation has to prove.
 
 So they are stated over an arbitrary `run`, with the selection's causality as a hypothesis; a
 bracketed three-stage run supplies it from its own and gets the rest free. **Stating the charge
@@ -480,22 +470,21 @@ A run's selection of a target cell must not see that cell's value. The bracketed
 runs, and after the first stage the two sides are in different states, so the second stage's
 probability is not the same object on both sides. The continuation is a parameter, and what is
 asked of it is **the conclusion's own shape** — that its selection does not see the cell either —
-plus two facts that compose by themselves: it never fails, and it never shortens the target
-recording. The `pure` case is then the continuation's own causality rather than a termination,
-and the step that *reads* the cell is settled on both sides by the recording already being long
-enough, exactly as before.
+plus one fact that composes by itself: it never shortens the target recording. The `pure` case
+is then the continuation's own causality rather than a termination, and the step that *reads*
+the cell is settled on both sides by the recording already being long enough, exactly as
+before.
 -/
 
 open scoped Classical in
 /-- **Once the recording is long enough the whole rest of the run keeps it so.** The
 continuation form of the single-run statement: the run only grows the recording and the
-continuation only grows it further, and neither can fail. -/
+continuation only grows it further. -/
 theorem probEvent_length_eq_one_cont (leftKeep rightKeep : Bytes → σ → Prop)
     {α γ : Type} (computation : OracleComp OracleWorld α)
     (after : α × SplitTapeState σ → ProbComp γ) (finalRight : γ → Record)
     (hgrow : ∀ (z : α × SplitTapeState σ) (w : γ), w ∈ support (after z) ->
       (rightOf z.2).length ≤ (finalRight w).length)
-    (hfail : ∀ z, prFail (after z) = 0)
     (cache : σ) (tapes : List HashOutput × List HashOutput)
     (leftRecord rightRecord : Record) (entry : Bytes × HashOutput) (bound : Nat)
     (hbound : bound < (rightRecord ++ [entry]).length) :

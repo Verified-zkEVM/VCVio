@@ -205,16 +205,6 @@ theorem padding_length (trials : Nat) (pad : List HashOutput)
     rw [support_pure, Set.mem_singleton_iff] at hpure
     rw [hpure, List.length_cons, ih rest hrestMem]
 
-/-- Padding never fails. -/
-theorem padding_neverFails (trials : Nat) : prFail (padding trials) = 0 := by
-  induction trials with
-  | zero => rw [padding]; simp
-  | succ remaining ih =>
-    rw [show padding (remaining + 1) =
-      ($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
-        padding remaining >>= fun rest => (pure (value :: rest) : ProbComp _) from rfl]
-    simp
-
 /-- Coordinatewise, a uniform word of answers has a uniform tape of parsed views. -/
 theorem viewTape_uniform (trials : Nat) :
     ((fun word index => MessageDigest.parse (word index)) <$>

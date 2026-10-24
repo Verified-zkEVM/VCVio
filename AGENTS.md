@@ -74,8 +74,14 @@ build boundaries and the staged consolidation.
 - `Extern/`: native FFI surface — the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them. No proof library may import it; the backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
 - `LatticeCrypto/`: lattice-specific algebra, hardness assumptions, scheme definitions, security theorems, and concrete implementations.
 - `HashSig/`: hash-based signatures — SLH-DSA (SPHINCS+, FIPS 205) proof-level specs,
-  component-level FIPS conformance results, and security-facing interfaces (no unforgeability
-  theorem or complete FIPS conformance result yet). Peer of `LatticeCrypto/`; depends on
+  component-level FIPS conformance results, and security-facing interfaces. A model of the SHAKE
+  parameter sets over a single SHAKE256 random oracle on byte strings is `shakeRomScheme`
+  (`SLHDSA/Security/ByteModel.lean`); answering its oracle with SHAKE256 gives the library's
+  FIPS 205 SHAKE internal algorithms (`shakeRomScheme_map_shakeAnswer`, checked against pinned NIST
+  ACVP vectors). `SLHDSA/SHAKE128s/` proves 127 bits of strong unforgeability (SUF-CMA) for that
+  model at SLH-DSA-SHAKE-128s in pure mode with deterministic signing, counting the adversary's
+  signing requests, its hash calls and the verification of its forgery
+  (`SlhDsaSecurity.slhDsa_sufCma_127`). Peer of `LatticeCrypto/`; depends on
   `VCVio`/`ToMathlib` but nothing in those imports it back.
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
@@ -180,6 +186,8 @@ Security notions, experiments, games, and advantages follow
 ## Canonical Examples
 
 - Compact modern crypto proof: `Examples/OneTimePad/Basic.lean`
+- Concrete bit security of a deployed signature in the random-oracle model (SLH-DSA-SHAKE-128s,
+  127-bit SUF-CMA): `HashSig/SLHDSA/SHAKE128s/Statement/Theorems/StrongUnforgeability.lean`
 - ElGamal IND-CPA via the generic one-time DDH lift: `Examples/ElGamal/Basic.lean`
 - Schnorr sigma protocol (completeness, soundness, HVZK): `VCVio/Schemes/Schnorr/SigmaProtocol.lean`
 - Concrete transcript and commitment walkthroughs: `Examples/Schnorr/Basic.lean`,
@@ -447,6 +455,8 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
   [`docs/design/slh-dsa-fips205-generalization.md`](docs/design/slh-dsa-fips205-generalization.md)
 - **SLH-DSA implementation status, stale-plan corrections, and remaining slices**:
   [`docs/design/slh-dsa-status-and-roadmap.md`](docs/design/slh-dsa-status-and-roadmap.md)
+- **SLH-DSA-SHAKE-128s 127-bit SUF-CMA: statement, model, proof and bridge**:
+  [`docs/design/slh-dsa-shake128s-suf-cma.md`](docs/design/slh-dsa-shake128s-suf-cma.md)
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
 - **Converting code written against the removed discrete `Pr[…]` API**: [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)

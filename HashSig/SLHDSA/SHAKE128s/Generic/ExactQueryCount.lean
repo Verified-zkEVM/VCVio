@@ -26,13 +26,17 @@ variable {ι : Type} {spec : OracleSpec ι} {α β : Type}
 /-- On every path, the computation makes exactly `count` oracle queries. -/
 inductive ExactQueryCount :
     OracleComp spec α → Nat → Prop where
+  /-- A returned value makes no queries. -/
   | pure (value : α) : ExactQueryCount (pure value) 0
+  /-- One query followed, on every answer, by exactly `count` more makes `count + 1`. -/
   | query (input : spec.Domain) (next : spec.Range input → OracleComp spec α)
       (count : Nat) (hnext : ∀ output, ExactQueryCount (next output) count) :
       ExactQueryCount (liftM (spec.query input) >>= next) (count + 1)
 
 namespace ExactQueryCount
 
+/-- Running a computation with exactly `count` queries, then a continuation with exactly
+`nextCount` queries on every value, makes exactly `count + nextCount` queries. -/
 theorem bind {computation : OracleComp spec α} {count : Nat}
     (hcomputation : ExactQueryCount computation count)
     (next : α → OracleComp spec β) (nextCount : Nat)
@@ -46,13 +50,14 @@ theorem bind {computation : OracleComp spec α} {count : Nat}
         ExactQueryCount.query input (fun output => rest output >>= next)
           (restCount + nextCount) ih
 
+/-- Mapping a function over the output does not change the number of queries. -/
 theorem map {computation : OracleComp spec α} {count : Nat}
     (hcomputation : ExactQueryCount computation count) (f : α → β) :
     ExactQueryCount (f <$> computation) count := by
   convert hcomputation.bind
     (fun value => (Pure.pure (f value) : OracleComp spec β)) 0
-    (fun value => ExactQueryCount.pure (f value)) using 1 <;>
-    simp [map_eq_bind_pure_comp]
+    (fun value => ExactQueryCount.pure (f value)) using 1
+  simp [map_eq_bind_pure_comp]
 
 end ExactQueryCount
 

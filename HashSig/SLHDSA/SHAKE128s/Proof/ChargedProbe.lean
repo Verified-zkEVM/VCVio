@@ -32,10 +32,11 @@ variable {Node : Type}
 equal whatever the summands; it is stated for an arbitrary index set because this is the step at
 which a factor of the index count would hide, and a general statement is easier to check than
 one specialised to a type with `2 ^ 26` elements. -/
-theorem sum_tsum_comm {Index Result : Type} [DecidableEq Index] (nodes : Finset Index)
+theorem sum_tsum_comm {Index Result : Type} (nodes : Finset Index)
     (summand : Index → Result → ℝ≥0∞) :
     ∑ index ∈ nodes, ∑' result : Result, summand index result =
       ∑' result : Result, ∑ index ∈ nodes, summand index result := by
+  classical
   refine Finset.induction_on nodes ?_ ?_
   · simp
   · intro head rest hhead ih
