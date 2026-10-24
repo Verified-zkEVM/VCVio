@@ -29,6 +29,19 @@ signature.
 The statements below also pin the resulting discharges: key separation at every FIPS SHA-2
 bundle, and the key discipline at every FIPS 205 parameter set, at the limited SHA2-128-24 profile
 and at the compatibility bundle. At every FIPS 205 parameter set an honest entry exists.
+
+## The address encoding is not injective at any shipped bundle
+
+`CorePrimitives.KeyInjective` asks for injectivity of `core.adrsToKey` on the in-range addresses
+only, because no shipped bundle is injective on all of `Adrs`. Each of its six natural-number
+fields is written into a fixed number of bytes, four for the leaf index, so `⟨0, 0, 3, 0, 0, 0⟩`
+and `⟨0, 0, 3, 0, 0, 2 ^ 32⟩`, two FORS leaf addresses of one tree differing only in the leaf
+index, have the same 32-byte serialization (`toBytes_collision`) and the same 22-byte `ADRSc`
+compression (`compressSha2_collision`). The FIPS SHA-2 key `Concrete.sha2AdrsKey` routes
+through the checked compression instead and maps every rejected address of one type class to
+one fallback key (`sha2AdrsKey_toList_collision`).
+Hence `not_injective_adrsToKey_shake`, `not_injective_adrsToKey_sha` and
+`not_injective_adrsToKey_sha2`, stated at the field each bundle installs.
 -/
 
 public section
@@ -147,5 +160,38 @@ example (ps : FipsParameterSet) (c : PublicHash.Cache (approvedPrimitives ps).co
     (forsLeafAdrs_mem_constructionAddresses _ ⟨0, ps.validatedParams.valid.k_pos⟩
       (Nat.zero_div _))
     (by rw [simulateQ_pure]; rfl)
+
+/-! ## The address encoding is not injective at any shipped bundle -/
+
+/-- Two FORS leaf addresses differing only by `2 ^ 32` in the leaf index have the same 32-byte
+serialization. -/
+theorem toBytes_collision :
+    Adrs.toBytes ⟨0, 0, 3, 0, 0, 0⟩ = Adrs.toBytes ⟨0, 0, 3, 0, 0, 2 ^ 32⟩ := by decide
+
+/-- The same two addresses have the same 22-byte `ADRSc` compression. -/
+theorem compressSha2_collision :
+    Adrs.compressSha2 ⟨0, 0, 3, 0, 0, 0⟩ = Adrs.compressSha2 ⟨0, 0, 3, 0, 0, 2 ^ 32⟩ := by decide
+
+/-- The FIPS SHA-2 tweak map sends two FORS leaf addresses the checked compression rejects to one
+fallback key. -/
+theorem sha2AdrsKey_toList_collision : (sha2AdrsKey ⟨0, 0, 3, 0, 0, 2 ^ 32⟩).toList =
+    (sha2AdrsKey ⟨0, 0, 3, 0, 0, 2 ^ 32 + 1⟩).toList := by decide
+
+/-- The tweak map the SHAKE bundle installs is not injective. -/
+theorem not_injective_adrsToKey_shake (p : Params) :
+    ¬ Function.Injective (shakePrimitives p).adrsToKey := fun h =>
+  absurd (h (show Adrs.toVector _ = Adrs.toVector _ from
+    Vector.toList_inj.mp (by simpa [Adrs.toVector] using toBytes_collision))) (by decide)
+
+/-- The tweak map the compatibility bundle installs is not injective. -/
+theorem not_injective_adrsToKey_sha : ¬ Function.Injective shaPrimitives.adrsToKey := fun h =>
+  absurd (h (show shaAdrsKey _ = shaAdrsKey _ from
+    Vector.toList_inj.mp (by simpa using compressSha2_collision))) (by decide)
+
+/-- The tweak map the FIPS SHA-2 bundle installs is not injective. -/
+theorem not_injective_adrsToKey_sha2 (p : Params) :
+    ¬ Function.Injective (sha2Primitives p).adrsToKey := fun h =>
+  absurd (h (show sha2AdrsKey _ = sha2AdrsKey _ from
+    Vector.toList_inj.mp sha2AdrsKey_toList_collision)) (by decide)
 
 end SLHDSA.KeyDisciplineTest
