@@ -106,14 +106,18 @@ def main():
     p, h, e = decl_span(src, int(row['line']))
     orig_main = '\n'.join(src[h:e])
     short = HEADER.match(src[h]).group('name').split('.')[-1]
-    imports = []
+    imports, inlines = [], []
     if a.arm == 'O':
         helpers, main_text = '', orig_main
     else:
         path = os.path.join(HERE, 'arms', a.id, a.arm + '.lean')
         lines = open(path, encoding='utf-8').read().rstrip('\n').split('\n')
-        if lines and lines[0].startswith('-- imports:'):
-            imports = lines[0].split(':', 1)[1].split()
+        while lines and lines[0].startswith(('-- imports:', '-- inline:')):
+            key, val = lines[0].split(':', 1)
+            if key == '-- imports':
+                imports += val.split()
+            else:
+                inlines += val.split()
             lines = lines[1:]
         k = next((i for i, l in enumerate(lines)
                   if (m := HEADER.match(l)) and m.group('name').split('.')[-1] == short), None)
@@ -147,6 +151,14 @@ run_cmd do
   logInfo m!"@usage {{lib.qsort Name.lt}}"
 '''
     out = src[:p]
+    n_inl = 0
+    for f in inlines:
+        # library text (not counted): a library module's body after its imports, as a section
+        body = open(f, encoding='utf-8').read().split('\n')
+        k = max(i for i, l in enumerate(body) if re.match(r'^(public )?(meta )?import ', l))
+        body = [l for l in body[k + 1:] if l.strip() not in ('public section', '@[expose] public section')]
+        out += ['section'] + body + ['end']
+        n_inl += len(body) + 2
     if helpers:
         out += helpers.split('\n')
     out += ['#count_heartbeats in'] + src[p:h] + main_text.split('\n') + report.split('\n') + src[e:]
@@ -156,7 +168,7 @@ run_cmd do
                                                        'meta import Lean.Elab.Command']
     out = out[:last + 1] + extra + out[last + 1:]
     os.makedirs(SCRATCH, exist_ok=True)
-    lo = p + len(extra) + 1
+    lo = p + len(extra) + 1 + n_inl
     hi = lo + len(helpers.split('\n')) * bool(helpers) + 1 + (h - p) + len(main_text.split('\n'))
     copy = os.path.join(SCRATCH, f'{a.id}_{a.arm}.lean')
     open(copy, 'w', encoding='utf-8').write('\n'.join(out))
@@ -180,7 +192,7 @@ run_cmd do
            'census_lines': int(row['lines']), 'stratum': row['stratum'], 'family': row['family'],
            'seconds': round(dt, 1),
            'library': [s.strip() for s in usage.group(1).split(',') if s.strip()] if usage else [],
-           'imports': imports}
+           'imports': imports, 'inlines': inlines}
     if errs:
         rec['first_errors'] = errs[:5]
     if warns:
