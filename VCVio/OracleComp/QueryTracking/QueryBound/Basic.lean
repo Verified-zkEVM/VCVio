@@ -799,21 +799,16 @@ lemma isTotalQueryBound_query_bind_iff {t : spec.Domain}
 
 lemma IsTotalQueryBound.mono {oa : OracleComp spec α} {n₁ n₂ : ℕ}
     (h : IsTotalQueryBound oa n₁) (hle : n₁ ≤ n₂) :
-    IsTotalQueryBound oa n₂ := by
-  induction oa using OracleComp.inductionOn generalizing n₁ n₂ with
-  | pure _ => trivial
-  | query_bind t mx ih =>
-      rw [isTotalQueryBound_query_bind_iff] at h ⊢
-      exact ⟨Nat.lt_of_lt_of_le h.1 hle,
-        fun u => ih u (h.2 u) (Nat.sub_le_sub_right hle 1)⟩
+    IsTotalQueryBound oa n₂ :=
+  PFunctor.FreeM.IsTotalRollBound.mono h hle
 
-/-- `IsTotalQueryBound` instantiates the generic vector-budget bind at `B := ℕ`,
-`combine := (· + ·)`, with the canQuery / cost obligations both discharged by `omega`. -/
+/-- Total query budgets add under sequencing; this is
+`PFunctor.FreeM.isTotalRollBound_bind` on the underlying free monad. -/
 lemma isTotalQueryBound_bind {oa : OracleComp spec α} {ob : α → OracleComp spec β}
     {n₁ n₂ : ℕ}
     (h1 : IsTotalQueryBound oa n₁) (h2 : ∀ x, IsTotalQueryBound (ob x) n₂) :
-    IsTotalQueryBound (oa >>= ob) (n₁ + n₂) := by
-  refine isQueryBound_bind (combine := fun a b => a + b) ?_ ?_ h1 h2 <;> grind
+    IsTotalQueryBound (oa >>= ob) (n₁ + n₂) :=
+  PFunctor.FreeM.isTotalRollBound_bind h1 h2
 
 /-- Support-aware bind rule. Under uniform oracle semantics every syntactically reachable
 continuation value lies in `support oa`, so it suffices to bound the continuation on that support

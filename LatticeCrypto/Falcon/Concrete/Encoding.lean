@@ -7,7 +7,6 @@ Authors: Quang Dao
 module
 public import Batteries.Data.ByteArray
 public import Batteries.Data.Array.Lemmas
-public import ToMathlib.Data.ByteArray
 public import LatticeCrypto.Falcon.Arithmetic
 
 /-!
@@ -611,6 +610,32 @@ def sigDecode (d : ByteArray) (logn : ℕ) : Option (Bytes 40 × List UInt8) := 
       have hempty : ({ data := #[] } : ByteArray).size = 0 := rfl
       simp [sigDecode, sigEncode, hsalt, hone, hempty]
 
+/-- The accumulator loop underlying `ByteArray.toList` reverses its accumulator onto the
+remaining bytes, so the full traversal recovers the underlying array as a list. -/
+private theorem toList_loop_eq (a : ByteArray) :
+    ∀ i (acc : List UInt8), ByteArray.toList.loop a i acc
+      = acc.reverse ++ (a.data.toList.drop i) := by
+  intro i acc
+  fun_induction ByteArray.toList.loop a i acc with
+  | case1 i acc h ih =>
+      rw [ih]
+      have hi : i < a.data.toList.length := by rw [Array.length_toList]; exact h
+      rw [List.drop_eq_getElem_cons hi]
+      simp only [List.reverse_cons, List.append_assoc, List.singleton_append]
+      congr 2
+      cases a with
+      | mk bs =>
+        change bs[i]! = _
+        rw [getElem!_pos bs i (show i < bs.size from h), Array.getElem_toList]
+  | case2 i acc h =>
+      have : a.data.toList.length ≤ i := by
+        rw [Array.length_toList]; exact Nat.le_of_not_lt h
+      rw [List.drop_eq_nil_of_le this]; simp
+
+/-- `ByteArray.toList` agrees with the list of the underlying data array. -/
+private theorem byteArray_toList_eq (a : ByteArray) : a.toList = a.data.toList := by
+  rw [ByteArray.toList, toList_loop_eq]; simp
+
 /-- `ByteArray` `getElem!` agrees with the underlying data array's `getElem!`. -/
 private theorem byteArray_getElem!_data (a : ByteArray) (i : ℕ) : a[i]! = a.data[i]! := by
   by_cases hi : i < a.size
@@ -658,7 +683,7 @@ theorem sigDecode_sigEncode (salt : Bytes 40) (compSig : List UInt8) (logn : ℕ
     rw [ByteArray.extract_append_eq_right
       (a := ByteArray.mk #[hdr] ++ ByteArray.mk salt.toArray) (b := ByteArray.mk compSig.toArray)
       (by rw [ByteArray.size_append, hb1, hss]) (by rw [ByteArray.size_append, hb1, hss, hcs])]
-    rw [ByteArray.toList_eq_toList_data]
+    rw [byteArray_toList_eq]
   unfold sigDecode
   simp only [Id.run, hguard, hhead, hhdr, ite_false, bne_self_eq_false, Bool.false_eq_true,
     hsalt, hcomp]

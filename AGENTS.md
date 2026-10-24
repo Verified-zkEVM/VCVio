@@ -74,25 +74,15 @@ build boundaries and the staged consolidation.
 - `Extern/`: native FFI surface — the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them. No proof library may import it; the backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
 - `LatticeCrypto/`: lattice-specific algebra, hardness assumptions, scheme definitions, security theorems, and concrete implementations.
 - `HashSig/`: hash-based signatures — SLH-DSA (SPHINCS+, FIPS 205) proof-level specs,
-  component-level FIPS conformance results, and an SUF-CMA bound (strong unforgeability, which
-  gives EUF-CMA at the same bound) in the classical random-oracle model with three oracles (the
-  tweakable hash, `Hmsg`, `PRFmsg`): `securityTarget_two_one`, per public seed and averaged over
-  seed distributions. A model of the SHAKE parameter sets over a single SHAKE256 random oracle on
-  byte strings is stated (`shakeRomScheme`); answering its oracle with SHAKE256 gives the library's
-  FIPS 205 SHAKE internal algorithms (`shakeRomScheme_map_shakeAnswer`), which are checked against
-  pinned NIST ACVP vectors at SLH-DSA-SHAKE-128f, 192f, and 256f; the SUF-CMA bound in that model, the three-oracle
-  bound plus `(q_s + 1) / 2^{8n}` and a weak-key term (at `n = 32` only the weak seeds' share of
-  the bound at every seed), is `shakeStrongAdvantage_le_securityBound` (per public seed:
-  `shakeStrongAdvantage_pure_le_securityBound`); in hedged signing `(q_s + 1) / 2^{8n}` becomes
-  `1 / 2^{8n} + q_s (q_h + q_s + 1) / 2^{16n}` (`shakeStrongAdvantage_le_securityBound_hedged`).
-  The EUF-CMA forms are `shakeAdvantage_le_securityBound`, `shakeAdvantage_pure_le_securityBound`
-  and `shakeAdvantage_le_securityBound_hedged`. `Security/Wire.lean` transports the bounds to
-  strict byte-list public keys and signatures in pure mode with a fixed checked context,
-  preserving both query budgets and strong freshness. Canonical parsing and injectivity are
-  proved in `Codec.lean`. `Security/Profile.lean` binds SHAKE parameters, signing mode, context,
-  codecs, uniform seed sampling, and the matching exact bound evaluator. Prehash collision
-  accounting, variable-length-XOF adversaries, and complete FIPS conformance remain open.
-  Peer of `LatticeCrypto/`; depends on `VCVio`/`ToMathlib` but nothing in those imports it back.
+  component-level FIPS conformance results, and security-facing interfaces. A model of the SHAKE
+  parameter sets over a single SHAKE256 random oracle on byte strings is `shakeRomScheme`
+  (`SLHDSA/Security/ByteModel.lean`); answering its oracle with SHAKE256 gives the library's
+  FIPS 205 SHAKE internal algorithms (`shakeRomScheme_map_shakeAnswer`, checked against pinned NIST
+  ACVP vectors). `SLHDSA/SHAKE128s/` proves 127 bits of strong unforgeability (SUF-CMA) for that
+  model at SLH-DSA-SHAKE-128s in pure mode with deterministic signing, counting the adversary's
+  signing requests, its hash calls and the verification of its forgery
+  (`SLHDSA.SHAKE128s.slhDsa_sufCma_127`). Peer of `LatticeCrypto/`; depends on
+  `VCVio`/`ToMathlib` but nothing in those imports it back.
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
 - `VCVioWidgets/`: optional widget experiments and visualizations.
@@ -196,6 +186,8 @@ Security notions, experiments, games, and advantages follow
 ## Canonical Examples
 
 - Compact modern crypto proof: `Examples/OneTimePad/Basic.lean`
+- Concrete bit security of a deployed signature in the random-oracle model (SLH-DSA-SHAKE-128s,
+  127-bit SUF-CMA): `HashSig/SLHDSA/SHAKE128s/Statement/Theorems/StrongUnforgeability.lean`
 - ElGamal IND-CPA via the generic one-time DDH lift: `Examples/ElGamal/Basic.lean`
 - Schnorr sigma protocol (completeness, soundness, HVZK): `VCVio/Schemes/Schnorr/SigmaProtocol.lean`
 - Concrete transcript and commitment walkthroughs: `Examples/Schnorr/Basic.lean`,
@@ -280,9 +272,8 @@ For the tactic reference, proof-mode entry points, and workflow details, see
 `Lean.Meta.Sym.Pattern` / `Lean.Meta.Sym.DiscrTree`. `Sym.*` is under active
 development in core Lean; see the *Internal Architecture* and *SymM
 Stability Note* sections of that doc for the churn classes to watch at each
-toolchain bump and the re-entry plan for the deferred symbolic
-rewriter bridge (when it lands, `Sym.Simp.mkTheoremFromDecl` rebuilds the
-bundle on demand).
+toolchain bump; the `@[wpStep]` rewrites already run through
+`Sym.Simp.mkTheoremFromDecl` and `Sym.simpGoal`.
 
 ## Building
 
@@ -464,8 +455,8 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
   [`docs/design/slh-dsa-fips205-generalization.md`](docs/design/slh-dsa-fips205-generalization.md)
 - **SLH-DSA implementation status, stale-plan corrections, and remaining slices**:
   [`docs/design/slh-dsa-status-and-roadmap.md`](docs/design/slh-dsa-status-and-roadmap.md)
-- **SLH-DSA classical random-oracle bound, its accounting, and leanVM's 127-bit proof**:
-  [`docs/design/slh-dsa-classical-rom-bound.md`](docs/design/slh-dsa-classical-rom-bound.md)
+- **SLH-DSA-SHAKE-128s 127-bit SUF-CMA: statement, model, proof and bridge**:
+  [`docs/design/slh-dsa-shake128s-suf-cma.md`](docs/design/slh-dsa-shake128s-suf-cma.md)
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
 - **Converting code written against the removed discrete `Pr[…]` API**: [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)

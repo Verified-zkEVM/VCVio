@@ -36,6 +36,8 @@ def compose (so' : QueryImpl spec' m) (so : QueryImpl spec (OracleComp spec')) :
     QueryImpl spec m :=
   fun t => simulateQ so' (so t)
 
+/-- `so' ∘ₛ so` is `QueryImpl.compose so' so`: answer each query with the `spec'`-program from
+`so`, then run that program under `so'`. -/
 infixl : 65 " ∘ₛ " => QueryImpl.compose
 
 @[simp]

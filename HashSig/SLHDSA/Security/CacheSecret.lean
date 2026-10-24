@@ -195,19 +195,19 @@ theorem forsPkGenWithSecret?_eq_some_iff (pk : core.PkSeed) (adrs : Adrs)
   simp only [forsPkGenWithSecret?, forsNodeWithSecret?, forsPkGenWithSecret, forsRootWithSecret,
     simulateQ_bind_eq_some_iff, simulateQ_ofFnM_eq_some_iff, simulateQ_toPartialImpl_tl]
 
-/-- A FORS signature over a provider is settled exactly when, for every tree, the sibling-only
-authentication path is settled and the secret at the selected leaf's `FORS_PRF` address is
-settled, at the values the signature carries. -/
+/-- A FORS signature over a provider is settled exactly when, for every tree, the secret at the
+selected leaf's `FORS_PRF` address is settled and the sibling-only authentication path is settled,
+at the values the signature carries. -/
 theorem simulateQ_toPartialImpl_forsSignWithSecret_eq_some_iff (md : List Byte) (pk : core.PkSeed)
     (adrs : Adrs) {sig : ForsSigCore p core} :
     simulateQ c.toPartialImpl (forsSignWithSecretM core secret md pk adrs) = some sig ↔
-      ∀ i : Fin p.k, ∃ path : Vector core.Y p.a,
+      ∀ i : Fin p.k, ∃ x, simulateQ c.toPartialImpl
+            (secret (forsSkAdrs adrs (i.val * 2 ^ p.a + forsIdx p md i.val))) = some x ∧
+        ∃ path : Vector core.Y p.a,
         simulateQ c.toPartialImpl (PerfectMerkleTree.intrinsicAuthPathM
           (forsLeafWithSecret core (PublicHash.f core pk) secret adrs)
           (forsNodeHashWith (PublicHash.h core pk) adrs)
           (i.val * 2 ^ p.a + forsIdx p md i.val) p.a) = some path ∧
-        ∃ x, simulateQ c.toPartialImpl
-            (secret (forsSkAdrs adrs (i.val * 2 ^ p.a + forsIdx p md i.val))) = some x ∧
           (⟨x, path⟩ : ForsTreeSigCore p core) = sig[i] := by
   simp only [forsSignWithSecretM, forsSignWithSecret, simulateQ_ofFnM_eq_some_iff,
     simulateQ_bind_eq_some_iff, simulateQ_pure_eq_some_iff]
@@ -284,7 +284,7 @@ theorem forsPkGenWithSecret?_eq_some_of_forsSignWithSecret (md : List Byte) (pk 
   rw [forsPkGenWithSecret?_eq_some_iff]
   obtain ⟨roots, hper, hTk⟩ := hrec
   refine ⟨roots, fun i => ?_, hTk⟩
-  obtain ⟨path, hpath, x, hx, hsig⟩ := hsign i
+  obtain ⟨x, hx, path, hpath, hsig⟩ := hsign i
   obtain ⟨leaf, hF, hclimb⟩ := hper i
   rw [Fin.getElem_fin] at hsig
   rw [← hsig] at hF hclimb

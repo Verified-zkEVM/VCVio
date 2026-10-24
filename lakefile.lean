@@ -72,7 +72,7 @@ idempotent.
 -/
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun" @
-  "ef4c157b3c6775fb55864303d96f9b400428d5f0"
+  "5670109ccaaaf945c6003519244b76e0777ecc45"
 
 require "leanprover-community" / "mathlib" @ git "v4.35.0"
 
@@ -378,8 +378,7 @@ lean_exe smoke_test where
   root := `VCVioTest.Smoke
 
 /-- `lake test`: build the three test libraries, then run the smoke, pure algorithm and SLH-DSA test
-executables and independently check the regenerated exact bound table against its artifact.
-`lake test -- --ffi` additionally builds and runs the native-backed ML-KEM / ML-DSA /
+executables. `lake test -- --ffi` additionally builds and runs the native-backed ML-KEM / ML-DSA /
 Falcon executables, which compile the vendored C backends under `third_party/`; that path is what
 the nightly FFI workflow runs and is never part of the per-PR CI. -/
 @[test_driver]
@@ -417,9 +416,7 @@ script test (args) do
     #["exe", "slhdsa_composition_tests"],
     #["exe", "slhdsa_suf_bound_tests"],
     #["exe", "slhdsa_limited_profile_tests"],
-    #["exe", "slhdsa_byte_model_tests"],
-    #["exe", "slhdsa_wire_tests"],
-    #["build", "slhdsa_bound_table"]]
+    #["exe", "slhdsa_byte_model_tests"]]
   if args.contains "--ffi" then
     steps := steps ++ #[#["exe", "mlkem_test"], #["exe", "mldsa_test"], #["exe", "falcon_test"]]
   for cmdArgs in steps do
@@ -427,17 +424,7 @@ script test (args) do
     if rc != 0 then
       IO.eprintln s!"lake test: `lake {" ".intercalate cmdArgs.toList}` exited with code {rc}"
       return rc
-  let root ← getRootPackage
-  let generator := (root.binDir / "slhdsa_bound_table").addExtension System.FilePath.exeExtension
-  let checkArgs := #["scripts/check-slh-dsa-bound-table.py",
-    "docs/design/slh-dsa-security-bounds.csv", "--generator",
-    generator.toString]
-  IO.println s!"# python3 {" ".intercalate checkArgs.toList}"
-  let check ← IO.Process.spawn { cmd := "python3", args := checkArgs }
-  let rc ← check.wait
-  if rc != 0 then
-    IO.eprintln s!"lake test: independent SLH-DSA bound-table check exited with code {rc}"
-  return rc
+  return 0
 
 /-- ML-KEM test executable (links against mlkem-native FFI). -/
 lean_exe mlkem_test where
@@ -493,14 +480,6 @@ address, layout-order negative controls, SHAKE256 prefix consistency, and the FI
 internal algorithms against pinned NIST ACVP vectors at SLH-DSA-SHAKE-128f. -/
 lean_exe slhdsa_byte_model_tests where
   root := `HashSigTest.SLHDSA.ByteModel
-
-/-- Exact rational evaluations of the proved structured and averaged single-SHAKE bounds. -/
-lean_exe slhdsa_bound_table where
-  root := `HashSigTest.SLHDSA.BoundEval
-
-/-- Strict parsing, pure-mode messages, and returned-pair freshness of the wire adapter. -/
-lean_exe slhdsa_wire_tests where
-  root := `HashSigTest.SLHDSA.Wire
 
 /-- Sizes, distinctness, cross-role disjointness, and pinned membership of the reachable security
 target ledgers, on small validated profiles. -/

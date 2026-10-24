@@ -241,20 +241,25 @@ theorem preserves {c : StateT (Heap Ident) m α} (footprint : SupportWriteFootpr
 
 variable [LawfulMonad m]
 
+/-- `pure x` writes no cells, so its footprint is empty. -/
 def pure (x : α) : SupportWriteFootprint (pure x : StateT (Heap Ident) m α) where
   writes := ∅
   sound := supportWritesOnly_pure_empty x
 
+/-- Reading the cell `r` writes no cells, so its footprint is empty. -/
 def readM (r : CellRef Ident) :
     SupportWriteFootprint (r.readM : StateT (Heap Ident) m r.Value) where
   writes := ∅
   sound := readM_supportWritesOnly_empty r
 
+/-- Writing `x` to the cell `r` has the footprint `{r.id}`. -/
 def writeM [DecidableEq Ident] (r : CellRef Ident) (x : r.Value) :
     SupportWriteFootprint (r.writeM x : StateT (Heap Ident) m PUnit) where
   writes := {r.id}
   sound := writeM_supportWritesOnly_single r x
 
+/-- The footprint of `c >>= k`: the cells `c` may write, together with the cells that the
+continuation `k a` may write for some result `a`. -/
 def bind {c : StateT (Heap Ident) m α} {k : α → StateT (Heap Ident) m β}
     (footprint : SupportWriteFootprint c) (kont : ∀ a, SupportWriteFootprint (k a)) :
     SupportWriteFootprint (c >>= k) where
@@ -553,19 +558,24 @@ theorem preserves {c : StateT (Heap Ident) Id α} (footprint : WriteFootprint c)
     Preserves c r :=
   footprint.sound r hr
 
+/-- `pure x` writes no cells, so its footprint is empty. -/
 def pure (x : α) : WriteFootprint (pure x : StateT (Heap Ident) Id α) where
   writes := ∅
   sound := fun r _ => preserves_pure x r
 
+/-- Reading the cell `r` writes no cells, so its footprint is empty. -/
 def read (r : CellRef Ident) : WriteFootprint r.read where
   writes := ∅
   sound := read_writesOnly_empty r
 
+/-- Writing `x` to the cell `r` has the footprint `{r.id}`. -/
 def write [DecidableEq Ident] (r : CellRef Ident) (x : r.Value) :
     WriteFootprint (r.write x) where
   writes := {r.id}
   sound := write_writesOnly_single r x
 
+/-- The footprint of `c >>= k`: the cells `c` may write, together with the cells that the
+continuation `k a` may write for some result `a`. -/
 def bind {c : StateT (Heap Ident) Id α} {k : α → StateT (Heap Ident) Id β}
     (footprint : WriteFootprint c) (kont : ∀ a, WriteFootprint (k a)) :
     WriteFootprint (c >>= k) where
@@ -789,8 +799,12 @@ instance : CellSpec DemoCell where
     | .cache => 0
     | .flag => false
 
+/-- The reference to the `Nat`-valued log counter cell `DemoCell.log`. -/
 @[reducible] def logRef : CellRef DemoCell := ⟨.log⟩
+/-- The reference to the `Nat`-valued cache counter cell `DemoCell.cache`. -/
 @[reducible] def cacheRef : CellRef DemoCell := ⟨.cache⟩
+/-- The reference to the `Bool`-valued flag cell `DemoCell.flag`, which the demo handler only
+reads. -/
 @[reducible] def flagRef : CellRef DemoCell := ⟨.flag⟩
 
 /-! ### Query-handler write footprints -/

@@ -363,23 +363,6 @@ section guess
 
 variable {X Y : Type} [Fintype X] [DecidableEq X] [Fintype Y] [AddCommGroup Y]
 
-/-- Each value is taken at a given input by the same number of functions: the functions with
-`H x = y`, times `|Y|`, are all the functions. -/
-theorem card_filter_apply_eq_mul_card [DecidableEq Y] (x : X) (y : Y) :
-    (Finset.univ.filter fun H : X → Y ↦ H x = y).card * Fintype.card Y =
-      Fintype.card (X → Y) := by
-  have hfib : ∀ y' : Y, (Finset.univ.filter fun H : X → Y ↦ H x = y').card =
-      (Finset.univ.filter fun H : X → Y ↦ H x = y).card := fun y' ↦
-    Finset.card_equiv (Equiv.addRight fun _ ↦ y - y') fun H ↦ by
-      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-      exact ⟨fun h ↦ (congrArg (· + (y - y')) h).trans (add_sub_cancel y' y),
-        fun h ↦ add_right_cancel (h.trans (add_sub_cancel y' y).symm)⟩
-  have h := Finset.card_eq_sum_card_fiberwise (f := fun H : X → Y ↦ H x) (s := Finset.univ)
-    (t := Finset.univ) fun _ _ ↦ Finset.mem_coe.mpr (Finset.mem_univ _)
-  rw [Finset.card_univ] at h
-  rw [h, Finset.sum_congr rfl fun b _ ↦ hfib b, Finset.sum_const, Finset.card_univ, smul_eq_mul,
-    mul_comm]
-
 /-- A guess that does not depend on the function is right with probability the total weight
 divided by `|Y|`: for weights `w i` on labels `i` that each carry a guess `(x i, y i)`, averaging
 over all functions `H` the total weight of the labels with `y i = H (x i)` gives the total weight
@@ -391,7 +374,12 @@ theorem sum_tsum_guess {ι : Type*} (w : ι → ℝ≥0∞) (x : ι → X) (y : 
   classical
   have hcount : ∀ i, ∑ H : X → Y, (Fintype.card (X → Y) : ℝ≥0∞)⁻¹ *
       (if y i = H (x i) then 1 else 0) = (Fintype.card Y : ℝ≥0∞)⁻¹ := fun i ↦ by
-    have hc := card_filter_apply_eq_mul_card (x i) (y i)
+    have hc : (Finset.univ.filter fun H : X → Y ↦ H (x i) = y i).card * Fintype.card Y =
+        Fintype.card (X → Y) := by
+      have h := Fintype.card_filter_piFinset_eq_of_mem (fun _ : X ↦ (Finset.univ : Finset Y))
+        (x i) (Finset.mem_univ (y i))
+      simp only [Fintype.piFinset_univ, Finset.card_univ] at h
+      rw [h, Finset.prod_erase_mul _ _ (Finset.mem_univ _), Fintype.card_pi]
     have hfilter : (Finset.univ.filter fun H : X → Y ↦ y i = H (x i)) =
         Finset.univ.filter fun H : X → Y ↦ H (x i) = y i :=
       Finset.filter_congr fun _ _ ↦ eq_comm

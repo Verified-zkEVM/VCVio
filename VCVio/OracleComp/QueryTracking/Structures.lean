@@ -977,6 +977,7 @@ lemma eq_of_prependValues_singleton_eq (seed rest : QuerySeed spec)
     u :: rest i = seed i ∧ rest = seed.update i ((seed i).tail) := by
   subst h; simp [prependValues]
 
+/-- Append the single value `u` to the end of the seed at index `i`. -/
 abbrev addValue (seed : QuerySeed spec) (i : ι) (u : spec.Range i) :
     QuerySeed spec :=
   seed.addValues [u]

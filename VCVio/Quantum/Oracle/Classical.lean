@@ -38,6 +38,23 @@ restricted to classical algorithms, is the classical random-oracle model.
 * `Quantum.qromEvalDist₂_toQuantum_eq_randomOracle`: this is the distribution of `oa` under
   `randomOracle`.
 
+## Classical calls from inside an experiment
+
+The challengers of ePrint 2025/2166, §7 (p. 51) make classical calls while holding the
+adversary's register. Over any signature and any held register `B`:
+
+* `Quantum.QComp.callBasis p B a read`: prepare the basis input `a` of port `p` beside `B`, call
+  `p`, measure and discard the port register, and return `read` of the reading and the result.
+  It is lossless and makes one call of `p` (`Quantum.QComp.isQueryBound_callBasis_single`).
+* `OracleComp.toQuantumAt oa q`: the classical algorithm `oa` with each query answered by the
+  program `q t`; `OracleComp.toQuantum` is the case `B = Unit`, `q = Quantum.classicalImpl`
+  (`OracleComp.toQuantum_eq_toQuantumAt`), and `n` queries within budget `b` each give budget
+  `n • b` (`OracleComp.isQueryBound_toQuantumAt`).
+* `Quantum.QComp.allIn W f`: the conjunction of the checks `f i`, `i ∈ W`, without
+  short-circuit, within the sum of their budgets (`Quantum.QComp.isQueryBound_allIn`).
+* `Quantum.QuantumComp₂.forgetReg x`: a fixed-register program read as a general program, with
+  the same observed laws (`Quantum.QuantumRuntime.outcomeLawWith_forgetReg`).
+
 ## Not covered
 
 * **Private randomness.** Algorithms that also sample coins, `OracleComp (unifSpec + (X →ₒ Y)) α`,
@@ -289,3 +306,331 @@ theorem qromEvalDist₂_toQuantum_eq_randomOracle [SampleableType Y] [Measurable
     OracleComp.evalDist_simulateQ_randomOracle_run'_empty_eq_uniformTable]
 
 end Quantum
+
+/-! ## Classical calls from inside an experiment
+
+The challengers of the security experiments of ePrint 2025/2166 (§7, p. 51) make classical
+calls on a chosen port while the adversary's final register `B` is held, and run classical
+verifiers whose oracle queries are such calls. The constructions below work over any signature
+and any register `B`; `Quantum.classicalQuery` and `OracleComp.toQuantum` are the case of the
+random-oracle signature on the trivial register (`OracleComp.toQuantum_eq_toQuantumAt`). -/
+
+universe u v u₁ v₁ w
+
+namespace Quantum
+
+namespace QComp
+
+variable {spec : QuantumOracleSpec.{u₁, v₁}} {β : Type w}
+
+/-- The preparation of a basis call: on `B`, adjoin the port register of `p` in the basis state
+`|a⟩`. It relabels `B` as `Unit × B` and prepares `|a⟩` on the factor `Unit`. -/
+@[expose]
+noncomputable def callBasisPrep (p : spec.Port) (B : QReg) (a : spec.In p) :
+    SubInstrument B (spec.In p × B) PUnit.{w + 1} :=
+  (SubInstrument.relabel (Equiv.uniqueProd B Unit).symm).bind fun _ ↦
+    (DSubInstrument.classical (B := fun _ ↦ spec.In p)
+      (fun _ : Unit ↦ PUnit.unit) (fun _ ↦ a)).frame B
+
+/-- The read-out of a basis call with result `r`: measure the port register in the computational
+basis, report `read o r` on reading `o`, and discard the port register. -/
+@[expose]
+noncomputable def callBasisMeasure (p : spec.Port) (B : QReg)
+    (read : spec.Out p → spec.Result p → β) (r : spec.Result p) :
+    SubInstrument (spec.Out p × B) B β :=
+  ((DSubInstrument.classical (B := fun _ ↦ Unit)
+    (fun o : spec.Out p ↦ read o r) (fun _ ↦ ())).frame B).bind fun c ↦
+    (SubInstrument.relabel (Equiv.uniqueProd B Unit)).bind fun _ ↦ SubInstrument.pure c
+
+/-- **A classical call beside a held register.** Prepare the basis input `a` of port `p` beside
+`B`, call `p`, measure the port register in the computational basis, discard it, and return
+`read o r` for the reading `o` and the classical result `r` of the call. It is built from the
+same pieces as `Quantum.classicalQuery`: relabellings, a classical preparation framed by `B`,
+and `Quantum.QuantumComp₂.query p B (Equiv.refl _)`. -/
+@[expose]
+noncomputable def callBasis (p : spec.Port) (B : QReg) (a : spec.In p)
+    (read : spec.Out p → spec.Result p → β) : QComp spec B B β :=
+  (QComp.act (B := QReg.of (spec.In p × B)) (callBasisPrep p B a)).bind fun _ ↦
+    (QuantumComp₂.query (L := LocalSig.instruments.{w}) p B (Equiv.refl _)).bind fun r ↦
+      QComp.act (A := QReg.of (spec.Out p × B)) (callBasisMeasure p B read r)
+
+/-- The preparation of a basis call is lossless. -/
+theorem lossless_callBasisPrep (p : spec.Port) (B : QReg) (a : spec.In p) :
+    (callBasisPrep.{u₁, v₁, w} p B a).Lossless :=
+  (SubInstrument.lossless_relabel _).bind fun _ ↦
+    (DSubInstrument.lossless_classical _ _).frame B
+
+/-- The read-out of a basis call is lossless. -/
+theorem lossless_callBasisMeasure (p : spec.Port) (B : QReg)
+    (read : spec.Out p → spec.Result p → β) (r : spec.Result p) :
+    (callBasisMeasure p B read r).Lossless :=
+  ((DSubInstrument.lossless_classical _ _).frame B).bind fun _ ↦
+    (SubInstrument.lossless_relabel _).bind fun _ ↦ DSubInstrument.lossless_ret _ _
+
+/-- A basis call is a lossless program. -/
+theorem lossless_callBasis (p : spec.Port) (B : QReg) (a : spec.In p)
+    (read : spec.Out p → spec.Result p → β) :
+    (callBasis p B a read).Lossless .instruments :=
+  QuantumComp₂.lossless_bind (QComp.lossless_act (lossless_callBasisPrep p B a)) fun _ ↦
+    QuantumComp₂.lossless_bind (QuantumComp₂.lossless_query _ _ _) fun r ↦
+      QComp.lossless_act (lossless_callBasisMeasure p B read r)
+
+/-- A basis call on port `p` is within every budget that allows a call of `p`. -/
+theorem isQueryBound_callBasis {p : spec.Port} {b : spec.Port → ℕ} (hb : 0 < b p) (B : QReg)
+    (a : spec.In p) (read : spec.Out p → spec.Result p → β) :
+    (callBasis p B a read).IsQueryBound b := by
+  rw [callBasis, QComp.isQueryBound_act_bind_iff]
+  intro _
+  refine (QuantumComp₂.isQueryBound_bind (b₁ := b) (b₂ := 0) ?_
+    fun _ ↦ QComp.isQueryBound_act _ _).mono (add_zero _).le
+  exact (QuantumComp₂.isQueryBound_query_iff _ _ _ _).mpr hb
+
+/-- A basis call on port `p` makes one call of `p` and no other call. -/
+theorem isQueryBound_callBasis_single [DecidableEq spec.Port] (p : spec.Port) (B : QReg)
+    (a : spec.In p) (read : spec.Out p → spec.Result p → β) :
+    (callBasis p B a read).IsQueryBound (Pi.single p 1) :=
+  isQueryBound_callBasis (by simp) B a read
+
+/-- The run of a basis call: the framed preparation, the call, and the framed read-out. -/
+theorem run₂_callBasis (R : QuantumRuntime spec) (p : spec.Port) (B : QReg) (a : spec.In p)
+    (read : spec.Out p → spec.Result p → β) :
+    R.run₂ .instruments (callBasis p B a read) =
+      ((callBasisPrep.{u₁, v₁, w} p B a).frame R.D).bind fun _ ↦
+        (R.queryStep (A := QReg.of (spec.In p × B)) p B (Equiv.refl _)).bind fun r ↦
+          ((callBasisMeasure p B read r).frame R.D).bind fun c ↦ SubInstrument.pure c := by
+  simp only [callBasis, QuantumRuntime.run₂_act_bind, QuantumRuntime.run₂_query_bind,
+    QuantumRuntime.run₂_act]
+
+/-- **Conjunction of classical checks.** Run `f i` for every `i ∈ W` in increasing order of `i`,
+without short-circuit, so that the calls of every check happen, and return the conjunction of
+their results. This is `⋀_{i ∈ W}` of the experiments of ePrint 2025/2166 (§7, p. 51). -/
+@[expose]
+noncomputable def allIn {k : ℕ} {B : QReg} (W : Finset (Fin k))
+    (f : Fin k → QComp spec B B Bool) : QComp spec B B Bool :=
+  (List.finRange k).foldlM (fun acc i ↦ if i ∈ W then (acc && ·) <$> f i else pure acc) true
+
+section allIn
+
+variable {k : ℕ} {B : QReg} (W : Finset (Fin k)) (f : Fin k → QComp spec B B Bool)
+
+/-- The fold behind `allIn`, along any list, is within the sum of the budgets of the checks it
+runs. -/
+private theorem isQueryBound_foldlM {b : Fin k → spec.Port → ℕ}
+    (hf : ∀ i ∈ W, (f i).IsQueryBound (b i)) (l : List (Fin k)) (acc : Bool) :
+    (l.foldlM (fun acc i ↦ if i ∈ W then (acc && ·) <$> f i else pure acc) acc).IsQueryBound
+      ((l.filter (· ∈ W)).map b).sum := by
+  induction l generalizing acc with
+  | nil => exact QuantumComp₂.isQueryBound_pure acc _
+  | cons i l ih =>
+    rw [List.foldlM_cons, List.filter_cons]
+    by_cases hi : i ∈ W
+    · simp only [hi, ↓reduceIte, decide_true, List.map_cons, List.sum_cons]
+      refine (QuantumComp₂.isQueryBound_bind (b₁ := b i + 0)
+        (QuantumComp₂.isQueryBound_bind (hf i hi) fun _ ↦ QuantumComp₂.isQueryBound_pure _ _)
+        fun s ↦ ih s).mono (by rw [add_zero])
+    · simp only [hi, ↓reduceIte, decide_false, Bool.false_eq_true]
+      exact ih acc
+
+/-- The fold behind `allIn` is lossless when the checks it runs are. -/
+private theorem lossless_foldlM (hf : ∀ i ∈ W, (f i).Lossless .instruments) (l : List (Fin k))
+    (acc : Bool) :
+    (l.foldlM (fun acc i ↦ if i ∈ W then (acc && ·) <$> f i else pure acc) acc).Lossless
+      .instruments := by
+  induction l generalizing acc with
+  | nil => exact QuantumComp₂.lossless_pure acc
+  | cons i l ih =>
+    rw [List.foldlM_cons]
+    by_cases hi : i ∈ W
+    · simp only [hi, ↓reduceIte]
+      exact QuantumComp₂.lossless_bind (QuantumComp₂.lossless_bind (hf i hi) fun _ ↦
+        QuantumComp₂.lossless_pure _) ih
+    · simp only [hi, ↓reduceIte]
+      exact ih acc
+
+/-- The conjunction of checks is within the sum, over `W`, of the budgets of the checks. -/
+theorem isQueryBound_allIn {b : Fin k → spec.Port → ℕ} (hf : ∀ i ∈ W, (f i).IsQueryBound (b i)) :
+    (allIn W f).IsQueryBound (∑ i ∈ W, b i) := by
+  have h := isQueryBound_foldlM W f hf (List.finRange k) true
+  rw [← List.sum_toFinset _ ((List.nodup_finRange k).filter _), List.toFinset_filter,
+    List.toFinset_finRange] at h
+  simp only [decide_eq_true_eq] at h
+  rw [Finset.filter_mem_eq_inter, Finset.univ_inter] at h
+  exact h
+
+/-- The conjunction of checks within a common budget `b` is within `#W • b`. -/
+theorem isQueryBound_allIn_const {b : spec.Port → ℕ} (hf : ∀ i ∈ W, (f i).IsQueryBound b) :
+    (allIn W f).IsQueryBound (W.card • b) := by
+  have h := isQueryBound_allIn W f (b := fun _ ↦ b) hf
+  rwa [Finset.sum_const] at h
+
+/-- The conjunction of lossless checks is lossless. -/
+theorem lossless_allIn (hf : ∀ i ∈ W, (f i).Lossless .instruments) :
+    (allIn W f).Lossless .instruments :=
+  lossless_foldlM W f hf _ true
+
+end allIn
+
+end QComp
+
+namespace QuantumComp₂
+
+variable {L : LocalSig.{u, v}} {spec : QuantumOracleSpec.{u₁, v₁}} {A B : QReg} {α : Type w}
+
+/-- Read a fixed-register program as a general program whose leaves carry its value on any
+register: the leaf `⟨B, rfl, a⟩` becomes `⟨B, a⟩`. This lets a fixed-register challenger follow
+a general adversary whose final register depends on its outcome. -/
+@[expose]
+def forgetReg (x : QuantumComp₂ L spec A B α) : QuantumComp L spec (fun _ ↦ α) A :=
+  QuantumComp.bind x fun _ p ↦ QuantumComp.pure p.2
+
+/-- Forgetting the register keeps losslessness. -/
+theorem lossless_forgetReg {I : L.Interp} {x : QuantumComp₂ L spec A B α}
+    (hx : x.Lossless I) : x.forgetReg.Lossless I :=
+  QuantumComp.Lossless.bind hx fun _ _ ↦ trivial
+
+/-- Forgetting the register keeps every query budget. -/
+theorem isQueryBound_forgetReg {x : QuantumComp₂ L spec A B α} {b : spec.Port → ℕ}
+    (hx : x.IsQueryBound b) : x.forgetReg.IsQueryBound b :=
+  (hx.bind fun _ _ ↦ QuantumComp.isQueryBound_pure _ 0).mono (add_zero b).le
+
+end QuantumComp₂
+
+namespace QuantumRuntime
+
+variable {L : LocalSig.{u, v}} {spec : QuantumOracleSpec.{u₁, v₁}} {A B : QReg} {α : Type w}
+  (R : QuantumRuntime spec) (I : L.Interp)
+
+/-- The run of a program with its register forgotten is the run of the program, reindexed along
+`⟨u, ⟨h, a⟩⟩ ↦ ⟨u, a⟩`. -/
+theorem run_forgetReg (x : QuantumComp₂ L spec A B α) :
+    R.run I x.forgetReg =
+      (R.run I x).map (C := fun q : Σ _ : QReg, α ↦ q.1 × R.D)
+        fun p : Σ u, QuantumComp₂.Leaf B α u ↦ ⟨p.1, p.2.2⟩ := by
+  exact run_bind R I x _
+
+/-- The joint post-state of a program with its register forgotten, at the leaf `⟨u, a⟩` read off
+the leaf `⟨u, ⟨h, a⟩⟩` of the program, is the joint post-state of the program there. -/
+theorem matrix_jointPost_forgetReg (x : QuantumComp₂ L spec A B α) (ρ : SubState A)
+    (p : Σ u, QuantumComp₂.Leaf B α u) :
+    (R.jointPost I x.forgetReg ρ ⟨p.1, p.2.2⟩).matrix = (R.jointPost I x ρ p).matrix := by
+  refine (matrix_jointPost R I _ ρ _).trans (Eq.trans ?_ (matrix_jointPost R I x ρ p).symm)
+  rw [run_forgetReg, DSubInstrument.map_eq_bind_ret,
+    DSubInstrument.branch_bind_apply, tsum_eq_single p fun p' hp' ↦ ?_]
+  · rw [DSubInstrument.branch_ret_self, LinearMap.id_apply]
+  · obtain ⟨u, h, a⟩ := p
+    obtain ⟨u', h', a'⟩ := p'
+    subst h h'
+    have ha : a ≠ a' := fun ha ↦ hp' (by rw [ha])
+    rw [DSubInstrument.branch_ret_of_ne _ fun he ↦ ha (eq_of_heq (Sigma.mk.inj he).2),
+      LinearMap.zero_apply]
+
+/-- The joint post-state of a program with its register forgotten vanishes at a leaf that no
+leaf of the program reads to. -/
+theorem matrix_jointPost_forgetReg_of_notMem (x : QuantumComp₂ L spec A B α) (ρ : SubState A)
+    {q : Σ _ : QReg, α} (hq : q ∉ Set.range fun p : Σ u, QuantumComp₂.Leaf B α u ↦
+      (⟨p.1, p.2.2⟩ : Σ _ : QReg, α)) :
+    (R.jointPost I x.forgetReg ρ q).matrix = 0 := by
+  rw [matrix_jointPost, run_forgetReg, DSubInstrument.map_eq_bind_ret,
+    DSubInstrument.branch_bind_apply]
+  refine (tsum_congr fun p ↦ ?_).trans tsum_zero
+  rw [DSubInstrument.branch_ret_of_ne _ fun he ↦ hq ⟨p, he.symm⟩, LinearMap.zero_apply]
+
+/-- **Forgetting the register changes no observed law.** Observing `f` on the leaves of the
+program with its register forgotten is observing `f ⟨u, a⟩` on the leaves `⟨u, ⟨h, a⟩⟩` of the
+program. -/
+theorem outcomeLawWith_forgetReg {γ : Type*} [MeasurableSpace γ] (x : QuantumComp₂ L spec A B α)
+    (ρ : SubState A) (f : (Σ _ : QReg, α) → γ) :
+    R.evalDistMap I x.forgetReg ρ f = R.evalDistMap I x ρ fun p ↦ f ⟨p.1, p.2.2⟩ := by
+  ext s hs
+  refine (evalDistMap_apply R I _ ρ f hs).trans
+    (Eq.trans ?_ (evalDistMap_apply R I x ρ (fun p ↦ f ⟨p.1, p.2.2⟩) hs).symm)
+  have hg : Function.Injective fun p : Σ u, QuantumComp₂.Leaf B α u ↦
+      (⟨p.1, p.2.2⟩ : Σ _ : QReg, α) := by
+    rintro ⟨u, h, a⟩ ⟨u', h', a'⟩ he
+    subst h h'
+    cases eq_of_heq (Sigma.mk.inj he).2
+    rfl
+  refine (hg.tsum_eq fun q hq ↦ ?_).symm.trans (tsum_congr fun p ↦ ?_)
+  · by_contra hq'
+    refine hq ?_
+    beta_reduce
+    rw [matrix_jointPost_forgetReg_of_notMem R I x ρ hq', Matrix.trace_zero, Complex.zero_re,
+      ENNReal.ofReal_zero, zero_mul]
+  · simp only [matrix_jointPost_forgetReg]
+
+end QuantumRuntime
+
+end Quantum
+
+namespace OracleComp
+
+open Quantum
+
+section toQuantumAt
+
+variable {ι : Type u} {ospec : OracleSpec.{u, v} ι} {α : Type v}
+  {spec : QuantumOracleSpec.{u₁, v₁}} {B : QReg}
+
+/-- **A classical algorithm run from inside an experiment.** Run the classical oracle algorithm
+`oa` as a quantum program on the held register `B`, answering each query `t` with the program
+`q t`, for instance a basis call `Quantum.QComp.callBasis`. -/
+@[expose]
+noncomputable def toQuantumAt (oa : OracleComp ospec α) (q : QueryImpl ospec (QComp spec B B)) :
+    QComp spec B B α :=
+  simulateQ q oa
+
+variable (q : QueryImpl ospec (QComp spec B B))
+
+/-- A computation that returns at once runs to the program that returns at once. -/
+@[simp]
+theorem toQuantumAt_pure (a : α) :
+    (pure a : OracleComp ospec α).toQuantumAt q = QuantumComp₂.pure a :=
+  rfl
+
+/-- A query followed by a continuation runs to the answer program followed by the programs of
+the continuation. -/
+@[simp]
+theorem toQuantumAt_query_bind (t : ospec.Domain) (k : ospec.Range t → OracleComp ospec α) :
+    (liftM (ospec.query t) >>= k : OracleComp ospec α).toQuantumAt q =
+      (q t).bind fun y ↦ (k y).toQuantumAt q := by
+  rw [toQuantumAt, simulateQ_bind, simulateQ_spec_query]
+  rfl
+
+/-- A classical algorithm whose queries are answered by lossless programs runs to a lossless
+program. -/
+theorem lossless_toQuantumAt {q : QueryImpl ospec (QComp spec B B)}
+    (hq : ∀ t, (q t).Lossless .instruments) (oa : OracleComp ospec α) :
+    (oa.toQuantumAt q).Lossless .instruments := by
+  induction oa using OracleComp.inductionOn with
+  | pure a => exact QuantumComp₂.lossless_pure a
+  | query_bind t k ih =>
+    rw [toQuantumAt_query_bind]
+    exact QuantumComp₂.lossless_bind (hq t) ih
+
+end toQuantumAt
+
+/-- A classical algorithm making at most `n` queries, each answered by a program within the
+budget `b`, runs to a program within the budget `n • b`. -/
+theorem isQueryBound_toQuantumAt {ι : Type u} {ospec : OracleSpec.{u, u} ι} {α : Type u}
+    {spec : QuantumOracleSpec.{u₁, v₁}} {B : QReg} {q : QueryImpl ospec (QComp spec B B)}
+    {b : spec.Port → ℕ} (hq : ∀ t, (q t).IsQueryBound b) {oa : OracleComp ospec α} {n : ℕ}
+    (h : IsTotalQueryBound oa n) : (oa.toQuantumAt q).IsQueryBound (n • b) := by
+  induction oa using OracleComp.inductionOn generalizing n with
+  | pure a => exact QuantumComp₂.isQueryBound_pure a _
+  | query_bind t k ih =>
+    rw [isTotalQueryBound_query_bind_iff] at h
+    rw [toQuantumAt_query_bind]
+    refine (QuantumComp₂.isQueryBound_bind (hq t) fun y ↦ ih y (h.2 y)).mono fun i ↦ ?_
+    obtain ⟨m, rfl⟩ := Nat.exists_eq_add_one_of_ne_zero h.1.ne'
+    simp only [Pi.add_apply, Pi.smul_apply, smul_eq_mul, Nat.add_sub_cancel]
+    rw [Nat.succ_mul, add_comm]
+
+variable {X Y α : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
+
+/-- The embedding of classical algorithms on the trivial register is the case `B = Unit` with
+queries answered by `Quantum.classicalQuery`. -/
+theorem toQuantum_eq_toQuantumAt (oa : OracleComp (X →ₒ Y) α) :
+    oa.toQuantum = oa.toQuantumAt classicalImpl :=
+  rfl
+
+end OracleComp

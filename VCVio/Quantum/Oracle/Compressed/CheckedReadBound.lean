@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+import VCVio.Quantum.MatrixMap.Norm
 public import VCVio.Quantum.Oracle.Compressed.CheckedRead
 public import VCVio.Quantum.Oracle.Compressed.CommutatorSharp
 import Mathlib.Analysis.Matrix.Order
@@ -91,23 +92,6 @@ theorem checkedReadPhaseCell_some_some {χ : AddChar Y ℂ} (hχ : χ ≠ 0)
   simp only [checkedReadPhaseCell, Matrix.add_apply, Matrix.smul_apply, smul_eq_mul,
     checkedReadEmptyCell_apply, cellUniform_some, cellAmp_mul_self, phaseCell_some_some hχ]
   split_ifs <;> ring
-
-omit [DecidableEq Y] in
-/-- A unit-modulus multiple of a nontrivial character has the same quadratic sum law. -/
-theorem sum_norm_sub_signed_char_sq {χ : AddChar Y ℂ} (hχ : χ ≠ 0)
-    {ε : ℂ} (hε : ‖ε‖ = 1) (c : ℂ) :
-    ∑ w, ‖c - ε * χ w‖ ^ 2 = Fintype.card Y * (‖c‖ ^ 2 + 1) := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
-  have e : ∀ w, ‖c - ε * χ w‖ ^ 2 =
-      (‖c‖ ^ 2 + 1) - 2 * (c * conj (ε * χ w)).re := fun w ↦ by
-    rw [Complex.sq_norm, Complex.sq_norm, Complex.normSq_sub,
-      ← Complex.sq_norm (ε * χ w), norm_mul, hε, AddChar.norm_apply]
-    ring
-  simp_rw [e]
-  rw [Finset.sum_sub_distrib, Finset.sum_const, Finset.card_univ, nsmul_eq_mul,
-    ← Finset.mul_sum, ← Complex.re_sum, ← Finset.mul_sum, ← map_sum,
-    ← Finset.mul_sum, hs]
-  simp
 
 /-- The squared residual row norm for every nontrivial character and unit sign. -/
 theorem sum_norm_checkedReadPhaseCell_sub_sq {χ : AddChar Y ℂ} (hχ : χ ≠ 0)
@@ -827,19 +811,6 @@ theorem l2_opNorm_commutator_validity_sq_le_sixteen_mul
 
 open scoped ComplexOrder
 
-private theorem read_trace_rectangular_le {m n : Type*}
-    [Fintype m] [Fintype n] [DecidableEq n]
-    (A : Matrix m n ℂ) (σ : Matrix n n ℂ) (hσ : σ.PosSemidef) :
-    (A * σ * Aᴴ).trace.re ≤ ‖A‖ ^ 2 * σ.trace.re := by
-  open scoped MatrixOrder in
-    have hh := (posSemidef_conjTranspose_mul_self A).isHermitian
-    have h := (Matrix.le_iff.mp (IsSelfAdjoint.le_algebraMap_norm_self (Aᴴ * A)
-      hh)).trace_mul_re_nonneg hσ
-    rw [Matrix.sub_mul, Matrix.trace_sub, Complex.sub_re] at h
-    rw [Matrix.trace_mul_cycle]
-    simpa [Algebra.algebraMap_eq_smul_one, Matrix.smul_mul, Matrix.trace_smul,
-      l2_opNorm_conjTranspose_mul_self, ← Complex.ofReal_mul, pow_two] using h
-
 private theorem read_sum_trace_diagonal {n α : Type*} [Fintype n] [DecidableEq n]
     [Fintype α] [DecidableEq α] (f : n → α) (B : Matrix n n ℂ) :
     ∑ a, (diagonal (fun i ↦ if f i = a then (1 : ℂ) else 0) * B *
@@ -913,7 +884,7 @@ theorem sum_trace_truncatedCheckedReadDefect_le
       (truncatedCheckedReadDefect t (labelControlled (fun i ↦ π i.1.2) W) a)ᴴ).trace.re ≤
       24 * (Database.instability π t).toReal * σ.trace.re := by
   rw [← Complex.re_sum, sum_trace_truncatedCheckedReadDefect_eq]
-  refine (read_trace_rectangular_le _ _ hσ).trans ?_
+  refine (MatrixMap.re_trace_conj_le _ hσ).trans ?_
   rw [norm_sub_rev]
   exact mul_le_mul_of_nonneg_right
     (l2_opNorm_commutator_checkedRead_sq_le_twentyFour_mul π t hW hU hA) hσ.trace_re_nonneg
@@ -1176,7 +1147,7 @@ theorem sum_trace_checkedReadDefect_le
   rw [← Complex.re_sum, ← read_stinespring_trace]
   change (S * σ * Sᴴ).trace.re ≤ _
   rw [← he]
-  exact (read_trace_rectangular_le _ _ hσ).trans
+  exact (MatrixMap.re_trace_conj_le _ hσ).trans
     (mul_le_mul_of_nonneg_right (l2_opNorm_checkedReadDefectStack_sq_le π U hU p)
       hσ.trace_re_nonneg)
 

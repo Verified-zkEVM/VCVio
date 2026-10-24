@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.Quantum.Comp.Runtime
+public import PolyFun.IPFunctor.Free.Bound
 
 /-!
 # Query budgets and operation costs of quantum programs
@@ -27,12 +28,11 @@ hold against every interpretation and every runtime.
 
 ## Implementation note
 
-PolyFun's `PFunctor.FreeM.IsRollBound` bounds the commands of the non-indexed free monad
-`PFunctor.FreeM`. Programs are trees of the indexed free monad `IPFunctor.IFreeM`, so
-`IsRollBound` does not apply directly; transporting through `IFreeM.toSigmaFreeM` would carry
-the indices of the leaves through every statement. The bounds are therefore defined by recursion
-on the tree, the query budget one port at a time (`Quantum.QuantumComp.IsQueryBoundAt`).
-Counting one port at a time needs no decidable equality on ports.
+The budgets are instances of PolyFun's indexed `IPFunctor.IFreeM.IsChargeBound`.
+The query budget charges one for calls of the selected port and zero for other commands;
+the local-operation budget charges `c o` for a primitive `o` and zero for calls.
+Port charges use classical decidability internally, so the bounds need no decidable equality
+on ports.
 
 ## Main definitions
 
@@ -70,21 +70,19 @@ variable {L : LocalSig.{u, v}} {spec : QuantumOracleSpec.{u₁, v₁}} {X : QReg
 
 /-! ## Budgets on one port -/
 
-/-- Every path of the tree calls port `i` at most `n` times. -/
+/-- Charge one for calls of port `i`, and zero for other commands. -/
 @[expose]
-def isQueryBoundAtAux (i : spec.Port) :
-    {A : QReg} → IFreeM (toIPFunctor L spec) X A → ℕ → Prop
-  | _, .pure _, _ => True
-  | _, .liftBind (.prim _) k, n => ∀ b, isQueryBoundAtAux i (k (ULift.up b)) n
-  | _, .liftBind (.query j _ _) k, n =>
-      (j = i → 0 < n ∧ ∀ r, isQueryBoundAtAux i (k (ULift.up r)) (n - 1)) ∧
-        (j ≠ i → ∀ r, isQueryBoundAtAux i (k (ULift.up r)) n)
+noncomputable def queryCharge (i : spec.Port) (A : QReg) : Cmd L spec A → ℕ := by
+  classical
+  exact fun cmd ↦ match cmd with
+    | .prim _ => 0
+    | .query j _ _ => if j = i then 1 else 0
 
 /-- Every path of `x`, including paths reached with weight zero, calls port `i` at most `n`
 times. -/
 @[expose]
 def IsQueryBoundAt (x : QuantumComp L spec X A) (i : spec.Port) (n : ℕ) : Prop :=
-  isQueryBoundAtAux i x n
+  IFreeM.IsChargeBound x (queryCharge i) n
 
 /-- A program that stops at once makes no call. -/
 @[simp]
@@ -96,8 +94,11 @@ theorem isQueryBoundAt_pure (x : X A) (i : spec.Port) (n : ℕ) :
 @[simp]
 theorem isQueryBoundAt_primBind_iff (o : L.Op A)
     (k : (b : L.Outcome o) → QuantumComp L spec X (L.next o b)) (i : spec.Port) (n : ℕ) :
-    (primBind o k).IsQueryBoundAt i n ↔ ∀ b, (k b).IsQueryBoundAt i n :=
-  Iff.rfl
+    (primBind o k).IsQueryBoundAt i n ↔ ∀ b, (k b).IsQueryBoundAt i n := by
+  refine (IFreeM.isChargeBound_liftBind_iff (P := toIPFunctor L spec) (X := X)
+    (c := queryCharge i) (.prim o) (onDown k) n).trans ?_
+  simp only [queryCharge, Nat.zero_le, Nat.sub_zero, true_and]
+  exact ULift.forall
 
 /-- A call of port `j` followed by a continuation: if `j = i` it uses one unit of the budget,
 and the continuations must fit in the rest. -/
@@ -106,34 +107,26 @@ theorem isQueryBoundAt_queryBind_iff (j : spec.Port) (E : QReg) (ℓ : A ≃ spe
     (n : ℕ) :
     (queryBind j E ℓ k).IsQueryBoundAt i n ↔
       (j = i → 0 < n ∧ ∀ r, (k r).IsQueryBoundAt i (n - 1)) ∧
-        (j ≠ i → ∀ r, (k r).IsQueryBoundAt i n) :=
-  Iff.rfl
+        (j ≠ i → ∀ r, (k r).IsQueryBoundAt i n) := by
+  classical
+  refine (IFreeM.isChargeBound_liftBind_iff (P := toIPFunctor L spec) (X := X)
+    (c := queryCharge i) (.query j E ℓ) (onDown k) n).trans ?_
+  change ((if j = i then 1 else 0) ≤ n ∧
+    ∀ r : ULift.{v} (spec.Result j), (k r.down).IsQueryBoundAt i
+      (n - if j = i then 1 else 0)) ↔ _
+  by_cases h : j = i <;> simp [Nat.succ_le_iff, h]
 
 /-- A budget on one port can be enlarged. -/
 theorem IsQueryBoundAt.mono {x : QuantumComp L spec X A} {i : spec.Port} {n m : ℕ}
-    (hx : x.IsQueryBoundAt i n) (hnm : n ≤ m) : x.IsQueryBoundAt i m := by
-  induction x using QuantumComp.inductionOn generalizing n m with
-  | pure _ _ => trivial
-  | primBind _ o k ih => exact fun b ↦ ih b (hx b) hnm
-  | queryBind _ j E ℓ k ih =>
-    rw [isQueryBoundAt_queryBind_iff] at hx ⊢
-    exact ⟨fun hj ↦ ⟨lt_of_lt_of_le (hx.1 hj).1 hnm, fun r ↦ ih r ((hx.1 hj).2 r)
-      (Nat.sub_le_sub_right hnm 1)⟩, fun hj r ↦ ih r (hx.2 hj r) hnm⟩
+    (hx : x.IsQueryBoundAt i n) (hnm : n ≤ m) : x.IsQueryBoundAt i m :=
+  IFreeM.IsChargeBound.mono hx hnm
 
 /-- Budgets on one port add under sequencing. -/
 theorem IsQueryBoundAt.bind {x : QuantumComp L spec X A} {k : ∀ u, X u → QuantumComp L spec Y u}
     {i : spec.Port} {n m : ℕ} (hx : x.IsQueryBoundAt i n)
     (hk : ∀ u y, (k u y).IsQueryBoundAt i m) : (x.bind k).IsQueryBoundAt i (n + m) := by
-  induction x using QuantumComp.inductionOn generalizing n with
-  | pure _ y => exact (hk _ y).mono (Nat.le_add_left m n)
-  | primBind _ o k' ih => exact fun b ↦ ih b (hx b)
-  | queryBind _ j E ℓ k' ih =>
-    rw [isQueryBoundAt_queryBind_iff] at hx
-    rw [queryBind_bind, isQueryBoundAt_queryBind_iff]
-    refine ⟨fun hj ↦ ⟨Nat.add_pos_left (hx.1 hj).1 m, fun r ↦ ?_⟩,
-      fun hj r ↦ ih r (hx.2 hj r)⟩
-    rw [Nat.sub_add_comm (hx.1 hj).1]
-    exact ih r ((hx.1 hj).2 r)
+  rw [bind_eq_iFreeM_bind]
+  exact IFreeM.isChargeBound_bind hx hk
 
 /-! ## Budgets on all ports -/
 
@@ -159,21 +152,21 @@ is. -/
 @[simp]
 theorem isQueryBound_primBind_iff (o : L.Op A)
     (k : (c : L.Outcome o) → QuantumComp L spec X (L.next o c)) (b : spec.Port → ℕ) :
-    (primBind o k).IsQueryBound b ↔ ∀ c, (k c).IsQueryBound b :=
-  forall_comm
+    (primBind o k).IsQueryBound b ↔ ∀ c, (k c).IsQueryBound b := by
+  simp only [IsQueryBound, isQueryBoundAt_primBind_iff]
+  exact forall_comm
 
 /-- The generic local operation has every budget. -/
 @[simp]
 theorem isQueryBound_prim (o : L.Op A) (b : spec.Port → ℕ) :
-    (prim (spec := spec) o).IsQueryBound b :=
-  fun _ _ ↦ trivial
+    (prim (spec := spec) o).IsQueryBound b := by
+  simp [prim]
 
 /-- A single call of port `i` is within a budget exactly when the budget of `i` is nonzero. -/
 @[simp]
 theorem isQueryBound_query_iff (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In i × E)
-    (b : spec.Port → ℕ) : (query (L := L) i E ℓ).IsQueryBound b ↔ 0 < b i :=
-  ⟨fun h ↦ ((h i).1 rfl).1, fun h _ ↦
-    ⟨fun hij ↦ ⟨hij ▸ h, fun _ ↦ trivial⟩, fun _ _ ↦ trivial⟩⟩
+    (b : spec.Port → ℕ) : (query (L := L) i E ℓ).IsQueryBound b ↔ 0 < b i := by
+  simp [IsQueryBound, query, isQueryBoundAt_queryBind_iff]
 
 /-- Budgets add under sequencing. -/
 theorem IsQueryBound.bind {x : QuantumComp L spec X A} {k : ∀ u, X u → QuantumComp L spec Y u}
@@ -218,13 +211,11 @@ theorem isQueryBound_queryBind_iff [DecidableEq spec.Port] (i : spec.Port) (E : 
 
 /-! ## Costs of local operations -/
 
-/-- Along every path of the tree, the costs of the local operations add up to at most `n`. -/
+/-- Charge `c o` for a local operation `o`, and zero for calls. -/
 @[expose]
-def isCostBoundAux (c : ∀ ⦃A : QReg⦄, L.Op A → ℕ) :
-    {A : QReg} → IFreeM (toIPFunctor L spec) X A → ℕ → Prop
-  | _, .pure _, _ => True
-  | _, .liftBind (.prim o) k, n => c o ≤ n ∧ ∀ b, isCostBoundAux c (k (ULift.up b)) (n - c o)
-  | _, .liftBind (.query _ _ _) k, n => ∀ r, isCostBoundAux c (k (ULift.up r)) n
+def costCharge (c : ∀ ⦃A : QReg⦄, L.Op A → ℕ) (A : QReg) : Cmd L spec A → ℕ
+  | .prim o => c o
+  | .query _ _ _ => 0
 
 /-- Along every path of `x`, including branches reached with weight zero, the costs `c o`
 of the named local operations sum to at most `n`. With unit cost this bounds the number of
@@ -235,7 +226,7 @@ are uncharged. This predicate is a syntactic local-operation budget, not an over
 circuit-size or running-time bound. -/
 @[expose]
 def IsCostBound (c : ∀ ⦃A : QReg⦄, L.Op A → ℕ) (x : QuantumComp L spec X A) (n : ℕ) : Prop :=
-  isCostBoundAux c x n
+  IFreeM.IsChargeBound x (costCharge c) n
 
 variable {c : ∀ ⦃A : QReg⦄, L.Op A → ℕ}
 
@@ -250,15 +241,20 @@ most `n` and every continuation fits in the rest. -/
 @[simp]
 theorem isCostBound_primBind_iff (o : L.Op A)
     (k : (b : L.Outcome o) → QuantumComp L spec X (L.next o b)) (n : ℕ) :
-    (primBind o k).IsCostBound c n ↔ c o ≤ n ∧ ∀ b, (k b).IsCostBound c (n - c o) :=
-  Iff.rfl
+    (primBind o k).IsCostBound c n ↔ c o ≤ n ∧ ∀ b, (k b).IsCostBound c (n - c o) := by
+  refine (IFreeM.isChargeBound_liftBind_iff (P := toIPFunctor L spec) (X := X)
+    (c := costCharge c) (.prim o) (onDown k) n).trans ?_
+  exact and_congr_right' ULift.forall
 
 /-- A call followed by a continuation costs what its continuations cost. -/
 @[simp]
 theorem isCostBound_queryBind_iff (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In i × E)
     (k : spec.Result i → QuantumComp L spec X (QReg.of (spec.Out i × E))) (n : ℕ) :
-    (queryBind i E ℓ k).IsCostBound c n ↔ ∀ r, (k r).IsCostBound c n :=
-  Iff.rfl
+    (queryBind i E ℓ k).IsCostBound c n ↔ ∀ r, (k r).IsCostBound c n := by
+  refine (IFreeM.isChargeBound_liftBind_iff (P := toIPFunctor L spec) (X := X)
+    (c := costCharge c) (.query i E ℓ) (onDown k) n).trans ?_
+  simp only [costCharge, Nat.zero_le, Nat.sub_zero, true_and]
+  exact ULift.forall
 
 /-- The generic local operation `o` costs at most `c o`. -/
 theorem isCostBound_prim (o : L.Op A) : (prim (spec := spec) o).IsCostBound c (c o) :=
@@ -266,29 +262,20 @@ theorem isCostBound_prim (o : L.Op A) : (prim (spec := spec) o).IsCostBound c (c
 
 /-- A call costs nothing. -/
 theorem isCostBound_query (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In i × E) (n : ℕ) :
-    (query (L := L) i E ℓ).IsCostBound c n :=
-  fun _ ↦ trivial
+    (query (L := L) i E ℓ).IsCostBound c n := by
+  simp [query]
 
 /-- A cost bound can be enlarged. -/
 theorem IsCostBound.mono {x : QuantumComp L spec X A} {n m : ℕ} (hx : x.IsCostBound c n)
-    (hnm : n ≤ m) : x.IsCostBound c m := by
-  induction x using QuantumComp.inductionOn generalizing n m with
-  | pure _ _ => trivial
-  | primBind _ o k ih =>
-    exact ⟨hx.1.trans hnm, fun b ↦ ih b (hx.2 b) (Nat.sub_le_sub_right hnm _)⟩
-  | queryBind _ i E ℓ k ih => exact fun r ↦ ih r (hx r) hnm
+    (hnm : n ≤ m) : x.IsCostBound c m :=
+  IFreeM.IsChargeBound.mono hx hnm
 
 /-- **Costs add under sequencing.** -/
 theorem IsCostBound.bind {x : QuantumComp L spec X A} {k : ∀ u, X u → QuantumComp L spec Y u}
     {n m : ℕ} (hx : x.IsCostBound c n) (hk : ∀ u y, (k u y).IsCostBound c m) :
     (x.bind k).IsCostBound c (n + m) := by
-  induction x using QuantumComp.inductionOn generalizing n with
-  | pure _ y => exact (hk _ y).mono (Nat.le_add_left m n)
-  | primBind _ o k' ih =>
-    refine ⟨hx.1.trans (Nat.le_add_right n m), fun b ↦ ?_⟩
-    rw [Nat.sub_add_comm hx.1]
-    exact ih b (hx.2 b)
-  | queryBind _ i E ℓ k' ih => exact fun r ↦ ih r (hx r)
+  rw [bind_eq_iFreeM_bind]
+  exact IFreeM.isChargeBound_bind hx hk
 
 end QuantumComp
 
@@ -344,21 +331,24 @@ continuation is. -/
 @[simp]
 theorem isQueryBoundAt_act_bind_iff (p : SubInstrument A B β) (k : β → QComp spec B C α)
     (i : spec.Port) (n : ℕ) :
-    ((act p).bind k).IsQueryBoundAt i n ↔ ∀ b, (k b).IsQueryBoundAt i n :=
-  Iff.rfl
+    ((act p).bind k).IsQueryBoundAt i n ↔ ∀ b, (k b).IsQueryBoundAt i n := by
+  rw [act_bind, QuantumComp₂.primBind]
+  exact QuantumComp.isQueryBoundAt_primBind_iff (L := LocalSig.instruments)
+    ⟨β, fun _ ↦ B, p⟩ k i n
 
 /-- A local subinstrument has every budget. -/
 @[simp]
 theorem isQueryBound_act (p : SubInstrument A B α) (b : spec.Port → ℕ) :
     (act (spec := spec) p).IsQueryBound b :=
-  fun _ _ ↦ trivial
+  (QuantumComp.isQueryBound_primBind_iff _ _ b).mpr fun _ _ ↦ trivial
 
 /-- A local subinstrument followed by a continuation is within a budget when every
 continuation is. -/
 @[simp]
 theorem isQueryBound_act_bind_iff (p : SubInstrument A B β) (k : β → QComp spec B C α)
-    (b : spec.Port → ℕ) : ((act p).bind k).IsQueryBound b ↔ ∀ c, (k c).IsQueryBound b :=
-  forall_comm
+    (b : spec.Port → ℕ) : ((act p).bind k).IsQueryBound b ↔ ∀ c, (k c).IsQueryBound b := by
+  simp only [QuantumComp.IsQueryBound, isQueryBoundAt_act_bind_iff]
+  exact forall_comm
 
 end QComp
 

@@ -97,6 +97,9 @@ def IND_CPA_Adversary.MakesAtMostQueries {encAlg : AsymmEncAlg ProbComp M PK SK 
 abbrev IND_CPA_Cache (_encAlg : AsymmEncAlg ProbComp M PK SK C) :=
   (M × M →ₒ C).QueryCache
 
+/-- The full IND-CPA oracle implementation built from a challenge-oracle implementation:
+uniform-sampling queries are answered by lifting them into `StateT σ ProbComp`, and challenge
+queries are answered by `challenge`. -/
 def IND_CPA_queryImplFromChallenge
     (encAlg : AsymmEncAlg ProbComp M PK SK C)
     {σ : Type}
@@ -104,6 +107,9 @@ def IND_CPA_queryImplFromChallenge
     QueryImpl encAlg.IND_CPA_oracleSpec (StateT σ ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) + challenge
 
+/-- The cached left/right challenge oracle under public key `pk`: a repeated message pair is
+answered with its cached ciphertext, and a fresh pair `mm` is answered by encrypting the message
+`select mm` and caching the result. -/
 def IND_CPA_cachedChallengeOracle
     (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (pk : PK) (select : M × M → M) :
@@ -178,6 +184,9 @@ variable {encAlg' : AsymmEncAlg ProbComp M PK SK C}
 abbrev IND_CPA_CountedState (_encAlg : AsymmEncAlg ProbComp M PK SK C) :=
   _encAlg.IND_CPA_Cache × ℕ
 
+/-- The cached left/right challenge oracle with a counter of fresh queries. A repeated message
+pair is answered from the cache. A fresh pair `mm`, met when the counter reads `n`, is answered by
+encrypting `select n mm`; the ciphertext is cached and the counter incremented. -/
 def IND_CPA_countedChallengeOracle
     (pk : PK) (select : ℕ → M × M → M) :
     QueryImpl (M × M →ₒ C)

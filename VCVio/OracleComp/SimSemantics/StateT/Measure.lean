@@ -9,7 +9,6 @@ module
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.EvalDist.Measure
-public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 
 /-!
 # Joint measure laws for stateful oracle interpretation
@@ -18,14 +17,6 @@ Local equality in distribution of the joint response and retained state preserve
 distribution of the complete result and state of every adaptive oracle computation. This
 interface retains service state in its premise because later adaptive calls may reveal changes
 hidden from the immediate response.
-
-A probabilistic state map that intertwines two handlers step by step, `QueryImpl.Intertwines`,
-intertwines their runs of every oracle computation
-(`QueryImpl.Intertwines.evalDist_simulateQ_run`). The step condition may be restricted to the
-states satisfying an invariant that the first handler preserves (`QueryImpl.IntertwinesOn` and
-`QueryImpl.IntertwinesOn.evalDist_simulateQ_run`), so a state map that is only meaningful on
-reachable states, such as one drawing a value for each of finitely many cached points, still
-intertwines whole runs.
 
 Stateful simulation from a sampled initial state satisfies an event with probability one
 whenever every possible output of the original computation does: simulation only
@@ -102,71 +93,6 @@ theorem evalDist_simulateQ_run'_eq_of_forall
       simpa only [StateT.run'_eq] using ih output.1 output.2)
 
 end OracleComp
-
-namespace QueryImpl
-
-open OracleComp
-
-variable {ι : Type} {spec : OracleSpec ι} {σ₁ σ₂ : Type}
-
-/-- A probabilistic state map `fill` intertwines `impl₁` with `impl₂`: from every state, a step
-of `impl₁` followed by `fill` of its post-state has, before any continuation, the distribution of
-`fill` followed by the step of `impl₂`. With `fill = pure` this is the equality of step measures
-of `OracleComp.evalDist_simulateQ_run_congr`. -/
-@[expose] def Intertwines (fill : σ₁ → ProbComp σ₂)
-    (impl₁ : QueryImpl spec (StateT σ₁ ProbComp)) (impl₂ : QueryImpl spec (StateT σ₂ ProbComp)) :
-    Prop :=
-  ∀ t s {γ : Type} [MeasurableSpace γ] (f : spec.Range t → σ₂ → ProbComp γ),
-    𝒟[(impl₁ t).run s >>= fun z ↦ fill z.2 >>= f z.1] =
-      𝒟[fill s >>= fun s' ↦ (impl₂ t).run s' >>= fun z ↦ f z.1 z.2]
-
-/-- A probabilistic state map `fill` intertwines `impl₁` with `impl₂` on the states satisfying
-`inv`: from every state satisfying `inv`, a step of `impl₁` followed by `fill` of its post-state
-has, before any continuation, the distribution of `fill` followed by the step of `impl₂`. With the
-trivial invariant this is `QueryImpl.Intertwines`. -/
-@[expose] def IntertwinesOn (inv : σ₁ → Prop) (fill : σ₁ → ProbComp σ₂)
-    (impl₁ : QueryImpl spec (StateT σ₁ ProbComp)) (impl₂ : QueryImpl spec (StateT σ₂ ProbComp)) :
-    Prop :=
-  ∀ t s, inv s → ∀ {γ : Type} [MeasurableSpace γ] (f : spec.Range t → σ₂ → ProbComp γ),
-    𝒟[(impl₁ t).run s >>= fun z ↦ fill z.2 >>= f z.1] =
-      𝒟[fill s >>= fun s' ↦ (impl₂ t).run s' >>= fun z ↦ f z.1 z.2]
-
-/-- A state map that intertwines two handlers from every state intertwines them on the states
-satisfying any invariant. -/
-theorem Intertwines.intertwinesOn {fill : σ₁ → ProbComp σ₂}
-    {impl₁ : QueryImpl spec (StateT σ₁ ProbComp)} {impl₂ : QueryImpl spec (StateT σ₂ ProbComp)}
-    (h : Intertwines fill impl₁ impl₂) (inv : σ₁ → Prop) : IntertwinesOn inv fill impl₁ impl₂ :=
-  fun t s _ ↦ h t s
-
-/-- If `fill` intertwines `impl₁` with `impl₂` on the states satisfying an invariant that `impl₁`
-preserves, it intertwines their runs of every oracle computation from every such state. -/
-theorem IntertwinesOn.evalDist_simulateQ_run {inv : σ₁ → Prop} {fill : σ₁ → ProbComp σ₂}
-    {impl₁ : QueryImpl spec (StateT σ₁ ProbComp)} {impl₂ : QueryImpl spec (StateT σ₂ ProbComp)}
-    (h : IntertwinesOn inv fill impl₁ impl₂) (hinv : PreservesInv impl₁ inv) {α γ : Type}
-    [MeasurableSpace γ] (oa : OracleComp spec α) (s : σ₁) (hs : inv s)
-    (f : α → σ₂ → ProbComp γ) :
-    𝒟[(simulateQ impl₁ oa).run s >>= fun z ↦ fill z.2 >>= f z.1] =
-      𝒟[fill s >>= fun s' ↦ (simulateQ impl₂ oa).run s' >>= fun z ↦ f z.1 z.2] := by
-  induction oa using OracleComp.inductionOn generalizing s with
-  | pure a => simp only [simulateQ_pure, StateT.run_pure, pure_bind]
-  | query_bind t k ih =>
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, bind_assoc]
-    calc _ = 𝒟[(impl₁ t).run s >>= fun z ↦ fill z.2 >>= fun s' ↦
-          (simulateQ impl₂ (k z.1)).run s' >>= fun w ↦ f w.1 w.2] :=
-          evalDist_bind_congr_of_support _ _ _ fun z hz ↦ ih z.1 z.2 (hinv t s hs z hz)
-      _ = _ := h t s hs fun u s' ↦ (simulateQ impl₂ (k u)).run s' >>= fun w ↦ f w.1 w.2
-
-/-- If `fill` intertwines `impl₁` with `impl₂` step by step, it intertwines their runs of every
-oracle computation. -/
-theorem Intertwines.evalDist_simulateQ_run {fill : σ₁ → ProbComp σ₂}
-    {impl₁ : QueryImpl spec (StateT σ₁ ProbComp)} {impl₂ : QueryImpl spec (StateT σ₂ ProbComp)}
-    (h : Intertwines fill impl₁ impl₂) {α γ : Type} [MeasurableSpace γ]
-    (oa : OracleComp spec α) (s : σ₁) (f : α → σ₂ → ProbComp γ) :
-    𝒟[(simulateQ impl₁ oa).run s >>= fun z ↦ fill z.2 >>= f z.1] =
-      𝒟[fill s >>= fun s' ↦ (simulateQ impl₂ oa).run s' >>= fun z ↦ f z.1 z.2] :=
-  (h.intertwinesOn fun _ ↦ True).evalDist_simulateQ_run (fun _ _ _ _ _ ↦ trivial) oa s trivial f
-
-end QueryImpl
 
 section simulateQ
 

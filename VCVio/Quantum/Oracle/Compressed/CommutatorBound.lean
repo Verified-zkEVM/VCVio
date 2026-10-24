@@ -185,28 +185,20 @@ theorem sum_ite_norm_phaseCell_sq_le (χ : AddChar Y ℂ) (u : Y) :
         simp
     simp only [h0, Finset.sum_const_zero]
     positivity
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
   set c : ℂ := 1 - χ u with hc
   have hterm : ∀ v, (if some u = some v then 0 else ‖phaseCell Y χ (some u) (some v)‖ ^ 2) ≤
-      N⁻¹ ^ 2 * (‖c‖ ^ 2 + 1 - 2 * (c * starRingEnd ℂ (χ v)).re) := by
+      N⁻¹ ^ 2 * ‖c - χ v‖ ^ 2 := by
     intro v
-    have heq : ‖(Fintype.card Y : ℂ)⁻¹ * (c - χ v)‖ ^ 2 =
-        N⁻¹ ^ 2 * (‖c‖ ^ 2 + 1 - 2 * (c * starRingEnd ℂ (χ v)).re) := by
-      rw [norm_mul, mul_pow, norm_inv, Complex.norm_natCast, ← hNdef, Complex.sq_norm (c - χ v),
-        Complex.normSq_sub, ← Complex.sq_norm, ← Complex.sq_norm (χ v), AddChar.norm_apply,
-        one_pow]
     split_ifs with h
-    · exact heq ▸ sq_nonneg _
+    · positivity
     · have huv : u ≠ v := fun huv ↦ h (huv ▸ rfl)
-      rw [phaseCell_some_some hχ, ite_eq_right huv, zero_add, ← heq, hc]
-  have hsum : ∑ v, N⁻¹ ^ 2 * (‖c‖ ^ 2 + 1 - 2 * (c * starRingEnd ℂ (χ v)).re) =
-      N⁻¹ * (‖c‖ ^ 2 + 1) := by
-    have hre : ∑ v, (c * starRingEnd ℂ (χ v)).re = 0 := by
-      rw [← Complex.re_sum, ← Finset.mul_sum, ← map_sum, hs, map_zero, mul_zero, Complex.zero_re]
-    rw [← Finset.mul_sum, Finset.sum_sub_distrib, ← Finset.mul_sum, hre, Finset.sum_const,
-      Finset.card_univ, nsmul_eq_mul, ← hNdef]
+      rw [phaseCell_some_some hχ, ite_eq_right huv, zero_add, ← hc, norm_mul, mul_pow,
+        norm_inv, Complex.norm_natCast, ← hNdef]
+  have hsum : ∑ v, N⁻¹ ^ 2 * ‖c - χ v‖ ^ 2 = N⁻¹ * (‖c‖ ^ 2 + 1) := by
+    have hs := sum_norm_sub_signed_char_sq hχ (norm_one (α := ℂ)) c
+    simp only [one_mul] at hs
+    rw [← Finset.mul_sum, hs, ← hNdef]
     field_simp
-    ring
   have hc2 : ‖c‖ ≤ 2 := by
     calc ‖c‖ ≤ ‖(1 : ℂ)‖ + ‖χ u‖ := norm_sub_le _ _
       _ = 2 := by rw [norm_one, AddChar.norm_apply]; norm_num

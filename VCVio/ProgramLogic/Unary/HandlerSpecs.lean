@@ -62,8 +62,6 @@ The product-state representation matches the Fiat-Shamir and forking proofs in
 
 ## Limitations
 
-* `seededOracle` is defined with `StateT.mk`, for which core registers no `vcgen` rule;
-  `triple_stateT_mk` supplies it to the proofs of the seeded specifications.
 * `seededOracle_triple_of_cons` and `seededOracle_triple_of_nil` are not `@[spec]`-tagged.
   `vcgen` applies the highest-priority registered rule that fits a program, and these rules
   fit every call of `seededOracle` while holding only under their seed hypothesis, so
@@ -85,14 +83,6 @@ namespace OracleComp.ProgramLogic
 needs them in `Type v`; both universes are pinned to `Type`. -/
 variable {ι : Type}
 variable {spec : OracleSpec.{0, 0} ι}
-
-/-- `StateT.mk f` runs `f` at the incoming state. -/
-theorem triple_stateT_mk {m : Type → Type} [Monad m] {Pred EPred : Type}
-    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred]
-    {σ α : Type} (f : σ → m (α × σ)) (post : α → σ → Pred) (epost : EPred) :
-    Std.WP.Triple (StateT.mk f : StateT σ m α)
-      (fun s => wp (f s) (fun p => post p.1 p.2) epost) post epost :=
-  ⟨fun _ => Lean.Order.PartialOrder.rel_refl⟩
 
 /-! ## Reading triples against the support -/
 
@@ -256,7 +246,7 @@ theorem seededOracle_triple (t : spec.Domain) (seed₀ : QuerySeed spec) :
     ⦃ fun v seed' => (seed₀ t = [] ∧ seed' = seed₀) ∨
         ∃ us, seed₀ t = v :: us ∧ seed' = Function.update seed₀ t us ⦄ := by
   rw [seededOracle.apply_eq]
-  vcgen [triple_stateT_mk] <;> grind [QuerySeed.update]
+  vcgen <;> grind [QuerySeed.update]
 
 /-- Specialized specification: if the seed has at least one value at `t`, `seededOracle t`
 deterministically pops the head and updates the state. -/
@@ -267,7 +257,7 @@ theorem seededOracle_triple_of_cons (t : spec.Domain)
       (seededOracle t : StateT (QuerySeed spec) (OracleComp spec) (spec.Range t))
     ⦃ fun v seed' => v = u ∧ seed' = seed₀.update t us ⦄ := by
   rw [seededOracle.apply_eq]
-  vcgen [triple_stateT_mk] with finish
+  vcgen with finish
 
 /-- Specialized specification: if the seed is empty at `t`, `seededOracle t` makes a live
 query and leaves the state untouched. -/
@@ -277,7 +267,7 @@ theorem seededOracle_triple_of_nil (t : spec.Domain) (seed₀ : QuerySeed spec)
       (seededOracle t : StateT (QuerySeed spec) (OracleComp spec) (spec.Range t))
     ⦃ fun _ seed' => seed' = seed₀ ⦄ := by
   rw [seededOracle.apply_eq]
-  vcgen [triple_stateT_mk] with finish
+  vcgen with finish
 
 /-- `vcgen` example: two consecutive `seededOracle` calls from a seed that is empty at both
 indices fall through to live queries, leaving the seed unchanged. The two hypotheses on the
