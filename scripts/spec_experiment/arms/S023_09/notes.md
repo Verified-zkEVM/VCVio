@@ -33,3 +33,23 @@
   (`bind_pure_comp`), or a documented convention for which side `run` equations take.
 - Not ported to A: needs the library simp set (A's best non-library variants were
   `handler_nf`+default `simp` (1872 HB) or a 2-line `simp only` list (883 HB)).
+
+## C
+- Minutes: ~5. 16 lines / 287 HB (B 14 / 1328). Accepted (HB gate), but 2 lines longer than B.
+- Used: `derive_handler_specs embedTrapFreshIdxImpl` (one helper line); the proof is
+  `simp only [embedTrapFreshIdxImpl.run_inr, bind_pure_comp]`. The derived `run_inr` is exactly
+  the hand-written equation up to `bind_pure_comp` (derived RHS ends in `>>= fun x => pure …`,
+  the stated one in `<$>`).
+- Measurement caveats: (1) the `derive_handler_specs` command is not counted by the harness's
+  heartbeats (`#count_heartbeats` is only put before declarations); measured separately it
+  costs 1676 HB (so ≈1963 HB in total, ≈ A). (2) +1 line `omit [DecidableEq Range]
+  [Fintype Salt] in`: the file's own `omit … in` before the docstring is consumed by the first
+  helper command, so it has to be repeated before the theorem (without it, the theorem picks up
+  unused instance arguments and later uses break).
+- T3 `GPVHashAndSign/TrapCount`: importing it fails (it imports this theorem's module); inlining
+  it is a **placement failure** — its support lemmas for `embedTrapFreshIdxImpl` are proved with
+  `embedTrapFreshIdxImpl_run_inr`, i.e. the theorem being proved. Its contents (support iffs,
+  `wp` specs) are downstream of this run equation anyway.
+- Missing: a deriver option to state the run equation in the `<$>`-tail form (or generate it
+  under a user-chosen name), so it could *replace* hand-written `_run_*` lemmas instead of
+  duplicating them.

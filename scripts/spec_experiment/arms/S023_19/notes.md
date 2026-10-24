@@ -57,3 +57,27 @@
     Pr[E | mx >>= fun x => f <$> run x s] = Pr[E | mx >>= fun x => f <$> run x s']`); a
   discard rule in T1/ProbBounds comparing two continuations of one draw that agree off a bad set
   (`Pr[q | mx >>= f] ≤ Pr[q | mx >>= g] + Pr[bad | mx]`).
+
+## C
+- Minutes: ~10. C = B + imports of `Derive` and T3 `PRFTagReader/{Table,
+  MultipleToHybridSetup, MultipleToHybridEagerSetup}` (they import cleanly): 252 lines /
+  19881 HB (B 252 / 19885).
+- Tried: `derive_handler_specs multipleBadTableHandlerFine` (and dry runs for
+  `multipleTableHandler`, `singleTableHandler`) to drop the hand-stated head-step lemmas
+  `hMstep`/`hSstep` and collapse the reader query by `simp only [… query_bind' …,
+  multipleBadTableHandlerFine.apply_inr, multipleTableHandler_reader_run_slotZeroSubTable,
+  singleTableHandler_reader_run, pure_bind]`. The derived `apply_inr` unfolds correctly, but the
+  collapse stops at `pure (reply, s) >>= fun r => …`: the bind there is
+  `PFunctor.FreeM.instBind` and the `pure` `PFunctor.FreeM.instPure` (the direct cslib instances
+  that elaboration picks at type `ProbComp`), and `pure_bind`/`simulateQ_nf`, stated over
+  `Monad.toBind`/`Monad.toApplicative`, does not unify with them (`?inst` cannot be solved from
+  `Monad.toBind ?inst =?= FreeM.instBind`). A pure-bind example with only `instPure` explicit
+  does simp; it is the direct `instBind` that blocks. So `hMstep`/`hSstep` (stated in
+  `>>= f = f …` form and closed by `rfl`) stay. The derived lemmas for the table handlers stop at
+  `unlinkReaderQueryImpl`, so they would not replace `*_reader_run` either.
+- T3 PRFTagReader specs are support/`wp`/`MonotoneState` facts; this proof needs equalities in
+  distribution / Pr-level facts (lazification, `cacheBad` irrelevance, discard), so none apply.
+- Missing: `pure_bind`/`bind_assoc`/`map_bind` variants (or a simproc) for the direct
+  `FreeM.instBind`/`instPure` instances in `simulateQ_nf` (this is the root cause of the B and C
+  failures here); deriving through named sub-handlers (`unlinkReaderQueryImpl`) to the
+  deterministic reader reply; the Pr-level irrelevance/discard rules listed in B.

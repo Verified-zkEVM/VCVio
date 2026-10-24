@@ -43,3 +43,18 @@
 - Missing/not firing: `simulateQ_nf` does not reduce `match (cache t) with …` on a
   `QueryCache` lookup without a `split`; a "simp normal form for cached-lookup handlers" rule
   (`match c t with | some v => pure v | none => …` + `support` of it) would remove the `split`.
+
+## C
+- Minutes: ~4. 10 lines / 3369 HB (B 10 / 6961). Accepted (line gate; HB now 1.3× O).
+- Used: T3 `GPVHashAndSign/EmbedIndex` via `-- inline:` (import fails: it imports this module);
+  its `@[simulateQ_nf]` support iffs `mem_support_embedTrapIdxSigImpl_{unif,read,sign}_iff`
+  make each step hypothesis a closed disjunction/existential, so the whole step obligation is
+  `rintro … <;> simp only [simulateQ_nf] at hz <;> grind` (no `split`, no unfolding of the
+  handler, half the HB of B).
+- Line count is unchanged only because of a placement artifact: the inlined section consumes
+  the file's `omit [DecidableEq Range] [Fintype Salt] in`, which has to be repeated (+1 line);
+  otherwise C would be 9 lines.
+- Not used: the T3 `MonotoneState` instance (the freshness invariant is not of the
+  "keys only grow" form it records). Missing: a T3/T1 rule for *conditional* invariants
+  (`idx k = some j → k ∉ signed → cache k = some y`) — i.e. `inv_of_mem_support_simulateQ_run`
+  with `Inv` inferable from a ∀-shaped goal.

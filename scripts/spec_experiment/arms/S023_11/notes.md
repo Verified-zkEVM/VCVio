@@ -33,3 +33,15 @@
     (Pr[bad z.2 | (simulateQ i₁ oa).run s]).toReal` (real, full-run until-bad), and a
   "bad flag unchanged by a continuation with no bad-moving queries" lemma (`IsQueryBoundP … 0`
   on the queries that can raise the flag ⇒ `Pr[bad | sim (oa >>= k)] ≤ Pr[bad | sim oa]`).
+
+## C
+- Minutes: ~3. C = B + `Derive` import: 27 lines / 721 HB (B 27 / 721).
+- T3 `GPVHashAndSign/FlagHandlers`: importing fails (imports this theorem's module); inlining is a
+  **placement failure**: the module's `wp`/support lemmas use `gpvRealImplFlagFresh_run_inl`,
+  `progGameRunImplNoRecFlagFresh_run_inl`, … which are declared after this theorem
+  (line 828) in `FlagHandlers.lean`. (The theorem itself still elaborated in that test.)
+- Even placed, nothing applies: the proof is a term chain through the until-bad TV lemma and
+  file lemmas; the T3 `MonotoneState` instances (`flag never lowered`) restate the
+  `*_bad_mono` facts the proof already passes by name, and are not shorter at the call site.
+- Missing (as in B): a full-run real-valued until-bad lemma and a flag-preserving-continuation
+  lemma.

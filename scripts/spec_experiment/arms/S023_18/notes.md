@@ -56,3 +56,19 @@
 - `simulateQ_nf` for the head step: same situation as S023_16, where it was tested (A's single
   line already uses the file's `run_query_bind'` lemmas, and the handler lemmas are stated on
   `impl q s`, so they stop firing on `simulateQ_nf`'s `(impl t).run s` output).
+
+## C
+- Minutes: ~5. C.lean = B.lean with imports `VCVio.ProgramLogic.Library
+  VCVio.ProgramLogic.Library.Derive …T3.PRFTagReader.{Table, MultipleToHybridSetup,
+  MultipleToHybridEagerSetup}`. 138 lines / 9156 HB (B: 138 / 9156). No T3 lemma or derived
+  equation used.
+- Looked at: `derive_handler_specs? multipleBadTableHandlerFine` gives `run_inl` =
+  `multipleTableHandler g (.inl q) s.1 >>= fun r => pure (r.1, r.2, multipleBadAdvance q s.2 r.1)`,
+  which is what A gets from unfolding the definition; the slot-zero step equation
+  (`multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero`) is semantic
+  and not derivable. T3's `multipleBadAdvance_bad_mono` is about the flags; the invariant proofs
+  need the `responses` field.
+- Missing: `@[simp]` `multipleBadAdvance_responses` (`(multipleBadAdvance tag sB (some tr)).responses
+  (t, m) = if (t, m) = (tag, tr.nonce) then some … else sB.responses (t, m)`), and the
+  distribution-level facts listed under B (normalised-form event bound through a bind, prEvent
+  rotate/swap/cell-resampling).

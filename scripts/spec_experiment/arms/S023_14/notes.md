@@ -53,3 +53,18 @@
   frozen/write-only state deferral). The whole-run support principles
   (`inv_of_mem_support_simulateQ_run`, `MonotoneState`) would re-prove the file's existing
   `…_signedSet_grows`/`…_frozen`, which this proof only uses.
+
+## C
+- Minutes: ~8. C.lean = B.lean with imports `VCVio.ProgramLogic.Library
+  VCVio.ProgramLogic.Library.Derive VCVio.ProgramLogic.Library.T3.GPVHashAndSign.TrapCount`.
+  91 lines / 22829 HB (B: 91 / 22836). No T3 lemma or derived equation used.
+- Looked at: T3 `TrapCount` gives `mem_support_progGameRunImplCombinedTrapCount_{unif,read,sign}_iff`,
+  `…_wp_*` and a `MonotoneState` instance whose relation includes "the signed set grows". That
+  instance can replace `progGameRunImplCombinedTrapCount_signedSet_grows psf M Salt pk sk _ _ z hz`
+  by `(QueryImpl.MonotoneState.rel_of_mem_support hz).1.2.1`, but the line count stays the same
+  (the call is no shorter). `derive_handler_specs? progGameRunImplCombinedTrapCount` produces
+  exactly the file's existing `…_run_inl_inl/inl_inr/inr` equations.
+- Missing: what the proof actually needs is the *value* freezing (`…_frozen`: a cached,
+  unsigned key keeps its cache entry and table entry) and the weighted-sum / write-only-deferral
+  facts; T3's monotone relation only records `isSome`-preservation, so it does not subsume
+  `…_frozen`, and nothing in T1–T3 works on `∑' z, Pr[= z | run] * f z`.

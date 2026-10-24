@@ -37,6 +37,13 @@ What is the most useful program logic VCVio can have, reusing core `Std.WP`/`vcg
 
 **Measured payoff.** Per family it ranges from about 0% to about 70% fewer lines. Over the routed part of the library, the estimate is 15–32% fewer lines, which is 7–15% of all proof lines. Heartbeats move 0.3–4.7×, depending on the family.
 
+**A large spec library does not change this (section 6, measured).** On a stratified random sample of routed theorems:
+- re-proving with today's tools saves 44% of the lines (75% of proof bodies);
+- adding a ~430-declaration, 4.5k-line spec and handler library saves 1.2 points more;
+- the library costs more lines than it saves.
+
+The leverage is in re-proving, normal-form fixes, a per-branch equation deriver, and a handful of distribution-level theorems.
+
 ## 1. Routing
 
 `Route.classify` reads a goal into a `RouteKey`:
@@ -191,7 +198,7 @@ This is consistent with #821's per-proof pilots (35–75%) once averaged across 
 ## 5. Roadmap
 
 1. **Land the route key, the diagnostics and the core-triple front end.** It is small, has no measured overhead, and fixes misroutes.
-2. **Add the library rules with measured payoff** (section 2), then extend dispatch:
+2. **Add only the library rules with measured payoff** (sections 2 and 6), then extend dispatch:
    - event goals to the readings;
    - handler equations to the bisimulation rule;
    - query bounds to the budget reading.
@@ -202,3 +209,122 @@ This is consistent with #821's per-proof pilots (35–75%) once averaged across 
    - Then try Foxglove's `∗` on core frames: an opaque `FProp`-like carrier and a frameproc.
    - Raise iris-lean's global `⊤` notation upstream.
 6. **Send the core requests** in section 3.
+7. **Re-prove the routed proofs with today's tools** (section 6). This is the largest measured saving: about 44% of the frame's lines.
+
+## 6. Does a large spec library pay? (measured)
+
+> Local branch `spike/spec-library`, stacked on `spike/route-classifier`.
+> - **Library:** `VCVio/ProgramLogic/Library/`.
+> - **Experiment:** `scripts/spec_experiment/` (sampler, in-place harness, estimator, arms, notes, `results.jsonl`).
+
+**Question.** Sections 2 and 4 found missing specs in every probe. Would a large library of spec and handler lemmas make the savings significantly larger than the 15–32% estimate?
+
+**Answer: no.**
+- A careful re-prover using today's tools already removes 44% of the lines.
+- A ~430-declaration library adds about one point.
+- The library costs more lines than it saves.
+
+### Setup
+
+**The library: 4,533 normalized lines.** It was written without seeing the sample.
+
+| Tier | Lines | Contents |
+|---|---|---|
+| T1, handler-agnostic | 1,338 | structural `simulateQ` specs; the `simulateQ_nf` simp set; a support calculus for runs; invariant lifts and frames (`QueryImpl.MonotoneState`); support/probability bridges; bisimulation and identical-until-bad rules; the upper and budget readings; query-bound rules; probability bounds through binds |
+| T2, core handlers | 1,054 | caching, random, seeded, eager, logging, counting, cost, caching-logging, programming, and the combinators: WP specs, frames, support and distribution facts |
+| T3, scheme handlers | 1,906 | GPV, PRF, commitment hiding, PRFTagReader: 68 WP specs, 62 support iffs, 28 frames |
+| `derive_handler_specs` | 235 | generates per-branch run equations for a handler |
+
+**The sample.**
+- A seeded, stratified random sample of 20 routed theorems: 14 of 6–60 lines, plus 6 long ones drawn proportional to size.
+- The frame is 813 theorems and 22.9k census lines. Program algebra and Foxglove's own logic are not in it.
+
+**The arms.** Each theorem was re-proved in a copy of its own file, with its statement checked unchanged. Lines are non-blank, non-comment lines, helpers included. Each arm had to pass a heartbeat gate.
+
+| Arm | What the re-prover could use |
+|---|---|
+| A | today's tools |
+| B | today's tools plus T1+T2, starting from A; improvements found that didn't need the library went back into A |
+| C | plus T3 and the deriver, for the 7 theorems where they apply |
+| F | the library, by a fresh agent who never saw A, on 5 theorems |
+
+### Result
+
+| | Share of frame saved | 90% CI |
+|---|---|---|
+| A: today's tools | **44.0%** | 36.4–48.8 |
+| B: + T1+T2 | **45.2%** | 37.5–50.2 |
+| Increment B − A | **+1.2 pts** | +0.4 to +2.2 |
+| C: + T3 + deriver | no further change in lines | |
+| B net of T1+T2 (2,392 lines) | 34.7% | lower bound 27.0 |
+
+- **The early stop triggered.** The increment is under +3 points and its upper bound is under +10, so the 40-theorem main sample was not run.
+- **The fresh agent (F) agrees with A–B**, matching or beating A by at most 7 lines on each theorem. The library mattered only on S023_15.
+- **Heartbeats** fall to 0.82× the originals in A and 0.78× in B. Importing the library costs about 1 heartbeat on unchanged proofs (maximum 174).
+
+### What the savings are made of
+- **Statements stay.** Statements are 19% of the sampled lines, and nothing can save them.
+- **The proof bodies shrink by 75% with today's tools.** For example:
+
+  | Theorem | Before | After |
+  |---|---|---|
+  | S023_18 | 407 | 57 |
+  | S023_16 | 213 | 35 |
+  | S023_08 | 47 | 2 |
+
+- **Tokens fall 54%, so this is not line-cramming.** The cuts come from:
+  - not restating intermediate programs in `have`s;
+  - normalizing in place with `simp only`, letting unification fill in continuations and post-states;
+  - existing generic lemmas the originals did not use, such as `simulateQ_run_preservesInv` and `IsQueryBoundP.simulateQ_of_step`;
+  - collapsing repeated blocks.
+
+### What the library contributed
+- **Only a few pieces were used.** Of about 430 declarations, the B and F proofs used the `simulateQ_nf` simp set (5 proofs; mostly a bundle of existing core lemmas), `loggingOracle.run_apply`, `countingOracle.run_apply`, `StateT.run_ite`, and T3's support iffs (1 proof).
+- **No spec, frame, bridge, bisimulation rule, reading or bound was used.**
+- **The wins:**
+
+  | Theorem | A lines | B lines | Notes |
+  |---|---|---|---|
+  | S023_15 | 18 | 13 | heartbeats 14.7k → 9.1k |
+  | S023_17 | 16 | 10 | T3 then halves heartbeats |
+  | S023_02 | 13 | 12 | |
+  | S023_09 | 14 | 14 | 29% fewer heartbeats |
+
+**Why specs did not bite.**
+1. **The long proofs are about distributions,** not supports or one-step behaviour: weighted sums `∑' z, Pr[= z | run] * f z`, lazy versus eager tables, cached values that stay frozen, event bounds through `map`/`bind`. Specs answer "what can the state be"; these proofs need "how is it distributed".
+2. **Normal-form defects block the generic rules:**
+   - Monad laws (`pure_bind`) don't fire on cslib's direct `FreeM.instPure`/`instBind`, which `ProbComp` elaboration picks.
+   - `simulateQ_nf` re-types answers of sum specs, so `(spec₁+spec₂).Range (.inr t)` becomes the summand's range and later terms stop elaborating.
+   - The files' handler lemmas are stated on `impl q s`, which doesn't meet `(impl q).run s`.
+   - Core `vcgen` matches specs only up to reducible defeq, so sum-spec posts need care.
+3. **Placement.** A scheme-handler spec module must import its handler's file. Theorems in that file can't import it, and splicing it in works only if the specs avoid the file's later lemmas (failed for 2 of 3 modules).
+
+**The deriver** is measured over the whole census, not the sample.
+- **Coverage:** 168 of 169 scheme handlers, generating 595 lemmas in 4.3 s.
+- **Hand-written one-step equations:** the derived lemmas prove 85 of 115 in one line, but plain `simp [h, …]` already proves 81.
+- **Its real value is removing statements.** 834 census lines of hand-written equation declarations, across 42 handlers, could become 42 `derive_handler_specs` lines. That is about 3 points of frame gross, before renaming call sites.
+
+**T3 out of sample.** Invariant and step theorems drop from 32–72 lines to 1–3 lines. For example, `combinedTableInDomainInv_step` goes from 53 lines to 3. But today's tools already do much of this: S023_17 goes 76 → 16 → 10. T3 estimates about 40 such theorems across its families.
+
+### Recommendations
+1. **Re-prove the library's proofs with today's tools.** This is the payoff: about 44% of the frame's lines (statements included), about 10k lines. It needs no new infrastructure, and heartbeats fall on average.
+2. **Keep only the slice of the library that earned its keep:**
+   - `simulateQ_nf`, with the missing members added: `simulateQ_list_mapM`, `AddWriterT.runAdd`, `countingOracle.simulate`, Bool/`beq` cleanup;
+   - the handler `run_apply` lemmas;
+   - support iffs for handlers that proofs step through.
+3. **Fix the normal-form defects in item 2 of "Why specs did not bite".** Each one blocked a generic rule on several theorems.
+4. **Adopt `derive_handler_specs`** for one-step equations, so their statements disappear.
+5. **Add the few generic distribution theorems the pilot asked for, each justified by how many theorems need it:**
+   - a union bound through maps of one source;
+   - a coupling bound through bind;
+   - a discard rule (two continuations of one draw);
+   - identical-until-bad for full runs (`measureTVDist`);
+   - `prEvent` forms of the draw swap and rotate lemmas;
+   - congruence of weighted sums on support;
+   - a lazy-versus-eager random-oracle theorem for cache-consulting handlers (PRFTagReader has a family of these).
+6. **Do not build out specs for every handler.** Most of T1–T3 went unused.
+
+**Caveats.**
+- **Sample size:** n = 20. The long stratum dominates the totals, but the increment's interval is tight because the arms are paired on each theorem.
+- **Who re-proved:** agents on one model, with timeboxes; nobody reviewed the new proofs for maintainability.
+- **Not measured:** the library's value for future proofs, and for theorems outside the frame (VCVio's own `OracleComp`/`ProgramLogic` modules).

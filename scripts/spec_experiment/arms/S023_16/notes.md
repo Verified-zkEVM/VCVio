@@ -48,3 +48,19 @@
   Missing: a lazy-vs-eager theorem "`(simulateQ (lazy c-handler) oa).run (s, c) =ᵈ
   ($ᵗ g >>= fun g => (simulateQ (table-handler (tableExtending c g)) oa).run s)` from per-query
   `=ᵈ` of the steps".
+
+## C
+- Minutes: ~6. C.lean = B.lean with imports `VCVio.ProgramLogic.Library
+  VCVio.ProgramLogic.Library.Derive …T3.PRFTagReader.Table …T3.PRFTagReader.MultipleToHybridSetup`
+  and `-- inline: …T3/PRFTagReader/MultipleToHybridEagerSetup.lean` (it imports this file).
+  52 lines / 3988 HB (B: 52 / 3994). No T3 lemma or derived equation used.
+- Looked at: the T3 PRFTagReader modules are support iffs (`mem_support_*_iff`), one-query
+  `wp` specs and `MonotoneState` instances — all support-level, while this theorem is an equality
+  of distributions. `derive_handler_specs? multipleBadQueryImpl` gives `run_inl/run_inr` that stop
+  at `multipleIdealLiftedQueryImpl.postInsert …` (does not see through `postInsert`), i.e. weaker
+  than the file's `multipleBadQueryImpl_tag_run`; for `multipleBadTableHandlerFine` /
+  `singleTableHandler` the derived equations are the definitional unfoldings A already gets by
+  naming the definition in `simp only`.
+- Missing: a distributional (not support) T3 fact — the lazy-vs-eager equivalence for the
+  composed handler, or at least `=ᵈ`-equations for one step (`(multipleBadQueryImpl t).run s`
+  vs `$ᵗ g; (multipleBadTableHandler (tableExtending c g) t).run …`).
