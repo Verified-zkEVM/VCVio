@@ -17,8 +17,8 @@ import VCVio.Algorithms.CRC
 
 open Cryptol Cryptol.Bridge
 
-example : ImperativeSource.bundle.elaborate ImperativeSource.source.provenance.name 32 =
-    .ok Imperative.imported := Imperative.import_accepted
+example : Imperative.bundle.elaborate "shared::common::utils::Imperative" =
+    .ok Imperative.imported := Imperative.accepted
 
 example (initial : Computation .integer) :
     Imperative.whileLoop (.value (.const (.value ⟨false⟩))) ⊥ initial = initial :=
@@ -30,8 +30,8 @@ example : Imperative.whileLoop (a := .bit)
   rw [Imperative.whileLoop_eq_step_of_true _ _ _ rfl]
   exact Imperative.whileLoop_eq_of_false _ _ _ rfl
 
-example : Translation.SourceElaboration.check ImportedScalarSource.bundle
-    ImportedScalarSource.root 1000 = .ok ImportedScalar.certificate.result :=
+example : Translation.SourceElaboration.check ImportedScalar.bundle
+    ImportedScalar.smallSigma256Zero.root 1000 = .ok ImportedScalar.certificate.result :=
   ImportedScalar.accepted
 
 example (x : UInt32) :
@@ -43,7 +43,7 @@ example (x : UInt32) :
 
 example (x : UInt32) :
     DomainResult.applyContinuous
-      (Resolved.denote ImportedSpecialization.source Environment.empty)
+      (Resolved.denote ImportedSpecialization.smallSigma256Zero Environment.empty)
       (.value (wordValue x.toBitVec)) =
         .value (wordValue (VCVio.Algorithms.Sha2.ssig0 x).toBitVec) :=
   ImportedSpecialization.core_correct x

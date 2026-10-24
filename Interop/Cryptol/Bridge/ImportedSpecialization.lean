@@ -7,7 +7,6 @@ Authors: Devon Tuma
 module
 
 public import Interop.Cryptol.Bridge.ImportedScalar
-public import Interop.Cryptol.Bridge.ImportedSpecializationSource
 public import PolyFunCryptol.Model.ResolvedLaws
 import PolyFunCryptol.Translation.SourceElaboration
 import PolyFunCryptol.Translation.SourceScope
@@ -20,45 +19,34 @@ import PolyFunCryptol.Model.Types
 # Checking an official Cryptol specialization candidate
 
 The candidate is produced by Cryptol's `Specialize.specializeEWhere`, keeping primitive
-instantiations explicit. Both endpoints pass the Lean elaborator. The correspondence below
-checks the candidate's meaning on partial inputs; the external transformation is not an axiom.
-The ordinary native implementation and its contracts use the existing certified-function API.
+instantiations explicit. `cryptol_import` checks it with the Lean elaborator, like the
+unspecialized source. It keeps four local declarations: the shift, the two rotations, and the
+function combining them by exclusive-or, which is the result. The correspondence below checks the
+candidate's meaning on partial inputs; the external transformation is not an axiom. The
+ordinary native implementation and its contracts use the existing certified-function API.
 -/
 
 public section
 
-namespace Cryptol.Bridge.ImportedSpecialization
+namespace Cryptol.Bridge
 
-open Translation SourceElaboration ImportedSpecializationSource
+cryptol_import ImportedSpecialization from
+  "Interop/Cryptol/artifacts/references/specialized-scalar-bundle.json" as smallSigma256Zero
 
-/-- The candidate retains four local declarations produced by the official specializer. -/
-@[expose] def source : Resolved.Term [] (.arrow (wordTy 32) (wordTy 32)) :=
-  .letE (.lam (.app (.app (.primitive (.shift 32 .right)) (.var .zero)) (.integer 3)))
-    (.letE (.lam (.app (.app (.primitive (.shift 32 .rotateRight)) (.var .zero)) (.integer 7)))
-      (.letE (.lam (.app (.app (.primitive (.shift 32 .rotateRight)) (.var .zero))
-        (.integer 18)))
-        (.letE (.lam (.app (.app (.primitive (.wordLogic 32 .xor))
-          (.app (.app (.primitive (.wordLogic 32 .xor))
-            (.app (.var (.succ (.succ .zero))) (.var .zero)))
-            (.app (.var (.succ .zero)) (.var .zero))))
-          (.app (.var (.succ (.succ (.succ .zero)))) (.var .zero)))) (.var .zero))))
+namespace ImportedSpecialization
 
-set_option maxRecDepth 10000 in
-/-- Kernel reduction checks the candidate graph, all local bindings, and its result type. -/
-theorem accepted : check bundle root 1000 =
-    .ok ⟨.arrow (wordTy 32) (wordTy 32), source⟩ := by
-  with_unfolding_all rfl
+open Translation SourceElaboration
 
 /-- The candidate carries the same typed-import evidence as the unspecialized source. -/
-@[expose] def certificate : Certificate bundle root where
+@[expose] def certificate : Certificate bundle smallSigma256Zero.root where
   budget := 1000
-  result := ⟨.arrow (wordTy 32) (wordTy 32), source⟩
-  accepted := accepted
+  result := ⟨_, smallSigma256Zero⟩
+  accepted := smallSigma256Zero.accepted
 
 /-- Specialization preserves the full partial function, including errors and bottom. -/
-theorem correct : Resolved.denote source Environment.empty =
+theorem correct : Resolved.denote smallSigma256Zero Environment.empty =
     Resolved.denote Foundation.wordSource1In Environment.empty := by
-  rw [Foundation.wordSource1In, source]
+  rw [Foundation.wordSource1In, smallSigma256Zero]
   simp (config := { dsimp := false }) only [Resolved.denote_letE]
   simp (config := { dsimp := false }) only [Resolved.denote_var, Environment.cons_zero]
   apply Resolved.denote_lam_congr
@@ -75,10 +63,12 @@ theorem correct : Resolved.denote source Environment.empty =
 
 /-- All 32-bit inputs agree with VCVio's implementation after the checked transformation. -/
 theorem core_correct (x : UInt32) :
-    DomainResult.applyContinuous (Resolved.denote source Environment.empty)
+    DomainResult.applyContinuous (Resolved.denote smallSigma256Zero Environment.empty)
       (.value (wordValue x.toBitVec)) =
         .value (wordValue (VCVio.Algorithms.Sha2.ssig0 x).toBitVec) := by
   rw [correct]
   exact ImportedScalar.core_correct x
 
-end Cryptol.Bridge.ImportedSpecialization
+end ImportedSpecialization
+
+end Cryptol.Bridge

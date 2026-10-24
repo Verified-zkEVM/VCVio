@@ -108,11 +108,10 @@ Sequence lengths and numeric instantiations still use the old total `NumExpr`
 fragment: parsing a partial expression does not silently give it a total meaning.
 
 `source module-code FILE MODULE` folds an accepted polynomial tree to candidate
-Lean constructor expressions. It is an untrusted renderer. The generated
-`ImperativeBodies` and retained `ImperativeSource` are tied together by
-`Imperative.import_accepted`, an exact kernel-checked elaboration equation.
-Its function-valued body table requires pointwise equality, rather than only
-checking that the importer returned success. Regeneration checks both quotations.
+Lean constructor expressions. It is an untrusted renderer. `Bridge/Imperative.lean`
+imports the retained `artifacts/modules/list.json` with `cryptol_import … module`,
+which renders the same bodies, declares them, and proves `Imperative.accepted`, an
+exact kernel-checked elaboration equation for the module's dependency-closed bundle.
 Keeping these bodies explicit avoids repeated frontend evaluation in consumer
 proofs. `source module-elaborate FILE MODULE` reports typing without rendering.
 
@@ -187,10 +186,10 @@ definition remains debt-free, and an admitted definition is rejected even if
 listed in the local ledger. These fixtures stay outside the library aggregates.
 
 On VCVio main with the published PolyFun revision
-`367623629125d1dbab590e73f6979bfa2011cf6a`, optional build/lint/tests/axioms pass.
-The optional Bridge axiom sweep covers 495 declarations across 31 modules with no
+`d96b2079eaa1feebf0f42aded1ff3f15b280f38e`, optional build/lint/tests/axioms pass.
+The optional Bridge axiom sweep covers 487 declarations across 27 modules with no
 admissions or nonstandard-axiom taint. The language model is swept by PolyFun's
-suite, which covers 22,405 declarations across 574 modules with the same zero-debt
+suite, which covers 22,674 declarations across 577 modules with the same zero-debt
 result. Pinned
 external validation also passes at this pin. That covers byte-identical
 regeneration of the 31-root export and the retained utility bundle, and the

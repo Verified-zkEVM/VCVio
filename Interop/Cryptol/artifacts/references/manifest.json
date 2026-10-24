@@ -9,12 +9,10 @@
   "entry_sha256": "caf0e9fae38d70d0cdc915cd45b8be918e0ba9b95b95b0fada22d5c8941c9a40",
   "exporter_sha256": "a0bd4ebc025bcf5a9dced0eafbdb13d3698d81d63786197899eec0d16806aa39",
   "scalar_bundle_sha256": "f55b811250ecb86f076b1f75206525f8821a9d2410cef3c1727533a98210cc03",
-  "scalar_lean_sha256": "a04082ac92c8bbb56494d3debad1c1087b62efd093dd69a5b5ff64b191cc0c6f",
   "specialization": {
     "pass": "Cryptol.Transform.Specialize.specializeEWhere",
     "primitive_policy": "retain-explicit-instantiations",
     "bundle_sha256": "4db0badd02ff62f61a25d4cb4b4060486d0cd2ba610573f0d3837c63a51c471d",
-    "lean_sha256": "b02511bb67d345909065826a859d1de8d4e59c997e8606daab61b9eeb4bbd592",
     "evidence": "Cryptol.Bridge.ImportedSpecialization.correct"
   },
   "entries": [

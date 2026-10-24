@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""The retained Foundation utility bundle and its quoted Imperative import.
+"""The retained Foundation utility bundle behind the Imperative import.
 
 PolyFun's own module tests cover whole-module checking, diagnosis and the broader
-Foundation corpus. This check ties the committed bundle to the Bridge quotations
-and to typed elaboration, and rejects an ill-typed and a meaning-changing body.
+Foundation corpus. `Bridge/Imperative.lean` imports the committed bundle with
+`cryptol_import`; this check ties the bundle to typed elaboration and rejects an
+ill-typed and a meaning-changing body.
 """
 
 from copy import deepcopy
@@ -14,7 +15,6 @@ import tempfile
 
 import polyfun_tools  # noqa: F401
 from corpus import elaborate_module
-from quote_imperative import quote_imperative, quote_imperative_bodies
 from extract_foundation import ROOT
 from test_source import nodes
 
@@ -29,11 +29,9 @@ def main():
                             capture_output=True, text=True)
     report = json.loads(result.stdout)
     assert result.returncode == 0 and all(r["scope"]["status"] == "accepted" for r in report), report
-    assert (ROOT / "Bridge/ImperativeSource.lean").read_bytes() == quote_imperative(utility)
     typed = elaborate_module(lean, path, IMPERATIVE, code=True)
     assert typed["expression_typing"] == "accepted" and typed["shared_declarations"] == 2
     assert typed["source_correspondence"] == "not-established"
-    assert (ROOT / "Bridge/ImperativeBodies.lean").read_bytes() == quote_imperative_bodies(utility, typed)
 
     def mutate(type_preserving):
         mutant = deepcopy(utility)
@@ -58,7 +56,7 @@ def main():
     assert rejected["status"] == "rejected" and "scheme mismatch" in rejected["message"], rejected
     changed = mutate(True)
     assert changed["expression_typing"] == "accepted" and changed["bodies"] != typed["bodies"]
-    print("Imperative: retained utility bundle, exact quotations, typed import, "
+    print("Imperative: retained utility bundle, typed import, "
           "2 typing/meaning mutations")
 
 

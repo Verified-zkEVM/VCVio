@@ -1,7 +1,7 @@
 """Locate the shared Cryptol tooling in the PolyFun package checkout.
 
-PolyFun owns the pins, the frontend identity check, the quotation helpers, the
-exporter and the evaluator observations. A local override uses the same
+PolyFun owns the pins, the frontend identity check, the exporter and the evaluator
+observations; Lean reads the committed exports through `cryptol_import`. A local override uses the same
 `POLYFUN_PATH` as the Lake build. Scripts in this directory take precedence.
 """
 

@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import Interop.Cryptol.Bridge.ImportedScalarSource
+public import PolyFunCryptol.Translation.Import
 public import Interop.Cryptol.Bridge.SourceScalars
 public import Interop.Cryptol.Bridge.CompressionTotal
 public import Interop.Cryptol.Bridge.Round
@@ -22,27 +22,37 @@ import PolyFunCryptol.Model.Types
 /-!
 # A checked Foundation scalar import
 
-The exact quoted frontend bundle passes the scope, kind, constraint and expression
-typing gates. Its elaborated result is the retained resolved scalar, whose partial
-semantics and all-input agreement with the core SHA-2 implementation are proved.
-The quotation and pinned external frontend remain outside Lean's trusted kernel;
-regeneration checks tie the quotation to the exported JSON and source digests.
+`cryptol_import` reads the exported frontend bundle, which passes the scope, kind,
+constraint and expression typing gates. Its elaborated result is the retained resolved
+scalar, whose partial semantics and all-input agreement with the core SHA-2
+implementation are proved. The pinned external frontend remains outside Lean's
+trusted kernel; regeneration checks tie the export to the source digests.
 -/
 
 public section
 
-namespace Cryptol.Bridge.ImportedScalar
+namespace Cryptol.Bridge
 
-open Translation SourceElaboration ImportedScalarSource
+cryptol_import ImportedScalar from "Interop/Cryptol/artifacts/references/scalar-bundle.json"
+  as smallSigma256Zero
+
+namespace ImportedScalar
+
+open Translation SourceElaboration
 
 set_option maxRecDepth 10000
+
+/-- The import is the retained Foundation scalar. -/
+theorem import_eq : smallSigma256Zero = Foundation.wordSource1In := rfl
+
 /-- Kernel reduction checks the actual exported dependency graph and scalar expression. -/
-theorem accepted : check bundle root 1000 =
+theorem accepted : check bundle smallSigma256Zero.root 1000 =
     .ok ⟨.arrow (wordTy 32) (wordTy 32), Foundation.wordSource1In⟩ := by
-  with_unfolding_all rfl
+  rw [← import_eq]
+  exact smallSigma256Zero.accepted
 
 /-- The imported scalar's typing certificate retains its exact source and output. -/
-@[expose] def certificate : Certificate bundle root where
+@[expose] def certificate : Certificate bundle smallSigma256Zero.root where
   budget := 1000
   result := ⟨.arrow (wordTy 32) (wordTy 32), Foundation.wordSource1In⟩
   accepted := accepted
@@ -79,4 +89,6 @@ theorem core_contract_iff (pre : BitVec 32 → Prop) (post : BitVec 32 → BitVe
         ∀ x, pre x → post x (VCVio.Algorithms.Sha2.ssig0 (UInt32.ofBitVec x)).toBitVec :=
   compiled.contract_iff pre post
 
-end Cryptol.Bridge.ImportedScalar
+end ImportedScalar
+
+end Cryptol.Bridge

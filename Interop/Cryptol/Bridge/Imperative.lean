@@ -6,7 +6,8 @@ Authors: Devon Tuma
 
 module
 
-public import Interop.Cryptol.Bridge.ImperativeBodies
+public import PolyFunCryptol.Translation.Import
+public import PolyFunCryptol.Model.PolyExamples
 import PolyFunCryptol.Translation.SourceScope
 import PolyFunCryptol.Translation.SourceLink
 import PolyFunCryptol.Model.Reference.Dependencies
@@ -36,28 +37,29 @@ public section
 
 open OmegaCompletePartialOrder
 
-namespace Cryptol.Bridge.Imperative
+namespace Cryptol.Bridge
+
+cryptol_import Imperative from "Interop/Cryptol/artifacts/modules/list.json"
+  module "shared::common::utils::Imperative"
+
+namespace Imperative
 
 open Polymorphic Translation
 
 set_option maxRecDepth 10000
 
-/-- Kernel reduction checks the candidate against the complete retained source. -/
-theorem import_accepted :
-    ImperativeSource.bundle.elaborate ImperativeSource.source.provenance.name 32 =
-      .ok imported := by
-  with_unfolding_all
-    change Except.ok _ = Except.ok imported
-    congr 3
-    funext i
-    cases i using Fin.cases with
-    | zero => rfl
-    | succ i => exact Fin.elim0 i
+/-- The common polymorphic loop interface. -/
+@[expose, reducible] def loopScheme : Scheme 0 0 :=
+  .allType (.mono (.arrow (.arrow (.var 0) .bit) (.arrow (.arrow (.var 0) (.var 0))
+    (.arrow (.var 0) (.var 0)))))
+
+/-- Both declarations have the loop interface. -/
+theorem bindings_eq :
+    imported.bindings.map Prod.snd = [loopScheme, loopScheme] := rfl
 
 /-- The complete source import, carrying its exact kernel-checked acceptance equation. -/
-@[expose] def certificate :
-    ImperativeSource.bundle.ElaborationCertificate ImperativeSource.source.provenance.name :=
-  ⟨32, imported, import_accepted⟩
+@[expose] def certificate : bundle.ElaborationCertificate source.provenance.name :=
+  ⟨10000, imported, accepted⟩
 
 /-- The finite while export retains the module's ordered declaration groups. -/
 @[expose] def whileSource : Term Scope.empty [] loopScheme :=
@@ -81,7 +83,7 @@ theorem export_dowhile : imported.exportTerm "dowhile" = .ok ⟨loopScheme, dowh
   .type a (.mono _ _)
 
 private def whileBodies : (i : Fin 1) → Term Scope.empty [loopScheme] [loopScheme][i] :=
-  Fin.cases body0 (fun i => nomatch i)
+  Fin.cases body0 (fun i => Fin.elim0 i)
 
 private noncomputable def whileEnvironment : Env emptyAssignment [loopScheme] :=
   IPFunctor.ScopedDomain.Env.fixGroup (D := fun s => s.domain emptyAssignment.val)
@@ -239,4 +241,6 @@ theorem whileLoop_error {a : ClosedTy} (error : EvalError)
   rw [whileLoop_unfold]
   rfl
 
-end Cryptol.Bridge.Imperative
+end Imperative
+
+end Cryptol.Bridge

@@ -60,23 +60,24 @@ still apply. No SAW proof artifact, solver certificate, FFI assumption,
 
 ## Checked typed-AST scalar
 
-`ImportedScalarSource.lean` is a constructor-only quotation of
-`artifacts/references/scalar-bundle.json`, exported for
-`(sigma_256_0 : [32] -> [32])`. It retains all seven dependencies, source schemes,
-ordered type/proof applications and module digests. The Python quotation does
-not specialize, normalize or typecheck the expression.
+`ImportedScalar.lean` reads `artifacts/references/scalar-bundle.json`, exported for
+`(sigma_256_0 : [32] -> [32])`, with `cryptol_import`, naming the root `smallSigma256Zero`. The bundle retains all seven
+dependencies, source schemes, ordered type/proof applications and module digests.
+The import does not specialize or normalize the expression.
 
 `SourceElaboration.check` validates scopes, kinds, closed constraints, binder
 identities, application types and result annotations before building typed
-resolved syntax. `ImportedScalar.accepted` checks the exact output in the kernel;
+resolved syntax. The import's `smallSigma256Zero.accepted` checks the exact output in the
+kernel, and `ImportedScalar.accepted` identifies it with the retained Foundation term;
 `partial_correct` retains the existing partial-input equation and `core_correct`
 proves agreement with the actual `Sha2.ssig0` for every `UInt32`. No sampled
 evaluation or native proof oracle is used in that theorem. Mutation tests reject
 wrong result/argument types, missing proofs, failed constraints and unsupported
 primitives.
 
-`ImportedScalar.compiled` retains the finite native IR with a correctness
-certificate for this exact imported source. `core_contract_iff` transfers
+`ImportedScalar.compiled` is a native certificate for this exact imported source:
+native evaluation of the import equals `Sha2.ssig0`, and PolyFun's fundamental lemma
+supplies the lazy meaning. `core_contract_iff` transfers
 arbitrary bitvector pre/postconditions to core `Sha2.ssig0` through the shared
 PolyFun correspondence machinery.
 
@@ -87,8 +88,8 @@ The existing compression path and probability theorems retain their boundaries.
 
 ## Checked upstream specialization
 
-The official specializer produces `ImportedSpecializationSource`; the Lean importer
-checks its monomorphic local declarations and root schema. `ImportedSpecialization.correct`
+The official specializer produces `artifacts/references/specialized-scalar-bundle.json`;
+`cryptol_import` checks its monomorphic local declarations and root schema. `ImportedSpecialization.correct`
 proves equality of its partial meaning with `ImportedScalar`, whose native
 certificate supplies the all-input agreement with `ssig0`. The corresponding core theorem
 still quantifies over every input. This scalar pilot is independent of the older

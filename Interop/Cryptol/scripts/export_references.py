@@ -15,11 +15,9 @@ from pathlib import Path
 import polyfun_tools
 from pins import canonical, digest, run, verify_checkout
 from frontend import frontend_patches, check_frontend
-from quote_reference import quote_bundle
 from extract_foundation import COMPRESSION, CRYPTOL, FOUNDATION, ROOT
 
 FAMILIES = {"SHA2", "SHA3", "SHAKE", "Keccak", "AES", "CRC"}
-QUOTATION = dict(copyright="Devon Tuma", driver="Interop/Cryptol/scripts/export_references.py")
 ARTIFACTS = ROOT / "artifacts" / "references"
 
 
@@ -93,18 +91,11 @@ def main():
         if scalar["cryptol_revision"] != CRYPTOL or scalar["modules"] != bundle["modules"]:
             raise ValueError("scalar export changed the validated source provenance")
         scalar_data = canonical(scalar)
-        scalar_lean = quote_bundle(scalar, namespace="Cryptol.Bridge.ImportedScalarSource",
-            artifact="artifacts/references/scalar-bundle.json",
-            title="Quoted Foundation scalar source", **QUOTATION)
         specialization = json.loads(run(str(args.exporter), "--specialize",
             str(args.foundation), str(path), "(sigma_256_0 : [32] -> [32])"))
         if specialization["source"] != scalar:
             raise ValueError("specialization changed its unspecialized endpoint")
         specialized_data = canonical(specialization["candidate"])
-        specialized_lean = quote_bundle(specialization["candidate"],
-            namespace="Cryptol.Bridge.ImportedSpecializationSource",
-            artifact="artifacts/references/specialized-scalar-bundle.json",
-            title="Quoted Foundation scalar source", **QUOTATION)
         checked = Path(temporary) / "candidate.json"
         checked.write_bytes(specialized_data)
         reports = json.loads(run(str(args.lean), "source", "elaborate", str(checked)))
@@ -116,10 +107,9 @@ def main():
         "bundle_sha256": digest(data), "entry_sha256": digest(wrapper.encode()),
         "exporter_sha256": digest(polyfun_tools.EXPORTER_SOURCE.read_bytes()),
         "scalar_bundle_sha256": digest(scalar_data),
-        "scalar_lean_sha256": digest(scalar_lean),
         "specialization": {"pass": specialization["pass"],
             "primitive_policy": specialization["primitive_policy"],
-            "bundle_sha256": digest(specialized_data), "lean_sha256": digest(specialized_lean),
+            "bundle_sha256": digest(specialized_data),
             "evidence": "Cryptol.Bridge.ImportedSpecialization.correct"},
         "entries": [{"id": e["id"], "root": root} for e, root in zip(entries, roots)],
         "validation": {k: inspection[k] for k in ["status", "groups", "declarations", "modules"]},
@@ -141,14 +131,6 @@ def main():
                 raise ValueError(f"stale reference artifact: {path}")
         else:
             ARTIFACTS.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(contents)
-    for name, contents in {"Bridge/ImportedScalarSource.lean": scalar_lean,
-            "Bridge/ImportedSpecializationSource.lean": specialized_lean}.items():
-        path = ROOT / name
-        if args.check:
-            if not path.is_file() or path.read_bytes() != contents:
-                raise ValueError(f"stale source quotation: {path}")
-        else:
             path.write_bytes(contents)
     print(f"31 roots; {inspection['declarations']} declarations; "
           "source digests and Lean scope/kind checks passed")

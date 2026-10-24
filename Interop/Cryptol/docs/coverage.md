@@ -24,7 +24,7 @@ checks do not claim expression typing, constraint entailment for open terms,
 execution of the imported JSON graph, or implementation equivalence.
 
 The separate scalar pilot in `artifacts/references/scalar-bundle.json` has a
-stronger checked path: its exact quotation elaborates to typed resolved syntax,
+stronger checked path: `cryptol_import` elaborates it to typed resolved syntax,
 and `ImportedScalar.core_correct` covers every input to core `Sha2.ssig0`.
 This component certificate is recorded separately from the 57 whole-algorithm
 entries; it does not promote the remaining shared graph beyond `scoped`.

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Export Foundation's utility modules and quote the complete Imperative module.
+"""Export Foundation's utility modules, including the complete Imperative module.
 
 The official exporter owns parsing and elaboration; PolyFun's Lean checker types
-the module and renders its bodies. `Bridge/Imperative.lean` then checks the
-quoted candidate against whole-module elaboration in the kernel.
+the module. `Bridge/Imperative.lean` imports the committed bundle with
+`cryptol_import`, which checks whole-module elaboration in the kernel.
 """
 
 import argparse
@@ -16,7 +16,6 @@ import polyfun_tools  # noqa: F401
 from pins import FOUNDATION, canonical, verify_checkout
 from frontend import check_frontend
 from corpus import elaborate_module
-from quote_imperative import quote_imperative, quote_imperative_bodies
 from extract_foundation import ROOT
 
 BUNDLE = ROOT / "artifacts/modules/list.json"
@@ -42,15 +41,14 @@ def main():
         path = Path(temporary) / "list.json"
         path.write_bytes(data)
         typed = elaborate_module(args.lean, path, IMPERATIVE, code=True)
-    outputs = {BUNDLE: data, ROOT / "Bridge/ImperativeSource.lean": quote_imperative(bundle),
-               ROOT / "Bridge/ImperativeBodies.lean": quote_imperative_bodies(bundle, typed)}
-    for path, contents in outputs.items():
-        if args.check:
-            if path.read_bytes() != contents:
-                raise ValueError(f"stale Imperative artifact: {path}")
-        else:
-            path.write_bytes(contents)
-    print(f"Imperative: {typed['shared_declarations']} shared declarations quoted and typed")
+    if typed["expression_typing"] != "accepted":
+        raise ValueError(f"Imperative no longer elaborates: {typed}")
+    if args.check:
+        if BUNDLE.read_bytes() != data:
+            raise ValueError(f"stale Imperative artifact: {BUNDLE}")
+    else:
+        BUNDLE.write_bytes(data)
+    print(f"Imperative: {typed['shared_declarations']} shared declarations typed")
 
 
 if __name__ == "__main__":

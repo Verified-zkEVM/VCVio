@@ -13,8 +13,7 @@ from pathlib import Path
 import subprocess
 import tempfile
 
-import polyfun_tools
-from quote_reference import quote_bundle
+import polyfun_tools  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
 LEAN = ROOT.parents[1] / ".lake/build/bin/cryptol-interop"
@@ -40,8 +39,6 @@ def nodes(value):
 def specialization_checks(artifacts, manifest):
     assert hashlib.sha256((artifacts / "specialized-scalar-bundle.json").read_bytes()).hexdigest() == \
         manifest["specialization"]["bundle_sha256"]
-    assert hashlib.sha256((ROOT / "Bridge/ImportedSpecializationSource.lean").read_bytes()).hexdigest() == \
-        manifest["specialization"]["lean_sha256"]
     code, report = run(artifacts / "specialized-scalar-bundle.json", "elaborate")
     assert code == 0 and all(r["status"] == "typed" for r in report), report
     specialized = json.loads((artifacts / "specialized-scalar-bundle.json").read_bytes())
@@ -59,21 +56,19 @@ def specialization_checks(artifacts, manifest):
         path.write_text(json.dumps(mutant))
         code, report = run(path, "elaborate")
         assert code == 0, report
-        source = quote_bundle(mutant, namespace="Cryptol.Bridge.MutatedSpecialization",
-                              artifact="mutated.json", title="Mutated specialization",
-                              driver="Interop/Cryptol/scripts/test_source.py").decode()
-        source = source.replace("public import PolyFunCryptol.Translation.SourceBundle", """
+        source = f"""module
 public import Interop.Cryptol.Bridge.ImportedSpecialization
 import PolyFunCryptol.Translation.SourceElaboration
 import PolyFunCryptol.Translation.SourceScope
 import PolyFunCryptol.Model.Reference.Kinds
 import PolyFunCryptol.Model.Reference.Types
 import PolyFunCryptol.Model.Reference.Syntax
-import PolyFunCryptol.Model.Types""".strip())
-        source += """
-open Cryptol Translation SourceElaboration Bridge.MutatedSpecialization
+import PolyFunCryptol.Model.Types
+open Cryptol Translation SourceElaboration
+cryptol_import Mutated from "{path}" as smallSigma256Zero
 set_option maxRecDepth 10000 in
-example : check bundle root = .ok ⟨_, Bridge.ImportedSpecialization.source⟩ := by
+example : check Mutated.bundle Mutated.smallSigma256Zero.root =
+    .ok ⟨_, Bridge.ImportedSpecialization.smallSigma256Zero⟩ := by
   with_unfolding_all rfl
 """
         proof = Path(temporary) / "MutatedSpecialization.lean"
@@ -147,8 +142,6 @@ def main():
     scalar_path = artifacts / "scalar-bundle.json"
     scalar_bytes = scalar_path.read_bytes()
     assert hashlib.sha256(scalar_bytes).hexdigest() == manifest["scalar_bundle_sha256"]
-    assert hashlib.sha256((ROOT / "Bridge/ImportedScalarSource.lean").read_bytes()).hexdigest() == \
-        manifest["scalar_lean_sha256"]
     scalar = json.loads(scalar_bytes)
     code, report = run(scalar_path, "elaborate")
     assert code == 0 and len(report) == 1 and report[0]["status"] == "typed", report

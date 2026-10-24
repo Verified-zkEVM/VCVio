@@ -35,7 +35,7 @@ lake exe cryptol-interop model arx-native 32 8
 ```
 
 The root manifest pins the companion PolyFun development, which hosts `PolyFunCryptol`, at
-`367623629125d1dbab590e73f6979bfa2011cf6a`. The commands above and the separate
+`d96b2079eaa1feebf0f42aded1ff3f15b280f38e`. The commands above and the separate
 `Consumer` use that published dependency; no sibling checkout is required.
 For local development against a different PolyFun checkout:
 
@@ -114,8 +114,8 @@ the certified importer still targets the Foundation SHA-256 subset. The
 definitions for 31 SHA2/SHA3/SHAKE, Keccak, AES and CRC entries. Lean checks their
 scope and kinds, and separately checks closed numeric and class constraints.
 The scalar `(sigma_256_0 : [32] -> [32])` additionally has checked expression
-elaboration from its exact quoted seven-declaration dependency graph. The kernel
-checks its resolved output, and `ImportedScalar.core_correct` proves agreement
+elaboration from its exported seven-declaration dependency graph: `cryptol_import`
+reads the export and the kernel checks its resolved output, and `ImportedScalar.core_correct` proves agreement
 with `VCVio.Algorithms.Sha2.ssig0` for every input. This gate also supports lexical monomorphic declarations, records, tuples,
 sequence literals, projections, closed guards and single-generator comprehensions.
 The official specializer supplies a candidate for the scalar; a Lean proof checks
