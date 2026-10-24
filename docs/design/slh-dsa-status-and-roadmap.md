@@ -393,3 +393,15 @@ longer true on `main`:
 - A. Hülsing, J. Rijneveld, F. Song, *Mitigating Multi-Target Attacks in Hash-Based Signatures*,
   PKC 2016.
 - NIST ACVP-Server SLH-DSA vectors, commit `975de31e`.
+
+## Foundation compression correspondence
+
+The optional [Foundation bridge](../../Interop/Cryptol/docs/foundation.md) preserves the
+instantiated SHA-256 compression source from Foundation's pinned Cryptol AST.
+Lean checks its recursive schedule, all 64 rounds and feed-forward against a
+finite description and the actual `Sha2.compress` byte-array implementation.
+The byte theorem requires exactly eight state words and a complete 64-byte
+window; its offset need not be aligned. Arbitrary data contracts and adaptive
+response/state equality transfer through that correspondence. The frontend
+and structural reifier remain trusted; full hashing and padding remain separate
+obligations. The language package and bridge add no dependency to default HashSig.

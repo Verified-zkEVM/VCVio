@@ -30,7 +30,7 @@ if [[ -n "${EXPOSE_BOUNDARY_LIBS:-}" ]]; then
   read -r -a LIBS <<< "$EXPOSE_BOUNDARY_LIBS"
 else
   LIBS=(VCVio VCVioCslib ToMathlib LatticeCrypto HashSig Examples Extern VCVioWidgets VCVioTest
-    LatticeCryptoTest HashSigTest)
+    LatticeCryptoTest HashSigTest Interop/Cryptol)
 fi
 
 # Count, per library, the files that open a broad exposed public section.

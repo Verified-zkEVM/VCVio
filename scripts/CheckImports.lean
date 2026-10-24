@@ -11,6 +11,7 @@ import Lean.Elab.ParseImportsFast
 # Import isolation
 
 Checks the optional-backend, native-linking and pure-algorithm boundaries directly from source.
+Core libraries import neither `Interop` nor PolyFun's optional `PolyFunCryptol` case study.
 Lean's own header parser handles import modifiers, comments and module names. No project or
 dependency build is needed. Run `lean --run scripts/CheckImports.lean [--extern]` from the root.
 -/
@@ -41,7 +42,7 @@ private def allowed (externOnly : Bool) (owner : String) (path : FilePath) (name
   if externOnly then
     owner == "Extern" || tests.contains owner || head != "Extern"
   else if core.contains owner then
-    !(["Interop", "Hax", "Aeneas"].contains head) &&
+    !(["Interop", "Hax", "Aeneas", "PolyFunCryptol"].contains head) &&
       (if (`VCVio.Algorithms).isPrefixOf source then
         ["Init", "Std", "Lean", "Mathlib", "Batteries", "Cslib", "ToCslib", "PolyFun",
          "Qq", "Aesop", "ToMathlib"].contains head || (`VCVio.Algorithms).isPrefixOf name

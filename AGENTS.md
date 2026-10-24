@@ -100,6 +100,18 @@ build boundaries and the staged consolidation.
   It stays outside the default library graph but participates in repository validation.
 - `VCVioComplexity/`: optional isolated Lake package for the complexitylib-backed exact-machine
   substrate; it is not part of VCVio's default dependency graph.
+- `Interop/Cryptol/`: one optional root-project development. Bridge owns Foundation,
+  core-algorithm, and probability correspondences over PolyFun's optional `PolyFunCryptol`
+  case study, which owns the language semantics, native IR, certificates, and export.
+  Core libraries never import these modules.
+  Use `./scripts/validate.sh --cryptol --lint --test --axioms`; add
+  `--cryptol-external` with `CRYPTOL_BINARY=…` and `FOUNDATION_PATH=…` for pinned checks.
+  Set `POLYFUN_PATH=…` when using the companion local PolyFun checkout.
+  Use that override for the optional Cryptol driver or `-R -K polyfunPath=…` for
+  direct Lake commands. Keep Lake's Git dependency checkout independent: never
+  replace `.lake/packages/PolyFun` with a symlink to a working repository. A
+  plain Lake invocation may check out its pinned revision. Root-wide validation
+  uses the published pin; local overrides need explicit forwarding in each tool.
 - `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs.
 - `Interop/`: experimental bridges to Rust verification frontends (hax, aeneas). **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
 - `csrc/`: C FFI shims used for differential testing against native ML-DSA, ML-KEM, and Falcon code.

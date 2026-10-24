@@ -12,6 +12,7 @@ trap 'rm -rf "$FIXTURE_DIR"' EXIT
 printf '%s\n' \
   'module' \
   'public import PolyFun.PFunctor.Basic' \
+  'import PolyFunCryptol.Model.Types' \
   'import all VCVio.OracleComp.Basic' \
   > "$FIXTURE_DIR/Allowed.lean"
 
@@ -25,6 +26,11 @@ printf '%s\n' \
   'meta import all PolyFun.PFunctor.Basic' \
   > "$FIXTURE_DIR/MetaViolation.lean"
 
+printf '%s\n' \
+  'module' \
+  'public import all PolyFunCryptol.Model.Types' \
+  > "$FIXTURE_DIR/CaseStudyViolation.lean"
+
 "$CHECKER" "$FIXTURE_DIR/Allowed.lean"
 
 if "$CHECKER" "$FIXTURE_DIR/PlainViolation.lean" >/dev/null 2>&1; then
@@ -34,6 +40,11 @@ fi
 
 if "$CHECKER" "$FIXTURE_DIR/MetaViolation.lean" >/dev/null 2>&1; then
   echo 'ERROR: `meta import all PolyFun` fixture was not rejected.' >&2
+  exit 1
+fi
+
+if "$CHECKER" "$FIXTURE_DIR/CaseStudyViolation.lean" >/dev/null 2>&1; then
+  echo 'ERROR: `public import all PolyFunCryptol` fixture was not rejected.' >&2
   exit 1
 fi
 

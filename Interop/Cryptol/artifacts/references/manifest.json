@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "cryptol_revision": "61dd17b0c45ddf8c5c1e952afd5e789c4dc4ec4b",
+  "foundation_revision": "7d0528bd998682788f4e23661f2829298f9e47db",
+  "frontend_patches": [
+    "cffd4082d3347aba60c131d2e7d33f8b8fdfaf6afa4aedd52d8d2fff7bb30a2e"
+  ],
+  "bundle_sha256": "b010c25f298f602fba0e76b5e4dfca07c074600affcd9d866ef4646e68a47e7b",
+  "entry_sha256": "caf0e9fae38d70d0cdc915cd45b8be918e0ba9b95b95b0fada22d5c8941c9a40",
+  "exporter_sha256": "a0bd4ebc025bcf5a9dced0eafbdb13d3698d81d63786197899eec0d16806aa39",
+  "scalar_bundle_sha256": "f55b811250ecb86f076b1f75206525f8821a9d2410cef3c1727533a98210cc03",
+  "specialization": {
+    "pass": "Cryptol.Transform.Specialize.specializeEWhere",
+    "primitive_policy": "retain-explicit-instantiations",
+    "bundle_sha256": "4db0badd02ff62f61a25d4cb4b4060486d0cd2ba610573f0d3837c63a51c471d",
+    "evidence": "Cryptol.Bridge.ImportedSpecialization.correct"
+  },
+  "entries": [
+    {
+      "id": "sha256-compression",
+      "root": "result"
+    },
+    {
+      "id": "sha224",
+      "root": "R0::hash"
+    },
+    {
+      "id": "sha256",
+      "root": "R1::hash"
+    },
+    {
+      "id": "sha384",
+      "root": "R2::hash"
+    },
+    {
+      "id": "sha512",
+      "root": "R3::hash"
+    },
+    {
+      "id": "sha512_224",
+      "root": "R4::hash"
+    },
+    {
+      "id": "sha512_256",
+      "root": "R5::hash"
+    },
+    {
+      "id": "sha3_224",
+      "root": "R6::hash"
+    },
+    {
+      "id": "sha3_256",
+      "root": "R7::hash"
+    },
+    {
+      "id": "sha3_384",
+      "root": "R8::hash"
+    },
+    {
+      "id": "sha3_512",
+      "root": "R9::hash"
+    },
+    {
+      "id": "shake128",
+      "root": "R10::SHAKE128"
+    },
+    {
+      "id": "shake256",
+      "root": "R10::SHAKE256"
+    },
+    {
+      "id": "rawshake128",
+      "root": "R10::RawSHAKE128"
+    },
+    {
+      "id": "rawshake256",
+      "root": "R10::RawSHAKE256"
+    },
+    {
+      "id": "keccak-keccak",
+      "root": "R11::Keccak"
+    },
+    {
+      "id": "keccak-bitreordering",
+      "root": "R11::bitReordering"
+    },
+    {
+      "id": "keccak-tostate",
+      "root": "R12::toState"
+    },
+    {
+      "id": "keccak-tostring",
+      "root": "R12::toString"
+    },
+    {
+      "id": "keccak-tostatetostringprop",
+      "root": "R12::toStatetoStringProp"
+    },
+    {
+      "id": "keccak-tostringtostateprop",
+      "root": "R12::toStringtoStateProp"
+    },
+    {
+      "id": "aes128-encrypt",
+      "root": "R13::AES128.Encrypt"
+    },
+    {
+      "id": "aes128-decrypt",
+      "root": "R13::AES128.Decrypt"
+    },
+    {
+      "id": "aes192-encrypt",
+      "root": "R13::AES192.Encrypt"
+    },
+    {
+      "id": "aes192-decrypt",
+      "root": "R13::AES192.Decrypt"
+    },
+    {
+      "id": "aes256-encrypt",
+      "root": "R13::AES256.Encrypt"
+    },
+    {
+      "id": "aes256-decrypt",
+      "root": "R13::AES256.Decrypt"
+    },
+    {
+      "id": "crc32-crc",
+      "root": "R14::CRC"
+    },
+    {
+      "id": "crc32-crcupdate",
+      "root": "R14::CRCUpdate"
+    },
+    {
+      "id": "crc32-crcupdatecorrect",
+      "root": "R14::CRCUpdateCorrect"
+    },
+    {
+      "id": "crc32-crcrunning",
+      "root": "R14::CRCRunning"
+    }
+  ],
+  "validation": {
+    "status": "scoped",
+    "groups": 280,
+    "declarations": 280,
+    "modules": 49
+  },
+  "trust_boundary": [
+    "Pinned Cryptol parser, renamer, type checker and module elaborator",
+    "Haskell typed-AST serialization and provenance collection"
+  ],
+  "not_established": [
+    "Expression typing and constraint entailment in Lean",
+    "Semantic correspondence with the Haskell evaluator",
+    "Implementation equivalence for these entry points"
+  ]
+}

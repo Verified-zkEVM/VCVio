@@ -1,0 +1,2228 @@
+{
+  "schema_version": 1,
+  "foundation_revision": "7d0528bd998682788f4e23661f2829298f9e47db",
+  "cryptol_revision": "61dd17b0c45ddf8c5c1e952afd5e789c4dc4ec4b",
+  "features": {
+    "ordered-polymorphism": "Numeric, type and proof binders in source order; semantic stages retained.",
+    "partial-numerics": "Partial numeric type functions and their constraint obligations.",
+    "class-constraints": "Resolved value-type class constraints and structural primitive lifting.",
+    "finite-words": "Finite bit sequences, wrapping arithmetic, shifts and bitwise operations.",
+    "finite-sequences": "Finite sequences and exact indexing, split, join and update conventions.",
+    "lazy-recursion": "Simultaneous least fixed points and demanded observations.",
+    "bounded-folds": "Source folds compiled with a supported-shape certificate.",
+    "full-comprehensions": "Sequential and parallel generators and local declarations.",
+    "lazy-aggregates": "Heterogeneous tuples and records with lazy fields and updates.",
+    "numeric-guards": "Ordered numeric guards, with the selected branch assumptions.",
+    "pure-foreign-fallback": "Retain and interpret a foreign declaration\u2019s pure body.",
+    "modular-arithmetic": "Modular integers and explicit modulus/primality hypotheses.",
+    "polynomial-arithmetic": "Binary polynomial arithmetic and field calculations.",
+    "productive-streams": "Demand-driven infinite sequences and finite observations.",
+    "general-recursion": "Recursive calls beyond a certified bounded fold or prefix recurrence.",
+    "module-provenance": "Module parameters, imports, instantiations and declaration identities."
+  },
+  "profiles": {
+    "compression256": "Every 8-word UInt32 state and 16-word block; byte boundary: state.size = 8 and base + 64 \u2264 bytes.size. Base need not be aligned.",
+    "finite-bits": "All finite bit lengths admitted by the source constraints. A byte implementation additionally requires byte alignment and its size limits.",
+    "xof": "Finite input and requested output lengths admitted by the source; track bit/byte units and zero-length output explicitly.",
+    "aes": "All 128-bit blocks, keys of length 128/192/256, pure foreign fallbacks.",
+    "crc": "Finite input; update/concatenation theorem restricted to byte-aligned inputs for reflected profiles.",
+    "composition": "Source-admitted finite parameters and supplied hash/PRF functions; no unproved equivalence assumptions hidden in a concrete instance.",
+    "p256": "P-256 only; validate nonzero denominators, scalar/range conditions, point validity and the behavior of invalid encodings.",
+    "keccak-state": "Every finite lane width; all 25 lanes with explicit x/y and bit-order conventions."
+  },
+  "source_sha256": {
+    "algorithms/AES/Cipher.cry": "230be98f59f225712bae2e31fb81d8a2054ed5befb6e7cd99ced4080e9e676ff",
+    "algorithms/AES/KeyExpansion.cry": "3981c3c444969ba09adda5c520a169e8071d231b605f7139ac13810cc30c6e19",
+    "algorithms/AES/Main.cry": "663f3502a04fcd677ce8f28af820350c64d1c4d32619b6a0c9ae087291e58906",
+    "algorithms/ECDSA/ECDSA.cry": "06615ff7defc333443b739571cb6ad2d9991dc3f82d1f27c0b40b3aaed30b99e",
+    "algorithms/ECDSA/Routines.cry": "06df2e41f91e7c7b1a9fac94753cb1b9e4bc1698a3cf3c6a3d3eacf5db42eb4c",
+    "algorithms/ECDSA/p256.cry": "5df950b9931094976687d6229afd48eb367cd589e45120bd1565fade9171d042",
+    "algorithms/HMAC/Main.cry": "b853e76b721f5abe70e0764c2b1548b6fc37d85bb05cd10d95b285f19a4f4cbe",
+    "algorithms/KMAC/Main.cry": "7b4b527639e3e10665182686de2d19d26bdc0abd439a67dd817fb8e9a9957ccd",
+    "algorithms/Keccak/Main.cry": "8ce5d7498fa929f71af881e68224f8ffd73b3b3bc51858e5c4c87db86febd60d",
+    "algorithms/Keccak/StateConversions.cry": "44d90d9709262d59c0eb2f98beb871522bbba6d20f4a5851276e65525b064153",
+    "algorithms/KeyWrapping/AES128.cry": "5fda5269482358f7e51ac57871ae8f28136a6f971744750a537ee190ce46e50b",
+    "algorithms/KeyWrapping/KW.cry": "79ed1b927d6ce5b76c2ac4a6512c55b7866d20edd3e1d5e5f249dd2f61d77b42",
+    "algorithms/KeyWrapping/KWP.cry": "683938e4bb446435cd0d72fab1a16ba1727b7fe5144217df8c64ca00b2519226",
+    "algorithms/PBKDF/Main.cry": "528f05bb80868f4666da40b24e95a5cb2cc0795a36f65c8aa4f91f0b098dfff5",
+    "algorithms/ParallelHash/Main.cry": "d9d04fef068f26d1c4463f198eeeb389d4cac5668f971eaef07c1f0d3d375b79",
+    "algorithms/SHA1/Main.cry": "cfbbc9fae74681c95ef8ad5602300fab1c7cef65669a2fde3ffed084a1901a8f",
+    "algorithms/SHA2/Main.cry": "dfbe7d0b4b401cb9141989dd38e35aad8d873c47c3e0bca6a00b3a21abb9906e",
+    "algorithms/SHA2/Preprocessing.cry": "953df0b7fea1ef5f7252d9860a17b925ebfc5a675042ad873f49a0ce1fdbd01e",
+    "algorithms/SHA2/SHA224.cry": "0670352e83ed097a08809d536e5617e9d37eb52ff3e16c8d1f9db6e225942e5d",
+    "algorithms/SHA2/SHA256.cry": "261721ba3eee4b4c23c9af174a4ca078c05d37c627df788f3b25c10cbc1fb846",
+    "algorithms/SHA2/SHA384.cry": "c68d3db323b5e1e7cf5e344cfcff887a3642f84ba78a6b5837b42f189bf4da0d",
+    "algorithms/SHA2/SHA512.cry": "406bd80c188bc699a97451b94dea8168dd0c5bb4a6735f862df47debc2184979",
+    "algorithms/SHA2/SHA512_224.cry": "1c6491ee06fafba4ac8cae15814ccfb60896baf7bb302d4b30e4fc2e30a0e3e9",
+    "algorithms/SHA2/SHA512_256.cry": "86ed1e643c1215838611e20365ff210940ef4a194b8a04871776a99b766414a1",
+    "algorithms/SHA3/SHA3_224.cry": "66661a73347b334d20e82c7f024dacbfeff0d970fd8c2637b21cf345bda642b2",
+    "algorithms/SHA3/SHA3_256.cry": "14076be6ca363cf5d5c500f87db67e336e839f71f55e4d983ead3e68882c8af1",
+    "algorithms/SHA3/SHA3_384.cry": "d2d9e0d817c6a6662a51c79f9e19f5720e145d3cda059ad3a8114a0db405dbfb",
+    "algorithms/SHA3/SHA3_512.cry": "5db178aa522ac800f4eaf6ae2d8a6bc1146385de049ece8b22887febc13aae0a",
+    "algorithms/SHAKE/Main.cry": "74472c53273cbe1683eff5c0daeb71dcec300b5daab5ea67611659a80a1bebcd",
+    "algorithms/TupleHash/Main.cry": "2b1e353d5c14bee1b9e13064dc37007e084bc40c2e623fdff80a0ba9be3bee49",
+    "algorithms/cSHAKE/Main.cry": "b8e1fdc3d367fb208401f4e00c3bb904ac735f859cd9a97670539345e22a18e0",
+    "packaging/Hash.cry": "f2ff656ec1cc63b3ad86ed2c8208baafa5c22814ecd60c8fcaa4c183ef4f9406",
+    "shared/CRC/CRC32_IEEE_802_3_Ethernet.cry": "5e300f97248dd498af0f01a7ea1905ee2042a9b380b3775cf1b552e786b1d68f",
+    "shared/CRC/Main.cry": "56b314861a7e7537b8a72fcfc864c808f1836d94dd98fec1abcb5ed9f825f258"
+  },
+  "entries": [
+    {
+      "id": "sha256-compression",
+      "family": "SHA2",
+      "source": {
+        "module": "algorithms/SHA2/Main.cry",
+        "symbol": "step",
+        "probe": "compression-wrapper"
+      },
+      "profile": "compression256",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-recursion",
+        "bounded-folds"
+      ],
+      "dependencies": {
+        "status": "extracted",
+        "manifest": "artifacts/manifest.json",
+        "key": "source_dependencies"
+      },
+      "status": "certified",
+      "implementation": "VCVio.Algorithms.Sha2.compress",
+      "theorems": [
+        "Cryptol.Bridge.compiledCompress_eq",
+        "Cryptol.Bridge.compression_byte_contract_iff"
+      ],
+      "evidence": [
+        "artifacts/manifest.json",
+        "Bridge/CompressionCertificate.lean"
+      ],
+      "wave": 0,
+      "trusted_steps": [
+        "Cryptol 3.6.0 frontend, type checking and erased constraints",
+        "typed AST exporter and constructor decoder",
+        "monomorphic structural reification, comprehension translation and lambda lifting"
+      ],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "result"
+      }
+    },
+    {
+      "id": "sha224",
+      "family": "SHA2",
+      "source": {
+        "module": "algorithms/SHA2/SHA224.cry",
+        "symbol": "hash"
+      },
+      "profile": "finite-bits",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-recursion",
+        "bounded-folds"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/SHA2/Main.cry",
+          "algorithms/SHA2/Preprocessing.cry",
+          "packaging/Hash.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Sha2.sha224",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 1,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R0::hash"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "sha256",
+      "family": "SHA2",
+      "source": {
+        "module": "algorithms/SHA2/SHA256.cry",
+        "symbol": "hash"
+      },
+      "profile": "finite-bits",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-recursion",
+        "bounded-folds"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/SHA2/Main.cry",
+          "algorithms/SHA2/Preprocessing.cry",
+          "packaging/Hash.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Sha2.sha256",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 1,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R1::hash"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "sha384",
+      "family": "SHA2",
+      "source": {
+        "module": "algorithms/SHA2/SHA384.cry",
+        "symbol": "hash"
+      },
+      "profile": "finite-bits",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-recursion",
+        "bounded-folds"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/SHA2/Main.cry",
+          "algorithms/SHA2/Preprocessing.cry",
+          "packaging/Hash.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Sha2.sha384",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 1,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R2::hash"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "sha512",
+      "family": "SHA2",
+      "source": {
+        "module": "algorithms/SHA2/SHA512.cry",
+        "symbol": "hash"
+      },
+      "profile": "finite-bits",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-recursion",
+        "bounded-folds"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/SHA2/Main.cry",
+          "algorithms/SHA2/Preprocessing.cry",
+          "packaging/Hash.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Sha2.sha512",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 1,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R3::hash"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "sha512_224",
+      "family": "SHA2",
+      "source": {
+        "module": "algorithms/SHA2/SHA512_224.cry",
+        "symbol": "hash"
+      },
+      "profile": "finite-bits",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-recursion",
+        "bounded-folds"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/SHA2/Main.cry",
+          "algorithms/SHA2/Preprocessing.cry",
+          "packaging/Hash.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Sha2.sha512Trunc224",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 1,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R4::hash"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "sha512_256",
+      "family": "SHA2",
+      "source": {
+        "module": "algorithms/SHA2/SHA512_256.cry",
+        "symbol": "hash"
+      },
+      "profile": "finite-bits",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-recursion",
+        "bounded-folds"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/SHA2/Main.cry",
+          "algorithms/SHA2/Preprocessing.cry",
+          "packaging/Hash.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Sha2.sha512Trunc256",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 1,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R5::hash"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "sha3_224",
+      "family": "SHA3",
+      "source": {
+        "module": "algorithms/SHA3/SHA3_224.cry",
+        "symbol": "hash"
+      },
+      "profile": "finite-bits",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "numeric-guards",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/Keccak/Main.cry",
+          "packaging/Hash.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Keccak.sha3Digest224",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R6::hash"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "documented-index-error"
+      }
+    },
+    {
+      "id": "sha3_256",
+      "family": "SHA3",
+      "source": {
+        "module": "algorithms/SHA3/SHA3_256.cry",
+        "symbol": "hash"
+      },
+      "profile": "finite-bits",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "numeric-guards",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/Keccak/Main.cry",
+          "packaging/Hash.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Keccak.sha3Digest256",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R7::hash"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "documented-index-error"
+      }
+    },
+    {
+      "id": "sha3_384",
+      "family": "SHA3",
+      "source": {
+        "module": "algorithms/SHA3/SHA3_384.cry",
+        "symbol": "hash"
+      },
+      "profile": "finite-bits",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "numeric-guards",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/Keccak/Main.cry",
+          "packaging/Hash.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Keccak.sha3Digest384",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R8::hash"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "documented-index-error"
+      }
+    },
+    {
+      "id": "sha3_512",
+      "family": "SHA3",
+      "source": {
+        "module": "algorithms/SHA3/SHA3_512.cry",
+        "symbol": "hash"
+      },
+      "profile": "finite-bits",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "numeric-guards",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/Keccak/Main.cry",
+          "packaging/Hash.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Keccak.sha3Digest512",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R9::hash"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "documented-index-error"
+      }
+    },
+    {
+      "id": "shake128",
+      "family": "SHAKE",
+      "source": {
+        "module": "algorithms/SHAKE/Main.cry",
+        "symbol": "SHAKE128"
+      },
+      "profile": "xof",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "numeric-guards",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/Keccak/Main.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Keccak.shake128",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R10::SHAKE128"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "documented-index-error"
+      }
+    },
+    {
+      "id": "shake256",
+      "family": "SHAKE",
+      "source": {
+        "module": "algorithms/SHAKE/Main.cry",
+        "symbol": "SHAKE256"
+      },
+      "profile": "xof",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "numeric-guards",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/Keccak/Main.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": "VCVio.Algorithms.Keccak.shake256",
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R10::SHAKE256"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "documented-index-error"
+      }
+    },
+    {
+      "id": "rawshake128",
+      "family": "SHAKE",
+      "source": {
+        "module": "algorithms/SHAKE/Main.cry",
+        "symbol": "RawSHAKE128"
+      },
+      "profile": "xof",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "numeric-guards",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/Keccak/Main.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R10::RawSHAKE128"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "documented-index-error"
+      }
+    },
+    {
+      "id": "rawshake256",
+      "family": "SHAKE",
+      "source": {
+        "module": "algorithms/SHAKE/Main.cry",
+        "symbol": "RawSHAKE256"
+      },
+      "profile": "xof",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "numeric-guards",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/Keccak/Main.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R10::RawSHAKE256"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "documented-index-error"
+      }
+    },
+    {
+      "id": "keccak-keccak",
+      "family": "Keccak",
+      "source": {
+        "module": "algorithms/Keccak/Main.cry",
+        "symbol": "Keccak"
+      },
+      "profile": "xof",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "numeric-guards",
+        "productive-streams",
+        "pure-foreign-fallback"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R11::Keccak"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "documented-index-error"
+      }
+    },
+    {
+      "id": "keccak-bitreordering",
+      "family": "Keccak",
+      "source": {
+        "module": "algorithms/Keccak/Main.cry",
+        "symbol": "bitReordering"
+      },
+      "profile": "xof",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "numeric-guards",
+        "productive-streams",
+        "pure-foreign-fallback"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/check_bridge.py",
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R11::bitReordering"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "keccak-tostate",
+      "family": "Keccak",
+      "source": {
+        "module": "algorithms/Keccak/StateConversions.cry",
+        "symbol": "toState"
+      },
+      "profile": "keccak-state",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R12::toState"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "keccak-tostring",
+      "family": "Keccak",
+      "source": {
+        "module": "algorithms/Keccak/StateConversions.cry",
+        "symbol": "toString"
+      },
+      "profile": "keccak-state",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R12::toString"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "keccak-tostatetostringprop",
+      "family": "Keccak",
+      "source": {
+        "module": "algorithms/Keccak/StateConversions.cry",
+        "symbol": "toStatetoStringProp"
+      },
+      "profile": "keccak-state",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R12::toStatetoStringProp"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "keccak-tostringtostateprop",
+      "family": "Keccak",
+      "source": {
+        "module": "algorithms/Keccak/StateConversions.cry",
+        "symbol": "toStringtoStateProp"
+      },
+      "profile": "keccak-state",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R12::toStringtoStateProp"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "aes128-encrypt",
+      "family": "AES",
+      "source": {
+        "module": "algorithms/AES/Main.cry",
+        "symbol": "AES128.Encrypt"
+      },
+      "profile": "aes",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-aggregates",
+        "polynomial-arithmetic",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/AES/Cipher.cry",
+          "algorithms/AES/KeyExpansion.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R13::AES128.Encrypt"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "aes128-decrypt",
+      "family": "AES",
+      "source": {
+        "module": "algorithms/AES/Main.cry",
+        "symbol": "AES128.Decrypt"
+      },
+      "profile": "aes",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-aggregates",
+        "polynomial-arithmetic",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/AES/Cipher.cry",
+          "algorithms/AES/KeyExpansion.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R13::AES128.Decrypt"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "aes192-encrypt",
+      "family": "AES",
+      "source": {
+        "module": "algorithms/AES/Main.cry",
+        "symbol": "AES192.Encrypt"
+      },
+      "profile": "aes",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-aggregates",
+        "polynomial-arithmetic",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/AES/Cipher.cry",
+          "algorithms/AES/KeyExpansion.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R13::AES192.Encrypt"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "aes192-decrypt",
+      "family": "AES",
+      "source": {
+        "module": "algorithms/AES/Main.cry",
+        "symbol": "AES192.Decrypt"
+      },
+      "profile": "aes",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-aggregates",
+        "polynomial-arithmetic",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/AES/Cipher.cry",
+          "algorithms/AES/KeyExpansion.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R13::AES192.Decrypt"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "aes256-encrypt",
+      "family": "AES",
+      "source": {
+        "module": "algorithms/AES/Main.cry",
+        "symbol": "AES256.Encrypt"
+      },
+      "profile": "aes",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-aggregates",
+        "polynomial-arithmetic",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/AES/Cipher.cry",
+          "algorithms/AES/KeyExpansion.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R13::AES256.Encrypt"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "aes256-decrypt",
+      "family": "AES",
+      "source": {
+        "module": "algorithms/AES/Main.cry",
+        "symbol": "AES256.Decrypt"
+      },
+      "profile": "aes",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-aggregates",
+        "polynomial-arithmetic",
+        "pure-foreign-fallback",
+        "full-comprehensions"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/AES/Cipher.cry",
+          "algorithms/AES/KeyExpansion.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R13::AES256.Decrypt"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "crc32-crc",
+      "family": "CRC",
+      "source": {
+        "module": "shared/CRC/CRC32_IEEE_802_3_Ethernet.cry",
+        "symbol": "CRC"
+      },
+      "profile": "crc",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "polynomial-arithmetic",
+        "bounded-folds",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "shared/CRC/Main.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R14::CRC"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "crc32-crcupdate",
+      "family": "CRC",
+      "source": {
+        "module": "shared/CRC/CRC32_IEEE_802_3_Ethernet.cry",
+        "symbol": "CRCUpdate"
+      },
+      "profile": "crc",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "polynomial-arithmetic",
+        "bounded-folds",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "shared/CRC/Main.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R14::CRCUpdate"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "crc32-crcupdatecorrect",
+      "family": "CRC",
+      "source": {
+        "module": "shared/CRC/CRC32_IEEE_802_3_Ethernet.cry",
+        "symbol": "CRCUpdateCorrect"
+      },
+      "profile": "crc",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "polynomial-arithmetic",
+        "bounded-folds",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "shared/CRC/Main.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R14::CRCUpdateCorrect"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "crc32-crcrunning",
+      "family": "CRC",
+      "source": {
+        "module": "shared/CRC/CRC32_IEEE_802_3_Ethernet.cry",
+        "symbol": "CRCRunning"
+      },
+      "profile": "crc",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "polynomial-arithmetic",
+        "bounded-folds",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "shared/CRC/Main.cry"
+        ]
+      },
+      "status": "probe",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [
+        "scripts/test_references.py"
+      ],
+      "wave": 2,
+      "trusted_steps": [],
+      "reference_import": {
+        "stage": "scoped",
+        "manifest": "artifacts/references/manifest.json",
+        "root": "R14::CRCRunning"
+      },
+      "execution_probe": {
+        "target": "pinned-source",
+        "normal": "agreed",
+        "reference": "agreed"
+      }
+    },
+    {
+      "id": "sha1-hash",
+      "family": "SHA1",
+      "source": {
+        "module": "algorithms/SHA1/Main.cry",
+        "symbol": "hash"
+      },
+      "profile": "finite-bits",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "hmac-hmac",
+      "family": "HMAC",
+      "source": {
+        "module": "algorithms/HMAC/Main.cry",
+        "symbol": "HMAC"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "cshake-cshake128",
+      "family": "cSHAKE",
+      "source": {
+        "module": "algorithms/cSHAKE/Main.cry",
+        "symbol": "cSHAKE128"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "cshake-cshake256",
+      "family": "cSHAKE",
+      "source": {
+        "module": "algorithms/cSHAKE/Main.cry",
+        "symbol": "cSHAKE256"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "kmac-kmac128",
+      "family": "KMAC",
+      "source": {
+        "module": "algorithms/KMAC/Main.cry",
+        "symbol": "KMAC128"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "kmac-kmac256",
+      "family": "KMAC",
+      "source": {
+        "module": "algorithms/KMAC/Main.cry",
+        "symbol": "KMAC256"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "kmac-kmacxof128",
+      "family": "KMAC",
+      "source": {
+        "module": "algorithms/KMAC/Main.cry",
+        "symbol": "KMACXOF128"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "kmac-kmacxof256",
+      "family": "KMAC",
+      "source": {
+        "module": "algorithms/KMAC/Main.cry",
+        "symbol": "KMACXOF256"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "tuplehash-tuplehash128",
+      "family": "TupleHash",
+      "source": {
+        "module": "algorithms/TupleHash/Main.cry",
+        "symbol": "TupleHash128"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "tuplehash-tuplehash256",
+      "family": "TupleHash",
+      "source": {
+        "module": "algorithms/TupleHash/Main.cry",
+        "symbol": "TupleHash256"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "tuplehash-tuplehashxof128",
+      "family": "TupleHash",
+      "source": {
+        "module": "algorithms/TupleHash/Main.cry",
+        "symbol": "TupleHashXOF128"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "tuplehash-tuplehashxof256",
+      "family": "TupleHash",
+      "source": {
+        "module": "algorithms/TupleHash/Main.cry",
+        "symbol": "TupleHashXOF256"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "parallelhash-parallelhash128",
+      "family": "ParallelHash",
+      "source": {
+        "module": "algorithms/ParallelHash/Main.cry",
+        "symbol": "ParallelHash128"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "parallelhash-parallelhash256",
+      "family": "ParallelHash",
+      "source": {
+        "module": "algorithms/ParallelHash/Main.cry",
+        "symbol": "ParallelHash256"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "parallelhash-parallelhashxof128",
+      "family": "ParallelHash",
+      "source": {
+        "module": "algorithms/ParallelHash/Main.cry",
+        "symbol": "ParallelHashXOF128"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "parallelhash-parallelhashxof256",
+      "family": "ParallelHash",
+      "source": {
+        "module": "algorithms/ParallelHash/Main.cry",
+        "symbol": "ParallelHashXOF256"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "pbkdf-pbkdf2",
+      "family": "PBKDF",
+      "source": {
+        "module": "algorithms/PBKDF/Main.cry",
+        "symbol": "PBKDF2"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "full-comprehensions",
+        "lazy-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": []
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "keywrapping-kwae",
+      "family": "KeyWrapping",
+      "source": {
+        "module": "algorithms/KeyWrapping/AES128.cry",
+        "symbol": "KWAE"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "lazy-aggregates",
+        "pure-foreign-fallback"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/KeyWrapping/KW.cry",
+          "algorithms/KeyWrapping/KWP.cry",
+          "algorithms/AES/Main.cry"
+        ]
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "keywrapping-kwad",
+      "family": "KeyWrapping",
+      "source": {
+        "module": "algorithms/KeyWrapping/AES128.cry",
+        "symbol": "KWAD"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "lazy-aggregates",
+        "pure-foreign-fallback"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/KeyWrapping/KW.cry",
+          "algorithms/KeyWrapping/KWP.cry",
+          "algorithms/AES/Main.cry"
+        ]
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "keywrapping-kwpae",
+      "family": "KeyWrapping",
+      "source": {
+        "module": "algorithms/KeyWrapping/AES128.cry",
+        "symbol": "KWPAE"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "lazy-aggregates",
+        "pure-foreign-fallback"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/KeyWrapping/KW.cry",
+          "algorithms/KeyWrapping/KWP.cry",
+          "algorithms/AES/Main.cry"
+        ]
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "keywrapping-kwpad",
+      "family": "KeyWrapping",
+      "source": {
+        "module": "algorithms/KeyWrapping/AES128.cry",
+        "symbol": "KWPAD"
+      },
+      "profile": "composition",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "bounded-folds",
+        "lazy-aggregates",
+        "pure-foreign-fallback"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/KeyWrapping/KW.cry",
+          "algorithms/KeyWrapping/KWP.cry",
+          "algorithms/AES/Main.cry"
+        ]
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 3,
+      "trusted_steps": []
+    },
+    {
+      "id": "p256-sign",
+      "family": "ECDSA",
+      "source": {
+        "module": "algorithms/ECDSA/p256.cry",
+        "symbol": "sign"
+      },
+      "profile": "p256",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-aggregates",
+        "modular-arithmetic",
+        "general-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/ECDSA/ECDSA.cry",
+          "algorithms/ECDSA/Routines.cry"
+        ]
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 4,
+      "trusted_steps": []
+    },
+    {
+      "id": "p256-verify",
+      "family": "ECDSA",
+      "source": {
+        "module": "algorithms/ECDSA/p256.cry",
+        "symbol": "verify"
+      },
+      "profile": "p256",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-aggregates",
+        "modular-arithmetic",
+        "general-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/ECDSA/ECDSA.cry",
+          "algorithms/ECDSA/Routines.cry"
+        ]
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 4,
+      "trusted_steps": []
+    },
+    {
+      "id": "p256-private_to_public",
+      "family": "ECDSA",
+      "source": {
+        "module": "algorithms/ECDSA/p256.cry",
+        "symbol": "private_to_public"
+      },
+      "profile": "p256",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-aggregates",
+        "modular-arithmetic",
+        "general-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/ECDSA/ECDSA.cry",
+          "algorithms/ECDSA/Routines.cry"
+        ]
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 4,
+      "trusted_steps": []
+    },
+    {
+      "id": "p256-ec_compress",
+      "family": "ECDSA",
+      "source": {
+        "module": "algorithms/ECDSA/p256.cry",
+        "symbol": "ec_compress"
+      },
+      "profile": "p256",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-aggregates",
+        "modular-arithmetic",
+        "general-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/ECDSA/ECDSA.cry",
+          "algorithms/ECDSA/Routines.cry"
+        ]
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 4,
+      "trusted_steps": []
+    },
+    {
+      "id": "p256-ec_decompress",
+      "family": "ECDSA",
+      "source": {
+        "module": "algorithms/ECDSA/p256.cry",
+        "symbol": "ec_decompress"
+      },
+      "profile": "p256",
+      "required_features": [
+        "ordered-polymorphism",
+        "partial-numerics",
+        "finite-words",
+        "finite-sequences",
+        "module-provenance",
+        "lazy-aggregates",
+        "modular-arithmetic",
+        "general-recursion"
+      ],
+      "dependencies": {
+        "status": "partial",
+        "modules": [
+          "algorithms/ECDSA/ECDSA.cry",
+          "algorithms/ECDSA/Routines.cry"
+        ]
+      },
+      "status": "planned",
+      "implementation": null,
+      "theorems": [],
+      "evidence": [],
+      "wave": 4,
+      "trusted_steps": []
+    }
+  ],
+  "component_equations": [
+    {
+      "kind": "transcribed-equations",
+      "source": "algorithms/Keccak/StateConversions.cry",
+      "assumptions": [
+        "Arbitrary finite lane width, including zero; total indexed input"
+      ],
+      "trusted_steps": [
+        "Manual transcription of lane order; no imported-AST correspondence"
+      ],
+      "theorems": [
+        "Cryptol.Bridge.KeccakCodec.offset_val",
+        "Cryptol.Bridge.KeccakCodec.toString_toState",
+        "Cryptol.Bridge.KeccakCodec.toState_toString"
+      ]
+    },
+    {
+      "kind": "transcribed-equations",
+      "source": "shared/CRC/Main.cry",
+      "assumptions": [
+        "Monic binary generator polynomial",
+        "Byte-aligned input; optional per-byte reflection"
+      ],
+      "trusted_steps": [
+        "Manual transcription of expandedData and remainder equations; no pmod bitvector correspondence"
+      ],
+      "theorems": [
+        "Cryptol.Bridge.CRC.encode_append",
+        "Cryptol.Bridge.CRC.pack_append",
+        "Cryptol.Bridge.CRC.update_append",
+        "Cryptol.Bridge.CRC.finalize_update_append"
+      ]
+    }
+  ]
+}

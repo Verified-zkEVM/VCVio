@@ -12,6 +12,7 @@ import unittest
 UMBRELLAS = (
     "ToMathlib.lean", "VCVio.lean", "VCVioCslib.lean", "LatticeCrypto.lean", "Extern.lean",
     "HashSig.lean", "Examples.lean", "VCVioWidgets.lean", "VCVioTest.lean", "Interop.lean",
+    "Interop/Cryptol/Bridge.lean",
 )
 
 
@@ -23,7 +24,9 @@ class CheckImportsTests(unittest.TestCase):
         scripts = self.root / "scripts"
         scripts.mkdir()
         shutil.copyfile(Path(__file__).with_name("check-imports.sh"), scripts / "check-imports.sh")
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
         for name in UMBRELLAS:
+            (self.root / name).parent.mkdir(parents=True, exist_ok=True)
             (self.root / name).write_text(f"original {name}\n")
 
     def run_check(self, generator="exit 0\n"):
@@ -93,8 +96,10 @@ pathlib.Path(library + ".checked").touch()
 sys.exit(1)
 ''')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual({p.stem for p in self.root.glob("*.checked")},
-                         {Path(p).stem for p in UMBRELLAS})
+        self.assertEqual({str(p.relative_to(self.root).with_suffix(""))
+                          for p in self.root.rglob("*.checked")},
+                         {str(Path(p).with_suffix("")) for p in UMBRELLAS
+                          if p != "Interop.lean"})
 
     def test_generator_does_not_swallow_failed_verification(self):
         result = self.run_real_generator('''import sys

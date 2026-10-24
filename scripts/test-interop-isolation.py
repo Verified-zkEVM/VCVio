@@ -32,9 +32,11 @@ class IsolationTests(unittest.TestCase):
     def test_forbidden_edges_and_modifiers(self):
         edges = [("VCVio/Algorithms/X.lean", "VCVio.OracleComp"),
                  ("VCVio/Algorithms/X.lean", "HashSig"),
-                 ("VCVio/Algorithms/X.lean", "Interop.Hax"),
+                 ("VCVio/Algorithms/X.lean", "Interop.Cryptol.Model"),
+                 ("Interop/Cryptol/Bridge/X.lean", "HashSig"),
                  ("HashSig/X.lean", "Interop.Rust"),
                  ("VCVio.lean", "Interop"),
+                 ("VCVio/X.lean", "PolyFunCryptol.Model.Types"),
                  ("VCVioTest/X.lean", "Hax"),
                  ("Interop/Hax/X.lean", "HashSig")]
         for source, target in edges:
@@ -48,6 +50,9 @@ class IsolationTests(unittest.TestCase):
     def test_allowed_edges_comments_and_multiple_imports(self):
         result = self.check({
             "Interop/Hax/X.lean": "import VCVio\nimport ToMathlib\n",
+            "Interop/Cryptol/Model/X.lean": "module\npublic import PolyFun\nimport Cslib\n",
+            "Interop/Cryptol/Translation/X.lean": "import Interop.Cryptol.Model.X\n",
+            "Interop/Cryptol/Bridge/X.lean": "import VCVio\nimport Interop.Cryptol.Translation.X\n",
             "HashSig/X.lean": "import VCVio\n/- outer /- nested -/ import Interop -/\n",
             "VCVio/Schemes/X.lean": "module\npublic import VCVio.CryptoFoundations.X\n",
             "VCVio/Algorithms/X.lean": "import Mathlib\nimport ToMathlib\nimport PolyFun\nimport VCVio.Algorithms.Y\n",
