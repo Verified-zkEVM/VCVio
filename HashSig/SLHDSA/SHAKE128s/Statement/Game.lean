@@ -95,11 +95,6 @@ inductive QueryKind where
   | verification
 deriving DecidableEq
 
-/-- The three query kinds of the adversary's phase. -/
-instance : Fintype QueryKind where
-  elems := {.signing, .hash, .verification}
-  complete := by intro kind; cases kind <;> decide
-
 /-- A count per kind. -/
 abbrev Counts := QueryKind → Nat
 

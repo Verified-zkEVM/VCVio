@@ -8,7 +8,9 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.Hashing
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
-public import Mathlib.Tactic.DeriveFintype
+public import Mathlib.Basic.Finite.Prod
+public import Mathlib.Basic.Finite.Sigma
+public import Mathlib.Basic.Finite.Sum
 
 /-!
 # Finite canonical structural coordinates
@@ -35,7 +37,7 @@ structure Tree where
   layer : Fin layers
   /-- The index of the tree within its layer. -/
   tree : Fin (2 ^ (totalHeight - subtreeHeight))
-deriving DecidableEq, Fintype
+deriving DecidableEq
 
 /-- A WOTS+ key pair: an XMSS tree and the leaf it occupies. -/
 structure WotsKey where
@@ -43,7 +45,7 @@ structure WotsKey where
   tree : Tree
   /-- The leaf index of the key pair in its tree. -/
   leaf : Fin (2 ^ subtreeHeight)
-deriving DecidableEq, Fintype
+deriving DecidableEq
 
 /-- A FORS key pair, attached to a leaf of a bottom-layer XMSS tree. -/
 structure ForsKey where
@@ -51,7 +53,7 @@ structure ForsKey where
   tree : Fin (2 ^ (totalHeight - subtreeHeight))
   /-- The leaf of that tree the FORS key pair signs under. -/
   leaf : Fin (2 ^ subtreeHeight)
-deriving DecidableEq, Fintype
+deriving DecidableEq
 
 /-- The hypertree address of an XMSS tree. -/
 @[expose] def Tree.address (tree : Tree) : Address :=
@@ -85,7 +87,7 @@ inductive StructuralNode where
       (index : Fin (forsTrees * 2 ^ (forsHeight - height.val)))
   /-- The compressed FORS public key. -/
   | forsRoots (key : ForsKey)
-deriving DecidableEq, Fintype
+deriving DecidableEq
 
 /-- A node of the computation graph: the secret seed or a structural node. -/
 inductive Node where
@@ -93,7 +95,7 @@ inductive Node where
   | secretSeed
   /-- A structural node. -/
   | structural (node : StructuralNode)
-deriving DecidableEq, Fintype
+deriving DecidableEq
 
 /-- The address under which a structural node is computed. -/
 @[expose] def StructuralNode.address : StructuralNode → Address
@@ -118,6 +120,66 @@ deriving DecidableEq, Fintype
   | .forsPrf _ _ => 1
   | .forsTree _ height _ => 2 + height.val
   | .forsRoots _ => 15
+
+/-! ## Finiteness
+
+Each coordinate type injects into a sum of products of finite types. The `Fintype` instances
+come from `Fintype.ofFinite`, so loading this module builds no enumeration.
+-/
+
+/-- A tree is determined by its layer and index. -/
+instance : Finite Tree :=
+  Finite.of_injective (fun tree : Tree => (tree.layer, tree.tree)) <| by
+    rintro ⟨⟩ ⟨⟩ h
+    simp_all
+
+/-- A WOTS+ key pair is determined by its tree and leaf. -/
+instance : Finite WotsKey :=
+  Finite.of_injective (fun key : WotsKey => (key.tree, key.leaf)) <| by
+    rintro ⟨⟩ ⟨⟩ h
+    simp_all
+
+/-- A FORS key pair is determined by its tree index and leaf. -/
+instance : Finite ForsKey :=
+  Finite.of_injective (fun key : ForsKey => (key.tree, key.leaf)) <| by
+    rintro ⟨⟩ ⟨⟩ h
+    simp_all
+
+/-- The fields of a structural node, one summand per constructor. -/
+private def StructuralNode.fields : StructuralNode →
+    (WotsKey × Fin chains) ⊕ (WotsKey × Fin chains × Fin (w - 1)) ⊕ WotsKey ⊕
+      (Tree × (height : Fin subtreeHeight) × Fin (2 ^ (subtreeHeight - (height.val + 1)))) ⊕
+      (ForsKey × Fin (forsTrees * 2 ^ forsHeight)) ⊕
+      (ForsKey × (height : Fin (forsHeight + 1)) ×
+        Fin (forsTrees * 2 ^ (forsHeight - height.val))) ⊕ ForsKey
+  | .wotsPrf key chain => .inl (key, chain)
+  | .wotsHash key chain step => .inr (.inl (key, chain, step))
+  | .wotsPk key => .inr (.inr (.inl key))
+  | .tree location height index => .inr (.inr (.inr (.inl (location, ⟨height, index⟩))))
+  | .forsPrf key index => .inr (.inr (.inr (.inr (.inl (key, index)))))
+  | .forsTree key height index => .inr (.inr (.inr (.inr (.inr (.inl (key, ⟨height, index⟩))))))
+  | .forsRoots key => .inr (.inr (.inr (.inr (.inr (.inr key)))))
+
+/-- A structural node is determined by its constructor and fields. -/
+instance : Finite StructuralNode :=
+  Finite.of_injective StructuralNode.fields <| by
+    intro left right h
+    cases left <;> cases right <;> simp_all [StructuralNode.fields]
+
+/-- A node is the secret seed or a structural node. -/
+instance : Finite Node :=
+  Finite.of_injective
+    (fun node : Node => match node with
+      | .secretSeed => (none : Option StructuralNode)
+      | .structural node => some node) <| by
+    intro left right h
+    cases left <;> cases right <;> simp_all
+
+/-- The structural nodes, enumerated through `Finite StructuralNode`. -/
+noncomputable instance : Fintype StructuralNode := Fintype.ofFinite _
+
+/-- The nodes, enumerated through `Finite Node`. -/
+noncomputable instance : Fintype Node := Fintype.ofFinite _
 
 /-- The depth of a node in the computation graph, zero for the secret seed. -/
 @[expose] def Node.rank : Node → Nat

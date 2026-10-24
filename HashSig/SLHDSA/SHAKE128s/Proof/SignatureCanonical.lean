@@ -23,10 +23,6 @@ public section
 
 namespace SlhDsaSecurity
 
-deriving instance Fintype for XmssSignature
-deriving instance Fintype for ForsTreeSignature
-deriving instance Fintype for Signature
-
 /-- An XMSS signature as its pair of fields. -/
 private def xmssFields : XmssSignature ≃ WotsSignature × (Fin subtreeHeight → Digest) where
   toFun signature := (signature.wots, signature.authentication)
@@ -48,19 +44,28 @@ private def signatureFields : Signature ≃ Digest × ForsSignature × Hypertree
   left_inv := by intro signature; rfl
   right_inv := by intro fields; rfl
 
+/-- An XMSS signature is a finite tuple of digests. -/
+instance : Finite XmssSignature := Finite.of_equiv _ xmssFields.symm
+
+/-- A FORS tree signature is a finite tuple of digests. -/
+instance : Finite ForsTreeSignature := Finite.of_equiv _ forsFields.symm
+
+/-- A signature is a finite tuple of digests. -/
+instance : Finite Signature := Finite.of_equiv _ signatureFields.symm
+
 /-- There are exactly `2 ^ (8 * signatureBytes)` signatures. -/
-theorem Signature.card : Fintype.card Signature = 2 ^ (8 * signatureBytes) := by
-  have hxmss : Fintype.card XmssSignature = (2 ^ (8 * n)) ^ (chains + subtreeHeight) := by
-    rw [Fintype.card_congr xmssFields]
-    simp only [WotsSignature, Fintype.card_prod, Fintype.card_fun, Fintype.card_fin,
-      Digest, Fintype.card_bitVec, pow_add]
-  have hfors : Fintype.card ForsTreeSignature = (2 ^ (8 * n)) ^ (1 + forsHeight) := by
-    rw [Fintype.card_congr forsFields]
-    simp only [Fintype.card_prod, Fintype.card_fun, Fintype.card_fin,
-      Digest, Fintype.card_bitVec, pow_add, pow_one]
-  rw [Fintype.card_congr signatureFields]
-  simp only [ForsSignature, HypertreeSignature, Fintype.card_prod, Fintype.card_fun,
-    Fintype.card_fin, hxmss, hfors, Digest, Fintype.card_bitVec, ← pow_mul, ← pow_add]
+theorem Signature.card : Nat.card Signature = 2 ^ (8 * signatureBytes) := by
+  have hdigest : Nat.card Digest = 2 ^ (8 * n) := by
+    rw [Nat.card_eq_fintype_card, Fintype.card_bitVec]
+  have hxmss : Nat.card XmssSignature = (2 ^ (8 * n)) ^ (chains + subtreeHeight) := by
+    rw [Nat.card_congr xmssFields]
+    simp only [WotsSignature, Nat.card_prod, Nat.card_fun, Nat.card_fin, hdigest, pow_add]
+  have hfors : Nat.card ForsTreeSignature = (2 ^ (8 * n)) ^ (1 + forsHeight) := by
+    rw [Nat.card_congr forsFields]
+    simp only [Nat.card_prod, Nat.card_fun, Nat.card_fin, hdigest, pow_add, pow_one]
+  rw [Nat.card_congr signatureFields]
+  simp only [ForsSignature, HypertreeSignature, Nat.card_prod, Nat.card_fun, Nat.card_fin, hxmss,
+    hfors, hdigest, ← pow_mul, ← pow_add]
   apply congrArg (fun exponent : Nat => 2 ^ exponent)
   rfl
 
@@ -77,11 +82,10 @@ theorem Signature.encodeFixed_injective : Function.Injective encodeFixed := by
 
 /-- The fixed-length encoding is a bijection onto byte strings of the standard length. -/
 theorem Signature.encodeFixed_bijective : Function.Bijective encodeFixed := by
-  apply (Fintype.bijective_iff_injective_and_card _).2
-  refine ⟨encodeFixed_injective, ?_⟩
-  rw [card, Fintype.card_congr (Equiv.vectorEquivFin UInt8 signatureBytes)]
-  rw [Fintype.card_fun, Fintype.card_fin,
-    ← FinEnum.card_eq_fintypeCard (α := UInt8), FinEnum.card_UInt8, pow_mul]
+  refine encodeFixed_injective.bijective_of_nat_card_le (le_of_eq ?_)
+  rw [card, Nat.card_congr (Equiv.vectorEquivFin UInt8 signatureBytes), Nat.card_fun,
+    Nat.card_fin, Nat.card_eq_fintype_card (α := UInt8), ← FinEnum.card_eq_fintypeCard,
+    FinEnum.card_UInt8, pow_mul]
 
 /-- Every accepted byte string is precisely the canonical encoding of its parsed signature. -/
 theorem Signature.toBytes_fromBytes {input : Bytes} {signature : Signature}

@@ -33,11 +33,6 @@ inductive QueryKind where
   | verifier
 deriving DecidableEq, Repr
 
-/-- The five query kinds of the experiment. -/
-instance : Fintype QueryKind where
-  elems := {.sign, .hash, .keygen, .signer, .verifier}
-  complete := by intro kind; cases kind <;> decide
-
 /-- A count per kind of query. -/
 abbrev QueryCounts := QueryKind → ℕ
 
