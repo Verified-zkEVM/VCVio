@@ -25,8 +25,8 @@ All four branches stack, bottom to top. They are local to Devon's machine (workt
 | `experimental/v4.35-bump` | `d3c00ab` | `main` | Bump to Lean v4.35.0. Draft PR NethermindEth/Foxglove#2. |
 | `experimental/vcvio-measure-bridge` | `bef60aa` | the bump | Foxglove's semantics of `OracleComp` agrees with VCVio's. Draft PR NethermindEth/Foxglove#3. |
 | `experimental/vcvio-measure-adequacy` | `97b963b` | the bridge | Adequacy: Foxglove laws are VCVio distributions. Draft PR NethermindEth/Foxglove#4. |
-| `experimental/vcvio-free` | `3bd934b` | the bump | The dependency reversal: Foxglove without VCVio (requires cslib directly). `Split`, a VCVio-free `Adequacy` (`lawPMF`), `Rules/Derived`, `Rules/Independence`, the `⦃X, Q⦄` notation scoped. VCVio's `spike/foxglove-bridge` pins this commit. |
-| `spike/wpv-lax-v435` | `e3308c9` | the adequacy branch | The value-level `wp` is a lax WP on convex postconditions. |
+| `experimental/vcvio-free` | `3bd934b` | the bump | The dependency reversal: Foxglove without VCVio (requires cslib directly). `Split`, a VCVio-free `Adequacy` (`lawPMF`), `Rules/Derived`, `Rules/Independence`, the `⦃X, Q⦄` notation scoped. VCVio's `spike/foxglove-bridge` pins this commit. Draft PR dtumad/Foxglove#1 (within the fork). |
+| `spike/wpv-lax-v435` | `e3308c9` | the adequacy branch | The value-level `wp` is a lax WP on convex postconditions. Draft PR dtumad/Foxglove#2 (within the fork). |
 
 Local only and superseded: `dtumad/vcvio-bridge`, `dtumad/vcvio-adequacy` and `spike/wpv-lax`
 (versions before the v4.35 bump); `dtumad/v4.35-repin` is `experimental/v4.35-bump`.
@@ -102,5 +102,8 @@ VCVioWidgets `Html` clash, an ML-DSA `decide` recursion depth; watch the `mkAppM
 
 ## Remote copies
 
-- Foxglove: the five branches above are on `dtumad/Foxglove`.
+- Foxglove: the five branches above are on `dtumad/Foxglove`. Draft PRs within the fork:
+  https://github.com/dtumad/Foxglove/pull/1 (dependency reversal) and
+  https://github.com/dtumad/Foxglove/pull/2 (lax WP). Upstream drafts:
+  https://github.com/NethermindEth/Foxglove/pull/2, /3, /4.
 - VCVio: not yet pushed; there is no `dtumad/VCVio` fork.
