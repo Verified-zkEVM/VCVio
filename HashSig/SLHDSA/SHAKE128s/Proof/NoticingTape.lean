@@ -229,7 +229,7 @@ theorem prob_selected_hit_le_of_causal {ρ : Type}
         · rintro result ⟨hselected, hgood, other, hread, hhit⟩
           exact ⟨⟨hgood, (eq_of_getElem?_set rightTape index value other hread) ▸ hhit⟩,
             hselected⟩
-        · rw [probEvent_const_and]
+        · rw [prEvent_const_and]
           by_cases hcase : goodBlock leftTape ∧ hit leftTape value
           · rw [ite_eq_left hcase, ite_eq_left hcase, htarget]
             exact le_of_eq (hcausal leftTape rightTape value)
@@ -481,7 +481,7 @@ open scoped Classical in
 /-- **Once the recording is long enough the whole rest of the run keeps it so.** The
 continuation form of the single-run statement: the run only grows the recording and the
 continuation only grows it further. -/
-theorem probEvent_length_eq_one_cont (leftKeep rightKeep : Bytes → σ → Prop)
+theorem prEvent_length_eq_one_cont (leftKeep rightKeep : Bytes → σ → Prop)
     {α γ : Type} (computation : OracleComp OracleWorld α)
     (after : α × SplitTapeState σ → ProbComp γ) (finalRight : γ → Record)
     (hgrow : ∀ (z : α × SplitTapeState σ) (w : γ), w ∈ support (after z) ->

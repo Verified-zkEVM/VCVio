@@ -25,7 +25,7 @@ over `2 ^ 128` for any game whose blind runs keep the charged entries within `bo
 
 The claims file nothing once the flag is up, so the charge is taken at the blind handler's
 filing form (`ShareBlindFacts.filing`), which files them whatever the flag: its flag has the blind
-game's law (`probEvent_flagGame_eq`).
+game's law (`prEvent_flagGame_eq`).
 
 An entry locating a node is prefixed by the public seed, so the two kinds of guess are counted
 against disjoint parts of the record and add to at most its length (`charged_le_length`).
@@ -177,7 +177,7 @@ theorem ex_add {β : Type} (mx : ProbComp β) (f g : β → ℝ≥0∞) :
   exact tsum_congr fun x => (mul_add _ _ _).symm
 
 /-- A draw nothing after it reads leaves an event's chance alone. -/
-theorem probEvent_bind_const {β γ : Type} (mx : ProbComp β) (f : β → ProbComp γ)
+theorem prEvent_bind_eq_of_forall_eq {β γ : Type} (mx : ProbComp β) (f : β → ProbComp γ)
     (event : γ → Prop) (c : ℝ≥0∞) (h : ∀ x, Pr{let y ← f x}[event y] = c) :
     Pr{let x ← mx >>= f}[event x] = c := by
   rw [OracleComp.prEvent_bind_eq_tsum]
@@ -293,17 +293,17 @@ theorem map_filingGame (publicSeed : Digest)
   simp only [filingGame, blindGame, map_bind, map_pure, ← map_filingRun, bind_map_left]
 
 /-- **The flag, off a bad walk, has the same law in the blind run and its filing form.** -/
-theorem probEvent_flagRun_eq (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool))
+theorem prEvent_flagRun_eq (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool))
     (setup : Setup) :
     Pr{let z ← flagRun comp setup}[setup.Good ∧ z.2.2 = true] =
       Pr{let z ← filingRun comp setup}[setup.Good ∧ z.2.2 = true] := by
   by_cases hgood : setup.Good
   · simp only [hgood, true_and]
-    exact (probEvent_filing_eq _ _ St.start).symm
+    exact (prEvent_filing_eq _ _ St.start).symm
   · simp [hgood]
 
 /-- **The same in the game.** -/
-theorem probEvent_flagGame_eq (publicSeed : Digest)
+theorem prEvent_flagGame_eq (publicSeed : Digest)
     (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
     Pr{let w ← flagGame publicSeed comp}[w.1.Good ∧ w.2.2.2 = true] =
       Pr{let w ← filingGame publicSeed comp}[w.1.Good ∧ w.2.2.2 = true] := by
@@ -313,7 +313,7 @@ theorem probEvent_flagGame_eq (publicSeed : Digest)
   rw [OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_bind_eq_tsum]
   refine tsum_congr fun table => congrArg (_ * ·) ?_
   rw [bind_pure_comp, bind_pure_comp, prEvent_map, prEvent_map]
-  exact probEvent_flagRun_eq comp _
+  exact prEvent_flagRun_eq comp _
 
 /-- The blind run at a drawn table, `SK.prf` fixed at a default. -/
 @[expose] noncomputable def tableGame (publicSeed : Digest)
@@ -332,7 +332,7 @@ theorem flag_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec
       Pr{let w ← blindGame publicSeed comp}[(∃ entry ∈ w.2.2.record, Sens w.1 entry.2 entry.1) ∨
           (∃ entry ∈ w.2.2.record, ¬ Target127.SeedPrefixed publicSeed entry.1 ∧
             RandomizerGate.PrfClass w.1.prf entry.1)] := by
-  rw [probEvent_flagGame_eq, ← map_filingGame, prEvent_map]
+  rw [prEvent_flagGame_eq, ← map_filingGame, prEvent_map]
   refine prEvent_mono_of_support _ _ _ fun w hw hevent => ?_
   obtain ⟨hgood, hflag⟩ := hevent
   simp only [filingGame, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hw
@@ -367,7 +367,7 @@ theorem sens_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec
       Pr{let tz ← tableGame publicSeed comp}[∃ entry ∈ tz.2.2.record,
         Sens ⟨default, publicSeed, tz.1⟩ entry.2 entry.1] := by
     unfold blindGame
-    refine probEvent_bind_const _ _ _ _ fun prf => ?_
+    refine prEvent_bind_eq_of_forall_eq _ _ _ _ fun prf => ?_
     unfold tableGame
     simp only [blindRun_prf comp publicSeed prf default]
     rw [OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_bind_eq_tsum]
@@ -463,7 +463,7 @@ theorem prf_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec 
       simp only [bind_assoc, pure_bind]
     simp only [hshape]
     exact OracleComp.EvalDistEq.bind_bind_swap _ _ _
-  rw [hlaw.prEvent_eq, BlindCharge.probEvent_eq_ex_bind, ← BlindCharge.ex_div_const]
+  rw [hlaw.prEvent_eq, BlindCharge.prEvent_eq_ex_bind, ← BlindCharge.ex_div_const]
   refine BlindCharge.ex_mono _ fun tz => ?_
   rw [bind_pure_comp, prEvent_map]
   exact prob_prf_list_le publicSeed tz.2.2.record

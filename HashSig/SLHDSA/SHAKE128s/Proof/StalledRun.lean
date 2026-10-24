@@ -30,7 +30,7 @@ becomes available. Three facts then do the work, and none of them needs a set fi
   reads only available cells actually has.
 * Stalling does not change the event. A probe can only be charged against a cell that is
   unavailable when the probe is made, and availability only grows, so no charge can arise after
-  the stall. `probEvent_flag_stalled_eq` is that: a run whose flag can no longer change may be
+  the stall. `prEvent_flag_stalled_eq` is that: a run whose flag can no longer change may be
   stopped without changing the flag's law.
 * So the charge against one cell is the charge against the stalled run, which is blind to it.
 
@@ -134,7 +134,7 @@ private theorem lintegral_frozen {γ : Type}
     exact lintegral_const_of_support _ _ _ fun y hmem => by
       rw [ih y.1 y.2 (hfrozen t p hp y hmem), hquiet t p hp y hmem]
 
-/-- `probEvent_flag_frozen`, from a run that keeps its flag while frozen. -/
+/-- `prEvent_flag_frozen`, from a run that keeps its flag while frozen. -/
 private theorem prEvent_flag_frozen_aux {γ : Type}
     (impl : QueryImpl spec (StateT (σ × Bool) ProbComp)) (Frozen : σ → Prop)
     (hfrozen : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
@@ -155,7 +155,7 @@ private theorem prEvent_flag_frozen_aux {γ : Type}
       rw [ih y.1 y.2 (hfrozen t p hp y hmem), hquiet t p hp y hmem]
 
 /-- **A frozen run keeps the flag it started with.** -/
-theorem probEvent_flag_frozen {γ : Type} (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
+theorem prEvent_flag_frozen {γ : Type} (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
     (Frozen : σ → Prop)
     (hfrozen : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
       ∀ z ∈ support ((impl t).run p), Frozen z.2.1)
@@ -169,7 +169,7 @@ theorem probEvent_flag_frozen {γ : Type} (impl : QueryImpl spec (StateT (σ × 
 open scoped Classical in
 /-- **Stalling does not change the flag.** Once the flag can no longer change, stopping the run
 there leaves its law alone. -/
-theorem probEvent_flag_stalled_eq {γ : Type}
+theorem prEvent_flag_stalled_eq {γ : Type}
     (impl : QueryImpl spec (StateT (σ × Bool) ProbComp)) (Frozen : σ → Prop)
     (stall : (t : spec.Domain) → spec.Range t)
     (hfrozen : ∀ (t : spec.Domain) (p : σ × Bool), Frozen p.1 →
@@ -231,7 +231,7 @@ theorem expectation_frozen {γ : Type} (impl : QueryImpl spec (StateT (σ × Boo
 
 open scoped Classical in
 /-- **Stalling preserves the expectation of a quantity that cannot change while frozen.**
-`probEvent_flag_stalled_eq` is the case of a sticky flag; a count of events that can only occur
+`prEvent_flag_stalled_eq` is the case of a sticky flag; a count of events that can only occur
 while unfrozen is the case this is wanted for. -/
 theorem expectation_stalled_eq {γ : Type}
     (impl : QueryImpl spec (StateT (σ × Bool) ProbComp)) (Frozen : σ → Prop)

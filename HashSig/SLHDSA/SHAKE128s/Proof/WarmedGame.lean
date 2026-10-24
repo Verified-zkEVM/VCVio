@@ -125,7 +125,7 @@ theorem evalDist_outcome (adversary : Adversary) :
 
 /-- **The target's event, transferred to the warmed run.** The winning event looks only at the
 outcome, so warming — which changes the cache, and only the cache — leaves it alone. -/
-theorem probEvent_warmed (adversary : Adversary) (event : Outcome × Nat → Prop) :
+theorem prEvent_warmed (adversary : Adversary) (event : Outcome × Nat → Prop) :
     Pr{let result ← WholeGameStructural.instrumentedRun adversary}[event result.1] =
       Pr{let result ← warmedRun adversary}[event result.1.2] := by
   rw [← prEvent_map (WholeGameStructural.instrumentedRun adversary) Prod.fst event,
@@ -138,7 +138,7 @@ The charges apply to what happens *after* the graph is walked, with the cells he
 the cache already carrying them. So the run is split in two: `graphWalk`, which draws the
 seeds and evaluates the canonical graph, and `tail`, which plays the counted game from the
 cache the walk left. A bound that holds after every walk holds for the run, by
-`Averaging.probEvent_bind_pair_le`; nothing else about the walk is used, since its output is an
+`Averaging.prEvent_bind_pair_le`; nothing else about the walk is used, since its output is an
 arbitrary fixed cell table from here on. -/
 
 /-- The seeds and the canonical graph's evaluation, with the cache they leave. -/

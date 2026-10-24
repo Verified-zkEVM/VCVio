@@ -24,7 +24,7 @@ result) at such a tail, and `forgetRecordings` is the map from it to the recorde
 The ordering event is not a predicate of the recorded pair alone: the record is a multiset, so
 it remembers which queries were made and how often, not in which order, and the event is an
 ordering. So it is read at a pair that carries the recordings besides, while everything defined
-on the recorded pair keeps its probability under `forgetRecordings`, by `probEvent_forget`, once
+on the recorded pair keeps its probability under `forgetRecordings`, by `prEvent_forget`, once
 the presentation satisfies `ForgetsTo`.
 -/
 
@@ -83,7 +83,7 @@ asking for something nobody can give and nothing here uses. -/
 
 open scoped Classical in
 /-- **Every event the join already has keeps its probability.** -/
-theorem probEvent_forget {fused : FusedTail} {adversary : Adversary}
+theorem prEvent_forget {fused : FusedTail} {adversary : Adversary}
     (hforget : ForgetsTo fused adversary) (event : SharedJoin.RecordedPair → Prop) :
     Pr{let pair ← pairedOf fused adversary}[event (forgetRecordings pair)] =
       Pr{let x ← RandomiserRecord.recordedPairedRun adversary}[event x] := by

@@ -16,7 +16,7 @@ Off the flag the lenient and the blind handler take the same step. The flag is r
 the queries at which their answers could differ — a canonical input at a closed node is a
 sensitive probe, a `PRF_msg` input at the real seed is in its class, and a drawn randomiser
 equal to the seed is the signer's coincidence — so VCVio's identical-until-bad law
-(`OracleComp.ProgramLogic.Relational.probEvent_output_bad_eq'`) gives the flag the same
+(`OracleComp.ProgramLogic.Relational.prEvent_simulateQ_run_bad_eq`) gives the flag the same
 probability in both.
 
 The two facts about the table that make "closed" mean "sensitive" are here too:
@@ -229,7 +229,7 @@ theorem mono (lenient : Bool) (setup : Setup) (queried : ShareSpec.Domain)
     simp
 
 /-- **The flag has the same law in both games.** -/
-theorem probEvent_bad_eq (setup : Setup) {α : Type} (computation : OracleComp ShareSpec α)
+theorem prEvent_bad_eq (setup : Setup) {α : Type} (computation : OracleComp ShareSpec α)
     (start : St) :
     Pr{let z ← (simulateQ (handler true setup) computation).run (start, false)}[z.2.2 = true] =
       Pr{let z ← (simulateQ (handler false setup) computation).run (start, false)}[z.2.2 = true] :=

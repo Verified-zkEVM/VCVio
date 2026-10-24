@@ -12,7 +12,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.VerifierTally
 /-!
 # The joint cap's two hypotheses, from the budget
 
-`ShareJoint.probEvent_realFlat_le` compares the flattened real game with the jointly capped one
+`ShareJoint.prEvent_realFlat_le` compares the flattened real game with the jointly capped one
 under two hypotheses. Both follow from `BySourceBridge.TailBudgetW` at a drawn table, with the
 adversary capped at `q - 569`:
 
@@ -115,7 +115,7 @@ theorem verify_le {adversary : Adversary} {q : Nat}
 
 /-- **At a drawn table, an event of the real game with an accepted forgery is at most as likely
 in the game capped jointly at `q - 569`.** -/
-theorem probEvent_realFlat_le {adversary : Adversary} {q : Nat}
+theorem prEvent_realFlat_le {adversary : Adversary} {q : Nat}
     (hbudget : TailBudgetW adversary q) (prfSeed publicSeed : Digest) (table : Cells × Padding)
     (event : (((Forgery × Multiplicative Tally) × (Bool × Tally)) × SigningLog) ×
       QueryCache HashSpec → Prop) :
@@ -123,7 +123,7 @@ theorem probEvent_realFlat_le {adversary : Adversary} {q : Nat}
           (walkOfTable prfSeed publicSeed table).2)}[event r ∧ r.1.1.2.1 = true] ≤
       Pr{let x ← (ShareJoint.realFlatJ adversary (q - 569) (keysOf prfSeed publicSeed table)
         (walkOfTable prfSeed publicSeed table).2)}[event x] :=
-  ShareJoint.probEvent_realFlat_le adversary (q - 569) _ _ event
+  ShareJoint.prEvent_realFlat_le adversary (q - 569) _ _ event
     (accepted_le hbudget prfSeed publicSeed table) (verify_le hbudget prfSeed publicSeed table)
 
 end SlhDsaSecurity.JointBudget

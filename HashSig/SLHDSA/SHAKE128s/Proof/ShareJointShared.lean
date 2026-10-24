@@ -17,7 +17,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.BySourceShared
 and the chain has three links, with the jointly capped games:
 
 * the real event with an accepted forgery is at most as likely in the jointly capped real game
-  (`JointBudget.probEvent_realFlat_le`, at `limit = q - 569`);
+  (`JointBudget.prEvent_realFlat_le`, at `limit = q - 569`);
 * that is at most the lenient flag, and so the blind flag (`SetupBound`);
 * the blind flag is at most the charged entries over `2 ^ 128`, at most `q - 569 + 330 + 231 =
   q - 8` of them (`ShareJointBound.charged_blindRun_shareCompJ`).
@@ -60,14 +60,14 @@ theorem walk_bound {adversary : Adversary} {q : Nat} (hbudget : TailBudgetW adve
   classical
   by_cases hgood : (ShareFinal.setupOf prfSeed publicSeed table).Good
   · refine le_trans (prEvent_mono _ _ _ fun result hevent => hevent.2) ?_
-    have hlinked := SharePresent.probEvent_recordedTail_linked adversary prfSeed publicSeed table
+    have hlinked := SharePresent.prEvent_recordedTail_linked adversary prfSeed publicSeed table
       (fun x => (RoutedSplit.InputBad (SharedJoin.recordedTraceOf
           (WalkTable.walkOfTable prfSeed publicSeed table, ((x.1, 0), x.2))) ∨
         Target127.Late (WalkTable.walkOfTable prfSeed publicSeed table, ((x.1, 0), x.2))) ∧
         x.1.1.verified = true)
     refine le_trans (le_of_eq hlinked) ?_
     rw [SharePresent.linkedRun_eq]
-    refine le_trans (le_trans ?_ (JointBudget.probEvent_realFlat_le hbudget prfSeed publicSeed
+    refine le_trans (le_trans ?_ (JointBudget.prEvent_realFlat_le hbudget prfSeed publicSeed
       table (fun r => ShareFinal.RealEvent (ShareFinal.setupOf prfSeed publicSeed table) r ∧
         r.1.1.2.1 = true))) ?_
     · exact prEvent_mono _ _ _ fun r h => ⟨h, h.2⟩
@@ -104,11 +104,11 @@ theorem hshared (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adversa
                     (WalkTable.walkOfTable prfSeed publicSeed table, result)) ∨
                   Target127.Late (WalkTable.walkOfTable prfSeed publicSeed table, result)) ∧
                 result.1.1.1.verified = true] := by
-        rw [probEvent_eq_ex_bind]
+        rw [prEvent_eq_ex_bind]
         refine ex_congr _ fun prfSeed => ?_
-        rw [probEvent_eq_ex_bind]
+        rw [prEvent_eq_ex_bind]
         refine ex_congr _ fun publicSeed => ?_
-        rw [RecordedWalkTable.recordedTableRun, probEvent_eq_ex_bind]
+        rw [RecordedWalkTable.recordedTableRun, prEvent_eq_ex_bind]
         refine ex_congr _ fun table => ?_
         rw [bind_pure_comp, prEvent_map]
     _ ≤ ex ($ᵗ Digest : ProbComp Digest) fun prfSeed => ex ($ᵗ Digest : ProbComp Digest)
@@ -128,9 +128,9 @@ theorem hshared (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adversa
           Pr{let w ← ShareBound.flagGame publicSeed (ShareJoint.shareCompJ adversary (q - 569))}[
             w.1.Good ∧ w.2.2.2 = true] := by
         refine ex_congr _ fun publicSeed => ?_
-        rw [ShareBound.flagGame, probEvent_eq_ex_bind]
+        rw [ShareBound.flagGame, prEvent_eq_ex_bind]
         refine ex_congr _ fun prfSeed => ?_
-        rw [probEvent_eq_ex_bind]
+        rw [prEvent_eq_ex_bind]
         refine ex_congr _ fun table => ?_
         rw [bind_pure_comp, prEvent_map]
         rfl

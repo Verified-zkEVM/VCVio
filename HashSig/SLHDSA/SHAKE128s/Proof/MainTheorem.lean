@@ -35,7 +35,7 @@ so an event about the value alone has the same probability either way. -/
 
 /-- **An event about the value alone does not see the cache.** The cache-keeping run is
 `WholeGameStructural.instrumentedRun`; this says the projection costs nothing. -/
-theorem probEvent_runAll (adversary : Adversary) (event : Outcome × Nat → Prop) :
+theorem prEvent_runAll (adversary : Adversary) (event : Outcome × Nat → Prop) :
     Pr{let x ← runAll adversary}[event x] =
       Pr{let result ← WholeGameStructural.instrumentedRun adversary}[event result.1] := by
   rw [runAll, RandomOracleModel.run, WholeGameStructural.instrumentedRun,

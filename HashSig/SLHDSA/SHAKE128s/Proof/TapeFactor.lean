@@ -500,7 +500,7 @@ theorem eq_of_getElem?_set (tape : List HashOutput) (index : Nat) (value other :
 
 open scoped Classical in
 /-- A constant conjunct factors out of an event. -/
-theorem probEvent_const_and {γ : Type} (run : ProbComp γ) (constant : Prop)
+theorem prEvent_const_and {γ : Type} (run : ProbComp γ) (constant : Prop)
     (event : γ → Prop) :
     Pr{let value ← run}[constant ∧ event value] =
       if constant then Pr{let x ← run}[event x] else 0 := by

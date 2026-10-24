@@ -114,7 +114,7 @@ theorem prob_bad_walk_pairedFused {γ : Type}
     Pr{let pair ← pairedFused fused}[¬ GoodWalk pair.1] ≤
       1 / ((2 ^ 128 : Nat) : ℝ≥0∞) + 1 / ((2 ^ 165 : Nat) : ℝ≥0∞) := by
   classical
-  refine le_trans (WalkDefects.probEvent_bind_pair_split_le graphWalk fused
+  refine le_trans (WalkDefects.prEvent_bind_pair_split_le graphWalk fused
     (fun walk _ => ¬ GoodWalk walk) (fun walk => ¬ GoodWalk walk) 0
     fun walk _ hgood => ?_) ?_
   · rw [show (fun _ : γ => ¬ GoodWalk walk) = fun _ => False from by

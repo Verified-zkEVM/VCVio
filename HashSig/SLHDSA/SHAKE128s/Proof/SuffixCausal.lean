@@ -13,8 +13,8 @@ import VCVio.OracleComp.EvalDist.Sum
 # Reaching a target cell does not read any cell at or after it
 
 Whether a run reaches target cell `index` does not move when any cell `cell ≥ index` of the
-target tape is overwritten (`probEvent_length_setGe_cont`, with its fused and three-stage forms
-`probEvent_length_setGe_fused` and `probEvent_length_setGe_threeStage`). The second-order
+target tape is overwritten (`prEvent_length_setGe_cont`, with its fused and three-stage forms
+`prEvent_length_setGe_fused` and `prEvent_length_setGe_threeStage`). The second-order
 coverage charge (`FiredCoverage.prob_firedCovered_le`) needs this: the pair charge redraws the
 *later* of two cells while holding the selection of the earlier one, and the later cell is read
 only after the earlier was reached.
@@ -40,7 +40,7 @@ variable {σ : Type} [CacheView σ]
 open scoped Classical in
 /-- **Overwriting a cell at or after the selected one does not move the selection**, with a
 continuation. -/
-theorem probEvent_length_setGe_cont (leftKeep rightKeep : Bytes → σ → Prop)
+theorem prEvent_length_setGe_cont (leftKeep rightKeep : Bytes → σ → Prop)
     {α γ : Type} (computation : OracleComp OracleWorld α)
     (after : α × SplitTapeState σ → ProbComp γ) (finalRight : γ → Record)
     (hgrow : ∀ (z : α × SplitTapeState σ) (w : γ), w ∈ support (after z) ->
@@ -102,11 +102,11 @@ theorem probEvent_length_setGe_cont (leftKeep rightKeep : Bytes → σ → Prop)
                   simp only [List.set_cons_zero,
                     splitTapeRecorder_run_right_cons leftKeep rightKeep input noticed leftTape _ _
                       leftRecord rightRecord hfresh hleft hright, pure_bind, Nat.add_zero]
-                  rw [probEvent_length_eq_one_cont leftKeep rightKeep (next head) after
+                  rw [prEvent_length_eq_one_cont leftKeep rightKeep (next head) after
                       finalRight hgrow (CacheView.update noticed input head)
                       (leftTape, rest) leftRecord rightRecord (input, head) rightRecord.length
                       (by simp),
-                    probEvent_length_eq_one_cont leftKeep rightKeep (next newValue) after
+                    prEvent_length_eq_one_cont leftKeep rightKeep (next newValue) after
                       finalRight hgrow (CacheView.update noticed input newValue)
                       (leftTape, rest) leftRecord rightRecord (input, newValue)
                       rightRecord.length (by simp)]
@@ -114,11 +114,11 @@ theorem probEvent_length_setGe_cont (leftKeep rightKeep : Bytes → σ → Prop)
                   simp only [List.set_cons_succ,
                     splitTapeRecorder_run_right_cons leftKeep rightKeep input noticed leftTape _ _
                       leftRecord rightRecord hfresh hleft hright, pure_bind, Nat.add_zero]
-                  rw [probEvent_length_eq_one_cont leftKeep rightKeep (next head) after
+                  rw [prEvent_length_eq_one_cont leftKeep rightKeep (next head) after
                       finalRight hgrow (CacheView.update noticed input head)
                       (leftTape, rest) leftRecord rightRecord (input, head) rightRecord.length
                       (by simp),
-                    probEvent_length_eq_one_cont leftKeep rightKeep (next head) after
+                    prEvent_length_eq_one_cont leftKeep rightKeep (next head) after
                       finalRight hgrow (CacheView.update noticed input head)
                       (leftTape, rest.set later newValue) leftRecord rightRecord (input, head)
                       rightRecord.length (by simp)]
@@ -154,7 +154,7 @@ variable {ω : Type} [Monoid ω]
 
 open scoped Classical in
 /-- **The same, at the fused handler.** -/
-theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop)
+theorem prEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop)
     (inner : QueryImpl (OracleWorld + Security.SigningSpec)
       (WriterT ω (StateT Security.SigningLog (OracleComp OracleWorld))))
     (before : Message → σ → σ) (afterMap : σ → σ)
@@ -196,7 +196,7 @@ theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop
     simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, bind_assoc]
     rcases queried with world | request
     · simp only [FusedTape.fuseServing_run_inl, bind_assoc, pure_bind]
-      exact probEvent_length_setGe_cont leftKeep rightKeep
+      exact prEvent_length_setGe_cont leftKeep rightKeep
         (((inner (Sum.inl world)).run).run log)
         (fun z => (simulateQ (fuseServing (noticingSplitTapeRecorder leftKeep rightKeep) inner
             (fun r => onCarrierTape (before r)) (onCarrierTape afterMap)) (next z.1.1.1)).run
@@ -211,7 +211,7 @@ theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop
           z.2.2.1.1 z.2.2.1.2 z.2.2.2.1 z.2.2.2.2)
         index cell hle newValue cache leftTape rightTape leftRecord rightRecord
     · simp only [FusedTape.fuseServing_run_inr, bind_assoc, pure_bind]
-      exact probEvent_length_setGe_cont leftKeep rightKeep
+      exact prEvent_length_setGe_cont leftKeep rightKeep
         (((inner (Sum.inr request)).run).run log)
         (fun z => (simulateQ (fuseServing (noticingSplitTapeRecorder leftKeep rightKeep) inner
             (fun r => onCarrierTape (before r)) (onCarrierTape afterMap)) (next z.1.1.1)).run
@@ -229,7 +229,7 @@ theorem probEvent_length_setGe_fused (leftKeep rightKeep : Bytes → σ → Prop
 
 open scoped Classical in
 /-- **Across all three stages.** -/
-theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ → Prop)
+theorem prEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ → Prop)
     {β α γ δ : Type}
     (inner : β → QueryImpl (OracleWorld + Security.SigningSpec)
       (WriterT ω (StateT Security.SigningLog (OracleComp OracleWorld))))
@@ -248,7 +248,7 @@ theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ →
         rightRecord.length + index < w.2.2.2.length] := by
   classical
   rw [threeStageTapeRun, threeStageTapeRun]
-  refine probEvent_length_setGe_cont leftKeep rightKeep first
+  refine prEvent_length_setGe_cont leftKeep rightKeep first
     (fun keys => (simulateQ (fuseServing (noticingSplitTapeRecorder leftKeep rightKeep)
           (inner keys.1) (fun request => onCarrierTape (before request))
           (onCarrierTape afterMap)) (phase keys.1)).run (1, [], keys.2) >>= fun middle =>
@@ -269,7 +269,7 @@ theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ →
       (1, [], z.2) middle hmiddle).length_le ?_
     exact (noticingRightOf_prefix leftKeep rightKeep _ middle.2.2.2 final hfinal).length_le
   · intro idx c hc v z
-    refine probEvent_length_setGe_fused leftKeep rightKeep (inner z.1) before afterMap
+    refine prEvent_length_setGe_fused leftKeep rightKeep (inner z.1) before afterMap
       (phase z.1)
       (fun middle => (simulateQ (noticingSplitTapeRecorder leftKeep rightKeep)
             (last z.1 middle.1)).run middle.2.2.2 >>= fun final =>
@@ -286,7 +286,7 @@ theorem probEvent_length_setGe_threeStage (leftKeep rightKeep : Bytes → σ →
       rw [hpure]
       exact (noticingRightOf_prefix leftKeep rightKeep _ y.2.2.2 final hfinal).length_le
     · intro idx2 c2 hc2 v2 y
-      refine probEvent_length_setGe_cont leftKeep rightKeep (last z.1 y.1)
+      refine prEvent_length_setGe_cont leftKeep rightKeep (last z.1 y.1)
         (fun final => (pure (value z.1 y.1 y.2.1 y.2.2.1 final.1 final.2.1,
           forgetViewTape final.2) : ProbComp (δ × SplitPrefix.SplitState)))
         (fun w => w.2.2.2) ?_ ?_ idx2 c2 hc2 v2 y.2.2.2.1 y.2.2.2.2.1.1 y.2.2.2.2.1.2
@@ -314,7 +314,7 @@ theorem threeStageCausalGe (leftKeep rightKeep : Bytes → σ → Prop)
           cache [] [] leftTape (rightTape.set cell newValue))}[index < w.2.2.2.length] =
       Pr{let w ← (threeStageTapeRun leftKeep rightKeep inner before afterMap first phase last value
           cache [] [] leftTape rightTape)}[index < w.2.2.2.length] := by
-  have h := probEvent_length_setGe_threeStage leftKeep rightKeep inner before afterMap first phase
+  have h := prEvent_length_setGe_threeStage leftKeep rightKeep inner before afterMap first phase
     last value index cell hle newValue cache [] [] leftTape rightTape
   simpa only [List.length_nil, Nat.zero_add] using h.symm
 

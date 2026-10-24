@@ -60,7 +60,7 @@ theorem setupBound (adversary : Adversary) (limit : Nat) :
       · have := flag_of_signerHit setup hgood real stateV hinv hcache hlog hlate
         rw [hflag] at this
         cases this
-  · exact le_of_eq (ShareUntilBad.probEvent_bad_eq setup _ St.start)
+  · exact le_of_eq (ShareUntilBad.prEvent_bad_eq setup _ St.start)
 
 /-- **The blind verifier files what it consults**, at every setup. -/
 theorem verifierFiles (setup : Setup) : ShareJointBound.VerifierFiles setup :=
@@ -82,7 +82,7 @@ theorem hsharedFused (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW ad
   rw [hpaired]
   refine le_trans (le_of_eq ?_) (ShareJointShared.hshared q adversary hbudget hq
     (setupBound adversary (q - 569)) verifierFiles)
-  exact LateProbes.probEvent_forget (CarrierTail.forgetsTo CarrierThin.keep127 adversary)
+  exact LateProbes.prEvent_forget (CarrierTail.forgetsTo CarrierThin.keep127 adversary)
     (fun pair : SharedJoin.RecordedPair => GoodWalk pair.1 ∧
       (InputBad (SharedJoin.recordedTraceOf pair) ∨ Target127.Late pair) ∧
       pair.2.1.1.1.verified = true)
@@ -136,8 +136,8 @@ theorem hasSecurityBits_work : HasSecurityBits adversaryWork 127 := by
   by_cases hq : 569 ≤ q
   · have hbudget := tailBudgetW_of hlimit hbound
     rw [advantage_securityGame, totalAdvantage,
-      MainTheorem.probEvent_runAll adversary (fun result => Wins result.1),
-      WarmedGame.probEvent_warmed adversary (fun outcome => Wins outcome.1)]
+      MainTheorem.prEvent_runAll adversary (fun result => Wins result.1),
+      WarmedGame.prEvent_warmed adversary (fun outcome => Wins outcome.1)]
     exact WorkTarget.warmed_bound q adversary hbudget (by omega)
       (hsharedFused q adversary hbudget hq)
   · rw [advantage_eq_zero adversary q (by omega) hbound]

@@ -17,7 +17,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ServedDisclosure
 The flag of `ShareGame.handler` reads the table — a guess is a guess *at* a cell — so the
 handler with its flag is not blind to anything. The flag is read back by the handler only at the
 claims, which file nothing once it is up. The handler that files the claims whatever the flag
-(`filing`) raises the flag with the same law (`probEvent_filing_eq`) and is witnessed by its
+(`filing`) raises the flag with the same law (`prEvent_filing_eq`) and is witnessed by its
 record the same way (`filing_witness`), and it never reads its flag back, so dropping the flag
 leaves a step (`blindStep`) whose law is the filing handler's with the flag forgotten
 (`map_filing_run`). That step is the one the charge is taken at.
@@ -106,7 +106,7 @@ theorem map_handler_run (setup : Setup) (queried : ShareSpec.Domain) (state : St
 /-- **The blind handler, filing the claims whatever the flag**: its step is the blind handler's
 step from a lowered flag, the flag kept up once it is up. It parts from `handler false` only at
 claims made with the flag already up, so the flag has the same law in both
-(`probEvent_filing_eq`), and with the flag forgotten it is `blindStep` from every state. -/
+(`prEvent_filing_eq`), and with the flag forgotten it is `blindStep` from every state. -/
 @[expose]
 noncomputable def filing (setup : Setup) : QueryImpl ShareSpec (StateT (St × Bool) ProbComp) :=
   fun queried state => (fun z => (z.1, (z.2.1, state.2 || z.2.2))) <$>
@@ -173,7 +173,7 @@ theorem filing_mono (setup : Setup) (queried : ShareSpec.Domain) (state : St × 
   simp [hbad]
 
 /-- **The flag has the same law in the blind game and its filing form.** -/
-theorem probEvent_filing_eq (setup : Setup) {α : Type} (computation : OracleComp ShareSpec α)
+theorem prEvent_filing_eq (setup : Setup) {α : Type} (computation : OracleComp ShareSpec α)
     (start : St) :
     Pr{let z ← (simulateQ (filing setup) computation).run (start, false)}[z.2.2 = true] =
       Pr{let z ← (simulateQ (handler false setup) computation).run (start, false)}[z.2.2 = true] :=

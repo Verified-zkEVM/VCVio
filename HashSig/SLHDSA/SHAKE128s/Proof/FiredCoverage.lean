@@ -270,7 +270,7 @@ selection, which is what lets one cell be redrawn under it. -/
 
 open scoped Classical in
 /-- **A block event beside the selection is a reach mass.** -/
-theorem probEvent_reach_and_eq (leftLength rightLength index : Nat)
+theorem prEvent_reach_and_eq (leftLength rightLength index : Nat)
     (event : List HashOutput → List HashOutput → Prop) :
     Pr{let outcome ← blockRunOf run leftLength rightLength}[
         index < len outcome.2 ∧ event outcome.1.1 outcome.1.2] =
@@ -283,20 +283,20 @@ theorem probEvent_reach_and_eq (leftLength rightLength index : Nat)
   refine tsum_congr fun rightTape => congrArg _ ?_
   rw [prEvent_map]
   rw [prEvent_congr _ _ (fun z => event leftTape rightTape ∧ index < len z) fun z => and_comm,
-    TapeFactor.probEvent_const_and]
+    TapeFactor.prEvent_const_and]
   split <;> simp
 
 /-- The selection alone is the reach mass of the unit weight. -/
-theorem probEvent_reach_eq (leftLength rightLength index : Nat) :
+theorem prEvent_reach_eq (leftLength rightLength index : Nat) :
     Pr{let outcome ← blockRunOf run leftLength rightLength}[index < len outcome.2] =
       reachMass run len leftLength rightLength index (fun _ _ => 1) := by
   classical
-  have h := probEvent_reach_and_eq run len leftLength rightLength index (fun _ _ => True)
+  have h := prEvent_reach_and_eq run len leftLength rightLength index (fun _ _ => True)
   simp only [and_true, ite_true] at h
   exact h
 
 /-- **The blocked run's events, as a double expectation over the two blocks.** -/
-theorem probEvent_blockRunOf_eq (leftLength rightLength : Nat)
+theorem prEvent_blockRunOf_eq (leftLength rightLength : Nat)
     (event : (List HashOutput × List HashOutput) × ρ → Prop) :
     Pr{let x ← blockRunOf run leftLength rightLength}[event x] =
       ∑' leftTape, Pr{let x ← padding leftLength}[x = leftTape] *
@@ -358,7 +358,7 @@ theorem prob_thin_le (leftLength rightLength index : Nat) (thinned : ρ → Prop
       rate * reachMass run len leftLength rightLength index
         (fun leftTape rightTape => if event leftTape rightTape then 1 else 0) := by
   classical
-  rw [← reachMass_const_mul, probEvent_blockRunOf_eq, reachMass]
+  rw [← reachMass_const_mul, prEvent_blockRunOf_eq, reachMass]
   refine ENNReal.tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
   refine ENNReal.tsum_le_tsum fun rightTape => mul_le_mul' le_rfl ?_
   by_cases hevent : event leftTape rightTape
@@ -377,7 +377,7 @@ theorem reachMass_le_const_of_length (leftLength rightLength index : Nat)
     reachMass run len leftLength rightLength index weight ≤
       bound * Pr{let outcome ← blockRunOf run leftLength rightLength}[index < len outcome.2] := by
   classical
-  rw [probEvent_reach_eq run len leftLength rightLength index,
+  rw [prEvent_reach_eq run len leftLength rightLength index,
     ← reachMass_const_mul run len leftLength rightLength index bound]
   refine ENNReal.tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
   refine ENNReal.tsum_le_tsum fun rightTape => ?_
@@ -710,7 +710,7 @@ theorem prob_not_goodLeft_le {ρ : Type} (run : List HashOutput → List HashOut
     rw [hevent]
     exact ForsDisclosureTape.bad_load_probability_sharper leftLength hcap
   refine le_trans ?_ hblock
-  rw [probEvent_blockRunOf_eq, ← tsum_ite_eq_probEvent]
+  rw [prEvent_blockRunOf_eq, ← tsum_ite_eq_probEvent]
   refine ENNReal.tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
   by_cases hgood : GoodLeft leftLength leftTape
   · simp [hgood]

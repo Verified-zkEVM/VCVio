@@ -23,7 +23,7 @@ the limit (`cost_capCompRem_le`, `cost_capCompOpt_le`), and where the uncapped r
 it the cap changes nothing (`evalDist_capCompRem`, `evalDist_capCompOpt`) — and with one more:
 **a capped run and the uncapped one agree until the cap fires**, so an event of the uncapped run
 that also keeps it within the limit is at most as likely as the event of the capped one
-(`probEvent_le_capCompRem`).
+(`prEvent_le_capCompRem`).
 -/
 
 public section
@@ -94,7 +94,7 @@ theorem cost_capCompRem_le (impl : QueryImpl spec (StateT S ProbComp)) (weight :
 /-- **Until the cap fires, the capped run is the uncapped one.** An event of the uncapped run,
 followed by any continuation, that also keeps the run within the limit is at most as likely as
 the event of the capped run followed by the same continuation, read at the reported remainder. -/
-theorem probEvent_le_capCompRem (impl : QueryImpl spec (StateT S ProbComp)) (weight : ι → Nat)
+theorem prEvent_le_capCompRem (impl : QueryImpl spec (StateT S ProbComp)) (weight : ι → Nat)
     (cost : S → Nat) (hcost : ReportsCost impl weight cost) (fallback : α) {β : Type}
     (event : β → Prop) :
     ∀ (oa : OracleComp spec α) (limit : Nat) (state : S)

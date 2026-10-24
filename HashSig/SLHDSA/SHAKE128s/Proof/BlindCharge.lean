@@ -39,7 +39,7 @@ The three steps, for one cell:
 1. **Flag** (`flagged`). The event is the final value of a sticky flag that a step raises when it
    files a charged entry. A step at a state where the cell is available files nothing charged,
    so the flag is quiet there.
-2. **Stall** (`StalledRun.probEvent_flag_stalled_eq`). A run whose flag can no longer move may
+2. **Stall** (`StalledRun.prEvent_flag_stalled_eq`). A run whose flag can no longer move may
    be stopped where it is, and the stalled run is blind to the cell for its whole length.
 3. **Redraw** (`RedrawCell.evalDist_redraw_coordinate`). A run blind to a cell may have that
    cell drawn after it, and against a fresh cell each entry aiming at it is one guess.
@@ -76,7 +76,7 @@ theorem run_simulateQ_map_proj (impl : QueryImpl spec (StateT σ ProbComp))
     exact congrArg _ (funext fun z => ih z.1 z.2)
 
 /-- An event read through a projection is the event of the projected run. -/
-theorem probEvent_proj (impl : QueryImpl spec (StateT σ ProbComp))
+theorem prEvent_proj (impl : QueryImpl spec (StateT σ ProbComp))
     (impl' : QueryImpl spec (StateT τ ProbComp)) (f : σ → τ)
     (h : ∀ (t : spec.Domain) (s : σ),
       (fun z => (z.1, f z.2)) <$> (impl t).run s = (impl' t).run (f s))
@@ -173,12 +173,12 @@ theorem flag_iff (charged : Bytes × K → Prop) (impl : QueryImpl spec (StateT 
   exact hinv
 
 /-- **The record's verdict is the flagged run's flag.** -/
-theorem probEvent_record_eq_flag (charged : Bytes × K → Prop)
+theorem prEvent_record_eq_flag (charged : Bytes × K → Prop)
     (impl : QueryImpl spec (StateT σ ProbComp)) (hfiles : Files record now impl)
     {α : Type} (oa : OracleComp spec α) (s : σ) (hs : ¬ ∃ entry ∈ record s, charged entry) :
     Pr{let z ← (simulateQ impl oa).run s}[∃ entry ∈ record z.2, charged entry] =
       Pr{let z ← (simulateQ (flagged record charged impl) oa).run (s, false)}[z.2.2 = true] := by
-  refine (probEvent_proj (flagged record charged impl) impl Prod.fst
+  refine (prEvent_proj (flagged record charged impl) impl Prod.fst
     (fun t p => flagged_proj record charged impl t p) oa (s, false)
     (fun z => ∃ entry ∈ record z.2, charged entry)).symm.trans ?_
   exact (prEvent_congr_of_support _ _ _
@@ -232,7 +232,7 @@ theorem stalled_flagged (charged : Bytes × K → Prop) (impl : QueryImpl spec (
       stalledFree_run, ite_eq_right hp]
 
 /-- **Stalling leaves the record's verdict alone**, once nothing filed can be charged. -/
-theorem probEvent_record_stalled (charged : Bytes × K → Prop)
+theorem prEvent_record_stalled (charged : Bytes × K → Prop)
     (impl : QueryImpl spec (StateT σ ProbComp))
     (hfiles : Files record now impl) (Frozen : σ → Prop)
     (stall : (t : spec.Domain) → spec.Range t)
@@ -243,10 +243,10 @@ theorem probEvent_record_stalled (charged : Bytes × K → Prop)
       Pr{let z ← (simulateQ (stalledFree impl Frozen stall) oa).run s}[
         ∃ entry ∈ record z.2, charged entry] := by
   classical
-  rw [probEvent_record_eq_flag record now charged impl hfiles oa s hs,
-    probEvent_record_eq_flag record now charged _ (files_stalledFree record now impl hfiles
+  rw [prEvent_record_eq_flag record now charged impl hfiles oa s hs,
+    prEvent_record_eq_flag record now charged _ (files_stalledFree record now impl hfiles
       Frozen stall) oa s hs, ← stalled_flagged]
-  refine StalledRun.probEvent_flag_stalled_eq _ Frozen stall
+  refine StalledRun.prEvent_flag_stalled_eq _ Frozen stall
     (fun t p hp z hz => ?_)
     (fun t p hp z hz => ?_) oa (s, false)
   · obtain ⟨w, hw, rfl⟩ := mem_support_flagged record charged impl t p z hz
@@ -339,7 +339,7 @@ theorem ex_div_const {β : Type} (mx : ProbComp β) (f : β → ℝ≥0∞) (c :
   exact ENNReal.tsum_mul_right
 
 /-- The probability of an event after a bind is the expected conditional probability. -/
-theorem probEvent_eq_ex_bind {β γ : Type} (mx : ProbComp β) (g : β → ProbComp γ)
+theorem prEvent_eq_ex_bind {β γ : Type} (mx : ProbComp β) (g : β → ProbComp γ)
     (event : γ → Prop) : Pr{let x ← mx >>= g}[event x] = ex mx fun x => Pr{let y ← g x}[event y] :=
   OracleComp.prEvent_bind_eq_tsum mx g event
 
@@ -356,14 +356,14 @@ variable {Aux α : Type}
   pure (z, cells, aux)
 
 /-- An event of the experiment, as an iterated expectation over table and randomness. -/
-theorem probEvent_experiment (auxiliary : ProbComp Aux) (run : Cells → Aux → ProbComp (α × σ))
+theorem prEvent_experiment (auxiliary : ProbComp Aux) (run : Cells → Aux → ProbComp (α × σ))
     (event : (α × σ) × Cells × Aux → Prop) :
     Pr{let x ← experiment auxiliary run}[event x] =
       ex ($ᵗ Cells : ProbComp Cells) fun cells => ex auxiliary fun aux =>
         Pr{let z ← run cells aux}[event (z, cells, aux)] := by
-  rw [experiment, probEvent_eq_ex_bind]
+  rw [experiment, prEvent_eq_ex_bind]
   refine ex_congr _ fun cells => ?_
-  rw [probEvent_eq_ex_bind]
+  rw [prEvent_eq_ex_bind]
   refine ex_congr _ fun aux => ?_
   rw [bind_pure_comp, prEvent_map]
 
@@ -503,9 +503,9 @@ theorem prob_index_le (auxiliary : ProbComp Aux)
         ChargedAt stakes (unavail w.2.1 w.2.2) index (w.2.1 index) entry] =
       Pr{let w ← experiment auxiliary stalledRun}[∃ entry ∈ record w.1.2,
         ChargedAt stakes (unavail w.2.1 w.2.2) index (w.2.1 index) entry] := by
-    rw [probEvent_experiment, probEvent_experiment]
+    rw [prEvent_experiment, prEvent_experiment]
     refine ex_congr _ fun cells => ex_congr _ fun aux => ?_
-    exact probEvent_record_stalled record now
+    exact prEvent_record_stalled record now
       (fun entry => ChargedAt stakes (unavail cells aux) index (cells index) entry)
       (impl cells aux) (hfiles cells aux) (Frozen cells aux) stall
       (fun t s hs z hz => hmono cells aux t s hs z hz)
@@ -518,9 +518,9 @@ theorem prob_index_le (auxiliary : ProbComp Aux)
         let aux ← auxiliary
         let result ← run' cells aux
         pure (result, cells index))}[event' x] := by
-    rw [probEvent_experiment, probEvent_eq_ex_bind]
+    rw [prEvent_experiment, prEvent_eq_ex_bind]
     refine ex_congr _ fun cells => ?_
-    rw [probEvent_eq_ex_bind]
+    rw [prEvent_eq_ex_bind]
     refine ex_congr _ fun aux => ?_
     rw [bind_pure_comp, prEvent_map, prEvent_map]
     rfl
@@ -566,11 +566,11 @@ theorem prob_index_le (auxiliary : ProbComp Aux)
           (((record z.2).countP fun entry =>
             decide (AimsAt stakes (unavail cells aux) index entry) : Nat) : ℝ≥0∞) /
             ((2 ^ 128 : Nat) : ℝ≥0∞) := by
-    rw [probEvent_eq_ex_bind]
+    rw [prEvent_eq_ex_bind]
     refine ex_mono _ fun cells => ?_
-    rw [probEvent_eq_ex_bind]
+    rw [prEvent_eq_ex_bind]
     refine ex_mono _ fun aux => ?_
-    rw [probEvent_eq_ex_bind, ex_map]
+    rw [prEvent_eq_ex_bind, ex_map]
     refine ex_mono _ fun z => ?_
     simp only [Function.comp]
     rw [bind_pure_comp, prEvent_map]

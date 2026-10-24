@@ -27,7 +27,7 @@ paid for at its own count, so it is capped too, against **what the adversary lef
   the real verifier never exceeds its cap.
 
 On the real side (`realFlatJ`) the same two caps are applied to the flattened real game, and
-`probEvent_realFlat_le` says an event of the real game that comes with an accepted forgery is at
+`prEvent_realFlat_le` says an event of the real game that comes with an accepted forgery is at
 most as likely in the capped one: an accepted forgery's verifier makes at least `569` calls, so
 its adversary stayed within `limit`, and its verifier within its own cap.
 -/
@@ -148,7 +148,7 @@ theorem realFlat_eq (adversary : Adversary) (keys : SecretKey × PublicKey)
 /-- **An event of the real game with an accepted forgery is at most as likely in the jointly
 capped one**, given that an accepted forgery's adversary stays within `limit` and that, within
 it, the verifier stays within its cap. -/
-theorem probEvent_realFlat_le (adversary : Adversary) (limit : Nat)
+theorem prEvent_realFlat_le (adversary : Adversary) (limit : Nat)
     (keys : SecretKey × PublicKey) (warm : QueryCache HashSpec)
     (event : (((Forgery × Multiplicative Tally) × (Bool × Tally)) × SigningLog) ×
       QueryCache HashSpec → Prop)
@@ -171,7 +171,7 @@ theorem probEvent_realFlat_le (adversary : Adversary) (limit : Nat)
       (simulateQ (realImpl (StrippedGame.strippedSign warm keys.1))
         (capCompRem weight fallbackForgery limit (adversary.main keys.2))).run (1, [], warm) >>=
         capped := rfl
-  have hstep := probEvent_le_capCompRem (realImpl (StrippedGame.strippedSign warm keys.1)) weight
+  have hstep := prEvent_le_capCompRem (realImpl (StrippedGame.strippedSign warm keys.1)) weight
     ShareRealCap.realCost (ShareRealCap.reportsCost_real warm keys.1) fallbackForgery event
     (adversary.main keys.2) limit (1, [], warm) capped
   rw [hJ]

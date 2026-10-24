@@ -18,7 +18,7 @@ The shared half's event is read off `RecordedTail.recordedTail` at a drawn table
 with the lenient game it has to be one handler's run over the adversary's own oracles, as the
 lenient game is. This file gets it there in two moves.
 
-* **The chain** (`probEvent_recordedTail_linked`): the outer count is dropped, the honest phase
+* **The chain** (`prEvent_recordedTail_linked`): the outer count is dropped, the honest phase
   stripped, the keys handed in, and the game becomes one computation — `TableTail`'s chain,
   carried with the record the event reads.
 * **The flattening** (`run_flat`, `run_flatVerify`): the three layers the linked run nests — the
@@ -43,7 +43,7 @@ attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenI
 /-! ## The recorded tail is the linked run -/
 
 /-- **The recorded tail at a drawn table is the linked game**, the record carried. -/
-theorem probEvent_recordedTail_linked (adversary : Adversary) (prfSeed publicSeed : Digest)
+theorem prEvent_recordedTail_linked (adversary : Adversary) (prfSeed publicSeed : Digest)
     (table : Cells × Padding) (event : (Outcome × Multiset Bytes) × QueryCache HashSpec → Prop) :
     Pr{let result ← RecordedTail.recordedTail adversary (walkOfTable prfSeed publicSeed table)}[
         event (result.1.1, result.2)] =

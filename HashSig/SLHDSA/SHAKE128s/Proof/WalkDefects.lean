@@ -37,7 +37,7 @@ open Security CanonicalGraph WarmedGame
 /-! ## Averaging -/
 
 /-- **A bound that holds after every prefix holds over the bind.** -/
-theorem probEvent_bind_le {α β : Type} (run : ProbComp α) (next : α → ProbComp β)
+theorem prEvent_bind_le {α β : Type} (run : ProbComp α) (next : α → ProbComp β)
     (event : β → Prop) (bound : ℝ≥0∞) (hnext : ∀ value, Pr{let x ← next value}[event x] ≤ bound) :
     Pr{let x ← run >>= next}[event x] ≤ bound :=
   prEvent_bind_le_of_forall_le run next event hnext
@@ -45,7 +45,7 @@ theorem probEvent_bind_le {α β : Type} (run : ProbComp α) (next : α → Prob
 open scoped Classical in
 /-- **An event settled by the prefix costs what it costs there.** Whatever the continuation
 does, an outcome in the event comes from a prefix in the prefix's event. -/
-theorem probEvent_bind_le_of_prefix {α β : Type} (run : ProbComp α) (next : α → ProbComp β)
+theorem prEvent_bind_le_of_prefix {α β : Type} (run : ProbComp α) (next : α → ProbComp β)
     (event : β → Prop) (prefixEvent : α → Prop)
     (hprefix : ∀ value, ∀ result ∈ support (next value), event result → prefixEvent value) :
     Pr{let x ← run >>= next}[event x] ≤ Pr{let x ← run}[prefixEvent x] :=
@@ -56,7 +56,7 @@ theorem probEvent_bind_le_of_prefix {α β : Type} (run : ProbComp α) (next : �
 open scoped Classical in
 /-- **A bound that holds after every good prefix holds over the pair, at the cost of the bad
 ones.** -/
-theorem probEvent_bind_pair_split_le {α β : Type} (first : ProbComp α) (rest : α → ProbComp β)
+theorem prEvent_bind_pair_split_le {α β : Type} (first : ProbComp α) (rest : α → ProbComp β)
     (event : α → β → Prop) (bad : α → Prop) (bound : ℝ≥0∞)
     (hrest : ∀ value ∈ support first, ¬ bad value →
       Pr{let x ← rest value}[(event value) x] ≤ bound) :
@@ -75,8 +75,8 @@ theorem prob_prf_eq_publicSeed_seeds :
     Pr{let sds ← seeds}[sds.2.1 = sds.2.2] ≤
       1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   rw [seeds]
-  refine probEvent_bind_le _ _ _ _ fun secretSeed => ?_
-  refine probEvent_bind_le _ _ _ _ fun prfSeed => ?_
+  refine prEvent_bind_le _ _ _ _ fun secretSeed => ?_
+  refine prEvent_bind_le _ _ _ _ fun prfSeed => ?_
   rw [bind_pure_comp, prEvent_map]
   exact le_of_eq (SecretGuessCharge.prob_single_guess prfSeed)
 
@@ -84,7 +84,7 @@ theorem prob_prf_eq_publicSeed_seeds :
 theorem prob_prf_eq_publicSeed_walk :
     Pr{let walk ← graphWalk}[walk.1.1.2.1 = walk.1.1.2.2] ≤ 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) := by
   rw [graphWalk_eq]
-  refine le_trans (probEvent_bind_le_of_prefix seeds _ _
+  refine le_trans (prEvent_bind_le_of_prefix seeds _ _
     (fun sds : Digest × Digest × Digest => sds.2.1 = sds.2.2) ?_) prob_prf_eq_publicSeed_seeds
   intro sds walk hwalk hevent
   rw [mem_support_bind_iff] at hwalk

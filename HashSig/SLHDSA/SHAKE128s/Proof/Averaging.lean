@@ -27,7 +27,7 @@ open OracleComp OracleSpec ENNReal
 namespace SlhDsaSecurity.Averaging
 
 /-- **A bound that holds after every prefix holds over the pair.** -/
-theorem probEvent_bind_pair_le {α β : Type} (first : ProbComp α) (rest : α → ProbComp β)
+theorem prEvent_bind_pair_le {α β : Type} (first : ProbComp α) (rest : α → ProbComp β)
     (event : α → β → Prop) (bound : ℝ≥0∞)
     (hrest : ∀ value ∈ support first, Pr{let x ← rest value}[(event value) x] ≤ bound) :
     Pr{let pair ← (do

@@ -54,7 +54,7 @@ theorem warmed_le (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adver
           AnswerBad ((pair.1.1, (FinalAssembly.forgetFused pair.2).1),
             (FinalAssembly.forgetFused pair.2).2) ∧ ¬ Target127.late pair] ≤
         (q : ℝ≥0∞) / ((2 ^ 128 : Nat) : ℝ≥0∞) + (1 : ℝ≥0∞) / 2 ^ 126 := by
-    refine Averaging.probEvent_bind_pair_le graphWalk
+    refine Averaging.prEvent_bind_pair_le graphWalk
       (CarrierTail.carrierTail CarrierThin.keep127 adversary)
       (fun walk result => GoodWalk walk ∧
         AnswerBad ((walk.1, (FinalAssembly.forgetFused result).1),
