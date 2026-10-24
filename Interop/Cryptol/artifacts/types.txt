@@ -1,0 +1,15 @@
+Loading module Cryptol
+Loading module Cryptol
+Loading module algorithms::SHA2::Notation
+Loading module algorithms::SHA2::Functions
+(SIGMA_256_0 : [32] -> [32]) : [32] -> [32]
+(SIGMA_256_1 : [32] -> [32]) : [32] -> [32]
+(sigma_256_0 : [32] -> [32]) : [32] -> [32]
+(sigma_256_1 : [32] -> [32]) : [32] -> [32]
+(Ch : ([32], [32], [32]) -> [32]) : ([32], [32], [32]) -> [32]
+(Maj : ([32], [32], [32]) -> [32]) : ([32], [32], [32]) -> [32]
+Loading module Cryptol
+Loading module algorithms::SHA2::Notation
+(ROTRIsRightCircularShift`{2, 32} : [32] -> Bit) : [32] -> Bit
+(ROTRIsRightCircularShift`{13, 32} : [32] -> Bit) : [32] -> Bit
+(ROTRIsRightCircularShift`{22, 32} : [32] -> Bit) : [32] -> Bit

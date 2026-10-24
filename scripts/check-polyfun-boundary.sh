@@ -2,7 +2,8 @@
 # scripts/check-polyfun-boundary.sh
 #
 # Enforce the public package boundary between VCVio and PolyFun. A downstream
-# package must never use `import all PolyFun.…`: doing so makes VCVio depend on
+# package must never use `import all PolyFun.…` or `import all` on another PolyFun
+# library such as `PolyFunCryptol.…`: doing so makes VCVio depend on
 # declarations that PolyFun intentionally kept private and turns a module
 # migration into an accidental API expansion.
 #
@@ -38,7 +39,7 @@ else
   done
 fi
 
-forbidden_re='^[[:space:]]*(meta[[:space:]]+)?import[[:space:]]+all[[:space:]]+PolyFun(\.|[[:space:]]|$)'
+forbidden_re='^[[:space:]]*(public[[:space:]]+)?(meta[[:space:]]+)?import[[:space:]]+all[[:space:]]+PolyFun[A-Za-z]*(\.|[[:space:]]|$)'
 violations=0
 
 for target in "${TARGETS[@]}"; do

@@ -84,6 +84,13 @@ Choose imports as follows:
 
 ## Public definitions and definitional equality
 
+Repository inspection tools (`initsweep`, `axiomsweep`, and `docnames`) run from
+the repository root and prefer `.lake/build/lib/lean` over dependency artifacts.
+This matters when a local PolyFun checkout has also built its `Examples`
+tutorial namespace. The sweep fixtures check that such a dependency directory
+cannot shadow VCVio's own modules. Lake builds themselves use their generated
+module setup maps.
+
 Default to an opaque public definition plus public equations. Typical API
 laws are constructor equations, application lemmas, extensionality lemmas,
 and characterization `…_iff` theorems. Mark a definition `@[expose]` only when

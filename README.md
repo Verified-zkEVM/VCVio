@@ -76,6 +76,10 @@ build boundaries and the staged consolidation.
 - `VCVio/Schemes/` owns reusable Schnorr, Pedersen, KEM–DEM and MAC-from-PRF constructions;
   `Examples/` includes small consumers of these APIs.
 - `Interop/` contains experimental bridges to Rust verification frontends such as hax and Aeneas.
+- [`Interop/Cryptol/`](Interop/Cryptol/README.md) contains the optional Cryptol
+  language model, native translation, and Foundation/VCVio bridge in one project.
+  Its proof and CLI targets share the root toolchain and dependency pins;
+  default libraries do not import it.
 - `csrc/` contains C FFI bridges for the native ML-DSA, ML-KEM, and Falcon implementations used in tests.
 - `third_party/` contains the native backends as git submodules, used by the `Extern` FFI layer and differential tests.
 - `ToMathlib/` contains supporting constructions that may eventually move to a separate project.
@@ -84,12 +88,24 @@ For agent-oriented repo guidance, see [`AGENTS.md`](AGENTS.md) and the focused d
 [`docs/agents/`](docs/agents/), especially [`docs/agents/lattice.md`](docs/agents/lattice.md)
 for lattice-specific entry points and workflows.
 
+The [placement policy](AGENTS.md#placement-policy) keeps reusable algorithms and
+named constructions within the core library, with examples as consumers and
+interop as a downstream conformance layer. Existing scheme libraries migrate in
+dependency-complete slices.
+
 External papers and project references cited in this repo are centralized in
 [`REFERENCES.md`](REFERENCES.md).
 
 For the quantum layer (`VCVio/Quantum/`), [`docs/quantum/`](docs/quantum/README.md) has a tutorial
 for readers new to quantum computing, a guide to the layer's definitions and theorems, and
 reference pages; the design record is [`docs/design/quantum-layer.md`](docs/design/quantum-layer.md).
+
+The pure hash API is in `VCVio.Algorithms.Sha2` and
+`VCVio.Algorithms.Keccak`. SHA-512/224 and SHA-512/256 are
+`sha512Trunc224` and `sha512Trunc256`; SHA3 variants are
+`sha3Digest224`, `sha3Digest256`, `sha3Digest384`, and `sha3Digest512`.
+The names identify algorithms; Foundation conformance is stated separately
+in the optional [Cryptol coverage catalogue](Interop/Cryptol/docs/coverage.md).
 
 ## End-to-end examples
 

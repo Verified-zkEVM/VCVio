@@ -14,7 +14,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 UMBRELLAS=(ToMathlib.lean VCVio.lean VCVioCslib.lean LatticeCrypto.lean Extern.lean HashSig.lean Examples.lean
-  VCVioWidgets.lean VCVioTest.lean Interop.lean)
+  VCVioWidgets.lean VCVioTest.lean Interop.lean Interop/Cryptol/Bridge.lean)
 
 # A missing umbrella must fail before regeneration: otherwise it would be created without
 # comparison or an original file to restore, silently turning this check into a repair.
@@ -36,6 +36,7 @@ restore() {
 trap restore EXIT
 
 for f in "${UMBRELLAS[@]}"; do
+  mkdir -p "$STASH/$(dirname "$f")"
   if [[ -f "$f" ]]; then cp "$f" "$STASH/$f"; fi
 done
 

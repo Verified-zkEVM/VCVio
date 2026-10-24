@@ -1,6 +1,16 @@
-# Interop with Rust verification frontends (hax, aeneas)
+# Interop with language and verification frontends
 
-`Interop/` is an experimental sibling to `LatticeCrypto/` whose job is to
+`Interop/Cryptol` is an active, optional development within the root project.
+Its bridge and test targets share the root toolchain and manifest and build on
+PolyFun's optional `PolyFunCryptol` language case study. See
+[the Cryptol guide](../../Interop/Cryptol/README.md) for commands, coverage, and the
+trusted extraction boundary. Only Bridge imports VCVio and HashSig. Core libraries and
+tests, including HashSig, never import an interoperability layer.
+
+The remaining material describes the dormant Rust backends. Their separate
+`Interop` aggregate excludes Cryptol and is not in the default build.
+
+`Interop/Rust`, `Interop/Hax`, and `Interop/Aeneas` are experimental siblings to `LatticeCrypto/` whose job is to
 let VCVio reason about Lean code emitted by Rust verification frontends:
 
 - [hax](https://github.com/cryspen/hax): MIR → Lean/F\*/Coq/EasyCrypt/ProVerif/SSProve via a 35-phase OCaml engine. Lean target produces code in the `Hax.RustM := ExceptT Error Option` monad.
@@ -31,7 +41,7 @@ The contract is therefore enforced at three levels:
    check for forbidden imports. `.github/workflows/interop-isolation.yml`
    runs it on every PR and on pushes to `main`. The source parser needs the
    pinned Lean toolchain but no built project modules or Lake dependencies.
-3. **Reverse direction**: `Interop/**` may import from `VCVio/**`,
+3. **Rust reverse direction**: the dormant backend directories may import from `VCVio/**`,
    `ToMathlib/**`, `Hax.…`, and `Aeneas.…`, but **not** from
    `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `Extern/**`,
    `VCVioWidgets/**`, or `VCVioTest/**`.

@@ -73,7 +73,7 @@ def style_modules(files: list[tuple[str, str]], roots: list[str]) -> dict[str, l
         if key in folded and folded[key] != path:
             raise ValueError(f"Case-insensitive filename clash: {folded[key]}, {path}")
         folded[key] = path
-        if not path.endswith(".lean"):
+        if not path.endswith(".lean") or Path(path).name == "lakefile.lean":
             continue
         if mode == "100755":
             raise ValueError(f"Executable Lean source: {path}")
@@ -109,6 +109,10 @@ def style(libraries: list[str]) -> None:
 
 def collect(tool: str, libraries: list[str], baseline: str) -> set[tuple[str, str]]:
     current = set()
+    # Collection runs in a temporary baseline directory. Resolve this package's
+    # modules before dependency namespaces such as PolyFun's Examples directory.
+    env = dict(os.environ)
+    env["LEAN_PATH"] = str(Path(".lake/build/lib/lean").resolve()) + os.pathsep + env.get("LEAN_PATH", "")
     for library in libraries:
         with tempfile.TemporaryDirectory(prefix="vcvio-env-lint-") as directory:
             scratch = Path(directory)
@@ -116,7 +120,7 @@ def collect(tool: str, libraries: list[str], baseline: str) -> set[tuple[str, st
             path.parent.mkdir()
             path.write_text(baseline)
             result = subprocess.run((tool, "--update", "--no-build", library), cwd=scratch,
-                                    text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                    text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
             # Batteries writes the updated JSON before exiting 1 for findings missing
             # from the input baseline. This is expected while enrolling new debt.
             passed = result.returncode == 0 and \
@@ -267,6 +271,8 @@ def main() -> int:
     except subprocess.CalledProcessError as error:
         if error.stdout:
             print(error.stdout, end="", file=sys.stderr)
+        if error.stderr:
+            print(error.stderr, end="", file=sys.stderr)
         return error.returncode if 0 < error.returncode < 126 else 1
     except (OSError, ValueError) as error:
         print(f"lint: {error}", file=sys.stderr)

@@ -1,0 +1,31 @@
+module FoundationReferences where
+import Cryptol::Reference as OfficialReference
+import algorithms::SHA2::SHA224 as R0
+import algorithms::SHA2::SHA256 as R1
+import algorithms::SHA2::SHA384 as R2
+import algorithms::SHA2::SHA512 as R3
+import algorithms::SHA2::SHA512_224 as R4
+import algorithms::SHA2::SHA512_256 as R5
+import algorithms::SHA3::SHA3_224 as R6
+import algorithms::SHA3::SHA3_256 as R7
+import algorithms::SHA3::SHA3_384 as R8
+import algorithms::SHA3::SHA3_512 as R9
+import algorithms::SHAKE::Main as R10
+import algorithms::Keccak::Main as R11
+import algorithms::Keccak::StateConversions as R12
+import algorithms::AES::Main as R13
+import shared::CRC::CRC32_IEEE_802_3_Ethernet as R14
+import algorithms::SHA2::Preprocessing (H0_256)
+import algorithms::SHA2::Functions
+import algorithms::SHA2::Main as Core where
+  type d = 256
+  type w = 32
+  type Klen = 64
+  H0 = H0_256
+  K = K_256
+  SIGMA_0 = SIGMA_256_0
+  SIGMA_1 = SIGMA_256_1
+  sigma_0 = sigma_256_0
+  sigma_1 = sigma_256_1
+result : [8][32] -> [16][32] -> [8][32]
+result = Core::step

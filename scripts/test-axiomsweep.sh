@@ -47,6 +47,13 @@ lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Tainted --out "$TAINTED_R
 lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Tainted --out "$TAINTED_REPORT_2"
 lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Unimported --out "$UNIMPORTED_REPORT"
 
+# A dependency directory with the same namespace must not shadow this package's artifacts.
+mkdir -p "$FIXTURE_TMP/shadow/VCVioAxiomSweepTestFixtures"
+lake env bash -c 'export LEAN_PATH="$1:$LEAN_PATH"; exec .lake/build/bin/axiomsweep \
+  --root VCVioAxiomSweepTestFixtures.Clean --out "$2"' \
+  _ "$FIXTURE_TMP/shadow" "$FIXTURE_TMP/shadow.json"
+cmp "$CLEAN_REPORT" "$FIXTURE_TMP/shadow.json"
+
 # The sweep must be deterministic: same build, byte-identical report.
 cmp "$TAINTED_REPORT" "$TAINTED_REPORT_2"
 

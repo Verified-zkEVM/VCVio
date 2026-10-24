@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Exercise upstream-linter orchestration, source coverage, and safe exception pruning."""
 
+from contextlib import redirect_stderr
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -49,6 +51,31 @@ print("-- Linting passed for " + root + ".")
         lint.check_delta(current, lint.read_pairs(baseline, "test"), prune=True)
         lint.write_baseline(lint.BASELINE, current)
         self.assertEqual(lint.read_pairs(lint.BASELINE.read_text(), "test"), current)
+
+    def test_collection_prioritizes_root_over_dependency_namespace(self):
+        local = self.root / ".lake/build/lib/lean"
+        local.mkdir(parents=True)
+        (local / "Examples.olean").write_text("local module")
+        dependency = self.root / "dependency"
+        (dependency / "Examples").mkdir(parents=True)
+        tool = self.tool('''import os, pathlib
+roots = [pathlib.Path(p) for p in os.environ["LEAN_PATH"].split(os.pathsep)]
+assert (roots[0] / "Examples.olean").read_text() == "local module"
+assert (roots[1] / "Examples").is_dir()
+print("-- Linting passed for Examples.")
+''')
+        with patch.dict(os.environ, {"LEAN_PATH": str(dependency)}):
+            self.assertEqual(lint.collect(tool, ["Examples"], "[]"), set())
+            self.assertEqual(os.environ["LEAN_PATH"], str(dependency))
+
+    def test_main_reports_failed_linter_stderr(self):
+        error = subprocess.CalledProcessError(7, "linter", "partial output\n", "missing module\n")
+        output = io.StringIO()
+        with patch("sys.argv", ["lint.py", "--libraries", "A", "--env-only"]), \
+                patch.object(lint, "environment", side_effect=error), redirect_stderr(output):
+            self.assertEqual(lint.main(), 7)
+        self.assertIn("partial output", output.getvalue())
+        self.assertIn("missing module", output.getvalue())
 
     def test_failed_library_cannot_prune(self):
         tool = self.tool('import sys\nsys.exit(7)\n')
