@@ -350,12 +350,12 @@ theorem forsSign (pos : BottomPosition vp) (md : List Byte) {sig : ForsSigCore v
       (forsSignWithSecretM core (oracleSecret core e pk sk) md pk pos.forsAdrs) = some sig := by
   rw [simulateQ_toPartialImpl_forsSignWithSecret_eq_some_iff] at hs ⊢
   intro i
-  obtain ⟨path, hpath, x, hx, hsig⟩ := hs i
+  obtain ⟨x, hx, path, hpath, hsig⟩ := hs i
   have hidx := add_forsIdx_div_two_pow vp.params md i
-  exact ⟨path, simulateQ_intrinsicAuthPathM_of_merkleRootM _ _ _ _ _ (fun z hz w hw =>
-    h.forsNode (forsNodeAdrs_sibling_mem_constructionAddresses pos i hidx hz) hw) hpath, x,
-    h.secret (forsLeafAdrs_mem_constructionAddresses pos i hidx)
-      (inl_forsSkAdrs_mem_childAdrs _ _) hx, hsig⟩
+  exact ⟨x, h.secret (forsLeafAdrs_mem_constructionAddresses pos i hidx)
+      (inl_forsSkAdrs_mem_childAdrs _ _) hx,
+    path, simulateQ_intrinsicAuthPathM_of_merkleRootM _ _ _ _ _ (fun z hz w hw =>
+      h.forsNode (forsNodeAdrs_sibling_mem_constructionAddresses pos i hidx hz) hw) hpath, hsig⟩
 
 /-- Recovery of the FORS public key from an honest FORS signature at a reachable instance,
 settled on `A`, is settled at the same value on `B`. -/
@@ -372,7 +372,7 @@ theorem forsPkFromSig (pos : BottomPosition vp) (md : List Byte)
     (h.forsSign pos md hs)
   refine (simulateQ_toPartialImpl_forsPkFromSigM_eq_some_iff core B _ md pk _).2
     ⟨roots, fun i => ?_, hv⟩
-  obtain ⟨path, hpath, x, hx, hsig⟩ := hsB i
+  obtain ⟨x, hx, path, hpath, hsig⟩ := hsB i
   have hroot : forsNodeWithSecret? core B (oracleSecret core e pk sk) pk pos.forsAdrs
       vp.params.a ((i.val * 2 ^ vp.params.a + forsIdx vp.params md i.val) / 2 ^ vp.params.a) =
         some roots[i] := by

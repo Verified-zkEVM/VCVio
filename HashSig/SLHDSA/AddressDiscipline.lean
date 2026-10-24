@@ -149,11 +149,12 @@ include hpure hbind hhash hnode hsecret in
 theorem forsSignWithSecret_pred (md : List Byte) (adrs : Adrs) :
     Q (forsSignWithSecret core hash nodeHash secret md adrs) :=
   Vector.ofFnM_pred Q hpure hbind _ fun _ =>
-    hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
-      (fun _ _ => hbind _ _ (hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)) fun _ =>
-        hhash _ type_le_four _)
-      fun _ _ _ _ _ => hnode _ type_le_four)
-    fun _ => hbind _ _ (hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)) fun _ => hpure _
+    hbind _ _ (hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)) fun _ =>
+      hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
+        (fun _ _ => hbind _ _ (hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)) fun _ =>
+          hhash _ type_le_four _)
+        fun _ _ _ _ _ => hnode _ type_le_four)
+      fun _ => hpure _
 
 include hpure hbind hhash hcompress hnode in
 /-- FORS public-key recovery satisfies `Q`. -/

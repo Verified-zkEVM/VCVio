@@ -90,9 +90,40 @@
       "reportLocation": "outside source tree; attach to exact PR revision"
     },
     "canonicalBaseA0": {
-      "status": "pending implementation",
-      "scope": "preserved PR 766 on canonical dependency lock, before further proof or adapter development",
-      "command": "python3 docs/design/slh-dsa-pr766-pr912-evidence/validate-recorded-head.py -- lake build HashSig VCVioTest HashSigTest"
+      "status": "passed",
+      "scope": "preserved PR 766 compilation on the canonical lock before the FORS repair; runtime and full validation remain pending",
+      "command": "python3 docs/design/slh-dsa-pr766-pr912-evidence/validate-recorded-head.py -- lake build HashSig VCVioTest HashSigTest",
+      "validatedCommit": "65dc7c27bba380b9bfa1ae33d2df3e5fd7a8ce54",
+      "validatedTree": "106ef6731c730aa613b13cd9561a3d5b211bdfbf",
+      "validationCommand": [
+        "/usr/bin/time",
+        "-v",
+        "lake",
+        "build",
+        "HashSig",
+        "VCVioTest",
+        "HashSigTest"
+      ],
+      "reportPath": "/tmp/vcvio-pr766-a0/validation.json",
+      "reportSha256": "3ef6e4bca10ec0fb15ec09d7dcd569e46df03d62975f84e4eadc1f2825e115b5",
+      "commandLogPath": "/tmp/vcvio-pr766-a0/command.log",
+      "commandLogSha256": "706de0e84bfa5c8148306a3926123d44ffd4086c1e99267465cdf533e795ce13",
+      "rootEvaluationPath": "/tmp/slhdsa-orchestration/a0-root-evaluation.json",
+      "rootEvaluationSha256": "037f1e699052f557b6ffa551558280e38d69bc9f1c7b6350b2dee1821361517d",
+      "manifestSha256": "747a2db13896cd159394586f62d2c70e31b91cf9ed6b6700276802353e8961c8",
+      "dependencyRevisions": {
+        "mathlib": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+        "PolyFun": "5670109ccaaaf945c6003519244b76e0777ecc45",
+        "plausible": "dfa4f38190d07c37e315953e08b90fe2d95b3c24",
+        "LeanSearchClient": "d6b4c7be5be75ec4917c873ac50c756dc1436372",
+        "importGraph": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93",
+        "proofwidgets": "df72b022e558978a1c50264cfc4d7fec86fa8e04",
+        "aesop": "4a174c490d8707121c4a9290800489f105d85e07",
+        "Qq": "dce0ad79c486cb1fb504af04f953c3466b0c6db8",
+        "batteries": "66e469188fe07963e5cf666c7d4433f45b8131c5",
+        "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
+        "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8"
+      }
     },
     "canonicalCoexistenceB0": {
       "status": "pending implementation",
@@ -104,7 +135,7 @@
       "fixtures": 25,
       "implementation": "validate-recorded-head.py",
       "checker": "test-validate-recorded-head.py",
-      "scope": "gate enforcement only; canonical builds and full validation remain pending",
+      "scope": "gate enforcement fixtures only; canonical A0 compilation passed separately, B0 and full validation remain pending",
       "versionQueryChecks": {
         "invocations": [
           "initial",

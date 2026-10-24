@@ -392,13 +392,13 @@ theorem forsSignWithSecret_labTriple (md : List Byte) :
       ∀ j (hj : j < vp.params.a), ForsHolds core pos.forsAdrs j
         (sibling (forsLeafIndex vp.params md i / 2 ^ j)) sig.auth[j] st)
     (fun _ _ _ _ hle h ↦ ⟨h.1.mono hle, fun j hj ↦ (h.2 j hj).mono hle⟩) fun i ↦
-      (forsAuthPath_labTriple core hd pkSeed pos md i).bind fun path ↦
-        (((labSecret_labTriple core pkSeed (Adrs.isSecretKey_forsSkAdrs _ _)).frame
-          (F := fun st ↦ ∀ j (hj : j < vp.params.a), ForsHolds core pos.forsAdrs j
-            (sibling (forsLeafIndex vp.params md i / 2 ^ j)) path[j] st)
-          fun _ _ hle h j hj ↦ (h j hj).mono hle).mono (fun _ h ↦ ⟨trivial, h⟩)
-            fun _ _ h ↦ h).bind fun sk ↦
-          QueryImpl.EqDistTriple.pure _ fun _ h ↦ ⟨trivial, h.1, h.2⟩).mono (fun _ h ↦ h)
+      (labSecret_labTriple core pkSeed (Adrs.isSecretKey_forsSkAdrs _ _)).bind fun sk ↦
+        (((forsAuthPath_labTriple core hd pkSeed pos md i).frame
+          (F := fun st ↦ CellHolds core st (childCell core (.inl
+            (forsSkAdrs pos.forsAdrs (forsLeafIndex vp.params md i)))) sk)
+          fun _ _ hle h ↦ h.mono hle).mono (fun _ h ↦ ⟨trivial, h⟩)
+            fun _ _ h ↦ h).bind fun path ↦
+          QueryImpl.EqDistTriple.pure _ fun _ h ↦ ⟨trivial, h.2, h.1⟩).mono (fun _ h ↦ h)
     fun _ _ h ↦ h.2
 
 include hd in

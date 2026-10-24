@@ -129,6 +129,13 @@ signatures reject before invoking the underlying verifier. Exact call traces che
 ambient requests and signing-query forwarding; malformed public keys also reject without
 underlying verification.
 
+`forsSignWithSecret` reads the selected leaf's `FORS_PRF` value before evaluating its
+sibling-only authentication path, for each tree in order. `slhdsa_fors_secret_order_tests`
+checks that schedule with distinguishable selected and sibling leaves, exact provider/hash
+addresses and authentication-node values, and a full callback trace. The honest-provider
+specialization and public hash traffic agree with `forsSignWith`; provider call order is
+checked separately because an effect-free honest provider cannot distinguish the two schedules.
+
 `CoveringEval.lean` computes surjection counts with a table-based triangular recurrence proved by
 partitioning functions by image size. Binomial coefficients use descending factorials; budgets
 such as `2^64` are never enumerated. `Security/BoundEval.lean` proves that exact nonnegative

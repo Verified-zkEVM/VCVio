@@ -102,7 +102,8 @@ passes on the exact new #766 head. Merge #766 before merging #912.
 
 Use a separate worktree and the stabilized #766 as the base, rebased to canonical `main` after
 #766 merges. Bring over the 238 modules under `HashSig/SLHDSA/SHAKE128s/`, preserving attribution,
-and `docs/design/slh-dsa-shake128s-suf-cma.md`. Include the original program bridge and theorem.
+and the proposed `docs/design/slh-dsa-shake128s-suf-cma.md`. Include the original program bridge
+and theorem.
 The shared FORS repair belongs to A and should not be introduced a second time.
 
 Do not replay the deletion commit `e897ebb5570f7eaf60c4b8a0142c85e00dc05bf1`. Preserve the
@@ -130,8 +131,9 @@ must build here. Do not begin substantial adapter work on the strength of the ol
 
 ## C Connect the two public security interfaces
 
-Add `HashSig/SLHDSA/SHAKE128s/Bridge/Wire.lean` for the fixed-context adapter and
-`HashSig/SLHDSA/SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean` for the public bound.
+Add the proposed `HashSig/SLHDSA/SHAKE128s/Bridge/Wire.lean` for the fixed-context adapter and
+the proposed `HashSig/SLHDSA/SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean`
+for the public bound.
 The former may import `SLHDSA/Security/Wire.lean`; the existing generic security and VCVio
 modules must not import the specialized SHAKE-128s proof. Keep this dependency direction.
 
@@ -190,7 +192,7 @@ and signer hash calls remain excluded from `adversaryWork`, while verification i
 Retain FIPS codec and ACVP tests for the actual scheme. Tests that merely restate the final
 theorem do not replace these controls.
 
-Put the counted-game controls in `HashSigTest/SLHDSA/SHAKE128s/Game.lean`, registered as
+Put the counted-game controls in the proposed `HashSigTest/SLHDSA/SHAKE128s/Game.lean`, registered as
 `slhdsa_shake128s_game_tests` in `lakefile.lean` and `lake test`. Supply a computable runner
 proved equal to the counted experiment, following the existing wire test's
 `executableExperiment_eq`; execute it against a small deterministic caching/trace handler.
@@ -200,8 +202,8 @@ samples add no work. The expected `adversaryWork` total is four, while the full 
 six. Changing either cache-hit accounting or source attribution must fail the fixture.
 
 Put fixed-context translation and theorem-interface controls in
-`HashSigTest/SLHDSA/SHAKE128s/WireBridge.lean`. Check actual query translation using a nonempty
-context and a recognizable signing reply, without executing an expensive full FIPS keygen.
+the proposed `HashSigTest/SLHDSA/SHAKE128s/WireBridge.lean`. Check actual query translation
+using a nonempty context and a recognizable signing reply, without executing an expensive full FIPS keygen.
 The replay and same-message/different-signature controls must inspect the computed win bit and
 log, not rely on application of the final security inequality.
 
@@ -315,6 +317,7 @@ probe environment, artifact hashes, completed checks, and outstanding obligation
 | Unchanged #912 coexistence | [168 of 238 modules](slh-dsa-pr766-pr912-evidence/new-proof-compatibility-results.json), including its full scheme bridge, compiled against the repaired environment; the broader probe was stopped after this checkpoint |
 | Byte-range follow-up targets | All 36 proposed coefficient inequalities passed exact rational arithmetic; Lean range transport remains open |
 | Recorded-head validation gate | 25 isolated-repository fixtures pass: the original 13 cover clean/ignored-build success, dirty source/index, generated-import mutation, moved HEAD, dependency mismatch/dirt, command failure, and wrong Lean; 12 cover dirty or committed source/dependency changes and committed manifest/toolchain changes during both initial and final version queries |
+| Canonical-base checkpoint A0 | Passed at `65dc7c27bba380b9bfa1ae33d2df3e5fd7a8ce54`: `HashSig`, `VCVioTest` and `HashSigTest` built with clean source and all 11 locked dependencies; external report and hashes are recorded in the validation record |
 | Full combined build and validation | Required on the canonical dependency lock after implementation; not discharged by these probes |
 
 The repair and interface probes used Lean `v4.35.0`, cached dependencies from the clean pinned
@@ -332,8 +335,8 @@ modules and its final headline have not been rebuilt by the coexistence probe.
 
 Reproduce the validation-gate fixtures with
 `python3 docs/design/slh-dsa-pr766-pr912-evidence/test-validate-recorded-head.py`.
-These fixtures exercise commit/lock enforcement; they do not satisfy the pending A0, B0, or
-full implementation validation gates.
+These fixtures exercise commit/lock enforcement; the separate A0 compilation passed as recorded
+above. B0 and full implementation validation remain pending.
 
 ## Follow-ups after both security developments coexist
 

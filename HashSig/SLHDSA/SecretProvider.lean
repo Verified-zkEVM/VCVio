@@ -286,16 +286,16 @@ leaves. -/
   compress (forsPkAdrs adrs) roots.toList
 
 /-- The FORS signature on digest `md` at `adrs` (FIPS 205 Algorithm 16): for each tree, the
-authentication path through the provider-parametric tree together with the provider's value at the
-indexed leaf's `FORS_PRF` address. -/
+provider's value at the indexed leaf's `FORS_PRF` address, then the authentication path through
+the provider-parametric tree, in the order FIPS 205 evaluates them. -/
 @[expose] def forsSignWithSecret {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y) (nodeHash : Adrs → core.Y → core.Y → m core.Y)
     (secret : Adrs → m core.Y) (md : List Byte) (adrs : Adrs) : m (ForsSigCore p core) :=
   Vector.ofFnM fun i : Fin p.k => do
     let idx := i.val * 2 ^ p.a + forsIdx p md i.val
+    let sk ← secret (forsSkAdrs adrs idx)
     let path ← PerfectMerkleTree.intrinsicAuthPathM (forsLeafWithSecret core hash secret adrs)
       (forsNodeHashWith nodeHash adrs) idx p.a
-    let sk ← secret (forsSkAdrs adrs idx)
     return ⟨sk, path⟩
 
 /-- At the honest provider provider-parametric FORS signing is `forsSignWith`. -/
@@ -487,13 +487,13 @@ theorem forsSignWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad
       forsSignWithSecret core hashn nodeHashn secretn md adrs := by
   apply Vector.ofFnM_natural F
   intro i
+  rw [F.mmap_bind, hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)]
+  refine bind_congr fun sk => ?_
   rw [F.mmap_bind, PerfectMerkleTree.intrinsicAuthPathM_natural F _ _
     (forsLeafWithSecret core hashn secretn adrs) (forsNodeHashWith nodeHashn adrs)
     (fun t => forsLeafWithSecret_natural core F hashm hashn secretm secretn hhash hsecret adrs t)
     (fun z t l r => forsNodeHashWith_natural F nodeHashm nodeHashn hnode adrs z t l r)]
-  refine bind_congr fun path => ?_
-  rw [F.mmap_bind, hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)]
-  exact bind_congr fun sk => F.mmap_pure _
+  exact bind_congr fun path => F.mmap_pure _
 
 /-- A query-preserving monad morphism commutes with provider-parametric FORS signing when it
 commutes with the provider at secret-key addresses. -/

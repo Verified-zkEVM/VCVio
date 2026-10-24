@@ -88,11 +88,15 @@ build boundaries and the staged consolidation.
   `shakeAdvantage_*_validatedParams` theorems (`shakeAdvantage_le_securityBound_validatedParams`)
   and `shakeAdvantage_le_securityBound`, `shakeAdvantage_pure_le_securityBound` and
   `shakeAdvantage_le_securityBound_hedged`. The bounds are over the structured
-  signatures of FIPS 205's internal functions; SUF-CMA over byte strings at the external API, which
-  also needs the signature encoding to parse one-to-one, is not proved. The SHA-2 parameter sets
-  have no single-oracle model. A complete FIPS conformance result is not proved; see
-  `docs/design/slh-dsa-status-and-roadmap.md` and, for the accounting and levels,
-  `docs/design/slh-dsa-classical-rom-bound.md`.
+  signatures of FIPS 205's internal functions and extend to the pure-mode byte interface at a
+  fixed valid context, using canonical public-key and signature codecs with unchanged adversary
+  query budgets (`wireStrongAdvantage_le_securityBound_validatedParams` and its hedged form).
+  Exact evaluators and a kernel-certified 18-entry table accompany the bounds; uniform
+  budget-range certificates cover the three-oracle bound. Variable-length XOF game transport,
+  SLH-DSA-specific honest-work certificates, byte-level range certificates, and a second
+  construction remain open. The SHA-2 parameter sets have no single-oracle model. A complete
+  FIPS conformance result is not proved; see `docs/design/slh-dsa-status-and-roadmap.md` and,
+  for the accounting and levels, `docs/design/slh-dsa-classical-rom-bound.md`.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
 - `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr.

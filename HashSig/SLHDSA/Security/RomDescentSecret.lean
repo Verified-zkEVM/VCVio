@@ -739,7 +739,7 @@ theorem targetCollision_or_eq_of_forsSignWithSecret (pk : core.PkSeed)
   refine (forsPkFromSig?_cases secret pk c digest sig forsPk hforge hhonest).imp id
     fun h => Vector.ext fun i hi => ?_
   obtain ⟨hx', hpath'⟩ := h ⟨i, hi⟩
-  obtain ⟨path, hpath, x, hx, hsig⟩ := hsign ⟨i, hi⟩
+  obtain ⟨x, hx, path, hpath, hsig⟩ := hsign ⟨i, hi⟩
   rw [Fin.getElem_fin] at hsig
   rw [← hsig, Option.some.inj (hx.symm.trans hx'), Option.some.inj (hpath.symm.trans hpath')]
 

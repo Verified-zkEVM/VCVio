@@ -223,9 +223,9 @@ the lab tree and the secret at the indexed leaf. -/
     OracleComp (labSpec core) (ForsSigCore vp.params core) :=
   Vector.ofFnM fun i : Fin vp.params.k => do
     let idx := i.val * 2 ^ vp.params.a + forsIdx vp.params md i.val
+    let sk ← labSecret core (forsSkAdrs adrs idx)
     let path ← PerfectMerkleTree.intrinsicAuthPathM (labForsLeaf core adrs)
       (forsNodeHashWith (labH core) adrs) idx vp.params.a
-    let sk ← labSecret core (forsSkAdrs adrs idx)
     return ⟨sk, path⟩
 
 /-- The hypertree signature of `msg` from layer position `pos` upward over `layers` layers, with
@@ -330,11 +330,12 @@ include hpure hbind htouch hread in
 /-- The lab FORS signature satisfies `Q`. -/
 theorem labForsSign_pred (md : List Byte) (adrs : Adrs) : Q (labForsSign core md adrs) :=
   Vector.ofFnM_pred Q hpure hbind _ fun _ =>
-    hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
-      (fun _ _ => labForsLeaf_pred core hpure hbind htouch hread _ _)
-      fun _ _ _ _ _ _ _ => labNode_pred core hpure hread _) fun _ =>
     hbind _ _ ((labSecret_of_isSecretKey core (Adrs.isSecretKey_forsSkAdrs _ _)) ▸ hread _)
-      fun _ => hpure _
+      fun _ =>
+      hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
+        (fun _ _ => labForsLeaf_pred core hpure hbind htouch hread _ _)
+        fun _ _ _ _ _ _ _ => labNode_pred core hpure hread _)
+        fun _ => hpure _
 
 include hpure hbind htouch hread in
 /-- The lab hypertree signature satisfies `Q`. -/

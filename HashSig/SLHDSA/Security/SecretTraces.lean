@@ -195,12 +195,13 @@ theorem forsSignWithSecret_pred_of_ledger (md : List Byte) (pos : BottomPosition
     Q (forsSignWithSecret core hash nodeHash secret md pos.forsAdrs) :=
   Vector.ofFnM_pred Q hpure hbind _ fun tree =>
     have hdiv := forsLeafIndex_div vp.params md tree.val
-    hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
-      (fun _ hi => forsLeafWithSecret_pred_of_ledger Q hbind core hhash hsecret pos tree
-        (hi.trans hdiv))
-      fun _ _ hh hha hi => hnode _
-        (forsTreeAdrs_mem_constructionAddresses pos tree hh hha (hi.trans hdiv)))
-    fun _ => hbind _ _ (secret_forsSkAdrs_pred Q core hsecret pos tree hdiv) fun _ => hpure _
+    hbind _ _ (secret_forsSkAdrs_pred Q core hsecret pos tree hdiv) fun _ =>
+      hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
+        (fun _ hi => forsLeafWithSecret_pred_of_ledger Q hbind core hhash hsecret pos tree
+          (hi.trans hdiv))
+        fun _ _ hh hha hi => hnode _
+          (forsTreeAdrs_mem_constructionAddresses pos tree hh hha (hi.trans hdiv)))
+      fun _ => hpure _
 
 include hpure hbind hhash hcompress hnode in
 /-- FORS public-key recovery at a reachable bottom position satisfies `Q`. -/

@@ -244,14 +244,15 @@ theorem readsUnhidden_labForsSign (hd : core.KeyDiscipline vp) {d : Bytes vp.par
     (hU : U d) :
     ReadsUnhidden core pkSeed U st (labForsSign core (splitDigest vp.params d).md.toList
       (splitDigest vp.params d).forsAdrs) := by
-  refine allQueriesSatisfy_ofFnM _ fun i ↦ allQueriesSatisfy_bind
-    (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree (ReadsUnhidden core pkSeed U st)
-      (fun _ ↦ allQueriesSatisfy_pure _ _) (fun _ _ ↦ allQueriesSatisfy_bind) _ _ _ _
-      (fun _ _ ↦ readsUnhidden_touchRead pkSeed hd (b := .inr (forsNodeAdrs _ 0 _)) rfl fun _ hc ↦
-        ⟨addressFacts_of_childCell_inr_eq_some hd.canonicalAddressBounds hc,
-          not_hiddenChild_inr (.inl (by simp [forsNodeAdrs_eq]))⟩)
-      fun _ _ _ _ _ _ _ ↦ readsUnhidden_forsNodeHashWith pkSeed hd _ _ _ _ _) fun _ ↦
-      allQueriesSatisfy_bind ?_ fun _ ↦ allQueriesSatisfy_pure _ _
+  refine allQueriesSatisfy_ofFnM _ fun i ↦ allQueriesSatisfy_bind ?_ fun _ ↦
+    allQueriesSatisfy_bind
+      (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree (ReadsUnhidden core pkSeed U st)
+        (fun _ ↦ allQueriesSatisfy_pure _ _) (fun _ _ ↦ allQueriesSatisfy_bind) _ _ _ _
+        (fun _ _ ↦ readsUnhidden_touchRead pkSeed hd (b := .inr (forsNodeAdrs _ 0 _)) rfl fun _ hc ↦
+          ⟨addressFacts_of_childCell_inr_eq_some hd.canonicalAddressBounds hc,
+            not_hiddenChild_inr (.inl (by simp [forsNodeAdrs_eq]))⟩)
+        fun _ _ _ _ _ _ _ ↦ readsUnhidden_forsNodeHashWith pkSeed hd _ _ _ _ _)
+      fun _ ↦ allQueriesSatisfy_pure _ _
   have h := Adrs.isSecretKey_forsSkAdrs (splitDigest vp.params d).forsAdrs
     (forsSigLeafIndex vp.params (splitDigest vp.params d).md.toList i.val)
   rw [forsSigLeafIndex_eq] at h
