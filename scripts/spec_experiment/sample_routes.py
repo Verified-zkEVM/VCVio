@@ -90,7 +90,7 @@ def main():
     with open(a.out, 'w', newline='') as f:
         cols = ['id', 'decl', 'module', 'file', 'line', 'route', 'family', 'stratum', 'lines',
                 'incl', 'weight']
-        w = csv.DictWriter(f, fieldnames=cols)
+        w = csv.DictWriter(f, fieldnames=cols, lineterminator='\n')
         w.writeheader()
         for i, r in enumerate(out):
             path, line = locate(r['module'], r['decl'])
