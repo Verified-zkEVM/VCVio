@@ -1,0 +1,339 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>VCVio Program Logic Routing</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column with wide tables in their own scroll boxes; a sticky route-key strip under the title. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #1b2230;
+  --muted: #5a6476;
+  --rule: #d9dee7;
+  --accent: #2f45a8;
+  --accent-soft: #e6eaf8;
+  --good: #1f7a4d;
+  --warn: #9a5b00;
+  --display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10131a; --surface: #171b24; --fg: #dde2ea; --muted: #9aa3b4; --rule: #2b3140;
+    --accent: #9aabff; --accent-soft: #232b48; --good: #6fd19c; --warn: #f0b45c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10131a; --surface: #171b24; --fg: #dde2ea; --muted: #9aa3b4; --rule: #2b3140;
+  --accent: #9aabff; --accent-soft: #232b48; --good: #6fd19c; --warn: #f0b45c;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+main { max-width: 860px; margin: 0 auto; display: grid; gap: 40px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 600; font-size: clamp(30px, 5vw, 44px); line-height: 1.12; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 26px; line-height: 1.2; margin: 0 0 12px; text-wrap: balance; }
+h3 { font-size: 16px; font-weight: 600; margin: 18px 0 6px; }
+p { margin: 0 0 12px; max-width: 68ch; }
+.lede { font-size: 18px; color: var(--fg); max-width: 66ch; }
+.meta { color: var(--muted); font-size: 14px; }
+code, .mono { font-family: var(--mono); font-size: .88em; }
+.pill { display: inline-block; font-family: var(--mono); font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.pill.good { background: transparent; color: var(--good); border: 1px solid currentColor; }
+.pill.warn { background: transparent; color: var(--warn); border: 1px solid currentColor; }
+section { display: grid; gap: 4px; }
+.keystrip { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--rule); padding-block: 8px; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.keystrip .lbl { font-size: 12px; color: var(--muted); margin-right: 4px; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); margin: 6px 0 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.layers { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 8px 0 4px; }
+.layer { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px; min-width: 0; display: grid; gap: 6px; align-content: start; }
+.layer b { font-family: var(--display); font-size: 18px; font-weight: 600; }
+.layer p { font-size: 14px; color: var(--muted); margin: 0; }
+ol, ul { margin: 0 0 12px; padding-left: 22px; max-width: 68ch; }
+li { margin: 4px 0; }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; margin: 6px 0 12px; }
+.foot { color: var(--muted); font-size: 13px; border-top: 1px solid var(--rule); padding-top: 14px; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 480px) { th, td { padding: 7px 9px; } .lede { font-size: 17px; } }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">VCVio · investigation record · 2026-10-23</div>
+    <h1>One program logic for VCVio, with cheap routing</h1>
+    <p class="lede">Which logic should handle a goal, what core Lean will give on the v4.36 line, and how far automation goes. The answer: <code>vcgen</code> stays the one entry point, behind a syntactic route key, and each layer does what only it can do.</p>
+    <p class="meta">Local branch <span class="mono">spike/route-classifier</span>. Base: VCVio main <span class="mono">f3df0ac18</span> + PolyFun re-pin (#911) + the Foxglove bridge spike. Lean v4.35.0; probes also on v4.36.0-rc1 and nightly-2026-10-23.</p>
+  </header>
+
+  <nav class="keystrip" aria-label="Route tags used on this page">
+    <span class="lbl">Route tags</span>
+    <span class="pill">core:&lt;reading&gt;</span><span class="pill">necessary</span><span class="pill">upper</span><span class="pill">lowerUpper</span><span class="pill">relational</span><span class="pill">handler</span><span class="pill">queryBound</span><span class="pill">foxglove</span><span class="pill">+fox</span>
+  </nav>
+
+  <section>
+    <h2>The answer in brief</h2>
+    <div class="layers">
+      <div class="layer"><b>Core vcgen</b><p>The monadic skeleton: pure, bind, if/match, transformer layers, ∧/∃ splits, invariants and measures, exceptions, and (shown here) separation-logic frames.</p></div>
+      <div class="layer"><b>VCVio</b><p>Averaging steps (core stops at the first +, *, ∑, ∑′), the four event readings, relational logic, handler and bisimulation rules, oracle specs.</p></div>
+      <div class="layer"><b>PolyFun</b><p>Exact WP laws and the <code>ExactWPMonad.dual</code> upper reading. A budget reading would serve query bounds.</p></div>
+      <div class="layer"><b>Foxglove</b><p>Independence and conditioning, for the goals where they are the crux. Its ∗ can ride core frames.</p></div>
+    </div>
+    <p>The route key reads head constants only, at about 85µs per goal.</p>
+    <ul>
+      <li>Explicit core triples go to core <code>vcgen</code>.</li>
+      <li>Event goals go to their reading, following the reverted <code>prvcgen</code>'s table.</li>
+      <li>Relational goals go to <code>rvcgen</code>.</li>
+      <li>Equations between handler-run programs go to bisimulation rules.</li>
+      <li>Query bounds go to a budget reading.</li>
+      <li>Pair events also try Foxglove.</li>
+    </ul>
+    <p class="callout">Measured payoff ranges from about 0% to about 70% fewer lines per family. Over the routed part of the library, the estimate is 15–32% fewer lines, which is 7–15% of all proof lines. Heartbeats move 0.3–4.7×, depending on the family.</p>
+    <p class="callout"><b>A large spec library does not change this</b> (section 6, measured on a random sample). Re-proving with today's tools saves 44% of the lines (75% of proof bodies). A ~430-declaration, 4.5k-line spec and handler library adds 1.2 points, and costs more lines than it saves.</p>
+  </section>
+
+  <section>
+    <h2>1. Routing</h2>
+    <p><code>Route.classify</code> reads a goal into a <code>RouteKey</code>:</p>
+    <ul>
+      <li><b>Judgment head:</b> core or VCVio triple, <code>⊑ wp</code>, the relational judgments, <code>=ᵈ</code>, query and cost bounds, Foxglove entailments, or a relation. An equation at a monad type is an equation of programs.</li>
+      <li><b>Side kinds of a relation:</b> event, measure, <code>wp</code>, expectation (∑′ or ∫⁻), coupling, total-variation distance, 0, 1, or arithmetic.</li>
+      <li><b>Carrier and interpretation</b> of a triple. The reading is read off the <code>WP</code> instance, including a caller's own instance definition.</li>
+      <li><b>Monad and computation heads.</b></li>
+      <li><b>Premise bits:</b> support membership, triples, query bounds.</li>
+    </ul>
+    <p>It never searches the term, unifies, or tries a step speculatively. That is why it routes correctly the triples that sit in premises and the <code>Prop</code> and <code>Prob</code> carriers, which today's <code>find?</code>-based classifiers misroute.</p>
+    <h3>The front end in <code>vcgen</code></h3>
+    <p>An explicit core triple with a known reading goes to core <code>vcgen</code> with its default configuration. Every other goal falls through unchanged.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Check</th><th>Before</th><th>With the front end</th></tr></thead>
+      <tbody>
+        <tr><td><code>VCVioTest/ProgramLogic/CoreVCGen.lean</code>, with VCVio's tactics imported</td><td class="num">7 errors</td><td class="num"><span class="pill good">0 errors</span></td></tr>
+        <tr><td><code>CoreWP.lean</code>, the same</td><td class="num">1 error</td><td class="num"><span class="pill good">0 errors</span></td></tr>
+        <tr><td><code>HandlerSpecs.seededOracle_triple</code> heartbeats</td><td class="num">4,176</td><td class="num">813</td></tr>
+        <tr><td>226 declarations in nine <code>vcgen</code>-heavy files</td><td class="num">—</td><td class="num">no change</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Census of the library</h3>
+    <p>The scope is CryptoFoundations, Examples, LatticeCrypto, HashSig, Foxglove and the bridge: 4,285 theorems and 63.1k lines. 1,383 theorems (32%) route to a program logic, and they hold 30.0k lines (47%). Classification costs p50 85µs and p99 270µs.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Route</th><th>Goal shape</th><th class="num">Decls</th><th class="num">Lines</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill">upper</span></td><td><code>Pr ≤ ε</code>, <code>= 0</code>, <code>wp ≤</code></td><td class="num">92</td><td class="num">5,683</td></tr>
+        <tr><td><span class="pill">relational</span></td><td>game-hop equations, <code>=ᵈ</code>, couplings</td><td class="num">128</td><td class="num">5,308</td></tr>
+        <tr><td><span class="pill">necessary</span></td><td><code>= 1</code>, support premises</td><td class="num">156</td><td class="num">4,714</td></tr>
+        <tr><td><span class="pill">progAlgebra</span></td><td>other equations of programs</td><td class="num">356</td><td class="num">4,471</td></tr>
+        <tr><td><span class="pill">queryBound</span></td><td>query and cost bounds</td><td class="num">155</td><td class="num">2,452</td></tr>
+        <tr><td><span class="pill">handler</span></td><td>equations through <code>simulateQ</code></td><td class="num">171</td><td class="num">2,200</td></tr>
+        <tr><td><span class="pill">foxglove</span></td><td>Foxglove's own logic</td><td class="num">181</td><td class="num">2,198</td></tr>
+        <tr><td><span class="pill">lowerUpper</span></td><td><code>Pr = c</code></td><td class="num">100</td><td class="num">1,765</td></tr>
+        <tr><td><span class="pill">upToBad</span></td><td>total variation</td><td class="num">21</td><td class="num">812</td></tr>
+        <tr><td><span class="pill">+fox</span></td><td>Foxglove candidates among the above (pair events)</td><td class="num">49</td><td class="num">2,782</td></tr>
+      </tbody>
+    </table></div>
+    <p>What remains unrouted is mostly mathematics: encodings, lattice and polynomial algebra, data structures.</p>
+    <p>The 14 program-logic calls in real proofs (outside the showcase files) are all <code>rvcgen</code>, <code>rvcstep</code> or <code>vcstep</code>. ArkLib was not censused: its build is from an older toolchain.</p>
+  </section>
+
+  <section>
+    <h2>2. Probes: core-first re-proofs</h2>
+    <p>One re-proof per goal family, with each original proof copied into the same file for comparison. Line counts include any new helper lemmas.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Probe</th><th>Route</th><th class="num">Lines</th><th class="num">Heartbeats</th></tr></thead>
+      <tbody>
+        <tr><td>P1 Merkle batch-root support invariant</td><td>necessary + core vcgen</td><td class="num">93 → 37–44</td><td class="num">1.9k → 6.8–9.1k</td></tr>
+        <tr><td>P1′ its <code>verifyOpening</code> corollary</td><td>the same</td><td class="num">11 → 6</td><td class="num">377 → 882</td></tr>
+        <tr><td>P2 PRF-tag swap invariant</td><td>handler, with a new bisimulation rule</td><td class="num">174 → 122</td><td class="num">3.5k → 3.1k</td></tr>
+        <tr><td>P5a ElGamal sample reordering</td><td>relational</td><td class="num">14 → 13–15</td><td class="num">2.0k → 2.6–3.9k</td></tr>
+        <tr><td>P5b ElGamal half lemma</td><td>relational, same-type bijection</td><td class="num">122 → 35</td><td class="num">20.0k → 5.9k</td></tr>
+        <tr><td>P4 three query bounds</td><td>budget reading + core vcgen</td><td class="num">−7% to −45%</td><td class="num">0.37×–3.4×</td></tr>
+        <tr><td>P3 a bad-event bound</td><td>upper reading + ranked triples</td><td class="num">108 → 48</td><td class="num">5.2k → 9.8k</td></tr>
+        <tr><td>P6 a single fresh draw</td><td>upper reading</td><td class="num">4 → 5</td><td class="num">1.6k → 1.0k</td></tr>
+        <tr><td>Fair-bit lemma (earlier spike)</td><td>Foxglove independence</td><td class="num">27 → 1 or 5</td><td class="num">1.0k → 5.4k or 1.1k</td></tr>
+      </tbody>
+    </table></div>
+    <h3>What the probes found missing</h3>
+    <ul>
+      <li><b>Handler specs.</b> WP-form specs for the caching, seeded and logging oracles; structural <code>simulateQ</code> specs; a whole-simulation monotone frame; a <code>support_of_triple_wp</code> bridge.</li>
+      <li><b>Reducibility.</b> Reducible wrapper definitions, or one-step equation lemmas, because spec matching does not unfold wrappers.</li>
+      <li><b>Relational rules.</b> The bisimulation equation <code>simulateQ_run_eq_of_impl_eq_on_inv</code> (proved in P2 in 7 lines), and a cross-type bijection coupling.</li>
+      <li><b>Bound readings.</b> The upper reading restored, with <code>simulateQ_triple_ranked</code> and a StateT readback simp set; a budget reading for query bounds.</li>
+      <li><b>Tactic defects.</b> <code>rvcstep</code> crashes on a loose bound variable; an untyped <code>using</code> hint is misread; a pure leaf with a non-<code>EqRel</code> relation fails instead of leaving its goal; <code>rvcgen</code> hits maximum recursion depth; swaps have no side or depth selector; the <code>vcstep?</code> planner is costly.</li>
+      <li><b>A core bug.</b> An eta-reduced StateT precondition makes core <code>vcgen</code> fail.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. Upstream: what core gives on v4.36</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Feature</th><th>Finding</th></tr></thead>
+      <tbody>
+        <tr><td>Frames</td><td><span class="pill good">works</span> A Foxglove-style ∗ rides core frames on v4.35, rc1 and the nightly. It needs an opaque assertion type, its own monad head, <code>withFrameClosure</code>, specs with concrete posts, and a roughly 75-line frameproc. One blocker: core does not expose the frame rule's <code>WP.Frames</code> side goal.</td></tr>
+        <tr><td><code>+jp</code></td><td><span class="pill warn">nightly only</span> 64 verification conditions collapse to 1. It shares nothing when preconditions carry resources, and errors on v4.35 and rc1.</td></tr>
+        <tr><td>Quantitative goals</td><td><span class="pill warn">stops at averaging</span> Core handles pure, bind, if, ∧ splits and fixed-post specs. It stops at the first +, *, ∑ or ∑′, and its table of lattice operations is closed. Equational WP laws close what it leaves.</td></tr>
+        <tr><td>Bump readiness</td><td><span class="pill good">builds</span> PolyFun and VCVio build on rc1 with small patches. Most of the breakage comes from Mathlib (<code>Set</code> is now a structure). The <code>Std.WP</code> changes: PolyFun's <code>wpTrans</code> is now a separate field, binders were renamed <code>epost</code>→<code>eposts</code>, and <code>throws</code> is a keyword. A hidden risk: a meta-level <code>mkAppM</code> call on a deprecated name in <code>Backward.lean</code>.</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Requests to make of core</h3>
+    <ol>
+      <li>Expose the <code>WP.Frames</code> side goal to frameprocs, or discharge it automatically.</li>
+      <li>An extension point for lattice operations or steps, so a library can step through + and ∑.</li>
+      <li>Spec arguments at a call site that may depend on earlier binders.</li>
+      <li><code>+jp</code> sharing with resource-carrying preconditions.</li>
+      <li>The eta-reduced precondition bug.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>4. How far automation goes</h2>
+    <p>At its best, a goal whose leaves all have specs closes in one call: the fair-bit lemma, the laws of uniform queries, and Foxglove's Schwartz–Zippel read as a VCVio <code>Pr</code> statement. Below that:</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Tier</th><th>What is left to the user</th><th>Measured</th></tr></thead>
+      <tbody>
+        <tr><td>Invariants (handler, support)</td><td>one <code>vcgen</code> per case, plus a first-order closer</td><td>≈50% fewer lines, 3.5–4.7× heartbeats (<code>grind</code>)</td></tr>
+        <tr><td>Bijection game hops</td><td>a bijection hint, plus algebra</td><td>≈70% fewer lines, 3× cheaper</td></tr>
+        <tr><td>Reordering hops</td><td>swap guidance</td><td>≈0–10%</td></tr>
+        <tr><td>Per-query bad-event bounds</td><td>a potential</td><td>≈55% fewer lines, 1.9× heartbeats</td></tr>
+        <tr><td>Query bounds</td><td>arithmetic</td><td>7–45%</td></tr>
+        <tr><td>Composed phase bounds</td><td>restating phases as potential triples</td><td>not measured</td></tr>
+        <tr><td>Forking, nonlinear 2-safety</td><td>—</td><td>out of scope</td></tr>
+      </tbody>
+    </table></div>
+    <p>Weighted over the census, the estimate is about 4.5k–9.5k fewer lines out of the 30k routed:</p>
+    <ul>
+      <li>necessary: 1.4–2.6k;</li>
+      <li>upper: 1.1–2.8k;</li>
+      <li>relational: 0.8–1.3k;</li>
+      <li>handler: 0.7–1.0k;</li>
+      <li>query bounds: 0.25–1.0k;</li>
+      <li>Foxglove candidates: 0.3–0.8k.</li>
+    </ul>
+    <p>This is consistent with #821's per-proof pilots (35–75%) once averaged across families.</p>
+  </section>
+
+  <section>
+    <h2>5. Roadmap</h2>
+    <ol>
+      <li><b>Land the route key, diagnostics and core-triple front end.</b> It is small, has no measured overhead, and fixes misroutes.</li>
+      <li><b>Add only the library rules with measured payoff</b> (sections 2 and 6), then extend dispatch to the readings, the bisimulation rule and the budget reading.</li>
+      <li><b>Fix the relational tactic defects.</b></li>
+      <li><b>Bump to v4.36</b> from the rc1 patches when the release lands, and adopt <code>+jp</code> once it is in a release.</li>
+      <li><b>Foxglove:</b>
+        <ul>
+          <li>open the bridge PR (the VCVio switch), stacked on a cleaned-up v4.35 update, including Foxglove's notation scoping and the <code>Countable</code> generalization;</li>
+          <li>then try its ∗ on core frames;</li>
+          <li>raise iris-lean's global ⊤ notation upstream.</li>
+        </ul>
+      </li>
+      <li><b>Send the requests to core.</b></li>
+      <li><b>Re-prove the routed proofs with today's tools</b> (section 6). This is the largest measured saving: about 44% of the frame's lines.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>6. Does a large spec library pay?</h2>
+    <p>Sections 2 and 4 found missing specs in every probe. So we built the library they asked for and measured it on a random sample of the routed theorems. <b>It does not pay.</b> A careful re-prover with today's tools already removes 44% of the lines; the library adds about one point and costs more lines than it saves.</p>
+
+    <h3>Setup</h3>
+    <p>The library is 4,533 normalized lines on <span class="mono">spike/spec-library</span>, written without seeing the sample:</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Tier</th><th class="num">Lines</th><th>Contents</th></tr></thead>
+      <tbody>
+        <tr><td>T1, handler-agnostic</td><td class="num">1,338</td><td>structural <code>simulateQ</code> specs, the <code>simulateQ_nf</code> simp set, support calculus for runs, invariant lifts and frames (<code>MonotoneState</code>), bridges, bisimulation and identical-until-bad rules, upper and budget readings, query bounds, probability bounds through binds</td></tr>
+        <tr><td>T2, core handlers</td><td class="num">1,054</td><td>caching, random, seeded, eager, logging, counting, cost, caching-logging, programming oracles and the combinators</td></tr>
+        <tr><td>T3, scheme handlers</td><td class="num">1,906</td><td>GPV, PRF, commitment hiding, PRFTagReader: 68 WP specs, 62 support iffs, 28 frames</td></tr>
+        <tr><td><code>derive_handler_specs</code></td><td class="num">235</td><td>per-branch run equations, generated for any handler</td></tr>
+      </tbody>
+    </table></div>
+    <p>The sample is 20 routed theorems, seeded and stratified by family and length, with long proofs drawn proportional to size. The frame is 813 theorems and 22.9k census lines.</p>
+    <p>Each theorem was re-proved in a copy of its own file, with the statement checked unchanged and a heartbeat gate:</p>
+    <ul>
+      <li><b>A</b>: today's tools;</li>
+      <li><b>B</b>: plus T1 and T2, starting from A (anything that didn't need the library went back into A);</li>
+      <li><b>C</b>: plus T3 and the deriver;</li>
+      <li><b>F</b>: a fresh agent with the library, never shown A.</li>
+    </ul>
+
+    <h3>Result</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Arm</th><th class="num">Frame lines saved</th><th class="num">90% CI</th></tr></thead>
+      <tbody>
+        <tr><td>A: today's tools</td><td class="num">44.0%</td><td class="num">36.4–48.8</td></tr>
+        <tr><td>B: + T1+T2</td><td class="num">45.2%</td><td class="num">37.5–50.2</td></tr>
+        <tr><td>Increment B − A</td><td class="num">+1.2 pts</td><td class="num">+0.4 to +2.2</td></tr>
+        <tr><td>C: + T3 + deriver</td><td class="num">no change in lines</td><td class="num">—</td></tr>
+        <tr><td>B net of T1+T2 lines</td><td class="num">34.7%</td><td class="num">≥ 27.0</td></tr>
+      </tbody>
+    </table></div>
+    <p>The early stop triggered (increment &lt; +3 points, upper bound &lt; +10), so the 40-theorem main sample was not run. The fresh agent matched A–B. Heartbeats fall to 0.82× the originals in A and 0.78× in B. Importing the library costs about 1 heartbeat.</p>
+
+    <h3>What the savings are made of</h3>
+    <ul>
+      <li>Statements are 19% of the lines, and nothing removes them.</li>
+      <li>Proof bodies shrink 75% with today's tools, for example 407 → 57, 213 → 35 and 47 → 2 lines. Tokens fall 54%, so this is not line-cramming.</li>
+      <li>The cuts come from dropping restated intermediate programs, normalizing in place with <code>simp only</code> while unification fills in continuations, using existing generic lemmas the originals missed, and collapsing repeated blocks.</li>
+    </ul>
+
+    <h3>What the library contributed</h3>
+    <p>The re-proofs used only a handful of the ~430 new declarations:</p>
+    <ul>
+      <li>the <code>simulateQ_nf</code> simp set, in 5 proofs;</li>
+      <li>two handler <code>run_apply</code> lemmas and <code>StateT.run_ite</code>;</li>
+      <li>T3's support iffs, in 1 proof.</li>
+    </ul>
+    <p>No spec, frame, bridge, bisimulation rule, reading or bound was used. The wins were 18 → 13 lines, 16 → 10, 13 → 12, and two heartbeat halvings.</p>
+    <p>Specs did not bite for three reasons:</p>
+    <ol>
+      <li><b>The long proofs are about distributions,</b> not supports: weighted sums over runs, lazy versus eager tables, frozen cache values, event bounds through map and bind.</li>
+      <li><b>Normal-form defects:</b>
+        <ul>
+          <li>monad laws don't fire on cslib's direct <code>FreeM.instPure</code>/<code>instBind</code>;</li>
+          <li>the simp set re-types answers of sum specs;</li>
+          <li>handler lemmas are stated on <code>impl q s</code> rather than <code>.run</code>.</li>
+        </ul>
+      </li>
+      <li><b>Placement:</b> a scheme spec module must import its handler's file, so theorems in that file can't import it.</li>
+    </ol>
+    <p><b>The deriver,</b> measured over the whole census, covers 168 of 169 scheme handlers. Its derived lemmas prove 85 of 115 hand-written one-step equations, but plain <code>simp</code> already proves 81. Its value is removing statements: 834 census lines could become 42 one-line commands.</p>
+
+    <h3>What to do instead</h3>
+    <ol>
+      <li><b>Re-prove with today's tools:</b> about 44% of the frame's lines, about 10k lines.</li>
+      <li><b>Keep only what earned its keep:</b> <code>simulateQ_nf</code> (plus missing members), the handler <code>run_apply</code> lemmas, and support iffs for handlers that proofs step through.</li>
+      <li><b>Fix the normal-form defects</b> above.</li>
+      <li><b>Adopt <code>derive_handler_specs</code></b> for one-step equations.</li>
+      <li><b>Add the few distribution-level theorems the pilot asked for,</b> each justified by demand: a union bound through maps, a coupling bound through bind, a discard rule, identical-until-bad for full runs, event forms of the draw swaps, congruence of weighted sums, and lazy versus eager random oracles.</li>
+    </ol>
+    <p class="meta">Caveats: n = 20; agent re-provers on one model, with timeboxes; the new proofs weren't reviewed for maintainability; future proofs and theorems outside the frame were not measured.</p>
+  </section>
+
+  <p class="foot">Code on <span class="mono">spike/route-classifier</span>:</p>
+  <ul class="foot">
+    <li><span class="mono">VCVio/ProgramLogic/Tactics/Common/Route.lean</span>, <span class="mono">Tactics/Route.lean</span></li>
+    <li><span class="mono">scripts/RouteCensus.lean</span></li>
+    <li><span class="mono">VCVioTest/ProgramLogic/Route.lean</span></li>
+    <li><span class="mono">VCVioTest/ProgramLogic/Probes/</span></li>
+    <li><span class="mono">docs/reading/program-logic-routing.md</span></li>
+  </ul>
+  <p class="foot">The spec-library experiment is on <span class="mono">spike/spec-library</span>: <span class="mono">VCVio/ProgramLogic/Library/</span> and <span class="mono">scripts/spec_experiment/</span> (sampler, in-place harness, estimator, re-proofs, notes, measurements).</p>
+  <p class="foot">The v4.36 probes and rc1 patches were lost with a cleared session scratchpad; their findings are in section 3, and <span class="mono">docs/reading/foxglove-vcvio-checkpoint.md</span> lists what the port needs.</p>
+</main>
+
+</body></html>

@@ -1,0 +1,6 @@
+{"_comment": "Census lines per stratum of the sampling frame (route-census.csv of 2026-10-23, routed families outside the Foxglove modules; 813 theorems, 22893 lines). Used by estimate.py when the census CSV is absent.",
+ "long": 9223,
+ "handler/mid": 2023, "lowerUpper/mid": 1980, "necessary/mid": 3239,
+ "queryBound/mid": 2206, "relational/mid": 2347, "upper/mid": 1627,
+ "handler/short": 112, "lowerUpper/short": 76, "necessary/short": 19,
+ "queryBound/short": 22, "relational/short": 18, "upper/short": 1}
