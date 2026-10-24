@@ -13,9 +13,10 @@ public import Interop.Cryptol.Bridge.Probability
 # From an imported Cryptol function to VCVio clients
 
 An ordinary-import walk-through on Foundation's `sigma_256_0`. The kernel-checked
-import is `ImportedScalar.certificate`; this file reads it back as a function on
-words, proves it equal to VCVio's `ssig0`, moves an algebraic property and a
-pre/post contract across, and swaps it inside every adaptive oracle client.
+import is `ImportedScalar.certificate`, and native evaluation of its result certifies
+it against VCVio's `ssig0` (`ImportedScalar.compiled`). This file uses the
+certificate's function on words, moves an algebraic property and a pre/post contract
+across, and swaps it inside every adaptive oracle client.
 -/
 
 public section
@@ -25,20 +26,20 @@ namespace Cryptol.Consumer.Demo
 open Cryptol Cryptol.Bridge OracleComp OracleSpec
 open VCVio.Algorithms.Sha2 (ssig0)
 
-/-- The certified native implementation of the imported function, on 32-bit words. -/
+/-- The certificate's native function, on 32-bit words. -/
 noncomputable def importedSigma (x : UInt32) : UInt32 :=
-  UInt32.ofBitVec (ImportedScalar.compiled.implementation.denote Finite.Env.empty x.toBitVec)
+  UInt32.ofBitVec (ImportedScalar.compiled.implementation x.toBitVec)
 
 /-- It is VCVio's implementation. -/
 theorem importedSigma_eq : importedSigma = ssig0 := by
   funext x
-  apply UInt32.toBitVec_inj.mp
-  simpa [importedSigma, ImportedScalar.compiled] using smallSigma256Zero_eq x
+  rw [importedSigma, ImportedScalar.compiled, Resolved.dataCertificate_implementation,
+    UInt32.ofBitVec_toBitVec, UInt32.ofBitVec_toBitVec]
 
 /-- The lazy meaning of the imported source agrees at every defined input. -/
 theorem source_meaning (x : UInt32) :
     DomainResult.applyContinuous
-        (Resolved.denote ImportedScalar.certificate.result.2 Environment.empty)
+        (Resolved.denote Foundation.wordSource1In Environment.empty)
         (.value (wordValue x.toBitVec)) =
       .value (wordValue (importedSigma x).toBitVec) := by
   rw [ImportedScalar.core_correct, importedSigma_eq]
@@ -59,7 +60,8 @@ theorem importedSigma_xor (x y : UInt32) :
   rw [importedSigma_eq, ssig0_xor]
 
 /-- A pre/post contract on the imported source, discharged against VCVio. -/
-example : Finite.DataContract (.word 32) (Resolved.lower ImportedScalar.compiled.source)
+example : DataContract (.word 32) (.word 32)
+    (Resolved.denote Foundation.wordSource1In Environment.empty)
     (fun x : BitVec 32 => x = 0) (fun _ (r : BitVec 32) => r = 0) := by
   rw [ImportedScalar.core_contract_iff]
   rintro x rfl

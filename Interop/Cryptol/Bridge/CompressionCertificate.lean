@@ -13,9 +13,10 @@ public import Interop.Cryptol.Bridge.ByteCompression
 /-!
 # Certified SHA-256 compression and specification transfer
 
-The certificate connects the preserved recursive Foundation source to a finite
-implementation. A second theorem crosses the real byte-array boundary under
-explicit size and bounds hypotheses. Both directions quantify arbitrary predicates.
+The certificate connects the preserved recursive Foundation source to the native
+compression function. The finite implementation executes it at the byte boundary.
+A second theorem crosses the real byte-array boundary under explicit size and
+bounds hypotheses. Both directions quantify arbitrary predicates.
 -/
 
 public section
@@ -37,28 +38,28 @@ theorem compressionSourceTupled_correct (x : CompressionInput.Native) :
       (encodeData compressionInputShape x) = encodeData roundOutputShape (compressionNative x) := by
   rw [compressionSourceTupled, Resolved.denote_letE, Resolved.denote_lam_apply]
   simp (config := { dsimp := false }) only [Resolved.denote_app, Resolved.denote_var,
-    Resolved.denote_fst, Resolved.denote_snd, Environment.extend_succ]
+    Resolved.denote_fst, Resolved.denote_snd, Environment.cons_succ]
   change DomainResult.applyContinuous (DomainResult.applyContinuous
     (Resolved.denote Foundation.compressionSource Environment.empty) (wordsMeaning x.1))
       (wordsMeaning x.2) = wordsMeaning (compressionNative x)
   rw [compressionSource_correct, compressionMeaning_value]
   rfl
 
-/-- Kernel-checked recurrence and fold compilation for full SHA-256 compression. -/
+/-- The preserved recursive source, certified against the native compression function. -/
 @[expose] noncomputable def compressionCertified :
-    CertifiedFunction compressionInputShape roundOutputShape where
-  source := compressionSourceTupled
-  implementation := compressionTerm
-  correct x := by
-    rw [compressionTerm_denote]
-    exact compressionSourceTupled_correct x
+    DataCertificate compressionInputShape roundOutputShape where
+  meaning := DomainResult.applyContinuous
+    (Resolved.denote compressionSourceTupled Environment.empty)
+  implementation := compressionNative
+  correct := compressionSourceTupled_correct
 
 /-- Arbitrary total specifications transfer between preserved source and native word arrays. -/
 theorem compression_contract_iff (pre : CompressionInput.Native → Prop)
     (post : CompressionInput.Native → RoundOutput.Native → Prop) :
-    DataContract compressionInputShape (Resolved.lower compressionSourceTupled) pre post ↔
-      ∀ x, pre x → post x (compressionNative x) :=
-  compressionCertified.contract_iff compressionNative compressionTerm_denote pre post
+    DataContract compressionInputShape roundOutputShape
+      (Resolved.denote compressionSourceTupled Environment.empty) pre post ↔
+        ∀ x, pre x → post x (compressionNative x) :=
+  compressionCertified.contract_iff pre post
 
 /-- A valid call of VCVio's byte-array compression function, at any offset. -/
 structure CompressionRequest where
@@ -103,10 +104,7 @@ theorem compression_byte_contract_iff (pre : CompressionRequest → Prop)
       (compressionTerm.denote Env.empty r.input)
       (DomainResult.applyContinuous ((Resolved.lower compressionSourceTupled).denote
         Environment.empty) (encodeData compressionInputShape r.input)) := by
-    change Represents RoundOutput (compressionTerm.denote Env.empty r.input)
-      (DomainResult.applyContinuous ((Resolved.lower compressionCertified.source).denote
-        Environment.empty) (encodeData compressionInputShape r.input))
-    rw [compressionCertified.lower_apply]
+    rw [Resolved.lower_correct, compressionSourceTupled_correct, compressionTerm_denote]
     exact represents_encodeData roundOutputShape _
   constructor
   · intro h r hp

@@ -11,7 +11,7 @@ public import Interop.Cryptol.Bridge.SourceScalars
 public import Interop.Cryptol.Bridge.CompressionTotal
 public import Interop.Cryptol.Bridge.Round
 public import PolyFunCryptol.Translation.SourceElaboration
-public import PolyFunCryptol.Translation.Certified
+public import PolyFunCryptol.Translation.DataCertificate
 import PolyFunCryptol.Translation.SourceElaboration
 import PolyFunCryptol.Translation.SourceScope
 import PolyFunCryptol.Model.Reference.Kinds
@@ -47,33 +47,36 @@ theorem accepted : check bundle root 1000 =
   result := ⟨.arrow (wordTy 32) (wordTy 32), Foundation.wordSource1In⟩
   accepted := accepted
 
+/-! `accepted` identifies the import's result with `Foundation.wordSource1In`, so the semantic
+facts below are stated about that term. -/
+
 /-- The imported scalar preserves all three shift demands, including on partial inputs. -/
 theorem partial_correct (x : PartialWord) :
-    DomainResult.applyContinuous (Resolved.denote certificate.result.2 Environment.empty) x =
+    DomainResult.applyContinuous (Resolved.denote Foundation.wordSource1In Environment.empty) x =
       sigmaMeaning 7 18 3 .right x := wordSource1In_correct _ x
+
+/-- Native evaluation certifies the imported scalar against VCVio's `ssig0`. -/
+@[expose] noncomputable def compiled : DataCertificate (.word 32) (.word 32) :=
+  Resolved.dataCertificate (.word 32) (.word 32) Foundation.wordSource1In
+    (fun x => (VCVio.Algorithms.Sha2.ssig0 (UInt32.ofBitVec x)).toBitVec) fun x => by
+      have h := smallSigma256Zero_eq (UInt32.ofBitVec x)
+      rw [UInt32.toBitVec_ofBitVec] at h
+      rw [← h]
+      simp [Foundation.wordSource1In]
+      rfl
 
 /-- Every 32-bit input agrees with the actual core SHA-2 small-sigma implementation. -/
 theorem core_correct (x : UInt32) :
-    DomainResult.applyContinuous (Resolved.denote certificate.result.2 Environment.empty)
+    DomainResult.applyContinuous (Resolved.denote Foundation.wordSource1In Environment.empty)
       (.value (wordValue x.toBitVec)) =
-        .value (wordValue (VCVio.Algorithms.Sha2.ssig0 x).toBitVec) := by
-  rw [partial_correct, sigmaMeaning_value]
-  exact congrArg (fun v => DomainResult.value (wordValue v)) (smallSigma256Zero_eq x)
-
-/-- The imported source has the existing finite native scalar as a certified implementation. -/
-@[expose] noncomputable def compiled : Finite.CertifiedFunction (.word 32) (.word 32) where
-  source := certificate.result.2
-  implementation := Foundation.smallSigma256Zero
-  correct x := (partial_correct (.value (wordValue x))).trans
-    (sigmaMeaning_value 7 18 3 .right x)
+        .value (wordValue (VCVio.Algorithms.Sha2.ssig0 x).toBitVec) :=
+  compiled.correct x.toBitVec
 
 /-- Arbitrary bitvector specifications transfer from the imported scalar to the core algorithm. -/
 theorem core_contract_iff (pre : BitVec 32 → Prop) (post : BitVec 32 → BitVec 32 → Prop) :
-    Finite.DataContract (.word 32) (Resolved.lower compiled.source) pre post ↔
-      ∀ x, pre x → post x (VCVio.Algorithms.Sha2.ssig0 (UInt32.ofBitVec x)).toBitVec := by
-  apply compiled.contract_iff
-  intro x
-  simpa only [compiled, UInt32.toBitVec_ofBitVec] using
-    smallSigma256Zero_eq (UInt32.ofBitVec x)
+    DataContract (.word 32) (.word 32)
+      (Resolved.denote Foundation.wordSource1In Environment.empty) pre post ↔
+        ∀ x, pre x → post x (VCVio.Algorithms.Sha2.ssig0 (UInt32.ofBitVec x)).toBitVec :=
+  compiled.contract_iff pre post
 
 end Cryptol.Bridge.ImportedScalar

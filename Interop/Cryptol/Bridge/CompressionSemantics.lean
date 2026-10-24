@@ -9,7 +9,7 @@ module
 public import Interop.Cryptol.Bridge.Compression
 public import Interop.Cryptol.Bridge.SourceFoundation
 public import PolyFunCryptol.Model.Recurrence
-public import PolyFunCryptol.Translation.Certified
+public import PolyFunCryptol.Translation.DataCertificate
 
 /-!
 # Partial semantics of the preserved compression source

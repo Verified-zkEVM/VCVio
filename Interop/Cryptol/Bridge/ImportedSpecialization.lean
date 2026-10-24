@@ -57,12 +57,21 @@ theorem accepted : check bundle root 1000 =
 
 /-- Specialization preserves the full partial function, including errors and bottom. -/
 theorem correct : Resolved.denote source Environment.empty =
-    Resolved.denote ImportedScalar.certificate.result.2 Environment.empty := by
-  rfl
-
-/-- Certified native code is shared with the original import. -/
-@[expose] noncomputable def compiled : Finite.CertifiedFunction (.word 32) (.word 32) :=
-  ImportedScalar.compiled.congrSource source correct
+    Resolved.denote Foundation.wordSource1In Environment.empty := by
+  rw [Foundation.wordSource1In, source]
+  simp (config := { dsimp := false }) only [Resolved.denote_letE]
+  simp (config := { dsimp := false }) only [Resolved.denote_var, Environment.cons_zero]
+  apply Resolved.denote_lam_congr
+  intro x
+  simp (config := { dsimp := false }) only [Resolved.denote_app, Resolved.denote_primitive,
+    Resolved.denote_wordLogic]
+  simp (config := { dsimp := false }) only [Resolved.denote_var, Environment.cons_zero,
+    Environment.cons_succ]
+  simp (config := { dsimp := false }) only [Resolved.denote_lam_apply, Resolved.denote_app,
+    Resolved.denote_primitive, Resolved.denote_shift]
+  simp (config := { dsimp := false }) only [Resolved.denote_var, Environment.cons_zero,
+    Resolved.denote_integer]
+  simp only [Primitive.denote, Semantics.apply_function₂]
 
 /-- All 32-bit inputs agree with VCVio's implementation after the checked transformation. -/
 theorem core_correct (x : UInt32) :

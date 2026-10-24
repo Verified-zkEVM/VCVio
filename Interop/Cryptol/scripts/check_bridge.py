@@ -244,12 +244,11 @@ def check_boundaries():
 
 def certificate_rejection(temporary):
     probe = temporary / "BadCertificate.lean"
-    probe.write_text("""import PolyFunCryptol.Translation.Certified
-open Cryptol Cryptol.Finite
-noncomputable def bad : CertifiedFunction (.word 8) (.word 8) where
-  source := .lam (.var .zero)
-  implementation := .lam (.word 0)
-  correct := by intro x; rfl
+    probe.write_text("""import PolyFunCryptol.Translation.DataCertificate
+open Cryptol
+noncomputable def bad : DataCertificate (.word 8) (.word 8) :=
+  Resolved.dataCertificate (.word 8) (.word 8) (.lam (.var .zero)) (fun _ => (0 : BitVec 8))
+    (by intro x; rfl)
 """)
     command = ["lake"]
     if os.environ.get("POLYFUN_PATH"):

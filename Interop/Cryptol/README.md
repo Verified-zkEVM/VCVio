@@ -35,7 +35,7 @@ lake exe cryptol-interop model arx-native 32 8
 ```
 
 The root manifest pins the companion PolyFun development, which hosts `PolyFunCryptol`, at
-`bcd30b8e086309708377ecd917de7b1c95910a43`. The commands above and the separate
+`367623629125d1dbab590e73f6979bfa2011cf6a`. The commands above and the separate
 `Consumer` use that published dependency; no sibling checkout is required.
 For local development against a different PolyFun checkout:
 
@@ -119,8 +119,8 @@ checks its resolved output, and `ImportedScalar.core_correct` proves agreement
 with `VCVio.Algorithms.Sha2.ssig0` for every input. This gate also supports lexical monomorphic declarations, records, tuples,
 sequence literals, projections, closed guards and single-generator comprehensions.
 The official specializer supplies a candidate for the scalar; a Lean proof checks
-its partial meaning before `CertifiedFunction.congrSource` reuses the native
-implementation. PolyFun's nine importer canaries cover higher-order composition, folds,
+its partial meaning, and native evaluation certifies the scalar against `ssig0`
+(`ImportedScalar.compiled`). PolyFun's nine importer canaries cover higher-order composition, folds,
 captured locals and finite observations of infinite sequences. The broader graph
 still needs general elaboration and source correspondence. Component theorems
 cover Keccak coordinate inverses and byte-aligned

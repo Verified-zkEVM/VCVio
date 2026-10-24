@@ -36,23 +36,25 @@ example (s : VCVio.Algorithms.Sha2.RoundState) (kt wt : UInt32) :
       stateBits (VCVio.Algorithms.Sha2.round256 s kt wt) := round256_eq s kt wt
 
 example (pre : RoundInput.Native → Prop) (post : RoundInput.Native → RoundOutput.Native → Prop) :
-    Finite.DataContract roundInputShape (Resolved.lower Foundation.round256.source) pre post ↔
-      ∀ x, pre x → post x (nativeRound x) := round_source_contract_iff pre post
+    Cryptol.DataContract roundInputShape roundOutputShape
+      (Resolved.denote roundTerm.source Environment.empty) pre post ↔
+        ∀ x, pre x → post x (nativeRound x) := round_contract_iff pre post
 
 example (x : CompressionInput.Native) :
     DomainResult.applyContinuous
       ((Resolved.lower compressionSourceTupled).denote Environment.empty)
       (Finite.encodeData compressionInputShape x) =
-      Finite.encodeData roundOutputShape (compressionTerm.denote Finite.Env.empty x) :=
-  compressionCertified.lower_apply x
+      Finite.encodeData roundOutputShape (compressionTerm.denote Finite.Env.empty x) := by
+  rw [Resolved.lower_correct, compressionSourceTupled_correct, compressionTerm_denote]
 
 example (r : CompressionRequest) : compiledCompress r = nativeCompress r :=
   compiledCompress_eq r
 
 example (pre : CompressionInput.Native → Prop)
     (post : CompressionInput.Native → RoundOutput.Native → Prop) :
-    Finite.DataContract compressionInputShape (Resolved.lower compressionSourceTupled) pre post ↔
-      ∀ x, pre x → post x (compressionNative x) := compression_contract_iff pre post
+    Cryptol.DataContract compressionInputShape roundOutputShape
+      (Resolved.denote compressionSourceTupled Environment.empty) pre post ↔
+        ∀ x, pre x → post x (compressionNative x) := compression_contract_iff pre post
 
 example {α : Type} (program : OracleComp compressionSpec α) (state : Nat) :
     (simulateQ (compressionHandler compiledCompress) program).run state =ᵈ

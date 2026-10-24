@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-import PolyFunCryptol.Translation.Certified
+import PolyFunCryptol.Translation.DataCertificate
 import PolyFunCryptol.Translation.Finite.Loop
 import PolyFunCryptol.Model.ResolvedSequences
 import PolyFunCryptol.Model.Recurrence
@@ -47,12 +47,14 @@ example {Γ : List ClosedTy} {a : ClosedTy} (shape : RingType a)
     (shape.binary op x y).denote ρ = shape.binarySem op (x.denote ρ) (y.denote ρ) :=
   shape.denote_binary op x y ρ
 
-example {a b : Finite.Ty} {ha : DataShape a} {hb : DataShape b}
-    (f : CertifiedFunction ha hb) (g : a.Native → b.Native)
-    (h : ∀ x, f.implementation.denote Env.empty x = g x)
+example {a b : Finite.Ty} (ha : DataShape a) (hb : DataShape b)
+    (t : Resolved.Term [] (.arrow a.core b.core)) (g : a.Native → b.Native)
+    (h : ∀ x, (t.denote Resolved.native IPFunctor.ScopedSignature.Env.empty).bind
+      (fun f => f (ha.native x)) = hb.native (g x))
     (pre : a.Native → Prop) (post : a.Native → b.Native → Prop) :
-    DataContract ha (Resolved.lower f.source) pre post ↔ ∀ x, pre x → post x (g x) :=
-  f.contract_iff g h pre post
+    DataContract ha hb (Resolved.denote t Environment.empty) pre post ↔
+      ∀ x, pre x → post x (g x) :=
+  (Resolved.dataCertificate ha hb t g h).contract_iff pre post
 
 example {Γ : List ClosedTy} (start : Int) (n : Nat) (ρ : Environment Γ) :
     Resolved.denote (Resolved.Term.range start n) ρ =
@@ -72,8 +74,8 @@ example {Γ : List Finite.Ty} {a : Finite.Ty}
 
 example (n : Nat) (pre : (BitVec n × BitVec n) → Prop)
     (post : (BitVec n × BitVec n) → BitVec n → Prop) :
-    DataMeaningContract (b := .word n) (.prod (.word n) (.word n))
-      (PolymorphicExamples.xorCertificate.meaningAt n).meaning pre post ↔
+    DataContract (.prod (.word n) (.word n)) (.word n)
+      (PolymorphicExamples.xorInterface.observe Polymorphic.Examples.xor n) pre post ↔
         ∀ x, pre x → post x (x.1 ^^^ x.2) :=
   PolymorphicExamples.xor_contract n pre post
 
@@ -98,7 +100,7 @@ example {a b : Finite.Ty} {ha : DataShape a} {hb : DataShape b}
     (h : CorrespondsOn ha hb valid meaning implementation)
     (pre : a.Native → Prop) (post : a.Native → b.Native → Prop)
     (admissible : ∀ x, pre x → valid x) :
-    DataMeaningContract ha meaning pre post ↔ ∀ x, pre x → post x (implementation x) :=
+    DataContract ha hb meaning pre post ↔ ∀ x, pre x → post x (implementation x) :=
   h.contract_iff pre post admissible
 
 open Polymorphic in

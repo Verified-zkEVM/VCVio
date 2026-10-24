@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import Interop.Cryptol.Bridge.Correspondence
-public import PolyFunCryptol.Translation.Contracts
+public import PolyFunCryptol.Translation.DataCertificate
 
 /-!
 # Pulling rotation specifications and pushing linearity
@@ -76,12 +76,18 @@ theorem rotateLaw2_lower_true (x : BitVec 32) :
       .value ⟨true⟩ := by
   rw [Term.denote_apply_bit, rotateLaw2_true]
 
+/-- The extracted big sigma's source translation, certified against VCVio's `bsig0`. -/
+@[expose] noncomputable def sigmaCertificate : DataCertificate (.word 32) (.word 32) :=
+  (Finite.Term.dataCertificate (.word 32) (.word 32) Foundation.sigma256Zero).congr
+    (g := fun x => (VCVio.Algorithms.Sha2.bsig0 (UInt32.ofBitVec x)).toBitVec)
+    fun x => (congrFun (Finite.Term.dataCertificate_implementation _ _ _) x).trans
+      (congrArg UInt32.toBitVec (foundationSigma_eq (UInt32.ofBitVec x)))
+
 /-- Total pre/post specifications transfer in both directions. -/
 theorem sigma_contract_iff (pre : BitVec 32 → Prop) (post : BitVec 32 → BitVec 32 → Prop) :
-    TotalContract Foundation.sigma256Zero.lower pre post ↔
-      ∀ x, pre x → post x (VCVio.Algorithms.Sha2.bsig0 (UInt32.ofBitVec x)).toBitVec := by
-  apply Term.totalContract_iff
-  intro x
-  exact congrArg UInt32.toBitVec (foundationSigma_eq (UInt32.ofBitVec x))
+    DataContract (.word 32) (.word 32)
+      (Resolved.denote Foundation.sigma256Zero.source Environment.empty) pre post ↔
+        ∀ x, pre x → post x (VCVio.Algorithms.Sha2.bsig0 (UInt32.ofBitVec x)).toBitVec :=
+  sigmaCertificate.contract_iff pre post
 
 end Cryptol.Bridge

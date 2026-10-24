@@ -32,7 +32,7 @@ theorem wordSource0In_correct {Γ : List ClosedTy} (ρ : Environment Γ) (x : Pa
   rw [Foundation.wordSource0In, Resolved.denote_lam_apply]
   simp (config := { dsimp := false }) only [Resolved.denote_lam_apply, Resolved.denote_wordLogic,
     Resolved.denote_app, Resolved.denote_var, Resolved.denote_shift, Resolved.denote_integer,
-    Environment.extend_zero]
+    Environment.cons_zero]
   rfl
 
 /-- The preserved scalar unit retains all three partial shift demands. -/
@@ -42,7 +42,7 @@ theorem wordSource1In_correct {Γ : List ClosedTy} (ρ : Environment Γ) (x : Pa
   rw [Foundation.wordSource1In, Resolved.denote_lam_apply]
   simp (config := { dsimp := false }) only [Resolved.denote_lam_apply, Resolved.denote_wordLogic,
     Resolved.denote_app, Resolved.denote_var, Resolved.denote_shift, Resolved.denote_integer,
-    Environment.extend_zero]
+    Environment.cons_zero]
   rfl
 
 /-- The preserved scalar unit retains all three partial shift demands. -/
@@ -52,7 +52,7 @@ theorem wordSource2In_correct {Γ : List ClosedTy} (ρ : Environment Γ) (x : Pa
   rw [Foundation.wordSource2In, Resolved.denote_lam_apply]
   simp (config := { dsimp := false }) only [Resolved.denote_lam_apply, Resolved.denote_wordLogic,
     Resolved.denote_app, Resolved.denote_var, Resolved.denote_shift, Resolved.denote_integer,
-    Environment.extend_zero]
+    Environment.cons_zero]
   rfl
 
 /-- The preserved scalar unit retains all three partial shift demands. -/
@@ -62,7 +62,7 @@ theorem wordSource4In_correct {Γ : List ClosedTy} (ρ : Environment Γ) (x : Pa
   rw [Foundation.wordSource4In, Resolved.denote_lam_apply]
   simp (config := { dsimp := false }) only [Resolved.denote_lam_apply, Resolved.denote_wordLogic,
     Resolved.denote_app, Resolved.denote_var, Resolved.denote_shift, Resolved.denote_integer,
-    Environment.extend_zero]
+    Environment.cons_zero]
   rfl
 
 /-- The complete choice closure is independent of the surrounding source environment. -/
@@ -73,8 +73,8 @@ theorem wordSource3In_denote {Γ : List ClosedTy} (ρ : Environment Γ) :
   intro p
   simp (config := { dsimp := false }) only [Resolved.denote_letE, Resolved.denote_fst,
     Resolved.denote_snd, Resolved.denote_wordLogic, Resolved.denote_app,
-    Resolved.denote_primitive, Resolved.denote_var, Environment.extend_zero,
-    Environment.extend_succ]
+    Resolved.denote_primitive, Resolved.denote_var, Environment.cons_zero,
+    Environment.cons_succ]
   rfl
 
 /-- The complete majority closure is independent of the surrounding source environment. -/
@@ -85,7 +85,7 @@ theorem wordSource5In_denote {Γ : List ClosedTy} (ρ : Environment Γ) :
   intro p
   simp (config := { dsimp := false }) only [Resolved.denote_letE, Resolved.denote_fst,
     Resolved.denote_snd, Resolved.denote_wordLogic, Resolved.denote_var,
-    Environment.extend_zero, Environment.extend_succ]
+    Environment.cons_zero, Environment.cons_succ]
   rfl
 
 /-- The source choice function on a constructed tuple demands only its components. -/

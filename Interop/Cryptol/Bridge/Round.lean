@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import Interop.Cryptol.Bridge.Correspondence
-public import PolyFunCryptol.Translation.Contracts
+public import PolyFunCryptol.Translation.DataCertificate
 public import PolyFunCryptol.Model.Laws
 import Mathlib.Tactic.FinCases
 
@@ -116,21 +116,22 @@ theorem round256_native_eq (x : RoundInput.Native) :
 @[expose] def roundInputShape : DataShape RoundInput :=
   .prod roundOutputShape (.prod (.word 32) (.word 32))
 
+/-- The extracted round at its represented input and output types. -/
+@[expose] def roundTerm : Finite.Term [] (.arrow RoundInput RoundOutput) := Foundation.round256
+
+/-- The extracted round's compact source translation, certified against `nativeRound`. -/
+@[expose] noncomputable def roundCertificate : DataCertificate roundInputShape roundOutputShape :=
+  (Finite.Term.dataCertificate roundInputShape roundOutputShape roundTerm).congr
+    fun x => (congrFun (Finite.Term.dataCertificate_implementation _ _ _) x).trans
+      (round256_native_eq x)
+
 /-- Arbitrary preconditions and postconditions transfer in either direction. -/
 theorem round_contract_iff (pre : RoundInput.Native → Prop)
     (post : RoundInput.Native → RoundOutput.Native → Prop) :
-    DataContract roundInputShape Foundation.round256.lower pre post ↔
-      ∀ x, pre x → post x (nativeRound x) :=
-  Foundation.round256.dataContract_iff roundInputShape roundOutputShape
-    nativeRound round256_native_eq pre post
-
-/-- Contracts also transfer through the compact source translation used for export. -/
-theorem round_source_contract_iff (pre : RoundInput.Native → Prop)
-    (post : RoundInput.Native → RoundOutput.Native → Prop) :
-    DataContract roundInputShape (Resolved.lower Foundation.round256.source) pre post ↔
-      ∀ x, pre x → post x (nativeRound x) :=
-  Foundation.round256.source_dataContract_iff roundInputShape roundOutputShape
-    nativeRound round256_native_eq pre post
+    DataContract roundInputShape roundOutputShape
+      (Resolved.denote (roundTerm.source) Environment.empty) pre post ↔
+        ∀ x, pre x → post x (nativeRound x) :=
+  roundCertificate.contract_iff pre post
 
 /-- Closure conversion restores exactly the two captured lookups of the extracted round. -/
 @[expose] def roundCaptured (state : ClosedExpr [] RoundOutput.core)

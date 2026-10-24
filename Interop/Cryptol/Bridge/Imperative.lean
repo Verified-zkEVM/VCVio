@@ -84,8 +84,8 @@ private def whileBodies : (i : Fin 1) → Term Scope.empty [loopScheme] [loopSch
   Fin.cases body0 (fun i => nomatch i)
 
 private noncomputable def whileEnvironment : Env emptyAssignment [loopScheme] :=
-  IPFunctor.ScopedDomain.Env.fixGroup (Ξ := [loopScheme]) (Γ := [])
-    (fun s => s.domain emptyAssignment.val)
+  IPFunctor.ScopedDomain.Env.fixGroup (D := fun s => s.domain emptyAssignment.val)
+    (Ξ := [loopScheme]) (Γ := [])
     (fun i : Fin 1 => (whileBodies i).denote emptyAssignment)
     (Env.empty emptyAssignment)
 
@@ -105,8 +105,8 @@ private theorem whileEnvironment_unfold :
     whileEnvironment loopScheme .zero = body0.denote emptyAssignment
       (Env.append emptyAssignment (whileEnvironment, Env.empty emptyAssignment)) := by
   exact congrArg (fun η : Env emptyAssignment [loopScheme] => η loopScheme .zero)
-    (IPFunctor.ScopedDomain.Env.fixGroup_unfold (Ξ := [loopScheme]) (Γ := [])
-      (fun s => s.domain emptyAssignment.val)
+    (IPFunctor.ScopedDomain.Env.fixGroup_unfold (D := fun s => s.domain emptyAssignment.val)
+      (Ξ := [loopScheme]) (Γ := [])
       (fun i => (whileBodies i).denote emptyAssignment) (Env.empty emptyAssignment))
 
 private theorem body0_apply {a : ClosedTy} (η : Env emptyAssignment [loopScheme])

@@ -89,8 +89,8 @@ The existing compression path and probability theorems retain their boundaries.
 
 The official specializer produces `ImportedSpecializationSource`; the Lean importer
 checks its monomorphic local declarations and root schema. `ImportedSpecialization.correct`
-proves equality of its partial meaning with `ImportedScalar`, and `congrSource`
-reuses the existing finite native implementation. The corresponding core theorem
+proves equality of its partial meaning with `ImportedScalar`, whose native
+certificate supplies the all-input agreement with `ssig0`. The corresponding core theorem
 still quantifies over every input. This scalar pilot is independent of the older
 full-compression certificate: that certificate has not yet migrated to the broader
 typed-AST importer. See [tooling integration](tooling.md) for the whole-Foundation

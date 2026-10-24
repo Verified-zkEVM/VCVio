@@ -8,9 +8,9 @@ correspondences belong in VCVio #840.
 
 
 The optional [Cryptol model](../README.md) pins the published PolyFun companion
-at `bcd30b8e086309708377ecd917de7b1c95910a43`, the head of
-[PR 356](https://github.com/Verified-zkEVM/PolyFun/pull/356), which hosts the language
-model as `PolyFunCryptol` above the stacked generic substrate PRs #352–#355. The shared toolchain
+at `367623629125d1dbab590e73f6979bfa2011cf6a`, the head of
+[PR 364](https://github.com/Verified-zkEVM/PolyFun/pull/364). The stack hosts the
+language model as `PolyFunCryptol` (#356) above the generic substrate PRs #352–#355. The shared toolchain
 is Lean `v4.35.0`, Mathlib `56a005855ea17e0b0958f73ec801ae140b0a1679`, and CSLib
 `5b56df99362532c46e1175381fbbdd755bd56030`. Exact weakest preconditions are
 exercised for finite executions; they are not a substitute for domain-theoretic

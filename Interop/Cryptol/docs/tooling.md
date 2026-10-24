@@ -30,7 +30,8 @@ separate claims.
 4. `ImportedSpecialization.accepted` checks the actual specializer output for
    Foundation's `sigma_256_0`. `ImportedSpecialization.correct` proves equality
    with the original import in the current partial model, including errors and
-   bottom. `CertifiedFunction.congrSource` reuses its native implementation.
+   bottom. `ImportedScalar.compiled` certifies the scalar against `ssig0` by native
+   evaluation, with no proof about the lazy semantics.
 5. `ImportedSpecialization.core_correct` proves agreement with VCVio's actual
    `Sha2.ssig0` for every `UInt32`. The independent `Consumer` package uses
    ordinary imports. The existing contract and probability layers remain the
@@ -186,7 +187,7 @@ definition remains debt-free, and an admitted definition is rejected even if
 listed in the local ledger. These fixtures stay outside the library aggregates.
 
 On VCVio main with the published PolyFun revision
-`bcd30b8e086309708377ecd917de7b1c95910a43`, optional build/lint/tests/axioms pass.
+`367623629125d1dbab590e73f6979bfa2011cf6a`, optional build/lint/tests/axioms pass.
 The optional Bridge axiom sweep covers 495 declarations across 31 modules with no
 admissions or nonstandard-axiom taint. The language model is swept by PolyFun's
 suite, which covers 22,405 declarations across 574 modules with the same zero-debt
@@ -206,8 +207,8 @@ built against the identified compatibility frontend, and the upstream evaluator
 | Checked monomorphic language | `Resolved.Term` on `ScopedSignature` / `IFreeM` | Intrinsic binding, type-preserving substitution and polynomial directions already exist. Labels are checking metadata, not a new evaluator. |
 | Open quantifiers and module parameters | Existing `ScopedFamily` / `Polymorphic.Term` | Numeric/type/proof stages and simultaneous recursion require this extra information. General source elaboration into it remains missing. Do not approximate higher-order parameters with data-only codecs. |
 | Partial meaning | Existing lifted domains and continuous functions | Error, divergence, suspended components and partial function arguments are relevant. Document each primitive's intended meaning and any backend disagreement. |
-| Native data implementation | Existing `Finite.Term`, `Represents` and `CertifiedFunction` | This IR has executable total functions and preserves native word operations. The distinction earns its weight at the partial/total boundary; it is not another source language. |
-| Contracts | Existing PolyFun correspondence plus VCVio's domain adapter | `congrSource` extends the existing certificate rather than adding a parallel transformation-contract hierarchy. |
+| Native data implementation | PolyFun's `DataCertificate`, the generic `CertifiedMeaning` at Cryptol's data embedding | Native evaluation (`Resolved.dataCertificate`) certifies source directly. Finite descriptions (`Finite.Term.dataCertificate`) remain for recursion and loops, which native evaluation does not run. |
+| Contracts | PolyFun's generic correspondence plus VCVio's domain adapter | `CertifiedMeaning.congr` restates a certificate against a separately written native function rather than adding a parallel transformation-contract hierarchy. |
 | Execution | Existing `Control.Transition`, ITree and machine adapters | No heap evaluator was added just to obtain another model. A heap needs a measured sharing requirement and a simulation/adequacy obligation. |
 | Core syntax | Existing `Expr` remains the operational/adequacy backend | It also has internal `force`; removing this carrier requires migrating those proofs and normal demand rules together. A second cosmetic polynomial wrapper would add a bridge without removing the duplicate. |
 

@@ -34,7 +34,7 @@ theorem scheduleSourceIn_correct {Γ : List ClosedTy} (ρ : Environment Γ) (m :
   intro w
   simp (config := { dsimp := false }) only [Resolved.denote_app,
     Resolved.denote_lam_apply, Resolved.denote_letE, Resolved.denote_var,
-    Environment.extend_zero, Environment.extend_succ, Environment.extendContinuous_apply,
+    Environment.cons_zero, Environment.cons_succ,
     Resolved.denote_primitive,
     Primitive.denote, Semantics.apply_function₂, Resolved.denote_generate,
     wordSource0In_correct, wordSource1In_correct, tableSource0In_correct, roundIndices,
@@ -75,7 +75,7 @@ theorem roundSourceIn_apply_correct {Γ : List ClosedTy} (ρ : Environment Γ) (
     Resolved.denote_lam_apply]
   simp (config := { dsimp := false }) only [Resolved.denote_app,
     Resolved.denote_lam_apply, Resolved.denote_letE, Resolved.denote_var,
-    Environment.extend_zero, Environment.extend_succ, wordSource2In_correct, wordSource3In_denote,
+    Environment.cons_zero, Environment.cons_succ, wordSource2In_correct, wordSource3In_denote,
     wordSource4In_correct, wordSource5In_denote,
     tableSource1In_correct, Resolved.denote_sequence, Resolved.denote_index,
     Resolved.denote_integer, Resolved.denote_wordArithmetic, Resolved.denote_pair]
@@ -111,8 +111,10 @@ theorem compressionSource_correct (s : PartialState) (m : PartialBlock) :
       compressionMeaning s m := by
   rw [Foundation.compressionSource, Resolved.denote_lam_apply, Resolved.denote_lam_apply]
   simp (config := { dsimp := false }) only [Resolved.denote_app,
-    Resolved.denote_lam_apply, Resolved.denote_letE, Resolved.denote_var,
-    Environment.extend_zero, Environment.extend_succ, Resolved.denote_primitive, Primitive.denote,
+    Resolved.denote_lam_apply, Resolved.denote_letE]
+  simp (config := { dsimp := false }) only [Resolved.denote_var, Environment.cons_zero,
+    Environment.cons_succ]
+  simp (config := { dsimp := false }) only [Resolved.denote_primitive, Primitive.denote,
     tableSource0In_correct, scheduleSourceIn_correct, roundSourceIn_correct,
     Semantics.apply_function₂, Semantics.apply_function₃]
   rfl
