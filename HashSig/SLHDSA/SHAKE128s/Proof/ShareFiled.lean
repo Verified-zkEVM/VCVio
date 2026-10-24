@@ -29,7 +29,7 @@ No cold cache is needed for this. The cold cache (`ColdCache`) is the separate f
 run that ends with the flag down never cached an input of the walk's warm cache.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -73,7 +73,7 @@ theorem route_false_cases (setup : Setup) (state : St) (input : Bytes) (z : Hash
 /-! ## A step that routes blindly and files -/
 
 /-- **The visible cache grows** from one state to the next: every visible entry stays. -/
-def Grows (setup : Setup) (old new : St) : Prop :=
+@[expose] def Grows (setup : Setup) (old new : St) : Prop :=
   ∀ input value, visible setup old input = some value → visible setup new input = some value
 
 theorem Grows.refl (setup : Setup) (state : St) : Grows setup state state := fun _ _ h => h
@@ -84,7 +84,7 @@ theorem Grows.trans {setup : Setup} {first second third : St} (h1 : Grows setup 
 
 /-- **A hash handler that routes blindly and files**, read through a projection to the game's
 state: each step answers as the blind router does and files the input at the served digests. -/
-def RoutesBlind (setup : Setup) {σ : Type} (π : σ → St)
+@[expose] def RoutesBlind (setup : Setup) {σ : Type} (π : σ → St)
     (impl : QueryImpl HashSpec (StateT σ ProbComp)) : Prop :=
   ∀ input state z, z ∈ support ((impl input).run state) →
     ∃ routed ∈ support (route false setup (π state) input), z.1 = routed.1 ∧
@@ -233,10 +233,12 @@ theorem worldImpl_run (lenient : Bool) (setup : Setup) (world : OracleWorld.Doma
   erw [simulateQ_spec_query]
 
 /-- The blind world handler at a hash input. -/
+@[expose]
 noncomputable def hashImpl (setup : Setup) : QueryImpl HashSpec (StateT (St × Bool) ProbComp) :=
   fun input => ShareBound.worldImpl false setup (Sum.inr input)
 
 /-- The blind world handler at a coin. -/
+@[expose]
 noncomputable def coinImpl (setup : Setup) : QueryImpl unifSpec (StateT (St × Bool) ProbComp) :=
   fun coin => ShareBound.worldImpl false setup (Sum.inl coin)
 

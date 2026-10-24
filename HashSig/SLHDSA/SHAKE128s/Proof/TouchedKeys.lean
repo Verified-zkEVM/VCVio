@@ -26,7 +26,7 @@ unstripped signer that makes this true: `StrippedGame.strippedSign` carries the 
 cache as an argument and would mention every cell, whereas `Scheme.sign` carries only the key.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

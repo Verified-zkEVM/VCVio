@@ -29,7 +29,7 @@ The third point needs the blind verifier's probes to be filed whatever happened 
 taken here as a hypothesis, `hfiled`, in the form the blind handler provides it.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -107,7 +107,7 @@ theorem reportsCost_charged (lenient : Bool) (setup : Setup) :
 
 /-- **What the blind verifier's filing provides**: at any state, a run of the verifier keeps the
 stamp, and every input the replayed verifier consults at the run's visible cache is filed at it. -/
-def VerifierFiles (setup : Setup) : Prop :=
+@[expose] def VerifierFiles (setup : Setup) : Prop :=
   ∀ (request : Message) (wire : Bytes) (p : St × Bool) (w : Bool × (St × Bool)),
     w ∈ support ((simulateQ (worldImpl false setup)
       (Scheme.verify (m := OracleComp OracleWorld) setup.pk request wire)).run p) →

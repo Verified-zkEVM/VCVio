@@ -59,7 +59,7 @@ Three things take work.
   `deviatingCollision_or_residue_of_top_fault` records.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -330,7 +330,7 @@ signature of a message differing from the honest input threaded into that layer.
 mirrors `Extraction.HypertreeChain.HypertreeFault`'s own, so the signature at each layer is
 still the component the forgery supplied and the message is still the one that layer was fed.
 -/
-def WotsResidue (secretSeed publicSeed : Digest) :
+@[expose] def WotsResidue (secretSeed publicSeed : Digest) :
     (remaining : Nat) → (Fin remaining → XmssSignature) → (layer tree : Nat) →
       SlhDsaSecurity.Hypertree.LeafIndex → (message expectedInput : Digest) → Prop
   | 0, _, _, _, _, _, _ => False

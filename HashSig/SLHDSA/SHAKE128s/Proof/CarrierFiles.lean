@@ -32,7 +32,7 @@ Every step fact is one of `CarriedWitness`'s notice lemmas or `HandlerCarrier`'s
 and the run facts are the inductions that carry them.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -406,7 +406,7 @@ laws the tail reads the handler through survive the wrapping, because neither lo
 counter. -/
 
 /-- The handler a carrier tail runs under. -/
-noncomputable def countedCarrierRecorder (rightKeep : Bytes → State → Prop) :
+@[expose] noncomputable def countedCarrierRecorder (rightKeep : Bytes → State → Prop) :
     QueryImpl OracleWorld
       (StateT (State × ((DigestTape.Record × DigestTape.Record) × Nat)) ProbComp) :=
   CountedHandler.withCount

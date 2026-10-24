@@ -24,7 +24,7 @@ The two facts about the table that make "closed" mean "sensitive" are here too:
 entry the open table lacks has exactly one child, unavailable).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

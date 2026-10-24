@@ -26,7 +26,7 @@ adversary's oracles and at the verifier's:
 This part: what a routed query leaves of the state.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

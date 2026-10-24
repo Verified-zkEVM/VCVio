@@ -31,7 +31,7 @@ graph's nodes is carried as hypotheses: it is bookkeeping, discharged where the 
 known, and stating it here would tie the argument to one layer.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

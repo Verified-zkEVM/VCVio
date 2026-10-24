@@ -19,7 +19,7 @@ filed in the lenient record (the verifier's at the final digests), and the lenie
 its invariant.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
@@ -63,6 +63,7 @@ theorem relTriple_support_left {oa : OracleComp spec₁ α} {ob : OracleComp spe
 
 open scoped Classical in
 /-- What the claims step leaves. -/
+@[expose]
 noncomputable def claimsStep (setup : Setup) (p : St × Bool) (forgery : Forgery) : St × Bool :=
   ({ p.1 with
       record := if p.2 then p.1.record else
@@ -98,7 +99,7 @@ theorem lenient_eq (setup : Setup) (adversary : Adversary) (limit : Nat) :
 /-! ## The coupling -/
 
 /-- **What the coupling's two ends share.** -/
-def Final (setup : Setup)
+@[expose] def Final (setup : Setup)
     (real : (((Forgery × Multiplicative RecordedQueries.Tally) × (Bool × RecordedQueries.Tally)) ×
       SigningLog) × QueryCache HashSpec)
     (lenient : (Forgery × Bool) × (St × Bool)) : Prop :=

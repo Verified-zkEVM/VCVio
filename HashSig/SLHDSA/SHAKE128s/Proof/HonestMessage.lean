@@ -29,7 +29,7 @@ So the message is a function of the key and the seeds alone, which is what the w
 rests on — each hypertree key signs one message, fixed before the adversary runs.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

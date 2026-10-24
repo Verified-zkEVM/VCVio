@@ -30,7 +30,7 @@ With this, mapping a path collision to a deviating query is a matter of naming t
 node and the candidate cells; the byte inputs already agree on the nose.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

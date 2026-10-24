@@ -32,7 +32,7 @@ counted run with its counter split: map the two slots to their sum and the split
 `BracketedRun.CountedState` and `CarrierTail.carrierTail` are untouched. The carrier instance is
 `splitCarrierRecorder`, with `run_splitCarrierRecorder_counted`. -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -47,7 +47,7 @@ variable (pk : PublicKey) {τ : Type}
 
 /-- A handler with a two-slot hash counter beside its carrier: one slot for the class, one for
 its complement. -/
-noncomputable def withSplit (inClass : Bytes → Prop) (inside outside : QueryKind)
+@[expose] noncomputable def withSplit (inClass : Bytes → Prop) (inside outside : QueryKind)
     (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp)) :
     QueryImpl OracleWorld (StateT (HandlerCarrier.State × (τ × Counts)) ProbComp) :=
   withExtra impl (fun queried counts => counts + splitCost inClass inside outside queried)
@@ -102,7 +102,7 @@ theorem run_withSplit_withCount (inClass : Bytes → Prop) {inside outside : Que
       harith]
 
 /-- The map a split state is read as a counted state through: sum the two slots. -/
-def sumSlots (inside outside : QueryKind)
+@[expose] def sumSlots (inside outside : QueryKind)
     (state : HandlerCarrier.State × (τ × Counts)) : HandlerCarrier.State × (τ × Nat) :=
   (state.1, (state.2.1, state.2.2 inside + state.2.2 outside))
 
@@ -148,6 +148,7 @@ recorder that notices. Its split counterpart is the same recorder under `withSpl
 three laws the tail reads a handler through come back unchanged. -/
 
 /-- The handler a split-counted carrier tail runs under. -/
+@[expose]
 noncomputable def splitCarrierRecorder (inClass : Bytes → Prop) (inside outside : QueryKind)
     (rightKeep : Bytes → HandlerCarrier.State → Prop) :
     QueryImpl OracleWorld
@@ -157,7 +158,7 @@ noncomputable def splitCarrierRecorder (inClass : Bytes → Prop) (inside outsid
     (@noticingRecorderOf HandlerCarrier.State (servingView pk) (disclosingKeep pk) rightKeep)
 
 /-- **The split carrier recorder is the counted one, with the counter split.** The carrier
-instance of `run_withSplit_withCount`, and the statement a split tail is carried onto the
+@[expose] instance of `run_withSplit_withCount`, and the statement a split tail is carried onto the
 existing tail by. -/
 theorem run_splitCarrierRecorder_counted (inClass : Bytes → Prop) {inside outside : QueryKind}
     (hne : inside ≠ outside) (rightKeep : Bytes → HandlerCarrier.State → Prop) {α : Type}

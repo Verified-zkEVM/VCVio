@@ -26,7 +26,7 @@ position, so it names a concrete queried input.
 collision.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -35,15 +35,15 @@ namespace SlhDsaSecurity.Extraction.Fors
 variable [HasQuery HashSpec Id]
 
 /-- The global node index of the selected leaf in FORS tree `i`. -/
-def leafIndex (indices : SlhDsaSecurity.Fors.Indices) (i : Fin forsTrees) : Nat :=
+@[expose] def leafIndex (indices : SlhDsaSecurity.Fors.Indices) (i : Fin forsTrees) : Nat :=
   i.val * 2 ^ forsHeight + (indices i).val
 
 /-- The twelve authentication siblings of FORS tree `i`, padded past the tree height. -/
-def siblings (signature : ForsSignature) (i : Fin forsTrees) (height : Nat) : Digest :=
+@[expose] def siblings (signature : ForsSignature) (i : Fin forsTrees) (height : Nat) : Digest :=
   if h : height < forsHeight then (signature i).authentication ⟨height, h⟩ else 0
 
 /-- The recovered leaf of FORS tree `i`: the compression of the revealed secret. -/
-def recoveredLeaf (signature : ForsSignature) (indices : SlhDsaSecurity.Fors.Indices)
+@[expose] def recoveredLeaf (signature : ForsSignature) (indices : SlhDsaSecurity.Fors.Indices)
     (publicSeed : Digest) (address : Address) (i : Fin forsTrees) : Digest :=
   Hashing.tweakable (m := Id) publicSeed
     (SlhDsaSecurity.Fors.nodeAddress address 0 (leafIndex indices i))
@@ -51,7 +51,7 @@ def recoveredLeaf (signature : ForsSignature) (indices : SlhDsaSecurity.Fors.Ind
 
 /-- The recovered root of FORS tree `i`, exactly as computed inside Algorithm 17
 before the fourteen roots are compressed. -/
-def recoveredRoot (signature : ForsSignature) (indices : SlhDsaSecurity.Fors.Indices)
+@[expose] def recoveredRoot (signature : ForsSignature) (indices : SlhDsaSecurity.Fors.Indices)
     (publicSeed : Digest) (address : Address) (i : Fin forsTrees) : Digest :=
   (List.finRange forsHeight).foldl (fun value j =>
     let payload := if (indices i).val / 2 ^ j.val % 2 = 0 then
@@ -121,11 +121,11 @@ theorem root_eq_canonical_or_collision (secretSeed publicSeed : Digest)
   · exact Or.inr hcollision
 
 /-- The address of the final FORS root-compression call. -/
-def rootAddress (address : Address) : Address :=
+@[expose] def rootAddress (address : Address) : Address :=
   { address.setTypeAndClear .forsRoots with keyPair := address.keyPair }
 
 /-- The canonical root of each of the fourteen FORS trees under the genuine seeds. -/
-def canonicalRoots (secretSeed publicSeed : Digest) (address : Address) :
+@[expose] def canonicalRoots (secretSeed publicSeed : Digest) (address : Address) :
     Fin forsTrees → Digest := fun i =>
   SlhDsaSecurity.Fors.node (m := Id) secretSeed publicSeed address forsHeight i.val
 
@@ -141,7 +141,7 @@ theorem publicKeyFromSignature_eq (signature : ForsSignature)
 
 /-- A collision at the final FORS root-compression call: two different root
 tuples whose full oracle inputs are distinct but compress identically. -/
-def CompressionCollision (actualRoots canonicalRoots : Fin forsTrees → Digest)
+@[expose] def CompressionCollision (actualRoots canonicalRoots : Fin forsTrees → Digest)
     (publicSeed : Digest) (address : Address) : Prop :=
   let actualInput := Hashing.tweakableInput publicSeed (rootAddress address)
     (digestArrayBytes actualRoots)
@@ -205,7 +205,7 @@ theorem publicKey_canonical_decomposition (secretSeed publicSeed : Digest) (addr
 
 /-- A collision at a FORS leaf compression: the forged secret and the honest secret are
 distinct but hash to the same leaf under the same leaf address. -/
-def LeafCollision (secretSeed publicSeed : Digest) (address : Address) (index : Nat)
+@[expose] def LeafCollision (secretSeed publicSeed : Digest) (address : Address) (index : Nat)
     (forgedSecret : Digest) : Prop :=
   let honestSecret := SlhDsaSecurity.Fors.secret (m := Id) secretSeed publicSeed address index
   forgedSecret ≠ honestSecret ∧

@@ -27,7 +27,7 @@ read the view: it is consulted at one input and one view only, the view in force
 input was answered fresh.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -51,7 +51,7 @@ variable {σ : Type} [CacheView σ]
 /-- The right test: an input of the narrowed class that is not disclosing. The class may read the
 view; `AnswerCarrier.carrierRightKeep` is a class that does, excluding the signer's randomiser
 probe by the frame in flight. -/
-def targetKeep (narrow : Bytes → σ → Prop) (served : Bytes → σ → Prop) :
+@[expose] def targetKeep (narrow : Bytes → σ → Prop) (served : Bytes → σ → Prop) :
     Bytes → σ → Prop :=
   fun input view => narrow input view ∧ ¬ served input view
 
@@ -69,7 +69,7 @@ The disclosing test reading the cache alone: the signer randomised this input, i
 the `PRF_msg` entry its randomiser truncates from is there. -/
 
 /-- The left test: the signer randomised this input, as the cache in force says. -/
-def disclosingKeep (prfSeed : Digest) (pk : PublicKey) :
+@[expose] def disclosingKeep (prfSeed : Digest) (pk : PublicKey) :
     Bytes → QueryCache HashSpec → Prop :=
   fun input cache => SignerRandomised prfSeed pk cache input
 
@@ -81,11 +81,11 @@ query on a request framed as `PK.root ‖ m` is a message input by the FIPS 205 
 and it is not signer-randomised when it is made; without the clause the recorder would file it
 as a target. It is a syntactic exclusion that works while the byte formats separate the two; the
 frame-based exclusion is `AnswerCarrier.carrierRightKeep`'s. -/
-def narrowClass (prfSeed : Digest) (pk : PublicKey) : Bytes → Prop :=
+@[expose] def narrowClass (prfSeed : Digest) (pk : PublicKey) : Bytes → Prop :=
   fun input => CombinedCharge.IsMessageInput pk input ∧ ¬ RandomizerGate.PrfClass prfSeed input
 
 /-- The right test at the signer instantiation. -/
-def targetKeep (prfSeed : Digest) (pk : PublicKey) : Bytes → QueryCache HashSpec → Prop :=
+@[expose] def targetKeep (prfSeed : Digest) (pk : PublicKey) : Bytes → QueryCache HashSpec → Prop :=
   Served.targetKeep (fun probe _ => narrowClass prfSeed pk probe) (disclosingKeep prfSeed pk)
 
 end SlhDsaSecurity.SplitWitness

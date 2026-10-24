@@ -36,7 +36,7 @@ The freshness rule belongs to the *coverage recorder's* list, where a block of a
 a block of fresh draws; it is a different object and it does not transfer here.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -53,10 +53,10 @@ structure State where
   framing : Option Bytes
 
 /-- The digest inputs a state has served. -/
-def Served (state : State) (input : Bytes) : Prop := input ∈ state.served
+@[expose] def Served (state : State) (input : Bytes) : Prop := input ∈ state.served
 
 /-- The cache a state holds. -/
-def cacheOf (state : State) : QueryCache HashSpec := state.cache
+@[expose] def cacheOf (state : State) : QueryCache HashSpec := state.cache
 
 /-! ## Growth
 
@@ -65,7 +65,7 @@ request completes takes its framing out of flight, and a relation that fixed the
 component would fail at exactly that step — the step the whole notion exists for. -/
 
 /-- Growth of a carrier: entries persist and served inputs stay served. -/
-def Grows (left right : State) : Prop :=
+@[expose] def Grows (left right : State) : Prop :=
   (∀ (input : Bytes) (answer : HashOutput),
       left.cache input = some answer → right.cache input = some answer) ∧
     ∀ input : Bytes, Served left input → Served right input
@@ -82,17 +82,18 @@ theorem Grows.trans {left middle right : State} (hfirst : Grows left middle)
 /-! ## The operations -/
 
 /-- Set the framing of the request being served. -/
+@[expose]
 def setFraming (state : State) (framed : Bytes) : State := { state with framing := some framed }
 
 /-- Clear the framing when the request is done. -/
-def clearFraming (state : State) : State := { state with framing := none }
+@[expose] def clearFraming (state : State) : State := { state with framing := none }
 
 /-- File a digest input the signer has served. -/
-def file (state : State) (input : Bytes) : State :=
+@[expose] def file (state : State) (input : Bytes) : State :=
   { state with served := input ::ₘ state.served }
 
 /-- Cache an answer. -/
-def cacheAnswer (state : State) (input : Bytes) (answer : HashOutput) : State :=
+@[expose] def cacheAnswer (state : State) (input : Bytes) (answer : HashOutput) : State :=
   { state with cache := state.cache.cacheQuery input answer }
 
 @[simp] theorem framing_cacheAnswer (state : State) (input : Bytes) (answer : HashOutput) :
@@ -157,7 +158,7 @@ The mean load potential at the coupling's own rate is `2 ^ 63 · T₁₄(3)`, ab
 (`ForsConcentration.centeredLoadSum_eq` uses `T₁₄(3) = 461101962108` as its centering).
 Doubling the recording doubles the per-bin rate, so the mean crosses `2 ^ 103` already at rate
 about `3.34`. -/
-def FilesLeft (pk : PublicKey) (state : State) (input : Bytes) : Prop :=
+@[expose] def FilesLeft (pk : PublicKey) (state : State) (input : Bytes) : Prop :=
   ∃ framed : Bytes, state.framing = some framed ∧
     ∃ randomizer : Digest, input = Hashing.messageInput randomizer pk framed
 

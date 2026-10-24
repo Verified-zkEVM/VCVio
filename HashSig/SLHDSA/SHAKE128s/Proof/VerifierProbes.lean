@@ -38,7 +38,7 @@ What comes out is the four hypotheses the charges ask for: one for the hypertree
 compression, path and leaf entries the FORS branch takes.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -49,12 +49,12 @@ open CacheReplay Extraction CanonicalGraph
 /-! ## What the replayed verifier computes -/
 
 /-- The message digest the replayed verifier computes for this forgery. -/
-def digestOf (cache : QueryCache HashSpec) (pk : PublicKey) (message : Bytes)
+@[expose] def digestOf (cache : QueryCache HashSpec) (pk : PublicKey) (message : Bytes)
     (parsed : Signature) : HashOutput :=
   @Hashing.messageDigest Id (CacheReplay.replayQuery cache) parsed.randomizer pk message
 
 /-- The FORS public key the replayed verifier recovers from this forgery. -/
-def forsKeyOf (cache : QueryCache HashSpec) (pk : PublicKey) (message : Bytes)
+@[expose] def forsKeyOf (cache : QueryCache HashSpec) (pk : PublicKey) (message : Bytes)
     (parsed : Signature) : Digest :=
   @SlhDsaSecurity.Fors.publicKeyFromSignature Id Id.instMonad (CacheReplay.replayQuery cache)
     parsed.fors (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed
@@ -159,7 +159,7 @@ theorem fors_pathInput (signature : ForsSignature)
 
 /-- One FORS tree's root recovery: compress the revealed secret, then climb the authentication
 path, with the path written in the form `PathEntry` names. -/
-def forsTreeRoot (signature : ForsSignature) (indices : SlhDsaSecurity.Fors.Indices)
+@[expose] def forsTreeRoot (signature : ForsSignature) (indices : SlhDsaSecurity.Fors.Indices)
     (publicSeed : Digest) (address : Address) (i : Fin forsTrees) : OracleComp HashSpec Digest :=
   (Hashing.shortHash (m := OracleComp HashSpec)
       (Hashing.tweakableInput publicSeed

@@ -34,7 +34,7 @@ term. If there is exactly one, `j`, then `t` is covered by the block together wi
 (`HelpedBy`), and two facts multiply: `j` fired, which a fresh `PRF_msg` draw decides at
 `2 ^ -128` (`hthin1`), and two independent uniform views at one instance cover each other's leaves
 with probability at most `2 ^ -177` (`prob_helpedBy_le`). If there are two, two fired cells share an
-instance: `2 ^ -256` for the two draws (`hthin2`) and `2 ^ -63` for the instance.
+@[expose] instance: `2 ^ -256` for the two draws (`hthin2`) and `2 ^ -63` for the instance.
 
 **What the run has to supply** is the two thinning bounds and one causality fact, all stated per
 pair of blocks so they are facts about the run rather than about the blocks' law:
@@ -45,7 +45,7 @@ pair of blocks so they are facts about the run rather than about the blocks' law
 * `hthin1`, `hthin2` — reaching a cell and then seeing it fire costs `2 ^ -128` per cell.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -58,7 +58,7 @@ open DigestTape NoticingTape BlockViews ForsCoverage
 /-! ## Two views at one instance -/
 
 /-- **A target covered by the disclosures together with one helper view at its own instance.** -/
-def HelpedBy (revealed : Disclosures) (target helper : View) : Prop :=
+@[expose] def HelpedBy (revealed : Disclosures) (target helper : View) : Prop :=
   helper.1 = target.1 ∧
     ∀ tree, target.2 tree ∈ revealed target.1 tree ∨ helper.2 tree = target.2 tree
 
@@ -69,7 +69,7 @@ instance (revealed : Disclosures) (target helper : View) :
   infer_instance
 
 /-- The leaf pairs one tree contributes: the target's leaf disclosed, or the helper's equal. -/
-def LeafPairs (shown : Finset Leaf) : Type :=
+@[expose] def LeafPairs (shown : Finset Leaf) : Type :=
   {pair : Leaf × Leaf // pair.1 ∈ shown ∨ pair.2 = pair.1}
 
 /-- The leaf pairs of one tree form a finite type. -/
@@ -78,7 +78,7 @@ instance (shown : Finset Leaf) : Fintype (LeafPairs shown) := by
   infer_instance
 
 /-- The helped pairs, as a dependent choice of instance and per-tree leaf pairs. -/
-def helpedEquiv (revealed : Disclosures) :
+@[expose] def helpedEquiv (revealed : Disclosures) :
     (Σ index : Instance, (tree : Tree) → LeafPairs (revealed index tree)) ≃
       {pair : View × View // HelpedBy revealed pair.1 pair.2} where
   toFun choice := ⟨((choice.1, fun tree => (choice.2 tree).val.1),
@@ -262,7 +262,7 @@ variable {ρ : Type} (run : List HashOutput → List HashOutput → ProbComp ρ)
 /-- **The expected weight on the runs that reach target cell `index`**, with both blocks drawn
 first. A weight that reads the blocks only is a fact about the blocks; this keeps it beside the
 selection, which is what lets one cell be redrawn under it. -/
-noncomputable def reachMass (leftLength rightLength index : Nat)
+@[expose] noncomputable def reachMass (leftLength rightLength index : Nat)
     (weight : List HashOutput → List HashOutput → ℝ≥0∞) : ℝ≥0∞ :=
   ∑' leftTape, Pr{let x ← padding leftLength}[x = leftTape] *
     ∑' rightTape, Pr{let x ← padding rightLength}[x = rightTape] *
@@ -392,25 +392,25 @@ end Tape
 /-! ## The wide event, and how it falls into four -/
 
 /-- The parsed view at one cell of a block. -/
-def cellView (tape : List HashOutput) (index : Nat) : View :=
+@[expose] def cellView (tape : List HashOutput) (index : Nat) : View :=
   MessageDigest.parse (tape.getD index default)
 
 /-- A witness view supplies the target's leaf at one tree, at the target's own instance. -/
-def Supplies (witness target : View) (tree : Tree) : Prop :=
+@[expose] def Supplies (witness target : View) (tree : Tree) : Prop :=
   witness.1 = target.1 ∧ witness.2 tree = target.2 tree
 
 /-- The disclosing block's loads are below the sharper cap. -/
-def GoodLeft (leftLength : Nat) (leftTape : List HashOutput) : Prop :=
+@[expose] def GoodLeft (leftLength : Nat) (leftTape : List HashOutput) : Prop :=
   ∑ part, ForsDisclosureTape.loads (blockTape leftLength leftTape) part ^ 14 ≤ 2 ^ 102
 
 /-- The disclosures of the whole disclosing block. -/
-def leftDisclosures (leftLength : Nat) (leftTape : List HashOutput) : Disclosures :=
+@[expose] def leftDisclosures (leftLength : Nat) (leftTape : List HashOutput) : Disclosures :=
   ForsDisclosureTape.disclosures (blockTape leftLength leftTape)
 
 /-- **The wide coverage event, in the blocks' coordinates.** Some reached target cell has each of
 its fourteen leaves supplied, at its own instance, by a cell of the disclosing block or by
 another reached target cell that fired. -/
-def FiredCovered {ρ : Type} (len : ρ → Nat) (fired : ρ → Nat → Prop)
+@[expose] def FiredCovered {ρ : Type} (len : ρ → Nat) (fired : ρ → Nat → Prop)
     (leftLength rightLength : Nat) (outcome : (List HashOutput × List HashOutput) × ρ) : Prop :=
   ∃ target < rightLength, target < len outcome.2 ∧ ∀ tree,
     (∃ cell < leftLength,

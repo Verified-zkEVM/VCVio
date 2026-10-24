@@ -31,7 +31,7 @@ and at most one digest per request:
 which is inside the work budget, with key generation's top tree to spare.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -43,12 +43,12 @@ open Security CacheReplay CanonicalGraph BracketedRun CarrierTail CarrierThin Fr
 /-! ## The two classes -/
 
 /-- An input a structural fault can be read at: one whose canonical target exists. -/
-def Deviating (walk : Walk) (input : Bytes) : Prop :=
+@[expose] def Deviating (walk : Walk) (input : Bytes) : Prop :=
   CanonicalTarget.canonicalTarget walk.1.1.2.2 walk.1.2 input ≠ none
 
 /-- An input the target record can file: a message input at the walk's key that is not a
 `PRF_msg` input at the walk's seed. -/
-def Targeted (walk : Walk) (input : Bytes) : Prop :=
+@[expose] def Targeted (walk : Walk) (input : Bytes) : Prop :=
   CombinedCharge.IsMessageInput (keyAt walk) input ∧
     ¬ RandomizerGate.PrfClass walk.1.1.2.1 input
 

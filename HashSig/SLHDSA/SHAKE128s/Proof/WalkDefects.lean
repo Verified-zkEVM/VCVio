@@ -24,7 +24,7 @@ argument: an event that reads only the walk's prefix is bounded by its probabili
 prefix, whatever happens afterwards.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -106,7 +106,7 @@ uniform table, truncated, is a uniform digest. Fixing the seed first and boundin
 would cost a factor of the number of address prefixes. -/
 
 /-- The graph node whose cell is the public root: the top subtree's root. -/
-def topNode : StructuralNode :=
+@[expose] def topNode : StructuralNode :=
   .tree ⟨⟨layers - 1, by decide⟩, ⟨0, by decide⟩⟩ ⟨subtreeHeight - 1, by decide⟩
     ⟨0, by decide⟩
 

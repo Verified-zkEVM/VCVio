@@ -39,7 +39,7 @@ hypotheses, together with the cache entries, which `CacheReplay` and `PathEntry`
 verifier's own run.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -266,7 +266,7 @@ variable [HasQuery HashSpec Id]
 
 /-- A concrete collision inside one FORS verification: at the root compression, on one tree's
 authentication path, or at one tree's revealed leaf. -/
-def ForsCollision (secretSeed publicSeed : Digest) (address : Address)
+@[expose] def ForsCollision (secretSeed publicSeed : Digest) (address : Address)
     (indices : SlhDsaSecurity.Fors.Indices) (signature : ForsSignature) : Prop :=
   let nodes : Nat → Nat → Digest :=
     SlhDsaSecurity.Fors.node (m := Id) secretSeed publicSeed address

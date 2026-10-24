@@ -32,7 +32,7 @@ reach a recording or a block, so the bracket cases need no hypothesis at all. Pu
 invariant must not see outside the thing the invariant is about.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -45,11 +45,11 @@ open Security DigestTape TapeFactor NoticingTape RecorderView PhaseFusion
 variable {σ : Type} [CacheView σ] {ω : Type} [Monoid ω]
 
 /-- A carrier-level state map, as the recorder's state sees it. -/
-def onCarrier (f : σ → σ) (state : StateOf σ) : StateOf σ := (f state.1, state.2)
+@[expose] def onCarrier (f : σ → σ) (state : StateOf σ) : StateOf σ := (f state.1, state.2)
 
 /-- The same map, as the tape recorder's state sees it. The blocks and the recordings are in
 components the map cannot reach. -/
-def onCarrierTape (f : σ → σ) (state : SplitTapeState σ) : SplitTapeState σ :=
+@[expose] def onCarrierTape (f : σ → σ) (state : SplitTapeState σ) : SplitTapeState σ :=
   (f state.1, state.2)
 
 /-- A world query to the fused handler is one nested run of the outer handler, with the
@@ -159,11 +159,11 @@ on stating both factorisations with a continuation.
 -/
 
 /-- The projection the bracketed shape reads its state through, at a general view. -/
-def forgetView (state : StateOf σ) : SplitPrefix.SplitState :=
+@[expose] def forgetView (state : StateOf σ) : SplitPrefix.SplitState :=
   (CacheView.cacheOf state.1, state.2)
 
 /-- The same projection from the tape recorder's state: the blocks go with the carrier. -/
-def forgetViewTape (state : SplitTapeState σ) : SplitPrefix.SplitState :=
+@[expose] def forgetViewTape (state : SplitTapeState σ) : SplitPrefix.SplitState :=
   (CacheView.cacheOf state.1, state.2.2)
 
 open scoped Classical in
@@ -307,7 +307,7 @@ definitionally and the bracketed case needs nothing said about it.
 -/
 
 /-- Overwrite one cell of the target block, leaving everything else alone. -/
-def setRightTape (cell : Nat) (value : HashOutput) (state : SplitTapeState σ) :
+@[expose] def setRightTape (cell : Nat) (value : HashOutput) (state : SplitTapeState σ) :
     SplitTapeState σ :=
   (state.1, (state.2.1.1, state.2.1.2.set cell value), state.2.2)
 
@@ -318,7 +318,7 @@ overwriting a cell of a block the answer no longer mentions cannot change the an
 -/
 
 /-- The tape-reading three-stage run, named so the charge can be stated at it. -/
-noncomputable def threeStageTapeRun (leftKeep rightKeep : Bytes → σ → Prop)
+@[expose] noncomputable def threeStageTapeRun (leftKeep rightKeep : Bytes → σ → Prop)
     {β α γ δ : Type}
     (inner : β → QueryImpl (OracleWorld + SigningSpec)
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld))))
@@ -706,7 +706,7 @@ cache and the two recordings — `forgetViewTape` did that inside it.
 -/
 
 /-- The handler-side three-stage run: the left of `evalDist_threeStage`, named. -/
-noncomputable def threeStageHandlerRun (leftKeep rightKeep : Bytes → σ → Prop)
+@[expose] noncomputable def threeStageHandlerRun (leftKeep rightKeep : Bytes → σ → Prop)
     {β α γ δ : Type}
     (inner : β → QueryImpl (OracleWorld + SigningSpec)
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld))))

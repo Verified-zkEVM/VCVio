@@ -27,7 +27,7 @@ below what any signature revealed — and that is a secret-side event, charged o
 half of the budget.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

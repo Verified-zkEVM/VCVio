@@ -23,7 +23,7 @@ key the tail's final cache generates is the key the graph walk already fixed (it
 top cell), so a hypothesis on the walk's key is a hypothesis on the generated one.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -36,7 +36,7 @@ attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenI
 
 /-- The structural clause as a per-answer predicate: this answer hits the canonical cell of the
 node its own input names, the input's child values deviating from the honest ones. -/
-noncomputable def CanonicalBad (publicSeed : Digest) (cells : Cells) :
+@[expose] noncomputable def CanonicalBad (publicSeed : Digest) (cells : Cells) :
     Bytes → HashOutput → Prop :=
   fun input answer =>
     CanonicalTarget.canonicalTarget publicSeed cells input = some (Hashing.truncate answer)

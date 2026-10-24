@@ -22,7 +22,7 @@ is to raise the framing, so the views inside a sub-run carry the request the sub
 The statements here never read that region.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -35,7 +35,7 @@ open Security BracketedRun CarrierFiles CarrierTail PhaseFusion RecordInvariant 
 variable (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
 
 /-- The invariant: nothing in flight at the carrier a counted state carries. -/
-def Clear (state : CountedState) : Prop := state.1.framing = none
+@[expose] def Clear (state : CountedState) : Prop := state.1.framing = none
 
 /-- **The tail starts with nothing in flight.** -/
 theorem clear_startAt (cache : QueryCache HashSpec) :

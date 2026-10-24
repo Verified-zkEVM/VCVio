@@ -43,7 +43,7 @@ The right keep is the carrier's with the `PRF_msg` class at the real seed taken 
 keeps a watched target out of the target recording.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -55,7 +55,7 @@ open Security DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedT
 /-! ## The watched input of a target cell -/
 
 /-- The framed message an `H_msg` input carries. -/
-def msgOf (input : Bytes) : Bytes := input.drop (3 * n)
+@[expose] def msgOf (input : Bytes) : Bytes := input.drop (3 * n)
 
 /-- The framed message of a message input is the message it frames. -/
 theorem msgOf_messageInput (randomizer : Digest) (pk : PublicKey) (message : Bytes) :
@@ -67,12 +67,12 @@ theorem msgOf_messageInput (randomizer : Digest) (pk : PublicKey) (message : Byt
 
 /-- **The answer that makes a target cell fire**: its `PRF_msg` answer truncates to the cell's
 own randomiser. -/
-def HitsOf (pk : PublicKey) (input : Bytes) (answer : HashOutput) : Prop :=
+@[expose] def HitsOf (pk : PublicKey) (input : Bytes) (answer : HashOutput) : Prop :=
   Hashing.messageInput (Hashing.truncate answer) pk (msgOf input) = input
 
 /-- **The input whose answer decides it**: the `PRF_msg` input at the real seed and the cell's
 own framed message. -/
-def targetOf (prf : Digest) (pk : PublicKey) (input : Bytes) : Bytes :=
+@[expose] def targetOf (prf : Digest) (pk : PublicKey) (input : Bytes) : Bytes :=
   Hashing.randomizerInput prf pk.seed (msgOf input)
 
 /-- A cell's target lies in the `PRF_msg` class at the real seed. -/
@@ -110,38 +110,38 @@ theorem prob_hitsOf_le (pk : PublicKey) (input : Bytes) :
 /-! ## The run, at fixed blocks -/
 
 /-- The carrier with its counter, as a cache view at one key. A synonym, so that the view is an
-instance. -/
-def CountedAt (_pk : PublicKey) : Type := Counted
+@[expose] instance. -/
+@[expose] def CountedAt (_pk : PublicKey) : Type := Counted
 
 /-- The counted carrier at key `pk` is a cache view through `countedView pk`. -/
 noncomputable instance (pk : PublicKey) : CacheView (CountedAt pk) := countedView pk
 
 /-- **The target test the `127` route uses**: the carrier's, less the `PRF_msg` class at the
 real seed. -/
-def keep127 (walk : Walk) (input : Bytes) (state : HandlerCarrier.State) : Prop :=
+@[expose] def keep127 (walk : Walk) (input : Bytes) (state : HandlerCarrier.State) : Prop :=
   AnswerCarrier.carrierRightKeep walk input state ∧
     ¬ RandomizerGate.PrfClass walk.1.1.2.1 input
 
 /-- The left test, at the counted view. -/
-def leftAt (walk : Walk) : Bytes → CountedAt (keyAt walk) → Prop :=
+@[expose] def leftAt (walk : Walk) : Bytes → CountedAt (keyAt walk) → Prop :=
   liftTest (disclosingKeep (keyAt walk))
 
 /-- The right test, at the counted view. -/
-def rightAt (walk : Walk) : Bytes → CountedAt (keyAt walk) → Prop :=
+@[expose] def rightAt (walk : Walk) : Bytes → CountedAt (keyAt walk) → Prop :=
   liftTest (keep127 walk)
 
 /-- The walk's secret key. -/
-noncomputable def skAt (walk : Walk) : SecretKey :=
+@[expose] noncomputable def skAt (walk : Walk) : SecretKey :=
   { seed := walk.1.1.1, prf := walk.1.1.2.1, publicKey := keyAt walk }
 
 /-- The handler the phase is fused over. -/
-noncomputable def innerAt (keys : SecretKey × PublicKey) :
+@[expose] noncomputable def innerAt (keys : SecretKey × PublicKey) :
     QueryImpl (OracleWorld + SigningSpec)
       (WriterT (Multiplicative Tally) (StateT SigningLog (OracleComp OracleWorld))) :=
   recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1)
 
 /-- **The carrier tail's tape run, at fixed blocks.** -/
-noncomputable def tapeRun (adversary : Adversary) (walk : Walk)
+@[expose] noncomputable def tapeRun (adversary : Adversary) (walk : Walk)
     (leftTape rightTape : List HashOutput) :
     ProbComp (((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState) :=
   threeStageTapeRun (σ := CountedAt (keyAt walk)) (leftAt walk) (rightAt walk) innerAt
@@ -365,22 +365,22 @@ theorem signing_step_shape (walk : Walk) (request : Message) (state : FState wal
 
 /-- **The defect so far, at the fused state**: an adversary query in the `PRF_msg` class at the
 real seed, or a signature whose randomiser is the seed. -/
-def Late2 (walk : Walk) (state : FState walk) : Prop :=
+@[expose] def Late2 (walk : Walk) (state : FState walk) : Prop :=
   (∃ y ∈ (Multiplicative.toAdd state.1).2, RandomizerGate.PrfClass walk.1.1.2.1 y) ∨
     RandomiserProvenance.SignerHitsSeed walk.1.1.2.1 walk.1.1.2.2
       (CacheView.cacheOf state.2.2.1) state.2.1
 
 /-- **Every signer-randomised input is cached, or `late` has begun.** -/
-def Covered (walk : Walk) (cache : QueryCache HashSpec) (late : Prop) : Prop :=
+@[expose] def Covered (walk : Walk) (cache : QueryCache HashSpec) (late : Prop) : Prop :=
   ∀ input, CacheAvailability.SignerRandomised walk.1.1.2.1 (keyAt walk) cache input →
     cache input ≠ none ∨ late
 
 /-- No target entry is in the excluded class. -/
-def RightClean (walk : Walk) (record : Record) : Prop :=
+@[expose] def RightClean (walk : Walk) (record : Record) : Prop :=
   ∀ entry ∈ record, ¬ RandomizerGate.PrfClass walk.1.1.2.1 entry.1
 
 /-- **The invariant of the fused phase.** -/
-def Inv2 (walk : Walk) (state : FState walk) : Prop :=
+@[expose] def Inv2 (walk : Walk) (state : FState walk) : Prop :=
   Covered walk (CacheView.cacheOf state.2.2.1) (Late2 walk state) ∧
     RightClean walk state.2.2.2.2.2
 
@@ -661,7 +661,7 @@ theorem signing_step_right (walk : Walk) (hwalk : walk ∈ support WarmedGame.gr
 open scoped Classical in
 /-- **The watched value of target cell `index`**: zero until the cell is filed, then the watched
 value of its `PRF_msg` input. -/
-noncomputable def watchAt (walk : Walk) (index : Nat)
+@[expose] noncomputable def watchAt (walk : Walk) (index : Nat)
     (state : SplitTapeState (CountedAt (keyAt walk))) : ℝ≥0∞ :=
   match state.2.2.2[index]? with
   | some entry => watchValue (targetOf walk.1.1.2.1 (keyAt walk) entry.1)
@@ -673,12 +673,12 @@ noncomputable abbrev unit128 : ℝ≥0∞ := 1 / ((2 ^ 128 : Nat) : ℝ≥0∞)
 
 open scoped Classical in
 /-- **The value of the fused phase**: the cell's watched value, zeroed once `late` has begun. -/
-noncomputable def value2 (walk : Walk) (index : Nat) (state : FState walk) : ℝ≥0∞ :=
+@[expose] noncomputable def value2 (walk : Walk) (index : Nat) (state : FState walk) : ℝ≥0∞ :=
   watchAt walk index state.2.2 * (if Late2 walk state then 0 else 1)
 
 open scoped Classical in
 /-- **The bound of the fused phase**: one unit once the cell is reached. -/
-noncomputable def bound2 (walk : Walk) (index : Nat) (state : FState walk) : ℝ≥0∞ :=
+@[expose] noncomputable def bound2 (walk : Walk) (index : Nat) (state : FState walk) : ℝ≥0∞ :=
   if index < state.2.2.2.2.2.length then unit128 else 0
 
 /-- A weighted sum of a pointwise inequality on the support. -/
@@ -861,18 +861,18 @@ through the cache instead: a `PRF_msg` input cached now and not at the end of th
 (`NewPrf`). -/
 
 /-- **A `PRF_msg` input at the real seed cached since the phase ended.** -/
-def NewPrf (walk : Walk) (phaseCache : QueryCache HashSpec)
+@[expose] def NewPrf (walk : Walk) (phaseCache : QueryCache HashSpec)
     (state : SplitTapeState (CountedAt (keyAt walk))) : Prop :=
   ∃ y, RandomizerGate.PrfClass walk.1.1.2.1 y ∧ CacheView.cacheOf state.1 y ≠ none ∧
     phaseCache y = none
 
 /-- `late` as far as verification has got. -/
-def Late3 (walk : Walk) (phaseLate : Prop) (phaseCache : QueryCache HashSpec)
+@[expose] def Late3 (walk : Walk) (phaseLate : Prop) (phaseCache : QueryCache HashSpec)
     (state : SplitTapeState (CountedAt (keyAt walk))) : Prop :=
   phaseLate ∨ NewPrf walk phaseCache state
 
 /-- **The invariant of verification.** -/
-def Inv3 (walk : Walk) (phaseLate : Prop) (phaseCache : QueryCache HashSpec)
+@[expose] def Inv3 (walk : Walk) (phaseLate : Prop) (phaseCache : QueryCache HashSpec)
     (state : SplitTapeState (CountedAt (keyAt walk))) : Prop :=
   Covered walk (CacheView.cacheOf state.1) (Late3 walk phaseLate phaseCache state) ∧
     RightClean walk state.2.2.2 ∧
@@ -972,14 +972,14 @@ theorem inv3_step (walk : Walk) (phaseLate : Prop) (phaseCache : QueryCache Hash
 
 open scoped Classical in
 /-- **The value of verification.** -/
-noncomputable def value3 (walk : Walk) (index : Nat) (phaseLate : Prop)
+@[expose] noncomputable def value3 (walk : Walk) (index : Nat) (phaseLate : Prop)
     (phaseCache : QueryCache HashSpec) (state : SplitTapeState (CountedAt (keyAt walk))) :
     ℝ≥0∞ :=
   watchAt walk index state * (if Late3 walk phaseLate phaseCache state then 0 else 1)
 
 open scoped Classical in
 /-- **The bound of verification.** -/
-noncomputable def bound3 (walk : Walk) (index : Nat)
+@[expose] noncomputable def bound3 (walk : Walk) (index : Nat)
     (state : SplitTapeState (CountedAt (keyAt walk))) : ℝ≥0∞ :=
   if index < state.2.2.2.length then unit128 else 0
 

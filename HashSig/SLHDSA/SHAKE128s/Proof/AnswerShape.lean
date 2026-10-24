@@ -19,7 +19,7 @@ Events that read only the outcome, the count and the recorder state (the cache a
 recordings) are the *same proposition* at either value type, so a bound proved at the run without
 the record transports along this map by `prEvent_map` with nothing lost or assumed. -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -28,7 +28,7 @@ namespace SlhDsaSecurity.AnswerShape
 open Security CanonicalGraph WarmedGame RoutedSplit Target
 
 /-- The map the answer side's bound is transported along: drop the record, keep the state. -/
-def forgetRecord (result : ((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState) :
+@[expose] def forgetRecord (result : ((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState) :
     (Outcome × Nat) × SplitPrefix.SplitState :=
   ((result.1.1.1, result.1.2), result.2)
 

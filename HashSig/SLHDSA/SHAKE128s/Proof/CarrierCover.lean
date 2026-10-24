@@ -48,7 +48,7 @@ inventing one here would be guessing at what a future `reaches` needs. At the ca
 well as without — it is immediate.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -62,7 +62,7 @@ open CarrierTail ServedAgreement
 variable (pk : PublicKey)
 
 /-- The tail's state, with the counter dropped. -/
-def dropCount (state : HandlerCarrier.State ×
+@[expose] def dropCount (state : HandlerCarrier.State ×
     ((DigestTape.Record × DigestTape.Record) × Nat)) :
     RecorderView.StateOf HandlerCarrier.State :=
   (state.1, state.2.1)

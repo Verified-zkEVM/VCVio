@@ -18,7 +18,7 @@ the positions at which `readDigest` finds every field of `Signature.toBytes`, an
 `Signature.fromBytes_toBytes`, which states that parsing an encoded signature returns it.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity
 

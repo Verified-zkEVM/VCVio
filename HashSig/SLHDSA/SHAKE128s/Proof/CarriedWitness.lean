@@ -34,7 +34,7 @@ law constrains only the cache, and filing does not touch it.
 together.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -55,7 +55,7 @@ where the answer does means. -/
 
 open scoped Classical in
 /-- Notice a query: file the input when the flag says the signer is serving it. -/
-noncomputable def servingNotice (state : State) (input : Bytes) : State :=
+@[expose] noncomputable def servingNotice (state : State) (input : Bytes) : State :=
   if FilesLeft pk state input then file state input else state
 
 open scoped Classical in
@@ -89,7 +89,7 @@ theorem filesLeft_servingNotice (state : State) (input probe : Bytes) :
 
 open scoped Classical in
 /-- The carrier as a recorder state, with the signing oracle's own notice. -/
-@[reducible] noncomputable def servingView : CacheView State where
+@[expose, reducible] noncomputable def servingView : CacheView State where
   cacheOf := cacheOf
   update := cacheAnswer
   onQuery := servingNotice pk
@@ -122,10 +122,10 @@ theorem served_cacheAnswer_iff (state : State) (input probe : Bytes) (answer : H
 
 /-- The left test: the flag is up for a request, and the input is that request's own digest
 shape. Only the signing oracle sets the flag, so there is no clause an adversary can satisfy. -/
-def disclosingKeep : Bytes → State → Prop := fun input state => FilesLeft pk state input
+@[expose] def disclosingKeep : Bytes → State → Prop := fun input state => FilesLeft pk state input
 
 /-- What an entry of the disclosing recording satisfies at the end: the carrier served it. -/
-def disclosedAtEnd : Bytes → State → Prop := fun input state => Served state input
+@[expose] def disclosedAtEnd : Bytes → State → Prop := fun input state => Served state input
 
 open scoped Classical in
 /-- **Every entry of the disclosing recording was served**, read at the end of the run. The flag

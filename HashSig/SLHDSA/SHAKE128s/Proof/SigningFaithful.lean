@@ -56,7 +56,7 @@ the game signed with is recovered from the run's own final cache, exactly as
 `WarmedSplit.cases_of_win` recovers the public one, and the walk never enters.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -67,7 +67,7 @@ variable {α : Type}
 open Security CacheReplay StrippedGame AdversaryQueries
 
 /-- The pair of handlers the adversary's phase runs against. -/
-noncomputable def phaseImpl (sk : SecretKey) :
+@[expose] noncomputable def phaseImpl (sk : SecretKey) :
     QueryImpl (OracleWorld + SigningSpec) CountedRun :=
   adversaryImpl + Security.signingOracle sk
 
@@ -78,6 +78,7 @@ Quantifying the later cache up front is what makes the predicate monotone, and m
 an induction through a growing cache needs. -/
 
 /-- Every entry of the log carries the signer's answer, read at any cache extending this one. -/
+@[expose]
 def FaithfulFrom (sk : SecretKey) (cache : QueryCache HashSpec) (log : SigningLog) : Prop :=
   ∀ later : QueryCache HashSpec, CacheAvailability.Persists cache later →
     ∀ entry ∈ log, ∀ framed : Bytes, entry.1.frame = some framed →
@@ -234,6 +235,7 @@ step establishes it from `CacheProvenance.sign_randomizer_cached`, whose conclus
 that form. -/
 
 /-- Every logged request's own `PRF_msg` entry is in the cache, and in any cache extending it. -/
+@[expose]
 def RandomiserCachedFrom (sk : SecretKey) (cache : QueryCache HashSpec) (log : SigningLog) :
     Prop :=
   ∀ later : QueryCache HashSpec, CacheAvailability.Persists cache later →

@@ -38,7 +38,7 @@ adversary's handler forwards *world* queries, and a coin is not a hash call.
 `CacheProvenance.queried_of_fresh_step` is that step, and it is where the coin half is discharged.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -49,7 +49,7 @@ variable {α β : Type}
 open Security CacheReplay RecordedQueries CacheProvenance
 
 /-- The adversary's phase, run from a log and a cache, recording as it goes. -/
-noncomputable def recordedRun {α : Type} (x : RecordedRun α) (log : SigningLog)
+@[expose] noncomputable def recordedRun {α : Type} (x : RecordedRun α) (log : SigningLog)
     (cache : QueryCache HashSpec) :
     ProbComp (((α × Multiplicative Tally) × SigningLog) × QueryCache HashSpec) :=
   (simulateQ KeygenUniform.rom ((WriterT.run x).run log)).run cache
@@ -165,7 +165,7 @@ The second half is not decoration. The randomiser the signer *derived* is `Hashi
 the cached answer; with no entry there `CacheReplay.replay` answers `default` and the randomiser
 becomes a fixed constant. So the entry's presence has to be carried from where the sub-run is in
 hand, not recovered later from a `QueriesUnder` witness, which does not imply it. -/
-def SignerMade (sk : SecretKey) (cache : QueryCache HashSpec) (request : Message)
+@[expose] def SignerMade (sk : SecretKey) (cache : QueryCache HashSpec) (request : Message)
     (probe : Bytes) : Prop :=
   QueriesUnder cache (Scheme.sign (m := OracleComp HashSpec) sk request) probe ∧
     ∀ framed : Bytes, request.frame = some framed →
@@ -197,7 +197,7 @@ theorem signerMade_of_fresh_step (sk : SecretKey) (request : Message) (log : Sig
 
 /-- Where an entry the phase installed can have come from: the adversary's own record, or a
 signing sub-run for a request the log names. -/
-def PhaseSource (sk : SecretKey) (record : Multiset Bytes) (log : SigningLog)
+@[expose] def PhaseSource (sk : SecretKey) (record : Multiset Bytes) (log : SigningLog)
     (cache : QueryCache HashSpec) (probe : Bytes) : Prop :=
   probe ∈ record ∨ ∃ entry ∈ log, SignerMade sk cache entry.1 probe
 

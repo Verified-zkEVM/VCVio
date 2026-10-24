@@ -24,7 +24,7 @@ its input. No collision or one-wayness is assumed; every fault is a concrete wit
 probability is charged elsewhere in the proof.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -33,14 +33,14 @@ namespace SlhDsaSecurity.Extraction.HypertreeChain
 variable [HasQuery HashSpec Id]
 
 /-- The honest root of the subtree at `(layer, tree)` under the genuine seeds. -/
-def honestNode (secretSeed publicSeed : Digest) (layer tree : Nat) : Digest :=
+@[expose] def honestNode (secretSeed publicSeed : Digest) (layer tree : Nat) : Digest :=
   SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed
     (SlhDsaSecurity.Hypertree.address layer tree) subtreeHeight 0
 
 /-- The honest top root reached by folding the given segment upward. The recovered root of
 each honest layer is independent of its incoming message, so the fold ignores its input
 past the bottom layer. -/
-def honestFold (secretSeed publicSeed : Digest) :
+@[expose] def honestFold (secretSeed publicSeed : Digest) :
     (remaining layer tree : Nat) → Digest → Digest
   | 0, _, _, input => input
   | remaining + 1, layer, tree, _ =>
@@ -50,7 +50,7 @@ def honestFold (secretSeed publicSeed : Digest) :
 /-- A concrete structural fault somewhere in the segment: either a layer collision, or a
 layer whose WOTS signature is the honest signature of a message differing from the honest
 input threaded into that layer. The second case is a WOTS one-wayness witness. -/
-def HypertreeFault (secretSeed publicSeed : Digest) :
+@[expose] def HypertreeFault (secretSeed publicSeed : Digest) :
     (remaining : Nat) → (Fin remaining → XmssSignature) → (layer tree : Nat) →
       SlhDsaSecurity.Hypertree.LeafIndex → (message expectedInput : Digest) → Prop
   | 0, _, _, _, _, _, _ => False

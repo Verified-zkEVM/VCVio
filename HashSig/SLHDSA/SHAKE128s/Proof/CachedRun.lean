@@ -29,7 +29,7 @@ Nothing is lost in the replacement: `run_eq_pure_of_cached` is an equality of co
 not a hop between games.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

@@ -28,7 +28,7 @@ So nothing here is a near miss except the key-pair field, which is exactly `2 ^ 
 because the bound is strict on an index that is strictly below it.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity
 

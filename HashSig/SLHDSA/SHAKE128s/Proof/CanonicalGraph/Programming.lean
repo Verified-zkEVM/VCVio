@@ -29,7 +29,7 @@ function agreeing with the programmed cache evaluates the algorithms to the samp
 (`value_eq_of_cache_agreement`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -39,18 +39,18 @@ namespace SlhDsaSecurity.CanonicalGraph.Programming
 abbrev Outputs := StructuralNode → HashOutput
 
 /-- The preorder comparing structural nodes by rank. -/
-def RankLE (left right : StructuralNode) : Prop := left.rank ≤ right.rank
+@[expose] def RankLE (left right : StructuralNode) : Prop := left.rank ≤ right.rank
 
 /-- Rank comparison is decided on the ranks. -/
 instance : DecidableRel RankLE := fun _ _ => inferInstanceAs (Decidable (_ ≤ _))
 /-- Rank comparison is transitive. -/
-instance : IsTrans StructuralNode RankLE := ⟨fun _ _ _ => Nat.le_trans⟩
+@[expose] instance : IsTrans StructuralNode RankLE := ⟨fun _ _ _ => Nat.le_trans⟩
 /-- Any two structural nodes are comparable by rank. -/
-instance : Std.Total RankLE := ⟨fun _ _ => Nat.le_total _ _⟩
+@[expose] instance : Std.Total RankLE := ⟨fun _ _ => Nat.le_total _ _⟩
 
 /-- All structural nodes, listed in nondecreasing rank, so every node comes after its
 children. -/
-noncomputable def order : List StructuralNode :=
+@[expose] noncomputable def order : List StructuralNode :=
   (Finset.univ : Finset StructuralNode).toList.mergeSort (RankLE · ·)
 
 /-- `order` is sorted by rank. -/
@@ -68,32 +68,32 @@ theorem mem_order (node : StructuralNode) : node ∈ order := by
   exact (List.mergeSort_perm _ _).mem_iff.mpr (by simp)
 
 /-- The cells before the traversal: the secret seed at its node and zero elsewhere. -/
-def initialCells (secretSeed : Digest) : Cells
+@[expose] def initialCells (secretSeed : Digest) : Cells
   | .secretSeed => secretSeed
   | .structural _ => 0
 
 /-- The cells determined by a seed and a full output table: each structural cell is the
 truncation of the node's output. -/
-def cellsOfOutputs (secretSeed : Digest) (outputs : Outputs) : Cells
+@[expose] def cellsOfOutputs (secretSeed : Digest) (outputs : Outputs) : Cells
   | .secretSeed => secretSeed
   | .structural parent => Hashing.truncate (outputs parent)
 
 /-- Records the truncation of a hash output as the cell of the given node. -/
-def assign (parent : StructuralNode) (cells : Cells) (output : HashOutput) : Cells :=
+@[expose] def assign (parent : StructuralNode) (cells : Cells) (output : HashOutput) : Cells :=
   Function.update cells (.structural parent) (Hashing.truncate output)
 
 /-- The byte input queried for a node during the traversal: its canonical input under the
 current cells. -/
-def input (publicSeed : Digest) (parent : StructuralNode) (cells : Cells) : Bytes :=
+@[expose] def input (publicSeed : Digest) (parent : StructuralNode) (cells : Cells) : Bytes :=
   canonicalInput publicSeed cells parent
 
 /-- The rank-order traversal querying the hash oracle at every structural node's canonical
 input and recording each answer's truncation as the node's cell. -/
-noncomputable def warmup (publicSeed secretSeed : Digest) : OracleComp HashSpec Cells :=
+@[expose] noncomputable def warmup (publicSeed secretSeed : Digest) : OracleComp HashSpec Cells :=
   GraphFreshSampling.evaluate (input publicSeed) assign order (initialCells secretSeed)
 
 /-- The canonical cache written using final cells, rather than partial traversal states. -/
-def cacheFrom (publicSeed : Digest) (cells : Cells) (outputs : Outputs) :
+@[expose] def cacheFrom (publicSeed : Digest) (cells : Cells) (outputs : Outputs) :
     List StructuralNode → QueryCache HashSpec → QueryCache HashSpec
   | [], cache => cache
   | parent :: parents, cache => cacheFrom publicSeed cells outputs parents
@@ -101,7 +101,7 @@ def cacheFrom (publicSeed : Digest) (cells : Cells) (outputs : Outputs) :
 
 /-- The cells agree with the target on the secret seed and on every structural node outside the
 given list. -/
-def AgreesOutside (remaining : List StructuralNode) (cells target : Cells) : Prop :=
+@[expose] def AgreesOutside (remaining : List StructuralNode) (cells target : Cells) : Prop :=
   cells .secretSeed = target .secretSeed ∧
     ∀ parent ∉ remaining, cells (.structural parent) = target (.structural parent)
 
@@ -268,7 +268,7 @@ theorem value_eq_of_cache_agreement [HasQuery HashSpec Id]
 
 /-- Split the independently sampled seed and full output table into all short
 graph cells (including the seed) and the unused 112-bit suffix at every hash node. -/
-def splitTable (table : Digest × Outputs) : Cells × Padding :=
+@[expose] def splitTable (table : Digest × Outputs) : Cells × Padding :=
   (cellsOfOutputs table.1 table.2, fun parent => (table.2 parent).extractLsb' 0 112)
 
 /-- Splitting a seed and output table into cells and padding loses no information. -/

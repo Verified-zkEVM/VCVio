@@ -16,7 +16,7 @@ All parties share one lazily sampled hash oracle. Each hash call costs one unit,
 repeated inputs; private uniform sampling is free. Each experiment starts with an empty cache.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -32,21 +32,21 @@ abbrev World := unifSpec + HashSpec Input Output
 
 /-- Forward uniform sampling; answer a fresh hash input by a uniform output and cache it, and a
 repeated input from the cache. -/
-noncomputable def impl :
+@[expose] noncomputable def impl :
     QueryImpl (World Input Output) (StateT (QueryCache (HashSpec Input Output)) ProbComp) :=
   unifFwdImpl (HashSpec Input Output) +
     (randomOracle : QueryImpl (HashSpec Input Output)
       (StateT (QueryCache (HashSpec Input Output)) ProbComp))
 
 /-- One unit per hash call, including repeated inputs; nothing per uniform sample. -/
-def hashCost : (World Input Output).Domain → ℕ
+@[expose] def hashCost : (World Input Output).Domain → ℕ
   | .inl _ => 0
   | .inr _ => 1
 
 variable {Input Output}
 
 /-- Run a computation of the random-oracle world from an empty cache. -/
-noncomputable def run {α : Type} (computation : OracleComp (World Input Output) α) :
+@[expose] noncomputable def run {α : Type} (computation : OracleComp (World Input Output) α) :
     ProbComp α :=
   (simulateQ (impl Input Output) computation).run' ∅
 

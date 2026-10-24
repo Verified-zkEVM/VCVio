@@ -21,7 +21,7 @@ first. Conditioning on the walk fixes the cell table, so the shared side average
 seeds the table does not carry, with the table still in the measure.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -32,7 +32,7 @@ open Security WarmedGame WalkTable
 /-! ## The recorded paired run at a drawn table -/
 
 /-- The recorded game at a drawn table, with the walk it determines kept. -/
-noncomputable def recordedTableRun (adversary : Adversary) (prfSeed publicSeed : Digest) :
+@[expose] noncomputable def recordedTableRun (adversary : Adversary) (prfSeed publicSeed : Digest) :
     ProbComp ((((Digest × Digest × Digest) × CanonicalGraph.Cells) × QueryCache HashSpec) ×
       (((Outcome × Multiset Bytes) × Nat) × QueryCache HashSpec)) := do
   let table ← ($ᵗ (CanonicalGraph.Cells × CanonicalGraph.Padding) :

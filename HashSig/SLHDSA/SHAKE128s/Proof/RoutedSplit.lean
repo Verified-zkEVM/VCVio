@@ -51,7 +51,7 @@ first call is the message digest, so the entry is in the run's own final cache a
 the replayed verifier reads.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -65,27 +65,27 @@ abbrev Trace : Type :=
   (((Digest × Digest × Digest) × Cells) × (Outcome × Nat)) × QueryCache HashSpec
 
 /-- The public key the walk's seeds generate, read from this run's own cache. -/
-def keyOf (x : Trace) : PublicKey :=
+@[expose] def keyOf (x : Trace) : PublicKey :=
   generatedKey x.1.1.1.1 x.1.1.1.2.1 x.1.1.1.2.2 x.2
 
 /-- The counted outcome and the final cache, as the charges read a tail's result. -/
-def resultOf (x : Trace) : (Outcome × Nat) × QueryCache HashSpec := (x.1.2, x.2)
+@[expose] def resultOf (x : Trace) : (Outcome × Nat) × QueryCache HashSpec := (x.1.2, x.2)
 
 /-- **The answer side, at a public key held fixed.** A structural collision that deviates from
 the walk's cells, or the forgery's own message digest covered by the digests that disclose —
 the digests of requests the signer served, which are the only ones that reveal a FORS secret.
 The key is a parameter because the charge needs it fixed before the tail runs: both clauses are
 charged per query, and which class a query falls in is decided by the key its bytes name. -/
-def AnswerBadAt (pk : PublicKey) (x : Trace) : Prop :=
+@[expose] def AnswerBadAt (pk : PublicKey) (x : Trace) : Prop :=
   StructuralTerm.DeviatingCollision x.1.1.1.2.2 x.1.1.2 (resultOf x) ∨
     CoverageRouted.ForgeryDisclosedCovered pk (resultOf x)
 
 /-- **The answer side**, at the key this run's own cache generates. -/
-def AnswerBad (x : Trace) : Prop := AnswerBadAt (keyOf x) x
+@[expose] def AnswerBad (x : Trace) : Prop := AnswerBadAt (keyOf x) x
 
 /-- **The input side.** Some entry of the record of claims the forgery determines is the
 canonical input of a node whose staked cell no signature has made available. -/
-def InputBad (x : Trace) : Prop :=
+@[expose] def InputBad (x : Trace) : Prop :=
   ∃ (message : Bytes) (parsed : Signature),
     x.1.2.1.forgery.message.frame = some message ∧
       Signature.fromBytes? x.1.2.1.forgery.signature = some parsed ∧
@@ -99,7 +99,7 @@ def InputBad (x : Trace) : Prop :=
 
 /-- The forgery's FORS part and its hypertree are both the ones the signer writes for the
 digest it carries. -/
-def CanonicalAt (x : Trace) (message : Bytes) (parsed : Signature) : Prop :=
+@[expose] def CanonicalAt (x : Trace) (message : Bytes) (parsed : Signature) : Prop :=
   forsKeyOf x.2 (keyOf x) message parsed =
       honestForsKey x.1.1.1.1 x.1.1.1.2.2 x.2
         (Scheme.forsAddress (digestOf x.2 (keyOf x) message parsed)) ∧
@@ -116,7 +116,7 @@ def CanonicalAt (x : Trace) (message : Bytes) (parsed : Signature) : Prop :=
 
 /-- Every served input whose digest selects one of the forgery's own FORS positions, at the
 forgery's own FORS instance, *is* the forgery's own input. -/
-def OnlySelfAt (x : Trace) (message : Bytes) (parsed : Signature) : Prop :=
+@[expose] def OnlySelfAt (x : Trace) (message : Bytes) (parsed : Signature) : Prop :=
   ∃ tree : MessageDigest.ForsTree, ∀ (input : Bytes) (answer : HashOutput),
     ServedLog.servedLog (keyOf x) (resultOf x) input →
       x.2 input = some answer →
@@ -128,7 +128,7 @@ def OnlySelfAt (x : Trace) (message : Bytes) (parsed : Signature) : Prop :=
             input = Hashing.messageInput parsed.randomizer (keyOf x) message
 
 /-- **The branch the provenance argument owns.** -/
-def CanonicalForgery (x : Trace) : Prop :=
+@[expose] def CanonicalForgery (x : Trace) : Prop :=
   ∃ (message : Bytes) (parsed : Signature),
     x.1.2.1.forgery.message.frame = some message ∧
       Signature.fromBytes? x.1.2.1.forgery.signature = some parsed ∧
@@ -136,7 +136,7 @@ def CanonicalForgery (x : Trace) : Prop :=
 
 /-- Every one of the fourteen positions the forgery's digest selects is disclosed by the digest
 of some request the signer served. -/
-def Disclosed (x : Trace) (message : Bytes) (parsed : Signature) : Prop :=
+@[expose] def Disclosed (x : Trace) (message : Bytes) (parsed : Signature) : Prop :=
   ∀ tree : MessageDigest.ForsTree,
     GraphStakes.forsIndex
         (MessageDigest.forsIndices (digestOf x.2 (keyOf x) message parsed)) tree ∈
@@ -145,7 +145,7 @@ def Disclosed (x : Trace) (message : Bytes) (parsed : Signature) : Prop :=
 
 /-- The forgery reads its digest at an input the signer served: the log holds a request whose
 own framing and own published randomiser name that very input. -/
-def SelfServed (x : Trace) (message : Bytes) (parsed : Signature) : Prop :=
+@[expose] def SelfServed (x : Trace) (message : Bytes) (parsed : Signature) : Prop :=
   ServedLog.servedLog (keyOf x) (resultOf x)
     (Hashing.messageInput parsed.randomizer (keyOf x) message)
 
@@ -169,7 +169,7 @@ digest input, which pins both its randomiser and its message — and it is also 
 this case from coverage: a forgery that reads an input the signer served is not a target the
 coverage charge has to carry, because the charge counts targets outside the disclosing
 class. -/
-def ReplayForgery (x : Trace) : Prop :=
+@[expose] def ReplayForgery (x : Trace) : Prop :=
   ∃ (message : Bytes) (parsed : Signature),
     x.1.2.1.forgery.message.frame = some message ∧
       Signature.fromBytes? x.1.2.1.forgery.signature = some parsed ∧

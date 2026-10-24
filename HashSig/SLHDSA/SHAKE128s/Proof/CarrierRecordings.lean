@@ -24,7 +24,7 @@ Both invariants read only the cache and the recordings, so their bracket conditi
 discharged here (`recordClass_bracket`, `recordCached_bracket`) rather than asked for.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -123,11 +123,11 @@ theorem step_right_shape (rightKeep : Bytes → HandlerCarrier.State → Prop)
 /-! ## The two invariants -/
 
 /-- **Every target-recorded input is of the narrowed class.** -/
-def RecordClass (narrow : Bytes → Prop) (state : CountedState) : Prop :=
+@[expose] def RecordClass (narrow : Bytes → Prop) (state : CountedState) : Prop :=
   ∀ entry ∈ state.2.1.2, narrow entry.1
 
 /-- **Every target-recorded input is cached**, so it was fresh exactly once. -/
-def RecordCached (state : CountedState) : Prop :=
+@[expose] def RecordCached (state : CountedState) : Prop :=
   ∀ entry ∈ state.2.1.2, state.1.cache entry.1 ≠ none
 
 /-- A bracket keeps every target-recorded input in the narrowed class. -/
@@ -191,7 +191,7 @@ input is fresh, and every entry already recorded is cached, so the new one is no
 two halves travel together for the same reason the step fact reports both. -/
 
 /-- **The target recording is cached and holds each input once.** -/
-def RecordFreshNodup (state : CountedState) : Prop :=
+@[expose] def RecordFreshNodup (state : CountedState) : Prop :=
   RecordCached state ∧ (state.2.1.2.map Prod.fst).Nodup
 
 /-- A bracket keeps the target recording cached and free of duplicates. -/

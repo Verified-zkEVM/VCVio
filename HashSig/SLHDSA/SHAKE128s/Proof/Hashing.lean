@@ -19,7 +19,7 @@ hashes (`Hashing.randomizerInput_injective`, `Hashing.messageInput_injective`,
 points.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity
 

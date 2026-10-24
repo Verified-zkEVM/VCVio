@@ -18,7 +18,7 @@ probability one. A bit-security statement bounds the advantage of every adversar
 work by `q / 2^bits`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -36,11 +36,11 @@ namespace SecurityGame
 variable {Scheme Kind : Type} (game : SecurityGame Scheme Kind) (scheme : Scheme)
 
 /-- The probability that the adversary wins. -/
-noncomputable def advantage (adversary : game.Adversary) : ℝ≥0∞ :=
+@[expose] noncomputable def advantage (adversary : game.Adversary) : ℝ≥0∞ :=
   Pr{let result ← game.experiment scheme adversary}[result.1 = true]
 
 /-- The total count in mode `Z` is at most `q` with probability one. -/
-def HasQueryBound (Z : Finset Kind) (adversary : game.Adversary) (q : ℕ) : Prop :=
+@[expose] def HasQueryBound (Z : Finset Kind) (adversary : game.Adversary) (q : ℕ) : Prop :=
   Pr{let result ← game.experiment scheme adversary}[∑ kind ∈ Z, result.2 kind ≤ q] = 1
 
 end SecurityGame

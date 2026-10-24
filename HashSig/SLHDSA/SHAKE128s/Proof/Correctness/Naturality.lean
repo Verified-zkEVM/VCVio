@@ -17,7 +17,7 @@ component (WOTS, XMSS, FORS, the hypertree, `Scheme.keygenInternal`, `Scheme.sig
 `Scheme.sign`) gives the same computation run directly in the target monad.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

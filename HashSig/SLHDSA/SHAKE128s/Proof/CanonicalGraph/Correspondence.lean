@@ -23,19 +23,20 @@ the roots node (`fors_publicKey_cell`); and the public-key root is the cell of t
 the seeds.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CanonicalGraph
 
 /-- Position zero is the PRF-derived secret; position fifteen is the chain endpoint. -/
+@[expose]
 def wotsPosition (key : WotsKey) (chain : Fin chains) (position : Fin w) : StructuralNode :=
   if hzero : position.val = 0 then .wotsPrf key chain
   else .wotsHash key chain ⟨position.val - 1, by have := position.isLt; omega⟩
 
 /-- The root node of the top hypertree layer, whose cell is the public-key root. -/
-def topRoot : StructuralNode :=
+@[expose] def topRoot : StructuralNode :=
   .tree ⟨⟨layers - 1, by decide⟩, ⟨0, by decide⟩⟩
     ⟨subtreeHeight - 1, by decide⟩ ⟨0, by decide⟩
 

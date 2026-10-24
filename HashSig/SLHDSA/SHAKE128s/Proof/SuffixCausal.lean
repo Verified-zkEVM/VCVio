@@ -24,7 +24,7 @@ run has reached its cell whatever the head is, and at `index = i + 1` the overwr
 past the head too, so both drop by one together.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

@@ -37,7 +37,7 @@ the honest warmup `worldWarmup` it gives `evalDist_prepend_warmup` and
 hash counter so that the query budget is unaffected.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -140,7 +140,7 @@ entry is — each query lands on an input still empty — with the induction pee
 a time because the next input is chosen using the value just drawn. -/
 
 /-- The graph traversal, in the experiment's oracle world. -/
-noncomputable def worldEvaluate {State Index : Type} (input : Index → State → Bytes)
+@[expose] noncomputable def worldEvaluate {State Index : Type} (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State) :
     List Index → State → OracleComp OracleWorld State
   | [], state => pure state
@@ -212,7 +212,7 @@ fixes the honest cells before the adversary runs, since
 uniform table and a programmed cache. -/
 
 /-- The warmup traversal, in the experiment's oracle world. -/
-noncomputable def worldWarmup (publicSeed secretSeed : Digest) :
+@[expose] noncomputable def worldWarmup (publicSeed secretSeed : Digest) :
     OracleComp OracleWorld CanonicalGraph.Cells :=
   worldEvaluate (CanonicalGraph.Programming.input publicSeed)
     CanonicalGraph.Programming.assign CanonicalGraph.Programming.order

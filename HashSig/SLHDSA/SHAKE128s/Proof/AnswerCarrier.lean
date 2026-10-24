@@ -19,7 +19,7 @@ there: the message class, less the signer's own randomiser probe for the frame i
 (`FilesRandomiser`), less whatever the carrier's flag already files on the left.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -28,7 +28,7 @@ namespace SlhDsaSecurity.AnswerCarrier
 open Security CanonicalGraph WarmedGame Target
 
 /-- The run the answer side owes a bound at, when the tail is the carrier's. -/
-noncomputable def answerCarrierRun
+@[expose] noncomputable def answerCarrierRun
     (rightKeep : (((Digest × Digest × Digest) × Cells) × QueryCache HashSpec) → Bytes →
       HandlerCarrier.State → Prop)
     (adversary : Adversary)
@@ -47,14 +47,14 @@ boundary) and true exactly while the signer serves that frame. -/
 /-- **The signer's own randomiser probe, as the flag sees it.** The `PRF_msg` input for the frame
 in flight — the exact counterpart of `HandlerCarrier.FilesLeft`, which is the digest input for
 that same frame. -/
-def FilesRandomiser (prfSeed : Digest) (pk : PublicKey) (state : HandlerCarrier.State)
+@[expose] def FilesRandomiser (prfSeed : Digest) (pk : PublicKey) (state : HandlerCarrier.State)
     (input : Bytes) : Prop :=
   ∃ framed : Bytes, state.framing = some framed ∧
     input = Hashing.randomizerInput prfSeed pk.seed framed
 
 /-- **The target test at the carrier.** The message class, less the probe for the frame in
 flight, less whatever the flag is already filing on the left. -/
-def carrierRightKeep
+@[expose] def carrierRightKeep
     (walk : (((Digest × Digest × Digest) × Cells) × QueryCache HashSpec))
     (input : Bytes) (state : HandlerCarrier.State) : Prop :=
   (CombinedCharge.IsMessageInput

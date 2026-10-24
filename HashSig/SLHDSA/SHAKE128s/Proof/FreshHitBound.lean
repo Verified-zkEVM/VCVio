@@ -38,14 +38,14 @@ instead of over the queries would be far too lossy.
 Uniform-coin queries are free: they never touch the cache and never consume budget.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.FreshHitBound
 
 /-- The charged queries: those addressed to the shared hash oracle. -/
-def HashQuery : OracleWorld.Domain → Prop := fun query => query.isRight = true
+@[expose] def HashQuery : OracleWorld.Domain → Prop := fun query => query.isRight = true
 
 /-- Whether a query is charged is decided by its oracle index. -/
 instance : DecidablePred HashQuery := fun _ => inferInstanceAs (Decidable (_ = _))
@@ -56,12 +56,12 @@ The target may differ from input to input, so a single charge covers an arbitrar
 table of honest values: each cache miss can only match the one target belonging to the
 input being queried. This is what keeps the bound linear in the query count instead of
 multiplying by the number of honest values. -/
-def Hit {α : Type} (targetOf : Bytes → Option Digest) :
+@[expose] def Hit {α : Type} (targetOf : Bytes → Option Digest) :
     α × QueryCache HashSpec → Prop := fun result =>
   ∃ input output, result.2 input = some output ∧ targetOf input = some (Hashing.truncate output)
 
 /-- A cache holding no answer that truncates to its own input's target. -/
-def Clean (targetOf : Bytes → Option Digest) (cache : QueryCache HashSpec) : Prop :=
+@[expose] def Clean (targetOf : Bytes → Option Digest) (cache : QueryCache HashSpec) : Prop :=
   ∀ input output, cache input = some output → targetOf input ≠ some (Hashing.truncate output)
 
 /-- One fresh hash answer truncates to a value fixed in advance with probability `2 ^ -128`. -/

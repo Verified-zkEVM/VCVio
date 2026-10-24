@@ -29,7 +29,7 @@ stateful implementation (`FreeBounds.simulated`), in particular the game's rando
 `OracleWorld` (`verify_free_rom`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 open scoped BigOperators
@@ -42,12 +42,12 @@ open VerificationQueries
 
 /-- An input is **free** at a public seed: it locates no sensitive node, and it is prefixed by
 the seed. -/
-def Free (publicSeed : Digest) (input : Bytes) : Prop :=
+@[expose] def Free (publicSeed : Digest) (input : Bytes) : Prop :=
   (GraphStakes.stakes publicSeed).locate input = none ∧ Target127.SeedPrefixed publicSeed input
 
 open scoped Classical in
 /-- One unit for each free query. -/
-noncomputable def freeCost (publicSeed : Digest) (input : Bytes) : Nat :=
+@[expose] noncomputable def freeCost (publicSeed : Digest) (input : Bytes) : Nat :=
   if Free publicSeed input then 1 else 0
 
 /-- A free query costs one unit. -/
@@ -104,7 +104,7 @@ private theorem queryBoundedBelowBy_withAddCost_of_lawful {m : Type → Type} [M
   exact le_refl _
 
 /-- Every reachable trace makes at least `lower` free queries, under every oracle implementation. -/
-@[irreducible] def FreeBounds (publicSeed : Digest) (computation : OracleComp HashSpec α)
+@[expose, irreducible] def FreeBounds (publicSeed : Digest) (computation : OracleComp HashSpec α)
     (lower : Nat) : Prop :=
   ∀ (m : Type → Type) [Monad m] [LawfulMonad m]
     [MonadAttach m] [LawfulMonadAttach m] (impl : QueryImpl HashSpec m),
@@ -294,6 +294,7 @@ theorem verify_free (pk : PublicKey) (request : Message) (wire : Bytes)
 /-! ## Transfer to stateful implementations -/
 
 /-- Instrument the free computation with the free-query cost before interpreting it. -/
+@[expose]
 noncomputable def freeCounted (publicSeed : Digest) (computation : OracleComp HashSpec α) :
     OracleComp HashSpec (α × Multiplicative Nat) :=
   (simulateQ ((QueryImpl.ofLift HashSpec (OracleComp HashSpec)).withAddCost (freeCost publicSeed))

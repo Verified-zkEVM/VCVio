@@ -17,7 +17,7 @@ Key generation at the warm cache is a `pure`, so the key the carrier tail's run 
 the walk's replayed key (`keys_eq_replay`) and its public key is `keyAt walk` (`keys_publicKey`),
 with nothing to match against. -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

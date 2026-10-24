@@ -43,7 +43,7 @@ which is what lets the WOTS clause be read off the walk. The FORS side is the op
 a function of the state.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -80,7 +80,7 @@ theorem SensitiveNode.ext {left right : SensitiveNode} (hparent : left.parent = 
 variable (publicSeed : Digest)
 
 /-- The canonical input of a sensitive node, as a function of the one cell at stake. -/
-def inputOf (node : SensitiveNode) (cell : Cell) : Bytes :=
+@[expose] def inputOf (node : SensitiveNode) (cell : Cell) : Bytes :=
   Hashing.tweakableInput publicSeed node.parent.address (bytesBE n cell)
 
 /-- It is the node's canonical input, with the staked cell taking that value. -/
@@ -100,7 +100,7 @@ theorem inputOf_inj {left right : SensitiveNode} {leftCell rightCell : Cell}
 
 open scoped Classical in
 /-- The node a candidate input's address names, if any. -/
-noncomputable def locate (input : Bytes) : Option SensitiveNode :=
+@[expose] noncomputable def locate (input : Bytes) : Option SensitiveNode :=
   if hsome : ∃ node : SensitiveNode, ∃ cell : Cell, inputOf publicSeed node cell = input
     then some hsome.choose else none
 
@@ -115,7 +115,7 @@ theorem locate_inputOf (node : SensitiveNode) (cell : Cell) :
   exact congrArg some (inputOf_inj publicSeed hvalue).1
 
 /-- **The canonical graph, as the charge's stakes structure.** -/
-noncomputable def stakes : Stakes SensitiveNode Node where
+@[expose] noncomputable def stakes : Stakes SensitiveNode Node where
   inputOf := inputOf publicSeed
   locate := locate publicSeed
   stake := SensitiveNode.child
@@ -130,7 +130,7 @@ two structures have different node types, which is why `SensitiveQuery` keeps `S
 `Graph` apart. -/
 
 /-- The structure availability has to be closed under. -/
-def graph : Graph StructuralNode Node where
+@[expose] def graph : Graph StructuralNode Node where
   cellOf := fun parent => .structural parent
   children := fun parent index => index ∈ parent.children
 
@@ -138,7 +138,7 @@ variable {State : Type} (revealed : WotsKey → Fin chains → Nat)
     (signedAt : State → ForsKey → Finset (Fin (forsTrees * 2 ^ forsHeight)))
 
 /-- The cells the signatures issued by a given state do not make available. -/
-def unavailableAt (state : State) (index : Node) : Prop :=
+@[expose] def unavailableAt (state : State) (index : Node) : Prop :=
   ¬ Available revealed (signedAt state) index
 
 /-- **Availability is closed under the structure.** -/
@@ -172,7 +172,7 @@ section HonestDigit
 variable [HasQuery HashSpec Id]
 
 /-- The message the honest key at `key` signs. -/
-def honestMessage (secretSeed publicSeed : Digest) (key : WotsKey) : Digest :=
+@[expose] def honestMessage (secretSeed publicSeed : Digest) (key : WotsKey) : Digest :=
   match key.tree.layer.val with
   | 0 => value secretSeed publicSeed (.structural (.forsRoots ⟨key.tree.tree, key.leaf⟩))
   | layer + 1 => Extraction.HypertreeChain.honestNode secretSeed publicSeed layer
@@ -180,6 +180,7 @@ def honestMessage (secretSeed publicSeed : Digest) (key : WotsKey) : Digest :=
 
 /-- The digit that message encodes on a chain: the position the signature on this key
 discloses. -/
+@[expose]
 def honestRevealed (secretSeed publicSeed : Digest) (key : WotsKey) (chain : Fin chains) : Nat :=
   (Checksum.encode (honestMessage secretSeed publicSeed key) chain).val
 
@@ -235,7 +236,7 @@ theorem not_obtainable_forsPrf (state : State) (key : ForsKey)
   hunsigned (not_unavailable_of_obtainable revealed signedAt state hobtain)
 
 /-- The position a FORS tree's selected leaf sits at, as a graph index. -/
-def forsIndex (indices : SlhDsaSecurity.Fors.Indices) (tree : Fin forsTrees) :
+@[expose] def forsIndex (indices : SlhDsaSecurity.Fors.Indices) (tree : Fin forsTrees) :
     Fin (forsTrees * 2 ^ forsHeight) :=
   ⟨Extraction.Fors.leafIndex indices tree, by
     have htree := tree.isLt
@@ -280,6 +281,7 @@ exactly one child whether or not they are sensitive — a chain step's child is 
 it, a FORS leaf's child is its secret — so the candidates are built unconditionally. -/
 
 /-- The chain-step node above a chain position, which always has exactly one child. -/
+@[expose]
 def wotsHashNode (key : WotsKey) (chain : Fin chains) (step : Fin (w - 1)) : SensitiveNode :=
   ⟨.wotsHash key chain step,
     .structural (wotsPosition key chain ⟨step.val, by have := step.isLt; omega⟩),
@@ -299,6 +301,7 @@ The witness that the probes are really made is `WotsEntry.queriesUnder_chain`: e
 chain consults its canonical input at the chain's own partial value. -/
 
 /-- The FORS leaf node above a FORS secret, which always has exactly one child. -/
+@[expose]
 def forsLeafNode (key : ForsKey) (index : Fin (forsTrees * 2 ^ forsHeight)) : SensitiveNode :=
   ⟨.forsTree key ⟨0, by omega⟩ ⟨index.val, by simp [index.isLt]⟩,
     .structural (.forsPrf key index), by
@@ -341,7 +344,7 @@ is a function of the forgery alone. Its length is a constant — `forsTrees + la
 which is `259` — not a function of the budget, which is what makes it affordable. -/
 
 /-- One candidate per cell the forgery claims. -/
-def claimedCandidates (forsKey : ForsKey) (indices : SlhDsaSecurity.Fors.Indices)
+@[expose] def claimedCandidates (forsKey : ForsKey) (indices : SlhDsaSecurity.Fors.Indices)
     (signature : Signature) (keyAt : Fin layers → WotsKey)
     (stepAt : Fin layers → Fin chains → Fin (w - 1)) : List Bytes :=
   (List.finRange forsTrees).map (fun tree =>

@@ -33,7 +33,7 @@ structural event the random oracle pays for. The WOTS residue and the disclosed 
 one-wayness and coverage statements about the genuine secrets, and belong to the input half.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -42,13 +42,13 @@ namespace SlhDsaSecurity.SplitCharged
 open Security CacheReplay Extraction CanonicalGraph VerifierProbes
 
 /-- The public key the walk's seeds generate, read from this run's own cache. -/
-def generatedKey (secretSeed prfSeed publicSeed : Digest) (cache : QueryCache HashSpec) :
+@[expose] def generatedKey (secretSeed prfSeed publicSeed : Digest) (cache : QueryCache HashSpec) :
     PublicKey :=
   (@Scheme.keygenInternal Id Id.instMonad (CacheReplay.replayQuery cache)
     secretSeed prfSeed publicSeed).2
 
 /-- The FORS public key the genuine secrets produce at an address. -/
-def honestForsKey (secretSeed publicSeed : Digest) (cache : QueryCache HashSpec)
+@[expose] def honestForsKey (secretSeed publicSeed : Digest) (cache : QueryCache HashSpec)
     (address : Address) : Digest :=
   @Hashing.tweakable Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed
     (Extraction.Fors.rootAddress address)
@@ -56,7 +56,7 @@ def honestForsKey (secretSeed publicSeed : Digest) (cache : QueryCache HashSpec)
       secretSeed publicSeed address))
 
 /-- The canonical-graph FORS key a digest selects. -/
-def forsKeyOfDigest (digest : HashOutput) : ForsKey :=
+@[expose] def forsKeyOfDigest (digest : HashOutput) : ForsKey :=
   ⟨(MessageDigest.treeIndex digest).toFin, (MessageDigest.leafIndex digest).toFin⟩
 
 /-- The graph's FORS key sits at the address the verifier uses. -/

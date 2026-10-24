@@ -20,7 +20,7 @@ the number of hash queries made. This file states its step laws (`countAllHashes
 sequencing (`countAllHashes_bind`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

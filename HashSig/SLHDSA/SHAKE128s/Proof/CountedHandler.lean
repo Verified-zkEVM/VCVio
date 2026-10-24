@@ -28,7 +28,7 @@ through it (`files_withExtra`, `files_withCount`), and so does the projection la
 counter beside its cache, the handler a counted run forgets to.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -41,7 +41,7 @@ open Security HandlerCarrier ServedAgreement
 variable (pk : PublicKey) {τ : Type}
 
 /-- A handler with a hash counter beside its carrier. -/
-noncomputable def withCount
+@[expose] noncomputable def withCount
     (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp)) :
     QueryImpl OracleWorld (StateT (HandlerCarrier.State × (τ × Nat)) ProbComp) :=
   fun queried state => do
@@ -83,7 +83,7 @@ transport needs only that the carrier's half is untouched and the handler's own 
 so it is stated once here and `withCount` is its instance. -/
 
 /-- A handler with some extra component beside its state, updated per query. -/
-noncomputable def withExtra {ω : Type}
+@[expose] noncomputable def withExtra {ω : Type}
     (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (update : OracleWorld.Domain → ω → ω) :
     QueryImpl OracleWorld (StateT (HandlerCarrier.State × (τ × ω)) ProbComp) :=
@@ -339,7 +339,7 @@ differently: `ServedAgreement.Files` needs the carrier first, so the carrier's c
 `carrier × (recordings × count)`, while the shared oracle's is just `cache × count`. -/
 
 /-- The shared oracle with a hash counter beside its cache. -/
-noncomputable def romWithCount :
+@[expose] noncomputable def romWithCount :
     QueryImpl OracleWorld (StateT (QueryCache HashSpec × Nat) ProbComp) :=
   fun queried state => do
     let step ← (KeygenUniform.rom queried).run state.1

@@ -37,7 +37,7 @@ Nat)`: the carrier first, because `ServedAgreement.Files` reads it there; the re
 because the recorder writes them; the count last, because nothing but the value reads it.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -57,12 +57,12 @@ variable {ω : Type} [Monoid ω]
 
 /-- **The brackets touch neither the cache nor either recording.** The one condition a bracket
 has to meet, and the one `ServingForget.run_fuseServing_map` asks for. -/
-def Bracket (f : CountedState → CountedState) : Prop :=
+@[expose] def Bracket (f : CountedState → CountedState) : Prop :=
   ∀ state : CountedState, (f state).1.cache = state.1.cache ∧ (f state).2.1 = state.2.1
 
 /-- The projection a bracketed run is read through: the cache and the two recordings. The
 carrier's served set and framing go, and so does the count, which the value carries instead. -/
-def forgetCarrier (state : CountedState) : SplitPrefix.SplitState :=
+@[expose] def forgetCarrier (state : CountedState) : SplitPrefix.SplitState :=
   (state.1.cache, state.2.1)
 
 end SlhDsaSecurity.BracketedRun

@@ -29,7 +29,7 @@ one cell of a block, and the correspondence between recorded entries and block c
 `NoticingTape` runs the induction over a computation at the noticing recorder.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -44,7 +44,7 @@ open scoped Classical in
 /-- **The recording oracle with its class answers read off a tape.** A fresh query whose input
 passes `keep` takes the head of the tape as its answer; everything else draws as before, and so
 does a class query made after the tape is spent. -/
-noncomputable def tapeRecorder (keep : Bytes → Prop) :
+@[expose] noncomputable def tapeRecorder (keep : Bytes → Prop) :
     QueryImpl OracleWorld (StateT TapeState ProbComp) :=
   fun queried state =>
     match queried with
@@ -110,7 +110,7 @@ open scoped Classical in
 answer and leaves the carrier, a miss draws and installs. Naming it keeps the "neither" branch
 a single equation at a general view, which is what lets every proof below treat that branch as
 one opaque step exactly as it did at the cache. -/
-noncomputable def plainStep (input : Bytes) (state : σ) : ProbComp (HashOutput × σ) :=
+@[expose] noncomputable def plainStep (input : Bytes) (state : σ) : ProbComp (HashOutput × σ) :=
   match RecorderView.CacheView.cacheOf state input with
   | some cached => (pure (cached, state) : ProbComp _)
   | none =>
@@ -146,7 +146,7 @@ theorem recorderOf_run_inr_plain (leftKeep rightKeep : Bytes → σ → Prop) (i
 open scoped Classical in
 /-- **The two-recording oracle with each role's answers read off its own block.** The left test
 is tried first, so one answer is never read off both blocks. -/
-noncomputable def splitTapeRecorder
+@[expose] noncomputable def splitTapeRecorder
     (leftKeep rightKeep : Bytes → σ → Prop) :
     QueryImpl OracleWorld (StateT (SplitTapeState σ) ProbComp) :=
   fun queried state =>
@@ -381,7 +381,7 @@ induction cannot be carried through it. It does not have to be: at the step that
 the event has already come true, and a recording that only grows keeps it true. -/
 
 /-- The target recording of a state. -/
-def rightOf (state : SplitTapeState σ) : Record := state.2.2.2
+@[expose] def rightOf (state : SplitTapeState σ) : Record := state.2.2.2
 
 open scoped Classical in
 /-- **One step only extends the target recording.** This is what the selection argument needs,
@@ -555,7 +555,7 @@ is witnessed by the left *recording*. They agree where the block still has a cel
 block being drawn as long as the signing limit allows — is everywhere the recording reaches. -/
 
 /-- The disclosing recording of a state. -/
-def leftOf (state : SplitTapeState σ) : Record := state.2.2.1
+@[expose] def leftOf (state : SplitTapeState σ) : Record := state.2.2.1
 
 open scoped Classical in
 /-- **One step appends at most one disclosing entry.** The `leftOf` half of

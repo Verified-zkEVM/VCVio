@@ -28,7 +28,7 @@ and every proof is the same proof: the counter is an extra component of the hand
 same run read two ways. The last theorem, `forget_splitCarrierTail`, is the file's output.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -46,7 +46,7 @@ same with a pair of slots. It is a separate definition because the carrier's sta
 the other way, and merging the two would cost a reassociation at every call site. -/
 
 /-- The shared oracle with a two-slot hash counter beside its cache. -/
-noncomputable def romWithSplit (inClass : Bytes → Prop) (inside outside : QueryKind) :
+@[expose] noncomputable def romWithSplit (inClass : Bytes → Prop) (inside outside : QueryKind) :
     QueryImpl OracleWorld (StateT (QueryCache HashSpec × Counts) ProbComp) :=
   fun queried state => do
     let step ← (KeygenUniform.rom queried).run state.1

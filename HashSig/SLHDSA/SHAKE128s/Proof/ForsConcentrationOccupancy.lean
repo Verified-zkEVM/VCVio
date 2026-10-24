@@ -29,7 +29,7 @@ These facts concern independent uniform choices only; connecting adaptive random
 transcripts to this experiment is a separate obligation.
 -/
 
-@[expose] public section
+public section
 
 open MeasureTheory ProbabilityTheory
 open scoped NNReal
@@ -37,7 +37,7 @@ open scoped NNReal
 namespace SlhDsaSecurity.ForsConcentration
 
 /-- The full vector of instance multiplicities in a word of uniformly sampled indices. -/
-noncomputable def wordCounts {bins requests : Nat} (word : Fin requests → Fin bins) :
+@[expose] noncomputable def wordCounts {bins requests : Nat} (word : Fin requests → Fin bins) :
     Fin bins →₀ Nat :=
   ∑ j, Finsupp.single (word j) 1
 
@@ -64,7 +64,7 @@ theorem wordCounts_fiber_card (bins requests : Nat) (counts : Fin bins →₀ Na
   simpa only [Finset.card_eq_sum_ones, Finset.sum_filter, eq_comm, Nat.cast_id] using hc.symm
 
 /-- The multiplicity vector of a word, as a plain function. -/
-noncomputable def wordLoads {bins requests : Nat} (word : Fin requests → Fin bins) :
+@[expose] noncomputable def wordLoads {bins requests : Nat} (word : Fin requests → Fin bins) :
     Fin bins → Nat := wordCounts word
 
 /-- `wordCounts_fiber_card` for plain load functions: the number of words with given loads is
@@ -89,11 +89,11 @@ lemma wordLoads_fiber_card (bins requests : Nat) (counts : Fin bins → Nat) :
   exact hc
 
 /-- The concrete multinomial occupancy measure obtained from independent uniform choices. -/
-noncomputable def uniformLoads (bins requests : Nat) : Measure (Fin bins → Nat) :=
+@[expose] noncomputable def uniformLoads (bins requests : Nat) : Measure (Fin bins → Nat) :=
   (uniformOn (Set.univ : Set (Fin requests → Fin bins))).map wordLoads
 
 /-- The occupancy law is a probability measure. -/
-instance (bins requests : Nat) [NeZero bins] :
+@[expose] instance (bins requests : Nat) [NeZero bins] :
     IsProbabilityMeasure (uniformLoads bins requests) := by
   unfold uniformLoads
   exact (Measure.isProbabilityMeasure_map_iff (Measurable.aemeasurable .of_discrete)).mpr

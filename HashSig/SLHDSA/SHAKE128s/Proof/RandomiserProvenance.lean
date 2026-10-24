@@ -24,7 +24,7 @@ behind them is `SK.prf` itself. This file names the two halves of that overlap:
   guess at the seed and so costs one more element of the record.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -43,7 +43,7 @@ difference matters: `replay` answers `default` at an absent input, so the predic
 `replayRandomizer` alone would also be satisfied by `Hashing.truncate default = SK.prf`, a
 statement about a fixed constant that no per-run charge can pay for. The entry's presence comes
 from the signing sub-run, through `PhaseProvenance.SignerMade`. -/
-def SignerHitsSeed (prfSeed publicSeed : Digest) (cache : QueryCache HashSpec)
+@[expose] def SignerHitsSeed (prfSeed publicSeed : Digest) (cache : QueryCache HashSpec)
     (signed : SigningLog) : Prop :=
   ∃ entry ∈ signed, ∃ (framed : Bytes) (answer : HashOutput),
     entry.1.frame = some framed ∧
@@ -52,6 +52,7 @@ def SignerHitsSeed (prfSeed publicSeed : Digest) (cache : QueryCache HashSpec)
 
 /-- The one input the forgery's own digest query names, when the forgery has one. The forgery's
 randomiser being `SK.prf` is *exactly* this input being a `PRF_msg` input at the seed. -/
+@[expose]
 noncomputable def forgeryDigestRecord (pk : PublicKey) (forgery : Forgery) : Multiset Bytes :=
   match forgery.message.frame with
   | none => 0

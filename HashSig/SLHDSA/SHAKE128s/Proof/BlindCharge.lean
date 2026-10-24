@@ -48,7 +48,7 @@ Stalling leaves the expected number of aiming entries alone too, for the same re
 the flag alone, so the weights are taken under the real run.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -103,13 +103,13 @@ variable (record : σ → List (Bytes × K)) (now : σ → K)
 
 /-- **A handler files what it records**: a step appends entries, each beside the snapshot of the
 state it started from. -/
-def Files (impl : QueryImpl spec (StateT σ ProbComp)) : Prop :=
+@[expose] def Files (impl : QueryImpl spec (StateT σ ProbComp)) : Prop :=
   ∀ (t : spec.Domain) (s : σ), ∀ z ∈ support ((impl t).run s),
     ∃ inputs : List Bytes, record z.2 = record s ++ inputs.map fun input => (input, now s)
 
 open scoped Classical in
 /-- The flag after a step from `p` to a state `next`: raised when the step filed a charged entry. -/
-noncomputable def raise (charged : Bytes × K → Prop) (p : σ × Bool) (next : σ) : Bool :=
+@[expose] noncomputable def raise (charged : Bytes × K → Prop) (p : σ × Bool) (next : σ) : Bool :=
   p.2 || decide (∃ entry ∈ (record next).drop (record p.1).length, charged entry)
 
 /-- The flag is raised exactly when it was up or a newly filed entry is charged. -/
@@ -120,6 +120,7 @@ theorem raise_iff (charged : Bytes × K → Prop) (p : σ × Bool) (next : σ) :
   rw [raise, Bool.or_eq_true, decide_eq_true_iff]
 
 /-- The handler with a sticky flag, raised when a step files an entry that is charged. -/
+@[expose]
 noncomputable def flagged (charged : Bytes × K → Prop) (impl : QueryImpl spec (StateT σ ProbComp)) :
     QueryImpl spec (StateT (σ × Bool) ProbComp) :=
   fun t p => (fun z => (z.1, (z.2, raise record charged p z.2))) <$> (impl t).run p.1
@@ -187,6 +188,7 @@ theorem probEvent_record_eq_flag (charged : Bytes × K → Prop)
 
 open scoped Classical in
 /-- The handler stalled: once frozen, every query is answered by `stall` and nothing moves. -/
+@[expose]
 noncomputable def stalledFree (impl : QueryImpl spec (StateT σ ProbComp)) (Frozen : σ → Prop)
     (stall : (t : spec.Domain) → spec.Range t) : QueryImpl spec (StateT σ ProbComp) :=
   fun t s => if Frozen s then pure (stall t, s) else (impl t).run s
@@ -307,7 +309,7 @@ end Flag
 /-! ## Expectations -/
 
 /-- The expectation of a nonnegative quantity. -/
-noncomputable def ex {β : Type} (mx : ProbComp β) (f : β → ℝ≥0∞) : ℝ≥0∞ :=
+@[expose] noncomputable def ex {β : Type} (mx : ProbComp β) (f : β → ℝ≥0∞) : ℝ≥0∞ :=
   ∑' x, Pr{let y ← mx}[y = x] * f x
 
 /-- The expectation over a bind is the iterated expectation. -/
@@ -346,7 +348,7 @@ theorem probEvent_eq_ex_bind {β γ : Type} (mx : ProbComp β) (g : β → ProbC
 variable {Aux α : Type}
 
 /-- **The experiment the charge is about.** -/
-noncomputable def experiment (auxiliary : ProbComp Aux)
+@[expose] noncomputable def experiment (auxiliary : ProbComp Aux)
     (run : Cells → Aux → ProbComp (α × σ)) : ProbComp ((α × σ) × Cells × Aux) := do
   let cells ← ($ᵗ Cells : ProbComp Cells)
   let aux ← auxiliary
@@ -386,6 +388,7 @@ variable {Index Target : Type} (stakes : Stakes Target Index)
 
 /-- An entry **charged against** a cell at a value: the canonical input of a node staking that
 cell, filed while the cell was unavailable, carrying that value. -/
+@[expose]
 def ChargedAt (unavail : K → Index → Prop) (index : Index) (cell : Cell) (entry : Bytes × K) :
     Prop :=
   ∃ node : Target, stakes.stake node = index ∧ unavail entry.2 index ∧
@@ -393,7 +396,7 @@ def ChargedAt (unavail : K → Index → Prop) (index : Index) (cell : Cell) (en
 
 /-- An entry **aiming at** a cell: its address names a node staking that cell, filed while the
 cell was unavailable. No cell is read. -/
-def AimsAt (unavail : K → Index → Prop) (index : Index) (entry : Bytes × K) : Prop :=
+@[expose] def AimsAt (unavail : K → Index → Prop) (index : Index) (entry : Bytes × K) : Prop :=
   ∃ node : Target, stakes.stake node = index ∧ unavail entry.2 index ∧
     stakes.locate entry.1 = some node
 
@@ -455,7 +458,7 @@ variable {Target : Type} (stakes : Stakes Target Node)
   (record : σ → List (Bytes × K)) (now : σ → K)
 
 /-- Two tables agreeing off one cell. -/
-def AgreeOff (index : Node) (cells other : Cells) : Prop :=
+@[expose] def AgreeOff (index : Node) (cells other : Cells) : Prop :=
   ∀ node, node ≠ index → cells node = other node
 
 open scoped Classical in

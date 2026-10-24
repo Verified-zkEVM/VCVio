@@ -18,7 +18,7 @@ two messages are equal (`eq_of_encode_le`). Hence a forgery on a different messa
 earlier value on some chain than the signed one (`exists_decreased_digit`).
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.Checksum
 

@@ -28,7 +28,7 @@ That leaves exactly one entry the first step itself could have filed — the `PR
 `SplitWitness.narrowClass`'s last clause is what removes it, as its own docstring says.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

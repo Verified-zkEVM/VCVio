@@ -32,7 +32,7 @@ because the coverage charge needs two tape coordinates to be *distinct*.
 `viewTape_uniform` says a uniform word of answers has a uniform tape of parsed views.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -52,7 +52,7 @@ open scoped Classical in
 /-- The shared random oracle, recording the answer of every *fresh* query whose input passes
 `keep`. A cache hit records nothing: it draws no randomness, so it contributes no tape
 coordinate. -/
-noncomputable def recorder (keep : Bytes → Prop) :
+@[expose] noncomputable def recorder (keep : Bytes → Prop) :
     QueryImpl OracleWorld (StateT RecordState ProbComp) :=
   fun queried state =>
     match queried with
@@ -94,7 +94,7 @@ theorem rom_run_inr (input : Bytes) (cache : QueryCache HashSpec) :
 
 /-- A block of `trials` independent uniform answers, used to pad a short recording out to a
 full tape. -/
-noncomputable def padding : Nat → ProbComp (List HashOutput)
+@[expose] noncomputable def padding : Nat → ProbComp (List HashOutput)
   | 0 => pure []
   | n + 1 => do
       let value ← ($ᵗ HashOutput : ProbComp HashOutput)

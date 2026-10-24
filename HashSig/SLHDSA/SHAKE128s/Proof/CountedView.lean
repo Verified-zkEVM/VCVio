@@ -29,7 +29,7 @@ view-level map in the first component — which is what the tape layer asks of a
 `CarrierTail.handlerAt` itself is untouched. This is a transport, not a change of shape.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -43,14 +43,14 @@ open Security RecorderView HandlerCarrier CarriedWitness
 abbrev Counted : Type := HandlerCarrier.State × Nat
 
 /-- The counted handler's state, re-associated as a recorder state over `Counted`. -/
-def reassociate (state : HandlerCarrier.State ×
+@[expose] def reassociate (state : HandlerCarrier.State ×
     ((DigestTape.Record × DigestTape.Record) × Nat)) : RecorderView.StateOf Counted :=
   ((state.1, state.2.2), state.2.1)
 
 open scoped Classical in
 /-- **The carrier-with-counter as a cache view.** The notice bumps the counter, which is what
 `withCount` does on a hash query and the only thing it does. -/
-@[reducible] noncomputable def countedView (pk : PublicKey) : CacheView Counted where
+@[expose, reducible] noncomputable def countedView (pk : PublicKey) : CacheView Counted where
   cacheOf := fun state => state.1.cache
   update := fun state input answer => (HandlerCarrier.cacheAnswer state.1 input answer, state.2)
   onQuery := fun state input => (servingNotice pk state.1 input, state.2 + 1)
@@ -58,7 +58,7 @@ open scoped Classical in
   cache_onQuery := fun state input => cacheOf_servingNotice pk state.1 input
 
 /-- A test on the carrier, read at the carrier-with-counter. -/
-def liftTest (test : Bytes → HandlerCarrier.State → Prop) :
+@[expose] def liftTest (test : Bytes → HandlerCarrier.State → Prop) :
     Bytes → Counted → Prop := fun input state => test input state.1
 
 open scoped Classical in

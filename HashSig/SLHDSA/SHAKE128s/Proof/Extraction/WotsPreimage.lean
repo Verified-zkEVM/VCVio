@@ -21,7 +21,7 @@ writes each honest signature value as the chain started from the derived secret 
 its message digit. No one-wayness is assumed here.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -30,7 +30,7 @@ namespace SlhDsaSecurity.Extraction.WotsPreimage
 variable [HasQuery HashSpec Id]
 
 /-- The chain-step address of chain `i` for this WOTS key. -/
-def chainAddress (address : Address) (i : Fin chains) : Address :=
+@[expose] def chainAddress (address : Address) (i : Fin chains) : Address :=
   { address with chainOrHeight := BitVec.ofNat 32 i.val }
 
 /-- Each honest WOTS signature value is the chain started from the derived secret,

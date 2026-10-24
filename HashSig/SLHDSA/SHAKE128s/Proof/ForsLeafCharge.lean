@@ -35,7 +35,7 @@ collision avenue on the structural one, which is why the per-class accounting is
 target reachable.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

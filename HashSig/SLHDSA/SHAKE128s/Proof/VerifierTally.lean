@@ -27,7 +27,7 @@ a coin. Read off the final tally of a run from `(1, cache)`:
 * an accepted verification counts at least `569` (`accepted_ge`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -64,7 +64,7 @@ theorem toAdd_step (tally : Multiplicative Tally) (queried : OracleWorld.Domain)
       Multiplicative.toAdd tally + verifierCost queried := rfl
 
 /-- The invariant: the record's size is the verification count. -/
-def Balanced (tally : Multiplicative Tally) : Prop :=
+@[expose] def Balanced (tally : Multiplicative Tally) : Prop :=
   Multiset.card (Multiplicative.toAdd tally).2 = (Multiplicative.toAdd tally).1 .verification
 
 /-- The empty tally is balanced. -/
@@ -137,7 +137,7 @@ theorem verify_eq_pure_of_parse (hparse : Signature.fromBytes? wire = none) :
 /-! ## The free queries -/
 
 /-- The free queries of a tally's record. -/
-noncomputable def freeSum (publicSeed : Digest) (tally : Multiplicative Tally) : Nat :=
+@[expose] noncomputable def freeSum (publicSeed : Digest) (tally : Multiplicative Tally) : Nat :=
   ((Multiplicative.toAdd tally).2.map (VerifyFree.freeCost publicSeed)).sum
 
 /-- A hash step adds the input's free cost to the free sum. -/

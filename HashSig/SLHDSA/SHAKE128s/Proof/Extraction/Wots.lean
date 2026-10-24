@@ -19,7 +19,7 @@ key either is the canonical signature, or has a `CompressionCollision` at the fi
 call, or a `ChainCollision` at a concrete chain step.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -29,7 +29,7 @@ variable [HasQuery HashSpec Id]
 
 /-- A collision at chain step `start + offset`: advancing `actual` and `canonical` by `offset`
 steps gives distinct values whose next chain step hashes them to the same output. -/
-def ChainCollision (publicSeed : Digest) (address : Address)
+@[expose] def ChainCollision (publicSeed : Digest) (address : Address)
     (start : Nat) (actual canonical : Digest) (offset : Nat) : Prop :=
   let actualValue := SlhDsaSecurity.Wots.chain (m := Id) publicSeed address start offset actual
   let canonicalValue :=
@@ -85,7 +85,7 @@ theorem digestArrayBytes_injective (size : Nat) :
 
 /-- The chain endpoints recomputed by WOTS verification: each signature value advanced from its
 message digit to the end of its chain. -/
-def endpoints (signature : WotsSignature) (message publicSeed : Digest)
+@[expose] def endpoints (signature : WotsSignature) (message publicSeed : Digest)
     (address : Address) : Fin chains → Digest := fun i =>
   SlhDsaSecurity.Wots.chain (m := Id) publicSeed
     { address with chainOrHeight := BitVec.ofNat 32 i.val }
@@ -102,7 +102,7 @@ theorem publicKeyFromSignature_eq (signature : WotsSignature) (message publicSee
 
 /-- A collision at the final WOTS public-key compression: the two endpoint tuples give distinct
 oracle inputs that hash to the same output. -/
-def CompressionCollision (actual canonical : WotsSignature) (message publicSeed : Digest)
+@[expose] def CompressionCollision (actual canonical : WotsSignature) (message publicSeed : Digest)
     (address : Address) : Prop :=
   let actualInput :=
     Hashing.tweakableInput publicSeed (SlhDsaSecurity.Wots.publicKeyAddress address)

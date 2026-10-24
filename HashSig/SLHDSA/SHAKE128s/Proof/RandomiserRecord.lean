@@ -27,7 +27,7 @@ the provenance of a cache entry at that run, so the record is the run's own outp
   read at.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -237,13 +237,13 @@ record — the forgery's digest input, when its randomiser is `SK.prf` — and a
 framed as `PK.root ‖ m` is legal, so a defect that excludes such requests would not cover it. -/
 
 /-- The record the charge is read against: the run's own, as a `Finset`. -/
-noncomputable def chargedRecord
+@[expose] noncomputable def chargedRecord
     (result : ((Outcome × Multiset Bytes) × Nat) × QueryCache HashSpec) : Finset Bytes :=
   Multiset.toFinset result.1.1.2
 
 /-- **The charge's event**: the run's own record holds an input of the `PRF_msg` class at the
 real seed. -/
-def RecordMeetsPrfClass (prfSeed : Digest)
+@[expose] def RecordMeetsPrfClass (prfSeed : Digest)
     (result : ((Outcome × Multiset Bytes) × Nat) × QueryCache HashSpec) : Prop :=
   ∃ input ∈ chargedRecord result, RandomizerGate.PrfClass prfSeed input
 
@@ -288,7 +288,7 @@ computations, so the paired run **is** the recorded paired run with the record d
 event about the trace keeps its probability exactly. -/
 
 /-- The paired run, with the record kept. -/
-noncomputable def recordedPairedRun (adversary : Adversary) :
+@[expose] noncomputable def recordedPairedRun (adversary : Adversary) :
     ProbComp ((((Digest × Digest × Digest) × CanonicalGraph.Cells) × QueryCache HashSpec) ×
       (((Outcome × Multiset Bytes) × Nat) × QueryCache HashSpec)) := do
   let walk ← WarmedGame.graphWalk
@@ -296,7 +296,7 @@ noncomputable def recordedPairedRun (adversary : Adversary) :
   pure (walk, result)
 
 /-- The plain pair a recorded one forgets to. -/
-def forgetRecord
+@[expose] def forgetRecord
     (pair : (((Digest × Digest × Digest) × CanonicalGraph.Cells) × QueryCache HashSpec) ×
       (((Outcome × Multiset Bytes) × Nat) × QueryCache HashSpec)) :
     (((Digest × Digest × Digest) × CanonicalGraph.Cells) × QueryCache HashSpec) ×

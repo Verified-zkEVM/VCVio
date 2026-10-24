@@ -46,7 +46,7 @@ What the signer gains by moving is what the whole exercise is for: it is somethi
 does, so its reads of the cell table are frozen when the run is stalled.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -59,7 +59,7 @@ open Security RecordedQueries RecordedPhase KeygenValue
 /-! ## The lift, pinned -/
 
 /-- A world computation in the phase's spec, at the instance the composition lemmas use. -/
-noncomputable def liftWorld {α : Type} (computation : OracleComp OracleWorld α) :
+@[expose] noncomputable def liftWorld {α : Type} (computation : OracleComp OracleWorld α) :
     OracleComp (OracleWorld + SigningSpec) α :=
   @OracleComp.liftComp _ _ OracleWorld α computation (OracleWorld + SigningSpec)
     (instMonadLiftTOfMonadLift (m := OracleQuery OracleWorld) (n := OracleQuery OracleWorld)
@@ -98,6 +98,7 @@ theorem run_unchargedPhase_lift {α : Type}
 
 /-- The game as one computation: the adversary's phase counted and recorded where it stands,
 the verifier lifted beside it with its own instrumentation. -/
+@[expose]
 noncomputable def linkedAfterSeeds (adversary : Adversary) (keys : SecretKey × PublicKey) :
     OracleComp (OracleWorld + SigningSpec)
       ((Forgery × Multiplicative Tally) × (Bool × Tally)) := do
@@ -107,6 +108,7 @@ noncomputable def linkedAfterSeeds (adversary : Adversary) (keys : SecretKey × 
   pure (adversaryStep, verifierStep)
 
 /-- The outcome and the record, assembled from the run's value and the handler's final log. -/
+@[expose]
 def outcomeOf (result : ((Forgery × Multiplicative Tally) × (Bool × Tally)) × SigningLog) :
     Outcome × Multiset Bytes :=
   ({ forgery := result.1.1.1

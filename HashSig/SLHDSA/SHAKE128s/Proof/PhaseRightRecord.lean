@@ -36,7 +36,7 @@ something is cached, because the consumer has to match the entry's own randomise
 cached one; a lemma hands back the most it knows, not the least its first consumer asked for.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -49,7 +49,7 @@ open Security CacheReplay RecordedQueries SplitPrefix SignerRightRecord
 /-! ## The phase, run under the recorder -/
 
 /-- The adversary's phase, run from a log and a recorder state. -/
-noncomputable def recorderRun (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
+@[expose] noncomputable def recorderRun (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     {α : Type} (x : RecordedRun α) (log : SigningLog) (state : SplitState) :
     ProbComp (((α × Multiplicative Tally) × SigningLog) × SplitState) :=
   (simulateQ (recorder leftKeep rightKeep) ((WriterT.run x).run log)).run state
@@ -186,7 +186,7 @@ theorem mem_support_counted_bind (leftKeep rightKeep : Bytes → QueryCache Hash
 /-- Where a target-recorded entry of the phase can have come from: the adversary's own record,
 or a signing sub-run — and in the second case, either the request's randomiser probe or an
 entry filed at a cache that already held that request's randomiser answer. -/
-def RightSource (sk : SecretKey) (rightKeep : Bytes → QueryCache HashSpec → Prop)
+@[expose] def RightSource (sk : SecretKey) (rightKeep : Bytes → QueryCache HashSpec → Prop)
     (record : Multiset Bytes) (final : QueryCache HashSpec) (entry : Bytes × HashOutput) :
     Prop :=
   entry.1 ∈ record ∨

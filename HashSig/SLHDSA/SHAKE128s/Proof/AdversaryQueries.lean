@@ -25,7 +25,7 @@ the adversary's own charged oracle `adversaryImpl`, and `servedCount`, the numbe
 the signer served, read off the signing log.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -93,7 +93,7 @@ theorem mem_support_counted_bind_count {α β : Type} (computation : OracleComp 
 /-! ## The adversary's own charges -/
 
 /-- The adversary's own oracle: forward the query to the game's world and charge the hash. -/
-noncomputable def adversaryImpl : QueryImpl OracleWorld CountedRun :=
+@[expose] noncomputable def adversaryImpl : QueryImpl OracleWorld CountedRun :=
   (QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld))).withAddCost
     (fun input => Counts.single .hash (hashCost input))
 
@@ -117,7 +117,7 @@ signer's, so the work budget never sees either. The log says how many requests w
 since the answer it records is `some` exactly when the frame was. -/
 
 /-- The number of requests the signer served, read off the log it left. -/
-def servedCount (log : SigningLog) : Nat :=
+@[expose] def servedCount (log : SigningLog) : Nat :=
   (log.filter fun entry => entry.2.isSome).length
 
 /-- Appending an entry adds one served request exactly when its answer is `some`. -/

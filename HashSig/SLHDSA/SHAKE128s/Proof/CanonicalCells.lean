@@ -25,7 +25,7 @@ What remains per shape is only the child-side bookkeeping: which graph node a gi
 index names.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

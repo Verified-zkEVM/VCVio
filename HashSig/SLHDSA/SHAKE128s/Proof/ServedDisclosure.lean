@@ -17,7 +17,7 @@ the statement holds whatever that set is read from, for instance the signing log
 (`ServedLog.disclosedByLog`). The state that carries the log is left abstract.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

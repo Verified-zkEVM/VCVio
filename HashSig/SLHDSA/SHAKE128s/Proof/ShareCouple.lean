@@ -26,7 +26,7 @@ and a table read; `couple_adv` couples one adversary step under the invariant `R
 adversary's phase served.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
@@ -39,12 +39,12 @@ open Security CanonicalGraph ShareGame
 open scoped Classical in
 /-- The oracle's entries off the table: the signer's `PRF_msg` answers at their inputs, and
 everything else from the plain cache. -/
-noncomputable def merged (setup : Setup) (state : St) : QueryCache HashSpec :=
+@[expose] noncomputable def merged (setup : Setup) (state : St) : QueryCache HashSpec :=
   QueryCache.ofFn fun input =>
   if IsPrfInput setup input then state.prfs (prfFrame input) else state.cache input
 
 /-- **The real oracle's cache**, read off the lenient state. -/
-noncomputable def realView (setup : Setup) (state : St) : QueryCache HashSpec :=
+@[expose] noncomputable def realView (setup : Setup) (state : St) : QueryCache HashSpec :=
   QueryCache.ofFn fun input =>
   match setup.warm input with
   | some answer => some answer
@@ -113,7 +113,7 @@ theorem realView_cache_update (setup : Setup) (state : St) (input : Bytes)
 /-! ## One hash query -/
 
 /-- What one routed hash query leaves of the lenient state: everything but the two caches. -/
-def Quiet (state next : St) : Prop :=
+@[expose] def Quiet (state next : St) : Prop :=
   next.served = state.served ∧ next.record = state.record ∧ next.log = state.log
 
 open scoped Classical in

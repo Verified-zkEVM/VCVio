@@ -33,7 +33,7 @@ The step of the replayed fold is `Hashing.tweakable` under `CacheReplay.replayQu
 the advance the replay performs are the same function.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -42,14 +42,14 @@ namespace SlhDsaSecurity.PathEntry
 open CacheReplay Extraction
 
 /-- The byte input the Merkle path's `j`-th step hashes. -/
-def pathInput {height : Nat} (publicSeed : Digest) (addressOf : Nat → Nat → Address)
+@[expose] def pathInput {height : Nat} (publicSeed : Digest) (addressOf : Nat → Nat → Address)
     (index : Nat) (siblings : Nat → Digest) : Digest → Fin height → Bytes :=
   fun value j => Hashing.tweakableInput publicSeed
     (addressOf (j.val + 1) (index / 2 ^ (j.val + 1)))
     (BinaryPath.pairBytes (BinaryPath.ordered index j.val value (siblings j.val)))
 
 /-- The recombination the extraction reasons with, answered from this cache. -/
-noncomputable def pathCombine (cache : QueryCache HashSpec) (publicSeed : Digest)
+@[expose] noncomputable def pathCombine (cache : QueryCache HashSpec) (publicSeed : Digest)
     (addressOf : Nat → Nat → Address) : Nat → Nat → Digest → Digest → Digest :=
   fun nodeHeight nodeIndex left right =>
     @Hashing.tweakable Id _ (replayQuery cache) publicSeed (addressOf nodeHeight nodeIndex)

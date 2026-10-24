@@ -32,7 +32,7 @@ own value carries, which is the one `SharedJoin.recordOf` reads and the one
 than in a multiset that merely has the same size.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

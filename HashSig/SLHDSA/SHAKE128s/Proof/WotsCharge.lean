@@ -30,7 +30,7 @@ position address give the same result. So the composition below is the chain ana
 `MerkleCharge`, resting on `CollisionToDeviating.deviatingCollision_of_single_child`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

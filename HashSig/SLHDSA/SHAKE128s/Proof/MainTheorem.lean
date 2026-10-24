@@ -20,7 +20,7 @@ the run that keeps the cache (`WholeGameStructural.instrumentedRun`), while the 
 lemma that links the two: an event about the outcome alone has the same probability in both.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

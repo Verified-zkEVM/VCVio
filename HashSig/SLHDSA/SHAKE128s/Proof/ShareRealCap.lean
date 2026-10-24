@@ -20,7 +20,7 @@ signer answers exactly the framed requests, and `exists_recordedTail_of_linked` 
 the linked run reaches to one the recorded tail reaches.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -63,7 +63,7 @@ theorem exists_of_mem_support_map {α β : Type} (f : α → β) (mx : ProbComp 
   exact hz
 
 /-- The cap's weight, read off the flattened real state. -/
-def realCost (state : RealState) : Nat :=
+@[expose] def realCost (state : RealState) : Nat :=
   (Multiplicative.toAdd state.1).1.work + AdversaryQueries.servedCount state.2.1
 
 theorem reportsCost_real (warm : QueryCache HashSpec) (sk : SecretKey) :
@@ -90,7 +90,7 @@ theorem reportsCost_real (warm : QueryCache HashSpec) (sk : SecretKey) :
 /-! ## The capped adversary -/
 
 /-- The adversary, capped at `limit` weighted queries. -/
-noncomputable def capAdv (adversary : Adversary) (limit : Nat) : Adversary :=
+@[expose] noncomputable def capAdv (adversary : Adversary) (limit : Nat) : Adversary :=
   ⟨fun pk => CapComp.capComp ShareGame.weight ShareGame.fallbackForgery limit (adversary.main pk)⟩
 
 /-! ## The linked run and the recorded tail -/

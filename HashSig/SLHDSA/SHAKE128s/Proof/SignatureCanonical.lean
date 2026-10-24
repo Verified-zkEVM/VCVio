@@ -19,7 +19,7 @@ of the standard length, so every accepted byte string is the canonical encoding 
 signature (`Signature.toBytes_fromBytes`).
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity
 
@@ -65,7 +65,7 @@ theorem Signature.card : Fintype.card Signature = 2 ^ (8 * signatureBytes) := by
   rfl
 
 /-- The encoder into all byte strings of the standard length. -/
-def Signature.encodeFixed (signature : Signature) : List.Vector UInt8 signatureBytes :=
+@[expose] def Signature.encodeFixed (signature : Signature) : List.Vector UInt8 signatureBytes :=
   ⟨signature.toBytes, signature.toBytes_length⟩
 
 /-- The fixed-length encoding is injective. -/

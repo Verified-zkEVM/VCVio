@@ -36,7 +36,7 @@ and the per-call counts `count_query` and `one_le_count_tweakable` that `KeygenC
 recursion.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

@@ -39,7 +39,7 @@ section carries it to the game's own monad, where the honest parties are lifts o
 computations.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -239,7 +239,7 @@ available once the signature is issued: the secret because its index is signed, 
 because `forsTree` nodes are unprotected. -/
 
 /-- The leaf an honest FORS signature opens, as a coordinate of the whole key. -/
-def forsSecretIndex (indices : Fors.Indices) (tree : Fin forsTrees) :
+@[expose] def forsSecretIndex (indices : Fors.Indices) (tree : Fin forsTrees) :
     Fin (forsTrees * 2 ^ forsHeight) :=
   ⟨tree.val * 2 ^ forsHeight + (indices tree).val, by
     have hindex := (indices tree).isLt
@@ -250,12 +250,12 @@ def forsSecretIndex (indices : Fors.Indices) (tree : Fin forsTrees) :
       _ ≤ forsTrees * 2 ^ forsHeight := Nat.mul_le_mul_right _ (by omega)⟩
 
 /-- The node an honest FORS signature's secret discloses. -/
-def forsSecretNode (key : ForsKey) (indices : Fors.Indices) (tree : Fin forsTrees) :
+@[expose] def forsSecretNode (key : ForsKey) (indices : Fors.Indices) (tree : Fin forsTrees) :
     StructuralNode :=
   .forsPrf key (forsSecretIndex indices tree)
 
 /-- The node an honest FORS signature's authentication path discloses at one level. -/
-def forsAuthNode (key : ForsKey) (indices : Fors.Indices) (tree : Fin forsTrees)
+@[expose] def forsAuthNode (key : ForsKey) (indices : Fors.Indices) (tree : Fin forsTrees)
     (level : Fin forsHeight) : StructuralNode :=
   .forsTree key ⟨level.val, by have := level.isLt; omega⟩
     ⟨tree.val * 2 ^ (forsHeight - level.val) +
@@ -602,12 +602,13 @@ digit is available, because the signature discloses it, while the value one step
 not, so no query answers for it. -/
 
 /-- The sibling an honest XMSS signature discloses at one level. -/
-def merkleAuthIndex (leaf : Fin (2 ^ subtreeHeight)) (level : Fin subtreeHeight) :
+@[expose] def merkleAuthIndex (leaf : Fin (2 ^ subtreeHeight)) (level : Fin subtreeHeight) :
     Fin (2 ^ (subtreeHeight - level.val)) :=
   ⟨Nat.xor (leaf.val / 2 ^ level.val) 1,
     sibling_lt subtreeHeight level.val leaf.val level.isLt leaf.isLt⟩
 
 /-- The node an honest XMSS signature's authentication path discloses at one level. -/
+@[expose]
 def merkleAuthNode (tree : Tree) (leaf : Fin (2 ^ subtreeHeight)) (level : Fin subtreeHeight) :
     StructuralNode :=
   merkleNode tree level.val (le_of_lt level.isLt) (merkleAuthIndex leaf level)
@@ -652,7 +653,7 @@ only protected cell in sight is the chain value the WOTS half discloses, which i
 because the signature discloses it. -/
 
 /-- The node an honest subtree's root is the cell at. -/
-def subtreeRootNode (tree : Tree) : StructuralNode :=
+@[expose] def subtreeRootNode (tree : Tree) : StructuralNode :=
   merkleNode tree subtreeHeight (le_refl subtreeHeight) ⟨0, by simp⟩
 
 /-- **A subtree's root is the cell at its top node.** -/
@@ -824,18 +825,18 @@ theorem Probes.mono {α : Type} {cache : QueryCache HashSpec}
   fun probe hprobe => himplies probe (hprobes probe hprobe)
 
 /-- The randomizer the cache gives a signing request. -/
-def replayRandomizer (cache : QueryCache HashSpec) (sk : SecretKey) (message : Bytes) :
+@[expose] def replayRandomizer (cache : QueryCache HashSpec) (sk : SecretKey) (message : Bytes) :
     Digest :=
   Hashing.truncate (replay cache (Hashing.randomizerInput sk.prf sk.publicKey.seed message))
 
 /-- The FORS key a message digest selects. -/
-def forsKeyOf (digest : HashOutput) : ForsKey :=
+@[expose] def forsKeyOf (digest : HashOutput) : ForsKey :=
   ⟨⟨(MessageDigest.treeIndex digest).toNat, (MessageDigest.treeIndex digest).isLt⟩,
     ⟨(MessageDigest.leafIndex digest).toNat, (MessageDigest.leafIndex digest).isLt⟩⟩
 
 /-- The two message-dependent inputs signing consults that are not graph coordinates: the
 randomizer's and the message digest's. -/
-def MessageProbe (cache : QueryCache HashSpec) (sk : SecretKey) (message : Bytes)
+@[expose] def MessageProbe (cache : QueryCache HashSpec) (sk : SecretKey) (message : Bytes)
     (probe : Bytes) : Prop :=
   probe = Hashing.randomizerInput sk.prf sk.publicKey.seed message ∨
     probe = Hashing.messageInput (replayRandomizer cache sk message) sk.publicKey message
@@ -905,7 +906,7 @@ are exactly entries the walk installed — and running key generation from that 
 nothing and changes nothing. -/
 
 /-- The cache a completed graph walk leaves behind. -/
-noncomputable def warmCache (publicSeed secretSeed : Digest)
+@[expose] noncomputable def warmCache (publicSeed secretSeed : Digest)
     (outputs : Programming.Outputs) : QueryCache HashSpec :=
   Programming.cacheFrom publicSeed (Programming.cellsOfOutputs secretSeed outputs) outputs
     Programming.order ∅

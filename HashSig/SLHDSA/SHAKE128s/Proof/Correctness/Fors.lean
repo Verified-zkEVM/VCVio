@@ -18,7 +18,7 @@ of an honest FORS signature reconstructs the root of its indexed tree, so
 `Fors.publicKeyFromSignature_sign` recovers the compressed FORS public key.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

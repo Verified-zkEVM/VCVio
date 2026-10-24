@@ -52,7 +52,7 @@ inside that lemma's own proof, where it is local. No lifting law is involved; an
 that fails here is failing downstream of the mismatch and cannot fix it.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -63,11 +63,12 @@ variable {α : Type}
 open Security RecordedQueries
 
 /-- What the adversary's phase charges and records, query by query. -/
-def phaseCost : (OracleWorld + SigningSpec).Domain → Tally
+@[expose] def phaseCost : (OracleWorld + SigningSpec).Domain → Tally
   | .inl input => (Counts.single .hash (hashCost input), recordOf input)
   | .inr _ => (Counts.single .signing 1, 0)
 
 /-- The signer with nothing charged and nothing recorded: it answers and records to the log. -/
+@[expose]
 noncomputable def unchargedSigner (signer : Message → OracleComp OracleWorld (Option Bytes)) :
     QueryImpl SigningSpec (StateT SigningLog (OracleComp OracleWorld)) := fun request => do
   let answer ← liftM (signer request)
@@ -75,6 +76,7 @@ noncomputable def unchargedSigner (signer : Message → OracleComp OracleWorld (
   return answer
 
 /-- The phase's pair of oracles with nothing charged and nothing recorded. -/
+@[expose]
 noncomputable def unchargedPhase (signer : Message → OracleComp OracleWorld (Option Bytes)) :
     QueryImpl (OracleWorld + SigningSpec) (StateT SigningLog (OracleComp OracleWorld)) :=
   QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld)) +

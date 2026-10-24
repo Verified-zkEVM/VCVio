@@ -36,7 +36,7 @@ The writer's monoid is a parameter, so this serves `Security.CountedRun` and any
 over the log alike.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -48,7 +48,7 @@ variable {ω : Type} [Monoid ω] {S : Type}
 
 /-- The phase's two handlers as one: `inner`'s step, then `outer` on what it emitted, with the
 writer and the log carried in the state. -/
-noncomputable def fuse (outer : QueryImpl OracleWorld (StateT S ProbComp))
+@[expose] noncomputable def fuse (outer : QueryImpl OracleWorld (StateT S ProbComp))
     (inner : QueryImpl (OracleWorld + SigningSpec)
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld)))) :
     QueryImpl (OracleWorld + SigningSpec) (StateT (ω × SigningLog × S) ProbComp) :=
@@ -99,7 +99,7 @@ state, run, clear it. It is stated against an arbitrary pair of state maps becau
 is the carrier's business and not the fusion's. -/
 
 /-- The fused handler with the signing step bracketed by two state maps. -/
-noncomputable def fuseServing (outer : QueryImpl OracleWorld (StateT S ProbComp))
+@[expose] noncomputable def fuseServing (outer : QueryImpl OracleWorld (StateT S ProbComp))
     (inner : QueryImpl (OracleWorld + SigningSpec)
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld))))
     (before : Message → S → S) (after : S → S) :

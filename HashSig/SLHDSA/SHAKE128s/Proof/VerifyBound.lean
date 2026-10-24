@@ -27,7 +27,7 @@ top subtree's `512` leaves derives thirty-five WOTS secrets and compresses. That
 generation's spend.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -36,7 +36,7 @@ namespace SlhDsaSecurity.VerifyBound
 open Security
 
 /-- The hash calls, among the game's oracle queries. -/
-def IsHash (queried : OracleWorld.Domain) : Prop := queried.isRight = true
+@[expose] def IsHash (queried : OracleWorld.Domain) : Prop := queried.isRight = true
 
 /-- Whether a query is a hash call is decidable. -/
 instance : DecidablePred IsHash := fun queried => by unfold IsHash; infer_instance

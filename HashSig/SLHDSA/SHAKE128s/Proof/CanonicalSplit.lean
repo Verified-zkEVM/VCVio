@@ -27,7 +27,7 @@ identifies it with the signature a request returned, which strong freshness forb
 Nothing here decides which branch a given win lands in; the two taken jointly are the content.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

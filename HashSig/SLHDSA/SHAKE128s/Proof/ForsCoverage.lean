@@ -21,7 +21,7 @@ says that every one of the target's fourteen leaves lies in the disclosed set of
 not identify that distribution with an adaptively selected message digest.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -39,7 +39,7 @@ abbrev View := MessageDigest.View
 abbrev Disclosures := Instance → Tree → Finset Leaf
 
 /-- A view is covered when every one of its leaves has been disclosed in its own tree. -/
-def Covered (revealed : Disclosures) (view : View) : Prop :=
+@[expose] def Covered (revealed : Disclosures) (view : View) : Prop :=
   ∀ tree, view.2 tree ∈ revealed view.1 tree
 
 /-- Coverage of a view is decidable. -/
@@ -47,7 +47,7 @@ instance (revealed : Disclosures) : DecidablePred (Covered revealed) :=
   fun view => inferInstanceAs (Decidable (∀ tree, view.2 tree ∈ revealed view.1 tree))
 
 /-- Covered views are equivalent to an instance with a disclosed leaf chosen in every tree. -/
-def coveredEquiv (revealed : Disclosures) :
+@[expose] def coveredEquiv (revealed : Disclosures) :
     (Σ index : Instance, (tree : Tree) → {leaf : Leaf // leaf ∈ revealed index tree}) ≃
       {view : View // Covered revealed view} where
   toFun choice :=

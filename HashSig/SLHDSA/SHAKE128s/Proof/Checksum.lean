@@ -18,7 +18,7 @@ These lemmas count the chain steps specified by Algorithm 8. Connecting this cou
 oracle implementation of the full verifier is a separate proof obligation.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.Checksum
 

@@ -18,7 +18,7 @@ every canonical node, and the node flattening is injective, so `StructuralNode.a
 follows.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.CanonicalGraph
 

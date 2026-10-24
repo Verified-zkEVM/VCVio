@@ -23,7 +23,7 @@ the same claimed candidates (`claimedCandidatesOf_congr`) — which is how the l
 claims, read off the cache it can see, are the real game's claims.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

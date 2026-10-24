@@ -18,7 +18,7 @@ installs it (`rom_run_inr_none`). Both are stated at the answer type the world's
 so they rewrite a step of a simulated game run directly.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

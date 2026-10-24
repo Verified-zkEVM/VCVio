@@ -18,7 +18,7 @@ All hash functions are one shared random oracle with 30-byte answers; the 16-byt
 their prefixes, as with SHAKE.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -27,44 +27,45 @@ namespace SlhDsaSecurity
 /-! ## Parameters (Table 2) -/
 
 /-- `n`: the byte length of seeds, tree nodes, chain values and the randomizer. -/
-def n : Nat := 16
+@[expose] def n : Nat := 16
 
 /-- `h`: the total height of the hypertree. -/
-def totalHeight : Nat := 63
+@[expose] def totalHeight : Nat := 63
 
 /-- `d`: the number of layers of the hypertree. -/
-def layers : Nat := 7
+@[expose] def layers : Nat := 7
 
 /-- `h'`: the height of each XMSS tree of the hypertree. -/
-def subtreeHeight : Nat := 9
+@[expose] def subtreeHeight : Nat := 9
 
 /-- `a`: the height of each FORS tree. -/
-def forsHeight : Nat := 12
+@[expose] def forsHeight : Nat := 12
 
 /-- `k`: the number of FORS trees. -/
-def forsTrees : Nat := 14
+@[expose] def forsTrees : Nat := 14
 
 /-- `lg_w`: the number of bits of a WOTS+ digit. -/
-def winternitzBits : Nat := 4
+@[expose] def winternitzBits : Nat := 4
 
 /-- `w = 2 ^ lg_w`: the number of values of a WOTS+ digit. -/
-def w : Nat := 2 ^ winternitzBits
+@[expose] def w : Nat := 2 ^ winternitzBits
 
 /-- `len₁`: the number of base-`w` digits of an `n`-byte message. -/
-def messageDigits : Nat := 8 * n / winternitzBits
+@[expose] def messageDigits : Nat := 8 * n / winternitzBits
 
 /-- `len₂`: the number of base-`w` digits of the WOTS+ checksum. -/
-def checksumDigits : Nat := 3
+@[expose] def checksumDigits : Nat := 3
 
 /-- `len = len₁ + len₂`: the number of WOTS+ chains. -/
-def chains : Nat := messageDigits + checksumDigits
+@[expose] def chains : Nat := messageDigits + checksumDigits
 
 /-- Output length of `H_msg`, in bytes. -/
-def messageDigestBytes : Nat := 30
+@[expose] def messageDigestBytes : Nat := 30
 
 /-- The byte length of an encoded signature: the randomizer, a secret value and `a` authentication
 nodes for each of the `k` FORS trees, then `d` WOTS+ signatures of `len` values and `h`
 authentication nodes in total over the hypertree, all in units of `n` bytes. -/
+@[expose]
 def signatureBytes : Nat := (1 + forsTrees * (1 + forsHeight) + totalHeight + layers * chains) * n
 
 /-! ## Data -/
@@ -94,7 +95,7 @@ structure SecretKey where
 deriving DecidableEq
 
 /-- Big-endian encoding (Algorithm 3). -/
-def bytesBE (byteCount : Nat) (value : BitVec (8 * byteCount)) : Bytes :=
+@[expose] def bytesBE (byteCount : Nat) (value : BitVec (8 * byteCount)) : Bytes :=
   (List.ofFn fun i : Fin byteCount =>
     UInt8.ofBitVec (value.extractLsb' (8 * i.val) 8)).reverse
 
@@ -119,7 +120,7 @@ inductive AddressType where
 deriving DecidableEq
 
 /-- The 4-byte type code of an address type. -/
-def AddressType.code : AddressType → BitVec 32
+@[expose] def AddressType.code : AddressType → BitVec 32
   | .wotsHash => 0
   | .wotsPk => 1
   | .tree => 2
@@ -145,13 +146,13 @@ structure Address where
 deriving DecidableEq
 
 /-- The 32-byte encoding of an address: each field big-endian, in order. -/
-def Address.toBytes (address : Address) : Bytes :=
+@[expose] def Address.toBytes (address : Address) : Bytes :=
   bytesBE 4 address.layer ++ bytesBE 12 address.tree ++ bytesBE 4 address.kind.code ++
     bytesBE 4 address.keyPair ++ bytesBE 4 address.chainOrHeight ++ bytesBE 4 address.hashOrIndex
 
 /-- `ADRS.setTypeAndClear`: set the type and zero the key pair, chain or height, and hash or index
 fields. -/
-def Address.setTypeAndClear (address : Address) (kind : AddressType) : Address :=
+@[expose] def Address.setTypeAndClear (address : Address) (kind : AddressType) : Address :=
   { address with kind, keyPair := 0, chainOrHeight := 0, hashOrIndex := 0 }
 
 /-! ## Hashing (Section 11.1, as one random oracle) -/
@@ -165,50 +166,51 @@ abbrev OracleWorld := RandomOracleModel.World Bytes HashOutput
 namespace Hashing
 
 /-- The first 16 bytes of an answer. -/
-def truncate (answer : HashOutput) : Digest :=
+@[expose] def truncate (answer : HashOutput) : Digest :=
   answer.extractLsb' (8 * (messageDigestBytes - n)) (8 * n)
 
 /-- Input of `F`, `H`, `T_l` and `PRF`: `PK.seed ‖ ADRS ‖ payload`. -/
-def tweakableInput (seed : Digest) (address : Address) (payload : Bytes) : Bytes :=
+@[expose] def tweakableInput (seed : Digest) (address : Address) (payload : Bytes) : Bytes :=
   bytesBE n seed ++ address.toBytes ++ payload
 
 /-- Input of `PRF_msg`, with `opt_rand = PK.seed`. -/
-def randomizerInput (prf seed : Digest) (message : Bytes) : Bytes :=
+@[expose] def randomizerInput (prf seed : Digest) (message : Bytes) : Bytes :=
   bytesBE n prf ++ bytesBE n seed ++ message
 
 /-- Input of `H_msg`. -/
-def messageInput (randomizer : Digest) (pk : PublicKey) (message : Bytes) : Bytes :=
+@[expose] def messageInput (randomizer : Digest) (pk : PublicKey) (message : Bytes) : Bytes :=
   bytesBE n randomizer ++ bytesBE n pk.seed ++ bytesBE n pk.root ++ message
 
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
 /-- One query to the random oracle. -/
-def hash (input : Bytes) : m HashOutput := query (spec := HashSpec) input
+@[expose] def hash (input : Bytes) : m HashOutput := query (spec := HashSpec) input
 
 /-- The first `n` bytes of the random oracle's answer. -/
-def shortHash (input : Bytes) : m Digest := do
+@[expose] def shortHash (input : Bytes) : m Digest := do
   return truncate (← hash input)
 
 /-- The tweakable hashes `F`, `H` and `T_l`, keyed by the public seed and an address. -/
-def tweakable (seed : Digest) (address : Address) (payload : Bytes) : m Digest :=
+@[expose] def tweakable (seed : Digest) (address : Address) (payload : Bytes) : m Digest :=
   shortHash (tweakableInput seed address payload)
 
 /-- `PRF(PK.seed, SK.seed, ADRS)`: a secret value derived from the secret seed at an address. -/
-def derive (publicSeed secretSeed : Digest) (address : Address) : m Digest :=
+@[expose] def derive (publicSeed secretSeed : Digest) (address : Address) : m Digest :=
   tweakable publicSeed address (bytesBE n secretSeed)
 
 /-- `PRF_msg(SK.prf, PK.seed, M)`: the randomizer `R` of a signature. -/
-def randomizer (prf seed : Digest) (message : Bytes) : m Digest :=
+@[expose] def randomizer (prf seed : Digest) (message : Bytes) : m Digest :=
   shortHash (randomizerInput prf seed message)
 
 /-- `H_msg(R, PK.seed, PK.root, M)`: the full message digest. -/
+@[expose]
 def messageDigest (randomizer : Digest) (pk : PublicKey) (message : Bytes) : m HashOutput :=
   hash (messageInput randomizer pk message)
 
 end Hashing
 
 /-- Pure-mode framing `0 ‖ |ctx| ‖ ctx ‖ M` (Algorithms 22 and 24). -/
-def Message.frame (request : Message) : Option Bytes :=
+@[expose] def Message.frame (request : Message) : Option Bytes :=
   if request.context.length ≤ 255 then
     some ([0, UInt8.ofNat request.context.length] ++ request.context ++ request.message)
   else none
@@ -253,7 +255,7 @@ deriving DecidableEq
 
 /-- `Fin.cases` by direct matching. Core's goes through `Fin.induction`, which evaluates its
 unused argument, so compiled nested uses take exponential time; `@[csimp]` swaps it in. -/
-def finCases {n : Nat} {motive : Fin (n + 1) → Sort _} (zero : motive 0)
+@[expose] def finCases {n : Nat} {motive : Fin (n + 1) → Sort _} (zero : motive 0)
     (succ : ∀ i : Fin n, motive i.succ) : ∀ i, motive i
   | ⟨0, hi⟩ => by rwa [Fin.mk_zero]
   | ⟨i + 1, hi⟩ => succ ⟨i, Nat.lt_of_succ_lt_succ hi⟩
@@ -264,7 +266,7 @@ def finCases {n : Nat} {motive : Fin (n + 1) → Sort _} (zero : motive 0)
   rcases i with ⟨_ | i, hi⟩ <;> rfl
 
 /-- Run the indexed computations in increasing order. -/
-def sequenceFin {m : Type → Type} [Monad m] {α : Type} :
+@[expose] def sequenceFin {m : Type → Type} [Monad m] {α : Type} :
     (size : Nat) → (Fin size → m α) → m (Fin size → α)
   | 0, _ => pure Fin.elim0
   | size + 1, f => do
@@ -273,31 +275,31 @@ def sequenceFin {m : Type → Type} [Monad m] {α : Type} :
     return Fin.cases first rest
 
 /-- The big-endian encodings of a family of `n`-byte values, concatenated in index order. -/
-def digestArrayBytes {size : Nat} (values : Fin size → Digest) : Bytes :=
+@[expose] def digestArrayBytes {size : Nat} (values : Fin size → Digest) : Bytes :=
   (List.ofFn fun i => bytesBE n (values i)).flatten
 
 /-- The byte encoding of an XMSS signature: the WOTS+ signature, then the authentication path. -/
-def XmssSignature.toBytes (signature : XmssSignature) : Bytes :=
+@[expose] def XmssSignature.toBytes (signature : XmssSignature) : Bytes :=
   digestArrayBytes signature.wots ++ digestArrayBytes signature.authentication
 
 /-- The byte encoding of one FORS tree's part: the secret value, then the authentication path. -/
-def ForsTreeSignature.toBytes (signature : ForsTreeSignature) : Bytes :=
+@[expose] def ForsTreeSignature.toBytes (signature : ForsTreeSignature) : Bytes :=
   bytesBE n signature.secret ++ digestArrayBytes signature.authentication
 
 /-- The byte encoding of a signature: the randomizer, the FORS trees in order, then the hypertree
 layers in order. -/
-def Signature.toBytes (signature : Signature) : Bytes :=
+@[expose] def Signature.toBytes (signature : Signature) : Bytes :=
   bytesBE n signature.randomizer ++
     (List.ofFn fun i => (signature.fors i).toBytes).flatten ++
     (List.ofFn fun i => (signature.hypertree i).toBytes).flatten
 
 /-- The 16-byte big-endian field at a byte offset. -/
-def Signature.readDigest (input : Bytes) (offset : Nat) : Digest :=
+@[expose] def Signature.readDigest (input : Bytes) (offset : Nat) : Digest :=
   ((input.drop offset).take n).foldl
     (fun value byte => (value <<< 8) ||| BitVec.ofNat (8 * n) byte.toNat) 0
 
 /-- Parse a signature; anything but exactly `signatureBytes` bytes is rejected. -/
-def Signature.fromBytes? (input : Bytes) : Option Signature :=
+@[expose] def Signature.fromBytes? (input : Bytes) : Option Signature :=
   if input.length = signatureBytes then
     some {
       randomizer := readDigest input 0
@@ -329,18 +331,18 @@ abbrev Encoding := Fin chains → Digit
 namespace Checksum
 
 /-- The base-`w` digits of an `n`-byte message, most significant first. -/
-def messageDigit (message : Digest) (i : Fin messageDigits) : Digit :=
+@[expose] def messageDigit (message : Digest) (i : Fin messageDigits) : Digit :=
   (message.extractLsb' (winternitzBits * (messageDigits - 1 - i.val)) winternitzBits).toFin
 
 /-- The WOTS+ checksum: the sum of `w - 1 - digit` over the message digits. -/
-def checksum (digits : MessageDigits) : Nat := ∑ i, (w - 1 - (digits i).val)
+@[expose] def checksum (digits : MessageDigits) : Nat := ∑ i, (w - 1 - (digits i).val)
 
 /-- The checksum's base-16 digits, most significant first. -/
-def checksumDigit (csum : Nat) (i : Fin checksumDigits) : Digit :=
+@[expose] def checksumDigit (csum : Nat) (i : Fin checksumDigits) : Digit :=
   ⟨csum / w ^ (checksumDigits - 1 - i.val) % w, Nat.mod_lt _ (by decide)⟩
 
 /-- The digits a WOTS+ signature signs: the message digits, then the checksum digits. -/
-def encode (message : Digest) : Encoding := fun i =>
+@[expose] def encode (message : Digest) : Encoding := fun i =>
   if h : i.val < messageDigits then messageDigit message ⟨i.val, h⟩
   else checksumDigit (checksum (messageDigit message))
     ⟨i.val - messageDigits, by have := i.isLt; simp only [chains] at *; omega⟩
@@ -358,15 +360,15 @@ abbrev ForsTree := Fin forsTrees
 abbrev ForsLeaf := Fin (2 ^ forsHeight)
 
 /-- `idx_tree`: the low 54 bits of bytes 21–27. -/
-def treeIndex (output : HashOutput) : BitVec (totalHeight - subtreeHeight) :=
+@[expose] def treeIndex (output : HashOutput) : BitVec (totalHeight - subtreeHeight) :=
   output.extractLsb' 16 (totalHeight - subtreeHeight)
 
 /-- `idx_leaf`: the low 9 bits of bytes 28–29. -/
-def leafIndex (output : HashOutput) : BitVec subtreeHeight :=
+@[expose] def leafIndex (output : HashOutput) : BitVec subtreeHeight :=
   output.extractLsb' 0 subtreeHeight
 
 /-- The FORS indices: fourteen 12-bit digits of bytes 0–20, most significant first. -/
-def forsIndices (output : HashOutput) (tree : ForsTree) : ForsLeaf :=
+@[expose] def forsIndices (output : HashOutput) (tree : ForsTree) : ForsLeaf :=
   (output.extractLsb' (72 + forsHeight * (forsTrees - 1 - tree.val)) forsHeight).toFin
 
 end MessageDigest
@@ -379,7 +381,7 @@ variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
 /-- Algorithm 5 (`chain`): `steps` steps of the hash chain of `address`, starting at position
 `start`. -/
-def chain (publicSeed : Digest) (address : Address) :
+@[expose] def chain (publicSeed : Digest) (address : Address) :
     Nat → Nat → Digest → m Digest
   | _, 0, value => pure value
   | start, steps + 1, value => do
@@ -388,16 +390,16 @@ def chain (publicSeed : Digest) (address : Address) :
     chain publicSeed address (start + 1) steps next
 
 /-- The `WOTS_PRF` address of a chain's secret value, at the key pair of `address`. -/
-def secretAddress (address : Address) (chainIndex : Fin chains) : Address :=
+@[expose] def secretAddress (address : Address) (chainIndex : Fin chains) : Address :=
   { address.setTypeAndClear .wotsPrf with
     keyPair := address.keyPair, chainOrHeight := BitVec.ofNat 32 chainIndex.val }
 
 /-- The `WOTS_PK` address of the key pair of `address`. -/
-def publicKeyAddress (address : Address) : Address :=
+@[expose] def publicKeyAddress (address : Address) : Address :=
   { address.setTypeAndClear .wotsPk with keyPair := address.keyPair }
 
 /-- Algorithm 6 (`wots_pkGen`): the WOTS+ public key, the compression of all chain ends. -/
-def publicKey (secretSeed publicSeed : Digest) (address : Address) : m Digest := do
+@[expose] def publicKey (secretSeed publicSeed : Digest) (address : Address) : m Digest := do
   let endpoints ← sequenceFin chains fun i => do
     let secret ← Hashing.derive publicSeed secretSeed (secretAddress address i)
     chain publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val }
@@ -406,7 +408,7 @@ def publicKey (secretSeed publicSeed : Digest) (address : Address) : m Digest :=
 
 /-- Algorithm 7 (`wots_sign`): each chain's secret value advanced by its digit of the encoded
 message. -/
-def sign (message secretSeed publicSeed : Digest) (address : Address) : m WotsSignature :=
+@[expose] def sign (message secretSeed publicSeed : Digest) (address : Address) : m WotsSignature :=
   sequenceFin chains fun i => do
     let secret ← Hashing.derive publicSeed secretSeed (secretAddress address i)
     chain publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val }
@@ -414,7 +416,7 @@ def sign (message secretSeed publicSeed : Digest) (address : Address) : m WotsSi
 
 /-- Algorithm 8 (`wots_pkFromSig`): each chain completed from the signature, then the ends
 compressed. -/
-def publicKeyFromSignature (signature : WotsSignature) (message publicSeed : Digest)
+@[expose] def publicKeyFromSignature (signature : WotsSignature) (message publicSeed : Digest)
     (address : Address) : m Digest := do
   let endpoints ← sequenceFin chains fun i =>
     let digit := (Checksum.encode message i).val
@@ -431,17 +433,17 @@ namespace Merkle
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
 /-- The `WOTS_HASH` address of the WOTS+ key at leaf `index` of the XMSS tree of `address`. -/
-def wotsAddress (address : Address) (index : Nat) : Address :=
+@[expose] def wotsAddress (address : Address) (index : Nat) : Address :=
   { address.setTypeAndClear .wotsHash with keyPair := BitVec.ofNat 32 index }
 
 /-- The `TREE` address of the node at height `height` and index `index`. -/
-def nodeAddress (address : Address) (height index : Nat) : Address :=
+@[expose] def nodeAddress (address : Address) (height index : Nat) : Address :=
   { address.setTypeAndClear .tree with
     chainOrHeight := BitVec.ofNat 32 height, hashOrIndex := BitVec.ofNat 32 index }
 
 /-- Algorithm 9 (`xmss_node`): the node at height `height` and index `index` of the XMSS tree of
 `address`. -/
-def node (secretSeed publicSeed : Digest) (address : Address) :
+@[expose] def node (secretSeed publicSeed : Digest) (address : Address) :
     Nat → Nat → m Digest
   | 0, index => Wots.publicKey secretSeed publicSeed (wotsAddress address index)
   | height + 1, index => do
@@ -452,7 +454,7 @@ def node (secretSeed publicSeed : Digest) (address : Address) :
 
 /-- Algorithm 10 (`xmss_sign`): a WOTS+ signature of `message` under the key of leaf `index`, with
 that leaf's authentication path. -/
-def sign (message secretSeed publicSeed : Digest) (address : Address)
+@[expose] def sign (message secretSeed publicSeed : Digest) (address : Address)
     (index : Fin (2 ^ subtreeHeight)) : m XmssSignature := do
   let authentication ← sequenceFin subtreeHeight fun j =>
     node secretSeed publicSeed address j.val (Nat.xor (index.val / 2 ^ j.val) 1)
@@ -461,7 +463,7 @@ def sign (message secretSeed publicSeed : Digest) (address : Address)
 
 /-- Algorithm 11 (`xmss_pkFromSig`): the WOTS+ public key recovered from the signature, hashed up
 the authentication path to a root. -/
-def publicKeyFromSignature (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignature)
+@[expose] def publicKeyFromSignature (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignature)
     (message publicSeed : Digest) (address : Address) : m Digest := do
   let leaf ← Wots.publicKeyFromSignature signature.wots message publicSeed
     (wotsAddress address index.val)
@@ -485,21 +487,22 @@ variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
 /-- The `FORS_PRF` address of the secret value of global leaf `index`, at the key pair of
 `address`. -/
-def secretAddress (address : Address) (index : Nat) : Address :=
+@[expose] def secretAddress (address : Address) (index : Nat) : Address :=
   { address.setTypeAndClear .forsPrf with
     keyPair := address.keyPair, hashOrIndex := BitVec.ofNat 32 index }
 
 /-- The address of the FORS node at height `height` and global index `index`. -/
-def nodeAddress (address : Address) (height index : Nat) : Address :=
+@[expose] def nodeAddress (address : Address) (height index : Nat) : Address :=
   { address with
     chainOrHeight := BitVec.ofNat 32 height, hashOrIndex := BitVec.ofNat 32 index }
 
 /-- Indices are global across the fourteen trees. -/
+@[expose]
 def secret (secretSeed publicSeed : Digest) (address : Address) (index : Nat) : m Digest :=
   Hashing.derive publicSeed secretSeed (secretAddress address index)
 
 /-- Algorithm 15 (`fors_node`): the FORS node at height `height` and global index `index`. -/
-def node (secretSeed publicSeed : Digest) (address : Address) :
+@[expose] def node (secretSeed publicSeed : Digest) (address : Address) :
     Nat → Nat → m Digest
   | 0, index => do
     let value ← secret secretSeed publicSeed address index
@@ -512,7 +515,7 @@ def node (secretSeed publicSeed : Digest) (address : Address) :
 
 /-- Algorithm 16 (`fors_sign`): for each tree, the selected leaf's secret value and authentication
 path. -/
-def sign (indices : Indices) (secretSeed publicSeed : Digest) (address : Address) :
+@[expose] def sign (indices : Indices) (secretSeed publicSeed : Digest) (address : Address) :
     m ForsSignature :=
   sequenceFin forsTrees fun i => do
     let selected ← secret secretSeed publicSeed address
@@ -524,7 +527,7 @@ def sign (indices : Indices) (secretSeed publicSeed : Digest) (address : Address
 
 /-- Algorithm 17 (`fors_pkFromSig`): each tree's root recovered from the signature, then the roots
 compressed into the FORS public key. -/
-def publicKeyFromSignature (signature : ForsSignature) (indices : Indices)
+@[expose] def publicKeyFromSignature (signature : ForsSignature) (indices : Indices)
     (publicSeed : Digest) (address : Address) : m Digest := do
   let roots ← sequenceFin forsTrees fun i => do
     let index := i.val * 2 ^ forsHeight + (indices i).val
@@ -552,18 +555,18 @@ abbrev LeafIndex := Fin (2 ^ subtreeHeight)
 abbrev TreeIndex := BitVec (totalHeight - subtreeHeight)
 
 /-- The address of XMSS tree `tree` of layer `layer`. -/
-def address (layer tree : Nat) : Address :=
+@[expose] def address (layer tree : Nat) : Address :=
   { layer := BitVec.ofNat 32 layer, tree := BitVec.ofNat 96 tree }
 
 /-- The leaf of the next layer that signs the root of tree `tree`: its low `h'` bits. -/
-def nextLeaf (tree : Nat) : LeafIndex :=
+@[expose] def nextLeaf (tree : Nat) : LeafIndex :=
   ⟨tree % 2 ^ subtreeHeight, Nat.mod_lt _ (by decide)⟩
 
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
 /-- Algorithm 12 (`ht_sign`) over the `remaining` layers from `layer` up: an XMSS signature of
 `message` at tree `tree` and leaf `leaf`, then of the recovered root one layer up. -/
-def signLayers (secretSeed publicSeed : Digest) :
+@[expose] def signLayers (secretSeed publicSeed : Digest) :
     (remaining : Nat) → Nat → Nat → LeafIndex → Digest →
       m (Fin remaining → XmssSignature)
   | 0, _, _, _, _ => pure Fin.elim0
@@ -580,13 +583,13 @@ def signLayers (secretSeed publicSeed : Digest) :
 
 /-- Algorithm 12 (`ht_sign`): the hypertree signature of `message` at bottom tree `tree` and leaf
 `leaf`. -/
-def sign (message secretSeed publicSeed : Digest) (tree : TreeIndex) (leaf : LeafIndex) :
+@[expose] def sign (message secretSeed publicSeed : Digest) (tree : TreeIndex) (leaf : LeafIndex) :
     m HypertreeSignature :=
   signLayers secretSeed publicSeed layers 0 tree.toNat leaf message
 
 /-- The root reached from `message` by recovering one XMSS root per layer, from layer `layer` up
 through the `remaining` layers. -/
-def rootFromSignature (publicSeed : Digest) :
+@[expose] def rootFromSignature (publicSeed : Digest) :
     (remaining : Nat) → (Fin remaining → XmssSignature) → Nat → Nat → LeafIndex → Digest →
       m Digest
   | 0, _, _, _, _, message => pure message
@@ -597,7 +600,7 @@ def rootFromSignature (publicSeed : Digest) :
       (tree / 2 ^ subtreeHeight) (nextLeaf tree) root
 
 /-- Algorithm 13 (`ht_verify`): whether the recovered top root is `PK.root`. -/
-def verify (message : Digest) (signature : HypertreeSignature) (pk : PublicKey)
+@[expose] def verify (message : Digest) (signature : HypertreeSignature) (pk : PublicKey)
     (tree : TreeIndex) (leaf : LeafIndex) : m Bool := do
   let root ← rootFromSignature pk.seed layers signature 0 tree.toNat leaf message
   return root == pk.root
@@ -611,6 +614,7 @@ namespace Scheme
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
 /-- Algorithm 18: the root of the top XMSS tree. -/
+@[expose]
 def keygenInternal (secretSeed prfSeed publicSeed : Digest) : m (SecretKey × PublicKey) := do
   let root ← Merkle.node secretSeed publicSeed (Hypertree.address (layers - 1) 0)
     subtreeHeight 0
@@ -618,19 +622,19 @@ def keygenInternal (secretSeed prfSeed publicSeed : Digest) : m (SecretKey × Pu
   return ({ seed := secretSeed, prf := prfSeed, publicKey := pk }, pk)
 
 /-- Algorithm 21: three uniform seeds. -/
-noncomputable def keygen [HasQuery unifSpec m] : m (SecretKey × PublicKey) := do
+@[expose] noncomputable def keygen [HasQuery unifSpec m] : m (SecretKey × PublicKey) := do
   let secretSeed ← simulateQ (fun i => query (spec := unifSpec) i) ($ᵗ Digest)
   let prfSeed ← simulateQ (fun i => query (spec := unifSpec) i) ($ᵗ Digest)
   let publicSeed ← simulateQ (fun i => query (spec := unifSpec) i) ($ᵗ Digest)
   keygenInternal secretSeed prfSeed publicSeed
 
 /-- The `FORS_TREE` address of the FORS instance a message digest selects. -/
-def forsAddress (digest : HashOutput) : Address :=
+@[expose] def forsAddress (digest : HashOutput) : Address :=
   { (Hypertree.address 0 (MessageDigest.treeIndex digest).toNat).setTypeAndClear .forsTree with
     keyPair := BitVec.ofNat 32 (MessageDigest.leafIndex digest).toNat }
 
 /-- Algorithm 19, deterministic. -/
-def signInternal (sk : SecretKey) (message : Bytes) : m Signature := do
+@[expose] def signInternal (sk : SecretKey) (message : Bytes) : m Signature := do
   let randomizer ← Hashing.randomizer sk.prf sk.publicKey.seed message
   let digest ← Hashing.messageDigest randomizer sk.publicKey message
   let indices := MessageDigest.forsIndices digest
@@ -642,6 +646,7 @@ def signInternal (sk : SecretKey) (message : Bytes) : m Signature := do
   return { randomizer, fors, hypertree }
 
 /-- Algorithm 20. -/
+@[expose]
 def verifyInternal (pk : PublicKey) (message : Bytes) (signature : Signature) : m Bool := do
   let digest ← Hashing.messageDigest signature.randomizer pk message
   let forsKey ← Fors.publicKeyFromSignature signature.fors (MessageDigest.forsIndices digest)
@@ -650,13 +655,13 @@ def verifyInternal (pk : PublicKey) (message : Bytes) (signature : Signature) : 
     (MessageDigest.treeIndex digest) (MessageDigest.leafIndex digest).toFin
 
 /-- Algorithm 22; `none` for a context longer than 255 bytes. -/
-def sign (sk : SecretKey) (request : Message) : m (Option Bytes) := do
+@[expose] def sign (sk : SecretKey) (request : Message) : m (Option Bytes) := do
   match request.frame with
   | none => return none
   | some message => return some (← signInternal sk message).toBytes
 
 /-- Algorithm 24. -/
-def verify (pk : PublicKey) (request : Message) (signature : Bytes) : m Bool := do
+@[expose] def verify (pk : PublicKey) (request : Message) (signature : Bytes) : m Bool := do
   match request.frame with
   | none => return false
   | some message =>

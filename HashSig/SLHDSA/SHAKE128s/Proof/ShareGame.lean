@@ -46,7 +46,7 @@ The claims file only the candidates the record does not already hold at the curr
 it is raised no longer matters. The flag itself is computed over every candidate.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -68,23 +68,23 @@ structure Setup where
 namespace Setup
 
 /-- The secret seed, the table's own cell. -/
-def secretSeed (setup : Setup) : Digest := setup.table.1 Node.secretSeed
+@[expose] def secretSeed (setup : Setup) : Digest := setup.table.1 Node.secretSeed
 
 /-- The walk's warm cache: every canonical input, answered in full. -/
-noncomputable def warm (setup : Setup) : QueryCache HashSpec :=
+@[expose] noncomputable def warm (setup : Setup) : QueryCache HashSpec :=
   Programming.cacheFrom setup.publicSeed setup.table.1 (fullOutput setup.table.1 setup.table.2)
     Programming.order ∅
 
 /-- The public key. -/
-def pk (setup : Setup) : PublicKey :=
+@[expose] def pk (setup : Setup) : PublicKey :=
   { seed := setup.publicSeed, root := setup.table.1 (.structural topRoot) }
 
 /-- The secret key. -/
-def sk (setup : Setup) : SecretKey :=
+@[expose] def sk (setup : Setup) : SecretKey :=
   { seed := setup.secretSeed, prf := setup.prf, publicKey := setup.pk }
 
 /-- **The walk is good**: the seeds differ and the public key is no coincidence. -/
-def Good (setup : Setup) : Prop :=
+@[expose] def Good (setup : Setup) : Prop :=
   setup.prf ≠ setup.publicSeed ∧ ¬ HashSeparation.Possible (setup.publicSeed, setup.pk.root)
 
 end Setup
@@ -105,14 +105,14 @@ structure St where
   log : SigningLog
 
 /-- The state a run starts from. -/
-def St.start : St :=
+@[expose] def St.start : St :=
   { cache := ∅, prfs := fun _ => none, served := [], record := [], log := [] }
 
 /-! ## Availability -/
 
 open scoped Classical in
 /-- **The FORS positions the drawn digests disclose.** -/
-noncomputable def disclosed (served : List HashOutput) (key : ForsKey) :
+@[expose] noncomputable def disclosed (served : List HashOutput) (key : ForsKey) :
     Finset (Fin (forsTrees * 2 ^ forsHeight)) :=
   Finset.univ.filter fun index => ∃ digest ∈ served,
     SplitCharged.forsKeyOfDigest digest = key ∧
@@ -121,27 +121,28 @@ noncomputable def disclosed (served : List HashOutput) (key : ForsKey) :
 
 /-- **The cells available once these digests are served**, at the digits the table's own
 signed cells reveal. -/
-noncomputable def available (setup : Setup) (served : List HashOutput) : Node → Prop :=
+@[expose] noncomputable def available (setup : Setup) (served : List HashOutput) : Node → Prop :=
   Available (ShareCells.revealedOf setup.table.1) (disclosed served)
 
 /-- **A sensitive probe**: the canonical input of a node with an unavailable child, carrying
 that child's true cell. -/
-def Sens (setup : Setup) (served : List HashOutput) (probe : Bytes) : Prop :=
+@[expose] def Sens (setup : Setup) (served : List HashOutput) (probe : Bytes) : Prop :=
   SensitiveQuery.Sensitive (GraphStakes.stakes setup.publicSeed)
     (fun served index => ¬ available setup served index) setup.table.1 served probe
 
 /-- **The probe's verdict**: sensitive, or in the `PRF_msg` class at the real seed. -/
-def Guess (setup : Setup) (served : List HashOutput) (probe : Bytes) : Prop :=
+@[expose] def Guess (setup : Setup) (served : List HashOutput) (probe : Bytes) : Prop :=
   Sens setup served probe ∨ RandomizerGate.PrfClass setup.prf probe
 
 /-- **The entries a run may legitimately read**: the table's canonical answers at open nodes. -/
+@[expose]
 noncomputable def openAt (setup : Setup) (served : List HashOutput) : QueryCache HashSpec :=
   OpenCache.openCache setup.publicSeed (available setup served) setup.table
 
 /-- The cache the claims are read off: the open table, and then the oracle's entries. The open
 table comes first, as it does in the blind router (`route false`): an input the oracle cached
 while it was closed and that has since opened reads as the table answers it now. -/
-noncomputable def visible (setup : Setup) (state : St) : QueryCache HashSpec :=
+@[expose] noncomputable def visible (setup : Setup) (state : St) : QueryCache HashSpec :=
   QueryCache.ofFn fun input =>
   match openAt setup state.served input with
   | some value => some value
@@ -150,14 +151,14 @@ noncomputable def visible (setup : Setup) (state : St) : QueryCache HashSpec :=
 /-! ## Answering a hash query -/
 
 /-- The frame a `PRF_msg` input at the public seed carries. -/
-def prfFrame (input : Bytes) : Bytes := input.drop (2 * n)
+@[expose] def prfFrame (input : Bytes) : Bytes := input.drop (2 * n)
 
 /-- An input is the signer's `PRF_msg` input at its own frame. -/
-def IsPrfInput (setup : Setup) (input : Bytes) : Prop :=
+@[expose] def IsPrfInput (setup : Setup) (input : Bytes) : Prop :=
   input = Hashing.randomizerInput setup.prf setup.publicSeed (prfFrame input)
 
 /-- The plain oracle on the state's cache. -/
-noncomputable def plain (state : St) (input : Bytes) : ProbComp (HashOutput × St) :=
+@[expose] noncomputable def plain (state : St) (input : Bytes) : ProbComp (HashOutput × St) :=
   match state.cache input with
   | some value => pure (value, state)
   | none => do
@@ -165,7 +166,7 @@ noncomputable def plain (state : St) (input : Bytes) : ProbComp (HashOutput × S
       pure (value, { state with cache := state.cache.cacheQuery input value })
 
 /-- The signer's `PRF_msg` answer at a frame, drawn the first time it is asked. -/
-noncomputable def prfAt (state : St) (frame : Bytes) : ProbComp (HashOutput × St) :=
+@[expose] noncomputable def prfAt (state : St) (frame : Bytes) : ProbComp (HashOutput × St) :=
   match state.prfs frame with
   | some value => pure (value, state)
   | none => do
@@ -176,7 +177,7 @@ open scoped Classical in
 /-- **A hash query, routed.** The lenient handler answers every canonical input from the full
 table and the signer's `PRF_msg` inputs from its table; the blind one answers only open nodes
 from the table and everything else from the plain oracle. -/
-noncomputable def route (lenient : Bool) (setup : Setup) (state : St) (input : Bytes) :
+@[expose] noncomputable def route (lenient : Bool) (setup : Setup) (state : St) (input : Bytes) :
     ProbComp (HashOutput × St) :=
   match (if lenient then setup.warm else openAt setup state.served) input with
   | some value => pure (value, state)
@@ -200,10 +201,11 @@ abbrev ClaimSpec : OracleSpec Forgery := Forgery →ₒ Unit
 abbrev ShareSpec := OracleWorld + DrawSpec + AssembleSpec + ClaimSpec
 
 /-- A world query. -/
-def worldQuery (queried : OracleWorld.Domain) : ShareSpec.Domain :=
+@[expose] def worldQuery (queried : OracleWorld.Domain) : ShareSpec.Domain :=
   Sum.inl (Sum.inl (Sum.inl queried))
 
 /-- **A signing request, split.** -/
+@[expose]
 noncomputable def splitter : QueryImpl (OracleWorld + SigningSpec) (OracleComp ShareSpec) :=
   fun queried => match queried with
     | Sum.inl world => (query (spec := ShareSpec) (worldQuery world) :
@@ -215,22 +217,24 @@ noncomputable def splitter : QueryImpl (OracleWorld + SigningSpec) (OracleComp S
           OracleComp ShareSpec (Option Bytes))
 
 /-- The weight the cap counts: one per hash call, one per framed signing request. -/
-def weight : (OracleWorld + SigningSpec).Domain → Nat
+@[expose] def weight : (OracleWorld + SigningSpec).Domain → Nat
   | Sum.inl (Sum.inl _) => 0
   | Sum.inl (Sum.inr _) => 1
   | Sum.inr request => if request.frame.isSome then 1 else 0
 
 /-- The forgery a capped adversary gives up with. -/
+@[expose]
 def fallbackForgery : Forgery := { message := { context := [], message := [] }, signature := [] }
 
 /-- The verifier, as world queries of the game. -/
+@[expose]
 noncomputable def verifyShare (pk : PublicKey) (forgery : Forgery) : OracleComp ShareSpec Bool :=
   simulateQ (fun world => (query (spec := ShareSpec) (worldQuery world) :
       OracleComp ShareSpec (OracleWorld.Range world)))
     (Scheme.verify (m := OracleComp OracleWorld) pk forgery.message forgery.signature)
 
 /-- **The computation both games run.** -/
-noncomputable def shareComp (adversary : Adversary) (limit : Nat) (pk : PublicKey) :
+@[expose] noncomputable def shareComp (adversary : Adversary) (limit : Nat) (pk : PublicKey) :
     OracleComp ShareSpec (Forgery × Bool) := do
   let forgery ← simulateQ splitter
     (CapComp.capComp weight fallbackForgery limit (adversary.main pk))
@@ -241,6 +245,7 @@ noncomputable def shareComp (adversary : Adversary) (limit : Nat) (pk : PublicKe
 /-! ## The handlers -/
 
 /-- **The forgery's claimed candidates**, read off the visible cache. -/
+@[expose]
 noncomputable def claimsOf (setup : Setup) (state : St) (forgery : Forgery) : List Bytes :=
   match forgery.message.frame, Signature.fromBytes? forgery.signature with
   | some message, some parsed =>
@@ -250,7 +255,7 @@ noncomputable def claimsOf (setup : Setup) (state : St) (forgery : Forgery) : Li
 
 /-- **The claimed candidates not yet filed** at these digests. A claim that repeats an entry the
 record already holds at the same digests (one the verifier filed, say) files nothing new. -/
-def unfiled (record : List (Bytes × List HashOutput)) (served : List HashOutput)
+@[expose] def unfiled (record : List (Bytes × List HashOutput)) (served : List HashOutput)
     (candidates : List Bytes) : List Bytes :=
   candidates.filter fun candidate => decide ((candidate, served) ∉ record)
 
@@ -263,7 +268,7 @@ theorem mem_unfiled {record : List (Bytes × List HashOutput)} {served : List Ha
 
 open scoped Classical in
 /-- **The handler**, lenient or blind, with the sticky flag beside its state. -/
-noncomputable def handler (lenient : Bool) (setup : Setup) :
+@[expose] noncomputable def handler (lenient : Bool) (setup : Setup) :
     QueryImpl ShareSpec (StateT (St × Bool) ProbComp) :=
   fun queried state => match queried with
     | Sum.inl (Sum.inl (Sum.inl (Sum.inl coin))) => do

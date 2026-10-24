@@ -22,7 +22,7 @@ of `2 ^ -128` and one whose public key encodes an address prefix costs `2 ^ -165
 both. `pairedRun` and `pairedFused` play the game after a walk and keep the walk's value, and
 `pairedRun_eq_map_pairedFused` relates the two presentations. -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -34,7 +34,7 @@ open Security CanonicalGraph WarmedGame
 
 /-- A walk the three charges can be read against: its two seeds differ, and its public key is
 no coincidence. -/
-def GoodWalk (walk : ((Digest × Digest × Digest) × Cells) × QueryCache HashSpec) : Prop :=
+@[expose] def GoodWalk (walk : ((Digest × Digest × Digest) × Cells) × QueryCache HashSpec) : Prop :=
   walk.1.1.2.1 ≠ walk.1.1.2.2 ∧
     ¬ HashSeparation.Possible (walk.1.1.2.2, walk.1.2 (.structural WalkDefects.topNode))
 
@@ -66,7 +66,7 @@ and stays at a fixed walk: its charges are guesses at the tail's own fresh answe
 choice of adversary can bias in advance. -/
 
 /-- The walk and the game that follows it, with the walk's value retained. -/
-noncomputable def pairedRun (adversary : Adversary) :
+@[expose] noncomputable def pairedRun (adversary : Adversary) :
     ProbComp ((((Digest × Digest × Digest) × Cells) × QueryCache HashSpec) ×
       ((Outcome × Nat) × QueryCache HashSpec)) := do
   let walk ← graphWalk
@@ -80,7 +80,7 @@ answer half's own term. -/
 
 /-- The small defects, with the **answer half's own term a parameter**. The other two are the
 walk's, and the walk pays them whatever the answer half's bound turns out to be. -/
-noncomputable def defectsAt (answerDefect : ℝ≥0∞) : ℝ≥0∞ :=
+@[expose] noncomputable def defectsAt (answerDefect : ℝ≥0∞) : ℝ≥0∞ :=
   answerDefect +
     ((1 : ℝ≥0∞) / ((2 ^ 128 : Nat) : ℝ≥0∞) + (1 : ℝ≥0∞) / ((2 ^ 165 : Nat) : ℝ≥0∞))
 
@@ -101,7 +101,7 @@ restatement sound is `hforget` alone, an equality of computations. The walk's ow
 coincidences are paid inside the refined paired run exactly as they are inside the plain one. -/
 
 /-- The walk and a refining tail played from it. -/
-noncomputable def pairedFused {γ : Type}
+@[expose] noncomputable def pairedFused {γ : Type}
     (fused : (((Digest × Digest × Digest) × Cells) × QueryCache HashSpec) → ProbComp γ) :
     ProbComp ((((Digest × Digest × Digest) × Cells) × QueryCache HashSpec) × γ) := do
   let walk ← graphWalk

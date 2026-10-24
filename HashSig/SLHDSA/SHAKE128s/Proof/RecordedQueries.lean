@@ -45,7 +45,7 @@ for an arbitrary writer and handler, with the game-level statement an instance o
 one handler at two writers and concludes an equality of computations.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -116,7 +116,7 @@ is at most the multiset's. -/
 abbrev Tally := Counts × Multiset Bytes
 
 /-- What a query records: its own input if it is a hash call, nothing for a coin. -/
-def recordOf : OracleWorld.Domain → Multiset Bytes
+@[expose] def recordOf : OracleWorld.Domain → Multiset Bytes
   | .inl _ => 0
   | .inr input => {input}
 
@@ -126,7 +126,7 @@ theorem card_recordOf (queried : OracleWorld.Domain) :
   rcases queried with _ | _ <;> rfl
 
 /-- The projection that forgets the record. -/
-def forget : Multiplicative Tally → Multiplicative Counts :=
+@[expose] def forget : Multiplicative Tally → Multiplicative Counts :=
   fun tally => Multiplicative.ofAdd (Multiplicative.toAdd tally).1
 
 /-- Forgetting the record preserves the unit. -/
@@ -140,7 +140,7 @@ theorem forget_mul (left right : Multiplicative Tally) :
 abbrev RecordedRun := AddWriterT Tally (StateT SigningLog (OracleComp OracleWorld))
 
 /-- The adversary's own oracle, recording the input of every hash call it forwards. -/
-noncomputable def recordedAdversaryImpl : QueryImpl OracleWorld RecordedRun :=
+@[expose] noncomputable def recordedAdversaryImpl : QueryImpl OracleWorld RecordedRun :=
   (QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld))).withAddCost
     (fun input => (Counts.single .hash (hashCost input), recordOf input))
 
@@ -178,7 +178,7 @@ theorem run_liftM_inner {ω : Type} [Monoid ω] {α : Type}
 
 /-- The signing oracle, recording nothing: the signer is honest, so its calls are not charged
 and must not be recorded. -/
-noncomputable def recordedSigningOracle
+@[expose] noncomputable def recordedSigningOracle
     (signer : Message → OracleComp OracleWorld (Option Bytes)) :
     QueryImpl SigningSpec RecordedRun := fun request => do
   AddWriterT.addTell ((Counts.single .signing 1, (0 : Multiset Bytes)))
@@ -217,7 +217,7 @@ theorem run_signingOracle_map
 /-! ### The verifier's instrumentation at the recording writer -/
 
 /-- The verifier's instrumentation, recording as well as counting. -/
-noncomputable def countRecorded {α : Type} (cost : OracleWorld.Domain → Tally)
+@[expose] noncomputable def countRecorded {α : Type} (cost : OracleWorld.Domain → Tally)
     (computation : OracleComp OracleWorld α) : OracleComp OracleWorld (α × Tally) :=
   (fun result => (result.1, Multiplicative.toAdd result.2)) <$>
     (simulateQ (addCostOracle cost) computation).run
@@ -237,7 +237,7 @@ theorem countQueries_eq_map_countRecorded {α : Type} (cost : OracleWorld.Domain
   rfl
 
 /-- The verifier's cost: charge the call and record its input. -/
-noncomputable def verifierCost : OracleWorld.Domain → Tally :=
+@[expose] noncomputable def verifierCost : OracleWorld.Domain → Tally :=
   fun input => (Counts.single .verification (hashCost input), recordOf input)
 
 /-- The verifier's own instrumentation, at the spelling the game uses. -/
@@ -254,6 +254,7 @@ stripped precisely so that its queries cannot be sensitive, and recording it wou
 back. -/
 
 /-- The stripped game, recording the adversary's and the verifier's own hash inputs. -/
+@[expose]
 noncomputable def recordedAfterSeeds (adversary : Adversary) (sds : Digest × Digest × Digest)
     (warm : QueryCache HashSpec) : OracleComp OracleWorld (Outcome × Multiset Bytes) := do
   let (sk, pk) ← StrippedGame.strippedKeygen warm sds
@@ -314,7 +315,7 @@ the same per-query size, the cardinality of the record equals the charged work s
 That is the whole advantage of recording in the writer rather than at the oracle. -/
 
 /-- A cost whose record has exactly the cardinality its counters charge. -/
-def Faithful (cost : OracleWorld.Domain → Tally) : Prop :=
+@[expose] def Faithful (cost : OracleWorld.Domain → Tally) : Prop :=
   ∀ queried, Multiset.card (cost queried).2 = ((cost queried).1).work
 
 /-- The adversary's cost is faithful. -/

@@ -34,7 +34,7 @@ one handler with the keys handed in (`keysOf`) and the record kept. It is reache
 own cells and padding, the form `KeygenValue.run_recordedAfterSeeds` is stated at.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -53,13 +53,13 @@ theorem walkOfTable_cache (prfSeed publicSeed : Digest) (table : Cells × Paddin
 
 /-- The keys the drawn table's own cache determines. Their only table coordinates are the secret
 seed and the honest root, which is what the charge's blindness hypothesis asks of them. -/
-noncomputable def keysOf (prfSeed publicSeed : Digest) (table : Cells × Padding) :
+@[expose] noncomputable def keysOf (prfSeed publicSeed : Digest) (table : Cells × Padding) :
     SecretKey × PublicKey :=
   KeygenValue.honestKeys (table.1 Node.secretSeed, prfSeed, publicSeed)
     (fullOutput table.1 table.2)
 
 /-- The game at a drawn table, as one computation under one handler. -/
-noncomputable def linkedRun (adversary : Adversary) (prfSeed publicSeed : Digest)
+@[expose] noncomputable def linkedRun (adversary : Adversary) (prfSeed publicSeed : Digest)
     (table : Cells × Padding) :
     ProbComp ((((Forgery × Multiplicative RecordedQueries.Tally) ×
       (Bool × RecordedQueries.Tally)) × SigningLog) × QueryCache HashSpec) :=

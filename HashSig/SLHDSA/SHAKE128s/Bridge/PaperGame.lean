@@ -18,7 +18,7 @@ The security proof is carried out on a direct transcription of SLH-DSA-SHAKE-128
 (`hasSecurityBits_model_iff`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -26,7 +26,7 @@ namespace SlhDsaSecurity.Bridge
 
 /-- The proof's transcription of SLH-DSA-SHAKE-128s, as a pure-mode scheme over one oracle with
 `240`-bit answers. -/
-noncomputable def model : Game.ExternalScheme HashOutput PublicKey SecretKey where
+@[expose] noncomputable def model : Game.ExternalScheme HashOutput PublicKey SecretKey where
   keygen := Scheme.keygen
   sign := Scheme.sign
   verify := Scheme.verify

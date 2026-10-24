@@ -36,7 +36,7 @@ charged. So this is applied to `Scheme.keygenInternal` and `Scheme.sign` inside 
 experiment, not to the experiment.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -45,7 +45,7 @@ namespace SlhDsaSecurity.StripCached
 open CacheReplay
 
 /-- Answer from the cache where it can, and forward the rest. -/
-def stripImpl (cache : QueryCache HashSpec) : QueryImpl HashSpec (OracleComp HashSpec) :=
+@[expose] def stripImpl (cache : QueryCache HashSpec) : QueryImpl HashSpec (OracleComp HashSpec) :=
   fun input =>
     match cache input with
     | some value => pure value

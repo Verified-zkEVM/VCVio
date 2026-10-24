@@ -35,7 +35,7 @@ with the carrier's served set, its framing and the counter projected away by
 `BracketedRun.forgetCarrier`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -46,7 +46,7 @@ variable {α β : Type}
 open Security RecorderView CarriedWitness PhaseFusion RecordedQueries BracketedRun
 
 /-- The carrier a run starts from: the walk's cache, nothing served, nothing in flight. -/
-def startAt (cache : QueryCache HashSpec) : HandlerCarrier.State :=
+@[expose] def startAt (cache : QueryCache HashSpec) : HandlerCarrier.State :=
   { cache := cache, served := 0, framing := none }
 
 /-- The key the walk generates, which both tests are read at. -/
@@ -54,12 +54,12 @@ noncomputable abbrev keyAt (walk : Walk) : PublicKey :=
   SplitCharged.generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 walk.2
 
 /-- The handler the tail runs under: the recorder that notices, at the walk's key, counting. -/
-noncomputable def handlerAt (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
+@[expose] noncomputable def handlerAt (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) : QueryImpl OracleWorld (StateT CountedState ProbComp) :=
   CarrierFiles.countedCarrierRecorder (keyAt walk) (rightKeep walk)
 
 /-- **The tail.** -/
-noncomputable def carrierTail
+@[expose] noncomputable def carrierTail
     (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) : LateProbes.FusedTail :=
   fun adversary walk =>
     (simulateQ (handlerAt rightKeep walk)

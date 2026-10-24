@@ -21,7 +21,7 @@ public-key compression collision, or a WOTS chain collision. This composes the M
 and WOTS extractions for a single layer; chaining all seven layers and discharging the
 checksum-antichain argument is handled separately. No collision resistance is assumed. -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -30,13 +30,13 @@ namespace SlhDsaSecurity.Extraction.Hypertree
 variable [HasQuery HashSpec Id]
 
 /-- The WOTS key-pair address of leaf `l` in the subtree at `(layer, tree)`. -/
-def wotsAddress (layer tree : Nat) (l : SlhDsaSecurity.Hypertree.LeafIndex) : Address :=
+@[expose] def wotsAddress (layer tree : Nat) (l : SlhDsaSecurity.Hypertree.LeafIndex) : Address :=
   SlhDsaSecurity.Merkle.wotsAddress (SlhDsaSecurity.Hypertree.address layer tree) l.val
 
 /-- A concrete collision inside one layer's verification: a Merkle authentication-path
 collision, the WOTS compression collision, or a WOTS chain collision. Each witness
 names a specific queried oracle input. -/
-def LayerCollision (secretSeed publicSeed message : Digest) (layer tree : Nat)
+@[expose] def LayerCollision (secretSeed publicSeed message : Digest) (layer tree : Nat)
     (l : SlhDsaSecurity.Hypertree.LeafIndex) (xsig : XmssSignature) : Prop :=
   let address := SlhDsaSecurity.Hypertree.address layer tree
   let wa := wotsAddress layer tree l

@@ -19,7 +19,7 @@ arithmetic this uses, together with `foldlM_id`, which reads a monadic fold in `
 fold.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.Correctness
 

@@ -34,7 +34,7 @@ the shared oracle's run on the nose. `run_recorder_forget` is that, by one induc
 conjuncts fall out of it.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -61,7 +61,7 @@ noncomputable abbrev rightKeepAt
     (SplitCharged.generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 walk.2)
 
 /-- **The tail the ordering term reads**: the recorded game, run under the recorder. -/
-noncomputable def fusedTail : LateProbes.FusedTail :=
+@[expose] noncomputable def fusedTail : LateProbes.FusedTail :=
   fun adversary walk =>
     (simulateQ (recorder (leftKeepAt walk) (rightKeepAt walk))
       (countAllHashes (RecordedTail.recordedAfterSeeds adversary walk.1.1))).run

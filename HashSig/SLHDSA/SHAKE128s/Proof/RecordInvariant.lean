@@ -33,7 +33,7 @@ carries a `Counts` where the counted one carries a `Nat`, and an invariant inter
 not follow it there would have to be written twice.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

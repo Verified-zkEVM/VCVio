@@ -17,7 +17,7 @@ Deterministic correctness of the standard WOTS+ algorithms under any fixed hash,
 signature returns the public key.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

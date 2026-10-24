@@ -21,11 +21,12 @@ all needed integrability from the concrete product measure, and `poisson_sixth_s
 the sixth centered moment of the potential, the input to a Markov-type tail bound.
 
 This module concerns independent Poisson loads only: it does not compare them with uniform
+@[expose]
 instance selections, does not claim that adaptively generated signing transcripts have this law,
 and does not prove SLH-DSA security.
 -/
 
-@[expose] public section
+public section
 
 open MeasureTheory ProbabilityTheory
 
@@ -75,7 +76,7 @@ lemma independent_integral_add_power (hi : IndepFun X Y μ) (order : Nat)
 
 /-- Moments through order six of a sum of `count` independent centered identically distributed
 random variables with moments `m`, as polynomials in `count` (valid also for `count = 0, 1`). -/
-def sumMoment (m : Nat → ℝ) (count order : Nat) : ℝ :=
+@[expose] def sumMoment (m : Nat → ℝ) (count order : Nat) : ℝ :=
   let n : ℝ := count
   match order with
   | 0 => 1
@@ -144,20 +145,20 @@ lemma independent_sum_moments {ι : Type*} [IsProbabilityMeasure μ]
 end IndependentPowers
 
 /-- Independent rate-three Poisson loads, before any coupling to fixed-size sampling. -/
-noncomputable def poissonLoads (bins : Nat) : Measure (Fin bins → Nat) :=
+@[expose] noncomputable def poissonLoads (bins : Nat) : Measure (Fin bins → Nat) :=
   Measure.pi (fun _ => poissonMeasure 3)
 
 /-- The independent Poisson loads form a probability measure. -/
-instance (bins : Nat) : IsProbabilityMeasure (poissonLoads bins) := by
+@[expose] instance (bins : Nat) : IsProbabilityMeasure (poissonLoads bins) := by
   unfold poissonLoads
   infer_instance
 
 /-- The fourteenth power of a load, centered by its mean under a rate-three Poisson law. -/
-noncomputable def centeredLoad (n : Nat) : ℝ :=
+@[expose] noncomputable def centeredLoad (n : Nat) : ℝ :=
   (n : ℝ) ^ 14 - (ForsMoments.touchard 14 3 : ℝ)
 
 /-- The sum of the centered loads over all bins. -/
-noncomputable def centeredLoadSum {bins : Nat} (loads : Fin bins → Nat) : ℝ :=
+@[expose] noncomputable def centeredLoadSum {bins : Nat} (loads : Fin bins → Nat) : ℝ :=
   ∑ i, centeredLoad (loads i)
 
 /-- The moments up to order six of `centeredLoadSum` under `poissonLoads` are `sumMoment` of the
@@ -217,7 +218,7 @@ lemma poisson_sixth_sum_bound :
     _ = _ := by norm_num
 
 /-- The load potential: the sum of the fourteenth powers of all loads. -/
-noncomputable def loadPotential {bins : Nat} (loads : Fin bins → Nat) : ℝ :=
+@[expose] noncomputable def loadPotential {bins : Nat} (loads : Fin bins → Nat) : ℝ :=
   ∑ i, (loads i : ℝ) ^ 14
 
 /-- The centered load sum is the potential minus its mean. -/

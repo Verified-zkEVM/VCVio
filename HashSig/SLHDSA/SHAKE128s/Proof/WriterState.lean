@@ -20,7 +20,7 @@ then answering it with the uncharged handler. This is an equality of computation
 their laws; `run_withAddCost_apply` is the single-query case.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

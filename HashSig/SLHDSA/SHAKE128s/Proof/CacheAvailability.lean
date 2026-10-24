@@ -43,7 +43,7 @@ different answer selects different positions. No sound instance can be, since wh
 digest opens is not a function of which inputs were asked.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -58,7 +58,7 @@ with the same answer. It is what a run of the lazy handler actually does, and it
 stronger than the growth of the cache's domain. -/
 
 /-- Every entry of the first cache is still present, with its answer, in the second. -/
-def Persists (left right : QueryCache HashSpec) : Prop :=
+@[expose] def Persists (left right : QueryCache HashSpec) : Prop :=
   ∀ (probe : Bytes) (value : HashOutput), left probe = some value → right probe = some value
 
 /-- Every cache persists into itself. -/
@@ -89,7 +89,7 @@ the walk fixes the secret and an adversary may carry it as a constant — so it 
 
 /-- A message input whose randomiser is the one the signer derives for that message, with the
 derivation's own query in the cache. -/
-def SignerRandomised (prfSeed : Digest) (pk : PublicKey) (cache : QueryCache HashSpec)
+@[expose] def SignerRandomised (prfSeed : Digest) (pk : PublicKey) (cache : QueryCache HashSpec)
     (input : Bytes) : Prop :=
   ∃ (message : Bytes) (prfAnswer : HashOutput),
     cache (Hashing.randomizerInput prfSeed pk.seed message) = some prfAnswer ∧
@@ -97,6 +97,7 @@ def SignerRandomised (prfSeed : Digest) (pk : PublicKey) (cache : QueryCache Has
 
 open scoped Classical in
 /-- **The FORS positions some cached digest of the signer's own discloses.** -/
+@[expose]
 noncomputable def signedAt (prfSeed : Digest) (pk : PublicKey) (cache : QueryCache HashSpec)
     (key : ForsKey) : Finset (Fin (forsTrees * 2 ^ forsHeight)) :=
   Finset.univ.filter fun index =>

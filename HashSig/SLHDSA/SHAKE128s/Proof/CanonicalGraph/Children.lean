@@ -17,13 +17,13 @@ input, and `StructuralNode.child_rank_lt` shows every child has strictly smaller
 canonical graph is well founded.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.CanonicalGraph
 
 /-- The node at `height` and `index` of an XMSS tree: a WOTS public key at height zero, an
 internal tree node above it. -/
-def merkleNode (tree : Tree) (height : Nat) (hheight : height ≤ subtreeHeight)
+@[expose] def merkleNode (tree : Tree) (height : Nat) (hheight : height ≤ subtreeHeight)
     (index : Fin (2 ^ (subtreeHeight - height))) : StructuralNode :=
   if hzero : height = 0 then
     .wotsPk ⟨tree, ⟨index.val, by simpa [hzero] using index.isLt⟩⟩
@@ -50,7 +50,7 @@ theorem child_index_lt (height level count : Nat) (hlt : level < height)
   omega
 
 /-- The `side` child of the internal XMSS node at `height + 1` and `index`. -/
-def merkleChild (tree : Tree) (height : Fin subtreeHeight)
+@[expose] def merkleChild (tree : Tree) (height : Fin subtreeHeight)
     (index : Fin (2 ^ (subtreeHeight - (height.val + 1)))) (side : Fin 2) : StructuralNode :=
   merkleNode tree height.val (Nat.le_of_lt height.isLt)
     ⟨2 * index.val + side.val, by
@@ -65,7 +65,7 @@ theorem merkleChild_rank (tree : Tree) (height : Fin subtreeHeight)
   merkleNode_rank _ _ _ _
 
 /-- The `side` child of the FORS node at positive `height` and `index`. -/
-def forsChild (key : ForsKey) (height : Fin (forsHeight + 1))
+@[expose] def forsChild (key : ForsKey) (height : Fin (forsHeight + 1))
     (hpos : 0 < height.val)
     (index : Fin (forsTrees * 2 ^ (forsHeight - height.val))) (side : Fin 2) : StructuralNode :=
   .forsTree key ⟨height.val - 1, by omega⟩
@@ -76,7 +76,7 @@ def forsChild (key : ForsKey) (height : Fin (forsHeight + 1))
         ⟨index.val, by simpa only [hback] using index.isLt⟩ side⟩
 
 /-- The nodes a structural hash call reads, in input order. -/
-def StructuralNode.children : StructuralNode → List Node
+@[expose] def StructuralNode.children : StructuralNode → List Node
   | .wotsPrf _ _ => [.secretSeed]
   | .wotsHash key chain step =>
       if hzero : step.val = 0 then [.structural (.wotsPrf key chain)]

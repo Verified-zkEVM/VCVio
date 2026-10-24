@@ -27,7 +27,7 @@ lenient game is. This file gets it there in two moves.
   verifier's two layers likewise.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -84,7 +84,7 @@ abbrev RealState := Multiplicative Tally × SigningLog × QueryCache HashSpec
 
 /-- **The real phase as one handler** over the adversary's oracles: a world query is the oracle's
 step, charged; a signing request runs the signer against the oracle and is logged. -/
-noncomputable def realImpl (signer : Message → OracleComp OracleWorld (Option Bytes)) :
+@[expose] noncomputable def realImpl (signer : Message → OracleComp OracleWorld (Option Bytes)) :
     QueryImpl (OracleWorld + SigningSpec) (StateT RealState ProbComp) :=
   fun queried state => match queried with
     | Sum.inl world =>
@@ -196,7 +196,7 @@ theorem run_flat (signer : Message → OracleComp OracleWorld (Option Bytes)) {�
 abbrev VerifyState := Multiplicative Tally × QueryCache HashSpec
 
 /-- **The verifier as one handler**: the oracle's step, charged as verification. -/
-noncomputable def realWorldImpl : QueryImpl OracleWorld (StateT VerifyState ProbComp) :=
+@[expose] noncomputable def realWorldImpl : QueryImpl OracleWorld (StateT VerifyState ProbComp) :=
   fun world state =>
     (fun z => (z.1, (state.1 * Multiplicative.ofAdd (verifierCost world), z.2))) <$>
       (KeygenUniform.rom world).run state.2
@@ -253,7 +253,7 @@ theorem rom_verify_eq {α : Type} (computation : OracleComp OracleWorld α)
 
 /-- **The real game at a drawn table, flattened**: the adversary's phase under one handler, then
 the verifier under another. -/
-noncomputable def realFlat (adversary : Adversary) (keys : SecretKey × PublicKey)
+@[expose] noncomputable def realFlat (adversary : Adversary) (keys : SecretKey × PublicKey)
     (warm : QueryCache HashSpec) :
     ProbComp ((((Forgery × Multiplicative Tally) × (Bool × Tally)) × SigningLog) ×
       QueryCache HashSpec) := do

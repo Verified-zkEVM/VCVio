@@ -23,7 +23,7 @@ signed names a different input, and names nothing the signer served. It also let
 the framing through `Hashing.messageInput_injective`, with no collision bound anywhere.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -33,7 +33,7 @@ open Security
 
 /-- The digest inputs the signer has served, read off the log: for each answered request, the
 input its own signature's randomiser and its own framing name. -/
-def servedLog (pk : PublicKey) (result : (Outcome × Nat) × QueryCache HashSpec)
+@[expose] def servedLog (pk : PublicKey) (result : (Outcome × Nat) × QueryCache HashSpec)
     (input : Bytes) : Prop :=
   ∃ entry ∈ result.1.1.signed, ∃ (framed : Bytes) (bytes : Bytes) (parsed : Signature),
     entry.1.frame = some framed ∧ entry.2 = some bytes ∧
@@ -64,7 +64,7 @@ theorem entry_of_servedLog (pk : PublicKey)
 
 open scoped Classical in
 /-- The FORS positions the log's served requests disclose, read off the log. -/
-noncomputable def disclosedByLog (pk : PublicKey)
+@[expose] noncomputable def disclosedByLog (pk : PublicKey)
     (result : (Outcome × Nat) × QueryCache HashSpec) (key : CanonicalGraph.ForsKey) :
     Finset (Fin (forsTrees * 2 ^ forsHeight)) :=
   Finset.univ.filter fun index =>

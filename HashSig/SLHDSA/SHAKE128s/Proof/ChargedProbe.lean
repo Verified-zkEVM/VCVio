@@ -18,7 +18,7 @@ The only result here is `sum_tsum_comm`, the exchange of a finite sum over cells
 expectation over run results, used when per-cell charges are summed under one measure.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

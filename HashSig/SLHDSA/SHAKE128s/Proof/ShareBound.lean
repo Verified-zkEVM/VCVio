@@ -31,7 +31,7 @@ An entry locating a node is prefixed by the public seed, so the two kinds of gue
 against disjoint parts of the record and add to at most its length (`charged_le_length`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -44,7 +44,7 @@ open Security CanonicalGraph ShareGame ShareFlag ShareBlindFacts
 /-! ## The record's length -/
 
 /-- The game's handler, read at the verifier's oracles. -/
-noncomputable def worldImpl (lenient : Bool) (setup : Setup) :
+@[expose] noncomputable def worldImpl (lenient : Bool) (setup : Setup) :
     QueryImpl OracleWorld (StateT (St × Bool) ProbComp) :=
   QueryImpl.compose (handler lenient setup) fun world =>
     (query (spec := ShareSpec) (worldQuery world) : OracleComp ShareSpec (OracleWorld.Range world))
@@ -228,17 +228,17 @@ theorem countP_located_add_le (publicSeed : Digest) (entries : List (Bytes × Li
 /-! ## The two games at a public seed -/
 
 /-- The blind run at a setup, flag carried. -/
-noncomputable def flagRun (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool))
+@[expose] noncomputable def flagRun (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool))
     (setup : Setup) : ProbComp ((Forgery × Bool) × (St × Bool)) :=
   (simulateQ (handler false setup) (comp setup.pk)).run (St.start, false)
 
 /-- The blind run at a setup, flag dropped. -/
-noncomputable def blindRun (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool))
+@[expose] noncomputable def blindRun (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool))
     (setup : Setup) : ProbComp ((Forgery × Bool) × St) :=
   (simulateQ (blindStep setup) (comp setup.pk)).run St.start
 
 /-- The blind run at a setup in its filing form, flag carried. -/
-noncomputable def filingRun (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool))
+@[expose] noncomputable def filingRun (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool))
     (setup : Setup) : ProbComp ((Forgery × Bool) × (St × Bool)) :=
   (simulateQ (filing setup) (comp setup.pk)).run (St.start, false)
 
@@ -259,7 +259,7 @@ theorem blindRun_prf (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool
   rw [blindStep_prf publicSeed table.1 prf prf' table.2, pk_prf publicSeed table.1 prf prf' table.2]
 
 /-- **The blind game at a public seed**: `SK.prf` and the table drawn, the run beside them. -/
-noncomputable def flagGame (publicSeed : Digest)
+@[expose] noncomputable def flagGame (publicSeed : Digest)
     (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
     ProbComp (Setup × ((Forgery × Bool) × (St × Bool))) := do
   let prf ← ($ᵗ Digest : ProbComp Digest)
@@ -268,7 +268,7 @@ noncomputable def flagGame (publicSeed : Digest)
   pure (⟨prf, publicSeed, table⟩, z)
 
 /-- The same, flag dropped. -/
-noncomputable def blindGame (publicSeed : Digest)
+@[expose] noncomputable def blindGame (publicSeed : Digest)
     (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
     ProbComp (Setup × ((Forgery × Bool) × St)) := do
   let prf ← ($ᵗ Digest : ProbComp Digest)
@@ -277,7 +277,7 @@ noncomputable def blindGame (publicSeed : Digest)
   pure (⟨prf, publicSeed, table⟩, z)
 
 /-- The same, in the filing form. -/
-noncomputable def filingGame (publicSeed : Digest)
+@[expose] noncomputable def filingGame (publicSeed : Digest)
     (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
     ProbComp (Setup × ((Forgery × Bool) × (St × Bool))) := do
   let prf ← ($ᵗ Digest : ProbComp Digest)
@@ -316,7 +316,7 @@ theorem probEvent_flagGame_eq (publicSeed : Digest)
   exact probEvent_flagRun_eq comp _
 
 /-- The blind run at a drawn table, `SK.prf` fixed at a default. -/
-noncomputable def tableGame (publicSeed : Digest)
+@[expose] noncomputable def tableGame (publicSeed : Digest)
     (comp : PublicKey → OracleComp ShareSpec (Forgery × Bool)) :
     ProbComp ((Cells × Padding) × ((Forgery × Bool) × St)) := do
   let table ← ($ᵗ (Cells × Padding) : ProbComp (Cells × Padding))
@@ -348,7 +348,7 @@ theorem flag_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec
 /-! ## The cell guesses -/
 
 /-- What a frozen run answers: anything. -/
-def stall : (queried : ShareSpec.Domain) → ShareSpec.Range queried
+@[expose] def stall : (queried : ShareSpec.Domain) → ShareSpec.Range queried
   | Sum.inl (Sum.inl (Sum.inl (Sum.inl coin))) => (0 : Fin (coin + 1))
   | Sum.inl (Sum.inl (Sum.inl (Sum.inr _))) => (0 : HashOutput)
   | Sum.inl (Sum.inl (Sum.inr _)) => none
@@ -473,6 +473,7 @@ theorem prf_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec 
 open scoped Classical in
 /-- **The entries a charge pays for**: those locating a node, and those not prefixed by the
 public seed. -/
+@[expose]
 noncomputable def charged (publicSeed : Digest) (record : List (Bytes × List HashOutput)) : Nat :=
   record.countP (fun entry => ((GraphStakes.stakes publicSeed).locate entry.1).isSome) +
     record.countP (fun entry => decide (¬ Target127.SeedPrefixed publicSeed entry.1))

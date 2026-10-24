@@ -23,7 +23,7 @@ canonical, and the warm cache holds every canonical input, so stripping answers 
 locally and the computation collapses to its replay (`strip_eq_pure_of_probes`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -40,6 +40,7 @@ section Generic
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
 /-- **What the signer does once its digest is drawn.** -/
+@[expose]
 def signAfter (randomizer : Digest) (sk : SecretKey) (digest : HashOutput) : m Signature := do
   let indices := MessageDigest.forsIndices digest
   let address := Scheme.forsAddress digest
@@ -133,6 +134,7 @@ theorem strip_eq_pure_of_probes {α : Type} (cache : QueryCache HashSpec) :
 /-! ## The stripped signer at the walk's cache -/
 
 /-- **The signature the signer assembles from its randomiser and digest**, read off a cache. -/
+@[expose]
 noncomputable def cellSig (cache : QueryCache HashSpec) (sk : SecretKey) (randomizer : Digest)
     (digest : HashOutput) : Signature :=
   @signAfter Id _ (replayQuery cache) randomizer sk digest

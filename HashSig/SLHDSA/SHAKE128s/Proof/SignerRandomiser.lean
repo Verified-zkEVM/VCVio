@@ -32,7 +32,7 @@ That is the statement the hop's step-law equality rests on. The signer's randomi
 charge protects.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -43,6 +43,7 @@ open Security CacheReplay HonestProbes
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
 /-- `Scheme.signInternal` once its randomiser is in hand. -/
+@[expose]
 def signInternalAt (randomizer : Digest) (sk : SecretKey) (message : Bytes) : m Signature := do
   let digest ← Hashing.messageDigest randomizer sk.publicKey message
   let indices := MessageDigest.forsIndices digest

@@ -31,7 +31,7 @@ forms of the factorisation and of the cell correspondences, and `blockRunOf`, th
 two blocks it read kept beside its result.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -47,7 +47,7 @@ variable {σ : Type} [CacheView σ]
 /-- **The two-headed tape recorder, told about every query.** The notice is applied to the
 carrier before the step, exactly as `RecorderView.noticingRecorderOf` applies it before
 `recorderOf`'s; the two blocks and the two recordings ride through untouched. -/
-noncomputable def noticingSplitTapeRecorder (leftKeep rightKeep : Bytes → σ → Prop) :
+@[expose] noncomputable def noticingSplitTapeRecorder (leftKeep rightKeep : Bytes → σ → Prop) :
     QueryImpl OracleWorld (StateT (SplitTapeState σ) ProbComp) :=
   fun queried state =>
     match queried with
@@ -146,6 +146,7 @@ margin could be spent.
 -/
 
 /-- A run with the two blocks it read kept beside its result. -/
+@[expose]
 noncomputable def blockRunOf {ρ : Type} (run : List HashOutput → List HashOutput → ProbComp ρ)
     (leftLength rightLength : Nat) :
     ProbComp ((List HashOutput × List HashOutput) × ρ) :=
@@ -509,7 +510,7 @@ ones to the final, and nothing has to count how many cells the first stage ate.
 -/
 
 /-- The unread remainder of the target block. -/
-def rightTapeOf (state : SplitTapeState σ) : List HashOutput := state.2.1.2
+@[expose] def rightTapeOf (state : SplitTapeState σ) : List HashOutput := state.2.1.2
 
 open scoped Classical in
 /-- **Each recorded target answer is the block cell it was read from**, with a continuation. -/
@@ -614,7 +615,7 @@ theorem rightOf_getElem?_cont (leftKeep rightKeep : Bytes → σ → Prop)
         exact ih _ _ _ _ _ _ w hrest index hreached hcell
 
 /-- The unread remainder of the disclosing block. -/
-def leftTapeOf (state : SplitTapeState σ) : List HashOutput := state.2.1.1
+@[expose] def leftTapeOf (state : SplitTapeState σ) : List HashOutput := state.2.1.1
 
 open scoped Classical in
 /-- **Each recorded disclosing answer is the block cell it was read from**, with a continuation.

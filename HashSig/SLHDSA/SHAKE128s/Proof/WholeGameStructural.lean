@@ -20,7 +20,7 @@ cache and the count of every hash call, so a statement about the whole game's wo
 one run. `mem_support_runAll_of_mem_support` ties its support back to `runAll`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -29,7 +29,7 @@ namespace SlhDsaSecurity.WholeGameStructural
 open Security CanonicalGraph
 
 /-- The instrumented run, before the count is projected away. -/
-noncomputable def instrumentedRun (adversary : Adversary) :
+@[expose] noncomputable def instrumentedRun (adversary : Adversary) :
     ProbComp ((Outcome × Nat) × QueryCache HashSpec) :=
   (simulateQ KeygenUniform.rom (countAllHashes (experiment adversary))).run ∅
 

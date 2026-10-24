@@ -20,7 +20,7 @@ hash of its canonical input. `value_unique` shows that the evaluation is the onl
 satisfying these equations. Nothing here posits component security.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -30,7 +30,7 @@ variable [HasQuery HashSpec Id]
 
 /-- The value the SLH-DSA algorithms compute at a structural node, for fixed seeds and a fixed
 hash function. -/
-def structuralValue (secretSeed publicSeed : Digest) : StructuralNode → Digest
+@[expose] def structuralValue (secretSeed publicSeed : Digest) : StructuralNode → Digest
   | .wotsPrf key chain => Hashing.derive (m := Id) publicSeed secretSeed
       (Wots.secretAddress key.address chain)
   | .wotsHash key chain step =>
@@ -52,7 +52,7 @@ def structuralValue (secretSeed publicSeed : Digest) : StructuralNode → Digest
 
 /-- The actual evaluation of the canonical graph: the secret seed at its node and the computed
 value at every structural node. -/
-def value (secretSeed publicSeed : Digest) : Cells
+@[expose] def value (secretSeed publicSeed : Digest) : Cells
   | .secretSeed => secretSeed
   | .structural node => structuralValue secretSeed publicSeed node
 

@@ -35,7 +35,7 @@ the adversary's own handler is a hash-only computation lifted into the game's wo
 `WarmedSplit.run_rom_liftM` routes its run back to `randomOracle` alone.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

@@ -29,7 +29,7 @@ adversary's own calls, the verifier's and key generation's fit in `q`. That fact
 the signer's calls, which is the point.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -42,7 +42,7 @@ open Security
 /-! ## One run, counted twice -/
 
 /-- **Key generation counted, then the rest counted**, with both counts kept. -/
-noncomputable def joint (adversary : Adversary) :
+@[expose] noncomputable def joint (adversary : Adversary) :
     OracleComp OracleWorld (((SecretKey × PublicKey) × Nat) × (Outcome × Nat)) :=
   countAllHashes Scheme.keygen >>= fun first =>
     countAllHashes (afterKeygen adversary first.1) >>= fun second =>
@@ -154,7 +154,7 @@ theorem exists_sourceCounts (adversary : Adversary)
 
 /-- **The budget at the adversary's own work, read at the warmed tail**: at most `2 ^ 64`
 requests, and the requests, the adversary's own calls and the verifier's within `q`. -/
-def TailBudgetW (adversary : Adversary) (q : Nat) : Prop :=
+@[expose] def TailBudgetW (adversary : Adversary) (q : Nat) : Prop :=
   ∀ walk ∈ support WarmedGame.graphWalk, ∀ result ∈ support (WarmedGame.tail adversary walk),
     result.1.1.counts .signing ≤ signingLimit ∧
       result.1.1.counts.work + result.1.1.counts .signing ≤ q

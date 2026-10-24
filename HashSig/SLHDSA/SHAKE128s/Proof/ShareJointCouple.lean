@@ -22,7 +22,7 @@ accepted forgery, together with the real verifier's uncapped run that accepted i
 the input-side event reads.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
@@ -73,7 +73,7 @@ theorem lenient_eq (setup : Setup) (adversary : Adversary) (limit : Nat) :
 /-- **What the jointly capped coupling's two ends share.** Forgery and verdict agree; the real
 cache and log are the lenient state's; every recorded input is filed; and an accepted forgery's
 claims were taken, with the real verifier's uncapped run that accepted it. -/
-def FinalJ (setup : Setup)
+@[expose] def FinalJ (setup : Setup)
     (real : (((Forgery × Multiplicative RecordedQueries.Tally) × (Bool × RecordedQueries.Tally)) ×
       SigningLog) × QueryCache HashSpec)
     (lenient : (Forgery × Bool) × (St × Bool)) : Prop :=

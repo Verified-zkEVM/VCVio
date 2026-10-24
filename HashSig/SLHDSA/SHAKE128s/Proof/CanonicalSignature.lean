@@ -40,7 +40,7 @@ signer's in the replay case is that the two message inputs coincide, which is a 
 cache rather than about the signature.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

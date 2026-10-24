@@ -28,7 +28,7 @@ mass. `expect_run_le` turns the one-step bound into a whole-run bound, and the f
 three-stage forms follow because the brackets do not touch the cache or the recordings.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -86,7 +86,7 @@ open scoped Classical in
 /-- **The watched value of one input.** While it is uncached: the mass of the target set under
 one fresh draw. Once cached: whether it holds an answer in the set and sits in neither
 recording. -/
-noncomputable def watchValue (target : Bytes) (hits : HashOutput → Prop)
+@[expose] noncomputable def watchValue (target : Bytes) (hits : HashOutput → Prop)
     (state : SplitTapeState σ) : ℝ≥0∞ :=
   match CacheView.cacheOf state.1 target with
   | some answer =>

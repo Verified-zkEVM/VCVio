@@ -36,7 +36,7 @@ The substitution also makes the key explicit: it is `⟨sds.1, sds.2.1, ⟨sds.2
 only table coordinates are the secret seed and the honest root.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -45,14 +45,14 @@ namespace SlhDsaSecurity.KeygenValue
 open Security CacheReplay RecordedQueries
 
 /-- The keys the walk's cache determines. -/
-noncomputable def honestKeys (sds : Digest × Digest × Digest)
+@[expose] noncomputable def honestKeys (sds : Digest × Digest × Digest)
     (outputs : CanonicalGraph.Programming.Outputs) : SecretKey × PublicKey :=
   @Scheme.keygenInternal Id _
     (replayQuery (HonestProbes.warmCache sds.2.2 sds.1 outputs)) sds.1 sds.2.1 sds.2.2
 
 /-- The recorded game with its keys handed in rather than generated. The signer is the stripped
 one. -/
-noncomputable def recordedAfterSeedsAt (adversary : Adversary)
+@[expose] noncomputable def recordedAfterSeedsAt (adversary : Adversary)
     (keys : SecretKey × PublicKey) (warm : QueryCache HashSpec) :
     OracleComp OracleWorld (Outcome × Multiset Bytes) := do
   let adversaryStep ←

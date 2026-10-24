@@ -36,7 +36,7 @@ The lemmas here read the instrumented run back:
   the cache at which each of its entries was filed.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -52,7 +52,7 @@ open scoped Classical in
 the query is fresh and passes the left test, otherwise the right one takes it if it passes the
 right test, otherwise neither. The tests are tried in order, so a single answer is recorded
 once. -/
-noncomputable def appended (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
+@[expose] noncomputable def appended (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (input : Bytes) (state : SplitState) (answer : HashOutput) : Record × Record :=
   if state.1 input = none ∧ leftKeep input state.1 then
     (state.2.1 ++ [(input, answer)], state.2.2)
@@ -62,7 +62,7 @@ noncomputable def appended (leftKeep rightKeep : Bytes → QueryCache HashSpec �
 
 open scoped Classical in
 /-- The shared random oracle, keeping two recordings. -/
-noncomputable def recorder (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop) :
+@[expose] noncomputable def recorder (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop) :
     QueryImpl OracleWorld (StateT SplitState ProbComp) :=
   fun queried state =>
     match queried with

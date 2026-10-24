@@ -35,7 +35,7 @@ left. This is a fact about `Scheme.sign`, so it holds at every moment of a reque
 run.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -86,7 +86,7 @@ theorem sign_messageShape_randomizer (cache : QueryCache HashSpec) (sk : SecretK
 /-! ## The containment the composition needs -/
 
 /-- **What the composition needs**: the carrier serves no more than the log does. -/
-def CarrierBelowLog (pk : PublicKey) (state : ServingCarrier.Carrier)
+@[expose] def CarrierBelowLog (pk : PublicKey) (state : ServingCarrier.Carrier)
     (result : (Outcome × Nat) × QueryCache HashSpec) : Prop :=
   ∀ input : Bytes, ServingCarrier.Served state input → ServedLog.servedLog pk result input
 

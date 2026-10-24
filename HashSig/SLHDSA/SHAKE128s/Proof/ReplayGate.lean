@@ -38,7 +38,7 @@ rather than proved: `LogFaithful` is stated at the cache and the log, the two th
 target's trace carries, and not at the record.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -47,7 +47,7 @@ namespace SlhDsaSecurity.ReplayGate
 open Security CanonicalGraph CacheReplay Extraction VerifierProbes SplitCharged RoutedSplit
 
 /-- The secret key the walk's three seeds generate, read from this run's own cache. -/
-def secretKeyOf (x : Trace) : SecretKey :=
+@[expose] def secretKeyOf (x : Trace) : SecretKey :=
   ⟨x.1.1.1.1, x.1.1.1.2.1, keyOf x⟩
 
 /-! ## What the log says
@@ -57,7 +57,7 @@ request, read at this run's own cache — which is the same answer it computed w
 was made, because the cache only grows and a replayed query reads the entry that is there. -/
 
 /-- Every logged request carries the signer's own answer. -/
-def LogFaithful (x : Trace) : Prop :=
+@[expose] def LogFaithful (x : Trace) : Prop :=
   ∀ entry ∈ x.1.2.1.signed, ∀ framed : Bytes, entry.1.frame = some framed →
     entry.2 = some
       (@Scheme.signInternal Id Id.instMonad (replayQuery x.2) (secretKeyOf x) framed).toBytes

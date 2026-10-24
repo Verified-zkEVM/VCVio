@@ -28,7 +28,7 @@ on the recorded pair keeps its probability under `forgetRecordings`, by `probEve
 the presentation satisfies `ForgetsTo`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -52,13 +52,14 @@ abbrev SplitPair : Type :=
     (((Outcome × Multiset Bytes) × Nat) × SplitState)
 
 /-- The paired run at such a tail. -/
+@[expose]
 noncomputable def pairedOf (fused : FusedTail) (adversary : Adversary) : ProbComp SplitPair := do
   let walk <- WarmedGame.graphWalk
   let result <- fused adversary walk
   pure (walk, result)
 
 /-- The recorded pair a split pair forgets to: the recordings go, the cache stays. -/
-def forgetRecordings (pair : SplitPair) : SharedJoin.RecordedPair :=
+@[expose] def forgetRecordings (pair : SplitPair) : SharedJoin.RecordedPair :=
   (pair.1, (pair.2.1, pair.2.2.1))
 
 /-! ## What the forgetting map buys
@@ -73,7 +74,7 @@ It is an equality of **distributions**, not of computations. The two are differe
 and will stay different ones, while everything the join reads — a probability, a count, a
 support — is a function of the distribution alone. Asking for the stronger equation would be
 asking for something nobody can give and nothing here uses. -/
-def ForgetsTo (fused : FusedTail) (adversary : Adversary) : Prop :=
+@[expose] def ForgetsTo (fused : FusedTail) (adversary : Adversary) : Prop :=
   (∀ pair : SharedJoin.RecordedPair,
       Pr{let x ← forgetRecordings <$> pairedOf fused adversary}[x = pair] =
         Pr{let x ← RandomiserRecord.recordedPairedRun adversary}[x = pair]) ∧

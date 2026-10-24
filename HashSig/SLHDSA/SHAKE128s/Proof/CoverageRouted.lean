@@ -23,7 +23,7 @@ same position at the same FORS instance, and that is almost `CoverageTail.Covere
 reconciliations do the rest. A position determines the tree it sits in and the leaf inside it,
 since the leaf is below `2 ^ forsHeight` and the position is `tree * 2 ^ forsHeight + leaf`, so a
 witness at *some* tree is a witness at *that* tree. The FORS key a digest selects is its parsed
-instance, repackaged. And two message inputs are equal only when their randomiser, key and
+@[expose] instance, repackaged. And two message inputs are equal only when their randomiser, key and
 message all are.
 
 **The case that is left over.** `CoveredAt` asks for witnesses *other than the forgery's own*
@@ -42,7 +42,7 @@ signature a request returned.
 with the leftover case named rather than assumed away.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -93,10 +93,10 @@ is no fiction to charge. The narrow event implies the wide one, so a charge stat
 either applies. -/
 
 /-- The digest `answer` has each of its fourteen FORS leaves also selected, at the same FORS
-instance, by a cached digest at a *disclosing* input other than the target. Which inputs
+@[expose] instance, by a cached digest at a *disclosing* input other than the target. Which inputs
 disclose is a parameter: the extraction reads it off the signing log, while the join that sends
 the event into the two recordings reads it off the recorder's own test. -/
-def DisclosedCoveredBy (disclosing : Bytes → Prop) (cache : QueryCache HashSpec)
+@[expose] def DisclosedCoveredBy (disclosing : Bytes → Prop) (cache : QueryCache HashSpec)
     (target : Bytes) (answer : HashOutput) : Prop :=
   ∀ tree : MessageDigest.ForsTree, ∃ (other : Bytes) (otherAnswer : HashOutput),
     other ≠ target ∧ disclosing other ∧ cache other = some otherAnswer ∧
@@ -106,7 +106,7 @@ def DisclosedCoveredBy (disclosing : Bytes → Prop) (cache : QueryCache HashSpe
 /-- **The coverage event at the forgery's own digest, counted on a disclosing class.** The
 target is a digest that does *not* disclose: one that does is the replay case, which the split
 sends elsewhere, and the charge counts targets outside the disclosing class. -/
-def ForgeryCoveredBy (disclosing : Bytes → Prop) (pk : PublicKey)
+@[expose] def ForgeryCoveredBy (disclosing : Bytes → Prop) (pk : PublicKey)
     (result : (Outcome × Nat) × QueryCache HashSpec) : Prop :=
   ∃ (message : Bytes) (parsed : Signature) (answer : HashOutput),
     result.1.1.forgery.message.frame = some message ∧
@@ -117,7 +117,7 @@ def ForgeryCoveredBy (disclosing : Bytes → Prop) (pk : PublicKey)
               (Hashing.messageInput parsed.randomizer pk message) answer
 
 /-- **The coverage event at the forgery's own digest, counted on the served class.** -/
-def ForgeryDisclosedCovered (pk : PublicKey)
+@[expose] def ForgeryDisclosedCovered (pk : PublicKey)
     (result : (Outcome × Nat) × QueryCache HashSpec) : Prop :=
   ForgeryCoveredBy (ServedLog.servedLog pk result) pk result
 

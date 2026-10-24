@@ -25,7 +25,7 @@ bound is read at, and a fact about the tail that its consumer has to unfold to u
 stated one step too early.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

@@ -27,7 +27,7 @@ the verification of its forgery. Key generation's and the signer's hash calls ar
   counted calls.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 

@@ -26,7 +26,7 @@ whatever the handler has drawn beside them) and the congruences saying that an h
 signature reads only the cells it discloses.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -124,7 +124,7 @@ theorem splitTable_fullOutput (table : Cells × Padding) :
   · exact BitVec.extractLsb'_append_eq_right
 
 /-- The programmed entries, with whatever the handler has drawn beside them. -/
-noncomputable def unionCache (publicSeed : Digest) (table : Cells × Padding)
+@[expose] noncomputable def unionCache (publicSeed : Digest) (table : Cells × Padding)
     (cache : QueryCache HashSpec) : QueryCache HashSpec :=
   QueryCache.ofFn fun input =>
     match openCache publicSeed (fun _ => True) table input with
@@ -169,7 +169,7 @@ only away from the cells a signature discloses and the signature does not move. 
 
 /-- The nodes an honest FORS signature discloses: the secret at each selected leaf, and the
 sibling at each level of its authentication path. -/
-def ForsDiscloses (key : ForsKey) (indices : Fors.Indices) : CanonicalGraph.Node → Prop :=
+@[expose] def ForsDiscloses (key : ForsKey) (indices : Fors.Indices) : CanonicalGraph.Node → Prop :=
   fun node =>
     (∃ tree, node = .structural (HonestProbes.forsSecretNode key indices tree)) ∨
       ∃ tree level, node = .structural (HonestProbes.forsAuthNode key indices tree level)

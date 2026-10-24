@@ -24,7 +24,7 @@ SLH-DSA-SHAKE-128s address and keeps address parsing independent of secret value
 WOTS chain indices and height-dependent Merkle/FORS node indices have their exact bounds.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.CanonicalGraph
 
@@ -54,15 +54,15 @@ structure ForsKey where
 deriving DecidableEq, Fintype
 
 /-- The hypertree address of an XMSS tree. -/
-def Tree.address (tree : Tree) : Address :=
+@[expose] def Tree.address (tree : Tree) : Address :=
   Hypertree.address tree.layer.val tree.tree.val
 
 /-- The WOTS+ hash address of a WOTS+ key pair. -/
-def WotsKey.address (key : WotsKey) : Address :=
+@[expose] def WotsKey.address (key : WotsKey) : Address :=
   Merkle.wotsAddress key.tree.address key.leaf.val
 
 /-- The FORS tree address of a FORS key pair. -/
-def ForsKey.address (key : ForsKey) : Address :=
+@[expose] def ForsKey.address (key : ForsKey) : Address :=
   { (Hypertree.address 0 key.tree.val).setTypeAndClear .forsTree with
     keyPair := BitVec.ofNat 32 key.leaf.val }
 
@@ -96,7 +96,7 @@ inductive Node where
 deriving DecidableEq, Fintype
 
 /-- The address under which a structural node is computed. -/
-def StructuralNode.address : StructuralNode → Address
+@[expose] def StructuralNode.address : StructuralNode → Address
   | .wotsPrf key chain => Wots.secretAddress key.address chain
   | .wotsHash key chain step =>
       { key.address with
@@ -110,7 +110,7 @@ def StructuralNode.address : StructuralNode → Address
       { key.address.setTypeAndClear .forsRoots with keyPair := key.address.keyPair }
 
 /-- The depth of a structural node: the number of hash steps from the secret seed. -/
-def StructuralNode.rank : StructuralNode → Nat
+@[expose] def StructuralNode.rank : StructuralNode → Nat
   | .wotsPrf _ _ => 1
   | .wotsHash _ _ step => 2 + step.val
   | .wotsPk _ => 17
@@ -120,7 +120,7 @@ def StructuralNode.rank : StructuralNode → Nat
   | .forsRoots _ => 15
 
 /-- The depth of a node in the computation graph, zero for the secret seed. -/
-def Node.rank : Node → Nat
+@[expose] def Node.rank : Node → Nat
   | .secretSeed => 0
   | .structural node => node.rank
 

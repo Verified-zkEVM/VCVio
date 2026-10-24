@@ -24,7 +24,7 @@ follows by the congruence.
 of them would mean a step was not the equality it is taken for.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -37,7 +37,7 @@ open Security RecordedQueries StrippedGame
 /-! ## The writer's run, over an arbitrary monoid -/
 
 /-- The run of a phase computation carrying a writer, from a log and a cache. -/
-noncomputable def writerRun {ω : Type} {α : Type}
+@[expose] noncomputable def writerRun {ω : Type} {α : Type}
     (x : WriterT ω (StateT SigningLog (OracleComp OracleWorld)) α) (log : SigningLog)
     (current : QueryCache HashSpec) :
     ProbComp (((α × ω) × SigningLog) × QueryCache HashSpec) :=

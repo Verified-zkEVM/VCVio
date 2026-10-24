@@ -15,7 +15,7 @@ The kinds of hash and signing queries an unforgeability experiment counts, and a
 A counting mode selects which kinds are the adversary's work.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.Unforgeability
 
@@ -42,6 +42,6 @@ instance : Fintype QueryKind where
 abbrev QueryCounts := QueryKind → ℕ
 
 /-- `n` queries of kind `kind`, and none of the other kinds. -/
-def QueryCounts.single (kind : QueryKind) (n : ℕ) : QueryCounts := Pi.single kind n
+@[expose] def QueryCounts.single (kind : QueryKind) (n : ℕ) : QueryCounts := Pi.single kind n
 
 end SlhDsaSecurity.Unforgeability

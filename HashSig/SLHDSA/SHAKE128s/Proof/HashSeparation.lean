@@ -20,14 +20,14 @@ distribution, and proving that every honest structural address satisfies these
 bounds, are separate obligations; neither is assumed as a security theorem here.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity.HashSeparation
 
 /-- Loose power-of-two bounds enclosing the standard 128s structural addresses. -/
-def WithinBounds (address : Address) : Prop :=
+@[expose] def WithinBounds (address : Address) : Prop :=
   address.layer.toNat < 2 ^ 3 ∧ address.tree.toNat < 2 ^ 54 ∧
   address.keyPair.toNat < 2 ^ 9 ∧ address.chainOrHeight.toNat < 2 ^ 6 ∧
   address.hashOrIndex.toNat < 2 ^ 16
@@ -38,16 +38,16 @@ simple. -/
 abbrev Prefix := BitVec 3 × BitVec 54 × BitVec 3 × BitVec 9 × BitVec 6 × BitVec 16
 
 /-- The byte encoding of a bounded address, each field zero-extended to its full width. -/
-def prefixBytes (parts : Prefix) : Bytes :=
+@[expose] def prefixBytes (parts : Prefix) : Bytes :=
   bytesBE 4 (parts.1.setWidth 32) ++ bytesBE 12 (parts.2.1.setWidth 96) ++
     bytesBE 4 (parts.2.2.1.setWidth 32) ++ bytesBE 4 (parts.2.2.2.1.setWidth 32) ++
     bytesBE 4 (parts.2.2.2.2.1.setWidth 32) ++ bytesBE 4 (parts.2.2.2.2.2.setWidth 32)
 
 /-- The concatenated bytes of a public seed and public root. -/
-def publicBytes (pair : Digest × Digest) : Bytes := bytesBE n pair.1 ++ bytesBE n pair.2
+@[expose] def publicBytes (pair : Digest × Digest) : Bytes := bytesBE n pair.1 ++ bytesBE n pair.2
 
 /-- A public seed and root whose concatenation is the encoding of some bounded address. -/
-def Possible (pair : Digest × Digest) : Prop :=
+@[expose] def Possible (pair : Digest × Digest) : Prop :=
   ∃ parts : Prefix, publicBytes pair = prefixBytes parts
 
 private theorem restore_width {wide narrow : Nat} (value : BitVec wide)

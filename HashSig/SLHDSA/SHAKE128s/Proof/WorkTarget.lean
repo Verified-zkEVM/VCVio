@@ -18,7 +18,7 @@ verification is what pays for the shared half's fixed costs once key generation 
 Given the shared half at `(q - 8) / 2 ^ 128`, the three terms sum to at most `q / 2 ^ 127`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

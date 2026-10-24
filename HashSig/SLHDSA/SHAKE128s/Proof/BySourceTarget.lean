@@ -18,7 +18,7 @@ entry and the target record per entry, and together they are within the adversar
 the requests (`BySourceAnswer.fresh_add_right_le`), whatever the signer asks.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

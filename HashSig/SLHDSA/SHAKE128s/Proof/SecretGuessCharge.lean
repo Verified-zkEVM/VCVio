@@ -18,7 +18,7 @@ a run that has queried a finite set of inputs has staked at most that many guess
 guess is right against a uniform `128`-bit secret with probability `2 ^ -128`
 (`prob_single_guess`). The secret must be sampled independently of the queried inputs. -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

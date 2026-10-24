@@ -26,7 +26,7 @@ that also keeps it within the limit is at most as likely as the event of the cap
 (`probEvent_le_capCompRem`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -39,7 +39,7 @@ variable {ι : Type} {spec : OracleSpec ι} {α : Type}
 /-! ## Reporting the remainder -/
 
 /-- **Truncate once the weighted queries would exceed the limit, and report the remainder.** -/
-noncomputable def capCompRem (weight : ι → Nat) (fallback : α) :
+@[expose] noncomputable def capCompRem (weight : ι → Nat) (fallback : α) :
     Nat → OracleComp spec α → OracleComp spec (α × Nat) :=
   fun limit oa => OracleComp.construct (C := fun _ => Nat → OracleComp spec (α × Nat))
     (fun value remaining => pure (value, remaining))
@@ -141,7 +141,7 @@ theorem probEvent_le_capCompRem (impl : QueryImpl spec (StateT S ProbComp)) (wei
 /-! ## Reporting whether it fired -/
 
 /-- **Truncate once the weighted queries would exceed the limit, returning `none` then.** -/
-noncomputable def capCompOpt (weight : ι → Nat) :
+@[expose] noncomputable def capCompOpt (weight : ι → Nat) :
     Nat → OracleComp spec α → OracleComp spec (Option α) :=
   fun limit oa => OracleComp.construct (C := fun _ => Nat → OracleComp spec (Option α))
     (fun value _ => pure (some value))

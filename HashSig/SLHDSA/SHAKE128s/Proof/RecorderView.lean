@@ -35,7 +35,7 @@ served set lives in the carrier's own field. Instantiating the left test at the 
 former exactly where it is, so no instantiation can collapse the two even by accident.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -100,7 +100,7 @@ abbrev StateOf (σ : Type) := σ × Record × Record
 open scoped Classical in
 /-- What the two recordings become when a query is answered. The guard is freshness, read at
 the view's cache, exactly as `SplitPrefix.appended` reads it at the cache itself. -/
-noncomputable def appendedOf (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
+@[expose] noncomputable def appendedOf (leftKeep rightKeep : Bytes → σ → Prop) (input : Bytes)
     (state : StateOf σ) (answer : HashOutput) : Record × Record :=
   if CacheView.cacheOf state.1 input = none ∧ leftKeep input state.1 then
     (state.2.1 ++ [(input, answer)], state.2.2)
@@ -247,7 +247,7 @@ implementation.
 The two branches are the shared oracle's own — a hit
 returns the cached answer and leaves the state, a miss draws and installs — so at the cache this
 is `SplitPrefix.recorder` and not merely something with its law. -/
-noncomputable def recorderOf (leftKeep rightKeep : Bytes → σ → Prop) :
+@[expose] noncomputable def recorderOf (leftKeep rightKeep : Bytes → σ → Prop) :
     QueryImpl OracleWorld (StateT (StateOf σ) ProbComp) :=
   fun queried state =>
     match queried with
@@ -518,7 +518,7 @@ because the law says it leaves the cache alone. -/
 
 open scoped Classical in
 /-- The recorder, with the view told about each hash query before it is answered. -/
-noncomputable def noticingRecorderOf (leftKeep rightKeep : Bytes → σ → Prop) :
+@[expose] noncomputable def noticingRecorderOf (leftKeep rightKeep : Bytes → σ → Prop) :
     QueryImpl OracleWorld (StateT (StateOf σ) ProbComp) :=
   fun queried state =>
     match queried with

@@ -23,7 +23,7 @@ missing is that `padding` draws a uniform word at all (it draws one answer at a 
 `evalDist_padding_eq_ofFn`, by splitting a uniform function type at its first coordinate.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -114,7 +114,7 @@ theorem evalDist_parse_uniform :
 /-- A block of answers, read as a tape of parsed FORS views. Cells past the block's end read as
 a default, which never happens where the charge looks: it reads cell `index` only when the run
 recorded an answer there. -/
-def blockTape (length : Nat) (block : List HashOutput) : ForsDisclosureTape.Tape length :=
+@[expose] def blockTape (length : Nat) (block : List HashOutput) : ForsDisclosureTape.Tape length :=
   fun index => MessageDigest.parse (block.getD index.val default)
 
 /-- **A drawn block is a uniform tape.** -/
@@ -138,7 +138,7 @@ theorem evalDist_blockTape (length : Nat) :
 /-! ## The hit relation the game needs -/
 
 /-- An answer whose fourteen FORS leaves are all disclosed by the block. -/
-def BlockHit (length : Nat) (block : List HashOutput) (value : HashOutput) : Prop :=
+@[expose] def BlockHit (length : Nat) (block : List HashOutput) (value : HashOutput) : Prop :=
   ForsCoverage.Covered (ForsDisclosureTape.disclosures (blockTape length block))
     (MessageDigest.parse value)
 

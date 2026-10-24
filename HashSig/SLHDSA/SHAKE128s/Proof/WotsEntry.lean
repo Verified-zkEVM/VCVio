@@ -21,7 +21,7 @@ is exactly the value `Extraction.Wots.ChainCollision` is stated about, so
 `WotsCharge.deviatingCollision_of_chainCollision` can take the entry directly.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

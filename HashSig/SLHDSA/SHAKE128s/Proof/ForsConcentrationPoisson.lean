@@ -19,7 +19,7 @@ the independent-load concentration argument. It does not couple Poisson loads
 to a signing transcript or assert any cryptographic security bound.
 -/
 
-@[expose] public section
+public section
 
 open MeasureTheory ProbabilityTheory
 open scoped NNReal Nat
@@ -149,7 +149,7 @@ lemma poisson_integral_power_nat (rate degree : Nat) :
 
 /-- The exact `order`-th centered moment of `N ^ 14` for a rate-three Poisson load `N`, expressed
 through Touchard polynomials. -/
-def centeredMoment (order : Nat) : ℤ :=
+@[expose] def centeredMoment (order : Nat) : ℤ :=
   ∑ k ∈ Finset.range (order + 1),
     (ForsMoments.touchard (14 * k) 3 : ℤ) *
       (-(ForsMoments.touchard 14 3 : ℤ)) ^ (order - k) * order.choose k

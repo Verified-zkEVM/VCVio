@@ -34,7 +34,7 @@ leaving it unfiled would make the signer's own reads unavailable at the carrier.
 adversary can do files an input, because only the signing oracle sets the framing.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -63,14 +63,14 @@ flight. -/
 
 /-- The digest inputs a signing log names, each read at the cache the randomiser is replayed
 from. -/
-def logServed (sk : SecretKey) (cache : QueryCache HashSpec) (signed : SigningLog)
+@[expose] def logServed (sk : SecretKey) (cache : QueryCache HashSpec) (signed : SigningLog)
     (input : Bytes) : Prop :=
   ∃ entry ∈ signed, ∃ framed : Bytes, entry.1.frame = some framed ∧
     input = Hashing.messageInput (HonestProbes.replayRandomizer cache sk framed)
       sk.publicKey framed
 
 /-- **What a run must leave true**: the carrier served exactly what the log names. -/
-def AgreesWithLog (sk : SecretKey) (signed : SigningLog) (state : Carrier) : Prop :=
+@[expose] def AgreesWithLog (sk : SecretKey) (signed : SigningLog) (state : Carrier) : Prop :=
   ∀ input : Bytes, Served state input ↔ logServed sk state.cache signed input
 
 end SlhDsaSecurity.ServingCarrier

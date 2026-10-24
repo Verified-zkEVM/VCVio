@@ -34,7 +34,7 @@ Both are the same observation: *filing needs a frame in flight, and both of the 
 unbracketed stages have none.*
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -56,7 +56,7 @@ theorem carrierLogged_of_served_zero (sk : SecretKey) (warm : QueryCache HashSpe
 
 /-- The invariant the verifier's stage keeps: nothing in flight, and the served set it was
 entered with. -/
-def ClearWith (served : Multiset Bytes) (carrier : HandlerCarrier.State) : Prop :=
+@[expose] def ClearWith (served : Multiset Bytes) (carrier : HandlerCarrier.State) : Prop :=
   carrier.framing = none ∧ carrier.served = served
 
 theorem clearWith_cacheAnswer (served : Multiset Bytes) (carrier : HandlerCarrier.State)

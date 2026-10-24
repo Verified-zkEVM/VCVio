@@ -20,7 +20,7 @@ pays for both. The counts are read off the same `Security.countQueries` instrume
 of the accounting uses.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -32,7 +32,7 @@ open Security GrowthCharge
 
 open scoped Classical in
 /-- One unit for a hash call at an input of the class, nothing for anything else. -/
-noncomputable def classCost (inClass : Bytes → Prop) : OracleWorld.Domain → Counts
+@[expose] noncomputable def classCost (inClass : Bytes → Prop) : OracleWorld.Domain → Counts
   | .inl _ => 0
   | .inr input => if inClass input then Counts.single .hash 1 else 0
 
@@ -50,7 +50,7 @@ leaving them free keeps the counter usable whichever two the caller has to spare
 open scoped Classical in
 /-- **The two-slot class counter.** One unit of `inside` for a hash call at an input of the
 class, one unit of `outside` for a hash call anywhere else, nothing for a coin. -/
-noncomputable def splitCost (inClass : Bytes → Prop) (inside outside : QueryKind) :
+@[expose] noncomputable def splitCost (inClass : Bytes → Prop) (inside outside : QueryKind) :
     OracleWorld.Domain → Counts
   | .inl _ => 0
   | .inr input => if inClass input then Counts.single inside 1 else Counts.single outside 1

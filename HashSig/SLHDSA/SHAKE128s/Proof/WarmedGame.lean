@@ -33,7 +33,7 @@ speak about *this run's* honest key rather than an arbitrary fixed one. What is 
 `Presample.evalDist_counted_warmed` is an equality.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -42,7 +42,7 @@ namespace SlhDsaSecurity.WarmedGame
 open Security CanonicalGraph
 
 /-- The three seeds key generation draws, as one sample. -/
-noncomputable def seeds : ProbComp (Digest × Digest × Digest) := do
+@[expose] noncomputable def seeds : ProbComp (Digest × Digest × Digest) := do
   let secretSeed ← $ᵗ Digest
   let prfSeed ← $ᵗ Digest
   let publicSeed ← $ᵗ Digest
@@ -50,7 +50,7 @@ noncomputable def seeds : ProbComp (Digest × Digest × Digest) := do
 
 /-- The experiment after its seeds are drawn: key generation from those seeds, the
 adversary's interaction, and the verification of what it returns. -/
-noncomputable def afterSeeds (adversary : Adversary) (sds : Digest × Digest × Digest) :
+@[expose] noncomputable def afterSeeds (adversary : Adversary) (sds : Digest × Digest × Digest) :
     OracleComp OracleWorld Outcome := do
   let (sk, pk) ← Scheme.keygenInternal sds.1 sds.2.1 sds.2.2
   let ((forgery, adversaryCounts), signed) ←
@@ -85,7 +85,7 @@ The warmup sits outside `countAllHashes`, which is what makes it free — it mak
 of `2 ^ 26` queries, far more than any budget would allow, and none of them is charged. -/
 
 /-- The experiment with the canonical graph walked first, keeping seeds, cells and cache. -/
-noncomputable def warmedRun (adversary : Adversary) :
+@[expose] noncomputable def warmedRun (adversary : Adversary) :
     ProbComp ((((Digest × Digest × Digest) × Cells) × (Outcome × Nat)) × QueryCache HashSpec) :=
   (simulateQ KeygenUniform.rom (do
     let sds ← (liftM seeds : OracleComp OracleWorld _)
@@ -142,7 +142,7 @@ cache the walk left. A bound that holds after every walk holds for the run, by
 arbitrary fixed cell table from here on. -/
 
 /-- The seeds and the canonical graph's evaluation, with the cache they leave. -/
-noncomputable def graphWalk :
+@[expose] noncomputable def graphWalk :
     ProbComp (((Digest × Digest × Digest) × Cells) × QueryCache HashSpec) :=
   (simulateQ KeygenUniform.rom (do
     let sds ← (liftM seeds : OracleComp OracleWorld _)
@@ -150,7 +150,7 @@ noncomputable def graphWalk :
     pure (sds, cells))).run ∅
 
 /-- The counted game, played from what the walk left. -/
-noncomputable def tail (adversary : Adversary)
+@[expose] noncomputable def tail (adversary : Adversary)
     (start : ((Digest × Digest × Digest) × Cells) × QueryCache HashSpec) :
     ProbComp ((Outcome × Nat) × QueryCache HashSpec) :=
   (simulateQ KeygenUniform.rom (countAllHashes (afterSeeds adversary start.1.1))).run start.2

@@ -44,7 +44,7 @@ Two things about the table are easy to get wrong.
 state where cell `i` is unavailable, the entries this handler may serve do not mention `i`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -77,7 +77,7 @@ variable (publicSeed : Digest) (available : Node → Prop)
 
 open scoped Classical in
 /-- The nodes all of whose children's cells the signatures make available. -/
-noncomputable def openNodes : List StructuralNode :=
+@[expose] noncomputable def openNodes : List StructuralNode :=
   Programming.order.filter (fun parent => decide (∀ child ∈ parent.children, available child))
 
 open scoped Classical in
@@ -90,7 +90,7 @@ theorem mem_openNodes (parent : StructuralNode) :
 open scoped Classical in
 /-- **The entries a run may legitimately read**: the canonical inputs of those nodes, with
 their full thirty-byte answers. -/
-noncomputable def openCache (table : Cells × Padding) : QueryCache HashSpec :=
+@[expose] noncomputable def openCache (table : Cells × Padding) : QueryCache HashSpec :=
   cacheFrom publicSeed table.1 (fullOutput table.1 table.2) (openNodes available) ∅
 
 /-! ## Blindness to one cell
@@ -102,7 +102,7 @@ children's cells, which are available; the values mention only the node's own ce
 
 /-- Two tables agreeing off one coordinate: the same cells everywhere else, and the same
 padding at every node but that one. -/
-def AgreeOff (index : Node) (left right : Cells × Padding) : Prop :=
+@[expose] def AgreeOff (index : Node) (left right : Cells × Padding) : Prop :=
   (∀ other, other ≠ index → left.1 other = right.1 other) ∧
     ∀ parent : StructuralNode, Node.structural parent ≠ index → left.2 parent = right.2 parent
 
@@ -163,7 +163,7 @@ abbrev HandlerState := HandlerCarrier.State × List (Bytes × HandlerCarrier.Sta
 open scoped Classical in
 /-- **The handler.** Fresh uniform everywhere, except at an input the run may legitimately
 read, which is answered from the table. -/
-noncomputable def lazyProgram (availableAt : HandlerCarrier.State → Node → Prop)
+@[expose] noncomputable def lazyProgram (availableAt : HandlerCarrier.State → Node → Prop)
     (table : Cells × Padding) : QueryImpl OracleWorld (StateT HandlerState ProbComp) :=
   fun queried state =>
     match queried with

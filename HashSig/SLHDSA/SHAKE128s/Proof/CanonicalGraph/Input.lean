@@ -20,7 +20,7 @@ the child cells (`canonicalInput_eq_iff`), and that the full hash output of a no
 cell and an independent padding (`fullOutput`, `truncate_fullOutput`).
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.CanonicalGraph
 
@@ -30,15 +30,17 @@ abbrev Cells := Node → Digest
 abbrev Padding := StructuralNode → BitVec (8 * (messageDigestBytes - n))
 
 /-- The concatenated big-endian encodings of the cells of the given children, in order. -/
-def childBytes (cells : Cells) (children : List Node) : Bytes :=
+@[expose] def childBytes (cells : Cells) (children : List Node) : Bytes :=
   (children.map fun child => bytesBE n (cells child)).flatten
 
 /-- The tweakable-hash input of a structural node: the public seed, the node's address and the
 encoded cells of its ordered children. -/
+@[expose]
 def canonicalInput (publicSeed : Digest) (cells : Cells) (parent : StructuralNode) : Bytes :=
   Hashing.tweakableInput publicSeed parent.address (childBytes cells parent.children)
 
 /-- The full 30-byte response consists of its 16-byte cell and an independent 14-byte suffix. -/
+@[expose]
 def fullOutput (cells : Cells) (padding : Padding) (parent : StructuralNode) : HashOutput :=
   cells (.structural parent) ++ padding parent
 

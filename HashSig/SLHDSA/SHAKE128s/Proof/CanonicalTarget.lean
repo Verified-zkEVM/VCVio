@@ -34,7 +34,7 @@ fault witness provides — a deviating input whose answer truncates to the canon
 cell — is an instance of `FreshHitBound.Hit`, hence charged at `2 ^ -128` per query.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -43,7 +43,7 @@ namespace SlhDsaSecurity.CanonicalTarget
 open CanonicalGraph
 
 /-- The query's child values agree with the honest cells at the parsed parent. -/
-def Honest (cells : Cells) (parsed : ParsedInput) : Prop :=
+@[expose] def Honest (cells : Cells) (parsed : ParsedInput) : Prop :=
   ∀ child ∈ parsed.parent.children, parsed.candidates child = cells child
 
 /-- Honesty of a parsed query is decided child by child. -/
@@ -51,7 +51,7 @@ instance (cells : Cells) (parsed : ParsedInput) : Decidable (Honest cells parsed
   List.decidableBAll _ _
 
 /-- Charge a deviating structural query against its own parent's canonical cell. -/
-noncomputable def canonicalTarget (publicSeed : Digest) (cells : Cells)
+@[expose] noncomputable def canonicalTarget (publicSeed : Digest) (cells : Cells)
     (input : Bytes) : Option Digest :=
   match parseInput publicSeed input with
   | none => none

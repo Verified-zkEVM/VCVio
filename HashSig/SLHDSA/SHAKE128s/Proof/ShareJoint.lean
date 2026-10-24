@@ -32,7 +32,7 @@ most as likely in the capped one: an accepted forgery's verifier makes at least 
 its adversary stayed within `limit`, and its verifier within its own cap.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -46,35 +46,35 @@ open Security CanonicalGraph ShareGame SharePresent RecordedQueries CapComp CapR
 
 open scoped Classical in
 /-- **A verifier query's weight**: one if the shared charge pays for its input. -/
-noncomputable def chargedOf (publicSeed : Digest) (input : Bytes) : Nat :=
+@[expose] noncomputable def chargedOf (publicSeed : Digest) (input : Bytes) : Nat :=
   (if ((GraphStakes.stakes publicSeed).locate input).isSome then 1 else 0) +
     if Target127.SeedPrefixed publicSeed input then 0 else 1
 
 /-- The charged weight of a world query: coins are free. -/
-noncomputable def chargedWeight (publicSeed : Digest) : OracleWorld.Domain → Nat
+@[expose] noncomputable def chargedWeight (publicSeed : Digest) : OracleWorld.Domain → Nat
   | Sum.inl _ => 0
   | Sum.inr input => chargedOf publicSeed input
 
 /-- What the verifier may spend beyond what the adversary left: the `569` calls an accepted
 forgery's verification costs at least, less the `239` of them the charge never pays for. -/
-def verifierAllowance : Nat := 330
+@[expose] def verifierAllowance : Nat := 330
 
 /-! ## The two games -/
 
 /-- A world computation, as queries of the shared games. -/
-noncomputable def toShare {α : Type} (computation : OracleComp OracleWorld α) :
+@[expose] noncomputable def toShare {α : Type} (computation : OracleComp OracleWorld α) :
     OracleComp ShareSpec α :=
   simulateQ (fun world => (query (spec := ShareSpec) (worldQuery world) :
       OracleComp ShareSpec (OracleWorld.Range world))) computation
 
 /-- The verifier, capped on its charged queries. -/
-noncomputable def cappedVerify (pk : PublicKey) (limit : Nat) (forgery : Forgery) :
+@[expose] noncomputable def cappedVerify (pk : PublicKey) (limit : Nat) (forgery : Forgery) :
     OracleComp OracleWorld (Option Bool) :=
   capCompOpt (chargedWeight pk.seed) limit
     (Scheme.verify (m := OracleComp OracleWorld) pk forgery.message forgery.signature)
 
 /-- **The computation both shared games run, capped jointly.** -/
-noncomputable def shareCompJ (adversary : Adversary) (limit : Nat) (pk : PublicKey) :
+@[expose] noncomputable def shareCompJ (adversary : Adversary) (limit : Nat) (pk : PublicKey) :
     OracleComp ShareSpec (Forgery × Bool) := do
   let p ← simulateQ splitter
     (capCompRem weight fallbackForgery limit (adversary.main pk))
@@ -86,6 +86,7 @@ noncomputable def shareCompJ (adversary : Adversary) (limit : Nat) (pk : PublicK
       pure (p.1, verified)
 
 /-- **The real game at a drawn table, flattened and capped jointly.** -/
+@[expose]
 noncomputable def realFlatJ (adversary : Adversary) (limit : Nat) (keys : SecretKey × PublicKey)
     (warm : QueryCache HashSpec) :
     ProbComp ((((Forgery × Multiplicative Tally) × (Bool × Tally)) × SigningLog) ×
@@ -99,7 +100,7 @@ noncomputable def realFlatJ (adversary : Adversary) (limit : Nat) (keys : Secret
 /-! ## The verifier's charged cost, read off its tally -/
 
 /-- The charged cost of the verifier's tally: its recorded inputs, weighed. -/
-noncomputable def verifyCost (publicSeed : Digest) (state : VerifyState) : Nat :=
+@[expose] noncomputable def verifyCost (publicSeed : Digest) (state : VerifyState) : Nat :=
   ((Multiplicative.toAdd state.1).2.map (chargedOf publicSeed)).sum
 
 theorem reportsCost_verify (publicSeed : Digest) :
@@ -134,7 +135,7 @@ noncomputable abbrev verRun (keys : SecretKey × PublicKey) (z : Forgery × Real
     (1, z.2.2.2)
 
 /-- What both games return, from a phase and a verifier run. -/
-def assemble (z : Forgery × RealState) (w : Bool × VerifyState) :
+@[expose] def assemble (z : Forgery × RealState) (w : Bool × VerifyState) :
     (((Forgery × Multiplicative Tally) × (Bool × Tally)) × SigningLog) × QueryCache HashSpec :=
   ((((z.1, z.2.1), (w.1, Multiplicative.toAdd w.2.1)), z.2.2.1), w.2.2)
 

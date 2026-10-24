@@ -34,7 +34,7 @@ Keeping the record indexed by every layer and chain, rather than only by the cha
 names, keeps its length a constant.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -43,7 +43,7 @@ namespace SlhDsaSecurity.ClaimedProbes
 open CanonicalGraph WotsResidueReduction
 
 /-- A digit, clamped into the range a chain-step node is indexed by. -/
-def clampStep (digit : Nat) : Fin (w - 1) :=
+@[expose] def clampStep (digit : Nat) : Fin (w - 1) :=
   ⟨min digit (w - 2), by simp only [w, winternitzBits]; omega⟩
 
 /-- **Below the endpoint the clamp is the identity.** -/
@@ -55,7 +55,7 @@ theorem clampStep_val {digit : Nat} (hdigit : digit < w - 1) :
 variable [HasQuery HashSpec Id]
 
 /-- The position the forgery's chain value at the layer reached after `i` steps sits at. -/
-def forgedStep (publicSeed : Digest) (remaining : Nat)
+@[expose] def forgedStep (publicSeed : Digest) (remaining : Nat)
     (signatures : Fin remaining → XmssSignature) (layer tree : Nat)
     (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message : Digest) (i : Nat)
     (chain : Fin chains) : Fin (w - 1) :=
@@ -76,7 +76,7 @@ theorem forgedStep_val (publicSeed : Digest) (remaining : Nat)
 
 /-- The record's position function, read off the forgery: the hypertree runs from layer zero at
 the subtree and leaf its digest selects, starting from the FORS public key it recovers. -/
-def forgedSteps (publicSeed : Digest) (signature : Signature) (tree : Nat)
+@[expose] def forgedSteps (publicSeed : Digest) (signature : Signature) (tree : Nat)
     (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (forsKey : Digest) :
     Fin layers → Fin chains → Fin (w - 1) :=
   fun layer chain =>
@@ -119,13 +119,14 @@ and the leaf. The hypertree's own keys follow from the subtree and leaf by the s
 the residue threads, so the record is determined rather than quantified. -/
 
 /-- The WOTS key the forgery's path uses at a layer. -/
-def forgedKey (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
+@[expose] def forgedKey (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
     (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (layer : Fin layers) : WotsKey :=
   ⟨⟨layer, ⟨treeAt tree.val layer.val,
       lt_of_le_of_lt (treeAt_le tree.val layer.val) tree.isLt⟩⟩,
     leafAt leaf tree.val layer.val⟩
 
 /-- **The record the charge takes, as a function of the run's own result.** -/
+@[expose]
 def claimedCandidatesOf (publicSeed : Digest) (cache : QueryCache HashSpec) (pk : PublicKey)
     (message : Bytes) (parsed : Signature) : List Bytes :=
   GraphStakes.claimedCandidates publicSeed

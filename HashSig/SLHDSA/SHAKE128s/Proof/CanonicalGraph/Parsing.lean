@@ -17,7 +17,7 @@ secret table. Values at coordinates outside the parsed parent's children are irr
 The parser is noncomputable because efficiency is immaterial for the query-count reduction.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.CanonicalGraph
 
@@ -30,11 +30,12 @@ structure ParsedInput where
   candidates : Cells
 
 /-- The bytes are the canonical input of some structural node, under some cell assignment. -/
-def HasParse (publicSeed : Digest) (input : Bytes) : Prop :=
+@[expose] def HasParse (publicSeed : Digest) (input : Bytes) : Prop :=
   ∃ parsed : ParsedInput, canonicalInput publicSeed parsed.candidates parsed.parent = input
 
 /-- A chosen parse of the bytes as a canonical input under the given public seed, or `none` if
 they are not one. -/
+@[expose]
 noncomputable def parseInput (publicSeed : Digest) (input : Bytes) : Option ParsedInput := by
   classical
   exact if h : HasParse publicSeed input then some h.choose else none

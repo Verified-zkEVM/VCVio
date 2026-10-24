@@ -39,7 +39,7 @@ The length of the signing log is a budget fact and is taken as a hypothesis; not
 file bounds the adversary's signing queries.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -53,7 +53,7 @@ open RecordedQueries RecorderView CarriedWitness HandlerCarrier
 /-! ## Nothing in flight, nothing served -/
 
 /-- The carrier invariant the middle stage is entered with. -/
-def Quiet (carrier : HandlerCarrier.State) : Prop :=
+@[expose] def Quiet (carrier : HandlerCarrier.State) : Prop :=
   carrier.framing = none ∧ carrier.served = 0
 
 /-- A fresh carrier over any cache is quiet. -/
@@ -223,15 +223,15 @@ keep all three for the same reason they keep everything else: they write the fra
 the rest of the state untouched. -/
 
 /-- Every disclosing-recorded input is cached. -/
-def LeftCached (state : CountedState) : Prop :=
+@[expose] def LeftCached (state : CountedState) : Prop :=
   ∀ entry ∈ state.2.1.1, state.1.cache entry.1 ≠ none
 
 /-- Every disclosing-recorded input is cached, and the recording holds each input once. -/
-def LeftFreshNodup (state : CountedState) : Prop :=
+@[expose] def LeftFreshNodup (state : CountedState) : Prop :=
   LeftCached state ∧ (state.2.1.1.map Prod.fst).Nodup
 
 /-- Every disclosing-recorded input was served. -/
-def LeftServed (state : CountedState) : Prop :=
+@[expose] def LeftServed (state : CountedState) : Prop :=
   ∀ entry ∈ state.2.1.1, HandlerCarrier.Served state.1 entry.1
 
 /-- The empty recording at a fresh carrier is cached and duplicate-free. -/

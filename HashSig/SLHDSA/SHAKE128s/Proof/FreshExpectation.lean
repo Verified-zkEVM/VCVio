@@ -27,7 +27,7 @@ The growth is read as a sum over all inputs in `ℝ≥0∞`, so no finiteness is
 expectation of an infinite count is simply `⊤`, and the bound is then trivial.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -42,6 +42,7 @@ open Security GrowthCharge
 open scoped Classical in
 /-- **The class's fresh entries**: one unit per input of the class the final cache holds and the
 initial one does not. -/
+@[expose]
 noncomputable def freshMass (inClass : Bytes → Prop) (initial final : QueryCache HashSpec) :
     ℝ≥0∞ :=
   ∑' input : Bytes, if inClass input ∧ initial input = none ∧ final input ≠ none then 1 else 0

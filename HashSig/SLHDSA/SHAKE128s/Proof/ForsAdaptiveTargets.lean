@@ -18,7 +18,7 @@ future disclosures. The experiment is a finite model, not a simulation of the co
 random oracle.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

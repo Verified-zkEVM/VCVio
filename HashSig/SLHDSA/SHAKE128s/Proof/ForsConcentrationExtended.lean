@@ -17,7 +17,7 @@ de-Poissonization denominator that extends the independent occupancy experiment 
 of the number of instances. It does not assert a coupling to the adaptive random-oracle game.
 -/
 
-@[expose] public section
+public section
 
 open MeasureTheory ProbabilityTheory
 open scoped NNReal

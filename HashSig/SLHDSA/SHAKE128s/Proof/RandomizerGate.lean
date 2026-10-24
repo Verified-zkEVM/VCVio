@@ -32,7 +32,7 @@ seeds, so unless the seeds coincide no input is both (`canonicalInput_ne_randomi
 coincidence `SK.prf = PK.seed` is itself one unit of `2 ^ -128`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -53,7 +53,7 @@ theorem randomizerInput_prf_inj {prf prf' seed seed' : Digest} {message message'
 
 open scoped Classical in
 /-- The seed a `PRF_msg` input carries in the clear, read off its first block. -/
-noncomputable def prfGuess (input : Bytes) : Digest :=
+@[expose] noncomputable def prfGuess (input : Bytes) : Digest :=
   if hformat : ∃ (prf seed : Digest) (message : Bytes),
     input = Hashing.randomizerInput prf seed message then hformat.choose else default
 
@@ -115,7 +115,7 @@ behind it. A fresh answer truncates to a fixed digest with probability `2 ^ -128
 inputs of the class can fire the event. -/
 
 /-- The inputs whose first block is a given seed. -/
-def PrfClass (prfSeed : Digest) (input : Bytes) : Prop :=
+@[expose] def PrfClass (prfSeed : Digest) (input : Bytes) : Prop :=
   ∃ (seed : Digest) (message : Bytes), input = Hashing.randomizerInput prfSeed seed message
 
 /-- **A fresh answer truncates to a fixed digest with probability `2 ^ -128`.** -/

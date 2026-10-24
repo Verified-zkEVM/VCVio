@@ -38,7 +38,7 @@ per-walk fact is stated for a walk in `support graphWalk`, and a drawn table nam
 so none of them has to be restated at the new shape.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -71,14 +71,14 @@ theorem cellsOfOutputs_fullOutput (table : Cells × Padding) :
 
 /-- The walk a cells-and-padding pair determines: the table's own secret seed, the two seeds
 drawn beside it, the table's cells, and the canonical entries of those cells. -/
-noncomputable def walkOfTable (prfSeed publicSeed : Digest) (table : Cells × Padding) :
+@[expose] noncomputable def walkOfTable (prfSeed publicSeed : Digest) (table : Cells × Padding) :
     ((Digest × Digest × Digest) × Cells) × QueryCache HashSpec :=
   (((table.1 Node.secretSeed, prfSeed, publicSeed), table.1),
     Programming.cacheFrom publicSeed table.1 (fullOutput table.1 table.2)
       Programming.order ∅)
 
 /-- The walk, drawn as a table. -/
-noncomputable def tableWalk :
+@[expose] noncomputable def tableWalk :
     ProbComp (((Digest × Digest × Digest) × Cells) × QueryCache HashSpec) := do
   let prfSeed ← ($ᵗ Digest : ProbComp Digest)
   let publicSeed ← ($ᵗ Digest : ProbComp Digest)

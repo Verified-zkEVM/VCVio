@@ -43,7 +43,7 @@ What that possession costs is a probabilistic question about the adversary's exe
 in `WotsCharge`; this file is the deterministic half.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -55,7 +55,7 @@ variable [HasQuery HashSpec Id]
 
 /-- The value a forgery holds on one chain of one layer's WOTS key: the honest chain, started
 from the honest secret at that key's address and advanced only as far as the forged digit. -/
-def heldValue (secretSeed publicSeed : Digest) (layer tree : Nat)
+@[expose] def heldValue (secretSeed publicSeed : Digest) (layer tree : Nat)
     (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (forged : Digest) (chainIndex : Fin chains) :
     Digest :=
   SlhDsaSecurity.Wots.chain (m := Id) publicSeed
@@ -69,7 +69,7 @@ def heldValue (secretSeed publicSeed : Digest) (layer tree : Nat)
 disclosed. The recursion is `FaultCharge.WotsResidue`'s own, so the address is the address of
 the layer the recursion has reached, the secret is derived from `secretSeed` at that address,
 and the disclosed position is the digit of the message that key actually signed. -/
-def HoldsEarlyChainValue (secretSeed publicSeed : Digest) :
+@[expose] def HoldsEarlyChainValue (secretSeed publicSeed : Digest) :
     (remaining : Nat) → (Fin remaining → XmssSignature) → (layer tree : Nat) →
       SlhDsaSecurity.Hypertree.LeafIndex → (message expectedInput : Digest) → Prop
   | 0, _, _, _, _, _, _ => False
@@ -117,17 +117,17 @@ Their closed forms are recorded below for the two cases a caller needs: the laye
 per step, and the tree index only shrinks, which is what bounds the coordinates. -/
 
 /-- The layer the recursion has reached after `i` steps. -/
-def layerAt (layer : Nat) : Nat → Nat
+@[expose] def layerAt (layer : Nat) : Nat → Nat
   | 0 => layer
   | i + 1 => layerAt (layer + 1) i
 
 /-- The subtree index the recursion has reached after `i` steps. -/
-def treeAt (tree : Nat) : Nat → Nat
+@[expose] def treeAt (tree : Nat) : Nat → Nat
   | 0 => tree
   | i + 1 => treeAt (tree / 2 ^ subtreeHeight) i
 
 /-- The leaf the recursion has reached after `i` steps. -/
-def leafAt (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (tree : Nat) :
+@[expose] def leafAt (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (tree : Nat) :
     Nat → SlhDsaSecurity.Hypertree.LeafIndex
   | 0 => leaf
   | i + 1 => leafAt (SlhDsaSecurity.Hypertree.nextLeaf tree) (tree / 2 ^ subtreeHeight) i
@@ -135,7 +135,7 @@ def leafAt (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (tree : Nat) :
 /-- The message the honest key at the layer reached after `i` steps actually signed. Each WOTS
 key of the hypertree signs exactly one message, and that message is the honest node one layer
 down, so this is a function of the seeds alone. -/
-def revealedAt (secretSeed publicSeed expectedInput : Digest) (layer tree : Nat) :
+@[expose] def revealedAt (secretSeed publicSeed expectedInput : Digest) (layer tree : Nat) :
     Nat → Digest
   | 0 => expectedInput
   | i + 1 => revealedAt secretSeed publicSeed
@@ -146,7 +146,7 @@ def revealedAt (secretSeed publicSeed expectedInput : Digest) (layer tree : Nat)
 lower layers recover. Unlike `revealedAt` this follows the forgery rather than the seeds, and it
 is the accumulator the residue's recursion threads — which is what lets the position a claimed
 chain value sits at be named rather than quantified. -/
-def forgedAt (publicSeed : Digest) :
+@[expose] def forgedAt (publicSeed : Digest) :
     (remaining : Nat) → (Fin remaining → XmssSignature) → (layer tree : Nat) →
       SlhDsaSecurity.Hypertree.LeafIndex → Digest → Nat → Digest
   | 0, _, _, _, _, message, _ => message

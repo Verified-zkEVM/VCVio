@@ -26,7 +26,7 @@ probe (`realView_eq_visible`), and every probe of the real verifier is in its re
 `flag_of_prfHit`, `flag_of_signerHit` and `flag_of_inputBad`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -190,12 +190,12 @@ theorem realView_eq_visible (setup : Setup) (p : St × Bool) (hinv : Inv setup p
 /-! ## The verifier's probes are in its record -/
 
 /-- The flattened verifier at a hash input. -/
-noncomputable def realHashImpl :
+@[expose] noncomputable def realHashImpl :
     QueryImpl HashSpec (StateT SharePresent.VerifyState ProbComp) :=
   fun input => SharePresent.realWorldImpl (Sum.inr input)
 
 /-- The flattened verifier at a coin. -/
-noncomputable def realCoinImpl :
+@[expose] noncomputable def realCoinImpl :
     QueryImpl unifSpec (StateT SharePresent.VerifyState ProbComp) :=
   fun coin => SharePresent.realWorldImpl (Sum.inl coin)
 
@@ -309,7 +309,7 @@ theorem verify_probes_recorded (pk : PublicKey) (request : Message) (signature :
 /-! ## The event, read at the coupling's two ends -/
 
 /-- The real game's recorded pair, at a setup's walk. -/
-noncomputable def realPair (setup : Setup)
+@[expose] noncomputable def realPair (setup : Setup)
     (real : (((Forgery × Multiplicative RecordedQueries.Tally) × (Bool × RecordedQueries.Tally)) ×
       SigningLog) × QueryCache HashSpec) : SharedJoin.RecordedPair :=
   (WalkTable.walkOfTable setup.prf setup.publicSeed setup.table,

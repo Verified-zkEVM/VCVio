@@ -57,7 +57,7 @@ by the record pathwise but only in its own game. So the input half's aiming gues
 holds pathwise.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -66,23 +66,23 @@ namespace SlhDsaSecurity.Target127
 open Security WarmedGame Target SharedJoin RandomiserRecord LateProbes
 
 /-- An input whose first `n` bytes are the encoding of `seed`. -/
-def SeedPrefixed (seed : Digest) (input : Bytes) : Prop :=
+@[expose] def SeedPrefixed (seed : Digest) (input : Bytes) : Prop :=
   ∃ rest : Bytes, input = bytesBE n seed ++ rest
 
 /-- **The seed guess.** Some query of the adversary or the verifier is a `PRF_msg` input at the
 walk's `SK.prf`. -/
-def PrfHit (pair : RecordedPair) : Prop :=
+@[expose] def PrfHit (pair : RecordedPair) : Prop :=
   RecordMeetsPrfClass pair.1.1.1.2.1 pair.2
 
 /-- **The signer's coincidence**: some signature's randomiser is the walk's `SK.prf`. -/
-def SignerHit (pair : RecordedPair) : Prop :=
+@[expose] def SignerHit (pair : RecordedPair) : Prop :=
   RandomiserProvenance.SignerHitsSeed pair.1.1.1.2.1 pair.1.1.1.2.2 pair.2.2 pair.2.1.1.1.signed
 
 /-- **The defect at the recorded pair**: the seed guess or the signer's coincidence. -/
-def Late (pair : RecordedPair) : Prop := PrfHit pair ∨ SignerHit pair
+@[expose] def Late (pair : RecordedPair) : Prop := PrfHit pair ∨ SignerHit pair
 
 /-- **The defect at the split pair**, read through the recordings' forgetting. -/
-def late (pair : SplitPair) : Prop := Late (forgetRecordings pair)
+@[expose] def late (pair : SplitPair) : Prop := Late (forgetRecordings pair)
 
 /-- A `PRF_msg` input at `prf` is prefixed by `prf`. -/
 theorem seedPrefixed_of_prfClass {prf : Digest} {input : Bytes}

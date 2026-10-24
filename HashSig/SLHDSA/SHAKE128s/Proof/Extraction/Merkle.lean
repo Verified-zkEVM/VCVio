@@ -18,7 +18,7 @@ public key and all nine authentication siblings, or exhibits a `BinaryPath.Colli
 concrete height of its authentication path.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -27,7 +27,7 @@ namespace SlhDsaSecurity.Extraction.Merkle
 variable [HasQuery HashSpec Id]
 
 /-- The authentication siblings of an XMSS signature, padded with zero past the subtree height. -/
-def siblings (signature : XmssSignature) (height : Nat) : Digest :=
+@[expose] def siblings (signature : XmssSignature) (height : Nat) : Digest :=
   if h : height < subtreeHeight then signature.authentication ⟨height, h⟩ else 0
 
 set_option maxRecDepth 10000 in

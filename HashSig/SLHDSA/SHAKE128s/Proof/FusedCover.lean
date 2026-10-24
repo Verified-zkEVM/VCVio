@@ -39,7 +39,7 @@ instead of rounding it up.
 is handed, and then the signing branch needs nothing about the sub-run's own final view.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

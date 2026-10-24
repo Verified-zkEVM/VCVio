@@ -36,7 +36,7 @@ most `2 ^ -165` under actual key generation. `IsMessageInput` is the message cla
 `separated_of_not_possible` is the deterministic half of the separation.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -55,7 +55,7 @@ budget. Pinning the key removes that: the only `H_msg` call that can produce a f
 one the verifier makes, and the verifier uses the real key. A query under any other key is not
 a message input, so the coverage clause is dead for it and only the structural clause is
 charged. -/
-def IsMessageInput (pk : PublicKey) (input : Bytes) : Prop :=
+@[expose] def IsMessageInput (pk : PublicKey) (input : Bytes) : Prop :=
   ∃ (randomizer : Digest) (message : Bytes),
     input = Hashing.messageInput randomizer pk message
 

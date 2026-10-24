@@ -32,7 +32,7 @@ that the forgery *holds* those secrets, which a run could also reach by querying
 secret-bearing `PRF` input directly — an input-side event, charged elsewhere.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -50,8 +50,8 @@ attribute [local irreducible] WarmedGame.afterSeeds Scheme.keygenInternal Scheme
 /-! ## The event -/
 
 /-- The digest `answer` has each of its fourteen FORS leaves also selected, at the same FORS
-instance, by the digest cached at some *other* message-class input. -/
-def CoveredAt (pk : PublicKey) (cache : QueryCache HashSpec) (target : Bytes)
+@[expose] instance, by the digest cached at some *other* message-class input. -/
+@[expose] def CoveredAt (pk : PublicKey) (cache : QueryCache HashSpec) (target : Bytes)
     (answer : HashOutput) : Prop :=
   ∀ tree : MessageDigest.ForsTree, ∃ (other : Bytes) (otherAnswer : HashOutput),
     other ≠ target ∧ CombinedCharge.IsMessageInput pk other ∧

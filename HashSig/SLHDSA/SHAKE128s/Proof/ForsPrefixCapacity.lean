@@ -19,7 +19,7 @@ measures. This models independent leaf samples only; it does not identify an ada
 shared-oracle transcript with that distribution.
 -/
 
-@[expose] public section
+public section
 
 open MeasureTheory ProbabilityTheory
 open scoped ENNReal BigOperators
@@ -39,27 +39,27 @@ abbrev InstanceTape (requests : Nat) := Fin 10 → TreeTape requests
 abbrev Tape {ι : Type*} (loads : ι → Nat) := (i : ι) → InstanceTape (loads i)
 
 /-- The uniform distribution on leaves. -/
-def leafMeasure : Measure Leaf := uniformOn Set.univ
+@[expose] def leafMeasure : Measure Leaf := uniformOn Set.univ
 /-- Independent uniform leaves for every request in one tree. -/
-def treeMeasure (requests : Nat) : Measure (TreeTape requests) :=
+@[expose] def treeMeasure (requests : Nat) : Measure (TreeTape requests) :=
   Measure.pi (fun _ => leafMeasure)
 /-- Independent uniform leaves for every tree and request of one instance. -/
-def instanceMeasure (requests : Nat) : Measure (InstanceTape requests) :=
+@[expose] def instanceMeasure (requests : Nat) : Measure (InstanceTape requests) :=
   Measure.pi (fun _ => treeMeasure requests)
 /-- Independent uniform leaves for every instance, tree and request. -/
-def tapeMeasure {ι : Type*} [Fintype ι] (loads : ι → Nat) : Measure (Tape loads) :=
+@[expose] def tapeMeasure {ι : Type*} [Fintype ι] (loads : ι → Nat) : Measure (Tape loads) :=
   Measure.pi (fun i => instanceMeasure (loads i))
 
 /-- The uniform leaf distribution is a probability measure. -/
-instance : IsProbabilityMeasure leafMeasure := by unfold leafMeasure; infer_instance
+@[expose] instance : IsProbabilityMeasure leafMeasure := by unfold leafMeasure; infer_instance
 /-- The per-tree leaf distribution is a probability measure. -/
-instance (n : Nat) : IsProbabilityMeasure (treeMeasure n) := by
+@[expose] instance (n : Nat) : IsProbabilityMeasure (treeMeasure n) := by
   unfold treeMeasure; infer_instance
 /-- The per-instance leaf distribution is a probability measure. -/
-instance (n : Nat) : IsProbabilityMeasure (instanceMeasure n) := by
+@[expose] instance (n : Nat) : IsProbabilityMeasure (instanceMeasure n) := by
   unfold instanceMeasure; infer_instance
 /-- The tape distribution is a probability measure. -/
-instance {ι : Type*} [Fintype ι] (loads : ι → Nat) :
+@[expose] instance {ι : Type*} [Fintype ι] (loads : ι → Nat) :
     IsProbabilityMeasure (tapeMeasure loads) := by unfold tapeMeasure; infer_instance
 
 end

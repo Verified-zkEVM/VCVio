@@ -19,7 +19,7 @@ is uniform (`truncate_uniform`). This is the distributional fact behind the unif
 public-key root drawn from a fresh oracle at key generation.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -27,7 +27,7 @@ namespace SlhDsaSecurity.KeygenUniform
 
 /-- Splits a hash output into its leading `Digest` (the truncation used throughout the scheme)
 and its trailing `112` bits. -/
-def splitOutput (output : HashOutput) : Digest × BitVec 112 :=
+@[expose] def splitOutput (output : HashOutput) : Digest × BitVec 112 :=
   (Hashing.truncate output, output.extractLsb' 0 112)
 
 /-- Splitting a hash output into digest and remainder loses no information. -/

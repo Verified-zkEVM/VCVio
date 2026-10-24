@@ -22,7 +22,7 @@ mean), hence at most `2 ^ -126` for up to `5 * 2 ^ 62` uniform choices
 (`ForsDisclosureTape.bad_load_probability_sharper`).
 -/
 
-@[expose] public section
+public section
 
 open MeasureTheory ProbabilityTheory OracleComp OracleSpec
 open scoped NNReal ENNReal

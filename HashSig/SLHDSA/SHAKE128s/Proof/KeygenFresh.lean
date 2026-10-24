@@ -19,18 +19,18 @@ the root of the top XMSS tree, `RootQuery` recognises the oracle query that comp
 absent throughout the preceding key-generation work.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.KeygenUniform
 
 /-- The address of the root of the top XMSS tree. -/
-def rootAddress : Address :=
+@[expose] def rootAddress : Address :=
   Merkle.nodeAddress (Hypertree.address (layers - 1) 0) subtreeHeight 0
 
 /-- The oracle query computing the top-tree root under `seed` with input `payload`. -/
-def RootQuery (seed : Digest) (payload : Bytes) : OracleWorld.Domain → Prop :=
+@[expose] def RootQuery (seed : Digest) (payload : Bytes) : OracleWorld.Domain → Prop :=
   fun input => input = .inr (Hashing.tweakableInput seed rootAddress payload)
 
 /-- Recognising the root query is decidable. -/

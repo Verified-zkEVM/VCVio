@@ -17,7 +17,7 @@ handler, as equations. Both are `rfl`; they are restated here so that this file 
 `PhaseFusion` alone.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

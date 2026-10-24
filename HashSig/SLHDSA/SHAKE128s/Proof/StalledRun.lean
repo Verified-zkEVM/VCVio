@@ -37,7 +37,7 @@ becomes available. Three facts then do the work, and none of them needs a set fi
 What the stall costs is nothing, because the flag is sticky and the frozen tail is silent.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -50,7 +50,7 @@ variable {ι : Type} {spec : OracleSpec ι} {σ : Type}
 open scoped Classical in
 /-- The handler stopped once the state satisfies `Frozen`: from then on every query is answered
 by a fixed value and the state stands still. -/
-noncomputable def stalled (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
+@[expose] noncomputable def stalled (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
     (Frozen : σ → Prop) (stall : (t : spec.Domain) → spec.Range t) :
     QueryImpl spec (StateT (σ × Bool) ProbComp) :=
   fun t p => if Frozen p.1 then pure (stall t, p) else impl t p

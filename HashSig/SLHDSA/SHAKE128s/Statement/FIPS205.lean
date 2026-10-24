@@ -29,7 +29,7 @@ The random oracle answers `m = 30` bytes (`SLHDSA.Security.shakeSpec`); FIPS 205
 `n = 16` of them for `F`, `H`, `T_ℓ`, `PRF` and `PRF_msg`, and all of them for `H_msg`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -47,7 +47,7 @@ abbrev core : CorePrimitives params.params := shakeCore params
 abbrev Answer : Type := SLHDSA.Bytes params.params.m
 
 /-- Deterministic signing: `opt_rand` is the public seed. -/
-def deterministicRand (pk : PublicKeyCore core) : ProbComp core.Y :=
+@[expose] def deterministicRand (pk : PublicKeyCore core) : ProbComp core.Y :=
   pure pk.pkSeed
 
 /-- FIPS 205's internal algorithms over one SHAKE256 random oracle, deterministic signing, with a
@@ -56,7 +56,7 @@ noncomputable abbrev internal :=
   shakeRomScheme params deterministicRand ($ᵗ core.PkSeed)
 
 /-- The public key a secret key carries. -/
-def SecretKeyCore.publicKey (sk : SecretKeyCore core) : PublicKeyCore core :=
+@[expose] def SecretKeyCore.publicKey (sk : SecretKeyCore core) : PublicKeyCore core :=
   ⟨sk.pkSeed, sk.pkRoot⟩
 
 /-- **SLH-DSA-SHAKE-128s in pure mode over one SHAKE256 random oracle.** Key generation is
@@ -65,7 +65,7 @@ with the internal signer, returning the canonical byte encoding of the signature
 the context is too long; verification frames the request, decodes the signature and runs the
 internal verifier (Algorithm 24), rejecting a request it cannot frame or a string it cannot
 decode. -/
-noncomputable def scheme :
+@[expose] noncomputable def scheme :
     Game.ExternalScheme Answer (PublicKeyCore core) (SecretKeyCore core) where
   keygen := (fun keys => (keys.2, keys.1)) <$> internal.keygen
   sign sk request :=

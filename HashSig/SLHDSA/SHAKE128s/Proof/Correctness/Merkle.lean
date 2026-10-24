@@ -18,7 +18,7 @@ Correctness of an XMSS subtree under a fixed hash, including its actual path fol
 subtree root computed by `Merkle.node`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

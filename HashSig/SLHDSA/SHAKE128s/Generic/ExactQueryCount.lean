@@ -15,7 +15,7 @@ public import VCVio.OracleComp.OracleComp
 queries. It is closed under `bind` and `map`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

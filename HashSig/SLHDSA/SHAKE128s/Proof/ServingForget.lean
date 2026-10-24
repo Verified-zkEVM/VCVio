@@ -33,7 +33,7 @@ side instead of collapsing it. `bind_of_forgetsAlong` and `bind_of_fuseServing_c
 transports in bind form, so that stages chain by `bind_congr`.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -47,7 +47,7 @@ variable {ω : Type} [Monoid ω] {S S' : Type}
 
 /-- **A handler forgets along `π`**: running it and projecting is projecting and running. The
 only thing a bracketed presentation asks of the handler underneath it. -/
-def ForgetsAlong (π : S → S') (outer : QueryImpl OracleWorld (StateT S ProbComp))
+@[expose] def ForgetsAlong (π : S → S') (outer : QueryImpl OracleWorld (StateT S ProbComp))
     (outer' : QueryImpl OracleWorld (StateT S' ProbComp)) : Prop :=
   ∀ {β : Type} (computation : OracleComp OracleWorld β) (state : S),
     (fun z : β × S => (z.1, π z.2)) <$> (simulateQ outer computation).run state =

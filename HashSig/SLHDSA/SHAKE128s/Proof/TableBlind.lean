@@ -30,7 +30,7 @@ It does not cover a set of unavailable cells that shrinks as signatures are issu
 is not indexed by prefixes of the run.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

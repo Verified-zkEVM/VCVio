@@ -36,7 +36,7 @@ causality is `SuffixCausal.threeStageCausalGe`, and the cell correspondences are
 run's own.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -74,7 +74,7 @@ theorem second_order_fits (rightLength : Nat) (hright : rightLength ≤ 2 ^ 174)
 /-- **The coverage event with fired target entries admitted as witnesses.** Some target entry has
 each of its fourteen leaves supplied, at its own instance, by a disclosing entry or by another
 target entry that fired. -/
-def FiredCoveredRec (walk : Walk)
+@[expose] def FiredCoveredRec (walk : Walk)
     (w : ((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState) : Prop :=
   ∃ (target : Nat) (targetEntry : Bytes × HashOutput), w.2.2.2[target]? = some targetEntry ∧
     ∀ tree : ForsCoverage.Tree,

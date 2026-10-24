@@ -35,13 +35,13 @@ that could have produced it are at lower positions still. Excluding the endpoint
 tree cells and `forsRoots` collects tree roots, which are public outright.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.CanonicalGraph
 
 /-- The cells the input half does not have to protect: everything except the secret seed, a
 WOTS chain value strictly below the endpoint, and a FORS secret. -/
-def AlwaysAvailable : Node → Prop
+@[expose] def AlwaysAvailable : Node → Prop
   | .secretSeed => False
   | .structural (.wotsPrf _ _) => False
   | .structural (.wotsHash _ _ step) => step.val = w - 2
@@ -127,7 +127,7 @@ variable (revealed : WotsKey → Fin chains → Nat)
     (signed : ForsKey → Finset (Fin (forsTrees * 2 ^ forsHeight)))
 
 /-- The cells the signatures issued so far make available. -/
-def Available : Node → Prop
+@[expose] def Available : Node → Prop
   | .secretSeed => False
   | .structural (.wotsPrf key chain) => revealed key chain = 0
   | .structural (.wotsHash key chain step) => revealed key chain ≤ step.val + 1
@@ -138,7 +138,7 @@ def Available : Node → Prop
   | .structural (.forsRoots _) => True
 
 /-- A node the signatures leave a child of unavailable. -/
-def Sensitive (parent : StructuralNode) : Prop :=
+@[expose] def Sensitive (parent : StructuralNode) : Prop :=
   ∃ child ∈ parent.children, ¬ Available revealed signed child
 
 /-- An unprotected cell is available, whatever the signatures were — the only thing the rate

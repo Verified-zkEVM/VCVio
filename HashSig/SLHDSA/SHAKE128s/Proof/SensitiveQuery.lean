@@ -48,7 +48,7 @@ probability at most `2 ^ -128` over a uniform table, so a table drawn after the 
 unit of `2 ^ -128` per candidate it issued.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -78,7 +78,7 @@ variable {Node Index State : Type}
 
 /-- A candidate input is **sensitive** at a state when it is the canonical input of a node
 whose staked cell is unavailable there, that cell taking the value the table gives it. -/
-def Sensitive (stakes : Stakes Node Index) (unavailable : State → Index → Prop)
+@[expose] def Sensitive (stakes : Stakes Node Index) (unavailable : State → Index → Prop)
     (table : Index → Cell) (state : State) (candidate : Bytes) : Prop :=
   ∃ node : Node, unavailable state (stakes.stake node) ∧
     stakes.inputOf node (table (stakes.stake node)) = candidate
@@ -108,7 +108,7 @@ structure Graph (Node Index : Type) where
 
 /-- **Availability is closed under the structure.** A node all of whose children's cells are
 available has an available cell. -/
-def Closed (graph : Graph Node Index) (unavailable : State → Index → Prop) : Prop :=
+@[expose] def Closed (graph : Graph Node Index) (unavailable : State → Index → Prop) : Prop :=
   ∀ (state : State) (node : Node),
     (∀ index, graph.children node index → ¬ unavailable state index) →
       ¬ unavailable state (graph.cellOf node)

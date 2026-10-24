@@ -27,7 +27,7 @@ give over a run.
   most `limit` entries, whatever the handler answers.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -84,6 +84,7 @@ theorem route_mem_support (lenient : Bool) (setup : Setup) (state : St) (input :
 /-! ## One step -/
 
 /-- The entries a list of inputs files at the current digests. -/
+@[expose]
 def filed (served : List HashOutput) (inputs : List Bytes) : List (Bytes × List HashOutput) :=
   inputs.map fun input => (input, served)
 
@@ -168,19 +169,19 @@ theorem step_shape (lenient : Bool) (setup : Setup) (queried : ShareSpec.Domain)
 /-! ## Over a run -/
 
 /-- **The invariant a run keeps**: a raised flag is a bad walk or a guess the record holds. -/
-def Witnessed (setup : Setup) (state : St × Bool) : Prop :=
+@[expose] def Witnessed (setup : Setup) (state : St × Bool) : Prop :=
   state.2 = true → ¬ setup.Good ∨ ∃ entry ∈ state.1.record, Guess setup entry.2 entry.1
 
 /-! ## The record counts the cap's weight -/
 
 /-- The game's handler, read at the adversary's own oracles. -/
-noncomputable def advImpl (lenient : Bool) (setup : Setup) :
+@[expose] noncomputable def advImpl (lenient : Bool) (setup : Setup) :
     QueryImpl (OracleWorld + SigningSpec) (StateT (St × Bool) ProbComp) :=
   QueryImpl.compose (handler lenient setup) splitter
 
 /-- The number of entries a query files: at the claims, the candidates not already filed, and
 none once the flag is up. -/
-noncomputable def added (setup : Setup) (state : St × Bool) : ShareSpec.Domain → Nat
+@[expose] noncomputable def added (setup : Setup) (state : St × Bool) : ShareSpec.Domain → Nat
   | Sum.inl (Sum.inl (Sum.inl (Sum.inl _))) => 0
   | Sum.inl (Sum.inl (Sum.inl (Sum.inr _))) => 1
   | Sum.inl (Sum.inl (Sum.inr request)) => if request.frame.isSome then 1 else 0

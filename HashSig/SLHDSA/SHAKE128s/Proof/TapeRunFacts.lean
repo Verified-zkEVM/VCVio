@@ -24,7 +24,7 @@ handler-level recorders already have:
   proved about the handler's final results holds of the tape run's too.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -61,7 +61,7 @@ theorem run_cache_persists (leftKeep rightKeep : Bytes → σ → Prop) {α : Ty
         step hstep
 
 /-- A carrier property that the notice and the installation both keep. -/
-def Kept (keepsProperty : σ → Prop) : Prop :=
+@[expose] def Kept (keepsProperty : σ → Prop) : Prop :=
   (∀ (carrier : σ) (input : Bytes), keepsProperty carrier →
       keepsProperty (CacheView.onQuery carrier input)) ∧
     ∀ (carrier : σ) (input : Bytes) (answer : HashOutput), keepsProperty carrier →

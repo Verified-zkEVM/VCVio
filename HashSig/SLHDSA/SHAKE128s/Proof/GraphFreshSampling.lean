@@ -19,7 +19,7 @@ samples independent full 240-bit answers. The result below preserves both the
 computed state and the entire programmed byte-input cache.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -28,7 +28,7 @@ namespace SlhDsaSecurity.GraphFreshSampling
 variable {Index State : Type}
 
 /-- Run the actual shared hash oracle while carrying the partially computed graph. -/
-def evaluate (input : Index → State → Bytes) (step : Index → State → HashOutput → State) :
+@[expose] def evaluate (input : Index → State → Bytes) (step : Index → State → HashOutput → State) :
     List Index → State → OracleComp HashSpec State
   | [], state => pure state
   | node :: nodes, state => do
@@ -36,7 +36,7 @@ def evaluate (input : Index → State → Bytes) (step : Index → State → Has
       evaluate input step nodes (step node state output)
 
 /-- The corresponding experiment with an independent fresh answer at every coordinate. -/
-def sample (input : Index → State → Bytes) (step : Index → State → HashOutput → State) :
+@[expose] def sample (input : Index → State → Bytes) (step : Index → State → HashOutput → State) :
     List Index → State → QueryCache HashSpec → ProbComp (State × QueryCache HashSpec)
   | [], state, cache => pure (state, cache)
   | node :: nodes, state, cache => do
@@ -45,7 +45,7 @@ def sample (input : Index → State → Bytes) (step : Index → State → HashO
         (cache.cacheQuery (input node state) output)
 
 /-- Deterministically program the traversal from a table of full oracle answers. -/
-def program (input : Index → State → Bytes) (step : Index → State → HashOutput → State)
+@[expose] def program (input : Index → State → Bytes) (step : Index → State → HashOutput → State)
     (outputs : Index → HashOutput) : List Index → State → QueryCache HashSpec →
       State × QueryCache HashSpec
   | [], state, cache => (state, cache)
@@ -55,12 +55,12 @@ def program (input : Index → State → Bytes) (step : Index → State → Hash
 
 /-- Distinct coordinates have distinct byte inputs, whatever the payload states on either
 side. -/
-def Separated (input : Index → State → Bytes) : Prop :=
+@[expose] def Separated (input : Index → State → Bytes) : Prop :=
   ∀ left right, left ≠ right → ∀ leftState rightState,
     input left leftState ≠ input right rightState
 
 /-- No byte input of a coordinate in `nodes`, in any state, has been cached yet. -/
-def FreshFor (input : Index → State → Bytes) (nodes : List Index)
+@[expose] def FreshFor (input : Index → State → Bytes) (nodes : List Index)
     (cache : QueryCache HashSpec) : Prop :=
   ∀ node ∈ nodes, ∀ state, cache (input node state) = none
 

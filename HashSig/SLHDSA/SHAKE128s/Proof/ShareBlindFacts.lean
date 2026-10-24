@@ -33,7 +33,7 @@ with the padding and `SK.prf` beside it:
   signature reads only the cells its served digest releases (`ShareSignCongr.cellSig_congr`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -47,7 +47,7 @@ open Security CanonicalGraph ShareGame
 
 open scoped Classical in
 /-- **The blind game's step, flag dropped.** -/
-noncomputable def blindStep (setup : Setup) : QueryImpl ShareSpec (StateT St ProbComp) :=
+@[expose] noncomputable def blindStep (setup : Setup) : QueryImpl ShareSpec (StateT St ProbComp) :=
   fun queried state => match queried with
     | Sum.inl (Sum.inl (Sum.inl (Sum.inl coin))) => do
         let value ← ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _)
@@ -107,6 +107,7 @@ theorem map_handler_run (setup : Setup) (queried : ShareSpec.Domain) (state : St
 step from a lowered flag, the flag kept up once it is up. It parts from `handler false` only at
 claims made with the flag already up, so the flag has the same law in both
 (`probEvent_filing_eq`), and with the flag forgotten it is `blindStep` from every state. -/
+@[expose]
 noncomputable def filing (setup : Setup) : QueryImpl ShareSpec (StateT (St × Bool) ProbComp) :=
   fun queried state => (fun z => (z.1, (z.2.1, state.2 || z.2.2))) <$>
     ((handler false setup) queried).run (state.1, false)
@@ -262,7 +263,7 @@ theorem not_alwaysAvailable_of_unavailable (setup : Setup) (served : List HashOu
 /-! ## A setup drawn cell by cell -/
 
 /-- The setup at a public seed, a cell table, and `SK.prf` with the padding. -/
-def setupOf (publicSeed : Digest) (cells : Cells) (aux : Digest × Padding) : Setup :=
+@[expose] def setupOf (publicSeed : Digest) (cells : Cells) (aux : Digest × Padding) : Setup :=
   ⟨aux.1, publicSeed, (cells, aux.2)⟩
 
 /-- **The availability reads only always-available cells.** -/

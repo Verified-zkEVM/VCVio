@@ -51,7 +51,7 @@ run equalities `run_strippedKeygen` and `run_strippedSign`, and the stripped exp
 hence never a canonical one, hence never a sensitive one.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -62,7 +62,7 @@ variable {α β : Type}
 open Security CacheReplay
 
 /-- Every entry of the first cache is still present in the second. -/
-def Extends (warm current : QueryCache HashSpec) : Prop :=
+@[expose] def Extends (warm current : QueryCache HashSpec) : Prop :=
   ∀ (input : Bytes) (value : HashOutput), warm input = some value → current input = some value
 
 /-- Every cache extends itself. -/
@@ -95,13 +95,13 @@ theorem sign_lift (sk : SecretKey) (request : Message) :
     (fun _ => rfl) sk request).symm
 
 /-- Key generation, answered from the warm table wherever it can be. -/
-noncomputable def strippedKeygen (warm : QueryCache HashSpec)
+@[expose] noncomputable def strippedKeygen (warm : QueryCache HashSpec)
     (sds : Digest × Digest × Digest) : OracleComp OracleWorld (SecretKey × PublicKey) :=
   OracleComp.liftComp (simulateQ (StripCached.stripImpl warm)
     (Scheme.keygenInternal (m := OracleComp HashSpec) sds.1 sds.2.1 sds.2.2)) OracleWorld
 
 /-- Signing, answered from the warm table wherever it can be. -/
-noncomputable def strippedSign (warm : QueryCache HashSpec) (sk : SecretKey)
+@[expose] noncomputable def strippedSign (warm : QueryCache HashSpec) (sk : SecretKey)
     (request : Message) : OracleComp OracleWorld (Option Bytes) :=
   OracleComp.liftComp (simulateQ (StripCached.stripImpl warm)
     (Scheme.sign (m := OracleComp HashSpec) sk request)) OracleWorld
@@ -158,7 +158,7 @@ theorem run_liftM_state {α : Type} (x : StateT SigningLog (OracleComp OracleWor
 
 /-- The counted signing oracle with its signer left as a parameter: charge one request, call the
 signer, and append the answer to the log. -/
-noncomputable def signingOracleWith
+@[expose] noncomputable def signingOracleWith
     (signer : Message → OracleComp OracleWorld (Option Bytes)) :
     QueryImpl SigningSpec CountedRun := fun request => do
   AddWriterT.addTell (Counts.single .signing 1)
@@ -186,7 +186,7 @@ theorem run_signingOracleWith
     StateT.run_modify, map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def, mul_one]
 
 /-- The signing oracle with its signer answered from the warm table. -/
-noncomputable def strippedSigningOracle (warm : QueryCache HashSpec) (sk : SecretKey) :
+@[expose] noncomputable def strippedSigningOracle (warm : QueryCache HashSpec) (sk : SecretKey) :
     QueryImpl SigningSpec CountedRun :=
   signingOracleWith (strippedSign warm sk)
 
@@ -199,7 +199,7 @@ makes the stripped signer agree with the real one. So the induction carries that
 the step is allowed to use it because a run of the game's world only ever adds entries. -/
 
 /-- The counted run of a counted computation, from a log and a cache. -/
-noncomputable def countedRun {α : Type} (x : CountedRun α) (log : SigningLog)
+@[expose] noncomputable def countedRun {α : Type} (x : CountedRun α) (log : SigningLog)
     (current : QueryCache HashSpec) :
     ProbComp (((α × Multiplicative Counts) × SigningLog) × QueryCache HashSpec) :=
   (simulateQ KeygenUniform.rom ((WriterT.run x).run log)).run current
@@ -219,6 +219,7 @@ theorem countedRun_bind {α β : Type} (x : CountedRun α) (next : α → Counte
 
 /-- `WarmedGame.afterSeeds` with key generation and the signer answered from the warm table.
 The adversary's own oracle and the verifier are untouched. -/
+@[expose]
 noncomputable def strippedAfterSeeds (adversary : Adversary) (sds : Digest × Digest × Digest)
     (warm : QueryCache HashSpec) : OracleComp OracleWorld Outcome := do
   let (sk, pk) ← strippedKeygen warm sds

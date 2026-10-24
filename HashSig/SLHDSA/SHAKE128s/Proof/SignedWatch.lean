@@ -33,7 +33,7 @@ tape recorder is a hit, a left filing, a right filing or a plain draw
 supermartingale (`watchPair_step_le`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

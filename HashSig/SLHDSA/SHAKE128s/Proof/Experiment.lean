@@ -19,14 +19,14 @@ charges, namely the count `Checksum.chainVerificationCalls` of chain steps in Al
 the parse `MessageDigest.parse` of a message digest into a FORS instance and its indices.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
 namespace SlhDsaSecurity
 
 /-- Number of calls to `F` in Algorithm 8, before the final WOTS public-key compression. -/
-def Checksum.chainVerificationCalls (digits : MessageDigits) : Nat :=
+@[expose] def Checksum.chainVerificationCalls (digits : MessageDigits) : Nat :=
   (∑ i, (w - 1 - (digits i).val)) +
     ∑ i : Fin checksumDigits, (w - 1 - (Checksum.checksumDigit (Checksum.checksum digits) i).val)
 
@@ -38,7 +38,7 @@ abbrev Instance := Fin (2 ^ totalHeight)
 abbrev View := Instance × (ForsTree → ForsLeaf)
 
 /-- The 63-bit FORS-instance index and the FORS indices. -/
-def parse (output : HashOutput) : View :=
+@[expose] def parse (output : HashOutput) : View :=
   ((treeIndex output ++ leafIndex output).toFin, forsIndices output)
 
 end MessageDigest
@@ -48,6 +48,7 @@ namespace Security
 export Game (Counts.work)
 
 /-- Key generation, then the adversary's phase and verification. -/
+@[expose]
 noncomputable def experiment (adversary : Adversary) : OracleComp OracleWorld Outcome := do
   let (sk, pk) ← Scheme.keygen
   let ((forgery, adversaryCounts), signed) ←
@@ -65,15 +66,15 @@ noncomputable def experiment (adversary : Adversary) : OracleComp OracleWorld Ou
     counts := Multiplicative.toAdd adversaryCounts + verifierCounts }
 
 /-- The experiment run against a lazily sampled random oracle. -/
-noncomputable def run (adversary : Adversary) : ProbComp Outcome :=
+@[expose] noncomputable def run (adversary : Adversary) : ProbComp Outcome :=
   RandomOracleModel.run (experiment adversary)
 
 /-- The experiment with its total hash count. -/
-noncomputable def runAll (adversary : Adversary) : ProbComp (Outcome × Nat) :=
+@[expose] noncomputable def runAll (adversary : Adversary) : ProbComp (Outcome × Nat) :=
   RandomOracleModel.run (countAllHashes (experiment adversary))
 
 /-- The probability that the adversary wins the experiment, read off `runAll`. -/
-noncomputable def totalAdvantage (adversary : Adversary) : ℝ≥0∞ :=
+@[expose] noncomputable def totalAdvantage (adversary : Adversary) : ℝ≥0∞ :=
   Pr{let result ← runAll adversary}[Wins result.1]
 
 end Security

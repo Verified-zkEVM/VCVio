@@ -50,7 +50,7 @@ lemmas carry the hypotheses that the stored indices fit their fields, which hold
 either scheme builds.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -111,7 +111,7 @@ theorem length_bytesBE (k : ℕ) (v : BitVec (8 * k)) : (bytesBE k v).length = k
 
 /-- **`k`-byte big-endian values and `k`-byte vectors**: the paper's `bytesBE` packaged as a
 vector, with inverse FIPS 205's `toInt`. -/
-def bytesEquiv (k : ℕ) : BitVec (8 * k) ≃ SLHDSA.Bytes k where
+@[expose] def bytesEquiv (k : ℕ) : BitVec (8 * k) ≃ SLHDSA.Bytes k where
   toFun v := ⟨(bytesBE k v).toArray, by simp [bytesBE]⟩
   invFun b := BitVec.ofNat (8 * k) (toInt b.toList)
   left_inv v := by
@@ -151,10 +151,10 @@ abbrev Node : Type := SLHDSA.Bytes FIPS205.params.params.n
 
 /-- **Digests are nodes**: a `128`-bit digest is the node of its `16` big-endian bytes. The
 codomain is the node carrier `FIPS205.core.Y`, definitionally `Node`. -/
-def digestEquiv : Digest ≃ FIPS205.core.Y := bytesEquiv n
+@[expose] def digestEquiv : Digest ≃ FIPS205.core.Y := bytesEquiv n
 
 /-- **Oracle answers are `30`-byte vectors** (`m = 30` for SLH-DSA-SHAKE-128s), big-endian. -/
-def answerEquiv : HashOutput ≃ FIPS205.Answer := bytesEquiv messageDigestBytes
+@[expose] def answerEquiv : HashOutput ≃ FIPS205.Answer := bytesEquiv messageDigestBytes
 
 /-- The bytes of a digest's node are its big-endian bytes. -/
 @[simp] theorem toList_digestEquiv (d : Digest) :
@@ -349,7 +349,7 @@ theorem chainStepsCore_eq_encode (msg : FIPS205.core.Y) (i : Fin chains) :
 /-! ## Addresses -/
 
 /-- The FIPS 205 address type of a paper address type. -/
-def _root_.SlhDsaSecurity.AddressType.toAddrType : AddressType → AddrType
+@[expose] def _root_.SlhDsaSecurity.AddressType.toAddrType : AddressType → AddrType
   | .wotsHash => .wotsHash
   | .wotsPk => .wotsPk
   | .tree => .tree
@@ -364,7 +364,7 @@ def _root_.SlhDsaSecurity.AddressType.toAddrType : AddressType → AddrType
   cases k <;> rfl
 
 /-- **The FIPS 205 structured address of a paper address**: the same six fields, as naturals. -/
-def toAdrs (a : Address) : Adrs where
+@[expose] def toAdrs (a : Address) : Adrs where
   layer := a.layer.toNat
   tree := a.tree.toNat
   type := a.kind.code.toNat
@@ -610,42 +610,42 @@ theorem xmssSigCore_ext {x y : XmssSigCore FIPS205.params.params FIPS205.core}
   simp_all
 
 /-- The paper's FORS tree signature of a FIPS 205 one. -/
-def forsTreeOfCore (t : ForsTreeSigCore FIPS205.params.params FIPS205.core) :
+@[expose] def forsTreeOfCore (t : ForsTreeSigCore FIPS205.params.params FIPS205.core) :
     ForsTreeSignature where
   secret := digestEquiv.symm t.sk
   authentication j := digestEquiv.symm (t.auth[j.val]'j.isLt)
 
 /-- FIPS 205's FORS tree signature of a paper one. -/
-def forsTreeToCore (t : ForsTreeSignature) :
+@[expose] def forsTreeToCore (t : ForsTreeSignature) :
     ForsTreeSigCore FIPS205.params.params FIPS205.core where
   sk := digestEquiv t.secret
   auth := Vector.ofFn fun j => digestEquiv (t.authentication j)
 
 /-- The paper's XMSS signature of a FIPS 205 one. -/
-def xmssOfCore (t : XmssSigCore FIPS205.params.params FIPS205.core) : XmssSignature where
+@[expose] def xmssOfCore (t : XmssSigCore FIPS205.params.params FIPS205.core) : XmssSignature where
   wots j := digestEquiv.symm (t.wots[j.val]'j.isLt)
   authentication j := digestEquiv.symm (t.auth[j.val]'j.isLt)
 
 /-- FIPS 205's XMSS signature of a paper one. -/
-def xmssToCore (t : XmssSignature) : XmssSigCore FIPS205.params.params FIPS205.core where
+@[expose] def xmssToCore (t : XmssSignature) : XmssSigCore FIPS205.params.params FIPS205.core where
   wots := Vector.ofFn fun j => digestEquiv (t.wots j)
   auth := Vector.ofFn fun j => digestEquiv (t.authentication j)
 
 /-- **The paper's signature of a FIPS 205 structured signature**: every node read as a digest,
 FORS trees and hypertree layers in the same order. -/
-def sigOfCore (σ : CoreSignature) : Signature where
+@[expose] def sigOfCore (σ : CoreSignature) : Signature where
   randomizer := digestEquiv.symm σ.randomness
   fors i := forsTreeOfCore (σ.fors[i.val]'i.isLt)
   hypertree i := xmssOfCore (σ.hypertree[i.val]'i.isLt)
 
 /-- FIPS 205's structured signature of a paper signature. -/
-def sigToCore (s : Signature) : CoreSignature where
+@[expose] def sigToCore (s : Signature) : CoreSignature where
   randomness := digestEquiv s.randomizer
   fors := Vector.ofFn fun i => forsTreeToCore (s.fors i)
   hypertree := Vector.ofFn fun i => xmssToCore (s.hypertree i)
 
 /-- **Signatures of the two schemes are in bijection** (`sigOfCore`, `sigToCore`). -/
-def signatureEquiv : CoreSignature ≃ Signature where
+@[expose] def signatureEquiv : CoreSignature ≃ Signature where
   toFun := sigOfCore
   invFun := sigToCore
   left_inv σ := by

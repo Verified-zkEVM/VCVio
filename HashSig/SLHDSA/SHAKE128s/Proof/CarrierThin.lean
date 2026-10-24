@@ -29,7 +29,7 @@ once; their product is a supermartingale because the run keeps its target entrie
 distinct (`RightDistinct`), so one fresh answer never makes both fire (`hits_disjoint`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -104,7 +104,7 @@ theorem leftEntry_logged (adversary : Adversary) (walk : Walk)
 
 /-- **Target cell `index` fired**: its input is signer-randomised at the end, and `late` did not
 happen. -/
-def Fired (walk : Walk) (w : ((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState)
+@[expose] def Fired (walk : Walk) (w : ((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState)
     (index : Nat) : Prop :=
   ∃ entry, w.2.2.2[index]? = some entry ∧
     CacheAvailability.SignerRandomised walk.1.1.2.1 (keyAt walk) w.2.1 entry.1 ∧
@@ -334,6 +334,7 @@ cannot make both cells fire, the cells being distinct inputs. So the run has to 
 entries distinct, which it does because an entry is filed only while uncached. -/
 
 /-- **The target recording's inputs are cached and distinct.** -/
+@[expose]
 def RightDistinct (walk : Walk) (state : SplitTapeState (CountedAt (keyAt walk))) : Prop :=
   (∀ entry ∈ state.2.2.2, CacheView.cacheOf state.1 entry.1 ≠ none) ∧
     (state.2.2.2.map Prod.fst).Nodup
@@ -557,7 +558,7 @@ theorem fst_ne_of_nodup (record : Record) (hnodup : (record.map Prod.fst).Nodup)
 
 open scoped Classical in
 /-- The second cell's factor: its watched value once filed, one coin's mass before. -/
-noncomputable def secondFactor (walk : Walk) (second : Nat)
+@[expose] noncomputable def secondFactor (walk : Walk) (second : Nat)
     (state : SplitTapeState (CountedAt (keyAt walk))) : ℝ≥0∞ :=
   match state.2.2.2[second]? with
   | some entry => watchValue (targetOf walk.1.1.2.1 (keyAt walk) entry.1)
@@ -566,7 +567,7 @@ noncomputable def secondFactor (walk : Walk) (second : Nat)
 
 open scoped Classical in
 /-- **The pair's watched value**: zero until the first cell is filed. -/
-noncomputable def pairAt (walk : Walk) (first second : Nat)
+@[expose] noncomputable def pairAt (walk : Walk) (first second : Nat)
     (state : SplitTapeState (CountedAt (keyAt walk))) : ℝ≥0∞ :=
   match state.2.2.2[first]? with
   | some entry => watchValue (targetOf walk.1.1.2.1 (keyAt walk) entry.1)
@@ -576,16 +577,17 @@ noncomputable def pairAt (walk : Walk) (first second : Nat)
 open scoped Classical in
 /-- **The pair value of the fused phase**: the pair's watched value, zeroed once `late` has
 begun. -/
+@[expose]
 noncomputable def value2P (walk : Walk) (first second : Nat) (state : FState walk) : ℝ≥0∞ :=
   pairAt walk first second state.2.2 * (if Late2 walk state then 0 else 1)
 
 open scoped Classical in
 /-- **The pair bound of the fused phase**: two coins' mass once the first cell is reached. -/
-noncomputable def bound2P (walk : Walk) (first : Nat) (state : FState walk) : ℝ≥0∞ :=
+@[expose] noncomputable def bound2P (walk : Walk) (first : Nat) (state : FState walk) : ℝ≥0∞ :=
   if first < state.2.2.2.2.2.length then unit128 * unit128 else 0
 
 /-- The fused phase's pair invariant. -/
-def Inv2P (walk : Walk) (state : FState walk) : Prop :=
+@[expose] def Inv2P (walk : Walk) (state : FState walk) : Prop :=
   Inv2 walk state ∧ RightDistinct walk state.2.2
 
 /-- **The fused phase keeps the pair invariant.** -/
@@ -780,19 +782,19 @@ theorem stage2P_step (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWal
 open scoped Classical in
 /-- **The pair value of verification**: the pair's watched value, zeroed once `late` as far as
 verification has got has begun. -/
-noncomputable def value3P (walk : Walk) (first second : Nat) (phaseLate : Prop)
+@[expose] noncomputable def value3P (walk : Walk) (first second : Nat) (phaseLate : Prop)
     (phaseCache : QueryCache HashSpec) (state : SplitTapeState (CountedAt (keyAt walk))) :
     ℝ≥0∞ :=
   pairAt walk first second state * (if Late3 walk phaseLate phaseCache state then 0 else 1)
 
 open scoped Classical in
 /-- **The pair bound of verification**: two coins' mass once the first cell is reached. -/
-noncomputable def bound3P (walk : Walk) (first : Nat)
+@[expose] noncomputable def bound3P (walk : Walk) (first : Nat)
     (state : SplitTapeState (CountedAt (keyAt walk))) : ℝ≥0∞ :=
   if first < state.2.2.2.length then unit128 * unit128 else 0
 
 /-- Verification's pair invariant. -/
-def Inv3P (walk : Walk) (phaseLate : Prop) (phaseCache : QueryCache HashSpec)
+@[expose] def Inv3P (walk : Walk) (phaseLate : Prop) (phaseCache : QueryCache HashSpec)
     (state : SplitTapeState (CountedAt (keyAt walk))) : Prop :=
   Inv3 walk phaseLate phaseCache state ∧ RightDistinct walk state
 

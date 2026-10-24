@@ -23,7 +23,7 @@ returns the computation itself, and a supported uncounted run has a supported co
 counterpart.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

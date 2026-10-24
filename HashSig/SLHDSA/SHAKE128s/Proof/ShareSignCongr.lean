@@ -23,7 +23,7 @@ climb's own message encodes, so the induction goes through with the invariant st
 table's cells.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

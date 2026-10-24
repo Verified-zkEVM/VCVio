@@ -33,7 +33,7 @@ what survives a step survives the run. The brackets are free, since `BracketedRu
 the recordings outright. A predicate on one state that every step preserves composes by itself.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -100,7 +100,7 @@ only grows afterwards, so the property survives. `step_left_mem` reports it alon
 the way `CarrierRecordings.step_right_mem` reports its entry's caching alongside its test. -/
 
 /-- **Every disclosing entry is served by the carrier that holds it.** -/
-def LeftServed (state : CountedState) : Prop :=
+@[expose] def LeftServed (state : CountedState) : Prop :=
   ∀ entry ∈ state.2.1.1, HandlerCarrier.Served state.1 entry.1
 
 /-- The empty recording at a fresh carrier is served. -/

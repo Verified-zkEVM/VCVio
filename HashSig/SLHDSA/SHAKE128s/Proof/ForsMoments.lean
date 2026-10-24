@@ -18,14 +18,14 @@ polynomial values and a sixth-moment scalar inequality only. It does not establi
 Poisson coupling, a concentration theorem, or a bound for adaptive signing transcripts.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.ForsMoments
 
 /-- Row `n` of the triangle of Stirling numbers of the second kind, `S(n, 0), …, S(n, n)`,
 computed row by row so that kernel evaluation does not unfold the two-term recurrence
 exponentially. -/
-def stirlingRow : Nat → List Nat
+@[expose] def stirlingRow : Nat → List Nat
   | 0 => [1]
   | n + 1 =>
       let previous := stirlingRow n
@@ -57,12 +57,12 @@ theorem stirlingRow_getD (n k : Nat) :
 /-- The Touchard polynomial of the given degree evaluated at `mean`,
 `∑ k ≤ degree, S(degree, k) * mean ^ k`: the raw moment of that degree of a Poisson variable
 with integer mean `mean`. -/
-def touchard (degree mean : Nat) : Nat :=
+@[expose] def touchard (degree mean : Nat) : Nat :=
   ∑ k ∈ Finset.range (degree + 1), Nat.stirlingSecond degree k * mean ^ k
 
 /-- `touchard` with its Stirling coefficients read from the precomputed `stirlingRow`, the form
 used for kernel evaluation. -/
-def cachedTouchard (degree mean : Nat) : Nat :=
+@[expose] def cachedTouchard (degree mean : Nat) : Nat :=
   let row := stirlingRow degree
   ∑ k ∈ Finset.range (degree + 1), row.getD k 0 * mean ^ k
 

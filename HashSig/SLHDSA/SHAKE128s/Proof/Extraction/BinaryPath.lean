@@ -20,7 +20,7 @@ canonical nodes everywhere or exhibits a `Collision` at a concrete height. The w
 path position, so it names a concrete hash input.
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.Extraction.BinaryPath
 
@@ -28,7 +28,7 @@ variable {α : Type}
 
 /-- The ordered pair of a path value and its sibling at `height`: the value goes on the left
 exactly when bit `height` of the leaf `index` is zero. -/
-def ordered (index height : Nat) (value sibling : α) : α × α :=
+@[expose] def ordered (index height : Nat) (value sibling : α) : α × α :=
   if index / 2 ^ height % 2 = 0 then (value, sibling) else (sibling, value)
 
 /-- `ordered` is injective in the pair it orders. -/
@@ -40,7 +40,7 @@ theorem ordered_eq_iff (index height : Nat) (value sibling value' sibling' : α)
 
 /-- The value at `height` recomputed from the leaf and the supplied siblings, combining at each
 level with `combine height nodeIndex left right`. -/
-def value (combine : Nat → Nat → α → α → α) (index : Nat)
+@[expose] def value (combine : Nat → Nat → α → α → α) (index : Nat)
     (leaf : α) (siblings : Nat → α) : Nat → α
   | 0 => leaf
   | height + 1 =>
@@ -49,7 +49,7 @@ def value (combine : Nat → Nat → α → α → α) (index : Nat)
 
 /-- The canonical ordered pair of children at `height` on the path of leaf `index`, read off the
 genuine node table `nodes height nodeIndex`. -/
-def canonicalPair (nodes : Nat → Nat → α) (index height : Nat) : α × α :=
+@[expose] def canonicalPair (nodes : Nat → Nat → α) (index height : Nat) : α × α :=
   ordered index height (nodes height (index / 2 ^ height))
     (nodes height (Nat.xor (index / 2 ^ height) 1))
 
@@ -69,7 +69,7 @@ theorem canonical_step (nodes : Nat → Nat → α)
 
 /-- A collision at `height` on the path of leaf `index`: the recomputed ordered pair differs from
 the canonical one, yet both combine to the same parent. -/
-def Collision (nodes : Nat → Nat → α) (combine : Nat → Nat → α → α → α)
+@[expose] def Collision (nodes : Nat → Nat → α) (combine : Nat → Nat → α → α → α)
     (index : Nat) (leaf : α) (siblings : Nat → α) (height : Nat) : Prop :=
   let actual := ordered index height (value combine index leaf siblings height) (siblings height)
   let canonical := canonicalPair nodes index height
@@ -119,6 +119,6 @@ theorem value_eq_fold (combine : Nat → Nat → α → α → α)
     _ (fun _ => rfl)
 
 /-- The byte encoding of an ordered pair of digests, as hashed by an internal tree node. -/
-def pairBytes (pair : Digest × Digest) : Bytes := bytesBE n pair.1 ++ bytesBE n pair.2
+@[expose] def pairBytes (pair : Digest × Digest) : Bytes := bytesBE n pair.1 ++ bytesBE n pair.2
 
 end SlhDsaSecurity.Extraction.BinaryPath

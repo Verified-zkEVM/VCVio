@@ -24,7 +24,7 @@ retained**, because some of them read the record and the record is not a functio
 (the cache keeps neither multiplicity nor caller). `traceOf` and `recordedTraceOf` read the trace
 off a pair, and `recordOf` reads the record. -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

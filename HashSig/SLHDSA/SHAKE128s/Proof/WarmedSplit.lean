@@ -46,7 +46,7 @@ unfold into the whole game, and even a step that closes a goal with a syntactica
 hypothesis exhausts the heartbeat budget.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

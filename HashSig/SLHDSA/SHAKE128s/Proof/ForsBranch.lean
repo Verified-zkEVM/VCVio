@@ -27,7 +27,7 @@ what the verifier's own queries supply: the verifier computed each of these hash
 input is in the final cache (`CacheReplay.cached_of_queriesUnder`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

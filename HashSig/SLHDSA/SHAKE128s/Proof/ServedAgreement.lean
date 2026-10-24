@@ -36,7 +36,7 @@ randomiser's input, then the digest's, whose input carries the randomiser the fi
 truncates to. Everything after is the tail, which this file never looks at.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -114,13 +114,14 @@ structure Files (pk : PublicKey) {τ : Type}
         HandlerCarrier.Served state.1 probe ∨ probe = input
 
 /-- Raising the framing, at any state that carries a carrier. -/
-def startServingOn {τ : Type} (request : Message) (state : HandlerCarrier.State × τ) :
+@[expose] def startServingOn {τ : Type} (request : Message) (state : HandlerCarrier.State × τ) :
     HandlerCarrier.State × τ :=
   match request.frame with
   | none => state
   | some framed => (HandlerCarrier.setFraming state.1 framed, state.2)
 
 /-- And lowering it. -/
+@[expose]
 def stopServingOn {τ : Type} (state : HandlerCarrier.State × τ) : HandlerCarrier.State × τ :=
   (HandlerCarrier.clearFraming state.1, state.2)
 
@@ -143,7 +144,7 @@ phase is taken over an arbitrary signer and those two places become hypotheses:
 Both hold of `Scheme.sign sk`: `signerShape_sign`, `signerPins_sign`. -/
 
 /-- The serving phase at an arbitrary signer. -/
-noncomputable def servingPhaseWith {τ : Type}
+@[expose] noncomputable def servingPhaseWith {τ : Type}
     (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (signer : Message → OracleComp OracleWorld (Option Bytes)) :
     QueryImpl (OracleWorld + SigningSpec)
@@ -152,7 +153,7 @@ noncomputable def servingPhaseWith {τ : Type}
     (recordedAdversaryImpl + recordedSigningOracle signer) startServingOn stopServingOn
 
 /-- **What the filing argument asks of a signer**: it asks its randomiser and then its digest. -/
-def SignerShape (sk : SecretKey)
+@[expose] def SignerShape (sk : SecretKey)
     (signer : Message → OracleComp OracleWorld (Option Bytes)) : Prop :=
   ∀ (request : Message) (framed : Bytes), request.frame = some framed →
     ∃ rest : HashOutput → HashOutput → OracleComp OracleWorld (Option Bytes),
@@ -166,7 +167,7 @@ def SignerShape (sk : SecretKey)
 
 /-- **What the containment asks of a signer**: it is the lift of a hash-only computation whose
 only query of a framing's digest shape carries the randomiser the cache replays. -/
-def SignerPins (sk : SecretKey) (warm : QueryCache HashSpec)
+@[expose] def SignerPins (sk : SecretKey) (warm : QueryCache HashSpec)
     (signer : Message → OracleComp OracleWorld (Option Bytes)) : Prop :=
   ∃ hashSigner : Message → OracleComp HashSpec (Option Bytes),
     (∀ request : Message, signer request =
@@ -410,7 +411,7 @@ theorem randomizer_of_signInternalAt {σ : Type} (impl : QueryImpl OracleWorld (
 
 /-- **What the log's own reading asks of a signer**: it answers with a signature whose
 randomiser the final cache replays. -/
-def SignerFaithful (pk : PublicKey)
+@[expose] def SignerFaithful (pk : PublicKey)
     {τ : Type} (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (_hfiles : Files pk impl)
     (sk : SecretKey) (signer : Message → OracleComp OracleWorld (Option Bytes)) : Prop :=
@@ -466,6 +467,7 @@ from moving as the run goes on, since the input names the randomiser and the ran
 back off the cache. -/
 
 /-- **What a run leaves true of its log and its carrier.** -/
+@[expose]
 def LogFiled (sk : SecretKey) (log : SigningLog) (carrier : HandlerCarrier.State) : Prop :=
   ∀ entry ∈ log, ∀ framed : Bytes, entry.1.frame = some framed →
     ∃ (seed : HashOutput) (signature : Signature),
@@ -812,7 +814,7 @@ theorem servedClear_run {α : Type} (pk : PublicKey)
 
 /-- **What a run leaves true of its carrier and its log**, read at any cache the carrier's own
 extends. -/
-def CarrierLogged (sk : SecretKey) (warm : QueryCache HashSpec) (log : SigningLog)
+@[expose] def CarrierLogged (sk : SecretKey) (warm : QueryCache HashSpec) (log : SigningLog)
     (carrier : HandlerCarrier.State) : Prop :=
   ∀ later : QueryCache HashSpec,
     (∀ (input : Bytes) (value : HashOutput), carrier.cache input = some value →
@@ -980,7 +982,7 @@ message. `HandlerCarrier.FilesLeft` compares against the framing in flight and n
 is false there. -/
 
 /-- The digest input a logged entry serves, when it has a framing. -/
-def servedOf (sk : SecretKey) (cache : QueryCache HashSpec)
+@[expose] def servedOf (sk : SecretKey) (cache : QueryCache HashSpec)
     (entry : (_ : Message) × Option Bytes) : Option Bytes :=
   (entry.1.frame).map fun framed =>
     Hashing.messageInput (HonestProbes.replayRandomizer cache sk framed) sk.publicKey framed

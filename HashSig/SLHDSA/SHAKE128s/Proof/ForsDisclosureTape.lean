@@ -21,7 +21,7 @@ loads of a uniform tape is exactly `ForsConcentration.uniformLoads` (`loads_prob
 Coupling this experiment to an adaptive shared random oracle is a separate obligation.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec MeasureTheory ProbabilityTheory
 open scoped ENNReal
@@ -46,15 +46,15 @@ abbrev InstanceWord (requests : Nat) := Fin requests → Instance
 abbrev LeafWord (requests : Nat) := Fin requests → Tree → Leaf
 
 /-- The instance word of a tape. -/
-def instanceWord {requests : Nat} (tape : Tape requests) : InstanceWord requests :=
+@[expose] def instanceWord {requests : Nat} (tape : Tape requests) : InstanceWord requests :=
   fun j => (tape j).1
 
 /-- The number of requests on a tape that select instance `i`. -/
-def loads {requests : Nat} (tape : Tape requests) (i : Instance) : Nat :=
+@[expose] def loads {requests : Nat} (tape : Tape requests) (i : Instance) : Nat :=
   (Finset.univ.filter (fun j => (tape j).1 = i)).card
 
 /-- The leaves a tape discloses in each tree of each instance. -/
-def disclosures {requests : Nat} (tape : Tape requests) : ForsCoverage.Disclosures :=
+@[expose] def disclosures {requests : Nat} (tape : Tape requests) : ForsCoverage.Disclosures :=
   fun i tree => (Finset.univ.filter (fun j => (tape j).1 = i)).image
     (fun j => (tape j).2 tree)
 
@@ -72,6 +72,7 @@ theorem loads_eq_wordLoads {requests : Nat} (tape : Tape requests) :
     Finset.sum_filter, instanceWord]
 
 /-- A tape splits into its instance word and its leaf word. -/
+@[expose]
 def splitTape (requests : Nat) : Tape requests ≃ InstanceWord requests × LeafWord requests where
   toFun tape := (instanceWord tape, fun j => (tape j).2)
   invFun pair j := (pair.1 j, pair.2 j)

@@ -16,7 +16,7 @@ same run: binding a common continuation after two computations of the same law g
 law.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

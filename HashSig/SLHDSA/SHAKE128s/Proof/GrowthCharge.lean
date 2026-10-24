@@ -15,7 +15,7 @@ Cache entries are never overwritten (`cache_value_persists`): once an answer is 
 every later query returns that same answer. `Bad` is the event that some cached answer is bad for
 its own input, and `CleanBad` is its negation at a cache. -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -76,12 +76,12 @@ for its own input, `CleanBad` says the cache holds none, and `CleanBad.cacheQuer
 installing a non-bad answer keeps a cache clean. -/
 
 /-- Some cached answer is bad for its own input. -/
-def Bad {α : Type} (bad : Bytes → HashOutput → Prop) :
+@[expose] def Bad {α : Type} (bad : Bytes → HashOutput → Prop) :
     α × QueryCache HashSpec → Prop := fun result =>
   ∃ input output, result.2 input = some output ∧ bad input output
 
 /-- The cache holds no answer that is bad for its own input. -/
-def CleanBad (bad : Bytes → HashOutput → Prop) (cache : QueryCache HashSpec) : Prop :=
+@[expose] def CleanBad (bad : Bytes → HashOutput → Prop) (cache : QueryCache HashSpec) : Prop :=
   ∀ input output, cache input = some output → ¬ bad input output
 
 /-- Installing an answer that is not bad for its input keeps a clean cache clean. -/

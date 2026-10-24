@@ -19,7 +19,7 @@ oracle calls. The lemmas lift this through the components, from a single hash
 (`verify_simulate`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

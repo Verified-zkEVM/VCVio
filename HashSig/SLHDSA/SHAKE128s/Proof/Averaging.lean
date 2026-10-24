@@ -20,7 +20,7 @@ Stated for a prefix whose value is kept — which is what the halves need, since
 describe names the prefix's cells.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

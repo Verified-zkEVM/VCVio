@@ -26,14 +26,14 @@ nothing outside the hypertree is ever made available, and the digit is plainly b
 cell but the always-available ones (`revealedOf_congr`).
 -/
 
-@[expose] public section
+public section
 
 namespace SlhDsaSecurity.ShareCells
 
 open CanonicalGraph
 
 /-- **The node whose cell a hypertree key signs**, for a key the hypertree uses. -/
-def messageNode (key : WotsKey) : Option StructuralNode :=
+@[expose] def messageNode (key : WotsKey) : Option StructuralNode :=
   match key.tree.layer.val with
   | 0 => some (.forsRoots ⟨key.tree.tree, key.leaf⟩)
   | layer + 1 =>
@@ -45,7 +45,7 @@ def messageNode (key : WotsKey) : Option StructuralNode :=
     else none
 
 /-- **The digit each key reveals on a chain**, read off the table. -/
-def revealedOf (cells : Cells) (key : WotsKey) (chain : Fin chains) : Nat :=
+@[expose] def revealedOf (cells : Cells) (key : WotsKey) (chain : Fin chains) : Nat :=
   match messageNode key with
   | some node => (Checksum.encode (cells (.structural node)) chain).val
   | none => w - 1

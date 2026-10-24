@@ -33,7 +33,7 @@ they use:
   final cache computes are the walk's own (`value_replay_eq_walk_cells`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

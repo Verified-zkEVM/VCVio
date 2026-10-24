@@ -19,7 +19,7 @@ least thirty-six (`count_wotsPublicKey_ge`). Hence a subtree of height `h` costs
 spend.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

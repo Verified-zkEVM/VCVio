@@ -43,7 +43,7 @@ graph's cell at a node the signatures leave unavailable. Both sides are already 
 one as a cached message digest, the other as an entry of the record of claims.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

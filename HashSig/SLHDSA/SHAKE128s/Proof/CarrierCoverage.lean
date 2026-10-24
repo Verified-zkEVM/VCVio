@@ -26,7 +26,7 @@ The chain is three applications of the bind-form transports, which is why those 
 binds: `bind_congr` walks them and the continuation is handed over rather than guessed.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -51,7 +51,7 @@ theorem reassociate_stopServingOn
       FusedTape.onCarrier ServedAgreement.stopServingOn (reassociate state) := rfl
 
 /-- The value the tail reads, with the final count taken off the carrier. -/
-def tailValue (_keys : (SecretKey × PublicKey)) (forgery : Forgery)
+@[expose] def tailValue (_keys : (SecretKey × PublicKey)) (forgery : Forgery)
     (accumulated : Multiplicative Tally) (log : SigningLog)
     (final : Bool × Tally) (carrier : Counted) :
     (Outcome × Multiset Bytes) × Nat :=

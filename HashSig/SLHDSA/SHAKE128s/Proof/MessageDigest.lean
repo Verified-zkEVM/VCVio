@@ -18,7 +18,7 @@ parses to an independent, uniform instance and index tuple, the distribution use
 counting.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -26,7 +26,7 @@ namespace SlhDsaSecurity.MessageDigest
 
 /-- The parse of a message digest together with the bits it discards: two bits above the tree
 index and seven bits above the leaf index. -/
-def split (output : HashOutput) : View × (BitVec 2 × BitVec 7) :=
+@[expose] def split (output : HashOutput) : View × (BitVec 2 × BitVec 7) :=
   (parse output, output.extractLsb' 70 2, output.extractLsb' 9 7)
 
 /-- Distinct digests have distinct splits. -/

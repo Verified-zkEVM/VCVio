@@ -33,7 +33,7 @@ by `Fin`. Matching the two is arithmetic with no cryptographic content, and keep
 hypotheses lets the actual argument be stated once rather than per layer.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

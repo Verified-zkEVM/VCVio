@@ -21,7 +21,7 @@ that verification makes between 569 and 3824 hash calls. `Bounds.simulated` tran
 bounds through any stateful implementation, such as a cached random oracle.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 open scoped BigOperators
@@ -257,7 +257,8 @@ theorem exact_cost {m : Type → Type} [Monad m] [LawfulMonad m]
       queryCostExactly_bind' hquery ih
 
 /-- Every reachable trace has the given bounds, under every possible oracle implementation. -/
-@[irreducible] def Bounds (computation : OracleComp HashSpec α) (lower upper : Nat) : Prop :=
+@[expose, irreducible]
+def Bounds (computation : OracleComp HashSpec α) (lower upper : Nat) : Prop :=
   ∀ (m : Type → Type) [Monad m] [LawfulMonad m]
     [MonadAttach m] [LawfulMonadAttach m] (impl : QueryImpl HashSpec m),
     AddWriterT.QueryBoundedBelowBy (simulateQ impl.withUnitCost computation) lower ∧
@@ -357,6 +358,7 @@ theorem verify_bounds (pk : PublicKey) (request : Message) (wire : Bytes)
   simpa only [Scheme.verify, hframe, hparse] using verifyInternal_bounds pk message signature
 
 /-- Instrument the free computation before interpreting its hash calls. -/
+@[expose]
 def counted (computation : OracleComp HashSpec α) : OracleComp HashSpec (α × Multiplicative Nat) :=
   (simulateQ (QueryImpl.ofLift HashSpec (OracleComp HashSpec)).withUnitCost computation).run
 

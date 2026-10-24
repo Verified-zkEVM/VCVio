@@ -27,7 +27,7 @@ The second is applied at the real game, where the budget says the cap never fire
 the blind game, where nothing else bounds the count.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -36,7 +36,7 @@ namespace SlhDsaSecurity.CapComp
 variable {ι : Type} {spec : OracleSpec ι} {α : Type}
 
 /-- **Truncate a computation once its weighted queries would exceed the limit.** -/
-noncomputable def capComp (weight : ι → Nat) (fallback : α) :
+@[expose] noncomputable def capComp (weight : ι → Nat) (fallback : α) :
     Nat → OracleComp spec α → OracleComp spec α :=
   fun limit oa => OracleComp.construct (C := fun _ => Nat → OracleComp spec α)
     (fun value _ => pure value)
@@ -48,7 +48,7 @@ noncomputable def capComp (weight : ι → Nat) (fallback : α) :
 variable {S : Type}
 
 /-- A handler whose state reports the weighted cost, query by query. -/
-def ReportsCost (impl : QueryImpl spec (StateT S ProbComp)) (weight : ι → Nat)
+@[expose] def ReportsCost (impl : QueryImpl spec (StateT S ProbComp)) (weight : ι → Nat)
     (cost : S → Nat) : Prop :=
   ∀ (t : ι) (state : S), ∀ z ∈ support ((impl t).run state), cost z.2 = cost state + weight t
 

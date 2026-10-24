@@ -24,7 +24,7 @@ named — the same escape as at the shared oracle, for the same reason: the lemm
 the states the rest reached instead of picking one.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

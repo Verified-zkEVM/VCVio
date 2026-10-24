@@ -30,7 +30,7 @@ hypotheses they need are `SplitCounted.forgetsAlong_sumSlots` and the two bracke
 laws. No induction is added here.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 open scoped ENNReal
@@ -43,7 +43,7 @@ open Security RecorderView CarriedWitness PhaseFusion RecordedQueries BracketedR
 open SplitCounted CarrierTail
 
 /-- The handler a split tail runs under: the tail's handler, counting in two slots. -/
-noncomputable def splitHandlerAt (inClass : Bytes → Prop) (inside outside : QueryKind)
+@[expose] noncomputable def splitHandlerAt (inClass : Bytes → Prop) (inside outside : QueryKind)
     (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) (walk : Walk) :
     QueryImpl OracleWorld (StateT (HandlerCarrier.State ×
       ((DigestTape.Record × DigestTape.Record) × Counts)) ProbComp) :=
@@ -59,7 +59,7 @@ theorem forgetsAlong_splitHandlerAt (inClass : Bytes → Prop) {inside outside :
 
 /-- **The split tail.** The tail's three stages at the split handler, with the two slots carried
 out beside the tail's own value. -/
-noncomputable def splitCarrierTail (inClass : Bytes → Prop) (inside outside : QueryKind)
+@[expose] noncomputable def splitCarrierTail (inClass : Bytes → Prop) (inside outside : QueryKind)
     (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) (adversary : Adversary)
     (walk : Walk) :
     ProbComp ((((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState) × Counts) :=

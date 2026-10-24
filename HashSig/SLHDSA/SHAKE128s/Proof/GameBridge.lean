@@ -32,7 +32,7 @@ sense `HypertreeDispatch.cases_of_accepted` consumes, and the honest key the ext
 against is the one key generation actually produced.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

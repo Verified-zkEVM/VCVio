@@ -23,7 +23,7 @@ canonical queries starts clean, so the event is charged at `2 ^ -128` per query,
 budget and independent of how many honest node values exist.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -34,7 +34,7 @@ open CanonicalGraph
 /-- The phase produced a child tuple deviating from the honest cells at some parent node,
 whose cached answer nevertheless reproduces that node's honest value. This is precisely the
 shape of every witness the structural extraction yields. -/
-def DeviatingCollision {α : Type} (publicSeed : Digest) (cells : Cells) :
+@[expose] def DeviatingCollision {α : Type} (publicSeed : Digest) (cells : Cells) :
     α × QueryCache HashSpec → Prop := fun result =>
   ∃ (candidates : Cells) (parent : StructuralNode) (output : HashOutput),
     (∃ child ∈ parent.children, candidates child ≠ cells child) ∧

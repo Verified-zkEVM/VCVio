@@ -18,7 +18,7 @@ charged. This file holds the one counting fact that step uses: the number of ser
 is at most the length of the signing log.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 

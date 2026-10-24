@@ -23,7 +23,7 @@ and the chain has three links, with the jointly capped games:
   q - 8` of them (`ShareJointBound.charged_blindRun_shareCompJ`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -37,7 +37,7 @@ attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenI
 
 /-- **The per-setup link**: at a good setup, the real event with an accepted forgery in the
 jointly capped real game is at most the blind flag of the jointly capped game. -/
-def SetupBound (adversary : Adversary) (limit : Nat) : Prop :=
+@[expose] def SetupBound (adversary : Adversary) (limit : Nat) : Prop :=
   ∀ setup : Setup, setup.Good →
     Pr{let r ← ShareJoint.realFlatJ adversary limit (setup.sk, setup.pk) setup.warm}[
         ShareFinal.RealEvent setup r ∧ r.1.1.2.1 = true] ≤

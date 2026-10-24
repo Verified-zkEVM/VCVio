@@ -23,7 +23,7 @@ an accepted forgery costs the experiment at least `569` charged hashes
 (`accepted_outcome_work`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -35,7 +35,7 @@ open Security VerificationQueries
 
 /-- The cost vector of a query made during the final verification: its hash cost, charged to
 the `verification` coordinate. -/
-def verificationCost (input : OracleWorld.Domain) : Counts :=
+@[expose] def verificationCost (input : OracleWorld.Domain) : Counts :=
   Counts.single .verification (Security.hashCost input)
 
 /-- The verifier in the experiment's oracle world is the hash-only verifier, lifted. -/

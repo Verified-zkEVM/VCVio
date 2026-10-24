@@ -29,7 +29,7 @@ at the top (`card_top_le`). Hence at most `7 * 33 = 231` claims are not verifier
 (`card_unqueried_claims_le`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

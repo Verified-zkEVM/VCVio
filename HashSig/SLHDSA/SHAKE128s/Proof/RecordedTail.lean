@@ -29,7 +29,7 @@ with the record dropped, as an equality of computations, so a probability at the
 probability at the other and nothing is paid for the instrumentation.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -42,6 +42,7 @@ open Security RecordedQueries
 /-! ## The game, recording the adversary's and the verifier's own inputs -/
 
 /-- `WarmedGame.afterSeeds`, recording the adversary's and the verifier's own hash inputs. -/
+@[expose]
 noncomputable def recordedAfterSeeds (adversary : Adversary) (sds : Digest × Digest × Digest) :
     OracleComp OracleWorld (Outcome × Multiset Bytes) := do
   let (sk, pk) ← Scheme.keygenInternal sds.1 sds.2.1 sds.2.2
@@ -145,7 +146,7 @@ theorem countAllHashes_map {α β : Type} (f : α → β) (computation : OracleC
     Functor.map_map]
 
 /-- The counted game played from what the walk left, carrying the record. -/
-noncomputable def recordedTail (adversary : Adversary)
+@[expose] noncomputable def recordedTail (adversary : Adversary)
     (start : ((Digest × Digest × Digest) × CanonicalGraph.Cells) × QueryCache HashSpec) :
     ProbComp (((Outcome × Multiset Bytes) × Nat) × QueryCache HashSpec) :=
   (simulateQ KeygenUniform.rom

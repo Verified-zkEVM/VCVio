@@ -20,7 +20,7 @@ a `PRF_msg` input with `SK.prf`, and the two seeds differ on a good walk (`Targe
 So the walk's cache holds no `PRF_msg` entry at the walk's own seed (`walk_cache_prf_fresh`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

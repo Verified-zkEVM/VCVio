@@ -21,7 +21,7 @@ table. This file states the real event at a setup (`RealEvent`), the setup a dra
 (`setupOf`), and the commutation of expectations (`ex_comm`) used to average.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
@@ -32,7 +32,7 @@ open Security CanonicalGraph ShareGame ShareCouple ShareInv ShareWhole ShareEven
 /-! ## At one setup -/
 
 /-- The real event at a setup, on the flattened real game's output. -/
-def RealEvent (setup : Setup)
+@[expose] def RealEvent (setup : Setup)
     (real : (((Forgery × Multiplicative RecordedQueries.Tally) × (Bool × RecordedQueries.Tally)) ×
       SigningLog) × QueryCache HashSpec) : Prop :=
   RoutedSplit.InputBad (SharedJoin.recordedTraceOf (realPair setup real)) ∨
@@ -44,7 +44,7 @@ attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenI
 /-! ## At one walk -/
 
 /-- The setup a drawn walk is. -/
-def setupOf (prfSeed publicSeed : Digest) (table : Cells × Padding) : Setup :=
+@[expose] def setupOf (prfSeed publicSeed : Digest) (table : Cells × Padding) : Setup :=
   ⟨prfSeed, publicSeed, table⟩
 
 /-- A drawn walk is good exactly when the setup it is is good. -/

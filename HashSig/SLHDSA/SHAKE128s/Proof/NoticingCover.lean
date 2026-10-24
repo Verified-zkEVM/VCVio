@@ -31,7 +31,7 @@ state — and it is why `reaches` has to survive `onQuery` as well as `update`. 
 This is the single-run statement of the composition the carrier tail needs.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 

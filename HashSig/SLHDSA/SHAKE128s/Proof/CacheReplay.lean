@@ -27,14 +27,14 @@ also flips coins cannot be replayed from a cache, because the coins leave no tra
 verifier is hash-only, which is why the statement is about it and not about the whole game.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
 namespace SlhDsaSecurity.CacheReplay
 
 /-- A finished cache, read as a total hash function. -/
-def replay (cache : QueryCache HashSpec) : QueryImpl HashSpec Id :=
+@[expose] def replay (cache : QueryCache HashSpec) : QueryImpl HashSpec Id :=
   fun input => ((cache input).getD default : Id HashOutput)
 
 /-- The oracle step either returns a cached value and leaves the cache alone, or samples and
@@ -162,7 +162,7 @@ entries, which is what the structural charge quantifies over — so an accepted 
 collisions can be read off the cache the game itself left behind. -/
 
 /-- The `HasQuery` instance that answers from a finished cache. -/
-@[reducible] def replayQuery (cache : QueryCache HashSpec) : HasQuery HashSpec Id :=
+@[expose, reducible] def replayQuery (cache : QueryCache HashSpec) : HasQuery HashSpec Id :=
   ⟨fun input => ((cache input).getD default : Id HashOutput)⟩
 
 /-- A hash call reads the cached answer at its input. -/
@@ -341,7 +341,7 @@ This is what makes the peeling usable on the verifier, whose Merkle path is a fo
 `subtreeHeight` steps and whose collision sits at an arbitrary one of them. -/
 
 /-- The Id-level fold a replayed hash-fold performs. -/
-def replayFold {ι : Type} (cache : QueryCache HashSpec) (inputOf : Digest → ι → Bytes) :
+@[expose] def replayFold {ι : Type} (cache : QueryCache HashSpec) (inputOf : Digest → ι → Bytes) :
     List ι → Digest → Digest
   | [], value => value
   | x :: xs, value =>

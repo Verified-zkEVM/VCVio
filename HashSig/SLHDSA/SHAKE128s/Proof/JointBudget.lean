@@ -26,7 +26,7 @@ adversary capped at `q - 569`:
   within what the adversary left plus `330` (`verify_le`).
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
