@@ -73,10 +73,11 @@ idempotent.
 /-
 Foxglove (a Bluebell-style probabilistic separation logic on iris-lean) for the
 `VCVioFoxglove` bridge. Only `VCVioFoxglove` may import it
-(`scripts/check-foxglove-isolation.sh`). Spike: pinned to a local commit.
+(`scripts/check-foxglove-isolation.sh`). Spike: pinned to a commit of the fork's
+`experimental/vcvio-free` branch (Foxglove without VCVio).
 -/
 require foxglove from git
-  "/home/dtumad/Documents/Foxglove" @
+  "https://github.com/dtumad/Foxglove" @
   "3bd934bd6067d5b59ba9e41675bc3a69f1453201"
 
 require PolyFun from git

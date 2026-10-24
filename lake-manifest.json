@@ -21,7 +21,7 @@
    "inputRev": "ecac686fd8a3b4763d3df2e738c91947bdec40d6",
    "inherited": false,
    "configFile": "lakefile.toml"},
-  {"url": "/home/dtumad/Documents/Foxglove",
+  {"url": "https://github.com/dtumad/Foxglove",
    "type": "git",
    "subDir": null,
    "scope": "",
