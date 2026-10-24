@@ -1,0 +1,150 @@
+{
+  "date": "2026-10-24",
+  "sourceRevisions": {
+    "main": "f3df0ac18aa5ae72b3e920ad5460492aa039b4f7",
+    "pr766": "aaf16f331e2d8cdc3e93f5bdb4029804c286689a",
+    "pr912": "1e1a0b0e9d6ed78351e98409719d754f2acd7e64",
+    "pr886": "97b8b31afde12e3af4e674d8fd5990f3de9716a2"
+  },
+  "probeEnvironment": {
+    "lean": "v4.35.0",
+    "mathlib": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+    "polyfun": "ef4c157b3c6775fb55864303d96f9b400428d5f0",
+    "unchangedDependencies": "existing compiled pinned PR 766 dependencies"
+  },
+  "canonicalIntegrationPolyfun": "5670109ccaaaf945c6003519244b76e0777ecc45",
+  "checks": {
+    "forsRepair": {
+      "status": "passed",
+      "affectedModules": 61,
+      "patch": "fors-order-repair.patch",
+      "moduleResults": "fors-rebuild-results.json",
+      "patchFormat": "zero-context unified diff",
+      "applyCommand": "git apply --unidiff-zero docs/design/slh-dsa-pr766-pr912-evidence/fors-order-repair.patch",
+      "patchReconstruction": {
+        "status": "byte_for_byte_identical_to_original_prototype",
+        "filesPerBaseline": 9,
+        "baselines": {
+          "pr766": "aaf16f331e2d8cdc3e93f5bdb4029804c286689a",
+          "canonicalIntegration": "21880ea684198fb8b5fa502edd11e5d02d81fca5"
+        },
+        "scope": "artifact conversion only; does not discharge canonical build gates"
+      }
+    },
+    "adapterContract": {
+      "status": "typechecked",
+      "proved": [
+        "fixed-context signing equation",
+        "verifierCap = 3929"
+      ],
+      "unproved": [
+        "advantage equality",
+        "signing-limit transport",
+        "work-budget transport",
+        "public work and minimum bounds"
+      ],
+      "source": "adapter-contract.lean.txt"
+    },
+    "countedRunner": {
+      "status": "definitions_and_equality_proofs_compile",
+      "runtimeStatus": "requires Lake-linked executable; direct interpreter lacks native OracleSpec.query symbol",
+      "source": "counted-runner.lean.txt"
+    },
+    "existingWireExecutable": {
+      "status": "passed",
+      "scope": "existing pinned PR 766 binary, not new combined tree"
+    },
+    "existingBoundTable": {
+      "status": "passed",
+      "rows": 18,
+      "checks": [
+        "compiled generator output identical to CSV",
+        "independent exact rational coefficient check"
+      ]
+    },
+    "plannedByteRangeCoefficients": {
+      "status": "exact_rational_inequalities_passed",
+      "inequalities": 36,
+      "LeanProofStatus": "pending implementation",
+      "coefficients": "byte-range-coefficients.json",
+      "checker": "check-byte-range-targets.py"
+    },
+    "newProofCoexistence": {
+      "status": "partial",
+      "compiledModules": 168,
+      "totalModules": 238,
+      "remainingModules": 70,
+      "results": "new-proof-compatibility-results.json"
+    },
+    "canonicalHeadFullValidation": {
+      "status": "pending implementation",
+      "command": "python3 docs/design/slh-dsa-pr766-pr912-evidence/validate-recorded-head.py -- ./scripts/validate.sh --lint --test --axioms",
+      "sourceRequirements": [
+        "generation reviewed and committed before validation",
+        "clean source and index before and after",
+        "HEAD and source tree unchanged",
+        "all dependency checkouts clean and at locked revisions",
+        "active Lean matches lean-toolchain",
+        "both active-version queries preserve all source, toolchain, manifest and dependency inputs"
+      ],
+      "reportLocation": "outside source tree; attach to exact PR revision"
+    },
+    "canonicalBaseA0": {
+      "status": "pending implementation",
+      "scope": "preserved PR 766 on canonical dependency lock, before further proof or adapter development",
+      "command": "python3 docs/design/slh-dsa-pr766-pr912-evidence/validate-recorded-head.py -- lake build HashSig VCVioTest HashSigTest"
+    },
+    "canonicalCoexistenceB0": {
+      "status": "pending implementation",
+      "scope": "minimal additive reconstruction, all 238 new modules and both original headlines, before adapter work",
+      "command": "python3 docs/design/slh-dsa-pr766-pr912-evidence/validate-recorded-head.py -- lake build HashSig VCVioTest HashSigTest"
+    },
+    "recordedHeadGate": {
+      "status": "fixture_checks_passed",
+      "fixtures": 25,
+      "implementation": "validate-recorded-head.py",
+      "checker": "test-validate-recorded-head.py",
+      "scope": "gate enforcement only; canonical builds and full validation remain pending",
+      "versionQueryChecks": {
+        "invocations": [
+          "initial",
+          "final"
+        ],
+        "invariants": [
+          "source HEAD and tree",
+          "source and index cleanliness",
+          "lean-toolchain",
+          "manifest hash",
+          "every dependency revision and cleanliness"
+        ],
+        "mutationFixturesPerInvocation": [
+          "tracked source dirt",
+          "clean source commit",
+          "dependency dirt",
+          "clean dependency commit",
+          "clean manifest commit",
+          "clean toolchain commit"
+        ],
+        "adversarialReproducers": "original dirty-final-source and clean-final-dependency-commit reproductions now reject; clean-final-source-commit reproduction also rejects"
+      }
+    },
+    "wireBridgeExecutable": {
+      "status": "specified_not_implemented",
+      "executable": "slhdsa_shake128s_wire_bridge_tests",
+      "root": "HashSigTest.SLHDSA.SHAKE128s.WireBridge",
+      "invocation": "lake exe slhdsa_shake128s_wire_bridge_tests",
+      "lakeTestRequirement": "explicit executable step, running check : IO Unit through root main, assertions fail nonzero"
+    }
+  },
+  "artifactsSha256": {
+    "test-validate-recorded-head.py": "3282b385b91c39278ca57894c7f415f2fccfae73f3687c4685f4ad42e5896e24",
+    "fors-rebuild-results.json": "999b76cc3edd8a5d94a662cebbb2d85fbf362411b85717d179d84477575f811c",
+    "check-byte-range-targets.py": "9b5787f4e9b0b9f789d0120fcca8d65604b1e8d0bbad4b4c7faf19280c1d96b1",
+    "new-proof-compatibility-results.json": "2eea37232e1d9baeb84e982bc2dc3620de29b91cf4019ab50d066d5f47f4a778",
+    "adapter-contract.lean.txt": "5578f460914bbde00e2278fe4e91fc1ca8c7975e083258b2d3df30ac34ab27a2",
+    "fors-order-repair.patch": "c1e481f4d5af9530328ea01f12363b525adb94c5629409741216c44598f39adf",
+    "counted-runner.lean.txt": "36cc4fdcd4816e69c6734ecfd44ee5ee341915d409f67602cf91de2275d9e198",
+    "validate-recorded-head.py": "bfa572106925366744da3d41d64273ec5fe290e696a67f2a12e3d50fb369e74f",
+    "byte-range-coefficients.json": "c00f3d56679f443d7e39c9f820bc2bd0b26dee8121804025354a275f6969de9e"
+  }
+}
