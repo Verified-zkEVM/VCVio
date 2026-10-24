@@ -27,7 +27,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CanonicalGraph
+namespace SLHDSA.SHAKE128s.CanonicalGraph
 
 /-- Position zero is the PRF-derived secret; position fifteen is the chain endpoint. -/
 @[expose]
@@ -87,4 +87,4 @@ theorem keygen_root_cell (secretSeed prfSeed publicSeed : Digest) :
     (Scheme.keygenInternal (m := Id) secretSeed prfSeed publicSeed).2.root =
       value secretSeed publicSeed (.structural topRoot) := rfl
 
-end SlhDsaSecurity.CanonicalGraph
+end SLHDSA.SHAKE128s.CanonicalGraph

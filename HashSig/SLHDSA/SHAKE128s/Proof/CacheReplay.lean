@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CacheReplay
+namespace SLHDSA.SHAKE128s.CacheReplay
 
 /-- A finished cache, read as a total hash function. -/
 @[expose] def replay (cache : QueryCache HashSpec) : QueryImpl HashSpec Id :=
@@ -497,4 +497,4 @@ theorem simulateQ_replay_congr {α : Type} (computation : OracleComp HashSpec α
     exact ih (replay left input) left right fun probe hprobe =>
       hagree probe (QueriesUnder.tail input probe next hprobe)
 
-end SlhDsaSecurity.CacheReplay
+end SLHDSA.SHAKE128s.CacheReplay

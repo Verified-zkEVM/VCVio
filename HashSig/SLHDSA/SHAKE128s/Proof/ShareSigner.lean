@@ -27,7 +27,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ShareSigner
+namespace SLHDSA.SHAKE128s.ShareSigner
 
 variable {α : Type}
 
@@ -190,4 +190,4 @@ theorem strippedSign_eq_draw (sk : SecretKey) (outputs : Programming.Outputs)
     exact warmCache_ne_none sk.publicKey.seed sk.seed outputs probe
       (probes_signAfter warm _ sk digest probe hprobe)
 
-end SlhDsaSecurity.ShareSigner
+end SLHDSA.SHAKE128s.ShareSigner

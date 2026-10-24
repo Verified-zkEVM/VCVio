@@ -40,7 +40,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ServedAgreement
+namespace SLHDSA.SHAKE128s.ServedAgreement
 
 variable {α β : Type}
 
@@ -1104,4 +1104,4 @@ theorem servedLog_iff_logServed (sk : SecretKey) (pk : PublicKey) (hpk : sk.publ
       hsigAnswer, Signature.fromBytes_toBytes signature, ?_⟩
     rw [hrandomizer, replayRandomizer_of_cached later sk framed seed (hlater _ seed hcached)]
 
-end SlhDsaSecurity.ServedAgreement
+end SLHDSA.SHAKE128s.ServedAgreement

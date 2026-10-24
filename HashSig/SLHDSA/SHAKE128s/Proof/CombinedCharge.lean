@@ -40,7 +40,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.CombinedCharge
+namespace SLHDSA.SHAKE128s.CombinedCharge
 
 open CanonicalGraph
 
@@ -84,4 +84,4 @@ theorem separated_of_not_possible (publicSeed : Digest) (pk : PublicKey) (cells 
     exact absurd (CanonicalGraph.parseInput_sound hparse).symm
       (HashSeparation.message_tweakable_ne hpublic (hbounds parsed.parent))
 
-end SlhDsaSecurity.CombinedCharge
+end SLHDSA.SHAKE128s.CombinedCharge

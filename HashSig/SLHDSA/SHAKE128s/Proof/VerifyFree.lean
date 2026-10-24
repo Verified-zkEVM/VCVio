@@ -34,7 +34,7 @@ public section
 open OracleComp OracleSpec
 open scoped BigOperators
 
-namespace SlhDsaSecurity.VerifyFree
+namespace SLHDSA.SHAKE128s.VerifyFree
 
 variable {α β : Type}
 
@@ -360,4 +360,4 @@ theorem freeCounted_query_bind (input : HashSpec.Domain)
   simp [freeCounted, simulateQ_bind, QueryImpl.withAddCost, QueryImpl.withCost, WriterT.run_bind,
     bind_assoc, map_eq_bind_pure_comp]
 
-end SlhDsaSecurity.VerifyFree
+end SLHDSA.SHAKE128s.VerifyFree

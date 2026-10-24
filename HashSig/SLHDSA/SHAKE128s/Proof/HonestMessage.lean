@@ -33,13 +33,13 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.HonestMessage
+namespace SLHDSA.SHAKE128s.HonestMessage
 
 open CanonicalGraph WotsResidueReduction
 
 /-- **The step's subtree index and leaf recombine to the subtree the step came from.** -/
 theorem treeAt_succ_add_leafAt (tree : Nat) :
-    ∀ (i : Nat) (leaf : SlhDsaSecurity.Hypertree.LeafIndex),
+    ∀ (i : Nat) (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex),
       treeAt tree (i + 1) * 2 ^ subtreeHeight + (leafAt leaf tree (i + 1)).val =
         treeAt tree i := by
   intro i
@@ -51,7 +51,7 @@ theorem treeAt_succ_add_leafAt (tree : Nat) :
     exact Nat.div_add_mod tree (2 ^ subtreeHeight)
   | succ i ih =>
     intro leaf
-    exact ih (tree / 2 ^ subtreeHeight) (SlhDsaSecurity.Hypertree.nextLeaf tree)
+    exact ih (tree / 2 ^ subtreeHeight) (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree)
 
 attribute [local irreducible] Extraction.HypertreeChain.honestNode CanonicalGraph.value
 
@@ -89,7 +89,7 @@ theorem honestMessage_succ (secretSeed publicSeed : Digest) (key : WotsKey) (lay
 
 /-- **The message the residue threads is the message the key signs.** -/
 theorem honestMessage_eq_revealedAt (secretSeed publicSeed expectedInput : Digest)
-    (layer tree : Nat) (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (i : Nat) (key : WotsKey)
+    (layer tree : Nat) (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (i : Nat) (key : WotsKey)
     (hlayer : key.tree.layer.val = layerAt layer (i + 1))
     (htree : key.tree.tree.val = treeAt tree (i + 1))
     (hleaf : key.leaf.val = (leafAt leaf tree (i + 1)).val) :
@@ -104,7 +104,7 @@ theorem honestMessage_eq_revealedAt (secretSeed publicSeed expectedInput : Diges
 the WOTS clause asks for: `GraphStakes.honestRevealed` really is the digit that key's own
 signature discloses. -/
 theorem honestRevealed_eq (secretSeed publicSeed expectedInput : Digest)
-    (layer tree : Nat) (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (i : Nat) (key : WotsKey)
+    (layer tree : Nat) (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (i : Nat) (key : WotsKey)
     (hlayer : key.tree.layer.val = layerAt layer (i + 1))
     (htree : key.tree.tree.val = treeAt tree (i + 1))
     (hleaf : key.leaf.val = (leafAt leaf tree (i + 1)).val) (chain : Fin chains) :
@@ -115,4 +115,4 @@ theorem honestRevealed_eq (secretSeed publicSeed expectedInput : Digest)
     honestMessage_eq_revealedAt secretSeed publicSeed expectedInput layer tree leaf i key
       hlayer htree hleaf]
 
-end SlhDsaSecurity.HonestMessage
+end SLHDSA.SHAKE128s.HonestMessage

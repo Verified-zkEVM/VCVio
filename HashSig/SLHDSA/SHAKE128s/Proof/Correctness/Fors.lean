@@ -22,22 +22,22 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Correctness.Fors
+namespace SLHDSA.SHAKE128s.Correctness.Fors
 
 variable [HasQuery HashSpec Id]
 
 /-- Recovering the FORS public key from an honest signature returns the compression of the
 `forsTrees` tree roots. -/
-theorem publicKeyFromSignature_sign (indices : SlhDsaSecurity.Fors.Indices)
+theorem publicKeyFromSignature_sign (indices : SLHDSA.SHAKE128s.Fors.Indices)
     (secretSeed publicSeed : Digest) (address : Address) :
-    SlhDsaSecurity.Fors.publicKeyFromSignature (m := Id)
-        (SlhDsaSecurity.Fors.sign (m := Id) indices secretSeed publicSeed address)
+    SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := Id)
+        (SLHDSA.SHAKE128s.Fors.sign (m := Id) indices secretSeed publicSeed address)
         indices publicSeed address =
       Hashing.tweakable (m := Id) publicSeed
         { address.setTypeAndClear .forsRoots with keyPair := address.keyPair }
         (digestArrayBytes fun i : Fin forsTrees =>
-          SlhDsaSecurity.Fors.node (m := Id) secretSeed publicSeed address forsHeight i.val) := by
-  simp only [SlhDsaSecurity.Fors.sign, SlhDsaSecurity.Fors.publicKeyFromSignature,
+          SLHDSA.SHAKE128s.Fors.node (m := Id) secretSeed publicSeed address forsHeight i.val) := by
+  simp only [SLHDSA.SHAKE128s.Fors.sign, SLHDSA.SHAKE128s.Fors.publicKeyFromSignature,
     sequenceFin_id, bind, pure, foldlM_id]
   apply congrArg (fun roots : Fin forsTrees → Digest =>
     Hashing.tweakable (m := Id) publicSeed
@@ -45,9 +45,9 @@ theorem publicKeyFromSignature_sign (indices : SlhDsaSecurity.Fors.Indices)
       (digestArrayBytes roots))
   funext i
   have hpath := recover_path
-    (SlhDsaSecurity.Fors.node (m := Id) secretSeed publicSeed address)
+    (SLHDSA.SHAKE128s.Fors.node (m := Id) secretSeed publicSeed address)
     (fun height nodeIndex left right => Hashing.tweakable (m := Id) publicSeed
-      (SlhDsaSecurity.Fors.nodeAddress address height nodeIndex)
+      (SLHDSA.SHAKE128s.Fors.nodeAddress address height nodeIndex)
       (bytesBE n left ++ bytesBE n right))
     (fun _ _ => rfl) forsHeight (i.val * 2 ^ forsHeight + (indices i).val)
   rw [offset_div_pow _ _ _ _ (Nat.le_refl _), Nat.sub_self, pow_zero, Nat.mul_one,
@@ -65,4 +65,4 @@ theorem publicKeyFromSignature_sign (indices : SlhDsaSecurity.Fors.Indices)
   rw [hparity]
   split <;> rfl
 
-end SlhDsaSecurity.Correctness.Fors
+end SLHDSA.SHAKE128s.Correctness.Fors

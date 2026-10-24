@@ -35,7 +35,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ForsCharge
+namespace SLHDSA.SHAKE128s.ForsCharge
 
 open CanonicalGraph Extraction
 
@@ -115,4 +115,4 @@ theorem deviatingCollision_of_compressionCollision_canonical {α : Type}
     simp [StructuralNode.children, childBytes_ofFn, value, structuralValue,
       Hashing.tweakable, StructuralNode.address, Extraction.Fors.rootAddress]
 
-end SlhDsaSecurity.ForsCharge
+end SLHDSA.SHAKE128s.ForsCharge

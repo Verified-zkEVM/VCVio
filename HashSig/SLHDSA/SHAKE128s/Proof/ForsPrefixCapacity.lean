@@ -24,7 +24,7 @@ public section
 open MeasureTheory ProbabilityTheory
 open scoped ENNReal BigOperators
 
-namespace SlhDsaSecurity.ForsPrefixCapacity
+namespace SLHDSA.SHAKE128s.ForsPrefixCapacity
 
 noncomputable section
 
@@ -64,4 +64,4 @@ abbrev Tape {ι : Type*} (loads : ι → Nat) := (i : ι) → InstanceTape (load
 
 end
 
-end SlhDsaSecurity.ForsPrefixCapacity
+end SLHDSA.SHAKE128s.ForsPrefixCapacity

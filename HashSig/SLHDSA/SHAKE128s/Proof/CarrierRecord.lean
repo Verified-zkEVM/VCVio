@@ -21,7 +21,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarrierRecord
+namespace SLHDSA.SHAKE128s.CarrierRecord
 
 open Security BracketedRun CarrierFiles CarrierRecordings CarrierSignRecord
   CarriedWitness CarrierTail RecordedQueries AnswerCarrier
@@ -57,4 +57,4 @@ theorem keys_publicKey (rightKeep : Walk → Bytes → HandlerCarrier.State → 
   rw [keys_eq_replay rightKeep walk hwalk keys hkeys]
   exact LateProvenance.keygen_publicKey walk.2 walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2
 
-end SlhDsaSecurity.CarrierRecord
+end SLHDSA.SHAKE128s.CarrierRecord

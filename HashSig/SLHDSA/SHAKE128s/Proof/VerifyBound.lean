@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.VerifyBound
+namespace SLHDSA.SHAKE128s.VerifyBound
 
 open Security
 
@@ -43,4 +43,4 @@ instance : DecidablePred IsHash := fun queried => by unfold IsHash; infer_instan
 
 /-! ## Upper bounds, structurally -/
 
-end SlhDsaSecurity.VerifyBound
+end SLHDSA.SHAKE128s.VerifyBound

@@ -33,7 +33,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ClaimsQueried
+namespace SLHDSA.SHAKE128s.ClaimsQueried
 
 open CacheReplay
 
@@ -267,4 +267,4 @@ theorem card_unqueried_claims_le (cache : QueryCache HashSpec) (pk : PublicKey)
   exact hchain (queriesUnder_verify_wotsClaim cache pk request wire message parsed hframe hparsed
     layer chain hlt)
 
-end SlhDsaSecurity.ClaimsQueried
+end SLHDSA.SHAKE128s.ClaimsQueried

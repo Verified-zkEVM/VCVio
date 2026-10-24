@@ -36,7 +36,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.LateProvenance
+namespace SLHDSA.SHAKE128s.LateProvenance
 
 variable {α : Type}
 
@@ -334,4 +334,4 @@ theorem hrecord (adversary : Adversary) :
       rw [houtcome]]
     exact Multiset.mem_add.mpr (Or.inr hrec)
 
-end SlhDsaSecurity.LateProvenance
+end SLHDSA.SHAKE128s.LateProvenance

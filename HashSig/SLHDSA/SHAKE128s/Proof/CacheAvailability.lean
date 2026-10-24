@@ -47,7 +47,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CacheAvailability
+namespace SLHDSA.SHAKE128s.CacheAvailability
 
 open CanonicalGraph
 
@@ -119,4 +119,4 @@ query either reads the cache, leaving it alone, or writes an input the cache had
 
 open OpenCache
 
-end SlhDsaSecurity.CacheAvailability
+end SLHDSA.SHAKE128s.CacheAvailability

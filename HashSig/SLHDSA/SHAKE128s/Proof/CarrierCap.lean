@@ -43,7 +43,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarrierCap
+namespace SLHDSA.SHAKE128s.CarrierCap
 
 variable {α : Type}
 
@@ -504,4 +504,4 @@ theorem leftRecord_le_cap_carrierTail
 
 attribute [local irreducible] WarmedGame.afterSeeds
 
-end SlhDsaSecurity.CarrierCap
+end SLHDSA.SHAKE128s.CarrierCap

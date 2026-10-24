@@ -36,7 +36,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.GameBridge
+namespace SLHDSA.SHAKE128s.GameBridge
 
 /-- The replay implementation agrees with the replay instance, by definition. -/
 theorem replay_agrees (cache : QueryCache HashSpec) (input : Bytes) :
@@ -64,7 +64,7 @@ theorem keygen_publicKey (secretSeed prfSeed publicSeed : Digest)
         secretSeed prfSeed publicSeed).2.seed = publicSeed ∧
       (@Scheme.keygenInternal Id Id.instMonad (CacheReplay.replayQuery cache)
         secretSeed prfSeed publicSeed).2.root =
-        @SlhDsaSecurity.Extraction.HypertreeChain.honestNode (CacheReplay.replayQuery cache)
+        @SLHDSA.SHAKE128s.Extraction.HypertreeChain.honestNode (CacheReplay.replayQuery cache)
           secretSeed publicSeed (layers - 1) 0 :=
   ⟨rfl, rfl⟩
 
@@ -130,8 +130,8 @@ theorem verifyInternal_of_verify (pk : PublicKey) (request : Message) (signature
 /-- The internal verifier's acceptance is a hypertree acceptance at the recovered FORS key. -/
 theorem hypertree_of_verifyInternal (pk : PublicKey) (message : Bytes) (parsed : Signature)
     (haccept : Scheme.verifyInternal (m := Id) pk message parsed = true) :
-    SlhDsaSecurity.Hypertree.verify (m := Id)
-        (SlhDsaSecurity.Fors.publicKeyFromSignature (m := Id) parsed.fors
+    SLHDSA.SHAKE128s.Hypertree.verify (m := Id)
+        (SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := Id) parsed.fors
           (MessageDigest.forsIndices
             (Hashing.messageDigest (m := Id) parsed.randomizer pk message))
           pk.seed
@@ -144,4 +144,4 @@ theorem hypertree_of_verifyInternal (pk : PublicKey) (message : Bytes) (parsed :
           (Hashing.messageDigest (m := Id) parsed.randomizer pk message)).toFin = true :=
   haccept
 
-end SlhDsaSecurity.GameBridge
+end SLHDSA.SHAKE128s.GameBridge

@@ -34,7 +34,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.TableBlind
+namespace SLHDSA.SHAKE128s.TableBlind
 
 open SensitiveQuery
 
@@ -62,4 +62,4 @@ theorem evalDist_run_congr_of_step {ι : Type} {spec : OracleSpec ι} {σ Table 
 
 variable {Node Index State : Type} [Fintype Index] [DecidableEq Index]
 
-end SlhDsaSecurity.TableBlind
+end SLHDSA.SHAKE128s.TableBlind

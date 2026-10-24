@@ -30,7 +30,7 @@ public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
-namespace SlhDsaSecurity.ShareCouple
+namespace SLHDSA.SHAKE128s.ShareCouple
 
 open Security CanonicalGraph ShareGame
 
@@ -482,4 +482,4 @@ theorem couple_verify (setup : Setup) (log : SigningLog) (served : List HashOutp
       · exact ⟨(x, lstate.served), List.mem_append_right _ (List.mem_singleton_self _), rfl,
           hrel.servedEq⟩
 
-end SlhDsaSecurity.ShareCouple
+end SLHDSA.SHAKE128s.ShareCouple

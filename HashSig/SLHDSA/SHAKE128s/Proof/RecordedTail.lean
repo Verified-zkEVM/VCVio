@@ -33,7 +33,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.RecordedTail
+namespace SLHDSA.SHAKE128s.RecordedTail
 
 variable {α β : Type}
 
@@ -179,4 +179,4 @@ theorem card_toFinset_le_count (adversary : Adversary)
   card_toFinset_le_work adversary start.1.1 start.2 (result.1.1, result.2)
     (WarmedSplit.mem_support_of_countAllHashes _ start.2 result hresult)
 
-end SlhDsaSecurity.RecordedTail
+end SLHDSA.SHAKE128s.RecordedTail

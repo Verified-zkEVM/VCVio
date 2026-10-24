@@ -22,7 +22,7 @@ path position, so it names a concrete hash input.
 
 public section
 
-namespace SlhDsaSecurity.Extraction.BinaryPath
+namespace SLHDSA.SHAKE128s.Extraction.BinaryPath
 
 variable {α : Type}
 
@@ -121,4 +121,4 @@ theorem value_eq_fold (combine : Nat → Nat → α → α → α)
 /-- The byte encoding of an ordered pair of digests, as hashed by an internal tree node. -/
 @[expose] def pairBytes (pair : Digest × Digest) : Bytes := bytesBE n pair.1 ++ bytesBE n pair.2
 
-end SlhDsaSecurity.Extraction.BinaryPath
+end SLHDSA.SHAKE128s.Extraction.BinaryPath

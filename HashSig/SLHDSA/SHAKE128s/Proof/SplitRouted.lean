@@ -47,7 +47,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.SplitRouted
+namespace SLHDSA.SHAKE128s.SplitRouted
 
 open Security CanonicalGraph WotsResidueReduction
 
@@ -93,7 +93,7 @@ chain is the canonical input of a node whose staked cell no signature discloses.
 omit [HasQuery HashSpec Id] in
 /-- The coordinates of the key the residue reaches after `i` steps. -/
 theorem forgedKey_coords (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (layer : Fin layers) :
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (layer : Fin layers) :
     (ClaimedProbes.forgedKey tree leaf layer).tree.layer.val = layer.val ∧
       (ClaimedProbes.forgedKey tree leaf layer).tree.tree.val = treeAt tree.val layer.val ∧
       (ClaimedProbes.forgedKey tree leaf layer).leaf = leafAt leaf tree.val layer.val :=
@@ -103,7 +103,7 @@ theorem forgedKey_coords (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
 at: the message the residue threads for the honest side is the message the key really signs. -/
 theorem honestRevealed_eq_revealedAt (secretSeed publicSeed : Digest)
     (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (layer : Fin layers) (chain : Fin chains) :
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (layer : Fin layers) (chain : Fin chains) :
     GraphStakes.honestRevealed secretSeed publicSeed
         (ClaimedProbes.forgedKey tree leaf layer) chain =
       (Checksum.encode (revealedAt secretSeed publicSeed
@@ -134,7 +134,7 @@ theorem sensitive_of_residue {State : Type} (secretSeed publicSeed : Digest)
     (signedAt : State → ForsKey → Finset (Fin (forsTrees * 2 ^ forsHeight))) (state : State)
     (cells : Cells) (hcells : value secretSeed publicSeed = cells)
     (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (signature : Signature) (recovered : Digest)
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (signature : Signature) (recovered : Digest)
     (hresidue : FaultCharge.WotsResidue secretSeed publicSeed layers signature.hypertree 0
       tree.val leaf recovered
       (value secretSeed publicSeed (.structural (.forsRoots ⟨tree, leaf⟩)))) :
@@ -178,9 +178,9 @@ theorem signed_or_sensitive_of_secrets {State : Type} (secretSeed publicSeed : D
     (signedAt : State → ForsKey → Finset (Fin (forsTrees * 2 ^ forsHeight))) (state : State)
     (cache : QueryCache HashSpec) (cells : Cells)
     (hcells : @value (CacheReplay.replayQuery cache) secretSeed publicSeed = cells)
-    (key : ForsKey) (indices : SlhDsaSecurity.Fors.Indices) (signature : ForsSignature)
+    (key : ForsKey) (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : ForsSignature)
     (hsecrets : ∀ tree : Fin forsTrees, (signature tree).secret =
-      @SlhDsaSecurity.Fors.secret Id Id.instMonad (CacheReplay.replayQuery cache)
+      @SLHDSA.SHAKE128s.Fors.secret Id Id.instMonad (CacheReplay.replayQuery cache)
         secretSeed publicSeed key.address (Extraction.Fors.leafIndex indices tree))
     (tree : Fin forsTrees) :
     GraphStakes.forsIndex indices tree ∈ signedAt state key ∨
@@ -198,4 +198,4 @@ theorem signed_or_sensitive_of_secrets {State : Type} (secretSeed publicSeed : D
       (GraphStakes.forsIndex indices tree) ((signature tree).secret) hsigned
       (by rw [hcell, hcells]))
 
-end SlhDsaSecurity.SplitRouted
+end SLHDSA.SHAKE128s.SplitRouted

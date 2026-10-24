@@ -30,7 +30,7 @@ because the bound is strict on an index that is strictly below it.
 
 public section
 
-namespace SlhDsaSecurity
+namespace SLHDSA.SHAKE128s
 
 open CanonicalGraph HashSeparation
 
@@ -167,4 +167,4 @@ theorem withinBounds_structural (parent : StructuralNode) : WithinBounds parent.
     rw [ofNat_toNat_of_lt (by omega)]
     exact hlt
 
-end SlhDsaSecurity
+end SLHDSA.SHAKE128s

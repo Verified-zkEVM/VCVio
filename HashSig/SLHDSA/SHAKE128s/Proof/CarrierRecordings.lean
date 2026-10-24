@@ -28,7 +28,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarrierRecordings
+namespace SLHDSA.SHAKE128s.CarrierRecordings
 
 open Security BracketedRun RecorderView CarriedWitness CarrierFiles RecordInvariant
   CountedHandler
@@ -224,4 +224,4 @@ theorem step_recordFreshNodup (rightKeep : Bytes → HandlerCarrier.State → Pr
     rw [← hnew, ← hpriorInput]
     exact hinv.1 prior hpriorMem
 
-end SlhDsaSecurity.CarrierRecordings
+end SLHDSA.SHAKE128s.CarrierRecordings

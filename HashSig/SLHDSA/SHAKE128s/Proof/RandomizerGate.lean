@@ -36,7 +36,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.RandomizerGate
+namespace SLHDSA.SHAKE128s.RandomizerGate
 
 open CanonicalGraph
 
@@ -133,4 +133,4 @@ theorem prob_truncate_eq (target : Digest) :
     Fintype.card_bitVec, one_div]
   rfl
 
-end SlhDsaSecurity.RandomizerGate
+end SLHDSA.SHAKE128s.RandomizerGate

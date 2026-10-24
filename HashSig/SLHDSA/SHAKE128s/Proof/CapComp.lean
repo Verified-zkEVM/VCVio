@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.CapComp
+namespace SLHDSA.SHAKE128s.CapComp
 
 variable {ι : Type} {spec : OracleSpec ι} {α : Type}
 
@@ -76,4 +76,4 @@ theorem evalDist_bind_congr_support {β γ : Type} (oa : ProbComp β) (f g : β 
     (h : ∀ a ∈ support oa, f a =ᵈ g a) : oa >>= f =ᵈ oa >>= g :=
   OracleComp.EvalDistEq.bind_congr_of_support oa h
 
-end SlhDsaSecurity.CapComp
+end SLHDSA.SHAKE128s.CapComp

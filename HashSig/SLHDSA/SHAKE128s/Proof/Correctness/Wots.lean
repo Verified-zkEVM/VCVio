@@ -21,7 +21,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Correctness
+namespace SLHDSA.SHAKE128s.Correctness
 
 /-- In the identity monad, sequencing a family of computations returns the family itself. -/
 @[simp] theorem sequenceFin_id {α : Type} (size : Nat) (f : Fin size → Id α) :
@@ -42,14 +42,14 @@ variable [HasQuery HashSpec Id]
 /-- Splitting a chain preserves both the hash inputs and their order. -/
 theorem chain_add (publicSeed : Digest) (address : Address)
     (start first second : Nat) (value : Digest) :
-    SlhDsaSecurity.Wots.chain (m := Id) publicSeed address start (first + second) value =
-      SlhDsaSecurity.Wots.chain (m := Id) publicSeed address (start + first) second
-        (SlhDsaSecurity.Wots.chain (m := Id) publicSeed address start first value) := by
+    SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address start (first + second) value =
+      SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address (start + first) second
+        (SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address start first value) := by
   induction first generalizing start value with
   | zero => rw [Nat.zero_add]; rfl
   | succ first ih =>
       have hstart : start + 1 + first = start + (first + 1) := by omega
-      simpa only [Nat.succ_add, SlhDsaSecurity.Wots.chain, bind, hstart] using
+      simpa only [Nat.succ_add, SLHDSA.SHAKE128s.Wots.chain, bind, hstart] using
         ih (start + 1)
           (Hashing.tweakable (m := Id) publicSeed
             { address with hashOrIndex := BitVec.ofNat 32 start } (bytesBE n value))
@@ -57,12 +57,12 @@ theorem chain_add (publicSeed : Digest) (address : Address)
 /-- Recovering the public key from an honest WOTS signature returns the WOTS public key. -/
 theorem publicKeyFromSignature_sign (message secretSeed publicSeed : Digest)
     (address : Address) :
-    SlhDsaSecurity.Wots.publicKeyFromSignature (m := Id)
-        (SlhDsaSecurity.Wots.sign (m := Id) message secretSeed publicSeed address)
+    SLHDSA.SHAKE128s.Wots.publicKeyFromSignature (m := Id)
+        (SLHDSA.SHAKE128s.Wots.sign (m := Id) message secretSeed publicSeed address)
         message publicSeed address =
-      SlhDsaSecurity.Wots.publicKey (m := Id) secretSeed publicSeed address := by
-  simp only [SlhDsaSecurity.Wots.sign, SlhDsaSecurity.Wots.publicKeyFromSignature,
-    SlhDsaSecurity.Wots.publicKey, sequenceFin_id, bind]
+      SLHDSA.SHAKE128s.Wots.publicKey (m := Id) secretSeed publicSeed address := by
+  simp only [SLHDSA.SHAKE128s.Wots.sign, SLHDSA.SHAKE128s.Wots.publicKeyFromSignature,
+    SLHDSA.SHAKE128s.Wots.publicKey, sequenceFin_id, bind]
   congr 2
   funext i
   have digit_le : (Checksum.encode message i).val ≤ w - 1 := by
@@ -73,7 +73,7 @@ theorem publicKeyFromSignature_sign (message secretSeed publicSeed : Digest)
     (chain_add publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val }
       0 (Checksum.encode message i).val (w - 1 - (Checksum.encode message i).val)
       (Hashing.derive (m := Id) publicSeed secretSeed
-        (SlhDsaSecurity.Wots.secretAddress address i))).symm
+        (SLHDSA.SHAKE128s.Wots.secretAddress address i))).symm
 
 end Wots
-end SlhDsaSecurity.Correctness
+end SLHDSA.SHAKE128s.Correctness

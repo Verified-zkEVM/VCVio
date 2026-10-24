@@ -24,7 +24,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.WriterState
+namespace SLHDSA.SHAKE128s.WriterState
 
 /-! ## Counting before answering, and counting after
 
@@ -67,4 +67,4 @@ theorem run_simulateQ_withAddCost {ι : Type} {spec : OracleSpec ι} {ω : Type}
     simp only []
     rw [ih value, simulateQ_map, addCostOracle]
 
-end SlhDsaSecurity.WriterState
+end SLHDSA.SHAKE128s.WriterState

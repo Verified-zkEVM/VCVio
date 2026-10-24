@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
-namespace SlhDsaSecurity.WorkFinal
+namespace SLHDSA.SHAKE128s.WorkFinal
 
 open Security CanonicalGraph ShareGame ShareInv ShareWhole ShareEvent WarmedGame Target
   RoutedSplit BySourceBridge
@@ -143,4 +143,4 @@ theorem hasSecurityBits_work : HasSecurityBits adversaryWork 127 := by
   · rw [advantage_eq_zero adversary q (by omega) hbound]
     exact zero_le
 
-end SlhDsaSecurity.WorkFinal
+end SLHDSA.SHAKE128s.WorkFinal

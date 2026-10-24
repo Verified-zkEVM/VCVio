@@ -27,7 +27,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.BlockViews
+namespace SLHDSA.SHAKE128s.BlockViews
 
 open DigestTape TapeFactor
 
@@ -178,4 +178,4 @@ theorem tsum_probOutput_map {β γ : Type} (run : ProbComp β) (reshape : β →
   rw [← lintegral_evalDist_eq_tsum_probComp, ← lintegral_evalDist_eq_tsum_probComp,
     lintegral_evalDist_map_of_discrete]
 
-end SlhDsaSecurity.BlockViews
+end SLHDSA.SHAKE128s.BlockViews

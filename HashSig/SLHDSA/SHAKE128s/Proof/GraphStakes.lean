@@ -47,7 +47,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.GraphStakes
+namespace SLHDSA.SHAKE128s.GraphStakes
 
 open CanonicalGraph SensitiveQuery
 
@@ -236,7 +236,7 @@ theorem not_obtainable_forsPrf (state : State) (key : ForsKey)
   hunsigned (not_unavailable_of_obtainable revealed signedAt state hobtain)
 
 /-- The position a FORS tree's selected leaf sits at, as a graph index. -/
-@[expose] def forsIndex (indices : SlhDsaSecurity.Fors.Indices) (tree : Fin forsTrees) :
+@[expose] def forsIndex (indices : SLHDSA.SHAKE128s.Fors.Indices) (tree : Fin forsTrees) :
     Fin (forsTrees * 2 ^ forsHeight) :=
   ⟨Extraction.Fors.leafIndex indices tree, by
     have htree := tree.isLt
@@ -249,10 +249,10 @@ theorem not_obtainable_forsPrf (state : State) (key : ForsKey)
 
 /-- **The FORS disclosure, position by position: signed, or not obtainable.** -/
 theorem forsSecret_signed_or_not_obtainable (cache : QueryCache HashSpec)
-    (secretSeed : Digest) (key : ForsKey) (indices : SlhDsaSecurity.Fors.Indices)
+    (secretSeed : Digest) (key : ForsKey) (indices : SLHDSA.SHAKE128s.Fors.Indices)
     (signature : ForsSignature) (state : State)
     (hsecrets : ∀ tree : Fin forsTrees, (signature tree).secret =
-      @SlhDsaSecurity.Fors.secret Id Id.instMonad (CacheReplay.replayQuery cache)
+      @SLHDSA.SHAKE128s.Fors.secret Id Id.instMonad (CacheReplay.replayQuery cache)
         secretSeed publicSeed key.address (Extraction.Fors.leafIndex indices tree))
     (tree : Fin forsTrees) :
     (signature tree).secret =
@@ -344,7 +344,7 @@ is a function of the forgery alone. Its length is a constant — `forsTrees + la
 which is `259` — not a function of the budget, which is what makes it affordable. -/
 
 /-- One candidate per cell the forgery claims. -/
-@[expose] def claimedCandidates (forsKey : ForsKey) (indices : SlhDsaSecurity.Fors.Indices)
+@[expose] def claimedCandidates (forsKey : ForsKey) (indices : SLHDSA.SHAKE128s.Fors.Indices)
     (signature : Signature) (keyAt : Fin layers → WotsKey)
     (stepAt : Fin layers → Fin chains → Fin (w - 1)) : List Bytes :=
   (List.finRange forsTrees).map (fun tree =>
@@ -355,4 +355,4 @@ which is `259` — not a function of the budget, which is what makes it affordab
         inputOf publicSeed (wotsHashNode (keyAt layer) chain (stepAt layer chain))
           ((signature.hypertree layer).wots chain)
 
-end SlhDsaSecurity.GraphStakes
+end SLHDSA.SHAKE128s.GraphStakes

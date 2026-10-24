@@ -34,7 +34,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CollisionToDeviating
+namespace SLHDSA.SHAKE128s.CollisionToDeviating
 
 open CanonicalGraph
 
@@ -193,4 +193,4 @@ theorem deviatingCollision_of_array {α : Type} {size : Nat} (publicSeed : Diges
       show (fun index => candidates (children index)) = actual from funext hvalue]
     exact hentry
 
-end SlhDsaSecurity.CollisionToDeviating
+end SLHDSA.SHAKE128s.CollisionToDeviating

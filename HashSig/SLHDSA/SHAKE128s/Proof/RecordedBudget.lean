@@ -27,7 +27,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.RecordedBudget
+namespace SLHDSA.SHAKE128s.RecordedBudget
 
 variable {α : Type}
 
@@ -47,4 +47,4 @@ theorem map_countAllHashes {α : Type} (computation : OracleComp OracleWorld α)
 attribute [local irreducible] WarmedGame.afterSeeds StrippedGame.strippedAfterSeeds
   RecordedQueries.recordedAfterSeeds Scheme.verify Scheme.keygenInternal Security.countQueries
 
-end SlhDsaSecurity.RecordedBudget
+end SLHDSA.SHAKE128s.RecordedBudget

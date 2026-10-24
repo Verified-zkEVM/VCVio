@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.SharePresent
+namespace SLHDSA.SHAKE128s.SharePresent
 
 variable {α : Type}
 
@@ -274,4 +274,4 @@ theorem linkedRun_eq (adversary : Adversary) (prfSeed publicSeed : Digest)
   simp only [simulateQ_bind, StateT.run_bind, LinkedGame.run_unchargedPhase_lift,
     simulateQ_pure, StateT.run_pure, bind_map_left, rom_verify_eq]
 
-end SlhDsaSecurity.SharePresent
+end SLHDSA.SHAKE128s.SharePresent

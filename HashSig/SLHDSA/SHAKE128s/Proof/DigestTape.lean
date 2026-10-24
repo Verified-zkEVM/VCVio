@@ -36,7 +36,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.DigestTape
+namespace SLHDSA.SHAKE128s.DigestTape
 
 /-! ## The recording oracle -/
 
@@ -236,4 +236,4 @@ theorem viewTape_uniform (trials : Nat) :
   rw [prEvent_map]
   exact SampleableType.prEvent_uniformSample_fst p
 
-end SlhDsaSecurity.DigestTape
+end SLHDSA.SHAKE128s.DigestTape

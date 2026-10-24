@@ -35,7 +35,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.NoticingCover
+namespace SLHDSA.SHAKE128s.NoticingCover
 
 variable {α : Type}
 
@@ -247,4 +247,4 @@ theorem mem_recordOf_of_cache_reaches {α : Type} (leftKeep rightKeep : Bytes �
               hnoticed]
             exact hfresh
 
-end SlhDsaSecurity.NoticingCover
+end SLHDSA.SHAKE128s.NoticingCover

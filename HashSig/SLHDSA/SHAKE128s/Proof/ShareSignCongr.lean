@@ -27,7 +27,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ShareSignCongr
+namespace SLHDSA.SHAKE128s.ShareSignCongr
 
 open CanonicalGraph RedrawCell ShareGame
 
@@ -206,4 +206,4 @@ theorem cellSig_congr (publicSeed prfLeft prfRight : Digest) (left right : Cells
     rw [revealedOf_zero]
     rfl
 
-end SlhDsaSecurity.ShareSignCongr
+end SLHDSA.SHAKE128s.ShareSignCongr

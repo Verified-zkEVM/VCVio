@@ -21,7 +21,7 @@ signature (`Signature.toBytes_fromBytes`).
 
 public section
 
-namespace SlhDsaSecurity
+namespace SLHDSA.SHAKE128s
 
 /-- An XMSS signature as its pair of fields. -/
 private def xmssFields : XmssSignature ≃ WotsSignature × (Fin subtreeHeight → Digest) where
@@ -100,4 +100,4 @@ theorem Signature.toBytes_fromBytes {input : Bytes} {signature : Signature}
     exact Option.some.inj h
   exact hsignature ▸ hbytes
 
-end SlhDsaSecurity
+end SLHDSA.SHAKE128s

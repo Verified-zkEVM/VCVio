@@ -36,7 +36,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ShareJoint
+namespace SLHDSA.SHAKE128s.ShareJoint
 
 variable {α : Type}
 
@@ -208,4 +208,4 @@ theorem prEvent_realFlat_le (adversary : Adversary) (limit : Nat)
     obtain ⟨w, hw, rfl⟩ := hr
     exact hcost (haccepted z hz w hw hev.2)
 
-end SlhDsaSecurity.ShareJoint
+end SLHDSA.SHAKE128s.ShareJoint

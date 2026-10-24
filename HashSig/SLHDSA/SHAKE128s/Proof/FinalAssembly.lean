@@ -32,7 +32,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.FinalAssembly
+namespace SLHDSA.SHAKE128s.FinalAssembly
 
 open Security CanonicalGraph WarmedGame RoutedSplit Target AnswerSide
 
@@ -41,4 +41,4 @@ open Security CanonicalGraph WarmedGame RoutedSplit Target AnswerSide
     (Outcome × Nat) × QueryCache HashSpec :=
   ((result.1.1.1, result.1.2), result.2.1)
 
-end SlhDsaSecurity.FinalAssembly
+end SLHDSA.SHAKE128s.FinalAssembly

@@ -21,7 +21,7 @@ fold.
 
 public section
 
-namespace SlhDsaSecurity.Correctness
+namespace SLHDSA.SHAKE128s.Correctness
 
 /-- A monadic left fold in `Id` is the plain left fold. -/
 theorem foldlM_id {α β : Type} (f : α → β → Id α) (initial : α) (items : List β) :
@@ -133,4 +133,4 @@ theorem recover_path {α : Type} (nodes : Nat → Nat → α)
   simpa only [div_pow_succ] using
     parent_reconstruction nodes combine hnodes j.val (index / 2 ^ j.val)
 
-end SlhDsaSecurity.Correctness
+end SLHDSA.SHAKE128s.Correctness

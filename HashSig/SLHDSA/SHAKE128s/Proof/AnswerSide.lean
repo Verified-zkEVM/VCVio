@@ -27,7 +27,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.AnswerSide
+namespace SLHDSA.SHAKE128s.AnswerSide
 
 open Security CanonicalGraph WarmedGame
 
@@ -128,4 +128,4 @@ theorem not_possible_generatedKey
   rw [generatedKey_eq_walk_pair hwalk]
   exact hgood
 
-end SlhDsaSecurity.AnswerSide
+end SLHDSA.SHAKE128s.AnswerSide

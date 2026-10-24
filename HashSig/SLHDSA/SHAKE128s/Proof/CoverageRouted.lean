@@ -46,14 +46,14 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CoverageRouted
+namespace SLHDSA.SHAKE128s.CoverageRouted
 
 open Security CanonicalGraph
 
 /-! ## A position names its tree and its leaf -/
 
 /-- **A FORS position determines the tree it sits in and the leaf inside it.** -/
-theorem forsIndex_inj {left right : SlhDsaSecurity.Fors.Indices}
+theorem forsIndex_inj {left right : SLHDSA.SHAKE128s.Fors.Indices}
     {treeLeft treeRight : Fin forsTrees}
     (hindex : GraphStakes.forsIndex left treeLeft = GraphStakes.forsIndex right treeRight) :
     treeLeft = treeRight ∧ left treeLeft = right treeRight := by
@@ -183,4 +183,4 @@ theorem forgeryDisclosedCovered_or_only_self (pk : PublicKey)
   obtain ⟨htree, hleaf⟩ := forsIndex_inj hother
   exact ⟨input, a, hne, hsigner, hcached, hkey, htree ▸ hleaf⟩
 
-end SlhDsaSecurity.CoverageRouted
+end SLHDSA.SHAKE128s.CoverageRouted

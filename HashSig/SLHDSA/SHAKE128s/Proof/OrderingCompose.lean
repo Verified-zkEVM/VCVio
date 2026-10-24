@@ -21,7 +21,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.OrderingCompose
+namespace SLHDSA.SHAKE128s.OrderingCompose
 
 open Security PhaseFusion
 
@@ -54,4 +54,4 @@ theorem fuseServing_run_inr (outer : QueryImpl OracleWorld (StateT σ ProbComp))
         (pure (step.1.1.1, (state.1 * step.1.1.2, step.1.2, after step.2)) :
           ProbComp _) := rfl
 
-end SlhDsaSecurity.OrderingCompose
+end SLHDSA.SHAKE128s.OrderingCompose

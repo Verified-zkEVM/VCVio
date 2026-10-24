@@ -37,7 +37,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.SplitCharged
+namespace SLHDSA.SHAKE128s.SplitCharged
 
 open Security CacheReplay Extraction CanonicalGraph VerifierProbes
 
@@ -117,7 +117,7 @@ theorem cases_of_win_charged (adversary : Adversary)
                     (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2)
                     message parsed))) ∨
               ∀ i : Fin forsTrees, (parsed.fors i).secret =
-                @SlhDsaSecurity.Fors.secret Id Id.instMonad (CacheReplay.replayQuery result.2)
+                @SLHDSA.SHAKE128s.Fors.secret Id Id.instMonad (CacheReplay.replayQuery result.2)
                   walk.1.1.1 walk.1.1.2.2
                   (Scheme.forsAddress (digestOf result.2
                     (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2) message parsed))
@@ -155,4 +155,4 @@ theorem cases_of_win_charged (adversary : Adversary)
     · exact Or.inl hdeviating
     · exact Or.inr (Or.inl hresidue)
 
-end SlhDsaSecurity.SplitCharged
+end SLHDSA.SHAKE128s.SplitCharged

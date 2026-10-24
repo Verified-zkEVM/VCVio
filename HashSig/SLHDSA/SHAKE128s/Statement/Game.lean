@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity
+namespace SLHDSA.SHAKE128s
 
 /-- Byte strings. -/
 abbrev Bytes := List UInt8
@@ -232,4 +232,4 @@ variable [SampleableType Output]
 
 end Game
 
-end SlhDsaSecurity
+end SLHDSA.SHAKE128s

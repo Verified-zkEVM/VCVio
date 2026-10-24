@@ -40,7 +40,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.HonestGrowth
+namespace SLHDSA.SHAKE128s.HonestGrowth
 
 open Security WarmedGame CacheReplay CanonicalGraph
 
@@ -92,9 +92,9 @@ theorem one_le_count_tweakable (publicSeed : Digest) (address : Address) (payloa
   rw [show result.1.2 = inner.1.2 from by rw [← heq], hcount]
   exact Nat.le_refl 1
 
-attribute [local irreducible] SlhDsaSecurity.Merkle.node
+attribute [local irreducible] SLHDSA.SHAKE128s.Merkle.node
 
 attribute [local irreducible] WarmedGame.afterSeeds Scheme.keygenInternal Scheme.verify
   Scheme.sign Security.signingOracle Security.countQueries
 
-end SlhDsaSecurity.HonestGrowth
+end SLHDSA.SHAKE128s.HonestGrowth

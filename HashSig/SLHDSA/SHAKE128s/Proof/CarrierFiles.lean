@@ -36,7 +36,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarrierFiles
+namespace SLHDSA.SHAKE128s.CarrierFiles
 
 variable {α : Type}
 
@@ -428,4 +428,4 @@ theorem forgetsAlong_countedCarrierRecorder (rightKeep : Bytes → State → Pro
     (fun state : StateOf State => CacheView.cacheOf state.1) _ KeygenUniform.rom
     (forgetsAlong_carrierRecorder pk rightKeep)
 
-end SlhDsaSecurity.CarrierFiles
+end SLHDSA.SHAKE128s.CarrierFiles

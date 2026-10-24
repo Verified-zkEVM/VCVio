@@ -36,7 +36,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.SplitCounted
+namespace SLHDSA.SHAKE128s.SplitCounted
 
 variable {α : Type}
 
@@ -173,4 +173,4 @@ theorem run_splitCarrierRecorder_counted (inClass : Bytes → Prop) {inside outs
           (state.1, (state.2.1, state.2.2 inside + state.2.2 outside)) :=
   run_withSplit_withCount inClass hne _ computation
 
-end SlhDsaSecurity.SplitCounted
+end SLHDSA.SHAKE128s.SplitCounted

@@ -25,7 +25,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ForsCoverage
+namespace SLHDSA.SHAKE128s.ForsCoverage
 
 /-- The FORS instance selected by a message digest. -/
 abbrev Instance := MessageDigest.Instance
@@ -80,4 +80,4 @@ theorem fresh_coverage (revealed : Disclosures) :
       Fintype.card_fin, totalHeight, forsHeight, forsTrees]
   rw [hcard]
 
-end SlhDsaSecurity.ForsCoverage
+end SLHDSA.SHAKE128s.ForsCoverage

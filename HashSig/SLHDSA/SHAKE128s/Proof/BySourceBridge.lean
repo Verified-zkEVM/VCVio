@@ -33,7 +33,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.BySourceBridge
+namespace SLHDSA.SHAKE128s.BySourceBridge
 
 variable {α β : Type}
 
@@ -202,4 +202,4 @@ theorem tailBudgetW_of {adversary : Adversary} {q : Nat}
   unfold Counts.work
   omega
 
-end SlhDsaSecurity.BySourceBridge
+end SLHDSA.SHAKE128s.BySourceBridge

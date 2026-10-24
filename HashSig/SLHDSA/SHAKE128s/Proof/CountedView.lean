@@ -33,7 +33,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CountedView
+namespace SLHDSA.SHAKE128s.CountedView
 
 variable {β : Type}
 
@@ -131,4 +131,4 @@ theorem forgetsAlong_counted (pk : PublicKey)
     rw [← ih step.1 step.2, map_eq_bind_pure_comp]
     rfl
 
-end SlhDsaSecurity.CountedView
+end SLHDSA.SHAKE128s.CountedView

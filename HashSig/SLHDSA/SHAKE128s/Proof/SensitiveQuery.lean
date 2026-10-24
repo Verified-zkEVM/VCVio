@@ -52,7 +52,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.SensitiveQuery
+namespace SLHDSA.SHAKE128s.SensitiveQuery
 
 /-- The value a graph cell carries: the bits a hash answer is truncated to. -/
 abbrev Cell := Digest
@@ -213,4 +213,4 @@ theorem prob_sensitive_le (stakes : Stakes Node Index)
       subst hsame
       exact hpreimage ⟨table (stakes.stake other), hinput⟩
 
-end SlhDsaSecurity.SensitiveQuery
+end SLHDSA.SHAKE128s.SensitiveQuery

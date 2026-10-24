@@ -37,7 +37,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.PathEntry
+namespace SLHDSA.SHAKE128s.PathEntry
 
 open CacheReplay Extraction
 
@@ -88,4 +88,4 @@ theorem queriesUnder_pathInput {height : Nat} (cache : QueryCache HashSpec)
     replayFold_eq_value cache publicSeed addressOf index leaf siblings height step.val
       (le_of_lt step.isLt)] at hquery
 
-end SlhDsaSecurity.PathEntry
+end SLHDSA.SHAKE128s.PathEntry

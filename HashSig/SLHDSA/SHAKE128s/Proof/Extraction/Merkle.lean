@@ -22,7 +22,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Extraction.Merkle
+namespace SLHDSA.SHAKE128s.Extraction.Merkle
 
 variable [HasQuery HashSpec Id]
 
@@ -37,35 +37,35 @@ on this verifier path. Otherwise its recovered WOTS key and all nine siblings
 are exactly the genuine values. -/
 theorem root_eq_canonical_or_collision (secretSeed publicSeed message : Digest)
     (address : Address) (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignature)
-    (hroot : SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) index signature
-      message publicSeed address = SlhDsaSecurity.Merkle.node (m := Id)
+    (hroot : SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) index signature
+      message publicSeed address = SLHDSA.SHAKE128s.Merkle.node (m := Id)
         secretSeed publicSeed address subtreeHeight 0) :
     let nodes : Nat → Nat → Digest :=
-      SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed address
+      SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed address
     let combine : Nat → Nat → Digest → Digest → Digest := fun height nodeIndex left right =>
       Hashing.tweakable (m := Id) publicSeed
-        (SlhDsaSecurity.Merkle.nodeAddress address height nodeIndex)
+        (SLHDSA.SHAKE128s.Merkle.nodeAddress address height nodeIndex)
         (BinaryPath.pairBytes (left, right))
     let leaf : Digest := Wots.publicKeyFromSignature (m := Id) signature.wots message publicSeed
-      (SlhDsaSecurity.Merkle.wotsAddress address index.val)
+      (SLHDSA.SHAKE128s.Merkle.wotsAddress address index.val)
     (leaf = nodes 0 index.val ∧ ∀ j, signature.authentication j =
       nodes j.val (Nat.xor (index.val / 2 ^ j.val) 1)) ∨
     ∃ j < subtreeHeight,
       BinaryPath.Collision nodes combine index.val leaf (siblings signature) j := by
   dsimp only
   let nodes : Nat → Nat → Digest :=
-    SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed address
+    SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed address
   let combine : Nat → Nat → Digest → Digest → Digest := fun height nodeIndex left right =>
     Hashing.tweakable (m := Id) publicSeed
-      (SlhDsaSecurity.Merkle.nodeAddress address height nodeIndex)
+      (SLHDSA.SHAKE128s.Merkle.nodeAddress address height nodeIndex)
       (BinaryPath.pairBytes (left, right))
   let leaf : Digest := Wots.publicKeyFromSignature (m := Id) signature.wots message publicSeed
-    (SlhDsaSecurity.Merkle.wotsAddress address index.val)
+    (SLHDSA.SHAKE128s.Merkle.wotsAddress address index.val)
   have hfold : BinaryPath.value combine index.val leaf (siblings signature) subtreeHeight =
-      SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) index signature
+      SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) index signature
         message publicSeed address := by
     rw [BinaryPath.value_eq_fold]
-    simp only [SlhDsaSecurity.Merkle.publicKeyFromSignature, bind, Correctness.foldlM_id]
+    simp only [SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature, bind, Correctness.foldlM_id]
     congr 1
     funext current j
     simp only [siblings, dite_eq_left j.isLt, BinaryPath.ordered]
@@ -78,4 +78,4 @@ theorem root_eq_canonical_or_collision (secretSeed publicSeed message : Digest)
     simpa only [siblings, dite_eq_left j.isLt] using hsiblings j.val j.isLt
   · exact Or.inr hcollision
 
-end SlhDsaSecurity.Extraction.Merkle
+end SLHDSA.SHAKE128s.Extraction.Merkle

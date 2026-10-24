@@ -30,7 +30,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.JointBudget
+namespace SLHDSA.SHAKE128s.JointBudget
 
 open Security CanonicalGraph WarmedGame WalkTable TableTail RecordedQueries RecordedPhase
   SharePresent ShareRealCap BySourceBridge
@@ -126,4 +126,4 @@ theorem prEvent_realFlat_le {adversary : Adversary} {q : Nat}
   ShareJoint.prEvent_realFlat_le adversary (q - 569) _ _ event
     (accepted_le hbudget prfSeed publicSeed table) (verify_le hbudget prfSeed publicSeed table)
 
-end SlhDsaSecurity.JointBudget
+end SLHDSA.SHAKE128s.JointBudget

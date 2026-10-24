@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ForsBranch
+namespace SLHDSA.SHAKE128s.ForsBranch
 
 open CanonicalGraph Extraction
 
@@ -41,8 +41,8 @@ and identifying the whole of it is what lets a forgery with nothing forged in it
 with the signature a request returned. -/
 theorem deviatingCollision_or_canonical {α : Type} (secretSeed publicSeed : Digest)
     (cache : QueryCache HashSpec) (key : ForsKey)
-    (indices : SlhDsaSecurity.Fors.Indices) (signature : ForsSignature)
-    (hkey : @SlhDsaSecurity.Fors.publicKeyFromSignature Id Id.instMonad
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : ForsSignature)
+    (hkey : @SLHDSA.SHAKE128s.Fors.publicKeyFromSignature Id Id.instMonad
         (CacheReplay.replayQuery cache) signature indices publicSeed key.address =
       @Hashing.tweakable Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed
         (Extraction.Fors.rootAddress key.address)
@@ -54,21 +54,21 @@ theorem deviatingCollision_or_canonical {α : Type} (secretSeed publicSeed : Dig
       (digestArrayBytes (@Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache)
         signature indices publicSeed key.address))) ≠ none)
     (hpathEntry : ∀ (i : Fin forsTrees) (step : Fin forsHeight),
-      cache (PathEntry.pathInput publicSeed (SlhDsaSecurity.Fors.nodeAddress key.address)
+      cache (PathEntry.pathInput publicSeed (SLHDSA.SHAKE128s.Fors.nodeAddress key.address)
         (Extraction.Fors.leafIndex indices i) (Extraction.Fors.siblings signature i)
         (BinaryPath.value
           (PathEntry.pathCombine cache publicSeed
-            (SlhDsaSecurity.Fors.nodeAddress key.address))
+            (SLHDSA.SHAKE128s.Fors.nodeAddress key.address))
           (Extraction.Fors.leafIndex indices i)
           (@Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices
             publicSeed key.address i)
           (Extraction.Fors.siblings signature i) step.val) step) ≠ none)
     (hleafEntry : ∀ i : Fin forsTrees, cache (Hashing.tweakableInput publicSeed
-      (SlhDsaSecurity.Fors.nodeAddress key.address 0 (Extraction.Fors.leafIndex indices i))
+      (SLHDSA.SHAKE128s.Fors.nodeAddress key.address 0 (Extraction.Fors.leafIndex indices i))
       (bytesBE n (signature i).secret)) ≠ none) :
     StructuralTerm.DeviatingCollision publicSeed
         (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result ∨
-      signature = @SlhDsaSecurity.Fors.sign Id Id.instMonad (CacheReplay.replayQuery cache)
+      signature = @SLHDSA.SHAKE128s.Fors.sign Id Id.instMonad (CacheReplay.replayQuery cache)
         indices secretSeed publicSeed key.address := by
   rcases @ForsDispatch.forsCollision_or_canonical_signature (CacheReplay.replayQuery cache)
     secretSeed publicSeed key.address indices signature hkey with hcollision | hcanonical
@@ -79,8 +79,8 @@ theorem deviatingCollision_or_canonical {α : Type} (secretSeed publicSeed : Dig
 /-- **The FORS branch: a charged collision, or the honest secrets were revealed.** -/
 theorem deviatingCollision_or_secrets {α : Type} (secretSeed publicSeed : Digest)
     (cache : QueryCache HashSpec) (key : ForsKey)
-    (indices : SlhDsaSecurity.Fors.Indices) (signature : ForsSignature)
-    (hkey : @SlhDsaSecurity.Fors.publicKeyFromSignature Id Id.instMonad
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : ForsSignature)
+    (hkey : @SLHDSA.SHAKE128s.Fors.publicKeyFromSignature Id Id.instMonad
         (CacheReplay.replayQuery cache) signature indices publicSeed key.address =
       @Hashing.tweakable Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed
         (Extraction.Fors.rootAddress key.address)
@@ -92,22 +92,22 @@ theorem deviatingCollision_or_secrets {α : Type} (secretSeed publicSeed : Diges
       (digestArrayBytes (@Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache)
         signature indices publicSeed key.address))) ≠ none)
     (hpathEntry : ∀ (i : Fin forsTrees) (step : Fin forsHeight),
-      cache (PathEntry.pathInput publicSeed (SlhDsaSecurity.Fors.nodeAddress key.address)
+      cache (PathEntry.pathInput publicSeed (SLHDSA.SHAKE128s.Fors.nodeAddress key.address)
         (Extraction.Fors.leafIndex indices i) (Extraction.Fors.siblings signature i)
         (BinaryPath.value
           (PathEntry.pathCombine cache publicSeed
-            (SlhDsaSecurity.Fors.nodeAddress key.address))
+            (SLHDSA.SHAKE128s.Fors.nodeAddress key.address))
           (Extraction.Fors.leafIndex indices i)
           (@Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices
             publicSeed key.address i)
           (Extraction.Fors.siblings signature i) step.val) step) ≠ none)
     (hleafEntry : ∀ i : Fin forsTrees, cache (Hashing.tweakableInput publicSeed
-      (SlhDsaSecurity.Fors.nodeAddress key.address 0 (Extraction.Fors.leafIndex indices i))
+      (SLHDSA.SHAKE128s.Fors.nodeAddress key.address 0 (Extraction.Fors.leafIndex indices i))
       (bytesBE n (signature i).secret)) ≠ none) :
     StructuralTerm.DeviatingCollision publicSeed
         (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result ∨
       ∀ i : Fin forsTrees, (signature i).secret =
-        @SlhDsaSecurity.Fors.secret Id Id.instMonad (CacheReplay.replayQuery cache)
+        @SLHDSA.SHAKE128s.Fors.secret Id Id.instMonad (CacheReplay.replayQuery cache)
           secretSeed publicSeed key.address (Extraction.Fors.leafIndex indices i) := by
   rcases @ForsDispatch.forsCollision_or_canonical_secrets (CacheReplay.replayQuery cache)
     secretSeed publicSeed key.address indices signature hkey with hcollision | hsecrets
@@ -115,4 +115,4 @@ theorem deviatingCollision_or_secrets {α : Type} (secretSeed publicSeed : Diges
       key indices signature hcollision result hcache hcompressionEntry hpathEntry hleafEntry)
   · exact Or.inr hsecrets
 
-end SlhDsaSecurity.ForsBranch
+end SLHDSA.SHAKE128s.ForsBranch

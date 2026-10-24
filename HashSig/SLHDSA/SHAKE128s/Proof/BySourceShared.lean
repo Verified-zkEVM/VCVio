@@ -22,7 +22,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.BySourceShared
+namespace SLHDSA.SHAKE128s.BySourceShared
 
 open Security CanonicalGraph WarmedGame WalkTable TableTail RecordedQueries RecordedPhase
   SharePresent ShareRealCap BySourceBridge
@@ -35,4 +35,4 @@ theorem servedCount_le_length (log : SigningLog) :
     AdversaryQueries.servedCount log ≤ log.length :=
   List.length_filter_le _ _
 
-end SlhDsaSecurity.BySourceShared
+end SLHDSA.SHAKE128s.BySourceShared

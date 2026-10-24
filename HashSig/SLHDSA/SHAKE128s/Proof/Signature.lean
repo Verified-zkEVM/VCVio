@@ -20,7 +20,7 @@ the positions at which `readDigest` finds every field of `Signature.toBytes`, an
 
 public section
 
-namespace SlhDsaSecurity
+namespace SLHDSA.SHAKE128s
 
 /-- FORS tree signatures with equal fields are equal. -/
 theorem ForsTreeSignature.ext {left right : ForsTreeSignature}
@@ -266,4 +266,4 @@ theorem Signature.readDigest_xmss_auth (signature : Signature) (i : Fin layers)
       · funext j; exact readDigest_wots _ i j
       · funext j; exact readDigest_xmss_auth _ i j
 
-end SlhDsaSecurity
+end SLHDSA.SHAKE128s

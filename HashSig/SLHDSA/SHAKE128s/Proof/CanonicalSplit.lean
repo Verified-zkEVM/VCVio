@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CanonicalSplit
+namespace SLHDSA.SHAKE128s.CanonicalSplit
 
 open Security CacheReplay Extraction CanonicalGraph VerifierProbes SplitCharged
 
@@ -72,7 +72,7 @@ theorem cases_of_win_canonical (adversary : Adversary)
                     (Scheme.forsAddress (digestOf result.2
                       (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2)
                       message parsed)) ∧
-                parsed.fors = @SlhDsaSecurity.Fors.sign Id Id.instMonad
+                parsed.fors = @SLHDSA.SHAKE128s.Fors.sign Id Id.instMonad
                   (CacheReplay.replayQuery result.2)
                   (MessageDigest.forsIndices (digestOf result.2
                     (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2) message parsed))
@@ -80,7 +80,7 @@ theorem cases_of_win_canonical (adversary : Adversary)
                   (Scheme.forsAddress (digestOf result.2
                     (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2)
                     message parsed)) ∧
-                parsed.hypertree = @SlhDsaSecurity.Hypertree.signLayers Id Id.instMonad
+                parsed.hypertree = @SLHDSA.SHAKE128s.Hypertree.signLayers Id Id.instMonad
                   (CacheReplay.replayQuery result.2) walk.1.1.1 walk.1.1.2.2 layers 0
                   (MessageDigest.treeIndex (digestOf result.2
                     (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2)
@@ -148,4 +148,4 @@ theorem cases_of_win_canonical (adversary : Adversary)
     · exact Or.inl hdeviating
     · exact Or.inr (Or.inl hresidue)
 
-end SlhDsaSecurity.CanonicalSplit
+end SLHDSA.SHAKE128s.CanonicalSplit

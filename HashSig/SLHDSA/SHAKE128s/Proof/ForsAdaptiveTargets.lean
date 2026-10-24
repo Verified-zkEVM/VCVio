@@ -22,11 +22,11 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ForsAdaptiveTargets
+namespace SLHDSA.SHAKE128s.ForsAdaptiveTargets
 
 /-- The parsed FORS view of one target. -/
 abbrev View := ForsCoverage.View
 /-- A tape of `trials` target views. -/
 abbrev Tape (trials : Nat) := Fin trials → View
 
-end SlhDsaSecurity.ForsAdaptiveTargets
+end SLHDSA.SHAKE128s.ForsAdaptiveTargets

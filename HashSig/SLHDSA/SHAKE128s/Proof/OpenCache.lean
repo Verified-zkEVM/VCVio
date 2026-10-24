@@ -48,7 +48,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.OpenCache
+namespace SLHDSA.SHAKE128s.OpenCache
 
 open CanonicalGraph CanonicalGraph.Programming
 
@@ -182,4 +182,4 @@ read, which is answered from the table. -/
                   ($ᵗ HashOutput : ProbComp HashOutput))
         pure (step.1, (step.2, state.2.1 ++ [(input, state.1)], state.2.2 + 1))
 
-end SlhDsaSecurity.OpenCache
+end SLHDSA.SHAKE128s.OpenCache

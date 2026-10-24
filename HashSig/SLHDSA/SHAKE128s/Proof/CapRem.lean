@@ -30,7 +30,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.CapRem
+namespace SLHDSA.SHAKE128s.CapRem
 
 open CapComp
 
@@ -255,4 +255,4 @@ theorem mem_support_of_capCompOpt_some (impl : QueryImpl spec (StateT S ProbComp
     · rw [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
       cases hz
 
-end SlhDsaSecurity.CapRem
+end SLHDSA.SHAKE128s.CapRem

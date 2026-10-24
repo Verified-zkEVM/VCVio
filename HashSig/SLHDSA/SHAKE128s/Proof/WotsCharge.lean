@@ -34,7 +34,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.WotsCharge
+namespace SLHDSA.SHAKE128s.WotsCharge
 
 open CanonicalGraph Extraction
 
@@ -47,11 +47,11 @@ theorem deviatingCollision_of_chainCollision {α : Type} (publicSeed : Digest)
     (haddress : parent.address =
       { address with hashOrIndex := BitVec.ofNat 32 (start + offset) })
     (hchildCell : cells child =
-      @SlhDsaSecurity.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed address
+      @SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed address
         start offset canonical)
     (hparentCell : cells (.structural parent) =
       @Hashing.tweakable Id _ (CacheReplay.replayQuery cache) publicSeed parent.address
-        (bytesBE n (@SlhDsaSecurity.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
+        (bytesBE n (@SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
           address start offset canonical)))
     -- the collision, and the cache entry its own query left behind
     (hcollision : @Wots.ChainCollision (CacheReplay.replayQuery cache) publicSeed address
@@ -59,19 +59,19 @@ theorem deviatingCollision_of_chainCollision {α : Type} (publicSeed : Digest)
     (result : α × QueryCache HashSpec) (output : HashOutput)
     (hcache : result.2 = cache)
     (hentry : cache (Hashing.tweakableInput publicSeed parent.address
-      (bytesBE n (@SlhDsaSecurity.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
+      (bytesBE n (@SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
         address start offset actual))) = some output) :
     StructuralTerm.DeviatingCollision publicSeed cells result := by
   obtain ⟨hdiffers, hjoins⟩ := hcollision
   refine CollisionToDeviating.deviatingCollision_of_single_child publicSeed cells parent child
-    (@SlhDsaSecurity.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed address
+    (@SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed address
       start offset actual) hchildren ?_ result output ?_ ?_
   · rw [hchildCell]
     exact hdiffers
   · rw [hcache]
     exact hentry
   · have hcached := CacheReplay.tweakable_replayQuery cache publicSeed parent.address
-      (bytesBE n (@SlhDsaSecurity.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
+      (bytesBE n (@SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
         address start offset actual)) output hentry
     rw [hparentCell, ← hcached, haddress]
     exact hjoins
@@ -103,21 +103,21 @@ theorem deviatingCollision_of_compressionCollision {α : Type} (publicSeed : Dig
     (address : Address)
     (hchildren : parent.children = List.ofFn children)
     (hinj : Function.Injective children)
-    (haddress : parent.address = SlhDsaSecurity.Wots.publicKeyAddress address)
+    (haddress : parent.address = SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
     (hchildCells : ∀ chainIndex, cells (children chainIndex) = canonicalEndpoints chainIndex)
     (hparentCell : cells (.structural parent) =
       @Hashing.shortHash Id _ (CacheReplay.replayQuery cache)
-        (Hashing.tweakableInput publicSeed (SlhDsaSecurity.Wots.publicKeyAddress address)
+        (Hashing.tweakableInput publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
           (digestArrayBytes canonicalEndpoints)))
     (hinputs : Hashing.tweakableInput publicSeed
-        (SlhDsaSecurity.Wots.publicKeyAddress address) (digestArrayBytes actualEndpoints) ≠
+        (SLHDSA.SHAKE128s.Wots.publicKeyAddress address) (digestArrayBytes actualEndpoints) ≠
       Hashing.tweakableInput publicSeed
-        (SlhDsaSecurity.Wots.publicKeyAddress address) (digestArrayBytes canonicalEndpoints))
+        (SLHDSA.SHAKE128s.Wots.publicKeyAddress address) (digestArrayBytes canonicalEndpoints))
     (hjoins : @Hashing.shortHash Id _ (CacheReplay.replayQuery cache)
-        (Hashing.tweakableInput publicSeed (SlhDsaSecurity.Wots.publicKeyAddress address)
+        (Hashing.tweakableInput publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
           (digestArrayBytes actualEndpoints)) =
       @Hashing.shortHash Id _ (CacheReplay.replayQuery cache)
-        (Hashing.tweakableInput publicSeed (SlhDsaSecurity.Wots.publicKeyAddress address)
+        (Hashing.tweakableInput publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
           (digestArrayBytes canonicalEndpoints)))
     (result : α × QueryCache HashSpec) (output : HashOutput)
     (hcache : result.2 = cache)
@@ -157,15 +157,15 @@ theorem deviatingCollision_of_chainCollision_canonical_at {α : Type}
     (actual : Digest)
     (hcollision : @Wots.ChainCollision (CacheReplay.replayQuery cache) publicSeed
       { key.address with chainOrHeight := BitVec.ofNat 32 chainIndex.val } start actual
-      (@SlhDsaSecurity.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
+      (@SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
         { key.address with chainOrHeight := BitVec.ofNat 32 chainIndex.val } 0 start
         (@Hashing.derive Id _ (CacheReplay.replayQuery cache) publicSeed secretSeed
-          (SlhDsaSecurity.Wots.secretAddress key.address chainIndex))) offset)
+          (SLHDSA.SHAKE128s.Wots.secretAddress key.address chainIndex))) offset)
     (result : α × QueryCache HashSpec) (output : HashOutput)
     (hcache : result.2 = cache)
     (hentry : cache (Hashing.tweakableInput publicSeed
       (StructuralNode.wotsHash key chainIndex ⟨start + offset, hposition⟩).address
-      (bytesBE n (@SlhDsaSecurity.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
+      (bytesBE n (@SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
         { key.address with chainOrHeight := BitVec.ofNat 32 chainIndex.val } start offset
         actual))) = some output) :
     StructuralTerm.DeviatingCollision publicSeed
@@ -177,17 +177,17 @@ theorem deviatingCollision_of_chainCollision_canonical_at {α : Type}
       simp only [wotsPosition, StructuralNode.children] <;> split <;> simp_all
   have hchild : @value (CacheReplay.replayQuery cache) secretSeed publicSeed
         (.structural (wotsPosition key chainIndex ⟨start + offset, hinw⟩)) =
-      @SlhDsaSecurity.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
+      @SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
         { key.address with chainOrHeight := BitVec.ofNat 32 chainIndex.val } start offset
-        (@SlhDsaSecurity.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
+        (@SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
           { key.address with chainOrHeight := BitVec.ofNat 32 chainIndex.val } 0 start
           (@Hashing.derive Id _ (CacheReplay.replayQuery cache) publicSeed secretSeed
-            (SlhDsaSecurity.Wots.secretAddress key.address chainIndex))) := by
+            (SLHDSA.SHAKE128s.Wots.secretAddress key.address chainIndex))) := by
     rw [@value_wotsPosition (CacheReplay.replayQuery cache)]
     have hadd := @Correctness.Wots.chain_add (CacheReplay.replayQuery cache) publicSeed
       { key.address with chainOrHeight := BitVec.ofNat 32 chainIndex.val } 0 start offset
       (@Hashing.derive Id _ (CacheReplay.replayQuery cache) publicSeed secretSeed
-        (SlhDsaSecurity.Wots.secretAddress key.address chainIndex))
+        (SLHDSA.SHAKE128s.Wots.secretAddress key.address chainIndex))
     rw [Nat.zero_add] at hadd
     exact hadd
   refine deviatingCollision_of_chainCollision publicSeed
@@ -215,7 +215,7 @@ theorem deviatingCollision_of_chainBranch {α : Type} (secretSeed publicSeed mes
     (hcollision : @Wots.ChainCollision (CacheReplay.replayQuery cache) publicSeed
       { key.address with chainOrHeight := BitVec.ofNat 32 chainIndex.val }
       (Checksum.encode message chainIndex).val forged
-      (@SlhDsaSecurity.Wots.sign Id _ (CacheReplay.replayQuery cache) message secretSeed
+      (@SLHDSA.SHAKE128s.Wots.sign Id _ (CacheReplay.replayQuery cache) message secretSeed
         publicSeed key.address chainIndex) offset)
     (result : α × QueryCache HashSpec) (output : HashOutput)
     (hcache : result.2 = cache)
@@ -223,7 +223,7 @@ theorem deviatingCollision_of_chainBranch {α : Type} (secretSeed publicSeed mes
     (hentry : cache (Hashing.tweakableInput publicSeed
       (StructuralNode.wotsHash key chainIndex
         ⟨(Checksum.encode message chainIndex).val + offset, hposition⟩).address
-      (bytesBE n (@SlhDsaSecurity.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
+      (bytesBE n (@SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
         { key.address with chainOrHeight := BitVec.ofNat 32 chainIndex.val }
         (Checksum.encode message chainIndex).val offset forged))) = some output) :
     StructuralTerm.DeviatingCollision publicSeed
@@ -249,18 +249,18 @@ theorem deviatingCollision_of_compressionCollision_canonical {α : Type}
     (secretSeed publicSeed : Digest) (cache : QueryCache HashSpec) (key : WotsKey)
     (actualEndpoints : Fin chains → Digest)
     (hinputs : Hashing.tweakableInput publicSeed
-        (SlhDsaSecurity.Wots.publicKeyAddress key.address)
+        (SLHDSA.SHAKE128s.Wots.publicKeyAddress key.address)
         (digestArrayBytes actualEndpoints) ≠
       Hashing.tweakableInput publicSeed
-        (SlhDsaSecurity.Wots.publicKeyAddress key.address)
+        (SLHDSA.SHAKE128s.Wots.publicKeyAddress key.address)
         (digestArrayBytes (fun chainIndex =>
           @value (CacheReplay.replayQuery cache) secretSeed publicSeed
             (.structural (.wotsHash key chainIndex ⟨w - 2, by decide⟩)))))
     (hjoins : @Hashing.shortHash Id _ (CacheReplay.replayQuery cache)
-        (Hashing.tweakableInput publicSeed (SlhDsaSecurity.Wots.publicKeyAddress key.address)
+        (Hashing.tweakableInput publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress key.address)
           (digestArrayBytes actualEndpoints)) =
       @Hashing.shortHash Id _ (CacheReplay.replayQuery cache)
-        (Hashing.tweakableInput publicSeed (SlhDsaSecurity.Wots.publicKeyAddress key.address)
+        (Hashing.tweakableInput publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress key.address)
           (digestArrayBytes (fun chainIndex =>
             @value (CacheReplay.replayQuery cache) secretSeed publicSeed
               (.structural (.wotsHash key chainIndex ⟨w - 2, by decide⟩))))))
@@ -283,6 +283,6 @@ theorem deviatingCollision_of_compressionCollision_canonical {α : Type}
     exact Fin.ext (by simpa using hval)
   · rw [CanonicalCells.parentCell_tweakable cache secretSeed publicSeed]
     simp [StructuralNode.children, childBytes_ofFn, Hashing.tweakable,
-      StructuralNode.address, SlhDsaSecurity.Wots.publicKeyAddress]
+      StructuralNode.address, SLHDSA.SHAKE128s.Wots.publicKeyAddress]
 
-end SlhDsaSecurity.WotsCharge
+end SLHDSA.SHAKE128s.WotsCharge

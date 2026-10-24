@@ -37,7 +37,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.WarmedGame
+namespace SLHDSA.SHAKE128s.WarmedGame
 
 open Security CanonicalGraph
 
@@ -214,4 +214,4 @@ theorem mem_support_graphWalk {walk : ((Digest × Digest × Digest) × Cells) ×
   obtain ⟨outputs, -, houtputs⟩ := hresult
   refine ⟨outputs, ?_, ?_⟩ <;> rw [hpair] <;> rw [← houtputs]
 
-end SlhDsaSecurity.WarmedGame
+end SLHDSA.SHAKE128s.WarmedGame

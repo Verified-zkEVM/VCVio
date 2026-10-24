@@ -47,7 +47,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.WotsResidueReduction
+namespace SLHDSA.SHAKE128s.WotsResidueReduction
 
 open Extraction CanonicalGraph
 
@@ -56,13 +56,13 @@ variable [HasQuery HashSpec Id]
 /-- The value a forgery holds on one chain of one layer's WOTS key: the honest chain, started
 from the honest secret at that key's address and advanced only as far as the forged digit. -/
 @[expose] def heldValue (secretSeed publicSeed : Digest) (layer tree : Nat)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (forged : Digest) (chainIndex : Fin chains) :
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (forged : Digest) (chainIndex : Fin chains) :
     Digest :=
-  SlhDsaSecurity.Wots.chain (m := Id) publicSeed
+  SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed
     (WotsPreimage.chainAddress (Extraction.Hypertree.wotsAddress layer tree leaf) chainIndex)
     0 (Checksum.encode forged chainIndex).val
     (Hashing.derive (m := Id) publicSeed secretSeed
-      (SlhDsaSecurity.Wots.secretAddress (Extraction.Hypertree.wotsAddress layer tree leaf)
+      (SLHDSA.SHAKE128s.Wots.secretAddress (Extraction.Hypertree.wotsAddress layer tree leaf)
         chainIndex))
 
 /-- At some layer the forgery holds a chain value strictly below the position that layer's key
@@ -71,7 +71,7 @@ the layer the recursion has reached, the secret is derived from `secretSeed` at 
 and the disclosed position is the digit of the message that key actually signed. -/
 @[expose] def HoldsEarlyChainValue (secretSeed publicSeed : Digest) :
     (remaining : Nat) → (Fin remaining → XmssSignature) → (layer tree : Nat) →
-      SlhDsaSecurity.Hypertree.LeafIndex → (message expectedInput : Digest) → Prop
+      SLHDSA.SHAKE128s.Hypertree.LeafIndex → (message expectedInput : Digest) → Prop
   | 0, _, _, _, _, _, _ => False
   | remaining + 1, signatures, layer, tree, leaf, message, expectedInput =>
     (∃ chainIndex : Fin chains,
@@ -80,15 +80,15 @@ and the disclosed position is the digit of the message that key actually signed.
         (Checksum.encode message chainIndex).val <
           (Checksum.encode expectedInput chainIndex).val) ∨
     HoldsEarlyChainValue secretSeed publicSeed remaining (fun i => signatures i.succ) (layer + 1)
-      (tree / 2 ^ subtreeHeight) (SlhDsaSecurity.Hypertree.nextLeaf tree)
-      (SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0) message
-        publicSeed (SlhDsaSecurity.Hypertree.address layer tree))
+      (tree / 2 ^ subtreeHeight) (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree)
+      (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0) message
+        publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree))
       (Extraction.HypertreeChain.honestNode secretSeed publicSeed layer tree)
 
 /-- **The WOTS residue puts the forgery in possession of an undisclosed chain value.** -/
 theorem holds_early_chain_value_of_residue (secretSeed publicSeed : Digest) :
     ∀ (remaining : Nat) (signatures : Fin remaining → XmssSignature) (layer tree : Nat)
-      (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message expectedInput : Digest),
+      (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message expectedInput : Digest),
       FaultCharge.WotsResidue secretSeed publicSeed remaining signatures layer tree leaf
           message expectedInput →
         HoldsEarlyChainValue secretSeed publicSeed remaining signatures layer tree leaf
@@ -127,10 +127,10 @@ per step, and the tree index only shrinks, which is what bounds the coordinates.
   | i + 1 => treeAt (tree / 2 ^ subtreeHeight) i
 
 /-- The leaf the recursion has reached after `i` steps. -/
-@[expose] def leafAt (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (tree : Nat) :
-    Nat → SlhDsaSecurity.Hypertree.LeafIndex
+@[expose] def leafAt (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (tree : Nat) :
+    Nat → SLHDSA.SHAKE128s.Hypertree.LeafIndex
   | 0 => leaf
-  | i + 1 => leafAt (SlhDsaSecurity.Hypertree.nextLeaf tree) (tree / 2 ^ subtreeHeight) i
+  | i + 1 => leafAt (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree) (tree / 2 ^ subtreeHeight) i
 
 /-- The message the honest key at the layer reached after `i` steps actually signed. Each WOTS
 key of the hypertree signs exactly one message, and that message is the honest node one layer
@@ -148,14 +148,14 @@ is the accumulator the residue's recursion threads — which is what lets the po
 chain value sits at be named rather than quantified. -/
 @[expose] def forgedAt (publicSeed : Digest) :
     (remaining : Nat) → (Fin remaining → XmssSignature) → (layer tree : Nat) →
-      SlhDsaSecurity.Hypertree.LeafIndex → Digest → Nat → Digest
+      SLHDSA.SHAKE128s.Hypertree.LeafIndex → Digest → Nat → Digest
   | 0, _, _, _, _, message, _ => message
   | _ + 1, _, _, _, _, message, 0 => message
   | remaining + 1, signatures, layer, tree, leaf, message, i + 1 =>
       forgedAt publicSeed remaining (fun j => signatures j.succ) (layer + 1)
-        (tree / 2 ^ subtreeHeight) (SlhDsaSecurity.Hypertree.nextLeaf tree)
-        (SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0) message
-          publicSeed (SlhDsaSecurity.Hypertree.address layer tree)) i
+        (tree / 2 ^ subtreeHeight) (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree)
+        (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0) message
+          publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree)) i
 
 omit [HasQuery HashSpec Id] in
 /-- The layer rises by one per step. -/
@@ -176,7 +176,7 @@ theorem treeAt_le (tree : Nat) : ∀ i : Nat, treeAt tree i ≤ tree := by
 /-- **The residue, read at an explicit layer.** -/
 theorem exists_held_value_of_residue (secretSeed publicSeed : Digest) :
     ∀ (remaining : Nat) (signatures : Fin remaining → XmssSignature) (layer tree : Nat)
-      (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message expectedInput : Digest),
+      (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message expectedInput : Digest),
       HoldsEarlyChainValue secretSeed publicSeed remaining signatures layer tree leaf message
           expectedInput →
         ∃ (i : Fin remaining) (chainIndex : Fin chains),
@@ -210,7 +210,7 @@ revealed. This is the vocabulary `WotsCharge` indexes by. -/
 
 /-- The held value is the canonical graph's cell at that chain position. -/
 theorem heldValue_eq_cell (secretSeed publicSeed : Digest) (location : Tree)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (forged : Digest) (chainIndex : Fin chains) :
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (forged : Digest) (chainIndex : Fin chains) :
     heldValue secretSeed publicSeed location.layer.val location.tree.val leaf forged chainIndex =
       value secretSeed publicSeed
         (.structural (wotsPosition ⟨location, leaf⟩ chainIndex
@@ -218,4 +218,4 @@ theorem heldValue_eq_cell (secretSeed publicSeed : Digest) (location : Tree)
   (value_wotsPosition secretSeed publicSeed ⟨location, leaf⟩ chainIndex
     (Checksum.encode forged chainIndex)).symm
 
-end SlhDsaSecurity.WotsResidueReduction
+end SLHDSA.SHAKE128s.WotsResidueReduction

@@ -28,7 +28,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.Security
+namespace SLHDSA.SHAKE128s.Security
 
 /-- The signing oracle's interface. -/
 abbrev SigningSpec : OracleSpec Message := Game.SigningSpec
@@ -164,4 +164,4 @@ source. -/
 - the hash calls of verifying its forgery (+1 per call). -/
 @[expose] def adversaryWork : Finset Unforgeability.QueryKind := {.sign, .hash, .verifier}
 
-end SlhDsaSecurity.Security
+end SLHDSA.SHAKE128s.Security

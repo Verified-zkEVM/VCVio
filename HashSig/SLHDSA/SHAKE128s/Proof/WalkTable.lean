@@ -42,7 +42,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.WalkTable
+namespace SLHDSA.SHAKE128s.WalkTable
 
 variable {α β : Type}
 
@@ -161,4 +161,4 @@ theorem evalDist_graphWalk : graphWalk =ᵈ tableWalk := by
   refine EvalDistEq.bind_right _ fun publicSeed => ?_
   exact evalDist_warmup_table prfSeed publicSeed
 
-end SlhDsaSecurity.WalkTable
+end SLHDSA.SHAKE128s.WalkTable

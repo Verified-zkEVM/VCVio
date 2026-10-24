@@ -21,7 +21,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Correctness.Naturality
+namespace SLHDSA.SHAKE128s.Correctness.Naturality
 
 open VerifierNaturality
 
@@ -151,4 +151,4 @@ theorem sign_simulate (sk : SecretKey) (request : Message) :
   | none => simp only [simulateQ_pure]
   | some message => simp only [simulateQ_bind, simulateQ_pure, signInternal_simulate impl himpl]
 
-end SlhDsaSecurity.Correctness.Naturality
+end SLHDSA.SHAKE128s.Correctness.Naturality

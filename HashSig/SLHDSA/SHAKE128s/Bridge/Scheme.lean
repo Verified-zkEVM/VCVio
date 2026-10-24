@@ -35,7 +35,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Bridge
+namespace SLHDSA.SHAKE128s.Bridge
 
 open SLHDSA SLHDSA.Security GeneralHypertree
 
@@ -316,4 +316,4 @@ theorem hasSecurityBits_fips205 {Z : Finset Unforgeability.QueryKind} {bits : â„
     (h : Game.HasSecurityBits model Z bits) : Game.HasSecurityBits FIPS205.scheme Z bits :=
   hasSecurityBits_of_bridge schemeBridge map_answerEquiv_uniformSample h
 
-end SlhDsaSecurity.Bridge
+end SLHDSA.SHAKE128s.Bridge

@@ -33,7 +33,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ShareJointBound
+namespace SLHDSA.SHAKE128s.ShareJointBound
 
 open Security CanonicalGraph ShareGame ShareFlag ShareBound ShareBlindFacts ShareJoint CapRem
 
@@ -211,4 +211,4 @@ theorem charged_blindRun_shareCompJ (setup : Setup) (hfiles : VerifierFiles setu
   obtain ⟨w, hw, rfl⟩ := hz
   exact charged_filing_shareCompJ setup hfiles adversary limit false w hw
 
-end SlhDsaSecurity.ShareJointBound
+end SLHDSA.SHAKE128s.ShareJointBound

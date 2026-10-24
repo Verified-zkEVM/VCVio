@@ -33,7 +33,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ShareFiled
+namespace SLHDSA.SHAKE128s.ShareFiled
 
 variable {α : Type}
 
@@ -293,4 +293,4 @@ theorem verify_probes_filed_any (setup : Setup) (pk : PublicKey) (request : Mess
   rw [VerificationBudget.verify_lift] at hw
   exact probes_filed setup _ p w hw
 
-end SlhDsaSecurity.ShareFiled
+end SLHDSA.SHAKE128s.ShareFiled

@@ -43,7 +43,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.FusedCover
+namespace SLHDSA.SHAKE128s.FusedCover
 
 variable {α : Type}
 
@@ -258,4 +258,4 @@ theorem mem_recordOf_of_cache_reaches (leftKeep rightKeep : Bytes → σ → Pro
         exact (hsub request state.2.1 state.2.2 z hz hreach hfresh hvalue).imp
           (fun hmemz => hleft.subset hmemz) fun hmemz => hright.subset hmemz
 
-end SlhDsaSecurity.FusedCover
+end SLHDSA.SHAKE128s.FusedCover

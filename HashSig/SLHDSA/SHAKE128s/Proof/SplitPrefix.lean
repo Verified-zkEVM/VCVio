@@ -40,7 +40,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.SplitPrefix
+namespace SLHDSA.SHAKE128s.SplitPrefix
 
 open DigestTape
 
@@ -399,4 +399,4 @@ theorem right_record_suffix {α : Type}
             rw [hsuffix, hrecStep,
               appended_of_neither leftKeep rightKeep input state answer hleft hright]
 
-end SlhDsaSecurity.SplitPrefix
+end SLHDSA.SHAKE128s.SplitPrefix

@@ -36,7 +36,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Bridge
+namespace SLHDSA.SHAKE128s.Bridge
 
 open SLHDSA SLHDSA.Security
 
@@ -228,4 +228,4 @@ theorem simulateQ_relabel_merkleRoot (secretSeed publicSeed : Digest) (a : Addre
             (digestEquiv secretSeed)) (toAdrs a) : TypedComp _) :=
   simulateQ_relabel_merkleNode secretSeed publicSeed a subtreeHeight 0 (by decide)
 
-end SlhDsaSecurity.Bridge
+end SLHDSA.SHAKE128s.Bridge

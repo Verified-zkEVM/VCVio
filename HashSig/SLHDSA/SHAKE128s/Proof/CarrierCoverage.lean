@@ -30,7 +30,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.CarrierCoverage
+namespace SLHDSA.SHAKE128s.CarrierCoverage
 
 open Security CarrierTail CountedView RecorderView CarriedWitness PhaseFusion RecordedQueries
 
@@ -117,4 +117,4 @@ under a three-stage run is the seventh member of the family that reports `timeou
 neither the metavariable nor the cause.
 -/
 
-end SlhDsaSecurity.CarrierCoverage
+end SLHDSA.SHAKE128s.CarrierCoverage

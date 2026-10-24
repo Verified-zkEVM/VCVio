@@ -27,7 +27,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ShareClaims
+namespace SLHDSA.SHAKE128s.ShareClaims
 
 open Security CacheReplay VerifierProbes
 
@@ -142,4 +142,4 @@ theorem claimedCandidatesOf_congr (publicSeed : Digest) (left right : QueryCache
   unfold ClaimedProbes.claimedCandidatesOf
   rw [← hdig, ← hfors, hsteps]
 
-end SlhDsaSecurity.ShareClaims
+end SLHDSA.SHAKE128s.ShareClaims

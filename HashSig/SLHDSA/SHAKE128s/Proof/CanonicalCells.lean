@@ -29,7 +29,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CanonicalCells
+namespace SLHDSA.SHAKE128s.CanonicalCells
 
 open CanonicalGraph
 
@@ -44,4 +44,4 @@ theorem parentCell_tweakable (cache : QueryCache HashSpec) (secretSeed publicSee
           parent.children) :=
   @value_equation (CacheReplay.replayQuery cache) secretSeed publicSeed parent
 
-end SlhDsaSecurity.CanonicalCells
+end SLHDSA.SHAKE128s.CanonicalCells

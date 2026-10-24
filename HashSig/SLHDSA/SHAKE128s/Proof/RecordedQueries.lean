@@ -49,7 +49,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.RecordedQueries
+namespace SLHDSA.SHAKE128s.RecordedQueries
 
 variable {α β : Type}
 
@@ -506,4 +506,4 @@ theorem card_toFinset_le_work (adversary : Adversary) (sds : Digest × Digest ×
   le_of_le_of_eq (Multiset.toFinset_card_le _)
     (card_eq_work adversary sds warm cache result hmem)
 
-end SlhDsaSecurity.RecordedQueries
+end SLHDSA.SHAKE128s.RecordedQueries

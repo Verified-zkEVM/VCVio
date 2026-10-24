@@ -55,7 +55,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.RoutedSplit
+namespace SLHDSA.SHAKE128s.RoutedSplit
 
 open Security CanonicalGraph CacheReplay Extraction VerifierProbes SplitCharged
 
@@ -103,11 +103,11 @@ digest it carries. -/
   forsKeyOf x.2 (keyOf x) message parsed =
       honestForsKey x.1.1.1.1 x.1.1.1.2.2 x.2
         (Scheme.forsAddress (digestOf x.2 (keyOf x) message parsed)) ∧
-    parsed.fors = @SlhDsaSecurity.Fors.sign Id Id.instMonad (replayQuery x.2)
+    parsed.fors = @SLHDSA.SHAKE128s.Fors.sign Id Id.instMonad (replayQuery x.2)
         (MessageDigest.forsIndices (digestOf x.2 (keyOf x) message parsed))
         x.1.1.1.1 x.1.1.1.2.2
         (Scheme.forsAddress (digestOf x.2 (keyOf x) message parsed)) ∧
-      parsed.hypertree = @SlhDsaSecurity.Hypertree.signLayers Id Id.instMonad
+      parsed.hypertree = @SLHDSA.SHAKE128s.Hypertree.signLayers Id Id.instMonad
         (replayQuery x.2) x.1.1.1.1 x.1.1.1.2.2 layers 0
         (MessageDigest.treeIndex (digestOf x.2 (keyOf x) message parsed)).toNat
         (MessageDigest.leafIndex (digestOf x.2 (keyOf x) message parsed)).toFin
@@ -185,7 +185,7 @@ variable [HasQuery HashSpec Id]
 omit [HasQuery HashSpec Id] in
 /-- **A claimed WOTS value is an entry of the record.** -/
 theorem mem_claimedCandidates_wots (publicSeed : Digest) (forsKey : ForsKey)
-    (indices : SlhDsaSecurity.Fors.Indices) (signature : Signature)
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : Signature)
     (keyAt : Fin layers → WotsKey) (stepAt : Fin layers → Fin chains → Fin (w - 1))
     (layer : Fin layers) (chain : Fin chains) :
     GraphStakes.inputOf publicSeed
@@ -198,7 +198,7 @@ theorem mem_claimedCandidates_wots (publicSeed : Digest) (forsKey : ForsKey)
 omit [HasQuery HashSpec Id] in
 /-- **A claimed FORS secret is an entry of the record.** -/
 theorem mem_claimedCandidates_fors (publicSeed : Digest) (forsKey : ForsKey)
-    (indices : SlhDsaSecurity.Fors.Indices) (signature : Signature)
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : Signature)
     (keyAt : Fin layers → WotsKey) (stepAt : Fin layers → Fin chains → Fin (w - 1))
     (tree : Fin forsTrees) :
     GraphStakes.inputOf publicSeed
@@ -301,7 +301,7 @@ theorem cases_of_canonical (adversary : Adversary)
   · push Not at hsigned
     obtain ⟨tree, hunsigned⟩ := hsigned
     have hsecrets : ∀ tree : Fin forsTrees, (parsed.fors tree).secret =
-        @SlhDsaSecurity.Fors.secret Id Id.instMonad (replayQuery result.2)
+        @SLHDSA.SHAKE128s.Fors.secret Id Id.instMonad (replayQuery result.2)
           walk.1.1.1 walk.1.1.2.2
           (forsKeyOfDigest (digestOf result.2
             (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2) message parsed)).address
@@ -375,4 +375,4 @@ theorem cases_of_win_three (adversary : Adversary)
   · exact Or.inr (Or.inl hinput)
   · exact cases_of_canonical adversary hwalk hresult message parsed hframe hparsed hcanonical
 
-end SlhDsaSecurity.RoutedSplit
+end SLHDSA.SHAKE128s.RoutedSplit

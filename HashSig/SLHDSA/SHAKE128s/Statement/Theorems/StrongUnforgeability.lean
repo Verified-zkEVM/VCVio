@@ -13,10 +13,10 @@ import HashSig.SLHDSA.SHAKE128s.Proof.WorkFinal
 /-!
 # Strong unforgeability of SLH-DSA-SHAKE-128s
 
-`slhDsa_sufCma_127`: the library's FIPS 205 SLH-DSA-SHAKE-128s (`SlhDsaSecurity.FIPS205.scheme`),
+`slhDsa_sufCma_127`: the library's FIPS 205 SLH-DSA-SHAKE-128s (`SLHDSA.SHAKE128s.FIPS205.scheme`),
 in pure mode, with deterministic signing and every SHAKE256 call one query of a single shared
 random oracle on byte strings, has 127 bits of strong unforgeability in the sense of
-`SlhDsaSecurity.Game.HasSecurityBits`: an adversary within `2 ^ 64` signing requests whose work is
+`SLHDSA.SHAKE128s.Game.HasSecurityBits`: an adversary within `2 ^ 64` signing requests whose work is
 at most `q ≥ 1` wins with probability at most `q / 2 ^ 127`, its work counting its signing
 requests, its own hash calls and the hash calls of verifying its forgery (`Game.adversaryWork`).
 
@@ -29,7 +29,7 @@ key generations have the same law.
 
 public section
 
-namespace SlhDsaSecurity
+namespace SLHDSA.SHAKE128s
 
 /-- **SLH-DSA-SHAKE-128s has 127 bits of strong unforgeability**: FIPS 205's pure-mode scheme over
 one SHAKE256 random oracle with deterministic signing, counting the adversary's signing requests,
@@ -38,4 +38,4 @@ theorem slhDsa_sufCma_127 : Game.HasSecurityBits FIPS205.scheme Game.adversaryWo
   Bridge.hasSecurityBits_fips205
     ((Bridge.hasSecurityBits_model_iff _ _).mp WorkFinal.hasSecurityBits_work)
 
-end SlhDsaSecurity
+end SLHDSA.SHAKE128s

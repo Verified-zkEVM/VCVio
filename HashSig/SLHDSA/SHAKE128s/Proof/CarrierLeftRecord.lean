@@ -37,7 +37,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarrierLeftRecord
+namespace SLHDSA.SHAKE128s.CarrierLeftRecord
 
 variable {γ : Type}
 
@@ -227,4 +227,4 @@ theorem servedLog_leftRecord_carrierTail
     (leftServed_carrierTail rightKeep adversary walk keys hkeys middle hmiddle _ final hlast
       entry hentry)
 
-end SlhDsaSecurity.CarrierLeftRecord
+end SLHDSA.SHAKE128s.CarrierLeftRecord

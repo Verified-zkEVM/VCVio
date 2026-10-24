@@ -19,7 +19,7 @@ canonical graph is well founded.
 
 public section
 
-namespace SlhDsaSecurity.CanonicalGraph
+namespace SLHDSA.SHAKE128s.CanonicalGraph
 
 /-- The node at `height` and `index` of an XMSS tree: a WOTS public key at height zero, an
 internal tree node above it. -/
@@ -135,4 +135,4 @@ theorem StructuralNode.child_rank_lt (parent : StructuralNode) (child : Node)
       obtain ⟨tree, rfl⟩ := hchild
       simp [Node.rank, StructuralNode.rank, forsHeight]
 
-end SlhDsaSecurity.CanonicalGraph
+end SLHDSA.SHAKE128s.CanonicalGraph

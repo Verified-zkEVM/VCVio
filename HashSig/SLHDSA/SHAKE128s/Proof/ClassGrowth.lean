@@ -24,7 +24,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ClassGrowth
+namespace SLHDSA.SHAKE128s.ClassGrowth
 
 variable {α : Type}
 
@@ -159,4 +159,4 @@ theorem mem_support_countAllHashes_of_splitCost (inClass : Bytes → Prop)
   rw [← run_splitCost_eq_map inClass hne computation initialCache, support_map]
   exact ⟨result, hmem, rfl⟩
 
-end SlhDsaSecurity.ClassGrowth
+end SLHDSA.SHAKE128s.ClassGrowth

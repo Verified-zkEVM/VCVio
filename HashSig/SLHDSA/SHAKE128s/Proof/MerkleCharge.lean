@@ -37,7 +37,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.MerkleCharge
+namespace SLHDSA.SHAKE128s.MerkleCharge
 
 open CanonicalGraph Extraction
 
@@ -94,12 +94,12 @@ theorem deviatingCollision_of_pathCollision {α : Type} (publicSeed : Digest) (c
     (combine : Nat → Nat → Digest → Digest → Digest)
     (hcombine : ∀ h i l r, combine h i l r =
       @Hashing.tweakable Id _ (CacheReplay.replayQuery cache) publicSeed
-        (SlhDsaSecurity.Merkle.nodeAddress address h i) (BinaryPath.pairBytes (l, r)))
+        (SLHDSA.SHAKE128s.Merkle.nodeAddress address h i) (BinaryPath.pairBytes (l, r)))
     (hnodes : ∀ h i, nodes (h + 1) i =
       combine (h + 1) i (nodes h (2 * i)) (nodes h (2 * i + 1)))
     -- how this path position sits in the canonical graph
     (haddress : (StructuralNode.tree location parentHeight parentIndex).address =
-      SlhDsaSecurity.Merkle.nodeAddress address (height + 1) (index / 2 ^ (height + 1)))
+      SLHDSA.SHAKE128s.Merkle.nodeAddress address (height + 1) (index / 2 ^ (height + 1)))
     (hchildren : (StructuralNode.tree location parentHeight parentIndex).children =
       [.structural (merkleChild location parentHeight parentIndex 0),
         .structural (merkleChild location parentHeight parentIndex 1)])
@@ -163,19 +163,19 @@ theorem deviatingCollision_of_pathCollision_canonical {α : Type}
     (combine : Nat → Nat → Digest → Digest → Digest)
     (hcombine : ∀ h i l r, combine h i l r =
       @Hashing.tweakable Id _ (CacheReplay.replayQuery cache) publicSeed
-        (SlhDsaSecurity.Merkle.nodeAddress location.address h i)
+        (SLHDSA.SHAKE128s.Merkle.nodeAddress location.address h i)
         (BinaryPath.pairBytes (l, r)))
     (hnodes : ∀ h i,
-      @SlhDsaSecurity.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
+      @SLHDSA.SHAKE128s.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
           location.address (h + 1) i =
         combine (h + 1) i
-          (@SlhDsaSecurity.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed
+          (@SLHDSA.SHAKE128s.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed
             publicSeed location.address h (2 * i))
-          (@SlhDsaSecurity.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed
+          (@SLHDSA.SHAKE128s.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed
             publicSeed location.address h (2 * i + 1)))
     (hindex : parentIndex.val = index / 2 ^ (parentHeight.val + 1))
     (hcollision : BinaryPath.Collision
-      (@SlhDsaSecurity.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
+      (@SLHDSA.SHAKE128s.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
         location.address)
       combine index leaf siblings parentHeight.val)
     (result : α × QueryCache HashSpec) (output : HashOutput)
@@ -190,7 +190,7 @@ theorem deviatingCollision_of_pathCollision_canonical {α : Type}
       (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
   refine deviatingCollision_of_pathCollision publicSeed
     (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) cache location.address
-    (@SlhDsaSecurity.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
+    (@SLHDSA.SHAKE128s.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
       location.address)
     index parentHeight.val leaf siblings location parentHeight parentIndex combine hcombine
     hnodes ?_ rfl ?_ ?_ ?_ ?_ hcollision result output hcache hentry
@@ -227,11 +227,11 @@ theorem deviatingCollision_of_pathBranch {α : Type} (secretSeed publicSeed : Di
     (_hleafIndex : leafIndex < 2 ^ subtreeHeight) (leaf : Digest) (siblings : Nat → Digest)
     (pathHeight : Fin subtreeHeight)
     (hcollision : BinaryPath.Collision
-      (@SlhDsaSecurity.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
+      (@SLHDSA.SHAKE128s.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
         location.address)
       (fun height nodeIndex left right =>
         @Hashing.tweakable Id _ (CacheReplay.replayQuery cache) publicSeed
-          (SlhDsaSecurity.Merkle.nodeAddress location.address height nodeIndex)
+          (SLHDSA.SHAKE128s.Merkle.nodeAddress location.address height nodeIndex)
           (BinaryPath.pairBytes (left, right)))
       leafIndex leaf siblings pathHeight.val)
     (result : α × QueryCache HashSpec) (output : HashOutput)
@@ -245,7 +245,7 @@ theorem deviatingCollision_of_pathBranch {α : Type} (secretSeed publicSeed : Di
             (BinaryPath.value
               (fun height nodeIndex left right =>
                 @Hashing.tweakable Id _ (CacheReplay.replayQuery cache) publicSeed
-                  (SlhDsaSecurity.Merkle.nodeAddress location.address height nodeIndex)
+                  (SLHDSA.SHAKE128s.Merkle.nodeAddress location.address height nodeIndex)
                   (BinaryPath.pairBytes (left, right)))
               leafIndex leaf siblings pathHeight.val)
             (siblings pathHeight.val)))) = some output) :
@@ -257,4 +257,4 @@ theorem deviatingCollision_of_pathBranch {α : Type} (secretSeed publicSeed : Di
   · exact hcollision
   · exact hentry
 
-end SlhDsaSecurity.MerkleCharge
+end SLHDSA.SHAKE128s.MerkleCharge

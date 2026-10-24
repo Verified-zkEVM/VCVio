@@ -42,7 +42,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ReplayGate
+namespace SLHDSA.SHAKE128s.ReplayGate
 
 open Security CanonicalGraph CacheReplay Extraction VerifierProbes SplitCharged RoutedSplit
 
@@ -139,4 +139,4 @@ theorem cases_of_win_charged (adversary : Adversary)
   · exact Or.inr hinput
   · exact absurd hwin (not_wins_of_replay hfaithful hreplay)
 
-end SlhDsaSecurity.ReplayGate
+end SLHDSA.SHAKE128s.ReplayGate

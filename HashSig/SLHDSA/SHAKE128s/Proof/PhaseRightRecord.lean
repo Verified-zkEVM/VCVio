@@ -40,7 +40,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.PhaseRightRecord
+namespace SLHDSA.SHAKE128s.PhaseRightRecord
 
 variable {α β : Type}
 
@@ -362,4 +362,4 @@ splitting one phase per lemma, each handing back its own sub-run, exactly as
 count's removal, and the phase's own attribution — are all above.
 -/
 
-end SlhDsaSecurity.PhaseRightRecord
+end SLHDSA.SHAKE128s.PhaseRightRecord

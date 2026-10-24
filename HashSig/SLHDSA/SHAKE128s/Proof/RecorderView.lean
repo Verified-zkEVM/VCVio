@@ -39,7 +39,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.RecorderView
+namespace SLHDSA.SHAKE128s.RecorderView
 
 open SplitPrefix DigestTape
 
@@ -669,4 +669,4 @@ theorem noticing_left_recordOf_endKeep_final {α : Type}
               appendedOf_of_neither leftKeep rightKeep input noticed step.1 hleft hright]
             exact hcarry'
 
-end SlhDsaSecurity.RecorderView
+end SLHDSA.SHAKE128s.RecorderView

@@ -28,7 +28,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.SharedJoin
+namespace SLHDSA.SHAKE128s.SharedJoin
 
 open Security WarmedGame RoutedSplit ReplayGate Target RandomiserProvenance RandomiserRecord
 
@@ -56,4 +56,4 @@ attribute [local irreducible] WarmedGame.afterSeeds WarmedGame.tail
 /-- The run's own record. -/
 abbrev recordOf (pair : RecordedPair) : Multiset Bytes := pair.2.1.1.2
 
-end SlhDsaSecurity.SharedJoin
+end SLHDSA.SHAKE128s.SharedJoin

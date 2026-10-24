@@ -24,7 +24,7 @@ public section
 open MeasureTheory ProbabilityTheory
 open scoped NNReal Nat
 
-namespace SlhDsaSecurity.ForsConcentration
+namespace SLHDSA.SHAKE128s.ForsConcentration
 
 /-- Shifting a Poisson weight by `k`: the weight of `n + k` times `(n + k)! / n!` is `rate ^ k`
 times the weight of `n`. -/
@@ -188,4 +188,4 @@ theorem centeredMoment_bounds :
   simp only [centeredMoment, ForsMoments.touchard_eq_cached]
   decide +kernel
 
-end SlhDsaSecurity.ForsConcentration
+end SLHDSA.SHAKE128s.ForsConcentration

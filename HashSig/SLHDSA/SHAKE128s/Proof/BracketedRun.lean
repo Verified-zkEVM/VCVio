@@ -41,7 +41,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.BracketedRun
+namespace SLHDSA.SHAKE128s.BracketedRun
 
 open Security RecorderView PhaseFusion CountedHandler
 
@@ -65,4 +65,4 @@ carrier's served set and framing go, and so does the count, which the value carr
 @[expose] def forgetCarrier (state : CountedState) : SplitPrefix.SplitState :=
   (state.1.cache, state.2.1)
 
-end SlhDsaSecurity.BracketedRun
+end SLHDSA.SHAKE128s.BracketedRun

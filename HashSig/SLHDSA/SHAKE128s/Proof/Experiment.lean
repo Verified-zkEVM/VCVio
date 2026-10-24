@@ -23,7 +23,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity
+namespace SLHDSA.SHAKE128s
 
 /-- Number of calls to `F` in Algorithm 8, before the final WOTS public-key compression. -/
 @[expose] def Checksum.chainVerificationCalls (digits : MessageDigits) : Nat :=
@@ -79,4 +79,4 @@ noncomputable def experiment (adversary : Adversary) : OracleComp OracleWorld Ou
 
 end Security
 
-end SlhDsaSecurity
+end SLHDSA.SHAKE128s

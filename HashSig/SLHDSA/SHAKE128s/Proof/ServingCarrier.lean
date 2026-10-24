@@ -38,7 +38,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ServingCarrier
+namespace SLHDSA.SHAKE128s.ServingCarrier
 
 open CanonicalGraph Security
 
@@ -73,4 +73,4 @@ from. -/
 @[expose] def AgreesWithLog (sk : SecretKey) (signed : SigningLog) (state : Carrier) : Prop :=
   ∀ input : Bytes, Served state input ↔ logServed sk state.cache signed input
 
-end SlhDsaSecurity.ServingCarrier
+end SLHDSA.SHAKE128s.ServingCarrier

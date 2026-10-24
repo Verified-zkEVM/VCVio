@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.VerifierTally
+namespace SLHDSA.SHAKE128s.VerifierTally
 
 open Security RecordedQueries SharePresent ShareEvent
 
@@ -258,4 +258,4 @@ theorem accepted_ge (w : Bool × VerifyState)
   exact (VerificationBudget.verification_accepted_count_bounds pk request wire cache _ hcount
     haccept).1
 
-end SlhDsaSecurity.VerifierTally
+end SLHDSA.SHAKE128s.VerifierTally

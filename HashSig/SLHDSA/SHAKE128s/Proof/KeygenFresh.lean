@@ -23,7 +23,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.KeygenUniform
+namespace SLHDSA.SHAKE128s.KeygenUniform
 
 /-- The address of the root of the top XMSS tree. -/
 @[expose] def rootAddress : Address :=
@@ -42,4 +42,4 @@ the shared hash answers fresh inputs uniformly and repeated inputs from its cach
 noncomputable abbrev rom : QueryImpl OracleWorld (StateT (QueryCache HashSpec) ProbComp) :=
   RandomOracleModel.impl Bytes HashOutput
 
-end SlhDsaSecurity.KeygenUniform
+end SLHDSA.SHAKE128s.KeygenUniform

@@ -24,7 +24,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.RandomiserCharge
+namespace SLHDSA.SHAKE128s.RandomiserCharge
 
 open Security CanonicalGraph WarmedGame
 
@@ -39,4 +39,4 @@ theorem walk_cache_prf_fresh
   exact RandomizerGate.canonicalInput_ne_randomizerInput walk.1.1.2.2 walk.1.1.2.1 seed
     walk.1.2 parent message hgood.1 hcanonical.symm
 
-end SlhDsaSecurity.RandomiserCharge
+end SLHDSA.SHAKE128s.RandomiserCharge

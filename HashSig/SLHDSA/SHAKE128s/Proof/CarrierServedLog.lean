@@ -38,7 +38,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarrierServedLog
+namespace SLHDSA.SHAKE128s.CarrierServedLog
 
 variable {α : Type}
 
@@ -218,4 +218,4 @@ theorem carrierBelowLog_of_invariants (sk : SecretKey) (pk : PublicKey)
     result hsigned input).mpr
     (hlogged result.2 hcache (fun _ _ hvalue => absurd hvalue (by simp)) input hserved)
 
-end SlhDsaSecurity.CarrierServedLog
+end SLHDSA.SHAKE128s.CarrierServedLog

@@ -33,7 +33,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.TapeFactor
+namespace SLHDSA.SHAKE128s.TapeFactor
 
 open DigestTape
 
@@ -621,4 +621,4 @@ theorem leftOf_step (leftKeep rightKeep : Bytes → σ → Prop)
       rw [hpure]
       exact List.prefix_rfl
 
-end SlhDsaSecurity.TapeFactor
+end SLHDSA.SHAKE128s.TapeFactor

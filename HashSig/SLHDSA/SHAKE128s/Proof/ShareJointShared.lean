@@ -27,7 +27,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ShareJointShared
+namespace SLHDSA.SHAKE128s.ShareJointShared
 
 open Security CanonicalGraph WarmedGame WalkTable TableTail RecordedQueries RecordedPhase
   SharePresent ShareGame BySourceBridge
@@ -150,4 +150,4 @@ theorem hshared (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adversa
         unfold ShareJoint.verifierAllowance
         omega
 
-end SlhDsaSecurity.ShareJointShared
+end SLHDSA.SHAKE128s.ShareJointShared

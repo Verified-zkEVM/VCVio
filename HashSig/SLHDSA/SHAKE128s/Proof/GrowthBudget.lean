@@ -24,7 +24,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.GrowthBudget
+namespace SLHDSA.SHAKE128s.GrowthBudget
 
 variable {α β : Type}
 
@@ -75,4 +75,4 @@ theorem countAllHashes_bind {α β : Type} (computation : OracleComp OracleWorld
     simp only [ih]
     simp [map_bind, bind_map_left, bind_assoc, Nat.add_assoc]
 
-end SlhDsaSecurity.GrowthBudget
+end SLHDSA.SHAKE128s.GrowthBudget

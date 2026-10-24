@@ -23,7 +23,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.KeygenUniform
+namespace SLHDSA.SHAKE128s.KeygenUniform
 
 /-- Splits a hash output into its leading `Digest` (the truncation used throughout the scheme)
 and its trailing `112` bits. -/
@@ -57,4 +57,4 @@ theorem truncate_uniform :
   rw [prEvent_map]
   exact SampleableType.prEvent_uniformSample_fst p
 
-end SlhDsaSecurity.KeygenUniform
+end SLHDSA.SHAKE128s.KeygenUniform

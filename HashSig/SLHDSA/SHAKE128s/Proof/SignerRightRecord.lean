@@ -32,7 +32,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.SignerRightRecord
+namespace SLHDSA.SHAKE128s.SignerRightRecord
 
 open Security CacheAvailability SplitPrefix SignerRandomiser
 
@@ -235,4 +235,4 @@ theorem sign_right_record (leftKeep rightKeep : Bytes â†’ QueryCache HashSpec â†
   rw [hinnerState]
   exact hprobe
 
-end SlhDsaSecurity.SignerRightRecord
+end SLHDSA.SHAKE128s.SignerRightRecord

@@ -26,7 +26,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarrierClearFraming
+namespace SLHDSA.SHAKE128s.CarrierClearFraming
 
 variable {α : Type}
 
@@ -108,4 +108,4 @@ theorem clear_stages (adversary : Adversary) (walk : Walk)
   exact ⟨clear_startAt walk.2, hkey, hphase,
     clear_run rightKeep walk _ _ final hfinal hphase⟩
 
-end SlhDsaSecurity.CarrierClearFraming
+end SLHDSA.SHAKE128s.CarrierClearFraming

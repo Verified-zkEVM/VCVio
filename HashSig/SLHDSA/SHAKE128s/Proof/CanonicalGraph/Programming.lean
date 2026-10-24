@@ -33,7 +33,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CanonicalGraph.Programming
+namespace SLHDSA.SHAKE128s.CanonicalGraph.Programming
 
 /-- A full hash output for every structural node. -/
 abbrev Outputs := StructuralNode → HashOutput
@@ -350,4 +350,4 @@ theorem warmup_seed_uniform (publicSeed : Digest) :
   rw [hprog] at hstep
   exact hstep.trans (splitTable_uniform.map result)
 
-end SlhDsaSecurity.CanonicalGraph.Programming
+end SLHDSA.SHAKE128s.CanonicalGraph.Programming

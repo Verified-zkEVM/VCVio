@@ -22,7 +22,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity
+namespace SLHDSA.SHAKE128s
 
 /-! ## Parameters (Table 2) -/
 
@@ -671,4 +671,4 @@ def verifyInternal (pk : PublicKey) (message : Bytes) (signature : Signature) : 
 
 end Scheme
 
-end SlhDsaSecurity
+end SLHDSA.SHAKE128s

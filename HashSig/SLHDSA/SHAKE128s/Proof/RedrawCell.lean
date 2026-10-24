@@ -31,7 +31,7 @@ public section
 open OracleComp OracleSpec ENNReal
 
 
-namespace SlhDsaSecurity.RedrawCell
+namespace SLHDSA.SHAKE128s.RedrawCell
 
 variable {γ : Type}
 
@@ -225,4 +225,4 @@ theorem signature_mk_eq {randomizerLeft randomizerRight : Digest}
       Signature.mk randomizerRight forsRight hypertreeRight := by
   rw [hrandom, hfors, hhypertree]
 
-end SlhDsaSecurity.RedrawCell
+end SLHDSA.SHAKE128s.RedrawCell

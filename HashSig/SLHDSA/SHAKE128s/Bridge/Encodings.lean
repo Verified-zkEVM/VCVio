@@ -54,7 +54,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Bridge
+namespace SLHDSA.SHAKE128s.Bridge
 
 open SLHDSA
 
@@ -349,7 +349,7 @@ theorem chainStepsCore_eq_encode (msg : FIPS205.core.Y) (i : Fin chains) :
 /-! ## Addresses -/
 
 /-- The FIPS 205 address type of a paper address type. -/
-@[expose] def _root_.SlhDsaSecurity.AddressType.toAddrType : AddressType → AddrType
+@[expose] def _root_.SLHDSA.SHAKE128s.AddressType.toAddrType : AddressType → AddrType
   | .wotsHash => .wotsHash
   | .wotsPk => .wotsPk
   | .tree => .tree
@@ -359,7 +359,7 @@ theorem chainStepsCore_eq_encode (msg : FIPS205.core.Y) (i : Fin chains) :
   | .forsPrf => .forsPrf
 
 /-- The paper's type code is FIPS 205's. -/
-@[simp] theorem _root_.SlhDsaSecurity.AddressType.toNat_code (k : AddressType) :
+@[simp] theorem _root_.SLHDSA.SHAKE128s.AddressType.toNat_code (k : AddressType) :
     k.code.toNat = k.toAddrType.toCode := by
   cases k <;> rfl
 
@@ -931,4 +931,4 @@ theorem map_answerEquiv_uniformSample :
       ($ᵗ FIPS205.Answer : ProbComp _) :=
   map_uniformSample_evalDistEq_of_bijective answerEquiv.bijective
 
-end SlhDsaSecurity.Bridge
+end SLHDSA.SHAKE128s.Bridge

@@ -32,7 +32,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CountedHandler
+namespace SLHDSA.SHAKE128s.CountedHandler
 
 variable {α β : Type}
 
@@ -380,4 +380,4 @@ theorem run_romWithCount_count {α : Type} (computation : OracleComp OracleWorld
       ((result.1.1, state.2 + (hashCost queried + result.1.2)), result.2)
     rw [Nat.add_assoc]
 
-end SlhDsaSecurity.CountedHandler
+end SLHDSA.SHAKE128s.CountedHandler

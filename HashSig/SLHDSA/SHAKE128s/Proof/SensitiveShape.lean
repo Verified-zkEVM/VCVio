@@ -37,7 +37,7 @@ tree cells and `forsRoots` collects tree roots, which are public outright.
 
 public section
 
-namespace SlhDsaSecurity.CanonicalGraph
+namespace SLHDSA.SHAKE128s.CanonicalGraph
 
 /-- The cells the input half does not have to protect: everything except the secret seed, a
 WOTS chain value strictly below the endpoint, and a FORS secret. -/
@@ -230,4 +230,4 @@ theorem available_of_children_available {parent : StructuralNode}
   | forsTree key height index => exact True.intro
   | forsRoots key => exact True.intro
 
-end SlhDsaSecurity.CanonicalGraph
+end SLHDSA.SHAKE128s.CanonicalGraph

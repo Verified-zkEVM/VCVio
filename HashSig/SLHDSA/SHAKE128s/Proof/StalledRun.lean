@@ -41,7 +41,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.StalledRun
+namespace SLHDSA.SHAKE128s.StalledRun
 
 variable {ι : Type} {spec : OracleSpec ι} {σ : Type}
 
@@ -296,4 +296,4 @@ the cell in question is still unavailable, and so the states at which a handler 
 available cells does not read it. That is the hypothesis such a handler has, and it is why
 nothing has to be fixed before the run. -/
 
-end SlhDsaSecurity.StalledRun
+end SLHDSA.SHAKE128s.StalledRun

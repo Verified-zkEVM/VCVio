@@ -41,7 +41,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Bridge
+namespace SLHDSA.SHAKE128s.Bridge
 
 open SLHDSA SLHDSA.Security
 
@@ -300,4 +300,4 @@ theorem simulateQ_relabel_wotsPublicKeyFromSignature
   rw [simulateQ_relabel_tweakable_digestArray, toAdrs_wotsPublicKeyAddress]
   rfl
 
-end SlhDsaSecurity.Bridge
+end SLHDSA.SHAKE128s.Bridge

@@ -20,7 +20,7 @@ Poisson coupling, a concentration theorem, or a bound for adaptive signing trans
 
 public section
 
-namespace SlhDsaSecurity.ForsMoments
+namespace SLHDSA.SHAKE128s.ForsMoments
 
 /-- Row `n` of the triangle of Stirling numbers of the second kind, `S(n, 0), …, S(n, n)`,
 computed row by row so that kernel evaluation does not unfold the two-term recurrence
@@ -71,4 +71,4 @@ theorem touchard_eq_cached (degree mean : Nat) :
     touchard degree mean = cachedTouchard degree mean := by
   simp only [touchard, cachedTouchard, stirlingRow_getD]
 
-end SlhDsaSecurity.ForsMoments
+end SLHDSA.SHAKE128s.ForsMoments

@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.RandomiserRecord
+namespace SLHDSA.SHAKE128s.RandomiserRecord
 
 variable {α : Type}
 
@@ -303,4 +303,4 @@ event about the trace keeps its probability exactly. -/
       ((Outcome × Nat) × QueryCache HashSpec) :=
   (pair.1, ((pair.2.1.1.1, pair.2.1.2), pair.2.2))
 
-end SlhDsaSecurity.RandomiserRecord
+end SLHDSA.SHAKE128s.RandomiserRecord

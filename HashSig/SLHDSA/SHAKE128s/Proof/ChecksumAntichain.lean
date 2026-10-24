@@ -20,7 +20,7 @@ earlier value on some chain than the signed one (`exists_decreased_digit`).
 
 public section
 
-namespace SlhDsaSecurity.Checksum
+namespace SLHDSA.SHAKE128s.Checksum
 
 /-- The first `messageDigits` entries of the encoding are the message's base-16 digits. -/
 theorem encode_messageDigit (message : Digest) (i : Fin messageDigits) :
@@ -112,4 +112,4 @@ theorem exists_decreased_digit {signed forged : Digest} (hne : signed ≠ forged
   simp only [not_exists, not_lt] at h
   exact hne (eq_of_encode_le h)
 
-end SlhDsaSecurity.Checksum
+end SLHDSA.SHAKE128s.Checksum

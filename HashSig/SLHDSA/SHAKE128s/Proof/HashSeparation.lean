@@ -24,7 +24,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.HashSeparation
+namespace SLHDSA.SHAKE128s.HashSeparation
 
 /-- Loose power-of-two bounds enclosing the standard 128s structural addresses. -/
 @[expose] def WithinBounds (address : Address) : Prop :=
@@ -131,4 +131,4 @@ theorem prob_possible_le :
   apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
   norm_num
 
-end SlhDsaSecurity.HashSeparation
+end SLHDSA.SHAKE128s.HashSeparation

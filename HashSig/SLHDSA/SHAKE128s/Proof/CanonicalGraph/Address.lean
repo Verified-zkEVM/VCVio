@@ -20,7 +20,7 @@ follows.
 
 public section
 
-namespace SlhDsaSecurity.CanonicalGraph
+namespace SLHDSA.SHAKE128s.CanonicalGraph
 
 /-- Six numeric address coordinates: layer, tree, type, key pair, chain or height, and hash or
 index. -/
@@ -112,4 +112,4 @@ theorem StructuralNode.address_injective : Function.Injective StructuralNode.add
   apply code_injective
   simpa only [addressCode_eq] using congrArg addressCode h
 
-end SlhDsaSecurity.CanonicalGraph
+end SLHDSA.SHAKE128s.CanonicalGraph

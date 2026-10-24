@@ -40,7 +40,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.StripCached
+namespace SLHDSA.SHAKE128s.StripCached
 
 open CacheReplay
 
@@ -109,4 +109,4 @@ theorem run_simulateQ_strip {α : Type} (computation : OracleComp HashSpec α)
         · rw [QueryCache.cacheQuery_of_ne _ _ heq]
           exact hsub key value hkey
 
-end SlhDsaSecurity.StripCached
+end SLHDSA.SHAKE128s.StripCached

@@ -22,7 +22,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Bridge
+namespace SLHDSA.SHAKE128s.Bridge
 
 /-- The proof's transcription of SLH-DSA-SHAKE-128s, as a pure-mode scheme over one oracle with
 `240`-bit answers. -/
@@ -38,4 +38,4 @@ theorem securityGame_model : Security.securityGame = Game.securityGame model := 
 theorem hasSecurityBits_model_iff (Z : Finset Unforgeability.QueryKind) (bits : Nat) :
     Security.HasSecurityBits Z bits ↔ Game.HasSecurityBits model Z bits := Iff.rfl
 
-end SlhDsaSecurity.Bridge
+end SLHDSA.SHAKE128s.Bridge

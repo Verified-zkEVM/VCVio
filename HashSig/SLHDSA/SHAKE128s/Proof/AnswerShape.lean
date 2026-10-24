@@ -23,7 +23,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.AnswerShape
+namespace SLHDSA.SHAKE128s.AnswerShape
 
 open Security CanonicalGraph WarmedGame RoutedSplit Target
 
@@ -32,4 +32,4 @@ open Security CanonicalGraph WarmedGame RoutedSplit Target
     (Outcome × Nat) × SplitPrefix.SplitState :=
   ((result.1.1.1, result.1.2), result.2)
 
-end SlhDsaSecurity.AnswerShape
+end SLHDSA.SHAKE128s.AnswerShape

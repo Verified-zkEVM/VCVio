@@ -26,7 +26,7 @@ public section
 open OracleComp OracleSpec
 open scoped BigOperators
 
-namespace SlhDsaSecurity.VerificationQueries
+namespace SLHDSA.SHAKE128s.VerificationQueries
 
 open Generic (ExactQueryCount)
 
@@ -379,4 +379,4 @@ theorem Bounds.simulated {m : Type → Type} [Monad m] [LawfulMonad m]
   have hb := h (OracleComp HashSpec) (QueryImpl.ofLift HashSpec (OracleComp HashSpec))
   exact ⟨hb.1 result hfree, hb.2 result hfree⟩
 
-end SlhDsaSecurity.VerificationQueries
+end SLHDSA.SHAKE128s.VerificationQueries

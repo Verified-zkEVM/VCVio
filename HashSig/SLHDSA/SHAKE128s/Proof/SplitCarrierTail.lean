@@ -32,7 +32,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.SplitCarrierTail
+namespace SLHDSA.SHAKE128s.SplitCarrierTail
 
 variable {α β : Type}
 
@@ -290,4 +290,4 @@ theorem forget_splitCarrierTail (inClass : Bytes → Prop) (inside outside : Que
   refine bind_congr fun final => ?_
   rfl
 
-end SlhDsaSecurity.SplitCarrierTail
+end SLHDSA.SHAKE128s.SplitCarrierTail

@@ -39,7 +39,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ServedBridge
+namespace SLHDSA.SHAKE128s.ServedBridge
 
 open Security CacheReplay
 
@@ -151,4 +151,4 @@ theorem signerRandomised_of_servedLog (adversary : Adversary)
     rw [hparsedEq, signInternal_randomizer, HonestProbes.replayRandomizer]
     simp [replay, hentryValue]
 
-end SlhDsaSecurity.ServedBridge
+end SLHDSA.SHAKE128s.ServedBridge

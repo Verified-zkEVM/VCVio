@@ -21,7 +21,7 @@ points.
 
 public section
 
-namespace SlhDsaSecurity
+namespace SLHDSA.SHAKE128s
 
 /-- The big-endian encoding of a `count`-byte value has `count` bytes. -/
 @[simp] theorem length_bytesBE (count : Nat) (value : BitVec (8 * count)) :
@@ -127,4 +127,4 @@ theorem Message.frame_injective {left right : Message} {framed : Bytes}
     · cases hright
   · cases hleft
 
-end SlhDsaSecurity
+end SLHDSA.SHAKE128s

@@ -37,7 +37,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.SignedWatch
+namespace SLHDSA.SHAKE128s.SignedWatch
 
 variable {α β γ : Type}
 
@@ -463,4 +463,4 @@ theorem watchPair_onCarrierTape (first second : Bytes) (firstHits secondHits : H
       watchValue first firstHits state * watchValue second secondHits state := by
   rw [watchValue_onCarrierTape _ _ _ hf, watchValue_onCarrierTape _ _ _ hf]
 
-end SlhDsaSecurity.SignedWatch
+end SLHDSA.SHAKE128s.SignedWatch

@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.FreshExpectation
+namespace SLHDSA.SHAKE128s.FreshExpectation
 
 variable {α β γ : Type}
 
@@ -303,4 +303,4 @@ theorem prob_bad_le_expected_fresh (inClass : Bytes → Prop) (bad : Bytes → H
           refine le_of_eq (tsum_congr fun answer => ?_)
           ring
 
-end SlhDsaSecurity.FreshExpectation
+end SLHDSA.SHAKE128s.FreshExpectation

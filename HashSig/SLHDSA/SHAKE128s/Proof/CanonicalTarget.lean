@@ -38,7 +38,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CanonicalTarget
+namespace SLHDSA.SHAKE128s.CanonicalTarget
 
 open CanonicalGraph
 
@@ -111,4 +111,4 @@ theorem hit_of_deviating_collision {α : Type} (publicSeed : Digest) (cells cand
   refine ⟨canonicalInput publicSeed candidates parent, output, hentry, ?_⟩
   rw [canonicalTarget_deviating publicSeed cells candidates parent hdeviates, hcollision]
 
-end SlhDsaSecurity.CanonicalTarget
+end SLHDSA.SHAKE128s.CanonicalTarget

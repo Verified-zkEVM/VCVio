@@ -42,7 +42,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.FreshHitBound
+namespace SLHDSA.SHAKE128s.FreshHitBound
 
 /-- The charged queries: those addressed to the shared hash oracle. -/
 @[expose] def HashQuery : OracleWorld.Domain → Prop := fun query => query.isRight = true
@@ -93,4 +93,4 @@ theorem prob_target_match_le (optionalTarget : Option Digest) :
     refine le_of_eq_of_le ?_ (le_of_eq (prob_truncate_eq target))
     exact prEvent_congr _ _ _ fun _ => Option.some_inj
 
-end SlhDsaSecurity.FreshHitBound
+end SLHDSA.SHAKE128s.FreshHitBound

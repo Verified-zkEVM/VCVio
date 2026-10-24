@@ -24,7 +24,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.WholeGameStructural
+namespace SLHDSA.SHAKE128s.WholeGameStructural
 
 open Security CanonicalGraph
 
@@ -43,4 +43,4 @@ theorem mem_support_runAll_of_mem_support {adversary : Adversary}
   rw [StateT.run'_eq, support_map]
   exact ⟨result, hmem, rfl⟩
 
-end SlhDsaSecurity.WholeGameStructural
+end SLHDSA.SHAKE128s.WholeGameStructural

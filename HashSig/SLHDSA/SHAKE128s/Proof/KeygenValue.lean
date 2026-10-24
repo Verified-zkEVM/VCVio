@@ -40,7 +40,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.KeygenValue
+namespace SLHDSA.SHAKE128s.KeygenValue
 
 open Security CacheReplay RecordedQueries
 
@@ -84,4 +84,4 @@ theorem run_recordedAfterSeeds (adversary : Adversary) (sds : Digest Ã— Digest Ã
     HonestProbes.run_keygenInternal_world_eq_pure, pure_bind]
   rfl
 
-end SlhDsaSecurity.KeygenValue
+end SLHDSA.SHAKE128s.KeygenValue

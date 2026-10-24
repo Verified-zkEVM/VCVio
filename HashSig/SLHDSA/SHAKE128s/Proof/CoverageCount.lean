@@ -22,7 +22,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.CoverageCount
+namespace SLHDSA.SHAKE128s.CoverageCount
 
 open Security DigestTape ClassGrowth
 
@@ -46,4 +46,4 @@ theorem rom_run_inr_none (input : Bytes) (cache : QueryCache HashSpec)
   rw [DigestTape.rom_run_inr, QueryImpl.withCaching_run_none _ hfresh]
   rfl
 
-end SlhDsaSecurity.CoverageCount
+end SLHDSA.SHAKE128s.CoverageCount

@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.HypertreeDispatch
+namespace SLHDSA.SHAKE128s.HypertreeDispatch
 
 open Extraction.HypertreeChain
 
@@ -55,13 +55,13 @@ hypotheses about the hash. -/
 pins every layer, not just the bottom message, which is what lets a forgery with no fault in it
 be compared with the signature a request returned. -/
 theorem cases_of_accepted_signed (secretSeed publicSeed : Digest) (pk : PublicKey)
-    (tree : SlhDsaSecurity.Hypertree.TreeIndex) (leaf : SlhDsaSecurity.Hypertree.LeafIndex)
+    (tree : SLHDSA.SHAKE128s.Hypertree.TreeIndex) (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex)
     (forsKey honestForsKey : Digest) (signature : HypertreeSignature)
     (hseed : pk.seed = publicSeed)
     (hroot : pk.root = honestNode secretSeed publicSeed (layers - 1) 0)
-    (haccept : SlhDsaSecurity.Hypertree.verify (m := Id) forsKey signature pk tree leaf = true) :
+    (haccept : SLHDSA.SHAKE128s.Hypertree.verify (m := Id) forsKey signature pk tree leaf = true) :
     (forsKey = honestForsKey ∧
-        signature = SlhDsaSecurity.Hypertree.signLayers (m := Id) secretSeed publicSeed layers 0
+        signature = SLHDSA.SHAKE128s.Hypertree.signLayers (m := Id) secretSeed publicSeed layers 0
           tree.toNat leaf honestForsKey) ∨
       HypertreeFault secretSeed publicSeed layers signature 0 tree.toNat leaf forsKey
         honestForsKey :=
@@ -70,11 +70,11 @@ theorem cases_of_accepted_signed (secretSeed publicSeed : Digest) (pk : PublicKe
 
 /-- **An accepted hypertree signature is canonical or faulty.** -/
 theorem cases_of_accepted (secretSeed publicSeed : Digest) (pk : PublicKey)
-    (tree : SlhDsaSecurity.Hypertree.TreeIndex) (leaf : SlhDsaSecurity.Hypertree.LeafIndex)
+    (tree : SLHDSA.SHAKE128s.Hypertree.TreeIndex) (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex)
     (forsKey honestForsKey : Digest) (signature : HypertreeSignature)
     (hseed : pk.seed = publicSeed)
     (hroot : pk.root = honestNode secretSeed publicSeed (layers - 1) 0)
-    (haccept : SlhDsaSecurity.Hypertree.verify (m := Id) forsKey signature pk tree leaf = true) :
+    (haccept : SLHDSA.SHAKE128s.Hypertree.verify (m := Id) forsKey signature pk tree leaf = true) :
     forsKey = honestForsKey ∨
       HypertreeFault secretSeed publicSeed layers signature 0 tree.toNat leaf forsKey
         honestForsKey :=
@@ -98,12 +98,12 @@ open CacheReplay in
 /-- Descend into this layer. -/
 theorem queriesUnder_rootFromSignature_head (cache : QueryCache HashSpec) (publicSeed : Digest)
     (remaining : Nat) (signatures : Fin (remaining + 1) → XmssSignature) (layer tree : Nat)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message : Digest) (probe : Bytes)
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message : Digest) (probe : Bytes)
     (hquery : QueriesUnder cache
-      (SlhDsaSecurity.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) leaf
-        (signatures 0) message publicSeed (SlhDsaSecurity.Hypertree.address layer tree)) probe) :
+      (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) leaf
+        (signatures 0) message publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree)) probe) :
     QueriesUnder cache
-      (SlhDsaSecurity.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
+      (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
         (remaining + 1) signatures layer tree leaf message) probe :=
   queriesUnder_bind cache _ _ probe hquery
 
@@ -111,18 +111,18 @@ open CacheReplay in
 /-- Step over this layer to the next, advancing the message to this layer's replayed root. -/
 theorem queriesUnder_rootFromSignature_tail (cache : QueryCache HashSpec) (publicSeed : Digest)
     (remaining : Nat) (signatures : Fin (remaining + 1) → XmssSignature) (layer tree : Nat)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message : Digest) (probe : Bytes)
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message : Digest) (probe : Bytes)
     (hquery : QueriesUnder cache
-      (SlhDsaSecurity.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
+      (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
         remaining (fun i => signatures i.succ) (layer + 1)
-        (tree / 2 ^ subtreeHeight) (SlhDsaSecurity.Hypertree.nextLeaf tree)
+        (tree / 2 ^ subtreeHeight) (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree)
         (simulateQ (replay cache)
-          (SlhDsaSecurity.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) leaf
+          (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) leaf
             (signatures 0) message publicSeed
-            (SlhDsaSecurity.Hypertree.address layer tree)))) probe) :
+            (SLHDSA.SHAKE128s.Hypertree.address layer tree)))) probe) :
     QueriesUnder cache
-      (SlhDsaSecurity.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
+      (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
         (remaining + 1) signatures layer tree leaf message) probe :=
   queriesUnder_bind_right cache _ _ probe hquery
 
-end SlhDsaSecurity.HypertreeDispatch
+end SLHDSA.SHAKE128s.HypertreeDispatch

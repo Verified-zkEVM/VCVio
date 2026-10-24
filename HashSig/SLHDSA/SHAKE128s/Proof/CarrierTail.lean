@@ -39,7 +39,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarrierTail
+namespace SLHDSA.SHAKE128s.CarrierTail
 
 variable {α β : Type}
 
@@ -402,4 +402,4 @@ theorem forgetFused_carrierTail (rightKeep : Walk → Bytes → HandlerCarrier.S
     Functor.map_map]
   rfl
 
-end SlhDsaSecurity.CarrierTail
+end SLHDSA.SHAKE128s.CarrierTail

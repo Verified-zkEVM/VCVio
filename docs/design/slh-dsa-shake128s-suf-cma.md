@@ -4,7 +4,7 @@ Status: design record for `HashSig/SLHDSA/SHAKE128s/`, established 2026-10-24.
 
 ## The statement
 
-`SlhDsaSecurity.slhDsa_sufCma_127`
+`SLHDSA.SHAKE128s.slhDsa_sufCma_127`
 (`HashSig/SLHDSA/SHAKE128s/Statement/Theorems/StrongUnforgeability.lean`):
 
 ```lean

@@ -27,7 +27,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.VerificationBudget
+namespace SLHDSA.SHAKE128s.VerificationBudget
 
 variable {α β : Type}
 
@@ -182,4 +182,4 @@ theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)
   simp only [Counts.work, Pi.add_apply]
   omega
 
-end SlhDsaSecurity.VerificationBudget
+end SLHDSA.SHAKE128s.VerificationBudget

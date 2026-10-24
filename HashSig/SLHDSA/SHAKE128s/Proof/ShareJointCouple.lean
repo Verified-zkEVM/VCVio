@@ -26,7 +26,7 @@ public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
-namespace SlhDsaSecurity.ShareJointCouple
+namespace SLHDSA.SHAKE128s.ShareJointCouple
 
 variable {α : Type}
 
@@ -137,4 +137,4 @@ theorem couple_whole (setup : Setup) (hgood : setup.Good) (adversary : Adversary
     exact mem_support_of_capCompOpt_some SharePresent.realWorldImpl
       (chargedWeight setup.pk.seed) _ _ (1, z.2.2.2) verified wState hw
 
-end SlhDsaSecurity.ShareJointCouple
+end SLHDSA.SHAKE128s.ShareJointCouple

@@ -29,7 +29,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarrierTailRecordings
+namespace SLHDSA.SHAKE128s.CarrierTailRecordings
 
 open Security BracketedRun CarrierFiles CarrierRecordings RecordInvariant CarrierTail
   RecordedQueries
@@ -128,4 +128,4 @@ about the object's size rather than about any name in them.
 with the state unchanged. Stated here so that a consumer of `answerCarrierRun` never has to
 unfold it to reach them. -/
 
-end SlhDsaSecurity.CarrierTailRecordings
+end SLHDSA.SHAKE128s.CarrierTailRecordings

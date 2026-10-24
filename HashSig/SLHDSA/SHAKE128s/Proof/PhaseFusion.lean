@@ -40,7 +40,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.PhaseFusion
+namespace SLHDSA.SHAKE128s.PhaseFusion
 
 open Security
 
@@ -132,4 +132,4 @@ theorem run_phase_fused {α : Type} (outer : QueryImpl OracleWorld (StateT S Pro
   rw [run_fuse outer inner computation 1 log state, Functor.map_map]
   simp [one_mul]
 
-end SlhDsaSecurity.PhaseFusion
+end SLHDSA.SHAKE128s.PhaseFusion

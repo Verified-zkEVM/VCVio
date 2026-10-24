@@ -24,7 +24,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.Averaging
+namespace SLHDSA.SHAKE128s.Averaging
 
 /-- **A bound that holds after every prefix holds over the pair.** -/
 theorem prEvent_bind_pair_le {α β : Type} (first : ProbComp α) (rest : α → ProbComp β)
@@ -44,4 +44,4 @@ theorem support_eq_of_evalDistEq {α : Type} {left right : ProbComp α}
     (hlaw : left =ᵈ right) : support left = support right :=
   OracleComp.support_eq_of_evalDistEq hlaw
 
-end SlhDsaSecurity.Averaging
+end SLHDSA.SHAKE128s.Averaging

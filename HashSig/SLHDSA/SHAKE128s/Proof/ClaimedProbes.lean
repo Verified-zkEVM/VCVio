@@ -38,7 +38,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ClaimedProbes
+namespace SLHDSA.SHAKE128s.ClaimedProbes
 
 open CanonicalGraph WotsResidueReduction
 
@@ -57,7 +57,7 @@ variable [HasQuery HashSpec Id]
 /-- The position the forgery's chain value at the layer reached after `i` steps sits at. -/
 @[expose] def forgedStep (publicSeed : Digest) (remaining : Nat)
     (signatures : Fin remaining → XmssSignature) (layer tree : Nat)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message : Digest) (i : Nat)
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message : Digest) (i : Nat)
     (chain : Fin chains) : Fin (w - 1) :=
   clampStep (Checksum.encode
     (forgedAt publicSeed remaining signatures layer tree leaf message i) chain).val
@@ -65,7 +65,7 @@ variable [HasQuery HashSpec Id]
 /-- **On the chain the residue names, the clamp changes nothing.** -/
 theorem forgedStep_val (publicSeed : Digest) (remaining : Nat)
     (signatures : Fin remaining → XmssSignature) (layer tree : Nat)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message : Digest) (i : Nat)
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message : Digest) (i : Nat)
     (chain : Fin chains) (bound : Nat) (hbound : bound ≤ w - 1)
     (hdigit : (Checksum.encode
       (forgedAt publicSeed remaining signatures layer tree leaf message i) chain).val < bound) :
@@ -77,7 +77,7 @@ theorem forgedStep_val (publicSeed : Digest) (remaining : Nat)
 /-- The record's position function, read off the forgery: the hypertree runs from layer zero at
 the subtree and leaf its digest selects, starting from the FORS public key it recovers. -/
 @[expose] def forgedSteps (publicSeed : Digest) (signature : Signature) (tree : Nat)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (forsKey : Digest) :
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (forsKey : Digest) :
     Fin layers → Fin chains → Fin (w - 1) :=
   fun layer chain =>
     forgedStep publicSeed layers signature.hypertree 0 tree leaf forsKey layer.val chain
@@ -89,7 +89,7 @@ theorem sensitive_forgedClaim (publicSeed : Digest) {State : Type}
     (hrevealed : ∀ key chain, revealed key chain ≤ w - 1)
     (table : Cells) (state : State) (key : WotsKey) (chain : Fin chains)
     (remaining : Nat) (signatures : Fin remaining → XmssSignature) (layer tree : Nat)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message : Digest) (i : Nat)
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message : Digest) (i : Nat)
     (value : SensitiveQuery.Cell)
     (hdigit : (Checksum.encode
       (forgedAt publicSeed remaining signatures layer tree leaf message i) chain).val <
@@ -120,7 +120,7 @@ the residue threads, so the record is determined rather than quantified. -/
 
 /-- The WOTS key the forgery's path uses at a layer. -/
 @[expose] def forgedKey (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (layer : Fin layers) : WotsKey :=
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (layer : Fin layers) : WotsKey :=
   ⟨⟨layer, ⟨treeAt tree.val layer.val,
       lt_of_le_of_lt (treeAt_le tree.val layer.val) tree.isLt⟩⟩,
     leafAt leaf tree.val layer.val⟩
@@ -139,4 +139,4 @@ def claimedCandidatesOf (publicSeed : Digest) (cache : QueryCache HashSpec) (pk 
       (MessageDigest.leafIndex (VerifierProbes.digestOf cache pk message parsed)).toFin
       (VerifierProbes.forsKeyOf cache pk message parsed))
 
-end SlhDsaSecurity.ClaimedProbes
+end SLHDSA.SHAKE128s.ClaimedProbes

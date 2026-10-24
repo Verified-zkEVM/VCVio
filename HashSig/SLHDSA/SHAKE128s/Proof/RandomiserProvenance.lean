@@ -28,7 +28,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.RandomiserProvenance
+namespace SLHDSA.SHAKE128s.RandomiserProvenance
 
 open Security CacheReplay RecordedQueries CacheProvenance PhaseProvenance
 
@@ -71,4 +71,4 @@ theorem mem_forgeryDigestRecord (pk : PublicKey) (forgery : Forgery) (framed : B
 
 attribute [local irreducible] WarmedGame.afterSeeds WarmedGame.tail
 
-end SlhDsaSecurity.RandomiserProvenance
+end SLHDSA.SHAKE128s.RandomiserProvenance

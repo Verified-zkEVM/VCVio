@@ -40,7 +40,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.AnswerFired
+namespace SLHDSA.SHAKE128s.AnswerFired
 
 open Security DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedTape TapeWatch
   SignedWatch TapeRunFacts CountedView CarriedWitness RecordedQueries BracketedRun CarrierTail
@@ -395,4 +395,4 @@ theorem defects_le : Target.defectsAt ((1 : ℝ≥0∞) / 2 ^ 126) ≤
     ENNReal.toReal_pow, ENNReal.toReal_ofNat]
   norm_num
 
-end SlhDsaSecurity.AnswerFired
+end SLHDSA.SHAKE128s.AnswerFired

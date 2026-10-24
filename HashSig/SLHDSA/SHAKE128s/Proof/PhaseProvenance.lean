@@ -42,7 +42,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.PhaseProvenance
+namespace SLHDSA.SHAKE128s.PhaseProvenance
 
 variable {α β : Type}
 
@@ -269,4 +269,4 @@ theorem provenance_phase_subset (sk : SecretKey) {α : Type}
         · exact signerMade_of_fresh_step sk request log cache laterCache outer houter hgrow
             probe hfresh hpresentOuter
 
-end SlhDsaSecurity.PhaseProvenance
+end SLHDSA.SHAKE128s.PhaseProvenance

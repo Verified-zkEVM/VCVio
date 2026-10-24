@@ -21,7 +21,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ServedDisclosure
+namespace SLHDSA.SHAKE128s.ServedDisclosure
 
 open CanonicalGraph
 
@@ -48,4 +48,4 @@ theorem available_mono_signed (revealed : WotsKey → Fin chains → Nat)
 
 variable [HasQuery HashSpec Id]
 
-end SlhDsaSecurity.ServedDisclosure
+end SLHDSA.SHAKE128s.ServedDisclosure

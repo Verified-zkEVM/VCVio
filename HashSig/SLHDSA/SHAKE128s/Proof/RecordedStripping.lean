@@ -28,7 +28,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.RecordedStripping
+namespace SLHDSA.SHAKE128s.RecordedStripping
 
 variable {α β : Type}
 
@@ -129,4 +129,4 @@ theorem evalDist_run_recordedAfterSeeds (adversary : Adversary)
       (evalDist_writerRun_signingOracle warm sk t log inner hinner).symm)
     (adversary.main pk) [] cache hcache
 
-end SlhDsaSecurity.RecordedStripping
+end SLHDSA.SHAKE128s.RecordedStripping

@@ -22,7 +22,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.MessageDigest
+namespace SLHDSA.SHAKE128s.MessageDigest
 
 /-- The parse of a message digest together with the bits it discards: two bits above the tree
 index and seven bits above the leaf index. -/
@@ -84,4 +84,4 @@ theorem split_bijective : Function.Bijective split := by
     Fintype.card_prod, Fintype.card_fun, Fintype.card_fin, Fintype.card_bitVec,
     totalHeight, forsHeight, forsTrees]
 
-end SlhDsaSecurity.MessageDigest
+end SLHDSA.SHAKE128s.MessageDigest

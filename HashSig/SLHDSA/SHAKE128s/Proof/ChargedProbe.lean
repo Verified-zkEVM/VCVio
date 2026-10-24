@@ -22,7 +22,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ChargedProbe
+namespace SLHDSA.SHAKE128s.ChargedProbe
 
 open CanonicalGraph SensitiveQuery OpenCache
 
@@ -45,4 +45,4 @@ theorem sum_tsum_comm {Index Result : Type} (nodes : Finset Index)
 
 variable (publicSeed : Digest)
 
-end SlhDsaSecurity.ChargedProbe
+end SLHDSA.SHAKE128s.ChargedProbe

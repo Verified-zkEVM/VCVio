@@ -37,7 +37,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.RecordInvariant
+namespace SLHDSA.SHAKE128s.RecordInvariant
 
 variable {α : Type}
 
@@ -185,4 +185,4 @@ found in the phase's. -/
 An invariant that reads only the cache and the two recordings is preserved by any `Bracket`,
 because that is exactly what a bracket is defined to leave alone. -/
 
-end SlhDsaSecurity.RecordInvariant
+end SLHDSA.SHAKE128s.RecordInvariant

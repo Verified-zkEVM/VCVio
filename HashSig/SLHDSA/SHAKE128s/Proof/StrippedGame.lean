@@ -55,7 +55,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.StrippedGame
+namespace SLHDSA.SHAKE128s.StrippedGame
 
 variable {α β : Type}
 
@@ -247,4 +247,4 @@ so in particular never consult a sensitive one, whatever region of the table the
 chooses to strip. Without the surgery the honest parties would walk straight through the region
 themselves, and the comparison would bound nothing. -/
 
-end SlhDsaSecurity.StrippedGame
+end SLHDSA.SHAKE128s.StrippedGame

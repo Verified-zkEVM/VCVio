@@ -61,7 +61,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.Target127
+namespace SLHDSA.SHAKE128s.Target127
 
 open Security WarmedGame Target SharedJoin RandomiserRecord LateProbes
 
@@ -100,4 +100,4 @@ theorem eq_of_seedPrefixed {left right : Digest} {input : Bytes}
     at htake
   exact bytesBE_injective n htake
 
-end SlhDsaSecurity.Target127
+end SLHDSA.SHAKE128s.Target127

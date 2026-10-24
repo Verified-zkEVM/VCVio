@@ -23,7 +23,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.KeygenCost
+namespace SLHDSA.SHAKE128s.KeygenCost
 
 variable {α : Type}
 
@@ -84,18 +84,18 @@ theorem count_merkleNode_ge (secretSeed publicSeed : Digest) (address : Address)
     ∀ (height index : Nat) (cache : QueryCache HashSpec)
       (result : (Digest × Nat) × QueryCache HashSpec),
       result ∈ support ((simulateQ KeygenUniform.rom (countAllHashes
-        (SlhDsaSecurity.Merkle.node (m := OracleComp OracleWorld) secretSeed publicSeed address
+        (SLHDSA.SHAKE128s.Merkle.node (m := OracleComp OracleWorld) secretSeed publicSeed address
           height index))).run cache) →
         (chains + 1) * 2 ^ height ≤ result.1.2 := by
   intro height
   induction height with
   | zero =>
     intro index cache result hmem
-    rw [SlhDsaSecurity.Merkle.node] at hmem
+    rw [SLHDSA.SHAKE128s.Merkle.node] at hmem
     simpa using count_wotsPublicKey_ge secretSeed publicSeed _ cache result hmem
   | succ height ih =>
     intro index cache result hmem
-    rw [SlhDsaSecurity.Merkle.node] at hmem
+    rw [SLHDSA.SHAKE128s.Merkle.node] at hmem
     obtain ⟨left, leftCache, leftCount, restCount, hleft, hrest, hsplit⟩ :=
       AdversaryQueries.mem_support_counted_bind_count _ _ cache result hmem
     obtain ⟨right, rightCache, rightCount, lastCount, hright, hlast, hsplit'⟩ :=
@@ -106,7 +106,7 @@ theorem count_merkleNode_ge (secretSeed publicSeed : Digest) (address : Address)
     rw [pow_succ, ← mul_assoc, mul_two]
     omega
 
-attribute [local irreducible] SlhDsaSecurity.Merkle.node
+attribute [local irreducible] SLHDSA.SHAKE128s.Merkle.node
 
 /-- **Key generation costs at least `36 · 2 ^ subtreeHeight` calls.** -/
 theorem count_keygen_ge (secretSeed prfSeed publicSeed : Digest)
@@ -119,9 +119,9 @@ theorem count_keygen_ge (secretSeed prfSeed publicSeed : Digest)
   obtain ⟨root, middleCache, first, second, hfirst, -, hsplit⟩ :=
     AdversaryQueries.mem_support_counted_bind_count _ _ cache result hmem
   have hnode := count_merkleNode_ge secretSeed publicSeed
-    (SlhDsaSecurity.Hypertree.address (layers - 1) 0) subtreeHeight 0 cache
+    (SLHDSA.SHAKE128s.Hypertree.address (layers - 1) 0) subtreeHeight 0 cache
     ⟨⟨root, first⟩, middleCache⟩ hfirst
   simp only at hnode
   omega
 
-end SlhDsaSecurity.KeygenCost
+end SLHDSA.SHAKE128s.KeygenCost

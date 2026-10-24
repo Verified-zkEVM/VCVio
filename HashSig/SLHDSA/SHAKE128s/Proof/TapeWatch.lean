@@ -33,7 +33,7 @@ public section
 open OracleComp OracleSpec ENNReal
 
 
-namespace SlhDsaSecurity.TapeWatch
+namespace SLHDSA.SHAKE128s.TapeWatch
 
 variable {α γ : Type}
 
@@ -410,4 +410,4 @@ theorem tape_run_rom (leftKeep rightKeep : Bytes → σ → Prop) {α : Type}
     exact ⟨(step.1, CacheView.cacheOf step.2.1),
       tape_step_rom leftKeep rightKeep queried state step hstep, ih step.1 step.2 result hrest⟩
 
-end SlhDsaSecurity.TapeWatch
+end SLHDSA.SHAKE128s.TapeWatch

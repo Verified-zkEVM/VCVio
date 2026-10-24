@@ -37,7 +37,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ShareBlindFacts
+namespace SLHDSA.SHAKE128s.ShareBlindFacts
 
 variable {α : Type}
 
@@ -381,4 +381,4 @@ theorem blindStep_congr (publicSeed : Digest) (index : Node) (cells other : Cell
     simp only [blindStep, StateT.run, hclaims]
     exact EvalDistEq.rfl
 
-end SlhDsaSecurity.ShareBlindFacts
+end SLHDSA.SHAKE128s.ShareBlindFacts

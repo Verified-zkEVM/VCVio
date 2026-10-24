@@ -20,7 +20,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.LazyBridge
+namespace SLHDSA.SHAKE128s.LazyBridge
 
 /-- **Bind congruence.** Binding a common continuation after two computations of the same law
 gives the same law. -/
@@ -28,4 +28,4 @@ theorem evalDist_bind_congr_right {α β : Type} {oa ob : ProbComp α} (hlaw : o
     (k : α → ProbComp β) : oa >>= k =ᵈ ob >>= k := by
   exact hlaw.bind_left k
 
-end SlhDsaSecurity.LazyBridge
+end SLHDSA.SHAKE128s.LazyBridge

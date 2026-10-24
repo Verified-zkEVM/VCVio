@@ -22,7 +22,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.SecretGuessCharge
+namespace SLHDSA.SHAKE128s.SecretGuessCharge
 
 /-- A single input guesses the secret with probability `2 ^ -128`. -/
 theorem prob_single_guess (guess : Digest) :
@@ -37,4 +37,4 @@ theorem prob_single_guess (guess : Digest) :
   rw [Fintype.card_bitVec, one_div]
   rfl
 
-end SlhDsaSecurity.SecretGuessCharge
+end SLHDSA.SHAKE128s.SecretGuessCharge

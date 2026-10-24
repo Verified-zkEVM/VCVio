@@ -35,7 +35,7 @@ public section
 open OracleComp OracleSpec
 open scoped ENNReal
 
-namespace SlhDsaSecurity.SplitTail
+namespace SLHDSA.SHAKE128s.SplitTail
 
 variable {α : Type}
 
@@ -166,4 +166,4 @@ theorem map_splitCarrierTail (inClass : Bytes → Prop) {inside outside : QueryK
   rw [split_last_stage_bind inClass hne rightKeep walk keys.1.2 middle.1 middle.2.2.2]
   simp only [bind_assoc, pure_bind]
 
-end SlhDsaSecurity.SplitTail
+end SLHDSA.SHAKE128s.SplitTail

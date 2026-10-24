@@ -50,7 +50,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.LinkedGame
+namespace SLHDSA.SHAKE128s.LinkedGame
 
 variable {α : Type}
 
@@ -135,4 +135,4 @@ theorem recordedAfterSeedsAt_eq (adversary : Adversary) (keys : SecretKey × Pub
   rw [simulateQ_pure, StateT.run_pure, map_pure]
   rfl
 
-end SlhDsaSecurity.LinkedGame
+end SLHDSA.SHAKE128s.LinkedGame

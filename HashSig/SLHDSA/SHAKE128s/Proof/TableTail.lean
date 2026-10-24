@@ -38,7 +38,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.TableTail
+namespace SLHDSA.SHAKE128s.TableTail
 
 open Security CanonicalGraph WarmedGame WalkTable
 
@@ -70,4 +70,4 @@ seed and the honest root, which is what the charge's blindness hypothesis asks o
       (LinkedGame.linkedAfterSeeds adversary (keysOf prfSeed publicSeed table))).run [])).run
     (walkOfTable prfSeed publicSeed table).2
 
-end SlhDsaSecurity.TableTail
+end SLHDSA.SHAKE128s.TableTail

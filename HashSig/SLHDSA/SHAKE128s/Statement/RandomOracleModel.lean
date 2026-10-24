@@ -20,7 +20,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.RandomOracleModel
+namespace SLHDSA.SHAKE128s.RandomOracleModel
 
 variable (Input Output : Type) [DecidableEq Input] [SampleableType Output]
 
@@ -50,4 +50,4 @@ variable {Input Output}
     ProbComp α :=
   (simulateQ (impl Input Output) computation).run' ∅
 
-end SlhDsaSecurity.RandomOracleModel
+end SLHDSA.SHAKE128s.RandomOracleModel

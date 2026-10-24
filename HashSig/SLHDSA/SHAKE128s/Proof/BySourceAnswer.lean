@@ -35,7 +35,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.BySourceAnswer
+namespace SLHDSA.SHAKE128s.BySourceAnswer
 
 open Security CacheReplay CanonicalGraph BracketedRun CarrierTail CarrierThin FreshExpectation
   BySourceBridge
@@ -255,4 +255,4 @@ theorem fresh_add_right_le (adversary : Adversary) {walk : Walk}
     _ ≤ ((z.1.1.1.1.counts.work + z.1.1.1.1.counts .signing : Nat) : ℝ≥0∞) := by
         exact_mod_cast Nat.add_le_add_left hlength _
 
-end SlhDsaSecurity.BySourceAnswer
+end SLHDSA.SHAKE128s.BySourceAnswer

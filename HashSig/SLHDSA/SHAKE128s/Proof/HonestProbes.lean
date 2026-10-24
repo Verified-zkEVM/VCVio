@@ -43,7 +43,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.HonestProbes
+namespace SLHDSA.SHAKE128s.HonestProbes
 
 open CacheReplay CanonicalGraph
 
@@ -992,4 +992,4 @@ theorem run_keygenInternal_world_eq_pure (publicSeed secretSeed prfSeed : Digest
     QueryImpl.simulateQ_add_liftComp_right]
   exact run_keygenInternal_eq_pure publicSeed secretSeed prfSeed outputs
 
-end SlhDsaSecurity.HonestProbes
+end SLHDSA.SHAKE128s.HonestProbes

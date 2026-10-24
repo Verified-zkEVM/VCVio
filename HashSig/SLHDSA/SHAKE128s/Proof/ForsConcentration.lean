@@ -30,7 +30,7 @@ public section
 
 open MeasureTheory ProbabilityTheory
 
-namespace SlhDsaSecurity.ForsConcentration
+namespace SLHDSA.SHAKE128s.ForsConcentration
 
 section IndependentPowers
 
@@ -227,4 +227,4 @@ lemma centeredLoadSum_eq {bins : Nat} (loads : Fin bins → Nat) :
       (bins : ℝ) * (ForsMoments.touchard 14 3 : ℝ) := by
   simp [centeredLoadSum, centeredLoad, loadPotential, Finset.sum_sub_distrib]
 
-end SlhDsaSecurity.ForsConcentration
+end SLHDSA.SHAKE128s.ForsConcentration

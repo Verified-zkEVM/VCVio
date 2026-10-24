@@ -30,7 +30,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.TouchedKeys
+namespace SLHDSA.SHAKE128s.TouchedKeys
 
 open Security CanonicalGraph WalkTable TableTail KeygenValue
 
@@ -59,4 +59,4 @@ theorem keysOf_eq (prfSeed publicSeed : Digest) (table : Cells × Padding) :
         ⟨publicSeed, table.1 (.structural topRoot)⟩) := by
   rw [keysOf, honestKeys_eq, cellsOfOutputs_fullOutput]
 
-end SlhDsaSecurity.TouchedKeys
+end SLHDSA.SHAKE128s.TouchedKeys

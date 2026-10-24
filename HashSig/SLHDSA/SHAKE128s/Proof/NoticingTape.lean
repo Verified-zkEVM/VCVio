@@ -36,7 +36,7 @@ public section
 open OracleComp OracleSpec ENNReal
 
 
-namespace SlhDsaSecurity.NoticingTape
+namespace SLHDSA.SHAKE128s.NoticingTape
 
 variable {α γ : Type}
 
@@ -741,4 +741,4 @@ theorem mem_support_blockRunOf {ρ : Type}
   rw [← hshape]
   exact ⟨hleftTape, hrightTape, hresult⟩
 
-end SlhDsaSecurity.NoticingTape
+end SLHDSA.SHAKE128s.NoticingTape

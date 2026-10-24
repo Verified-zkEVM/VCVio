@@ -56,7 +56,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.RecordedPhase
+namespace SLHDSA.SHAKE128s.RecordedPhase
 
 variable {α : Type}
 
@@ -130,4 +130,4 @@ theorem run_phase_counted (signer : Message → OracleComp OracleWorld (Option B
         ((simulateQ (addCostOracle phaseCost) computation).run) := by
   rw [phase_eq, WriterState.run_simulateQ_withAddCost]
 
-end SlhDsaSecurity.RecordedPhase
+end SLHDSA.SHAKE128s.RecordedPhase

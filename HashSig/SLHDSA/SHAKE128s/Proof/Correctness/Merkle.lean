@@ -22,23 +22,23 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Correctness.Merkle
+namespace SLHDSA.SHAKE128s.Correctness.Merkle
 
 variable [HasQuery HashSpec Id]
 
 /-- Verifying an honest XMSS signature recovers the subtree root. -/
 theorem publicKeyFromSignature_sign (message secretSeed publicSeed : Digest)
     (address : Address) (index : Fin (2 ^ subtreeHeight)) :
-    SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) index
-        (SlhDsaSecurity.Merkle.sign (m := Id) message secretSeed publicSeed address index)
+    SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) index
+        (SLHDSA.SHAKE128s.Merkle.sign (m := Id) message secretSeed publicSeed address index)
         message publicSeed address =
-      SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed address subtreeHeight 0 := by
-  simp only [SlhDsaSecurity.Merkle.sign, SlhDsaSecurity.Merkle.publicKeyFromSignature,
+      SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed address subtreeHeight 0 := by
+  simp only [SLHDSA.SHAKE128s.Merkle.sign, SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature,
     sequenceFin_id, bind, pure, Wots.publicKeyFromSignature_sign, foldlM_id]
   have hpath := recover_path
-    (SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed address)
+    (SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed address)
     (fun height nodeIndex left right => Hashing.tweakable (m := Id) publicSeed
-      (SlhDsaSecurity.Merkle.nodeAddress address height nodeIndex)
+      (SLHDSA.SHAKE128s.Merkle.nodeAddress address height nodeIndex)
       (bytesBE n left ++ bytesBE n right))
     (fun _ _ => rfl) subtreeHeight index.val
   rw [Nat.div_eq_of_lt index.isLt] at hpath
@@ -47,4 +47,4 @@ theorem publicKeyFromSignature_sign (message secretSeed publicSeed : Digest)
   funext value j
   split <;> rfl
 
-end SlhDsaSecurity.Correctness.Merkle
+end SLHDSA.SHAKE128s.Correctness.Merkle

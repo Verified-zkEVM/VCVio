@@ -30,7 +30,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ShareInv
+namespace SLHDSA.SHAKE128s.ShareInv
 
 open Security CanonicalGraph ShareGame ShareCouple
 
@@ -382,4 +382,4 @@ theorem inv_verify (setup : Setup) (queried : OracleWorld.Domain) (p : St × Boo
   rw [worldImpl_run] at h
   exact inv_world setup (worldQuery queried) ⟨queried, rfl⟩ p hinv z h
 
-end SlhDsaSecurity.ShareInv
+end SLHDSA.SHAKE128s.ShareInv

@@ -19,7 +19,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.GrowthCharge
+namespace SLHDSA.SHAKE128s.GrowthCharge
 
 /-- Cache entries are never *overwritten*: an installed answer persists verbatim.
 
@@ -97,4 +97,4 @@ theorem CleanBad.cacheQuery {bad : Bytes → HashOutput → Prop} {cache : Query
   · rw [QueryCache.cacheQuery_of_ne cache output heq] at hanswer
     exact hclean queried answer hanswer
 
-end SlhDsaSecurity.GrowthCharge
+end SLHDSA.SHAKE128s.GrowthCharge

@@ -22,7 +22,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity
+namespace SLHDSA.SHAKE128s
 
 /-- A security game for schemes of type `Scheme`, counting queries of the kinds in `Kind`. -/
 structure SecurityGame (Scheme : Type) (Kind : Type) where
@@ -45,4 +45,4 @@ variable {Scheme Kind : Type} (game : SecurityGame Scheme Kind) (scheme : Scheme
 
 end SecurityGame
 
-end SlhDsaSecurity
+end SLHDSA.SHAKE128s

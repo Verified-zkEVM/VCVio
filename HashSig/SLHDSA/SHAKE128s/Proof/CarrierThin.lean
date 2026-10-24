@@ -33,7 +33,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.CarrierThin
+namespace SLHDSA.SHAKE128s.CarrierThin
 
 open Security DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedTape TapeWatch
   SignedWatch TapeRunFacts CountedView CarriedWitness RecordedQueries BracketedRun CarrierTail
@@ -1100,4 +1100,4 @@ theorem thin2 (adversary : Adversary) (walk : Walk) (hwalk : walk ∈ support Wa
   rw [mem_support_bind_iff]
   exact ⟨final, hfinal, by simp⟩
 
-end SlhDsaSecurity.CarrierThin
+end SLHDSA.SHAKE128s.CarrierThin

@@ -24,7 +24,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CanonicalGraph
+namespace SLHDSA.SHAKE128s.CanonicalGraph
 
 variable [HasQuery HashSpec Id]
 
@@ -160,4 +160,4 @@ theorem value_unique (secretSeed publicSeed : Digest) (cells : Cells)
             (fun child hchild => ih child (parent.child_rank_lt child hchild))
           rw [hinput, hparents]
 
-end SlhDsaSecurity.CanonicalGraph
+end SLHDSA.SHAKE128s.CanonicalGraph

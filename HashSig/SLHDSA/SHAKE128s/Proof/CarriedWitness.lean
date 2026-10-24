@@ -38,7 +38,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarriedWitness
+namespace SLHDSA.SHAKE128s.CarriedWitness
 
 open RecorderView HandlerCarrier
 
@@ -147,4 +147,4 @@ theorem mem_served_of_mem_leftRecord {α : Type} (rightKeep : Bytes → State �
       served_cacheAnswer_iff view input probe answer hkeep)
     computation state result hmem hstart
 
-end SlhDsaSecurity.CarriedWitness
+end SLHDSA.SHAKE128s.CarriedWitness

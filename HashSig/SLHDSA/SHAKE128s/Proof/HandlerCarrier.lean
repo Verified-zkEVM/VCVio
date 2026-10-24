@@ -40,7 +40,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.HandlerCarrier
+namespace SLHDSA.SHAKE128s.HandlerCarrier
 
 /-- What a handler carries: the cache, the digest inputs the signer has served, and the framing
 of the request it is serving. -/
@@ -178,4 +178,4 @@ theorem framed_of_filesLeft (pk : PublicKey) (state : State) (input : Bytes)
   obtain ⟨framed, hframing, randomizer, hinput⟩ := hfiles
   exact ⟨framed, randomizer, hframing, hinput⟩
 
-end SlhDsaSecurity.HandlerCarrier
+end SLHDSA.SHAKE128s.HandlerCarrier

@@ -23,7 +23,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.AnswerCarrier
+namespace SLHDSA.SHAKE128s.AnswerCarrier
 
 open Security CanonicalGraph WarmedGame Target
 
@@ -78,4 +78,4 @@ theorem carrierRightKeep_class
 -- unifier walk into `carrierTail` at every membership.
 attribute [local irreducible] answerCarrierRun
 
-end SlhDsaSecurity.AnswerCarrier
+end SLHDSA.SHAKE128s.AnswerCarrier

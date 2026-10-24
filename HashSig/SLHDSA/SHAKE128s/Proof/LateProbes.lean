@@ -32,7 +32,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.LateProbes
+namespace SLHDSA.SHAKE128s.LateProbes
 
 open Security SplitPrefix SplitWitness
 
@@ -104,4 +104,4 @@ theorem mem_support_pairedOf {fused : FusedTail} {adversary : Adversary} {pair :
   rw [support_pure, Set.mem_singleton_iff] at hpure
   exact ⟨walk, hwalk, result, hresult, hpure.symm⟩
 
-end SlhDsaSecurity.LateProbes
+end SLHDSA.SHAKE128s.LateProbes

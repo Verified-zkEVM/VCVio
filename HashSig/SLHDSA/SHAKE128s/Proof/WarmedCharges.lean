@@ -37,7 +37,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.WarmedCharges
+namespace SLHDSA.SHAKE128s.WarmedCharges
 
 open Security CanonicalGraph WarmedGame
 
@@ -130,4 +130,4 @@ theorem value_replay_eq_walk_cells (adversary : Adversary)
   rw [hcache, hcells]
   exact hentry
 
-end SlhDsaSecurity.WarmedCharges
+end SLHDSA.SHAKE128s.WarmedCharges

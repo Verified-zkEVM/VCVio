@@ -39,7 +39,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Bridge
+namespace SLHDSA.SHAKE128s.Bridge
 
 open SLHDSA SLHDSA.Security GeneralHypertree
 
@@ -232,4 +232,4 @@ theorem simulateQ_relabel_keygenRoot (secretSeed publicSeed : Digest) :
   rw [simulateQ_relabel_merkleRoot, toAdrs_address_top]
   rfl
 
-end SlhDsaSecurity.Bridge
+end SLHDSA.SHAKE128s.Bridge

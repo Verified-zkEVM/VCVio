@@ -29,7 +29,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.AdversaryQueries
+namespace SLHDSA.SHAKE128s.AdversaryQueries
 
 variable {α β : Type}
 
@@ -131,4 +131,4 @@ attribute [local irreducible] Scheme.keygenInternal Scheme.verify Scheme.sign
 
 attribute [local irreducible] WarmedGame.afterSeeds
 
-end SlhDsaSecurity.AdversaryQueries
+end SLHDSA.SHAKE128s.AdversaryQueries

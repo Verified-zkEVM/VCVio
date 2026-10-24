@@ -22,7 +22,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.WorkTarget
+namespace SLHDSA.SHAKE128s.WorkTarget
 
 open Security CanonicalGraph WarmedGame Target RoutedSplit BracketedRun CarrierTail CarrierThin
   BySourceBridge
@@ -154,4 +154,4 @@ theorem warmed_bound (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW ad
         rw [show (2 ^ 128 : Nat) = 2 * 2 ^ 127 by norm_num, Nat.cast_mul, Nat.cast_mul,
           ENNReal.mul_div_mul_left _ _ (by norm_num) (by norm_num)]
 
-end SlhDsaSecurity.WorkTarget
+end SLHDSA.SHAKE128s.WorkTarget

@@ -22,7 +22,7 @@ cell and an independent padding (`fullOutput`, `truncate_fullOutput`).
 
 public section
 
-namespace SlhDsaSecurity.CanonicalGraph
+namespace SLHDSA.SHAKE128s.CanonicalGraph
 
 /-- An assignment of a digest to every node of the canonical graph. -/
 abbrev Cells := Node → Digest
@@ -104,4 +104,4 @@ theorem canonicalInput_congr (publicSeed : Digest) (left right : Cells)
     canonicalInput publicSeed left parent = canonicalInput publicSeed right parent :=
   canonicalInput_eq_iff.mpr ⟨rfl, rfl, hchildren⟩
 
-end SlhDsaSecurity.CanonicalGraph
+end SLHDSA.SHAKE128s.CanonicalGraph

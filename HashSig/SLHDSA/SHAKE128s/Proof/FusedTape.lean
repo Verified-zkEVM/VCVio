@@ -36,7 +36,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.FusedTape
+namespace SLHDSA.SHAKE128s.FusedTape
 
 variable {α β γ : Type}
 
@@ -767,4 +767,4 @@ theorem evalDist_threeStageHandlerRun_eq (leftKeep rightKeep : Bytes → σ → 
   exact evalDist_threeStage leftKeep rightKeep inner before afterMap first phase last value
     leftLength rightLength cache leftRecord rightRecord
 
-end SlhDsaSecurity.FusedTape
+end SLHDSA.SHAKE128s.FusedTape

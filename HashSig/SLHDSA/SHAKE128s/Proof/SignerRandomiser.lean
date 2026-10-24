@@ -36,7 +36,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.SignerRandomiser
+namespace SLHDSA.SHAKE128s.SignerRandomiser
 
 open Security CacheReplay HonestProbes
 
@@ -90,4 +90,4 @@ theorem probes_signInternalAt (cache : QueryCache HashSpec) (randomizer : Digest
       fun _ hprobe => Or.inl hprobe) ?_
   exact probes_pure cache _ _
 
-end SlhDsaSecurity.SignerRandomiser
+end SLHDSA.SHAKE128s.SignerRandomiser

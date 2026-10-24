@@ -19,7 +19,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Generic
+namespace SLHDSA.SHAKE128s.Generic
 
 variable {ι : Type} {spec : OracleSpec ι} {α β : Type}
 
@@ -61,4 +61,4 @@ theorem map {computation : OracleComp spec α} {count : Nat}
 
 end ExactQueryCount
 
-end SlhDsaSecurity.Generic
+end SLHDSA.SHAKE128s.Generic

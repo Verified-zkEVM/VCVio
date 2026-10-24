@@ -41,7 +41,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Presample
+namespace SLHDSA.SHAKE128s.Presample
 
 /-- Writing two different keys commutes. -/
 theorem cacheQuery_comm (cache : QueryCache HashSpec) {left right : Bytes}
@@ -359,4 +359,4 @@ theorem evalDist_counted_warmed {α γ : Type} (sample : ProbComp γ)
   exact evalDist_prepend_warmup_after sample
     (fun value => Security.countAllHashes (rest value)) publicSeed secretSeed
 
-end SlhDsaSecurity.Presample
+end SLHDSA.SHAKE128s.Presample

@@ -30,7 +30,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ShareEvent
+namespace SLHDSA.SHAKE128s.ShareEvent
 
 variable {α : Type}
 
@@ -439,4 +439,4 @@ theorem flag_of_inputBad (setup : Setup)
   simp only [Bool.or_eq_true, decide_eq_true_eq]
   exact Or.inr (Or.inr ⟨candidate, hcand', hguess⟩)
 
-end SlhDsaSecurity.ShareEvent
+end SLHDSA.SHAKE128s.ShareEvent

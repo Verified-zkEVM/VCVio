@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.SplitWitness
+namespace SLHDSA.SHAKE128s.SplitWitness
 
 open Security CacheAvailability SplitPrefix
 
@@ -88,4 +88,4 @@ frame-based exclusion is `AnswerCarrier.carrierRightKeep`'s. -/
 @[expose] def targetKeep (prfSeed : Digest) (pk : PublicKey) : Bytes → QueryCache HashSpec → Prop :=
   Served.targetKeep (fun probe _ => narrowClass prfSeed pk probe) (disclosingKeep prfSeed pk)
 
-end SlhDsaSecurity.SplitWitness
+end SLHDSA.SHAKE128s.SplitWitness

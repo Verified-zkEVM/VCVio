@@ -28,7 +28,7 @@ WOTS chain indices and height-dependent Merkle/FORS node indices have their exac
 
 public section
 
-namespace SlhDsaSecurity.CanonicalGraph
+namespace SLHDSA.SHAKE128s.CanonicalGraph
 
 /-- The location of an XMSS tree in the hypertree: a layer and a tree index, ranging over the
 full rectangle of tree indices at every layer. -/
@@ -186,4 +186,4 @@ noncomputable instance : Fintype Node := Fintype.ofFinite _
   | .secretSeed => 0
   | .structural node => node.rank
 
-end SlhDsaSecurity.CanonicalGraph
+end SLHDSA.SHAKE128s.CanonicalGraph

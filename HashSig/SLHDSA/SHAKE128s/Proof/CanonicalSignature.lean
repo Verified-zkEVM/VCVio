@@ -44,7 +44,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CanonicalSignature
+namespace SLHDSA.SHAKE128s.CanonicalSignature
 
 variable [HasQuery HashSpec Id]
 
@@ -52,19 +52,19 @@ variable [HasQuery HashSpec Id]
 theorem eq_signInternal (sk : SecretKey) (message : Bytes) (parsed : Signature)
     (hrandomizer : parsed.randomizer =
       Hashing.randomizer (m := Id) sk.prf sk.publicKey.seed message)
-    (hfors : parsed.fors = SlhDsaSecurity.Fors.sign (m := Id)
+    (hfors : parsed.fors = SLHDSA.SHAKE128s.Fors.sign (m := Id)
       (MessageDigest.forsIndices
         (Hashing.messageDigest (m := Id) parsed.randomizer sk.publicKey message))
       sk.seed sk.publicKey.seed
       (Scheme.forsAddress
         (Hashing.messageDigest (m := Id) parsed.randomizer sk.publicKey message)))
-    (hhypertree : parsed.hypertree = SlhDsaSecurity.Hypertree.signLayers (m := Id) sk.seed
+    (hhypertree : parsed.hypertree = SLHDSA.SHAKE128s.Hypertree.signLayers (m := Id) sk.seed
       sk.publicKey.seed layers 0
       (MessageDigest.treeIndex
         (Hashing.messageDigest (m := Id) parsed.randomizer sk.publicKey message)).toNat
       (MessageDigest.leafIndex
         (Hashing.messageDigest (m := Id) parsed.randomizer sk.publicKey message)).toFin
-      (SlhDsaSecurity.Fors.publicKeyFromSignature (m := Id) parsed.fors
+      (SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := Id) parsed.fors
         (MessageDigest.forsIndices
           (Hashing.messageDigest (m := Id) parsed.randomizer sk.publicKey message))
         sk.publicKey.seed
@@ -99,4 +99,4 @@ theorem not_fresh_of_canonical (sk : SecretKey) (signed : Security.SigningLog)
   exact hfresh ⟨entry, hentry, hmessage, by
     rw [hanswer, signature_eq_toBytes sk message forgery.signature parsed hparsed hcanonical]⟩
 
-end SlhDsaSecurity.CanonicalSignature
+end SLHDSA.SHAKE128s.CanonicalSignature

@@ -29,7 +29,7 @@ public section
 open OracleComp OracleSpec ENNReal
 
 
-namespace SlhDsaSecurity.SuffixCausal
+namespace SLHDSA.SHAKE128s.SuffixCausal
 
 variable {α β γ : Type}
 
@@ -318,4 +318,4 @@ theorem threeStageCausalGe (leftKeep rightKeep : Bytes → σ → Prop)
     last value index cell hle newValue cache [] [] leftTape rightTape
   simpa only [List.length_nil, Nat.zero_add] using h.symm
 
-end SlhDsaSecurity.SuffixCausal
+end SLHDSA.SHAKE128s.SuffixCausal

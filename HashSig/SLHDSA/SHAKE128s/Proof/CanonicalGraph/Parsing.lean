@@ -19,7 +19,7 @@ The parser is noncomputable because efficiency is immaterial for the query-count
 
 public section
 
-namespace SlhDsaSecurity.CanonicalGraph
+namespace SLHDSA.SHAKE128s.CanonicalGraph
 
 /-- A reading of a byte string as a canonical input: the structural node it is the input of, and
 cells from which it is formed. -/
@@ -74,4 +74,4 @@ theorem parseInput_canonical (publicSeed : Digest) (cells : Cells) (parent : Str
   refine ⟨hexists.choose, hparse, heq.2.1, ?_⟩
   simpa only [heq.2.1] using heq.2.2
 
-end SlhDsaSecurity.CanonicalGraph
+end SLHDSA.SHAKE128s.CanonicalGraph

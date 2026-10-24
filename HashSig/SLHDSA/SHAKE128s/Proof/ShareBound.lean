@@ -35,7 +35,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ShareBound
+namespace SLHDSA.SHAKE128s.ShareBound
 
 variable {β γ : Type}
 
@@ -509,4 +509,4 @@ theorem blind_bound_of (publicSeed : Digest)
   unfold charged at h
   convert h
 
-end SlhDsaSecurity.ShareBound
+end SLHDSA.SHAKE128s.ShareBound

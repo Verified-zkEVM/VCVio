@@ -22,7 +22,7 @@ public section
 open MeasureTheory ProbabilityTheory
 open scoped NNReal
 
-namespace SlhDsaSecurity.ForsConcentration
+namespace SLHDSA.SHAKE128s.ForsConcentration
 
 set_option exponentiation.threshold 1024 in
 /-- A rate-3B Poisson count reaches 5B/2 with probability at least one half. -/
@@ -69,4 +69,4 @@ theorem poisson_count_tail_extended_half :
   simpa only [measureReal_def, ENNReal.toReal_div, ENNReal.toReal_one,
     ENNReal.toReal_ofNat] using htail
 
-end SlhDsaSecurity.ForsConcentration
+end SLHDSA.SHAKE128s.ForsConcentration

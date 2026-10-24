@@ -63,7 +63,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.FaultCharge
+namespace SLHDSA.SHAKE128s.FaultCharge
 
 open CacheReplay Extraction CanonicalGraph
 
@@ -78,13 +78,13 @@ that ends the WOTS recovery, and into one chain of that recovery. -/
 `PathEntry` names. -/
 theorem merkle_eq_wots_bind_fold (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignature)
     (message publicSeed : Digest) (address : Address) :
-    (SlhDsaSecurity.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) index signature
+    (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) index signature
         message publicSeed address) =
-      (SlhDsaSecurity.Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature.wots
-        message publicSeed (SlhDsaSecurity.Merkle.wotsAddress address index.val)) >>=
+      (SLHDSA.SHAKE128s.Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature.wots
+        message publicSeed (SLHDSA.SHAKE128s.Merkle.wotsAddress address index.val)) >>=
         fun leaf => (List.finRange subtreeHeight).foldlM (m := OracleComp HashSpec)
           (fun value j => Hashing.shortHash
-            (PathEntry.pathInput publicSeed (SlhDsaSecurity.Merkle.nodeAddress address)
+            (PathEntry.pathInput publicSeed (SLHDSA.SHAKE128s.Merkle.nodeAddress address)
               index.val (Extraction.Merkle.siblings signature) value j)) leaf := by
   refine congrArg (Bind.bind _) (funext fun leaf => ?_)
   refine congrArg (fun body => (List.finRange subtreeHeight).foldlM
@@ -119,7 +119,7 @@ theorem simulateQ_endpoints (cache : QueryCache HashSpec) (signature : WotsSigna
     (message publicSeed : Digest) (address : Address) :
     (simulateQ (CacheReplay.replay cache)
         (sequenceFin chains fun i =>
-          SlhDsaSecurity.Wots.chain (m := OracleComp HashSpec) publicSeed
+          SLHDSA.SHAKE128s.Wots.chain (m := OracleComp HashSpec) publicSeed
             { address with chainOrHeight := BitVec.ofNat 32 i.val }
             (Checksum.encode message i).val (w - 1 - (Checksum.encode message i).val)
             (signature i)) : Id (Fin chains → Digest)) =
@@ -135,9 +135,9 @@ theorem simulateQ_endpoints (cache : QueryCache HashSpec) (signature : WotsSigna
 theorem queriesUnder_wots_compression (cache : QueryCache HashSpec)
     (signature : WotsSignature) (message publicSeed : Digest) (address : Address) :
     QueriesUnder cache
-      (SlhDsaSecurity.Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature message
+      (SLHDSA.SHAKE128s.Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature message
         publicSeed address)
-      (Hashing.tweakableInput publicSeed (SlhDsaSecurity.Wots.publicKeyAddress address)
+      (Hashing.tweakableInput publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
         (digestArrayBytes (@Extraction.Wots.endpoints (CacheReplay.replayQuery cache)
           signature message publicSeed address))) := by
   rw [← simulateQ_endpoints cache signature message publicSeed address]
@@ -148,13 +148,13 @@ theorem queriesUnder_wots_chain (cache : QueryCache HashSpec) (signature : WotsS
     (message publicSeed : Digest) (address : Address) (chainIndex : Fin chains) (offset : Nat)
     (hoffset : offset < w - 1 - (Checksum.encode message chainIndex).val) :
     QueriesUnder cache
-      (SlhDsaSecurity.Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature message
+      (SLHDSA.SHAKE128s.Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature message
         publicSeed address)
       (Hashing.tweakableInput publicSeed
         { { address with chainOrHeight := BitVec.ofNat 32 chainIndex.val } with
           hashOrIndex :=
             BitVec.ofNat 32 ((Checksum.encode message chainIndex).val + offset) }
-        (bytesBE n (@SlhDsaSecurity.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
+        (bytesBE n (@SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
           { address with chainOrHeight := BitVec.ofNat 32 chainIndex.val }
           (Checksum.encode message chainIndex).val offset (signature chainIndex)))) :=
   queriesUnder_bind cache _ _ _
@@ -176,10 +176,10 @@ theorem queriesUnder_merkle_wots (cache : QueryCache HashSpec)
     (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignature)
     (message publicSeed : Digest) (address : Address) (probe : Bytes)
     (hquery : QueriesUnder cache
-      (SlhDsaSecurity.Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature.wots
-        message publicSeed (SlhDsaSecurity.Merkle.wotsAddress address index.val)) probe) :
+      (SLHDSA.SHAKE128s.Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature.wots
+        message publicSeed (SLHDSA.SHAKE128s.Merkle.wotsAddress address index.val)) probe) :
     QueriesUnder cache
-      (SlhDsaSecurity.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) index signature
+      (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) index signature
         message publicSeed address) probe :=
   queriesUnder_bind cache _ _ probe hquery
 
@@ -189,27 +189,27 @@ theorem queriesUnder_merkle_path (cache : QueryCache HashSpec)
     (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignature)
     (message publicSeed : Digest) (address : Address) (step : Fin subtreeHeight) :
     QueriesUnder cache
-      (SlhDsaSecurity.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) index signature
+      (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) index signature
         message publicSeed address)
-      (PathEntry.pathInput publicSeed (SlhDsaSecurity.Merkle.nodeAddress address) index.val
+      (PathEntry.pathInput publicSeed (SLHDSA.SHAKE128s.Merkle.nodeAddress address) index.val
         (Extraction.Merkle.siblings signature)
         (BinaryPath.value
-          (PathEntry.pathCombine cache publicSeed (SlhDsaSecurity.Merkle.nodeAddress address))
+          (PathEntry.pathCombine cache publicSeed (SLHDSA.SHAKE128s.Merkle.nodeAddress address))
           index.val
-          (@SlhDsaSecurity.Wots.publicKeyFromSignature Id _ (CacheReplay.replayQuery cache)
+          (@SLHDSA.SHAKE128s.Wots.publicKeyFromSignature Id _ (CacheReplay.replayQuery cache)
             signature.wots message publicSeed
-            (SlhDsaSecurity.Merkle.wotsAddress address index.val))
+            (SLHDSA.SHAKE128s.Merkle.wotsAddress address index.val))
           (Extraction.Merkle.siblings signature) step.val)
         step) := by
   rw [merkle_eq_wots_bind_fold]
   refine queriesUnder_bind_right cache _ _ _ ?_
   rw [show (simulateQ (CacheReplay.replay cache)
-      (SlhDsaSecurity.Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature.wots
-        message publicSeed (SlhDsaSecurity.Merkle.wotsAddress address index.val)) :
+      (SLHDSA.SHAKE128s.Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature.wots
+        message publicSeed (SLHDSA.SHAKE128s.Merkle.wotsAddress address index.val)) :
         Id Digest) =
-      @SlhDsaSecurity.Wots.publicKeyFromSignature Id _ (CacheReplay.replayQuery cache)
+      @SLHDSA.SHAKE128s.Wots.publicKeyFromSignature Id _ (CacheReplay.replayQuery cache)
         signature.wots message publicSeed
-        (SlhDsaSecurity.Merkle.wotsAddress address index.val) from
+        (SLHDSA.SHAKE128s.Merkle.wotsAddress address index.val) from
     @VerifierNaturality.wots_simulate Id Id.instMonad _ (CacheReplay.replay cache)
       (CacheReplay.replayQuery cache) (replay_agrees cache) _ _ _ _]
   exact PathEntry.queriesUnder_pathInput cache publicSeed _ index.val _ _ step
@@ -222,7 +222,7 @@ secret all the way. -/
 theorem endpoints_sign_eq_cells (cache : QueryCache HashSpec)
     (secretSeed publicSeed message : Digest) (key : WotsKey) :
     @Extraction.Wots.endpoints (CacheReplay.replayQuery cache)
-        (@SlhDsaSecurity.Wots.sign Id Id.instMonad (CacheReplay.replayQuery cache) message
+        (@SLHDSA.SHAKE128s.Wots.sign Id Id.instMonad (CacheReplay.replayQuery cache) message
           secretSeed publicSeed key.address)
         message publicSeed key.address =
       fun chainIndex => @value (CacheReplay.replayQuery cache) secretSeed publicSeed
@@ -236,10 +236,10 @@ theorem endpoints_sign_eq_cells (cache : QueryCache HashSpec)
     omega
   have htop : @value (CacheReplay.replayQuery cache) secretSeed publicSeed
       (.structural (.wotsHash key chainIndex ⟨w - 2, by decide⟩)) =
-      @SlhDsaSecurity.Wots.chain Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed
+      @SLHDSA.SHAKE128s.Wots.chain Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed
         { key.address with chainOrHeight := BitVec.ofNat 32 chainIndex.val } 0 (w - 1)
         (@Hashing.derive Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed secretSeed
-          (SlhDsaSecurity.Wots.secretAddress key.address chainIndex)) := by
+          (SLHDSA.SHAKE128s.Wots.secretAddress key.address chainIndex)) := by
     have h := @value_wotsPosition (CacheReplay.replayQuery cache) secretSeed publicSeed key
       chainIndex ⟨w - 1, by decide⟩
     rwa [show wotsPosition key chainIndex ⟨w - 1, by decide⟩ =
@@ -247,13 +247,13 @@ theorem endpoints_sign_eq_cells (cache : QueryCache HashSpec)
         simp only [wotsPosition, w, winternitzBits]; rfl] at h
   rw [htop]
   simp only [Extraction.Wots.endpoints]
-  rw [show (@SlhDsaSecurity.Wots.sign Id Id.instMonad (CacheReplay.replayQuery cache) message
+  rw [show (@SLHDSA.SHAKE128s.Wots.sign Id Id.instMonad (CacheReplay.replayQuery cache) message
         secretSeed publicSeed key.address) chainIndex =
-      @SlhDsaSecurity.Wots.chain Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed
+      @SLHDSA.SHAKE128s.Wots.chain Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed
         { key.address with chainOrHeight := BitVec.ofNat 32 chainIndex.val } 0
         (Checksum.encode message chainIndex).val
         (@Hashing.derive Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed secretSeed
-          (SlhDsaSecurity.Wots.secretAddress key.address chainIndex)) from by
+          (SLHDSA.SHAKE128s.Wots.secretAddress key.address chainIndex)) from by
       rw [@wots_sign_cells (CacheReplay.replayQuery cache) message secretSeed publicSeed key]
       exact @value_wotsPosition (CacheReplay.replayQuery cache) secretSeed publicSeed key
         chainIndex (Checksum.encode message chainIndex)]
@@ -262,7 +262,7 @@ theorem endpoints_sign_eq_cells (cache : QueryCache HashSpec)
     (Checksum.encode message chainIndex).val
     (w - 1 - (Checksum.encode message chainIndex).val)
     (@Hashing.derive Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed secretSeed
-      (SlhDsaSecurity.Wots.secretAddress key.address chainIndex))
+      (SLHDSA.SHAKE128s.Wots.secretAddress key.address chainIndex))
   rw [hsplit, Nat.zero_add] at hadd
   exact hadd.symm
 
@@ -271,10 +271,10 @@ theorem endpoints_sign_eq_cells (cache : QueryCache HashSpec)
 /-- **Each of the three shapes of a layer collision is a deviating collision.** -/
 theorem deviatingCollision_of_layerCollision {α : Type}
     (secretSeed publicSeed : Digest) (cache : QueryCache HashSpec)
-    (location : Tree) (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message : Digest)
+    (location : Tree) (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message : Digest)
     (xsig : XmssSignature)
     (hcached : ∀ probe, QueriesUnder cache
-      (SlhDsaSecurity.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) leaf xsig
+      (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) leaf xsig
         message publicSeed location.address) probe → cache probe ≠ none)
     (hcollision : @Extraction.Hypertree.LayerCollision (CacheReplay.replayQuery cache)
       secretSeed publicSeed message location.layer.val location.tree.val leaf xsig)
@@ -297,7 +297,7 @@ theorem deviatingCollision_of_layerCollision {α : Type}
     obtain ⟨output, hout⟩ := Option.ne_none_iff_exists'.mp
       (hcached _ (queriesUnder_merkle_wots cache leaf xsig message publicSeed location.address _
         (queriesUnder_wots_compression cache xsig.wots message publicSeed
-          (SlhDsaSecurity.Merkle.wotsAddress location.address leaf.val))))
+          (SLHDSA.SHAKE128s.Merkle.wotsAddress location.address leaf.val))))
     obtain ⟨hinputs, hjoins⟩ := hcompression
     refine WotsCharge.deviatingCollision_of_compressionCollision_canonical secretSeed publicSeed
       cache ⟨location, leaf⟩ _ ?_ ?_ result output hcache hout
@@ -313,7 +313,7 @@ theorem deviatingCollision_of_layerCollision {α : Type}
     obtain ⟨output, hout⟩ := Option.ne_none_iff_exists'.mp
       (hcached _ (queriesUnder_merkle_wots cache leaf xsig message publicSeed location.address _
         (queriesUnder_wots_chain cache xsig.wots message publicSeed
-          (SlhDsaSecurity.Merkle.wotsAddress location.address leaf.val) chainIndex offset
+          (SLHDSA.SHAKE128s.Merkle.wotsAddress location.address leaf.val) chainIndex offset
           hoffset)))
     exact WotsCharge.deviatingCollision_of_chainBranch secretSeed publicSeed message cache
       ⟨location, leaf⟩ chainIndex (xsig.wots chainIndex) offset hoffset hchain result output
@@ -332,15 +332,15 @@ still the component the forgery supplied and the message is still the one that l
 -/
 @[expose] def WotsResidue (secretSeed publicSeed : Digest) :
     (remaining : Nat) → (Fin remaining → XmssSignature) → (layer tree : Nat) →
-      SlhDsaSecurity.Hypertree.LeafIndex → (message expectedInput : Digest) → Prop
+      SLHDSA.SHAKE128s.Hypertree.LeafIndex → (message expectedInput : Digest) → Prop
   | 0, _, _, _, _, _, _ => False
   | remaining + 1, signatures, layer, tree, leaf, message, expectedInput =>
-    ((signatures 0).wots = SlhDsaSecurity.Wots.sign (m := Id) message secretSeed publicSeed
+    ((signatures 0).wots = SLHDSA.SHAKE128s.Wots.sign (m := Id) message secretSeed publicSeed
         (Extraction.Hypertree.wotsAddress layer tree leaf) ∧ message ≠ expectedInput) ∨
     WotsResidue secretSeed publicSeed remaining (fun i => signatures i.succ) (layer + 1)
-      (tree / 2 ^ subtreeHeight) (SlhDsaSecurity.Hypertree.nextLeaf tree)
-      (SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0) message
-        publicSeed (SlhDsaSecurity.Hypertree.address layer tree))
+      (tree / 2 ^ subtreeHeight) (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree)
+      (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0) message
+        publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree))
       (Extraction.HypertreeChain.honestNode secretSeed publicSeed layer tree)
 
 end Residue
@@ -365,10 +365,10 @@ where the segment is all `layers` layers and the tree index comes from a `TreeIn
 theorem deviatingCollision_or_residue_of_fault {α : Type}
     (secretSeed publicSeed : Digest) (cache : QueryCache HashSpec) :
     ∀ (remaining : Nat) (signatures : Fin remaining → XmssSignature) (layer tree : Nat)
-      (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message expectedInput : Digest),
+      (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message expectedInput : Digest),
       layer + remaining ≤ layers → tree < 2 ^ (totalHeight - subtreeHeight) →
       (∀ probe, QueriesUnder cache
-        (SlhDsaSecurity.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
+        (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
           remaining signatures layer tree leaf message) probe → cache probe ≠ none) →
       ∀ result : α × QueryCache HashSpec, result.2 = cache →
       @Extraction.HypertreeChain.HypertreeFault (CacheReplay.replayQuery cache) secretSeed
@@ -396,21 +396,21 @@ theorem deviatingCollision_or_residue_of_fault {α : Type}
         message probe hprobe)
     · exact Or.inr (Or.inl hwots)
     · have hstep : ∀ probe, QueriesUnder cache
-          (SlhDsaSecurity.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
+          (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
             remaining (fun i => signatures i.succ) (layer + 1) (tree / 2 ^ subtreeHeight)
-            (SlhDsaSecurity.Hypertree.nextLeaf tree)
-            (@SlhDsaSecurity.Merkle.publicKeyFromSignature Id Id.instMonad
+            (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree)
+            (@SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature Id Id.instMonad
               (CacheReplay.replayQuery cache) leaf (signatures 0) message publicSeed
-              (SlhDsaSecurity.Hypertree.address layer tree))) probe → cache probe ≠ none := by
+              (SLHDSA.SHAKE128s.Hypertree.address layer tree))) probe → cache probe ≠ none := by
         intro probe hprobe
         refine hcached probe (@HypertreeDispatch.queriesUnder_rootFromSignature_tail
           cache publicSeed remaining signatures layer tree leaf
           message probe ?_)
         rwa [@VerifierNaturality.merkle_simulate Id Id.instMonad _ (CacheReplay.replay cache)
           (CacheReplay.replayQuery cache) (replay_agrees cache) leaf (signatures 0) message
-          publicSeed (SlhDsaSecurity.Hypertree.address layer tree)]
+          publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree)]
       rcases ih (fun i => signatures i.succ) (layer + 1) (tree / 2 ^ subtreeHeight)
-        (SlhDsaSecurity.Hypertree.nextLeaf tree) _ _ (by omega)
+        (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree) _ _ (by omega)
         (lt_of_le_of_lt (Nat.div_le_self _ _) htree) hstep result hcache hrest with hdev | hres
       · exact Or.inl hdev
       · exact Or.inr (Or.inr hres)
@@ -420,10 +420,10 @@ the hypertree, which is the only place `HypertreeDispatch.cases_of_accepted` pro
 the segment is all `layers` layers, and the tree index is a `TreeIndex`. -/
 theorem deviatingCollision_or_residue_of_top_fault {α : Type}
     (secretSeed publicSeed : Digest) (cache : QueryCache HashSpec)
-    (signature : HypertreeSignature) (tree : SlhDsaSecurity.Hypertree.TreeIndex)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message expectedInput : Digest)
+    (signature : HypertreeSignature) (tree : SLHDSA.SHAKE128s.Hypertree.TreeIndex)
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message expectedInput : Digest)
     (hcached : ∀ probe, QueriesUnder cache
-      (SlhDsaSecurity.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed layers
+      (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed layers
         signature 0 tree.toNat leaf message) probe → cache probe ≠ none)
     (result : α × QueryCache HashSpec) (hcache : result.2 = cache)
     (hfault : @Extraction.HypertreeChain.HypertreeFault (CacheReplay.replayQuery cache)
@@ -435,4 +435,4 @@ theorem deviatingCollision_or_residue_of_top_fault {α : Type}
   deviatingCollision_or_residue_of_fault secretSeed publicSeed cache layers signature 0
     tree.toNat leaf message expectedInput (by omega) tree.isLt hcached result hcache hfault
 
-end SlhDsaSecurity.FaultCharge
+end SLHDSA.SHAKE128s.FaultCharge

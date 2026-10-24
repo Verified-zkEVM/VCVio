@@ -25,7 +25,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.RecordedWalkTable
+namespace SLHDSA.SHAKE128s.RecordedWalkTable
 
 open Security WarmedGame WalkTable
 
@@ -53,4 +53,4 @@ theorem evalDist_recordedPairedRun (adversary : Adversary) :
   simp only [recordedTableRun, bind_assoc, pure_bind]
   exact EvalDistEq.refl _
 
-end SlhDsaSecurity.RecordedWalkTable
+end SLHDSA.SHAKE128s.RecordedWalkTable

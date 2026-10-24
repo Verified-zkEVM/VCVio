@@ -39,7 +39,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CacheProvenance
+namespace SLHDSA.SHAKE128s.CacheProvenance
 
 variable {α : Type}
 
@@ -267,4 +267,4 @@ theorem queried_of_fresh_step (queried : OracleWorld.Domain)
           exact hfresh) hpresent
     · exact absurd (show step.2 probe = none from by rw [hshape]; exact hfresh) hpresent
 
-end SlhDsaSecurity.CacheProvenance
+end SLHDSA.SHAKE128s.CacheProvenance

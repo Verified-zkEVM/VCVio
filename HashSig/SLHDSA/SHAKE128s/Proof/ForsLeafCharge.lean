@@ -39,7 +39,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ForsLeafCharge
+namespace SLHDSA.SHAKE128s.ForsLeafCharge
 
 open CanonicalGraph Extraction
 
@@ -49,13 +49,13 @@ theorem deviatingCollision_of_leafCollision {α : Type} (publicSeed secretSeed :
     (address : Address) (index : Nat) (forgedSecret : Digest)
     -- how this leaf sits in the canonical graph
     (hchildren : parent.children = [child])
-    (haddress : parent.address = SlhDsaSecurity.Fors.nodeAddress address 0 index)
+    (haddress : parent.address = SLHDSA.SHAKE128s.Fors.nodeAddress address 0 index)
     (hchildCell : cells child =
-      @SlhDsaSecurity.Fors.secret Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
+      @SLHDSA.SHAKE128s.Fors.secret Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
         address index)
     (hparentCell : cells (.structural parent) =
       @Hashing.tweakable Id _ (CacheReplay.replayQuery cache) publicSeed parent.address
-        (bytesBE n (@SlhDsaSecurity.Fors.secret Id _ (CacheReplay.replayQuery cache)
+        (bytesBE n (@SLHDSA.SHAKE128s.Fors.secret Id _ (CacheReplay.replayQuery cache)
           secretSeed publicSeed address index)))
     -- the collision, and the cache entry its own query left behind
     (hcollision : @Fors.LeafCollision (CacheReplay.replayQuery cache) secretSeed publicSeed
@@ -94,7 +94,7 @@ theorem deviatingCollision_of_leafCollision_canonical {α : Type}
     (result : α × QueryCache HashSpec) (output : HashOutput)
     (hcache : result.2 = cache)
     (hentry : cache (Hashing.tweakableInput publicSeed
-      (SlhDsaSecurity.Fors.nodeAddress key.address 0 index.val)
+      (SLHDSA.SHAKE128s.Fors.nodeAddress key.address 0 index.val)
       (bytesBE n forgedSecret)) = some output) :
     StructuralTerm.DeviatingCollision publicSeed
       (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
@@ -108,4 +108,4 @@ theorem deviatingCollision_of_leafCollision_canonical {α : Type}
   · rw [CanonicalCells.parentCell_tweakable cache secretSeed publicSeed]
     simp [StructuralNode.children, childBytes, value, structuralValue]
 
-end SlhDsaSecurity.ForsLeafCharge
+end SLHDSA.SHAKE128s.ForsLeafCharge

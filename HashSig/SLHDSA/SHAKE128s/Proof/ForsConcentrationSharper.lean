@@ -27,7 +27,7 @@ public section
 open MeasureTheory ProbabilityTheory OracleComp OracleSpec
 open scoped NNReal ENNReal
 
-namespace SlhDsaSecurity.ForsConcentration
+namespace SLHDSA.SHAKE128s.ForsConcentration
 
 /-- The Touchard polynomial value `T₁₄(3)`, the exact fourteenth moment of a `Poisson(3)` load. -/
 theorem touchard_fourteen_three : ForsMoments.touchard 14 3 = 461101962108 := by
@@ -108,9 +108,9 @@ theorem uniform_load_tail_sharper_of_le (requests : Nat) (hrequests : requests �
   exact (measure_mono hsub).trans
     ((uniformLoads_monotone (2 ^ 63) _ hup hrequests).trans htail)
 
-end SlhDsaSecurity.ForsConcentration
+end SLHDSA.SHAKE128s.ForsConcentration
 
-namespace SlhDsaSecurity.ForsCoverage
+namespace SLHDSA.SHAKE128s.ForsCoverage
 
 /-- Smaller load cap for use when the joint query accounting needs a smaller coverage
 coefficient. -/
@@ -134,9 +134,9 @@ theorem fresh_coverage_le_sharper (revealed : Disclosures) (loads : Instance →
       apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
       norm_num
 
-end SlhDsaSecurity.ForsCoverage
+end SLHDSA.SHAKE128s.ForsCoverage
 
-namespace SlhDsaSecurity.ForsDisclosureTape
+namespace SLHDSA.SHAKE128s.ForsDisclosureTape
 
 /-- A disclosure tape of at most `5 * 2 ^ 62` requests exceeds the smaller load cap with
 probability at most `2 ^ -126`. -/
@@ -147,4 +147,4 @@ theorem bad_load_probability_sharper (requests : Nat) (hrequests : requests ≤ 
   rw [loads_probability (fun counts => 2 ^ 102 < ∑ i, counts i ^ 14)]
   exact ForsConcentration.uniform_load_tail_sharper_of_le requests hrequests
 
-end SlhDsaSecurity.ForsDisclosureTape
+end SLHDSA.SHAKE128s.ForsDisclosureTape

@@ -38,7 +38,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.FusedCoverage
+namespace SLHDSA.SHAKE128s.FusedCoverage
 
 open Security SplitPrefix
 
@@ -67,4 +67,4 @@ noncomputable abbrev rightKeepAt
       (countAllHashes (RecordedTail.recordedAfterSeeds adversary walk.1.1))).run
         (walk.2, [], [])
 
-end SlhDsaSecurity.FusedCoverage
+end SLHDSA.SHAKE128s.FusedCoverage

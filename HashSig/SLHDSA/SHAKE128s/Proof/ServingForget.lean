@@ -37,7 +37,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ServingForget
+namespace SLHDSA.SHAKE128s.ServingForget
 
 variable {α β γ : Type}
 
@@ -242,4 +242,4 @@ theorem bind_of_fuseServing_conj {α γ : Type} (π : S → S')
       hforget computation accumulated log state, map_eq_bind_pure_comp, bind_assoc]
   simp only [pure_bind, Function.comp_def]
 
-end SlhDsaSecurity.ServingForget
+end SLHDSA.SHAKE128s.ServingForget

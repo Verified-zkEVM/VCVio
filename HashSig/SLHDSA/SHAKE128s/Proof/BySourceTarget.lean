@@ -22,7 +22,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.BySourceTarget
+namespace SLHDSA.SHAKE128s.BySourceTarget
 
 open Security CanonicalGraph WarmedGame Target RoutedSplit BracketedRun CarrierTail CarrierThin
   FreshExpectation BySourceBridge BySourceAnswer
@@ -160,4 +160,4 @@ theorem answerBound (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adv
     _ = (q : ℝ≥0∞) / ((2 ^ 128 : Nat) : ℝ≥0∞) + (1 : ℝ≥0∞) / 2 ^ 126 := by
         rw [div_eq_mul_one_div (q : ℝ≥0∞)]
 
-end SlhDsaSecurity.BySourceTarget
+end SLHDSA.SHAKE128s.BySourceTarget

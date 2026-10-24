@@ -37,7 +37,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.HonestProbes
+namespace SLHDSA.SHAKE128s.HonestProbes
 
 open CacheReplay CanonicalGraph
 
@@ -699,4 +699,4 @@ theorem probes_keygenInternal (cache : QueryCache HashSpec)
       ⟨0, by decide⟩)
     (probes_pure cache _ _)
 
-end SlhDsaSecurity.HonestProbes
+end SLHDSA.SHAKE128s.HonestProbes

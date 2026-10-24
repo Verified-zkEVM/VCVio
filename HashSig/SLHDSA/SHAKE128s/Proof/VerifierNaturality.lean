@@ -23,7 +23,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.VerifierNaturality
+namespace SLHDSA.SHAKE128s.VerifierNaturality
 
 variable {m : Type → Type} [Monad m] [LawfulMonad m] {α β : Type}
 variable (impl : QueryImpl HashSpec m)
@@ -137,4 +137,4 @@ theorem verify_simulate (pk : PublicKey) (request : Message) (signature : Bytes)
     | none => rfl
     | some parsed => exact verifyInternal_simulate impl himpl pk message parsed
 
-end SlhDsaSecurity.VerifierNaturality
+end SLHDSA.SHAKE128s.VerifierNaturality

@@ -27,7 +27,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.ServedLog
+namespace SLHDSA.SHAKE128s.ServedLog
 
 open Security
 
@@ -87,4 +87,4 @@ theorem mem_disclosedByLog (pk : PublicKey)
   rw [disclosedByLog, Finset.mem_filter]
   exact ⟨fun hmem => hmem.2, fun hwitness => ⟨Finset.mem_univ _, hwitness⟩⟩
 
-end SlhDsaSecurity.ServedLog
+end SLHDSA.SHAKE128s.ServedLog

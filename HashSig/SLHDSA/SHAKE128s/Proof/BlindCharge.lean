@@ -52,7 +52,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.BlindCharge
+namespace SLHDSA.SHAKE128s.BlindCharge
 
 open CanonicalGraph SensitiveQuery
 
@@ -694,4 +694,4 @@ theorem prob_sensitive_le (auxiliary : ProbComp Aux)
 
 end Sum
 
-end SlhDsaSecurity.BlindCharge
+end SLHDSA.SHAKE128s.BlindCharge

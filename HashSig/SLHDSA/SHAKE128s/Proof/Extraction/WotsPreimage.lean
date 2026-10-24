@@ -25,7 +25,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Extraction.WotsPreimage
+namespace SLHDSA.SHAKE128s.Extraction.WotsPreimage
 
 variable [HasQuery HashSpec Id]
 
@@ -37,11 +37,11 @@ variable [HasQuery HashSpec Id]
 advanced to the message digit. -/
 theorem sign_eq_chain (message secretSeed publicSeed : Digest) (address : Address)
     (i : Fin chains) :
-    SlhDsaSecurity.Wots.sign (m := Id) message secretSeed publicSeed address i =
-      SlhDsaSecurity.Wots.chain (m := Id) publicSeed (chainAddress address i)
+    SLHDSA.SHAKE128s.Wots.sign (m := Id) message secretSeed publicSeed address i =
+      SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed (chainAddress address i)
         0 (Checksum.encode message i).val
         (Hashing.derive (m := Id) publicSeed secretSeed
-          (SlhDsaSecurity.Wots.secretAddress address i)) := by
-  simp only [SlhDsaSecurity.Wots.sign, Correctness.sequenceFin_id, bind, chainAddress]
+          (SLHDSA.SHAKE128s.Wots.secretAddress address i)) := by
+  simp only [SLHDSA.SHAKE128s.Wots.sign, Correctness.sequenceFin_id, bind, chainAddress]
 
-end SlhDsaSecurity.Extraction.WotsPreimage
+end SLHDSA.SHAKE128s.Extraction.WotsPreimage

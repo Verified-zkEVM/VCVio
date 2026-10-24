@@ -33,7 +33,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CachedRun
+namespace SLHDSA.SHAKE128s.CachedRun
 
 open CacheReplay
 
@@ -69,4 +69,4 @@ theorem run_eq_pure_of_cached {α : Type} (computation : OracleComp HashSpec α)
           = value from by simp [replay, hvalue]]
       rfl
 
-end SlhDsaSecurity.CachedRun
+end SLHDSA.SHAKE128s.CachedRun

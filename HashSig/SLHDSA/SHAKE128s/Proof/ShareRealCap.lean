@@ -24,7 +24,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ShareRealCap
+namespace SLHDSA.SHAKE128s.ShareRealCap
 
 variable {α β : Type}
 
@@ -112,4 +112,4 @@ theorem exists_recordedTail_of_linked (adversary : Adversary) (prfSeed publicSee
   obtain ⟨result, hresult, heq⟩ := (prEvent_pos_iff _ _).mp hpos
   exact ⟨result, hresult, congrArg Prod.fst heq, congrArg Prod.snd heq⟩
 
-end SlhDsaSecurity.ShareRealCap
+end SLHDSA.SHAKE128s.ShareRealCap

@@ -27,7 +27,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.StructuralTerm
+namespace SLHDSA.SHAKE128s.StructuralTerm
 
 open CanonicalGraph
 
@@ -41,4 +41,4 @@ shape of every witness the structural extraction yields. -/
     result.2 (canonicalInput publicSeed candidates parent) = some output ∧
     Hashing.truncate output = cells (.structural parent)
 
-end SlhDsaSecurity.StructuralTerm
+end SLHDSA.SHAKE128s.StructuralTerm

@@ -52,7 +52,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarrierCover
+namespace SLHDSA.SHAKE128s.CarrierCover
 
 variable {α : Type}
 
@@ -323,4 +323,4 @@ theorem cover_carrierRightKeep (walk : Walk) (probe : Bytes) (view : HandlerCarr
 **drops the record from the value and keeps the whole recorder state** — the same fact that let
 `hcoverage` transport free. So the cover arrives here by `support_map` and nothing else. -/
 
-end SlhDsaSecurity.CarrierCover
+end SLHDSA.SHAKE128s.CarrierCover

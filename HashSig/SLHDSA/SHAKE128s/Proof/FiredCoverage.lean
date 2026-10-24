@@ -49,7 +49,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.FiredCoverage
+namespace SLHDSA.SHAKE128s.FiredCoverage
 
 variable {α β : Type}
 
@@ -911,4 +911,4 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
           (le_trans (add_le_add hhelped htwo) hpairs))
     _ = _ := by ring
 
-end SlhDsaSecurity.FiredCoverage
+end SLHDSA.SHAKE128s.FiredCoverage

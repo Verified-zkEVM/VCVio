@@ -81,7 +81,7 @@ build boundaries and the staged consolidation.
   ACVP vectors). `SLHDSA/SHAKE128s/` proves 127 bits of strong unforgeability (SUF-CMA) for that
   model at SLH-DSA-SHAKE-128s in pure mode with deterministic signing, counting the adversary's
   signing requests, its hash calls and the verification of its forgery
-  (`SlhDsaSecurity.slhDsa_sufCma_127`). Peer of `LatticeCrypto/`; depends on
+  (`SLHDSA.SHAKE128s.slhDsa_sufCma_127`). Peer of `LatticeCrypto/`; depends on
   `VCVio`/`ToMathlib` but nothing in those imports it back.
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.

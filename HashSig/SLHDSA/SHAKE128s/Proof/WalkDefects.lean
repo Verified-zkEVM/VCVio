@@ -28,7 +28,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.WalkDefects
+namespace SLHDSA.SHAKE128s.WalkDefects
 
 variable {α β : Type}
 
@@ -182,4 +182,4 @@ theorem prob_possible_walk :
   rw [prEvent_bind_of_discrete, prEvent_bind_of_discrete]
   exact MeasureTheory.lintegral_congr fun publicSeed => hroot publicSeed
 
-end SlhDsaSecurity.WalkDefects
+end SLHDSA.SHAKE128s.WalkDefects

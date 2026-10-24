@@ -31,7 +31,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ShareFlag
+namespace SLHDSA.SHAKE128s.ShareFlag
 
 open Security ShareGame
 
@@ -270,4 +270,4 @@ theorem reportsCost (lenient : Bool) (setup : Setup) :
     simp only [weight, added] at hdraw hassemble ⊢
     omega
 
-end SlhDsaSecurity.ShareFlag
+end SLHDSA.SHAKE128s.ShareFlag

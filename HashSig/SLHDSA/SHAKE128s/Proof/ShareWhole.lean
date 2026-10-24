@@ -23,7 +23,7 @@ public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
-namespace SlhDsaSecurity.ShareWhole
+namespace SLHDSA.SHAKE128s.ShareWhole
 
 variable {α β : Type}
 
@@ -154,4 +154,4 @@ theorem couple_whole (setup : Setup) (hgood : setup.Good) (adversary : Adversary
     obtain ⟨entry, hentry, hx, hsnap⟩ := hrelv.verifier x hx
     exact ⟨entry, hentry, hx, hsnap.trans hrelv.servedEq.symm⟩
 
-end SlhDsaSecurity.ShareWhole
+end SLHDSA.SHAKE128s.ShareWhole

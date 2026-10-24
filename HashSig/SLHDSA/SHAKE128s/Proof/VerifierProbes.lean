@@ -42,7 +42,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.VerifierProbes
+namespace SLHDSA.SHAKE128s.VerifierProbes
 
 open CacheReplay Extraction CanonicalGraph
 
@@ -56,7 +56,7 @@ open CacheReplay Extraction CanonicalGraph
 /-- The FORS public key the replayed verifier recovers from this forgery. -/
 @[expose] def forsKeyOf (cache : QueryCache HashSpec) (pk : PublicKey) (message : Bytes)
     (parsed : Signature) : Digest :=
-  @SlhDsaSecurity.Fors.publicKeyFromSignature Id Id.instMonad (CacheReplay.replayQuery cache)
+  @SLHDSA.SHAKE128s.Fors.publicKeyFromSignature Id Id.instMonad (CacheReplay.replayQuery cache)
     parsed.fors (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed
     (Scheme.forsAddress (digestOf cache pk message parsed))
 
@@ -75,7 +75,7 @@ theorem queriesUnder_verify_fors (cache : QueryCache HashSpec) (pk : PublicKey)
     (hframe : request.frame = some message)
     (hparsed : Signature.fromBytes? signature = some parsed) (probe : Bytes)
     (hquery : QueriesUnder cache
-      (SlhDsaSecurity.Fors.publicKeyFromSignature (m := OracleComp HashSpec) parsed.fors
+      (SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := OracleComp HashSpec) parsed.fors
         (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed
         (Scheme.forsAddress (digestOf cache pk message parsed))) probe) :
     QueriesUnder cache (Scheme.verify (m := OracleComp HashSpec) pk request signature) probe := by
@@ -90,7 +90,7 @@ theorem queriesUnder_verify_hypertree (cache : QueryCache HashSpec) (pk : Public
     (hframe : request.frame = some message)
     (hparsed : Signature.fromBytes? signature = some parsed) (probe : Bytes)
     (hquery : QueriesUnder cache
-      (SlhDsaSecurity.Hypertree.rootFromSignature (m := OracleComp HashSpec) pk.seed layers
+      (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) pk.seed layers
         parsed.hypertree 0 (MessageDigest.treeIndex (digestOf cache pk message parsed)).toNat
         (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
         (forsKeyOf cache pk message parsed)) probe) :
@@ -100,7 +100,7 @@ theorem queriesUnder_verify_hypertree (cache : QueryCache HashSpec) (pk : Public
   rw [simulateQ_messageDigest]
   refine queriesUnder_bind_right cache _ _ probe ?_
   rw [show (simulateQ (CacheReplay.replay cache)
-      (SlhDsaSecurity.Fors.publicKeyFromSignature (m := OracleComp HashSpec) parsed.fors
+      (SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := OracleComp HashSpec) parsed.fors
         (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed
         (Scheme.forsAddress (digestOf cache pk message parsed))) : Id Digest) =
       forsKeyOf cache pk message parsed from
@@ -117,7 +117,7 @@ theorem cached_hypertree_probe (cache initialCache : QueryCache HashSpec) (pk : 
     (hmem : (verified, cache) ∈ support ((simulateQ randomOracle
       (Scheme.verify (m := OracleComp HashSpec) pk request signature)).run initialCache)) :
     ∀ probe, QueriesUnder cache
-      (SlhDsaSecurity.Hypertree.rootFromSignature (m := OracleComp HashSpec) pk.seed layers
+      (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) pk.seed layers
         parsed.hypertree 0 (MessageDigest.treeIndex (digestOf cache pk message parsed)).toNat
         (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
         (forsKeyOf cache pk message parsed)) probe → cache probe ≠ none :=
@@ -136,15 +136,15 @@ is the shape every descent below needs. -/
 
 /-- The scheme's per-tree payload is the extraction's ordered pair of bytes. -/
 theorem fors_pathInput (signature : ForsSignature)
-    (indices : SlhDsaSecurity.Fors.Indices) (publicSeed : Digest) (address : Address)
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (publicSeed : Digest) (address : Address)
     (i : Fin forsTrees) (value : Digest) (step : Fin forsHeight) :
     Hashing.tweakableInput publicSeed
-        (SlhDsaSecurity.Fors.nodeAddress address (step.val + 1)
+        (SLHDSA.SHAKE128s.Fors.nodeAddress address (step.val + 1)
           (Extraction.Fors.leafIndex indices i / 2 ^ (step.val + 1)))
         (if (indices i).val / 2 ^ step.val % 2 = 0 then
             bytesBE n value ++ bytesBE n ((signature i).authentication step)
           else bytesBE n ((signature i).authentication step) ++ bytesBE n value) =
-      PathEntry.pathInput publicSeed (SlhDsaSecurity.Fors.nodeAddress address)
+      PathEntry.pathInput publicSeed (SLHDSA.SHAKE128s.Fors.nodeAddress address)
         (Extraction.Fors.leafIndex indices i) (Extraction.Fors.siblings signature i) value
         step := by
   have hparity : Extraction.Fors.leafIndex indices i / 2 ^ step.val % 2 =
@@ -159,22 +159,22 @@ theorem fors_pathInput (signature : ForsSignature)
 
 /-- One FORS tree's root recovery: compress the revealed secret, then climb the authentication
 path, with the path written in the form `PathEntry` names. -/
-@[expose] def forsTreeRoot (signature : ForsSignature) (indices : SlhDsaSecurity.Fors.Indices)
+@[expose] def forsTreeRoot (signature : ForsSignature) (indices : SLHDSA.SHAKE128s.Fors.Indices)
     (publicSeed : Digest) (address : Address) (i : Fin forsTrees) : OracleComp HashSpec Digest :=
   (Hashing.shortHash (m := OracleComp HashSpec)
       (Hashing.tweakableInput publicSeed
-        (SlhDsaSecurity.Fors.nodeAddress address 0 (Extraction.Fors.leafIndex indices i))
+        (SLHDSA.SHAKE128s.Fors.nodeAddress address 0 (Extraction.Fors.leafIndex indices i))
         (bytesBE n (signature i).secret))) >>= fun leaf =>
     (List.finRange forsHeight).foldlM (m := OracleComp HashSpec)
       (fun value step => Hashing.shortHash
-        (PathEntry.pathInput publicSeed (SlhDsaSecurity.Fors.nodeAddress address)
+        (PathEntry.pathInput publicSeed (SLHDSA.SHAKE128s.Fors.nodeAddress address)
           (Extraction.Fors.leafIndex indices i) (Extraction.Fors.siblings signature i) value step))
       leaf
 
 /-- Algorithm 17 is the fourteen tree recoveries, then one compression. -/
 theorem fors_eq_trees_bind_compression (signature : ForsSignature)
-    (indices : SlhDsaSecurity.Fors.Indices) (publicSeed : Digest) (address : Address) :
-    (SlhDsaSecurity.Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (publicSeed : Digest) (address : Address) :
+    (SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices
         publicSeed address) =
       sequenceFin forsTrees (forsTreeRoot signature indices publicSeed address) >>= fun roots =>
         Hashing.shortHash (m := OracleComp HashSpec)
@@ -193,7 +193,7 @@ theorem fors_eq_trees_bind_compression (signature : ForsSignature)
 
 /-- The replayed tree recovery is the extraction's recovered root. -/
 theorem simulateQ_forsTreeRoot (cache : QueryCache HashSpec) (signature : ForsSignature)
-    (indices : SlhDsaSecurity.Fors.Indices) (publicSeed : Digest) (address : Address)
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (publicSeed : Digest) (address : Address)
     (i : Fin forsTrees) :
     (simulateQ (CacheReplay.replay cache)
         (forsTreeRoot signature indices publicSeed address i) : Id Digest) =
@@ -211,7 +211,7 @@ theorem simulateQ_forsTreeRoot (cache : QueryCache HashSpec) (signature : ForsSi
 
 /-- The replayed recovery of all fourteen trees. -/
 theorem simulateQ_forsTrees (cache : QueryCache HashSpec) (signature : ForsSignature)
-    (indices : SlhDsaSecurity.Fors.Indices) (publicSeed : Digest) (address : Address) :
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (publicSeed : Digest) (address : Address) :
     (simulateQ (CacheReplay.replay cache)
         (sequenceFin forsTrees (forsTreeRoot signature indices publicSeed address)) :
           Id (Fin forsTrees → Digest)) =
@@ -226,11 +226,11 @@ theorem simulateQ_forsTrees (cache : QueryCache HashSpec) (signature : ForsSigna
 
 /-- Descend into the recovery of one FORS tree. -/
 theorem queriesUnder_fors_tree (cache : QueryCache HashSpec) (signature : ForsSignature)
-    (indices : SlhDsaSecurity.Fors.Indices) (publicSeed : Digest) (address : Address)
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (publicSeed : Digest) (address : Address)
     (i : Fin forsTrees) (probe : Bytes)
     (hquery : QueriesUnder cache (forsTreeRoot signature indices publicSeed address i) probe) :
     QueriesUnder cache
-      (SlhDsaSecurity.Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices
+      (SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices
         publicSeed address) probe := by
   rw [fors_eq_trees_bind_compression]
   exact queriesUnder_bind cache _ _ probe
@@ -238,9 +238,9 @@ theorem queriesUnder_fors_tree (cache : QueryCache HashSpec) (signature : ForsSi
 
 /-- **The root compression consults the recovered roots' bytes.** -/
 theorem queriesUnder_fors_compression (cache : QueryCache HashSpec) (signature : ForsSignature)
-    (indices : SlhDsaSecurity.Fors.Indices) (publicSeed : Digest) (address : Address) :
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (publicSeed : Digest) (address : Address) :
     QueriesUnder cache
-      (SlhDsaSecurity.Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices
+      (SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices
         publicSeed address)
       (Hashing.tweakableInput publicSeed (Extraction.Fors.rootAddress address)
         (digestArrayBytes (@Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache)
@@ -250,13 +250,13 @@ theorem queriesUnder_fors_compression (cache : QueryCache HashSpec) (signature :
 
 /-- **Each tree's leaf compression consults the revealed secret's bytes.** -/
 theorem queriesUnder_fors_leaf (cache : QueryCache HashSpec) (signature : ForsSignature)
-    (indices : SlhDsaSecurity.Fors.Indices) (publicSeed : Digest) (address : Address)
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (publicSeed : Digest) (address : Address)
     (i : Fin forsTrees) :
     QueriesUnder cache
-      (SlhDsaSecurity.Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices
+      (SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices
         publicSeed address)
       (Hashing.tweakableInput publicSeed
-        (SlhDsaSecurity.Fors.nodeAddress address 0 (Extraction.Fors.leafIndex indices i))
+        (SLHDSA.SHAKE128s.Fors.nodeAddress address 0 (Extraction.Fors.leafIndex indices i))
         (bytesBE n (signature i).secret)) :=
   queriesUnder_fors_tree cache signature indices publicSeed address i _
     (queriesUnder_shortHash cache _ _)
@@ -264,15 +264,15 @@ theorem queriesUnder_fors_leaf (cache : QueryCache HashSpec) (signature : ForsSi
 /-- **Each step of each tree's authentication path consults its input**, at the running value
 the extraction's `BinaryPath.value` names. -/
 theorem queriesUnder_fors_path (cache : QueryCache HashSpec) (signature : ForsSignature)
-    (indices : SlhDsaSecurity.Fors.Indices) (publicSeed : Digest) (address : Address)
+    (indices : SLHDSA.SHAKE128s.Fors.Indices) (publicSeed : Digest) (address : Address)
     (i : Fin forsTrees) (step : Fin forsHeight) :
     QueriesUnder cache
-      (SlhDsaSecurity.Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices
+      (SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices
         publicSeed address)
-      (PathEntry.pathInput publicSeed (SlhDsaSecurity.Fors.nodeAddress address)
+      (PathEntry.pathInput publicSeed (SLHDSA.SHAKE128s.Fors.nodeAddress address)
         (Extraction.Fors.leafIndex indices i) (Extraction.Fors.siblings signature i)
         (BinaryPath.value
-          (PathEntry.pathCombine cache publicSeed (SlhDsaSecurity.Fors.nodeAddress address))
+          (PathEntry.pathCombine cache publicSeed (SLHDSA.SHAKE128s.Fors.nodeAddress address))
           (Extraction.Fors.leafIndex indices i)
           (@Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices
             publicSeed address i)
@@ -282,7 +282,7 @@ theorem queriesUnder_fors_path (cache : QueryCache HashSpec) (signature : ForsSi
   refine queriesUnder_bind_right cache _ _ _ ?_
   rw [show (simulateQ (CacheReplay.replay cache) (Hashing.shortHash (m := OracleComp HashSpec)
       (Hashing.tweakableInput publicSeed
-        (SlhDsaSecurity.Fors.nodeAddress address 0 (Extraction.Fors.leafIndex indices i))
+        (SLHDSA.SHAKE128s.Fors.nodeAddress address 0 (Extraction.Fors.leafIndex indices i))
         (bytesBE n (signature i).secret))) : Id Digest) =
       @Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices publicSeed
         address i from rfl]
@@ -322,11 +322,11 @@ theorem cached_fors_path_probe (cache initialCache : QueryCache HashSpec)
       (Scheme.verify (m := OracleComp HashSpec) pk request signature)).run initialCache))
     (i : Fin forsTrees) (step : Fin forsHeight) :
     cache (PathEntry.pathInput pk.seed
-      (SlhDsaSecurity.Fors.nodeAddress (Scheme.forsAddress (digestOf cache pk message parsed)))
+      (SLHDSA.SHAKE128s.Fors.nodeAddress (Scheme.forsAddress (digestOf cache pk message parsed)))
       (Extraction.Fors.leafIndex (MessageDigest.forsIndices (digestOf cache pk message parsed)) i)
       (Extraction.Fors.siblings parsed.fors i)
       (BinaryPath.value
-        (PathEntry.pathCombine cache pk.seed (SlhDsaSecurity.Fors.nodeAddress
+        (PathEntry.pathCombine cache pk.seed (SLHDSA.SHAKE128s.Fors.nodeAddress
           (Scheme.forsAddress (digestOf cache pk message parsed))))
         (Extraction.Fors.leafIndex (MessageDigest.forsIndices (digestOf cache pk message parsed)) i)
         (@Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) parsed.fors
@@ -347,7 +347,7 @@ theorem cached_fors_leaf_probe (cache initialCache : QueryCache HashSpec)
       (Scheme.verify (m := OracleComp HashSpec) pk request signature)).run initialCache))
     (i : Fin forsTrees) :
     cache (Hashing.tweakableInput pk.seed
-      (SlhDsaSecurity.Fors.nodeAddress (Scheme.forsAddress (digestOf cache pk message parsed)) 0
+      (SLHDSA.SHAKE128s.Fors.nodeAddress (Scheme.forsAddress (digestOf cache pk message parsed)) 0
         (Extraction.Fors.leafIndex
           (MessageDigest.forsIndices (digestOf cache pk message parsed)) i))
       (bytesBE n (parsed.fors i).secret)) ≠ none :=
@@ -400,7 +400,7 @@ theorem deviatingCollision_or_secrets_of_verified {α : Type} (secretSeed : Dige
     (hmem : (verified, cache) ∈ support ((simulateQ randomOracle
       (Scheme.verify (m := OracleComp HashSpec) pk request signature)).run initialCache))
     (result : α × QueryCache HashSpec) (hcache : result.2 = cache)
-    (hkey : @SlhDsaSecurity.Fors.publicKeyFromSignature Id Id.instMonad
+    (hkey : @SLHDSA.SHAKE128s.Fors.publicKeyFromSignature Id Id.instMonad
         (CacheReplay.replayQuery cache) parsed.fors
         (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed key.address =
       @Hashing.tweakable Id Id.instMonad (CacheReplay.replayQuery cache) pk.seed
@@ -410,7 +410,7 @@ theorem deviatingCollision_or_secrets_of_verified {α : Type} (secretSeed : Dige
     StructuralTerm.DeviatingCollision pk.seed
         (@value (CacheReplay.replayQuery cache) secretSeed pk.seed) result ∨
       ∀ i : Fin forsTrees, (parsed.fors i).secret =
-        @SlhDsaSecurity.Fors.secret Id Id.instMonad (CacheReplay.replayQuery cache)
+        @SLHDSA.SHAKE128s.Fors.secret Id Id.instMonad (CacheReplay.replayQuery cache)
           secretSeed pk.seed key.address
           (Extraction.Fors.leafIndex
             (MessageDigest.forsIndices (digestOf cache pk message parsed)) i) :=
@@ -443,7 +443,7 @@ theorem deviatingCollision_or_canonical_of_verified {α : Type} (secretSeed : Di
     (hmem : (verified, cache) ∈ support ((simulateQ randomOracle
       (Scheme.verify (m := OracleComp HashSpec) pk request signature)).run initialCache))
     (result : α × QueryCache HashSpec) (hcache : result.2 = cache)
-    (hkey : @SlhDsaSecurity.Fors.publicKeyFromSignature Id Id.instMonad
+    (hkey : @SLHDSA.SHAKE128s.Fors.publicKeyFromSignature Id Id.instMonad
         (CacheReplay.replayQuery cache) parsed.fors
         (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed key.address =
       @Hashing.tweakable Id Id.instMonad (CacheReplay.replayQuery cache) pk.seed
@@ -452,7 +452,7 @@ theorem deviatingCollision_or_canonical_of_verified {α : Type} (secretSeed : Di
           secretSeed pk.seed key.address))) :
     StructuralTerm.DeviatingCollision pk.seed
         (@value (CacheReplay.replayQuery cache) secretSeed pk.seed) result ∨
-      parsed.fors = @SlhDsaSecurity.Fors.sign Id Id.instMonad (CacheReplay.replayQuery cache)
+      parsed.fors = @SLHDSA.SHAKE128s.Fors.sign Id Id.instMonad (CacheReplay.replayQuery cache)
         (MessageDigest.forsIndices (digestOf cache pk message parsed)) secretSeed pk.seed
         key.address :=
   ForsBranch.deviatingCollision_or_canonical secretSeed pk.seed cache key
@@ -472,4 +472,4 @@ theorem deviatingCollision_or_canonical_of_verified {α : Type} (secretSeed : Di
       exact cached_fors_leaf_probe cache initialCache pk request signature message parsed
         verified hframe hparsed hmem i)
 
-end SlhDsaSecurity.VerifierProbes
+end SLHDSA.SHAKE128s.VerifierProbes

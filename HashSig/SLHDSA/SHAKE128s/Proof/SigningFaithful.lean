@@ -60,7 +60,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.SigningFaithful
+namespace SLHDSA.SHAKE128s.SigningFaithful
 
 variable {α : Type}
 
@@ -602,4 +602,4 @@ theorem cases_of_win_charged (adversary : Adversary)
   ReplayGate.cases_of_win_charged adversary hwalk hresult
     (logFaithful_tail adversary hresult) hwin
 
-end SlhDsaSecurity.SigningFaithful
+end SLHDSA.SHAKE128s.SigningFaithful

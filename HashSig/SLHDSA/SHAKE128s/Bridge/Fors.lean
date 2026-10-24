@@ -45,7 +45,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Bridge
+namespace SLHDSA.SHAKE128s.Bridge
 
 open SLHDSA SLHDSA.Security
 
@@ -503,4 +503,4 @@ theorem simulateQ_forsPublicKeyFromSignature_parts (h : HashOutput)
   rw [← toAdrs_forsAddress]
   exact simulateQ_forsPublicKeyFromSignature sig _ _ (forsIdx_parts h) pk _ (kind_forsAddress h)
 
-end SlhDsaSecurity.Bridge
+end SLHDSA.SHAKE128s.Bridge

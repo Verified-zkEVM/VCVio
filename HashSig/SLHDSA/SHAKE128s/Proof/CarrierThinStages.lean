@@ -47,7 +47,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.CarrierThin
+namespace SLHDSA.SHAKE128s.CarrierThin
 
 open Security DigestTape TapeFactor NoticingTape RecorderView PhaseFusion FusedTape TapeWatch
   SignedWatch TapeRunFacts CountedView CarriedWitness RecordedQueries BracketedRun CarrierTail
@@ -1100,4 +1100,4 @@ theorem stage3_step (walk : Walk) (index : Nat) (phaseLate : Prop)
             exact zero_le
       · rw [hst] at hreachedZ; exact absurd hreachedZ hreached
 
-end SlhDsaSecurity.CarrierThin
+end SLHDSA.SHAKE128s.CarrierThin

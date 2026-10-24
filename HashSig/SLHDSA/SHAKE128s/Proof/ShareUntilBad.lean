@@ -28,7 +28,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ShareUntilBad
+namespace SLHDSA.SHAKE128s.ShareUntilBad
 
 variable {α : Type}
 
@@ -243,4 +243,4 @@ theorem prEvent_bad_eq (setup : Setup) {α : Type} (computation : OracleComp Sha
     (fun queried state hbad z hz => mono false setup queried state hbad z hz)
     computation (start, false)
 
-end SlhDsaSecurity.ShareUntilBad
+end SLHDSA.SHAKE128s.ShareUntilBad

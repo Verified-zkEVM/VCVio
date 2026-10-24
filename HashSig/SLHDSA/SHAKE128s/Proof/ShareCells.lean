@@ -28,7 +28,7 @@ cell but the always-available ones (`revealedOf_congr`).
 
 public section
 
-namespace SlhDsaSecurity.ShareCells
+namespace SLHDSA.SHAKE128s.ShareCells
 
 open CanonicalGraph
 
@@ -82,4 +82,4 @@ theorem revealedOf_congr (left right : Cells)
     rw [hagree _ (alwaysAvailable_messageNode key node hnode)]
   · rfl
 
-end SlhDsaSecurity.ShareCells
+end SLHDSA.SHAKE128s.ShareCells

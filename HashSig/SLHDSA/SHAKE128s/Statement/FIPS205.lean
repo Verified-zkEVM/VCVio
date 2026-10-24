@@ -33,7 +33,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.FIPS205
+namespace SLHDSA.SHAKE128s.FIPS205
 
 open SLHDSA SLHDSA.Security SLHDSA.Concrete SLHDSA.External
 
@@ -82,4 +82,4 @@ decode. -/
       | .error _ => pure false
       | .ok decoded => internal.verify pk message decoded
 
-end SlhDsaSecurity.FIPS205
+end SLHDSA.SHAKE128s.FIPS205

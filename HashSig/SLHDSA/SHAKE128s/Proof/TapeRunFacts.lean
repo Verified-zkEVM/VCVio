@@ -28,7 +28,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.TapeRunFacts
+namespace SLHDSA.SHAKE128s.TapeRunFacts
 
 variable {α β γ : Type}
 
@@ -192,4 +192,4 @@ theorem mem_support_threeStageHandlerRun_of_tape (leftKeep rightKeep : Bytes →
   rw [support_map]
   exact ⟨w, hw, rfl⟩
 
-end SlhDsaSecurity.TapeRunFacts
+end SLHDSA.SHAKE128s.TapeRunFacts

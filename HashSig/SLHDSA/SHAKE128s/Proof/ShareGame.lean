@@ -50,7 +50,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.ShareGame
+namespace SLHDSA.SHAKE128s.ShareGame
 
 open Security CanonicalGraph
 
@@ -309,4 +309,4 @@ open scoped Classical in
           state.2 || decide (¬ setup.Good ∨
             ∃ candidate ∈ candidates, Guess setup state.1.served candidate)))
 
-end SlhDsaSecurity.ShareGame
+end SLHDSA.SHAKE128s.ShareGame

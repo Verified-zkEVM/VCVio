@@ -36,7 +36,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.CoverageTail
+namespace SLHDSA.SHAKE128s.CoverageTail
 
 open Security CanonicalGraph WarmedGame
 
@@ -119,4 +119,4 @@ theorem walk_cache_fresh (pk : PublicKey)
   exact WarmedCharges.not_messageInput_canonical walk.1.1.2.2 walk.1.2 pk hpublic hbounds
     parent hmessage
 
-end SlhDsaSecurity.CoverageTail
+end SLHDSA.SHAKE128s.CoverageTail

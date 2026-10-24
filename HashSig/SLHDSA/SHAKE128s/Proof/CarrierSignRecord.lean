@@ -28,7 +28,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.CarrierSignRecord
+namespace SLHDSA.SHAKE128s.CarrierSignRecord
 
 variable {α : Type}
 
@@ -61,4 +61,4 @@ shared oracle's to answer. The projection is **stronger** here than `SplitPrefix
 was: `ServingForget.ForgetsAlong` is an equality of computations, so the shared oracle's run is
 not merely reachable from the carrier's but equal to its image. -/
 
-end SlhDsaSecurity.CarrierSignRecord
+end SLHDSA.SHAKE128s.CarrierSignRecord

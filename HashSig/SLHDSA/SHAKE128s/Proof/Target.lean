@@ -26,7 +26,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.Target
+namespace SLHDSA.SHAKE128s.Target
 
 variable {γ : Type}
 
@@ -134,4 +134,4 @@ theorem pairedRun_eq_map_pairedFused {γ : Type} (adversary : Adversary)
   rw [← hforget walk, map_eq_bind_pure_comp, map_eq_bind_pure_comp, bind_assoc, bind_assoc]
   exact bind_congr fun result => by rw [pure_bind]; rfl
 
-end SlhDsaSecurity.Target
+end SLHDSA.SHAKE128s.Target

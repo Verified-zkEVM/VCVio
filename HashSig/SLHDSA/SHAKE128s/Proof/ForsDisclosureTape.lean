@@ -28,7 +28,7 @@ open scoped ENNReal
 
 noncomputable section
 
-namespace SlhDsaSecurity.ForsDisclosureTape
+namespace SLHDSA.SHAKE128s.ForsDisclosureTape
 
 /-- The parsed FORS view of a message digest. -/
 abbrev View := ForsCoverage.View
@@ -123,4 +123,4 @@ theorem loads_probability {requests : Nat} (event : (Instance → Nat) → Prop)
           Measure.map_apply Measurable.of_discrete MeasurableSet.of_discrete]
         rfl
 
-end SlhDsaSecurity.ForsDisclosureTape
+end SLHDSA.SHAKE128s.ForsDisclosureTape

@@ -28,14 +28,14 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.Extraction.HypertreeChain
+namespace SLHDSA.SHAKE128s.Extraction.HypertreeChain
 
 variable [HasQuery HashSpec Id]
 
 /-- The honest root of the subtree at `(layer, tree)` under the genuine seeds. -/
 @[expose] def honestNode (secretSeed publicSeed : Digest) (layer tree : Nat) : Digest :=
-  SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed
-    (SlhDsaSecurity.Hypertree.address layer tree) subtreeHeight 0
+  SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed
+    (SLHDSA.SHAKE128s.Hypertree.address layer tree) subtreeHeight 0
 
 /-- The honest top root reached by folding the given segment upward. The recovered root of
 each honest layer is independent of its incoming message, so the fold ignores its input
@@ -52,17 +52,17 @@ layer whose WOTS signature is the honest signature of a message differing from t
 input threaded into that layer. The second case is a WOTS one-wayness witness. -/
 @[expose] def HypertreeFault (secretSeed publicSeed : Digest) :
     (remaining : Nat) → (Fin remaining → XmssSignature) → (layer tree : Nat) →
-      SlhDsaSecurity.Hypertree.LeafIndex → (message expectedInput : Digest) → Prop
+      SLHDSA.SHAKE128s.Hypertree.LeafIndex → (message expectedInput : Digest) → Prop
   | 0, _, _, _, _, _, _ => False
   | remaining + 1, signatures, layer, tree, leaf, message, expectedInput =>
     Extraction.Hypertree.LayerCollision secretSeed publicSeed message layer tree leaf
         (signatures 0) ∨
-    ((signatures 0).wots = SlhDsaSecurity.Wots.sign (m := Id) message secretSeed publicSeed
+    ((signatures 0).wots = SLHDSA.SHAKE128s.Wots.sign (m := Id) message secretSeed publicSeed
         (Extraction.Hypertree.wotsAddress layer tree leaf) ∧ message ≠ expectedInput) ∨
     HypertreeFault secretSeed publicSeed remaining (fun i => signatures i.succ) (layer + 1)
-      (tree / 2 ^ subtreeHeight) (SlhDsaSecurity.Hypertree.nextLeaf tree)
-      (SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0) message
-        publicSeed (SlhDsaSecurity.Hypertree.address layer tree))
+      (tree / 2 ^ subtreeHeight) (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree)
+      (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0) message
+        publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree))
       (honestNode secretSeed publicSeed layer tree)
 
 /-! ## The layers the honest signer writes
@@ -76,37 +76,38 @@ forgery whose layers are all canonical with the signature the signer issued. -/
 
 /-- One layer peeled off the honest signer's loop, uniformly in how many are left. -/
 theorem signLayers_succ (secretSeed publicSeed : Digest) (remaining layer tree : Nat)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (message : Digest) :
-    SlhDsaSecurity.Hypertree.signLayers (m := Id) secretSeed publicSeed (remaining + 1) layer
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message : Digest) :
+    SLHDSA.SHAKE128s.Hypertree.signLayers (m := Id) secretSeed publicSeed (remaining + 1) layer
         tree leaf message =
-      Fin.cases (SlhDsaSecurity.Merkle.sign (m := Id) message secretSeed publicSeed
-          (SlhDsaSecurity.Hypertree.address layer tree) leaf)
-        (SlhDsaSecurity.Hypertree.signLayers (m := Id) secretSeed publicSeed remaining (layer + 1)
-          (tree / 2 ^ subtreeHeight) (SlhDsaSecurity.Hypertree.nextLeaf tree)
-          (SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) leaf
-            (SlhDsaSecurity.Merkle.sign (m := Id) message secretSeed publicSeed
-              (SlhDsaSecurity.Hypertree.address layer tree) leaf)
-            message publicSeed (SlhDsaSecurity.Hypertree.address layer tree))) := by
+      Fin.cases (SLHDSA.SHAKE128s.Merkle.sign (m := Id) message secretSeed publicSeed
+          (SLHDSA.SHAKE128s.Hypertree.address layer tree) leaf)
+        (SLHDSA.SHAKE128s.Hypertree.signLayers (m := Id) secretSeed publicSeed remaining (layer + 1)
+          (tree / 2 ^ subtreeHeight) (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree)
+          (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) leaf
+            (SLHDSA.SHAKE128s.Merkle.sign (m := Id) message secretSeed publicSeed
+              (SLHDSA.SHAKE128s.Hypertree.address layer tree) leaf)
+            message publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree))) := by
   cases remaining <;> rfl
 
 /-- **A canonical WOTS part and canonical siblings are the honest layer signature.** -/
 theorem xmss_eq_sign (secretSeed publicSeed message : Digest) (layer tree : Nat)
-    (leaf : SlhDsaSecurity.Hypertree.LeafIndex) (xsig : XmssSignature)
-    (hwots : xsig.wots = SlhDsaSecurity.Wots.sign (m := Id) message secretSeed publicSeed
+    (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (xsig : XmssSignature)
+    (hwots : xsig.wots = SLHDSA.SHAKE128s.Wots.sign (m := Id) message secretSeed publicSeed
       (Extraction.Hypertree.wotsAddress layer tree leaf))
-    (hauth : ∀ j, xsig.authentication j = SlhDsaSecurity.Merkle.node (m := Id) secretSeed
-      publicSeed (SlhDsaSecurity.Hypertree.address layer tree) j.val
+    (hauth : ∀ j, xsig.authentication j = SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed
+      publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree) j.val
         (Nat.xor (leaf.val / 2 ^ j.val) 1)) :
-    xsig = SlhDsaSecurity.Merkle.sign (m := Id) message secretSeed publicSeed
-      (SlhDsaSecurity.Hypertree.address layer tree) leaf := by
-  have hsign : SlhDsaSecurity.Merkle.sign (m := Id) message secretSeed publicSeed
-      (SlhDsaSecurity.Hypertree.address layer tree) leaf =
-      { wots := SlhDsaSecurity.Wots.sign (m := Id) message secretSeed publicSeed
+    xsig = SLHDSA.SHAKE128s.Merkle.sign (m := Id) message secretSeed publicSeed
+      (SLHDSA.SHAKE128s.Hypertree.address layer tree) leaf := by
+  have hsign : SLHDSA.SHAKE128s.Merkle.sign (m := Id) message secretSeed publicSeed
+      (SLHDSA.SHAKE128s.Hypertree.address layer tree) leaf =
+      { wots := SLHDSA.SHAKE128s.Wots.sign (m := Id) message secretSeed publicSeed
           (Extraction.Hypertree.wotsAddress layer tree leaf),
-        authentication := fun j => SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed
-          (SlhDsaSecurity.Hypertree.address layer tree) j.val
+        authentication := fun j => SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed
+          (SLHDSA.SHAKE128s.Hypertree.address layer tree) j.val
             (Nat.xor (leaf.val / 2 ^ j.val) 1) } := by
-    simp only [SlhDsaSecurity.Merkle.sign, SlhDsaSecurity.Correctness.sequenceFin_id, bind, pure]
+    simp only [SLHDSA.SHAKE128s.Merkle.sign, SLHDSA.SHAKE128s.Correctness.sequenceFin_id, bind,
+      pure]
     rfl
   rw [hsign]
   cases xsig
@@ -119,13 +120,13 @@ layer carries the signature the honest signer writes there. The second conjunct 
 induction proves at each layer anyway: a layer with no fault has the honest WOTS signature and
 the honest siblings, which is the honest layer signature. -/
 theorem rootFromSignature_fault_or_signed (secretSeed publicSeed rootTarget : Digest)
-    (remaining layer tree : Nat) (leaf : SlhDsaSecurity.Hypertree.LeafIndex)
+    (remaining layer tree : Nat) (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex)
     (message expectedInput : Digest) (signatures : Fin remaining → XmssSignature)
-    (htop : SlhDsaSecurity.Hypertree.rootFromSignature (m := Id) publicSeed remaining
+    (htop : SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := Id) publicSeed remaining
         signatures layer tree leaf message = rootTarget)
     (hexp : honestFold secretSeed publicSeed remaining layer tree expectedInput = rootTarget) :
     (message = expectedInput ∧
-        signatures = SlhDsaSecurity.Hypertree.signLayers (m := Id) secretSeed publicSeed
+        signatures = SLHDSA.SHAKE128s.Hypertree.signLayers (m := Id) secretSeed publicSeed
           remaining layer tree leaf expectedInput) ∨
       HypertreeFault secretSeed publicSeed remaining signatures layer tree leaf message
         expectedInput := by
@@ -133,28 +134,28 @@ theorem rootFromSignature_fault_or_signed (secretSeed publicSeed rootTarget : Di
   | zero =>
     -- No layers: the fold and the recovery both return their input, and there is nothing to pin.
     refine Or.inl ⟨?_, ?_⟩
-    · simp only [SlhDsaSecurity.Hypertree.rootFromSignature] at htop
+    · simp only [SLHDSA.SHAKE128s.Hypertree.rootFromSignature] at htop
       simp only [honestFold] at hexp
       exact htop.trans hexp.symm
     · funext i
       exact i.elim0
   | succ remaining ih =>
     -- Peel the bottom layer and apply the induction to the upper segment.
-    rw [SlhDsaSecurity.Hypertree.rootFromSignature] at htop
+    rw [SLHDSA.SHAKE128s.Hypertree.rootFromSignature] at htop
     simp only [bind] at htop
-    set root₀ := SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0)
-      message publicSeed (SlhDsaSecurity.Hypertree.address layer tree) with hroot₀
+    set root₀ := SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0)
+      message publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree) with hroot₀
     have hexp' : honestFold secretSeed publicSeed remaining (layer + 1)
         (tree / 2 ^ subtreeHeight) (honestNode secretSeed publicSeed layer tree) = rootTarget := by
       rw [honestFold] at hexp; exact hexp
-    rcases ih (layer + 1) (tree / 2 ^ subtreeHeight) (SlhDsaSecurity.Hypertree.nextLeaf tree)
+    rcases ih (layer + 1) (tree / 2 ^ subtreeHeight) (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree)
         root₀ (honestNode secretSeed publicSeed layer tree) (fun i => signatures i.succ)
         htop hexp' with ⟨hcanon, hrest⟩ | hfault
     · -- The upper segment recovered the honest node, pinning this layer's output.
-      have hbottom : SlhDsaSecurity.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0)
-          message publicSeed (SlhDsaSecurity.Hypertree.address layer tree) =
-          SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed
-            (SlhDsaSecurity.Hypertree.address layer tree) subtreeHeight 0 := hcanon
+      have hbottom : SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0)
+          message publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree) =
+          SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed
+            (SLHDSA.SHAKE128s.Hypertree.address layer tree) subtreeHeight 0 := hcanon
       rcases Extraction.Hypertree.layer_canonical_or_collision secretSeed publicSeed message
           layer tree leaf (signatures 0) hbottom with ⟨hwots, hauth⟩ | hcollision
       · by_cases hmessage : message = expectedInput
@@ -162,9 +163,9 @@ theorem rootFromSignature_fault_or_signed (secretSeed publicSeed rootTarget : Di
           subst hmessage
           have hzero := xmss_eq_sign secretSeed publicSeed message layer tree leaf (signatures 0)
             hwots hauth
-          rw [signLayers_succ, SlhDsaSecurity.Correctness.Merkle.publicKeyFromSignature_sign,
-            show SlhDsaSecurity.Merkle.node (m := Id) secretSeed publicSeed
-                (SlhDsaSecurity.Hypertree.address layer tree) subtreeHeight 0 =
+          rw [signLayers_succ, SLHDSA.SHAKE128s.Correctness.Merkle.publicKeyFromSignature_sign,
+            show SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed
+                (SLHDSA.SHAKE128s.Hypertree.address layer tree) subtreeHeight 0 =
               honestNode secretSeed publicSeed layer tree from rfl, ← hrest]
           funext i
           induction i using Fin.cases with
@@ -195,20 +196,20 @@ theorem honestFold_eq (secretSeed publicSeed : Digest) (remaining layer tree : N
 concrete structural fault at some layer, or it is the signature the honest signer writes** — in
 particular its recovered FORS public key, the bottom message, is the honest one. -/
 theorem verify_fault_or_fors_signed (secretSeed publicSeed : Digest) (pk : PublicKey)
-    (tree : SlhDsaSecurity.Hypertree.TreeIndex) (leaf : SlhDsaSecurity.Hypertree.LeafIndex)
+    (tree : SLHDSA.SHAKE128s.Hypertree.TreeIndex) (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex)
     (forsKey honestForsKey : Digest) (signature : HypertreeSignature)
     (hseed : pk.seed = publicSeed)
     (hroot : pk.root = honestNode secretSeed publicSeed (layers - 1) 0)
-    (haccept : SlhDsaSecurity.Hypertree.verify (m := Id) forsKey signature pk tree leaf = true) :
+    (haccept : SLHDSA.SHAKE128s.Hypertree.verify (m := Id) forsKey signature pk tree leaf = true) :
     (forsKey = honestForsKey ∧
-        signature = SlhDsaSecurity.Hypertree.signLayers (m := Id) secretSeed publicSeed layers 0
+        signature = SLHDSA.SHAKE128s.Hypertree.signLayers (m := Id) secretSeed publicSeed layers 0
           tree.toNat leaf honestForsKey) ∨
       HypertreeFault secretSeed publicSeed layers signature 0 tree.toNat leaf forsKey
         honestForsKey := by
-  have htop : SlhDsaSecurity.Hypertree.rootFromSignature (m := Id) publicSeed layers
+  have htop : SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := Id) publicSeed layers
       signature 0 tree.toNat leaf forsKey = pk.root := by
     rw [← hseed]
-    simp only [SlhDsaSecurity.Hypertree.verify, bind, pure] at haccept
+    simp only [SLHDSA.SHAKE128s.Hypertree.verify, bind, pure] at haccept
     exact (beq_iff_eq (α := Digest)).mp haccept
   have hexp : honestFold secretSeed publicSeed layers 0 tree.toNat honestForsKey = pk.root := by
     have hfold : honestFold secretSeed publicSeed layers 0 tree.toNat honestForsKey =
@@ -227,15 +228,15 @@ theorem verify_fault_or_fors_signed (secretSeed publicSeed : Digest) (pk : Publi
 
 /-- The same, read only for the recovered FORS public key. -/
 theorem verify_fault_or_fors_canonical (secretSeed publicSeed : Digest) (pk : PublicKey)
-    (tree : SlhDsaSecurity.Hypertree.TreeIndex) (leaf : SlhDsaSecurity.Hypertree.LeafIndex)
+    (tree : SLHDSA.SHAKE128s.Hypertree.TreeIndex) (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex)
     (forsKey honestForsKey : Digest) (signature : HypertreeSignature)
     (hseed : pk.seed = publicSeed)
     (hroot : pk.root = honestNode secretSeed publicSeed (layers - 1) 0)
-    (haccept : SlhDsaSecurity.Hypertree.verify (m := Id) forsKey signature pk tree leaf = true) :
+    (haccept : SLHDSA.SHAKE128s.Hypertree.verify (m := Id) forsKey signature pk tree leaf = true) :
     forsKey = honestForsKey ∨
       HypertreeFault secretSeed publicSeed layers signature 0 tree.toNat leaf forsKey
         honestForsKey :=
   (verify_fault_or_fors_signed secretSeed publicSeed pk tree leaf forsKey honestForsKey signature
     hseed hroot haccept).imp And.left id
 
-end SlhDsaSecurity.Extraction.HypertreeChain
+end SLHDSA.SHAKE128s.Extraction.HypertreeChain

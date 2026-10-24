@@ -50,7 +50,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.WarmedSplit
+namespace SLHDSA.SHAKE128s.WarmedSplit
 
 variable {α β : Type}
 
@@ -301,7 +301,7 @@ theorem cases_of_win (adversary : Adversary)
       result.1.1.forgery.message.frame = some message ∧
         Signature.fromBytes? result.1.1.forgery.signature = some parsed ∧
           ∀ honestForsKey : Digest,
-            @SlhDsaSecurity.Fors.publicKeyFromSignature Id Id.instMonad
+            @SLHDSA.SHAKE128s.Fors.publicKeyFromSignature Id Id.instMonad
                 (CacheReplay.replayQuery result.2) parsed.fors
                 (MessageDigest.forsIndices
                   (@Hashing.messageDigest Id (CacheReplay.replayQuery result.2)
@@ -327,7 +327,7 @@ theorem cases_of_win (adversary : Adversary)
                   parsed.randomizer
                   (@Scheme.keygenInternal Id Id.instMonad (CacheReplay.replayQuery result.2)
                     walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2).2 message)).toFin
-                (@SlhDsaSecurity.Fors.publicKeyFromSignature Id Id.instMonad
+                (@SLHDSA.SHAKE128s.Fors.publicKeyFromSignature Id Id.instMonad
                 (CacheReplay.replayQuery result.2) parsed.fors
                 (MessageDigest.forsIndices
                   (@Hashing.messageDigest Id (CacheReplay.replayQuery result.2)
@@ -367,4 +367,4 @@ theorem cases_of_win (adversary : Adversary)
     (GameBridge.keygen_publicKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2).2
     (@GameBridge.hypertree_of_verifyInternal (CacheReplay.replayQuery result.2) _ _ _ hinternal)
 
-end SlhDsaSecurity.WarmedSplit
+end SLHDSA.SHAKE128s.WarmedSplit

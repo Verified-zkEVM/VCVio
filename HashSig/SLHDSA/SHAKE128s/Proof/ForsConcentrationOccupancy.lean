@@ -34,7 +34,7 @@ public section
 open MeasureTheory ProbabilityTheory
 open scoped NNReal
 
-namespace SlhDsaSecurity.ForsConcentration
+namespace SLHDSA.SHAKE128s.ForsConcentration
 
 /-- The full vector of instance multiplicities in a word of uniformly sampled indices. -/
 @[expose] noncomputable def wordCounts {bins requests : Nat} (word : Fin requests → Fin bins) :
@@ -267,4 +267,4 @@ lemma poisson_integral_square_sub (rate : Nat) :
   norm_num [ForsMoments.touchard, Finset.sum_range_succ, Nat.stirlingSecond]
   ring_nf
 
-end SlhDsaSecurity.ForsConcentration
+end SLHDSA.SHAKE128s.ForsConcentration

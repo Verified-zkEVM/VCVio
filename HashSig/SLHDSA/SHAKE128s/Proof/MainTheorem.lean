@@ -24,7 +24,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.MainTheorem
+namespace SLHDSA.SHAKE128s.MainTheorem
 
 open Security
 
@@ -43,4 +43,4 @@ theorem prEvent_runAll (adversary : Adversary) (event : Outcome × Nat → Prop)
       Prod.fst <$> (simulateQ KeygenUniform.rom (countAllHashes (experiment adversary))).run ∅
       from rfl, prEvent_map]
 
-end SlhDsaSecurity.MainTheorem
+end SLHDSA.SHAKE128s.MainTheorem

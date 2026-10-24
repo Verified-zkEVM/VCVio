@@ -34,7 +34,7 @@ public section
 
 open OracleComp OracleSpec ENNReal
 
-namespace SlhDsaSecurity.Bridge
+namespace SLHDSA.SHAKE128s.Bridge
 
 variable {A B : Type}
 
@@ -510,4 +510,4 @@ theorem hasSecurityBits_of_bridge (b : SchemeBridge e SA SB)
   · exact (hE.prEvent_eq _).symm.trans hlimit
   · exact (hE.prEvent_eq _).symm.trans hbound
 
-end SlhDsaSecurity.Bridge
+end SLHDSA.SHAKE128s.Bridge

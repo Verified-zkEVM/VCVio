@@ -20,7 +20,7 @@ oracle implementation of the full verifier is a separate proof obligation.
 
 public section
 
-namespace SlhDsaSecurity.Checksum
+namespace SLHDSA.SHAKE128s.Checksum
 
 /-- The WOTS+ checksum of a message digest is at most `32 * (16 - 1) = 480`. -/
 theorem checksum_le (digits : MessageDigits) : checksum digits ≤ 480 := by
@@ -47,4 +47,4 @@ theorem chainVerificationCalls_bounds (digits : MessageDigits) :
   have h := checksum_le digits
   omega
 
-end SlhDsaSecurity.Checksum
+end SLHDSA.SHAKE128s.Checksum

@@ -25,7 +25,7 @@ public section
 
 open OracleComp OracleSpec ENNReal OracleComp.ProgramLogic.Relational
 
-namespace SlhDsaSecurity.ShareFinal
+namespace SLHDSA.SHAKE128s.ShareFinal
 
 open Security CanonicalGraph ShareGame ShareCouple ShareInv ShareWhole ShareEvent
 
@@ -64,4 +64,4 @@ theorem ex_comm {α β : Type} (mx : ProbComp α) (my : ProbComp β) (f : α →
   refine tsum_congr fun b => tsum_congr fun a => ?_
   ring
 
-end SlhDsaSecurity.ShareFinal
+end SLHDSA.SHAKE128s.ShareFinal

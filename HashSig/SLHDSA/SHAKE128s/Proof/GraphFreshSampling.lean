@@ -23,7 +23,7 @@ public section
 
 open OracleComp OracleSpec
 
-namespace SlhDsaSecurity.GraphFreshSampling
+namespace SLHDSA.SHAKE128s.GraphFreshSampling
 
 variable {Index State : Type}
 
@@ -173,4 +173,4 @@ theorem evalDist_evaluate_eq_uniform_program (input : Index → State → Bytes)
   rw [evaluate_eq_sample input step hseparated nodes hnodup state cache hfresh]
   exact evalDist_sample_eq_uniform_program input step nodes hnodup state cache
 
-end SlhDsaSecurity.GraphFreshSampling
+end SLHDSA.SHAKE128s.GraphFreshSampling
