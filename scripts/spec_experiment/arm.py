@@ -160,7 +160,28 @@ run_cmd do
         out += ['section'] + body + ['end']
         n_inl += len(body) + 2
     if helpers:
-        out += helpers.split('\n')
+        # count each helper declaration's heartbeats too: `#count_heartbeats in` before its
+        # docstring/attributes
+        hl = helpers.split('\n')
+        starts = set()
+        for i, l in enumerate(hl):
+            if re.match(r'^(?:@\[[^\]]*\]\s*)*(?:private |protected |noncomputable )*'
+                        r'(?:theorem|lemma|def|abbrev|instance)\b', l):
+                j = i
+                while j > 0 and (hl[j - 1].startswith('@[') or hl[j - 1].rstrip().endswith('-/')):
+                    if hl[j - 1].startswith('@['):
+                        j -= 1; continue
+                    k = j - 1
+                    while k >= 0 and not hl[k].lstrip().startswith('/--'):
+                        k -= 1
+                    if k < 0:
+                        break
+                    j = k
+                starts.add(j)
+        for i, l in enumerate(hl):
+            if i in starts:
+                out.append('#count_heartbeats in')
+            out.append(l)
     out += ['#count_heartbeats in'] + src[p:h] + main_text.split('\n') + report.split('\n') + src[e:]
     # imports: after the last import line; add the meta import the report needs
     last = max(i for i, l in enumerate(out[:p + 50]) if re.match(r'^(public )?(meta )?import ', l))
@@ -169,7 +190,7 @@ run_cmd do
     out = out[:last + 1] + extra + out[last + 1:]
     os.makedirs(SCRATCH, exist_ok=True)
     lo = p + len(extra) + 1 + n_inl
-    hi = lo + len(helpers.split('\n')) * bool(helpers) + 1 + (h - p) + len(main_text.split('\n'))
+    hi = lo + 2 * len(helpers.split('\n')) * bool(helpers) + 1 + (h - p) + len(main_text.split('\n'))
     copy = os.path.join(SCRATCH, f'{a.id}_{a.arm}.lean')
     open(copy, 'w', encoding='utf-8').write('\n'.join(out))
     t0 = time.time()
@@ -185,10 +206,11 @@ run_cmd do
         m = re.search(r'\.lean:(\d+):', l)
         return m is not None and lo <= int(m.group(1)) <= hi
     warns = [l for l in log.split('\n') if ': warning' in l and in_region(l)]
-    hb = re.search(r'Used (\d+) heartbeats', log)
-    usage = re.search(r'@usage #\[(.*?)\]', log, re.S)
+    hbs = [int(x) for x in re.findall(r'Used (\d+) heartbeats', log)]
+    hb = sum(hbs) if hbs else None
+    usage = re.search(r'@usage #?\[(.*?)\]', log, re.S)
     rec = {'id': a.id, 'arm': a.arm, 'ok': not errs, 'errors': len(errs), 'warnings': len(warns),
-           'heartbeats': int(hb.group(1)) if hb else None, 'lines': n_lines, 'tokens': n_toks,
+           'heartbeats': hb, 'heartbeats_parts': hbs, 'lines': n_lines, 'tokens': n_toks,
            'census_lines': int(row['lines']), 'stratum': row['stratum'], 'family': row['family'],
            'seconds': round(dt, 1),
            'library': [s.strip() for s in usage.group(1).split(',') if s.strip()] if usage else [],
