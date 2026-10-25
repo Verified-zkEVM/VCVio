@@ -47,7 +47,10 @@ Bridges the semantic coefficient-indexed carrier to mutable `Array` operations
 paths (e.g. concrete NTTs) operate on arrays via the kernel, then convert back
 to the backend carrier. -/
 structure PolyKernel (Coeff : Type u) (backend : PolyBackend Coeff) where
+  /-- Export a polynomial as the array of its `degree` coefficients. -/
   toArray : backend.Poly → Array Coeff
+  /-- Import a coefficient array as a polynomial; `coeff_ofArray` fixes the coefficients of an
+  array of length `degree`. -/
   ofArray : Array Coeff → backend.Poly
   toArray_size : ∀ p, (toArray p).size = backend.degree
   coeff_ofArray : ∀ a (h : a.size = backend.degree) i,
@@ -75,13 +78,22 @@ into a single computable bundle. Downstream scheme `Arithmetic.lean` modules
 this structure via `vectorNegacyclicRing` and then expose scheme-local type
 aliases (`Rq`, `Tq`, `RqVec`, etc.) that the rest of the scheme imports. -/
 structure NegacyclicRing (Coeff : Type u) [CommRing Coeff] where
+  /-- The coefficient-indexed storage for polynomials. -/
   backend : PolyBackend.{u, v} Coeff
+  /-- The array interface that executable fast paths use on `backend`. -/
   kernel : PolyKernel.{u, v} Coeff backend
+  /-- The zero polynomial. -/
   zero : backend.Poly
+  /-- The constant polynomial `1`, the multiplicative identity. -/
   one : backend.Poly
+  /-- Coefficient-wise addition. -/
   add : backend.Poly → backend.Poly → backend.Poly
+  /-- Coefficient-wise subtraction. -/
   sub : backend.Poly → backend.Poly → backend.Poly
+  /-- Coefficient-wise negation. -/
   neg : backend.Poly → backend.Poly
+  /-- Negacyclic multiplication, the product in `R[X] / (X^n + 1)`; its soundness is certified
+  by `NegacyclicRingSemantics.mul_sound`. -/
   mul : backend.Poly → backend.Poly → backend.Poly
   add_coeff : ∀ f g i, backend.coeff (add f g) i = backend.coeff f i + backend.coeff g i
   sub_coeff : ∀ f g i, backend.coeff (sub f g) i = backend.coeff f i - backend.coeff g i
@@ -98,6 +110,7 @@ This structure is `noncomputable` by design — it exists only for proof-level
 reasoning and is never evaluated at runtime. -/
 structure NegacyclicRingSemantics {Coeff : Type u} [CommRing Coeff]
     (ring : NegacyclicRing Coeff) where
+  /-- The element of `R[X] / (X^n + 1)` that an executable polynomial represents. -/
   quotientOf : ring.backend.Poly → NegacyclicQuotient Coeff ring.backend.degree
   zero_sound : quotientOf ring.zero = 0
   one_sound : quotientOf ring.one = 1

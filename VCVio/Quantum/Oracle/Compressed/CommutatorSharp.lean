@@ -207,20 +207,6 @@ section cell
 
 variable {Y : Type*} [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
 
-omit [DecidableEq Y] in
-/-- Against a nontrivial character, `∑ w, ‖c - χ w‖² = N (‖c‖² + 1)`. -/
-theorem sum_norm_sub_apply_sq {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (c : ℂ) :
-    ∑ w, ‖c - χ w‖ ^ 2 = Fintype.card Y * (‖c‖ ^ 2 + 1) := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
-  have e : ∀ w, ‖c - χ w‖ ^ 2 = (‖c‖ ^ 2 + 1) - 2 * (c * conj (χ w)).re := fun w ↦ by
-    rw [Complex.sq_norm, Complex.sq_norm, Complex.normSq_sub, ← Complex.sq_norm (χ w),
-      AddChar.norm_apply]
-    ring
-  simp_rw [e]
-  rw [Finset.sum_sub_distrib, Finset.sum_const, Finset.card_univ, nsmul_eq_mul, ← Finset.mul_sum,
-    ← Complex.re_sum, ← Finset.mul_sum, ← map_sum, hs]
-  simp
-
 /-- The phase cell is symmetric. -/
 theorem phaseCell_comm (χ : AddChar Y ℂ) (a b : Option Y) :
     phaseCell Y χ a b = phaseCell Y χ b a := by
@@ -254,7 +240,10 @@ theorem sum_norm_phaseCell_sub_sq {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (u : Y) 
   rw [Fintype.sum_option]
   simp only [hw, reduceCtorEq, ite_false, sub_zero, phaseCell_some_none hχ, norm_mul,
     AddChar.norm_apply, mul_one, norm_cellAmp_sq, mul_pow, ← Finset.mul_sum,
-    sum_norm_sub_apply_sq hχ, norm_inv, Complex.norm_natCast]
+    norm_inv, Complex.norm_natCast]
+  have hs := sum_norm_sub_signed_char_sq hχ (norm_one (α := ℂ)) (1 - χ u)
+  simp only [one_mul] at hs
+  rw [hs]
   have h1 : ‖(1 : ℂ) - χ u‖ ^ 2 = 2 - 2 * (χ u).re := by
     rw [Complex.sq_norm, Complex.normSq_sub, ← Complex.sq_norm (χ u), AddChar.norm_apply]
     simp

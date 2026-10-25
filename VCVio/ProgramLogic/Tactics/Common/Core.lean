@@ -39,6 +39,13 @@ register_option vcvio.vcgen.traceSteps : Bool := {
   descr := "Emit opt-in trace messages for chosen vcgen/rvcgen planned steps."
 }
 
+/-- Hand quantitative triples to core `vcgen` in exhaustive `vcgen`. -/
+register_option vcvio.vcgen.core : Bool := {
+  defValue := true
+  descr := "Let exhaustive `vcgen` step quantitative triples with core `vcgen` and the `@[spec]` \
+    rules of the lower reading before VCVio's own structural steps."
+}
+
 /-- Collect and report elapsed time for VCGen planner phases. -/
 register_option vcvio.vcgen.time : Bool := {
   defValue := false

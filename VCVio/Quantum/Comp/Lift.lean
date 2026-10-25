@@ -210,8 +210,12 @@ theorem isCostBound_liftAux_iff (c : ∀ ⦃A : QReg⦄, L.Op A → ℕ) (x : Qu
     (liftAux F x M e).IsCostBound (fun _ (o : L.FramedOp _) ↦ c o.op) n ↔ x.IsCostBound c n := by
   induction x using QuantumComp.inductionOn generalizing M n with
   | pure _ _ => exact Iff.rfl
-  | primBind _ o k ih => exact and_congr_right' (forall_congr' fun b ↦ ih b _ _)
-  | queryBind _ j E ℓ k ih => exact forall_congr' fun r ↦ ih r _ _
+  | primBind _ o k ih =>
+    rw [liftAux_primBind, isCostBound_primBind_iff, isCostBound_primBind_iff]
+    exact and_congr_right' (forall_congr' fun b ↦ ih b _ _)
+  | queryBind _ j E ℓ k ih =>
+    rw [liftAux_queryBind, isCostBound_queryBind_iff, isCostBound_queryBind_iff]
+    exact forall_congr' fun r ↦ ih r _ _
 
 /-- Lifting along a subsystem preserves operation costs exactly. -/
 theorem isCostBound_lift_iff (c : ∀ ⦃A : QReg⦄, L.Op A → ℕ) (S : Subsystem A M)

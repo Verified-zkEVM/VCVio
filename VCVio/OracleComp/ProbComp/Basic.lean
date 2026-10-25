@@ -45,6 +45,7 @@ By making this range inclusive we avoid the case of choosing from the empty rang
 def uniformFin (n : ℕ) : ProbComp (Fin (n + 1)) :=
   unifSpec.query n
 
+/-- `$[0..n]` is `uniformFin n`, a uniformly random element of `Fin (n + 1)`. -/
 notation "$[0.." n "]" => uniformFin n
 
 @[grind =]
@@ -117,17 +118,25 @@ The container type is given by `cont` with the resulting type given by `β`.
 NOTE: This current implementation doesn't impose any "correctness" conditions,
 it purely exists to provide the notation, could revisit that in the future. -/
 class HasUniformSelect (cont : Type u) (β : outParam Type) where
+  /-- Select an element of a collection uniformly at random, failing when there is none to
+  choose, as for the empty list. -/
   uniformSelect : cont → OptionT ProbComp β
 
 /-- Version of `HasUniformSelect` that doesn't allow for failure.
 Useful for things like `Vector` that can be shown nonempty at the type level. -/
 class HasUniformSelect! (cont : Type u) (β : outParam Type) where
+  /-- Select an element of a collection uniformly at random, without the possibility of
+  failure. -/
   uniformSelect! : cont → ProbComp β
 
 export HasUniformSelect (uniformSelect)
 export HasUniformSelect! (uniformSelect!)
 
+/-- `$ xs` is `uniformSelect xs`, a uniformly random element of `xs` that fails when `xs`
+offers none. -/
 prefix : 75 "$" => uniformSelect
+/-- `$! xs` is `uniformSelect! xs`, a uniformly random element of a collection `xs` that is
+nonempty by construction. -/
 prefix : 75 "$!" => uniformSelect!
 
 variable {cont : Type u} {β : Type}

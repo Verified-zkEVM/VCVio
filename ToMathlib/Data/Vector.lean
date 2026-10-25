@@ -9,12 +9,15 @@ public import ToMathlib.Data.Vector.Induction
 public import ToMathlib.Data.Vector.ListVector
 public import ToMathlib.Logic.Basic
 public import Mathlib.Control.Monad.Basic
+public import PolyFun.Control.Monad.Hom
 
 /-!
 # Lemmas about monadic operations on `Vector`
 
-Commutation lemmas for `Vector.mapM` against pure post-processing maps, and index-wise
-extraction lemmas for sequencing `Option`-valued vectors.
+Commutation lemmas for `Vector.mapM` against pure post-processing maps, index-wise
+extraction lemmas for sequencing `Option`-valued vectors, and the naturality of `Vector.ofFnM`
+under a monad morphism and its preservation of any predicate on programs closed under `pure` and
+`bind`.
 -/
 
 @[expose] public section
@@ -106,5 +109,33 @@ lemma mapM_id_some_index
         have hi_eq : i = ⟨L, Nat.lt_succ_self L⟩ := Fin.ext hilast
         subst i
         simp [hdecomp.2]
+
+/-- `Vector.ofFnM` is natural in the monad: a monad morphism applied to a monadic vector
+construction is the construction of the componentwise images. -/
+theorem ofFnM_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n) {α : Type} {k : ℕ}
+    (fm : Fin k → m α) (fn : Fin k → n α) (h : ∀ i, F (fm i) = fn i) :
+    F (Vector.ofFnM fm) = Vector.ofFnM fn := by
+  induction k with
+  | zero => simp [F.mmap_pure]
+  | succ k ih =>
+      rw [Vector.ofFnM_succ, Vector.ofFnM_succ, F.mmap_bind]
+      rw [ih (fun i => fm i.castSucc) (fun i => fn i.castSucc) (fun i => h i.castSucc)]
+      congr 1
+      funext xs
+      rw [F.mmap_bind, h (Fin.last k)]
+      simp [F.mmap_pure]
+
+/-- A predicate on monadic programs that holds of every `pure` and is preserved by `bind` holds of
+`Vector.ofFnM f` when it holds of every component `f i`. -/
+theorem ofFnM_pred {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    (Q : ∀ {α : Type u}, m α → Prop) (hpure : ∀ {α : Type u} (x : α), Q (pure x))
+    (hbind : ∀ {α β : Type u} (oa : m α) (ob : α → m β), Q oa → (∀ x, Q (ob x)) → Q (oa >>= ob))
+    {α : Type u} {k : ℕ} (f : Fin k → m α) (h : ∀ i, Q (f i)) : Q (Vector.ofFnM f) := by
+  induction k with
+  | zero => rw [Vector.ofFnM_zero]; exact hpure _
+  | succ k ih =>
+      rw [Vector.ofFnM_succ]
+      exact hbind _ _ (ih _ fun i => h i.castSucc) fun _ => hbind _ _ (h _) fun _ => hpure _
 
 end Vector

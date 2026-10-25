@@ -44,8 +44,12 @@ abbrev LeafIndex (p : Params) := Fin p.t
 /-- A bounded node coordinate in one of the `k` FORS trees.  Height zero denotes a leaf and
 height `a` denotes that tree's root. -/
 structure NodePosition (p : Params) where
+  /-- The FORS tree containing the node, one of the `k` trees. -/
   tree : TreeIndex p
+  /-- The node's height above the leaves, from `0` (a leaf) to `a` (the root). -/
   height : Fin (p.a + 1)
+  /-- The node's index among the `2 ^ (a - height)` nodes at its height within its own tree;
+  `NodePosition.globalIndex` offsets it by `tree`. -/
   index : Fin (2 ^ (p.a - height.val))
 
 /-- Global node coordinate stored in the FORS tree-address word at a typed position. -/

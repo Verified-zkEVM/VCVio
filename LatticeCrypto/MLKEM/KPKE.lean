@@ -25,16 +25,24 @@ namespace KPKE
 
 /-- The semantic public key for K-PKE. -/
 structure PublicKey (params : Params) (encoding : Encoding params) where
+  /-- The serialized NTT-domain vector `ByteEncode_12(t̂)`, the first `384k` bytes of the
+  encryption key `ek_PKE` (FIPS 203 Algorithm 13). -/
   tHatEncoded : encoding.EncodedTHat
+  /-- The 32-byte seed `ρ`, the last 32 bytes of `ek_PKE`, from which `SampleNTT`
+  (FIPS 203 Algorithm 7) expands the public matrix `Â`. -/
   rho : Seed32
 
 /-- The semantic secret key for K-PKE. -/
 structure SecretKey (params : Params) (encoding : Encoding params) where
+  /-- The serialized NTT-domain secret vector `ByteEncode_12(ŝ)`, which is the whole decryption
+  key `dk_PKE` (FIPS 203 Algorithm 13). -/
   sHatEncoded : encoding.EncodedTHat
 
 /-- The semantic ciphertext for K-PKE. -/
 structure Ciphertext (params : Params) (encoding : Encoding params) where
+  /-- The first component `c₁ = ByteEncode_du(Compress_du(u))` (FIPS 203 Algorithm 14). -/
   uEncoded : encoding.EncodedU
+  /-- The second component `c₂ = ByteEncode_dv(Compress_dv(v))` (FIPS 203 Algorithm 14). -/
   vEncoded : encoding.EncodedV
 
 variable {params : Params}

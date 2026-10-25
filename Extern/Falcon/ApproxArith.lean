@@ -101,6 +101,8 @@ corollary. `Valid` has to be threaded through every intermediate a proof reasons
 
 The machine epsilon for IEEE-754 binary64 is `2^{-52} ≈ 2.22 × 10^{-16}`. -/
 class HasRealSemantics (F : Type) [FloatLike F] (ε : outParam ℝ) where
+  /-- The real number a value of `F` denotes. It is total, so non-finite encodings also
+  receive some real value. -/
   interp : F → ℝ
   /-- The operands on which this format's arithmetic laws are guaranteed to hold
   (e.g. normal, finite binary64 values). -/

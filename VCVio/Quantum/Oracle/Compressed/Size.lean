@@ -251,8 +251,9 @@ theorem DatabaseSupportedOn.run_compressedRuntime (I : L.Interp)
     · rw [DSubInstrument.branch_ret_of_ne _ hp]
       exact querySupportedOn_zero _ _
   | primBind _ o k ih =>
+    rw [QuantumComp.isQueryBound_primBind_iff] at hx
     rw [QuantumRuntime.run_primBind, DSubInstrument.branch_bind_apply]
-    exact QuerySupportedOn.tsum fun b ↦ ih b (fun i ↦ hx i b) (hρ.amplify _)
+    exact QuerySupportedOn.tsum fun b ↦ ih b (hx b) (hρ.amplify _)
   | queryBind _ i E ℓ k ih =>
     obtain ⟨hq, hk⟩ := (QuantumComp.isQueryBound_queryBind_iff i E ℓ k _).mp hx
     have hb : Function.update (fun _ : Unit ↦ q) i (q - 1) = fun _ ↦ q - 1 :=
@@ -276,7 +277,9 @@ theorem forallQueries_compressedRuntime (I : L.Interp) {x : QuantumComp L (qromS
         (Set.Iic n) σ) x ρ := by
   induction x using QuantumComp.inductionOn generalizing q t with
   | pure _ _ => trivial
-  | primBind _ o k ih => exact fun b ↦ ih b (fun i ↦ hx i b) htn (hρ.amplify _)
+  | primBind _ o k ih =>
+    rw [QuantumComp.isQueryBound_primBind_iff] at hx
+    exact fun b ↦ ih b (hx b) htn (hρ.amplify _)
   | queryBind _ i E ℓ k ih =>
     obtain ⟨hq, hk⟩ := (QuantumComp.isQueryBound_queryBind_iff i E ℓ k _).mp hx
     have hb : Function.update (fun _ : Unit ↦ q) i (q - 1) = fun _ ↦ q - 1 :=

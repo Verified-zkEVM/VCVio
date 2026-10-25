@@ -6,6 +6,8 @@ first. The tracking issue is #706.
 
 ## Status
 
+Merged:
+
 | PR | Content |
 |---|---|
 | #850 | Quantum operations, subinstruments, dependent subinstruments, outcome measures, partial trace |
@@ -13,8 +15,22 @@ first. The tracking issue is #706.
 | #852 | State vectors, operator norms and the bridge to density matrices; the hybrid bound |
 | #853 | Quantum programs, runtimes, the QROM, classical algorithms in the QROM, combs |
 | #854 | Choi matrices, Kraus operators and Stinespring form |
+| #855 | The compressed random oracle as a quantum runtime |
+| #856 | How much one compressed-oracle query can disturb a database property |
+| #857 | Query mass and the hybrid argument for general quantum programs |
+| #859 | The optimal constant 24 for compressed-oracle commutator bounds, including checked reads |
+| #878 | The tutorial, guide and reference in [`docs/quantum/`](../quantum/README.md) |
+| #882 | Subsystems and lifting programs along them |
 
-#851 depends only on `main`. The others are stacked on #850.
+Open:
+
+| PR | Content |
+|---|---|
+| #858 | Vector commitments, multi-extractors and salted Merkle trees (draft) |
+| #860 | Emulated quantum oracles, classical reads and total call budgets (draft) |
+| #861, #862, #864, #871, #873–#875, #877 | Vector commitments against quantum adversaries; stacked on #860 (drafts) |
+| #903 | Sequencing as PolyFun's indexed bind; query and cost budgets as PolyFun charge bounds |
+| #904 | Existing Mathlib and VCVio lemmas in place of local copies (draft) |
 
 ## Decisions
 

@@ -358,6 +358,12 @@ lemma prEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι}
   classical
   simpa only [propInd_eq_ite] using prEvent_eq_wp_indicator oa p
 
+/-- The probability of a proposition-valued computation is the expectation of its indicator.
+An event over several draws, `Pr{let x ← oa; let y ← ob x}[p x y]`, is of this form. -/
+lemma prEvent_eq_wp {ι : Type u} {spec : OracleSpec ι} [OracleSpec.AnswerMeasure spec]
+    (mx : OracleComp spec Prop) : prEvent mx = wp mx (fun P => propInd P) := by
+  simpa using prEvent_eq_wp_propInd mx id
+
 /-- Assertions agreeing on possible outputs have equal quantitative WP. -/
 lemma wp_congr_of_support (oa : OracleComp spec α) {f g : α → ℝ≥0∞}
     (hfg : ∀ x ∈ support oa, f x = g x) : wp oa f = wp oa g :=
