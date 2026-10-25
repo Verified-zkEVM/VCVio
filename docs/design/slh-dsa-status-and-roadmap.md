@@ -13,10 +13,11 @@ accounting of the classical random-oracle bound, and its relation to the 127-bit
 A capability is listed as DONE only when its source and validation are on `main`. Open pull
 requests are named as such. Conditional EUF-CMA composition, the SUF residual bound and the
 SP 800-230 profile corollary are on `main`. They leave the scheme-to-game reductions as
-hypotheses and do not prove a small concrete bound or bound the same-message SUF residual. The
-open pull request #766 proves an unconditional SUF-CMA bound, and with it EUF-CMA at the same
-bound, in the classical random-oracle model
-([below](#classical-random-oracle-bound-open-766)).
+hypotheses and do not prove a small concrete bound or bound the same-message SUF residual. PR #766 adds an unconditional SUF-CMA bound, and with it EUF-CMA at the same bound, in the
+classical random-oracle model
+([below](#classical-random-oracle-bound-merged-766)). It merged as
+`55c29f083ccde8850b4a0dc5a7d5d13ff5cc1dc8` on 2026-10-24. The specialized #912 development
+is an additive integration candidate until its own merge and exact-head validation are recorded.
 
 ## Where the work lives
 
@@ -57,11 +58,20 @@ with `--lint`, `--test`, `--ffi`, and `--axioms` selecting the slower passes.
 
 ## Milestone status ledger
 
-Verified against `origin/main` at `fb4a312d5778b247fb9105b54e3ae01b08004d40`.
+The original milestone ledger and G1–G10/primitive-assumption gate diagnoses below describe
+`origin/main` at `fb4a312d5778b247fb9105b54e3ae01b08004d40`. Preserve that historical snapshot:
+#766 subsequently added the general-depth ROM scheme, security results and wider executed vectors
+described in the current classical-ROM section. Its merged commit
+`55c29f083ccde8850b4a0dc5a7d5d13ff5cc1dc8` extends that snapshot. The independently scoped #886
+follow-up subsequently merged as `96754a37e739270ac5bb8fe7deaeafef6964b688`. The added #766 and
+#886 rows use their verified GitHub merge times; the older rows retain their historical records. The outstanding primitive-assumption reduction and full FIPS
+conformance gates are separate from the classical-ROM security theorem.
 
 "Merged" means one thing throughout this document and is checkable from a clone: the pull
 request's squash-merge commit, located by `git log origin/main --grep='(#N)'`, is an ancestor of
-that snapshot under `git merge-base --is-ancestor`. Every commit in the table below satisfies it.
+the indicated snapshot under `git merge-base --is-ancestor`. Every commit in the table below
+satisfies that ancestry test against the newer #886 merge revision. This does not re-audit the
+older rows' merge timestamps or the original milestone/gate diagnoses.
 The one thing not checkable from a clone is the stacking order, which is each pull request's base
 branch on GitHub. No head of an open pull request is quoted anywhere: a head is whatever was last
 pushed, so a quoted one goes stale without notice.
@@ -80,6 +90,8 @@ pushed, so a quoted one goes stale without notice.
 | #715 | `43e7e96f8a01d1fd2e13be8816b4d3d3074a0c0b` | 2026-09-16T10:54:59Z |
 | #718 | `4ae9371b6a803918adcd787a10b8c1226ebc34f5` | 2026-09-16T11:51:52Z |
 | #723 | `7863088c70f06ea5cbec8b26d309624ecdb1e1b1` | 2026-09-16T12:24:09Z |
+| #766 | `55c29f083ccde8850b4a0dc5a7d5d13ff5cc1dc8` | 2026-10-24T17:38:57Z |
+| #886 | `96754a37e739270ac5bb8fe7deaeafef6964b688` | 2026-10-24T21:49:55Z |
 
 | Milestone | Status | Landed in | Realized by | Gap against the plan's wording |
 |---|---|---|---|---|
@@ -124,11 +136,12 @@ pushed, so a quoted one goes stale without notice.
   Neither same-message SUF residual arm is bounded. The profile fixes parameters and
   coefficients; it does not discharge these obligations or enforce the signing limit.
 - **General-`d` security gate: not started**, and correctly claimed nowhere.
-- **Classical random-oracle SUF-CMA bound: proved on the open pull request #766**, at general
-  `d`, in the three-oracle model, and for the SHAKE parameter sets over a single SHAKE256 random
-  oracle on byte strings; not on `main`. See the next section.
+- **Classical random-oracle SUF-CMA bound: merged in #766**, at general `d`, in the three-oracle
+  model, and for the SHAKE parameter sets over a single SHAKE256 random oracle on byte strings.
+  This closes the classical-ROM milestone, while the broader construction and deployment work
+  listed below remains open.
 
-## Classical random-oracle bound (open, #766)
+## Classical random-oracle bound (merged #766)
 
 #766 proves SUF-CMA security of SLH-DSA, strong unforgeability under chosen-message attack, in
 the classical random-oracle model in which the
@@ -205,6 +218,56 @@ game transport, and complete FIPS conformance. The pure-mode SHAKE wire game is 
 [validated review follow-up](slh-dsa-classical-rom-bound.md#validated-review-follow-up-2026-10-23)
 for the executable evaluators, kernel-certified table, budget-range certificates, wider vectors,
 security profiles, and remaining construction/deployment obligations.
+
+## Specialized SHAKE-128s strong-unforgeability proof (#912)
+
+The specialized development under `HashSig/SLHDSA/SHAKE128s/` contains a transcription, its
+probability proof and a program/distribution bridge to the library's deterministic pure-mode
+SHAKE-128s scheme. `SLHDSA.SHAKE128s.slhDsa_sufCma_127` bounds strong forging probability by
+`q / 2^127` for `q ≥ 1`, under probability-one work and lifetime caps. The original game permits
+variable contexts in signing requests and uses byte-string signatures. It shares one random
+oracle with fixed 30-byte answers across key generation, signing, the adversary and verification;
+shorter hash roles read the first 16 bytes. Key seeds are independent and uniform.
+
+Work is the sum of signing requests, direct adversary hash calls and final-verification hash
+calls, including repeated oracle inputs. At most `2^64` signing requests are allowed. The model
+records key-generation and signer hashes separately and excludes them from this work bound.
+The original public-key interface is structured. The additive candidate's
+`Bridge.strongUnforgeableAdvantage_eq_fixedContext` identifies its fixed-context adaptation with
+that actual byte-public-key wire game. `Bridge.withinSigningLimit_fixedContext` and
+`Bridge.hasQueryBound_fixedContext` derive the actual probability-one caps from a wire
+adversary's `RomQueryBound q_h q_s`. The work transport needs no lifetime premise; the signing
+limit and both security corollaries additionally use `q_s ≤ 2^64`. The external verifier has a
+proved universal cap of 3929 calls, without an acceptance premise.
+`wireStrongAdvantage_le_workBound` gives `(q_h + q_s + 3929) / 2^127`;
+`wireStrongAdvantage_le_min_bound` combines it with the existing general SHAKE bound. These
+wire corollaries share deterministic signing, one fixed valid context, independent uniform seeds,
+and the fixed 30-byte oracle. The original variable-context theorem remains unchanged.
+
+The original general-depth results, all-six-set deterministic/hedged SHAKE bounds, pure-wire
+reductions, exact evaluators, certified table and three-oracle range certificates remain
+available. The two design records describe their distinct accounting and interfaces:
+[general ROM bounds](slh-dsa-classical-rom-bound.md) and
+[specialized SHAKE-128s](slh-dsa-shake128s-suf-cma.md).
+
+Canonical additive checkpoint B0 rebuilt all 238 original specialized modules and their headline
+on the locked dependencies before adapter work. Its historical recorded head and source-neutral
+restack onto merged #766 are listed in the
+[integration execution record](slh-dsa-pr766-pr912-integration-plan.md#implementation-execution-record).
+The later canonical build checkpoint K at `e32b95e2` passed the strict recorded-head build under
+the actual `ecac686f` dependency lock. It covers C5 plus merged #886/#911. The exact C4/C6
+canonical union was independently reviewed and committed as K2, `611ddbe3`; its targeted
+source-candidate build, five public axiom audits, 11 preserved headline comparisons and four direct
+runtime checks passed on that lock. These targeted checks do not replace the final combined
+candidate's clean recorded-head full gate or remote CI, which remain pending. A historical
+ancestor's pass does not certify a later or rebased commit.
+The named `slhdsa_shake128s_compiler_tests` imports the enlarged `HashSig` umbrella;
+`slhdsa_shake128s_game_tests` checks actual source counts and cache-hit charging, and
+`slhdsa_shake128s_wire_bridge_tests` executes actual adapter translation/freshness and rejected-input
+controls. All are explicit `lake test` steps whose assertions must actually execute in the final
+validation log; test-library compilation alone is insufficient. Variable-length-XOF game transport, concrete-SHAKE
+computational security, prehash collision accounting, honest-work certificates, byte-level range
+certificates and the second construction remain separate work.
 
 ## Security lane: slices, status, and source correspondence
 

@@ -1,7 +1,9 @@
 # SLH-DSA integration plan for PRs 766 and 912
 
-Status: execution specification, 2026-10-24. The implementation and merge gates below remain
-open unless the validation record explicitly marks a probe complete.
+Status: execution specification and implementation record, updated 2026-10-24. The pinned inputs
+and pre-implementation probes are historical evidence. Completed implementation checkpoints are
+listed in the execution record below; final combined validation and merging require their own
+explicit acceptance at the exact new source head.
 
 Preserve #766's general classical-ROM security results and reusable framework APIs. Land #912
 as an additional deterministic SHAKE-128s result, connect it to the existing wire-game API, and
@@ -296,10 +298,103 @@ Keep changes reviewable as separate commits: shared FORS repair; additive proof 
 wire/runtime/log adapter; budget transport and minimum bound; regressions and documentation.
 Do not merge a commit with a failed gate or an unresolved finding about its claimed theorem.
 
+## Implementation execution record
+
+The implementation preserves all 238 original specialized Lean modules and their design note
+byte-for-byte, alongside the original general-ROM results, CSV and tests. Additions implement the
+fixed-context bridge, its exact advantage equality, actual phase and verifier budgets, public
+work/minimum bounds, and executable compiler/counting/wire controls. The additive proof and
+adapter commits preserve their dependency lock and warning, lint, initialization and axiom
+baselines. The later upstream canonical dependency change is recorded separately below.
+
+| Checkpoint | Recorded source revision | Result and scope |
+|---|---|---|
+| A0 canonical lock | `65dc7c27bba380b9bfa1ae33d2df3e5fd7a8ce54` | Recorded `HashSig VCVioTest HashSigTest` build passed with clean source and all 11 dependencies at their locks |
+| A1 FORS repair | `c50715c2da8cbadf92747a13bfdb35c81537fb3c` | Recorded `validate.sh --lint --test --axioms` passed and the 18-row table remained byte-identical. Separate targeted captures showed the 11 preserved headline outputs byte-identical; targeted secret-order positive and old-order negative controls executed |
+| #766 merge | `55c29f083ccde8850b4a0dc5a7d5d13ff5cc1dc8` | Squash-merged onto main; its source tree equals the accepted A1 tree `b76cc19a057a85fef6c92963d73603bdb6edd085` |
+| B0 additive import | `cfe2e1dc91bbff4ba927e319c959765d5904f771` | Recorded canonical build passed for both families, all 238 original specialized modules and both test libraries; compiler canary positive/negative/restored controls passed before this gate |
+| Actual merged-base restack | `b00e9593b659e800c01f0da5e0796fd3e116f5a3` | Source-neutral rebased B0 tree `1179990ea7d05cb6c22a9f105d2f1d09a816a56e`; historical B0 acceptance remains attached to its old commit |
+| C1 definitions | `0546b3f6e744945d8682d232c0ae39dc0a63adca` | Independently reviewed fixed-context definitions, framing/sign/verify equations and registered executable translation control |
+| C2 key/log foundations | `6bb9331ae926470855eb2285f2931f1f9bc589db` | Independently reviewed actual generated-key consistency, None exclusion, exact signing/verification and arbitrary-prefix returned-pair freshness |
+| C3 operational/runtime phase | `a57053c5db5f6dfbb0054c8c99f7d667f30e8238` | Independently reviewed actual phase equations and syntactic bounds; proved-equal computable runner; exact selected-work 4, full-hash 6, cache-miss 5 and private-sample 2 fixture and asymmetric attribution negative controls |
+| C5 actual budget transport | `abe79fe64387d0306673683d9c6a59f02a6b33f0` | Independently reviewed complete-game and arbitrary-cache support, actual universal verifier cap 3929, and both public syntactic-to-counted budget transports |
+| C4 advantage and wire runtime | `3039540f0c9efc83ec9576cd40e9716114bb0b43` | Independently reviewed complete winning-program and advantage equality, with no budget/lifetime premise; actual adapter replay/fresh-pair controls, FIPS framing/decoding rejection and invalid-context signing controls executed with counter/backend observations |
+| C6 public bounds | `60371098af9663d4ac70daf0d5b2b99834ffff22` | Independently reviewed literal `(qh + qs + 3929) / 2^127` wire corollary and its minimum with the full existing general bound, including its weak-seed contribution; targeted build, two public axiom audits, compiler startup and source/import/style checks passed |
+
+The A0–C6 implementation checkpoints above use the historical lock: Lean `v4.35.0`, Mathlib
+`56a005855ea17e0b0958f73ec801ae140b0a1679` and PolyFun
+`5670109ccaaaf945c6003519244b76e0777ecc45`. Each self-contained work item was committed only
+after an independent adversarial review. The phase, budget and public security proofs use only
+`propext`, `Classical.choice` and `Quot.sound`.
+
+The full combined `validate.sh --lint --test --axioms` run must occur on the clean commit containing
+the complete source, generated imports and these final documentation updates, on the current
+canonical base and dependency lock described below. Preserve its external report and log
+fingerprints with that exact PR revision; do not commit a self-referential report afterward. Source-neutral restacks preserve
+source trees, not the validity of a recorded-head acceptance result for the new commit.
+
+The original probe record below retains its original environment and incomplete-probe status.
+It does not supersede these actual canonical implementation checkpoints. The independent #886
+follow-up remains separate from this adapter and does not supply a prerequisite API.
+
+### Current canonical base and dependency lock
+
+The independent #886 provider/fresh-answer follow-up merged as
+`96754a37e739270ac5bb8fe7deaeafef6964b688` at 2026-10-24T21:49:55Z. Its parent is
+`b9f70da16cd2549e93e0e09a0780b8ba2df3bc86` (#911), which repins PolyFun to
+`ecac686fd8a3b4763d3df2e738c91947bdec40d6` and removes upstream-owned local control copies.
+Lean remains `v4.35.0` and Mathlib remains `56a005855ea17e0b0958f73ec801ae140b0a1679`.
+The actual merged base's `lake-manifest.json` SHA-256 is
+`68e3e9f60f635be3e88e676b871b3419004f882626da3ab85523cb2b374da8d2`.
+
+This later canonical lock is distinct from the historical `5670109c` lock of A0–C6. Source-tree
+preservation and a clean static union do not certify dependency compatibility or a later source
+head. The canonical original-238 compatibility checkpoint was independently reviewed and committed
+as K, `e32b95e2aee61de6f40f815f9e58bdaa309e92be`, tree
+`d392fe716800451376c7f9de780984c43ca1ff48`. Its strict recorded-head
+`lake build HashSig VCVioTest HashSigTest` passed with clean identical before/after source snapshots
+and all 11 dependencies clean at their locks. The fresh B1 compilation covered all 238 original
+specialized modules; the original 239 source/design-note hashes remain unchanged.
+
+K contains the C5 development together with actual merged main at `96754a37`; it excludes C4 and
+C6. K is a build checkpoint, not the complete final-head validation or remote CI. Its external
+report SHA-256 is
+`c9774f37be4d6a86198477c8b4d6996f71dcc01818144b667d9853843e025996`;
+the command-log SHA-256 is
+`69dacfbb213c837b95f73ae429ad89000b4c858eb3ab54dd2f83e68de73d056e`.
+
+The exact C4/C6 canonical union was independently reviewed and committed as K2,
+`611ddbe35c2316aa8469f423bb16007fbb600d26`, tree
+`2daf2b7ef4cf8609660b6db37623e2d088bec975`, with parents K and C6. Its source-candidate
+`HashSig VCVioTest HashSigTest` build passed in 75.824 seconds on the actual `ecac686f` lock.
+The five public exports report only the three standard axioms; all 11 preserved headline
+reports are identical. The compiler, counted-game, wire-bridge and FORS-order executables were
+built and each passed direct bounded execution. Generated-import, exposure and source-preservation
+checks passed; all original 239 source/design-note hashes and the five accepted C4/C6 source blobs
+are unchanged. This is targeted source-candidate build/API/runtime acceptance attached to the
+exact committed tree, not the final strict recorded-head full gate or remote CI. Its build-report
+SHA-256 is `c2e42e2cb2d7e7d9527da5c972af83745d21a4f2e4042f2c14a747b5f3e52437`.
+
+The final recorded-head full gate and remote CI must run on the complete canonical source commit
+with the `ecac686f` lock, including these documentation updates. Keep prior probe/checkpoint reports
+attached to their original revisions. The #886 merge remains an independent generic follow-up;
+the SHAKE-128s adapter and public bounds do not acquire a new #886-specific hypothesis or API.
+The work-budget transport needs `RomQueryBound` alone. The signing-limit transport and both
+security corollaries additionally use `qs ≤ signingLimit = 2^64`; the verifier overhead is a
+universal upper cap, not an assertion that every verifier path makes 3929 calls.
+
+The final full gate includes the seven default libraries and the optional `VCVioCslib` facade.
+The committed `lake test` driver has 35 explicit steps: two builds and 33 executable invocations,
+with an additional independent Python CSV check. Its log must show the counted-game and
+wire-bridge assertions actually running, including freshness and rejected-input checks;
+compiling the test-library glob alone does not discharge those runtime gates.
+
 ## Validation record
 
-These probes validate the repair scope and interface specification. They are distinct from
-the required canonical-base Lake build and final integration validation.
+These historical pre-implementation probes validate the repair scope and interface specification.
+Their incomplete statuses and differing PolyFun revision are retained as provenance. They are
+distinct from the completed canonical implementation checkpoints recorded above and the final
+combined recorded-head gate.
 The [machine-readable record](slh-dsa-pr766-pr912-evidence/validation-record.json) pins the
 probe environment, artifact hashes, completed checks, and outstanding obligations.
 
@@ -335,8 +430,9 @@ modules and its final headline have not been rebuilt by the coexistence probe.
 
 Reproduce the validation-gate fixtures with
 `python3 docs/design/slh-dsa-pr766-pr912-evidence/test-validate-recorded-head.py`.
-These fixtures exercise commit/lock enforcement; the separate A0 compilation passed as recorded
-above. B0 and full implementation validation remain pending.
+These fixtures exercise commit/lock enforcement. The completed canonical A0, A1 and B0 gates
+are recorded in the implementation execution record; the final combined candidate must still
+pass its own recorded-head full validation.
 
 ## Follow-ups after both security developments coexist
 
@@ -418,7 +514,9 @@ cannot supply a deployment security claim. Neither merge closes these milestones
 
 ## Effort and checkpoints
 
-Planning estimates are focused engineer-days, excluding independent review and CI queue time.
+The original planning estimates below are retained as forecasts in focused engineer-days,
+excluding independent review and CI queue time. Canonical A0 and B0 now pass as recorded above;
+these estimates do not turn remaining construction/deployment milestones into completed work.
 
 | Work | Estimate | Checkpoint |
 |---|---:|---|

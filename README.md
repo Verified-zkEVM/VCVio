@@ -97,6 +97,25 @@ build boundaries and the staged consolidation.
   construction remain open. The SHA-2 parameter sets have no single-oracle model. A complete
   FIPS conformance result is not proved; see `docs/design/slh-dsa-status-and-roadmap.md` and,
   for the accounting and levels, `docs/design/slh-dsa-classical-rom-bound.md`.
+  `HashSig/SLHDSA/SHAKE128s/` adds a specialized deterministic SHAKE-128s pure-mode proof,
+  `SLHDSA.SHAKE128s.slhDsa_sufCma_127`. Its signing requests carry variable contexts and its
+  signatures are byte strings. Over one shared random oracle with fixed 30-byte answers and
+  independent uniform key seeds, the winning probability is at most `q / 2^127` for `q ≥ 1`,
+  subject to probability-one work and signing-request caps. Work counts signing requests, direct
+  adversary hash calls and final-verification hash calls; the signing lifetime is at most
+  `2^64` requests. Key-generation and signer hashes are outside that work count. The
+  [specialized design record](docs/design/slh-dsa-shake128s-suf-cma.md) specifies this interface.
+  The fixed-context byte-wire interface has the same advantage as this counted game
+  (`Bridge.strongUnforgeableAdvantage_eq_fixedContext`). A wire adversary with syntactic budgets
+  `RomQueryBound q_h q_s` and `q_s ≤ 2^64` has advantage at most
+  `(q_h + q_s + 3929) / 2^127` (`wireStrongAdvantage_le_workBound`); the 3929 calls are a proved
+  universal cap for the actual external verifier, including losing and malformed forgeries.
+  `wireStrongAdvantage_le_min_bound` retains the smaller of this bound and the existing general
+  SHAKE bound on their common deterministic, fixed-valid-context, uniform-seed scope. The
+  original variable-context headline and the broader six-set deterministic and hedged results
+  remain available. See the
+  [integration execution record](docs/design/slh-dsa-pr766-pr912-integration-plan.md#implementation-execution-record)
+  for the accepted revisions and exact-head validation requirements.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
 - `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr.
