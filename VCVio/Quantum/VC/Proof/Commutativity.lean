@@ -5,7 +5,6 @@ Authors: Quang Dao
 -/
 
 module
-
 public import VCVio.Quantum.MatrixMap.BlockNorm
 public import VCVio.Quantum.Oracle.Compressed.CommutatorSharp
 public import VCVio.Quantum.Oracle.Compressed.Size
@@ -161,7 +160,8 @@ variable {P : Type u} {In : P → QReg} (F : EmulatedOracle P In) (g : F.S → �
 /-- The steps of an emulated oracle whose unitaries raise the grade by at most one raise the grade
 of the support by at most one. -/
 theorem querySupportedOn_toRuntime_step
-    (hF : ∀ i a a' d d', F.U i (a', d') (a, d) ≠ 0 → g d' ≤ g d + 1) (i : P) (r : Unit) (t : ℕ)
+    (hF : ∀ i a a' d d', F.U i (a', d') (a, d) ≠ 0 → g d' ≤ g d + 1)
+    (i : P) (r : Unit) (t : ℕ)
     (σ : Matrix (In i × F.S) (In i × F.S) ℂ)
     (hσ : QuerySupportedOn (fun m : In i × F.S ↦ g m.2) (Set.Iic t) σ) :
     QuerySupportedOn (fun m : In i × F.S ↦ g m.2) (Set.Iic (t + 1))
@@ -175,7 +175,8 @@ omit F g in
 theorem coherent_U_grade {P : Type} [Fintype P] [DecidableEq P] {In : P → QReg}
     (F : EmulatedOracle P In) (g : F.S → ℕ)
     (hF : ∀ i a a' d d', F.U i (a', d') (a, d) ≠ 0 → g d' ≤ g d + 1) (i : Unit)
-    (a a' : cohIn In) (d d' : F.S) (h : F.coherent.U i (a', d') (a, d) ≠ 0) : g d' ≤ g d + 1 := by
+    (a a' : cohIn In) (d d' : F.S) (h : F.coherent.U i (a', d') (a, d) ≠ 0) :
+    g d' ≤ g d + 1 := by
   obtain ⟨p', b'⟩ := a'
   obtain ⟨p, b⟩ := a
   by_cases hp : p' = p
@@ -205,7 +206,8 @@ theorem compressedVCOracle_withExtract_U_size_le (i : Fin k) (p : Fin k ⊕ Unit
     (h : ((compressedVCOracle k X Y).withExtract ME code).U p (a', d') (a, d) ≠ 0) :
     (d' i).size ≤ (d i).size + 1 := by
   rcases p with j | u
-  · change onFactor (splitAt (X × Y) (Database X Y) j) (compressedOracle X Y) (a', d') (a, d) ≠ 0
+  · change onFactor (splitAt (X × Y) (Database X Y) j)
+      (compressedOracle X Y) (a', d') (a, d) ≠ 0
       at h
     rw [onFactor_apply] at h
     split_ifs at h with hsplit
@@ -237,14 +239,16 @@ theorem querySupportedOn_jointPost₂_compressedVCOracle_withExtract (i : Fin k)
       (((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime.jointPost₂
         .instruments x ρ a).matrix := by
   set F := ((compressedVCOracle k X Y).withExtract ME code)
-  have hR := F.coherent.querySupportedOn_toRuntime_step (fun d : Fin k → Database X Y ↦ (d i).size)
+  have hR := F.coherent.querySupportedOn_toRuntime_step
+    (fun d : Fin k → Database X Y ↦ (d i).size)
     fun j b b' d d' h ↦ F.coherent_U_grade (fun d : Fin k → Database X Y ↦ (d i).size)
       (fun p b b' d d' h ↦ compressedVCOracle_withExtract_U_size_le ME code i p b b' d d' h)
       j b b' d d' h
   have h0 : QuerySupportedOn (fun m : A × (Fin k → Database X Y) ↦ (m.2 i).size) (Set.Iic 0)
       (ρ.matrix ⊗ₖ F.coherent.toRuntime.init.matrix) := by
     intro m m' hm
-    change (ρ.matrix ⊗ₖ (SubState.basis fun _ : Fin k ↦ (Database.empty : Database X Y)).matrix)
+    change (ρ.matrix ⊗ₖ
+      (SubState.basis fun _ : Fin k ↦ (Database.empty : Database X Y)).matrix)
       m m' ≠ 0 at hm
     rw [SubState.matrix_basis, kroneckerMap_apply] at hm
     have h := right_ne_zero_of_mul hm
@@ -347,7 +351,8 @@ theorem querySupportedOn_jointPost₂_compressedVCOracle_mixed (i : Fin k) {A B 
   have h0 : QuerySupportedOn (fun m : A × (Fin k → Database X Y) ↦ (m.2 i).size) (Set.Iic 0)
       (ρ.matrix ⊗ₖ R.init.matrix) := by
     intro m m' hm
-    change (ρ.matrix ⊗ₖ (SubState.basis fun _ : Fin k ↦ (Database.empty : Database X Y)).matrix)
+    change (ρ.matrix ⊗ₖ
+      (SubState.basis fun _ : Fin k ↦ (Database.empty : Database X Y)).matrix)
       m m' ≠ 0 at hm
     rw [SubState.matrix_basis, kroneckerMap_apply] at hm
     have h := right_ne_zero_of_mul hm
@@ -403,7 +408,8 @@ theorem re_trace_mul_mul_conjTranspose_le_of_blockDiagonal {N B o : Type*} [Fint
   have hn : ‖(blockDiagonal F).submatrix e e‖ ^ 2 ≤ r := by
     rw [l2_opNorm_submatrix_equiv]
     calc ‖blockDiagonal F‖ ^ 2 ≤ √r ^ 2 :=
-          pow_le_pow_left₀ (norm_nonneg _) (l2_opNorm_blockDiagonal_le F (Real.sqrt_nonneg r) hb) 2
+          pow_le_pow_left₀ (norm_nonneg _)
+            (l2_opNorm_blockDiagonal_le F (Real.sqrt_nonneg r) hb) 2
       _ = r := Real.sq_sqrt hr
   rw [key]
   exact (MatrixMap.re_trace_conj_le _ hpsd).trans
@@ -419,7 +425,8 @@ register and a block index: the block register holds the oracle query register, 
 extractor and the other databases. -/
 @[expose]
 def comSplit (i : ι) :
-    ((XY × (Tc × Z)) × Env) × (ι → DB) ≃ ((XY × DB) × (Z × Env)) × (Tc × ({j // j ≠ i} → DB))
+    ((XY × (Tc × Z)) × Env) × (ι → DB) ≃
+      ((XY × DB) × (Z × Env)) × (Tc × ({j // j ≠ i} → DB))
     where
   toFun a := (((a.1.1.1, a.2 i), (a.1.1.2.2, a.1.2)), (a.1.1.2.1, fun j ↦ a.2 j.1))
   invFun b := (((b.1.1.1, (b.2.1, b.1.2.1)), b.1.2.2),
@@ -468,14 +475,16 @@ theorem onFactor_slotFst₃_onFactor_splitAt (i : ι) (M : Matrix (XY × DB) (XY
   simp only [onFactor_apply, slotFst₃, Equiv.coe_fn_mk, splitAt_apply, submatrix_apply,
     comSplit_apply, blockDiagonal_apply, kroneckerMap_apply, one_apply, Prod.mk.injEq]
   by_cases h₁ : tc = tc' <;> by_cases h₂ : z = z' <;> by_cases h₃ : env = env' <;>
-    by_cases h₄ : (fun j : {j // j ≠ i} ↦ d j.1) = fun j ↦ d' j.1 <;> simp [h₁, h₂, h₃, h₄]
+    by_cases h₄ : (fun j : {j // j ≠ i} ↦ d j.1) = fun j ↦ d' j.1 <;>
+      simp [h₁, h₂, h₃, h₄]
 
 /-- **A diagonal operator on one table, on the output of a P2 adversary**, is block diagonal for
 `comSplit i`. -/
 theorem diagonal_apply_eq_blockDiagonal (i : ι) (p : DB → ℂ) :
     diagonal (fun m : ((XY × (Tc × Z)) × Env) × (ι → DB) ↦ p (m.2 i)) =
       (blockDiagonal fun _ : Tc × ({j // j ≠ i} → DB) ↦
-        diagonal (fun a : XY × DB ↦ p a.2) ⊗ₖ (1 : Matrix (Z × Env) (Z × Env) ℂ)).submatrix
+        diagonal (fun a : XY × DB ↦ p a.2)
+          ⊗ₖ (1 : Matrix (Z × Env) (Z × Env) ℂ)).submatrix
         (comSplit i) (comSplit i) := by
   ext ⟨⟨⟨xy, tc, z⟩, env⟩, d⟩ ⟨⟨⟨xy', tc', z'⟩, env'⟩, d'⟩
   simp only [diagonal_apply, submatrix_apply, comSplit_apply, blockDiagonal_apply,
@@ -483,7 +492,8 @@ theorem diagonal_apply_eq_blockDiagonal (i : ι) (p : DB → ℂ) :
   simp only [eq_iff_apply_eq_and_restrict_eq i (d := d)]
   by_cases h₁ : tc = tc' <;> by_cases h₂ : z = z' <;> by_cases h₃ : env = env' <;>
     by_cases h₄ : (fun j : {j // j ≠ i} ↦ d j.1) = fun j ↦ d' j.1 <;>
-    by_cases h₅ : xy = xy' <;> by_cases h₆ : d i = d' i <;> simp [h₁, h₂, h₃, h₄, h₅, h₆]
+    by_cases h₅ : xy = xy' <;> by_cases h₆ : d i = d' i <;>
+      simp [h₁, h₂, h₃, h₄, h₅, h₆]
 
 variable [AddGroup Z]
 
@@ -500,7 +510,8 @@ theorem onFactor_slotSnd₃_eq_blockDiagonal (i : ι) (f : Tc → (ι → DB) �
         labelControlled (fun a : (XY × DB) × (Z × Env) ↦
             f c.1 ((Equiv.funSplitAt i DB).symm (a.1.2, c.2)))
           fun l ↦ (1 : Matrix (XY × DB) (XY × DB) ℂ) ⊗ₖ
-            (xorShift Z l ⊗ₖ (1 : Matrix Env Env ℂ))).submatrix (comSplit i) (comSplit i) := by
+            (xorShift Z l ⊗ₖ (1 : Matrix Env Env ℂ))).submatrix
+              (comSplit i) (comSplit i) := by
   ext ⟨⟨⟨xy, tc, z⟩, env⟩, d⟩ ⟨⟨⟨xy', tc', z'⟩, env'⟩, d'⟩
   simp only [onFactor_apply, slotSnd₃, Equiv.coe_fn_mk, hV, submatrix_apply,
     comSplit_apply, blockDiagonal_apply, labelControlled_apply, kroneckerMap_apply, one_apply,
@@ -558,11 +569,13 @@ omit [AddCommGroup Y] in
 theorem labelControlled_mul_sizeProjector_kronecker {ι : Type*} (π : Database X Y → ι)
     (U : ι → Matrix W W ℂ) (s : ℕ) :
     labelControlled (fun a : ((X × Y) × Database X Y) × W ↦ π a.1.2)
-          (fun l ↦ (1 : Matrix ((X × Y) × Database X Y) ((X × Y) × Database X Y) ℂ) ⊗ₖ U l) *
+          (fun l ↦ (1 : Matrix ((X × Y) × Database X Y) ((X × Y) × Database X Y) ℂ)
+            ⊗ₖ U l) *
         (sizeProjector X Y s ⊗ₖ (1 : Matrix W W ℂ)) =
       (sizeProjector X Y s ⊗ₖ (1 : Matrix W W ℂ)) *
         labelControlled (fun a : ((X × Y) × Database X Y) × W ↦ π a.1.2)
-          (fun l ↦ (1 : Matrix ((X × Y) × Database X Y) ((X × Y) × Database X Y) ℂ) ⊗ₖ U l) := by
+          (fun l ↦ (1 : Matrix ((X × Y) × Database X Y) ((X × Y) × Database X Y) ℂ)
+            ⊗ₖ U l) := by
   have hP : sizeProjector X Y s ⊗ₖ (1 : Matrix W W ℂ) =
       diagonal fun a ↦ if a.1.2.size ≤ s then 1 else 0 := by
     ext ⟨a, w⟩ ⟨b, w'⟩
@@ -576,8 +589,8 @@ theorem labelControlled_mul_sizeProjector_kronecker {ι : Type*} (π : Database 
   · simp [hab]
 
 /-- **The truncation step on one block.** If `L` commutes with `P_size^(t) ⊗ 1`, then on the
-range of `P_size^(t) ⊗ 1` the commutator of `L` with `cO ⊗ 1` is its commutator with the truncated
-oracle `O^(t+1) ⊗ 1`. -/
+range of `P_size^(t) ⊗ 1` the commutator of `L` with `cO ⊗ 1` is its commutator with
+the truncated oracle `O^(t+1) ⊗ 1`. -/
 theorem commutator_mul_sizeProjector_kronecker_eq (t : ℕ)
     (L : Matrix (((X × Y) × Database X Y) × W) (((X × Y) × Database X Y) × W) ℂ)
     (hL : L * (sizeProjector X Y t ⊗ₖ (1 : Matrix W W ℂ)) =
@@ -642,14 +655,8 @@ theorem commutator_onFactor_mul_diagonal_eq (i : ι) (f : Tc → (ι → Databas
           if (m.2 i).size ≤ t then (1 : ℂ) else 0) := by
   rw [onFactor_slotSnd₃_eq_blockDiagonal i f hV, onFactor_slotFst₃_onFactor_splitAt i,
     diagonal_apply_eq_blockDiagonal i fun D : Database X Y ↦ if D.size ≤ t then 1 else 0]
-  have hsub : ∀ A B : Matrix ((((X × Y) × Database X Y) × (Z × Env)) ×
-      (Tc × ({j // j ≠ i} → Database X Y))) ((((X × Y) × Database X Y) × (Z × Env)) ×
-      (Tc × ({j // j ≠ i} → Database X Y))) ℂ,
-      A.submatrix (comSplit (XY := X × Y) (Tc := Tc) (Z := Z) (Env := Env) i) (comSplit i) -
-          B.submatrix (comSplit (XY := X × Y) (Tc := Tc) (Z := Z) (Env := Env) i) (comSplit i) =
-        (A - B).submatrix (comSplit (XY := X × Y) (Tc := Tc) (Z := Z) (Env := Env) i)
-          (comSplit i) := fun _ _ ↦ rfl
-  rw [submatrix_mul_equiv, submatrix_mul_equiv, hsub, submatrix_mul_equiv, submatrix_mul_equiv,
+  rw [submatrix_mul_equiv, submatrix_mul_equiv, ← Pi.sub_apply, ← Pi.sub_apply,
+    ← submatrix_sub, submatrix_mul_equiv, submatrix_mul_equiv,
     ← blockDiagonal_mul, ← blockDiagonal_mul, ← blockDiagonal_sub, ← blockDiagonal_mul,
     ← blockDiagonal_mul]
   refine congrArg (fun F ↦ (blockDiagonal F).submatrix _ _) (funext fun c ↦ ?_)
@@ -803,7 +810,8 @@ private theorem sum_trace_fixedReadDefect_le [UniformAnswerMeasure (X →ₒ Y)]
     rw [← LinearMap.comp_apply, ← MatrixMap.conj_mul, hK, MatrixMap.conj_mul,
       LinearMap.comp_apply]
   change ∑ a, (MatrixMap.conj (K a) σ).trace.re ≤ _
-  change ∑ a, (MatrixMap.conj (checkedReadDefect π U a) (MatrixMap.conj J σ)).trace.re ≤ _ at h
+  change ∑ a, (MatrixMap.conj (checkedReadDefect π U a) (MatrixMap.conj J σ)).trace.re
+    ≤ _ at h
   simpa only [he, ht] using h
 
 private theorem trace_conj_blockDiagonal {B C : Type*} [Fintype B] [Fintype C]
@@ -909,7 +917,6 @@ variable {k : ℕ} {X Y Cm Z : Type} [Fintype X] [DecidableEq X] [Fintype Y] [De
   {Dm : Fin k → Type} (ME : MultiExtractor k Cm Dm (Fin k → Database X Y))
   (code : TpDCode k Dm Z)
 
-
 private theorem sum_trace_readComDefect_le [UniformAnswerMeasure (X →ₒ Y)]
     (t : ℕ) (i : Fin k) (x : X) (Env : QReg)
     (σ : Matrix (ReadComOut k Cm Z Env × (compressedVCOracle k X Y).S)
@@ -922,13 +929,15 @@ private theorem sum_trace_readComDefect_le [UniformAnswerMeasure (X →ₒ Y)]
     Database.instability (onlineLabel ME ![tic] Dfix j') (t + 1)
   have hS : S ≠ ⊤ := iSup_instability_onlineLabel_ne_top ME (t + 1)
   let e := readSplit (Tc := TpIC k Cm) (Z := Z) (E := Env) (DB := Database X Y) i
-  let f : TpIC k Cm → (Fin k → Database X Y) → Z := fun tc d ↦ code.enc ⟨tc.1, ME.extract tc d⟩
+  let f : TpIC k Cm → (Fin k → Database X Y) → Z :=
+    fun tc d ↦ code.enc ⟨tc.1, ME.extract tc d⟩
   let lab := fun c : TpIC k Cm × ({j // j ≠ i} → Database X Y) ↦
     fun d ↦ f c.1 ((Equiv.funSplitAt i (Database X Y)).symm (d, c.2))
   let U := fun z ↦ xorShift Z z ⊗ₖ (1 : Matrix Env Env ℂ)
   let T := fun c ↦ labelControlled (fun p : Database X Y × (Z × Env) ↦ lab c p.1)
     (fun z ↦ (1 : Matrix (Database X Y) (Database X Y) ℂ) ⊗ₖ U z)
-  let K := fun c a ↦ (checkedReadProjector x a ⊗ₖ (1 : Matrix (Z × Env) (Z × Env) ℂ)) * T c -
+  let K := fun c a ↦
+    (checkedReadProjector x a ⊗ₖ (1 : Matrix (Z × Env) (Z × Env) ℂ)) * T c -
     T c * (checkedReadProjector x a ⊗ₖ (1 : Matrix (Z × Env) (Z × Env) ℂ))
   have hC (a : Option Y) : readComDefect (compressedVCOracle k X Y) ME code Env (i, x) a =
       (blockDiagonal fun c ↦ K c a).submatrix e e := by
@@ -994,11 +1003,13 @@ theorem comBound_compressedVCOracle [UniformAnswerMeasure (X →ₒ Y)] :
       Database.instability (onlineLabel ME ![tic] Dfix j') (t + 1) with hSdef
     have hS : S ≠ ⊤ := iSup_instability_onlineLabel_ne_top ME (t + 1)
     -- the blocks
-    let f : TpIC k Cm → (Fin k → Database X Y) → Z := fun tc s ↦ code.enc ⟨tc.1, ME.extract tc s⟩
+    let f : TpIC k Cm → (Fin k → Database X Y) → Z :=
+      fun tc s ↦ code.enc ⟨tc.1, ME.extract tc s⟩
     let lab : TpIC k Cm × ({j // j ≠ i} → Database X Y) → Database X Y → Z :=
       fun c D ↦ f c.1 ((Equiv.funSplitAt i (Database X Y)).symm (D, c.2))
     let Lb : TpIC k Cm × ({j // j ≠ i} → Database X Y) →
-        Matrix (((X × Y) × Database X Y) × (Z × Env)) (((X × Y) × Database X Y) × (Z × Env)) ℂ :=
+        Matrix (((X × Y) × Database X Y) × (Z × Env))
+          (((X × Y) × Database X Y) × (Z × Env)) ℂ :=
       fun c ↦ labelControlled (fun a ↦ lab c a.1.2) fun l ↦
         (1 : Matrix ((X × Y) × Database X Y) ((X × Y) × Database X Y) ℂ) ⊗ₖ
           (xorShift Z l ⊗ₖ (1 : Matrix Env Env ℂ))

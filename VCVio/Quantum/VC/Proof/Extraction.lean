@@ -5,7 +5,6 @@ Authors: Quang Dao
 -/
 
 module
-
 public import VCVio.Quantum.Oracle.ClassicalCalls
 public import VCVio.Quantum.Oracle.Compressed.Consistency
 public import VCVio.Quantum.VC.CheckedRead
@@ -21,7 +20,7 @@ accepting weight, including zero-valued prescriptions.
 
 An opening budget `h` bounds the error by `1 - (1 - 1/N)^(2 n h)`, independently of the
 adversary's query bound and query masses. The arbitrary-proof budget `q2` supplies the
-existing corollaries. Opening coins and extraction outcomes retain their original weights.
+uniform corollaries. Opening coins and extraction outcomes retain their original weights.
 
 The ordinary-port basis-call equation is stated separately from checked acceptance.
 
@@ -91,7 +90,8 @@ theorem trace_re_conj_one_kronecker_eq_of_conj {C P Q : Matrix S S ℂ} (hC : C�
     a * φ.trace.re =
       (MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ (C * P * C)) φ).trace.re := by
   refine trace_re_conj_one_kronecker_eq hC hCC hP hPP ha hφ ?_
-  rw [← hφQ, MatrixMap.conj_apply, ← Matrix.mul_assoc, ← Matrix.mul_assoc, ← mul_kronecker_mul,
+  rw [← hφQ, MatrixMap.conj_apply, ← Matrix.mul_assoc, ← Matrix.mul_assoc,
+    ← mul_kronecker_mul,
     Matrix.one_mul, hPQ]
 
 end trace
@@ -106,10 +106,13 @@ variable {B S : Type*} [Fintype B] [DecidableEq B] [Fintype S] [DecidableEq S]
 `D_p`, `D_q` and an involution `C`, gives the Kraus map of `1 ⊗ C D_{p ∧ q} C`. -/
 theorem conj_one_kronecker_comp_conj_one_kronecker {C : Matrix S S ℂ} (hCC : C * C = 1)
     (p q : S → Prop) [DecidablePred p] [DecidablePred q] :
-    MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ (C * diagonal (fun d ↦ if q d then 1 else 0) * C)) ∘ₗ
-        MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ (C * diagonal (fun d ↦ if p d then 1 else 0) * C)) =
+    MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ
+      (C * diagonal (fun d ↦ if q d then 1 else 0) * C)) ∘ₗ
+        MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ
+          (C * diagonal (fun d ↦ if p d then 1 else 0) * C)) =
       MatrixMap.conj
-        ((1 : Matrix B B ℂ) ⊗ₖ (C * diagonal (fun d ↦ if p d ∧ q d then 1 else 0) * C)) := by
+        ((1 : Matrix B B ℂ) ⊗ₖ
+          (C * diagonal (fun d ↦ if p d ∧ q d then 1 else 0) * C)) := by
   rw [← MatrixMap.conj_mul, ← mul_kronecker_mul, Matrix.one_mul]
   congr 2
   rw [show C * diagonal (fun d ↦ if q d then (1 : ℂ) else 0) * C *
@@ -131,7 +134,8 @@ theorem conj_one_kronecker_true {C : Matrix S S ℂ} (hCC : C * C = 1) :
 omit [Fintype B] [DecidableEq B] [Fintype S] in
 /-- A diagonal `0/1` matrix is Hermitian. -/
 theorem conjTranspose_diagonal_ite (p : S → Prop) [DecidablePred p] :
-    (diagonal fun d ↦ if p d then (1 : ℂ) else 0)ᴴ = diagonal fun d ↦ if p d then 1 else 0 := by
+    (diagonal fun d ↦ if p d then (1 : ℂ) else 0)ᴴ =
+      diagonal fun d ↦ if p d then 1 else 0 := by
   rw [diagonal_conjTranspose]
   congr 1
   funext d
@@ -258,7 +262,8 @@ theorem branch_run₂_allIn {k : ℕ} (W : Finset (Fin k)) (f : Fin k → QComp 
       rw [List.foldlM_cons]
       by_cases hi : i ∈ W
       · simp only [hi, ↓reduceIte, bind_map_left]
-        rw [QuantumComp₂.bind_eq, QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply_univ,
+        rw [QuantumComp₂.bind_eq, QuantumRuntime.run₂_bind,
+          DSubInstrument.branch_bind_apply_univ,
           Fintype.sum_bool, ih, ih]
         cases acc
         · simp
@@ -292,7 +297,8 @@ theorem exists_branch_run₂_toQuantumAt_coinImpl_eq_smul {α : Type} (oa : Prob
     rw [toQuantumAt_pure, QuantumRuntime.run₂_pure]
     by_cases h : a = x
     · subst h
-      exact ⟨1, by rw [SubInstrument.branch_pure_self, one_smul], fun h' ↦ absurd (by simp) h'⟩
+      exact ⟨1, by rw [SubInstrument.branch_pure_self, one_smul],
+        fun h' ↦ absurd (by simp) h'⟩
     · exact ⟨0, by rw [SubInstrument.branch_pure_of_ne h, zero_smul], fun _ ↦ rfl⟩
   | query_bind t k ih =>
     choose c hc hs using ih
@@ -334,7 +340,8 @@ theorem exists_branch_run₂_pi_eq_smul : {k : ℕ} → {β : Fin k → Type w} 
     · refine LinearMap.ext fun ρ ↦ ?_
       rw [QComp.pi, QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply,
         tsum_eq_single (v 0)]
-      · rw [QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply, tsum_eq_single (Fin.tail v)]
+      · rw [QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply,
+          tsum_eq_single (Fin.tail v)]
         · rw [QuantumRuntime.run₂_pure, Fin.cons_self_tail, SubInstrument.branch_pure_self,
             LinearMap.id_apply, hc₁, hc₀]
           simp only [LinearMap.smul_apply, LinearMap.id_apply, smul_smul]
@@ -360,7 +367,8 @@ section oracleCall
 /-- A block of a matrix conjugated by `1 ⊗ C` is the block conjugated by `C`. -/
 theorem submatrix_one_kronecker_mul_mul_one_kronecker {A S : Type*} [Fintype A] [DecidableEq A]
     [Fintype S] (C : Matrix S S ℂ) (M : Matrix (A × S) (A × S) ℂ) (a b : A) :
-    (((1 : Matrix A A ℂ) ⊗ₖ C) * M * ((1 : Matrix A A ℂ) ⊗ₖ C)).submatrix (fun d ↦ (a, d))
+    (((1 : Matrix A A ℂ) ⊗ₖ C) * M * ((1 : Matrix A A ℂ) ⊗ₖ C)).submatrix
+        (fun d ↦ (a, d))
         (fun d ↦ (b, d)) =
       C * M.submatrix (fun d ↦ (a, d)) (fun d ↦ (b, d)) * C := by
   ext d d'
@@ -372,7 +380,8 @@ variable {X Y T : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
 
 omit [Fintype X] [Fintype Y] [Fintype T] in
 /-- A block of the table oracle on a query input `|t, 0⟩` is diagonal: it is the projector onto
-the tables that read `y'` at `t`, if the output is `|t', y'⟩` with `t' = t`, and zero otherwise. -/
+the tables that read `y'` at `t`, if the output is `|t', y'⟩` with `t' = t`,
+and zero otherwise. -/
 theorem submatrix_tableOracle (read : T → X → Y) (t t' : X) (y' : Y) :
     (tableOracle read).submatrix (fun d ↦ (((t', y') : X × Y), d))
         (fun d ↦ (((t, 0) : X × Y), d)) =
@@ -407,7 +416,8 @@ theorem branch_run₂_oracleCall_compressedVCOracle (B : QReg) (j : Fin k) (t : 
       ((compressedVCOracle k X Y).withExtract ME code).coherent.block ()
           ⟨.inl j, ((t', y') : X × Y)⟩ ⟨.inl j, ((t, 0) : X × Y)⟩ =
         compressDatabases k X Y *
-          diagonal (fun D : Fin k → Database X Y ↦ if t' = t ∧ (D j).lookup t = y' then 1 else 0) *
+          diagonal (fun D : Fin k → Database X Y ↦
+            if t' = t ∧ (D j).lookup t = y' then 1 else 0) *
           compressDatabases k X Y := by
     intro t' y'
     ext d d'
@@ -418,7 +428,8 @@ theorem branch_run₂_oracleCall_compressedVCOracle (B : QReg) (j : Fin k) (t : 
     refine (EmulatedOracle.coherent_U_apply_self _ (Sum.inl j) _ _ _ _).trans (Eq.trans ?_ h)
     exact congrFun (congrFun (compressedVCOracle_U_eq_conj j) _) _
   have hread : ∀ (i : Fin k) (m : X × Y),
-      readY (Cm := Cm) (Z := Z) (⟨.inl i, m⟩ : Σ i, extIn k X Y Cm Z i) = m.2 := fun _ _ ↦ rfl
+      readY (Cm := Cm) (Z := Z) (⟨.inl i, m⟩ : Σ i, extIn k X Y Cm Z i) = m.2 :=
+        fun _ _ ↦ rfl
   rw [oracleCall, EmulatedOracle.branch_run₂_callBasis,
     Finset.sum_eq_single (⟨.inl j, ((t, y) : X × Y)⟩ : Σ i, extIn k X Y Cm Z i)]
   · simp only [hread, ↓reduceIte, hblock, true_and]
@@ -441,7 +452,8 @@ theorem branch_run₂_oracleCall_compressedVCOracle (B : QReg) (j : Fin k) (t : 
             ⟨.inl i, m⟩ ⟨.inl j, ((t, 0) : X × Y)⟩ = 0 := by
           ext d d'
           rw [EmulatedOracle.block_apply]
-          exact EmulatedOracle.coherent_U_apply_of_ne _ (fun h ↦ hij (Sum.inl_injective h)) _ _ _ _
+          exact EmulatedOracle.coherent_U_apply_of_ne _
+            (fun h ↦ hij (Sum.inl_injective h)) _ _ _ _
         rw [hb, kronecker_zero, MatrixMap.conj_zero, ite_self]
     · have hb : ((compressedVCOracle k X Y).withExtract ME code).coherent.block ()
           ⟨.inr u, m⟩ ⟨.inl j, ((t, 0) : X × Y)⟩ = 0 := by
@@ -538,8 +550,8 @@ projector onto the tuples of databases `D` on which every check `VC_i.Check^{D_{
 `i ∈ W` passes, read on the partial tables themselves (`checkOn`). Conjugating this projector
 `P` by database compression `C` gives the checked accepting projector `C P C`. -/
 @[expose]
-noncomputable def checkPassProjector (W : Finset (Fin k)) (idx : Fin k → Fin k) (cm : Fin k → Cm)
-    (ans : ∀ i, PartialVec (ℓ i) Msg) (pf : ∀ i, Pf i) :
+noncomputable def checkPassProjector (W : Finset (Fin k)) (idx : Fin k → Fin k)
+    (cm : Fin k → Cm) (ans : ∀ i, PartialVec (ℓ i) Msg) (pf : ∀ i, Pf i) :
     Matrix (Fin k → Database X Y) (Fin k → Database X Y) ℂ :=
   diagonal fun D ↦
     if ∀ i ∈ W, (chk i).checkOn (D (idx i)) (cm i) (ans i) (pf i) = true then 1 else 0
@@ -548,7 +560,8 @@ noncomputable def checkPassProjector (W : Finset (Fin k)) (idx : Fin k → Fin k
 the lengths of these proofs' logs: the acceptance factor is at least `(1 - 1/N)^(2 n q)`. -/
 theorem exists_le_checkPassProjector_conj_of_length_le (n : ℕ) (W : Finset (Fin k))
     (hW : W.card ≤ n)
-    (idx : Fin k → Fin k) (cm : Fin k → Cm) (ans : ∀ i, PartialVec (ℓ i) Msg) (pf : ∀ i, Pf i)
+    (idx : Fin k → Fin k) (cm : Fin k → Cm) (ans : ∀ i, PartialVec (ℓ i) Msg)
+    (pf : ∀ i, Pf i)
     (q : ℕ)
     (hlen : ∀ i, (((chk i).log (cm i) (ans i) (pf i)).getD []).length ≤ q) :
     ∃ a : ℝ, (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q) ≤ a ∧
@@ -558,7 +571,8 @@ theorem exists_le_checkPassProjector_conj_of_length_le (n : ℕ) (W : Finset (Fi
         (a : ℂ) • checkPassProjector chk W idx cm ans pf := by
   have hN : (0 : ℝ) ≤ 1 - (Fintype.card Y : ℝ)⁻¹ :=
     sub_nonneg.mpr (inv_le_one_of_one_le₀ (by exact_mod_cast Fintype.card_pos))
-  have hN1 : 1 - (Fintype.card Y : ℝ)⁻¹ ≤ 1 := sub_le_self _ (inv_nonneg.mpr (Nat.cast_nonneg _))
+  have hN1 : 1 - (Fintype.card Y : ℝ)⁻¹ ≤ 1 :=
+    sub_le_self _ (inv_nonneg.mpr (Nat.cast_nonneg _))
   by_cases hall : ∀ i ∈ W, ((chk i).log (cm i) (ans i) (pf i)).isSome
   · -- the prescriptions on each database
     let L : Fin k → QueryLog (X →ₒ Y) := fun j ↦ (List.finRange k).flatMap fun i ↦
@@ -635,7 +649,8 @@ theorem exists_le_checkPassProjector_conj_of_length_le (n : ℕ) (W : Finset (Fi
 `P` is the product of the consistency projectors of the prescriptions on each database, and `a`
 is `(1 - 1/N)^{2d}` for the number `d ≤ n q2` of prescribed cells; otherwise `P = 0`. -/
 theorem exists_le_checkPassProjector_conj (n : ℕ) (W : Finset (Fin k)) (hW : W.card ≤ n)
-    (idx : Fin k → Fin k) (cm : Fin k → Cm) (ans : ∀ i, PartialVec (ℓ i) Msg) (pf : ∀ i, Pf i) :
+    (idx : Fin k → Fin k) (cm : Fin k → Cm) (ans : ∀ i, PartialVec (ℓ i) Msg)
+    (pf : ∀ i, Pf i) :
     ∃ a : ℝ, (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 chk) ≤ a ∧
       checkPassProjector chk W idx cm ans pf *
           (compressDatabases k X Y * checkPassProjector chk W idx cm ans pf *
@@ -651,7 +666,8 @@ end passProjector
 
 section filledBatch
 
-variable {k : ℕ} {X Y Msg Cm : Type} [DecidableEq Y] {ℓ : Fin k → ℕ} {Td Pf : Fin k → Type}
+variable {k : ℕ} {X Y Msg Cm : Type} [DecidableEq Y] {ℓ : Fin k → ℕ}
+  {Td Pf : Fin k → Type}
   {VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i)}
   (chk : ∀ i, (VC i).NonadaptiveCheck) [Fintype X] [DecidableEq X] [Fintype Y] [AddCommGroup Y]
 
@@ -733,7 +749,8 @@ theorem branch_run₂_filledBatch_compressedVCOracle (B : QReg) (W : Finset (Fin
       (c.ans i) (c.pf i))
 
 /-- The checks after extraction with an opening-specific cell budget. -/
-theorem outcomeMeasure_run₂_checks_le_of_openingQueryBound [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
+theorem outcomeMeasure_run₂_checks_le_of_openingQueryBound
+    [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
     (q : ℕ) (hq : OpeningQueryBound chk q)
     (hC : Conditions VC chk ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
     {B : QReg} (tdm : TpDLen k (DmOf ℓ Msg Td) (TpIC.full hk c.idx c.cm).1) (pf : ∀ i, Pf i)
@@ -836,7 +853,8 @@ theorem outcomeMeasure_run₂_checks_le [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
     (openingQueryBound_q2 chk) hC hk n c tdm pf hpf ρ hρ
 
 /-- The openings and checks after extraction with an opening-specific cell budget. -/
-theorem outcomeMeasure_run₂_openings_le_of_openingQueryBound [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
+theorem outcomeMeasure_run₂_openings_le_of_openingQueryBound
+    [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
     (q : ℕ) (hq : OpeningQueryBound chk q)
     (hC : Conditions VC chk ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
     {B : QReg} (tdm : TpDLen k (DmOf ℓ Msg Td) (TpIC.full hk c.idx c.cm).1)

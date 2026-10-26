@@ -179,6 +179,12 @@ def prescribedCheck (ps : Option (QueryLog (Bool →ₒ ZMod 2))) :
   qVC_mono _ _ _ := le_rfl
   length_le _ _ _ L h := by cases ps <;> simp_all
 
+/-- Flattening a batch follows claim order and retains the selected database indices. -/
+example : batchLog (fun _ : Fin 2 ↦ prescribedCheck (some [⟨false, 0⟩])) Finset.univ
+    ⟨Fin.rev, fun _ ↦ (), fun _ _ ↦ none, fun _ ↦ (), Finset.univ⟩ =
+      [⟨(1, false), 0⟩, ⟨(0, false), 0⟩] := by
+  decide
+
 /-- A zero prescription reaches the actual accepting channel of `checkAt`. -/
 example {Z : Type} [Fintype Z] [DecidableEq Z] [AddGroup Z]
     (ME : MultiExtractor 2 Unit (DmOf (fun _ ↦ 0) Unit (fun _ ↦ Unit)) (E).S)
@@ -218,6 +224,20 @@ example :
     simp [VectorCommitment.NonadaptiveCheck.checkOn, prescribedCheck]
   exact h.trans ((congrArg (fun P ↦ MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ P)) hP).trans
     (by rw [kronecker_zero]; exact MatrixMap.conj_zero))
+
+/-- A batch of malformed checks rejects through the batch's actual accepting channel. -/
+example :
+    ((((E).mixedExtractRuntime ME code).run₂ .instruments
+      (QComp.allIn Finset.univ fun i ↦
+        checkAt (fun _ ↦ prescribedVC none) B i i () (fun _ ↦ none) ())).branch true) = 0 := by
+  refine (branch_run₂_filledBatch_compressedVCOracle
+    (fun _ : Fin 2 ↦ prescribedCheck none) ME code B Finset.univ
+    ⟨id, fun _ ↦ (), fun _ _ ↦ none, fun _ ↦ (), Finset.univ⟩).trans ?_
+  simp only [filledBatch, checkPassProjector, Finset.mem_univ,
+    VectorCommitment.NonadaptiveCheck.checkOn, prescribedCheck, Option.elim_none, id_eq,
+    Bool.false_eq_true, imp_false, not_true_eq_false, forall_const, ↓reduceIte, diagonal_zero,
+    mul_zero, zero_mul, kroneckerMap_zero_right, MatrixMap.conj_zero]
+  rfl
 
 /-- A well-formed empty log accepts and preserves every joint residual state. -/
 example (ρ : Matrix (B × DB) (B × DB) ℂ) :

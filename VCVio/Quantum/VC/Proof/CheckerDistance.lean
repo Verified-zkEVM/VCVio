@@ -5,7 +5,6 @@ Authors: Quang Dao
 -/
 
 module
-
 public import VCVio.Quantum.VC.Proof.Extraction
 public import VCVio.Quantum.Oracle.Compressed.Consistency
 
@@ -62,7 +61,8 @@ theorem filled_partial_eq_zero_of_conflict (log : QueryLog ((Fin k × X) →ₒ 
     checkProjector_eq_zero_of_not_consistent h]
   simp
 
-/-- The filled versus partial checker distance is at most `δN` of the number of distinct cells,
+/-- The filled versus partial checker distance is at most the square root of its exact
+squared discrepancy for the number of distinct cells,
 including conflicting prescriptions. Repeated equal prescriptions incur no additional cost. -/
 theorem filled_partial_distance [Nonempty Y] (log : QueryLog ((Fin k × X) →ₒ Y)) :
     ‖filledCheck log - partialCheck log‖ ≤
@@ -72,7 +72,6 @@ theorem filled_partial_distance [Nonempty Y] (log : QueryLog ((Fin k × X) →�
   · obtain ⟨hq, hp⟩ := filled_partial_eq_zero_of_conflict log h
     rw [hq, hp, sub_zero, norm_zero]
     exact Real.sqrt_nonneg _
-
 
 /-- The raw list length bounds the discrepancy even when prescriptions conflict. -/
 theorem filled_partial_distance_le_sqrt [Nonempty Y] (log : QueryLog ((Fin k × X) →ₒ Y)) :
@@ -101,30 +100,27 @@ theorem two_list_distance [Nonempty Y]
     intro D
     split_ifs <;> norm_num
   have hf (L : QueryLog ((Fin k × X) →ₒ Y)) : ‖filledCheck L‖ ≤ 1 := by
-    rw [filledCheck_eq_compressedCheckProjector, l2_opNorm_submatrix_equiv]
-    have hC : (compressAll (Fin k × X) Y)ᴴ * compressAll (Fin k × X) Y = 1 := by
-      rw [conjTranspose_compressAll, compressAll_mul_self]
-    rw [compressedCheckProjector]
-    conv_lhs => arg 1; arg 2; rw [← conjTranspose_compressAll (Fin k × X) Y]
-    apply (l2_opNorm_mul_mul_conjTranspose_le hC _).trans
-    rw [checkProjector, l2_opNorm_diagonal]
-    apply (pi_norm_le_iff_of_nonneg (by norm_num : (0 : ℝ) ≤ 1)).mpr
-    intro D
-    split_ifs <;> norm_num
+    have hC : (compressDatabases k X Y)ᴴ * compressDatabases k X Y = 1 := by
+      rw [conjTranspose_compressDatabases, compressDatabases_mul_self]
+    rw [filledCheck]
+    conv_lhs => arg 1; arg 2; rw [← conjTranspose_compressDatabases k X Y]
+    exact (l2_opNorm_mul_mul_conjTranspose_le hC _).trans (hp L)
   have he : filledCheck L₁ * U * filledCheck L₀ - partialCheck L₁ * U * partialCheck L₀ =
       filledCheck L₁ * U * (filledCheck L₀ - partialCheck L₀) +
         (filledCheck L₁ - partialCheck L₁) * U * partialCheck L₀ := by
     noncomm_ring
   have hnorm : ‖filledCheck L₁ * U * filledCheck L₀ -
       partialCheck L₁ * U * partialCheck L₀‖ ≤
-        ‖filledCheck L₀ - partialCheck L₀‖ + ‖filledCheck L₁ - partialCheck L₁‖ := by
+        ‖filledCheck L₀ - partialCheck L₀‖
+          + ‖filledCheck L₁ - partialCheck L₁‖ := by
     rw [he]
     apply (norm_add_le _ _).trans
     apply add_le_add
     · exact (norm_mul_le _ _).trans (by
         have hu := (norm_mul_le (filledCheck L₁) U).trans
           (mul_le_mul (hf _) hU (norm_nonneg _) (by norm_num))
-        simpa using mul_le_mul_of_nonneg_right hu (norm_nonneg (filledCheck L₀ - partialCheck L₀)))
+        simpa using mul_le_mul_of_nonneg_right hu
+          (norm_nonneg (filledCheck L₀ - partialCheck L₀)))
     · have hu := norm_mul_le (filledCheck L₁ - partialCheck L₁) U
       exact (norm_mul_le _ _).trans (by
         calc
@@ -155,7 +151,8 @@ end Quantum.CompressedReplay
 
 namespace Quantum
 
-variable {k : ℕ} {X Y Msg Cm : Type} [DecidableEq Y] {ℓ : Fin k → ℕ} {Td Pf : Fin k → Type}
+variable {k : ℕ} {X Y Msg Cm : Type} [DecidableEq Y] {ℓ : Fin k → ℕ}
+  {Td Pf : Fin k → Type}
   {VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i)}
   (chk : ∀ i, (VC i).NonadaptiveCheck)
 
@@ -163,7 +160,7 @@ variable {k : ℕ} {X Y Msg Cm : Type} [DecidableEq Y] {ℓ : Fin k → ℕ} {Td
 position order. Malformed component logs are empty here; the identification lemmas require
 well-formedness. -/
 @[expose]
-noncomputable def batchLog (W : Finset (Fin k)) (c : OpeningClaim k Cm Msg ℓ Pf) :
+def batchLog (W : Finset (Fin k)) (c : OpeningClaim k Cm Msg ℓ Pf) :
     QueryLog ((Fin k × X) →ₒ Y) :=
   (List.finRange k).flatMap fun i ↦ if i ∈ W then
     (((chk i).log (c.cm i) (c.ans i) (c.pf i)).getD []).map
@@ -233,9 +230,6 @@ theorem checkPassProjector_eq_zero_of_malformed (W : Finset (Fin k))
     simp [VectorCommitment.NonadaptiveCheck.checkOn, hbad] at hh
   simp [checkPassProjector, hn]
 
-variable [AddCommGroup Y]
-
-omit [AddCommGroup Y] in
 /-- The partial-database batch is a contraction, including malformed claims. -/
 theorem norm_checkPassProjector_le_one (W : Finset (Fin k))
     (c : OpeningClaim k Cm Msg ℓ Pf) :
@@ -244,6 +238,8 @@ theorem norm_checkPassProjector_le_one (W : Finset (Fin k))
   apply (pi_norm_le_iff_of_nonneg (by norm_num : (0 : ℝ) ≤ 1)).mpr
   intro D
   split_ifs <;> norm_num
+
+variable [AddCommGroup Y]
 
 /-- The filled-cell batch is a contraction, including malformed claims. -/
 theorem norm_filledBatch_le_one (W : Finset (Fin k)) (c : OpeningClaim k Cm Msg ℓ Pf) :
