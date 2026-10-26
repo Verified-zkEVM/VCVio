@@ -49,8 +49,8 @@ The labels are the arguments of `Quantum.Database.instability` in the error boun
   and condition 3 asks every possible opening `pfᵢ ← Open(Dom(mᵢ), tdᵢ)` to pass the check: both
   quantify over the support of the opening. For a deterministic opening
   (`DetVectorCommitment.toVectorCommitment`) the support is a single proof.
-* The paper's `Check^{D}` (p. 53) is `VectorCommitment.NonadaptiveCheck.checkOn`: the check runs
-  `OutputIO` and rejects any listed query outside the domain of the database.
+* The paper's `Check^{D}` (p. 53) is `VectorCommitment.NonadaptiveCheck.checkOn`: the check
+  computes the query log and rejects any logged query outside the domain of the database.
 * The paper's `q_VC(qs, ℓ)` has the length as a second argument; `NonadaptiveCheck.qVC` is the query
   complexity of `VC i` at its own length `ℓ i`, so `q1` and `q2` use `qVC` of the size of the opened
   set alone. The paper evaluates `q1` at `ℓmax` (p. 54); here each `VC i` is evaluated at `ℓ i`.
@@ -127,8 +127,8 @@ commitments `VC i`, a multi-extractor `ME` reading the tuple of databases, the t
 of its `⊥` and the good databases `Pgood`. Admissibility is the repaired, distinct-index form of
 Def 7.1 (`Quantum.MultiExtractor.Admissible`), and the efficiency of `ME` (p. 53) is not
 included: it is a separate hypothesis. Condition 1 (p. 53), that every check is deterministic
-and classical, of the form `OutputIO` followed by `CheckIO` with query complexity `qVC_i`, is the
-data `io i : (VC i).NonadaptiveCheck`.
+and classical, computing and rechecking a query log with query complexity `qVC_i`, is the data
+`chk i : (VC i).NonadaptiveCheck`.
 
 * `admissible`: the multi-extractor is admissible (p. 53) in the repaired sense of
   `Quantum.MultiExtractor.Admissible`, with `⊥ = (⊥^{ℓ_i}, tdBot i)`.
@@ -141,7 +141,7 @@ data `io i : (VC i).NonadaptiveCheck`.
   `Dom(m_i)` with the extracted trapdoor makes the extracted message `m_i` pass the check
   `VC_i.Check^{D_{idx i}}`. -/
 structure Conditions (VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i))
-    (io : ∀ i, (VC i).NonadaptiveCheck)
+    (chk : ∀ i, (VC i).NonadaptiveCheck)
     (ME : MultiExtractor k Cm (DmOf ℓ Msg Td) (Fin k → Database X Y)) (tdBot : ∀ i, Td i)
     (Pgood : Set (Database X Y)) : Prop where
   /-- The multi-extractor is admissible (Def 7.1, p. 49; Thm 8.4, p. 53), repaired to require
@@ -153,7 +153,7 @@ structure Conditions (VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ
   binding : ∀ (hk : 1 ≤ k) (idx : Fin k → Fin k), Function.Injective idx →
     ∀ (cm : Fin k → Cm) (ans : ∀ i, PartialVec (ℓ i) Msg) (pf : ∀ i, Pf i)
       (Ds : Fin k → Database X Y), (∀ i, Ds i ∈ Pgood) →
-      (∀ i, (io i).checkOn (Ds (idx i)) (cm i) (ans i) (pf i) = true) → ∀ i,
+      (∀ i, (chk i).checkOn (Ds (idx i)) (cm i) (ans i) (pf i) = true) → ∀ i,
         (ME.extract (TpIC.full hk idx cm) Ds i).1.Agrees (ans i) ∧
           ∀ pf' ∈ support ((VC i).opening (ans i).dom (ME.extract (TpIC.full hk idx cm) Ds i).2),
             pf' = pf i
@@ -162,7 +162,7 @@ structure Conditions (VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ
     ∀ (cm : Fin k → Cm) (Ds : Fin k → Database X Y) (i : Fin k),
       ∀ pf ∈ support ((VC i).opening (ME.extract (TpIC.full hk idx cm) Ds i).1.dom
           (ME.extract (TpIC.full hk idx cm) Ds i).2),
-        (io i).checkOn (Ds (idx i)) (cm i) (ME.extract (TpIC.full hk idx cm) Ds i).1 pf = true
+        (chk i).checkOn (Ds (idx i)) (cm i) (ME.extract (TpIC.full hk idx cm) Ds i).1 pf = true
 
 end conditions
 
@@ -178,52 +178,52 @@ variable {k : ℕ} {X : Type uX} {Y : Type} {Msg : Type uM} {Cm : Type} {ℓ : F
 checks when the opened sets have sizes summing to at most `qs`. It enters the offline error
 (p. 54). -/
 @[expose]
-def q1 (io : ∀ i, (VC i).NonadaptiveCheck) (qs : ℕ) : ℕ :=
+def q1 (chk : ∀ i, (VC i).NonadaptiveCheck) (qs : ℕ) : ℕ :=
   ((Finset.univ : Finset (Fin k → Fin (qs + 1))).filter fun v ↦ ∑ i, (v i : ℕ) ≤ qs).sup
-    fun v ↦ ∑ i, (io i).qVC (v i)
+    fun v ↦ ∑ i, (chk i).qVC (v i)
 
 /-- **The query count `q2`** of Theorem 8.4 (ePrint 2025/2166, p. 54): `q2 := max_i qVC_i(ℓ_i)`,
 the largest number of queries of a check that opens a whole vector. It enters the extraction
 error (p. 54). -/
 @[expose]
-def q2 (io : ∀ i, (VC i).NonadaptiveCheck) : ℕ :=
-  Finset.univ.sup fun i ↦ (io i).qVC (ℓ i)
+def q2 (chk : ∀ i, (VC i).NonadaptiveCheck) : ℕ :=
+  Finset.univ.sup fun i ↦ (chk i).qVC (ℓ i)
 
-variable (io : ∀ i, (VC i).NonadaptiveCheck)
+variable (chk : ∀ i, (VC i).NonadaptiveCheck)
 
 /-- Every split of a budget `qs` among the `k` checks makes at most `q1 qs` queries in total. -/
 theorem sum_qVC_le_q1 {qs : ℕ} (qsv : Fin k → ℕ) (h : ∑ i, qsv i ≤ qs) :
-    ∑ i, (io i).qVC (qsv i) ≤ q1 io qs := by
+    ∑ i, (chk i).qVC (qsv i) ≤ q1 chk qs := by
   have hle (i : Fin k) : qsv i < qs + 1 :=
     Nat.lt_succ_of_le ((Finset.single_le_sum (fun _ _ ↦ Nat.zero_le _)
       (Finset.mem_univ i)).trans h)
-  refine Finset.le_sup (f := fun v : Fin k → Fin (qs + 1) ↦ ∑ i, (io i).qVC (v i))
+  refine Finset.le_sup (f := fun v : Fin k → Fin (qs + 1) ↦ ∑ i, (chk i).qVC (v i))
     (b := fun i ↦ ⟨qsv i, hle i⟩) ?_
   simpa using h
 
 /-- `q1` is attained: it is the total number of queries of some split of the budget. -/
 theorem exists_sum_qVC_eq_q1 (qs : ℕ) :
-    ∃ qsv : Fin k → ℕ, ∑ i, qsv i ≤ qs ∧ ∑ i, (io i).qVC (qsv i) = q1 io qs := by
+    ∃ qsv : Fin k → ℕ, ∑ i, qsv i ≤ qs ∧ ∑ i, (chk i).qVC (qsv i) = q1 chk qs := by
   have hne : ((Finset.univ : Finset (Fin k → Fin (qs + 1))).filter
       fun v ↦ ∑ i, (v i : ℕ) ≤ qs).Nonempty := ⟨fun _ ↦ 0, by simp⟩
   obtain ⟨v, hv, hmax⟩ := Finset.exists_mem_eq_sup _ hne
-    fun v : Fin k → Fin (qs + 1) ↦ ∑ i, (io i).qVC (v i)
+    fun v : Fin k → Fin (qs + 1) ↦ ∑ i, (chk i).qVC (v i)
   exact ⟨fun i ↦ v i, (Finset.mem_filter.mp hv).2, hmax.symm⟩
 
 /-- `q1` is non-decreasing in the budget. -/
-theorem q1_mono : Monotone (q1 io) := fun qs qs' hqs ↦ by
-  obtain ⟨qsv, hsum, heq⟩ := exists_sum_qVC_eq_q1 io qs
-  exact heq ▸ sum_qVC_le_q1 io qsv (hsum.trans hqs)
+theorem q1_mono : Monotone (q1 chk) := fun qs qs' hqs ↦ by
+  obtain ⟨qsv, hsum, heq⟩ := exists_sum_qVC_eq_q1 chk qs
+  exact heq ▸ sum_qVC_le_q1 chk qsv (hsum.trans hqs)
 
 /-- A check that opens a whole vector of `VC i` makes at most `q2` queries. -/
-theorem qVC_le_q2 (i : Fin k) : (io i).qVC (ℓ i) ≤ q2 io :=
-  Finset.le_sup (f := fun i ↦ (io i).qVC (ℓ i)) (Finset.mem_univ i)
+theorem qVC_le_q2 (i : Fin k) : (chk i).qVC (ℓ i) ≤ q2 chk :=
+  Finset.le_sup (f := fun i ↦ (chk i).qVC (ℓ i)) (Finset.mem_univ i)
 
 /-- A check of `VC i` on any opened set makes at most `q2` queries. -/
 theorem qVC_card_dom_le_q2 (i : Fin k) (ans : PartialVec (ℓ i) Msg) :
-    (io i).qVC ans.dom.card ≤ q2 io :=
-  ((io i).qVC_mono ((Finset.card_le_univ _).trans (Fintype.card_fin _).le)).trans
-    (qVC_le_q2 io i)
+    (chk i).qVC ans.dom.card ≤ q2 chk :=
+  ((chk i).qVC_mono ((Finset.card_le_univ _).trans (Fintype.card_fin _).le)).trans
+    (qVC_le_q2 chk i)
 
 /-- A cell budget for proofs produced by opening one trapdoor on the supplied answer domain.
 This can be smaller than the query bound for arbitrary proofs in `NonadaptiveCheck`. -/

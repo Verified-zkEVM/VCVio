@@ -9,6 +9,7 @@ public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.Support
 public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 
 /-!
 # Vector commitments in the model of one oracle
@@ -38,11 +39,11 @@ fixed function (`VectorCommitment.PerfectlyCompleteForAll`, and
 every `D`.
 
 The check of every vector commitment in §8 of ePrint 2025/2166 has a special form
-(Def 8.1 and Thm 8.4 condition 1, pp. 52–53): an oracle-free, non-adaptive
-`OutputIO` step lists input-output pairs, and `CheckIO^f` queries every input and compares the
-answer with the listed output. `VectorCommitment.NonadaptiveCheck` records this non-adaptive
-check, which makes `Check` deterministic and coin-free while leaving `Open` general, together
-with a non-decreasing bound `qVC` on the number of pairs (§3.5, p. 27).
+(Def 8.1 and Thm 8.4 condition 1, pp. 52–53): an oracle-free, non-adaptive step computes a query
+log, and `QueryLog.recheck` queries every logged input and compares the answer with the logged
+one. `VectorCommitment.NonadaptiveCheck` records this non-adaptive check, which makes `Check`
+deterministic and coin-free while leaving `Open` general, together with a non-decreasing bound
+`qVC` on the length of the log (§3.5, p. 27).
 
 ## Universes
 
@@ -50,8 +51,8 @@ The oracle input type `X` and the message type `Msg` are in arbitrary universes.
 output type `Y`, the commitments `Cm`, the trapdoors `Td` and the proofs `Pf` are in `Type`: they
 are answers of oracle queries or outputs of oracle computations whose combined specification
 includes the uniform-sampling oracle `unifSpec`, and the semantics of `OracleComp` (`simulateQ`,
-`evalDist`) places outputs in the universe of the oracle answers. The partial vectors and the
-table check `checkIOOn` are fully universe-polymorphic.
+`evalDist`) places outputs in the universe of the oracle answers. The partial vectors are fully
+universe-polymorphic.
 
 ## Main definitions
 
@@ -60,9 +61,8 @@ table check `checkIOOn` are fully universe-polymorphic.
   `VectorCommitment.PerfectlyComplete` and `VectorCommitment.PerfectlyCompleteForAll`.
 * `DetVectorCommitment X Y Msg Cm Td Pf ℓ`, `DetVectorCommitment.toVectorCommitment` and
   `DetVectorCommitment.PerfectlyComplete`.
-* `checkIO io`: query every listed input and compare; `checkIOOn D io`: the same check against a
-  partial table `D : X → Option Y`, rejecting at an empty cell.
-* `VectorCommitment.NonadaptiveCheck`: `Check` is `OutputIO` followed by `CheckIO`.
+* `VectorCommitment.NonadaptiveCheck`: `Check` rechecks an oracle-free query log, and
+  `VectorCommitment.NonadaptiveCheck.checkOn` checks the same log against a partial table.
 
 ## Main results
 
@@ -72,9 +72,6 @@ table check `checkIOOn` are fully universe-polymorphic.
   experiment accepts on every outcome, for `D`-almost every function.
 * `DetVectorCommitment.PerfectlyComplete.toVectorCommitment`: the same sufficient condition for a
   deterministic scheme.
-* `evalWithAnswerFn_checkIO`: against a fixed function `H`, `checkIO io` accepts exactly when
-  `H x = y` for every listed pair.
-* `checkIOOn_dedup`: removing duplicate pairs does not change acceptance.
 * `VectorCommitment.NonadaptiveCheck.simulateQ_check`: against a fixed function, a non-adaptive
   check returns the table check `checkOn`.
 * `VectorCommitment.NonadaptiveCheck.length_le_of_card_le`: `qVC qs` bounds the check for every
@@ -333,138 +330,59 @@ theorem PerfectlyComplete.toVectorCommitment [MeasurableSpace (X → Y)]
 
 end DetVectorCommitment
 
-/-! ## Input-output checks -/
-
-section CheckIOOn
-
-variable {X : Type u} {Y : Type v} [DecidableEq Y]
-
-/-- `CheckIO` against a partial table `D` (p. 53): accept when every listed input has the listed
-output in `D`; an empty cell rejects. Stated on `X → Option Y`, the type of
-`Quantum.Database X Y`. -/
-@[expose]
-def checkIOOn (D : X → Option Y) (io : List (X × Y)) : Bool :=
-  io.all fun p ↦ decide (D p.1 = some p.2)
-
-/-- `checkIOOn` accepts exactly when every listed pair is in the table. -/
-theorem checkIOOn_eq_true_iff (D : X → Option Y) (io : List (X × Y)) :
-    checkIOOn D io = true ↔ ∀ p ∈ io, D p.1 = some p.2 := by
-  simp [checkIOOn]
-
-/-- Repeating a check is idempotent: removing duplicate pairs does not change acceptance. -/
-theorem checkIOOn_dedup [DecidableEq X] (D : X → Option Y) (io : List (X × Y)) :
-    checkIOOn D io.dedup = checkIOOn D io := by
-  rw [Bool.eq_iff_iff, checkIOOn_eq_true_iff, checkIOOn_eq_true_iff]
-  simp [List.mem_dedup]
-
-end CheckIOOn
-
-section CheckIO
-
-variable {X : Type uX} {Y : Type} [DecidableEq Y]
-
-/-- One step of `CheckIO`: query `p.1`, compare the answer with `p.2`, and conjoin the result
-with the running verdict `acc`. -/
-@[expose]
-def checkIOStep (acc : Bool) (p : X × Y) : OracleComp (X →ₒ Y) Bool := do
-  let y : Y ← (X →ₒ Y).query p.1
-  pure (acc && decide (y = p.2))
-
-/-- `CheckIO^f(x, y)` (ePrint 2025/2166, Def 8.1, p. 52): query every listed input `x` and
-compare the answer with the listed output `y`. Every query is made, with no short-circuit. -/
-@[expose]
-def checkIO (io : List (X × Y)) : OracleComp (X →ₒ Y) Bool :=
-  io.foldlM checkIOStep true
-
-/-- One step of `CheckIO` against a fixed function compares the answer with the expected output. -/
-@[simp]
-theorem evalWithAnswerFn_checkIOStep (H : X → Y) (acc : Bool) (p : X × Y) :
-    evalWithAnswerFn (QueryImpl.ofFn H) (checkIOStep acc p) = (acc && decide (H p.1 = p.2)) :=
-  rfl
-
-private theorem evalWithAnswerFn_foldlM_checkIOStep (H : X → Y) (io : List (X × Y))
-    (acc : Bool) :
-    evalWithAnswerFn (QueryImpl.ofFn H) (io.foldlM checkIOStep acc) =
-      (acc && io.all fun p ↦ decide (H p.1 = p.2)) := by
-  induction io generalizing acc with
-  | nil => simp
-  | cons p io ih =>
-      rw [List.foldlM_cons, evalWithAnswerFn_bind, ih, evalWithAnswerFn_checkIOStep]
-      simp [Bool.and_assoc]
-
-/-- Against a fixed function `H`, `checkIO io` accepts exactly when `H x = y` for every listed
-pair `(x, y)`. -/
-theorem evalWithAnswerFn_checkIO (H : X → Y) (io : List (X × Y)) :
-    evalWithAnswerFn (QueryImpl.ofFn H) (checkIO io) = io.all fun p ↦ decide (H p.1 = p.2) := by
-  rw [checkIO, evalWithAnswerFn_foldlM_checkIOStep, Bool.true_and]
-
-/-- Against a total table, `checkIOOn` is `checkIO` evaluated at the tabulated function. -/
-theorem checkIOOn_some (H : X → Y) (io : List (X × Y)) :
-    checkIOOn (fun x ↦ some (H x)) io =
-      evalWithAnswerFn (QueryImpl.ofFn H) (checkIO io) := by
-  simp [checkIOOn, evalWithAnswerFn_checkIO]
-
-/-- Removing duplicate pairs does not change the acceptance of `checkIO` against any fixed
-function. -/
-theorem evalWithAnswerFn_checkIO_dedup [DecidableEq X] (H : X → Y) (io : List (X × Y)) :
-    evalWithAnswerFn (QueryImpl.ofFn H) (checkIO io.dedup) =
-      evalWithAnswerFn (QueryImpl.ofFn H) (checkIO io) := by
-  rw [← checkIOOn_some, ← checkIOOn_some, checkIOOn_dedup]
-
-end CheckIO
-
 namespace VectorCommitment
 
 variable {X : Type uX} {Y : Type} {Msg : Type uM} {Cm Td Pf : Type} {ℓ : ℕ} [DecidableEq Y]
 
 /-- A non-adaptive check (Chiesa, Di, Hu and Zheng, ePrint 2025/2166, Thm 8.4 condition 1,
-p. 53): `Check` uses no coins and computes an oracle-free, fixed list of input-answer pairs from
-`(cm, ans, pf)` alone, followed by `CheckIO`, which queries the pairs in order; `Open` is
-unconstrained. The list is the paper's `OutputIO`. `pairs` returns `none` when the proof does not
-parse; the check then rejects without a query, the projector `P̂ = 0` of p. 52.
+p. 53): `Check` uses no coins and computes an oracle-free, fixed query log from `(cm, ans, pf)`
+alone (the paper's `OutputIO`), followed by `QueryLog.recheck`, which queries the logged inputs in
+order; `Open` is unconstrained. `log` returns `none` when the proof does not parse; the check then
+rejects without a query, the projector `P̂ = 0` of p. 52.
 
-`qVC` bounds the number of listed pairs by the size of the opened set and is non-decreasing, as
+`qVC` bounds the length of the log by the size of the opened set and is non-decreasing, as
 §3.5 assumes (p. 27), so `qVC qs` bounds the check of every opened set of size at most `qs`
 (`length_le_of_card_le`). The paper's second argument `ℓ` of `q_VC(qs, ℓ)` (p. 54) is fixed by
 the scheme and absorbed into `qVC`. -/
 structure NonadaptiveCheck (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) where
-  /-- `OutputIO(cm, Q, ans, pf) → (x, y)`, or `none` when `pf` does not parse. -/
-  pairs : Cm → PartialVec ℓ Msg → Pf → Option (List (X × Y))
-  /-- `Check` is `OutputIO` followed by `CheckIO`, with no coins. -/
+  /-- The query log to check at `(cm, ans, pf)`, or `none` when `pf` does not parse. -/
+  log : Cm → PartialVec ℓ Msg → Pf → Option (QueryLog (X →ₒ Y))
+  /-- `Check` rechecks the log, with no coins. -/
   check_eq : ∀ cm ans pf, vc.check cm ans pf =
-    liftComp ((pairs cm ans pf).elim (pure false) checkIO) (unifSpec + (X →ₒ Y))
+    liftComp ((log cm ans pf).elim (pure false) QueryLog.recheck) (unifSpec + (X →ₒ Y))
   /-- The query complexity, as a function of the size of the opened set. -/
   qVC : ℕ → ℕ
   /-- The query complexity is non-decreasing (p. 27). -/
   qVC_mono : Monotone qVC
-  /-- `OutputIO` lists at most `qVC |Q|` pairs. -/
-  length_le : ∀ cm ans pf io, pairs cm ans pf = some io → io.length ≤ qVC ans.dom.card
+  /-- The log has at most `qVC |Q|` entries. -/
+  length_le : ∀ cm ans pf L, log cm ans pf = some L → L.length ≤ qVC ans.dom.card
 
 namespace NonadaptiveCheck
 
 variable {vc : VectorCommitment X Y Msg Cm Td Pf ℓ}
 
-/-- `qVC qs` bounds the number of listed pairs for every budget `qs ≥ |Q|` (p. 27). -/
+/-- `qVC qs` bounds the length of the log for every budget `qs ≥ |Q|` (p. 27). -/
 theorem length_le_of_card_le (h : NonadaptiveCheck vc) {cm : Cm} {ans : PartialVec ℓ Msg} {pf : Pf}
-    {io : List (X × Y)} (hio : h.pairs cm ans pf = some io) {qs : ℕ}
-    (hqs : ans.dom.card ≤ qs) : io.length ≤ h.qVC qs :=
-  (h.length_le cm ans pf io hio).trans (h.qVC_mono hqs)
+    {log : QueryLog (X →ₒ Y)} (hlog : h.log cm ans pf = some log) {qs : ℕ}
+    (hqs : ans.dom.card ≤ qs) : log.length ≤ h.qVC qs :=
+  (h.length_le cm ans pf log hlog).trans (h.qVC_mono hqs)
 
 /-- `Check^D` against a partial table `D` (p. 53): reject when the proof does not parse, and
-otherwise run `checkIOOn D` on the listed pairs. -/
+otherwise check the log against `D` with `QueryLog.agreesWith`. -/
 @[expose]
 def checkOn (h : NonadaptiveCheck vc) (D : X → Option Y) (cm : Cm) (ans : PartialVec ℓ Msg)
     (pf : Pf) : Bool :=
-  (h.pairs cm ans pf).elim false (checkIOOn D)
+  (h.log cm ans pf).elim false (QueryLog.agreesWith (.ofFn D))
 
 /-- Against a total table, `checkOn` is the coin-free check evaluated at the tabulated
 function. -/
 theorem checkOn_some (h : NonadaptiveCheck vc) (H : X → Y) (cm : Cm) (ans : PartialVec ℓ Msg)
     (pf : Pf) :
     h.checkOn (fun x ↦ some (H x)) cm ans pf =
-      evalWithAnswerFn (QueryImpl.ofFn H) ((h.pairs cm ans pf).elim (pure false) checkIO) := by
+      evalWithAnswerFn (QueryImpl.ofFn H)
+        ((h.log cm ans pf).elim (pure false) QueryLog.recheck) := by
   rw [checkOn]
-  cases h.pairs cm ans pf <;> simp [checkIOOn_some]
+  cases h.log cm ans pf <;> simp [QueryLog.agreesWith_ofFn_some]
 
 /-- Against a fixed function `H`, a non-adaptive check deterministically returns the table check
 at the tabulated function. -/

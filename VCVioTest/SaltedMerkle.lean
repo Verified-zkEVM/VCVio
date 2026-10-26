@@ -23,7 +23,7 @@ public section
 
 namespace VCVioTest.SaltedMerkleCanary
 
-open SaltedMerkle Quantum MerkleTreeHashing BinaryTree
+open SaltedMerkle Quantum MerkleTreeHashing BinaryTree OracleSpec
 
 /-- Tagged inputs: node inputs on the left, leaf inputs `(m, γ)` on the right. -/
 abbrev X := (Bool × Bool) ⊕ (Bool × Bool)
@@ -63,9 +63,9 @@ example : Monotone (nonadaptiveCheck (Msg := Bool) enc 1).qVC := (nonadaptiveChe
 example : (nonadaptiveCheck (Msg := Bool) enc 1).qVC 2 = 4 := rfl
 
 /-- At depth `0`, the one opening lists at most `2 · 1 - 1 = 1` distinct pair. -/
-example (rt : Bool) (ans : PartialVec 1 Bool) (td : Td Bool Bool 0) (io : List (X × Bool))
-    (h : pairs enc 0 rt ans (opening 0 ans.dom td) = some io) : io.length ≤ 1 :=
-  length_pairs_opening_le enc rt ans _ td io h
+example (rt : Bool) (ans : PartialVec 1 Bool) (td : Td Bool Bool 0) (log : QueryLog (X →ₒ Bool))
+    (h : pairs enc 0 rt ans (opening 0 ans.dom td) = some log) : log.length ≤ 1 :=
+  length_pairs_opening_le enc rt ans _ td log h
 
 /-! ## An honest commitment, opened and checked -/
 
@@ -191,25 +191,25 @@ example : pairs enc 1 true (PartialVec.restrict msg {0})
 /-- A singleton opening queries the leaf before its parent. -/
 example : pairs enc 1 true (PartialVec.restrict msg {0})
     (opening 1 {0} (honestTree enc 1 H msg salts).2) =
-    some [(enc.leaf () (true, false), true), (enc.node () (true, false), true)] := by decide
+    some [⟨enc.leaf () (true, false), true⟩, ⟨enc.node () (true, false), true⟩] := by decide
 
 /-- At depth two the leaf comes first, followed by the root and then its child. -/
-example : leafIO enc true (0 : Fin 4) false
+example : leafLog enc true (0 : Fin 4) false
     ⟨false, ⟨[(true, false), (false, true)], rfl⟩⟩ =
-    [(enc.leaf () (false, false), false), (enc.node () (true, false), true),
-      (enc.node () (false, true), true)] := by decide
+    [⟨enc.leaf () (false, false), false⟩, ⟨enc.node () (true, false), true⟩,
+      ⟨enc.node () (false, true), true⟩] := by decide
 
 /-- Right edges preserve sibling orientation after placing the leaf first. -/
-example : leafIO enc true (3 : Fin 4) false
+example : leafLog enc true (3 : Fin 4) false
     ⟨false, ⟨[(true, false), (false, true)], rfl⟩⟩ =
-    [(enc.leaf () (false, false), false), (enc.node () (false, true), true),
-      (enc.node () (true, false), true)] := by decide
+    [⟨enc.leaf () (false, false), false⟩, ⟨enc.node () (false, true), true⟩,
+      ⟨enc.node () (true, false), true⟩] := by decide
 
 /-- Two openings share the root pair; deduplication keeps it only once. -/
 example : pairs enc 1 true (PartialVec.restrict msg Finset.univ)
     (opening 1 Finset.univ (honestTree enc 1 H msg salts).2) =
-    some [(enc.leaf () (true, false), true), (enc.leaf () (false, false), false),
-      (enc.node () (true, false), true)] := by decide
+    some [⟨enc.leaf () (true, false), true⟩, ⟨enc.leaf () (false, false), false⟩,
+      ⟨enc.node () (true, false), true⟩] := by decide
 
 /-- An extracted empty table knows the claimed root, unlike the repeated-index bottom. -/
 example : (extract enc 0 true Database.empty).2.2.getRootValue = some true ∧
