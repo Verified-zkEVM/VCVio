@@ -486,6 +486,7 @@ public import VCVio.Quantum.Comp.Subsystem
 public import VCVio.Quantum.Comp.TotalQueryBound
 public import VCVio.Quantum.DSubInstrument
 public import VCVio.Quantum.MatrixMap
+public import VCVio.Quantum.MatrixMap.BlockNorm
 public import VCVio.Quantum.MatrixMap.Commutant
 public import VCVio.Quantum.MatrixMap.Completion
 public import VCVio.Quantum.MatrixMap.Family
@@ -527,6 +528,9 @@ public import VCVio.Quantum.Pure.Vector
 public import VCVio.Quantum.Register
 public import VCVio.Quantum.Semantics
 public import VCVio.Quantum.SubInstrument
+public import VCVio.Quantum.VC.CheckedRead
+public import VCVio.Quantum.VC.Compressed
+public import VCVio.Quantum.VC.Conditions
 public import VCVio.Quantum.VC.Emulated
 public import VCVio.Quantum.VC.MultiExtractable
 public import VCVio.Quantum.VC.MultiExtractor
