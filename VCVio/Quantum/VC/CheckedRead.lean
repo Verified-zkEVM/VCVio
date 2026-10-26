@@ -100,14 +100,10 @@ theorem filledCheck_eq_prod (log : QueryLog ((Fin k × X) →ₒ Y)) :
 theorem filledCheck_cons_right (p : (_ : Fin k × X) × Y)
     (log : QueryLog ((Fin k × X) →ₒ Y)) :
     filledCheck (p :: log) = filledCheck log * compressedReadProjector k X Y p.1 (some p.2) := by
-  rw [filledCheck, filledCheck, compressedReadProjector,
-    compressed_conjugate_mul _ (compressDatabases_mul_self k X Y)]
-  congr 2
-  rw [partialCheck, partialCheck, diagonal_mul_diagonal]
-  congr 1
-  funext D
-  simp only [List.forall_mem_cons]
-  split_ifs <;> simp_all
+  simp only [filledCheck_eq_prod]
+  refine (Commute.list_prod_right _ _ fun Q hQ ↦ ?_).eq
+  obtain ⟨q, _, rfl⟩ := List.mem_map.mp hQ
+  exact compressedReadProjector_commute k X Y p.1 q.1 (some p.2) (some q.2)
 
 end CompressedReplay
 
