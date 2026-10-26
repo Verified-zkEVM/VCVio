@@ -32,6 +32,8 @@ public import HashSig.SLHDSA.GeneralScheme
 public import HashSig.SLHDSA.GeneralSchemeQueryBound
 public import HashSig.SLHDSA.Graph.Children
 public import HashSig.SLHDSA.Graph.Encoding
+public import HashSig.SLHDSA.Graph.Fors.Dependencies
+public import HashSig.SLHDSA.Graph.Fors.Schedule
 public import HashSig.SLHDSA.Graph.Structure
 public import HashSig.SLHDSA.Hypertree
 public import HashSig.SLHDSA.HypertreeConformance
