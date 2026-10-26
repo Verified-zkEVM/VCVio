@@ -92,7 +92,7 @@ variable [Fintype n] [DecidableEq n] [Fintype A] [DecidableEq A] [Finite R]
 theorem onFactor_mem_unitaryGroup (e : n ≃ A × R) {M : Matrix A A ℂ}
     (hM : M ∈ unitaryGroup A ℂ) : onFactor e M ∈ unitaryGroup n ℂ := by
   have := Fintype.ofFinite R
-  exact reindex_mem_unitaryGroup _ (kronecker_mem_unitary hM (one_mem _))
+  exact Matrix.submatrix_equiv_mem_unitary.mpr (kronecker_mem_unitary hM (one_mem _))
 
 omit [DecidableEq n] [DecidableEq A] in
 /-- Placement on a factor is multiplicative. -/
