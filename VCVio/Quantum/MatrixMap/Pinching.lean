@@ -246,6 +246,15 @@ theorem mul_labelProjector_eq_labelProjector_mul [Fintype n] [Fintype m] [Decida
   · rw [hU a b h]
     split_ifs <;> simp
 
+/-- Label projectors are self-adjoint. -/
+@[simp]
+theorem conjTranspose_labelProjector [Semiring α] [StarRing α] (β : n → κ) (i : κ) :
+    (labelProjector β i : Matrix n n α)ᴴ = labelProjector β i := by
+  rw [labelProjector, diagonal_conjTranspose]
+  congr 1
+  funext a
+  split_ifs <;> simp [*]
+
 /-- A label projector is an orthogonal projection. -/
 theorem isStarProjection_labelProjector [Fintype n] [Semiring α] [StarRing α]
     (β : n → κ) (i : κ) : IsStarProjection (labelProjector β i : Matrix n n α) := by
@@ -256,10 +265,7 @@ theorem isStarProjection_labelProjector [Fintype n] [Semiring α] [StarRing α]
     funext a
     split_ifs <;> simp
   · change star (labelProjector β i) = labelProjector β i
-    rw [star_eq_conjTranspose, labelProjector, diagonal_conjTranspose]
-    congr 1
-    funext a
-    split_ifs <;> simp [*]
+    rw [star_eq_conjTranspose, conjTranspose_labelProjector]
 
 /-- A label projector has norm at most one. -/
 theorem l2_opNorm_labelProjector_le_one {𝕜 : Type*} [RCLike 𝕜] [Fintype n]
@@ -303,7 +309,7 @@ theorem sum_conjTranspose_mul_labelProjector [Fintype n] [Fintype κ] [Semiring 
     ∑ i, (labelProjector β i : Matrix n n α)ᴴ * labelProjector β i = 1 := by
   refine (Finset.sum_congr rfl fun i _ ↦ ?_).trans (sum_labelProjector β)
   have h := isStarProjection_labelProjector (α := α) β i
-  rw [← star_eq_conjTranspose, h.isSelfAdjoint.star_eq, h.isIdempotentElem.eq]
+  rw [conjTranspose_labelProjector, h.isIdempotentElem.eq]
 
 /-- A label projector beside an identity is the label projector of the labelling read from the
 first factor. -/

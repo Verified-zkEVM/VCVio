@@ -309,8 +309,7 @@ theorem isCoherentIndex_labelProjector {P : Type u} {In : P → QReg} {κ : P �
   sum_eq_one i := Matrix.sum_labelProjector (f i)
   mul_self i k := (Matrix.isStarProjection_labelProjector (f i) k).isIdempotentElem.eq
   conjTranspose_mul_of_ne i a b h := by
-    rw [← Matrix.star_eq_conjTranspose,
-      (Matrix.isStarProjection_labelProjector (f i) b).isSelfAdjoint.star_eq,
+    rw [Matrix.conjTranspose_labelProjector,
       Matrix.labelProjector_mul_labelProjector_of_ne _ (Ne.symm h)]
 
 namespace EmulatedOracle
