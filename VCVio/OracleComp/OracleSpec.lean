@@ -47,9 +47,13 @@ namespace OracleSpec
 
 variable {ι : Type u}
 
+/-- The polynomial functor of `spec`, whose positions are the oracle inputs `ι` and whose
+directions at an input `t` are the possible answers `spec t`. -/
 @[reducible]
 def toPFunctor (spec : OracleSpec ι) : PFunctor := PFunctor.mk ι spec
 
+/-- The oracle specification of a polynomial functor `P`, with one oracle input for each
+position `a : P.A`, answered in the directions `P.B a`; it is inverse to `toPFunctor`. -/
 @[reducible, inline]
 def ofPFunctor (P : PFunctor) : OracleSpec P.A := P.B
 
@@ -59,7 +63,9 @@ def ofPFunctor (P : PFunctor) : OracleSpec P.A := P.B
 @[simp] lemma ofPFunctor_toPFunctor (spec : OracleSpec ι) :
     OracleSpec.ofPFunctor (OracleSpec.toPFunctor spec) = spec := rfl
 
+/-- The type of oracle inputs of `spec`, which is its index type `ι`. -/
 abbrev Domain (_spec : OracleSpec ι) : Type _ := ι
+/-- The type of answers that the oracles of `spec` return to a query on input `t`. -/
 abbrev Range (spec : OracleSpec ι) (t : ι) : Type _ := spec t
 
 /-! ## Typeclass data on indices and answer types
@@ -77,7 +83,9 @@ instances of their own; `+` combines the per-branch instances of its summands. -
 
 section ofFn
 
+/-- The oracle specification whose oracle answers a query on input `t : ι` in the type `F t`. -/
 @[reducible, always_inline] def ofFn {ι : Type u} (F : ι → Type v) : OracleSpec ι := F
+/-- `A →ₒ B` specifies oracles that take inputs in `A` and answer every query in `B`. -/
 notation:25 (name := singletonSpec) A:25 " →ₒ " B:26 =>
   OracleSpec.ofFn (ι := A) (fun _ => B)
 
@@ -207,6 +215,7 @@ section emptySpec
 
 /-- Specifies access to no oracles, using the empty type as the indexing type. -/
 @[reducible] def emptySpec : OracleSpec PEmpty := PEmpty →ₒ PEmpty
+/-- `[]ₒ` is the specification `emptySpec`, which provides no oracles. -/
 notation "[]ₒ" => emptySpec
 
 @[simp] lemma toPFunctor_emptySpec : []ₒ.toPFunctor = 0 := rfl

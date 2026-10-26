@@ -26,6 +26,7 @@ and signature space `S`.
 ## Main definitions
 
 * `SignatureAlg`: a signature scheme as a `keygen`/`sign`/`verify` triple in a monad `m`.
+* `SignatureAlg.withVerify`: a scheme with its verification replaced.
 * `SignatureAlg.runWithSigningOracle`: runs an adversary with its ambient oracles forwarded and a
   logged signing oracle.
 * `SignatureAlg.Complete`: completeness up to an error `δ`, with `PerfectlyComplete` the `δ = 0`
@@ -46,8 +47,11 @@ where `M` is the space of messages, `PK`/`SK` are the spaces of the public/priva
 and `S` is the type of the final signature. -/
 @[ext]
 structure SignatureAlg (m : Type → Type v) [Monad m] (M PK SK S : Type) where
+  /-- Sample a public/secret key pair. -/
   keygen : m (PK × SK)
+  /-- Sign a message using the secret key, with the matching public key also available. -/
   sign (pk : PK) (sk : SK) (msg : M) : m S
+  /-- Check whether a signature is valid for a message under a public key. -/
   verify (pk : PK) (msg : M) (σ : S) : m Bool
 
 namespace SignatureAlg
@@ -128,6 +132,25 @@ lemma map_correctnessGame (F : m →ᵐ n) (sigAlg : SignatureAlg m M PK SK S) (
   simp
 
 end map
+
+section withVerify
+
+variable {m : Type → Type v} [Monad m] {M PK SK S : Type}
+
+/-- The scheme `sigAlg` with its verification replaced by `ver`. -/
+def withVerify (sigAlg : SignatureAlg m M PK SK S) (ver : PK → M → S → m Bool) :
+    SignatureAlg m M PK SK S :=
+  { sigAlg with verify := ver }
+
+variable (sigAlg : SignatureAlg m M PK SK S) (ver : PK → M → S → m Bool)
+
+@[simp] lemma withVerify_keygen : (sigAlg.withVerify ver).keygen = sigAlg.keygen := rfl
+
+@[simp] lemma withVerify_sign : (sigAlg.withVerify ver).sign = sigAlg.sign := rfl
+
+@[simp] lemma withVerify_verify : (sigAlg.withVerify ver).verify = ver := rfl
+
+end withVerify
 
 section correctness
 
@@ -447,6 +470,16 @@ lemma strongUnforgeableAdvantage_le_euf_add_sameMessage
       unforgeableAdvantage runtime adv.toUnforgeableAdversary +
         sameMessageStrongUnforgeableAdvantage runtime adv :=
   (strongUnforgeableAdvantage_eq_euf_add_sameMessage runtime adv).le
+
+/-- Strong unforgeability is at least as demanding as unforgeability: the forging advantage of an
+adversary is at most the strong forging advantage of the same program. -/
+lemma unforgeableAdvantage_le_strongUnforgeableAdvantage
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : UnforgeableAdversary sigAlg) :
+    unforgeableAdvantage runtime adv ≤
+      strongUnforgeableAdvantage runtime (⟨adv.main⟩ : StrongUnforgeableAdversary sigAlg) := by
+  rw [strongUnforgeableAdvantage_eq_euf_add_sameMessage]
+  exact le_self_add
 
 /-- SUF-CMA from EUF-CMA plus a quantitative same-message binding property. -/
 lemma strongUnforgeableAdvantage_le_euf_add_of_sameMessageBinding

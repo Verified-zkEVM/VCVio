@@ -135,6 +135,20 @@ lemma triple_propInd_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}
     Triple r oa (fun x => 𝟙⟦p x⟧) ↔ r ≤ Pr{let x ← oa}[p x] := by
   rw [triple_iff_le_wp, ← prEvent_eq_wp_propInd]
 
+/-- Almost-sure correctness of a proposition-valued computation, such as the computation of an
+event over several draws, as a triple with the indicator of its result. -/
+lemma triple_propInd_self_iff_prEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
+    [OracleSpec.AnswerMeasure spec] (mx : OracleComp spec Prop) :
+    Triple (𝟙⟦True⟧ : ℝ≥0∞) mx (fun P => 𝟙⟦P⟧) ↔ prEvent mx = 1 := by
+  simpa using triple_propInd_iff_prEvent_eq_one mx id
+
+/-- Lower bounds on the probability of a proposition-valued computation are triples with the
+indicator of its result. -/
+lemma triple_propInd_self_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}
+    [OracleSpec.AnswerMeasure spec] (mx : OracleComp spec Prop) (r : ℝ≥0∞) :
+    Triple r mx (fun P => 𝟙⟦P⟧) ↔ r ≤ prEvent mx := by
+  simpa using triple_propInd_iff_le_prEvent mx id r
+
 /-! ## Expectation-level bridge lemmas -/
 
 /-- WP of a disjunction indicator is bounded by the sum of individual WP indicators. -/

@@ -26,7 +26,9 @@ open OracleSpec OracleComp ENNReal
 /-- A data encapsulation mechanism with key space `K`, message space `M`, and ciphertext space
 `C`. The key is supplied externally, matching the proof-ladders DEM model. -/
 structure DEMScheme (m : Type → Type u) [Monad m] (K M C : Type) where
+  /-- Encrypt a message under a symmetric key. -/
   encrypt : K → M → m C
+  /-- Decrypt a ciphertext under a symmetric key. -/
   decrypt : K → C → m M
 
 namespace DEMScheme
@@ -58,8 +60,12 @@ variable {ι : Type} {spec : OracleSpec ι} [SampleableType K]
 /-- Two-phase one-time IND-CPA adversary for a DEM. The key is hidden, so the message-selection
 phase receives no public input. -/
 structure IND_CPA_Adversary (_dem : DEMScheme (OracleComp spec) K M C) where
+  /-- The state the adversary carries from the message-choice phase to the guessing phase. -/
   State : Type
+  /-- Choose the two challenge messages together with the state to pass to `distinguish`. -/
   chooseMessages : OracleComp spec (M × M × State)
+  /-- Given the saved state and the challenge ciphertext, guess which challenge message was
+  encrypted. -/
   distinguish : State → C → OracleComp spec Bool
 
 /-- Fixed-branch one-time IND-CPA experiment for a DEM, matching the source proof-ladders

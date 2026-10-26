@@ -7,7 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import ToMathlib.Algebra.BigOperators.Finset
 public import ToMathlib.Control.Functor.Prod
-public import ToMathlib.Algebra.BigOperators.List
+public import Mathlib.Algebra.BigOperators.Group.List.Basic
 public import ToMathlib.Data.Fin.Basic
 public import ToMathlib.Data.Vector.ListVector
 public import ToMathlib.Logic.Basic

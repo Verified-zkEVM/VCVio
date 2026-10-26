@@ -59,6 +59,7 @@ section OpenReduction
 
 variable {G : Type} [AddCommGroup G]
 
+/-- Zero is the default element of the group `G`, which is also the ElGamal message space. -/
 local instance : Inhabited G := ⟨0⟩
 
 /-- The left-port query invoking the message-selection phase of a one-time adversary. -/
