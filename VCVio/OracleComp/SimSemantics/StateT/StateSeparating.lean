@@ -359,6 +359,8 @@ structure ExportRoute
     {ιₑ : Type uₑ} (E : OracleSpec.{uₑ, v} ιₑ)
     {ιₑ₁ : Type uₑ} (E₁ : OracleSpec.{uₑ, v} ιₑ₁)
     {ιₑ₂ : Type uₑ} (E₂ : OracleSpec.{uₑ, v} ιₑ₂) where
+  /-- For each external query `t`, the component that owns it, the component query it becomes,
+  and the equivalence between the external and component response types. -/
   route : (t : E.Domain) →
     (Σ t₁ : E₁.Domain, E.Range t ≃ E₁.Range t₁) ⊕
     (Σ t₂ : E₂.Domain, E.Range t ≃ E₂.Range t₂)

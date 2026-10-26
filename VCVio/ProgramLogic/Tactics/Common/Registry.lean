@@ -141,9 +141,12 @@ def VCSpecEntry.lookupKey (entry : VCSpecEntry) : VCSpecLookupKey :=
 * `relational` indexes relational entries by their `oa` `Sym.Pattern`;
   the right-hand head check happens at lookup time. -/
 structure VCSpecRegistry where
+  /-- Every registered entry, in insertion order, used by `kind`-indexed iteration. -/
   all : Array VCSpecEntry := #[]
   /-- Unary entries, keyed by the pattern of their computation. -/
   unary : DiscrTree VCSpecEntry := .empty
+  /-- Relational entries, keyed by the pattern of their left computation; the head of the
+  right computation is checked at lookup time. -/
   relational : DiscrTree VCSpecEntry := .empty
   deriving Inhabited
 
@@ -151,6 +154,7 @@ private def VCSpecRegistry.addToTree (tree : DiscrTree VCSpecEntry) (entry : VCS
     DiscrTree VCSpecEntry :=
   Lean.Meta.Sym.insertPattern tree entry.pattern entry
 
+/-- The scoped environment extension holding the registered `@[vcspec]` entries. -/
 initialize vcSpecRegistry :
     SimpleScopedEnvExtension
       VCSpecEntry
