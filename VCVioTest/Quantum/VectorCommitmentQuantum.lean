@@ -254,37 +254,37 @@ example (B : QReg) (t : Fin 2) :
   erw [run₂_checkedRead_rom]
   exact SubInstrument.branch_pure_of_ne (by simp)
 
-/-- The toy check with an empty transcript. -/
-def trivialIO : trivialVC.NonadaptiveCheck where
-  pairs _ _ _ := some []
+/-- The toy check with an empty query log. -/
+def trivialCheck : trivialVC.NonadaptiveCheck where
+  log _ _ _ := some []
   check_eq _ _ _ := rfl
   qVC _ := 0
   qVC_mono := monotone_const
-  length_le _ _ _ io h := by cases h; simp
+  length_le _ _ _ L h := by cases h; simp
 
 /-- Malformed proof strings produce rejection. -/
 def rejectingVC : VectorCommitment (Fin 2) (Fin 2) Bool Unit Unit Unit 0 :=
   { trivialVC with check := fun _ _ _ ↦ pure false }
 
-/-- The malformed transcript form of the rejecting toy check. -/
-def rejectingIO : rejectingVC.NonadaptiveCheck where
-  pairs _ _ _ := none
+/-- The rejecting toy check, which has no query log. -/
+def rejectingCheck : rejectingVC.NonadaptiveCheck where
+  log _ _ _ := none
   check_eq _ _ _ := rfl
   qVC _ := 0
   qVC_mono := monotone_const
-  length_le _ _ _ io h := by cases h
+  length_le _ _ _ L h := by cases h
 
-/-- A malformed transcript rejects. -/
+/-- A missing query log rejects. -/
 example (B : QReg) (ans : PartialVec 0 Bool) :
     checkAt (Z := Z0) (fun _ : Fin 1 ↦ rejectingVC) B 0 0 () ans () =
       QuantumComp₂.pure false :=
-  checkAt_pairs_none _ _ rejectingIO _ _ _ _ _ rfl
+  checkAt_log_none _ _ rejectingCheck _ _ _ _ _ rfl
 
-/-- A present empty transcript accepts. -/
+/-- A present empty query log accepts. -/
 example (B : QReg) (ans : PartialVec 0 Bool) :
     checkAt (Z := Z0) (fun _ : Fin 1 ↦ trivialVC) B 0 0 () ans () =
       QuantumComp₂.pure true :=
-  checkAt_pairs_nil _ _ trivialIO _ _ _ _ _ rfl
+  checkAt_log_nil _ _ trivialCheck _ _ _ _ _ rfl
 
 /-- The real checked interpreter preserves the complete joint law of a toy oracle check. -/
 example (B : QReg) :
