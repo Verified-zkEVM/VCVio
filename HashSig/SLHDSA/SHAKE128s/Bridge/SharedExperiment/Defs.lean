@@ -38,4 +38,22 @@ abbrev SourceCounts := Unforgeability.QueryCounts
   | .ambient phase input => Pi.single (sourceKind phase) (Game.hashCost input)
   | .signingAttempt _ => Pi.single .sign 1
 
+/-- A signing view of the same external algorithms, with public/secret key-pair order. -/
+@[expose] def externalView {Output PK SK : Type} (scheme : Game.ExternalScheme Output PK SK) :
+    SigningView (OracleComp (Game.World Output)) Message PK SK Bytes (Option Bytes) where
+  keygen := Prod.swap <$> scheme.keygen
+  sign _ sk request := scheme.sign sk request
+  verify := scheme.verify
+  readback := id
+
+/-- Recover the three original phase coordinates from the full source vector. -/
+@[expose] def phaseCounts (cost : SourceCounts) : Game.Counts
+  | .signing => cost .sign
+  | .hash => cost .hash
+  | .verification => cost .verifier
+
+/-- The total hashes after key generation include direct, signer and verification calls. -/
+@[expose] def laterHashes (cost : SourceCounts) : Nat :=
+  cost .hash + cost .signer + cost .verifier
+
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment
