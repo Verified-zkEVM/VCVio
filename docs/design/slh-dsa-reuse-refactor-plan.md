@@ -325,7 +325,7 @@ units add contracts and proved compatibility; retain original theorem routes whi
 | R5 canonical delegation | P4/P5/P6; migrate WOTS/FORS/XMSS/hypertree/scheme/view bodies in dependency-complete units | Public equations preserve each old result and effect observation; remove a duplicate only after complete old theorem recovery |
 | R6a generic probability owners | R1; general-Input/Output adaptive sampler plus independent-moment family, after existing-owner search | Tiered reuse criteria: real graph clients or intrinsic public math with actual FORS use; exact old specialization, no fixed-128s import/slack |
 | R6b graph gate P6 | R3/R6a; canonical-parameter graph on 128s and 192f, structural laws separate from quantitative certificates | Actual coordinates/address/rank/evaluation/provider observer reuse; recover old 128s specialization; revise architecture if it fails |
-| R6c deeper proof extraction | R6b; further theorem families selected by demonstrated shared clients | Same exact-strength/consumer gates; document genuine new math and retain specialized side certificates |
+| R6c deeper proof extraction | R6b; finite named extraction/recovery manifest frozen after P6 | Complete that manifest under the same exact-strength/consumer gates; retain specialized side certificates |
 | R7 consumer surface | R2/R4; light construction/adaptation/observation/certificate leaves and examples | Real changed-context, parameter, provider and resource consumers without engine rewrites; import and global-attribute guards |
 | R8 final migration gate | R5/R6a–c/R7; clean recorded committed source/generated imports and full validation | Ledger complete, all original regressions and exact 18-row artifact, strict before/after head/dependency cleanliness and independent final review |
 
@@ -334,6 +334,15 @@ concrete specializations first. It does not require replacing every construction
 After the graph pilot also passes, R5 delegates or retargets bodies component by component
 against those proved contracts;
 there is no circular requirement to finish a whole rewrite before validating shared semantics.
+
+After P6, freeze the R6c completion manifest in a reviewed commit before starting its deeper
+ports. List a finite set of named source theorem families, intended generic owners, actual
+consumers or the applicable intrinsic-math reuse criterion, and exact old-specialization recovery
+theorems. Record which remaining specialized arguments stay local and why. This manifest fixes
+the R6c deliverables and the corresponding R8 completion endpoint; later extraction ideas are
+separate follow-up work, not an open-ended condition for finishing this migration. The manifest
+must still satisfy the required generic probability extraction and two-instance structural graph
+reuse above; it cannot reduce completion to facades over unchanged specialized proof bodies.
 
 R6a–c proceed incrementally alongside compatibility work; required probability extraction and
 the graph pilot must not be postponed indefinitely
