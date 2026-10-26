@@ -228,6 +228,19 @@ theorem qVC_card_dom_le_q2 (i : Fin k) (ans : PartialVec (ℓ i) Msg) :
   ((chk i).qVC_mono ((Finset.card_le_univ _).trans (Fintype.card_fin _).le)).trans
     (qVC_le_q2 chk i)
 
+/-- A cell budget for proofs produced by opening one trapdoor on the supplied answer domain.
+This can be smaller than the query bound for arbitrary proofs in `NonadaptiveCheck`. -/
+@[expose]
+def OpeningQueryBound (q : ℕ) : Prop :=
+  ∀ (i : Fin k) (cm : Cm) (ans : PartialVec (ℓ i) Msg) (td : Td i) (pf : Pf i),
+    pf ∈ support ((VC i).opening ans.dom td) →
+      ∀ L, (chk i).log cm ans pf = some L → L.length ≤ q
+
+/-- The arbitrary-proof budget also bounds all proofs produced by opening. -/
+theorem openingQueryBound_q2 : OpeningQueryBound chk (q2 chk) := by
+  intro i cm ans td pf _ L hL
+  exact ((chk i).length_le _ _ _ _ hL).trans (qVC_card_dom_le_q2 chk i ans)
+
 end counts
 
 end Quantum

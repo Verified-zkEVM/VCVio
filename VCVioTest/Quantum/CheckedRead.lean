@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.Quantum.VC.CheckedRead
+public import VCVio.Quantum.VC.Proof.CheckerDistance
 
 /-!
 # Checked-read channel tests
@@ -17,9 +17,60 @@ databases. Equalities compare projector products and complete residual channels.
 public section
 
 open Quantum Quantum.CompressedReplay Matrix OracleSpec
-open scoped Kronecker ENNReal
+open scoped Kronecker ENNReal Matrix.Norms.L2Operator
 
 namespace VCVioTest.QuantumCheckedRead
+
+/-- A repeated prescription across two oracle databases, touching only one cell. -/
+abbrev repeated : QueryLog ((Fin 2 × Bool) →ₒ ZMod 3) :=
+  [⟨(0, true), 1⟩, ⟨(0, true), 1⟩]
+
+/-- Duplicate checks retain the one-cell squared discrepancy `5/9`. -/
+example : ‖filledCheck repeated - partialCheck repeated‖ ^ 2 = 5 / 9 := by
+  have hc : QueryLog.Consistent repeated := by
+    intro p hp q hq _
+    simp only [repeated, List.mem_cons, List.not_mem_nil, or_false, or_self] at hp hq
+    subst p
+    subst q
+    rfl
+  rw [filled_partial_distance_sq repeated hc]
+  norm_num [loggedCells, repeated, ZMod.card]
+
+/-- Equal addresses in distinct databases count as two cells, giving `65/81`. -/
+example :
+    ‖filledCheck
+        ([⟨(0, true), 1⟩, ⟨(1, true), 1⟩] : QueryLog ((Fin 2 × Bool) →ₒ ZMod 3)) -
+      partialCheck [⟨(0, true), 1⟩, ⟨(1, true), 1⟩]‖ ^ 2 = 65 / 81 := by
+  have hc : QueryLog.Consistent
+      ([⟨(0, true), 1⟩, ⟨(1, true), 1⟩] : QueryLog ((Fin 2 × Bool) →ₒ ZMod 3)) := by
+    refine QueryLog.consistent_iff.mpr fun p hp q hq _ ↦ ?_
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hp hq
+    rcases hp with rfl | rfl <;> rcases hq with rfl | rfl <;> rfl
+  rw [filled_partial_distance_sq _ hc]
+  norm_num [loggedCells, ZMod.card]
+
+/-- Two different answers at one cell, one of them the special zero answer. -/
+abbrev conflicting : QueryLog ((Fin 2 × Bool) →ₒ ZMod 3) :=
+  [⟨(0, true), 0⟩, ⟨(0, true), 1⟩]
+
+/-- Conflicting prescriptions vanish even if one is the special zero answer. -/
+example : filledCheck conflicting = 0 ∧ partialCheck conflicting = 0 := by
+  apply filled_partial_eq_zero_of_conflict
+  intro h
+  have he := QueryLog.consistent_iff.mp h ⟨(0, true), 0⟩ (by simp [conflicting])
+    ⟨(0, true), 1⟩ (by simp [conflicting]) rfl
+  exact (by decide : (0 : ZMod 3) ≠ 1) he
+
+/-- The singleton answer alphabet has unit distance on a prescribed cell. -/
+example : ‖filledCheck ([⟨(0, true), 0⟩] : QueryLog ((Fin 1 × Bool) →ₒ ZMod 1)) -
+    partialCheck [⟨(0, true), 0⟩]‖ ^ 2 = 1 := by
+  rw [filled_partial_distance_sq _ (QueryLog.consistent_singleton _)]
+  norm_num [loggedCells, ZMod.card]
+
+/-- An empty list has zero checker distance, including for a singleton alphabet. -/
+example :
+    ‖filledCheck ([] : QueryLog ((Fin 1 × Bool) →ₒ ZMod 1)) - partialCheck []‖ = 0 := by
+  simp [filledCheck_nil, partialCheck]
 
 local notation "E" => compressedVCOracle 2 Bool (ZMod 2)
 local notation "Q" => compressedReadProjector 2 Bool (ZMod 2)
@@ -124,6 +175,12 @@ def prescribedCheck (ps : Option (QueryLog (Bool →ₒ ZMod 2))) :
   qVC_mono _ _ _ := le_rfl
   length_le _ _ _ L h := by cases ps <;> simp_all
 
+/-- Flattening a batch follows claim order and retains the selected database indices. -/
+example : batchLog (fun _ : Fin 2 ↦ prescribedCheck (some [⟨false, 0⟩])) Finset.univ
+    ⟨Fin.rev, fun _ ↦ (), fun _ _ ↦ none, fun _ ↦ (), Finset.univ⟩ =
+      [⟨(1, false), 0⟩, ⟨(0, false), 0⟩] := by
+  decide
+
 /-- A zero prescription reaches the actual accepting channel of `checkAt`. -/
 example {Z : Type} [Fintype Z] [DecidableEq Z] [AddGroup Z]
     (ME : MultiExtractor 2 Unit (DmOf (fun _ ↦ 0) Unit (fun _ ↦ Unit)) (E).S)
@@ -163,6 +220,20 @@ example :
     simp [VectorCommitment.NonadaptiveCheck.checkOn, prescribedCheck]
   exact h.trans ((congrArg (fun P ↦ MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ P)) hP).trans
     (by rw [kronecker_zero]; exact MatrixMap.conj_zero))
+
+/-- A batch of malformed checks rejects through the batch's actual accepting channel. -/
+example :
+    ((((E).mixedExtractRuntime ME code).run₂ .instruments
+      (QComp.allIn Finset.univ fun i ↦
+        checkAt (fun _ ↦ prescribedVC none) B i i () (fun _ ↦ none) ())).branch true) = 0 := by
+  refine (branch_run₂_filledBatch_compressedVCOracle
+    (fun _ : Fin 2 ↦ prescribedCheck none) ME code B Finset.univ
+    ⟨id, fun _ ↦ (), fun _ _ ↦ none, fun _ ↦ (), Finset.univ⟩).trans ?_
+  simp only [filledBatch, checkPassProjector, Finset.mem_univ,
+    VectorCommitment.NonadaptiveCheck.checkOn, prescribedCheck, Option.elim_none, id_eq,
+    Bool.false_eq_true, imp_false, not_true_eq_false, forall_const, ↓reduceIte, diagonal_zero,
+    mul_zero, zero_mul, kroneckerMap_zero_right, MatrixMap.conj_zero]
+  rfl
 
 /-- A well-formed empty log accepts and preserves every joint residual state. -/
 example (ρ : Matrix (B × DB) (B × DB) ℂ) :
