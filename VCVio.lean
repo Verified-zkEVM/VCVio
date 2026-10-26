@@ -497,6 +497,7 @@ public import VCVio.Quantum.MatrixMap.ProjectorEvent
 public import VCVio.Quantum.Observe
 public import VCVio.Quantum.Oracle.Basis
 public import VCVio.Quantum.Oracle.Classical
+public import VCVio.Quantum.Oracle.ClassicalCalls
 public import VCVio.Quantum.Oracle.ClassicalRead
 public import VCVio.Quantum.Oracle.Comb
 public import VCVio.Quantum.Oracle.Compressed.Action
@@ -526,8 +527,11 @@ public import VCVio.Quantum.Pure.Vector
 public import VCVio.Quantum.Register
 public import VCVio.Quantum.Semantics
 public import VCVio.Quantum.SubInstrument
+public import VCVio.Quantum.VC.Emulated
+public import VCVio.Quantum.VC.MultiExtractable
 public import VCVio.Quantum.VC.MultiExtractor
 public import VCVio.Quantum.VC.Tuples
+public import VCVio.Quantum.VC.Unitaries
 public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
