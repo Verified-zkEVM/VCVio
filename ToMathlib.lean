@@ -78,6 +78,7 @@ public import ToMathlib.Probability.Kernel.Bounds
 public import ToMathlib.Probability.Kernel.Quadratic
 public import ToMathlib.Probability.Kernel.Subprobability
 public import ToMathlib.Probability.Kernel.TotalVariation
+public import ToMathlib.Probability.Moments.IndependentPowers
 public import ToMathlib.Probability.NegativeHypergeometric
 public import ToMathlib.Probability.TailSums
 public import ToMathlib.Probability.UniformOn
