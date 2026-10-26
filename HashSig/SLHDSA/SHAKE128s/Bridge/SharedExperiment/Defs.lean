@@ -56,4 +56,25 @@ abbrev SourceCounts := Unforgeability.QueryCounts
 @[expose] def laterHashes (cost : SourceCounts) : Nat :=
   cost .hash + cost .signer + cost .verifier
 
+/-- Present the original adversary's final forgery as a message/signature pair. -/
+@[expose] def externalMain {Output PK : Type} (adversary : Game.Adversary Output PK)
+    (pk : PK) : OracleComp (Game.World Output + Game.SigningSpec) (Message × Bytes) :=
+  (fun forgery => (forgery.message, forgery.signature)) <$> adversary.main pk
+
+/-- The shared counted program for the same external algorithms and adversary. -/
+@[expose] def canonicalExperiment {Output PK SK : Type}
+    (scheme : Game.ExternalScheme Output PK SK) (adversary : Game.Adversary Output PK) :
+    OracleComp (Game.World Output)
+      (SigningView.Observation Message Bytes (Option Bytes) SourceCounts) :=
+  SigningView.countedExperiment sourcePolicy (externalView scheme) (externalMain adversary)
+
+/-- Recover the original outcome, including its full raw log and three phase counters. -/
+@[expose] def legacyOutcome
+    (observed : SigningView.Observation Message Bytes (Option Bytes) SourceCounts) :
+    Game.Outcome :=
+  { forgery := ⟨observed.forgery.1, observed.forgery.2⟩
+    signed := observed.rawLog
+    verified := observed.verified
+    counts := phaseCounts observed.cost }
+
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment
