@@ -39,6 +39,8 @@ Chiesa, Manohar and Spooner (TCC 2019, Lemma 5.10) and of Don, Fehr, Majenz and 
 * `Matrix.l2_opNorm_commutator_labelControlled_le`.
 * `Matrix.isStarProjection_labelProjector`, `Matrix.mul_labelProjector_eq_labelProjector_mul`:
   label projectors are orthogonal projections, intertwined by block-preserving operators.
+* `Matrix.labelProjector_mul_labelProjector_of_ne`, `Matrix.sum_labelProjector`: for finite
+  labels, the label projectors are mutually orthogonal and add up to the identity.
 * `Matrix.l2_opNorm_sub_pinch_le_max_bool` and
   `Matrix.l2_opNorm_labelProjector_commutator_le_max_bool`: for two labels, both the pinching
   distance and the commutator with a label projector are at most the larger norm of the two
@@ -244,6 +246,15 @@ theorem mul_labelProjector_eq_labelProjector_mul [Fintype n] [Fintype m] [Decida
   · rw [hU a b h]
     split_ifs <;> simp
 
+/-- Label projectors are self-adjoint. -/
+@[simp]
+theorem conjTranspose_labelProjector [Semiring α] [StarRing α] (β : n → κ) (i : κ) :
+    (labelProjector β i : Matrix n n α)ᴴ = labelProjector β i := by
+  rw [labelProjector, diagonal_conjTranspose]
+  congr 1
+  funext a
+  split_ifs <;> simp [*]
+
 /-- A label projector is an orthogonal projection. -/
 theorem isStarProjection_labelProjector [Fintype n] [Semiring α] [StarRing α]
     (β : n → κ) (i : κ) : IsStarProjection (labelProjector β i : Matrix n n α) := by
@@ -254,10 +265,7 @@ theorem isStarProjection_labelProjector [Fintype n] [Semiring α] [StarRing α]
     funext a
     split_ifs <;> simp
   · change star (labelProjector β i) = labelProjector β i
-    rw [star_eq_conjTranspose, labelProjector, diagonal_conjTranspose]
-    congr 1
-    funext a
-    split_ifs <;> simp [*]
+    rw [star_eq_conjTranspose, conjTranspose_labelProjector]
 
 /-- A label projector has norm at most one. -/
 theorem l2_opNorm_labelProjector_le_one {𝕜 : Type*} [RCLike 𝕜] [Fintype n]
@@ -275,6 +283,47 @@ theorem one_sub_labelProjector_bool [Ring α] (β : n → Bool) (b : Bool) :
     simp only [labelProjector, sub_apply, one_apply_eq, diagonal_apply_eq]
     cases β a <;> cases b <;> simp
   · simp [labelProjector, one_apply_ne h, diagonal_apply_ne _ h]
+
+/-- Label projectors of distinct labels are orthogonal. -/
+theorem labelProjector_mul_labelProjector_of_ne [Fintype n] [NonAssocSemiring α] (β : n → κ)
+    {i j : κ} (h : i ≠ j) : (labelProjector β i * labelProjector β j : Matrix n n α) = 0 := by
+  rw [labelProjector, labelProjector, diagonal_mul_diagonal, ← diagonal_zero]
+  congr 1
+  funext a
+  by_cases ha : β a = i
+  · simp [ha, h]
+  · simp [ha]
+
+/-- For finite labels, the label projectors add up to the identity. -/
+theorem sum_labelProjector [Fintype κ] [NonAssocSemiring α] (β : n → κ) :
+    ∑ i, (labelProjector β i : Matrix n n α) = 1 := by
+  ext a b
+  by_cases hab : a = b
+  · subst hab
+    simp [labelProjector, sum_apply]
+  · simp [labelProjector, sum_apply, hab]
+
+/-- For finite labels, the label projectors form a complete family: `∑ i, (P i)ᴴ * P i = 1`. -/
+theorem sum_conjTranspose_mul_labelProjector [Fintype n] [Fintype κ] [Semiring α] [StarRing α]
+    (β : n → κ) :
+    ∑ i, (labelProjector β i : Matrix n n α)ᴴ * labelProjector β i = 1 := by
+  refine (Finset.sum_congr rfl fun i _ ↦ ?_).trans (sum_labelProjector β)
+  have h := isStarProjection_labelProjector (α := α) β i
+  rw [conjTranspose_labelProjector, h.isIdempotentElem.eq]
+
+/-- A label projector beside an identity is the label projector of the labelling read from the
+first factor. -/
+theorem labelProjector_kronecker_one [MulZeroOneClass α] [DecidableEq p] (β : n → κ) (i : κ) :
+    (labelProjector β i : Matrix n n α) ⊗ₖ (1 : Matrix p p α) =
+      labelProjector (fun q : n × p ↦ β q.1) i := by
+  ext ⟨a, c⟩ ⟨b, d⟩
+  by_cases hab : a = b
+  · subst hab
+    by_cases hcd : c = d
+    · subst hcd
+      simp [labelProjector]
+    · simp [labelProjector, hcd]
+  · simp [labelProjector, hab]
 
 variable [Fintype n]
 
