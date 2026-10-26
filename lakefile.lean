@@ -72,7 +72,7 @@ idempotent.
 -/
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun" @
-  "ecac686fd8a3b4763d3df2e738c91947bdec40d6"
+  "5ec3601b796f03a1d251de789984aa37d710bc81"
 
 require "leanprover-community" / "mathlib" @ git "v4.35.0"
 
