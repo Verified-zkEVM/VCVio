@@ -17,8 +17,8 @@ The unitaries of Def 7.2 of Chiesa, Di, Hu and Zheng (ePrint 2025/2166, §7, pp.
 * `U_MultiExtract` (p. 49) on `(TpIC × Z) × S`: controlled on a commitment tuple `tic` and a
   basis state `s` of the oracle's private register, it adds an encoding of `MultiExtract(tic, s)`
   to the output register `Z` (`Quantum.extractUnitary`);
-* `Record(U)` (pp. 49–50) on `(TpIC × Yr) × (S × R)`: controlled on `tic`, it applies `U` to the
-  register `Yr` and the cell `R_tic` of the recording register (`Quantum.recordUnitary`);
+* `Record(U)` (pp. 49–50) on `(TpIC × Yr) × (S × R)`: controlled on `tic`, it applies `U`
+  to `Yr` and the cell `R_tic` of the recording register (`Quantum.recordUnitary`);
 * `Record(MultiExtract, U)` (p. 50): controlled on `tic` and `s`, it applies `U` to `Yr` and
   the cell `R_(tic, MultiExtract(tic, s))` (`Quantum.recordMEUnitary`).
 
@@ -27,8 +27,9 @@ The unitaries of Def 7.2 of Chiesa, Di, Hu and Zheng (ePrint 2025/2166, §7, pp.
 The paper writes the extracted tuple into its output register by XOR with a bit string
 (p. 49). Here the output register is any type `Z` with an additive group structure, and a
 `Quantum.TpDCode` is an injective encoding `TpD k Dm → Z`; the paper's case is
-`Z = Fin N → ZMod 2`. The encoding has no decoder field: a total decoder `Z → TpD k Dm` would not
-exist when `TpD k Dm` is empty. Decoding is the partial inverse `Quantum.TpDCode.decodeAt`. The
+`Z = Fin N → ZMod 2`. The encoding has no decoder field: a total decoder
+`Z → TpD k Dm` would not exist when `TpD k Dm` is empty.
+Decoding is the partial inverse `Quantum.TpDCode.decodeAt`. The
 default encoding (`Quantum.TpDCode.ofFintype`) writes into `ZMod (card (TpD k Dm) + 1)`.
 
 ## Main definitions
@@ -44,8 +45,8 @@ default encoding (`Quantum.TpDCode.ofFintype`) writes into `ZMod (card (TpD k Dm
 * `Quantum.extractUnitary_mem_unitaryGroup`, `Quantum.recordUnitary_mem_unitaryGroup`,
   `Quantum.recordMEUnitary_mem_unitaryGroup`.
 * `Quantum.extractUnitary_eq_sum_labelControlled`: for a fixed tuple, `U_MultiExtract` is
-  label-controlled by `s ↦ MultiExtract(tic, s)` with members `1 ⊗ xorShift z`. This is the form of
-  the purified measurements of Cor 5.6 (p. 31).
+  label-controlled by `s ↦ MultiExtract(tic, s)` with members `1 ⊗ xorShift z`,
+  the form of the purified measurements of Cor 5.6 (p. 31).
 -/
 
 public section
@@ -86,25 +87,23 @@ theorem eq_of_onFactor_apply_ne_zero {e : n ≃ A × R} {M : Matrix A A ℂ} {a 
   by_contra hne
   exact h (by simp [onFactor_apply, hne])
 
-variable [Fintype n] [DecidableEq n] [Fintype A] [DecidableEq A] [Finite R]
-
 /-- A unitary on one factor is a unitary on the register. -/
-theorem onFactor_mem_unitaryGroup (e : n ≃ A × R) {M : Matrix A A ℂ}
+theorem onFactor_mem_unitaryGroup [Fintype n] [DecidableEq n] [Fintype A]
+    [DecidableEq A] [Finite R] (e : n ≃ A × R) {M : Matrix A A ℂ}
     (hM : M ∈ unitaryGroup A ℂ) : onFactor e M ∈ unitaryGroup n ℂ := by
   have := Fintype.ofFinite R
   exact Matrix.submatrix_equiv_mem_unitary.mpr (kronecker_mem_unitary hM (one_mem _))
 
-omit [DecidableEq n] [DecidableEq A] in
 /-- Placement on a factor is multiplicative. -/
-theorem onFactor_mul (e : n ≃ A × R) (M N : Matrix A A ℂ) :
+theorem onFactor_mul [Fintype n] [Fintype A] [Finite R] (e : n ≃ A × R) (M N : Matrix A A ℂ) :
     onFactor e (M * N) = onFactor e M * onFactor e N := by
   have := Fintype.ofFinite R
   simp only [onFactor, reindex_apply, submatrix_mul_equiv, ← mul_kronecker_mul, Matrix.mul_one]
 
-omit [Fintype n] [Fintype A] [Finite R] in
 /-- Placement on a factor sends the identity to the identity. -/
 @[simp]
-theorem onFactor_one (e : n ≃ A × R) : onFactor e (1 : Matrix A A ℂ) = 1 := by
+theorem onFactor_one [DecidableEq n] [DecidableEq A] (e : n ≃ A × R) :
+    onFactor e (1 : Matrix A A ℂ) = 1 := by
   simp [onFactor]
 
 end onFactor
@@ -198,7 +197,7 @@ theorem extractPerm_apply (tic : TpIC k Cm) (z : Z) (s : S) :
     extractPerm ME code ((tic, z), s) = ((tic, z + code.enc ⟨tic.1, ME.extract tic s⟩), s) :=
   rfl
 
-variable [Fintype Cm] [DecidableEq Cm] [Fintype S] [DecidableEq S] [Fintype Z] [DecidableEq Z]
+variable [DecidableEq Cm] [DecidableEq S] [DecidableEq Z]
 
 /-- **`U_MultiExtract`** (ePrint 2025/2166, Def 7.2, p. 49), the basis matrix of
 `Quantum.extractPerm`. -/
@@ -206,16 +205,16 @@ variable [Fintype Cm] [DecidableEq Cm] [Fintype S] [DecidableEq S] [Fintype Z] [
 noncomputable def extractUnitary : Matrix ((TpIC k Cm × Z) × S) ((TpIC k Cm × Z) × S) ℂ :=
   basisMatrix (extractPerm ME code)
 
-omit [Fintype Cm] [Fintype S] [Fintype Z] in
 /-- The entries of `U_MultiExtract`: `⟨(tic, z), s| U |(tic', z'), s'⟩` is one exactly when
 `tic = tic'`, `s = s'` and `z = z' + enc(MultiExtract(tic', s'))`. -/
 theorem extractUnitary_apply (tic tic' : TpIC k Cm) (z z' : Z) (s s' : S) :
     extractUnitary ME code ((tic, z), s) ((tic', z'), s') =
-      if tic = tic' ∧ z = z' + code.enc ⟨tic'.1, ME.extract tic' s'⟩ ∧ s = s' then 1 else 0 := by
+      if tic = tic' ∧ z = z' + code.enc ⟨tic'.1, ME.extract tic' s'⟩ ∧ s = s'
+        then 1 else 0 := by
   simp only [extractUnitary, basisMatrix_apply, extractPerm_apply, Prod.mk.injEq, and_assoc]
 
 /-- `U_MultiExtract` is unitary. -/
-theorem extractUnitary_mem_unitaryGroup :
+theorem extractUnitary_mem_unitaryGroup [Fintype Cm] [Fintype S] [Fintype Z] :
     extractUnitary ME code ∈ unitaryGroup ((TpIC k Cm × Z) × S) ℂ :=
   basisMatrix_perm_mem_unitaryGroup _
 
@@ -235,12 +234,12 @@ def extractRegroup : TpIC k Cm × (S × Z) ≃ (TpIC k Cm × Z) × S where
   left_inv _ := rfl
   right_inv _ := rfl
 
-omit [Fintype S] [Fintype Z] in
 /-- **`U_MultiExtract` is block diagonal in the tuple, with label-controlled blocks**:
-`U_MultiExtract = ∑_tic |tic⟩⟨tic| ⊗ labelControlled (s ↦ enc(ME(tic, s))) (z ↦ 1 ⊗ xorShift z)`.
+`U_MultiExtract = ∑_tic |tic⟩⟨tic| ⊗ extractBlock ME code tic`.
+The block is label-controlled by `s ↦ enc(ME(tic, s))`, with members `1 ⊗ xorShift z`.
 Each block has the form of the purified measurements of Cor 5.6 of ePrint 2025/2166
 (p. 31): a labelling of the rest of the register, and an XOR shift on the output. -/
-theorem extractUnitary_eq_sum_labelControlled :
+theorem extractUnitary_eq_sum_labelControlled [Fintype Cm] :
     extractUnitary ME code = ∑ tic, reindex extractRegroup extractRegroup
       (single tic tic (1 : ℂ) ⊗ₖ extractBlock ME code tic) := by
   ext ⟨⟨t, z⟩, s⟩ ⟨⟨t', z'⟩, s'⟩
@@ -265,7 +264,7 @@ section record
 
 variable {Q Yr S Rg K Cell G : Type*} [DecidableEq K]
 
-/-- Split off the register `Yr` and the cell `key` of a recording register `Rg ≅ (K → Cell) × G`
+/-- Split off `Yr` and the cell `key` of a recording register `Rg ≅ (K → Cell) × G`
 from `(Q × Yr) × (S × Rg)`. The rest keeps the control `Q`, the private register `S`, the other
 cells and `G`. -/
 @[expose]
@@ -298,11 +297,13 @@ variable [Fintype Q] [DecidableEq Q] [Fintype Yr] [DecidableEq Yr] [Fintype S] [
 control `q` and the private register `s`. Both record unitaries of Def 7.2 have this form. -/
 @[expose]
 noncomputable def cellControlled (eR : Rg ≃ (K → Cell) × G) (β : Q × S → K)
-    (U : Matrix (Yr × Cell) (Yr × Cell) ℂ) : Matrix ((Q × Yr) × (S × Rg)) ((Q × Yr) × (S × Rg)) ℂ :=
+    (U : Matrix (Yr × Cell) (Yr × Cell) ℂ) :
+    Matrix ((Q × Yr) × (S × Rg)) ((Q × Yr) × (S × Rg)) ℂ :=
   labelControlled (fun a ↦ β (a.1.1, a.2.1)) fun key ↦ onFactor (cellSplit eR key) U
 
 /-- A cell-controlled unitary is unitary. -/
-theorem cellControlled_mem_unitaryGroup [Finite G] (eR : Rg ≃ (K → Cell) × G) (β : Q × S → K)
+theorem cellControlled_mem_unitaryGroup [Finite G] (eR : Rg ≃ (K → Cell) × G)
+    (β : Q × S → K)
     {U : Matrix (Yr × Cell) (Yr × Cell) ℂ} (hU : U ∈ unitaryGroup (Yr × Cell) ℂ) :
     cellControlled eR β U ∈ unitaryGroup ((Q × Yr) × (S × Rg)) ℂ := by
   have := Fintype.ofFinite G

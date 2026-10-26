@@ -36,10 +36,30 @@ namespace VCVioTest.QuantumVCModule
 
 open EmulatedOracle (cohSpec)
 
+/-! ## Length-indexed decoding -/
+
+/-- An encoding cannot decode at a different tuple length. This exercises the length tag
+through the ordinary-import interface, without assuming decommitments are finite. -/
+example {k : ℕ} {Dm : Fin k → Type v} {Z : Type w} (code : TpDCode k Dm Z)
+    {j j' : TupleLen k} (hne : j ≠ j') (tdm : TpDLen k Dm j') :
+    code.decodeAt j (code.enc ⟨j', tdm⟩) = none := by
+  cases h : code.decodeAt j (code.enc ⟨j', tdm⟩) with
+  | none => rfl
+  | some t =>
+    exact False.elim (hne (congrArg Sigma.fst
+      (code.enc_injective (code.decodeAt_eq_some_iff.mp h))))
+
+/-- An output outside the encoding's range is rejected at every length. -/
+example {k : ℕ} {Dm : Fin k → Type v} {Z : Type w} (code : TpDCode k Dm Z)
+    (j : TupleLen k) (z : Z) (hz : z ∉ Set.range code.enc) : code.decodeAt j z = none := by
+  cases h : code.decodeAt j z with
+  | none => rfl
+  | some t => exact False.elim (hz ⟨⟨j, t⟩, code.decodeAt_eq_some_iff.mp h⟩)
+
 variable {k : ℕ} {X Y Msg Cm Z : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
   [Fintype Msg] [DecidableEq Msg] [Fintype Cm] [DecidableEq Cm] [Fintype Z]
-  [DecidableEq Z] [AddGroup Z] {ℓ : Fin k → ℕ} {Td Pf : Fin k → Type} [∀ i, Fintype (Td i)]
-  [∀ i, DecidableEq (Td i)] [∀ i, DecidableEq (Pf i)]
+  [DecidableEq Z] [AddGroup Z] {ℓ : Fin k → ℕ} {Td Pf : Fin k → Type}
+  [∀ i, Fintype (Td i)] [∀ i, DecidableEq (Td i)] [∀ i, DecidableEq (Pf i)]
   {VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i)} {E : VCOracle k X Y}
   {ME : MultiExtractor k Cm (DmOf ℓ Msg Td) E.S} {code : TpDCode k (DmOf ℓ Msg Td) Z}
 
@@ -121,14 +141,15 @@ example : ExtractionCorrect.{v, w} VC E ME code ⊤ := by
   exact le_top
 
 /-- P3 is eliminated by application. -/
-example {κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℕ → ℝ≥0∞} (h : ExtractionCorrect.{v, w} VC E ME code κ)
+example {κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℕ → ℝ≥0∞}
+    (h : ExtractionCorrect.{v, w} VC E ME code κ)
     (hk : 1 ≤ k)
     {A : QReg} {W : QReg → Type w}
     (x : QuantumComp LocalSig.instruments.{v} (cohSpec (extIn k X Y Cm Z)) W A)
     (claim : ∀ u, W u → ExtractClaim k Cm) (ρ : SubState A) (hx : x.IsQueryBound fun _ ↦ 0) :
     (E.mixedExtractRuntime ME code).evalDistMap .instruments
-      (experiment x.liftOrdinary fun u y ↦ extractChallenger VC code hk 0 (claim u y) u) ρ Sigma.snd
-        {true} ≤ κ 0 ⊤ ⊤ 0 :=
+      (experiment x.liftOrdinary fun u y ↦ extractChallenger VC code hk 0 (claim u y) u) ρ
+        Sigma.snd {true} ≤ κ 0 ⊤ ⊤ 0 :=
   h hk 0 0 ⊤ ⊤ x claim ρ (Nat.zero_le _) hx le_top le_top
 
 /-- P4 is introduced against its quantifiers. -/
@@ -137,15 +158,16 @@ example : OfflineExtractable.{v, w} VC E ME code ⊤ := by
   exact le_top
 
 /-- P4 is eliminated by application. -/
-example {κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℕ → ℝ≥0∞} (h : OfflineExtractable.{v, w} VC E ME code κ)
+example {κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℕ → ℝ≥0∞}
+    (h : OfflineExtractable.{v, w} VC E ME code κ)
     (hk : 1 ≤ k)
     {A : QReg} {W : QReg → Type w}
     (x : QuantumComp LocalSig.instruments.{v} (cohSpec (extIn k X Y Cm Z)) W A)
     (claim : ∀ u, W u → OpeningClaim k Cm Msg ℓ Pf) (ρ : SubState A)
     (hx : x.IsQueryBound fun _ ↦ 0) :
     (E.mixedExtractRuntime ME code).evalDistMap .instruments
-      (experiment x.liftOrdinary fun u y ↦ offlineChallenger VC code hk 0 (claim u y) u) ρ Sigma.snd
-        {true} ≤ κ 0 ⊤ ⊤ 0 :=
+      (experiment x.liftOrdinary fun u y ↦ offlineChallenger VC code hk 0 (claim u y) u) ρ
+        Sigma.snd {true} ≤ κ 0 ⊤ ⊤ 0 :=
   h hk 0 0 ⊤ ⊤ x claim ρ hx le_top le_top
 
 /-! ## P5 -/
@@ -156,7 +178,8 @@ example : OnlineIndistinguishable.{v, w} E ME code ⊤ := by
   simp
 
 /-- P5 is eliminated by application. -/
-example {κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞} (h : OnlineIndistinguishable.{v, w} E ME code κ)
+example {κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞}
+    (h : OnlineIndistinguishable.{v, w} E ME code κ)
     (U : Matrix (Unit × Unit) (Unit × Unit) ℂ) (hU : U ∈ unitaryGroup (Unit × Unit) ℂ)
     {A : QReg} {W : QReg → Type w}
     (x : QuantumComp LocalSig.instruments.{v} (mixedRecSpec k X Y Cm Z Unit) W A)
@@ -215,8 +238,10 @@ example (c : Fin k × X)
 
 /-- `MEErrors.Monotone` is built from its four monotonicity facts. -/
 example (κ : MEErrors) (h₁ : Monotone κ.sim) (h₂ : Monotone κ.com)
-    (h₃ : Monotone fun p : ℕ × ℝ≥0∞ × ℝ≥0∞ × ℕ ↦ κ.offline p.1 p.2.1 p.2.2.1 p.2.2.2)
-    (h₄ : Monotone fun p : ℕ × ℝ≥0∞ × ℝ≥0∞ × ℝ≥0∞ ↦ κ.online p.1 p.2.1 p.2.2.1 p.2.2.2) :
+    (h₃ : Monotone fun p : ℕ × ℝ≥0∞ × ℝ≥0∞ × ℕ ↦
+      κ.offline p.1 p.2.1 p.2.2.1 p.2.2.2)
+    (h₄ : Monotone fun p : ℕ × ℝ≥0∞ × ℝ≥0∞ × ℝ≥0∞ ↦
+      κ.online p.1 p.2.1 p.2.2.1 p.2.2.2) :
     κ.Monotone :=
   ⟨h₁, h₂, h₃, h₄⟩
 
@@ -247,15 +272,16 @@ example {tdBot : ∀ i, Td i} {Ω : Type*} {p : Convexity.StdSimplex ℝ Ω}
 
 /-- P3 applies to an adversary whose local operations have outcomes in `Type 1` and whose leaves
 are `ULift.{1} Bool`. -/
-example {κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℕ → ℝ≥0∞} (h : ExtractionCorrect.{1, 1} VC E ME code κ)
+example {κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℕ → ℝ≥0∞}
+    (h : ExtractionCorrect.{1, 1} VC E ME code κ)
     (hk : 1 ≤ k) {A : QReg}
     (x : QuantumComp LocalSig.instruments.{1} (cohSpec (extIn k X Y Cm Z))
       (fun _ ↦ ULift.{1} Bool) A)
     (claim : QReg → ULift.{1} Bool → ExtractClaim k Cm) (ρ : SubState A)
     (hx : x.IsQueryBound fun _ ↦ 0) :
     (E.mixedExtractRuntime ME code).evalDistMap .instruments
-      (experiment x.liftOrdinary fun u y ↦ extractChallenger VC code hk 0 (claim u y) u) ρ Sigma.snd
-        {true} ≤ κ 0 ⊤ ⊤ 0 :=
+      (experiment x.liftOrdinary fun u y ↦ extractChallenger VC code hk 0 (claim u y) u) ρ
+        Sigma.snd {true} ≤ κ 0 ⊤ ⊤ 0 :=
   h hk 0 0 ⊤ ⊤ x claim ρ (Nat.zero_le _) hx le_top le_top
 
 /-- The run of an experiment of a large adversary is the run of the adversary followed by the
