@@ -89,7 +89,8 @@ noncomputable example (B : QReg) (c : OpeningClaim 1 Unit Bool (fun _ ↦ 0) fun
 
 /-- A P3 adversary followed by the challenger, as one program. -/
 noncomputable example {A : QReg} {W : QReg → Type}
-    (x : QuantumComp LocalSig.instruments extSpec W A) (claim : ∀ u, W u → ExtractClaim 1 Unit) :
+    (x : QuantumComp LocalSig.instruments extSpec W A)
+    (claim : ∀ u, W u → ExtractClaim 1 Unit) :
     QuantumComp LocalSig.instruments mixedSpec (fun _ ↦ Bool) A :=
   experiment x.liftOrdinary fun u y ↦
     extractChallenger (fun _ ↦ trivialVC) code0 le_rfl 1 (claim u y) u

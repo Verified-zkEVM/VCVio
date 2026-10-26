@@ -364,7 +364,8 @@ noncomputable def recordIndexWeight (bot : Cell) (U : Matrix (Yr × Cell) (Yr ×
       (MatrixMap.conj ((E.withRecord ME code bot U hU).indexProj i) σ).trace.re
   | .inr _, _ => 0
 
-variable (bot : Cell) (U : Matrix (Yr × Cell) (Yr × Cell) ℂ) (hU : U ∈ unitaryGroup (Yr × Cell) ℂ)
+variable (bot : Cell) (U : Matrix (Yr × Cell) (Yr × Cell) ℂ)
+  (hU : U ∈ unitaryGroup (Yr × Cell) ℂ)
 
 /-- The two record worlds share their ports other than the record port. -/
 theorem withRecord_U_inl (i : Fin k ⊕ Unit) :
@@ -393,7 +394,7 @@ end VCOracle
 /-! ## The random-oracle model -/
 
 /-- **The random-oracle model as an emulated oracle** (ePrint 2025/2166, p. 28): a trivial
-private register, and the port `i` answered by the oracle unitary `|x, y⟩ ↦ |x, y + H i x⟩`. -/
+private register, with port `i` answered by `|x, y⟩ ↦ |x, y + H i x⟩`. -/
 @[expose]
 noncomputable def romVCOracle (k : ℕ) (X Y : Type) [Fintype X] [DecidableEq X] [Fintype Y]
     [DecidableEq Y] [AddCommGroup Y] (H : Fin k → X → Y) : VCOracle k X Y where
