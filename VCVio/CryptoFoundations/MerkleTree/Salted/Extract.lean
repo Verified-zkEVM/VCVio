@@ -61,16 +61,16 @@ theorem mem_collisionFree_iff {X Y : Type} {D : Database X Y} :
 section Parse
 variable [DecidableEq X] [DecidableEq Y] (enc : QueryEncoding X Unit Unit (Msg × Salt) Y)
 
-/-- If a database accepts `(rt, ans, pf)`, every pair that `OutputIO` lists for an opened position
-is an entry of the database. -/
-theorem leafIO_sub_of_checkOn {d : ℕ} {rt : Y} {ans : PartialVec (2 ^ d) Msg} {pf : Pf Y Salt d}
+/-- If a database accepts `(rt, ans, pf)`, every entry of the log of an opened position is an entry
+of the database. -/
+theorem leafLog_sub_of_checkOn {d : ℕ} {rt : Y} {ans : PartialVec (2 ^ d) Msg} {pf : Pf Y Salt d}
     {D : Database X Y} (h : checkOn enc d D rt ans pf = true) :
     (∀ ι, (pf ι).isSome = (ans ι).isSome) ∧ ∀ ι a pp, ans ι = some a → pf ι = some pp →
-      ∀ p ∈ leafIO enc rt ι a pp, D p.1 = some p.2 := by
-  change (pairs enc d rt ans pf).elim false (checkIOOn D) = true at h
+      ∀ p ∈ leafLog enc rt ι a pp, D p.1 = some p.2 := by
+  change (pairs enc d rt ans pf).elim false (QueryLog.agreesWith (.ofFn D)) = true at h
   unfold pairs at h
   split_ifs at h with hpf
-  · rw [Option.elim_some, checkIOOn_eq_true_iff] at h
+  · rw [Option.elim_some, QueryLog.agreesWith_eq_true_iff] at h
     refine ⟨hpf, fun ι a pp ha hpp p hp ↦ h p ?_⟩
     rw [List.mem_dedup, List.mem_flatMap]
     exact ⟨ι, List.mem_finRange _, by rw [ha, hpp]; exact hp⟩
@@ -137,21 +137,21 @@ theorem consistent_extract (d : ℕ) (rt : Y) (D : Database X Y) :
 theorem extract_valid [DecidableEq X] (d : ℕ) (rt : Y) (D : Database X Y) :
     checkOn enc d D rt (extract enc d rt D).1
       (opening d (extract enc d rt D).1.dom (extract enc d rt D).2) = true := by
-  obtain ⟨io, hio, hG⟩ := (consistent_extract enc d rt D).pairs_opening
-  change (pairs enc d rt _ _).elim false (checkIOOn D) = true
-  rw [hio, Option.elim_some, checkIOOn_eq_true_iff]
+  obtain ⟨log, hlog, hG⟩ := (consistent_extract enc d rt D).pairs_opening
+  change (pairs enc d rt _ _).elim false (QueryLog.agreesWith (.ofFn D)) = true
+  rw [hlog, Option.elim_some, QueryLog.agreesWith_eq_true_iff]
   exact hG
 /-- Collision-free accepted checks recover the exact salt, message and labelled path. -/
 theorem extract_path_of_checkOn {d : ℕ} {rt : Y} {D : Database X Y} (hD : D ∈ collisionFree)
     {i : Fin (2 ^ d)} {a : Msg} {pp : PathProof Y Salt d}
-    (hchecks : ∀ q ∈ leafIO enc rt i a pp, D q.1 = some q.2) :
+    (hchecks : ∀ q ∈ leafLog enc rt i a pp, D q.1 = some q.2) :
     extLeaf enc d rt D i = some (a, pp.salt) ∧
       readPath (extract enc d rt D).2.2 (SkeletonLeafIndex.perfectEquiv d i) = some (pp.at _) := by
   obtain ⟨hp, label, hl, hleaf⟩ := readPath_treeWith_of_checks (enc.node ()) D
     (fun _ : Unit => resolvePair (enc.node ()) D)
     (fun _ _ h => resolvePair_eq_of_injective (enc.node_injective ()) hD h)
     (SkeletonLeafIndex.perfectEquiv d i) rt (pp.at _) (enc.leaf () (a, pp.salt))
-    (by simpa only [leafIO, List.mem_rotate] using hchecks)
+    (by simpa only [leafLog, List.mem_rotate] using hchecks)
   refine ⟨?_, hp⟩
   rw [extLeaf, recoverLeaf, hl, Option.bind_some]
   exact resolvePair_eq_of_injective (enc.leaf_injective ()) hD hleaf
@@ -163,7 +163,7 @@ theorem extract_binding {d : ℕ} {rt : Y} {ans : PartialVec (2 ^ d) Msg}
     {pf : Pf Y Salt d} {D : Database X Y} (hD : D ∈ collisionFree)
     (h : checkOn enc d D rt ans pf = true) :
     (extract enc d rt D).1.Agrees ans ∧ opening d ans.dom (extract enc d rt D).2 = pf := by
-  obtain ⟨hpf, hmem⟩ := leafIO_sub_of_checkOn enc h
+  obtain ⟨hpf, hmem⟩ := leafLog_sub_of_checkOn enc h
   have hpp : ∀ i a, ans i = some a → ∃ pp, pf i = some pp := fun i a ha =>
     Option.isSome_iff_exists.mp (by rw [hpf, ha]; rfl)
   refine ⟨fun i a ha => ?_, funext fun i => ?_⟩

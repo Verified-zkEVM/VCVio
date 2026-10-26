@@ -15,9 +15,9 @@ public import Mathlib.Data.List.Rotate
 
 The commitment of Chiesa, Di, Hu and Zheng, ePrint 2025/2166, Definition 8.2 uses perfect binary
 trees and a common oracle for leaf payloads and node labels. Openings carry salts, path labels,
-and siblings. The verifier checks a fixed list of prescribed input-output pairs, deduplicated
+and siblings. The verifier checks a fixed query log of prescribed checks, deduplicated
 across paths. One path contains `d + 1` checks, including its leaf; openings from one trapdoor
-contain at most `2 * 2 ^ d - 1` distinct pairs.
+contain at most `2 * 2 ^ d - 1` distinct checks.
 -/
 
 public section
@@ -87,49 +87,49 @@ def opening (d : ℕ) (Q : Finset (Fin (2 ^ d))) (td : Td Y Salt d) : Pf Y Salt 
       fun p => ⟨salt, ⟨p.toList, by simp⟩⟩
   else none
 
-/-- The leaf check followed by the prescribed node checks in root-to-leaf order.
-Rotating the depth-many node pairs places the final leaf pair first. -/
+/-- The query log of an opened leaf: the leaf check followed by the prescribed node checks in
+root-to-leaf order. Rotating the depth-many node entries places the final leaf entry first. -/
 @[expose]
-def leafIO (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (rt : Y)
-    (i : Fin (2 ^ d)) (a : Msg) (pp : PathProof Y Salt d) : List (X × Y) :=
-  (pathIO (enc.node ()) (enc.leaf () (a, pp.salt)) (SkeletonLeafIndex.perfectEquiv d i)
+def leafLog (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (rt : Y)
+    (i : Fin (2 ^ d)) (a : Msg) (pp : PathProof Y Salt d) : QueryLog (X →ₒ Y) :=
+  (pathLog (enc.node ()) (enc.leaf () (a, pp.salt)) (SkeletonLeafIndex.perfectEquiv d i)
     rt (pp.at _)).rotate d
 
-/-- The prescribed checks at an answered and opened position. -/
+/-- The query log of the prescribed checks at an answered and opened position. -/
 @[expose]
-def entryIO (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (rt : Y) (i : Fin (2 ^ d)) :
-    Option Msg → Option (PathProof Y Salt d) → List (X × Y)
-  | some a, some pp => leafIO enc rt i a pp
+def entryLog (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (rt : Y) (i : Fin (2 ^ d)) :
+    Option Msg → Option (PathProof Y Salt d) → QueryLog (X →ₒ Y)
+  | some a, some pp => leafLog enc rt i a pp
   | _, _ => []
 
-/-- Reject mismatched domains; otherwise list each prescribed pair once. -/
+/-- Reject mismatched domains; otherwise log each prescribed check once. -/
 @[expose]
 def pairs [DecidableEq X] [DecidableEq Y]
     (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (d : ℕ) (rt : Y)
-    (ans : PartialVec (2 ^ d) Msg) (pf : Pf Y Salt d) : Option (List (X × Y)) :=
+    (ans : PartialVec (2 ^ d) Msg) (pf : Pf Y Salt d) : Option (QueryLog (X →ₒ Y)) :=
   if ∀ i, (pf i).isSome = (ans i).isSome then
-    some ((List.finRange (2 ^ d)).flatMap fun i => entryIO enc rt i (ans i) (pf i)).dedup
+    some ((List.finRange (2 ^ d)).flatMap fun i => entryLog enc rt i (ans i) (pf i)).dedup
   else none
 
-/-- Check the prescribed pairs against a partial oracle table. -/
+/-- Check the prescribed log against a partial oracle table. -/
 @[expose]
 def checkOn [DecidableEq X] [DecidableEq Y]
     (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (d : ℕ)
     (D : X → Option Y) (rt : Y) (ans : PartialVec (2 ^ d) Msg) (pf : Pf Y Salt d) : Bool :=
-  (pairs enc d rt ans pf).elim false (checkIOOn D)
+  (pairs enc d rt ans pf).elim false (QueryLog.agreesWith (.ofFn D))
 
 variable (enc : QueryEncoding X Unit Unit (Msg × Salt) Y)
 
 /-- One opening prescribes exactly one check per edge and one leaf check. -/
-theorem length_leafIO (rt : Y) (i : Fin (2 ^ d)) (a : Msg) (pp : PathProof Y Salt d) :
-    (leafIO enc rt i a pp).length = d + 1 := by
-  simp [leafIO, length_pathIO]
+theorem length_leafLog (rt : Y) (i : Fin (2 ^ d)) (a : Msg) (pp : PathProof Y Salt d) :
+    (leafLog enc rt i a pp).length = d + 1 := by
+  simp [leafLog, length_pathLog]
 
 /-- An unanswered position contributes no checks. -/
-theorem length_entryIO_le (rt : Y) (i : Fin (2 ^ d)) (a : Option Msg)
+theorem length_entryLog_le (rt : Y) (i : Fin (2 ^ d)) (a : Option Msg)
     (pp : Option (PathProof Y Salt d)) :
-    (entryIO enc rt i a pp).length ≤ if a.isSome then d + 1 else 0 := by
-  cases a <;> cases pp <;> simp [entryIO, length_leafIO]
+    (entryLog enc rt i a pp).length ≤ if a.isSome then d + 1 else 0 := by
+  cases a <;> cases pp <;> simp [entryLog, length_leafLog]
 
 /-- A generated opening records exactly its salt and the tree's typed labelled path. -/
 theorem path_of_opening_eq_some {Q : Finset (Fin (2 ^ d))} {td : Td Y Salt d}
@@ -144,18 +144,18 @@ theorem path_of_opening_eq_some {Q : Finset (Fin (2 ^ d))} {td : Td Y Salt d}
 
 section Check
 variable [DecidableEq X] [DecidableEq Y]
-/-- `OutputIO` lists at most `d + 1` pairs per opened position. -/
+/-- The log has at most `d + 1` entries per opened position. -/
 theorem length_pairs_le (rt : Y) (ans : PartialVec (2 ^ d) Msg) (pf : Pf Y Salt d)
-    (io : List (X × Y)) (h : pairs enc d rt ans pf = some io) :
-    io.length ≤ ans.dom.card * (d + 1) := by
+    (log : QueryLog (X →ₒ Y)) (h : pairs enc d rt ans pf = some log) :
+    log.length ≤ ans.dom.card * (d + 1) := by
   unfold pairs at h
   split_ifs at h with hpf
   obtain rfl := Option.some.inj h.symm
   refine (List.dedup_sublist _).length_le.trans ?_
   rw [List.length_flatMap]
-  calc ((List.finRange (2 ^ d)).map fun ι ↦ (entryIO enc rt ι (ans ι) (pf ι)).length).sum
+  calc ((List.finRange (2 ^ d)).map fun ι ↦ (entryLog enc rt ι (ans ι) (pf ι)).length).sum
       ≤ ((List.finRange (2 ^ d)).map fun ι ↦ if (ans ι).isSome then d + 1 else 0).sum :=
-        List.sum_le_sum fun ι _ ↦ length_entryIO_le enc rt ι _ _
+        List.sum_le_sum fun ι _ ↦ length_entryLog_le enc rt ι _ _
     _ = ∑ ι, if (ans ι).isSome then d + 1 else 0 := by
         rw [← List.sum_ofFn, List.ofFn_eq_map]
     _ = ans.dom.card * (d + 1) := by
@@ -183,7 +183,7 @@ variable {G : X → Y → Prop} {enc : QueryEncoding X Unit Unit (Msg × Salt) Y
 /-- Every answered leaf has a complete labelled opening whose prescribed checks hold. -/
 theorem opening_eq_some (hc : Consistent G enc rt ans td) {i : Fin (2 ^ d)} {a : Msg}
     (ha : ans i = some a) : ∃ pp, opening d ans.dom td i = some pp ∧
-      ∀ q ∈ leafIO enc rt i a pp, G q.1 q.2 := by
+      ∀ q ∈ leafLog enc rt i a pp, G q.1 q.2 := by
   obtain ⟨salt, label, hs, hl, hg⟩ := hc.leaf i a ha
   obtain ⟨root, p, hr, hp, hg⟩ := hc.closed.readPath _ hl hg
   rw [hc.root] at hr
@@ -195,8 +195,8 @@ theorem opening_eq_some (hc : Consistent G enc rt ans td) {i : Fin (2 ^ d)} {a :
 
 /-- Openings of a consistent trapdoor parse, and all their prescribed relations hold. -/
 theorem pairs_opening [DecidableEq X] [DecidableEq Y] (hc : Consistent G enc rt ans td) :
-    ∃ io, pairs enc d rt ans (opening d ans.dom td) = some io ∧
-      ∀ q ∈ io, G q.1 q.2 := by
+    ∃ log, pairs enc d rt ans (opening d ans.dom td) = some log ∧
+      ∀ q ∈ log, G q.1 q.2 := by
   have hpf : ∀ i, (opening d ans.dom td i).isSome = (ans i).isSome := by
     intro i
     cases ha : ans i with
@@ -206,22 +206,22 @@ theorem pairs_opening [DecidableEq X] [DecidableEq Y] (hc : Consistent G enc rt 
   rw [List.mem_dedup, List.mem_flatMap] at hq
   obtain ⟨i, _, hq⟩ := hq
   cases ha : ans i with
-  | none => simp [ha, entryIO] at hq
+  | none => simp [ha, entryLog] at hq
   | some a =>
       obtain ⟨pp, hp, hg⟩ := hc.opening_eq_some ha
       rw [ha, hp] at hq
       exact hg q hq
 end Consistent
 
-/-- A generated family of paths contains at most one distinct pair per tree vertex. -/
+/-- A generated family of paths contains at most one distinct check per tree vertex. -/
 theorem length_pairs_opening_le [DecidableEq X] [DecidableEq Y] (rt : Y)
     (ans : PartialVec (2 ^ d) Msg) (Q : Finset (Fin (2 ^ d))) (td : Td Y Salt d)
-    (io : List (X × Y)) (h : pairs enc d rt ans (opening d Q td) = some io) :
-    io.length ≤ 2 * 2 ^ d - 1 := by
+    (log : QueryLog (X →ₒ Y)) (h : pairs enc d rt ans (opening d Q td) = some log) :
+    log.length ≤ 2 * 2 ^ d - 1 := by
   let inputs : SkeletonLeafIndex (Skeleton.perfect d) → Option X := fun i =>
     (ans ((SkeletonLeafIndex.perfectEquiv d).symm i)).bind fun a =>
       (td.1 ((SkeletonLeafIndex.perfectEquiv d).symm i)).map fun salt => enc.leaf () (a, salt)
-  have hsub : ∀ q ∈ io, q ∈ treeIO (enc.node ()) td.2 inputs rt := by
+  have hsub : ∀ q ∈ log, q ∈ treeLog (enc.node ()) td.2 inputs rt := by
     unfold pairs at h
     split_ifs at h
     cases h
@@ -229,25 +229,25 @@ theorem length_pairs_opening_le [DecidableEq X] [DecidableEq Y] (rt : Y)
     rw [List.mem_dedup, List.mem_flatMap] at hq
     obtain ⟨i, _, hq⟩ := hq
     cases ha : ans i <;> cases hp : opening d Q td i <;>
-      simp only [ha, hp, entryIO, List.not_mem_nil] at hq
+      simp only [ha, hp, entryLog, List.not_mem_nil] at hq
     rename_i a pp
     obtain ⟨hs, ht⟩ := path_of_opening_eq_some hp
-    exact pathIO_subset_treeIO (enc.node ()) td.2 inputs rt _ _ ht
+    exact pathLog_subset_treeLog (enc.node ()) td.2 inputs rt _ _ ht
       (leaf := enc.leaf () (a, pp.salt))
-      (by simp [inputs, ha, hs]) q (by simpa only [leafIO, List.mem_rotate] using hq)
-  have hn : io.Nodup := by
+      (by simp [inputs, ha, hs]) q (by simpa only [leafLog, List.mem_rotate] using hq)
+  have hn : log.Nodup := by
     unfold pairs at h
     split_ifs at h
     cases h
     exact List.nodup_dedup _
-  calc io.length = io.toFinset.card := (List.toFinset_card_of_nodup hn).symm
-       _ ≤ (treeIO (enc.node ()) td.2 inputs rt).toFinset.card :=
+  calc log.length = log.toFinset.card := (List.toFinset_card_of_nodup hn).symm
+       _ ≤ (treeLog (enc.node ()) td.2 inputs rt).toFinset.card :=
          Finset.card_le_card (by
            intro q hq
            exact List.mem_toFinset.mpr (hsub q (List.mem_toFinset.mp hq)))
-       _ ≤ (treeIO (enc.node ()) td.2 inputs rt).length := List.toFinset_card_le _
+       _ ≤ (treeLog (enc.node ()) td.2 inputs rt).length := List.toFinset_card_le _
        _ ≤ 2 * 2 ^ d - 1 := by
-         simpa using length_treeIO_le (enc.node ()) td.2 inputs rt
+         simpa using length_treeLog_le (enc.node ()) td.2 inputs rt
 
 /-- The honest tree for fixed messages, salts and a fixed hash function. -/
 @[expose]
@@ -315,8 +315,8 @@ variable {X : Type uX} {Y Salt : Type} {Msg : Type uM}
 
 /-- The salted Merkle commitment `MT[σ, Σ, ℓ = 2 ^ d, ν]` (Def 8.2, pp. 52–53). `Commit` samples
 the salts uniformly with `unifSpec` and hashes bottom-up, `Open` reads the paths from the
-trapdoor, and `Check` is `OutputIO` then `CheckIO`. `Open` is deterministic and `Check` is
-coin-free, so the scheme is a `DetVectorCommitment`. -/
+trapdoor, and `Check` rechecks the prescribed query log.
+`Open` is deterministic and `Check` is coin-free, so the scheme is a `DetVectorCommitment`. -/
 @[expose]
 def scheme [DecidableEq X] [DecidableEq Y] [SampleableType Salt]
     (enc : QueryEncoding X Unit Unit (Msg × Salt) Y)
@@ -325,18 +325,18 @@ def scheme [DecidableEq X] [DecidableEq Y] [SampleableType Salt]
     let γ ← OracleComp.liftComp ($ᵗ (Fin (2 ^ d) → Salt)) (unifSpec + (X →ₒ Y))
     OracleComp.liftComp (commitTree enc d msg γ) (unifSpec + (X →ₒ Y))
   opening := opening d
-  check rt ans pf := (pairs enc d rt ans pf).elim (pure false) checkIO
+  check rt ans pf := (pairs enc d rt ans pf).elim (pure false) QueryLog.recheck
 
-/-- The non-adaptive check of `scheme enc d`, with at most `d + 1` pairs per opened position. -/
+/-- The non-adaptive check of `scheme enc d`, with at most `d + 1` checks per opened position. -/
 @[expose]
 def nonadaptiveCheck [DecidableEq X] [DecidableEq Y] [SampleableType Salt]
     (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (d : ℕ) :
     (scheme (Msg := Msg) enc d).toVectorCommitment.NonadaptiveCheck where
-  pairs := pairs enc d
+  log := pairs enc d
   check_eq _ _ _ := rfl
   qVC q := q * (d + 1)
   qVC_mono _ _ h := Nat.mul_le_mul_right _ h
-  length_le rt ans pf io h := length_pairs_le enc rt ans pf io h
+  length_le rt ans pf L h := length_pairs_le enc rt ans pf L h
 
 /-- The table check of `nonadaptiveCheck enc d` is `checkOn enc d`. -/
 theorem nonadaptiveCheck_checkOn [DecidableEq X] [DecidableEq Y] [SampleableType Salt]
@@ -359,10 +359,11 @@ theorem perfectlyComplete [DecidableEq X] [DecidableEq Y] [SampleableType Salt]
   rw [simulateQ_commitTree] at hz
   rw [support_pure, Set.mem_singleton_iff] at hz
   subst hz
-  obtain ⟨io, hio, hG⟩ := (consistent_honestTree enc d H msg γ Q).pairs_opening
-  rw [PartialVec.dom_restrict] at hio
-  change evalWithAnswerFn _ ((pairs enc d _ _ (opening d Q _)).elim (pure false) checkIO) = true
-  rw [hio, Option.elim_some, evalWithAnswerFn_checkIO, List.all_eq_true]
+  obtain ⟨log, hlog, hG⟩ := (consistent_honestTree enc d H msg γ Q).pairs_opening
+  rw [PartialVec.dom_restrict] at hlog
+  change evalWithAnswerFn _
+    ((pairs enc d _ _ (opening d Q _)).elim (pure false) QueryLog.recheck) = true
+  rw [hlog, Option.elim_some, QueryLog.evalWithAnswerFn_recheck, List.all_eq_true]
   intro p hp
   simp [hG p hp]
 
