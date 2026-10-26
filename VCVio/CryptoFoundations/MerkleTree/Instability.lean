@@ -159,7 +159,7 @@ theorem tree_eq_of_logRepresentsCache [DecidableEq Address] [DecidableEq Y]
   induction s generalizing root with
   | leaf => rfl
   | internal left right ihLeft ihRight =>
-      simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt]
+      simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, MerkleTreeExtractor.treeWith]
       rw [children_eq_of_logRepresentsCache view h₁ h₂ hno]
       cases MerkleTreeExtractor.children view log₂ (addressKey .ofInternal) root with
       | none => rfl
