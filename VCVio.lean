@@ -178,6 +178,7 @@ public import VCVio.CryptoFoundations.SeededFork
 public import VCVio.CryptoFoundations.SigmaProtocol
 public import VCVio.CryptoFoundations.SigmaProtocol.ChallengeRestriction
 public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment
 public import VCVio.CryptoFoundations.SignatureAlg.Naturality
 public import VCVio.CryptoFoundations.SignatureAlg.RomQueryCount
 public import VCVio.CryptoFoundations.SignatureAlg.RomWork

@@ -373,6 +373,11 @@ lean_exe algorithm_tests where
   srcDir := "scripts"
   root := `AlgorithmTests
 
+/-- Ordered source, cost, reply-log and cache checks for the generic signing experiment. -/
+lean_exe signing_view_tests where
+  srcDir := "scripts"
+  root := `SigningViewTests
+
 /-- Smoke test: imports VCVio and prints OK. -/
 lean_exe smoke_test where
   root := `VCVioTest.Smoke
@@ -392,6 +397,7 @@ script test (args) do
     #["build", "VCVioTest", "LatticeCryptoTest", "HashSigTest"],
     #["exe", "smoke_test"],
     #["exe", "algorithm_tests"],
+    #["exe", "signing_view_tests"],
     #["exe", "slhdsa_kat"],
     #["exe", "slhdsa_c13_kat"],
     #["exe", "slhdsa_data_codec_tests"],
