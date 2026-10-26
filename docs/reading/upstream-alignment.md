@@ -1197,7 +1197,7 @@ source change for them.
 
 ## PolyFun repin (2026-10-25)
 
-PolyFun `ecac686f` → `5ec3601b` (`main`, through PolyFun #375). Mathlib, cslib, Batteries and the
+PolyFun `ecac686f` → `4181c822` (`main`, through PolyFun #369). Mathlib, cslib, Batteries and the
 other transitive pins are unchanged, and VCVio needed no source change.
 
 - **PolyFun #375** adds `IFreeM.fold_bind`, roll and charge bounds under state-carrying traversals
@@ -1208,3 +1208,7 @@ other transitive pins are unchanged, and VCVio needed no source change.
   `VCVio/Quantum/Oracle/Classical.lean`, which can move onto them in a follow-up.
 - **PolyFun #350** adds the optional `PolyFunIO` library, which the `PolyFun` umbrella does not
   import.
+- **PolyFun #373, #367, #368, #369** add composition of finite orbits with labelled traces,
+  composition of free handlers into any monad and projections of stateful handlers, sequential
+  and parallel composition of stateful packages, and monomorphisms, epimorphisms and cartesian
+  routes of lenses. VCVio does not use these APIs yet.
