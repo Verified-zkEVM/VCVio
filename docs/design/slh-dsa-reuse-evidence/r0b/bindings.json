@@ -1,0 +1,147 @@
+{
+  "format": 1,
+  "scope": "Original semantic/evaluator regression baseline; not future implementation or proof recovery",
+  "baseCommit": "b69ac3346eebddf8d2dd33b2f56d5b5f09ce5ba7",
+  "semanticGroups": {
+    "signature_game": [
+      "signingOracleEquation",
+      "signingRunEquation",
+      "returnedPairEquation",
+      "strongExperimentEquation"
+    ],
+    "structural_budget": [
+      "structuralBudgetEquation",
+      "structuralHashSelectorEquation",
+      "structuralSigningSelectorEquation"
+    ],
+    "general_bound_definitions": [
+      "byteBoundEquation",
+      "hedgedByteBoundEquation",
+      "everySeedBoundEquation",
+      "hedgedEverySeedBoundEquation"
+    ],
+    "weak_seed_factor": [
+      "weakSeedFactorEquation"
+    ],
+    "original_912_game_and_sources": [
+      "hashSelectorEquation",
+      "countedSigningEquation",
+      "countedAfterKeygenEquation",
+      "countedFreshnessEquation",
+      "countedWinningEquation",
+      "countedSourcesEquation",
+      "countedExperimentEquation",
+      "countedRandomOracleEquation",
+      "countedSecurityGameEquation"
+    ],
+    "original_912_probability_one_budget": [
+      "probabilityOneBudgetEquation"
+    ],
+    "original_912_lifetime_security_and_work": [
+      "signingLimitEquation",
+      "lifetimeEquation",
+      "bitSecurityEquation",
+      "selectedWorkEquation",
+      "hashWorkEquation"
+    ],
+    "actual_912_scheme": [
+      "shake128sParametersEquation",
+      "conservativeVerifierCapEquation",
+      "answerCarrierEquation",
+      "deterministicRandomizerEquation",
+      "internalSchemeEquation",
+      "externalKeygenEquation",
+      "externalSigningEquation",
+      "externalVerificationEquation"
+    ],
+    "profile_mode_selection": [
+      "profileRandomizerEquation",
+      "profileAlgorithmEquation",
+      "profileEvaluatorEquation"
+    ],
+    "effectful_secret_first": [
+      "secretFirstProgramEquation"
+    ],
+    "fors_runtime_fixture": [
+      "literalForsTraceEquation"
+    ]
+  },
+  "r0aProtectedFiles": {
+    "HashSigTest/SLHDSA/Refactor/Capture.lean": "434cc67898dc2dd43bceddf1e8285554c8f5b46fdcfea078cf67773f9bc4f0af",
+    "HashSigTest/SLHDSA/Refactor/Strength/General.lean": "5297555e6bede156d7519c391a8f74049d27ec09b16328bb9a032dff0efbc826",
+    "HashSigTest/SLHDSA/Refactor/Strength/JointWork.lean": "5609dad121144c958afb64668105b23fa392a00c90612650840cc400efa60390",
+    "HashSigTest/SLHDSA/Refactor/Strength/ParameterWire.lean": "8ee4ebd25679327ad32f93880c9dfbe5e48a46a38b0aeaee8011f7011fe4d3d8",
+    "HashSigTest/SLHDSA/Refactor/Strength/ProviderWork.lean": "a063d5b563632cead5054bf000df60b7b638901294a291cae90f47bd0affada9",
+    "HashSigTest/SLHDSA/Refactor/StrengthContracts.lean": "8c0bfd385fc5e32bb0c387cbfa0f2fa59ab8b64aee7edb3ab44d35772c09ba31",
+    "docs/design/slh-dsa-reuse-evidence/r0/README.md": "a063ac9ca714a553c018d563f2c0f55e0283c4a63cf1f292c4985ea4fcb5e4ab",
+    "docs/design/slh-dsa-reuse-evidence/r0/baseline.json": "755e6b68e9d9bdecbd0e31bd1447c07aa7121799cb2bbf9c03a34c57e3e1f004",
+    "docs/design/slh-dsa-reuse-evidence/r0/capture-input.json": "b4c1698aef855ac2c4da4b2308ad232b309bc6b8e0fc6bb0b09a658c58114574",
+    "docs/design/slh-dsa-reuse-evidence/r0/kernel-types.json": "7fce7eb97ac9f640fcfacd5e65c61c90c513d1096e4f818664ebdbb0851521e2",
+    "docs/design/slh-dsa-reuse-evidence/r0/schemas.md": "c5c8d75cdbedca325f81854b86433adfb04901201b869d6e853484ef2f4f6cd3",
+    "docs/design/slh-dsa-reuse-evidence/r0/semantic-fingerprints.tsv": "70febfb9a47833ebe00b912d39395f3c25cacf707a372e9a2fc0607fda86c73f",
+    "scripts/check-slh-dsa-r0.py": "5f63ef5c94a6a5f8eaa06be12c2e889625cd262978cee25f0f782e042e8b8f28",
+    "scripts/tests/test_slh_dsa_r0.py": "1a47c6a24fc56a0d90a62e383c211b0a7d61f445d4e8545913f465dc26c97127"
+  },
+  "semanticSourceSha256": {
+    "HashSigTest/SLHDSA/Refactor/Semantics/Bounds.lean": "239314b3531287e9a54fec94cd483addd5e3575ce184083bcdec54720be1166d",
+    "HashSigTest/SLHDSA/Refactor/Semantics/Construction.lean": "34a6fc4caddfe51798851353d17f717265dc86346e6893584218dcb607773831",
+    "HashSigTest/SLHDSA/Refactor/Semantics/Game.lean": "72a75e4d6fa8ae079ba39a8e8401de9b35fe2b37288919cddb2c233d2ea4ee7e",
+    "HashSigTest/SLHDSA/Refactor/Semantics/Legacy.lean": "8707c2e6b734748b90b8f71538da75564db7452f64a0816ba478b2ecb565f93b",
+    "HashSigTest/SLHDSA/Refactor/SemanticContracts.lean": "3f4ea2dfee7615d655b54aaf2cd7496d8446d798b79f35db798499ead11f33a2"
+  },
+  "runtimeSourceSha256": {
+    "HashSigTest/SLHDSA/SHAKE128s/Compiler.lean": "98d25862631d520426a185ca4365419399ac6fd974696003cde472a0876c95ee",
+    "HashSigTest/SLHDSA/SHAKE128s/Game.lean": "514869b7e901d6cb498f3564da06641e498bf55f0344ca0bb9f6d95d561534a3",
+    "HashSigTest/SLHDSA/SHAKE128s/WireBridge.lean": "8052808d6c6064cc0cb578f3744a5298c4b383fa8d185c83cadc6ba2af172924",
+    "HashSigTest/SLHDSA/SHAKE128s/Support.lean": "c4f4123a633c220c65310536cf1f4ddda8a70ccb5e52333e9e5a38bbb384e42b",
+    "HashSigTest/SLHDSA/ForsSecretOrder.lean": "768183c8b43d25cc4de50e14149f2805f9f4fe817c2fba740f5f16da1a1fecae",
+    "HashSigTest/SLHDSA/BoundEval.lean": "14510782aabb8c53a2c957068ab2bc89602a95c0db533dec37f890c6fab7ea06",
+    "HashSig/SLHDSA/Security/BoundEval.lean": "4dc98a7f9a73a00ccbda9277821e8915a9f93ebf140bf99e8f6eee5a97d2192a",
+    "HashSig/SLHDSA/SHAKE128s/Statement/Scheme.lean": "01c7f41b6586a54aa7e86f210152d137855af8a42deae7d4fc9233e9f413e542",
+    "scripts/check-slh-dsa-bound-table.py": "24434c1a7d59e73d7abf1e87620c8eeb6d62f29f4efadb4f1c917d5b4843d0f5"
+  },
+  "csvSha256": "211f43f33c0e65ed17e26197c677e31809b3af804791aacb5985c57ae29c941a",
+  "registeredRuntimes": {
+    "slhdsa_shake128s_compiler_tests": "Fin.cases zero/successor/last; nested32entries; literal sum1024",
+    "slhdsa_shake128s_game_tests": "all5sources; reject/continue; None/repeated logs; cache-hit count",
+    "slhdsa_shake128s_wire_bridge_tests": "actual transformed adversary; freshness; 255/256 framing; malformed decode; actual None signing",
+    "slhdsa_fors_secret_order_tests": "literal selected-secret-first chronological trace and signature fields"
+  },
+  "originalNumericStatementAnchors": [
+    "SLHDSA.SHAKE128s.slhDsa_sufCma_127",
+    "SLHDSA.SHAKE128s.WorkFinal.advantage_eq_zero",
+    "SLHDSA.SHAKE128s.VerificationBudget.verification_count_bounds",
+    "SLHDSA.SHAKE128s.VerificationBudget.verification_accepted_count_bounds",
+    "SLHDSA.SHAKE128s.VerificationBudget.accepted_outcome_work"
+  ],
+  "numericStatementScope": "Exact127, q<569 and framed/parsed vs accepting569..3824 premises are already checked as five of the77 literal R0a types;3929 is only the conservative structural wire cap",
+  "globalCompilerRule": {
+    "name": "SLHDSA.SHAKE128s.fin_cases_eq_finCases",
+    "source": "HashSig/SLHDSA/SHAKE128s/Statement/Scheme.lean",
+    "coverage": "Original registered rule source is hash-bound; actual Compiler binary exercises the known finite-index paths, not arbitrary future programs"
+  },
+  "targetBindings": {
+    "slhdsa_bound_table": {
+      "srcDir": ".",
+      "root": "HashSigTest.SLHDSA.BoundEval"
+    },
+    "slhdsa_fors_secret_order_tests": {
+      "srcDir": ".",
+      "root": "HashSigTest.SLHDSA.ForsSecretOrder"
+    },
+    "slhdsa_shake128s_compiler_tests": {
+      "srcDir": ".",
+      "root": "HashSigTest.SLHDSA.SHAKE128s.Compiler"
+    },
+    "slhdsa_shake128s_game_tests": {
+      "srcDir": ".",
+      "root": "HashSigTest.SLHDSA.SHAKE128s.Game"
+    },
+    "slhdsa_shake128s_wire_bridge_tests": {
+      "srcDir": ".",
+      "root": "HashSigTest.SLHDSA.SHAKE128s.WireBridge"
+    }
+  },
+  "driverScaffoldSha256": "66911ef4dd932f156ebb3b2dd4de091ad47ec8a0f3730f30800b94f4a2b045de",
+  "driverScaffoldPolicy": "Erase only standalone nonprotected exe-list entries; keep all other driver bytes, including loop/error propagation, table generator/checker, and the R0 tail"
+}

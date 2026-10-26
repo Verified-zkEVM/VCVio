@@ -447,7 +447,14 @@ script test (args) do
   let rc ← check.wait
   if rc != 0 then
     IO.eprintln s!"lake test: independent SLH-DSA bound-table check exited with code {rc}"
-  return rc
+    return rc
+  let r0Args := #["scripts/check-slh-dsa-r0b.py"]
+  IO.println s!"# python3 {" ".intercalate r0Args.toList}"
+  let r0Check ← IO.Process.spawn { cmd := "python3", args := r0Args }
+  let r0Result ← r0Check.wait
+  if r0Result != 0 then
+    IO.eprintln s!"lake test: SLH-DSA frozen semantic contracts exited with code {r0Result}"
+  return r0Result
 
 /-- ML-KEM test executable (links against mlkem-native FFI). -/
 lean_exe mlkem_test where
