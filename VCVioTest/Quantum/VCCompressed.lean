@@ -25,7 +25,7 @@ and `VCVio.Quantum.MatrixMap.BlockNorm` (ePrint 2025/2166, Lemma 9.2 and Theorem
   with probability `1 / 2` against the compressed oracles, while against the oracle answering
   `0` everywhere, whose ports are the identity, it returns `0` with certainty;
 * the norm of an operator controlled by one classical bit is the larger norm of its two blocks;
-* the salted Merkle scheme of #858 satisfies the conditions of Theorem 8.4 with `P_good` the
+* the salted Merkle scheme satisfies the conditions of Theorem 8.4 with `P_good` the
   collision-free databases, so `Quantum.Conditions` is not vacuous.
 -/
 
@@ -75,7 +75,8 @@ example : (E₂).S = QReg.of (Fin 2 → Database Bool (ZMod 2)) :=
 
 /-- The two ports of the small instance commute, on two query registers. -/
 example :
-    onFactor (slotSnd (Bool × ZMod 2) (Bool × ZMod 2) (Fin 2 → Database Bool (ZMod 2))) ((E₂).U 0) *
+    onFactor (slotSnd (Bool × ZMod 2) (Bool × ZMod 2) (Fin 2 → Database Bool (ZMod 2)))
+      ((E₂).U 0) *
         onFactor (slotFst (Bool × ZMod 2) (Bool × ZMod 2) (Fin 2 → Database Bool (ZMod 2)))
           ((E₂).U 1) =
       onFactor (slotFst (Bool × ZMod 2) (Bool × ZMod 2) (Fin 2 → Database Bool (ZMod 2)))
@@ -113,7 +114,8 @@ example (ρ : SubState Reg) {γ : Type} [MeasurableSpace γ]
     (f : (Σ u, (fun u ↦ PSigma fun _ : u = QReg.of ((cohSpec (oIn 2 Bool (ZMod 2))).Out () ×
       QReg.of Unit) ↦ (cohSpec (oIn 2 Bool (ZMod 2))).Result ()) u) → γ) :
     (E₂).coherent.toRuntime.evalDistMap .instruments oneQuery ρ f =
-      ∑ H : Fin 2 → Bool → ZMod 2, (Fintype.card (Fin 2 → Bool → ZMod 2) : ℝ≥0∞)⁻¹ •
+      ∑ H : Fin 2 → Bool → ZMod 2,
+        (Fintype.card (Fin 2 → Bool → ZMod 2) : ℝ≥0∞)⁻¹ •
         (romVCOracle 2 Bool (ZMod 2) H).coherent.toRuntime.evalDistMap .instruments oneQuery
           ρ f :=
   outcomeLawWith_coherent_compressedVCOracle _ _ _ _
@@ -151,7 +153,8 @@ theorem block_romVCOracle (H : Fin 2 → Bool → ZMod 2) (o : Bool × ZMod 2) :
       if o = (false, H 0 false) then 1 else 0 := by
   ext ⟨⟩ ⟨⟩
   by_cases h : o = (false, H 0 false) <;>
-    simp [romVCOracle, oracleUnitary_apply, h] <;> rfl
+    simp only [romVCOracle, Fin.isValue, EmulatedOracle.block_apply, kroneckerMap_apply,
+      oracleUnitary_apply, zero_add, h, ↓reduceIte, one_apply_eq, mul_one] <;> rfl
 
 /-- Against the random oracle `H`, the call returns `H 0 false` with certainty. -/
 theorem outcomeLaw₂_romVCOracle_answerCall (H : Fin 2 → Bool → ZMod 2) (y : ZMod 2) :
@@ -164,7 +167,9 @@ theorem outcomeLaw₂_romVCOracle_answerCall (H : Fin 2 → Bool → ZMod 2) (y 
   · subst h
     simp only [block_romVCOracle, ↓reduceIte, one_kronecker_one, MatrixMap.conj_one]
     rw [LinearMap.id_apply]
-    simp [romVCOracle, Matrix.trace]
+    simp only [trace, romVCOracle, SubState.matrix_basis, diag_apply, kroneckerMap_apply,
+      single_apply_same, mul_one, Finset.sum_const, nsmul_eq_mul, Complex.natCast_re,
+      ENNReal.ofReal_natCast, Nat.cast_eq_one]
     rfl
   · simp [h]
 
@@ -201,11 +206,12 @@ example :
 
 /-! ## The norm of a classically controlled operator with two blocks -/
 
-/-- **Two blocks.** The operator `|0⟩⟨0| ⊗ A + |1⟩⟨1| ⊗ B` controlled by one bit has norm
-`max ‖A‖ ‖B‖`. -/
+/-- **Two blocks.** The operator `|0⟩⟨0| ⊗ A + |1⟩⟨1| ⊗ B` controlled by one bit has
+norm `max ‖A‖ ‖B‖`. -/
 example {m n : Type} [Fintype m] [Fintype n] [DecidableEq m] [DecidableEq n]
     (A B : Matrix m n ℂ) :
-    ‖single (0 : Fin 2) (0 : Fin 2) (1 : ℂ) ⊗ₖ A + single (1 : Fin 2) (1 : Fin 2) (1 : ℂ) ⊗ₖ B‖ =
+    ‖single (0 : Fin 2) (0 : Fin 2) (1 : ℂ) ⊗ₖ A +
+      single (1 : Fin 2) (1 : Fin 2) (1 : ℂ) ⊗ₖ B‖ =
       max ‖A‖ ‖B‖ := by
   have h := l2_opNorm_sum_single_kronecker (𝕜 := ℂ) ![A, B]
   rw [Fin.sum_univ_two] at h
@@ -219,6 +225,18 @@ example {m n : Type} [Fintype m] [Fintype n] [DecidableEq m] [DecidableEq n]
     · exact le_max_right _ _
   · simpa using le_ciSup hbdd 0
   · simpa using le_ciSup hbdd 1
+
+/-- An empty control register gives norm zero even for nonempty rectangular blocks. -/
+example (A : Empty → Matrix (Fin 2) (Fin 3) ℂ) :
+    ‖∑ c, single c c (1 : ℂ) ⊗ₖ A c‖ = 0 := by
+  rw [l2_opNorm_sum_single_kronecker, Real.iSup_of_isEmpty]
+
+open scoped ComplexOrder in
+/-- The public Gram-slack bound turns a rectangular contraction into positive slack. -/
+example (K : Matrix (Fin 2) (Fin 3) ℂ) (hK : ‖K‖ ≤ 1) :
+    ((1 : Matrix (Fin 3) (Fin 3) ℂ) - Kᴴ * K).PosSemidef := by
+  have hsq : ‖K‖ ^ 2 ≤ (1 : ℝ) := by nlinarith [norm_nonneg K]
+  simpa only [one_smul] using MatrixMap.posSemidef_scalar_sub_gram_of_norm_sq_le K hsq
 
 /-! ## Non-vacuity: the salted Merkle scheme satisfies the conditions -/
 
@@ -236,7 +254,8 @@ support conditions reduce to the deterministic binding and validity of `MTMultiE
 theorem merkle_conditions (enc : MerkleTreeHashing.QueryEncoding X Unit Unit (Msg × Salt) Y)
     {k : ℕ} (d : Fin k → ℕ) :
     Conditions (fun i ↦ (scheme (Msg := Msg) enc (d i)).toVectorCommitment)
-      (fun i ↦ nonadaptiveCheck enc (d i)) (multiExtract enc d) (fun _ ↦ tdBot) collisionFree where
+      (fun i ↦ nonadaptiveCheck enc (d i)) (multiExtract enc d) (fun _ ↦ tdBot)
+        collisionFree where
   admissible := multiExtract_admissible enc d
   empty_mem := empty_mem_collisionFree
   binding hk idx hidx cm ans pf Ds hD h i := by

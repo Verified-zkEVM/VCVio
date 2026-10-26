@@ -5,17 +5,17 @@ Authors: Quang Dao
 -/
 
 module
-
 public import VCVio.Quantum.MatrixMap.Norm
 
 /-!
 # The operator norm of a classically controlled operator
 
-An operator controlled by a classical register `C`, `∑ c, |c⟩⟨c| ⊗ A c`, acts on the block of each
-basis state `|c⟩` as `A c` and does not mix blocks. Its `L²` operator norm is the largest norm of a
-block (`Matrix.l2_opNorm_sum_single_kronecker`). This is the step of the proof of Lemma 9.2 of
-Chiesa, Di, Hu and Zheng (ePrint 2025/2166, pp. 58–59) that turns a bound for every fixed value of
-a classical control register, the commitment tuple and the other databases, into a bound for the
+An operator controlled by a classical register `C`, `∑ c, |c⟩⟨c| ⊗ A c`, acts on the
+block of each basis state `|c⟩` as `A c` and does not mix blocks. Its `L²` operator norm
+is the largest block norm (`Matrix.l2_opNorm_sum_single_kronecker`). This is the step of
+Lemma 9.2 of Chiesa, Di, Hu and Zheng (ePrint 2025/2166, pp. 58–59) that turns a bound for
+every fixed value of a classical control register, the commitment tuple and the other databases,
+into a bound for the
 operator controlled by it; the index `C` is any finite type and the blocks are rectangular.
 
 ## Main results
@@ -32,20 +32,21 @@ open scoped Matrix.Norms.L2Operator Kronecker
 
 namespace Matrix
 
-variable {𝕜 : Type*} [RCLike 𝕜] {m n : Type*} [Fintype m] [Fintype n]
+variable {𝕜 : Type*} [RCLike 𝕜] {m n : Type*}
 
 /-! ## Restriction along injective maps -/
 
 /-- The columns of the identity along an injective map form an isometry. -/
-theorem conjTranspose_one_submatrix_mul_self [DecidableEq m] {m' : Type*} [DecidableEq m']
-    {f : m' → m} (hf : Function.Injective f) :
+theorem conjTranspose_one_submatrix_mul_self [Fintype m] [DecidableEq m] {m' : Type*}
+    [DecidableEq m'] {f : m' → m} (hf : Function.Injective f) :
     ((1 : Matrix m m 𝕜).submatrix id f)ᴴ * (1 : Matrix m m 𝕜).submatrix id f = 1 := by
   ext a b
   simp [mul_apply, one_apply, hf.eq_iff]
 
 /-- Restricting the rows and the columns along injective maps does not increase the norm. -/
-theorem l2_opNorm_submatrix_le_of_injective [DecidableEq n] {m' n' : Type*} [Fintype m']
-    [Fintype n'] [DecidableEq n'] (A : Matrix m n 𝕜) {f : m' → m} {g : n' → n}
+theorem l2_opNorm_submatrix_le_of_injective [Fintype m] [Fintype n] [DecidableEq n]
+    {m' n' : Type*} [Fintype m'] [Fintype n'] [DecidableEq n']
+    (A : Matrix m n 𝕜) {f : m' → m} {g : n' → n}
     (hf : Function.Injective f) (hg : Function.Injective g) :
     ‖A.submatrix f g‖ ≤ ‖A‖ := by
   classical
@@ -72,11 +73,11 @@ theorem l2_opNorm_submatrix_le_of_injective [DecidableEq n] {m' n' : Type*} [Fin
 
 variable {C : Type*} [Fintype C] [DecidableEq C]
 
-omit [Fintype m] [Fintype n] in
-/-- The entries of the controlled operator `∑ c, |c⟩⟨c| ⊗ A c`: the entry of `A c` inside the
-block of `c`, and `0` across blocks. -/
+/-- The entries of the controlled operator `∑ c, |c⟩⟨c| ⊗ A c`: the entry of `A c`
+inside the block of `c`, and `0` across blocks. -/
 theorem sum_single_kronecker_apply (A : C → Matrix m n 𝕜) (c c' : C) (i : m) (j : n) :
-    (∑ c₀, single c₀ c₀ (1 : 𝕜) ⊗ₖ A c₀) (c, i) (c', j) = if c = c' then A c i j else 0 := by
+    (∑ c₀, single c₀ c₀ (1 : 𝕜) ⊗ₖ A c₀) (c, i) (c', j) =
+      if c = c' then A c i j else 0 := by
   rw [Matrix.sum_apply, Finset.sum_eq_single c]
   · by_cases h : c = c'
     · subst h
@@ -87,17 +88,18 @@ theorem sum_single_kronecker_apply (A : C → Matrix m n 𝕜) (c c' : C) (i : m
     grind
   · simp
 
-omit [Fintype m] [Fintype n] in
 /-- The block of `c` of the controlled operator is `A c`. -/
 theorem submatrix_sum_single_kronecker (A : C → Matrix m n 𝕜) (c : C) :
-    (∑ c₀, single c₀ c₀ (1 : 𝕜) ⊗ₖ A c₀).submatrix (fun i ↦ (c, i)) (fun j ↦ (c, j)) = A c := by
+    (∑ c₀, single c₀ c₀ (1 : 𝕜) ⊗ₖ A c₀).submatrix
+      (fun i ↦ (c, i)) (fun j ↦ (c, j)) = A c := by
   ext i j
   simp [sum_single_kronecker_apply]
 
 /-- **The norm of a classically controlled operator** is the largest norm of its blocks:
-`‖∑ c, |c⟩⟨c| ⊗ A c‖ = ⨆ c, ‖A c‖`, for any finite control register `C` (the supremum over an
-empty `C` is `0`). -/
-theorem l2_opNorm_sum_single_kronecker [DecidableEq n] (A : C → Matrix m n 𝕜) :
+`‖∑ c, |c⟩⟨c| ⊗ A c‖ = ⨆ c, ‖A c‖`, for any finite control register `C` (the
+supremum over an empty `C` is `0`). -/
+theorem l2_opNorm_sum_single_kronecker [Fintype m] [Fintype n] [DecidableEq n]
+    (A : C → Matrix m n 𝕜) :
     ‖∑ c, single c c (1 : 𝕜) ⊗ₖ A c‖ = ⨆ c, ‖A c‖ := by
   classical
   set M := ∑ c, single c c (1 : 𝕜) ⊗ₖ A c

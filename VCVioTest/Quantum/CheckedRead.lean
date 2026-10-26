@@ -145,7 +145,8 @@ example {L : LocalSig} (I : L.Interp) {W : QReg → Type} {A : QReg}
     (x : QuantumComp L (mixedOracleSpec 2 Bool (ZMod 2)) W A) (ρ : SubState A)
     {γ : Type} [MeasurableSpace γ] (f : (Σ B, W B) → γ) :
     (E).mixedRuntime.evalDistMap I x ρ f =
-      ∑ H : Fin 2 → Bool → ZMod 2, (Fintype.card (Fin 2 → Bool → ZMod 2) : ℝ≥0∞)⁻¹ •
+      ∑ H : Fin 2 → Bool → ZMod 2,
+        (Fintype.card (Fin 2 → Bool → ZMod 2) : ℝ≥0∞)⁻¹ •
         (romVCOracle 2 Bool (ZMod 2) H).mixedRuntime.evalDistMap I x ρ f :=
   evalDistMap_mixed_compressedVCOracle I x ρ f
 
@@ -195,6 +196,42 @@ example {Z : Type} [Fintype Z] [DecidableEq Z] [AddGroup Z]
       prescribedCheck, QueryLog.agreesWith_eq_true_iff]
   exact (LinearMap.congr_fun h ρ).trans
     (congrArg (fun P ↦ MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ P) ρ) hP)
+
+section EmptyChecks
+
+variable {Z : Type} [Fintype Z] [DecidableEq Z] [AddGroup Z]
+  (ME : MultiExtractor 2 Unit (DmOf (fun _ ↦ 0) Unit (fun _ ↦ Unit)) (E).S)
+  (code : TpDCode 2 (DmOf (fun _ ↦ 0) Unit (fun _ ↦ Unit)) Z) (B : QReg)
+
+/-- A malformed opening has zero accepting channel through the actual checker. -/
+example :
+    ((((E).mixedExtractRuntime ME code).run₂ .instruments
+      (checkAt (fun _ ↦ prescribedVC none) B 0 0 () (fun _ ↦ none) ())).branch true) = 0 := by
+  have h := branch_run₂_checkAt_compressedVCOracle (fun _ ↦ prescribedVC none)
+    ME code (fun _ ↦ prescribedCheck none) B 0 0 () (fun _ ↦ none) ()
+  have hP : compressDatabases 2 Bool (ZMod 2) * diagonal (fun D : DB ↦
+      if (prescribedCheck none).checkOn (D 0) () (fun _ ↦ none) ()
+        then (1 : ℂ) else 0) * compressDatabases 2 Bool (ZMod 2) = 0 := by
+    simp [VectorCommitment.NonadaptiveCheck.checkOn, prescribedCheck]
+  exact h.trans ((congrArg (fun P ↦ MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ P)) hP).trans
+    (by rw [kronecker_zero]; exact MatrixMap.conj_zero))
+
+/-- A well-formed empty log accepts and preserves every joint residual state. -/
+example (ρ : Matrix (B × DB) (B × DB) ℂ) :
+    ((((E).mixedExtractRuntime ME code).run₂ .instruments
+      (checkAt (fun _ ↦ prescribedVC (some [])) B 0 0 () (fun _ ↦ none) ())).branch true) ρ =
+        ρ := by
+  have h := branch_run₂_checkAt_compressedVCOracle (fun _ ↦ prescribedVC (some []))
+    ME code (fun _ ↦ prescribedCheck (some [])) B 0 0 () (fun _ ↦ none) ()
+  have hP : compressDatabases 2 Bool (ZMod 2) * diagonal (fun D : DB ↦
+      if (prescribedCheck (some [])).checkOn (D 0) () (fun _ ↦ none) ()
+        then (1 : ℂ) else 0) * compressDatabases 2 Bool (ZMod 2) = 1 := by
+    simp [VectorCommitment.NonadaptiveCheck.checkOn, prescribedCheck,
+      QueryLog.agreesWith_eq_true_iff, compressDatabases_mul_self]
+  exact (LinearMap.congr_fun h ρ).trans
+    ((congrArg (fun P ↦ MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ P) ρ) hP).trans (by simp))
+
+end EmptyChecks
 
 local notation "Old" => projectiveClassicalAnswers (k := 2) (X := Bool) (Y := ZMod 2)
 

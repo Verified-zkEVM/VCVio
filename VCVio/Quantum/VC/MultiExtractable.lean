@@ -24,6 +24,8 @@ properties:
 * **P4, offline extractability** (p. 51, `Quantum.OfflineExtractable`);
 * **P5, online indistinguishability** (p. 51, `Quantum.OnlineIndistinguishable`).
 
+`Quantum.IsMultiExtractableWith` bundles these properties with errors `Quantum.MEErrors`.
+
 ## Conventions
 
 * **Adversaries** are general programs `x : QuantumComp LocalSig.instruments spec W A` from a
@@ -32,21 +34,13 @@ properties:
   The paper's start state `|0^ℓ⟩` (p. 50) is
   the case of a pure `ρ`. Adversaries with classically named ports translate to the coherent view
   through `Quantum.QuantumComp.toCoherent`; P3 and P4 have corollaries for them.
-* **Universes.** The outcomes of the adversary's local operations (`LocalSig.instruments.{v}`)
-  and its leaves (`W : QReg → Type w`) may lie in any universes: every property is universe
-  polymorphic, with the universe parameters `v` and `w` first (`Quantum.Simulates.{v, w}`,
-  `Quantum.ExtractionCorrect.{v, w}`, …), and the bundle `Quantum.IsMultiExtractable.{v, w}` uses
-  one pair for all five properties. The challengers' local operations have outcomes in `Type`;
-  the experiment lifts them to the adversary's universe (`Quantum.QuantumComp.liftInstruments`),
-  which changes no run (`Quantum.run_experiment`). What remains fixed to `Type`: the carriers of
-  registers (`Quantum.QReg`), hence the oracle's `X` and `Y` and the extraction register `Z`; the
-  vector-commitment fields `Cm`, `Td`, `Pf`, which `VectorCommitment` keeps in `Type`; and, as a
-  choice of this file, the messages `Msg` (which `VectorCommitment` allows in any universe). The
-  uniform form of P1 (`Quantum.uniformWeights`, `Quantum.simulates_uniformWeights_iff`) needs
-  `Ω : Type`, and `Quantum.EmulatedOracle.branch_run₂_callBasis` has its result in `Type` (its
-  present proof goes through a lemma stated for `Unit`). No bridge between the instances of a
-  property at different universes is proved, so a property at `v, w` is not known to imply it at
-  other universes.
+* **Universes.** Local-operation outcomes and leaves range over `Type v` and `Type w`.
+  Each property and the bundle put these universes first, e.g. `Quantum.Simulates.{v, w}`.
+  The experiment lifts the challenger's `Type`-valued operations to the adversary's universe
+  without changing its run (`Quantum.QuantumComp.liftInstruments`). Registers, `X`, `Y`,
+  `Z`, `Cm`, `Td`, `Pf`, and this file's messages `Msg` remain in `Type`.
+  The uniform form of P1 also needs `Ω : Type`; `Quantum.EmulatedOracle.branch_run₂_callBasis`
+  has its result in `Type`. No implication between different universe instances is proved.
 * **"t-query"** (p. 50) is `x.IsTotalQueryBound t` in P1, P2 and P5: every call counts,
   including reads, extraction and recording. P3 and P4 retain their single coherent port budget.
 * **Masses** in P3 and P4 are ordinary adversary masses, excluding the challenger. In P5 the
@@ -70,26 +64,16 @@ properties:
   (`Quantum.uniformWeights`) over the family of `Quantum.romVCOracle`, for which P1 reads as a
   bound against `Quantum.sampledEvalDistMap` (`Quantum.simulates_uniformWeights_iff`).
 * P2's distance `‖Ψ − Ψ′‖²` (p. 50) is `Quantum.comError`, the trace of the defect
-  `C = U_ME O_i − O_i U_ME` against the joint post-state of the oracle register and the adversary's
-  output, summed over outcomes. On a unitary adversary from a pure state it is `‖C V |ψ⟩|ϕ⟩‖²`
+  `C = U_ME O_i − O_i U_ME` against the joint post-state, summed over outcomes.
+  On a unitary adversary from a pure state it is `‖C V |ψ⟩|ϕ⟩‖²`
   (`Quantum.comError_of_pure`).
-* P5 is stated as the two inequalities `√p₁ ≤ √p₂ + √κ` and `√p₂ ≤ √p₁ + √κ`, which together say
+* P5 is stated as `√p₁ ≤ √p₂ + √κ` and `√p₂ ≤ √p₁ + √κ`, together saying
   `(√p₁ − √p₂)² ≤ κ` (p. 51).
 * Extraction returns `none` when the read value is no encoding of a tuple of the right length;
   this branch has weight zero, and the challengers report `false` on it.
 * The security parameter `λ` and running-time conditions are not modelled; error functions take
   the query bound and the masses. Monotonicity of the errors (p. 51) is the separate hypothesis
   `Quantum.MEErrors.Monotone`.
-
-## Main definitions
-
-* `Quantum.mixedLawWith`, `Quantum.uniformWeights`.
-* `Quantum.experiment`, `Quantum.oracleCall`, `Quantum.checkAt`, `Quantum.openAt`,
-  `Quantum.extractQuery`, `Quantum.extractChallenger`, `Quantum.offlineChallenger`.
-* `Quantum.Simulates`, `Quantum.OraclesCommute`, `Quantum.comDefect`, `Quantum.comError`,
-  `Quantum.ComBound`, `Quantum.ExtractionCorrect`, `Quantum.OfflineExtractable`,
-  `Quantum.OnlineIndistinguishable`.
-* `Quantum.MEErrors`, `Quantum.IsMultiExtractableWith`, `Quantum.IsMultiExtractable`.
 
 ## Main results
 
@@ -147,9 +131,11 @@ its fixed-register run. -/
 theorem QuantumRuntime.outcomeMeasure_run_forgetReg {L : LocalSig.{u, v}}
     {spec : QuantumOracleSpec.{u₁, v₁}} (R : QuantumRuntime spec) (I : L.Interp) {A B : QReg}
     {α : Type w} [MeasurableSpace α] [MeasurableSpace (Σ _ : QReg, α)]
-    (x : QuantumComp₂ L spec A B α) (σ : SubState (A × R.D)) {s : Set α} (hs : MeasurableSet s)
+    (x : QuantumComp₂ L spec A B α) (σ : SubState (A × R.D))
+    {s : Set α} (hs : MeasurableSet s)
     (hs' : MeasurableSet (Sigma.snd ⁻¹' s : Set (Σ _ : QReg, α))) :
-    (R.run I x.forgetReg).outcomeMeasure σ (Sigma.snd ⁻¹' s) = (R.run₂ I x).outcomeMeasure σ s := by
+    (R.run I x.forgetReg).outcomeMeasure σ (Sigma.snd ⁻¹' s) =
+      (R.run₂ I x).outcomeMeasure σ s := by
   let _ : MeasurableSpace (Σ u, QuantumComp₂.Leaf B α u) := ⊤
   rw [QuantumRuntime.run_forgetReg, DSubInstrument.map_eq_bind_ret,
     DSubInstrument.outcomeMeasure_bind, Measure.sum_apply _ hs',
@@ -227,10 +213,11 @@ variable {spec : QuantumOracleSpec.{u₁, v₁}} {L : LocalSig.{u, v}} {W : QReg
   {A : QReg} {Ω : Type*} {β : Type*} [MeasurableSpace β]
 
 /-- **The law against a finite mixture of runtimes.** For a finitely supported distribution `p`
-on `Ω` (Mathlib's `Convexity.StdSimplex ℝ Ω`: real weights `p.weights ω ≥ 0` with finite support
-summing to `1`) and a family of runtimes `R`, the law of an observation of the leaf reached by
+on `Ω` (Mathlib's `Convexity.StdSimplex ℝ Ω`: nonnegative real weights with finite
+support summing to `1`) and runtimes `R`, the law of an observation of the leaf reached by
 `x` when the oracle is realized by `R ω` with probability `p.weights ω`: the mixture
-`∑ ω, p.weights ω • (R ω).evalDistMap I x ρ (f ω)`. The observation sees the sampled value. -/
+`∑ ω, p.weights ω • (R ω).evalDistMap I x ρ (f ω)`.
+The observation sees the sampled value. -/
 @[expose]
 noncomputable def mixedLawWith (p : StdSimplex ℝ Ω) (R : Ω → QuantumRuntime spec)
     (I : L.Interp) (x : QuantumComp L spec W A) (ρ : SubState A) (f : Ω → (Σ u, W u) → β) :
@@ -284,7 +271,8 @@ directions. The reference model is the paper's `D(λ)` (p. 50): a finitely suppo
 random-oracle model is the uniform distribution (`Quantum.uniformWeights`) over the family of
 `Quantum.romVCOracle`; see `Quantum.simulates_uniformWeights_iff`. -/
 @[expose]
-def Simulates {Ω : Type*} (p : StdSimplex ℝ Ω) (Ref : Ω → QuantumRuntime (mixedOracleSpec k X Y))
+def Simulates {Ω : Type*} (p : StdSimplex ℝ Ω)
+    (Ref : Ω → QuantumRuntime (mixedOracleSpec k X Y))
     (E : VCOracle k X Y) (κsim : ℕ → ℝ≥0∞) : Prop :=
   ∀ (t : ℕ) {A : QReg} {W : QReg → Type w}
     (x : QuantumComp LocalSig.instruments.{v} (mixedOracleSpec k X Y) W A)
@@ -298,7 +286,8 @@ variable {Ω : Type*} {p : StdSimplex ℝ Ω} {Ref : Ω → QuantumRuntime (mixe
   {E : VCOracle k X Y}
 
 /-- P1 is monotone in the error. -/
-theorem Simulates.mono {κ κ' : ℕ → ℝ≥0∞} (h : Simulates.{v, w} p Ref E κ) (hκ : κ ≤ κ') :
+theorem Simulates.mono {κ κ' : ℕ → ℝ≥0∞} (h : Simulates.{v, w} p Ref E κ)
+    (hκ : κ ≤ κ') :
     Simulates.{v, w} p Ref E κ' := fun t _ _ x f ρ hx ↦
   ⟨(h t x f ρ hx).1.trans (add_le_add le_rfl (hκ t)),
     (h t x f ρ hx).2.trans (add_le_add le_rfl (hκ t))⟩
@@ -381,7 +370,8 @@ def slotSnd (M₁ M₂ S : Type*) : (M₁ × M₂) × S ≃ (M₂ × S) × M₁ 
 /-- The first factor of the output and the shared register:
 `((M₁ × M₂) × N) × S ≃ (M₁ × S) × (M₂ × N)`. -/
 @[expose]
-def slotFst₃ (M₁ M₂ N S : Type*) : ((M₁ × M₂) × N) × S ≃ (M₁ × S) × (M₂ × N) where
+def slotFst₃ (M₁ M₂ N S : Type*) :
+    ((M₁ × M₂) × N) × S ≃ (M₁ × S) × (M₂ × N) where
   toFun a := ((a.1.1.1, a.2), (a.1.1.2, a.1.2))
   invFun b := (((b.1.1, b.2.1), b.2.2), b.1.2)
   left_inv _ := rfl
@@ -390,7 +380,8 @@ def slotFst₃ (M₁ M₂ N S : Type*) : ((M₁ × M₂) × N) × S ≃ (M₁ ×
 /-- The second factor of the output and the shared register:
 `((M₁ × M₂) × N) × S ≃ (M₂ × S) × (M₁ × N)`. -/
 @[expose]
-def slotSnd₃ (M₁ M₂ N S : Type*) : ((M₁ × M₂) × N) × S ≃ (M₂ × S) × (M₁ × N) where
+def slotSnd₃ (M₁ M₂ N S : Type*) :
+    ((M₁ × M₂) × N) × S ≃ (M₂ × S) × (M₁ × N) where
   toFun a := ((a.1.1.2, a.2), (a.1.1.1, a.1.2))
   invFun b := (((b.2.1, b.1.1), b.2.2), b.1.2)
   left_inv _ := rfl
@@ -417,9 +408,9 @@ abbrev ComOut (Env : QReg) : QReg :=
 
 variable (E : VCOracle k X Y) (ME : MultiExtractor k Cm Dm E.S) (code : TpDCode k Dm Z)
 
-/-- The commutation defect `C = (U_ME)_{X₂Y₂S} (O_i)_{X₁Y₁S} − (O_i)_{X₁Y₁S} (U_ME)_{X₂Y₂S}` on the
-output of a P2 adversary and the private register, so that `Ψ − Ψ′ = C φ` (ePrint 2025/2166,
-p. 50). -/
+/-- The commutation defect `C = U_ME O_i − O_i U_ME` on the output of a P2 adversary
+and the private register, so that `Ψ − Ψ′ = C φ` (ePrint 2025/2166, p. 50).
+The extractor acts on `X₂Y₂S` and the oracle on `X₁Y₁S`. -/
 @[expose]
 noncomputable def comDefect (Env : QReg) (i : Fin k) :
     Matrix (ComOut k X Y Cm Z Env × E.S) (ComOut k X Y Cm Z Env × E.S) ℂ :=
@@ -428,8 +419,8 @@ noncomputable def comDefect (Env : QReg) (i : Fin k) :
     onFactor (slotFst₃ (X × Y) (TpIC k Cm × Z) Env E.S) (E.U i) *
       onFactor (slotSnd₃ (X × Y) (TpIC k Cm × Z) Env E.S) (extractUnitary ME code)
 
-/-- **P2's distance `‖Ψ − Ψ′‖²`** (ePrint 2025/2166, p. 50), for a general program: the sum
-over outcomes `a` of `tr(C σ_a C†)`, where `σ_a` is the joint post-state of the adversary's output
+/-- **P2's distance `‖Ψ − Ψ′‖²`** (ePrint 2025/2166, p. 50): the sum over outcomes `a`
+of `tr(C σ_a C†)`, where `σ_a` is the joint post-state of the adversary's output
 and the private register of `EO^(Ext)`. The joint state is used because `C` acts on the private
 register. For a pure input and a unitary adversary it is `‖C V |ψ⟩|ϕ⟩‖²`
 (`Quantum.comError_of_pure`). -/
@@ -486,7 +477,8 @@ def ComBound (κcom : ℕ → ℝ≥0∞) : Prop :=
 variable {E ME code}
 
 /-- The commutation bound is monotone in the error. -/
-theorem ComBound.mono {κ κ' : ℕ → ℝ≥0∞} (h : ComBound.{v, w} E ME code κ) (hκ : κ ≤ κ') :
+theorem ComBound.mono {κ κ' : ℕ → ℝ≥0∞} (h : ComBound.{v, w} E ME code κ)
+    (hκ : κ ≤ κ') :
     ComBound.{v, w} E ME code κ' :=
   ⟨fun i t _ _ _ x ρ hx ↦ (h.1 i t x ρ hx).trans (hκ t),
     fun t _ _ _ x ρ c hx ↦ (h.2 t x ρ c hx).trans (hκ t)⟩
@@ -542,8 +534,8 @@ theorem comError_of_pure {i : Fin k} {A Env : QReg} {α : Type w}
     (hv : ρ.matrix ⊗ₖ E.init.matrix = vecMulVec v (star v)) :
     comError E ME code i x ρ =
       ENNReal.ofReal (∑ b, ‖((comDefect E ME code Env i * V) *ᵥ v) b‖ ^ 2) := by
-  rw [comError_eq_of_branch E ME code a₀ V hx₀ hx, hv, ← trace_mul_vecMulVec_mul_conjTranspose_re,
-    conjTranspose_mul]
+  rw [comError_eq_of_branch E ME code a₀ V hx₀ hx, hv,
+    ← trace_mul_vecMulVec_mul_conjTranspose_re, conjTranspose_mul]
   simp only [Matrix.mul_assoc]
 
 /-- The ordinary commutator is bounded by four times the joint input trace. -/
@@ -903,7 +895,8 @@ section challengers
 
 variable {k : ℕ} {X Y Msg Cm Z : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
   [Fintype Cm] [DecidableEq Cm] [Fintype Z] [DecidableEq Z]
-  {ℓ : Fin k → ℕ} {Td Pf : Fin k → Type} (VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i))
+  {ℓ : Fin k → ℕ} {Td Pf : Fin k → Type}
+  (VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i))
 
 /-- `VC_i.Check^{O_j}(cm, Q, ans, pf)` run from inside an experiment, with `Q = dom ans`
 (ePrint 2025/2166, p. 51). -/
@@ -995,26 +988,38 @@ structure OpeningClaim (k : ℕ) (Cm Msg : Type) (ℓ : Fin k → ℕ) (Pf : Fin
   /-- The positions `W` checked before extraction. -/
   W : Finset (Fin k)
 
+/-- The opening and mismatch decision of the P4 challenger, conditional on the retained
+check/extract/check transcript. It preserves randomized openings, the opening budget,
+and the requirement that oracle indices be distinct. -/
+@[expose]
+noncomputable def offlineFinish [DecidableEq Msg] [∀ i, DecidableEq (Pf i)]
+    (hk : 1 ≤ k) (qs : ℕ) (c : OpeningClaim k Cm Msg ℓ Pf) (B : QReg)
+    (r : Bool × Option (TpDLen k (DmOf ℓ Msg Td) (TupleLen.full hk)) × Bool) :
+    QComp (mixedExtSpec k X Y Cm Z) B B Bool :=
+  match r.2.1 with
+  | none => QuantumComp₂.pure false
+  | some tdm => (QComp.pi fun i : Fin k ↦
+      openAt VC B i (c.ans i).dom (tdm i).2).bind fun pf' ↦
+        QuantumComp₂.pure (r.1 && r.2.2 &&
+          decide (∃ i : Fin k, ¬ PartialVec.Agrees (tdm i).1 (c.ans i) ∨ pf' i ≠ c.pf i) &&
+          decide (∑ i, (c.ans i).dom.card ≤ qs) && decide (Function.Injective c.idx))
+
 /-- **The P4 challenger** (ePrint 2025/2166, Def 7.3, p. 51), on the adversary's final
 register `B`: run the checks on `W`, extract, run the checks on `[k] \ W`, open every position at
-`Q_i` with the extracted trapdoor, and report the event `b₁ ∧ b₂ ∧ ∃ i, (m_i[Q_i] ≠ ans_i ∨
-pf'_i ≠ pf_i) ∧ ∑ |Q_i| ≤ qs ∧ (idx_i)_i distinct`. The order matters, since checks call the
-oracle and move the private register. -/
+`Q_i` with the extracted trapdoor, and report the event
+`b₁ ∧ b₂ ∧ ∃ i, (m_i[Q_i] ≠ ans_i ∨ pf'_i ≠ pf_i)`,
+subject to `∑ |Q_i| ≤ qs` and distinct indices `(idx_i)_i`.
+The order matters, since checks call the oracle and move the private register. -/
 @[expose]
 noncomputable def offlineChallenger [DecidableEq Msg] [∀ i, DecidableEq (Pf i)]
-    (code : TpDCode k (DmOf ℓ Msg Td) Z) (hk : 1 ≤ k) (qs : ℕ) (c : OpeningClaim k Cm Msg ℓ Pf)
+    (code : TpDCode k (DmOf ℓ Msg Td) Z) (hk : 1 ≤ k) (qs : ℕ)
+    (c : OpeningClaim k Cm Msg ℓ Pf)
     (B : QReg) : QComp (mixedExtSpec k X Y Cm Z) B B Bool :=
   (QComp.allIn c.W fun i ↦ checkAt VC B i (c.idx i) (c.cm i) (c.ans i) (c.pf i)).bind fun b₁ ↦
     QuantumComp₂.bind (QuantumComp.liftOrdinary
     (extractQuery code B (TpIC.full hk c.idx c.cm))) fun otdm ↦
       (QComp.allIn c.Wᶜ fun i ↦ checkAt VC B i (c.idx i) (c.cm i) (c.ans i) (c.pf i)).bind
-        fun b₂ ↦ match otdm with
-          | none => QuantumComp₂.pure false
-          | some tdm =>
-            (QComp.pi fun i : Fin k ↦ openAt VC B i (c.ans i).dom (tdm i).2).bind fun pf' ↦
-              QuantumComp₂.pure (b₁ && b₂ &&
-                decide (∃ i : Fin k, ¬ PartialVec.Agrees (tdm i).1 (c.ans i) ∨ pf' i ≠ c.pf i) &&
-                decide (∑ i, (c.ans i).dom.card ≤ qs) && decide (Function.Injective c.idx))
+        fun b₂ ↦ offlineFinish VC (Z := Z) hk qs c B (b₁, otdm, b₂)
 
 variable (code : TpDCode k (DmOf ℓ Msg Td) Z)
 
@@ -1029,20 +1034,6 @@ noncomputable def offlineChecks (hk : 1 ≤ k) (c : OpeningClaim k Cm Msg ℓ Pf
       (QComp.allIn c.Wᶜ fun i ↦
         checkAt VC B i (c.idx i) (c.cm i) (c.ans i) (c.pf i)).map
           (fun b₂ ↦ (tdm, b₂))).map (fun r ↦ (b₁, r))
-
-/-- The opening and mismatch decision of the P4 challenger, conditional on the retained
-check/extract/check transcript. Randomized openings and both budget checks are preserved. -/
-noncomputable def offlineFinish [DecidableEq Msg] [∀ i, DecidableEq (Pf i)]
-    (hk : 1 ≤ k) (qs : ℕ) (c : OpeningClaim k Cm Msg ℓ Pf) (B : QReg)
-    (r : Bool × Option (TpDLen k (DmOf ℓ Msg Td) (TupleLen.full hk)) × Bool) :
-    QComp (mixedExtSpec k X Y Cm Z) B B Bool :=
-  match r.2.1 with
-  | none => QuantumComp₂.pure false
-  | some tdm => (QComp.pi fun i : Fin k ↦
-      openAt VC B i (c.ans i).dom (tdm i).2).bind fun pf' ↦
-        QuantumComp₂.pure (r.1 && r.2.2 &&
-          decide (∃ i : Fin k, ¬ PartialVec.Agrees (tdm i).1 (c.ans i) ∨ pf' i ≠ c.pf i) &&
-          decide (∑ i, (c.ans i).dom.card ≤ qs) && decide (Function.Injective c.idx))
 
 omit [AddGroup Z] in
 /-- On an accepted transcript, the finish opens with `tdm` and decides the mismatch event. -/
@@ -1113,9 +1104,6 @@ theorem offlineChallenger_eq_bind_offlineChecks [DecidableEq Msg] [∀ i, Decida
   funext tdm
   erw [QuantumComp₂.bind_assoc]
   congr 1
-  funext b₂
-  erw [QuantumComp₂.pure_bind]
-  cases tdm <;> rfl
 
 /-- The actual P4 challenger instrument retaining its check/extraction transcript alongside
 the final mismatch-event bit. Forgetting the transcript recovers `offlineChallenger`. -/
@@ -1152,7 +1140,8 @@ theorem run₂_offlineChecks (R : QuantumRuntime (mixedExtSpec k X Y Cm Z))
   have h₁ := R.run₂_bind_record .instruments (checks c.W)
     (fun _ ↦ extract.bind fun d ↦ (checks c.Wᶜ).map (fun b ↦ (d, b))) b₁ (tdm, b₂)
   have h₂ := R.run₂_bind_record .instruments extract (fun _ ↦ checks c.Wᶜ) tdm b₂
-  exact h₁.trans (congrArg (fun F ↦ F ∘ₗ (R.run₂ .instruments (checks c.W)).branch b₁) h₂)
+  exact h₁.trans
+    (congrArg (fun F ↦ F ∘ₗ (R.run₂ .instruments (checks c.W)).branch b₁) h₂)
 
 /-- The retained event branch executes the finishing program on its particular transcript. -/
 theorem run₂_offlineInstrument [DecidableEq Msg] [∀ i, DecidableEq (Pf i)]
@@ -1246,8 +1235,8 @@ def ExtractionCorrect (κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℕ → ℝ≥
     (E.withExtract ME code).totalMass .instruments x (ρ.matrix ⊗ₖ E.init.matrix) (.inr ()) ≤
       wME →
     (E.mixedExtractRuntime ME code).evalDistMap .instruments
-      (experiment x.liftOrdinary fun u y ↦ extractChallenger VC code hk n (claim u y) u) ρ Sigma.snd
-        {true} ≤ κ t wVC wME n
+      (experiment x.liftOrdinary fun u y ↦ extractChallenger VC code hk n (claim u y) u) ρ
+        Sigma.snd {true} ≤ κ t wVC wME n
 
 /-- **P4, offline extractability** (ePrint 2025/2166, Def 7.3, p. 51): against every
 `t`-query adversary querying `EO^(Ext)` with the mass bounds of P3, the P4 challenger reports
@@ -1290,8 +1279,10 @@ theorem OfflineExtractable.mono [DecidableEq Msg] [∀ i, DecidableEq (Pf i)]
 call classically, makes at most `b i` calls of port `i`, and has per-port query masses within
 `wVC` and `wME`, makes the P3 challenger report its event with probability at most
 `κ (∑ i, b i) wVC wME n`. -/
-theorem ExtractionCorrect.of_classicalPorts {κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℕ → ℝ≥0∞}
-    (h : ExtractionCorrect.{v, w} VC E ME code κ) (hk : 1 ≤ k) {n : ℕ} (hn : n ≤ k) {wVC wME : ℝ≥0∞}
+theorem ExtractionCorrect.of_classicalPorts
+    {κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℕ → ℝ≥0∞}
+    (h : ExtractionCorrect.{v, w} VC E ME code κ) (hk : 1 ≤ k)
+    {n : ℕ} (hn : n ≤ k) {wVC wME : ℝ≥0∞}
     {A : QReg} {W : QReg → Type w}
     (x : QuantumComp LocalSig.instruments.{v} (uSpec (Fin k ⊕ Unit) (extIn k X Y Cm Z)) W A)
     (claim : ∀ u, W u → ExtractClaim k Cm) (ρ : SubState A) {b : Fin k ⊕ Unit → ℕ}
@@ -1315,7 +1306,8 @@ theorem OfflineExtractable.of_classicalPorts [DecidableEq Msg] [∀ i, Decidable
     (h : OfflineExtractable.{v, w} VC E ME code κ) (hk : 1 ≤ k) {qs : ℕ} {wVC wME : ℝ≥0∞}
     {A : QReg} {W : QReg → Type w}
     (x : QuantumComp LocalSig.instruments.{v} (uSpec (Fin k ⊕ Unit) (extIn k X Y Cm Z)) W A)
-    (claim : ∀ u, W u → OpeningClaim k Cm Msg ℓ Pf) (ρ : SubState A) {b : Fin k ⊕ Unit → ℕ}
+    (claim : ∀ u, W u → OpeningClaim k Cm Msg ℓ Pf) (ρ : SubState A)
+    {b : Fin k ⊕ Unit → ℕ}
     (hx : x.IsQueryBound b)
     (h₁ : ∑ i : Fin k, (E.withExtract ME code).toRuntime.queryMass .instruments x
       (ρ.matrix ⊗ₖ E.init.matrix) (.inl i) ≤ wVC)
@@ -1344,13 +1336,15 @@ variable {k : ℕ} {X Y Cm Z : Type} [Fintype X] [DecidableEq X] [Fintype Y] [De
 form: for every unitary `U` on `Yr × Cell` and every `t`-query adversary querying `EO^(Record)`
 whose oracle, extraction and record masses in the world `Record(U)` are at most `wVC`, `wME` and
 `wRec`, the probabilities `p₁` and `p₂` of observing `true` in the worlds `Record(U)` and
-`Record(MultiExtract, U)` satisfy `√p₁ ≤ √p₂ + √κ` and `√p₂ ≤ √p₁ + √κ`, that is,
-`(√p₁ − √p₂)² ≤ κ t wVC wME wRec`. Both worlds start with every cell of the recording register
-at `bot`. The trusted verifier may read inside this program. Its reads contribute their full
+`Record(MultiExtract, U)` satisfy `√p₁ ≤ √p₂ + √κ` and `√p₂ ≤ √p₁ + √κ`,
+that is, `(√p₁ − √p₂)² ≤ κ t wVC wME wRec`.
+Both worlds start with every cell of the recording register at `bot`.
+The trusted verifier may read inside this program. Its reads contribute their full
 input trace to `wVC`, alongside selected ordinary oracle mass; `wME` and `wRec` count only their
 ordinary coherent indices. All three masses are measured in the unsplit `Record(U)` world. -/
 @[expose]
-def OnlineIndistinguishable (κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞) : Prop :=
+def OnlineIndistinguishable
+    (κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞) : Prop :=
   ∀ (Yr Cell : Type) [Fintype Yr] [DecidableEq Yr] [Fintype Cell] [DecidableEq Cell] (bot : Cell)
     (U : Matrix (Yr × Cell) (Yr × Cell) ℂ) (hU : U ∈ unitaryGroup (Yr × Cell) ℂ)
     (t : ℕ) (wVC wME wRec : ℝ≥0∞) {A : QReg} {W : QReg → Type w}
@@ -1378,7 +1372,8 @@ def OnlineIndistinguishable (κ : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0�
 variable {E ME code}
 
 /-- P5 is monotone in the error. -/
-theorem OnlineIndistinguishable.mono {κ κ' : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞}
+theorem OnlineIndistinguishable.mono
+    {κ κ' : ℕ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞ → ℝ≥0∞}
     (h : OnlineIndistinguishable.{v, w} E ME code κ) (hκ : κ ≤ κ') :
     OnlineIndistinguishable.{v, w} E ME code κ' := by
   intro Yr Cell _ _ _ _ bot U hU t wVC wME wRec A W x f ρ hx h₁ h₂ h₃
@@ -1423,8 +1418,10 @@ part of `Quantum.IsMultiExtractableWith`. -/
 @[expose]
 def Monotone (κ : MEErrors) : Prop :=
   _root_.Monotone κ.sim ∧ _root_.Monotone κ.com ∧
-    _root_.Monotone (fun p : ℕ × ℝ≥0∞ × ℝ≥0∞ × ℕ ↦ κ.offline p.1 p.2.1 p.2.2.1 p.2.2.2) ∧
-    _root_.Monotone (fun p : ℕ × ℝ≥0∞ × ℝ≥0∞ × ℝ≥0∞ ↦ κ.online p.1 p.2.1 p.2.2.1 p.2.2.2)
+    _root_.Monotone (fun p : ℕ × ℝ≥0∞ × ℝ≥0∞ × ℕ ↦
+      κ.offline p.1 p.2.1 p.2.2.1 p.2.2.2) ∧
+    _root_.Monotone (fun p : ℕ × ℝ≥0∞ × ℝ≥0∞ × ℝ≥0∞ ↦
+      κ.online p.1 p.2.1 p.2.2.1 p.2.2.2)
 
 end MEErrors
 
@@ -1440,7 +1437,8 @@ extractor is admissible (Def 7.1, repaired as in `Quantum.MultiExtractor.Admissi
 `⊥ = (⊥^ℓ_i, tdBot i)`, and P1–P5 hold with the errors `κ`. -/
 structure IsMultiExtractableWith {Z : Type} [Fintype Z] [DecidableEq Z] [AddGroup Z]
     (E : VCOracle k X Y) (ME : MultiExtractor k Cm (DmOf ℓ Msg Td) E.S)
-    (code : TpDCode k (DmOf ℓ Msg Td) Z) (tdBot : ∀ i, Td i) {Ω : Type*} (p : StdSimplex ℝ Ω)
+    (code : TpDCode k (DmOf ℓ Msg Td) Z) (tdBot : ∀ i, Td i)
+    {Ω : Type*} (p : StdSimplex ℝ Ω)
     (Ref : Ω → QuantumRuntime (mixedOracleSpec k X Y)) (κ : MEErrors) : Prop where
   /-- Def 7.1: the extractor is admissible. -/
   admissible : ME.Admissible fun i ↦ ((fun _ ↦ none), tdBot i)
@@ -1473,7 +1471,8 @@ variable {VC}
 /-- Def 7.3 for a given oracle is monotone in the errors. -/
 theorem IsMultiExtractableWith.mono {Z : Type} [Fintype Z] [DecidableEq Z] [AddGroup Z]
     {E : VCOracle k X Y} {ME : MultiExtractor k Cm (DmOf ℓ Msg Td) E.S}
-    {code : TpDCode k (DmOf ℓ Msg Td) Z} {tdBot : ∀ i, Td i} {Ω : Type*} {p : StdSimplex ℝ Ω}
+    {code : TpDCode k (DmOf ℓ Msg Td) Z} {tdBot : ∀ i, Td i}
+    {Ω : Type*} {p : StdSimplex ℝ Ω}
     {Ref : Ω → QuantumRuntime (mixedOracleSpec k X Y)} {κ κ' : MEErrors}
     (h : IsMultiExtractableWith.{v, w} VC E ME code tdBot p Ref κ) (hκ : κ ≤ κ') :
     IsMultiExtractableWith.{v, w} VC E ME code tdBot p Ref κ' where

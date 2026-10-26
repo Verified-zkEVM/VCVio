@@ -58,25 +58,26 @@ namespace Quantum
 
 namespace SubInstrument
 
-variable (Ω : Type*) [Fintype Ω] [Nonempty Ω] (A : Type*) [Fintype A] [DecidableEq A]
+variable (Ω : Type*) [Fintype Ω] (A : Type*) [Fintype A] [DecidableEq A]
 
 /-- The Kraus operator of every outcome of a uniform coin: `|Ω|^(-1/2) • 1`. -/
 @[expose]
 noncomputable def uniformKraus : Matrix A A ℂ :=
   ((Real.sqrt (Fintype.card Ω : ℝ)⁻¹ : ℝ) : ℂ) • (1 : Matrix A A ℂ)
 
-omit [Nonempty Ω] in
 private theorem sqrt_inv_card_mul_self : (((Real.sqrt (Fintype.card Ω : ℝ)⁻¹ : ℝ) : ℂ)) *
     ((Real.sqrt (Fintype.card Ω : ℝ)⁻¹ : ℝ) : ℂ) = (Fintype.card Ω : ℂ)⁻¹ := by
   rw [← Complex.ofReal_mul, Real.mul_self_sqrt (by positivity)]
   simp
 
-omit [Nonempty Ω] in
 /-- The Kraus operator of a uniform coin, composed with its adjoint, is `|Ω|⁻¹ • 1`. -/
 theorem conjTranspose_uniformKraus_mul_self :
-    (uniformKraus Ω A)ᴴ * uniformKraus Ω A = ((Fintype.card Ω : ℂ)⁻¹) • (1 : Matrix A A ℂ) := by
+    (uniformKraus Ω A)ᴴ * uniformKraus Ω A =
+      ((Fintype.card Ω : ℂ)⁻¹) • (1 : Matrix A A ℂ) := by
   simp only [uniformKraus, conjTranspose_smul, conjTranspose_one, Complex.star_def,
     Complex.conj_ofReal, smul_mul_smul, Matrix.mul_one, sqrt_inv_card_mul_self]
+
+variable [Nonempty Ω]
 
 /-- The Kraus operators of a uniform coin form a complete family. -/
 theorem sum_conjTranspose_uniformKraus_mul_self :
@@ -86,8 +87,8 @@ theorem sum_conjTranspose_uniformKraus_mul_self :
     mul_inv_cancel₀ (Nat.cast_ne_zero.mpr Fintype.card_ne_zero), one_smul]
 
 /-- **A uniform coin**: draw a uniform outcome in `Ω` and leave the register `A` untouched. Each
-branch is `ρ ↦ ρ / |Ω|` (`Quantum.SubInstrument.branch_uniform_apply`). It is the measurement of
-a fresh register prepared in the uniform state, with the measured register discarded. -/
+branch is `ρ ↦ ρ / |Ω|` (`Quantum.SubInstrument.branch_uniform_apply`). It measures a
+fresh uniform register and discards the measured register. -/
 @[expose]
 noncomputable def uniform : SubInstrument A A Ω :=
   ofKraus (fun _ ↦ uniformKraus Ω A) (sum_conjTranspose_uniformKraus_mul_self Ω A)
@@ -124,20 +125,23 @@ theorem lossless_coinImpl (n : ℕ) : (coinImpl spec B n).Lossless .instruments 
   QComp.lossless_act (SubInstrument.lossless_uniform _ _)
 
 /-- Coins make no call. -/
-theorem isQueryBound_coinImpl (n : ℕ) (b : spec.Port → ℕ) : (coinImpl spec B n).IsQueryBound b :=
+theorem isQueryBound_coinImpl (n : ℕ) (b : spec.Port → ℕ) :
+    (coinImpl spec B n).IsQueryBound b :=
   QComp.isQueryBound_act _ b
 
 /-- **Sequencing over `Fin k`.** Run `f 0, …, f (k - 1)` in order on the held register and
 return the dependent tuple of their results. -/
 @[expose]
-noncomputable def pi : {k : ℕ} → {β : Fin k → Type w} → ((i : Fin k) → QComp spec B B (β i)) →
+noncomputable def pi : {k : ℕ} → {β : Fin k → Type w} →
+    ((i : Fin k) → QComp spec B B (β i)) →
     QComp spec B B ((i : Fin k) → β i)
   | 0, _, _ => QuantumComp₂.pure fun i ↦ i.elim0
   | _ + 1, _, f => (f 0).bind fun b ↦ (pi fun i ↦ f i.succ).bind fun bs ↦
       QuantumComp₂.pure (Fin.cons b bs)
 
 /-- Sequencing lossless programs is lossless. -/
-theorem lossless_pi : {k : ℕ} → {β : Fin k → Type w} → {f : (i : Fin k) → QComp spec B B (β i)} →
+theorem lossless_pi : {k : ℕ} → {β : Fin k → Type w} →
+    {f : (i : Fin k) → QComp spec B B (β i)} →
     (∀ i, (f i).Lossless .instruments) → (pi f).Lossless .instruments
   | 0, _, _, _ => QuantumComp₂.lossless_pure _
   | _ + 1, _, _, hf => QuantumComp₂.lossless_bind (hf 0) fun _ ↦
@@ -235,7 +239,8 @@ theorem liftInstruments_primBind {A : QReg} (o : LocalSig.instruments.{v}.Op A)
 @[simp]
 theorem liftInstruments_queryBind {A : QReg} (i : spec.Port) (E : QReg)
     (ℓ : A ≃ spec.In i × E)
-    (k : spec.Result i → QuantumComp LocalSig.instruments.{v} spec X (QReg.of (spec.Out i × E))) :
+    (k : spec.Result i →
+      QuantumComp LocalSig.instruments.{v} spec X (QReg.of (spec.Out i × E))) :
     ((QuantumComp.queryBind i E ℓ k).liftInstruments :
       QuantumComp LocalSig.instruments.{max v w} spec X A) =
       QuantumComp.queryBind i E ℓ fun r ↦ (k r).liftInstruments :=
@@ -343,7 +348,14 @@ theorem branch_run₂_callBasis {β : Type} [DecidableEq β] (p : P) (B : QReg) 
     ext ⟨b, d⟩ ⟨⟨i, b'⟩, d'⟩
     simp only [kroneckerMap_apply, Matrix.mul_apply, Matrix.single_apply, Matrix.one_apply,
       Fintype.sum_prod_type, basisMatrix_apply, conjTranspose_apply]
-    split_ifs <;> first | (simp_all; done) | (simp_all; tauto)
+    split_ifs <;>
+      simp_all only [Finset.mem_filter, Finset.mem_univ, true_and, Prod.mk.injEq, not_and,
+        and_imp, Finset.univ_unique, PUnit.default_eq_unit, Equiv.coe_uniqueProd, mul_ite,
+        mul_one, mul_zero, ↓reduceIte, Finset.sum_ite_eq', Finset.sum_ite_irrel,
+        Finset.sum_const, Finset.card_singleton, one_smul, smul_zero,
+        star_zero, star_one, ite_eq_right_iff, one_ne_zero, imp_false, ite_self,
+        not_true_eq_false]
+    tauto
   rw [hR, ← Matrix.mul_assoc, hL]
   simp only [Matrix.mul_assoc]
   rw [← basisMatrix_comp, basisMatrix_equiv_eq_conjTranspose (QuantumRuntime.queryEquivOut _ _ _),

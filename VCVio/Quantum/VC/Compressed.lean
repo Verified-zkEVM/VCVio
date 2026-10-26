@@ -66,7 +66,8 @@ theorem onFactor_splitAt_one_kronecker (i : ι) (K : Matrix T T ℂ) :
   ext ⟨m, D⟩ ⟨m', D'⟩
   rw [onFactor_apply, splitAt_apply, splitAt_apply, kroneckerMap_apply, kroneckerMap_apply,
     piKron_apply, Fintype.prod_eq_mul_prod_subtype_ne _ i, Pi.mulSingle_eq_same]
-  have hrest : (∏ j : {j // j ≠ i}, (Pi.mulSingle i K : ι → Matrix T T ℂ) j.1 (D j.1) (D' j.1)) =
+  have hrest : (∏ j : {j // j ≠ i},
+      (Pi.mulSingle i K : ι → Matrix T T ℂ) j.1 (D j.1) (D' j.1)) =
       if (fun j : {j // j ≠ i} ↦ D j.1) = fun j ↦ D' j.1 then 1 else 0 := by
     have h1 (j : {j // j ≠ i}) : (Pi.mulSingle i K : ι → Matrix T T ℂ) j.1 = 1 :=
       Pi.mulSingle_eq_of_ne (M := fun _ ↦ Matrix T T ℂ) j.2 K
@@ -120,12 +121,14 @@ variable (k : ℕ) (X Y : Type) [Fintype X] [DecidableEq X] [Fintype Y] [Decidab
 /-- The compression of every cell of every database of `(D_i)_{i ∈ [k]}`: the pi-tensor product
 of `k` copies of `Quantum.compressAll X Y`. -/
 @[expose]
-noncomputable def compressDatabases : Matrix (Fin k → Database X Y) (Fin k → Database X Y) ℂ :=
+noncomputable def compressDatabases :
+    Matrix (Fin k → Database X Y) (Fin k → Database X Y) ℂ :=
   piKron fun _ : Fin k ↦ compressAll X Y
 
 omit [DecidableEq X] in
 /-- Compressing every database is Hermitian. -/
-theorem conjTranspose_compressDatabases : (compressDatabases k X Y)ᴴ = compressDatabases k X Y := by
+theorem conjTranspose_compressDatabases :
+    (compressDatabases k X Y)ᴴ = compressDatabases k X Y := by
   rw [compressDatabases, conjTranspose_piKron, conjTranspose_compressAll]
 
 /-- For nonempty `Y`, compressing every database is an involution. -/
@@ -199,7 +202,8 @@ private theorem compressedPort_eq_conj (i : Fin k) :
     onFactor_splitAt_standardOracle, onFactor_splitAt_one_kronecker]
   set T := tableOracle fun D : Fin k → Database X Y ↦ (D i).lookup
   set I := (1 : Matrix (X × Y) (X × Y) ℂ)
-  calc (I ⊗ₖ Ci) * T * (I ⊗ₖ Ci) = (I ⊗ₖ Ci) * T * ((I ⊗ₖ R) * (I ⊗ₖ R)) * (I ⊗ₖ Ci) := by
+  calc (I ⊗ₖ Ci) * T * (I ⊗ₖ Ci) =
+      (I ⊗ₖ Ci) * T * ((I ⊗ₖ R) * (I ⊗ₖ R)) * (I ⊗ₖ Ci) := by
         rw [← mul_kronecker_mul, Matrix.one_mul, hRR, one_kronecker_one, Matrix.mul_one]
     _ = (I ⊗ₖ Ci) * ((I ⊗ₖ R) * T) * ((I ⊗ₖ R) * (I ⊗ₖ Ci)) := by
         rw [← hT]
@@ -209,7 +213,6 @@ private theorem compressedPort_eq_conj (i : Fin k) :
         simp only [Matrix.mul_assoc]
         rfl
     _ = _ := by rw [← hCR, ← hRC]
-
 
 /-- A classical read distinguishes every stored label, including the empty label. -/
 @[expose]
@@ -354,10 +357,8 @@ end oracle
 
 section slots
 
-variable {M₁ M₂ S : Type*} [Fintype M₁] [DecidableEq M₁] [Fintype M₂] [DecidableEq M₂]
-  [Fintype S] [DecidableEq S]
+variable {M₁ M₂ S : Type*} [DecidableEq M₁] [DecidableEq M₂]
 
-omit [Fintype M₁] [Fintype M₂] [Fintype S] [DecidableEq S] in
 /-- An operator on the shared register beside the identity on the first query register, placed
 through `Quantum.slotFst`, is the identity on both query registers next to that operator. -/
 theorem onFactor_slotFst_one_kronecker (K : Matrix S S ℂ) :
@@ -368,7 +369,6 @@ theorem onFactor_slotFst_one_kronecker (K : Matrix S S ℂ) :
     Prod.mk.injEq]
   by_cases ha : a = a' <;> by_cases hb : b = b' <;> simp [ha, hb]
 
-omit [Fintype M₁] [Fintype M₂] [Fintype S] [DecidableEq S] in
 /-- An operator on the shared register beside the identity on the second query register, placed
 through `Quantum.slotSnd`, is the identity on both query registers next to that operator. -/
 theorem onFactor_slotSnd_one_kronecker (K : Matrix S S ℂ) :
@@ -379,7 +379,8 @@ theorem onFactor_slotSnd_one_kronecker (K : Matrix S S ℂ) :
     Prod.mk.injEq]
   by_cases ha : a = a' <;> by_cases hb : b = b' <;> simp [ha, hb]
 
-variable {X Y : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
+variable {X Y : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
+  [AddCommGroup Y] [Fintype S] [DecidableEq S]
 
 /-- **Table oracles on two query registers commute** (the step of Chiesa, Di, Hu and Zheng,
 ePrint 2025/2166, Lemma 9.2
@@ -402,9 +403,7 @@ section commute
 /-- Conjugation by an involution preserves commutation. -/
 theorem conj_mul_conj_comm {M : Type*} [Monoid M] {P A B : M} (hP : P * P = 1)
     (h : A * B = B * A) : P * A * P * (P * B * P) = P * B * P * (P * A * P) := by
-  calc P * A * P * (P * B * P) = P * (A * (P * P) * B) * P := by simp only [mul_assoc]
-    _ = P * (B * (P * P) * A) * P := by rw [hP, mul_one, mul_one, h]
-    _ = P * B * P * (P * A * P) := by simp only [mul_assoc]
+  rw [compressed_conjugate_mul P hP, compressed_conjugate_mul P hP, h]
 
 variable {k : ℕ} {X Y : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
   [AddCommGroup Y]
@@ -452,7 +451,8 @@ section intertwine
 variable {P : Type u} {In : P → QReg}
 
 /-- An isometry intertwining the ports and initialization preserves every observed law. -/
-theorem outcomeLawWith_eq_of_intertwine (E₁ E₂ : EmulatedOracle P In) (M : Matrix E₂.S E₁.S ℂ)
+theorem outcomeLawWith_eq_of_intertwine (E₁ E₂ : EmulatedOracle P In)
+    (M : Matrix E₂.S E₁.S ℂ)
     (hM : Mᴴ * M = 1)
     (hU : ∀ i, E₂.U i * ((1 : Matrix (In i) (In i) ℂ) ⊗ₖ M) =
       ((1 : Matrix (In i) (In i) ℂ) ⊗ₖ M) * E₁.U i)
@@ -466,24 +466,24 @@ theorem outcomeLawWith_eq_of_intertwine (E₁ E₂ : EmulatedOracle P In) (M : M
     (MatrixMap.conj M).amplifyLeft (In i) ∘ₗ MatrixMap.conj (E₁.U i)
   rw [MatrixMap.amplifyLeft_conj, ← MatrixMap.conj_mul, ← MatrixMap.conj_mul, hU i]
 
-/-- Kraus maps whose operators `M ω` resolve the identity (`∑ ω, (M ω)ᴴ M ω = 1`), applied on the
-second factor, preserve the trace in sum. -/
+/-- Kraus maps whose operators `M ω` resolve the identity (`∑ ω, (M ω)ᴴ M ω = 1`),
+applied on the second factor, preserve the trace in sum. -/
 theorem sum_trace_amplifyLeft_conj {Ω S B : Type*} {S' : Ω → Type*} [Fintype Ω] [Fintype S]
     [DecidableEq S] [∀ ω, Fintype (S' ω)] [Fintype B] (M : ∀ ω, Matrix (S' ω) S ℂ)
     (hM : ∑ ω, (M ω)ᴴ * M ω = 1) (N : Matrix (B × S) (B × S) ℂ) :
     ∑ ω, ((MatrixMap.conj (M ω)).amplifyLeft B N).trace = N.trace := by
   classical
   simp only [MatrixMap.amplifyLeft_conj, MatrixMap.conj_apply]
-  have h (ω : Ω) : (((1 : Matrix B B ℂ) ⊗ₖ M ω) * N * ((1 : Matrix B B ℂ) ⊗ₖ M ω)ᴴ).trace =
+  have h (ω : Ω) :
+      (((1 : Matrix B B ℂ) ⊗ₖ M ω) * N * ((1 : Matrix B B ℂ) ⊗ₖ M ω)ᴴ).trace =
       (((1 : Matrix B B ℂ) ⊗ₖ ((M ω)ᴴ * M ω)) * N).trace := by
     rw [Matrix.trace_mul_cycle, conjTranspose_kronecker, conjTranspose_one, ← mul_kronecker_mul,
       Matrix.one_mul]
   have hsum : ∑ ω, (1 : Matrix B B ℂ) ⊗ₖ ((M ω)ᴴ * M ω) =
       (1 : Matrix B B ℂ) ⊗ₖ ∑ ω, (M ω)ᴴ * M ω := by
-    ext ⟨b, t⟩ ⟨b', t'⟩
-    simp [Matrix.sum_apply, Finset.mul_sum]
-  simp only [h, ← Matrix.trace_sum, ← Finset.sum_mul, hsum, hM, one_kronecker_one, Matrix.one_mul]
-
+    exact (map_sum (kroneckerBilinear (R := ℂ) (1 : Matrix B B ℂ)) _ _).symm
+  simp only [h, ← Matrix.trace_sum, ← Finset.sum_mul, hsum, hM, one_kronecker_one,
+    Matrix.one_mul]
 
 end intertwine
 
@@ -496,7 +496,8 @@ identity on `In i` next to `M` on the block of `i`. -/
 theorem one_kronecker_eq_submatrix_blockDiagonal' {S S' : Type*} (M : Matrix S' S ℂ) :
     (1 : Matrix (cohIn In) (cohIn In) ℂ) ⊗ₖ M =
       (Matrix.blockDiagonal' fun i ↦ (1 : Matrix (In i) (In i) ℂ) ⊗ₖ M).submatrix
-        (Equiv.sigmaProdDistrib (fun i ↦ In i) S') (Equiv.sigmaProdDistrib (fun i ↦ In i) S) := by
+        (Equiv.sigmaProdDistrib (fun i ↦ In i) S')
+        (Equiv.sigmaProdDistrib (fun i ↦ In i) S) := by
   ext ⟨⟨i, a⟩, d⟩ ⟨⟨i', a'⟩, d'⟩
   by_cases h : i = i'
   · subst h
@@ -505,7 +506,8 @@ theorem one_kronecker_eq_submatrix_blockDiagonal' {S S' : Type*} (M : Matrix S' 
 
 /-- **Intertwining passes to the coherent oracle.** If `M` intertwines every port of `E₁` with the
 same port of `E₂`, it intertwines their coherent oracles. -/
-theorem coherent_U_mul_one_kronecker (E₁ E₂ : EmulatedOracle P In) (M : Matrix E₂.S E₁.S ℂ)
+theorem coherent_U_mul_one_kronecker (E₁ E₂ : EmulatedOracle P In)
+    (M : Matrix E₂.S E₁.S ℂ)
     (hU : ∀ i, E₂.U i * ((1 : Matrix (In i) (In i) ℂ) ⊗ₖ M) =
       ((1 : Matrix (In i) (In i) ℂ) ⊗ₖ M) * E₁.U i) :
     E₂.coherent.U () * ((1 : Matrix (cohIn In) (cohIn In) ℂ) ⊗ₖ M) =
@@ -526,14 +528,13 @@ end EmulatedOracle
 
 section uniform
 
-variable (Ω : Type*) [Fintype Ω] [DecidableEq Ω]
+variable (Ω : Type*) [Fintype Ω]
 
 /-- The uniform superposition `|Ω|^(-1/2) ∑ ω, |ω⟩` over a finite type, as a column. -/
 @[expose]
 noncomputable def uniformColumnOn : Matrix Ω Unit ℂ :=
   Matrix.of fun _ _ ↦ cellAmp Ω
 
-omit [DecidableEq Ω] in
 /-- For nonempty `Ω`, the uniform superposition is a unit vector. -/
 theorem conjTranspose_uniformColumnOn_mul_self [Nonempty Ω] :
     (uniformColumnOn Ω)ᴴ * uniformColumnOn Ω = 1 := by
@@ -549,14 +550,12 @@ noncomputable def uniformState [Nonempty Ω] : SubState Ω :=
   (SubInstrument.ofIsometry (uniformColumnOn Ω) (conjTranspose_uniformColumnOn_mul_self Ω)).post
     (SubState.basis ()) ()
 
-omit [DecidableEq Ω] in
 /-- The density matrix of the uniform superposition is `|u⟩⟨u|` for the uniform column `u`. -/
 theorem matrix_uniformState [Nonempty Ω] :
     (uniformState Ω).matrix = MatrixMap.conj (uniformColumnOn Ω) (Matrix.single () () 1) := by
   rw [uniformState, DSubInstrument.matrix_post, SubInstrument.branch_ofIsometry_apply,
     SubState.matrix_basis]
 
-omit [DecidableEq Ω] in
 /-- The amplitude of a type whose cardinality is the `n`-th power of that of another. -/
 theorem cellAmp_eq_pow {B : Type*} [Fintype B] {n : ℕ}
     (h : Fintype.card Ω = Fintype.card B ^ n) : cellAmp Ω = cellAmp B ^ n := by
@@ -735,8 +734,12 @@ theorem oracleUnitary_kronecker_one_mul_one_kronecker_evalRow_apply (H : Fin k �
   ext ⟨m, u⟩ ⟨m', H'⟩
   by_cases hH : H' = H
   · subst hH
-    simp [Matrix.mul_apply, Fintype.sum_prod_type, evalRow, oracleUnitary_apply,
-      tableOracle_apply, Matrix.one_apply]
+    simp only [evalRow, Matrix.mul_apply, kroneckerMap_apply, oracleUnitary_apply,
+      one_apply_eq, mul_one, Matrix.one_apply, of_apply, ↓reduceIte, mul_ite, mul_zero,
+      Fintype.sum_prod_type, Finset.univ_unique, PUnit.default_eq_unit, Finset.sum_ite_irrel,
+      Finset.sum_boole, Finset.filter_const, Finset.sum_const_zero, Finset.sum_ite_eq',
+      Finset.mem_univ, tableOracle_apply, tableOracleEquiv_apply, oracleEquiv_apply, ite_mul,
+      one_mul, zero_mul, Prod.mk.injEq, and_true, Finset.sum_ite_eq]
     split_ifs <;> simp
   · simp [Matrix.mul_apply, Fintype.sum_prod_type, evalRow, oracleUnitary_apply,
       tableOracle_apply, Matrix.one_apply, hH, Ne.symm hH]
@@ -751,7 +754,8 @@ theorem sum_conjTranspose_evalRow_mul_self :
 /-- Reading the uniform superposition at `H` leaves the weight `|Y|^(-k|X|)`. -/
 theorem conj_evalRow_purifiedVCOracle_init (H : Fin k → X → Y) :
     MatrixMap.conj (evalRow H) (purifiedVCOracle k X Y).init.matrix =
-      (((Fintype.card (Fin k → X → Y) : ℝ≥0)⁻¹ : ℝ) : ℂ) • (romVCOracle k X Y H).init.matrix := by
+      (((Fintype.card (Fin k → X → Y) : ℝ≥0)⁻¹ : ℝ) : ℂ) •
+        (romVCOracle k X Y H).init.matrix := by
   change MatrixMap.conj (evalRow H) (uniformState (Fin k → X → Y)).matrix =
     _ • (SubState.basis ()).matrix
   rw [matrix_uniformState, ← LinearMap.comp_apply, ← MatrixMap.conj_mul, SubState.matrix_basis]
@@ -815,7 +819,8 @@ private theorem runtimeLaw_eq_sum {spec : QuantumOracleSpec.{u₁, v₁}}
     (hstep : ∀ ω i r, ((F ω).step i).branch r ∘ₗ
         (MatrixMap.conj (M ω)).amplifyLeft (spec.In i) =
       (MatrixMap.conj (M ω)).amplifyLeft (spec.Out i) ∘ₗ (E.step i).branch r)
-    (hinit : ∀ ω, MatrixMap.conj (M ω) E.init.matrix = ((c ω : ℝ) : ℂ) • (F ω).init.matrix)
+    (hinit : ∀ ω, MatrixMap.conj (M ω) E.init.matrix =
+      ((c ω : ℝ) : ℂ) • (F ω).init.matrix)
     {L : LocalSig.{uL, vL}} (I : L.Interp) {W : QReg → Type w} {A : QReg}
     (x : QuantumComp L spec W A) (ρ : SubState A) {γ : Type*} [MeasurableSpace γ]
     (f : (Σ u, W u) → γ) :
@@ -842,7 +847,6 @@ private theorem runtimeLaw_eq_sum {spec : QuantumOracleSpec.{u₁, v₁}}
   · refine Finset.sum_congr rfl fun ω _ ↦ ?_
     rw [ENNReal.ofReal_mul (c ω).coe_nonneg, ENNReal.ofReal_coe_nnreal, mul_assoc]
   · exact fun ω _ ↦ mul_nonneg (c ω).coe_nonneg (SubState.trace_re_nonneg _)
-
 
 namespace VCOracle
 
@@ -890,7 +894,8 @@ theorem evalDistMap_eq_sum_of_mixed_intertwine {Ω : Type*} [Fintype Ω] (E : VC
     (hM : ∑ ω, (M ω)ᴴ * M ω = 1)
     (hU : ∀ ω i, (F ω).U i * (1 ⊗ₖ M ω) = (1 ⊗ₖ M ω) * E.U i)
     (hA : ∀ ω d a, (F ω).classicalRead.A d a * M ω = M ω * E.classicalRead.A d a)
-    (hinit : ∀ ω, MatrixMap.conj (M ω) E.init.matrix = ((c ω : ℝ) : ℂ) • (F ω).init.matrix)
+    (hinit : ∀ ω, MatrixMap.conj (M ω) E.init.matrix =
+      ((c ω : ℝ) : ℂ) • (F ω).init.matrix)
     {L : LocalSig.{uL, vL}} (I : L.Interp) {W : QReg → Type w} {A : QReg}
     (x : QuantumComp L (mixedOracleSpec k X Y) W A) (ρ : SubState A)
     {γ : Type*} [MeasurableSpace γ] (f : (Σ u, W u) → γ) :
@@ -928,13 +933,6 @@ theorem evalDistMap_mixed_compressedVCOracle
       oracleUnitary_kronecker_one_mul_one_kronecker_evalRow_apply rom_read_mul_evalRow
       conj_evalRow_purifiedVCOracle_init I x ρ f]
   simp [ENNReal.coe_inv]
-
-omit [DecidableEq Y] [AddCommGroup Y] in
-/-- The weight `|Fin k → X → Y|⁻¹` of each family of functions, as an extended real. -/
-theorem coe_inv_card_fun_eq [Nonempty (Fin k → X → Y)] :
-    (((Fintype.card (Fin k → X → Y) : ℝ≥0)⁻¹ : ℝ≥0) : ℝ≥0∞) =
-      (Fintype.card (Fin k → X → Y) : ℝ≥0∞)⁻¹ := by
-  rw [ENNReal.coe_inv (Nat.cast_ne_zero.mpr Fintype.card_ne_zero), ENNReal.coe_natCast]
 
 /-- Ordinary coherent programs have the same observed law as the uniform random oracle,
 by restricting the exact mixed-runtime law to the ordinary ports. -/
@@ -986,8 +984,8 @@ private theorem law_reifyLocal {spec : QuantumOracleSpec.{u₁, v₁}} (R : Quan
 as used in Lemma 9.2, p. 58), for programs
 calling the oracles through their classical ports: every program, observed through any function
 of its leaf, has the same law against `Quantum.compressedVCOracle k X Y` as on average over
-uniformly random families `H : Fin k → X → Y` against `Quantum.romVCOracle k X Y H`. Programs are
-general: adaptive, with their own local operations and registers, a final register that may
+uniformly random families `H : Fin k → X → Y` against `Quantum.romVCOracle k X Y H`.
+Programs are adaptive, with their own local operations and registers, a final register that may
 depend on the outcome, and any number of calls on each path. -/
 theorem outcomeLawWith_compressedVCOracle
     (x : QuantumComp L (uSpec (Fin k) (oIn k X Y)) W A) (ρ : SubState A) (f : (Σ u, W u) → γ) :
@@ -1040,7 +1038,8 @@ theorem outcomeLawWith_coherent_compressedVCOracle_eq_sampledLawWith
     (x : QuantumComp L (EmulatedOracle.cohSpec (oIn k X Y)) W A) (ρ : SubState A)
     (f : (Σ u, W u) → γ) :
     (compressedVCOracle k X Y).coherent.toRuntime.evalDistMap I x ρ f =
-      sampledEvalDistMap (fun H ↦ (romVCOracle k X Y H).coherent.toRuntime) I x ρ fun _ ↦ f := by
+      sampledEvalDistMap (fun H ↦ (romVCOracle k X Y H).coherent.toRuntime)
+        I x ρ fun _ ↦ f := by
   rw [outcomeLawWith_coherent_compressedVCOracle, sampledEvalDistMap_eq_sum, Finset.smul_sum]
 
 /-- The classical-port form of `outcomeLawWith_coherent_compressedVCOracle_eq_sampledLawWith`. -/

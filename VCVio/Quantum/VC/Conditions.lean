@@ -45,15 +45,16 @@ The labels are the arguments of `Quantum.Database.instability` in the error boun
   resource hypothesis, not part of `Quantum.Conditions`; a security statement that uses these
   conditions has to assume it separately.
 * The paper's `Open` is a randomized algorithm (pp. 53–54), as in the interface
-  `VectorCommitment`. Condition 2 asks every possible opening `pf'ᵢ ← Open(Qᵢ, tdᵢ)` to equal `pfᵢ`,
-  and condition 3 asks every possible opening `pfᵢ ← Open(Dom(mᵢ), tdᵢ)` to pass the check: both
-  quantify over the support of the opening. For a deterministic opening
+  `VectorCommitment`. Condition 2 asks every possible opening `pf'ᵢ ← Open(Qᵢ, tdᵢ)` to
+  equal `pfᵢ`, and condition 3 asks every possible opening `pfᵢ ← Open(Dom(mᵢ), tdᵢ)`
+  to pass the check: both quantify over the support of the opening. For a deterministic opening
   (`DetVectorCommitment.toVectorCommitment`) the support is a single proof.
 * The paper's `Check^{D}` (p. 53) is `VectorCommitment.NonadaptiveCheck.checkOn`: the check
   computes the query log and rejects any logged query outside the domain of the database.
-* The paper's `q_VC(qs, ℓ)` has the length as a second argument; `NonadaptiveCheck.qVC` is the query
-  complexity of `VC i` at its own length `ℓ i`, so `q1` and `q2` use `qVC` of the size of the opened
-  set alone. The paper evaluates `q1` at `ℓmax` (p. 54); here each `VC i` is evaluated at `ℓ i`.
+* The paper's `q_VC(qs, ℓ)` has the length as a second argument; `NonadaptiveCheck.qVC` is the
+  query complexity of `VC i` at its own length `ℓ i`, so `q1` and `q2` use `qVC` of the size
+  of the opened set alone. The paper evaluates `q1` at `ℓmax` (p. 54); here each `VC i` is
+  evaluated at `ℓ i`.
 * Conditions 2 and 3 are stated for the full tuples `Quantum.TpIC.full` of `k` distinct indices
   (`hk : 1 ≤ k`), as in the paper (tuples of length `k`, pp. 53–54).
 -/
@@ -155,7 +156,8 @@ structure Conditions (VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ
       (Ds : Fin k → Database X Y), (∀ i, Ds i ∈ Pgood) →
       (∀ i, (chk i).checkOn (Ds (idx i)) (cm i) (ans i) (pf i) = true) → ∀ i,
         (ME.extract (TpIC.full hk idx cm) Ds i).1.Agrees (ans i) ∧
-          ∀ pf' ∈ support ((VC i).opening (ans i).dom (ME.extract (TpIC.full hk idx cm) Ds i).2),
+          ∀ pf' ∈ support ((VC i).opening (ans i).dom
+            (ME.extract (TpIC.full hk idx cm) Ds i).2),
             pf' = pf i
   /-- Condition 3: the extracted messages are valid over their domains (p. 54). -/
   valid : ∀ (hk : 1 ≤ k) (idx : Fin k → Fin k), Function.Injective idx →
@@ -171,7 +173,8 @@ end conditions
 section counts
 
 variable {k : ℕ} {X : Type uX} {Y : Type} {Msg : Type uM} {Cm : Type} {ℓ : Fin k → ℕ}
-  {Td Pf : Fin k → Type} [DecidableEq Y] {VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i)}
+  {Td Pf : Fin k → Type} [DecidableEq Y]
+  {VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i)}
 
 /-- **The query count `q1`** of Theorem 8.4 (ePrint 2025/2166, p. 54):
 `q1 := max_{Σ_i qs_i ≤ qs} Σ_i qVC_i(qs_i)`, the largest total number of queries of the `k`
