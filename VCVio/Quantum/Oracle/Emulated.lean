@@ -9,6 +9,7 @@ public import PolyFun.IPFunctor.Free.Bound.Substitution
 public import VCVio.Quantum.Comp.Combinators
 public import VCVio.Quantum.Comp.HybridIndex
 public import VCVio.Quantum.Comp.QueryMass
+public import VCVio.Quantum.MatrixMap.Pinching
 public import VCVio.Quantum.Oracle.Basis
 
 /-!
@@ -42,7 +43,7 @@ call to the coherent port, a query weight in the sense of `VCVio.Quantum.Comp.Qu
 
 It is an index mass of `VCVio.Quantum.Comp.QueryMass`: the projector onto `i` is
 `Quantum.EmulatedOracle.cohIndexProj In i ⊗ 1`, with `Quantum.EmulatedOracle.cohIndexProj` the
-projector onto the fibre `Quantum.fiberProj` of `i` under the index of the coherent register, and
+label projector `Matrix.labelProjector` onto `i` for the index of the coherent register, and
 `Quantum.EmulatedOracle.totalMass_eq_indexMass` identifies the two masses. These projectors form
 a coherent index (`Quantum.EmulatedOracle.isCoherentIndex_cohIndexProj`) that the coherent unitary
 respects (`Quantum.EmulatedOracle.respectsIndex_coherent_U`), so the square-root hybrid bounds of
@@ -259,15 +260,6 @@ structure EmulatedOracle (P : Type u) (In : P → QReg) where
   /-- Each `U i` is unitary. -/
   unitary : ∀ i, U i ∈ Matrix.unitaryGroup (In i × S) ℂ
 
-/-- A matrix moved along a bijection of its basis stays unitary. -/
-theorem reindex_mem_unitaryGroup {m n : Type*} [Fintype m] [DecidableEq m] [Fintype n]
-    [DecidableEq n] (e : m ≃ n) {M : Matrix m m ℂ} (hM : M ∈ Matrix.unitaryGroup m ℂ) :
-    Matrix.reindex e e M ∈ Matrix.unitaryGroup n ℂ := by
-  rw [Matrix.mem_unitaryGroup_iff'] at hM ⊢
-  rw [Matrix.star_eq_conjTranspose, Matrix.conjTranspose_reindex, Matrix.reindex_apply,
-    Matrix.reindex_apply, Matrix.submatrix_mul_equiv, ← Matrix.star_eq_conjTranspose, hM,
-    Matrix.submatrix_one_equiv]
-
 /-- A block-diagonal matrix of unitaries is unitary. -/
 theorem blockDiagonal'_mem_unitaryGroup {o : Type*} [Fintype o] [DecidableEq o]
     {m : o → Type*} [∀ i, Fintype (m i)] [∀ i, DecidableEq (m i)] {M : ∀ i, Matrix (m i) (m i) ℂ}
@@ -303,86 +295,22 @@ private theorem conj_reindex_prodAssoc_kronecker_one {a s g : Type*} [Fintype a]
   rw [MatrixMap.amplify_conj, MatrixMap.conj_apply]
   exact MatrixMap.conj_reindex_apply _ _ ρ
 
-/-! ## Projectors onto the fibres of a labelling -/
-
-section fiberProj
-
-variable {J K : Type*} [DecidableEq J] [DecidableEq K]
-
-/-- The orthogonal projector onto the basis vectors of `J` labelled `k` by `f : J → K`: the
-diagonal matrix with entry `1` at `a` when `f a = k`, and `0` otherwise. When `f` reads the index
-carried by a query register, it is the paper's `P_mass^(k) = |k⟩⟨k|_I` (ePrint 2025/2166,
-p. 28). -/
-@[expose]
-noncomputable def fiberProj (f : J → K) (k : K) : Matrix J J ℂ :=
-  Matrix.diagonal fun a ↦ if f a = k then 1 else 0
-
-/-- Projectors onto fibres are self-adjoint. -/
-@[simp]
-theorem conjTranspose_fiberProj (f : J → K) (k : K) : (fiberProj f k)ᴴ = fiberProj f k := by
-  rw [fiberProj, Matrix.diagonal_conjTranspose]
-  congr 1
-  funext a
-  by_cases h : f a = k <;> simp [h]
-
-/-- Projectors onto fibres are idempotent. -/
-@[simp]
-theorem fiberProj_mul_self [Fintype J] (f : J → K) (k : K) :
-    fiberProj f k * fiberProj f k = fiberProj f k := by
-  rw [fiberProj, Matrix.diagonal_mul_diagonal]
-  congr 1
-  funext a
-  by_cases h : f a = k <;> simp [h]
-
-/-- Projectors onto distinct fibres are orthogonal. -/
-theorem fiberProj_mul_of_ne [Fintype J] (f : J → K) {k k' : K} (h : k ≠ k') :
-    fiberProj f k * fiberProj f k' = 0 := by
-  rw [fiberProj, fiberProj, Matrix.diagonal_mul_diagonal, ← Matrix.diagonal_zero]
-  congr 1
-  funext a
-  by_cases ha : f a = k
-  · simp [ha, h]
-  · simp [ha]
-
-/-- The projectors onto the fibres add up to the identity. -/
-theorem sum_fiberProj [Fintype K] (f : J → K) : ∑ k, fiberProj f k = 1 := by
-  ext a b
-  by_cases hab : a = b
-  · subst hab
-    simp [fiberProj, Matrix.sum_apply]
-  · simp [fiberProj, Matrix.sum_apply, hab]
-
-/-- The projectors onto the fibres form a complete family: `∑ₖ (P k)ᴴ P k = 1`. -/
-theorem sum_conjTranspose_mul_fiberProj [Fintype J] [Fintype K] (f : J → K) :
-    ∑ k, (fiberProj f k)ᴴ * fiberProj f k = 1 := by
-  simp only [conjTranspose_fiberProj, fiberProj_mul_self, sum_fiberProj]
-
-/-- A projector onto a fibre beside an identity is the projector onto the fibre of the labelling
-read from the first factor. -/
-theorem fiberProj_kronecker_one {D : Type*} [DecidableEq D] (f : J → K) (k : K) :
-    fiberProj f k ⊗ₖ (1 : Matrix D D ℂ) = fiberProj (fun a : J × D ↦ f a.1) k := by
-  ext ⟨a, c⟩ ⟨b, d⟩
-  by_cases hab : a = b
-  · subst hab
-    by_cases hcd : c = d
-    · subst hcd
-      simp [fiberProj]
-    · simp [fiberProj, hcd]
-  · simp [fiberProj, hab]
+/-! ## Label projectors as a coherent index -/
 
 /-- **Basis labels of the port registers form a coherent index.** On a signature of unitary
-ports, the projectors onto the fibres of labellings `f i` of the port registers are a coherent
-index (`Quantum.Hybrid.IsCoherentIndex`), with the same projectors on input and output. -/
-theorem isCoherentIndex_fiberProj {P : Type u} {In : P → QReg} {κ : P → Type*}
+ports, the label projectors `Matrix.labelProjector (f i)` of labellings `f i` of the port registers
+are a coherent index (`Quantum.Hybrid.IsCoherentIndex`), with the same projectors on input and
+output. When `f i` reads the index carried by a query register, the projector of the label `k` is
+the paper's `P_mass^(k) = |k⟩⟨k|_I` (ePrint 2025/2166, p. 28). -/
+theorem isCoherentIndex_labelProjector {P : Type u} {In : P → QReg} {κ : P → Type*}
     [∀ i, Fintype (κ i)] [∀ i, DecidableEq (κ i)] (f : ∀ i, In i → κ i) :
-    Hybrid.IsCoherentIndex (spec := uSpec P In) (fun i ↦ fiberProj (f i))
-      (fun i ↦ fiberProj (f i)) where
-  sum_eq_one i := sum_fiberProj (f i)
-  mul_self i k := fiberProj_mul_self (f i) k
+    Hybrid.IsCoherentIndex (spec := uSpec P In) (fun i ↦ Matrix.labelProjector (f i))
+      (fun i ↦ Matrix.labelProjector (f i)) where
+  sum_eq_one i := Matrix.sum_labelProjector (f i)
+  mul_self i k := (Matrix.isStarProjection_labelProjector (f i) k).isIdempotentElem.eq
   conjTranspose_mul_of_ne i a b h := by
-    rw [conjTranspose_fiberProj, fiberProj_mul_of_ne _ (Ne.symm h)]
-
-end fiberProj
+    rw [Matrix.conjTranspose_labelProjector,
+      Matrix.labelProjector_mul_labelProjector_of_ne _ (Ne.symm h)]
 
 namespace EmulatedOracle
 
@@ -468,7 +396,7 @@ noncomputable def addRegister (G : QReg) (σ : SubState G) : EmulatedOracle P In
   init := E.init.prod σ
   U i := Matrix.reindex (Equiv.prodAssoc _ _ _) (Equiv.prodAssoc _ _ _)
     (E.U i ⊗ₖ (1 : Matrix G G ℂ))
-  unitary i := reindex_mem_unitaryGroup _
+  unitary i := Matrix.submatrix_equiv_mem_unitary.mpr
     (Matrix.kronecker_mem_unitary (E.unitary i) (one_mem _))
 
 /-- **The two ways of adjoining a register agree**: the runtime of `E.addRegister G σ` is the
@@ -505,7 +433,7 @@ noncomputable def coherent : EmulatedOracle Unit fun _ ↦ cohIn In where
   init := E.init
   U _ := Matrix.reindex (Equiv.sigmaProdDistrib _ _).symm (Equiv.sigmaProdDistrib _ _).symm
     (Matrix.blockDiagonal' E.U)
-  unitary _ := reindex_mem_unitaryGroup _
+  unitary _ := Matrix.submatrix_equiv_mem_unitary.mpr
     (blockDiagonal'_mem_unitaryGroup E.unitary)
 
 /-- The projector of the coherent register onto the index `i`, tensored with the identity on the
@@ -520,13 +448,13 @@ coherent port alone (the paper's `|i⟩⟨i|_I`, p. 28): the projector onto the 
 (`Quantum.EmulatedOracle.isCoherentIndex_cohIndexProj`). -/
 @[expose, reducible]
 noncomputable def cohIndexProj (In : P → QReg) (i : P) : Matrix (cohIn In) (cohIn In) ℂ :=
-  fiberProj (fun a : cohIn In ↦ a.1) i
+  Matrix.labelProjector (fun a : cohIn In ↦ a.1) i
 
 /-- The projector onto an index, with the private register, is the projector of the coherent
 register beside the identity. -/
 theorem indexProj_eq_kronecker (i : P) :
     E.indexProj i = cohIndexProj In i ⊗ₖ (1 : Matrix E.S E.S ℂ) := by
-  rw [cohIndexProj, fiberProj_kronecker_one]
+  rw [cohIndexProj, Matrix.labelProjector_kronecker_one]
   rfl
 
 /-- The projectors onto the indices form a coherent index on the signature of the coherent
@@ -534,7 +462,7 @@ oracle, so the square-root hybrid bounds of `VCVio.Quantum.Comp.HybridIndex` app
 theorem isCoherentIndex_cohIndexProj :
     Hybrid.IsCoherentIndex (spec := cohSpec In) (fun _ ↦ cohIndexProj In)
       (fun _ ↦ cohIndexProj In) :=
-  isCoherentIndex_fiberProj fun _ (a : cohIn In) ↦ a.1
+  isCoherentIndex_labelProjector fun _ (a : cohIn In) ↦ a.1
 
 /-- The weight of the index-`i` component of an operator: the trace of its compression by the
 projector onto `i`, the squared norm `‖P_mass^(i) |ψ⟩‖²` for a pure state. -/
@@ -587,7 +515,7 @@ theorem sum_totalMass (x : QuantumComp L (cohSpec In) W A) {ρ : Matrix (A × E.
   simp only [E.totalMass_eq_indexMass I x ρ]
   rw [← tsum_fintype (L := .unconditional P)]
   exact E.coherent.toRuntime.tsum_indexMass_eq_queryMass I (fun _ ↦ cohIndexProj In) ()
-    (sum_conjTranspose_mul_fiberProj _) x hρ
+    (Matrix.sum_conjTranspose_mul_labelProjector _) x hρ
 
 /-- The mass on one index is at most the query mass of the coherent port. -/
 theorem totalMass_le_queryMass (x : QuantumComp L (cohSpec In) W A)

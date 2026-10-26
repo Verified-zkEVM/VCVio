@@ -144,6 +144,7 @@ public import VCVioTest.SMDTTCR
 public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
+public import VCVioTest.SaltedMerkle
 public import VCVioTest.SampleableType
 public import VCVioTest.Schemes.KEMDEM
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
