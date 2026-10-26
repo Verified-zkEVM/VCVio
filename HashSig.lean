@@ -309,6 +309,7 @@ public import HashSig.SLHDSA.Security.ByteLinkedBound
 public import HashSig.SLHDSA.Security.ByteLinkedRun
 public import HashSig.SLHDSA.Security.ByteLinkedView
 public import HashSig.SLHDSA.Security.ByteModel
+public import HashSig.SLHDSA.Security.ByteModel.Split
 public import HashSig.SLHDSA.Security.ByteRedirect
 public import HashSig.SLHDSA.Security.ByteRouter
 public import HashSig.SLHDSA.Security.CacheDecomposition
