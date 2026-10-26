@@ -5,15 +5,14 @@ Authors: Quang Dao
 -/
 
 module
-
 public import VCVio.Quantum.MatrixMap.OpNorm
 
 /-!
 # The distance between two projectors in a fixed angle
 
 Two orthogonal projections `P` and `Q` with `P Q P = a P` and `Q P Q = a Q` for a real `a` are in
-the position of two lines at angle `θ` with `cos² θ = a`, in every two-dimensional block that they
-do not annihilate. The square of their difference, `M = (P - Q)²`, then satisfies
+the position of two lines at angle `θ` with `cos² θ = a`, in every two-dimensional block
+that they do not annihilate. The square of their difference, `M = (P - Q)²`, then satisfies
 `M P = (1 - a) P`, `M Q = (1 - a) Q` and `M² = (1 - a) M`, so for `P ≠ 0` the operator norm of
 `P - Q` is `√|1 - a|` exactly (`Matrix.l2_opNorm_sub_sq_eq_of_mul_mul_eq`).
 
@@ -35,8 +34,8 @@ namespace Matrix
 
 variable {n : Type*} [Fintype n]
 
-/-- If `P` and `Q` are orthogonal projections with `P Q P = a P` and `Q P Q = a Q` for a real `a`,
-then `(P - Q)²` acts on `P` as the scalar `1 - a`. -/
+/-- If `P` and `Q` are idempotent matrices with `P Q P = a P` for a real `a`, then
+`(P - Q)²` acts on `P` as the scalar `1 - a`. -/
 theorem sub_mul_sub_mul_left_eq {P Q : Matrix n n ℂ} (hPP : P * P = P) (hQQ : Q * Q = Q)
     {a : ℝ} (hPQP : P * Q * P = (a : ℂ) • P) :
     (P - Q) * (P - Q) * P = ((1 - a : ℝ) : ℂ) • P := by
@@ -47,7 +46,7 @@ theorem sub_mul_sub_mul_left_eq {P Q : Matrix n n ℂ} (hPP : P * P = P) (hQQ : 
   rw [sub_smul, one_smul]
   abel
 
-/-- If `P` and `Q` are orthogonal projections with `P Q P = a P` and `Q P Q = a Q` for a real `a`,
+/-- If `P` and `Q` are idempotent matrices with `P Q P = a P` and `Q P Q = a Q` for a real `a`,
 then `M = (P - Q)²` satisfies `M² = (1 - a) M`. -/
 theorem sub_mul_sub_sq_eq {P Q : Matrix n n ℂ} (hPP : P * P = P) (hQQ : Q * Q = Q) {a : ℝ}
     (hPQP : P * Q * P = (a : ℂ) • P) (hQPQ : Q * P * Q = (a : ℂ) • Q) :
@@ -58,20 +57,13 @@ theorem sub_mul_sub_sq_eq {P Q : Matrix n n ℂ} (hPP : P * P = P) (hQQ : Q * Q 
   have hQ' : (P - Q) * (P - Q) * Q = ((1 - a : ℝ) : ℂ) • Q := by
     rw [← hQ]
     noncomm_ring
-  have hM : (P - Q) * (P - Q) = P - P * Q - Q * P + Q := by
-    rw [show (P - Q) * (P - Q) = P * P - P * Q - Q * P + Q * Q by noncomm_ring, hPP, hQQ]
-  have key : ∀ M : Matrix n n ℂ,
-      M * (P - P * Q - Q * P + Q) = M * P - M * P * Q - M * Q * P + M * Q := by
-    intro M
-    noncomm_ring
-  rw [show (P - Q) * (P - Q) * ((P - Q) * (P - Q)) =
-      (P - Q) * (P - Q) * (P - P * Q - Q * P + Q) from congrArg _ hM, key, hP, hQ', hM]
-  simp only [smul_mul_assoc, smul_sub, smul_add]
+  rw [← mul_assoc, mul_sub ((P - Q) * (P - Q)), hP, hQ', ← smul_sub, smul_mul_assoc]
 
 /-- **Two projectors in a fixed angle.** If `P ≠ 0` and `Q` are orthogonal projections with
 `P Q P = a P` and `Q P Q = a Q` for a real `a`, then `‖P - Q‖² = |1 - a|`. -/
 theorem l2_opNorm_sub_sq_eq_of_mul_mul_eq [DecidableEq n] {P Q : Matrix n n ℂ} (hP : Pᴴ = P)
-    (hPP : P * P = P) (hQ : Qᴴ = Q) (hQQ : Q * Q = Q) {a : ℝ} (hPQP : P * Q * P = (a : ℂ) • P)
+    (hPP : P * P = P) (hQ : Qᴴ = Q) (hQQ : Q * Q = Q) {a : ℝ}
+    (hPQP : P * Q * P = (a : ℂ) • P)
     (hQPQ : Q * P * Q = (a : ℂ) • Q) (hP0 : P ≠ 0) :
     ‖P - Q‖ ^ 2 = |1 - a| := by
   set M := (P - Q) * (P - Q) with hM

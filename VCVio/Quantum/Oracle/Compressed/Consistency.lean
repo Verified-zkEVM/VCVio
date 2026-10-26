@@ -5,7 +5,6 @@ Authors: Quang Dao
 -/
 
 module
-
 public import VCVio.Quantum.MatrixMap.ProjectorPair
 public import VCVio.Quantum.Oracle.Compressed.Basic
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
@@ -14,7 +13,7 @@ public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 # Consistency projectors and their compressed conjugates
 
 A query log `log : QueryLog (ι →ₒ Y)` of prescribed answers defines the projector
-`Quantum.checkProjector log` on the database register `Database ι Y`: the diagonal projector onto
+`Quantum.checkProjector Y log` on the database register `Database ι Y`: the diagonal projector onto
 the databases that hold every logged answer at its query. Its conjugate by the compression of
 every cell, `P̂ = F P F` with `F = Quantum.compressAll ι Y`, is the projector onto the
 superposition oracles whose function satisfies the prescription
@@ -36,7 +35,7 @@ for Succinct Non-Interactive Reductions* (ePrint 2025/2166), and sharpens their 
 
 ## Main definitions
 
-* `Quantum.checkProjector log`: the projector onto the databases that satisfy `log`.
+* `Quantum.checkProjector Y log`: the projector onto the databases that satisfy `log`.
 * `Quantum.compressedCheckProjector log`: its conjugate by `Quantum.compressAll ι Y`.
 
 ## Main results
@@ -156,9 +155,6 @@ theorem checkProjector_ne_zero {log : QueryLog (ι →ₒ Y)} (h : log.Consisten
 
 section compress
 
-variable [Nonempty Y]
-
-omit [Nonempty Y] in
 /-- The compressed consistency projector is Hermitian. -/
 theorem conjTranspose_compressedCheckProjector (log : QueryLog (ι →ₒ Y)) :
     (compressedCheckProjector log)ᴴ = compressedCheckProjector log := by
@@ -166,7 +162,7 @@ theorem conjTranspose_compressedCheckProjector (log : QueryLog (ι →ₒ Y)) :
     conjTranspose_checkProjector, Matrix.mul_assoc]
 
 /-- The compressed consistency projector is idempotent. -/
-theorem compressedCheckProjector_mul_self (log : QueryLog (ι →ₒ Y)) :
+theorem compressedCheckProjector_mul_self [Nonempty Y] (log : QueryLog (ι →ₒ Y)) :
     compressedCheckProjector log * compressedCheckProjector log = compressedCheckProjector log := by
   simp only [compressedCheckProjector]
   rw [show compressAll ι Y * checkProjector Y log * compressAll ι Y *
@@ -178,11 +174,10 @@ theorem compressedCheckProjector_mul_self (log : QueryLog (ι →ₒ Y)) :
 
 /-- The empty prescription has compressed projector the identity. -/
 @[simp]
-theorem compressedCheckProjector_nil :
+theorem compressedCheckProjector_nil [Nonempty Y] :
     compressedCheckProjector ([] : QueryLog (ι →ₒ Y)) = 1 := by
   rw [compressedCheckProjector, checkProjector_nil, Matrix.mul_one, compressAll_mul_self]
 
-omit [Nonempty Y] in
 /-- An inconsistent prescription has zero compressed projector. -/
 theorem compressedCheckProjector_eq_zero_of_not_consistent {log : QueryLog (ι →ₒ Y)}
     (h : ¬ log.Consistent) : compressedCheckProjector log = 0 := by
@@ -325,17 +320,18 @@ theorem piKron_checkProjector_mul_piKron_compressedCheckProjector_mul {κ : Type
 /-! ## The exact distance (26) -/
 
 omit [DecidableEq Y] in
-/-- The real angle `α² = (1 - 1/N)^(2d)` lies in `[0, 1]`. -/
+/-- Every natural power of `1 - 1/N` lies in `[0, 1]` for a nonempty answer alphabet. -/
 theorem one_sub_inv_card_pow_mem_Icc (d : ℕ) :
-    0 ≤ (1 - (Fintype.card Y : ℝ)⁻¹) ^ d ∧ (1 - (Fintype.card Y : ℝ)⁻¹) ^ d ≤ 1 := by
+    0 ≤ (1 - (Fintype.card Y : ℝ)⁻¹) ^ d
+      ∧ (1 - (Fintype.card Y : ℝ)⁻¹) ^ d ≤ 1 := by
   have hN : (1 : ℝ) ≤ Fintype.card Y := Nat.one_le_cast.mpr Fintype.card_pos
   have h0 : 0 ≤ 1 - (Fintype.card Y : ℝ)⁻¹ := sub_nonneg.mpr (inv_le_one_of_one_le₀ hN)
   have h1 : 1 - (Fintype.card Y : ℝ)⁻¹ ≤ 1 := sub_le_self _ (by positivity)
   exact ⟨pow_nonneg h0 d, pow_le_one₀ h0 h1⟩
 
 /-- **The exact discrepancy of a consistency projector (eq. (26)).** For a consistent prescription
-on `d` distinct inputs, `‖P̂ - P‖² = 1 - (1 - 1/N)^(2d)`, where `P̂ = F P F`. This is exact; the
-paper bounds the norm by `2√(d/N)` (ePrint 2025/2166, Lemma 9.5, p. 61). -/
+on `d` distinct inputs, `‖P̂ - P‖² = 1 - (1 - 1/N)^(2d)`, where `P̂ = F P F`.
+The paper bounds the norm by `2√(d/N)` (ePrint 2025/2166, Lemma 9.5, p. 61). -/
 theorem l2_opNorm_compressedCheckProjector_sub_sq {log : QueryLog (ι →ₒ Y)}
     (h : log.Consistent) :
     ‖compressedCheckProjector log - checkProjector Y log‖ ^ 2 =
@@ -382,8 +378,8 @@ theorem l2_opNorm_compressedCheckProjector_sub_sq_le (log : QueryLog (ι →ₒ 
     norm_num
     positivity
 
-/-- **Lemma 9.5 of the paper** (ePrint 2025/2166, p. 61): `‖P̂ - P‖ ≤ 2√(d/N)`. It follows from
-the sharper `‖P̂ - P‖² ≤ 2d/N`. -/
+/-- **Lemma 9.5 of the paper** (ePrint 2025/2166, p. 61): `‖P̂ - P‖ ≤ 2√(d/N)`.
+It follows from the sharper `‖P̂ - P‖² ≤ 2d/N`. -/
 theorem l2_opNorm_compressedCheckProjector_sub_le_two_mul_sqrt (log : QueryLog (ι →ₒ Y)) :
     ‖compressedCheckProjector log - checkProjector Y log‖ ≤
       2 * Real.sqrt ((loggedCells log).card / Fintype.card Y) := by
