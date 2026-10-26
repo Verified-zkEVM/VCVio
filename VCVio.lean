@@ -179,12 +179,14 @@ public import VCVio.CryptoFoundations.SigmaProtocol
 public import VCVio.CryptoFoundations.SigmaProtocol.ChallengeRestriction
 public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment
+public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.Encoding
 public import VCVio.CryptoFoundations.SignatureAlg.Naturality
 public import VCVio.CryptoFoundations.SignatureAlg.RomQueryCount
 public import VCVio.CryptoFoundations.SignatureAlg.RomWork
 public import VCVio.CryptoFoundations.SignatureAlg.Routed
 public import VCVio.CryptoFoundations.SignatureAlg.SigningHazard
 public import VCVio.CryptoFoundations.SignatureAlg.SigningView
+public import VCVio.CryptoFoundations.SignatureAlg.SigningView.Encoding
 public import VCVio.CryptoFoundations.SignatureAlg.Tagged
 public import VCVio.CryptoFoundations.SignatureAlg.Transcript
 public import VCVio.CryptoFoundations.SignatureAlg.TranscriptCongr

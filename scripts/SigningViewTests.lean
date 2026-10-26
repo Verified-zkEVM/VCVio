@@ -6,8 +6,11 @@ Authors: Alexander Hicks
 
 module
 import VCVioTest.CryptoFoundations.SigningViewCounted
+import VCVioTest.CryptoFoundations.SigningViewEncoding
 
 /-! # Executable signing-view observation checks -/
 
 /-- Run the signing-view observation checks. -/
-public def main : IO Unit := VCVioTest.CryptoFoundations.SigningViewCounted.run
+public def main : IO Unit := do
+  VCVioTest.CryptoFoundations.SigningViewCounted.run
+  VCVioTest.CryptoFoundations.SigningViewEncoding.run
