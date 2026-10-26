@@ -80,6 +80,15 @@ lemma simulateQ_run {α : Type} (oa : ProbComp α) (s : hashSpec.QueryCache) :
   | pure x => simp
   | query_bind t oa ih => simp [← ih]
 
+/-- A step of `unifFwdImpl` leaves the cache untouched. -/
+lemma snd_eq_of_mem_support_run (i : unifSpec.Domain) (s : hashSpec.QueryCache)
+    {z : unifSpec.Range i × hashSpec.QueryCache}
+    (hz : z ∈ support ((unifFwdImpl hashSpec i).run s)) : z.2 = s := by
+  rw [unifFwdImpl, QueryImpl.liftTarget_apply, StateT.run_liftM, bind_pure_comp,
+    support_map] at hz
+  obtain ⟨_, -, rfl⟩ := hz
+  rfl
+
 end unifFwdImpl
 
 namespace roSim
@@ -110,6 +119,17 @@ lemma run_liftM_support {α : Type} (oa : ProbComp α) (s : hashSpec.QueryCache)
     support ((simulateQ (unifFwdImpl hashSpec + ro) (liftM oa)).run s) =
       (fun x => (x, s)) '' support oa := by
   rw [run_liftM, support_map]
+
+/-- A run of `liftM oa >>= k` under the `unifFwdImpl + ro` simulation from cache `s` is a run of
+`k x` from the same cache, for some possible output `x` of `oa`. -/
+lemma exists_mem_support_run_of_mem_support_run_liftM_bind {α β : Type} (oa : ProbComp α)
+    (k : α → OracleComp (unifSpec + hashSpec) β) {s : hashSpec.QueryCache}
+    {z : β × hashSpec.QueryCache}
+    (hz : z ∈ support ((simulateQ (unifFwdImpl hashSpec + ro) (liftM oa >>= k)).run s)) :
+    ∃ x ∈ support oa, z ∈ support ((simulateQ (unifFwdImpl hashSpec + ro) (k x)).run s) := by
+  rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
+  obtain ⟨_, ⟨x, hx, rfl⟩, hz⟩ := run_liftM_support ro oa s ▸ hz
+  exact ⟨x, hx, hz⟩
 
 /-- Running the `unifFwdImpl + ro` simulation of a lifted `ProbComp` bound to a continuation,
 projected to its value via `run'`, samples `oa` and then runs each continuation on cache `s`. -/

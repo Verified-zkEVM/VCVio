@@ -297,6 +297,8 @@ namespace UC
 
 open Concurrent Interaction.Open
 
+/-- The closed systems of `openTheory Party m schedulerSampler`, namely open processes over the
+empty port boundary, which `processSemanticsAsync` runs against an environment. -/
 abbrev AsyncClosed (Party : Type u) (m : Type → Type)
     (schedulerSampler : m (ULift Bool)) :=
   (openTheory.{u, 0, 0, 0} Party m schedulerSampler).Closed

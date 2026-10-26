@@ -183,11 +183,14 @@ section fail
 
 variable {m : Type u → Type v} [AlternativeMonad m] {ω : Type u} {α β γ : Type u}
 
+/-- Try `x₁`, falling back to `x₂ ()` through the `orElse` of the underlying monad `m`; the log
+is the one written by the branch whose result is returned. -/
 @[always_inline, inline]
 protected def orElse {α : Type u} (x₁ : WriterT ω m α)
     (x₂ : Unit → WriterT ω m α) : WriterT ω m α :=
   WriterT.mk (x₁.run <|> (x₂ ()).run)
 
+/-- The failing computation, inherited from the underlying monad `m`. -/
 @[always_inline, inline]
 protected def failure {α : Type u} : WriterT ω m α := WriterT.mk failure
 

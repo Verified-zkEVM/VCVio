@@ -24,10 +24,18 @@ generic `TweakableHash` and `PRFScheme` interfaces:
 - `Primitives.skPrfScheme` exposes the secret-value derivation function `PRF` at a public seed.
 
 These packages identify the primitive families to which an SLH-DSA security reduction applies.
-An aggregate EUF-CMA theorem additionally needs the seed-aware collection games under
-`HardnessAssumptions.TweakableHash`, SM-DT-DSPR and SM-DT-OpenPRE/UD variants, an `H_msg`
-interleaved-target-subset-resilience game, explicit reductions from the forger, and checked query
-bounds. Primitive packaging alone does not supply those ingredients.
+An aggregate EUF-CMA theorem from standard-model assumptions on these families additionally needs
+the seed-aware collection games under `HardnessAssumptions.TweakableHash`, SM-DT-DSPR and
+SM-DT-OpenPRE/UD variants, an `H_msg` interleaved-target-subset-resilience game, explicit
+reductions from the forger, and checked query bounds. Primitive packaging alone does not supply
+those ingredients. In the classical random-oracle model, with the tweakable hash, `H_msg` and
+`PRF_msg` as three oracles, the SUF-CMA bound, which gives EUF-CMA at the same bound, is
+`HashSig.SLHDSA.Security.CoverageBound` (`securityTarget_two_one`); over a single SHAKE256 random
+oracle on byte strings it is `HashSig.SLHDSA.Security.ByteBound`
+(`shakeStrongAdvantage_le_securityBound`; in hedged signing,
+`shakeStrongAdvantage_le_securityBound_hedged`; per public seed at `n = 32`, the smaller of the two
+per-seed bounds, `shakeStrongAdvantage_pure_le_min_of_n_eq_32`), with the EUF-CMA forms under the
+`shakeAdvantage_*` names.
 
 ## References
 

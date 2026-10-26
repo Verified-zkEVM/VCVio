@@ -28,9 +28,12 @@ open MLKEM
 
 /-! ## Conversion helpers -/
 
+/-- The bytes of a fixed-length byte vector, in order, as a `ByteArray`. -/
 def vectorToByteArray {n : Nat} (v : Vector UInt8 n) : ByteArray :=
   ByteArray.mk v.toArray
 
+/-- The `n` bytes of `ba` starting at position `offset`, as a fixed-length byte vector. A position
+past the end of `ba` panics through `ByteArray.get!` and reads as `0`. -/
 def byteArrayToVector (ba : ByteArray) (offset : Nat) (n : Nat) : Vector UInt8 n :=
   Vector.ofFn fun ⟨i, _⟩ => ba.get! (offset + i)
 

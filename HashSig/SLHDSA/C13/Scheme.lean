@@ -38,14 +38,20 @@ open SLHDSA (Adrs)
 
 /-- C13 public key. -/
 structure PublicKey (prims : Primitives) where
+  /-- Public seed `PK.seed`. -/
   pkSeed : prims.PkSeed
+  /-- Hypertree root `PK.root`, the root of the top layer of the `d = 2` hypertree. -/
   pkRoot : prims.Y
 
 /-- C13 secret key (carries the public material). -/
 structure SecretKey (prims : Primitives) where
+  /-- Secret seed `SK.seed`, from which `PRF` derives the WOTS+C and FORS+C secret values. -/
   skSeed : prims.SkSeed
+  /-- Message-PRF key `SK.prf`, which keys `PRFmsg` to derive the message randomizer `R`. -/
   skPrf : prims.SkPrf
+  /-- Public seed `PK.seed`. -/
   pkSeed : prims.PkSeed
+  /-- Hypertree root `PK.root`, the root of the top layer of the `d = 2` hypertree. -/
   pkRoot : prims.Y
 
 /-- A C13 signature: randomizer `R`, FORS+C signature, and the `d = 2` hypertree signature. -/

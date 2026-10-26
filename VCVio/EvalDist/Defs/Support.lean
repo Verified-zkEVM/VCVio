@@ -33,6 +33,7 @@ export MonadAttach (support)
 We restrict to the case of decidable equality of the output type, so `Finset.biUnion` exists.
 Note: we can't use `MonadHomClass` since `Finset` has no `Monad` instance. -/
 class HasEvalFinset (m : Type u → Type v) [MonadAttach m] where
+  /-- The finite set of possible outputs of `mx`, whose coercion to a set is `support mx`. -/
   finSupport {α : Type u} [DecidableEq α] (mx : m α) : Finset α
   coe_finSupport {α : Type u} [DecidableEq α] (mx : m α) :
     (↑(finSupport mx) : Set α) = support mx
@@ -126,6 +127,7 @@ section decidable
 
 /-- Membership in the support of computations in. -/
 protected class HasEvalSet.Decidable (m : Type u → Type v) [MonadAttach m] where
+  /-- A decision procedure for whether a value is a possible output of `mx`. -/
   mem_support_decidable {α : Type u} (mx : m α) : DecidablePred (· ∈ support mx)
 
 instance decidablePred_mem_support [MonadAttach m] [HasEvalSet.Decidable m]
