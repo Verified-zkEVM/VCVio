@@ -110,6 +110,7 @@ public import VCVioTest.Quantum.Subsystem
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryCacheInstability
 public import VCVioTest.QueryHom
+public import VCVioTest.QueryTracking.TraversalFrame
 public import VCVioTest.RandomOracleClassIndexedTape
 public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleDefer
