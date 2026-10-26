@@ -26,7 +26,7 @@ of the original transcript and leaves its residual joint state unchanged.
 
 public section
 
-open Matrix
+open Matrix OracleSpec
 open scoped Kronecker
 
 universe uL vL w
@@ -65,18 +65,18 @@ theorem forget_repeat (B : QReg) (x : X) :
   simp
 
 /-- Product of the projectors prescribed by a classical transcript. -/
-noncomputable def projector (tr : List (X × Y)) : Matrix E.S E.S ℂ :=
+noncomputable def projector (tr : QueryLog (X →ₒ Y)) : Matrix E.S E.S ℂ :=
   (tr.map fun q ↦ H.A q.1 q.2).prod
 
 /-- The empty transcript has identity projector. -/
 @[simp] theorem projector_nil : H.projector [] = 1 := by simp [projector]
 
 /-- A transcript starts with its first answer projector. -/
-@[simp] theorem projector_cons (q : X × Y) (tr : List (X × Y)) :
+@[simp] theorem projector_cons (q : (_ : X) × Y) (tr : QueryLog (X →ₒ Y)) :
     H.projector (q :: tr) = H.A q.1 q.2 * H.projector tr := by simp [projector]
 
 /-- Every answer commutes with every transcript projector. -/
-theorem answer_commute_projector (x : X) (y : Y) (tr : List (X × Y)) :
+theorem answer_commute_projector (x : X) (y : Y) (tr : QueryLog (X →ₒ Y)) :
     H.A x y * H.projector tr = H.projector tr * H.A x y := by
   induction tr with
   | nil => simp
@@ -85,7 +85,7 @@ theorem answer_commute_projector (x : X) (y : Y) (tr : List (X × Y)) :
     rw [← Matrix.mul_assoc, H.commute_cells, Matrix.mul_assoc, ih, ← Matrix.mul_assoc]
 
 /-- All transcript projectors are idempotent, including contradictory transcripts. -/
-theorem projector_mul_self (tr : List (X × Y)) :
+theorem projector_mul_self (tr : QueryLog (X →ₒ Y)) :
     H.projector tr * H.projector tr = H.projector tr := by
   induction tr with
   | nil => simp
@@ -99,7 +99,8 @@ theorem projector_mul_self (tr : List (X × Y)) :
       _ = _ := by rw [← Matrix.mul_assoc, H.orthogonal, ite_eq_left rfl, Matrix.mul_assoc, ih]
 
 /-- The projector of a transcript is Hermitian. -/
-theorem projector_hermitian (tr : List (X × Y)) : (H.projector tr)ᴴ = H.projector tr := by
+theorem projector_hermitian (tr : QueryLog (X →ₒ Y)) :
+    (H.projector tr)ᴴ = H.projector tr := by
   induction tr with
   | nil => simp
   | cons q tr ih =>
@@ -107,7 +108,7 @@ theorem projector_hermitian (tr : List (X × Y)) : (H.projector tr)ᴴ = H.proje
 
 /-- Joint-state branch for a recorded transcript; no renormalization is performed. -/
 @[expose]
-noncomputable def transcriptBranch (B : QReg) (tr : List (X × Y)) :
+noncomputable def transcriptBranch (B : QReg) (tr : QueryLog (X →ₒ Y)) :
     MatrixMap (B × E.S) (B × E.S) :=
   MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ H.projector tr)
 
@@ -117,14 +118,14 @@ noncomputable def transcriptBranch (B : QReg) (tr : List (X × Y)) :
   simp [transcriptBranch]
 
 /-- The transcript branch is the operational composition in query order. -/
-theorem transcriptBranch_cons (B : QReg) (q : X × Y) (tr : List (X × Y)) :
+theorem transcriptBranch_cons (B : QReg) (q : (_ : X) × Y) (tr : QueryLog (X →ₒ Y)) :
     H.transcriptBranch B (q :: tr) = H.transcriptBranch B tr ∘ₗ H.branch B q.1 q.2 := by
   rw [transcriptBranch, projector_cons, H.answer_commute_projector,
     ← Matrix.one_mul (1 : Matrix B B ℂ), mul_kronecker_mul, MatrixMap.conj_mul]
   rfl
 
 /-- Replaying any recorded transcript leaves its whole subnormalized branch unchanged. -/
-theorem replay_transcript (B : QReg) (tr : List (X × Y)) :
+theorem replay_transcript (B : QReg) (tr : QueryLog (X →ₒ Y)) :
     H.transcriptBranch B tr ∘ₗ H.transcriptBranch B tr = H.transcriptBranch B tr := by
   rw [transcriptBranch, ← MatrixMap.conj_mul, ← mul_kronecker_mul, Matrix.one_mul,
     H.projector_mul_self]
@@ -134,7 +135,7 @@ by capability without changing the retained joint branch. -/
 theorem projector_commute {Addr Ans : Type} [Fintype Ans] [DecidableEq Ans]
     (K : ProjectiveClassicalAnswers E Addr Ans)
     (hcomm : ∀ x y c a, H.A x y * K.A c a = K.A c a * H.A x y)
-    (ts : List (X × Y)) (us : List (Addr × Ans)) :
+    (ts : QueryLog (X →ₒ Y)) (us : QueryLog (Addr →ₒ Ans)) :
     H.projector ts * K.projector us = K.projector us * H.projector ts := by
   have ha (x : X) (y : Y) : H.A x y * K.projector us = K.projector us * H.A x y := by
     induction us with
@@ -152,7 +153,7 @@ branch. Fixing the query policies and coins fixes the two retained answer lists.
 theorem replay_mixed_transcripts {Addr Ans : Type} [Fintype Ans] [DecidableEq Ans]
     (K : ProjectiveClassicalAnswers E Addr Ans)
     (hcomm : ∀ x y c a, H.A x y * K.A c a = K.A c a * H.A x y)
-    (B : QReg) (ts : List (X × Y)) (us : List (Addr × Ans)) :
+    (B : QReg) (ts : QueryLog (X →ₒ Y)) (us : QueryLog (Addr →ₒ Ans)) :
     (H.transcriptBranch B ts ∘ₗ K.transcriptBranch B us) ∘ₗ
         (H.transcriptBranch B ts ∘ₗ K.transcriptBranch B us) =
       H.transcriptBranch B ts ∘ₗ K.transcriptBranch B us := by
@@ -165,9 +166,9 @@ theorem replay_mixed_transcripts {Addr Ans : Type} [Fintype Ans] [DecidableEq An
 /-- The adaptive transcript determined by a fixed choice of coins, inputs and answer prefix.
 The caller chooses a finite stopping prefix; no bound on the policy or its computation is used. -/
 @[expose]
-def adaptiveTranscript (next : List Y → X) : List Y → List (X × Y)
+def adaptiveTranscript (next : List Y → X) : List Y → QueryLog (X →ₒ Y)
   | [] => []
-  | y :: ys => (next [], y) :: adaptiveTranscript (fun pre ↦ next (y :: pre)) ys
+  | y :: ys => ⟨next [], y⟩ :: adaptiveTranscript (fun pre ↦ next (y :: pre)) ys
 
 /-- Fixed-coin adaptive replay preserves the original joint branch, including its mass.
 The policy may depend on arbitrary fixed public inputs, private coins and prior answers. -/
@@ -179,7 +180,7 @@ theorem replay_fixedCoins_transcript {Coins : Type*} (B : QReg)
   H.replay_transcript B _
 
 /-- Factoring the first answers of two transcript products uses cross-cell commutation. -/
-theorem projector_cons_mul_cons (q r : X × Y) (ts us : List (X × Y)) :
+theorem projector_cons_mul_cons (q r : (_ : X) × Y) (ts us : QueryLog (X →ₒ Y)) :
     H.projector (q :: ts) * H.projector (r :: us) =
       (H.A q.1 q.2 * H.A r.1 r.2) * (H.projector ts * H.projector us) := by
   simp only [projector_cons]
@@ -375,7 +376,7 @@ theorem branch_checkAdaptiveTranscript (B : QReg) (next : List Y → X) (ys : Li
     rw [checkAdaptiveTranscript, QuantumRuntime.run₂_bind,
       DSubInstrument.branch_bind_apply_univ, Finset.sum_eq_single y]
     · rw [ite_eq_left rfl, ih, H.branch_classicalCall]
-      exact (H.transcriptBranch_cons B (next [], y)
+      exact (H.transcriptBranch_cons B ⟨next [], y⟩
         (adaptiveTranscript (fun pre ↦ next (y :: pre)) ys)).symm
     · intro z _ hz
       rw [ite_eq_right hz, QuantumRuntime.run₂_pure,
@@ -413,7 +414,7 @@ theorem branch_checkMixedTranscript {Addr Ans : Type} [Fintype Ans] [DecidableEq
     rw [checkMixedTranscript, QuantumRuntime.run₂_bind,
       DSubInstrument.branch_bind_apply_univ, Finset.sum_eq_single y]
     · rw [ite_eq_left rfl, ih, hcall]
-      exact (H.transcriptBranch_cons B (next [], y) _).symm
+      exact (H.transcriptBranch_cons B ⟨next [], y⟩ _).symm
     · intro z _ hz
       rw [ite_eq_right hz, QuantumRuntime.run₂_pure,
         SubInstrument.branch_pure_of_ne (by decide), LinearMap.zero_comp]
@@ -440,7 +441,8 @@ theorem replay_checkMixedTranscript {Addr Ans : Type} [Fintype Ans] [DecidableEq
 end runtime
 
 /-- An answer already present in a transcript is absorbed by its projector. -/
-theorem answer_mul_projector_of_mem (q : X × Y) (tr : List (X × Y)) (hq : q ∈ tr) :
+theorem answer_mul_projector_of_mem (q : (_ : X) × Y) (tr : QueryLog (X →ₒ Y))
+    (hq : q ∈ tr) :
     H.A q.1 q.2 * H.projector tr = H.projector tr := by
   induction tr with
   | nil => simp at hq
@@ -451,17 +453,17 @@ theorem answer_mul_projector_of_mem (q : X × Y) (tr : List (X × Y)) (hq : q �
     · rw [projector_cons, ← Matrix.mul_assoc, H.commute_cells, Matrix.mul_assoc, ih h]
 
 /-- A list prescribing two different answers at one address has zero projector. -/
-theorem projector_eq_zero_of_contradiction (tr : List (X × Y)) (x : X) (y z : Y)
-    (hy : (x, y) ∈ tr) (hz : (x, z) ∈ tr) (hne : z ≠ y) : H.projector tr = 0 := by
+theorem projector_eq_zero_of_contradiction (tr : QueryLog (X →ₒ Y)) (x : X) (y z : Y)
+    (hy : ⟨x, y⟩ ∈ tr) (hz : ⟨x, z⟩ ∈ tr) (hne : z ≠ y) : H.projector tr = 0 := by
   calc
     H.projector tr = H.A x z * (H.A x y * H.projector tr) := by
-      rw [H.answer_mul_projector_of_mem (x, y) tr hy,
-        H.answer_mul_projector_of_mem (x, z) tr hz]
+      rw [H.answer_mul_projector_of_mem ⟨x, y⟩ tr hy,
+        H.answer_mul_projector_of_mem ⟨x, z⟩ tr hz]
     _ = 0 := by rw [← Matrix.mul_assoc, H.orthogonal, ite_eq_right hne, Matrix.zero_mul]
 
 /-- Contradictory transcripts have zero branch on every joint input. -/
-theorem transcriptBranch_eq_zero_of_contradiction (B : QReg) (tr : List (X × Y))
-    (x : X) (y z : Y) (hy : (x, y) ∈ tr) (hz : (x, z) ∈ tr) (hne : z ≠ y) :
+theorem transcriptBranch_eq_zero_of_contradiction (B : QReg) (tr : QueryLog (X →ₒ Y))
+    (x : X) (y z : Y) (hy : ⟨x, y⟩ ∈ tr) (hz : ⟨x, z⟩ ∈ tr) (hne : z ≠ y) :
     H.transcriptBranch B tr = 0 := by
   simp [transcriptBranch, H.projector_eq_zero_of_contradiction tr x y z hy hz hne]
 
@@ -478,7 +480,7 @@ theorem sum_unused_check (x : X) (F : Matrix E.S E.S ℂ)
     _ = F := by rw [← Finset.mul_sum, H.complete, Matrix.mul_one]
 
 /-- A retained transcript effect is unaffected by summing any unused check outcome. -/
-theorem sum_unused_check_projector (x : X) (tr : List (X × Y)) :
+theorem sum_unused_check_projector (x : X) (tr : QueryLog (X →ₒ Y)) :
     ∑ y, H.A x y * H.projector tr * H.A x y = H.projector tr :=
   H.sum_unused_check x _ fun y ↦ H.answer_commute_projector x y tr
 
@@ -522,7 +524,7 @@ theorem trace_sum_unused_check (B : QReg) (x : X)
 
 /-- Ordinary queries may be interposed between a transcript and its replay, on a separate
 call register, without changing the retained transcript projector. -/
-theorem ordinary_commute_projector (p : P) (tr : List (X × Y)) :
+theorem ordinary_commute_projector (p : P) (tr : QueryLog (X →ₒ Y)) :
     E.U p * ((1 : Matrix (In p) (In p) ℂ) ⊗ₖ H.projector tr) =
       ((1 : Matrix (In p) (In p) ℂ) ⊗ₖ H.projector tr) * E.U p := by
   induction tr with
@@ -533,7 +535,7 @@ theorem ordinary_commute_projector (p : P) (tr : List (X × Y)) :
 
 /-- An ordinary query on a separate register can intervene before replay without changing
 the retained branch. The claim is an identity of joint-state maps, not only of probabilities. -/
-theorem replay_after_ordinary (p : P) (tr : List (X × Y)) :
+theorem replay_after_ordinary (p : P) (tr : QueryLog (X →ₒ Y)) :
     H.transcriptBranch (In p) tr ∘ₗ MatrixMap.conj (E.U p) ∘ₗ
         H.transcriptBranch (In p) tr =
       MatrixMap.conj (E.U p) ∘ₗ H.transcriptBranch (In p) tr := by
@@ -547,7 +549,7 @@ theorem replay_after_ordinary (p : P) (tr : List (X × Y)) :
 adaptive local instruments, aborts and register changes, separately on every final leaf. -/
 theorem commute_run {L : LocalSig.{uL, vL}} (I : L.Interp) {W : QReg → Type w}
     {B : QReg} (prog : QuantumComp L (uSpec P In) W B) (leaf : Σ u, W u)
-    (tr : List (X × Y)) :
+    (tr : QueryLog (X →ₒ Y)) :
     (E.toRuntime.run I prog).branch leaf ∘ₗ H.transcriptBranch B tr =
       H.transcriptBranch leaf.1 tr ∘ₗ (E.toRuntime.run I prog).branch leaf := by
   have hs := QuantumRuntime.simulation (R₁ := E.toRuntime) (R₂ := E.toRuntime)
@@ -561,7 +563,7 @@ theorem commute_run {L : LocalSig.{uL, vL}} (I : L.Interp) {W : QReg → Type w}
 measure the external registers; the private transcript remains fixed on each subnormalized leaf. -/
 theorem replay_after_run {L : LocalSig.{uL, vL}} (I : L.Interp) {W : QReg → Type w}
     {B : QReg} (prog : QuantumComp L (uSpec P In) W B) (leaf : Σ u, W u)
-    (tr : List (X × Y)) :
+    (tr : QueryLog (X →ₒ Y)) :
     H.transcriptBranch leaf.1 tr ∘ₗ (E.toRuntime.run I prog).branch leaf ∘ₗ
         H.transcriptBranch B tr =
       (E.toRuntime.run I prog).branch leaf ∘ₗ H.transcriptBranch B tr := by

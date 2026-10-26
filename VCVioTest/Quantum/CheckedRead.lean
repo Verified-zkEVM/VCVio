@@ -201,7 +201,8 @@ local notation "Old" => projectiveClassicalAnswers (k := 2) (X := Bool) (Y := ZM
 /-- The public mixed-runtime theorem covers both retained answer families together. -/
 example {L : LocalSig} (I : L.Interp) {W : QReg → Type} {B : QReg}
     (prog : QuantumComp L (mixedOracleSpec 2 Bool (ZMod 2)) W B)
-    (leaf : Σ u, W u) (tr : List (Cell × ZMod 2)) (us : List (Cell × Option (ZMod 2))) :
+    (leaf : Σ u, W u) (tr : QueryLog (Cell →ₒ ZMod 2))
+    (us : QueryLog (Cell →ₒ Option (ZMod 2))) :
     ((Old).transcriptBranch leaf.1 tr ∘ₗ (E).classicalRead.transcriptBranch leaf.1 us) ∘ₗ
         ((E).mixedRuntime.run I prog).branch leaf ∘ₗ
         ((Old).transcriptBranch B tr ∘ₗ (E).classicalRead.transcriptBranch B us) =

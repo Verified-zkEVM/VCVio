@@ -19,7 +19,7 @@ excluded, as required for Chiesa, Di, Hu and Zheng, ePrint 2025/2166, Lemma 11.1
 
 public section
 
-open Matrix OracleComp
+open Matrix OracleComp OracleSpec
 open scoped Kronecker
 
 universe uL vL w
@@ -33,11 +33,11 @@ variable {P : Type} [Fintype P] [DecidableEq P] {In : P → QReg}
 
 /-- The accepting branch of the complete checker fold. Calls continue after a failed comparison;
 all rejected answer histories have zero contribution to the accepting branch. -/
-theorem actual_fold_accept (B : QReg) (io : List (X × Y)) (acc : Bool) :
+theorem actual_fold_accept (B : QReg) (log : QueryLog (X →ₒ Y)) (acc : Bool) :
     ((E.withClassicalReads H).run₂ .instruments
-      ((io.foldlM checkIOStep acc).toQuantumAt (H.classicalCall B))).branch true =
-        if acc then H.transcriptBranch B io else 0 := by
-  induction io generalizing acc with
+      ((log.foldlM QueryLog.recheckStep acc).toQuantumAt (H.classicalCall B))).branch true =
+        if acc then H.transcriptBranch B log else 0 := by
+  induction log generalizing acc with
   | nil =>
     rw [List.foldlM_nil, toQuantumAt_pure, QuantumRuntime.run₂_pure]
     cases acc
@@ -45,12 +45,12 @@ theorem actual_fold_accept (B : QReg) (io : List (X × Y)) (acc : Bool) :
     · rw [SubInstrument.branch_pure_self]
       simp only [ite_true, transcriptBranch_nil]
       rfl
-  | cons p io ih =>
-    have hp : ((p :: io).foldlM checkIOStep acc).toQuantumAt (H.classicalCall B) =
+  | cons p log ih =>
+    have hp : ((p :: log).foldlM QueryLog.recheckStep acc).toQuantumAt (H.classicalCall B) =
         (H.classicalCall B p.1).bind fun y ↦
-          (io.foldlM checkIOStep (acc && decide (y = p.2))).toQuantumAt
+          (log.foldlM QueryLog.recheckStep (acc && decide (y = p.2))).toQuantumAt
             (H.classicalCall B) := by
-      rw [List.foldlM_cons, checkIOStep, bind_assoc]
+      rw [List.foldlM_cons, QueryLog.recheckStep, bind_assoc]
       simp only [pure_bind]
       exact toQuantumAt_query_bind (H.classicalCall B) p.1 _
     rw [hp, QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply_univ,
@@ -61,26 +61,28 @@ theorem actual_fold_accept (B : QReg) (io : List (X × Y)) (acc : Bool) :
       · simp
       · simp only [↓reduceIte]
         rw [H.branch_classicalCall]
-        exact (H.transcriptBranch_cons B p io).symm
+        exact (H.transcriptBranch_cons B p log).symm
     · intro y _ hy
       rw [ih]
       simp only [hy, decide_false, Bool.and_false, Bool.false_eq_true, ite_false]
       rfl
     · simp
 
-/-- The actual classical `checkIO` accepts on the product of its answer projectors, including
-repeated and contradictory prescriptions, on any entangled reference/private input matrix. -/
-theorem actual_accept_eq_projectorProduct (B : QReg) (io : List (X × Y)) :
+/-- The actual classical `recheck` of a query log accepts on the product of its answer
+projectors, including repeated and contradictory prescriptions, on any entangled
+reference/private input matrix. -/
+theorem actual_accept_eq_projectorProduct (B : QReg) (log : QueryLog (X →ₒ Y)) :
     ((E.withClassicalReads H).run₂ .instruments
-      ((checkIO io).toQuantumAt (H.classicalCall B))).branch true =
-        MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ H.projector io) := by
-  simpa only [checkIO, ↓reduceIte, transcriptBranch] using H.actual_fold_accept B io true
+      ((QueryLog.recheck log).toQuantumAt (H.classicalCall B))).branch true =
+        MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ H.projector log) := by
+  simpa only [QueryLog.recheck, ↓reduceIte, transcriptBranch] using
+    H.actual_fold_accept B log true
 
 /-- Transcript projectors commute through general quantum programs that coherently choose
 ordinary ports. This lifts portwise commutation without assuming a classical port schedule. -/
 theorem commute_coherent_run {L : LocalSig.{uL, vL}} (I : L.Interp) {W : QReg → Type w}
     {B : QReg} (prog : QuantumComp L (EmulatedOracle.cohSpec In) W B)
-    (leaf : Σ u, W u) (tr : List (X × Y)) :
+    (leaf : Σ u, W u) (tr : QueryLog (X →ₒ Y)) :
     (E.coherent.toRuntime.run I prog).branch leaf ∘ₗ H.transcriptBranch B tr =
       H.transcriptBranch leaf.1 tr ∘ₗ (E.coherent.toRuntime.run I prog).branch leaf := by
   have hs := QuantumRuntime.simulation (R₁ := E.coherent.toRuntime)
@@ -97,7 +99,7 @@ theorem commute_coherent_run {L : LocalSig.{uL, vL}} (I : L.Interp) {W : QReg �
 subnormalized branch is preserved on each possibly register-dependent final leaf. -/
 theorem replay_after_coherent_run {L : LocalSig.{uL, vL}} (I : L.Interp)
     {W : QReg → Type w} {B : QReg} (prog : QuantumComp L (EmulatedOracle.cohSpec In) W B)
-    (leaf : Σ u, W u) (tr : List (X × Y)) :
+    (leaf : Σ u, W u) (tr : QueryLog (X →ₒ Y)) :
     H.transcriptBranch leaf.1 tr ∘ₗ (E.coherent.toRuntime.run I prog).branch leaf ∘ₗ
         H.transcriptBranch B tr =
       (E.coherent.toRuntime.run I prog).branch leaf ∘ₗ H.transcriptBranch B tr := by
@@ -112,7 +114,7 @@ theorem commute_mixed_run {Addr Ans : Type} [Fintype Ans] [DecidableEq Ans]
     {L : LocalSig.{uL, vL}} (I : L.Interp) {W : QReg → Type w}
     {B : QReg} (prog : QuantumComp L
       (withReadSpec (EmulatedOracle.cohSpec In) Addr Ans) W B)
-    (leaf : Σ u, W u) (tr : List (X × Y)) :
+    (leaf : Σ u, W u) (tr : QueryLog (X →ₒ Y)) :
     ((E.withClassicalReads K).run I prog).branch leaf ∘ₗ H.transcriptBranch B tr =
       H.transcriptBranch leaf.1 tr ∘ₗ ((E.withClassicalReads K).run I prog).branch leaf := by
   have hs := QuantumRuntime.simulation (R₁ := E.withClassicalReads K)
@@ -154,7 +156,7 @@ theorem replay_after_mixed_run {Addr Ans : Type} [Fintype Ans] [DecidableEq Ans]
     {L : LocalSig.{uL, vL}} (I : L.Interp)
     {W : QReg → Type w} {B : QReg} (prog : QuantumComp L
       (withReadSpec (EmulatedOracle.cohSpec In) Addr Ans) W B)
-    (leaf : Σ u, W u) (tr : List (X × Y)) :
+    (leaf : Σ u, W u) (tr : QueryLog (X →ₒ Y)) :
     H.transcriptBranch leaf.1 tr ∘ₗ ((E.withClassicalReads K).run I prog).branch leaf ∘ₗ
         H.transcriptBranch B tr =
       ((E.withClassicalReads K).run I prog).branch leaf ∘ₗ H.transcriptBranch B tr := by
@@ -169,7 +171,7 @@ theorem replay_mixed_transcripts_after_run {Addr Ans : Type} [Fintype Ans] [Deci
     (hcomm : ∀ x y c a, H.A x y * K.A c a = K.A c a * H.A x y)
     {L : LocalSig.{uL, vL}} (I : L.Interp) {W : QReg → Type w} {B : QReg}
     (prog : QuantumComp L (withReadSpec (EmulatedOracle.cohSpec In) Addr Ans) W B)
-    (leaf : Σ u, W u) (ts : List (X × Y)) (us : List (Addr × Ans)) :
+    (leaf : Σ u, W u) (ts : QueryLog (X →ₒ Y)) (us : QueryLog (Addr →ₒ Ans)) :
     (H.transcriptBranch leaf.1 ts ∘ₗ K.transcriptBranch leaf.1 us) ∘ₗ
         ((E.withClassicalReads K).run I prog).branch leaf ∘ₗ
         (H.transcriptBranch B ts ∘ₗ K.transcriptBranch B us) =
@@ -194,14 +196,14 @@ variable {k : ℕ} {X Y : Type} [Fintype X] [DecidableEq X]
   [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
 
 /-- Prescribed present answers form the checked transcript projector. -/
-theorem filledCheck_eq_projector (io : List ((Fin k × X) × Y)) :
-    filledCheck io = (compressedVCOracle k X Y).classicalRead.projector
-      (io.map fun p ↦ (p.1, some p.2)) := by
-  induction io with
+theorem filledCheck_eq_projector (log : QueryLog ((Fin k × X) →ₒ Y)) :
+    filledCheck log = (compressedVCOracle k X Y).classicalRead.projector
+      (log.map fun p ↦ ⟨p.1, some p.2⟩) := by
+  induction log with
   | nil =>
     simp only [filledCheck_nil, List.map_nil, ProjectiveClassicalAnswers.projector_nil]
     rfl
-  | cons p io ih =>
+  | cons p log ih =>
     rw [filledCheck_cons, List.map_cons, ProjectiveClassicalAnswers.projector_cons, ih]
     rfl
 
@@ -210,13 +212,13 @@ projector, including zero prescriptions. A missing read returns rejection. -/
 theorem checked_accept_eq_projectorProduct
     {Cm Z : Type} [Fintype Cm] [DecidableEq Cm] [Fintype Z] [DecidableEq Z] [AddGroup Z]
     {Dm : Fin k → Type} (ME : MultiExtractor k Cm Dm (compressedVCOracle k X Y).S)
-    (code : TpDCode k Dm Z) (B : QReg) (j : Fin k) (io : List (X × Y)) :
+    (code : TpDCode k Dm Z) (B : QReg) (j : Fin k) (log : QueryLog (X →ₒ Y)) :
     (((compressedVCOracle k X Y).mixedExtractRuntime ME code).run₂ .instruments
-      (runClassicalChecked B j (liftComp (checkIO io) (unifSpec + (X →ₒ Y))))).branch
+      (runClassicalChecked B j (liftComp (QueryLog.recheck log) (unifSpec + (X →ₒ Y))))).branch
         (some true) =
       (compressedVCOracle k X Y).classicalRead.transcriptBranch B
-        (io.map fun p ↦ ((j, p.1), some p.2)) := by
-  simp only [checkIO, branch_run₂_checked_fold, ite_true, filledCheck_eq_projector,
+        (log.map fun p ↦ ⟨(j, p.1), some p.2⟩) := by
+  simp only [QueryLog.recheck, branch_run₂_checked_fold, ite_true, filledCheck_eq_projector,
     List.map_map, Function.comp_def, ProjectiveClassicalAnswers.transcriptBranch]
   rfl
 
