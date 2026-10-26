@@ -45,6 +45,8 @@ mixing. Arithmetic instances delegate to the underlying `NegacyclicRing`
 operations. -/
 @[ext] structure TransformPoly {Coeff : Type u} [CommRing Coeff]
     (ring : NegacyclicRing Coeff) where
+  /-- The underlying `ring.Poly` value, whose coefficient slots hold the transform-domain
+  coordinates. -/
   coeffs : ring.Poly
 
 namespace TransformPoly
@@ -140,8 +142,14 @@ Concrete NTT modules provide executable instances; `TransformOps.Laws` certifies
 that the transform is a ring isomorphism. -/
 class TransformOps {Coeff : Type u} [CommRing Coeff]
     (ring : NegacyclicRing Coeff) (Hat : outParam (Type v)) [AddCommGroup Hat] where
+  /-- The forward transform into the transform domain; for ML-KEM it is `NTT` (FIPS 203
+  Algorithm 9), and for ML-DSA `NTT` (FIPS 204 Algorithm 41). -/
   toHat : ring.Poly → Hat
+  /-- The inverse transform back to the coefficient domain; for ML-KEM it is `NTT⁻¹`
+  (FIPS 203 Algorithm 10), and for ML-DSA `NTT⁻¹` (FIPS 204 Algorithm 42). -/
   fromHat : Hat → ring.Poly
+  /-- Multiplication in the transform domain, matching negacyclic multiplication under `toHat`;
+  for ML-KEM it is `MultiplyNTTs` (FIPS 203 Algorithm 11). -/
   mulHat : Hat → Hat → Hat
 
 namespace TransformOps

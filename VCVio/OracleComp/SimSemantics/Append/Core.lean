@@ -166,6 +166,15 @@ lemma simulateQ_add_liftComp_right (ob : OracleComp spec₂' α) :
   congr 1 with t
   exact simulateQ_add_liftM_query_right impl₁' impl₂' t
 
+/-- `HasQuery.toQueryImpl`-keyed form of `simulateQ_add_liftComp_left`: a computation over the
+left summand, embedded in the sum through its query capability, is simulated by the left handler
+alone. -/
+lemma simulateQ_add_simulateQ_toQueryImpl_left (oa : OracleComp spec₁' α) :
+    simulateQ (impl₁' + impl₂') (simulateQ
+      (HasQuery.toQueryImpl (spec := spec₁') (m := OracleComp (spec₁' + spec₂'))) oa) =
+    simulateQ impl₁' oa :=
+  simulateQ_add_liftComp_left impl₁' impl₂' oa
+
 /-- `liftM`-normal-form companion of `simulateQ_add_liftComp_left`. Because `liftComp_eq_liftM`
 normalizes `liftComp → liftM` under `simp`, the `liftComp`-keyed lemma never fires inside `simp`;
 this `liftM`-keyed form is what `simp` actually needs.

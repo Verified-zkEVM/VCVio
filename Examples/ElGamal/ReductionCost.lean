@@ -36,6 +36,7 @@ section IND_CPA
 variable {F : Type} [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
 variable {G : Type} [AddCommGroup G] [Module F G] [SampleableType G]
 
+/-- Zero is the default element of the group `G`, which is also the ElGamal message space. -/
 local instance : Inhabited G := ⟨0⟩
 
 /-- Interface operations exposed by a one-time IND-CPA adversary. -/
@@ -138,7 +139,9 @@ end OneTimeINDCPACapability
 
 /-- Asymptotic cost assignment for the two procedures of a one-time IND-CPA adversary. -/
 structure OneTimeINDCPAProcedureCost (ω κ : Type) where
+  /-- Resource profile assigned to the adversary's `chooseMessages` procedure. -/
   chooseMessages : ResourceProfile ω κ
+  /-- Resource profile assigned to the adversary's `distinguish` procedure. -/
   distinguish : ResourceProfile ω κ
 
 namespace OneTimeINDCPAProcedureCost

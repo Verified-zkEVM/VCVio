@@ -60,21 +60,37 @@ variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
 
 /-- The semantic public key: the public seed `ρ` and the power-2 rounded key vector `t₁`. -/
 structure PublicKey where
+  /-- The 32-byte public seed `ρ`, from which `Â = ExpandA(ρ)` (FIPS 204 Algorithm 32) is
+  expanded. -/
   rho : Bytes 32
+  /-- The high-order part `t₁` of `Power2Round(t)` (FIPS 204 Algorithm 35) for the key vector
+  `t = A·s₁ + s₂`. -/
   t1 : Vector prims.Power2High p.k
 
 /-- The semantic secret key: includes the expanded public key material for efficient signing. -/
 structure SecretKey where
+  /-- The 32-byte public seed `ρ`, as in the public key. -/
   rho : Bytes 32
+  /-- The 32-byte private seed `K`, mixed into the private random seed
+  `ρ'' = H(K ‖ rnd ‖ μ, 64)` during signing (FIPS 204 Algorithm 7). -/
   key : Bytes 32
+  /-- The 64-byte public-key hash `tr = H(pk, 64)`, hashed with the message into `μ`. -/
   tr : Bytes 64
+  /-- The `η`-bounded secret vector `s₁` of length `l`, produced by `ExpandS`
+  (FIPS 204 Algorithm 33). -/
   s1 : RqVec p.l
+  /-- The `η`-bounded secret vector `s₂` of length `k`, produced by `ExpandS`
+  (FIPS 204 Algorithm 33). -/
   s2 : RqVec p.k
+  /-- The low-order part `t₀` of `Power2Round(t)`, withheld from the public key. -/
   t0 : RqVec p.k
 
 /-- The signing state: commitment data retained between commit and respond phases. -/
 structure SigningState where
+  /-- The masking vector `y`, which the response combines with the challenge into
+  `z = y + c·s₁`. -/
   y : RqVec p.l
+  /-- The unrounded commitment vector `w = A·y`, whose high bits form the commitment `w₁`. -/
   w : RqVec p.k
 
 /-- The public commitment: `w₁ = HighBits(w)`. -/
