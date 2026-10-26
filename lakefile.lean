@@ -406,6 +406,7 @@ script test (args) do
     #["exe", "slhdsa_xmss_tests"],
     #["exe", "slhdsa_fors_tests"],
     #["exe", "slhdsa_fors_secret_order_tests"],
+    #["exe", "slhdsa_fors_provider_tests"],
     #["exe", "slhdsa_hypertree_tests"],
     #["exe", "slhdsa_external_tests"],
     #["exe", "slhdsa_target_ledger_tests"],
@@ -499,6 +500,10 @@ lean_exe slhdsa_fors_tests where
 /-- FORS provider callbacks follow the selected-secret-first schedule. -/
 lean_exe slhdsa_fors_secret_order_tests where
   root := `HashSigTest.SLHDSA.ForsSecretOrder
+
+/-- Actual oracle-provider, ordered cost and retained cache checks for canonical FORS. -/
+lean_exe slhdsa_fors_provider_tests where
+  root := `HashSigTest.SLHDSA.Refactor.ForsObservation
 
 /-- General-hypertree trajectories, checked addresses, and selected concrete construction. -/
 lean_exe slhdsa_hypertree_tests where

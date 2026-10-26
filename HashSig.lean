@@ -40,6 +40,7 @@ public import HashSig.SLHDSA.Primitives
 public import HashSig.SLHDSA.RandomOracle
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Encodings
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Fors
+public import HashSig.SLHDSA.SHAKE128s.Bridge.ForsObservation
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Hypertree
 public import HashSig.SLHDSA.SHAKE128s.Bridge.PaperGame
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Scheme
@@ -286,6 +287,7 @@ public import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.WireStrongUnforgeabili
 public import HashSig.SLHDSA.SHAKE128s.Statement.UnforgeabilityGame
 public import HashSig.SLHDSA.Scheme
 public import HashSig.SLHDSA.SecretProvider
+public import HashSig.SLHDSA.SecretProvider.Observation
 public import HashSig.SLHDSA.Security
 public import HashSig.SLHDSA.Security.AddressKeys
 public import HashSig.SLHDSA.Security.BoundCertificates
@@ -333,6 +335,7 @@ public import HashSig.SLHDSA.Security.LinkedHazards
 public import HashSig.SLHDSA.Security.NodeGraph
 public import HashSig.SLHDSA.Security.PrfKeyBound
 public import HashSig.SLHDSA.Security.Profile
+public import HashSig.SLHDSA.Security.ProviderObservation
 public import HashSig.SLHDSA.Security.RangeBound
 public import HashSig.SLHDSA.Security.ReachableTargets
 public import HashSig.SLHDSA.Security.RomConformance
