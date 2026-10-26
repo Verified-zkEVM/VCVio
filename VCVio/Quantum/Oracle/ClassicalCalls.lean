@@ -134,30 +134,35 @@ return the dependent tuple of their results. -/
 @[expose]
 noncomputable def pi : {k : ℕ} → {β : Fin k → Type w} →
     ((i : Fin k) → QComp spec B B (β i)) →
-    QComp spec B B ((i : Fin k) → β i)
-  | 0, _, _ => QuantumComp₂.pure fun i ↦ i.elim0
-  | _ + 1, _, f => (f 0).bind fun b ↦ (pi fun i ↦ f i.succ).bind fun bs ↦
-      QuantumComp₂.pure (Fin.cons b bs)
+    QComp spec B B ((i : Fin k) → β i) :=
+  IPFunctor.FreeM₂.seqPi
+
+/-- Sequencing an empty tuple returns the empty tuple. -/
+@[simp]
+theorem pi_zero {β : Fin 0 → Type w} (f : (i : Fin 0) → QComp spec B B (β i)) :
+    pi f = QuantumComp₂.pure fun i ↦ i.elim0 :=
+  rfl
+
+/-- Sequencing a nonempty tuple runs its first component, then the remaining components. -/
+theorem pi_succ {k : ℕ} {β : Fin (k + 1) → Type w}
+    (f : (i : Fin (k + 1)) → QComp spec B B (β i)) :
+    pi f = (f 0).bind fun b ↦ (pi fun i ↦ f i.succ).bind fun bs ↦
+      QuantumComp₂.pure (Fin.cons b bs) :=
+  rfl
 
 /-- Sequencing lossless programs is lossless. -/
 theorem lossless_pi : {k : ℕ} → {β : Fin k → Type w} →
     {f : (i : Fin k) → QComp spec B B (β i)} →
-    (∀ i, (f i).Lossless .instruments) → (pi f).Lossless .instruments
-  | 0, _, _, _ => QuantumComp₂.lossless_pure _
-  | _ + 1, _, _, hf => QuantumComp₂.lossless_bind (hf 0) fun _ ↦
-      QuantumComp₂.lossless_bind (lossless_pi fun i ↦ hf i.succ) fun _ ↦
-        QuantumComp₂.lossless_pure _
+    (∀ i, (f i).Lossless .instruments) → (pi f).Lossless .instruments :=
+  IPFunctor.FreeM₂.isRollBound_seqPi_unit
 
 /-- The sequence of the programs `f i` is within the sum of their budgets. -/
 theorem isQueryBound_pi : {k : ℕ} → {β : Fin k → Type w} →
     {f : (i : Fin k) → QComp spec B B (β i)} → {b : Fin k → spec.Port → ℕ} →
-    (∀ i, (f i).IsQueryBound (b i)) → (pi f).IsQueryBound (∑ i, b i)
-  | 0, _, _, _, _ => QuantumComp₂.isQueryBound_pure _ _
-  | _ + 1, _, _, b, hf => by
-    rw [Fin.sum_univ_succ, ← add_zero (∑ i : Fin _, b i.succ)]
-    exact QuantumComp₂.isQueryBound_bind (hf 0) fun _ ↦
-      QuantumComp₂.isQueryBound_bind (isQueryBound_pi fun i ↦ hf i.succ) fun _ ↦
-        QuantumComp₂.isQueryBound_pure _ _
+    (∀ i, (f i).IsQueryBound (b i)) → (pi f).IsQueryBound (∑ i, b i) := by
+  intro k β f b hf p
+  rw [Finset.sum_apply]
+  exact IPFunctor.FreeM₂.isChargeBound_seqPi (fun i ↦ b i p) (fun i ↦ hf i p)
 
 end QComp
 

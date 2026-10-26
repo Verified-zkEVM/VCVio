@@ -331,14 +331,14 @@ theorem exists_branch_run₂_pi_eq_smul : {k : ℕ} → {β : Fin k → Type w} 
   | 0, _, f, S, _, v => by
     have hv : v = fun i ↦ i.elim0 := funext fun i ↦ i.elim0
     refine ⟨1, ?_, fun ⟨i, _⟩ ↦ i.elim0⟩
-    rw [QComp.pi, QuantumRuntime.run₂_pure, hv, SubInstrument.branch_pure_self, one_smul]
+    rw [QComp.pi_zero, QuantumRuntime.run₂_pure, hv, SubInstrument.branch_pure_self, one_smul]
   | k + 1, β, f, S, hf, v => by
     obtain ⟨c₀, hc₀, hs₀⟩ := hf 0 (v 0)
     obtain ⟨c₁, hc₁, hs₁⟩ := exists_branch_run₂_pi_eq_smul (fun i ↦ f i.succ)
       (fun i ↦ S i.succ) (fun i b ↦ hf i.succ b) (Fin.tail v)
     refine ⟨c₁ * c₀, ?_, fun ⟨i, hi⟩ ↦ ?_⟩
     · refine LinearMap.ext fun ρ ↦ ?_
-      rw [QComp.pi, QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply,
+      rw [QComp.pi_succ, QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply,
         tsum_eq_single (v 0)]
       · rw [QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply,
           tsum_eq_single (Fin.tail v)]

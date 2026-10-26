@@ -244,8 +244,11 @@ theorem lossless_run {x : QuantumComp L spec X A} (hx : x.Lossless I)
     (hR : ∀ i, (R.step i).Lossless) : (R.run I x).Lossless := by
   induction x using QuantumComp.inductionOn with
   | pure _ _ => exact DSubInstrument.lossless_ret _ _
-  | primBind _ o k ih => exact (hx.1.frame R.D).bind fun b ↦ ih b (hx.2 b)
+  | primBind _ o k ih =>
+    rw [QuantumComp.lossless_primBind_iff] at hx
+    exact (hx.1.frame R.D).bind fun b ↦ ih b (hx.2 b)
   | queryBind _ i E ℓ k ih =>
+    rw [QuantumComp.lossless_queryBind_iff] at hx
     exact DSubInstrument.Lossless.bind (R.lossless_queryStep (hR i) E ℓ)
       fun r ↦ ih r (hx r)
 
@@ -326,19 +329,14 @@ theorem run₂_primBind (o : L.Op A)
 is sequencing their runs. -/
 theorem run₂_bind (x : QuantumComp₂ L spec A B α) (k : α → QuantumComp₂ L spec B C β) :
     R.run₂ I (x.bind k) = (R.run₂ I x).bind fun a ↦ R.run₂ I (k a) := by
-  refine QuantumComp₂.inductionOn (motive := fun A B x ↦ ∀ {C : QReg}
-    (k : α → QuantumComp₂ L spec B C β),
-      R.run₂ I (x.bind k) = (R.run₂ I x).bind fun a ↦ R.run₂ I (k a)) ?_ ?_ ?_ x k
-  · intro _ a _ k
-    rw [QuantumComp₂.pure_bind, run₂_pure, SubInstrument.pure_bind]
-  · intro _ _ o k' ih _ k
-    rw [QuantumComp₂.primBind_bind, run₂_primBind,
-      run₂_primBind, SubInstrument.bind, DSubInstrument.bind_assoc]
-    refine congrArg _ (funext fun b ↦ ?_)
-    rw [ih b k]
-  · intro _ _ i E ℓ k' ih _ k
-    rw [QuantumComp₂.queryBind_bind, run₂_queryBind, run₂_queryBind, SubInstrument.bind_assoc]
-    exact congrArg _ (funext fun r ↦ ih r k)
+  refine DSubInstrument.ext (funext fun b ↦ LinearMap.ext fun ρ ↦ ?_)
+  have h := congrArg (fun p ↦ p.branch ⟨C, rfl, b⟩ ρ)
+    (R.run_bind I x fun u (p : QuantumComp₂.Leaf B α u) ↦
+      p.casesOn fun h a ↦ h ▸ k a)
+  change (R.run₂ I (x.bind k)).branch b ρ = _ at h
+  rw [h, DSubInstrument.branch_bind_apply, ← (QuantumComp₂.leafEquiv B α).tsum_eq]
+  rw [SubInstrument.bind, DSubInstrument.branch_bind_apply]
+  rfl
 
 /-- Running a program with a relabelled return value relabels the outcomes of its run. -/
 theorem run₂_map (f : α → β) (x : QuantumComp₂ L spec A B α) :

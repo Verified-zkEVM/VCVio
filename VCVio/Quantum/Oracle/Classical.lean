@@ -8,6 +8,7 @@ module
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 public import VCVio.Quantum.Oracle.Model
+public import PolyFun.IPFunctor.Free.Bound.Loops
 
 /-!
 # Classical oracle algorithms in the quantum random-oracle model
@@ -323,6 +324,12 @@ namespace QComp
 
 variable {spec : QuantumOracleSpec.{u₁, v₁}} {β : Type w}
 
+/-- The quantum monad uses the pure and bind operations of the diagonal indexed monad. -/
+private theorem isDiagonalMonad (B : QReg) :
+    IPFunctor.FreeM₂.IsDiagonalMonad
+      (inferInstance : Monad (QComp.{u₁, v₁, w} spec B B)) :=
+  ⟨fun _ ↦ rfl, fun _ _ ↦ rfl⟩
+
 /-- The preparation of a basis call: on `B`, adjoin the port register of `p` in the basis state
 `|a⟩`. It relabels `B` as `Unit × B` and prepares `|a⟩` on the factor `Unit`. -/
 @[expose]
@@ -436,16 +443,11 @@ private theorem lossless_foldlM (hf : ∀ i ∈ W, (f i).Lossless .instruments) 
     (acc : Bool) :
     (l.foldlM (fun acc i ↦ if i ∈ W then (acc && ·) <$> f i else pure acc) acc).Lossless
       .instruments := by
-  induction l generalizing acc with
-  | nil => exact QuantumComp₂.lossless_pure acc
-  | cons i l ih =>
-    rw [List.foldlM_cons]
-    by_cases hi : i ∈ W
-    · simp only [hi, ↓reduceIte]
-      exact QuantumComp₂.lossless_bind (QuantumComp₂.lossless_bind (hf i hi) fun _ ↦
-        QuantumComp₂.lossless_pure _) ih
-    · simp only [hi, ↓reduceIte]
-      exact ih acc
+  refine IPFunctor.FreeM₂.isRollBound_foldlM_unit (isDiagonalMonad (spec := spec) B) ?_ l acc
+  intro acc i
+  split_ifs with hi
+  · exact QuantumComp₂.lossless_bind (hf i hi) fun _ ↦ QuantumComp₂.lossless_pure _
+  · exact QuantumComp₂.lossless_pure acc
 
 /-- The conjunction of checks is within the sum, over `W`, of the budgets of the checks. -/
 theorem isQueryBound_allIn {b : Fin k → spec.Port → ℕ} (hf : ∀ i ∈ W, (f i).IsQueryBound (b i)) :

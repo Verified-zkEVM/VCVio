@@ -167,9 +167,7 @@ theorem simulateQ_pure_eq_evalWithAnswerFn {m : Type → Type v} [Monad m] [Lawf
     (H : X → Y) {α : Type} (oa : OracleComp (X →ₒ Y) α) :
     simulateQ (fun x ↦ (pure (H x) : m Y)) oa =
       pure (evalWithAnswerFn (QueryImpl.ofFn H) oa) := by
-  induction oa using OracleComp.inductionOn with
-  | pure a => simp
-  | query_bind t k ih => simp [ih]
+  exact (PFunctor.FreeM.liftM_natural (s := QueryImpl.ofFn H) (MonadHom.pure m) oa).symm
 
 /-- The implementation of `unifSpec + (X →ₒ Y)` in `ProbComp` that passes the coins through and
 answers every oracle query with the fixed function `H`. -/
