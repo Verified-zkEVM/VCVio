@@ -427,6 +427,7 @@ script test (args) do
     #["exe", "slhdsa_limited_profile_tests"],
     #["exe", "slhdsa_byte_model_tests"],
     #["exe", "slhdsa_wire_tests"],
+    #["exe", "slhdsa_signing_view_tests"],
     #["exe", "slhdsa_shake128s_compiler_tests"],
     #["exe", "slhdsa_shake128s_game_tests"],
     #["exe", "slhdsa_shake128s_wire_bridge_tests"],
@@ -527,6 +528,10 @@ lean_exe slhdsa_bound_table where
 /-- Strict parsing, pure-mode messages, and returned-pair freshness of the wire adapter. -/
 lean_exe slhdsa_wire_tests where
   root := `HashSigTest.SLHDSA.Wire
+
+/-- Patterned canonical signature, key and framing checks through the internal signing view. -/
+lean_exe slhdsa_signing_view_tests where
+  root := `HashSigTest.SLHDSA.Refactor.SigningViewEncoding
 
 /-- Finite-index compiler controls through the combined hash-signature import. -/
 lean_exe slhdsa_shake128s_compiler_tests where

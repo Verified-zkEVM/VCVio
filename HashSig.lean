@@ -11,6 +11,7 @@ public import HashSig.SLHDSA.C13.Scheme
 public import HashSig.SLHDSA.C13.WotsC
 public import HashSig.SLHDSA.C13.Xmss
 public import HashSig.SLHDSA.Codec
+public import HashSig.SLHDSA.Codec.Option
 public import HashSig.SLHDSA.Concrete.Codec
 public import HashSig.SLHDSA.Concrete.FIPS
 public import HashSig.SLHDSA.Concrete.Fors
@@ -23,6 +24,7 @@ public import HashSig.SLHDSA.DepthOneCompatibility
 public import HashSig.SLHDSA.Encoding
 public import HashSig.SLHDSA.EncodingLemmas
 public import HashSig.SLHDSA.External
+public import HashSig.SLHDSA.External.Framing
 public import HashSig.SLHDSA.FipsParams
 public import HashSig.SLHDSA.Fors
 public import HashSig.SLHDSA.ForsConformance
@@ -55,6 +57,7 @@ public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Defs
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Joint
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Observation
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Phase
+public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Pure
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Recorded
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Transfer
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Wire
@@ -374,6 +377,7 @@ public import HashSig.SLHDSA.Security.WeakKeyBound
 public import HashSig.SLHDSA.Security.Wire
 public import HashSig.SLHDSA.Security.WotsWitnesses
 public import HashSig.SLHDSA.Security.XmssWitnesses
+public import HashSig.SLHDSA.SigningView.Encoding
 public import HashSig.SLHDSA.Wots
 public import HashSig.SLHDSA.WotsChecksum
 public import HashSig.SLHDSA.WotsEncoding
