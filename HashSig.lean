@@ -48,6 +48,7 @@ public import HashSig.SLHDSA.SHAKE128s.Bridge.GraphStructure
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Hypertree
 public import HashSig.SLHDSA.SHAKE128s.Bridge.PaperGame
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Scheme
+public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Certificates
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Component
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Defs
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Joint
