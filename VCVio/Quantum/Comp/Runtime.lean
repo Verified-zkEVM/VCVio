@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import PolyFun.IPFunctor.Free.Fold
 public import VCVio.Quantum.Comp.Basic
 public import VCVio.Quantum.Oracle.Basis
 
@@ -22,7 +23,7 @@ implementation of the oracle, not a running time.
 Running a program `x : QuantumComp L spec X A` under an interpretation `I` of its local
 operations and against a runtime `R` gives a dependent subinstrument `R.run I x` from `A × R.D`
 whose outcomes are the leaves `⟨u, y⟩` of `x`, with output register `u × R.D` on the leaf
-`⟨u, y⟩`. It is defined by recursion on the program tree:
+`⟨u, y⟩`. It is the algebra fold of the program tree:
 
 * a local operation `o` applies `I o` to the program register, framed by `D`;
 * a call of port `i` through `ℓ : A ≃ In i × E` relabels `A × D` to `(In i × D) × E`, applies
@@ -166,15 +167,17 @@ theorem lossless_queryStep {i : spec.Port} (hi : (R.step i).Lossless) (E : QReg)
 
 /-! ## Execution -/
 
-/-- Execution of a program tree, by recursion on the tree. -/
+/-- Execution of a program tree as an algebra fold into dependent subinstruments. -/
 @[expose]
 noncomputable def runAux :
     {A : QReg} → IFreeM (QuantumComp.toIPFunctor L spec) X A →
-      DSubInstrument (A × R.D) (Σ u, X u) fun p ↦ p.1 × R.D
-  | _, .pure x => DSubInstrument.ret (fun p : Σ u, X u ↦ p.1 × R.D) ⟨_, x⟩
-  | _, .liftBind (.prim o) k => ((I o).frame R.D).bind fun b ↦ runAux (k (ULift.up b))
-  | _, .liftBind (.query i E ℓ) k =>
-      DSubInstrument.bind (R.queryStep i E ℓ) fun r ↦ runAux (k (ULift.up r))
+      DSubInstrument (A × R.D) (Σ u, X u) fun p ↦ p.1 × R.D :=
+  fun {_} x ↦ IFreeM.fold (P := QuantumComp.toIPFunctor L spec)
+    (D := fun A ↦ DSubInstrument (A × R.D) (Σ u, X u) fun p ↦ p.1 × R.D)
+    (fun _ x ↦ DSubInstrument.ret (fun p : Σ u, X u ↦ p.1 × R.D) ⟨_, x⟩)
+    (fun _ cmd next ↦ match cmd with
+      | .prim o => ((I o).frame R.D).bind fun b ↦ next (ULift.up b)
+      | .query i E ℓ => DSubInstrument.bind (R.queryStep i E ℓ) fun r ↦ next (ULift.up r)) x
 
 /-- The execution of the program `x` under the interpretation `I` of its local operations, against
 the runtime `R`: a dependent subinstrument from `A × R.D` whose outcomes are the leaves `⟨u, y⟩` of
@@ -182,7 +185,10 @@ the runtime `R`: a dependent subinstrument from `A × R.D` whose outcomes are th
 a call applies `R.step i` to the exposed port register and `D`, with the rest of the program
 register carried along (`queryStep`). `run` sends `bind` of programs to `bind` of dependent
 subinstruments (`run_bind`). It does not choose an initial state; the observations below start
-from `ρ ⊗ R.init`. -/
+from `ρ ⊗ R.init`.
+
+To compare runs against two runtimes on a pure program, rewrite with `run_pure` rather than
+closing by `rfl`: definitional unfolding can compare the two unused fold algebras first. -/
 @[expose]
 noncomputable def run (x : QuantumComp L spec X A) :
     DSubInstrument (A × R.D) (Σ u, X u) fun p ↦ p.1 × R.D :=
