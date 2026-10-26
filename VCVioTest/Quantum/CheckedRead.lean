@@ -232,7 +232,7 @@ example :
   simp only [filledBatch, checkPassProjector, Finset.mem_univ,
     VectorCommitment.NonadaptiveCheck.checkOn, prescribedCheck, Option.elim_none, id_eq,
     Bool.false_eq_true, imp_false, not_true_eq_false, forall_const, ↓reduceIte, diagonal_zero,
-    mul_zero, zero_mul, implies_true, kroneckerMap_zero_right, MatrixMap.conj_zero]
+    mul_zero, zero_mul, kroneckerMap_zero_right, MatrixMap.conj_zero]
   rfl
 
 /-- A well-formed empty log accepts and preserves every joint residual state. -/
