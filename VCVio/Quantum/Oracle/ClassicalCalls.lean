@@ -348,7 +348,14 @@ theorem branch_run₂_callBasis {β : Type} [DecidableEq β] (p : P) (B : QReg) 
     ext ⟨b, d⟩ ⟨⟨i, b'⟩, d'⟩
     simp only [kroneckerMap_apply, Matrix.mul_apply, Matrix.single_apply, Matrix.one_apply,
       Fintype.sum_prod_type, basisMatrix_apply, conjTranspose_apply]
-    split_ifs <;> first | (simp_all; done) | (simp_all; tauto)
+    split_ifs <;>
+      simp_all only [Finset.mem_filter, Finset.mem_univ, true_and, Prod.mk.injEq, not_and,
+        and_imp, Finset.univ_unique, PUnit.default_eq_unit, Equiv.coe_uniqueProd, mul_ite,
+        mul_one, mul_zero, ↓reduceIte, Finset.sum_ite_eq', Finset.sum_ite_irrel,
+        Finset.sum_const, Finset.card_singleton, one_smul, smul_zero,
+        star_zero, star_one, ite_eq_right_iff, one_ne_zero, imp_false, ite_self,
+        not_true_eq_false]
+    tauto
   rw [hR, ← Matrix.mul_assoc, hL]
   simp only [Matrix.mul_assoc]
   rw [← basisMatrix_comp, basisMatrix_equiv_eq_conjTranspose (QuantumRuntime.queryEquivOut _ _ _),
