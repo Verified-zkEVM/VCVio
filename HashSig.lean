@@ -49,6 +49,7 @@ public import HashSig.SLHDSA.SHAKE128s.Bridge.PaperGame
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Scheme
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Component
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Defs
+public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Observation
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Phase
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Recorded
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Transfer

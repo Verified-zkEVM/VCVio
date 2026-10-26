@@ -77,4 +77,11 @@ abbrev SourceCounts := Unforgeability.QueryCounts
     verified := observed.verified
     counts := phaseCounts observed.cost }
 
+/-- Recover the original outcome and its complete source vector from one observation. -/
+@[expose] def legacyObservation
+    (observed : SigningView.Observation Message Bytes (Option Bytes) SourceCounts) :
+    Game.Outcome × SourceCounts :=
+  (legacyOutcome observed,
+    Game.sourceCounts (legacyOutcome observed) (observed.cost .keygen) (laterHashes observed.cost))
+
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment
