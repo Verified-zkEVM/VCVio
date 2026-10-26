@@ -931,18 +931,18 @@ theorem lossless_run₂_checkAt [AddGroup Z] (E : VCOracle k X Y)
     (E.lossless_mixedExtractRuntime_step ME code)
 
 /-- A malformed prescribed transcript rejects without reading. -/
-theorem checkAt_pairs_none (i : Fin k) (io : (VC i).NonadaptiveCheck) (B : QReg)
+theorem checkAt_log_none (i : Fin k) (chk : (VC i).NonadaptiveCheck) (B : QReg)
     (j : Fin k) (cm : Cm) (ans : PartialVec (ℓ i) Msg) (pf : Pf i)
-    (h : io.pairs cm ans pf = none) :
+    (h : chk.log cm ans pf = none) :
     checkAt (Z := Z) VC B i j cm ans pf = QuantumComp₂.pure false := by
-  simp [checkAt, io.check_eq, h]
+  simp [checkAt, chk.check_eq, h]
 
 /-- An empty prescribed transcript accepts without reading. -/
-theorem checkAt_pairs_nil (i : Fin k) (io : (VC i).NonadaptiveCheck) (B : QReg)
+theorem checkAt_log_nil (i : Fin k) (chk : (VC i).NonadaptiveCheck) (B : QReg)
     (j : Fin k) (cm : Cm) (ans : PartialVec (ℓ i) Msg) (pf : Pf i)
-    (h : io.pairs cm ans pf = some []) :
+    (h : chk.log cm ans pf = some []) :
     checkAt (Z := Z) VC B i j cm ans pf = QuantumComp₂.pure true := by
-  simp [checkAt, io.check_eq, h, checkIO]
+  simp [checkAt, chk.check_eq, h, OracleSpec.QueryLog.recheck]
 
 /-- `VC_i.Open(Q, td)` run from inside an experiment, its coins answered by uniform coins
 (ePrint 2025/2166, p. 51). It makes no oracle call. -/
