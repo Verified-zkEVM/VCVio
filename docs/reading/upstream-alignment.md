@@ -12,8 +12,7 @@ way to core or blocked on a design decision.
 
 Companion files: [`probability-semantics-landscape.md`](probability-semantics-landscape.md)
 (§19–20 are the probability-specific evidence ledger), PolyFun's
-`docs/reading/upstream-alignment.md` (the same survey for the polynomial-functor layer,
-whose `corrections.md` items 3–5 name VCVio-side duplications recorded below).
+`docs/reading/upstream-alignment.md` (the same survey for the polynomial-functor layer).
 
 ## Why this file exists
 
@@ -68,7 +67,7 @@ needs an instance-synthesis check, not a grep.
 | `ToMathlib/Control/WriterT.lean:130` `run_seqLeft'` | local `run_seqLeft` :83 | — | **done** (this PR) — verbatim duplicate inside the same file, 0 consumers |
 | `ToMathlib/Control/Monad/Ordered.lean:39,46` `pointwiseRelation`, `Proper` | `Pi.le_def`; `Relator.LiftFun`, `Mathlib/Logic/Relator.lean` | yes | **done** (this PR) — 0 uses, even inside the file |
 | `HashSig/SLHDSA/WotsChecksum.lean:38` `Forall₂` (+ `length_eq` :43, `sum_le` :49, `take`, `drop`) | `List.Forall₂`, `Batteries/Data/List/Basic.lean:383`; `List.Forall₂.length_eq`, `Mathlib/Data/List/Forall2.lean:133`; `forall₂_take`/`forall₂_drop`, `:180,185`; `List.Forall₂.sum_le_sum`, `Mathlib/Algebra/Order/BigOperators/Group/List.lean:27` (`to_additive` of `prod_le_prod'`) | yes | **done** (this PR) — `sum_le_sum` needs `Mathlib.Algebra.Order.Group.Nat` for `AddLeftMono ℕ`; `append_inv` is re-proved from `forall₂_take_append`/`forall₂_drop_append` (`:190,196`); `eq_of_sum_eq` :57 is new content and stays |
-| `VCVio/OracleComp/SimSemantics/StateT/PreservesInv.lean:54` `QueryImpl.PreservesInv` | local `StateT.PreservesInv` :143 | — | **open (internal)** — the first unfolds to `∀ t, StateT.PreservesInv (impl t) Inv`; redefine it that way, `preservesInv_iff := Iff.rfl` |
+| `VCVio/OracleComp/SimSemantics/StateT/PreservesInv.lean:54` `QueryImpl.PreservesInv` | local `StateT.PreservesInv` :143 | — | **done (internal)** — `QueryImpl.PreservesInv impl Inv := ∀ t, StateT.PreservesInv (impl t) Inv` |
 | `Examples/ProgramLogic/RelationalDerived.lean:10` `public import Cslib.Foundations.Data.PFunctor.Free` | — | — | **keep** — corrected while landing this PR: no identifier from the module is used, but removing the import breaks the file (`PFunctor.FreeM.instPure` is otherwise reachable only through `public meta import`, so the non-`meta` import is what makes the `pure` instance usable in definitions). A name search cannot see module-visibility dependencies; the row was wrong |
 | `LibSodium/SHA2.lean` | — | — | **done** (this PR) — 0-byte file |
 | `VCVio/OracleComp/Constructions/WithoutReplacement.lean:44` `List.length_eq_countP_add_countP_not` | `List.length_eq_countP_add_countP`, `Init/Data/List/Count.lean:66` | yes | **done** (this PR) — `¬p a` vs `!p x`, bridged by `simp` |
@@ -83,15 +82,15 @@ needs an instance-synthesis check, not a grep.
 | `VCVio/EvalDist/Defs/Support.lean:31–41` `SetM.pure_def/bind_def/run_eq` | local `SetM.run_pure/run_bind/run_map`, `ToMathlib/Data/Set/Functor.lean:36–45` | — | **done** (this PR) — two simp normal forms for one term; keep the `run_*` family |
 | `ToMathlib/Control/Monad/Indexed.lean` (whole file) | `PolyFun/Control/Monad/Indexed.lean` (verbatim copy; `ireturn`↔`ipure` only) | yes | **done** (this PR) — both declare a root-namespace `class IndexedMonad`; delete the copy, import PolyFun's from `Graded.lean` |
 | `ToMathlib/Control/WriterT.lean:30` `LawfulAppend` | `Std.Associative (·++·)` + `Std.LawfulIdentity (·++·) ∅`, `Init/Core.lean:2478,2542`; `List` instances `Init/Data/List/Basic.lean:627,647` (re-proved locally at `:51`) | yes | **deferred** — 49 sites in 8 files, the reverse associativity orientation, `grind =` attributes, and Mathlib's `LawfulMonad (WriterT ω M)` only for `[Monoid ω]`: over 100 lines of churn, so recorded rather than done |
-| `LatticeCrypto/Ring/Norms.lean:74` `centeredRepr` + six restated lemmas `:78–136` | `ZMod.valMinAbs`, `Mathlib/Data/ZMod/ValMinAbs.lean:23–29`; `natAbs_valMinAbs_le`, `natAbs_valMinAbs_neg`, `coe_valMinAbs`, `valMinAbs_mem_Ioc`, `valMinAbs_spec` | yes | **open** — the file already proves `centeredRepr_eq_valMinAbs` (`:139`) |
-| `LatticeCrypto/Ring/Core.lean:204–210` `polyCoeffFinsetSum` | `Polynomial.finsetSum_coeff`, `Mathlib/Algebra/Polynomial/Coeff.lean` | yes | **open** — verbatim |
-| `LatticeCrypto/MLDSA/Concrete/NTT.lean:82–129` `zeta_pow_256`, `MLKEM/Concrete/NTT.lean:106–156` `zeta_pow_128`, both `nInv_stageScalar` | `reduce_mod_char`, `Mathlib/Tactic/ReduceModChar.lean` | yes | **open** — one line each (verified); `square_mod` helper goes with them |
-| `LatticeCrypto/MLKEM/Concrete/Encoding.lean:510–520` `decode12Pair_fst/snd` | `omega` | — | **open** (verified) |
-| `Extern/MLDSA/NonVacuity.lean:36–38,98`, `Extern/MLDSA/Laws.lean:236` docstrings citing a `native_decide` NTT certificate | — | — | **open (docs)** — the certificate was retired by #614; no `native_decide` remains in the proof libraries |
+| `LatticeCrypto/Ring/Norms.lean:74` `centeredRepr` + six restated lemmas `:78–136` | `ZMod.valMinAbs`, `Mathlib/Data/ZMod/ValMinAbs.lean:23–29`; `natAbs_valMinAbs_le`, `natAbs_valMinAbs_neg`, `coe_valMinAbs`, `valMinAbs_mem_Ioc`, `valMinAbs_spec` | yes | **done** (#634) — `centeredRepr` is `ZMod.valMinAbs` by definition and its lemmas delegate |
+| `LatticeCrypto/Ring/Core.lean:204–210` `polyCoeffFinsetSum` | `Polynomial.finsetSum_coeff`, `Mathlib/Algebra/Polynomial/Coeff.lean` | yes | **done** (#634) — the coefficient proofs use `Polynomial.finsetSum_coeff` |
+| `LatticeCrypto/MLDSA/Concrete/NTT.lean:82–129` `zeta_pow_256`, `MLKEM/Concrete/NTT.lean:106–156` `zeta_pow_128`, both `nInv_stageScalar` | `reduce_mod_char`, `Mathlib/Tactic/ReduceModChar.lean` | yes | **done** (#634) — `reduce_mod_char` |
+| `LatticeCrypto/MLKEM/Concrete/Encoding.lean:510–520` `decode12Pair_fst/snd` | `omega` | — | **done** — `omega` |
+| `Extern/MLDSA/NonVacuity.lean:36–38,98`, `Extern/MLDSA/Laws.lean:236` docstrings citing a `native_decide` NTT certificate | — | — | **done (docs)** — the docstrings cite `LatticeCrypto/Ring/NTTCert.lean`; no `native_decide` remains in the proof libraries |
 | `ToMathlib/Data/ENNReal/AbsDiff.lean:51–55` private `tsub_le_tsub_add_tsub` | `tsub_le_tsub_add_tsub`, `Mathlib/Algebra/Order/Sub/Defs.lean:138` (same name, same statement) | yes | **done** (this PR) |
 | `VCVio/EvalDist/Inequalities.lean:41–44` private `tsum_sub_tsum_le_tsum_sub` (unused hypothesis) | local `ENNReal.tsum_tsub_le_tsum_tsub`, `ToMathlib/Data/ENNReal/AbsDiff.lean:114` | — | **done** (this PR) |
-| `VCVio/CryptoFoundations/Asymptotics/Negligible.lean:43–46` `negligible_of_le` | `SuperpolynomialDecay.trans_eventuallyLE`, `Mathlib/Analysis/Asymptotics/SuperpolynomialDecay.lean:133–138`, with `g := 0` | yes (`IsOrderedRing ℝ≥0∞`, `Mathlib/Data/ENNReal/Basic.lean:143`) | **open** — restate through it; gains eventually-≤ |
-| `ToMathlib/Data/ENNReal/SumSquares.lean:63–80` `sq_sum_div_card_le_sum_sq` (17 lines) | `ENNReal.div_le_of_le_mul`, `Mathlib/Data/ENNReal/Inv.lean:386` | yes | **open** — keep the statement, two-line proof |
+| `VCVio/CryptoFoundations/Asymptotics/Negligible.lean:43–46` `negligible_of_le` | `SuperpolynomialDecay.trans_eventuallyLE`, `Mathlib/Analysis/Asymptotics/SuperpolynomialDecay.lean:133–138`, with `g := 0` | yes (`IsOrderedRing ℝ≥0∞`, `Mathlib/Data/ENNReal/Basic.lean:143`) | **done** (#635) — through `negligible_of_eventuallyLE` |
+| `ToMathlib/Data/ENNReal/SumSquares.lean:63–80` `sq_sum_div_card_le_sum_sq` (17 lines) | `ENNReal.div_le_of_le_mul'`, `Mathlib/Basic/ENNReal/Inv.lean:400` | yes | **done** — one term, `ENNReal.div_le_of_le_mul' (sq_sum_le_card_mul_sum_sq s f)` |
 | `negligible_natMul_of_poly_bound`, `negligible_ofReal_natDiv_of_poly_bound` | generic; belong in `Negligible.lean` | — | **done** — `VCVio/CryptoFoundations/Asymptotics/Negligible.lean:131,141` |
 | `ToMathlib/ProbabilityTheory/OptimalCoupling.lean:110` private `spmf_ext`; `LatticeCrypto/Ring/Kernel.lean:149` `poly_ext` | local `@[ext] SPMF.ext` (`SPMF.lean:187`), `@[ext] PolyBackend.ext_coeff` (`Ring/Core.lean:142`) | — | **done** (this PR) — wrappers over the `@[ext]` lemmas they call |
 
@@ -117,12 +116,12 @@ needs an instance-synthesis check, not a grep.
 
 | VCVio | Target | Evidence of absence |
 |---|---|---|
-| `CommApplicative` instances for `Id`, `Option`, `Except ε` (`[Subsingleton ε]`), `ReaderT` (from `Commutative.lean`) | `Mathlib/Control/Basic.lean` | `grep -rn "instance.*CommApplicative" Mathlib` → 5 hits, none of these |
+| `CommApplicative` instances for `Option`, `Except ε` (`[Subsingleton ε]`), `ReaderT` (from the deleted `Commutative.lean`) | `Mathlib/Control/Basic.lean` | absent on Mathlib `master` (2026-10-22); `CommApplicative Id` is upstream (`Mathlib/Control/Applicative.lean:74`) |
 | `ToMathlib/Data/FinEnum.lean:61` `FinEnum Bool`, `Sym.finEnum`, `Equiv.Perm.finEnum`, `Function.Embedding.finEnum` | `Mathlib/Data/FinEnum.lean` | Mathlib has `Fintype (Sym α n)` (`Data/Fintype/Vector.lean:47`) and `Fintype (α ↪ β)` but no `FinEnum` versions |
 | `VCVio/OracleComp/Constructions/SampleableType.lean:300–308` `FinEnum (ZMod n)`, `FinEnum USize`, `FinEnum ISize`; `arrayVectorEquivFin`, `instFintypeVector` | `Mathlib/Data/FinEnum.lean`; `Mathlib/Data/Fintype/Vector.lean` (which covers `List.Vector` only, `:27`) | grep of core/Batteries/Mathlib for `Vector α n ≃ (Fin n → α)` forms empty |
 | `ToMathlib/General.lean` core-`Vector` `cases`/`induction`/`cases₂`/`induction₂` | core `Init/Data/Vector/` | core has only `elimAsArray`/`elimAsList` (`Init/Data/Vector/Basic.lean:71,78`) |
 | `ToMathlib/Control/WriterT.lean:30` `LawfulAppend` | core (or just use `Monoid`) | no `LawfulAppend` in core/Batteries/Mathlib |
-| `ToMathlib/Control/Lawful/MonadFunctor.lean:20,31`, `MonadControl.lean:23,39` `LawfulMonadFunctor(T)`, `LawfulMonadControl(T)` | core `Init/Control/Lawful/` next to `LawfulMonadLift(T)` (`Init/Control/Lawful/MonadLift/Basic.lean:29,44`, the exact template) | class-keyword grep across five trees |
+| `LawfulMonadFunctor(T)`, `LawfulMonadControl(T)`, now in PolyFun's `PolyFun/Control/Lawful/MonadFunctor.lean` and `MonadControl.lean` | core `Init/Control/Lawful/` next to `LawfulMonadLift(T)` (`Init/Control/Lawful/MonadLift/Basic.lean:29,44`, the exact template) | class-keyword grep across five trees |
 | `HashSig/SLHDSA/WotsChecksum.lean` `Forall₂.eq_of_sum_eq` | `Mathlib/Data/List/Forall2.lean` | no statement of this shape upstream |
 | `ToMathlib/Data/Set/Functor.lean` `SetM.run_*`; `BitVec.xor_self_xor` | Mathlib / core | see Keep |
 
@@ -137,6 +136,13 @@ Mathlib kernel composition delegates to the measure rules. Parameterized expecte
 `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` and
 `ToMathlib/Probability/Kernel/TotalVariation.lean`.
 
+Mathlib v4.35 defines `MeasureTheory.etvDist`/`tvDist` (`Mathlib/MeasureTheory/Measure/TotalVariation/`)
+as the total variation of `μ - ν`, twice the event-supremum `Measure.etvDist` on probability
+measures; `ToMathlib/MeasureTheory/Measure/TotalVariation/Variation.lean` proves the relation
+(`two_mul_etvDist_eq_etvDist_add_absDiff`). Mathlib has no map, bind or kernel bounds for its
+distance, at the pin or on `master`, so the composition lemmas stay local and are the upstream
+candidates.
+
 **Program logic: core lattice-generic WP on v4.35.** Unary carriers consume `Std.WP.WPMonad`
 and core exception stacks through PolyFun's `MAlgOrdered.toWPMonad`. PolyFun's `ExactWPMonad`
 provides equality laws for pure, bind and map; its parallel ordered-algebra WP/triple API is
@@ -144,8 +150,15 @@ removed. VCVio's expectation, necessary and probability-bounded interpretations 
 The measure scopes also provide direct `WP` instances so that concrete-monad instances do not
 select a different carrier. The lower expectation instance uses `MAlgOrdered.toWP` without
 `LawfulMonad`; only its `WPMonad` instance and mapped-integral equation require that assumption.
-The handler catalogue consumes core `@[spec]` rules and `vcgen`.
-VCVio's probability/coupling frontend still owns `@[vcspec]`/`@[wpStep]` dispatch.
+The handler catalogue consumes core `@[spec]` rules and `vcgen`, and
+`Unary/WP/{NecessarySpecs,LowerSpecs}.lean` register the oracle primitives (queries, uniform
+draws, `replicate`, `liftComp`) for core `vcgen` in both readings, exact by default and pointwise
+under `OracleComp.Lower.Pointwise`.
+VCVio's probability/coupling frontend still owns `@[vcspec]`/`@[wpStep]` dispatch, and its
+exhaustive `vcgen` hands quantitative triples to core `vcgen` (`tryCoreVCGen`): core takes the
+structural steps, VCVio the probability lowering, cuts, averages, loops with invariants in
+context, and relational steps. `Pr{…}[…]` keeps its meaning; events reach triples through the
+bridge lemmas `prEvent_eq_wp` and `triple_propInd_self_iff_*`.
 
 The upgrade uses published Mathlib v4.35.0 and pins PolyFun to main at
 `ef4c157b3c6775fb55864303d96f9b400428d5f0`, which includes the #314–#328 naming stack.
@@ -202,10 +215,10 @@ four presentations; `AddWriterT` (`WriterCost.lean`) is canonical and
 `CostModel.expectedCost` already delegates to `AddWriterT.expectedCost`. The odd one out is
 `CountingOracle.withCost` on the multiplicative `QueryCount` writer, blocked by the item above.
 
-**`OracleSpec` operations vs PolyFun** (PolyFun `corrections.md` item 4): `OracleSpec`'s
+**`OracleSpec` operations vs PolyFun**: `OracleSpec`'s
 `+`/`×`/`Σ`/`Π` are re-declared for `ι → Type` indexing but are `rfl`-bridged to
 `PFunctor.add/sigma/pi` (`toPFunctor_add/sigma/mul/pi` in `OracleSpec.lean`); the theory is
-not re-proved. `QueryImpl`/`ProbHandler` vs PolyFun `Sampler`/`Decoration` (item 3) remains
+not re-proved. `QueryImpl`/`ProbHandler` vs PolyFun `Sampler`/`Decoration` remains
 two vocabularies for one concept; reconcile when the Kleisli–Mealy wiring lands.
 
 **Deprecated aliases.** 25 `@[deprecated (since := "2026-06-25")] alias` blocks and 5 dated
@@ -455,7 +468,7 @@ Batteries' `LawfulAlternativeLift` and `LawfulMonadStateOf` (`B:Control/LawfulMo
 exist, the latter with 0 VCVio uses. `support` (a monad morphism into `SetM`) corresponds to core's
 `MonadAttach.CanReturn` (`C:Init/Control/MonadAttach.lean:30`, lawful instances for
 `ReaderT/StateT/ExceptT/OptionT`) and to `Functor.Liftp`/`Functor.supp` (`M:Control/Functor.lean:238,251`);
-no bridge exists in either direction. `OrderedMonad` (`V:ToMathlib/Control/Monad/Ordered.lean:52`,
+no bridge exists in either direction. `OrderedMonad` (PolyFun's `PolyFun/Control/Monad/Ordered.lean`,
 Mathlib `Preorder`) is the twin of core's `MonoBind` (`C:Init/Internal/Order/Basic.lean:879`,
 `Lean.Order`), likewise unbridged.
 
@@ -912,7 +925,7 @@ audit before deletion (see Method).
 | Surface | Verdict |
 |---|---|
 | `ToMathlib/Control/Monad/Commutative.lean` (whole file, ~200 lines) | no consumer; either restate over `CommApplicative` or delete |
-| `ToMathlib/Control/Monad/Ordered.lean` `pointwiseRelation`, `Proper` | delete |
+| `ToMathlib/Control/Monad/Ordered.lean` `pointwiseRelation`, `Proper` | **done**: the file is deleted, and PolyFun owns `OrderedMonad` (see *PolyFun repin*) |
 | `ToMathlib/General.lean:419,156,165,280` | delete (see Adopt) |
 | `Examples/Regev.lean`, `Examples/FrankingProtocol.lean` | delete (fully commented out) |
 | `Examples/OneTimePad/Basic.lean:12` `public import Mathlib.Data.Vector.Zip` | no `Vector` use in the file; delete |
@@ -1078,3 +1091,106 @@ fair-coin identity. One-time-pad privacy uses `Measure.prod_prod` and singleton 
 of a point-mass calculation. ElGamal's computational handler identities induce native measure
 equivalence; the discrete theorem names then kept as compatibility corollaries have since been
 removed.
+
+## v4.35 survey (2026-10-22)
+
+The *Maintenance* pass for the v4.35.0 pins, read against the next releases as well:
+
+| Tree | Revisions read | How |
+|---|---|---|
+| Lean core / Std | `v4.34.0` → `v4.35.0` (pin) → `v4.36.0-rc1` and `master` | `diff -r` of the two installed toolchains' `src/lean`; release notes and per-path commit lists through the GitHub API for rc1 and `master` |
+| Mathlib | `5ed29652` (v4.34.0) → `56a00585` (v4.35.0, pin) → `v4.36.0-rc1` (`625d8914`) and `master` | local `git diff` between the pins; per-directory commit lists past the pin |
+| cslib | `990e65a6` → `5b56df99` (pin) → `v4.36.0-rc1` and `main` | local checkout and GitHub API |
+| PolyFun | `3710d71b` → `ef4c157b` (pin, `main`) | the PolyFun clone at both revisions |
+| Batteries, Aesop, Plausible | v4.35.0 (pin) → v4.36.0-rc1 | GitHub API (Batteries' rc1 diff touches four files; the others move only the toolchain) |
+
+**Adopted at the pin.**
+- PolyFun's `@[spec] Std.WP.Spec.mk_StateT` (#271) is the `StateT.mk` rule of the seeded-oracle
+  specifications.
+- PolyFun's `IsTotalRollBound.mono`/`isTotalRollBound_bind` prove the total query bound laws.
+- Mathlib's `ENNReal.div_le_of_le_mul'` is the divided Cauchy–Schwarz step.
+- Core `List.map_const'`/`List.prod_replicate` replace the deleted `List.prod_map_const`.
+- Mathlib's variation distance is related to `Measure.etvDist` (see *Native TV composition*).
+- Core `vcgen` steps oracle programs with the rules of `Unary/WP/{NecessarySpecs,LowerSpecs}.lean`,
+  and VCVio's exhaustive `vcgen` delegates its quantitative triples to it.
+
+**Core `vcgen` (v4.35, experimental).** It works over any `Std.WP` lattice, splits
+`ite`/`dite`/`cond`/matchers keeping the branch hypotheses, takes loop invariants (`invariants`,
+`@[spec_invariant_type]`), frames, and a `with <grind step>` discharger, and with
+`errorOnMissingSpec := false` it leaves the programs it has no rule for as verification
+conditions. `@[spec]` is a scoped attribute, so alternative rule sets can be opened per call.
+VCVio's own `vcgen` syntax is a `tactic_alt` of core's `vcgenMacro`, and a bare `vcgen` parses as
+both. Core's `vcgen` does not descend under an integral or sum, which is why the exact rules of the
+lower reading leave the expectation of the rest of the program in the verification condition.
+
+**v4.36.0-rc1 changes that strengthen core `vcgen`.**
+- lean4#15555: `vcgen` reuses the goal's `WP` instance; on v4.35 it rebuilds each rule for the
+  instance that search finds, so a goal stated in one reading is stepped with the rules of the
+  reading in scope.
+- lean4#15517: `Lean.Order.iSup`/`iInf` over `Sort`, so an infimum over the support needs no
+  `{a // a ∈ support oa}` subtype.
+- lean4#15487, lean4#15515: pointwise `∧` and `∃`/`⨆` splitting in preconditions.
+- lean4#15491: conjunctive preconditions for core's `monadLift`, `tryCatch`, `orElse`,
+  `liftWith`, `adapt` rules.
+- lean4#14827: pointwise exception verification conditions.
+- `master` adds `vcgen +jp` (lean4#14398) and lexicographic loop measures (lean4#14753).
+
+**Next bump (v4.36).**
+- lean4#15217 renames the `epost` binder of `Std.WP.Triple.iff` to `eposts`. A named argument
+  would be a hard error; `triple_iff_le_wp` passes none.
+- lean4#15290 deprecates the `Std.Do` proof mode (`mintro`, `mspec`, …). The `Std.Do` examples
+  are term proofs, and `Unary/StdDoBridge.lean`, `Unary/WriterTBridge.lean` and
+  `Interaction/UC/StdDoBridge.lean` retire with it.
+- lean4#15171 renames `Std.WP.WP.wp_consequence_le` to `wp_monotone_post_le` (cited by name in
+  `Tactics/Common/Backward.lean`, where the deprecation is not linted) and the `WP.trans`
+  family that `ToMathlib/Control/Monad/RelWP.lean` mirrors; PolyFun has sixteen such sites.
+- lean4#14316 keeps the type-class cache across commands; the `SpecInstanceSearch` canaries must
+  still run a real search.
+- Mathlib #42704 makes the type arguments of `IsZeroApply` implicit
+  (`ToMathlib/MeasureTheory/Measure/Subprobability.lean`).
+- Mathlib #41506 makes `Set` a one-field structure. VCVio has no `Set.Mem`/`setOf` unfolding, but
+  only a build shows the effect.
+
+**Recorded as upstream candidates, prepared as Mathlib patches.**
+- `basify`'s `isAtom` keeps metadata, so a `no_index` numeral is generalized as an atom.
+- A `finiteness` rule for finite `ENNReal` sums.
+- `CommApplicative` instances for `Option`, `Except`, `ReaderT`.
+- `FinEnum` instances for `ZMod n`, `USize`, `ISize` and the safe ones of
+  `ToMathlib/Data/FinEnum.lean`.
+- An `IsZeroApply` instance for `Measure`.
+- The core-`Vector` equivalence with `Fin n → α` (`arrayVectorEquivFin`, duplicated by
+  `HashSig/SLHDSA/Codec.lean`'s `WireCodec.vectorEquivFin`).
+
+**Unchanged upstream.**
+- Core: `LawfulMonadFunctor`/`LawfulMonadControl`, core-`Vector` `cases`/`induction`/`cons`,
+  `BitVec.xor_self_xor`, a replacement for `LawfulAppend`.
+- Mathlib: a subprobability-measure class, `SetM.run_*`, `Forall₂.eq_of_sum_eq`, a
+  `PseudoEMetricSpace ℝ≥0∞` instance.
+- cslib: `PFunctor.add` stays implicit-reducible, so the coproduct answer-type workarounds of the
+  v4.35 port stay.
+
+## PolyFun repin (2026-10-23)
+
+PolyFun `5670109c` → `ecac686f` (`main`, through PolyFun #349). Mathlib, cslib, Batteries and the
+other transitive pins are unchanged. The new commits (#340–#349) add features; VCVio needed no
+source change for them.
+
+- **Copies of PolyFun's files.** PolyFun already shipped these at `5670109c`, so the VCVio copies
+  are deleted, with their 71 `scripts/nolints.json` rows:
+  - the monad theory of PolyFun #333: `ToMathlib/Control/Lawful/{MonadControl,MonadFunctor,MonadState}.lean`
+    and `Monad/{Dijkstra,Graded,Ordered,Relation,Relative}.lean`, now under
+    `PolyFun/Control/{Lawful,Monad}/`;
+  - `ToMathlib/Control/AlternativeMonad.lean`.
+  None of them was imported outside the group.
+- **`AlternativeMonad.lean`'s lemmas.** Its `monadLift_guard`, `monadLift_optional` and
+  `Option.monadLift_elimM` are PolyFun's (`PolyFun/Control/Monad/AlternativeLift.lean`). Its `liftM`
+  forms (`liftM_failure`, `liftM_orElse`, `liftM_guard`, `liftM_optional`, `Option.liftM_elimM`)
+  had no consumers. Core's `liftM` abbreviates `monadLift`, so Batteries' `monadLift_failure` and
+  `monadLift_orElse` and PolyFun's lemmas already state them.
+- **`WriterT.AppendWP`.** It is PolyFun's `PolyFun/Control/Monad/WriterT/WP.lean`, with its `@[spec]`
+  rules in `PolyFun/Control/Do/Spec.lean`, and `ToMathlib/Control/WriterT/WP.lean` is deleted. The
+  scoped `Std.Associative` and `Std.LawfulIdentity` instances for `LawfulAppend` logs
+  (`ToMathlib/Control/WriterT.lean`, scope `WriterT.AppendWP`) feed PolyFun's reading. The
+  `LawfulAppend` row above stays deferred.
+- **Init sweep.** `VCVioTest.PFunctorFacade.instFintypeTriPFunctor` is no longer flagged, so its
+  baseline entry goes.

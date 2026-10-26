@@ -69,15 +69,23 @@ private def bitRevN (logn : ℕ) (i : Nat) : Nat := Id.run do
     v := v >>> 1
   return r
 
+/-- The twiddle factors `ζ^(brv i)` for `i < 2^logn`, where `brv` reverses `logn`-bit indices and
+`ζ = 11^((q - 1) / 2^(logn + 1))`, a primitive `2^(logn + 1)`-th root of unity modulo `q` for
+`logn ≤ 11`. -/
 def zetaTable (logn : ℕ) : Array Coeff :=
   let n := 2 ^ logn
   let z := primitiveRoot2N logn
   (Array.range n).map fun i => z ^ bitRevN logn i
 
+/-- The inverse of `n = 2^logn` modulo `q` for `n ∣ q - 1`, computed as `q - (q - 1) / n`; it
+scales the output of `butterflyInvNTT`. -/
 def nInv (logn : ℕ) : Coeff :=
   let n := (2 ^ logn : ℕ)
   ((modulus - (modulus - 1) / n : ℕ) : Coeff)
 
+/-- The forward NTT of `f ∈ ℤ_q[x]/(x^n + 1)`, `n = 2^logn`, by in-place Cooley–Tukey
+butterflies with twiddles from `zetaTable`. Entry `i` of the result is `f(ζ^(2 · brv i + 1))`,
+so the evaluations at the roots of `x^n + 1` appear in bit-reversed order. -/
 def butterflyNTT (logn : ℕ) (f : Rq (2 ^ logn)) : Tq (2 ^ logn) := Id.run do
   let n := 2 ^ logn
   let table := zetaTable logn
@@ -99,6 +107,8 @@ def butterflyNTT (logn : ℕ) (f : Rq (2 ^ logn)) : Tq (2 ^ logn) := Id.run do
     len := len / 2
   return ⟨Vector.ofFn fun i => a.getD i.val 0⟩
 
+/-- The inverse of `butterflyNTT`, by in-place Gentleman–Sande butterflies with the negated
+twiddles taken in reverse order, followed by scaling by `nInv`. -/
 def butterflyInvNTT (logn : ℕ) (fHat : Tq (2 ^ logn)) : Rq (2 ^ logn) := Id.run do
   let n := 2 ^ logn
   let table := zetaTable logn
@@ -122,16 +132,21 @@ def butterflyInvNTT (logn : ℕ) (fHat : Tq (2 ^ logn)) : Rq (2 ^ logn) := Id.ru
     a := a.set! j (scale * a.getD j 0)
   return Vector.ofFn fun i => a.getD i.val 0
 
+/-- Multiplication in the NTT domain: the pointwise product of two transforms. -/
 def multiplyNTTs {n : ℕ} (fHat gHat : Tq n) : Tq n :=
   ⟨Vector.ofFn fun i => fHat[i.val] * gHat[i.val]⟩
 
 /-! ## Public API -/
 
+/-- The NTT of a Falcon polynomial modulo `q = 12289`, computed by `butterflyNTT`. -/
 def ntt (logn : ℕ) (f : Rq (2 ^ logn)) : Tq (2 ^ logn) := butterflyNTT logn f
 
+/-- The inverse NTT modulo `q = 12289`, computed by `butterflyInvNTT`. -/
 def invNTT (logn : ℕ) (fHat : Tq (2 ^ logn)) : Rq (2 ^ logn) :=
   butterflyInvNTT logn fHat
 
+/-- The executable transform-domain operations for degree `2^logn`: `ntt`, `invNTT` and the
+pointwise product `multiplyNTTs`. -/
 @[reducible] def concreteNTTRingOps (logn : ℕ) : NTTRingOps (2 ^ logn) where
   toHat := ntt logn
   fromHat := invNTT logn

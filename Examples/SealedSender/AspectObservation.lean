@@ -66,8 +66,11 @@ structure Packet where
   ciphertext : Nat
   /-- Length of the ciphertext. -/
   ctLen : Nat
+  /-- Send time. -/
   timestamp : Nat
+  /-- MAC tag authenticating the packet (numeric placeholder). -/
   macTag : Nat
+  /-- Length of the MAC tag. -/
   tagLen : Nat
 
 /-- The four parties in the sketch: real Sender / Server / Recipient and a
@@ -91,33 +94,50 @@ inductive Mode
 
 /-- The honest Server's observation: routing + ciphertext + timestamp, no MAC. -/
 structure ServerView where
+  /-- Sender id from the envelope. -/
   envFrom : Nat
+  /-- Recipient id from the envelope. -/
   envTo : Nat
+  /-- The packet's ciphertext. -/
   ciphertext : Nat
+  /-- The packet's send time. -/
   timestamp : Nat
 
 /-- The honest passive Network observer: envelope + ciphertext length + timestamp. -/
 structure NetView where
+  /-- Sender id from the envelope. -/
   envFrom : Nat
+  /-- Recipient id from the envelope. -/
   envTo : Nat
+  /-- Length of the packet's ciphertext. -/
   ctLen : Nat
+  /-- The packet's send time. -/
   timestamp : Nat
 
 /-- Sealed-sender's view of the Server: as `ServerView` but with `envFrom`
 stripped. -/
 structure ServerSealedView where
+  /-- Recipient id from the envelope. -/
   envTo : Nat
+  /-- The packet's ciphertext. -/
   ciphertext : Nat
+  /-- The packet's send time. -/
   timestamp : Nat
 
 /-- The MAC-aware passive network observer: like `NetView` but also sees the
 MAC tag and its length. -/
 structure NetMacAwareView where
+  /-- Sender id from the envelope. -/
   envFrom : Nat
+  /-- Recipient id from the envelope. -/
   envTo : Nat
+  /-- Length of the packet's ciphertext. -/
   ctLen : Nat
+  /-- The packet's send time. -/
   timestamp : Nat
+  /-- The packet's MAC tag. -/
   macTag : Nat
+  /-- Length of the packet's MAC tag. -/
   tagLen : Nat
 
 /-! ## Honest and corrupted observations -/

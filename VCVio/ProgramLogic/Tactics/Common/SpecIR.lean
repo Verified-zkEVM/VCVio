@@ -67,8 +67,11 @@ entry. The discrimination tree is the primary index; this summary powers
 kind-filtered iteration helpers and structural-compatibility scoring in
 the planner. -/
 structure NormalizedVCSpec where
+  /-- The category of the rule, read off the head of its statement. -/
   kind : VCSpecKind
+  /-- The head names that route the rule to the unary or relational discrimination tree. -/
   lookupKey : VCSpecLookupKey
+  /-- The outer syntactic shape of the rule's computation slot or slots. -/
   compPattern : VCSpecCompPattern
   deriving Inhabited, BEq, Repr
 

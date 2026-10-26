@@ -29,19 +29,30 @@ namespace FujisakiOkamoto
 /-- A reusable FO hash world packages the public hash-oracle interface together with the
 variant-specific ways of deriving encryption coins and shared keys. -/
 structure Variant {ι : Type} (hashOracleSpec : OracleSpec ι) (M PK C R K : Type) where
+  /-- The state of the hash oracles, such as the caches of lazily sampled random oracles. -/
   QueryCache : Type
+  /-- The hash-oracle state before any query has been answered. -/
   initCache : QueryCache
+  /-- The stateful implementation of the hash oracles, threading the `QueryCache` state. -/
   queryImpl : QueryImpl hashOracleSpec (StateT QueryCache ProbComp)
+  /-- Derive the encryption coins for a message under a public key by querying the hash
+  oracles. -/
   deriveCoins : {m : Type → Type v} → [Monad m] → [MonadLiftT ProbComp m] →
     [HasQuery hashOracleSpec m] → PK → M → m R
+  /-- Derive the shared key for a message and its ciphertext under a public key by querying the
+  hash oracles. -/
   deriveKey : {m : Type → Type v} → [Monad m] → [MonadLiftT ProbComp m] →
     [HasQuery hashOracleSpec m] → PK → M → C → m K
 
 /-- Rejection behavior is factored out from the FO hash world so explicit and implicit rejection
 share the same core construction. -/
 structure RejectionPolicy (K C : Type) where
+  /-- The extra secret state used to answer rejected ciphertexts, such as a PRF key. -/
   FallbackState : Type
+  /-- Sample the fallback secret state as part of key generation. -/
   keygen : ProbComp FallbackState
+  /-- The decapsulation output for a rejected ciphertext, computed from the fallback state:
+  `none` under explicit rejection, or a pseudorandom fallback key under implicit rejection. -/
   onReject : FallbackState → C → Option K
 
 /-- Explicit rejection returns `none` and carries no extra secret state. -/

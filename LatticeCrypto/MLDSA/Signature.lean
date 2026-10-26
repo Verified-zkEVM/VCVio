@@ -46,8 +46,13 @@ variable [nttOps : NTTRingOps]
 
 /-- The FIPS 204 signature format: `(c̃, z, h)`. -/
 structure FIPSSignature where
+  /-- The `λ/4`-byte commitment hash `c̃ = H(μ ‖ w1Encode(w₁), λ/4)`, from which the challenge
+  `c = SampleInBall(c̃)` (FIPS 204 Algorithm 29) is derived. -/
   cTilde : CommitHashBytes p
+  /-- The response vector `z = y + c·s₁`, accepted only when `‖z‖∞ < γ₁ - β`. -/
   z : RqVec p.l
+  /-- The hint `h = MakeHint(-c·t₀, w - c·s₂ + c·t₀)` (FIPS 204 Algorithm 39), from which the
+  verifier recovers `w₁` with `UseHint` (FIPS 204 Algorithm 40). -/
   h : Vector prims.Hint p.k
 
 /-! ### Key Generation -/

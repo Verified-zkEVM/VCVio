@@ -95,7 +95,9 @@ variable {K : Type}
 The key-sampling algorithm is probabilistic; the hash itself is a
 deterministic function of the key and input. -/
 structure KeyedHashFamily (K X Y : Type) where
+  /-- Sample a hash key. -/
   keygen : ProbComp K
+  /-- Hash an input under a key. -/
   hash : K → X → Y
 
 /-- A keyed CR adversary receives the public key and outputs a candidate
