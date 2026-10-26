@@ -17,6 +17,7 @@ public import ToMathlib.Control.Option
 public import ToMathlib.Control.OptionT
 public import ToMathlib.Control.StateT
 public import ToMathlib.Control.WriterT
+public import ToMathlib.Control.WriterT.Map
 public import ToMathlib.Data.BitVec
 public import ToMathlib.Data.ByteArray
 public import ToMathlib.Data.ENNReal.AbsDiff
