@@ -13,6 +13,9 @@ public import VCVio.Quantum.VC.Proof.Repeatability
 
 Prescriptions include zero, repeated cells, conflicting answers, and equal addresses in different
 databases. Equalities compare projector products and complete residual channels.
+Ordinary-import examples exercise mixed adaptive replay, including missing checked answers.
+A concrete extraction runtime supplies a phase-kickback counterexample to replay when
+extraction occurs between reads.
 -/
 
 public section
@@ -233,19 +236,20 @@ example (ρ : Matrix (B × DB) (B × DB) ℂ) :
 
 end EmptyChecks
 
-local notation "Old" => projectiveClassicalAnswers (k := 2) (X := Bool) (Y := ZMod 2)
+local notation "Ordinary" => projectiveClassicalAnswers (k := 2) (X := Bool) (Y := ZMod 2)
 
 /-- The public mixed-runtime theorem covers both retained answer families together. -/
 example {L : LocalSig} (I : L.Interp) {W : QReg → Type} {B : QReg}
     (prog : QuantumComp L (mixedOracleSpec 2 Bool (ZMod 2)) W B)
     (leaf : Σ u, W u) (tr : QueryLog (Cell →ₒ ZMod 2))
     (us : QueryLog (Cell →ₒ Option (ZMod 2))) :
-    ((Old).transcriptBranch leaf.1 tr ∘ₗ (E).classicalRead.transcriptBranch leaf.1 us) ∘ₗ
+    ((Ordinary).transcriptBranch leaf.1 tr ∘ₗ
+        (E).classicalRead.transcriptBranch leaf.1 us) ∘ₗ
         ((E).mixedRuntime.run I prog).branch leaf ∘ₗ
-        ((Old).transcriptBranch B tr ∘ₗ (E).classicalRead.transcriptBranch B us) =
+        ((Ordinary).transcriptBranch B tr ∘ₗ (E).classicalRead.transcriptBranch B us) =
       ((E).mixedRuntime.run I prog).branch leaf ∘ₗ
-        ((Old).transcriptBranch B tr ∘ₗ (E).classicalRead.transcriptBranch B us) := by
-  exact (Old).replay_mixed_transcripts_after_run (E).classicalRead
+        ((Ordinary).transcriptBranch B tr ∘ₗ (E).classicalRead.transcriptBranch B us) := by
+  exact (Ordinary).replay_mixed_transcripts_after_run (E).classicalRead
     (fun x y c a ↦ answer_commute_checked x c y a) I prog leaf tr us
 
 /-- Fixed coins preserve optional answers, including the missing outcome. -/
@@ -258,6 +262,17 @@ example (B : QReg) (next : Bool → List (Option (ZMod 2)) → Cell) (coins : Bo
       if zs = ys then (E).classicalRead.transcriptBranch B
         (ProjectiveClassicalAnswers.adaptiveTranscript (next coins) ys) else 0 :=
   (E).classicalRead.replay_fixedCoins_answers B next coins ys zs hl
+
+/-- The adaptive read wrapper exposes its accepting branch through an ordinary import. -/
+example (B : QReg) (next : List (Option (ZMod 2)) → Cell) :
+    (((E).withClassicalReads (E).classicalRead).run₂ .instruments
+      ((E).classicalRead.checkAdaptiveTranscript B next [none])).branch true =
+      (E).classicalRead.branch B (next []) none := by
+  rw [ProjectiveClassicalAnswers.branch_checkAdaptiveTranscript]
+  simp only [ProjectiveClassicalAnswers.adaptiveTranscript,
+    ProjectiveClassicalAnswers.transcriptBranch_cons,
+    ProjectiveClassicalAnswers.transcriptBranch_nil, LinearMap.id_comp]
+  rfl
 
 /-- A fixed policy alternates ports and chooses later actions from both answer types. -/
 def alternatingPolicy : List (ZMod 2 ⊕ Option (ZMod 2)) →
@@ -332,8 +347,12 @@ theorem readProjector_eq (a : Option (ZMod 2)) :
     ← Matrix.submatrix_mul_equiv _ _ _ cellEquiv.symm,
     ← Matrix.submatrix_mul_equiv _ _ _ cellEquiv.symm]
   congr 2 <;> ext i j <;>
-    simp [cellEquiv, compressDatabases, compressAll, piKron_apply,
-      Equiv.funUnique, Equiv.piUnique, Matrix.diagonal_apply, funext_iff]
+    simp only [cellEquiv, compressDatabases, compressAll, piKron_apply,
+      Equiv.funUnique, Equiv.piUnique, Matrix.diagonal_apply, funext_iff,
+      Fin.default_eq_zero, Fin.isValue, PUnit.default_eq_unit, Equiv.symm_trans,
+      Equiv.symm_mk, Equiv.coe_trans, Equiv.coe_fn_mk, submatrix_apply,
+      Function.comp_apply, Finset.univ_unique, uniqueElim_const, Finset.prod_const,
+      Finset.card_singleton, pow_one, forall_const]
   rfl
 
 /-- Phase kickback controlled by whether the stored cell contains zero. -/
@@ -444,7 +463,8 @@ theorem mixed_extraction_runtime_phase :
         (.inl ())).branch () ∘ₗ MatrixMap.conj mixedPhaseSector =
       MatrixMap.conj mixedPhaseSector ∘ₗ MatrixMap.conj extractionPhase := by
   change MatrixMap.conj
-    (((compressedVCOracle 1 Unit (ZMod 2)).withExtract phaseExtractor phaseCode).coherent.U ()) ∘ₗ
+    (((compressedVCOracle 1 Unit (ZMod 2)).withExtract
+      phaseExtractor phaseCode).coherent.U ()) ∘ₗ
       MatrixMap.conj mixedPhaseSector = _
   erw [← MatrixMap.conj_mul, coherent_extract_phaseSector, MatrixMap.conj_mul]
   rfl

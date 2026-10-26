@@ -78,11 +78,9 @@ noncomputable def projector (tr : QueryLog (X →ₒ Y)) : Matrix E.S E.S ℂ :=
 /-- Every answer commutes with every transcript projector. -/
 theorem answer_commute_projector (x : X) (y : Y) (tr : QueryLog (X →ₒ Y)) :
     H.A x y * H.projector tr = H.projector tr * H.A x y := by
-  induction tr with
-  | nil => simp
-  | cons q tr ih =>
-    simp only [projector_cons]
-    rw [← Matrix.mul_assoc, H.commute_cells, Matrix.mul_assoc, ih, ← Matrix.mul_assoc]
+  exact (Commute.list_prod_right _ _ fun A hA ↦ by
+    obtain ⟨q, _, rfl⟩ := List.mem_map.mp hA
+    exact H.commute_cells x y q.1 q.2).eq
 
 /-- All transcript projectors are idempotent, including contradictory transcripts. -/
 theorem projector_mul_self (tr : QueryLog (X →ₒ Y)) :
@@ -322,7 +320,8 @@ theorem run₂_classicalCall (B : QReg) (x : X) :
       E.read H x B := by
   let R := E.withClassicalReads H
   change R.run₂ .instruments (H.classicalCall B x) = _
-  rw [classicalCall, EmulatedOracle.read, QuantumRuntime.run₂_act_bind, SubInstrument.frame_relabel]
+  rw [classicalCall, EmulatedOracle.read, QuantumRuntime.run₂_act_bind,
+    SubInstrument.frame_relabel]
   unfold SubInstrument.reindex
   refine congrArg (fun f : Unit → SubInstrument ((Unit × B) × R.D) (B × R.D) Y ↦
     (SubInstrument.relabel
@@ -351,50 +350,6 @@ theorem branch_classicalCall (B : QReg) (x : X) (y : Y) :
   rw [H.run₂_classicalCall, E.read_branch]
   rfl
 
-/-- Execute an adaptive query prefix and retain precisely the prescribed answer transcript.
-Every call uses the actual emulated-oracle runtime; a mismatched answer returns `false`.
-The program is the postselection of a deterministic classical algorithm with fixed coins. -/
-noncomputable def checkAdaptiveTranscript (B : QReg) (next : List Y → X) :
-    List Y → QComp (withReadSpec (EmulatedOracle.cohSpec In) X Y) B B Bool
-  | [] => QuantumComp₂.pure true
-  | y :: ys =>
-    (H.classicalCall B (next [])).bind fun z ↦
-        if z = y then checkAdaptiveTranscript B (fun pre ↦ next (z :: pre)) ys
-        else QuantumComp₂.pure false
-
-/-- The actual accepting branch of adaptive transcript postselection is its projector product.
-Rejected outcomes are retained as separate branches of the program, never renormalized away. -/
-theorem branch_checkAdaptiveTranscript (B : QReg) (next : List Y → X) (ys : List Y) :
-    ((E.withClassicalReads H).run₂ .instruments (H.checkAdaptiveTranscript B next ys)).branch true =
-      H.transcriptBranch B (adaptiveTranscript next ys) := by
-  induction ys generalizing next with
-  | nil =>
-    rw [checkAdaptiveTranscript, QuantumRuntime.run₂_pure, SubInstrument.branch_pure_self]
-    simp only [adaptiveTranscript, transcriptBranch_nil]
-    rfl
-  | cons y ys ih =>
-    rw [checkAdaptiveTranscript, QuantumRuntime.run₂_bind,
-      DSubInstrument.branch_bind_apply_univ, Finset.sum_eq_single y]
-    · rw [ite_eq_left rfl, ih, H.branch_classicalCall]
-      exact (H.transcriptBranch_cons B ⟨next [], y⟩
-        (adaptiveTranscript (fun pre ↦ next (y :: pre)) ys)).symm
-    · intro z _ hz
-      rw [ite_eq_right hz, QuantumRuntime.run₂_pure,
-        SubInstrument.branch_pure_of_ne (by decide), LinearMap.zero_comp]
-    · simp
-
-/-- Operational fixed-coin replay of any adaptive classical query prefix leaves its accepting
-joint branch unchanged. The initial state can be the output of any preceding quantum program. -/
-theorem replay_checkAdaptiveTranscript (B : QReg) (next : List Y → X) (ys : List Y) :
-    ((E.withClassicalReads H).run₂ .instruments
-        (H.checkAdaptiveTranscript B next ys)).branch true ∘ₗ
-      ((E.withClassicalReads H).run₂ .instruments
-        (H.checkAdaptiveTranscript B next ys)).branch true =
-      ((E.withClassicalReads H).run₂ .instruments
-        (H.checkAdaptiveTranscript B next ys)).branch true := by
-  rw [H.branch_checkAdaptiveTranscript]
-  exact H.replay_transcript B _
-
 /-- Any implementation of the certified calls in the mixed runtime realizes the adaptive
 history projector. In particular the implementation may use both runtime ports. -/
 theorem branch_checkMixedTranscript {Addr Ans : Type} [Fintype Ans] [DecidableEq Ans]
@@ -419,6 +374,33 @@ theorem branch_checkMixedTranscript {Addr Ans : Type} [Fintype Ans] [DecidableEq
       rw [ite_eq_right hz, QuantumRuntime.run₂_pure,
         SubInstrument.branch_pure_of_ne (by decide), LinearMap.zero_comp]
     · simp
+
+/-- Execute an adaptive query prefix and retain precisely the prescribed answer transcript.
+Every call uses the actual emulated-oracle runtime; a mismatched answer returns `false`.
+The program is the postselection of a deterministic classical algorithm with fixed coins. -/
+noncomputable def checkAdaptiveTranscript (B : QReg) (next : List Y → X) :
+    List Y → QComp (withReadSpec (EmulatedOracle.cohSpec In) X Y) B B Bool :=
+  checkMixedTranscript (H.classicalCall B) next
+
+/-- The actual accepting branch of adaptive transcript postselection is its projector product.
+Rejected outcomes are retained as separate branches of the program, never renormalized away. -/
+theorem branch_checkAdaptiveTranscript (B : QReg) (next : List Y → X) (ys : List Y) :
+    ((E.withClassicalReads H).run₂ .instruments
+      (H.checkAdaptiveTranscript B next ys)).branch true =
+      H.transcriptBranch B (adaptiveTranscript next ys) :=
+  H.branch_checkMixedTranscript H B (H.classicalCall B) (H.branch_classicalCall B) next ys
+
+/-- Operational fixed-coin replay of any adaptive classical query prefix leaves its accepting
+joint branch unchanged. The initial state can be the output of any preceding quantum program. -/
+theorem replay_checkAdaptiveTranscript (B : QReg) (next : List Y → X) (ys : List Y) :
+    ((E.withClassicalReads H).run₂ .instruments
+        (H.checkAdaptiveTranscript B next ys)).branch true ∘ₗ
+      ((E.withClassicalReads H).run₂ .instruments
+        (H.checkAdaptiveTranscript B next ys)).branch true =
+      ((E.withClassicalReads H).run₂ .instruments
+        (H.checkAdaptiveTranscript B next ys)).branch true := by
+  rw [H.branch_checkAdaptiveTranscript]
+  exact H.replay_transcript B _
 
 /-- With the same coins and stopping rule, replay of a terminal mixed execution retains
 exactly its original history and substate; incompatible terminal histories vanish. -/
@@ -492,11 +474,9 @@ theorem sum_unused_check_framed (B : QReg) (x : X) (F : Matrix (B × E.S) (B × 
     ∑ y, ((1 : Matrix B B ℂ) ⊗ₖ H.A x y) * F *
       ((1 : Matrix B B ℂ) ⊗ₖ H.A x y) = F := by
   have hsum : (∑ y, (1 : Matrix B B ℂ) ⊗ₖ H.A x y) = 1 := by
-    ext ⟨b, d⟩ ⟨b', d'⟩
-    have h := congrFun (congrFun (H.complete x) d) d'
-    simpa only [Matrix.sum_apply, kroneckerMap_apply, ← Finset.mul_sum,
-      ← one_kronecker_one (α := ℂ), kroneckerMap_apply] using
-      congrArg ((1 : Matrix B B ℂ) b b' * ·) h
+    change (∑ y, kroneckerBilinear (R := ℂ) (1 : Matrix B B ℂ) (H.A x y)) = 1
+    rw [← map_sum, H.complete]
+    exact one_kronecker_one
   calc
     _ = ∑ y, F * ((1 : Matrix B B ℂ) ⊗ₖ H.A x y) := by
       apply Finset.sum_congr rfl

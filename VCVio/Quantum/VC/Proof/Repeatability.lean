@@ -141,11 +141,8 @@ theorem commute_mixed_run {Addr Ans : Type} [Fintype Ans] [DecidableEq Ans]
         (MatrixMap.conj (H.projector tr)).amplifyLeft Unit ∘ₗ (K.step x).branch r
       rw [K.step_branch, MatrixMap.amplifyLeft_conj]
       have hc : K.A x r * H.projector tr = H.projector tr * K.A x r := by
-        induction tr with
-        | nil => simp
-        | cons q tr ih =>
-          rw [projector_cons, ← Matrix.mul_assoc, ← hcomm, Matrix.mul_assoc, ih,
-            ← Matrix.mul_assoc]
+        simpa only [projector_cons, projector_nil, Matrix.mul_one] using
+          (H.projector_commute K hcomm tr [⟨x, r⟩]).symm
       simp only [← MatrixMap.conj_mul, ← mul_kronecker_mul, Matrix.one_mul, hc]
 
 /-- Exact replay on arbitrary initial joint substates after a mixed program, separately on
@@ -222,14 +219,14 @@ theorem checked_accept_eq_projectorProduct
     List.map_map, Function.comp_def, ProjectiveClassicalAnswers.transcriptBranch]
   rfl
 
-/-- The old answer projector, expressed by lookup in the decompressed basis. -/
+/-- The ordinary answer projector, expressed by lookup in the decompressed basis. -/
 noncomputable def answer (x : Fin k × X) (y : Y) :
     Matrix (Fin k → Database X Y) (Fin k → Database X Y) ℂ :=
   compressDatabases k X Y *
     diagonal (fun D ↦ if (D x.1).lookup x.2 = y then 1 else 0) * compressDatabases k X Y
 
 /-- The ordinary zero answer includes the missing sector on every private state. -/
-theorem old_answer_projector (x : Fin k × X) (y : Y) :
+theorem answer_eq_checked_projectors (x : Fin k × X) (y : Y) :
     answer x y = compressedReadProjector k X Y x (some y) +
       if y = 0 then compressedReadProjector k X Y x none else 0 := by
   have hd : (diagonal fun D : Fin k → Database X Y ↦
@@ -249,12 +246,12 @@ theorem old_answer_projector (x : Fin k × X) (y : Y) :
   · rw [Matrix.mul_add, Matrix.add_mul]
   · simp only [add_zero]
 
-/-- Every old answer projector is Hermitian. -/
+/-- Every ordinary answer projector is Hermitian. -/
 theorem answer_hermitian (x : Fin k × X) (y : Y) : (answer x y)ᴴ = answer x y := by
   simp only [answer, conjTranspose_mul, conjTranspose_compressDatabases,
     conjTranspose_diagonal_ite, Matrix.mul_assoc]
 
-/-- Orthogonality of distinct old answers, with idempotency for equal answers. -/
+/-- Orthogonality of distinct ordinary answers, with idempotency for equal answers. -/
 theorem answer_orthogonal (x : Fin k × X) (z y : Y) :
     answer x z * answer x y = if z = y then answer x y else 0 := by
   rw [answer, answer, compressed_conjugate_mul _ (compressDatabases_mul_self k X Y),
@@ -272,7 +269,7 @@ theorem answer_orthogonal (x : Fin k × X) (z y : Y) :
     rw [hd]
     simp [h]
 
-/-- Old classical answers resolve the identity, with no reachable-state restriction. -/
+/-- Ordinary classical answers resolve the identity, with no reachable-state restriction. -/
 theorem answer_complete (x : Fin k × X) : ∑ y : Y, answer x y = 1 := by
   have hd : (∑ y : Y, diagonal fun D : Fin k → Database X Y ↦
       if (D x.1).lookup x.2 = y then (1 : ℂ) else 0) = 1 := by
@@ -284,7 +281,7 @@ theorem answer_complete (x : Fin k × X) : ∑ y : Y, answer x y = 1 := by
   simp only [answer, ← Finset.sum_mul, ← Finset.mul_sum]
   rw [hd, Matrix.mul_one, compressDatabases_mul_self]
 
-/-- All old answer projectors commute, including at different oracle indices. -/
+/-- All ordinary answer projectors commute, including at different oracle indices. -/
 theorem answer_commute (x x' : Fin k × X) (y y' : Y) :
     answer x y * answer x' y' = answer x' y' * answer x y := by
   simp only [answer, compressed_conjugate_mul _ (compressDatabases_mul_self k X Y),
@@ -299,7 +296,7 @@ theorem answer_commute_checked (x x' : Fin k × X) (y : Y) (a : Option Y) :
     compressed_conjugate_mul _ (compressDatabases_mul_self k X Y), diagonal_ite_mul_diagonal_ite]
   simp only [and_comm]
 
-/-- The classical basis-call branch of the old oracle on an arbitrary reference register. -/
+/-- The classical basis-call branch of the ordinary oracle on an arbitrary reference register. -/
 theorem branch_eq (B : QReg) (x : Fin k × X) (y : Y) :
     ((compressedVCOracle k X Y).toRuntime.run₂ .instruments
       (QComp.callBasis x.1 B (x.2, 0) (fun o _ ↦ o.2))).branch y =
@@ -334,7 +331,7 @@ theorem branch_eq (B : QReg) (x : Fin k × X) (y : Y) :
     · simp [hz]
   · simp
 
-/-- An old answer projector commutes with every ordinary query on a separate call register. -/
+/-- An ordinary answer projector commutes with every ordinary query on a separate call register. -/
 theorem answer_commute_ordinary (p : Fin k) (x : Fin k × X) (y : Y) :
     (show Matrix ((X × Y) × (Fin k → Database X Y))
       ((X × Y) × (Fin k → Database X Y)) ℂ from (compressedVCOracle k X Y).U p) *
@@ -364,7 +361,7 @@ theorem answer_commute_ordinary (p : Fin k) (x : Fin k × X) (y : Y) :
   change (C * _ * C) * (C * _ * C) = (C * _ * C) * (C * _ * C)
   rw [compressed_conjugate_mul C hCC, compressed_conjugate_mul C hCC, hT]
 
-/-- The old compressed oracle has complete projective classical answers on all states.
+/-- The compressed oracle has complete projective classical answers on all states.
 The generic API supplies fixed-coin adaptive replay and rejection of contradictory lists. -/
 @[expose]
 noncomputable def projectiveClassicalAnswers :
@@ -422,11 +419,11 @@ theorem branch_mixedCall (B : QReg) (x : (Fin k × X) ⊕ (Fin k × X)) (a : Y �
       Finset.sum_ite_eq', Finset.mem_univ, ite_true]
   · erw [ho]
     rfl
-  · simp [ProjectiveClassicalAnswers.branch, mixedAnswers,
-      ProjectiveClassicalAnswers.sumAnswers]
+  · simp only [ProjectiveClassicalAnswers.branch, mixedAnswers,
+      ProjectiveClassicalAnswers.sumAnswers, kronecker_zero, MatrixMap.conj_zero]
     rfl
-  · simp [ProjectiveClassicalAnswers.branch, mixedAnswers,
-      ProjectiveClassicalAnswers.sumAnswers]
+  · simp only [ProjectiveClassicalAnswers.branch, mixedAnswers,
+      ProjectiveClassicalAnswers.sumAnswers, kronecker_zero, MatrixMap.conj_zero]
     rfl
   · erw [ProjectiveClassicalAnswers.branch_classicalCall]
     rfl
@@ -446,7 +443,8 @@ theorem branch_mixedAdaptive (B : QReg)
 answer-dependent stopping and checked failures. Distinct terminal histories have zero branch. -/
 theorem replay_mixedAdaptive {Coins : Type*} (B : QReg)
     (next : Coins → List (Y ⊕ Option Y) → (Fin k × X) ⊕ (Fin k × X))
-    (stop : Coins → List (Y ⊕ Option Y) → Bool) (coins : Coins) (ys zs : List (Y ⊕ Option Y))
+    (stop : Coins → List (Y ⊕ Option Y) → Bool) (coins : Coins)
+    (ys zs : List (Y ⊕ Option Y))
     (hy : ProjectiveClassicalAnswers.TerminalTranscript (stop coins) ys)
     (hz : ProjectiveClassicalAnswers.TerminalTranscript (stop coins) zs) :
     ((compressedVCOracle k X Y).mixedRuntime.run₂ .instruments
