@@ -174,24 +174,26 @@ theorem _root_.OracleComp.toQuantumAt_bind {ι : Type u} {ospec : OracleSpec.{u,
 variable {X Y : Type} [Fintype Y] [DecidableEq Y]
 
 omit [Fintype Y] in
-/-- **`CheckIO` against a conjugated table oracle.** Let every classical query `call t` have the
-branch at the reading `y` given by the Kraus map of `1_B ⊗ C D_{t,y} C`, where `C` is an
-involution of the runtime register and `D_{t,y}` the diagonal projector onto the registers `d`
-with `read d t = y`. Then running `CheckIO` on the list `io` from the verdict `acc` accepts on the
-Kraus map of `1_B ⊗ C D_io C`, with `D_io` the diagonal projector onto the registers that read
-every listed output, when `acc` holds, and never otherwise. -/
-theorem branch_run₂_toQuantumAt_foldlM_checkIOStep [Finite Y]
+/-- **Rechecking a query log against a conjugated table oracle.** Let every classical query
+`call t` have the branch at the reading `y` given by the Kraus map of `1_B ⊗ C D_{t,y} C`, where
+`C` is an involution of the runtime register and `D_{t,y}` the diagonal projector onto the
+registers `d` with `read d t = y`. Then the fold of `QueryLog.recheckStep` over the log `log` from
+the verdict `acc` accepts on the Kraus map of `1_B ⊗ C D_log C`, with `D_log` the diagonal
+projector onto the registers that read every logged answer, when `acc` holds, and never
+otherwise. -/
+theorem branch_run₂_toQuantumAt_foldlM_recheckStep [Finite Y]
     (call : QueryImpl (X →ₒ Y) (QComp spec B B)) {C : Matrix R.D R.D ℂ} (hCC : C * C = 1)
     (read : R.D → X → Y)
     (hcall : ∀ t y, (R.run₂ .instruments (call t)).branch y =
       MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ
         (C * diagonal (fun d ↦ if read d t = y then 1 else 0) * C)))
-    (io : List (X × Y)) (acc : Bool) :
-    (R.run₂ .instruments ((io.foldlM checkIOStep acc).toQuantumAt call)).branch true =
+    (log : QueryLog (X →ₒ Y)) (acc : Bool) :
+    (R.run₂ .instruments ((log.foldlM QueryLog.recheckStep acc).toQuantumAt call)).branch true =
       if acc then MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ
-        (C * diagonal (fun d ↦ if ∀ p ∈ io, read d p.1 = p.2 then 1 else 0) * C)) else 0 := by
+        (C * diagonal (fun d ↦ if ∀ p ∈ log, read d p.1 = p.2 then 1 else 0) * C))
+        else 0 := by
   have : Fintype Y := Fintype.ofFinite Y
-  induction io generalizing acc with
+  induction log generalizing acc with
   | nil =>
     rw [List.foldlM_nil, toQuantumAt_pure, QuantumRuntime.run₂_pure]
     cases acc
@@ -199,11 +201,11 @@ theorem branch_run₂_toQuantumAt_foldlM_checkIOStep [Finite Y]
     · rw [SubInstrument.branch_pure_self, ite_eq_left rfl]
       simp only [List.not_mem_nil, false_imp_iff, imp_true_iff]
       exact (conj_one_kronecker_true hCC).symm
-  | cons p io ih =>
-    have hprog : ((p :: io).foldlM checkIOStep acc).toQuantumAt call =
-        (call p.1).bind fun y ↦ (io.foldlM checkIOStep (acc && decide (y = p.2))).toQuantumAt
-          call := by
-      rw [List.foldlM_cons, checkIOStep, bind_assoc]
+  | cons p log ih =>
+    have hprog : ((p :: log).foldlM QueryLog.recheckStep acc).toQuantumAt call =
+        (call p.1).bind fun y ↦
+          (log.foldlM QueryLog.recheckStep (acc && decide (y = p.2))).toQuantumAt call := by
+      rw [List.foldlM_cons, QueryLog.recheckStep, bind_assoc]
       simp only [pure_bind]
       exact toQuantumAt_query_bind call p.1 _
     rw [hprog, QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply_univ,
@@ -528,7 +530,8 @@ section passProjector
 
 variable {k : ℕ} {X Y Msg Cm : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
   [AddCommGroup Y] {ℓ : Fin k → ℕ} {Td Pf : Fin k → Type}
-  {VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i)} (io : ∀ i, (VC i).NonadaptiveCheck)
+  {VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i)}
+  (chk : ∀ i, (VC i).NonadaptiveCheck)
 
 /-- **The pass projector of the checks on `W`** (ePrint 2025/2166, p. 61): the diagonal
 projector onto the tuples of databases `D` on which every check `VC_i.Check^{D_{idx i}}` with
@@ -538,46 +541,47 @@ projector onto the tuples of databases `D` on which every check `VC_i.Check^{D_{
 noncomputable def checkPassProjector (W : Finset (Fin k)) (idx : Fin k → Fin k) (cm : Fin k → Cm)
     (ans : ∀ i, PartialVec (ℓ i) Msg) (pf : ∀ i, Pf i) :
     Matrix (Fin k → Database X Y) (Fin k → Database X Y) ℂ :=
-  diagonal fun D ↦ if ∀ i ∈ W, (io i).checkOn (D (idx i)) (cm i) (ans i) (pf i) = true then 1 else 0
+  diagonal fun D ↦
+    if ∀ i ∈ W, (chk i).checkOn (D (idx i)) (cm i) (ans i) (pf i) = true then 1 else 0
 
 /-- The pass projector against its compressed conjugate, with an explicit bound `q` on
-these proofs' output lists: the acceptance factor is at least `(1 - 1/N)^(2 n q)`. -/
+the lengths of these proofs' logs: the acceptance factor is at least `(1 - 1/N)^(2 n q)`. -/
 theorem exists_le_checkPassProjector_conj_of_length_le (n : ℕ) (W : Finset (Fin k))
     (hW : W.card ≤ n)
     (idx : Fin k → Fin k) (cm : Fin k → Cm) (ans : ∀ i, PartialVec (ℓ i) Msg) (pf : ∀ i, Pf i)
     (q : ℕ)
-    (hlen : ∀ i, (((io i).pairs (cm i) (ans i) (pf i)).getD []).length ≤ q) :
+    (hlen : ∀ i, (((chk i).log (cm i) (ans i) (pf i)).getD []).length ≤ q) :
     ∃ a : ℝ, (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q) ≤ a ∧
-      checkPassProjector io W idx cm ans pf *
-          (compressDatabases k X Y * checkPassProjector io W idx cm ans pf *
-            compressDatabases k X Y) * checkPassProjector io W idx cm ans pf =
-        (a : ℂ) • checkPassProjector io W idx cm ans pf := by
+      checkPassProjector chk W idx cm ans pf *
+          (compressDatabases k X Y * checkPassProjector chk W idx cm ans pf *
+            compressDatabases k X Y) * checkPassProjector chk W idx cm ans pf =
+        (a : ℂ) • checkPassProjector chk W idx cm ans pf := by
   have hN : (0 : ℝ) ≤ 1 - (Fintype.card Y : ℝ)⁻¹ :=
     sub_nonneg.mpr (inv_le_one_of_one_le₀ (by exact_mod_cast Fintype.card_pos))
   have hN1 : 1 - (Fintype.card Y : ℝ)⁻¹ ≤ 1 := sub_le_self _ (inv_nonneg.mpr (Nat.cast_nonneg _))
-  by_cases hall : ∀ i ∈ W, ((io i).pairs (cm i) (ans i) (pf i)).isSome
+  by_cases hall : ∀ i ∈ W, ((chk i).log (cm i) (ans i) (pf i)).isSome
   · -- the prescriptions on each database
-    let L : Fin k → List (X × Y) := fun j ↦ (List.finRange k).flatMap fun i ↦
-      if i ∈ W ∧ idx i = j then ((io i).pairs (cm i) (ans i) (pf i)).getD [] else []
+    let L : Fin k → QueryLog (X →ₒ Y) := fun j ↦ (List.finRange k).flatMap fun i ↦
+      if i ∈ W ∧ idx i = j then ((chk i).log (cm i) (ans i) (pf i)).getD [] else []
     have hmem : ∀ j p, p ∈ L j ↔ ∃ i, (i ∈ W ∧ idx i = j) ∧
-        p ∈ ((io i).pairs (cm i) (ans i) (pf i)).getD [] := by
+        p ∈ ((chk i).log (cm i) (ans i) (pf i)).getD [] := by
       intro j p
       simp only [L, List.mem_flatMap, List.mem_finRange, true_and]
       refine exists_congr fun i ↦ ?_
       split_ifs with h <;> simp [h]
     have hc : ∀ (D : Fin k → Database X Y), ∀ i ∈ W,
-        ((io i).checkOn (D (idx i)) (cm i) (ans i) (pf i) = true ↔
-          ∀ p ∈ ((io i).pairs (cm i) (ans i) (pf i)).getD [], D (idx i) p.1 = some p.2) := by
+        ((chk i).checkOn (D (idx i)) (cm i) (ans i) (pf i) = true ↔
+          ∀ p ∈ ((chk i).log (cm i) (ans i) (pf i)).getD [], D (idx i) p.1 = some p.2) := by
       intro D i hi
       obtain ⟨Li, hLi⟩ := Option.isSome_iff_exists.mp (hall i hi)
-      simp [VectorCommitment.NonadaptiveCheck.checkOn, hLi, checkIOOn_eq_true_iff]
-    have hP : checkPassProjector io W idx cm ans pf = piKron fun j ↦ checkProjector Y (L j) := by
+      simp [VectorCommitment.NonadaptiveCheck.checkOn, hLi, QueryLog.agreesWith_eq_true_iff]
+    have hP : checkPassProjector chk W idx cm ans pf = piKron fun j ↦ checkProjector Y (L j) := by
       ext D D'
       rw [checkPassProjector, piKron_apply, diagonal_apply]
       simp_rw [checkProjector_apply]
       by_cases hD : D = D'
       · subst hD
-        have key : (∀ i ∈ W, (io i).checkOn (D (idx i)) (cm i) (ans i) (pf i) = true) ↔
+        have key : (∀ i ∈ W, (chk i).checkOn (D (idx i)) (cm i) (ans i) (pf i) = true) ↔
             ∀ j, ∀ p ∈ L j, D j p.1 = some p.2 := by
           refine ⟨fun h j p hp ↦ ?_, fun h i hi ↦ (hc D i hi).mpr fun p hp ↦ ?_⟩
           · obtain ⟨i, ⟨hiW, rfl⟩, hpi⟩ := (hmem j p).mp hp
@@ -594,10 +598,10 @@ theorem exists_le_checkPassProjector_conj_of_length_le (n : ℕ) (W : Finset (Fi
       · obtain ⟨j, hj⟩ := Function.ne_iff.mp hD
         simp only [hD, ↓reduceIte]
         exact (Finset.prod_eq_zero (Finset.mem_univ j) (by simp [hj])).symm
-    have hcells : ∑ j, (ioCells (L j)).card ≤ n * q :=
-      calc ∑ j, (ioCells (L j)).card
-          ≤ ∑ j, (L j).length := Finset.sum_le_sum fun j _ ↦ card_ioCells_le_length _
-        _ = ∑ i ∈ W, (((io i).pairs (cm i) (ans i) (pf i)).getD []).length := by
+    have hcells : ∑ j, (loggedCells (L j)).card ≤ n * q :=
+      calc ∑ j, (loggedCells (L j)).card
+          ≤ ∑ j, (L j).length := Finset.sum_le_sum fun j _ ↦ card_loggedCells_le_length _
+        _ = ∑ i ∈ W, (((chk i).log (cm i) (ans i) (pf i)).getD []).length := by
             simp only [L, List.length_flatMap, ← Fin.sum_univ_def, apply_ite List.length,
               List.length_nil, ite_and]
             simp only [Finset.sum_ite_mem, Finset.univ_inter]
@@ -606,7 +610,7 @@ theorem exists_le_checkPassProjector_conj_of_length_le (n : ℕ) (W : Finset (Fi
         _ ≤ ∑ i ∈ W, q := Finset.sum_le_sum fun i _ ↦ hlen i
         _ = W.card * q := by rw [Finset.sum_const, smul_eq_mul]
         _ ≤ n * q := Nat.mul_le_mul_right _ hW
-    refine ⟨(1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * ∑ j, (ioCells (L j)).card),
+    refine ⟨(1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * ∑ j, (loggedCells (L j)).card),
       pow_le_pow_of_le_one hN hN1 (by rw [Nat.mul_assoc]; exact Nat.mul_le_mul_left 2 hcells), ?_⟩
     have hCPC : compressDatabases k X Y * piKron (fun j ↦ checkProjector Y (L j)) *
         compressDatabases k X Y = piKron fun j ↦ compressedCheckProjector (L j) := by
@@ -617,7 +621,7 @@ theorem exists_le_checkPassProjector_conj_of_length_le (n : ℕ) (W : Finset (Fi
     rfl
   · simp only [not_forall] at hall
     obtain ⟨i, hi, hn⟩ := hall
-    have hP0 : checkPassProjector io W idx cm ans pf = 0 := by
+    have hP0 : checkPassProjector chk W idx cm ans pf = 0 := by
       rw [checkPassProjector, ← diagonal_zero]
       congr 1
       funext D
@@ -632,16 +636,16 @@ theorem exists_le_checkPassProjector_conj_of_length_le (n : ℕ) (W : Finset (Fi
 is `(1 - 1/N)^{2d}` for the number `d ≤ n q2` of prescribed cells; otherwise `P = 0`. -/
 theorem exists_le_checkPassProjector_conj (n : ℕ) (W : Finset (Fin k)) (hW : W.card ≤ n)
     (idx : Fin k → Fin k) (cm : Fin k → Cm) (ans : ∀ i, PartialVec (ℓ i) Msg) (pf : ∀ i, Pf i) :
-    ∃ a : ℝ, (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io) ≤ a ∧
-      checkPassProjector io W idx cm ans pf *
-          (compressDatabases k X Y * checkPassProjector io W idx cm ans pf *
-            compressDatabases k X Y) * checkPassProjector io W idx cm ans pf =
-        (a : ℂ) • checkPassProjector io W idx cm ans pf := by
-  apply exists_le_checkPassProjector_conj_of_length_le io n W hW idx cm ans pf (q2 io)
+    ∃ a : ℝ, (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 chk) ≤ a ∧
+      checkPassProjector chk W idx cm ans pf *
+          (compressDatabases k X Y * checkPassProjector chk W idx cm ans pf *
+            compressDatabases k X Y) * checkPassProjector chk W idx cm ans pf =
+        (a : ℂ) • checkPassProjector chk W idx cm ans pf := by
+  apply exists_le_checkPassProjector_conj_of_length_le chk n W hW idx cm ans pf (q2 chk)
   intro i
-  cases h : (io i).pairs (cm i) (ans i) (pf i) with
+  cases h : (chk i).log (cm i) (ans i) (pf i) with
   | none => simp
-  | some L => exact ((io i).length_le _ _ _ _ h).trans (qVC_card_dom_le_q2 io i (ans i))
+  | some L => exact ((chk i).length_le _ _ _ _ h).trans (qVC_card_dom_le_q2 chk i (ans i))
 
 end passProjector
 
@@ -649,13 +653,13 @@ section filledBatch
 
 variable {k : ℕ} {X Y Msg Cm : Type} [DecidableEq Y] {ℓ : Fin k → ℕ} {Td Pf : Fin k → Type}
   {VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i)}
-  (io : ∀ i, (VC i).NonadaptiveCheck) [Fintype X] [DecidableEq X] [Fintype Y] [AddCommGroup Y]
+  (chk : ∀ i, (VC i).NonadaptiveCheck) [Fintype X] [DecidableEq X] [Fintype Y] [AddCommGroup Y]
 
 /-- The accepting projector of the batch of checked reads. -/
 @[expose]
 noncomputable def filledBatch (W : Finset (Fin k)) (c : OpeningClaim k Cm Msg ℓ Pf) :
     Matrix (Fin k → Database X Y) (Fin k → Database X Y) ℂ :=
-  compressDatabases k X Y * checkPassProjector io W c.idx c.cm c.ans c.pf *
+  compressDatabases k X Y * checkPassProjector chk W c.idx c.cm c.ans c.pf *
     compressDatabases k X Y
 
 end filledBatch
@@ -673,28 +677,28 @@ section extractError
 
 variable {k : ℕ} {X Y Msg Cm : Type} [Fintype Y] [DecidableEq Y] {ℓ : Fin k → ℕ}
   {Td Pf : Fin k → Type} {VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i)}
-  (io : ∀ i, (VC i).NonadaptiveCheck)
+  (chk : ∀ i, (VC i).NonadaptiveCheck)
 
 /-- **The error of Lemma 9.3, exact form**: `1 - (1 - 1/N)^{2 n q2}` (ePrint 2025/2166),
 with `N = |Y|`. It is at most `2 n q2 / N`
 (`Quantum.extractError_le_two_mul`); the paper has `8 n q2 / N` (p. 59). -/
 @[expose]
 noncomputable def extractError (n : ℕ) : ℝ≥0∞ :=
-  ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io))
+  ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 chk))
 
 /-- The exact error of Lemma 9.3 is at most its leading order `2 n q2 / N`. -/
 theorem extractError_le_two_mul (n : ℕ) :
-    extractError io n ≤ (2 * n * q2 io : ℝ≥0∞) / Fintype.card Y := by
+    extractError chk n ≤ (2 * n * q2 chk : ℝ≥0∞) / Fintype.card Y := by
   rcases Nat.eq_zero_or_pos (Fintype.card Y) with h0 | hpos
   · simp [extractError, h0]
   have hN : (0 : ℝ) < Fintype.card Y := Nat.cast_pos.mpr hpos
   have hN1 : (1 : ℝ) ≤ Fintype.card Y := Nat.one_le_cast.mpr hpos
-  calc extractError io n
-      ≤ ENNReal.ofReal (((2 * n * q2 io : ℕ) : ℝ) / Fintype.card Y) := by
+  calc extractError chk n
+      ≤ ENNReal.ofReal (((2 * n * q2 chk : ℕ) : ℝ) / Fintype.card Y) := by
         refine ENNReal.ofReal_le_ofReal ?_
         rw [div_eq_mul_inv]
         exact one_sub_one_sub_pow_le _ ((inv_le_one_of_one_le₀ hN1).trans one_le_two)
-    _ = (2 * n * q2 io : ℝ≥0∞) / Fintype.card Y := by
+    _ = (2 * n * q2 chk : ℝ≥0∞) / Fintype.card Y := by
         rw [ENNReal.ofReal_div_of_pos hN, ENNReal.ofReal_natCast, ENNReal.ofReal_natCast]
         push_cast
         rfl
@@ -708,7 +712,8 @@ section challenger
 variable {k : ℕ} {X Y Msg Cm Z : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
   [AddCommGroup Y] [Fintype Cm] [DecidableEq Cm] [Fintype Z] [DecidableEq Z] [AddGroup Z]
   {ℓ : Fin k → ℕ} {Td Pf : Fin k → Type}
-  {VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i)} (io : ∀ i, (VC i).NonadaptiveCheck)
+  {VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i)}
+  (chk : ∀ i, (VC i).NonadaptiveCheck)
   (ME : MultiExtractor k Cm (DmOf ℓ Msg Td) (compressedVCOracle k X Y).S)
   (code : TpDCode k (DmOf ℓ Msg Td) Z) {tdBot : ∀ i, Td i} {Pgood : Set (Database X Y)}
 
@@ -718,19 +723,19 @@ theorem branch_run₂_filledBatch_compressedVCOracle (B : QReg) (W : Finset (Fin
     (c : OpeningClaim k Cm Msg ℓ Pf) :
     (((compressedVCOracle k X Y).mixedExtractRuntime ME code).run₂ .instruments
       (QComp.allIn W fun i ↦ checkAt VC B i (c.idx i) (c.cm i) (c.ans i) (c.pf i))).branch true =
-      MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ filledBatch io W c) := by
+      MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ filledBatch chk W c) := by
   exact branch_run₂_allIn ((compressedVCOracle k X Y).mixedExtractRuntime ME code) W
     (fun i ↦ checkAt VC B i (c.idx i) (c.cm i) (c.ans i) (c.pf i))
     (compressDatabases_mul_self k X Y)
     (fun i (D : Fin k → Database X Y) ↦
-      (io i).checkOn (D (c.idx i)) (c.cm i) (c.ans i) (c.pf i) = true)
-    (fun i _ ↦ branch_run₂_checkAt_compressedVCOracle VC ME code io B i (c.idx i) (c.cm i)
+      (chk i).checkOn (D (c.idx i)) (c.cm i) (c.ans i) (c.pf i) = true)
+    (fun i _ ↦ branch_run₂_checkAt_compressedVCOracle VC ME code chk B i (c.idx i) (c.cm i)
       (c.ans i) (c.pf i))
 
 /-- The checks after extraction with an opening-specific cell budget. -/
 theorem outcomeMeasure_run₂_checks_le_of_openingQueryBound [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
-    (q : ℕ) (hq : OpeningQueryBound io q)
-    (hC : Conditions VC io ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
+    (q : ℕ) (hq : OpeningQueryBound chk q)
+    (hC : Conditions VC chk ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
     {B : QReg} (tdm : TpDLen k (DmOf ℓ Msg Td) (TpIC.full hk c.idx c.cm).1) (pf : ∀ i, Pf i)
     (hpf : ∀ i, pf i ∈ support ((VC i).opening (tdm i).1.dom (tdm i).2))
     (ρ : SubState (B × ((compressedVCOracle k X Y).mixedExtractRuntime ME code).D))
@@ -763,14 +768,14 @@ theorem outcomeMeasure_run₂_checks_le_of_openingQueryBound [∀ i, DecidableEq
         (c.cm i) (tdm i).1 (pf i)) fun i _ ↦ lossless_checkAt VC _ _ _ _ _ _)
       ((compressedVCOracle k X Y).lossless_mixedExtractRuntime_step ME code)
     have hsum := SubInstrument.trace_re_branch_add_of_lossless hloss ρ.matrix
-    obtain ⟨a, ha0, ha⟩ := exists_le_checkPassProjector_conj_of_length_le io n c.W hW c.idx c.cm
-      (fun i ↦ (tdm i).1) pf q (by
+    obtain ⟨a, ha0, ha⟩ := exists_le_checkPassProjector_conj_of_length_le chk n c.W hW c.idx
+      c.cm (fun i ↦ (tdm i).1) pf q (by
         intro i
-        cases hL : (io i).pairs (c.cm i) (tdm i).1 (pf i) with
+        cases hL : (chk i).log (c.cm i) (tdm i).1 (pf i) with
         | none => simp
         | some L => exact hq i (c.cm i) (tdm i).1 (tdm i).2 (pf i) (hpf i) L hL)
     -- the checks on the partial tables pass under the extraction outcome (condition 3)
-    have hPQ : checkPassProjector io c.W c.idx c.cm (fun i ↦ (tdm i).1) pf *
+    have hPQ : checkPassProjector chk c.W c.idx c.cm (fun i ↦ (tdm i).1) pf *
         (diagonal fun D : Fin k → Database X Y ↦
           if ME.extract (TpIC.full hk c.idx c.cm) D = tdm then 1 else 0) =
         diagonal fun D : Fin k → Database X Y ↦
@@ -791,7 +796,7 @@ theorem outcomeMeasure_run₂_checks_le_of_openingQueryBound [∀ i, DecidableEq
         ((((compressedVCOracle k X Y).mixedExtractRuntime ME code).run₂ .instruments
           (QComp.allIn c.W fun i ↦ checkAt (Z := Z) VC B i (c.idx i) (c.cm i) (tdm i).1
             (pf i))).branch true ρ.matrix).trace.re := by
-      rw [branch_run₂_filledBatch_compressedVCOracle io ME code B c.W
+      rw [branch_run₂_filledBatch_compressedVCOracle chk ME code B c.W
         ⟨c.idx, c.cm, (fun i ↦ (tdm i).1), pf, c.W⟩]
       exact le_of_eq (trace_re_conj_one_kronecker_eq_of_conj
         (conjTranspose_compressDatabases k X Y) hCC
@@ -814,7 +819,7 @@ holding with weight at most `1 - (1 - 1/N)^{2 n q2}` times the trace. By conditi
 lies under the pass projector `P` of the checks on the partial tables, while the checks run
 against the compressed oracles accept on `C P C`; its overlap with `P` bounds acceptance. -/
 theorem outcomeMeasure_run₂_checks_le [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
-    (hC : Conditions VC io ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
+    (hC : Conditions VC chk ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
     {B : QReg} (tdm : TpDLen k (DmOf ℓ Msg Td) (TpIC.full hk c.idx c.cm).1) (pf : ∀ i, Pf i)
     (hpf : ∀ i, pf i ∈ support ((VC i).opening (tdm i).1.dom (tdm i).2))
     (ρ : SubState (B × ((compressedVCOracle k X Y).mixedExtractRuntime ME code).D))
@@ -825,15 +830,15 @@ theorem outcomeMeasure_run₂_checks_le [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
           (pf i)).bind fun b ↦ QuantumComp₂.pure
             (!b && decide (c.W.card ≤ n) && decide (Function.Injective c.idx)))).outcomeMeasure
         ρ {true} ≤
-      ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io)) *
+      ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 chk)) *
         ENNReal.ofReal ρ.matrix.trace.re :=
-  outcomeMeasure_run₂_checks_le_of_openingQueryBound io ME code (q2 io)
-    (openingQueryBound_q2 io) hC hk n c tdm pf hpf ρ hρ
+  outcomeMeasure_run₂_checks_le_of_openingQueryBound chk ME code (q2 chk)
+    (openingQueryBound_q2 chk) hC hk n c tdm pf hpf ρ hρ
 
 /-- The openings and checks after extraction with an opening-specific cell budget. -/
 theorem outcomeMeasure_run₂_openings_le_of_openingQueryBound [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
-    (q : ℕ) (hq : OpeningQueryBound io q)
-    (hC : Conditions VC io ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
+    (q : ℕ) (hq : OpeningQueryBound chk q)
+    (hC : Conditions VC chk ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
     {B : QReg} (tdm : TpDLen k (DmOf ℓ Msg Td) (TpIC.full hk c.idx c.cm).1)
     (φ : SubState (B × ((compressedVCOracle k X Y).mixedExtractRuntime ME code).D))
     (hφ : MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ diagonal fun D : Fin k → Database X Y ↦
@@ -857,7 +862,7 @@ theorem outcomeMeasure_run₂_openings_le_of_openingQueryBound [∀ i, Decidable
   · rw [SubInstrument.outcomeMeasure_eq_zero_of_matrix_eq_zero _ (by
       rw [DSubInstrument.matrix_post, hc₀, hz hs, zero_smul, LinearMap.zero_apply])]
     exact zero_le
-  · refine outcomeMeasure_run₂_checks_le_of_openingQueryBound io ME code q hq hC hk n c tdm pf
+  · refine outcomeMeasure_run₂_checks_le_of_openingQueryBound chk ME code q hq hC hk n c tdm pf
       (fun i ↦ Classical.byContradiction fun h ↦ hs ⟨i, h⟩) _ ?_
     rw [DSubInstrument.matrix_post, hc₀, LinearMap.smul_apply, LinearMap.id_apply]
     exact (LinearMap.map_smul _ c₀ φ.matrix).trans (congrArg (c₀ • ·) hφ)
@@ -867,7 +872,7 @@ outcome `tdm`, opening every position and running the checks on `W` reports the 
 weight at most `1 - (1 - 1/N)^{2 n q2}` times the trace. The openings use only coins, so each
 opening outcome scales the substate; outcomes outside the support of `Open` have weight zero. -/
 theorem outcomeMeasure_run₂_openings_le [∀ i, DecidableEq (DmOf ℓ Msg Td i)]
-    (hC : Conditions VC io ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
+    (hC : Conditions VC chk ME tdBot Pgood) (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm)
     {B : QReg} (tdm : TpDLen k (DmOf ℓ Msg Td) (TpIC.full hk c.idx c.cm).1)
     (φ : SubState (B × ((compressedVCOracle k X Y).mixedExtractRuntime ME code).D))
     (hφ : MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ diagonal fun D : Fin k → Database X Y ↦
@@ -878,15 +883,15 @@ theorem outcomeMeasure_run₂_openings_le [∀ i, DecidableEq (DmOf ℓ Msg Td i
             (pf i)).bind fun b ↦ QuantumComp₂.pure
               (!b && decide (c.W.card ≤ n) && decide (Function.Injective c.idx)))).outcomeMeasure
         φ {true} ≤
-      ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io)) *
+      ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 chk)) *
         ENNReal.ofReal φ.matrix.trace.re :=
-  outcomeMeasure_run₂_openings_le_of_openingQueryBound io ME code (q2 io)
-    (openingQueryBound_q2 io) hC hk n c tdm φ hφ
+  outcomeMeasure_run₂_openings_le_of_openingQueryBound chk ME code (q2 chk)
+    (openingQueryBound_q2 chk) hC hk n c tdm φ hφ
 
 /-- The extraction challenger with an opening-specific cell budget. -/
 theorem outcomeMeasure_run₂_extractChallenger_le_of_openingQueryBound
-    (q : ℕ) (hq : OpeningQueryBound io q)
-    (hC : Conditions VC io ME tdBot Pgood)
+    (q : ℕ) (hq : OpeningQueryBound chk q)
+    (hC : Conditions VC chk ME tdBot Pgood)
     (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm) {B : QReg}
     (σ : SubState (B × ((compressedVCOracle k X Y).mixedExtractRuntime ME code).D)) :
     (((compressedVCOracle k X Y).mixedExtractRuntime ME code).run₂ .instruments
@@ -902,7 +907,8 @@ theorem outcomeMeasure_run₂_extractChallenger_le_of_openingQueryBound
     rw [QuantumRuntime.run₂_pure, DSubInstrument.outcomeMeasure_ret]
     simp
   | some tdm =>
-    refine outcomeMeasure_run₂_openings_le_of_openingQueryBound io ME code q hq hC hk n c tdm _ ?_
+    refine outcomeMeasure_run₂_openings_le_of_openingQueryBound chk ME code q hq hC hk n c tdm
+      _ ?_
     have hlift : ((compressedVCOracle k X Y).mixedExtractRuntime ME code).run₂ .instruments
         (QuantumComp.liftOrdinary (extractQuery code B (TpIC.full hk c.idx c.cm))) =
         ((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime.run₂ .instruments
@@ -924,28 +930,28 @@ pp. 59–61). From every joint substate of the adversary's register and the data
 challenger reports its event with weight at most `1 - (1 - 1/N)^{2 n q2}` times the trace.
 Extraction is the measurement of `MultiExtract(tic, ·)` (game G0, p. 59), so each extraction
 outcome leaves a substate supported on it. -/
-theorem outcomeMeasure_run₂_extractChallenger_le (hC : Conditions VC io ME tdBot Pgood)
+theorem outcomeMeasure_run₂_extractChallenger_le (hC : Conditions VC chk ME tdBot Pgood)
     (hk : 1 ≤ k) (n : ℕ) (c : ExtractClaim k Cm) {B : QReg}
     (σ : SubState (B × ((compressedVCOracle k X Y).mixedExtractRuntime ME code).D)) :
     (((compressedVCOracle k X Y).mixedExtractRuntime ME code).run₂ .instruments
         (extractChallenger VC code hk n c B)).outcomeMeasure σ {true} ≤
-      ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 io)) *
+      ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q2 chk)) *
         ENNReal.ofReal σ.matrix.trace.re :=
-  outcomeMeasure_run₂_extractChallenger_le_of_openingQueryBound io ME code (q2 io)
-    (openingQueryBound_q2 io) hC hk n c σ
+  outcomeMeasure_run₂_extractChallenger_le_of_openingQueryBound chk ME code (q2 chk)
+    (openingQueryBound_q2 chk) hC hk n c σ
 
 /-! ## Lemma 9.3 -/
 
 /-- P3 with error `1 - (1 - 1/N)^(2 n q)` when opening outputs use at most `q` cells. -/
 theorem extractionCorrect_compressedVCOracle_of_openingQueryBound
-    (q : ℕ) (hq : OpeningQueryBound io q)
-    (hC : Conditions VC io ME tdBot Pgood) :
+    (q : ℕ) (hq : OpeningQueryBound chk q)
+    (hC : Conditions VC chk ME tdBot Pgood) :
     ExtractionCorrect.{v, w} VC (compressedVCOracle k X Y) ME code
       fun _ _ _ n ↦ ENNReal.ofReal (1 - (1 - (Fintype.card Y : ℝ)⁻¹) ^ (2 * n * q)) := by
   intro hk t n wVC wME A W x claim ρ _ _ _ _
   exact outcomeLawWith_experiment_true_le _ (QuantumComp.liftOrdinary x) _ ρ fun u y σ ↦
     outcomeMeasure_run₂_extractChallenger_le_of_openingQueryBound
-      io ME code q hq hC hk n (claim u y) σ
+      chk ME code q hq hC hk n (claim u y) σ
 
 /-- **Lemma 9.3 of ePrint 2025/2166, exact form** (pp. 59–61): `EO^(Ext)` for the `k`
 compressed oracles is multi-extraction correct (P3, `Quantum.ExtractionCorrect`) under the
@@ -960,27 +966,27 @@ partial tables, so the ideal failure probability is zero. Against the compressed
 checks accept exactly on `C P C`, and `P (C P C) P = a P` with `a ≥ (1 - 1/N)^{2 n q2}`
 because there are at most `n q2` prescribed cells, so the checks fail with weight at most
 `1 - a` times the trace. -/
-theorem extractionCorrect_compressedVCOracle (hC : Conditions VC io ME tdBot Pgood) :
+theorem extractionCorrect_compressedVCOracle (hC : Conditions VC chk ME tdBot Pgood) :
     ExtractionCorrect.{v, w} VC (compressedVCOracle k X Y) ME code
-      fun _ _ _ n ↦ extractError io n :=
-  extractionCorrect_compressedVCOracle_of_openingQueryBound io ME code (q2 io)
-    (openingQueryBound_q2 io) hC
+      fun _ _ _ n ↦ extractError chk n :=
+  extractionCorrect_compressedVCOracle_of_openingQueryBound chk ME code (q2 chk)
+    (openingQueryBound_q2 chk) hC
 
 /-- **Lemma 9.3 of ePrint 2025/2166, leading order**: P3 with error `2 n q2 / N`, a corollary of
 `Quantum.extractionCorrect_compressedVCOracle`. -/
-theorem extractionCorrect_compressedVCOracle_two_mul (hC : Conditions VC io ME tdBot Pgood) :
+theorem extractionCorrect_compressedVCOracle_two_mul (hC : Conditions VC chk ME tdBot Pgood) :
     ExtractionCorrect.{v, w} VC (compressedVCOracle k X Y) ME code
-      fun _ _ _ n ↦ (2 * n * q2 io : ℝ≥0∞) / Fintype.card Y :=
-  (extractionCorrect_compressedVCOracle io ME code hC).mono fun _ _ _ n ↦
-    extractError_le_two_mul io n
+      fun _ _ _ n ↦ (2 * n * q2 chk : ℝ≥0∞) / Fintype.card Y :=
+  (extractionCorrect_compressedVCOracle chk ME code hC).mono fun _ _ _ n ↦
+    extractError_le_two_mul chk n
 
 /-- **Lemma 9.3 of ePrint 2025/2166 with the paper's error `8 n q2 / N`** (p. 59): a corollary of
 `Quantum.extractionCorrect_compressedVCOracle`. -/
-theorem extractionCorrect_compressedVCOracle_eight_mul (hC : Conditions VC io ME tdBot Pgood) :
+theorem extractionCorrect_compressedVCOracle_eight_mul (hC : Conditions VC chk ME tdBot Pgood) :
     ExtractionCorrect.{v, w} VC (compressedVCOracle k X Y) ME code
-      fun _ _ _ n ↦ (8 * n * q2 io : ℝ≥0∞) / Fintype.card Y :=
-  (extractionCorrect_compressedVCOracle_two_mul io ME code hC).mono fun _ _ _ n ↦ by
-    change (2 * n * q2 io : ℝ≥0∞) / Fintype.card Y ≤ 8 * n * q2 io / Fintype.card Y
+      fun _ _ _ n ↦ (8 * n * q2 chk : ℝ≥0∞) / Fintype.card Y :=
+  (extractionCorrect_compressedVCOracle_two_mul chk ME code hC).mono fun _ _ _ n ↦ by
+    change (2 * n * q2 chk : ℝ≥0∞) / Fintype.card Y ≤ 8 * n * q2 chk / Fintype.card Y
     gcongr
     norm_num
 

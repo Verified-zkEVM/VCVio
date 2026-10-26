@@ -231,12 +231,12 @@ This can be smaller than the query bound for arbitrary proofs in `NonadaptiveChe
 def OpeningQueryBound (q : ℕ) : Prop :=
   ∀ (i : Fin k) (cm : Cm) (ans : PartialVec (ℓ i) Msg) (td : Td i) (pf : Pf i),
     pf ∈ support ((VC i).opening ans.dom td) →
-      ∀ L, (io i).pairs cm ans pf = some L → L.length ≤ q
+      ∀ L, (chk i).log cm ans pf = some L → L.length ≤ q
 
 /-- The arbitrary-proof budget also bounds all proofs produced by opening. -/
-theorem openingQueryBound_q2 : OpeningQueryBound io (q2 io) := by
+theorem openingQueryBound_q2 : OpeningQueryBound chk (q2 chk) := by
   intro i cm ans td pf _ L hL
-  exact ((io i).length_le _ _ _ _ hL).trans (qVC_card_dom_le_q2 io i ans)
+  exact ((chk i).length_le _ _ _ _ hL).trans (qVC_card_dom_le_q2 chk i ans)
 
 end counts
 

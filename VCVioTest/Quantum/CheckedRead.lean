@@ -22,49 +22,54 @@ open scoped Kronecker ENNReal Matrix.Norms.L2Operator
 namespace VCVioTest.QuantumCheckedRead
 
 /-- A repeated prescription across two oracle databases, touching only one cell. -/
-abbrev repeated : List ((Fin 2 × Bool) × ZMod 3) :=
-  [((0, true), 1), ((0, true), 1)]
+abbrev repeated : QueryLog ((Fin 2 × Bool) →ₒ ZMod 3) :=
+  [⟨(0, true), 1⟩, ⟨(0, true), 1⟩]
 
 /-- Duplicate checks retain the one-cell squared discrepancy `5/9`. -/
 example : ‖filledCheck repeated - partialCheck repeated‖ ^ 2 = 5 / 9 := by
-  have hc : ConsistentIO repeated := by
+  have hc : QueryLog.Consistent repeated := by
     intro p hp q hq _
     simp only [repeated, List.mem_cons, List.not_mem_nil, or_false, or_self] at hp hq
     subst p
     subst q
     rfl
   rw [filled_partial_distance_sq repeated hc]
-  norm_num [ioCells, repeated, ZMod.card]
+  norm_num [loggedCells, repeated, ZMod.card]
 
 /-- Equal addresses in distinct databases count as two cells, giving `65/81`. -/
 example :
-    ‖filledCheck ([((0, true), 1), ((1, true), 1)] : List ((Fin 2 × Bool) × ZMod 3)) -
-      partialCheck [((0, true), 1), ((1, true), 1)]‖ ^ 2 = 65 / 81 := by
-  have hc : ConsistentIO
-      ([((0, true), 1), ((1, true), 1)] : List ((Fin 2 × Bool) × ZMod 3)) := by
-    intro p hp q hq _
+    ‖filledCheck
+        ([⟨(0, true), 1⟩, ⟨(1, true), 1⟩] : QueryLog ((Fin 2 × Bool) →ₒ ZMod 3)) -
+      partialCheck [⟨(0, true), 1⟩, ⟨(1, true), 1⟩]‖ ^ 2 = 65 / 81 := by
+  have hc : QueryLog.Consistent
+      ([⟨(0, true), 1⟩, ⟨(1, true), 1⟩] : QueryLog ((Fin 2 × Bool) →ₒ ZMod 3)) := by
+    refine QueryLog.consistent_iff.mpr fun p hp q hq _ ↦ ?_
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hp hq
     rcases hp with rfl | rfl <;> rcases hq with rfl | rfl <;> rfl
   rw [filled_partial_distance_sq _ hc]
-  norm_num [ioCells, ZMod.card]
+  norm_num [loggedCells, ZMod.card]
+
+/-- Two different answers at one cell, one of them the special zero answer. -/
+abbrev conflicting : QueryLog ((Fin 2 × Bool) →ₒ ZMod 3) :=
+  [⟨(0, true), 0⟩, ⟨(0, true), 1⟩]
 
 /-- Conflicting prescriptions vanish even if one is the special zero answer. -/
-example :
-    filledCheck ([((0, true), 0), ((0, true), 1)] : List ((Fin 2 × Bool) × ZMod 3)) = 0 ∧
-    partialCheck ([((0, true), 0), ((0, true), 1)] : List ((Fin 2 × Bool) × ZMod 3)) = 0 := by
+example : filledCheck conflicting = 0 ∧ partialCheck conflicting = 0 := by
   apply filled_partial_eq_zero_of_conflict
   intro h
-  have he := h ((0, true), 0) (by simp) ((0, true), 1) (by simp) rfl
+  have he := QueryLog.consistent_iff.mp h ⟨(0, true), 0⟩ (by simp [conflicting])
+    ⟨(0, true), 1⟩ (by simp [conflicting]) rfl
   exact (by decide : (0 : ZMod 3) ≠ 1) he
 
 /-- The singleton answer alphabet has unit distance on a prescribed cell. -/
-example : ‖filledCheck ([((0, true), 0)] : List ((Fin 1 × Bool) × ZMod 1)) -
-    partialCheck [((0, true), 0)]‖ ^ 2 = 1 := by
-  rw [filled_partial_distance_sq _ (consistentIO_singleton _)]
-  norm_num [ioCells, ZMod.card]
+example : ‖filledCheck ([⟨(0, true), 0⟩] : QueryLog ((Fin 1 × Bool) →ₒ ZMod 1)) -
+    partialCheck [⟨(0, true), 0⟩]‖ ^ 2 = 1 := by
+  rw [filled_partial_distance_sq _ (QueryLog.consistent_singleton _)]
+  norm_num [loggedCells, ZMod.card]
 
 /-- An empty list has zero checker distance, including for a singleton alphabet. -/
-example : ‖filledCheck ([] : List ((Fin 1 × Bool) × ZMod 1)) - partialCheck []‖ = 0 := by
+example :
+    ‖filledCheck ([] : QueryLog ((Fin 1 × Bool) →ₒ ZMod 1)) - partialCheck []‖ = 0 := by
   simp [filledCheck_nil, partialCheck]
 
 local notation "E" => compressedVCOracle 2 Bool (ZMod 2)
