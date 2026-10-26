@@ -367,8 +367,9 @@ theorem run_congr_of_isQueryBound {D : QReg} {σ₁ σ₂ : SubState D}
     {x : QuantumComp L spec X A} {b : spec.Port → ℕ} (hx : x.IsQueryBound b)
     (hs : ∀ i, b i ≠ 0 → s₁ i = s₂ i) :
     (QuantumRuntime.mk D σ₁ s₁).run I x = (QuantumRuntime.mk D σ₂ s₂).run I x := by
+  -- Constructor equations avoid comparing unused runtime algebras by definitional equality.
   induction x using QuantumComp.inductionOn with
-  | pure _ _ => rfl
+  | pure _ _ => simp only [run_pure]
   | primBind _ o k ih =>
     rw [QuantumComp.isQueryBound_primBind_iff] at hx
     rw [run_primBind, run_primBind]
