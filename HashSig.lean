@@ -44,6 +44,7 @@ public import HashSig.SLHDSA.RandomOracle
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Encodings
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Fors
 public import HashSig.SLHDSA.SHAKE128s.Bridge.ForsObservation
+public import HashSig.SLHDSA.SHAKE128s.Bridge.GraphInput
 public import HashSig.SLHDSA.SHAKE128s.Bridge.GraphStructure
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Hypertree
 public import HashSig.SLHDSA.SHAKE128s.Bridge.PaperGame
@@ -326,6 +327,7 @@ public import HashSig.SLHDSA.Security.CoverageRun
 public import HashSig.SLHDSA.Security.DigestTransport
 public import HashSig.SLHDSA.Security.EncodedTargets
 public import HashSig.SLHDSA.Security.ForsWitnesses
+public import HashSig.SLHDSA.Security.GraphInput
 public import HashSig.SLHDSA.Security.HedgedKeyBound
 public import HashSig.SLHDSA.Security.HiddenCells
 public import HashSig.SLHDSA.Security.HiddenUndrawn
