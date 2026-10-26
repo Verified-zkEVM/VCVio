@@ -1,0 +1,684 @@
+{
+  "status": "CANDIDATE_R0_STRENGTH_MANIFEST_NOT_A_BUILD_OR_AUDIT",
+  "sourceHead": "f2bd85c91e5a0df4d874c320f7ad3174606d91fe",
+  "sourceTree": "e10d9c5580c60c61e60659a3895c95e0f443b5a2",
+  "sourceRoot": "/tmp/vcvio-pr912-canonical",
+  "recoveryRule": "Each original fully quantified conclusion must be re-derived with same or weaker hypotheses and identical RHS/model/resource interface, via proved exact specification/refinement equations. A #check or printed-name/type comparison alone is insufficient if a definition is silently weakened. Capture elaborated original types and defining game/budget/bound equations atR0; compare futurecandidate recovery proofs.",
+  "groups": [
+    {
+      "family": "766 general three-oracle target and arbitrary seed distribution",
+      "role": "security headline",
+      "path": "HashSig/SLHDSA/Security/CoverageBound.lean",
+      "sourceSha256": "8c041a6ef1dc4bd47f897937c3638f03cd664be44575e82f5d891c10e79ae4fb",
+      "preservationContract": "All qh,qs; arbitrary validated depth/parameters/core under unchanged ByteLaws/KeyDiscipline/card/equivalence hypotheses; c=2,r=1; arbitrary optRand; pure/public-seed and arbitrary seed distribution, not only uniform.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.strongUnforgeableAdvantage_romScheme_pure_le_securityBound",
+          "line": 325,
+          "declarationHeader": "theorem strongUnforgeableAdvantage_romScheme_pure_le_securityBound (laws : core.ByteLaws)\n    (hd : core.KeyDiscipline vp) (hcard : Nat.card core.Y \u2264 Nat.card core.SkPrf)\n    (e : core.SkSeed \u2243 core.Y) (optRand : PublicKeyCore core \u2192 ProbComp core.Y)\n    (pkSeed : core.PkSeed)\n    {adv : StrongUnforgeableAdversary (romScheme core e optRand (pure pkSeed))}\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    strongUnforgeableAdvantage (ProbCompRuntime.rom (hashSpec core)) adv \u2264\n      securityBound vp.params (Nat.card core.Y) 2 1 qh qs"
+        },
+        {
+          "name": "SLHDSA.Security.securityTarget_two_one",
+          "line": 350,
+          "declarationHeader": "theorem securityTarget_two_one (laws : core.ByteLaws) (hd : core.KeyDiscipline vp)\n    (hcard : Nat.card core.Y \u2264 Nat.card core.SkPrf) (e : core.SkSeed \u2243 core.Y)\n    (optRand : PublicKeyCore core \u2192 ProbComp core.Y) :\n    SecurityTarget core e optRand 2 1"
+        },
+        {
+          "name": "SLHDSA.Security.strongUnforgeableAdvantage_romScheme_le_securityBound",
+          "line": 362,
+          "declarationHeader": "theorem strongUnforgeableAdvantage_romScheme_le_securityBound (laws : core.ByteLaws)\n    (hd : core.KeyDiscipline vp) (hcard : Nat.card core.Y \u2264 Nat.card core.SkPrf)\n    (e : core.SkSeed \u2243 core.Y) (optRand : PublicKeyCore core \u2192 ProbComp core.Y)\n    (pkSeedDist : ProbComp core.PkSeed)\n    (adv : StrongUnforgeableAdversary (romScheme core e optRand pkSeedDist)) {qh qs : \u2115}\n    (hadv : adv.RomQueryBound qh qs) :\n    strongUnforgeableAdvantage (ProbCompRuntime.rom (hashSpec core)) adv \u2264\n      securityBound vp.params (Nat.card core.Y) 2 1 qh qs"
+        }
+      ]
+    },
+    {
+      "family": "766 single-SHAKE per-seed and generic randomizer collision contract",
+      "role": "security headline",
+      "path": "HashSig/SLHDSA/Security/ByteBound.lean",
+      "sourceSha256": "a95bef444e6e1fdab3c0db259eecc2517d7c1f688936dfe66a18d47aa8663563",
+      "preservationContract": "All qh,qs under original canonical-address/n-width hypotheses; arbitrary optRand coarse term, generic epsilon optRand collision premise, sharper independent-uniform hedged term; exact weak-key mass, including its removal at strong n32 seeds.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound",
+          "line": 204,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound (hb : CanonicalAddressBounds vp.params)\n    (hn16 : 16 \u2264 vp.params.n) (hn : vp.params.n \u2264 32) (hnm : vp.params.n \u2264 vp.params.m)\n    (pkSeed : (shakeCore vp).PkSeed)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme vp optRand (pure pkSeed))) {qh qs : \u2115}\n    (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264 byteBound vp qh qs + weakKeyMass vp pkSeed"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound_of_weakKeyMass_eq_zero",
+          "line": 221,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound_of_weakKeyMass_eq_zero\n    (hb : CanonicalAddressBounds vp.params) (hn16 : 16 \u2264 vp.params.n) (hn : vp.params.n \u2264 32)\n    (hnm : vp.params.n \u2264 vp.params.m) {pkSeed : (shakeCore vp).PkSeed}\n    (hs : weakKeyMass vp pkSeed = 0)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme vp optRand (pure pkSeed))) {qh qs : \u2115}\n    (hadv : adv.RomQueryBound qh qs) : shakeStrongAdvantage vp adv \u2264 byteBound vp qh qs"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound_of_n_eq_32",
+          "line": 234,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound_of_n_eq_32\n    (hb : CanonicalAddressBounds vp.params) (hn : vp.params.n = 32)\n    (hnm : vp.params.n \u2264 vp.params.m) {pkSeed : (shakeCore vp).PkSeed}\n    (hs : \u00acIsHonestKey vp (shakeCore vp) (adrsKeyOfList vp (Vector.toList (pkSeed : Bytes _))))\n    (adv : StrongUnforgeableAdversary (shakeRomScheme vp optRand (pure pkSeed))) {qh qs : \u2115}\n    (hadv : adv.RomQueryBound qh qs) : shakeStrongAdvantage vp adv \u2264 byteBound vp qh qs"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound_of_prEvent_optRand_le",
+          "line": 250,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound_of_prEvent_optRand_le\n    (hb : CanonicalAddressBounds vp.params) (hn16 : 16 \u2264 vp.params.n) (hn : vp.params.n \u2264 32)\n    (hnm : vp.params.n \u2264 vp.params.m) (pkSeed : (shakeCore vp).PkSeed) {\u03b5 : \u211d\u22650\u221e}\n    (h\u03b5 : \u2200 pk, Pr{let r \u2190 optRand pk}[r = pkSeed] \u2264 \u03b5)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme vp optRand (pure pkSeed))) {qh qs : \u2115}\n    (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264\n      securityBound vp.params (256 ^ vp.params.n) 2 1 qh qs + 1 / (256 ^ vp.params.n : \u2115) +\n        qs * \u03b5 * (((qh : \u211d\u22650\u221e) + qs + 1) / (256 ^ vp.params.n : \u2115)) + weakKeyMass vp pkSeed"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound_hedged",
+          "line": 272,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound_hedged (hb : CanonicalAddressBounds vp.params)\n    (hn16 : 16 \u2264 vp.params.n) (hn : vp.params.n \u2264 32) (hnm : vp.params.n \u2264 vp.params.m)\n    (pkSeed : (shakeCore vp).PkSeed)\n    (adv : StrongUnforgeableAdversary\n      (shakeRomScheme vp (fun _ \u21a6 $\u1d57 (shakeCore vp).Y) (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264 byteBoundHedged vp qh qs + weakKeyMass vp pkSeed"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound_hedged_of_n_eq_32",
+          "line": 292,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound_hedged_of_n_eq_32\n    (hb : CanonicalAddressBounds vp.params) (hn : vp.params.n = 32)\n    (hnm : vp.params.n \u2264 vp.params.m) {pkSeed : (shakeCore vp).PkSeed}\n    (hs : \u00acIsHonestKey vp (shakeCore vp) (adrsKeyOfList vp (Vector.toList (pkSeed : Bytes _))))\n    (adv : StrongUnforgeableAdversary\n      (shakeRomScheme vp (fun _ \u21a6 $\u1d57 (shakeCore vp).Y) (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264 byteBoundHedged vp qh qs"
+        }
+      ]
+    },
+    {
+      "family": "766 per-seed n32 minimum and weak-seed multiplication",
+      "role": "security headline",
+      "path": "HashSig/SLHDSA/Security/ByteBound.lean",
+      "sourceSha256": "a95bef444e6e1fdab3c0db259eecc2517d7c1f688936dfe66a18d47aa8663563",
+      "preservationContract": "Retain min with everySeedBound/everySeedBoundHedged and full weakKeyMass*weakSeedFactor factor; no replacement by only a looser bound or arbitrary-seed exclusion.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_min_of_n_eq_32",
+          "line": 331,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_min_of_n_eq_32 (hb : CanonicalAddressBounds vp.params)\n    (hn : vp.params.n = 32) (hnm : vp.params.n \u2264 vp.params.m) (pkSeed : (shakeCore vp).PkSeed)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme vp optRand (pure pkSeed))) {qh qs : \u2115}\n    (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264\n      min (byteBound vp qh qs + weakKeyMass vp pkSeed) (everySeedBound vp qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_min_hedged_of_n_eq_32",
+          "line": 349,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_min_hedged_of_n_eq_32 (hb : CanonicalAddressBounds vp.params)\n    (hn : vp.params.n = 32) (hnm : vp.params.n \u2264 vp.params.m) (pkSeed : (shakeCore vp).PkSeed)\n    (adv : StrongUnforgeableAdversary\n      (shakeRomScheme vp (fun _ \u21a6 $\u1d57 (shakeCore vp).Y) (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264\n      min (byteBoundHedged vp qh qs + weakKeyMass vp pkSeed) (everySeedBoundHedged vp qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound_add_weakKeyMass_mul",
+          "line": 369,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound_add_weakKeyMass_mul\n    (hb : CanonicalAddressBounds vp.params) (hn16 : 16 \u2264 vp.params.n) (hn : vp.params.n \u2264 32)\n    (hnm : vp.params.n \u2264 vp.params.m) (pkSeed : (shakeCore vp).PkSeed)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme vp optRand (pure pkSeed))) {qh qs : \u2115}\n    (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264\n      byteBound vp qh qs + weakKeyMass vp pkSeed * weakSeedFactor vp (everySeedBound vp qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound_hedged_add_weakKeyMass_mul",
+          "line": 388,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound_hedged_add_weakKeyMass_mul\n    (hb : CanonicalAddressBounds vp.params) (hn16 : 16 \u2264 vp.params.n) (hn : vp.params.n \u2264 32)\n    (hnm : vp.params.n \u2264 vp.params.m) (pkSeed : (shakeCore vp).PkSeed)\n    (adv : StrongUnforgeableAdversary\n      (shakeRomScheme vp (fun _ \u21a6 $\u1d57 (shakeCore vp).Y) (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264 byteBoundHedged vp qh qs +\n      weakKeyMass vp pkSeed * weakSeedFactor vp (everySeedBoundHedged vp qh qs)"
+        }
+      ]
+    },
+    {
+      "family": "766 uniform public-seed averaged and n32 sharp forms",
+      "role": "security headline",
+      "path": "HashSig/SLHDSA/Security/ByteBound.lean",
+      "sourceSha256": "a95bef444e6e1fdab3c0db259eecc2517d7c1f688936dfe66a18d47aa8663563",
+      "preservationContract": "All qh,qs; uniform public seed; byteBound or byteBoundHedged plus honestAdrsCount/2^256*weakSeedFactor(everySeedBound); n32 factor min1epsilon preserved exactly.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_le_securityBound",
+          "line": 413,
+          "declarationHeader": "theorem shakeStrongAdvantage_le_securityBound (hb : CanonicalAddressBounds vp.params)\n    (hn16 : 16 \u2264 vp.params.n) (hn : vp.params.n \u2264 32) (hnm : vp.params.n \u2264 vp.params.m)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme vp optRand ($\u1d57 (shakeCore vp).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264 byteBound vp qh qs +\n      honestAdrsCount vp / 2 ^ 256 * weakSeedFactor vp (everySeedBound vp qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_le_securityBound_hedged",
+          "line": 431,
+          "declarationHeader": "theorem shakeStrongAdvantage_le_securityBound_hedged (hb : CanonicalAddressBounds vp.params)\n    (hn16 : 16 \u2264 vp.params.n) (hn : vp.params.n \u2264 32) (hnm : vp.params.n \u2264 vp.params.m)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme vp (fun _ \u21a6 $\u1d57 (shakeCore vp).Y)\n      ($\u1d57 (shakeCore vp).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264 byteBoundHedged vp qh qs +\n      honestAdrsCount vp / 2 ^ 256 * weakSeedFactor vp (everySeedBoundHedged vp qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_le_securityBound_of_n_eq_32",
+          "line": 450,
+          "declarationHeader": "theorem shakeStrongAdvantage_le_securityBound_of_n_eq_32 (hb : CanonicalAddressBounds vp.params)\n    (hn : vp.params.n = 32) (hnm : vp.params.n \u2264 vp.params.m)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme vp optRand ($\u1d57 (shakeCore vp).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264\n      byteBound vp qh qs + honestAdrsCount vp / 2 ^ 256 * min 1 (everySeedBound vp qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_le_securityBound_hedged_of_n_eq_32",
+          "line": 465,
+          "declarationHeader": "theorem shakeStrongAdvantage_le_securityBound_hedged_of_n_eq_32\n    (hb : CanonicalAddressBounds vp.params) (hn : vp.params.n = 32)\n    (hnm : vp.params.n \u2264 vp.params.m)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme vp (fun _ \u21a6 $\u1d57 (shakeCore vp).Y)\n      ($\u1d57 (shakeCore vp).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264 byteBoundHedged vp qh qs +\n      honestAdrsCount vp / 2 ^ 256 * min 1 (everySeedBoundHedged vp qh qs)"
+        }
+      ]
+    },
+    {
+      "family": "766 approved parameter entrypoints: six primary SHAKE parameter sets",
+      "role": "security headline",
+      "path": "HashSig/SLHDSA/Security/ByteBound.lean",
+      "sourceSha256": "a95bef444e6e1fdab3c0db259eecc2517d7c1f688936dfe66a18d47aa8663563",
+      "preservationContract": "All qh,qs and FipsParameterSet parameter bundles; SHAKE core/model throughout, not a SHA2 security claim. Instantiate all six SHAKE names. Preserve per-seed, uniform-average, n32 every-seed, arbitrary/deterministic optRand and sharper hedged interfaces.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound_validatedParams",
+          "line": 486,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound_validatedParams (set : FipsParameterSet)\n    {optRand : PublicKeyCore (shakeCore set.validatedParams) \u2192\n      ProbComp (shakeCore set.validatedParams).Y}\n    (pkSeed : (shakeCore set.validatedParams).PkSeed)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme set.validatedParams optRand (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage set.validatedParams adv \u2264\n      byteBound set.validatedParams qh qs + weakKeyMass set.validatedParams pkSeed"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound_hedged_validatedParams",
+          "line": 502,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound_hedged_validatedParams (set : FipsParameterSet)\n    (pkSeed : (shakeCore set.validatedParams).PkSeed)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme set.validatedParams\n      (fun _ \u21a6 $\u1d57 (shakeCore set.validatedParams).Y) (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage set.validatedParams adv \u2264\n      byteBoundHedged set.validatedParams qh qs + weakKeyMass set.validatedParams pkSeed"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound_add_validatedParams",
+          "line": 517,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound_add_validatedParams (set : FipsParameterSet)\n    (hn : set.validatedParams.params.n = 32)\n    {optRand : PublicKeyCore (shakeCore set.validatedParams) \u2192\n      ProbComp (shakeCore set.validatedParams).Y}\n    (pkSeed : (shakeCore set.validatedParams).PkSeed)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme set.validatedParams optRand (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage set.validatedParams adv \u2264 everySeedBound set.validatedParams qh qs"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_pure_le_securityBound_add_hedged_validatedParams",
+          "line": 533,
+          "declarationHeader": "theorem shakeStrongAdvantage_pure_le_securityBound_add_hedged_validatedParams\n    (set : FipsParameterSet) (hn : set.validatedParams.params.n = 32)\n    (pkSeed : (shakeCore set.validatedParams).PkSeed)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme set.validatedParams\n      (fun _ \u21a6 $\u1d57 (shakeCore set.validatedParams).Y) (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage set.validatedParams adv \u2264 everySeedBoundHedged set.validatedParams qh qs"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_le_securityBound_validatedParams",
+          "line": 549,
+          "declarationHeader": "theorem shakeStrongAdvantage_le_securityBound_validatedParams (set : FipsParameterSet)\n    {optRand : PublicKeyCore (shakeCore set.validatedParams) \u2192\n      ProbComp (shakeCore set.validatedParams).Y}\n    (adv : StrongUnforgeableAdversary (shakeRomScheme set.validatedParams optRand\n      ($\u1d57 (shakeCore set.validatedParams).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage set.validatedParams adv \u2264 byteBound set.validatedParams qh qs +\n      honestAdrsCount set.validatedParams / 2 ^ 256 *\n        weakSeedFactor set.validatedParams (everySeedBound set.validatedParams qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_le_securityBound_hedged_validatedParams",
+          "line": 567,
+          "declarationHeader": "theorem shakeStrongAdvantage_le_securityBound_hedged_validatedParams (set : FipsParameterSet)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme set.validatedParams\n      (fun _ \u21a6 $\u1d57 (shakeCore set.validatedParams).Y) ($\u1d57 (shakeCore set.validatedParams).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage set.validatedParams adv \u2264 byteBoundHedged set.validatedParams qh qs +\n      honestAdrsCount set.validatedParams / 2 ^ 256 *\n        weakSeedFactor set.validatedParams (everySeedBoundHedged set.validatedParams qh qs)"
+        }
+      ]
+    },
+    {
+      "family": "766 named EUF corollaries",
+      "role": "derived EUF headline",
+      "path": "HashSig/SLHDSA/Security/ByteBound.lean",
+      "sourceSha256": "a95bef444e6e1fdab3c0db259eecc2517d7c1f688936dfe66a18d47aa8663563",
+      "preservationContract": "These are named EUF results derived by same-program SUF domination, not distinct probability proofs. Preserve exact RHS/budgets/sampling.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.shakeAdvantage_pure_le_securityBound",
+          "line": 586,
+          "declarationHeader": "theorem shakeAdvantage_pure_le_securityBound (hb : CanonicalAddressBounds vp.params)\n    (hn16 : 16 \u2264 vp.params.n) (hn : vp.params.n \u2264 32) (hnm : vp.params.n \u2264 vp.params.m)\n    (pkSeed : (shakeCore vp).PkSeed)\n    (adv : UnforgeableAdversary (shakeRomScheme vp optRand (pure pkSeed))) {qh qs : \u2115}\n    (hadv : adv.RomQueryBound qh qs) :\n    shakeAdvantage vp adv \u2264 byteBound vp qh qs + weakKeyMass vp pkSeed"
+        },
+        {
+          "name": "SLHDSA.Security.shakeAdvantage_le_securityBound",
+          "line": 596,
+          "declarationHeader": "theorem shakeAdvantage_le_securityBound (hb : CanonicalAddressBounds vp.params)\n    (hn16 : 16 \u2264 vp.params.n) (hn : vp.params.n \u2264 32) (hnm : vp.params.n \u2264 vp.params.m)\n    (adv : UnforgeableAdversary (shakeRomScheme vp optRand ($\u1d57 (shakeCore vp).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeAdvantage vp adv \u2264 byteBound vp qh qs +\n      honestAdrsCount vp / 2 ^ 256 * weakSeedFactor vp (everySeedBound vp qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.shakeAdvantage_le_securityBound_hedged",
+          "line": 606,
+          "declarationHeader": "theorem shakeAdvantage_le_securityBound_hedged (hb : CanonicalAddressBounds vp.params)\n    (hn16 : 16 \u2264 vp.params.n) (hn : vp.params.n \u2264 32) (hnm : vp.params.n \u2264 vp.params.m)\n    (adv : UnforgeableAdversary (shakeRomScheme vp (fun _ \u21a6 $\u1d57 (shakeCore vp).Y)\n      ($\u1d57 (shakeCore vp).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeAdvantage vp adv \u2264 byteBoundHedged vp qh qs +\n      honestAdrsCount vp / 2 ^ 256 * weakSeedFactor vp (everySeedBoundHedged vp qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.shakeAdvantage_pure_le_securityBound_validatedParams",
+          "line": 617,
+          "declarationHeader": "theorem shakeAdvantage_pure_le_securityBound_validatedParams (set : FipsParameterSet)\n    {optRand : PublicKeyCore (shakeCore set.validatedParams) \u2192\n      ProbComp (shakeCore set.validatedParams).Y}\n    (pkSeed : (shakeCore set.validatedParams).PkSeed)\n    (adv : UnforgeableAdversary (shakeRomScheme set.validatedParams optRand (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeAdvantage set.validatedParams adv \u2264\n      byteBound set.validatedParams qh qs + weakKeyMass set.validatedParams pkSeed"
+        },
+        {
+          "name": "SLHDSA.Security.shakeAdvantage_pure_le_securityBound_hedged_validatedParams",
+          "line": 629,
+          "declarationHeader": "theorem shakeAdvantage_pure_le_securityBound_hedged_validatedParams (set : FipsParameterSet)\n    (pkSeed : (shakeCore set.validatedParams).PkSeed)\n    (adv : UnforgeableAdversary (shakeRomScheme set.validatedParams\n      (fun _ \u21a6 $\u1d57 (shakeCore set.validatedParams).Y) (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeAdvantage set.validatedParams adv \u2264\n      byteBoundHedged set.validatedParams qh qs + weakKeyMass set.validatedParams pkSeed"
+        },
+        {
+          "name": "SLHDSA.Security.shakeAdvantage_pure_le_securityBound_add_validatedParams",
+          "line": 640,
+          "declarationHeader": "theorem shakeAdvantage_pure_le_securityBound_add_validatedParams (set : FipsParameterSet)\n    (hn : set.validatedParams.params.n = 32)\n    {optRand : PublicKeyCore (shakeCore set.validatedParams) \u2192\n      ProbComp (shakeCore set.validatedParams).Y}\n    (pkSeed : (shakeCore set.validatedParams).PkSeed)\n    (adv : UnforgeableAdversary (shakeRomScheme set.validatedParams optRand (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeAdvantage set.validatedParams adv \u2264 everySeedBound set.validatedParams qh qs"
+        },
+        {
+          "name": "SLHDSA.Security.shakeAdvantage_pure_le_securityBound_add_hedged_validatedParams",
+          "line": 653,
+          "declarationHeader": "theorem shakeAdvantage_pure_le_securityBound_add_hedged_validatedParams (set : FipsParameterSet)\n    (hn : set.validatedParams.params.n = 32) (pkSeed : (shakeCore set.validatedParams).PkSeed)\n    (adv : UnforgeableAdversary (shakeRomScheme set.validatedParams\n      (fun _ \u21a6 $\u1d57 (shakeCore set.validatedParams).Y) (pure pkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeAdvantage set.validatedParams adv \u2264 everySeedBoundHedged set.validatedParams qh qs"
+        },
+        {
+          "name": "SLHDSA.Security.shakeAdvantage_le_securityBound_validatedParams",
+          "line": 664,
+          "declarationHeader": "theorem shakeAdvantage_le_securityBound_validatedParams (set : FipsParameterSet)\n    {optRand : PublicKeyCore (shakeCore set.validatedParams) \u2192\n      ProbComp (shakeCore set.validatedParams).Y}\n    (adv : UnforgeableAdversary (shakeRomScheme set.validatedParams optRand\n      ($\u1d57 (shakeCore set.validatedParams).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeAdvantage set.validatedParams adv \u2264 byteBound set.validatedParams qh qs +\n      honestAdrsCount set.validatedParams / 2 ^ 256 *\n        weakSeedFactor set.validatedParams (everySeedBound set.validatedParams qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.shakeAdvantage_le_securityBound_hedged_validatedParams",
+          "line": 677,
+          "declarationHeader": "theorem shakeAdvantage_le_securityBound_hedged_validatedParams (set : FipsParameterSet)\n    (adv : UnforgeableAdversary (shakeRomScheme set.validatedParams\n      (fun _ \u21a6 $\u1d57 (shakeCore set.validatedParams).Y) ($\u1d57 (shakeCore set.validatedParams).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    shakeAdvantage set.validatedParams adv \u2264 byteBoundHedged set.validatedParams qh qs +\n      honestAdrsCount set.validatedParams / 2 ^ 256 *\n        weakSeedFactor set.validatedParams (everySeedBoundHedged set.validatedParams qh qs)"
+        }
+      ]
+    },
+    {
+      "family": "EUF-to-SUF bridge and arbitrary seed averaging interface",
+      "role": "essential transport",
+      "path": "HashSig/SLHDSA/Security/ByteModel.lean",
+      "sourceSha256": "a8deeba115a55228fb79797ad4137e24551021912e820a39b25a62bb27937df6",
+      "preservationContract": "Same adversary program and unchanged budget; integral bridge preserves arbitrary public-seed-distribution application interface.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.shakeAdvantage_le_shakeStrongAdvantage",
+          "line": 297,
+          "declarationHeader": "theorem shakeAdvantage_le_shakeStrongAdvantage\n    {optRand : PublicKeyCore (shakeCore vp) \u2192 ProbComp (shakeCore vp).Y}\n    {pkSeedDist : ProbComp (shakeCore vp).PkSeed}\n    (adv : UnforgeableAdversary (shakeRomScheme vp optRand pkSeedDist)) :\n    shakeAdvantage vp adv \u2264 shakeStrongAdvantage vp\n      (\u27e8adv.main\u27e9 : StrongUnforgeableAdversary (shakeRomScheme vp optRand pkSeedDist))"
+        },
+        {
+          "name": "SLHDSA.Security.shakeStrongAdvantage_le_lintegral",
+          "line": 584,
+          "declarationHeader": "theorem shakeStrongAdvantage_le_lintegral [MeasurableSpace (shakeCore vp).PkSeed]\n    [DiscreteMeasurableSpace (shakeCore vp).PkSeed]\n    {optRand : PublicKeyCore (shakeCore vp) \u2192 ProbComp (shakeCore vp).Y}\n    (pkSeedDist : ProbComp (shakeCore vp).PkSeed) (\u03b2 : (shakeCore vp).PkSeed \u2192 \u211d\u22650\u221e) {qh qs : \u2115}\n    (h : \u2200 pkSeed (adv : StrongUnforgeableAdversary (shakeRomScheme vp optRand (pure pkSeed))),\n      adv.RomQueryBound qh qs \u2192 shakeStrongAdvantage vp adv \u2264 \u03b2 pkSeed)\n    (adv : StrongUnforgeableAdversary (shakeRomScheme vp optRand pkSeedDist))\n    (hb : adv.RomQueryBound qh qs) :\n    shakeStrongAdvantage vp adv \u2264 \u222b\u207b pkSeed, \u03b2 pkSeed \u2202\ud835\udc9f[pkSeedDist]"
+        }
+      ]
+    },
+    {
+      "family": "Three-oracle named EUF target transport",
+      "role": "derived EUF headline",
+      "path": "HashSig/SLHDSA/Security/Target.lean",
+      "sourceSha256": "6d34c246e2fd7191d3b03db987ebd3bf61099782be5592d8d4b59c6d48ef2912",
+      "preservationContract": "Consumes SecurityTarget at general c,r; same-program generic EUF\u2264SUF; instantiate c2r1 with securityTarget_two_one.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.unforgeableAdvantage_romScheme_le",
+          "line": 297,
+          "declarationHeader": "theorem unforgeableAdvantage_romScheme_le {e : core.SkSeed \u2243 core.Y}\n    {optRand : PublicKeyCore core \u2192 ProbComp core.Y} {c r : \u2115}\n    (h : SecurityTarget core e optRand c r) (pkSeedDist : ProbComp core.PkSeed)\n    (adv : UnforgeableAdversary (romScheme core e optRand pkSeedDist)) {qh qs : \u2115}\n    (hb : adv.RomQueryBound qh qs) :\n    unforgeableAdvantage (ProbCompRuntime.rom (hashSpec core)) adv \u2264\n      securityBound vp.params (Nat.card core.Y) c r qh qs"
+        }
+      ]
+    },
+    {
+      "family": "Generic canonical EUF-to-SUF transport",
+      "role": "essential transport",
+      "path": "VCVio/CryptoFoundations/SignatureAlg.lean",
+      "sourceSha256": "dbdbcfc3de70e78ee1977a68d4cc28aa7ff1a0fdd7f8f5213fcf450786d550fa",
+      "preservationContract": "Same signature algorithm/runtime/adversary program; supplies wire/profile EUF consequences, which have no extra named SLHDSA-specific wire/profile EUF theorem here.",
+      "declarations": [
+        {
+          "name": "SignatureAlg.unforgeableAdvantage_le_strongUnforgeableAdvantage",
+          "line": 476,
+          "declarationHeader": "lemma unforgeableAdvantage_le_strongUnforgeableAdvantage\n    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}\n    (runtime : ProbCompRuntime (OracleComp spec)) (adv : UnforgeableAdversary sigAlg) :\n    unforgeableAdvantage runtime adv \u2264\n      strongUnforgeableAdvantage runtime (\u27e8adv.main\u27e9 : StrongUnforgeableAdversary sigAlg)"
+        }
+      ]
+    },
+    {
+      "family": "766 byte wire and exact concrete primitive bridge",
+      "role": "security headline",
+      "path": "HashSig/SLHDSA/Security/Wire.lean",
+      "sourceSha256": "56947838d9ff9c8139e2a32731ebbf672b636f93e3400fd15a5054b76d4d2577",
+      "preservationContract": "Fixed valid pure context; strict byte keys/signatures; same qh,qs; deterministic/general optRand and sharper hedged full weak-seed RHS; concrete SHAKE answer identification, not computational security for concrete SHAKE.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.wireShakeScheme_map_shakeAnswer",
+          "line": 85,
+          "declarationHeader": "theorem wireShakeScheme_map_shakeAnswer (hnm : vp.params.n \u2264 vp.params.m) (ctx : PureContext)\n    (optRand : PublicKeyCore (shakeCore vp) \u2192 ProbComp (shakeCore vp).Y)\n    (pkSeedDist : ProbComp (shakeCore vp).PkSeed) :\n    (wireShakeScheme vp ctx optRand pkSeedDist).map\n        (simulateQ' (unifFwdAnswerImpl (shakeAnswer vp))) =\n      SignatureAlg.Wire.scheme\n        (internalAlg vp (Concrete.shakePrimitives vp.params) optRand pkSeedDist) ctx.encode\n        (publicKeyCodec (Concrete.shakeWireCodec vp.params)).canonicalEncoding\n        (signatureCodec vp (Concrete.shakeWireCodec vp.params)).canonicalEncoding"
+        },
+        {
+          "name": "SLHDSA.Security.romQueryBound_wireReduce",
+          "line": 98,
+          "declarationHeader": "theorem romQueryBound_wireReduce (ctx : PureContext)\n    {optRand : PublicKeyCore (shakeCore vp) \u2192 ProbComp (shakeCore vp).Y}\n    {pkSeedDist : ProbComp (shakeCore vp).PkSeed}\n    (adv : StrongUnforgeableAdversary (wireShakeScheme vp ctx optRand pkSeedDist))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    (wireReduce vp ctx adv).RomQueryBound qh qs"
+        },
+        {
+          "name": "SLHDSA.Security.wireStrongAdvantage_le",
+          "line": 107,
+          "declarationHeader": "theorem wireStrongAdvantage_le (ctx : PureContext)\n    {optRand : PublicKeyCore (shakeCore vp) \u2192 ProbComp (shakeCore vp).Y}\n    {pkSeedDist : ProbComp (shakeCore vp).PkSeed}\n    (adv : StrongUnforgeableAdversary (wireShakeScheme vp ctx optRand pkSeedDist)) :\n    strongUnforgeableAdvantage (shakeRuntime vp) adv \u2264\n      shakeStrongAdvantage vp (wireReduce vp ctx adv)"
+        },
+        {
+          "name": "SLHDSA.Security.wireStrongAdvantage_le_securityBound_validatedParams",
+          "line": 118,
+          "declarationHeader": "theorem wireStrongAdvantage_le_securityBound_validatedParams (set : FipsParameterSet)\n    (ctx : PureContext)\n    {optRand : PublicKeyCore (shakeCore set.validatedParams) \u2192\n      ProbComp (shakeCore set.validatedParams).Y}\n    (adv : StrongUnforgeableAdversary (wireShakeScheme set.validatedParams ctx optRand\n      ($\u1d57 (shakeCore set.validatedParams).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    strongUnforgeableAdvantage (shakeRuntime set.validatedParams) adv \u2264\n      byteBound set.validatedParams qh qs + honestAdrsCount set.validatedParams / 2 ^ 256 *\n        weakSeedFactor set.validatedParams (everySeedBound set.validatedParams qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.wireStrongAdvantage_le_securityBound_hedged_validatedParams",
+          "line": 133,
+          "declarationHeader": "theorem wireStrongAdvantage_le_securityBound_hedged_validatedParams (set : FipsParameterSet)\n    (ctx : PureContext)\n    (adv : StrongUnforgeableAdversary (wireShakeScheme set.validatedParams ctx\n      (fun _ => $\u1d57 (shakeCore set.validatedParams).Y)\n      ($\u1d57 (shakeCore set.validatedParams).PkSeed)))\n    {qh qs : \u2115} (hadv : adv.RomQueryBound qh qs) :\n    strongUnforgeableAdvantage (shakeRuntime set.validatedParams) adv \u2264\n      byteBoundHedged set.validatedParams qh qs + honestAdrsCount set.validatedParams / 2 ^ 256 *\n        weakSeedFactor set.validatedParams (everySeedBoundHedged set.validatedParams qh qs)"
+        }
+      ]
+    },
+    {
+      "family": "766 profile executable-evaluator security theorem",
+      "role": "security headline",
+      "path": "HashSig/SLHDSA/Security/Profile.lean",
+      "sourceSha256": "59bfe576d118e568caa2df41854f018bff0e1aa48936d30f42aef05ef2db79f7",
+      "preservationContract": "For every ShakeProfile (SHAKE-family guard, fixed valid context, deterministic/hedged mode), all qh,qs: actual wire advantage\u2264rationalValue of matching exact boundEvaluator.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.ShakeProfile.strongUnforgeableAdvantage_le_boundEvaluator",
+          "line": 70,
+          "declarationHeader": "theorem strongUnforgeableAdvantage_le_boundEvaluator (profile : ShakeProfile)\n    (adv : StrongUnforgeableAdversary profile.algorithm) {qh qs : \u2115}\n    (hadv : adv.RomQueryBound qh qs) :\n    strongUnforgeableAdvantage (shakeRuntime profile.parameterSet.validatedParams) adv \u2264\n      rationalValue (profile.boundEvaluator qh qs)"
+        }
+      ]
+    },
+    {
+      "family": "912 original variable-context actual-joint theorem",
+      "role": "security headline",
+      "path": "HashSig/SLHDSA/SHAKE128s/Statement/Theorems/StrongUnforgeability.lean",
+      "sourceSha256": "ffb203c9b81a7e18a9b92c89d546f99a927a8e07f5010abbfc263ead37bbc49f",
+      "preservationContract": "Exact original Game.HasSecurityBits FIPS205.scheme Game.adversaryWork127. \u2200q\u22651,\u2200adversary with p1sign\u22642^64 and p1(sign+directhash+actualverifyhash\u2264q), advantage\u2264q/2^127. Variable contexts incl rejected requests, byte signatures, structured original PK, deterministic SHAKE128s, independent uniform key seeds, one shared30byteRO; no syntactic-cap or fixed-context requirement.",
+      "declarations": [
+        {
+          "name": "SLHDSA.SHAKE128s.slhDsa_sufCma_127",
+          "line": 37,
+          "declarationHeader": "theorem slhDsa_sufCma_127 : Game.HasSecurityBits FIPS205.scheme Game.adversaryWork 127"
+        }
+      ]
+    },
+    {
+      "family": "912 exact fixed-context equality and actual caps",
+      "role": "security headline",
+      "path": "HashSig/SLHDSA/SHAKE128s/Bridge/Wire/Equality.lean",
+      "sourceSha256": "c935dbdc5e8220fa80dc1f90f96c4a73ee74d928a25736caf15b5f06d7b0ad17",
+      "preservationContract": "Exact advantage equality with only ctx/adv; no budget, lifetime, extra key-consistency or Some-totality premise added.",
+      "declarations": [
+        {
+          "name": "SLHDSA.SHAKE128s.Bridge.strongUnforgeableAdvantage_eq_fixedContext",
+          "line": 307,
+          "declarationHeader": "theorem strongUnforgeableAdvantage_eq_fixedContext (ctx : SLHDSA.Security.PureContext)\n    (adv : StrongUnforgeableAdversary (wireAlgorithm ctx)) :\n    strongUnforgeableAdvantage (SLHDSA.Security.shakeRuntime FIPS205.params) adv =\n      (Game.securityGame FIPS205.scheme).advantage () (fixedContextAdversary ctx adv)"
+        }
+      ]
+    },
+    {
+      "family": "912 syntactic-to-actual budgets and all-request verifier bound",
+      "role": "security headline",
+      "path": "HashSig/SLHDSA/SHAKE128s/Bridge/Wire/QueryBudget.lean",
+      "sourceSha256": "b0dff9b274c0f4fd849b31214d2001020b751053f64e39dc15cb7aa54db732c9",
+      "preservationContract": "Universal verifiercap3929 incl losing/malformed/invalidcontext; withinSigningLimit needs RomQueryBound+qs\u2264signingLimit; HasQueryBound needs RomQueryBound only and exact workqh+qs+verifierCap. Do not replace originalactual-q theorem by this cap corollary.",
+      "declarations": [
+        {
+          "name": "SLHDSA.SHAKE128s.Bridge.isTotalQueryBound_FIPS205_internal_verify",
+          "line": 31,
+          "declarationHeader": "theorem isTotalQueryBound_FIPS205_internal_verify (pk : PublicKeyCore FIPS205.core) (msg : Bytes)\n    (signature : GeneralScheme.SignatureCore FIPS205.params FIPS205.core) :\n    IsTotalQueryBound (FIPS205.internal.verify pk msg signature) verifierCap"
+        },
+        {
+          "name": "SLHDSA.SHAKE128s.Bridge.isTotalQueryBound_FIPS205_verify",
+          "line": 61,
+          "declarationHeader": "theorem isTotalQueryBound_FIPS205_verify (pk : PublicKeyCore FIPS205.core) (request : Message)\n    (signature : Bytes) :\n    IsTotalQueryBound (FIPS205.scheme.verify pk request signature) verifierCap"
+        },
+        {
+          "name": "SLHDSA.SHAKE128s.Bridge.withinSigningLimit_fixedContext",
+          "line": 99,
+          "declarationHeader": "theorem withinSigningLimit_fixedContext (ctx : SLHDSA.Security.PureContext)\n    (adv : StrongUnforgeableAdversary (wireAlgorithm ctx)) {qh qs : Nat}\n    (hadv : adv.RomQueryBound qh qs) (hqs : qs \u2264 signingLimit) :\n    Game.WithinSigningLimit FIPS205.scheme (fixedContextAdversary ctx adv)"
+        },
+        {
+          "name": "SLHDSA.SHAKE128s.Bridge.hasQueryBound_fixedContext",
+          "line": 109,
+          "declarationHeader": "theorem hasQueryBound_fixedContext (ctx : SLHDSA.Security.PureContext)\n    (adv : StrongUnforgeableAdversary (wireAlgorithm ctx)) {qh qs : Nat}\n    (hadv : adv.RomQueryBound qh qs) :\n    (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork\n      (fixedContextAdversary ctx adv) (qh + qs + verifierCap)"
+        }
+      ]
+    },
+    {
+      "family": "912 fixed-context work and minimum corollaries",
+      "role": "security headline",
+      "path": "HashSig/SLHDSA/SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean",
+      "sourceSha256": "1e0d965e03023ae72126841732e42ffbe628d1b27536be746282f52711abe8f6",
+      "preservationContract": "RomQueryBound qhqs and qs\u22642^64; RHS(qh+qs+3929)/2^127 and min with complete oldbound including honestAdrsCount/2^256*weakSeedFactor; no simplification dropping old contribution.",
+      "declarations": [
+        {
+          "name": "SLHDSA.SHAKE128s.wireStrongAdvantage_le_workBound",
+          "line": 31,
+          "declarationHeader": "theorem wireStrongAdvantage_le_workBound (ctx : SLHDSA.Security.PureContext)\n    (adv : StrongUnforgeableAdversary (Bridge.wireAlgorithm ctx)) {qh qs : Nat}\n    (hadv : adv.RomQueryBound qh qs) (hqs : qs \u2264 signingLimit) :\n    strongUnforgeableAdvantage (SLHDSA.Security.shakeRuntime FIPS205.params) adv \u2264\n      ((qh + qs + 3929 : Nat) : \u211d\u22650\u221e) / ((2 ^ 127 : Nat) : \u211d\u22650\u221e)"
+        },
+        {
+          "name": "SLHDSA.SHAKE128s.wireStrongAdvantage_le_min_bound",
+          "line": 45,
+          "declarationHeader": "theorem wireStrongAdvantage_le_min_bound (ctx : SLHDSA.Security.PureContext)\n    (adv : StrongUnforgeableAdversary (Bridge.wireAlgorithm ctx)) {qh qs : Nat}\n    (hadv : adv.RomQueryBound qh qs) (hqs : qs \u2264 signingLimit) :\n    strongUnforgeableAdvantage (SLHDSA.Security.shakeRuntime FIPS205.params) adv \u2264\n      min (SLHDSA.Security.byteBound FIPS205.params qh qs +\n        SLHDSA.Security.honestAdrsCount FIPS205.params / 2 ^ 256 *\n          SLHDSA.Security.weakSeedFactor FIPS205.params\n            (SLHDSA.Security.everySeedBound FIPS205.params qh qs))\n        (((qh + qs + 3929 : Nat) : \u211d\u22650\u221e) / ((2 ^ 127 : Nat) : \u211d\u22650\u221e))"
+        }
+      ]
+    },
+    {
+      "family": "886 new FORS provider refinements/naturality",
+      "role": "provider/refinement API",
+      "path": "HashSig/SLHDSA/SecretProvider.lean",
+      "sourceSha256": "1626095e526c29304de2019ac149396d28acf8fdf9f5c9a872f8b4e176d04198",
+      "preservationContract": "Actual added886provider laws; preserve monad/handler generality and explicit provider assumptions; no conversion to only pure Id-provider results.",
+      "declarations": [
+        {
+          "name": "SLHDSA.forsRootWithSecret_eq_forsRootWith",
+          "line": 304,
+          "declarationHeader": "theorem forsRootWithSecret_eq_forsRootWith {m : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    (hash : Adrs \u2192 core.Y \u2192 m core.Y) (nodeHash : Adrs \u2192 core.Y \u2192 core.Y \u2192 m core.Y)\n    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (i : \u2115) :\n    forsRootWithSecret core hash nodeHash (fun a => pure (core.PRF pk sk a)) adrs i =\n      forsRootWith core hash nodeHash sk pk adrs i"
+        },
+        {
+          "name": "SLHDSA.forsPkGenWithSecret_eq_forsPkGenWith",
+          "line": 315,
+          "declarationHeader": "theorem forsPkGenWithSecret_eq_forsPkGenWith {m : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    (hash : Adrs \u2192 core.Y \u2192 m core.Y) (nodeHash : Adrs \u2192 core.Y \u2192 core.Y \u2192 m core.Y)\n    (compress : Adrs \u2192 List core.Y \u2192 m core.Y)\n    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :\n    forsPkGenWithSecret core hash nodeHash compress (fun a => pure (core.PRF pk sk a)) adrs =\n      forsPkGenWith core hash nodeHash compress sk pk adrs"
+        },
+        {
+          "name": "SLHDSA.forsRootWithSecret_natural",
+          "line": 502,
+          "declarationHeader": "theorem forsRootWithSecret_natural {m n : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    [Monad n] [LawfulMonad n] (F : m \u2192\u1d50 n)\n    (hashm : Adrs \u2192 core.Y \u2192 m core.Y) (hashn : Adrs \u2192 core.Y \u2192 n core.Y)\n    (nodeHashm : Adrs \u2192 core.Y \u2192 core.Y \u2192 m core.Y)\n    (nodeHashn : Adrs \u2192 core.Y \u2192 core.Y \u2192 n core.Y)\n    (secretm : Adrs \u2192 m core.Y) (secretn : Adrs \u2192 n core.Y)\n    (hhash : \u2200 a y, F (hashm a y) = hashn a y)\n    (hnode : \u2200 a l r, F (nodeHashm a l r) = nodeHashn a l r)\n    (hsecret : \u2200 a, a.IsSecretKey \u2192 F (secretm a) = secretn a) (adrs : Adrs) (i : \u2115) :\n    F (forsRootWithSecret core hashm nodeHashm secretm adrs i) =\n      forsRootWithSecret core hashn nodeHashn secretn adrs i"
+        },
+        {
+          "name": "SLHDSA.forsPkGenWithSecret_natural",
+          "line": 519,
+          "declarationHeader": "theorem forsPkGenWithSecret_natural {m n : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    [Monad n] [LawfulMonad n] (F : m \u2192\u1d50 n)\n    (hashm : Adrs \u2192 core.Y \u2192 m core.Y) (hashn : Adrs \u2192 core.Y \u2192 n core.Y)\n    (nodeHashm : Adrs \u2192 core.Y \u2192 core.Y \u2192 m core.Y)\n    (nodeHashn : Adrs \u2192 core.Y \u2192 core.Y \u2192 n core.Y)\n    (compressm : Adrs \u2192 List core.Y \u2192 m core.Y) (compressn : Adrs \u2192 List core.Y \u2192 n core.Y)\n    (secretm : Adrs \u2192 m core.Y) (secretn : Adrs \u2192 n core.Y)\n    (hhash : \u2200 a y, F (hashm a y) = hashn a y)\n    (hnode : \u2200 a l r, F (nodeHashm a l r) = nodeHashn a l r)\n    (hcompress : \u2200 a ys, F (compressm a ys) = compressn a ys)\n    (hsecret : \u2200 a, a.IsSecretKey \u2192 F (secretm a) = secretn a) (adrs : Adrs) :\n    F (forsPkGenWithSecret core hashm nodeHashm compressm secretm adrs) =\n      forsPkGenWithSecret core hashn nodeHashn compressn secretn adrs"
+        }
+      ]
+    },
+    {
+      "family": "Shared selected-secret-first provider and whole-scheme pipeline",
+      "role": "provider/refinement API",
+      "path": "HashSig/SLHDSA/SecretProvider.lean",
+      "sourceSha256": "1626095e526c29304de2019ac149396d28acf8fdf9f5c9a872f8b4e176d04198",
+      "preservationContract": "Preserve effectful secret-first order, sibling-only authentication path work, publichash/provider traffic and arbitrary monad-morphism naturality; FORS runtime fixture retained.",
+      "declarations": [
+        {
+          "name": "SLHDSA.forsSignWithSecret_eq_forsSignWith",
+          "line": 327,
+          "declarationHeader": "theorem forsSignWithSecret_eq_forsSignWith {m : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    (hash : Adrs \u2192 core.Y \u2192 m core.Y) (nodeHash : Adrs \u2192 core.Y \u2192 core.Y \u2192 m core.Y)\n    (md : List Byte) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :\n    forsSignWithSecret core hash nodeHash (fun a => pure (core.PRF pk sk a)) md adrs =\n      forsSignWith core hash nodeHash md sk pk adrs"
+        },
+        {
+          "name": "SLHDSA.forsSignWithSecret_natural",
+          "line": 539,
+          "declarationHeader": "theorem forsSignWithSecret_natural {m n : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    [Monad n] [LawfulMonad n] (F : m \u2192\u1d50 n)\n    (hashm : Adrs \u2192 core.Y \u2192 m core.Y) (hashn : Adrs \u2192 core.Y \u2192 n core.Y)\n    (nodeHashm : Adrs \u2192 core.Y \u2192 core.Y \u2192 m core.Y)\n    (nodeHashn : Adrs \u2192 core.Y \u2192 core.Y \u2192 n core.Y)\n    (secretm : Adrs \u2192 m core.Y) (secretn : Adrs \u2192 n core.Y)\n    (hhash : \u2200 a y, F (hashm a y) = hashn a y)\n    (hnode : \u2200 a l r, F (nodeHashm a l r) = nodeHashn a l r)\n    (hsecret : \u2200 a, a.IsSecretKey \u2192 F (secretm a) = secretn a) (md : List Byte) (adrs : Adrs) :\n    F (forsSignWithSecret core hashm nodeHashm secretm md adrs) =\n      forsSignWithSecret core hashn nodeHashn secretn md adrs"
+        },
+        {
+          "name": "SLHDSA.forsSignWithSecretM_natural",
+          "line": 562,
+          "declarationHeader": "theorem forsSignWithSecretM_natural {m n : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]\n    [HasQuery (publicHashSpec core) n] (F : HasQuery.QueryHom (publicHashSpec core) m n)\n    (secretm : Adrs \u2192 m core.Y) (secretn : Adrs \u2192 n core.Y)\n    (hsecret : \u2200 a, a.IsSecretKey \u2192 F.toMonadHom (secretm a) = secretn a)\n    (md : List Byte) (pkSeed : core.PkSeed) (adrs : Adrs) :\n    F.toMonadHom (forsSignWithSecretM core secretm md pkSeed adrs) =\n      forsSignWithSecretM core secretn md pkSeed adrs"
+        }
+      ]
+    },
+    {
+      "family": "GeneralHypertree provider pipeline",
+      "role": "provider/refinement API",
+      "path": "HashSig/SLHDSA/SecretProvider.lean",
+      "sourceSha256": "1626095e526c29304de2019ac149396d28acf8fdf9f5c9a872f8b4e176d04198",
+      "preservationContract": "Provider-polymorphic publichash interface and honest-provider refinements; preserve program semantics/effect order, not only final bytes.",
+      "declarations": [
+        {
+          "name": "SLHDSA.GeneralHypertree.signWithSecretM_eq_signM",
+          "line": 680,
+          "declarationHeader": "theorem signWithSecretM_eq_signM {m : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    [HasQuery (publicHashSpec core) m] (skSeed : core.SkSeed) (pkSeed : core.PkSeed)\n    (msg : core.Y) (parts : DigestParts vp.params) :\n    signWithSecretM core (fun a => pure (core.PRF pkSeed skSeed a)) msg pkSeed parts =\n      (signM vp core msg skSeed pkSeed parts : m (Signature vp core))"
+        },
+        {
+          "name": "SLHDSA.GeneralHypertree.rootWithSecretM_eq_rootM",
+          "line": 689,
+          "declarationHeader": "theorem rootWithSecretM_eq_rootM {m : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    [HasQuery (publicHashSpec core) m] (skSeed : core.SkSeed) (pkSeed : core.PkSeed) :\n    rootWithSecretM core (fun a => pure (core.PRF pkSeed skSeed a)) pkSeed =\n      (rootM vp core skSeed pkSeed : m core.Y)"
+        },
+        {
+          "name": "SLHDSA.GeneralHypertree.signWithSecretM_natural",
+          "line": 782,
+          "declarationHeader": "theorem signWithSecretM_natural {m n : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]\n    [HasQuery (publicHashSpec core) n] (F : HasQuery.QueryHom (publicHashSpec core) m n)\n    (secretm : Adrs \u2192 m core.Y) (secretn : Adrs \u2192 n core.Y)\n    (hsecret : \u2200 a, a.IsSecretKey \u2192 F.toMonadHom (secretm a) = secretn a)\n    (msg : core.Y) (pkSeed : core.PkSeed) (parts : DigestParts vp.params) :\n    F.toMonadHom (signWithSecretM core secretm msg pkSeed parts) =\n      signWithSecretM core secretn msg pkSeed parts"
+        },
+        {
+          "name": "SLHDSA.GeneralHypertree.rootWithSecretM_natural",
+          "line": 796,
+          "declarationHeader": "theorem rootWithSecretM_natural {m n : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]\n    [HasQuery (publicHashSpec core) n] (F : HasQuery.QueryHom (publicHashSpec core) m n)\n    (secretm : Adrs \u2192 m core.Y) (secretn : Adrs \u2192 n core.Y)\n    (hsecret : \u2200 a, a.IsSecretKey \u2192 F.toMonadHom (secretm a) = secretn a) (pkSeed : core.PkSeed) :\n    F.toMonadHom (rootWithSecretM core secretm pkSeed) = rootWithSecretM core secretn pkSeed"
+        }
+      ]
+    },
+    {
+      "family": "GeneralScheme provider pipeline",
+      "role": "provider/refinement API",
+      "path": "HashSig/SLHDSA/SecretProvider.lean",
+      "sourceSha256": "1626095e526c29304de2019ac149396d28acf8fdf9f5c9a872f8b4e176d04198",
+      "preservationContract": "Keep oracle-backed secret provider and explicit randomizer interface; monad-morphism transport at full keygen/sign pipeline.",
+      "declarations": [
+        {
+          "name": "SLHDSA.GeneralScheme.signInternalWithSecretRandomizerM_eq_signInternalWithRandomizerM",
+          "line": 836,
+          "declarationHeader": "theorem signInternalWithSecretRandomizerM_eq_signInternalWithRandomizerM {m : Type \u2192 Type*}\n    [Monad m] [LawfulMonad m] [HasQuery (publicHashSpec core) m] (skSeed : core.SkSeed)\n    (pkSeed : core.PkSeed) (msg : List Byte) (pkRoot R : core.Y) :\n    signInternalWithSecretRandomizerM core (fun a => pure (core.PRF pkSeed skSeed a)) msg pkSeed\n        pkRoot R =\n      (signInternalWithRandomizerM vp core msg skSeed pkSeed pkRoot R :\n        m (SignatureCore vp core))"
+        },
+        {
+          "name": "SLHDSA.GeneralScheme.keygenInternalWithSecretM_natural",
+          "line": 850,
+          "declarationHeader": "theorem keygenInternalWithSecretM_natural {m n : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]\n    [HasQuery (publicHashSpec core) n] (F : HasQuery.QueryHom (publicHashSpec core) m n)\n    (secretm : Adrs \u2192 m core.Y) (secretn : Adrs \u2192 n core.Y)\n    (hsecret : \u2200 a, a.IsSecretKey \u2192 F.toMonadHom (secretm a) = secretn a) (pkSeed : core.PkSeed) :\n    F.toMonadHom (keygenInternalWithSecretM core secretm pkSeed) =\n      keygenInternalWithSecretM core secretn pkSeed"
+        },
+        {
+          "name": "SLHDSA.GeneralScheme.signInternalWithSecretRandomizerM_natural",
+          "line": 861,
+          "declarationHeader": "theorem signInternalWithSecretRandomizerM_natural {m n : Type \u2192 Type*} [Monad m] [LawfulMonad m]\n    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]\n    [HasQuery (publicHashSpec core) n] (F : HasQuery.QueryHom (publicHashSpec core) m n)\n    (secretm : Adrs \u2192 m core.Y) (secretn : Adrs \u2192 n core.Y)\n    (hsecret : \u2200 a, a.IsSecretKey \u2192 F.toMonadHom (secretm a) = secretn a)\n    (msg : List Byte) (pkSeed : core.PkSeed) (pkRoot R : core.Y) :\n    F.toMonadHom (signInternalWithSecretRandomizerM core secretm msg pkSeed pkRoot R) =\n      signInternalWithSecretRandomizerM core secretn msg pkSeed pkRoot R"
+        }
+      ]
+    },
+    {
+      "family": "Honest whole-work certificate transport",
+      "role": "work API",
+      "path": "VCVio/CryptoFoundations/SignatureAlg/RomWork.lean",
+      "sourceSha256": "04d1569a9b6a24dff34a224c90d92a77cc314d2f8005be95bbe81c27b084434a",
+      "preservationContract": "Preserve certificate hypotheses and full K+qh+qs*S+V accounting. Generic transport exists; do not claim full SLH honest K/S certificates already discharged.",
+      "declarations": [
+        {
+          "name": "SignatureAlg.RomWorkBounds",
+          "line": 37,
+          "declarationHeader": "structure RomWorkBounds (alg : SignatureAlg (OracleComp (unifSpec + hs)) M PK SK S)\n    (keygen sign verify : \u2115) : Prop where\n  /-- Key generation charges all its hash-oracle calls. -/\n  keygen_bound : IsQueryBoundP alg.keygen (IsAmbientHashQuery (hs := hs)) keygen\n  /-- Signing charges hash calls and oracle-backed secret/randomizer derivations. -/\n  sign_bound : \u2200 pk sk msg,\n    IsQueryBoundP (alg.sign pk sk msg) (IsAmbientHashQuery (hs := hs)) sign\n  /-- Verification charges every hash-oracle call on every typed candidate. -/\n  verify_bound : \u2200 pk msg sig,\n    IsQueryBoundP (alg.verify pk msg sig) (IsAmbientHashQuery (hs := hs)) verify\n"
+        },
+        {
+          "name": "SignatureAlg.isQueryBoundP_runWithSigningOracle",
+          "line": 49,
+          "declarationHeader": "theorem isQueryBoundP_runWithSigningOracle\n    (alg : SignatureAlg (OracleComp (unifSpec + hs)) M PK SK S)\n    (key : PK) (sk : SK) {\u03b1 : Type} (oa : OracleComp ((unifSpec + hs) + (M \u2192\u2092 S)) \u03b1)\n    {qh qs sign : \u2115} (hh : IsQueryBoundP oa (IsHashQuery (hs"
+        },
+        {
+          "name": "SignatureAlg.isQueryBoundP_strongUnforgeableExperiment",
+          "line": 97,
+          "declarationHeader": "theorem isQueryBoundP_strongUnforgeableExperiment\n    (alg : SignatureAlg (OracleComp (unifSpec + hs)) M PK SK S)\n    (adv : StrongUnforgeableAdversary alg) {qh qs keygen sign verify : \u2115}\n    (hadv : adv.RomQueryBound qh qs) (honest : RomWorkBounds alg keygen sign verify) :\n    IsQueryBoundP (strongUnforgeableExperiment adv) (IsAmbientHashQuery (hs"
+        }
+      ]
+    },
+    {
+      "family": "General verifier existing structural cap",
+      "role": "work API",
+      "path": "HashSig/SLHDSA/GeneralSchemeQueryBound.lean",
+      "sourceSha256": "4dc183df384c1fc0b8ec02d6025181362728cc20e0d6d33277c223e0f7a03d6d",
+      "preservationContract": "General parameter-polymorphic cap and actual typed public-hash verifier bound; 128s gives3929. This is not a whole honest signer/keygen bound.",
+      "declarations": [
+        {
+          "name": "SLHDSA.GeneralScheme.verifyInternalQueryBound",
+          "line": 39,
+          "declarationHeader": "def verifyInternalQueryBound (p : Params) : \u2115"
+        },
+        {
+          "name": "SLHDSA.GeneralScheme.verifyInternalM_isTotalQueryBound",
+          "line": 81,
+          "declarationHeader": "theorem verifyInternalM_isTotalQueryBound (vp : ValidatedParams)\n    (core : CorePrimitives vp.params) [DecidableEq core.Y]\n    (msg : List Byte) (sig : SignatureCore vp core) (pk : PublicKeyCore core) :\n    IsTotalQueryBound\n      (verifyInternalM vp core msg sig pk : OracleComp (publicHashSpec core) Bool)\n      (verifyInternalQueryBound vp.params)"
+        }
+      ]
+    },
+    {
+      "family": "Evaluator/coefficient certificate bridge",
+      "role": "numeric/evaluator contract",
+      "path": "HashSig/SLHDSA/Security/BoundEval.lean",
+      "sourceSha256": "4dc98a7f9a73a00ccbda9277821e8915a9f93ebf140bf99e8f6eee5a97d2192a",
+      "preservationContract": "Rational evaluators equal full averaged old bound, including weak-seed factor; protects profile/evaluator exact RHS.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.rationalValue_averagedByteBoundEval",
+          "line": 111,
+          "declarationHeader": "theorem rationalValue_averagedByteBoundEval (vp : ValidatedParams) (qh qs : \u2115) :\n    rationalValue (averagedByteBoundEval vp.params qh qs) = byteBound vp qh qs +\n      honestAdrsCount vp / 2 ^ 256 * weakSeedFactor vp (everySeedBound vp qh qs)"
+        },
+        {
+          "name": "SLHDSA.Security.rationalValue_averagedByteBoundHedgedEval",
+          "line": 120,
+          "declarationHeader": "theorem rationalValue_averagedByteBoundHedgedEval (vp : ValidatedParams) (qh qs : \u2115) :\n    rationalValue (averagedByteBoundHedgedEval vp.params qh qs) = byteBoundHedged vp qh qs +\n      honestAdrsCount vp / 2 ^ 256 * weakSeedFactor vp (everySeedBoundHedged vp qh qs)"
+        }
+      ]
+    },
+    {
+      "family": "Existing certified table and range certificates",
+      "role": "numeric/evaluator contract",
+      "path": "HashSig/SLHDSA/Security/BoundCertificates.lean",
+      "sourceSha256": "f19b643f6a4290aa621ec7afc3683b8f95cf11a056c5f345347daff5b7a3b135",
+      "preservationContract": "Preserve 18row table and existing structured-ROM range coefficients; these are checks/corollaries, not restrictions on globally quantified parent theorem.",
+      "declarations": [
+        {
+          "name": "SLHDSA.Security.boundTable_certified",
+          "line": 50,
+          "declarationHeader": "theorem boundTable_certified :\n    \u2200 entry \u2208 boundTable,\n      let p"
+        },
+        {
+          "name": "SLHDSA.Security.rangeCoefficients_certified",
+          "line": 65,
+          "declarationHeader": "theorem rangeCoefficients_certified :\n    \u2200 entry \u2208 boundTable, \u2200 lifetime \u2208 ([2 ^ 20, 2 ^ 32, 2 ^ 64] : List \u2115),\n      let p"
+        }
+      ]
+    },
+    {
+      "family": "912 zero advantage below actual accepted-verification minimum",
+      "role": "strong auxiliary resource/security anchor",
+      "path": "HashSig/SLHDSA/SHAKE128s/Proof/WorkFinal.lean",
+      "sourceSha256": "dd7f092f61dce37b75b751c61116447ec7bced4d5f0c79d02bfb3f5bcd4425af",
+      "preservationContract": "Original specialized Security-game theorem: q<569 and actual HasQueryBound for adversaryWork imply advantage=0. NO WithinSigningLimit/lifetime premise, no structural cap premise. Preserve stronger equality-to-zero, not merely q/2^127 upper bound.",
+      "declarations": [
+        {
+          "name": "SLHDSA.SHAKE128s.WorkFinal.advantage_eq_zero",
+          "line": 102,
+          "declarationHeader": "theorem advantage_eq_zero (adversary : Adversary) (q : Nat) (hq : q < 569)\n    (hbound : securityGame.HasQueryBound () adversaryWork adversary q) :\n    securityGame.advantage () adversary = 0"
+        }
+      ]
+    },
+    {
+      "family": "912 supported/accepted verifier and outcome work bounds",
+      "role": "strong auxiliary resource/security anchor",
+      "path": "HashSig/SLHDSA/SHAKE128s/Proof/VerificationBudget.lean",
+      "sourceSha256": "28f70ba1ad37da52ceeba963ad8fcaa57eaa25219297992d2f4322e11aab5d5f",
+      "preservationContract": "verification_count_bounds assumes successful request.frame AND Signature.fromBytes? parsing plus support membership of counted verifier from arbitrary cache: both569\u2264verification\u22643824, NO acceptance premise. verification_accepted_count_bounds instead assumes supported run+verifiedtrue, derives frame/parse internally; same bounds. accepted_outcome_work assumes outcome in support(Security.run adversary)+outcome.verified=true:569\u2264outcome.counts.work(directhash+verification), without Fresh, lifetime or resource premises. These refer to current specialized transcription; invalid/malformed requests can cost0. Do not claim universal569 lower bound or weaken to old3929 upper bound.",
+      "declarations": [
+        {
+          "name": "SLHDSA.SHAKE128s.VerificationBudget.verification_count_bounds",
+          "line": 112,
+          "declarationHeader": "theorem verification_count_bounds (pk : PublicKey) (request : Message) (wire : Bytes)\n    (message : Bytes) (signature : Signature)\n    (hframe : request.frame = some message) (hparse : Signature.fromBytes? wire = some signature)\n    (cache : QueryCache HashSpec) (result : Bool \u00d7 Counts)\n    (hresult : result \u2208 support\n      ((simulateQ (RandomOracleModel.impl Bytes HashOutput)\n        (countQueries verificationCost (Scheme.verify pk request wire))).run' cache)) :\n    569 \u2264 result.2 .verification \u2227 result.2 .verification \u2264 3824"
+        },
+        {
+          "name": "SLHDSA.SHAKE128s.VerificationBudget.verification_accepted_count_bounds",
+          "line": 130,
+          "declarationHeader": "theorem verification_accepted_count_bounds (pk : PublicKey) (request : Message) (wire : Bytes)\n    (cache : QueryCache HashSpec) (result : Bool \u00d7 Counts)\n    (hresult : result \u2208 support\n      ((simulateQ (RandomOracleModel.impl Bytes HashOutput)\n        (countQueries verificationCost (Scheme.verify pk request wire))).run' cache))\n    (haccept : result.1 = true) :\n    569 \u2264 result.2 .verification \u2227 result.2 .verification \u2264 3824"
+        },
+        {
+          "name": "SLHDSA.SHAKE128s.VerificationBudget.accepted_outcome_work",
+          "line": 155,
+          "declarationHeader": "theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)\n    (houtcome : outcome \u2208 support (Security.run adversary)) (haccept : outcome.verified = true) :\n    569 \u2264 outcome.counts.work"
+        }
+      ]
+    }
+  ],
+  "definingSemanticAnchors": {
+    "signature_game": {
+      "path": "VCVio/CryptoFoundations/SignatureAlg.lean",
+      "line": 334,
+      "sourceSha256": "dbdbcfc3de70e78ee1977a68d4cc28aa7ff1a0fdd7f8f5213fcf450786d550fa"
+    },
+    "structural_budget": {
+      "path": "VCVio/CryptoFoundations/SignatureAlg/RomQueryCount.lean",
+      "line": 62,
+      "sourceSha256": "19c628b081bd4571d7088868f88a9044952e13d119401a6c1a6c9cdfbbcf72a0"
+    },
+    "general_bound_definitions": {
+      "path": "HashSig/SLHDSA/Security/ByteBound.lean",
+      "line": 174,
+      "sourceSha256": "a95bef444e6e1fdab3c0db259eecc2517d7c1f688936dfe66a18d47aa8663563"
+    },
+    "weak_seed_factor": {
+      "path": "HashSig/SLHDSA/Security/ByteBound.lean",
+      "line": 308,
+      "sourceSha256": "a95bef444e6e1fdab3c0db259eecc2517d7c1f688936dfe66a18d47aa8663563"
+    },
+    "original_912_game_and_sources": {
+      "path": "HashSig/SLHDSA/SHAKE128s/Statement/Game.lean",
+      "line": 127,
+      "sourceSha256": "0586b2766f3f6850501693fcd548e9216e4f9e87d62d15b1a76ccf473525c41a"
+    },
+    "original_912_probability_one_budget": {
+      "path": "HashSig/SLHDSA/SHAKE128s/Statement/BitSecurity.lean",
+      "line": 43,
+      "sourceSha256": "d3690980a48743e81b97aeb3a743c700d4128d71afae286f5fb7e7bd501b3976"
+    },
+    "original_912_lifetime_security_and_work": {
+      "path": "HashSig/SLHDSA/SHAKE128s/Statement/Game.lean",
+      "line": 215,
+      "sourceSha256": "0586b2766f3f6850501693fcd548e9216e4f9e87d62d15b1a76ccf473525c41a"
+    },
+    "actual_912_scheme": {
+      "path": "HashSig/SLHDSA/SHAKE128s/Statement/FIPS205.lean",
+      "line": 68,
+      "sourceSha256": "53ec07f31e9d896618b05c3a4dda439b5991e9cc892a0cc8e1b7fc960f785483"
+    },
+    "profile_mode_selection": {
+      "path": "HashSig/SLHDSA/Security/Profile.lean",
+      "line": 51,
+      "sourceSha256": "59bfe576d118e568caa2df41854f018bff0e1aa48936d30f42aef05ef2db79f7"
+    },
+    "effectful_secret_first": {
+      "path": "HashSig/SLHDSA/SecretProvider.lean",
+      "line": 293,
+      "sourceSha256": "1626095e526c29304de2019ac149396d28acf8fdf9f5c9a872f8b4e176d04198"
+    },
+    "fors_runtime_fixture": {
+      "path": "HashSigTest/SLHDSA/ForsSecretOrder.lean",
+      "line": 99,
+      "sourceSha256": "768183c8b43d25cc4de50e14149f2805f9f4fe817c2fba740f5f16da1a1fecae"
+    }
+  },
+  "noAdditionalLifetimesOrRestrictions": "Do not impose q_s\u22642^64 on766families that currently require onlyRomQueryBound; keep912actual-q lifetime as separatep1 assumption andfixedctxwire qs\u22642^64 premise exactly.",
+  "numericCertificatesAreCorollaries": "Full theorems quantify over arbitrary naturalbudgets; 18-rowtable/rangefixtures do not substitute for all-budget recovery.",
+  "manifestVersion": 2,
+  "previousVersion": {
+    "path": "/tmp/slhdsa-refactor-research/strength-manifest/v1-c18eca188520",
+    "manifestSha256": "c18eca18852053078ff56aee07f1c07b84fab7f64ccc88cede6ec82059745b00",
+    "packetSha256": "75ce911072d1b1119d879c5c99344db9130f2fc215e6b9a43d5e528841794240"
+  }
+}

@@ -1,0 +1,7 @@
+'SLHDSA.RefactorResearch.frame_injective' depends on axioms: [propext, Quot.sound]
+'SLHDSA.RefactorResearch.strongAdvantage_le' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.RefactorResearch.strongAdvantage_hedged_le' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.RefactorResearch.shake128s_consumer' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.RefactorResearch.shake192f_consumer' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.RefactorResearch.shake192f_hedged_consumer' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.RefactorResearch.invalid_context_collision' depends on axioms: [propext]
