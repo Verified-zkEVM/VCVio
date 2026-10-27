@@ -65,3 +65,28 @@ behind an unchanged Prop-valued type, adding a theorem premise, changing constru
 metadata, and changing a genuinely imported non-exposed opaque body. Positive repeated
 capture is stable. This tests semantic fingerprinting, rather than comparing source
 filenames or unrelated provenance hashes.
+
+
+## Oracle-index universe compatibility
+
+The guard accepts either all four original query-wrapper level interfaces, or their exact
+index-independent interfaces specified by `index-universe-compat.json`. The latter mode
+specializes `withAddCost` to index zero and the three trace/cost wrappers to the original
+input/index diagonal. Seven named constant occurrences are checked at fixed syntax paths;
+the added index must equal zero or the retained input level as specified. Unknown, mixed,
+missing, moved or additional protocol occurrences fail closed. Only those four parameter
+maps and seven checked slots are converted before the unchanged raw fingerprint comparison.
+No term reduction, level normalization or lambda-name quotient is used. The sidecar's reviewed
+SHA256 is pinned in the checker and read inside its before/after source frame.
+
+The 77 kernel witnesses run freshly before this compatibility check. The original literal
+DAG, 1242-record fingerprint table, 509-name pinned boundary and semantic roots remain
+unchanged. The ordinary `signing_view_tests` executable also executes a Type1-indexed mixed
+uniform/Boolean world with small messages, signatures, replies and noncommutative costs.
+Kernel clients retain the old explicit universe applications and quantify independent oracle
+and runtime-carrier universes. Compiled callers must be rebuilt because constant universe
+arity changes; source universe parameter positions retain their original meanings.
+
+This finite calling-convention recovery does not authorize changing protected algorithm
+bodies or security premises. Future body delegation still requires a separately reviewed
+recovery/evidence evolution; refreshing the frozen expected fingerprints is not acceptance.

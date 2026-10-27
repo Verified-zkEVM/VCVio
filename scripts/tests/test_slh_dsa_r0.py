@@ -71,11 +71,21 @@ def capture(directory: Path, source: str, *, import_all: bool = True) -> dict | 
     if code:
         raise RuntimeError(f"Fixture did not compile: {directory}")
     configuration = directory / "input.json"
-    configuration.write_text(json.dumps({"names": ROOTS, "localModuleRoots": ["R0Fixture"]}))
+    protocol = json.loads((checker.DATA / "capture-input.json").read_text())
+    configuration.write_text(json.dumps({
+        "names": protocol["names"] + ROOTS,
+        "localModuleRoots": protocol["localModuleRoots"] + ["R0Fixture"],
+    }))
     output = directory / "capture.json"
     driver = directory / "Driver.lean"
-    driver.write_text("module\nimport " + ("all " if import_all else "") + "R0Fixture\n"
-                      + "import " + checker.CAPTURE_MODULE + "\nslhdsa_r0_capture "
+    owners = sorted({entry["module"] for entry in checker.load_table(
+        checker.DATA / "semantic-fingerprints.tsv").values()})
+    if any(name.split(".")[0] not in protocol["localModuleRoots"] for name in owners):
+        raise ValueError("A protocol implementation owner is not repository-local")
+    driver.write_text("module\n" + "".join("import all " + name + "\n" for name in owners)
+                      + "import " + ("all " if import_all else "") + "R0Fixture\n"
+                      + "import " + checker.CAPTURE_MODULE + "\nimport " + checker.STRENGTH_MODULE
+                      + "\nslhdsa_r0_capture "
                       + json.dumps(str(configuration)) + " to " + json.dumps(str(output)) + "\n")
     code = command(["lake", "env", "lean", "-DautoImplicit=false", str(driver)],
                    directory / "capture.log", directory)
@@ -91,8 +101,20 @@ def capture(directory: Path, source: str, *, import_all: bool = True) -> dict | 
 def semantic_controls(report: Path) -> list[dict]:
     original = capture(report / "original", FIXTURE)
     repeated = capture(report / "repeated", FIXTURE)
-    expected = checker.semantic_records(original)
-    assert checker.compare_semantics(expected, checker.semantic_records(repeated)) == []
+    rules = checker.load_index_compat()
+    protected = checker.load_table(checker.DATA / "semantic-fingerprints.tsv")
+    recovered = checker.recover_index_universes(original, rules)
+    expected = checker.semantic_records(recovered)
+    assert {name: expected[name] for name in protected} == protected
+    assert checker.compare_semantics(expected, checker.semantic_records(
+        checker.recover_index_universes(repeated, rules))) == []
+    # The complete old protocol also takes the unchanged raw-comparison path.
+    assert checker.compare_semantics(expected, checker.semantic_records(
+        checker.recover_index_universes(recovered, rules))) == []
+    additive = capture(report / "unrelated-addition", FIXTURE.replace(
+        "end R0Fixture", "def unrelatedAddition : Nat := 91\nend R0Fixture"))
+    assert checker.compare_semantics(expected, checker.semantic_records(
+        checker.recover_index_universes(additive, rules))) == []
     opaque = next(row for row in original["records"] if row["name"] == "R0Fixture.opaqueHelper")
     assert opaque["shape"][0] == "opaque" and len(opaque["values"]) == 1
     variants = {
@@ -112,7 +134,7 @@ def semantic_controls(report: Path) -> list[dict]:
     for label, source in variants.items():
         actual = capture(report / label, source)
         assert actual["selected"] == original["selected"]
-        records = checker.semantic_records(actual)
+        records = checker.semantic_records(checker.recover_index_universes(actual, rules))
         differences = checker.compare_semantics(expected, records)
         assert differences, f"Semantic mutation escaped: {label}"
         if label in ("helper", "opaque"):
@@ -132,6 +154,72 @@ def semantic_controls(report: Path) -> list[dict]:
         assert row["shape"][0] == "opaque" and row["values"]
     results.append({"control": "ordinary-import-unavailable-body-fails-closed", "accepted": True,
                     "bodyAvailable": ordinary is not None})
+    results += protocol_controls(original, rules)
+    return results
+
+
+def protocol_controls(original: dict, rules: dict) -> list[dict]:
+    """Mutate serialized actual index slots, never the expected baseline or adapter data."""
+    import copy
+
+    def row(capture: dict, name: str) -> dict:
+        return next(value for value in capture["records"] if value["name"] == name)
+
+    def site_node(capture: dict, site: dict) -> list:
+        node = row(capture, site["caller"])
+        for key in site["path"]:
+            node = node[key]
+        return node
+
+    results = []
+
+    def reject(label: str, actual: dict) -> None:
+        try:
+            checker.recover_index_universes(actual, rules)
+        except ValueError as error:
+            results.append({"control": label, "accepted": True, "rejection": str(error),
+                            "kind": "serialized-capture protocol mutation"})
+        else:
+            raise AssertionError(f"Invalid indexed protocol escaped: {label}")
+
+    for number, site in enumerate(rules["referenceSites"]):
+        actual = copy.deepcopy(original)
+        node = site_node(actual, site)
+        # A blind last-slot drop would erase this genuine extra-index mismatch.
+        node[2][site["indexPosition"]] = ["succ", node[2][site["indexPosition"]]]
+        reject(f"index-site-{number}", actual)
+    for label in ("retained-role", "target-name", "moved-site", "duplicate-site"):
+        actual = copy.deepcopy(original)
+        site = rules["referenceSites"][0]
+        node = site_node(actual, site)
+        if label == "retained-role":
+            node[2][0] = ["succ", node[2][0]]
+        elif label == "target-name":
+            node[1] = ["str", ["anonymous"], "UnknownTarget"]
+        else:
+            parent = row(actual, site["caller"])
+            for key in site["path"][:-1]:
+                parent = parent[key]
+            # Both forms move the actual const; one also creates another occurrence.
+            parent[site["path"][-1]] = ["app", node,
+                copy.deepcopy(node) if label == "duplicate-site" else ["lit", "nat", 0]]
+        reject(label, actual)
+    for label in ("unknown-parameter", "retained-role-order", "mixed-mode", "missing-owner"):
+        actual = copy.deepcopy(original)
+        rule = rules["declarationMaps"][1]
+        target = row(actual, rule["name"])
+        if label == "unknown-parameter":
+            target["levels"].append("unknown")
+            target["levelNames"].append(["str", ["anonymous"], "unknown"])
+        elif label == "retained-role-order":
+            target["levels"][0:2] = reversed(target["levels"][0:2])
+            target["levelNames"][0:2] = reversed(target["levelNames"][0:2])
+        elif label == "mixed-mode":
+            target["levels"] = rule["oldLevels"]
+            target["levelNames"] = rule["oldLevelNames"]
+        else:
+            actual["records"].remove(target)
+        reject(label, actual)
     return results
 
 

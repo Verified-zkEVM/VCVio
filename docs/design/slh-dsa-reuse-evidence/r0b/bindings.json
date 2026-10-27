@@ -73,14 +73,14 @@
     "HashSigTest/SLHDSA/Refactor/Strength/ParameterWire.lean": "8ee4ebd25679327ad32f93880c9dfbe5e48a46a38b0aeaee8011f7011fe4d3d8",
     "HashSigTest/SLHDSA/Refactor/Strength/ProviderWork.lean": "a063d5b563632cead5054bf000df60b7b638901294a291cae90f47bd0affada9",
     "HashSigTest/SLHDSA/Refactor/StrengthContracts.lean": "8c0bfd385fc5e32bb0c387cbfa0f2fa59ab8b64aee7edb3ab44d35772c09ba31",
-    "docs/design/slh-dsa-reuse-evidence/r0/README.md": "a063ac9ca714a553c018d563f2c0f55e0283c4a63cf1f292c4985ea4fcb5e4ab",
+    "docs/design/slh-dsa-reuse-evidence/r0/README.md": "b7f4360e253350f79d089f0b9fb105729a6c04fb63ac2f98c3e54d8b297550a1",
     "docs/design/slh-dsa-reuse-evidence/r0/baseline.json": "755e6b68e9d9bdecbd0e31bd1447c07aa7121799cb2bbf9c03a34c57e3e1f004",
     "docs/design/slh-dsa-reuse-evidence/r0/capture-input.json": "b4c1698aef855ac2c4da4b2308ad232b309bc6b8e0fc6bb0b09a658c58114574",
     "docs/design/slh-dsa-reuse-evidence/r0/kernel-types.json": "7fce7eb97ac9f640fcfacd5e65c61c90c513d1096e4f818664ebdbb0851521e2",
     "docs/design/slh-dsa-reuse-evidence/r0/schemas.md": "c5c8d75cdbedca325f81854b86433adfb04901201b869d6e853484ef2f4f6cd3",
     "docs/design/slh-dsa-reuse-evidence/r0/semantic-fingerprints.tsv": "70febfb9a47833ebe00b912d39395f3c25cacf707a372e9a2fc0607fda86c73f",
-    "scripts/check-slh-dsa-r0.py": "5f63ef5c94a6a5f8eaa06be12c2e889625cd262978cee25f0f782e042e8b8f28",
-    "scripts/tests/test_slh_dsa_r0.py": "1a47c6a24fc56a0d90a62e383c211b0a7d61f445d4e8545913f465dc26c97127"
+    "scripts/check-slh-dsa-r0.py": "0a866bf14558b77a7aecbb646bdbd0c0d03ceb2e9b99f1fa544b7b4b8468d632",
+    "scripts/tests/test_slh_dsa_r0.py": "b3b8c0bd3422a37a94d04e2ce0717d03f324954dbdcf3bb634ad6703f5870fee"
   },
   "semanticSourceSha256": {
     "HashSigTest/SLHDSA/Refactor/Semantics/Bounds.lean": "239314b3531287e9a54fec94cd483addd5e3575ce184083bcdec54720be1166d",

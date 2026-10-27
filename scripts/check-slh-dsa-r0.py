@@ -8,6 +8,7 @@ freshly after their imports have been built. See the R0 README for the baseline'
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -47,6 +48,121 @@ def semantic_records(capture: dict) -> dict[str, dict]:
             "metadata": sha256(canonical(metadata)),
         }
     return records
+
+
+INDEX_COMPAT_SHA256 = "8382ec04b84e6b22286a2b3720dbabced70b8582592c8c6c629baac29fb791f8"
+
+
+def load_index_compat() -> dict:
+    """Load the reviewed finite protocol inside the verifier's source frame."""
+    encoded = (DATA / "index-universe-compat.json").read_bytes()
+    if sha256(encoded) != INDEX_COMPAT_SHA256:
+        raise ValueError("Index-universe compatibility data changed")
+    rules = json.loads(encoded)
+    if sha256((DATA / "semantic-fingerprints.tsv").read_bytes()) != rules[
+            "frozenFingerprintTableSHA256"]:
+        raise ValueError("Index-universe recovery targets a different frozen table")
+    return rules
+
+
+def recover_index_universes(capture: dict, rules: dict) -> dict:
+    """Recover four old level interfaces at seven checked sites, without rewriting terms.
+
+    Legacy captures are unchanged. Indexed captures must contain the entire exact protocol;
+    no partial activation or absent-protocol fallback is permitted. The unchanged raw semantic
+    comparator still checks every type, body and metadata field after this finite conversion.
+    """
+    recovered = copy.deepcopy(capture)
+    records = {row["name"]: row for row in recovered["records"]}
+    if len(records) != len(recovered["records"]):
+        raise ValueError("Duplicate captured declaration in index-universe protocol")
+    maps = {row["name"]: row for row in rules["declarationMaps"]}
+    modes = []
+    for name, rule in maps.items():
+        row = records.get(name)
+        if row is None or row["module"] != rule["module"] or row["shape"][0] != rule["kind"]:
+            raise ValueError(f"Missing or changed index-universe owner: {name}")
+        if row["levels"] == rule["oldLevels"] and row["levelNames"] == rule["oldLevelNames"]:
+            modes.append("legacy")
+        elif row["levels"] == rule["newLevels"] and row["levelNames"] == rule["newLevelNames"]:
+            modes.append("indexed")
+        else:
+            raise ValueError(f"Unknown index-universe level interface: {name}")
+    if len(set(modes)) != 1:
+        raise ValueError("Mixed legacy and indexed universe interfaces")
+    indexed = modes[0] == "indexed"
+    sites = {(row["caller"], tuple(row["path"])): row for row in rules["referenceSites"]}
+    if len(sites) != 7 or len(maps) != 4:
+        raise ValueError("Incomplete reviewed index-universe protocol")
+    visited = set()
+
+    def level(value: list, substitution: dict) -> list:
+        if value[0] == "param":
+            return copy.deepcopy(substitution.get(canonical(value[1]), value))
+        if value[0] not in ("zero", "succ", "max", "imax"):
+            raise ValueError("Unsupported level syntax in index-universe protocol")
+        return [value[0]] + [level(child, substitution) for child in value[1:]]
+
+    def expression(value: object, substitution: dict, caller: str, path: tuple) -> object:
+        if not isinstance(value, list):
+            return value
+        if value and value[0] == "sort":
+            return ["sort", level(value[1], substitution)]
+        if value and value[0] == "const":
+            levels = [level(item, substitution) for item in value[2]]
+            matching = [rule for rule in maps.values()
+                        if rule["name"] == name_from_json(value[1])]
+            key = (caller, path)
+            if matching:
+                site = sites.get(key)
+                if site is None or value[1] != site["targetName"]:
+                    raise ValueError(f"Unlisted or changed index-universe reference: {caller} {path}")
+                if key in visited:
+                    raise ValueError("Duplicate index-universe reference site")
+                visited.add(key)
+                expected_arity = site["newArity"] - (not indexed)
+                if len(levels) != expected_arity:
+                    raise ValueError(f"Changed index-universe reference arity: {caller} {path}")
+                if indexed:
+                    position = site["indexPosition"]
+                    retained = [item for i, item in enumerate(levels) if i != position]
+                    expected = ["zero"] if site["extraRule"] == "zero" else retained[0]
+                    if levels[position] != expected or levels[position] != site[
+                            "actualExtraAfterCallerSubstitution"]:
+                        raise ValueError(f"Changed index-universe index: {caller} {path}")
+                    levels = retained
+                if levels != site["retainedLevels"]:
+                    raise ValueError(f"Changed retained universe roles: {caller} {path}")
+            elif key in sites:
+                raise ValueError(f"Changed index-universe reference name: {caller} {path}")
+            return ["const", value[1], levels]
+        return [expression(item, substitution, caller, path + (i,))
+                for i, item in enumerate(value)]
+
+    for name, row in records.items():
+        substitution = {}
+        if name in maps and indexed:
+            rule = maps[name]
+            substitution = {canonical(item["newParameter"]): item["oldLevel"]
+                            for item in rule["parameterSubstitution"]}
+            row["levels"] = rule["oldLevels"]
+            row["levelNames"] = rule["oldLevelNames"]
+        row["type"] = expression(row["type"], substitution, name, ("type",))
+        row["values"] = [expression(value, substitution, name, ("values", i))
+                         for i, value in enumerate(row["values"])]
+    if visited != sites.keys():
+        raise ValueError("Missing index-universe reference sites")
+    return recovered
+
+
+def name_from_json(value: list) -> str:
+    """Render captured Names only for exact lookup; encoded Names are checked at each site."""
+    if value[0] == "anonymous":
+        return ""
+    if value[0] not in ("str", "num"):
+        raise ValueError("Unsupported captured Name")
+    prefix = name_from_json(value[1])
+    return (prefix + "." if prefix else "") + str(value[2])
 
 
 def compare_semantics(expected: dict, actual: dict) -> list[str]:
@@ -245,6 +361,7 @@ def verify(report: Path) -> dict:
     for name, expected_hash in baseline["artifactSha256"].items():
         if sha256((DATA / name).read_bytes()) != expected_hash:
             raise ValueError(f"Frozen artifact changed: {name}")
+    index_compat = load_index_compat()
     spec = json.loads((DATA / "capture-input.json").read_text())
     bundle = json.loads((DATA / "kernel-types.json").read_text())
     expected = load_table(DATA / "semantic-fingerprints.tsv")
@@ -273,7 +390,8 @@ def verify(report: Path) -> dict:
         raise ValueError("Capture roots or local module ownership policy changed")
     if actual["leanVersion"] != baseline["leanVersion"]:
         raise ValueError("Actual Lean version changed")
-    differences = compare_semantics(expected, semantic_records(actual))
+    recovered = recover_index_universes(actual, index_compat)
+    differences = compare_semantics(expected, semantic_records(recovered))
     if differences:
         raise ValueError("Semantic baseline changed:\n" + "\n".join(differences[:30]))
     resolved_boundary = boundary_packages(actual["externalBoundary"], spec["localModuleRoots"])

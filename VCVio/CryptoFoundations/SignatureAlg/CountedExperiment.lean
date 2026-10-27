@@ -26,6 +26,8 @@ public section
 
 open OracleSpec OracleComp
 
+universe r v idx
+
 namespace SignatureAlg.SigningView
 
 /-- The phase in which an ambient query is made. -/
@@ -41,18 +43,18 @@ inductive Phase where
   deriving DecidableEq, Repr
 
 /-- A policy sees actual query inputs and attempted signing requests. -/
-inductive Event {ι : Type} (spec : OracleSpec ι) (Request : Type) where
+inductive Event {ι : Type idx} (spec : OracleSpec.{idx, r} ι) (Request : Type) : Type idx where
   /-- An ambient query's execution phase and actual input. -/
   | ambient : Phase → spec.Domain → Event spec Request
   /-- An attempted signing request, observed before its signer executes. -/
   | signingAttempt : Request → Event spec Request
 
-variable {ι : Type} {spec : OracleSpec ι} {Request PK SK Sig Reply C : Type}
+variable {ι : Type idx} {spec : OracleSpec ι} {Request PK SK Sig Reply C : Type}
 
 /-- Additive cost accumulation over the shared free-oracle computation. -/
-abbrev CostM (spec : OracleSpec ι) (C : Type) := AddWriterT C (OracleComp spec)
+abbrev CostM (spec : OracleSpec.{idx, r} ι) (C : Type) := AddWriterT C (OracleComp spec)
 /-- The chronological raw reply log over the same additive cost computation. -/
-abbrev LoggedCostM (spec : OracleSpec ι) (Request Reply C : Type) :=
+abbrev LoggedCostM (spec : OracleSpec.{idx, r} ι) (Request Reply C : Type) :=
   WriterT (QueryLog (Request →ₒ Reply)) (CostM spec C)
 
 /-- Run a component while charging each ambient query at its actual input and phase. -/
@@ -269,7 +271,7 @@ theorem countedExperiment_erases_run [AddMonoid C]
     (policy : Event spec Request → C)
     (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
     (adv : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig))
-    {m : Type → Type*} [Monad m] [LawfulMonad m] {Cache : Type}
+    {m : Type → Type v} [Monad m] [LawfulMonad m] {Cache : Type}
     (handler : QueryImpl spec (StateT Cache m)) (initial : Cache) :
     Prod.map erase id <$> (simulateQ handler (countedExperiment policy view adv)).run initial =
       (simulateQ handler (view.experiment adv)).run initial := by
@@ -292,7 +294,7 @@ theorem countedExperiment_erases_run_bind [AddMonoid C]
     (policy : Event spec Request → C)
     (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
     (adv : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig))
-    {m : Type → Type*} [Monad m] [LawfulMonad m] {Cache β : Type}
+    {m : Type → Type v} [Monad m] [LawfulMonad m] {Cache β : Type}
     (handler : QueryImpl spec (StateT Cache m)) (initial : Cache)
     (continuation : Outcome Request Sig Reply × Cache → m β) :
     ((simulateQ handler (countedExperiment policy view adv)).run initial >>=

@@ -23,7 +23,7 @@ open OracleSpec OracleComp
 
 namespace SignatureAlg
 
-universe v
+universe v r idx
 
 /-- A signature interface with independent signing-reply and candidate-signature types. -/
 structure SigningView (m : Type → Type v) [Monad m] (Request PK SK Sig Reply : Type) where
@@ -118,10 +118,11 @@ structure Outcome (Request Sig Reply : Type) where
 
 section experiment
 
-variable {ι : Type} {spec : OracleSpec ι}
+variable {ι : Type idx} {spec : OracleSpec ι}
 
 /-- The signing service logs each response after its algorithm returns. -/
-@[expose] def signingOracle (view : SigningView (OracleComp spec) Request PK SK Sig Reply)
+@[expose] def signingOracle {spec : OracleSpec.{idx, r} ι}
+    (view : SigningView (OracleComp spec) Request PK SK Sig Reply)
     (pk : PK) (sk : SK) :
     QueryImpl (Request →ₒ Reply) (WriterT (QueryLog (Request →ₒ Reply)) (OracleComp spec)) :=
   QueryImpl.withLogging (view.sign pk sk)
@@ -205,7 +206,8 @@ theorem ofTotal_runWithSigningOracle (alg : SignatureAlg (OracleComp spec) Reque
 
 open scoped Classical in
 /-- The total view's winning bit uses the exact returned-pair predicate of the signature API. -/
-theorem ofTotal_decide_Wins (alg : SignatureAlg (OracleComp spec) Request PK SK Sig)
+theorem ofTotal_decide_Wins {spec : OracleSpec.{idx, r} ι}
+    (alg : SignatureAlg (OracleComp spec) Request PK SK Sig)
     (outcome : Outcome Request Sig Sig) :
     decide (Wins (ofTotal alg).readback outcome) =
       (!signingLogContains outcome.rawLog outcome.forgery.1 outcome.forgery.2 &&

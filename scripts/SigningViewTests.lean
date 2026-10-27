@@ -7,6 +7,7 @@ Authors: Alexander Hicks
 module
 import VCVioTest.CryptoFoundations.SigningViewCounted
 import VCVioTest.CryptoFoundations.SigningViewEncoding
+import VCVioTest.CryptoFoundations.SigningViewUniverse
 
 /-! # Executable signing-view observation checks -/
 
@@ -14,3 +15,4 @@ import VCVioTest.CryptoFoundations.SigningViewEncoding
 public def main : IO Unit := do
   VCVioTest.CryptoFoundations.SigningViewCounted.run
   VCVioTest.CryptoFoundations.SigningViewEncoding.run
+  VCVioTest.CryptoFoundations.SigningViewUniverse.run
