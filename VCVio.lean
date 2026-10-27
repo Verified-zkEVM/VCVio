@@ -482,6 +482,7 @@ public import VCVio.Quantum.Comp.HybridMeasure
 public import VCVio.Quantum.Comp.HybridProjected
 public import VCVio.Quantum.Comp.Lift
 public import VCVio.Quantum.Comp.LocalSig
+public import VCVio.Quantum.Comp.Potential
 public import VCVio.Quantum.Comp.QueryBound
 public import VCVio.Quantum.Comp.QueryMass
 public import VCVio.Quantum.Comp.Runtime
@@ -512,11 +513,16 @@ public import VCVio.Quantum.Oracle.Compressed.Basic
 public import VCVio.Quantum.Oracle.Compressed.BinaryPartition
 public import VCVio.Quantum.Oracle.Compressed.CheckedRead
 public import VCVio.Quantum.Oracle.Compressed.CheckedReadBound
+public import VCVio.Quantum.Oracle.Compressed.Collision
+public import VCVio.Quantum.Oracle.Compressed.CollisionBlocks
+public import VCVio.Quantum.Oracle.Compressed.CollisionPotential
+public import VCVio.Quantum.Oracle.Compressed.CollisionRuntime
 public import VCVio.Quantum.Oracle.Compressed.CommutatorBound
 public import VCVio.Quantum.Oracle.Compressed.CommutatorSharp
 public import VCVio.Quantum.Oracle.Compressed.Consistency
 public import VCVio.Quantum.Oracle.Compressed.Equivalence
 public import VCVio.Quantum.Oracle.Compressed.Instability
+public import VCVio.Quantum.Oracle.Compressed.LocalPotential
 public import VCVio.Quantum.Oracle.Compressed.Measurement
 public import VCVio.Quantum.Oracle.Compressed.Oracle
 public import VCVio.Quantum.Oracle.Compressed.Phase
@@ -544,6 +550,8 @@ public import VCVio.Quantum.VC.MultiExtractor
 public import VCVio.Quantum.VC.Proof.CheckerDistance
 public import VCVio.Quantum.VC.Proof.Commutativity
 public import VCVio.Quantum.VC.Proof.Extraction
+public import VCVio.Quantum.VC.Proof.GoodEvent
+public import VCVio.Quantum.VC.Proof.Offline
 public import VCVio.Quantum.VC.Proof.Repeatability
 public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
