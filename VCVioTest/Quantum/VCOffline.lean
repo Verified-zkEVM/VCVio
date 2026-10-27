@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import VCVio.Quantum.VC.Merkle.Offline
 
 public import VCVio.Quantum.VC.Proof.GoodEvent
 
@@ -604,3 +605,229 @@ theorem collision_weight_pos :
 end TwoInputCollision
 
 end VCVioTest.QuantumVCOffline
+
+namespace VCVioTest.QuantumVCOffline
+
+open Quantum Matrix OracleComp
+open scoped Kronecker
+
+section CheckedChallenger
+
+variable {k : ℕ} {X Y Msg Cm Z : Type} [Fintype X] [DecidableEq X] [Fintype Y]
+  [DecidableEq Y] [AddCommGroup Y] [Fintype Cm] [DecidableEq Cm]
+  [Fintype Z] [DecidableEq Z] [AddGroup Z] {ℓ : Fin k → ℕ} {Td Pf : Fin k → Type}
+  [DecidableEq Msg] [∀ i, DecidableEq (Pf i)]
+  (VC : ∀ i, VectorCommitment X Y Msg Cm (Td i) (Pf i) (ℓ i))
+  (ME : MultiExtractor k Cm (DmOf ℓ Msg Td) (Fin k → Database X Y))
+  (code : TpDCode k (DmOf ℓ Msg Td) Z) (hk : 1 ≤ k) (qs : ℕ)
+  (c : OpeningClaim k Cm Msg ℓ Pf) (B : QReg)
+
+open scoped Classical in
+/-- Fresh extraction through an arbitrary code measures its actual extraction fibre. -/
+example (tdm : TpDLen k (DmOf ℓ Msg Td) (TupleLen.full hk)) :
+    (((compressedVCOracle k X Y).withExtract ME code).coherent.toRuntime.run₂ .instruments
+      (extractQuery code B (TpIC.full hk c.idx c.cm))).branch (some tdm) =
+      MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ extractProj ME (TpIC.full hk c.idx c.cm) tdm) := by
+  classical
+  exact run₂_extractQuery_branch (compressedVCOracle k X Y) ME code B
+    (TpIC.full hk c.idx c.cm) tdm
+
+open scoped Classical in
+/-- Rejecting the first checked batch annihilates the retained mismatch branch. -/
+example (tdm : TpDLen k (DmOf ℓ Msg Td) (TupleLen.full hk)) :
+    (((compressedVCOracle k X Y).mixedExtractRuntime ME code).run₂ .instruments
+      (offlineInstrument VC code hk qs c B)).branch ((false, some tdm, true), true) = 0 := by
+  apply run₂_offlineInstrument_reject
+  simp
+
+open scoped Classical in
+/-- Exceeding the opening budget annihilates the actual challenger's event. -/
+example (ρ : SubState (B × (Fin k → Database X Y)))
+    (hq : ¬ ∑ i, (c.ans i).dom.card ≤ qs) :
+    (((compressedVCOracle k X Y).mixedExtractRuntime ME code).run₂ .instruments
+      (offlineChallenger VC code hk qs c B)).outcomeMeasure ρ {true} = 0 :=
+  offlineChallenger_over_budget VC code
+    ((compressedVCOracle k X Y).mixedExtractRuntime ME code) hk qs c B ρ hq
+
+open scoped Classical in
+/-- Every supported randomized opening is retained in the good-database zero identity. -/
+example (chk : ∀ i, (VC i).NonadaptiveCheck) (tdBot : ∀ i, Td i)
+    (Pgood : Set (Database X Y)) [DecidablePred (· ∈ Pgood)]
+    (hC : Conditions VC chk ME tdBot Pgood)
+    (tdm : TpDLen k (DmOf ℓ Msg Td) (TupleLen.full hk)) :
+    let R := (compressedVCOracle k X Y).mixedExtractRuntime ME code
+    let K := checkPassProjector chk c.Wᶜ c.idx c.cm c.ans c.pf *
+      extractProj ME (TpIC.full hk c.idx c.cm) tdm *
+      checkPassProjector chk c.W c.idx c.cm c.ans c.pf *
+      diagonal (fun D : Fin k → Database X Y ↦ if ∀ i, D i ∈ Pgood then (1 : ℂ) else 0)
+    (R.run₂ .instruments (offlineFinish VC (Z := Z) hk qs c B
+      (true, some tdm, true))).branch true ∘ₗ
+        MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ K) = 0 := by
+  classical
+  exact run₂_offlineFinish_partial_good_zero chk ME tdBot Pgood hC code hk qs c B tdm
+
+open scoped Classical in
+/-- The generic offline endpoint is available through ordinary public imports. -/
+example [OracleSpec.UniformAnswerMeasure (X →ₒ Y)]
+    (chk : ∀ i, (VC i).NonadaptiveCheck) (tdBot : ∀ i, Td i)
+    (Pgood : Set (Database X Y)) [DecidablePred (· ∈ Pgood)]
+    (hC : Conditions VC chk ME tdBot Pgood) :
+    OfflineExtractable VC (compressedVCOracle k X Y) ME code
+      (fun t wVC _ qs ↦ offlineError chk Pgood t wVC qs) :=
+  offlineExtractable_compressedVCOracle chk ME tdBot Pgood hC code
+
+end CheckedChallenger
+end VCVioTest.QuantumVCOffline
+
+/-- Accepted labels remain a subinstrument with an infinite outcome space. -/
+example : MatrixMap.IsCPTNIFamily (fun i : ℕ ↦ MatrixMap.conj
+    (Matrix.diagonal fun _ : Fin 2 ↦ if True ∧ (0 : ℕ) = i then (1 : ℂ) else 0)) :=
+  MatrixMap.accepted_label_isCPTNIFamily (fun _ ↦ True) (fun _ ↦ 0)
+
+namespace VCVioTest.OfflineFixture
+
+open Quantum Matrix OracleComp
+open scoped ENNReal Kronecker
+
+local notation "Dm" => DmOf (k := 1) (fun _ ↦ 1) Unit (fun _ ↦ Bool)
+local notation "DB" => Fin 1 → Database Unit (Fin 2)
+
+/-- A uniform binary opening; the submitted proof is the zero outcome. -/
+def vc : VectorCommitment Unit (Fin 2) Unit Unit Bool (Fin 2) 1 where
+  commit _ := pure ((), false)
+  opening _ _ := query (spec := unifSpec) 1
+  check _ _ pf := pure (pf == 0)
+
+def claim : OpeningClaim 1 Unit Unit (fun _ ↦ 1) (fun _ ↦ Fin 2) where
+  idx := id
+  cm := fun _ ↦ ()
+  ans := fun _ _ ↦ some ()
+  pf := fun _ ↦ 0
+  W := {0}
+
+def tuple (b : Bool) : TpDLen 1 Dm (.full (by decide)) :=
+  fun _ ↦ (fun _ ↦ some (), b)
+
+/-- Extraction records whether the selected cell contains a value. -/
+noncomputable def extractor : MultiExtractor 1 Unit Dm DB :=
+  ⟨fun tic D i ↦ (fun _ ↦ some (), (D ((tic.2 i).1) ()).isSome)⟩
+
+def db (b : Bool) : DB := fun _ _ ↦ if b then some 0 else none
+
+example (pf : Fin 2) : pf ∈ support (vc.opening Finset.univ false) := by
+  simp [vc]
+
+example : ∑ i, ((claim.ans i).dom.card) = 1 := by decide
+
+variable {Z : Type} [Fintype Z] [DecidableEq Z] [AddGroup Z]
+  (code : TpDCode 1 Dm Z)
+
+/-- The two measured fibres select opposite basis states. -/
+private theorem fibre_entry (b out : Bool) :
+    (MatrixMap.conj ((1 : Matrix Unit Unit ℂ) ⊗ₖ
+      extractProj extractor (TpIC.full (show 1 ≤ 1 by decide) claim.idx claim.cm) (tuple out))
+      (Matrix.single ((), db b) ((), db b) 1)) ((), db b) ((), db b) =
+        if b = out then 1 else 0 := by
+  classical
+  rw [MatrixMap.conj_apply]
+  simp only [extractProj, ← Matrix.diagonal_one, Matrix.diagonal_kronecker_diagonal,
+    one_mul, Matrix.diagonal_conjTranspose, Matrix.mul_diagonal, Matrix.diagonal_mul,
+    Matrix.single_apply_same]
+  have he : extractor.extract (TpIC.full (show 1 ≤ 1 by decide) claim.idx claim.cm)
+      (db b) = tuple b := by cases b <;> rfl
+  have hi : Function.Injective tuple := by
+    intro a b h
+    exact congrArg (fun f ↦ (f (0 : Fin 1)).2) h
+  simp only [Pi.star_apply]
+  erw [he]
+  by_cases h : b = out
+  · subst out
+    erw [ite_eq_left (rfl : tuple b = tuple b)]
+    norm_num
+  · have hn : tuple b ≠ tuple out := fun hh ↦ h (hi hh)
+    erw [ite_eq_right hn]
+    norm_num [h]
+
+/-- Fresh extraction distinguishes empty and occupied states for every tuple code. -/
+example (b out : Bool) :
+    let R := ((compressedVCOracle 1 Unit (Fin 2)).withExtract extractor code).coherent.toRuntime
+    ((R.run₂ .instruments (extractQuery code (QReg.of Unit)
+      (TpIC.full (by decide) claim.idx claim.cm))).branch (some (tuple out))
+        (SubState.basis ((), db b)).matrix) ((), db b) ((), db b) =
+      if b = out then 1 else 0 := by
+  classical
+  dsimp only
+  erw [run₂_extractQuery_branch]
+  convert fibre_entry b out using 1
+  rfl
+
+omit [AddGroup Z] in
+/-- Every opening branch has weight one half and leaves the state untouched. -/
+theorem opening_branch (R : QuantumRuntime (mixedExtSpec 1 Unit (Fin 2) Unit Z))
+    (B : QReg) (pf : Fin 2) :
+    (R.run₂ .instruments (openAt (fun _ : Fin 1 ↦ vc) B 0 Finset.univ false)).branch pf =
+      (1 / 2 : ℂ) • LinearMap.id := by
+  rw [openAt]
+  change (R.run₂ .instruments ((query (spec := unifSpec) 1 : ProbComp (Fin 2)).toQuantumAt
+    (QComp.coinImpl _ B))).branch pf = _
+  change (R.run₂ .instruments (((query (spec := unifSpec) 1 >>= pure) :
+    ProbComp (Fin 2)).toQuantumAt (QComp.coinImpl _ B))).branch pf = _
+  erw [toQuantumAt_query_bind]
+  simp only [toQuantumAt_pure, QuantumComp₂.bind_pure]
+  rw [QComp.coinImpl, QuantumRuntime.run₂_act, SubInstrument.bind_pure,
+    DSubInstrument.branch_frame_apply]
+  ext ρ x y
+  simp [SubInstrument.branch_uniform_apply]
+
+omit [AddGroup Z] in
+/-- On the accepted transcript, the fresh binary opening alone decides the mismatch. -/
+theorem finish_eq (B : QReg) :
+    offlineFinish (fun _ : Fin 1 ↦ vc) (Z := Z) (by decide) 1 claim B
+      (true, some (tuple false), true) =
+      (openAt (fun _ : Fin 1 ↦ vc) B 0 Finset.univ false).bind
+        (fun pf ↦ .pure (decide (pf ≠ 0))) := by
+  rw [offlineFinish_accept]
+  simp [QComp.pi_succ, QComp.pi_zero, claim, tuple, PartialVec.Agrees, Fin.exists_fin_succ,
+    openAt, vc, PartialVec.dom, QuantumComp₂.bind_assoc, Function.injective_id]
+
+omit [AddGroup Z] in
+/-- The actual accepted finish assigns exactly half the incoming state to mismatch. -/
+theorem mismatch_branch (R : QuantumRuntime (mixedExtSpec 1 Unit (Fin 2) Unit Z))
+    (B : QReg) :
+    (R.run₂ .instruments (offlineFinish (fun _ : Fin 1 ↦ vc) (Z := Z)
+      (by decide) 1 claim B (true, some (tuple false), true))).branch true =
+        (1 / 2 : ℂ) • LinearMap.id := by
+  rw [finish_eq, QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply_univ]
+  ext ρ x y
+  simp only [QuantumRuntime.run₂_pure, Fin.sum_univ_two]
+  erw [opening_branch, opening_branch]
+  simp
+
+/-- A normalized basis input therefore has mismatch weight exactly one half. -/
+example (R : QuantumRuntime (mixedExtSpec 1 Unit (Fin 2) Unit Z)) (s : R.D) :
+    ENNReal.ofReal (((R.run₂ .instruments
+      (offlineFinish (fun _ : Fin 1 ↦ vc) (Z := Z) (by decide) 1 claim (QReg.of Unit)
+        (true, some (tuple false), true))).branch true
+          (SubState.basis ((), s)).matrix).trace.re) = 1 / 2 := by
+  rw [mismatch_branch]
+  simp
+
+/-- The same submitted proof is rejected when it is changed to the nonzero outcome. -/
+example : vc.check () (claim.ans 0) 1 = pure false := rfl
+
+/-- A rejected first batch has zero mismatch channel on this concrete claim. -/
+example (R : QuantumRuntime (mixedExtSpec 1 Unit (Fin 2) Unit Z)) :
+    (R.run₂ .instruments (offlineFinish (fun _ : Fin 1 ↦ vc) (Z := Z)
+      (by decide) 1 { claim with pf := fun _ ↦ 1 } (QReg.of Unit)
+      (false, some (tuple false), true))).branch true = 0 := by
+  apply run₂_offlineFinish_reject
+  simp
+
+/-- The claim opens one position, so a zero budget rejects even an accepted transcript. -/
+example (R : QuantumRuntime (mixedExtSpec 1 Unit (Fin 2) Unit Z)) :
+    (R.run₂ .instruments (offlineFinish (fun _ : Fin 1 ↦ vc) (Z := Z)
+      (by decide) 0 claim (QReg.of Unit) (true, some (tuple false), true))).branch true = 0 := by
+  apply run₂_offlineFinish_over_budget
+  decide
+
+end VCVioTest.OfflineFixture
