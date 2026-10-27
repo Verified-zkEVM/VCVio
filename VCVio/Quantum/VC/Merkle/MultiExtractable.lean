@@ -32,7 +32,9 @@ open scoped ENNReal
 
 namespace SaltedMerkle
 
-/-- The aggregate errors increase with the query and mass budgets they use. -/
+/-- The aggregate errors increase with the query and mass budgets they use, in the sense of
+`MEErrors.Monotone`: the simulation, commutation, offline and online errors are monotone in all
+their arguments. The extraction-correctness error is not covered by this monotonicity. -/
 theorem merkleErrors_monotone (N dmax : ℕ) : (merkleErrors N dmax).Monotone := by
   refine ⟨fun _ _ _ ↦ le_rfl, ?_, ?_, ?_⟩
   · intro a b hab
