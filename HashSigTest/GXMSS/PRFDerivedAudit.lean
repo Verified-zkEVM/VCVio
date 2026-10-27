@@ -25,7 +25,7 @@ generated auxiliaries, is checked for a definition or proof and its transitive a
 
 public section
 
-open GXMSS.PRFDerived.Security
+open GXMSS.PRFDerived.Unforgeability
 
 run_cmd Lean.Elab.Command.liftTermElabM do
   let env ← Lean.getEnv

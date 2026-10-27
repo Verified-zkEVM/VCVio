@@ -17,7 +17,7 @@ epoch in the persistent ideal function cache.
 
 public section
 
-namespace GXMSS.PRFDerived.Security
+namespace GXMSS.PRFDerived.Unforgeability
 
 open OracleComp OracleSpec Encoding ENNReal GXMSS ProbabilityTheory MeasureTheory TweakableHash
 open OracleComp.ProgramLogic.Relational
@@ -597,4 +597,4 @@ private theorem oracleSign_bound
   simpa only [Nat.add_zero] using isTotalQueryBound_bind hretry hresult
 
 
-end GXMSS.PRFDerived.Security
+end GXMSS.PRFDerived.Unforgeability

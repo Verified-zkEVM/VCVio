@@ -18,7 +18,7 @@ Its cached ideal execution has the same returned-output measure as generic GXMSS
 
 public section
 
-namespace GXMSS.PRFDerived.Security
+namespace GXMSS.PRFDerived.Unforgeability
 
 open OracleComp OracleSpec Encoding ENNReal GXMSS ProbabilityTheory MeasureTheory TweakableHash
 open OracleComp.ProgramLogic.Relational
@@ -795,4 +795,4 @@ private theorem ideal_adaptive_interaction_correspondence [SampleableType H]
       simp [follow, bind_assoc]
 
 
-end GXMSS.PRFDerived.Security
+end GXMSS.PRFDerived.Unforgeability

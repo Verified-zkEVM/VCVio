@@ -72,7 +72,7 @@ Key generation samples only the evaluator key. Its distinguished response determ
 parameter used by all later queries and the public root; the secret key is the evaluator key.
 The arbitrary incomparable encoding and the ordinary GXMSS verifier remain shared.
 
-`GXMSS.PRFDerived.Security.randgenPRFReduction` queries the public parameter and starts once,
+`GXMSS.PRFDerived.Unforgeability.randgenPRFReduction` queries the public parameter and starts once,
 retains the resulting signing material, forwards the source adversary's ambient sampling, and
 answers each first signing request with its full finite retry-query budget. Duplicate epochs make
 no function queries. A first request that returns signing failure still consumes its epoch. The

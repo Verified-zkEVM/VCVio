@@ -17,9 +17,9 @@ the named PRF reduction, every generic hardness term, and the signing-query boun
 
 public section
 
-namespace GXMSS.PRFDerived.SecurityConsumer
+namespace GXMSS.PRFDerived.UnforgeabilityConsumer
 
-open GXMSS.PRFDerived.Security
+open GXMSS.PRFDerived.Unforgeability
 open OracleComp OracleSpec Encoding ENNReal GXMSS ProbabilityTheory MeasureTheory TweakableHash
 
 variable {Key PP T X H M R Response : Type} {h w v : ℕ}
@@ -149,4 +149,4 @@ example
   exact strong_reduction_bound hash enc prf projection budget qs hv hw
     htwo adv hbound keyLaw hseed hstart hretry
 
-end GXMSS.PRFDerived.SecurityConsumer
+end GXMSS.PRFDerived.UnforgeabilityConsumer

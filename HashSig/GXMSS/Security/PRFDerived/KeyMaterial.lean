@@ -20,7 +20,7 @@ queries project to the required independent startup sampling laws.
 
 public section
 
-namespace GXMSS.PRFDerived.Security
+namespace GXMSS.PRFDerived.Unforgeability
 
 open OracleComp OracleSpec Encoding ENNReal GXMSS ProbabilityTheory MeasureTheory TweakableHash
 open OracleComp.ProgramLogic.Relational
@@ -448,4 +448,4 @@ private theorem projectedStarts_sampling [SampleableType Response] [SampleableTy
   exact hnested.symm
 
 
-end GXMSS.PRFDerived.Security
+end GXMSS.PRFDerived.Unforgeability

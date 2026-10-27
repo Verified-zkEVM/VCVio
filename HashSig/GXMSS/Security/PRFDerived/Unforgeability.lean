@@ -19,7 +19,7 @@ and ideal strong games yield a conditional reduction to PRF and generic GXMSS ha
 
 public section
 
-namespace GXMSS.PRFDerived.Security
+namespace GXMSS.PRFDerived.Unforgeability
 
 open OracleComp OracleSpec Encoding ENNReal GXMSS ProbabilityTheory MeasureTheory TweakableHash
 open OracleComp.ProgramLogic.Relational
@@ -461,4 +461,4 @@ theorem strong_reduction_bound
   exact hhop.trans (add_le_add_right hgeneric _)
 
 
-end GXMSS.PRFDerived.Security
+end GXMSS.PRFDerived.Unforgeability
