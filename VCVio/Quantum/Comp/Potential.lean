@@ -40,9 +40,10 @@ Then a run from a state with no weight on `Q` ends with weight at most
 the additive term summed over the inputs of the `n`-th calls
 (`Quantum.QuantumRuntime.rpow_inv_two_eventWeight_le_of_potential`). The additive terms `eₙ`
 account both for ports that change the event and for local approximation errors, such as the
-cost of bounding a component of the input restricted to the event's complement by the full
-component (`Quantum.posSemidef_cellDrop_sub_flip`). They can be zero when the local leak
-estimate is exact; in that case the bound is `(∑ₙ λₙ) · (tr ((1 ⊗ Φ₀) ρ) + ∑ₙ Θₙ)`.
+cost of bounding a component of the input restricted to the contents on which the event keeps
+its empty-cell value by the full component (`Quantum.posSemidef_cellDrop_sub_flip`). They can be
+zero when the local leak estimate is exact; in that case the bound is
+`(∑ₙ λₙ) · (tr ((1 ⊗ Φ₀) ρ) + ∑ₙ Θₙ)`.
 
 Both conditions are stated on traces, so that runtimes with countably many outcomes and drops
 that are not given by operators are covered. Loewner inequalities between operators give them
@@ -365,10 +366,9 @@ theorem potential_queryStep (K : Matrix Z R.D ℂ) (i : spec.Port) (E : QReg)
 /-! ## Telescoping the drops -/
 
 /-- **Telescoping the drops**, the first half of the potential certificate. Let `K n` give the
-potential
-`Φₙ = (K n)ᴴ (K n)` before the `n`-th call, and suppose that on every positive semidefinite input
-`σ` of a call `n < N` of port `i`, the drop `w n i σ` and the potentials of the outputs of the
-step are at most the potential of the input plus the charge `c n i σ`:
+potential `Φₙ = (K n)ᴴ (K n)` before the `n`-th call, and suppose that on every positive
+semidefinite input `σ` of a call `n < N` of port `i`, the drop `w n i σ` and the potentials of
+the outputs of the step are at most the potential of the input plus the charge `c n i σ`:
 `w n i σ + ∑ᵣ tr ((1 ⊗ Φₙ₊₁) Uᵣ(σ)) ≤ tr ((1 ⊗ Φₙ) σ) + c n i σ`. Then the drops of the first `N`
 calls of any program, summed over its paths, are at most the initial potential plus the charges.
 

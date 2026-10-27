@@ -141,6 +141,7 @@ theorem run_of_total_step
     convert h using 1
     congr 1
     omega
+
 end QuerySupportedOn
 
 namespace QuantumRuntime
