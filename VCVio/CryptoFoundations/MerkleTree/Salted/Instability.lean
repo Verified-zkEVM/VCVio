@@ -30,16 +30,6 @@ open scoped ENNReal
 
 namespace SaltedMerkle
 
-variable {X Y : Type}
-
-/-- The number of nonempty cells is the cardinality of the database support. -/
-theorem ncard_support_eq_size [Fintype X] (D : Database X Y) : {x | D x ≠ none}.ncard = D.size := by
-  classical
-  rw [Database.size, ← Set.ncard_coe_finset]
-  congr 1
-  ext x
-  simp [Option.isSome_iff_ne_none]
-
 variable {X Y Msg Salt : Type} [Fintype X] [DecidableEq X] [LinearOrder Y] [Fintype Y]
   [Fintype Msg] [LinearOrder Msg] [Fintype Salt] [LinearOrder Salt]
   (enc : MerkleTreeHashing.QueryEncoding X Unit Unit (Msg × Salt) Y) {k : ℕ} (d : Fin k → ℕ)
@@ -80,7 +70,7 @@ theorem card_onlineLabel_changes_le (tic : TpIC k Y) (Dfix : Fin k → Database 
         _ ≤ (halfPreimages enc D).ncard + 1 := Set.ncard_insert_le _ _
         _ ≤ 2 * D.size + 1 := by
           have h := ncard_halfPreimages_le_of_finite enc D
-          rw [ncard_support_eq_size] at h
+          rw [Database.ncard_support_eq_size] at h
           omega
     · have hπ (y : Y) : π (Function.update D x (some y)) = π D :=
         stable y fun i hi ↦ (hex ⟨i, hi⟩).elim
