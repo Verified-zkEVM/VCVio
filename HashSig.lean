@@ -334,6 +334,7 @@ public import HashSig.SLHDSA.Security.CoverageRoles
 public import HashSig.SLHDSA.Security.CoverageRun
 public import HashSig.SLHDSA.Security.DigestTransport
 public import HashSig.SLHDSA.Security.EncodedTargets
+public import HashSig.SLHDSA.Security.ForsGraph
 public import HashSig.SLHDSA.Security.ForsWitnesses
 public import HashSig.SLHDSA.Security.GraphInput
 public import HashSig.SLHDSA.Security.HedgedKeyBound

@@ -407,6 +407,7 @@ script test (args) do
     #["exe", "slhdsa_fors_tests"],
     #["exe", "slhdsa_fors_secret_order_tests"],
     #["exe", "slhdsa_fors_provider_tests"],
+    #["exe", "slhdsa_fors_graph_tests"],
     #["exe", "slhdsa_hypertree_tests"],
     #["exe", "slhdsa_external_tests"],
     #["exe", "slhdsa_target_ledger_tests"],
@@ -505,6 +506,10 @@ lean_exe slhdsa_fors_secret_order_tests where
 /-- Actual oracle-provider, ordered cost and retained cache checks for canonical FORS. -/
 lean_exe slhdsa_fors_provider_tests where
   root := `HashSigTest.SLHDSA.Refactor.ForsObservation
+
+/-- Canonical effectful FORS and its structural traversal retain full cached observations. -/
+lean_exe slhdsa_fors_graph_tests where
+  root := `HashSigTest.SLHDSA.Refactor.ForsGraph
 
 /-- General-hypertree trajectories, checked addresses, and selected concrete construction. -/
 lean_exe slhdsa_hypertree_tests where
