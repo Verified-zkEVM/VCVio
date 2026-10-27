@@ -19,6 +19,7 @@ public import HashSig.GXMSS.Security.Auxiliary.HashWitnesses
 public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 public import HashSig.GXMSS.Security.PRFDerived.Interaction
 public import HashSig.GXMSS.Security.PRFDerived.KeyMaterial
+public import HashSig.GXMSS.Security.PRFDerived.Real
 public import HashSig.GXMSS.Security.PRFDerived.Signing
 public import HashSig.GXMSS.Security.PRFDerived.Unforgeability
 public import HashSig.GXMSS.Security.Reductions.ChainHybrid

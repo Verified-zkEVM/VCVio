@@ -22,6 +22,7 @@ is outside this development.
 | General security | [Reduction games](../../HashSig/GXMSS/Security/Reductions/JointReductions.lean), [bound](../../HashSig/GXMSS/Security/Unforgeability.lean) | Explicit reductions to the authoritative tweakable-hash and encoding target-collision games. |
 | Encoding instances | [Checksum](../../HashSig/GXMSS/Encoding/Winternitz.lean), [target sum](../../HashSig/GXMSS/Encoding/TargetSum.lean) | Incomparability, error bounds under the stated distribution premises, and code-size facts. |
 | PRF-derived sibling | [Derived construction](../../HashSig/GXMSS/PRFDerivedScheme.lean), [conditional strong bound](../../HashSig/GXMSS/Security/PRFDerived/Unforgeability.lean) | One abstract keyed evaluator supplies the public parameter, chain starts, and retry randomizers; a named PRF reduction connects its strong game to the ideal scheme. |
+| PRF security proof layers | [Real correspondence](../../HashSig/GXMSS/Security/PRFDerived/Real.lean), [final composition](../../HashSig/GXMSS/Security/PRFDerived/Unforgeability.lean) | The real handler and synchronized interaction agree with the seed-only scheme; the final module combines the query bound, ideal correspondence, and conditional reduction. |
 | Specialized security | [Encoding-specific bounds](../../HashSig/GXMSS/Security/Unforgeability.lean) | Composition with reductions from encoding collisions to the message hash's SM-DT-rTCR game. |
 
 ## Security statement
@@ -80,6 +81,10 @@ strong observation checks the exact message/signature pair against the complete 
 The ideal PRF experiment retains one persistent random-function cache across this interaction.
 The signing operation records its first-success consumed prefix; the reduction's function-query
 count charges the complete queried retry budget even when signing succeeds earlier.
+
+`Security/PRFDerived/Real.lean` proves the real-oracle correspondence.
+`Security/PRFDerived/Unforgeability.lean` publicly imports it, so importing the final module
+provides all five security theorems in `GXMSS.PRFDerived.Unforgeability`.
 
 The final `strong_reduction_bound` adds the advantage of this named PRF
 reduction to every generic hardness term above, with the same target counts and coefficients.

@@ -13,13 +13,14 @@ import all HashSig.GXMSS.PRFDerivedScheme
 import all HashSig.GXMSS.Security.PRFDerived.KeyMaterial
 import all HashSig.GXMSS.Security.PRFDerived.Signing
 import all HashSig.GXMSS.Security.PRFDerived.Interaction
+import all HashSig.GXMSS.Security.PRFDerived.Real
 import all HashSig.GXMSS.Security.PRFDerived.Unforgeability
 
 /-!
 # PRF-derived GXMSS security import audit
 
-The public security results must originate in the final security module. Every imported
-declaration from the scheme, indexed retry, and four security modules, including private and
+The public security results must originate in their designated proof modules. Every imported
+declaration from the scheme, indexed retry, and five security modules, including private and
 generated auxiliaries, is checked for a definition or proof and its transitive axioms.
 -/
 
@@ -30,6 +31,7 @@ open GXMSS.PRFDerived.Unforgeability
 run_cmd Lean.Elab.Command.liftTermElabM do
   let env ← Lean.getEnv
   let header := env.header
+  let realModule := `HashSig.GXMSS.Security.PRFDerived.Real
   let finalModule := `HashSig.GXMSS.Security.PRFDerived.Unforgeability
   let modules := [
     `HashSig.GXMSS.Encoding.RetryIndexed,
@@ -37,14 +39,15 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     `HashSig.GXMSS.Security.PRFDerived.KeyMaterial,
     `HashSig.GXMSS.Security.PRFDerived.Signing,
     `HashSig.GXMSS.Security.PRFDerived.Interaction,
+    realModule,
     finalModule]
   let names := [
-    ``randgenPRFReduction_real_strong,
-    ``randgenPRFReduction_functionQuery_bound,
-    ``ideal_adaptive_strong_correspondence,
-    ``adaptive_strong_additive_bound,
-    ``strong_reduction_bound]
-  for name in names do
+    (``randgenPRFReduction_real_strong, realModule),
+    (``randgenPRFReduction_functionQuery_bound, finalModule),
+    (``ideal_adaptive_strong_correspondence, finalModule),
+    (``adaptive_strong_additive_bound, finalModule),
+    (``strong_reduction_bound, finalModule)]
+  for (name, expectedModule) in names do
     let some info := env.find? name
       | throwError "{name} is missing from the imported environment"
     let .thmInfo theoremInfo := info
@@ -52,7 +55,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     let some index := env.getModuleIdxFor? name
       | throwError "{name} has no imported-module origin"
     let origin := header.moduleNames[index.toNat]!
-    unless origin == finalModule do
+    unless origin == expectedModule do
       throwError "{name} has wrong imported origin: {origin}"
     Lean.Meta.forallTelescope theoremInfo.type fun _ proposition => do
       let propositionType ← Lean.Meta.inferType proposition
