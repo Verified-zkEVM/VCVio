@@ -13,7 +13,8 @@ public import Mathlib.Topology.EMetricSpace.Weak
 
 This file defines `ENNReal.absDiff`, a symmetric absolute difference on extended non-negative
 reals using truncating subtraction, and proves supporting lemmas about `tsum` and `absDiff`
-interactions. These are the building blocks for total variation distance on `PMF`.
+interactions. `absDiff` is the event discrepancy in the measure-level total variation distance
+`MeasureTheory.Measure.etvDist`.
 
 ## Main definitions
 

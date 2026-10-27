@@ -323,6 +323,14 @@ lemma isQueryBoundP_bind
       refine ih'.mono ?_
       grind
 
+/-- `oa >>= ob` makes no `p`-query when `oa` and every continuation `ob x` make none. The
+continuations are taken at every value, so the bound composes as a predicate on programs that
+holds of every `pure` and is preserved by `bind`. -/
+lemma isQueryBoundP_bind_zero (oa : OracleComp spec α) (ob : α → OracleComp spec β)
+    (h : IsQueryBoundP oa p 0) (h' : ∀ x, IsQueryBoundP (ob x) p 0) :
+    IsQueryBoundP (oa >>= ob) p 0 :=
+  isQueryBoundP_bind h fun x _ => h' x
+
 /-- Transfer a predicate-targeted query bound through a `StateT` simulation
 whose handler step consumes at most one target-side predicate query exactly when
 the source query satisfies the source predicate.
@@ -381,6 +389,19 @@ lemma IsQueryBoundP.of_imp {oa : OracleComp spec α} {p p' : ι → Prop}
         · exact Or.inl hpt
       · refine (ih u (h.2 u)).mono ?_
         grind
+
+/-- Budgets add over a disjunction: a program making at most `n` `p`-queries and at most `m`
+`q`-queries makes at most `n + m` queries at which `p` or `q` holds. -/
+lemma IsQueryBoundP.or {oa : OracleComp spec α} {p q : ι → Prop} [DecidablePred p]
+    [DecidablePred q] {n m : ℕ} (hp : IsQueryBoundP oa p n) (hq : IsQueryBoundP oa q m) :
+    IsQueryBoundP oa (fun t => p t ∨ q t) (n + m) := by
+  induction oa using OracleComp.inductionOn generalizing n m with
+  | pure _ => trivial
+  | query_bind t mx ih =>
+      rw [isQueryBoundP_query_bind_iff] at hp hq ⊢
+      refine ⟨?_, fun u => (ih u (hp.2 u) (hq.2 u)).mono ?_⟩
+      · grind
+      · by_cases h1 : p t <;> by_cases h2 : q t <;> grind
 
 @[simp]
 lemma isQueryBoundP_map_iff (oa : OracleComp spec α) (f : α → β) (n : ℕ) :
@@ -504,6 +525,18 @@ theorem AllQueriesSatisfy.mono {oa : OracleComp spec α} {P Q : ι → Prop}
       obtain ⟨ht, hmx⟩ := (allQueriesSatisfy_query_bind_iff _ _ _).mp h
       exact (allQueriesSatisfy_query_bind_iff _ _ _).mpr ⟨hPQ t ht, fun u => ih u (hmx u)⟩
 
+/-- Two predicates that every query of `oa` satisfies hold jointly of every query. -/
+theorem AllQueriesSatisfy.and {oa : OracleComp spec α} {P Q : ι → Prop}
+    (hP : AllQueriesSatisfy oa P) (hQ : AllQueriesSatisfy oa Q) :
+    AllQueriesSatisfy oa fun t => P t ∧ Q t := by
+  induction oa using OracleComp.inductionOn with
+  | pure _ => exact allQueriesSatisfy_pure _ _
+  | query_bind t mx ih =>
+      obtain ⟨hPt, hPmx⟩ := (allQueriesSatisfy_query_bind_iff _ _ _).mp hP
+      obtain ⟨hQt, hQmx⟩ := (allQueriesSatisfy_query_bind_iff _ _ _).mp hQ
+      exact (allQueriesSatisfy_query_bind_iff _ _ _).mpr
+        ⟨⟨hPt, hQt⟩, fun u => ih u (hPmx u) (hQmx u)⟩
+
 /-- A predicate-only bound composes through monadic sequencing.  The unit budget discharges both
 side conditions of `isQueryBound_bind`. -/
 lemma allQueriesSatisfy_bind {oa : OracleComp spec α} {ob : α → OracleComp spec β}
@@ -523,6 +556,13 @@ lemma allQueriesSatisfy_ofFnM {n : ℕ} (f : Fin n → OracleComp spec α) {P : 
       rw [Vector.ofFnM_succ]
       exact allQueriesSatisfy_bind (ih (fun i => f i.castSucc) (fun i => h i.castSucc))
         fun _ => allQueriesSatisfy_bind (h (Fin.last n)) fun _ => allQueriesSatisfy_pure _ _
+
+/-- Every computation satisfies a predicate-only bound whose predicate holds at every index. -/
+lemma allQueriesSatisfy_of_forall {P : ι → Prop} (hP : ∀ t, P t) (oa : OracleComp spec α) :
+    AllQueriesSatisfy oa P := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => exact allQueriesSatisfy_pure x P
+  | query_bind t mx ih => exact (allQueriesSatisfy_query_bind_iff t mx P).2 ⟨hP t, ih⟩
 
 end AllQueriesSatisfy
 
@@ -756,6 +796,17 @@ lemma isTotalQueryBound_query_bind_iff {t : spec.Domain}
     IsTotalQueryBound (liftM (query t) >>= mx) n ↔
       0 < n ∧ ∀ u, IsTotalQueryBound (mx u) (n - 1) :=
   Iff.rfl
+
+/-- A computation makes no queries exactly when it is `pure x`. -/
+theorem isTotalQueryBound_zero_iff {oa : OracleComp spec α} :
+    IsTotalQueryBound oa 0 ↔ ∃ x, oa = pure x := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => exact ⟨fun _ => ⟨x, rfl⟩, fun _ => trivial⟩
+  | query_bind t mx _ =>
+      rw [isTotalQueryBound_query_bind_iff]
+      simp only [lt_irrefl, false_and, false_iff, not_exists]
+      intro x h
+      exact absurd (congrArg isPure h) (by simp)
 
 lemma IsTotalQueryBound.mono {oa : OracleComp spec α} {n₁ n₂ : ℕ}
     (h : IsTotalQueryBound oa n₁) (hle : n₁ ≤ n₂) :

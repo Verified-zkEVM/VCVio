@@ -50,6 +50,15 @@ lemma simulateQ_compose [LawfulMonad m] (so' : QueryImpl spec' m)
     (oa : OracleComp spec α) : simulateQ (so' ∘ₛ so) oa = simulateQ so' (simulateQ so oa) := by
   exact (PFunctor.FreeM.liftM_natural so (simulateQ' so') oa).symm
 
+/-- If `so'` runs each program `so t` as `impl` answers the query `t`, then running a program
+rewritten by `so` through `so'` is running the program through `impl`. -/
+lemma simulateQ_simulateQ_eq_of_apply [LawfulMonad m] {so' : QueryImpl spec' m}
+    {so : QueryImpl spec (OracleComp spec')} {impl : QueryImpl spec m}
+    (h : ∀ t, simulateQ so' (so t) = impl t) (oa : OracleComp spec α) :
+    simulateQ so' (simulateQ so oa) = simulateQ impl oa := by
+  rw [← simulateQ_compose]
+  exact congrArg (simulateQ · oa) (funext h)
+
 @[simp]
 lemma compose_id' [LawfulMonad m] (so : QueryImpl spec m) :
     so ∘ₛ QueryImpl.id' spec = so := by ext x; simp
