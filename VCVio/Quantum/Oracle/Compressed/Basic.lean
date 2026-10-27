@@ -123,6 +123,15 @@ theorem size_update_le [Fintype X] [DecidableEq X] (D : Database X Y) (x : X) (u
   · rw [Function.update_of_ne h] at hx'
     exact Or.inr hx'
 
+/-- The number of nonempty cells is the cardinality of the database support. -/
+theorem ncard_support_eq_size [Fintype X] (D : Database X Y) :
+    {x | D x ≠ none}.ncard = D.size := by
+  classical
+  rw [size, ← Set.ncard_coe_finset]
+  congr 1
+  ext x
+  simp [Option.isSome_iff_ne_none]
+
 /-- Databases are VCVio's query caches for the oracle `X →ₒ Y`, the partial answer tables of the
 classical lazy random oracle. -/
 @[expose]
