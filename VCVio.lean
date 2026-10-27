@@ -171,9 +171,13 @@ public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.StrongBound
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Targets
 public import VCVio.CryptoFoundations.MerkleTree.OrderedResolver
 public import VCVio.CryptoFoundations.MerkleTree.Recovery
+public import VCVio.CryptoFoundations.MerkleTree.Salted.Commutativity
+public import VCVio.CryptoFoundations.MerkleTree.Salted.Conditions
 public import VCVio.CryptoFoundations.MerkleTree.Salted.Defs
 public import VCVio.CryptoFoundations.MerkleTree.Salted.Extract
+public import VCVio.CryptoFoundations.MerkleTree.Salted.Extraction
 public import VCVio.CryptoFoundations.MerkleTree.Salted.HalfPreimage
+public import VCVio.CryptoFoundations.MerkleTree.Salted.Instability
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
