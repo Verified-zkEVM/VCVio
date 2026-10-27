@@ -1,9 +1,10 @@
 # Reusable SLH-DSA specifications and complementary security proofs
 
-Status: proposed gated execution plan, 2026-10-26. The three bounded prototypes below are
-checked; the shared experiment, effectful component refinement and complete migration are not.
+Status: gated execution plan. The bounded prototypes and production P4/P6 gates are checked;
+full P5 preservation and complete migration remain open. The
+[finite completion manifest](slh-dsa-reuse-completion-manifest.md) fixes R6c/R8 deliverables;
+complete per-unit Lean contracts and independent review remain required before bodies.
 Plan approval is not implementation acceptance.
-No production code, dependency, public theorem or default build is changed by this document.
 
 The objective is maximum useful generality **without sacrificing an existing security bound or
 strengthening its resource premises**. Use SLH-DSA as the constructive anchor. Share canonical
@@ -299,13 +300,15 @@ default recursion/heartbeat limits, private locked dependencies and standard axi
 | P1 `VariableContextWire.lean` | Canonical Wire handles per-query valid contexts; full old bound/weak term and sharper hedged bound; actual 128s/192f instances; 256-byte unchecked-frame collision | No rejected/optional signing experiment, exact joint-127 port or graph migration |
 | P2 `WeightedBudgetProbe.lean` | Exact weighted structural-to-pathwise bridge; adaptive joint cap 2 but necessary separate maxima 2+2; nonunit 3/1 policy cap/witness 6, erasure, AE and probability-one event | A free-computation consumer, not complete SUF/source/cache specialization or input-dependent-policy execution |
 | P3 `ReplyLogProbe.lean` | Total replies specialize to actual `signingLogContains`; optional-success projection; raw log length 3 versus successful length 2; replay/different-signature checks | Pure log laws; no execution/charging of a rejecting signer, full experiment or security transfer |
-| P4, first implementation gate | Effectful canonical FORS/tagged weighted observer, second actual instance | Unproved; must pass before broad construction/proof migration |
+| P4, first implementation gate | Effectful canonical FORS/tagged weighted observer, second actual instance | Accepted at `5d2362a5`; broad migration still requires P5/P6 |
 | P5, full preservation gate | One actual shared SUF experiment, exact old/new outcome/log/cache/source refinements and all-q headline recovery | Unproved; must pass before deleting superseded algorithms/games/proof routes |
-| P6, structural generality gate | Shared graph coordinates/address/rank/provider observer on 128s and 192f, with separate quantitative certificates | Unproved; required for completion; no automatic extension of the 127 exponent |
+| P6, structural generality gate | Shared graph coordinates/address/rank/provider observer on 128s and 192f, with separate quantitative certificates | Accepted at `ae23574d`; [clean checkpoint](slh-dsa-reuse-evidence/r6c/p6-checkpoint.json); no new security exponent |
 
 P1's independent scoped review is `b8365df9875f916e39318383fd3cbec4f142157969f99d6c50b022537bad097a`;
 P2/P3's is `e945431cbdd0fa70fed5feab0e23465e7004118443cc43db8844435505709b0f`.
 Those reviews accept the stated prototype scope, not this full implementation plan or P4/P5/P6.
+Current P4/P6 acceptance is recorded separately in the completion evidence; it does not close
+full P5, authorize old-body delegation, or establish R6c/R8 completion.
 P4/P5/P6 are gates within an approvable execution plan; their being open is not a prohibition on
 starting their implementation, and their planned status is not permission for early deletion.
 
