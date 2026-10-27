@@ -76,8 +76,8 @@ theorem IsCP.finish_le_complement [DecidableEq A] {Φ : MatrixMap B C}
   rw [conj_mul, LinearMap.comp_apply] at h
   exact (ENNReal.rpow_le_rpow_iff (by norm_num : (0 : ℝ) < 2⁻¹)).mp h
 
-/-- An outcome-dependent family of finishing branches supported on the bad subspace has total
-weight bounded by the original bad-subspace weight. No post-check population bound is used. -/
+/-- An outcome-dependent family of finishing branches that all vanish after `G` has total weight
+at most the weight of the input on the complement, `tr ((1 - G) ρ (1 - G)ᴴ)`. -/
 theorem finish_sum_le_complement [DecidableEq A] {ι : Type*}
     (Φ : ι → MatrixMap B C) (hΦ : ∀ i, (Φ i).IsCP) (hT : ∀ i, (Φ i).IsTNI)
     (K : ι → Matrix B A ℂ) (hK : IsCPTNIFamily (fun i ↦ conj (K i)))
@@ -141,8 +141,9 @@ theorem measured_sandwich_weight_le [DecidableEq A] {ι : Type*}
         ∑' i, ENNReal.ofReal (conj (P i) (conj R ρ)).trace.re := ENNReal.tsum_mul_left
     _ ≤ _ := mul_le_mul_right (hP.tsum_ofReal_trace_re_le ((isCP_conj _).posSemidef hρ)) _
 
-/-- The two checker replacements are compared while every intermediate measurement outcome
-is retained. Their amplitudes add, with the input trace retained for subsequent leaf sums. -/
+/-- Two replacements, `Pa` by `Qa` before a trace-nonincreasing family and `Pb` by `Qb` after
+it, are compared while every intermediate measurement outcome is retained. Their amplitudes add,
+and the bound keeps the input trace so that it can be summed over further outcomes. -/
 theorem measured_two_batches_distance_le [DecidableEq A] {ι : Type*}
     (P : ι → Matrix A A ℂ) (hP : IsCPTNIFamily (fun i ↦ conj (P i)))
     (Qa Qb Pa Pb : Matrix A A ℂ) (hQb : ‖Qb‖ ≤ 1) (hPa : ‖Pa‖ ≤ 1)
