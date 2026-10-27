@@ -7,6 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Traversal
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 
@@ -172,5 +173,25 @@ theorem evalDist_evaluate_eq_uniform_program (input : Index → State → Bytes)
         ($ᵗ (Index → HashOutput) : ProbComp (Index → HashOutput))) := by
   rw [evaluate_eq_sample input step hseparated nodes hnodup state cache hfresh]
   exact evalDist_sample_eq_uniform_program input step nodes hnodup state cache
+
+end SLHDSA.SHAKE128s.GraphFreshSampling
+
+namespace SLHDSA.SHAKE128s.GraphFreshSampling
+
+/-- The byte-oracle evaluator is the generic traversal at the full byte-answer types. -/
+theorem evaluate_eq_traversal
+    {Index State : Type}
+    (input : Index → State → Bytes)
+    (step : Index → State → HashOutput → State)
+    (nodes : List Index) (state : State) :
+    GraphFreshSampling.evaluate input step nodes state =
+      OracleComp.RandomOracleTraversal.evaluate input step nodes state := by
+  symm
+  induction nodes generalizing state with
+  | nil => rfl
+  | cons node nodes ih =>
+      simp only [RandomOracleTraversal.evaluate, GraphFreshSampling.evaluate]
+      exact bind_congr fun output => ih (step node state output)
+
 
 end SLHDSA.SHAKE128s.GraphFreshSampling
