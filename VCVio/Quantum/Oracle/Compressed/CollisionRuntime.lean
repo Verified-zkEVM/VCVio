@@ -267,6 +267,37 @@ theorem ofReal_trace_conj_le {J : Type*} [Fintype J]
   rw [← ENNReal.ofReal_mul hr, MatrixMap.trace_conj_apply]
   exact ENNReal.ofReal_le_ofReal (sub_nonneg.mp ht)
 
+/-- Portwise squared operator bounds lift to coherent selected mass on a supported input.
+The private projector may depend on the query position; no measurement of its grade or of
+its coherent port index is performed. -/
+theorem ofReal_trace_coherentBlocks_conj_le_selectedMass (E : EmulatedOracle P In)
+    (C : ∀ p, Matrix (In p × E.S) (In p × E.S) ℂ)
+    (P₀ : Matrix E.S E.S ℂ) (selected : P → Bool) {r : ℝ} (hr : 0 ≤ r)
+    (hC : ∀ p,
+      ((if selected p then r else 0) • (1 : Matrix (In p × E.S) (In p × E.S) ℂ) -
+        (C p * (1 ⊗ₖ P₀))ᴴ * (C p * (1 ⊗ₖ P₀))).PosSemidef)
+    {σ : Matrix (cohIn In × E.S) (cohIn In × E.S) ℂ} (hσ : σ.PosSemidef)
+    (hsupp : MatrixMap.conj ((1 : Matrix (cohIn In) (cohIn In) ℂ) ⊗ₖ P₀) σ = σ) :
+    ENNReal.ofReal (MatrixMap.conj (coherentBlocks C) σ).trace.re ≤
+      ENNReal.ofReal r * E.selectedMass selected σ := by
+  let B := fun p ↦ C p * ((1 : Matrix (In p) (In p) ℂ) ⊗ₖ P₀)
+  have hb := posSemidef_coherentBlocks hC
+  change (coherentBlocks ((fun p ↦ (if selected p then r else 0) • 1) -
+    (fun p ↦ (B p)ᴴ) * B)).PosSemidef at hb
+  rw [coherentBlocks_sub, coherentBlocks_mul, coherentBlocks_adjoint] at hb
+  have he : coherentBlocks B = coherentBlocks C *
+      ((1 : Matrix (cohIn In) (cohIn In) ℂ) ⊗ₖ P₀) := by
+    change coherentBlocks (C * (fun p ↦ (1 : Matrix (In p) (In p) ℂ) ⊗ₖ P₀)) = _
+    rw [coherentBlocks_mul, coherentBlocks_database]
+  rw [he] at hb
+  have ht := ofReal_trace_conj_le
+    (coherentBlocks C * ((1 : Matrix (cohIn In) (cohIn In) ℂ) ⊗ₖ P₀))
+    (selectedCharge selected r) (r := 1) (by norm_num)
+    (by simpa only [one_smul, selectedCharge] using hb) hσ
+  rw [MatrixMap.conj_mul, LinearMap.comp_apply, hsupp] at ht
+  simpa only [ENNReal.ofReal_one, one_mul, E.ofReal_trace_selectedCharge selected hr hσ]
+    using ht
+
 /-- The collision bound of NOTE (87)–(89), (91) from per-port operator inequalities
 and zero initial potential.
 This supports NOTE's refinement of the paper's §9.3 collision-event argument
