@@ -110,7 +110,7 @@ theorem card_onlineLabel_list_changes_le [Fintype X] {n : ℕ} (tics : Fin n →
     intro a ha
     exact hn.1 (Finset.mem_biUnion.mpr ⟨a, Finset.mem_univ _, ha⟩)
   have hh := ncard_halfPreimages_le_of_finite enc D
-  rw [ncard_support_eq_size, Set.ncard_eq_toFinset_card'] at hh
+  rw [Database.ncard_support_eq_size, Set.ncard_eq_toFinset_card'] at hh
   exact (Finset.card_le_card hsub).trans ((Finset.card_union_le _ _).trans
     (Nat.add_le_add (card_biUnion_onlineRoots_le tics j) hh))
 
@@ -287,40 +287,6 @@ theorem sum_onlineRate {N : ℕ} (hN : 0 < N) (t : ℕ) :
   rw [← Finset.sum_mul, ← Finset.mul_sum]
   congr 2
   exact_mod_cast sum_onlineStepWeight t
-
-open Matrix
-open scoped Kronecker ComplexOrder
-
-/-- Time-dependent discrepancy weights along an actual coherent execution have the exact
-online square-root bound. The port hypothesis is a local
-squared operator bound on inputs of grade `j`; it does not assume an execution comparison.
-Applying it to the recording swap requires discharging this operator hypothesis. -/
-theorem EmulatedOracle.tsum_rpow_queryWeight_conj_le_online
-    {P : Type} [Fintype P] [DecidableEq P] {In : P → QReg} (E : EmulatedOracle P In)
-    (g : E.S → ℕ)
-    (hE : ∀ p a a' d d', E.U p (a', d') (a, d) ≠ 0 → g d' ≤ g d + 1)
-    {L : LocalSig} (I : L.Interp) {W : QReg → Type*} {A : QReg}
-    {x : QuantumComp L (EmulatedOracle.cohSpec In) W A} {t N : ℕ} (hN : 0 < N)
-    (hx : x.IsQueryBound fun _ ↦ t) {ρ : Matrix (A × E.S) (A × E.S) ℂ}
-    (hρ : ρ.PosSemidef)
-    (hgrade : QuerySupportedOn (fun m : A × E.S ↦ g m.2) (Set.Iic 0) ρ)
-    (C : ∀ p, Matrix (In p × E.S) (In p × E.S) ℂ) (selected : P → Bool)
-    (hC : ∀ j < t, ∀ p,
-      ((if selected p then 24 * (onlineStepWeight j : ℝ) / N else 0) •
-          (1 : Matrix (In p × E.S) (In p × E.S) ℂ) -
-        (C p * (1 ⊗ₖ diagonal fun d ↦ if g d ≤ j then (1 : ℂ) else 0))ᴴ *
-          (C p * (1 ⊗ₖ diagonal fun d ↦ if g d ≤ j then (1 : ℂ) else 0))).PosSemidef) :
-    ∑' j, E.coherent.toRuntime.queryWeight I
-        (fun _ σ ↦ ENNReal.ofReal (MatrixMap.conj (EmulatedOracle.coherentBlocks C) σ).trace.re)
-        x ρ j ^ (2⁻¹ : ℝ) ≤
-      (24 * E.selectedTotalMass I selected x ρ * (t - 1 : ℕ) ^ 2 / N) ^ (2⁻¹ : ℝ) := by
-  have h := E.tsum_rpow_queryWeight_conj_le_of_grade g hE I hx hρ hgrade C selected
-    (fun j ↦ 24 * (onlineStepWeight j : ℝ) / N) (fun j _ ↦ by positivity) hC
-  rw [sum_onlineRate hN] at h
-  refine h.trans_eq ?_
-  congr 1
-  simp only [div_eq_mul_inv]
-  ac_rfl
 
 /-- The online error uses the combined source mass, capped by the total number of calls. -/
 @[expose]

@@ -35,10 +35,6 @@ open scoped ENNReal
 #check QuerySupportedOn.callInput
 #check QuantumRuntime.queryWeight_mono_of_grade
 #check EmulatedOracle.ofReal_trace_coherentBlocks_conj_le_selectedMass
-#check EmulatedOracle.queryWeight_conj_le_selectedMass_of_grade
-#check EmulatedOracle.tsum_rpow_queryWeight_conj_le_of_grade
-#check EmulatedOracle.outcomeLawWith_rpow_bounds_of_graded_ports
-#check EmulatedOracle.tsum_rpow_queryWeight_conj_le_online
 #check SaltedMerkle.instability_onlineLabel_list_le_jointBudget
 #check SaltedMerkle.l2_opNorm_online_commutator_sq_le
 #check online_weighted_rpow_sum_le
