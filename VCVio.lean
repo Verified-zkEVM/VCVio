@@ -133,6 +133,7 @@ public import VCVio.CryptoFoundations.MerkleTree.HashForest.Binary
 public import VCVio.CryptoFoundations.MerkleTree.HashForest.Defs
 public import VCVio.CryptoFoundations.MerkleTree.Hashing.Binding
 public import VCVio.CryptoFoundations.MerkleTree.Hashing.Defs
+public import VCVio.CryptoFoundations.MerkleTree.Hashing.Encoding
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Addressed
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Defs
@@ -151,6 +152,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Inductive.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Inductive.Uniqueness
 public import VCVio.CryptoFoundations.MerkleTree.Instability
+public import VCVio.CryptoFoundations.MerkleTree.LabelledPath
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.DelayedObservation
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Endgame
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Evolution
@@ -167,6 +169,11 @@ public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.SequentialB
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Stateful
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.StrongBound
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Targets
+public import VCVio.CryptoFoundations.MerkleTree.OrderedResolver
+public import VCVio.CryptoFoundations.MerkleTree.Recovery
+public import VCVio.CryptoFoundations.MerkleTree.Salted.Defs
+public import VCVio.CryptoFoundations.MerkleTree.Salted.Extract
+public import VCVio.CryptoFoundations.MerkleTree.Salted.HalfPreimage
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
@@ -197,6 +204,7 @@ public import VCVio.CryptoFoundations.SyncMultiSignatureAlg
 public import VCVio.CryptoFoundations.SyncSignatureAlg
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash
+public import VCVio.CryptoFoundations.VectorCommitment
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Measure
@@ -331,6 +339,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryBound.Tagged
 public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape
@@ -479,6 +488,7 @@ public import VCVio.Quantum.Comp.Subsystem
 public import VCVio.Quantum.Comp.TotalQueryBound
 public import VCVio.Quantum.DSubInstrument
 public import VCVio.Quantum.MatrixMap
+public import VCVio.Quantum.MatrixMap.BlockNorm
 public import VCVio.Quantum.MatrixMap.Commutant
 public import VCVio.Quantum.MatrixMap.Completion
 public import VCVio.Quantum.MatrixMap.Family
@@ -487,10 +497,13 @@ public import VCVio.Quantum.MatrixMap.Norm
 public import VCVio.Quantum.MatrixMap.OpNorm
 public import VCVio.Quantum.MatrixMap.Pinching
 public import VCVio.Quantum.MatrixMap.ProjectorEvent
+public import VCVio.Quantum.MatrixMap.ProjectorPair
 public import VCVio.Quantum.Observe
 public import VCVio.Quantum.Oracle.Basis
 public import VCVio.Quantum.Oracle.Classical
+public import VCVio.Quantum.Oracle.ClassicalCalls
 public import VCVio.Quantum.Oracle.ClassicalRead
+public import VCVio.Quantum.Oracle.ClassicalRepeatability
 public import VCVio.Quantum.Oracle.Comb
 public import VCVio.Quantum.Oracle.Compressed.Action
 public import VCVio.Quantum.Oracle.Compressed.Basic
@@ -499,6 +512,7 @@ public import VCVio.Quantum.Oracle.Compressed.CheckedRead
 public import VCVio.Quantum.Oracle.Compressed.CheckedReadBound
 public import VCVio.Quantum.Oracle.Compressed.CommutatorBound
 public import VCVio.Quantum.Oracle.Compressed.CommutatorSharp
+public import VCVio.Quantum.Oracle.Compressed.Consistency
 public import VCVio.Quantum.Oracle.Compressed.Equivalence
 public import VCVio.Quantum.Oracle.Compressed.Instability
 public import VCVio.Quantum.Oracle.Compressed.Measurement
@@ -519,6 +533,18 @@ public import VCVio.Quantum.Pure.Vector
 public import VCVio.Quantum.Register
 public import VCVio.Quantum.Semantics
 public import VCVio.Quantum.SubInstrument
+public import VCVio.Quantum.VC.CheckedRead
+public import VCVio.Quantum.VC.Compressed
+public import VCVio.Quantum.VC.Conditions
+public import VCVio.Quantum.VC.Emulated
+public import VCVio.Quantum.VC.MultiExtractable
+public import VCVio.Quantum.VC.MultiExtractor
+public import VCVio.Quantum.VC.Proof.CheckerDistance
+public import VCVio.Quantum.VC.Proof.Commutativity
+public import VCVio.Quantum.VC.Proof.Extraction
+public import VCVio.Quantum.VC.Proof.Repeatability
+public import VCVio.Quantum.VC.Tuples
+public import VCVio.Quantum.VC.Unitaries
 public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF

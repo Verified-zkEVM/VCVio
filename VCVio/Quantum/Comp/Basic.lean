@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import PolyFun.IPFunctor.Free.Indexed
+public import PolyFun.IPFunctor.Free.Bound
 public import VCVio.Quantum.Comp.LocalSig
 public import VCVio.Quantum.SubInstrument
 
@@ -596,21 +597,15 @@ namespace QuantumComp
 variable {L : LocalSig.{u, v}} {spec : QuantumOracleSpec.{u₁, v₁}} {X : QReg → Type w}
   {Y : QReg → Type w₁} {A : QReg}
 
-/-- Every local operation on every branch of the tree is interpreted by a lossless dependent
-subinstrument. -/
-@[expose]
-def losslessAux (I : L.Interp) : {A : QReg} → IFreeM (toIPFunctor L spec) X A → Prop
-  | _, .pure _ => True
-  | _, .liftBind (.prim o) k => (I o).Lossless ∧ ∀ b, losslessAux I (k (ULift.up b))
-  | _, .liftBind (.query _ _ _) k => ∀ r, losslessAux I (k (ULift.up r))
-
 /-- A program is lossless under the interpretation `I` when every local operation on every
 branch of its tree, including branches that are reached with weight zero, is interpreted by a
 lossless dependent subinstrument. Against a runtime whose steps are lossless, a lossless program
 runs to a lossless dependent subinstrument (`Quantum.QuantumRuntime.lossless_run`). -/
 @[expose]
 def Lossless (I : L.Interp) (x : QuantumComp L spec X A) : Prop :=
-  losslessAux I x
+  IFreeM.IsRollBound x ()
+    (fun _ a _ ↦ match a with | .prim o => (I o).Lossless | .query _ _ _ => True)
+    (fun _ _ b ↦ b)
 
 variable {I : L.Interp}
 
@@ -625,34 +620,32 @@ by a lossless dependent subinstrument and every continuation is lossless. -/
 theorem lossless_primBind_iff (o : L.Op A)
     (k : (b : L.Outcome o) → QuantumComp L spec X (L.next o b)) :
     (primBind o k).Lossless I ↔ (I o).Lossless ∧ ∀ b, (k b).Lossless I :=
-  Iff.rfl
+  and_congr Iff.rfl ULift.forall
 
 /-- A call followed by a continuation is lossless when every continuation is. -/
 @[simp]
 theorem lossless_queryBind_iff (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In i × E)
     (k : spec.Result i → QuantumComp L spec X (QReg.of (spec.Out i × E))) :
     (queryBind i E ℓ k).Lossless I ↔ ∀ r, (k r).Lossless I :=
-  Iff.rfl
+  ⟨fun h r ↦ h.2 ⟨r⟩, fun h ↦ ⟨trivial, fun r ↦ h r.down⟩⟩
 
 /-- A call is a lossless program. -/
 theorem lossless_query (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In i × E) :
     (query (L := L) (spec := spec) i E ℓ).Lossless I :=
-  fun _ ↦ trivial
+  ⟨trivial, fun _ ↦ trivial⟩
 
 /-- Under a lossless interpretation, every program is lossless. -/
 theorem lossless_of_interp (hI : I.Lossless) (x : QuantumComp L spec X A) : x.Lossless I := by
   induction x using QuantumComp.inductionOn with
   | pure _ _ => trivial
-  | primBind _ o k ih => exact ⟨hI o, ih⟩
-  | queryBind _ i E ℓ k ih => exact ih
+  | primBind _ o k ih => exact (lossless_primBind_iff o k).mpr ⟨hI o, ih⟩
+  | queryBind _ i E ℓ k ih => exact (lossless_queryBind_iff i E ℓ k).mpr ih
 
 /-- Sequencing lossless programs is lossless. -/
 theorem Lossless.bind {x : QuantumComp L spec X A} {k : ∀ u, X u → QuantumComp L spec Y u}
-    (hx : x.Lossless I) (hk : ∀ u y, (k u y).Lossless I) : (x.bind k).Lossless I := by
-  induction x using QuantumComp.inductionOn with
-  | pure _ y => exact hk _ y
-  | primBind _ o k' ih => exact ⟨hx.1, fun b ↦ ih b (hx.2 b)⟩
-  | queryBind _ i E ℓ k' ih => exact fun r ↦ ih r (hx r)
+    (hx : x.Lossless I) (hk : ∀ u y, (k u y).Lossless I) : (x.bind k).Lossless I :=
+  IFreeM.isRollBound_bind (fun _ _ ↦ ()) (fun _ _ _ _ _ h ↦ ⟨h, h⟩)
+    (fun _ _ _ _ _ _ ↦ ⟨rfl, rfl⟩) hx hk
 
 end QuantumComp
 
@@ -676,7 +669,7 @@ theorem lossless_bind {x : QuantumComp₂ L spec A B α} {k : α → QuantumComp
 /-- A call is a lossless program. -/
 theorem lossless_query (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In i × E) :
     (query (L := L) (spec := spec) i E ℓ).Lossless I :=
-  fun _ ↦ trivial
+  ⟨trivial, fun _ ↦ trivial⟩
 
 end QuantumComp₂
 
@@ -690,7 +683,7 @@ every continuation are. -/
 theorem lossless_act_bind_iff (p : SubInstrument A B β) (k : β → QComp spec B C α) :
     ((act p).bind k).Lossless .instruments ↔
       p.Lossless ∧ ∀ b, (k b).Lossless .instruments :=
-  Iff.rfl
+  QuantumComp.lossless_primBind_iff _ _
 
 /-- A lossless local subinstrument is a lossless program. -/
 theorem lossless_act {p : SubInstrument A B α} (hp : p.Lossless) :
