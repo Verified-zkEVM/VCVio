@@ -6,8 +6,8 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.Quantum.MatrixMap.Commutant
-public import VCVio.Quantum.MatrixMap.Completion
+public import QuantumFoundations.MatrixMap.Commutant
+public import QuantumFoundations.MatrixMap.Completion
 public import VCVio.Quantum.Oracle.Compressed.CommutatorBound
 
 /-!

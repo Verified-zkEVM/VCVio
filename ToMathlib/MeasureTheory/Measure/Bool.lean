@@ -5,7 +5,7 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-public import ToMathlib.MeasureTheory.Measure.Subprobability
+public import QuantumFoundations.ForMathlib.MeasureTheory.Measure.Subprobability
 public import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
 public import Mathlib.MeasureTheory.Measure.Prod
 public import ToMathlib.Data.ENNReal.AbsDiff

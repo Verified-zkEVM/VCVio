@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.Quantum.MatrixMap.ProjectorPair
+public import QuantumFoundations.MatrixMap.ProjectorPair
 public import VCVio.Quantum.Oracle.Compressed.Basic
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 

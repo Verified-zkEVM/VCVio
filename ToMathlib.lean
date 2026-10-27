@@ -1,9 +1,7 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
 public import ToMathlib.Algebra.BigOperators.Finset
-public import ToMathlib.Analysis.Matrix.PosSemidef
 public import ToMathlib.Analysis.MeanInequalities
-public import ToMathlib.Analysis.Normed.Ring.Commutator
 public import ToMathlib.Analysis.SumIntegralComparisons
 public import ToMathlib.Control.Except
 public import ToMathlib.Control.Functor.Prod
@@ -63,7 +61,6 @@ public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Monotone
 public import ToMathlib.MeasureTheory.Measure.Option
 public import ToMathlib.MeasureTheory.Measure.Prop
-public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Bind
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Variation

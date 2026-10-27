@@ -5,8 +5,8 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.Quantum.MatrixMap.Kraus
-public import VCVio.Quantum.MatrixMap.Norm
+public import QuantumFoundations.MatrixMap.Kraus
+public import QuantumFoundations.MatrixMap.Norm
 
 /-!
 # Comparing Kraus operators under a finishing map

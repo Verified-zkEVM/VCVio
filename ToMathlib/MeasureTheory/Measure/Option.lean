@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option
-public import ToMathlib.MeasureTheory.Measure.Subprobability
+public import QuantumFoundations.ForMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.MeasureTheory.Measure.Comap
 import Mathlib.MeasureTheory.Integral.Lebesgue.Countable

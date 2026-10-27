@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import ToMathlib.MeasureTheory.Measure.Coupling.Residual
-public import ToMathlib.MeasureTheory.Measure.Subprobability
+public import QuantumFoundations.ForMathlib.MeasureTheory.Measure.Subprobability
 
 /-!
 # State-law comparison by discarding an exceptional region

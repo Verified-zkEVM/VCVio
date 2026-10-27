@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.Quantum.Comp.HybridMeasure
-public import VCVio.Quantum.Oracle.Basis
+public import QuantumFoundations.Oracle.Basis
 
 /-!
 # Query-mass and square-root hybrid regression tests

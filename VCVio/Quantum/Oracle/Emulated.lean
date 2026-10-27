@@ -9,8 +9,8 @@ public import PolyFun.IPFunctor.Free.Bound.Substitution
 public import VCVio.Quantum.Comp.Combinators
 public import VCVio.Quantum.Comp.HybridIndex
 public import VCVio.Quantum.Comp.QueryMass
-public import VCVio.Quantum.MatrixMap.Pinching
-public import VCVio.Quantum.Oracle.Basis
+public import QuantumFoundations.MatrixMap.Pinching
+public import QuantumFoundations.Oracle.Basis
 
 /-!
 # Emulated oracles

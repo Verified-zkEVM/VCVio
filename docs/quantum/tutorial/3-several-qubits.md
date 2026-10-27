@@ -106,10 +106,9 @@ operation must satisfy to be safe in that situation.
 
 > **In VCVio.** A joint system is the product type `A × R`, so two qubits are `Fin 2 × Fin 2`,
 > listed as `00, 01, 10, 11` with the first factor first. The tensor product of vectors is
-> `tensorVec` (`VCVio/Quantum/Pure/Tensor.lean`), and of matrices Mathlib's Kronecker product
-> `⊗ₖ`, with `(X ⊗ₖ Y) (a, r) (b, s) = X a b * Y r s`. Running an operation on the first
-> factor while leaving `R` untouched is `frame R` (`VCVio/Quantum/SubInstrument.lean`). The Bell
-> state is `bell` in `VCVioTest/Quantum/Basic.lean`, where `frame_measureZ_bell` measures its
-> first qubit.
+> `tensorVec` (`QuantumFoundations/Pure/Tensor.lean`), and of matrices Mathlib's Kronecker product
+> `⊗ₖ`, with `(X ⊗ₖ Y) (a, r) (b, s) = X a b * Y r s`. Running an operation on the first factor
+> while leaving `R` untouched is `frame R` (`QuantumFoundations/SubInstrument.lean`). The Bell state
+> is `bell` in `VCVioTest/Quantum/Basic.lean`, where `frame_measureZ_bell` measures its first qubit.
 
 Next: [chapter 4, states you do not fully know](4-states-you-do-not-fully-know.md).

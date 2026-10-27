@@ -245,7 +245,7 @@ discrete `SPMF`/`Pr[…]` layer has since been removed, so its items below are s
 ### Probability and measure theory
 
 **Correspondence.** `𝒟[mx]` is a `Measure`; the local `IsSubprobabilityMeasure`
-(`V:ToMathlib/MeasureTheory/Measure/Subprobability.lean:37`) has no upstream twin
+(QuantumFoundations `ForMathlib/MeasureTheory/Measure/Subprobability.lean:43`) has no upstream twin
 (`grep -rni 'subprobability\|SubMarkov'` → 0; `IsZeroOrProbabilityMeasure` is incomparable).
 `evalSPMF` takes values in `OptionT PMF`; on the discrete compatibility interpretation,
 `probOutput` is `μ {x}` and `probEvent` is `μ {x | p x}`. Also,
@@ -1147,7 +1147,7 @@ lower reading leave the expectation of the rest of the program in the verificati
 - lean4#14316 keeps the type-class cache across commands; the `SpecInstanceSearch` canaries must
   still run a real search.
 - Mathlib #42704 makes the type arguments of `IsZeroApply` implicit
-  (`ToMathlib/MeasureTheory/Measure/Subprobability.lean`).
+  (`QuantumFoundations/ForMathlib/MeasureTheory/Measure/Subprobability.lean`).
 - Mathlib #41506 makes `Set` a one-field structure. VCVio has no `Set.Mem`/`setOf` unfolding, but
   only a build shows the effect.
 

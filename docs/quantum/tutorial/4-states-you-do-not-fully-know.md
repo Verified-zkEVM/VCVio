@@ -121,11 +121,11 @@ qubit.
 | one part of a pair | partial trace |
 | failure | missing trace |
 
-> **In VCVio.** A state is a `SubState A` (`VCVio/Quantum/Observe.lean`): a PSD matrix with trace at
-> most one, so failure can be represented. The state after outcome `a` is `p.post ρ a`, unnormalized
-> as above. The partial trace is `MatrixMap.traceRight A R` (`VCVio/Quantum/MatrixMap.lean`), with
-> `traceRight_kronecker` saying that throwing away the second factor of a product state leaves the
-> first. The measurement of `|+⟩⟨+|` is `measureZ` applied to `plus` in
-> `VCVioTest/Quantum/Basic.lean`.
+> **In VCVio.** A state is a `SubState A` (`QuantumFoundations/Observe.lean`): a PSD matrix with
+> trace at most one, so failure can be represented. The state after outcome `a` is `p.post ρ a`,
+> unnormalized as above. The partial trace is `MatrixMap.traceRight A R`
+> (`QuantumFoundations/MatrixMap.lean`), with `traceRight_kronecker` saying that throwing away the
+> second factor of a product state leaves the first. The measurement of `|+⟩⟨+|` is `measureZ`
+> applied to `plus` in `VCVioTest/Quantum/Basic.lean`.
 
 Next: [chapter 5, everything a quantum computer can do](5-what-a-quantum-computer-can-do.md).

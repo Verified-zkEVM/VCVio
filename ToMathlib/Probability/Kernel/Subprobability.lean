@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
-public import ToMathlib.MeasureTheory.Measure.Subprobability
+public import QuantumFoundations.ForMathlib.MeasureTheory.Measure.Subprobability
 public import Mathlib.Probability.Kernel.Composition.Comp
 public import Mathlib.Probability.Kernel.Composition.MapComap
 public import Mathlib.Probability.Kernel.Composition.Prod

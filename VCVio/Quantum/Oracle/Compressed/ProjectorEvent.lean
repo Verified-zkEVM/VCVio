@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.Quantum.MatrixMap.ProjectorEvent
+public import QuantumFoundations.MatrixMap.ProjectorEvent
 public import VCVio.Quantum.Oracle.Compressed.BinaryPartition
 public import Mathlib.Algebra.Order.Chebyshev
 
