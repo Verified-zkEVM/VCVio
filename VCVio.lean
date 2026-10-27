@@ -494,6 +494,7 @@ public import VCVio.Quantum.DSubInstrument
 public import VCVio.Quantum.MatrixMap
 public import VCVio.Quantum.MatrixMap.BlockNorm
 public import VCVio.Quantum.MatrixMap.Commutant
+public import VCVio.Quantum.MatrixMap.Comparison
 public import VCVio.Quantum.MatrixMap.Completion
 public import VCVio.Quantum.MatrixMap.Family
 public import VCVio.Quantum.MatrixMap.Kraus
@@ -546,14 +547,18 @@ public import VCVio.Quantum.VC.CheckedRead
 public import VCVio.Quantum.VC.Compressed
 public import VCVio.Quantum.VC.Conditions
 public import VCVio.Quantum.VC.Emulated
+public import VCVio.Quantum.VC.Merkle.MultiExtractable
+public import VCVio.Quantum.VC.Merkle.Offline
 public import VCVio.Quantum.VC.Merkle.Online
 public import VCVio.Quantum.VC.MultiExtractable
 public import VCVio.Quantum.VC.MultiExtractor
+public import VCVio.Quantum.VC.Proof.CheckerComparison
 public import VCVio.Quantum.VC.Proof.CheckerDistance
 public import VCVio.Quantum.VC.Proof.Commutativity
 public import VCVio.Quantum.VC.Proof.Extraction
 public import VCVio.Quantum.VC.Proof.GoodEvent
 public import VCVio.Quantum.VC.Proof.Offline
+public import VCVio.Quantum.VC.Proof.OfflineSecurity
 public import VCVio.Quantum.VC.Proof.Online
 public import VCVio.Quantum.VC.Proof.OnlineSecurity
 public import VCVio.Quantum.VC.Proof.Repeatability

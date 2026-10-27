@@ -256,6 +256,22 @@ example (ρ : Matrix (B × DB) (B × DB) ℂ) :
 
 end EmptyChecks
 
+/-- Repeating a zero prescription preserves the complete accepting channel for arbitrary codes. -/
+example {Z : Type} [Fintype Z] [DecidableEq Z] [AddGroup Z]
+    (ME : MultiExtractor 2 Unit (DmOf (fun _ ↦ 0) Unit (fun _ ↦ Unit)) (E).S)
+    (code : TpDCode 2 (DmOf (fun _ ↦ 0) Unit (fun _ ↦ Unit)) Z) (B : QReg) :
+    (((E).mixedExtractRuntime ME code).run₂ .instruments
+      (checkAt (fun _ ↦ prescribedVC (some [⟨false, 0⟩, ⟨false, 0⟩]))
+        B 0 0 () (fun _ ↦ none) ())).branch true =
+    (((E).mixedExtractRuntime ME code).run₂ .instruments
+      (checkAt (fun _ ↦ prescribedVC (some [⟨false, 0⟩]))
+        B 0 0 () (fun _ ↦ none) ())).branch true := by
+  rw [branch_run₂_checkAt_compressedVCOracle _ ME code
+    (fun _ ↦ prescribedCheck (some [⟨false, 0⟩, ⟨false, 0⟩])),
+    branch_run₂_checkAt_compressedVCOracle _ ME code
+      (fun _ ↦ prescribedCheck (some [⟨false, 0⟩]))]
+  simp [VectorCommitment.NonadaptiveCheck.checkOn, prescribedCheck, QueryLog.agreesWith]
+
 local notation "Ordinary" => projectiveClassicalAnswers (k := 2) (X := Bool) (Y := ZMod 2)
 
 /-- The public mixed-runtime theorem covers both retained answer families together. -/
@@ -571,3 +587,12 @@ example (a : Option (ZMod 2)) :
 end ExtractionReplay
 
 end VCVioTest.QuantumCheckedRead
+
+/-- The generic operational checker uses the supplied projective read instrument. -/
+example {P : Type} [Fintype P] [DecidableEq P] {In : P → QReg}
+    {E : EmulatedOracle P In} {X Y : Type} [Fintype Y] [DecidableEq Y]
+    (H : ProjectiveClassicalAnswers E X Y) (B : QReg) (log : QueryLog (X →ₒ Y)) :
+    ((E.withClassicalReads H).run₂ .instruments
+      ((QueryLog.recheck log).toQuantumAt (H.classicalCall B))).branch true =
+        MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ H.projector log) :=
+  H.actual_accept_eq_projectorProduct B log

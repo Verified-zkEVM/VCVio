@@ -98,21 +98,6 @@ namespace Quantum
 
 /-! ## Traces of families of positive semidefinite matrices -/
 
-namespace MatrixMap.IsCPTNIFamily
-
-variable {ι : Type*} {A : Type*} [Fintype A] {B : ι → Type*} [∀ i, Fintype (B i)]
-  {Φ : (i : ι) → MatrixMap A (B i)}
-
-/-- On a positive semidefinite input, the traces of the members of a completely positive family
-with trace-nonincreasing partial sums add up to at most the trace of the input, in `ℝ≥0∞`. -/
-theorem tsum_ofReal_trace_re_le (h : IsCPTNIFamily Φ) {ρ : Matrix A A ℂ} (hρ : ρ.PosSemidef) :
-    ∑' i, ENNReal.ofReal (Φ i ρ).trace.re ≤ ENNReal.ofReal ρ.trace.re := by
-  rw [← ENNReal.ofReal_tsum_of_nonneg (fun i ↦ h.trace_re_apply_nonneg i hρ)
-    (h.summable_trace_re_apply hρ)]
-  exact ENNReal.ofReal_le_ofReal (h.tsum_trace_re_apply_le hρ)
-
-end MatrixMap.IsCPTNIFamily
-
 /-- The trace of the sum of a summable family of positive semidefinite matrices is the sum of
 the traces, in `ℝ≥0∞`. -/
 theorem ofReal_trace_re_tsum {ι n : Type*} [Fintype n] {f : ι → Matrix n n ℂ} (hf : Summable f)
