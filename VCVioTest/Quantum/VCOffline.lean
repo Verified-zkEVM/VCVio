@@ -18,6 +18,12 @@ ordinary mass one and bound `19/128`.
 The public-import tests cover zero queries, substates, coherent ports, and the generic
 good-event facade. The collision estimate and the instability estimate use the same
 post-adversary bad-event projector.
+
+The collision-event tests check that a database mapping two inputs to the same answer lies in
+the collision event, while a family of two databases that each store one input with the same
+answer does not. On a two-input domain, querying one input and then the other from the empty
+database reaches the colliding database with amplitude `1/4`, so the collision event has
+strictly positive weight after these two queries.
 -/
 
 public section
@@ -437,5 +443,164 @@ theorem ordinary_bad_weight_pos :
   linarith
 
 end FinitePrefix
+
+/-! ## The collision event on concrete databases -/
+
+namespace CollisionEvent
+
+local notation "Bit" => Fin 2
+
+/-- Both inputs are mapped to the answer `0`. -/
+def both : Database Bool Bit := fun _ ↦ some 0
+
+/-- Only the input `x` is stored, with answer `0`. -/
+def only (x : Bool) : Database Bool Bit := fun x' ↦ if x' = x then some 0 else none
+
+/-- Two distinct inputs with the same answer form a collision. -/
+theorem both_not_collisionFree : ¬both.CollisionFree :=
+  fun h ↦ Bool.false_ne_true (h false true 0 rfl rfl)
+
+/-- A database with two inputs mapped to the same answer lies in the collision event. -/
+example : both.collisionLabel = true := by
+  simpa [Database.collisionLabel] using both_not_collisionFree
+
+/-- The family event contains a family with a colliding database. -/
+example : Database.allCollisionLabel (fun _ : Fin 1 ↦ both) = true :=
+  @decide_eq_true _ (Classical.propDecidable _) fun h ↦ both_not_collisionFree (h 0)
+
+/-- A database storing a single input has no collision. -/
+theorem only_collisionFree (x : Bool) : (only x).CollisionFree := by
+  intro a b y ha hb
+  simp only [only] at ha hb
+  split_ifs at ha hb with h1 h2
+  exact h1.trans h2.symm
+
+/-- Equal answers in different databases of a family are not a collision. -/
+example : Database.allCollisionLabel ![only false, only true] = false := by
+  rw [Database.allCollisionLabel, decide_eq_false_iff_not, not_not]
+  intro i
+  fin_cases i
+  exacts [only_collisionFree false, only_collisionFree true]
+
+/-- The family collision projector keeps the colliding family. -/
+example : familyCollisionProjector (k := 1) (X := Bool) (Y := Bit)
+    (fun _ ↦ both) (fun _ ↦ both) = 1 := by
+  simp [familyCollisionProjector, labelProjector, Database.allCollisionLabel,
+    Database.AllCollisionFree, both_not_collisionFree]
+
+/-- The family collision projector removes the family of two single-input databases. -/
+example : familyCollisionProjector (k := 2) (X := Bool) (Y := Bit)
+    ![only false, only true] ![only false, only true] = 0 := by
+  simp [familyCollisionProjector, labelProjector, Database.allCollisionLabel,
+    Database.AllCollisionFree, Fin.forall_fin_two, only_collisionFree]
+
+end CollisionEvent
+
+/-! ## A collision after two hash queries on a two-input domain -/
+
+namespace TwoInputCollision
+
+local notation "Bit" => Fin 2
+local notation "St" => (Bool × Bit) × Database Bool Bit
+
+/-- Redirect the query register to the other input. -/
+def other (a : St) : St := ((!a.1.1, a.1.2), a.2)
+
+/-- The permutation matrix of `other`. -/
+noncomputable def redirect : Matrix St St ℂ := of fun a b ↦ if a = other b then 1 else 0
+
+theorem redirect_mulVec_single (b : St) :
+    redirect *ᵥ Pi.single b 1 = Pi.single (other b) 1 := by
+  ext a
+  simp [redirect, Pi.single_apply]
+
+/-- Query `false`, switch the input to `true`, and query again. -/
+noncomputable def hashTwice : Matrix St St ℂ :=
+  compressedOracle Bool Bit * redirect * compressedOracle Bool Bit
+
+/-- The input state: query `false` with output register `0` on the empty database. -/
+def start : St := ((false, 0), Database.empty)
+
+/-- The output state: both inputs stored with answer `0`. -/
+def target : St := ((true, 0), fun _ ↦ some 0)
+
+/-- A query to the empty database fills at most one cell, so it never stores both inputs. -/
+theorem entry_empty (v : Bit) :
+    compressedOracle Bool Bit ((true, 0), fun _ ↦ some 0) ((true, v), Database.empty) = 0 := by
+  have h := congrFun (compressedOracle_mulVec_single_of_eq_none (X := Bool) (x := true) v
+    (D := Database.empty) rfl) ((true, 0), fun _ ↦ some 0)
+  rw [Matrix.mulVec_single_one] at h
+  refine h.trans ?_
+  simp [Finset.sum_apply, funext_iff, Function.update_apply, Database.empty]
+
+/-- The two queries reach the colliding database with amplitude `1/4`. -/
+theorem hashTwice_target_start : hashTwice target start = 1 / 4 := by
+  have hcol : (hashTwice *ᵥ Pi.single start 1) target = hashTwice target start := by
+    rw [Matrix.mulVec_single_one]
+    rfl
+  rw [← hcol, hashTwice, ← mulVec_mulVec, ← mulVec_mulVec, start,
+    compressedOracle_mulVec_single_of_eq_none _ rfl]
+  simp only [mulVec_sum, mulVec_add, mulVec_smul, redirect_mulVec_single, other]
+  simp (disch := first | rfl | simp [Database.empty]) only
+    [compressedOracle_mulVec_single_of_eq_none]
+  simp [Finset.sum_apply, Pi.single_apply, target, Fin.sum_univ_two, funext_iff,
+    Function.update_apply, Database.empty, entry_empty]
+  have h := cellAmp_mul_self Bit
+  rw [Fintype.card_fin] at h
+  linear_combination (1 / 2 : ℂ) * h
+
+/-- The collision event on the database register. -/
+noncomputable def collisionEvent : Matrix St St ℂ :=
+  (1 : Matrix (Bool × Bit) (Bool × Bit) ℂ) ⊗ₖ labelProjector Database.collisionLabel true
+
+theorem collisionEvent_mul_hashTwice :
+    (collisionEvent * hashTwice) target start = 1 / 4 := by
+  have hl : Database.collisionLabel (fun _ : Bool ↦ some (0 : Bit)) = true :=
+    by simpa [Database.collisionLabel] using
+      (show ¬Database.CollisionFree fun _ : Bool ↦ some (0 : Bit) from
+        CollisionEvent.both_not_collisionFree)
+  simp only [collisionEvent, labelProjector, ← diagonal_one, diagonal_kronecker_diagonal,
+    diagonal_mul, one_mul]
+  rw [← hashTwice_target_start]
+  simp [target, hl]
+
+/-- On the half-trace input `start`, the collision event after the two queries has diagonal
+entry `1/32` at the colliding database. -/
+theorem collision_diagonal :
+    (MatrixMap.conj collisionEvent
+      (MatrixMap.conj hashTwice (Matrix.single start start (1 / 2 : ℂ))) target target).re =
+      1 / 32 := by
+  rw [← LinearMap.comp_apply, ← MatrixMap.conj_mul]
+  have hk := collisionEvent_mul_hashTwice
+  generalize collisionEvent * hashTwice = K at hk ⊢
+  simp only [MatrixMap.conj_apply, Matrix.mul_apply, Matrix.single_apply,
+    Matrix.conjTranspose_apply]
+  rw [Finset.sum_eq_single start (fun c _ hc ↦ by simp [Ne.symm hc]) (by simp),
+    Finset.sum_eq_single start (fun c _ hc ↦ by simp [Ne.symm hc]) (by simp)]
+  simp only [and_self, ite_true, hk]
+  norm_num
+
+/-- The collision event has strictly positive weight after the two queries. -/
+theorem collision_weight_pos :
+    0 < (MatrixMap.conj collisionEvent
+      (MatrixMap.conj hashTwice (Matrix.single start start (1 / 2 : ℂ)))).trace.re := by
+  classical
+  let σ := Matrix.single start start (1 / 2 : ℂ)
+  let τ := MatrixMap.conj collisionEvent (MatrixMap.conj hashTwice σ)
+  have hs : σ.PosSemidef := by
+    simpa [σ, SubState.matrix_basis, Matrix.smul_single] using
+      (SubState.basis start).posSemidef.smul (by norm_num : (0 : ℝ) ≤ 1 / 2)
+  have ht : τ.PosSemidef := (MatrixMap.isCP_conj collisionEvent).posSemidef
+    ((MatrixMap.isCP_conj hashTwice).posSemidef hs)
+  change 0 < τ.trace.re
+  have hle : (τ target target).re ≤ τ.trace.re := by
+    rw [Matrix.trace, Complex.re_sum]
+    exact Finset.single_le_sum (f := fun a ↦ (τ a a).re)
+      (fun a _ ↦ (Complex.nonneg_iff.mp (ht.diag_nonneg (i := a))).1)
+      (Finset.mem_univ target)
+  have hdiag : (τ target target).re = 1 / 32 := collision_diagonal
+  linarith
+
+end TwoInputCollision
 
 end VCVioTest.QuantumVCOffline
