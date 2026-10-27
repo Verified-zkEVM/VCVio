@@ -246,6 +246,14 @@ theorem tsum_trace_re_apply_le (h : IsCPTNIFamily Φ) {ρ : Matrix A A ℂ} (hρ
   Real.tsum_le_of_sum_le (fun i ↦ h.trace_re_apply_nonneg i hρ) fun s ↦
     h.sum_trace_re_le s ρ hρ
 
+/-- On a positive semidefinite input, the traces of the members add up to at most the trace of
+the input, in `ℝ≥0∞`. -/
+theorem tsum_ofReal_trace_re_le (h : IsCPTNIFamily Φ) {ρ : Matrix A A ℂ} (hρ : ρ.PosSemidef) :
+    ∑' i, ENNReal.ofReal (Φ i ρ).trace.re ≤ ENNReal.ofReal ρ.trace.re := by
+  rw [← ENNReal.ofReal_tsum_of_nonneg (fun i ↦ h.trace_re_apply_nonneg i hρ)
+    (h.summable_trace_re_apply hρ)]
+  exact ENNReal.ofReal_le_ofReal (h.tsum_trace_re_apply_le hρ)
+
 /-- On every input, the traces of the members form a summable family. -/
 theorem summable_trace_apply (h : IsCPTNIFamily Φ) (ρ : Matrix A A ℂ) :
     Summable fun i ↦ (Φ i ρ).trace := by

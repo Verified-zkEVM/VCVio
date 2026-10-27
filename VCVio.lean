@@ -494,6 +494,7 @@ public import VCVio.Quantum.DSubInstrument
 public import VCVio.Quantum.MatrixMap
 public import VCVio.Quantum.MatrixMap.BlockNorm
 public import VCVio.Quantum.MatrixMap.Commutant
+public import VCVio.Quantum.MatrixMap.Comparison
 public import VCVio.Quantum.MatrixMap.Completion
 public import VCVio.Quantum.MatrixMap.Family
 public import VCVio.Quantum.MatrixMap.Kraus
