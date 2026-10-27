@@ -20,6 +20,7 @@ public import VCVioTest.CryptoFoundations.SignatureAlgBudget
 public import VCVioTest.CryptoFoundations.SignatureAlgRouted
 public import VCVioTest.CryptoFoundations.SigningViewCounted
 public import VCVioTest.CryptoFoundations.SigningViewEncoding
+public import VCVioTest.CryptoFoundations.SigningViewUnforgeability
 public import VCVioTest.CryptoFoundations.SigningViewUniverse
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.CryptoFoundations.UniversalHash
