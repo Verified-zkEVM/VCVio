@@ -10,17 +10,16 @@ import Lean.Util.CollectAxioms
 public import HashSig.GXMSS.Security.PRFDerived.Unforgeability
 import all HashSig.GXMSS.Encoding.RetryIndexed
 import all HashSig.GXMSS.PRFDerivedScheme
-import all HashSig.GXMSS.Security.PRFDerived.KeyMaterial
+import all HashSig.GXMSS.Security.PRFDerived.KeyGeneration
 import all HashSig.GXMSS.Security.PRFDerived.Signing
-import all HashSig.GXMSS.Security.PRFDerived.Interaction
-import all HashSig.GXMSS.Security.PRFDerived.Real
+import all HashSig.GXMSS.Security.PRFDerived.PRFOracleInteraction
 import all HashSig.GXMSS.Security.PRFDerived.Unforgeability
 
 /-!
 # PRF-derived GXMSS security import audit
 
 The public security results must originate in their designated proof modules. Every imported
-declaration from the scheme, indexed retry, and five security modules, including private and
+declaration from the scheme, indexed retry, and four security modules, including private and
 generated auxiliaries, is checked for a definition or proof and its transitive axioms.
 -/
 
@@ -31,18 +30,17 @@ open GXMSS.PRFDerived.Unforgeability
 run_cmd Lean.Elab.Command.liftTermElabM do
   let env ← Lean.getEnv
   let header := env.header
-  let realModule := `HashSig.GXMSS.Security.PRFDerived.Real
+  let interactionModule := `HashSig.GXMSS.Security.PRFDerived.PRFOracleInteraction
   let finalModule := `HashSig.GXMSS.Security.PRFDerived.Unforgeability
   let modules := [
     `HashSig.GXMSS.Encoding.RetryIndexed,
     `HashSig.GXMSS.PRFDerivedScheme,
-    `HashSig.GXMSS.Security.PRFDerived.KeyMaterial,
+    `HashSig.GXMSS.Security.PRFDerived.KeyGeneration,
     `HashSig.GXMSS.Security.PRFDerived.Signing,
-    `HashSig.GXMSS.Security.PRFDerived.Interaction,
-    realModule,
+    interactionModule,
     finalModule]
   let names := [
-    (``randgenPRFReduction_real_strong, realModule),
+    (``randgenPRFReduction_real_strong, interactionModule),
     (``randgenPRFReduction_functionQuery_bound, finalModule),
     (``ideal_adaptive_strong_correspondence, finalModule),
     (``adaptive_strong_additive_bound, finalModule),

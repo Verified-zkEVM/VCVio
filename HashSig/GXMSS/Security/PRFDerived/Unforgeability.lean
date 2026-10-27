@@ -5,10 +5,10 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.PRFDerived.Real
-import all HashSig.GXMSS.Security.PRFDerived.KeyMaterial
+public import HashSig.GXMSS.Security.PRFDerived.PRFOracleInteraction
+import all HashSig.GXMSS.Security.PRFDerived.KeyGeneration
 import all HashSig.GXMSS.Security.PRFDerived.Signing
-import all HashSig.GXMSS.Security.PRFDerived.Interaction
+import all HashSig.GXMSS.Security.PRFDerived.PRFOracleInteraction
 
 /-!
 # PRF-derived GXMSS strong unforgeability

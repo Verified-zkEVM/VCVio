@@ -5,8 +5,8 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.PRFDerived.KeyMaterial
-import all HashSig.GXMSS.Security.PRFDerived.KeyMaterial
+public import HashSig.GXMSS.Security.PRFDerived.KeyGeneration
+import all HashSig.GXMSS.Security.PRFDerived.KeyGeneration
 
 /-!
 # Cached PRF signing
