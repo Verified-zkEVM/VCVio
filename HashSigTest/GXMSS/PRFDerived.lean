@@ -6,7 +6,7 @@ Authors: Matthias Meijers
 
 module
 public import HashSigTest.GXMSS.Scheme
-public import HashSig.GXMSS.PRFDerived
+public import HashSig.GXMSS.PRFDerivedScheme
 
 /-!
 # PRF-derived GXMSS construction tests

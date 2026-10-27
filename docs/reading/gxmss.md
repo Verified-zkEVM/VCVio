@@ -21,7 +21,7 @@ is outside this development.
 | Scheme | [Construction](../../HashSig/GXMSS/Scheme.lean), [completeness](../../HashSig/GXMSS/Completeness.lean) | Independent chain starts, bounded encoding retries, chain verification, and Merkle authentication. |
 | General security | [Reduction games](../../HashSig/GXMSS/Security/Reductions/JointReductions.lean), [bound](../../HashSig/GXMSS/Security/Unforgeability.lean) | Explicit reductions to the authoritative tweakable-hash and encoding target-collision games. |
 | Encoding instances | [Checksum](../../HashSig/GXMSS/Encoding/Winternitz.lean), [target sum](../../HashSig/GXMSS/Encoding/TargetSum.lean) | Incomparability, error bounds under the stated distribution premises, and code-size facts. |
-| PRF-derived sibling | [Derived construction](../../HashSig/GXMSS/PRFDerived.lean), [conditional strong bound](../../HashSig/GXMSS/Security/PRFDerived.lean) | One abstract keyed evaluator supplies the public parameter, chain starts, and retry randomizers; a named PRF reduction connects its strong game to the ideal scheme. |
+| PRF-derived sibling | [Derived construction](../../HashSig/GXMSS/PRFDerivedScheme.lean), [conditional strong bound](../../HashSig/GXMSS/Security/PRFDerived/Unforgeability.lean) | One abstract keyed evaluator supplies the public parameter, chain starts, and retry randomizers; a named PRF reduction connects its strong game to the ideal scheme. |
 | Specialized security | [Encoding-specific bounds](../../HashSig/GXMSS/Security/Unforgeability.lean) | Composition with reductions from encoding collisions to the message hash's SM-DT-rTCR game. |
 
 ## Security statement
@@ -81,7 +81,7 @@ The ideal PRF experiment retains one persistent random-function cache across thi
 The signing operation records its first-success consumed prefix; the reduction's function-query
 count charges the complete queried retry budget even when signing succeeds earlier.
 
-The final `strong_reduction_bound_of_two_codewords` adds the advantage of this named PRF
+The final `strong_reduction_bound` adds the advantage of this named PRF
 reduction to every generic hardness term above, with the same target counts and coefficients.
 Its explicit premises are `PRFScheme.UniformKey`, `PublicSeedSamplingLaw`,
 `ChainStartSamplingLaw`, `RetrySamplingLaw`, the generic signing-query bound, positive chain count

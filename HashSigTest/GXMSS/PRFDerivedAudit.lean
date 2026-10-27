@@ -7,13 +7,13 @@ Authors: Matthias Meijers
 module
 import Lean.Elab.Command
 import Lean.Util.CollectAxioms
-public import HashSig.GXMSS.Security.PRFDerived
+public import HashSig.GXMSS.Security.PRFDerived.Unforgeability
 import all HashSig.GXMSS.Encoding.RetryIndexed
-import all HashSig.GXMSS.PRFDerived
+import all HashSig.GXMSS.PRFDerivedScheme
 import all HashSig.GXMSS.Security.PRFDerived.KeyMaterial
 import all HashSig.GXMSS.Security.PRFDerived.Signing
 import all HashSig.GXMSS.Security.PRFDerived.Interaction
-import all HashSig.GXMSS.Security.PRFDerived
+import all HashSig.GXMSS.Security.PRFDerived.Unforgeability
 
 /-!
 # PRF-derived GXMSS security import audit
@@ -30,10 +30,10 @@ open GXMSS.PRFDerived.Security
 run_cmd Lean.Elab.Command.liftTermElabM do
   let env ← Lean.getEnv
   let header := env.header
-  let finalModule := `HashSig.GXMSS.Security.PRFDerived
+  let finalModule := `HashSig.GXMSS.Security.PRFDerived.Unforgeability
   let modules := [
     `HashSig.GXMSS.Encoding.RetryIndexed,
-    `HashSig.GXMSS.PRFDerived,
+    `HashSig.GXMSS.PRFDerivedScheme,
     `HashSig.GXMSS.Security.PRFDerived.KeyMaterial,
     `HashSig.GXMSS.Security.PRFDerived.Signing,
     `HashSig.GXMSS.Security.PRFDerived.Interaction,
@@ -43,7 +43,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     ``randgenPRFReduction_functionQuery_bound,
     ``ideal_adaptive_strong_correspondence,
     ``adaptive_strong_additive_bound,
-    ``strong_reduction_bound_of_two_codewords]
+    ``strong_reduction_bound]
   for name in names do
     let some info := env.find? name
       | throwError "{name} is missing from the imported environment"

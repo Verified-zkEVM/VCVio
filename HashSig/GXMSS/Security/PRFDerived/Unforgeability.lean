@@ -416,7 +416,7 @@ set_option maxHeartbeats 1600000 in
 from the named adaptive PRF advantage and the proved two-codeword generic
 reduction. Each hardness term keeps the exact reduction adversary and target
 count from the generic theorem. -/
-theorem strong_reduction_bound_of_two_codewords
+theorem strong_reduction_bound
     [SampleableType Key] [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M]
     [DecidableEq R] [DecidableEq (Signature R H h v)]

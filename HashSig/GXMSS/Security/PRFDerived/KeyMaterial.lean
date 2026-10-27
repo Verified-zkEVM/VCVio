@@ -5,7 +5,7 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.PRFDerived
+public import HashSig.GXMSS.PRFDerivedScheme
 public import VCVio.CryptoFoundations.SyncSignatureAlg
 public import HashSig.GXMSS.Security.Unforgeability
 public import VCVio.CryptoFoundations.PRF
