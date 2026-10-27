@@ -548,7 +548,8 @@ lean_exe slhdsa_shake128s_game_tests where
 
 /-- Fixed-context wire query translation through the actual SHAKE-128s adversary adapter. -/
 lean_exe slhdsa_shake128s_wire_bridge_tests where
-  root := `HashSigTest.SLHDSA.SHAKE128s.WireBridge
+  srcDir := "scripts"
+  root := `SLHDSAWireBridgeTests
 
 /-- Sizes, distinctness, cross-role disjointness, and pinned membership of the reachable security
 target ledgers, on small validated profiles. -/

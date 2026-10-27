@@ -92,7 +92,8 @@
   "runtimeSourceSha256": {
     "HashSigTest/SLHDSA/SHAKE128s/Compiler.lean": "98d25862631d520426a185ca4365419399ac6fd974696003cde472a0876c95ee",
     "HashSigTest/SLHDSA/SHAKE128s/Game.lean": "514869b7e901d6cb498f3564da06641e498bf55f0344ca0bb9f6d95d561534a3",
-    "HashSigTest/SLHDSA/SHAKE128s/WireBridge.lean": "8052808d6c6064cc0cb578f3744a5298c4b383fa8d185c83cadc6ba2af172924",
+    "HashSigTest/SLHDSA/SHAKE128s/WireBridge.lean": "38527b3bb24cc9075eedaf8999b2357d5a46473412012d1f56a34a09a71e1db8",
+    "scripts/SLHDSAWireBridgeTests.lean": "35ad89c61cd698205033937a3d5e02c9c978aa62f42723e9af12bd4df49e157b",
     "HashSigTest/SLHDSA/SHAKE128s/Support.lean": "c4f4123a633c220c65310536cf1f4ddda8a70ccb5e52333e9e5a38bbb384e42b",
     "HashSigTest/SLHDSA/ForsSecretOrder.lean": "768183c8b43d25cc4de50e14149f2805f9f4fe817c2fba740f5f16da1a1fecae",
     "HashSigTest/SLHDSA/BoundEval.lean": "14510782aabb8c53a2c957068ab2bc89602a95c0db533dec37f890c6fab7ea06",
@@ -138,8 +139,8 @@
       "root": "HashSigTest.SLHDSA.SHAKE128s.Game"
     },
     "slhdsa_shake128s_wire_bridge_tests": {
-      "srcDir": ".",
-      "root": "HashSigTest.SLHDSA.SHAKE128s.WireBridge"
+      "srcDir": "scripts",
+      "root": "SLHDSAWireBridgeTests"
     }
   },
   "driverScaffoldSha256": "66911ef4dd932f156ebb3b2dd4de091ad47ec8a0f3730f30800b94f4a2b045de",

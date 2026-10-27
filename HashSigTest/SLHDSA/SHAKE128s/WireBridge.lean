@@ -335,6 +335,3 @@ def check : IO Unit := do
   IO.println "SLH-DSA SHAKE-128s wire bridge: PASS (actual query translation; fixed context)"
 
 end SLHDSA.SHAKE128s.WireBridgeTest
-
-/-- Execute the fixed-context wire translation controls. -/
-def main : IO Unit := SLHDSA.SHAKE128s.WireBridgeTest.check
