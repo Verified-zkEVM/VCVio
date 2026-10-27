@@ -12,11 +12,14 @@ public import VCVio.Quantum.Oracle.Emulated
 /-!
 # Charged collision bounds for coherent oracle interfaces
 
-The operator certificate of bounds-note (NOTE) equations (87)–(89), (91) lifts through a
-coherent port index. It formalizes NOTE's refinement of ePrint 2025/2166 §9.3's
-collision-event argument (Lemma 9.6, p. 61; event bound, pp. 64–65).
-Its charge is the actual input mass on the selected ordinary interfaces, including programs
-with entangled workspaces and adaptive local instruments.
+The collision certificate of `VCVio.Quantum.Oracle.Compressed.CollisionPotential` lifts
+through a coherent port index: if every port satisfies the drop and leak operator inequalities,
+with the charge `t/2` on the selected ordinary ports only and the collision rate
+`collisionRate t n N`, then the event weight is at most `(7t+5) t min(w, t) / (4N)`
+(`EmulatedOracle.eventWeight_le_collision_of_port_bounds`). This is the potential refinement
+of the collision-event argument of ePrint 2025/2166 §9.3 (Lemma 9.6, p. 61; event bound,
+pp. 64–65). The mass `w` is the actual input mass on the selected ordinary interfaces,
+including programs with entangled workspaces and adaptive local instruments.
 -/
 
 public section
@@ -298,10 +301,11 @@ theorem ofReal_trace_coherentBlocks_conj_le_selectedMass (E : EmulatedOracle P I
   simpa only [ENNReal.ofReal_one, one_mul, E.ofReal_trace_selectedCharge selected hr hσ]
     using ht
 
-/-- The collision bound of NOTE (87)–(89), (91) from per-port operator inequalities
-and zero initial potential.
-This supports NOTE's refinement of the paper's §9.3 collision-event argument
-(Lemma 9.6, p. 61; event bound, pp. 64–65).
+/-- The collision bound `(7t+5) t min(w, t) / (4N)` from per-port operator inequalities
+and zero initial potential: each port's charged drop is positive semidefinite and dominates its
+squared commutator with the event at the rate `collisionRate t n N`. This is the potential
+refinement of the collision-event argument of ePrint 2025/2166 §9.3 (Lemma 9.6, p. 61; event
+bound, pp. 64–65).
 The mass on the right is the actual mass of the selected interfaces of the program. -/
 theorem eventWeight_le_collision_of_port_bounds (E : EmulatedOracle P In) {L : LocalSig}
     (I : L.Interp) {W : QReg → Type*} {A : QReg} (selected : P → Bool)

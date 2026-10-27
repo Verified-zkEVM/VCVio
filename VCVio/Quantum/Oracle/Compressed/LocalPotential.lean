@@ -12,19 +12,37 @@ public import VCVio.Quantum.Oracle.Compressed.CommutatorBound
 # Local potential inequalities for the compressed oracle
 
 This file proves local positive-operator inequalities for binary events of one compressed
-cell over a finite abelian answer group. The two-coefficient inequality is equation (77) of
-the accompanying bounds note (NOTE), refining ePrint 2025/2166 §9.3's collision-event
-argument (Lemma 9.6, p. 61; event bound, pp. 64–65).
-The three-coefficient source estimate retains the phase component as in NOTE (100) and (107).
-The potential-drop identity underlies the population transition inequality (78).
+cell over a finite abelian answer group `Y`, with `N = |Y|`. They are the local steps of the
+potential refinement (`VCVio.Quantum.Comp.Potential`) of the collision-event argument of
+ePrint 2025/2166 §9.3 (Lemma 9.6, p. 61; event bound, pp. 64–65).
 
-`LeakBound` and `PhaseLeakBound` separate numerical calibration from the operator proof.
-`posSemidef_smul_cellDiag_sub_flip` proves the occupancy-sensitive bound, and
-`sum_norm_flipCommutator_sq_le` gives its three-coefficient source form. The latter retains
-the phase component after restricting to the unflipped source; this restriction matters when
-using the estimate in a potential certificate. `posSemidef_cellDrop_sub_flip` removes that
-restriction with the additive coefficient `lam * d * |fl| / N` from equation (107).
-`posSemidef_smul_cellDiag_sub_binary` also covers binary events true on the empty cell.
+Fix a character `χ` with phase cell `U`, write `P_e` and `P_f` for the projectors onto the
+empty and the filled contents of the cell, and let the event `Q` differ from its value on the
+empty content exactly on a set `fl` of filled contents, of proportion `β = |fl| / N`.
+
+* **Occupancy-sensitive leak bound.** If `β (1/a₀ + 5/a₁) ≤ λ` and `6β ≤ λ a₁`
+  (`LeakBound`), then `[Q, U]ᴴ [Q, U] ≤ λ (a₀ P_e + a₁ P_f)`
+  (`posSemidef_smul_cellDiag_sub_flip`, and `posSemidef_smul_cellDiag_sub_binary` for events
+  true or false on the empty content). For weights `0 < a ≤ b`, the *two-weight rate*
+  `λ = β (1/a + 5/b)` satisfies both conditions (`leakBound_of_pos_of_le`).
+* **Three source components.** For a nontrivial character, each flipped output row of the
+  commutator applied to `ψ` has squared modulus at most `(|ψ_e| + 2|s| + |g|)² / N`. Here `ψ_e`
+  is the empty component of `ψ`, and `s = N^{-1/2} ∑ ψ_w` and `g = N^{-1/2} ∑ χ(w) ψ_w`, with
+  sums over the unflipped filled contents `w ∉ fl`, are its uniform and phase components.
+  Weighted Cauchy–Schwarz with weights `a₀, a₁, a₁ + d`, and Bessel's inequality bounding
+  `|s|² + |g|²` by the squared norm of the unflipped filled source, give the rate condition
+  `β (1/a₀ + 4/a₁ + 1/(a₁ + d)) ≤ λ` (`PhaseLeakBound`) and the extra term `λ d |g|²`
+  (`sum_norm_flipCommutator_sq_le`). The flipped sources contribute at most `6β` times their
+  squared norm, which `6β ≤ λ a₁` absorbs. With `d = 0` this is the occupancy-sensitive bound.
+* **Removing the restriction.** The restricted phase component `g` differs from the full one,
+  the empty coordinate of `U ψ`, by a term of squared modulus at most `β ‖ψ‖²`. Young's
+  inequality with a parameter `s > 0` gives `[Q, U]ᴴ [Q, U] ≤ (1 + s) λ (a₀ P_e + a₁ P_f +
+  d Uᴴ P_e U) + (1 + s⁻¹) λ d β` (`posSemidef_cellDrop_sub_flip`). The term `Uᴴ P_e U` is the
+  part of the exact drop of a two-level potential that the population transition discards
+  (`cellDiag_add_sub_eq`).
+* **Population transition.** A unitary conjugate of `v - (v - u) E` with `E ≥ 0`, `u ≤ v`, is
+  at most `v` (`posSemidef_scalar_sub_unitary_twoLevel`): after a query the population potential
+  is at most its value with the queried cell filled.
 
 The phase-cell results are stated for the scalar character blocks of the standard compressed
 oracle. They do not identify a response-mixing empty-sector extension with those blocks.
@@ -140,7 +158,8 @@ theorem sq_add_two_mul_add_le {p q : ℝ} (hp : 0 < p) (hq : 0 < q) (x y z : ℝ
   ring
 
 /-- A unitary conjugate of a two-level potential is bounded by its larger scalar value.
-This is the local population transition inequality (78), with no restriction on the unitary. -/
+This is the local population transition inequality: after a query, a nondecreasing function of
+the population is at most its value with the queried cell filled. The unitary is arbitrary. -/
 theorem posSemidef_scalar_sub_unitary_twoLevel [DecidableEq n]
     {E U : Matrix n n ℂ} (hE : E.PosSemidef) (hU : Uᴴ * U = 1)
     {u v : ℝ} (huv : u ≤ v) :
@@ -263,8 +282,8 @@ theorem LeakBound.mono {lam a₀ a₁ β β' : ℝ} (h : LeakBound lam a₀ a₁
   · exact Or.inr ⟨h₀, h₁, (mul_le_mul_of_nonneg_right hle (by positivity)).trans h₂,
       by linarith⟩
 
-/-- Positive weights `a ≤ b` give the round-6 rate `1/a + 5/b` for every nonnegative
-flipped proportion. -/
+/-- Positive weights `a ≤ b` give the two-weight rate `β (1/a + 5/b)` for every nonnegative
+flipped proportion `β`: its second condition `6 ≤ b/a + 5` is `a ≤ b`. -/
 theorem leakBound_of_pos_of_le {a b β : ℝ} (ha : 0 < a) (hab : a ≤ b) (hβ : 0 ≤ β) :
     LeakBound (β * (a⁻¹ + 5 * b⁻¹)) a b β := by
   have hb : 0 < b := ha.trans_le hab
@@ -274,7 +293,9 @@ theorem leakBound_of_pos_of_le {a b β : ℝ} (ha : 0 < a) (hab : a ≤ b) (hβ 
   rw [mul_assoc, heq]
   nlinarith
 
-/-- Equation (77)'s calibration: `1 < α ≤ 6` and `β = 5α/(α−1)`. -/
+/-- The normalized form of the two-weight rate: for `1 < α ≤ 6`, the coefficients `α` and
+`5α/(α−1)` satisfy `1/α + 5/(5α/(α−1)) = 1`, and the filled coefficient is at least `6`, so the
+flipped proportion `b` itself is an admissible rate. -/
 theorem leakBound_alpha {α b : ℝ} (hα : 1 < α) (hα6 : α ≤ 6) (hb : 0 ≤ b) :
     LeakBound b α (5 * α / (α - 1)) b := by
   have ha : 0 < α := by linarith
@@ -357,14 +378,17 @@ noncomputable def unflippedPhase (χ : AddChar Y ℂ) (fl : Finset Y)
     (ψ : Option Y → ℂ) : ℂ :=
   cellAmp Y * ∑ w, χ w * if w ∈ fl then 0 else ψ (some w)
 
-/-- The three-coefficient leak condition of bounds-note equation (107). -/
+/-- **The three-coefficient leak condition of one cell**, for a rate `lam`, drop coefficients
+`a₀` (empty content) and `a₁` (filled contents), a phase coefficient `d`, and the flipped
+proportion `β`: either nothing flips, or both coefficients are positive,
+`β (1/a₀ + 4/a₁ + 1/(a₁ + d)) ≤ lam` and `6 β ≤ lam a₁`. -/
 @[expose]
 def PhaseLeakBound (lam a₀ a₁ d β : ℝ) : Prop :=
   β = 0 ∨ (0 < a₀ ∧ 0 < a₁ ∧
     β * (a₀⁻¹ + 4 * a₁⁻¹ + (a₁ + d)⁻¹) ≤ lam ∧ 6 * β ≤ lam * a₁)
 
 /-- The binary phase-cell commutator with three source coefficients. The last term retains
-only the phase component of the unflipped source, as in bounds-note equations (100), (107). -/
+only the phase component of the unflipped filled source, `N^{-1/2} ∑_{w ∉ fl} χ(w) ψ_w`. -/
 theorem sum_norm_flipCommutator_sq_le (χ : AddChar Y ℂ) (fl : Finset Y)
     {lam a₀ a₁ d : ℝ} (hlam : 0 ≤ lam) (h₀ : 0 ≤ a₀) (h₁ : 0 ≤ a₁) (hd : 0 ≤ d)
     (hleak : PhaseLeakBound lam a₀ a₁ d (fl.card / Fintype.card Y)) (ψ : Option Y → ℂ) :
@@ -582,9 +606,10 @@ theorem re_star_dotProduct_cellDiag_mulVec (a₀ a₁ : ℝ) (ψ : Option Y → 
   simp only [cellDiag, mulVec_diagonal, dotProduct, Fintype.sum_option, Pi.star_apply,
     Option.elim_none, Option.elim_some, Complex.add_re, Complex.re_sum, e, Finset.mul_sum]
 
-/-- The occupancy-sensitive positive-operator bound for a binary cell event, bounds-note (77).
-This supports NOTE's refinement of the paper's §9.3 collision-event argument
-(Lemma 9.6, p. 61; event bound, pp. 64–65).
+/-- **The occupancy-sensitive bound** for a binary cell event:
+`[Q, U]ᴴ [Q, U] ≤ lam (a₀ P_e + a₁ P_f)`, with different coefficients on the empty and the
+filled contents. This is the local step of the potential refinement of the collision-event
+argument of ePrint 2025/2166 §9.3 (Lemma 9.6, p. 61; event bound, pp. 64–65).
 The rate satisfies the weighted Cauchy–Schwarz condition and absorbs the reverse cross block. -/
 theorem posSemidef_smul_cellDiag_sub_flip (χ : AddChar Y ℂ) (fl : Finset Y) {lam a₀ a₁ : ℝ}
     (hlam : 0 ≤ lam) (h₀ : 0 ≤ a₀) (h₁ : 0 ≤ a₁)
@@ -635,8 +660,9 @@ theorem norm_phase_flipped_sq_le (χ : AddChar Y ℂ) (fl : Finset Y)
           (mul_le_mul_of_nonneg_left hs (by positivity))
     _ = _ := by ring
 
-/-- Replacing the unflipped phase component by the full component costs the additive term
-from bounds-note (104b). This form uses Young's inequality, as in the runtime certificate. -/
+/-- Replacing the unflipped phase component by the full component, the empty coordinate of
+`U ψ`, costs an additive multiple of the flipped proportion. This form uses Young's inequality
+`(x + y)² ≤ (1 + s) x² + (1 + s⁻¹) y²`, as in the runtime certificate. -/
 theorem norm_unflippedPhase_sq_le {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (fl : Finset Y)
     (ψ : Option Y → ℂ) {s : ℝ} (hs : 0 < s) :
     ‖unflippedPhase χ fl ψ‖ ^ 2 ≤
@@ -665,7 +691,7 @@ theorem norm_unflippedPhase_sq_le {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (fl : Fi
         nlinarith [mul_le_mul_of_nonneg_left hR (by positivity : 0 ≤ 1 + s⁻¹)]
 
 /-- The three-coefficient binary leak bound with the phase restriction removed. The error
-coefficient is `lam * d * |fl| / N`, exactly as in bounds-note equation (107). -/
+coefficient is `(1 + s⁻¹) lam d |fl| / N`. -/
 theorem sum_norm_flipCommutator_sq_le_drop (χ : AddChar Y ℂ) (fl : Finset Y)
     {lam a₀ a₁ d s : ℝ} (hlam : 0 ≤ lam) (h₀ : 0 ≤ a₀) (h₁ : 0 ≤ a₁) (hd : 0 ≤ d)
     (hs : 0 < s) (hleak : PhaseLeakBound lam a₀ a₁ d (fl.card / Fintype.card Y))
@@ -686,10 +712,10 @@ theorem sum_norm_flipCommutator_sq_le_drop (χ : AddChar Y ℂ) (fl : Finset Y)
   have hb := mul_nonneg (mul_nonneg hs.le hlam) hbase
   nlinarith
 
-/-- The three-coefficient leak bound as a positive-operator inequality, with the full
-phase projector and the additive scalar error of bounds-note (107).
-This supports NOTE's refinement of the paper's §9.3 collision-event argument
-(Lemma 9.6, p. 61; event bound, pp. 64–65). -/
+/-- The three-coefficient leak bound as a positive-operator inequality, with the full phase
+projector `Uᴴ P_e U` and the additive scalar error `(1 + s⁻¹) lam d |fl| / N`. This is the
+local step of the potential refinement of the collision-event argument of ePrint 2025/2166 §9.3
+(Lemma 9.6, p. 61; event bound, pp. 64–65) that keeps the phase part of the potential drop. -/
 theorem posSemidef_cellDrop_sub_flip (χ : AddChar Y ℂ) (fl : Finset Y)
     {lam a₀ a₁ d s : ℝ} (hlam : 0 ≤ lam) (h₀ : 0 ≤ a₀) (h₁ : 0 ≤ a₁) (hd : 0 ≤ d)
     (hs : 0 < s) (hleak : PhaseLeakBound lam a₀ a₁ d (fl.card / Fintype.card Y)) :
@@ -758,7 +784,8 @@ theorem binaryCell_commutator_gram (q : Option Y → Bool) (U : Matrix (Option Y
     rw [heq, hc]
     rw [conjTranspose_neg, neg_mul_neg]
 
-/-- Equation (77) for an arbitrary binary event, whether its empty-cell label is true or false. -/
+/-- The occupancy-sensitive bound for an arbitrary binary event, whether its empty-cell label
+is true or false. -/
 theorem posSemidef_smul_cellDiag_sub_binary (χ : AddChar Y ℂ) (q : Option Y → Bool)
     {lam a₀ a₁ : ℝ} (hlam : 0 ≤ lam) (h₀ : 0 ≤ a₀) (h₁ : 0 ≤ a₁)
     (hleak : LeakBound lam a₀ a₁ ((binaryFlipSet q).card / Fintype.card Y)) :

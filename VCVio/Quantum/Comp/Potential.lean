@@ -10,16 +10,20 @@ public import VCVio.Quantum.Comp.HybridProjected
 /-!
 # Potential certificates for events of a runtime
 
-This file formalizes the bounds note's (NOTE) refinement of the collision-event argument in
-ePrint 2025/2166 §9.3 (Lemma 9.6, p. 61; event bound, pp. 64–65).
-The paper uses the size projection, Corollaries 5.8/5.6, and a coefficient-80 per-database
-bound.
-Corollaries 5.6 and 5.8 appear on pp. 31 and 33.
-NOTE introduces the charged potential: an operator on the runtime register whose
-trace can decrease up to a charge per call and dominates leakage from the good subspace.
-Here we prove its general certificate for arbitrary programs against runtimes with Kraus
-steps (NOTE (107)). The quadratic schedule and 7/4 coefficient are NOTE's refinement
-(NOTE (77)–(78), (87)–(91)), instantiated in the collision modules.
+This file proves a potential certificate for the weight of an event at the end of a run. It
+refines the collision-event argument of ePrint 2025/2166 §9.3 (Lemma 9.6, p. 61; event bound,
+pp. 64–65). There, after the size projection, the event weight is at most the number of calls
+times the query mass times the worst-case squared commutator norm of the oracle with the event
+(Corollary 5.8, p. 33), and that norm is at most `80` times the instability (Corollary 5.6,
+p. 31). Here every call is instead charged a rate times the actual decrease of a *potential*:
+an operator on the runtime register whose expectation, up to a fixed charge per call, pays for
+the squared commutator of that call on the state it actually acts on, rather than for the
+worst case.
+
+The certificate holds for arbitrary programs against runtimes with Kraus steps. The collision
+modules instantiate it with a quadratic population potential on compressed databases
+(`VCVio.Quantum.Oracle.Compressed.CollisionPotential`), where it yields the bound
+`(7t+5)t min(w,t)/(4N)` on the collision event, with leading coefficient `7/4`.
 
 ## The certificate
 
@@ -36,7 +40,8 @@ Then a run from a state with no weight on `Q` ends with weight at most
 the additive term summed over the inputs of the `n`-th calls
 (`Quantum.QuantumRuntime.rpow_inv_two_eventWeight_le_of_potential`). The additive terms `eₙ`
 account both for ports that change the event and for local approximation errors, such as the
-phase-projection replacement in bounds-note (107). They can be zero when the local leak
+cost of bounding a component of the input restricted to the event's complement by the full
+component (`Quantum.posSemidef_cellDrop_sub_flip`). They can be zero when the local leak
 estimate is exact; in that case the bound is `(∑ₙ λₙ) · (tr ((1 ⊗ Φ₀) ρ) + ∑ₙ Θₙ)`.
 
 Both conditions are stated on traces, so that runtimes with countably many outcomes and drops
@@ -359,7 +364,8 @@ theorem potential_queryStep (K : Matrix Z R.D ℂ) (i : spec.Port) (E : QReg)
 
 /-! ## Telescoping the drops -/
 
-/-- **Telescoping the drops** (bounds note, eq. (107), first half). Let `K n` give the potential
+/-- **Telescoping the drops**, the first half of the potential certificate. Let `K n` give the
+potential
 `Φₙ = (K n)ᴴ (K n)` before the `n`-th call, and suppose that on every positive semidefinite input
 `σ` of a call `n < N` of port `i`, the drop `w n i σ` and the potentials of the outputs of the
 step are at most the potential of the input plus the charge `c n i σ`:
@@ -634,9 +640,10 @@ theorem rpow_inv_two_eventWeight_le_commutators (x : QuantumComp L spec X A)
 /-! ## The certificate -/
 
 include hU hQ hQQ in
-/-- **The potential certificate** of NOTE (107), with per-port additive terms. This supports
-NOTE's refinement of the paper's §9.3 collision-event argument (Lemma 9.6,
-p. 61; event bound, pp. 64–65).
+/-- **The potential certificate**, with per-port additive terms. It refines the collision-event
+argument of ePrint 2025/2166 §9.3 (Lemma 9.6, p. 61; event bound, pp. 64–65), which charges
+every call its worst-case squared commutator norm, by charging each call a rate times its
+potential drop.
 Let a runtime have Kraus operators `U i r`, let `Q` be a projector on its
 register, and let a program call it at most `N` times. Suppose that for every call `n < N`, on
 every positive semidefinite input `σ` of a call of port `i`,

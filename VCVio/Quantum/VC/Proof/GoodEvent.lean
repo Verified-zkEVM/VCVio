@@ -15,7 +15,11 @@ import VCVio.Quantum.Oracle.Compressed.ProjectorEvent
 
 The ordinary/extraction execution preserves good databases except at ordinary oracle calls.
 The event weight on its final state is bounded by `24 t min(w,t) I_off(t)`, with total
-call budget `t` and ordinary mass `w`. The family projector also identifies the collision
+call budget `t` and ordinary mass `w`. Here `I_off(t)` is the instability
+`Database.instability (offlineLabel Pgood) t`: the largest probability, over databases with
+fewer than `t` occupied cells and their empty cells, that filling the cell with a uniformly
+random answer changes membership in `Pgood`, in either direction (good to bad or bad to good).
+The family projector also identifies the collision
 bound as an alternative input to offline extractability.
 -/
 
@@ -378,8 +382,12 @@ private theorem good_port_bound (n : ℕ) (p : Fin k ⊕ Unit) :
 
 
 /-- The bad-database event on the post-adversary state has weight at most
-`24 t min(w,t) I_off(t)`. Extraction counts towards the total call budget and preserves
-this event. Only ordinary calls contribute to `w`, including coherently selected calls. -/
+`24 t min(w,t) I_off(t)`. Here `I_off(t) = Database.instability (offlineLabel Pgood) t` is the
+largest probability that filling one empty cell of a database with fewer than `t` occupied
+cells with a uniformly random answer changes its membership in `Pgood`, maximized over both
+membership classes (good to bad and bad to good), over such databases and over their empty
+cells. Extraction counts towards the total call budget and preserves this event. Only ordinary
+calls contribute to `w`, including coherently selected calls. -/
 theorem badEvent_compressedWithExtract_le (hgood : Database.empty ∈ Pgood)
     {L : LocalSig} (I : L.Interp) {W : QReg → Type*} {A : QReg}
     (x : QuantumComp L (cohSpec (extIn k X Y Cm Z)) W A)

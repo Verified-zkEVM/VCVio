@@ -11,9 +11,21 @@ public import VCVio.Quantum.Oracle.Compressed.Collision
 /-!
 # Lifting the collision potential through query blocks
 
-This file assembles the one-cell inequalities of bounds-note (NOTE) equations (77), (78),
-(87)–(89), (91), formalizing NOTE's refinement of ePrint 2025/2166 §9.3's collision-event
-argument (Lemma 9.6, p. 61; event bound, pp. 64–65).
+This file assembles the one-cell inequalities of
+`VCVio.Quantum.Oracle.Compressed.LocalPotential` and
+`VCVio.Quantum.Oracle.Compressed.CollisionPotential` into operator inequalities for one
+ordinary query of the compressed oracle. The phase oracle is a direct sum, over the query, its
+phase and the database outside the queried cell, of one-cell operators; a database-diagonal
+potential splits accordingly into two-level cell potentials.
+
+For the population potential `Φₙ`, a function of the number of occupied entries (plus a fixed
+offset for other databases), the charged drop `Φₙ + t/2 - Uᴴ Φₙ₊₁ U` of an ordinary query is
+positive semidefinite (`posSemidef_compressedPopulationDrop`). For every binary event whose
+number of changing answers at an empty cell is at most the offset plus the population outside
+that cell, the squared commutator of the event with the query is at most the collision rate of
+the call times that drop (`posSemidef_compressedPopulationLeak`). These are the drop and leak
+hypotheses of the potential certificate (`VCVio.Quantum.Comp.Potential`), which refines the
+collision-event argument of ePrint 2025/2166 §9.3 (Lemma 9.6, p. 61; event bound, pp. 64–65).
 The population counts database entries only.
 -/
 
@@ -368,9 +380,12 @@ theorem posSemidef_compressedPopulationDrop {t n : ℕ} (hn : n < t) (offset : �
     operatorPullback_queryFourier_database, operatorPullback_queryFourier_phaseOracle] at h
   exact h
 
-/-- The population drop dominates collision leakage for the standard compressed oracle.
-This supports NOTE's refinement of the paper's §9.3 collision-event argument
-(Lemma 9.6, p. 61; event bound, pp. 64–65). -/
+/-- The population drop dominates collision leakage for the standard compressed oracle: the
+squared commutator of the event with the query is at most `collisionRate t n N` times the
+charged drop, for every event whose changing answers at an empty cell number at most the
+offset plus the population outside it. This is the leak hypothesis of the potential
+certificate, which refines the collision-event argument of ePrint 2025/2166 §9.3 (Lemma 9.6,
+p. 61; event bound, pp. 64–65). -/
 theorem posSemidef_compressedPopulationLeak {t n : ℕ} (hn : n < t) (offset : ℕ)
     (q : Database X Y → Bool)
     (hq : ∀ (x : X) (r : Database X Y), r x = none →

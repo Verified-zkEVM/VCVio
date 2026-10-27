@@ -11,11 +11,18 @@ public import VCVio.Quantum.Oracle.Compressed.CollisionPotential
 /-!
 # Collision events of compressed databases
 
-The collision event in ePrint 2025/2166 §9.3 (Lemma 9.6, p. 61;
-event bound, pp. 64–65) changes at a cell only for answers already stored elsewhere.
-Thus the changing-answer count is at most the number of occupied entries outside that cell.
-This supports the bounds note's (NOTE) refinement in equations (87)–(89), (91).
-Recording registers are not part of this population.
+A database has a collision when two distinct keys store the same answer; a family of
+databases has a collision when one of its databases has one. Answers shared by different
+databases of a family are not collisions. This is the collision event of ePrint 2025/2166 §9.3
+(Lemma 9.6, p. 61; event bound, pp. 64–65).
+
+Filling an empty cell changes the collision event only for answers already stored elsewhere
+in the same database (`collisionFlipSet_subset_values`). Thus the number of changing answers
+is at most the number of occupied entries outside that cell (`card_collisionFlipSet_le`,
+`card_allCollisionFlipSet_le`). This is the population that the collision potential charges
+(`VCVio.Quantum.Oracle.Compressed.CollisionPotential`): the flipped proportion of a query on a
+database with `c` other entries is at most `c/N`. Recording registers are not part of this
+population.
 -/
 
 public section

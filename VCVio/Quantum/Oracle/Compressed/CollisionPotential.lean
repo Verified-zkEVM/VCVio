@@ -12,22 +12,50 @@ public import VCVio.Quantum.Comp.Potential
 /-!
 # A charged population potential for collision detection
 
-The calibration `a_h = 1`, `b_h = t/h` of bounds-note (NOTE) equations (87)–(89), (91)
-admits an explicit quadratic upper bound on its charged recursion. This schedule and its
-7/4 coefficient formalize NOTE's refinement of ePrint 2025/2166 §9.3's collision-event
-argument (Lemma 9.6, p. 61; event bound, pp. 64–65). The paper uses
-the size projection, Corollaries 5.8/5.6, and a coefficient-80 per-database bound.
-Corollaries 5.6 and 5.8 appear on pp. 31 and 33.
-At call index `n > 0`, use `(t-n)c(c-1)/(2n)`; at index zero use `tc(c+1)/2`.
-These functions are nonnegative and nondecreasing on integer populations, vanish at the
-terminal index, and start at zero on the empty database. The per-call charge is `t/2`.
+This file calibrates the potential certificate (`VCVio.Quantum.Comp.Potential`) for the
+collision event of compressed databases, with call budget `t ≥ 1` and `N` answers. It refines
+the collision-event argument of ePrint 2025/2166 §9.3 (Lemma 9.6, p. 61; event bound,
+pp. 64–65). That argument charges every call the worst-case squared commutator, a constant
+times the instability, and the instability of the collision event is at most `(t - 1)/N`
+(a fresh answer collides with one of fewer than `t` stored answers). It therefore gives
+`C t (t - 1) w / N` for ordinary query mass `w`, where `C` is the commutator constant (`80` in
+the paper, `24` in `Quantum.badEvent_compressedWithExtract_le`). The potential argument below
+gives `(7t+5) t min(w,t) / (4N)`, with leading coefficient `7/4` in `t² min(w,t) / N`.
+
+**Rewards and rates.** At the call with one-based index `h` (zero-based index `n = h - 1`), let
+`L` be the population, the number of occupied database entries, and reward the call with
+`L (a_h P_e + b_h P_f)`, where `P_e` and `P_f` project onto an empty and a filled queried cell
+and `0 < a_h ≤ b_h`. A query to an empty cell with `c` other entries earns `a_h c`; a query to
+a filled cell earns `b_h (c + 1)`. Filling a cell changes the collision event only at answers
+stored elsewhere, at most `c` of them (`VCVio.Quantum.Oracle.Compressed.Collision`), so the
+occupancy-sensitive leak bound (`VCVio.Quantum.Oracle.Compressed.LocalPotential`) bounds the
+squared commutator of the event with the call by `λ_h / N` times its reward, with the
+*two-weight rate* `λ_h = 1/a_h + 5/b_h`.
+
+**Calibration.** Take `a_h = 1` and `b_h = t/h`. The rate is `λ_h = 1 + 5h/t`
+(`collisionRate`, which includes the factor `1/N`), and `∑_{h=1}^t λ_h = (7t+5)/2`
+(`sum_collisionRate`).
+
+**Potential.** The rewards are paid by the quadratic potential in the population `c`
+(`collisionPotential`): `Φ_0(c) = t c (c + 1) / 2` before the first call and
+`Φ_n(c) = (t - n) c (c - 1) / (2n)` after `n > 0` calls. It is nonnegative and nondecreasing,
+`Φ_0(0) = 0` on the empty database, and `Φ_t = 0`. With a charge of `t/2` per ordinary call it
+pays both rewards: `c + Φ_{n+1}(c + 1) ≤ Φ_n(c) + t/2` for a query that fills a cell
+(`collisionPotential_growth`), and `(t/(n+1)) c + Φ_{n+1}(c) ≤ Φ_n(c) + t/2` for a query to a
+filled cell with population `c` (`collisionPotential_stay`); calls that preserve the
+population need no charge (`collisionPotential_idle`). Telescoping, the rewards of a run sum to
+at most `Φ_0(0) + (t/2) min(w, t) = (t/2) min(w, t)`: the charge makes the bound proportional to
+the actual ordinary mass `w`, not to the number `t` of calls.
+
+**Bound.** Cauchy–Schwarz over the calls bounds the event weight by
+`(∑_h λ_h / N) · (t/2) min(w, t) = (7t+5) t min(w, t) / (4N)`.
 The population counts database entries only; recording registers are excluded.
 
 `posSemidef_collisionCellDrop` and `posSemidef_collisionCellLeak` verify the local hypotheses.
 `QuantumRuntime.eventWeight_le_of_collisionCertificate` specializes the general runtime
 certificate to the finite coefficient `(7t+5)t/(4N)`, retaining the original mass through
-`min w t`. The concrete collision predicate and the operator assembly for the old oracle
-with extraction and recording are in `VCVio.Quantum.VC.Proof.Offline`; its theorem
+`min w t`. The concrete collision predicate and the operator assembly for the compressed VC oracle
+with extraction and recording ports are in `VCVio.Quantum.VC.Proof.Offline`; its theorem
 `Quantum.collisionEvent_compressedVCOracle_le` supplies these trace hypotheses.
 -/
 
@@ -35,7 +63,10 @@ public section
 
 namespace Quantum
 
-/-- The charged quadratic population potential, with zero-based call indices. -/
+/-- The charged quadratic population potential `Φ_n(c)` after `n` calls, at population `c`:
+`t c (c + 1) / 2` for `n = 0` and `(t - n) c (c - 1) / (2n)` for `n > 0` (with truncated
+subtraction, so it vanishes from `n = t` on). It pays the rewards of the calibration
+`a_h = 1`, `b_h = t/h` with a charge `t/2` per ordinary call. -/
 @[expose]
 noncomputable def collisionPotential (t n c : ℕ) : ℝ :=
   if n = 0 then (t : ℝ) / 2 * c * (c + 1)
@@ -85,7 +116,9 @@ theorem population_gap_mul_succ_nonneg (n c : ℕ) :
   · have h' : (n : ℝ) + 1 ≤ c := by exact_mod_cast (show n + 1 ≤ c by omega)
     exact mul_nonneg_of_nonpos_of_nonpos (by linarith) (by linarith)
 
-/-- The potential pays the growth reward and charge of equation (89). -/
+/-- **Growth.** A query that fills an empty cell, with `c` other entries, earns reward `c`; the
+potential pays it with the charge `t/2`. For `n > 0` the slack is
+`t (n - c)(n + 1 - c) / (2n(n+1))`, nonnegative at integers `c`. -/
 theorem collisionPotential_growth {t n : ℕ} (hn : n < t) (c : ℕ) :
     (c : ℝ) + collisionPotential t (n + 1) (c + 1) ≤
       collisionPotential t n c + (t : ℝ) / 2 := by
@@ -112,7 +145,9 @@ theorem collisionPotential_growth {t n : ℕ} (hn : n < t) (c : ℕ) :
         (by positivity)
     linarith
 
-/-- The potential pays the filled-source reward and charge of equation (89). -/
+/-- **Stay.** A query to a filled cell at the call with one-based index `n + 1`, with
+population `c`, earns reward `(t/(n+1)) c`; the potential pays it with the charge `t/2`. Its
+left side equals that of the growth inequality at the same `c`. -/
 theorem collisionPotential_stay {t n : ℕ} (hn : n < t) (c : ℕ) :
     ((t : ℝ) / (n + 1)) * c + collisionPotential t (n + 1) c ≤
       collisionPotential t n c + (t : ℝ) / 2 := by
@@ -148,7 +183,8 @@ theorem collisionPotential_idle {t n : ℕ} (hn : n < t) (c : ℕ) :
       mul_nonneg (by positivity) (population_mul_pred_nonneg c)
     linarith
 
-/-- The round-6 local rate, with zero-based call index and answer-space size `N`. -/
+/-- The two-weight rate `(1/a_h + 5/b_h) / N` of the calibration `a_h = 1`, `b_h = t/h`, at
+the call with zero-based index `n = h - 1`, for answer-space size `N`: `(1 + 5(n+1)/t) / N`. -/
 @[expose]
 noncomputable def collisionRate (t n : ℕ) (N : ℝ) : ℝ :=
   (1 + 5 * (n + 1) / t) / N
@@ -157,7 +193,8 @@ noncomputable def collisionRate (t n : ℕ) (N : ℝ) : ℝ :=
 theorem collisionRate_nonneg (t n : ℕ) {N : ℝ} (hN : 0 ≤ N) :
     0 ≤ collisionRate t n N := by unfold collisionRate; positivity
 
-/-- The exact sum of the round-6 rates, equation (89). -/
+/-- The exact sum of the two-weight rates over `t` calls: `∑_{h=1}^t (1 + 5h/t) = (7t+5)/2`,
+divided by `N`. -/
 theorem sum_collisionRate {t : ℕ} (ht : 0 < t) (N : ℝ) :
     ∑ n ∈ Finset.range t, collisionRate t n N = (7 * t + 5) / (2 * N) := by
   have hsum (k : ℕ) : (∑ n ∈ Finset.range k, ((n : ℝ) + 1)) = k * (k + 1) / 2 := by
@@ -173,7 +210,8 @@ theorem sum_collisionRate {t : ℕ} (ht : 0 < t) (N : ℝ) :
   field_simp
   ring
 
-/-- The charged potential and the rate sum give the finite `7/4` numerator. -/
+/-- The rate sum times the total charge `(t/2) min(w, t)` is the collision bound
+`(7t+5) t min(w, t) / (4N)`, with leading coefficient `7/4`. -/
 theorem sum_collisionRate_mul_charge {t : ℕ} (ht : 0 < t) (N w : ℝ) :
     (∑ n ∈ Finset.range t, collisionRate t n N) * ((t : ℝ) / 2 * min w t) =
       (7 * t + 5) * t * min w t / (4 * N) := by
@@ -234,8 +272,9 @@ theorem posSemidef_cellDiag_sub {Y : Type*} [DecidableEq Y] {u v u' v' : ℝ}
   rw [heq]
   exact posSemidef_cellDiag (sub_nonneg.mpr hu) (sub_nonneg.mpr hv)
 
-/-- A binary event with at most `c` changing answers has its local leak paid by the
-round-6 rate times the population reward. -/
+/-- A binary event with at most `c` changing answers, where `c` is the number of other
+entries, has its local leak paid by the two-weight rate times the population reward:
+`[Q, U]ᴴ [Q, U] ≤ collisionRate t n N · (c P_e + (t/(n+1)) (c + 1) P_f)`. -/
 theorem posSemidef_collisionCellLeak {Y : Type*} [Fintype Y] [DecidableEq Y]
     [AddCommGroup Y] (χ : AddChar Y ℂ) (fl : Finset Y) {t n c : ℕ}
     (hn : n < t) (hfl : fl.card ≤ c) :
@@ -293,9 +332,11 @@ variable {spec : QuantumOracleSpec} {L : LocalSig} (I : L.Interp)
   {U : ∀ i, spec.Result i → Matrix (spec.Out i × D) (spec.In i × D) ℂ}
   {Q : Matrix D D ℂ}
 
-/-- The `7/4` numerical specialization of the runtime certificate, NOTE (87)–(89), (91).
-This supports NOTE's refinement of the paper's §9.3 collision-event argument
-(Lemma 9.6, p. 61; event bound, pp. 64–65). The hypotheses are local
+/-- **The collision certificate**: the potential certificate specialized to the rates
+`collisionRate t n N` and the charge `t/2` per unit of mass, giving the event bound
+`(7t+5) t min(w, t) / (4N)`, with leading coefficient `7/4`. This refines the collision-event
+argument of ePrint 2025/2166 §9.3 (Lemma 9.6, p. 61; event bound, pp. 64–65), which charges
+every call the worst-case squared commutator. The hypotheses are local
 trace inequalities, an initially zero potential and event, and a bound on the original mass.
 Concrete compressed-oracle applications must establish these hypotheses for their database
 population; this statement does not identify an arbitrary runtime with a compressed oracle. -/
