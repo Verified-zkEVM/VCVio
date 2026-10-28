@@ -134,7 +134,7 @@ theorem dlogExperiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampl
       have hd := congrArg MvPolynomial.totalDegree (sub_eq_zero.mp he)
       simp at hd
     · simp [W, h]
-  have h := computational_runGen_symbolic_le ($ᵗ (Unit → F))
+  have h := prEvent_runGen_symbolic_le_add_of_polynomial ($ᵗ (Unit → F))
     (degreeClosed_discreteSig (fun _ : Unit => 1))
     (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A
     (fun s => hq.appendsTo s) tbl hd W 1 (fun z _ => hW z)
@@ -209,7 +209,7 @@ theorem cdhExperiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
       have hdeg := hp z hz
       omega
     · simpa only [W, target, map_sub, map_mul, MvPolynomial.eval_X, sub_eq_zero] using he.symm
-  have h := computational_runGen_symbolic_le ($ᵗ (Bool → F))
+  have h := prEvent_runGen_symbolic_le_add_of_polynomial ($ᵗ (Bool → F))
     (degreeClosed_discreteSig (fun _ : Unit => 1))
     (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A
     (fun s => hq.appendsTo s) tbl hd W 2 hW E hE

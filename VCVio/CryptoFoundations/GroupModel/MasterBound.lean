@@ -562,7 +562,8 @@ theorem prEvent_runGen_symbolic_le_add [Field F] [DecidableEq F] [DecidableEq ι
 
 /-- **T8.** If success forces a nonzero bounded-degree output polynomial to vanish, the
 hidden-point success probability is at most the collision bound plus its root bound. -/
-theorem computational_runGen_symbolic_le_of_support [Field F] [DecidableEq F] [DecidableEq ι]
+theorem prEvent_runGen_symbolic_le_add_of_polynomial_of_support
+    [Field F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type} {σ : Sig S}
     (xs : ProbComp (ι → F)) {D : S → ℕ} {ε : S → ℝ≥0∞} {B ε' : ℝ≥0∞}
     (hD : σ.DegreeClosed D)
@@ -603,7 +604,7 @@ theorem computational_runGen_symbolic_le_of_support [Field F] [DecidableEq F] [D
 
 /-- **T8 with per-sort budgets.** The collision sum uses the budget and degree of each sort;
 the output polynomial contributes one further root-probability bound. -/
-theorem computational_runGen_symbolic_le [Field F] [DecidableEq F] [DecidableEq ι]
+theorem prEvent_runGen_symbolic_le_add_of_polynomial [Field F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type} {σ : Sig S}
     (xs : ProbComp (ι → F)) {D : S → ℕ} {ε : S → ℝ≥0∞} {ε' : ℝ≥0∞} {n : S → ℕ}
     (hD : σ.DegreeClosed D)
@@ -623,7 +624,8 @@ theorem computational_runGen_symbolic_le [Field F] [DecidableEq F] [DecidableEq 
     Pr{let x ← xs; let z ← (runGen (symbolic F σ ι)
       (fun _ p => MvPolynomial.eval x p) oa tbl)}[E x z] ≤
       (∑ s, (((tbl s).length + n s + 1).choose 2 : ℝ≥0∞) * ε s) + ε' := by
-  apply computational_runGen_symbolic_le_of_support xs hD hε oa tbl hd _ W k hW E hE hroot
+  apply prEvent_runGen_symbolic_le_add_of_polynomial_of_support xs hD hε oa tbl hd _
+    W k hW E hE hroot
   intro z hz
   apply Finset.sum_le_sum
   intro s _

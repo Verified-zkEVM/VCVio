@@ -168,7 +168,7 @@ theorem experiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
       bind_map_left, Functor.map_map, Function.comp_def, Prod.map, id_eq,
       decide_eq_true_eq] using hs.prEvent_eq id
   rw [hevent]
-  have hb := computational_runGen_symbolic_le ($ᵗ (Unit → F)) hD
+  have hb := prEvent_runGen_symbolic_le_add_of_polynomial ($ᵗ (Unit → F)) hD
     (ε := fun s => (D s : ℝ≥0∞) / Fintype.card F)
     (ε' := (1 : ℝ≥0∞) / Fintype.card F)
     (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A hn tbl hd

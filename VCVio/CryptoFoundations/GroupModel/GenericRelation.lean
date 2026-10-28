@@ -78,21 +78,15 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampleabl
   let W := fun (z : (Fin n → F) × Tbl (fun _ : Unit => MvPolynomial (Fin n) F)) =>
     ∑ i, MvPolynomial.C (z.1 i) * MvPolynomial.X i
   have hW (z : (Fin n → F) × Tbl (fun _ : Unit => MvPolynomial (Fin n) F)) :
-      (W z).totalDegree ≤ 1 := by
-    apply MvPolynomial.totalDegree_finsetSum_le
-    intro i _
-    exact (MvPolynomial.totalDegree_mul _ _).trans (by simp)
+      (W z).totalDegree ≤ 1 :=
+    _root_.DiscreteLogRelation.totalDegree_sum_C_mul_X_le_one z.1
   have hE (x : Fin n → F)
       (z : (Fin n → F) × Tbl (fun _ : Unit => MvPolynomial (Fin n) F))
       (he : E x z) : W z ≠ 0 ∧ MvPolynomial.eval x (W z) = 0 := by
     constructor
-    · intro h
-      apply he.1
-      funext i
-      have hx := congrArg (MvPolynomial.eval (Pi.single i 1)) h
-      simpa [W, Pi.single_apply, mul_ite] using hx
+    · exact _root_.DiscreteLogRelation.sum_C_mul_X_ne_zero z.1 he.1
     · simpa [W] using he.2
-  have h := computational_runGen_symbolic_le ($ᵗ (Fin n → F))
+  have h := prEvent_runGen_symbolic_le_add_of_polynomial ($ᵗ (Fin n → F))
     (degreeClosed_discreteSig (fun _ : Unit => 1))
     (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A
     (fun s => hq.appendsTo s) tbl hd W 1 (fun z _ => hW z) E
