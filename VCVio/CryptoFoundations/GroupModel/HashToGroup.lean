@@ -11,7 +11,8 @@ public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Presentation
 /-! # Hash-to-group for algebraic games
 
 Scheme-independent lazy hashing, programmable coefficient rows, perfect simulation,
-transport of chronological explanations, and relation extraction with explicit cancellation loss.
+coin-aware transport of chronological explanations, symbolic receipt provenance, and normalized
+relation extraction for independently sampled challenge tables.
 -/
 
 public section

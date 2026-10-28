@@ -6,12 +6,12 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup
-public import Mathlib.Data.ZMod.Basic
+public import Mathlib.Algebra.Field.ZMod
 
 /-! # Hash-to-group regression tests
 
 Local fixtures over `ZMod 101` exercise certified adaptive hashing, coefficient substitution,
-perfect simulation, and cancellation caused by repeated cached replies.
+perfect simulation, private coins, and symbolic normalization of repeated cached replies.
 -/
 
 public section
@@ -21,6 +21,8 @@ open OracleComp OracleSpec GroupModel.Interaction GroupModel.HashToGroup
 namespace HashToGroupTest
 
 private abbrev F := ZMod 101
+
+private instance : Fact (Nat.Prime 101) := ⟨by decide⟩
 private abbrev Gs := fun _ : Unit => F
 private abbrev Spec := explainedSpec F Gs Bool (fun _ => Unit)
 
@@ -95,7 +97,7 @@ private def duplicateAdversary : Adversary F Gs Unit Bool (fun _ => Unit) Unit w
     refine ⟨fun _ => .nil, fun second => ?_⟩
     exact Explained.valid_ofVectors _ _ _
 
--- The exact loss in the relation bound can be one, even with honest uniform programming.
+-- Receipt-level differences can cancel, even with honest uniform programming.
 example (B : Fin 2 → F) (sample : Bool → ProbComp (Fin 2 → F)) :
     Pr{let z ← execution (G := F) B sample duplicateAdversary []}[
       RepresentationCollision z.1 ∧ relationVector z.2.2 z.1 = 0] = 1 := by
@@ -118,5 +120,78 @@ example (r : Fin 2 → F) :
 /-- The difference of two identical receipt rows cancels under representation transport. -/
 theorem transport_duplicate_rows (r : Fin 2 → ZMod 101) : transport [r, r] [1, -1] = 0 := by
   simp [transport, evaluate, List.mapIdx_cons, List.mapIdx_nil]
+
+private abbrev CoinSpec := explainedSpec F Gs (GroupModel.CoinQuery Bool)
+  (GroupModel.CoinReply (fun _ => Unit))
+
+private def collisionAdversary (nextLabel : F → Bool) :
+    Adversary F Gs Unit (GroupModel.CoinQuery Bool)
+      (GroupModel.CoinReply (fun _ => Unit)) Unit where
+  main input := do
+    let first ← CoinSpec.query ⟨⟨.inl false, fun _ => []⟩, fun _ => []⟩
+    let second ← CoinSpec.query
+      ⟨⟨.inl (nextLabel ((first.groups ()).getD 0 0)), fun _ => []⟩, fun _ => []⟩
+    let basis := extend (extend input.groups first.groups) second.groups
+    return Explained.ofVectors basis () (fun s =>
+      [fun i => if i.val = (input.groups s).length then 1 else 0,
+       fun i => if i.val = (extend input.groups first.groups s).length then 1 else 0])
+  algebraic input := by
+    refine ⟨fun _ => .nil, fun first => ?_⟩
+    refine ⟨fun _ => .nil, fun second => ?_⟩
+    exact Explained.valid_ofVectors _ _ _
+
+-- Repeated cached labels remain two receipts, but no longer win the normalized game.
+example (B : Origin 0 Bool → F) :
+    Pr{let z ← normalizedExecution (F := F) (G := F) B (collisionAdversary fun _ => false)}[
+      NormalizedCollision z.2.2 z.1] = 0 := by
+  dsimp only [normalizedExecution, collisionAdversary]
+  erw [runGameWithCoins_hash]
+  simp only [initial, oracle_apply, QueryCache.empty_apply, map_pure, pure_bind]
+  erw [runGameWithCoins_hash]
+  simp [oracle_apply, reply, Explained.ofVectors, extend, NormalizedCollision,
+    merge, transport, evaluate, List.mapIdx_cons, List.mapIdx_nil, prEvent_norm]
+
+
+-- Equal values at different labels remain a real normalized collision.
+example (g : F) :
+    Pr{let z ← (normalizedExecution (n := 0) (F := F) (G := F) (fun _ => g)
+      (collisionAdversary fun _ => true))}[NormalizedCollision z.2.2 z.1] = 1 := by
+  have hne := merge_pair_ne (F := F) (Sum.inr false : Origin 0 Bool) (Sum.inr true)
+    (by decide)
+  dsimp only [normalizedExecution, collisionAdversary]
+  erw [runGameWithCoins_hash]
+  simp only [initial, oracle_apply, QueryCache.empty_apply, map_pure, pure_bind]
+  erw [runGameWithCoins_hash]
+  simpa [oracle_apply, reply, Explained.ofVectors, extend, NormalizedCollision,
+    evaluate, List.mapIdx_cons, List.mapIdx_nil, prEvent_norm] using hne
+
+
+-- The finite challenge-table bound accepts labels selected from previous group replies.
+example :
+    Pr{let w ← (normalizedTrial (F := F) (G := F) 1 (1 : F)
+      (collisionAdversary fun g => decide (g ≠ 0)))}[NormalizedCollision w.2.2.2 w.2.1] ≤
+      Pr{let b ← (DiffieHellman.dlogExperiment (1 : F)
+        (DiscreteLogRelation.plainReduction (normalizedReduction (F := F) (G := F) (n := 1)
+          (collisionAdversary fun g => decide (g ≠ 0)))))}[b = true] + 1 / 101 := by
+  simpa only [ZMod.card, Nat.cast_ofNat] using
+    normalizedTrial_le_dlog (F := F) (G := F) 1 (1 : F) generator_bijective
+    (collisionAdversary fun g => decide (g ≠ 0))
+
+private def coinHandle : GroupModel.HandleAdversary F (GroupModel.discreteSig Unit) Gs
+    Unit Bool (fun _ => Unit) Unit := fun _ => do
+  let c : Fin 2 ← (GroupModel.HandleSpec F Unit Gs Bool (fun _ => Unit)).query
+    (.inr (.inr (.inl 1)))
+  (GroupModel.HandleSpec F Unit Gs Bool (fun _ => Unit)).query
+    (.inr (.inr (.inr ⟨decide (c = 1), fun _ => []⟩)))
+
+-- Ordinary imports suffice to transport the actual translated randomized handle run.
+example (B : Fin 2 → F) (sample : Bool → ProbComp (Fin 2 → F))
+    (z : (Explained F Unit Gs × Groups Gs) × State Bool (Fin 2 → F))
+    (hz : z ∈ support (((GroupModel.toExplained coinHandle (fun _ => id)).run
+      (GroupModel.withCoins coins (programmed (F := F) (G := F) B sample))
+      ⟨(), fun _ => []⟩).run (initial []))) :
+    (transportExplained (fun _ => z.2.2) z.1.1 ()).map (basisMap (G := F) B) =
+      z.1.1.value.groups () :=
+  toExplained_programmed_transport B sample coinHandle (fun _ => id) (initial []) z hz
 
 end HashToGroupTest

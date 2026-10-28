@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Oracle
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Transport
+public import VCVio.CryptoFoundations.GroupModel.Coins
 
 /-! # Programmed hash-to-group and certified executions
 
@@ -21,7 +22,7 @@ namespace GroupModel.HashToGroup
 
 open OracleComp OracleSpec Interaction
 
-variable {Label F G κ Data α : Type}
+variable {Label F G κ Data α Query : Type} {Reply : Query → Type}
 
 /-- The programmed interaction oracle evaluates sampled coefficient vectors over `B`. -/
 @[expose] def programmed [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
@@ -83,9 +84,9 @@ theorem scalarSample_uniform [CommSemiring F] [AddCommMonoid G] [Module F G]
 
 /-- Forward explained requests to the plain game while retaining explanations in the result. -/
 @[expose] def interactionProgram
-    (p : OracleComp (explainedSpec F (fun _ : Unit => G) Label (fun _ => Unit)) α) :
-    OracleComp (gameSpec Label G) α :=
-  simulateQ (fun q => (gameSpec Label G).query q.value) p
+    (p : OracleComp (explainedSpec F (fun _ : Unit => G) Query Reply) α) :
+    OracleComp (plainSpec (fun _ : Unit => G) Query Reply) α :=
+  simulateQ (fun q => (plainSpec (fun _ : Unit => G) Query Reply).query q.value) p
 
 /-- Run an explained computation against the programmed oracle and retain its coefficient log. -/
 @[expose] def runProgram [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]

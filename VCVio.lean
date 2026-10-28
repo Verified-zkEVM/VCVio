@@ -91,9 +91,11 @@ public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 public import VCVio.CryptoFoundations.GroupModel.GenericRelation
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup
+public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Coins
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Oracle
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Presentation
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Programmed
+public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Provenance
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Relation
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Transport
 public import VCVio.CryptoFoundations.GroupModel.Instances
