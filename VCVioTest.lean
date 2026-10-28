@@ -11,6 +11,7 @@ public import VCVioTest.CryptoFoundations.ComplexityAdapters
 public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.CslibPPolyUniverses
+public import VCVioTest.CryptoFoundations.DiscreteLogRelation
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.KeyedHashCovering
 public import VCVioTest.CryptoFoundations.OracleClosure
@@ -51,6 +52,7 @@ public import VCVioTest.GroupModel.Cost
 public import VCVioTest.GroupModel.Decisional
 public import VCVioTest.GroupModel.GenericDDH
 public import VCVioTest.GroupModel.GenericHardness
+public import VCVioTest.GroupModel.GenericRelation
 public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.MasterBound
 public import VCVioTest.ITSR
