@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.Schemes.BLS.Aggregate.Reduction
+public import VCVio.Schemes.BLS.Aggregate.Security
 public import Mathlib.Algebra.Field.ZMod
 
 /-! # Aggregate BLS regression theorems
@@ -13,11 +13,13 @@ public import Mathlib.Algebra.Field.ZMod
 Concrete two-signer verification and duplicate-message rejection over `ZMod 101` with
 multiplication as the pairing. A separate two-dimensional second-source example records
 the distinction between a linear source map and compatibility with the pairing.
+A one-hash, one-sign adversary instantiates the Type 2 security theorem with loss four.
 -/
 
 public section
 
 open OracleComp OracleSpec
+open scoped ENNReal
 
 namespace BLSAggregateTest
 
@@ -62,8 +64,42 @@ theorem zero_query_bound :
     BLS.Aggregate.QueryBound A 0 0 1 := by
   simp [BLS.Aggregate.QueryBound]
 
-/-- A linear source map can meet the two generator hypotheses yet fail the arbitrary-key
-pairing identity needed to strip contributions. Here `ψ` projects the first coordinate,
+/-- A concrete adversary hashes one message, signs the other, and returns a two-message
+aggregate. The named Type 2 reduction satisfies the factor-four bound, with both source
+generator conditions discharged for multiplication by one in `ZMod 101`. -/
+theorem one_hash_one_sign_bound :
+    let A : AggregateSignatureAlg.UnforgeableAdversary toyScheme := ⟨fun pk => do
+      let h : ZMod 101 ←
+        ((unifSpec + (Bool →ₒ ZMod 101)) + (Bool →ₒ ZMod 101)).query (.inl (.inr true))
+      let σ : ZMod 101 ←
+        ((unifSpec + (Bool →ₒ ZMod 101)) + (Bool →ₒ ZMod 101)).query (.inr false)
+      return ([(pk, true), (pk, false)], pk * h + σ)⟩
+    BLS.Aggregate.QueryBound A 1 1 2 ∧
+      AggregateSignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ ZMod 101)) A ≤
+        4 * Pr{let b ← CoCDH.isoExperiment 1
+                (BLS.Aggregate.reduction LinearMap.id A 1 1 2)}[b = true] := by
+  intro A
+  have hQ : BLS.Aggregate.QueryBound A 1 1 2 := by
+    intro pk
+    refine ⟨?_, ?_, ?_⟩
+    · simp [A, isQueryBoundP_query_bind_iff]
+    · simp [A, isQueryBoundP_query_bind_iff]
+    · intro z hz
+      simp only [A, support_bind, support_query, Set.mem_iUnion, Set.mem_univ, exists_true_left,
+        support_pure, Set.mem_singleton_iff] at hz
+      obtain ⟨h, σ, rfl⟩ := hz
+      simp
+  refine ⟨hQ, ?_⟩
+  have hg : Function.Bijective (· • (1 : ZMod 101) : ZMod 101 → ZMod 101) := by simp
+  have h := BLS.Aggregate.unforgeableAdvantage_le
+    (LinearMap.id (R := ZMod 101) (M := ZMod 101)) A 1 1 2 hQ
+    (by simp) hg.surjective (by simp)
+  norm_num at h
+  exact h
+
+/-- A linear source map can meet first-source generation and nondegeneracy without
+second-source cyclicity, yet fail the arbitrary-key identity needed to strip contributions.
+Here `ψ` projects the first coordinate,
 while the pairing uses the sum of both coordinates. -/
 theorem source_map_compatibility_counterexample :
     let ψ : (ZMod 101 × ZMod 101) →ₗ[ZMod 101] ZMod 101 := LinearMap.fst _ _ _

@@ -565,8 +565,17 @@ public import VCVio.Quantum.VC.Proof.Repeatability
 public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
 public import VCVio.Schemes.BLS.Abort
+public import VCVio.Schemes.BLS.Aggregate.Algebra
+public import VCVio.Schemes.BLS.Aggregate.Averaging
 public import VCVio.Schemes.BLS.Aggregate.Basic
+public import VCVio.Schemes.BLS.Aggregate.Execution
+public import VCVio.Schemes.BLS.Aggregate.Extraction
+public import VCVio.Schemes.BLS.Aggregate.ExtractionProbability
+public import VCVio.Schemes.BLS.Aggregate.GameIdentification
+public import VCVio.Schemes.BLS.Aggregate.Guess
+public import VCVio.Schemes.BLS.Aggregate.Programming
 public import VCVio.Schemes.BLS.Aggregate.Reduction
+public import VCVio.Schemes.BLS.Aggregate.Security
 public import VCVio.Schemes.BLS.Averaging
 public import VCVio.Schemes.BLS.Basic
 public import VCVio.Schemes.BLS.Covariance

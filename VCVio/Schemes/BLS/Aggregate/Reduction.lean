@@ -58,14 +58,13 @@ The challenge slot uses its independently sampled mask; a missing cache entry co
 `h + mask • ψ gen₂`; other answers are `r • ψ gen₂`. Signing uses `r • ψ pk`.
 After an abort, duplicate messages, or absence of a fresh honest selected entry, it returns
 zero. Otherwise it strips every scalar contribution, including the selected entry's mask. -/
-@[expose] def reductionAt [Field F] [SampleableType F]
+@[expose] def reductionAtMask [Field F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     (ψ : G₂ →ₗ[F] G₁) {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₂ : G₂}
     (A : AggregateSignatureAlg.UnforgeableAdversary (scheme (M := M) e g₂))
-    (j : ℕ) : CoCDH.IsoAdversary F G₁ G₂ :=
+    (j : ℕ) (mask : F) : CoCDH.IsoAdversary F G₁ G₂ :=
   fun gen₂ pk h => do
-    let mask ← $ᵗ F
     let z ← (simulateQ
       (indexedOracle (tagDraw (V := F) j)
         (fun tag => tag.elim (h + mask • ψ gen₂) (· • ψ gen₂))
@@ -77,6 +76,17 @@ zero. Otherwise it strips every scalar contribution, including the selected entr
         (match z.2.cache p.2 with | some (none, _) => true | _ => false)) then
       return z.1.2 - (z.1.1.map (fun p => cachedScalar mask z.2 p.2 • ψ p.1)).sum
     else return 0
+
+/-- Fixed-index solver with an independent uniform mask for the programmed hash. -/
+@[expose] def reductionAt [Field F] [SampleableType F]
+    [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
+    (ψ : G₂ →ₗ[F] G₁) {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₂ : G₂}
+    (A : AggregateSignatureAlg.UnforgeableAdversary (scheme (M := M) e g₂))
+    (j : ℕ) : CoCDH.IsoAdversary F G₁ G₂ :=
+  fun gen₂ pk h => do
+    let mask ← $ᵗ F
+    reductionAtMask ψ A j mask gen₂ pk h
 
 /-- BGLS's Type 2 solver with a uniform insertion-index guess. The guessing range has
 `max 1 (qH + qS + N)` slots: direct hashes, signing hashes, and final verification hashes.
