@@ -65,14 +65,18 @@ private theorem ddh_right_independent [Field F] :
   funext i
   fin_cases i <;> simp [e, coe_basisMonomials, X]
 
-private theorem ddh_sameKernel [Field F] :
+/-- The real DDH table `[1, X₀, X₁, X₀ * X₁]` and the random DDH table
+`[1, X₀, X₁, X₂]` have the same linear relation kernel over any field. -/
+theorem ddhTables_sameKernel [Field F] :
     SameKernel (F := F) (ι := Fin 3)
       (fun _ : Unit => [1, X 0, X 1, X 0 * X 1])
       (fun _ : Unit => [1, X 0, X 1, X 2]) :=
   sameKernel_of_linearIndependent (fun _ => rfl)
     (fun _ => ddh_left_independent) (fun _ => ddh_right_independent)
 
-private theorem ddh_degreeLE [Field F] :
+/-- The real DDH table has total degree at most two in each entry, and the random DDH
+table has total degree at most one in each entry. -/
+theorem ddhTables_degreeLE [Field F] :
     DegreeLE (F := F) (ι := Fin 3) 2
       (fun _ : Unit => [1, X 0, X 1, X 0 * X 1]) ∧
     DegreeLE (F := F) (ι := Fin 3) 1
@@ -193,7 +197,7 @@ theorem ddhAdvantage_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
   rw [DiffieHellman.ddhAdvantage, hl.evalDist_eq, hr.evalDist_eq]
   have hb := measureETVDist_runGen_sameKernel_uniform_le A hq
     (fun _ => [1, X 0, X 1, X 0 * X 1]) (fun _ => [1, X 0, X 1, X 2])
-    ddh_degreeLE.1 ddh_degreeLE.2 ddh_sameKernel
+    ddhTables_degreeLE.1 ddhTables_degreeLE.2 ddhTables_sameKernel
   calc
     _ ≤ measureETVDist (Prod.snd <$> left) (Prod.snd <$> right) :=
       measure_absDiff_apply_le_measureETVDist _ _ (MeasurableSet.singleton true)
