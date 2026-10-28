@@ -15,7 +15,8 @@ Checks of `OracleSpec.batch`, its handlers and its budgets on small concrete pro
 mixing oracles with different answer types, the order in which a round's points are submitted,
 the empty round, a round with a repeated point, free uniform queries, and a two-round program that
 no one-round budget admits, whatever its point budget. Budgets are checked to be exact: each point
-is charged, so a budget one short fails.
+is charged, so a budget one short fails. The typed rounds `queryRound₂`, `queryRound` and
+`queryPoint` are checked against a fixed answer table and against their budgets.
 -/
 
 public section
@@ -243,5 +244,40 @@ example : (inferInstance : hetSpec.batch ⊂ₒ (hetSpec + unifSpec).batch).onQu
 /-- Lifting preserves the online budget. -/
 example : IsOnlineQueryBound (liftComp twoRounds (unifSpec + (hetSpec + unifSpec).batch)) (2, 2) :=
   twoRounds_isOnlineQueryBound.liftComp
+
+/-! ## Rounds with typed answers -/
+
+/-- One round to both oracles through `queryRound₂`; each answer is read at its own type, with no
+cast. -/
+def typedRound : OracleComp (unifSpec + hetSpec.batch) (Fin 3 × Bool) := do
+  let us ← queryRound₂ (fun _ : Fin 1 => true) (fun _ : Fin 1 => false)
+  pure (us.1 0, us.2 0)
+
+example : simulateQ (zeroCoins + hetImpl).batch' typedRound = ((2 : Fin 3), true) := rfl
+
+/-- Against a fixed table, a single-point round returns the table's answer. -/
+example : simulateQ (unifFwdAnswerImpl hetImpl).batch' (queryPoint (spec := hetSpec) false) =
+    pure true := by
+  rw [simulateQ_queryPoint]
+  rfl
+
+/-- A typed round costs one round and one point per point it holds. -/
+example : IsOnlineQueryBound (queryRound₂ (spec := hetSpec) (fun _ : Fin 1 => true)
+    (fun _ : Fin 2 => false)) (1, 3) :=
+  isOnlineQueryBound_queryRound₂ _ _
+
+example : ¬ IsOnlineQueryBound (queryPoint (spec := hetSpec) true) (1, 0) := by
+  simp [queryPoint, queryRound, queryRound₂, isQueryBound_map_iff]
+
+/-- Two single-point rounds in sequence fit two rounds of two points. -/
+example : IsOnlineQueryBound (do
+    let _ ← queryPoint (spec := hetSpec) true
+    queryPoint (spec := hetSpec) false) (2, 2) :=
+  isOnlineQueryBound_bind_le (1, 1) (1, 1) (isOnlineQueryBound_queryPoint _)
+    (fun _ => isOnlineQueryBound_queryPoint _) ⟨le_rfl, le_rfl⟩
+
+/-- Local coins lifted from `ProbComp` submit no rounds. -/
+example : IsOnlineQueryBound (liftComp ($ᵗ Fin 4) (unifSpec + hetSpec.batch)) (0, 0) :=
+  isOnlineQueryBound_liftComp _ _
 
 end VCVioTest.PointerChainPuzzle.Batch

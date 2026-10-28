@@ -32,6 +32,9 @@ Local coins (`unifSpec` queries) are free in both phases.
   online budget.
 * `IsOnlineQueryBound.liftComp`: lifting a program through a `SubSpec` inclusion preserves the
   online budget.
+* `isOnlineQueryBound_queryRound₂`, `isOnlineQueryBound_queryRound`,
+  `isOnlineQueryBound_queryPoint`: each of the typed rounds costs one round and one point per
+  point it holds.
 -/
 
 public section
@@ -156,6 +159,49 @@ lemma IsOnlineQueryBound.isPointQueryBound {oa : OracleComp (unifSpec + spec.bat
   IsQueryBound.proj Prod.snd
     (fun t b' hb => by rcases t with n | ts <;> simp_all)
     (fun t b' hb => by rcases t with n | ts <;> simp) h
+
+/-! ## Budgets of building blocks -/
+
+/-- A pure value submits no rounds. -/
+lemma isOnlineQueryBound_pure (x : α) (b : ℕ × ℕ) :
+    IsOnlineQueryBound (pure x : OracleComp (unifSpec + spec.batch) α) b :=
+  trivial
+
+/-- A lifted `ProbComp`, which only flips local coins, submits no rounds. -/
+lemma isOnlineQueryBound_liftComp (oa : ProbComp α) (b : ℕ × ℕ) :
+    IsOnlineQueryBound (liftComp oa (unifSpec + spec.batch)) b := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => exact isOnlineQueryBound_pure x b
+  | query_bind t k ih =>
+      rw [liftComp_bind, liftComp_query]
+      change IsOnlineQueryBound (liftM ((unifSpec + spec.batch).query (.inl t)) >>= fun u =>
+        (k u).liftComp _) b
+      exact (isOnlineQueryBound_query_bind_inl_iff _ _ _).2 ih
+
+/-- Composing online budgets `b₁` and `b₂` into a budget `b` that covers their sum. -/
+lemma isOnlineQueryBound_bind_le {oa : OracleComp (unifSpec + spec.batch) α}
+    {ob : α → OracleComp (unifSpec + spec.batch) β} (b₁ b₂ : ℕ × ℕ) {b : ℕ × ℕ}
+    (h₁ : IsOnlineQueryBound oa b₁) (h₂ : ∀ x, IsOnlineQueryBound (ob x) b₂)
+    (hb : b₁.1 + b₂.1 ≤ b.1 ∧ b₁.2 + b₂.2 ≤ b.2) : IsOnlineQueryBound (oa >>= ob) b :=
+  (isOnlineQueryBound_bind h₁ h₂).mono (Prod.mk_le_mk.mpr hb)
+
+/-- The round `queryRound₂ p q` costs one round of `k + l` points. -/
+lemma isOnlineQueryBound_queryRound₂ {k l : ℕ} (p : Fin k → ι) (q : Fin l → ι) :
+    IsOnlineQueryBound (queryRound₂ (spec := spec) p q) (1, k + l) := by
+  rw [queryRound₂, IsOnlineQueryBound, isQueryBound_map_iff, isQueryBound_query_iff]
+  simp
+
+/-- The round `queryRound p` costs one round of `k` points. -/
+lemma isOnlineQueryBound_queryRound {k : ℕ} (p : Fin k → ι) :
+    IsOnlineQueryBound (queryRound (spec := spec) p) (1, k) := by
+  rw [queryRound, IsOnlineQueryBound, isQueryBound_map_iff]
+  exact isOnlineQueryBound_queryRound₂ p _
+
+/-- The single-point round `queryPoint t` costs one round of one point. -/
+lemma isOnlineQueryBound_queryPoint (t : ι) :
+    IsOnlineQueryBound (queryPoint (spec := spec) t) (1, 1) := by
+  rw [queryPoint, IsOnlineQueryBound, isQueryBound_map_iff]
+  exact isOnlineQueryBound_queryRound _
 
 /-! ## Rewriting rounds as single queries -/
 
