@@ -105,6 +105,15 @@ example : (run singleModel (fun _ => id) singleGame equalityProgram
 example : (run singleModel (fun _ _ => ()) singleGame equalityProgram
     (fun _ => [1, 3])).1 = true := by decide
 
+/-- Bilinear queries look up each handle in its corresponding source table. -/
+theorem bilinear_argument_order :
+    let tbl : Tbl (fun _ : PSort => ZMod 7) := fun
+      | .g₁ => [2, 4]
+      | .g₂ => [3, 5]
+      | .gₜ => []
+    let oa : OracleComp pairingQueries Handle := pairingQueries.query (.inl (.bil () 0 1))
+    (run pairingModel (fun _ => id) pairingGame oa tbl).2 .gₜ = [3] := by decide
+
 /-! ## Product projection through ordinary imports -/
 
 section ProductProjection
@@ -114,7 +123,7 @@ variable {F : Type} [CommSemiring F] {S : Type} [DecidableEq S] {σ : Sig S}
     [∀ s, AddCommMonoid (W s)] [∀ s, Module F (W s)]
 
 example (M : Model F σ V) (N : Model F σ W) (s : S) (x : V s × W s) :
-    (Model.Hom.snd M N).toFun s x = x.2 := rfl
+    (Model.Hom.snd M N).toFun s x = x.2 := by simp only [Model.Hom.snd_apply]
 
 example (M : Model F σ V) (N : Model F σ W) (s : S) (x : V s × W s) :
     (Model.Hom.fst M N).toFun s x = x.1 := by simp only [Model.Hom.fst_apply]
