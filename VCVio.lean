@@ -89,7 +89,9 @@ public import VCVio.CryptoFoundations.GroupModel.Interaction
 public import VCVio.CryptoFoundations.GroupModel.OfExplained
 public import VCVio.CryptoFoundations.GroupModel.Oracle
 public import VCVio.CryptoFoundations.GroupModel.Projection
+public import VCVio.CryptoFoundations.GroupModel.RoundTrip
 public import VCVio.CryptoFoundations.GroupModel.Signature
+public import VCVio.CryptoFoundations.GroupModel.ToExplained
 public import VCVio.CryptoFoundations.GroupModel.Tracking
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
