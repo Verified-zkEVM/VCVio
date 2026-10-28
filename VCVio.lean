@@ -84,6 +84,7 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
 public import VCVio.CryptoFoundations.GroupModel.Collision
 public import VCVio.CryptoFoundations.GroupModel.Cost
 public import VCVio.CryptoFoundations.GroupModel.Decisional
+public import VCVio.CryptoFoundations.GroupModel.GenericCoCDH
 public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 public import VCVio.CryptoFoundations.GroupModel.GenericPairing
@@ -94,6 +95,7 @@ public import VCVio.CryptoFoundations.GroupModel.Oracle
 public import VCVio.CryptoFoundations.GroupModel.Projection
 public import VCVio.CryptoFoundations.GroupModel.Signature
 public import VCVio.CryptoFoundations.GroupModel.Tracking
+public import VCVio.CryptoFoundations.HardnessAssumptions.CoCDH
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation
