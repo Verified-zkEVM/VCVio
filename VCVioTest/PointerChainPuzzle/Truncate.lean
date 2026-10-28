@@ -12,8 +12,9 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Truncate
 # Truncating a program at a round bound
 
 Checks of `OracleComp.truncate` on small concrete programs: a three-round chain cut after one
-round returns the fallback, a program within the bound is unchanged, and uniform queries do not
-count as rounds.
+round returns the fallback; a fair coin choosing between one and three rounds returns `true`
+within one round with probability `1 / 2`, and so does its truncation after one round; a program
+within the bound is unchanged; and uniform queries do not count as rounds.
 -/
 
 public section
@@ -67,12 +68,45 @@ example : runCountingRounds (zeroCoins + notImpl).batch' threeRounds = (true, 3)
   simp only [threeRounds, runCountingRounds_query_bind, runCountingRounds_pure]
   rfl
 
-/-- Under any handler, outputs of the chain within one round are outputs of its truncation. -/
-example {m : Type → Type} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
-    [LawfulEvalDistSemantics m] (impl : QueryImpl (unifSpec + boolSpec.batch) m) (p : Bool → Prop) :
-    Pr{let z ← runCountingRounds impl threeRounds}[z.2 ≤ 1 ∧ p z.1] ≤
-      Pr{let x ← simulateQ impl (truncate 1 false threeRounds)}[p x] :=
-  prEvent_runCountingRounds_le_truncate impl threeRounds p
+/-! ## Probability kept by the truncation -/
+
+/-- Uniform local coins, and rounds answered by negating every point. -/
+def coinImpl : QueryImpl (unifSpec + boolSpec.batch) ProbComp :=
+  QueryImpl.ofLift unifSpec ProbComp +
+    fun ts => (pure (notImpl.batch ts).run : ProbComp (boolSpec.batch.Range ts))
+
+/-- A single round, returning `true`. -/
+def oneRound : OracleComp (unifSpec + boolSpec.batch) Bool := do
+  let _ ← liftM ((unifSpec + boolSpec.batch).query (.inr [false]))
+  pure true
+
+/-- A fair coin choosing between one round and the three-round chain; both return `true`. -/
+def coinRounds : OracleComp (unifSpec + boolSpec.batch) Bool := do
+  let b ← liftM ((unifSpec + boolSpec.batch).query (.inl 1))
+  if b.val = 0 then oneRound else threeRounds
+
+/-- Cut after one round, the coin keeps the one-round branch and cuts the three-round branch. -/
+lemma truncate_coinRounds :
+    truncate 1 false coinRounds = (do
+      let b ← liftM ((unifSpec + boolSpec.batch).query (.inl 1))
+      if b.val = 0 then oneRound else do
+        let _ ← liftM ((unifSpec + boolSpec.batch).query (.inr [false]))
+        pure false) := by
+  simp only [coinRounds, truncate_query_bind_inl, apply_ite (truncate 1 false), oneRound,
+    threeRounds, truncate_succ_query_bind_inr, truncate_zero_query_bind_inr, truncate_pure]
+
+/-- The program returns `true` within one completed round with probability `1 / 2`. -/
+example : Pr{let z ← runCountingRounds coinImpl coinRounds}[z.2 ≤ 1 ∧ z.1 = true] = 1 / 2 := by
+  simp only [coinRounds, oneRound, threeRounds, runCountingRounds_query_bind,
+    apply_ite (runCountingRounds coinImpl), runCountingRounds_pure]
+  simp [coinImpl, notImpl, ← apply_ite (pure : Bool × ℕ → ProbComp (Bool × ℕ)),
+    apply_ite Prod.fst, apply_ite Prod.snd, apply_ite (· ≤ 1), and_iff_left_of_imp Or.inl,
+    prEvent_liftM_query_eq_card_div, Finset.filter_eq']
+
+/-- Its truncation after one round returns `true` with probability `1 / 2`. -/
+example : Pr{let x ← simulateQ coinImpl (truncate 1 false coinRounds)}[x = true] = 1 / 2 := by
+  simp [truncate_coinRounds, oneRound, coinImpl, ← apply_ite (pure : Bool → ProbComp Bool),
+    prEvent_liftM_query_eq_card_div, Finset.filter_eq']
 
 /-! ## Programs within the bound -/
 
