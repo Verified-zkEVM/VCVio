@@ -87,44 +87,6 @@ private theorem uniform_bool [SampleableType F] :
   simpa only [prEvent_norm] using
     SampleableType.prEvent_uniformSample_pair_of_bijective hb p
 
-private theorem hidden_event_le [Field F] [Fintype F] [DecidableEq F]
-    [Finite ι] [SampleableType (ι → F)]
-    (A : OracleComp (genSpec F (discreteSig Unit)) α) (q k : ℕ)
-    (hq : IsQueryBoundP A (fun i => isGroupOp i = true) q)
-    (tbl : Tbl (fun _ : Unit => MvPolynomial ι F)) (hd : DegreeLE 1 tbl)
-    (E : (ι → F) → (α × Tbl (fun _ : Unit => MvPolynomial ι F)) → Prop)
-    (hE : ∀ z, DegreeLE 1 z.2 → Pr{let x ← $ᵗ (ι → F)}[E x z] ≤
-      (k : ℝ≥0∞) / Fintype.card F) :
-    Pr{let x ← $ᵗ (ι → F); let z ← (runGen (symbolic F (discreteSig Unit) ι)
-      (fun _ p => MvPolynomial.eval x p) A tbl)}[E x z] ≤
-      ((((tbl ()).length + q + 1).choose 2 + k : ℕ) : ℝ≥0∞) / Fintype.card F := by
-  classical
-  let : MeasurableSpace ((ι → F) × (α × Tbl (fun _ : Unit => MvPolynomial ι F))) := ⊤
-  have hm := (prEvent_runGen_symbolic_le_add ($ᵗ (ι → F))
-    (fun f hf hd => prob_eval_zero_univ_le_div f hf hd) A hq tbl hd
-    {w | E w.1 w.2} (MeasurableSet.of_discrete)).1
-  have hs : Pr{let x ← $ᵗ (ι → F); let z ← (runGen (symbolic F (discreteSig Unit) ι)
-      (fun _ => id) A tbl)}[E x z] ≤ (k : ℝ≥0∞) / Fintype.card F := by
-    rw [prEvent_bind_map_swap]
-    simpa only [map_bind, Functor.map_map, id_eq] using
-      prEvent_bind_le_of_forall_le_of_support
-        (runGen (symbolic F (discreteSig Unit) ι) (fun _ => id) A tbl)
-        (fun z => (fun x => E x z) <$> ($ᵗ (ι → F) : ProbComp _)) id
-        (fun z hz => by
-          simpa only [Functor.map_map, id_eq] using
-            hE z (runGen_degreeLE (fun _ => id) A tbl hd z hz))
-  simp only [Set.mem_ofPred_eq, Nat.cast_one] at hm
-  refine hm.trans ?_
-  calc
-    _ ≤ (k : ℝ≥0∞) / Fintype.card F +
-        (((∑ s, (tbl s).length) + q + 1).choose 2 : ℝ≥0∞) *
-          ((1 : ℝ≥0∞) / Fintype.card F) := add_le_add hs le_rfl
-    _ = ((((tbl ()).length + q + 1).choose 2 + k : ℕ) : ℝ≥0∞) / Fintype.card F := by
-      rw [Fintype.sum_unique, Subsingleton.elim (default : Unit) (),
-        Nat.cast_add, ENNReal.add_div]
-      simp only [div_eq_mul_inv, one_mul]
-      exact add_comm _ _
-
 /-- A generic discrete-logarithm adversary using at most `q` group operations succeeds with
 probability at most `((q + 3).choose 2 + 1) / |F|`. Equality queries are free. -/
 theorem dlogExperiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
@@ -134,7 +96,7 @@ theorem dlogExperiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampl
     Pr{let b ← DiffieHellman.dlogExperiment g (DLogAdversary.ofGeneric (G := G) A)}[b = true] ≤
       (((q + 3).choose 2 + 1 : ℕ) : ℝ≥0∞) / Fintype.card F := by
   let tbl : Tbl (fun _ : Unit => MvPolynomial Unit F) := fun _ => [1, MvPolynomial.X ()]
-  have hd : DegreeLE 1 tbl := by
+  have hd : DegreeLE (fun _ => 1) tbl := by
     intro s p hp
     simp only [tbl, List.mem_cons, List.not_mem_nil, or_false] at hp
     rcases hp with rfl | rfl <;> simp
@@ -160,21 +122,28 @@ theorem dlogExperiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampl
       prEvent_norm, bind_map_left, Functor.map_map, Function.comp_def,
       Prod.map, id_eq, decide_eq_true_eq] using hs.prEvent_eq id
   rw [he]
-  have h := hidden_event_le A q 1 hq tbl hd (fun x z => z.1 = x ()) (by
-    intro z _
-    have heq : ∀ x : Unit → F, z.1 = x () ↔ x = fun _ => z.1 := by
-      intro x
-      constructor
-      · intro h
-        funext u
-        cases u
-        exact h.symm
-      · rintro rfl
-        rfl
-    rw [prEvent_congr _ _ _ heq, SampleableType.prEvent_uniformSample_eq_singleton]
-    simp)
-  simpa only [groupSig, discreteSig, tbl, List.length_cons, List.length_nil, Nat.reduceAdd,
-    Nat.add_comm 2 q, Nat.add_assoc] using h
+  let W := fun (z : F × Tbl (fun _ : Unit => MvPolynomial Unit F)) =>
+    MvPolynomial.X () - MvPolynomial.C z.1
+  have hW (z : F × Tbl (fun _ : Unit => MvPolynomial Unit F)) :
+      (W z).totalDegree ≤ 1 := by
+    exact (MvPolynomial.totalDegree_sub_C_le _ _).trans (by simp)
+  have hE (x : Unit → F) (z : F × Tbl (fun _ : Unit => MvPolynomial Unit F))
+      (h : z.1 = x ()) : W z ≠ 0 ∧ MvPolynomial.eval x (W z) = 0 := by
+    constructor
+    · intro he
+      have hd := congrArg MvPolynomial.totalDegree (sub_eq_zero.mp he)
+      simp at hd
+    · simp [W, h]
+  have h := computational_runGen_symbolic_le ($ᵗ (Unit → F))
+    (degreeClosed_discreteSig (fun _ : Unit => 1))
+    (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A
+    (fun s => hq.appendsTo s) tbl hd W 1 (fun z _ => hW z)
+    (fun x z => z.1 = x ()) (fun x z _ he => hE x z he)
+    (fun f hf hd => prob_eval_zero_univ_le_div f hf hd)
+  refine h.trans_eq ?_
+  simp only [Fintype.sum_unique, tbl, List.length_cons, List.length_nil, Nat.reduceAdd,
+    Nat.cast_one, Nat.add_comm 2 q, Nat.add_assoc, Nat.cast_add, ENNReal.add_div]
+  simp [div_eq_mul_inv]
 
 /-- A generic computational Diffie–Hellman adversary using at most `q` group operations
 succeeds with probability at most `((q + 4).choose 2 + 2) / |F|`. Equality queries are free. -/
@@ -187,7 +156,7 @@ theorem cdhExperiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
   classical
   let tbl : Tbl (fun _ : Unit => MvPolynomial Bool F) :=
     fun _ => [1, MvPolynomial.X false, MvPolynomial.X true]
-  have hd : DegreeLE 1 tbl := by
+  have hd : DegreeLE (fun _ => 1) tbl := by
     intro s p hp
     simp only [tbl, List.mem_cons, List.not_mem_nil, or_false] at hp
     rcases hp with rfl | rfl | rfl <;> simp
@@ -215,25 +184,39 @@ theorem cdhExperiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
       Prod.map, id_eq, decide_eq_true_eq, lookup_mapTbl, evalAt_apply,
       smul_left_inj hg, E, Bool.false_eq_true, ↓reduceIte] using hs.prEvent_eq id
   rw [he]
-  have h := hidden_event_le A q 2 hq tbl hd E (by
-    intro z hz
-    let p := lookup z.2 () z.1
-    let target : MvPolynomial Bool F := MvPolynomial.X false * MvPolynomial.X true
-    have hp : p.totalDegree ≤ 1 := hz.lookup () z.1
-    have ht : target.totalDegree = 2 := by
-      rw [MvPolynomial.totalDegree_mul_of_isDomain (MvPolynomial.X_ne_zero false)
-        (MvPolynomial.X_ne_zero true)]
-      simp
-    have hn : target - p ≠ 0 := by
-      intro he
-      have he := congrArg MvPolynomial.totalDegree (sub_eq_zero.mp he)
+  let target : MvPolynomial Bool F := MvPolynomial.X false * MvPolynomial.X true
+  let W := fun (z : Handle × Tbl (fun _ : Unit => MvPolynomial Bool F)) =>
+    target - lookup z.2 () z.1
+  have ht : target.totalDegree = 2 := by
+    rw [MvPolynomial.totalDegree_mul_of_isDomain (MvPolynomial.X_ne_zero false)
+      (MvPolynomial.X_ne_zero true)]
+    simp
+  have hp (z : Handle × Tbl (fun _ : Unit => MvPolynomial Bool F))
+      (hz : z ∈ support (runGen (symbolic F groupSig Bool) (fun _ => id) A tbl)) :
+      (lookup z.2 () z.1).totalDegree ≤ 1 :=
+    (runGen_degreeLE (degreeClosed_discreteSig (fun _ : Unit => 1))
+      (fun _ => id) A tbl hd z hz).lookup () z.1
+  have hW (z : Handle × Tbl (fun _ : Unit => MvPolynomial Bool F))
+      (hz : z ∈ support (runGen (symbolic F groupSig Bool) (fun _ => id) A tbl)) :
+      (W z).totalDegree ≤ 2 :=
+    (MvPolynomial.totalDegree_sub _ _).trans (max_le (by omega) ((hp z hz).trans (by omega)))
+  have hE (x : Bool → F) (z : Handle × Tbl (fun _ : Unit => MvPolynomial Bool F))
+      (hz : z ∈ support (runGen (symbolic F groupSig Bool) (fun _ => id) A tbl))
+      (he : E x z) : W z ≠ 0 ∧ MvPolynomial.eval x (W z) = 0 := by
+    constructor
+    · intro heq
+      have heq := congrArg MvPolynomial.totalDegree (sub_eq_zero.mp heq)
+      have hdeg := hp z hz
       omega
-    have hdeg : (target - p).totalDegree ≤ 2 :=
-      (MvPolynomial.totalDegree_sub _ _).trans (max_le (by omega) (by omega))
-    have hb := prob_eval_zero_univ_le_div (target - p) hn hdeg
-    simp only [target, map_sub, map_mul, MvPolynomial.eval_X, sub_eq_zero] at hb
-    simpa only [E, p, eq_comm] using hb)
-  simpa only [groupSig, discreteSig, tbl, List.length_cons, List.length_nil, Nat.reduceAdd,
-    Nat.add_comm 3 q, Nat.add_assoc] using h
+    · simpa only [W, target, map_sub, map_mul, MvPolynomial.eval_X, sub_eq_zero] using he.symm
+  have h := computational_runGen_symbolic_le ($ᵗ (Bool → F))
+    (degreeClosed_discreteSig (fun _ : Unit => 1))
+    (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A
+    (fun s => hq.appendsTo s) tbl hd W 2 hW E hE
+    (fun f hf hd => prob_eval_zero_univ_le_div f hf hd)
+  refine h.trans_eq ?_
+  simp only [Fintype.sum_unique, tbl, List.length_cons, List.length_nil, Nat.reduceAdd,
+    Nat.cast_one, Nat.add_comm 3 q, Nat.add_assoc, Nat.cast_add, ENNReal.add_div]
+  simp [div_eq_mul_inv]
 
 end GroupModel

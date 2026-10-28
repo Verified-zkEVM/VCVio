@@ -8,8 +8,7 @@ module
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 
-/-!
-# Generic hardness of discrete-log relations
+/-! # Generic hardness of discrete-log relations
 
 A generic adversary receives the `n` challenge elements as its initial table. With at most `q`
 group operations, its relation-finding probability is at most
@@ -38,16 +37,6 @@ The table contains exactly `n` entries, without an additional generator entry. -
     _root_.DiscreteLogRelation.Adversary F G n :=
   fun xs => Prod.fst <$> runGen (Model.group G) (fun _ => id) A (fun _ => List.ofFn xs)
 
-private theorem relation_event_le [Field F] [Fintype F] [SampleableType F]
-    (a : Fin n → F) :
-    Pr{let x ← $ᵗ (Fin n → F)}[a ≠ 0 ∧ ∑ i, a i * x i = 0] ≤
-      (1 : ℝ≥0∞) / Fintype.card F := by
-  classical
-  by_cases ha : a = 0
-  · simp [ha]
-  simpa only [ha, ne_eq, not_false_eq_true, true_and] using
-    _root_.DiscreteLogRelation.prEvent_sum_mul_eq_zero_le a ha
-
 /-- A generic relation adversary on `n` given elements with at most `q` group operations
 succeeds with probability at most `((q + n + 1).choose 2 + 1) / |F|`. Equality queries are free,
 and handles outside the table retain the ordinary zero-default semantics. -/
@@ -61,7 +50,7 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampleabl
   classical
   let tbl : Tbl (fun _ : Unit => MvPolynomial (Fin n) F) :=
     fun _ => List.ofFn MvPolynomial.X
-  have hd : DegreeLE 1 tbl := by
+  have hd : DegreeLE (fun _ => 1) tbl := by
     intro s p hp
     obtain ⟨i, rfl⟩ := List.mem_ofFn.mp hp
     simp
@@ -86,23 +75,32 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampleabl
       hr, prEvent_norm, decide_eq_true_eq, Prod.map, id_eq, smul_smul,
       ← Finset.sum_smul, smul_eq_zero, hg, or_false, E]
   rw [he]
-  let : MeasurableSpace ((Fin n → F) ×
-      ((Fin n → F) × Tbl (fun _ : Unit => MvPolynomial (Fin n) F))) := ⊤
-  have hm := (prEvent_runGen_symbolic_le_add ($ᵗ (Fin n → F))
-    (fun f hf hd => prob_eval_zero_univ_le_div f hf hd) A hq tbl hd
-    {w | E w.1 w.2} (MeasurableSet.of_discrete)).1
-  have hs : Pr{let x ← $ᵗ (Fin n → F); let z ← (runGen (symbolic F groupSig (Fin n))
-      (fun _ => id) A tbl)}[E x z] ≤ (1 : ℝ≥0∞) / Fintype.card F := by
-    rw [prEvent_bind_map_swap]
-    simpa only [map_bind, Functor.map_map, id_eq] using
-      prEvent_bind_le_of_forall_le
-        (runGen (symbolic F groupSig (Fin n)) (fun _ => id) A tbl)
-        (fun z => (fun x => E x z) <$> ($ᵗ (Fin n → F) : ProbComp _)) id
-        (fun z => by simpa only [Functor.map_map, id_eq, E] using relation_event_le z.1)
-  simp only [Set.mem_ofPred_eq, Nat.cast_one] at hm
-  refine hm.trans ((add_le_add hs le_rfl).trans_eq ?_)
-  simp only [Fintype.sum_unique, tbl,
-    List.length_ofFn, Nat.cast_add, Nat.cast_one, div_eq_mul_inv, one_mul]
-  rw [Nat.add_comm n q, add_mul, one_mul, add_comm]
+  let W := fun (z : (Fin n → F) × Tbl (fun _ : Unit => MvPolynomial (Fin n) F)) =>
+    ∑ i, MvPolynomial.C (z.1 i) * MvPolynomial.X i
+  have hW (z : (Fin n → F) × Tbl (fun _ : Unit => MvPolynomial (Fin n) F)) :
+      (W z).totalDegree ≤ 1 := by
+    apply MvPolynomial.totalDegree_finsetSum_le
+    intro i _
+    exact (MvPolynomial.totalDegree_mul _ _).trans (by simp)
+  have hE (x : Fin n → F)
+      (z : (Fin n → F) × Tbl (fun _ : Unit => MvPolynomial (Fin n) F))
+      (he : E x z) : W z ≠ 0 ∧ MvPolynomial.eval x (W z) = 0 := by
+    constructor
+    · intro h
+      apply he.1
+      funext i
+      have hx := congrArg (MvPolynomial.eval (Pi.single i 1)) h
+      simpa [W, Pi.single_apply, mul_ite] using hx
+    · simpa [W] using he.2
+  have h := computational_runGen_symbolic_le ($ᵗ (Fin n → F))
+    (degreeClosed_discreteSig (fun _ : Unit => 1))
+    (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A
+    (fun s => hq.appendsTo s) tbl hd W 1 (fun z _ => hW z) E
+    (fun x z _ he => hE x z he)
+    (fun f hf hd => prob_eval_zero_univ_le_div f hf hd)
+  refine h.trans_eq ?_
+  simp only [Fintype.sum_unique, tbl, List.length_ofFn, Nat.cast_one,
+    Nat.add_comm n q, Nat.cast_add, ENNReal.add_div]
+  simp [div_eq_mul_inv]
 
 end GroupModel

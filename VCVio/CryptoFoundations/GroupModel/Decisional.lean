@@ -111,7 +111,7 @@ theorem measureETVDist_runGen_symbolic_fst_le [Field F] [DecidableEq F] [Decidab
       Pr{let x ← xs}[MvPolynomial.eval x f = 0] ≤ ε)
     (oa : OracleComp (genSpec F (discreteSig S)) α)
     (hq : IsQueryBoundP oa (fun i => isGroupOp i = true) q)
-    (tbl : Tbl (fun _ : S => MvPolynomial ι F)) (hd : DegreeLE d tbl) :
+    (tbl : Tbl (fun _ : S => MvPolynomial ι F)) (hd : DegreeLE (fun _ => d) tbl) :
     measureETVDist
       (do let x ← xs
           let z ← runGen (symbolic F (discreteSig S) ι) (fun _ p => MvPolynomial.eval x p) oa tbl
@@ -141,7 +141,7 @@ theorem measureETVDist_runGen_sameKernel_le [Field F] [DecidableEq F]
     (oa : OracleComp (genSpec F (discreteSig S)) α)
     (hq : IsQueryBoundP oa (fun i => isGroupOp i = true) q)
     (T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F))
-    (hd₀ : DegreeLE d₀ T₀) (hd₁ : DegreeLE d₁ T₁) (h : SameKernel T₀ T₁) :
+    (hd₀ : DegreeLE (fun _ => d₀) T₀) (hd₁ : DegreeLE (fun _ => d₁) T₁) (h : SameKernel T₀ T₁) :
     measureETVDist
       (do let x ← xs
           let z ← runGen (symbolic F (discreteSig S) ι) (fun _ p => MvPolynomial.eval x p) oa T₀
@@ -182,7 +182,7 @@ theorem prEvent_runGen_sameKernel_le_add [Field F] [DecidableEq F]
     (oa : OracleComp (genSpec F (discreteSig S)) α)
     (hq : IsQueryBoundP oa (fun i => isGroupOp i = true) q)
     (T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F))
-    (hd₀ : DegreeLE d₀ T₀) (hd₁ : DegreeLE d₁ T₁) (h : SameKernel T₀ T₁)
+    (hd₀ : DegreeLE (fun _ => d₀) T₀) (hd₁ : DegreeLE (fun _ => d₁) T₁) (h : SameKernel T₀ T₁)
     (E : Set ((ι → F) × α)) (hE : MeasurableSet E) :
     (Pr{let x ← xs; let z ← (runGen (symbolic F (discreteSig S) ι)
         (fun _ p => MvPolynomial.eval x p) oa T₀)}[(x, z.1) ∈ E] ≤
@@ -223,7 +223,7 @@ theorem measureETVDist_runGen_sameKernel_uniform_le [Field F] [DecidableEq F]
     {d₀ d₁ q : ℕ} (oa : OracleComp (genSpec F (discreteSig S)) α)
     (hq : IsQueryBoundP oa (fun i => isGroupOp i = true) q)
     (T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F))
-    (hd₀ : DegreeLE d₀ T₀) (hd₁ : DegreeLE d₁ T₁) (h : SameKernel T₀ T₁) :
+    (hd₀ : DegreeLE (fun _ => d₀) T₀) (hd₁ : DegreeLE (fun _ => d₁) T₁) (h : SameKernel T₀ T₁) :
     measureETVDist
       (do let x ← $ᵗ (ι → F)
           let z ← runGen (symbolic F (discreteSig S) ι) (fun _ p => MvPolynomial.eval x p) oa T₀

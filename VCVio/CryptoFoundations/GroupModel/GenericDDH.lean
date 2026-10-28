@@ -77,9 +77,9 @@ theorem ddhTables_sameKernel [Field F] :
 /-- The real DDH table has total degree at most two in each entry, and the random DDH
 table has total degree at most one in each entry. -/
 theorem ddhTables_degreeLE [Field F] :
-    DegreeLE (F := F) (ι := Fin 3) 2
+    DegreeLE (F := F) (ι := Fin 3) (fun _ => 2)
       (fun _ : Unit => [1, X 0, X 1, X 0 * X 1]) ∧
-    DegreeLE (F := F) (ι := Fin 3) 1
+    DegreeLE (F := F) (ι := Fin 3) (fun _ => 1)
       (fun _ : Unit => [1, X 0, X 1, X 2]) := by
   constructor
   · intro s p hp

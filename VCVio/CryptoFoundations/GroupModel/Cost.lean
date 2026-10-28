@@ -48,8 +48,65 @@ variable {F S : Type} {σ : Sig S} {ι : Type} {Γ : OracleSpec ι}
 @[simp] theorem Query.isOp_bil (o : σ.Bil) (a b : Handle) :
     (Query.bil (F := F) o a b).isOp = true := rfl
 
+/-- The sort receiving the appended entry, or none for equality queries. -/
+@[expose] def Query.target : Query F σ → Option S
+  | .add s _ _ => some s
+  | .smul s _ _ => some s
+  | .eq _ _ _ => none
+  | .lin o _ => some (σ.ltgt o)
+  | .bil o _ _ => some (σ.tgt o)
+
+/-- Addition appends at its operand sort. -/
+@[simp] theorem Query.target_add (s : S) (a b : Handle) :
+    (Query.add (F := F) (σ := σ) s a b).target = some s := rfl
+
+/-- Scalar multiplication appends at its operand sort. -/
+@[simp] theorem Query.target_smul (s : S) (c : F) (a : Handle) :
+    (Query.smul (σ := σ) s c a).target = some s := rfl
+
+/-- Equality has no append target. -/
+@[simp] theorem Query.target_eq (s : S) (a b : Handle) :
+    (Query.eq (F := F) (σ := σ) s a b).target = none := rfl
+
+/-- A linear structure map appends at its target sort. -/
+@[simp] theorem Query.target_lin (o : σ.Lin) (a : Handle) :
+    (Query.lin (F := F) o a).target = some (σ.ltgt o) := rfl
+
+/-- A bilinear structure map appends at its target sort. -/
+@[simp] theorem Query.target_bil (o : σ.Bil) (a b : Handle) :
+    (Query.bil (F := F) o a b).target = some (σ.tgt o) := rfl
+
+/-- Whether a combined-oracle query appends an entry at the specified sort. -/
+@[expose] def appendsTo (s : S) : Query F σ ⊕ ι → Prop :=
+  Sum.elim (fun t => t.target = some s) (fun _ => False)
+
+/-- Append targets can be decided from equality of sorts. -/
+instance [DecidableEq S] (s : S) : DecidablePred (appendsTo (F := F) (σ := σ) (ι := ι) s) :=
+  fun t => match t with
+    | .inl t => inferInstanceAs (Decidable (t.target = some s))
+    | .inr _ => inferInstanceAs (Decidable False)
+
+/-- A group query appends at a sort exactly when that sort is its target. -/
+@[simp] theorem appendsTo_inl (s : S) (t : Query F σ) :
+    appendsTo (ι := ι) s (.inl t) ↔ t.target = some s := Iff.rfl
+
+/-- Auxiliary queries do not append entries. -/
+@[simp] theorem appendsTo_inr (s : S) (t : ι) :
+    ¬ appendsTo (F := F) (σ := σ) s (.inr t) := id
+
 /-- Count group operations, ignoring auxiliary queries. -/
 @[expose] def isGroupOp : Query F σ ⊕ ι → Bool := Sum.elim Query.isOp (fun _ => false)
+
+/-- A total group-operation budget bounds appends to each individual sort. -/
+theorem _root_.OracleComp.IsQueryBoundP.appendsTo [DecidableEq S]
+    {α : Type} {oa : OracleComp (spec F σ + Γ) α} {q : ℕ}
+    (h : IsQueryBoundP oa (fun i => isGroupOp i = true) q) (s : S) :
+    IsQueryBoundP oa (GroupModel.appendsTo s) q := by
+  apply h.of_imp
+  intro t ht
+  cases t with
+  | inl t => cases t <;> simp_all [GroupModel.appendsTo, Query.target, isGroupOp, Query.isOp]
+  | inr t => exact False.elim ht
 
 /-- Each group operation costs one; equality is free. -/
 @[expose] def unitCost : CostModel (spec F σ) ℕ where
@@ -143,6 +200,28 @@ theorem impl_table_step [DecidableEq S] [CommSemiring F]
     replace hz := (mem_support_pure_iff _ _).mp hz <;>
     subst z
   all_goals first | rfl | exact ⟨_, _, rfl⟩
+
+private theorem impl_length_target [DecidableEq S] [CommSemiring F]
+    [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
+    {U : S → Type} [∀ s, DecidableEq (U s)]
+    (M : Model F σ V) (obs : (s : S) → V s → U s)
+    (t : Query F σ) (tbl : Tbl V) (z : spec F σ t × Tbl V)
+    (hz : z ∈ support ((impl M obs (OracleComp spec') t).run tbl)) (s : S) :
+    (z.2 s).length = (tbl s).length + if t.target = some s then 1 else 0 := by
+  cases t <;>
+    simp only [impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
+      StateT.modifyGet] at hz <;>
+    replace hz := (mem_support_pure_iff _ _).mp hz <;>
+    subst z
+  all_goals simp only [Query.target, Option.some.injEq]
+  all_goals try simp
+  all_goals
+    split
+    · rename_i h
+      subst s
+      simp [append]
+    · rename_i h
+      simp [append, Function.update_of_ne (Ne.symm h)]
 
 /-- Each group handler reply preserves the old table as a prefix in every sort. -/
 theorem impl_prefix [DecidableEq S] [CommSemiring F]
@@ -286,6 +365,30 @@ theorem runGen_length_le [DecidableEq S] [CommSemiring F]
     (tbl : Tbl V) (z : α × Tbl V) (hz : z ∈ support (runGen M obs oa tbl)) (s : S) :
     (z.2 s).length ≤ (tbl s).length + q :=
   run_length_le M obs _ preservesTbl_coins h tbl z hz s
+
+/-- A sort receives at most its own append budget many new entries. -/
+theorem runGen_length_le_of_target [DecidableEq S] [CommSemiring F]
+    [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
+    {U : S → Type} [∀ s, DecidableEq (U s)]
+    (M : Model F σ V) (obs : (s : S) → V s → U s)
+    {α : Type} {oa : OracleComp (genSpec F σ) α} {n : ℕ} (s : S)
+    (h : IsQueryBoundP oa (appendsTo s) n)
+    (tbl : Tbl V) (z : α × Tbl V) (hz : z ∈ support (runGen M obs oa tbl)) :
+    (z.2 s).length ≤ (tbl s).length + n := by
+  classical
+  apply h.cost_le_of_mem_support_run_simulateQ (fun tbl => (tbl s).length) ?_ ?_ tbl z hz
+  · intro t ht tbl z hz
+    cases t with
+    | inl t =>
+      rw [impl_length_target M obs t tbl z hz s]
+      simp_all
+    | inr t => exact False.elim ht
+  · intro t ht tbl z hz
+    cases t with
+    | inl t =>
+      rw [impl_length_target M obs t tbl z hz s]
+      simp_all
+    | inr t => rw [preservesTbl_coins t tbl z hz]
 
 /-- Private-coin runs have total size at most the initial size plus the operation budget. -/
 theorem runGen_sum_length_le [DecidableEq S] [CommSemiring F]
