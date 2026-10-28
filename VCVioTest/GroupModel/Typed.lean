@@ -25,13 +25,14 @@ namespace GroupModelTest.Typed
 private abbrev Scalar := ZMod 7
 private abbrev Group := fun _ : Unit => Scalar
 private def inputs : Groups Group := fun _ => [2, 2]
-private def point : AlgebraicPoint Scalar (fun i : Fin (inputs ()).length => (inputs ())[i]) :=
-  AlgebraicPoint.ofCoeffs _ (fun i => if i.val = 0 then 3 else 4)
+local notation "point" =>
+  (AlgebraicPoint.ofCoeffs (fun i : Fin (inputs ()).length => (inputs ())[i])
+    (fun i => ite (Fin.val i = 0) (3 : Scalar) 4))
 
-example : point.point = 0 := by decide
-example : point.coeffs ⟨0, by decide⟩ = 3 ∧ point.coeffs ⟨1, by decide⟩ = 4 := by decide
+example : (point).point = 0 := by decide
+example : (point).coeffs ⟨0, by decide⟩ = 3 ∧ (point).coeffs ⟨1, by decide⟩ = 4 := by decide
 
-private def output : TypedOutput Scalar Bool inputs := ⟨true, fun _ => [point]⟩
+local notation "output" => (Prod.mk true (fun _ => [point]) : TypedOutput Scalar Bool inputs)
 
 example : (forget inputs output).value.groups () = [0] := by decide
 example : (forget inputs output).coefficients () = [[3, 4]] := rfl

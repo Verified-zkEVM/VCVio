@@ -31,8 +31,11 @@ open OracleComp OracleSpec
 @[ext]
 structure AlgebraicPoint (F : Type) {G : Type} [AddCommMonoid G] [SMul F G]
     {ι : Type} [Fintype ι] (basis : ι → G) where
+  /-- The represented group value. -/
   point : G
+  /-- The chosen coefficient vector indexed by the basis. -/
   coeffs : ι → F
+  /-- Evaluating the chosen coefficients over the basis gives the represented value. -/
   eval_eq : ∑ i, coeffs i • basis i = point
 
 namespace AlgebraicPoint
@@ -43,8 +46,10 @@ variable {F G ι : Type} [AddCommMonoid G] [SMul F G] [Fintype ι] {basis : ι �
 @[expose] def ofCoeffs (basis : ι → G) (c : ι → F) : AlgebraicPoint F basis :=
   ⟨∑ i, c i • basis i, c, rfl⟩
 
+/-- Constructing a point from coefficients retains the chosen vector. -/
 @[simp] theorem ofCoeffs_coeffs (c : ι → F) : (ofCoeffs basis c).coeffs = c := rfl
 
+/-- The value constructed from coefficients is their weighted sum over the basis. -/
 @[simp] theorem ofCoeffs_point (c : ι → F) :
     (ofCoeffs basis c).point = ∑ i, c i • basis i := rfl
 
