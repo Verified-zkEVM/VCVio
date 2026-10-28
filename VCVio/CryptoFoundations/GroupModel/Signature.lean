@@ -25,12 +25,19 @@ abbrev Handle := ℕ
 /-- A signature over sorts `S`: the names of the linear and bilinear structure maps and their
 sorts. -/
 structure Sig (S : Type) where
+  /-- Names of linear structure maps. -/
   Lin : Type
+  /-- Source sort of each linear map. -/
   lsrc : Lin → S
+  /-- Target sort of each linear map. -/
   ltgt : Lin → S
+  /-- Names of bilinear structure maps. -/
   Bil : Type
+  /-- First source sort of each bilinear map. -/
   src₁ : Bil → S
+  /-- Second source sort of each bilinear map. -/
   src₂ : Bil → S
+  /-- Target sort of each bilinear map. -/
   tgt : Bil → S
 
 /-- Queries: the module operations and equality in each sort, and each structure map. -/
@@ -52,7 +59,9 @@ inductive Query (F : Type) {S : Type} (σ : Sig S) : Type
 /-- A model of a signature: a module per sort and a map per structure map. -/
 structure Model (F : Type) [CommSemiring F] {S : Type} (σ : Sig S) (V : S → Type)
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)] where
+  /-- Interpretation of each linear structure map. -/
   lin : (o : σ.Lin) → V (σ.lsrc o) →ₗ[F] V (σ.ltgt o)
+  /-- Interpretation of each bilinear structure map. -/
   bil : (o : σ.Bil) → V (σ.src₁ o) →ₗ[F] V (σ.src₂ o) →ₗ[F] V (σ.tgt o)
 
 /-- A morphism of models: a linear map per sort that commutes with the structure maps. -/
@@ -60,8 +69,11 @@ structure Model.Hom {F : Type} [CommSemiring F] {S : Type} {σ : Sig S} {V W : S
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
     [∀ s, AddCommMonoid (W s)] [∀ s, Module F (W s)]
     (M : Model F σ V) (N : Model F σ W) where
+  /-- Linear component of the morphism at each sort. -/
   toFun : (s : S) → V s →ₗ[F] W s
+  /-- Compatibility with the linear structure maps. -/
   map_lin : ∀ o x, toFun (σ.ltgt o) (M.lin o x) = N.lin o (toFun _ x)
+  /-- Compatibility with the bilinear structure maps. -/
   map_bil : ∀ o x y, toFun (σ.tgt o) (M.bil o x y) = N.bil o (toFun _ x) (toFun _ y)
 
 section Models
@@ -72,20 +84,20 @@ variable {F : Type} [CommSemiring F] {S : Type} {σ : Sig S} {V W X : S → Type
     [∀ s, AddCommMonoid (X s)] [∀ s, Module F (X s)]
 
 /-- Identity morphism of a model. -/
-@[expose] def Model.Hom.id (M : Model F σ V) : M.Hom M where
+def Model.Hom.id (M : Model F σ V) : M.Hom M where
   toFun _ := LinearMap.id
-  map_lin _ _ := rfl
-  map_bil _ _ _ := rfl
+  map_lin _ _ := by rfl
+  map_bil _ _ _ := by rfl
 
 /-- Composition of model morphisms. -/
-@[expose] def Model.Hom.comp {L : Model F σ V} {M : Model F σ W} {N : Model F σ X}
+def Model.Hom.comp {L : Model F σ V} {M : Model F σ W} {N : Model F σ X}
     (ψ : M.Hom N) (φ : L.Hom M) : L.Hom N where
   toFun s := (ψ.toFun s).comp (φ.toFun s)
   map_lin o x := by simp [φ.map_lin, ψ.map_lin]
   map_bil o x y := by simp [φ.map_bil, ψ.map_bil]
 
 /-- Componentwise product of two models. -/
-@[expose] def Model.prod (M : Model F σ V) (N : Model F σ W) :
+def Model.prod (M : Model F σ V) (N : Model F σ W) :
     Model F σ (fun s => V s × W s) where
   lin o := (M.lin o).prodMap (N.lin o)
   bil o :=
@@ -95,44 +107,44 @@ variable {F : Type} [CommSemiring F] {S : Type} {σ : Sig S} {V W X : S → Type
       map_smul' := by intros; ext <;> simp }
 
 /-- First projection from a product model. -/
-@[expose] def Model.Hom.fst (M : Model F σ V) (N : Model F σ W) : (M.prod N).Hom M where
+def Model.Hom.fst (M : Model F σ V) (N : Model F σ W) : (M.prod N).Hom M where
   toFun _ := LinearMap.fst F _ _
-  map_lin _ _ := rfl
-  map_bil _ _ _ := rfl
+  map_lin _ _ := by rfl
+  map_bil _ _ _ := by rfl
 
 /-- Second projection from a product model. -/
-@[expose] def Model.Hom.snd (M : Model F σ V) (N : Model F σ W) : (M.prod N).Hom N where
+def Model.Hom.snd (M : Model F σ V) (N : Model F σ W) : (M.prod N).Hom N where
   toFun _ := LinearMap.snd F _ _
-  map_lin _ _ := rfl
-  map_bil _ _ _ := rfl
+  map_lin _ _ := by rfl
+  map_bil _ _ _ := by rfl
 
 /-- The identity morphism acts as the identity at each sort. -/
 @[simp] theorem Model.Hom.id_apply (M : Model F σ V) (s : S) (x : V s) :
-    (Model.Hom.id M).toFun s x = x := rfl
+    (Model.Hom.id M).toFun s x = x := by rfl
 
 /-- Composition acts by composing the component maps. -/
 @[simp] theorem Model.Hom.comp_apply {L : Model F σ V} {M : Model F σ W}
     {N : Model F σ X} (ψ : M.Hom N) (φ : L.Hom M) (s : S) (x : V s) :
-    (ψ.comp φ).toFun s x = ψ.toFun s (φ.toFun s x) := rfl
+    (ψ.comp φ).toFun s x = ψ.toFun s (φ.toFun s x) := by rfl
 
 /-- The first projection selects the first component at each sort. -/
 @[simp] theorem Model.Hom.fst_apply (M : Model F σ V) (N : Model F σ W)
-    (s : S) (x : V s × W s) : (Model.Hom.fst M N).toFun s x = x.1 := rfl
+    (s : S) (x : V s × W s) : (Model.Hom.fst M N).toFun s x = x.1 := by rfl
 
 /-- The second projection selects the second component at each sort. -/
 @[simp] theorem Model.Hom.snd_apply (M : Model F σ V) (N : Model F σ W)
-    (s : S) (x : V s × W s) : (Model.Hom.snd M N).toFun s x = x.2 := rfl
+    (s : S) (x : V s × W s) : (Model.Hom.snd M N).toFun s x = x.2 := by rfl
 
 /-- Linear structure maps act componentwise in a product model. -/
 @[simp] theorem Model.prod_lin_apply (M : Model F σ V) (N : Model F σ W)
     (o : σ.Lin) (x : V (σ.lsrc o) × W (σ.lsrc o)) :
-    (M.prod N).lin o x = (M.lin o x.1, N.lin o x.2) := rfl
+    (M.prod N).lin o x = (M.lin o x.1, N.lin o x.2) := by rfl
 
 /-- Bilinear structure maps act componentwise in a product model. -/
 @[simp] theorem Model.prod_bil_apply (M : Model F σ V) (N : Model F σ W)
     (o : σ.Bil) (x : V (σ.src₁ o) × W (σ.src₁ o))
     (y : V (σ.src₂ o) × W (σ.src₂ o)) :
-    (M.prod N).bil o x y = (M.bil o x.1 y.1, N.bil o x.2 y.2) := rfl
+    (M.prod N).bil o x y = (M.bil o x.1 y.1, N.bil o x.2 y.2) := by rfl
 
 end Models
 
