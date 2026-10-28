@@ -58,3 +58,18 @@ lemma Array.card_eq_countP {α : Type} (as : Array α)
   congr 1
   funext i
   simp
+
+namespace List
+
+/-- `countP` as a sum of indicators, the form that matches `Finset.card_filter`. -/
+theorem countP_eq_sum_map {α : Type*} (l : List α) (p : α → Bool) :
+    l.countP p = (l.map fun x => if p x then 1 else 0).sum := by
+  induction l with
+  | nil => simp
+  | cons x xs ih =>
+      rw [countP_cons, map_cons, sum_cons, ih]
+      cases p x
+      · simp
+      · simp; omega
+
+end List
