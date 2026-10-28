@@ -176,6 +176,7 @@ public import VCVioTest.Schemes.BLSAGM
 public import VCVioTest.Schemes.KEMDEM
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms
+public import VCVioTest.Schemes.SchnorrAGM
 public import VCVioTest.SeparatedOTP
 public import VCVioTest.Smoke
 public import VCVioTest.StateSeparating.Measure
