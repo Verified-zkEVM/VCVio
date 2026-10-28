@@ -1,22 +1,22 @@
 # Generic and algebraic group models for VCVio
 
-Status: design note, 12 October 2026. No library code has landed. The definitions of Section 4
-and the lemma L1 are type-checked in
-[`group-models/Prototype.lean`](group-models/Prototype.lean). The sorted model of Section 6, L1
-for it, and the kernel lemma T6 are type-checked in
-[`group-models/SortedPrototype.lean`](group-models/SortedPrototype.lean). Section 12 says against
-what. Every other theorem in this note is a target, and the arguments given for them are paper
-arguments.
+Status: design note against VCVio `main` at `e3d105040`. D1–D15 are settled. The group-model
+library is planned; Sections 4–6 describe its definitions and theorem targets. Section 12
+separates those targets from paper arguments.
 
-Sources read for this note, each at its upstream head on the day of writing:
+Sources used for the design:
 
 | Repository | Commit | Lean | Licence |
 |---|---|---|---|
-| `Verified-zkEVM/VCVio` | `afa6593f1` | v4.34.0 | Apache-2.0 |
-| `Verified-zkEVM/ArkLib` | `db7005f84a` | v4.34.0 | Apache-2.0 |
+| `Verified-zkEVM/VCVio` | `e3d105040` | v4.35.0 | Apache-2.0 |
+| `Verified-zkEVM/ArkLib` | `4b6d206` | — | Apache-2.0 |
 | `zksecurity/agm-lean` | `c207f29` | v4.34.0 | Apache-2.0 |
-| `zksecurity/signature-security-lean` | `435ddd5` | v4.34.0 | Apache-2.0 |
-| `zcash/ironwood` | `86e3c702` | v4.30.0 | MIT or Apache-2.0 |
+| `zksecurity/signature-security-lean` | `5541a23` | v4.34.0 | Apache-2.0 |
+| `zcash/ironwood` | `def2cade` | v4.30.0 | MIT or Apache-2.0 |
+
+VCVio uses Lean and Mathlib v4.35.0, with PolyFun and QuantumFoundations as dependencies.
+ArkLib pins VCVio `6214f9077`. The signature repository pins VCVio `f5119c64e`, agm-lean `c207f29`
+and ArkLib `7653a90`.
 
 ## 1. The problem
 
@@ -31,15 +31,17 @@ stated:
 2. unconditional lower bounds (generic hardness of DLog, CDH, the `q`-type assumptions);
 3. cost statements about group work.
 
-Four Lean developments have each built part of this, with four different presentations of an
-algebraic adversary:
+Four Lean developments supply the interfaces and proof ideas:
 
 | Development | An algebraic adversary is | Basis | Cost |
 |---|---|---|---|
-| ArkLib `AGM/Basic.lean` (202 lines) | an `OracleComp` over operation, exponentiation, equality and encoding oracles on handles into a table | fixed `Fintype` basis in `GroupRepresentation`; a decode oracle is defined but not offered | none; `Adversary.run` is `sorry` |
-| `agm-lean` `Interaction.lean` (160 lines) | an interactive program whose messages carry coefficient vectors (`Explained`, `IsAlgebraic`) | every group element received so far, per sort | none |
-| `signature-security-lean` `Model/`, `AlgebraicGroupModel/` | a program returning coefficient lists `β`, `γ`, `ξ` for its one group output | generator, hash-oracle replies, signing replies, added as they arrive | separate closed-language layer (`Runtime/`, 7,128 lines) |
-| ironwood `Zcash/Common/DiscreteLogRelation.lean` and the AGM soundness tree | any oracle computation whose outputs have type `AlgebraicPoint`, a point with its representation | fixed enumerated basis, sampled in the experiment | group operations counted in a shallow embedding; fidelity is an `opaque` premise |
+| ArkLib | `GroupRepresentation`, mapped to typed points through `Additive G` over `ZMod p` | fixed finite basis | none |
+| agm-lean `Interaction.lean` | an interactive program with `Explained` messages and an `IsAlgebraic` certificate | every received group element, per sort | none |
+| signature-security-lean `Signatures/`, `Proofs/` | agm-lean's `Interaction.Adversary` directly, in `Signatures/Model/DirectAGM.lean` | token-indexed `Representation F Token := Token → F` over `Transcript Token G`; grouped `(β, γ, ξ)` coefficients are an internal view | separate `Signatures/Runtime/` and `Proofs/Runtime/` layers; weighted-solver bounds stay outside this library under D7 |
+| ironwood `Zcash/Common/DiscreteLogRelation.lean` and AGM soundness tree | a computation returning typed `AlgebraicPoint` outputs | fixed enumerated basis | shallow group-work count relying on the opaque premise `StagedGroupWorkFaithful` |
+
+The signature repository includes Schnorr in the AGM and ROM, Pointcheval–Sanders and
+synchronized PS, a shared `EufCma` experiment, and `QueryAllowance`.
 
 The goal is one model in VCVio into which each of these embeds, with the translations proved,
 and with theorems that correspond to named results in the literature.
@@ -60,8 +62,9 @@ says in what sense each is proper.*
 
 - A **standard** adversary receives group elements and returns anything. This is every existing
   VCVio adversary type.
-- An **algebraic** adversary (Fuchsbauer, Kiltz and Loss) sees the group elements, and each group
-  element it returns comes with coefficients over the elements it has received.
+- An **algebraic** adversary is a handle computation with an encoding oracle. Its group
+  outputs acquire representations from the tracking run. Certified coefficient outputs give
+  the presentation of Fuchsbauer, Kiltz and Loss (Section 4.4).
 - A **generic** adversary (Shoup; Maurer) never sees a group element. It holds opaque handles and
   reaches the group through an oracle.
 
@@ -91,11 +94,12 @@ statement.
 |---|---|---|---|
 | algebraic, no cost | A, E | W | `signature-security-lean` inner theorems; ironwood, where the promise is the `opaque` predicate `StagedGroupWorkFaithful` |
 | generic | A, W | E | this note: opaque handles, work is the number of oracle queries |
-| machine model | E, W | A | `signature-security-lean` `Runtime/`: a closed language with a step semantics |
+| machine model | E, W | A | `signature-security-lean` `Signatures/Runtime/` and `Proofs/Runtime/`: a closed language with a step semantics |
 
 This note builds the first two corners in one model and proves how they relate. The third corner
 is a question about machine models and belongs to
-[`computational-complexity.md`](computational-complexity.md); nothing here depends on it.
+[`computational-complexity.md`](computational-complexity.md), tracked in
+[VCVio#906](https://github.com/Verified-zkEVM/VCVio/issues/906); nothing here depends on it.
 
 ## 4. The model
 
@@ -117,7 +121,7 @@ def spec (F : Type) : OracleSpec (Query F)
   | .smul _ _ => Handle
   | .eq _ _ => Bool
 
-abbrev genSpec (F : Type) := unifSpec + spec F
+abbrev genSpec (F : Type) := spec F + unifSpec
 ```
 
 A handle is a position in a table of group elements. `add` and `smul` append an entry and return
@@ -125,18 +129,11 @@ its handle. The table only grows, so it is at once the adversary's state and the
 elements it could ever output. A generic computation is an `OracleComp (genSpec F) α`: private
 coins and the group oracle.
 
-Three choices differ from ArkLib's current file and each removes a problem found there.
-
-- The adversary is not given the table. ArkLib's `Adversary` is a `ReaderT (GroupValTable ι G)`,
-  so the adversary holds group elements: the interface does not make it generic and cannot count
-  its group work. ArkLib's type does keep one restriction, that group outputs are table indices.
-  That is the algebraic restriction. The model here keeps it and supplies real encodings through
-  an oracle (Section 4.5).
-- The oracle chooses where results go. Destination indices chosen by the adversary make the
-  table a mutable store whose history has to be reconstructed in every proof.
-- Out-of-range handles denote `0`. The handler is total and needs no failure monad. The price is
-  that zero is always within the adversary's reach at no cost. Every count below of the values
-  an equality query can compare is therefore the number of table entries plus one.
+The adversary is not given the table. It receives handles and can request real encodings
+through an oracle (Section 4.5). The oracle chooses where results go, so the table is an
+append-only record. Out-of-range handles denote `0`: the handler is total and needs no failure
+monad. Zero is always within the adversary's reach at no cost, so every count of values an
+equality query can compare includes the table entries plus one.
 
 ### 4.2 One handler
 
@@ -183,18 +180,18 @@ theorem run_map (φ : V →ₗ[F] W) (obs : W → U) (oa : OracleComp (genSpec F
 ```
 
 Running in `V` and observing through `φ` is the same computation as running in `W` on the image
-table. This is proved in the prototype, by `OracleComp.map_run_simulateQ_eq_of_query_map_eq`
+table. The proof target in `Projection.lean` uses `OracleComp.map_run_simulateQ_eq_of_query_map_eq`
 (`VCVio/OracleComp/SimSemantics/StateT/StateProjection.lean`) and a case split on the query. Two
 instances:
 
 - `φ := LinearMap.snd`: the tracking run and the real run have the same output distribution
-  (`runTracking_map_snd`, proved).
+  (`runTracking_map_snd`).
 - `φ := MvPolynomial.aeval x`: the hidden-real run on polynomials `P` is the real run on their
-  values `P.map (eval x)` (`runEval_map_eval`, proved).
+  values `P.map (eval x)` (`runEval_map_eval`).
 
 A companion fact, `impl_congr`: the handler depends on `obs` only through the equalities it
 induces. In particular, composing `obs` with an injective map does not change the handler. It is
-proved in the sorted prototype (Section 6.2).
+a target in `Projection.lean` (Section 6.2).
 
 **L2 (identical until a collision).** Call an `eq a b` query a *collision* when the two values it
 looks up differ and their observations agree. A looked-up value is a table entry, or zero for an
@@ -222,7 +219,7 @@ def trackInputs (xs : List G) : List (Repr F × G) :=
 def Repr.eval (r : Repr F) (tbl : List (Repr F × G)) : G :=
   ((List.range tbl.length).map fun h => r h • (lookup tbl h).2).sum
 
-structure Explains (given : Set Handle) (tbl : List (Repr F × G)) : Prop where
+structure Explains (given : List Handle) (tbl : List (Repr F × G)) : Prop where
   given_lt : ∀ h ∈ given, h < tbl.length
   repr_given : ∀ h ∈ given, (lookup tbl h).1 = Pi.single h 1
   support_subset : ∀ e ∈ tbl, ∀ h, e.1 h ≠ 0 → h ∈ given
@@ -231,35 +228,85 @@ structure Explains (given : Set Handle) (tbl : List (Repr F × G)) : Prop where
 
 An entry that was *given* (an input, an oracle reply) has representation `Pi.single h 1` at its
 own handle `h`. An entry that was *computed* has the corresponding combination. The basis is
-therefore the set `given` of handles of given entries, and it grows whenever the game hands out
+therefore the list `given` of handles of given entries, and it grows whenever the game hands out
 another element. The invariant has four fields. The equation `eq_eval` alone holds of a table
 in which every entry is declared its own basis element, whatever was given. `support_subset`
 says that a computed entry is a combination of given ones. `given_lt` says that every given
 handle is in the table, so `given` is finite. It follows from `repr_given`, because a handle
 outside the table looks up the zero representation, and it is a field so that the adapters can
 use it directly. For a run that starts from `trackInputs xs` and is handed nothing more, `given`
-is `{h | h < xs.length}`.
+is `List.range xs.length`.
 
-`Explains given` is the invariant behind agm-lean's `Explained.Valid`, ArkLib's
-`GroupRepresentation.hEq`, the signature repository's `materialize`, and the proof field of
-ironwood's `AlgebraicPoint`. ArkLib and ironwood index coefficients by a fixed finite family.
-agm-lean and the signature repository index them by the received elements in order of arrival,
-with one position for each receipt: agm-lean's `extend` appends every reply, repetitions
-included. Handles are allocated in order, so `given`, taken in increasing order, is that list
-provided each receipt is its own `push`. Section 4.5 uses `push` that way. An element handed out
-twice then has two handles and two basis positions, as it has in those repositories, and the
-adapters of T1 reindex by position. `given_lt` makes the list finite.
+`Explains given` connects the tracked table to agm-lean's `Explained.Valid` and the proof
+field of a typed `AlgebraicPoint`. The tracking state keeps a list of given handles per sort,
+in arrival order, with one entry per receipt. Each receipt calls `pushGiven`, even if its value
+has appeared before. The coefficient list is directly `given.map repr`; no reindexing lemma is
+needed. A repeated element has two handles and two basis positions. `pushGiven` extends both
+the table and the list, while group operations append only to the table.
 
 `Repr F` is a function type so that it is a computable module (`Pi`). `Handle →₀ F` gives
 finite support for free and makes every operation noncomputable. This is decision D4.
+
+**Four presentations.**
+
+Common setting: sorts `S` with `[DecidableEq S]`, a signature `σ : Sig S`, a field `F`, carriers
+`G : S → Type` with `Module F (G s)`, and a real model `M : Model F σ G`.
+
+**(H) Handle adversaries.** This is the definition, per D11.
+
+```lean
+abbrev genSpec F σ := spec F σ + unifSpec                    -- generic: the group oracle and coins
+def encSpec (E : S → Type) : OracleSpec (S × Handle) := fun q => E q.1
+-- algebraic adversary against a game Γ (handlers share the table):
+--   OracleComp (spec F σ + encSpec E + Γ) α
+```
+
+The semantics is `run M obs (gameImpl) A tbl`. For a game given on values,
+`gameImpl := liftGame impl`, where
+
+```lean
+def handleSpec (Query) (Reply : Query → Type) : OracleSpec (Message Query (fun _ : S => Handle)) :=
+  fun q => Message (Reply q.data) (fun _ => Handle)
+def liftGame (impl : QueryImpl (plainSpec G Query Reply) m) :
+    QueryImpl (handleSpec Query Reply) (StateT (Tbl G) m)
+  -- look up every handle, call impl, push each element of the reply, return the new handles
+```
+
+**(G) Generic adversaries, as the projection of the tracking model.** The tracking model is
+`(free σ).prod M`, a generic product of models. Its forgetful morphism is `Model.Hom.snd`. L1 for
+`snd` says that the real run of a generic computation is the projection of its tracking run.
+`Explains` on the tracked table says that every handle it holds has a representation over what it
+was given (T2).
+
+**(E) Certified explained adversaries.** agm-lean's `Interaction.Adversary F G Input Query Reply
+Result`, under `GroupModel.Interaction`, with the module system and preserved definitions: `main` on
+`Message Input G` and
+`algebraic : ∀ input, IsAlgebraic input.groups (main input)`. The signature repository's adversary
+is this same type.
+
+**(T) Typed points over a fixed basis.** These follow ironwood and ArkLib, additively:
+
+```lean
+structure AlgebraicPoint {ι : Type} [Fintype ι] (basis : ι → G) where
+  point : G
+  coeffs : ι → F
+  eval_eq : ∑ i, coeffs i • basis i = point
+```
+
+A typed point is valid by construction. It is the presentation for games whose basis is fixed
+before the adversary runs.
+
+**Derived normal forms, not presentations.** Fixed-slot coefficient outputs, such as the signature
+repository's `(β, γ, ξ)` over (generator, hash replies, signing replies), are a regrouping of (E)'s
+basis list. They arrive with the BLS port.
 
 ### 4.5 Knobs
 
 Everything else is an extra oracle beside `spec F`, with a handler that shares the table.
 
-- **Encoding oracle** `Handle →ₒ E`. Absent: Maurer's model. Present with `enc : G → E` applied
-  to the entry: the adversary sees real encodings, which is the algebraic class. Present with
-  lazily sampled random labels: Shoup's model.
+- **Encoding oracle** `encSpec E`, where `E : S → Type`: query `(s, h)` returns `E s`.
+  Its handlers are absent (Maurer's model), real `enc s : G s → E s` applied to the entry,
+  and lazy random labels. Real encodings give the algebraic class; random labels give Shoup's model.
 - **Given elements.** `push v` appends an entry and returns its handle. Game oracles that hand
   out group elements (a signing oracle) call it. In the tracking instance a pushed entry is a new
   basis element.
@@ -319,20 +366,70 @@ count the two separately; `ResourceProfile` already carries a usage vector.
 `m₀` is the length of the initial table, `q` a bound on the number of `add` and `smul` queries
 (an `IsQueryBoundP` hypothesis), `m := m₀ + q`.
 
-**T1 (presentations agree).** Translations in both directions between an algebraic handle
-adversary and each of: a coefficient-output forger (signature repository), an adversary sending
-`Explained` messages (agm-lean), a computation returning typed `AlgebraicPoint`s (ironwood), and
-a `GroupRepresentation` over a fixed finite basis (ArkLib). Each translation preserves the
-game's output distribution exactly. From coefficients to handles costs at most one `smul` and
-one `add` per nonzero coefficient; from handles to coefficients costs nothing, by T2.
+The following translation theorems are targets. Their run equations are exact equalities of
+computations in any lawful monad `N`.
+`lookupMessage tbl : Message R (fun _ => Handle) → Message R G` reads the output handles.
+`HandleAdversary F σ E Input Query Reply Result` is
+`Message Input (fun _ => Handle) → OracleComp (spec F σ + encSpec E + handleSpec Query Reply)
+(Message Result (fun _ => Handle))`. Its `run M enc impl input` starts from the table
+`input.groups` and answers the three components with the real handler, `enc`, and `liftGame impl`.
 
-**T2 (generic ⊆ algebraic).** For every generic computation, the tracking run has the same
-output distribution as the real run (L1, proved) and its final table satisfies `Explains given`,
-with `given` the handles of its inputs (stated in the prototype, not proved). Every handle a
-generic adversary returns therefore comes with a representation over what it was given. When
-every element is given before the adversary runs, the representation needs no invariant of its
-own: the table half of L1, for the map that evaluates a representation on the inputs, says that
-each entry is the value of its representation on the inputs alone (Section 6.3).
+- **T2 (generic ⊆ algebraic, with representations).** For a computation `A` at any signature,
+  and a tracking table with `Explains given tbl`:
+
+  - `Prod.map id (mapTbl snd) <$> runTracking A tbl = runReal A (mapTbl snd tbl)`;
+  - every `(x, tbl') ∈ support (runTracking A tbl)` satisfies `Explains given' tbl'`, where
+    `given'` is `given` extended by the receipts of the run.
+
+  The proof uses `QueryImpl.PreservesInv`. Milestone 1 covers source sorts, meaning sorts that are
+  not the target of a structure map; that is every sort of `discreteSig`. The target sort of a
+  pairing waits for `ReprT` (D10).
+- **T1a (handles → explanations).** For any `enc`:
+
+  ```lean
+  def toExplained (A : HandleAdversary F (discreteSig S) E Input Query Reply Result) (enc) :
+      Interaction.Adversary F G Input Query Reply Result
+  theorem toExplained_run :
+      (fun z => z.1.value) <$> (toExplained A enc).run impl input =
+        (fun z => lookupMessage z.2 z.1) <$> A.run M enc impl input
+  ```
+
+  `toExplained` simulates the group oracle in the tracking model on the received values. Each
+  outgoing handle becomes the tracked value together with the coefficients `given.map repr`.
+  `algebraic` is proved from `Explains`, and `_run` from L1 for `snd`.
+- **T1b (explanations → handles).** Given a decoder `dec` with `∀ s g, dec s (enc s g) = g`
+  (agm-lean's setting is `E := G`, `enc := id`, `dec := id`):
+
+  ```lean
+  def ofExplained (B : Interaction.Adversary F G Input Query Reply Result) (dec) :
+      HandleAdversary F (discreteSig S) E Input Query Reply Result
+  theorem ofExplained_run (hdec : ∀ s g, dec s (enc s g) = g) :
+      (fun z => lookupMessage z.2 z.1) <$> (ofExplained B dec).run M enc impl input =
+        (fun z => z.1.value) <$> B.run impl input
+  ```
+
+  `ofExplained` decodes the received handles. It builds each outgoing element from its
+  coefficients with at most one `smul` and one `add` per nonzero coefficient, which is where
+  `B.algebraic` is used. Composing T1a with T1b gives the round trip for (E).
+- **T1c (typed points ↔ valid explanations, fixed basis).**
+
+  - `{out : Explained F R G // out.Valid inputs} ≃ R × ((s : S) → List (AlgebraicPoint (inputs s
+    ·)))`,
+    with basis `fun i : Fin (inputs s).length => (inputs s)[i]`.
+  - At the level of programs, for games whose replies carry no group elements:
+    `toTyped B := MonadAttach.attach`, using `CanReturn ↔ support` (`OracleComp/CanReturn.lean`)
+    and `Adversary.run_valid`; and `ofTyped` forgets the proofs. Both preserve `run` after
+    forgetting.
+- **Generic → algebraic.** `toAlgebraic := liftComp` into `spec F σ + encSpec E + Γ`, with
+  `run_toAlgebraic : run (toAlgebraic A) = run A`. Then `toExplained ∘ toAlgebraic` gives every
+  generic adversary a certified agm-lean presentation.
+- **ArkLib** (in ArkLib): `GroupRepresentation basis target ≃ {P : AlgebraicPoint (Additive.ofMul
+  ∘ basis) // P.point = Additive.ofMul target}` over `ZMod p`.
+
+T1a and T1b are stated at `discreteSig S`, which has sorts but no structure maps. That matches
+agm-lean, which offers no pairing query and has no target-group representations. A version at
+`pairingSig` for source-sort outputs follows from the same proofs once the game reads only
+source-sort handles. Target outputs need `ReprT` (milestone 6).
 
 **T3 (master bound).** Let the initial table be polynomials `P : List (MvPolynomial σ F)` of
 total degree at most `d`, with `σ` finite and `x` uniform in `σ → F`. For every generic
@@ -465,16 +562,22 @@ sort. Equality at sort `s` is decided on the image under `obs s : V s → U s`.
 | Signature | Sorts | Linear maps | Bilinear maps | Setting |
 |---|---|---|---|---|
 | `groupSig` | one | none | none | Sections 4 and 5 |
+| `discreteSig S` | `S` | none | none | T1a and T1b |
 | `pairingSig` | `g₁`, `g₂`, `gₜ` | none | `e : g₁ × g₂ → gₜ` | Type 3 |
 | `pairingIsoSig` | `g₁`, `g₂`, `gₜ` | `ψ : g₂ → g₁` | `e : g₁ × g₂ → gₜ` | Type 2 |
 | `symmPairingSig` | source, target | none | `e : source × source → target` | Type 1 |
 
 The three types are those of Galbraith, Paterson and Smart. Boneh, Gentry, Lynn and Shacham
 state co-CDH and aggregate signatures for a pair of groups with a computable isomorphism
-`ψ : G₂ → G₁`, which is `pairingIsoSig`. The definitions above and the handler are type-checked
-in [`group-models/SortedPrototype.lean`](group-models/SortedPrototype.lean). Three theorems are
-proved there: L1 and `impl_congr` (Section 6.2) and the kernel lemma T6 (Section 6.5). Every
-other statement of this section is a target.
+`ψ : G₂ → G₁`, which is `pairingIsoSig`. The planned library modules are:
+
+- Planned `VCVio/CryptoFoundations/GroupModel/Signature.lean`: signatures and models.
+- Planned `VCVio/CryptoFoundations/GroupModel/Oracle.lean`: tables, handler and runner.
+- Planned `VCVio/CryptoFoundations/GroupModel/Projection.lean`: L1, `impl_congr` and T6.
+- Planned `VCVio/CryptoFoundations/GroupModel/Instances.lean`: real, symbolic and free instances.
+- Planned `VCVio/CryptoFoundations/GroupModel/Tracking.lean`: tracking and its invariant.
+
+These are slices 1–2 of milestone 1; target-sort representations wait for milestone 6.
 
 ### 6.2 How this relates to the one-group model
 
@@ -495,22 +598,23 @@ theorem run_map (φ : M.Hom N) (obs : (s : S) → W s → U s) (oa : OracleComp 
       run N obs oa (mapTbl (fun s => φ.toFun s) tbl)
 ```
 
-This is proved once, for all four signatures, by the argument of Section 4.3 with two more cases.
-A second lemma, also proved, says that the handler depends on `obs` only through the equalities
+The proof in slice 1 is uniform in the signature, by the argument of Section 4.3 with two more
+cases.
+A second lemma, `impl_congr`, says that the handler depends on `obs` only through the equalities
 it induces (`impl_congr`): if `obs s x = obs s y ↔ obs' s x = obs' s y` for all `s`, `x`, `y`,
 then `impl M obs = impl M obs'`.
 
 **Attacks go up, lower bounds go down.** A map of signatures `σ → τ` (sorts to sorts, map names
 to map names, compatibly) turns a `τ`-model into a `σ`-model by forgetting, and a
 `σ`-computation into a `τ`-computation by renaming its queries. When the map is injective on
-sorts, running the renamed computation in a `τ`-model is running the original in the forgotten
+sorts, running the translated computation in a `τ`-model is running the original in the forgotten
 model, on the tables of the sorts in the image. Injectivity is needed because a handle is a
 position in the table of its sort. A map that sends two sorts to one interleaves their entries
-and shifts their handles, so the renamed computation is a different computation: with two sorts
+and shifts their handles, so the translated computation is a different computation: with two sorts
 and empty tables, `add` at the first sort and then `add` at the second return handles `0` and
 `0`, and after merging the sorts they return `0` and `1`. Such a map (a Type 3 computation run
 in a Type 1 group, both source sorts sent to the one source sort) needs the handle translation
-of T5. The injective case is a target; it is not in the prototype. Two consequences follow.
+of T5. The injective case is a target. Two consequences follow.
 
 - Every one-group adversary is a pairing-group adversary that happens not to pair. So a lower
   bound proved in the pairing model implies the same bound in the group model.
@@ -549,7 +653,7 @@ the degrees of the two source sorts.
 
 **Hidden-real.** The symbolic model observed through `MvPolynomial.eval x`. For a pairing group
 with generators `g₁`, `g₂`, the maps `P ↦ P(x) • g₁`, `P ↦ P(x) • g₂`, `P ↦ P(x) • e g₁ g₂` form
-a morphism `evalHom e g₁ g₂ x` from the symbolic model to `real e` (proved; the pairing case is
+a morphism `evalHom e g₁ g₂ x` from the symbolic model to `real e` (the pairing case is
 `(P * Q)(x) • e g₁ g₂ = e (P(x) • g₁) (Q(x) • g₂)`). By L1 the symbolic model observed through
 this morphism is the real run on the values. By `impl_congr` that is the hidden-real run, as
 soon as `c ↦ c • g` is injective at each sort: `g₁ ≠ 0`, `g₂ ≠ 0` and `e g₁ g₂ ≠ 0`.
@@ -563,7 +667,8 @@ generators must satisfy `ψ g₂ = g₁`.
 abbrev Repr (F : Type) := Handle → F
 abbrev ReprT (F : Type) := (Handle → F) × (Handle → Handle → F)
 
-def outer (F : Type) [CommSemiring F] : Repr F →ₗ[F] Repr F →ₗ[F] ReprT F  -- (0, fun i j => r₁ i * r₂ j)
+-- (0, fun i j => r₁ i * r₂ j)
+def outer (F : Type) [CommSemiring F] : Repr F →ₗ[F] Repr F →ₗ[F] ReprT F
 def free (F : Type) [CommSemiring F] : Model F pairingSig (PFam (Repr F) (Repr F) (ReprT F))
 def evHom (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (xs : List G₁) (ys : List G₂) (zs : List Gₜ) :
     (free F).Hom (real e)
@@ -573,14 +678,16 @@ A source entry has a coefficient for each given element of its sort. A target en
 coefficient for each given target element and a coefficient for each pair of a given `G₁`
 element and a given `G₂` element. The pairing of two representations is their outer product.
 `evHom` evaluates a representation on the given elements, using `e` for the pairs; that it is a
-morphism is the identity `Σᵢⱼ (r₁ i * r₂ j) • e xᵢ yⱼ = e (Σᵢ r₁ i • xᵢ) (Σⱼ r₂ j • yⱼ)` (proved,
-`evReprT_outer`). This is the representation the literature asks of an algebraic algorithm in a
+morphism is the identity `Σᵢⱼ (r₁ i * r₂ j) • e xᵢ yⱼ = e (Σᵢ r₁ i • xᵢ) (Σⱼ r₂ j • yⱼ)`
+(`evReprT_outer`, a milestone-6 target). This is the representation the literature asks of an
+algebraic algorithm in a
 bilinear group: Rotem's statement of the model of Bauer, Fuchsbauer and Loss explains a target
 output by coefficients over the pairings of pairs of inputs.
 
 **Tracking.** The product of the free and real models, with `tracking.forget` the second
-projection (a morphism, proved). So T2 holds for pairing groups with the proof it has for one
-group: the tracking run and the real run have the same output distribution.
+projection `Model.Hom.snd`. L1 gives equality of the tracking and real outputs. T2 also needs
+the `Explains` invariant; milestone 1 proves it for source sorts, and milestone 6 covers target
+sorts with `ReprT`.
 
 Two remarks on representations.
 
@@ -593,7 +700,7 @@ separate induction is needed. Every problem of the uber family has this shape. T
 and the invariant `Explains given` of Section 4.4 are needed when the game hands out elements
 during the run.
 
-*The free model is built per signature.* Each of the four signatures above has a closed form
+*The free model is built per signature.* The group and pairing signatures have closed forms
 like the one shown. For `pairingIsoSig` a `G₁` representation also has a coefficient for each
 given `G₂` element, through `ψ`, and a target representation a coefficient for each pair of
 given `G₂` elements. A general signature needs more. When the output of a bilinear map can be
@@ -652,7 +759,7 @@ theorem run_fst_eq_of_kernel_eq (φ : L.Hom M) (ψ : L.Hom N)
       Prod.fst <$> run N (fun _ => id) oa (mapTbl (fun s => ψ.toFun s) tbl)
 ```
 
-This is proved in the prototype, for every signature, from L1 twice and `impl_congr`.
+The slice-1 proof in `Projection.lean` uses L1 twice and `impl_congr`, for every signature.
 
 *Use.* Take `L` to be the free model, `M` and `N` symbolic models, and `φ`, `ψ` evaluation on two
 initial tables `T₀`, `T₁` of the same shape. The hypothesis says that `T₀` and `T₁` satisfy the
@@ -863,22 +970,76 @@ The tables give each result, what it needs, the existing declaration it composes
 source. Constants are those of the paper argument and are fixed by the proofs. `m = m₀ + q`, and
 each collision term counts the pairs among `m` entries and zero, `((m + 1) choose 2)`.
 
-### 8.1 One group (milestones 1 and 2)
+**Milestones and placement.** The model lives under `VCVio/CryptoFoundations/GroupModel/`;
+problem statements belong under `VCVio/CryptoFoundations/HardnessAssumptions/`. Named schemes
+belong under `VCVio/Schemes/BLS/` and `VCVio/Schemes/LinearFunctional/`, following
+[the repository ownership map](repository-layout.md). `Examples/` is for instructional consumers.
+Names follow [the cryptographic naming rules](../agents/crypto.md#naming): experiments are
+programs, advantages evaluate them, and reduction inequalities name their reductions.
+
+New library files use `module`, `public import` for public dependencies, and plain
+`public section`. Use per-declaration `@[expose]` only where unfolding is part of the API,
+such as `impl`, `run` and `lookup`. The expose-boundary ceiling excludes new file-wide exposure.
+
+**Milestone 1: core and presentations.** Paths below are planned; `GroupModel/` abbreviates
+`VCVio/CryptoFoundations/GroupModel/`.
+
+1. **Sorted core and projection.** `Signature.lean`, `Oracle.lean`, `Projection.lean`, and
+   planned `VCVioTest/GroupModel/Basic.lean`: `Sig`, `Query`, `spec`, `Model`, `Model.Hom`,
+   `Model.prod`,
+   `Hom.fst/snd`, `Tbl`, `lookup`, `append`, `push`, `mapTbl`, `impl`, and `run` with a game
+   handler. Prove `run_map` for any pair of game handlers related by `φ`, `impl_congr`, and
+   `run_fst_eq_of_kernel_eq`. Define `groupSig`, `discreteSig`, `pairingSig`, `pairingIsoSig`,
+   and `symmPairingSig`; add executable runs over `ZMod 7`.
+2. **Instances and tracking.** `Instances.lean`, `Tracking.lean`, and tests: `real`, `symbolic`,
+   `free` for `groupSig`, `discreteSig`, and the source sorts of `pairingSig`; `evHom`,
+   `evalHom`, `tracking := free.prod real`, `pushGiven`, `Explains`, and T2. Depends on slice 1.
+3. **Certified interaction.** `Interaction.lean` and `VCVioTest/GroupModel/Interaction/`: move
+   agm-lean's module and its three test files, preserving the zkSecurity / Kobi Gurkan header
+   and adopting the module system and `GroupModel.Interaction` namespace. The authors have
+   agreed to the move.
+4. **Handles and explanations.** `Encoding.lean`, `Game.lean`, and `Algebraic.lean`: `encSpec`
+   and its real handler, `handleSpec`, `liftGame`, `HandleAdversary`, `toAlgebraic`,
+   `toExplained`, `ofExplained`, T1a, T1b, and their round trip. Depends on slices 1–3.
+5. **Typed points.** `Typed.lean`: `AlgebraicPoint`, the T1c equivalence, `toTyped`, and
+   `ofTyped`. Depends on slice 3.
+6. **ArkLib adapter.** In ArkLib's `ArkLib/AGM/Basic.lean`, delete `GroupValTable` and the oracle
+   half that follows it, including the unfinished `Adversary.run`. Keep `GroupRepresentation`
+   and add its adapter to `AlgebraicPoint`; update `ArkLib.lean`, the axiom baseline and the
+   VCVio pin. `ArkLibTest/AGM/Basic.lean` is unchanged. Depends on slice 5 being merged.
+
+Slice 1 comes first. Slices 2 and 3 can then proceed in parallel, followed by 4 and 5, then 6.
+Each VCVio slice runs `./scripts/validate.sh` and `./scripts/update-lib.sh`, adds no `sorry`,
+and leaves the axiom-sweep baseline untouched.
+
+**Milestone 2: generic lower bounds.** `Collision.lean` supplies L2 and `Cost.lean` supplies
+query accounting. This milestone includes the Schwartz–Zippel move and T3/T4, with T6/T7 for
+DDH. A second route is [PolyFun#279](https://github.com/Verified-zkEVM/PolyFun/pull/279), whose
+M5 counting kernel supplies generic-DLog and DDH witnesses. Either route must expose bounds
+that compose with the named VCVio reductions.
+
+**Later milestones.** Milestone 3 covers the discrete-log relation problem and its reduction;
+milestone 4 ports linear-functional signatures and BLS; milestone 5 proves T5 with handle
+virtualization and cost certificates. Milestone 6 covers pairing bounds, KZG, `ReprT`, and the
+free models for Types 1 and 2. Milestone 7 adds random labels and decoding. The real encoding
+handler needed by T1 belongs to milestone 1.
+
+### 8.1 One group (milestone 2)
 
 | Result | Statement | Composes with | Source |
 |---|---|---|---|
-| generic DLog | `dlogExperiment g (ofGeneric A) ≤ ((q + 3).choose 2 + 1)/|F|` | | Shoup |
-| generic CDH | `cdhExperiment g (ofGeneric A) ≤ ((q + 4).choose 2 + 2)/|F|` | | Shoup |
-| generic DDH | `ddhAdvantage g (ofGeneric A) ≤ 3 · (q + 5).choose 2/|F|` | | Shoup; T7 |
-| Pedersen binding, unconditional | for a generic binder with `q` operations, success at most `((q + 9).choose 2 + 1)/|F|` | `pedersenCommit.binding_le_dlog` and `pedersenCommit.dlogReduction` in `Examples/Pedersen.lean` | |
-| ElGamal one-time IND-CPA, unconditional | for a generic adversary, twice the generic DDH bound at a counted number of operations | `elGamalAsymmEnc.elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage` in `Examples/ElGamal/Basic.lean` | |
-| ElGamal IND-CPA with `q` queries, unconditional | `2q` times the generic DDH bound | `elGamalAsymmEnc.elGamal_IND_CPA_le_q_mul_ddh`, after it is restated (below) | |
+| generic DLog | `dlogExperiment g (ofGeneric A) ≤ ((q + 3).choose 2 + 1)/\|F\|` |  | Shoup |
+| generic CDH | `cdhExperiment g (ofGeneric A) ≤ ((q + 4).choose 2 + 2)/\|F\|` |  | Shoup |
+| generic DDH | `ddhAdvantage g (ofGeneric A) ≤ 3 · (q + 5).choose 2/\|F\|` |  | Shoup; T7 |
+| Pedersen binding, unconditional | for a generic binder with `q` operations, success at most `((q + 9).choose 2 + 1)/\|F\|` | `pedersenCommit.binding_le_dlog` and `pedersenCommit.dlogReduction` in `VCVio/Schemes/Pedersen.lean` |  |
+| ElGamal one-time IND-CPA, unconditional | for a generic adversary, twice the generic DDH bound at a counted number of operations | `elGamalAsymmEnc.elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage` in `Examples/ElGamal/Basic.lean` |  |
+| ElGamal IND-CPA with `q` queries, unconditional | `2q` times the generic DDH bound | `elGamalAsymmEnc.elGamal_IND_CPA_le_q_mul_ddh`, after it is restated (below) |  |
 
 The three constants come from T3, T7 and T8 as follows. DLog: `m = q + 2`, degree `1`, and
 `1/|F|` for the final guess. CDH: `m = q + 3`, degree `1`, and `W = A · B − p` of degree `2`.
 DDH: `m = q + 4`, with degree `2` on the real side and `1` on the random side.
 
-The Pedersen row is the smallest complete test of the design. `pedersenCommit.dlogReduction`
+The Pedersen entry is the smallest complete test of the design. `pedersenCommit.dlogReduction`
 checks two openings with four `smul`, two `add` and two equality tests, so a generic binder with
 `q` operations yields a generic DLog solver with `q + 6`, and the two existing lemmas compose
 with T4 without change.
@@ -889,14 +1050,14 @@ kind. A generic DDH bound covers generic adversaries only. The theorem has to be
 the hybrid adversaries named, as a sum of their DDH advantages, before a generic bound can be
 substituted. The one-time theorem is an equation about one named reduction and composes now.
 
-### 8.2 Algebraic adversaries and the transfer (milestones 3 to 5)
+### 8.2 Algebraic adversaries and the transfer (milestones 1 and 3 to 5)
 
 | Result | Statement | Composes with | Source |
 |---|---|---|---|
-| presentations agree (T1) | exact translations among the four presentations of Section 1 | agm-lean `Adversary.run_valid`; ArkLib `GroupRepresentation` | Fuchsbauer, Kiltz, Loss |
-| discrete-log relation | finding a nontrivial relation among `n` random elements is at most DLog plus `1/|F|`; against a generic adversary, by T5, at most `((q + 3n + 3).choose 2 + 2)/|F|` | proved in ironwood on other foundations; T4 | Jaeger, Tessaro, Lemma 3 |
-| linear-functional signatures, BLS | `advantage ≤ adv(goodReduction A) + adv(badReduction A) + 1/|F|` against `(1,1)`-DLog | proved in `signature-security-lean` at VCVio `f5119c64e` | |
-| BLS, unconditional | a bound in `q`, `q_H`, `q_S` and `|F|` only | the row above, T5, and generic `(1,1)`-DLog. The last is a bound at `pairingSig` (Section 8.3), so this row is reached in milestone 6 and not before | Jaeger, Mohan |
+| presentations agree (T1) | exact translations among the four presentations of Section 4.4 | agm-lean `Adversary.run_valid`; ArkLib `GroupRepresentation` | Fuchsbauer, Kiltz, Loss |
+| discrete-log relation | finding a nontrivial relation among `n` random elements is at most DLog plus `1/\|F\|`; against a generic adversary, by T5, at most `((q + 3n + 3).choose 2 + 2)/\|F\|` | proved in ironwood on other foundations; T4 | Jaeger, Tessaro, Lemma 3 |
+| linear-functional signatures, BLS | `advantage ≤ adv(goodReduction A) + adv(badReduction A) + 1/\|F\|` against `(1,1)`-DLog | proved in `signature-security-lean` at VCVio `f5119c64e` |  |
+| BLS, unconditional | a bound in `q`, `q_H`, `q_S` and `\|F\|` only | the row above, T5, and generic `(1,1)`-DLog. The last is a bound at `pairingSig` (Section 8.3), so this row is reached in milestone 6 and not before | Jaeger, Mohan |
 | inner-product and Bulletproofs-style arguments | binding of the vector commitment against an algebraic prover | the discrete-log relation row | Jaeger, Tessaro |
 
 The generic bound for the relation problem has the number `n` of given elements in it. The
@@ -914,14 +1075,14 @@ them, and their difference is a relation.
 |---|---|---|---|
 | generic `(q₁, q₂)`-DLog; co-CDH in both forms | T8 | the signature repository's `dlog11Exp` and `coCDHExp` (the Type 3 form) | Bauer, Fuchsbauer, Loss; Boneh, Gentry, Lynn, Shacham |
 | generic `t`-SDH and ARSDH | T8, for ArkLib's experiments: `tSdhExperiment D (ofGeneric A)` and `arsdhExperiment D (ofGeneric A)` | ArkLib `KZG/HardnessAssumptions.lean` | Boneh, Boyen; Chiesa, Guan, Knabenhans, Yu, Definition 9.6 |
-| SXDH; decisional uber | T7, with the accessible span of the signature at hand | | Boneh, Boyen, Goh; Boyen |
-| KZG evaluation binding and function binding, unconditional | for a generic adversary, at most the generic `t`-SDH and ARSDH bounds at a counted number of operations | ArkLib `KZG.CommitmentScheme.binding` with `bindingReduction`, `KZG.CommitmentScheme.function_binding` with `reduction` | |
+| SXDH; decisional uber | T7, with the accessible span of the signature at hand |  | Boneh, Boyen, Goh; Boyen |
+| KZG evaluation binding and function binding, unconditional | for a generic adversary, at most the generic `t`-SDH and ARSDH bounds at a counted number of operations | ArkLib `KZG.CommitmentScheme.binding` with `bindingReduction`, `KZG.CommitmentScheme.function_binding` with `reduction` |  |
 | KZG extraction | a named straight-line extractor; `Pr[accept ∧ p(z) ≠ v] ≤` the `t`-SDH advantage of a named reduction | ArkLib `Commitment.extractability`, today a placeholder, once its game says what the extractor receives (below) | Marlin, Theorem B.12 |
-| uber family from `q`-DLog, algebraic adversaries | a reduction that factors `W` | | Bauer, Fuchsbauer, Loss; Rotem |
+| uber family from `q`-DLog, algebraic adversaries | a reduction that factors `W` |  | Bauer, Fuchsbauer, Loss; Rotem |
 | BLS and aggregate BLS under co-CDH | Type 3, and Type 2 with `ψ` | milestone 4 | Boneh, Gentry, Lynn, Shacham |
 | Groth16 knowledge soundness | algebraic, from `q`-DLog; then generic by T5 | no Groth16 in ArkLib yet | Groth; Fuchsbauer, Kiltz, Loss |
 
-Two rows need a change in ArkLib first.
+Two results need a change in ArkLib first.
 
 *The KZG binding theorems take a hypothesis that no bound in this note can discharge.*
 `KZG.CommitmentScheme.binding` assumes `Groups.tSdhAssumption … tSdhError`, which is
@@ -957,7 +1118,7 @@ the committed polynomial.
 
 | Result | Why it waits | Composes with |
 |---|---|---|
-| Schnorr EUF-CMA, unconditional in the labelled model | the scheme hashes a group element, so both scheme and adversary need labels | `Schnorr.signature_euf_cma` in `Examples/Schnorr/Signature.lean`, a forking bound against `dlogExperiment g (dlogReduction …)`; the composed bound has the square-root loss of forking |
+| Schnorr EUF-CMA, unconditional in the labelled model | the scheme hashes a group element, so both scheme and adversary need labels | `Schnorr.signature_euf_cma` in `VCVio/Schemes/Schnorr/Signature.lean`, a forking bound against `dlogExperiment g (dlogReduction …)`; the composed bound has the square-root loss of forking |
 | Schnorr, tight, algebraic adversaries | a different proof, not a composition | Fuchsbauer, Plouviez, Seurin |
 | hashed ElGamal, the DDH term only | the scheme hashes a group element. The existing bound is one-time and reads `2 · (ddhAdvantage … + EntropySmoothing.advantage …)` for an arbitrary keyed function `hash : HK → G → M`. A group model bounds the first term. The second is an assumption on the hash family and stays one: with a constant `hash` the scheme sends the message in the clear | `hashedElGamal.hashedElGamal_IND_CPA_bound` in `Examples/ElGamal/Hash.lean` |
 | KZG extraction with oblivious sampling | the adversary can create elements with no representation | Lipmaa, Parisella, Siim; Belohorec, Hubáček, Stejskal |
@@ -984,27 +1145,27 @@ the committed polynomial.
 
 | Source | Object | Becomes |
 |---|---|---|
-| ArkLib | `GroupOpOracle`, `GroupExpOracle`, `GroupEqOracle` | `GroupModel.spec` |
-| ArkLib | `GroupEncodeOracle`, `GroupDecodeOracle` with `Serialize` | encoding and decoding oracles over plain functions `enc`, `dec`; ArkLib instantiates them from `Serialize` |
-| ArkLib | `GroupRepresentation basis target` | a T1 adapter from `Explains given`, through `Additive` |
-| ArkLib | `Adversary`, `Adversary.run` (`sorry`) | `OracleComp (genSpec F + …)` and `run` |
-| agm-lean | `Groups`, `extend`, `Message`, `Explained`, `Explained.Valid`, `IsAlgebraic`, `Adversary.run`, `Adversary.run_valid` | moved as a module; `Explained.Valid` proved equivalent to `Explains given` on the tracked table, with the given handles listed in order of arrival, one for each receipt |
-| signature repo | `AlgebraicGroupModel.Representation`, `Output`, `materialize` | T1 adapter |
-| signature repo | `Model.LazyAGM.{fixedImpl, lazyImpl, game, advantage}` | the hash-to-group oracle, with a cache of elements and one `push` for each reply, and a game written with `push` |
-| signature repo | `goodReduction`, `badReduction`, the files of `LinearFunctional/Proofs/` with `Model.LazyAGM.Proofs.security`, and `BLS.LazyAGM.Proofs.security` | the same reductions written as handlers; the inner theorem, then its generic corollary by T5 |
-| signature repo | `AlgebraicGroupModel.DLog11Adversary`, `dlog11Exp`, `BLS.CoCDH.CoCDHAdversary`, `coCDHExp` | `HardnessAssumptions/` next to `DiffieHellman.lean`; `coCDHExp` is the Type 3 form of co-CDH (Section 6.5) |
-| signature repo | `BilinearPairing` class | the real model of `pairingSig` over a Mathlib bilinear map (Section 6.3) |
-| ArkLib | the `pairing` argument of `KZG`, `Groups.tSdhExperiment`, `Groups.arsdhExperiment` | the same real model through `Additive`; generic bounds by T8 |
-| ArkLib | `Commitment.extractability` (body `False`) | a game whose extractor receives the commitment key, the group-oracle log and the committer's output handle, and replays the log in the free model (Section 8.3) |
-| signature repo | `Runtime/`, `HardWithin`, `Statement.lean` endpoints | not moved (the third corner of Section 3) |
-| ironwood | `representationEval`, `AlgebraicRelationWitness`, `ProgrammedBasisEmbedding`, `relationWithCoins_prob_le_of_textbookDL` | statements re-proved on VCVio's measures: the discrete-log relation problem and its reduction to DLog with loss `1/|F|` (Jaeger and Tessaro, Lemma 3) |
-| ironwood | `CostedLabeledOracleComp`, `StagedGroupWorkFaithful` | not moved; replaced by `CostModel` on `spec F` for generic adversaries |
+| ArkLib | `GroupRepresentation basis target` | typed points through `Additive G` over `ZMod p`, by T1c |
+| agm-lean | `Groups`, `extend`, `Message`, `Explained`, `Explained.Valid`, `IsAlgebraic`, `Adversary.run`, `Adversary.run_valid` | `GroupModel.Interaction`; T1a/T1b connect it to handles using the per-sort receipt list |
+| signature repo | `Signatures/Model/DirectAGM.lean` | the same certified `Interaction.Adversary` as agm-lean, not another presentation |
+| signature repo | `Signatures/Model/AlgebraicRepresentation.lean`: `Representation F Token`, `Transcript Token G` | token-indexed representations; fixed-slot coefficients are a derived grouping of the receipt basis |
+| signature repo | `Signatures/Model/LazyAGM.lean`, `Proofs/Model/DirectAGM.lean` | hash-to-group handlers with an element cache and a fresh given handle for each reply |
+| signature repo | `Proofs/LinearFunctional/`, `Proofs/BLS/`: `goodReduction`, `badReduction` and security proofs | handlers under `VCVio/Schemes/LinearFunctional/` and `VCVio/Schemes/BLS/`; generic corollaries by T5 |
+| signature repo | `Signatures/Model/DLog11.lean`, `Signatures/Model/CoCDH.lean` | problems under `HardnessAssumptions/`; the co-CDH experiment is the Type 3 form |
+| signature repo | `Signatures/Model/BilinearGroup.lean`: `BilinearPairing` | a one-line adapter in that repository to the Mathlib bilinear map used by `pairingSig` |
+| ArkLib | KZG's pairing, `Groups.tSdhExperiment`, `Groups.arsdhExperiment` | the real pairing model through `Additive`; bounds by T8 |
+| ArkLib | `Commitment.extractability` (body `False`) | a game giving the extractor the key, group-oracle log and output handle (Section 8.3) |
+| signature repo | `Signatures/Runtime/`, `Proofs/Runtime/`, weighted solvers and `HardWithin` | remain outside this library (Section 3 and D7) |
+| ironwood | `representationEval`, `AlgebraicRelationWitness`, `ProgrammedBasisEmbedding`, `relationWithCoins_prob_le_of_textbookDL` | proofs on VCVio measures of the relation problem and its reduction to DLog with loss `1/\|F\|` |
+| ironwood | `CostedLabeledOracleComp`, `StagedGroupWorkFaithful` | remain outside this library; generic adversaries use `CostModel` on `spec F` |
 
-Ironwood is on Lean v4.30.0 with its own `OracleComp` and Mathlib `PMF`. VCVio's probability is
-`Measure`-valued and its linter rejects `PMF`, so ironwood contributes statements and proof
-ideas, with attribution, not files. The signature repository builds on VCVio `f5119c64e`,
-22 commits behind `main`, and uses the removed `Pr[= x | mx]` notation; its files go through the
-codemod in `docs/agents/probability-migration.md`.
+ArkLib retains only `GroupRepresentation` from its AGM interface; the oracle half is deleted
+in milestone-1 slice 6 and has no embedding target.
+
+Ironwood uses Lean v4.30.0, its own `OracleComp` and Mathlib `PMF`. VCVio uses measures and its
+linter rejects `PMF`, so ironwood contributes statements and proof ideas with attribution.
+The signature repository uses Lean v4.34.0 and VCVio `f5119c64e`. Its probability notation
+needs the codemod in `docs/agents/probability-migration.md` when porting to current VCVio.
 
 `zksecurity/bulletproofs-formal-verification` contains the same discrete-log-relation lemma
 under AGPL-3.0. It cannot be copied into an Apache-2.0 library. Ironwood's statement of the
@@ -1019,20 +1180,20 @@ against the paper before a theorem cites it).
 | Paper | Object or theorem here | Status | Basis |
 |---|---|---|---|
 | Shoup, *Lower bounds for discrete logarithms and related problems* (1997) | T3, T4; the labelled variant of the encoding oracle | target | recalled |
-| Maurer, *Abstract models of computation in cryptography* (2005) | `spec F`, `impl`, equality as a relation query | prototype | recalled |
-| Fuchsbauer, Kiltz, Loss, ePrint 2017/620 | the algebraic class; T1, T2; Groth16 in the algebraic model | L1 proved in prototype | abstract |
+| Maurer, *Abstract models of computation in cryptography* (2005) | `spec F`, `impl`, equality as a relation query | library target | recalled |
+| Fuchsbauer, Kiltz, Loss, ePrint 2017/620 | the algebraic class; T1, T2; Groth16 in the algebraic model | L1 in slice 1 | abstract |
 | Boneh, Boyen, *Short signatures without random oracles* (2004) | `t`-SDH and its generic bound (T8) | target | recalled; the assumption as restated in Marlin was read |
-| Boneh, Boyen, Goh, ePrint 2005/015; Boyen, *The uber-assumption family* (2008) | T7; the independence condition as equality of relation kernels | T6 proved in prototype | recalled |
-| Galbraith, Paterson, Smart, ePrint 2006/165 | the three pairing signatures; hashing per sort | prototype | abstract |
-| Boneh, Gentry, Lynn, Shacham, *Aggregate and verifiably encrypted signatures from bilinear maps* (2003) | `pairingIsoSig`; co-CDH | prototype | read |
+| Boneh, Boyen, Goh, ePrint 2005/015; Boyen, *The uber-assumption family* (2008) | T7; the independence condition as equality of relation kernels | T6 in slice 1 | recalled |
+| Galbraith, Paterson, Smart, ePrint 2006/165 | the three pairing signatures; hashing per sort | library target | abstract |
+| Boneh, Gentry, Lynn, Shacham, *Aggregate and verifiably encrypted signatures from bilinear maps* (2003) | `pairingIsoSig`; co-CDH | library target | read |
 | Jager, Rupp, *The semi-generic group model and applications to pairing-based cryptography* (2010) | a per-sort choice of knobs (Section 6.6) | target | abstract |
 | Groth, ePrint 2016/260 | knowledge soundness in the generic bilinear group model (Section 8.3) | not planned yet | abstract |
 | Chiesa, Hu, Maller, Mishra, Vesely, Ward, *Marlin*, ePrint 2019/1047, Appendices A.4 and B.3 | pairing as a query; KZG extraction from the adversary's representations | target | read |
 | Bauer, Fuchsbauer, Loss, ePrint 2020/859 | `(q₁, q₂)`-DLog; the uber family from `q`-DLog for algebraic adversaries | target | abstract; restated in Rotem, read |
-| Rotem, ePrint 2022/584 | target-group representations (`ReprT`); the degree needed in `q`-DLog | prototype | read |
+| Rotem, ePrint 2022/584 | target-group representations (`ReprT`); the degree needed in `q`-DLog | library target | read |
 | Rotem, Segev, ePrint 2020/1144 | algebraic distinguishers for decisional problems | not planned | abstract |
 | Bauer, Farshim, Harasser, Kohlweiss, *The uber-knowledge assumption* (IACR CiC 1(3)) | knowledge assumptions that instantiate algebraic extraction | not planned | abstract |
-| Jaeger, Tessaro, ePrint 2020/1213, Lemma 3 | discrete-log relation ≤ DLog + `1/|F|` | proved in ironwood on other foundations | recalled; ironwood's statement was read |
+| Jaeger, Tessaro, ePrint 2020/1213, Lemma 3 | discrete-log relation ≤ DLog + `1/\|F\|` | proved in ironwood on other foundations | recalled; ironwood's statement was read |
 | Fuchsbauer, Plouviez, Seurin, ePrint 2019/877 | Schnorr, tight, algebraic adversaries | not planned yet | recalled |
 | Bauer, Fuchsbauer, Plouviez, ePrint 2021/866 | one-more discrete log, beyond T3 (Section 8.5) | not planned | abstract |
 | Katz, Zhang, Zhou, ePrint 2022/210 | S2 | target | recalled |
@@ -1056,55 +1217,42 @@ representations.
 
 ## 11. Decisions
 
-| | Question | Recommendation |
+D1–D15 are settled.
+
+| Decision | Topic | Settled choice |
 |---|---|---|
-| D1 | Equality: an oracle query, or canonical handles that make equal elements share a handle? | Oracle query, free in the default cost model, bounds stated in table size (Section 4.7). Canonical handles make handle allocation depend on the group and break L1 as an equality. |
-| D2 | Encoding variants in one oracle signature or separate models? | One signature `Handle →ₒ E` with three handlers. |
-| D3 | Sorts and structure maps from the start, or a single group first? | The signature of Section 6.1 from the start, with one-group names as abbreviations at `groupSig`. L1 is then proved once for every signature, as in the prototype; agm-lean is already sorted; the first application has two source groups. The cost is tables indexed by a dependent family, which the prototype handles by defining each map on concrete types before packaging it. |
-| D4 | `Repr F := Handle → F` or `Handle →₀ F`? | `Handle → F`: computable, and the support bound is part of the invariant. |
-| D5 | Additive `Module F G` or multiplicative `Group G` with `PrimeOrderWith`? | Additive, as in `DiffieHellman.lean`. ArkLib's KZG already goes through `Additive G`. |
-| D6 | Namespace and location. | `GroupModel`, under `VCVio/CryptoFoundations/GroupModel/`; problems under `HardnessAssumptions/`. |
-| D7 | `∀`-solver hardness predicates such as `HardWithin`. | Not in the library. Primary statements are reduction inequalities with named reductions (gotcha 11) and T4-style bounds on `ofGeneric`. An asymptotic `SecurityGame` wrapper is the only place a quantifier over adversaries appears. |
-| D8 | Pairings: a query built into the oracle, an extra oracle beside it, or an instance of a signature? And the map itself: a Mathlib bilinear map, or a `BilinearPairing` class? | An instance of a signature (Section 6.1), so that Type 1, 2 and 3 share L1, the symbolic model and T3ₛ. The real model takes the Mathlib map `G₁ →ₗ[F] G₂ →ₗ[F] Gₜ`, as ArkLib's KZG does. |
-| D9 | What happens to `agm-lean` once its module has moved? | A shim that re-exports the VCVio module, or archived. Its owners decide. |
-| D10 | Representations for a signature with structure maps: one general free model, or one per signature? | One per signature: one group, Type 1, Type 2, Type 3 (Section 6.3). The general construction is needed only when structure maps compose: a bilinear map into the source of another map, or linear maps in a chain or a cycle. Source-sort representations first; `ReprT` when an application outputs target elements. |
+| D1 | equality | An oracle query, free in `unitCost`; bounds are stated in table size, with zero counted. |
+| D2 | encodings | One oracle `encSpec E`, with a query `(s, h)` answered in `E s`, and three handlers: absent, real `enc`, lazy random labels. |
+| D3 | sorts | The sorted signature from the first library slice. One-group names are abbreviations at `groupSig`. |
+| D4 | representations | `Handle → F`. |
+| D5 | notation | Additive `Module F G`. ArkLib bridges through `Additive G` and `ZMod p` (its `GroupRepresentation` is multiplicative with `PrimeOrderWith`). |
+| D6 | location | `VCVio/CryptoFoundations/GroupModel/` for the model, `HardnessAssumptions/` for problems, `VCVio/Schemes/` for BLS and the other schemes. |
+| D7 | no `∀`-solver premises | None enter the library. Statements are reduction inequalities with named reductions, and bounds on `ofGeneric A`. |
+| D8 | pairings | An instance of a signature; the real model takes a Mathlib map `G₁ →ₗ[F] G₂ →ₗ[F] Gₜ`. The signature repository's `BilinearPairing` class gets a one-line adapter in that repository. |
+| D9 | agm-lean | Once its module is in VCVio, a re-export shim pinned to VCVio, then archived. The owners decide. |
+| D10 | free models | One per signature. Milestone 1 builds `groupSig`, `discreteSig S` and `pairingSig` (source sorts); `ReprT` and Types 1 and 2 come at milestone 6. |
+| D11 | The one definition of an algebraic adversary | It is a handle computation with the encoding oracle: `OracleComp (spec F σ + encSpec E + Γ) α`. Its representations come from the tracking run; the adversary does not supply them. A generic adversary is the same computation without `encSpec`, so generic ⊆ algebraic is `liftComp`. agm-lean's certified explained adversary and ironwood's typed points are presentations of this class, with translations that preserve the game's output exactly (Section 5). Reasons for this choice: the inclusion of the generic class is syntactic; group work is countable; nobody writing an adversary has to supply a proof obligation; a reduction written as a handler serves both classes (T5). |
+| D12 | Games | A game may be written on values in agm-lean's form (`plainSpec G Query Reply`, a handler on actual elements) and lifted to handles once, by `liftGame`. A game may also be written directly on handles with `lookup` and `push`. T1 is stated for lifted games. |
+| D13 | Basis bookkeeping | The tracking state keeps, for each sort, the list of given handles in order of arrival, one entry per receipt. agm-lean's coefficient list is then `given.map repr`, and no reindexing lemma is needed. |
+| D14 | Milestone order | The algebraic presentations and their translations (without KZG) come immediately after the core, before generic lower bounds. L2 (`Collision.lean`) and `Cost.lean` belong to milestone 2, the first place that uses them. |
+| D15 | agm-lean's namespace | The library namespace is `GroupModel.Interaction`. The signature repository must re-pin to VCVio in any case. |
 
 ## 12. What was checked
 
-Both prototype files were elaborated with Lean v4.34.0 against Mathlib and VCVio `f5119c64e`,
-the revision `signature-security-lean` builds on, by calling `lean` directly on the compiled
-modules. They were not built against VCVio `main`; the one VCVio lemma they use,
-`OracleComp.map_run_simulateQ_eq_of_query_map_eq`, has the same statement there. Neither file is
-part of a Lake library.
+This note is checked against VCVio `main` at `e3d105040`, using Lean and Mathlib v4.35.0.
+The library slices are proof obligations, not claims of completed formalization. No Lean
+elaboration is part of this documentation check.
 
-`group-models/Prototype.lean` (234 lines), the one-group model. It contains a verbatim copy of
-`DiffieHellman.DLogAdversary` and `dlogExperiment` because that module was not among the compiled
-ones.
+Slice 1 will prove L1 (`run_map`), `impl_congr`, and T6 (`run_fst_eq_of_kernel_eq`) in
+`Projection.lean`, using the definitions in `Signature.lean` and `Oracle.lean`. Slice 2 will
+prove the real, symbolic and source-sort free-model evaluation maps in `Instances.lean`, and
+the tracking projection and `Explains` preservation in `Tracking.lean`. In particular,
+`explains_of_mem_support_runTracking` remains a target. Slices 3–5 will supply the certified
+interaction interface and the T1a/T1b/T1c translations, including their exact run equalities.
 
-- Elaborate: `Handle`, `Query`, `spec`, `lookup`, `push`, `impl`, `genSpec`, `run`, `runReal`,
-  `Repr`, `runTracking`, `trackInputs`, `Repr.eval`, `Explains`, `runSymbolic`, `runEval`,
-  `DLogAdversary.ofGeneric`, `unitCost`.
-- Proved, with axioms `propext` and `Quot.sound`: `lookup_map`, `run_map`,
-  `runTracking_map_snd`.
-- Proved, with `Classical.choice` in addition: `map_snd_trackInputs`, `runEval_map_eval`.
-- Stated with `sorry`: `explains_of_mem_support_runTracking`, `dlogExperiment_ofGeneric_le`.
-
-`group-models/SortedPrototype.lean` (385 lines), the sorted model. It has no `sorry`.
-
-- Elaborate: `Sig`, `Query`, `spec`, `Model`, `Model.Hom`, `Tbl`, `lookup`, `append`, `mapTbl`,
-  `impl`, `genSpec`, `run`; the signatures `groupSig`, `pairingSig`, `pairingIsoSig`,
-  `symmPairingSig`; the models `symbolic`, `real`, `tracking`, `free`; `Repr`, `ReprT`, `outer`,
-  `evRepr`, `evReprT`, `evalAt`.
-- Proved, with axioms `propext` and `Quot.sound`: `run_map` (L1 for every signature and every
-  morphism), `impl_congr`, `run_fst_eq_of_kernel_eq` (T6), `tracking.forget`.
-- Proved, with `Classical.choice` in addition: `evReprT_outer`, `evHom`, `evRepr_single`,
-  `evalAt_apply`, `evalHom`.
-
-Not checked by Lean: L2 in either form, T1 and the count of receipts it relies on, the
-invariant of T2 (`Explains given`, in every case), T3, T3ₛ, T5 and its cost certificate, the
-two bounds for the relation problem, T7, T8, S1 to S3, P1 to P3, the restriction along a
-map of signatures (Section 6.2), the free and tracking models for `pairingIsoSig` and
-`symmPairingSig`, the accessible spans of Section 6.5, the instance of T6 at two tables of
-polynomials (which needs the evaluation map from the free model into the symbolic model), every
-numeric constant in Section 8, and the trilemma of Section 3. The argument of Section 8.3 that
-ArkLib's KZG hypotheses cannot be met is an argument on paper.
+Everything else is a paper argument or theorem target: L2, T3/T4 (including
+`dlogExperiment_ofGeneric_le`), T3ₛ, T5 and its cost certificate, the relation-problem bounds,
+T7/T8, S1–S3, P1–P3, restriction along a map of signatures, the target representation `ReprT`
+and `evReprT_outer`, the free and tracking models for Types 1 and 2, the accessible spans,
+the polynomial-table instance of T6, and every numeric constant in Section 8. The trilemma in
+Section 3 and the argument about ArkLib's KZG hypotheses in Section 8.3 are paper arguments.
