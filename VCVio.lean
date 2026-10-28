@@ -594,6 +594,14 @@ public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.Pedersen
+public import VCVio.Schemes.Schnorr.AGM.Adversary
+public import VCVio.Schemes.Schnorr.AGM.Bridge
+public import VCVio.Schemes.Schnorr.AGM.Probability
+public import VCVio.Schemes.Schnorr.AGM.Reduction
+public import VCVio.Schemes.Schnorr.AGM.Representation
+public import VCVio.Schemes.Schnorr.AGM.Security
+public import VCVio.Schemes.Schnorr.AGM.Simulation
+public import VCVio.Schemes.Schnorr.AGM.Soundness
 public import VCVio.Schemes.Schnorr.BoundedChallenges
 public import VCVio.Schemes.Schnorr.ChallengeRestriction
 public import VCVio.Schemes.Schnorr.SigmaProtocol
