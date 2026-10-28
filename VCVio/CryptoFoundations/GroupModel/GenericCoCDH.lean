@@ -37,22 +37,6 @@ empty target table, and read its first-source output handle, with zero out of ra
       | .g₂ => [g₂, X₂]
       | .gₜ => [])
 
-private theorem uniform_fin_two {F : Type} [SampleableType F] :
-    (do let a ← $ᵗ F; let b ← $ᵗ F; pure (![a, b] : Fin 2 → F)) =ᵈ
-      ($ᵗ (Fin 2 → F) : ProbComp (Fin 2 → F)) := by
-  have hb : Function.Bijective (Function.uncurry (fun (a b : F) => (![a, b] : Fin 2 → F))) := by
-    constructor
-    · intro a b h
-      exact Prod.ext (congrFun h 0) (congrFun h 1)
-    · intro f
-      refine ⟨(f 0, f 1), ?_⟩
-      funext i
-      fin_cases i <;> rfl
-  apply EvalDistEq.of_forall_prEvent_eq
-  intro p
-  simpa only [prEvent_norm] using
-    SampleableType.prEvent_uniformSample_pair_of_bijective hb p
-
 /-- A Type 3 generic co-CDH adversary with append budgets `n₁`, `n₂`, `nₜ` succeeds with
 probability at most `((n₁ + 4).choose 2 + (n₂ + 3).choose 2 +
 2 * (nₜ + 1).choose 2 + 2) / |F|`. The first generator parametrizes its group bijectively;
@@ -126,7 +110,15 @@ theorem experiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
     rfl
   let E := fun (x : Fin 2 → F) (z : Handle × Tbl (fun _ : PSort => MvPolynomial (Fin 2) F)) =>
     MvPolynomial.eval x (lookup z.2 .g₁ z.1) = x 0 * x 1
-  have hs := (uniform_fin_two (F := F)).bind_left (fun x =>
+  have hb : Function.Bijective (Function.uncurry (fun (a b : F) => (![a, b] : Fin 2 → F))) := by
+    constructor
+    · intro a b h
+      exact Prod.ext (congrFun h 0) (congrFun h 1)
+    · intro f
+      refine ⟨(f 0, f 1), ?_⟩
+      funext i
+      fin_cases i <;> rfl
+  have hs := (SampleableType.evalDistEq_uniformSample_pair_of_bijective hb).bind_left (fun x =>
     E x <$> runGen (symbolic F pairingSig (Fin 2)) (fun _ p => MvPolynomial.eval x p) A tbl)
   have hh := SampleableType.map_uniformSample_evalDistEq_of_bijective hg
   have hevent : Pr{let b ← _root_.CoCDH.experiment g₁ g₂ (Adversary.ofGeneric e A)}[b = true] =
