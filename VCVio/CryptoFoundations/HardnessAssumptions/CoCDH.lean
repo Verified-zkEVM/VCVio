@@ -8,10 +8,11 @@ module
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import Mathlib.Algebra.Module.Basic
 
-/-! # The Type 3 co-computational Diffie–Hellman problem
+/-! # Co-computational Diffie–Hellman problems
 
-The challenge supplies a common scalar multiple in both source groups and an independent
-uniform point in the first source group. The adversary must multiply that point by the scalar.
+The Type 3 challenge supplies a common scalar multiple in both source groups. The Type 2
+challenge supplies only the second-source multiple, with a public map to the first source.
+Both problems ask for the scalar multiple of an independent uniform first-source point.
 -/
 
 public section
@@ -35,6 +36,23 @@ note distinguishes this form from co-CDH with a map between the source groups. -
   let x ← $ᵗ F
   let h ← $ᵗ G₁
   let w ← A g₁ g₂ (x • g₁) (x • g₂) h
+  return decide (w = x • h)
+
+/-- A Type 2 co-CDH adversary receives a second-source generator, its scalar multiple,
+and an independent challenge point in the first source group. -/
+@[expose] def IsoAdversary (_F G₁ G₂ : Type) := G₂ → G₂ → G₁ → ProbComp G₁
+
+/-- The Type 2 co-CDH problem of Boneh, Gentry, Lynn and Shacham (aggregate signatures,
+EUROCRYPT 2003). The scalar `x` and challenge `h` are independent and uniform; success
+means returning `x • h`. The map `ψ : G₂ → G₁` and the pairing are public system
+parameters, which the adversary may capture. -/
+@[expose] def isoExperiment {F G₁ G₂ : Type} [Field F] [SampleableType F]
+    [AddCommGroup G₁] [Module F G₁] [SampleableType G₁] [DecidableEq G₁]
+    [AddCommGroup G₂] [Module F G₂]
+    (g₂ : G₂) (A : IsoAdversary F G₁ G₂) : ProbComp Bool := do
+  let x ← $ᵗ F
+  let h ← $ᵗ G₁
+  let w ← A g₂ (x • g₂) h
   return decide (w = x • h)
 
 end CoCDH
