@@ -95,4 +95,56 @@ example : (run pairingModel (fun _ => id) pairingGame pairingProgram pairingTabl
 
 example : lookup pairingTable .g₁ 99 = 0 := by decide
 
+/-- Compare two distinct handles through the group oracle. -/
+def equalityProgram : OracleComp (spec (ZMod 7) groupSig + gameSpec) Bool :=
+  (spec (ZMod 7) groupSig + gameSpec).query (.inl (.eq () 0 1))
+
+example : (run singleModel (fun _ => id) singleGame equalityProgram
+    (fun _ => [3, 3])).1 = true := by decide
+
+example : (run singleModel (fun _ _ => ()) singleGame equalityProgram
+    (fun _ => [1, 3])).1 = true := by decide
+
+/-! ## Product projection through ordinary imports -/
+
+section ProductProjection
+
+variable {F : Type} [CommSemiring F] {S : Type} [DecidableEq S] {σ : Sig S}
+    {V W : S → Type} [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
+    [∀ s, AddCommMonoid (W s)] [∀ s, Module F (W s)]
+
+example (M : Model F σ V) (N : Model F σ W) (s : S) (x : V s × W s) :
+    (Model.Hom.snd M N).toFun s x = x.2 := rfl
+
+example (M : Model F σ V) (N : Model F σ W) (s : S) (x : V s × W s) :
+    (Model.Hom.fst M N).toFun s x = x.1 := by simp only [Model.Hom.fst_apply]
+
+example (M : Model F σ V) (s : S) (x : V s) :
+    ((Model.Hom.id M).comp (Model.Hom.id M)).toFun s x = x := by
+  simp only [Model.Hom.comp_apply, Model.Hom.id_apply]
+
+example (M : Model F σ V) (N : Model F σ W) (o : σ.Lin)
+    (x : V (σ.lsrc o) × W (σ.lsrc o)) :
+    (M.prod N).lin o x = (M.lin o x.1, N.lin o x.2) := by
+  simp only [Model.prod_lin_apply]
+
+example (M : Model F σ V) (N : Model F σ W) (o : σ.Bil)
+    (x : V (σ.src₁ o) × W (σ.src₁ o)) (y : V (σ.src₂ o) × W (σ.src₂ o)) :
+    (M.prod N).bil o x y = (M.bil o x.1 y.1, N.bil o x.2 y.2) := by
+  simp only [Model.prod_bil_apply]
+
+example [∀ s, DecidableEq (W s)] (M : Model F σ V) (N : Model F σ W) {α : Type}
+    (oa : OracleComp (genSpec F σ) α) (tbl : Tbl fun s => V s × W s) :
+    Prod.map id (mapTbl fun _ => Prod.snd) <$>
+        runGen (M.prod N) (fun _ => Prod.snd) oa tbl =
+      runGen N (fun _ => id) oa (mapTbl (fun _ => Prod.snd) tbl) := by
+  have hsnd : (fun s => ⇑((Model.Hom.snd M N).toFun s)) =
+      (fun _ => Prod.snd) := by
+    funext s x
+    simp only [Model.Hom.snd_apply]
+  simpa only [hsnd, Function.comp_def, id_eq] using
+    runGen_map (Model.Hom.snd M N) (fun _ => id) oa tbl
+
+end ProductProjection
+
 end GroupModel

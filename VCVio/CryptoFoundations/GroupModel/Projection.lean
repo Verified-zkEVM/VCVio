@@ -41,29 +41,36 @@ theorem run_map [∀ s, DecidableEq (U s)] {M : Model F σ V} {N : Model F σ W}
   rcases t with (⟨s', a, b⟩ | ⟨s', c, a⟩ | ⟨s', a, b⟩ | ⟨o, a⟩ | ⟨o, a, b⟩) | n
   · simp only [QueryImpl.add_apply_inl, impl, push, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet, StateT.run]
-    erw [map_pure]
-    simp [Prod.map, mapTbl_append, lookup_mapTbl, mapTbl]
-    rfl
+    change Prod.map (id : Handle → Handle) (mapTbl fun s => φ.toFun s) <$>
+      (pure _ : m (Handle × Tbl V)) = (pure _ : m (Handle × Tbl W))
+    simp only [map_pure, Prod.map, id_eq, mapTbl_append, lookup_mapTbl, map_add,
+      mapTbl, List.length_map]
   · simp only [QueryImpl.add_apply_inl, impl, push, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet, StateT.run]
-    erw [map_pure]
-    simp [Prod.map, mapTbl_append, lookup_mapTbl, mapTbl]
-    rfl
+    change Prod.map (id : Handle → Handle) (mapTbl fun s => φ.toFun s) <$>
+      (pure _ : m (Handle × Tbl V)) = (pure _ : m (Handle × Tbl W))
+    simp only [map_pure, Prod.map, id_eq, mapTbl_append, lookup_mapTbl, map_smul,
+      mapTbl, List.length_map]
   · simp only [QueryImpl.add_apply_inl, impl, Function.comp_apply, StateT.run_bind,
       StateT.run_get, pure_bind, lookup_mapTbl]
-    erw [StateT.run_pure, StateT.run_pure]
-    simp
-    rfl
+    change Prod.map (id : Bool → Bool) (mapTbl fun s => φ.toFun s) <$>
+      (pure (decide (obs s' (φ.toFun s' (lookup s s' a)) =
+        obs s' (φ.toFun s' (lookup s s' b))), s) : m (Bool × Tbl V)) =
+      pure (decide (obs s' (φ.toFun s' (lookup s s' a)) =
+        obs s' (φ.toFun s' (lookup s s' b))), mapTbl (fun s => φ.toFun s) s)
+    simp only [map_pure, Prod.map, id_eq]
   · simp only [QueryImpl.add_apply_inl, impl, push, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet, StateT.run]
-    erw [map_pure]
-    simp [Prod.map, mapTbl_append, lookup_mapTbl, φ.map_lin, mapTbl]
-    rfl
+    change Prod.map (id : Handle → Handle) (mapTbl fun s => φ.toFun s) <$>
+      (pure _ : m (Handle × Tbl V)) = (pure _ : m (Handle × Tbl W))
+    simp only [map_pure, Prod.map, id_eq, mapTbl_append, lookup_mapTbl, φ.map_lin,
+      mapTbl, List.length_map]
   · simp only [QueryImpl.add_apply_inl, impl, push, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet, StateT.run]
-    erw [map_pure]
-    simp [Prod.map, mapTbl_append, lookup_mapTbl, φ.map_bil, mapTbl]
-    rfl
+    change Prod.map (id : Handle → Handle) (mapTbl fun s => φ.toFun s) <$>
+      (pure _ : m (Handle × Tbl V)) = (pure _ : m (Handle × Tbl W))
+    simp only [map_pure, Prod.map, id_eq, mapTbl_append, lookup_mapTbl, φ.map_bil,
+      mapTbl, List.length_map]
   · exact hgame n s
 
 /-- Projection of a generic run along a model morphism. -/
