@@ -218,7 +218,7 @@ theorem prEvent_runGen_sameKernel_le_add [Field F] [DecidableEq F]
 /-- Uniform hidden points over a finite field give the two Schwartz–Zippel terms
 `choose (initial size + q + 1) 2 * (degree / card F)` in the decisional bound. -/
 theorem measureETVDist_runGen_sameKernel_uniform_le [Field F] [DecidableEq F]
-    [Fintype F] [Finite ι] [SampleableType (ι → F)]
+    [Fintype F] [SampleableType (ι → F)]
     [Fintype S] [DecidableEq S] {α : Type} [MeasurableSpace ((ι → F) × α)]
     {d₀ d₁ q : ℕ} (oa : OracleComp (genSpec F (discreteSig S)) α)
     (hq : IsQueryBoundP oa (fun i => isGroupOp i = true) q)
@@ -236,6 +236,11 @@ theorem measureETVDist_runGen_sameKernel_uniform_le [Field F] [DecidableEq F]
       (((∑ s, (T₁ s).length) + q + 1).choose 2 : ℝ≥0∞) *
         ((d₁ : ℝ≥0∞) / Fintype.card F) := by
   classical
+  have : Finite ι := Finite.of_injective (fun i : ι => Pi.single i (1 : F)) (by
+    intro i j h
+    by_contra hij
+    have he := congrFun h i
+    simp [hij] at he)
   apply measureETVDist_runGen_sameKernel_le ($ᵗ (ι → F)) _ _ oa hq T₀ T₁ hd₀ hd₁ h
   · intro f hf hdeg
     exact prob_eval_zero_univ_le_div f hf hdeg
