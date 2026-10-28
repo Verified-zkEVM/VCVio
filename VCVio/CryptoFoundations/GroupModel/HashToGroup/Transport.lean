@@ -30,7 +30,8 @@ variable {F G κ : Type}
   map_add' a b := by simp [add_smul, Finset.sum_add_distrib]
   map_smul' a c := by simp [Finset.smul_sum, smul_smul]
 
-private theorem evaluate_linearMap [Semiring F]
+/-- A linear map commutes with evaluation of a chronological coefficient list. -/
+theorem evaluate_linearMap [Semiring F]
     {V W : Type} [AddCommMonoid V] [AddCommMonoid W] [Module F V] [Module F W]
     (φ : V →ₗ[F] W) (c : List F) (rows : List V) :
     φ (evaluate c rows) = evaluate c (rows.map φ) := by

@@ -92,11 +92,14 @@ public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 public import VCVio.CryptoFoundations.GroupModel.GenericRelation
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Coins
+public import VCVio.CryptoFoundations.GroupModel.HashToGroup.LazyExecution
+public import VCVio.CryptoFoundations.GroupModel.HashToGroup.LazyRelation
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Oracle
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Presentation
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Programmed
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Provenance
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Relation
+public import VCVio.CryptoFoundations.GroupModel.HashToGroup.SlotTransport
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Transport
 public import VCVio.CryptoFoundations.GroupModel.Instances
 public import VCVio.CryptoFoundations.GroupModel.Interaction
@@ -404,6 +407,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Relabel
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Routing
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Settled
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.RandomOracle.SlotRenaming
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Tape
 public import VCVio.OracleComp.QueryTracking.RandomOracle.TouchRead
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Wiring

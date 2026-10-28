@@ -5,14 +5,14 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Relation
+public import VCVio.CryptoFoundations.GroupModel.HashToGroup.LazyRelation
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Presentation
 
 /-! # Hash-to-group for algebraic games
 
 Scheme-independent lazy hashing, programmable coefficient rows, perfect simulation,
 coin-aware transport of chronological explanations, symbolic receipt provenance, and normalized
-relation extraction for independently sampled challenge tables.
+relation extraction for bounded lazy hashing through finite challenge slots.
 -/
 
 public section

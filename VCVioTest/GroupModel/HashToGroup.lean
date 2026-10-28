@@ -194,4 +194,58 @@ example (B : Fin 2 → F) (sample : Bool → ProbComp (Fin 2 → F))
       z.1.1.value.groups () :=
   toExplained_programmed_transport B sample coinHandle (fun _ => id) (initial []) z hz
 
+private abbrev NatCoinSpec := explainedSpec F Gs (GroupModel.CoinQuery ℕ)
+  (GroupModel.CoinReply (fun _ => Unit))
+
+private def adaptiveCoinAdversary :
+    Adversary F Gs Unit (GroupModel.CoinQuery ℕ)
+      (GroupModel.CoinReply (fun _ => Unit)) Unit where
+  main input := do
+    let coin ← NatCoinSpec.query ⟨⟨.inr 1, fun _ => []⟩, fun _ => []⟩
+    let first ← NatCoinSpec.query ⟨⟨.inl coin.data.val, fun _ => []⟩, fun _ => []⟩
+    let secondLabel := if (first.groups ()).getD 0 0 = 0 then coin.data.val else coin.data.val + 1
+    let second ← NatCoinSpec.query ⟨⟨.inl secondLabel, fun _ => []⟩, fun _ => []⟩
+    let beforeHash := extend input.groups coin.groups
+    let afterFirst := extend beforeHash first.groups
+    return Explained.ofVectors (extend afterFirst second.groups) () (fun s =>
+      [fun i => if i.val = (beforeHash s).length then 1 else 0,
+       fun i => if i.val = (afterFirst s).length then 1 else 0])
+  algebraic input := by
+    refine ⟨fun _ => .nil, fun coin => ?_⟩
+    refine ⟨fun _ => .nil, fun first => ?_⟩
+    refine ⟨fun _ => .nil, fun second => ?_⟩
+    exact Explained.valid_ofVectors _ _ _
+
+private theorem adaptiveCoinAdversary_bound (n : ℕ) :
+    HashQueryBound (F := F) (G := F) n 2 adaptiveCoinAdversary := by
+  intro fixed
+  simp only [rawProgram, interactionProgram, adaptiveCoinAdversary,
+    simulateQ_bind, simulateQ_spec_query, simulateQ_pure, rawGame]
+  apply isQueryBoundP_bind (n := 0) (m := 2)
+  · apply (isQueryBoundP_map_iff _ _ _).mpr
+    simp
+  · intro coin _
+    apply isQueryBoundP_bind (n := 1) (m := 1)
+    · apply (isQueryBoundP_map_iff _ _ _).mpr
+      simp
+    · intro first _
+      apply isQueryBoundP_bind (n := 1) (m := 0)
+      · apply (isQueryBoundP_map_iff _ _ _).mpr
+        simp
+      · intro second _
+        exact isQueryBoundP_pure (p := fun t : ℕ ⊕ ℕ => t.isRight) _ _
+
+-- Ordinary imports expose the final lazy-oracle bound on an infinite label type. The first
+-- label depends on a private coin; the second depends on both that coin and a hash reply.
+example :
+    Pr{let z ← lazyTrial (F := F) (G := F) 1 adaptiveCoinAdversary}[
+      NormalizedCollision (receiptOrigins 1 z.2) z.1] ≤
+      Pr{let b ← (DiffieHellman.dlogExperiment (1 : F)
+        (DiscreteLogRelation.plainReduction
+          (lazyRelationReduction (F := F) (G := F) (n := 1) (q := 2)
+            adaptiveCoinAdversary)))}[b = true] + 1 / 101 := by
+  simpa only [ZMod.card, Nat.cast_ofNat] using
+    lazyTrial_le_dlog (F := F) (G := F) 1 2 (1 : F) generator_bijective
+      adaptiveCoinAdversary (adaptiveCoinAdversary_bound 1)
+
 end HashToGroupTest

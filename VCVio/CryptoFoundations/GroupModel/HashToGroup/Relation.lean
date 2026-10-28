@@ -15,8 +15,8 @@ The challenge-table experiment gives each fixed-input slot and hash label its ow
 Its reduction is an instance of the shared relation experiment; the subsequent discrete-log
 bound uses the joint hidden-mask argument of `DiscreteLogRelation.experiment_le`.
 
-The quantitative experiment samples a complete finite table. Applying it to an arbitrary label
-space with a fresh-query budget requires a lazy-oracle-to-challenge-slot simulation theorem.
+The quantitative experiment samples a complete finite table. `HashToGroup.LazyRelation` connects
+the honest lazy oracle on arbitrary labels to a finite challenge basis under a hash-query budget.
 -/
 
 public section
