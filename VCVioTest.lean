@@ -106,8 +106,11 @@ public import VCVioTest.Quantum.Kraus
 public import VCVioTest.Quantum.MultiExtractableModule
 public import VCVioTest.Quantum.Oracle
 public import VCVioTest.Quantum.Pure
+public import VCVioTest.Quantum.SaltedMerkleMultiExtractable
 public import VCVioTest.Quantum.Subsystem
 public import VCVioTest.Quantum.VCCompressed
+public import VCVioTest.Quantum.VCOffline
+public import VCVioTest.Quantum.VCOnline
 public import VCVioTest.Quantum.VCProof
 public import VCVioTest.Quantum.VectorCommitmentQuantum
 public import VCVioTest.QueryBounds

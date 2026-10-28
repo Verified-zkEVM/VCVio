@@ -7,14 +7,14 @@ Authors: Quang Dao
 module
 public import VCVio.Quantum.VC.Compressed
 public import VCVio.Quantum.VC.Conditions
-public import VCVio.Quantum.MatrixMap.BlockNorm
+public import QuantumFoundations.MatrixMap.BlockNorm
 public import VCVio.CryptoFoundations.MerkleTree.Salted.Extract
 
 /-!
 # Tests for the k compressed oracles and the conditions of Theorem 8.4
 
 Checks of the public interface of `VCVio.Quantum.VC.Compressed`, `VCVio.Quantum.VC.Conditions`
-and `VCVio.Quantum.MatrixMap.BlockNorm` (ePrint 2025/2166, Lemma 9.2 and Theorem 8.4):
+and `QuantumFoundations.MatrixMap.BlockNorm` (ePrint 2025/2166, Lemma 9.2 and Theorem 8.4):
 
 * unitarity and commutation of the ports of two compressed oracles on `Bool → ZMod 2`;
 * smoke tests of the statements of the law equality and of P1 on a one-query adversary against

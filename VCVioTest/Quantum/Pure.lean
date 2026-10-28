@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.Quantum.Pure.Tensor
+public import QuantumFoundations.Pure.Tensor
 public import VCVioTest.Quantum.Basic
 
 /-!

@@ -8,7 +8,7 @@ module
 public import PolyFun.IPFunctor.Free.Indexed
 public import PolyFun.IPFunctor.Free.Bound
 public import VCVio.Quantum.Comp.LocalSig
-public import VCVio.Quantum.SubInstrument
+public import QuantumFoundations.SubInstrument
 
 /-!
 # Quantum oracle programs

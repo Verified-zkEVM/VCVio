@@ -109,14 +109,14 @@ step with no division (chapter 4).
   The transpose is positive but not CP.
 * Instruments compose like classical programs, with the probability carried in the trace.
 
-> **In VCVio.** A linear map on matrices is a `MatrixMap A B` (`VCVio/Quantum/MatrixMap.lean`).
+> **In VCVio.** A linear map on matrices is a `MatrixMap A B` (`QuantumFoundations/MatrixMap.lean`).
 > `IsCP`, `IsTNI` and `IsTP` are complete positivity, trace nonincreasing and trace preserving;
-> `conj K` is $\rho \mapsto K\rho K^\dagger$, CP by `isCP_conj`. A subinstrument
-> `SubInstrument A B α` has a CP branch for each outcome in `α` and a total that does not increase
-> the trace (`VCVio/Quantum/SubInstrument.lean`). On a fixed system, `SubInstrument M M` is a lawful
+> `conj K` is $\rho \mapsto K\rho K^\dagger$, CP by `isCP_conj`. A subinstrument `SubInstrument A B
+> α` has a CP branch for each outcome in `α` and a total that does not increase the trace
+> (`QuantumFoundations/SubInstrument.lean`). On a fixed system, `SubInstrument M M` is a lawful
 > monad in the outcome type, so `do` notation sequences instruments as it sequences `OracleComp`
 > programs. The Kraus, Choi and Stinespring theorems are `isCP_iff_exists_kraus`,
 > `isCP_iff_posSemidef_choi` and `IsCP.exists_stinespring_of_isTNI`
-> (`VCVio/Quantum/MatrixMap/Kraus.lean`).
+> (`QuantumFoundations/MatrixMap/Kraus.lean`).
 
 Next: [chapter 6, quantum queries and the QROM](6-quantum-queries.md).
