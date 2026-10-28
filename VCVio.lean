@@ -102,6 +102,9 @@ public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyTable
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Masking
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Probability
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.TraceExtraction
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedCover
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedExecution
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedOracle
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Weights
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.GroupModel.Oracle
@@ -594,6 +597,13 @@ public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.Pedersen
+public import VCVio.Schemes.Proximity.Adversary
+public import VCVio.Schemes.Proximity.Basic
+public import VCVio.Schemes.Proximity.Collision
+public import VCVio.Schemes.Proximity.Extraction
+public import VCVio.Schemes.Proximity.Game
+public import VCVio.Schemes.Proximity.Reductions
+public import VCVio.Schemes.Proximity.Tables
 public import VCVio.Schemes.Schnorr.BoundedChallenges
 public import VCVio.Schemes.Schnorr.ChallengeRestriction
 public import VCVio.Schemes.Schnorr.SigmaProtocol
