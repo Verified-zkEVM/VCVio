@@ -11,6 +11,7 @@ import VCVioTest.CryptoFoundations.SigningViewUniverse
 import VCVioTest.CryptoFoundations.SigningViewUnforgeability
 import HashSigTest.SLHDSA.Refactor.SigningViewContext
 public import HashSigTest.SLHDSA.Refactor.Recovery.General
+public import HashSigTest.SLHDSA.Refactor.Recovery.Wire
 
 /-! # Executable signing-view observation checks -/
 
@@ -36,6 +37,31 @@ run_cmd do
     { name, levelParams := levels, type, value := mkConst proofName [] })
   addDocStringCore name
     "An ordinary complete-type proof consumer of the counted random-oracle bound."
+
+run_cmd do
+  let goals ← SLHDSA.Refactor.Recovery.Contracts.readGoals
+  let (_, levels, type) := goals[36]!
+  let proofName ← resolveGlobalConstNoOverloadCore
+    `HashSigTest.SLHDSA.Refactor.Recovery.Wire.wireSchemeInterpretation
+  unless proofName == `HashSigTest.SLHDSA.Refactor.Recovery.Wire.wireSchemeInterpretation &&
+      !isPrivateName proofName && levels.isEmpty do
+    throwError "The ordinary wire interpretation is not the expected public theorem"
+  let info ← getConstInfo proofName
+  unless (← ofExcept (encodeExpr info.type)) == (← ofExcept (encodeExpr type)) &&
+      info.levelParams == levels do
+    throwError "The ordinary wire consumer has a different complete type"
+  unless owner (← getEnv) proofName == some `HashSigTest.SLHDSA.Refactor.Recovery.Wire do
+    throwError "The ordinary wire interpretation owner changed"
+  let name := mkPrivateNameCore (← getMainModule) `SigningViewTests.wireSchemeInterpretation
+  if ((← getEnv).find? name).isSome then throwError "Duplicate ordinary wire consumer"
+  liftCoreM <| addAndCompile (.thmDecl {
+    name := name
+    levelParams := levels
+    type := type
+    value := mkConst proofName []
+  })
+  addDocStringCore name
+    "An ordinary complete-type proof consumer of the strict pure-wire interpretation."
 
 /-- Run the signing-view observation checks. -/
 public def main : IO Unit := do
