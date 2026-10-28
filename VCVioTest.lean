@@ -140,6 +140,7 @@ public import VCVioTest.ReactiveSecurity
 public import VCVioTest.ReactiveWorld
 public import VCVioTest.ReplayCheckpoint
 public import VCVioTest.ResumptionCompatibility
+public import VCVioTest.Rewinding
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.Runtime
 public import VCVioTest.SMDTDSPR
