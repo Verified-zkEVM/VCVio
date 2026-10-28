@@ -82,10 +82,17 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.TrapCount
 public import VCVio.CryptoFoundations.GPVHashAndSign.TrapProjection
 public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
 public import VCVio.CryptoFoundations.GroupModel.Coins
+public import VCVio.CryptoFoundations.GroupModel.Collision
+public import VCVio.CryptoFoundations.GroupModel.Cost
+public import VCVio.CryptoFoundations.GroupModel.Decisional
 public import VCVio.CryptoFoundations.GroupModel.Encoding
 public import VCVio.CryptoFoundations.GroupModel.Game
+public import VCVio.CryptoFoundations.GroupModel.GenericDDH
+public import VCVio.CryptoFoundations.GroupModel.GenericHardness
+public import VCVio.CryptoFoundations.GroupModel.GenericRelation
 public import VCVio.CryptoFoundations.GroupModel.Instances
 public import VCVio.CryptoFoundations.GroupModel.Interaction
+public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.GroupModel.OfExplained
 public import VCVio.CryptoFoundations.GroupModel.Oracle
 public import VCVio.CryptoFoundations.GroupModel.Projection
@@ -95,6 +102,7 @@ public import VCVio.CryptoFoundations.GroupModel.ToExplained
 public import VCVio.CryptoFoundations.GroupModel.Tracking
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.Covering
@@ -309,6 +317,7 @@ public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.SchwartzZippel
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.Constructions.UniformSelectMeasure
 public import VCVio.OracleComp.Constructions.WithoutReplacement

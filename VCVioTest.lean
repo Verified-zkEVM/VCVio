@@ -11,6 +11,7 @@ public import VCVioTest.CryptoFoundations.ComplexityAdapters
 public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.CslibPPolyUniverses
+public import VCVioTest.CryptoFoundations.DiscreteLogRelation
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.KeyedHashCovering
 public import VCVioTest.CryptoFoundations.OracleClosure
@@ -46,11 +47,18 @@ public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.Foundations
 public import VCVioTest.GrindFailFast
 public import VCVioTest.GroupModel.Basic
+public import VCVioTest.GroupModel.Collision
+public import VCVioTest.GroupModel.Cost
+public import VCVioTest.GroupModel.Decisional
 public import VCVioTest.GroupModel.Game
+public import VCVioTest.GroupModel.GenericDDH
+public import VCVioTest.GroupModel.GenericHardness
+public import VCVioTest.GroupModel.GenericRelation
 public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.Interaction.Axioms
 public import VCVioTest.GroupModel.Interaction.Basic
 public import VCVioTest.GroupModel.Interaction.MultiGroup
+public import VCVioTest.GroupModel.MasterBound
 public import VCVioTest.GroupModel.OfExplained
 public import VCVioTest.GroupModel.ToExplained
 public import VCVioTest.ITSR
@@ -77,6 +85,7 @@ public import VCVioTest.OracleComp.BudgetedPotential
 public import VCVioTest.OracleComp.EqDistTriple
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
+public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.OracleComp.SpecInstanceSearch
 public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
