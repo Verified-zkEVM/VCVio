@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-import VCVio.Quantum.MatrixMap.Norm
+import QuantumFoundations.MatrixMap.Norm
 public import VCVio.Quantum.Oracle.Compressed.CheckedRead
 public import VCVio.Quantum.Oracle.Compressed.CommutatorSharp
 import Mathlib.Analysis.Matrix.Order

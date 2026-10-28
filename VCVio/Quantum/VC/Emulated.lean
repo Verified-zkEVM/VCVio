@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.Quantum.VC.Unitaries
-public import VCVio.Quantum.Oracle.Unitary
+public import QuantumFoundations.Oracle.Unitary
 public import VCVio.Quantum.Oracle.ClassicalRead
 
 /-!

@@ -6,7 +6,8 @@ Authors: Quang Dao
 
 module
 public import VCVio.EvalDist.Defs.Semantics.Core
-public import VCVio.Quantum.Observe
+public import QuantumFoundations.Observe
+public import VCVio.Quantum.Subprobability
 
 /-!
 # Bundled semantics of subinstruments
@@ -23,7 +24,7 @@ which the distribution of the outcome of `p` forgets. The composition law is the
 `Quantum.DSubInstrument.outcomeMeasure_bind`.
 
 This is the only part of the quantum core that imports the rest of VCVio; the outcome measure
-itself is defined in `VCVio.Quantum.Observe`.
+itself is defined in `QuantumFoundations.Observe`.
 -/
 
 public section

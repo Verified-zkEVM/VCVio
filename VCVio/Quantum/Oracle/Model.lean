@@ -9,7 +9,7 @@ public import ToMathlib.MeasureTheory.Measure.UniformTable
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.Quantum.Comp.QueryBound
 public import VCVio.Quantum.Comp.Simulation
-public import VCVio.Quantum.Oracle.Unitary
+public import QuantumFoundations.Oracle.Unitary
 
 /-!
 # Sampled quantum oracles and the quantum random-oracle model

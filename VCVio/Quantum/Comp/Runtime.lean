@@ -7,7 +7,8 @@ Authors: Quang Dao
 module
 public import PolyFun.IPFunctor.Free.Fold
 public import VCVio.Quantum.Comp.Basic
-public import VCVio.Quantum.Oracle.Basis
+public import QuantumFoundations.Oracle.Basis
+public import VCVio.Quantum.Subprobability
 
 /-!
 # Runtimes and the execution of quantum programs
