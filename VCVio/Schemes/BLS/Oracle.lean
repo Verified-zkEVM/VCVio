@@ -90,7 +90,7 @@ are recorded independently of that response. -/
   (unif + ro) + signer
 
 /-- A public-randomness step leaves all oracle state unchanged. -/
-theorem indexedOracle_run_unif {V M G : Type} [DecidableEq M] (draw : ℕ → ProbComp V)
+private theorem indexedOracle_run_unif {V M G : Type} [DecidableEq M] (draw : ℕ → ProbComp V)
     (hash sign : V → G) (j : Option ℕ) (t : unifSpec.Domain) (s : OracleState V M) :
     (indexedOracle draw hash sign j (.inl (.inl t))).run s =
       (fun v => (v, s)) <$> (unifSpec.query t : ProbComp _) := rfl
@@ -122,7 +122,7 @@ private theorem indexedEntry_eraseSelection {V M : Type} [DecidableEq M]
       OracleState.insert, Prod.map]
 
 /-- Erasing the selected-slot fields commutes with every oracle step. -/
-theorem indexedOracle_eraseSelection {V M G : Type} [DecidableEq M]
+private theorem indexedOracle_eraseSelection {V M G : Type} [DecidableEq M]
     (draw : ℕ → ProbComp V) (hash sign : V → G) (j : Option ℕ)
     (t : ((unifSpec + (M →ₒ G)) + (M →ₒ G)).Domain) (s : OracleState V M) :
     Prod.map id OracleState.eraseSelection <$> (indexedOracle draw hash sign j t).run s =

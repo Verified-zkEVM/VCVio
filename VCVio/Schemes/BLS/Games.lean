@@ -26,7 +26,7 @@ namespace BLS
   QueryCache.ofFn fun msg => (s.cache msg).map Prod.fst
 
 /-- Honest signing through the standard lazy random-oracle cache. -/
-@[expose] def realSign {F G M : Type} [SMul F G] [SampleableType G] [DecidableEq M]
+private abbrev realSign {F G M : Type} [SMul F G] [SampleableType G] [DecidableEq M]
     (x : F) : QueryImpl (M →ₒ G) (StateT (M →ₒ G).QueryCache ProbComp) :=
   fun msg => (x • ·) <$> (M →ₒ G).randomOracle msg
 
@@ -39,7 +39,7 @@ into a single state. -/
       (StateT (List M) (StateT (M →ₒ G).QueryCache ProbComp)) :=
     ((M →ₒ G).romImpl.liftTarget
       (StateT (List M) (StateT (M →ₒ G).QueryCache ProbComp))) +
-      QueryImpl.appendInputLog (realSign (M := M) (G := G) x)
+      QueryImpl.appendInputLog (fun msg => (x • ·) <$> (M →ₒ G).randomOracle msg)
   impl.flattenStateT
 
 private theorem valueCache_insert {V M : Type} [DecidableEq M]
@@ -80,7 +80,7 @@ private theorem indexedEntry_signed {G M : Type} [SampleableType G] [DecidableEq
     OracleState.insert]
 
 /-- Projecting the insertion bookkeeping yields the real hash/signing handler step by step. -/
-theorem indexedOracle_realOracle_proj {F G M : Type} [SMul F G]
+private theorem indexedOracle_realOracle_proj {F G M : Type} [SMul F G]
     [SampleableType G] [DecidableEq M] (x : F) (j : Option ℕ)
     (t : ((unifSpec + (M →ₒ G)) + (M →ₒ G)).Domain) (s : OracleState G M) :
     (fun z => (z.1, z.2.signed, valueCache z.2)) <$>
@@ -115,7 +115,7 @@ theorem indexedOracle_realOracle_proj {F G M : Type} [SMul F G]
     simp only [Functor.map_map] at he
     rw [he]
     simp only [realOracle, QueryImpl.flattenStateT, QueryImpl.add_apply_inr,
-      QueryImpl.appendInputLog_apply, realSign, StateT.run_bind, StateT.run_map,
+      QueryImpl.appendInputLog_apply, StateT.run_bind, StateT.run_map,
       StateT.run_modify, StateT.run_monadLift, monadLift_self, StateT.run_mk,
       Functor.map_map, pure_bind, bind_pure_comp]
 

@@ -26,12 +26,12 @@ namespace BLS
   z.1.1.1 ∉ z.2.signed ∧ z.1.1.2 = sign z.1.2
 
 /-- A winning forgery whose message occupies the guessed insertion slot. -/
-@[expose] def TargetWin {V M G : Type} (sign : G → G) (j : ℕ)
+private def TargetWin {V M G : Type} (sign : G → G) (j : ℕ)
     (z : ((M × G) × G) × OracleState V M) : Prop :=
   Winning sign z ∧ ∃ v, z.2.cache z.1.1.1 = some (v, j)
 
 /-- A non-aborted challenge-tagged output carrying the honest signature of the challenge. -/
-@[expose] def ExtractEvent {V M G : Type} (sign : G → G) (j : ℕ)
+private def ExtractEvent {V M G : Type} (sign : G → G) (j : ℕ)
     (z : ((M × G) × G) × (OracleState (Option V) M × G)) : Prop :=
   z.1.1.2 = sign z.2.2 ∧ z.2.1.cache z.1.1.1 = some (none, j) ∧ ¬z.2.1.bad = true
 
@@ -57,7 +57,7 @@ private theorem fillChallenge_target {V M G : Type} [SampleableType G]
 
 /-- A winning forgery at a fixed guessed slot becomes a non-aborted challenge extraction
 event after completing the selected challenge. -/
-theorem prEvent_targetWin_le_programmed {V M G : Type}
+private theorem prEvent_targetWin_le_programmed {V M G : Type}
     [SampleableType V] [SampleableType G] [DecidableEq M]
     (f : V → G) (hf : Function.Bijective f) (sign : G → G) (j : ℕ)
     (oa : OracleComp ((unifSpec + (M →ₒ G)) + (M →ₒ G)) (M × G)) :
@@ -99,7 +99,7 @@ theorem prEvent_targetWin_le_programmed {V M G : Type}
 
 /-- A fresh valid forgery at the fixed guessed slot yields a co-CDH solution from the named
 reduction at that slot, after averaging the independent challenge. -/
-theorem prEvent_targetWin_le_reductionAt {F G₁ G₂ Gₜ M : Type}
+private theorem prEvent_targetWin_le_reductionAt {F G₁ G₂ Gₜ M : Type}
     [Field F] [SampleableType F] [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
     [AddCommGroup G₂] [Module F G₂] [AddCommGroup Gₜ] [Module F Gₜ]
     [DecidableEq Gₜ] [DecidableEq M]
@@ -135,7 +135,7 @@ theorem prEvent_targetWin_le_reductionAt {F G₁ G₂ Gₜ M : Type}
 
 /-- Every winning run has a forgery index in the finite guessing range. Summing its indexed
 events therefore bounds the total winning probability. -/
-theorem prEvent_winning_le_sum_targetWin {V M G : Type} [DecidableEq M]
+private theorem prEvent_winning_le_sum_targetWin {V M G : Type} [DecidableEq M]
     (draw : ℕ → ProbComp V) (hash sign : V → G)
     (check : G → G)
     (oa : OracleComp ((unifSpec + (M →ₒ G)) + (M →ₒ G)) (M × G))
@@ -155,7 +155,7 @@ theorem prEvent_winning_le_sum_targetWin {V M G : Type} [DecidableEq M]
 
 /-- Passive selected-slot bookkeeping does not change the probability of a winning forgery
 at that slot. -/
-theorem prEvent_targetWin_eraseSelection {V M G : Type} [DecidableEq M]
+private theorem prEvent_targetWin_eraseSelection {V M G : Type} [DecidableEq M]
     (draw : ℕ → ProbComp V) (hash sign : V → G) (check : G → G) (j : ℕ)
     (oa : OracleComp ((unifSpec + (M →ₒ G)) + (M →ₒ G)) ((M × G) × G)) :
     Pr{let z ← (simulateQ (indexedOracle draw hash sign none) oa).run

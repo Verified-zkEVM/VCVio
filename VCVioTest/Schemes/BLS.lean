@@ -42,7 +42,7 @@ private def adversary : SignatureAlg.UnforgeableAdversary toyScheme where
     return (false, pk.2 * h)
 
 /-- Multiplication with unit generators instantiates the generic ROM completeness theorem. -/
-theorem perfectlyComplete :
+private theorem perfectlyComplete :
     (toyScheme).PerfectlyComplete (ProbCompRuntime.rom (Bool →ₒ ZMod 101)) :=
   BLS.perfectlyComplete _ _ _
 
@@ -52,7 +52,7 @@ private theorem queryBound : BLS.QueryBound adversary 1 1 := by
   constructor <;> simp [adversary, isQueryBoundP_query_bind_iff]
 
 /-- In the concrete pairing, every accepted signature equals the secret times the hash. -/
-theorem verification_iff (x h σ : ZMod 101) : σ * 1 = h * (x * 1) ↔ σ = x * h := by
+private theorem verification_iff (x h σ : ZMod 101) : σ * 1 = h * (x * 1) ↔ σ = x * h := by
   simpa using BLS.pairing_eq_iff (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1
     (by intro y; exact ⟨y, by simp⟩) (by simp) x h σ
 

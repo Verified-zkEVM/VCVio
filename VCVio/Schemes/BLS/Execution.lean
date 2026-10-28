@@ -29,7 +29,7 @@ namespace BLS
   return (out, h)
 
 /-- Final verification adds one direct hash query. -/
-theorem withFinalHash_hash_bound {M G : Type}
+private theorem withFinalHash_hash_bound {M G : Type}
     (oa : OracleComp ((unifSpec + (M →ₒ G)) + (M →ₒ G)) (M × G))
     (qH : ℕ) (hH : oa.IsQueryBoundP (· matches .inl (.inr _)) qH) :
     (withFinalHash oa).IsQueryBoundP (· matches .inl (.inr _)) (qH + 1) := by
@@ -39,7 +39,7 @@ theorem withFinalHash_hash_bound {M G : Type}
   simp
 
 /-- Final verification adds no signing query. -/
-theorem withFinalHash_sign_bound {M G : Type}
+private theorem withFinalHash_sign_bound {M G : Type}
     (oa : OracleComp ((unifSpec + (M →ₒ G)) + (M →ₒ G)) (M × G))
     (qS : ℕ) (hS : oa.IsQueryBoundP (· matches .inr _) qS) :
     (withFinalHash oa).IsQueryBoundP (· matches .inr _) qS := by

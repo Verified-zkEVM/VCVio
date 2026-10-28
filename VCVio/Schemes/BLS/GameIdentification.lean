@@ -72,7 +72,7 @@ private theorem verify_run_realOracle {F G₁ G₂ Gₜ M : Type}
 
 /-- The standard EUF-CMA advantage is the real shared-cache game, including the final
 verification hash and the signing-log freshness test. -/
-theorem unforgeableAdvantage_eq_realOracle {F G₁ G₂ Gₜ M : Type}
+private theorem unforgeableAdvantage_eq_realOracle {F G₁ G₂ Gₜ M : Type}
     [Field F] [SampleableType F] [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
     [AddCommGroup G₂] [Module F G₂] [AddCommGroup Gₜ] [Module F Gₜ]
     [DecidableEq Gₜ] [DecidableEq M]

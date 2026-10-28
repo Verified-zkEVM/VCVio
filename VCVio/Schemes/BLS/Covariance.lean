@@ -41,7 +41,7 @@ private theorem map_recordSign {V W M : Type} (f : V → W)
 
 /-- Mapping the value in a cache lookup and its post-state changes only the fresh-draw
 representation, provided the mapped fresh-draw distributions agree. -/
-theorem indexedEntry_map_evalDistEq {V W M : Type} [DecidableEq M]
+private theorem indexedEntry_map_evalDistEq {V W M : Type} [DecidableEq M]
     (f : V → W) (draw : ℕ → ProbComp V) (draw' : ℕ → ProbComp W)
     (hdraw : ∀ n, f <$> draw n =ᵈ draw' n)
     (j : Option ℕ) (msg : M) (s : OracleState V M) :
@@ -60,7 +60,7 @@ theorem indexedEntry_map_evalDistEq {V W M : Type} [DecidableEq M]
       (hdraw s.count).map (fun v => ((v, s.count), (s.map f).insert j msg v))
 
 /-- Changing the cached representation intertwines the combined hash and signing handlers. -/
-theorem indexedOracle_map_intertwines {V W M G : Type} [DecidableEq M]
+private theorem indexedOracle_map_intertwines {V W M G : Type} [DecidableEq M]
     (f : V → W) (draw : ℕ → ProbComp V) (draw' : ℕ → ProbComp W)
     (hdraw : ∀ n, f <$> draw n =ᵈ draw' n)
     (hash sign : W → G) (j : Option ℕ) :

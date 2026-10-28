@@ -193,7 +193,7 @@ theorem indexedOracle_preserves_selectionInv {V M G : Type} [DecidableEq M]
     exact ⟨hp, he⟩
 
 /-- A hash lookup inserts at most one new message. -/
-theorem indexedEntry_count_le {V M : Type} [DecidableEq M]
+private theorem indexedEntry_count_le {V M : Type} [DecidableEq M]
     (draw : ℕ → ProbComp V) (j : Option ℕ) (msg : M) (s : OracleState V M)
     (z : (V × ℕ) × OracleState V M)
     (hz : z ∈ support ((indexedEntry draw j msg).run s)) : z.2.count ≤ s.count + 1 := by

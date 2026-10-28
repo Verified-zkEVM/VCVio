@@ -46,7 +46,7 @@ when the selected insertion has not yet occurred. -/
 
 /-- Honest hash/signing handler with an upfront challenge and scalar-tagged other entries.
 The challenge is an immutable component of its state. -/
-@[expose] def programmedOracle {V W M : Type} [SampleableType V] [DecidableEq M]
+private abbrev programmedOracle {V W M : Type} [SampleableType V] [DecidableEq M]
     (f : V → W) (sign : W → W) (j : ℕ) :
     QueryImpl ((unifSpec + (M →ₒ W)) + (M →ₒ W))
       (StateT (OracleState (Option V) M × W) ProbComp) :=
@@ -107,7 +107,7 @@ private theorem fillChallenge_insert_other {V W M : Type} [SampleableType W]
 
 /-- An indexed scalar lookup followed by challenge completion agrees in distribution with
 completing the challenge first and using the programmed tag lookup. -/
-theorem indexedEntry_fillChallenge {V W M γ : Type} [SampleableType V] [SampleableType W]
+private theorem indexedEntry_fillChallenge {V W M γ : Type} [SampleableType V] [SampleableType W]
     [DecidableEq M] (f : V → W) (hf : Function.Bijective f) (j : ℕ)
     (msg : M) (s : OracleState V M) (hs : SelectionInv j s)
     (k : W → ℕ → (OracleState (Option V) M × W) → ProbComp γ) :
@@ -150,7 +150,7 @@ theorem indexedEntry_fillChallenge {V W M γ : Type} [SampleableType V] [Samplea
 
 /-- Challenge completion intertwines the honest scalar handler with the upfront-programmed
 handler on every state satisfying the selected-value invariant. -/
-theorem indexedOracle_fillChallenge_intertwines {V W M : Type}
+private theorem indexedOracle_fillChallenge_intertwines {V W M : Type}
     [SampleableType V] [SampleableType W] [DecidableEq M]
     (f : V → W) (hf : Function.Bijective f) (sign : W → W) (j : ℕ) :
     QueryImpl.IntertwinesOn (SelectionInv j) (fillChallenge (M := M) f j)
@@ -184,7 +184,12 @@ theorem simulateQ_fillChallenge_evalDistEq {V W M α : Type}
     (s : OracleState V M) (hs : SelectionInv j s) :
     ((simulateQ (indexedOracle (fun _ => $ᵗ V) f (sign ∘ f) (some j)) oa).run s >>=
       fun z => (fun st => (z.1, st)) <$> fillChallenge f j z.2) =ᵈ
-    (fillChallenge f j s >>= fun st => (simulateQ (programmedOracle f sign j) oa).run st) := by
+    (fillChallenge f j s >>= fun st => (simulateQ
+      (show QueryImpl ((unifSpec + (M →ₒ W)) + (M →ₒ W))
+        (StateT (OracleState (Option V) M × W) ProbComp) from
+        fun t s => (fun z => (z.1, z.2, s.2)) <$>
+          (indexedOracle (tagDraw j) (fun tag => tag.elim s.2 f)
+            (fun tag => sign (tag.elim s.2 f)) (some j) t).run s.1) oa).run st) := by
   let : MeasurableSpace (α × (OracleState (Option V) M × W)) := ⊤
   apply EvalDistEq.of_evalDist_eq
   have h := (indexedOracle_fillChallenge_intertwines f hf sign j).evalDist_simulateQ_run
@@ -197,18 +202,18 @@ theorem programmedOracle_run {V W M α : Type} [SampleableType V] [DecidableEq M
     (f : V → W) (sign : W → W) (j : ℕ)
     (oa : OracleComp ((unifSpec + (M →ₒ W)) + (M →ₒ W)) α)
     (s : OracleState (Option V) M) (h : W) :
-    (simulateQ (programmedOracle f sign j) oa).run (s, h) =
+    (simulateQ
+      (show QueryImpl ((unifSpec + (M →ₒ W)) + (M →ₒ W))
+        (StateT (OracleState (Option V) M × W) ProbComp) from
+        fun t s => (fun z => (z.1, z.2, s.2)) <$>
+          (indexedOracle (tagDraw j) (fun tag => tag.elim s.2 f)
+            (fun tag => sign (tag.elim s.2 f)) (some j) t).run s.1) oa).run (s, h) =
       (fun z => (z.1, z.2, h)) <$>
         (simulateQ (indexedOracle (tagDraw j) (fun tag => tag.elim h f)
           (fun tag => sign (tag.elim h f)) (some j)) oa).run s := by
-  induction oa using OracleComp.inductionOn generalizing s with
-  | pure a => simp
-  | query_bind t k ih =>
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-    simp only [programmedOracle, StateT.run, bind_map_left, map_bind]
-    apply bind_congr
-    intro z
-    exact ih z.1 z.2
+  symm
+  exact map_run_simulateQ_eq_of_query_map_eq _ _ (fun st => (st, h))
+    (fun _ _ => rfl) oa s
 
 /-- Tagging an empty history leaves an empty tag history. -/
 theorem tagState_empty {V M : Type} (j : ℕ) :

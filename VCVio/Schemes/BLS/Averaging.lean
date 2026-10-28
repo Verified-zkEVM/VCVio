@@ -22,7 +22,7 @@ open scoped ENNReal
 namespace BLS
 
 /-- The reduction's independent guess may be sampled before the co-CDH secret and challenge. -/
-theorem experiment_reduction_evalDistEq {F G₁ G₂ Gₜ M : Type}
+private theorem experiment_reduction_evalDistEq {F G₁ G₂ Gₜ M : Type}
     [Field F] [SampleableType F] [AddCommGroup G₁] [Module F G₁]
     [SampleableType G₁] [DecidableEq G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]

@@ -21,11 +21,11 @@ open OracleComp OracleSpec
 namespace BLS
 
 /-- Every challenge tag in the cache belongs to the guessed insertion index. -/
-@[expose] def ChallengeInv {V M : Type} (j : ℕ) (s : OracleState (Option V) M) : Prop :=
+private def ChallengeInv {V M : Type} (j : ℕ) (s : OracleState (Option V) M) : Prop :=
   ∀ msg i, s.cache msg = some (none, i) → i = j
 
 /-- The empty scalar-tag cache satisfies challenge-index consistency. -/
-theorem challengeInv_empty {V M : Type} (j : ℕ) :
+private theorem challengeInv_empty {V M : Type} (j : ℕ) :
     ChallengeInv j (OracleState.empty : OracleState (Option V) M) := by
   simp [ChallengeInv, OracleState.empty]
 
@@ -49,7 +49,7 @@ private theorem challengeInv_insert {V M : Type} [DecidableEq M]
 
 /-- A tag lookup preserves challenge-index consistency and identifies every returned
 challenge tag with the guessed slot. -/
-theorem indexedEntry_support_challengeInv {V M : Type}
+private theorem indexedEntry_support_challengeInv {V M : Type}
     [SampleableType V] [DecidableEq M] (j : ℕ) (msg : M)
     (s : OracleState (Option V) M) (hs : ChallengeInv j s)
     (z : (Option V × ℕ) × OracleState (Option V) M)
@@ -68,7 +68,7 @@ theorem indexedEntry_support_challengeInv {V M : Type}
     exact ⟨challengeInv_insert hs msg v ht, ht⟩
 
 /-- Challenge-index consistency is preserved by every hash and signing query. -/
-theorem indexedOracle_preserves_challengeInv {V M G : Type}
+private theorem indexedOracle_preserves_challengeInv {V M G : Type}
     [SampleableType V] [DecidableEq M] (hash sign : Option V → G) (j : ℕ) :
     QueryImpl.PreservesInv (indexedOracle (M := M) (tagDraw j) hash sign (some j))
       (ChallengeInv j) := by
@@ -99,7 +99,7 @@ private theorem indexedEntry_bad_eq {V M : Type} [DecidableEq M]
     rfl
 
 /-- Once raised, the abort flag remains raised throughout every subsequent oracle step. -/
-theorem indexedOracle_preserves_bad {V M G : Type} [DecidableEq M]
+private theorem indexedOracle_preserves_bad {V M G : Type} [DecidableEq M]
     (draw : ℕ → ProbComp V) (hash sign : V → G) (j : Option ℕ) :
     QueryImpl.PreservesInv (indexedOracle (M := M) draw hash sign j) (fun s => s.bad = true) := by
   intro t s hs z hz
@@ -117,7 +117,7 @@ theorem indexedOracle_preserves_bad {V M G : Type} [DecidableEq M]
 
 /-- Signing responses may be changed on challenge tags without decreasing any event restricted
 to non-aborted runs. Scalar-tagged signing responses must agree. -/
-theorem indexedOracle_dominatedUntilBad {V M G : Type}
+private theorem indexedOracle_dominatedUntilBad {V M G : Type}
     [SampleableType V] [DecidableEq M] (hash sign sign' : Option V → G)
     (hsign : ∀ v, sign (some v) = sign' (some v)) (j : ℕ) :
     QueryImpl.DominatedUntilBad

@@ -49,7 +49,7 @@ The left oracle summand supplies uniform randomness and the right one hashes mes
     return decide (e σ g₂ = e h pk.2)
 
 /-- Bilinearity makes an honestly formed BLS signature satisfy the verification equation. -/
-theorem pairing_smul_eq [Field F]
+private theorem pairing_smul_eq [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₂ : G₂) (x : F) (h : G₁) :
