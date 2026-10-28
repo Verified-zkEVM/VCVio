@@ -91,7 +91,7 @@ def batchCons {t : ι} {ts : List ι} (u : spec.Range t) (us : spec.batch.Range 
 
 @[simp] lemma batchCons_zero {t : ι} {ts : List ι} (u : spec.Range t)
     (us : spec.batch.Range ts) :
-    batchCons u us ⟨0, Nat.zero_lt_succ _⟩ = u := rfl
+    batchCons u us (0 : Fin (ts.length + 1)) = u := rfl
 
 @[simp] lemma batchCons_succ {t : ι} {ts : List ι} (u : spec.Range t)
     (us : spec.batch.Range ts) (j : Fin ts.length) :

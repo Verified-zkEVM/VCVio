@@ -27,9 +27,10 @@ open OracleComp OracleSpec
 /-- Two oracles with different answer types: `true` answers in `Fin 3`, `false` in `Bool`. -/
 abbrev hetSpec : OracleSpec Bool := fun b => if b then Fin 3 else Bool
 
+/-- Both answer types are sampled through `Fin`, so loading this module enumerates no type. -/
 instance : ∀ t, SampleableType (hetSpec.Range t)
-  | true => inferInstanceAs (SampleableType (Fin 3))
-  | false => inferInstanceAs (SampleableType Bool)
+  | true => SampleableType.Fin 2
+  | false => @SampleableType.ofEquiv _ _ (SampleableType.Fin 1) finTwoEquiv
 
 instance : ∀ t, Inhabited (hetSpec.Range t)
   | true => inferInstanceAs (Inhabited (Fin 3))

@@ -108,14 +108,14 @@ every path; the number of rounds and its uniform queries are free. -/
 abbrev IsPointQueryBound (oa : OracleComp (unifSpec + spec.batch) α) (q : ℕ) : Prop :=
   IsQueryBound oa q (fun t q => pointCount t ≤ q) (fun t q => q - pointCount t)
 
-@[simp] lemma isOnlineQueryBound_query_bind_inl_iff (n : ℕ)
+lemma isOnlineQueryBound_query_bind_inl_iff (n : ℕ)
     (mx : (unifSpec + spec.batch).Range (.inl n) → OracleComp (unifSpec + spec.batch) α)
     (b : ℕ × ℕ) :
     IsOnlineQueryBound (liftM ((unifSpec + spec.batch).query (.inl n)) >>= mx) b ↔
       ∀ u, IsOnlineQueryBound (mx u) b := by
   simp [IsOnlineQueryBound]
 
-@[simp] lemma isOnlineQueryBound_query_bind_inr_iff (ts : List ι)
+lemma isOnlineQueryBound_query_bind_inr_iff (ts : List ι)
     (mx : (unifSpec + spec.batch).Range (.inr ts) → OracleComp (unifSpec + spec.batch) α)
     (b : ℕ × ℕ) :
     IsOnlineQueryBound (liftM ((unifSpec + spec.batch).query (.inr ts)) >>= mx) b ↔
