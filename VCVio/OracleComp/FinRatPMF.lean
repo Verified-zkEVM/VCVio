@@ -97,6 +97,7 @@ end finRatImpl
 
 namespace Demo
 
+/-- The enumeration of `Bool` sending `false` to `0` and `true` to `1`, local to the demos. -/
 local instance : FinEnum Bool where
   card := 2
   equiv :=
@@ -115,17 +116,22 @@ instance : (t : coinSpec.Domain) → FinEnum (coinSpec.Range t) := by
   change FinEnum Bool
   infer_instance
 
+/-- The exclusive or of two independent fair coins, which is again a fair coin. -/
 def xorTwoCoins : FinRatPMF.Raw Bool := do
   let b1 ← FinRatPMF.Raw.coin
   let b2 ← FinRatPMF.Raw.coin
   pure (b1 != b2)
 
+/-- The number of heads among three independent fair coins, a binomial count with three trials
+of success probability `1/2`. -/
 def threeCoinCount : FinRatPMF.Raw Nat := do
   let b1 ← FinRatPMF.Raw.coin
   let b2 ← FinRatPMF.Raw.coin
   let b3 ← FinRatPMF.Raw.coin
   pure (cond b1 1 0 + cond b2 1 0 + cond b3 1 0)
 
+/-- The number of heads among two queries to the coin oracle, as an oracle program for
+`finRatImpl` to evaluate exactly. -/
 def twoCoinQueries : OracleComp coinSpec Nat := do
   let b1 ← OracleComp.coin
   let b2 ← OracleComp.coin

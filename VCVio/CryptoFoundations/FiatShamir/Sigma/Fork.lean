@@ -450,6 +450,7 @@ theorem simulateQ_uniformImpl_evalDistEq [SampleableType Chal]
   · simp only [QueryImpl.add_apply_inl, QueryImpl.ofLift_eq_id', QueryImpl.id'_apply]
     exact evalDist_liftM_query_uniform (spec := unifSpec) n
   · let : MeasurableSpace Chal := ⊤
+    let : MeasurableSpace ((wrappedSpec Chal).Range (.inr u)) := ‹MeasurableSpace Chal›
     simp only [QueryImpl.add_apply_inr, uniformSampleImpl_apply]
     exact SampleableType.evalDist_uniformSample
 

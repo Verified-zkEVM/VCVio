@@ -5,12 +5,19 @@ the plan in [`slh-dsa-fips205-generalization.md`](slh-dsa-fips205-generalization
 the target architecture, milestone definitions, acceptance gates, and merge protocol established
 on 2026-08-30. This document records what has merged since, what is open, where the plan's snapshot
 statements are now stale, and the ordered slices that remain. For the `main` snapshot identified in
-the milestone ledger below, use this document rather than the plan's older status statements.
+the milestone ledger below, use this document rather than the plan's older status statements. The
+accounting of the classical random-oracle bound, and its relation to the 127-bit proof in
+`leanEthereum/leanVM`, are recorded in
+[`slh-dsa-classical-rom-bound.md`](slh-dsa-classical-rom-bound.md).
 
 A capability is listed as DONE only when its source and validation are on `main`. Open pull
 requests are named as such. Conditional EUF-CMA composition, the SUF residual bound and the
 SP 800-230 profile corollary are on `main`. They leave the scheme-to-game reductions as
-hypotheses and do not prove a small concrete bound or bound the same-message SUF residual.
+hypotheses and do not prove a small concrete bound or bound the same-message SUF residual. PR #766 adds an unconditional SUF-CMA bound, and with it EUF-CMA at the same bound, in the
+classical random-oracle model
+([below](#classical-random-oracle-bound-merged-766)). It merged as
+`55c29f083ccde8850b4a0dc5a7d5d13ff5cc1dc8` on 2026-10-24. The specialized #912 development
+is an additive integration candidate until its own merge and exact-head validation are recorded.
 
 ## Where the work lives
 
@@ -21,13 +28,14 @@ hypotheses and do not prove a small concrete bound or bound the same-message SUF
 | General hypertree and scheme | `HypertreeGeneral.lean` (+ `QueryBound.lean`), `GeneralScheme.lean`, `GeneralSchemeQueryBound.lean`, `DepthOneCompatibility.lean` | `slhdsa_hypertree_tests`, `HashSigTest/SLHDSA/HypertreeGeneral.lean`, `GeneralScheme.lean` |
 | Depth-one compatibility scheme | `Hypertree.lean`, `Scheme.lean`, `RandomOracle.lean`, `Oracle.lean` | `HashSigTest/SLHDSA/Hypertree.lean`, `Oracle.lean`, `Scheme.lean` |
 | Wire codecs | `Codec.lean`, `Concrete/Codec.lean` | `slhdsa_data_codec_tests` |
-| Concrete primitives (12 FIPS sets) | `Concrete/Sha2.lean`, `Concrete/Keccak.lean`, `Concrete/FIPS.lean`, `Concrete/Instance.lean`, `Concrete/Prehash.lean` | `slhdsa_primitive_tests` (+ `PrimitiveVectors/`), `slhdsa_kat` |
+| Concrete primitives (12 FIPS sets) | `VCVio/Algorithms/Sha2.lean`, `VCVio/Algorithms/Keccak.lean`, `Concrete/FIPS.lean`, `Concrete/Instance.lean`, `Concrete/Prehash.lean` | `algorithm_tests` (+ `VCVioTest/Algorithms/HashVectors/`), `slhdsa_primitive_tests` (+ `PrimitiveVectors/`), `slhdsa_kat` |
 | C13 variant (WOTS+C/FORS+C, keccak256, `d = 2`) | `C13/{Params,Primitives,WotsC,ForsC,Xmss,Hypertree,Scheme,Concrete}.lean` | `slhdsa_c13_kat` |
 | External interfaces (Alg. 21–25) | `External.lean` | `slhdsa_external_tests` |
 | Security packaging | `Security.lean` (primitive families as `TweakableHash`/`PRFScheme`), `MerkleExtractor.lean` | — |
 | Security lane, slices 1–5 (on `main`) | `Security/TargetCounts.lean`, `Security/ReachableTargets.lean` (#630); `Security/EncodedTargets.lean` (#631); `WotsInjectivity.lean` (#665); `Security/TraceTargets.lean` (#666); the consolidated second-round review fixes for those four, including `VCVio/OracleComp/QueryTracking/{QueryBound,LoggingOracle}.lean`'s `AllQueriesSatisfy` (#680, `0a1ff722`); `Security/ComponentTraces.lean` (#682, `630301f3`) | `slhdsa_target_ledger_tests`, `slhdsa_encoded_ledger_tests`, `slhdsa_trace_target_tests`, `slhdsa_component_trace_tests` |
 | Security lane, slice 6 (on `main`) | `Security/CanonicalGames.lean` (#683) | `slhdsa_canonical_game_tests` |
 | Security lane, slices 7–8 | `Security/{WotsWitnesses,ForsWitnesses,XmssWitnesses,HypertreeWitnesses,SchemeWitnesses,HmsgWitnesses,SufResidual,SchemeGames,Composition,SufBound}.lean` (#685–#718, on `main`); `Security/LimitedProfile.lean` (#723) | Owning witness, residual, scheme-game, composition, SUF-bound and profile executables in `lake test` |
+| Byte-level SHAKE model and bound (#766) | `Security/RomConformance.lean`, `Security/ByteModel.lean`, `Security/ByteConformance.lean`, `Security/ByteRouter.lean`, `Security/RunProvenance.lean`, `Security/ByteClash.lean`, `Security/PrfKeyBound.lean`, `Security/HedgedKeyBound.lean`, `Security/WeakKeyBound.lean`, `Security/ByteRedirect.lean`, `Security/ByteLinkedRun.lean`, `Security/ByteLinkedView.lean`, `Security/HonestTransfer.lean`, `Security/ByteLinkedBound.lean`, `Security/LinkedHazards.lean`, `Security/ByteBound.lean` | `slhdsa_byte_model_tests` (+ `ByteModelVectors/`), `HashSigTest/SLHDSA/{ByteRouter,ByteClash,PrfKeyBound,HedgedKeyBound,WeakKeyBound,ByteRedirect,ByteLinkedRun,ByteLinkedView,ByteLinkedBound,LinkedHazards,ByteBound}.lean` |
 | Generic hash games consumed | `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/*.lean`, `KeyedHash/ITSR.lean`, `VCVio/CryptoFoundations/SignatureAlg.lean` | `VCVioTest/SMDT*.lean` |
 
 Every SLH-DSA test executable is registered in the `@[test_driver] script test` of `lakefile.lean`
@@ -50,11 +58,20 @@ with `--lint`, `--test`, `--ffi`, and `--axioms` selecting the slower passes.
 
 ## Milestone status ledger
 
-Verified against `origin/main` at `fb4a312d5778b247fb9105b54e3ae01b08004d40`.
+The original milestone ledger and G1–G10/primitive-assumption gate diagnoses below describe
+`origin/main` at `fb4a312d5778b247fb9105b54e3ae01b08004d40`. Preserve that historical snapshot:
+#766 subsequently added the general-depth ROM scheme, security results and wider executed vectors
+described in the current classical-ROM section. Its merged commit
+`55c29f083ccde8850b4a0dc5a7d5d13ff5cc1dc8` extends that snapshot. The independently scoped #886
+follow-up subsequently merged as `96754a37e739270ac5bb8fe7deaeafef6964b688`. The added #766 and
+#886 rows use their verified GitHub merge times; the older rows retain their historical records. The outstanding primitive-assumption reduction and full FIPS
+conformance gates are separate from the classical-ROM security theorem.
 
 "Merged" means one thing throughout this document and is checkable from a clone: the pull
 request's squash-merge commit, located by `git log origin/main --grep='(#N)'`, is an ancestor of
-that snapshot under `git merge-base --is-ancestor`. Every commit in the table below satisfies it.
+the indicated snapshot under `git merge-base --is-ancestor`. Every commit in the table below
+satisfies that ancestry test against the newer #886 merge revision. This does not re-audit the
+older rows' merge timestamps or the original milestone/gate diagnoses.
 The one thing not checkable from a clone is the stacking order, which is each pull request's base
 branch on GitHub. No head of an open pull request is quoted anywhere: a head is whatever was last
 pushed, so a quoted one goes stale without notice.
@@ -73,6 +90,8 @@ pushed, so a quoted one goes stale without notice.
 | #715 | `43e7e96f8a01d1fd2e13be8816b4d3d3074a0c0b` | 2026-09-16T10:54:59Z |
 | #718 | `4ae9371b6a803918adcd787a10b8c1226ebc34f5` | 2026-09-16T11:51:52Z |
 | #723 | `7863088c70f06ea5cbec8b26d309624ecdb1e1b1` | 2026-09-16T12:24:09Z |
+| #766 | `55c29f083ccde8850b4a0dc5a7d5d13ff5cc1dc8` | 2026-10-24T17:38:57Z |
+| #886 | `96754a37e739270ac5bb8fe7deaeafef6964b688` | 2026-10-24T21:49:55Z |
 
 | Milestone | Status | Landed in | Realized by | Gap against the plan's wording |
 |---|---|---|---|---|
@@ -82,7 +101,7 @@ pushed, so a quoted one goes stale without notice.
 | G4 general hypertree | DONE | #603 | `GeneralHypertree.signM/rootM/pkFromSigM/verifyM`, `verify_sign`, `HypertreeGeneral/QueryBound.lean` | none |
 | G5 general internal scheme | DONE | #617 | `keygenInternalM/signInternalM/verifyInternalM`, `verifyInternal_signInternal`, `DepthOneCompatibility` | the depth-one bridge for signing, `signInternalM_toOneLayer_eq`, is not an equality with `slhSignInternalM`: the general signer's trace carries one additional, discarded XMSS recovery. Consumers must use that form |
 | G6 exact wire codecs | DONE | #619 | `WireCodec`, `signatureCodec`, `WireLayout.*` slice theorems, `Concrete.approvedWireCodec`, legacy-decoder reconciliation | same-length tamper test at 128f only (issue #629 item 3) |
-| G7 SHA2 and SHAKE suites | DONE | #626 | `sha2Primitives`, `shakePrimitives`, `approvedPrimitives`, `Sha2Address`, `sha2AdrsKey_injective_of_domain`, `compressSha2_injective_of_fits` | several primitives, among them SHA-384, SHA-512/224, SHA-512/256, and both MGF1 variants, are regression-pinned rather than covered by independent NIST vectors (`PrimitiveVectors/NOTICE.md`); abstract `F`/`T₁` identification at arity 1 (#629 item 1) |
+| G7 SHA2 and SHAKE suites | DONE | #626 | `sha2Primitives`, `shakePrimitives`, `approvedPrimitives`, `Sha2Address`, `sha2AdrsKey_injective_of_domain`, `compressSha2_injective_of_fits` | several primitives, among them SHA-384, SHA-512/224, SHA-512/256, and both MGF1 variants, are regression-pinned rather than covered by independent NIST vectors (`VCVioTest/Algorithms/HashVectors/NOTICE.md`); abstract `F`/`T₁` identification at arity 1 (#629 item 1) |
 | FORS and hypertree conformance ports | DONE | #627, #628 | `ForsConformance.lean`, `HypertreeConformance.lean`, typed trajectory traces, concrete address bounds | none |
 | G8 external interfaces and prehash | DONE | #611 | `External.lean` (`requireContext`, `signPure*`, `verifyPure*`, prehash variants), `Concrete/Prehash.lean` (12 ACVP names, OIDs), pinned `opt_rand = PK.seed` | "ACVP uses supplied randomness exactly when requested" is untestable until G10 |
 | G9 efficient refinement-linked execution | NOT MERGED | frozen branch `feat/slhdsa-g9-efficient-execution-20260831`, tip `0529cefa` (still hosted) | branch-only `HashSig/SLHDSA/Execution.lean` with the full `*_eq_spec` refinement chain | the frozen branch carries stale pre-merge copies of the G4–G8 files; re-slice it instead of rebasing the whole branch (see below) |
@@ -117,6 +136,138 @@ pushed, so a quoted one goes stale without notice.
   Neither same-message SUF residual arm is bounded. The profile fixes parameters and
   coefficients; it does not discharge these obligations or enforce the signing limit.
 - **General-`d` security gate: not started**, and correctly claimed nowhere.
+- **Classical random-oracle SUF-CMA bound: merged in #766**, at general `d`, in the three-oracle
+  model, and for the SHAKE parameter sets over a single SHAKE256 random oracle on byte strings.
+  This closes the classical-ROM milestone, while the broader construction and deployment work
+  listed below remains open.
+
+## Classical random-oracle bound (merged #766)
+
+#766 proves SUF-CMA security of SLH-DSA, strong unforgeability under chosen-message attack, in
+the classical random-oracle model in which the
+tweakable hash (with `PRF` as the tweakable hash at the PRF address types), `H_msg` and `PRF_msg`
+are three independent oracles (`hashSpec`, `romScheme` in `Security/Target.lean`), for every
+validated parameter set and both signing modes. A strong forgery is a valid pair of message and
+signature that the signing oracle never returned. Every bound below is on the strong advantage at
+the right-hand side of the corresponding existential bound, and every existential bound follows
+from its strong one through `shakeAdvantage_le_shakeStrongAdvantage` (three-oracle model:
+`unforgeableAdvantage_le_strongUnforgeableAdvantage`), so the levels are those of EUF-CMA. Named
+existential forms exist only for the target (`unforgeableAdvantage_romScheme_le`), for
+`shakeAdvantage_pure_le_securityBound`, `shakeAdvantage_le_securityBound` and
+`shakeAdvantage_le_securityBound_hedged`, and for the six `shakeAdvantage_*_validatedParams`
+forms. The
+bounds extend to pure-mode byte-list public keys and signatures through `Security/Wire.lean`,
+with a fixed checked context and unchanged query budgets. Canonical parsing and injectivity are
+already proved in `Codec.lean`; prehash-mode collision accounting remains open. The accounting and the levels it reaches are in
+[`slh-dsa-classical-rom-bound.md`](slh-dsa-classical-rom-bound.md).
+
+| Result | Theorem | Module |
+|---|---|---|
+| The security target at `c = 2`, `r = 1`, per public seed | `securityTarget_two_one` | `Security/CoverageBound.lean` |
+| The same bound for every distribution of the public seed, the uniform one included | `strongUnforgeableAdvantage_romScheme_le_securityBound` | `Security/CoverageBound.lean` |
+| The joint target-collision, hidden-value and seed-guess term `2 (q_h + V) / \|Y\|` | `prEvent_romSchemeRun_runTargetCollision_or_runHiddenHit_le` | `Security/JointBound.lean` |
+| Interleaved-target coverage in the ideal hidden-seed game, at most `(q_h + 1) · weightedTargetCoverBound h a k q_s q_h (q_s / \|Y\|)` | `prEvent_idealDraw_runItsrCovered_le` | `Security/CoverageBound.lean` |
+| The target at every SHAKE and FIPS SHA-2 bundle whose address fields fit their widths, and so at all twelve parameter sets | `securityTarget_shake`, `securityTarget_sha2` | `HashSigTest/SLHDSA/CoverageBound.lean` |
+
+The hypotheses are the byte laws, the key discipline (`CorePrimitives.KeyDiscipline`) and
+`|Y| ≤ |SK.prf|`; all three are discharged at every FIPS 205 bundle. The adversary's budget counts
+its own hash queries `q_h` and signing queries `q_s`; key generation, signing and verification are
+not charged.
+
+#766 also states the byte-level model of the SHAKE parameter sets, identifies it with FIPS 205,
+and bounds the strong forging advantage in it:
+
+| Result | Theorem | Module |
+|---|---|---|
+| SLH-DSA over one SHAKE256 random oracle on byte strings with `m`-byte answers, every hash a query at its FIPS 205 §11.1 layout; the advantage, and its averaging over the public seed | `shakeRomScheme`, `shakeStrongAdvantage`, `shakeStrongAdvantage_le_lintegral` | `Security/ByteModel.lean` |
+| Answering that oracle with SHAKE256 gives the library's FIPS 205 SHAKE internal algorithms, in both signing modes and for every public-seed distribution | `shakeRomScheme_map_shakeAnswer`, `shakeRomScheme_map_shakeAnswer_validatedParams` | `Security/ByteConformance.lean` |
+| Those internal algorithms reproduce NIST ACVP-Server vectors (commit `975de31e`) at SLH-DSA-SHAKE-128f: keyGen test case 31, internal-interface sigGen test cases 137 (deterministic) and 448 (hedged), sigVer test cases 223 and 219 | `slhdsa_byte_model_tests` | `HashSigTest/SLHDSA/ByteModel.lean`, `ByteModelVectors/vectors.json` |
+| The strong forging advantage over one SHAKE256 oracle, per public seed, for `16 ≤ n ≤ 32`, `n ≤ m` and address fields within their FIPS 205 widths (`CanonicalAddressBounds`): at most `securityBound p 2^{8n} 2 1 q_h q_s + (q_s + 1) / 2^{8n} + weakKeyMass vp PK.seed`, in both signing modes | `shakeStrongAdvantage_pure_le_securityBound` | `Security/ByteBound.lean` |
+| Per public seed of weak-key mass zero, and at `n = 32` per public seed outside the weak set, without the weak-key term | `shakeStrongAdvantage_pure_le_securityBound_of_weakKeyMass_eq_zero`, `shakeStrongAdvantage_pure_le_securityBound_of_n_eq_32` | `Security/ByteBound.lean` |
+| At `n = 32`, at every public seed, weak seeds included: at most `securityBound p 2^256 2 1 (q_h + V) q_s + 2 (q_s + 1) / 2^256`, `V` the verifier's query bound, through the verification redirected at the linked points; per seed, the smaller of this and the per-seed bound | `shakeStrongAdvantage_pure_le_securityBound_add_of_n_eq_32`, `shakeStrongAdvantage_pure_le_min_of_n_eq_32` | `Security/LinkedHazards.lean`, `Security/ByteBound.lean` |
+| Over the uniform public seed, the per-seed bound with the weak-key term replaced by `\|A_hon\| / 2^256 · weakSeedFactor vp ε`, where `ε` is the bound at every seed and the factor is `min 1 ε` at `n = 32` and `1` otherwise; it implies the bound with `\|A_hon\| / 2^256` | `shakeStrongAdvantage_le_securityBound`, `shakeStrongAdvantage_le_securityBound_of_n_eq_32`, `weakSeedFactor_le_one` | `Security/ByteBound.lean`, `HashSigTest/SLHDSA/ByteBound.lean` |
+| These bounds at the six SHAKE parameter sets, the adversary's budget the only hypothesis, the averaged one a single statement for `n < 32` and `n = 32`; the theorems are stated over all twelve `FipsParameterSet` values, a SHA-2 value contributing only its parameters, which equal its SHAKE twin's | `shakeStrongAdvantage_pure_le_securityBound_validatedParams`, `shakeStrongAdvantage_pure_le_securityBound_add_validatedParams`, `shakeStrongAdvantage_le_securityBound_validatedParams` | `Security/ByteBound.lean`, `HashSigTest/SLHDSA/ByteBound.lean` |
+| In hedged signing (`opt_rand` uniform), each of these bounds with `1 / 2^{8n} + q_s (q_h + q_s + 1) / 2^{16n}` in place of `(q_s + 1) / 2^{8n}`, at the three-oracle level per public seed (at `n = 32`, outside the weak set) and over the uniform public seed; for any `opt_rand` source equal to `PK.seed` with probability at most `ε`, with `1 / 2^{8n} + q_s ε (q_h + q_s + 1) / 2^{8n}` | `shakeStrongAdvantage_pure_le_securityBound_hedged`, `shakeStrongAdvantage_le_securityBound_hedged`, `shakeStrongAdvantage_pure_le_securityBound_hedged_of_n_eq_32`, `shakeStrongAdvantage_pure_le_min_hedged_of_n_eq_32`, `shakeStrongAdvantage_pure_le_securityBound_hedged_validatedParams`, `shakeStrongAdvantage_pure_le_securityBound_add_hedged_validatedParams`, `shakeStrongAdvantage_le_securityBound_hedged_validatedParams`, `shakeStrongAdvantage_pure_le_securityBound_of_prEvent_optRand_le` | `Security/ByteBound.lean`, `Security/HedgedKeyBound.lean`, `Security/LinkedHazards.lean`, `HashSigTest/SLHDSA/ByteBound.lean` |
+
+The faithfulness step routes a forger's byte strings to typed queries of the three oracles
+(`Security/ByteRouter.lean`), classifies every clash of two byte strings in the routed run as a hit
+of the message-`PRF` key or a weak public key (`Security/ByteClash.lean`), charges the first
+jointly with the three-oracle events (`Security/PrfKeyBound.lean`) and bounds the second by the
+uniformity of the public root (`Security/WeakKeyBound.lean`). In hedged signing the hit keeps the
+condition `opt_rand = PK.seed` of the clashing `PRF_msg` string and is charged as a product in
+the ideal hidden-seed game (`Security/HedgedKeyBound.lean`). At `n = 32` a tweakable-hash query at
+the address `PK.seed` with first block `PK.root` shares its string with an `H_msg` query; the
+verification redirected at those linked points (`Security/ByteRedirect.lean`) is run as the
+adversary's own queries, its events are read on the cache through the redirect
+(`Security/ByteLinkedRun.lean`, `Security/ByteLinkedView.lean`, `Security/HonestTransfer.lean`) and
+bounded in one potential with two further charged events (`Security/ByteLinkedBound.lean`,
+`Security/LinkedHazards.lean`), which gives the bound at every seed. The accounting and the levels
+are in [`slh-dsa-classical-rom-bound.md`](slh-dsa-classical-rom-bound.md).
+
+The single oracle answers every string with `m` bytes, the longest SHAKE256 output FIPS 205 reads.
+The variable-length-XOF adversary transport remains unformalised: its simulator must retain
+cached suffixes consistently across repeated and extended requests. Concrete SHAKE prefix
+consistency at all widths is proved in `VCVio/Algorithms/KeccakPrefix.lean`. At
+`q_h = q_s = 2^64` the averaged byte-level levels of the 256-bit sets are 254.00 (256s) and 253.89
+(256f), 254.41 and 254.27 in hedged signing, equal, to two decimals, to the per-seed levels
+outside the weak set; the bound at every seed, weak seeds included, is at 253.68 and 253.59, and
+at 254.00 and 253.89 in hedged signing.
+Not proved: a byte-level model of SHA-2, prehash collision accounting, the variable-length-XOF
+game transport, and complete FIPS conformance. The pure-mode SHAKE wire game is covered by
+`wireStrongAdvantage_le_securityBound_validatedParams` and its hedged form. See the
+[validated review follow-up](slh-dsa-classical-rom-bound.md#validated-review-follow-up-2026-10-23)
+for the executable evaluators, kernel-certified table, budget-range certificates, wider vectors,
+security profiles, and remaining construction/deployment obligations.
+
+## Specialized SHAKE-128s strong-unforgeability proof (#912)
+
+The specialized development under `HashSig/SLHDSA/SHAKE128s/` contains a transcription, its
+probability proof and a program/distribution bridge to the library's deterministic pure-mode
+SHAKE-128s scheme. `SLHDSA.SHAKE128s.slhDsa_sufCma_127` bounds strong forging probability by
+`q / 2^127` for `q ≥ 1`, under probability-one work and lifetime caps. The original game permits
+variable contexts in signing requests and uses byte-string signatures. It shares one random
+oracle with fixed 30-byte answers across key generation, signing, the adversary and verification;
+shorter hash roles read the first 16 bytes. Key seeds are independent and uniform.
+
+Work is the sum of signing requests, direct adversary hash calls and final-verification hash
+calls, including repeated oracle inputs. At most `2^64` signing requests are allowed. The model
+records key-generation and signer hashes separately and excludes them from this work bound.
+The original public-key interface is structured. The additive candidate's
+`Bridge.strongUnforgeableAdvantage_eq_fixedContext` identifies its fixed-context adaptation with
+that actual byte-public-key wire game. `Bridge.withinSigningLimit_fixedContext` and
+`Bridge.hasQueryBound_fixedContext` derive the actual probability-one caps from a wire
+adversary's `RomQueryBound q_h q_s`. The work transport needs no lifetime premise; the signing
+limit and both security corollaries additionally use `q_s ≤ 2^64`. The external verifier has a
+proved universal cap of 3929 calls, without an acceptance premise.
+`wireStrongAdvantage_le_workBound` gives `(q_h + q_s + 3929) / 2^127`;
+`wireStrongAdvantage_le_min_bound` combines it with the existing general SHAKE bound. These
+wire corollaries share deterministic signing, one fixed valid context, independent uniform seeds,
+and the fixed 30-byte oracle. The original variable-context theorem remains unchanged.
+
+The original general-depth results, all-six-set deterministic/hedged SHAKE bounds, pure-wire
+reductions, exact evaluators, certified table and three-oracle range certificates remain
+available. The two design records describe their distinct accounting and interfaces:
+[general ROM bounds](slh-dsa-classical-rom-bound.md) and
+[specialized SHAKE-128s](slh-dsa-shake128s-suf-cma.md).
+
+Canonical additive checkpoint B0 rebuilt all 238 original specialized modules and their headline
+on the locked dependencies before adapter work. Its historical recorded head and source-neutral
+restack onto merged #766 are listed in the
+[integration execution record](slh-dsa-pr766-pr912-integration-plan.md#implementation-execution-record).
+The later canonical build checkpoint K at `e32b95e2` passed the strict recorded-head build under
+the actual `ecac686f` dependency lock. It covers C5 plus merged #886/#911. The exact C4/C6
+canonical union was independently reviewed and committed as K2, `611ddbe3`; its targeted
+source-candidate build, five public axiom audits, 11 preserved headline comparisons and four direct
+runtime checks passed on that lock. These targeted checks do not replace the final combined
+candidate's clean recorded-head full gate or remote CI, which remain pending. A historical
+ancestor's pass does not certify a later or rebased commit.
+The named `slhdsa_shake128s_compiler_tests` imports the enlarged `HashSig` umbrella;
+`slhdsa_shake128s_game_tests` checks actual source counts and cache-hit charging, and
+`slhdsa_shake128s_wire_bridge_tests` executes actual adapter translation/freshness and rejected-input
+controls. All are explicit `lake test` steps whose assertions must actually execute in the final
+validation log; test-library compilation alone is insufficient. Variable-length-XOF game transport, concrete-SHAKE
+computational security, prehash collision accounting, honest-work certificates, byte-level range
+certificates and the second construction remain separate work.
 
 ## Security lane: slices, status, and source correspondence
 
@@ -168,12 +319,14 @@ hypotheses and resource/domain conditions not encoded by the current theorem:
   and neither bounds the transcript, so the Lean advantage is the supplied adversary's success
   probability with no transcript bound, where the source's term is bounded through its reduction;
 - the same-randomizer half of the strong-unforgeability residual, which has no counterpart in the
-  source at all and no bound anywhere in this repository.
+  source at all and no bound in the standard-model lane of this repository (the random-oracle
+  bound of #766 closes that case through its strong bridge, at no extra term).
 
-Reduction traps recorded in issue #629 apply to every slice from 6 onward: the zero fallbacks of
-`sha2AdrsKey` and `checkedNodeOrZero` alias reachable values, so future reductions must establish
-approved query domains before using `sha2AdrsKey_injective_of_domain`; and `SameMessageBinding` is
-unbounded, so the SUF residual uses `advantage_eq_euf_add_sameMessage`.
+Reduction traps recorded in issue #629 apply to every slice from 6 onward: the zero fallback of
+`checkedNodeOrZero` aliases reachable values, and the type-tagged fallback of `sha2AdrsKey` is the
+key of no checked-domain address but collapses rejected addresses of one type class, so future
+reductions must establish approved query domains before using `sha2AdrsKey_injective_of_domain`;
+and `SameMessageBinding` is unbounded, so the SUF residual uses `advantage_eq_euf_add_sameMessage`.
 
 ### Conventions the lane follows
 
@@ -196,9 +349,9 @@ The G9 and G10 branches, `feat/slhdsa-g9-efficient-execution-20260831` (tip `052
 predate the merged G4–G8 and carry stale pre-merge copies of those files, so neither can be
 rebased. Use the tip commits as idea sources and re-slice only the owned changes:
 
-- **G9**: a single PR carrying `HashSig/SLHDSA/Execution.lean` (the `treeHash`,
+- **G9**: a proposed PR carrying `HashSig/SLHDSA/Execution.lean` (the `treeHash`,
   `authenticationPath`, and `*_eq_spec` refinement theorems restated against the merged
-  `GeneralScheme`, `Codec`, and `External` APIs) plus `HashSigTest/SLHDSA/Execution.lean` and a
+  `GeneralScheme`, `Codec`, and `External` APIs) plus the proposed `HashSigTest/SLHDSA/Execution.lean` and a
   benchmark record for the six numerical shapes.
 - **G10**: first a corpus-import PR (schema, strict JSON parser, lossless corpus, manifest pinned
   to ACVP-Server `975de31e`, provenance check script), then a runner PR that executes
@@ -261,7 +414,7 @@ longer true on `main`:
   by `signInternalM_toOneLayer_eq`. The plan forbids keeping both indefinitely; the compatibility
   scheme should be retired once slice 7 consumes `GeneralScheme` directly.
 - Independent NIST vectors for the regression-pinned primitives listed in
-  `HashSigTest/SLHDSA/PrimitiveVectors/NOTICE.md`.
+  `VCVioTest/Algorithms/HashVectors/NOTICE.md`.
 - Deferred cleanup: the `XmssSig` alias of `XmssSigCore`, the dead `pk` parameter of
   `recoverFromPositionWith`, the unused `FipsParameterSet.category`, and the smaller items
   recorded on #605–#611.
@@ -295,7 +448,8 @@ longer true on `main`:
   §10 external functions (21–25), §11 parameter sets (§11.2 compressed address `ADRSc`,
   Figure 18, Table 3).
 - M. Barbosa, F. Dupressoir, A. Hülsing, M. Meijers, P.-Y. Strub, *A Tight Security Proof for
-  SPHINCS+, Formally Verified*, ASIACRYPT 2023; EasyCrypt development `FV-SPHINCSPLUS-EC`.
+  SPHINCS+, Formally Verified*, Cryptology ePrint Archive, Report 2024/910; EasyCrypt
+  development `FV-SPHINCSPLUS-EC`.
 - D. J. Bernstein, A. Hülsing, S. Kölbl, R. Niederhagen, J. Rijneveld, P. Schwabe, *The SPHINCS+
   Signature Framework*, CCS 2019; SPHINCS+ round-3.1 specification (2022) and NIST submission
   package (reference implementation).

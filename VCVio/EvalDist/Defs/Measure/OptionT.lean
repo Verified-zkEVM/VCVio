@@ -197,7 +197,8 @@ instance (priority := 20) instLawfulEvalDistSemanticsOptionT
         (fun x ↦ 𝒟[(f x).run]) := Measurable.of_comap_le le_sup_right
     have hmap := @OptionT.evalDist_map m _ _ _ _ α α mObs mα mx id hId
     rw [id_map] at hmap
-    rw [hmap, @Measure.bind_map α α β mObs mα mβ _ _ _ hId hf]
+    rw [hmap, @Measure.bind_map α α mObs mα β mβ _ _ _
+      (@Measurable.aemeasurable α α mObs mα id _ hId) hf.aemeasurable]
     exact @OptionT.evalDist_bind m _ _ _ α β mObs mβ mx f hRun
 
 /-- The successful-output measure of sampling and then guarding is the measure of the

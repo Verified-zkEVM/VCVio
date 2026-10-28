@@ -7,7 +7,7 @@ name: Interop TCB Isolation
 # `Extern`, `VCVioWidgets`, `VCVioTest`).
 #
 # Runs on every PR and on pushes to `main`. The check is fast
-# (a handful of `rg` invocations) and runs without a Lean toolchain.
+# and parses source with Lean; it does not build the project or fetch Lake dependencies.
 
 on:
   push:
@@ -27,8 +27,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
+        with:
+          auto-config: false
+          use-github-cache: false
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: false
       - name: Run isolation check
-        run: bash scripts/check-interop-isolation.sh
+        run: |
+          python3 scripts/test-interop-isolation.py
+          bash scripts/check-interop-isolation.sh
 
       - name: Run Extern isolation check
         run: bash scripts/check-extern-isolation.sh

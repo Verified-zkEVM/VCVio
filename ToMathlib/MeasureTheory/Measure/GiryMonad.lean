@@ -31,18 +31,4 @@ theorem measurable_map_parameter (μ : Measure β) [SFinite μ]
   have h := (measurable_map f hf).comp (Measurable.map_prodMk_left (ν := μ))
   simpa only [Measure.map_map hf measurable_prodMk_left, Function.comp_def] using h
 
-/-- Pushforward commutes with binding a measurable family of measures. -/
-theorem map_bind (μ : Measure α) {k : α → Measure β} {f : β → γ}
-    (hk : Measurable k) (hf : Measurable f) :
-    (μ.bind k).map f = μ.bind (fun a ↦ (k a).map f) := by
-  rw [bind, ← join_map_map hf, Measure.map_map (measurable_map f hf) hk]
-  rfl
-
-/-- Binding after a pushforward is substitution in the measure-valued continuation. -/
-theorem bind_map (μ : Measure α) {f : α → β} {k : β → Measure γ}
-    (hf : Measurable f) (hk : Measurable k) :
-    (μ.map f).bind k = μ.bind (fun a ↦ k (f a)) := by
-  rw [bind, Measure.map_map hk hf]
-  rfl
-
 end MeasureTheory.Measure

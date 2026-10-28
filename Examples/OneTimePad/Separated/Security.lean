@@ -23,7 +23,7 @@ public section
 
 namespace OneTimePad.Separated
 
-open PFunctor Interaction.UC OracleComp MeasureTheory ProbabilityTheory
+open PFunctor Interaction Interaction.Open Interaction.UC OracleComp MeasureTheory ProbabilityTheory
 
 variable {Message Cipher Key Memory Advice : Type}
 

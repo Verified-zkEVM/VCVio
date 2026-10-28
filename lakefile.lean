@@ -17,6 +17,8 @@ computations, probability semantics, program logic, and lattice- and hash-based 
     ⟨`weak.linter.redundantVisibility, true⟩,
     -- Use Mathlib's 1500-line limit downstream too; split files before exceeding it.
     ⟨`weak.linter.style.longFile, .ofNat 1500⟩,
+    -- Acknowledge the experimental core VC generator used by the program logic.
+    ⟨`experimental.vcgen, true⟩,
     -- Disable the unicode allowlist linter: VCVio docstrings legitimately use
     -- FIPS-204 math notation (combining tilde `c̃`) and cited author names with
     -- diacritics (e.g. `Cătălin Hriţcu`).
@@ -39,14 +41,14 @@ script lint (args) do
   child.wait
 
 /-
-Interop backends are intentionally disabled for the Lean 4.34 baseline. Their
+Interop backends are intentionally disabled for the Lean 4.35 baseline. Their
 source remains under `Interop/`, isolated from the trusted libraries by
 `scripts/check-interop-isolation.sh`, but the aggregate module and CI do not
 build it. Re-enable a backend only once its upstream Lean library supports the
 repository's Lean version without a local compatibility layer.
 
 The pinned Hax revision still targets Lean 4.29.0-rc1 and is not part of the
-Lean 4.34 build. Subdirectory: `hax-lib/proof-libs/lean`.
+Lean 4.35 build. Subdirectory: `hax-lib/proof-libs/lean`.
 -/
 -- require Hax from git
 --   "https://github.com/cryspen/hax" @
@@ -63,16 +65,24 @@ Subdirectory: `backends/lean`.
 --   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 
 /-
-List PolyFun before the root Mathlib pin. Lake resolves dependencies in reverse
-declaration order, so this keeps the direct Mathlib requirement authoritative
-over PolyFun's inherited pin and makes `lake update --keep-toolchain`
-idempotent.
+List PolyFun and QuantumFoundations before the root Mathlib pin. Lake resolves
+dependencies in reverse declaration order, so this keeps the direct Mathlib
+requirement authoritative over their inherited pins and makes
+`lake update --keep-toolchain` idempotent.
 -/
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun" @
-  "3710d71b28404a151b8d1f0ce080ea448778dec0"
+  "4181c82238142d9b73403fbf4c4b13e1a801e400"
 
-require "leanprover-community" / "mathlib" @ git "v4.34.0"
+/-
+The Mathlib-only quantum foundation (matrix maps, instruments, registers,
+observation, pure states and oracle unitaries), shared with CatCrypt-core.
+-/
+require QuantumFoundations from git
+  "https://github.com/lean-crypto-foundations/QuantumFoundations" @
+  "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac"
+
+require "leanprover-community" / "mathlib" @ git "v4.35.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
@@ -106,7 +116,7 @@ Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but no
 /-- Dormant Interop bridges to Rust verification frontends (hax, aeneas).
 Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
 `Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
-excluded from the Lean 4.34 baseline build. -/
+excluded from the Lean 4.35 baseline build. -/
 lean_lib Interop
 
 /-
@@ -366,12 +376,18 @@ collide. -/
 lean_lib HashSigTest where
   globs := #[.submodules `HashSigTest]
 
+/-- Pure hash regressions, independent of scheme and FFI test runners. -/
+lean_exe algorithm_tests where
+  srcDir := "scripts"
+  root := `AlgorithmTests
+
 /-- Smoke test: imports VCVio and prints OK. -/
 lean_exe smoke_test where
   root := `VCVioTest.Smoke
 
-/-- `lake test`: build the three test libraries, then run the smoke test and the SLH-DSA test
-executables. `lake test -- --ffi` additionally builds and runs the native-backed ML-KEM / ML-DSA /
+/-- `lake test`: build the three test libraries, then run the smoke, pure algorithm and SLH-DSA test
+executables and independently check the regenerated exact bound table against its artifact.
+`lake test -- --ffi` additionally builds and runs the native-backed ML-KEM / ML-DSA /
 Falcon executables, which compile the vendored C backends under `third_party/`; that path is what
 the nightly FFI workflow runs and is never part of the per-PR CI. -/
 @[test_driver]
@@ -383,6 +399,7 @@ script test (args) do
   let mut steps : Array (Array String) := #[
     #["build", "VCVioTest", "LatticeCryptoTest", "HashSigTest"],
     #["exe", "smoke_test"],
+    #["exe", "algorithm_tests"],
     #["exe", "slhdsa_kat"],
     #["exe", "slhdsa_c13_kat"],
     #["exe", "slhdsa_data_codec_tests"],
@@ -390,6 +407,7 @@ script test (args) do
     #["exe", "slhdsa_wots_tests"],
     #["exe", "slhdsa_xmss_tests"],
     #["exe", "slhdsa_fors_tests"],
+    #["exe", "slhdsa_fors_secret_order_tests"],
     #["exe", "slhdsa_hypertree_tests"],
     #["exe", "slhdsa_external_tests"],
     #["exe", "slhdsa_target_ledger_tests"],
@@ -407,7 +425,13 @@ script test (args) do
     #["exe", "slhdsa_scheme_game_tests"],
     #["exe", "slhdsa_composition_tests"],
     #["exe", "slhdsa_suf_bound_tests"],
-    #["exe", "slhdsa_limited_profile_tests"]]
+    #["exe", "slhdsa_limited_profile_tests"],
+    #["exe", "slhdsa_byte_model_tests"],
+    #["exe", "slhdsa_wire_tests"],
+    #["exe", "slhdsa_shake128s_compiler_tests"],
+    #["exe", "slhdsa_shake128s_game_tests"],
+    #["exe", "slhdsa_shake128s_wire_bridge_tests"],
+    #["build", "slhdsa_bound_table"]]
   if args.contains "--ffi" then
     steps := steps ++ #[#["exe", "mlkem_test"], #["exe", "mldsa_test"], #["exe", "falcon_test"]]
   for cmdArgs in steps do
@@ -415,7 +439,17 @@ script test (args) do
     if rc != 0 then
       IO.eprintln s!"lake test: `lake {" ".intercalate cmdArgs.toList}` exited with code {rc}"
       return rc
-  return 0
+  let root ← getRootPackage
+  let generator := (root.binDir / "slhdsa_bound_table").addExtension System.FilePath.exeExtension
+  let checkArgs := #["scripts/check-slh-dsa-bound-table.py",
+    "docs/design/slh-dsa-security-bounds.csv", "--generator",
+    generator.toString]
+  IO.println s!"# python3 {" ".intercalate checkArgs.toList}"
+  let check ← IO.Process.spawn { cmd := "python3", args := checkArgs }
+  let rc ← check.wait
+  if rc != 0 then
+    IO.eprintln s!"lake test: independent SLH-DSA bound-table check exited with code {rc}"
+  return rc
 
 /-- ML-KEM test executable (links against mlkem-native FFI). -/
 lean_exe mlkem_test where
@@ -457,6 +491,10 @@ lean_exe slhdsa_xmss_tests where
 lean_exe slhdsa_fors_tests where
   root := `HashSigTest.SLHDSA.ForsConstructionTests
 
+/-- FORS provider callbacks follow the selected-secret-first schedule. -/
+lean_exe slhdsa_fors_secret_order_tests where
+  root := `HashSigTest.SLHDSA.ForsSecretOrder
+
 /-- General-hypertree trajectories, checked addresses, and selected concrete construction. -/
 lean_exe slhdsa_hypertree_tests where
   root := `HashSigTest.SLHDSA.HypertreeConformanceTests
@@ -464,6 +502,33 @@ lean_exe slhdsa_hypertree_tests where
 /-- Algorithms 21--25 message boundary and all twelve ACVP pre-hash digest/OID canaries. -/
 lean_exe slhdsa_external_tests where
   root := `HashSigTest.SLHDSA.External
+
+/-- SLH-DSA over a single SHAKE256 oracle: SHAKE256 at the FIPS 205 §11.1 layouts of `F`,
+`H_msg` and `PRF_msg` against the landed SHAKE functions, `PRF` as the tweakable hash at a `PRF`
+address, layout-order negative controls, SHAKE256 prefix consistency, and the FIPS 205 SHAKE
+internal algorithms against pinned NIST ACVP vectors at SLH-DSA-SHAKE-128f. -/
+lean_exe slhdsa_byte_model_tests where
+  root := `HashSigTest.SLHDSA.ByteModel
+
+/-- Exact rational evaluations of the proved structured and averaged single-SHAKE bounds. -/
+lean_exe slhdsa_bound_table where
+  root := `HashSigTest.SLHDSA.BoundEval
+
+/-- Strict parsing, pure-mode messages, and returned-pair freshness of the wire adapter. -/
+lean_exe slhdsa_wire_tests where
+  root := `HashSigTest.SLHDSA.Wire
+
+/-- Finite-index compiler controls through the combined hash-signature import. -/
+lean_exe slhdsa_shake128s_compiler_tests where
+  root := `HashSigTest.SLHDSA.SHAKE128s.Compiler
+
+/-- Actual source-counted game controls, with separate full-call and cache-miss counters. -/
+lean_exe slhdsa_shake128s_game_tests where
+  root := `HashSigTest.SLHDSA.SHAKE128s.Game
+
+/-- Fixed-context wire query translation through the actual SHAKE-128s adversary adapter. -/
+lean_exe slhdsa_shake128s_wire_bridge_tests where
+  root := `HashSigTest.SLHDSA.SHAKE128s.WireBridge
 
 /-- Sizes, distinctness, cross-role disjointness, and pinned membership of the reachable security
 target ledgers, on small validated profiles. -/

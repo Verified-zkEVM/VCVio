@@ -169,7 +169,7 @@ an adversary is at most the sum of the ROR advantages of the two adversaries
 hybrid through the experiment that encrypts a uniform message.
 
 The runtime coherence hypotheses are those of the KEM+DEM composition theorem in
-`VCVio.CryptoFoundations.KEMDEM`: runtime measures preserve `pure` and measurable binds, agree
+`VCVio.Schemes.KEMDEM`: runtime measures preserve `pure` and measurable binds, agree
 with the canonical `ProbComp` measure on lifted public randomness, and are total on Boolean
 computations. Totality is used by `Measure.boolBias_bind_coin`, which distinguishes missing
 mass from the output `false`. -/

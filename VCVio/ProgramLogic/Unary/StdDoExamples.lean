@@ -6,11 +6,12 @@ Authors: Quang Dao
 
 module
 
-public import Std.Tactic.Do
 public import VCVio.ProgramLogic.Unary.StdDoBridge
 
 /-!
-# `Std.Do` / `mvcgen` examples for `OracleComp`
+# `Std.Do` triples for `OracleComp`
+
+The `Std.Do` specifications of `VCVio.ProgramLogic.Unary.StdDoBridge`, applied as terms.
 -/
 
 @[expose] public section
@@ -19,8 +20,6 @@ open Std.Do
 
 universe u
 
-set_option mvcgen.warning false
-
 namespace OracleComp.ProgramLogic.StdDo
 
 variable {ι : Type u} {spec : OracleSpec ι}
@@ -28,16 +27,14 @@ variable [OracleSpec.UniformAnswerMeasure spec]
 variable {α : Type}
 
 example (x : α) :
-    Std.Do.Triple (pure x : OracleComp spec α) (spred(⌜True⌝)) (⇓ y => ⌜y = x⌝) := by
-  mvcgen
+    Std.Do.Triple (pure x : OracleComp spec α) (spred(⌜True⌝)) (⇓ y => ⌜y = x⌝) :=
+  Std.Do.Triple.of_entails_wp (Std.Do.Triple.entails_wp_of_pre Std.Do.Spec.pure fun _ => rfl)
 
 example (t : spec.Domain) {Q : Std.Do.PostCond (spec.Range t) .pure} :
     Std.Do.Triple (HasQuery.query t : OracleComp spec (spec.Range t))
       (⌜wpProp (spec := spec) (HasQuery.query t) (fun a => (Q.1 a).down)⌝)
-      Q := by
-  unfold Std.Do.Triple
-  intro h
-  mspec
+      Q :=
+  Spec.query t
 
 example (oa : OracleComp spec α) (p : α → Prop) :
     wpProp (spec := spec) oa p ↔ Pr{let x ← oa}[p x] = 1 :=

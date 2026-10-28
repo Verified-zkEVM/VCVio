@@ -122,7 +122,8 @@ theorem tree_internal_of_children_eq_none (left right : Skeleton)
         (populateDown left (Option.bindPair (children log)) none)
         (populateDown right (Option.bindPair (children log)) none) := by
   change MerkleTreeExtractor.children queryView log () root = none at hchildren
-  simp only [tree, MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, hchildren]
+  simp only [tree, MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt,
+    MerkleTreeExtractor.treeWith, hchildren]
   rw [populateDown_none_eq left (Option.bindPair (children log)) rfl,
     populateDown_none_eq right (Option.bindPair (children log)) rfl]
 
@@ -133,7 +134,8 @@ theorem tree_internal_of_children_eq_some (left right : Skeleton)
     tree (.internal left right) log root =
       FullData.internal (some root) (tree left log x) (tree right log y) := by
   change MerkleTreeExtractor.children queryView log () root = some (x, y) at hchildren
-  simp [tree, MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, hchildren]
+  simp [tree, MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt,
+    MerkleTreeExtractor.treeWith, hchildren]
 
 @[simp]
 theorem targets_leaf (log : (spec α).QueryLog) (root : α) :
