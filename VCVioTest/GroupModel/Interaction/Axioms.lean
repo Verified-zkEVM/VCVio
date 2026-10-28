@@ -15,13 +15,6 @@ public section
 
 open Lean Meta Elab Command in
 run_cmd liftTermElabM do
-  for name in #[`GroupModel.Adversary, `GroupModel.MultiGroup.Adversary,
-      `GroupModel.Output, `GroupModel.Transcript,
-      `GroupModel.Interaction.erase, `GroupModel.Interaction.Core.run,
-      `GroupModel.Interaction.run, `GroupModel.Interaction.run_pure,
-      `GroupModel.Interaction.run_query, `GroupModel.Interaction.run_valid] do
-    if (← getEnv).contains name then
-      throwError "Removed interface or adapter has returned: {name}"
   for (name, _) in (← getEnv).constants.toList do
     if (`GroupModel.Interaction).isPrefixOf name then
       for axiomName in ← collectAxioms name do

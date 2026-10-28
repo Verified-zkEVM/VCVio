@@ -105,8 +105,8 @@ example : ¬ IsAlgebraic (Reply := fun _ : Unit => Unit) (fun _ : Bool => [7])
   have invalid := h false
   simp at invalid
 
--- A reply may introduce fresh values in both groups without explanations.
-example {Tag F : Type} {G : Tag → Type} [Zero F] [One F]
+/-- A reply may introduce fresh values in both groups without explanations. -/
+theorem isAlgebraic_fresh_reply {Tag F : Type} {G : Tag → Type} [Zero F] [One F]
     [∀ s, AddMonoid (G s)] [∀ s, SMul F (G s)] :
     IsAlgebraic (Reply := fun _ : String => Unit) (fun _ => ([] : List (G _)))
       (OracleComp.queryBind (⟨⟨"hash", fun _ => []⟩, fun _ => []⟩ : Explained F String G)

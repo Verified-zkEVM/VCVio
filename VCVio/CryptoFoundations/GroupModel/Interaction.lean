@@ -43,7 +43,6 @@ open OracleComp OracleSpec
 variable {Tag : Type}
 
 /-- Received inputs or outgoing values, separated by group sort. -/
-@[expose]
 abbrev Groups (G : Tag → Type) := (s : Tag) → List (G s)
 
 /-- Append only received values, preserving order and repetitions within each sort. -/
@@ -92,13 +91,11 @@ theorem Explained.valid_ofVectors {F Data : Type} {G : Tag → Type}
   | cons v vs ih => exact .cons ⟨by simp, rfl⟩ ih
 
 /-- Plain game oracles may depend on the request's data and receive its actual group arguments. -/
-@[expose]
 abbrev plainSpec (G : Tag → Type) (Query : Type) (Reply : Query → Type) : OracleSpec
     (Message Query G) :=
   fun q => Message (Reply q.data) G
 
 /-- Adversarial requests carry explanations; oracle replies deliberately do not. -/
-@[expose]
 abbrev explainedSpec (F : Type) (G : Tag → Type) (Query : Type) (Reply : Query → Type) :
     OracleSpec (Explained F Query G) := fun q => Message (Reply q.value.data) G
 

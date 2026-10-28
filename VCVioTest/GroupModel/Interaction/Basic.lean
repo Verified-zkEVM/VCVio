@@ -101,8 +101,8 @@ example : (⟨⟨"hash this message", fun _ => []⟩, fun _ => []⟩ : Explained
     (fun _ => []) := by
   simp [Explained.Valid, GroupModel.Interaction.evaluate]
 
--- Any fresh group reply is accepted without an explanation in the old (here empty) basis.
-example {F G : Type} [Zero F] [One F] [AddMonoid G] [SMul F G] :
+/-- Any fresh group reply is accepted without an explanation in the old (here empty) basis. -/
+theorem isAlgebraic_fresh_reply {F G : Type} [Zero F] [One F] [AddMonoid G] [SMul F G] :
     IsAlgebraic (Reply := fun _ : String => Unit) (fun _ : Unit => ([] : List G))
       (OracleComp.queryBind (⟨⟨"hash", fun _ => []⟩, fun _ => []⟩ : Explained F String (fun _
           : Unit => G))
