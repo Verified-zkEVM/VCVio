@@ -24,21 +24,21 @@ namespace Proximity.AGM
 
 private def received {I M G₁ G₂ : Type} (initial : Groups (Group G₁ G₂))
     (hash : I → G₁) (sign : M → G₁) (tr : Weighted.Transcript I M) : Groups (Group G₁ G₂) :=
-  groupInputs (initial false ++ tr.map (Sum.elim hash sign)) (initial true)
+  sourceInputs (initial false ++ tr.map (Sum.elim hash sign)) (initial true)
 
 private def fixedPlainOracle {F Slot G₁ G₂ : Type} {dimension : ℕ}
     (hash : Index Slot dimension → G₁) (sign : Proximity.Message F Slot dimension → G₁) :
     QueryImpl (plainSpec (Group G₁ G₂) (Query F Slot dimension) Reply) ProbComp := by
   intro ⟨q, _⟩
   rcases q with ((n | i) | m)
-  · exact (fun r => ⟨r, groupInputs [] []⟩) <$> (unifSpec.query n : ProbComp _)
-  · exact pure ⟨(), groupInputs [hash i] []⟩
-  · exact pure ⟨(), groupInputs [sign m] []⟩
+  · exact (fun r => ⟨r, sourceInputs [] []⟩) <$> (unifSpec.query n : ProbComp _)
+  · exact pure ⟨(), sourceInputs [hash i] []⟩
+  · exact pure ⟨(), sourceInputs [sign m] []⟩
 
 private theorem received_empty {I M G₁ G₂ : Type} (initial : Groups (Group G₁ G₂))
     (hash : I → G₁) (sign : M → G₁) : received initial hash sign [] = initial := by
   funext s
-  cases s <;> simp [received, groupInputs]
+  cases s <;> simp [received, sourceInputs]
 
 private theorem fixedRun_groups {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ} [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
@@ -47,10 +47,10 @@ private theorem fixedRun_groups {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
     (A : AlgebraicAdversary F Slot G₁ G₂ dimension e g₁ g₂) (pk : G₂)
     (hash : Index Slot dimension → G₁) (sign : Proximity.Message F Slot dimension → G₁) :
     (fun z => (z.1, received (initialInput g₁ g₂ pk).groups hash sign z.2)) <$>
-      Weighted.fixedRun hash sign (A.rawMain pk) =
+      weightedFixedRun hash sign (A.rawMain pk) =
       A.toAdversary.run (fixedPlainOracle hash sign) (initialInput g₁ g₂ pk) := by
   let input := initialInput g₁ g₂ pk
-  let impl₁ := (Weighted.fixedOracle hash sign) ∘ₛ (fun q => oracle q.value
+  let impl₁ := (weightedFixedOracle hash sign) ∘ₛ (fun q => oracle q.value
     : QueryImpl (explainedSpec F (Group G₁ G₂) (Query F Slot dimension) Reply)
       (OracleComp (rawSpec F Slot G₁ dimension)))
   let impl₂ : QueryImpl (explainedSpec F (Group G₁ G₂) (Query F Slot dimension) Reply)
@@ -65,35 +65,35 @@ private theorem fixedRun_groups {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
         simulateQ_map, simulateQ_spec_query, StateT.run_map, StateT.run_mk,
         bind_pure_comp, Functor.map_map]
     · change (fun r : Fin (n + 1) =>
-          ((⟨r, groupInputs [] []⟩ : GroupModel.Interaction.Message _ (Group G₁ G₂)),
+          ((⟨r, sourceInputs [] []⟩ : GroupModel.Interaction.Message _ (Group G₁ G₂)),
             received input.groups hash sign tr)) <$> (unifSpec.query n : ProbComp _) =
         (fun r : Fin (n + 1) =>
-          ((⟨r, groupInputs [] []⟩ : GroupModel.Interaction.Message _ (Group G₁ G₂)),
-            extend (received input.groups hash sign tr) (groupInputs [] []))) <$>
+          ((⟨r, sourceInputs [] []⟩ : GroupModel.Interaction.Message _ (Group G₁ G₂)),
+            extend (received input.groups hash sign tr) (sourceInputs [] []))) <$>
           (unifSpec.query n : ProbComp _)
       congr 1
       funext r
       apply Prod.ext
       · rfl
       · funext s
-        cases s <;> simp [received, groupInputs, extend]
-    · simp only [Weighted.fixedOracle, StateT.run, map_pure, Prod.map_apply', id_eq]
+        cases s <;> simp [received, sourceInputs, extend]
+    · simp only [weightedFixedOracle, StateT.run, map_pure, Prod.map_apply', id_eq]
       apply congrArg pure
       apply Prod.ext
       · rfl
       · funext s
-        cases s <;> simp [received, groupInputs, extend, List.append_assoc]
-    · simp only [Weighted.fixedOracle, StateT.run, map_pure, Prod.map_apply', id_eq]
+        cases s <;> simp [received, sourceInputs, extend, List.append_assoc]
+    · simp only [weightedFixedOracle, StateT.run, map_pure, Prod.map_apply', id_eq]
       apply congrArg pure
       apply Prod.ext
       · rfl
       · funext s
-        cases s <;> simp [received, groupInputs, extend, List.append_assoc]
+        cases s <;> simp [received, sourceInputs, extend, List.append_assoc]
   have h := map_run_simulateQ_eq_of_query_map_eq impl₁ impl₂
     (received input.groups hash sign) hstep (A.main input) []
   rw [received_empty] at h
   simpa only [impl₁, QueryImpl.simulateQ_compose, impl₂, Adversary.run,
-    Weighted.fixedRun, AlgebraicAdversary.rawMain, input, Prod.map_def, id_eq] using h
+    weightedFixedRun, AlgebraicAdversary.rawMain, input, Prod.map_def, id_eq] using h
 
 private theorem fixedRun_valid {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ} [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
@@ -103,7 +103,7 @@ private theorem fixedRun_valid {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ} 
     (hash : Index Slot dimension → G₁) (sign : Proximity.Message F Slot dimension → G₁)
     (z : Explained F (Proximity.Message F Slot dimension) (Group G₁ G₂) ×
       Weighted.Transcript (Index Slot dimension) (Proximity.Message F Slot dimension))
-    (hz : z ∈ support (Weighted.fixedRun hash sign (A.rawMain pk))) :
+    (hz : z ∈ support (weightedFixedRun hash sign (A.rawMain pk))) :
     z.1.Valid (received (initialInput g₁ g₂ pk).groups hash sign z.2) := by
   apply A.toAdversary.run_valid (fixedPlainOracle hash sign) (initialInput g₁ g₂ pk)
     (z.1, received (initialInput g₁ g₂ pk).groups hash sign z.2)
@@ -146,7 +146,7 @@ theorem fixedRun_good_sound {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ} [Fi
     (ρ : Index Slot dimension → F)
     (z : Explained F (Proximity.Message F Slot dimension) (Group G₁ G₂) ×
       Weighted.Transcript (Index Slot dimension) (Proximity.Message F Slot dimension))
-    (hz : z ∈ support (Weighted.fixedRun (fun i => ρ i • g₁)
+    (hz : z ∈ support (weightedFixedRun (fun i => ρ i • g₁)
       (fun m => Weighted.value ρ (terms m) • (κ • g₁)) (A.rawMain (κ • g₂)))) :
     (forgery z.1).2 = (goodRepresentation ρ z.1 z.2).eval κ • g₁ := by
   let f : (F × F) →ₗ[F] G₁ :=
@@ -157,7 +157,7 @@ theorem fixedRun_good_sound {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ} [Fi
   have hb : (received (initialInput g₁ g₂ (κ • g₂)).groups
       (fun i => ρ i • g₁) (fun m => Weighted.value ρ (terms m) • (κ • g₁)) z.2) false =
       basis.map f := by
-    simp only [received, initialInput, groupInputs, basis, List.map_append, List.map_cons,
+    simp only [received, initialInput, sourceInputs, basis, List.map_append, List.map_cons,
       List.map_nil, List.map_map]
     congr 1
     · simp [f]
@@ -178,7 +178,7 @@ theorem goodRepresentation_extract {F Slot G₁ G₂ Gₜ : Type} {dimension : �
     (ρ : Index Slot dimension → F)
     (z : Explained F (Proximity.Message F Slot dimension) (Group G₁ G₂) ×
       Weighted.Transcript (Index Slot dimension) (Proximity.Message F Slot dimension))
-    (hz : z ∈ support (Weighted.fixedRun (fun i => ρ i • g₁)
+    (hz : z ∈ support (weightedFixedRun (fun i => ρ i • g₁)
       (fun m => Weighted.value ρ (terms m) • (κ • g₁)) (A.rawMain (κ • g₂))))
     (he : e g₁ g₂ ≠ 0)
     (hv : e (forgery z.1).2 g₂ = e (Weighted.value ρ (terms z.1.value.data) • g₁) (κ • g₂))

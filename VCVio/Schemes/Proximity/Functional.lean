@@ -120,7 +120,7 @@ theorem weights_apply {F Slot : Type} [CommSemiring F] [DecidableEq Slot]
 /-- Summing one coordinate's weights across the covered slots recovers that vector entry. -/
 theorem weights_coordinate {F Slot : Type} [CommSemiring F] [DecidableEq Slot]
     {dimension : ℕ} (S : Finset (Index Slot dimension))
-    (m : Proximity.Message F Slot dimension) (h : Weighted.ReplyCovered terms S (.inr m))
+    (m : Proximity.Message F Slot dimension) (h : ∀ p ∈ terms m, p.1 ∈ S)
     (k : Fin dimension) :
     tableEval (fun i : S => if i.val.1 = some k then 1 else 0) (weights S m) = m.1 k := by
   classical
@@ -145,7 +145,7 @@ theorem weights_coordinate {F Slot : Type} [CommSemiring F] [DecidableEq Slot]
 /-- The covered weights of a message project to its actual vector. -/
 theorem vectorMap_weights {F Slot : Type} [CommSemiring F] [DecidableEq Slot]
     {dimension : ℕ} (S : Finset (Index Slot dimension))
-    (m : Proximity.Message F Slot dimension) (h : Weighted.ReplyCovered terms S (.inr m)) :
+    (m : Proximity.Message F Slot dimension) (h : ∀ p ∈ terms m, p.1 ∈ S) :
     vectorMap S (weights S m) = m.1 := by
   funext k
   exact weights_coordinate S m h k
@@ -153,7 +153,7 @@ theorem vectorMap_weights {F Slot : Type} [CommSemiring F] [DecidableEq Slot]
 /-- The same projection sends the signing functional to the source's signing-vector sum. -/
 theorem vectorMap_functional {F Slot G₁ G₂ : Type} [CommSemiring F] [DecidableEq Slot]
     {dimension : ℕ} (S : Finset (Index Slot dimension)) (z : Trace F Slot G₁ G₂ dimension)
-    (h : ∀ q ∈ z.2, Weighted.ReplyCovered terms S q) :
+    (h : ∀ q ∈ z.2, Sum.elim (fun i => i ∈ S) (fun m => ∀ p ∈ terms m, p.1 ∈ S) q) :
     vectorMap S (functional S z) = signingVector (coefficients z.1) z.2 := by
   rw [functional_map]
   unfold signingVector
@@ -167,8 +167,8 @@ theorem vectorMap_functional {F Slot G₁ G₂ : Type} [CommSemiring F] [Decidab
 /-- A noncolliding target vector forces a nonzero gap in the finite base cover. -/
 theorem gap_ne_zero {F Slot G₁ G₂ : Type} [CommRing F] [DecidableEq Slot]
     {dimension : ℕ} (S : Finset (Index Slot dimension)) (z : Trace F Slot G₁ G₂ dimension)
-    (htarget : Weighted.ReplyCovered terms S (.inr z.1.value.data))
-    (htrace : ∀ q ∈ z.2, Weighted.ReplyCovered terms S q)
+    (htarget : ∀ p ∈ terms z.1.value.data, p.1 ∈ S)
+    (htrace : ∀ q ∈ z.2, Sum.elim (fun i => i ∈ S) (fun m => ∀ p ∈ terms m, p.1 ∈ S) q)
     (hnc : z.1.value.data.1 ≠ signingVector (coefficients z.1) z.2) :
     ∃ i : S, gap S z i ≠ 0 := by
   by_contra h

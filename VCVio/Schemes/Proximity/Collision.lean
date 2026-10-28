@@ -63,11 +63,6 @@ theorem exists_gap_ne_zero {F Slot Q : Type} [CommRing F] [Finite Slot] [Decidab
 
 namespace AGM
 
-/-- Signing requests in chronological order, with repetitions and slots intact. -/
-@[expose] def signedMessages {F Slot : Type} {dimension : ℕ}
-    (tr : Weighted.Transcript (Index Slot dimension) (Proximity.Message F Slot dimension)) :
-    List (Proximity.Message F Slot dimension) := tr.filterMap Sum.getRight?
-
 /-- The vector represented by the signing-reply coefficients. The generator and hash replies
 contribute zero; the coefficient at every signing occurrence stays in its original position. -/
 @[expose] def signingVector {F Slot : Type} [Semiring F] {dimension : ℕ}
@@ -80,7 +75,8 @@ contribute zero; the coefficient at every signing occurrence stays in its origin
 @[expose] def FreshCollision {F Slot G₁ G₂ : Type} [Semiring F] {dimension : ℕ}
     (out : Explained F (Proximity.Message F Slot dimension) (Group G₁ G₂))
     (tr : Weighted.Transcript (Index Slot dimension) (Proximity.Message F Slot dimension)) : Prop :=
-  out.value.data ∉ signedMessages tr ∧ out.value.data.1 = signingVector (coefficients out) tr
+  out.value.data ∉ weightedSignedMessages tr ∧
+    out.value.data.1 = signingVector (coefficients out) tr
 
 /-- With no signing or hash replies the represented signing vector is zero. -/
 @[simp] theorem signingVector_nil {F Slot : Type} [Semiring F] {dimension : ℕ}
@@ -91,7 +87,7 @@ end AGM
 
 /-- Observe the source fresh-collision event under the direct scheme's shared lazy oracle.
 The signing coefficient at each reply occurrence is obtained from the certified final output. -/
-noncomputable def collisionGame {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
+noncomputable def freshCollisionExperiment {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
     [Field F] [SampleableType F] [DecidableEq Slot]
     [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
     [AddCommGroup G₂] [Module F G₂] [AddCommGroup Gₜ] [Module F Gₜ]

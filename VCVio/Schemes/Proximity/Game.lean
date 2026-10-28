@@ -30,7 +30,7 @@ theorem runWithSigningOracle_eq {F Slot G₁ G₂ Gₜ α : Type} {dimension : �
     (oa : OracleComp (AGM.rawSpec F Slot G₁ dimension) α) :
     (fun z => (z.1, z.2.map (fun entry => entry.1))) <$>
       (scheme e g₂).runWithSigningOracle pk κ oa =
-    (fun z => (z.1, AGM.signedMessages z.2)) <$>
+    (fun z => (z.1, weightedSignedMessages z.2)) <$>
       (simulateQ (Weighted.oracle terms id (fun r : G₁ => κ • r)) oa).run [] := by
   let spec := unifSpec + (Index Slot dimension →ₒ G₁)
   let sign : QueryImpl (Message F Slot dimension →ₒ G₁) (OracleComp spec) :=
@@ -40,28 +40,28 @@ theorem runWithSigningOracle_eq {F Slot G₁ G₂ Gₜ α : Type} {dimension : �
     spec.passthrough + QueryImpl.appendInputLog sign
   have hr := QueryImpl.map_run_withLogging_inputs_eq_run_appendInputLog
     (spec₀ := spec) sign oa []
-  have hs : ∀ q tr, Prod.map id AGM.signedMessages <$>
+  have hs : ∀ q tr, Prod.map id weightedSignedMessages <$>
       (Weighted.oracle terms id (fun r : G₁ => κ • r) q).run tr =
-      (impl q).run (AGM.signedMessages tr) := by
+      (impl q).run (weightedSignedMessages tr) := by
     intro q tr
     rcases q with ((n | i) | m)
-    · change Prod.map id AGM.signedMessages <$>
+    · change Prod.map id weightedSignedMessages <$>
         ((fun r => (r, tr)) <$>
           (liftM ((unifSpec + (Index Slot dimension →ₒ G₁)).query (.inl n)) :
             OracleComp (unifSpec + (Index Slot dimension →ₒ G₁)) _)) = _
-      simp [impl, AGM.signedMessages, spec]
-    · change Prod.map id AGM.signedMessages <$>
+      simp [impl, weightedSignedMessages, spec]
+    · change Prod.map id weightedSignedMessages <$>
         ((fun r => (r, tr ++ [.inl i])) <$>
           (liftM ((unifSpec + (Index Slot dimension →ₒ G₁)).query (.inr i)) :
             OracleComp (unifSpec + (Index Slot dimension →ₒ G₁)) _)) = _
-      simp [impl, AGM.signedMessages, spec]
-      simp only [List.filterMap_cons, Sum.getRight?_inl, List.filterMap_nil, List.append_nil]
-    · change Prod.map id AGM.signedMessages <$>
+      simp [impl, weightedSignedMessages, spec]
+      simp only [List.filterMap_cons, Sum.elim_inl, List.filterMap_nil, List.append_nil]
+    · change Prod.map id weightedSignedMessages <$>
         ((fun r : G₁ => (κ • r, tr ++ [.inr m])) <$>
           (liftM (weightedQuery (terms m)) : OracleComp spec G₁)) = _
-      simp [impl, AGM.signedMessages, Sum.getRight?, sign, scheme, hash]
-  have ht := map_run_simulateQ_eq_of_query_map_eq _ impl AGM.signedMessages hs oa []
-  simp only [AGM.signedMessages, List.filterMap_nil] at ht
+      simp [impl, weightedSignedMessages, sign, scheme, hash]
+  have ht := map_run_simulateQ_eq_of_query_map_eq _ impl weightedSignedMessages hs oa []
+  simp only [weightedSignedMessages, List.filterMap_nil] at ht
   have hr' : (fun z => (z.1, z.2.map (fun entry => entry.1))) <$>
       (scheme e g₂).runWithSigningOracle pk κ oa = (simulateQ impl oa).run [] := by
     simpa only [SignatureAlg.runWithSigningOracle, SignatureAlg.signingOracle,
@@ -81,7 +81,7 @@ theorem unforgeableExperiment_eq {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ
       let (out, tr) ← (simulateQ (Weighted.oracle terms id (fun r : G₁ => κ • r))
         (A.rawMain (κ • g₂))).run []
       let h ← hash out.value.data
-      return decide (out.value.data ∉ AGM.signedMessages tr) &&
+      return decide (out.value.data ∉ weightedSignedMessages tr) &&
         decide (e (AGM.forgery out).2 g₂ = e h (κ • g₂))) := by
   classical
   have hkey : (scheme (Slot := Slot) (dimension := dimension) e g₂).keygen =

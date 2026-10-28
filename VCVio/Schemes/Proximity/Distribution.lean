@@ -42,11 +42,11 @@ theorem oracle_scalar_table {F I M G α : Type} [Field F] [SampleableType F]
     (terms : M → List (I × F)) (target : α → M) (g : G)
     (hg : Function.Bijective (· • g : F → G)) (κ : F)
     (oa : OracleComp (interfaceSpec I M G) α) (S : Finset I)
-    (hS : Covered terms S target oa) :
+    (hS : WeightedInterfaceCovered S terms target oa) :
     (simulateQ (I →ₒ G).romImpl
       ((simulateQ (oracle terms id (fun r : G => κ • r)) oa).run [])).run' ∅ =ᵈ (do
       let ρ ← $ᵗ (S → F)
-      fixedRun (fun i => extendTable S 0 ρ i • g)
+      weightedFixedRun (fun i => extendTable S 0 ρ i • g)
         (fun m => value (extendTable S 0 ρ) (terms m) • (κ • g)) oa) := by
   have h := simulateQ_romImpl_evalDistEq_finite_table S _
     (oracle_covered terms S target id (fun r : G => κ • r) oa hS) (0 : G)
@@ -55,7 +55,7 @@ theorem oracle_scalar_table {F I M G α : Type} [Field F] [SampleableType F]
   have hu := SampleableType.map_uniformSample_evalDistEq_of_bijective
     (Function.Bijective.piMap (fun _ : S => hg))
   have ht := hu.bind_left (fun table : S → G =>
-    fixedRun (extendTable S 0 table)
+    weightedFixedRun (extendTable S 0 table)
       (fun m => κ • value (extendTable S 0 table) (terms m)) oa)
   simp only [bind_map_left] at ht
   refine ht.symm.trans ?_
@@ -78,11 +78,11 @@ theorem targetProgram_scalar_table {F I M G α : Type} [Field F] [SampleableType
     (terms : M → List (I × F)) (target : α → M) (g : G)
     (hg : Function.Bijective (· • g : F → G)) (κ : F)
     (oa : OracleComp (interfaceSpec I M G) α) (S : Finset I)
-    (hS : Covered terms S target oa) :
+    (hS : WeightedInterfaceCovered S terms target oa) :
     (simulateQ (I →ₒ G).romImpl
       (targetProgram terms target id (fun r : G => κ • r) oa)).run' ∅ =ᵈ (do
       let ρ ← $ᵗ (S → F)
-      let z ← fixedRun (fun i => extendTable S 0 ρ i • g)
+      let z ← weightedFixedRun (fun i => extendTable S 0 ρ i • g)
         (fun m => value (extendTable S 0 ρ) (terms m) • (κ • g)) oa
       return (z.1, z.2, value (extendTable S 0 ρ) (terms (target z.1)) • g)) := by
   have h := simulateQ_romImpl_evalDistEq_finite_table S _
@@ -92,7 +92,7 @@ theorem targetProgram_scalar_table {F I M G α : Type} [Field F] [SampleableType
   have hu := SampleableType.map_uniformSample_evalDistEq_of_bijective
     (Function.Bijective.piMap (fun _ : S => hg))
   have ht := hu.bind_left (fun table : S → G => do
-    let z ← fixedRun (extendTable S 0 table)
+    let z ← weightedFixedRun (extendTable S 0 table)
       (fun m => κ • value (extendTable S 0 table) (terms m)) oa
     return (z.1, z.2, value (extendTable S 0 table) (terms (target z.1))))
   simp only [bind_map_left, bind_pure_comp] at ht
@@ -123,22 +123,22 @@ theorem unforgeableAdvantage_eq_table {F Slot G₁ G₂ Gₜ : Type} {dimension 
     (A : AlgebraicAdversary F Slot G₁ G₂ dimension e g₁ g₂)
     (hg₁ : Function.Bijective (· • g₁ : F → G₁))
     (S : Finset (Index Slot dimension))
-    (hS : ∀ κ : F, Weighted.Covered terms S (fun out => out.value.data)
+    (hS : ∀ κ : F, WeightedInterfaceCovered S terms (fun out => out.value.data)
       (A.rawMain (κ • g₂))) :
     SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Index Slot dimension →ₒ G₁))
       A.toUnforgeableAdversary =
     Pr{let κ ← ($ᵗ F : ProbComp F); let ρ ← $ᵗ (S → F)
-       let z ← Weighted.fixedRun (fun i => extendTable S 0 ρ i • g₁)
+       let z ← weightedFixedRun (fun i => extendTable S 0 ρ i • g₁)
          (fun m => Weighted.value (extendTable S 0 ρ) (terms m) • (κ • g₁))
          (A.rawMain (κ • g₂))}[
-      z.1.value.data ∉ signedMessages z.2 ∧
+      z.1.value.data ∉ weightedSignedMessages z.2 ∧
       e (forgery z.1).2 g₂ =
         e (Weighted.value (extendTable S 0 ρ) (terms z.1.value.data) • g₁) (κ • g₂)] := by
   classical
   rw [SignatureAlg.unforgeableAdvantage, ProbCompRuntime.rom_evalDist]
   have hx : SignatureAlg.unforgeableExperiment A.toUnforgeableAdversary = (do
       let κ ← (liftM ($ᵗ F) : OracleComp (unifSpec + (Index Slot dimension →ₒ G₁)) F)
-      (fun z => decide (z.1.value.data ∉ signedMessages z.2.1) &&
+      (fun z => decide (z.1.value.data ∉ weightedSignedMessages z.2.1) &&
         decide (e (forgery z.1).2 g₂ = e z.2.2 (κ • g₂))) <$>
         Weighted.targetProgram terms (fun out => out.value.data) id (fun r : G₁ => κ • r)
           (A.rawMain (κ • g₂))) := by
@@ -158,11 +158,11 @@ theorem unforgeableAdvantage_eq_table {F Slot G₁ G₂ Gₜ : Type} {dimension 
   simpa only [StateT.run'_eq, prEvent_norm] using
     (Weighted.targetProgram_scalar_table terms (fun out => out.value.data) g₁ hg₁ κ
       (A.rawMain (κ • g₂)) S (hS κ)).prEvent_eq
-      (fun z => z.1.value.data ∉ signedMessages z.2.1 ∧
+      (fun z => z.1.value.data ∉ weightedSignedMessages z.2.1 ∧
         e (forgery z.1).2 g₂ = e z.2.2 (κ • g₂))
 
 /-- The source fresh-collision event is observed in the same finite scalar-table execution. -/
-theorem collisionGame_eq_table {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
+theorem freshCollisionExperiment_eq_table {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
     [Field F] [SampleableType F] [DecidableEq Slot]
     [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
     [AddCommGroup G₂] [Module F G₂] [AddCommGroup Gₜ] [Module F Gₜ]
@@ -170,15 +170,15 @@ theorem collisionGame_eq_table {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
     (A : AlgebraicAdversary F Slot G₁ G₂ dimension e g₁ g₂)
     (hg₁ : Function.Bijective (· • g₁ : F → G₁))
     (S : Finset (Index Slot dimension))
-    (hS : ∀ κ : F, Weighted.Covered terms S (fun out => out.value.data)
+    (hS : ∀ κ : F, WeightedInterfaceCovered S terms (fun out => out.value.data)
       (A.rawMain (κ • g₂))) :
-    Pr{let b ← collisionGame A}[b = true] =
+    Pr{let b ← freshCollisionExperiment A}[b = true] =
     Pr{let κ ← ($ᵗ F : ProbComp F); let ρ ← $ᵗ (S → F)
-       let z ← Weighted.fixedRun (fun i => extendTable S 0 ρ i • g₁)
+       let z ← weightedFixedRun (fun i => extendTable S 0 ρ i • g₁)
          (fun m => Weighted.value (extendTable S 0 ρ) (terms m) • (κ • g₁))
          (A.rawMain (κ • g₂))}[FreshCollision z.1 z.2] := by
   classical
-  simp only [collisionGame, bind_pure_comp, simulateQ_bind, romImpl]
+  simp only [freshCollisionExperiment, bind_pure_comp, simulateQ_bind, romImpl]
   rw [roSim.run'_liftM_bind]
   simp only [simulateQ_map, StateT.run'_eq, StateT.run_map, prEvent_norm, decide_eq_true_eq]
   let : MeasurableSpace F := ⊤

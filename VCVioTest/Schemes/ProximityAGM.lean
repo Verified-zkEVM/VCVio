@@ -44,7 +44,7 @@ private def oneHash :
     Proximity.AlgebraicAdversary K Bool K K 0 (LinearMap.mul K K) 1 1 where
   main input := do
     let reply ← Spec.query
-      ⟨⟨.inl (.inr (none, false)), Proximity.AGM.groupInputs [] []⟩, fun _ => []⟩
+      ⟨⟨.inl (.inr (none, false)), sourceInputs [] []⟩, fun _ => []⟩
     return output input.groups reply
   algebraic input := by
     constructor
@@ -63,7 +63,7 @@ private theorem oneHash_raw (pk : K) :
   simp [Proximity.AlgebraicAdversary.toUnforgeableAdversary,
     Proximity.AlgebraicAdversary.rawMain, oneHash, Proximity.AGM.oracle,
     output, Explained.ofVectors, Proximity.AGM.forgery, Proximity.AGM.initialInput,
-    Proximity.AGM.groupInputs, extend, evaluate]
+    sourceInputs, extend, evaluate]
 
 private theorem oneHash_good (X Y : K) :
     Proximity.goodReduction oneHash 1 X 1 Y = (fun ρ : K => ρ / ρ) <$> ($ᵗ K) := by
@@ -71,7 +71,7 @@ private theorem oneHash_good (X Y : K) :
     smul_eq_mul, mul_one, Proximity.AGM.program, Proximity.AGM.oracle, add_apply_inl,
     bind_pure_comp, add_apply_inr, oneHash, output, Explained.ofVectors, Matrix.zero_empty,
     extend, evaluate, List.length_append, List.getElem?_ofFn, Fin.cast_mk,
-    Proximity.AGM.initialInput, Proximity.AGM.groupInputs, List.cons_append, List.nil_append,
+    Proximity.AGM.initialInput, sourceInputs, List.cons_append, List.nil_append,
     List.length_cons, List.length_nil, zero_add, simulateQ_map, simulateQ_query,
     OracleQuery.input_query, OracleQuery.cont_query, Functor.map_map, id_eq, Nat.reduceAdd,
     id_map, StateT.run_map, Proximity.terms, List.ofFn_zero, weightedQuery,
@@ -126,11 +126,11 @@ theorem one_hash_adversary_exists :
 empty signing combination, independently of the signature and the random-oracle values. -/
 theorem freshCollision_empty_zero :
     Proximity.AGM.FreshCollision
-      (⟨⟨((0 : Fin 1 → ZMod 101), false), Proximity.AGM.groupInputs [0] ([] : List (ZMod 101))⟩,
+      (⟨⟨((0 : Fin 1 → ZMod 101), false), sourceInputs [0] ([] : List (ZMod 101))⟩,
         fun s => if s then [] else [[0]]⟩ :
         Explained (ZMod 101) (Proximity.Message (ZMod 101) Bool 1)
           (Proximity.AGM.Group (ZMod 101) (ZMod 101))) [] := by
-  simp [Proximity.AGM.FreshCollision, Proximity.AGM.signedMessages]
+  simp [Proximity.AGM.FreshCollision, weightedSignedMessages]
 
 /-- The full algebraic security theorem specializes to the field of order 101, arbitrary
 natural-number slots and dimension, and explicit pathwise hash and signing budgets. -/

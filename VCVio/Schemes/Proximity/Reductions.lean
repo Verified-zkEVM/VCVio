@@ -76,7 +76,7 @@ theorem goodProgram_table {F Slot G₁ G₂ : Type} {dimension : ℕ} [Field F]
           (Sum.elim (fun i => (ρ i, (0 : F)))
             (fun m => ((0 : F), Weighted.value ρ (terms m)))))
         repr.1 / (Weighted.value ρ (terms z.1.value.data) - repr.2)) <$>
-      Weighted.fixedRun (fun i => ρ i • g) (fun m => Weighted.value ρ (terms m) • X)
+      weightedFixedRun (fun i => ρ i • g) (fun m => Weighted.value ρ (terms m) • X)
         (program A g h Y) := by
   simp [goodProgram, Weighted.extractionProgram_table, Function.comp_def]
 
@@ -93,7 +93,7 @@ theorem badProgram_table {F Slot G₁ G₂ : Type} {dimension : ℕ} [Field F]
             (fun m => Weighted.value ab (terms m))))
         let target := Weighted.value ab (terms z.1.value.data)
         (repr.2 - target.2) / (target.1 - repr.1)) <$>
-      Weighted.fixedRun (fun i => (ab i).1 • X + (ab i).2 • g)
+      weightedFixedRun (fun i => (ab i).1 • X + (ab i).2 • g)
         (fun m => κ • ((Weighted.value ab (terms m)).1 • X +
           (Weighted.value ab (terms m)).2 • g)) (program A g h (κ • h)) := by
   simp [badProgram, Weighted.extractionProgram_table, Function.comp_def]

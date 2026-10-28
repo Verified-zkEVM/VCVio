@@ -69,13 +69,13 @@ theorem badReduction_table {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : AlgebraicAdversary F Slot G₁ G₂ dimension e g₁ g₂) (α : F)
     (S : Finset (Index Slot dimension))
-    (hS : ∀ κ : F, Weighted.Covered terms S (fun out => out.value.data)
+    (hS : ∀ κ : F, WeightedInterfaceCovered S terms (fun out => out.value.data)
       (A.rawMain (κ • g₂))) :
     badReduction A g₁ (α • g₁) g₂ (α • g₂) =ᵈ (do
       let κ ← $ᵗ F
       let a ← $ᵗ (S → F); let b ← $ᵗ (S → F)
       let ρ := extendTable S 0 (fun i => a i * α + b i)
-      let z ← Weighted.fixedRun (fun i => ρ i • g₁)
+      let z ← weightedFixedRun (fun i => ρ i • g₁)
         (fun m => Weighted.value ρ (terms m) • (κ • g₁)) (A.rawMain (κ • g₂))
       return (0 - ∑ i, gap S z i * b i) / (∑ i, gap S z i * a i)) := by
   unfold badReduction
@@ -85,7 +85,7 @@ theorem badReduction_table {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
   have ht := (pair_tables (F := F) (ι := S)).bind_left (fun ab => do
     let table := extendTable S (0, 0) ab
     let point := fun r : F × F => r.1 • (α • g₁) + r.2 • g₁
-    let z ← Weighted.fixedRun (point ∘ table)
+    let z ← weightedFixedRun (point ∘ table)
       (fun m => κ • point (Weighted.value table (terms m))) (A.rawMain (κ • g₂))
     let repr := evaluate (coefficients z.1) ([(0, 0)] ++ z.2.map
       (Sum.elim (fun _ => ((0 : F), (0 : F))) (fun m => Weighted.value table (terms m))))

@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.Schemes.Proximity.Basic
-public import VCVio.CryptoFoundations.GroupModel.Interaction
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.SourceGroups
 public import VCVio.OracleComp.Traversal
 public import VCVio.OracleComp.QueryTracking.QueryBound
 
@@ -20,28 +20,12 @@ forwards the same requests and returns the same message and signature to `Signat
 
 public section
 
-open OracleComp OracleSpec GroupModel.Interaction
+open OracleComp OracleSpec GroupModel.Interaction GroupModel.LinearFunctional
 
 namespace Proximity.AGM
 
 /-- The two pairing source groups are tracked separately, even for equal carrier types. -/
-abbrev Group (G₁ G₂ : Type) : Bool → Type
-  | false => G₁
-  | true => G₂
-
-/-- Addition is inherited separately in each source sort. -/
-instance {G₁ G₂ : Type} [AddMonoid G₁] [AddMonoid G₂] (s : Bool) :
-    AddMonoid (Group G₁ G₂ s) := by cases s <;> dsimp [Group] <;> infer_instance
-
-/-- Scalar multiplication is inherited separately in each source sort. -/
-instance {F G₁ G₂ : Type} [SMul F G₁] [SMul F G₂] (s : Bool) :
-    SMul F (Group G₁ G₂ s) := by cases s <;> dsimp [Group] <;> infer_instance
-
-/-- A pair of chronological lists, one for each source group. -/
-@[expose] def groupInputs {G₁ G₂ : Type} (xs : List G₁) (ys : List G₂) :
-    Groups (Group G₁ G₂)
-  | false => xs
-  | true => ys
+abbrev Group (G₁ G₂ : Type) := GroupModel.LinearFunctional.SourceGroup G₁ G₂
 
 /-- Requests distinguish randomness, base hashes, and signatures. -/
 abbrev Query (F Slot : Type) (dimension : ℕ) :=
@@ -59,7 +43,7 @@ abbrev rawSpec (F Slot G₁ : Type) (dimension : ℕ) :=
 /-- Both generators and the second-source public key are explicit received inputs. -/
 @[expose] def initialInput {G₁ G₂ : Type} (g₁ : G₁) (g₂ pk : G₂) :
     GroupModel.Interaction.Message Unit (Group G₁ G₂) :=
-  ⟨(), groupInputs [g₁] [g₂, pk]⟩
+  ⟨(), sourceInputs [g₁] [g₂, pk]⟩
 
 /-- Forward ordinary requests, delivering hash and signature values as received group points. -/
 @[expose] def oracle {F Slot G₁ G₂ : Type} {dimension : ℕ} :
@@ -69,13 +53,13 @@ abbrev rawSpec (F Slot G₁ : Type) (dimension : ℕ) :=
   rcases q with ((n | i) | m)
   · exact do
       let r ← (rawSpec F Slot G₁ dimension).query (.inl (.inl n))
-      return ⟨r, groupInputs [] []⟩
+      return ⟨r, sourceInputs [] []⟩
   · exact do
       let h ← (rawSpec F Slot G₁ dimension).query (.inl (.inr i))
-      return ⟨(), groupInputs [h] []⟩
+      return ⟨(), sourceInputs [h] []⟩
   · exact do
       let σ ← (rawSpec F Slot G₁ dimension).query (.inr m)
-      return ⟨(), groupInputs [σ] []⟩
+      return ⟨(), sourceInputs [σ] []⟩
 
 /-- Decode the forged message and the first signature point. -/
 @[expose] def forgery {F Slot G₁ G₂ : Type} [Zero G₁] {dimension : ℕ}

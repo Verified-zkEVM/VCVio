@@ -30,8 +30,9 @@ theorem exists_base_cover {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : AlgebraicAdversary F Slot G₁ G₂ dimension e g₁ g₂) :
     ∃ S : Finset (Index Slot dimension), ∀ κ : F,
-      Weighted.Covered terms S (fun out => out.value.data) (A.rawMain (κ • g₂)) :=
-  Weighted.exists_cover terms (fun out => out.value.data) (fun κ : F => A.rawMain (κ • g₂))
+      WeightedInterfaceCovered S terms (fun out => out.value.data) (A.rawMain (κ • g₂)) :=
+  exists_weightedInterfaceCovered terms (fun out => out.value.data)
+    (fun κ : F => A.rawMain (κ • g₂))
 
 /-- The actual lazy good reduction has the finite scalar-table law on any public cover. -/
 theorem goodReduction_table {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
@@ -41,11 +42,11 @@ theorem goodReduction_table {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : AlgebraicAdversary F Slot G₁ G₂ dimension e g₁ g₂) (κ : F)
     (S : Finset (Index Slot dimension))
-    (hS : Weighted.Covered terms S (fun out => out.value.data) (A.rawMain (κ • g₂))) :
+    (hS : WeightedInterfaceCovered S terms (fun out => out.value.data) (A.rawMain (κ • g₂))) :
     goodReduction A g₁ (κ • g₁) g₂ (κ • g₂) =ᵈ (do
       let table ← $ᵗ (S → F)
       let ρ := extendTable S 0 table
-      let z ← Weighted.fixedRun (fun i => ρ i • g₁)
+      let z ← weightedFixedRun (fun i => ρ i • g₁)
         (fun m => Weighted.value ρ (terms m) • (κ • g₁)) (A.rawMain (κ • g₂))
       let repr := evaluate (coefficients z.1) ([(1, 0)] ++ z.2.map
         (Sum.elim (fun i => (ρ i, (0 : F)))
@@ -70,13 +71,13 @@ theorem badProgram_rom_table {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : AlgebraicAdversary F Slot G₁ G₂ dimension e g₁ g₂) (α κ : F)
     (S : Finset (Index Slot dimension))
-    (hS : Weighted.Covered terms S (fun out => out.value.data) (A.rawMain (κ • g₂))) :
+    (hS : WeightedInterfaceCovered S terms (fun out => out.value.data) (A.rawMain (κ • g₂))) :
     (simulateQ (Index Slot dimension →ₒ (F × F)).romImpl
       (badProgram A.toAdversary g₁ (α • g₁) g₂ κ)).run' ∅ =ᵈ (do
       let table ← $ᵗ (S → F × F)
       let ab := extendTable S (0, 0) table
       let point := fun r : F × F => r.1 • (α • g₁) + r.2 • g₁
-      let z ← Weighted.fixedRun (point ∘ ab)
+      let z ← weightedFixedRun (point ∘ ab)
         (fun m => κ • point (Weighted.value ab (terms m))) (A.rawMain (κ • g₂))
       let repr := evaluate (coefficients z.1) ([(0, 0)] ++ z.2.map
         (Sum.elim (fun _ => ((0 : F), (0 : F))) (fun m => Weighted.value ab (terms m))))

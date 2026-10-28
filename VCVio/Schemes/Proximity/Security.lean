@@ -27,7 +27,7 @@ private def view {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ} [Field F]
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : AlgebraicAdversary F Slot G₁ G₂ dimension e g₁ g₂)
     (ρ : Index Slot dimension → F) (κ : F) : ProbComp (Trace F Slot G₁ G₂ dimension) :=
-  Weighted.fixedRun (fun i => ρ i • g₁)
+  weightedFixedRun (fun i => ρ i • g₁)
     (fun m => Weighted.value ρ (terms m) • (κ • g₁)) (A.rawMain (κ • g₂))
 
 end Proximity.AGM
@@ -48,7 +48,7 @@ theorem unforgeableAdvantage_le {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
       A.toUnforgeableAdversary ≤
       Pr{let b ← DLog11.experiment g₁ g₂ (goodReduction A)}[b = true] +
       Pr{let b ← DLog11.experiment g₁ g₂ (badReduction A)}[b = true] +
-      1 / Fintype.card F + Pr{let b ← collisionGame A}[b = true] := by
+      1 / Fintype.card F + Pr{let b ← freshCollisionExperiment A}[b = true] := by
   classical
   obtain ⟨S, hS⟩ := AGM.exists_base_cover A
   let table := fun ρ : S → F => extendTable S 0 ρ
@@ -61,7 +61,7 @@ theorem unforgeableAdvantage_le {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
     let z ← pub ρ
     return (ρ, z)
   let win := fun z : (S → F) × F × AGM.Trace F Slot G₁ G₂ dimension =>
-    z.2.2.1.value.data ∉ AGM.signedMessages z.2.2.2 ∧
+    z.2.2.1.value.data ∉ weightedSignedMessages z.2.2.2 ∧
       e (AGM.forgery z.2.2.1).2 g₂ =
         e (Weighted.value (table z.1) (terms z.2.2.1.value.data) • g₁) (z.2.1 • g₂)
   let good := fun z : (S → F) × F × AGM.Trace F Slot G₁ G₂ dimension =>
@@ -69,7 +69,7 @@ theorem unforgeableAdvantage_le {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
       (Weighted.value (table z.1) (terms z.2.2.1.value.data) -
         (AGM.goodRepresentation (table z.1) z.2.2.1 z.2.2.2).lin) = z.2.1
   let valid := fun z : F × AGM.Trace F Slot G₁ G₂ dimension =>
-    z.2.1.value.data ∉ AGM.signedMessages z.2.2 ∧
+    z.2.1.value.data ∉ weightedSignedMessages z.2.2 ∧
       z.2.1.value.data.1 ≠ AGM.signingVector (AGM.coefficients z.2.1) z.2.2
   let bad := fun z : (S → F) × F × AGM.Trace F Slot G₁ G₂ dimension =>
     valid z.2 ∧ ∑ i, AGM.gap S z.2.2 i * z.1 i = 0
@@ -87,9 +87,9 @@ theorem unforgeableAdvantage_le {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
       Pr{let z ← game}[win z] := by
     rw [AGM.unforgeableAdvantage_eq_table A hg₁ S hS]
     simpa only [prEvent_norm, win, AGM.view, table] using horder.prEvent_eq win
-  have hcollision : Pr{let b ← collisionGame A}[b = true] =
+  have hcollision : Pr{let b ← freshCollisionExperiment A}[b = true] =
       Pr{let z ← game}[collision z] := by
-    rw [AGM.collisionGame_eq_table A hg₁ S hS]
+    rw [AGM.freshCollisionExperiment_eq_table A hg₁ S hS]
     simpa only [prEvent_norm, collision, AGM.view, table] using horder.prEvent_eq collision
   have hgood : Pr{let b ← DLog11.experiment g₁ g₂ (goodReduction A)}[b = true] =
       Pr{let z ← game}[good z] := by
@@ -124,7 +124,7 @@ theorem unforgeableAdvantage_le {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
       exact sub_eq_zero.mpr hg.symm
     · exact Or.inl (AGM.goodRepresentation_extract A κ (table ρ) t ht he hw.2 hg)
   obtain ⟨z₀, hz₀⟩ := support_nonempty (AGM.view A (table (fun _ => 0)) (0 : F))
-  have hm₀ := (Weighted.fixedRun_mem_cover terms S (fun out => out.value.data)
+  have hm₀ := (weightedFixedRun_mem_cover S terms (fun out => out.value.data)
     _ _ _ (hS 0) z₀ hz₀).1
   have hi₀ : (none, z₀.1.value.data.2) ∈ S :=
     hm₀ ((none, z₀.1.value.data.2), 1) (by simp [terms])
@@ -135,7 +135,7 @@ theorem unforgeableAdvantage_le {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ}
     obtain ⟨κ, _, t, ht, rfl⟩ := by
       simpa only [pub, support_bind, Set.mem_iUnion, support_pure,
         Set.mem_singleton_iff] using hz
-    have hc := Weighted.fixedRun_mem_cover terms S (fun out => out.value.data)
+    have hc := weightedFixedRun_mem_cover S terms (fun out => out.value.data)
       _ _ _ (hS κ) t ht
     have hn := AGM.gap_ne_zero S t hc.1 hc.2 hv.2
     simpa only [j, dite_eq_left hn] using hn.choose_spec

@@ -5,7 +5,7 @@ Authors: Kobi Gurkan, Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedExecution
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedTrace
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Interaction
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
@@ -66,20 +66,6 @@ abbrev Transcript (I M : Type) := List (I ⊕ M)
       (fun r => (sign r, tr ++ [.inr m])) <$>
       (liftM (weightedQuery (terms m)) : OracleComp (unifSpec + (I →ₒ R)) R) := rfl
 
-/-- A fixed pair of functions answers public queries and records reply occurrences. -/
-@[expose] def fixedOracle {I M G : Type} (hash : I → G) (sign : M → G) :
-    QueryImpl (interfaceSpec I M G) (StateT (Transcript I M) ProbComp) := by
-  intro q tr
-  rcases q with ((n | i) | m)
-  · exact (fun r => (r, tr)) <$> (unifSpec.query n : ProbComp _)
-  · exact pure (hash i, tr ++ [.inl i])
-  · exact pure (sign m, tr ++ [.inr m])
-
-/-- Execute a public program at fixed hash and signing functions. -/
-@[expose] def fixedRun {I M G α : Type} (hash : I → G) (sign : M → G)
-    (oa : OracleComp (interfaceSpec I M G) α) : ProbComp (α × Transcript I M) :=
-  (simulateQ (fixedOracle hash sign) oa).run []
-
 private theorem table_random {I R : Type} (table : I → R) (n : ℕ) :
     unifFwdAnswerImpl (QueryImpl.ofFn table) (.inl n) =
       (unifSpec.query n : ProbComp _) := rfl
@@ -93,46 +79,13 @@ theorem oracle_table {F I M R G α : Type} [AddMonoid R] [SMul F R]
     (oa : OracleComp (interfaceSpec I M G) α) (tr : Transcript I M) :
     simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn table))
       ((simulateQ (oracle terms hash sign) oa).run tr) =
-      (simulateQ (fixedOracle (hash ∘ table)
+      (simulateQ (weightedFixedOracle (hash ∘ table)
         (fun m => sign (value table (terms m)))) oa).run tr := by
   apply simulateQ_StateT_compose
   intro q tr
   rcases q with ((n | i) | m) <;>
-    simp [StateT.run, oracle, fixedOracle, table_random, table_lookup,
+    simp [StateT.run, oracle, weightedFixedOracle, table_random, table_lookup,
       simulateQ_unifFwd_weightedQuery, value]
-
-/-- The shared fixed-table execution records exactly the representations of the chronological
-public replies. Internal signing lookups do not contribute received inputs. -/
-theorem tableOracle_eq {F I M R G V α : Type} [AddMonoid R] [SMul F R]
-    (terms : M → List (I × F)) (table : I → R)
-    (hash sign : R → G) (hashRep signRep : R → V) (initial : List V)
-    (oa : OracleComp (weightedInterfaceSpec I M G) α) :
-    (simulateQ (weightedTableOracle terms table hash sign hashRep signRep) oa).run initial =
-      (fun z => (z.1, initial ++ z.2.map
-        (Sum.elim (hashRep ∘ table) (fun m => signRep (value table (terms m)))))) <$>
-      fixedRun (hash ∘ table) (fun m => sign (value table (terms m))) oa := by
-  let f := Sum.elim (hashRep ∘ table) (fun m => signRep (value table (terms m)))
-  have h (tr : Transcript I M) :
-      (simulateQ (weightedTableOracle terms table hash sign hashRep signRep) oa).run
-        (initial ++ tr.map f) =
-      (fun z => (z.1, initial ++ z.2.map f)) <$>
-        (simulateQ (fixedOracle (hash ∘ table)
-          (fun m => sign (value table (terms m)))) oa).run tr := by
-    induction oa using OracleComp.inductionOn generalizing tr with
-    | pure out => simp
-    | query_bind q next ih =>
-        simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-        rcases q with ((n | i) | m) <;>
-          simp only [weightedTableOracle, fixedOracle, StateT.run, bind_map_left,
-            pure_bind, map_bind]
-        · exact bind_congr fun r => ih r tr
-        · have hi := ih (hash (table i)) (tr ++ [.inl i])
-          rw [List.map_append, List.map_singleton, ← List.append_assoc] at hi
-          exact hi
-        · have hi := ih (sign (value table (terms m))) (tr ++ [.inr m])
-          rw [List.map_append, List.map_singleton, ← List.append_assoc] at hi
-          exact hi
-  simpa [fixedRun] using h []
 
 /-- One fixed table supplies the execution, chronological representations, and final target. -/
 theorem extractionProgram_table {F I M R G V α : Type} [AddMonoid R] [SMul F R]
@@ -144,8 +97,8 @@ theorem extractionProgram_table {F I M R G V α : Type} [AddMonoid R] [SMul F R]
       (fun z => (z.1, initial ++ z.2.map
         (Sum.elim (hashRep ∘ table) (fun m => signRep (value table (terms m)))),
         value table (terms (target z.1)))) <$>
-        fixedRun (hash ∘ table) (fun m => sign (value table (terms m))) oa := by
-  rw [weightedExtractionProgram_table, tableOracle_eq]
+        weightedFixedRun (hash ∘ table) (fun m => sign (value table (terms m))) oa := by
+  rw [weightedExtractionProgram_table, weightedTableOracle_run_eq]
   simp only [Functor.map_map]
   rfl
 
@@ -165,7 +118,7 @@ theorem targetProgram_table {F I M R G α : Type} [AddMonoid R] [SMul F R]
     simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn table))
       (targetProgram terms target hash sign oa) =
       (fun z => (z.1, z.2, value table (terms (target z.1)))) <$>
-        fixedRun (hash ∘ table) (fun m => sign (value table (terms m))) oa := by
-  simp [targetProgram, oracle_table, simulateQ_unifFwd_weightedQuery, value, fixedRun]
+        weightedFixedRun (hash ∘ table) (fun m => sign (value table (terms m))) oa := by
+  simp [targetProgram, oracle_table, simulateQ_unifFwd_weightedQuery, value, weightedFixedRun]
 
 end Proximity.Weighted
