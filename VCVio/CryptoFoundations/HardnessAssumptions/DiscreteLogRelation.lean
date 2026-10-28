@@ -6,10 +6,10 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+public import Mathlib.Algebra.MvPolynomial.Degrees
 import VCVio.OracleComp.Constructions.SampleableType.SchwartzZippel
 
-/-!
-# The discrete-log relation problem
+/-! # The discrete-log relation problem
 
 An adversary receives `n` independently uniform multiples of a generator and seeks a nonzero
 vector of coefficients whose linear combination vanishes. Programming each basis element as
@@ -49,6 +49,26 @@ into the negated generator coefficient, returning zero when that denominator van
   let a ← A (fun i => x i • g + y i • Z)
   return if ∑ i, a i * y i ≠ 0 then -(∑ i, a i * x i) / (∑ i, a i * y i) else 0
 
+/-- A linear combination of distinct polynomial variables has total degree at most one. -/
+theorem totalDegree_sum_C_mul_X_le_one [CommSemiring F] [Nontrivial F]
+    {ι : Type*} [Fintype ι]
+    (a : ι → F) :
+    (∑ i, MvPolynomial.C (a i) * MvPolynomial.X i).totalDegree ≤ 1 := by
+  apply MvPolynomial.totalDegree_finsetSum_le
+  intro i _
+  exact (MvPolynomial.totalDegree_mul _ _).trans (by simp)
+
+/-- A nonzero coefficient vector defines a nonzero linear combination of polynomial variables. -/
+theorem sum_C_mul_X_ne_zero [CommSemiring F] {ι : Type*} [Fintype ι]
+    (a : ι → F) (ha : a ≠ 0) :
+    (∑ i, MvPolynomial.C (a i) * MvPolynomial.X i) ≠ 0 := by
+  classical
+  intro h
+  apply ha
+  funext i
+  have he := congrArg (MvPolynomial.eval (Pi.single i 1)) h
+  simpa [Pi.single_apply, mul_ite] using he
+
 /-- A nonzero coefficient vector has vanishing scalar product with a uniformly sampled vector
 over a finite field with probability at most the reciprocal of the field cardinality. -/
 theorem prEvent_sum_mul_eq_zero_le [Field F] [Fintype F] [SampleableType F]
@@ -57,17 +77,8 @@ theorem prEvent_sum_mul_eq_zero_le [Field F] [Fintype F] [SampleableType F]
       (1 : ℝ≥0∞) / Fintype.card F := by
   classical
   let p : MvPolynomial (Fin n) F := ∑ i, MvPolynomial.C (a i) * MvPolynomial.X i
-  have hn : p ≠ 0 := by
-    intro h
-    apply ha
-    funext i
-    have he := congrArg (MvPolynomial.eval (Pi.single i 1)) h
-    simpa [p, Pi.single_apply, mul_ite] using he
-  have hd : p.totalDegree ≤ 1 := by
-    apply MvPolynomial.totalDegree_finsetSum_le
-    intro i _
-    exact (MvPolynomial.totalDegree_mul _ _).trans (by simp)
-  simpa [p] using prob_eval_zero_univ_le_div p hn hd
+  simpa [p] using prob_eval_zero_univ_le_div p
+    (sum_C_mul_X_ne_zero a ha) (totalDegree_sum_C_mul_X_le_one a)
 
 private theorem programmed_eq [Field F] [SampleableType F]
     [AddCommGroup G] [Module F G] (g : G) (A : Adversary F G n) (z : F) :
