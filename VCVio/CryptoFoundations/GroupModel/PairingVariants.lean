@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
+import Mathlib.Algebra.Module.Torsion.Free
 
 /-! # Type 1 and Type 2 pairing models
 
@@ -148,5 +149,40 @@ theorem degreeClosed_symmPairingSig (d dₜ : ℕ) :
     symmPairingSig.DegreeClosed (fun | false => d | true => max dₜ (2 * d)) := by
   refine ⟨fun o => o.elim, fun _ => ?_⟩
   exact (by omega : d + d ≤ max dₜ (2 * d))
+
+open OracleComp
+
+/-- Evaluating symbolic tables commutes with a Type 2 run when the source map preserves
+the chosen generators and both generators and their pairing are nonzero. -/
+theorem runGen_pairingIso_mapTbl_evalHom {α : Type} [Field F] [DecidableEq F]
+    [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
+    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    (ψ : G₂ →ₗ[F] G₁) (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
+    (hψ : ψ g₂ = g₁) (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0) (x : ι → F)
+    (A : OracleComp (genSpec F pairingIsoSig) α)
+    (tbl : Tbl (fun _ : PSort => MvPolynomial ι F)) :
+    runGen (pairingIsoReal ψ e) (fun _ => id) A
+        (mapTbl (fun s => (evalHom.pairingIso ψ e g₁ g₂ x hψ).toFun s) tbl) =
+      Prod.map id (mapTbl (fun s => (evalHom.pairingIso ψ e g₁ g₂ x hψ).toFun s)) <$>
+        runGen (symbolic F pairingIsoSig ι) (fun _ p => MvPolynomial.eval x p) A tbl := by
+  have h := runGen_map (evalHom.pairingIso ψ e g₁ g₂ x hψ) (fun _ => id) A tbl
+  simp only [Function.comp_def, id_eq] at h
+  rw [← h]
+  congr 1
+  unfold runGen run
+  rw [impl_congr (symbolic F pairingIsoSig ι)
+    (fun s p => (evalHom.pairingIso ψ e g₁ g₂ x hψ).toFun s p)
+    (fun _ p => MvPolynomial.eval x p) (by
+      intro s p r
+      cases s
+      · change (evalAt g₁ x p = evalAt g₁ x r) ↔ _
+        simp only [evalAt_apply]
+        exact (smul_left_injective F hg₁).eq_iff
+      · change (evalAt g₂ x p = evalAt g₂ x r) ↔ _
+        simp only [evalAt_apply]
+        exact (smul_left_injective F hg₂).eq_iff
+      · change (evalAt (e g₁ g₂) x p = evalAt (e g₁ g₂) x r) ↔ _
+        simp only [evalAt_apply]
+        exact (smul_left_injective F he).eq_iff) ProbComp]
 
 end GroupModel

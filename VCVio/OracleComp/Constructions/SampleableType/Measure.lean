@@ -288,6 +288,15 @@ theorem prEvent_uniformSample_pair_of_bijective [SampleableType γ] {g : α → 
           evalDist_uniformSample, evalDist_uniformSample, ← uniformOn_univ_prod]
         exact map_uniformOn_univ_of_bijective Measurable.of_discrete hg
 
+/-- Combining two independent uniform samples by a bijection gives the uniform distribution
+on the target sample space. -/
+theorem evalDistEq_uniformSample_pair_of_bijective [SampleableType γ] {f : α → β → γ}
+    (hf : Function.Bijective (Function.uncurry f)) :
+    (do let a ← $ᵗ α; let b ← $ᵗ β; pure (f a b)) =ᵈ ($ᵗ γ : ProbComp γ) := by
+  apply EvalDistEq.of_forall_prEvent_eq
+  intro p
+  simpa only [prEvent_norm] using prEvent_uniformSample_pair_of_bijective hf p
+
 /-- A uniform draw from a product is two independent uniform draws. -/
 theorem prEvent_uniformSample_prod (p : α × β → Prop) :
     Pr{let z ← $ᵗ (α × β)}[p z] = Pr{let x ← $ᵗ α; let y ← $ᵗ β}[p (x, y)] :=
