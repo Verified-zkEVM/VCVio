@@ -20,6 +20,7 @@ public import VCVioTest.CryptoFoundations.SignatureAlgBudget
 public import VCVioTest.CryptoFoundations.SignatureAlgRouted
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.CryptoFoundations.UniversalHash
+public import VCVioTest.ElGamal.Generic
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.DisagreementMeasure
