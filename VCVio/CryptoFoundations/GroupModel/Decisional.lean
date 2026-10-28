@@ -37,7 +37,9 @@ theorem SameKernel.eq_iff [Field F] {T₀ T₁ : Tbl (fun _ : S => MvPolynomial 
     evRepr (T₀ s) r = evRepr (T₀ s) r' ↔ evRepr (T₁ s) r = evRepr (T₁ s) r' := by
   simpa only [map_sub, sub_eq_zero] using (h s).2 (r - r')
 
-private theorem evRepr_eq_zero_iff [Field F] {G : Type} [AddCommGroup G] [Module F G]
+/-- Evaluation on a linearly independent list vanishes exactly when every in-range coefficient
+is zero. -/
+theorem evRepr_eq_zero_iff [Field F] {G : Type} [AddCommGroup G] [Module F G]
     (xs : List G) (h : LinearIndependent F xs.get) (r : Repr F) :
     evRepr xs r = 0 ↔ ∀ i < xs.length, r i = 0 := by
   rw [evRepr_apply, ← Fin.sum_univ_eq_sum_range]
