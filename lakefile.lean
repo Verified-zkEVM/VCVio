@@ -65,14 +65,22 @@ Subdirectory: `backends/lean`.
 --   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 
 /-
-List PolyFun before the root Mathlib pin. Lake resolves dependencies in reverse
-declaration order, so this keeps the direct Mathlib requirement authoritative
-over PolyFun's inherited pin and makes `lake update --keep-toolchain`
-idempotent.
+List PolyFun and QuantumFoundations before the root Mathlib pin. Lake resolves
+dependencies in reverse declaration order, so this keeps the direct Mathlib
+requirement authoritative over their inherited pins and makes
+`lake update --keep-toolchain` idempotent.
 -/
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun" @
   "4181c82238142d9b73403fbf4c4b13e1a801e400"
+
+/-
+The Mathlib-only quantum foundation (matrix maps, instruments, registers,
+observation, pure states and oracle unitaries), shared with CatCrypt-core.
+-/
+require QuantumFoundations from git
+  "https://github.com/lean-crypto-foundations/QuantumFoundations" @
+  "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac"
 
 require "leanprover-community" / "mathlib" @ git "v4.35.0"
 

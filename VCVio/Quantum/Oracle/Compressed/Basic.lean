@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.QueryTracking.Structures
-public import VCVio.Quantum.Oracle.Unitary
+public import QuantumFoundations.Oracle.Unitary
 
 /-!
 # Databases and the one-cell compression

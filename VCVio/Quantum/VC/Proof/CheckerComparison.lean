@@ -6,9 +6,9 @@ Authors: Quang Dao
 
 module
 public import VCVio.Quantum.VC.Proof.CheckerDistance
-public import VCVio.Quantum.MatrixMap.Commutant
-public import VCVio.Quantum.MatrixMap.Comparison
-public import VCVio.Quantum.Pure.Tensor
+public import QuantumFoundations.MatrixMap.Commutant
+public import QuantumFoundations.MatrixMap.Comparison
+public import QuantumFoundations.Pure.Tensor
 
 /-!
 # Outcome-preserving checker comparison
