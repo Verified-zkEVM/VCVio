@@ -46,6 +46,7 @@ public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.Foundations
 public import VCVioTest.GrindFailFast
 public import VCVioTest.GroupModel.Basic
+public import VCVioTest.GroupModel.Instances
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
