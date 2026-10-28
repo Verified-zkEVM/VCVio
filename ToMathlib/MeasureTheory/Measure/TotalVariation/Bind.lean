@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
-public import QuantumFoundations.ForMathlib.MeasureTheory.Measure.Subprobability
+public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.MeasureTheory.Integral.AbsDiff
 public import Mathlib.MeasureTheory.Integral.Layercake
 public import Mathlib.MeasureTheory.Integral.Lebesgue.Sub

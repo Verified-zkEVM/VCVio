@@ -5,7 +5,7 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-public import QuantumFoundations.ForMathlib.MeasureTheory.Measure.Subprobability
+public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import Mathlib.MeasureTheory.Integral.MeanInequalities
 public import Mathlib.MeasureTheory.Integral.Lebesgue.Sub
 

@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.EvalDist.Defs.Semantics.Core
 public import QuantumFoundations.Observe
+public import VCVio.Quantum.Subprobability
 
 /-!
 # Bundled semantics of subinstruments

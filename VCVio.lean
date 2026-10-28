@@ -490,7 +490,6 @@ public import VCVio.Quantum.Comp.Runtime
 public import VCVio.Quantum.Comp.Simulation
 public import VCVio.Quantum.Comp.Subsystem
 public import VCVio.Quantum.Comp.TotalQueryBound
-public import VCVio.Quantum.MatrixMap.Comparison
 public import VCVio.Quantum.Oracle.Classical
 public import VCVio.Quantum.Oracle.ClassicalCalls
 public import VCVio.Quantum.Oracle.ClassicalRead
@@ -521,6 +520,7 @@ public import VCVio.Quantum.Oracle.Emulated
 public import VCVio.Quantum.Oracle.EmulatedTensor
 public import VCVio.Quantum.Oracle.Model
 public import VCVio.Quantum.Semantics
+public import VCVio.Quantum.Subprobability
 public import VCVio.Quantum.VC.CheckedRead
 public import VCVio.Quantum.VC.Compressed
 public import VCVio.Quantum.VC.Conditions

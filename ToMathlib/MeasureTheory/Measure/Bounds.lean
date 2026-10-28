@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import ToMathlib.MeasureTheory.Integral.Bounds
-public import QuantumFoundations.ForMathlib.MeasureTheory.Measure.Subprobability
+public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import Mathlib.Probability.UniformOn
 
 /-!

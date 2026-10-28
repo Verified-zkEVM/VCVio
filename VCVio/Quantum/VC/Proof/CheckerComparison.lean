@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.Quantum.VC.Proof.CheckerDistance
 public import QuantumFoundations.MatrixMap.Commutant
-public import VCVio.Quantum.MatrixMap.Comparison
+public import QuantumFoundations.MatrixMap.Comparison
 public import QuantumFoundations.Pure.Tensor
 
 /-!
