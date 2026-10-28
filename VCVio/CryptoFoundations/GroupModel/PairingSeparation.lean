@@ -32,7 +32,7 @@ namespace GroupModel
 variable {F G G₁ G₂ Gₜ : Type}
 
 /-- Interpret a Type 1 adversary on the four source handles of a DDH challenge. -/
-@[expose] def symmDDH.ofGeneric [Field F] [AddCommGroup G] [Module F G]
+@[expose] def DDHAdversary.ofSymmPairingGeneric [Field F] [AddCommGroup G] [Module F G]
     [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (SFam G Gₜ s)]
     (e : G →ₗ[F] G →ₗ[F] Gₜ) (A : OracleComp (genSpec F symmPairingSig) Bool) :
     DiffieHellman.DDHAdversary F G :=
@@ -40,13 +40,13 @@ variable {F G G₁ G₂ Gₜ : Type}
     (fun | false => [g, X, Y, T] | true => [])
 
 /-- Pair the two challenge factors and compare with the generator paired with the target. -/
-@[expose] def symmDDHAttack (F : Type) : OracleComp (genSpec F symmPairingSig) Bool := do
+@[expose] def ddhSymmPairingAttack (F : Type) : OracleComp (genSpec F symmPairingSig) Bool := do
   let xy ← (genSpec F symmPairingSig).query (.inl (.bil () 1 2))
   let gt ← (genSpec F symmPairingSig).query (.inl (.bil () 0 3))
   (genSpec F symmPairingSig).query (.inl (.eq true xy gt))
 
 /-- Interpret a Type 2 adversary on four second-source handles and empty other tables. -/
-@[expose] def isoDDH.ofGeneric [Field F] [AddCommGroup G₁] [Module F G₁]
+@[expose] def DDHAdversary.ofPairingIsoGeneric [Field F] [AddCommGroup G₁] [Module F G₁]
     [AddCommGroup G₂] [Module F G₂] [AddCommGroup Gₜ] [Module F Gₜ]
     [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
     (ψ : G₂ →ₗ[F] G₁) (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
@@ -55,21 +55,22 @@ variable {F G G₁ G₂ Gₜ : Type}
     (fun | .g₁ => [] | .g₂ => [g, X, Y, T] | .gₜ => [])
 
 /-- Map the first challenge factor and generator to the first source, then compare pairings. -/
-@[expose] def isoDDHAttack (F : Type) : OracleComp (genSpec F pairingIsoSig) Bool := do
+@[expose] def ddhPairingIsoAttack (F : Type) : OracleComp (genSpec F pairingIsoSig) Bool := do
   let x ← (genSpec F pairingIsoSig).query (.inl (.lin () 1))
   let g ← (genSpec F pairingIsoSig).query (.inl (.lin () 0))
   let xy ← (genSpec F pairingIsoSig).query (.inl (.bil () x 2))
   let gt ← (genSpec F pairingIsoSig).query (.inl (.bil () g 3))
   (genSpec F pairingIsoSig).query (.inl (.eq .gₜ xy gt))
 
-private theorem symmDDHAttack_run [DecidableEq Gₜ] [Field F] [AddCommGroup G] [Module F G]
+private theorem ddhSymmPairingAttack_run [DecidableEq Gₜ] [Field F] [AddCommGroup G] [Module F G]
     [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (SFam G Gₜ s)]
     (e : G →ₗ[F] G →ₗ[F] Gₜ) (g X Y T : G) :
-    symmDDH.ofGeneric e (symmDDHAttack F) g X Y T = pure (decide (e X Y = e g T)) := by
+    DDHAdversary.ofSymmPairingGeneric e (ddhSymmPairingAttack F) g X Y T =
+      pure (decide (e X Y = e g T)) := by
   let t₀ : Tbl (SFam G Gₜ) := fun | false => [g, X, Y, T] | true => []
   let t₁ := append t₀ true (e X Y)
   let t₂ := append t₁ true (e g T)
-  unfold symmDDH.ofGeneric symmDDHAttack runGen run
+  unfold DDHAdversary.ofSymmPairingGeneric ddhSymmPairingAttack runGen run
   erw [simulateQ_bind, StateT.run_bind, simulateQ_spec_query, QueryImpl.add_apply_inl]
   change (Prod.fst <$> ((pure (0, t₁) : ProbComp _) >>= _)) = _
   erw [pure_bind]
@@ -83,18 +84,18 @@ private theorem symmDDHAttack_run [DecidableEq Gₜ] [Field F] [AddCommGroup G] 
   rw [decide_eq_decide]
   rfl
 
-private theorem isoDDHAttack_run [DecidableEq Gₜ] [Field F] [AddCommGroup G₁] [Module F G₁]
+private theorem ddhPairingIsoAttack_run [DecidableEq Gₜ] [Field F] [AddCommGroup G₁] [Module F G₁]
     [AddCommGroup G₂] [Module F G₂] [AddCommGroup Gₜ] [Module F Gₜ]
     [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
     (ψ : G₂ →ₗ[F] G₁) (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g X Y T : G₂) :
-    isoDDH.ofGeneric ψ e (isoDDHAttack F) g X Y T =
+    DDHAdversary.ofPairingIsoGeneric ψ e (ddhPairingIsoAttack F) g X Y T =
       pure (decide (e (ψ X) Y = e (ψ g) T)) := by
   let t₀ : Tbl (PFam G₁ G₂ Gₜ) := fun | .g₁ => [] | .g₂ => [g, X, Y, T] | .gₜ => []
   let t₁ := append t₀ .g₁ (ψ X)
   let t₂ := append t₁ .g₁ (ψ g)
   let t₃ := append t₂ .gₜ (e (ψ X) Y)
   let t₄ := append t₃ .gₜ (e (ψ g) T)
-  unfold isoDDH.ofGeneric isoDDHAttack runGen run
+  unfold DDHAdversary.ofPairingIsoGeneric ddhPairingIsoAttack runGen run
   erw [simulateQ_bind, StateT.run_bind, simulateQ_spec_query, QueryImpl.add_apply_inl]
   change (Prod.fst <$> ((pure (0, t₁) : ProbComp _) >>= _)) = _
   erw [pure_bind]
@@ -137,63 +138,39 @@ private theorem ddhAdvantage_of_scalar_test [Field F] [Fintype F] [SampleableTyp
 
 /-- P1: two symmetric pairing queries and one equality test have exact DDH advantage
 `1 - 1 / |F|`. Nonzero self-pairing makes the scalar equality test faithful. -/
-theorem ddhAdvantage_symmDDHAttack_eq [Field F] [Fintype F] [SampleableType F]
+theorem ddhAdvantage_ddhSymmPairingAttack_eq [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G] [Module F G] [AddCommGroup Gₜ] [Module F Gₜ]
     [∀ s, DecidableEq (SFam G Gₜ s)]
     (e : G →ₗ[F] G →ₗ[F] Gₜ) (g : G) (he : e g g ≠ 0) :
-    ddhAdvantage g (symmDDH.ofGeneric e (symmDDHAttack F)) =
+    ddhAdvantage g (DDHAdversary.ofSymmPairingGeneric e (ddhSymmPairingAttack F)) =
       1 - 1 / (Fintype.card F : ℝ≥0∞) := by
   classical
   apply ddhAdvantage_of_scalar_test
   intro a b c
-  rw [symmDDHAttack_run]
+  rw [ddhSymmPairingAttack_run]
   congr 1
   rw [decide_eq_decide]
   simp only [map_smul, LinearMap.smul_apply, smul_smul]
   rw [mul_comm b a, (smul_left_injective F he).eq_iff]
   exact eq_comm
 
-/-- P1 gives advantage at least `1 - 1 / |F|` for a cyclic source with nonzero self-pairing.
-At the one-group signature the same four inputs instead obey `ddhAdvantage_ofGeneric_le`. -/
-theorem ddhAdvantage_symmDDHAttack_ge [Field F] [Fintype F] [SampleableType F]
-    [AddCommGroup G] [Module F G] [AddCommGroup Gₜ] [Module F Gₜ]
-    [∀ s, DecidableEq (SFam G Gₜ s)]
-    (e : G →ₗ[F] G →ₗ[F] Gₜ) (g : G) (hg : Function.Bijective (· • g : F → G))
-    (he : e g g ≠ 0) :
-    1 - 1 / (Fintype.card F : ℝ≥0∞) ≤
-      ddhAdvantage g (symmDDH.ofGeneric e (symmDDHAttack F)) := by
-  obtain ⟨_, _⟩ := hg
-  exact (ddhAdvantage_symmDDHAttack_eq e g he).ge
-
 /-- P3: two source-map queries, two pairing queries and one equality test have exact
 DDH advantage `1 - 1 / |F|` in the second source group. -/
-theorem ddhAdvantage_isoDDHAttack_eq [Field F] [Fintype F] [SampleableType F]
+theorem ddhAdvantage_ddhPairingIsoAttack_eq [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
     (ψ : G₂ →ₗ[F] G₁) (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₂ : G₂)
     (he : e (ψ g₂) g₂ ≠ 0) :
-    ddhAdvantage g₂ (isoDDH.ofGeneric ψ e (isoDDHAttack F)) =
+    ddhAdvantage g₂ (DDHAdversary.ofPairingIsoGeneric ψ e (ddhPairingIsoAttack F)) =
       1 - 1 / (Fintype.card F : ℝ≥0∞) := by
   classical
   apply ddhAdvantage_of_scalar_test
   intro a b c
-  rw [isoDDHAttack_run]
+  rw [ddhPairingIsoAttack_run]
   congr 1
   rw [decide_eq_decide]
   simp only [map_smul, LinearMap.smul_apply, smul_smul]
   rw [mul_comm b a, (smul_left_injective F he).eq_iff]
   exact eq_comm
-
-/-- P3 gives advantage at least `1 - 1 / |F|` for a cyclic second source when its
-source-map image has nonzero pairing with its generator. -/
-theorem ddhAdvantage_isoDDHAttack_ge [Field F] [Fintype F] [SampleableType F]
-    [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
-    (ψ : G₂ →ₗ[F] G₁) (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₂ : G₂)
-    (hg₂ : Function.Bijective (· • g₂ : F → G₂)) (he : e (ψ g₂) g₂ ≠ 0) :
-    1 - 1 / (Fintype.card F : ℝ≥0∞) ≤
-      ddhAdvantage g₂ (isoDDH.ofGeneric ψ e (isoDDHAttack F)) := by
-  obtain ⟨_, _⟩ := hg₂
-  exact (ddhAdvantage_isoDDHAttack_eq ψ e g₂ he).ge
 
 end GroupModel

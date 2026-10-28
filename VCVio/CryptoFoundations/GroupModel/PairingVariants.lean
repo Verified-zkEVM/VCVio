@@ -136,10 +136,12 @@ noncomputable def evalHom.symmPairing [Field F] [AddCommGroup G] [AddCommGroup G
     (e : G →ₗ[F] G →ₗ[F] Gₜ) (g : G) (x : ι → F) (P : MvPolynomial ι F) :
     (evalHom.symmPairing e g x).toFun true P = evalAt (e g g) x P := by rfl
 
-/-- Closed Type 2 source bounds require `d₂ ≤ d₁`; the least target extension is their sum. -/
-theorem degreeClosed_pairingIsoSig (d₁ d₂ dₜ : ℕ) (h : d₂ ≤ d₁) :
-    pairingIsoSig.DegreeClosed (fun | .g₁ => d₁ | .g₂ => d₂ | .gₜ => max dₜ (d₁ + d₂)) :=
-  ⟨fun _ => h, fun _ => Nat.le_max_right _ _⟩
+/-- The least closed Type 2 bounds extend the first source by the second source bound,
+then extend the target by the sum of the closed source bounds. -/
+theorem degreeClosed_pairingIsoSig (d₁ d₂ dₜ : ℕ) :
+    pairingIsoSig.DegreeClosed
+      (fun | .g₁ => max d₁ d₂ | .g₂ => d₂ | .gₜ => max dₜ (max d₁ d₂ + d₂)) :=
+  ⟨fun _ => Nat.le_max_right _ _, fun _ => Nat.le_max_right _ _⟩
 
 /-- The least closed Type 1 target bound extends the initial bound by twice the source bound. -/
 theorem degreeClosed_symmPairingSig (d dₜ : ℕ) :

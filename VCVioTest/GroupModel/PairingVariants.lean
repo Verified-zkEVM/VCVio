@@ -29,36 +29,35 @@ private theorem sub_one_div_101 : (1 : ℝ≥0∞) - 1 / 101 = 100 / 101 := by
 
 /-- The symmetric multiplication pairing over `ZMod 101` breaks DDH with advantage
 at least `100/101`, through an ordinary public import of the separation theorem. -/
-theorem symmDDHAttack_zmod_101 :
+theorem ddhSymmPairingAttack_zmod_101 :
     letI : Fact (Nat.Prime 101) := ⟨by decide⟩
     letI : ∀ s, DecidableEq (SFam (ZMod 101) (ZMod 101) s) :=
       fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
     (100 / 101 : ℝ≥0∞) ≤ ddhAdvantage (1 : ZMod 101)
-      (symmDDH.ofGeneric (LinearMap.mul (ZMod 101) (ZMod 101)) (symmDDHAttack (ZMod 101))) := by
+      (DDHAdversary.ofSymmPairingGeneric (LinearMap.mul (ZMod 101) (ZMod 101))
+        (ddhSymmPairingAttack (ZMod 101))) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
   let : ∀ s, DecidableEq (SFam (ZMod 101) (ZMod 101) s) :=
     fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
-  have h := ddhAdvantage_symmDDHAttack_ge (LinearMap.mul (ZMod 101) (ZMod 101)) 1
-    (by simpa only [smul_eq_mul, mul_one, id_eq] using! Function.bijective_id)
-    (by simp)
+  have h := (ddhAdvantage_ddhSymmPairingAttack_eq (LinearMap.mul (ZMod 101) (ZMod 101)) 1
+    (by simp)).ge
   simpa only [ZMod.card, Nat.cast_ofNat, sub_one_div_101] using! h
 
 /-- The identity source map and multiplication pairing over `ZMod 101` break
 second-source DDH with advantage at least `100/101`. -/
-theorem isoDDHAttack_zmod_101 :
+theorem ddhPairingIsoAttack_zmod_101 :
     letI : Fact (Nat.Prime 101) := ⟨by decide⟩
     letI : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
       fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
     (100 / 101 : ℝ≥0∞) ≤ ddhAdvantage (1 : ZMod 101)
-      (isoDDH.ofGeneric (LinearMap.id : ZMod 101 →ₗ[ZMod 101] ZMod 101)
-        (LinearMap.mul (ZMod 101) (ZMod 101)) (isoDDHAttack (ZMod 101))) := by
+      (DDHAdversary.ofPairingIsoGeneric (LinearMap.id : ZMod 101 →ₗ[ZMod 101] ZMod 101)
+        (LinearMap.mul (ZMod 101) (ZMod 101)) (ddhPairingIsoAttack (ZMod 101))) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
   let : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
     fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
-  have h := ddhAdvantage_isoDDHAttack_ge (LinearMap.id : ZMod 101 →ₗ[ZMod 101] ZMod 101)
+  have h := (ddhAdvantage_ddhPairingIsoAttack_eq (LinearMap.id : ZMod 101 →ₗ[ZMod 101] ZMod 101)
     (LinearMap.mul (ZMod 101) (ZMod 101)) 1
-    (by simpa only [smul_eq_mul, mul_one, id_eq] using! Function.bijective_id)
-    (by simp)
+    (by simp)).ge
   simpa only [ZMod.card, Nat.cast_ofNat, sub_one_div_101] using! h
 
 end GroupModel
