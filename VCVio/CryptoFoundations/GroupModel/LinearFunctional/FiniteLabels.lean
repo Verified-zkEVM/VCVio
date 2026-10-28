@@ -6,7 +6,7 @@ Authors: Kobi Gurkan, Quang Dao
 
 module
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyTable
-public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
+import VCVio.OracleComp.QueryTracking.RandomOracle.FiniteSupport
 public import VCVio.OracleComp.Traversal
 
 /-! # Finite proof covers for arbitrary labels
@@ -79,92 +79,44 @@ theorem exists_finite_label_cover {I α M K : Type} {spec : OracleSpec I}
     (oa : OracleComp (unifSpec + (M →ₒ R)) α) : Prop :=
   AllQueriesSatisfy oa (fun q => match q with | .inl _ => True | .inr m => m ∈ S)
 
-private noncomputable def restrict {M R α : Type} (S : Finset M) :
-    (oa : OracleComp (unifSpec + (M →ₒ R)) α) → QueriesCovered S oa →
-      OracleComp (unifSpec + (S →ₒ R)) α := by
-  intro oa h
-  induction oa using OracleComp.recOn with
-  | pure a => exact pure a
-  | queryBind q next ih =>
-      have hq := ((allQueriesSatisfy_query_bind_iff _ _ _).mp h).1
-      have hn := ((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2
-      cases q with
-      | inl n => exact (unifSpec + (S →ₒ R)).query (.inl n) >>= fun r => ih r (hn r)
-      | inr m => exact (unifSpec + (S →ₒ R)).query (.inr ⟨m, hq⟩) >>= fun r => ih r (hn r)
-
-private theorem restrict_pure {M R α : Type} (S : Finset M) (a : α)
-    (h : QueriesCovered S (pure a : OracleComp (unifSpec + (M →ₒ R)) α)) :
-    restrict S (pure a) h = pure a := rfl
-
-private theorem restrict_query_bind {M R α : Type} (S : Finset M)
-    (q : (unifSpec + (M →ₒ R)).Domain)
-    (next : (unifSpec + (M →ₒ R)).Range q → OracleComp (unifSpec + (M →ₒ R)) α)
-    (h : QueriesCovered S (liftM ((unifSpec + (M →ₒ R)).query q) >>= next)) :
-    restrict S (liftM ((unifSpec + (M →ₒ R)).query q) >>= next) h =
-      (match q, ((allQueriesSatisfy_query_bind_iff _ _ _).mp h).1, next,
-          ((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 with
-      | .inl n, _, k, hk => (unifSpec + (S →ₒ R)).query (.inl n) >>=
-          fun r => restrict S (k r) (hk r)
-      | .inr m, hm, k, hk => (unifSpec + (S →ₒ R)).query (.inr ⟨m, hm⟩) >>=
-          fun r => restrict S (k r) (hk r)) := by cases q <;> rfl
+private theorem queriesCovered_elim {M R α : Type} {S : Finset M}
+    {oa : OracleComp (unifSpec + (M →ₒ R)) α} (h : QueriesCovered S oa) :
+    AllQueriesSatisfy oa (Sum.elim (fun _ => True) (· ∈ S)) := by
+  apply h.mono
+  intro q hq
+  cases q <;> exact hq
 
 private theorem restrict_rom {M R α : Type} [DecidableEq M] [SampleableType R]
     (S : Finset M) (oa : OracleComp (unifSpec + (M →ₒ R)) α) (h : QueriesCovered S oa)
     (c : (M →ₒ R).QueryCache) :
-    (simulateQ (S →ₒ R).romImpl (restrict S oa h)).run' (restrictCache S c) =
+    (simulateQ (S →ₒ R).romImpl
+      (restrictRandomOracleQueries S oa (queriesCovered_elim h))).run' (restrictCache S c) =
       (simulateQ (M →ₒ R).romImpl oa).run' c := by
-  induction oa using OracleComp.inductionOn generalizing c with
-  | pure a => simp [restrict_pure]
-  | query_bind q next ih =>
-      rw [restrict_query_bind]
-      cases q with
-      | inl n =>
-          suffices ((unifSpec.query n : ProbComp _) >>= fun r =>
-              (simulateQ (S →ₒ R).romImpl (restrict S (next r)
-                (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 r))).run' (restrictCache S c)) =
-              ((unifSpec.query n : ProbComp _) >>= fun r =>
-                (simulateQ (M →ₒ R).romImpl (next r)).run' c) by
-            simpa [romImpl, unifFwdImpl] using this
-          apply bind_congr
-          intro r
-          exact ih r _ c
-      | inr m =>
-          simp only [simulateQ_bind, simulateQ_spec_query, romImpl_apply_inr,
-            StateT.run'_eq, StateT.run_bind, map_bind]
-          cases hc : c m with
-          | none =>
-              have hr : restrictCache S c ⟨m, ((allQueriesSatisfy_query_bind_iff _ _ _).mp h).1⟩ =
-                  none := hc
-              rw [QueryImpl.withCaching_run_none _ hr, QueryImpl.withCaching_run_none _ hc]
-              simp only [bind_map_left]
-              apply bind_congr
-              intro r
-              rw [← restrictCache_update]
-              exact ih r _ _
-          | some r =>
-              have hr : restrictCache S c ⟨m, ((allQueriesSatisfy_query_bind_iff _ _ _).mp h).1⟩ =
-                  some r := hc
-              rw [QueryImpl.withCaching_run_some _ hr, QueryImpl.withCaching_run_some _ hc,
-                pure_bind, pure_bind]
-              exact ih r _ _
+  have he := congrArg (fun p => (fun z => z.1.1) <$> p)
+    (randomOracleLoggedRun_restrictCache S oa (queriesCovered_elim h) c)
+  simp only [StateT.run'_eq, ← randomOracleLoggedRun_project, Functor.map_map]
+  simpa only [Functor.map_map, extendLoggedResult] using he
 
 private theorem restrict_table {M R α : Type} (S : Finset M)
     (oa : OracleComp (unifSpec + (M →ₒ R)) α) (h : QueriesCovered S oa) (table : M → R) :
-    simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (fun m : S => table m))) (restrict S oa h) =
+    simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (fun m : S => table m)))
+      (restrictRandomOracleQueries S oa (queriesCovered_elim h)) =
       simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn table)) oa := by
   induction oa using OracleComp.inductionOn with
-  | pure a => simp [restrict_pure]
+  | pure a => simp only [restrictRandomOracleQueries_pure, simulateQ_pure]
   | query_bind q next ih =>
-      rw [restrict_query_bind]
       cases q with
       | inl n =>
+          rw [restrictRandomOracleQueries_uniformQuery_bind]
           simp only [simulateQ_bind, simulateQ_spec_query]
           change ((unifSpec.query n : ProbComp _) >>= _) = ((unifSpec.query n : ProbComp _) >>= _)
-          exact bind_congr fun r => ih r _
+          exact bind_congr fun r => ih r (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 r)
       | inr m =>
+          rw [restrictRandomOracleQueries_hashQuery_bind]
           simp only [simulateQ_bind, simulateQ_spec_query]
           change (pure (table m) >>= _) = (pure (table m) >>= _)
-          simpa only [pure_bind] using ih (table m) _
+          simpa only [pure_bind] using
+            ih (table m) (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 (table m))
 
 /-- Extend a proof table by a fixed fallback outside its finite domain. -/
 @[expose] def extendTable {M R : Type} [DecidableEq M] (S : Finset M) (fallback : R)
@@ -178,12 +130,9 @@ theorem simulateQ_romImpl_evalDistEq_finite_table {M R α : Type}
     (simulateQ (M →ₒ R).romImpl oa).run' ∅ =ᵈ
       (do let table ← $ᵗ (S → R)
           simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (extendTable S fallback table))) oa) := by
-  rw [← restrict_rom S oa h ∅]
-  have hempty : restrictCache S (∅ : (M →ₒ R).QueryCache) = ∅ := by
-    ext m
-    simp [restrictCache]
-  rw [hempty]
-  refine (simulateQ_romImpl_evalDistEq_table (restrict S oa h) ∅).trans ?_
+  rw [← restrict_rom S oa h ∅, restrictCache_empty]
+  refine (simulateQ_romImpl_evalDistEq_table
+    (restrictRandomOracleQueries S oa (queriesCovered_elim h)) ∅).trans ?_
   apply _root_.EvalDistEq.bind_right
   intro table
   rw [completeTable_empty]
