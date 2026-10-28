@@ -12,9 +12,10 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Batch
 # Rounds of parallel queries
 
 Checks of `OracleSpec.batch`, its handlers and its budgets on small concrete programs: a round
-mixing oracles with different answer types, the empty round, a round with a repeated point, free
-uniform queries, and a two-round program that no one-round budget admits, whatever its point
-budget.
+mixing oracles with different answer types, the order in which a round's points are submitted,
+the empty round, a round with a repeated point, free uniform queries, and a two-round program that
+no one-round budget admits, whatever its point budget. Budgets are checked to be exact: each point
+is charged, so a budget one short fails.
 -/
 
 public section
@@ -80,6 +81,10 @@ example : IsQueryBoundP (simulateQ hetSpec.unbatch hetRound) (·.isRight) 2 := b
   refine IsOnlineQueryBound.isQueryBoundP_simulateQ_unbatch (r := 1) ?_
   simp [hetRound]
 
+/-- One query to `hetSpec` does not suffice for the unbatched two-point round. -/
+example : ¬ IsQueryBoundP (simulateQ hetSpec.unbatch hetRound) (·.isRight) 1 := by
+  simp [hetRound, isQueryBoundP_query_bind_iff]
+
 /-- An online point budget, rewritten as single queries, is a preprocessing budget. -/
 example {α : Type} {oa : OracleComp (unifSpec + hetSpec.batch) α} {r q : ℕ}
     (h : IsOnlineQueryBound oa (r, q)) :
@@ -91,6 +96,28 @@ example {α : Type} (oa : OracleComp (unifSpec + hetSpec.batch) α) :
     simulateQ hetSpec.romImpl (simulateQ hetSpec.unbatch oa) =
       simulateQ (unifFwdImpl hetSpec + hetSpec.randomOracle.batch) oa :=
   simulateQ_romImpl_simulateQ_unbatch oa
+
+/-! ## Execution order -/
+
+/-- Oracles indexed by points `ℕ`, answering in `ℕ`. -/
+abbrev pointSpec : OracleSpec ℕ := fun _ => ℕ
+
+/-- A stateful handler that appends each submitted point to a trace and answers with the number
+of points submitted before it. -/
+def traceImpl : QueryImpl pointSpec (StateM (List ℕ)) := fun t => do
+  let s ← get
+  set (s ++ [t])
+  pure s.length
+
+/-- The points of a round are submitted in the order of its list. -/
+example : ((traceImpl.batch [5, 7, 9]).run []).2 = [5, 7, 9] := rfl
+
+/-- Each answer sits at the position of its point: the `j`-th point is answered `j`. -/
+example : ((traceImpl.batch [5, 7, 9]).run []).1 ⟨0, by decide⟩ = 0 := rfl
+
+example : ((traceImpl.batch [5, 7, 9]).run []).1 ⟨1, by decide⟩ = 1 := rfl
+
+example : ((traceImpl.batch [5, 7, 9]).run []).1 ⟨2, by decide⟩ = 2 := rfl
 
 /-! ## The empty round -/
 
@@ -145,13 +172,11 @@ on every run. -/
 example : ∀ z ∈ support ((hetSpec.randomOracle.batch [true, true]).run ∅),
     z.1 ⟨0, by decide⟩ = z.1 ⟨1, by decide⟩ := by
   intro z hz
-  simp only [QueryImpl.batch_cons, QueryImpl.withCaching_apply, uniformSampleImpl_apply,
-    QueryImpl.batch_nil, bind_pure_comp, map_pure, map_bind, Functor.map_map, bind_assoc,
-    StateT.run_bind, StateT.run_get, StateT.run_map, pure_bind, QueryCache.empty_apply,
-    StateT.run_monadLift, monadLift_self, StateT.run_modifyGet, bind_map_left,
-    QueryCache.cacheQuery_self, StateT.run_pure, MonadAttach.support_map, support_uniformSample,
-    Set.image_univ, Set.mem_range] at hz
-  obtain ⟨u, rfl⟩ := hz
+  simp only [QueryImpl.batch_cons, QueryImpl.batch_nil, StateT.run_bind, randomOracle.run_eq,
+    QueryCache.empty_apply, QueryCache.cacheQuery_self, StateT.run_pure, bind_assoc,
+    pure_bind] at hz
+  simp only [support_bind, support_pure, Set.mem_iUnion, Set.mem_singleton_iff] at hz
+  obtain ⟨u, -, rfl⟩ := hz
   rfl
 
 /-! ## Free uniform queries -/
@@ -173,6 +198,11 @@ example : IsPreprocessingQueryBound (spec := hetSpec)
     (do
       let _ ← liftM ((unifSpec + hetSpec).query (.inl 3))
       liftM ((unifSpec + hetSpec).query (.inl 4))) 0 := by
+  simp
+
+/-- A query to `hetSpec` in the preprocessing phase is charged. -/
+example : ¬ IsPreprocessingQueryBound
+    (liftM ((unifSpec + hetSpec).query (.inr true)) : OracleComp (unifSpec + hetSpec) _) 0 := by
   simp
 
 /-- Unbatching keeps uniform queries free. -/
