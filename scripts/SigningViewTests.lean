@@ -13,6 +13,7 @@ import HashSigTest.SLHDSA.Refactor.SigningViewContext
 public import HashSigTest.SLHDSA.Refactor.Recovery.General
 public import HashSigTest.SLHDSA.Refactor.Recovery.Wire
 public import HashSigTest.SLHDSA.Refactor.Recovery.SeedBounds
+public import HashSigTest.SLHDSA.Refactor.Recovery.Approved
 
 /-! # Executable signing-view observation checks -/
 
@@ -88,6 +89,31 @@ run_cmd do
   })
   addDocStringCore name
     "An ordinary complete-type proof consumer of the counted public-seed average."
+
+run_cmd do
+  let goals ← SLHDSA.Refactor.Recovery.Contracts.readGoals
+  let (_, levels, type) := goals[41]!
+  let proofName ← resolveGlobalConstNoOverloadCore
+    `HashSigTest.SLHDSA.Refactor.Recovery.Approved.countedProfileBound
+  unless proofName == `HashSigTest.SLHDSA.Refactor.Recovery.Approved.countedProfileBound &&
+      !isPrivateName proofName && levels.isEmpty do
+    throwError "The ordinary profile bound is not the expected public theorem"
+  let info ← getConstInfo proofName
+  unless (← ofExcept (encodeExpr info.type)) == (← ofExcept (encodeExpr type)) &&
+      info.levelParams == levels do
+    throwError "The ordinary profile-bound consumer has a different complete type"
+  unless owner (← getEnv) proofName == some `HashSigTest.SLHDSA.Refactor.Recovery.Approved do
+    throwError "The ordinary profile-bound recovery owner changed"
+  let name := mkPrivateNameCore (← getMainModule) `SigningViewTests.countedProfileBound
+  if ((← getEnv).find? name).isSome then throwError "Duplicate ordinary profile-bound consumer"
+  liftCoreM <| addAndCompile (.thmDecl {
+    name := name
+    levelParams := levels
+    type := type
+    value := mkConst proofName []
+  })
+  addDocStringCore name
+    "An ordinary complete-type proof consumer of the counted pure SHAKE profile bound."
 
 /-- Run the signing-view observation checks. -/
 public def main : IO Unit := do
