@@ -29,12 +29,18 @@ and counting its rounds is an ordinary path-wise query bound
   uniform queries as before and rounds point by point.
 * `OracleSpec.unbatch`: rewrite each round as the sequence of its single queries.
 * `OracleSpec.SubSpec.batch`: a `SubSpec` inclusion lifted through `batch`.
+* `OracleComp.queryRound₂`, `OracleComp.queryRound`, `OracleComp.queryPoint`: rounds whose
+  points are given by functions on `Fin k`, with their answers returned as dependent families
+  (`OracleSpec.splitAnswers`).
 
 ## Main statements
 
 * `QueryImpl.simulateQ_simulateQ_unbatch`: running a program with rounds through `unbatch` and
   then a handler is running it through the batched handler.
 * `OracleSpec.simulateQ_romImpl_simulateQ_unbatch`: the corollary for the lazy random oracle.
+* `OracleComp.simulateQ_queryRound₂`, `OracleComp.simulateQ_queryRound`,
+  `OracleComp.simulateQ_queryPoint`: against a fixed answer table, a round returns the table's
+  answers at its points.
 -/
 
 public section
@@ -300,3 +306,112 @@ instance [h : spec ⊂ₒ superSpec] [LawfulSubSpec spec superSpec] :
           · exact congrFun hus j
 
 end OracleSpec.SubSpec
+
+/-! ## Rounds with typed answers
+
+A round whose points are given by functions `p : Fin k → ι` and `q : Fin l → ι` returns its
+answers as two dependent families, so that the answer at `p j` has type `spec.Range (p j)`, which
+reduces when `p j` is a constructor application. -/
+
+namespace OracleSpec
+
+variable {ι : Type u} {spec : OracleSpec.{u, v} ι}
+
+/-- Split the answer to the round `List.ofFn p ++ List.ofFn q` into the answers at the points
+`p j` and the answers at the points `q j`. -/
+@[expose]
+def splitAnswers {k l : ℕ} (p : Fin k → ι) (q : Fin l → ι)
+    (us : spec.batch.Range (List.ofFn p ++ List.ofFn q)) :
+    ((j : Fin k) → spec.Range (p j)) × ((j : Fin l) → spec.Range (q j)) :=
+  (fun j => cast (by simp) (us ⟨j, by simp; omega⟩),
+    fun j => cast (by simp) (us ⟨k + j, by simp⟩))
+
+end OracleSpec
+
+namespace OracleComp
+
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
+
+/-- One round holding the points `p j`, then the points `q j`; the answers are returned as two
+families. -/
+@[expose]
+def queryRound₂ {k l : ℕ} (p : Fin k → ι) (q : Fin l → ι) :
+    OracleComp (unifSpec + spec.batch)
+      (((j : Fin k) → spec.Range (p j)) × ((j : Fin l) → spec.Range (q j))) :=
+  splitAnswers p q <$>
+    liftM ((unifSpec + spec.batch).query (.inr (List.ofFn p ++ List.ofFn q)))
+
+/-- One round holding the points `p j`. -/
+@[expose]
+def queryRound {k : ℕ} (p : Fin k → ι) :
+    OracleComp (unifSpec + spec.batch) ((j : Fin k) → spec.Range (p j)) :=
+  Prod.fst <$> queryRound₂ p (Fin.elim0 : Fin 0 → ι)
+
+/-- One round holding the single point `t`. -/
+@[expose]
+def queryPoint (t : ι) : OracleComp (unifSpec + spec.batch) (spec.Range t) :=
+  (fun us => us 0) <$> queryRound (fun _ : Fin 1 => t)
+
+end OracleComp
+
+/-! ### Rounds against a fixed answer table -/
+
+namespace QueryImpl
+
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
+
+/-- Answering each point of a round from the table `f` answers the round with `f` pointwise. -/
+lemma batch_unifFwdAnswerImpl (f : QueryImpl spec Id) (ts : List ι) :
+    QueryImpl.batch (fun t => unifFwdAnswerImpl f (.inr t)) ts =
+      (pure (fun j => (f ts[j]).run) : ProbComp (spec.batch.Range ts)) := by
+  induction ts with
+  | nil =>
+      rw [QueryImpl.batch_nil]
+      exact congrArg (pure : _ → ProbComp _) (funext fun j => j.elim0)
+  | cons t ts ih =>
+      rw [QueryImpl.batch_cons, ih]
+      change (pure (f t).run >>= fun u => pure (batchCons u _) : ProbComp _) = _
+      rw [pure_bind]
+      exact congrArg (pure : _ → ProbComp _) (funext fun j => Fin.cases rfl (fun _ => rfl) j)
+
+end QueryImpl
+
+namespace OracleComp
+
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
+
+private lemma cast_run_of_eq (f : QueryImpl spec Id) {a b : ι} (hab : a = b)
+    (h : spec.Range a = spec.Range b) : cast h (f a).run = (f b).run := by
+  subst hab
+  rfl
+
+private lemma splitAnswers_table (f : QueryImpl spec Id) {k l : ℕ} (p : Fin k → ι)
+    (q : Fin l → ι) :
+    splitAnswers p q (fun j => (f (List.ofFn p ++ List.ofFn q)[j]).run) =
+      (fun j => (f (p j)).run, fun j => (f (q j)).run) := by
+  simp only [splitAnswers]
+  congr 1 <;> funext j <;> exact cast_run_of_eq f (by simp) _
+
+/-- Against the fixed table `f`, the round `queryRound₂ p q` returns the table's answers at the
+points `p j` and `q j`. -/
+@[simp] lemma simulateQ_queryRound₂ (f : QueryImpl spec Id) {k l : ℕ} (p : Fin k → ι)
+    (q : Fin l → ι) :
+    simulateQ (unifFwdAnswerImpl f).batch' (queryRound₂ p q) =
+      pure (fun j => (f (p j)).run, fun j => (f (q j)).run) := by
+  rw [queryRound₂, simulateQ_map, simulateQ_spec_query, QueryImpl.batch'_apply_inr,
+    QueryImpl.batch_unifFwdAnswerImpl]
+  exact (map_pure _ _).trans (congrArg pure (splitAnswers_table f p q))
+
+/-- Against the fixed table `f`, the round `queryRound p` returns the table's answers at the points
+`p j`. -/
+@[simp] lemma simulateQ_queryRound (f : QueryImpl spec Id) {k : ℕ} (p : Fin k → ι) :
+    simulateQ (unifFwdAnswerImpl f).batch' (queryRound p) = pure (fun j => (f (p j)).run) := by
+  rw [queryRound, simulateQ_map, simulateQ_queryRound₂, map_pure]
+
+/-- Against the fixed table `f`, the single-point round `queryPoint t` returns the table's answer
+at `t`. -/
+@[simp] lemma simulateQ_queryPoint (f : QueryImpl spec Id) (t : ι) :
+    simulateQ (unifFwdAnswerImpl f).batch' (queryPoint t) = pure (f t).run := by
+  rw [queryPoint, simulateQ_map, simulateQ_queryRound, map_pure]
+
+end OracleComp
