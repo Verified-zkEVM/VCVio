@@ -130,7 +130,8 @@ private theorem runGen_virtualize_bind [DecidableEq S] [CommSemiring F]
         runGen M obs ((virtualize z (k r.1.1)).run r.1.2) r.2) := by
   simp only [runGen, run, virtualize, simulateQ_bind, StateT.run_bind]
 
-private theorem virtualize_step_wellFormed [DecidableEq S] [CommSemiring F]
+/-- A single virtualized query preserves valid translated handles and the designated zero. -/
+theorem wellFormed_runGen_virtualizeImpl [DecidableEq S] [CommSemiring F]
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
     {U : S → Type} [∀ s, DecidableEq (U s)]
     (M : Model F σ V) (obs : (s : S) → V s → U s)
@@ -242,7 +243,7 @@ theorem wellFormed_runGen_virtualize [DecidableEq S] [CommSemiring F]
   | query_bind t k ih =>
     rw [runGen_virtualize_bind, mem_support_bind_iff] at hr
     obtain ⟨w, hw', hr⟩ := hr
-    have hs : WellFormed z w.1.2 w.2 := virtualize_step_wellFormed M obs hw t w
+    have hs : WellFormed z w.1.2 w.2 := wellFormed_runGen_virtualizeImpl M obs hw t w
       (by simpa only [virtualize, simulateQ_spec_query] using hw')
     exact ih w.1.1 hs hr
 
@@ -263,7 +264,7 @@ theorem runGen_virtualize [DecidableEq S] [CommSemiring F]
     simp only [virtualize, simulateQ_spec_query, bind_map_left, map_bind]
     apply bind_congr_of_forall_mem_support
     intro w hw'
-    exact ih w.1.1 (virtualize_step_wellFormed M obs hw t w hw')
+    exact ih w.1.1 (wellFormed_runGen_virtualizeImpl M obs hw t w hw')
 
 /-- Virtualization preserves every group-operation budget; equality and coins remain free. -/
 theorem isQueryBoundP_virtualize [DecidableEq S] (z : S → Handle)
