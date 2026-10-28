@@ -53,6 +53,7 @@ public import VCVioTest.GroupModel.GenericDDH
 public import VCVioTest.GroupModel.GenericHardness
 public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.MasterBound
+public import VCVioTest.GroupModel.Virtualize
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
