@@ -87,8 +87,8 @@ theorem runWithSigningOracle_fixedTable {F T G₁ G₂ Gₜ α : Type}
   simpa only [weightedFixedRun, Prod.map_def, id_eq, weightedSignedMessages,
     List.filterMap_nil] using h
 
-/-- Degree admissibility holds on every supported fixed-table chronological execution of an
-admissible adversary. This is a consequence of the existing lazy random-oracle game's support. -/
+/-- Successful fresh fixed-table forgeries obey the degree rule, by transporting the signing
+runner and verifier together into the existing shared-cache random-oracle execution. -/
 theorem fixedRun_admissible {F T G₁ G₂ Gₜ : Type}
     [Field F] [SampleableType F] [DecidableEq F] [DecidableEq T]
     [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
@@ -100,7 +100,10 @@ theorem fixedRun_admissible {F T G₁ G₂ Gₜ : Type}
       List ((T × Fin (degree + 1)) ⊕ (F × T)))
     (hz : z ∈ support (weightedFixedRun H
       (fun m => x • ((terms degree m).map fun p => p.2 • H p.1).sum)
-      (rawMain A (x • g₂)))) :
+      (rawMain A (x • g₂))))
+    (hfresh : z.1.value.data ∉ weightedSignedMessages z.2)
+    (hverify : e (forgery z.1).2 g₂ =
+      e (((terms degree z.1.value.data).map fun p => p.2 • H p.1).sum) (x • g₂)) :
     admissible degree z.1.value.data (weightedSignedMessages z.2) := by
   have hproj := runWithSigningOracle_fixedTable e g₂ (x • g₂) degree x H
     (A.toUnforgeableAdversary.main (x • g₂))
@@ -116,21 +119,30 @@ theorem fixedRun_admissible {F T G₁ G₂ Gₜ : Type}
     exact ⟨z, hz, rfl⟩
   rw [support_map] at hz'
   obtain ⟨w, hw, heq⟩ := hz'
-  obtain ⟨cache, hc⟩ :=
-    (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff _ ∅ w).mp
-      ⟨QueryImpl.ofFn H, by intro i u hu; simp at hu, hw⟩
-  have hwrom : w ∈ support ((simulateQ ((T × Fin (degree + 1)) →ₒ G₁).romImpl
-      ((scheme e g₂ degree).runWithSigningOracle (x • g₂) x
-        (A.toUnforgeableAdversary.main (x • g₂)))).run' ∅) := by
-    rw [StateT.run'_eq, support_map]
-    exact ⟨(w, cache), hc, rfl⟩
-  have hadm := hA x w hwrom
   have hm := congrArg (fun z => z.1.1) heq
   have hs := congrArg Prod.snd heq
+  have hσ := congrArg (fun z => z.1.2) heq
+  change w.1.2 = (forgery z.1).2 at hσ
   change w.1.1 = z.1.value.data at hm
   change w.2.map (fun q => q.1) = weightedSignedMessages z.2 at hs
-  rw [hm, hs] at hadm
-  exact hadm
+  have hsuccess : (w, true) ∈ support
+      (simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn H)) (do
+        let w ← (scheme e g₂ degree).runWithSigningOracle (x • g₂) x
+          (A.toUnforgeableAdversary.main (x • g₂))
+        let accepted ← (scheme e g₂ degree).verify (x • g₂) w.1.1 w.1.2
+        return (w, accepted))) := by
+    simp only [simulateQ_bind, simulateQ_pure, support_bind, Set.mem_iUnion]
+    refine ⟨w, hw, ?_⟩
+    simp only [scheme, hash, simulateQ_bind, simulateQ_unifFwd_weightedQuery,
+      pure_bind, simulateQ_pure, support_pure, Set.mem_singleton_iff]
+    exact ⟨true, by simp only [hm, hσ, hverify, decide_true], rfl⟩
+  obtain ⟨cache, hc⟩ :=
+    (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff _ ∅ (w, true)).mp
+      ⟨QueryImpl.ofFn H, by intro i u hu; simp at hu, hsuccess⟩
+  have hadm := hA x (w, true) (by
+    rw [StateT.run'_eq, support_map]
+    exact ⟨((w, true), cache), hc, rfl⟩) (by simpa only [hm, hs] using hfresh) rfl
+  simpa only [hm, hs] using hadm
 
 open scoped Classical in
 private theorem unforgeableExperiment_fixedTable {F T G₁ G₂ Gₜ : Type}
@@ -214,7 +226,7 @@ private theorem table_smul {F I G : Type} [Semiring F] [AddCommMonoid G] [Module
   simp only [GroupModel.LinearFunctional.extendTable]
   split <;> simp
 
-/-- The degree invariant also holds in the common scalar-table view used by both reductions. -/
+/-- Successful fresh forgeries in the common scalar-table view obey the degree rule. -/
 theorem fixedView_admissible {F T G₁ G₂ Gₜ : Type}
     [Field F] [SampleableType F] [DecidableEq F] [DecidableEq T]
     [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
@@ -224,10 +236,14 @@ theorem fixedView_admissible {F T G₁ G₂ Gₜ : Type}
     (x : F) (ρ : T × Fin (degree + 1) → F)
     (z : Explained F (F × T) (SourceGroup G₁ G₂) ×
       List ((T × Fin (degree + 1)) ⊕ (F × T)))
-    (hz : z ∈ support (fixedView A ρ x)) :
+    (hz : z ∈ support (fixedView A ρ x))
+    (hfresh : z.1.value.data ∉ weightedSignedMessages z.2)
+    (hverify : e (forgery z.1).2 g₂ = e (scalarHash degree ρ z.1.value.data • g₁) (x • g₂)) :
     admissible degree z.1.value.data (weightedSignedMessages z.2) := by
   apply fixedRun_admissible A hA x (fun i => ρ i • g₁) z
-  simpa only [terms_smul, fixedView, scalarHash] using hz
+  · simpa only [terms_smul, fixedView, scalarHash] using hz
+  · exact hfresh
+  · simpa only [terms_smul, scalarHash] using hverify
 
 /-- Generator bijectivity identifies the existing advantage with the common scalar-table
 view. This preserves both freshness and the original pairing verification equation. -/

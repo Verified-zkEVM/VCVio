@@ -50,12 +50,109 @@ private theorem generatorForgery_raw (pk : (ZMod 101)) :
 
 /-- The generator fixture obeys the degree-zero rule on every actual ROM execution. -/
 theorem generatorForgery_admissible : generatorForgery.Admissible := by
-  intro x z hz
+  intro x z hz _ _
+  rw [StateT.run'_eq, support_map] at hz
+  obtain ⟨⟨w, cache⟩, hw, rfl⟩ := hz
+  obtain ⟨H, _, hH⟩ :=
+    (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff _ ∅ w).mpr ⟨cache, hw⟩
   simp only [generatorForgery_raw, SignatureAlg.runWithSigningOracle, simulateQ_pure,
-    WriterT.run_pure, StateT.run'_eq, StateT.run_pure, map_pure, support_pure,
-    Set.mem_singleton_iff] at hz
-  subst z
-  decide
+    WriterT.run_pure, pure_bind, simulateQ_bind, support_bind, Set.mem_iUnion,
+    support_pure, Set.mem_singleton_iff] at hH
+  obtain ⟨b, _, rfl⟩ := hH
+  simp [OOPS.admissible]
+
+/-- The algebraic query program for signing zero and returning its signature on scalar `m`. -/
+@[expose] def signOnceMain (m : ZMod 101)
+    (input : Message Unit (SourceGroup (ZMod 101) (ZMod 101))) :
+    OracleComp (explainedSpec (ZMod 101) (SourceGroup (ZMod 101) (ZMod 101))
+      (OOPS.AGM.Query (ZMod 101) Bool 0) OOPS.AGM.Reply)
+      (Explained (ZMod 101) (ZMod 101 × Bool) (SourceGroup (ZMod 101) (ZMod 101))) := do
+  let q := Explained.ofVectors (F := ZMod 101) (G := SourceGroup (ZMod 101) (ZMod 101))
+    input.groups
+    (Sum.inr (0, false) : OOPS.AGM.Query (ZMod 101) Bool 0) (fun _ => [])
+  let reply ← (explainedSpec (ZMod 101) (SourceGroup (ZMod 101) (ZMod 101))
+    (OOPS.AGM.Query (ZMod 101) Bool 0) OOPS.AGM.Reply).query q
+  return Explained.ofVectors (F := ZMod 101) (G := SourceGroup (ZMod 101) (ZMod 101))
+    (extend input.groups reply.groups) (m, false)
+    (fun s => match s with
+      | false => [fun i => if i.val = (input.groups false).length then 1 else 0]
+      | true => [])
+
+/-- Sign scalar zero once, then return its signature with the chosen scalar on the same topic.
+The zero choice replays the signed message; any nonzero choice is fresh at degree zero. -/
+@[expose] def signOnce (m : ZMod 101) :
+    OOPS.AlgebraicAdversary (ZMod 101) Bool (ZMod 101) (ZMod 101)
+      (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1 0 where
+  main := signOnceMain m
+  algebraic input := by
+    apply (isAlgebraic_query _ _ _).mpr
+    exact ⟨Explained.valid_ofVectors _ _ _, fun _ => Explained.valid_ofVectors _ _ _⟩
+  protocol input := by
+    unfold signOnceMain
+    apply (allPathsSatisfy_query_bind _ _).mpr
+    constructor
+    · simp [Explained.ofVectors]
+    · intro reply _
+      simp [Explained.ofVectors]
+
+private theorem signOnce_raw (m pk : ZMod 101) :
+    (signOnce m).toUnforgeableAdversary.main pk = (do
+      let σ ← (OOPS.AGM.rawSpec (ZMod 101) Bool (ZMod 101) 0).query (.inr (0, false))
+      return ((m, false), σ)) := by
+  simp [OOPS.AlgebraicAdversary.toUnforgeableAdversary, signOnce, signOnceMain, OOPS.AGM.oracle,
+    Explained.ofVectors, OOPS.AGM.forgery, OOPS.AGM.initialInput, sourceInputs,
+    evaluate, extend, bind_pure_comp]
+
+private theorem signOnce_checked_table (m x : ZMod 101)
+    (H : Bool × Fin 1 → ZMod 101) :
+    simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn H)) (do
+      let w ← (OOPS.scheme (T := Bool)
+        (LinearMap.mul (ZMod 101) (ZMod 101)) 1 0).runWithSigningOracle (x • 1) x
+          ((signOnce m).toUnforgeableAdversary.main (x • 1))
+      let accepted ← (OOPS.scheme (T := Bool)
+        (LinearMap.mul (ZMod 101) (ZMod 101)) 1 0).verify (x • 1) w.1.1 w.1.2
+      return (w, accepted)) =
+      pure ((((m, false), x * H (false, 0)), [⟨(0, false), x * H (false, 0)⟩]), true) := by
+  simp [signOnce_raw, SignatureAlg.runWithSigningOracle, SignatureAlg.signingOracle,
+    QueryImpl.withLogging_apply, OOPS.scheme, OOPS.hash, simulateQ_unifFwd_weightedQuery,
+    OOPS.terms, mul_comm]
+
+/-- Signing and replaying the same message is admissible even though its degree-zero target
+has one signed message: the output loses freshness. -/
+theorem signOnce_replay_admissible : (signOnce 0).Admissible := by
+  intro x z hz hfresh _
+  rw [StateT.run'_eq, support_map] at hz
+  obtain ⟨⟨w, cache⟩, hw, rfl⟩ := hz
+  obtain ⟨H, _, hH⟩ :=
+    (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff _ ∅ w).mpr ⟨cache, hw⟩
+  rw [show H = QueryImpl.ofFn (fun i => (H i).run) from rfl,
+    signOnce_checked_table, support_pure, Set.mem_singleton_iff] at hH
+  subst w
+  simp at hfresh
+
+/-- Relabeling the degree-zero signature as a fresh scalar gives a successful over-degree
+forgery, so the winning-outcome degree rule excludes this adversary. -/
+theorem signOnce_fresh_not_admissible : ¬ (signOnce 1).Admissible := by
+  intro hA
+  let w : (((ZMod 101 × Bool) × ZMod 101) × QueryLog ((ZMod 101 × Bool) →ₒ ZMod 101)) × Bool :=
+    ((((1, false), 1), [⟨(0, false), 1⟩]), true)
+  have hfixed : w ∈ support (simulateQ (unifFwdAnswerImpl
+      (QueryImpl.ofFn (fun _ : Bool × Fin 1 => (1 : ZMod 101)))) (do
+        let z ← (OOPS.scheme (T := Bool)
+          (LinearMap.mul (ZMod 101) (ZMod 101)) 1 0).runWithSigningOracle
+            ((1 : ZMod 101) • 1) 1 ((signOnce 1).toUnforgeableAdversary.main ((1 : ZMod 101) • 1))
+        let accepted ← (OOPS.scheme (T := Bool)
+          (LinearMap.mul (ZMod 101) (ZMod 101)) 1 0).verify ((1 : ZMod 101) • 1) z.1.1 z.1.2
+        return (z, accepted))) := by
+    rw [signOnce_checked_table]
+    simp [w]
+  obtain ⟨cache, hc⟩ :=
+    (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff _ ∅ w).mp
+      ⟨QueryImpl.ofFn (fun _ => 1), by intro i u hu; simp at hu, hfixed⟩
+  have hadm := hA 1 w (by
+    rw [StateT.run'_eq, support_map]
+    exact ⟨(w, cache), hc, rfl⟩) (by decide) rfl
+  norm_num [w, OOPS.admissible] at hadm
 
 /-- Degree-two OOPS is perfectly complete over the concrete field in the actual lazy ROM. -/
 theorem perfectlyComplete :

@@ -7,6 +7,7 @@ Authors: Kobi Gurkan, Quang Dao
 module
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedExecution
 import all VCVio.CryptoFoundations.GroupModel.LinearFunctional.FiniteLabels
+import VCVio.OracleComp.QueryTracking.RandomOracle.FiniteSupport
 
 /-! # Finite covers for weighted interactions
 
@@ -50,28 +51,10 @@ theorem WeightedInterfaceCovered.mono {F I M G α : Type}
 theorem exists_queriesCovered {I R α : Type} [Finite R]
     (oa : OracleComp (unifSpec + (I →ₒ R)) α) : ∃ S : Finset I, QueriesCovered S oa := by
   classical
-  let labels : (unifSpec + (I →ₒ R)).Domain → Finset I :=
-    Sum.elim (fun _ => ∅) (fun i => {i})
-  have : ∀ q, Finite ((unifSpec + (I →ₒ R)).Range q) := by
-    intro q
-    rcases q with n | i
-    · change Finite (Fin (n + 1))
-      infer_instance
-    · change Finite R
-      infer_instance
-  obtain ⟨S, hS⟩ := exists_finite_label_cover labels (fun _ => ∅) (fun _ : Unit => oa)
-  refine ⟨S, ?_⟩
-  have h := hS ()
-  clear hS
-  induction oa using OracleComp.inductionOn with
-  | pure out => exact allQueriesSatisfy_pure _ _
-  | query_bind q next ih =>
-    obtain ⟨hq, hn⟩ := (allPathsSatisfy_query_bind q next).mp h
-    apply (allQueriesSatisfy_query_bind_iff _ _ _).mpr
-    refine ⟨?_, fun r => ih r (hn r (Set.mem_univ _))⟩
-    cases q with
-    | inl n => trivial
-    | inr i => exact hq (Finset.mem_singleton_self i)
+  refine ⟨possibleRandomOracleKeys oa, ?_⟩
+  apply (allQueriesSatisfy_possibleRandomOracleKeys oa).mono
+  intro q hq
+  cases q <;> exact hq
 
 /-- Finite public answers give a common finite base cover for a finite family of interactions. -/
 theorem exists_weightedInterfaceCovered {F I M G α K : Type} [Finite G] [Finite K]
