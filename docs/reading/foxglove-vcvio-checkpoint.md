@@ -8,15 +8,15 @@
 
 ### VCVio
 
-All four branches stack, bottom to top. They are local to Devon's machine (worktree
-`~/Documents/LeanCrypto/VCVio-spike`); see "Remote copies" below.
+All four branches stack, bottom to top. The three spike branches are on Verified-zkEVM/VCVio,
+with no PRs; see "Remote copies" below.
 
 | Branch | Head | On top of | What |
 |---|---|---|---|
 | `chore/repin-polyfun-main` | `e6cceebae` | `main` (then) | Re-pins PolyFun and drops the declarations it owns. Merged upstream as #911 (squash `b9f70da16`). Kept as the base of the stack. |
-| `spike/foxglove-bridge` | `adb6d5d43` | the re-pin | VCVio requires Foxglove (from the `dtumad/Foxglove` fork, branch `experimental/vcvio-free`). Non-default library `VCVioFoxglove`: interpretation, adequacy, expectations, specs, independence, `vcgen` routes, examples. Results log: `VCVioFoxglove/README.md`. |
-| `spike/route-classifier` | `c12a882e3` | the bridge | A syntactic route key for program-logic goals, a `vcgen` front end sending explicit core triples to core `vcgen`, a census of the library, six core-first probes. Report: `docs/reading/program-logic-routing.md`, sections 1–5. |
-| `spike/spec-library` | tip of this branch | the classifier | A ~430-declaration spec library (`VCVio/ProgramLogic/Library/`), the `derive_handler_specs` command, and the measured experiment (`scripts/spec_experiment/`). Report: section 6 of the routing report. This file. |
+| `dtumad/spike-foxglove-bridge` | `22da04f52` | the re-pin | VCVio requires Foxglove (from the `dtumad/Foxglove` fork, branch `experimental/vcvio-free`). Non-default library `VCVioFoxglove`: interpretation, adequacy, expectations, specs, independence, `vcgen` routes, examples. Results log: `VCVioFoxglove/README.md`. |
+| `dtumad/spike-route-classifier` | `5b3dcc1aa` | the bridge | A syntactic route key for program-logic goals, a `vcgen` front end sending explicit core triples to core `vcgen`, a census of the library, six core-first probes. Report: `docs/reading/program-logic-routing.md`, sections 1–5. |
+| `dtumad/spike-spec-library` | tip of this branch | the classifier | A ~430-declaration spec library (`VCVio/ProgramLogic/Library/`), the `derive_handler_specs` command, and the measured experiment (`scripts/spec_experiment/`). Report: section 6 of the routing report. This file. |
 
 ### Foxglove (fork `dtumad/Foxglove`)
 
@@ -25,7 +25,7 @@ All four branches stack, bottom to top. They are local to Devon's machine (workt
 | `experimental/v4.35-bump` | `d3c00ab` | `main` | Bump to Lean v4.35.0. Draft PR NethermindEth/Foxglove#2. |
 | `experimental/vcvio-measure-bridge` | `bef60aa` | the bump | Foxglove's semantics of `OracleComp` agrees with VCVio's. Draft PR NethermindEth/Foxglove#3. |
 | `experimental/vcvio-measure-adequacy` | `97b963b` | the bridge | Adequacy: Foxglove laws are VCVio distributions. Draft PR NethermindEth/Foxglove#4. |
-| `experimental/vcvio-free` | `3bd934b` | the bump | The dependency reversal: Foxglove without VCVio (requires cslib directly). `Split`, a VCVio-free `Adequacy` (`lawPMF`), `Rules/Derived`, `Rules/Independence`, the `⦃X, Q⦄` notation scoped. VCVio's `spike/foxglove-bridge` pins this commit. Draft PR dtumad/Foxglove#1 (within the fork). |
+| `experimental/vcvio-free` | `3bd934b` | the bump | The dependency reversal: Foxglove without VCVio (requires cslib directly). `Split`, a VCVio-free `Adequacy` (`lawPMF`), `Rules/Derived`, `Rules/Independence`, the `⦃X, Q⦄` notation scoped. VCVio's `dtumad/spike-foxglove-bridge` pins this commit. Draft PR dtumad/Foxglove#1 (within the fork). |
 | `spike/wpv-lax-v435` | `e3308c9` | the adequacy branch | The value-level `wp` is a lax WP on convex postconditions. Draft PR dtumad/Foxglove#2 (within the fork). |
 
 Local only and superseded: `dtumad/vcvio-bridge`, `dtumad/vcvio-adequacy` and `spike/wpv-lax`
@@ -106,4 +106,5 @@ VCVioWidgets `Html` clash, an ML-DSA `decide` recursion depth; watch the `mkAppM
   https://github.com/dtumad/Foxglove/pull/1 (dependency reversal) and
   https://github.com/dtumad/Foxglove/pull/2 (lax WP). Upstream drafts:
   https://github.com/NethermindEth/Foxglove/pull/2, /3, /4.
-- VCVio: not yet pushed; there is no `dtumad/VCVio` fork.
+- VCVio: `dtumad/spike-foxglove-bridge`, `dtumad/spike-route-classifier` and
+  `dtumad/spike-spec-library` are on Verified-zkEVM/VCVio, with no PRs.
