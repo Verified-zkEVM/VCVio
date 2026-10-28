@@ -6,10 +6,13 @@ Authors: Devon Tuma
 
 module
 import VCVioTest.Algorithms.Hash
+import VCVioTest.PointerChainPuzzle.LeanSeal
 
 /-! # Executable entry point for shared algorithm regressions -/
 
 public section
 
-/-- Run pure algorithm tests without importing a scheme or native backend. -/
-def main : IO Unit := VCVioTest.Algorithms.Hash.run
+/-- Run the pure algorithm tests and the leanSeal known answers, without a native backend. -/
+def main : IO Unit := do
+  VCVioTest.Algorithms.Hash.run
+  VCVioTest.LeanSeal.run
