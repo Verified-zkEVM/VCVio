@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.Schemes.Proximity.Game
+public import VCVio.Schemes.Proximity.Security
 public import VCVio.Schemes.Proximity.Extraction
 public import Mathlib.Algebra.Field.ZMod
 
@@ -67,14 +67,14 @@ private theorem oneHash_raw (pk : K) :
 
 private theorem oneHash_good (X Y : K) :
     Proximity.goodReduction oneHash 1 X 1 Y = (fun ρ : K => ρ / ρ) <$> ($ᵗ K) := by
-  simp only [Proximity.goodReduction, Proximity.AGM.goodProgram, Weighted.extractionProgram,
+  simp only [Proximity.goodReduction, Proximity.AGM.goodProgram, weightedExtractionProgram,
     smul_eq_mul, mul_one, Proximity.AGM.program, Proximity.AGM.oracle, add_apply_inl,
     bind_pure_comp, add_apply_inr, oneHash, output, Explained.ofVectors, Matrix.zero_empty,
     extend, evaluate, List.length_append, List.getElem?_ofFn, Fin.cast_mk,
     Proximity.AGM.initialInput, Proximity.AGM.groupInputs, List.cons_append, List.nil_append,
     List.length_cons, List.length_nil, zero_add, simulateQ_map, simulateQ_query,
     OracleQuery.input_query, OracleQuery.cont_query, Functor.map_map, id_eq, Nat.reduceAdd,
-    id_map, StateT.run_map, Proximity.terms, List.ofFn_zero, weightedQuery_cons, weightedQuery,
+    id_map, StateT.run_map, Proximity.terms, List.ofFn_zero, weightedQuery,
     one_mul, map_pure, add_zero, bind_pure, bind_map_left, Proximity.AGM.coefficients,
     List.isEmpty_iff, List.headD_eq_head?_getD, map_bind, Order.lt_two_iff, List.mapIdx_cons,
     zero_le, ↓reduceDIte, Fin.zero_eta, Fin.isValue, Option.getD_some, add_le_iff_nonpos_left,
@@ -82,11 +82,24 @@ private theorem oneHash_good (X Y : K) :
     Option.getD_none, zero_mul, List.mapIdx_nil, List.sum_cons, List.sum_nil, List.map_cons,
     Fin.coe_ofNat_eq_mod, Nat.zero_mod, zero_ne_one, ↓reduceIte, Nat.mod_succ, List.map_nil,
     List.cons_ne_self, List.ofFn_succ, Fin.val_succ, Fin.val_eq_zero, List.head?_cons,
-    getElem?_pos, List.getElem_cons_zero, zero_smul, List.getElem?_cons_succ, simulateQ_bind,
-    QueryImpl.add_apply_inr, QueryImpl.withCaching_apply, uniformSampleImpl_apply,
-    StateT.run'_eq, StateT.run_bind, StateT.run_get, pure_bind]
-  rw [Weighted.oracle_run_hash]
-  simp [Weighted.readTranscript]
+    simulateQ_bind,
+    StateT.run'_eq, StateT.run_bind]
+  have hstep :
+      (weightedOracle (Proximity.terms (F := K) (dimension := 0)) (fun ρ : K => ρ) (fun ρ => ρ * X)
+        (fun ρ => (ρ, (0 : K))) (fun ρ => ((0 : K), ρ))
+        (.inl (.inr (none, false)))).run [(1, 0)] =
+      (fun ρ : K => (ρ, [(1, 0), (ρ, 0)])) <$>
+        ((Proximity.Index Bool 0 →ₒ K).query (none, false) :
+          OracleComp (unifSpec + (Proximity.Index Bool 0 →ₒ K)) K) := rfl
+  rw [hstep]
+  have hquery :
+      (liftM (liftM ((Proximity.Index Bool 0 →ₒ K).query (none, false)) :
+        OracleComp (Proximity.Index Bool 0 →ₒ K) K) :
+        OracleComp (unifSpec + (Proximity.Index Bool 0 →ₒ K)) K) =
+      ((Proximity.Index Bool 0 →ₒ K).query (none, false) :
+        OracleComp (unifSpec + (Proximity.Index Bool 0 →ₒ K)) K) :=
+    OracleComp.liftComp_liftM_query _ _
+  simp [hquery]
 
 /-- The direct scheme is perfectly complete over `ZMod 101`, for every dimension and for
 arbitrary natural-number slots, using the standard shared random-oracle runtime. -/
@@ -118,5 +131,26 @@ theorem freshCollision_empty_zero :
         Explained (ZMod 101) (Proximity.Message (ZMod 101) Bool 1)
           (Proximity.AGM.Group (ZMod 101) (ZMod 101))) [] := by
   simp [Proximity.AGM.FreshCollision, Proximity.AGM.signedMessages]
+
+/-- The full algebraic security theorem specializes to the field of order 101, arbitrary
+natural-number slots and dimension, and explicit pathwise hash and signing budgets. -/
+theorem security (dimension : ℕ)
+    (A : Proximity.AlgebraicAdversary (ZMod 101) ℕ (ZMod 101) (ZMod 101) dimension
+      (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1) (qh qs : ℕ)
+    (hqueries : A.QueryBound qh qs) :
+    SignatureAlg.unforgeableAdvantage
+      (ProbCompRuntime.rom (Proximity.Index ℕ dimension →ₒ ZMod 101))
+      A.toUnforgeableAdversary ≤
+      Pr{let b ← DLog11.experiment 1 1 (Proximity.goodReduction A)}[b = true] +
+      Pr{let b ← DLog11.experiment 1 1 (Proximity.badReduction A)}[b = true] +
+      1 / 101 + Proximity.freshCollisionProbability A qh qs := by
+  have hg : Function.Bijective (· • (1 : ZMod 101) : ZMod 101 → ZMod 101) := by
+    constructor
+    · intro x y h
+      simpa only [smul_eq_mul, mul_one] using h
+    · intro y
+      exact ⟨y, by simp⟩
+  have he : LinearMap.mul (ZMod 101) (ZMod 101) 1 1 ≠ 0 := by simp
+  simpa using Proximity.unforgeableAdvantage_le_of_algebraic A qh qs hqueries hg he
 
 end ProximityAGMTest

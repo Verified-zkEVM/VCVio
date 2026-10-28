@@ -7,7 +7,7 @@ Authors: Kobi Gurkan, Quang Dao
 module
 public import VCVio.Schemes.Proximity.Adversary
 public import VCVio.CryptoFoundations.HardnessAssumptions.DLog11
-public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedExecution
+public import VCVio.Schemes.Proximity.Weighted
 
 /-! # Proximity's two discrete-logarithm reductions
 
@@ -44,7 +44,7 @@ namespace Proximity.AGM
     (A : Adversary F (Group G₁ G₂) Unit (Query F Slot dimension) Reply
       (Proximity.Message F Slot dimension)) (g X : G₁) (h Y : G₂) :
     OracleComp (unifSpec + (Index Slot dimension →ₒ F)) F := do
-  let (out, basis, target) ← Weighted.extractionProgram terms (fun out => out.value.data)
+  let (out, basis, target) ← weightedExtractionProgram terms (fun out => out.value.data)
     (fun ρ : F => ρ • g) (fun ρ => ρ • X)
     (fun ρ => (ρ, (0 : F))) (fun ρ => ((0 : F), ρ)) [(1, 0)]
     (program A g h Y)
@@ -58,7 +58,7 @@ namespace Proximity.AGM
       (Proximity.Message F Slot dimension)) (g X : G₁) (h : G₂) (κ : F) :
     OracleComp (unifSpec + (Index Slot dimension →ₒ (F × F))) F := do
   let point := fun r : F × F => r.1 • X + r.2 • g
-  let (out, basis, target) ← Weighted.extractionProgram terms (fun out => out.value.data)
+  let (out, basis, target) ← weightedExtractionProgram terms (fun out => out.value.data)
     point (fun r => κ • point r) (fun _ => ((0 : F), (0 : F))) id [(0, 0)]
     (program A g h (κ • h))
   let repr := evaluate (coefficients out) basis

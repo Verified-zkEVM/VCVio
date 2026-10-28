@@ -57,7 +57,8 @@ theorem runWithSigningOracle_eq {F Slot G₁ G₂ Gₜ α : Type} {dimension : �
       simp [impl, AGM.signedMessages, spec]
       simp only [List.filterMap_cons, Sum.getRight?_inl, List.filterMap_nil, List.append_nil]
     · change Prod.map id AGM.signedMessages <$>
-        ((fun r : G₁ => (κ • r, tr ++ [.inr m])) <$> weightedQuery (terms m)) = _
+        ((fun r : G₁ => (κ • r, tr ++ [.inr m])) <$>
+          (liftM (weightedQuery (terms m)) : OracleComp spec G₁)) = _
       simp [impl, AGM.signedMessages, Sum.getRight?, sign, scheme, hash]
   have ht := map_run_simulateQ_eq_of_query_map_eq _ impl AGM.signedMessages hs oa []
   simp only [AGM.signedMessages, List.filterMap_nil] at ht

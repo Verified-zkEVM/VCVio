@@ -127,7 +127,7 @@ private theorem valid_head {F Slot G₁ G₂ : Type} [Semiring F] {dimension : �
           have he := (List.forall₂_cons.mp hv).1.2
           simpa [coefficients, forgery, hg, hc] using he
 
-/-- The affine representation obtained by replaying a scalar-programmed transcript. -/
+/-- The affine representation obtained by interpreting a scalar-programmed transcript. -/
 @[expose] def goodRepresentation {F Slot G₁ G₂ : Type} [Semiring F] {dimension : ℕ}
     (ρ : Index Slot dimension → F)
     (out : Explained F (Proximity.Message F Slot dimension) (Group G₁ G₂))
@@ -137,7 +137,7 @@ private theorem valid_head {F Slot G₁ G₂ : Type} [Semiring F] {dimension : �
     (Sum.elim (fun i => (ρ i, (0 : F))) (fun m => ((0 : F), Weighted.value ρ (terms m)))))
   ⟨r.1, r.2⟩
 
-/-- Algebraicity makes the replayed affine representation equal the actual forged signature. -/
+/-- Algebraicity makes the chronological affine representation equal the actual forged signature. -/
 theorem fixedRun_good_sound {F Slot G₁ G₂ Gₜ : Type} {dimension : ℕ} [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ]

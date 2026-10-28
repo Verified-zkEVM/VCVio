@@ -6,7 +6,7 @@ Authors: Kobi Gurkan, Quang Dao
 
 module
 public import VCVio.CryptoFoundations.SignatureAlg
-public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedOracle
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedQuery
 public import Mathlib.LinearAlgebra.BilinearMap
 
 /-! # Proximity signatures
@@ -44,14 +44,14 @@ abbrev Index (Slot : Type) (dimension : ℕ) := Option (Fin dimension) × Slot
 /-- The direct message hash over the oracle of slot and coordinate bases. -/
 @[expose] def hash {F Slot G : Type} [Semiring F] [AddCommMonoid G] [Module F G]
     {dimension : ℕ} (msg : Message F Slot dimension) :
-    OracleComp (unifSpec + (Index Slot dimension →ₒ G)) G := weightedQuery (terms msg)
+    OracleComp (unifSpec + (Index Slot dimension →ₒ G)) G := liftM (weightedQuery (terms msg))
 
 /-- Fixed-table interpretation of the message hash is its constant base plus weighted bases. -/
 theorem hash_table {F Slot G : Type} [Semiring F] [AddCommMonoid G] [Module F G]
     {dimension : ℕ} (table : Index Slot dimension → G) (msg : Message F Slot dimension) :
     simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn table)) (hash msg) =
       pure (table (none, msg.2) + ∑ k, msg.1 k • table (some k, msg.2)) := by
-  rw [hash, weightedQuery_table]
+  rw [hash, simulateQ_unifFwd_weightedQuery]
   simp [terms, List.map_ofFn, List.sum_ofFn]
 
 /-- Proximity's direct signature algorithm, with its verification key in the second source group. -/

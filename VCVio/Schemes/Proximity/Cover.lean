@@ -5,23 +5,24 @@ Authors: Kobi Gurkan, Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedExecution
+public import VCVio.Schemes.Proximity.Weighted
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.FiniteLabels
 import all VCVio.CryptoFoundations.GroupModel.LinearFunctional.FiniteLabels
 
 /-! # Finite proof covers for weighted oracle execution
 
 Finite-answer programs use finitely many base labels across all adaptive paths. A cover
-includes each weighted signing list and the final target's list. Replay adds no labels, so
+includes each weighted signing list and the final target's list. Recording representations adds
+no labels, so
 the existing finite-table random-oracle theorem applies to the whole extraction program.
 The finite cover is used only in proofs and never enumerated by the executable reduction.
 -/
 
 public section
 
-open OracleComp OracleSpec
+open OracleComp OracleSpec GroupModel.LinearFunctional
 
-namespace GroupModel.LinearFunctional.Weighted
+namespace Proximity.Weighted
 
 /-- A base query is covered when its label is; a signing query requires all its weighted bases. -/
 @[expose] def ReplyCovered {F I M : Type} (terms : M → List (I × F)) (S : Finset I) :
@@ -67,16 +68,56 @@ theorem exists_cover {F I M G α K : Type} [Finite G] [Finite K]
 /-- Every lookup in a weighted query belongs to the cover of its list. -/
 theorem weightedQuery_covered {F I R : Type} [AddMonoid R] [SMul F R]
     (S : Finset I) (ts : List (I × F)) (h : ∀ t ∈ ts, t.1 ∈ S) :
-    QueriesCovered S (weightedQuery (V := R) ts) := by
+    QueriesCovered S (liftM (weightedQuery (G := R) ts) :
+      OracleComp (unifSpec + (I →ₒ R)) R) := by
   induction ts with
   | nil => exact allQueriesSatisfy_pure _ _
   | cons t ts ih =>
       rcases t with ⟨i, a⟩
-      rw [weightedQuery_cons]
+      simp only [weightedQuery, liftM_bind, liftM_pure]
       apply (allQueriesSatisfy_query_bind_iff _ _ _).2
       refine ⟨h (i, a) (by simp), fun _ => ?_⟩
       exact allQueriesSatisfy_bind (ih (fun t ht => h t (by simp [ht])))
         (fun _ => allQueriesSatisfy_pure _ _)
+
+private theorem weighted_bind_covered {F I M R G V α β : Type}
+    [AddMonoid R] [SMul F R]
+    (terms : M → List (I × F)) (S : Finset I) (target : α → M)
+    (hash sign : R → G) (hashRep signRep : R → V)
+    (oa : OracleComp (interfaceSpec I M G) α) (h : Covered terms S target oa)
+    (initial : List V) (k : α × List V → OracleComp (unifSpec + (I →ₒ R)) β)
+    (hk : ∀ out basis, ReplyCovered terms S (.inr (target out)) →
+      QueriesCovered S (k (out, basis))) :
+    QueriesCovered S
+      ((simulateQ (weightedOracle terms hash sign hashRep signRep) oa).run initial >>= k) := by
+  induction oa using OracleComp.inductionOn generalizing initial with
+  | pure out =>
+      simp only [simulateQ_pure, StateT.run_pure, pure_bind]
+      exact hk out initial (by simpa [Covered] using h)
+  | query_bind q next ih =>
+      obtain ⟨hq, hn⟩ := (allPathsSatisfy_query_bind q next).mp h
+      simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, bind_assoc]
+      rcases q with ((n | i) | m) <;>
+        simp only [weightedOracle, StateT.run, bind_map_left]
+      · exact (allQueriesSatisfy_query_bind_iff _ _ _).2
+          ⟨trivial, fun r => ih r (hn r (Set.mem_univ _)) initial⟩
+      · exact (allQueriesSatisfy_query_bind_iff _ _ _).2
+          ⟨hq, fun r => ih (hash r) (hn _ (Set.mem_univ _)) _⟩
+      · exact allQueriesSatisfy_bind (weightedQuery_covered S (terms m) hq)
+          (fun r => ih (sign r) (hn _ (Set.mem_univ _)) _)
+
+/-- A public base cover includes every private lookup of the shared weighted extractor. -/
+theorem extractionProgram_covered {F I M R G V α : Type} [AddMonoid R] [SMul F R]
+    (terms : M → List (I × F)) (S : Finset I) (target : α → M)
+    (hash sign : R → G) (hashRep signRep : R → V) (initial : List V)
+    (oa : OracleComp (interfaceSpec I M G) α) (h : Covered terms S target oa) :
+    QueriesCovered S
+      (weightedExtractionProgram terms target hash sign hashRep signRep initial oa) := by
+  unfold weightedExtractionProgram
+  apply weighted_bind_covered terms S target hash sign hashRep signRep oa h initial
+  intro out basis hout
+  exact allQueriesSatisfy_bind (weightedQuery_covered S (terms (target out)) hout)
+    (fun _ => allQueriesSatisfy_pure _ _)
 
 private theorem oracle_bind_covered {F I M R G α β : Type} [AddMonoid R] [SMul F R]
     (terms : M → List (I × F)) (S : Finset I) (target : α → M) (hash sign : R → G)
@@ -112,7 +153,8 @@ private theorem oracle_bind_covered {F I M R G α β : Type} [AddMonoid R] [SMul
         · exact htr q hmem
         · simpa using (List.mem_singleton.mp hmem) ▸ hq
       · change QueriesCovered S
-          (((fun r => (sign r, tr ++ [.inr m])) <$> weightedQuery (terms m)) >>= fun z =>
+          (((fun r => (sign r, tr ++ [.inr m])) <$>
+            (liftM (weightedQuery (terms m)) : OracleComp (unifSpec + (I →ₒ R)) R)) >>= fun z =>
             (simulateQ (oracle terms hash sign) (next z.1)).run z.2 >>= k)
         simp only [bind_map_left]
         apply allQueriesSatisfy_bind (weightedQuery_covered S (terms m) hq)
@@ -123,43 +165,26 @@ private theorem oracle_bind_covered {F I M R G α β : Type} [AddMonoid R] [SMul
         · exact htr q hmem
         · simpa using (List.mem_singleton.mp hmem) ▸ hq
 
-private theorem readTranscript_covered {F I M R V : Type} [AddMonoid R] [SMul F R]
-    (terms : M → List (I × F)) (S : Finset I) (hash sign : R → V)
-    (tr : Transcript I M) (htr : ∀ q ∈ tr, ReplyCovered terms S q) :
-    QueriesCovered S (readTranscript terms hash sign tr) := by
-  induction tr with
-  | nil => exact allQueriesSatisfy_pure _ _
-  | cons q rest ih =>
-      cases q with
-      | inl i =>
-          simp only [readTranscript]
-          refine (allQueriesSatisfy_query_bind_iff _ _ _).2
-            ⟨htr (.inl i) (by simp), fun _ => ?_⟩
-          exact allQueriesSatisfy_bind (ih (fun q h => htr q (by simp [h])))
-            (fun _ => allQueriesSatisfy_pure _ _)
-      | inr m =>
-          simp only [readTranscript]
-          apply allQueriesSatisfy_bind
-            (weightedQuery_covered S (terms m) (htr (.inr m) (by simp)))
-          intro r
-          exact allQueriesSatisfy_bind (ih (fun q h => htr q (by simp [h])))
-            (fun _ => allQueriesSatisfy_pure _ _)
-
-/-- The public weighted-base cover includes replay and final-target lookups. -/
-theorem extractionProgram_covered {F I M R G V α : Type} [AddMonoid R] [SMul F R]
-    (terms : M → List (I × F)) (S : Finset I) (target : α → M)
-    (hash sign : R → G) (hashRep signRep : R → V) (initial : List V)
+/-- Chronological execution uses only the public program's covered bases. -/
+theorem oracle_covered {F I M R G α : Type} [AddMonoid R] [SMul F R]
+    (terms : M → List (I × F)) (S : Finset I) (target : α → M) (hash sign : R → G)
     (oa : OracleComp (interfaceSpec I M G) α) (h : Covered terms S target oa) :
-    QueriesCovered S (extractionProgram terms target hash sign hashRep signRep initial oa) := by
-  unfold extractionProgram
+    QueriesCovered S ((simulateQ (oracle terms hash sign) oa).run []) := by
+  simpa only [bind_pure] using oracle_bind_covered terms S target hash sign oa h []
+    (by simp) pure (fun _ _ _ _ => allQueriesSatisfy_pure _ _)
+
+/-- The verification target and every chronological query use covered bases. -/
+theorem targetProgram_covered {F I M R G α : Type} [AddMonoid R] [SMul F R]
+    (terms : M → List (I × F)) (S : Finset I) (target : α → M) (hash sign : R → G)
+    (oa : OracleComp (interfaceSpec I M G) α) (h : Covered terms S target oa) :
+    QueriesCovered S (targetProgram terms target hash sign oa) := by
+  unfold targetProgram
   apply oracle_bind_covered terms S target hash sign oa h [] (by simp)
-  intro out tr hout htr
-  apply allQueriesSatisfy_bind (readTranscript_covered terms S hashRep signRep tr htr)
-  intro basis
+  intro out tr hout _
   exact allQueriesSatisfy_bind (weightedQuery_covered S (terms (target out)) hout)
     (fun _ => allQueriesSatisfy_pure _ _)
 
-/-- The entire lazy weighted extractor has the law of one finite table, jointly with its
+/-- The shared lazy weighted extractor has the law of one finite table, jointly with its
 output, chronological coefficient basis, and final target. -/
 theorem extractionProgram_evalDistEq_finite_table {F I M R G V α : Type}
     [AddMonoid R] [SMul F R] [DecidableEq I] [SampleableType R]
@@ -167,15 +192,51 @@ theorem extractionProgram_evalDistEq_finite_table {F I M R G V α : Type}
     (hash sign : R → G) (hashRep signRep : R → V) (initial : List V)
     (oa : OracleComp (interfaceSpec I M G) α) (h : Covered terms S target oa) (fallback : R) :
     (simulateQ (I →ₒ R).romImpl
-      (extractionProgram terms target hash sign hashRep signRep initial oa)).run' ∅ =ᵈ
+      (weightedExtractionProgram terms target hash sign hashRep signRep initial oa)).run' ∅ =ᵈ
       (do let table ← $ᵗ (S → R)
           let ρ := extendTable S fallback table
           let z ← fixedRun (hash ∘ ρ) (fun m => sign (value ρ (terms m))) oa
           return (z.1, initial ++ z.2.map
             (Sum.elim (hashRep ∘ ρ) (fun m => signRep (value ρ (terms m)))),
             value ρ (terms (target z.1)))) := by
-  have he := simulateQ_romImpl_evalDistEq_finite_table S _
-    (extractionProgram_covered terms S target hash sign hashRep signRep initial oa h) fallback
-  simpa only [extractionProgram_table, bind_pure_comp] using he
+  have he := weightedExtractionProgram_evalDistEq_finite_table terms target
+    hash sign hashRep signRep initial oa S fallback
+    (extractionProgram_covered terms S target hash sign hashRep signRep initial oa h)
+  simpa only [tableOracle_eq, Functor.map_map, bind_pure_comp, value, Function.comp_def] using he
 
-end GroupModel.LinearFunctional.Weighted
+/-- Every fixed-table execution has covered reply labels and a covered final target. -/
+theorem fixedRun_mem_cover {F I M G α : Type} (terms : M → List (I × F))
+    (S : Finset I) (target : α → M) (hash : I → G) (sign : M → G)
+    (oa : OracleComp (interfaceSpec I M G) α) (h : Covered terms S target oa)
+    (z : α × Transcript I M) (hz : z ∈ support (fixedRun hash sign oa)) :
+    ReplyCovered terms S (.inr (target z.1)) ∧ ∀ q ∈ z.2, ReplyCovered terms S q := by
+  suffices ∀ tr, (∀ q ∈ tr, ReplyCovered terms S q) →
+      z ∈ support ((simulateQ (fixedOracle hash sign) oa).run tr) →
+      ReplyCovered terms S (.inr (target z.1)) ∧ ∀ q ∈ z.2, ReplyCovered terms S q from
+    this [] (by simp) hz
+  clear hz
+  intro tr htr hz
+  induction oa using OracleComp.inductionOn generalizing tr with
+  | pure out =>
+      have he : z = (out, tr) := by simpa using hz
+      subst z
+      exact ⟨by simpa [Covered] using h, htr⟩
+  | query_bind q next ih =>
+      obtain ⟨hq, hn⟩ := (allPathsSatisfy_query_bind q next).mp h
+      simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind] at hz
+      rcases q with ((n | i) | m) <;>
+        simp only [fixedOracle, StateT.run, bind_map_left, pure_bind] at hz
+      · obtain ⟨r, _, hr⟩ := mem_support_bind_peel _ _ hz
+        exact ih r (hn r (Set.mem_univ _)) tr htr hr
+      · apply ih (hash i) (hn _ (Set.mem_univ _)) _ _ hz
+        intro q hq'
+        rcases List.mem_append.mp hq' with hmem | hmem
+        · exact htr q hmem
+        · simpa using (List.mem_singleton.mp hmem) ▸ hq
+      · apply ih (sign m) (hn _ (Set.mem_univ _)) _ _ hz
+        intro q hq'
+        rcases List.mem_append.mp hq' with hmem | hmem
+        · exact htr q hmem
+        · simpa using (List.mem_singleton.mp hmem) ▸ hq
+
+end Proximity.Weighted

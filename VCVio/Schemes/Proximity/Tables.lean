@@ -6,11 +6,11 @@ Authors: Kobi Gurkan, Quang Dao
 
 module
 public import VCVio.Schemes.Proximity.Reductions
-public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedCover
+public import VCVio.Schemes.Proximity.Cover
 
 /-! # Finite-table laws for Proximity's lazy reductions
 
-A finite cover of the adaptive public program covers signing, replay, and final-target base
+A finite cover of the adaptive public program covers signing and final-target base
 lookups. The named reductions retain their executable lazy caches over arbitrary slots.
 Only their probability laws use a finite table. The same cover can be selected for every
 secret key because both the scalar field and the oracle-answer types are finite.
