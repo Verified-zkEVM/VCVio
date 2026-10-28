@@ -5,8 +5,9 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.Schemes.BLS.AGM.Reductions
+public import VCVio.Schemes.BLS.AGM.Security
 import all VCVio.Schemes.BLS.AGM.Reductions
+import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyExecution
 public import Mathlib.Algebra.Field.ZMod
 
 /-! # Concrete algebraic BLS fixtures over the field of order 101
@@ -63,9 +64,25 @@ private theorem oneHash_raw (pk : K × K) :
 
 private theorem oneHash_good (X Y : K) :
     BLS.goodReduction oneHash 1 X 1 Y = (fun ρ : K => ρ / ρ) <$> ($ᵗ K) := by
-  simp [BLS.goodReduction, BLS.reductionRun, BLS.reductionOracle, BLS.cached_run,
-    BLS.coefficients, oneHash, output, Explained.ofVectors, BLS.AGM.initialInput,
-    BLS.AGM.groupInputs, extend, evaluate]
+  simp only [BLS.goodReduction, BLS.reductionRun,
+    GroupModel.LinearFunctional.extractionProgram, smul_eq_mul, mul_one, BLS.AGM.oracle,
+    add_apply_inl, bind_pure_comp, add_apply_inr, oneHash, output, Explained.ofVectors, extend,
+    evaluate, List.length_append, List.getElem?_ofFn, Fin.cast_mk, BLS.AGM.initialInput,
+    BLS.AGM.groupInputs, List.cons_append, List.nil_append, List.length_cons, List.length_nil,
+    zero_add, Nat.reduceAdd, simulateQ_map, simulateQ_query, OracleQuery.input_query,
+    OracleQuery.cont_query, Functor.map_map, id_eq, id_map, StateT.run_map, bind_map_left,
+    simulateQ_bind, QueryImpl.add_apply_inr, QueryImpl.withCaching_apply, uniformSampleImpl_apply,
+    map_bind, StateT.run'_eq, StateT.run_bind, StateT.run_get, pure_bind, BLS.coefficients,
+    List.isEmpty_iff, List.headD_eq_head?_getD, List.mapIdx_cons, Nat.ofNat_pos, ↓reduceDIte,
+    Fin.zero_eta, Fin.isValue, Option.getD_some, Nat.one_lt_ofNat, Fin.mk_one, Nat.lt_add_one,
+    Fin.reduceFinMk, List.mapIdx_nil, List.sum_cons, List.sum_nil, add_zero, List.map_cons,
+    Fin.coe_ofNat_eq_mod, Nat.zero_mod, OfNat.zero_ne_ofNat, ↓reduceIte, Nat.one_mod,
+    OfNat.one_ne_ofNat, zero_mul, Nat.mod_succ, one_mul, List.map_nil, List.cons_ne_self,
+    List.ofFn_succ, Fin.val_succ, Nat.reduceEqDiff, zero_ne_one, Fin.val_eq_zero, List.ofFn_zero,
+    List.head?_cons, getElem?_pos, List.getElem_cons_zero, zero_smul, List.getElem?_cons_succ,
+    Order.lt_two_iff, zero_le]
+  rw [GroupModel.LinearFunctional.transcriptOracle_hash]
+  simp [GroupModel.LinearFunctional.readTranscript]
 
 /-- A certified one-hash algebraic adversary forgets to exactly the ordinary hash-and-return
 program in the existing BLS oracle specification. -/
@@ -87,5 +104,29 @@ theorem dlog11_identity_guess_probability :
   simp only [DLog11.experiment, prEvent_norm, decide_eq_true_eq]
   simpa [eq_comm] using
     SampleableType.prEvent_uniformSample_eq_singleton (1 : ZMod 101)
+
+/-- The one-hash fixture instantiates the tight algebraic EUF-CMA theorem over `ZMod 101`,
+with the scheme's original random-oracle experiment and its two named reductions. -/
+theorem one_hash_unforgeable_bound :
+    ∃ A : BLS.AlgebraicAdversary (ZMod 101) Bool (ZMod 101) (ZMod 101)
+      (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1,
+      (∀ pk, A.toUnforgeableAdversary.main pk = (do
+        let h ← (BLS.AGM.rawSpec Bool (ZMod 101)).query (.inl (.inr false))
+        pure (false, h))) ∧
+      SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ ZMod 101))
+        A.toUnforgeableAdversary ≤
+        Pr{let b ← DLog11.experiment 1 1 (BLS.goodReduction A)}[b = true] +
+        Pr{let b ← DLog11.experiment 1 1 (BLS.badReduction A)}[b = true] +
+        (1 / 101 : ℝ≥0∞) := by
+  refine ⟨oneHash, oneHash_raw, ?_⟩
+  have h := BLS.unforgeableAdvantage_le_of_algebraic oneHash
+    (by
+      constructor
+      · intro a b hab
+        simpa only [smul_eq_mul, mul_one] using hab
+      · intro a
+        exact ⟨a, by simp⟩)
+    (by simp)
+  simpa using h
 
 end BLSAGMTest

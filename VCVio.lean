@@ -94,9 +94,14 @@ public import VCVio.CryptoFoundations.GroupModel.Interaction
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Affine
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Collision
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Extraction
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.FiniteLabels
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Interaction
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyCover
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyExecution
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyTable
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Masking
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Probability
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.TraceExtraction
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Weights
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.GroupModel.Oracle
@@ -571,6 +576,7 @@ public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
 public import VCVio.Schemes.BLS.AGM.Adversary
 public import VCVio.Schemes.BLS.AGM.Reductions
+public import VCVio.Schemes.BLS.AGM.Security
 public import VCVio.Schemes.BLS.Abort
 public import VCVio.Schemes.BLS.Averaging
 public import VCVio.Schemes.BLS.Basic

@@ -164,4 +164,25 @@ theorem prEvent_zero_gap_le_affine_extract_add {F ι γ : Type} [Field F] [Finty
   simp only [prEvent_norm, hnum] at hd
   simpa only [seen, prEvent_norm, ← hd] using hb
 
+/-- Averaging affine extraction over a fresh uniform challenge preserves the single
+field-sized collision term. -/
+theorem prEvent_zero_gap_le_uniform_affine_extract_add {F ι γ : Type}
+    [Field F] [Fintype F] [SampleableType F] [Fintype ι] [DecidableEq ι]
+    (view : (ι → F) → ProbComp γ) (L : γ → ι → F) (c : γ → F)
+    (valid : γ → Prop) (j : γ → ι)
+    (hL : ∀ ρ z, z ∈ support (view ρ) → valid z → L z (j z) ≠ 0) :
+    Pr{let ρ ← $ᵗ (ι → F); let z ← view ρ}[
+      valid z ∧ ∑ i, L z i * ρ i = c z] ≤
+    Pr{let α ← ($ᵗ F : ProbComp F)
+       let a ← $ᵗ (ι → F); let b ← $ᵗ (ι → F)
+       let z ← view (fun i => a i * α + b i)}[
+      (c z - ∑ i, L z i * b i) / (∑ i, L z i * a i) = α] + 1 / Fintype.card F := by
+  let : MeasurableSpace F := ⊤
+  have h := MeasureTheory.lintegral_mono (μ := 𝒟[($ᵗ F : ProbComp F)])
+    (fun α => prEvent_zero_gap_le_affine_extract_add view L c valid j α hL)
+  rw [MeasureTheory.lintegral_const,
+    MeasureTheory.lintegral_add_left Measurable.of_discrete,
+    MeasureTheory.lintegral_const] at h
+  simpa only [MeasureTheory.measure_univ, mul_one, prEvent_bind_of_discrete] using h
+
 end GroupModel.LinearFunctional
