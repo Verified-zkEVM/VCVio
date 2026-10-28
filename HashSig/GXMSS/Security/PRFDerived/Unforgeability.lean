@@ -19,7 +19,7 @@ public section
 
 namespace GXMSS.PRFDerived.Unforgeability
 
-open Encoding TweakableHash
+open Encoding ENNReal TweakableHash
 
 variable {Key PP T X H M R Response : Type} {h w v : ℕ}
 
