@@ -93,7 +93,8 @@ second-source generator, with the supplied public pairing and an empty target ta
   fun g₁ X Y T g₂ => Prod.fst <$> runGen (pairingReal e) (fun _ => id) A
     (fun | .g₁ => [g₁, X, Y, T] | .g₂ => [g₂] | .gₜ => [])
 
-private theorem uniform_fin_three [SampleableType F] :
+/-- Three independent uniform samples form a uniform function on `Fin 3`. -/
+theorem uniformSample_fin_three [SampleableType F] :
     (do let a ← $ᵗ F; let b ← $ᵗ F; let c ← $ᵗ F
         pure (![a, b, c] : Fin 3 → F)) =ᵈ ($ᵗ (Fin 3 → F) : ProbComp _) := by
   have hb : Function.Bijective (Function.uncurry
@@ -142,7 +143,7 @@ private theorem real_experiment_evalDistEq [Field F] [DecidableEq F] [Sampleable
       (do let x ← $ᵗ (Fin 3 → F)
           Prod.fst <$> runGen (symbolic F pairingSig (Fin 3))
             (fun _ p => MvPolynomial.eval x p) A (xdhTable (X 0 * X 1))) := by
-  have hs := (uniform_fin_three (F := F)).bind_left (fun x =>
+  have hs := (uniformSample_fin_three (F := F)).bind_left (fun x =>
     Adversary.ofGeneric e A g₁ (x 0 • g₁) (x 1 • g₁) ((x 0 * x 1) • g₁) g₂)
   have hc := EvalDistEq.bind_right ($ᵗ F : ProbComp F) (fun a =>
     EvalDistEq.bind_right ($ᵗ F : ProbComp F) (fun b =>
@@ -164,7 +165,7 @@ private theorem random_experiment_evalDistEq [Field F] [DecidableEq F] [Sampleab
       (do let x ← $ᵗ (Fin 3 → F)
           Prod.fst <$> runGen (symbolic F pairingSig (Fin 3))
             (fun _ p => MvPolynomial.eval x p) A (xdhTable (X 2))) := by
-  have hs := (uniform_fin_three (F := F)).bind_left (fun x =>
+  have hs := (uniformSample_fin_three (F := F)).bind_left (fun x =>
     Adversary.ofGeneric e A g₁ (x 0 • g₁) (x 1 • g₁) (x 2 • g₁) g₂)
   apply EvalDistEq.of_forall_prEvent_eq
   intro p
