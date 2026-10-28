@@ -51,12 +51,16 @@ abbrev Groups (G : Tag → Type) := (s : Tag) → List (G s)
 
 /-- A game message with independently typed group arguments. -/
 structure Message (Data : Type) (G : Tag → Type) where
+  /-- Plain data carried by the message. -/
   data : Data
+  /-- Group arguments separated by sort. -/
   groups : Groups G
 
 /-- One exact-length coefficient vector for each outgoing element, separately at each sort. -/
 structure Explained (F Data : Type) (G : Tag → Type) where
+  /-- The outgoing message explained by the coefficient vectors. -/
   value : Message Data G
+  /-- Coefficient vectors in outgoing-element order within each sort. -/
   coefficients : Tag → List (List F)
 
 /-- Evaluate a vector over the chronological list of received group inputs. -/
@@ -80,6 +84,7 @@ structure Explained (F Data : Type) (G : Tag → Type) where
   ⟨⟨data, fun s => (vectors s).map fun v => evaluate (List.ofFn v) (inputs s)⟩,
     fun s => (vectors s).map List.ofFn⟩
 
+/-- Vectors indexed by the current inputs give valid explanations. -/
 theorem Explained.valid_ofVectors {F Data : Type} {G : Tag → Type}
     [Zero F] [∀ s, AddMonoid (G s)] [∀ s, SMul F (G s)]
     (inputs : Groups G) (data : Data) (vectors : (s : Tag) → List (Fin (inputs s).length → F)) :
@@ -113,20 +118,24 @@ variable [Zero F] [∀ s, AddMonoid (G s)] [∀ s, SMul F (G s)]
     (fun q _ next basis => q.Valid basis ∧
       ∀ reply, next reply (extend basis reply.groups)) inputs
 
+/-- A final output is algebraic exactly when its explanation is valid. -/
 @[simp] theorem isAlgebraic_pure (inputs : Groups G) (out : Explained F Result G) :
     IsAlgebraic (Reply := Reply) inputs (pure out) ↔ out.Valid inputs := Iff.rfl
 
+/-- A query is algebraic when its explanation and every reply continuation are valid. -/
 @[simp] theorem isAlgebraic_query (inputs : Groups G) (q : Explained F Query G)
     (next : Message (Reply q.value.data) G →
       OracleComp (explainedSpec F G Query Reply) (Explained F Result G)) :
-    IsAlgebraic inputs (OracleComp.queryBind q next) ↔
+    IsAlgebraic inputs (liftM ((explainedSpec F G Query Reply).query q) >>= next) ↔
       q.Valid inputs ∧ ∀ reply, IsAlgebraic (extend inputs reply.groups) (next reply) := Iff.rfl
 
 /-- A raw-value adversary with algebraicity evidence on all inputs and reply paths. -/
 structure Adversary (F : Type) (G : Tag → Type) (Input Query : Type) (Reply : Query → Type)
     (Result : Type)
     [Zero F] [∀ s, AddMonoid (G s)] [∀ s, SMul F (G s)] where
+  /-- The adaptive program on an initial message. -/
   main : Message Input G → OracleComp (explainedSpec F G Query Reply) (Explained F Result G)
+  /-- Every execution path explains its outgoing messages from received inputs. -/
   algebraic : ∀ input, IsAlgebraic input.groups (main input)
 
 /-- Run a certified adversary, recording only newly received group inputs. -/
@@ -153,7 +162,7 @@ theorem Adversary.run_valid {Input I : Type} {ambient : OracleSpec I}
       simpa only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff]
         using hz ▸ h
   | query_bind q next ih =>
-      change IsAlgebraic basis (OracleComp.queryBind q next) at h
+      change IsAlgebraic basis (liftM ((explainedSpec F G Query Reply).query q) >>= next) at h
       obtain ⟨_, hnext⟩ := (isAlgebraic_query basis q next).mp h
       simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, StateT.run_mk,
         bind_assoc, pure_bind] at hz
