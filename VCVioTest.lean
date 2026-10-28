@@ -171,6 +171,7 @@ public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SaltedMerkle
 public import VCVioTest.SampleableType
 public import VCVioTest.Schemes.BLS
+public import VCVioTest.Schemes.BLSAggregate
 public import VCVioTest.Schemes.KEMDEM
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms

@@ -8,6 +8,7 @@ public import VCVio.CryptoFoundations.AKE.UAKE.Defs
 public import VCVio.CryptoFoundations.AKE.UAKE.Party
 public import VCVio.CryptoFoundations.AKE.UAKE.Runtime
 public import VCVio.CryptoFoundations.AKE.UAKE.Transcript
+public import VCVio.CryptoFoundations.AggregateSignatureAlg
 public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCCA
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
@@ -564,6 +565,8 @@ public import VCVio.Quantum.VC.Proof.Repeatability
 public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
 public import VCVio.Schemes.BLS.Abort
+public import VCVio.Schemes.BLS.Aggregate.Basic
+public import VCVio.Schemes.BLS.Aggregate.Reduction
 public import VCVio.Schemes.BLS.Averaging
 public import VCVio.Schemes.BLS.Basic
 public import VCVio.Schemes.BLS.Covariance
