@@ -51,12 +51,14 @@ public import VCVioTest.GroupModel.Collision
 public import VCVioTest.GroupModel.Cost
 public import VCVioTest.GroupModel.Decisional
 public import VCVioTest.GroupModel.GenericCoCDH
+public import VCVioTest.GroupModel.GenericCoCDHIso
 public import VCVioTest.GroupModel.GenericDDH
 public import VCVioTest.GroupModel.GenericHardness
 public import VCVioTest.GroupModel.GenericPairing
 public import VCVioTest.GroupModel.GenericRelation
 public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.MasterBound
+public import VCVioTest.GroupModel.PairingVariants
 public import VCVioTest.GroupModel.SortedMasterBound
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
@@ -169,6 +171,7 @@ public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SaltedMerkle
 public import VCVioTest.SampleableType
 public import VCVioTest.Schemes.BLS
+public import VCVioTest.Schemes.BLSAggregate
 public import VCVioTest.Schemes.KEMDEM
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms
