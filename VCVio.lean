@@ -81,6 +81,8 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.TapeFactorization
 public import VCVio.CryptoFoundations.GPVHashAndSign.TrapCount
 public import VCVio.CryptoFoundations.GPVHashAndSign.TrapProjection
 public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
+public import VCVio.CryptoFoundations.GroupModel.Encoding
+public import VCVio.CryptoFoundations.GroupModel.Game
 public import VCVio.CryptoFoundations.GroupModel.Interaction
 public import VCVio.CryptoFoundations.GroupModel.Oracle
 public import VCVio.CryptoFoundations.GroupModel.Projection
