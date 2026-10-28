@@ -68,10 +68,10 @@ private theorem indexedEntry_support_challengeInv {V M : Type}
     exact ⟨challengeInv_insert hs msg v ht, ht⟩
 
 /-- Challenge-index consistency is preserved by every hash and signing query. -/
-private theorem indexedOracle_preserves_challengeInv {V M G : Type}
+theorem indexedOracle_preserves_challengeInv {V M G : Type}
     [SampleableType V] [DecidableEq M] (hash sign : Option V → G) (j : ℕ) :
     QueryImpl.PreservesInv (indexedOracle (M := M) (tagDraw j) hash sign (some j))
-      (ChallengeInv j) := by
+      (fun s => ∀ msg i, s.cache msg = some (none, i) → i = j) := by
   intro t s hs z hz
   rcases t with (t | msg) | msg
   · change z ∈ support ((fun v => (v, s)) <$> (unifSpec.query t : ProbComp _)) at hz
