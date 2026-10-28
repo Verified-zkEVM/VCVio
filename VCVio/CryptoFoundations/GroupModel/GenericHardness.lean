@@ -38,7 +38,9 @@ output handle; an out-of-range handle returns zero. -/
   fun g X Y => (fun z => lookup z.2 () z.1) <$>
     runGen (Model.group G) (fun _ => id) A (fun _ => [g, X, Y])
 
-private theorem runGen_eval [Field F] [DecidableEq F] [AddCommGroup G] [Module F G]
+/-- Evaluating a symbolic table at a hidden point commutes with running the generic
+computation in a module with a nonzero generator. -/
+theorem runGen_group_mapTbl_evalAt [Field F] [DecidableEq F] [AddCommGroup G] [Module F G]
     [DecidableEq G] (g : G) (hg : g ≠ 0) (x : ι → F)
     (A : OracleComp (genSpec F (discreteSig Unit)) α)
     (tbl : Tbl (fun _ : Unit => MvPolynomial ι F)) :
@@ -146,7 +148,7 @@ theorem dlogExperiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampl
       funext u
       simp [mapTbl, tbl, evalAt_apply]
     rw [← ht]
-    exact runGen_eval g hg (fun _ : Unit => a) A tbl
+    exact runGen_group_mapTbl_evalAt g hg (fun _ : Unit => a) A tbl
   have hs := (uniform_unit (F := F)).bind_left (fun x =>
     (fun z => z.1 = x ()) <$> runGen (symbolic F groupSig Unit)
       (fun _ p => MvPolynomial.eval x p) A tbl)
@@ -199,7 +201,7 @@ theorem cdhExperiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
       funext u
       simp [mapTbl, tbl, evalAt_apply]
     rw [← ht]
-    exact runGen_eval g hg (fun i : Bool => if i then b else a) A tbl
+    exact runGen_group_mapTbl_evalAt g hg (fun i : Bool => if i then b else a) A tbl
   let E := fun (x : Bool → F) (z : Handle × Tbl (fun _ : Unit => MvPolynomial Bool F)) =>
     MvPolynomial.eval x (lookup z.2 () z.1) = x false * x true
   have hs := (uniform_bool (F := F)).bind_left (fun x =>

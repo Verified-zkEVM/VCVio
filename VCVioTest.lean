@@ -49,6 +49,7 @@ public import VCVioTest.GroupModel.Basic
 public import VCVioTest.GroupModel.Collision
 public import VCVioTest.GroupModel.Cost
 public import VCVioTest.GroupModel.Decisional
+public import VCVioTest.GroupModel.GenericDDH
 public import VCVioTest.GroupModel.GenericHardness
 public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.MasterBound

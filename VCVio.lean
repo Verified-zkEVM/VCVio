@@ -84,6 +84,7 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
 public import VCVio.CryptoFoundations.GroupModel.Collision
 public import VCVio.CryptoFoundations.GroupModel.Cost
 public import VCVio.CryptoFoundations.GroupModel.Decisional
+public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 public import VCVio.CryptoFoundations.GroupModel.Instances
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
