@@ -5,7 +5,7 @@ Authors: Kobi Gurkan, Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedExecution
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedQuery
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.FiniteLabels
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
@@ -14,7 +14,8 @@ public import VCVio.OracleComp.SimSemantics.StateT.Basic
 Signing and representation callbacks receive the signed message as well as the combined base.
 This supports several secret-key coefficients acting on the same cached base, while preserving
 one chronological received input per signing request. The private base oracle and finite-table
-transport are shared with ordinary weighted extraction.
+transport are shared with ordinary weighted extraction. The computational definitions are
+reducible so that the message-independent wrappers preserve their unfolding behavior.
 -/
 
 public section
@@ -23,9 +24,12 @@ open OracleComp OracleSpec
 
 namespace GroupModel.LinearFunctional
 
+/-- Uniform randomness, base hashing, and signing of possibly different message labels. -/
+abbrev weightedInterfaceSpec (I M G : Type) := (unifSpec + (I →ₒ G)) + (M →ₒ G)
+
 /-- Answer public queries through one private base oracle and record each received point's
 representation. Weighted signing queries add one input, regardless of their number of bases. -/
-@[expose] def indexedWeightedOracle {F I M R G V : Type} [AddMonoid R] [SMul F R]
+@[expose, reducible] def indexedWeightedOracle {F I M R G V : Type} [AddMonoid R] [SMul F R]
     (terms : M → List (I × F)) (hash : R → G) (sign : M → R → G)
     (hashRep : R → V) (signRep : M → R → V) :
     QueryImpl (weightedInterfaceSpec I M G)
@@ -40,8 +44,8 @@ representation. Weighted signing queries add one input, regardless of their numb
 
 /-- Run the public interaction and query the final weighted target using the same private
 oracle. The final target is excluded from the adversary's received-input basis. -/
-@[expose] def indexedWeightedExtractionProgram {F I M R G V α : Type} [AddMonoid R] [SMul F R]
-    (terms : M → List (I × F)) (target : α → M)
+@[expose, reducible] def indexedWeightedExtractionProgram {F I M R G V α : Type}
+    [AddMonoid R] [SMul F R] (terms : M → List (I × F)) (target : α → M)
     (hash : R → G) (sign : M → R → G)
     (hashRep : R → V) (signRep : M → R → V) (initial : List V)
     (oa : OracleComp (weightedInterfaceSpec I M G) α) :
@@ -52,7 +56,7 @@ oracle. The final target is excluded from the adversary's received-input basis. 
   return (out, basis, targetValue)
 
 /-- The fixed-table counterpart of weighted execution, retaining the same representation basis. -/
-@[expose] def indexedWeightedTableOracle {F I M R G V : Type} [AddMonoid R] [SMul F R]
+@[expose, reducible] def indexedWeightedTableOracle {F I M R G V : Type} [AddMonoid R] [SMul F R]
     (terms : M → List (I × F)) (table : I → R)
     (hash : R → G) (sign : M → R → G)
     (hashRep : R → V) (signRep : M → R → V) :
