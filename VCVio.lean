@@ -109,6 +109,8 @@ public import VCVio.CryptoFoundations.GroupModel.Tracking
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation.Algebra
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation.RandomOracle
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.Covering
@@ -578,6 +580,7 @@ public import VCVio.Schemes.Schnorr.ChallengeRestriction
 public import VCVio.Schemes.Schnorr.SigmaProtocol
 public import VCVio.Schemes.Schnorr.Signature
 public import VCVio.Schemes.Schnorr.Transforms
+public import VCVio.Schemes.VectorPedersen
 public import VCVio.StateSeparating.Advantage.Measure
 public import VCVio.StateSeparating.CellRef
 public import VCVio.StateSeparating.DistEquiv
