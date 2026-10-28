@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import Mathlib.Algebra.Module.Basic
+public import VCVio.CryptoFoundations.HardnessAssumptions.PairingDLog
 
 /-! # The (1,1)-discrete logarithm problem
 
@@ -32,5 +33,27 @@ when the solver recovers it. -/
   let α ← $ᵗ F
   let guess ← A g₁ (α • g₁) g₂ (α • g₂)
   return decide (guess = α)
+
+/-- Present the two source generators and challenges as the degree-zero and degree-one
+powers of a powers discrete-logarithm solver. -/
+@[expose] def Adversary.ofPairing {F G₁ G₂ : Type}
+    (A : PairingDLog.Adversary F G₁ G₂ 1 1) : Adversary F G₁ G₂ :=
+  fun g₁ x₁ g₂ x₂ => A ![g₁, x₁] ![g₂, x₂]
+
+/-- The two presentations of the common-exponent experiment agree exactly at `(1,1)`. -/
+theorem experiment_ofPairing {F G₁ G₂ : Type} [Field F] [SampleableType F]
+    [DecidableEq F] [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
+    (g₁ : G₁) (g₂ : G₂) (A : PairingDLog.Adversary F G₁ G₂ 1 1) :
+    experiment g₁ g₂ (Adversary.ofPairing A) = PairingDLog.experiment g₁ g₂ A := by
+  unfold experiment PairingDLog.experiment Adversary.ofPairing
+  congr 1
+  funext a
+  have h₁ : ![g₁, a • g₁] = (fun i : Fin 2 => a ^ (i : ℕ) • g₁) := by
+    ext i
+    fin_cases i <;> simp
+  have h₂ : ![g₂, a • g₂] = (fun i : Fin 2 => a ^ (i : ℕ) • g₂) := by
+    ext i
+    fin_cases i <;> simp
+  rw [h₁, h₂]
 
 end DLog11

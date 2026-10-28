@@ -47,9 +47,11 @@ public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.Foundations
 public import VCVioTest.GrindFailFast
 public import VCVioTest.GroupModel.Basic
+public import VCVioTest.GroupModel.Certificate
 public import VCVioTest.GroupModel.Collision
 public import VCVioTest.GroupModel.Cost
 public import VCVioTest.GroupModel.Decisional
+public import VCVioTest.GroupModel.Game
 public import VCVioTest.GroupModel.GenericCoCDH
 public import VCVioTest.GroupModel.GenericDDH
 public import VCVioTest.GroupModel.GenericHardness
@@ -60,7 +62,10 @@ public import VCVioTest.GroupModel.Interaction.Axioms
 public import VCVioTest.GroupModel.Interaction.Basic
 public import VCVioTest.GroupModel.Interaction.MultiGroup
 public import VCVioTest.GroupModel.MasterBound
+public import VCVioTest.GroupModel.OfExplained
 public import VCVioTest.GroupModel.SortedMasterBound
+public import VCVioTest.GroupModel.ToExplained
+public import VCVioTest.GroupModel.Virtualize
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
@@ -173,6 +178,7 @@ public import VCVioTest.SaltedMerkle
 public import VCVioTest.SampleableType
 public import VCVioTest.Schemes.BLS
 public import VCVioTest.Schemes.BLSAGM
+public import VCVioTest.Schemes.BLSGeneric
 public import VCVioTest.Schemes.KEMDEM
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms
@@ -192,3 +198,4 @@ public import VCVioTest.UniformOn
 public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability
 public import VCVioTest.VCGenAmbiguity
+public import VCVioTest.WeightedQueryBound
