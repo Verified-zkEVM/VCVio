@@ -102,21 +102,13 @@ private theorem restrict_table {M R α : Type} (S : Finset M)
     simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (fun m : S => table m)))
       (restrictRandomOracleQueries S oa (queriesCovered_elim h)) =
       simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn table)) oa := by
-  induction oa using OracleComp.inductionOn with
-  | pure a => simp only [restrictRandomOracleQueries_pure, simulateQ_pure]
-  | query_bind q next ih =>
-      cases q with
-      | inl n =>
-          rw [restrictRandomOracleQueries_uniformQuery_bind]
-          simp only [simulateQ_bind, simulateQ_spec_query]
-          change ((unifSpec.query n : ProbComp _) >>= _) = ((unifSpec.query n : ProbComp _) >>= _)
-          exact bind_congr fun r => ih r (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 r)
-      | inr m =>
-          rw [restrictRandomOracleQueries_hashQuery_bind]
-          simp only [simulateQ_bind, simulateQ_spec_query]
-          change (pure (table m) >>= _) = (pure (table m) >>= _)
-          simpa only [pure_bind] using
-            ih (table m) (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 (table m))
+  classical
+  have he := congrArg (fun p => (fun z => z.1.1) <$> p)
+    (fixedTableLoggedRun_restrictCache S table oa (queriesCovered_elim h) ∅)
+  have project {D : Type} [DecidableEq D] (program : OracleComp (unifSpec + (D →ₒ R)) α)
+      (g : D → R) := fixedTableLoggedRun_completeTable_project program ∅ g
+  simp only [completeTable_empty] at project
+  simpa only [Functor.map_map, extendLoggedResult, restrictCache_empty, project] using he
 
 /-- Extend a proof table by a fixed fallback outside its finite domain. -/
 @[expose] def extendTable {M R : Type} [DecidableEq M] (S : Finset M) (fallback : R)

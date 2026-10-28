@@ -8,6 +8,7 @@ module
 public import VCVio.CryptoFoundations.GroupModel.Interaction
 public import Mathlib.Algebra.Module.LinearMap.Defs
 public import Mathlib.Algebra.Module.BigOperators
+import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
 -- Enumeration entry points inspected by the per-module initialization sweep.
 import Mathlib.Data.FinEnum
@@ -34,17 +35,14 @@ theorem Adversary.run_fst {Tag F Input Query Result : Type} {G : Tag → Type}
     (A : Adversary F G Input Query Reply Result)
     (impl : QueryImpl (plainSpec G Query Reply) N) (input : Message Input G) :
     Prod.fst <$> A.run impl input = simulateQ (fun q => impl q.value) (A.main input) := by
-  unfold Adversary.run
-  generalize A.main input = program
-  generalize input.groups = basis
-  induction program using OracleComp.inductionOn generalizing basis with
-  | pure out => simp
-  | query_bind q next ih =>
-      simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, StateT.run_mk,
-        map_bind, bind_assoc, pure_bind]
-      apply bind_congr
-      intro reply
-      exact ih reply (extend basis reply.groups)
+  have h := run'_simulateQ_eq_of_query_map_eq
+    (fun q => StateT.mk fun basis => do
+      let reply ← impl q.value
+      pure (reply, extend basis reply.groups))
+    (QueryImpl.liftTarget (StateT Unit N)
+      (fun q => impl q.value : QueryImpl (explainedSpec F G Query Reply) N))
+    (fun _ => ()) (fun q basis => by simp [QueryImpl.liftTarget]) (A.main input) input.groups
+  simpa [Adversary.run, StateT.run'_eq] using h
 
 /-- Applying a linear map to a represented point is the same as mapping its received inputs.
 Coefficient vectors retain their chronological positions. -/

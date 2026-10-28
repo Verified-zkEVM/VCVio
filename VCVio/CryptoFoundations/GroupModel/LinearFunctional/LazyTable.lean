@@ -6,7 +6,9 @@ Authors: Kobi Gurkan, Quang Dao
 
 module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DependentTable
+public import VCVio.OracleComp.QueryTracking.RandomOracle.LoggedRun
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedFreshQuery
 
 /-! # Deferred tables for adaptive algebraic reductions
 
@@ -21,6 +23,41 @@ open OracleComp OracleSpec
 
 namespace GroupModel.LinearFunctional
 
+/-- Forgetting the cache and log of a completed fixed-table execution gives direct table
+interpretation. The completion preserves all answers already present in the initial cache. -/
+theorem fixedTableLoggedRun_completeTable_project {D α : Type} {R : D → Type}
+    [DecidableEq D] (oa : OracleComp (unifSpec + ofFn R) α)
+    (c : (ofFn R).QueryCache) (g : ∀ d, R d) :
+    (fun z => z.1.1) <$> fixedTableLoggedRun oa (completeTable c g) c =
+      simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c g))) oa := by
+  induction oa using OracleComp.inductionOn generalizing c with
+  | pure a => simp [fixedTableLoggedRun]
+  | query_bind q next ih =>
+      rw [fixedTableLoggedRun_bind, simulateQ_bind, simulateQ_spec_query]
+      cases q with
+      | inl n =>
+          rw [fixedTableLoggedRun_uniformQuery]
+          simpa [unifFwdAnswerImpl] using
+            bind_congr (x := (unifSpec.query n : ProbComp _)) (fun r => ih r c)
+      | inr d =>
+          rw [fixedTableLoggedRun_hashQuery]
+          cases hc : c d with
+          | none =>
+              rw [QueryImpl.withCaching_run_none _ hc]
+              simp only [add_apply_inr, PFunctor.Handler.liftTarget_apply,
+                ofPFunctor_toPFunctor, QueryImpl.ofFn_apply, Functor.map_map, bind_map_left,
+                List.cons_append, List.nil_append, map_bind]
+              have hi := ih (completeTable c g d) (c.cacheQuery d (completeTable c g d))
+              rw [completeTable_cacheQuery_value] at hi
+              exact hi
+          | some r =>
+              rw [QueryImpl.withCaching_run_some _ hc]
+              simp only [map_pure, pure_bind, Functor.map_map]
+              change _ = ((pure (completeTable c g d) : ProbComp _) >>= _)
+              have hval : completeTable c g d = r := by simp [completeTable, hc]
+              rw [hval, pure_bind]
+              exact ih r c
+
 /-- An entire lazy execution, including adaptive extraction lookups, has the law obtained by
 sampling a full table first. The initial cache overrides the sampled table. -/
 theorem simulateQ_romImpl_evalDistEq_table {D R α : Type} [DecidableEq D] [Finite D]
@@ -30,70 +67,10 @@ theorem simulateQ_romImpl_evalDistEq_table {D R α : Type} [DecidableEq D] [Fini
       (do
         let table ← $ᵗ (D → R)
         simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c table))) oa) := by
-  induction oa using OracleComp.inductionOn generalizing c with
-  | pure a =>
-      simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]
-      exact (OracleComp.EvalDistEq.bind_const ($ᵗ (D → R)) (pure a)).symm
-  | query_bind q next ih =>
-      cases q with
-      | inl n =>
-          have hl : (simulateQ (D →ₒ R).romImpl
-              (liftM ((unifSpec + (D →ₒ R)).query (.inl n)) >>= next)).run' c =
-              (unifSpec.query n : ProbComp _) >>= fun r =>
-                (simulateQ (D →ₒ R).romImpl (next r)).run' c := by
-            simp [romImpl, unifFwdImpl]
-          rw [hl]
-          simp only [simulateQ_bind, simulateQ_spec_query, unifFwdAnswerImpl]
-          exact (_root_.EvalDistEq.bind_right _ fun r => ih r c).trans
-            (OracleComp.EvalDistEq.bind_bind_swap _ _ _)
-      | inr d =>
-          have hl : (simulateQ (D →ₒ R).romImpl
-              (liftM ((unifSpec + (D →ₒ R)).query (.inr d)) >>= next)).run' c =
-              ((D →ₒ R).randomOracle d).run c >>= fun z =>
-                (simulateQ (D →ₒ R).romImpl (next z.1)).run' z.2 := by
-            simp only [simulateQ_bind, simulateQ_spec_query, StateT.run'_eq,
-              StateT.run_bind, map_bind, romImpl_apply_inr]
-            rfl
-          rw [hl]
-          have hr : (do
-              let table ← $ᵗ (D → R)
-              simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c table)))
-                (liftM ((unifSpec + (D →ₒ R)).query (.inr d)) >>= next)) =
-              (do
-                  let table ← $ᵗ (D → R)
-                  simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c table)))
-                    (next (completeTable c table d))) := by
-            apply bind_congr
-            intro table
-            rw [simulateQ_bind, simulateQ_spec_query]
-            change (pure (completeTable c table d) >>= _) = _
-            rw [pure_bind]
-          rw [hr]
-          cases hc : c d with
-          | none =>
-              rw [QueryImpl.withCaching_run_none _ hc, bind_map_left]
-              trans ($ᵗ R >>= fun r => $ᵗ (D → R) >>= fun table =>
-                simulateQ (unifFwdAnswerImpl
-                  (QueryImpl.ofFn (completeTable (c.cacheQuery d r) table))) (next r))
-              · exact _root_.EvalDistEq.bind_right _ fun r => ih r (c.cacheQuery d r)
-              · let ψ := fun table =>
-                  simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c table)))
-                    (next (completeTable c table d))
-                have h (r : R) (table : D → R) :
-                    simulateQ (unifFwdAnswerImpl
-                  (QueryImpl.ofFn (completeTable (c.cacheQuery d r) table))) (next r) =
-                      ψ (Function.update table d r) := by
-                  dsimp [ψ]
-                  rw [completeTable_cacheQuery, ← completeTable_update_of_none c table hc r]
-                  simp
-                simp_rw [h]
-                let : MeasurableSpace R := ⊤
-                let : MeasurableSpace α := ⊤
-                exact EvalDistEq.of_evalDist_eq
-                  (evalDist_bind_bind_update_dependent d ($ᵗ R) ($ᵗ (D → R))
-                    SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample ψ)
-          | some r =>
-              rw [QueryImpl.withCaching_run_some _ hc, pure_bind]
-              simpa only [completeTable, hc, Option.getD_some] using ih r c
+  let : MeasurableSpace ((α × QueryLog (D →ₒ R)) × (D →ₒ R).QueryCache) := ⊤
+  have h := (EvalDistEq.of_evalDist_eq
+    (evalDist_randomOracleLoggedRun_eq_fixedTable_finite oa c)).map (fun z => z.1.1)
+  simp only [StateT.run'_eq, ← randomOracleLoggedRun_project, Functor.map_map]
+  simpa only [map_bind, fixedTableLoggedRun_completeTable_project] using h
 
 end GroupModel.LinearFunctional
