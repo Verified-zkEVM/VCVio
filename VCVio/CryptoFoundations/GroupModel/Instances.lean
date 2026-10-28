@@ -228,7 +228,11 @@ theorem runGen_tracking_map_snd {F S : Type} [CommSemiring F] [DecidableEq S]
     (oa : OracleComp (genSpec F (discreteSig S)) α) (tbl : Tbl (fun s => Repr F × G s)) :
     Prod.map id (mapTbl fun _ => Prod.snd) <$> runGen (tracking M) (fun _ => Prod.snd) oa tbl =
       runGen M (fun _ => id) oa (mapTbl (fun _ => Prod.snd) tbl) := by
-  simpa [Model.Hom.snd, tracking, tracking.pairing] using
+  have hsnd : (fun s => ⇑((Model.Hom.snd (free.discrete F S) M).toFun s)) =
+      (fun _ => Prod.snd) := by
+    funext s x
+    exact Model.Hom.snd_apply _ _ _ _
+  simpa only [hsnd, Function.comp_def, id_eq, tracking] using
     runGen_map (Model.Hom.snd (free.discrete F S) M) (fun _ => id) oa tbl
 
 /-- Forgetting representations commutes with a generic pairing run. -/
@@ -242,7 +246,11 @@ theorem runGen_tracking_map_snd.pairing {F G₁ G₂ Gₜ : Type} [CommSemiring 
     Prod.map id (mapTbl fun _ => Prod.snd) <$>
         runGen (tracking.pairing e) (fun _ => Prod.snd) oa tbl =
       runGen (pairingReal e) (fun _ => id) oa (mapTbl (fun _ => Prod.snd) tbl) := by
-  simpa [Model.Hom.snd, tracking, tracking.pairing] using
+  have hsnd : (fun s => ⇑((Model.Hom.snd (free.pairing F) (pairingReal e)).toFun s)) =
+      (fun _ => Prod.snd) := by
+    funext s x
+    exact Model.Hom.snd_apply _ _ _ _
+  simpa only [hsnd, Function.comp_def, id_eq, tracking.pairing] using
     runGen_map (Model.Hom.snd (free.pairing F) (pairingReal e)) (fun _ => id) oa tbl
 
 end GroupModel

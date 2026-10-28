@@ -7,10 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.GroupModel.Tracking
 public import Mathlib.Data.ZMod.Basic
-public meta import VCVio.CryptoFoundations.GroupModel.Tracking
-public meta import VCVio.CryptoFoundations.GroupModel.Oracle
-public meta import VCVio.CryptoFoundations.GroupModel.Instances
-public meta import Mathlib.Data.ZMod.Defs
+import all VCVio.CryptoFoundations.GroupModel.Instances
 
 /-!
 # Executable checks of group-model representations
@@ -50,13 +47,14 @@ private def tracked := firstAnswers
 private def realRun := firstAnswers
   (runGen (Model.discrete (F := F) (fun _ : Unit => F)) (fun _ => id) program inputs)
 
-#guard tracked.1 == (4, true)
-#guard realRun.1 == tracked.1
-#guard (mapTbl (fun _ => Prod.snd) tracked.2) () == realRun.2 ()
-#guard (lookup tracked.2 () 4).2 == 1
-#guard ((List.range 2).map (lookup tracked.2 () 4).1) == [3, 3]
-#guard (lookup tracked.2 () 4).1 99 == 0
-#guard (lookup tracked.2 () 4).1.eval (tracked.2 ()) == (lookup tracked.2 () 4).2
+example : tracked.1 = (4, true) := by decide
+example : realRun.1 = tracked.1 := by decide
+example : (mapTbl (fun _ => Prod.snd) tracked.2) () = realRun.2 () := by decide
+example : (lookup tracked.2 () 4).2 = 1 := by decide
+example : ((List.range 2).map (lookup tracked.2 () 4).1) = [3, 3] := by decide
+example : (lookup tracked.2 () 4).1 99 = 0 := by decide
+example : (lookup tracked.2 () 4).1.eval (tracked.2 ()) = (lookup tracked.2 () 4).2 := by
+  decide
 
 -- Ordinary imports expose the universal run-level invariant and extraction interface.
 /-- The tracked output exposes coefficients through an ordinary public import. -/
@@ -71,10 +69,10 @@ theorem program_explained (z : (Handle × Bool) × Tbl (fun _ : Unit => GroupMod
 
 private def receipt := (pushGiven (F := F) () (2 : F) : StateT _ Id Handle).run tracked.2
 
-#guard receipt.1 == 5
-#guard (lookup receipt.2 () 5).1 5 == 1
-#guard (lookup receipt.2 () 5).1 0 == 0
-#guard (lookup receipt.2 () 5).2 == 2
+example : receipt.1 = 5 := by decide
+example : (lookup receipt.2 () 5).1 5 = 1 := by decide
+example : (lookup receipt.2 () 5).1 0 = 0 := by decide
+example : (lookup receipt.2 () 5).2 = 2 := by decide
 
 private instance : ∀ s, DecidableEq (PFam F F F s)
   | .g₁ => inferInstanceAs (DecidableEq F)
@@ -100,11 +98,50 @@ private def pairingRealRun := firstAnswers
   (runGen (pairingReal pairing) (fun _ => id) pairingProgram
     (mapTbl (fun _ => Prod.snd) pairingInputs))
 
-#guard pairingTracked.1 == 1
-#guard (lookup pairingTracked.2 .gₜ 1).2 == (5 : F)
-#guard (lookup pairingTracked.2 .gₜ 1).1.1 0 == 0
-#guard (lookup pairingTracked.2 .gₜ 1).1.2 0 0 == 2
-#guard (mapTbl (fun _ => Prod.snd) pairingTracked.2) .gₜ == pairingRealRun.2 .gₜ
-#guard evReprT pairing [2] [3] [] (lookup pairingTracked.2 .gₜ 1).1 == 5
+private def pairingExecutable : Model F pairingSig
+    (fun s => PFam (GroupModel.Repr F) (GroupModel.Repr F) (ReprT F) s × PFam F F F s) where
+  lin o := o.elim
+  bil _ := (show (GroupModel.Repr F × F) →ₗ[F] (GroupModel.Repr F × F) →ₗ[F]
+      (ReprT F × F) from
+    LinearMap.mk₂ F (fun x y => (outer F x.1 y.1, pairing x.2 y.2))
+      (by intros; simp)
+      (by intros; simp [pairing, mul_assoc])
+      (by intros; simp)
+      (by intros; simp [pairing, mul_left_comm]))
+
+private theorem pairing_model_eq : tracking.pairing pairing = pairingExecutable := by
+  have hl : (tracking.pairing pairing).lin = pairingExecutable.lin := by
+    funext o
+    exact o.elim
+  have hb : (tracking.pairing pairing).bil = pairingExecutable.bil := by
+    funext o
+    apply LinearMap.ext
+    intro x
+    apply LinearMap.ext
+    intro y
+    exact Model.prod_bil_apply (free.pairing F) (pairingReal pairing) o x y
+  exact congrArg₂ Model.mk hl hb
+
+example : pairingTracked.1 = 1 := by decide
+example : (lookup pairingTracked.2 .gₜ 1).2 = (5 : F) := by
+  unfold pairingTracked
+  rw [pairing_model_eq]
+  exact @of_decide_eq_true _ (ZMod.decidableEq 7 _ _) rfl
+example : (lookup pairingTracked.2 .gₜ 1).1.1 0 = 0 := by
+  unfold pairingTracked
+  rw [pairing_model_eq]
+  decide
+example : (lookup pairingTracked.2 .gₜ 1).1.2 0 0 = 2 := by
+  unfold pairingTracked
+  rw [pairing_model_eq]
+  decide
+example : (mapTbl (fun _ => Prod.snd) pairingTracked.2) .gₜ = pairingRealRun.2 .gₜ := by
+  unfold pairingTracked
+  rw [pairing_model_eq]
+  decide
+example : evReprT pairing [2] [3] [] (lookup pairingTracked.2 .gₜ 1).1 = 5 := by
+  unfold pairingTracked
+  rw [pairing_model_eq]
+  decide
 
 end GroupModelTest
