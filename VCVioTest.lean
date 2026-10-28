@@ -56,6 +56,7 @@ public import VCVioTest.GroupModel.GenericPairing
 public import VCVioTest.GroupModel.GenericRelation
 public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.MasterBound
+public import VCVioTest.GroupModel.PairingVariants
 public import VCVioTest.GroupModel.SortedMasterBound
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
