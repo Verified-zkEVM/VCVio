@@ -49,7 +49,9 @@ into the negated generator coefficient, returning zero when that denominator van
   let a ← A (fun i => x i • g + y i • Z)
   return if ∑ i, a i * y i ≠ 0 then -(∑ i, a i * x i) / (∑ i, a i * y i) else 0
 
-private theorem linear_zero_le [Field F] [Fintype F] [SampleableType F]
+/-- A nonzero coefficient vector has vanishing scalar product with a uniformly sampled vector
+over a finite field with probability at most the reciprocal of the field cardinality. -/
+theorem prEvent_sum_mul_eq_zero_le [Field F] [Fintype F] [SampleableType F]
     (a : Fin n → F) (ha : a ≠ 0) :
     Pr{let y ← $ᵗ (Fin n → F)}[∑ i, a i * y i = 0] ≤
       (1 : ℝ≥0∞) / Fintype.card F := by
@@ -173,7 +175,7 @@ theorem experiment_le [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     · simp [win, ha]
     · refine (prEvent_mono ($ᵗ (Fin n → F) : ProbComp _)
         (fun y => win (z, t, y, a) ∧ ¬ success (z, t, y, a))
-        (fun y => ∑ i, a i * y i = 0) ?_).trans (linear_zero_le a ha)
+        (fun y => ∑ i, a i * y i = 0) ?_).trans (prEvent_sum_mul_eq_zero_le a ha)
       intro y h
       by_contra hy
       exact h.2 (by simpa only [success, ite_eq_left hy] using hextract z t y a h.1.2 hy)

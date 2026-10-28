@@ -45,18 +45,8 @@ private theorem relation_event_le [Field F] [Fintype F] [SampleableType F]
   classical
   by_cases ha : a = 0
   · simp [ha]
-  let p : MvPolynomial (Fin n) F := ∑ i, MvPolynomial.C (a i) * MvPolynomial.X i
-  have hn : p ≠ 0 := by
-    intro h
-    apply ha
-    funext i
-    have he := congrArg (MvPolynomial.eval (Pi.single i 1)) h
-    simpa [p, Pi.single_apply, mul_ite] using he
-  have hd : p.totalDegree ≤ 1 := by
-    apply MvPolynomial.totalDegree_finsetSum_le
-    intro i _
-    exact (MvPolynomial.totalDegree_mul _ _).trans (by simp)
-  simpa [p, ha] using prob_eval_zero_univ_le_div p hn hd
+  simpa only [ha, ne_eq, not_false_eq_true, true_and] using
+    _root_.DiscreteLogRelation.prEvent_sum_mul_eq_zero_le a ha
 
 /-- A generic relation adversary on `n` given elements with at most `q` group operations
 succeeds with probability at most `((q + n + 1).choose 2 + 1) / |F|`. Equality queries are free,
