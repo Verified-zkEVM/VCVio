@@ -70,7 +70,8 @@ theorem lookup_readBack [∀ s, Zero (V s)] {z : S → Handle}
   rw [← (hw s).2.2]
   exact List.getD_map (τ s) (z s) (lookup T s)
 
-private theorem readBack_prefix [∀ s, Zero (V s)] {z : S → Handle}
+/-- Extending the outer table preserves all currently visible virtual values. -/
+theorem readBack_prefix [∀ s, Zero (V s)] {z : S → Handle}
     {τ : Tbl (fun _ : S => Handle)} {T T' : Tbl V} (hw : WellFormed z τ T)
     (hp : ∀ s, T s <+: T' s) : readBack τ T' = readBack τ T := by
   funext s
@@ -109,7 +110,40 @@ private theorem readBack_append [DecidableEq S] [∀ s, Zero (V s)]
       congrArg (fun R : Tbl V => R s ++ [v]) hp
   · simpa [readBack, append, Function.update_of_ne ht] using congrFun hp t
 
-private theorem runGen_bind [DecidableEq S] [CommSemiring F]
+/-- Install an existing outer handle after a table extension, preserving virtual validity. -/
+theorem wellFormed_receive [DecidableEq S] [∀ s, Zero (V s)]
+    {z : S → Handle} {τ : Tbl (fun _ : S => Handle)} {T T' : Tbl V}
+    (hw : WellFormed z τ T) (hp : ∀ s, T s <+: T' s)
+    (s : S) (h : Handle) (hh : h < (T' s).length) :
+    WellFormed z (append τ s h) T' := by
+  intro t
+  refine ⟨?_, lt_of_lt_of_le (hw t).2.1 (hp t).length_le, ?_⟩
+  · intro k hk
+    by_cases ht : t = s
+    · subst t
+      simp only [append, Function.update_self, List.mem_append, List.mem_singleton] at hk
+      rcases hk with hk | rfl
+      · exact lt_of_lt_of_le ((hw s).1 k hk) (hp s).length_le
+      · exact hh
+    · have hk' : k ∈ τ t := by simpa [append, Function.update_of_ne ht] using hk
+      exact lt_of_lt_of_le ((hw t).1 k hk') (hp t).length_le
+  · rw [lookup_eq_of_prefix t (hp t) _ (hw t).2.1, (hw t).2.2]
+
+/-- Receiving an outer handle appends its real value to the visible table. -/
+theorem readBack_receive [DecidableEq S] [∀ s, Zero (V s)]
+    {z : S → Handle} {τ : Tbl (fun _ : S => Handle)} {T T' : Tbl V}
+    (hw : WellFormed z τ T) (hp : ∀ s, T s <+: T' s) (s : S) (h : Handle) :
+    readBack (append τ s h) T' = append (readBack τ T) s (lookup T' s h) := by
+  have he := readBack_prefix hw hp
+  funext t
+  by_cases ht : t = s
+  · subst t
+    simpa [readBack, append, List.map_append] using
+      congrArg (fun R : Tbl V => R s ++ [lookup T' s h]) he
+  · simpa [readBack, append, Function.update_of_ne ht] using congrFun he t
+
+/-- Generic execution sequences computations through their evolving real table. -/
+theorem runGen_bind [DecidableEq S] [CommSemiring F]
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
     {U : S → Type} [∀ s, DecidableEq (U s)]
     (M : Model F σ V) (obs : (s : S) → V s → U s)
@@ -130,7 +164,17 @@ private theorem runGen_virtualize_bind [DecidableEq S] [CommSemiring F]
         runGen M obs ((virtualize z (k r.1.1)).run r.1.2) r.2) := by
   simp only [runGen, run, virtualize, simulateQ_bind, StateT.run_bind]
 
-private theorem virtualize_step_wellFormed [DecidableEq S] [CommSemiring F]
+/-- A virtualized group query is deterministic after real group interpretation. -/
+theorem exists_runGen_virtualize_group [DecidableEq S] [CommSemiring F]
+    [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
+    {U : S → Type} [∀ s, DecidableEq (U s)]
+    (M : Model F σ V) (obs : (s : S) → V s → U s) (z : S → Handle)
+    (q : Query F σ) (τ : Tbl (fun _ : S => Handle)) (T : Tbl V) :
+    ∃ r, runGen M obs ((virtualizeImpl z (.inl q)).run τ) T = pure r := by
+  cases q <;> exact ⟨_, rfl⟩
+
+/-- One virtualized query preserves valid translations and persistent zero handles. -/
+theorem virtualize_step_wellFormed [DecidableEq S] [CommSemiring F]
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
     {U : S → Type} [∀ s, DecidableEq (U s)]
     (M : Model F σ V) (obs : (s : S) → V s → U s)
@@ -156,7 +200,8 @@ private theorem virtualize_step_wellFormed [DecidableEq S] [CommSemiring F]
     subst r
     exact hw
 
-private theorem virtualize_step_readBack [DecidableEq S] [CommSemiring F]
+/-- Reading back one virtualized query agrees with the corresponding direct real query. -/
+theorem virtualize_step_readBack [DecidableEq S] [CommSemiring F]
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
     {U : S → Type} [∀ s, DecidableEq (U s)]
     (M : Model F σ V) (obs : (s : S) → V s → U s)

@@ -8,8 +8,7 @@ module
 public import VCVio.CryptoFoundations.GroupModel.Tracking
 public import VCVio.CryptoFoundations.GroupModel.Coins
 
-/-!
-Certified explanations of handle computations
+/-! # Certified explanations of handle computations
 
 Tracking records coefficients over chronological receipts independently at each sort.
 Private randomness is forwarded through the coin-bearing interaction interface.
@@ -30,7 +29,7 @@ abbrev Tracked (F : Type) (G : S → Type) :=
   (S → List Handle) × Tbl (fun s => Repr F × G s)
 
 /-- Read the chronological basis from a tracking state. -/
-private def basis [Zero F] [∀ s, Zero (G s)] (st : Tracked F G) : Groups G :=
+@[expose] def basis [Zero F] [∀ s, Zero (G s)] (st : Tracked F G) : Groups G :=
   fun s => (st.1 s).map fun h => (lookup st.2 s h).2
 
 /-- Explain a message by restricting each representation to received handles. -/
@@ -50,7 +49,8 @@ private theorem evaluate_maps [CommSemiring F] {V : Type} [AddCommMonoid V] [Mod
     have hi' : i < hs.length := by simpa using hj
     simp [hi']
 
-private theorem explain_valid [CommSemiring F]
+/-- An explained message reconstructs from the chronological received basis. -/
+theorem explain_valid [CommSemiring F]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)]
     {st : Tracked F G} (ht : Explains st.1 st.2) {Data : Type}
     (msg : Message Data (fun _ : S => Handle)) : (explain st msg).Valid (basis st) := by
@@ -83,7 +83,8 @@ private theorem receiveAt_inv [CommSemiring F] [DecidableEq S]
     (st : Tracked F G) (xs : Groups G) : Tracked F G :=
   (fun s => (receiveAt s (xs s) st).1 s, fun s => (receiveAt s (xs s) st).2 s)
 
-private theorem receive_inv [CommSemiring F] [DecidableEq S]
+/-- Installing replies preserves the representation invariant. -/
+theorem receive_inv [CommSemiring F] [DecidableEq S]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)]
     (st : Tracked F G) (xs : Groups G) (ht : Explains st.1 st.2) :
     Explains (receive st xs).1 (receive st xs).2 := by
@@ -119,7 +120,8 @@ private theorem receive_tables [Zero F] [One F] [DecidableEq S]
   funext s
   exact (receiveAt_tables s (xs s) st).1
 
-private theorem receive_projection [Zero F] [One F] [DecidableEq S]
+/-- Forgetting received representations installs the same real group replies. -/
+theorem receive_projection [Zero F] [One F] [DecidableEq S]
     (st : Tracked F G) (xs : Groups G) :
     mapTbl (fun _ => Prod.snd) (receive st xs).2 =
       (pushGroups xs (mapTbl (fun _ => Prod.snd) st.2)).2 := by
@@ -133,7 +135,8 @@ private theorem receive_projection [Zero F] [One F] [DecidableEq S]
   · intro i hi hj
     simp
 
-private theorem receive_basis [CommSemiring F] [DecidableEq S]
+/-- Installing replies appends them to the chronological received basis. -/
+theorem receive_basis [CommSemiring F] [DecidableEq S]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)]
     (st : Tracked F G) (xs : Groups G) (ht : Explains st.1 st.2) :
     basis (receive st xs) = extend (basis st) xs := by
@@ -174,7 +177,8 @@ abbrev HandleSpec (F S : Type) (E : S → Type) (Query : Type)
   | .lin o _ => o.elim
   | .bil o _ _ => o.elim
 
-private theorem groupStep_inv [CommSemiring F] [DecidableEq S]
+/-- A discrete group step preserves the representation invariant. -/
+theorem groupStep_inv [CommSemiring F] [DecidableEq S]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)] [∀ s, DecidableEq (G s)]
     (q : GroupModel.Query F (discreteSig S)) (st : Tracked F G)
     (ht : Explains st.1 st.2) : Explains st.1 (groupStep q st.2).2 := by
@@ -202,7 +206,8 @@ private theorem basis_append [CommSemiring F] [DecidableEq S]
   intro h hh
   exact congrArg Prod.snd (lookup_append_old st.2 s e t h (ht.given_lt t h hh))
 
-private theorem groupStep_basis [CommSemiring F] [DecidableEq S]
+/-- A discrete group step leaves the chronological received basis unchanged. -/
+theorem groupStep_basis [CommSemiring F] [DecidableEq S]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)] [∀ s, DecidableEq (G s)]
     (q : GroupModel.Query F (discreteSig S)) (st : Tracked F G)
     (ht : Explains st.1 st.2) : basis (st.1, (groupStep q st.2).2) = basis st := by
@@ -272,7 +277,8 @@ theorem explainProgram_isAlgebraic [CommSemiring F] [DecidableEq S]
         rw [← receive_basis st reply.groups ht]
         exact ih _ _ (receive_inv st reply.groups ht)
 
-private theorem basis_initial [Zero F] [One F] [∀ s, Zero (G s)] (xs : Groups G) :
+/-- The initial chronological basis is exactly the supplied input lists. -/
+theorem basis_initial [Zero F] [One F] [∀ s, Zero (G s)] (xs : Groups G) :
     basis (fun s => List.range (xs s).length, trackInputs (F := F) xs) = xs := by
   funext s
   apply List.ext_getElem
@@ -301,13 +307,15 @@ private theorem basis_initial [Zero F] [One F] [∀ s, Zero (G s)] (xs : Groups 
 
 /-! ## Exact execution -/
 
-private theorem lookup_snd [CommSemiring F]
+/-- Looking up a projected table reads the real component of the tracked entry. -/
+theorem lookup_snd [CommSemiring F]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)]
     (tbl : Tbl (fun s => Repr F × G s)) (s : S) (h : Handle) :
     lookup (mapTbl (fun _ => Prod.snd) tbl) s h = (lookup tbl s h).2 :=
   lookup_mapTbl (fun s => LinearMap.snd F (Repr F) (G s)) tbl s h
 
-private theorem explain_value [CommSemiring F]
+/-- Forgetting a message explanation resolves its handles in the projected table. -/
+theorem explain_value [CommSemiring F]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)]
     (st : Tracked F G) {Data : Type} (msg : Message Data (fun _ : S => Handle)) :
     (explain st msg).value = lookupMessage (mapTbl (fun _ => Prod.snd) st.2) msg := by
@@ -316,7 +324,8 @@ private theorem explain_value [CommSemiring F]
   funext s
   exact List.map_congr_left (fun h _ => (lookup_snd st.2 s h).symm)
 
-private theorem initial_projection [Zero F] [One F] (xs : Groups G) :
+/-- Forgetting the initial representations recovers the input tables. -/
+theorem initial_projection [Zero F] [One F] (xs : Groups G) :
     mapTbl (fun _ => Prod.snd) (trackInputs (F := F) xs) = xs := by
   funext s
   apply List.ext_getElem
@@ -324,10 +333,12 @@ private theorem initial_projection [Zero F] [One F] (xs : Groups G) :
   · intro i hi hj
     simp [mapTbl, trackInputs]
 
-private theorem receive_empty [Zero F] [One F] [DecidableEq S] (st : Tracked F G) :
+/-- Receiving empty lists at every sort leaves the tracking state unchanged. -/
+theorem receive_empty [Zero F] [One F] [DecidableEq S] (st : Tracked F G) :
     receive st (fun _ => []) = st := rfl
 
-private theorem run_value {N : Type → Type} [Monad N] [LawfulMonad N]
+/-- Forgetting explanations and the received basis commutes with the shared interaction run. -/
+theorem run_value {N : Type → Type} [Monad N] [LawfulMonad N]
     (game : QueryImpl (plainSpec G Query Reply) N)
     (p : OracleComp (explainedSpec F G Query Reply) (Explained F Result G))
     (b : Groups G) :
