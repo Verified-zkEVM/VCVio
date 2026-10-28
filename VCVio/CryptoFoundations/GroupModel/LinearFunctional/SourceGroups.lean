@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.GroupModel.Interaction
+public import Mathlib.Algebra.Module.Defs
 
 /-! # Separately tracked pairing source groups
 
@@ -29,6 +30,16 @@ instance {G₁ G₂ : Type} [AddMonoid G₁] [AddMonoid G₂] (s : Bool) :
 /-- Scalar multiplication is inherited separately at each source sort. -/
 instance {F G₁ G₂ : Type} [SMul F G₁] [SMul F G₂] (s : Bool) :
     SMul F (SourceGroup G₁ G₂ s) := by cases s <;> dsimp [SourceGroup] <;> infer_instance
+
+/-- Commutative addition is inherited separately at each source sort. -/
+instance {G₁ G₂ : Type} [AddCommMonoid G₁] [AddCommMonoid G₂] (s : Bool) :
+    AddCommMonoid (SourceGroup G₁ G₂ s) := by
+  cases s <;> dsimp [SourceGroup] <;> infer_instance
+
+/-- Linear interpretations use the module structure of the corresponding source group. -/
+instance {F G₁ G₂ : Type} [Semiring F] [AddCommMonoid G₁] [AddCommMonoid G₂]
+    [Module F G₁] [Module F G₂] (s : Bool) : Module F (SourceGroup G₁ G₂ s) := by
+  cases s <;> dsimp [SourceGroup] <;> infer_instance
 
 /-- A pair of chronological input lists, one for each source group. -/
 @[expose] def sourceInputs {G₁ G₂ : Type} (xs : List G₁) (ys : List G₂) :

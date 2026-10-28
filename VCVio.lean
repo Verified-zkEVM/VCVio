@@ -103,8 +103,11 @@ public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Masking
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Probability
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.SourceGroups
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.TraceExtraction
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedCover
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedExecution
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedQuery
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedTrace
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedTraceExtraction
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Weights
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.GroupModel.Oracle
@@ -597,7 +600,12 @@ public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.OOPS.AGM.Adversary
+public import VCVio.Schemes.OOPS.AGM.Execution
+public import VCVio.Schemes.OOPS.AGM.Functional
+public import VCVio.Schemes.OOPS.AGM.Game
 public import VCVio.Schemes.OOPS.AGM.Reductions
+public import VCVio.Schemes.OOPS.AGM.Security
+public import VCVio.Schemes.OOPS.AGM.Table
 public import VCVio.Schemes.OOPS.Admissibility
 public import VCVio.Schemes.OOPS.Basic
 public import VCVio.Schemes.OOPS.Weights
