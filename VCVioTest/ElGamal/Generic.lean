@@ -48,7 +48,7 @@ theorem advantage_zmod101 :
     change IsQueryBoundP (liftM ((genSpec (ZMod 101) groupSig).query (.inl (.eq () b 0)))) _ 0
     rw [isQueryBoundP_query_iff]
     simp [isGroupOp, Query.isOp]
-  have h := oneTimeAdvantage_toOneTime_le hg testAdversary 0 0 h₁ h₂
+  have h := oneTimeAdvantage_toOneTime_le hg testAdversary 0 0 h₁ (fun out _ => h₂ out.2.2)
   norm_num [Nat.choose, ZMod.card, ← mul_div_assoc] at h ⊢
   exact h
 

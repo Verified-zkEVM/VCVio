@@ -65,11 +65,12 @@ with virtual handles. Setup creates zero, and the challenge adds the selected me
       (append (append τ () 2) () c)
   pure (bit == guess)
 
-/-- The generic DDH solver adds exactly two group operations to the two phase budgets. -/
+/-- The generic DDH solver adds exactly two group operations to the two phase budgets.
+The second-phase budget is needed only for states reachable in the first phase. -/
 theorem isQueryBoundP_ddhOfGeneric [Zero F] (A : GenericOneTimeAdversary F) (q₁ q₂ : ℕ)
     (h₁ : IsQueryBoundP A.chooseMessages (fun i => isGroupOp i = true) q₁)
-    (h₂ : ∀ s a b, IsQueryBoundP (A.distinguish s a b)
-      (fun i => isGroupOp i = true) q₂) :
+    (h₂ : ∀ out ∈ support A.chooseMessages, ∀ a b,
+      IsQueryBoundP (A.distinguish out.2.2 a b) (fun i => isGroupOp i = true) q₂) :
     IsQueryBoundP (ddhOfGeneric A) (fun i => isGroupOp i = true) (q₁ + q₂ + 2) := by
   rw [ddhOfGeneric]
   erw [isQueryBoundP_query_bind_iff]
@@ -81,7 +82,12 @@ theorem isQueryBoundP_ddhOfGeneric [Zero F] (A : GenericOneTimeAdversary F) (q�
     have hn : q₁ + q₂ + 2 - 1 = q₁ + (q₂ + 1) := by omega
     rw [hn]
     apply isQueryBoundP_bind (isQueryBoundP_virtualize (fun _ => z) h₁ _)
-    rintro ⟨out, τ⟩ _
+    rintro ⟨out, τ⟩ hs
+    have hout : out ∈ support A.chooseMessages := by
+      apply support_simulateQ_run'_subset (virtualizeImpl (fun _ => z))
+        A.chooseMessages (fun _ => [0, 1])
+      rw [StateT.run'_eq, MonadAttach.support_map]
+      exact Set.mem_image_of_mem Prod.fst hs
     rw [bind_map_left]
     erw [isQueryBoundP_query_bind_iff]
     refine ⟨Or.inl (by simp [isGroupOp]), fun bit => ?_⟩
@@ -93,14 +99,15 @@ theorem isQueryBoundP_ddhOfGeneric [Zero F] (A : GenericOneTimeAdversary F) (q�
     refine ⟨Or.inr (by omega), fun c => ?_⟩
     change IsQueryBoundP (_ >>= _) (fun i => isGroupOp i = true) (q₂ + 1 - 1)
     simpa only [Nat.add_sub_cancel, bind_pure_comp, isQueryBoundP_map_iff] using
-      isQueryBoundP_virtualize (fun _ => z) (h₂ out.2.2 (τ ()).length ((τ ()).length + 1))
+      isQueryBoundP_virtualize (fun _ => z) (h₂ out hout (τ ()).length ((τ ()).length + 1))
         (append (append τ () 2) () c)
 
 section Interpretation
 
 variable [Field F] [AddCommGroup G] [Module F G] [DecidableEq G]
 
-private theorem runGen_bind {α β : Type} (A : OracleComp (genSpec F groupSig) α)
+/-- Interpreting a generic group computation preserves bind and threads the group table. -/
+theorem runGen_bind {α β : Type} (A : OracleComp (genSpec F groupSig) α)
     (k : α → OracleComp (genSpec F groupSig) β) (tbl : Tbl (fun _ : Unit => G)) :
     runGen (Model.group G) (fun _ => id) (A >>= k) tbl =
       (runGen (Model.group G) (fun _ => id) A tbl >>= fun r =>
@@ -244,13 +251,15 @@ theorem oneTimeDDHReduction_toOneTime_eq [Field F] [Fintype F] [DecidableEq F]
   rfl
 
 /-- A generic adversary with phase budgets `q₁` and `q₂` has unconditional advantage at most
-`2 * (3 * (q₁ + q₂ + 7).choose 2 / |F|)` in the unchanged one-time ElGamal game. -/
+`2 * (3 * (q₁ + q₂ + 7).choose 2 / |F|)` in the unchanged one-time ElGamal game.
+The second-phase budget is required only on the support of message selection. -/
 theorem oneTimeAdvantage_toOneTime_le [Field F] [Fintype F] [DecidableEq F]
     [SampleableType F] [AddCommGroup G] [Module F G] [SampleableType G] [DecidableEq G]
     {gen : G} (hg : Function.Bijective (· • gen : F → G))
     (A : GenericOneTimeAdversary F) (q₁ q₂ : ℕ)
     (h₁ : IsQueryBoundP A.chooseMessages (fun i => isGroupOp i = true) q₁)
-    (h₂ : ∀ s a b, IsQueryBoundP (A.distinguish s a b) (fun i => isGroupOp i = true) q₂) :
+    (h₂ : ∀ out ∈ support A.chooseMessages, ∀ a b,
+      IsQueryBoundP (A.distinguish out.2.2 a b) (fun i => isGroupOp i = true) q₂) :
     AsymmEncAlg.IND_CPA_OneTime_Advantage (elGamalAsymmEnc F G gen) ProbCompRuntime.probComp
         (A.toOneTime gen) ≤
       2 * ((3 * (q₁ + q₂ + 7).choose 2 : ℕ) / (Fintype.card F : ℝ≥0∞)) := by
