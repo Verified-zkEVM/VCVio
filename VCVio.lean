@@ -85,6 +85,7 @@ public import VCVio.CryptoFoundations.GroupModel.Collision
 public import VCVio.CryptoFoundations.GroupModel.Cost
 public import VCVio.CryptoFoundations.GroupModel.Decisional
 public import VCVio.CryptoFoundations.GroupModel.GenericCoCDH
+public import VCVio.CryptoFoundations.GroupModel.GenericCoCDHIso
 public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 public import VCVio.CryptoFoundations.GroupModel.GenericPairing
