@@ -104,7 +104,7 @@ theorem advantage_zmod101 :
       simpa only [smul_eq_mul, mul_one] using h
     · intro x
       exact ⟨x, by simp only [smul_eq_mul, mul_one]⟩
-  have h := IND_CPA_Advantage_toIND_CPA_le hg testAdversary 0 2 operation_bound query_bound
+  have h := IND_CPA_Advantage_toAdversary_le hg testAdversary 0 2 operation_bound query_bound
   norm_num [Nat.choose, ZMod.card, ← mul_div_assoc] at h ⊢
   exact h
 

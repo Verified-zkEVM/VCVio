@@ -1386,7 +1386,7 @@ Each hybrid step uses at most `qₒ + 3 * q` operations in each phase: simulated
 cost three operations. The two phases and seven setup entries give the collision-table size;
 the factor three is the generic DDH collision bound, and the factor two converts DDH distance
 to one-time IND-CPA advantage. -/
-theorem IND_CPA_Advantage_toIND_CPA_le [Field F] [Fintype F] [DecidableEq F]
+theorem IND_CPA_Advantage_toAdversary_le [Field F] [Fintype F] [DecidableEq F]
     [SampleableType F] [AddCommGroup G] [Module F G] [SampleableType G] [DecidableEq G]
     {gen : G} (hg : Function.Bijective (· • gen : F → G))
     (A : GenericAdversary F) (qₒ q : ℕ)
