@@ -39,6 +39,24 @@ private theorem tableEval_apply {F ι : Type} [CommSemiring F] [Fintype ι]
     (ρ v : ι → F) : tableEval ρ v = ∑ i, v i * ρ i := by
   simp [tableEval, mul_comm]
 
+/-- A finite table can be interpreted before or after chronological coefficient evaluation.
+The input functionals and their initial positions are arbitrary. -/
+theorem evaluate_weighted_table {F ι : Type} [CommSemiring F] [Fintype ι]
+    (coeff : List F) (inputs : List (ι → F)) (ρ : ι → F) :
+    evaluate coeff (inputs.map fun v => ∑ i, v i * ρ i) =
+      ∑ i, evaluate coeff inputs i * ρ i := by
+  have hf : (⇑(tableEval ρ)) = (fun v => ∑ i, v i * ρ i) :=
+    funext (tableEval_apply ρ)
+  simpa only [hf] using evaluate_map (tableEval ρ) coeff inputs
+
+/-- Finite weighted sums commute with evaluation over an arbitrary list of input labels. -/
+theorem evaluate_weighted_map {F ι X : Type} [CommSemiring F] [Fintype ι]
+    (coeff : List F) (inputs : List X) (w : X → ι → F) (ρ : ι → F) :
+    evaluate coeff (inputs.map fun x => ∑ i, w x i * ρ i) =
+      ∑ i, evaluate coeff (inputs.map fun x => w x i) * ρ i := by
+  simp only [evaluate_map_eq_sum, smul_eq_mul, Finset.mul_sum, Finset.sum_mul, mul_assoc]
+  exact Finset.sum_comm
+
 /-- Interpreting the signing functional by a scalar table gives the good reduction's linear
 coefficient, including the coefficient on the received public-key point. -/
 theorem traceFunctional_good {F M ι : Type} [CommSemiring F] [Fintype ι]

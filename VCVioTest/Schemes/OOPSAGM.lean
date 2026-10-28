@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.Schemes.OOPS.Admissibility
-public import VCVio.Schemes.OOPS.AGM.Reductions
+public import VCVio.Schemes.OOPS.AGM.Security
 import all VCVio.Schemes.OOPS.AGM.Reductions
 public import Mathlib.Algebra.Field.ZMod
 
@@ -21,6 +21,7 @@ enumeration of the field.
 public section
 
 open OracleComp OracleSpec GroupModel.Interaction GroupModel.LinearFunctional
+open scoped ENNReal
 
 namespace OOPSAGMTest
 
@@ -123,5 +124,25 @@ theorem good_reduction_run :
   refine ⟨71, ?_, ?_⟩
   · simp
   · exact (div_eq_iff (by decide : (71 : ZMod 101) ≠ 0)).2 (by decide)
+
+/-- The concrete admissible adversary instantiates the main EUF-CMA bound over `ZMod 101`
+with the existing random-oracle game and both named reductions. -/
+theorem generatorForgery_unforgeable_bound :
+    SignatureAlg.unforgeableAdvantage
+        (ProbCompRuntime.rom ((Bool × Fin 1) →ₒ ZMod 101))
+        generatorForgery.toUnforgeableAdversary ≤
+      Pr{let b ← DLog11.experiment 1 1 (OOPS.goodReduction generatorForgery)}[b = true] +
+      Pr{let b ← DLog11.experiment 1 1 (OOPS.badReduction generatorForgery)}[b = true] +
+      (1 / 101 : ℝ≥0∞) := by
+  have h := OOPS.unforgeableAdvantage_le_of_algebraic generatorForgery
+    generatorForgery_admissible
+    (by
+      constructor
+      · intro a b hab
+        simpa only [smul_eq_mul, mul_one] using hab
+      · intro a
+        exact ⟨a, by simp⟩)
+    (by simp)
+  simpa using h
 
 end OOPSAGMTest

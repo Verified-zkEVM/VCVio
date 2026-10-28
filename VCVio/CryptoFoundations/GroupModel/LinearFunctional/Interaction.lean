@@ -57,4 +57,36 @@ theorem evaluate_map {F V W : Type} [Semiring F]
   · intro i hi hj
     simp
 
+/-- Evaluation consumes one chronological coefficient for each received input. -/
+theorem evaluate_cons {F V : Type} [Zero F] [AddMonoid V] [SMul F V]
+    (coeff : List F) (v : V) (inputs : List V) :
+    evaluate coeff (v :: inputs) = coeff.headD 0 • v + evaluate coeff.tail inputs := by
+  cases coeff <;> simp [evaluate, List.mapIdx_cons]
+
+/-- Evaluation of mapped inputs as a finite sum over their original chronological indices. -/
+theorem evaluate_map_eq_sum {F V X : Type} [Semiring F] [AddCommMonoid V] [Module F V]
+    (coeff : List F) (inputs : List X) (f : X → V) :
+    evaluate coeff (inputs.map f) =
+      ∑ i : Fin inputs.length, (coeff[i.val]?).getD 0 • f (inputs.get i) := by
+  simp [evaluate, List.mapIdx_eq_ofFn, List.sum_ofFn]
+
+/-- A valid explanation evaluates its first coefficient vector to its first output point.
+Empty output lists use zero on both sides. -/
+theorem Explained.evaluate_headD {Tag F Result : Type} {G : Tag → Type}
+    [Semiring F] [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)]
+    (out : Explained F Result G) (inputs : Groups G) (h : out.Valid inputs) (s : Tag) :
+    evaluate ((out.coefficients s).headD []) (inputs s) =
+      (out.value.groups s).headD 0 := by
+  have hv := h s
+  cases hg : out.value.groups s with
+  | nil =>
+    have hc : out.coefficients s = [] := by simpa [hg] using hv
+    simp [hc, evaluate, List.mapIdx_eq_ofFn]
+  | cons σ rest =>
+    cases hc : out.coefficients s with
+    | nil => simp [hg, hc] at hv
+    | cons c cs =>
+      rw [hg, hc] at hv
+      simpa [hg, hc] using (List.forall₂_cons.mp hv).1.2
+
 end GroupModel.Interaction
