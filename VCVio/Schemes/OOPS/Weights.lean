@@ -3,6 +3,7 @@ Copyright (c) 2026 zkSecurity. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kobi Gurkan, Quang Dao
 -/
+
 module
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Weights
 public import VCVio.Schemes.OOPS.Basic

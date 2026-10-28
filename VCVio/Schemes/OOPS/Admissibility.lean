@@ -12,7 +12,7 @@ public import VCVio.Schemes.OOPS.Weights
 
 Only distinct signed scalar messages on the final forgery's topic count toward the degree.
 Repeated signatures and signatures on other topics do not consume this allowance. The
-adversary predicate constrains the signing transcript of the existing signature game under
+adversary predicate constrains successful fresh forgeries in the existing signature game under
 its random-oracle runtime; it introduces no separate EUF-CMA experiment.
 -/
 
@@ -52,17 +52,21 @@ theorem exists_gapCoeff_ne_zero_of_admissible {F T : Type}
   · intro q h
     exact hfresh (h ▸ List.get_mem signed q)
 
-/-- Degree admissibility on every possible random-oracle execution of the ordinary signing
-stage. The public key is generated from the same scalar used by the signing oracle. -/
+/-- The degree rule holds on supported successful fresh forgeries. The ordinary signing
+runner and verifier share one random-oracle cache, and the public key and signer use the same
+secret scalar. Losing outcomes impose no degree restriction. -/
 @[expose] def AlgebraicAdversary.Admissible {F T G₁ G₂ Gₜ : Type}
     [Field F] [SampleableType F] [DecidableEq F] [DecidableEq T]
     [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
     [AddCommGroup G₂] [Module F G₂] [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ]
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂} {degree : ℕ}
     (A : AlgebraicAdversary F T G₁ G₂ e g₁ g₂ degree) : Prop :=
-  ∀ x z, z ∈ support ((simulateQ ((T × Fin (degree + 1)) →ₒ G₁).romImpl
-    ((scheme e g₂ degree).runWithSigningOracle (x • g₂) x
-      (A.toUnforgeableAdversary.main (x • g₂)))).run' ∅) →
-    admissible degree z.1.1 (z.2.map fun q => q.1)
+  ∀ x z, z ∈ support ((simulateQ ((T × Fin (degree + 1)) →ₒ G₁).romImpl (do
+    let w ← (scheme e g₂ degree).runWithSigningOracle (x • g₂) x
+      (A.toUnforgeableAdversary.main (x • g₂))
+    let accepted ← (scheme e g₂ degree).verify (x • g₂) w.1.1 w.1.2
+    return (w, accepted))).run' ∅) →
+    z.1.1.1 ∉ z.1.2.map (fun q => q.1) → z.2 = true →
+      admissible degree z.1.1.1 (z.1.2.map fun q => q.1)
 
 end OOPS

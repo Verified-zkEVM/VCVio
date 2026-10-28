@@ -121,7 +121,7 @@ theorem unforgeableAdvantage_le_of_algebraic {F T G₁ G₂ Gₜ : Type}
     by_cases hgap : AGM.scalarHash degree (extendTable S 0 ρ) t.1.value.data -
         (repr ρ t).2 = 0
     · apply Or.inr
-      refine ⟨⟨hw.1, AGM.fixedView_admissible A hA κ _ t ht⟩, ?_⟩
+      refine ⟨⟨hw.1, AGM.fixedView_admissible A hA κ _ t ht hw.1 hw.2⟩, ?_⟩
       exact (AGM.scalarHash_sub_goodRepresentation_snd degree S ρ
         ((t.1.coefficients false).headD []) t.2 t.1.value.data).symm.trans hgap
     · apply Or.inl
