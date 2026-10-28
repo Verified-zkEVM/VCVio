@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.GroupModel.GenericRelation
 public import Mathlib.Algebra.Field.ZMod
 
 /-!
-# Generic discrete-log relation regression test
+ # Generic discrete-log relation regression test
 
 A free equality query compares the two challenge handles. It returns `![1, -1]` on equality
 and the zero vector otherwise, using no group operations.
@@ -29,7 +29,7 @@ theorem relation_generic_zmod_101 :
     let A : OracleComp (genSpec (ZMod 101) groupSig) (Fin 2 → ZMod 101) := do
       let eq : Bool ← (genSpec (ZMod 101) groupSig).query (.inl (.eq () 0 1))
       pure (if eq then ![1, -1] else 0)
-    Pr{let b ← (_root_.DiscreteLogRelation.experiment (1 : ZMod 101)
+    Pr{let b ← (_root_.DiscreteLogRelation.plainExperiment (1 : ZMod 101)
       (DiscreteLogRelation.Adversary.ofGeneric A))}[b = true] ≤ (4 / 101 : ℝ≥0∞) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
   dsimp only
