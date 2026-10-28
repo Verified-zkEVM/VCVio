@@ -59,7 +59,8 @@ variable {F S : Type} {σ : Sig S} {ι : Type} {Γ : OracleSpec ι}
 @[expose] def unitCostSum (Γ : OracleSpec ι) : CostModel (spec F σ + Γ) ℕ where
   queryCost t := if isGroupOp t then 1 else 0
 
-/-- A structural group-operation budget bounds the accumulated pathwise cost. -/
+/-- A structural group-operation budget bounds the accumulated pathwise cost.
+The converse fails when an auxiliary oracle has an empty answer type. -/
 theorem worstCaseCostBound_unitCostSum {α : Type} {oa : OracleComp (spec F σ + Γ) α}
     {q : ℕ} (h : IsQueryBoundP oa (fun i => isGroupOp i = true) q) :
     WorstCaseCostBound oa (unitCostSum Γ) q := by
@@ -139,6 +140,7 @@ theorem impl_table_step [DecidableEq S] [CommSemiring F]
   cases t <;>
     simp only [impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet] at hz <;>
+    replace hz := (mem_support_pure_iff _ _).mp hz <;>
     subst z
   all_goals first | rfl | exact ⟨_, _, rfl⟩
 

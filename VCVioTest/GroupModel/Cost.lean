@@ -63,6 +63,7 @@ theorem equality_only (tbl : Tbl (fun _ : Unit => ZMod 7)) :
   · exact ⟨by decide, fun _ => ⟨by decide, fun _ =>
       ⟨by decide, fun _ => trivial⟩⟩⟩
   · intro z hz
-    simpa [runGen, run, impl, StateT.run] using congrArg Prod.snd hz
+    simpa [runGen, run, impl, StateT.run] using
+      congrArg Prod.snd ((mem_support_pure_iff _ _).mp hz)
 
 end GroupModel
