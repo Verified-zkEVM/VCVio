@@ -220,6 +220,7 @@ def Repr.eval (r : Repr F) (tbl : List (Repr F × G)) : G :=
   ((List.range tbl.length).map fun h => r h • (lookup tbl h).2).sum
 
 structure Explains (given : List Handle) (tbl : List (Repr F × G)) : Prop where
+  given_nodup : given.Nodup
   given_lt : ∀ h ∈ given, h < tbl.length
   repr_given : ∀ h ∈ given, (lookup tbl h).1 = Pi.single h 1
   support_subset : ∀ e ∈ tbl, ∀ h, e.1 h ≠ 0 → h ∈ given
@@ -229,20 +230,23 @@ structure Explains (given : List Handle) (tbl : List (Repr F × G)) : Prop where
 An entry that was *given* (an input, an oracle reply) has representation `Pi.single h 1` at its
 own handle `h`. An entry that was *computed* has the corresponding combination. The basis is
 therefore the list `given` of handles of given entries, and it grows whenever the game hands out
-another element. The invariant has four fields. The equation `eq_eval` alone holds of a table
+another element. The invariant has five fields. The equation `eq_eval` alone holds of a table
 in which every entry is declared its own basis element, whatever was given. `support_subset`
 says that a computed entry is a combination of given ones. `given_lt` says that every given
 handle is in the table, so `given` is finite. It follows from `repr_given`, because a handle
 outside the table looks up the zero representation, and it is a field so that the adapters can
 use it directly. For a run that starts from `trackInputs xs` and is handed nothing more, `given`
-is `List.range xs.length`.
+is `List.range xs.length`. The field `given_nodup` rules out repeated handles in this list;
+in the sorted model it holds separately at every sort.
 
 `Explains given` connects the tracked table to agm-lean's `Explained.Valid` and the proof
 field of a typed `AlgebraicPoint`. The tracking state keeps a list of given handles per sort,
 in arrival order, with one entry per receipt. Each receipt calls `pushGiven`, even if its value
 has appeared before. The coefficient list is directly `given.map repr`; no reindexing lemma is
-needed. A repeated element has two handles and two basis positions. `pushGiven` extends both
-the table and the list, while group operations append only to the table.
+needed. T1a uses `given_nodup` to show that this conversion counts each basis handle exactly
+once. Repeated group values still have distinct handles and distinct basis positions. Fresh
+allocation by `pushGiven` preserves `given_nodup` while extending the table and the list; group
+operations append only to the table.
 
 `Repr F` is a function type so that it is a computable module (`Pi`). `Handle →₀ F` gives
 finite support for free and makes every operation noncomputable. This is decision D4.
@@ -250,7 +254,9 @@ finite support for free and makes every operation noncomputable. This is decisio
 **Four presentations.**
 
 Common setting: sorts `S` with `[DecidableEq S]`, a signature `σ : Sig S`, a field `F`, carriers
-`G : S → Type` with `Module F (G s)`, and a real model `M : Model F σ G`.
+`G : S → Type` with `Module F (G s)`, and a real model `M : Model F σ G`. The core, T1a
+and the certified interaction interface do not require finitely many sorts. T1b and its round
+trip additionally require `[Fintype S]`.
 
 **(H) Handle adversaries.** This is the definition, per D11.
 
@@ -258,7 +264,7 @@ Common setting: sorts `S` with `[DecidableEq S]`, a signature `σ : Sig S`, a fi
 abbrev genSpec F σ := spec F σ + unifSpec                    -- generic: the group oracle and coins
 def encSpec (E : S → Type) : OracleSpec (S × Handle) := fun q => E q.1
 -- algebraic adversary against a game Γ (handlers share the table):
---   OracleComp (spec F σ + encSpec E + Γ) α
+--   OracleComp (spec F σ + encSpec E + unifSpec + Γ) α
 ```
 
 The semantics is `run M obs (gameImpl) A tbl`. For a game given on values,
@@ -282,7 +288,8 @@ was given (T2).
 Result`, under `GroupModel.Interaction`, with the module system and preserved definitions: `main` on
 `Message Input G` and
 `algebraic : ∀ input, IsAlgebraic input.groups (main input)`. The signature repository's adversary
-is this same type.
+is this same type. It receives randomness through a coin-bearing game-query wrapper, defined
+in Section 5, rather than through a separate oracle in `Adversary.main`.
 
 **(T) Typed points over a fixed basis.** These follow ironwood and ArkLib, additively:
 
@@ -366,13 +373,46 @@ count the two separately; `ResourceProfile` already carries a usage vector.
 `m₀` is the length of the initial table, `q` a bound on the number of `add` and `smul` queries
 (an `IsQueryBoundP` hypothesis), `m := m₀ + q`.
 
-The following translation theorems are targets. Their run equations are exact equalities of
-computations in any lawful monad `N`.
+The following translation theorems are targets. T1a and T1b use `N := ProbComp`, with
+`impl : QueryImpl (plainSpec G Query Reply) ProbComp`; their run equations are exact equalities
+of computations in that monad. This supplies the sampling needed by both presentations.
 `lookupMessage tbl : Message R (fun _ => Handle) → Message R G` reads the output handles.
-`HandleAdversary F σ E Input Query Reply Result` is
-`Message Input (fun _ => Handle) → OracleComp (spec F σ + encSpec E + handleSpec Query Reply)
-(Message Result (fun _ => Handle))`. Its `run M enc impl input` starts from the table
-`input.groups` and answers the three components with the real handler, `enc`, and `liftGame impl`.
+
+```lean
+abbrev HandleAdversary F σ E Input Query Reply Result :=
+  Message Input (fun _ => Handle) →
+    OracleComp (spec F σ + encSpec E + unifSpec + handleSpec Query Reply)
+      (Message Result (fun _ => Handle))
+```
+
+Its `run M enc impl input` starts from `input.groups` and answers the four components with
+the real handler, `enc`, private coins, and `liftGame impl`. The private-coin handler is
+`fun n => liftM (unifSpec.query n : ProbComp (Fin (n + 1)))`, lifted into
+`StateT (Tbl G) ProbComp`; sampling leaves the table unchanged.
+
+The certified presentation obtains the same coins through the game. Use a natural-number
+query and `Fin (n + 1)` reply, matching `unifSpec` exactly:
+
+```lean
+abbrev CoinQuery (Query : Type) := Query ⊕ ℕ
+def CoinReply (Reply : Query → Type) : CoinQuery Query → Type :=
+  Sum.elim Reply (fun n => Fin (n + 1))
+
+def withCoins (impl : QueryImpl (plainSpec G Query Reply) ProbComp) :
+    QueryImpl (plainSpec G (CoinQuery Query) (CoinReply Reply)) ProbComp
+  | ⟨.inl q, groups⟩ => impl ⟨q, groups⟩
+  | ⟨.inr n, _⟩ => do
+      let x ← (unifSpec.query n : ProbComp (Fin (n + 1)))
+      pure ⟨x, fun _ => []⟩
+```
+
+A coin request ignores group arguments and returns empty group lists at every sort, so it adds
+no receipts to the basis. `toExplained` sends coin requests with empty group arguments and
+empty explanations, forwards ordinary game requests through `Sum.inl`, and reads the sample
+from the reply's data. `ofExplained` implements `Sum.inr n` by its private `unifSpec` oracle
+and supplies the empty group reply to the certified continuation. The signature repository
+uses the same coin-bearing game-query pattern in `Signatures/Model/SignatureInteraction.lean`
+and `Signatures/Model/DirectAGM.lean`.
 
 - **T2 (generic ⊆ algebraic, with representations).** For a computation `A` at any signature,
   and a tracking table with `Explains given tbl`:
@@ -388,29 +428,37 @@ computations in any lawful monad `N`.
 
   ```lean
   def toExplained (A : HandleAdversary F (discreteSig S) E Input Query Reply Result) (enc) :
-      Interaction.Adversary F G Input Query Reply Result
+      Interaction.Adversary F G Input (CoinQuery Query) (CoinReply Reply) Result
   theorem toExplained_run :
-      (fun z => z.1.value) <$> (toExplained A enc).run impl input =
+      (fun z => z.1.value) <$> (toExplained A enc).run (withCoins impl) input =
         (fun z => lookupMessage z.2 z.1) <$> A.run M enc impl input
   ```
 
   `toExplained` simulates the group oracle in the tracking model on the received values. Each
   outgoing handle becomes the tracked value together with the coefficients `given.map repr`.
-  `algebraic` is proved from `Explains`, and `_run` from L1 for `snd`.
-- **T1b (explanations → handles).** Given a decoder `dec` with `∀ s g, dec s (enc s g) = g`
-  (agm-lean's setting is `E := G`, `enc := id`, `dec := id`):
+  `algebraic` is proved from `Explains`, including `given_nodup` for the coefficient conversion,
+  and `_run` from L1 for `snd` and the matching private-coin handlers.
+- **T1b (explanations → handles).** Under `[Fintype S]` and `[DecidableEq S]`, given a decoder
+  `dec` with `∀ s g, dec s (enc s g) = g` (the real-value setting is `E := G`, `enc := id`,
+  `dec := id`):
 
   ```lean
-  def ofExplained (B : Interaction.Adversary F G Input Query Reply Result) (dec) :
+  def ofExplained [Fintype S] [DecidableEq S]
+      (B : Interaction.Adversary F G Input (CoinQuery Query) (CoinReply Reply) Result) (dec) :
       HandleAdversary F (discreteSig S) E Input Query Reply Result
-  theorem ofExplained_run (hdec : ∀ s g, dec s (enc s g) = g) :
+  theorem ofExplained_run [Fintype S] [DecidableEq S]
+      (hdec : ∀ s g, dec s (enc s g) = g) :
       (fun z => lookupMessage z.2 z.1) <$> (ofExplained B dec).run M enc impl input =
-        (fun z => z.1.value) <$> B.run impl input
+        (fun z => z.1.value) <$> B.run (withCoins impl) input
   ```
 
-  `ofExplained` decodes the received handles. It builds each outgoing element from its
-  coefficients with at most one `smul` and one `add` per nonzero coefficient, which is where
-  `B.algebraic` is used. Composing T1a with T1b gives the round trip for (E).
+  `ofExplained` enumerates the sorts and decodes the received handles. It builds each outgoing
+  element from its coefficients with at most one `smul` and one `add` per nonzero coefficient,
+  which is where `B.algebraic` is used. A certified adversary may output elements at every
+  sort, while a handle run touches only finitely many sorts. Enumerability is therefore needed
+  for this direction. The core model, T1a and agm-lean's interface remain general in `S`.
+  Composing T1a with T1b gives the round trip for (E) under the same `[Fintype S]`,
+  `[DecidableEq S]` and decoder assumptions, with certified runs using `withCoins impl`.
 - **T1c (typed points ↔ valid explanations, fixed basis).**
 
   - `{out : Explained F R G // out.Valid inputs} ≃ R × ((s : S) → List (AlgebraicPoint (inputs s
@@ -420,9 +468,13 @@ computations in any lawful monad `N`.
     `toTyped B := MonadAttach.attach`, using `CanReturn ↔ support` (`OracleComp/CanReturn.lean`)
     and `Adversary.run_valid`; and `ofTyped` forgets the proofs. Both preserve `run` after
     forgetting.
-- **Generic → algebraic.** `toAlgebraic := liftComp` into `spec F σ + encSpec E + Γ`, with
+- **Generic → algebraic.** `toAlgebraic := liftComp` targets
+  `spec F σ + encSpec E + unifSpec + Γ`, with
   `run_toAlgebraic : run (toAlgebraic A) = run A`. Then `toExplained ∘ toAlgebraic` gives every
-  generic adversary a certified agm-lean presentation.
+  generic adversary a certified agm-lean presentation over `CoinQuery Query` and `CoinReply Reply`.
+  The source is `spec F σ + unifSpec + Γ`; `liftComp` preserves both group queries and coins,
+  and the two runners use the same sampling handler. For message games, `Γ` is
+  `handleSpec Query Reply`, and the certified run uses `withCoins impl`.
 - **ArkLib** (in ArkLib): `GroupRepresentation basis target ≃ {P : AlgebraicPoint (Additive.ofMul
   ∘ basis) // P.point = Additive.ofMul target}` over `ZMod p`.
 
@@ -999,8 +1051,10 @@ such as `impl`, `run` and `lookup`. The expose-boundary ceiling excludes new fil
    and adopting the module system and `GroupModel.Interaction` namespace. The authors have
    agreed to the move.
 4. **Handles and explanations.** `Encoding.lean`, `Game.lean`, and `Algebraic.lean`: `encSpec`
-   and its real handler, `handleSpec`, `liftGame`, `HandleAdversary`, `toAlgebraic`,
-   `toExplained`, `ofExplained`, T1a, T1b, and their round trip. Depends on slices 1–3.
+   and its real handler, `handleSpec`, `liftGame`, `withCoins`, `HandleAdversary`, `toAlgebraic`,
+   `toExplained`, `ofExplained`, T1a, T1b, and their round trip in `ProbComp`. T1b and its round
+   trip require `[Fintype S]` and `[DecidableEq S]`; T1a remains general in `S`. Test the matching
+   private-coin handlers, including a private-coin-only adversary. Depends on slices 1–3.
 5. **Typed points.** `Typed.lean`: `AlgebraicPoint`, the T1c equivalence, `toTyped`, and
    `ofTyped`. Depends on slice 3.
 6. **ArkLib adapter.** In ArkLib's `ArkLib/AGM/Basic.lean`, delete `GroupValTable` and the oracle
@@ -1231,9 +1285,9 @@ D1–D15 are settled.
 | D8 | pairings | An instance of a signature; the real model takes a Mathlib map `G₁ →ₗ[F] G₂ →ₗ[F] Gₜ`. The signature repository's `BilinearPairing` class gets a one-line adapter in that repository. |
 | D9 | agm-lean | Once its module is in VCVio, a re-export shim pinned to VCVio, then archived. The owners decide. |
 | D10 | free models | One per signature. Milestone 1 builds `groupSig`, `discreteSig S` and `pairingSig` (source sorts); `ReprT` and Types 1 and 2 come at milestone 6. |
-| D11 | The one definition of an algebraic adversary | It is a handle computation with the encoding oracle: `OracleComp (spec F σ + encSpec E + Γ) α`. Its representations come from the tracking run; the adversary does not supply them. A generic adversary is the same computation without `encSpec`, so generic ⊆ algebraic is `liftComp`. agm-lean's certified explained adversary and ironwood's typed points are presentations of this class, with translations that preserve the game's output exactly (Section 5). Reasons for this choice: the inclusion of the generic class is syntactic; group work is countable; nobody writing an adversary has to supply a proof obligation; a reduction written as a handler serves both classes (T5). |
-| D12 | Games | A game may be written on values in agm-lean's form (`plainSpec G Query Reply`, a handler on actual elements) and lifted to handles once, by `liftGame`. A game may also be written directly on handles with `lookup` and `push`. T1 is stated for lifted games. |
-| D13 | Basis bookkeeping | The tracking state keeps, for each sort, the list of given handles in order of arrival, one entry per receipt. agm-lean's coefficient list is then `given.map repr`, and no reindexing lemma is needed. |
+| D11 | The one definition of an algebraic adversary | It is a handle computation with the encoding oracle: `OracleComp (spec F σ + encSpec E + unifSpec + Γ) α`. Its representations come from the tracking run; the adversary does not supply them. Private coins are supplied by `unifSpec`; the certified presentation obtains them through `withCoins`. A generic adversary is the same computation without `encSpec`, so generic ⊆ algebraic is `liftComp`. agm-lean's certified explained adversary and ironwood's typed points are presentations of this class, with translations that preserve the game's output exactly (Section 5). Reasons for this choice: the inclusion of the generic class is syntactic; group work is countable; nobody writing an adversary has to supply a proof obligation; a reduction written as a handler serves both classes (T5). |
+| D12 | Games | A game may be written on values in agm-lean's form (`plainSpec G Query Reply`, a handler on actual elements) and lifted to handles once, by `liftGame`. A game may also be written directly on handles with `lookup` and `push`. T1 is stated for lifted games in `ProbComp`, with certified runs using `withCoins impl`. T1b and its round trip require `[Fintype S]` and `[DecidableEq S]`; the core, T1a and the interaction interface remain general. |
+| D13 | Basis bookkeeping | The tracking state keeps, for each sort, the list of given handles in order of arrival, one entry per receipt. agm-lean's coefficient list is then `given.map repr`, and no reindexing lemma is needed. `Explains` includes `given.Nodup` per sort; T1a uses it to avoid counting a handle twice, while repeated group values receive distinct handles. |
 | D14 | Milestone order | The algebraic presentations and their translations (without KZG) come immediately after the core, before generic lower bounds. L2 (`Collision.lean`) and `Cost.lean` belong to milestone 2, the first place that uses them. |
 | D15 | agm-lean's namespace | The library namespace is `GroupModel.Interaction`. The signature repository must re-pin to VCVio in any case. |
 
