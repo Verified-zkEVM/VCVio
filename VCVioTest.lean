@@ -50,6 +50,7 @@ public import VCVioTest.GroupModel.Basic
 public import VCVioTest.GroupModel.Collision
 public import VCVioTest.GroupModel.Cost
 public import VCVioTest.GroupModel.Decisional
+public import VCVioTest.GroupModel.Game
 public import VCVioTest.GroupModel.GenericCoCDH
 public import VCVioTest.GroupModel.GenericDDH
 public import VCVioTest.GroupModel.GenericHardness
@@ -60,7 +61,9 @@ public import VCVioTest.GroupModel.Interaction.Axioms
 public import VCVioTest.GroupModel.Interaction.Basic
 public import VCVioTest.GroupModel.Interaction.MultiGroup
 public import VCVioTest.GroupModel.MasterBound
+public import VCVioTest.GroupModel.OfExplained
 public import VCVioTest.GroupModel.SortedMasterBound
+public import VCVioTest.GroupModel.ToExplained
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache

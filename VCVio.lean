@@ -81,9 +81,12 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.TapeFactorization
 public import VCVio.CryptoFoundations.GPVHashAndSign.TrapCount
 public import VCVio.CryptoFoundations.GPVHashAndSign.TrapProjection
 public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
+public import VCVio.CryptoFoundations.GroupModel.Coins
 public import VCVio.CryptoFoundations.GroupModel.Collision
 public import VCVio.CryptoFoundations.GroupModel.Cost
 public import VCVio.CryptoFoundations.GroupModel.Decisional
+public import VCVio.CryptoFoundations.GroupModel.Encoding
+public import VCVio.CryptoFoundations.GroupModel.Game
 public import VCVio.CryptoFoundations.GroupModel.GenericCoCDH
 public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
@@ -104,9 +107,12 @@ public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Probability
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.TraceExtraction
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Weights
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
+public import VCVio.CryptoFoundations.GroupModel.OfExplained
 public import VCVio.CryptoFoundations.GroupModel.Oracle
 public import VCVio.CryptoFoundations.GroupModel.Projection
+public import VCVio.CryptoFoundations.GroupModel.RoundTrip
 public import VCVio.CryptoFoundations.GroupModel.Signature
+public import VCVio.CryptoFoundations.GroupModel.ToExplained
 public import VCVio.CryptoFoundations.GroupModel.Tracking
 public import VCVio.CryptoFoundations.HardnessAssumptions.CoCDH
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
