@@ -47,14 +47,16 @@ lemma prob_eval_zero_le_div
   · rw [Fintype.card_pi]
     aesop
 
-/-- Full-carrier specialization of `prob_eval_zero_le_div`. -/
+/-- A nonzero polynomial of total degree at most `d` vanishes on a uniform assignment over a
+finite field `F` with probability at most `d / Fintype.card F`. -/
 lemma prob_eval_zero_univ_le_div
-    {F : Type} [Field F] [Fintype F] [SampleableType F]
-    {ι : Type} [Fintype ι] [DecidableEq ι] {d : ℕ}
+    {F : Type} [Field F] [Fintype F]
+    {ι : Type} [Finite ι] [SampleableType (ι → F)] {d : ℕ}
     (f : MvPolynomial ι F) (hf : f ≠ 0) (hd : f.totalDegree ≤ d) :
     Pr{let x ← $ᵗ (ι → F)}[MvPolynomial.eval x f = 0] ≤
       (d : ℝ≥0∞) / Fintype.card F := by
   classical
+  let : Fintype ι := Fintype.ofFinite ι
   rw [@SampleableType.prEvent_uniformSample _ _ _
     (fun x : ι → F => MvPolynomial.eval x f = 0)
     (fun _ => Classical.propDecidable _)]
@@ -63,4 +65,3 @@ lemma prob_eval_zero_univ_le_div
     Fintype.card_fun] using
       @schwartz_zippel_counting F _ (Classical.decEq F) ι _ _ f hf
         (fun _ => Finset.univ) d (Fintype.card F) hd Fintype.card_pos (fun _ => le_rfl)
-
