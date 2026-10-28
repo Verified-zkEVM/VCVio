@@ -8,6 +8,8 @@ public import VCVio.CryptoFoundations.AKE.UAKE.Defs
 public import VCVio.CryptoFoundations.AKE.UAKE.Party
 public import VCVio.CryptoFoundations.AKE.UAKE.Runtime
 public import VCVio.CryptoFoundations.AKE.UAKE.Transcript
+public import VCVio.CryptoFoundations.AggregateSignatureAlg
+public import VCVio.CryptoFoundations.AggregateSignatureAlg.Synchronized
 public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCCA
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
@@ -85,6 +87,7 @@ public import VCVio.CryptoFoundations.GroupModel.Collision
 public import VCVio.CryptoFoundations.GroupModel.Cost
 public import VCVio.CryptoFoundations.GroupModel.Decisional
 public import VCVio.CryptoFoundations.GroupModel.GenericCoCDH
+public import VCVio.CryptoFoundations.GroupModel.GenericCoCDHIso
 public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 public import VCVio.CryptoFoundations.GroupModel.GenericPairing
@@ -95,6 +98,8 @@ public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Affine
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Collision
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Extraction
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.FiniteLabels
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.IndexedWeightedExecution
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.IndexedWeightedTrace
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Interaction
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyCover
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyExecution
@@ -111,6 +116,8 @@ public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedTraceE
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Weights
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.GroupModel.Oracle
+public import VCVio.CryptoFoundations.GroupModel.PairingSeparation
+public import VCVio.CryptoFoundations.GroupModel.PairingVariants
 public import VCVio.CryptoFoundations.GroupModel.Projection
 public import VCVio.CryptoFoundations.GroupModel.Signature
 public import VCVio.CryptoFoundations.GroupModel.Tracking
@@ -584,6 +591,17 @@ public import VCVio.Schemes.BLS.AGM.Adversary
 public import VCVio.Schemes.BLS.AGM.Reductions
 public import VCVio.Schemes.BLS.AGM.Security
 public import VCVio.Schemes.BLS.Abort
+public import VCVio.Schemes.BLS.Aggregate.Algebra
+public import VCVio.Schemes.BLS.Aggregate.Averaging
+public import VCVio.Schemes.BLS.Aggregate.Basic
+public import VCVio.Schemes.BLS.Aggregate.Execution
+public import VCVio.Schemes.BLS.Aggregate.Extraction
+public import VCVio.Schemes.BLS.Aggregate.ExtractionProbability
+public import VCVio.Schemes.BLS.Aggregate.GameIdentification
+public import VCVio.Schemes.BLS.Aggregate.Guess
+public import VCVio.Schemes.BLS.Aggregate.Programming
+public import VCVio.Schemes.BLS.Aggregate.Reduction
+public import VCVio.Schemes.BLS.Aggregate.Security
 public import VCVio.Schemes.BLS.Averaging
 public import VCVio.Schemes.BLS.Basic
 public import VCVio.Schemes.BLS.Covariance
@@ -629,6 +647,14 @@ public import VCVio.Schemes.Schnorr.ChallengeRestriction
 public import VCVio.Schemes.Schnorr.SigmaProtocol
 public import VCVio.Schemes.Schnorr.Signature
 public import VCVio.Schemes.Schnorr.Transforms
+public import VCVio.Schemes.SynchronizedPS.Adversary
+public import VCVio.Schemes.SynchronizedPS.Basic
+public import VCVio.Schemes.SynchronizedPS.Execution
+public import VCVio.Schemes.SynchronizedPS.Functional
+public import VCVio.Schemes.SynchronizedPS.Game
+public import VCVio.Schemes.SynchronizedPS.Reductions
+public import VCVio.Schemes.SynchronizedPS.Security
+public import VCVio.Schemes.SynchronizedPS.Table
 public import VCVio.StateSeparating.Advantage.Measure
 public import VCVio.StateSeparating.CellRef
 public import VCVio.StateSeparating.DistEquiv

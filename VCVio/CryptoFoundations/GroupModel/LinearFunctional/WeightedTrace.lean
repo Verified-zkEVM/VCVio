@@ -40,6 +40,32 @@ namespace GroupModel.LinearFunctional
 
 /-- The representations recorded at reply arrival agree with the corresponding chronological
 labels, preserving the initial basis and every repeated query occurrence. -/
+theorem indexedWeightedTableOracle_run_eq {F I M R G V α : Type}
+    [AddMonoid R] [SMul F R] (terms : M → List (I × F)) (table : I → R)
+    (hash : R → G) (sign : M → R → G)
+    (hashRep : R → V) (signRep : M → R → V) (initial : List V)
+    (oa : OracleComp (weightedInterfaceSpec I M G) α) :
+    (simulateQ (indexedWeightedTableOracle terms table hash sign hashRep signRep) oa).run initial =
+      (fun z => (z.1, initial ++ z.2.map (Sum.elim (fun i => hashRep (table i))
+        (fun m => signRep m (((terms m).map fun p => p.2 • table p.1).sum))))) <$>
+      weightedFixedRun (fun i => hash (table i))
+        (fun m => sign m (((terms m).map fun p => p.2 • table p.1).sum)) oa := by
+  let value := fun m => ((terms m).map fun p => p.2 • table p.1).sum
+  let decode := fun tr : List (I ⊕ M) =>
+    initial ++ tr.map (Sum.elim (fun i => hashRep (table i)) (fun m => signRep m (value m)))
+  have hstep : ∀ q tr, Prod.map id decode <$>
+      ((weightedFixedOracle (fun i => hash (table i)) (fun m => sign m (value m))) q).run tr =
+      (indexedWeightedTableOracle terms table hash sign hashRep signRep q).run (decode tr) := by
+    intro q tr
+    rcases q with ((n | i) | m) <;>
+      simp [weightedFixedOracle, indexedWeightedTableOracle, StateT.run, decode,
+        value, List.append_assoc]
+  have h := map_run_simulateQ_eq_of_query_map_eq _ _ decode hstep oa []
+  simpa only [weightedFixedRun, decode, List.map_nil, List.append_nil, Prod.map_def,
+    id_eq, value] using h.symm
+
+/-- The representations recorded at reply arrival agree with the corresponding chronological
+labels, preserving the initial basis and every repeated query occurrence. -/
 theorem weightedTableOracle_run_eq {F I M R G V α : Type}
     [AddMonoid R] [SMul F R] (terms : M → List (I × F)) (table : I → R)
     (hash sign : R → G) (hashRep signRep : R → V) (initial : List V)
@@ -48,20 +74,9 @@ theorem weightedTableOracle_run_eq {F I M R G V α : Type}
       (fun z => (z.1, initial ++ z.2.map (Sum.elim (fun i => hashRep (table i))
         (fun m => signRep (((terms m).map fun p => p.2 • table p.1).sum))))) <$>
       weightedFixedRun (fun i => hash (table i))
-        (fun m => sign (((terms m).map fun p => p.2 • table p.1).sum)) oa := by
-  let value := fun m => ((terms m).map fun p => p.2 • table p.1).sum
-  let decode := fun tr : List (I ⊕ M) =>
-    initial ++ tr.map (Sum.elim (fun i => hashRep (table i)) (fun m => signRep (value m)))
-  have hstep : ∀ q tr, Prod.map id decode <$>
-      ((weightedFixedOracle (fun i => hash (table i)) (fun m => sign (value m))) q).run tr =
-      (weightedTableOracle terms table hash sign hashRep signRep q).run (decode tr) := by
-    intro q tr
-    rcases q with ((n | i) | m) <;>
-      simp [weightedFixedOracle, weightedTableOracle, StateT.run, decode,
-        value, List.append_assoc]
-  have h := map_run_simulateQ_eq_of_query_map_eq _ _ decode hstep oa []
-  simpa only [weightedFixedRun, decode, List.map_nil, List.append_nil, Prod.map_def,
-    id_eq, value] using h.symm
+        (fun m => sign (((terms m).map fun p => p.2 • table p.1).sum)) oa :=
+  indexedWeightedTableOracle_run_eq terms table hash (fun _ => sign)
+    hashRep (fun _ => signRep) initial oa
 
 /-- Every supported fixed execution returns a covered target and records covered requests. -/
 theorem weightedFixedRun_mem_cover {F I M G α : Type}

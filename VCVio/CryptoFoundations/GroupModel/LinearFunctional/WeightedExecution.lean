@@ -5,9 +5,7 @@ Authors: Kobi Gurkan, Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedQuery
-public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.FiniteLabels
-public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.IndexedWeightedExecution
 
 /-! # Lazy extraction for weighted signing interfaces
 
@@ -17,7 +15,8 @@ appends one representation to the chronological received-input basis; the intern
 lookups of a signing query append no adversary-visible inputs.
 
 This adapts the weighted-reduction construction underlying Gurkan's OOPS proof to a
-shared base oracle and representations recorded when replies arrive.
+shared base oracle and representations recorded when replies arrive. The definitions specialize
+the message-dependent execution core with callbacks that ignore the message.
 -/
 
 public section
@@ -26,22 +25,14 @@ open OracleComp OracleSpec
 
 namespace GroupModel.LinearFunctional
 
-/-- Uniform randomness, base hashing, and signing of possibly different message labels. -/
-abbrev weightedInterfaceSpec (I M G : Type) := (unifSpec + (I →ₒ G)) + (M →ₒ G)
-
 /-- Answer public queries through one private base oracle and record each received point's
-representation. Weighted signing queries add one input, regardless of their number of bases. -/
-@[expose] def weightedOracle {F I M R G V : Type} [AddMonoid R] [SMul F R]
+representation. Weighted signing queries add one input, regardless of their number of bases.
+The specialization is reducible so rewriting also matches the message-dependent core. -/
+@[expose, reducible] def weightedOracle {F I M R G V : Type} [AddMonoid R] [SMul F R]
     (terms : M → List (I × F)) (hash sign : R → G) (hashRep signRep : R → V) :
     QueryImpl (weightedInterfaceSpec I M G)
-      (StateT (List V) (OracleComp (unifSpec + (I →ₒ R)))) := by
-  intro q basis
-  rcases q with ((n | i) | m)
-  · exact (fun r => (r, basis)) <$> (unifSpec + (I →ₒ R)).query (.inl n)
-  · exact (fun r => (hash r, basis ++ [hashRep r])) <$>
-      (unifSpec + (I →ₒ R)).query (.inr i)
-  · exact (fun r => (sign r, basis ++ [signRep r])) <$>
-      (liftM (weightedQuery (G := R) (terms m)) : OracleComp (unifSpec + (I →ₒ R)) R)
+      (StateT (List V) (OracleComp (unifSpec + (I →ₒ R)))) :=
+  indexedWeightedOracle terms hash (fun _ => sign) hashRep (fun _ => signRep)
 
 /-- Run the public interaction and query the final weighted target using the same private
 oracle. The final target is excluded from the adversary's received-input basis. -/
@@ -49,22 +40,16 @@ oracle. The final target is excluded from the adversary's received-input basis. 
     (terms : M → List (I × F)) (target : α → M)
     (hash sign : R → G) (hashRep signRep : R → V) (initial : List V)
     (oa : OracleComp (weightedInterfaceSpec I M G) α) :
-    OracleComp (unifSpec + (I →ₒ R)) (α × List V × R) := do
-  let (out, basis) ← (simulateQ (weightedOracle terms hash sign hashRep signRep) oa).run initial
-  let targetValue ← liftM (weightedQuery (G := R) (terms (target out)))
-  return (out, basis, targetValue)
+    OracleComp (unifSpec + (I →ₒ R)) (α × List V × R) :=
+  indexedWeightedExtractionProgram terms target hash (fun _ => sign)
+    hashRep (fun _ => signRep) initial oa
 
 /-- The fixed-table counterpart of weighted execution, retaining the same representation basis. -/
 @[expose] def weightedTableOracle {F I M R G V : Type} [AddMonoid R] [SMul F R]
     (terms : M → List (I × F)) (table : I → R)
     (hash sign : R → G) (hashRep signRep : R → V) :
-    QueryImpl (weightedInterfaceSpec I M G) (StateT (List V) ProbComp) := by
-  intro q basis
-  rcases q with ((n | i) | m)
-  · exact (fun r => (r, basis)) <$> (unifSpec.query n : ProbComp _)
-  · exact pure (hash (table i), basis ++ [hashRep (table i)])
-  · let r := ((terms m).map fun p => p.2 • table p.1).sum
-    exact pure (sign r, basis ++ [signRep r])
+    QueryImpl (weightedInterfaceSpec I M G) (StateT (List V) ProbComp) :=
+  indexedWeightedTableOracle terms table hash (fun _ => sign) hashRep (fun _ => signRep)
 
 /-- Interpreting all private base lookups by one table preserves chronological execution. -/
 theorem weightedOracle_table {F I M R G V α : Type} [AddMonoid R] [SMul F R]
@@ -73,18 +58,8 @@ theorem weightedOracle_table {F I M R G V α : Type} [AddMonoid R] [SMul F R]
     (oa : OracleComp (weightedInterfaceSpec I M G) α) (initial : List V) :
     simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn table))
       ((simulateQ (weightedOracle terms hash sign hashRep signRep) oa).run initial) =
-      (simulateQ (weightedTableOracle terms table hash sign hashRep signRep) oa).run initial := by
-  apply simulateQ_StateT_compose
-  intro q basis
-  rcases q with ((n | i) | m)
-  · simp [weightedOracle, weightedTableOracle, StateT.run, unifFwdAnswerImpl]
-  · change simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn table))
-      ((fun r => (hash r, basis ++ [hashRep r])) <$>
-        (liftM ((unifSpec + (I →ₒ R)).query (.inr i)))) = _
-    rw [simulateQ_map, simulateQ_spec_query]
-    rfl
-  · simp only [weightedOracle, weightedTableOracle, StateT.run, simulateQ_map,
-      simulateQ_unifFwd_weightedQuery, map_pure]
+      (simulateQ (weightedTableOracle terms table hash sign hashRep signRep) oa).run initial :=
+  indexedWeightedOracle_table terms table hash (fun _ => sign) hashRep (fun _ => signRep) oa initial
 
 /-- A fixed table interprets both the interaction and its final polynomial target. -/
 theorem weightedExtractionProgram_table {F I M R G V α : Type}
@@ -94,9 +69,9 @@ theorem weightedExtractionProgram_table {F I M R G V α : Type}
     simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn table))
       (weightedExtractionProgram terms target hash sign hashRep signRep initial oa) =
       (fun z => (z.1, z.2, ((terms (target z.1)).map fun p => p.2 • table p.1).sum)) <$>
-        (simulateQ (weightedTableOracle terms table hash sign hashRep signRep) oa).run initial := by
-  simp only [weightedExtractionProgram, simulateQ_bind, weightedOracle_table,
-    simulateQ_map, simulateQ_unifFwd_weightedQuery, map_pure, bind_pure_comp]
+        (simulateQ (weightedTableOracle terms table hash sign hashRep signRep) oa).run initial :=
+  indexedWeightedExtractionProgram_table terms table target hash (fun _ => sign)
+    hashRep (fun _ => signRep) initial oa
 
 /-- A finite proof cover gives a uniform-table interpretation of weighted lazy extraction.
 The base label type itself may be infinite; only the covered labels are sampled in the proof. -/
@@ -115,10 +90,8 @@ theorem weightedExtractionProgram_evalDistEq_finite_table {F I M R G V α : Type
         let H := extendTable S fallback table
         (fun z : α × List V =>
           (z.1, z.2, ((terms (target z.1)).map fun p : I × F => p.2 • H p.1).sum)) <$>
-          (simulateQ (weightedTableOracle terms H hash sign hashRep signRep) oa).run initial) := by
-  refine (simulateQ_romImpl_evalDistEq_finite_table S _ h fallback).trans ?_
-  apply _root_.EvalDistEq.bind_right
-  intro table
-  rw [weightedExtractionProgram_table]
+          (simulateQ (weightedTableOracle terms H hash sign hashRep signRep) oa).run initial) :=
+  indexedWeightedExtractionProgram_evalDistEq_finite_table terms target hash (fun _ => sign)
+    hashRep (fun _ => signRep) initial oa S fallback h
 
 end GroupModel.LinearFunctional
