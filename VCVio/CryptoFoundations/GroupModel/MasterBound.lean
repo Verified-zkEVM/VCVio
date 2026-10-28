@@ -389,8 +389,7 @@ theorem prEvent_runGen_symbolic_le_add [Field F] [DecidableEq F] [DecidableEq ι
 /-- Uniform hidden points over a finite field give the Schwartz–Zippel specialization
 `choose (initial size + operation budget + 1) 2 * (d / card F)` of the joint master bound. -/
 theorem measureETVDist_runGen_symbolic_uniform_le [Field F] [DecidableEq F]
-    [Fintype F] [SampleableType F] [Finite ι] [DecidableEq ι]
-    [SampleableType (ι → F)]
+    [Fintype F] [Finite ι] [DecidableEq ι] [SampleableType (ι → F)]
     [Fintype S] [DecidableEq S] {α : Type}
     [MeasurableSpace ((ι → F) × (α × Tbl (fun _ : S => MvPolynomial ι F)))]
     {d q : ℕ} (oa : OracleComp (genSpec F (discreteSig S)) α)
@@ -407,9 +406,6 @@ theorem measureETVDist_runGen_symbolic_uniform_le [Field F] [DecidableEq F]
         ((d : ℝ≥0∞) / Fintype.card F) := by
   apply measureETVDist_runGen_symbolic_le ($ᵗ (ι → F)) _ oa hq tbl hd
   intro f hf hdeg
-  let : Fintype ι := Fintype.ofFinite ι
-  rw [SampleableType.prEvent_uniformSample_inst_irrel
-    (inferInstance : SampleableType (ι → F)) instSampleableTypePiFintype]
   exact prob_eval_zero_univ_le_div f hf hdeg
 
 end GroupModel
