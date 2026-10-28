@@ -30,7 +30,7 @@ abbrev Tracked (F : Type) (G : S → Type) :=
   (S → List Handle) × Tbl (fun s => Repr F × G s)
 
 /-- Read the chronological basis from a tracking state. -/
-@[expose] def basis [Zero F] [∀ s, Zero (G s)] (st : Tracked F G) : Groups G :=
+private def basis [Zero F] [∀ s, Zero (G s)] (st : Tracked F G) : Groups G :=
   fun s => (st.1 s).map fun h => (lookup st.2 s h).2
 
 /-- Explain a message by restricting each representation to received handles. -/
