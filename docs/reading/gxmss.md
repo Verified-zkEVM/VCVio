@@ -84,12 +84,15 @@ The signing operation records its first-success consumed prefix; the reduction's
 count charges the complete queried retry budget even when signing succeeds earlier.
 
 `Security/PRFDerived/PRFOracleInteraction.lean` defines the adaptive reduction and proves
-its real-oracle and cached ideal-interaction correspondences.
+its real-oracle and cached ideal-interaction correspondences, the pathwise function-query bound,
+and the additive PRF advantage bound.
 `Security/PRFDerived/Unforgeability.lean` publicly imports it, so importing the final module
-provides all five security theorems in `GXMSS.PRFDerived.Unforgeability`.
+provides all five security theorems in `GXMSS.PRFDerived.Unforgeability`. Its only declaration
+is the final conditional strong-unforgeability reduction.
 
-The final `strong_reduction_bound` adds the advantage of this named PRF
-reduction to every generic hardness term above, with the same target counts and coefficients.
+The final `GXMSS.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound` adds the
+advantage of this named PRF reduction to every generic hardness term above, with the same target
+counts and coefficients.
 Its explicit premises are `PRFScheme.UniformKey`, `PublicSeedSamplingLaw`,
 `ChainStartSamplingLaw`, `RetrySamplingLaw`, the generic signing-query bound, positive chain count
 and digit width, and two distinct global codewords. The three projection laws identify a uniform

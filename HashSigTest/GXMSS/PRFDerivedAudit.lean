@@ -41,10 +41,10 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     finalModule]
   let names := [
     (``randgenPRFReduction_real_strong, interactionModule),
-    (``randgenPRFReduction_functionQuery_bound, finalModule),
-    (``ideal_adaptive_strong_correspondence, finalModule),
-    (``adaptive_strong_additive_bound, finalModule),
-    (``strong_reduction_bound, finalModule)]
+    (``randgenPRFReduction_functionQuery_bound, interactionModule),
+    (``ideal_adaptive_strong_correspondence, interactionModule),
+    (``adaptive_strong_additive_bound, interactionModule),
+    (``strong_unforgeability_reduction_bound, finalModule)]
   for (name, expectedModule) in names do
     let some info := env.find? name
       | throwError "{name} is missing from the imported environment"

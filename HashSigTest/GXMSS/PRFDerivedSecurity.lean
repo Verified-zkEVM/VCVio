@@ -106,7 +106,7 @@ example [SampleableType Key]
 
 set_option maxHeartbeats 1600000 in
 -- The complete six-reduction result needs a larger elaboration budget.
-/-- Ordinary public import applies `strong_reduction_bound`
+/-- Ordinary public import applies `strong_unforgeability_reduction_bound`
 at its complete stated type. -/
 example
     [SampleableType Key] [SampleableType H] [SampleableType R]
@@ -146,7 +146,7 @@ example
             hash enc budget hv hw adv) +
           SM_DT_PRE_Advantage
             (GXMSS.Reductions.jointPreimageReduction hash enc budget hv hw adv))) := by
-  exact strong_reduction_bound hash enc prf projection budget qs hv hw
+  exact strong_unforgeability_reduction_bound hash enc prf projection budget qs hv hw
     htwo adv hbound keyLaw hseed hstart hretry
 
 end GXMSS.PRFDerived.UnforgeabilityConsumer
