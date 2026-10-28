@@ -101,7 +101,10 @@ public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyExecution
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyTable
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Masking
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Probability
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.SourceGroups
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.TraceExtraction
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedExecution
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.WeightedQuery
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Weights
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.GroupModel.Oracle
@@ -593,6 +596,11 @@ public import VCVio.Schemes.BLS.Security
 public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
+public import VCVio.Schemes.OOPS.AGM.Adversary
+public import VCVio.Schemes.OOPS.AGM.Reductions
+public import VCVio.Schemes.OOPS.Admissibility
+public import VCVio.Schemes.OOPS.Basic
+public import VCVio.Schemes.OOPS.Weights
 public import VCVio.Schemes.Pedersen
 public import VCVio.Schemes.Schnorr.BoundedChallenges
 public import VCVio.Schemes.Schnorr.ChallengeRestriction

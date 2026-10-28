@@ -174,6 +174,7 @@ public import VCVioTest.SampleableType
 public import VCVioTest.Schemes.BLS
 public import VCVioTest.Schemes.BLSAGM
 public import VCVioTest.Schemes.KEMDEM
+public import VCVioTest.Schemes.OOPSAGM
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms
 public import VCVioTest.SeparatedOTP
