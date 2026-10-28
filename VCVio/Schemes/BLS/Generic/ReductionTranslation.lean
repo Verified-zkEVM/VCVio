@@ -76,7 +76,7 @@ theorem explainProgram_transcript_view [Field F]
         simp only [Pairing.explainProgram_query_bind, simulateQ_bind, simulateQ_spec_query,
           withCoins_apply_inr, QueryImpl.ofLift_apply, hcoin,
           simulateQ_pure,
-          StateT.run_bind, StateT.run_pure, 
+          StateT.run_bind, StateT.run_pure,
           map_bind]
         simp only [realReductionHandler, StateT.run, bind_assoc, pure_bind,
           LinearFunctional.transcriptOracle, bind_map_left, receive_empty]
@@ -87,7 +87,7 @@ theorem explainProgram_transcript_view [Field F]
           simp only [Pairing.explainProgram_query_bind, explain, Pairing.sourceMessage,
             simulateQ_bind, simulateQ_spec_query, withCoins_apply_inl, sourceOracle,
             bind_assoc, pure_bind,
-            StateT.run_bind, 
+            StateT.run_bind,
             LinearFunctional.transcriptOracle_hash, LinearFunctional.transcriptOracle_sign,
             map_bind]
         all_goals

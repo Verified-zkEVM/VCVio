@@ -28,7 +28,7 @@ variable {F M R α : Type} {V U : PSort → Type}
 attribute [local implicit_reducible] spec
 
 /-- The real group interpreter with ordinary private coins. -/
-@[expose] def realImpl [CommSemiring F]
+private def realImpl [CommSemiring F]
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)] [∀ s, DecidableEq (U s)]
     (model : Model F pairingSig V) (obs : (s : PSort) → V s → U s) :
     QueryImpl (genSpec F pairingSig) (StateT (Tbl V) ProbComp) :=
