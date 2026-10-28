@@ -27,6 +27,14 @@ noncomputable def symbolic (F : Type) [CommSemiring F] {S : Type} (σ : Sig S) (
   lin _ := LinearMap.id
   bil _ := LinearMap.mul F (MvPolynomial ι F)
 
+/-- Symbolic linear structure maps act as the identity. -/
+@[simp] theorem symbolic_lin_apply {F S ι : Type} [CommSemiring F] (σ : Sig S)
+    (o : σ.Lin) (P : MvPolynomial ι F) : (symbolic F σ ι).lin o P = P := by rfl
+
+/-- Symbolic bilinear structure maps multiply polynomials. -/
+@[simp] theorem symbolic_bil_apply {F S ι : Type} [CommSemiring F] (σ : Sig S)
+    (o : σ.Bil) (P Q : MvPolynomial ι F) : (symbolic F σ ι).bil o P Q = P * Q := by rfl
+
 /-- A family of types indexed by the pairing sorts. -/
 @[expose] def PFam (A₁ A₂ Aₜ : Type) : PSort → Type
   | .g₁ => A₁
@@ -58,6 +66,10 @@ def pairingReal (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) : Model F pairingSig (P
   lin o := o.elim
   bil _ := e
 
+/-- The real pairing model applies its supplied bilinear map. -/
+@[simp] theorem pairingReal_bil_apply (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (o : Unit)
+    (x : G₁) (y : G₂) : (pairingReal e).bil o x y = e x y := by rfl
+
 /-- Representations in the source sorts: a coefficient per handle of that sort. -/
 abbrev Repr (F : Type) := Handle → F
 
@@ -72,6 +84,10 @@ def outer (F : Type) [CommSemiring F] : Repr F →ₗ[F] Repr F →ₗ[F] ReprT 
     (by intro c a b; ext <;> simp [mul_assoc])
     (by intro a b c; ext <;> simp [mul_add])
     (by intro c a b; ext <;> simp [mul_left_comm])
+
+/-- The outer product has zero linear part and pairwise products as coefficients. -/
+@[simp] theorem outer_apply (F : Type) [CommSemiring F] (r₁ r₂ : Repr F) :
+    outer F r₁ r₂ = (0, fun i j => r₁ i * r₂ j) := by rfl
 
 /-- The free model on given elements: representations only. -/
 @[expose] def free.pairing (F : Type) [CommSemiring F] :
@@ -129,6 +145,21 @@ def evHom.pairing (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (xs : List G₁) (ys 
   map_bil _ r₁ r₂ := by
     exact evReprT_outer e xs ys zs r₁ r₂
 
+/-- Free-model evaluation in the first source sort evaluates its coefficient function. -/
+@[simp] theorem evHom.pairing_apply_g₁ (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
+    (xs : List G₁) (ys : List G₂) (zs : List Gₜ) (r : Repr F) :
+    (evHom.pairing e xs ys zs).toFun .g₁ r = evRepr xs r := by rfl
+
+/-- Free-model evaluation in the second source sort evaluates its coefficient function. -/
+@[simp] theorem evHom.pairing_apply_g₂ (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
+    (xs : List G₁) (ys : List G₂) (zs : List Gₜ) (r : Repr F) :
+    (evHom.pairing e xs ys zs).toFun .g₂ r = evRepr ys r := by rfl
+
+/-- Free-model evaluation in the target sort evaluates linear and paired coefficients. -/
+@[simp] theorem evHom.pairing_apply_gₜ (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
+    (xs : List G₁) (ys : List G₂) (zs : List Gₜ) (r : ReprT F) :
+    (evHom.pairing e xs ys zs).toFun .gₜ r = evReprT e xs ys zs r := by rfl
+
 /-- A given element is the value of its own basis representation. -/
 theorem evRepr_single {G : Type} [AddCommMonoid G] [Module F G]
     (xs : List G) (i : Handle) (hi : i < xs.length) :
@@ -165,6 +196,21 @@ noncomputable def evalHom.pairing {ι : Type} (e : G₁ →ₗ[F] G₂ →ₗ[F]
     change evalAt (e g₁ g₂) x (P * Q) = e (evalAt g₁ x P) (evalAt g₂ x Q)
     simp only [evalAt_apply, map_mul, mul_smul, map_smul, LinearMap.smul_apply]
     rw [smul_comm]
+
+/-- Symbolic evaluation in the first source sort scales the first chosen element. -/
+@[simp] theorem evalHom.pairing_apply_g₁ {ι : Type} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
+    (g₁ : G₁) (g₂ : G₂) (x : ι → F) (P : MvPolynomial ι F) :
+    (evalHom.pairing e g₁ g₂ x).toFun .g₁ P = evalAt g₁ x P := by rfl
+
+/-- Symbolic evaluation in the second source sort scales the second chosen element. -/
+@[simp] theorem evalHom.pairing_apply_g₂ {ι : Type} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
+    (g₁ : G₁) (g₂ : G₂) (x : ι → F) (P : MvPolynomial ι F) :
+    (evalHom.pairing e g₁ g₂ x).toFun .g₂ P = evalAt g₂ x P := by rfl
+
+/-- Symbolic evaluation in the target sort scales the pairing of the chosen elements. -/
+@[simp] theorem evalHom.pairing_apply_gₜ {ι : Type} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
+    (g₁ : G₁) (g₂ : G₂) (x : ι → F) (P : MvPolynomial ι F) :
+    (evalHom.pairing e g₁ g₂ x).toFun .gₜ P = evalAt (e g₁ g₂) x P := by rfl
 
 end Evaluation
 
@@ -204,6 +250,17 @@ noncomputable def evalHom.discrete {F S ι : Type} [Field F] {G : S → Type}
   toFun s := evalAt (g s) x
   map_lin o := o.elim
   map_bil o := o.elim
+
+/-- Evaluation of a discrete free model acts independently in each sort. -/
+@[simp] theorem evHom.discrete_apply {F S : Type} [CommSemiring F] {G : S → Type}
+    [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)] (xs : (s : S) → List (G s))
+    (s : S) (r : Repr F) : (evHom.discrete xs).toFun s r = evRepr (xs s) r := by rfl
+
+/-- Symbolic evaluation in each discrete sort scales its chosen element. -/
+@[simp] theorem evalHom.discrete_apply {F S ι : Type} [Field F] {G : S → Type}
+    [∀ s, AddCommGroup (G s)] [∀ s, Module F (G s)] (g : (s : S) → G s) (x : ι → F)
+    (s : S) (P : MvPolynomial ι F) :
+    (evalHom.discrete g x).toFun s P = evalAt (g s) x P := by rfl
 
 /-- Track a representation alongside every element of an independent module. -/
 @[expose] def tracking {F S : Type} [CommSemiring F] {G : S → Type}
