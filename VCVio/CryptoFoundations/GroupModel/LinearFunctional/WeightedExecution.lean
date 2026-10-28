@@ -26,8 +26,9 @@ open OracleComp OracleSpec
 namespace GroupModel.LinearFunctional
 
 /-- Answer public queries through one private base oracle and record each received point's
-representation. Weighted signing queries add one input, regardless of their number of bases. -/
-@[expose] def weightedOracle {F I M R G V : Type} [AddMonoid R] [SMul F R]
+representation. Weighted signing queries add one input, regardless of their number of bases.
+The specialization is reducible so rewriting also matches the message-dependent core. -/
+@[expose, reducible] def weightedOracle {F I M R G V : Type} [AddMonoid R] [SMul F R]
     (terms : M → List (I × F)) (hash sign : R → G) (hashRep signRep : R → V) :
     QueryImpl (weightedInterfaceSpec I M G)
       (StateT (List V) (OracleComp (unifSpec + (I →ₒ R)))) :=
