@@ -49,6 +49,7 @@ public import VCVioTest.GroupModel.Basic
 public import VCVioTest.GroupModel.Collision
 public import VCVioTest.GroupModel.Cost
 public import VCVioTest.GroupModel.Instances
+public import VCVioTest.GroupModel.MasterBound
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
