@@ -17,8 +17,9 @@ round `[.inl 3, .inr 5, .inl 3, .inr 6, .inr 5]`. Run deterministically, with lo
 a counter so that every fresh side draw gets a new value, its simulation submits exactly one round,
 `[3, 3]`, with the repeated point kept, reassembles the answer tuple in the round's order, and
 answers both occurrences of `5` with the value drawn in preprocessing. The online budget `(1, 5)`
-of the adversary becomes `(1, 2)` for the simulation. A toy puzzle lifted to the sum submits the
-translated round and keeps its honest budget.
+of the adversary becomes `(1, 2)` for the simulation. A round holding only side points is still
+one round of the simulation: it submits the empty round `[]`, so its budget is `(1, 0)` and not
+`(0, 0)`. A toy puzzle lifted to the sum submits the translated round and keeps its honest budget.
 -/
 
 public section
@@ -118,6 +119,69 @@ theorem simulateSide_srcAdv_isQueryBound : srcAdv.simulateSide.IsQueryBound 1 (1
   simp only [TwoPhaseAdversary.simulateSide, srcAdv, simulateQ_map, simulateQ_spec_query,
     StateT.run'_eq, StateT.run_map, IsOnlineQueryBound, isQueryBound_map_iff]
   exact isOnlineQueryBound_sideOnlineImpl_inr_run mixed σ.2
+
+/-! ## A round of side points only -/
+
+/-- A round holding the side points `5` and `6` and no puzzle point. -/
+abbrev allSide : List (ℕ ⊕ ℕ) := [.inr 5, .inr 6]
+
+/-- No preprocessing; the online phase submits the all-side round and returns its answers. -/
+@[expose]
+def sideOnlyAdv : TwoPhaseAdversary unifSpec (puzSpec + sideSpec) Unit (List ℕ) where
+  State := Unit
+  preprocess := pure ()
+  online _ _ := toList allSide <$>
+    liftM ((unifSpec + (puzSpec + sideSpec).batch).query (.inr allSide))
+
+/-- Run the simulation of `sideOnlyAdv` from coin counter `3`; return the output and the rounds
+submitted, in order. -/
+def runSideOnly : List ℕ × List (List ℕ) :=
+  let adv := sideOnlyAdv.simulateSide
+  let (σ, k) := ((simulateQ preImpl adv.preprocess).run 3).run
+  let (out, _, rounds) := ((simulateQ onImpl (adv.online σ ())).run (k, [])).run
+  (out, rounds.reverse)
+
+/-- The side points draw the coins `3` and `4`, and the simulation submits exactly one round, the
+empty one. -/
+theorem runSideOnly_eq : runSideOnly = ([3, 4], [[]]) := by
+  decide
+
+/-- Local coins followed, on every outcome, by a program outside the online budget `b` are outside
+`b`. -/
+theorem not_isOnlineQueryBound_liftComp_bind {α β : Type} (pa : ProbComp α)
+    {f : α → OracleComp (unifSpec + puzSpec.batch) β} {b : ℕ × ℕ}
+    (hf : ∀ x, ¬ IsOnlineQueryBound (f x) b) :
+    ¬ IsOnlineQueryBound (liftComp pa (unifSpec + puzSpec.batch) >>= f) b := by
+  induction pa using OracleComp.inductionOn with
+  | pure x => simpa using hf x
+  | query_bind t k ih =>
+      rw [liftComp_bind, liftComp_query, bind_assoc]
+      change ¬ IsOnlineQueryBound ((liftM ((unifSpec + puzSpec.batch).query (.inl t)) >>= fun u =>
+        pure u) >>= fun u => liftComp (k u) _ >>= f) b
+      rw [bind_assoc, isOnlineQueryBound_query_bind_inl_iff, not_forall]
+      exact ⟨(0 : Fin (t + 1)), by simpa using ih 0⟩
+
+/-- The simulation of the all-side round fits the budget `(1, 0)`. -/
+theorem simulateSide_sideOnlyAdv_isQueryBound : sideOnlyAdv.simulateSide.IsQueryBound 0 (1, 0) := by
+  refine ⟨by simp [TwoPhaseAdversary.simulateSide, sideOnlyAdv], fun σ _ => ?_⟩
+  simp only [TwoPhaseAdversary.simulateSide, sideOnlyAdv, simulateQ_map, simulateQ_spec_query,
+    StateT.run'_eq, StateT.run_map, IsOnlineQueryBound, isQueryBound_map_iff]
+  exact isOnlineQueryBound_sideOnlineImpl_inr_run allSide σ.2
+
+/-- It does not fit `(0, 0)`: from every state, the empty round is submitted. -/
+theorem not_isOnlineQueryBound_simulateSide_sideOnlyAdv (σ : sideOnlyAdv.simulateSide.State) :
+    ¬ IsOnlineQueryBound (sideOnlyAdv.simulateSide.online σ ()) (0, 0) := by
+  simp only [TwoPhaseAdversary.simulateSide, sideOnlyAdv, simulateQ_map, simulateQ_spec_query,
+    StateT.run'_eq, StateT.run_map, IsOnlineQueryBound, isQueryBound_map_iff, sideOnlineImpl,
+    sideDraws, StateT.run_bind, StateT.run_mk]
+  refine not_isOnlineQueryBound_liftComp_bind _ fun z => ?_
+  rw [StateT.run_lift, bind_assoc]
+  simp
+
+/-- So the simulated adversary is not within the online budget `(0, 0)`. -/
+theorem not_simulateSide_sideOnlyAdv_isQueryBound :
+    ¬ sideOnlyAdv.simulateSide.IsQueryBound 0 (0, 0) :=
+  fun h => not_isOnlineQueryBound_simulateSide_sideOnlyAdv ((), ∅) (h.2 ((), ∅) ())
 
 /-! ## Lifting a puzzle -/
 
