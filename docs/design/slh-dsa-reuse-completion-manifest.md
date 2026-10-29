@@ -3,8 +3,9 @@
 The original evidence checkpoint is accepted commit
 `ae23574db895fd68ae28db806b54e0b3b275a551`. The clean committed full validation and independent P6 acceptance passed.
 This manifest freezes the finite completion deliverables; it does not freeze the
-intermediate declarations, proof bodies or public names. Full P5, R5
-delegation and R6c/R8 completion remain open.
+intermediate declarations, proof bodies or public names. The later
+[P5 checkpoint](slh-dsa-reuse-evidence/r6c/p5-checkpoint.md) is accepted at `fb6f14cb`;
+R5 delegation and R6c/R8 completion remain open.
 
 This finite endpoint supplements the [reuse plan](slh-dsa-reuse-refactor-plan.md),
 [original strength inventory](slh-dsa-reuse-evidence/strength-manifest.json),
@@ -147,7 +148,8 @@ original `evalDist_counted_warmed` route. Preserve their precise advertised
 projection: they compare downstream value laws, NOT final-cache equality.
 Warmup remains deliberately outside the selected counter in that transformation;
 never present it as a cost/cache-preserving actual execution or ignore repeated
-query multiplicity. Full joint keygen/observer P5 contracts remain separate.
+query multiplicity. The separate full joint keygen/observer P5 contract is accepted
+for its actual chosen-sampler case; this value-law family does not generalize it.
 
 ### C4. Programming by dependency agreement
 

@@ -21,6 +21,8 @@ implementation acceptance.
   implementation source and separately reviewed documentation candidates.
 - [p6-checkpoint.json](p6-checkpoint.json) records the exact implementation head,
   validation/source/log hashes, active Lean/manifest/all 11pins and gate scope.
+- [p5-checkpoint.md](p5-checkpoint.md) records the later accepted shared-experiment
+  security/semantics gate, actual context applications and clean full validation at `fb6f14cb`.
 
 The source-map, proof-route and provenance artifacts remain byte-exact historical inventories:
 their original author base ed014 plus held D candidate is not rewritten into a
@@ -32,9 +34,11 @@ comparison evidence and review deliberate guard/API changes rather than requirin
 identical internal proof values, owners or ASTs. The
 [R0 archive](../r0/README.md) and [R0b bindings](../r0b/README.md) remain unchanged.
 
-The root full command and independent P6 acceptance at ae235 passed. This closes
-the structural/effectful P6 gate only; full P5, broad migration and R6c/R8 remain
-open. The checkpoint records the independent receipt hash.
+The root full command and independent P6 acceptance at ae235 passed. That historical
+checkpoint closed the structural/effectful P6 gate only. P5 subsequently passed at
+clean validated `fb6f14cb`; P4/P5/P6 now allow migration in independently reviewed
+units. Actual canonical delegation and R6c/R8 remain unfinished. Each checkpoint
+records its own scope and receipt hashes; the original P6 record is unchanged.
 The gate ran 37 executable actions plus the CSV checker and R0b tail: 39 non-build
 driver actions. CSV has 18 rows; R0b checked 40 equations / 11 groups / 77 contracts and
 invoked R0a's 1242 records / 509-name boundary once. Counts are distinct. Inherited

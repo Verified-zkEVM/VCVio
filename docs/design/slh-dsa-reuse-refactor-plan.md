@@ -1,7 +1,8 @@
 # Reusable SLH-DSA specifications and complementary security proofs
 
-Status: gated execution plan. The bounded prototypes and production P4/P6 gates are checked;
-full P5 preservation and complete migration remain open. The
+Status: P4, P5 and P6 are accepted. The [P5 checkpoint](slh-dsa-reuse-evidence/r6c/p5-checkpoint.md)
+records the shared-experiment security/semantics gate at clean validated `fb6f14cb`.
+Canonical delegation and the remaining finite reuse families are still in progress. The
 [finite completion manifest](slh-dsa-reuse-completion-manifest.md) fixes R6c/R8 deliverables;
 explicit per-unit claims and independent review remain required for acceptance.
 Plan approval is not implementation acceptance.
@@ -313,7 +314,7 @@ structural separate caps and an actual joint cap are not interchangeable. Form a
 when both eligible certificates have been supplied on the same success event and interpretation;
 there is no automatic "best bound" that manufactures a missing budget assumption.
 
-## Checked prototypes and deliberately open gates
+## Checked prototypes and implementation gates
 
 [Evidence and reproduction instructions](slh-dsa-reuse-evidence/README.md) bind final source/log
 hashes and the clean isolated environment. All three use Lean 4.35, explicit autoImplicit=false,
@@ -324,17 +325,16 @@ default recursion/heartbeat limits, private locked dependencies and standard axi
 | P1 `VariableContextWire.lean` | Canonical Wire handles per-query valid contexts; full old bound/weak term and sharper hedged bound; actual 128s/192f instances; 256-byte unchecked-frame collision | No rejected/optional signing experiment, exact joint-127 port or graph migration |
 | P2 `WeightedBudgetProbe.lean` | Exact weighted structural-to-pathwise bridge; adaptive joint cap 2 but necessary separate maxima 2+2; nonunit 3/1 policy cap/witness 6, erasure, AE and probability-one event | A free-computation consumer, not complete SUF/source/cache specialization or input-dependent-policy execution |
 | P3 `ReplyLogProbe.lean` | Total replies specialize to actual `signingLogContains`; optional-success projection; raw log length 3 versus successful length 2; replay/different-signature checks | Pure log laws; no execution/charging of a rejecting signer, full experiment or security transfer |
-| P4, first implementation gate | Effectful canonical FORS/tagged weighted observer, second actual instance | Accepted at `5d2362a5`; broad migration still requires P5/P6 |
-| P5, full security/semantics gate | One actual shared SUF experiment, required outcome/log/cache/source refinements and retained/improved all-q guarantees | Open; must pass before deleting superseded algorithms/games/proof routes |
+| P4, first implementation gate | Effectful canonical FORS/tagged weighted observer, second actual instance | Accepted at `5d2362a5` |
+| P5, full security/semantics gate | One actual shared SUF experiment, required outcome/log/cache/source refinements and retained/improved all-q guarantees | Accepted at `fb6f14cb`; [scope and validation](slh-dsa-reuse-evidence/r6c/p5-checkpoint.md); no numerical improvement claimed |
 | P6, structural generality gate | Shared graph coordinates/address/rank/provider observer on 128s and 192f, with separate quantitative certificates | Accepted at `ae23574d`; [clean checkpoint](slh-dsa-reuse-evidence/r6c/p6-checkpoint.json); no new security exponent |
 
 P1's independent scoped review is `b8365df9875f916e39318383fd3cbec4f142157969f99d6c50b022537bad097a`;
 P2/P3's is `e945431cbdd0fa70fed5feab0e23465e7004118443cc43db8844435505709b0f`.
-Those reviews accept the stated prototype scope, not this full implementation plan or P4/P5/P6.
-Current P4/P6 acceptance is recorded separately in the completion evidence; it does not close
-full P5, authorize old-body delegation, or establish R6c/R8 completion.
-P4/P5/P6 are gates within an approvable execution plan; their being open is not a prohibition on
-starting their implementation, and their planned status is not permission for early deletion.
+Those reviews accept the stated prototype scope; later P4/P5/P6 implementation acceptance is
+recorded separately. All three prerequisite gates now pass, so construction migration may proceed
+in dependency-complete, independently reviewed units. Their acceptance does not establish R5,
+R6c or R8 completion or permit deleting a route before its required guarantee/semantic comparison.
 
 ## Work units, dependencies and acceptance
 

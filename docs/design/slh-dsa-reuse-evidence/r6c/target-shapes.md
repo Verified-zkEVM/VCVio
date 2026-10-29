@@ -38,7 +38,9 @@ existing Separated/Nodup/FreshFor conditions, prove its corresponding prepend va
 that same mechanism. The continuation may depend on private-sampled parameters via the
 original bind. Do not quantify over arbitrary private handlers when claiming a distributional
 commutation. Do not assert final caches or charged traces equal: those are intentionally
-projected in the original target. The full P5 chosen-sampler joint keygen law is a separate gate.
+projected in the original target. The separate full P5 chosen-sampler joint keygen law is
+accepted at the [P5 checkpoint](p5-checkpoint.md) for its particular actual case; this value law
+does not imply a different sampler's joint cache/cost law.
 
 C4: For every key/cell/input/output type, exact input/step functions and SAME list-order
 program, assume input at each scheduled key is determined by its declared children plus the
