@@ -376,7 +376,7 @@ collide. -/
 lean_lib HashSigTest where
   globs := #[.submodules `HashSigTest]
 
-/-- Pure hash regressions, independent of scheme and FFI test runners. -/
+/-- Pure hash regressions and the leanSeal known-answer tests, without native backends. -/
 lean_exe algorithm_tests where
   srcDir := "scripts"
   root := `AlgorithmTests
