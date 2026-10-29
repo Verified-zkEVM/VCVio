@@ -81,6 +81,8 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.TapeFactorization
 public import VCVio.CryptoFoundations.GPVHashAndSign.TrapCount
 public import VCVio.CryptoFoundations.GPVHashAndSign.TrapProjection
 public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
+public import VCVio.CryptoFoundations.GroupModel.Interaction
+public import VCVio.CryptoFoundations.GroupModel.Typed
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
@@ -342,6 +344,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Counter
 public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryBound.Tagged
+public import VCVio.OracleComp.QueryTracking.QueryBound.Truncate
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
