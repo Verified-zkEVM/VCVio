@@ -13,14 +13,19 @@ public import VCVio.CryptoFoundations.DataEncapMech
 # Hiding for time-lock puzzles: time-lock encryption
 
 A time-lock puzzle together with a data encapsulation mechanism encrypts to the future: the
-sender generates a puzzle with its key, encrypts under the key with the DEM, and sends the puzzle
-with the ciphertexts. The puzzle is a key encapsulation mechanism with no public key and a time
-bound: anyone can decapsulate, by solving the puzzle, but not within fewer rounds than the solver
-needs. Hiding is multi-message IND-CPA of this time-lock encryption. The adversary's preprocessing
-phase queries the oracles before the puzzle exists; its online phase receives the puzzle,
-submits rounds of parallel queries, and asks the left-or-right challenge oracle
-`LeftOrRight.oracle` of `VCVio.CryptoFoundations.LeftOrRight` for encryptions under the puzzle's
-key of the message that a hidden bit selects. Preprocessing, generation, the online phase and the
+sender generates a puzzle with its key, encrypts with the DEM, and sends the puzzle with the
+ciphertexts. The puzzle is a key encapsulation mechanism with no public key and a time bound:
+anyone can decapsulate, by solving the puzzle, but not within fewer rounds than the solver needs.
+The DEM is keyed by the generator's whole output, the puzzle together with its key, so that it can
+bind the puzzle it travels with, for example by authenticating it. A DEM under the key alone is
+the case that ignores the puzzle (`DEMScheme.comap Prod.snd`), and since the adversary holds the
+puzzle anyway, keying the DEM by it hides nothing extra.
+
+Hiding is multi-message IND-CPA of this time-lock encryption. The adversary's preprocessing phase
+queries the oracles before the puzzle exists; its online phase receives the puzzle, submits rounds
+of parallel queries, and asks the left-or-right challenge oracle `LeftOrRight.oracle` of
+`VCVio.CryptoFoundations.LeftOrRight` for encryptions, under the puzzle and its key, of the
+message that a hidden bit selects. Preprocessing, generation, the online phase and the
 challenger's encryptions all query one oracle, which in the random oracle model is one lazily
 sampled cache.
 
@@ -33,10 +38,11 @@ sampled cache.
   its subkeys from the oracle the puzzle uses and the adversary queries. The key is then not
   independent of the oracle the DEM evaluates, and hiding does not follow from a key
   indistinguishability game for the puzzle composed with the DEM's game under an independent key.
-* **The DEM's multi-query game with the puzzle's key.** The challenge oracle is the one of the
-  multi-query DEM game `DEMScheme.IND_CPA_Experiment`, built from `dem.encrypt key`, a leakage
-  function and the hidden bit. The hiding game replaces the DEM game's uniform key by the key of a
-  generated puzzle, gives the adversary the puzzle, and limits its online phase in rounds.
+* **The DEM's multi-query game with a generated puzzle.** The challenge oracle is the one of the
+  multi-query DEM game `DEMScheme.IND_CPA_Experiment`, built from the DEM's encryption, a leakage
+  function and the hidden bit. The DEM game encrypts under a uniform key; the hiding game encrypts
+  under a generated puzzle together with its key, gives the adversary the puzzle, and limits its
+  online phase in rounds.
 
 ## Main definitions
 
@@ -88,13 +94,19 @@ variable {Λ : Type} [DecidableEq Λ]
 and the leakage function `leak`: run the preprocessing phase, generate a puzzle with its key, run
 the online phase on the state and the puzzle, and return its guess. The online phase's rounds are
 rewritten as single queries (`OracleSpec.unbatch`); then local coins and queries to `spec` are
-forwarded, and challenge queries are answered by `LeftOrRight.oracle (dem.encrypt key) leak b`:
-a pair with equal leakage by the encryption under the puzzle's key of the message that `b`
-selects, any other pair by `none`.
+forwarded, and challenge queries are answered by
+`LeftOrRight.oracle (dem.encrypt (puzzle, key)) leak b`: a pair with equal leakage by the
+encryption, under the puzzle and its key, of the message that `b` selects, any other pair by
+`none`.
 
-* **The key enters through `dem.encrypt key`.** The challenge oracle is the library's left-or-right
-  oracle, which never sees the key: the experiment supplies it in the encryption function, as the
-  DEM game supplies a uniform key and a public-key game supplies `encrypt pk`.
+* **The DEM is keyed by the puzzle and its key.** Time-lock encryption sends the puzzle with the
+  ciphertexts, and its DEM is keyed by the generator's whole output, so that it can bind the
+  puzzle, for example by authenticating it. A DEM under the key alone is the case that ignores
+  the puzzle (`DEMScheme.comap Prod.snd`). The adversary holds the puzzle anyway, so this hides
+  nothing extra.
+* **The key enters through `dem.encrypt (puzzle, key)`.** The challenge oracle is the library's
+  left-or-right oracle, which never sees the key: the experiment supplies it in the encryption
+  function, as the DEM game supplies a uniform key and a public-key game supplies `encrypt pk`.
 * **One oracle.** The three phases and the challenger's encryptions query the one oracle `spec`,
   and in the random oracle model one cache: a DEM whose subkeys are derived through `spec`
   derives them through the oracle that the adversary queries.
@@ -103,11 +115,11 @@ selects, any other pair by `none`.
   and challenge queries are on the free summand, so neither costs the adversary a round. -/
 @[expose]
 def hidingExperiment (tlp : TimeLockPuzzle spec Puzzle Key)
-    (dem : DEMScheme (OracleComp (unifSpec + spec)) Key M C) (leak : M → Λ)
+    (dem : DEMScheme (OracleComp (unifSpec + spec)) (Puzzle × Key) M C) (leak : M → Λ)
     (adv : HidingAdversary spec Puzzle M C) (b : Bool) : OracleComp (unifSpec + spec) Bool := do
   let σ ← adv.preprocess
   let (puzzle, key) ← simulateQ spec.unbatch tlp.gen
-  simulateQ ((unifSpec.passthrough + LeftOrRight.oracle (dem.encrypt key) leak b) +
+  simulateQ ((unifSpec.passthrough + LeftOrRight.oracle (dem.encrypt (puzzle, key)) leak b) +
       (QueryImpl.id' spec).liftTarget (OracleComp (unifSpec + spec)))
     (simulateQ spec.unbatch (adv.online σ puzzle))
 
@@ -118,7 +130,7 @@ experiment returns `true` at hidden bits `true` and `false`, against one lazily 
 oracle starting from the empty cache. It is the left-or-right advantage
 `|Pr[Hide_1 = 1] - Pr[Hide_0 = 1]|`, with no factor from a hidden-bit normalization. -/
 noncomputable def hidingAdvantage (tlp : TimeLockPuzzle spec Puzzle Key)
-    (dem : DEMScheme (OracleComp (unifSpec + spec)) Key M C) (leak : M → Λ)
+    (dem : DEMScheme (OracleComp (unifSpec + spec)) (Puzzle × Key) M C) (leak : M → Λ)
     (adv : HidingAdversary spec Puzzle M C) : ℝ≥0∞ :=
   ((ProbCompRuntime.rom spec).evalDist (tlp.hidingExperiment dem leak adv true)).boolDist
     ((ProbCompRuntime.rom spec).evalDist (tlp.hidingExperiment dem leak adv false))
@@ -126,7 +138,7 @@ noncomputable def hidingAdvantage (tlp : TimeLockPuzzle spec Puzzle Key)
 /-- The hiding advantage is the distance between the probabilities that the hiding experiment
 returns `true` at the two hidden bits, against one lazily sampled random oracle. -/
 theorem hidingAdvantage_eq (tlp : TimeLockPuzzle spec Puzzle Key)
-    (dem : DEMScheme (OracleComp (unifSpec + spec)) Key M C) (leak : M → Λ)
+    (dem : DEMScheme (OracleComp (unifSpec + spec)) (Puzzle × Key) M C) (leak : M → Λ)
     (adv : HidingAdversary spec Puzzle M C) :
     hidingAdvantage tlp dem leak adv =
       ENNReal.absDiff
@@ -140,9 +152,9 @@ For a puzzle whose honest solver derives the key in round `T`, the meaningful bu
 `b = (T - 1, q)`. -/
 @[expose]
 def HidingSecure (tlp : TimeLockPuzzle spec Puzzle Key)
-    (dem : DEMScheme (OracleComp (unifSpec + spec)) Key M C) (leak : M → Λ) (Q : ℕ) (b : ℕ × ℕ)
-    (qEnc : ℕ) (ε : ℝ≥0∞) : Prop :=
-  ∀ adv : HidingAdversary spec Puzzle M C, adv.IsQueryBound Q b → adv.MakesAtMostQueries qEnc →
-    hidingAdvantage tlp dem leak adv ≤ ε
+    (dem : DEMScheme (OracleComp (unifSpec + spec)) (Puzzle × Key) M C) (leak : M → Λ) (Q : ℕ)
+    (b : ℕ × ℕ) (qEnc : ℕ) (ε : ℝ≥0∞) : Prop :=
+  ∀ adv : HidingAdversary spec Puzzle M C,
+    adv.IsQueryBound Q b → adv.MakesAtMostQueries qEnc → hidingAdvantage tlp dem leak adv ≤ ε
 
 end TimeLockPuzzle

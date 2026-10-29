@@ -30,6 +30,9 @@ left-or-right IND-CPA games under a uniform key.
 `DEMScheme.IND_CPA_OneTime_Advantage_eq_IND_CPA_Advantage` relates the two: the one-time
 advantage of an adversary is the multi-query advantage, without leakage, of
 `DEMScheme.IND_CPA_OneTime_Adversary.toMultiQuery`, which makes a single challenge query.
+
+`DEMScheme.comap f` changes the key type of a DEM along a function `f`, so that a DEM under a key
+is also a DEM under any data from which the key is read off.
 -/
 
 @[expose] public section
@@ -67,6 +70,31 @@ def PerfectlyCorrect (runtime : ProbCompRuntime m) : Prop :=
   ∀ k : K, ∀ msg : M, runtime.evalDist (dem.correctnessExperiment k msg) {true} = 1
 
 end Correct
+
+/-! ## Changing the key -/
+
+section comap
+
+variable {K' : Type}
+
+/-- The DEM keyed by `K'` that encrypts and decrypts under the image of its key by `f`. A DEM
+keyed by the whole output of a key encapsulation, such as a time-lock puzzle together with its
+key, is `dem.comap Prod.snd` when it uses the key alone. -/
+def comap (f : K' → K) : DEMScheme m K' M C where
+  encrypt k msg := dem.encrypt (f k) msg
+  decrypt k c := dem.decrypt (f k) c
+
+@[simp]
+lemma comap_encrypt (f : K' → K) (k : K') : (dem.comap f).encrypt k = dem.encrypt (f k) := rfl
+
+@[simp]
+lemma comap_decrypt (f : K' → K) (k : K') : (dem.comap f).decrypt k = dem.decrypt (f k) := rfl
+
+/-- A DEM pulled back along `f` runs the correctness experiment under the key's image. -/
+lemma correctnessExperiment_comap [DecidableEq M] (f : K' → K) (k : K') (msg : M) :
+    (dem.comap f).correctnessExperiment k msg = dem.correctnessExperiment (f k) msg := rfl
+
+end comap
 
 section IND_CPA_OneTime
 
