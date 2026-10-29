@@ -87,6 +87,7 @@ public import VCVioTest.PointerChainPuzzle.Basic
 public import VCVioTest.PointerChainPuzzle.Batch
 public import VCVioTest.PointerChainPuzzle.Handler
 public import VCVioTest.PointerChainPuzzle.Ideal
+public import VCVioTest.PointerChainPuzzle.Truncate
 public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProductRelationControls
 public import VCVioTest.ProgramLogic.BoundedMeasureWP
@@ -172,6 +173,7 @@ public import VCVioTest.Tactic.FunProp
 public import VCVioTest.Tactic.GeneralizedRelations
 public import VCVioTest.Tactic.GeneralizedRelationsExperiments
 public import VCVioTest.Tactic.Positivity
+public import VCVioTest.TimeLockPuzzle.Truncate
 public import VCVioTest.ToFinalValidity
 public import VCVioTest.ToMathlib.AbsDiff
 public import VCVioTest.UniformOn

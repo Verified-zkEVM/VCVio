@@ -205,6 +205,7 @@ public import VCVio.CryptoFoundations.SymmEncAlg.Deterministic
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
 public import VCVio.CryptoFoundations.TimeLockPuzzle
+public import VCVio.CryptoFoundations.TimeLockPuzzle.Truncate
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash
 public import VCVio.CryptoFoundations.VectorCommitment
@@ -342,6 +343,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Counter
 public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryBound.Tagged
+public import VCVio.OracleComp.QueryTracking.QueryBound.Truncate
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
