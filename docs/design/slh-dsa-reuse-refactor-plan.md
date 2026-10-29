@@ -3,11 +3,13 @@
 Status: gated execution plan. The bounded prototypes and production P4/P6 gates are checked;
 full P5 preservation and complete migration remain open. The
 [finite completion manifest](slh-dsa-reuse-completion-manifest.md) fixes R6c/R8 deliverables;
-complete per-unit Lean contracts and independent review remain required before bodies.
+explicit per-unit claims and independent review remain required for acceptance.
 Plan approval is not implementation acceptance.
 
-The objective is maximum useful generality **without sacrificing an existing security bound or
-strengthening its resource premises**. Use SLH-DSA as the constructive anchor. Share canonical
+The objective is maximum useful generality **while preserving or improving the end security
+guarantees over their original assumptions and resource regimes**. Intermediate theorems and
+APIs may change or disappear when a refactor tightens a bound, streamlines a proof or improves
+reuse. Use SLH-DSA as the constructive anchor. Share canonical
 construction, request, observation and probability infrastructure; retain two complementary
 proof methods until a stronger unification is actually proved. A cleaner facade is a step,
 not the endpoint. A near-total proof rewrite is an option only when evidence favors it.
@@ -38,18 +40,38 @@ The research examines interfaces and representative proof assemblies, not every 
 
 Keep model, scheme, success event, observer, probability interpretation and resource predicate
 attached to every certificate. A shared name such as `WorkBound` does not make them equivalent.
+The expressions below are comparison bounds; a proved tighter bound on the same scope satisfies
+the security requirement without reproducing the old formula as a separate theorem.
 
-| Required result | Preserve exactly |
+| Required guarantee or behavior | Acceptance scope |
 |---|---|
-| General #766 construction/security | Arbitrary-depth/provider APIs, their current hypotheses, `securityTarget_two_one`, SUF/EUF forms, per-seed and averaged results; no new adversary or hash assumptions |
+| General #766 construction/security | Arbitrary-depth/provider construction and security guarantees, SUF/EUF forms, per-seed and averaged results; no stronger adversary or hash assumptions |
 | Six SHAKE sets, deterministic | Full `byteBound + honestAdrsCount / 2^256 * weakSeedFactor(everySeedBound)`; keep existing `optRand` generality and structural `RomQueryBound qh qs` |
 | Per-seed/refined #766 families | Preserve epsilon-randomizer and arbitrary seed-distribution forms, outside-weak-seed bounds, sharper every-seed `n=32`/minimum forms and their exact current hypotheses, not only averaged headlines |
 | Six SHAKE sets, hedged | The distinct sharper hedged expression, uniform randomizer contract and full weak-seed contribution, including the `n=32` treatment |
 | Original #912 theorem | Exact success bound `q/2^127` for every original `q >= 1`, actual selected joint work bounded with probability one, actual signing count at most `2^64` with probability one |
 | Original #912 game | Variable contexts, optional signing replies, strict byte signatures, generated-key support, one empty-cache shared 30-byte oracle; keygen/signer hashes and private draws execute but are excluded from selected work |
 | #912 cost-tightness auxiliaries | Zero-win result below 569; well-framed/parseable verifier 569–3824 from arbitrary caches, accepted variants and accepted-outcome work lower bound, under exactly their original support/framing/acceptance premises |
-| Common wire interface | Advantage correspondence, syntactic-to-counted transports, literal `(qh+qs+3929)/2^127` and the full minimum on their common scope; do not replace an actual joint premise by separate maxima |
+| Common wire interface | Advantage correspondence, syntactic-to-counted transports, `(qh+qs+3929)/2^127` or a tighter bound and the full minimum on their common scope; do not replace an actual joint premise by separate maxima |
 | Conformance/numerical interfaces | Existing canonical codecs, algorithm/query behavior, secret-first FORS order, evaluators, 18 exact CSV rows, kernel point/range certificates, profiles and tests |
+
+For each affected guarantee, record its scheme, adversary and success event, seed/hash
+assumptions, context/profile domain and resource/lifetime predicate. The guarantee must remain
+available, possibly in a specialized module, or follow from a retained/new bound at least as
+strong over that whole original scope. A smaller right-hand side obtained by restricting that
+scope is not an improvement. Independent review cannot authorize loss of a required end guarantee;
+changing that outcome scope requires an explicit user decision.
+
+Historical declaration/type/body/owner snapshots help identify changes. They do not make every
+intermediate lemma, proof route or exported name a permanent API. Document intentional replacements
+or retirements and their effect on actual consumers; prove the comparison, refinement or resource
+transport needed for the retained/improved guarantee. A shorter proof can be a reuse or clarity
+benefit with the same bound; it does not itself establish a tighter bound.
+
+Observation laws below describe the intended scheme/experiment contracts, not blanket identity
+of old internal traces or representations. A simpler implementation may use a proved operational
+or distributional refinement and sound resource domination/transport. State which observations
+are compared; do not erase rejected/final-loss work or weaken probability-one budgets to expectation.
 
 The canonical experiment must not bake in or enforce `2^64`: #766's general results have no
 such lifetime restriction. That number belongs to the #912 certificate's eligibility predicate.
@@ -61,8 +83,8 @@ The [R0 declaration manifest](slh-dsa-reuse-evidence/strength-manifest.json) rec
 source declarations in 25 groups, with qualified names, source headers, file hashes and semantic
 anchors. It includes per-seed/epsilon-randomizer and sharper `n=32`/minimum families, derived EUF,
 profiles, the exact #912 game/budget predicates and protected provider/honest-work APIs. Source
-headers are a research inventory; R0 still captures elaborated statements/axioms and observer
-laws at the implementation head. A list of `#check` names alone is not strength preservation.
+headers and R0's elaborated statements/axioms and observer laws are comparison evidence.
+A list of `#check` names alone does not establish a retained or improved guarantee.
 
 A new cost policy describes declared query/request events, not arbitrary CPU or wall-clock work.
 Changing weights does not automatically retain 127 bits. To reuse it at the same q, prove
@@ -92,7 +114,7 @@ owner and clients; it does not imply that the remaining probability argument dis
 
 ## Alternatives and decision
 
-| Alternative | Exact-strength risk and reuse | Decision |
+| Alternative | Security-strength risk and reuse | Decision |
 |---|---|---|
 | Keep both stacks with a facade | Low immediate proof risk; leaves competing algorithms/games and internal coupling | Useful baseline and transition only |
 | Mechanical generic extraction | Removes some misplaced instrumentation/transport duplication; does not by itself unify construction or consumers | Early work units, not the endpoint |
@@ -103,8 +125,8 @@ owner and clients; it does not imply that the remaining probability argument dis
 
 Choose the shared core plus evidence-led deeper extraction. Do not stop at namespace changes,
 or move 51,000 lines under a generic name while importing fixed byte/message/128s constants.
-Full unification becomes an option only after it derives every ledger entry with unchanged
-premises and exact expressions, with evidence that it improves maintenance/adaptation.
+Full unification becomes an option only after it retains or improves every required end guarantee
+over its original scope, with evidence that it improves maintenance/adaptation.
 
 ## Target ownership and dependency direction
 
@@ -121,17 +143,18 @@ Use existing `Params`, `ValidatedParams`, `CorePrimitives`, `GeneralScheme`, `Se
 codec ownership. A provider-first canonical implementation can make current pure/oracle twins
 specializations, but it needs an import-DAG/component migration; do not create another twin family.
 Initially retain current definitions and prove component laws before delegating their bodies.
-Keep existing symbols and theorem statements as exact facades during the transition.
+Compatibility views can keep consumers working during the transition; retaining every old
+intermediate symbol or theorem statement is not a completion requirement.
 
 The public algorithm has one canonical meaning. A graph or bit-vector view may remain as an
 internal proof representation, with a certified refinement. It must not become a second public
 FIPS specification that downstream clients have to choose or reimplement.
 
-Before deprecating/removing an old public declaration, recover its exact type, model and budget
-meaning, including stronger auxiliary cost/security bounds; provide the ordinary consumer
-replacement and prove the compatibility observation. Review the consumer migration and the
-ledger together. The headline inventory is not permission to silently drop unlisted helpers or
-external-facing types. Keep exact compatibility names/views until that criterion passes.
+Before deprecating/removing a public declaration, identify its model and budget meaning and any
+independent security guarantee it provides. Review the retained/new guarantee and ordinary consumer
+migration together. An intermediate can be retired when no longer needed; deliberate API changes
+must be documented. Stronger auxiliary end guarantees remain available or are dominated on their
+original scope. Compatibility aliases are a migration choice, not a reason to retain duplicate proofs.
 
 ## Signing, rejection and the one experiment
 
@@ -224,10 +247,10 @@ security conclusion or an unproved graph property in a generic record.
 
 | First candidate | Genuine shared statement | Two real consumers and gate |
 |---|---|---|
-| `GraphFreshSampling.evaluate_eq_sample` | State-and-cache program equality for a fresh, separated adaptive traversal; general Input/Output, no Experiment import | Canonical FORS and WOTS/XMSS subgraphs; exact old specialization and payload-dependent traversal tests |
+| `GraphFreshSampling.evaluate_eq_sample` | State-and-cache program equality for a fresh, separated adaptive traversal; general Input/Output, no Experiment import | Canonical FORS and WOTS/XMSS subgraphs; specialization/refinement evidence and payload-dependent traversal tests |
 | Remaining graph programming laws | Coordinate agreement, updates outside a traversal, rank/dependency evaluation and table programming | Two actual SLH graph components or parameter instances; preserve complete cache, not just returned nodes |
 | `Presample` local lemmas | Prepending unused samples and adaptive traversals preserves the advertised law | Keygen warmup and later continuation warmup; keep outside the selected counter and preserve conditional cache law |
-| Independent-power/moment lemmas in `ForsConcentration` | Integrability/binomial moments for independent variables, before concrete 14th/sixth moments | Existing real FORS use, exact old specialization and ordinary public math consumer exposing assumptions; check Mathlib ownership first, no invented second cryptoscheme |
+| Independent-power/moment lemmas in `ForsConcentration` | Integrability/binomial moments for independent variables, before concrete 14th/sixth moments | Existing real FORS use with retained/improved tail bounds and ordinary public math consumer exposing assumptions; check Mathlib ownership first, no invented second cryptoscheme |
 | Exact counts/answer relabelling | Existing cost semantics and equal-information sampler-preserving bijections | Total/rejecting scheme views and concrete byte/bit view; exact policy/log/cache diagrams |
 
 These are extraction candidates, not accepted proofs of universal graph security. Current graph
@@ -242,7 +265,7 @@ Use tiered reuse criteria. The signing architecture needs both actual total/reje
 construction/graph abstractions need two genuine SLH components or parameter instances. A toy
 can falsify a bug but cannot be their second construction consumer. Intrinsically generic
 measure/moment/structural math may have one real FORS use if it has no SLH types/constants/imports,
-a justified existing Mathlib/framework owner, exact old specialization and an ordinary public
+a justified existing Mathlib/framework owner, retained/improved real FORS result and an ordinary public
 math consumer exposing the assumptions. Do not invent another cryptoscheme to satisfy a checkbox.
 A model-specific one-use helper stays scoped. Every extraction removes a real ownership/import
 coupling. No numerical slack, extra adversary premise or whole-security conclusion hidden as a
@@ -263,7 +286,8 @@ Use the same generic state/cache traversal theorem in two actual component/param
 
 Keep this structural contract distinct from quantitative side certificates: output/cardinality
 and sampler laws, FORS load/moment inequalities, ledger charges and the final security exponent.
-Recover the existing 128s instance and exact 127 proof without slack before replacing its route.
+Retain the existing 128s instance's 127-bit guarantee or prove a tighter bound over its full scope
+before replacing its route.
 The 192f structural instance uses its existing applicable general bound; no new 191-bit joint
 claim is inferred. Mathematical validity alone does not imply every byte/address constraint.
 
@@ -301,7 +325,7 @@ default recursion/heartbeat limits, private locked dependencies and standard axi
 | P2 `WeightedBudgetProbe.lean` | Exact weighted structural-to-pathwise bridge; adaptive joint cap 2 but necessary separate maxima 2+2; nonunit 3/1 policy cap/witness 6, erasure, AE and probability-one event | A free-computation consumer, not complete SUF/source/cache specialization or input-dependent-policy execution |
 | P3 `ReplyLogProbe.lean` | Total replies specialize to actual `signingLogContains`; optional-success projection; raw log length 3 versus successful length 2; replay/different-signature checks | Pure log laws; no execution/charging of a rejecting signer, full experiment or security transfer |
 | P4, first implementation gate | Effectful canonical FORS/tagged weighted observer, second actual instance | Accepted at `5d2362a5`; broad migration still requires P5/P6 |
-| P5, full preservation gate | One actual shared SUF experiment, exact old/new outcome/log/cache/source refinements and all-q headline recovery | Unproved; must pass before deleting superseded algorithms/games/proof routes |
+| P5, full security/semantics gate | One actual shared SUF experiment, required outcome/log/cache/source refinements and retained/improved all-q guarantees | Open; must pass before deleting superseded algorithms/games/proof routes |
 | P6, structural generality gate | Shared graph coordinates/address/rank/provider observer on 128s and 192f, with separate quantitative certificates | Accepted at `ae23574d`; [clean checkpoint](slh-dsa-reuse-evidence/r6c/p6-checkpoint.json); no new security exponent |
 
 P1's independent scoped review is `b8365df9875f916e39318383fd3cbec4f142157969f99d6c50b022537bad097a`;
@@ -315,22 +339,23 @@ starting their implementation, and their planned status is not permission for ea
 ## Work units, dependencies and acceptance
 
 Each unit is a separate reviewable commit after independent adversarial PASS and appropriate
-checks. Root orchestration owns commits; authors freeze exact packets before review. The first
-units add contracts and proved compatibility; retain original theorem routes while porting.
+checks. Root orchestration coordinates commits. State each unit's proposed claims and consumer/API
+changes explicitly; review the actual patch and proof evidence before accepting it. Retain a working
+route until its required end guarantees and semantics are established by the retained/new route.
 
 | Unit | Dependencies and deliverable | Required acceptance |
 |---|---|---|
-| R0 strength baseline | Recorded base/lock, theorem types/axioms, models, observer/budget predicates, exact numeric artifacts and explicit old tests | Complete ledger manifest; arbitrary-q preservation criteria, not just sampled output |
+| R0 strength baseline | Recorded base/lock, theorem types/axioms, models, observer/budget predicates, exact numeric artifacts and explicit old tests | Comparison inventory and arbitrary-q retained/improved guarantee criteria, not just sampled output |
 | R1 generic owners | R0; source/phase/input cost policy, Reply/readback/log core, existing cost/exact-count/relabel ownership | Two existing total/rejecting clients; no HashSig/fixed-message imports in generic modules; no duplicate cost semantics |
 | R2 frontend/experiment gate | R1; rejectable policy and one actual counted experiment over the canonical view | Reject then continue; raw prefix/log/count/cache laws, repeated hits and exact source vector; nonunit and input-dependent actual consumer; no sentinel-cost trap |
 | R3 component gate P4 | R1; canonical effectful FORS/provider refinement and chronological tagged observer | Two actual parameter/provider instances, hidden provider traffic and exact weighted costs; adversarial order/source controls |
-| R4 full gate P5 | R2/R3; concrete keygen/caches/answer representation and old/new game specialization | Original joint probability-one 127 at exact q/lifetime, every original #766 bound/hypothesis, losing/invalid branches; all-q kernel proofs |
-| R5 canonical delegation | P4/P5/P6; migrate WOTS/FORS/XMSS/hypertree/scheme/view bodies in dependency-complete units | Public equations preserve each old result and effect observation; remove a duplicate only after complete old theorem recovery |
-| R6a generic probability owners | R1; general-Input/Output adaptive sampler plus independent-moment family, after existing-owner search | Tiered reuse criteria: real graph clients or intrinsic public math with actual FORS use; exact old specialization, no fixed-128s import/slack |
+| R4 full gate P5 | R2/R3; concrete keygen/caches/answer representation and old/new game specialization | Retain or improve joint probability-one 127 over original q/lifetime and every #766 security regime; losing/invalid branches and all-q kernel proofs |
+| R5 canonical delegation | P4/P5/P6; migrate WOTS/FORS/XMSS/hypertree/scheme/view bodies in dependency-complete units | Required operational/observation laws and retained/improved end guarantees; document intermediate/API replacement or retirement and migrate real consumers |
+| R6a generic probability owners | R1; general-Input/Output adaptive sampler plus independent-moment family, after existing-owner search | Tiered reuse criteria: real graph clients or intrinsic public math with actual FORS use; retained/improved guarantees, no fixed-128s import or hidden numerical loss |
 | R6b graph gate P6 | R3/R6a; canonical-parameter graph on 128s and 192f, structural laws separate from quantitative certificates | Actual coordinates/address/rank/evaluation/provider observer reuse; recover old 128s specialization; revise architecture if it fails |
-| R6c deeper proof extraction | R6b; finite named extraction/recovery manifest frozen after P6 | Complete that manifest under the same exact-strength/consumer gates; retain specialized side certificates |
+| R6c deeper proof extraction | R6b; finite functional extraction/use manifest fixed after P6 | Complete the five families under the same security-strength/consumer gates; retain specialized certificates where needed |
 | R7 consumer surface | R2/R4; light construction/adaptation/observation/certificate leaves and examples | Real changed-context, parameter, provider and resource consumers without engine rewrites; import and global-attribute guards |
-| R8 final migration gate | R5/R6a–c/R7; clean recorded committed source/generated imports and full validation | Ledger complete, all original regressions and exact 18-row artifact, strict before/after head/dependency cleanliness and independent final review |
+| R8 final migration gate | R5/R6a–c/R7; clean recorded committed source/generated imports and full validation | Guarantee/consumer mapping complete, meaningful regressions and exact 18-row artifact, strict before/after head/dependency cleanliness and independent final review |
 
 R4/P5 uses the existing unchanged representation bridges to establish the shared experiment's
 concrete specializations first. It does not require replacing every construction/proof body.
@@ -340,8 +365,10 @@ there is no circular requirement to finish a whole rewrite before validating sha
 
 After P6, freeze the R6c completion manifest in a reviewed commit before starting its deeper
 ports. List a finite set of named source theorem families, intended generic owners, actual
-consumers or the applicable intrinsic-math reuse criterion, and exact old-specialization recovery
-theorems. Record which remaining specialized arguments stay local and why. This manifest fixes
+consumers or the applicable intrinsic-math reuse criterion, and the security/semantic comparison
+claims. Record which specialized arguments stay local and which intermediate APIs change or retire.
+The named old declarations locate affected arguments; they are not permanent API obligations.
+This manifest fixes
 the R6c deliverables and the corresponding R8 completion endpoint; later extraction ideas are
 separate follow-up work, not an open-ended condition for finishing this migration. The manifest
 must still satisfy the required generic probability extraction and two-instance structural graph
@@ -350,8 +377,8 @@ reuse above; it cannot reduce completion to facades over unchanged specialized p
 R6a–c proceed incrementally alongside compatibility work; required probability extraction and
 the graph pilot must not be postponed indefinitely
 behind a facade-only completion claim. Whole-engine replacement is a new decision after local
-extractions expose a genuinely shared argument. Any failed exact-strength gate retains the old
-working proof route and narrows/revises the proposed abstraction rather than weakening a theorem.
+extractions expose a genuinely shared argument. If an abstraction cannot retain or improve a
+required end guarantee on its original scope, retain the working route and revise the abstraction.
 
 ## Tests, imports and final evaluation
 
@@ -365,7 +392,8 @@ Negative controls must catch source/order swaps, free cache hits, omitted reject
 expectation substituted for almost-sure cost, and inadmissible weights inheriting 127. Add a
 final-invalid-request control that fails if a fallback adds verifier work. Preserve small-q and
 lifetime endpoints. Sampled counts/18-row arithmetic complement the all-budget kernel proofs;
-they cannot replace exact statement/premise recovery. Keep original axioms and all baselines.
+they cannot replace all-budget security proofs with honest premise/resource comparisons.
+Keep the standard axiom policy and all baselines.
 
 The specification, counting and adaptation leaves must exclude the 221 proof files. Existing
 Game/Transfer/FIPS205 leaves already do this; FIPS205 already excludes Statement.Scheme and its
@@ -386,6 +414,18 @@ and all eleven locked dependencies before and after. Regeneration is preparation
 never a hidden mutation inside the final acceptance run. Preserve reports outside that source
 head; a whitespace check alone does not certify committed inputs. Rebased/merged heads require
 their own validation and current-head CI. No baseline increase is part of this plan.
+
+Validation trusts the pinned installed Lean/Lake/Python tools and an owned Lake cache, using
+Lake's normal source/import content-hash invalidation as described in [AGENTS.md](../../AGENTS.md).
+Record the toolchain and source/lock snapshots; allow normal build outputs and one builder per
+writable cache. Routine implementation and prototyping use that toolchain without per-compile
+permission or recursive Python-cache/import-path and whole-Lean-reader admission audits.
+Review introduced metaprograms/initializers and check actual provider selection where it affects
+a test. Positive tests need genuine successful exits; negative tests need the intended failure
+after successful setup, with no timeout/import/build/cleanup failure counted as evidence.
+Historical audit packets and failures remain unchanged; unexecuted predicates are never reported
+as passed. An explicitly named dirty trial patch is useful precommit evidence, not a clean-head
+acceptance. Independent review before each accepted commit and final recorded-head validation remain.
 
 ## Effort, uncertainty and go/no-go
 

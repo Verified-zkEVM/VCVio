@@ -1,9 +1,9 @@
 # Finite SLH-DSA reuse completion manifest
 
-Documentation candidate bound to accepted commit
+The original evidence checkpoint is accepted commit
 `ae23574db895fd68ae28db806b54e0b3b275a551`. The clean committed full validation and independent P6 acceptance passed.
 This manifest freezes the finite completion deliverables; it does not freeze the
-complete per-unit Lean contracts or authorize bodies or migration. Full P5, R5
+intermediate declarations, proof bodies or public names. Full P5, R5
 delegation and R6c/R8 completion remain open.
 
 This finite endpoint supplements the [reuse plan](slh-dsa-reuse-refactor-plan.md),
@@ -12,60 +12,80 @@ This finite endpoint supplements the [reuse plan](slh-dsa-reuse-refactor-plan.md
 [R0b readable/runtime bindings](slh-dsa-reuse-evidence/r0b/README.md).
 The [source map](slh-dsa-reuse-evidence/r6c/source-map.json) retains its original
 historical provenance; every selected source anchor also matches this accepted
-commit. [Evidence and reproduction](slh-dsa-reuse-evidence/r6c/README.md),
+commit. Those historical hashes are not claims about later documentation revisions.
+[Evidence and reproduction](slh-dsa-reuse-evidence/r6c/README.md),
 [target-shape requirements](slh-dsa-reuse-evidence/r6c/target-shapes.md), and the
 [P6 checkpoint](slh-dsa-reuse-evidence/r6c/p6-checkpoint.json) distinguish this
-finite deliverable list from the fully quantified contracts still required
-before each body unit.
+finite deliverable list from the per-unit claims, implementations and evidence
+still needed for acceptance.
 
 ## Endpoint and exclusions
 
 The endpoint is one canonical provider-based construction and counted experiment,
-with two complementary probability arguments. It is not one universal security
-proof, nor a facade over permanently duplicated signing bodies. Five finite R6c
+with useful shared mathematics and complementary probability arguments where needed.
+A unified proof is eligible if it retains or improves every required guarantee;
+permanently duplicated signing bodies behind a facade are insufficient. Five finite R6c
 families below must be consumed by the real proof/construction routes. R5 then
 removes duplicate implementation ownership in the named dependency units below.
 A completed family is not reopened by discovering another possible extraction;
 additional families become separate follow-up work. Purely specialized helpers
 may remain local. No LOC or build-speed target is claimed.
 
-Every recovery uses the exact frozen original type and semantic equations, not
-only a theorem with the same pretty-printed name. No q+1/max(1,q) replacement,
-extra lifetime/width/freshness premise, or numerical slack is permitted. Generic
-hypotheses such as FreshFor are discharged by an honest component application;
-they are not added to the final adversary/security theorem.
+Acceptance preserves or improves the end security guarantees over their original
+scheme, adversary/success event, seed/hash assumptions, context/profile and
+resource/lifetime regimes. Each required guarantee remains available, possibly
+in a specialized module, or follows from a retained/new bound at least as strong
+over that whole scope. Independent review cannot authorize its loss or narrowing;
+that requires an explicit user change to the required outcome.
+
+Intermediate theorems and APIs may change or disappear when a refactor tightens
+a bound, streamlines a proof or improves reuse. Document the affected consumers
+and the comparison, refinement or resource transport supporting the retained/new
+guarantee. Historical types, bodies and owner snapshots are comparison evidence,
+not permanent API obligations. A shorter proof can improve clarity with the same
+bound; it is not itself evidence of a tighter bound. No q+1/max(1,q) substitution,
+extra lifetime/width/freshness premise or numerical loss may weaken the original
+security regime. Generic hypotheses such as FreshFor must be discharged in the
+actual application rather than passed to the final adversary/security theorem.
+
+Required observation laws concern the intended scheme/experiment contract, not
+every old internal trace or proof representation. A changed implementation may
+use an appropriate operational/distributional refinement and sound resource
+domination/transport. It must account for rejected/final-loss work and must not
+substitute expected cost for an almost-sure joint budget.
 
 ## Five required extraction / actual-use families
 
-All new names in this section are PROPOSED acceptance names, not declarations
-claimed to exist. Old fully qualified names and sources are in the linked source map.
+Names in this section locate original arguments or proposed consumers; they are
+not permanent declaration requirements. Old qualified names and sources are in the linked source map.
 Each family needs ordinary-import type/axiom witnesses and actual production use.
 A test-only reproving wrapper is useful evidence but does not finish delegation.
 
-All **52** named source declarations are absent from the original RAW1242 table;
-the source-map first-line headers are location anchors, not full contracts.
-Before each body unit, freeze and independently review its complete quantified
-Lean headers, exact old literal types, relevant semantic values/equations,
-declaration shape and axiom sets, dependencies/owner closure, and explicit
-carrier, sampler, policy and observation maps. Add coverage for these previously
-uncaptured declarations. Complete the existing-owner search before choosing a
-new owner. No body unit starts from this prose or an unchecked record alone.
+The **52** named source declarations are a finite change-impact inventory, and
+are absent from the original RAW1242 table. Their first-line headers locate
+arguments, not complete contracts. For each unit state the proposed security or
+functional claims and relevant carrier/sampler/policy/observation maps, identify
+which anchors are retained, strengthened, replaced or retired, and review the
+actual proofs, axioms and consumers. Use old type/body/dependency captures where
+they help establish that comparison, without requiring a new complete capture
+of every intermediate before implementation. Check existing owners before adding
+a generic mechanism. The five families and six construction layers fix the
+functional endpoint; they do not require retaining 52 declarations.
 
 ### C1. Adaptive sampler: finish actual ownership and consumers
 
 Existing generic owner: `OracleComp.RandomOracleTraversal` in
-`VCVio/OracleComp/QueryTracking/RandomOracle/Traversal.lean`. Keep its existing
-five definitions evaluate/sample/program/Separated/FreshFor and five laws.
+`VCVio/OracleComp/QueryTracking/RandomOracle/Traversal.lean`. Use its
+evaluate/sample/program and Separated/FreshFor mechanisms and laws.
 Do not add another traversal. Accepted A Frame remains its effectful frame API.
 
-Required old recoveries, namespace `SLHDSA.SHAKE128s.GraphFreshSampling`:
+Original comparison anchors, namespace `SLHDSA.SHAKE128s.GraphFreshSampling`:
 `evaluate_eq_sample`, `program_congr`, `program_update_outside`,
 `evalDist_sample_eq_uniform_program`, `evalDist_evaluate_eq_uniform_program`.
-Also recover the five definitions' exact old specialization equations.
-Proposed ledger group: `R6c.Sampler` (5 definition equations +5 literal types).
-Delegate the old proof uses to the generic owner after classifying any required
-guard migration below (proof-only reuse need not change RAW records); preserve
-old public types and exact state/cache observations.
+The five definition equations and five theorem types identify the original
+specialization. Proposed ledger group: `R6c.Sampler`. Make the real proof uses
+consume the generic mechanism, with the required full state/cache observations;
+document any intermediate/API replacement and evolve affected guards explicitly.
 
 Actual consumers: the existing 128s `CanonicalGraph.Programming.warmup_uniform`
 route and the canonical 192f FORS graph traversal. For 192f use actual GraphInput,
@@ -79,7 +99,7 @@ remain separate from these conditional random-oracle sampling clients.
 Proposed consumer theorems `SLHDSA.Security.ForsGraphSampling.shake128s` and
 `.shake192f` must both consume the SAME generic sampler law, actual canonical
 GraphInput/schedule, and retain complete traversal state plus outer oracle cache.
-Their exact hypotheses must be frozen before authoring, not invented as fields.
+Their hypotheses must be explicit and discharged for the actual clients, not assumed as fields.
 Uniform-prefix laws require their own sampling hypotheses: zero-padding for m<n
 does not yield uniform n-byte output. The universal effectful programme equality
 keeps all validated parameters without Width, PrefixFits or FreshFor premises.
@@ -92,19 +112,19 @@ Preserve the two arbitrary-order independent binomial power laws, the centered
 sum polynomial through six, its zero/succ equations, and finite-sum law.
 No new Poisson API is required to complete this family.
 
-Required old recoveries in `SLHDSA.SHAKE128s.ForsConcentration`:
+Original comparison anchors in `SLHDSA.SHAKE128s.ForsConcentration`:
 `independent_integrable_add_power`, `independent_integral_add_power`,
 `sumMoment` (all orders, including fallback >6), `sumMoment_zero`,
 `sumMoment_succ`, `independent_sum_moments`, and
 `poisson_centered_sum_moments`. Proposed ledger group `R6c.Moments`.
-The original production `poisson_centered_sum_moments` must consume the generic
-finite-sum law, and `poisson_sixth_sum_bound` / `poisson_load_tail_sharper`
-must still consume that production theorem. The accepted separate test theorem
+The production FORS concentration/tail argument must consume the generic
+finite-sum mechanism and retain or improve the resulting security bound under
+the original measure, integrability and moment assumptions. The accepted separate test theorem
 `Refactor.IndependentPowersRecovery.poisson_centered_sum_moments` is not enough.
-Retain its actual measure, all integrability and moment assumptions and constants.
+The named original proof chain is comparison evidence, not a permanent intermediate API.
 
 Reuse criterion is intrinsic mathematics: no SLH imports/constants in generic
-owner; Mathlib ownership/search check; exact old specializations; existing public
+owner; Mathlib ownership/search check; actual production specialization; existing public
 `iIndepFun.integral_pow_six_finsetSum_of_signs` consumer with polynomial
 15*n^3-30*n^2+16*n, including n=0,1. No artificial second cryptoscheme is needed.
 
@@ -115,9 +135,10 @@ below it after checking current Commute/Programming laws. Reuse randomOracle,
 QueryCache, simulateQ and existing traversal; no new ROM or world interpreter.
 Finite targets: one fresh-entry prepend value-distribution law and its adaptive
 traversal prepend law, generic in input/output and ambient private sampling.
-Recover exact old `Presample.evalDist_prepend_fresh_world` and
-`Presample.evalDist_prepend_worldEvaluate`; recover `worldEvaluate` as the exact
-lift of existing Traversal.evaluate. Proposed ledger group `R6c.Presample`.
+Original anchors are `Presample.evalDist_prepend_fresh_world`,
+`Presample.evalDist_prepend_worldEvaluate` and `worldEvaluate`'s lift of existing
+Traversal.evaluate. Retain their required value laws through the generic mechanism,
+with documented replacement or retirement of intermediate APIs. Proposed ledger group `R6c.Presample`.
 `cacheQuery_comm` should reuse an existing update lemma, not grow another API.
 
 Actual consumers: original `evalDist_prepend_warmup` (keygen graph warmup) and
@@ -137,12 +158,12 @@ agree, and deterministic program = final cells + cache written in SAME list orde
 Do not add rank sorting, Fintype enumeration or a second evaluator to the owner.
 Freeze explicit topological read-before-write assumptions before authoring.
 
-Recover old `CanonicalGraph.Programming.AgreesOutside.assign`, `input_eq_target`,
+Original anchors are `CanonicalGraph.Programming.AgreesOutside.assign`, `input_eq_target`,
 and `program_eq_cacheFrom`; the old Pairwise RankLE hypothesis discharges the
 new local read-before-write condition via accepted Graph.Children rank laws.
 Retain original cacheFrom order and full cells/cache equality.
-Proposed ledger group `R6c.Programming` (three types plus exact local-definition
-specialization equations required by those types).
+Proposed ledger group `R6c.Programming`. The required behavior is the complete
+programming/observation law, not permanent retention of those local definitions.
 
 Actual consumers: old full-graph 128s `warmup_uniform` and 192f canonical FORS
 subtree/forest programming using accepted B dependencies and C/D output stability.
@@ -154,13 +175,13 @@ for proved child-read availability or output persistence.
 
 ### C5. Exact counting and answer-representation transport (two finite slices)
 
-#### C5a. Exact counts, unchanged verifier arithmetic
+#### C5a. Exact counts and retained/improved verifier guarantees
 
 Intended owner: `VCVio/OracleComp/QueryTracking/QueryBound/Exact` (final path after
 existing-owner check), reusing existing QueryCostExactly for instrumentation.
 Finite declarations: ExactQueryCount, pure/query constructors, bind, map;
 generic finite sequencing and list fold count; transport to existing exact cost.
-Recover old `Generic.ExactQueryCount`, `.bind`, `.map` and old
+Original anchors are `Generic.ExactQueryCount`, `.bind`, `.map` and
 `VerificationQueries.exact_bind`, `exact_map`, `sequenceFin_exact`,
 `foldlM_exact`, `exact_cost`. Proposed ledger group `R6c.ExactCount`.
 Keep concrete `Bounds` and verifier branch/chain arithmetic local unless the
@@ -168,8 +189,9 @@ existing QueryBound API already supplies a lemma; do not introduce a cost model.
 
 Actual consumers: original concrete `fors_exact` and `wots_exact` verifier routes,
 and their canonical provider counterparts through R5 observation equalities.
-Recovery must reach unchanged `VerificationBudget.verification_count_bounds`,
-`verification_accepted_count_bounds`, `accepted_outcome_work` and q<569 zero.
+Retain the guarantees supplied by `VerificationBudget.verification_count_bounds`,
+`verification_accepted_count_bounds`, `accepted_outcome_work` and q<569 zero,
+or prove stronger guarantees on their original framing/acceptance/resource scope.
 Calls include cache hits; exact count is not number of distinct cache entries.
 
 #### C5b. Answer representation transport, not another game/ROM
@@ -180,19 +202,23 @@ writer/state fold composition. Finite original Bridge.Transfer targets:
 `simulateQ_relabel_unlabel`, `simulateQ_unlabel_relabel`, `mapCache_empty`,
 `mapCache_cacheQuery`, `run_simulateQ_relabel_from`,
 `simulateQ_writerT_run_compose`, `simulateQ_writerT_stateT_run_compose`.
-Retain their exact original specializations in Bridge.Transfer.
-Proposed ledger group `R6c.Relabel` (seven literal targets).
+Use these seven anchors to compare the original specializations with the new
+mechanism. Document intermediate replacements/retirements. Proposed ledger group `R6c.Relabel`.
 
 Actual consumers: existing FIPS byte/full-answer bridge using answerEquiv and
 canonical shared-experiment observation with the corresponding oracle-answer
 representation. Required pullback includes cache update, reply/log observation
 and caller's ordered cost policy. The sampler-preserving answer law is separate
 and explicit; arbitrary truncation/padding is not an equivalence. Original
-`runBySource_evalDistEq` and `hasSecurityBits_of_bridge` remain specialized game
-corollaries consuming the generic fold laws; they are not moved as a second
+`runBySource_evalDistEq` and `hasSecurityBits_of_bridge` identify the specialized game
+consumers; retained/new corollaries consume the generic fold laws without a second
 security semantics. Generic no-HashSig import audit is mandatory.
 
-## Specialized quantitative arguments deliberately retained
+## Specialized quantitative guarantees and certificates
+
+These guarantees remain available or are dominated over their original scopes.
+Their specialized proofs may stay local; a proved tighter or simpler replacement
+can retire intermediate certificates without retaining their original names.
 
 - #766 CoverageBound/JointBound/ByteBound/WeakKeyBound/HedgedKeyBound and their
   general witness, byte-clash, seed coupling, per-seed/averaged/randomizer bounds.
@@ -201,7 +227,8 @@ security semantics. Generic no-HashSig import audit is mandatory.
   centered-six constants, occupancy/de-Poissonization thresholds, disclosure and
   share ledger/charging/provenance, WorkTarget/WorkFinal final accounting.
   These are the specialized tight quantitative proof, not generic graph execution.
-  C2 factors independent-sum algebra; it does not replace those coefficients.
+  C2 factors independent-sum algebra; changing quantitative certificates needs
+  proof that the resulting end guarantee is at least as strong.
 - Exact 127 at ORIGINAL q>=1, probability-one ACTUAL combined work and original
   lifetime eligibility; q<569 zero (which has no lifetime premise); supported
   verification 569..3824 with their original framing/acceptance distinctions;
@@ -212,90 +239,80 @@ security semantics. Generic no-HashSig import audit is mandatory.
 - Exact18-row CSV bytes/evaluator/certificates and range inequalities. These are
   regression artifacts, not substitutes for all-q kernel recovery.
 
-## R5 finite dependency units (after P4/P5/P6 and named guard migration)
+## R5 finite dependency units (after P4/P5/P6 and affected guard migration)
 
 1. WOTS primitives/chain/keygen/sign/recover: canonical Wots/GeneralWots provider
-   programs; recover old Bridge.Wots complete sign/public-key/recovery equations.
+   programs; establish the sign/public-key/recovery refinements identified by Bridge.Wots.
 2. FORS recursive tree/auth/sign/recover: canonical Fors provider; use accepted
    naturality/P4 and C/D full program observation. Keep secret-first order and
    exact parser/defaultbits; preserve PRF→F, left→right→parent and output stability.
-3. XMSS/Merkle: after1, canonical Xmss effectful tree/auth/climb; recover original
-   Bridge.Xmss merkleNode/Sign/Climb/PublicKeyFromSignature/Root equations.
-4. Hypertree: after1–3, canonical GeneralHypertree layers/root; recover original
-   Bridge.Hypertree signLayers/sign/root/verify/keygenRoot equations.
+3. XMSS/Merkle: after1, canonical Xmss effectful tree/auth/climb; establish the
+   node/sign/climb/public-key/root refinements identified by Bridge.Xmss.
+4. Hypertree: after1–3, canonical GeneralHypertree layers/root; establish the
+   layer/sign/root/verify/keygen refinements identified by Bridge.Hypertree.
 5. Scheme/codec/view: after1–4, canonical GeneralScheme + existing codec and
    fromInternalPure family; retain randomizer/mode, context validity, optional
-   rejection and exact zero-work losing branches. Recover old Scheme.* external
-   keygen/sign/verify and Bridge.Scheme internal/relabel equations.
+   rejection and zero-work losing branches in the intended experiment. Establish
+   the external keygen/sign/verify and internal/relabel refinements identified by
+   Scheme.* and Bridge.Scheme.
 6. Game/observation entrypoints: after5 and complete P5, canonical counted
-   experiment + Reply/readback view; retain old public game/security theorem
-   statements as compatibility exports, not independent executable game bodies.
+   experiment + Reply/readback view; retain or improve the old game/security
+   guarantees, with documented public replacements or compatibility exports.
+   Do not retain independent executable game bodies merely to preserve names.
    Chosen actual sampler joint keypair/cache/original-cost continuation law is
    required; private draw reorder does not imply arbitrary private trace equality.
 
-Each unit removes duplicate executable definition ownership only AFTER exact
-operational equations and public recovery; the complementary probability proof
-routes remain. Preserve all old names/types/stronger auxiliary results until
-ledger recovery and an ordinary consumer replacement is independently reviewed.
-Use finite per-unit inventories before editing; no whole-file rewrite authority.
+Each unit removes duplicate executable ownership only after the required
+operational/observation laws and retained/improved end guarantees are proved.
+Review real consumer migration and deliberate intermediate/API retirements;
+compatibility exports are a choice. Complementary probability routes stay where
+needed for a guarantee. Use finite per-unit change-impact inventories and
+independently review each self-contained implementation unit.
 
-## RAW1242 and operational-source guard migration is a separate obligation
+## Historical comparison archives and guard evolution
 
-Current R0a stores1242 semantic records rooted at112 original semantic constants,
-77 literal theorem contracts and11 groups. Its comparison includes declaration
-body AST, dependency closure, owner/calling metadata and axioms, not only types.
-Even an extensionally equal delegating definition can change its body/dependencies
-and must FAIL honestly. Capture.lean excludes theorem proof VALUES: changing only
-a theorem proof with the same statement/axiom set does not itself add its proof
-dependencies. Computational or Prop-valued defnInfo, opaqueInfo and recInfo RHS
-values, and declaration TYPES, are captured. Classify each port before editing.
-The 52 selected declarations are not themselves RAW1242 entries, so this archive
-is not evidence that their bodies are currently covered. Each unit must add its
-reviewed literal/equation/shape/axiom/closure recovery before changing a body.
-R0b additionally binds readable semantic source files, runtime sources, CSV,
-protected executable registration and driver scaffold. U compatibility work
-remains a separate reviewed unit; bind any production
-manifest to its accepted parent and separately review operational binding deltas.
+R0a's original snapshot stores 1242 semantic records rooted at 112 constants,
+77 theorem contracts and 11 groups. Its AST/dependency/owner/axiom comparison
+can reject an extensionally equal refactor. That is honest evidence of a change,
+not proof of a security regression. The 52 selected anchors are not themselves
+RAW1242 entries; the archive does not claim complete intermediate coverage.
+R0b also records readable/runtime sources, CSV, executable registration and the
+driver scaffold. Preserve these historical archives and their original provenance.
 
-Do not delete RAW records, suppress the check, permit whole-module differences,
-mark new owners external, or regenerate expected output to make delegation green.
-Before each affected migration, freeze the named original raw body/type/dependency
-record and equation; add a versioned, separately reviewed semantic migration
-entry stating old→new representation, actual canonical RHS and observation map.
-Prove exact quantified operational/equal-law compatibility, replay immutable old
-literal contracts, and mutation-test that a changed canonical branch/cost/parser
-is still rejected. Retain the original1242 archive as historical oracle. A new
-current-definition capture may be added only with a reviewed explicit mapping
-and complete dependency coverage; no blanket bypass or automatic accept-list.
-This is guard evolution with theorem evidence, not a silent baseline refresh.
+For an affected unit, explain which old claims remain required, which are
+strengthened or replaced, and which intermediates are no longer needed. Supply
+the Lean security comparison and appropriate operational refinement, equal-law
+or resource-domination evidence. Internal proof values, representation choices
+and traces need not be identical when that evidence establishes the intended
+scheme/experiment semantics and honest resource scope. Exact observations remain
+required where they are part of an advertised contract; hidden rejection or
+final-loss charges cannot be erased by changing a guard.
 
-## Finite F6 universe recovery gate under U
+Evolve active guards in the same independently reviewed unit so they check the
+retained/new claims and meaningful branch/cost/parser behavior. A guard tied only
+to a retired intermediate may itself be retired with justification. Never edit
+an old archive or relabel an unrun/failed check to pretend the implementation is
+unchanged. New captures and comparison mappings must identify their actual
+source and coverage honestly; no blanket baseline refresh substitutes for proof.
 
-R8 also requires a reviewed, finite compatibility inventory for F6's frozen
-`Expr.const` universe vectors under the independent index/runtime universes U.
-Keep all **42** original closed goals and their original level-name lists exact,
-including the immutable a2d2 goal archive, 7b25 exact-schema producer archive and
-8ab4 row-proof archive. Ordinary source recompilation does not update a frozen
-metaprogram constant vector.
+## Security comparison and independent universe coverage
 
-Before implementation, freeze each affected named constant occurrence/structural
-AST path, original and new arity, explicit inserted index level, retained level
-roles, and specialization/inverse-recovery map. Prove exact specialization back
-to each frozen original goal; reject unknown/moved/duplicated sites or mismatched
-levels. Preserve complete goal ASTs, declaration types/shapes/axioms and import
-closure. No alpha/level quotient, reduction-based matching, goal recapture or
-replacement expected schema may discharge this gate. The finite four-declaration /
-seven-reference R0 U adapter is not a blanket permission to rewrite F6 vectors.
+The **42** original F6 goals, level-name lists and proof/schema captures remain
+immutable historical evidence. Later implementations need not export all 42
+names, reproduce every raw AST or retain every intermediate proof route. They
+must retain or improve the substantive guarantees over their original scopes,
+with sound universe instantiation and ordinary checked consumers. When adapting
+a frozen metaprogram, review its explicit universe arguments: recompiling source
+does not repair a stale `Expr.const` level vector.
 
-Retain the original generic row 36. Add a **separate full counted generic row**
-quantified independently over oracle index universe i and runtime-carrier
-universe r, retaining the original EUF-to-SUF inequality and all algorithm,
-request/reply, observer, runtime and policy quantifiers. It must not specialize
-i=r, force either to zero, or widen payload universes as a substitute. Freeze its
-complete Lean header and exact old specialization/inverse witnesses before its
-proof. Recover the original 39 counted concrete rows and two DIRECT rows 37/38
-without changing their bounds/seed assumptions; the old generic row remains the
-42nd archived row, not silently replaced by the new counted theorem.
+The full counted generic EUF-to-SUF comparison is quantified independently over
+oracle index universe i and runtime-carrier universe r, including the advertised
+algorithm, request/reply, observer, runtime and policy parameters. Do not replace
+that generality by i=r, either universe fixed to zero, or extra security premises.
+The original generic row 36, 39 counted concrete rows and two DIRECT rows 37/38
+provide comparison cases. Their accepted recovery records establish that work
+at the recorded checkpoint; future simplification can use different intermediate
+statements while proving the retained/improved end guarantees.
 
 ## Cost-policy eligibility
 
@@ -317,17 +334,17 @@ private route/trace observations. A different private observer needs its own law
 
 ## R8 finite completion checklist
 
-R8 closes when: P5/all old strength ledger and P6 clean committed full gate;
-C1–C5 actual production consumers/recoveries; R5 units1–6 delegation inventories;
+R8 closes when: P5/retained-or-improved security guarantee mapping and P6;
+C1–C5 actual production use; R5 units1–6 canonical delegation;
 light normal-import adaptation recipes for valid/rejected contexts,128s/192f,
 effectful provider and ordered/input-dependent policy; old theorem eligibility
-without automatic min under different hypotheses; all original + registered
-runtime/negative/table tests; reviewed finite F6/U recovery and separate full
-counted i/r row; eligible cost observers/transports; approved guard migrations;
+without automatic min under different hypotheses; meaningful registered
+runtime/negative/table tests; checked security/universe comparisons and full
+counted i/r generality; eligible cost observers/transports; reviewed guard changes;
 unchanged pins/baselines;
 clean recorded final head/source before==after full lint/init/axioms/test/build;
-independent final review. Recover exact joint127 and all old766 bounds on SAME
-canonical experiment with their original distinct contracts. No new security
+independent final review. Retain or improve joint127 and all required766 security
+regimes on the same canonical experiment with their distinct eligibility contracts. No new security
 exponent for192f, XOF/prehash/SHA2 or whole-engine unification is required here.
 
 ## Risks and bounded decision points
@@ -336,6 +353,6 @@ C1 freshness is stronger than node-address separation and may fail on arbitrary
 adversarial cache. C3 preserves a value law, not warm cache/cost. C4 partial writes
 need precise boundary agreement. C5b full joint observations can exceed old
 value-only bridges. R5 semantic-guard evolution and opaque public definitional APIs
-are real work, not clerical wrappers. Stop/revise a family if exact original
-strength cannot be recovered; retain the working original route. No reliable
+are real work, not clerical wrappers. Revise a family if it cannot retain or
+improve a required security guarantee on its original scope; retain the working route. No reliable
 whole-migration time estimate follows from the completed P6 pilot.
