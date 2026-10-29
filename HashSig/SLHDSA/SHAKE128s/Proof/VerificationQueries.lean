@@ -9,6 +9,8 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 public import HashSig.SLHDSA.SHAKE128s.Proof.Checksum
 public import HashSig.SLHDSA.SHAKE128s.Generic.ExactQueryCount
+public import VCVio.OracleComp.QueryTracking.QueryBound.Exact.Sequence
+public import VCVio.OracleComp.QueryTracking.QueryBound.Exact.Cost
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
 /-!
@@ -37,20 +39,13 @@ theorem exact_bind {computation : OracleComp spec α} {count : Nat}
     (h : ExactQueryCount computation count) (next : α → OracleComp spec β)
     (nextCount : Nat) (hnext : ∀ value, ExactQueryCount (next value) nextCount) :
     ExactQueryCount (computation >>= next) (count + nextCount) := by
-  induction h with
-  | pure value => simpa using hnext value
-  | query input rest restCount hrest ih =>
-    rw [bind_assoc]
-    simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
-      ExactQueryCount.query input (fun output => rest output >>= next)
-        (restCount + nextCount) ih
+  exact OracleComp.QueryBound.ExactQueryCount.bind h next nextCount hnext
 
 /-- Mapping over a computation preserves its exact query count. -/
 theorem exact_map {computation : OracleComp spec α} {count : Nat}
     (h : ExactQueryCount computation count) (f : α → β) :
     ExactQueryCount (f <$> computation) count := by
-  simpa [map_eq_bind_pure_comp] using
-    exact_bind h (fun value => pure (f value)) 0 (fun value => .pure (f value))
+  exact OracleComp.QueryBound.ExactQueryCount.map h f
 
 /-- One hash call makes exactly one query. -/
 theorem hash_exact (input : Bytes) :
@@ -80,28 +75,28 @@ theorem chain_exact (publicSeed : Digest) (address : Address) (start steps : Nat
     simpa only [Nat.add_comm] using
       exact_bind (tweakable_exact _ _ _) _ steps (fun next => ih (start + 1) next)
 
+/-- Finite oracle sequencing has the function-valued finite traversal's execution order. -/
+private theorem sequenceFin_eq_fin_mOfFn {ι : Type} {spec : OracleSpec ι} {α : Type}
+    (size : Nat) (f : Fin size → OracleComp spec α) :
+    SLHDSA.SHAKE128s.sequenceFin size f = Fin.mOfFn size f := by
+  induction size with
+  | zero => rfl
+  | succ size ih =>
+    simp only [SLHDSA.SHAKE128s.sequenceFin, Fin.mOfFn_succ, ih]
+    rfl
+
 /-- Sequencing a family of computations adds their exact query counts. -/
 theorem sequenceFin_exact {size : Nat} (f : Fin size → OracleComp HashSpec α)
     (count : Fin size → Nat) (hcount : ∀ i, ExactQueryCount (f i) (count i)) :
     ExactQueryCount (sequenceFin size f) (∑ i, count i) := by
-  induction size with
-  | zero => exact .pure Fin.elim0
-  | succ size ih =>
-    rw [sequenceFin, Fin.sum_univ_succ]
-    exact exact_bind (hcount 0) _ (∑ i : Fin size, count i.succ) (fun first => by
-      simpa only [map_eq_bind_pure_comp, Function.comp_def] using
-        exact_map (ih (fun i => f i.succ) (fun i => count i.succ) (fun i => hcount i.succ))
-          (fun rest => (Fin.cases first rest : Fin (size + 1) → α)))
+  rw [sequenceFin_eq_fin_mOfFn]
+  exact OracleComp.QueryBound.ExactQueryCount.fin_mOfFn f count hcount
 
 /-- A monadic fold whose step makes `count` queries makes `length * count` queries. -/
 theorem foldlM_exact (items : List α) (f : β → α → OracleComp HashSpec β)
     (count : Nat) (hcount : ∀ value item, ExactQueryCount (f value item) count) (initial : β) :
     ExactQueryCount (items.foldlM f initial) (items.length * count) := by
-  induction items generalizing initial with
-  | nil => simpa using ExactQueryCount.pure initial
-  | cons item items ih =>
-    simpa only [List.foldlM_cons, List.length_cons, Nat.add_mul, Nat.one_mul, Nat.add_comm] using
-      exact_bind (hcount initial item) _ (items.length * count) (fun value => ih value)
+  exact OracleComp.QueryBound.ExactQueryCount.foldlM items f count hcount initial
 
 /-- The remaining chain steps over the encoded message are the verifier's chain-call count. -/
 theorem encoded_chain_steps (message : Digest) :
@@ -162,64 +157,6 @@ section LawfulAttach
 
 variable {m : Type → Type} [Monad m] [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m]
 
-private theorem mem_support_run_bind {γ δ : Type} {oa : AddWriterT ℕ m γ}
-    {f : γ → AddWriterT ℕ m δ} {z : δ × Multiplicative ℕ} (hz : z ∈ support (oa >>= f).run) :
-    ∃ x ∈ support oa.run, ∃ y ∈ support (f x.1).run, z = (y.1, x.2 * y.2) := by
-  rw [WriterT.run_bind] at hz
-  obtain ⟨⟨a, wa⟩, hx, hy⟩ := LawfulMonadAttach.canReturn_bind_imp' hz
-  obtain ⟨⟨b, wb⟩, hb, hzb⟩ := LawfulMonadAttach.canReturn_map_imp' hy
-  exact ⟨(a, wa), hx, (b, wb), hb, hzb.symm⟩
-
-private theorem queryBoundedAboveBy_bind' {γ δ : Type} {oa : AddWriterT ℕ m γ}
-    {f : γ → AddWriterT ℕ m δ} {n₁ n₂ : ℕ} (h₁ : AddWriterT.QueryBoundedAboveBy oa n₁)
-    (h₂ : ∀ a, AddWriterT.QueryBoundedAboveBy (f a) n₂) :
-    AddWriterT.QueryBoundedAboveBy (oa >>= f) (n₁ + n₂) := by
-  intro z hz
-  obtain ⟨x, hx, y, hy, rfl⟩ := mem_support_run_bind hz
-  simpa using Nat.add_le_add (h₁ x hx) (h₂ x.1 y hy)
-
-private theorem queryBoundedBelowBy_bind' {γ δ : Type} {oa : AddWriterT ℕ m γ}
-    {f : γ → AddWriterT ℕ m δ} {n₁ n₂ : ℕ} (h₁ : AddWriterT.QueryBoundedBelowBy oa n₁)
-    (h₂ : ∀ a, AddWriterT.QueryBoundedBelowBy (f a) n₂) :
-    AddWriterT.QueryBoundedBelowBy (oa >>= f) (n₁ + n₂) := by
-  intro z hz
-  obtain ⟨x, hx, y, hy, rfl⟩ := mem_support_run_bind hz
-  simpa using Nat.add_le_add (h₁ x hx) (h₂ x.1 y hy)
-
-private theorem queryCostExactly_bind' {γ δ : Type} {oa : AddWriterT ℕ m γ}
-    {f : γ → AddWriterT ℕ m δ} {n₁ n₂ : ℕ} (h₁ : AddWriterT.QueryCostExactly oa n₁)
-    (h₂ : ∀ a, AddWriterT.QueryCostExactly (f a) n₂) :
-    AddWriterT.QueryCostExactly (oa >>= f) (n₁ + n₂) :=
-  ⟨queryBoundedAboveBy_bind' h₁.toAbove (fun a => (h₂ a).toAbove),
-    queryBoundedBelowBy_bind' h₁.toBelow (fun a => (h₂ a).toBelow)⟩
-
-private theorem queryCostExactly_pure' {γ : Type} (x : γ) :
-    AddWriterT.QueryCostExactly (pure x : AddWriterT ℕ m γ) 0 := by
-  have h : ∀ z ∈ support (pure x : AddWriterT ℕ m γ).run, Multiplicative.toAdd z.2 = 0 := by
-    intro z hz
-    rw [WriterT.run_pure] at hz
-    rw [← LawfulMonadAttach.eq_of_canReturn_pure hz]
-    rfl
-  exact ⟨fun z hz => (h z hz).le, fun z hz => (h z hz).ge⟩
-
-private theorem queryCostExactly_addTell' (w : ℕ) :
-    AddWriterT.QueryCostExactly (AddWriterT.addTell (M := m) w) w := by
-  have h : ∀ z ∈ support (AddWriterT.addTell (M := m) w).run, Multiplicative.toAdd z.2 = w := by
-    intro z hz
-    rw [AddWriterT.run_addTell] at hz
-    rw [← LawfulMonadAttach.eq_of_canReturn_pure hz]
-    rfl
-  exact ⟨fun z hz => (h z hz).le, fun z hz => (h z hz).ge⟩
-
-private theorem queryCostExactly_monadLift' {γ : Type} (x : m γ) :
-    AddWriterT.QueryCostExactly (monadLift x : AddWriterT ℕ m γ) 0 := by
-  have h : ∀ z ∈ support (monadLift x : AddWriterT ℕ m γ).run, Multiplicative.toAdd z.2 = 0 := by
-    intro z hz
-    rw [WriterT.run_monadLift] at hz
-    obtain ⟨a, -, rfl⟩ := LawfulMonadAttach.canReturn_map_imp' hz
-    rfl
-  exact ⟨fun z hz => (h z hz).le, fun z hz => (h z hz).ge⟩
-
 /-- Stateful simulation only shrinks the support of the free computation. -/
 private theorem fst_mem_support_of_mem_support_simulateQ_run {σ γ : Type}
     (impl : QueryImpl HashSpec (StateT σ m)) (oa : OracleComp HashSpec γ) (s : σ)
@@ -244,17 +181,7 @@ theorem exact_cost {m : Type → Type} [Monad m] [LawfulMonad m]
     (impl : QueryImpl HashSpec m) {computation : OracleComp HashSpec α} {count : Nat}
     (hexact : ExactQueryCount computation count) :
     AddWriterT.QueryCostExactly (simulateQ impl.withUnitCost computation) count := by
-  induction hexact with
-  | pure value => simpa using queryCostExactly_pure' (m := m) value
-  | query input next count hnext ih =>
-    rw [simulateQ_bind, simulateQ_spec_query]
-    have hquery : AddWriterT.QueryCostExactly (impl.withUnitCost input) 1 := by
-      rw [QueryImpl.withUnitCost_apply]
-      simpa only [Nat.add_zero] using queryCostExactly_bind'
-        (queryCostExactly_addTell' (m := m) 1)
-        (fun _ => queryCostExactly_monadLift' (impl input))
-    simpa only [Nat.add_comm] using
-      queryCostExactly_bind' hquery ih
+  exact OracleComp.QueryBound.ExactQueryCount.queryCostExactly impl hexact
 
 /-- Every reachable trace has the given bounds, under every possible oracle implementation. -/
 @[expose, irreducible]
@@ -282,8 +209,10 @@ theorem Bounds.bind {computation : OracleComp HashSpec α} {next : α → Oracle
   unfold Bounds at h hnext ⊢
   intro m _ _ _ _ impl
   rw [simulateQ_bind]
-  exact ⟨queryBoundedBelowBy_bind' (h m impl).1 (fun value => (hnext value m impl).1),
-    queryBoundedAboveBy_bind' (h m impl).2 (fun value => (hnext value m impl).2)⟩
+  exact ⟨AddWriterT.LawfulAttach.queryBoundedBelowBy_bind
+      (h m impl).1 (fun value => (hnext value m impl).1),
+    AddWriterT.LawfulAttach.queryBoundedAboveBy_bind
+      (h m impl).2 (fun value => (hnext value m impl).2)⟩
 
 /-- Mapping over a computation preserves its bounds. -/
 theorem Bounds.map {computation : OracleComp HashSpec α} {lower upper : Nat}

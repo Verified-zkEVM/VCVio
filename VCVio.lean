@@ -330,6 +330,9 @@ public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.OracleComp.QueryTracking.QueryBound.Counter
+public import VCVio.OracleComp.QueryTracking.QueryBound.Exact
+public import VCVio.OracleComp.QueryTracking.QueryBound.Exact.Cost
+public import VCVio.OracleComp.QueryTracking.QueryBound.Exact.Sequence
 public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryBound.Tagged
@@ -378,6 +381,7 @@ public import VCVio.OracleComp.QueryTracking.Tracing.Core
 public import VCVio.OracleComp.QueryTracking.Unpredictability
 public import VCVio.OracleComp.QueryTracking.WriterCost
 public import VCVio.OracleComp.QueryTracking.WriterCost.Compose
+public import VCVio.OracleComp.QueryTracking.WriterCost.LawfulAttach
 public import VCVio.OracleComp.QueryTracking.WriterCost.Map
 public import VCVio.OracleComp.ReachableWhen
 public import VCVio.OracleComp.RunIO
