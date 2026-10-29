@@ -14,6 +14,7 @@ public import HashSigTest.SLHDSA.Refactor.Recovery.General
 public import HashSigTest.SLHDSA.Refactor.Recovery.Wire
 public import HashSigTest.SLHDSA.Refactor.Recovery.SeedBounds
 public import HashSigTest.SLHDSA.Refactor.Recovery.Approved
+public import HashSigTest.SLHDSA.Refactor.Recovery.Generic
 
 /-! # Executable signing-view observation checks -/
 
@@ -114,6 +115,35 @@ run_cmd do
   })
   addDocStringCore name
     "An ordinary complete-type proof consumer of the counted pure SHAKE profile bound."
+
+run_cmd do
+  let (levels, type) ← HashSigTest.SLHDSA.Refactor.Recovery.Generic.readGoal
+  let proofName ← resolveGlobalConstNoOverloadCore
+    `HashSigTest.SLHDSA.Refactor.Recovery.Generic.genericCounted36
+  unless proofName == `HashSigTest.SLHDSA.Refactor.Recovery.Generic.genericCounted36 &&
+      !isPrivateName proofName && levels == [`i, `r] do
+    throwError "The ordinary generic counted theorem or raw universes changed"
+  let info ← getConstInfo proofName
+  unless (← ofExcept (encodeExpr info.type)) == (← ofExcept (encodeExpr type)) &&
+      info.levelParams == levels do
+    throwError "The ordinary generic counted theorem has a different complete type"
+  unless owner (← getEnv) proofName == some `HashSigTest.SLHDSA.Refactor.Recovery.Generic do
+    throwError "The ordinary generic counted theorem owner changed"
+  let clients : Array (Name × List Name × List Level) := #[
+    (`SigningViewTests.genericCounted36, levels, levels.map Level.param),
+    (`SigningViewTests.genericCounted36Higher, [], [Level.ofNat 1, Level.ofNat 2]),
+    (`SigningViewTests.genericCounted36Type0, [], [.zero, .zero])]
+  for (userName, clientLevels, arguments) in clients do
+    let name := mkPrivateNameCore (← getMainModule) userName
+    if ((← getEnv).find? name).isSome then throwError "Duplicate ordinary generic counted client"
+    liftCoreM <| addAndCompile (.thmDecl {
+      name := name
+      levelParams := clientLevels
+      type := type.instantiateLevelParams levels arguments
+      value := mkConst proofName arguments
+    })
+    addDocStringCore name
+      "An ordinary complete-type proof consumer of generic counted unforgeability domination."
 
 /-- Run the signing-view observation checks. -/
 public def main : IO Unit := do
