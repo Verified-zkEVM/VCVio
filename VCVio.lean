@@ -552,6 +552,7 @@ public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.Pedersen
+public import VCVio.Schemes.PointerChainPuzzle.Bad
 public import VCVio.Schemes.PointerChainPuzzle.Basic
 public import VCVio.Schemes.PointerChainPuzzle.Handler
 public import VCVio.Schemes.PointerChainPuzzle.Ideal
