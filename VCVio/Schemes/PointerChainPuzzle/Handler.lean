@@ -51,7 +51,9 @@ the preprocessing phase, with nothing reached and the counter at `0`; it reports
 adversary returns the key label, whether the generator's `Bad` holds, whether online Bad occurred,
 and whether the key is reached. The winning probability in the programmed experiment is at most
 the winning probability in the ideal experiment plus the probability of either Bad there
-(`programmedExperiment_win_le_idealExperiment`).
+(`programmedExperiment_win_le_idealExperiment`). The same bound holds for the delay advantage of
+the scheme itself (`delayAdvantage_scheme_le_idealExperiment`): a seed with the generator's `Bad`
+is charged once, inside the second term.
 
 The log of submissions is kept for the bound on online Bad: each logged point records the round
 in which it was submitted and the reached set at that time.
@@ -740,17 +742,33 @@ lemma prEvent_idealExperiment_genBad :
     OracleComp.evalDist_map_const, evalDist_pure, decide_eq_true_eq]
 
 /-- **Programming and until Bad.** The delay advantage of the pointer-chain puzzle is at most the
-winning probability in the ideal experiment, plus the probability there of the generator's `Bad`
-or online Bad, plus the probability there of the generator's `Bad`. -/
+winning probability in the ideal experiment plus the probability there of the generator's `Bad` or
+online Bad. A seed with the generator's `Bad` counts fully toward the second term; on any other seed
+the real and programmed continuations agree, so the generator's `Bad` is charged once. -/
 theorem delayAdvantage_scheme_le_idealExperiment [Finite Ctx] :
     (scheme n m mkCtx initAcc).delayAdvantage adv ≤
       Pr{let r ← idealExperiment adv m mkCtx initAcc}[r.win = true] +
-        Pr{let r ← idealExperiment adv m mkCtx initAcc}[r.genBad = true ∨ r.onlineBad = true] +
-          Pr{let r ← idealExperiment adv m mkCtx initAcc}[r.genBad = true] := by
-  rw [← delayAdvantage_maskedScheme m mkCtx initAcc adv]
-  refine (delayAdvantage_maskedScheme_le adv m mkCtx initAcc).trans ?_
-  rw [prEvent_programmedExperiment_bad, ← prEvent_idealExperiment_genBad]
-  exact add_le_add_left (programmedExperiment_win_le_idealExperiment adv m mkCtx initAcc) _
+        Pr{let r ← idealExperiment adv m mkCtx initAcc}[r.genBad = true ∨ r.onlineBad = true] := by
+  rw [← delayAdvantage_maskedScheme m mkCtx initAcc adv, delayAdvantage_maskedScheme_eq]
+  refine (prEvent_bind_mono_of_forall_le _ _ _ _
+    (fun r : IdealResult => r.win = true ∨ (r.genBad = true ∨ r.onlineBad = true))
+    fun s => ?_).trans (prEvent_or_le _ _ _)
+  by_cases hbad : Bad m mkCtx initAcc s.cache s.puzzle s.labels
+  · rw [idealRest, prEvent_map]
+    simp only [decide_eq_true_eq, hbad, true_or, or_true]
+    rw [prEvent_true_eq_one]
+    exact prEvent_le_one _
+  · rw [realRest_eq_of_not_bad adv m mkCtx initAcc s hbad]
+    have hrest : Prod.fst <$> programmedRest adv m mkCtx initAcc s =
+        onlineWin adv s.state s.puzzle (s.labels .key)
+          (programmedCache m mkCtx initAcc s.cache s.puzzle s.labels) := by
+      rw [programmedRest, Functor.map_map]
+      exact id_map _
+    rw [hrest, idealRest, prEvent_map]
+    refine (prEvent_onlineWin_le adv m mkCtx initAcc _ _ _ _).trans (le_of_eq ?_)
+    refine prEvent_congr _ _ _ fun z => ?_
+    simp only [decide_eq_true_eq]
+    tauto
 
 end Experiment
 
