@@ -207,6 +207,7 @@ public import VCVio.CryptoFoundations.SymmEncAlg.Deterministic
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
 public import VCVio.CryptoFoundations.TimeLockPuzzle
+public import VCVio.CryptoFoundations.TimeLockPuzzle.Truncate
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash
 public import VCVio.CryptoFoundations.VectorCommitment
