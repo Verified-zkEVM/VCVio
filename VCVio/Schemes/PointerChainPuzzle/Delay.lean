@@ -172,20 +172,6 @@ end Key
 
 /-! ## The final guess -/
 
-/-- A uniform draw from `S` equals a fixed value with probability `1 / |S|`. -/
-lemma prEvent_uniformSample_eq_right [SampleableType S] [Fintype S] (a : S) :
-    Pr{let u ← $ᵗ S}[a = u] = (Fintype.card S : ℝ≥0∞)⁻¹ := by
-  rw [← SampleableType.prEvent_uniformSample_eq_singleton a]
-  exact prEvent_congr _ _ _ fun _ => eq_comm
-
-/-- **Several guesses.** A uniform draw from `S` is among `q` fixed values with probability at most
-`q / |S|`. -/
-lemma prEvent_uniformSample_exists_eq_le [SampleableType S] [Fintype S] {q : ℕ} (f : Fin q → S) :
-    Pr{let u ← $ᵗ S}[∃ i, f i = u] ≤ q / Fintype.card S := by
-  refine (prEvent_exists_le_card_mul ($ᵗ S) (fun i u => f i = u)
-    fun i => (prEvent_uniformSample_eq_right (f i)).le).trans (le_of_eq ?_)
-  simp [div_eq_mul_inv]
-
 section OutcomeExperiment
 
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
@@ -234,7 +220,8 @@ theorem prEvent_idealOutcomeExperiment_mem_le [Fintype S] {q r b : ℕ}
     (hbound : ∀ σ P, IsOnlineQueryBound (adv.online σ P) (r, b)) (hr : r < keyRound n m) :
     Pr{let res ← idealOutcomeExperiment adv m mkCtx initAcc}[∃ i, res.out i = res.key] ≤
       q / Fintype.card S :=
-  prEvent_idealOutcomeExperiment_le_of_forall hbound hr prEvent_uniformSample_exists_eq_le
+  prEvent_idealOutcomeExperiment_le_of_forall hbound hr
+    SampleableType.prEvent_uniformSample_exists_eq_le
 
 /-- **The delay theorem for any event.** For injective `mkCtx` and an adversary with outputs of
 any type, at most `Q_pre` preprocessing queries and an online phase within `keyRound n m - 1`
@@ -285,7 +272,7 @@ theorem prEvent_guessExperiment_scheme_le [Finite Ctx] [Fintype S] [Fintype L] [
           ((Qpre + Qon) * solvePoints n m + (solvePoints n m : ℝ≥0∞) ^ 2 + q) /
             Fintype.card S := by
   refine (prEvent_guessExperiment_scheme_le_of_forall hctx hadv
-    prEvent_uniformSample_exists_eq_le).trans (le_of_eq ?_)
+    SampleableType.prEvent_uniformSample_exists_eq_le).trans (le_of_eq ?_)
   simp only [div_eq_mul_inv]
   ring
 
@@ -309,7 +296,7 @@ theorem prEvent_idealExperiment_win_le [Fintype S] {r q : ℕ}
   rw [idealExperiment_eq_map_toResult, prEvent_map]
   simpa only [IdealOutcome.toResult, decide_eq_true_eq] using
     prEvent_idealOutcomeExperiment_le_of_forall (E := (· = ·)) hbound hr fun out =>
-      (prEvent_uniformSample_eq_right out).le
+      (SampleableType.prEvent_uniformSample_eq_singleton' out).le
 
 /-! ## The delay theorem -/
 
@@ -333,7 +320,7 @@ theorem delayAdvantage_scheme_le [Finite Ctx] [Fintype S] [Fintype L] [Fintype S
             Fintype.card S := by
   rw [TimeLockPuzzle.delayAdvantage_eq_prEvent_guessExperiment]
   refine (prEvent_guessExperiment_scheme_le_of_forall (E := (· = ·)) hctx hadv fun out =>
-    (prEvent_uniformSample_eq_right out).le).trans (le_of_eq ?_)
+    (SampleableType.prEvent_uniformSample_eq_singleton' out).le).trans (le_of_eq ?_)
   simp only [div_eq_mul_inv]
   ring
 

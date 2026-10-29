@@ -18,6 +18,8 @@ API, for two chains of one step (`n = 2`, `m = 1`) over `S = Fin 11`, `L = Fin 5
 * `prEvent_guessExperiment_scheme_le` with one guess (`q = 1`) gives the bound of
   `delayAdvantage_scheme_le`, `Q_on / 5 + Q_pre / 15 + ((Q_pre + Q_on) 9 + 81 + 1) / 11`, and with
   `q` guesses the last term `1` becomes `q`;
+* the bound of `delayAdvantage_scheme_le` follows from `prEvent_guessExperiment_scheme_le` at the
+  adversary that submits its output as its one guess (`mapOutput`);
 * an adversary built with `TwoPhaseAdversary.mapOutput` keeps its budget
   (`isQueryBound_mapOutput`), and its delay experiment is the image of the original one
   (`guessExperiment_mapOutput`);
@@ -67,13 +69,22 @@ lemma prEvent_guessExperiment_one_le
   simpa [hP] using
     prEvent_guessExperiment_scheme_le (m := 1) (initAcc := initAcc) mkCtx_injective hadv
 
-/-- The same bound as `delayAdvantage_scheme_le` gives for a delay adversary. -/
-example {adv : TimeLockPuzzle.Adversary (oracleSpec 2 S L Salt Salt) (Puzzle 2 S L Salt) S}
+/-- The bound of `delayAdvantage_scheme_le`, derived from the delay theorem for guesses: a delay
+adversary submits its output as its one guess (`mapOutput`), within the same budget
+(`isQueryBound_mapOutput`), and the delay advantage is the probability that this guess is the key
+(`guessExperiment_mapOutput`, `delayAdvantage_eq_prEvent_guessExperiment`). -/
+lemma delayAdvantage_le_of_prEvent_guessExperiment_scheme_le
+    {adv : TimeLockPuzzle.Adversary (oracleSpec 2 S L Salt Salt) (Puzzle 2 S L Salt) S}
     {Qpre Qon : ℕ} (hadv : adv.IsQueryBound Qpre (6, Qon)) :
     (scheme 2 1 mkCtx initAcc).delayAdvantage adv ≤
       (Qon : ℝ≥0∞) / 5 + Qpre / (3 * 5) + ((Qpre + Qon) * 9 + 9 ^ 2 + 1) / 11 := by
   have hP : solvePoints 2 1 = 9 := rfl
-  simpa [hP] using delayAdvantage_scheme_le (m := 1) (initAcc := initAcc) mkCtx_injective hadv
+  have h := prEvent_guessExperiment_scheme_le (m := 1) (initAcc := initAcc) mkCtx_injective
+    (TimeLockPuzzle.TwoPhaseAdversary.isQueryBound_mapOutput (fun s (_ : Fin 1) => s) hadv)
+  rw [TimeLockPuzzle.guessExperiment_mapOutput, simulateQ_map] at h
+  rw [TimeLockPuzzle.delayAdvantage_eq_prEvent_guessExperiment]
+  simpa [hP, StateT.run'_eq, StateT.run_map, Functor.map_map, prEvent_map, Function.comp_def]
+    using h
 
 /-- With `q` guesses, the last term `1` becomes `q`. -/
 example {q : ℕ}
