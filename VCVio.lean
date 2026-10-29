@@ -553,6 +553,7 @@ public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.Pedersen
 public import VCVio.Schemes.PointerChainPuzzle.Basic
+public import VCVio.Schemes.PointerChainPuzzle.Ideal
 public import VCVio.Schemes.PointerChainPuzzle.LeanSeal
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealBridge
 public import VCVio.Schemes.PointerChainPuzzle.Path
