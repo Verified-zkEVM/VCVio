@@ -198,19 +198,19 @@ lemma isOnlineQueryBound_bind_le {oa : OracleComp (free + spec.batch) α}
 
 /-- The round `queryRound₂ p q` costs one round of `k + l` points. -/
 lemma isOnlineQueryBound_queryRound₂ {k l : ℕ} (p : Fin k → ι) (q : Fin l → ι) :
-    IsOnlineQueryBound (queryRound₂ (spec := spec) p q) (1, k + l) := by
+    IsOnlineQueryBound (queryRound₂ (free := free) (spec := spec) p q) (1, k + l) := by
   rw [queryRound₂, IsOnlineQueryBound, isQueryBound_map_iff, isQueryBound_query_iff]
   simp
 
 /-- The round `queryRound p` costs one round of `k` points. -/
 lemma isOnlineQueryBound_queryRound {k : ℕ} (p : Fin k → ι) :
-    IsOnlineQueryBound (queryRound (spec := spec) p) (1, k) := by
+    IsOnlineQueryBound (queryRound (free := free) (spec := spec) p) (1, k) := by
   rw [queryRound, IsOnlineQueryBound, isQueryBound_map_iff]
   exact isOnlineQueryBound_queryRound₂ p _
 
 /-- The single-point round `queryPoint t` costs one round of one point. -/
 lemma isOnlineQueryBound_queryPoint (t : ι) :
-    IsOnlineQueryBound (queryPoint (spec := spec) t) (1, 1) := by
+    IsOnlineQueryBound (queryPoint (free := free) (spec := spec) t) (1, 1) := by
   rw [queryPoint, IsOnlineQueryBound, isQueryBound_map_iff]
   exact isOnlineQueryBound_queryRound _
 

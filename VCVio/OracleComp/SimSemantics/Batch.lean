@@ -335,26 +335,26 @@ end OracleSpec
 
 namespace OracleComp
 
-variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
+variable {τ ι : Type} {free : OracleSpec.{0, 0} τ} {spec : OracleSpec.{0, 0} ι}
 
 /-- One round holding the points `p j`, then the points `q j`; the answers are returned as two
-families. -/
+families. The oracles `free` beside the rounds are not queried. -/
 @[expose]
 def queryRound₂ {k l : ℕ} (p : Fin k → ι) (q : Fin l → ι) :
-    OracleComp (unifSpec + spec.batch)
+    OracleComp (free + spec.batch)
       (((j : Fin k) → spec.Range (p j)) × ((j : Fin l) → spec.Range (q j))) :=
   splitAnswers p q <$>
-    liftM ((unifSpec + spec.batch).query (.inr (List.ofFn p ++ List.ofFn q)))
+    liftM ((free + spec.batch).query (.inr (List.ofFn p ++ List.ofFn q)))
 
 /-- One round holding the points `p j`. -/
 @[expose]
 def queryRound {k : ℕ} (p : Fin k → ι) :
-    OracleComp (unifSpec + spec.batch) ((j : Fin k) → spec.Range (p j)) :=
+    OracleComp (free + spec.batch) ((j : Fin k) → spec.Range (p j)) :=
   Prod.fst <$> queryRound₂ p (Fin.elim0 : Fin 0 → ι)
 
 /-- One round holding the single point `t`. -/
 @[expose]
-def queryPoint (t : ι) : OracleComp (unifSpec + spec.batch) (spec.Range t) :=
+def queryPoint (t : ι) : OracleComp (free + spec.batch) (spec.Range t) :=
   (fun us => us 0) <$> queryRound (fun _ : Fin 1 => t)
 
 end OracleComp

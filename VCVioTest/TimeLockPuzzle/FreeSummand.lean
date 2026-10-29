@@ -71,6 +71,10 @@ example : IsOnlineQueryBound (do
       OracleComp (freeSpec + boolSpec.batch) Bool) (0, 0) := by
   simp
 
+/-- A typed round beside the challenge oracle costs one round of one point. -/
+example : IsOnlineQueryBound (queryPoint (free := freeSpec) (spec := boolSpec) true) (1, 1) :=
+  isOnlineQueryBound_queryPoint true
+
 /-- The point budget alone. -/
 example : IsPointQueryBound prog 1 :=
   prog_isOnlineQueryBound.isPointQueryBound
