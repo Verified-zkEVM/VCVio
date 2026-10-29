@@ -186,6 +186,7 @@ public import VCVioTest.Tactic.GeneralizedRelationsExperiments
 public import VCVioTest.Tactic.Positivity
 public import VCVioTest.TimeLockPuzzle.FreeSummand
 public import VCVioTest.TimeLockPuzzle.Hiding
+public import VCVioTest.TimeLockPuzzle.HidingCap
 public import VCVioTest.TimeLockPuzzle.Truncate
 public import VCVioTest.ToFinalValidity
 public import VCVioTest.ToMathlib.AbsDiff
