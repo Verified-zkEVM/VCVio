@@ -87,6 +87,7 @@ public import VCVioTest.PRFNetworkUnlinkability
 public import VCVioTest.PRFReductionBudgets
 public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.PointerChainPuzzle.Batch
+public import VCVioTest.PointerChainPuzzle.Truncate
 public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProductRelationControls
 public import VCVioTest.ProgramLogic.BoundedMeasureWP
