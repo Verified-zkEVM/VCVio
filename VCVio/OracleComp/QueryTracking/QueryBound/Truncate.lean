@@ -13,10 +13,11 @@ public import VCVio.EvalDist.ProbabilityBounds
 /-!
 # Truncating a program at a round bound
 
-`truncate r k₀ oa` runs a round-structured program `oa : OracleComp (unifSpec + spec.batch) α`
-until it would submit round `r + 1`, and returns the fallback `k₀` there instead. Its uniform
-queries are kept, and so is its output after the last permitted round. The truncation is defined
-on the free monad itself, so it never answers a query it cuts off.
+`truncate r k₀ oa` runs a round-structured program `oa : OracleComp (free + spec.batch) α` until
+it would submit round `r + 1`, and returns the fallback `k₀` there instead. Its queries to the
+summand `free`, which cost no round, are kept, and so is its output after the last permitted
+round. The truncation is defined on the free monad itself, so it never answers a query it cuts
+off.
 
 The rounds a run completes are counted by instrumenting the handler: `runCountingRounds impl oa`
 is the run of `oa` under `impl` with an additive writer counting one per round
@@ -43,14 +44,14 @@ open OracleSpec
 
 namespace OracleComp
 
-variable {ι : Type} {spec : OracleSpec.{0, 0} ι} {α : Type}
+variable {τ ι : Type} {free : OracleSpec.{0, 0} τ} {spec : OracleSpec.{0, 0} ι} {α : Type}
 
 /-! ## The truncation -/
 
-/-- Run `oa` until it would submit round `r + 1`, and return `k₀` there instead. Uniform queries
-pass through, and every output reached within `r` rounds is kept. -/
-def truncate : ℕ → α → OracleComp (unifSpec + spec.batch) α →
-    OracleComp (unifSpec + spec.batch) α
+/-- Run `oa` until it would submit round `r + 1`, and return `k₀` there instead. Queries to the
+free summand pass through, and every output reached within `r` rounds is kept. -/
+def truncate : ℕ → α → OracleComp (free + spec.batch) α →
+    OracleComp (free + spec.batch) α
   | _, _, .pure x => pure x
   | r, k₀, .queryBind (Sum.inl n) k => .queryBind (Sum.inl n) fun u => truncate r k₀ (k u)
   | 0, k₀, .queryBind (Sum.inr _) _ => pure k₀
@@ -58,24 +59,25 @@ def truncate : ℕ → α → OracleComp (unifSpec + spec.batch) α →
 
 variable (r : ℕ) (k₀ : α)
 
-@[simp] lemma truncate_pure (x : α) : truncate (spec := spec) r k₀ (pure x) = pure x := by
+@[simp] lemma truncate_pure (x : α) :
+    truncate (free := free) (spec := spec) r k₀ (pure x) = pure x := by
   rfl
 
-@[simp] lemma truncate_query_bind_inl (n : ℕ)
-    (k : (unifSpec + spec.batch).Range (.inl n) → OracleComp (unifSpec + spec.batch) α) :
-    truncate r k₀ (liftM ((unifSpec + spec.batch).query (.inl n)) >>= k) =
-      liftM ((unifSpec + spec.batch).query (.inl n)) >>= fun u => truncate r k₀ (k u) := by
+@[simp] lemma truncate_query_bind_inl (n : τ)
+    (k : (free + spec.batch).Range (.inl n) → OracleComp (free + spec.batch) α) :
+    truncate r k₀ (liftM ((free + spec.batch).query (.inl n)) >>= k) =
+      liftM ((free + spec.batch).query (.inl n)) >>= fun u => truncate r k₀ (k u) := by
   rfl
 
 @[simp] lemma truncate_zero_query_bind_inr (ts : List ι)
-    (k : (unifSpec + spec.batch).Range (.inr ts) → OracleComp (unifSpec + spec.batch) α) :
-    truncate 0 k₀ (liftM ((unifSpec + spec.batch).query (.inr ts)) >>= k) = pure k₀ := by
+    (k : (free + spec.batch).Range (.inr ts) → OracleComp (free + spec.batch) α) :
+    truncate 0 k₀ (liftM ((free + spec.batch).query (.inr ts)) >>= k) = pure k₀ := by
   rfl
 
 @[simp] lemma truncate_succ_query_bind_inr (ts : List ι)
-    (k : (unifSpec + spec.batch).Range (.inr ts) → OracleComp (unifSpec + spec.batch) α) :
-    truncate (r + 1) k₀ (liftM ((unifSpec + spec.batch).query (.inr ts)) >>= k) =
-      liftM ((unifSpec + spec.batch).query (.inr ts)) >>= fun u => truncate r k₀ (k u) := by
+    (k : (free + spec.batch).Range (.inr ts) → OracleComp (free + spec.batch) α) :
+    truncate (r + 1) k₀ (liftM ((free + spec.batch).query (.inr ts)) >>= k) =
+      liftM ((free + spec.batch).query (.inr ts)) >>= fun u => truncate r k₀ (k u) := by
   rfl
 
 variable {r k₀}
@@ -83,7 +85,7 @@ variable {r k₀}
 /-! ## Budgets of the truncation -/
 
 /-- The truncation at `r` rounds of a program with point budget `q` has online budget `(r, q)`. -/
-theorem IsPointQueryBound.isOnlineQueryBound_truncate {oa : OracleComp (unifSpec + spec.batch) α}
+theorem IsPointQueryBound.isOnlineQueryBound_truncate {oa : OracleComp (free + spec.batch) α}
     {q : ℕ} (h : IsPointQueryBound oa q) : IsOnlineQueryBound (truncate r k₀ oa) (r, q) := by
   induction oa using OracleComp.inductionOn generalizing r q with
   | pure x => trivial
@@ -99,12 +101,12 @@ theorem IsPointQueryBound.isOnlineQueryBound_truncate {oa : OracleComp (unifSpec
             exact ⟨⟨r.succ_pos, by simpa using ht⟩, fun u => ih u (hk u)⟩
 
 /-- Truncation preserves the point budget. -/
-theorem IsPointQueryBound.truncate {oa : OracleComp (unifSpec + spec.batch) α} {q : ℕ}
+theorem IsPointQueryBound.truncate {oa : OracleComp (free + spec.batch) α} {q : ℕ}
     (h : IsPointQueryBound oa q) : IsPointQueryBound (OracleComp.truncate r k₀ oa) q :=
   (h.isOnlineQueryBound_truncate (r := r) (k₀ := k₀)).isPointQueryBound
 
 /-- A program within `r` rounds is its own truncation at `r` rounds. -/
-theorem truncate_eq_self_of_isOnlineQueryBound {oa : OracleComp (unifSpec + spec.batch) α}
+theorem truncate_eq_self_of_isOnlineQueryBound {oa : OracleComp (free + spec.batch) α}
     {q : ℕ} (h : IsOnlineQueryBound oa (r, q)) : truncate r k₀ oa = oa := by
   induction oa using OracleComp.inductionOn generalizing r q with
   | pure x => rfl
@@ -120,39 +122,40 @@ theorem truncate_eq_self_of_isOnlineQueryBound {oa : OracleComp (unifSpec + spec
 
 /-! ## Outputs within a round bound -/
 
-/-- The rounds a single query submits: none for a uniform query, and one for a round. -/
+/-- The rounds a single query submits: none for a query to the free summand, and one for a
+round. -/
 @[expose]
-def roundCount : ℕ ⊕ List ι → ℕ
+def roundCount : τ ⊕ List ι → ℕ
   | .inl _ => 0
   | .inr _ => 1
 
-@[simp] lemma roundCount_inl (n : ℕ) : roundCount (ι := ι) (.inl n) = 0 := rfl
+@[simp] lemma roundCount_inl (n : τ) : roundCount (ι := ι) (.inl n) = 0 := rfl
 
-@[simp] lemma roundCount_inr (ts : List ι) : roundCount (.inr ts) = 1 := rfl
+@[simp] lemma roundCount_inr (ts : List ι) : roundCount (τ := τ) (.inr ts) = 1 := rfl
 
 variable {m : Type → Type*} [Monad m]
 
 /-- Run `oa` under `impl`, returning its output together with the number of rounds the run
 completed. The first component is the run `simulateQ impl oa` itself
 (`fst_map_runCountingRounds`). -/
-abbrev runCountingRounds (impl : QueryImpl (unifSpec + spec.batch) m)
-    (oa : OracleComp (unifSpec + spec.batch) α) : m (α × ℕ) :=
+abbrev runCountingRounds (impl : QueryImpl (free + spec.batch) m)
+    (oa : OracleComp (free + spec.batch) α) : m (α × ℕ) :=
   (simulateQ (impl.withAddCost roundCount) oa).runAdd
 
-variable [LawfulMonad m] (impl : QueryImpl (unifSpec + spec.batch) m)
+variable [LawfulMonad m] (impl : QueryImpl (free + spec.batch) m)
 
-lemma fst_map_runCountingRounds (oa : OracleComp (unifSpec + spec.batch) α) :
+lemma fst_map_runCountingRounds (oa : OracleComp (free + spec.batch) α) :
     Prod.fst <$> runCountingRounds impl oa = simulateQ impl oa := by
   rw [AddWriterT.fst_map_runAdd]
   exact QueryImpl.fst_map_run_withCost impl _ oa
 
 @[simp] lemma runCountingRounds_pure (x : α) :
-    runCountingRounds (spec := spec) impl (pure x) = pure (x, 0) := by
+    runCountingRounds (free := free) (spec := spec) impl (pure x) = pure (x, 0) := by
   simp [runCountingRounds]
 
-lemma runCountingRounds_query_bind (t : ℕ ⊕ List ι)
-    (k : (unifSpec + spec.batch).Range t → OracleComp (unifSpec + spec.batch) α) :
-    runCountingRounds impl (liftM ((unifSpec + spec.batch).query t) >>= k) =
+lemma runCountingRounds_query_bind (t : τ ⊕ List ι)
+    (k : (free + spec.batch).Range t → OracleComp (free + spec.batch) α) :
+    runCountingRounds impl (liftM ((free + spec.batch).query t) >>= k) =
       impl t >>= fun u =>
         (fun z => (z.1, roundCount t + z.2)) <$> runCountingRounds impl (k u) := by
   simp [runCountingRounds, Prod.map]
@@ -161,7 +164,7 @@ lemma runCountingRounds_query_bind (t : ℕ ⊕ List ι)
 completed rounds is at most the probability that its truncation at `r` rounds outputs a value
 satisfying `p`. The event is read off the run of `oa` itself, counted by `runCountingRounds`. -/
 theorem prEvent_runCountingRounds_le_truncate [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    (oa : OracleComp (unifSpec + spec.batch) α) (p : α → Prop) :
+    (oa : OracleComp (free + spec.batch) α) (p : α → Prop) :
     Pr{let z ← runCountingRounds impl oa}[z.2 ≤ r ∧ p z.1] ≤
       Pr{let x ← simulateQ impl (truncate r k₀ oa)}[p x] := by
   induction oa using OracleComp.inductionOn generalizing r with
@@ -185,8 +188,8 @@ theorem prEvent_runCountingRounds_le_truncate [EvalDistSemantics m] [LawfulEvalD
 within `r` completed rounds and ends in a state satisfying `p` with it is at most the probability
 that its truncation at `r` rounds does. -/
 theorem prEvent_run_runCountingRounds_le_truncate [EvalDistSemantics m]
-    [LawfulEvalDistSemantics m] {σ : Type} (impl : QueryImpl (unifSpec + spec.batch) (StateT σ m))
-    (oa : OracleComp (unifSpec + spec.batch) α) (p : α → σ → Prop) (s : σ) :
+    [LawfulEvalDistSemantics m] {σ : Type} (impl : QueryImpl (free + spec.batch) (StateT σ m))
+    (oa : OracleComp (free + spec.batch) α) (p : α → σ → Prop) (s : σ) :
     Pr{let z ← (runCountingRounds impl oa).run s}[z.1.2 ≤ r ∧ p z.1.1 z.2] ≤
       Pr{let z ← (simulateQ impl (truncate r k₀ oa)).run s}[p z.1 z.2] := by
   induction oa using OracleComp.inductionOn generalizing r s with

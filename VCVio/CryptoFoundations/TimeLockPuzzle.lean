@@ -31,8 +31,11 @@ phase.
   generated key with probability one in the random oracle model.
 * `TimeLockPuzzle.IsGenQueryBound`, `TimeLockPuzzle.IsSolveQueryBound`: honest round and point
   budgets.
-* `TimeLockPuzzle.Adversary`, `TimeLockPuzzle.Adversary.IsQueryBound`: a two-phase adversary and
-  its preprocessing and online budgets.
+* `TimeLockPuzzle.TwoPhaseAdversary`, `TimeLockPuzzle.TwoPhaseAdversary.IsQueryBound`: a
+  two-phase adversary whose online phase also queries oracles `free` at no cost, and its
+  preprocessing and online budgets.
+* `TimeLockPuzzle.Adversary`: the delay adversary, the two-phase adversary whose free oracles are
+  local coins and whose output is a key.
 * `TimeLockPuzzle.delayExperiment`, `TimeLockPuzzle.delayAdvantage`,
   `TimeLockPuzzle.DelaySecure`: the delay experiment, its success probability, and the security
   statement for bounded adversaries.
@@ -93,24 +96,35 @@ def IsSolveQueryBound (tlp : TimeLockPuzzle spec Puzzle Key) (b : ℕ × ℕ) : 
 
 /-! ## The delay experiment -/
 
-/-- A two-phase adversary against a time-lock puzzle. The preprocessing phase queries the oracles
-one point at a time before the puzzle exists and outputs a state of any type; the online phase
-receives that state and the puzzle, submits rounds of parallel queries, and outputs a key. -/
-structure Adversary (spec : OracleSpec.{0, 0} ι) (Puzzle Key : Type) where
+/-- A two-phase adversary against a time-lock puzzle over the oracles `spec`, with outputs `Out`.
+The preprocessing phase samples local coins and queries `spec` one point at a time before the
+puzzle exists, and outputs a state of any type; the online phase receives that state and the
+puzzle, submits rounds of parallel queries to `spec`, and outputs a value of `Out`. Beside its
+rounds, the online phase queries the oracles `free`, which cost no round: local coins `unifSpec`
+in the delay game, and local coins together with the challenger's encryption oracle in a hiding
+game. -/
+structure TwoPhaseAdversary {τ : Type} (free : OracleSpec.{0, 0} τ) (spec : OracleSpec.{0, 0} ι)
+    (Puzzle Out : Type) where
   /-- The state passed from the preprocessing phase to the online phase. -/
   State : Type
   /-- The preprocessing phase, run before the puzzle is generated. -/
   preprocess : OracleComp (unifSpec + spec) State
   /-- The online phase, run on the preprocessing state and the puzzle. -/
-  online : State → Puzzle → OracleComp (unifSpec + spec.batch) Key
+  online : State → Puzzle → OracleComp (free + spec.batch) Out
 
-/-- The adversary makes at most `Q` preprocessing queries, and its online phase submits at most
-`b.1` rounds holding at most `b.2` points on every state and puzzle. Local coins are free in both
-phases. -/
+/-- The adversary makes at most `Q` preprocessing queries to `spec`, and its online phase submits
+at most `b.1` rounds holding at most `b.2` points on every state and puzzle. Local coins and the
+oracles `free` cost nothing. -/
 @[expose]
-def Adversary.IsQueryBound (adv : Adversary spec Puzzle Key) (Q : ℕ) (b : ℕ × ℕ) : Prop :=
+def TwoPhaseAdversary.IsQueryBound {τ : Type} {free : OracleSpec.{0, 0} τ} {Out : Type}
+    (adv : TwoPhaseAdversary free spec Puzzle Out) (Q : ℕ) (b : ℕ × ℕ) : Prop :=
   IsPreprocessingQueryBound adv.preprocess Q ∧
     ∀ σ puzzle, IsOnlineQueryBound (adv.online σ puzzle) b
+
+/-- An adversary in the delay experiment: a two-phase adversary whose online phase queries only
+local coins beside its rounds, and outputs a key. -/
+abbrev Adversary (spec : OracleSpec.{0, 0} ι) (Puzzle Key : Type) : Type 1 :=
+  TwoPhaseAdversary unifSpec spec Puzzle Key
 
 /-- The delay experiment: run the preprocessing phase, generate a puzzle with its key, run the
 online phase on the state and the puzzle, and return whether its output is the key. Rounds are

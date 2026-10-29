@@ -17,16 +17,17 @@ A round of parallel queries to `spec` is a list of points `ts : List ι`, submit
 answered by one answer per point. `OracleSpec.batch spec` is the oracle specification whose
 queries are such rounds: its answer to `ts` is a dependent tuple
 `(j : Fin ts.length) → spec.Range ts[j]`, so points of oracles with different answer types share
-one round. A round-structured computation is an ordinary `OracleComp` over `unifSpec + spec.batch`,
-and counting its rounds is an ordinary path-wise query bound
+one round. A round-structured computation is an ordinary `OracleComp` over `free + spec.batch`,
+where the summand `free` holds the oracles that cost no round (local coins `unifSpec`, or a
+challenger's oracle), and counting its rounds is an ordinary path-wise query bound
 (`VCVio/OracleComp/QueryTracking/QueryBound/Batch.lean`).
 
 ## Main definitions
 
 * `OracleSpec.batch`: rounds of parallel queries to `spec`.
 * `QueryImpl.batch`: answer a round point by point, in order.
-* `QueryImpl.batch'`: extend a handler of `unifSpec + spec` to `unifSpec + spec.batch`, answering
-  uniform queries as before and rounds point by point.
+* `QueryImpl.batch'`: extend a handler of `free + spec` to `free + spec.batch`, answering queries
+  to `free` as before and rounds point by point.
 * `OracleSpec.unbatch`: rewrite each round as the sequence of its single queries.
 * `OracleSpec.SubSpec.batch`: a `SubSpec` inclusion lifted through `batch`.
 * `OracleComp.queryRound₂`, `OracleComp.queryRound`, `OracleComp.queryPoint`: rounds whose
@@ -158,57 +159,61 @@ lemma compose_batch {ι' : Type*} {spec' : OracleSpec ι'} {m : Type v → Type 
   | nil => simp
   | cons t ts ih => simp [← ih]
 
-/-- Extend a handler of `unifSpec + spec` to rounds: uniform queries are answered as `impl`
-answers them, and a round is answered point by point by `impl`. -/
+section batch'
+
+variable {τ ι : Type} {free : OracleSpec.{0, 0} τ} {spec : OracleSpec.{0, 0} ι}
+  {m : Type → Type w} [Monad m]
+
+/-- Extend a handler of `free + spec` to rounds: queries to `free` are answered as `impl` answers
+them, and a round is answered point by point by `impl`. -/
 @[expose]
-def batch' {ι : Type} {spec : OracleSpec.{0, 0} ι} {m : Type → Type w} [Monad m]
-    (impl : QueryImpl (unifSpec + spec) m) : QueryImpl (unifSpec + spec.batch) m :=
+def batch' (impl : QueryImpl (free + spec) m) : QueryImpl (free + spec.batch) m :=
   QueryImpl.add (fun n => impl (.inl n)) (QueryImpl.batch fun t => impl (.inr t))
 
-@[simp] lemma batch'_apply_inl {ι : Type} {spec : OracleSpec.{0, 0} ι} {m : Type → Type w}
-    [Monad m] (impl : QueryImpl (unifSpec + spec) m) (n : ℕ) :
+@[simp] lemma batch'_apply_inl (impl : QueryImpl (free + spec) m) (n : τ) :
     impl.batch' (.inl n) = impl (.inl n) := rfl
 
-@[simp] lemma batch'_apply_inr {ι : Type} {spec : OracleSpec.{0, 0} ι} {m : Type → Type w}
-    [Monad m] (impl : QueryImpl (unifSpec + spec) m) (ts : List ι) :
+@[simp] lemma batch'_apply_inr (impl : QueryImpl (free + spec) m) (ts : List ι) :
     impl.batch' (.inr ts) = QueryImpl.batch (fun t => impl (.inr t)) ts := rfl
 
 /-- The batched form of a sum handler batches its right summand. -/
-@[simp] lemma batch'_add {ι : Type} {spec : OracleSpec.{0, 0} ι} {m : Type → Type w}
-    [Monad m] (impl₁ : QueryImpl unifSpec m) (impl₂ : QueryImpl spec m) :
+@[simp] lemma batch'_add (impl₁ : QueryImpl free m) (impl₂ : QueryImpl spec m) :
     (impl₁ + impl₂).batch' = impl₁ + impl₂.batch := rfl
+
+end batch'
 
 end QueryImpl
 
 namespace OracleSpec
 
-variable {ι : Type} (spec : OracleSpec.{0, 0} ι)
+variable {τ ι : Type} (spec : OracleSpec.{0, 0} ι) {free : OracleSpec.{0, 0} τ}
 
-/-- Rewrite each round as the sequence of its single queries, in order; uniform queries pass
-through unchanged. -/
+/-- Rewrite each round as the sequence of its single queries, in order; queries to the summand
+`free` pass through unchanged. -/
 @[expose]
-def unbatch : QueryImpl (unifSpec + spec.batch) (OracleComp (unifSpec + spec)) :=
-  QueryImpl.batch' fun t => liftM ((unifSpec + spec).query t)
+def unbatch : QueryImpl (free + spec.batch) (OracleComp (free + spec)) :=
+  QueryImpl.batch' fun t => liftM ((free + spec).query t)
 
 variable {spec}
 
-@[simp] lemma unbatch_apply_inl (n : ℕ) :
-    spec.unbatch (.inl n) = liftM ((unifSpec + spec).query (.inl n)) := rfl
+@[simp] lemma unbatch_apply_inl (n : τ) :
+    spec.unbatch (.inl n) = liftM ((free + spec).query (.inl n)) := rfl
 
 @[simp] lemma unbatch_apply_inr (ts : List ι) :
-    spec.unbatch (.inr ts) =
-      QueryImpl.batch (fun t => liftM ((unifSpec + spec).query (.inr t))) ts := rfl
+    spec.unbatch (free := free) (.inr ts) =
+      QueryImpl.batch (fun t => liftM ((free + spec).query (.inr t))) ts := rfl
 
 end OracleSpec
 
 namespace QueryImpl
 
-variable {ι : Type} {spec : OracleSpec.{0, 0} ι} {m : Type → Type w} [Monad m] [LawfulMonad m]
+variable {τ ι : Type} {free : OracleSpec.{0, 0} τ} {spec : OracleSpec.{0, 0} ι}
+  {m : Type → Type w} [Monad m] [LawfulMonad m]
 
 /-- Running a program with rounds through `unbatch` and then `impl` is running it through the
 batched handler `impl.batch'`. -/
-theorem simulateQ_simulateQ_unbatch (impl : QueryImpl (unifSpec + spec) m) {α : Type}
-    (oa : OracleComp (unifSpec + spec.batch) α) :
+theorem simulateQ_simulateQ_unbatch (impl : QueryImpl (free + spec) m) {α : Type}
+    (oa : OracleComp (free + spec.batch) α) :
     simulateQ impl (simulateQ spec.unbatch oa) = simulateQ impl.batch' oa := by
   refine simulateQ_simulateQ_eq_of_apply (fun t => ?_) oa
   rcases t with n | ts
