@@ -45,6 +45,10 @@ public import VCVioTest.ForkBounds
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.Foundations
 public import VCVioTest.GrindFailFast
+public import VCVioTest.GroupModel.Interaction.Axioms
+public import VCVioTest.GroupModel.Interaction.Basic
+public import VCVioTest.GroupModel.Interaction.MultiGroup
+public import VCVioTest.GroupModel.Typed
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
@@ -87,6 +91,7 @@ public import VCVioTest.PointerChainPuzzle.Basic
 public import VCVioTest.PointerChainPuzzle.Batch
 public import VCVioTest.PointerChainPuzzle.Handler
 public import VCVioTest.PointerChainPuzzle.Ideal
+public import VCVioTest.PointerChainPuzzle.Truncate
 public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProductRelationControls
 public import VCVioTest.ProgramLogic.BoundedMeasureWP
