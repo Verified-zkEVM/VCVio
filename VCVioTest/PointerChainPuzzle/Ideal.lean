@@ -19,7 +19,9 @@ Checks of the first two game hops of the pointer-chain delay proof for two chain
 `maskLinks` is a bijection; for a concrete labelling and a preprocessing cache holding one point
 off the path, `Bad` fails, so the programmed cache answers the path input of every path value with
 its label (`programmedCache_pathInput`) and keeps the off-path point
-(`programCache_apply_of_forall_ne`); and `Bad` holds once the cache already holds a path input.
+(`programCache_apply_of_forall_ne`); `Bad` holds once the cache already holds a path input; and
+for one chain of two steps (`n = 1`, `m = 2`) whose first two states share a label, the two step
+inputs coincide, so `Bad` holds with an empty cache.
 Bijectivity, `Bad` and the off-path condition are decided by kernel reduction of the derived
 decidable equality of points and path values, so the scheme modules are imported with
 `import all`.
@@ -124,5 +126,28 @@ example : (programmedCache 1 mkCtx initAcc c₀ P₀ ℓ₀ (pathInput 1 mkCtx i
 example : programmedCache 1 mkCtx initAcc c₀ P₀ ℓ₀ (.key 0 0) = some (3 : S) :=
   (programCache_apply_of_forall_ne 1 mkCtx initAcc P₀ ℓ₀ (fun w _ => pathInput_ne_key₀ w)
     c₀).trans (QueryCache.cacheQuery_self _ _ _)
+
+/-! ## A path-input collision -/
+
+/-- A labelling of one chain of two steps whose first two states share a label. -/
+def ℓ₂ : Labels 1 2 S L
+  | .state _ k => if k.val ≤ 1 then 3 else 4
+  | .mask _ => 0
+  | .acc _ => 1
+  | .key => 2
+  | .commit => 0
+
+/-- The puzzle of `ℓ₂`, with first link `1`. -/
+def P₂ : Puzzle 1 S L Salt := labelPuzzle salt₀ 1 (fun i => i.elim0) ℓ₂
+
+/-- The two steps of the chain have the same input, since the states they start from share a
+label. -/
+example : pathInput 2 mkCtx initAcc P₂ ℓ₂ (.state 0 1) =
+    pathInput 2 mkCtx initAcc P₂ ℓ₂ (.state 0 2) := by
+  decide +kernel
+
+/-- The collision is `Bad`, even with an empty preprocessing cache. -/
+example : Bad 2 mkCtx initAcc (∅ : (oracleSpec 1 S L Salt Salt).QueryCache) P₂ ℓ₂ := by
+  decide +kernel
 
 end VCVioTest.PointerChainPuzzle.Ideal
