@@ -99,6 +99,7 @@ public import VCVioTest.PointerChainPuzzle.Ideal
 public import VCVioTest.PointerChainPuzzle.LeanSeal
 public import VCVioTest.PointerChainPuzzle.LeanSealBridge
 public import VCVioTest.PointerChainPuzzle.LeanSealDelay
+public import VCVioTest.PointerChainPuzzle.LeanSealEnvelope
 public import VCVioTest.PointerChainPuzzle.Truncate
 public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProductRelationControls
