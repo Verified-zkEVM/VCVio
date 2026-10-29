@@ -58,11 +58,19 @@ formalize them.
 | Claim 1 (`claim:sequential`) | `rho_le_round_of_mem_support` |
 | Claim 1, the key | `key_not_mem_reached_of_isOnlineQueryBound` |
 | Claim 2 (`claim:hybrid`), links | `delayAdvantage_maskedScheme` |
-| Claim 2, programming | `delayAdvantage_maskedScheme_le`, `realRest_eq_of_not_bad` |
-| Claim 2, until Bad | `dominatedUntilBad_idealImpl` |
-| Claim 2, the comparison | `delayAdvantage_scheme_le_idealExperiment` |
-| Claim 3 (`claim:bad`) | `prEvent_idealExperiment_bad_le` |
+| Claim 2, programming (path-input) | `delayAdvantage_maskedScheme_le`, `realRest_eq_of_not_bad` |
+| Claim 2, until Bad (path-input) | `dominatedUntilBad_idealImpl` |
+| Claim 2, the comparison (path-input) | `delayAdvantage_scheme_le_idealExperiment` |
+| Claim 3 (`claim:bad`) (path-input) | `prEvent_idealExperiment_bad_le` |
 | Conclusion | `prEvent_idealExperiment_win_le` |
+
+The formal generator's `Bad` (`Bad`) is not the paper's Bad: its collision case asks for two
+distinct path values with equal path inputs, while the paper's Bad (a) asks for two path values
+with equal labels. Equal labels need not give equal path inputs (with `n = m = 1`, the key and the
+commitment may share a label without `Bad`), so `prEvent_idealExperiment_bad_le` does not bound the
+paper's event. The rows marked "path-input" state Claims 2 and 3 for the formal event. The
+comparison of Claim 2 needs only that distinct path values are programmed at distinct oracle
+inputs, so the formal proof bounds this event directly, and the final bound is the paper's.
 
 Claim 3 splits into the generator's `Bad` (`prEvent_seed_bad_le`) and online Bad
 (`prEvent_idealExperiment_onlineBad_le`). The per-run event of `thm:delay`, with no bound on the
