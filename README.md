@@ -66,8 +66,11 @@ build boundaries and the staged consolidation.
   their independent regressions run with `lake exe algorithm_tests`.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
 - `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
-- `HashSig/` contains hash-based signatures: proof-level specifications, component-level FIPS 205
-  conformance results, and security results for SLH-DSA. SLH-DSA has a proved quantitative SUF-CMA
+- `HashSig/` contains hash-based signatures. Generalized XMSS has a specification, completeness
+  proofs, and concrete strong-unforgeability reduction bounds under explicit assumptions; see
+  [the GXMSS guide](docs/reading/gxmss.md). SLH-DSA has proof-level specifications,
+  component-level FIPS 205 conformance results, and security results.
+  SLH-DSA has a proved quantitative SUF-CMA
   bound (strong unforgeability: no valid message-signature pair the signer never returned, which
   gives EUF-CMA at the same bound) in the classical random-oracle model with three oracles (the
   tweakable hash, `Hmsg` and `PRFmsg`), per public seed and averaged over seed distributions

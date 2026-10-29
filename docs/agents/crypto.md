@@ -44,6 +44,21 @@ Fiat-Shamir transform → managed-RO NMA → replay forking → DLog), see
 The Schnorr-specific σ-protocol facts that feed in live in
 [`VCVio/Schemes/Schnorr/SigmaProtocol.lean`](../../VCVio/Schemes/Schnorr/SigmaProtocol.lean).
 
+### Synchronized signatures
+
+`SyncSignatureAlg` captures fixed configuration and provides parameterless key generation,
+epoch-indexed signing that may return failure, and deterministic verification.
+`SyncSignatureUnforgeability` supplies regular and strong security observations. Eligible
+signing calls consume their epoch even when signing fails; strong freshness compares the exact
+message/signature pair at that epoch. The Boolean output measures and advantages preserve missing
+execution mass under the chosen runtime.
+
+`SyncMultiSignatureAlg` and `SyncMultiSignatureUnforgeability` provide the corresponding generic
+multi-signature interface and regular unforgeability notion for ordered public-key tuples.
+The challenger-key membership condition is explicit; empty and repeated tuples are represented.
+The [GXMSS guide](../reading/gxmss.md) describes a construction using the single-signature interface
+and its strong-unforgeability bounds.
+
 ### Commitment schemes (`CommitmentScheme`)
 
 ```lean
