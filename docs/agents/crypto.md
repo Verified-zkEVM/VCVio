@@ -198,7 +198,7 @@ hypotheses.
 
 `VCVio.CryptoFoundations.DataEncapMech` defines two left-or-right games for a `DEMScheme` under a
 uniform key. The one-time game `DEMScheme.IND_CPA_OneTime_Game` is the one the KEM–DEM
-composition uses. The multi-query game `DEMScheme.IND_CPA_Game runtime leak adv` gives the
+composition uses. The multi-query game `dem.IND_CPA_Game runtime leak adv` gives the
 adversary the DEM's own oracles and the shared challenge oracle `LeftOrRight.oracle` of
 `VCVio.CryptoFoundations.LeftOrRight`, built from `dem.encrypt k`, a leakage function `leak` and
 the hidden bit: a pair with equal leakage is encrypted, any other pair is answered `none`.

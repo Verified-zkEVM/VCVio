@@ -15,8 +15,9 @@ public import VCVio.OracleComp.Constructions.SampleableType.Measure
 Two toy DEMs on `Bool` with a uniform `Bool` key: the pad `k ^^ msg`, and the insecure DEM that
 sends the message in the clear. A one-query adversary that outputs its ciphertext has
 multi-query advantage `0` against the pad and `1` against the insecure DEM, and when the leakage
-reveals the message its query is refused. A one-time adversary is embedded by `toMultiQuery`, with
-its query budget and the advantage equality.
+reveals the message its query is refused. A two-query adversary has advantage `1` against the
+pad, since both challenges use the experiment's one key. A one-time adversary is embedded by
+`toMultiQuery`, with its query budget and the advantage equality.
 -/
 
 public section
@@ -83,6 +84,35 @@ theorem pad_advantage :
       (Function.Involutive.bijective Bool.not_not)).evalDist_eq
   rw [DEMScheme.IND_CPA_Advantage, pad_game, ProbCompRuntime.probComp_evalDist]
   simp [Measure.boolBias, hnot]
+
+/-- A two-query adversary against the pad: it asks for the encryption of `false` under both
+branches, then of `false` or `true`, and outputs the sum of the two ciphertexts. -/
+@[expose]
+def xorTwo : pad.IND_CPA_Adversary := do
+  let c₀ : Option Bool ← (unifSpec + LeftOrRight.spec Bool Bool).query (.inr (false, false))
+  let c₁ : Option Bool ← (unifSpec + LeftOrRight.spec Bool Bool).query (.inr (false, true))
+  return (c₀.getD false ^^ c₁.getD false)
+
+lemma xorTwo_makesAtMostQueries : xorTwo.MakesAtMostQueries 2 := by
+  simp [DEMScheme.IND_CPA_Adversary.MakesAtMostQueries, xorTwo]
+
+/-- Both challenges are encrypted under the one key of the experiment, so the sum of the
+ciphertexts is the hidden bit. -/
+lemma pad_game_xorTwo :
+    pad.IND_CPA_Game ProbCompRuntime.probComp (fun _ => ()) xorTwo =
+      (do let _ ← $ᵗ Bool; let _ ← $ᵗ Bool; pure true) := by
+  simp only [DEMScheme.IND_CPA_Game, DEMScheme.IND_CPA_Experiment, xorTwo, pad,
+    liftProbComp_probComp]
+  refine bind_congr fun b => ?_
+  simp only [bind_assoc]
+  refine bind_congr fun k => ?_
+  cases b <;> cases k <;> simp
+
+/-- Two queries break the pad: a key reused across challenges is a two-time pad. -/
+theorem pad_advantage_xorTwo :
+    pad.IND_CPA_Advantage ProbCompRuntime.probComp (fun _ => ()) xorTwo = 1 := by
+  rw [DEMScheme.IND_CPA_Advantage, pad_game_xorTwo, ProbCompRuntime.probComp_evalDist]
+  simp [Measure.boolBias]
 
 /-- When the leakage reveals the whole message, the pair `(false, true)` is refused, so even
 against the insecure DEM the guess does not depend on the hidden bit. -/
