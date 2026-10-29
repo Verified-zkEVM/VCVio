@@ -550,8 +550,10 @@ public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.Pedersen
 public import VCVio.Schemes.PointerChainPuzzle.Basic
+public import VCVio.Schemes.PointerChainPuzzle.Handler
 public import VCVio.Schemes.PointerChainPuzzle.Ideal
 public import VCVio.Schemes.PointerChainPuzzle.Path
+public import VCVio.Schemes.PointerChainPuzzle.Sequential
 public import VCVio.Schemes.Schnorr.BoundedChallenges
 public import VCVio.Schemes.Schnorr.ChallengeRestriction
 public import VCVio.Schemes.Schnorr.SigmaProtocol
