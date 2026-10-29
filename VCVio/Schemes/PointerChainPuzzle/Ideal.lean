@@ -24,9 +24,11 @@ generator `genMasked` draws the salt, the first link and the masked links unifor
 each later link from the mask answer of the chain before it; `maskedScheme` is the puzzle with this
 generator. Against every cache of the random oracle the two generators have the same output
 distribution (`evalDist_genMasked_run'`), so the two puzzles have the same delay advantage
-(`delayAdvantage_maskedScheme`). The proof answers the hash queries from a full answer table
-(`OracleComp.evalDist_simulateQ_romImpl_run'_eq_completeTable`), and needs the context type to be
-finite so that the points are.
+(`delayAdvantage_maskedScheme`); against an online phase with outputs of any type, the delay
+experiment returning the output with the key (`TimeLockPuzzle.guessExperiment`) has the same
+distribution for both (`evalDistEq_guessExperiment_maskedScheme`). The proof answers the hash
+queries from a full answer table (`OracleComp.evalDist_simulateQ_romImpl_run'_eq_completeTable`),
+and needs the context type to be finite so that the points are.
 
 ## The programming theorem
 
@@ -39,11 +41,16 @@ input with its label (`programmedCache_pathInput`).
 Against the lazy random oracle, the generator's fresh path answers are presampled as a labelling,
 which turns its path queries into the deterministic run `presetRun`
 (`evalDist_run_queryPath_bind`); off `Bad`, that run reaches the programmed cache
-(`presetRun_order_of_not_bad`). The delay experiment of `maskedScheme` is therefore the draw of a
-`Seed` (the preprocessing state and lazy cache, the salt, the first and masked links and the
-latent labels) followed by `realRest`, and `programmedExperiment` draws the same seed and runs the
-online phase from the programmed cache, returning whether the adversary wins and whether `Bad`
-holds. The two agree off `Bad`, so the delay advantage and the programmed winning probability
+(`presetRun_order_of_not_bad`). The delay experiment of `maskedScheme` returning the output with
+the key is therefore the draw of a `Seed` (the preprocessing state and lazy cache, the salt, the
+first and masked links and the latent labels; `seedOf`, which depends on the adversary only through
+its preprocessing phase) followed by `realRun`
+(`evalDistEq_guessExperiment_maskedScheme_seedOf`), and `programmedRun` runs the online phase from
+the programmed cache instead; off `Bad` the two agree on the output and the key
+(`realRun_eq_of_not_bad`). For a delay adversary, `realRest` decides whether the output of
+`realRun` is the key, and `programmedExperiment` draws the same seed (`seed`) and returns whether
+the adversary wins from the programmed cache and whether `Bad` holds. The two agree off `Bad`
+(`realRest_eq_of_not_bad`), so the delay advantage and the programmed winning probability
 differ by at most the probability of `Bad` in the programmed experiment, on either side
 (`delayAdvantage_maskedScheme_le`, `programmedExperiment_win_le`) and in absolute value
 (`abs_delayAdvantage_maskedScheme_sub_le`, and `abs_delayAdvantage_scheme_sub_le` for `scheme`
@@ -615,26 +622,40 @@ theorem evalDist_genMasked_run' [MeasurableSpace (Puzzle n S L Salt × S)]
     ← Oracles.toImpl_ofImpl (QueryImpl.ofFn (completeTable c g))]
   simpa only [bind_pure] using evalDist_simulateQ_genMasked_bind (Oracles.ofImpl _) pure
 
+/-- **Link change of variables, for any output.** In the lazy random oracle model from the empty
+cache, the delay experiment returning the output with the key (`guessExperiment`) has the same
+distribution for the pointer-chain puzzle and the puzzle with masked links, against an online
+phase with outputs of any type. -/
+theorem evalDistEq_guessExperiment_maskedScheme {Out : Type}
+    (adv : TimeLockPuzzle.TwoPhaseAdversary unifSpec (oracleSpec n S L Salt Ctx)
+      (Puzzle n S L Salt) Out) :
+    (simulateQ (oracleSpec n S L Salt Ctx).romImpl
+        ((maskedScheme n m mkCtx initAcc).guessExperiment adv)).run' ∅ =ᵈ
+      (simulateQ (oracleSpec n S L Salt Ctx).romImpl
+        ((scheme n m mkCtx initAcc).guessExperiment adv)).run' ∅ := by
+  let : Fintype (Point n S L Salt Ctx) := Fintype.ofFinite _
+  let : ∀ t, Fintype ((oracleSpec n S L Salt Ctx).Range t) := fun _ => Fintype.ofFinite _
+  let := SampleableType.piOfFintype (oracleSpec n S L Salt Ctx).Range
+  let : MeasurableSpace (Out × S) := ⊤
+  refine EvalDistEq.of_evalDist_eq ?_
+  rw [evalDist_simulateQ_romImpl_run'_eq_completeTable,
+    evalDist_simulateQ_romImpl_run'_eq_completeTable]
+  refine evalDist_bind_congr_of_support _ _ _ fun g _ => ?_
+  simp only [TimeLockPuzzle.guessExperiment, maskedScheme, scheme, simulateQ_bind,
+    QueryImpl.simulateQ_simulateQ_unbatch]
+  rw [← Oracles.toImpl_ofImpl (QueryImpl.ofFn (completeTable ∅ g))]
+  exact evalDist_bind_congr_of_support _ _ _ fun σ _ =>
+    evalDist_simulateQ_genMasked_bind (Oracles.ofImpl _) _
+
 /-- **Link change of variables.** The pointer-chain puzzle and the puzzle with masked links
 have the same delay advantage against every adversary. -/
 theorem delayAdvantage_maskedScheme
     (adv : TimeLockPuzzle.Adversary (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt) S) :
     (maskedScheme n m mkCtx initAcc).delayAdvantage adv =
       (scheme n m mkCtx initAcc).delayAdvantage adv := by
-  let : Fintype (Point n S L Salt Ctx) := Fintype.ofFinite _
-  let : ∀ t, Fintype ((oracleSpec n S L Salt Ctx).Range t) := fun _ => Fintype.ofFinite _
-  let := SampleableType.piOfFintype (oracleSpec n S L Salt Ctx).Range
-  rw [TimeLockPuzzle.delayAdvantage_eq, TimeLockPuzzle.delayAdvantage_eq,
-    ProbCompRuntime.rom_evalDist, ProbCompRuntime.rom_evalDist,
-    evalDist_simulateQ_romImpl_run'_eq_completeTable,
-    evalDist_simulateQ_romImpl_run'_eq_completeTable]
-  congr 1
-  refine evalDist_bind_congr_of_support _ _ _ fun g _ => ?_
-  simp only [TimeLockPuzzle.delayExperiment, maskedScheme, scheme, simulateQ_bind,
-    QueryImpl.simulateQ_simulateQ_unbatch]
-  rw [← Oracles.toImpl_ofImpl (QueryImpl.ofFn (completeTable ∅ g))]
-  exact evalDist_bind_congr_of_support _ _ _ fun σ _ =>
-    evalDist_simulateQ_genMasked_bind (Oracles.ofImpl _) _
+  rw [TimeLockPuzzle.delayAdvantage_eq_prEvent_guessExperiment,
+    TimeLockPuzzle.delayAdvantage_eq_prEvent_guessExperiment]
+  exact (evalDistEq_guessExperiment_maskedScheme m mkCtx initAcc adv).prEvent_eq _
 
 end Change
 
@@ -892,6 +913,92 @@ structure Seed (n m : ℕ) (S L Salt Ctx State : Type) where
 def Seed.puzzle {State : Type} (s : Seed n m S L Salt Ctx State) : Puzzle n S L Salt :=
   labelPuzzle s.salt s.firstLink s.maskedLinks s.labels
 
+section Runs
+
+variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
+  [SampleableType S] [SampleableType L]
+
+/-- Run the preprocessing computation `pre` lazily from the empty cache, then draw the salt, the
+first link, the masked links and the labelling uniformly. The seed depends on an adversary only
+through its preprocessing phase, so it does not depend on the type of its outputs. -/
+@[expose]
+def seedOf {State : Type} (pre : OracleComp (unifSpec + oracleSpec n S L Salt Ctx) State) (m : ℕ)
+    [SampleableType Salt] : ProbComp (Seed n m S L Salt Ctx State) := do
+  let s ← (simulateQ (oracleSpec n S L Salt Ctx).romImpl pre).run ∅
+  let salt ← $ᵗ Salt
+  let p ← $ᵗ (L × (Fin (n - 1) → L))
+  let ℓ ← $ᵗ (Labels n m S L)
+  return ⟨s.1, s.2, salt, p.1, p.2, ℓ⟩
+
+variable {Out : Type}
+  (adv : TimeLockPuzzle.TwoPhaseAdversary unifSpec (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt)
+    Out)
+
+/-- Run the online phase of `adv` on the state `σ` and the puzzle `P` in the random oracle model
+from the cache `c`, and return its output together with `key`. -/
+@[expose]
+def onlineRun (σ : adv.State) (P : Puzzle n S L Salt) (key : S)
+    (c : (oracleSpec n S L Salt Ctx).QueryCache) : ProbComp (Out × S) :=
+  (simulateQ (oracleSpec n S L Salt Ctx).romImpl (do
+    let out ← simulateQ (oracleSpec n S L Salt Ctx).unbatch (adv.online σ P)
+    return (out, key))).run' c
+
+variable (m : ℕ) (mkCtx : Salt → Ctx) (initAcc : Ctx → S) [NeZero n] [AddCommGroup L]
+
+/-- The delay experiment of `maskedScheme` after the seed, returning the output with the key: the
+generator's path values are the presampled run on the labels, and the online phase runs from the
+cache it reaches. -/
+@[expose]
+def realRun (s : Seed n m S L Salt Ctx adv.State) : ProbComp (Out × S) :=
+  let ν₀ : Labels n m S L := Labels.const (initAcc (mkCtx s.salt)) s.firstLink
+  let r := presetRun m mkCtx initAcc (labelPuzzle s.salt s.firstLink s.maskedLinks ν₀) s.labels
+    (PathValue.order n m) (ν₀, s.cache)
+  onlineRun adv s.state (labelPuzzle s.salt s.firstLink s.maskedLinks r.1) (r.1 .key) r.2
+
+/-- The programmed experiment after the seed, returning the output with the key label: the online
+phase runs from the programmed cache. -/
+@[expose]
+def programmedRun (s : Seed n m S L Salt Ctx adv.State) : ProbComp (Out × S) :=
+  onlineRun adv s.state s.puzzle (s.labels .key)
+    (programmedCache m mkCtx initAcc s.cache s.puzzle s.labels)
+
+/-- Off `Bad`, the delay experiment of `maskedScheme` and the programmed experiment agree after
+the seed, on the output and the key. -/
+lemma realRun_eq_of_not_bad (s : Seed n m S L Salt Ctx adv.State)
+    (h : ¬Bad m mkCtx initAcc s.cache s.puzzle s.labels) :
+    realRun adv m mkCtx initAcc s = programmedRun adv m mkCtx initAcc s := by
+  simp only [realRun, programmedRun]
+  rw [presetRun_congr m mkCtx initAcc
+    (pathInput_labelPuzzle m mkCtx initAcc s.salt s.firstLink s.maskedLinks _ s.labels),
+    presetRun_order_of_not_bad m mkCtx initAcc
+      (P := labelPuzzle s.salt s.firstLink s.maskedLinks s.labels) h]
+  rfl
+
+variable [SampleableType Salt]
+
+/-- The delay experiment of `maskedScheme` returning the output with the key is the seed followed
+by `realRun`. -/
+theorem evalDistEq_guessExperiment_maskedScheme_seedOf :
+    (simulateQ (oracleSpec n S L Salt Ctx).romImpl
+        ((maskedScheme n m mkCtx initAcc).guessExperiment adv)).run' ∅ =ᵈ
+      seedOf adv.preprocess m >>= realRun adv m mkCtx initAcc := by
+  let : MeasurableSpace (Out × S) := ⊤
+  refine EvalDistEq.of_evalDist_eq ?_
+  simp only [TimeLockPuzzle.guessExperiment, maskedScheme, seedOf, bind_assoc, pure_bind]
+  rw [run'_simulateQ_bind]
+  refine evalDist_bind_congr_of_support _ _ _ fun s _ => ?_
+  rw [run'_simulateQ_bind, OracleSpec.simulateQ_romImpl_simulateQ_unbatch, genMasked,
+    run_simulateQ_bind, run_simulateQ_unifFwdImpl_add_liftM, bind_assoc, bind_map_left]
+  refine evalDist_bind_congr_of_support _ _ _ fun salt _ => ?_
+  rw [run_simulateQ_bind, run_simulateQ_unifFwdImpl_add_liftM, bind_assoc, bind_map_left]
+  refine evalDist_bind_congr_of_support _ _ _ fun p _ => ?_
+  simp only [genMaskedWith]
+  rw [run_simulateQ_bind, bind_assoc]
+  simp only [simulateQ_pure, StateT.run_pure, pure_bind]
+  exact evalDist_run_queryPath_bind m mkCtx initAcc _ PathValue.nodup_order _ _ _
+
+end Runs
+
 section Programmed
 
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
@@ -899,23 +1006,20 @@ variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
   (adv : TimeLockPuzzle.Adversary (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt) S)
 
 /-- Run the preprocessing phase of `adv` lazily from the empty cache, then draw the salt, the
-first link, the masked links and the labelling uniformly. -/
+first link, the masked links and the labelling uniformly (`seedOf`). -/
 @[expose]
-def seed (m : ℕ) [SampleableType Salt] : ProbComp (Seed n m S L Salt Ctx adv.State) := do
-  let s ← (simulateQ (oracleSpec n S L Salt Ctx).romImpl adv.preprocess).run ∅
-  let salt ← $ᵗ Salt
-  let p ← $ᵗ (L × (Fin (n - 1) → L))
-  let ℓ ← $ᵗ (Labels n m S L)
-  return ⟨s.1, s.2, salt, p.1, p.2, ℓ⟩
+def seed (m : ℕ) [SampleableType Salt] : ProbComp (Seed n m S L Salt Ctx adv.State) :=
+  seedOf adv.preprocess m
+
+/-- The seed of an adversary is the seed of its preprocessing phase. -/
+lemma seed_eq_seedOf (m : ℕ) [SampleableType Salt] : seed adv m = seedOf adv.preprocess m := rfl
 
 /-- Run the online phase of `adv` on the state `σ` and the puzzle `P` in the random oracle model
 from the cache `c`, and report whether it returns `key`. -/
 @[expose]
 def onlineWin (σ : adv.State) (P : Puzzle n S L Salt) (key : S)
     (c : (oracleSpec n S L Salt Ctx).QueryCache) : ProbComp Bool :=
-  (simulateQ (oracleSpec n S L Salt Ctx).romImpl (do
-    let key' ← simulateQ (oracleSpec n S L Salt Ctx).unbatch (adv.online σ P)
-    return decide (key' = key))).run' c
+  (fun z => decide (z.1 = z.2)) <$> onlineRun adv σ P key c
 
 variable (m : ℕ) (mkCtx : Salt → Ctx) (initAcc : Ctx → S) [NeZero n] [AddCommGroup L]
 
@@ -942,16 +1046,19 @@ programs the cache with them. It returns whether the adversary wins and whether 
 def programmedExperiment [SampleableType Salt] : ProbComp (Bool × Bool) :=
   seed adv m >>= programmedRest adv m mkCtx initAcc
 
+/-- `realRest` decides whether the output of `realRun` is the key. -/
+lemma realRest_eq_map_realRun (s : Seed n m S L Salt Ctx adv.State) :
+    realRest adv m mkCtx initAcc s =
+      (fun z => decide (z.1 = z.2)) <$> realRun adv m mkCtx initAcc s :=
+  rfl
+
 /-- Off `Bad`, the delay experiment and the programmed experiment agree after the seed. -/
 lemma realRest_eq_of_not_bad (s : Seed n m S L Salt Ctx adv.State)
     (h : ¬Bad m mkCtx initAcc s.cache s.puzzle s.labels) :
     realRest adv m mkCtx initAcc s = Prod.fst <$> programmedRest adv m mkCtx initAcc s := by
-  simp only [realRest, programmedRest]
-  rw [presetRun_congr m mkCtx initAcc
-    (pathInput_labelPuzzle m mkCtx initAcc s.salt s.firstLink s.maskedLinks _ s.labels),
-    presetRun_order_of_not_bad m mkCtx initAcc
-      (P := labelPuzzle s.salt s.firstLink s.maskedLinks s.labels) h, Functor.map_map]
-  exact (id_map _).symm
+  rw [realRest_eq_map_realRun, realRun_eq_of_not_bad adv m mkCtx initAcc s h, programmedRest,
+    onlineWin, Functor.map_map, Functor.map_map]
+  rfl
 
 variable [SampleableType Salt]
 
@@ -960,18 +1067,16 @@ theorem evalDist_delayExperiment_maskedScheme :
     𝒟[(simulateQ (oracleSpec n S L Salt Ctx).romImpl
         ((maskedScheme n m mkCtx initAcc).delayExperiment adv)).run' ∅] =
       𝒟[seed adv m >>= realRest adv m mkCtx initAcc] := by
-  simp only [TimeLockPuzzle.delayExperiment, maskedScheme, seed, bind_assoc, pure_bind]
-  rw [run'_simulateQ_bind]
-  refine evalDist_bind_congr_of_support _ _ _ fun s _ => ?_
-  rw [run'_simulateQ_bind, OracleSpec.simulateQ_romImpl_simulateQ_unbatch, genMasked,
-    run_simulateQ_bind, run_simulateQ_unifFwdImpl_add_liftM, bind_assoc, bind_map_left]
-  refine evalDist_bind_congr_of_support _ _ _ fun salt _ => ?_
-  rw [run_simulateQ_bind, run_simulateQ_unifFwdImpl_add_liftM, bind_assoc, bind_map_left]
-  refine evalDist_bind_congr_of_support _ _ _ fun p _ => ?_
-  simp only [genMaskedWith]
-  rw [run_simulateQ_bind, bind_assoc]
-  simp only [simulateQ_pure, StateT.run_pure, pure_bind]
-  exact evalDist_run_queryPath_bind m mkCtx initAcc _ PathValue.nodup_order _ _ _
+  have h := (evalDistEq_guessExperiment_maskedScheme_seedOf adv m mkCtx initAcc).map
+    fun z => decide (z.1 = z.2)
+  have hrest : seed adv m >>= realRest adv m mkCtx initAcc =
+      (fun z => decide (z.1 = z.2)) <$>
+        (seedOf adv.preprocess m >>= realRun adv m mkCtx initAcc) := by
+    rw [map_bind]
+    rfl
+  rw [TimeLockPuzzle.delayExperiment_eq_map_guessExperiment, simulateQ_map, hrest]
+  refine EvalDistEq.evalDist_eq ?_
+  simpa only [StateT.run'_eq, StateT.run_map, Functor.map_map] using h
 
 /-- The delay advantage of `maskedScheme` is the probability that `realRest` wins after the
 seed. -/

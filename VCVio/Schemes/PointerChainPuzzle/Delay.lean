@@ -44,6 +44,16 @@ rounds. So the run of the online phase does not depend on the key label
 commitment label. Redrawing the key label alone (`prEvent_uniform_bind_le_of_update`) then
 leaves the output of the online phase fixed while the key label is uniform.
 
+## Any output, several guesses
+
+The final guess and the delay theorem hold for an online phase with outputs of any type and any
+event `E` of the output and the key (`prEvent_idealOutcomeExperiment_le_of_forall`,
+`prEvent_guessExperiment_scheme_le_of_forall`), with the last term `1 / |S|` replaced by any `ε`
+bounding the probability of `E out u` for each output `out` and a uniform `u`. For an online phase
+that outputs `q` guesses (`Fin q → S`) and the event that one of them is the key, the union bound
+gives `ε = q / |S|` (`prEvent_idealOutcomeExperiment_mem_le`, `prEvent_guessExperiment_scheme_le`).
+The delay statements of the table are the cases of these for the event that the output is the key.
+
 ## Paper citation table
 
 The leanSeal paper's statement and the steps of its proof (Appendix A), with the declarations that
@@ -162,26 +172,42 @@ end Key
 
 /-! ## The final guess -/
 
-section Experiment
+/-- A uniform draw from `S` equals a fixed value with probability `1 / |S|`. -/
+lemma prEvent_uniformSample_eq_right [SampleableType S] [Fintype S] (a : S) :
+    Pr{let u ← $ᵗ S}[a = u] = (Fintype.card S : ℝ≥0∞)⁻¹ := by
+  rw [← SampleableType.prEvent_uniformSample_eq_singleton a]
+  exact prEvent_congr _ _ _ fun _ => eq_comm
+
+/-- **Several guesses.** A uniform draw from `S` is among `q` fixed values with probability at most
+`q / |S|`. -/
+lemma prEvent_uniformSample_exists_eq_le [SampleableType S] [Fintype S] {q : ℕ} (f : Fin q → S) :
+    Pr{let u ← $ᵗ S}[∃ i, f i = u] ≤ q / Fintype.card S := by
+  refine (prEvent_exists_le_card_mul ($ᵗ S) (fun i u => f i = u)
+    fun i => (prEvent_uniformSample_eq_right (f i)).le).trans (le_of_eq ?_)
+  simp [div_eq_mul_inv]
+
+section OutcomeExperiment
 
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
   [SampleableType S] [SampleableType L] [SampleableType Salt]
-  {adv : TimeLockPuzzle.Adversary (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt) S}
   {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S} [NeZero n] [AddCommGroup L]
 
-/-- **The conclusion of the delay proof (the final guess).** If the online phase of the adversary
-submits at most `r < keyRound n m` rounds, it returns the key label in the ideal experiment with
-probability at most `1 / |S|`. The key is never reached (Claim 1), so the run of the online phase
-and the puzzle do not depend on the key label (`simulateQ_idealImpl_run_congr_of_ne_key`), and
-redrawing the key label alone (`prEvent_uniform_bind_le_of_update`) makes the output equal to it
-with probability `1 / |S|`. -/
-theorem prEvent_idealExperiment_win_le [Fintype S] {r q : ℕ}
-    (hbound : ∀ σ P, IsOnlineQueryBound (adv.online σ P) (r, q)) (hr : r < keyRound n m) :
-    Pr{let res ← idealExperiment adv m mkCtx initAcc}[res.win = true] ≤
-      (Fintype.card S : ℝ≥0∞)⁻¹ := by
-  rw [idealExperiment, map_bind]
-  refine prEvent_seed_bind_le fun z _ => prEvent_bind_le fun salt => prEvent_bind_le fun p => ?_
-  simp only [idealRest, Functor.map_map, Seed.puzzle]
+/-- **The final guess, for any event.** If the online phase of the adversary, with outputs of any
+type, submits at most `r < keyRound n m` rounds, then an event `E` of its output and the key label
+holds in the ideal experiment with probability at most `ε`, for every `ε` bounding the probability
+of `E out u` for each output `out` and a uniform `u`. The key is never reached (Claim 1), so the
+run of the online phase and the puzzle do not depend on the key label
+(`simulateQ_idealImpl_run_congr_of_ne_key`), and redrawing the key label alone
+(`prEvent_uniform_bind_le_of_update`) leaves the output fixed while the key label is uniform. -/
+theorem prEvent_idealOutcomeExperiment_le_of_forall {Out : Type}
+    {adv : TimeLockPuzzle.TwoPhaseAdversary unifSpec (oracleSpec n S L Salt Ctx)
+      (Puzzle n S L Salt) Out} {E : Out → S → Prop} {ε : ℝ≥0∞} {r q : ℕ}
+    (hbound : ∀ σ P, IsOnlineQueryBound (adv.online σ P) (r, q)) (hr : r < keyRound n m)
+    (hE : ∀ out, Pr{let u ← $ᵗ S}[E out u] ≤ ε) :
+    Pr{let res ← idealOutcomeExperiment adv m mkCtx initAcc}[E res.out res.key] ≤ ε := by
+  rw [idealOutcomeExperiment, map_bind]
+  refine prEvent_seedOf_bind_le fun z _ => prEvent_bind_le fun salt => prEvent_bind_le fun p => ?_
+  simp only [idealOutcomeRest, Functor.map_map, Seed.puzzle]
   refine prEvent_uniform_bind_le_of_update .key _ fun ℓ => ?_
   have hP : ∀ u : S, labelPuzzle salt p.1 p.2 (Function.update ℓ .key u) =
       labelPuzzle salt p.1 p.2 ℓ := fun u => by
@@ -193,13 +219,97 @@ theorem prEvent_idealExperiment_win_le [Fintype S] {r q : ℕ}
         (adv.online z.1 (labelPuzzle salt p.1 p.2 ℓ))).run (IdealState.init z.2) := fun u =>
     simulateQ_idealImpl_run_congr_of_ne_key (hbound _ _)
       (fun v hv => Function.update_of_ne hv _ _) (IdealState.rhoBounded_init _) (by simpa using hr)
-  simp only [hP, hrun, Function.update_self, decide_eq_true_eq]
+  simp only [hP, hrun, Function.update_self]
   simp only [map_eq_bind_pure_comp, Function.comp_def]
   rw [prEvent_bind_swap]
-  refine prEvent_bind_le fun w => le_of_eq ?_
-  rw [← SampleableType.prEvent_uniformSample_eq_singleton
-    (α := (PathValue.key : PathValue n m).Val S L) w.1]
-  simp only [map_eq_bind_pure_comp, Function.comp_def, @eq_comm _ w.1]
+  refine prEvent_bind_le fun w => le_of_eq_of_le ?_ (hE w.1)
+  simp only [map_eq_bind_pure_comp, Function.comp_def]
+
+/-- **The final guess with `q` guesses.** If the online phase of the adversary outputs `q` guesses
+within at most `r < keyRound n m` rounds, one of them is the key label in the ideal experiment with
+probability at most `q / |S|`. -/
+theorem prEvent_idealOutcomeExperiment_mem_le [Fintype S] {q r b : ℕ}
+    {adv : TimeLockPuzzle.TwoPhaseAdversary unifSpec (oracleSpec n S L Salt Ctx)
+      (Puzzle n S L Salt) (Fin q → S)}
+    (hbound : ∀ σ P, IsOnlineQueryBound (adv.online σ P) (r, b)) (hr : r < keyRound n m) :
+    Pr{let res ← idealOutcomeExperiment adv m mkCtx initAcc}[∃ i, res.out i = res.key] ≤
+      q / Fintype.card S :=
+  prEvent_idealOutcomeExperiment_le_of_forall hbound hr prEvent_uniformSample_exists_eq_le
+
+/-- **The delay theorem for any event.** For injective `mkCtx` and an adversary with outputs of
+any type, at most `Q_pre` preprocessing queries and an online phase within `keyRound n m - 1`
+rounds holding at most `Q_on` points, an event `E` of the output and the key in the delay
+experiment (`TimeLockPuzzle.guessExperiment`) has probability at most
+`[n ≥ 2] Q_on / |L| + Q_pre / (|Salt| |L|) + ((Q_pre + Q_on) P + P²) / |S| + ε`, with
+`P = solvePoints n m`, for every `ε` bounding the probability of `E out u` for each output `out`
+and a uniform `u`. The proof adds the final guess
+(`prEvent_idealOutcomeExperiment_le_of_forall`) to Claim 3
+(`prEvent_idealOutcomeExperiment_bad_le`) through the comparison with the ideal experiment
+(`prEvent_guessExperiment_scheme_le_idealOutcomeExperiment`). -/
+theorem prEvent_guessExperiment_scheme_le_of_forall [Finite Ctx] [Fintype S] [Fintype L]
+    [Fintype Salt] (hctx : Function.Injective mkCtx) {Out : Type}
+    {adv : TimeLockPuzzle.TwoPhaseAdversary unifSpec (oracleSpec n S L Salt Ctx)
+      (Puzzle n S L Salt) Out} {Qpre Qon : ℕ}
+    (hadv : adv.IsQueryBound Qpre (keyRound n m - 1, Qon)) {E : Out → S → Prop} {ε : ℝ≥0∞}
+    (hE : ∀ out, Pr{let u ← $ᵗ S}[E out u] ≤ ε) :
+    Pr{let z ← (simulateQ (oracleSpec n S L Salt Ctx).romImpl
+        ((scheme n m mkCtx initAcc).guessExperiment adv)).run' ∅}[E z.1 z.2] ≤
+      (if 2 ≤ n then (Qon : ℝ≥0∞) / Fintype.card L else 0) +
+        Qpre / (Fintype.card Salt * Fintype.card L) +
+          ((Qpre + Qon) * solvePoints n m + (solvePoints n m : ℝ≥0∞) ^ 2) / Fintype.card S +
+        ε := by
+  have hr : keyRound n m - 1 < keyRound n m := by
+    simp only [keyRound]
+    omega
+  refine (prEvent_guessExperiment_scheme_le_idealOutcomeExperiment adv m mkCtx initAcc E).trans ?_
+  rw [add_comm]
+  exact add_le_add (prEvent_idealOutcomeExperiment_bad_le hctx hadv)
+    (prEvent_idealOutcomeExperiment_le_of_forall hadv.2 hr hE)
+
+/-- **The delay theorem with `q` guesses.** For injective `mkCtx` and an adversary whose online
+phase outputs `q` guesses, with at most `Q_pre` preprocessing queries and an online phase within
+`keyRound n m - 1` rounds holding at most `Q_on` points, the probability that one of the guesses is
+the key is at most
+`[n ≥ 2] Q_on / |L| + Q_pre / (|Salt| |L|) + ((Q_pre + Q_on) P + P² + q) / |S|`, with
+`P = solvePoints n m`: the bound of `delayAdvantage_scheme_le` with its last term `1` replaced by
+`q`. -/
+theorem prEvent_guessExperiment_scheme_le [Finite Ctx] [Fintype S] [Fintype L] [Fintype Salt]
+    (hctx : Function.Injective mkCtx) {Qpre Qon q : ℕ}
+    {adv : TimeLockPuzzle.TwoPhaseAdversary unifSpec (oracleSpec n S L Salt Ctx)
+      (Puzzle n S L Salt) (Fin q → S)}
+    (hadv : adv.IsQueryBound Qpre (keyRound n m - 1, Qon)) :
+    Pr{let z ← (simulateQ (oracleSpec n S L Salt Ctx).romImpl
+        ((scheme n m mkCtx initAcc).guessExperiment adv)).run' ∅}[∃ i, z.1 i = z.2] ≤
+      (if 2 ≤ n then (Qon : ℝ≥0∞) / Fintype.card L else 0) +
+        Qpre / (Fintype.card Salt * Fintype.card L) +
+          ((Qpre + Qon) * solvePoints n m + (solvePoints n m : ℝ≥0∞) ^ 2 + q) /
+            Fintype.card S := by
+  refine (prEvent_guessExperiment_scheme_le_of_forall hctx hadv
+    prEvent_uniformSample_exists_eq_le).trans (le_of_eq ?_)
+  simp only [div_eq_mul_inv]
+  ring
+
+end OutcomeExperiment
+
+section Experiment
+
+variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
+  [SampleableType S] [SampleableType L] [SampleableType Salt]
+  {adv : TimeLockPuzzle.Adversary (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt) S}
+  {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S} [NeZero n] [AddCommGroup L]
+
+/-- **The conclusion of the delay proof (the final guess).** If the online phase of the adversary
+submits at most `r < keyRound n m` rounds, it returns the key label in the ideal experiment with
+probability at most `1 / |S|`: the case of `prEvent_idealOutcomeExperiment_le_of_forall` for the
+event that the output is the key label. -/
+theorem prEvent_idealExperiment_win_le [Fintype S] {r q : ℕ}
+    (hbound : ∀ σ P, IsOnlineQueryBound (adv.online σ P) (r, q)) (hr : r < keyRound n m) :
+    Pr{let res ← idealExperiment adv m mkCtx initAcc}[res.win = true] ≤
+      (Fintype.card S : ℝ≥0∞)⁻¹ := by
+  rw [idealExperiment_eq_map_toResult, prEvent_map]
+  simpa only [IdealOutcome.toResult, decide_eq_true_eq] using
+    prEvent_idealOutcomeExperiment_le_of_forall (E := (· = ·)) hbound hr fun out =>
+      (prEvent_uniformSample_eq_right out).le
 
 /-! ## The delay theorem -/
 
@@ -210,7 +320,9 @@ against the pointer-chain puzzle is at most
 `[n ≥ 2] Q_on / |L| + Q_pre / (|Salt| |L|) + ((Q_pre + Q_on) P + P² + 1) / |S|`, with
 `P = solvePoints n m`. The first term is absent when `n = 1`. The proof adds the final guess
 (`prEvent_idealExperiment_win_le`) to Claim 3 (`prEvent_idealExperiment_bad_le`) through the
-comparison with the ideal experiment (`delayAdvantage_scheme_le_idealExperiment`). -/
+comparison with the ideal experiment (`delayAdvantage_scheme_le_idealExperiment`); these are the
+cases of the statements for outputs of any type (`prEvent_guessExperiment_scheme_le_of_forall`)
+for the event that the output is the key. -/
 theorem delayAdvantage_scheme_le [Finite Ctx] [Fintype S] [Fintype L] [Fintype Salt]
     (hctx : Function.Injective mkCtx) {Qpre Qon : ℕ}
     (hadv : adv.IsQueryBound Qpre (keyRound n m - 1, Qon)) :
@@ -219,12 +331,9 @@ theorem delayAdvantage_scheme_le [Finite Ctx] [Fintype S] [Fintype L] [Fintype S
         Qpre / (Fintype.card Salt * Fintype.card L) +
           ((Qpre + Qon) * solvePoints n m + (solvePoints n m : ℝ≥0∞) ^ 2 + 1) /
             Fintype.card S := by
-  have hr : keyRound n m - 1 < keyRound n m := by
-    simp only [keyRound]
-    omega
-  refine (delayAdvantage_scheme_le_idealExperiment adv m mkCtx initAcc).trans
-    ((add_le_add (prEvent_idealExperiment_win_le hadv.2 hr)
-      (prEvent_idealExperiment_bad_le hctx hadv)).trans (le_of_eq ?_))
+  rw [TimeLockPuzzle.delayAdvantage_eq_prEvent_guessExperiment]
+  refine (prEvent_guessExperiment_scheme_le_of_forall (E := (· = ·)) hctx hadv fun out =>
+    (prEvent_uniformSample_eq_right out).le).trans (le_of_eq ?_)
   simp only [div_eq_mul_inv]
   ring
 
