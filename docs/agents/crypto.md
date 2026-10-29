@@ -194,16 +194,27 @@ hypotheses.
 `Measure.boolBias_bind_coin` requires total branches: missing mass is distinct from returning
 `false`, so the assumption cannot be dropped.
 
-### DEM real-or-random IND-CPA
+### DEM IND-CPA
+
+`VCVio.CryptoFoundations.DataEncapMech` defines two left-or-right games for a `DEMScheme` under a
+uniform key. The one-time game `DEMScheme.IND_CPA_OneTime_Game` is the one the KEM–DEM
+composition uses. The multi-query game `DEMScheme.IND_CPA_Game runtime leak adv` gives the
+adversary the DEM's own oracles and the shared challenge oracle `LeftOrRight.oracle` of
+`VCVio.CryptoFoundations.LeftOrRight`, built from `dem.encrypt k`, a leakage function `leak` and
+the hidden bit: a pair with equal leakage is encrypted, any other pair is answered `none`.
+Encryption budgets are `DEMScheme.IND_CPA_Adversary.MakesAtMostQueries`.
+`IND_CPA_OneTime_Advantage_eq_IND_CPA_Advantage` is the exact equality between the one-time
+advantage and the multi-query advantage, without leakage, of the one-query adversary
+`IND_CPA_OneTime_Adversary.toMultiQuery`.
 
 `VCVio.CryptoFoundations.DataEncapMech.RealOrRandom` defines the one-time real-or-random game
-`DEMScheme.realOrRandomGame`, which encrypts either the adversary's message or a uniform one.
-Both DEM advantages are `boolBias` of a fair hidden-bit game, that is, the distance between the
-two branches, so the constants carry no factor from the bias normalization.
-`realOrRandomAdvantage_eq_IND_CPA_Advantage` is an exact equality with no runtime hypotheses.
-`IND_CPA_Advantage_le_realOrRandomAdvantage_add` bounds the left-or-right advantage by the sum
-of two real-or-random advantages and takes the runtime coherence hypotheses of the KEM–DEM
-adapter.
+`DEMScheme.oneTimeRealOrRandomGame`, which encrypts either the adversary's message or a uniform
+one. Both one-time advantages are `boolBias` of a fair hidden-bit game, that is, the distance
+between the two branches, so the constants carry no factor from the bias normalization.
+`oneTimeRealOrRandomAdvantage_eq_IND_CPA_OneTime_Advantage` is an exact equality with no runtime
+hypotheses. `IND_CPA_OneTime_Advantage_le_oneTimeRealOrRandomAdvantage_add` bounds the
+left-or-right advantage by the sum of two real-or-random advantages and takes the runtime
+coherence hypotheses of the KEM–DEM adapter.
 
 ### Forking bounds and measure semantics
 

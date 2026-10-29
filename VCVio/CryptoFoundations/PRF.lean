@@ -18,6 +18,7 @@ public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.EvalDist.IndepProductMeasure
 
 /-!
 # Pseudorandom Functions (PRFs)
@@ -35,11 +36,13 @@ distinguish the real function `PRF.eval k` (for a random key `k`) from a truly r
 - `prfRealExperiment` — the real experiment (adversary queries `PRF.eval k`).
 - `prfIdealExperiment` — the ideal experiment (adversary queries a random oracle).
 - `prfAdvantage` — distinguishing advantage.
+- `PRFScheme.multiKey` — independent instances of a PRF as one PRF, whose `prfAdvantage` is the
+  multi-instance PRF advantage.
 -/
 
 @[expose] public section
 
-open OracleComp OracleSpec ENNReal
+open OracleComp OracleSpec ENNReal MeasureTheory
 
 /-- A pseudorandom function with key space `K`, domain `D`, and range `R`.
 Key generation is probabilistic; evaluation is deterministic given a key. -/
@@ -114,6 +117,50 @@ a random function. -/
 noncomputable def prfAdvantage [DecidableEq D] [SampleableType R]
     (prf : PRFScheme K D R) (adversary : PRFAdversary D R) : ℝ≥0∞ :=
   𝒟[prf.prfRealExperiment adversary].boolDist 𝒟[prfIdealExperiment adversary]
+
+/-! ## Independent instances
+
+A distinguisher against `u` independently keyed instances of a PRF is a PRF distinguisher against
+one product scheme, `PRFScheme.multiKey`, whose input names the instance it is evaluated by. -/
+
+section multiKey
+
+variable (prf : PRFScheme K D R) (U : Type) [Fintype U]
+
+/-- Independent instances of a PRF indexed by a finite type `U`, as one PRF. A key is a family
+`ks : U → K` of keys drawn independently by `prf.keygen`, and an input `(i, d)` is evaluated by
+instance `i`, as `prf.eval (ks i) d`.
+
+`prfAdvantage (prf.multiKey U)` is the multi-instance PRF advantage. In the real experiment the
+distinguisher queries `Fintype.card U` independently keyed instances of `prf`; in the ideal
+experiment the lazy random oracle on `U × D` is `Fintype.card U` independent random functions
+on `D`, one per instance. -/
+noncomputable def multiKey : PRFScheme (U → K) (U × D) R where
+  keygen := Fintype.mPi fun _ => prf.keygen
+  eval ks x := prf.eval (ks x.1) x.2
+
+lemma multiKey_keygen : (prf.multiKey U).keygen = Fintype.mPi fun _ => prf.keygen := rfl
+
+/-- Instance `i` of the product scheme evaluates `prf` under the key of instance `i`. -/
+@[simp]
+lemma multiKey_eval (ks : U → K) (i : U) (d : D) :
+    (prf.multiKey U).eval ks (i, d) = prf.eval (ks i) d := rfl
+
+/-- The keys of the product scheme are independent keys of `prf`. -/
+theorem evalDist_multiKey_keygen [MeasurableSpace K] :
+    𝒟[(prf.multiKey U).keygen] = Measure.pi fun _ : U => 𝒟[prf.keygen] := by
+  rw [multiKey_keygen]
+  exact evalDist_mPi _
+
+/-- For a PRF with uniform keys, the keys of the product scheme are uniform on `U → K`, that is,
+independent uniform keys. -/
+theorem evalDist_multiKey_keygen_of_uniformKey [SampleableType K] [MeasurableSpace K]
+    [MeasurableSingletonClass K] (h : prf.UniformKey) :
+    𝒟[(prf.multiKey U).keygen] = ProbabilityTheory.uniformOn Set.univ := by
+  rw [multiKey_keygen, h]
+  exact evalDist_mPi_const_uniform _ SampleableType.evalDist_uniformSample
+
+end multiKey
 
 /-! ## Forwarding lemmas for the PRF query implementations
 
