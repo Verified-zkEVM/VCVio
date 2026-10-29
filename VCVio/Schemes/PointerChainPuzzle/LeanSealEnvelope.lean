@@ -20,7 +20,13 @@ bytes:
   K ‖ nonce)`, two queries to the single oracle `byteSpec` (`subkeysQuery`), or the labelled
   hashes at a byte-answer function `h` (`subkeys`);
 * HMAC-SHA256 as the PRF (`hmacPRF`), computed outside the oracle;
-* the puzzle encoding of SPEC §6.1 (`encode`).
+* the puzzle encoding of SPEC §6.1 (`encode`);
+* 16-byte nonces, encoded as themselves (`FixedCodec.bytes 16`).
+
+Opening trusts the puzzle bytes and the key it is given. SPEC-conforming use opens under an
+already validated puzzle encoding (`decode`) and a key accepted against the puzzle's commitment
+(`solveBytes` checks it), and rejection checks the envelope relative to those values; opening
+decodes no puzzle and checks no commitment.
 
 `hmacPRF` lives here rather than beside `Sha2.hmacSha256` because its key and output type
 `Bytes` is the fixed-width byte type of leanSeal's encoding (`LeanSeal.lean`); the security
@@ -111,32 +117,34 @@ function `h` (SPEC §6.2 and §7). At `h = sha256` it is leanSeal's envelope. -/
 @[expose]
 def sealBytes (h : ByteArray → Bytes 32) (pz : ByteArray) (key : Bytes 32) (nonce : Bytes 16)
     (msg : Plaintext) : ByteArray :=
-  sealUnder hmacPRF (subkeys h key) pz nonce msg
+  sealUnder hmacPRF (FixedCodec.bytes 16) (subkeys h key) pz nonce msg
 
 /-- Open an envelope under the puzzle bytes `pz` and the key, at the byte-answer function `h`:
-`none` on any malformed input, on puzzle bytes other than `pz`, or on a tag mismatch. -/
+`none` on malformed input, on puzzle bytes other than `pz`, or on a tag mismatch. Opening trusts
+`pz` and the key: SPEC-conforming use passes an already validated puzzle encoding and a key
+accepted against its commitment, and rejection checks the envelope relative to those values. -/
 @[expose]
 def openBytes (h : ByteArray → Bytes 32) (pz : ByteArray) (key : Bytes 32) (env : ByteArray) :
     Option Plaintext :=
-  openUnder hmacPRF (subkeys h key) pz env
+  openUnder hmacPRF (FixedCodec.bytes 16) (subkeys h key) pz env
 
 /-- Opening a sealed envelope under the same puzzle bytes and key returns the message, for every
 nonce and every byte-answer function. -/
 theorem openBytes_sealBytes (h : ByteArray → Bytes 32) (pz : ByteArray) (key : Bytes 32)
     (nonce : Bytes 16) (msg : Plaintext) :
     openBytes h pz key (sealBytes h pz key nonce msg) = some msg :=
-  openUnder_sealUnder hmacPRF (subkeys h key) pz nonce msg
+  openUnder_sealUnder hmacPRF (FixedCodec.bytes 16) (subkeys h key) pz nonce msg
 
 /-! ## The envelope as a DEM over the single oracle -/
 
 /-- leanSeal's envelope as a DEM over the single oracle `byteSpec` with local coins, keyed by a
-puzzle with link width `b` and `n` chains together with its key: the nonce is drawn uniformly,
-the subkeys are two queries to the oracle (`subkeysQuery`), the PRF is HMAC-SHA256 and the
-envelope carries the puzzle encoding with `m` steps per chain. -/
+puzzle with link width `b` and `n` chains together with its key: the 16-byte nonce is drawn
+uniformly and carried as itself, the subkeys are two queries to the oracle (`subkeysQuery`), the
+PRF is HMAC-SHA256 and the envelope carries the puzzle encoding with `m` steps per chain. -/
 @[expose]
 def byteEnvelope (b n m : ℕ) :
     DEMScheme (OracleComp (unifSpec + byteSpec)) (Puzzle b n × Bytes 32) Plaintext ByteArray :=
-  dem hmacPRF subkeysQuery (encode m)
+  dem hmacPRF (FixedCodec.bytes 16) subkeysQuery (encode m)
 
 variable {b n : ℕ} (h : ByteArray → Bytes 32) (m : ℕ)
 
@@ -164,13 +172,13 @@ theorem byteEnvelope_perfectlyCorrect :
     (byteEnvelope b n m).PerfectlyCorrect
       (ProbCompRuntime.withStateOracle
         (fun x => (pure (h x) : StateT Unit ProbComp (Bytes 32))) ()) :=
-  dem_perfectlyCorrect_answerTable (spec := byteSpec) hmacPRF (fun x => (h x : Id (Bytes 32)))
-    subkeysQuery (encode m)
+  dem_perfectlyCorrect_answerTable hmacPRF (FixedCodec.bytes 16)
+    (spec := byteSpec) (fun x => (h x : Id (Bytes 32))) subkeysQuery (encode m)
 
 /-- The byte-level envelope is perfectly correct in the random oracle model, from every initial
 cache. -/
 theorem byteEnvelope_perfectlyCorrect_rom (cache : byteSpec.QueryCache) :
     (byteEnvelope b n m).PerfectlyCorrect (ProbCompRuntime.rom byteSpec cache) :=
-  dem_perfectlyCorrect_rom hmacPRF subkeysQuery (encode m) cache
+  dem_perfectlyCorrect_rom hmacPRF (FixedCodec.bytes 16) subkeysQuery (encode m) cache
 
 end PointerChainPuzzle.LeanSeal
