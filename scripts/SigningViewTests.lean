@@ -6,6 +6,7 @@ Authors: Alexander Hicks
 
 module
 import VCVioTest.CryptoFoundations.SigningViewCounted
+import VCVioTest.QueryTracking.RandomOraclePresampling
 import VCVioTest.CryptoFoundations.SigningViewEncoding
 import VCVioTest.CryptoFoundations.SigningViewUniverse
 import VCVioTest.CryptoFoundations.SigningViewUnforgeability
@@ -155,6 +156,7 @@ public def main : IO Unit := do
   VCVioTest.CryptoFoundations.SigningViewUnforgeability.run complete
   SLHDSA.Refactor.SigningViewContext.run complete
   SLHDSA.Refactor.Recovery.Contracts.auditFixture complete
-  let expected := ["f4-unforgeability", "f5-context", "f6-fixture"]
+  VCVioTest.QueryTracking.RandomOraclePresampling.run complete
+  let expected := ["f4-unforgeability", "f5-context", "f6-fixture", "c3-presampling"]
   unless (← completed.get) == expected do
     throw (IO.userError "Signing-view completion mismatch")

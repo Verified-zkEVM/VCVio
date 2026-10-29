@@ -123,8 +123,10 @@ theorem evalDist_outcome (adversary : Adversary) :
   exact (Presample.evalDist_counted_warmed seeds (afterSeeds adversary)
     (fun sds => sds.2.2) (fun sds => sds.1)).symm
 
-/-- **The target's event, transferred to the warmed run.** The winning event looks only at the
-outcome, so warming — which changes the cache, and only the cache — leaves it alone. -/
+/-- The counted outcome's event has the same probability in the warmed run.
+
+The final cache and the unselected warmup work may differ; the returned outcome and selected
+count have the same joint law. -/
 theorem prEvent_warmed (adversary : Adversary) (event : Outcome × Nat → Prop) :
     Pr{let result ← WholeGameStructural.instrumentedRun adversary}[event result.1] =
       Pr{let result ← warmedRun adversary}[event result.1.2] := by

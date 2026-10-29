@@ -1,40 +1,27 @@
 /-
-Copyright (c) 2026 Tom Wambsgans. All rights reserved.
+Copyright (c) 2026 Tom Wambsgans, Alexander Hicks. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Tom Wambsgans
+Authors: Tom Wambsgans, Alexander Hicks
 -/
 
 module
-
 public import HashSig.SLHDSA.SHAKE128s.Proof.CacheReplay
-public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Presampling
 public import HashSig.SLHDSA.SHAKE128s.Proof.GraphFreshSampling
 public import HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Programming
 public import HashSig.SLHDSA.SHAKE128s.Proof.GrowthBudget
 
 /-!
-# Pre-sampling an unused oracle entry is free
+# Value laws for presampling in the SLH-DSA experiment
 
-Every charge is parameterised by the honest cells, but the experiment samples the seeds — and
-so determines the cells — inside the run. Closing that needs the experiment rewritten as
-*sample a cell table, then program the oracle from it*, which is what
-`CanonicalGraph.Programming` does for key generation.
+A fresh uniform oracle entry or separated adaptive traversal may precede an experiment without
+changing its returned value distribution. The final cache and the work performed by the prefix
+can differ. The laws apply to complete returned observations, including the counted outcome.
 
-The step that lets such a rewrite be prepended to a run at all is below: filling a cache entry
-that is currently empty, with a uniform value, does not change the law of whatever runs next.
-In the lazy random-oracle model this is intuitively obvious — the entry would have been
-sampled with the same law on first use, and never used entries are never observed — but it is
-exactly the fact a presampling argument needs, and VCVio does not carry it.
-
-`evalDist_prepend_fresh_world` is that statement, in the experiment's oracle world. Note the
-`Prod.fst`: the two runs end with *different caches*, since one has an extra entry, so only the
-value can be compared. That is all any later step needs, because the caches agree wherever the
-entry is not involved.
-
-Iterating it along an adaptive traversal gives `evalDist_prepend_worldEvaluate`; specialised to
-the honest warmup `worldWarmup` it gives `evalDist_prepend_warmup` and
-`evalDist_prepend_warmup_after`, and `evalDist_counted_warmed` places the warmup outside the
-hash counter so that the query budget is unaffected.
+`worldEvaluate` lifts the canonical random-oracle traversal into the experiment's oracle world.
+The concrete warmup discharges separation, duplicate-freedom and freshness from its actual graph.
+Private seed sampling leaves the hash cache untouched; keeping warmup outside `countAllHashes`
+preserves the selected downstream count rather than charging the warmup to the adversary.
 -/
 
 public section
@@ -47,21 +34,10 @@ namespace SLHDSA.SHAKE128s.Presample
 theorem cacheQuery_comm (cache : QueryCache HashSpec) {left right : Bytes}
     (hne : left ≠ right) (leftValue rightValue : HashOutput) :
     (cache.cacheQuery left leftValue).cacheQuery right rightValue =
-      (cache.cacheQuery right rightValue).cacheQuery left leftValue := by
-  simp only [QueryCache.cacheQuery, QueryCache.toFn_ofFn]
-  exact congrArg QueryCache.ofFn (Function.update_comm hne _ _ _)
+      (cache.cacheQuery right rightValue).cacheQuery left leftValue :=
+  QueryCache.cacheQuery_comm cache hne leftValue rightValue
 
-/-! ## Pre-sampling one entry in the game's oracle world
-
-The experiment is `OracleComp OracleWorld` — hash calls and coin flips together — so the step
-is stated there. A coin flip does not touch the hash cache, so it commutes with the prepended
-draw exactly as a hash query at a different input does.
-
-One detail decides whether this goes through. The prepended draw puts the right-hand side
-under a binder, and `rw` does not rewrite under binders: unfolding the query step with `rw`
-rewrites only the left, after which the two sides no longer match and every later step fails
-on a `Range` mismatch that is really just the untouched side. Using `simp only` for that first
-unfolding, which does go under binders, removes the whole difficulty. -/
+/-! ## Presampling one entry -/
 
 /-- **Pre-sampling an empty hash entry is free.** Filling an entry the cache does not yet hold
 with a uniform value, before the run, leaves the law of the run's value unchanged. -/
@@ -72,82 +48,18 @@ theorem evalDist_prepend_fresh_world {α : Type} (computation : OracleComp Oracl
           let value ← ($ᵗ HashOutput : ProbComp HashOutput)
           Prod.fst <$> (simulateQ KeygenUniform.rom computation).run
             (cache.cacheQuery target value)) := by
-  induction computation using OracleComp.inductionOn with
-  | pure result =>
-    intro cache target _
-    simp only [simulateQ_pure, StateT.run_pure, map_pure]
-    exact (OracleComp.EvalDistEq.bind_const _ _).symm
-  | query_bind queried next ih =>
-    intro cache target hfresh
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, map_bind]
-    rcases queried with coin | input
-    · have hcoin : ∀ probe : QueryCache HashSpec,
-          (KeygenUniform.rom (Sum.inl coin)).run probe =
-            (fun value => (value, probe)) <$>
-              ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _) := fun _ => rfl
-      simp only [hcoin, bind_map_left]
-      refine (EvalDistEq.bind_right _
-        (fun value => ih value cache target hfresh)).trans ?_
-      exact OracleComp.EvalDistEq.bind_bind_swap _ _ _
-    · have hmissAt : ∀ probe : QueryCache HashSpec, probe input = none →
-          (KeygenUniform.rom (Sum.inr input)).run probe =
-            (fun value => (value, probe.cacheQuery input value)) <$>
-              ($ᵗ (OracleWorld.Range (Sum.inr input)) : ProbComp _) := by
-        intro probe hprobe
-        change (randomOracle input).run probe = _
-        rw [QueryImpl.withCaching_run_none _ hprobe]
-        simp [uniformSampleImpl]
-      have hhitAt : ∀ (probe : QueryCache HashSpec)
-          (value : OracleWorld.Range (Sum.inr input)), probe input = some value →
-          (KeygenUniform.rom (Sum.inr input)).run probe = pure (value, probe) := by
-        intro probe value hprobe
-        change (randomOracle input).run probe = _
-        rw [QueryImpl.withCaching_run_some _ hprobe]
-      by_cases hsame : input = target
-      · subst hsame
-        simp only [hmissAt cache hfresh, bind_map_left]
-        refine EvalDistEq.bind_right _ (fun value => ?_)
-        simp only [hhitAt (cache.cacheQuery input value) value
-          (QueryCache.cacheQuery_self cache input value), pure_bind]
-        exact EvalDistEq.rfl
-      · cases hlookup : cache input with
-        | some cached =>
-          simp only [hhitAt cache cached hlookup, pure_bind]
-          refine (ih cached cache target hfresh).trans
-            (EvalDistEq.bind_right _ (fun value => ?_))
-          simp only [hhitAt (cache.cacheQuery target value) cached
-            (by rw [QueryCache.cacheQuery_of_ne cache value hsame]; exact hlookup), pure_bind]
-          exact EvalDistEq.rfl
-        | none =>
-          simp only [hmissAt cache hlookup, bind_map_left]
-          refine (EvalDistEq.bind_right _
-            (fun value => ih value (cache.cacheQuery input value) target
-              (by rw [QueryCache.cacheQuery_of_ne cache value (Ne.symm hsame)];
-                  exact hfresh))).trans ?_
-          refine (OracleComp.EvalDistEq.bind_bind_swap _ _ _).trans ?_
-          refine EvalDistEq.bind_right _ (fun extra => ?_)
-          simp only [hmissAt (cache.cacheQuery target extra)
-            (by rw [QueryCache.cacheQuery_of_ne cache extra hsame]; exact hlookup),
-            bind_map_left, cacheQuery_comm cache hsame]
-          rfl
+  intro cache target hfresh
+  simpa only [KeygenUniform.rom, RandomOracleModel.impl, unifFwdImpl] using
+    OracleComp.RandomOraclePresampling.evalDist_prepend_fresh
+      (QueryImpl.ofLift unifSpec ProbComp) computation cache target hfresh
 
-/-! ## Prepending a traversal, in the game's world
+/-! ## Presampling the canonical traversal -/
 
-The honest parties' queries form an adaptive traversal: each node's byte input is built from
-its children's cells, so it depends on answers given earlier. `worldEvaluate` is that traversal
-in the experiment's own monad, and prepending it is free for the same reason prepending one
-entry is — each query lands on an input still empty — with the induction peeling one query at
-a time because the next input is chosen using the value just drawn. -/
-
-/-- The graph traversal, in the experiment's oracle world. -/
-@[expose] noncomputable def worldEvaluate {State Index : Type} (input : Index → State → Bytes)
+/-- The canonical full-answer graph traversal in the experiment's oracle world. -/
+noncomputable def worldEvaluate {State Index : Type} (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State) :
-    List Index → State → OracleComp OracleWorld State
-  | [], state => pure state
-  | node :: nodes, state => do
-      let output ← (query (spec := OracleWorld) (Sum.inr (input node state)) :
-        OracleComp OracleWorld HashOutput)
-      worldEvaluate input step nodes (step node state output)
+    List Index → State → OracleComp OracleWorld State :=
+  fun nodes state => liftM (OracleComp.RandomOracleTraversal.evaluate input step nodes state)
 
 /-- **Prepending a fresh traversal is free.** Running an adaptive traversal whose inputs are
 pairwise separated and still empty in the cache before a computation leaves the law of the
@@ -161,42 +73,11 @@ theorem evalDist_prepend_worldEvaluate {α State Index : Type}
       (Prod.fst <$> (simulateQ KeygenUniform.rom computation).run cache) =ᵈ
         (Prod.fst <$> (simulateQ KeygenUniform.rom
           (worldEvaluate input step nodes state >>= fun _ => computation)).run cache) := by
-  intro nodes
-  induction nodes with
-  | nil =>
-    intro state cache _ _
-    rw [worldEvaluate, pure_bind]
-  | cons node rest ih =>
-    intro state cache hnodup hfresh
-    have hnotMem : node ∉ rest := (List.nodup_cons.mp hnodup).1
-    have hrest : rest.Nodup := (List.nodup_cons.mp hnodup).2
-    have hhead : cache (input node state) = none := hfresh node (by simp) state
-    refine (evalDist_prepend_fresh_world computation cache (input node state) hhead).trans ?_
-    have hstep : ∀ value : HashOutput,
-        (Prod.fst <$> (simulateQ KeygenUniform.rom computation).run
-            (cache.cacheQuery (input node state) value)) =ᵈ
-          (Prod.fst <$> (simulateQ KeygenUniform.rom
-            (worldEvaluate input step rest (step node state value) >>=
-              fun _ => computation)).run (cache.cacheQuery (input node state) value)) := by
-      intro value
-      refine ih (step node state value) (cache.cacheQuery (input node state) value) hrest ?_
-      intro other hother otherState
-      rw [QueryCache.cacheQuery_of_ne cache value
-        (hseparated other node (fun hsame => hnotMem (hsame ▸ hother)) otherState state)]
-      exact hfresh other (by simp [hother]) otherState
-    refine (EvalDistEq.bind_right _ hstep).trans ?_
-    have hmiss : (KeygenUniform.rom (Sum.inr (input node state))).run cache =
-        (fun value => (value, cache.cacheQuery (input node state) value)) <$>
-          ($ᵗ (OracleWorld.Range (Sum.inr (input node state))) : ProbComp _) := by
-      change (randomOracle (input node state)).run cache = _
-      rw [QueryImpl.withCaching_run_none _ hhead]
-      simp [uniformSampleImpl]
-    have hsim : simulateQ KeygenUniform.rom
-        (query (spec := OracleWorld) (Sum.inr (input node state))) =
-        KeygenUniform.rom (Sum.inr (input node state)) := by simp
-    simp only [worldEvaluate, bind_assoc, simulateQ_bind, hsim,
-      StateT.run_bind, map_bind, hmiss, bind_map_left]
-    rfl
+  intro nodes state cache hnodup hfresh
+  simpa only [worldEvaluate, KeygenUniform.rom, RandomOracleModel.impl, unifFwdImpl] using
+    OracleComp.RandomOraclePresampling.evalDist_prepend_traversal
+      (QueryImpl.ofLift unifSpec ProbComp) computation input step hseparated
+      nodes state cache hnodup hfresh
 
 /-! ## Prepending the warmup
 
@@ -248,15 +129,8 @@ cache. -/
 theorem run_liftM_probComp {γ : Type} (sample : ProbComp γ) (cache : QueryCache HashSpec) :
     (simulateQ KeygenUniform.rom (liftM sample : OracleComp OracleWorld γ)).run cache =
       (fun value => (value, cache)) <$> sample := by
-  rw [show KeygenUniform.rom = unifFwdImpl HashSpec + (randomOracle :
-      QueryImpl HashSpec (StateT (QueryCache HashSpec) ProbComp)) from rfl,
-    QueryImpl.simulateQ_add_liftM_left]
-  induction sample using OracleComp.inductionOn generalizing cache with
-  | pure value => simp [simulateQ_pure, StateT.run_pure, map_pure]
-  | query_bind coin next ih =>
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, ih,
-      map_eq_bind_pure_comp, Function.comp_def, bind_assoc]
-    rfl
+  exact roSim.run_liftM (randomOracle :
+    QueryImpl HashSpec (StateT (QueryCache HashSpec) ProbComp)) sample cache
 
 /-- **The warmup may be inserted after the seeds are sampled.** -/
 theorem evalDist_prepend_warmup_after {α γ : Type} (sample : ProbComp γ)
@@ -271,27 +145,18 @@ theorem evalDist_prepend_warmup_after {α γ : Type} (sample : ProbComp γ)
   simpa only [simulateQ_bind, StateT.run_bind, map_bind] using
     evalDist_prepend_warmup (rest value) (publicSeed value) (secretSeed value)
 
-/-! ## The world traversal is the lifted one
+/-! ## The lifted traversal
 
-`worldEvaluate` was written in the experiment's monad so the prepend lemma could be stated
-there. It is the same computation as `GraphFreshSampling.evaluate`, lifted — each step's query
-is the hash query routed through the sum — and `rom` simulates a right-lifted computation
-through `randomOracle` alone.
-
-So everything already proved about the warmup in the hash-only world transfers: in particular
-`CanonicalGraph.Programming.warmup_uniform`, which gives the traversal's exact law as a uniform
-table and a programmed cache. That is what turns the prepended warmup into *fixed cells*. -/
+The full byte-answer evaluator and the canonical traversal have the same operational meaning.
+Their lift into the experiment therefore has the same complete warmup run in the shared cache.
+-/
 
 /-- The world traversal is the hash-only traversal, lifted into the experiment's oracle world. -/
 theorem worldEvaluate_eq_liftM {State Index : Type} (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State) (nodes : List Index) (state : State) :
     worldEvaluate input step nodes state =
       liftM (GraphFreshSampling.evaluate input step nodes state) := by
-  induction nodes generalizing state with
-  | nil => rfl
-  | cons node rest ih =>
-    rw [worldEvaluate, GraphFreshSampling.evaluate, liftM_bind]
-    exact congrArg (Bind.bind _) (funext fun output => ih (step node state output))
+  rw [worldEvaluate, GraphFreshSampling.evaluate_eq_traversal]
 
 /-- The warmup's run in the game's world is its run in the hash-only world. -/
 theorem run_worldWarmup (publicSeed secretSeed : Digest) (cache : QueryCache HashSpec) :
