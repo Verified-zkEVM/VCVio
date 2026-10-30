@@ -747,30 +747,6 @@ theorem absDiff_privateExperiment_counterExperiment_le [NeZero n] [AddCommGroup 
 
 end NonceHop
 
-/-! ## Envelopes with known keystream and tag functions -/
-
-section SealBy
-
-/-- Simulating the queries of `sealBy` is `sealBy` with the simulated block and tag functions. -/
-lemma simulateQ_sealBy {ι : Type} {spec : OracleSpec ι} {μ : Type → Type} [Monad μ]
-    [LawfulMonad μ] (impl : QueryImpl spec μ) (block tag : ByteArray → OracleComp spec (Bytes 32))
-    (pz : ByteArray) (nonce : N) (msg : Plaintext) :
-    simulateQ impl (sealBy codec block tag pz nonce msg) =
-      sealBy codec (fun x => simulateQ impl (block x)) (fun x => simulateQ impl (tag x)) pz nonce
-        msg := by
-  simp [sealBy]
-
-/-- `sealBy` with the block and tag functions of `prf` under the subkeys `k₁` and `k₂`, returned
-purely, returns the envelope under `(k₁, k₂)`. -/
-lemma sealBy_pure_eval {μ : Type → Type} [Monad μ] [LawfulMonad μ] (k₁ k₂ : K) (pz : ByteArray)
-    (nonce : N) (msg : Plaintext) :
-    sealBy codec (μ := μ) (fun x => pure (prf.eval k₁ x)) (fun x => pure (prf.eval k₂ x)) pz nonce
-      msg = pure (sealWith prf codec pz nonce (k₁, k₂) msg) := by
-  rw [sealWith_eq_sealBy]
-  simp [sealBy]
-
-end SealBy
-
 /-! ## From `G₁½` to `G₂`: the counter-indexed subkeys are a uniform key table -/
 
 section KeyTable
@@ -1031,30 +1007,6 @@ noncomputable def keyFill (s : (sealSpec n S L Salt Ctx N K).QueryCache × (ℕ 
     ProbComp (((sealSpec n S L Salt Ctx N K).QueryCache × ℕ) × (Fin (2 * qEnc) → K)) :=
   (fun T => ((s.1, s.2.1), keyTable qEnc T s.2.2)) <$> (prf.multiKey (Fin (2 * qEnc))).keygen
 
-omit [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx] [DecidableEq N]
-  [SampleableType S] [SampleableType L] [SampleableType N] in
-/-- Under `prf.UniformKey`, overwriting two distinct cells of the uniform key table of
-`prf.multiKey` by a fresh uniform pair of subkeys leaves its law unchanged. -/
-lemma evalDist_uniformSample_bind_keygen_update (hprf : prf.UniformKey) {γ : Type}
-    [MeasurableSpace γ] {i₀ i₁ : Fin (2 * qEnc)} (hne : i₀ ≠ i₁)
-    (G : (Fin (2 * qEnc) → K) → ProbComp γ) :
-    𝒟[$ᵗ (K × K) >>= fun ks => (prf.multiKey (Fin (2 * qEnc))).keygen >>= fun T =>
-      G (Function.update (Function.update T i₀ ks.1) i₁ ks.2)] =
-      𝒟[(prf.multiKey (Fin (2 * qEnc))).keygen >>= G] := by
-  let : MeasurableSpace K := ⊤
-  have hT := evalDist_multiKey_keygen_of_uniformKey prf (Fin (2 * qEnc)) hprf
-  have hK : 𝒟[$ᵗ K] = ProbabilityTheory.uniformOn Set.univ :=
-    SampleableType.evalDist_uniformSample
-  rw [SampleableType.uniformSample_prod_eq_bind]
-  simp only [bind_assoc, pure_bind]
-  calc _ = 𝒟[$ᵗ K >>= fun u₀ => (prf.multiKey (Fin (2 * qEnc))).keygen >>= fun T =>
-        G (Function.update T i₀ u₀)] :=
-        evalDist_bind_congr_of_support _ _ _ fun u₀ _ => by
-          simp_rw [Function.update_comm hne]
-          exact evalDist_bind_bind_update ($ᵗ K) _ hK hT i₁
-            (fun g => G (Function.update g i₀ u₀))
-    _ = _ := evalDist_bind_bind_update ($ᵗ K) _ hK hT i₀ G
-
 /-- **The key table intertwines `G₁½` with `G₂`.** Under `prf.UniformKey`, on the states whose
 log holds one entry per accepted encryption within the budget, a step of the online handler of
 `G₁½` followed by `keyFill` has the law of `keyFill` followed by a step of `keyedTabImpl`. Local
@@ -1084,7 +1036,7 @@ theorem intertwinesOn_keyFill (hprf : prf.UniformKey) (puzzle : Puzzle n S L Sal
         have hne := instanceIndex_zero_ne_one qEnc ⟨l.length, hj⟩
         refine Eq.trans ?_ (EvalDistEq.bind_bind_swap _ _ _).evalDist_eq.symm
         refine evalDist_bind_congr_of_support _ _ _ fun η _ => ?_
-        have h := evalDist_uniformSample_bind_keygen_update prf qEnc hprf hne
+        have h := evalDist_uniformSample_bind_multiKey_keygen_update prf (Fin (2 * qEnc)) hprf hne
           (fun g => f (some (sealWith prf codec (encodePuzzle puzzle) η
             (g (instanceIndex 0 ⟨l.length, hj⟩), g (instanceIndex 1 ⟨l.length, hj⟩))
             (if b = true then m₁ else m₀))) ((c, l.length + 1), keyTable qEnc g l))

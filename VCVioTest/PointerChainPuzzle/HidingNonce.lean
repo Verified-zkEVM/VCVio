@@ -23,8 +23,14 @@ and a toy PRF:
 * a pair of messages of unequal length leaves the counter of `G₁½` unchanged and draws no coin, in
   the challenger and in the joint handler of the online phase; an accepted pair beyond the budget
   advances the counter and draws no coin;
-* at a concrete hiding adversary with one challenge query: `G₁` and `G₁½` agree at budget `1`, `G₁½`
-  is `G₂` in law, and `|G₁ - G₂| ≤ 1 / 8`.
+* the main theorems applied at a concrete hiding adversary with one challenge query: `G₁` and `G₁½`
+  agree at budget `1`, `G₁½` is `G₂` in law, and `|G₁ - G₂| ≤ 1 / 8`. Its guess reads the first
+  byte of the envelope, which is the first byte of the header, so these are checks of the API only;
+* an adversary that asks two identical challenges and guesses whether the two envelopes are equal
+  separates the hybrids through the experiments: equality has probability exactly `1 / 4` in `G₁`,
+  where it is a nonce collision, and exactly `1 / 196` in `G₁½` at budget `2`, where the subkeys
+  must collide too. The toy envelope of a one-byte message determines its nonce and its subkeys. The
+  gap `12 / 49` is within the bound `1 / 4` of the nonce hop at budget `2`.
 
 The answer types are sampled through `SampleableType.Fin`, so loading this module enumerates no
 type.
@@ -199,7 +205,9 @@ def mkCtx (salt : Salt) : Salt := salt + 1
 def initAcc (ctx : Salt) : S := ⟨ctx.val + 6, by omega⟩
 
 /-- No preprocessing; the online phase asks one challenge on `msgA` and `msgB` and guesses whether
-the first byte of the ciphertext is even. -/
+the first byte of the envelope is even. That byte is the first header byte `0x4c`, so the guess is
+constant: the checks against `hidingAdv` exercise the statements, not the routing of nonces and
+subkeys. -/
 def hidingAdv : TimeLockPuzzle.HidingAdversary spec (Puzzle 2 S L Salt) Plaintext ByteArray where
   State := Unit
   preprocess := pure ()
@@ -249,5 +257,173 @@ theorem hidingAdv_private_indexed_le (b : Bool) :
   refine h.trans (le_of_eq ?_)
   rw [Fintype.card_fin]
   norm_num
+
+/-! ## Two identical challenges separate `G₁` from `G₁½` -/
+
+/-- The toy keystream byte of a one-byte message determines the encryption subkey. -/
+theorem xorBytes_keystream_msgA_inj : ∀ k k' : K,
+    xorBytes msgA.1.data.toList (keystream toyPRF k msgA.1.size) =
+      xorBytes msgA.1.data.toList (keystream toyPRF k' msgA.1.size) → k = k' := by
+  decide
+
+/-- Distinct subkeys below `7` are distinct bytes. -/
+theorem uInt8_ofNat_inj : ∀ k k' : K, UInt8.ofNat k.val = UInt8.ofNat k'.val → k = k' := by
+  decide
+
+/-- The toy envelope of `msgA` determines its nonce and its two subkeys, under all puzzle bytes:
+parsing reads back the nonce, the ciphertext determines the encryption subkey and the first tag
+byte the MAC subkey. -/
+theorem sealWith_msgA_inj (pz : ByteArray) {η η' : N} {ks ks' : K × K}
+    (h : sealWith toyPRF codec pz η ks msgA = sealWith toyPRF codec pz η' ks' msgA) :
+    η = η' ∧ ks = ks' := by
+  have hp := congrArg (parse codec pz) h
+  rw [parse_sealWith, parse_sealWith] at hp
+  simp only [Option.some.injEq, Fields.mk.injEq] at hp
+  obtain ⟨hη, hct, hsg, htag⟩ := hp
+  rw [hsg] at htag
+  have h0 := congrArg (fun x : Bytes 32 => x.toVector[0]) htag
+  simp only [toyPRF, Vector.getElem_ofFn] at h0
+  refine ⟨hη, Prod.ext (xorBytes_keystream_msgA_inj _ _ hct) (uInt8_ofNat_inj _ _ ?_)⟩
+  simpa using h0
+
+/-- No preprocessing; the online phase asks two challenges on `(msgA, msgA)` and guesses whether
+the two answers are equal. -/
+@[expose]
+def pairAdv : TimeLockPuzzle.HidingAdversary spec (Puzzle 2 S L Salt) Plaintext ByteArray where
+  State := Unit
+  preprocess := pure ()
+  online _ _ := do
+    let c₁ : Option ByteArray ← liftM (((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
+      spec.batch).query (.inl (.inr (msgA, msgA))))
+    let c₂ : Option ByteArray ← liftM (((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
+      spec.batch).query (.inl (.inr (msgA, msgA))))
+    return decide (c₁ = c₂)
+
+/-- `pairAdv` makes two challenge queries. -/
+theorem pairAdv_makesAtMostQueries : pairAdv.MakesAtMostQueries 2 := by
+  intro σ puzzle
+  simp [pairAdv]
+
+/-- The online phase of `pairAdv` under a stateful handler: two challenge steps, then the
+comparison of their answers. -/
+theorem run_pairAdv {σ : Type}
+    (impl : QueryImpl ((unifSpec + LeftOrRight.spec Plaintext ByteArray) + spec.batch)
+      (StateT σ ProbComp)) (puzzle : Puzzle 2 S L Salt) (s₀ : σ) :
+    (simulateQ impl (pairAdv.online () puzzle)).run s₀ = (do
+      let p : Option ByteArray × σ ← (impl (.inl (.inr (msgA, msgA)))).run s₀
+      let p' : Option ByteArray × σ ← (impl (.inl (.inr (msgA, msgA)))).run p.2
+      pure (decide (p.1 = p'.1), p'.2)) := by
+  simp [pairAdv]
+
+/-- A uniform draw followed by an independent uniform draw is a uniform pair. -/
+theorem prEvent_uniformSample_bind_uniformSample {α β γ : Type} [SampleableType α]
+    [SampleableType β] (F : α → β → γ) (p : γ → Prop) :
+    Pr{let z ← ($ᵗ α >>= fun a => $ᵗ β >>= fun b => pure (F a b))}[p z] =
+      Pr{let x ← $ᵗ (α × β)}[p (F x.1 x.2)] := by
+  rw [SampleableType.uniformSample_prod_eq_bind, ← prEvent_map]
+  simp [map_bind]
+
+/-- In the online phase of `G₁`, the two envelopes of `pairAdv` are equal exactly when the nonces
+collide, with probability `1 / 4`: the second encryption under the first nonce reads the subkeys
+from the private cache, and under another nonce the envelope carries another nonce. -/
+theorem prEvent_privateJointImpl_pairAdv (b : Bool) (puzzle : Puzzle 2 S L Salt)
+    (s : spec.QueryCache) :
+    Pr{let z ← (simulateQ (privateJointImpl (Ctx := Salt) toyPRF codec encodePuzzle puzzle b)
+      (pairAdv.online () puzzle)).run (s, ∅)}[z.1 = true] = (4 : ℝ≥0∞)⁻¹ := by
+  rw [run_pairAdv, privateJointImpl_run_challenge]
+  simp only [privateJointImpl_run_challenge, ↓reduceIte, ite_self, bind_assoc, pure_bind,
+    randomOracle.run_eq, QueryCache.empty_apply]
+  refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun η₁ => ?_
+  refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun ks₁ => ?_
+  classical
+  rw [prEvent_bind_eq_sum_fintype,
+    show (4 : ℝ≥0∞)⁻¹ = ∑ a : N, (4 : ℝ≥0∞)⁻¹ * (if a = η₁ then 1 else 0) by simp]
+  refine Finset.sum_congr rfl fun η₂ _ => ?_
+  rw [SampleableType.prEvent_uniformSample_eq_singleton, Fintype.card_fin, Nat.cast_ofNat]
+  congr 1
+  by_cases h : η₂ = η₁
+  · subst h
+    simp
+  · simp only [QueryCache.cacheQuery_of_ne (h := h), QueryCache.empty_apply, h, ↓reduceIte,
+      bind_assoc, pure_bind]
+    refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun ks₂ => ?_
+    rw [prEvent_pure]
+    simp only [decide_eq_true_eq, Option.some.injEq, ite_eq_right_iff, one_ne_zero, imp_false]
+    exact fun he => h (sealWith_msgA_inj _ he).1.symm
+
+/-- In the online phase of `G₁½` at budget `2`, the two envelopes of `pairAdv` are equal exactly
+when the nonces and both subkeys collide, with probability `1 / 196`. -/
+theorem prEvent_counterJointImpl_pairAdv (b : Bool) (puzzle : Puzzle 2 S L Salt)
+    (s : spec.QueryCache) :
+    Pr{let z ← (simulateQ (counterJointImpl toyPRF codec encodePuzzle 2 puzzle b)
+      (pairAdv.online () puzzle)).run (s, (0, []))}[z.1 = true] = (196 : ℝ≥0∞)⁻¹ := by
+  rw [run_pairAdv, counterJointImpl_run_challenge]
+  simp only [counterJointImpl_run_challenge, ↓reduceIte, ite_self, bind_assoc, pure_bind,
+    show (0 : ℕ) < 2 from by decide, show (0 + 1 : ℕ) < 2 from by decide]
+  refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun η₁ => ?_
+  refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun ks₁ => ?_
+  have hc : (196 : ℝ≥0∞)⁻¹ = (Fintype.card (N × (K × K)) : ℝ≥0∞)⁻¹ := by simp
+  rw [hc, ← SampleableType.prEvent_uniformSample_eq_singleton (η₁, ks₁),
+    prEvent_uniformSample_bind_uniformSample]
+  refine prEvent_congr _ _ _ fun x => ?_
+  simp only [decide_eq_true_eq, Option.some.injEq]
+  constructor
+  · intro h
+    obtain ⟨h₁, h₂⟩ := sealWith_msgA_inj _ h
+    exact Prod.ext h₁.symm h₂.symm
+  · rintro rfl
+    rfl
+
+/-- **`G₁` for `pairAdv`.** The two envelopes are equal with probability `1 / 4`. -/
+theorem privateExperiment_pairAdv (b : Bool) :
+    Pr{let z ← (simulateQ spec.romImpl
+      (privateExperiment 1 toyPRF codec encodePuzzle mkCtx initAcc pairAdv b)).run' ∅}[
+        z.1 = true] = (4 : ℝ≥0∞)⁻¹ := by
+  rw [StateT.run'_eq, prEvent_map]
+  simp only [privateExperiment, TimeLockPuzzle.guessExperiment, simulateQ_bind,
+    StateT.run_bind, bind_pure_comp, privateAdversary]
+  refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun p => ?_
+  refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun p₁ => ?_
+  rw [simulateQ_map, StateT.run_map, prEvent_map,
+    (run_romImpl_privateImpl_evalDistEq_privateJointImpl toyPRF codec encodePuzzle p₁.1.1 b _
+      p₁.2).prEvent_eq, prEvent_map]
+  exact prEvent_privateJointImpl_pairAdv encodePuzzle b p₁.1.1 p₁.2
+
+/-- **`G₁½` for `pairAdv` at budget `2`.** The two envelopes are equal with probability
+`1 / 196`. -/
+theorem counterExperiment_pairAdv (b : Bool) :
+    Pr{let z ← (simulateQ spec.romImpl
+      (counterExperiment 1 toyPRF codec encodePuzzle 2 mkCtx initAcc pairAdv b)).run' ∅}[
+        z.1 = true] = (196 : ℝ≥0∞)⁻¹ := by
+  rw [StateT.run'_eq, prEvent_map]
+  simp only [counterExperiment, TimeLockPuzzle.guessExperiment, simulateQ_bind,
+    StateT.run_bind, bind_pure_comp, counterAdversary]
+  refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun p => ?_
+  refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun p₁ => ?_
+  rw [simulateQ_map, StateT.run_map, prEvent_map,
+    (run_romImpl_counterImpl_evalDistEq_counterJointImpl toyPRF codec encodePuzzle 2 p₁.1.1 b _
+      p₁.2).prEvent_eq, prEvent_map]
+  exact prEvent_counterJointImpl_pairAdv encodePuzzle b p₁.1.1 p₁.2
+
+/-- `pairAdv` separates `G₁` from `G₁½`, and the nonce hop bounds the gap by `1 / 4`. -/
+theorem pairAdv_separates (b : Bool) :
+    Pr{let z ← (simulateQ spec.romImpl
+      (privateExperiment 1 toyPRF codec encodePuzzle mkCtx initAcc pairAdv b)).run' ∅}[
+        z.1 = true] ≠
+      Pr{let z ← (simulateQ spec.romImpl
+        (counterExperiment 1 toyPRF codec encodePuzzle 2 mkCtx initAcc pairAdv b)).run' ∅}[
+          z.1 = true] ∧
+    ENNReal.absDiff (4 : ℝ≥0∞)⁻¹ (196 : ℝ≥0∞)⁻¹ ≤ (4 : ℝ≥0∞)⁻¹ := by
+  rw [privateExperiment_pairAdv, counterExperiment_pairAdv]
+  refine ⟨by norm_num, ?_⟩
+  have h := absDiff_privateExperiment_counterExperiment_le (m := 1) toyPRF codec encodePuzzle 2
+    mkCtx initAcc pairAdv pairAdv_makesAtMostQueries b
+  rw [privateExperiment_pairAdv, counterExperiment_pairAdv] at h
+  refine h.trans (le_of_eq ?_)
+  rw [Fintype.card_fin]
+  norm_num
+  rw [ENNReal.div_eq_inv_mul, show (8 : ℝ≥0∞) = 4 * 2 by norm_num,
+    ENNReal.mul_inv (by simp) (by simp), mul_assoc, ENNReal.inv_mul_cancel (by simp) (by simp),
+    mul_one]
 
 end VCVioTest.PointerChainPuzzle.HidingNonce
