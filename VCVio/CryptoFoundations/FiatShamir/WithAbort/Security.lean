@@ -15,7 +15,8 @@ Statistical CMA-to-NMA reduction for the Fiat-Shamir-with-aborts transform,
 following Theorem 3 of Barbosa et al. (CRYPTO 2023, ePrint 2023/246).
 Instantiates `FiatShamir.signHashQueryBound` at the with-aborts signature type
 and exposes `cmaToNmaLoss`, `euf_cma_to_nma` (the managed-RO NMA interface) and
-`euf_cma_to_eufNma` (the plain EUF-NMA interface), together with the hybrid game
+`euf_cma_to_eufNma` (the plain EUF-NMA interface), each with an `_of_good_hvzk` variant
+that needs the HVZK bound only on good keys, together with the hybrid game
 chain (`hybridExpAtKey` over the signing bodies `realSignBody`, `progSignBody`,
 `transSignBody`, `simSignBody`) that structures the proof.
 
