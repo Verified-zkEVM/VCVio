@@ -24,6 +24,19 @@ parallel queries, and wins if it outputs the key. All three of preprocessing, ge
 online phase run on one cache, so an answer obtained in one phase is the answer in every later
 phase.
 
+Time is measured in rounds rather than in queries because all points of a round are chosen before
+any of its answers arrives: a bound on the rounds of the online phase therefore holds however much
+parallel hardware the adversary has, and its point budget bounds only its total work. The
+preprocessing phase runs before the clock starts, so it is charged only for its number of queries,
+and it may query one point at a time. This is the model of the leanSeal paper's delay theorem
+`thm:delay`: an adversary `(A_0, A_1)` whose preprocessing phase `A_0` makes `Q_pre` queries and
+passes its whole state to `A_1`, which receives the puzzle and makes `Q_on` queries, with time
+after publication counted in oracle rounds. A puzzle whose honest solver derives the key in round
+`T` is delay secure when every adversary within `T - 1` online rounds outputs the key with small
+probability (`DelaySecure`); the per-run form of the same event, for an adversary with any number
+of rounds, is `TimeLockPuzzle.delayAdvantageWithin` in
+`VCVio/CryptoFoundations/TimeLockPuzzle/Truncate.lean`.
+
 ## Main definitions
 
 * `TimeLockPuzzle spec Puzzle Key`: the generator and the solver.

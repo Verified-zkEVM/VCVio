@@ -51,7 +51,8 @@ uniform labelling may be bounded, for each fixed `ℓ₀`, over the resampled la
 * The online Bad test compares each logged point with path inputs under the full labelling, and a
   logged point records its reached set (`HitAt`). Against a labelling resampled outside `R`, a
   point hits through some path value with a predecessor `w ∉ R`. Redrawing the label of `w` alone
-  (`prEvent_uniform_le_of_update`) changes that path input injectively
+  (`prEvent_uniform_le_of_update`, the case for an event of
+  `prEvent_uniform_bind_le_of_update`) changes that path input injectively
   (`pathInput_update_injective`), which gives cases 3 and 4.
 * A round of the ideal handler reads only the labels of the reached set and the labels it newly
   reaches (`idealImpl_inr_run_congr`). After each round, the bridge resamples again outside the
@@ -159,7 +160,7 @@ end PathInput
 
 section Draw
 
-variable {α β : Type}
+variable {α : Type}
 
 /-- A bound on an event after every draw bounds it after the draw. -/
 lemma prEvent_bind_le {mx : ProbComp α} {f : α → ProbComp Prop} {ε : ℝ≥0∞}
@@ -170,13 +171,6 @@ lemma prEvent_bind_le {mx : ProbComp α} {f : α → ProbComp Prop} {ε : ℝ≥
 lemma prEvent_bind_le_of_support {mx : ProbComp α} {f : α → ProbComp Prop} {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, prEvent (f a) ≤ ε) : prEvent (mx >>= f) ≤ ε := by
   simpa using prEvent_bind_le_of_forall_le_of_support mx f (fun p => p) (by simpa using h)
-
-/-- Events compared after every possible draw compare after the draw. -/
-lemma prEvent_bind_mono {mx : ProbComp α} {f g : α → ProbComp Prop}
-    (h : ∀ a ∈ support mx, prEvent (f a) ≤ prEvent (g a)) :
-    prEvent (mx >>= f) ≤ prEvent (mx >>= g) := by
-  simpa using prEvent_bind_mono_of_forall_le_of_support mx f g (fun p => p) (fun p => p)
-    (by simpa using h)
 
 /-- A union bound after every draw gives a union bound after the draw. -/
 lemma prEvent_bind_le_add {mx : ProbComp α} {f g k : α → ProbComp Prop}
@@ -192,17 +186,6 @@ lemma prEvent_bind_le_mul {mx : ProbComp α} {f : α → ProbComp Prop} (p : α 
     prEvent (mx >>= f) ≤ Pr{let a ← mx}[p a] * ε := by
   simpa using prEvent_bind_le_prEvent_mul_of_forall_le mx f p (fun p => p) (by simpa using h₁)
     (by simpa using h₂)
-
-/-- A draw whose result is ignored does not change an event's probability. -/
-lemma prEvent_bind_const (mx : ProbComp α) (my : ProbComp Prop) :
-    prEvent (mx >>= fun _ => my) = prEvent my := by
-  rw [prEvent_def, prEvent_def, OracleComp.evalDist_bind_const]
-
-/-- Two independent draws commute. -/
-lemma prEvent_bind_swap (mx : ProbComp α) (my : ProbComp β) (f : α → β → ProbComp Prop) :
-    prEvent (mx >>= fun a => my >>= fun b => f a b) =
-      prEvent (my >>= fun b => mx >>= fun a => f a b) :=
-  prEvent_bind_bind_swap mx my f
 
 end Draw
 
@@ -285,23 +268,31 @@ lemma prEvent_uniform_bind_mixLabels (B : Finset (PathValue n m))
     simp [e]
   rw [prEvent_def, prEvent_def, h₂, h₁, SampleableType.evalDist_uniformSample_prod_bind_fst]
 
-/-- **One label.** An event of a uniform labelling has probability at most `ε` if, for every
-labelling, redrawing the label of `a` alone gives it probability at most `ε`. -/
-lemma prEvent_uniform_le_of_update (a : PathValue n m) (E : Labels n m S L → Prop) {ε : ℝ≥0∞}
-    (h : ∀ ℓ, Pr{let u ← $ᵗ (a.Val S L)}[E (Function.update ℓ a u)] ≤ ε) :
-    Pr{let ℓ ← $ᵗ Labels n m S L}[E ℓ] ≤ ε := by
+end Mix
+
+/-! ## Redrawing one label -/
+
+/-- **One label, after a computation.** An event of a computation run on a uniform labelling has
+probability at most `ε` if, for every labelling, redrawing the label of `a` alone gives it
+probability at most `ε`. -/
+lemma prEvent_uniform_bind_le_of_update [SampleableType S] [SampleableType L] (a : PathValue n m)
+    (f : Labels n m S L → ProbComp Prop) {ε : ℝ≥0∞}
+    (h : ∀ ℓ, prEvent ($ᵗ (a.Val S L) >>= fun u => f (Function.update ℓ a u)) ≤ ε) :
+    prEvent ($ᵗ Labels n m S L >>= f) ≤ ε := by
   let : ∀ v : PathValue n m, MeasurableSpace (v.Val S L) := fun _ => ⊤
   have h₁ := evalDist_bind_bind_update_dependent a ($ᵗ (a.Val S L)) ($ᵗ Labels n m S L)
-    SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample
-    (fun ℓ => (pure (E ℓ) : ProbComp Prop))
-  have h₂ : Pr{let ℓ ← $ᵗ Labels n m S L}[E ℓ] =
-      prEvent ($ᵗ (a.Val S L) >>= fun u => $ᵗ Labels n m S L >>= fun ℓ =>
-        (pure (E (Function.update ℓ a u)) : ProbComp Prop)) := by
-    rw [prEvent_def, prEvent_def, h₁, bind_pure_comp]
-  rw [h₂, prEvent_bind_swap]
-  exact prEvent_bind_le fun ℓ => by simpa [bind_pure_comp] using h ℓ
+    SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample f
+  rw [prEvent_def, ← h₁, ← prEvent_def, prEvent_bind_bind_swap]
+  exact prEvent_bind_le h
 
-end Mix
+/-- **One label.** An event of a uniform labelling has probability at most `ε` if, for every
+labelling, redrawing the label of `a` alone gives it probability at most `ε`. -/
+lemma prEvent_uniform_le_of_update [SampleableType S] [SampleableType L] (a : PathValue n m)
+    (E : Labels n m S L → Prop) {ε : ℝ≥0∞}
+    (h : ∀ ℓ, Pr{let u ← $ᵗ (a.Val S L)}[E (Function.update ℓ a u)] ≤ ε) :
+    Pr{let ℓ ← $ᵗ Labels n m S L}[E ℓ] ≤ ε := by
+  simpa [bind_pure_comp] using prEvent_uniform_bind_le_of_update a (fun ℓ => pure (E ℓ))
+    fun ℓ => by simpa [bind_pure_comp] using h ℓ
 
 /-! ## Hits on unreached path values -/
 
@@ -484,16 +475,6 @@ end Collision
 
 /-! ## The ideal handler reads only reached labels -/
 
-/-- Two handlers that agree on every query of a batch handle the batch alike. -/
-lemma queryImpl_batch_congr {ι : Type} {spec : OracleSpec.{0, 0} ι} {m' : Type → Type}
-    [Monad m'] {impl₁ impl₂ : QueryImpl spec m'} {ts : List ι}
-    (h : ∀ t ∈ ts, impl₁ t = impl₂ t) : impl₁.batch ts = impl₂.batch ts := by
-  induction ts with
-  | nil => rfl
-  | cons t ts ih =>
-      simp only [QueryImpl.batch_cons, h t List.mem_cons_self,
-        ih fun t' ht' => h t' (List.mem_cons_of_mem _ ht')]
-
 section Reads
 
 variable {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S} [NeZero n] [AddCommGroup L]
@@ -551,7 +532,7 @@ lemma idealImpl_inr_run_congr {s : IdealState n m S L Salt Ctx} {ts : List (Poin
   have hafter : ∀ c, s.afterRound m mkCtx initAcc P ℓ₁ ts c =
       s.afterRound m mkCtx initAcc P ℓ₂ ts c := fun c => by
     simp only [IdealState.afterRound, newlyReached_congr hR ts]
-  rw [idealImpl_inr_run, idealImpl_inr_run, queryImpl_batch_congr hpoint]
+  rw [idealImpl_inr_run, idealImpl_inr_run, QueryImpl.batch_congr hpoint]
   simp only [hafter]
 
 /-- The log of the ideal handler only grows. -/
@@ -661,7 +642,7 @@ theorem prEvent_newHit_le (P : Puzzle n S L Salt) {α : Type}
       simp only [run_simulateQ_query_bind, map_bind]
       rcases t with k | ts
       · simp only [idealImpl_inl_run, bind_map_left]
-        rw [prEvent_bind_swap]
+        rw [prEvent_bind_bind_swap]
         exact prEvent_bind_le fun u => by simpa using ih u (by simpa using hk u) s ℓ₀
       · simp only [pointCount_inr] at ht
         simp only [pointCount_inr] at hk
@@ -679,8 +660,9 @@ theorem prEvent_newHit_le (P : Puzzle n S L Salt) {α : Type}
           · refine (prEvent_le_one _).trans (le_trans (le_of_eq ?_) le_self_add)
             simp [hE]
           · refine le_trans ?_ le_add_self
-            exact prEvent_bind_mono fun p hp => prEvent_mono_of_support _ _ _ fun z hz hn =>
-              (newHit_of_mem_support_inr hp hz hn).resolve_left hE
+            exact prEvent_bind_mono_of_support _ _ _ fun p hp =>
+              prEvent_mono_of_support _ _ _ fun z hz hn =>
+                (newHit_of_mem_support_inr hp hz hn).resolve_left hE
         refine (add_le_add (b := (ts.length : ℝ≥0∞) * hitBound n m S L)
           (d := ((q - ts.length : ℕ) : ℝ≥0∞) * hitBound n m S L) ?_ ?_).trans (le_of_eq ?_)
         · simpa [bind_pure_comp] using prEvent_exists_hitAt_le P s.reached ℓ₀ ts
@@ -698,7 +680,7 @@ theorem prEvent_newHit_le (P : Puzzle n S L Salt) {α : Type}
               rw [hNR, ← hR₁] at hv
               exact (mixLabels_of_mem hv).symm).symm
           simp only [hstep]
-          rw [prEvent_bind_swap]
+          rw [prEvent_bind_bind_swap]
           refine prEvent_bind_le_of_support fun p hp => ?_
           have hreached : p.2.reached = R₁ := by
             rw [reached_of_mem_support_inr hp, hNR, hR₁]
@@ -899,7 +881,7 @@ theorem prEvent_idealOutcomeExperiment_onlineBad_le [Fintype S] [Fintype L] {r Q
   have h := prEvent_newHit_le (mkCtx := mkCtx) (initAcc := initAcc) (labelPuzzle salt p.1 p.2 ℓ₀)
     (adv.online z.1 (labelPuzzle salt p.1 p.2 ℓ₀)) (hadv _ _).isPointQueryBound
     (IdealState.init z.2) ℓ₀
-  refine le_trans (prEvent_bind_mono fun ℓ' _ =>
+  refine le_trans (prEvent_bind_mono_of_support _ _ _ fun ℓ' _ =>
     prEvent_mono_of_support _ _ _ fun w _ hw => ?_) h
   obtain ⟨e, he, hb⟩ := of_decide_eq_true hw
   exact ⟨e, by simpa using he, hb.hitAt⟩

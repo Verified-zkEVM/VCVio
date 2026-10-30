@@ -524,3 +524,14 @@ theorem evalDistEq_simulateQ {α : Type} (oa : OracleComp spec α) :
   EvalDistEq.of_evalDist_eq (evalDist_simulateQ oa)
 
 end uniformSampleImpl
+
+namespace OracleComp
+
+/-- A uniform draw, transported along an equality of types, is uniform. -/
+lemma evalDist_cast_uniformSample {X Y : Type} [SampleableType X] [MeasurableSpace Y]
+    [MeasurableSingletonClass Y] (h : X = Y) :
+    𝒟[cast h <$> ($ᵗ X)] = ProbabilityTheory.uniformOn Set.univ := by
+  subst h
+  exact (congrArg (fun mx => 𝒟[mx]) (id_map _)).trans SampleableType.evalDist_uniformSample
+
+end OracleComp

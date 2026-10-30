@@ -50,6 +50,15 @@ All algorithms submit rounds of parallel queries (`OracleSpec.batch`), built wit
 The values the honest solver obtains, with the rounds in which it obtains them, are in
 `VCVio/Schemes/PointerChainPuzzle/Path.lean`.
 
+The shape forces sequential work. A chain is a sequence of `m` dependent hashes, so it takes `m`
+rounds however many processors run it. The generator knows every link and runs all chains in
+parallel, but the puzzle publishes only the first link: the start of chain `i + 1` is unmasked by
+the end of chain `i`, so a solver cannot begin a chain before it has finished the previous one.
+The key hashes the accumulator over all chain ends, so no chain can be skipped, and the commitment
+lets the solver check the derived key. These are the paper's `Build` and `Open` (leanSeal SPEC §4
+and §5), with the labelled hashes as separate typed oracles; the byte-level encoding into one hash
+is in `VCVio/Schemes/PointerChainPuzzle/LeanSeal.lean`.
+
 ## Main statements
 
 * `scheme_correct`: the solver returns the generated key with probability one.

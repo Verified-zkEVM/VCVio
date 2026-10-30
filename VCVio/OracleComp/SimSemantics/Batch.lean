@@ -47,6 +47,9 @@ challenger's oracle), and counting its rounds is an ordinary path-wise query bou
 * `OracleComp.simulateQ_queryRound₂`, `OracleComp.simulateQ_queryRound`,
   `OracleComp.simulateQ_queryPoint`: against a fixed answer table, a round returns the table's
   answers at its points.
+* `QueryImpl.batch_congr`: two handlers that agree on every point of a round answer it alike.
+* `OracleComp.simulateQ_add_batch_queryPoint`: a single-point round against a handler of points
+  is that handler's answer at the point.
 -/
 
 public section
@@ -145,6 +148,16 @@ def batch [Monad m] (impl : QueryImpl spec m) : QueryImpl spec.batch m
       let u ← impl t
       let us ← impl.batch ts
       pure (batchCons u us)) := rfl
+
+/-- Two handlers that agree on every query of a batch handle the batch alike. -/
+lemma batch_congr {ι : Type} {spec : OracleSpec.{0, 0} ι} {m' : Type → Type}
+    [Monad m'] {impl₁ impl₂ : QueryImpl spec m'} {ts : List ι}
+    (h : ∀ t ∈ ts, impl₁ t = impl₂ t) : impl₁.batch ts = impl₂.batch ts := by
+  induction ts with
+  | nil => rfl
+  | cons t ts ih =>
+      simp only [QueryImpl.batch_cons, h t List.mem_cons_self,
+        ih fun t' ht' => h t' (List.mem_cons_of_mem _ ht')]
 
 /-- A deterministic handler answers each point of a round by itself. -/
 @[simp] lemma batch_id_apply (impl : QueryImpl spec Id) (ts : List ι) (j : Fin ts.length) :
@@ -526,3 +539,41 @@ at `t`. -/
   rw [queryPoint, simulateQ_map, simulateQ_queryRound, map_pure]
 
 end OracleComp
+
+/-! ### A single-point round against a point handler -/
+
+namespace OracleComp
+
+/-- A single-point round, answered by the rounds of a point handler, is that handler's answer. -/
+lemma simulateQ_add_batch_queryPoint {ι : Type} {spec : OracleSpec.{0, 0} ι}
+    {m : Type → Type} [Monad m] [LawfulMonad m] (impl₁ : QueryImpl unifSpec m)
+    (impl₂ : QueryImpl spec m) (t : ι) :
+    simulateQ (impl₁ + impl₂.batch) (queryPoint t) = impl₂ t := by
+  simp only [queryPoint, queryRound, queryRound₂, simulateQ_map, simulateQ_spec_query,
+    QueryImpl.add_apply_inr, Functor.map_map]
+  change (fun a => (splitAnswers (fun _ : Fin 1 => t) Fin.elim0 a).1 0) <$> impl₂.batch [t] = _
+  simp only [QueryImpl.batch_cons, QueryImpl.batch_nil, map_pure, bind_pure_comp]
+  refine (Functor.map_map _ _ _).trans ((congrArg (· <$> impl₂ t) ?_).trans (id_map _))
+  funext a
+  rfl
+
+end OracleComp
+
+/-! ### Answers to a round and their casts -/
+
+namespace OracleComp.RandomOracleEncoding
+
+@[simp] lemma batchCons_mk_zero {τ : Type} {spec' : OracleSpec τ} {t : τ} {ts : List τ}
+    (u : spec'.Range t) (us : spec'.batch.Range ts) (h : 0 < (t :: ts).length) :
+    batchCons u us ⟨0, h⟩ = u :=
+  rfl
+
+lemma batch_randomOracle_run_bind_cast {ι β : Type} {spec : OracleSpec.{0, 0} ι} [DecidableEq ι]
+    [∀ t, SampleableType (spec.Range t)] {l l' : List ι} (h : l = l') (c : spec.QueryCache)
+    (f : spec.batch.Range l × spec.QueryCache → ProbComp β) :
+    (spec.randomOracle.batch l).run c >>= f =
+      (spec.randomOracle.batch l').run c >>= fun y => f (cast (by rw [h]) y.1, y.2) := by
+  subst h
+  rfl
+
+end OracleComp.RandomOracleEncoding

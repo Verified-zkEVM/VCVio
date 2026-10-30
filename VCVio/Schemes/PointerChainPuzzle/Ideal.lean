@@ -8,6 +8,7 @@ module
 
 public import VCVio.Schemes.PointerChainPuzzle.Path
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DependentTable
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.EvalDist.Monad.Disagreement.Measure
 
 /-!
@@ -38,6 +39,15 @@ committing to its key label. `Bad` holds for the cache `c` left by the preproces
 `programmedCache` writes each label at its path input over `c`; off `Bad` it answers each path
 input with its label (`programmedCache_pathInput`).
 
+`Bad` is exactly what stops the labels from being programmed into the oracle. The real generator
+reads each path value from the oracle at its path input; to replace those answers by independent
+labels, every path input must still be free when the generator asks it and must hold one label
+only. Case (b) is a path input the preprocessing phase has already fixed, whose cached answer the
+generator, and later the online phase, must reuse; case (a) is two path values competing for one
+input. This is the generator's half of the paper's event `Bad` in Claim 2 (`claim:hybrid`) of the
+proof of `thm:delay`, stated for path inputs rather than for labels; the module docstring of
+`VCVio/Schemes/PointerChainPuzzle/Delay.lean` compares the two events.
+
 Against the lazy random oracle, the generator's fresh path answers are presampled as a labelling,
 which turns its path queries into the deterministic run `presetRun`
 (`evalDist_run_queryPath_bind`); off `Bad`, that run reaches the programmed cache
@@ -60,138 +70,6 @@ through the link change of variables).
 public section
 
 open OracleSpec OracleComp MeasureTheory
-
-/-! ## The lazy random oracle with uniform forwarding against a full table -/
-
-namespace OracleComp
-
-/-! ### Helpers for stateful handlers -/
-
-/-- A single-point round, answered by the rounds of a point handler, is that handler's answer. -/
-lemma simulateQ_add_batch_queryPoint {ι : Type} {spec : OracleSpec.{0, 0} ι}
-    {m : Type → Type} [Monad m] [LawfulMonad m] (impl₁ : QueryImpl unifSpec m)
-    (impl₂ : QueryImpl spec m) (t : ι) :
-    simulateQ (impl₁ + impl₂.batch) (queryPoint t) = impl₂ t := by
-  simp only [queryPoint, queryRound, queryRound₂, simulateQ_map, simulateQ_spec_query,
-    QueryImpl.add_apply_inr, Functor.map_map]
-  change (fun a => (splitAnswers (fun _ : Fin 1 => t) Fin.elim0 a).1 0) <$> impl₂.batch [t] = _
-  simp only [QueryImpl.batch_cons, QueryImpl.batch_nil, map_pure, bind_pure_comp]
-  refine (Functor.map_map _ _ _).trans ((congrArg (· <$> impl₂ t) ?_).trans (id_map _))
-  funext a
-  rfl
-
-/-- A lifted `ProbComp`, run beside uniform forwarding, samples and leaves the cache. -/
-lemma run_simulateQ_unifFwdImpl_add_liftM {ι τ : Type} {spec : OracleSpec.{0, 0} ι}
-    {spec' : OracleSpec.{0, 0} τ} (impl : QueryImpl spec' (StateT spec.QueryCache ProbComp))
-    {α : Type} (oa : ProbComp α) (c : spec.QueryCache) :
-    (simulateQ (unifFwdImpl spec + impl) (liftM oa : OracleComp (unifSpec + spec') α)).run c =
-      (·, c) <$> oa := by
-  rw [show simulateQ (unifFwdImpl spec + impl) (liftM oa : OracleComp (unifSpec + spec') α) =
-      simulateQ (unifFwdImpl spec) oa from QueryImpl.simulateQ_add_liftComp_left _ _ oa,
-    unifFwdImpl.simulateQ_run]
-
-/-- Running a bind through a stateful handler runs the continuation from the reached state. -/
-lemma run_simulateQ_bind {ι σ α β : Type} {spec : OracleSpec.{0, 0} ι}
-    (impl : QueryImpl spec (StateT σ ProbComp)) (oa : OracleComp spec α)
-    (f : α → OracleComp spec β) (s : σ) :
-    (simulateQ impl (oa >>= f)).run s =
-      (simulateQ impl oa).run s >>= fun p => (simulateQ impl (f p.1)).run p.2 := by
-  rw [simulateQ_bind, StateT.run_bind]
-
-/-- `run_simulateQ_bind` for the output alone. -/
-lemma run'_simulateQ_bind {ι σ α β : Type} {spec : OracleSpec.{0, 0} ι}
-    (impl : QueryImpl spec (StateT σ ProbComp)) (oa : OracleComp spec α)
-    (f : α → OracleComp spec β) (s : σ) :
-    (simulateQ impl (oa >>= f)).run' s =
-      (simulateQ impl oa).run s >>= fun p => (simulateQ impl (f p.1)).run' p.2 := by
-  rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind, map_bind]
-  rfl
-
-/-- A uniform draw, transported along an equality of types, is uniform. -/
-lemma evalDist_cast_uniformSample {X Y : Type} [SampleableType X] [MeasurableSpace Y]
-    [MeasurableSingletonClass Y] (h : X = Y) :
-    𝒟[cast h <$> ($ᵗ X)] = ProbabilityTheory.uniformOn Set.univ := by
-  subst h
-  exact (congrArg (fun mx => 𝒟[mx]) (id_map _)).trans SampleableType.evalDist_uniformSample
-
-/-! ### Uniform forwarding against a full table -/
-
-section Table
-
-variable {ι : Type} [DecidableEq ι] [Finite ι] {spec : OracleSpec.{0, 0} ι}
-  [∀ t, SampleableType (spec.Range t)] [SampleableType ((t : ι) → spec.Range t)]
-
-/-- Running `oa` in the random oracle model from the cache `c` has the output distribution of
-sampling a full answer table `g` uniformly and answering every hash query from `g`, overlaid by
-`c`, while uniform queries are sampled as they come. -/
-theorem evalDist_simulateQ_romImpl_run'_eq_completeTable {α : Type} [MeasurableSpace α]
-    (oa : OracleComp (unifSpec + spec) α) (c : spec.QueryCache) :
-    𝒟[(simulateQ spec.romImpl oa).run' c] =
-      𝒟[$ᵗ ((t : ι) → spec.Range t) >>= fun g =>
-          simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c g))) oa] := by
-  classical
-  let : ∀ t, MeasurableSpace (spec.Range t) := fun _ => ⊤
-  induction oa using OracleComp.inductionOn generalizing c with
-  | pure a =>
-      simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]
-      rw [OracleComp.evalDist_bind_const]
-  | query_bind t k ih =>
-      rcases t with n | t
-      · have hred :
-            (simulateQ spec.romImpl (liftM ((unifSpec + spec).query (.inl n)) >>= k)).run' c =
-            (unifSpec.query n : ProbComp _) >>= fun u => (simulateQ spec.romImpl (k u)).run' c := by
-          rw [simulateQ_bind, simulateQ_spec_query, StateT.run'_eq, StateT.run_bind,
-            roSim.run_apply_inl]
-          simp [StateT.run'_eq]
-        have heval : ∀ g : (t : ι) → spec.Range t,
-            simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c g)))
-                (liftM ((unifSpec + spec).query (.inl n)) >>= k) =
-              (unifSpec.query n : ProbComp _) >>= fun u =>
-                simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c g))) (k u) :=
-          fun g => by simp [unifFwdAnswerImpl]
-        rw [hred]
-        simp_rw [heval]
-        exact (evalDist_bind_congr_of_support _ _ _ fun u _ => ih u c).trans
-          (evalDist_bind_bind_swap_of_countable (α := Fin (n + 1)) _ _ _)
-      · have hred :
-            (simulateQ spec.romImpl (liftM ((unifSpec + spec).query (.inr t)) >>= k)).run' c =
-            (spec.randomOracle t).run c >>= fun p => (simulateQ spec.romImpl (k p.1)).run' p.2 := by
-          rw [simulateQ_bind, simulateQ_spec_query, StateT.run'_eq, StateT.run_bind, map_bind]
-          rfl
-        have heval : ∀ g : (t : ι) → spec.Range t,
-            simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c g)))
-                (liftM ((unifSpec + spec).query (.inr t)) >>= k) =
-              simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c g)))
-                (k (completeTable c g t)) :=
-          fun g => by simp [unifFwdAnswerImpl]; rfl
-        rw [hred]
-        simp_rw [heval]
-        rcases hc : c t with _ | u
-        · rw [QueryImpl.withCaching_run_none _ hc, map_eq_bind_pure_comp]
-          simp only [Function.comp, bind_assoc, pure_bind]
-          set ψ : ((t : ι) → spec.Range t) → ProbComp α := fun g =>
-            simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c g)))
-              (k (completeTable c g t)) with hψ
-          have hfun : ∀ u : spec.Range t, (fun g : (t : ι) → spec.Range t =>
-                simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable (c.cacheQuery t u) g)))
-                  (k u)) = fun g => ψ (Function.update g t u) := by
-            intro u
-            funext g
-            simp only [hψ]
-            rw [completeTable_cacheQuery, ← completeTable_update_of_none c g hc u,
-              Function.update_self]
-          refine (evalDist_bind_congr_of_support _ _ _ fun u _ =>
-            (ih u (c.cacheQuery t u)).trans (by rw [hfun u])).trans ?_
-          exact evalDist_bind_bind_update_dependent t _ _
-            SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample ψ
-        · rw [QueryImpl.withCaching_run_some _ hc, pure_bind, ih u c]
-          have h : ∀ g : (t : ι) → spec.Range t, completeTable c g t = u :=
-            fun g => by simp [completeTable, hc]
-          simp_rw [h]
-
-end Table
-
-end OracleComp
 
 namespace PointerChainPuzzle
 
@@ -648,7 +526,9 @@ theorem evalDistEq_guessExperiment_maskedScheme {Out : Type}
     evalDist_simulateQ_genMasked_bind (Oracles.ofImpl _) _
 
 /-- **Link change of variables.** The pointer-chain puzzle and the puzzle with masked links
-have the same delay advantage against every adversary. -/
+have the same delay advantage against every adversary: the links step of the paper's Claim 2
+(`claim:hybrid`), where the masked links `z_i` are uniform and independent and the later links are
+recovered from them. -/
 theorem delayAdvantage_maskedScheme
     (adv : TimeLockPuzzle.Adversary (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt) S) :
     (maskedScheme n m mkCtx initAcc).delayAdvantage adv =
@@ -1104,7 +984,8 @@ lemma prEvent_programmedExperiment_bad :
     OracleComp.evalDist_map_const, evalDist_pure, decide_eq_true_eq]
 
 /-- **Programming theorem**, one side: the delay advantage of `maskedScheme` is at most the
-winning probability in the programmed experiment plus the probability of `Bad` there. -/
+winning probability in the programmed experiment plus the probability of `Bad` there. This is the
+oracle and puzzle steps of the paper's Claim 2 (`claim:hybrid`), for the generator's `Bad`. -/
 theorem delayAdvantage_maskedScheme_le :
     (maskedScheme n m mkCtx initAcc).delayAdvantage adv ≤
       Pr{let r ← programmedExperiment adv m mkCtx initAcc}[r.1 = true] +
@@ -1151,8 +1032,10 @@ theorem abs_delayAdvantage_maskedScheme_sub_le :
   rw [ENNReal.toReal_add ha (prEvent_ne_top _)] at h₂
   exact abs_sub_le_iff.2 ⟨by linarith, by linarith⟩
 
-/-- The programming theorem for the pointer-chain puzzle itself, through the link change of
-variables. -/
+/-- **Programming theorem for the pointer-chain puzzle.** The delay advantage of `scheme` and the
+winning probability in the programmed experiment differ, in absolute value, by at most the
+probability of `Bad` in the programmed experiment: `abs_delayAdvantage_maskedScheme_sub_le`
+through the link change of variables (`delayAdvantage_maskedScheme`). -/
 theorem abs_delayAdvantage_scheme_sub_le [Finite Ctx] :
     |((scheme n m mkCtx initAcc).delayAdvantage adv).toReal -
         (Pr{let r ← programmedExperiment adv m mkCtx initAcc}[r.1 = true]).toReal| ≤
