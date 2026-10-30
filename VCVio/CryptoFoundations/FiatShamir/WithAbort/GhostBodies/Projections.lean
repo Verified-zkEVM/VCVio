@@ -29,7 +29,6 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 
 namespace FiatShamirWithAbort
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (M : Type) [DecidableEq M] (maxAttempts : ℕ)
@@ -57,20 +56,17 @@ lemma hybridSignImpl_run
       (fun ac : Option (Commit × Resp) × (M × Commit →ₒ Chal).QueryCache =>
         (ac.1, (ac.2, msg :: l))) <$> (signBody msg).run c := rfl
 
-omit [SampleableType Stmt] in
 lemma roStep_of_some {re : (M × Commit →ₒ Chal).QueryCache} {mc : M × Commit} {v : Chal}
     (h : re mc = some v) : roStep M re mc = pure (v, re) := by
   unfold roStep
   rw [h]
 
-omit [SampleableType Stmt] in
 lemma roStep_of_none {re : (M × Commit →ₒ Chal).QueryCache} {mc : M × Commit}
     (h : re mc = none) :
     roStep M re mc = uniformSample Chal >>= fun c => pure (c, re.cacheQuery mc c) := by
   unfold roStep
   rw [h]
 
-omit [SampleableType Stmt] in
 lemma hybridBaseImpl_run_ro (mc : M × Commit)
     (c : (M × Commit →ₒ Chal).QueryCache) (l : List M) :
     (hybridBaseImpl (Commit := Commit) (Chal := Chal) M (.inr mc)).run (c, l) =
@@ -86,7 +82,6 @@ lemma hybridBaseImpl_run_ro (mc : M × Commit)
       (cu.1, (cu.2, l))) <$> x) (randomOracle_run_eq_roStep M c mc)
   exact h
 
-omit [SampleableType Stmt] in
 lemma ghostHybridImpl_run_ro_ghost_some (progSide : Bool) (pk : Stmt) (sk : Wit)
     {mc : M × Commit} {s : GhostState M Commit Chal} {v : Chal}
     (h : s.1.1.2 mc = some v) :
@@ -102,7 +97,6 @@ lemma ghostHybridImpl_run_ro_ghost_some (progSide : Bool) (pk : Stmt) (sk : Wit)
         (cu.1, (((cu.2, s.1.1.2), s.1.2), s.2))) <$> roStep M s.1.1.1 mc) = _
   rw [h]
 
-omit [SampleableType Stmt] in
 lemma ghostHybridImpl_run_ro_ghost_none (progSide : Bool) (pk : Stmt) (sk : Wit)
     {mc : M × Commit} {s : GhostState M Commit Chal}
     (h : s.1.1.2 mc = none) :
@@ -117,7 +111,6 @@ lemma ghostHybridImpl_run_ro_ghost_none (progSide : Bool) (pk : Stmt) (sk : Wit)
         (cu.1, (((cu.2, s.1.1.2), s.1.2), s.2))) <$> roStep M s.1.1.1 mc) = _
   rw [h]
 
-omit [SampleableType Stmt] in
 lemma ghostHybridImpl_run_sign (progSide : Bool) (pk : Stmt) (sk : Wit)
     (msg : M) (s : GhostState M Commit Chal) :
     (ghostHybridImpl ids M maxAttempts progSide pk sk (.inr msg)).run s =
@@ -126,7 +119,6 @@ lemma ghostHybridImpl_run_sign (progSide : Bool) (pk : Stmt) (sk : Wit)
         (alc.1, ((alc.2, msg :: s.1.2), s.2))) <$>
         (ghostSignBody ids M pk sk msg maxAttempts).run s.1.1 := rfl
 
-omit [SampleableType Stmt] in
 /-- Per-step overlay projection: each step of the Prog-side ghost-instrumented handler
 projects onto the corresponding step of the Prog hybrid handler. -/
 lemma ghostHybridImpl_proj_prog (pk : Stmt) (sk : Wit)
@@ -174,7 +166,6 @@ lemma ghostHybridImpl_proj_prog (pk : Stmt) (sk : Wit)
     · exact (hybridSignImpl_run M (progSignBody ids M pk sk · maxAttempts) msg
         (overlayCache M s.1.1.1 s.1.1.2) s.1.2).symm
 
-omit [SampleableType Stmt] in
 /-- Per-step ghost-forgetting projection: each step of the Trans-side ghost-instrumented
 handler projects onto the corresponding step of the Trans hybrid handler. -/
 lemma ghostHybridImpl_proj_trans (pk : Stmt) (sk : Wit)
@@ -211,7 +202,6 @@ lemma ghostHybridImpl_proj_trans (pk : Stmt) (sk : Wit)
 
 /-! ## Ghost-domain invariant -/
 
-omit [SampleableType Stmt] in
 /-- Support bound for the ghost writes of `ghostSignBody`: every ghost entry of an
 output state was either already present or lies at the signed message `msg`. -/
 lemma ghostSignBody_support_ghost (pk : Stmt) (sk : Wit) (msg : M) :
@@ -244,7 +234,6 @@ lemma ghostSignBody_support_ghost (pk : Stmt) (sk : Wit) (msg : M) :
       simp only [uncacheQuery, QueryCache.toFn_ofFn, ne_eq, ite_eq_left_iff, not_forall] at hq
       exact Or.inl hq.2
 
-omit [SampleableType Stmt] in
 /-- Ghost-domain invariant: along any run of the ghost-instrumented handlers, every
 ghost entry's message component has been recorded in the signed list. -/
 lemma ghostHybridImpl_preserves_signed_inv (progSide : Bool) (pk : Stmt) (sk : Wit)

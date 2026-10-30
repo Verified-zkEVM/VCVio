@@ -36,7 +36,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -55,7 +54,6 @@ the ghost-blind one (`prEvent_ghostHybridImpl_bad_le_ghostBlind`), which
 `prEvent_ghostBlindImpl_bad_le` then charges through the deferred-draw coupling and the
 first-moment bound. -/
 
-omit [SampleableType Stmt] in
 /-- **Identical-until-bad / ghost-blind reduction** (the first step of the ghost-read
 bound). The eager hybrid handler `ghostHybridImpl … true` and the ghost-blind
 handler `ghostBlindImpl` flip the adversarial-read bad flag with *exactly the same*
@@ -94,7 +92,6 @@ lemma prEvent_ghostHybridImpl_bad_eq_ghostBlind (pk : Stmt) (sk : Wit) :
     (ghostBlindImpl_bad_mono ids M maxAttempts pk sk)
     (adv.main pk) ((((∅, ∅), []) : _), false)
 
-omit [SampleableType Stmt] in
 /-- The eager ghost-read bad mass is bounded by the ghost-blind handler's bad mass at the
 empty-cache Dirac start; immediate from the equality
 `prEvent_ghostHybridImpl_bad_eq_ghostBlind`. -/
@@ -164,7 +161,6 @@ value-free side-data that never feeds back into the run's outputs. -/
         let (res, ws) ← ghostSignDrawBody pk sk msg n
         pure (res, w :: ws)
 
-omit [SampleableType Stmt] in
 /-- One-step unfolding of the draw-collecting signing body.
 The body draws a commitment `w`, samples a challenge `ch`, responds, and on accept records *no*
 drawn commitment (the accepted commit is returned, not deferred) while on reject prepends `w` to

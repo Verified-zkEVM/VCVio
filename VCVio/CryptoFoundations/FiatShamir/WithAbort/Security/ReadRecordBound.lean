@@ -32,7 +32,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -44,7 +43,6 @@ variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
 variable (adv : SignatureAlg.UnforgeableAdversary
   (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
-omit [SampleableType Stmt] in
 /-- **The general per-pair charge over the inline read-recording run (induction carrier).** For an
 arbitrary start state `s`, the expected pair count `E[Σ_{rc ∈ readlist} drawnlist.count rc]` is at
 most the *un-charged pre-existing* contribution `E[Σ_{rc ∈ readlist} s.drawnlist.count rc]` (the
@@ -152,7 +150,6 @@ theorem readRecord_expected_pairs_general {γ : Type}
         exact signStep_pair_charge ids M maxAttempts qH ε p_abort hp₀ hp hε pk sk hGuess
           hAbort msg ob s hQ2' (fun u s' hQ' => ih u qH hQ' s')
 
-omit [SampleableType Stmt] in
 /-- **The value-free per-pair charge over the read-recording run**, consumed by
 `readRecord_expected_coincidences_le`. The expected pair count
 `E[Σ_{rc ∈ readlist} drawnlist.count rc]` of the `deferredDrawReadImpl` run is at most `ε · qH`
@@ -197,7 +194,6 @@ theorem readRecord_expected_pairs_le {γ : Type}
     List.length_nil, Nat.cast_zero, mul_zero, tsum_zero, zero_add] at hgen
   exact hgen
 
-omit [SampleableType Stmt] in
 /-- **The expected-coincidence-count bound.**
 The read-recording run's expected coincidence count
 `E[#{ rc ∈ readlist : rc ∈ drawnlist }]` — the first moment fed by the Markov step
@@ -323,7 +319,6 @@ theorem readRecord_expected_coincidences_le {γ : Type}
   congr 1
   field_simp
 
-omit [SampleableType Stmt] in
 /-- **Ghost-blind ghost-read bound.** The ghost-blind run's adversarial-read bad mass is at
 most `qS·(qH+1)·ε/(1-p)`: the ghost-blind bad mass is reduced to the deferred-draw run
 (`ghostBlind_bad_le_deferredDraw`), then to the
@@ -361,7 +356,6 @@ theorem prEvent_ghostBlindImpl_bad_le
   exact readRecord_expected_coincidences_le ids M maxAttempts qH ε p_abort hp₀ hp hε pk sk
     hGuess hAbort (adv.main pk) qS (hQ pk) ∅ []
 
-omit [SampleableType Stmt] in
 /-- **Ghost-read collision bound** for the Prog → Trans hop: the probability that the
 adversary ever queries the random oracle at a ghost point (a rejected signing attempt's
 programmed point) is at most `qS·(qH+1)·ε/(1-p)`.

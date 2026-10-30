@@ -14,6 +14,7 @@ public import VCVioTest.CryptoFoundations.CslibPPolyUniverses
 public import VCVioTest.CryptoFoundations.DEMIndCpa
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortCanary
+public import VCVioTest.CryptoFoundations.FiatShamirWithAbortInstance
 public import VCVioTest.CryptoFoundations.KeyedHashCovering
 public import VCVioTest.CryptoFoundations.LeftOrRight
 public import VCVioTest.CryptoFoundations.OracleClosure

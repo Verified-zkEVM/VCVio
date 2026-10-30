@@ -33,7 +33,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -100,7 +99,6 @@ read-commit list untouched. -/
       (fun alc => (alc.1.1, ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2), s.2))) <$>
         (ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1.1
 
-omit [SampleableType Stmt] in
 /-- **Coupling invariant for the read-recording reduction.** The underlying deferred state matches,
 and whenever the deferred bad flag is set there is a recorded read-commit already in the deferred
 drawn list. The drawn list grows monotonically, so a read-time hit (recorded in the bad flag) is
@@ -109,7 +107,6 @@ witnessed by a recorded read-commit lying in the *current* (hence final) drawn l
     (s₁ : DeferredState M Commit Chal) (s₂ : DeferredReadState M Commit Chal) : Prop :=
   s₁.1 = s₂.1.1 ∧ (s₁.2 = true → ∃ rc ∈ s₂.2, rc ∈ s₂.1.1.2)
 
-omit [SampleableType Stmt] in
 /-- **Per-query coupling step for the read-recording reduction.** From any pair of
 `deferredReadInv`-related states one step of `deferredDrawImpl` couples with one step of
 `deferredDrawReadImpl` with equal output and the invariant preserved.
@@ -183,7 +180,6 @@ theorem deferredDrawRead_step (pk : Stmt) (sk : Wit)
     obtain ⟨rc, hrcmem, hrcdraw⟩ := hbad hb
     exact ⟨rc, hrcmem, List.mem_append_left _ hrcdraw⟩
 
-omit [SampleableType Stmt] in
 /-- **The read-recording run coupling.** By induction on the adversary computation `oa`, the
 deferred-draw run and the read-recording run are coupled with `deferredReadInv` preserved at every
 leaf, using `deferredDrawRead_step` per query and the inductive hypothesis for the continuation.
@@ -211,7 +207,6 @@ theorem deferredDrawRead_run {γ : Type} (pk : Stmt) (sk : Wit)
       rw [show p₁.1 = p₂.1 from hout]
       exact ih p₂.1 p₁.2 p₂.2 hinv'
 
-omit [SampleableType Stmt] in
 /-- **The read-recording reduction.** The deferred-draw run's bad marginal is at most the
 read-recording run's final-state predicate "some recorded read-commit lies in the final drawn
 list", from any pair of `deferredReadInv`-related start states.
@@ -232,7 +227,6 @@ theorem deferredDraw_bad_le_readRecord {γ : Type}
     (deferredDrawRead_run ids M maxAttempts pk sk oa s₁ s₂ hinv)
     (fun _ _ hp hbad => hp.2 hbad)
 
-omit [SampleableType Stmt] in
 /-- **Markov reduction for the read-recording firing event.** The read-recording run's final-state
 read-hit predicate `∃ rc ∈ readlist, rc ∈ drawnlist` has probability at most the *expected
 coincidence count* `E[#{ rc ∈ readlist : rc ∈ drawnlist }]`, the first moment of the number of
