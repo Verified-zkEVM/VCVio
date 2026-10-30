@@ -143,8 +143,7 @@ end KeyGenWith
 
 section ExpandAOracle
 
-variable {M : Type} [DecidableEq M]
-  [SampleableType (CommitHashBytes p)]
+variable {M : Type}
 
 /-- The commitment-hash oracle `H : (msg, w₁) ↦ c̃` of the Fiat-Shamir-with-aborts signature. -/
 abbrev HashSpec (M : Type) : OracleSpec (M × Commitment p prims) :=
@@ -198,7 +197,6 @@ def verifyAtMatrix (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims) (msg : M)
     let c ← HasQuery.query (spec := HashSpec p prims M) (msg, w')
     pure (verifyWithMatrix p prims aHat pk w' c z)
 
-omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
 /-- At the honest matrix `ExpandA(pk.ρ)`, `verifyAtMatrix` is the verification algorithm of the
 short-model ML-DSA signature `FiatShamirWithAbort (identificationSchemeShort …)`. -/
 theorem verifyAtMatrix_expandA
@@ -223,8 +221,7 @@ def tableImpl (f : Bytes 32 → TqMatrix p.k p.l) :
       (fun rho => (pure (f rho) : OracleComp (unifSpec + HashSpec p prims M) _) :
         QueryImpl (ExpandASpec p) (OracleComp (unifSpec + HashSpec p prims M))))
 
-omit [DecidableEq prims.High] [DecidableEq M]
-  [SampleableType (CommitHashBytes p)] in
+omit [DecidableEq prims.High] in
 /-- With `ExpandA` answered by the table `f`, the oracle key generator is the short key
 generator at `f`. -/
 theorem simulateQ_tableImpl_keygenShortRO (f : Bytes 32 → TqMatrix p.k p.l) :
@@ -233,7 +230,6 @@ theorem simulateQ_tableImpl_keygenShortRO (f : Bytes 32 → TqMatrix p.k p.l) :
   simp [keygenShortRO, keygenShortWith, tableImpl, QueryImpl.simulateQ_add_liftM_left]
   rfl
 
-omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
 /-- With `ExpandA` answered by the table `f`, the oracle verifier is verification at the matrix
 `f pk.ρ`. -/
 theorem simulateQ_tableImpl_verifyRO (f : Bytes 32 → TqMatrix p.k p.l) (pk : PublicKey p prims)
@@ -242,8 +238,7 @@ theorem simulateQ_tableImpl_verifyRO (f : Bytes 32 → TqMatrix p.k p.l) (pk : P
       verifyAtMatrix p prims (f pk.rho) pk msg σ := by
   rcases σ with _ | ⟨w', z⟩ <;> simp [verifyRO, verifyAtMatrix, tableImpl]
 
-omit [DecidableEq prims.High] [DecidableEq M]
-  [SampleableType (CommitHashBytes p)] in
+omit [DecidableEq prims.High] in
 /-- **The oracle model degenerates to the scheme.** Answering `ExpandA` queries from the
 scheme's own `prims.expandA` turns the oracle key generator into `keygenShort`, the key
 generator of the short-model security statements. -/
@@ -252,7 +247,6 @@ theorem simulateQ_tableImpl_expandA_keygenShortRO :
       liftM (keygenShort p prims) := by
   rw [simulateQ_tableImpl_keygenShortRO, keygenShort_eq_keygenShortWith]
 
-omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
 /-- **The oracle model degenerates to the scheme.** Answering `ExpandA` queries from the
 scheme's own `prims.expandA` turns the oracle verifier into the verification algorithm of the
 short-model ML-DSA signature. -/
@@ -296,17 +290,16 @@ has embedded its challenge matrix at the seed it chose. -/
 def programmedAt (rho : Bytes 32) (aHat : TqMatrix p.k p.l) : (ExpandASpec p).QueryCache :=
   (∅ : (ExpandASpec p).QueryCache).cacheQuery rho aHat
 
-omit nttOps [SampleableType (CommitHashBytes p)] in
+omit nttOps in
 @[simp] lemma programmedAt_self (rho : Bytes 32) (aHat : TqMatrix p.k p.l) :
     programmedAt p rho aHat rho = some aHat :=
   QueryCache.cacheQuery_self (∅ : (ExpandASpec p).QueryCache) rho aHat
 
 /-! #### Running the simulator, one step at a time -/
 
-omit nttOps [DecidableEq prims.High] [DecidableEq M]
-  [SampleableType (CommitHashBytes p)] in
+omit nttOps [DecidableEq prims.High] in
 /-- A lifted `ProbComp` passes through the simulator untouched, leaving the cache unchanged. -/
-lemma expandARoImpl_run_liftM_bind {α β : Type} (oa : ProbComp α)
+private lemma expandARoImpl_run_liftM_bind {α β : Type} (oa : ProbComp α)
     (k : α → OracleComp (RomSpec p prims M) β) (c : (ExpandASpec p).QueryCache) :
     (simulateQ (expandARoImpl p prims (M := M)) (liftM oa >>= k)).run c =
       (liftM oa : OracleComp (unifSpec + HashSpec p prims M) α) >>= fun x =>
@@ -315,10 +308,9 @@ lemma expandARoImpl_run_liftM_bind {α β : Type} (oa : ProbComp α)
     simulateQ_liftTarget, OracleComp.liftM_run_StateT, bind_assoc, pure_bind]
   rfl
 
-omit nttOps [DecidableEq prims.High] [DecidableEq M]
-  [SampleableType (CommitHashBytes p)] in
+omit nttOps [DecidableEq prims.High] in
 /-- An `H` query is forwarded, leaving the cache unchanged. -/
-lemma expandARoImpl_run_queryHash_bind {β : Type} (q : M × Commitment p prims)
+private lemma expandARoImpl_run_queryHash_bind {β : Type} (q : M × Commitment p prims)
     (k : CommitHashBytes p → OracleComp (RomSpec p prims M) β) (c : (ExpandASpec p).QueryCache) :
     (simulateQ (expandARoImpl p prims (M := M))
       (HasQuery.query (spec := HashSpec p prims M) q >>= k)).run c =
@@ -326,10 +318,9 @@ lemma expandARoImpl_run_queryHash_bind {β : Type} (q : M × Commitment p prims)
         (simulateQ (expandARoImpl p prims (M := M)) (k u)).run c := by
   simp [simulateQ_bind, StateT.run_bind, expandARoImpl]
 
-omit nttOps [DecidableEq prims.High] [DecidableEq M]
-  [SampleableType (CommitHashBytes p)] in
+omit nttOps [DecidableEq prims.High] in
 /-- An `ExpandA` query at a cached seed is answered from the cache. -/
-lemma expandARoImpl_run_queryExpandA_bind_some {β : Type} (rho : Bytes 32)
+private lemma expandARoImpl_run_queryExpandA_bind_some {β : Type} (rho : Bytes 32)
     (k : TqMatrix p.k p.l → OracleComp (RomSpec p prims M) β) {c : (ExpandASpec p).QueryCache}
     {aHat : TqMatrix p.k p.l} (hc : c rho = some aHat) :
     (simulateQ (expandARoImpl p prims (M := M))
@@ -337,10 +328,9 @@ lemma expandARoImpl_run_queryExpandA_bind_some {β : Type} (rho : Bytes 32)
       (simulateQ (expandARoImpl p prims (M := M)) (k aHat)).run c := by
   simp [simulateQ_bind, StateT.run_bind, expandARoImpl, hc]
 
-omit nttOps [DecidableEq prims.High] [DecidableEq M]
-  [SampleableType (CommitHashBytes p)] in
+omit nttOps [DecidableEq prims.High] in
 /-- An `ExpandA` query at a fresh seed receives a fresh uniform matrix, which is cached. -/
-lemma expandARoImpl_run_queryExpandA_bind_none {β : Type} (rho : Bytes 32)
+private lemma expandARoImpl_run_queryExpandA_bind_none {β : Type} (rho : Bytes 32)
     (k : TqMatrix p.k p.l → OracleComp (RomSpec p prims M) β) {c : (ExpandASpec p).QueryCache}
     (hc : c rho = none) :
     (simulateQ (expandARoImpl p prims (M := M))
@@ -350,10 +340,9 @@ lemma expandARoImpl_run_queryExpandA_bind_none {β : Type} (rho : Bytes 32)
           (c.cacheQuery rho aHat) := by
   simp [simulateQ_bind, StateT.run_bind, expandARoImpl, expandALazy, hc]
 
-omit nttOps [DecidableEq prims.High] [DecidableEq M]
-  [SampleableType (CommitHashBytes p)] in
+omit nttOps [DecidableEq prims.High] in
 /-- The simulator's cache only grows: every reachable final cache extends the initial one. -/
-lemma le_of_mem_support_expandARoImpl_run {α : Type} (mx : OracleComp (RomSpec p prims M) α)
+private lemma le_of_mem_support_expandARoImpl_run {α : Type} (mx : OracleComp (RomSpec p prims M) α)
     (c : (ExpandASpec p).QueryCache) :
     ∀ z ∈ support ((simulateQ (expandARoImpl p prims (M := M)) mx).run c), c ≤ z.2 := by
   induction mx using OracleComp.inductionOn generalizing c with
@@ -378,10 +367,9 @@ lemma le_of_mem_support_expandARoImpl_run {α : Type} (mx : OracleComp (RomSpec 
       exact le_rfl
     · exact QueryImpl.withCaching_cache_le (expandALazy p prims (M := M)) rho c us hus
 
-omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
 /-- Under a cache that already holds `pk.ρ ↦ aHat`, the oracle verifier is verification at
 `aHat`: its `ExpandA` query is answered from the cache. -/
-lemma withExpandACache_verifyRO_of_cached (pk : PublicKey p prims) (msg : M)
+private lemma withExpandACache_verifyRO_of_cached (pk : PublicKey p prims) (msg : M)
     (σ : Option (Commitment p prims × Response p prims)) {c : (ExpandASpec p).QueryCache}
     {aHat : TqMatrix p.k p.l} (hc : c pk.rho = some aHat) :
     withExpandACache p prims c (verifyRO p prims pk msg σ) =
@@ -400,7 +388,7 @@ over a forging strategy `main` with access to all three oracles: generate a key 
 `ExpandA` is simulated lazily from the empty cache and shared by all three phases; `H` and
 uniform sampling are then observed through the signature's own runtime (`simulateToProbComp`).
 The game outputs the validity bit. -/
-noncomputable def romNmaGame
+noncomputable def romNmaGame [DecidableEq M]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) : ProbComp Bool :=
   simulateToProbComp p prims (M := M) (withExpandACache p prims ∅ (do
@@ -410,7 +398,7 @@ noncomputable def romNmaGame
 
 /-- The EUF-NMA advantage in the `ExpandA` random-oracle model: the `true`-probability of
 `romNmaGame`. -/
-noncomputable def romNmaAdvantage
+noncomputable def romNmaAdvantage [DecidableEq M]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) : ℝ≥0∞ :=
   𝒟[romNmaGame p prims main] {true}
@@ -423,7 +411,7 @@ the public key `pk = (ρ, Power2Round(t).1)`, runs the forger with `ExpandA` sim
 programmed cache `{ρ ↦ Â}` — so the forger sees `ExpandA(ρ) = Â` and fresh uniform matrices
 elsewhere, exactly as in the honest game — verifies the forgery at the matrix `Â` through the
 signature's runtime, and outputs the validity bit. -/
-noncomputable def distinguisherBRom
+noncomputable def distinguisherBRom [DecidableEq M]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) :
     LearningWithErrors.Adversary (mldsaMatrixMLWE p) :=
@@ -456,7 +444,6 @@ noncomputable def mldsaSTMSISMatrix (M : Type) :
     let w' := prims.useHintVec h (computeWApprox p prims aHat (prims.sampleInBall cTilde) z pk.t1)
     decide (hashInput.2 = w') && verifyWithMatrix p prims aHat pk w' cTilde (z, h)
 
-omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
 /-- At the honest matrix `ExpandA(pk.ρ)`, the seed-based tailored problem and the uniform-matrix
 tailored problem accept the same solutions. -/
 theorem mldsaSTMSISShort_isValid_expandA_eq_matrix (pk : PublicKey p prims)
@@ -482,7 +469,7 @@ noncomputable def extractorCRom [Inhabited (Commitment p prims)] [Inhabited (Res
 
 omit nttOps in
 /-- Pushing a lifted `ProbComp` out of the signature's runtime. -/
-lemma simulateToProbComp_liftM_bind {α β : Type} (oa : ProbComp α)
+private lemma simulateToProbComp_liftM_bind [DecidableEq M] {α β : Type} (oa : ProbComp α)
     (k : α → OracleComp (unifSpec + HashSpec p prims M) β) :
     simulateToProbComp p prims (M := M) (liftM oa >>= k) =
       oa >>= fun x => simulateToProbComp p prims (M := M) (k x) := by
@@ -493,7 +480,7 @@ lemma simulateToProbComp_liftM_bind {α β : Type} (oa : ProbComp α)
 cache `{pk.ρ ↦ aHat}`, the oracle verifier's `ExpandA` query is answered by `aHat` — the cache
 only grows — so verifying through the shared oracle is equal in distribution to verifying at
 `aHat`. -/
-lemma evalDistEq_verifyRO_eq_verifyAtMatrix
+lemma evalDistEq_verifyRO_eq_verifyAtMatrix [DecidableEq M]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims)))
     (pk : PublicKey p prims) (aHat : TqMatrix p.k p.l) :
@@ -539,7 +526,7 @@ honest key generator's first `ExpandA` query at the fresh seed `ρ` draws a unif
 caches it, which is the programmed cache `{ρ ↦ Â}` at the challenger's uniform `Â`; the key
 `t = Â·s₁ + s₂` is the real MLWE sample; and verification through the shared oracle is
 verification at `Â` (`evalDistEq_verifyRO_eq_verifyAtMatrix`). -/
-theorem romNmaAdvantage_eq_realExperiment
+theorem romNmaAdvantage_eq_realExperiment [DecidableEq M]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) :
     romNmaAdvantage p prims main =
@@ -589,7 +576,7 @@ random oracle from the empty cache; an aborting forgery contributes weight `0`; 
 `some (w', (z, h))` both branches issue the same `H(msg, w')` query, whose cached answer the
 STMSIS experiment reads back before `isValid` recovers the commitment, binds it to the preimage
 component `w'`, and runs the identical verifier at `aHat`. -/
-private theorem stmsis_tail_le_matrix
+private theorem stmsis_tail_le_matrix [DecidableEq M]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (aHat : TqMatrix p.k p.l)
     (main : PublicKey p prims →
@@ -666,7 +653,7 @@ uniform-matrix Module-LWE game against `distinguisherBRom` — a uniform matrix,
 self-chosen seed — is the parameter distribution of `mldsaSTMSISMatrix`, and per parameter the
 forge-and-verify tail at the challenge matrix accepts no more often than the extractor's
 read-back tail (`stmsis_tail_le_matrix`). -/
-theorem randomExperiment_le_stmsis_rom
+theorem randomExperiment_le_stmsis_rom [DecidableEq M]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) :
@@ -708,7 +695,8 @@ is at most the uniform branch plus the MLWE advantage, and the uniform branch is
 SelfTargetMSIS advantage (`randomExperiment_le_stmsis_rom`). There is no idealization slack and no
 hypothesis beyond the forger; the hardness problems are the literature's uniform-matrix MLWE and
 the tailored ML-DSA verifier relation at a uniform matrix. -/
-theorem nma_security_rom [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+theorem nma_security_rom [DecidableEq M]
+    [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) :
     romNmaAdvantage p prims main ≤
