@@ -99,6 +99,7 @@ public import VCVioTest.PointerChainPuzzle.Hiding
 public import VCVioTest.PointerChainPuzzle.HidingIdeal
 public import VCVioTest.PointerChainPuzzle.HidingNonce
 public import VCVioTest.PointerChainPuzzle.HidingPRF
+public import VCVioTest.PointerChainPuzzle.HidingTheorem
 public import VCVioTest.PointerChainPuzzle.Ideal
 public import VCVioTest.PointerChainPuzzle.LeanSeal
 public import VCVioTest.PointerChainPuzzle.LeanSealBridge

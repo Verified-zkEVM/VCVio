@@ -568,6 +568,7 @@ public import VCVio.Schemes.PointerChainPuzzle.Hiding
 public import VCVio.Schemes.PointerChainPuzzle.HidingIdeal
 public import VCVio.Schemes.PointerChainPuzzle.HidingNonce
 public import VCVio.Schemes.PointerChainPuzzle.HidingPRF
+public import VCVio.Schemes.PointerChainPuzzle.HidingTheorem
 public import VCVio.Schemes.PointerChainPuzzle.Ideal
 public import VCVio.Schemes.PointerChainPuzzle.LeanSeal
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealBridge
