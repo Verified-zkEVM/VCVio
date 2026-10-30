@@ -1,7 +1,5 @@
 {"sorry":
- ["FiatShamirWithAbort.euf_cma_bound",
-  "FiatShamirWithAbort.euf_cma_bound_perfectHVZK",
-  "MLDSA.eufCmaMLWEReduction",
+ ["MLDSA.eufCmaMLWEReduction",
   "MLDSA.eufCmaSTMSISReduction",
   "MLDSA.euf_cma_security"],
  "nonstandard": []}
