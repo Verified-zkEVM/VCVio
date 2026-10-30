@@ -262,16 +262,16 @@ example : simulateQ (unifFwdAnswerImpl hetImpl).batch' (queryPoint (spec := hetS
   rfl
 
 /-- A typed round costs one round and one point per point it holds. -/
-example : IsOnlineQueryBound (queryRound₂ (spec := hetSpec) (fun _ : Fin 1 => true)
-    (fun _ : Fin 2 => false)) (1, 3) :=
+example : IsOnlineQueryBound (queryRound₂ (free := unifSpec) (spec := hetSpec)
+    (fun _ : Fin 1 => true) (fun _ : Fin 2 => false)) (1, 3) :=
   isOnlineQueryBound_queryRound₂ _ _
 
-example : ¬ IsOnlineQueryBound (queryPoint (spec := hetSpec) true) (1, 0) := by
+example : ¬ IsOnlineQueryBound (queryPoint (free := unifSpec) (spec := hetSpec) true) (1, 0) := by
   simp [queryPoint, queryRound, queryRound₂, isQueryBound_map_iff]
 
 /-- Two single-point rounds in sequence fit two rounds of two points. -/
 example : IsOnlineQueryBound (do
-    let _ ← queryPoint (spec := hetSpec) true
+    let _ ← queryPoint (free := unifSpec) (spec := hetSpec) true
     queryPoint (spec := hetSpec) false) (2, 2) :=
   isOnlineQueryBound_bind_le (1, 1) (1, 1) (isOnlineQueryBound_queryPoint _)
     (fun _ => isOnlineQueryBound_queryPoint _) ⟨le_rfl, le_rfl⟩
