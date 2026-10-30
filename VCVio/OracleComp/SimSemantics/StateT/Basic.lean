@@ -317,6 +317,23 @@ variable {ι : Type*} {spec : OracleSpec ι}
 section support_simulateQ_StateT
 
 variable {α : Type w}
+
+/-- Simulating an `OracleComp` through an implementation in a monad `n` can only shrink the
+support: any output reachable after simulation was already reachable in the original computation
+(where oracle queries may return any value). -/
+theorem support_simulateQ_subset
+    {n : Type w → Type _} [Monad n] [LawfulMonad n] [MonadAttach n] [ExactMonadAttach n]
+    (impl : QueryImpl spec n) (oa : OracleComp spec α) :
+    support (simulateQ impl oa) ⊆ support oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t k ih =>
+    intro x hx
+    simp only [simulateQ_bind, simulateQ_spec_query, MonadAttach.support_bind, Set.mem_iUnion,
+      exists_prop] at hx
+    obtain ⟨u, -, hx⟩ := hx
+    exact (mem_support_bind_iff _ _ _).2 ⟨u, mem_support_query t u, ih u hx⟩
+
 /-- Simulating an `OracleComp` through a stateful implementation in monad `m` can only shrink the
 support: any output reachable after simulation was already reachable in the original computation
 (where oracle queries may return any value). The statement needs no probability interpretation. -/
