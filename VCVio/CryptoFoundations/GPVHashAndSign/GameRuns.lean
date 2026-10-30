@@ -1098,7 +1098,8 @@ lemma gpvRealImpl_run_read (pk : PK) (sk : SK) (mc : Salt × M)
     (cache : (Salt × M →ₒ Range).QueryCache) :
     (gpvRealImpl psf hr M Salt pk sk (.inl (.inr mc))).run cache =
       (randomOracle (spec := (Salt × M →ₒ Range)) mc).run cache := by
-  simp [gpvRealImpl, QueryImpl.compose, realGameRunImplNoLog, HAdd.hAdd, QueryImpl.add]
+  simp [-PFunctor.add_eq_add, gpvRealImpl, QueryImpl.compose, realGameRunImplNoLog,
+    HAdd.hAdd, QueryImpl.add]
 
 omit [Fintype Salt] in
 /-- **One-step unfolding of `gpvRealImpl` on a signing query (the `∘ₛ`/`liftM` unfold).** The
@@ -1159,7 +1160,8 @@ lemma progGameRunImplNoRec_run_read (domainSample : PK → ProbComp Domain) (pk 
             (fun sd : Domain => (psf.eval pk sd, cache.cacheQuery mc (psf.eval pk sd))) <$>
               (domainSample pk : ProbComp Domain)) := by
   cases h : cache mc <;>
-    simp [progGameRunImplNoRec, HAdd.hAdd, QueryImpl.add, StateT.run_bind, StateT.run_get,
+    simp [-PFunctor.add_eq_add, progGameRunImplNoRec, HAdd.hAdd, QueryImpl.add,
+      StateT.run_bind, StateT.run_get,
       StateT.run_set, StateT.run_monadLift, h, map_eq_bind_pure_comp, Function.comp]
 
 open Classical in
@@ -1180,7 +1182,8 @@ lemma progGameRunImplNoRec_run_sign (domainSample : PK → ProbComp Domain) (pk 
         let r ← ($ᵗ Salt : ProbComp Salt)
         let s ← (domainSample pk : ProbComp Domain)
         pure ((r, s), cache.cacheQuery (r, msg) (psf.eval pk s))) := by
-  simp [progGameRunImplNoRec, HAdd.hAdd, QueryImpl.add, StateT.run_bind, StateT.run_get,
+  simp [-PFunctor.add_eq_add, progGameRunImplNoRec, HAdd.hAdd, QueryImpl.add,
+    StateT.run_bind, StateT.run_get,
     StateT.run_set, StateT.run_monadLift, map_eq_bind_pure_comp, Function.comp, bind_assoc,
     pure_bind]
 

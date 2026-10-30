@@ -23,6 +23,10 @@ public section
 
 namespace Falcon.Concrete.GMTable
 
+/-- The FFT twiddle factors as IEEE-754 binary64 bit patterns: for `k` from `1` to `1023`,
+entries `2k` and `2k + 1` are `cos (rev k · π / 1024)` and `sin (rev k · π / 1024)`, where
+`rev` reverses 10-bit indices; entries `0` and `1` are unused. This is the `GM` table of
+c-fn-dsa's `sign_fpoly.c`. -/
 def gmRaw : Array UInt64 := #[
   0x0000000000000000, 0x0000000000000000, 0x8000000000000000, 0x3FF0000000000000,
   0x3FE6A09E667F3BCD, 0x3FE6A09E667F3BCD, 0xBFE6A09E667F3BCD, 0x3FE6A09E667F3BCD,
@@ -538,6 +542,9 @@ def gmRaw : Array UInt64 := #[
   0x3F6921F8BECCA4BA, 0x3FEFFFF621621D02, 0xBFEFFFF621621D02, 0x3F6921F8BECCA4BA
 ]
 
+/-- The per-degree inverse standard deviations `1 / σ` scaling the leaf samplers of
+`ffSampling`, as IEEE-754 binary64 bit patterns indexed by `logn` from `0` to `10`; entry `0`
+is unused. It plays the role of the `INV_SIGMA` table of c-fn-dsa's `sign_sampler.c`. -/
 def invSigmaRaw : Array UInt64 := #[
   0x0000000000000000,
   0x3F7C58C4D7E08B42,

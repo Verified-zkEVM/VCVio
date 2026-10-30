@@ -27,10 +27,10 @@ The contract is therefore enforced at three levels:
 
 1. **Lake**: `Interop` is its own `lean_lib` in `lakefile.lean`, sibling
    to `LatticeCrypto`/`Examples`. Cross-library imports are physical.
-2. **CI**: `scripts/check-interop-isolation.sh` greps for forbidden
-   imports. `.github/workflows/interop-isolation.yml` runs it on every PR
-   and on pushes to `main`. The script also runs without a Lean toolchain,
-   so it is fast and never blocks on Mathlib cache or build flakiness.
+2. **CI**: `scripts/check-interop-isolation.sh` uses Lean's source parser to
+   check for forbidden imports. `.github/workflows/interop-isolation.yml`
+   runs it on every PR and on pushes to `main`. The source parser needs the
+   pinned Lean toolchain but no built project modules or Lake dependencies.
 3. **Reverse direction**: `Interop/**` may import from `VCVio/**`,
    `ToMathlib/**`, `Hax.…`, and `Aeneas.…`, but **not** from
    `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `Extern/**`,
@@ -150,7 +150,7 @@ hax's WP shape (`.except Error (.except PUnit .pure)`) inside the
 equivalent VCVio shape, since `ExceptT Error (OptionT _)` composes to
 exactly that PostShape.
 
-For aeneas, `Interop/Aeneas/Bridge.lean` will pattern-match on `Result`:
+For aeneas, the proposed `Interop/Aeneas/Bridge.lean` will pattern-match on `Result`:
 
 ```lean
 def errorOfAeneas : Aeneas.Std.Error → Interop.Rust.Error := ...
@@ -198,7 +198,8 @@ maps from the upstream isomorphic enum.
    check will catch accidental cross-imports, but reviewing `git diff`
    for `VCVio/` paths catches them earlier.
 2. **Run `bash scripts/check-interop-isolation.sh` locally** before
-   pushing. It is fast and toolchain-free.
+   pushing. Its source parser needs the pinned Lean toolchain but no built
+   project modules or Lake dependencies.
 3. **`./scripts/update-lib.sh`** after adding new Lean files under
    `Interop/`; the umbrella `Interop.lean` regenerates.
 4. **Bump pins explicitly**: edit the `require` line, run `lake update

@@ -19,7 +19,7 @@ factors, generalized congruence, directional rewriting, and core triples through
 
 public section
 
-open MeasureTheory Std.Internal.Do
+open MeasureTheory Std.WP
 open scoped ENNReal
 
 run_cmd do
@@ -30,19 +30,19 @@ run_cmd do
 namespace VCVioTest.ProgramLogic.MeasureWP
 
 example : True := by
-  fail_if_success let _ := inferInstanceAs (WPMonad Option ENNReal EPost.Nil)
+  fail_if_success let _ := inferInstanceAs (WPMonad Option ENNReal EStack⟨⟩)
   trivial
 
 open scoped ExpectationWP.Lower
 
-example (c : ENNReal) : MAlgOrdered.wp (none : Option Nat) (fun _ ↦ c) = 0 := by simp
+example (c : ENNReal) : wp (none : Option Nat) (fun _ ↦ c) Lean.Order.bot = 0 := by simp
 
-example (c : ENNReal) : MAlgOrdered.wp (some 7 : Option Nat) (fun _ ↦ c) = c := by simp
+example (c : ENNReal) : wp (some 7 : Option Nat) (fun _ ↦ c) Lean.Order.bot = c := by simp
 
-noncomputable example : WPMonad Option ENNReal EPost.Nil := inferInstance
+noncomputable example : WPMonad Option ENNReal EStack⟨⟩ := inferInstance
 
 example : Triple (none : Option Nat) (0 : ENNReal) (fun _ : Nat ↦ (1 : ENNReal))
-    (Lean.Order.bot : EPost.Nil) := by
+    (Lean.Order.bot : EStack⟨⟩) := by
   exact Triple.intro (by simp)
 
 universe v
@@ -52,18 +52,18 @@ variable {m : Type → Type v} [Monad m] [LawfulMonad m]
   {α : Type} [MeasurableSpace α]
 
 example (mx : m α) (f g : α → ENNReal) (hfg : ∀ x, f x ≤ g x) :
-    MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g := by
+    wp mx f Lean.Order.bot ≤ wp mx g Lean.Order.bot := by
   gcongr with x
   exact hfg x
 
 example (mx : m α) (f g : α → ENNReal) (hfg : ∀ x, f x ≤ g x) :
-    MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g := by
+    wp mx f Lean.Order.bot ≤ wp mx g Lean.Order.bot := by
   grw [hfg]
 
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal)
     (hf : Measurable f) (hg : Measurable g) :
-    MAlgOrdered.wp mx (fun x ↦ c + f x + g x) =
-      c * 𝒟[mx] Set.univ + MAlgOrdered.wp mx f + MAlgOrdered.wp mx g := by
+    wp mx (fun x ↦ c + f x + g x) Lean.Order.bot =
+      c * 𝒟[mx] Set.univ + wp mx f Lean.Order.bot + wp mx g Lean.Order.bot := by
   simp only [ExpectationWP.Lower.wp_add mx (fun x ↦ c + f x) g
       (measurable_const.add hf) hg,
     ExpectationWP.Lower.wp_add mx (fun _ ↦ c) f measurable_const hf,
@@ -72,13 +72,13 @@ example (mx : m α) (f g : α → ENNReal) (c : ENNReal)
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal)
     (hf : Measurable f) (hg : Measurable g)
     (hfg : ∀ᵐ x ∂𝒟[mx], f x ≤ c + g x) :
-    MAlgOrdered.wp mx f ≤ c * 𝒟[mx] Set.univ + MAlgOrdered.wp mx g :=
+    wp mx f Lean.Order.bot ≤ c * 𝒟[mx] Set.univ + wp mx g Lean.Order.bot :=
   ExpectationWP.Lower.wp_le_const_mul_mass_add mx hf hg hfg
 
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal) [IsProbabilityMeasure 𝒟[mx]]
     (hf : Measurable f) (hg : Measurable g)
     (hfg : ∀ᵐ x ∂𝒟[mx], f x ≤ c + g x) :
-    MAlgOrdered.wp mx f ≤ c + MAlgOrdered.wp mx g := by
+    wp mx f Lean.Order.bot ≤ c + wp mx g Lean.Order.bot := by
   simpa using ExpectationWP.Lower.wp_le_const_mul_mass_add mx hf hg hfg
 
 end VCVioTest.ProgramLogic.MeasureWP

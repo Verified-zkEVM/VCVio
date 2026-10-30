@@ -82,7 +82,8 @@ lemma measureTVDist_run_gpvRealImplFlagFresh_sign_le (pk : PK) (sk : SK)
     (msg : M) (s : ((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) :
     letI : MeasurableSpace ((Salt × Domain) × ((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) :=
       ⊤
-    measureTVDist ((gpvRealImplFlagFresh psf hr M Salt pk sk (.inr msg)).run s)
+    measureTVDist (α := (Salt × Domain) × ((Salt × M →ₒ Range).QueryCache × Finset M) × Bool)
+      ((gpvRealImplFlagFresh psf hr M Salt pk sk (.inr msg)).run s)
       ((gpvRealImplFlagFresh psf' hr M Salt pk sk (.inr msg)).run s) ≤ ε := by
   let : MeasurableSpace Domain := ⊤
   let : MeasurableSpace ((Salt × Domain) × ((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) :=

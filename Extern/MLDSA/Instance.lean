@@ -25,6 +25,9 @@ namespace MLDSA.Concrete
 
 open MLDSA
 
+/-- The total number of `true` entries in a vector of hint polynomials, summing
+`MLDSA.Concrete.hintWeight` over its components. This is the `hintWeight` of
+`concretePrimitives`, which signing (FIPS 204 Algorithm 7) and verification compare against `ω`. -/
 def hintWeightVec {k : Nat} (h : Vector Hint k) : Nat :=
   h.toList.foldl (fun acc hi => acc + MLDSA.Concrete.hintWeight hi) 0
 

@@ -48,7 +48,7 @@ inductive CompTree where
 
 /-! ## Meta-level expression extraction -/
 
-private def rawPrefix : Name := `Interaction.UC.OpenSyntax.Raw
+private def rawPrefix : Name := `Interaction.Open.OpenSyntax.Raw
 
 /-- Extract the composition structure of an expression, using opaque labels for unrecognized nodes. -/
 partial def extractCompTree (e : Expr) : MetaM CompTree := do

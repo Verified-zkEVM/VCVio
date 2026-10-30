@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Validate agent documentation references against the actual codebase.
+"""Validate first-party documentation references against the actual codebase.
 
 Checks:
-1. File path references: every *.lean path mentioned in docs exists on disk
+1. Local links, Markdown anchors and repository paths across all Markdown and Lean prose
 2. Tactic coverage: every `macro "name" : tactic` in ProgramLogic/ is documented
 3. Notation coverage: every `notation`/`scoped notation` in VCVio/ is documented
 4. Dead references: no doc references to files that were deleted/renamed
@@ -15,21 +15,14 @@ import re
 import sys
 from pathlib import Path
 
+from doc_refs import local_references, source_files
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-DOC_FILES = list((REPO_ROOT / "docs" / "agents").glob("*.md")) + [
-    REPO_ROOT / "AGENTS.md",
-    REPO_ROOT / "README.md",
-    REPO_ROOT / "REFERENCES.md",
-]
+DOC_FILES = source_files(REPO_ROOT, "*.md")
 
 PROGRAM_LOGIC_DIR = REPO_ROOT / "VCVio" / "ProgramLogic"
 VCVIO_DIR = REPO_ROOT / "VCVio"
-
-LEAN_PATH_RE = re.compile(
-    r'`(?:VCVio|Examples|ToMathlib|LibSodium)/[A-Za-z0-9_/]+\.lean`'
-    r'|(?:VCVio|Examples|ToMathlib|LibSodium)/[A-Za-z0-9_/]+\.lean'
-)
 
 TACTIC_MACRO_RE = re.compile(r'(?:macro|syntax)\s+"([\w\']+)".*:\s*tactic')
 
@@ -47,22 +40,6 @@ def read_all_docs() -> str:
         if f.exists():
             contents.append(f.read_text())
     return "\n".join(contents)
-
-
-def check_file_paths(doc_text: str) -> list[str]:
-    """Check that all Lean file paths mentioned in docs exist."""
-    errors = []
-    matches = LEAN_PATH_RE.findall(doc_text)
-    seen = set()
-    for match in matches:
-        path_str = match.strip("`").strip()
-        if path_str in seen:
-            continue
-        seen.add(path_str)
-        full_path = REPO_ROOT / path_str
-        if not full_path.exists():
-            errors.append(f"Dead file reference: {path_str}")
-    return errors
 
 
 def find_tactic_macros() -> set[str]:
@@ -122,8 +99,10 @@ def main():
     doc_text = read_all_docs()
     all_errors: list[str] = []
 
-    print("Checking file path references...")
-    all_errors.extend(check_file_paths(doc_text))
+    sources = source_files(REPO_ROOT, "*.md", "*.lean")
+    print(f"Checking links and file references in {len(sources)} Markdown and Lean files...")
+    for path in sources:
+        all_errors.extend(local_references(REPO_ROOT, path))
 
     print("Checking tactic coverage...")
     all_errors.extend(check_tactic_coverage(doc_text))

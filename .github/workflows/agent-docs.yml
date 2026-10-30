@@ -16,7 +16,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate doc references
-        run: python scripts/check-agent-docs.py
+        run: |
+          python scripts/test-agent-docs.py
+          python scripts/check-agent-docs.py
       - name: Check auto-generated doc fragments
         run: python scripts/extract-doc-fragments.py --check
       - name: Check documentation names for retired declarations

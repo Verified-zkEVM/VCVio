@@ -193,7 +193,9 @@ def contextForkView [DecidableEq ι] (main : OracleComp spec α) (i : ι) (s : N
     OracleComp spec (Option (PFunctor.FreeM.Cursor.ForkView i main s)) :=
   PFunctor.FreeM.Cursor.locateAndForkAt (P := spec.toPFunctor) i main s
 
--- Shared success classifier for the fixed and dynamically selected context-fork experiments.
+/-- The success classifier shared by the fixed-index and dynamically selected context forks. On a
+fork view at occurrence `s` it returns the outputs of the two completions when their focused
+answers differ and both outputs select `s` under `cf`, and `none` otherwise. -/
 def classifyForkView [∀ t, DecidableEq (spec.Range t)] (main : OracleComp spec α) (qb : ι → ℕ)
     (i : ι) (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
     (view : PFunctor.FreeM.Cursor.ForkView i main s) : Option (α × α) :=
@@ -225,6 +227,9 @@ reduction-facing proofs. -/
 abbrev ContextForkWitness (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) :=
   PFunctor.FreeM.Cursor.SelectedForkView i main (Fin (qb i + 1)) Fin.val
 
+/-- Package a fork view at the selected ordinal `s` as a `ContextForkWitness` when
+`classifyForkView` accepts it, that is, when the two focused answers differ and both outputs
+select `s` under `cf`; otherwise return `none`. -/
 def acceptContextForkWitness [∀ t, DecidableEq (spec.Range t)] (main : OracleComp spec α)
     (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
@@ -260,6 +265,9 @@ first and second fork paths. -/
       (PFunctor.FreeM.output main witness.view.firstPath,
         PFunctor.FreeM.output main witness.view.secondPath) := rfl
 
+/-- The dynamically selected context fork computed directly by `classifyForkView`: the first
+execution chooses an ordinal through `cf`, the selected occurrence is completed a second time,
+and the classified pair of outputs is returned. It is the same experiment as `contextFork`. -/
 def contextForkByClassify [DecidableEq ι] [∀ t, DecidableEq (spec.Range t)]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) : OracleComp spec (Option (α × α)) :=
@@ -415,6 +423,9 @@ def guardedContextFork [DecidableEq ι] [∀ t, DecidableEq (spec.Range t)]
     OracleComp spec (Option (α × α)) :=
   PFunctor.FreeM.Cursor.filterMapLocateAndForkAt i main s (classifyForkView main qb i cf s)
 
+/-- The collision classifier on an optional fork view at occurrence `s`: it returns `some s` when
+the two focused answers are equal and both outputs select `s` under `cf`, and `none` otherwise,
+including when the occurrence is absent. -/
 def collideForkView [∀ t, DecidableEq (spec.Range t)] (main : OracleComp spec α) (qb : ι → ℕ)
     (i : ι) (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) :
     Option (PFunctor.FreeM.Cursor.ForkView i main s) → Option (Fin (qb i + 1))
@@ -433,6 +444,10 @@ def collideForkView [∀ t, DecidableEq (spec.Range t)] (main : OracleComp spec 
         cf (PFunctor.FreeM.output main view.secondPath) = some s := by
   simp [collideForkView]
 
+/-- The equal-answer collision experiment on the fixed-occurrence fork `contextForkView`: it
+returns `some s` exactly when both completions of occurrence `s` select `s` under `cf` and their
+focused answers coincide. Together with `guardedContextFork` it covers the success event of
+`contextForkPair`. -/
 def contextForkViewCollision [DecidableEq ι] [∀ t, DecidableEq (spec.Range t)]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1)) :

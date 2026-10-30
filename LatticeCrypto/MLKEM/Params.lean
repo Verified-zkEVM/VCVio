@@ -44,10 +44,23 @@ abbrev Coins := Bytes 32
 
 /-- The variable parameters that distinguish the approved ML-KEM instantiations. -/
 structure Params where
+  /-- The module rank `k` of FIPS 203 Table 2: the public matrix `Â` is `k × k`, and the
+  secret and error vectors and the ciphertext component `u` each have `k` polynomial
+  entries. -/
   k : ℕ
+  /-- The FIPS 203 parameter `η₁` of the centered binomial distribution `SamplePolyCBD_η₁`
+  (Algorithm 8) that samples `s` and `e` in `K-PKE.KeyGen` (Algorithm 13) and `y` in
+  `K-PKE.Encrypt` (Algorithm 14). -/
   eta1 : ℕ
+  /-- The FIPS 203 parameter `η₂` of the centered binomial distribution `SamplePolyCBD_η₂`
+  (Algorithm 8) that samples the encryption noise `e₁` and `e₂` in `K-PKE.Encrypt`
+  (Algorithm 14). -/
   eta2 : ℕ
+  /-- The FIPS 203 parameter `d_u`: the number of bits per coefficient kept when the ciphertext
+  component `u` is compressed by `Compress_du` and serialized by `ByteEncode_du`. -/
   du : ℕ
+  /-- The FIPS 203 parameter `d_v`: the number of bits per coefficient kept when the ciphertext
+  component `v` is compressed by `Compress_dv` and serialized by `ByteEncode_dv`. -/
   dv : ℕ
 deriving Repr, DecidableEq
 

@@ -10,6 +10,8 @@ public import Mathlib.Data.FinEnum
 public import Mathlib.Algebra.Order.Ring.NNRat
 public import Mathlib.Data.NNRat.BigOperators
 public import Mathlib.Algebra.BigOperators.Ring.List
+import Mathlib.Algebra.Order.BigOperators.Group.List
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Std.Data.HashMap.Lemmas
 
 /-!
@@ -48,6 +50,7 @@ Stores an array of `(outcome, weight)` pairs whose weights sum to `1`. This repr
 computable but not canonical: many different `FinRatPMF.Raw` values can represent the same
 probability distribution. -/
 structure Raw (α : Type u) : Type u where
+  /-- The `(outcome, weight)` entries, possibly with repeated outcomes and zero weights. -/
   data : Array (α × ℚ≥0)
   sum_eq_one : (data.toList.map Prod.snd).sum = 1
 
@@ -59,10 +62,13 @@ variable {α β γ : Type u}
 @[expose]
 def toList (p : Raw α) : List (α × ℚ≥0) := p.data.toList
 
+/-- The total weight that the entry list `l` assigns to `x`: the sum of the weights of all entries
+with outcome `x`. -/
 @[expose]
 def probOfList [DecidableEq α] (l : List (α × ℚ≥0)) (x : α) : ℚ≥0 :=
   (l.filter (fun a => a.1 = x) |>.map Prod.snd).sum
 
+/-- The outcomes carried by entries of `l` with nonzero weight. -/
 @[expose]
 def supportOfList [DecidableEq α] (l : List (α × ℚ≥0)) : Finset α :=
   (l.filter (fun a => a.2 ≠ 0)).map Prod.fst |>.toFinset
@@ -156,6 +162,7 @@ private lemma bind_sum_aux (l : List (α × ℚ≥0)) (g : α → Raw β) :
 
 /-! ### Monad operations -/
 
+/-- The point mass at `a`: the single entry `(a, 1)`. -/
 @[expose]
 protected def pure (a : α) : Raw α := ⟨#[(a, 1)], by simp⟩
 
@@ -168,6 +175,8 @@ instance [Repr α] : Repr (Raw α) where
 instance [Repr α] : ToString (Raw α) where
   toString p := reprStr (p.toList.map fun (a, q) => (reprStr a, (q : ℚ)))
 
+/-- Sequence `f` with the continuation `g`: each entry `(a, p)` of `f` contributes the entries of
+`g a` with their weights multiplied by `p`. -/
 @[expose]
 protected def bind (f : Raw α) (g : α → Raw β) : Raw β :=
   ⟨(f.toList.flatMap (fun (a, p) => (g a).toList.map (fun (b, q) => (b, p * q)))).toArray, by
@@ -596,11 +605,13 @@ lemma mem_support_bind_iff [DecidableEq α] [DecidableEq β] (m : Raw α) (f : �
   ext y
   simp [mem_support_bind_iff]
 
+/-- Add the weight of the entry `a` to the accumulated weight of its outcome in `m`. -/
 @[expose]
 def addWeight [BEq α] [Hashable α] (m : Std.HashMap α ℚ≥0) (a : α × ℚ≥0) :
     Std.HashMap α ℚ≥0 :=
   m.insert a.1 (m.getD a.1 0 + a.2)
 
+/-- The hash map sending each outcome in `xs` to the total weight of its entries. -/
 @[expose]
 def accumulateWeights [BEq α] [Hashable α] (xs : Array (α × ℚ≥0)) :
     Std.HashMap α ℚ≥0 :=
@@ -680,6 +691,7 @@ private lemma probOfList_toList_eq_getD [DecidableEq α] [BEq α] [Hashable α]
         (m := m) (k := x) (k' := x) (v := q)).2 ⟨hkey, hopt⟩
     simp [hfind]
 
+/-- The hash map sending each outcome of positive probability under `p` to that probability. -/
 @[expose]
 def normalizeMap [BEq α] [Hashable α] [LawfulBEq α] [LawfulHashable α] (p : Raw α) :
     Std.HashMap α ℚ≥0 :=

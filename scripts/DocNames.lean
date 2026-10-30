@@ -156,6 +156,8 @@ unsafe def run (args : List String) : IO UInt32 := do
     | .error e => IO.eprintln s!"docnames: cannot read {namesPath}: {e}"; return 2
   let roots := if cfg.roots.isEmpty then defaultRoots else cfg.roots
   initSearchPath (← findSysroot)
+  -- Inspect this package's artifacts before dependencies sharing a root such as `Examples`.
+  searchPathRef.modify ((System.FilePath.mk ".lake/build/lib/lean") :: ·)
   enableInitializersExecution
   let env ← try
       importModules (roots.map ({ module := · })) {} (trustLevel := 1024) (loadExts := true)

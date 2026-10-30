@@ -92,7 +92,8 @@ theorem perfectSecrecyAt_of_ciphertextRowsEqualAt [LawfulMonad m] [Nonempty M]
   have hrow : ∀ msg, 𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment msg] = row :=
     fun msg ↦ (hrows msg _).evalDist_eq
   rw [evalDist_perfectSecrecyCipherExperiment_of_rows encAlg mgen row hrow,
-    encAlg.perfectSecrecyExperiment_eq_bind mgen, evalDist_bind_of_discrete, Measure.prod_def]
+    encAlg.perfectSecrecyExperiment_eq_bind mgen, evalDist_bind_of_discrete,
+    Measure.prod_eq_of_sfinite]
   refine Measure.bind_congr_right (Filter.Eventually.of_forall fun msg ↦ ?_)
   dsimp only
   rw [evalDist_map _ measurable_prodMk_left, hrow]
