@@ -34,7 +34,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -46,7 +45,6 @@ variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
 variable (adv : SignatureAlg.UnforgeableAdversary
   (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
-omit [SampleableType Stmt] in
 /-- **One step of the constant-length body charge (the per-attempt induction step).** The
 `succ` case of `ghostSignDrawBody_continuation_charge`: peel the head commit draw `ws` (kept
 *averaged* — the head `ε`-kernel needs the full `ids.commit` marginal, a per-`ws` bound is false),
@@ -487,7 +485,6 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
             rw [← ENNReal.tsum_mul_left]; exact tsum_congr fun ws => by ring]
           rw [add_comm]
 
-omit [SampleableType Stmt] in
 /-- **The constant-length body charge (the genuine per-attempt induction).** Over one signing body
 `ghostSignDrawBody n`, the expected continuation read-multiplicity of the body's *rejected* draws —
 `E[Σ_{w ∈ body-rejects} continuation.readlist.count w]` — is at most `ε · (rl.length + qH) ·
@@ -554,7 +551,6 @@ theorem ghostSignDrawBody_continuation_charge {γ : Type}
         bad n re dr ih
 
 
-omit [SampleableType Stmt] in
 /-- **The sign-step value-free charge — the probabilistic core of the ghost-read bound.**
 This is the single-query step of the inline-run induction
 `readRecord_expected_pairs_general` at a *signing* query `Sum.inr msg`. The signing body

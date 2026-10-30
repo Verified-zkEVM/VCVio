@@ -34,7 +34,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -52,7 +51,6 @@ variable (adv : SignatureAlg.UnforgeableAdversary
 The bound below controls how many it records on average; `signBody_couple` matches its draws
 with those of the eager ghost signing body `ghostSignBody`. -/
 
-omit [SampleableType Stmt] in
 /-- **Expected drawn-list length of the draw-collecting signing body.** The expected number
 of recorded (rejected) commitments of one `ghostSignDrawBody` run is at most the
 reject-gated geometric sum `∑_{a<n} ofReal p^(a+1)`: an attempt's commitment is recorded only
@@ -192,7 +190,6 @@ read-hit flag in place of the eager ghost cache (see `DeferredState`). -/
       (fun alc => (alc.1.1, (((alc.2, msg :: s.1.1.2), s.1.2 ++ alc.1.2), s.2))) <$>
         (ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1
 
-omit [SampleableType Stmt] in
 /-- **Sign-step coupling.** The eager ghost signing body `ghostSignBody` and the deferred draw-
 collecting body `ghostSignDrawBody` are coupled, with their `ids.commit`/`uniformSample`/`respond`
 draws matched, so that the outputs and real caches agree and the eager ghost layer's key domain is

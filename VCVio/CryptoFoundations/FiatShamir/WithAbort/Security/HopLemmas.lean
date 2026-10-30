@@ -33,7 +33,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -50,7 +49,6 @@ variable (adv : SignatureAlg.UnforgeableAdversary
 Each hop is stated per key pair, under pointwise hypotheses at that key; the good-key
 event and `δ` enter only once, in the final averaging over `hr.gen`. -/
 
-omit [SampleableType Stmt] in
 /-- G₀ bridge: at every key pair produced by key generation, the real-signing hybrid
 experiment reproduces the success probability of the standard unforgeability experiment
 `SignatureAlg.unforgeableExperiment` under `runtime M`.
@@ -258,13 +256,13 @@ from `false`. -/
   fun t => StateT.mk fun p =>
     (fun us : spec.Range t × σ => (us.1, (us.2, p.2))) <$> (impl t).run p.1
 
-omit [SampleableType Stmt] [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
+omit [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
 lemma flagLift_run {ι : Type} {spec : OracleSpec ι} {σ : Type}
     (impl : QueryImpl spec (StateT σ ProbComp)) (t : spec.Domain) (s : σ) (b : Bool) :
     ((flagLift impl t).run (s, b)) =
       (fun us : spec.Range t × σ => (us.1, (us.2, b))) <$> (impl t).run s := rfl
 
-omit [SampleableType Stmt] [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
+omit [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
 /-- Transport a predicate-targeted query bound across a (propositionally equal) choice of
 predicate and `DecidablePred` instance. The predicate is allowed to differ by its match
 auxiliary (which arises when the same matches-notation is elaborated in different
@@ -322,7 +320,6 @@ lemma sum_natCast_mul_pow_le_sq_sum_pow (p : ℝ) (hp0 : 0 ≤ p) (m : ℕ) :
   rw [hP, Finset.mem_product, Finset.mem_range, Finset.mem_range]
   omega
 
-omit [SampleableType Stmt] in
 /-- Hop G₀ → G₁ (Sign → Prog) at a fixed key: replacing the caching hash of each signing
 attempt by overwrite-reprogramming with a fresh challenge costs at most
 
@@ -697,7 +694,6 @@ lemma prEvent_hybridExpAtKey_real_le_prog
       nlinarith [mul_nonneg hqS hε, hqS, hqH, hε]
     linarith [hextra]
 
-omit [SampleableType Stmt] in
 /-- Hop G₁ → G₂ (Prog → Trans) at a fixed key: dropping the reprogramming of rejected
 attempts (keeping only the accepted transcript's programming) costs at most
 `qS·(qH+1)·ε/(1-p)`.
@@ -843,24 +839,25 @@ lemma prEvent_hybridExpAtKey_prog_le_trans
         rw [hGT]
         exact add_le_add le_rfl h_badBound
 
-omit [SampleableType Stmt] in
 /-- Hop G₂ → G₃ (Trans → Sim) at a fixed key: replacing the private honest-execution
 loop by the per-attempt HVZK simulator loop costs at most `qS·ζ_zk/(1-p)`.
 
 Distributional content: per signing query, `transSignBody` and `simSignBody` differ only
 in the optional sampler driving `firstSome`; `measureTVDist_firstSome_le_geometric` bounds the
-per-query gap by `ζ_zk · (1 + p + ⋯) ≤ ζ_zk/(1-p)` using `ids.HVZK sim ζ_zk` (`hhvzk`)
+per-query gap by `ζ_zk · (1 + p + ⋯) ≤ ζ_zk/(1-p)` using the HVZK bound at this key (`hzk`)
 and the honest abort bound (`hAbort`), uniformly in the shared starting cache
 (`measureTVDist_run_transSignBody_simSignBody_le`). The per-query total-variation budget is
 accumulated across the at-most-`qS` signing queries of the adversary run by
 `measureETVDist_simulateQ_run_le_queryBoundP_mul`, the two hybrid handlers agreeing exactly on
 the base (uniform and random-oracle) component. -/
 lemma prEvent_hybridExpAtKey_trans_le_sim
-    (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk) (hhvzk : ids.HVZK sim (ENNReal.ofReal ζ_zk))
+    (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk)
     (qS qH : ℕ) (p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH)
-    (pk : Stmt) (sk : Wit) (hrel : rel pk sk = true)
+    (pk : Stmt) (sk : Wit)
+    (hzk : letI : MeasurableSpace (Option (Commit × Chal × Resp)) := ⊤
+      measureETVDist (ids.honestExecution pk sk) (sim pk) ≤ ENNReal.ofReal ζ_zk)
     (hAbort : Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort) :
     Pr{let x ← (hybridExpAtKey ids hr M maxAttempts adv
         (transSignBody ids M maxAttempts pk sk) pk)}[x = true] ≤
@@ -899,8 +896,8 @@ lemma prEvent_hybridExpAtKey_trans_le_sim
       Measurable.of_discrete).trans ?_
     rw [ENNReal.le_ofReal_iff_toReal_le (measureETVDist_ne_top _ _) hε_nonneg,
       ← measureTVDist_eq_toReal_measureETVDist]
-    exact measureTVDist_run_transSignBody_simSignBody_le ids M maxAttempts sim pk sk hrel msg
-      hζ hhvzk hq_toReal hp₀ s.1
+    exact measureTVDist_run_transSignBody_simSignBody_le ids M maxAttempts sim pk sk msg
+      hζ hzk hq_toReal hp₀ s.1
   -- Accumulate the per-query budget across the `qS` signing queries of the run.
   let : MeasurableSpace ((M × Option (Commit × Resp)) ×
     ((M × Commit →ₒ Chal).QueryCache × List M)) := ⊤

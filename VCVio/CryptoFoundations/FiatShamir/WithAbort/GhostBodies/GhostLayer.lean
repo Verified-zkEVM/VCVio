@@ -30,7 +30,6 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 
 namespace FiatShamirWithAbort
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (M : Type) [DecidableEq M] (maxAttempts : ℕ)
@@ -131,7 +130,6 @@ transcript into the real layer (clearing any stale ghost entry at that point). -
         modify fun s => (s.1, s.2.cacheQuery (msg, w) c)
         ghostSignBody pk sk msg n
 
-omit [SampleableType Stmt] in
 /-- Overlay projection: `ghostSignBody` with the ghost layer overlaid onto the real
 layer is exactly `progSignBody` on the overlaid cache. Rejected-attempt programmings
 (ghost writes) and accepted programmings (real writes) both surface as ordinary cache
@@ -161,7 +159,6 @@ lemma run_ghostSignBody_overlay (pk : Stmt) (sk : Wit) (msg : M) :
           run_ghostSignBody_overlay pk sk msg n re (gh.cacheQuery (msg, w) c),
           overlayCache_cacheQuery_ghost]
 
-omit [SampleableType Stmt] in
 /-- Ghost-forgetting projection (deferred sampling): dropping the ghost layer from
 `ghostSignBody` yields the accepted-only programming loop of `transSignBody`. The
 programming of a rejected attempt lives only in the ghost layer, so removing it does not
@@ -191,7 +188,6 @@ lemma run_ghostSignBody_fst (pk : Stmt) (sk : Wit) (msg : M) :
         simp only [IdenSchemeWithAbort.honestExecution, StateT.run_bind,
           OracleComp.liftM_run_StateT, bind_assoc, pure_bind]
 
-omit [SampleableType Stmt] in
 /-- `run_ghostSignBody_fst` at the attempt budget of the scheme: forgetting the ghost
 layer of `ghostSignBody` recovers `transSignBody` on the real layer. -/
 lemma run_ghostSignBody_fst_eq_transSignBody (pk : Stmt) (sk : Wit) (msg : M)
@@ -229,7 +225,6 @@ identical-until-bad shape of `measureETVDist_simulateQ_run_le_prEvent_bad`. -/
     let c ← uniformSample Chal
     pure (c, re.cacheQuery mc c)
 
-omit [SampleableType Stmt] in
 lemma randomOracle_run_eq_roStep (re : (M × Commit →ₒ Chal).QueryCache) (mc : M × Commit) :
     ((randomOracle : QueryImpl (M × Commit →ₒ Chal)
         (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)) mc).run re =
@@ -265,7 +260,6 @@ otherwise preserved; signing queries run `ghostSignBody` on the cache layers. -/
       (fun alc => (alc.1, ((alc.2, msg :: s.1.2), s.2))) <$>
         (ghostSignBody ids M pk sk msg maxAttempts).run s.1.1
 
-omit [SampleableType Stmt] in
 /-- The two ghost-instrumented handlers agree on all transitions that leave the bad flag
 unset: they differ only in the answer at a ghost hit, which fires the flag on both
 sides. -/
@@ -296,7 +290,6 @@ lemma ghostHybridImpl_agree_good (pk : Stmt) (sk : Wit)
     | none => rfl
   · rfl
 
-omit [SampleableType Stmt] in
 /-- The ghost-instrumented handlers never unset the bad flag. -/
 lemma ghostHybridImpl_bad_mono (progSide : Bool) (pk : Stmt) (sk : Wit)
     (t : ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp))).Domain)
@@ -349,13 +342,11 @@ run. Definitionally the Trans-side handler `ghostHybridImpl … false`
       (StateT (GhostState M Commit Chal) ProbComp) :=
   ghostHybridImpl ids M maxAttempts false pk sk
 
-omit [SampleableType Stmt] in
 /-- The ghost-blind handler is, by definition, the Trans-side instrumented handler. -/
 lemma ghostBlindImpl_eq_ghostHybridImpl_false (pk : Stmt) (sk : Wit) :
     ghostBlindImpl ids M maxAttempts pk sk =
       ghostHybridImpl ids M maxAttempts false pk sk := rfl
 
-omit [SampleableType Stmt] in
 /-- The eager (`ghostHybridImpl … true`) and ghost-blind handlers agree on every non-bad
 output transition from a non-bad input state: they coincide on uniform, signing, and
 ghost-*miss* read steps, and on a ghost-*hit* both flip the bad flag, so neither has any
@@ -371,7 +362,6 @@ lemma ghostBlindImpl_agree_good (pk : Stmt) (sk : Wit)
       Pr{let x ← (ghostBlindImpl ids M maxAttempts pk sk t).run (s, false)}[x = (u, (s', false))] :=
   ghostHybridImpl_agree_good ids M maxAttempts pk sk t s u s'
 
-omit [SampleableType Stmt] in
 /-- The ghost-blind handler never unsets the bad flag (bad-input monotonicity). -/
 lemma ghostBlindImpl_bad_mono (pk : Stmt) (sk : Wit)
     (t : ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp))).Domain)
