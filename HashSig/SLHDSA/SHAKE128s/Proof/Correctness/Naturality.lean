@@ -7,6 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.VerifierNaturality
+public import HashSig.SLHDSA.SHAKE128s.Proof.XmssAuthentication
 
 /-!
 # Naturality of key generation and signing
@@ -62,18 +63,33 @@ theorem merkle_node_simulate (secretSeed publicSeed : Digest) (address : Address
     (height index : Nat) :
     simulateQ impl (Merkle.node secretSeed publicSeed address height index) =
       (Merkle.node secretSeed publicSeed address height index : m Digest) := by
-  induction height generalizing index with
-  | zero => exact wots_publicKey_simulate impl himpl _ _ _
-  | succ height ih =>
-      simp only [Merkle.node, simulateQ_bind, ih, tweakable_simulate impl himpl]
+  unfold Merkle.node
+  apply PerfectMerkleTree.merkleRootM_natural (simulateQ' impl)
+  · intro t
+    exact wots_publicKey_simulate impl himpl _ _ _
+  · intro z t left right
+    exact tweakable_simulate impl himpl _ _ _
+
+/-- Simulating an XMSS path maps its effectful WOTS+ leaves and parent hashes. -/
+theorem merkle_authenticationPath_simulate (secretSeed publicSeed : Digest) (address : Address)
+    (height index : Nat) :
+    simulateQ impl (Merkle.authenticationPath secretSeed publicSeed address height index) =
+      (Merkle.authenticationPath secretSeed publicSeed address height index :
+        m (Vector Digest height)) := by
+  unfold Merkle.authenticationPath
+  apply PerfectMerkleTree.intrinsicAuthPathM_natural (simulateQ' impl)
+  · intro t
+    exact wots_publicKey_simulate impl himpl _ _ _
+  · intro z t left right
+    exact tweakable_simulate impl himpl _ _ _
 
 /-- Simulating XMSS signing is XMSS signing in the target monad. -/
 theorem merkle_sign_simulate (message secretSeed publicSeed : Digest) (address : Address)
     (index : Fin (2 ^ subtreeHeight)) :
     simulateQ impl (Merkle.sign message secretSeed publicSeed address index) =
       (Merkle.sign message secretSeed publicSeed address index : m XmssSignature) := by
-  simp only [Merkle.sign, simulateQ_bind, sequenceFin_simulate, simulateQ_pure,
-    merkle_node_simulate impl himpl, wots_sign_simulate impl himpl]
+  simp only [Merkle.sign, simulateQ_bind, simulateQ_pure,
+    merkle_authenticationPath_simulate impl himpl, wots_sign_simulate impl himpl]
 
 /-- Simulating FORS secret derivation is that derivation in the target monad. -/
 theorem fors_secret_simulate (secretSeed publicSeed : Digest) (address : Address)

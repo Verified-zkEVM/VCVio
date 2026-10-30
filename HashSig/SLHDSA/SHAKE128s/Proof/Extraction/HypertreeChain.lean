@@ -106,7 +106,8 @@ theorem xmss_eq_sign (secretSeed publicSeed message : Digest) (layer tree : Nat)
         authentication := fun j => SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed
           (SLHDSA.SHAKE128s.Hypertree.address layer tree) j.val
             (Nat.xor (leaf.val / 2 ^ j.val) 1) } := by
-    simp only [SLHDSA.SHAKE128s.Merkle.sign, SLHDSA.SHAKE128s.Correctness.sequenceFin_id, bind,
+    simp only [SLHDSA.SHAKE128s.Merkle.sign_eq_sequenceFin,
+      SLHDSA.SHAKE128s.Correctness.sequenceFin_id, bind,
       pure]
     rfl
   rw [hsign]

@@ -405,6 +405,7 @@ script test (args) do
     #["exe", "slhdsa_wots_tests"],
     #["exe", "slhdsa_wots_integration_tests"],
     #["exe", "slhdsa_xmss_tests"],
+    #["exe", "slhdsa_xmss_program_tests"],
     #["exe", "slhdsa_fors_tests"],
     #["exe", "slhdsa_fors_secret_order_tests"],
     #["exe", "slhdsa_fors_provider_tests"],
@@ -501,6 +502,11 @@ lean_exe slhdsa_wots_integration_tests where
 /-- Bounded XMSS construction, address-domain, and selected concrete-profile exercise. -/
 lean_exe slhdsa_xmss_tests where
   root := `HashSigTest.SLHDSA.XmssConstructionTests
+
+/-- Paper XMSS traversal, recovery, authentication and retained-effect checks. -/
+lean_exe slhdsa_xmss_program_tests where
+  srcDir := "scripts"
+  root := `SLHDSAXmssProgramTests
 
 /-- S07 FORS extraction, address-domain, tiny exhaustion, and selected concrete-profile exercise. -/
 lean_exe slhdsa_fors_tests where

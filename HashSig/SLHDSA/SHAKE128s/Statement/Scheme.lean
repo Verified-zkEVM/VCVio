@@ -497,23 +497,51 @@ variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
 /-- Algorithm 9 (`xmss_node`): the node at height `height` and index `index` of the XMSS tree of
 `address`. -/
-@[expose] def node (secretSeed publicSeed : Digest) (address : Address) :
-    Nat → Nat → m Digest
-  | 0, index => Wots.publicKey secretSeed publicSeed (wotsAddress address index)
-  | height + 1, index => do
-    let left ← node secretSeed publicSeed address height (2 * index)
-    let right ← node secretSeed publicSeed address height (2 * index + 1)
-    Hashing.tweakable publicSeed (nodeAddress address (height + 1) index)
-      (bytesBE n left ++ bytesBE n right)
+@[expose] def node (secretSeed publicSeed : Digest) (address : Address)
+    (height index : Nat) : m Digest :=
+  PerfectMerkleTree.merkleRootM
+    (fun t => Wots.publicKey secretSeed publicSeed (wotsAddress address t))
+    (fun z t left right =>
+      Hashing.tweakable publicSeed (nodeAddress address z t)
+        (bytesBE n left ++ bytesBE n right)) height index
+
+/-- A height-zero XMSS subtree computes the WOTS+ public key at its leaf. -/
+theorem node_zero (secretSeed publicSeed : Digest) (address : Address) (index : Nat) :
+    node (m := m) secretSeed publicSeed address 0 index =
+      (Wots.publicKey secretSeed publicSeed (wotsAddress address index) : m Digest) := rfl
+
+/-- An XMSS parent evaluates its left and right children before its node hash. -/
+theorem node_succ (secretSeed publicSeed : Digest) (address : Address) (height index : Nat) :
+    node (m := m) secretSeed publicSeed address (height + 1) index = (do
+      let left ← node secretSeed publicSeed address height (2 * index)
+      let right ← node secretSeed publicSeed address height (2 * index + 1)
+      Hashing.tweakable publicSeed (nodeAddress address (height + 1) index)
+        (bytesBE n left ++ bytesBE n right) : m Digest) := rfl
+
+/-- The leaf-first sibling path of an XMSS leaf at every natural height and index. -/
+@[expose] def authenticationPath (secretSeed publicSeed : Digest) (address : Address)
+    (height index : Nat) : m (Vector Digest height) :=
+  PerfectMerkleTree.intrinsicAuthPathM
+    (fun t => Wots.publicKey secretSeed publicSeed (wotsAddress address t))
+    (fun z t left right =>
+      Hashing.tweakable publicSeed (nodeAddress address z t)
+        (bytesBE n left ++ bytesBE n right)) index height
 
 /-- Algorithm 10 (`xmss_sign`): a WOTS+ signature of `message` under the key of leaf `index`, with
-that leaf's authentication path. -/
+that leaf's authentication path. The sibling path is evaluated before WOTS+ signing. -/
 @[expose] def sign (message secretSeed publicSeed : Digest) (address : Address)
     (index : Fin (2 ^ subtreeHeight)) : m XmssSignature := do
-  let authentication ← sequenceFin subtreeHeight fun j =>
-    node secretSeed publicSeed address j.val (Nat.xor (index.val / 2 ^ j.val) 1)
+  let authentication ← authenticationPath secretSeed publicSeed address subtreeHeight index.val
   let wots ← Wots.sign message secretSeed publicSeed (wotsAddress address index.val)
-  return { wots, authentication }
+  return { wots, authentication := fun j => authentication[j] }
+
+/-- Recover an XMSS subtree root from its leaf value and leaf-first sibling path. -/
+@[expose] def climb (publicSeed : Digest) (address : Address) (index : Nat)
+    (leaf : Digest) (authentication : List Digest) : m Digest :=
+  PerfectMerkleTree.climbM
+    (fun height index left right =>
+      Hashing.tweakable publicSeed (nodeAddress address height index)
+        (bytesBE n left ++ bytesBE n right)) index leaf authentication
 
 /-- Algorithm 11 (`xmss_pkFromSig`): the WOTS+ public key recovered from the signature, hashed up
 the authentication path to a root. -/
@@ -521,12 +549,7 @@ the authentication path to a root. -/
     (message publicSeed : Digest) (address : Address) : m Digest := do
   let leaf ← Wots.publicKeyFromSignature signature.wots message publicSeed
     (wotsAddress address index.val)
-  (List.finRange subtreeHeight).foldlM (fun value j => do
-    let payload := if index.val / 2 ^ j.val % 2 = 0 then
-      bytesBE n value ++ bytesBE n (signature.authentication j)
-      else bytesBE n (signature.authentication j) ++ bytesBE n value
-    Hashing.tweakable publicSeed
-      (nodeAddress address (j.val + 1) (index.val / 2 ^ (j.val + 1))) payload) leaf
+  climb publicSeed address index.val leaf (List.ofFn signature.authentication)
 
 end Merkle
 

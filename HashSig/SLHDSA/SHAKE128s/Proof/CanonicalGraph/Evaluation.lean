@@ -118,7 +118,7 @@ theorem structuralValue_equation (secretSeed publicSeed : Digest) (parent : Stru
         StructuralNode.address, Hashing.tweakable]
       rfl
   | tree tree height index =>
-      simp only [structuralValue, Merkle.node, bind, canonicalInput,
+      simp only [structuralValue, Merkle.node_succ, bind, canonicalInput,
         StructuralNode.children, childBytes, List.map_cons, List.map_nil,
         List.flatten_cons, List.flatten_nil, List.append_nil, value_merkleChild,
         StructuralNode.address, Hashing.tweakable]

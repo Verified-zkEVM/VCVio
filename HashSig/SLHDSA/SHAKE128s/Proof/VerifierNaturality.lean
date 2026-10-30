@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
+public import HashSig.SLHDSA.SHAKE128s.Proof.XmssRecovery
 
 /-!
 # Naturality of the verifier in the hash handler
@@ -83,13 +84,23 @@ theorem wots_simulate (signature : WotsSignature) (message publicSeed : Digest)
   simp only [Wots.publicKeyFromSignature_eq, simulateQ_bind, sequenceFin_simulate,
     chain_simulate impl himpl, tweakable_simulate impl himpl]
 
+/-- Simulating an XMSS climb maps its node-hash callback through the shared engine. -/
+theorem merkle_climb_simulate (publicSeed : Digest) (address : Address) (index : Nat)
+    (leaf : Digest) (authentication : List Digest) :
+    simulateQ impl (Merkle.climb publicSeed address index leaf authentication) =
+      (Merkle.climb publicSeed address index leaf authentication : m Digest) := by
+  unfold Merkle.climb
+  apply PerfectMerkleTree.climbM_natural (simulateQ' impl)
+  intro height index left right
+  exact tweakable_simulate impl himpl _ _ _
+
 /-- Simulating XMSS root recovery is the recovery in `m`. -/
 theorem merkle_simulate (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignature)
     (message publicSeed : Digest) (address : Address) :
     simulateQ impl (Merkle.publicKeyFromSignature index signature message publicSeed address) =
       (Merkle.publicKeyFromSignature index signature message publicSeed address : m Digest) := by
   simp only [Merkle.publicKeyFromSignature, simulateQ_bind, wots_simulate impl himpl,
-    foldlM_simulate, tweakable_simulate impl himpl]
+    merkle_climb_simulate impl himpl]
 
 /-- Simulating FORS root recovery maps the node-hash callback through the shared climb. -/
 theorem fors_climb_simulate (publicSeed : Digest) (address : Address) (index : Nat)

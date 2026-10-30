@@ -239,7 +239,7 @@ theorem merkle_free (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignature
     FreeBounds publicSeed
       (Merkle.publicKeyFromSignature index signature message publicSeed address :
         OracleComp HashSpec Digest) 10 := by
-  unfold Merkle.publicKeyFromSignature
+  rw [Merkle.publicKeyFromSignature_eq_fold]
   change FreeBounds publicSeed _ (1 + subtreeHeight)
   exact (wots_free signature.wots message _).bind (fun leaf => by
     simpa only [List.length_finRange, Nat.mul_one] using

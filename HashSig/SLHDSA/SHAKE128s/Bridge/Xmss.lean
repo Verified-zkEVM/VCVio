@@ -7,6 +7,8 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Wots
+public import HashSig.SLHDSA.SHAKE128s.Proof.XmssRecovery
+public import HashSig.SLHDSA.SHAKE128s.Proof.XmssAuthentication
 public import Mathlib.Data.Nat.Bitwise
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Option
 
@@ -77,7 +79,7 @@ theorem simulateQ_relabel_merkleNode (secretSeed publicSeed : Digest) (a : Addre
           (oracleSecret FIPS205.core (Equiv.refl _) (digestEquiv publicSeed)
             (digestEquiv secretSeed)) (toAdrs a) height index : TypedComp _)
   | 0, index, h => by
-    rw [Merkle.node, simulateQ_relabel_wotsPublicKey _ _ _ rfl rfl,
+    rw [Merkle.node_zero, simulateQ_relabel_wotsPublicKey _ _ _ rfl rfl,
       toAdrs_wotsAddress a (by omega)]
     rfl
   | height + 1, index, h => by
@@ -90,7 +92,7 @@ theorem simulateQ_relabel_merkleNode (secretSeed publicSeed : Digest) (a : Addre
     have hidx : index < 2 ^ 32 :=
       lt_of_lt_of_le (Nat.lt_succ_self _)
         (le_trans (Nat.le_mul_of_pos_right _ Nat.one_le_two_pow) h)
-    rw [Merkle.node, simulateQ_bind,
+    rw [Merkle.node_succ, simulateQ_bind,
       simulateQ_relabel_merkleNode secretSeed publicSeed a height (2 * index)
         (by nlinarith), bind_map_left]
     unfold xmssNodeWithSecret
@@ -125,7 +127,7 @@ theorem simulateQ_relabel_merkleSign (msg : FIPS205.core.Y) (secretSeed publicSe
           (oracleSecret FIPS205.core (Equiv.refl _) (digestEquiv publicSeed)
             (digestEquiv secretSeed)) msg (toAdrs a) index.val : TypedComp _) := by
   have hidx : index.val < 2 ^ 32 := lt_of_lt_of_le index.isLt (by decide)
-  rw [Merkle.sign, xmssSignWithSecret, intrinsicAuthPathM_eq_ofFnM, simulateQ_bind,
+  rw [Merkle.sign_eq_sequenceFin, xmssSignWithSecret, intrinsicAuthPathM_eq_ofFnM, simulateQ_bind,
     simulateQ_relabel_sequenceFin digestEquiv.symm subtreeHeight _ _ (fun j => by
       rw [← sibling_eq_xor, simulateQ_relabel_merkleNode _ _ _ _ _ (sibling_div_bound index j)]),
     bind_map_left, simulateQ_bind, map_bind]
@@ -199,7 +201,7 @@ theorem simulateQ_relabel_merklePublicKeyFromSignature (index : Fin (2 ^ subtree
           (PublicHash.h FIPS205.core (digestEquiv publicSeed)) index.val sig msg (toAdrs a) :
           TypedComp _) := by
   have hidx : index.val < 2 ^ 32 := lt_of_lt_of_le index.isLt (by decide)
-  rw [Merkle.publicKeyFromSignature, xmssPkFromSigWith, simulateQ_bind,
+  rw [Merkle.publicKeyFromSignature_eq_fold, xmssPkFromSigWith, simulateQ_bind,
     show (xmssOfCore sig).wots = wotsOfCore sig.wots from rfl,
     simulateQ_relabel_wotsPublicKeyFromSignature _ _ _ _ rfl rfl, toAdrs_wotsAddress a hidx,
     bind_map_left, simulateQ_bind, map_bind]

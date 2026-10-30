@@ -297,6 +297,8 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.WotsCharge
 public import HashSig.SLHDSA.SHAKE128s.Proof.WotsEntry
 public import HashSig.SLHDSA.SHAKE128s.Proof.WotsResidueReduction
 public import HashSig.SLHDSA.SHAKE128s.Proof.WriterState
+public import HashSig.SLHDSA.SHAKE128s.Proof.XmssAuthentication
+public import HashSig.SLHDSA.SHAKE128s.Proof.XmssRecovery
 public import HashSig.SLHDSA.SHAKE128s.Statement.BitSecurity
 public import HashSig.SLHDSA.SHAKE128s.Statement.FIPS205
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game

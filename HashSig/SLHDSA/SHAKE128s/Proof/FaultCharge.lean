@@ -86,6 +86,7 @@ theorem merkle_eq_wots_bind_fold (index : Fin (2 ^ subtreeHeight)) (signature : 
           (fun value j => Hashing.shortHash
             (PathEntry.pathInput publicSeed (SLHDSA.SHAKE128s.Merkle.nodeAddress address)
               index.val (Extraction.Merkle.siblings signature) value j)) leaf := by
+  rw [SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature_eq_fold]
   refine congrArg (Bind.bind _) (funext fun leaf => ?_)
   refine congrArg (fun body => (List.finRange subtreeHeight).foldlM
     (m := OracleComp HashSpec) body leaf) (funext fun value => funext fun j => ?_)

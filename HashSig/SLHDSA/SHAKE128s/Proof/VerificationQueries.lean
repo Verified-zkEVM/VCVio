@@ -13,6 +13,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Exact.Sequence
 public import VCVio.OracleComp.QueryTracking.QueryBound.Exact.Cost
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
+import HashSig.SLHDSA.SHAKE128s.Proof.XmssRecovery
 
 /-!
 # Oracle-call accounting for the SLH-DSA verifier
@@ -229,7 +230,7 @@ theorem merkle_bounds (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignatu
     (message publicSeed : Digest) (address : Address) :
     Bounds (Merkle.publicKeyFromSignature index signature message publicSeed address) 55 520 := by
   have hwork := Checksum.chainVerificationCalls_bounds (Checksum.messageDigit message)
-  unfold Merkle.publicKeyFromSignature
+  rw [Merkle.publicKeyFromSignature_eq_fold]
   have hwots := Bounds.of_exact
     (wots_exact signature.wots message publicSeed (Merkle.wotsAddress address index.val))
     (show 46 ≤ _ by omega) (show _ ≤ 511 by omega)

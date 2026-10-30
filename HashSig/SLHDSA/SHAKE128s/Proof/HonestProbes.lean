@@ -485,7 +485,7 @@ theorem merkle_sign_wots (cache : QueryCache HashSpec)
     (@Merkle.sign Id _ (replayQuery cache) message secretSeed publicSeed address leaf).wots =
       @Wots.sign Id _ (replayQuery cache) message secretSeed publicSeed
         (Merkle.wotsAddress address leaf.val) := by
-  simp only [Merkle.sign, Correctness.sequenceFin_id, bind, pure]
+  simp only [Merkle.sign_eq_sequenceFin, Correctness.sequenceFin_id, bind, pure]
 
 /-- The authentication half of an honest XMSS signature. -/
 theorem merkle_sign_authentication (cache : QueryCache HashSpec)
@@ -495,7 +495,7 @@ theorem merkle_sign_authentication (cache : QueryCache HashSpec)
         leaf).authentication level =
       @Merkle.node Id _ (replayQuery cache) secretSeed publicSeed address level.val
         (Nat.xor (leaf.val / 2 ^ level.val) 1) := by
-  simp only [Merkle.sign, Correctness.sequenceFin_id, bind, pure]
+  simp only [Merkle.sign_eq_sequenceFin, Correctness.sequenceFin_id, bind, pure]
 
 /-- A checksum-encoded digit never exceeds `w - 1`. -/
 theorem checksum_digit_le (message : Digest) (chain : Fin chains) :
@@ -586,6 +586,7 @@ theorem probes_merkle_sign (cache : QueryCache HashSpec) (secretSeed publicSeed 
     Probes cache
       (Merkle.sign (m := OracleComp HashSpec) message secretSeed publicSeed tree.address leaf)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Merkle.sign_eq_sequenceFin]
   refine probes_bind_replay cache _ _ _ ?_ ?_
   · refine probes_sequenceFin cache _ subtreeHeight _ fun level => ?_
     exact probes_merkle_node cache secretSeed publicSeed tree level.val (le_of_lt level.isLt)
@@ -738,6 +739,7 @@ theorem probes_merkle_publicKeyFromSignature (cache : QueryCache HashSpec)
       (Merkle.publicKeyFromSignature (m := OracleComp HashSpec) leaf signature message
         publicSeed tree.address)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Merkle.publicKeyFromSignature_eq_fold]
   have hwots : ∀ chain : Fin chains, signature.wots chain =
       @Wots.chain Id _ (replayQuery cache) publicSeed
         { (WotsKey.mk tree leaf).address with chainOrHeight := BitVec.ofNat 32 chain.val } 0
