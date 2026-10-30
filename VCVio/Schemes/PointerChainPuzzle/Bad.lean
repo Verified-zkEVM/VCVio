@@ -817,64 +817,45 @@ end Preprocessing
 
 /-! ## Claim 3 -/
 
-section Experiment
+section OutcomeExperiment
 
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
   [SampleableType S] [SampleableType L] [SampleableType Salt]
-  {adv : TimeLockPuzzle.Adversary (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt) S}
   {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S} [NeZero n] [AddCommGroup L]
 
 omit [NeZero n] [AddCommGroup L] in
-/-- A bound on an event after each preprocessing run, for the salt, links and labels drawn
-after it, bounds the event after the seed. -/
-lemma prEvent_seed_bind_le {g : Seed n m S L Salt Ctx adv.State → ProbComp Prop} {ε : ℝ≥0∞}
-    (h : ∀ z ∈ support ((simulateQ (oracleSpec n S L Salt Ctx).romImpl adv.preprocess).run ∅),
+/-- A bound on an event after each run of the preprocessing computation, for the salt, links and
+labels drawn after it, bounds the event after the seed. -/
+lemma prEvent_seedOf_bind_le {State : Type}
+    {pre : OracleComp (unifSpec + oracleSpec n S L Salt Ctx) State}
+    {g : Seed n m S L Salt Ctx State → ProbComp Prop} {ε : ℝ≥0∞}
+    (h : ∀ z ∈ support ((simulateQ (oracleSpec n S L Salt Ctx).romImpl pre).run ∅),
       prEvent ($ᵗ Salt >>= fun salt => $ᵗ (L × (Fin (n - 1) → L)) >>= fun p =>
         $ᵗ Labels n m S L >>= fun ℓ => g ⟨z.1, z.2, salt, p.1, p.2, ℓ⟩) ≤ ε) :
-    prEvent (seed adv m >>= g) ≤ ε := by
-  simp only [seed, bind_assoc, pure_bind]
+    prEvent (seedOf pre m >>= g) ≤ ε := by
+  simp only [seedOf, bind_assoc, pure_bind]
   exact prEvent_bind_le_of_support h
 
-/-- **Online Bad.** In the ideal experiment, under an online budget of `Q_on` points, online Bad
-occurs with probability at most `Q_on ([n ≥ 2] / |L| + P / |S|)`: resampling every label but the
-commitment fixes the puzzle, and the bridge (`prEvent_newHit_le`) applies from the initial state. -/
-theorem prEvent_idealExperiment_onlineBad_le [Fintype S] [Fintype L] {r Qon : ℕ}
-    (hadv : ∀ σ P, IsOnlineQueryBound (adv.online σ P) (r, Qon)) :
-    Pr{let res ← idealExperiment adv m mkCtx initAcc}[res.onlineBad = true] ≤
-      Qon * hitBound n m S L := by
-  rw [idealExperiment, map_bind]
-  refine prEvent_seed_bind_le fun z _ => prEvent_bind_le fun salt => prEvent_bind_le fun p => ?_
-  simp only [idealRest, Functor.map_map, Seed.puzzle]
-  rw [← prEvent_uniform_bind_mixLabels ∅]
-  refine prEvent_bind_le fun ℓ₀ => ?_
-  simp only [labelPuzzle_mixLabels]
-  have h := prEvent_newHit_le (mkCtx := mkCtx) (initAcc := initAcc) (labelPuzzle salt p.1 p.2 ℓ₀)
-    (adv.online z.1 (labelPuzzle salt p.1 p.2 ℓ₀)) (hadv _ _).isPointQueryBound
-    (IdealState.init z.2) ℓ₀
-  refine le_trans (prEvent_bind_mono fun ℓ' _ =>
-    prEvent_mono_of_support _ _ _ fun w _ hw => ?_) h
-  obtain ⟨e, he, hb⟩ := of_decide_eq_true hw
-  exact ⟨e, by simpa using he, hb.hitAt⟩
-
-/-- **The generator's `Bad`.** For a preprocessing phase making at most `Q_pre` queries, the
-generator's `Bad` holds on the seed with probability at most
+/-- **The generator's `Bad`.** For a preprocessing computation making at most `Q_pre` queries,
+the generator's `Bad` holds on the seed with probability at most
 `P² / |S| + Q_pre (1 / (|Salt| |L|) + P / |S|)`: collisions (case 1), and a path input among the
-at most `Q_pre` points cached by the preprocessing phase (case 2). -/
-theorem prEvent_seed_bad_le [Fintype S] [Fintype L] [Fintype Salt]
-    (hctx : Function.Injective mkCtx) {Qpre : ℕ}
-    (hpre : IsPreprocessingQueryBound adv.preprocess Qpre) :
-    Pr{let s ← seed adv m}[Bad m mkCtx initAcc s.cache s.puzzle s.labels] ≤
+at most `Q_pre` points cached by the preprocessing computation (case 2). -/
+theorem prEvent_seedOf_bad_le [Fintype S] [Fintype L] [Fintype Salt]
+    (hctx : Function.Injective mkCtx) {State : Type}
+    {pre : OracleComp (unifSpec + oracleSpec n S L Salt Ctx) State} {Qpre : ℕ}
+    (hpre : IsPreprocessingQueryBound pre Qpre) :
+    Pr{let s ← seedOf pre m}[Bad m mkCtx initAcc s.cache s.puzzle s.labels] ≤
       (solvePoints n m : ℝ≥0∞) ^ 2 / Fintype.card S +
         Qpre * ((Fintype.card Salt * Fintype.card L : ℝ≥0∞)⁻¹ +
           solvePoints n m / Fintype.card S) := by
   simp only [Bad]
   refine (prEvent_or_le _ _ _).trans (add_le_add ?_ ?_)
   · rw [map_eq_bind_pure_comp]
-    refine prEvent_seed_bind_le fun z _ => prEvent_bind_le fun salt => prEvent_bind_le fun p => ?_
+    refine prEvent_seedOf_bind_le fun z _ => prEvent_bind_le fun salt => prEvent_bind_le fun p => ?_
     simpa [Seed.puzzle, bind_pure_comp] using prEvent_collision_le (m := m) (mkCtx := mkCtx)
       (initAcc := initAcc) (S := S) salt p.1 p.2
   · rw [map_eq_bind_pure_comp]
-    refine prEvent_seed_bind_le fun z hz => ?_
+    refine prEvent_seedOf_bind_le fun z hz => ?_
     let J : ProbComp (Salt × (L × (Fin (n - 1) → L)) × Labels n m S L) :=
       $ᵗ Salt >>= fun salt => $ᵗ (L × (Fin (n - 1) → L)) >>= fun p =>
         $ᵗ Labels n m S L >>= fun ℓ => pure (salt, p, ℓ)
@@ -897,6 +878,93 @@ theorem prEvent_seed_bad_le [Fintype S] [Fintype L] [Fintype Salt]
           rw [mul_comm]
           gcongr
 
+variable {Out : Type}
+  {adv : TimeLockPuzzle.TwoPhaseAdversary unifSpec (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt)
+    Out}
+
+/-- **Online Bad.** In the ideal experiment for an online phase with outputs of any type, under an
+online budget of `Q_on` points, online Bad occurs with probability at most
+`Q_on ([n ≥ 2] / |L| + P / |S|)`: resampling every label but the commitment fixes the puzzle, and
+the bridge (`prEvent_newHit_le`) applies from the initial state. -/
+theorem prEvent_idealOutcomeExperiment_onlineBad_le [Fintype S] [Fintype L] {r Qon : ℕ}
+    (hadv : ∀ σ P, IsOnlineQueryBound (adv.online σ P) (r, Qon)) :
+    Pr{let res ← idealOutcomeExperiment adv m mkCtx initAcc}[res.onlineBad = true] ≤
+      Qon * hitBound n m S L := by
+  rw [idealOutcomeExperiment, map_bind]
+  refine prEvent_seedOf_bind_le fun z _ => prEvent_bind_le fun salt => prEvent_bind_le fun p => ?_
+  simp only [idealOutcomeRest, Functor.map_map, Seed.puzzle]
+  rw [← prEvent_uniform_bind_mixLabels ∅]
+  refine prEvent_bind_le fun ℓ₀ => ?_
+  simp only [labelPuzzle_mixLabels]
+  have h := prEvent_newHit_le (mkCtx := mkCtx) (initAcc := initAcc) (labelPuzzle salt p.1 p.2 ℓ₀)
+    (adv.online z.1 (labelPuzzle salt p.1 p.2 ℓ₀)) (hadv _ _).isPointQueryBound
+    (IdealState.init z.2) ℓ₀
+  refine le_trans (prEvent_bind_mono fun ℓ' _ =>
+    prEvent_mono_of_support _ _ _ fun w _ hw => ?_) h
+  obtain ⟨e, he, hb⟩ := of_decide_eq_true hw
+  exact ⟨e, by simpa using he, hb.hitAt⟩
+
+/-- **Claim 3, for any output.** In the ideal experiment for an online phase with outputs of any
+type, for injective `mkCtx` and an adversary making at most `Q_pre` preprocessing queries and at
+most `Q_on` online point queries, the generator's `Bad` or online Bad occurs with probability at
+most `[n ≥ 2] Q_on / |L| + Q_pre / (|Salt| |L|) + ((Q_pre + Q_on) P + P²) / |S|`, with
+`P = solvePoints n m`. The first term is absent when `n = 1`. -/
+theorem prEvent_idealOutcomeExperiment_bad_le [Fintype S] [Fintype L] [Fintype Salt]
+    (hctx : Function.Injective mkCtx) {Qpre r Qon : ℕ} (hadv : adv.IsQueryBound Qpre (r, Qon)) :
+    Pr{let res ← idealOutcomeExperiment adv m mkCtx initAcc}[
+        res.genBad = true ∨ res.onlineBad = true] ≤
+      (if 2 ≤ n then (Qon : ℝ≥0∞) / Fintype.card L else 0) +
+        Qpre / (Fintype.card Salt * Fintype.card L) +
+          ((Qpre + Qon) * solvePoints n m + (solvePoints n m : ℝ≥0∞) ^ 2) / Fintype.card S := by
+  refine (prEvent_or_le _ _ _).trans ?_
+  rw [prEvent_idealOutcomeExperiment_genBad]
+  refine (add_le_add (prEvent_seedOf_bad_le hctx hadv.1)
+    (prEvent_idealOutcomeExperiment_onlineBad_le hadv.2)).trans (le_of_eq ?_)
+  simp only [hitBound, div_eq_mul_inv]
+  split_ifs <;> ring
+
+end OutcomeExperiment
+
+section Experiment
+
+variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
+  [SampleableType S] [SampleableType L] [SampleableType Salt]
+  {adv : TimeLockPuzzle.Adversary (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt) S}
+  {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S} [NeZero n] [AddCommGroup L]
+
+omit [NeZero n] [AddCommGroup L] in
+/-- A bound on an event after each preprocessing run, for the salt, links and labels drawn
+after it, bounds the event after the seed. -/
+lemma prEvent_seed_bind_le {g : Seed n m S L Salt Ctx adv.State → ProbComp Prop} {ε : ℝ≥0∞}
+    (h : ∀ z ∈ support ((simulateQ (oracleSpec n S L Salt Ctx).romImpl adv.preprocess).run ∅),
+      prEvent ($ᵗ Salt >>= fun salt => $ᵗ (L × (Fin (n - 1) → L)) >>= fun p =>
+        $ᵗ Labels n m S L >>= fun ℓ => g ⟨z.1, z.2, salt, p.1, p.2, ℓ⟩) ≤ ε) :
+    prEvent (seed adv m >>= g) ≤ ε :=
+  prEvent_seedOf_bind_le h
+
+/-- **Online Bad.** In the ideal experiment, under an online budget of `Q_on` points, online Bad
+occurs with probability at most `Q_on ([n ≥ 2] / |L| + P / |S|)`: resampling every label but the
+commitment fixes the puzzle, and the bridge (`prEvent_newHit_le`) applies from the initial state. -/
+theorem prEvent_idealExperiment_onlineBad_le [Fintype S] [Fintype L] {r Qon : ℕ}
+    (hadv : ∀ σ P, IsOnlineQueryBound (adv.online σ P) (r, Qon)) :
+    Pr{let res ← idealExperiment adv m mkCtx initAcc}[res.onlineBad = true] ≤
+      Qon * hitBound n m S L := by
+  rw [idealExperiment_eq_map_toResult, prEvent_map]
+  exact prEvent_idealOutcomeExperiment_onlineBad_le hadv
+
+/-- **The generator's `Bad`.** For a preprocessing phase making at most `Q_pre` queries, the
+generator's `Bad` holds on the seed with probability at most
+`P² / |S| + Q_pre (1 / (|Salt| |L|) + P / |S|)`: collisions (case 1), and a path input among the
+at most `Q_pre` points cached by the preprocessing phase (case 2). -/
+theorem prEvent_seed_bad_le [Fintype S] [Fintype L] [Fintype Salt]
+    (hctx : Function.Injective mkCtx) {Qpre : ℕ}
+    (hpre : IsPreprocessingQueryBound adv.preprocess Qpre) :
+    Pr{let s ← seed adv m}[Bad m mkCtx initAcc s.cache s.puzzle s.labels] ≤
+      (solvePoints n m : ℝ≥0∞) ^ 2 / Fintype.card S +
+        Qpre * ((Fintype.card Salt * Fintype.card L : ℝ≥0∞)⁻¹ +
+          solvePoints n m / Fintype.card S) :=
+  prEvent_seedOf_bad_le hctx hpre
+
 /-- **Claim 3.** In the ideal experiment, for injective `mkCtx` and an adversary making at most
 `Q_pre` preprocessing queries and at most `Q_on` online point queries, the generator's `Bad` or
 online Bad occurs with probability at most
@@ -908,12 +976,8 @@ theorem prEvent_idealExperiment_bad_le [Fintype S] [Fintype L] [Fintype Salt]
       (if 2 ≤ n then (Qon : ℝ≥0∞) / Fintype.card L else 0) +
         Qpre / (Fintype.card Salt * Fintype.card L) +
           ((Qpre + Qon) * solvePoints n m + (solvePoints n m : ℝ≥0∞) ^ 2) / Fintype.card S := by
-  refine (prEvent_or_le _ _ _).trans ?_
-  rw [prEvent_idealExperiment_genBad]
-  refine (add_le_add (prEvent_seed_bad_le hctx hadv.1)
-    (prEvent_idealExperiment_onlineBad_le hadv.2)).trans (le_of_eq ?_)
-  simp only [hitBound, div_eq_mul_inv]
-  split_ifs <;> ring
+  rw [idealExperiment_eq_map_toResult, prEvent_map]
+  exact prEvent_idealOutcomeExperiment_bad_le hctx hadv
 
 end Experiment
 

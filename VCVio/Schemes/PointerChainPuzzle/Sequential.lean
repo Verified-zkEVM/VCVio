@@ -30,8 +30,9 @@ follows by induction on the rounds.
   most `r`.
 * `key_not_mem_reached_of_isOnlineQueryBound`: with fewer than `keyRound n m` online rounds, the
   key is not reached at the end of any run (the conclusion of Claim 1 used in the delay proof).
-* `prEvent_idealExperiment_keyReached`: in the ideal experiment of an adversary with fewer than
-  `keyRound n m` online rounds, the key is reached with probability `0`.
+* `prEvent_idealOutcomeExperiment_keyReached`, `prEvent_idealExperiment_keyReached`: in the ideal
+  experiment of an adversary with fewer than `keyRound n m` online rounds, for outputs of any type
+  and for a delay adversary, the key is reached with probability `0`.
 -/
 
 public section
@@ -165,6 +166,29 @@ theorem key_not_mem_reached_of_isOnlineQueryBound {α : Type}
 
 end Handler
 
+section OutcomeExperiment
+
+variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
+  [SampleableType S] [SampleableType L] [SampleableType Salt]
+  {mkCtx : Salt → Ctx} {initAcc : Ctx → S} [NeZero n] [AddCommGroup L]
+
+/-- **Claim 1, in the ideal experiment for any output.** If the online phase of the adversary, with
+outputs of any type, submits at most `r < keyRound n m` rounds, the key is reached in the ideal
+experiment with probability `0`. -/
+theorem prEvent_idealOutcomeExperiment_keyReached {Out : Type}
+    {adv : TimeLockPuzzle.TwoPhaseAdversary unifSpec (oracleSpec n S L Salt Ctx)
+      (Puzzle n S L Salt) Out} {r q : ℕ}
+    (hbound : ∀ σ P, IsOnlineQueryBound (adv.online σ P) (r, q)) (hr : r < keyRound n m) :
+    Pr{let res ← idealOutcomeExperiment adv m mkCtx initAcc}[res.keyReached = true] = 0 := by
+  refine prEvent_eq_zero_of_forall_mem_support _ _ fun res hres => ?_
+  rw [idealOutcomeExperiment, mem_support_bind_iff] at hres
+  obtain ⟨s, -, hres⟩ := hres
+  rw [idealOutcomeRest, support_map] at hres
+  obtain ⟨z, hz, rfl⟩ := hres
+  simpa using key_not_mem_reached_of_isOnlineQueryBound (hbound _ _) hr _ hz
+
+end OutcomeExperiment
+
 section Experiment
 
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
@@ -177,12 +201,8 @@ variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
 theorem prEvent_idealExperiment_keyReached {r q : ℕ}
     (hbound : ∀ σ P, IsOnlineQueryBound (adv.online σ P) (r, q)) (hr : r < keyRound n m) :
     Pr{let res ← idealExperiment adv m mkCtx initAcc}[res.keyReached = true] = 0 := by
-  refine prEvent_eq_zero_of_forall_mem_support _ _ fun res hres => ?_
-  rw [idealExperiment, mem_support_bind_iff] at hres
-  obtain ⟨s, -, hres⟩ := hres
-  rw [idealRest, support_map] at hres
-  obtain ⟨z, hz, rfl⟩ := hres
-  simpa using key_not_mem_reached_of_isOnlineQueryBound (hbound _ _) hr _ hz
+  rw [idealExperiment_eq_map_toResult, prEvent_map]
+  exact prEvent_idealOutcomeExperiment_keyReached hbound hr
 
 end Experiment
 
