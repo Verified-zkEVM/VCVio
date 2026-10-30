@@ -15,8 +15,9 @@ A reduction to PRF security often draws a hidden bit `b`, runs a game `run b` th
 distinguisher's function oracle, and outputs whether the game's guess is `b`. In either world of
 the PRF game its success probability is the average of the two branches in that world: the
 probability that the game at bit `true` outputs `true` and the probability that the game at bit
-`false` outputs `false`. Comparing the two worlds then bounds the gap between the branches by
-twice the PRF advantage.
+`false` outputs `false`. If the two branches have the same output distribution in the ideal
+world, comparing the two worlds bounds the gap between the branches in the real world by twice
+the PRF advantage.
 
 ## Main statements
 
