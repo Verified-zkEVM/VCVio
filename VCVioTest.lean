@@ -76,6 +76,7 @@ public import VCVioTest.OracleComp.BudgetedPotential
 public import VCVioTest.OracleComp.EqDistTriple
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
+public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.OracleComp.SpecInstanceSearch
 public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
