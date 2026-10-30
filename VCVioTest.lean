@@ -92,6 +92,7 @@ public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.PointerChainPuzzle.Bad
 public import VCVioTest.PointerChainPuzzle.Basic
 public import VCVioTest.PointerChainPuzzle.Batch
+public import VCVioTest.PointerChainPuzzle.Delay
 public import VCVioTest.PointerChainPuzzle.Handler
 public import VCVioTest.PointerChainPuzzle.Ideal
 public import VCVioTest.PointerChainPuzzle.LeanSeal
