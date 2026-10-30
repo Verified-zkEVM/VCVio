@@ -29,7 +29,6 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 
 namespace FiatShamirWithAbort
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (M : Type) [DecidableEq M] (maxAttempts : ℕ)
@@ -45,7 +44,6 @@ bounds, the within-signing-query total-variation induction
 (`measureETVDist_run_fsAbortSignLoop_progSignBody_le`), and the expected cache-growth
 bound for the reprogramming loop (`tsum_prEvent_run_progSignBody_mul_enncard_le`). -/
 
-omit [SampleableType Stmt] in
 /-- One-attempt unfolding of the reprogramming loop's cache-level run. -/
 lemma run_progSignBody_succ (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ)
     (c : (M × Commit →ₒ Chal).QueryCache) :
@@ -66,7 +64,6 @@ lemma run_progSignBody_succ (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ)
   | some z => rfl
   | none => rfl
 
-omit [SampleableType Stmt] in
 /-- One-attempt unfolding of the real signing loop's cache-level run under the caching
 random oracle: commit, take one `roStep` at the commitment point, respond against the
 returned challenge, and either return or recurse on the post-step cache. -/
@@ -146,7 +143,7 @@ lemma signCollisionBound_eq (ε p : ℝ) (n : ℕ) (N : ℝ≥0∞) :
 
 /-! ### Per-attempt collision and abort bounds -/
 
-omit [SampleableType Stmt] [DecidableEq Commit] in
+omit [DecidableEq Commit] in
 /-- Aggregate per-attempt abort bound: the commit-averaged probability that a fresh
 uniform challenge is refused equals the abort probability of one honest execution. -/
 lemma tsum_prEvent_commit_mul_abort_le (pk : Stmt) (sk : Wit) {p_abort : ℝ}
@@ -169,7 +166,7 @@ lemma tsum_prEvent_commit_mul_abort_le (pk : Stmt) (sk : Wit) {p_abort : ℝ}
     · exact absurd rfl hb
     · simp
 
-omit [SampleableType Stmt] [SampleableType Chal] [DecidableEq M] [DecidableEq Commit] in
+omit [SampleableType Chal] [DecidableEq M] [DecidableEq Commit] in
 /-- Commitment-guessing bound for cache hits: under a pointwise commitment-guessing
 bound `ε`, one commit lands on a cached point of `c` at message `msg` with probability
 at most `enncard c · ε`. -/
@@ -222,7 +219,6 @@ lemma prEvent_commit_hit_le (pk : Stmt) (sk : Wit) {ε : ℝ}
 
 /-! ### The two body-level cores of the Sign → Prog hop -/
 
-omit [SampleableType Stmt] in
 /-- **Within-signing-query TV induction for the Sign → Prog hop.** From a shared
 starting cache, the real signing loop (live caching random oracle) and the
 all-attempts-reprogramming loop are within total-variation distance
@@ -364,7 +360,6 @@ lemma measureETVDist_run_fsAbortSignLoop_progSignBody_le
         _ = signCollisionBound ε p_abort (n + 1) (QueryCache.enncard c) :=
             (signCollisionBound_succ ε p_abort n (QueryCache.enncard c)).symm
 
-omit [SampleableType Stmt] in
 /-- **Expected cache growth of the reprogramming loop.** Each attempt of `progSignBody`
 programs at most one new cache point and the loop continues only on a fresh-challenge
 rejection, so the expected size of the final cache is at most `|c| + ∑_{a<n} p ^ a`. -/

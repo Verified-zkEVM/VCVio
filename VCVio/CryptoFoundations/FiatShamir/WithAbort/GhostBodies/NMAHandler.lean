@@ -28,7 +28,6 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 
 namespace FiatShamirWithAbort
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (M : Type) [DecidableEq M] (maxAttempts : ℕ)
@@ -72,7 +71,7 @@ The base layer is untouched. -/
       ProbComp (Option (Commit × Resp)) :=
   liftM (firstSome (sim pk) maxAttempts) >>= ghostSignProgramCont M msg
 
-omit [SampleableType Stmt] [SampleableType Chal] in
+omit [SampleableType Chal] in
 /-- Overlay projection of `ghostSignProgramCont`: overlaying the ghost layer onto the base
 layer turns the ghost-layer programming into an ordinary cache programming, recovering
 `signProgramCont` on the overlaid cache. -/
@@ -91,7 +90,7 @@ lemma run_ghostSignProgramCont_overlay (msg : M)
       simp only [ghostSignProgramCont, signProgramCont, StateT.run_bind, StateT.run_modify,
         pure_bind, StateT.run_pure, map_pure, overlayCache_cacheQuery_ghost]
 
-omit [SampleableType Stmt] [SampleableType Chal] in
+omit [SampleableType Chal] in
 /-- Overlay projection of `simGhostSignBody`: overlaying the ghost layer onto the base layer
 recovers `simSignBody` on the overlaid cache. The simulator loop is run identically; only
 the destination layer of the accepted programming differs, which the overlay erases. -/
@@ -107,7 +106,7 @@ lemma run_simGhostSignBody_overlay (pk : Stmt) (sk : Wit) (msg : M)
   refine congrArg (firstSome (sim pk) maxAttempts >>= ·) (funext fun oz => ?_)
   exact run_ghostSignProgramCont_overlay M msg oz re gh
 
-omit [SampleableType Stmt] [SampleableType Chal] in
+omit [SampleableType Chal] in
 /-- Ghost-domain support fact for `simGhostSignBody`: every ghost-layer entry of an output
 state is either an entry already present in the input ghost layer, or sits at a point whose
 message component equals the signed message `msg`.  The base layer is never touched. -/
@@ -153,15 +152,15 @@ component of the linked-run projection `proj2`. -/
     | .inl _ => none
     | .inr mc => base mc
 
-omit [SampleableType Stmt] [DecidableEq Commit] [DecidableEq M] [SampleableType Chal] in
+omit [DecidableEq Commit] [DecidableEq M] [SampleableType Chal] in
 @[simp] lemma baseEmbed_inr (base : (M × Commit →ₒ Chal).QueryCache) (mc : M × Commit) :
     baseEmbed M base (.inr mc) = base mc := rfl
 
-omit [SampleableType Stmt] [DecidableEq Commit] [DecidableEq M] [SampleableType Chal] in
+omit [DecidableEq Commit] [DecidableEq M] [SampleableType Chal] in
 @[simp] lemma baseEmbed_inl (base : (M × Commit →ₒ Chal).QueryCache)
     (n : unifSpec.Domain) : baseEmbed M base (.inl n) = none := rfl
 
-omit [SampleableType Stmt] [DecidableEq Commit] [DecidableEq M] [SampleableType Chal] in
+omit [DecidableEq Commit] [DecidableEq M] [SampleableType Chal] in
 /-- The embedding of the empty base cache is the empty outer cache. -/
 @[simp] lemma baseEmbed_empty :
     baseEmbed M (∅ : (M × Commit →ₒ Chal).QueryCache) =
@@ -171,7 +170,7 @@ omit [SampleableType Stmt] [DecidableEq Commit] [DecidableEq M] [SampleableType 
   | inl n => rfl
   | inr mc => rfl
 
-omit [SampleableType Stmt] [SampleableType Chal] in
+omit [SampleableType Chal] in
 /-- Embedding commutes with caching a random-oracle point: `baseEmbed` of a base cache
 extended at `mc` equals the outer cache extended at the `.inr mc` slot. -/
 lemma baseEmbed_cacheQuery (base : (M × Commit →ₒ Chal).QueryCache)
@@ -213,13 +212,11 @@ programming to the *ghost* layer. -/
         (alc.1, (alc.2, msg :: s.2))) <$>
         (simGhostSignBody M maxAttempts sim pk msg).run s.1
 
-omit [SampleableType Stmt] in
 lemma ghostNmaImpl_run_unif (pk : Stmt) (sk : Wit) (n : unifSpec.Domain)
     (s : NmaGhostState M Commit Chal) :
     (ghostNmaImpl M maxAttempts sim pk sk (.inl (.inl n))).run s =
       (fun u => (u, s)) <$> (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) n := rfl
 
-omit [SampleableType Stmt] in
 lemma ghostNmaImpl_run_ro (pk : Stmt) (sk : Wit) (mc : M × Commit)
     (s : NmaGhostState M Commit Chal) :
     (ghostNmaImpl M maxAttempts sim pk sk (.inl (.inr mc))).run s =
@@ -229,7 +226,6 @@ lemma ghostNmaImpl_run_ro (pk : Stmt) (sk : Wit) (mc : M × Commit)
           (fun cu : Chal × (M × Commit →ₒ Chal).QueryCache =>
             (cu.1, ((cu.2, s.1.2), s.2))) <$> roStep M s.1.1 mc := rfl
 
-omit [SampleableType Stmt] in
 lemma ghostNmaImpl_run_sign (pk : Stmt) (sk : Wit) (msg : M)
     (s : NmaGhostState M Commit Chal) :
     (ghostNmaImpl M maxAttempts sim pk sk (.inr msg)).run s =
@@ -238,7 +234,6 @@ lemma ghostNmaImpl_run_sign (pk : Stmt) (sk : Wit) (msg : M)
         (alc.1, (alc.2, msg :: s.2))) <$>
         (simGhostSignBody M maxAttempts sim pk msg).run s.1 := rfl
 
-omit [SampleableType Stmt] in
 /-- **Ghost-domain invariant for `ghostNmaImpl`.** Along any run of the layered NMA handler,
 every ghost-layer entry's message component has been recorded in the signed list. This is the
 NMA analogue of `ghostHybridImpl_preserves_signed_inv`: the base oracles never write the ghost
@@ -276,7 +271,6 @@ lemma ghostNmaImpl_preserves_signed_inv (pk : Stmt) (sk : Wit)
     · exact List.mem_cons_of_mem _ (hs q hgh)
     · exact hmsg ▸ List.mem_cons_self
 
-omit [SampleableType Stmt] in
 /-- **Whole-run ghost-domain invariant.** Lifting `ghostNmaImpl_preserves_signed_inv` through
 the full simulated run via `simulateQ_run_preserves_inv_of_query`: starting from the empty
 layered state `((∅, ∅), [])`, every output state `z` in the support of the layered ghost-tagged
@@ -296,7 +290,6 @@ lemma ghostNmaImpl_run_signed_inv (pk : Stmt) (sk : Wit) {β : Type}
   intro q hq
   exact absurd rfl hq
 
-omit [SampleableType Stmt] in
 /-- **Overlay projection of the layered NMA handler.** Each step of the
 layered ghost-tagged handler `ghostNmaImpl`, projected by overlaying the ghost layer onto the
 base layer, equals the corresponding step of the plain single-cache hybrid handler
@@ -344,7 +337,6 @@ lemma ghostNmaImpl_proj_hybrid (pk : Stmt) (sk : Wit)
     · exact (hybridSignImpl_run M (simSignBody M maxAttempts sim pk sk) msg
         (overlayCache M s.1.1 s.1.2) s.2).symm
 
-omit [SampleableType Stmt] in
 /-- **Overlay projection, full-run form.** The full simulated run of the layered ghost-tagged NMA
 handler `ghostNmaImpl`, projected by overlaying the ghost layer onto the base layer, equals
 the plain single-cache simulated hybrid run.  This lifts the per-step projection
@@ -366,7 +358,6 @@ lemma map_run_simulateQ_ghostNmaImpl_overlay {β : Type} (pk : Stmt) (sk : Wit)
     (fun g => (overlayCache M g.1.1 g.1.2, g.2))
     (ghostNmaImpl_proj_hybrid M maxAttempts sim pk sk) oa s
 
-omit [SampleableType Stmt] in
 /-- **Overlay projection at the initial empty layered state.** Starting from the empty layered
 cache `((∅, ∅), [])`, the overlay-projected layered run equals the plain single-cache hybrid
 run started from `(∅, [])` (using `overlayCache _ ∅ = id` to simplify the projected initial

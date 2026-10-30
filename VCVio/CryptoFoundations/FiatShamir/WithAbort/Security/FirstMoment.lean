@@ -33,7 +33,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -68,7 +67,6 @@ count is recovered without a new state field as drawn-list growth plus signed-li
 (each signing query adds exactly one signed message), and its per-query charge is
 `∑_{a≤maxAttempts} p^a ≤ 1/(1-p)`. -/
 
-omit [SampleableType Stmt] in
 /-- **General geometric attempt-count fold.** For any number of terms `n`, the geometric sum
 `∑_{a<n} ofReal p^a` is bounded by `ofReal (1/(1-p))`; used at `n = maxAttempts + 1` for the
 attempt-count charge `∑_{a≤maxAttempts} p^a`. -/
@@ -133,7 +131,6 @@ lemma sum_map_count_comm {α : Type} [DecidableEq α] (l d : List α) :
         · simp [h, Ne.symm h]
       rw [key, count_eq_sum_map_ite, add_comm]
 
-omit [SampleableType Stmt] in
 /-- **Deterministic readlist-length bound.** Every reachable final state of the read-recording run
 records at most `qH` new read-commits, where `qH` bounds the random-oracle (read) queries `oa` makes
 (the `(· matches .inl (.inr _))` component of `signHashQueryBound`): each read step prepends exactly
@@ -193,7 +190,6 @@ theorem deferredDrawReadImpl_run_readlist_length_le {γ : Type} (pk : Stmt) (sk 
           ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2), s.2) z hzx
         simpa using hih
 
-omit [SampleableType Stmt] in
 /-- **Per-step expected attempt-count growth of the read-recording handler.** One step of
 `deferredDrawReadImpl` grows the expected combined size `drawnlist.length + signedlist.length` by at
 most `1/(1-p)` on a signing query and by `0` on a uniform or random-oracle-read query (which leave
@@ -267,7 +263,6 @@ lemma deferredDrawReadImpl_step_expected_attemptCount_le (pk : Stmt) (sk : Wit)
           rw [Finset.sum_range_succ']
           simp only [pow_zero]
 
-omit [SampleableType Stmt] in
 /-- **Run-level expected attempt count of the read-recording run.** By induction on `oa`, the
 expected combined size `drawnlist.length + signedlist.length` of the read-recording run from a start
 state `s` is at most `(s.drawnlist.length + s.signedlist.length) + qSrem · (1/(1-p))`, where `qSrem`
@@ -362,7 +357,6 @@ theorem deferredDrawRead_run_expected_attemptCount_le {γ : Type} (pk : Stmt) (s
               have : qSrem - 1 + 1 = qSrem := by omega
               rw [← this]; push_cast; ring]
 
-omit [SampleableType Stmt] in
 /-- **The signed-message list of the read-recording run grows.** From any start state the recorded
 signed-message list only ever gets longer, so its start length `l.length` is a lower bound on every
 reachable final length. -/
@@ -399,7 +393,6 @@ theorem deferredDrawRead_run_signed_prefix {γ : Type} (pk : Stmt) (sk : Wit)
         rw [support_map] at hxs
         obtain ⟨alc, _, rfl⟩ := hxs; simp
 
-omit [SampleableType Stmt] in
 /-- **The drawn-list of the read-recording run grows.** From any start state the recorded drawn
 (rejected-commit) list only ever gets longer: uniform and read steps leave it untouched, signing
 steps append the body's rejected draws. So the start length is a lower bound on every reachable
@@ -437,7 +430,6 @@ theorem deferredDrawRead_run_drawn_prefix {γ : Type} (pk : Stmt) (sk : Wit)
         rw [support_map] at hxs
         obtain ⟨alc, _, rfl⟩ := hxs; simp
 
-omit [SampleableType Stmt] in
 /-- **Read-recording attempt-count mean.** The constructed attempt count
 `(drawnlist.length) + (signedlist.length - l.length)` (= #rejects + #signing-queries, the count that
 soundly dominates the consumed-attempt positions) of the read-recording run from the empty-draw

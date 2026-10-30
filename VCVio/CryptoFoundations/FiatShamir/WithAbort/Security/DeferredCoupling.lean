@@ -32,7 +32,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -73,7 +72,6 @@ The state invariant linking the eager `GhostState` and the deferred `DeferredSta
 signed-message list agree, every key in the ghost cache has its commitment recorded in the drawn
 list, and the bad flag is ordered (eager-bad ⟹ deferred-bad). The read points coincide because both
 sides answer from the (shared) real layer. -/
-omit [SampleableType Stmt] in
 /-- The coupling invariant between the eager ghost-blind state and the deferred-draw state: real
 cache and signed list agree, every ghost-cache key's commitment is in the drawn list, and the bad
 flag is ordered. -/
@@ -83,7 +81,6 @@ flag is ordered. -/
     (∀ mc : M × Commit, s₁.1.1.2 mc ≠ none → mc.2 ∈ s₂.1.2) ∧
     (s₁.2 = true → s₂.2 = true)
 
-omit [SampleableType Stmt] in
 /-- **Per-query coupling step for the ghost-blind → deferred coupling.** From any pair of
 `deferredCoupleInv`-related states, one step of the eager ghost-blind handler couples with one step
 of the deferred-draw handler with equal output and the invariant preserved.
@@ -170,7 +167,6 @@ theorem deferredCouple_step (pk : Stmt) (sk : Wit)
     rintro p₁ p₂ ⟨hout, hcache, hghcov⟩
     exact ⟨hout, hcache, by rw [hl], hghcov, hbad⟩
 
-omit [SampleableType Stmt] in
 /-- **The ghost-blind → deferred run coupling.** By induction on the adversary computation `oa`,
 the eager ghost-blind run and the deferred-draw run are coupled with the invariant
 `deferredCoupleInv` preserved at every leaf, using `deferredCouple_step` at each query and the
@@ -198,7 +194,6 @@ theorem deferredCouple_run {γ : Type} (pk : Stmt) (sk : Wit)
       rw [show p₁.1 = p₂.1 from hout]
       exact ih p₂.1 p₁.2 p₂.2 hinv'
 
-omit [SampleableType Stmt] in
 /-- **Ghost-blind → deferred coupling.** The ghost-blind run's bad marginal is at most
 the deferred-draw run's bad marginal, from any pair of `deferredCoupleInv`-related start states.
 
