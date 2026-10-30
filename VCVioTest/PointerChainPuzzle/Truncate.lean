@@ -152,7 +152,8 @@ example (k₀ : Bool) :
 
 /-- A program of uniform queries alone is unchanged even with no round allowed. -/
 example (k₀ : Fin 4) :
-    truncate (spec := boolSpec) 0 k₀ (liftM ((unifSpec + boolSpec.batch).query (.inl 3))) =
+    truncate (free := unifSpec) (spec := boolSpec) 0 k₀
+      (liftM ((unifSpec + boolSpec.batch).query (.inl 3))) =
       liftM ((unifSpec + boolSpec.batch).query (.inl 3)) :=
   truncate_eq_self_of_isOnlineQueryBound (q := 0) (by simp)
 

@@ -11,8 +11,8 @@ public import VCVio.CryptoFoundations.TimeLockPuzzle.Truncate
 /-!
 # Delay security within a round bound on a toy puzzle
 
-Checks of `TimeLockPuzzle.Adversary.truncate` and `TimeLockPuzzle.delayAdvantageWithin` through
-ordinary imports, on a one-round toy puzzle over one oracle on `Bool`: the main statements
+Checks of `TimeLockPuzzle.TwoPhaseAdversary.truncate` and `TimeLockPuzzle.delayAdvantageWithin`
+through ordinary imports, on a one-round toy puzzle over one oracle on `Bool`: the main statements
 instantiate at the toy puzzle; an adversary whose online phase is a three-round chain, truncated
 at one round, fits the budget `(1, 3)` and returns the fallback key; and at three rounds its
 truncation is itself and its per-run event is its delay advantage.
@@ -98,7 +98,7 @@ example (adv : TimeLockPuzzle.Adversary boolSpec Unit Bool) (r : ℕ) :
 
 /-- The truncation fits one round and three points, with no preprocessing queries. -/
 example (k₀ : Bool) : (threeAdv.truncate 1 k₀).IsQueryBound 0 (1, 3) :=
-  TimeLockPuzzle.Adversary.isQueryBound_truncate threeAdv_isQueryBound.1
+  TimeLockPuzzle.TwoPhaseAdversary.isQueryBound_truncate threeAdv_isQueryBound.1
     (fun σ puzzle => (threeAdv_isQueryBound.2 σ puzzle).isPointQueryBound) 1 k₀
 
 /-- Its online phase submits the first round and returns the fallback. -/
@@ -106,7 +106,7 @@ example (k₀ : Bool) :
     (threeAdv.truncate 1 k₀).online () () = (do
       let _ ← liftM ((unifSpec + boolSpec.batch).query (.inr [false]))
       pure k₀) := by
-  simp only [TimeLockPuzzle.Adversary.truncate, threeAdv, threeRounds,
+  simp only [TimeLockPuzzle.TwoPhaseAdversary.truncate, threeAdv, threeRounds,
     truncate_succ_query_bind_inr, truncate_zero_query_bind_inr]
 
 /-- Under the negating handler the full online phase returns `true` after three rounds. -/
@@ -117,7 +117,7 @@ example : runCountingRounds (zeroCoins + notImpl).batch' (threeAdv.online () ())
 /-- Its truncation after one round returns the fallback `false` instead. -/
 example :
     simulateQ (zeroCoins + notImpl).batch' ((threeAdv.truncate 1 false).online () ()) = false := by
-  simp only [TimeLockPuzzle.Adversary.truncate, threeAdv, threeRounds,
+  simp only [TimeLockPuzzle.TwoPhaseAdversary.truncate, threeAdv, threeRounds,
     truncate_succ_query_bind_inr, truncate_zero_query_bind_inr]
   rfl
 
@@ -125,7 +125,7 @@ example :
 
 /-- Within three rounds the adversary is its own truncation. -/
 example (k₀ : Bool) : threeAdv.truncate 3 k₀ = threeAdv :=
-  TimeLockPuzzle.Adversary.truncate_eq_self threeAdv_isQueryBound k₀
+  TimeLockPuzzle.TwoPhaseAdversary.truncate_eq_self threeAdv_isQueryBound k₀
 
 /-- Within three rounds its per-run event is its delay advantage. -/
 example : TimeLockPuzzle.delayAdvantageWithin toy threeAdv 3 =
