@@ -182,6 +182,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Salted.Extraction
 public import VCVio.CryptoFoundations.MerkleTree.Salted.HalfPreimage
 public import VCVio.CryptoFoundations.MerkleTree.Salted.Instability
 public import VCVio.CryptoFoundations.PRF
+public import VCVio.CryptoFoundations.PRF.HiddenBit
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
@@ -563,6 +564,7 @@ public import VCVio.Schemes.PointerChainPuzzle.Delay
 public import VCVio.Schemes.PointerChainPuzzle.Envelope
 public import VCVio.Schemes.PointerChainPuzzle.Handler
 public import VCVio.Schemes.PointerChainPuzzle.Hiding
+public import VCVio.Schemes.PointerChainPuzzle.HidingPRF
 public import VCVio.Schemes.PointerChainPuzzle.Ideal
 public import VCVio.Schemes.PointerChainPuzzle.LeanSeal
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealBridge
