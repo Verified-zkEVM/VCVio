@@ -849,18 +849,20 @@ loop by the per-attempt HVZK simulator loop costs at most `qS·ζ_zk/(1-p)`.
 
 Distributional content: per signing query, `transSignBody` and `simSignBody` differ only
 in the optional sampler driving `firstSome`; `measureTVDist_firstSome_le_geometric` bounds the
-per-query gap by `ζ_zk · (1 + p + ⋯) ≤ ζ_zk/(1-p)` using `ids.HVZK sim ζ_zk` (`hhvzk`)
+per-query gap by `ζ_zk · (1 + p + ⋯) ≤ ζ_zk/(1-p)` using the HVZK bound at this key (`hzk`)
 and the honest abort bound (`hAbort`), uniformly in the shared starting cache
 (`measureTVDist_run_transSignBody_simSignBody_le`). The per-query total-variation budget is
 accumulated across the at-most-`qS` signing queries of the adversary run by
 `measureETVDist_simulateQ_run_le_queryBoundP_mul`, the two hybrid handlers agreeing exactly on
 the base (uniform and random-oracle) component. -/
 lemma prEvent_hybridExpAtKey_trans_le_sim
-    (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk) (hhvzk : ids.HVZK sim (ENNReal.ofReal ζ_zk))
+    (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk)
     (qS qH : ℕ) (p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH)
-    (pk : Stmt) (sk : Wit) (hrel : rel pk sk = true)
+    (pk : Stmt) (sk : Wit)
+    (hzk : letI : MeasurableSpace (Option (Commit × Chal × Resp)) := ⊤
+      measureETVDist (ids.honestExecution pk sk) (sim pk) ≤ ENNReal.ofReal ζ_zk)
     (hAbort : Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort) :
     Pr{let x ← (hybridExpAtKey ids hr M maxAttempts adv
         (transSignBody ids M maxAttempts pk sk) pk)}[x = true] ≤
@@ -899,8 +901,8 @@ lemma prEvent_hybridExpAtKey_trans_le_sim
       Measurable.of_discrete).trans ?_
     rw [ENNReal.le_ofReal_iff_toReal_le (measureETVDist_ne_top _ _) hε_nonneg,
       ← measureTVDist_eq_toReal_measureETVDist]
-    exact measureTVDist_run_transSignBody_simSignBody_le ids M maxAttempts sim pk sk hrel msg
-      hζ hhvzk hq_toReal hp₀ s.1
+    exact measureTVDist_run_transSignBody_simSignBody_le ids M maxAttempts sim pk sk msg
+      hζ hzk hq_toReal hp₀ s.1
   -- Accumulate the per-query budget across the `qS` signing queries of the run.
   let : MeasurableSpace ((M × Option (Commit × Resp)) ×
     ((M × Commit →ₒ Chal).QueryCache × List M)) := ⊤

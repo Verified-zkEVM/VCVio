@@ -186,7 +186,7 @@ handler `ghostNmaImpl`, projected by `proj2`, matches the linked managed handler
 applied to the projected state. The uniform query forwards straight through both handlers
 (`unifSim`/`unifFwdImpl`) without touching either cache layer, so the coupling is the
 straightforward forward pass. -/
-lemma hproj2_unif (pk : Stmt) (sk : Wit) (n : unifSpec.Domain)
+private lemma hproj2_unif (pk : Stmt) (sk : Wit) (n : unifSpec.Domain)
     (s : NmaGhostState M Commit Chal) :
     Prod.map id (proj2 M) <$> (ghostNmaImpl M maxAttempts sim pk sk (.inl (.inl n))).run s =
       (nmaLinkImpl M maxAttempts sim pk (.inl (.inl n))).run (proj2 M s) := by
@@ -219,7 +219,7 @@ The two other RO sub-cases are handled by the siblings `hproj2_ro_fresh` and
   the *overlay* in the inner slot and only the base layer in the outer slot, the re-cached point is
   already present on the projected side, so the step is an equality without needing a
   reachable-state side condition. -/
-lemma hproj2_ro (pk : Stmt) (sk : Wit) (mc : M × Commit) (v : Chal)
+private lemma hproj2_ro (pk : Stmt) (sk : Wit) (mc : M × Commit) (v : Chal)
     (s : NmaGhostState M Commit Chal) (hgm : s.1.2 mc = none) (hbh : s.1.1 mc = some v) :
     Prod.map id (proj2 M) <$> (ghostNmaImpl M maxAttempts sim pk sk (.inl (.inr mc))).run s =
       (nmaLinkImpl M maxAttempts sim pk (.inl (.inr mc))).run (proj2 M s) := by
@@ -249,7 +249,7 @@ which carries the ghost value at `.inr mc` (`overlayCache_apply_ghost_some`), so
 `roSim` finds it and short-circuits without touching either layer. Placing the overlay — rather
 than the bare base layer — in the inner slot is what makes this sub-case an exact equality, with
 no reachability side condition on the state. -/
-lemma hproj2_ro_ghost_hit (pk : Stmt) (sk : Wit) (mc : M × Commit) (v : Chal)
+private lemma hproj2_ro_ghost_hit (pk : Stmt) (sk : Wit) (mc : M × Commit) (v : Chal)
     (s : NmaGhostState M Commit Chal) (hgh : s.1.2 mc = some v) :
     Prod.map id (proj2 M) <$> (ghostNmaImpl M maxAttempts sim pk sk (.inl (.inr mc))).run s =
       (nmaLinkImpl M maxAttempts sim pk (.inl (.inr mc))).run (proj2 M s) := by
@@ -278,7 +278,7 @@ which has no entry at `.inr mc` since `base mc = none`) and forwards to the runt
 `randomOracle` (the `randomOracle_run_eq_roStep` round-trip), caching the result both in the
 inner managed cache and the outer runtime cache. Under `proj2`, the inner write matches
 `baseEmbed_cacheQuery` and the outer write matches `overlayCache_cacheQuery_real_of_ghost_none`. -/
-lemma hproj2_ro_fresh (pk : Stmt) (sk : Wit) (mc : M × Commit)
+private lemma hproj2_ro_fresh (pk : Stmt) (sk : Wit) (mc : M × Commit)
     (s : NmaGhostState M Commit Chal) (hgm : s.1.2 mc = none) (hbm : s.1.1 mc = none) :
     Prod.map id (proj2 M) <$> (ghostNmaImpl M maxAttempts sim pk sk (.inl (.inr mc))).run s =
       (nmaLinkImpl M maxAttempts sim pk (.inl (.inr mc))).run (proj2 M s) := by
@@ -352,7 +352,7 @@ followed by inner-cache programming `cacheQuery (.inr (msg, w)) c`. The LHS is `
 (`liftM (firstSome (sim pk) maxAttempts)` then ghost-layer `cacheQuery (msg, w) c`). A
 bind congruence in distribution on the accepted transcript then reduces both sides to
 matching pure values, closed by the overlay/`baseEmbed` cache algebra above. -/
-lemma hproj2_sign (pk : Stmt) (sk : Wit) (msg : M)
+private lemma hproj2_sign (pk : Stmt) (sk : Wit) (msg : M)
     (s : NmaGhostState M Commit Chal) :
     (Prod.map id (proj2 M) <$> (ghostNmaImpl M maxAttempts sim pk sk (.inr msg)).run s) =ᵈ
         ((nmaLinkImpl M maxAttempts sim pk (.inr msg)).run (proj2 M s)) := by
@@ -426,7 +426,7 @@ the projection `proj2 ((base, ghost), signed) = (baseEmbed (overlayCache base gh
 step is an exact equality (the random-oracle and signing steps do not depend on any reachability
 or no-collision side condition), so the coupling holds unconditionally on all of `t`. This is the
 per-query hypothesis for the whole-run state-projection `relTriple_simulateQ_run`. -/
-lemma hproj2_evalDistEq (pk : Stmt) (sk : Wit)
+private lemma hproj2_evalDistEq (pk : Stmt) (sk : Wit)
     (t : ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp))).Domain)
     (s : NmaGhostState M Commit Chal) :
     (Prod.map id (proj2 M) <$> (ghostNmaImpl M maxAttempts sim pk sk t).run s) =ᵈ

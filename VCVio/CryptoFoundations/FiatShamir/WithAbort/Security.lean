@@ -125,23 +125,20 @@ lemma managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment :
 /-! ## Assembly -/
 
 omit [SampleableType Stmt] in
-/-- **CMA-to-NMA reduction for Fiat-Shamir with aborts** (after Theorem 3, CRYPTO 2023),
-at the managed-RO NMA interface: for any EUF-CMA adversary making at most `qS` signing
-and `qH` hash queries, the CMA advantage is bounded by the managed-RO NMA success
-probability of `simulatedNmaAdv` plus the statistical loss `cmaToNmaLoss`.
-
-The good-key event `Good` plays the role of the event `Γ` in the paper's Lemma 1: `δ`
-bounds its complement under key generation, while `ε` and `p_abort` bound the per-key
-commitment-guessing and per-attempt abort probabilities pointwise on it. The pointwise form
-of `hGuess` on good keys is stronger than the key-averaged commitment-guessing condition of
-ePrint 2023/246; it is conservative and therefore sound, and the averaged form would matter
-only for tightness, not soundness. -/
-theorem euf_cma_to_nma
-    (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk) (hhvzk : ids.HVZK sim (ENNReal.ofReal ζ_zk))
+/-- **CMA-to-NMA reduction for Fiat-Shamir with aborts, HVZK on good keys.** The form of
+`euf_cma_to_nma` whose HVZK hypothesis is required only at related key pairs in the good-key
+event `Good`. The proof uses HVZK only per key, inside the per-key hybrid chain on good keys,
+so this is a strict generalization; `euf_cma_to_nma` is the special case of a global
+`ids.HVZK sim ζ_zk`. -/
+theorem euf_cma_to_nma_of_good_hvzk
+    (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk)
     (qS qH : ℕ) (ε p_abort δ : ℝ)
     (hε : 0 ≤ ε) (hδ : 0 ≤ δ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (Good : Stmt → Wit → Prop)
     (hGood : Pr{let xw ← hr.gen}[¬ Good xw.1 xw.2] ≤ ENNReal.ofReal δ)
+    (hhvzk : ∀ pk sk, rel pk sk = true → Good pk sk →
+      letI : MeasurableSpace (Option (Commit × Chal × Resp)) := ⊤
+      measureETVDist (ids.honestExecution pk sk) (sim pk) ≤ ENNReal.ofReal ζ_zk)
     (hGuess : ∀ pk sk, Good pk sk → ∀ cm : Commit,
       Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = cm] ≤ ENNReal.ofReal ε)
     (hAbort : ∀ pk sk, Good pk sk →
@@ -177,8 +174,8 @@ theorem euf_cma_to_nma
       hp₀ hp hQ pk sk (hGuess pk sk hgood) (hAbort pk sk hgood)
     have step2 := prEvent_hybridExpAtKey_prog_le_trans ids hr M maxAttempts adv qS qH ε p_abort
       hp₀ hp hε hQ pk sk (hGuess pk sk hgood) (hAbort pk sk hgood)
-    have step3 := prEvent_hybridExpAtKey_trans_le_sim ids hr M maxAttempts sim adv ζ_zk hζ hhvzk
-      qS qH p_abort hp₀ hp hQ pk sk hrel (hAbort pk sk hgood)
+    have step3 := prEvent_hybridExpAtKey_trans_le_sim ids hr M maxAttempts sim adv ζ_zk hζ
+      qS qH p_abort hp₀ hp hQ pk sk (hhvzk pk sk hrel hgood) (hAbort pk sk hgood)
     -- Chain the three hops and collapse the `ofReal` sums (slack pieces nonneg).
     calc Pr{let x ← (hybridExpAtKey ids hr M maxAttempts adv
             (realSignBody ids M maxAttempts pk sk) pk)}[x = true]
@@ -282,6 +279,65 @@ theorem euf_cma_to_nma
   rw [cmaToNmaLoss_eq_perKeyLoss_add, ENNReal.ofReal_add hPK hδ, add_assoc]
   gcongr
   exact prEvent_hybridExp_sim_le_managedRoNmaAdvantage ids hr M maxAttempts sim adv
+
+omit [SampleableType Stmt] in
+/-- **CMA-to-NMA reduction for Fiat-Shamir with aborts** (after Theorem 3, CRYPTO 2023),
+at the managed-RO NMA interface: for any EUF-CMA adversary making at most `qS` signing
+and `qH` hash queries, the CMA advantage is bounded by the managed-RO NMA success
+probability of `simulatedNmaAdv` plus the statistical loss `cmaToNmaLoss`.
+
+The good-key event `Good` plays the role of the event `Γ` in the paper's Lemma 1: `δ`
+bounds its complement under key generation, while `ε` and `p_abort` bound the per-key
+commitment-guessing and per-attempt abort probabilities pointwise on it. The pointwise form
+of `hGuess` on good keys is stronger than the key-averaged commitment-guessing condition of
+ePrint 2023/246; it is conservative and therefore sound, and the averaged form would matter
+only for tightness, not soundness. -/
+theorem euf_cma_to_nma
+    (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk) (hhvzk : ids.HVZK sim (ENNReal.ofReal ζ_zk))
+    (qS qH : ℕ) (ε p_abort δ : ℝ)
+    (hε : 0 ≤ ε) (hδ : 0 ≤ δ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
+    (Good : Stmt → Wit → Prop)
+    (hGood : Pr{let xw ← hr.gen}[¬ Good xw.1 xw.2] ≤ ENNReal.ofReal δ)
+    (hGuess : ∀ pk sk, Good pk sk → ∀ cm : Commit,
+      Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = cm] ≤ ENNReal.ofReal ε)
+    (hAbort : ∀ pk sk, Good pk sk →
+      Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort)
+    (hQ : ∀ pk, FiatShamir.signHashQueryBound M
+      (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
+    SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
+      SignatureAlg.managedRoNmaAdvantage (runtime M)
+        (simulatedNmaAdv ids hr M maxAttempts sim adv) +
+      ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) :=
+  euf_cma_to_nma_of_good_hvzk ids hr M maxAttempts sim adv ζ_zk hζ qS qH ε p_abort δ
+    hε hδ hp₀ hp Good hGood (fun pk sk hrel _ => hhvzk pk sk hrel) hGuess hAbort hQ
+
+omit [SampleableType Stmt] in
+/-- `euf_cma_to_eufNma` with the HVZK hypothesis required only on good keys, as in
+`euf_cma_to_nma_of_good_hvzk`. -/
+theorem euf_cma_to_eufNma_of_good_hvzk
+    (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk)
+    (qS qH : ℕ) (ε p_abort δ : ℝ)
+    (hε : 0 ≤ ε) (hδ : 0 ≤ δ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
+    (Good : Stmt → Wit → Prop)
+    (hGood : Pr{let xw ← hr.gen}[¬ Good xw.1 xw.2] ≤ ENNReal.ofReal δ)
+    (hhvzk : ∀ pk sk, rel pk sk = true → Good pk sk →
+      letI : MeasurableSpace (Option (Commit × Chal × Resp)) := ⊤
+      measureETVDist (ids.honestExecution pk sk) (sim pk) ≤ ENNReal.ofReal ζ_zk)
+    (hGuess : ∀ pk sk, Good pk sk → ∀ cm : Commit,
+      Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = cm] ≤ ENNReal.ofReal ε)
+    (hAbort : ∀ pk sk, Good pk sk →
+      Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort)
+    (hQ : ∀ pk, FiatShamir.signHashQueryBound M
+      (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
+    SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
+      SignatureAlg.eufNmaAdvantage (runtime M)
+        (simulatedEufNmaAdv ids hr M maxAttempts sim adv) +
+      ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
+  have h := euf_cma_to_nma_of_good_hvzk ids hr M maxAttempts sim adv ζ_zk hζ qS qH ε p_abort δ
+    hε hδ hp₀ hp Good hGood hhvzk hGuess hAbort hQ
+  rwa [SignatureAlg.managedRoNmaAdvantage,
+    managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment,
+    ← SignatureAlg.eufNmaAdvantage] at h
 
 omit [SampleableType Stmt] in
 /-- **CMA-to-NMA reduction for Fiat-Shamir with aborts**, at the plain EUF-NMA interface:

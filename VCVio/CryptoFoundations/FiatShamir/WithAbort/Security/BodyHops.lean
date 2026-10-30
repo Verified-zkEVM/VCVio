@@ -60,8 +60,10 @@ driven by the abort probability of either loop; the honest one is used, so no se
 abort bound on the simulator is needed. -/
 lemma measureTVDist_run_transSignBody_simSignBody_le
     [MeasurableSpace (Option (Commit × Resp) × (M × Commit →ₒ Chal).QueryCache)]
-    (pk : Stmt) (sk : Wit) (hrel : rel pk sk = true) (msg : M)
-    {ζ_zk : ℝ} (hζ : 0 ≤ ζ_zk) (hhvzk : ids.HVZK sim (ENNReal.ofReal ζ_zk))
+    (pk : Stmt) (sk : Wit) (msg : M)
+    {ζ_zk : ℝ} (hζ : 0 ≤ ζ_zk)
+    (hzk : letI : MeasurableSpace (Option (Commit × Chal × Resp)) := ⊤
+      measureETVDist (ids.honestExecution pk sk) (sim pk) ≤ ENNReal.ofReal ζ_zk)
     {q : ℝ} (hq : Pr{let x ← ids.honestExecution pk sk}[x = none].toReal ≤ q)
     (hq0 : 0 ≤ q)
     (s : (M × Commit →ₒ Chal).QueryCache) :
@@ -71,7 +73,7 @@ lemma measureTVDist_run_transSignBody_simSignBody_le
   let : MeasurableSpace (Option (Commit × Chal × Resp)) := ⊤
   have hzk : measureTVDist (ids.honestExecution pk sk) (sim pk) ≤ ζ_zk := by
     rw [measureTVDist_eq_toReal_measureETVDist, ← ENNReal.toReal_ofReal hζ]
-    exact ENNReal.toReal_mono ENNReal.ofReal_ne_top (hhvzk pk sk hrel)
+    exact ENNReal.toReal_mono ENNReal.ofReal_ne_top hzk
   have hcore : measureTVDist (firstSome (ids.honestExecution pk sk) maxAttempts)
       (firstSome (sim pk) maxAttempts) ≤
         ζ_zk * ∑ j ∈ Finset.range maxAttempts, q ^ j := by
