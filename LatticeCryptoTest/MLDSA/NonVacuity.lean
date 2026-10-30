@@ -22,9 +22,9 @@ and applying the headline end to end to a concrete trivial adversary
 (`trivial_euf_cma_security_of_nma_short`).
 
 This is a **logical consistency (inhabitance) witness only**: the trivial budgets (`ε = 1`,
-`ζ_zk = 1`, `δ = 1`, `εbridge = 1` via `expandAIdealization` at the vacuous bound `εA = 1`), the
-no-query forger, and the never-aborting simulator carry no quantitative security content, and no
-security claim about any real ML-DSA parameter set follows from it.
+`ζ_zk = 1`, `δ = 1`), the no-query forger, and the never-aborting simulator carry no
+quantitative security content, and no security claim about any real ML-DSA parameter set
+follows from it.
 
 The witness values are:
 
@@ -40,10 +40,8 @@ The witness values are:
 * `ε = 1` for the commitment-guessing bound (`prEvent_le_one`);
 * the trivial forger `trivialForger` (no queries, immediately returned `none` forgery) with
   `qS = qH = 0`;
-* `mlwe := mldsaMatrixMLWE`, `εbridge = 1`: the proven seed-to-matrix reduction
-  `advantage_mldsaMLWEShort_le_matrix` under `expandAIdealization p prims 1`, which holds
-  unconditionally (`expandAIdealization_one`) since the Boolean distance of two probability
-  measures is at most one.
+* `mlwe := mldsaMLWEShort` with `bridge := distinguisherBShort` and `εbridge = 0`: the bridge
+  is the identity, as in `nma_security_short_seed`.
 -/
 
 public section
@@ -113,17 +111,6 @@ lemma trivialForger_signHashQueryBound (maxAttempts : ℕ) (pk : PublicKey p pri
       (oa := (trivialForger p prims M maxAttempts).main pk) 0 0 :=
   ⟨isQueryBoundP_pure _ _ _, isQueryBoundP_pure _ _ _⟩
 
-omit nttOps [DecidableEq prims.High]
-  [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
-  [SampleableType (CommitHashBytes p)] in
-/-- `expandAIdealization` holds unconditionally at the trivial budget `εA = 1`: the two branch
-probabilities both lie in `[0, 1]`, so their Boolean distance is at most one.  This carries no
-idealization content; it exists to discharge the MLWE bridge of the consistency witness through
-the proven reduction `advantage_mldsaMLWEShort_le_matrix`. -/
-lemma expandAIdealization_one : expandAIdealization p prims 1 := fun _ =>
-  ENNReal.absDiff_le_iff.2
-    ⟨le_add_left (evalDist_apply_le_one _ _), le_add_left (evalDist_apply_le_one _ _)⟩
-
 /-! ## The joint frontier certificate -/
 
 open scoped Classical in
@@ -134,8 +121,8 @@ short-model CMA headline holds simultaneously at the witness values listed in th
 docstring: the pinned generable relation (`hGen`), the
 HVZK package at `ζ_zk = 1`, the nonnegativity side conditions with `p_abort = 0 < 1`, the
 good-key package (`hGood` at `δ = 1`, `hGuess` at `ε = 1`, `hAbort` at `p_abort = 0`), the
-query bounds `qS = qH = 0` on the trivial forger, and the MLWE bridge at
-`εbridge = 1` through the proven seed-to-matrix reduction.  The hypothesis conjunction of the
+query bounds `qS = qH = 0` on the trivial forger, and the MLWE bridge at `εbridge = 0` through
+the identity bridge.  The hypothesis conjunction of the
 headline is therefore jointly inhabitable; this witness carries no quantitative security
 content. -/
 theorem mldsa_short_cma_hyps_inhabited (maxAttempts : ℕ) :
@@ -161,30 +148,28 @@ theorem mldsa_short_cma_hyps_inhabited (maxAttempts : ℕ) :
     (∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commitment p prims × Response p prims))
       (oa := (trivialForger p prims M maxAttempts).main pk) 0 0) ∧
-    -- hMlweBridge at mlwe = mldsaMatrixMLWE p, εbridge = 1,
-    -- bridge = matrixLift ∘ distinguisherBShort
+    -- hMlweBridge at mlwe = mldsaMLWEShort p prims, εbridge = 0, bridge = distinguisherBShort
     (∀ main : PublicKey p prims →
         OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
           (M × Option (Commitment p prims × Response p prims)),
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
           (distinguisherBShort p prims (hrShort p prims) maxAttempts main) ≤
-        LearningWithErrors.advantage (mldsaMatrixMLWE p)
-          (matrixLift p prims (distinguisherBShort p prims (hrShort p prims) maxAttempts main)) +
-          1) :=
+        LearningWithErrors.advantage (mldsaMLWEShort p prims)
+          (distinguisherBShort p prims (hrShort p prims) maxAttempts main) + 0) :=
   ⟨rfl, ⟨zero_le_one, by rw [ENNReal.ofReal_one]; exact neverAbortSim_hvzk p prims⟩,
     ⟨zero_le_one, zero_le_one, le_rfl, zero_lt_one⟩,
     by rw [ENNReal.ofReal_one]; exact prEvent_le_one _,
     fun _pk _sk _h _cm => by rw [ENNReal.ofReal_one]; exact prEvent_le_one _,
     fun _pk _sk h => by rw [ENNReal.ofReal_zero]; exact h.le,
     trivialForger_signHashQueryBound p prims M maxAttempts,
-    fun _ => advantage_mldsaMLWEShort_le_matrix p prims (expandAIdealization_one p prims) _⟩
+    fun _ => le_of_eq (add_zero _).symm⟩
 
 open scoped Classical in
 /-- **End-to-end applicability of the short-model CMA headline.**  The derived theorem
 `MLDSA.euf_cma_security_of_nma_short` applies to the trivial forger with every hypothesis
 discharged at the witness values of `mldsa_short_cma_hyps_inhabited`, for the reductions
-`matrixLift ∘ distinguisherBShort` and `extractorCShort` at the simulated forging strategy.
-Consistency-only: with `ε = ζ_zk = δ = εbridge = 1` the resulting bound is trivial, and no
+`distinguisherBShort` and `extractorCShort` at the simulated forging strategy.
+Consistency-only: with `ε = ζ_zk = δ = 1` the resulting bound is trivial, and no
 quantitative claim about any real ML-DSA parameter set follows. -/
 theorem trivial_euf_cma_security_of_nma_short (maxAttempts : ℕ) :
     let main := (FiatShamirWithAbort.simulatedEufNmaAdv (identificationSchemeShort p prims)
@@ -194,12 +179,12 @@ theorem trivial_euf_cma_security_of_nma_short (maxAttempts : ℕ) :
         (FiatShamirWithAbort.runtime
           (Commit := Commitment p prims) (Chal := CommitHashBytes p) M)
         (trivialForger p prims M maxAttempts) ≤
-      LearningWithErrors.advantage (mldsaMatrixMLWE p)
-          (matrixLift p prims (distinguisherBShort p prims (hrShort p prims) maxAttempts main)) +
-        1 +
+      LearningWithErrors.advantage (mldsaMLWEShort p prims)
+          (distinguisherBShort p prims (hrShort p prims) maxAttempts main) +
+        0 +
         SelfTargetMSIS.advantage (extractorCShort p prims main) +
         ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss 0 0 1 0 1 1 zero_lt_one) :=
-  euf_cma_security_of_nma_short p prims (mldsaMatrixMLWE p)
+  euf_cma_security_of_nma_short p prims (mldsaMLWEShort p prims)
     maxAttempts (hrShort p prims) rfl (neverAbortSim p prims) 1 zero_le_one
     (by rw [ENNReal.ofReal_one]; exact neverAbortSim_hvzk p prims)
     0 0 1 0 1 zero_le_one zero_le_one le_rfl zero_lt_one
@@ -209,10 +194,9 @@ theorem trivial_euf_cma_security_of_nma_short (maxAttempts : ℕ) :
     (fun _pk _sk h => by rw [ENNReal.ofReal_zero]; exact h.le)
     (trivialForger p prims M maxAttempts)
     (trivialForger_signHashQueryBound p prims M maxAttempts)
-    1
-    (fun main =>
-      matrixLift p prims (distinguisherBShort p prims (hrShort p prims) maxAttempts main))
-    (fun _ => advantage_mldsaMLWEShort_le_matrix p prims (expandAIdealization_one p prims) _)
+    0
+    (distinguisherBShort p prims (hrShort p prims) maxAttempts)
+    (fun _ => le_of_eq (add_zero _).symm)
 
 end ShortCMAWitness
 

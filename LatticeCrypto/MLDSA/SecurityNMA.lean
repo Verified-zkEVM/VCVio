@@ -270,36 +270,31 @@ theorem keygen0_generable :
       hr.gen = keygen0 p prims :=
   ⟨hrFips p prims, rfl⟩
 
-/-- **XOF replacement for the ML-DSA secret derivation (`ExpandSeed`/`ExpandS`), quantified
-form.** For a bound `εPRG`, this asserts that no distinguisher receiving
-`(ρ, K, s₁, s₂)` can tell the FIPS derivation — expand a uniform 32-byte seed into
-`(ρ, ρ', K)` and derive `(s₁, s₂) = ExpandS(ρ')` — from independent sampling with the
-correct short marginals: `ρ`, `K` uniform and `(s₁, s₂)` uniform on the `η`-bounded box
-`S_η^ℓ × S_η^k`, i.e. exactly the draws of the idealized key generator `keygenShort`.
+/-- **Advantage of a distinguisher against the XOF replacement for the ML-DSA secret derivation
+(`ExpandSeed`/`ExpandS`).** The distinguisher `D` receives `(ρ, K, s₁, s₂)`, either from the
+FIPS derivation — expand a uniform 32-byte seed into `(ρ, ρ', K)` and derive
+`(s₁, s₂) = ExpandS(ρ')` — or from independent sampling with the correct short marginals: `ρ`,
+`K` uniform and `(s₁, s₂)` uniform on the `η`-bounded box `S_η^ℓ × S_η^k`, i.e. exactly the
+draws of the idealized key generator `keygenShort`. The advantage is the Boolean distance of
+its outputs on the two branches.
 
-This is the standard PRG/XOF-replacement reading of `ExpandSeed`/`ExpandS` against the
-short-secret marginal: the ideal branch is the box distribution the Module-LWE assumption
-for ML-DSA is stated over, so the assumption carries exactly the "SHAKE output is
-pseudorandom with the FIPS marginals" step and nothing else. For a fixed deterministic
-`prims` the unrestricted-quantifier form is only satisfiable at large `εPRG` — an unbounded
-distinguisher can test membership in the `2^256`-point image of the seed expansion — so,
-pending the cost-model infrastructure (#460), it should be read computationally, against
-bounded distinguishers, where it is the assumption that the SHAKE-derived `(ρ, K, s₁, s₂)`
-is pseudorandom with the FIPS marginals. It is consumed by the FIPS-keygen corollary
-`nma_security_fips` to transfer the short-model bound to `keygen0`. -/
-def expandSReplacement (εPRG : ℝ≥0∞) : Prop :=
-  ∀ D : Bytes 32 → Bytes 32 → RqVec p.l → RqVec p.k → ProbComp Bool,
+Security statements take this advantage for a *named* distinguisher, the one their proof builds
+(`nma_security_fips` uses `expandSDistinguisher`). A hypothesis bounding it for every `D` would
+hold only near `1`: for the fixed deterministic `prims`, an unbounded distinguisher can test
+membership in the `2^256`-point image of the seed expansion. -/
+noncomputable def expandSAdvantage
+    (D : Bytes 32 → Bytes 32 → RqVec p.l → RqVec p.k → ProbComp Bool) : ℝ≥0∞ :=
+  𝒟[do
+      let seed ← $ᵗ (Bytes 32)
+      let (rho, rhoPrime, key) := prims.expandSeed seed
+      let (s1, s2) := prims.expandS rhoPrime
+      D rho key s1 s2].boolDist
     𝒟[do
-        let seed ← $ᵗ (Bytes 32)
-        let (rho, rhoPrime, key) := prims.expandSeed seed
-        let (s1, s2) := prims.expandS rhoPrime
-        D rho key s1 s2].boolDist
-      𝒟[do
-        let key ← $ᵗ (Bytes 32)
-        let rho ← $ᵗ (Bytes 32)
-        let s1 ← sampleShortVec p.l p.eta
-        let s2 ← sampleShortVec p.k p.eta
-        D rho key s1 s2] ≤ εPRG
+      let key ← $ᵗ (Bytes 32)
+      let rho ← $ᵗ (Bytes 32)
+      let s1 ← sampleShortVec p.l p.eta
+      let s2 ← sampleShortVec p.k p.eta
+      D rho key s1 s2]
 
 end KeyGen
 
@@ -501,8 +496,8 @@ uniform and independent of `ρ`.
 branch with probability `1` and the ideal branch with probability `1 / |TqMatrix|`, so the
 inequality forces `εA` to be essentially `1`. Restricting to bounded distinguishers would not
 change that: recomputing `ExpandA(ρ)` is the same efficient evaluation that key generation and
-verification themselves perform. Consequently `nma_security_short_matrix`, the only headline
-that consumes it, is non-quantitative scaffolding.
+verification themselves perform. Consequently `advantage_mldsaMLWEShort_le_matrix`, which
+consumes it, gives no quantitative bound.
 
 Reaching the uniform-matrix problem requires *modelling* `ExpandA` as a random oracle rather
 than assuming a property of a fixed function. That model is
