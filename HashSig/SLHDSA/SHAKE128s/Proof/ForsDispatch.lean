@@ -310,7 +310,7 @@ theorem sign_apply (indices : SLHDSA.SHAKE128s.Fors.Indices) (secretSeed publicS
           (Extraction.Fors.leafIndex indices i),
         authentication := fun j => SLHDSA.SHAKE128s.Fors.node (m := Id) secretSeed publicSeed
           address j.val (Nat.xor (Extraction.Fors.leafIndex indices i / 2 ^ j.val) 1) } := by
-  simp only [SLHDSA.SHAKE128s.Fors.sign, Correctness.sequenceFin_id, bind, pure,
+  simp only [SLHDSA.SHAKE128s.Fors.sign_eq_sequenceFin, Correctness.sequenceFin_id, bind, pure,
     Extraction.Fors.leafIndex, ForsTreeSignature.mk.injEq, true_and]
   funext j
   rw [← fors_auth_index indices i j]

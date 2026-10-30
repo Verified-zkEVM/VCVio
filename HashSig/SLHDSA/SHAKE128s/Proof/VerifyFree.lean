@@ -9,6 +9,7 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.GraphStakes
 public import HashSig.SLHDSA.SHAKE128s.Proof.Target127
 public import HashSig.SLHDSA.SHAKE128s.Proof.VerificationBudget
+import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
 
 /-!
 # The verifier's free queries
@@ -197,7 +198,7 @@ theorem fors_free (signature : ForsSignature) (indices : Fors.Indices) (address 
     FreeBounds publicSeed
       (Fors.publicKeyFromSignature signature indices publicSeed address :
         OracleComp HashSpec Digest) 169 := by
-  unfold Fors.publicKeyFromSignature
+  rw [Fors.publicKeyFromSignature_eq_fold]
   have hroots : ∀ i : Fin forsTrees, FreeBounds publicSeed
       (do
         let index := i.val * 2 ^ forsHeight + (indices i).val

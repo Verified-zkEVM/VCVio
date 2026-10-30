@@ -180,6 +180,7 @@ theorem probes_fors_sign (cache : QueryCache HashSpec) (secretSeed publicSeed : 
     Probes cache
       (Fors.sign (m := OracleComp HashSpec) indices secretSeed publicSeed key.address)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Fors.sign_eq_sequenceFin]
   refine probes_sequenceFin cache _ forsTrees _ fun tree => ?_
   have hsecret : tree.val * 2 ^ forsHeight + (indices tree).val < forsTrees * 2 ^ forsHeight := by
     have := (indices tree).isLt
@@ -225,7 +226,7 @@ theorem fors_sign_entry (cache : QueryCache HashSpec) (indices : Fors.Indices)
           @Fors.node Id _ (replayQuery cache) secretSeed publicSeed address level.val
             (tree.val * 2 ^ (forsHeight - level.val) +
               Nat.xor ((indices tree).val / 2 ^ level.val) 1) } := by
-  simp only [Fors.sign, Correctness.sequenceFin_id, bind, pure]
+  simp only [Fors.sign_eq_sequenceFin, Correctness.sequenceFin_id, bind, pure]
 
 /-! ## The entries a FORS signature discloses are cells
 
@@ -377,6 +378,7 @@ theorem probes_fors_publicKeyFromSignature (cache : QueryCache HashSpec)
       (Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices publicSeed
         key.address)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Fors.publicKeyFromSignature_eq_fold]
   refine probes_bind cache _ _ _
     (fun tree : Fin forsTrees => @Fors.node Id _ (replayQuery cache) secretSeed publicSeed
       key.address forsHeight tree.val) ?_ ?_ ?_

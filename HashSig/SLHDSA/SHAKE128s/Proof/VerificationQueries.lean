@@ -12,6 +12,7 @@ public import HashSig.SLHDSA.SHAKE128s.Generic.ExactQueryCount
 public import VCVio.OracleComp.QueryTracking.QueryBound.Exact.Sequence
 public import VCVio.OracleComp.QueryTracking.QueryBound.Exact.Cost
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
+import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
 
 /-!
 # Oracle-call accounting for the SLH-DSA verifier
@@ -127,7 +128,7 @@ theorem fors_exact (signature : ForsSignature) (indices : Fors.Indices)
       (Fors.publicKeyFromSignature signature indices publicSeed address :
         OracleComp HashSpec Digest)
       183 := by
-  unfold Fors.publicKeyFromSignature
+  rw [Fors.publicKeyFromSignature_eq_fold]
   have hroots : ∀ i : Fin forsTrees, ExactQueryCount
       (do
         let index := i.val * 2 ^ forsHeight + (indices i).val

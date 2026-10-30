@@ -408,6 +408,7 @@ script test (args) do
     #["exe", "slhdsa_fors_tests"],
     #["exe", "slhdsa_fors_secret_order_tests"],
     #["exe", "slhdsa_fors_provider_tests"],
+    #["exe", "slhdsa_fors_node_tests"],
     #["exe", "slhdsa_fors_graph_tests"],
     #["exe", "slhdsa_hypertree_tests"],
     #["exe", "slhdsa_external_tests"],
@@ -512,6 +513,11 @@ lean_exe slhdsa_fors_secret_order_tests where
 /-- Actual oracle-provider, ordered cost and retained cache checks for canonical FORS. -/
 lean_exe slhdsa_fors_provider_tests where
   root := `HashSigTest.SLHDSA.Refactor.ForsObservation
+
+/-- Paper FORS traversal, recovery, authentication and retained-effect checks. -/
+lean_exe slhdsa_fors_node_tests where
+  srcDir := "scripts"
+  root := `SLHDSAForsNodeTests
 
 /-- Canonical effectful FORS and its structural traversal retain full cached observations. -/
 lean_exe slhdsa_fors_graph_tests where

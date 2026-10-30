@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Encodings
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Transfer
+public import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
 import Mathlib.Data.Nat.Bitwise
 import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Option
 
@@ -151,19 +152,9 @@ theorem pure_bridge {α β : Type} (x : α) (y : β) (c : β → α) (h : c y = 
 theorem sequenceFin_bridge {α β : Type} {k : ℕ} (P : Fin k → OracleComp OracleWorld α)
     (V : Fin k → OracleComp TypedWorld β) (c : β → α)
     (h : ∀ i, 𝓡 (P i) = c <$> 𝓔 (V i)) :
-    𝓡 (sequenceFin k P) = (fun v i => c v[i]) <$> 𝓔 (Vector.ofFnM V) := by
-  induction k with
-  | zero =>
-    rw [sequenceFin, Vector.ofFnM_zero]
-    exact pure_bridge _ _ _ (funext fun i => i.elim0)
-  | succ k ih =>
-    rw [sequenceFin, Vector.ofFnM_succ']
-    refine bind_bridge (h 0) fun y => ?_
-    refine bind_bridge (ih _ _ fun i => h i.succ) fun v => ?_
-    refine pure_bridge _ _ _ (funext fun i => ?_)
-    induction i using Fin.cases with
-    | zero => simp
-    | succ i => simp [Vector.getElem_append_right]
+    𝓡 (sequenceFin k P) = (fun v i => c v[i]) <$> 𝓔 (Vector.ofFnM V) :=
+  sequenceFin_ofFnM_bridge (simulateQ' (relabel answerEquiv))
+    (simulateQ' (encImpl FIPS205.params)) P V c h
 
 /-- Correspondences compose along left folds of node-valued steps. -/
 theorem foldlM_bridge {ι : Type} (l : List ι) (f : Digest → ι → OracleComp OracleWorld Digest)
@@ -184,10 +175,8 @@ theorem intrinsicAuthPathM_eq_ofFnM {Y : Type} {m : Type → Type} [Monad m] [La
     (leaf : ℕ → m Y) (nodeHash : ℕ → ℕ → Y → Y → m Y) (idx z : ℕ) :
     PerfectMerkleTree.intrinsicAuthPathM leaf nodeHash idx z =
       Vector.ofFnM fun j : Fin z => PerfectMerkleTree.merkleRootM leaf nodeHash j.val
-        (PerfectMerkleTree.sibling (idx / 2 ^ j.val)) := by
-  induction z with
-  | zero => simp [PerfectMerkleTree.intrinsicAuthPathM]
-  | succ z ih => simp [PerfectMerkleTree.intrinsicAuthPathM, Vector.ofFnM_succ, ih]
+        (PerfectMerkleTree.sibling (idx / 2 ^ j.val)) :=
+  PerfectMerkleTree.intrinsicAuthPathM_eq_ofFnM leaf nodeHash idx z
 
 /-- `climbM` along a path given as a function of the level is a left fold over the levels. -/
 theorem climbM_ofFn {Y : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
@@ -195,13 +184,8 @@ theorem climbM_ofFn {Y : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
     PerfectMerkleTree.climbM nodeHash idx node (List.ofFn g) =
       (List.finRange z).foldlM (fun v j =>
         if idx / 2 ^ j.val % 2 = 0 then nodeHash (j.val + 1) (idx / 2 ^ (j.val + 1)) v (g j)
-        else nodeHash (j.val + 1) (idx / 2 ^ (j.val + 1)) (g j) v) node := by
-  induction z with
-  | zero => simp
-  | succ z ih =>
-    rw [List.ofFn_succ_last, PerfectMerkleTree.climbM_concat, ih, List.finRange_succ_last,
-      List.foldlM_append, List.foldlM_map]
-    simp
+        else nodeHash (j.val + 1) (idx / 2 ^ (j.val + 1)) (g j) v) node :=
+  PerfectMerkleTree.climbM_ofFn nodeHash idx node g
 
 /-- `climbM` along the entries of a vector is a left fold over the levels. -/
 theorem climbM_toList {Y : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
@@ -209,42 +193,27 @@ theorem climbM_toList {Y : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
     PerfectMerkleTree.climbM nodeHash idx node v.toList =
       (List.finRange z).foldlM (fun x j =>
         if idx / 2 ^ j.val % 2 = 0 then nodeHash (j.val + 1) (idx / 2 ^ (j.val + 1)) x v[j]
-        else nodeHash (j.val + 1) (idx / 2 ^ (j.val + 1)) v[j] x) node := by
-  rw [← climbM_ofFn]
-  congr 1
-  apply List.ext_getElem <;> simp
+        else nodeHash (j.val + 1) (idx / 2 ^ (j.val + 1)) v[j] x) node :=
+  PerfectMerkleTree.climbM_toList nodeHash idx node v
 
 /-! ## Index arithmetic -/
 
 /-- `xor 1` is the Merkle sibling. -/
-theorem xor_one_eq_sibling (q : ℕ) : Nat.xor q 1 = PerfectMerkleTree.sibling q := by
-  unfold PerfectMerkleTree.sibling
-  change q ^^^ 1 = _
-  rcases Nat.even_or_odd q with h | h
-  · rw [Nat.xor_one_of_even h, ite_eq_left (Nat.even_iff.mp h)]
-  · rw [Nat.xor_one_of_odd h, ite_eq_right (by have := Nat.odd_iff.mp h; omega)]
+theorem xor_one_eq_sibling (q : ℕ) : Nat.xor q 1 = PerfectMerkleTree.sibling q :=
+  (PerfectMerkleTree.sibling_eq_xor q).symm
 
 /-- The height-`j` ancestor of global leaf `i * 2 ^ H + leaf` is node
 `i * 2 ^ (H - j) + leaf / 2 ^ j`. -/
 theorem global_div_pow {H j : ℕ} (hj : j ≤ H) (i leaf : ℕ) :
-    (i * 2 ^ H + leaf) / 2 ^ j = i * 2 ^ (H - j) + leaf / 2 ^ j := by
-  have : i * 2 ^ H = i * 2 ^ (H - j) * 2 ^ j := by
-    rw [mul_assoc, ← pow_add, Nat.sub_add_cancel hj]
-  rw [this, add_comm, Nat.add_mul_div_right _ _ (by positivity), add_comm]
+    (i * 2 ^ H + leaf) / 2 ^ j = i * 2 ^ (H - j) + leaf / 2 ^ j :=
+  PerfectMerkleTree.ancestor_add_tree_offset hj i leaf
 
 /-- The sibling of the height-`j` ancestor of global leaf `i * 2 ^ H + leaf` is the paper's
 `i * 2 ^ (H - j) + (leaf / 2 ^ j xor 1)`. -/
 theorem sibling_global {H j : ℕ} (hj : j < H) (i leaf : ℕ) :
     PerfectMerkleTree.sibling ((i * 2 ^ H + leaf) / 2 ^ j) =
       i * 2 ^ (H - j) + Nat.xor (leaf / 2 ^ j) 1 := by
-  rw [global_div_pow hj.le, xor_one_eq_sibling]
-  have hpow : 2 ^ (H - j) = 2 * 2 ^ (H - j - 1) := by
-    rw [← pow_succ']; congr 1; omega
-  rw [hpow, show i * (2 * 2 ^ (H - j - 1)) = 2 * (i * 2 ^ (H - j - 1)) by ring]
-  unfold PerfectMerkleTree.sibling
-  generalize leaf / 2 ^ j = q
-  generalize i * 2 ^ (H - j - 1) = c
-  split_ifs <;> omega
+  rw [PerfectMerkleTree.sibling_add_tree_offset hj, PerfectMerkleTree.sibling_eq_xor]
 
 /-- The sibling of a node below `2 ^ h` stays below `2 ^ h`, for `h > 0`. -/
 theorem xor_one_lt_pow {q h : ℕ} (hh : 0 < h) (hq : q < 2 ^ h) : Nat.xor q 1 < 2 ^ h := by
@@ -255,12 +224,8 @@ theorem xor_one_lt_pow {q h : ℕ} (hh : 0 < h) (hq : q < 2 ^ h) : Nat.xor q 1 <
 
 /-- Below the tree root, the parity of the global index's ancestor is that of the local leaf's. -/
 theorem global_div_pow_mod_two {i leaf j : ℕ} (hj : j < forsHeight) :
-    (i * 2 ^ forsHeight + leaf) / 2 ^ j % 2 = leaf / 2 ^ j % 2 := by
-  rw [global_div_pow hj.le]
-  have hpow : 2 ^ (forsHeight - j) = 2 * 2 ^ (forsHeight - j - 1) := by
-    rw [← pow_succ']; congr 1; omega
-  rw [hpow, show i * (2 * 2 ^ (forsHeight - j - 1)) = 2 * (i * 2 ^ (forsHeight - j - 1)) by ring]
-  omega
+    (i * 2 ^ forsHeight + leaf) / 2 ^ j % 2 = leaf / 2 ^ j % 2 :=
+  PerfectMerkleTree.ancestor_mod_two_add_tree_offset hj i leaf
 
 /-- The bytes of an array of digests are the flattened bytes of its list. -/
 theorem digestArrayBytes_eq {size : ℕ} (values : Fin size → Digest) :
@@ -299,7 +264,7 @@ theorem simulateQ_forsLeaf (sk pk : Digest) (a : Address) (hk : a.kind = .forsTr
         𝓔 (forsLeafWithSecret FIPS205.core (PublicHash.f FIPS205.core (digestEquiv pk))
           (oracleSecret FIPS205.core (Equiv.refl _) (digestEquiv pk) (digestEquiv sk))
           (toAdrs a) t : OracleComp TypedWorld FIPS205.core.Y) := by
-  rw [Fors.node]
+  rw [Fors.node_zero]
   refine bind_bridge (simulateQ_forsSecret sk pk a ht) fun y => ?_
   have h := simulateQ_tweakable_f pk (Fors.nodeAddress a 0 t)
     (toBytes_forsNodeAdrs a hk (by norm_num) ht) (digestEquiv.symm y)
@@ -331,7 +296,7 @@ theorem simulateQ_forsNode (sk pk : Digest) (a : Address) (hk : a.kind = .forsTr
     have ht : t < 2 ^ 32 := by
       have : t + 1 ≤ 2 ^ (z + 1) * (t + 1) := Nat.le_mul_of_pos_left _ (by positivity)
       omega
-    rw [Fors.node, PerfectMerkleTree.merkleRootM]
+    rw [Fors.node_succ, PerfectMerkleTree.merkleRootM]
     refine bind_bridge (ih (2 * t) (by rw [hpow] at hzt; nlinarith)) fun l => ?_
     refine bind_bridge (ih (2 * t + 1) (by rw [hpow] at hzt; nlinarith)) fun r => ?_
     have h := simulateQ_tweakable_h pk (Fors.nodeAddress a (z + 1) t)
@@ -397,6 +362,7 @@ theorem simulateQ_forsSign (indices : Fors.Indices) (md : List Byte)
           (oracleSecret FIPS205.core (Equiv.refl _) (digestEquiv pk) (digestEquiv sk)) md
           (digestEquiv pk) (toAdrs a) :
           OracleComp TypedWorld (ForsSigCore FIPS205.params.params FIPS205.core)) := by
+  rw [Fors.sign_eq_sequenceFin]
   refine sequenceFin_bridge _ _ forsTreeOfCore fun i => ?_
   rw [← hidx i]
   have hl : forsIdx FIPS205.params.params md i.val < 2 ^ forsHeight := forsIdx_lt _ _ _
@@ -423,6 +389,7 @@ theorem simulateQ_forsPublicKeyFromSignature
       digestEquiv.symm <$>
         𝓔 (forsPkFromSigM FIPS205.core sig md (digestEquiv pk) (toAdrs a) :
           OracleComp TypedWorld FIPS205.core.Y) := by
+  rw [Fors.publicKeyFromSignature_eq_fold]
   refine bind_bridge (sequenceFin_bridge _ _ digestEquiv.symm fun i => ?_) fun roots => ?_
   · rw [← hidx i]
     have hl : forsIdx FIPS205.params.params md i.val < 2 ^ forsHeight := forsIdx_lt _ _ _

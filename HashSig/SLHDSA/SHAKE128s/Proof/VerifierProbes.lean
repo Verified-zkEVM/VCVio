@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.FaultCharge
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsBranch
+import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
 
 /-!
 # The verifier's own queries, as cache entries
@@ -180,6 +181,7 @@ theorem fors_eq_trees_bind_compression (signature : ForsSignature)
         Hashing.shortHash (m := OracleComp HashSpec)
           (Hashing.tweakableInput publicSeed (Extraction.Fors.rootAddress address)
             (digestArrayBytes roots)) := by
+  rw [SLHDSA.SHAKE128s.Fors.publicKeyFromSignature_eq_fold]
   refine congrArg (fun trees : OracleComp HashSpec (Fin forsTrees → Digest) =>
     trees >>= fun roots => Hashing.shortHash (m := OracleComp HashSpec)
       (Hashing.tweakableInput publicSeed (Extraction.Fors.rootAddress address)

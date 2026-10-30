@@ -128,7 +128,7 @@ theorem structuralValue_equation (secretSeed publicSeed : Digest) (parent : Stru
       cases height with
       | zero => rfl
       | succ height =>
-          simp only [structuralValue, Fors.node, bind, canonicalInput,
+          simp only [structuralValue, Fors.node_succ, bind, canonicalInput,
             StructuralNode.children, Nat.succ_ne_zero, ↓reduceDIte, childBytes,
             List.map_cons, List.map_nil, List.flatten_cons, List.flatten_nil,
             List.append_nil, value, forsChild, Nat.add_sub_cancel,

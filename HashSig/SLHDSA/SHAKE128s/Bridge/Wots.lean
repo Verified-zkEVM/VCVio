@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Encodings
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Transfer
+import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
 
 /-!
 # The paper's hashing and WOTS+ programs are FIPS 205's, query for query
@@ -172,25 +173,10 @@ theorem simulateQ_relabel_sequenceFin {α β : Type} (conv : β → α) :
         conv <$> simulateQ (encImpl FIPS205.params) (V i)) →
       simulateQ (relabel answerEquiv) (sequenceFin k P) =
         (fun (v : Vector β k) (i : Fin k) => conv v[i]) <$>
-          simulateQ (encImpl FIPS205.params) (Vector.ofFnM V)
-  | 0, P, V, _ => by
-    simp only [sequenceFin, Vector.ofFnM_zero, simulateQ_pure, map_pure]
-    congr 1
-    funext i
-    exact i.elim0
-  | k + 1, P, V, h => by
-    rw [sequenceFin, Vector.ofFnM_succ', simulateQ_bind, h 0, bind_map_left, simulateQ_bind,
-      map_bind]
-    refine bind_congr fun a => ?_
-    rw [simulateQ_bind, simulateQ_relabel_sequenceFin conv k _ _ (fun i => h i.succ),
-      bind_map_left, simulateQ_bind, map_bind]
-    refine bind_congr fun as => ?_
-    simp only [simulateQ_pure, map_pure]
-    congr 1
-    funext i
-    refine Fin.cases ?_ (fun i => ?_) i
-    · simp
-    · simp
+          simulateQ (encImpl FIPS205.params) (Vector.ofFnM V) := by
+  intro k P V h
+  exact sequenceFin_ofFnM_bridge (simulateQ' (relabel answerEquiv))
+    (simulateQ' (encImpl FIPS205.params)) P V conv h
 
 /-! ## WOTS+ -/
 

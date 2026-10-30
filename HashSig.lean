@@ -166,6 +166,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ForsDispatch
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsLeafCharge
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsMoments
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsPrefixCapacity
+public import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
 public import HashSig.SLHDSA.SHAKE128s.Proof.FreshExpectation
 public import HashSig.SLHDSA.SHAKE128s.Proof.FreshHitBound
 public import HashSig.SLHDSA.SHAKE128s.Proof.FusedCover

@@ -87,12 +87,26 @@ theorem fors_node_simulate (secretSeed publicSeed : Digest) (address : Address)
     (height index : Nat) :
     simulateQ impl (Fors.node secretSeed publicSeed address height index) =
       (Fors.node secretSeed publicSeed address height index : m Digest) := by
-  induction height generalizing index with
-  | zero =>
-      simp only [Fors.node, simulateQ_bind, fors_secret_simulate impl himpl,
-        tweakable_simulate impl himpl]
-  | succ height ih =>
-      simp only [Fors.node, simulateQ_bind, ih, tweakable_simulate impl himpl]
+  unfold Fors.node
+  apply PerfectMerkleTree.merkleRootM_natural (simulateQ' impl)
+  · intro leafIndex
+    simp only [simulateQ_bind, fors_secret_simulate impl himpl,
+      tweakable_simulate impl himpl]
+  · intro z t left right
+    exact tweakable_simulate impl himpl _ _ _
+
+/-- Simulating a FORS authentication path maps its primitive leaf and node hashes. -/
+theorem fors_authenticationPath_simulate (secretSeed publicSeed : Digest) (address : Address)
+    (height index : Nat) :
+    simulateQ impl (Fors.authenticationPath secretSeed publicSeed address height index) =
+      (Fors.authenticationPath secretSeed publicSeed address height index :
+        m (Vector Digest height)) := by
+  unfold Fors.authenticationPath
+  apply PerfectMerkleTree.intrinsicAuthPathM_natural (simulateQ' impl)
+  · intro leafIndex
+    exact fors_node_simulate impl himpl _ _ _ 0 leafIndex
+  · intro z t left right
+    exact tweakable_simulate impl himpl _ _ _
 
 /-- Simulating FORS signing is FORS signing in the target monad. -/
 theorem fors_sign_simulate (indices : Fors.Indices) (secretSeed publicSeed : Digest)
@@ -100,7 +114,7 @@ theorem fors_sign_simulate (indices : Fors.Indices) (secretSeed publicSeed : Dig
     simulateQ impl (Fors.sign indices secretSeed publicSeed address) =
       (Fors.sign indices secretSeed publicSeed address : m ForsSignature) := by
   simp only [Fors.sign, sequenceFin_simulate, simulateQ_bind, simulateQ_pure,
-    fors_secret_simulate impl himpl, fors_node_simulate impl himpl]
+    fors_secret_simulate impl himpl, fors_authenticationPath_simulate impl himpl]
 
 /-- Simulating hypertree signing over `remaining` layers is that signing in the target monad. -/
 theorem hypertree_signLayers_simulate (secretSeed publicSeed : Digest)

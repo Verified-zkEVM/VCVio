@@ -7,6 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
+public import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
 
 /-!
 # Naturality of the verifier in the hash handler
@@ -90,14 +91,23 @@ theorem merkle_simulate (index : Fin (2 ^ subtreeHeight)) (signature : XmssSigna
   simp only [Merkle.publicKeyFromSignature, simulateQ_bind, wots_simulate impl himpl,
     foldlM_simulate, tweakable_simulate impl himpl]
 
+/-- Simulating FORS root recovery maps the node-hash callback through the shared climb. -/
+theorem fors_climb_simulate (publicSeed : Digest) (address : Address) (index : Nat)
+    (leaf : Digest) (authentication : List Digest) :
+    simulateQ impl (Fors.climb publicSeed address index leaf authentication) =
+      (Fors.climb publicSeed address index leaf authentication : m Digest) := by
+  unfold Fors.climb
+  apply PerfectMerkleTree.climbM_natural (simulateQ' impl)
+  intro height index left right
+  exact tweakable_simulate impl himpl _ _ _
+
 /-- Simulating FORS public-key recovery is the recovery in `m`. -/
 theorem fors_simulate (signature : ForsSignature) (indices : Fors.Indices)
     (publicSeed : Digest) (address : Address) :
     simulateQ impl (Fors.publicKeyFromSignature signature indices publicSeed address) =
       (Fors.publicKeyFromSignature signature indices publicSeed address : m Digest) := by
   simp only [Fors.publicKeyFromSignature, simulateQ_bind, sequenceFin_simulate,
-    foldlM_simulate, tweakable_simulate impl himpl]
-
+    fors_climb_simulate impl himpl, tweakable_simulate impl himpl]
 /-- Simulating hypertree root recovery is the recovery in `m`. -/
 theorem hypertree_root_simulate (publicSeed : Digest) (remaining : Nat)
     (signatures : Fin remaining → XmssSignature) (layer tree : Nat) (leaf : Hypertree.LeafIndex)

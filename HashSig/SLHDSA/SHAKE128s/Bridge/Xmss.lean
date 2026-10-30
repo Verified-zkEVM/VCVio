@@ -48,11 +48,8 @@ local notation "TypedComp" => OracleComp (unifSpec + hashSpec FIPS205.core)
 /-! ## Merkle helpers -/
 
 /-- The sibling of a node index flips its low bit. -/
-theorem sibling_eq_xor (i : ℕ) : PerfectMerkleTree.sibling i = Nat.xor i 1 := by
-  unfold PerfectMerkleTree.sibling
-  split_ifs with h
-  · exact (Nat.xor_one_of_even (Nat.even_iff.mpr h)).symm
-  · exact (Nat.xor_one_of_odd (Nat.odd_iff.mpr (by omega))).symm
+theorem sibling_eq_xor (i : ℕ) : PerfectMerkleTree.sibling i = Nat.xor i 1 :=
+  PerfectMerkleTree.sibling_eq_xor i
 
 /-- The authentication path is the vector of the sibling subtree roots, computed from the leaf
 level upward. -/
@@ -61,11 +58,8 @@ theorem intrinsicAuthPathM_eq_ofFnM {Y : Type} {m : Type → Type*} [Monad m] [L
     ∀ z : ℕ, PerfectMerkleTree.intrinsicAuthPathM leaf nodeHash idx z =
       Vector.ofFnM fun j : Fin z =>
         PerfectMerkleTree.merkleRootM leaf nodeHash j.val
-          (PerfectMerkleTree.sibling (idx / 2 ^ j.val))
-  | 0 => by simp [PerfectMerkleTree.intrinsicAuthPathM]
-  | z + 1 => by
-    rw [PerfectMerkleTree.intrinsicAuthPathM, Vector.ofFnM_succ, intrinsicAuthPathM_eq_ofFnM]
-    rfl
+          (PerfectMerkleTree.sibling (idx / 2 ^ j.val)) :=
+  PerfectMerkleTree.intrinsicAuthPathM_eq_ofFnM leaf nodeHash idx
 
 /-! ## XMSS -/
 
