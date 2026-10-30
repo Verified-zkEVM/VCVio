@@ -93,6 +93,7 @@ public import VCVioTest.PointerChainPuzzle.Bad
 public import VCVioTest.PointerChainPuzzle.Basic
 public import VCVioTest.PointerChainPuzzle.Batch
 public import VCVioTest.PointerChainPuzzle.Delay
+public import VCVioTest.PointerChainPuzzle.GuessDelay
 public import VCVioTest.PointerChainPuzzle.Handler
 public import VCVioTest.PointerChainPuzzle.Ideal
 public import VCVioTest.PointerChainPuzzle.LeanSeal
@@ -186,6 +187,7 @@ public import VCVioTest.Tactic.GeneralizedRelationsExperiments
 public import VCVioTest.Tactic.Positivity
 public import VCVioTest.TimeLockPuzzle.FreeSummand
 public import VCVioTest.TimeLockPuzzle.Hiding
+public import VCVioTest.TimeLockPuzzle.Lift
 public import VCVioTest.TimeLockPuzzle.Truncate
 public import VCVioTest.ToFinalValidity
 public import VCVioTest.ToMathlib.AbsDiff
