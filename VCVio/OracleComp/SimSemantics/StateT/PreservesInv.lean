@@ -32,7 +32,9 @@ The `WriterT` analogue of this theory lives in
   `QueryImpl.PreservesInv.add` / `preservesInv_add_iff` split it over a sum of implementations,
   and `QueryImpl.PreservesInv.extendState` carries it through a passive state extension
 - `OracleComp.simulateQ_run_preservesInv` — simulating any oracle computation
-  with a preserving implementation preserves `Inv` on the final state
+  with a preserving implementation preserves `Inv` on the final state;
+  `OracleComp.simulateQ_run_simulateQ_run_preservesInv` is the version for a relation between the
+  states of an inner and an outer handler, run one inside the other
 - `InitSatisfiesInv` — every sampled initial state satisfies the invariant
 - `StateT.StatePreserving` — computation never changes the state
 - `StateT.PreservesInv` — computation preserves an invariant on the state; the structural
@@ -151,6 +153,28 @@ theorem simulateQ_run_preservesInv
       have hus' : us ∈ support ((impl t).run σ0) := by
         simpa [simulateQ_spec_query] using hus
       exact ih us.1 us.2 (himpl t σ0 hσ0 us hus') z hzcont
+
+/-- A relation `Inv` between the state of an inner handler and the state of an outer handler is
+preserved by running a computation through the inner handler and then the result through the
+outer one, when it is preserved by running each inner step through the outer handler. -/
+theorem simulateQ_run_simulateQ_run_preservesInv {ι₀ ι₁ ι₂ : Type} {spec₀ : OracleSpec ι₀}
+    {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂} {σ τ α : Type}
+    (outer : QueryImpl spec₁ (StateT τ (OracleComp spec₂)))
+    (inner : QueryImpl spec₀ (StateT σ (OracleComp spec₁))) (Inv : σ → τ → Prop)
+    (hstep : ∀ t s q, Inv s q →
+      ∀ z ∈ support ((simulateQ outer ((inner t).run s)).run q), Inv z.1.2 z.2)
+    (oa : OracleComp spec₀ α) (s : σ) (q : τ) (h : Inv s q) {z : (α × σ) × τ}
+    (hz : z ∈ support ((simulateQ outer ((simulateQ inner oa).run s)).run q)) :
+    Inv z.1.2 z.2 := by
+  induction oa using OracleComp.inductionOn generalizing s q with
+  | pure x =>
+    simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
+    subst hz
+    exact h
+  | query_bind t k ih =>
+    rw [run_simulateQ_query_bind, simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
+    obtain ⟨y, hy, hz⟩ := hz
+    exact ih y.1.1 y.1.2 y.2 (hstep t s q h y hy) hz
 
 end OracleComp
 
