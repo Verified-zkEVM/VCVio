@@ -77,6 +77,35 @@ def equivFn : QueryCache spec ≃ ((t : spec.Domain) → Option (spec.Range t)) 
   left_inv := ofFn_toFn
   right_inv := toFn_ofFn
 
+section AnswerMap
+
+variable {R S : OracleSpec.{u, v} ι}
+
+/-- Map every stored answer at its original input. -/
+def mapAnswers (f : ∀ input, R input → S input) (cache : R.QueryCache) :
+    S.QueryCache :=
+  QueryCache.ofFn fun input => (cache input).map (f input)
+
+/-- Mapping a cache maps the optional lookup at the same input. -/
+@[simp] theorem mapAnswers_apply (f : ∀ input, R input → S input)
+    (cache : R.QueryCache) (input : ι) :
+    mapAnswers f cache input = (cache input).map (f input) := rfl
+
+/-- Mapping an empty table leaves it empty. -/
+theorem mapAnswers_empty (f : ∀ input, R input → S input) :
+    mapAnswers f (∅ : R.QueryCache) = ∅ :=
+  QueryCache.ext fun input => by simp [mapAnswers]
+
+/-- Inverse answer maps recover every optional cache entry. -/
+theorem mapAnswers_symm_mapAnswers (e : ∀ input, R input ≃ S input)
+    (cache : R.QueryCache) :
+    mapAnswers (fun input => (e input).symm) (mapAnswers (fun input => e input) cache) =
+      cache := by
+  refine QueryCache.ext fun input => ?_
+  cases h : cache input <;> simp [mapAnswers, h]
+
+end AnswerMap
+
 instance : Inhabited (QueryCache spec) := ⟨∅⟩
 
 instance [DecidableEq ((t : spec.Domain) → Option (spec.Range t))] :
@@ -226,6 +255,18 @@ lemma cacheQuery_self (t : spec.Domain) (u : spec.Range t) :
 lemma cacheQuery_of_ne {t' t : spec.Domain} (u : spec.Range t) (h : t' ≠ t) :
     (cache.cacheQuery t u) t' = cache t' := by
   simp [cacheQuery, h]
+
+/-- Mapping and overwriting one dependent entry commute. -/
+theorem mapAnswers_cacheQuery {R S : OracleSpec.{u, v} ι} (f : ∀ input, R input → S input)
+    (cache : R.QueryCache) (input : ι) (answer : R input) :
+    mapAnswers f (cache.cacheQuery input answer) =
+      (mapAnswers f cache).cacheQuery input (f input answer) := by
+  refine QueryCache.ext fun other => ?_
+  by_cases h : other = input
+  · subst other
+    simp [mapAnswers]
+  · simp [mapAnswers, QueryCache.cacheQuery, h]
+
 
 /-- After caching an answer at `t`, the cache answers `t'` exactly when `t'` is `t` or the cache
 already answered `t'`. -/
@@ -571,6 +612,40 @@ instance Mathlib already provides for `WriterT (QueryLog spec) M`, which the
   List ((t : spec.Domain) × spec.Range t)
 
 namespace QueryLog
+
+section AnswerMap
+
+/-- The existing chart forwards each input and its represented answer. -/
+def answerChart {ι : Type u} {R S : OracleSpec.{u, v} ι}
+    (e : ∀ input, R input ≃ S input) : PFunctor.Chart R.toPFunctor S.toPFunctor where
+  toFunA := id
+  toFunB input := e input
+
+/-- The existing chronological trace map viewed as one query-answer list. -/
+def mapAnswers {ι : Type u} {R S : OracleSpec.{u, v} ι}
+    (e : ∀ input, R input ≃ S input) (log : QueryLog R) : QueryLog S :=
+  PFunctor.Trace.mapChart (answerChart e) (fun _ : Unit => log) ()
+
+variable {ι : Type u} {R S : OracleSpec.{u, v} ι} (e : ∀ input, R input ≃ S input)
+
+/-- Mapping an empty public log emits no event. -/
+@[simp] theorem mapAnswers_empty : mapAnswers e ([] : QueryLog R) = [] := rfl
+
+/-- Mapping retains chronological order, including repeated inputs. -/
+theorem mapAnswers_append (first second : QueryLog R) :
+    mapAnswers e (first ++ second) = mapAnswers e first ++ mapAnswers e second := by
+  let entryMap : ((input : ι) × R input) → Option ((input : ι) × S input) :=
+    fun entry => some ⟨entry.1, (e entry.1) entry.2⟩
+  change (first ++ second).filterMap entryMap =
+    first.filterMap entryMap ++ second.filterMap entryMap
+  exact List.filterMap_append
+
+/-- A singleton answer is converted at its original input. -/
+@[simp] theorem mapAnswers_singleton (input : ι) (answer : R input) :
+    mapAnswers e [⟨input, answer⟩] = [⟨input, (e input) answer⟩] := by
+  rfl
+
+end AnswerMap
 
 /-- Query log with a single entry. -/
 def singleton (t : spec.Domain) (u : spec.Range t) : QueryLog spec := [⟨t, u⟩]

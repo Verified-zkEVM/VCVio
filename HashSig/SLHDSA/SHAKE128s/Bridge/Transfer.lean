@@ -7,6 +7,8 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AnswerRelabel
+public import VCVio.OracleComp.SimSemantics.WriterT.Core
 
 /-!
 # Transferring security bits along a relabelling of hash answers
@@ -42,15 +44,15 @@ variable {A B : Type}
 
 /-- Run a query of the `A` world in the `B` world: a uniform query is asked unchanged, and a
 hash query is asked of `B`'s oracle with its answer read back through `e.symm`. -/
-@[expose] def relabel (e : A ≃ B) : QueryImpl (Game.World A) (OracleComp (Game.World B))
-  | .inl n => liftM ((Game.World B).query (.inl n))
-  | .inr x => e.symm <$> liftM ((Game.World B).query (.inr x))
+@[expose] def relabel (e : A ≃ B) : QueryImpl (Game.World A) (OracleComp (Game.World B)) :=
+  QueryImpl.relabel (RandomOracleAnswerRelabel.worldAnswers (R := Bytes →ₒ A)
+    (S := Bytes →ₒ B) (fun _ => e))
 
-/-- Run a query of the `B` world in the `A` world: a uniform query is asked unchanged, and a
-hash query is asked of `A`'s oracle with its answer read back through `e`. -/
-@[expose] def unlabel (e : A ≃ B) : QueryImpl (Game.World B) (OracleComp (Game.World A))
-  | .inl n => liftM ((Game.World A).query (.inl n))
-  | .inr x => e <$> liftM ((Game.World A).query (.inr x))
+/-- Run a query in the inverse answer representation at the same input. -/
+@[expose] def unlabel (e : A ≃ B) : QueryImpl (Game.World B) (OracleComp (Game.World A)) :=
+  QueryImpl.relabel (fun input =>
+    (RandomOracleAnswerRelabel.worldAnswers (R := Bytes →ₒ A) (S := Bytes →ₒ B)
+      (fun _ => e) input).symm)
 
 /-- Relabelling a uniform query asks it unchanged. -/
 @[simp]
@@ -74,15 +76,13 @@ theorem unlabel_apply_inr (e : A ≃ B) (x : Bytes) :
 
 /-- Unlabelling and then relabelling a program of the `B` world gives the program back. -/
 theorem simulateQ_relabel_unlabel (e : A ≃ B) {α : Type} (P : OracleComp (Game.World B) α) :
-    simulateQ (relabel e) (simulateQ (unlabel e) P) = P := by
-  rw [QueryImpl.simulateQ_simulateQ_eq_of_apply (impl := QueryImpl.id' _), simulateQ_id']
-  rintro (n | x) <;> simp
+    simulateQ (relabel e) (simulateQ (unlabel e) P) = P :=
+  QueryImpl.simulateQ_relabel_relabel_symm _ P
 
-/-- Relabelling and then unlabelling a program of the `A` world gives the program back. -/
+/-- Inverse answer conversion recovers the source program. -/
 theorem simulateQ_unlabel_relabel (e : A ≃ B) {α : Type} (P : OracleComp (Game.World A) α) :
-    simulateQ (unlabel e) (simulateQ (relabel e) P) = P := by
-  rw [QueryImpl.simulateQ_simulateQ_eq_of_apply (impl := QueryImpl.id' _), simulateQ_id']
-  rintro (n | x) <;> simp
+    simulateQ (unlabel e) (simulateQ (relabel e) P) = P :=
+  QueryImpl.simulateQ_relabel_symm_relabel _ P
 
 /-! ## The random oracle under relabelling -/
 
@@ -91,41 +91,16 @@ abbrev Cache (Output : Type) := (RandomOracleModel.HashSpec Bytes Output).QueryC
 
 /-- The cache whose entries are those of `cache` mapped through `e`. -/
 @[expose] def mapCache (e : A ≃ B) (cache : Cache A) : Cache B :=
-  QueryCache.ofFn fun x => (cache x).map e
+  QueryCache.mapAnswers (fun _ => e) cache
 
-/-- Mapping the empty cache gives the empty cache. -/
+/-- Mapping an empty cache gives an empty cache. -/
 theorem mapCache_empty (e : A ≃ B) : mapCache e ∅ = ∅ :=
-  QueryCache.ext fun x => by simp [mapCache]
+  QueryCache.mapAnswers_empty _
 
-/-- Mapping a cache commutes with recording an answer, mapped through `e`. -/
+/-- Answer conversion commutes with recording a response at its actual input. -/
 theorem mapCache_cacheQuery (e : A ≃ B) (cache : Cache A) (x : Bytes) (a : A) :
-    mapCache e (cache.cacheQuery x a) = (mapCache e cache).cacheQuery x (e a) := by
-  refine QueryCache.ext fun y => ?_
-  by_cases h : y = x
-  · subst h
-    simp [mapCache]
-  · simp [mapCache, QueryCache.cacheQuery, h]
-
-/-- State-map transport in distribution: if each step of `left` from the image of a state has the
-law of the corresponding step of `right` with its final state mapped by `proj`, then the same
-holds for the whole simulated run of any program. -/
-theorem simulateQ_run_evalDistEq_map {ι : Type} {spec : OracleSpec ι} {σ τ : Type}
-    (left : QueryImpl spec (StateT τ ProbComp)) (right : QueryImpl spec (StateT σ ProbComp))
-    (proj : σ → τ)
-    (h : ∀ t s, (left t).run (proj s) =ᵈ Prod.map id proj <$> (right t).run s)
-    {α : Type} (P : OracleComp spec α) (s : σ) :
-    (simulateQ left P).run (proj s) =ᵈ Prod.map id proj <$> (simulateQ right P).run s := by
-  induction P using OracleComp.inductionOn generalizing s with
-  | pure x =>
-    simp only [simulateQ_pure, StateT.run_pure, map_pure]
-    exact EvalDistEq.rfl
-  | query_bind t k ih =>
-    simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, id_map,
-      OracleQuery.input_query, StateT.run_bind, map_bind]
-    refine ((h t s).bind fun p =>
-      EvalDistEq.rfl (mx := (simulateQ left (k p.1)).run p.2)).trans ?_
-    rw [bind_map_left]
-    exact EvalDistEq.bind_right _ fun p => ih p.1 p.2
+    mapCache e (cache.cacheQuery x a) = (mapCache e cache).cacheQuery x (e a) :=
+  QueryCache.mapAnswers_cacheQuery _ _ _ _
 
 section Uniform
 
@@ -138,24 +113,8 @@ theorem relabel_step (e : A ≃ B) (he : (e <$> ($ᵗ A : ProbComp A)) =ᵈ ($�
     (t : (Game.World A).Domain) (cache : Cache A) :
     (simulateQ (RandomOracleModel.impl Bytes B) (relabel e t)).run (mapCache e cache) =ᵈ
       Prod.map id (mapCache e) <$> (RandomOracleModel.impl Bytes A t).run cache := by
-  rcases t with n | x
-  · simp [RandomOracleModel.impl, unifFwdImpl]
-  · simp only [relabel, RandomOracleModel.impl, simulateQ_map, StateT.run_map,
-      QueryImpl.add_apply_inr]
-    rw [simulateQ_spec_query, QueryImpl.add_apply_inr, randomOracle.run_eq,
-      randomOracle.run_eq]
-    cases h : cache x with
-    | some a =>
-      have hmap : (mapCache e cache) x = some (e a) := by simp [mapCache, h]
-      simp [hmap]
-    | none =>
-      have hmap : (mapCache e cache) x = none := by simp [mapCache, h]
-      simp only [hmap, map_bind, map_pure]
-      have key := he.symm.map (fun b => (e.symm b, (mapCache e cache).cacheQuery x b))
-      rw [Functor.map_map] at key
-      simp only [Equiv.symm_apply_apply, ← mapCache_cacheQuery] at key
-      rw [map_eq_bind_pure_comp, map_eq_bind_pure_comp] at key
-      exact key
+  exact RandomOracleAnswerRelabel.world_step (R := Bytes →ₒ A) (S := Bytes →ₒ B)
+      (fun _ => e) (fun _ => he) t cache
 
 /-- A relabelled program run against `B`'s random oracle from a mapped cache has the law of the
 program run against `A`'s random oracle, with its final cache mapped. -/
@@ -166,8 +125,8 @@ theorem run_simulateQ_relabel_from (e : A ≃ B)
         (mapCache e cache) =ᵈ
       Prod.map id (mapCache e) <$>
         (simulateQ (RandomOracleModel.impl Bytes A) P).run cache := by
-  rw [← QueryImpl.simulateQ_compose]
-  exact simulateQ_run_evalDistEq_map _ _ (mapCache e) (fun t s => relabel_step e he t s) P cache
+  exact RandomOracleAnswerRelabel.evalDist_world_run (R := Bytes →ₒ A) (S := Bytes →ₒ B)
+      (fun _ => e) (fun _ => he) P cache
 
 /-- **Relabelling preserves the random-oracle model.** If `e` carries the uniform sampler of `A`
 to that of `B`, a relabelled program has the same law in the random-oracle model as the
@@ -183,38 +142,6 @@ theorem run_simulateQ_relabel (e : A ≃ B)
 end Uniform
 
 /-! ## Relabelling and counting -/
-
-/-- Writer-level simulation collapse: if a writer-instrumented handler `red` followed by `impl`
-agrees on every query with `game`, then it agrees on every program. -/
-theorem simulateQ_writerT_run_compose {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁}
-    {spec₂ : OracleSpec ι₂} {ω : Type} [Monoid ω] {n : Type → Type} [Monad n] [LawfulMonad n]
-    (red : QueryImpl spec₁ (WriterT ω (OracleComp spec₂))) (impl : QueryImpl spec₂ n)
-    (game : QueryImpl spec₁ (WriterT ω n))
-    (bridge : ∀ q, simulateQ impl (red q).run = (game q).run) {α : Type}
-    (oa : OracleComp spec₁ α) :
-    simulateQ impl (simulateQ red oa).run = (simulateQ game oa).run := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => simp
-  | query_bind t f ih =>
-    simp only [simulateQ_bind, WriterT.run_bind, simulateQ_spec_query, bridge t, simulateQ_map]
-    exact bind_congr fun p => by rw [ih p.1]
-
-/-- Simulation collapse through a writer over a state: if a handler `red` into
-`WriterT ω (StateT σ (OracleComp spec₂))` followed by `impl` agrees on every query and state with
-`game`, then it agrees on every program and state. -/
-theorem simulateQ_writerT_stateT_run_compose {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁}
-    {spec₂ : OracleSpec ι₂} {ω σ : Type} [Monoid ω] {n : Type → Type} [Monad n] [LawfulMonad n]
-    (red : QueryImpl spec₁ (WriterT ω (StateT σ (OracleComp spec₂)))) (impl : QueryImpl spec₂ n)
-    (game : QueryImpl spec₁ (WriterT ω (StateT σ n)))
-    (bridge : ∀ q s, simulateQ impl ((red q).run.run s) = (game q).run.run s) {α : Type}
-    (oa : OracleComp spec₁ α) (s : σ) :
-    simulateQ impl ((simulateQ red oa).run.run s) = (simulateQ game oa).run.run s := by
-  induction oa using OracleComp.inductionOn generalizing s with
-  | pure x => simp
-  | query_bind t f ih =>
-    simp only [simulateQ_bind, WriterT.run_bind, simulateQ_spec_query, StateT.run_bind,
-      StateT.run_map, bridge t, simulateQ_map]
-    exact bind_congr fun p => by rw [ih p.1.1 p.2]
 
 /-- Relabelling commutes with additive cost instrumentation for any cost on the shared query
 domain `ℕ ⊕ Bytes`: each query is relabelled into exactly one query with the same input. -/

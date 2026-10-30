@@ -180,6 +180,8 @@ public import VCVio.CryptoFoundations.SigmaProtocol.ChallengeRestriction
 public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.Encoding
+public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.Relabel
+public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.Relabel.RandomOracle
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.Unforgeability
 public import VCVio.CryptoFoundations.SignatureAlg.Naturality
 public import VCVio.CryptoFoundations.SignatureAlg.RomQueryCount
@@ -337,6 +339,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryBound.Tagged
 public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AnswerRelabel
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape
@@ -395,6 +398,7 @@ public import VCVio.OracleComp.SimSemantics.OptionT.Basic
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Relabel
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Tagged
 public import VCVio.OracleComp.SimSemantics.ReaderT.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
@@ -410,6 +414,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 public import VCVio.OracleComp.SimSemantics.StateT.UntilBad
 public import VCVio.OracleComp.SimSemantics.Wiring
 public import VCVio.OracleComp.SimSemantics.WriterT.Core
+public import VCVio.OracleComp.SimSemantics.WriterT.Measure
 public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
 public import VCVio.OracleComp.Support
 public import VCVio.OracleComp.Traversal

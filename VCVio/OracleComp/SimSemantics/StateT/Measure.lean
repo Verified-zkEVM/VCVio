@@ -189,3 +189,39 @@ theorem OptionT.prEvent_mk_simulateQ_run'_eq_one_of_support
   exact fun o ho ↦ h o (support_simulateQ_run'_subset impl oa s ho)
 
 end simulateQ
+
+namespace OracleComp
+
+open OracleSpec
+
+/-- Stepwise distribution transport by a deterministic state map lifts to adaptive runs. -/
+theorem evalDistEq_simulateQ_run_map :
+  ∀ {ι : Type} {spec : OracleSpec ι} {σ τ α : Type}
+    (left : QueryImpl spec (StateT τ ProbComp))
+    (right : QueryImpl spec (StateT σ ProbComp)) (project : σ → τ),
+    (∀ input state,
+      (left input).run (project state) =ᵈ
+        Prod.map id project <$> (right input).run state) →
+    ∀ (program : OracleComp spec α) (state : σ),
+      (simulateQ left program).run (project state) =ᵈ
+        Prod.map id project <$> (simulateQ right program).run state := by
+  intro ι spec σ τ α left right project hstep program state
+  have hfill : QueryImpl.Intertwines (fun s => pure (project s)) right left := by
+    intro input current γ _ continuation
+    have h := ((hstep input current).symm.bind_left
+      (fun output => continuation output.1 output.2)).evalDist_eq
+    simpa only [pure_bind, bind_map_left, Function.comp_def, Prod.map, id_eq] using h
+  let : MeasurableSpace (α × τ) := ⊤
+  apply EvalDistEq.of_evalDist_eq
+  have h := hfill.evalDist_simulateQ_run program state
+    (fun value finalState => pure (value, finalState))
+  have hmap : (Prod.map id project : α × σ → α × τ) =
+      (fun output => (output.1, project output.2)) := by
+    funext output
+    cases output
+    rfl
+  rw [hmap]
+  simpa only [pure_bind, map_pure, bind_pure, bind_pure_comp, Prod.mk.eta, id_map,
+    Function.comp_def, Prod.map, id_eq] using h.symm
+
+end OracleComp
