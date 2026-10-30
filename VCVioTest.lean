@@ -11,9 +11,12 @@ public import VCVioTest.CryptoFoundations.ComplexityAdapters
 public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.CslibPPolyUniverses
+public import VCVioTest.CryptoFoundations.DEMIndCpa
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.KeyedHashCovering
+public import VCVioTest.CryptoFoundations.LeftOrRight
 public import VCVioTest.CryptoFoundations.OracleClosure
+public import VCVioTest.CryptoFoundations.PRFMultiKey
 public import VCVioTest.CryptoFoundations.PRFTableMeasure
 public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SignatureAlgBudget
@@ -177,6 +180,7 @@ public import VCVioTest.Tactic.FunProp
 public import VCVioTest.Tactic.GeneralizedRelations
 public import VCVioTest.Tactic.GeneralizedRelationsExperiments
 public import VCVioTest.Tactic.Positivity
+public import VCVioTest.TimeLockPuzzle.Truncate
 public import VCVioTest.ToFinalValidity
 public import VCVioTest.ToMathlib.AbsDiff
 public import VCVioTest.UniformOn
