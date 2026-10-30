@@ -8,6 +8,7 @@ module
 
 public import VCVio.Schemes.PointerChainPuzzle.LeanSeal
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Encoded
+import VCVio.OracleComp.SimSemantics.StateT.Measure
 
 /-!
 # leanSeal over one random oracle
@@ -514,27 +515,6 @@ lemma run_simulateQ_unifFwdImpl_add_liftM {ι τ α : Type} {spec : OracleSpec.{
     QueryImpl.simulateQ_add_liftComp_left (m' := StateT spec.QueryCache ProbComp)
       (unifFwdImpl spec) ro oa]
   exact unifFwdImpl.simulateQ_run oa c
-
-/-- Running a computation through a stateful handler into a second interface, then through a
-stateful handler of that interface, is equal in distribution to running it through one handler on
-the pair of states, if this holds for every query. -/
-theorem simulateQ_run_simulateQ_run_evalDistEq {ι₀ ι₁ σ τ α : Type}
-    {spec₀ : OracleSpec.{0, 0} ι₀} {spec₁ : OracleSpec.{0, 0} ι₁}
-    (outer : QueryImpl spec₁ (StateT τ ProbComp))
-    (inner : QueryImpl spec₀ (StateT σ (OracleComp spec₁)))
-    (impl : QueryImpl spec₀ (StateT (τ × σ) ProbComp))
-    (h : ∀ t s q, (simulateQ outer ((inner t).run s)).run q =ᵈ
-      (fun z => ((z.1, z.2.2), z.2.1)) <$> (impl t).run (q, s))
-    (oa : OracleComp spec₀ α) (s : σ) (q : τ) :
-    (simulateQ outer ((simulateQ inner oa).run s)).run q =ᵈ
-      (fun z => ((z.1, z.2.2), z.2.1)) <$> (simulateQ impl oa).run (q, s) := by
-  induction oa using OracleComp.inductionOn generalizing s q with
-  | pure a => simp
-  | query_bind t k ih =>
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, map_bind]
-    refine ((h t s q).bind_left _).trans ?_
-    simp only [bind_map_left]
-    exact EvalDistEq.bind_right _ fun z => ih z.1 z.2.2 z.2.1
 
 variable {ι D M : Type} {spec : OracleSpec.{0, 0} ι} [SampleableType M]
   [∀ t, SampleableType (spec.Range t)] (E : RandomOracleEncoding spec D M)
