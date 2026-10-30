@@ -37,7 +37,11 @@ instance queries.
 `indexedRun` answers the oracles with subkeys itself, as a lazily sampled random oracle, forwards
 local coins, and forwards every instance query `(i, x)` to its function oracle. Run in the real
 world of `prf.multiKey (Fin (2 * qEnc))` it is the hybrid with the subkeys of each encryption
-replaced by independent keys of `prf`; run in the ideal world, with independent random functions.
+replaced by independent keys of `prf`, the hybrid `G₂` of the hiding proof; run in the ideal
+world, with independent random functions, it is the hybrid `G₃`, the paper's last game
+(`app:hiding`), in which
+every envelope has its own random encryption and tag functions and the view does not depend on
+the hidden bit.
 `hidingDistinguisher` draws the hidden bit itself, runs `indexedRun` at that bit and outputs
 whether the adversary guessed it. In either world it outputs `true` with probability
 `(p₁ + (1 - p₀)) / 2`, where `p_b` is the probability that the adversary outputs `true` against

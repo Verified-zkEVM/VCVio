@@ -32,13 +32,13 @@ messages of different lengths is rejected by the left-or-right oracle and does n
 A private random function of the nonce draws fresh subkeys at every nonce not yet seen, so `G₁`
 and `G₁½` agree until two accepted encryptions share a nonce (`NonceBad`). The proof is the
 until-bad argument (`QueryImpl.DominatedUntilBad`) on the online phases with the log of accepted
-encryptions as a ghost state (`counterJointImpl`), read as the private cache of `G₁` by
-`logCache`. The nonce of the `j`-th accepted encryption repeats an earlier one with probability at
-most `j / |N|`, whatever the adversary did in between, and the hazard lemma
-`OracleComp.prEvent_simulateQ_run_le_sum_of_isQueryBoundP` adds these up over the at most `qEnc`
-challenge queries to `qEnc (qEnc - 1) / (2 |N|)`. The nonces are drawn adaptively, interleaved with
-the adversary's other queries, which is why the bound is per query rather than a birthday bound for
-a tape of nonces drawn in advance.
+encryptions as a ghost state (`counterJointImpl`), read as the private cache of `G₁`
+(`privateOnlineImpl`) by `logCache`. The nonce of the `j`-th accepted encryption repeats an
+earlier one with probability at most `j / |N|`, whatever the adversary did in between, and the
+hazard lemma `OracleComp.prEvent_simulateQ_run_le_sum_of_isQueryBoundP` adds these up over the
+at most `qEnc` challenge queries to `qEnc (qEnc - 1) / (2 |N|)`. The nonces are drawn adaptively,
+interleaved with the adversary's other queries, which is why the bound is per query rather than a
+birthday bound for a tape of nonces drawn in advance.
 
 ## From `G₁½` to `G₂`
 
@@ -135,7 +135,12 @@ def counterAdversary
 variable (m) in
 /-- **The hybrid `G₁½`.** The delay experiment for any output of `sealScheme` against
 `counterAdversary adv b`: the hiding experiment at hidden bit `b` with the counter-indexed
-challenger, returning the guess together with the puzzle key. -/
+challenger, returning the guess together with the puzzle key.
+
+Its subkeys are fresh for every accepted encryption, as the paper's proof of the hiding theorem
+(`app:hiding`) has them once it excludes its bad event (c), two equal nonces: indexing them by the
+counter instead of the nonce is what lets the next hop read them off a table of `2 qEnc`
+independent PRF keys. -/
 @[expose]
 def counterExperiment [NeZero n] [AddCommGroup L] [DecidableEq S] [SampleableType Salt]
     [SampleableType L] (mkCtx : Salt → Ctx) (initAcc : Ctx → S)
@@ -216,27 +221,16 @@ lemma map_counterLogImpl_run (puzzle : Puzzle n S L Salt) (b : Bool)
 
 end Counter
 
-/-! ## The online phases as handlers on the cache of the random oracle -/
+/-! ## The online phase of `G₁½` as a handler on the cache of the random oracle
+
+The online phase of `G₁` is `privateOnlineImpl` of `VCVio.Schemes.PointerChainPuzzle.Hiding`, with
+its run equations and `run_romImpl_privateImpl_evalDistEq`; the nonce hop compares it with the
+handler below. -/
 
 section Joint
 
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
   [SampleableType S] [SampleableType L] [DecidableEq N] [SampleableType N] [SampleableType K]
-
-/-- The online phase of the hybrid `G₁` at hidden bit `b` for the puzzle `puzzle`, as one handler
-of the adversary's online oracles on the pair of the cache of the random oracle and the private
-cache: a step of `privateImpl` on the private cache, with rounds rewritten as single queries
-answered by the random oracle on the shared cache. -/
-@[expose]
-noncomputable def privateJointImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
-    QueryImpl ((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
-        (sealSpec n S L Salt Ctx N K).batch)
-      (StateT ((sealSpec n S L Salt Ctx N K).QueryCache × (privateSpec N K).QueryCache)
-        ProbComp) :=
-  fun t => StateT.mk fun s => (fun z => (z.1.1, (z.2, z.1.2))) <$>
-    (simulateQ (sealSpec n S L Salt Ctx N K).romImpl
-      (simulateQ (sealSpec n S L Salt Ctx N K).unbatch
-        ((privateImpl prf codec encodePuzzle puzzle b t).run s.2))).run s.1
 
 /-- The online phase of the hybrid `G₁½` with the log of accepted encryptions, at hidden bit `b`
 for the puzzle `puzzle`, as one handler on the pair of the cache of the random oracle and the
@@ -252,17 +246,6 @@ noncomputable def counterJointImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
       (simulateQ (sealSpec n S L Salt Ctx N K).unbatch
         ((counterLogImpl prf codec encodePuzzle qEnc puzzle b t).run s.2))).run s.1
 
-lemma privateJointImpl_run_unif (puzzle : Puzzle n S L Salt) (b : Bool) (k : ℕ)
-    (s : (sealSpec n S L Salt Ctx N K).QueryCache × (privateSpec N K).QueryCache) :
-    (privateJointImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b (.inl (.inl k))).run s =
-      (fun z => (z.1, (z.2, s.2))) <$> (unifFwdImpl (sealSpec n S L Salt Ctx N K) k).run s.1 := by
-  simp only [add_apply_inl, privateJointImpl, privateImpl, QueryImpl.add_apply_inl,
-    PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor, QueryImpl.ofLift_apply,
-    StateT.run_monadLift, monadLift_self, bind_pure_comp, simulateQ_map,
-    simulateQ_romImpl_simulateQ_unbatch, StateT.run_map, Functor.map_map, StateT.run_mk]
-  rw [OracleComp.liftM_eq_liftM_liftM, OracleQuery.liftM_add_left_query, simulateQ_spec_query]
-  rfl
-
 lemma counterJointImpl_run_unif (puzzle : Puzzle n S L Salt) (b : Bool) (k : ℕ)
     (s : (sealSpec n S L Salt Ctx N K).QueryCache × (ℕ × CounterLog N K)) :
     (counterJointImpl prf codec encodePuzzle qEnc puzzle b (.inl (.inl k))).run s =
@@ -273,24 +256,6 @@ lemma counterJointImpl_run_unif (puzzle : Puzzle n S L Salt) (b : Bool) (k : ℕ
     simulateQ_romImpl_simulateQ_unbatch, StateT.run_map, Functor.map_map, StateT.run_mk]
   rw [OracleComp.liftM_eq_liftM_liftM, OracleQuery.liftM_add_left_query, simulateQ_spec_query]
   rfl
-
-lemma privateJointImpl_run_challenge (puzzle : Puzzle n S L Salt) (b : Bool) (m₀ m₁ : Plaintext)
-    (s : (sealSpec n S L Salt Ctx N K).QueryCache × (privateSpec N K).QueryCache) :
-    (privateJointImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b (.inl (.inr (m₀, m₁)))).run s =
-      if plaintextLength m₀ = plaintextLength m₁ then (do
-        let nonce ← $ᵗ N
-        let z ← ((privateSpec N K).randomOracle nonce).run s.2
-        pure (some (sealWith prf codec (encodePuzzle puzzle) nonce z.1 (if b then m₁ else m₀)),
-          (s.1, z.2)))
-      else pure (none, s) := by
-  by_cases h : plaintextLength m₀ = plaintextLength m₁
-  · simp only [privateJointImpl, privateImpl, StateT.run_mk, QueryImpl.add_apply_inl,
-      QueryImpl.add_apply_inr, LeftOrRight.oracle, h, ↓reduceIte]
-    simp [privateEncrypt, simulateQ_romImpl_simulateQ_unbatch, QueryImpl.simulateQ_add_liftM_left,
-      unifFwdImpl.simulateQ_run]
-  · simp only [privateJointImpl, privateImpl, StateT.run_mk, QueryImpl.add_apply_inl,
-      QueryImpl.add_apply_inr, LeftOrRight.oracle, h, ↓reduceIte]
-    simp
 
 lemma counterJointImpl_run_challenge (puzzle : Puzzle n S L Salt) (b : Bool) (m₀ m₁ : Plaintext)
     (s : (sealSpec n S L Salt Ctx N K).QueryCache × (ℕ × CounterLog N K)) :
@@ -313,23 +278,6 @@ lemma counterJointImpl_run_challenge (puzzle : Puzzle n S L Salt) (b : Bool) (m�
   · simp only [counterJointImpl, counterLogImpl, StateT.run_mk, QueryImpl.add_apply_inl,
       QueryImpl.add_apply_inr, LeftOrRight.oracle, h, ↓reduceIte]
     simp
-
-lemma privateJointImpl_run_batch (puzzle : Puzzle n S L Salt) (b : Bool)
-    (ts : List (sealSpec n S L Salt Ctx N K).Domain)
-    (s : (sealSpec n S L Salt Ctx N K).QueryCache × (privateSpec N K).QueryCache) :
-    (privateJointImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b (.inr ts)).run s =
-      (fun z => (z.1, (z.2, s.2))) <$>
-        ((sealSpec n S L Salt Ctx N K).randomOracle.batch ts).run s.1 := by
-  simp only [add_apply_inr, privateJointImpl, privateImpl, QueryImpl.add_apply_inr,
-    StateT.run_monadLift, bind_pure_comp, simulateQ_map, simulateQ_query, OracleQuery.input_query,
-    OracleQuery.cont_query, unbatch_apply_inr, id_map, StateT.run_map, Functor.map_map,
-    StateT.run_mk]
-  rw [← QueryImpl.apply_compose, QueryImpl.compose_batch]
-  congr 3
-  funext t
-  simp only [QueryImpl.apply_compose, simulateQ_query, OracleQuery.input_query, add_apply_inr,
-    OracleQuery.cont_query, QueryImpl.add_apply_inr, QueryImpl.withCaching_apply,
-    uniformSampleImpl_apply, map_bind, id_map]
 
 lemma counterJointImpl_run_batch (puzzle : Puzzle n S L Salt) (b : Bool)
     (ts : List (sealSpec n S L Salt Ctx N K).Domain)
@@ -474,13 +422,13 @@ pair of subkeys, as `G₁½` does, and caches it, as logging it does; at a nonce
 the budget, the post-state is `NonceBad`. -/
 theorem dominatedUntilBad_counterJointImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
     QueryImpl.DominatedUntilBad (counterJointImpl (Ctx := Ctx) prf codec encodePuzzle qEnc puzzle b)
-      (privateJointImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b)
+      (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b)
       (fun s => (s.1, logCache s.2.2)) (fun _ => True) (fun s => NonceBad qEnc s.2) := by
   intro t s _ hb Q
   rcases t with (k | ⟨m₀, m₁⟩) | ts
-  · rw [counterJointImpl_run_unif, privateJointImpl_run_unif, prEvent_map, prEvent_map]
+  · rw [counterJointImpl_run_unif, privateOnlineImpl_run_unif, prEvent_map, prEvent_map]
     exact prEvent_mono _ _ _ fun z hz => hz.1
-  · rw [counterJointImpl_run_challenge, privateJointImpl_run_challenge]
+  · rw [counterJointImpl_run_challenge, privateOnlineImpl_run_challenge]
     by_cases h : plaintextLength m₀ = plaintextLength m₁
     · simp only [h, ↓reduceIte]
       by_cases hj : s.2.1 < qEnc
@@ -506,7 +454,7 @@ theorem dominatedUntilBad_counterJointImpl (puzzle : Puzzle n S L Salt) (b : Boo
         omega
     · simp only [h, ↓reduceIte]
       exact prEvent_pure_le_pure _ _ _ _ fun hq => hq.1
-  · rw [counterJointImpl_run_batch, privateJointImpl_run_batch, prEvent_map, prEvent_map]
+  · rw [counterJointImpl_run_batch, privateOnlineImpl_run_batch, prEvent_map, prEvent_map]
     exact prEvent_mono _ _ _ fun z hz => hz.1
 
 /-- The hazard of a challenge step of the handler of `G₁½` at counter `j`: at most `j / |N|`
@@ -605,29 +553,6 @@ theorem prEvent_counterJointImpl_nonceBad_le [Fintype N] (puzzle : Puzzle n S L 
     rw [Finset.mem_range] at hi
     simp [nonceHazard, hi]
 
-/-- The random-oracle run of the online phase of `G₁`, which runs `privateImpl` on the private
-cache inside the run on the shared cache, is equal in distribution to the run of `privateJointImpl`
-on the pair of caches. -/
-lemma run_romImpl_privateImpl_evalDistEq_privateJointImpl {α : Type} (puzzle : Puzzle n S L Salt)
-    (b : Bool) (oa : OracleComp ((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
-      (sealSpec n S L Salt Ctx N K).batch) α) (c : (sealSpec n S L Salt Ctx N K).QueryCache) :
-    (simulateQ (sealSpec n S L Salt Ctx N K).romImpl
-      (simulateQ (sealSpec n S L Salt Ctx N K).unbatch
-        ((simulateQ (privateImpl prf codec encodePuzzle puzzle b) oa).run' ∅))).run c =ᵈ
-      (fun z => (z.1, z.2.1)) <$>
-        (simulateQ (privateJointImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b) oa).run
-          (c, ∅) := by
-  have h := simulateQ_run_simulateQ_run_evalDistEq
-    ((sealSpec n S L Salt Ctx N K).romImpl ∘ₛ (sealSpec n S L Salt Ctx N K).unbatch)
-    (privateImpl prf codec encodePuzzle puzzle b)
-    (privateJointImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b) (fun t s q => by
-      rw [privateJointImpl, StateT.run_mk, Functor.map_map, QueryImpl.simulateQ_compose]
-      simp) oa ∅ c
-  rw [QueryImpl.simulateQ_compose] at h
-  rw [StateT.run'_eq, simulateQ_map, simulateQ_map, StateT.run_map]
-  refine (h.map fun z => (z.1.1, z.2)).trans ?_
-  rw [Functor.map_map]
-
 /-- The random-oracle run of the online phase of `G₁½`, which runs `counterImpl` on the counter
 inside the run on the shared cache, is equal in distribution to the run of `counterJointImpl` on
 the cache with the counter `0` and the empty log: forgetting the log, `counterLogImpl` is
@@ -659,11 +584,11 @@ lemma run_romImpl_counterImpl_evalDistEq_counterJointImpl {α : Type} (puzzle : 
 /-- **One online phase, from `G₁` to `G₁½`.** From any cache `c`, an event of the output of the
 online handler of `G₁` exceeds the event in the online handler of `G₁½` by at most the probability
 of `NonceBad` there. -/
-theorem prEvent_privateJointImpl_le {α : Type} (puzzle : Puzzle n S L Salt) (b : Bool)
+theorem prEvent_privateOnlineImpl_le {α : Type} (puzzle : Puzzle n S L Salt) (b : Bool)
     (oa : OracleComp ((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
       (sealSpec n S L Salt Ctx N K).batch) α) (c : (sealSpec n S L Salt Ctx N K).QueryCache)
     (P : α → Prop) :
-    Pr{let z ← (simulateQ (privateJointImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b) oa).run
+    Pr{let z ← (simulateQ (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b) oa).run
         (c, ∅)}[P z.1] ≤
       Pr{let z ← (simulateQ (counterJointImpl (Ctx := Ctx) prf codec encodePuzzle qEnc puzzle b)
           oa).run (c, (0, []))}[P z.1] +
@@ -683,7 +608,7 @@ theorem prEvent_counterJointImpl_le {α : Type} (puzzle : Puzzle n S L Salt) (b 
     (P : α → Prop) :
     Pr{let z ← (simulateQ (counterJointImpl (Ctx := Ctx) prf codec encodePuzzle qEnc puzzle b)
         oa).run (c, (0, []))}[P z.1] ≤
-      Pr{let z ← (simulateQ (privateJointImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b) oa).run
+      Pr{let z ← (simulateQ (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b) oa).run
           (c, ∅)}[P z.1] +
         Pr{let z ← (simulateQ (counterJointImpl (Ctx := Ctx) prf codec encodePuzzle qEnc puzzle b)
           oa).run (c, (0, []))}[NonceBad qEnc z.2.2] := by
@@ -696,10 +621,11 @@ theorem prEvent_counterJointImpl_le {α : Type} (puzzle : Puzzle n S L Salt) (b 
 
 /-- **From `G₁` to `G₁½`.** For a hiding adversary `adv` making at most `qEnc` challenge queries,
 at either hidden bit, the probabilities that `privateExperiment` and `counterExperiment` return
-the guess `true` differ by at most `qEnc (qEnc - 1) / (2 |N|)`.
+the guess `true` differ by at most `qEnc (qEnc - 1) / (2 |N|)`. This is the paper's term for its
+bad event (c), two equal nonces (`app:hiding`), at most `Q_enc² / 2^129` for 16-byte nonces.
 
 The two experiments share preprocessing and key generation. From the resulting cache, their
-online phases are, up to distribution, the runs of `privateJointImpl` and `counterJointImpl`,
+online phases are, up to distribution, the runs of `privateOnlineImpl` and `counterJointImpl`,
 which agree through `logCache` until two accepted encryptions share a nonce
 (`dominatedUntilBad_counterJointImpl`); the adaptive birthday bound bounds that event
 (`prEvent_counterJointImpl_nonceBad_le`). -/
@@ -731,15 +657,15 @@ theorem absDiff_privateExperiment_counterExperiment_le [NeZero n] [AddCommGroup 
   · refine (prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun p =>
       prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun p₁ => ?_).trans (add_le_add le_rfl hbad)
     rw [simulateQ_map, simulateQ_map, StateT.run_map, StateT.run_map, prEvent_map, prEvent_map,
-      (run_romImpl_privateImpl_evalDistEq_privateJointImpl prf codec encodePuzzle p₁.1.1 b _
+      (run_romImpl_privateImpl_evalDistEq prf codec encodePuzzle p₁.1.1 b _
         p₁.2).prEvent_eq,
       (run_romImpl_counterImpl_evalDistEq_counterJointImpl prf codec encodePuzzle qEnc p₁.1.1 b _
         p₁.2).prEvent_eq, prEvent_map, prEvent_map]
-    exact prEvent_privateJointImpl_le prf codec encodePuzzle qEnc p₁.1.1 b _ p₁.2 (· = true)
+    exact prEvent_privateOnlineImpl_le prf codec encodePuzzle qEnc p₁.1.1 b _ p₁.2 (· = true)
   · refine (prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun p =>
       prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun p₁ => ?_).trans (add_le_add le_rfl hbad)
     rw [simulateQ_map, simulateQ_map, StateT.run_map, StateT.run_map, prEvent_map, prEvent_map,
-      (run_romImpl_privateImpl_evalDistEq_privateJointImpl prf codec encodePuzzle p₁.1.1 b _
+      (run_romImpl_privateImpl_evalDistEq prf codec encodePuzzle p₁.1.1 b _
         p₁.2).prEvent_eq,
       (run_romImpl_counterImpl_evalDistEq_counterJointImpl prf codec encodePuzzle qEnc p₁.1.1 b _
         p₁.2).prEvent_eq, prEvent_map, prEvent_map]

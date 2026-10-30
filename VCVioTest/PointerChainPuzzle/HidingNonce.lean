@@ -326,12 +326,12 @@ theorem prEvent_uniformSample_bind_uniformSample {α β γ : Type} [SampleableTy
 /-- In the online phase of `G₁`, the two envelopes of `pairAdv` are equal exactly when the nonces
 collide, with probability `1 / 4`: the second encryption under the first nonce reads the subkeys
 from the private cache, and under another nonce the envelope carries another nonce. -/
-theorem prEvent_privateJointImpl_pairAdv (b : Bool) (puzzle : Puzzle 2 S L Salt)
+theorem prEvent_privateOnlineImpl_pairAdv (b : Bool) (puzzle : Puzzle 2 S L Salt)
     (s : spec.QueryCache) :
-    Pr{let z ← (simulateQ (privateJointImpl (Ctx := Salt) toyPRF codec encodePuzzle puzzle b)
+    Pr{let z ← (simulateQ (privateOnlineImpl (Ctx := Salt) toyPRF codec encodePuzzle puzzle b)
       (pairAdv.online () puzzle)).run (s, ∅)}[z.1 = true] = (4 : ℝ≥0∞)⁻¹ := by
-  rw [run_pairAdv, privateJointImpl_run_challenge]
-  simp only [privateJointImpl_run_challenge, ↓reduceIte, ite_self, bind_assoc, pure_bind,
+  rw [run_pairAdv, privateOnlineImpl_run_challenge]
+  simp only [privateOnlineImpl_run_challenge, ↓reduceIte, ite_self, bind_assoc, pure_bind,
     randomOracle.run_eq, QueryCache.empty_apply]
   refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun η₁ => ?_
   refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun ks₁ => ?_
@@ -385,9 +385,9 @@ theorem privateExperiment_pairAdv (b : Bool) :
   refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun p => ?_
   refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun p₁ => ?_
   rw [simulateQ_map, StateT.run_map, prEvent_map,
-    (run_romImpl_privateImpl_evalDistEq_privateJointImpl toyPRF codec encodePuzzle p₁.1.1 b _
+    (run_romImpl_privateImpl_evalDistEq toyPRF codec encodePuzzle p₁.1.1 b _
       p₁.2).prEvent_eq, prEvent_map]
-  exact prEvent_privateJointImpl_pairAdv encodePuzzle b p₁.1.1 p₁.2
+  exact prEvent_privateOnlineImpl_pairAdv encodePuzzle b p₁.1.1 p₁.2
 
 /-- **`G₁½` for `pairAdv` at budget `2`.** The two envelopes are equal with probability
 `1 / 196`. -/

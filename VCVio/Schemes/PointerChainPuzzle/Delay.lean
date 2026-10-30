@@ -75,6 +75,23 @@ formalize them.
 | Claim 3 (`claim:bad`) (path-input) | `prEvent_idealExperiment_bad_le` |
 | Conclusion | `prEvent_idealExperiment_win_le` |
 
+### Definitions to check
+
+To trust the rows above, read these definitions and compare each with the source named.
+
+* The game: `TimeLockPuzzle.delayExperimentWithin` and `TimeLockPuzzle.delayAdvantageWithin`
+  against the event "`A_1` outputs `K` within fewer than `T_key` oracle rounds" of `thm:delay`.
+* Rounds: `OracleSpec.batch` and `OracleSpec.unbatch` against the oracle rounds of `sec:rom`, where
+  all queries of a round are chosen before any of its answers arrives.
+* The adversary class: `TimeLockPuzzle.TwoPhaseAdversary` (`TimeLockPuzzle.Adversary`) against the
+  attacker `(A_0, A_1)` of the model of `sec:theorem`, unbounded and passing its whole state.
+* The budgets: `IsPreprocessingQueryBound` and `IsPointQueryBound` against `Q_pre` and `Q_on` of
+  the model of `sec:theorem`; `IsOnlineQueryBound` adds the round bound of `delaySecure_scheme`.
+* The oracles: `oracleSpec` against the independent random oracles of A1 and `sec:rom` (SPEC §3).
+* The scheme: `scheme`, with `gen` and `solve`, against `alg:build` and `alg:open` (SPEC §4, §5).
+* The constants: `keyRound` and `solvePoints` against `T_key = n (m + 2) + 1` and
+  `P = n (m + 3) + 1` of `sec:theorem` (SPEC §8).
+
 The formal generator's `Bad` (`Bad`) is not the paper's Bad: its collision case asks for two
 distinct path values with equal path inputs, while the paper's Bad (a) asks for two path values
 with equal labels. Equal labels need not give equal path inputs (with `n = m = 1`, the key and the

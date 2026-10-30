@@ -107,7 +107,14 @@ abbrev subkeySpec : OracleSpec (S × N ⊕ S × N) := (S × N →ₒ K) + (S × 
 
 variable (n S L Salt Ctx N K) in
 /-- The oracles of time-lock encryption with the pointer-chain puzzle and the envelope: the six
-typed oracles of the puzzle and the two subkey oracles, as a summand. -/
+typed oracles of the puzzle and the two subkey oracles, as a summand.
+
+The paper's proof of the hiding theorem (`app:hiding`) adds the subkeys `e_j`, `t_j` as `2 Q_enc`
+new path values of the delay proof. Here they are a separate summand instead, so `oracleSpec`,
+`Point` and every delay statement stay as they are; the hiding proof needs from the delay side
+only that the adversary does not query a subkey oracle at the key, which the delay theorem with
+several guesses gives. The price is the numerator `Q (P + 1) + P²` in place of the paper's
+`Q P' + P'²`, which implies the paper's for `Q_enc ≥ 1`. -/
 abbrev sealSpec := oracleSpec n S L Salt Ctx + subkeySpec S N K
 
 /-- The subkeys under the key `key` and the nonce `nonce`: one query to each subkey oracle, at
@@ -120,7 +127,11 @@ def sealDerive (key : S) (nonce : N) : OracleComp (sealSpec n S L Salt Ctx N K) 
 
 variable (n m) in
 /-- The pointer-chain puzzle over the oracles with subkeys: `scheme` lifted along
-`oracleSpec ⊂ₒ sealSpec`. Its generator and solver never query the subkey oracles. -/
+`oracleSpec ⊂ₒ sealSpec`. Its generator and solver never query the subkey oracles.
+
+This is the puzzle of the paper's hiding game (`fig:games`, `Build(n, m, b)`) in a world that also
+has the subkey hashes `H_enc` and `H_mac`, which the puzzle does not use (SPEC §7). Its delay bound
+is the bound of `scheme` (`delayAdvantage_sealScheme_le`). -/
 @[expose]
 def sealScheme [NeZero n] (mkCtx : Salt → Ctx) (initAcc : Ctx → S) (N K : Type) [AddCommGroup L]
     [DecidableEq S] [SampleableType Salt] [SampleableType L] :
@@ -131,14 +142,24 @@ variable (prf : PRFScheme K ByteArray (Bytes 32)) {w : ℕ} (codec : FixedCodec 
   (encodePuzzle : Puzzle n S L Salt → ByteArray)
 
 /-- The envelope over the oracles with subkeys, keyed by a puzzle together with its key: a uniform
-nonce, the subkeys of the key and the nonce (`sealDerive`), and the envelope under them. -/
+nonce, the subkeys of the key and the nonce (`sealDerive`), and the envelope under them.
+
+This is the paper's `Seal(K, η, M)` (`fig:games`) with the challenger's fresh nonce `η` drawn by
+the encryption itself, from local coins, as SPEC §7 seals: the subkeys are queried from the
+oracles that the adversary also queries, and the keystream and tag are computed with `prf` outside
+the oracles (assumption A4). The puzzle is part of the key so that the tag can authenticate the
+puzzle bytes `encodePuzzle` that the envelope carries. -/
 @[expose]
 def sealDEM [SampleableType N] :
     DEMScheme (OracleComp (unifSpec + sealSpec n S L Salt Ctx N K)) (Puzzle n S L Salt × S)
       Plaintext ByteArray :=
   dem prf codec (sealDerive (n := n) (L := L) (Salt := Salt) (Ctx := Ctx)) encodePuzzle
 
-/-- The leakage of the hiding game: the length of the message. -/
+/-- The leakage of the hiding game: the length of the message.
+
+With `LeftOrRight.oracle`, a pair is admissible when its messages have the same length, which is
+the paper's check `|M₀| ≠ |M₁| → ⊥` (`fig:games`). The envelope reveals the length of its
+plaintext, since its ciphertext is as long, so no smaller leakage is possible. -/
 @[expose]
 def plaintextLength (msg : Plaintext) : ℕ := msg.1.size
 
@@ -148,7 +169,12 @@ def plaintextLength (msg : Plaintext) : ℕ := msg.1.size
 abbrev privateSpec (N K : Type) : OracleSpec N := N →ₒ (K × K)
 
 /-- `BadK`: the cache `c` holds a subkey point, of either subkey oracle, whose key component is
-`key`. -/
+`key`.
+
+In the hybrid the challenger derives no subkey through the oracles, so a cached subkey point at
+the key is a query of the adversary at a subkey input `K ‖ η`. This is the event that the paper's
+proof of the hiding theorem (`app:hiding`) excludes when it notes that a query equal to a subkey
+input contains `K`, which is not revealed: off `BadK` the challenger's subkeys are fresh. -/
 @[expose]
 def BadK (key : S) (c : (sealSpec n S L Salt Ctx N K).QueryCache) : Prop :=
   ∃ x : S × N ⊕ S × N, (c (.inr x)).isSome ∧ Sum.elim Prod.fst Prod.fst x = key
@@ -256,7 +282,13 @@ theorem isQueryBound_privateAdversary
 variable (m) in
 /-- **The hybrid `G₁`.** The delay experiment for any output (`TimeLockPuzzle.guessExperiment`) of
 `sealScheme` against `privateAdversary adv b`: the hiding experiment at hidden bit `b` with the
-private challenger, returning the guess together with the puzzle key. -/
+private challenger, returning the guess together with the puzzle key.
+
+It plays the role of the paper's `Ideal` for the envelopes (`app:hiding`), where the challenger
+makes no query and uses the fresh values `ν(e_j)`, `ν(t_j)` as subkeys: here the subkeys are the
+values of a private random function at the nonce. The puzzle key is returned so that `BadK` can
+be read off the final cache, and the experiment is a delay experiment so that the delay theorem
+applies to it unchanged. -/
 @[expose]
 def privateExperiment [NeZero n] [AddCommGroup L] [DecidableEq S] [SampleableType Salt]
     [SampleableType L] (mkCtx : Salt → Ctx) (initAcc : Ctx → S)
