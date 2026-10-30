@@ -73,6 +73,16 @@ commitment.
 
 * `Envelope.openUnder_sealUnder`: opening a sealed envelope under the same puzzle bytes and subkey
   function returns the message, for every nonce, subkey function and PRF.
+* `Envelope.sealWith_eq_sealBy`: `sealWith` is `sealBy` in `Id`, with the PRF under the two subkeys
+  as the block and tag functions.
+* `Envelope.simulateQ_sealBy`, `Envelope.sealBy_pure_eval`: simulating `sealBy` simulates its block
+  and tag functions, and with the PRF under two subkeys returned purely it returns their envelope,
+  in every lawful monad.
+* `Envelope.nodup_map_be_range`: the keystream block counters of a plaintext are distinct.
+* `Envelope.map_xorBytes_flatMap_evalDistEq`: the one-time pad on byte strings: XOR with
+  independent uniform blocks is distributed as the blocks themselves.
+* `Envelope.sealBy_uniform_evalDistEq`: with uniform keystream blocks and tag, the envelopes of
+  two messages of the same length have the same distribution.
 * `Envelope.simulateQ_dem_encrypt`, `Envelope.simulateQ_dem_decrypt`: with the oracles answered
   by a fixed table, the DEM seals under a uniform nonce and opens with `openUnder`.
 * `Envelope.dem_perfectlyCorrect_answerTable`, `Envelope.dem_perfectlyCorrect_rom`: the DEM is
@@ -199,6 +209,36 @@ lemma xorBytes_xorBytes {l l' : List UInt8} (h : l.length ≤ l'.length) :
             UInt8.xor_zero, List.cons.injEq, true_and] at ih ⊢
           exact ih (by simpa using h)
 
+/-- XOR against a concatenation splits the first list at the length of the first part: the
+first part is XORed against a prefix of `l` and the second part against the rest of `l`. -/
+lemma xorBytes_append (l u v : List UInt8) :
+    xorBytes l (u ++ v) = xorBytes (l.take u.length) u ++ xorBytes (l.drop u.length) v := by
+  induction u generalizing l with
+  | nil => simp [xorBytes]
+  | cons a u ih =>
+    cases l with
+    | nil => simp [xorBytes]
+    | cons c l => simpa [xorBytes] using ih l
+
+/-- XOR against `l` reads only the first `l.length` bytes of the second list. -/
+lemma xorBytes_take_length (l l' : List UInt8) : xorBytes l (l'.take l.length) = xorBytes l l' := by
+  induction l generalizing l' with
+  | nil => simp [xorBytes]
+  | cons c l ih =>
+    cases l' with
+    | nil => simp [xorBytes]
+    | cons a l' => simpa [xorBytes] using ih l'
+
+/-- XOR of at most `k` bytes `l` with a byte string `x` of length `k` is the first `|l|` bytes of
+`x` plus `l` padded with zeros. -/
+lemma xorBytes_toList_eq {k : ℕ} (l : List UInt8) (hl : l.length ≤ k) (x : Bytes k) :
+    xorBytes l x.toList = (Bytes.read l 0 + x).toList.take l.length := by
+  apply List.ext_getElem
+  · simp [length_xorBytes, hl]
+  · intro i h₁ _
+    have hi : i < l.length := by simp [length_xorBytes] at h₁; omega
+    simp [xorBytes, Bytes.getElem_toList, Bytes.read, List.getD_eq_getElem?_getD, hi]
+
 @[simp] lemma length_keystream (k : K) (len : ℕ) : (keystream prf k len).length = len := by
   simp only [keystream, List.length_take, List.length_flatMap, Bytes.length_toList,
     List.map_const', List.length_range, List.sum_replicate, smul_eq_mul]
@@ -304,6 +344,160 @@ theorem openUnder_sealUnder (sk : N → K × K) (pz : ByteArray) (nonce : N) (ms
     openUnder prf codec sk pz (sealUnder prf codec sk pz nonce msg) = some msg := by
   rw [openUnder, sealUnder, ← openFields_sealWith prf codec pz nonce (sk nonce) msg,
     parse_sealWith, Option.bind_some, Option.bind_some]
+
+/-! ## The envelope with monadic PRF evaluations -/
+
+/-- The envelope of `msg` under the puzzle bytes `pz` and the nonce, with the PRF evaluations given
+as monadic functions: keystream block `j` is `block (be64(j))`, for each of the `⌈|msg| / 32⌉`
+blocks in order, and the tag is `tag` of the signed bytes. `sealWith prf codec` is the case
+`block := prf.eval k_enc`, `tag := prf.eval k_mac` in `Id` (`sealWith_eq_sealBy`); a reduction
+that answers the two evaluations with oracle queries runs it in `OracleComp`. -/
+@[expose]
+def sealBy {μ : Type → Type} [Monad μ] (block tag : ByteArray → μ (Bytes 32)) (pz : ByteArray)
+    (nonce : N) (msg : Plaintext) : μ ByteArray := do
+  let blocks ← (List.range ((msg.1.size + 31) / 32)).mapM fun j => block (be 8 j)
+  let ks := (blocks.flatMap fun x => x.toList).take msg.1.size
+  let e := signedBytes codec pz nonce (xorBytes msg.1.data.toList ks)
+  let t ← tag ⟨e.toArray⟩
+  return ⟨(e ++ t.toList).toArray⟩
+
+/-- The envelope under the subkeys `(k_enc, k_mac)` is `sealBy` in `Id` with the block function
+`prf.eval k_enc` and the tag function `prf.eval k_mac`. -/
+theorem sealWith_eq_sealBy (pz : ByteArray) (nonce : N) (ks : K × K) (msg : Plaintext) :
+    sealWith prf codec pz nonce ks msg =
+      (sealBy codec (fun x => pure (prf.eval ks.1 x)) (fun x => pure (prf.eval ks.2 x)) pz nonce
+        msg : Id ByteArray).run := by
+  simp [sealBy, sealWith, keystream, List.flatMap_map]
+
+/-- Simulating the queries of `sealBy` is `sealBy` with the simulated block and tag functions. -/
+lemma simulateQ_sealBy {ι : Type} {spec : OracleSpec ι} {μ : Type → Type} [Monad μ]
+    [LawfulMonad μ] (impl : QueryImpl spec μ) (block tag : ByteArray → OracleComp spec (Bytes 32))
+    (pz : ByteArray) (nonce : N) (msg : Plaintext) :
+    simulateQ impl (sealBy codec block tag pz nonce msg) =
+      sealBy codec (fun x => simulateQ impl (block x)) (fun x => simulateQ impl (tag x)) pz nonce
+        msg := by
+  simp [sealBy]
+
+/-- `sealBy` with the block and tag functions of `prf` under the subkeys `k₁` and `k₂`, returned
+purely, returns the envelope under `(k₁, k₂)`. -/
+lemma sealBy_pure_eval {μ : Type → Type} [Monad μ] [LawfulMonad μ] (k₁ k₂ : K) (pz : ByteArray)
+    (nonce : N) (msg : Plaintext) :
+    sealBy codec (μ := μ) (fun x => pure (prf.eval k₁ x)) (fun x => pure (prf.eval k₂ x)) pz nonce
+      msg = pure (sealWith prf codec pz nonce (k₁, k₂) msg) := by
+  rw [sealWith_eq_sealBy]
+  simp [sealBy]
+
+/-- `sealBy` commutes with monad morphisms: mapping the envelope through a morphism `F` is the
+envelope with the block and tag functions mapped through `F`. -/
+theorem sealBy_map {μ ν : Type → Type} [Monad μ] [Monad ν] {F : ∀ {α}, μ α → ν α}
+    (hF : Cslib.IsMonadHom μ ν F) (block tag : ByteArray → μ (Bytes 32)) (pz : ByteArray)
+    (nonce : N) (msg : Plaintext) :
+    F (sealBy codec block tag pz nonce msg) =
+      sealBy codec (fun x => F (block x)) (fun x => F (tag x)) pz nonce msg := by
+  simp only [sealBy, hF.map_bind, hF.map_listMapM, hF.map_pure, Function.comp_def]
+
+/-- The block counters `be 8 i` at which the envelope of a plaintext evaluates the keystream are
+distinct: a plaintext has fewer than `256 ^ 8` blocks. -/
+theorem nodup_map_be_range (msg : Plaintext) :
+    ((List.range ((msg.1.size + 31) / 32)).map (be 8)).Nodup := by
+  have hlt : ∀ i ∈ List.range ((msg.1.size + 31) / 32), i ∈ Set.Iio (256 ^ 8) := fun i hi => by
+    have := List.mem_range.mp hi
+    have := msg.2
+    simp only [maxLength] at *
+    simp only [Set.mem_Iio]
+    omega
+  exact List.nodup_range.map_on fun x hx y hy h => be_injOn 8 (hlt x hx) (hlt y hy) h
+
+/-! ## The envelope with uniform blocks and tag -/
+
+/-- **One-time pad on byte strings.** XOR of `l` with the concatenation of independent uniform
+byte strings of length `k`, as many as `xs` has entries and at least `|l|` bytes in all, is
+distributed as the first `|l|` bytes of the concatenation. -/
+theorem map_xorBytes_flatMap_evalDistEq {k : ℕ} {α : Type} (xs : List α) (l : List UInt8)
+    (hl : l.length ≤ k * xs.length) :
+    (fun bs : List (Bytes k) => xorBytes l (bs.flatMap Bytes.toList)) <$>
+        xs.mapM (fun _ => ($ᵗ Bytes k : ProbComp (Bytes k))) =ᵈ
+      (fun bs : List (Bytes k) => (bs.flatMap Bytes.toList).take l.length) <$>
+        xs.mapM (fun _ => ($ᵗ Bytes k : ProbComp (Bytes k))) := by
+  induction xs generalizing l with
+  | nil =>
+    obtain rfl : l = [] := List.eq_nil_of_length_eq_zero (by simpa using hl)
+    simp [xorBytes]
+  | cons x xs ih =>
+    set M := xs.mapM (fun _ => ($ᵗ Bytes k : ProbComp (Bytes k)))
+    set p : Bytes k := Bytes.read (l.take k) 0
+    have hA : ∀ b : Bytes k, xorBytes (l.take k) b.toList = (p + b).toList.take l.length := by
+      intro b
+      rw [xorBytes_toList_eq _ (by simp) b, List.length_take]
+      rcases le_total l.length k with h | h
+      · rw [min_eq_right h]
+      · rw [min_eq_left h]
+        change List.take k (p + b).toList = _
+        rw [List.take_of_length_le (by simp), List.take_of_length_le (by simp; omega)]
+    have hdrop : (l.drop k).length ≤ k * xs.length := by
+      simp only [List.length_drop, List.length_cons] at hl ⊢; rw [Nat.mul_succ] at hl; omega
+    simp only [List.mapM_cons, map_bind, map_pure, List.flatMap_cons, xorBytes_append,
+      Bytes.length_toList, List.take_append]
+    calc _ =ᵈ (do
+          let b ← ($ᵗ Bytes k : ProbComp (Bytes k))
+          let bs ← M
+          pure ((p + b).toList.take l.length ++
+            (bs.flatMap Bytes.toList).take (l.drop k).length) : ProbComp _) := by
+          refine EvalDistEq.bind_right _ fun b => ?_
+          rw [hA b]
+          simpa only [Functor.map_map, map_eq_bind_pure_comp, bind_assoc, pure_bind,
+            Function.comp_def] using
+            (ih _ hdrop).map (fun r => (p + b).toList.take l.length ++ r)
+      _ =ᵈ (do
+          let bs ← M
+          let b ← ($ᵗ Bytes k : ProbComp (Bytes k))
+          pure ((p + b).toList.take l.length ++
+            (bs.flatMap Bytes.toList).take (l.drop k).length) : ProbComp _) :=
+          EvalDistEq.bind_bind_swap _ _ _
+      _ =ᵈ (do
+          let bs ← M
+          let b ← ($ᵗ Bytes k : ProbComp (Bytes k))
+          pure (b.toList.take l.length ++
+            (bs.flatMap Bytes.toList).take (l.drop k).length) : ProbComp _) := by
+          refine EvalDistEq.bind_right _ fun bs => ?_
+          simpa only [Functor.map_map, map_eq_bind_pure_comp, bind_assoc, pure_bind,
+            Function.comp_def] using
+            (SampleableType.map_uniformSample_evalDistEq_of_bijective
+              (add_right_injective p).bijective_of_finite).map
+              (fun b : Bytes k => b.toList.take l.length ++
+                (bs.flatMap Bytes.toList).take (l.drop k).length)
+      _ =ᵈ _ := by
+          refine (EvalDistEq.bind_bind_swap _ _ _).trans ?_
+          simp only [List.length_drop]
+          exact EvalDistEq.rfl
+
+/-- **The envelope with uniform blocks hides the message up to its length.** With every keystream
+block and the tag drawn uniformly and independently, the envelopes of two messages of the same
+length under the same puzzle bytes and nonce have the same distribution. -/
+theorem sealBy_uniform_evalDistEq (pz : ByteArray) (nonce : N) {msg msg' : Plaintext}
+    (h : msg.1.size = msg'.1.size) :
+    sealBy codec (fun _ => ($ᵗ Bytes 32 : ProbComp (Bytes 32))) (fun _ => $ᵗ Bytes 32) pz nonce
+        msg =ᵈ
+      sealBy codec (fun _ => ($ᵗ Bytes 32 : ProbComp (Bytes 32))) (fun _ => $ᵗ Bytes 32) pz nonce
+        msg' := by
+  let M : ℕ → ProbComp (List (Bytes 32)) := fun s =>
+    (List.range ((s + 31) / 32)).mapM fun _ => ($ᵗ Bytes 32 : ProbComp (Bytes 32))
+  let T : List UInt8 → ProbComp ByteArray := fun ct => do
+    let t ← ($ᵗ Bytes 32 : ProbComp (Bytes 32))
+    pure ⟨(signedBytes codec pz nonce ct ++ t.toList).toArray⟩
+  have key : ∀ m : Plaintext,
+      sealBy codec (fun _ => ($ᵗ Bytes 32 : ProbComp (Bytes 32))) (fun _ => $ᵗ Bytes 32) pz nonce
+        m =ᵈ ((fun bs : List (Bytes 32) => (bs.flatMap Bytes.toList).take m.1.size) <$>
+          M m.1.size) >>= T := by
+    intro m
+    have hm : m.1.data.toList.length ≤ 32 * (List.range ((m.1.size + 31) / 32)).length := by
+      simp only [length_data_toList, List.length_range]; omega
+    have := (map_xorBytes_flatMap_evalDistEq _ _ hm).bind_left T
+    simp only [length_data_toList] at this
+    refine EvalDistEq.trans ?_ this
+    simp only [sealBy, bind_map_left, T, ← length_data_toList m.1, xorBytes_take_length]
+    exact EvalDistEq.rfl
+  exact (key msg).trans (by rw [h]; exact (key msg').symm)
 
 /-! ## The envelope as a DEM -/
 

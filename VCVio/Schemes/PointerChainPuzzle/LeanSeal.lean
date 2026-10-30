@@ -423,6 +423,13 @@ lemma beNat_natToBytesBE (x w : ℕ) : beNat (Encoding.natToBytesBE x w) = x % 2
         show (2 : ℕ) ^ 8 = 256 from rfl, Nat.mod_mod, Nat.mod_pow_succ]
       ring
 
+/-- Big-endian encoding in `w` bytes is injective on the numbers below `256 ^ w`. -/
+lemma be_injOn (w : ℕ) : Set.InjOn (be w) (Set.Iio (256 ^ w)) := by
+  intro x hx y hy h
+  have := congrArg (fun b : ByteArray => beNat b.data.toList) h
+  simpa [be, beNat_natToBytesBE, Nat.mod_eq_of_lt (Set.mem_Iio.mp hx),
+    Nat.mod_eq_of_lt (Set.mem_Iio.mp hy)] using this
+
 @[simp] lemma length_linkBytes (puzzle : Puzzle b n) : (linkBytes puzzle).length = n * b := by
   simp [linkBytes]
 
