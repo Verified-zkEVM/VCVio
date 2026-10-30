@@ -164,6 +164,15 @@ lemma compose_batch {ι' : Type*} {spec' : OracleSpec ι'} {m : Type v → Type 
   | nil => simp
   | cons t ts ih => simp [← ih]
 
+/-- A handler lifted into `StateT σ m` answers a round without touching the state: the round is
+answered by `impl`, and the initial state is returned unchanged. -/
+lemma run_batch_liftTarget [Monad m] [LawfulMonad m] {σ : Type v} (impl : QueryImpl spec m)
+    (ts : List ι) (s : σ) :
+    ((impl.liftTarget (StateT σ m)).batch ts).run s = (·, s) <$> impl.batch ts := by
+  induction ts with
+  | nil => simp
+  | cons t ts ih => simp [StateT.run_bind, ih, map_eq_bind_pure_comp]
+
 section batch'
 
 variable {τ ι : Type} {free : OracleSpec.{0, 0} τ} {spec : OracleSpec.{0, 0} ι}

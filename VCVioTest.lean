@@ -11,9 +11,12 @@ public import VCVioTest.CryptoFoundations.ComplexityAdapters
 public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.CslibPPolyUniverses
+public import VCVioTest.CryptoFoundations.DEMIndCpa
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.KeyedHashCovering
+public import VCVioTest.CryptoFoundations.LeftOrRight
 public import VCVioTest.CryptoFoundations.OracleClosure
+public import VCVioTest.CryptoFoundations.PRFMultiKey
 public import VCVioTest.CryptoFoundations.PRFTableMeasure
 public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SignatureAlgBudget
@@ -96,6 +99,7 @@ public import VCVioTest.PointerChainPuzzle.Ideal
 public import VCVioTest.PointerChainPuzzle.LeanSeal
 public import VCVioTest.PointerChainPuzzle.LeanSealBridge
 public import VCVioTest.PointerChainPuzzle.LeanSealDelay
+public import VCVioTest.PointerChainPuzzle.LeanSealEnvelope
 public import VCVioTest.PointerChainPuzzle.Truncate
 public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProductRelationControls
@@ -183,6 +187,8 @@ public import VCVioTest.Tactic.GeneralizedRelations
 public import VCVioTest.Tactic.GeneralizedRelationsExperiments
 public import VCVioTest.Tactic.Positivity
 public import VCVioTest.TimeLockPuzzle.FreeSummand
+public import VCVioTest.TimeLockPuzzle.Hiding
+public import VCVioTest.TimeLockPuzzle.HidingCap
 public import VCVioTest.TimeLockPuzzle.Lift
 public import VCVioTest.TimeLockPuzzle.LiftSum
 public import VCVioTest.TimeLockPuzzle.LogSide
