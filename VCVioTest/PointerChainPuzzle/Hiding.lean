@@ -27,6 +27,12 @@ nonce codec and the puzzle encoding left as parameters:
 * for that adversary, `absDiff_hidingExperiment_privateExperiment_le` bounds the gap between the
   hiding experiment's probability of `true` and the hybrid's by `BadK`, and with the `BadK` bound
   by `1 / 5 + (9 + 81 + 1) / 11`, at either hidden bit.
+* the online handlers of the hop at a repeated nonce, from a private cache holding the table's
+  distinct subkeys `(encKey (3, η), macKey (3, η))` at every nonce `η`: the hybrid's challenge
+  reuses the pair, encryption subkey first, and changes neither cache; a later round holding a
+  subkey point at the key `3` makes `BadK 3` hold, and a round holding a puzzle point and a subkey
+  point at the key `4` does not; and from the overlay of the private cache (`overlayCache`), the
+  hiding experiment's challenge is the hybrid's read through the overlay.
 
 The answer types are sampled through `SampleableType.Fin`, so loading this module enumerates no
 type.
@@ -194,5 +200,66 @@ lemma absDiff_hidingExperiment_hidingAdv_le (b : Bool) :
       1 / 5 + (9 + 9 ^ 2 + 1) / 11 :=
   (absDiff_hidingExperiment_hidingAdv_le_badK prf codec encodePuzzle b).trans
     (prEvent_privateExperiment_hidingAdv_badK_le prf codec encodePuzzle b)
+
+/-! ## The online handlers of the first hop at a repeated nonce -/
+
+/-- A private cache at the key `3` after a challenge at every nonce: the nonce `η` holds the table's
+subkeys `(encKey (3, η), macKey (3, η))`, which differ at every nonce. -/
+def privCache : (privateSpec N K).QueryCache :=
+  QueryCache.ofFn fun η => some (encKey ((3 : S), η), macKey ((3 : S), η))
+
+/-- In the hybrid, a challenge at a nonce already in the private cache reuses its pair of subkeys,
+encryption subkey first, and changes neither cache. -/
+theorem privateOnlineImpl_run_challenge_privCache (puzzle : Puzzle 2 S L Salt) (b : Bool)
+    (m₀ m₁ : Plaintext) (h : plaintextLength m₀ = plaintextLength m₁) (c : spec.QueryCache) :
+    (privateOnlineImpl (Ctx := Salt) prf codec encodePuzzle puzzle b
+        (.inl (.inr (m₀, m₁)))).run (c, privCache) =
+      (fun nonce => (some (sealWith prf codec (encodePuzzle puzzle) nonce
+          (encKey ((3 : S), nonce), macKey ((3 : S), nonce)) (if b then m₁ else m₀)),
+        (c, privCache))) <$> ($ᵗ N) := by
+  rw [privateOnlineImpl_run_challenge]
+  simp [h, privCache, map_eq_bind_pure_comp]
+
+/-- In the hybrid, a round holding the MAC subkey point at the key `3` caches it in the shared
+cache, so that `BadK 3` holds afterwards. -/
+theorem badK_of_mem_support_privateOnlineImpl_run_batch (puzzle : Puzzle 2 S L Salt) (b : Bool)
+    (η : N) {z} (hz : z ∈ support ((privateOnlineImpl (Ctx := Salt) prf codec encodePuzzle puzzle b
+      (.inr [.inr (.inr ((3 : S), η))])).run (∅, privCache))) :
+    BadK (3 : S) z.2.1 := by
+  rw [privateOnlineImpl_run_batch, support_map] at hz
+  obtain ⟨z', hz', rfl⟩ := hz
+  exact ⟨.inr ((3 : S), η), ((QueryImpl.withCaching_batch_le_and_isSome_iff _ hz').2 _).2
+    (Or.inr (List.mem_singleton_self _)), rfl⟩
+
+/-- In the hybrid, a round holding a puzzle point and the encryption subkey point at the key `4`
+leaves the shared cache without subkey points at the key `3`. -/
+theorem not_badK_of_mem_support_privateOnlineImpl_run_batch (puzzle : Puzzle 2 S L Salt)
+    (b : Bool) (q : Point 2 S L Salt Salt) (η : N) {z}
+    (hz : z ∈ support ((privateOnlineImpl (Ctx := Salt) prf codec encodePuzzle puzzle b
+      (.inr [.inl q, .inr (.inl ((4 : S), η))])).run (∅, privCache))) :
+    ¬BadK (3 : S) z.2.1 := by
+  rw [privateOnlineImpl_run_batch, support_map] at hz
+  obtain ⟨z', hz', rfl⟩ := hz
+  rintro ⟨x, hx, hkey⟩
+  rw [(QueryImpl.withCaching_batch_le_and_isSome_iff _ hz').2] at hx
+  rcases x with x | x
+  · simp only [QueryCache.empty_apply, Option.isSome_none, List.mem_cons, reduceCtorEq,
+      Sum.inr.injEq, Sum.inl.injEq, List.not_mem_nil, or_false, false_or] at hx
+    simp [hx] at hkey
+  · simp at hx
+
+/-- From the overlay of the private cache, the hiding experiment's challenge reads both subkeys of
+the drawn nonce from the overlay, with the labels of `overlayCache`, and so is the hybrid's
+challenge read through `overlayCache 3`. -/
+theorem hidingOnlineImpl_run_challenge_overlayCache (puzzle : Puzzle 2 S L Salt) (b : Bool)
+    (m₀ m₁ : Plaintext) (h : plaintextLength m₀ = plaintextLength m₁) :
+    (hidingOnlineImpl prf codec encodePuzzle puzzle (3 : S) b
+        (.inl (.inr (m₀, m₁)))).run (overlayCache (3 : S) (∅ : spec.QueryCache) privCache) =
+      (fun z => (z.1, overlayCache (3 : S) z.2.1 z.2.2)) <$>
+        (privateOnlineImpl (Ctx := Salt) prf codec encodePuzzle puzzle b
+          (.inl (.inr (m₀, m₁)))).run (∅, privCache) := by
+  rw [privateOnlineImpl_run_challenge_privCache prf codec encodePuzzle puzzle b m₀ m₁ h,
+    hidingOnlineImpl_run_challenge]
+  simp [h, overlayCache_apply_enc, overlayCache_apply_mac, privCache, map_eq_bind_pure_comp]
 
 end VCVioTest.PointerChainPuzzle.Hiding
