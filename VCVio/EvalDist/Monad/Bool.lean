@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.ProbabilityNotation
 public import ToMathlib.MeasureTheory.Measure.Bool
 
 /-!
@@ -14,6 +15,8 @@ public import ToMathlib.MeasureTheory.Measure.Bool
 
 A fair hidden bit and two lossless Boolean branches have a guessing bias equal to the branches'
 distinguishing distance. The monad is arbitrary; fairness and losslessness are semantic hypotheses.
+Two lossless Boolean computations, each at most as likely as the other to return either bit, have
+the same law.
 -/
 
 public section
@@ -46,3 +49,25 @@ theorem evalDist_boolBias_bind_coin {m : Type → Type v} [Monad m]
   rw [hgame]
   exact Measure.boolBias_bind_coin 𝒟[coin] 𝒟[real] 𝒟[rand]
     htrue hfalse (by simp) (by simp)
+
+/-- Two lossless Boolean computations, each at most as likely as the other to return `true` and to
+return `false`, have the same law: under a probability measure each bit's mass is one minus the
+other's, so the two inequalities are equalities. -/
+theorem evalDist_eq_of_prEvent_le {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {mx my : m Bool}
+    [IsProbabilityMeasure 𝒟[mx]] [IsProbabilityMeasure 𝒟[my]]
+    (ht : Pr{let x ← mx}[x = true] ≤ Pr{let x ← my}[x = true])
+    (hf : Pr{let x ← mx}[x = false] ≤ Pr{let x ← my}[x = false]) : 𝒟[mx] = 𝒟[my] := by
+  rw [prEvent_eq_evalDist_singleton, prEvent_eq_evalDist_singleton] at ht hf
+  have hx := Measure.apply_true_add_apply_false_eq_one 𝒟[mx]
+  have hy := Measure.apply_true_add_apply_false_eq_one 𝒟[my]
+  have htrue : 𝒟[mx] {true} = 𝒟[my] {true} := by
+    refine le_antisymm ht ?_
+    rw [ENNReal.eq_sub_of_add_eq (measure_ne_top _ _) hx,
+      ENNReal.eq_sub_of_add_eq (measure_ne_top _ _) hy]
+    exact tsub_le_tsub_left hf 1
+  have hfalse : 𝒟[mx] {false} = 𝒟[my] {false} := by
+    rw [add_comm] at hx hy
+    rw [ENNReal.eq_sub_of_add_eq (measure_ne_top _ _) hx,
+      ENNReal.eq_sub_of_add_eq (measure_ne_top _ _) hy, htrue]
+  exact Measure.ext_of_singleton fun x => by cases x <;> assumption
