@@ -39,6 +39,8 @@ challenger's oracle), and counting its rounds is an ordinary path-wise query bou
 * `QueryImpl.simulateQ_simulateQ_unbatch`: running a program with rounds through `unbatch` and
   then a handler is running it through the batched handler.
 * `OracleSpec.simulateQ_romImpl_simulateQ_unbatch`: the corollary for the lazy random oracle.
+* `QueryImpl.withCaching_batch_le_and_isSome_iff`: answering a round with a caching handler caches
+  exactly its points, beside the points cached before.
 * `QueryImpl.run_simulateQ_add_parallelStateT_batch_liftComp`: a program with rounds of `spec`,
   lifted to rounds of `spec + side` and answered by two handlers side by side, runs against the
   first handler alone and leaves the state of the second unchanged.
@@ -244,6 +246,33 @@ theorem simulateQ_romImpl_simulateQ_unbatch {α : Type}
   QueryImpl.simulateQ_simulateQ_unbatch _ oa
 
 end OracleSpec
+
+namespace QueryImpl
+
+variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι} {m : Type → Type w} [Monad m]
+  [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+
+/-- Answering a round `ts` point by point with `so.withCaching` only extends the cache, and caches
+exactly the points cached before or listed in `ts`. -/
+lemma withCaching_batch_le_and_isSome_iff (so : QueryImpl spec m) {ts : List ι}
+    {cache₀ : spec.QueryCache} {z : spec.batch.Range ts × spec.QueryCache}
+    (hz : z ∈ support ((so.withCaching.batch ts).run cache₀)) :
+    cache₀ ≤ z.2 ∧ ∀ t, (z.2 t).isSome ↔ (cache₀ t).isSome ∨ t ∈ ts := by
+  induction ts generalizing cache₀ with
+  | nil =>
+    simp only [batch_nil, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
+    subst hz
+    simp
+  | cons t ts ih =>
+    simp only [batch_cons, StateT.run_bind, StateT.run_pure, mem_support_bind_iff, support_pure,
+      Set.mem_singleton_iff] at hz
+    obtain ⟨y, hy, w, hw, rfl⟩ := hz
+    obtain ⟨hle, hiff⟩ := ih hw
+    refine ⟨(withCaching_cache_le so _ _ _ hy).trans hle, fun t' => ?_⟩
+    rw [hiff, withCaching_run_isSome_apply_iff so hy, List.mem_cons]
+    tauto
+
+end QueryImpl
 
 namespace OracleSpec.SubSpec
 
