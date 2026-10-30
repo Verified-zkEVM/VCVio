@@ -34,7 +34,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -53,7 +52,6 @@ recorded read list of the read-recording run is such a list: its reads answer vi
 the real layer and never from the drawn (rejected) values, so its law does not depend on the
 drawn list. -/
 
-omit [SampleableType Stmt] in
 /-- **The atomic value-free charge.** One fresh raw
 commitment draw `w ← ids.commit pk sk`, *independent of* a value-free list `rl`, contributes
 expected multiplicity `E[rl.count w.1] ≤ ε · rl.length`: each of the `rl.length` slots of `rl` is
@@ -74,7 +72,6 @@ lemma tsum_prEvent_commit_mul_count_le {C P : Type} [DecidableEq C]
     fun cm => by simpa only [prEvent_map] using hGuess cm
   rwa [lintegral_evalDist_eq_tsum, OracleComp.tsum_prEvent_map_mul] at h
 
-omit [SampleableType Stmt] in
 /-- **Value-substitution: the recorded read list is independent of the drawn-list content.** The
 expected multiplicity `E[readlist.count w]` of any fixed commitment `w` in the recorded read list of
 the read-recording run depends only on the start *real cache*, *signed list*, and *read list* — not

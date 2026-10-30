@@ -58,7 +58,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -91,7 +90,7 @@ noncomputable def simulatedEufNmaAdv :
       (FiatShamirWithAbort.inROM ids hr M maxAttempts) where
   main pk := Prod.fst <$> (simulatedNmaAdv ids hr M maxAttempts sim adv).main pk
 
-omit [SampleableType Stmt] [SampleableType Chal] in
+omit [SampleableType Chal] in
 /-- **Soundness of the managed-RO → plain EUF-NMA bridge.** The managed-RO NMA
 success probability of `simulatedNmaAdv` equals the plain EUF-NMA success probability of
 `simulatedEufNmaAdv`. The post-processing in `simulatedNmaAdv` erases the forgery's own
@@ -124,7 +123,6 @@ lemma managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment :
 
 /-! ## Assembly -/
 
-omit [SampleableType Stmt] in
 /-- **CMA-to-NMA reduction for Fiat-Shamir with aborts, HVZK on good keys.** The form of
 `euf_cma_to_nma` whose HVZK hypothesis is required only at related key pairs in the good-key
 event `Good`. The proof uses HVZK only per key, inside the per-key hybrid chain on good keys,
@@ -280,7 +278,6 @@ theorem euf_cma_to_nma_of_good_hvzk
   gcongr
   exact prEvent_hybridExp_sim_le_managedRoNmaAdvantage ids hr M maxAttempts sim adv
 
-omit [SampleableType Stmt] in
 /-- **CMA-to-NMA reduction for Fiat-Shamir with aborts** (after Theorem 3, CRYPTO 2023),
 at the managed-RO NMA interface: for any EUF-CMA adversary making at most `qS` signing
 and `qH` hash queries, the CMA advantage is bounded by the managed-RO NMA success
@@ -311,7 +308,6 @@ theorem euf_cma_to_nma
   euf_cma_to_nma_of_good_hvzk ids hr M maxAttempts sim adv ζ_zk hζ qS qH ε p_abort δ
     hε hδ hp₀ hp Good hGood (fun pk sk hrel _ => hhvzk pk sk hrel) hGuess hAbort hQ
 
-omit [SampleableType Stmt] in
 /-- `euf_cma_to_eufNma` with the HVZK hypothesis required only on good keys, as in
 `euf_cma_to_nma_of_good_hvzk`. -/
 theorem euf_cma_to_eufNma_of_good_hvzk
@@ -339,7 +335,6 @@ theorem euf_cma_to_eufNma_of_good_hvzk
     managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment,
     ← SignatureAlg.eufNmaAdvantage] at h
 
-omit [SampleableType Stmt] in
 /-- **CMA-to-NMA reduction for Fiat-Shamir with aborts**, at the plain EUF-NMA interface:
 under the hypotheses of `euf_cma_to_nma`, the CMA advantage is bounded by the EUF-NMA
 advantage of the cache-forgetting reduction `simulatedEufNmaAdv` plus `cmaToNmaLoss`. This
@@ -368,7 +363,7 @@ theorem euf_cma_to_eufNma
     managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment,
     ← SignatureAlg.eufNmaAdvantage] at h
 
-omit [SampleableType Stmt] [SampleableType Chal] in
+omit [SampleableType Chal] in
 /-- Cache-invariant companion to `simulatedNmaAdv`: the reduction issues at most `qH`
 live hash queries (the signing simulation samples transcripts using only uniform
 queries and programs the managed cache). Mirrors

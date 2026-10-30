@@ -34,7 +34,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -46,7 +45,6 @@ variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
 variable (adv : SignatureAlg.UnforgeableAdversary
   (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
-omit [SampleableType Stmt] in
 /-- **Per-signing-query core of the Trans → Sim hop.** From any shared starting cache,
 the accepted-only-reprogramming body and the simulated body are within total-variation
 distance `ζ_zk · (1 + q + ⋯ + q^(maxAttempts-1)) ≤ ζ_zk / (1 - q)` on their joint
@@ -122,7 +120,6 @@ adversary's forgery and the final hybrid state. -/
       ((FiatShamirWithAbort.inROM ids hr M maxAttempts).verify pk z.1.1 z.1.2)) z.2.1
   pure (decide (z.1.1 ∉ z.2.2) && ok)
 
-omit [SampleableType Stmt] in
 lemma hybridExpAtKey_eq_run_bind
     (signBody : M → StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp
       (Option (Commit × Resp)))
@@ -136,7 +133,6 @@ lemma hybridExpAtKey_eq_run_bind
   rcases z with ⟨⟨msg, σ⟩, cache, signed⟩
   rfl
 
-omit [SampleableType Stmt] in
 /-- The verification continuation only reads the cache at the forged message's points,
 so it is insensitive to cache changes away from them. -/
 lemma hybridVerifyCont_cache_congr (pk : Stmt) (ms : M × Option (Commit × Resp))
@@ -176,7 +172,6 @@ lemma hybridVerifyCont_cache_congr (pk : Stmt) (ms : M × Option (Commit × Resp
           roStep_of_none M (show c₂ (msg, w) = none from (h w).symm.trans hc)]
         simp
 
-omit [SampleableType Stmt] in
 /-- When the forged message has already been signed, the freshness conjunct forces the
 game output to `false`, so the success probability vanishes regardless of the cache. -/
 lemma prEvent_true_hybridVerifyCont_of_mem (pk : Stmt)

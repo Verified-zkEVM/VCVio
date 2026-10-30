@@ -33,7 +33,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -50,7 +49,6 @@ variable (adv : SignatureAlg.UnforgeableAdversary
 Each hop is stated per key pair, under pointwise hypotheses at that key; the good-key
 event and `δ` enter only once, in the final averaging over `hr.gen`. -/
 
-omit [SampleableType Stmt] in
 /-- G₀ bridge: at every key pair produced by key generation, the real-signing hybrid
 experiment reproduces the success probability of the standard unforgeability experiment
 `SignatureAlg.unforgeableExperiment` under `runtime M`.
@@ -258,13 +256,13 @@ from `false`. -/
   fun t => StateT.mk fun p =>
     (fun us : spec.Range t × σ => (us.1, (us.2, p.2))) <$> (impl t).run p.1
 
-omit [SampleableType Stmt] [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
+omit [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
 lemma flagLift_run {ι : Type} {spec : OracleSpec ι} {σ : Type}
     (impl : QueryImpl spec (StateT σ ProbComp)) (t : spec.Domain) (s : σ) (b : Bool) :
     ((flagLift impl t).run (s, b)) =
       (fun us : spec.Range t × σ => (us.1, (us.2, b))) <$> (impl t).run s := rfl
 
-omit [SampleableType Stmt] [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
+omit [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
 /-- Transport a predicate-targeted query bound across a (propositionally equal) choice of
 predicate and `DecidablePred` instance. The predicate is allowed to differ by its match
 auxiliary (which arises when the same matches-notation is elaborated in different
@@ -322,7 +320,6 @@ lemma sum_natCast_mul_pow_le_sq_sum_pow (p : ℝ) (hp0 : 0 ≤ p) (m : ℕ) :
   rw [hP, Finset.mem_product, Finset.mem_range, Finset.mem_range]
   omega
 
-omit [SampleableType Stmt] in
 /-- Hop G₀ → G₁ (Sign → Prog) at a fixed key: replacing the caching hash of each signing
 attempt by overwrite-reprogramming with a fresh challenge costs at most
 
@@ -697,7 +694,6 @@ lemma prEvent_hybridExpAtKey_real_le_prog
       nlinarith [mul_nonneg hqS hε, hqS, hqH, hε]
     linarith [hextra]
 
-omit [SampleableType Stmt] in
 /-- Hop G₁ → G₂ (Prog → Trans) at a fixed key: dropping the reprogramming of rejected
 attempts (keeping only the accepted transcript's programming) costs at most
 `qS·(qH+1)·ε/(1-p)`.
@@ -843,7 +839,6 @@ lemma prEvent_hybridExpAtKey_prog_le_trans
         rw [hGT]
         exact add_le_add le_rfl h_badBound
 
-omit [SampleableType Stmt] in
 /-- Hop G₂ → G₃ (Trans → Sim) at a fixed key: replacing the private honest-execution
 loop by the per-attempt HVZK simulator loop costs at most `qS·ζ_zk/(1-p)`.
 

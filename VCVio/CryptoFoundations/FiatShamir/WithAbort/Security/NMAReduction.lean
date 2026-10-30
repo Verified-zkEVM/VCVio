@@ -34,7 +34,6 @@ namespace FiatShamirWithAbort
 
 section EUF_CMA
 
-variable [SampleableType Stmt]
 variable [DecidableEq Commit] [SampleableType Chal]
 variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -58,7 +57,7 @@ combined simulation over the product cache that the per-step state-coupling proj
 Naming the three handlers at top level lets the coupling be stated and proved against
 `nmaLinkImpl pk` one query step at a time. -/
 
-omit [SampleableType Stmt] [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
+omit [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
 /-- **Uniform-only nested-simulation collapse.**
 The simulator loop inside `sigSim`/`nmaOuterImpl` is run under the inner managed handler's
 uniform branch `unifSim n = fwd (.inl n)`, which forwards each uniform draw transparently into
@@ -180,7 +179,6 @@ def proj2 (s : NmaGhostState M Commit Chal) :
     (unifSpec + (M × Commit →ₒ Chal)).QueryCache × (M × Commit →ₒ Chal).QueryCache :=
   (baseEmbed M (overlayCache M s.1.1 s.1.2), s.1.1)
 
-omit [SampleableType Stmt] in
 /-- **Linked-run projection, uniform-query step.** On a uniform query the layered ghost-tagged
 handler `ghostNmaImpl`, projected by `proj2`, matches the linked managed handler `nmaLinkImpl`
 applied to the projected state. The uniform query forwards straight through both handlers
@@ -195,7 +193,6 @@ private lemma hproj2_unif (pk : Stmt) (sk : Wit) (n : unifSpec.Domain)
     HasQuery.toQueryImpl_apply, nmaInnerImpl, unifFwdImpl, proj2]
   rfl
 
-omit [SampleableType Stmt] in
 /-- **Linked-run projection, random-oracle step — cached-read sub-case.** On a random-oracle query
 at a
 point `mc` whose ghost layer misses (`hgm`) and whose base layer already holds a value `v`
@@ -238,7 +235,6 @@ private lemma hproj2_ro (pk : Stmt) (sk : Wit) (mc : M × Commit) (v : Chal)
     PFunctor.Lens.State.fst, PFunctor.Lens.State.snd, Prod.map, id_eq, proj2]
   rfl
 
-omit [SampleableType Stmt] in
 /-- **Linked-run projection, random-oracle step — ghost-hit sub-case.** On a random-oracle query at
 a
 point `mc` whose ghost layer already holds a value `v` (`hgh : s.1.2 mc = some v`), the layered
@@ -267,7 +263,6 @@ private lemma hproj2_ro_ghost_hit (pk : Stmt) (sk : Wit) (mc : M × Commit) (v :
     PFunctor.Lens.State.fst, PFunctor.Lens.State.snd, Prod.map, id_eq, proj2]
   rfl
 
-omit [SampleableType Stmt] in
 /-- **Linked-run projection, random-oracle step — fresh-live-read sub-case.** On a random-oracle
 query at a point `mc` whose ghost layer misses (`hgm`) and whose base layer also misses
 (`hbm : s.1.1 mc = none`), the layered ghost-tagged handler `ghostNmaImpl`, projected by
@@ -324,7 +319,6 @@ private lemma hproj2_ro_fresh (pk : Stmt) (sk : Wit) (mc : M × Commit)
     PFunctor.Lens.State.put, PFunctor.Lens.State.mk]
   rw [overlayCache_cacheQuery_real_of_ghost_none (M := M) s.1.1 hgm, baseEmbed_cacheQuery]
 
-omit [SampleableType Stmt] in
 /-- **Linked-run projection, signing-query step — exact per-step equality.**
 
 On a signing query, the layered ghost-tagged handler `ghostNmaImpl`, projected by the
@@ -416,7 +410,6 @@ private lemma hproj2_sign (pk : Stmt) (sk : Wit) (msg : M)
       -- or not it coincides with a prior live read.
       rw [overlayCache_cacheQuery_ghost, baseEmbed_cacheQuery]
 
-omit [SampleableType Stmt] in
 /-- **Linked-run projection, unified per-step coupling in distribution.** For *every* oracle
 query `t` and
 every layered state `s`, the `proj2`-projected layered NMA step has the same output/state
@@ -459,7 +452,6 @@ private lemma relTriple_graph_of_evalDistEq_map
       (relTriple_refl_of_mem_support oa (R := fun a b => F a = F b) fun _ _ => rfl)
   exact OracleComp.ProgramLogic.Relational.relTriple_of_evalDistEq_right h h0
 
-omit [SampleableType Stmt] in
 /-- **Linked-run projection, whole-run state projection.** The full layered ghost-tagged NMA run
 `(simulateQ ghostNmaImpl (adv.main pk)).run s`, projected by `proj2`, has the same output/state
 distribution as the linked managed run `(simulateQ nmaLinkImpl (adv.main pk)).run (proj2 s)`. This
@@ -549,7 +541,6 @@ with the managed cache, in the interface of `SignatureAlg.ManagedRoNmaAdversary`
         | none => cache
       pure ((msg, σ), advCache)
 
-omit [SampleableType Stmt] in
 /-- **Nested-simulation fusion for the managed NMA run.** The managed reduction runs the
 common adversary `adv.main pk` under the inner managed handler `nmaOuterImpl pk` threading the
 inner cache (`StateT spec.QueryCache (OracleComp spec)`), then `.run ∅` re-simulates the
@@ -570,7 +561,7 @@ lemma managedRun_eq_link_run (pk : Stmt) :
             (adv.main pk)).run ∅)).run ∅ := by
   exact (QueryImpl.Stateful.simulateQ_link_run _ _ (adv.main pk) ∅ ∅)
 
-omit [SampleableType Stmt] [SampleableType Chal] in
+omit [SampleableType Chal] in
 /-- If a cache misses at the forgery's verification point `Sum.inr (msg, w')`, the overlay
 verification of `FiatShamirWithAbort.verify pk msg (some (w', z))` agrees with the plain
 live verification: the single query at `Sum.inr (msg, w')` misses and is forwarded live.
@@ -600,7 +591,6 @@ lemma withCacheOverlay_verify_eq_of_miss
       congr 1
       exact withCacheOverlay_query_miss _ (Sum.inr (msg, w')) hm
 
-omit [SampleableType Stmt] in
 /-- **Verify-tail pointwise split** (the per-forgery content of the NMA bridge). On a common
 ghost-tagged output state `((base, ghost), signed)` satisfying the ghost-domain invariant
 (every ghost point's message is signed), the hybrid verification-and-freshness continuation
@@ -644,7 +634,6 @@ lemma prEvent_hybridVerifyCont_le_managed_verify (pk : Stmt)
       StateT.run', bind_pure]
     rfl
 
-omit [SampleableType Stmt] in
 /-- **State-coupling for the NMA bridge** (genuine two-layer content). At a fixed key pair
 the single-cache hybrid run of `hybridExpAtKey`, *followed by its verification-and-freshness
 tail* `hybridVerifyCont`, is bounded by the run-normal-form of the managed-RO NMA
@@ -851,7 +840,6 @@ lemma hybridSimRun_le_managedRun_verify (pk : Stmt) (sk : Wit) :
   exact prEvent_hybridVerifyCont_le_managed_verify ids hr M maxAttempts pk av base ghost signed
     (fun q hq => ghostNmaImpl_run_signed_inv M maxAttempts sim pk sk (adv.main pk) _ ha q hq)
 
-omit [SampleableType Stmt] in
 /-- **Per-key cache-overlay invariant** (core of the NMA bridge): at a fixed key pair the
 simulated single-cache hybrid (with the freshness check) is bounded by the run-normal-form
 of the managed-RO NMA experiment — the managed-cache run of `simulatedNmaAdv` followed by
@@ -886,7 +874,6 @@ lemma hybridExp_sim_le_managedRun_perKey
   rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind]
   exact hybridSimRun_le_managedRun_verify ids hr M maxAttempts sim adv pk sk
 
-omit [SampleableType Stmt] in
 /-- NMA bridge: the success probability of the simulated hybrid (averaged over key
 generation, with the freshness check) is at most the success probability of
 `simulatedNmaAdv` in the managed-RO NMA experiment.
