@@ -206,6 +206,8 @@ lemma xorBytes_xorBytes {l l' : List UInt8} (h : l.length ≤ l'.length) :
             UInt8.xor_zero, List.cons.injEq, true_and] at ih ⊢
           exact ih (by simpa using h)
 
+/-- XOR against a concatenation splits the first list at the length of the first part: the
+first part is XORed against a prefix of `l` and the second part against the rest of `l`. -/
 lemma xorBytes_append (l u v : List UInt8) :
     xorBytes l (u ++ v) = xorBytes (l.take u.length) u ++ xorBytes (l.drop u.length) v := by
   induction u generalizing l with
@@ -215,6 +217,7 @@ lemma xorBytes_append (l u v : List UInt8) :
     | nil => simp [xorBytes]
     | cons c l => simpa [xorBytes] using ih l
 
+/-- XOR against `l` reads only the first `l.length` bytes of the second list. -/
 lemma xorBytes_take_length (l l' : List UInt8) : xorBytes l (l'.take l.length) = xorBytes l l' := by
   induction l generalizing l' with
   | nil => simp [xorBytes]
