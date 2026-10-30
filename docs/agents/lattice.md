@@ -66,7 +66,7 @@ instantiating those abstractions for a lattice scheme.
   model and the FIPS seed-derived key generation. Its Limitations section records what they do
   not cover.
 - `LatticeCrypto/MLDSA/SecurityExpandARO.lean`: the EUF-NMA theorem `nma_security_rom` with
-  `ExpandA` a programmed random oracle, against uniform-matrix MLWE.
+  ExpandA a programmed random oracle, against uniform-matrix MLWE.
 - `LatticeCrypto/MLDSA/Concrete/`: executable implementations of NTT, rounding, and encoding, plus
   `LawBounds.lean` — the algebraic range and bit-width bounds behind the `Primitives.Laws` fields.
 - `Extern/MLDSA/`: FFI bindings, SHAKE-backed sampling, and the FFI-backed instance. `Laws.lean`

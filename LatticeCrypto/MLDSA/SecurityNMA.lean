@@ -303,7 +303,7 @@ forger plus verification, the advantage is the quantity a PRG assumption on the 
 expansion bounds; no cost model is attached here (#460). -/
 noncomputable def expandSAdvantage
     (D : Bytes 32 → Bytes 32 → RqVec p.l → RqVec p.k → ProbComp Bool) : ℝ≥0∞ :=
-  𝒟[expandSRealExperiment p prims D].boolDist 𝒟[expandSIdealExperiment p prims D]
+  𝒟[expandSRealExperiment p prims D].boolDist 𝒟[expandSIdealExperiment p D]
 
 end KeyGen
 
@@ -1226,8 +1226,7 @@ theorem stmsis_tail_le_withMatrix
 /-- **Per-key STMSIS read-back comparison, short model.** `stmsis_tail_le_withMatrix` at the
 honest matrix `ExpandA(pk.ρ)`, where `verifyAtMatrix` is the short scheme's verification
 (`verifyAtMatrix_expandA`), `extractorCShort` runs `extractorC`, and the validity predicate is
-that of `mldsaSTMSISShort` (`mldsaSTMSISShort_isValid_expandA_eq_withMatrix`); all three
-identifications are definitional. -/
+that of `mldsaSTMSISShort` (`mldsaSTMSISShort_isValid_expandA_eq_withMatrix`). -/
 private theorem stmsis_tail_le_short
     [DecidableEq M] [SampleableType (CommitHashBytes p)]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
@@ -1250,6 +1249,8 @@ private theorem stmsis_tail_le_short
             pure ((mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk
               hashInput hashOutput response)
         | none => pure false] {true} := by
+  simp only [← verifyAtMatrix_expandA p prims hr maxAttempts,
+    mldsaSTMSISShort_isValid_expandA_eq_withMatrix]
   exact stmsis_tail_le_withMatrix p prims (prims.expandA pk.rho) main pk
 
 /-- **The SelfTargetMSIS extraction bound in the idealized short-key model.** The uniform-`t`
