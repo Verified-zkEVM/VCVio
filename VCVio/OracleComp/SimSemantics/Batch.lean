@@ -39,11 +39,11 @@ challenger's oracle), and counting its rounds is an ordinary path-wise query bou
 * `QueryImpl.simulateQ_simulateQ_unbatch`: running a program with rounds through `unbatch` and
   then a handler is running it through the batched handler.
 * `OracleSpec.simulateQ_romImpl_simulateQ_unbatch`: the corollary for the lazy random oracle.
-* `QueryImpl.withCaching_batch_le_and_isSome_iff`: answering a round with a caching handler caches
-  exactly its points, beside the points cached before.
 * `QueryImpl.run_simulateQ_add_parallelStateT_batch_liftComp`: a program with rounds of `spec`,
   lifted to rounds of `spec + side` and answered by two handlers side by side, runs against the
   first handler alone and leaves the state of the second unchanged.
+* `QueryImpl.withCaching_batch_le_and_isSome_iff`: answering a round with a caching handler caches
+  exactly its points, beside the points cached before.
 * `OracleComp.simulateQ_queryRound₂`, `OracleComp.simulateQ_queryRound`,
   `OracleComp.simulateQ_queryPoint`: against a fixed answer table, a round returns the table's
   answers at its points.

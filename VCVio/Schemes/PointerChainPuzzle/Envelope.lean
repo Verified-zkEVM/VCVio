@@ -75,6 +75,9 @@ commitment.
   function returns the message, for every nonce, subkey function and PRF.
 * `Envelope.sealWith_eq_sealBy`: `sealWith` is `sealBy` in `Id`, with the PRF under the two subkeys
   as the block and tag functions.
+* `Envelope.simulateQ_sealBy`, `Envelope.sealBy_pure_eval`: simulating `sealBy` simulates its block
+  and tag functions, and with the PRF under two subkeys returned purely it returns their envelope,
+  in every lawful monad.
 * `Envelope.nodup_map_be_range`: the keystream block counters of a plaintext are distinct.
 * `Envelope.map_xorBytes_flatMap_evalDistEq`: the one-time pad on byte strings: XOR with
   independent uniform blocks is distributed as the blocks themselves.
@@ -206,6 +209,8 @@ lemma xorBytes_xorBytes {l l' : List UInt8} (h : l.length ≤ l'.length) :
             UInt8.xor_zero, List.cons.injEq, true_and] at ih ⊢
           exact ih (by simpa using h)
 
+/-- XOR against a concatenation splits the first list at the length of the first part: the
+first part is XORed against a prefix of `l` and the second part against the rest of `l`. -/
 lemma xorBytes_append (l u v : List UInt8) :
     xorBytes l (u ++ v) = xorBytes (l.take u.length) u ++ xorBytes (l.drop u.length) v := by
   induction u generalizing l with
@@ -215,6 +220,7 @@ lemma xorBytes_append (l u v : List UInt8) :
     | nil => simp [xorBytes]
     | cons c l => simpa [xorBytes] using ih l
 
+/-- XOR against `l` reads only the first `l.length` bytes of the second list. -/
 lemma xorBytes_take_length (l l' : List UInt8) : xorBytes l (l'.take l.length) = xorBytes l l' := by
   induction l generalizing l' with
   | nil => simp [xorBytes]
@@ -362,6 +368,24 @@ theorem sealWith_eq_sealBy (pz : ByteArray) (nonce : N) (ks : K × K) (msg : Pla
       (sealBy codec (fun x => pure (prf.eval ks.1 x)) (fun x => pure (prf.eval ks.2 x)) pz nonce
         msg : Id ByteArray).run := by
   simp [sealBy, sealWith, keystream, List.flatMap_map]
+
+/-- Simulating the queries of `sealBy` is `sealBy` with the simulated block and tag functions. -/
+lemma simulateQ_sealBy {ι : Type} {spec : OracleSpec ι} {μ : Type → Type} [Monad μ]
+    [LawfulMonad μ] (impl : QueryImpl spec μ) (block tag : ByteArray → OracleComp spec (Bytes 32))
+    (pz : ByteArray) (nonce : N) (msg : Plaintext) :
+    simulateQ impl (sealBy codec block tag pz nonce msg) =
+      sealBy codec (fun x => simulateQ impl (block x)) (fun x => simulateQ impl (tag x)) pz nonce
+        msg := by
+  simp [sealBy]
+
+/-- `sealBy` with the block and tag functions of `prf` under the subkeys `k₁` and `k₂`, returned
+purely, returns the envelope under `(k₁, k₂)`. -/
+lemma sealBy_pure_eval {μ : Type → Type} [Monad μ] [LawfulMonad μ] (k₁ k₂ : K) (pz : ByteArray)
+    (nonce : N) (msg : Plaintext) :
+    sealBy codec (μ := μ) (fun x => pure (prf.eval k₁ x)) (fun x => pure (prf.eval k₂ x)) pz nonce
+      msg = pure (sealWith prf codec pz nonce (k₁, k₂) msg) := by
+  rw [sealWith_eq_sealBy]
+  simp [sealBy]
 
 /-- `sealBy` commutes with monad morphisms: mapping the envelope through a morphism `F` is the
 envelope with the block and tag functions mapped through `F`. -/
