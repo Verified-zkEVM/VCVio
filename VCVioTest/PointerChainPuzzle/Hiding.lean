@@ -24,6 +24,9 @@ nonce codec and the puzzle encoding left as parameters:
   point at the puzzle's commitment, has the budget `(0, (6, 1))`, which `privateAdversary` keeps
   (`isQueryBound_privateAdversary`), and `prEvent_privateExperiment_badK_le` bounds its `BadK` by
   `1 / 5 + (9 + 81 + 1) / 11`.
+* for that adversary, `absDiff_hidingExperiment_privateExperiment_le` bounds the gap between the
+  hiding experiment's probability of `true` and the hybrid's by `BadK`, and with the `BadK` bound
+  by `1 / 5 + (9 + 81 + 1) / 11`, at either hidden bit.
 
 The answer types are sampled through `SampleableType.Fin`, so loading this module enumerates no
 type.
@@ -160,5 +163,36 @@ lemma prEvent_privateExperiment_hidingAdv_badK_le (b : Bool) :
   have hP : solvePoints 2 1 = 9 := rfl
   simpa [hP] using prEvent_privateExperiment_badK_le (m := 1) prf codec encodePuzzle mkCtx
     initAcc mkCtx_injective hidingAdv_isQueryBound b
+
+/-- The first hop for the adversary: the hiding experiment's probability of `true` and the
+hybrid's probability of the guess `true` differ by at most the probability of `BadK` in the hybrid,
+at either hidden bit. -/
+lemma absDiff_hidingExperiment_hidingAdv_le_badK (b : Bool) :
+    ENNReal.absDiff
+      ((ProbCompRuntime.rom spec).evalDist
+        ((sealScheme 2 1 mkCtx initAcc N K).hidingExperiment
+          (sealDEM (Ctx := Salt) prf codec encodePuzzle) plaintextLength hidingAdv b) {true})
+      (Pr{let z ← (simulateQ spec.romImpl
+        (privateExperiment 1 prf codec encodePuzzle mkCtx initAcc hidingAdv b)).run ∅}[
+          z.1.1 = true]) ≤
+      Pr{let z ← (simulateQ spec.romImpl
+        (privateExperiment 1 prf codec encodePuzzle mkCtx initAcc hidingAdv b)).run ∅}[
+          BadK z.1.2 z.2] :=
+  absDiff_hidingExperiment_privateExperiment_le prf codec encodePuzzle mkCtx initAcc hidingAdv b
+
+/-- With the `BadK` bound, the hiding experiment's probability of `true` and the hybrid's
+probability of the guess `true` differ by at most `1 / 5 + (9 + 81 + 1) / 11`, at either hidden
+bit. -/
+lemma absDiff_hidingExperiment_hidingAdv_le (b : Bool) :
+    ENNReal.absDiff
+      ((ProbCompRuntime.rom spec).evalDist
+        ((sealScheme 2 1 mkCtx initAcc N K).hidingExperiment
+          (sealDEM (Ctx := Salt) prf codec encodePuzzle) plaintextLength hidingAdv b) {true})
+      (Pr{let z ← (simulateQ spec.romImpl
+        (privateExperiment 1 prf codec encodePuzzle mkCtx initAcc hidingAdv b)).run ∅}[
+          z.1.1 = true]) ≤
+      1 / 5 + (9 + 9 ^ 2 + 1) / 11 :=
+  (absDiff_hidingExperiment_hidingAdv_le_badK prf codec encodePuzzle b).trans
+    (prEvent_privateExperiment_hidingAdv_badK_le prf codec encodePuzzle b)
 
 end VCVioTest.PointerChainPuzzle.Hiding
