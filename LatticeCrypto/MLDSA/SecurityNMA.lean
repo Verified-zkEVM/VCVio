@@ -187,15 +187,15 @@ seed `ρ`, the signing key `K`, and the short secrets `(s₁, s₂)` independent
 with `(s₁, s₂)` uniform on the `η`-bounded box `S_η^ℓ × S_η^k` — the
 distribution the Module-LWE assumption for ML-DSA is stated over. The key-swap
 hop is then an exact monad identity against `mldsaMLWEShort` (no statistical
-slack); the deterministic-XOF derivation is not part of this hop and is handled
-separately by a named XOF-replacement assumption. -/
+slack); the deterministic-XOF derivation is not part of this hop and is charged
+separately as the `expandSAdvantage` of a named distinguisher. -/
 
 /-- **Idealized key generation (real `t`).** Sample the matrix seed `ρ`, the
 signing key `K`, and the short secrets `(s₁, s₂)` independently — `(s₁, s₂)`
 uniform on the `η`-bounded box — and form `t = ExpandA(ρ) · s₁ + s₂`. This is
 the honestly-sampled key distribution of the idealized proof-level ML-DSA
-model; the deterministic seed-expanded `keygen0` is related to it by a separate
-XOF-replacement assumption. -/
+model; the deterministic seed-expanded `keygen0` is related to it by the `ExpandS`
+replacement game (`expandSAdvantage`). -/
 noncomputable def keygenShort : ProbComp (PublicKey p prims × SecretKey p) := do
   let key ← $ᵗ (Bytes 32)
   let rho ← $ᵗ (Bytes 32)
@@ -269,36 +269,41 @@ theorem keygen0_generable :
       hr.gen = keygen0 p prims :=
   ⟨hrFips p prims, rfl⟩
 
-/-- **XOF replacement for the ML-DSA secret derivation (`ExpandSeed`/`ExpandS`), quantified
-form.** For a bound `εPRG`, this asserts that no distinguisher receiving
-`(ρ, K, s₁, s₂)` can tell the FIPS derivation — expand a uniform 32-byte seed into
-`(ρ, ρ', K)` and derive `(s₁, s₂) = ExpandS(ρ')` — from independent sampling with the
-correct short marginals: `ρ`, `K` uniform and `(s₁, s₂)` uniform on the `η`-bounded box
-`S_η^ℓ × S_η^k`, i.e. exactly the draws of the idealized key generator `keygenShort`.
+/-- **Real branch of the `ExpandS` replacement game.** Expand a uniform 32-byte seed into
+`(ρ, ρ', K)`, derive `(s₁, s₂) = ExpandS(ρ')`, and run the distinguisher `D` on
+`(ρ, K, s₁, s₂)`: the key material that the FIPS key generator `keygen0` uses. -/
+def expandSRealExperiment (D : Bytes 32 → Bytes 32 → RqVec p.l → RqVec p.k → ProbComp Bool) :
+    ProbComp Bool := do
+  let seed ← $ᵗ (Bytes 32)
+  let (rho, rhoPrime, key) := prims.expandSeed seed
+  let (s1, s2) := prims.expandS rhoPrime
+  D rho key s1 s2
 
-This is the standard PRG/XOF-replacement reading of `ExpandSeed`/`ExpandS` against the
-short-secret marginal: the ideal branch is the box distribution the Module-LWE assumption
-for ML-DSA is stated over, so the assumption carries exactly the "SHAKE output is
-pseudorandom with the FIPS marginals" step and nothing else. For a fixed deterministic
-`prims` the unrestricted-quantifier form is only satisfiable at large `εPRG` — an unbounded
-distinguisher can test membership in the `2^256`-point image of the seed expansion — so,
-pending the cost-model infrastructure (#460), it should be read computationally, against
-bounded distinguishers, where it is the assumption that the SHAKE-derived `(ρ, K, s₁, s₂)`
-is pseudorandom with the FIPS marginals. It is consumed by the FIPS-keygen corollary
-`nma_security_fips` to transfer the short-model bound to `keygen0`. -/
-def expandSReplacement (εPRG : ℝ≥0∞) : Prop :=
-  ∀ D : Bytes 32 → Bytes 32 → RqVec p.l → RqVec p.k → ProbComp Bool,
-    𝒟[do
-        let seed ← $ᵗ (Bytes 32)
-        let (rho, rhoPrime, key) := prims.expandSeed seed
-        let (s1, s2) := prims.expandS rhoPrime
-        D rho key s1 s2].boolDist
-      𝒟[do
-        let key ← $ᵗ (Bytes 32)
-        let rho ← $ᵗ (Bytes 32)
-        let s1 ← sampleShortVec p.l p.eta
-        let s2 ← sampleShortVec p.k p.eta
-        D rho key s1 s2] ≤ εPRG
+/-- **Ideal branch of the `ExpandS` replacement game.** Sample `K` and `ρ` uniformly and
+`(s₁, s₂)` uniformly on the `η`-bounded box `S_η^ℓ × S_η^k`, and run the distinguisher `D` on
+`(ρ, K, s₁, s₂)`: the key material that the idealized key generator `keygenShort` uses. -/
+noncomputable def expandSIdealExperiment
+    (D : Bytes 32 → Bytes 32 → RqVec p.l → RqVec p.k → ProbComp Bool) : ProbComp Bool := do
+  let key ← $ᵗ (Bytes 32)
+  let rho ← $ᵗ (Bytes 32)
+  let s1 ← sampleShortVec p.l p.eta
+  let s2 ← sampleShortVec p.k p.eta
+  D rho key s1 s2
+
+/-- **Distinguishing advantage against the `ExpandS` replacement.** The Boolean distance between
+`expandSRealExperiment D` and `expandSIdealExperiment D`: how well `D` tells the FIPS derivation
+of `(ρ, K, s₁, s₂)` from one seed through `ExpandSeed`/`ExpandS` apart from independent sampling
+with the short-box marginals of `keygenShort`.
+
+`nma_security_fips` charges this advantage for the single named distinguisher
+`expandSDistinguisher` its proof builds, not for every distinguisher. Over all distinguishers the
+supremum is close to `1`, since an unbounded `D` can test membership in the image of the
+`2^256`-point seed expansion. For that named distinguisher, whose cost is that of one run of the
+forger plus verification, the advantage is the quantity a PRG assumption on the SHAKE-based
+expansion bounds; no cost model is attached here (#460). -/
+noncomputable def expandSAdvantage
+    (D : Bytes 32 → Bytes 32 → RqVec p.l → RqVec p.k → ProbComp Bool) : ℝ≥0∞ :=
+  𝒟[expandSRealExperiment p prims D].boolDist 𝒟[expandSIdealExperiment p prims D]
 
 end KeyGen
 
@@ -509,6 +514,24 @@ noncomputable def distinguisherBShort
     simulateToProbComp p prims (M := M) do
       let (msg, σ) ← main pk
       (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
+
+/-- **The `ExpandS` replacement distinguisher.** On key material `(ρ, K, s₁, s₂)` it forms the
+public key `pk = (ρ, Power2Round(ExpandA(ρ)·s₁ + s₂).1)` that `keyFromMaterial` builds from that
+material, runs the NMA forging strategy `main` on `pk`, verifies the returned forgery through the
+signature's runtime, and outputs the validity bit. On the real branch
+(`expandSRealExperiment`) it reproduces the NMA game at the FIPS key generator `keygen0`; on the
+ideal branch (`expandSIdealExperiment`) it reproduces the NMA game at `keygenShort`. -/
+noncomputable def expandSDistinguisher
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
+    (maxAttempts : ℕ)
+    (main : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+        (M × Option (Commitment p prims × Response p prims))) :
+    Bytes 32 → Bytes 32 → RqVec p.l → RqVec p.k → ProbComp Bool :=
+  fun rho _key s1 s2 => simulateToProbComp p prims (M := M) (do
+    let d ← main ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩
+    (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify
+      ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩ d.1 d.2)
 
 end Distinguisher
 
