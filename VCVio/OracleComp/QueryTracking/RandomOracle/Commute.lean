@@ -126,13 +126,8 @@ theorem evalDist_simulateQ_queryAll_run_bind_of_perm {γ : Type} [MeasurableSpac
 theorem run_apply_of_ne {s t : ι₀} (hst : s ≠ t) (cache : spec₀.QueryCache)
     {z : spec₀.Range s × spec₀.QueryCache} (hz : z ∈ support ((spec₀.randomOracle s).run cache)) :
     z.2 t = cache t := by
-  rw [run_eq] at hz
-  cases h : cache s with
-  | some u => simp only [h, support_pure, Set.mem_singleton_iff] at hz; rw [hz]
-  | none =>
-    simp only [h, support_bind, support_pure, Set.mem_iUnion, Set.mem_singleton_iff] at hz
-    obtain ⟨u, -, rfl⟩ := hz
-    exact QueryCache.cacheQuery_of_ne _ _ hst.symm
+  rw [QueryImpl.withCaching_run_eq_cacheQuery uniformSampleImpl hz]
+  exact QueryCache.cacheQuery_of_ne _ _ hst.symm
 
 end randomOracle
 
