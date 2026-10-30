@@ -1,6 +1,5 @@
 {"sorry":
- ["Falcon.keyGenFromSeed",
-  "MLDSA.eufCmaMLWEReduction",
+ ["MLDSA.eufCmaMLWEReduction",
   "MLDSA.eufCmaSTMSISReduction",
   "MLDSA.euf_cma_security"],
  "nonstandard": []}
