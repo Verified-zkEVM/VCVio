@@ -17,6 +17,13 @@ public import ToMathlib.Control.WriterT
 A writer records each query and its successful response. The output projection recovers the
 original computation, while reachability and structural query bounds describe its trace.
 An input-only state handler records the same sequence of query inputs.
+For a logged handler running inside an outer simulation, a predicate on the log and the outer
+state that the outer steps at the program's own queries preserve, and that every outer run of the
+logged handler preserves once its entry is appended, holds at the end of the run
+(`QueryImpl.holds_of_mem_support_run_add_withLogging`). When the outer simulation is
+state-monotone, each log entry is located between two intermediate outer states, and an outer
+counter charged at least one per logged query bounds the length of the log, by the invariant
+whose predicate is the counter's growth.
 -/
 
 public section
@@ -302,6 +309,139 @@ theorem map_run_withLogging_inputs_eq_run_appendInputLog
           exact bind_congr fun u => by simpa [List.append_assoc] using ih u (initialInputs ++ [t'])
 
 end inputLog
+
+section logEntries
+
+variable {ι κ : Type} {spec : OracleSpec.{0, 0} ι} {sigSpec : OracleSpec.{0, 0} κ} {σ : Type}
+  [Preorder σ]
+
+/-- Every entry of the log left by a `withLogging` handler for the right summand records the
+output of a run of that handler's program between two intermediate states of an outer
+state-monotone simulation, and the state only grows afterwards. -/
+theorem exists_le_mem_support_run_of_mem_log_add_withLogging
+    (outer : QueryImpl spec (StateT σ ProbComp))
+    (hmono : ∀ {β : Type} (ob : OracleComp spec β) (s : σ) (z : β × σ),
+      z ∈ support ((simulateQ outer ob).run s) → s ≤ z.2)
+    (sign : QueryImpl sigSpec (OracleComp spec)) {α : Type}
+    (oa : OracleComp (spec + sigSpec) α) {s₀ : σ} {z : (α × QueryLog sigSpec) × σ}
+    (hz : z ∈ support ((simulateQ outer ((simulateQ
+      ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+        (WriterT (QueryLog sigSpec) (OracleComp spec)) + sign.withLogging) oa).run)).run s₀))
+    {e : (t : sigSpec.Domain) × sigSpec.Range t} (he : e ∈ z.1.2) :
+    ∃ s₁ s₂, s₀ ≤ s₁ ∧ s₂ ≤ z.2 ∧ (e.2, s₂) ∈ support ((simulateQ outer (sign e.1)).run s₁) := by
+  induction oa using OracleComp.inductionOn generalizing s₀ z with
+  | pure x => simp_all [simulateQ_pure]
+  | query_bind t k ih =>
+    rw [simulateQ_bind, simulateQ_spec_query, WriterT.run_bind', simulateQ_bind, StateT.run_bind,
+      mem_support_bind_iff] at hz
+    obtain ⟨⟨⟨u, w₁⟩, s'⟩, h₁, h₂⟩ := hz
+    simp only [simulateQ_map, StateT.run_map, support_map, Set.mem_image] at h₂
+    obtain ⟨⟨⟨a, w₂⟩, s''⟩, h₂, rfl⟩ := h₂
+    simp only [Prod.map_snd, List.mem_append] at he
+    dsimp only
+    cases t with
+    | inl t =>
+      simp only [QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
+        HasQuery.instOfMonadLift_query, WriterT.run_monadLift', simulateQ_map, StateT.run_map,
+        support_map, Set.mem_image, Prod.mk.injEq] at h₁
+      obtain ⟨⟨v, s₁'⟩, hv, ⟨⟨rfl, rfl⟩, rfl⟩⟩ := h₁
+      simp only [List.empty_eq, List.not_mem_nil, false_or] at he
+      obtain ⟨s₁, s₂, hs₁, hs₂, hmem⟩ := ih _ h₂ he
+      exact ⟨s₁, s₂, (hmono _ _ _ hv).trans hs₁, hs₂, hmem⟩
+    | inr t =>
+      rw [QueryImpl.add_apply_inr, QueryImpl.run_withLogging_apply, simulateQ_bind, StateT.run_bind,
+        mem_support_bind_iff] at h₁
+      obtain ⟨⟨v, s₁'⟩, hv, h₁⟩ := h₁
+      simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff,
+        Prod.mk.injEq] at h₁
+      obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h₁
+      rcases he with he | he
+      · rw [List.mem_singleton] at he
+        subst he
+        exact ⟨s₀, _, le_rfl, hmono _ _ _ h₂, hv⟩
+      · obtain ⟨s₁, s₂, hs₁, hs₂, hmem⟩ := ih _ h₂ he
+        exact ⟨s₁, s₂, (hmono _ _ _ hv).trans hs₁, hs₂, hmem⟩
+
+omit [Preorder σ] in
+/-- **Invariants of a logged run.**  Let `I` be a predicate on a log and an outer state that
+every outer step at an `allowed` ambient query preserves, and that every outer run of the logged
+inner handler's program preserves once the run's entry is appended to the log. Then a program
+whose ambient queries are all `allowed`, run through the logged handler under the outer
+simulation from a state satisfying `I` with some log `log₀`, ends in a state satisfying `I` with
+`log₀` followed by the log of the run. -/
+theorem holds_of_mem_support_run_add_withLogging
+    (outer : QueryImpl spec (StateT σ ProbComp)) (sign : QueryImpl sigSpec (OracleComp spec))
+    {allowed : ι → Prop} (I : QueryLog sigSpec → σ → Prop)
+    (hamb : ∀ t, allowed t → ∀ log s, I log s → ∀ z ∈ support ((outer t).run s), I log z.2)
+    (hsign : ∀ t log s, I log s → ∀ z ∈ support ((simulateQ outer (sign t)).run s),
+      I (log ++ [⟨t, z.1⟩]) z.2)
+    {α : Type} {oa : OracleComp (spec + sigSpec) α}
+    (hoa : AllQueriesSatisfy oa (Sum.elim allowed fun _ ↦ True)) {log₀ : QueryLog sigSpec}
+    {s₀ : σ} (h₀ : I log₀ s₀) {z : (α × QueryLog sigSpec) × σ}
+    (hz : z ∈ support ((simulateQ outer ((simulateQ
+      ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+        (WriterT (QueryLog sigSpec) (OracleComp spec)) + sign.withLogging) oa).run)).run s₀)) :
+    I (log₀ ++ z.1.2) z.2 := by
+  induction oa using OracleComp.inductionOn generalizing log₀ s₀ z with
+  | pure x => simp_all [simulateQ_pure]
+  | query_bind t k ih =>
+    rw [allQueriesSatisfy_query_bind_iff] at hoa
+    rw [simulateQ_bind, simulateQ_spec_query, WriterT.run_bind', simulateQ_bind, StateT.run_bind,
+      mem_support_bind_iff] at hz
+    obtain ⟨⟨⟨u, w₁⟩, s'⟩, h₁, h₂⟩ := hz
+    simp only [simulateQ_map, StateT.run_map, support_map, Set.mem_image] at h₂
+    obtain ⟨⟨⟨a, w₂⟩, s''⟩, h₂, rfl⟩ := h₂
+    dsimp only
+    cases t with
+    | inl t =>
+      simp only [QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
+        HasQuery.instOfMonadLift_query, WriterT.run_monadLift', simulateQ_map, StateT.run_map,
+        support_map, Set.mem_image, Prod.mk.injEq] at h₁
+      obtain ⟨⟨v, s₁'⟩, hv, ⟨⟨rfl, rfl⟩, rfl⟩⟩ := h₁
+      rw [simulateQ_spec_query] at hv
+      simpa only [Prod.map_snd, List.empty_eq, List.nil_append] using
+        ih _ (hoa.2 _) (hamb t hoa.1 log₀ s₀ h₀ _ hv) h₂
+    | inr t =>
+      rw [QueryImpl.add_apply_inr, QueryImpl.run_withLogging_apply, simulateQ_bind, StateT.run_bind,
+        mem_support_bind_iff] at h₁
+      obtain ⟨⟨v, s₁'⟩, hv, h₁⟩ := h₁
+      simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff,
+        Prod.mk.injEq] at h₁
+      obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h₁
+      simpa only [Prod.map_snd, List.append_assoc] using
+        ih _ (hoa.2 _) (hsign t log₀ s₀ h₀ _ hv) h₂
+
+omit [Preorder σ] in
+/-- **Logged queries are counted.**  For an outer state-monotone simulation carrying a counter
+`cnt` that increases by at least one across every run of the logged inner handler's program, the
+length of the log is at most the counter's increase.
+
+This is not a corollary of `exists_le_mem_support_run_of_mem_log_add_withLogging`: that lemma
+places each log entry in an interval of outer states but says nothing about the intervals of
+distinct entries being disjoint, so its per-entry increments cannot be summed to a count. -/
+theorem length_log_le_cnt_of_mem_support_run_add_withLogging
+    (outer : QueryImpl spec (StateT σ ProbComp)) (cnt : σ → ℕ)
+    (hmono : ∀ {β : Type} (ob : OracleComp spec β) (s : σ) (z : β × σ),
+      z ∈ support ((simulateQ outer ob).run s) → cnt s ≤ cnt z.2)
+    (sign : QueryImpl sigSpec (OracleComp spec))
+    (hsign : ∀ (t : sigSpec.Domain) (s : σ) (z : sigSpec.Range t × σ),
+      z ∈ support ((simulateQ outer (sign t)).run s) → cnt s + 1 ≤ cnt z.2)
+    {α : Type} (oa : OracleComp (spec + sigSpec) α) {s₀ : σ}
+    {z : (α × QueryLog sigSpec) × σ}
+    (hz : z ∈ support ((simulateQ outer ((simulateQ
+      ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+        (WriterT (QueryLog sigSpec) (OracleComp spec)) + sign.withLogging) oa).run)).run s₀)) :
+    cnt s₀ + z.1.2.length ≤ cnt z.2 := by
+  simpa using holds_of_mem_support_run_add_withLogging outer sign (allowed := fun _ ↦ True)
+    (fun log s ↦ cnt s₀ + log.length ≤ cnt s)
+    (fun t _ log s h w hw ↦ h.trans (hmono (spec.query t) s w (by simpa using hw)))
+    (fun t log s h w hw ↦ by
+      have := hsign t s w hw
+      simp only [List.length_append, List.length_singleton]
+      omega)
+    (allQueriesSatisfy_of_forall (by rintro (_ | _) <;> trivial) oa) (log₀ := []) (by simp) hz
+
+end logEntries
 
 end QueryImpl
 

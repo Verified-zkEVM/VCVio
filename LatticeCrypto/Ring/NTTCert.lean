@@ -268,6 +268,7 @@ variable {R : Type*} [CommRing R]
 Using an equivalence rather than separate index functions packages coverage,
 disjointness, and uniqueness in the form needed by a butterfly-stage proof. -/
 structure ButterflyLayout (Pair : Type v) (Coord : Type w) where
+  /-- The coordinate of each pair's left (`false`) and right (`true`) side. -/
   equiv : Pair × Bool ≃ Coord
 
 /-- The standard blocked NTT layout.  A pair is a block number and an offset
@@ -469,8 +470,12 @@ theorem forwardStage_zero
 the inverse/forward roundtrip and compatibility of the inverse with a scalar
 accumulated by inner stages. -/
 structure ScaledStage (R : Type*) [CommRing R] (Coord : Type w) where
+  /-- The forward stage map on coefficient vectors. -/
   forward : (Coord → R) → (Coord → R)
+  /-- The inverse stage map, which undoes `forward` up to multiplication by `scalar`. -/
   inverse : (Coord → R) → (Coord → R)
+  /-- The factor by which `inverse` composed with `forward` scales its input; a butterfly
+  stage has factor `2`. -/
   scalar : R
   inverse_forward : ∀ input, inverse (forward input) = scaleCoeffs scalar input
   inverse_scale : ∀ c input,

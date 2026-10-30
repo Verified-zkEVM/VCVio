@@ -70,15 +70,15 @@ theorem IsCoupling.bind {c : Measure (α × β)} {μ : Measure α} {ν : Measure
     (hj : Measurable j) (h : ∀ᵐ z ∂c, IsCoupling (j z) (k z.1) (l z.2)) :
     IsCoupling (c.bind j) (μ.bind k) (ν.bind l) := by
   constructor
-  · rw [Measure.fst, map_bind c hj measurable_fst]
+  · rw [Measure.fst, map_bind hj.aemeasurable measurable_fst.aemeasurable]
     change c.bind (fun z => (j z).fst) = _
     rw [bind_congr_right (h.mono fun _ hz => hz.fst_eq)]
-    rw [← bind_map c measurable_fst hk]
+    rw [← bind_map measurable_fst.aemeasurable hk.aemeasurable]
     exact congrArg (fun μ => μ.bind k) hc.fst_eq
-  · rw [Measure.snd, map_bind c hj measurable_snd]
+  · rw [Measure.snd, map_bind hj.aemeasurable measurable_snd.aemeasurable]
     change c.bind (fun z => (j z).snd) = _
     rw [bind_congr_right (h.mono fun _ hz => hz.snd_eq)]
-    rw [← bind_map c measurable_snd hl]
+    rw [← bind_map measurable_snd.aemeasurable hl.aemeasurable]
     exact congrArg (fun ν => ν.bind l) hc.snd_eq
 
 /-- Conditional joint families need only be measurable under the initial joint law. -/

@@ -62,20 +62,20 @@ theorem bind (hc : IsSubcouplingWithResidual c r μ ν)
     (h : ∀ᵐ z ∂c, IsSubcouplingWithResidual (j z) (e z) (k z.1) (l z.2)) :
     IsSubcouplingWithResidual (c.bind j) (r.bind k + c.bind e) (μ.bind k) (ν.bind l) := by
   constructor
-  · rw [Measure.fst, map_bind c hj measurable_fst]
+  · rw [Measure.fst, map_bind hj.aemeasurable measurable_fst.aemeasurable]
     change c.bind (fun z => (j z).fst) + (r.bind k + c.bind e) = _
     rw [← add_assoc, add_right_comm, ← bind_add_right c (k := fun z => (j z).fst)
       ((measurable_map _ measurable_fst).comp hj) he]
     rw [bind_congr_right (h.mono fun _ hz => hz.fst_add_residual)]
-    rw [← bind_map c measurable_fst hk, ← bind_add_left _ _ hk]
+    rw [← bind_map measurable_fst.aemeasurable hk.aemeasurable, ← bind_add_left _ _ hk]
     exact congrArg (fun m => m.bind k) hc.fst_add_residual
-  · rw [Measure.snd, map_bind c hj measurable_snd]
+  · rw [Measure.snd, map_bind hj.aemeasurable measurable_snd.aemeasurable]
     change c.bind (fun z => (j z).snd) ≤ _
     calc
       _ ≤ c.bind (fun z => l z.2) := bind_mono_right
         ((measurable_map _ measurable_snd).comp hj).aemeasurable
         (hl.comp measurable_snd).aemeasurable (h.mono fun _ hz => hz.snd_le)
-      _ = c.snd.bind l := (bind_map c measurable_snd hl).symm
+      _ = c.snd.bind l := (bind_map measurable_snd.aemeasurable hl.aemeasurable).symm
       _ ≤ ν.bind l := bind_mono_left hc.snd_le hl
 
 /-- A left event implies the right event outside a joint bad event, up to residual mass. -/

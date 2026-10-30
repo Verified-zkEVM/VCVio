@@ -18,6 +18,9 @@ measurable events.  This formulation is native to Mathlib measures, applies to c
 and also detects differing total mass.  On probability measures it is the usual total variation
 distance; on subprobability measures it agrees with first completing the missing mass as an
 explicit failure outcome.
+
+Mathlib's `MeasureTheory.etvDist` is the total variation of `μ - ν`, twice this distance on
+probability measures; `ToMathlib.MeasureTheory.Measure.TotalVariation.Variation` relates the two.
 -/
 
 @[expose] public section

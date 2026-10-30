@@ -1,0 +1,1199 @@
+{
+  "status": "partial_compatibility_probe",
+  "compiled": 168,
+  "total": 238,
+  "remaining": 70,
+  "stopReason": "Bounded planning probe stopped after completed module 168; final canonical-head build remains a merge gate.",
+  "modules": [
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Statement.RandomOracleModel",
+      "status": "compiled",
+      "sourceSha256": "c996824aeef6afbdddc7f0a5c7554e90fcb50d9d4f7a1124e3e3bf73fcec49d6"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Statement.UnforgeabilityGame",
+      "status": "compiled",
+      "sourceSha256": "8b82351b87f27cf102ae50e597a7bbedb954563710f04e25468538b4ebacff6e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Statement.BitSecurity",
+      "status": "compiled",
+      "sourceSha256": "d3690980a48743e81b97aeb3a743c700d4128d71afae286f5fb7e7bd501b3976"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Statement.Game",
+      "status": "compiled",
+      "sourceSha256": "0586b2766f3f6850501693fcd548e9216e4f9e87d62d15b1a76ccf473525c41a"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Statement.FIPS205",
+      "status": "compiled",
+      "sourceSha256": "53ec07f31e9d896618b05c3a4dda439b5991e9cc892a0cc8e1b7fc960f785483"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Statement.Scheme",
+      "status": "compiled",
+      "sourceSha256": "01c7f41b6586a54aa7e86f210152d137855af8a42deae7d4fc9233e9f413e542"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Bridge.Encodings",
+      "status": "compiled",
+      "sourceSha256": "c6dd113dc5dd8d4d61313026fccaf424dcd8a4b40f30b59819ab2e0c8b9b68d3"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Bridge.Transfer",
+      "status": "compiled",
+      "sourceSha256": "899d825649864efc289bc0b9f93e529964665f1d5721bcee981e177133db8f57"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Bridge.Wots",
+      "status": "compiled",
+      "sourceSha256": "099da87e67598438867dc5d1768c7c3b30d18f32a47721633ca5a50bf73ec8f6"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Bridge.Xmss",
+      "status": "compiled",
+      "sourceSha256": "ffdf798ec1b2b2c1c2a15cf6a3c6c7df26f13ccbde04fcdd5911d33c62d6c2d6"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Bridge.Fors",
+      "status": "compiled",
+      "sourceSha256": "d5967c44a662c29b06994dfe4f9c6c71c1279f80ffa1bca80f7a93b6185ce165"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Bridge.Hypertree",
+      "status": "compiled",
+      "sourceSha256": "5b92d7465f45628ed43d81d11ef2ff64667676f52a92ad848b983237c6d15cb4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Statement.Security",
+      "status": "compiled",
+      "sourceSha256": "792ad92b62d743e4579805514c8290b382a5c18369c0ffb4e0664d3e23babf63"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Bridge.PaperGame",
+      "status": "compiled",
+      "sourceSha256": "a3442f4c0e209826e7d57b2920dc97cd98bb3d17f26f05eec77973fca890fd9d"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Bridge.Scheme",
+      "status": "compiled",
+      "sourceSha256": "ae5675f15d95ada09cd55a4bf5530ea771a25d38ef327ecc272ddaa038428ef5"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Experiment",
+      "status": "compiled",
+      "sourceSha256": "b3244733282a3d1a34a8420c1c2bf636e131eaf95b9aad0851ee9b89fcde527f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Hashing",
+      "status": "compiled",
+      "sourceSha256": "337aa9823510290a9aa3556f18c13dfe37d4dfe307e30ce83b01b69b8ed9c59d"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.HashSeparation",
+      "status": "compiled",
+      "sourceSha256": "7841cf5402bc0ae2d09bf398967015736ac1fb21be9ea81a0d9ea4430f2b4873"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.KeygenFresh",
+      "status": "compiled",
+      "sourceSha256": "edd72c534e208fb503a607493b57755517f76e7e52f54071a1c37609d205270f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.KeygenUniform",
+      "status": "compiled",
+      "sourceSha256": "87ec67b98641367f4a2c6d8c0df0d53992e2b64a769e5e5825756a7e067da026"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.FreshHitBound",
+      "status": "compiled",
+      "sourceSha256": "5a99fa4b4025f2b88a9b422881127bf8a74dc9d855857a7d7a8f782e140f87f7"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.GrowthCharge",
+      "status": "compiled",
+      "sourceSha256": "503740daac71d175004c2ba2b8b59141c3290c65b0667a35613f909bfb386660"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SecretGuessCharge",
+      "status": "compiled",
+      "sourceSha256": "bcdee7ba2bcb1fc62313b35ba97e40828469c84eff08ee0af94318fbd7c83bda"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SensitiveQuery",
+      "status": "compiled",
+      "sourceSha256": "e485bf7fba0347ae04f5461bd4fcb0bcb92685a64a731b098d053e1ee36dd4d5"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Nodes",
+      "status": "compiled",
+      "sourceSha256": "9101bf2510e126d03f6d5a4fb2def8f26df2f75b688ece0c6393f6c8fb9fbf7f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Children",
+      "status": "compiled",
+      "sourceSha256": "c322f365f49238420e8f5595c84cafdae36044fa61d999d0e874b74485d5d5df"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Address",
+      "status": "compiled",
+      "sourceSha256": "377f60d29075236e25279ff17b087e0222dec7c522c134502b1cb0f24f50e3c1"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Input",
+      "status": "compiled",
+      "sourceSha256": "8cd3faa8e106d32a1177f16d7deb52bea60cb511880a52de6978b14a426a187c"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Wots",
+      "status": "compiled",
+      "sourceSha256": "5f7ae5873231afe261741c7c2c721c5f837451c278cb7865dffade946f34b093"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Evaluation",
+      "status": "compiled",
+      "sourceSha256": "d2d8c993fd506e49597b9e89796792132bb56c828641b2ce0efa5150dbc0686c"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Correctness.BinaryPath",
+      "status": "compiled",
+      "sourceSha256": "b520c16ba5cab59338826a2140619a54df2bbae0680b2652ed06af9a20eae6cb"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Fors",
+      "status": "compiled",
+      "sourceSha256": "1243fc5e6c4b294ec5128b41c4ef18bd1d58f8fce6f8cb75a719d85c0fde17da"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Merkle",
+      "status": "compiled",
+      "sourceSha256": "ba739f744d039e334402679bb6e052f0a21cceb310757413b0878925d9d88d7c"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Correspondence",
+      "status": "compiled",
+      "sourceSha256": "fda994cdd7f7915436d9811c2bb2fae1a87d41992c9a607da7b6c9ced6d68da7"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SensitiveShape",
+      "status": "compiled",
+      "sourceSha256": "233a61fd9e32236e060581c42745116b9120b9031ce4f30f5e14eebaf3bdd398"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Parsing",
+      "status": "compiled",
+      "sourceSha256": "d3bc76f38f5f90f08fe23cb1bf3ba71b046e3a1bd0f9dbf627d6db6619313f75"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalTarget",
+      "status": "compiled",
+      "sourceSha256": "12e09810287e303128b93b1980e2f976c2fba29e7efe55d12300f83dcf1e9f77"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Extraction.BinaryPath",
+      "status": "compiled",
+      "sourceSha256": "58348ab43b83a2aaaca5bb8af4abf4cb3e7bf416c4b8a3a938dba45aa9eed5e4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.StructuralTerm",
+      "status": "compiled",
+      "sourceSha256": "18edd488364ce232b23d4b3b5cad0087624a7f3803273992f97a98f929cdda8f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CollisionToDeviating",
+      "status": "compiled",
+      "sourceSha256": "b5d4b0e8233b8f4c2cd728288fd605b13cf1d86b846c817b5b6bb15d612b1cea"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Extraction.Merkle",
+      "status": "compiled",
+      "sourceSha256": "82aad9d43e2945aa90d2b418bc291577b14829bcedbf769dc71a0308ba9643dc"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Extraction.Wots",
+      "status": "compiled",
+      "sourceSha256": "9e8c608459f5895d05970138cb461e074d98539b6227dec9f734e4d7c692fd8d"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Extraction.Hypertree",
+      "status": "compiled",
+      "sourceSha256": "eed06cb73dbcbe1c595e918b167c303720957933e1822453be73c95b333b2182"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Checksum",
+      "status": "compiled",
+      "sourceSha256": "8b4cb5419785fc6bbe4c54641fc18157ec86076ee6587e4e664027419fe0292e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ChecksumAntichain",
+      "status": "compiled",
+      "sourceSha256": "15661f95996337d4d6d25a275d728873b31dc253bc353fe2c64e092e2398f777"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Extraction.WotsPreimage",
+      "status": "compiled",
+      "sourceSha256": "c2e72b96f8aa5b8ebb1cd94fddd682588ff868c95f5f939c2f90bbb4a9fd16dc"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Extraction.HypertreeChain",
+      "status": "compiled",
+      "sourceSha256": "36bfdd36e83c8a66f86514ee1e45bf8fff7cc7c1f5190d868ff5a31f18874938"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Extraction.Fors",
+      "status": "compiled",
+      "sourceSha256": "fc6de3c2de535a9db4f65e8aa32ee0bdc3c3c3e8ba233e410e7484f77b57e900"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CacheReplay",
+      "status": "compiled",
+      "sourceSha256": "d6ad7941c7ee704c65be3ac7c3c19bf262f38c3e51cbe6e8f4988223c45c2032"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.GraphStakes",
+      "status": "compiled",
+      "sourceSha256": "c2cd49436be5bd3eb8ef9e375208dbf6193e819096843d3122ad3de380cc1fc4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalCells",
+      "status": "compiled",
+      "sourceSha256": "be8f0cbf5c1b7a2e6749e6b927bef8d86e2b477f70529b6c56eb5603b03249ee"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.MerkleCharge",
+      "status": "compiled",
+      "sourceSha256": "0da8a4df43da436f32854099b82877a23cca3135663db9577b8dcc95126e4f18"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WotsCharge",
+      "status": "compiled",
+      "sourceSha256": "0ed666dc73353e3fb61985d551bb7661fb5945659714b0722dbdc9bc81cc67a4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.PathEntry",
+      "status": "compiled",
+      "sourceSha256": "cdda7a0efe8a978b35a90dde0af815ab8d9f8973fffbf066e7218bb0f116ea32"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WotsEntry",
+      "status": "compiled",
+      "sourceSha256": "4a25faa01b18744e46563627f3292b9e0404232bc5adf614ff89ea9c863b9832"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.HypertreeDispatch",
+      "status": "compiled",
+      "sourceSha256": "820d6bf644186d4508bd7d7128ab8503140874cdd1c15dcac3a3e9db7be015cf"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.VerifierNaturality",
+      "status": "compiled",
+      "sourceSha256": "6a8d716fdbaf7453fa88bdd0ef5e360c01b50787a39c659955f43af36aa5ae74"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.FaultCharge",
+      "status": "compiled",
+      "sourceSha256": "53ef153a464b1477fa880fe703ce4fd928870d424fa17e642a95cd113c24be15"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WotsResidueReduction",
+      "status": "compiled",
+      "sourceSha256": "60db34c93f696c023002537fd2df69d1f508e376dd3090514e362c7689ce236b"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.GraphFreshSampling",
+      "status": "compiled",
+      "sourceSha256": "3e6a08d53af4a638cd4829a60972a2af3c240742c26bf904ce5c3a4cd71108cb"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Programming",
+      "status": "compiled",
+      "sourceSha256": "719d1277b0c3b14ddddc35d3ab4348e31db98fe2b610d5848187934728b19d8b"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Generic.ExactQueryCount",
+      "status": "compiled",
+      "sourceSha256": "18bf91a3f595f7c77bfb380f3932101203fb02cd3ceb19b286a35e232b9425e8"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.VerificationQueries",
+      "status": "compiled",
+      "sourceSha256": "35a33ef3c577866e59579f4ebbd9e28aa7623511de18af2598ac85a9b692d652"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.VerificationBudget",
+      "status": "compiled",
+      "sourceSha256": "28f70ba1ad37da52ceeba963ad8fcaa57eaa25219297992d2f4322e11aab5d5f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.GrowthBudget",
+      "status": "compiled",
+      "sourceSha256": "99b860c483697090e7a4fdca2bbfd28490294893f7c83bf254c6386c55cd6fd5"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Presample",
+      "status": "compiled",
+      "sourceSha256": "a9230387b59715faf4338b1ab355a7e0b9ccd99585a54e9048a1502b9d4cf6ef"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.MessageDigest",
+      "status": "compiled",
+      "sourceSha256": "5bf32421fbbcb4515ab0f9385405cf49641c362e57ad197b70bbce63e30da823"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsCoverage",
+      "status": "compiled",
+      "sourceSha256": "a65c44e19d9ea1cec91b2d51d343a36412adb12c2ab15a8164083d097129fd29"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CombinedCharge",
+      "status": "compiled",
+      "sourceSha256": "ad7bb0d1ab6662896a9fb0743e8a0c1feec5cab261d0d1adf31b08bb38b6efd5"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WholeGameStructural",
+      "status": "compiled",
+      "sourceSha256": "7dd948e3a90fa0bd68db9ce0bf3a796000d0af9a3bc2a5044d089607dce15cfa"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Averaging",
+      "status": "compiled",
+      "sourceSha256": "3d09dab45b83d29033311a64d8afd0dab60637eb397eb7a75952e284ac908529"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WarmedGame",
+      "status": "compiled",
+      "sourceSha256": "bb8e3fac10d149af2203f820bf0087bd160932d2c4ef20c7244145ef1dbab3c6"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Naturality",
+      "status": "compiled",
+      "sourceSha256": "89f749d7c55a200c854a2d7d6fb3b03bdb7c7b3c6f34ee62d4daf19de5828b5b"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.GameBridge",
+      "status": "compiled",
+      "sourceSha256": "1324ef3842909e89ef40936928ecb35c34eb8a6dae1c4f98f294577cfd484b2b"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WarmedSplit",
+      "status": "compiled",
+      "sourceSha256": "d2930c96a3c39be8cf5b964672ec1bdf5a599cb8ff97aba6d2cc563358d6d9c1"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsCharge",
+      "status": "compiled",
+      "sourceSha256": "a85eae7f9e9a1cba171a9ad0d34164c5528fece99ec32cbc5d9b24e32a498bc6"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsLeafCharge",
+      "status": "compiled",
+      "sourceSha256": "750c38e3de7803c1adf5f44f171e62d52f82159d98174f7f869482d3944e0984"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsDispatch",
+      "status": "compiled",
+      "sourceSha256": "5bb6f2d624619b6d2ac0187c56cf46c0b583b56737e6cf698e3312ef2319bbc7"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsBranch",
+      "status": "compiled",
+      "sourceSha256": "c0e4cc72b54c92a8b682f440f3388f3e88e03b4d1ceb8ad0fe25897de7d2b064"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.VerifierProbes",
+      "status": "compiled",
+      "sourceSha256": "7b156651d7fa7d3a543ef88d67eab3cf4f5fe923c6de89d687f4adb9e5ca2fd4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SplitCharged",
+      "status": "compiled",
+      "sourceSha256": "46ea61620b076f86e468cbbd44dc98ac1ea049fcfa67a67593dbdc2e554704be"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ClaimedProbes",
+      "status": "compiled",
+      "sourceSha256": "945466f36ea4d61a5d66d5c191b69c7ab34ffa9168b6c5753e50115bce840d94"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsAdaptiveTargets",
+      "status": "compiled",
+      "sourceSha256": "ba5b59ed8490d8dfd6575c49a9a710c13419c38cdee7f91f5d8533df87aac1d7"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsMoments",
+      "status": "compiled",
+      "sourceSha256": "6b2f6a1d45173cbac151fc470bcf193258bed1d865c4ed9de9532c43407168f0"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsConcentrationPoisson",
+      "status": "compiled",
+      "sourceSha256": "b658b5ebff6a3fa307d89587761a284dcfc6fde205bdefcd77fa3bf0ad098de9"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsConcentration",
+      "status": "compiled",
+      "sourceSha256": "50393822dff290d66477913435e962795a99c9737d8715951b62fad01153c32f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsConcentrationOccupancy",
+      "status": "compiled",
+      "sourceSha256": "29a9c300c6942a9847dc49ae0a26e3a2181d5674838059653bf7a7658710cc09"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsConcentrationExtended",
+      "status": "compiled",
+      "sourceSha256": "6f0dd09ff647e16e03d469d75217f937e0d0894a430bcdab713a359b7e2a03a9"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsPrefixCapacity",
+      "status": "compiled",
+      "sourceSha256": "a845a82fce62a94823acf1e03a96c5705d93a25c4c092f9ca3a53974b7312c8c"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsDisclosureTape",
+      "status": "compiled",
+      "sourceSha256": "858fed3e4589ea17d5e3540134c52d6af1fd673a5745ec6b82d6b6fb6b7448f5"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.DigestTape",
+      "status": "compiled",
+      "sourceSha256": "c8a00de52a77277b65e5f5c66df2f56ed282202c462c4be72bb99192125a69a6"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WarmedCharges",
+      "status": "compiled",
+      "sourceSha256": "4f933f99629dacea6f69bfed37e5529238c319678c4a0177cb44cd00355e33cc"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CoverageTail",
+      "status": "compiled",
+      "sourceSha256": "59b216c0d498067d3c32c5e99545091a34892274b66358ef0e13fb64807230fe"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.TableBlind",
+      "status": "compiled",
+      "sourceSha256": "323519388beacd3c7b02131f53f43b77f99a5e1b295a22d97f295cfd5d0f6871"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.StalledRun",
+      "status": "compiled",
+      "sourceSha256": "f3998a2816b766c21ad835c1242ef9c52fae102de6ff44aaad919b0840047e3e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.HandlerCarrier",
+      "status": "compiled",
+      "sourceSha256": "8092cb85de9343d7038beedff439898040abc59e5212aa4f11128a6bbc51f008"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.OpenCache",
+      "status": "compiled",
+      "sourceSha256": "4344f9938a932926e5cdd3648177eb83306850e1f73b072523547ed83f334bad"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CachedRun",
+      "status": "compiled",
+      "sourceSha256": "911c8f552642b6257ddcc0fa4347a8f1d51bc01a4bcc90859bb90300cdfd343a"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.HonestProbes.Keygen",
+      "status": "compiled",
+      "sourceSha256": "cc414ac51ef05be6810813b4dd05376e99046915ce59bffedc200ef0e6840f04"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.HonestProbes",
+      "status": "compiled",
+      "sourceSha256": "d06d43a34075d1c7a5dbf4db5fc569d07fb419c7505d2b948558ec6a1bcb81d6"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.StripCached",
+      "status": "compiled",
+      "sourceSha256": "d88a42a881bed6379f84aafb11b35cfc865f8de531d52a758ce315355b8362b0"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.StrippedGame",
+      "status": "compiled",
+      "sourceSha256": "330443fa770645c6957d331c3a484203140a9d6be747dda64360cf6bff09bc8c"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.AdversaryQueries",
+      "status": "compiled",
+      "sourceSha256": "c89b50bb0f04a864720ade35f294c3f2ad0c2ce7fb28b7bd501113b7e67d5c7e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RecordedQueries",
+      "status": "compiled",
+      "sourceSha256": "842dae22631d68dbf0f42ef842af97631ec6ae2a76bf7008a7113b88c2fbe06b"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.HonestGrowth",
+      "status": "compiled",
+      "sourceSha256": "d76aca1c657d6f89cd2891b0c7e465b8b971ee4c5e19b6716d9886b5fec1839f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RecordedBudget",
+      "status": "compiled",
+      "sourceSha256": "7dc4e86dc230c5edba5345e423eb14abdf5d8c25e3400449cd1de8cce0a87865"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CacheAvailability",
+      "status": "compiled",
+      "sourceSha256": "227f58436919f0fff6b1590805eefa590fd897e8fc1cc789c6fd1deb977c72d0"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ServedDisclosure",
+      "status": "compiled",
+      "sourceSha256": "0394b702aac5f3a8fb8b668216f8654498d94c5a6795952b401db699849ab93d"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ServingCarrier",
+      "status": "compiled",
+      "sourceSha256": "a5e0e7786de5b7623958a5c0a8980d0617b8dc88b05af27e6abf71f97dd0bf6a"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WriterState",
+      "status": "compiled",
+      "sourceSha256": "8e4193fc8b062a20f2208bb624998cc5f2d269816b8957590e218d4a5e607958"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.PhaseFusion",
+      "status": "compiled",
+      "sourceSha256": "79ff5d61016719db0cb2fc7389d819e12d20dca03478123648edcf5c4d96e8c0"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Signature",
+      "status": "compiled",
+      "sourceSha256": "f86332ee61c8004b612e9c4380b7529c986c68897803e30a62de2b237e6c6e38"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SignatureCanonical",
+      "status": "compiled",
+      "sourceSha256": "4dfe453234a30f2b21c428b5e490bb624e8194ea12bba47974efe899da0b4a3a"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalSignature",
+      "status": "compiled",
+      "sourceSha256": "802be41956acd0e1cfd8f9cc93b238576e54832af1d61c29580f8bddbe1401f3"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ServedLog",
+      "status": "compiled",
+      "sourceSha256": "8ffe70c6edfdf9a261684651b7e640abbd88fe78d2844ed854beeb631dc5c69f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CacheProvenance",
+      "status": "compiled",
+      "sourceSha256": "508e2b76c2068f17c2e28a0fecb544b9804b70d23d2f174c85b501156edb68dd"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RandomizerGate",
+      "status": "compiled",
+      "sourceSha256": "4104773c12a17b9684c29491c3d6742eb6a0a873b7b7ea6eaeff63556d8c392a"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.AddressBounds",
+      "status": "compiled",
+      "sourceSha256": "80e6d1a8f2cb342246e6e247d1507591691bdec7b21cb58b695cd8cf6b881daf"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CanonicalSplit",
+      "status": "compiled",
+      "sourceSha256": "d07a61891436da7ecd06ad9fbf256e1c0aee8c3b490ce400183e10a340552339"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.HonestMessage",
+      "status": "compiled",
+      "sourceSha256": "6e61572f31542151cf568000357a1c93079ca2434796463aa6874de9c7cc87bf"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SplitRouted",
+      "status": "compiled",
+      "sourceSha256": "0dd5eac4137d4bb3b48d6856a2ea8572ff224a6275f87cf842f733eab1676e34"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CoverageRouted",
+      "status": "compiled",
+      "sourceSha256": "2ec8a50516b1652875e340dac55cceda55d5b3284277f7fd51f9c5626dce2421"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RoutedSplit",
+      "status": "compiled",
+      "sourceSha256": "7fa1debd001ab624eec7bad657e3e5025e893b28a080c6b010cbc97ad2e32cc8"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ReplayGate",
+      "status": "compiled",
+      "sourceSha256": "c05e63055288f4a238a0450b0692c98b8e29d72870db2fe18b43adf6f38f9321"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SigningFaithful",
+      "status": "compiled",
+      "sourceSha256": "d802d56ef3344c1f1907e2f09e57a3dc2faa18c7c06d85d8ecfc902292903bde"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ServedBridge",
+      "status": "compiled",
+      "sourceSha256": "0c843088c9f46697dcc14edfb665bc70ee99c16d6f498a8e74285ef6f4445093"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SignerRandomiser",
+      "status": "compiled",
+      "sourceSha256": "bd607ae49ec9c575eae4e081de36cfdfb6359deb9d6a17f548d995098b33286f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.LazyBridge",
+      "status": "compiled",
+      "sourceSha256": "8a0f2bea6b38d8f435ffb6a92fa38889355a850d7404c36da2d3c6d006b7ba20"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ChargedProbe",
+      "status": "compiled",
+      "sourceSha256": "86815efef52c84f4f6d6438a6b40c319d087109414146336a71a8e88eea178ac"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RedrawCell",
+      "status": "compiled",
+      "sourceSha256": "036c2ae33090e9f01b950edefffaa9f09c97758f4a28d1868c64296b81359b23"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.MainTheorem",
+      "status": "compiled",
+      "sourceSha256": "168628c1c7ea73f42a42c40ae7fb31c0c7fbed7a8ee886581aaa9ad667c3fab4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WalkDefects",
+      "status": "compiled",
+      "sourceSha256": "f482ffbb2f6dfc01912c6d78afde5e6fdb55feedfde02cbcddf51a31b99465bb"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Target",
+      "status": "compiled",
+      "sourceSha256": "170d58c7fb76ea3a12ff68d92bbf5088f7a65fd34d216e1f5abb54828975b094"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RecordedTail",
+      "status": "compiled",
+      "sourceSha256": "bf484293cfcdf6f4dc170e5bca9bd167288ed9ed913a6f6c4d2766919415a33d"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.PhaseProvenance",
+      "status": "compiled",
+      "sourceSha256": "09bd9cad7cba4323dbb5b30d29c4650946e0afe9032aae87dac59c52b2dc62f5"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RandomiserCharge",
+      "status": "compiled",
+      "sourceSha256": "77d1ee9453d599dfb34b758bacb8b6fad3fc2df87064f79cb8bcec0d422499b7"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RandomiserProvenance",
+      "status": "compiled",
+      "sourceSha256": "044a0d2b47881fc42f9e15478e6cdb6d32ae1641ee5058f38aadce3cc364ea8f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SplitPrefix",
+      "status": "compiled",
+      "sourceSha256": "749d12d8d8da8fe016b053a704852830a0903c2e2bdc75c830bf0ecfbcdfc21d"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RecorderView",
+      "status": "compiled",
+      "sourceSha256": "ed22e0031c7512f1bc5abe25f09d3505c597a678db57d63c79addcbf0ffe99e4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.TapeFactor",
+      "status": "compiled",
+      "sourceSha256": "40ec81e2077254f7e13856c63d11a21d5d68b8286160b6add9597b6bad196e3e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.BlockViews",
+      "status": "compiled",
+      "sourceSha256": "6eb70ac4f299b39f955a822bc1fa74c35fb8e7b0adb0ef149bf270c2f2093a7b"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ClassGrowth",
+      "status": "compiled",
+      "sourceSha256": "fdd574f7efbaf1eefe70beb09b5b568eee96458bde918fecb454a5a2159deea9"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CoverageCount",
+      "status": "compiled",
+      "sourceSha256": "435d6e059e1fc503fa819d44ceccbb38564529e18aef2df208174cff65641b6d"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SplitWitness",
+      "status": "compiled",
+      "sourceSha256": "47a88378eff7ecf61c9d2f0452fa13b50fd7e94df7f9d67507c9fa9ebf726610"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RandomiserRecord",
+      "status": "compiled",
+      "sourceSha256": "f823682905819116337665fdb54bee4c2fb1fa6a2c2bd62038341ac0bce45758"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.AnswerSide",
+      "status": "compiled",
+      "sourceSha256": "18d173444285bdf11df35f062b967c8bd98210c2e0375266fa2563dd2742c6c1"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SharedJoin",
+      "status": "compiled",
+      "sourceSha256": "2ed0e5a33c2ce2a595c689be5fc4dc579dbe34b87eb09676ca28c8c599cd00a1"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.KeygenValue",
+      "status": "compiled",
+      "sourceSha256": "41f89d8af21ee0d44d1795ef6028a591c1677ac1b256fa4e5327112cca85fcaa"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ServedAgreement",
+      "status": "compiled",
+      "sourceSha256": "d68ac2d83d474a0286d598a1ea08fc5359e0c6cb6add9b7eea4a25db313a8c6e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareSigner",
+      "status": "compiled",
+      "sourceSha256": "e388229c22d5e0360a7d656b3ec56c5a16eda76ba583f28fbde3b9b5abe88e4a"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.NoticingTape",
+      "status": "compiled",
+      "sourceSha256": "7ea4be86ee1a2e6573d1b7230b89cb51d2ff59ae2bed3ba82d20f2aee675aa8e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.FusedTape",
+      "status": "compiled",
+      "sourceSha256": "6bd88ccba66d3a10b044a9a062ec5c10e7d1a5430c9402e769c7fb6089cc370c"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ForsConcentrationSharper",
+      "status": "compiled",
+      "sourceSha256": "953d8254d14bbb26f24b0c950ce7099bc70d80d78d1f2df1bab08621772e9098"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.FiredCoverage",
+      "status": "compiled",
+      "sourceSha256": "e73400ddcd487608129664c495b89854db2dfb529cd6bbac0cbe990efe765523"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.TapeWatch",
+      "status": "compiled",
+      "sourceSha256": "139dd599c13ec60679206789bf04fbe920d17121b6322a4a72390114b9986a3b"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SignedWatch",
+      "status": "compiled",
+      "sourceSha256": "b495b1e032308bd78922bba10f5ac1bde6a3fa668b255ffa02c15b4b48b9132c"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CapComp",
+      "status": "compiled",
+      "sourceSha256": "81dbecce0d72898df95402b25b7d4588df7e63797e7c0fab123c6ea269da8e97"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareCells",
+      "status": "compiled",
+      "sourceSha256": "889610e1d2cd834f88b6c6c79e6692307739e1e51980bed54cf5178c35e8c1cd"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareGame",
+      "status": "compiled",
+      "sourceSha256": "d187dd8a9008bbe8a3dfa6e85915abb213d27dd17347bc4d90498abbd7f1dde4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareUntilBad",
+      "status": "compiled",
+      "sourceSha256": "92c62b1474ff02d007f1b2bd5ef5079d1e541e13954579836502cbe9d2128465"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareFlag",
+      "status": "compiled",
+      "sourceSha256": "62c78cb1b018e5ce3533014775d8836024e460f14fd7ecb90b74dc6931afa481"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareSignCongr",
+      "status": "compiled",
+      "sourceSha256": "9ba916ff8eb774013f248470869c1250153afc0c31fb86e315d79fc37e9e6c0f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.BlindCharge",
+      "status": "compiled",
+      "sourceSha256": "369b215e2e628a1330cb2d5a27d00922ff91581aeeb05a68c026084bd26f190e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareBlindFacts",
+      "status": "compiled",
+      "sourceSha256": "62c8402b5489329999ef1d2c8e7793075d551eff1e3296b20d77cebcf88e9a98"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.VerifyBound",
+      "status": "compiled",
+      "sourceSha256": "63ef92f994db77f685daf02e9b764d63435555441468aa75ef06c90557d6447e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.LateProbes",
+      "status": "compiled",
+      "sourceSha256": "61ac56fcc08e3b49eb0a7cfe51069710e92f21704fe74140771890ff86e55a04"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.FusedCoverage",
+      "status": "compiled",
+      "sourceSha256": "bcfc3984918e9916b98573413d4376c69c789b48945c0b185e89857fac0db24a"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SignerRightRecord",
+      "status": "compiled",
+      "sourceSha256": "822197239cc1a75c9be1572d1101bf1eaf8099f07332f62a7f756b8dfeb098a7"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.PhaseRightRecord",
+      "status": "not_run_to_completion",
+      "sourceSha256": "b5fe9032f7b09b2ca3b188fae0a1070e1d8a8d9d4ffbc8f82ca0b858c4b0440a"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.LateProvenance",
+      "status": "not_run_to_completion",
+      "sourceSha256": "accd01075be23456d2506003b8a96b2b8b000469a258b2dc9ae734437e7edaad"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RecordedStripping",
+      "status": "not_run_to_completion",
+      "sourceSha256": "79a7268a87c1fcfd0eb1aa304955f22a4527598abf1d59dee9b5f76d8b23b6d4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WalkTable",
+      "status": "not_run_to_completion",
+      "sourceSha256": "f813386a2f04df0392c26b08d88df8f039e5ad77ce70730e4819c048b02b82b4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RecordedWalkTable",
+      "status": "not_run_to_completion",
+      "sourceSha256": "2dfae1ae7fb62993e2b548b410c30c3b9b722626c5e971a1c75dfb3afb203694"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RecordedPhase",
+      "status": "not_run_to_completion",
+      "sourceSha256": "8c085df9ba5f2c6947708470ce1e11eab092b49e4abccc10441ce45658ea31f2"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.LinkedGame",
+      "status": "not_run_to_completion",
+      "sourceSha256": "6f97a40b9b8d70461cdd3bc338a3b6a3861679b7f9a9fbea538f339054fe00a5"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.TableTail",
+      "status": "not_run_to_completion",
+      "sourceSha256": "f18e32e1d5a62dc23cfcb372b0b748949cee9eee3a3ed5eb3a01ad279080c372"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.TouchedKeys",
+      "status": "not_run_to_completion",
+      "sourceSha256": "c00a6d15c215a85dd927e8c08b8f9f981436884ccca80407f16993927468e7be"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ServingForget",
+      "status": "not_run_to_completion",
+      "sourceSha256": "073220a3dc26f1155cb0d8a9361f9580beca17b1f7974bd161a51b788e1f20bb"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CountedHandler",
+      "status": "not_run_to_completion",
+      "sourceSha256": "20f5f5f2c8b3d5e4c3a517068eff417a281f30c762b7bd2bdcbacd6c315fcd93"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.BracketedRun",
+      "status": "not_run_to_completion",
+      "sourceSha256": "c2fa1cefa705d4524a525545c2cc2b2e3ef7be392ed613451dc7dd80fa68de3e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarriedWitness",
+      "status": "not_run_to_completion",
+      "sourceSha256": "c8a4a65c3f7bf2766e2a3f56e1d9f3905def66a159b4826f0e4548d3be829b41"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierFiles",
+      "status": "not_run_to_completion",
+      "sourceSha256": "1e7b5ea3cc3a2f94e9bcf0d943bb791fe827e758aad56fafeba36a57e5c710ac"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.FinalAssembly",
+      "status": "not_run_to_completion",
+      "sourceSha256": "5fad0cac250d05a4dd7b621205a4e6395d712ff739631e010999332194c42cd1"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.AnswerShape",
+      "status": "not_run_to_completion",
+      "sourceSha256": "cd680c41fbff8f8a9b4839e0a90c0aa019eacb171ea2d0a180c052c5c8654ae1"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierTail",
+      "status": "not_run_to_completion",
+      "sourceSha256": "31247beb048f697f70b6e35c92732e0d1016b15cf33e8cbf405f8ed41408ad88"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.Target127",
+      "status": "not_run_to_completion",
+      "sourceSha256": "8774a44d92c5a815365387ab1c53110e667d43f02c5640666ee5d73e9e2ebfda"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareBound",
+      "status": "not_run_to_completion",
+      "sourceSha256": "d4beeca10c2f1709805a375ab53985329179b8062f73bf65990671d623dc9ab7"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SharePresent",
+      "status": "not_run_to_completion",
+      "sourceSha256": "0926b35cbef1f9ac3c2eece4d84df51cfee59be5a5424b10350213638dc39f47"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.KeygenCost",
+      "status": "not_run_to_completion",
+      "sourceSha256": "dee71947b301b157ad0725e75e08b6aa530273edf161c89337b13766cf2fd315"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareRealCap",
+      "status": "not_run_to_completion",
+      "sourceSha256": "4b1d5f43c54288bf788aab14d43ec9503421ccdb5f228446b27ab9fe2722124f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CapRem",
+      "status": "not_run_to_completion",
+      "sourceSha256": "98ac4c04f1c3b8c989de3951dd2cde46e7a2fa7e2225ae0fde09a9725e60657d"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareJoint",
+      "status": "not_run_to_completion",
+      "sourceSha256": "697e0377c891cab42e39c3e55db2227f6c5167ce3f8ec8b70802b9c0bdcb706f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareCouple",
+      "status": "not_run_to_completion",
+      "sourceSha256": "a46c95572c2f602354383fbbebf44cd6fbce8df112b91310b09a1c39c9daf4e4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareInv",
+      "status": "not_run_to_completion",
+      "sourceSha256": "6b90cdc3c33a1f521e57714e6a00174101f0053a01af924fc8123b3b28663204"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareWhole",
+      "status": "not_run_to_completion",
+      "sourceSha256": "3fe4f73ad21710ceb30d4c17cb2810cb08215c76a70562c7a870f8ab38cdf014"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareJointCouple",
+      "status": "not_run_to_completion",
+      "sourceSha256": "f30403aa2960530f57d624d1f7ec8769e13a3e0453d245f794d4195994a9994a"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareClaims",
+      "status": "not_run_to_completion",
+      "sourceSha256": "c3841a96518f12c9830d278be4a6cb1c1585c9e5dc06b0730443606d1cd3a964"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ClaimsQueried",
+      "status": "not_run_to_completion",
+      "sourceSha256": "682f42e5a9ca8eb535b12ccd33cc119510eed5d5439cfbed20f2bd41306c1038"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareFiled",
+      "status": "not_run_to_completion",
+      "sourceSha256": "1b86b86a75fca7465be3d12e83578ee91daa1279bc66e65e24c7bc775f87f6e5"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareJointBound",
+      "status": "not_run_to_completion",
+      "sourceSha256": "ab722e1017315e63623a3043b45cfac817c067107a597b06f2f466ae3897549e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareEvent",
+      "status": "not_run_to_completion",
+      "sourceSha256": "d38af1357ceb81560abe52af69b3fc5a191d91f169035e4e093fa8f0f02ae025"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.TapeRunFacts",
+      "status": "not_run_to_completion",
+      "sourceSha256": "91ba4a388c34cb910989d1f61b8d90792dca363852d6177c1d404b8f5cd3eee2"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CountedView",
+      "status": "not_run_to_completion",
+      "sourceSha256": "2b04e1cb03f36d3e1f1848a134e7e4fb390eff2255c118ddf3fa38a89c31c7c0"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierCoverage",
+      "status": "not_run_to_completion",
+      "sourceSha256": "43dcfab13fdc1a8e4c72334126db60c9a9ec785ff30e33c2fb8f415225a35814"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.AnswerCarrier",
+      "status": "not_run_to_completion",
+      "sourceSha256": "4823b6da58fb526d7bcc4bea3e7f64275ce82c599b0b63714e7a22f43f0f1d11"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.RecordInvariant",
+      "status": "not_run_to_completion",
+      "sourceSha256": "f6f5624a0264e17010aef6b62fec0427d75119c8decc5bd1111509a3ed1c13cd"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierRecordings",
+      "status": "not_run_to_completion",
+      "sourceSha256": "fdf3ddf9dadd6cd21f040abf97548853237d6ad1a2487e4a1c3e0ad06d0be8ef"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierTailRecordings",
+      "status": "not_run_to_completion",
+      "sourceSha256": "7b2fe79162a7ca5a8ae5b08fc5cc8a197bf416b109657dfa1610de8e02f1bb4a"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierClearFraming",
+      "status": "not_run_to_completion",
+      "sourceSha256": "bb1f77154ab5cfefe3418c3889953944e442e017bee92c1bdcc6284cdd537ab4"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierSignRecord",
+      "status": "not_run_to_completion",
+      "sourceSha256": "9459c8629fdd67dc3dc481d699ca67162656923bd00351d0e7e24b17943fd24f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierRecord",
+      "status": "not_run_to_completion",
+      "sourceSha256": "9bc3ac5cf2e4b1cc62be13df0f6fa2c2b17599f0a34880a5abe1053edde8121e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierCap",
+      "status": "not_run_to_completion",
+      "sourceSha256": "635b4499f6145ea7d53dd56b22a312bfc5a10866673e008f618ac4266c62eb22"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.NoticingCover",
+      "status": "not_run_to_completion",
+      "sourceSha256": "7834e6c60b78169663af474bde8b037c58af0bb99f5367822859a3c56649e16d"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.OrderingCompose",
+      "status": "not_run_to_completion",
+      "sourceSha256": "e6ac91b17846cfc73361b22c4a489f8d0e3d149aa2e6616b6d31973febef1167"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.FusedCover",
+      "status": "not_run_to_completion",
+      "sourceSha256": "314ba3e66da8f5d5d906529c0865db8eb859b30d001c8aa563bfb9711119b102"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierCover",
+      "status": "not_run_to_completion",
+      "sourceSha256": "6a290f6ff8113808b07a4a35f470ae6abee66f129cf9724c8363bca5a62e19a2"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierServedLog",
+      "status": "not_run_to_completion",
+      "sourceSha256": "212f7ce59ee334963d2abed8f4b8e4935dfa137087de0426f63a489f428664e1"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierLeftRecord",
+      "status": "not_run_to_completion",
+      "sourceSha256": "5cf6cc557908422ec576df6a1a2ba43074c79fa2c151ff233762fa8d72a38981"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierThinStages",
+      "status": "not_run_to_completion",
+      "sourceSha256": "8b73e1c6a5cb4fa981c58166d3d02bd069e3bc50f740212510451b09c9455660"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.CarrierThin",
+      "status": "not_run_to_completion",
+      "sourceSha256": "8bc1e5adf07859524e59473eabeb3828a702f8e75dc1221872c3acfd1807aa46"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SuffixCausal",
+      "status": "not_run_to_completion",
+      "sourceSha256": "0286e27e275438b8cedfa1a8605c6ac89731953742f9bc47918442df4aa8fc19"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SplitCounted",
+      "status": "not_run_to_completion",
+      "sourceSha256": "8cb8e398404e6f8182f605b7675ee6a39063aafc7abe24b89547dff01b6012ef"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SplitTail",
+      "status": "not_run_to_completion",
+      "sourceSha256": "bede8d89b26aa549a7ab151bb6f3b3531db3f8a642be5b48a3fd8d17f1ade11f"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.SplitCarrierTail",
+      "status": "not_run_to_completion",
+      "sourceSha256": "c31f449a0b62f7698a413eaff2b7077210890b28915c7d6571c8260cec0e0fd3"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.AnswerFired",
+      "status": "not_run_to_completion",
+      "sourceSha256": "e731f70abb22f8d85ef90a8731bbb60143c2de8080a3ad08928f4eb21ecd3c10"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareFinal",
+      "status": "not_run_to_completion",
+      "sourceSha256": "f3418578bbaa1db2a17401d5f2137fadfed38928de2525d4f7f89fbae7e4ae11"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.BySourceBridge",
+      "status": "not_run_to_completion",
+      "sourceSha256": "c149a3f77ce0834f9fb0a3f237431aaba3a7953dc1aa5ec128abe8c8b2943a4c"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.BySourceShared",
+      "status": "not_run_to_completion",
+      "sourceSha256": "c793994e2fa742597dd3357f727c7812406e27a3d269bc5210fe18bef4ac035e"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.VerifyFree",
+      "status": "not_run_to_completion",
+      "sourceSha256": "957af9f51944f00ecc13883ba15f432078c7bcf3154503b4d20a50fe9b63a935"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.VerifierTally",
+      "status": "not_run_to_completion",
+      "sourceSha256": "49c4ae66eefb0682da701fc11facfed49b3f7c99ac6d3f16b7b2a27b7e685550"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.JointBudget",
+      "status": "not_run_to_completion",
+      "sourceSha256": "602e6e39239b385790fabcecb18319268a6f763c07fe7301207cb3fb444ca838"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.ShareJointShared",
+      "status": "not_run_to_completion",
+      "sourceSha256": "3c0a6a37ac5b979ac0f3a28bdf5f7c48eac6a7d8617d42d8c314832599c810db"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.FreshExpectation",
+      "status": "not_run_to_completion",
+      "sourceSha256": "a60ccf78c288b5f591d2fca372171977fcac5aaee096d9a5c848d5dc38def3fe"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.BySourceAnswer",
+      "status": "not_run_to_completion",
+      "sourceSha256": "f1c5c16e9de5b468e4d927db57db62674a0b2ae3cba0413cb1b51609f7154d8a"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.BySourceTarget",
+      "status": "not_run_to_completion",
+      "sourceSha256": "59b20c554a03c183dca1a3d618d581122b60fee83096b0d8898665c3cd6d0dcf"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WorkTarget",
+      "status": "not_run_to_completion",
+      "sourceSha256": "e533d09356ccba6d1eae8479a2bb6ac87a8b2bd3d20cbee9930df7f1b65b03fc"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Proof.WorkFinal",
+      "status": "not_run_to_completion",
+      "sourceSha256": "dd7f092f61dce37b75b751c61116447ec7bced4d5f0c79d02bfb3f5bcd4425af"
+    },
+    {
+      "module": "HashSig.SLHDSA.SHAKE128s.Statement.Theorems.StrongUnforgeability",
+      "status": "not_run_to_completion",
+      "sourceSha256": "ffb203c9b81a7e18a9b92c89d546f99a927a8e07f5010abbfc263ead37bbc49f"
+    }
+  ]
+}

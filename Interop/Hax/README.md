@@ -1,5 +1,9 @@
 # Interop / Hax
 
+Status: historical bridge design from the Lean 4.31 experiment. The backend remains
+dormant; these examples include retired probability APIs and are not current build instructions.
+See [the active interop guide](../../docs/agents/interop.md) for the revalidation boundary.
+
 Bridge from [hax](https://github.com/cryspen/hax)'s Lean backend (`Hax.RustM`)
 to VCVio's `RustOracleComp`.
 

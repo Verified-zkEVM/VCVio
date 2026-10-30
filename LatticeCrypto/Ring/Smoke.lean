@@ -124,38 +124,52 @@ Each function below exercises a specific path through the generic ring layer for
 a concrete scheme backend. They carry no runtime assertions — compilation success
 is the test. -/
 
+/-- The element of the negacyclic quotient that a function-backed polynomial over `ZMod 17`
+represents under `piSemantics`. -/
 noncomputable def piQuotientRoundtrip {n : Nat} (hn : 0 < n) (f : (piRing (ZMod 17) n).Poly) :
     NegacyclicRingSemantics.Quotient (piSemantics (ZMod 17) hn) :=
   (piSemantics (ZMod 17) hn).quotientOf f
 
+/-- The negacyclic product of two function-backed polynomials over `ZMod 17` in `piRing`. -/
 noncomputable def piNegacyclicRoundtrip (n : Nat) (f g : (piRing (ZMod 17) n).Poly) :
     (piRing (ZMod 17) n).Poly :=
   (piRing (ZMod 17) n).mul f g
 
+/-- An ML-DSA polynomial passed through the transform and its inverse, then interpreted in the
+ML-DSA quotient ring. -/
 noncomputable def mldsaQuotientRoundtrip (ops : MLDSA.NTTRingOps) (f : MLDSA.Rq) :
     MLDSA.Quotient :=
   MLDSA.quotientOfRq (ops.fromHat (ops.toHat f))
 
+/-- The product of two ML-DSA polynomials under the canonical negacyclic multiplication. -/
 def mldsaNegacyclicRoundtrip (f g : MLDSA.Rq) : MLDSA.Rq :=
   MLDSA.negacyclicMul f g
 
+/-- The squared `ℓ₂` norm of an ML-DSA polynomial, computed through `MLDSA.normOps`. -/
 def mldsaNormRoundtrip (f : MLDSA.Rq) : ℕ :=
   MLDSA.normOps.l2NormSq f
 
+/-- An ML-KEM polynomial passed through the transform and its inverse, then interpreted in the
+ML-KEM quotient ring. -/
 noncomputable def mlkemQuotientRoundtrip (ops : MLKEM.NTTRingOps) (f : MLKEM.Rq) :
     MLKEM.Quotient :=
   MLKEM.quotientOfRq (ops.fromHat (ops.toHat f))
 
+/-- The product of two ML-KEM polynomials under the canonical negacyclic multiplication. -/
 def mlkemNegacyclicRoundtrip (f g : MLKEM.Rq) : MLKEM.Rq :=
   MLKEM.negacyclicMul f g
 
+/-- A Falcon polynomial passed through the transform and its inverse, then interpreted in the
+Falcon quotient ring. -/
 noncomputable def falconQuotientRoundtrip {n : ℕ} {hn : 0 < n} (ops : Falcon.NTTRingOps n)
     (f : Falcon.Rq n) : Falcon.Quotient hn :=
   Falcon.quotientOfRq (ops.fromHat (ops.toHat f))
 
+/-- The product of two Falcon polynomials under the canonical negacyclic multiplication. -/
 def falconNegacyclicRoundtrip {n : ℕ} (f g : Falcon.Rq n) : Falcon.Rq n :=
   Falcon.negacyclicMul f g
 
+/-- A Falcon integer polynomial reduced into `Falcon.Rq n` through `Falcon.integralLift`. -/
 def falconIntegralLiftRoundtrip {n : ℕ} (f : Falcon.IntPoly n) : Falcon.Rq n :=
   Falcon.integralLift n |>.toRq f
 

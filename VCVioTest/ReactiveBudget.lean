@@ -20,7 +20,8 @@ public section
 
 namespace Interaction.UC.ReactiveRuntime.BudgetTests
 
-open PFunctor ReactiveProcess ReactiveNetwork DynSystem OracleComp MonadAttach MeasureTheory
+open PFunctor Interaction.Execution.ReactiveProcess Interaction.Execution.ReactiveNetwork DynSystem
+  OracleComp MonadAttach MeasureTheory
 
 @[expose] def effect : PFunctor.{0, 0} := ⟨Unit, fun _ => Bool⟩
 

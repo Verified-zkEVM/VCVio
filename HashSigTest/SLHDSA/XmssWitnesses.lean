@@ -63,7 +63,7 @@ them falsify all thirteen conjuncts of `witnessHolds`.
 The `example`s pin the theorem statements at that bundle and at approved profiles.  The last group
 is kernel-checked rather than run: on a profile whose layer-zero tree indices overflow SHA-2's
 compressed eight-byte tree field, two distinct listed XMSS internal-node targets encode to the same
-all-zero key, so `xmssNodeAdrsKey_injective`'s `EncodedTargetLedgerConditions` hypothesis is
+SHA-2 fallback key, so `xmssNodeAdrsKey_injective`'s `EncodedTargetLedgerConditions` hypothesis is
 load-bearing rather than decorative.
 -/
 
@@ -923,11 +923,11 @@ example {coord coord' : LayerTreeCoord twoLayer} {z z' j j' : ℕ}
 
 /-! ## The encoded-distinctness hypothesis is load-bearing
 
-`Concrete.sha2AdrsKey` sends every address outside its checked domain to the all-zero key, which is
-the genuine key of the all-zero WOTS-hash address rather than a sentinel.  On a profile whose
-layer-zero tree indices overflow the compressed eight-byte tree field, two distinct listed XMSS
-internal-node targets therefore share a tweak, and `xmssNodeAdrsKey_injective` is false without its
-`EncodedTargetLedgerConditions` argument.
+`Concrete.sha2AdrsKey` sends every address outside its checked domain to the fallback key of its
+type, `Concrete.sha2FallbackKey`, so distinct out-of-domain addresses of one type share a key.  On a
+profile whose layer-zero tree indices overflow the compressed eight-byte tree field, two distinct
+listed XMSS internal-node targets therefore share a tweak, and `xmssNodeAdrsKey_injective` is false
+without its `EncodedTargetLedgerConditions` argument.
 
 `HashSigTest.SLHDSA.EncodedTargets.deep_sha2_conditions_false` already refutes the *hypothesis* at
 the same profile and the same ledger.  What is stated here is the refutation of this module's
@@ -949,9 +949,8 @@ theorem deepCoord_tree (t : ℕ) (ht : t < 2 ^ 64 + 2) :
     (xmssNodeAdrs (deepCoord t ht).toAdrs 1 0).tree = t := rfl
 
 /-- Two distinct listed XMSS internal-node targets of the `deep` profile carry the same encoded
-SHA-2 tweak, namely the all-zero key: their layer-zero tree indices exceed the compressed
-eight-byte tree field, and the checked compression falls back to that key rather than to a
-sentinel. -/
+SHA-2 tweak, namely the fallback key of their type: their layer-zero tree indices exceed the
+compressed eight-byte tree field, so the checked compression rejects both. -/
 theorem deep_xmssNode_sha2_alias :
     ∃ c₁ c₂ : LayerTreeCoord deep,
       xmssNodeAdrs c₁.toAdrs 1 0 ∈ xmssNodeAddresses deep ∧
@@ -976,8 +975,9 @@ theorem deep_xmssNode_sha2_alias :
       norm_num
       omega
     rw [adrsToKey_sha2, adrsToKey_sha2,
-      sha2AdrsKey_eq_zero_of_tree_overflow _ (hfits (2 ^ 64) (le_refl _) _),
-      sha2AdrsKey_eq_zero_of_tree_overflow _ (hfits (2 ^ 64 + 1) (by norm_num) _)]
+      sha2AdrsKey_eq_sha2FallbackKey_of_tree_overflow _ (hfits (2 ^ 64) (le_refl _) _),
+      sha2AdrsKey_eq_sha2FallbackKey_of_tree_overflow _ (hfits (2 ^ 64 + 1) (by norm_num) _)]
+    rfl
 
 /-- Consequently `xmssNodeAdrsKey_injective`'s conclusion is false for the SHA-2 bundle at this
 profile: its `EncodedTargetLedgerConditions` hypothesis is load-bearing. -/

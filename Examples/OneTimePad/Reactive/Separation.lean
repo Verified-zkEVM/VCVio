@@ -22,7 +22,8 @@ public section
 
 namespace OneTimePad.Reactive
 
-open Interaction.UC ReactiveProcess ReactiveNetwork ReactiveRuntime
+open Interaction Interaction.UC Interaction.Execution.ReactiveProcess
+  Interaction.Execution.ReactiveNetwork ReactiveRuntime
   OracleComp MeasureTheory
 
 /-- Choose a private random bit and test whether the public ciphertext reveals it. -/

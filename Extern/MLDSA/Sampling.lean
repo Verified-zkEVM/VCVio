@@ -153,6 +153,10 @@ private def requireFullEtaSample (coeffs : Array ℤ) : Array ℤ :=
   else
     panic! s!"ML-DSA eta sampler produced {coeffs.size} coefficients; expected {ringDegree}"
 
+/-- FIPS 204 Algorithm 31 (`RejBoundedPoly`): sample a polynomial with coefficients in
+`[-η, η]` by rejection from the SHAKE-256 stream of `seed ‖ nonce`, with `nonce` as two
+little-endian bytes. The stream is truncated to 1024 bytes, and the sampler panics if it yields
+fewer than `ringDegree` coefficients. -/
 def sampleEtaPoly (eta : Nat) (seed : Bytes 64) (nonce : Nat) : Rq :=
   let stream := shake256Stream (vectorToByteArray seed) nonce 1024
   let coeffs := requireFullEtaSample <| rejEtaCoeffs eta stream

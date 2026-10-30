@@ -201,7 +201,7 @@ theorem evalDist_pair {m : Type u → Type v} [Monad m] [LawfulMonad m]
         Measurable (Prod.mk x : β → α × β)))
   rw [evalDist_bind mx _ (by simpa only [h] using
     (Measurable.map_prodMk_left (ν := 𝒟[my])))]
-  simp only [h, Measure.prod]
+  simp only [h, Measure.prod_eq_of_sfinite]
 
 /-- A constant continuation scales the continuation's measure by the success mass
 (`Measure.bind_const`). -/
