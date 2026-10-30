@@ -21,6 +21,12 @@ indexed hybrid outputs `true` with the same probability at both hidden bits
 PRF keys is then at most twice the PRF advantage of the distinguisher
 (`absDiff_indexed_le_prfAdvantage`).
 
+The ideal world is the hybrid `G₃` and the last step of the paper's proof of the hiding theorem
+(`app:hiding`): after HMAC under each subkey is replaced by a random function, every ciphertext is
+uniform given its length and every tag is uniform, so the view does not depend on the hidden bit.
+The paper charges `Adv^prf_{2Q_enc}` once per hidden bit; here the distinguisher draws the bit
+itself, and the factor `2` comes from the normalization of `HiddenBit.lean`.
+
 ## Independence of the hidden bit
 
 The preprocessing and the generator query only the oracles with subkeys, which the distinguisher

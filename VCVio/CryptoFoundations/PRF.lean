@@ -30,6 +30,18 @@ A PRF adversary gets oracle access to uniform sampling plus a function `D → R`
 distinguish the real function `PRF.eval k` (for a random key `k`) from a truly random function
 (modeled as a lazy random oracle with consistent responses).
 
+The random function is sampled lazily: a fresh input gets a uniform value and a repeated input
+gets the cached one, which has the law of a uniform function `D → R` on every finite run and needs
+no distribution on functions. The advantage is the distance `|Pr[real = 1] − Pr[ideal = 1]|` of
+the two experiments. Running time is not part of the game: security is stated as a bound by the
+advantage of an explicit distinguisher, not by the best advantage of a class of distinguishers
+of bounded time.
+
+`u` independently keyed instances, the game `PRF_β` of the leanSeal paper (`fig:games`,
+`def:prf`), are the game of one product scheme: the paper's `Adv^prf_u(B)` is
+`prfAdvantage (prf.multiKey (Fin u)) B`, since a random oracle on `Fin u × D` is `u` independent
+random functions on `D`.
+
 ## Main Definitions
 
 - `PRFScheme K D R` — a PRF with key space `K`, domain `D`, and range `R`.

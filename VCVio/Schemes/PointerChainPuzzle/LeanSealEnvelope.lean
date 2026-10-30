@@ -69,7 +69,11 @@ def hmac (k : Bytes 32) (x : ByteArray) : Bytes 32 :=
     unfold Sha2.hmacSha256
     exact Sha2.sha256_size _⟩⟩
 
-/-- HMAC-SHA256 as a PRF with uniform 32-byte keys, inputs of any length and 32-byte outputs. -/
+/-- HMAC-SHA256 as a PRF with uniform 32-byte keys, inputs of any length and 32-byte outputs.
+
+This is the PRF of the leanSeal paper's assumption A4 (`def:prf`): its game with `u` keys is
+`prfAdvantage (hmacPRF.multiKey (Fin u))`, and the paper's 32-byte keys `k_j` are the uniform
+keys of `keygen`. -/
 @[expose]
 def hmacPRF : PRFScheme (Bytes 32) ByteArray (Bytes 32) where
   keygen := $ᵗ Bytes 32

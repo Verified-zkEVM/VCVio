@@ -70,6 +70,8 @@ sampled cache.
   the adapted adversary is the capped experiment of the original one, and
   `TimeLockPuzzle.cappedHidingAdvantage_eq_hidingAdvantage_capChallenges` equates the two
   advantages.
+* `OracleComp.RandomOracleEncoding.isQueryBoundP_liftComp_challenge`: local coins lifted into the
+  hiding adversary's interface make no challenge query.
 
 ## The capped challenger
 
@@ -133,7 +135,12 @@ encryption, under the puzzle and its key, of the message that `b` selects, any o
   derives them through the oracle that the adversary queries.
 * **Rounds are the adversary's own.** The online budget counts the rounds that the online phase
   submits. The challenger's encryptions query `spec` directly, outside the online phase's rounds,
-  and challenge queries are on the free summand, so neither costs the adversary a round. -/
+  and challenge queries are on the free summand, so neither costs the adversary a round.
+* **The paper's game.** For leanSeal this is the game `Hide_β` of the paper (`def:hiding`,
+  `fig:games`), with `dem.encrypt` the envelope `Seal(K, η, M)` and `leak` the message length.
+  The paper's challenger also stops after `Q_enc` accepted pairs; here that count is the
+  adversary's budget `HidingAdversary.MakesAtMostQueries`, and `cappedHidingExperiment` is the
+  game with the challenger's count. -/
 @[expose]
 def hidingExperiment (tlp : TimeLockPuzzle spec Puzzle Key)
     (dem : DEMScheme (OracleComp (unifSpec + spec)) (Puzzle × Key) M C) (leak : M → Λ)
@@ -225,7 +232,9 @@ theorem hidingAdvantage_eq_zero_of_makesAtMostQueries_zero [DecidableEq ι]
 `LeftOrRight.cappedOracle (dem.encrypt (puzzle, key)) leak qEnc b` from the counter `0`. The first
 `qEnc` pairs with equal leakage are encrypted as in the hiding experiment; every later request,
 and every pair with unequal leakage, is answered with `none`, and only accepted pairs advance the
-counter. The adversary has no encryption budget: the cap is the challenger's. -/
+counter. The adversary has no encryption budget: the cap is the challenger's. This is the
+oracle `Enc` of the leanSeal paper (`fig:games`) as written: `⊥` once `i = Q_enc`, `⊥` when
+`|M₀| ≠ |M₁|`, and otherwise `i ← i + 1` and an encryption of `M_β`. -/
 @[expose]
 def cappedHidingExperiment (tlp : TimeLockPuzzle spec Puzzle Key)
     (dem : DEMScheme (OracleComp (unifSpec + spec)) (Puzzle × Key) M C) (leak : M → Λ)
@@ -409,3 +418,21 @@ theorem cappedHidingAdvantage_eq_hidingAdvantage_capChallenges [DecidableEq ι]
   simp only [cappedHidingAdvantage, hidingAdvantage, evalDist_hidingExperiment_capChallenges]
 
 end TimeLockPuzzle
+
+/-! ## Local coins make no challenge query -/
+
+namespace OracleComp.RandomOracleEncoding
+
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι} {Msg C : Type}
+
+/-- Local coins lifted into the hiding adversary's interface make no challenge query. -/
+lemma isQueryBoundP_liftComp_challenge {α : Type} (oa : ProbComp α) :
+    IsQueryBoundP (liftComp oa ((unifSpec + LeftOrRight.spec Msg C) + spec.batch))
+      (· matches .inl (.inr _)) 0 := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => exact isQueryBoundP_pure _ _ _
+  | query_bind t k ih =>
+      rw [liftComp_bind, liftComp_query]
+      exact (isQueryBoundP_query_bind_iff _ _ _ _).2 ⟨by simp, fun u => by simpa using ih u⟩
+
+end OracleComp.RandomOracleEncoding

@@ -561,7 +561,12 @@ variable [SampleableType N]
 with its key. Encryption draws a uniform nonce from local coins, derives the subkeys from the key
 and the nonce with `derive`, and seals under the puzzle bytes `encodePuzzle puzzle`. Decryption
 opens with `openQuery` and reports a rejection as the empty message, since a `DEMScheme` has a
-total decryption; `openQuery` and `openUnder` are the authenticated opening. -/
+total decryption; `openQuery` and `openUnder` are the authenticated opening.
+
+Encryption is the paper's `Seal(K, η, M)` (`fig:games`) after the challenger's step
+`η ← 16 random bytes`: drawing the nonce inside encryption makes every encryption use a fresh
+nonce, so the DEM is the one the hiding game `TimeLockPuzzle.hidingExperiment` calls, and a
+repeated nonce is an event of the coins, bounded in the hiding proof by `Q_enc² / (2 |N|)`. -/
 @[expose]
 def dem (derive : Key → N → OracleComp spec (K × K)) (encodePuzzle : Puzzle → ByteArray) :
     DEMScheme (OracleComp (unifSpec + spec)) (Puzzle × Key) Plaintext ByteArray where

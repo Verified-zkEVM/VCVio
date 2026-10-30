@@ -19,6 +19,13 @@ oracles. Each raw input that encodes a typed point is answered through the typed
 point, and every other raw input from a private lazy random oracle, whose cache passes from the
 preprocessing phase to the online phase.
 
+The adapter is how a theorem about typed oracles reaches the byte level. leanSeal's attacker
+queries SHA-256 at byte strings, while the hiding theorem of the pointer-chain seal bounds
+adversaries against independent typed oracles. The adapted adversary has the same budgets, since
+a raw query costs at most one typed query and a raw input that encodes no typed point costs none,
+and against an encoding that never clashes it has the same advantage. So the typed bound, with
+the same `Q_pre`, `Q_on`, rounds and `Q_enc`, is the bound for the byte-level attacker.
+
 This file states the adapter for a two-phase adversary whose online phase queries any free
 summand `free` beside its rounds: local coins in the delay game, local coins together with the
 left-or-right challenge oracle in the hiding game. Queries to `free` are forwarded unchanged. A
@@ -162,17 +169,6 @@ are forwarded at no cost, and the private draws are local coins. -/
 abbrev adaptHidingAdversary {Puzzle : Type} (adv : HidingAdversary (D →ₒ M) Puzzle Msg C) :
     HidingAdversary spec Puzzle Msg C :=
   E.adaptTwoPhase adv
-
-omit [∀ t, SampleableType (spec.Range t)] in
-/-- Local coins lifted into the hiding adversary's interface make no challenge query. -/
-lemma isQueryBoundP_liftComp_challenge {α : Type} (oa : ProbComp α) :
-    IsQueryBoundP (liftComp oa ((unifSpec + LeftOrRight.spec Msg C) + spec.batch))
-      (· matches .inl (.inr _)) 0 := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => exact isQueryBoundP_pure _ _ _
-  | query_bind t k ih =>
-      rw [liftComp_bind, liftComp_query]
-      exact (isQueryBoundP_query_bind_iff _ _ _ _).2 ⟨by simp, fun u => by simpa using ih u⟩
 
 /-- A step of the hiding adapter makes a challenge query exactly when it answers one: a challenge
 query is forwarded, and local coins, private draws and typed rounds make none. -/

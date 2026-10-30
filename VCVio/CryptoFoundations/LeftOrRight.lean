@@ -17,6 +17,14 @@ is a pair of messages `(m₀, m₁)`. When the two messages have the same leakag
 with `some c` for a ciphertext `c` drawn from `enc (if b then m₁ else m₀)`; otherwise it answers
 `none`.
 
+* **Left-or-right, not real-or-random.** The adversary chooses both messages and the hidden bit
+  picks the one encrypted, as in the paper's game `Hide_β` (`fig:games` of the leanSeal paper),
+  whose oracle returns `Seal(K, η, M_β)`. The game needs no distribution on messages or
+  ciphertexts, which a real-or-random game would sample from, and a pair `(m, m)` is an ordinary
+  encryption query, so one oracle gives multi-message chosen-plaintext security. A proof usually
+  moves each branch to one ideal game whose view does not depend on the bit; the advantage, the
+  distance between the two branches, is then at most twice the distance from a branch to that
+  game, which is the factor `2` of the paper's hiding theorem (`thm:hiding`).
 * **The key enters through `enc`.** The oracle takes an encryption function `enc : M → m C`, not
   a scheme and a key. A game supplies whatever its scheme encrypts with: `dem.encrypt k` under a
   uniform key `k` for a data encapsulation mechanism, `encrypt pk` for a public-key scheme, or an

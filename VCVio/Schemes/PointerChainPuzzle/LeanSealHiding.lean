@@ -82,6 +82,28 @@ The leanSeal paper's statement, with the declarations that formalize it at leanS
 | The game | `TimeLockPuzzle.hidingExperiment`, `LeftOrRight.oracle` |
 | The budgets | `TwoPhaseAdversary.IsQueryBound`, `HidingAdversary.MakesAtMostQueries` |
 
+### Definitions to check
+
+To trust the rows above, read these definitions and compare each with the source named.
+
+* The game: `TimeLockPuzzle.hidingExperiment` and `TimeLockPuzzle.hidingAdvantage` against
+  `Hide_β` and `Adv^hide` of `def:hiding` (`fig:games`); `TimeLockPuzzle.cappedHidingExperiment`
+  against its oracle `Enc` as written.
+* The challenge oracle: `LeftOrRight.oracle` with `plaintextLength` against `Enc` of `fig:games`,
+  which answers `⊥` when `|M₀| ≠ |M₁|`.
+* The adversary class: `TimeLockPuzzle.HidingAdversary byteSpec (Puzzle b n) Plaintext ByteArray`
+  against the attacker `(A_0, A_1)` of `def:hiding`, with SHA-256 and `Enc` as its oracles.
+* The budgets: `TwoPhaseAdversary.IsQueryBound` at `(keyRound n m - 1, Q_on)` against `Q_pre`,
+  `Q_on` and "stops within fewer than `T_key` oracle rounds" (`def:hiding`);
+  `HidingAdversary.MakesAtMostQueries` against the `Q_enc` envelopes.
+* The scheme: `byteScheme` as for the delay theorem, and `byteEnvelope` against `Seal(K, η, M)`
+  of `fig:games`, the envelope of SPEC §6.2 and §7.
+* The PRF: `hmacPRF`, `PRFScheme.multiKey` and `prfAdvantage` against A4 and `def:prf`.
+* The encoding: `sealEncoding` against the labelled hashes `TH("leanseal/v1/enc", K ‖ η)` and
+  `TH("leanseal/v1/mac", K ‖ η)` of SPEC §7, beside the puzzle's hash inputs (SPEC §1, §3).
+* The constants: `Valid` against SPEC §2, and `card_bytes` for the sizes `2^256`, `2^(8b)` and
+  `2^128` of hashes, links, salts and 16-byte nonces, so `Q_enc² / (2 |N|) = Q_enc² / 2^129`.
+
 Scope of every row: running time is not modelled, the PRF term is the advantage of the named
 distinguisher `byteHidingDistinguisher`, and `hidingSecure_byteScheme`'s PRF premise covers all
 byte-level adversaries (`hidingSecure_byteScheme_of_budget` only budgeted ones).

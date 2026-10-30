@@ -26,6 +26,11 @@ labels, so it is no hash input of a typed point (`route_subkeyInput`). The subke
 back by their label and two fixed-width fields, kept only if they re-encode to the byte string
 (`sealRoute`), as `route` does for the typed points; a subkey answer is the whole 32-byte answer.
 
+The extended encoding never clashing is the byte-level form of the remark in the paper's proof of
+the hiding theorem (`app:hiding`) that subkey inputs differ from every other path input because
+their labels differ: SHA-256 as one random oracle then answers the eight typed oracles as eight
+independent random oracles, which is the model of the typed hiding theorem.
+
 ## Main definitions
 
 * `PointerChainPuzzle.LeanSeal.sealTypedSpec`: the oracles of time-lock encryption at leanSeal's

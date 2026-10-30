@@ -48,6 +48,39 @@ byte-level adversary into a typed one within the same budgets
 (`delaySecure_byteScheme`), and the truncated adversary removes the bound on the rounds
 (`TimeLockPuzzle.delayAdvantageWithin_le_of_delaySecure`).
 
+## Paper citation table
+
+The leanSeal paper's statement at leanSeal's bytes, with the declarations that formalize it and
+the steps that carry the typed theorem over.
+
+| Paper | Declaration |
+| --- | --- |
+| `thm:delay`, leanSeal's bytes (SPEC §8) | `delayAdvantageWithin_byteScheme_le` |
+| `thm:delay`, at valid parameters | `delayAdvantageWithin_byteScheme_le_of_valid` |
+| `thm:delay`, within the rounds | `delaySecure_byteScheme`, `delaySecure_byteScheme_of_valid` |
+| `thm:delay`, typed, paper's constants | `delaySecure_scheme_paper` |
+| A1, independent oracles by domain separation (SPEC §1, §3) | `hashInput_injective`, `not_clash` |
+| The byte adversary as a typed one | `delayAdvantage_byteScheme_le` |
+| The sizes `2^256`, `2^(8b)`, `2^128` | `card_bytes` |
+
+### Definitions to check
+
+To trust the rows above, read these definitions and compare each with the source named.
+
+* The game: `TimeLockPuzzle.delayAdvantageWithin` against the event of `thm:delay`, as for the
+  typed theorem (`VCVio.Schemes.PointerChainPuzzle.Delay`).
+* The oracle: `byteSpec` against SHA-256 as one random oracle on byte strings (A1, SPEC §8).
+* The adversary class: `TimeLockPuzzle.Adversary byteSpec (Puzzle b n) (Bytes 32)` against the
+  attacker `(A_0, A_1)` of `sec:theorem`, with SHA-256 its only oracle.
+* The budgets: `IsPreprocessingQueryBound` and `IsPointQueryBound` against `Q_pre` and `Q_on`,
+  here counting queries to SHA-256.
+* The scheme: `byteScheme` against SPEC §4 and §5; `simulateQ_byteScheme_gen` and
+  `simulateQ_byteScheme_solve` equate it with the executable leanSeal of `LeanSeal.lean`.
+* The encoding: `hashInput` and `encoding` against the chain step of SPEC §3 and the labelled
+  hash `TH` of SPEC §1, and the mask as the first `b` bytes of its hash (SPEC §4).
+* The parameters and constants: `Valid` against SPEC §2, `ctx` against the context of SPEC §4,
+  and `keyRound`, `solvePoints` against `T_key` and `P` of SPEC §8.
+
 ## Main statements
 
 * `PointerChainPuzzle.LeanSeal.card_bytes`: `Bytes k` has `2^(8k)` elements.

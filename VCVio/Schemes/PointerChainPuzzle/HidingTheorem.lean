@@ -89,6 +89,29 @@ The leanSeal paper's statement, with the declarations that formalize it.
 | `thm:hiding`, the paper's capped challenger | `cappedHidingAdvantage_sealScheme_le_paper` |
 | `thm:hiding`, leanSeal's bytes (SPEC §8) | `LeanSeal.hidingAdvantage_byteScheme_le` |
 
+### Definitions to check
+
+To trust the rows above, read these definitions and compare each with the source named.
+
+* The game: `TimeLockPuzzle.hidingExperiment` and `TimeLockPuzzle.hidingAdvantage` against
+  `Hide_β` and `Adv^hide` of `def:hiding` (`fig:games`); `TimeLockPuzzle.cappedHidingExperiment`
+  against its oracle `Enc` as written.
+* The challenge oracle: `LeftOrRight.oracle` with `plaintextLength` against `Enc` of `fig:games`,
+  which answers `⊥` when `|M₀| ≠ |M₁|`.
+* The adversary class: `TimeLockPuzzle.HidingAdversary` against the attacker `(A_0, A_1)` of
+  `def:hiding`; challenge queries and local coins cost no round.
+* The budgets: `TwoPhaseAdversary.IsQueryBound` at `(keyRound n m - 1, Q_on)` against `Q_pre`,
+  `Q_on` and the round limit of `def:hiding`; `HidingAdversary.MakesAtMostQueries` against `Q_enc`.
+* The oracles: `sealSpec` against the six oracles of `thm:delay` and the subkey hashes `H_enc`,
+  `H_mac` of `app:hiding` (SPEC §7).
+* The scheme: `sealScheme` against `Build(n, m, b)` and `sealDEM` against `Seal(K, η, M)` of
+  `fig:games` (SPEC §7).
+* The PRF term: `PRFScheme.multiKey` and `prfAdvantage` against `Adv^prf_{2Q_enc}` of `def:prf`,
+  for the explicit distinguisher `hidingDistinguisher`.
+* The constants: `keyRound` and `solvePoints` against `T_key` and `P` of `sec:theorem`; the
+  hypotheses on `Fintype.card` in `hidingAdvantage_sealScheme_le_paper` against the sizes `2^256`,
+  `2^(8b)`, `2^128` and `2^128` of hashes, links, salts and nonces.
+
 ## Main statements
 
 * `PointerChainPuzzle.hidingAdvantage_sealScheme_le`: the hiding theorem with the generic sizes.
