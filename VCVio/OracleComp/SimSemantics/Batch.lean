@@ -39,11 +39,11 @@ challenger's oracle), and counting its rounds is an ordinary path-wise query bou
 * `QueryImpl.simulateQ_simulateQ_unbatch`: running a program with rounds through `unbatch` and
   then a handler is running it through the batched handler.
 * `OracleSpec.simulateQ_romImpl_simulateQ_unbatch`: the corollary for the lazy random oracle.
+* `QueryImpl.withCaching_batch_le_and_isSome_iff`: answering a round with a caching handler caches
+  exactly its points, beside the points cached before.
 * `QueryImpl.run_simulateQ_add_parallelStateT_batch_liftComp`: a program with rounds of `spec`,
   lifted to rounds of `spec + side` and answered by two handlers side by side, runs against the
   first handler alone and leaves the state of the second unchanged.
-* `QueryImpl.withCaching_batch_le_and_isSome_iff`: answering a round with a caching handler caches
-  exactly its points, beside the points cached before.
 * `OracleComp.simulateQ_queryRound₂`, `OracleComp.simulateQ_queryRound`,
   `OracleComp.simulateQ_queryPoint`: against a fixed answer table, a round returns the table's
   answers at its points.
@@ -526,3 +526,32 @@ at `t`. -/
   rw [queryPoint, simulateQ_map, simulateQ_queryRound, map_pure]
 
 end OracleComp
+
+namespace QueryImpl
+
+variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι} {m : Type → Type w} [Monad m]
+  [LawfulMonad m]
+
+/-- A map `g` of caches that, at every point satisfying `P`, leaves the entry unchanged and
+commutes with caching an answer commutes with answering a round `ts` of points satisfying `P` with
+`so.withCaching`: running the round and mapping the final cache through `g` is running the round
+from the mapped cache. -/
+lemma map_withCaching_batch_run_of_commute (so : QueryImpl spec m) {P : ι → Prop}
+    (g : spec.QueryCache → spec.QueryCache) (h₁ : ∀ cache t, P t → g cache t = cache t)
+    (h₂ : ∀ cache t u, P t → g (cache.cacheQuery t u) = (g cache).cacheQuery t u)
+    {ts : List ι} (hts : ∀ t ∈ ts, P t) (cache : spec.QueryCache) :
+    Prod.map id g <$> (so.withCaching.batch ts).run cache =
+      (so.withCaching.batch ts).run (g cache) := by
+  induction ts generalizing cache with
+  | nil => simp
+  | cons t ts ih =>
+    have ht := hts t List.mem_cons_self
+    simp only [batch_cons, StateT.run_bind, StateT.run_pure, map_bind, map_pure]
+    rw [← map_withCaching_run_of_commute so g (h₁ cache t ht) (fun u => h₂ cache t u ht),
+      bind_map_left]
+    refine bind_congr fun z => ?_
+    simp only [Prod.map_fst, Prod.map_snd, id_eq]
+    rw [← ih (fun t' ht' => hts t' (List.mem_cons_of_mem _ ht')), bind_map_left]
+    rfl
+
+end QueryImpl
