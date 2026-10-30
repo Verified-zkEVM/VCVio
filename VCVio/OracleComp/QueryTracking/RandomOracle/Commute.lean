@@ -16,7 +16,8 @@ Queries to the lazy random oracle `OracleSpec.randomOracle` commute: running a q
 after another query, or before or after a whole computation run against the same oracle, gives
 the same joint distribution of answers, outputs and final cache. A repeated index is answered from
 the cache, so the cache must be threaded through both orders; the statements quantify over every
-continuation of the answers and the final cache.
+continuation of the answers and the final cache. Queries at distinct points none of which is
+cached are answered with independent uniform values and change the cache only at those points.
 
 ## Main statements
 
@@ -25,6 +26,9 @@ continuation of the answers and the final cache.
   every computation run against the same oracle.
 - `randomOracle.evalDist_simulateQ_queryAll_run_bind_of_perm`: querying the lazy random oracle at
   the indices of a list depends, through the final cache, only on the list up to permutation.
+- `randomOracle.fst_map_run_list_mapM_of_fresh`: querying the lazy random function oracle at
+  distinct uncached points answers with independent uniform values, and
+  `randomOracle.run_list_mapM_apply_of_forall_ne`: it changes the cache only at those points.
 -/
 
 public section
@@ -117,5 +121,60 @@ theorem evalDist_simulateQ_queryAll_run_bind_of_perm {γ : Type} [MeasurableSpac
     exact evalDist_run_bind_run_swap t' t cache fun _ _ c ↦
       (simulateQ spec₀.randomOracle (spec₀.queryAll ts)).run c >>= fun w ↦ f w.2
   | trans _ _ ih₁ ih₂ => exact (ih₁ cache).trans (ih₂ cache)
+
+/-- A query to the lazy random oracle at `s` leaves the cache unchanged at every other index. -/
+theorem run_apply_of_ne {s t : ι₀} (hst : s ≠ t) (cache : spec₀.QueryCache)
+    {z : spec₀.Range s × spec₀.QueryCache} (hz : z ∈ support ((spec₀.randomOracle s).run cache)) :
+    z.2 t = cache t := by
+  rw [run_eq] at hz
+  cases h : cache s with
+  | some u => simp only [h, support_pure, Set.mem_singleton_iff] at hz; rw [hz]
+  | none =>
+    simp only [h, support_bind, support_pure, Set.mem_iUnion, Set.mem_singleton_iff] at hz
+    obtain ⟨u, -, rfl⟩ := hz
+    exact QueryCache.cacheQuery_of_ne _ _ hst.symm
+
+end randomOracle
+
+namespace randomOracle
+
+variable {D R : Type} [DecidableEq D] [SampleableType R]
+
+/-- Querying the lazy random function oracle at the points `f x`, for `x` in a list, leaves the
+cache unchanged at every point that is none of them. -/
+theorem run_list_mapM_apply_of_forall_ne {α : Type} (f : α → D) (xs : List α) {t : D}
+    (ht : ∀ x ∈ xs, f x ≠ t) (cache : (D →ₒ R).QueryCache) {z : List R × (D →ₒ R).QueryCache}
+    (hz : z ∈ support ((xs.mapM fun x => (D →ₒ R).randomOracle (f x)).run cache)) :
+    z.2 t = cache t := by
+  induction xs generalizing cache z with
+  | nil => simp_all
+  | cons x xs ih =>
+    simp only [List.mapM_cons, StateT.run_bind, StateT.run_pure, support_bind, support_pure,
+      Set.mem_iUnion, Set.mem_singleton_iff, exists_prop] at hz
+    obtain ⟨a, ha, b, hb, rfl⟩ := hz
+    rw [ih (fun y hy => ht y (List.mem_cons_of_mem _ hy)) a.2 hb]
+    exact run_apply_of_ne (ht x List.mem_cons_self) cache ha
+
+/-- **Fresh distinct points of the lazy random function oracle are independent and uniform.**
+Querying it at distinct points `f x`, for `x` in a list, none of them cached, answers with
+independent uniform values. -/
+theorem fst_map_run_list_mapM_of_fresh {α : Type} (f : α → D) (xs : List α)
+    (hnd : (xs.map f).Nodup) (cache : (D →ₒ R).QueryCache)
+    (hfresh : ∀ x ∈ xs, cache (f x) = none) :
+    Prod.fst <$> (xs.mapM fun x => (D →ₒ R).randomOracle (f x)).run cache =
+      xs.mapM fun _ => ($ᵗ R : ProbComp R) := by
+  induction xs generalizing cache with
+  | nil => simp
+  | cons x xs ih =>
+    rw [List.map_cons, List.nodup_cons] at hnd
+    simp only [List.mapM_cons, StateT.run_bind, run_eq, hfresh x List.mem_cons_self]
+    simp only [bind_assoc, pure_bind, map_bind]
+    refine bind_congr fun u => ?_
+    have hf : ∀ y ∈ xs, (cache.cacheQuery (f x) u) (f y) = none := fun y hy => by
+      rw [QueryCache.cacheQuery_of_ne]
+      · exact hfresh y (List.mem_cons_of_mem _ hy)
+      · intro h; exact hnd.1 (h ▸ List.mem_map_of_mem hy)
+    rw [← ih hnd.2 _ hf]
+    simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def, StateT.run_pure]
 
 end randomOracle

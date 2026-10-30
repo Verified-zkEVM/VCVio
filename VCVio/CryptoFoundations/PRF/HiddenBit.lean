@@ -25,6 +25,9 @@ the PRF advantage.
   `(p₁ + q₀) / 2`, where `p₁` is the probability that the game at bit `true` outputs `true` and
   `q₀` that the game at bit `false` outputs `false`, each in the real world.
 * `PRFScheme.prfIdealExperiment_guessBit`: the same in the ideal world.
+* `PRFScheme.absDiff_prfRealExperiment_eq_two_mul_prfAdvantage`: if the two branches output
+  `true` with the same probability in the ideal world, the gap between them in the real world is
+  twice the advantage of the hidden-bit distinguisher.
 -/
 
 public section
@@ -98,5 +101,46 @@ theorem prfIdealExperiment_guessBit [DecidableEq D] [SampleableType R]
       StateT.run_monadLift]
     simp
   rw [h]
+
+/-- **The hidden-bit reduction loses a factor of two.** If the two branches output `true` with the
+same probability in the ideal world, the gap between their probabilities of outputting `true` in
+the real world is twice the PRF advantage of the hidden-bit distinguisher. -/
+theorem absDiff_prfRealExperiment_eq_two_mul_prfAdvantage [DecidableEq D] [SampleableType R]
+    (prf : PRFScheme K D R) (run : Bool → PRFAdversary D R)
+    (hideal : Pr{let g ← prfIdealExperiment (run true)}[g = true] =
+      Pr{let g ← prfIdealExperiment (run false)}[g = true]) :
+    ENNReal.absDiff (Pr{let g ← prf.prfRealExperiment (run true)}[g = true])
+        (Pr{let g ← prf.prfRealExperiment (run false)}[g = true]) =
+      2 * prf.prfAdvantage (do
+        let b ← (liftM ($ᵗ Bool : ProbComp Bool) : OracleComp (PRFOracleSpec D R) Bool)
+        let g ← run b
+        return decide (g = b) : OracleComp (PRFOracleSpec D R) Bool) := by
+  rw [prfAdvantage, MeasureTheory.Measure.boolDist, ← prEvent_eq_evalDist_singleton,
+    ← prEvent_eq_evalDist_singleton, prfRealExperiment_guessBit, prfIdealExperiment_guessBit]
+  simp only [← Bool.not_eq_true, prEvent_not_eq_one_sub, hideal]
+  set p₁ := Pr{let g ← prf.prfRealExperiment (run true)}[g = true]
+  set p₀ := Pr{let g ← prf.prfRealExperiment (run false)}[g = true]
+  set q := Pr{let g ← prfIdealExperiment (run false)}[g = true]
+  have h₁ : p₁ ≤ 1 := prEvent_le_one _
+  have h₀ : p₀ ≤ 1 := prEvent_le_one _
+  have hq : q ≤ 1 := prEvent_le_one _
+  have hne : ∀ x : ENNReal, x ≤ 1 → x ≠ ⊤ := fun x hx => ne_top_of_le_ne_top ENNReal.one_ne_top hx
+  have hhalf : ∀ x y : ENNReal, x ≤ 1 → (x + (1 - y)) / 2 ≠ ⊤ := fun x y hx =>
+    ENNReal.div_ne_top (ENNReal.add_ne_top.mpr ⟨hne x hx, ENNReal.sub_ne_top ENNReal.one_ne_top⟩)
+      two_ne_zero
+  have htop : ∀ a b : ENNReal, a ≠ ⊤ → b ≠ ⊤ → ENNReal.absDiff a b ≠ ⊤ := fun a b ha hb =>
+    ENNReal.add_ne_top.mpr ⟨ENNReal.sub_ne_top ha, ENNReal.sub_ne_top hb⟩
+  rw [← ENNReal.toReal_eq_toReal_iff' (htop _ _ (hne _ h₁) (hne _ h₀))
+    (ENNReal.mul_ne_top ENNReal.ofNat_ne_top (htop _ _ (hhalf _ _ h₁) (hhalf _ _ hq))),
+    ENNReal.toReal_mul, ENNReal.absDiff_toReal (hne _ h₁) (hne _ h₀),
+    ENNReal.absDiff_toReal (hhalf _ _ h₁) (hhalf _ _ hq)]
+  simp only [ENNReal.toReal_div,
+    ENNReal.toReal_add (hne _ h₁) (ENNReal.sub_ne_top ENNReal.one_ne_top),
+    ENNReal.toReal_add (hne _ hq) (ENNReal.sub_ne_top ENNReal.one_ne_top),
+    ENNReal.toReal_sub_of_le h₀ ENNReal.one_ne_top, ENNReal.toReal_sub_of_le hq ENNReal.one_ne_top,
+    ENNReal.toReal_one, ENNReal.toReal_ofNat]
+  rw [show (p₁.toReal + (1 - p₀.toReal)) / 2 - (q.toReal + (1 - q.toReal)) / 2 =
+    (p₁.toReal - p₀.toReal) / 2 by ring, abs_div, abs_two]
+  ring
 
 end PRFScheme
