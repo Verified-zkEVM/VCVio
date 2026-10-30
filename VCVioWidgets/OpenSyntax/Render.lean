@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import PolyFun.Interaction.UC.OpenSyntax.Raw
+public import PolyFun.Interaction.Open.OpenSyntax.Raw
 
 /-!
 # Graphviz DOT rendering for Raw expressions
@@ -44,7 +44,7 @@ public section
 universe u
 
 namespace Interaction
-namespace UC
+namespace Open
 namespace OpenSyntax
 namespace Raw
 
@@ -157,5 +157,5 @@ def toDot
 
 end Raw
 end OpenSyntax
-end UC
+end Open
 end Interaction

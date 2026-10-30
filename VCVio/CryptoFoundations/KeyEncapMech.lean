@@ -31,8 +31,11 @@ universe u v
 /-- A key encapsulation mechanism with shared-key space `K`, public/secret key spaces `PK` and
 `SK`, and ciphertext space `C`. -/
 structure KEMScheme (m : Type → Type u) [Monad m] (K PK SK C : Type) where
+  /-- Sample a public/secret key pair. -/
   keygen : m (PK × SK)
+  /-- Encapsulate under a public key, producing a ciphertext and the shared key it carries. -/
   encaps : PK → m (C × K)
+  /-- Decapsulate a ciphertext under a secret key, returning `none` on rejection. -/
   decaps : SK → C → m (Option K)
 
 namespace KEMScheme
@@ -65,8 +68,12 @@ variable {ι : Type} {spec : OracleSpec ι} [SampleableType K]
 /-- Two-phase IND-CPA adversary for a KEM. The adversary only gets access to the base oracle
 set `spec`, with no decapsulation oracle. -/
 structure IND_CPA_Adversary (_kem : KEMScheme (OracleComp spec) K PK SK C) where
+  /-- The state the adversary carries from the pre-challenge phase to the guessing phase. -/
   State : Type
+  /-- Given the public key, compute the state to pass to `postChallenge`. -/
   preChallenge : PK → OracleComp spec State
+  /-- Given the saved state, the challenge ciphertext, and a challenge key that is either the
+  encapsulated key or a uniformly random one, guess whether the key is the real one. -/
   postChallenge : State → C → K → OracleComp spec Bool
 
 /-- Fixed-branch IND-CPA experiment for a KEM, matching the source proof-ladders formulation
@@ -119,8 +126,14 @@ def IND_CCA_oracleSpec (_kem : KEMScheme (OracleComp spec) K PK SK C) :=
 
 /-- Two-phase IND-CCA adversary for a KEM. -/
 structure IND_CCA_Adversary (kem : KEMScheme (OracleComp spec) K PK SK C) where
+  /-- The state the adversary carries from the pre-challenge phase to the guessing phase. -/
   State : Type
+  /-- Given the public key and decapsulation-oracle access, compute the state to pass to
+  `postChallenge`. -/
   preChallenge : PK → OracleComp kem.IND_CCA_oracleSpec State
+  /-- Given the saved state, the challenge ciphertext, and a challenge key that is either the
+  encapsulated key or a uniformly random one, and with access to a decapsulation oracle that
+  refuses the challenge, guess whether the key is the real one. -/
   postChallenge : State → C → K → OracleComp kem.IND_CCA_oracleSpec Bool
 
 /-- Pre-challenge decapsulation oracle. -/

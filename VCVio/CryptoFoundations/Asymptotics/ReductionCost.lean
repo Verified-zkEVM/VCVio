@@ -45,7 +45,10 @@ structure CostClassMap (isEff : (ℕ → σ) → Prop) (isEff' : (ℕ → σ') �
 
 /-- A reduction together with an explicit transform on asymptotic cost bounds. -/
 structure ReductionWithCost (cost : Adv → ℕ → σ) (cost' : Adv' → ℕ → σ') where
+  /-- The reduction, turning a source adversary into an adversary against the target game. -/
   reduce : Adv → Adv'
+  /-- At each security parameter, the map sending a bound on the source adversary's cost to a
+  bound on the reduced adversary's cost. -/
   transform : ℕ → σ → σ'
   monotone_transform : ∀ n, Monotone (transform n)
   cost_bound : ∀ A n, cost' (reduce A) n ≤ transform n (cost A n)

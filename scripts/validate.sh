@@ -98,6 +98,7 @@ python3 ./scripts/test-classify-migration-errors.py
 bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 bash scripts/check-extern-isolation.sh
+python3 scripts/test-interop-isolation.py
 bash scripts/check-interop-isolation.sh
 bash scripts/test-comment-fences.sh
 python3 ./scripts/check-comment-fences.py
@@ -113,6 +114,7 @@ lake lint -- --style-only
 
 echo ""
 echo "# Checking the agent documentation"
+python3 ./scripts/test-agent-docs.py
 python3 ./scripts/check-agent-docs.py
 python3 ./scripts/extract-doc-fragments.py --check
 bash scripts/test-docnames.sh
@@ -142,8 +144,8 @@ if (( run_test )); then
 
   # The eager-initialisation ratchet over the test libraries that can be swept: it needs
   # the oleans `lake test` has just built, which is why it is here and not in the default
-  # pass. `HashSigTest` has no umbrella module and thirteen `main`s, so it is not covered;
-  # `scripts/InitSweep.lean` records exactly what that leaves open.
+  # pass. `HashSigTest` has no umbrella module and multiple root-level `main` declarations,
+  # so it is not covered; `scripts/InitSweep.lean` records exactly what that leaves open.
   echo ""
   echo "# Checking eagerly-initialised constants in the test libraries"
   lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest

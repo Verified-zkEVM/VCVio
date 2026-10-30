@@ -44,7 +44,9 @@ open OracleComp OracleSpec ENNReal
 /-- A pseudorandom function with key space `K`, domain `D`, and range `R`.
 Key generation is probabilistic; evaluation is deterministic given a key. -/
 structure PRFScheme (K D R : Type) where
+  /-- Sample a secret key. -/
   keygen : ProbComp K
+  /-- Evaluate the keyed function on an input. -/
   eval : K → D → R
 
 namespace PRFScheme

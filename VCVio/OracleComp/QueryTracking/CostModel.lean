@@ -63,6 +63,7 @@ lemma fst_map_run_simulateQ_addCostOracle [AddCommMonoid ω] (costFn : spec.Doma
 /-- A cost model assigns a cost in `ω` to each oracle query.
 The cost type `ω` can be `ℕ`, `ℝ≥0∞`, `ι → ℕ` (per-oracle), or any `AddCommMonoid`. -/
 structure CostModel (spec : OracleSpec ι) (ω : Type) [AddCommMonoid ω] where
+  /-- The cost charged for one query on input `t`; costs of successive queries add up. -/
   queryCost : spec.Domain → ω
 
 namespace CostModel

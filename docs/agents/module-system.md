@@ -222,13 +222,19 @@ oracle `HAdd` projection, the PFunctor `HAdd` projection, and `Sum.elim` before
 reaching the primitive dependent recursor. The last wrapper is semireducible,
 so the chain could stop at `.implicit`.
 
-`PFunctor.sum` now writes `Sum.rec` directly and publishes its position and
+`PFunctor.add` writes `Sum.rec` directly and publishes its position and
 branch-direction equations. The OracleSpec `HAdd` is a plain instance, so the
 `instance` command gives it `instance_reducible`, and its body calls
-`PFunctor.sum` by name. Using the overloaded `+` inside that instance would
+`PFunctor.add` by name. Using the overloaded `+` inside that instance would
 insert another `HAdd.hAdd` projection into the instance's own dependent type;
 naming the construction directly keeps the instance well-typed at
 `.implicit`.
+
+cslib's simp lemma `PFunctor.add_eq_add` states `P.add Q = P + Q`, making
+addition notation the normal form.
+A simp set that unfolds `HAdd.hAdd` must exclude `PFunctor.add_eq_add`
+(for example, `simp [HAdd.hAdd, -PFunctor.add_eq_add]`): otherwise unfolding
+addition and rewriting the named construction back to notation form a loop.
 
 The instance's exact status matters. Explicitly changing it to
 `@[implicit_reducible]` removes the `instance_reducible` status used during
@@ -289,7 +295,7 @@ intentional documented API may still use `rfl` directly.
 ## The program-logic import boundary
 
 Unary carrier interpretations live in `VCVio/ProgramLogic/Unary/WP/` and consume core's
-`Std.Internal.Do` API through PolyFun's algebra bridge. Relational carrier interpretations
+`Std.WP` API through PolyFun's algebra bridge. Relational carrier interpretations
 live in `VCVio/ProgramLogic/Relational/WP/` and use VCVio's coupling interface. Carrier
 instances are scoped, so importing either layer does not choose a global semantics.
 

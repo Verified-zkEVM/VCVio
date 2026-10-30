@@ -46,8 +46,13 @@ the FIPS-approved registry; callers wanting FIPS conformance must use the enum e
 `SLHDSA.Concrete.Prehash` (which also enforce the §10.2 strength policy) rather than
 instantiating descriptors directly. -/
 structure PrehashDescriptor where
+  /-- The complete DER encoding of the pre-hash function's OID, written into the Algorithm 23
+  and 25 message input `M'` ahead of the digest. -/
   oidDer : List Byte
+  /-- The exact byte width of the digest `PH(M)`. -/
   outputLength : ℕ
+  /-- The pre-hash function `PH`, computing the `outputLength`-byte digest of a message, or an
+  error if the digest engine fails. -/
   digest : List Byte → Except Error (Bytes outputLength)
 
 /-- Enforce the Algorithm 22--25 context bound before evaluating the message body or pre-hash. -/

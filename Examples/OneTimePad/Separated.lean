@@ -25,7 +25,8 @@ public section
 
 namespace OneTimePad.Separated
 
-open PFunctor Interaction.UC ReactiveProcess ReactiveNetwork DynSystem
+open PFunctor Interaction Interaction.Open Interaction.UC Interaction.Execution
+  Interaction.Execution.ReactiveProcess Interaction.Execution.ReactiveNetwork DynSystem
 
 variable {Message Cipher Random SendKey ReceiveKey Memory Advice : Type}
 

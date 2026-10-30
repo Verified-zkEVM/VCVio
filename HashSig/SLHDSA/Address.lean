@@ -142,15 +142,23 @@ def setTreeIndex (a : Adrs) (i : ℕ) : Adrs := { a with word3 := i }
 def setKeyPairAddressChecked (a : Adrs) (i : ℕ) : Except CodecError Adrs := do
   return a.setKeyPairAddress (← requireFits 4 i)
 
+/-- Checked `ADRS.setChainAddress(i)`: rejects a chain index that does not fit the 32-bit
+word 2. -/
 def setChainAddressChecked (a : Adrs) (i : ℕ) : Except CodecError Adrs := do
   return a.setChainAddress (← requireFits 4 i)
 
+/-- Checked `ADRS.setTreeHeight(z)`: rejects a tree height that does not fit the 32-bit
+word 2. -/
 def setTreeHeightChecked (a : Adrs) (z : ℕ) : Except CodecError Adrs := do
   return a.setTreeHeight (← requireFits 4 z)
 
+/-- Checked `ADRS.setHashAddress(i)`: rejects a chain position that does not fit the 32-bit
+word 3. -/
 def setHashAddressChecked (a : Adrs) (i : ℕ) : Except CodecError Adrs := do
   return a.setHashAddress (← requireFits 4 i)
 
+/-- Checked `ADRS.setTreeIndex(i)`: rejects a node index that does not fit the 32-bit
+word 3. -/
 def setTreeIndexChecked (a : Adrs) (i : ℕ) : Except CodecError Adrs := do
   return a.setTreeIndex (← requireFits 4 i)
 
@@ -358,6 +366,7 @@ theorem fromVector_toVector_of_isCanonical (a : Adrs) (h : a.isCanonical = true)
 
 /-- A decoded ADRS wire carrier together with the canonicality fact checked at the boundary. -/
 structure Wire where
+  /-- The full 32-byte ADRS serialization, whose parse `fromVector bytes` is canonical. -/
   bytes : Bytes 32
   valid : (fromVector bytes).isCanonical = true
 

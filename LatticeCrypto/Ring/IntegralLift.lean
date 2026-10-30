@@ -36,8 +36,11 @@ multiplication in `ℤ[X]/(X^n + 1)`, and constant embedding. The multiplication
 is `negacyclicMulPure` over the integer backend, the `Finset`-sum specification whose
 runtime implementation is `schoolbookNegacyclicMul`. -/
 structure IntegralLift (IntPoly Rq : Type*) where
+  /-- Reduce an integer polynomial into `R_q`, coefficient by coefficient modulo `q`. -/
   toRq : IntPoly → Rq
+  /-- Multiplication of integer polynomials in `ℤ[X]/(X^n + 1)`. -/
   mul : IntPoly → IntPoly → IntPoly
+  /-- Embed an integer as a constant integer polynomial. -/
   const : ℤ → IntPoly
 
 /-- The constant polynomial with value `c` at position `0` and `0` elsewhere. -/
