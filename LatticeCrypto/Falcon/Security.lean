@@ -25,9 +25,11 @@ The theorems here are about an **idealized Falcon model**, precisely:
 
 - The schemes are `falconRetrySignatureAlg` — the generic GPV hash-and-sign scheme
   (`GPVHashAndSign`) over the rejection-loop signer `falconRetryPSF`, which repeats
-  `signAttempt` up to an attempt budget — and `falconSignatureAlg`, the same scheme over a
-  single trapdoor draw. Signatures carry the full `(s₁, s₂)` preimage; the compressed
-  `s₂`-only wire encoding and byte-level (de)serialization of FN-DSA are not modeled.
+  `signAttempt` at one salt and one target up to an attempt budget and returns `default` when
+  the budget runs out — and `falconSignatureAlg`, the same scheme over a single trapdoor draw.
+  The fuel-bounded signer `sign` instead draws a fresh salt for every retry. Signatures carry
+  the full `(s₁, s₂)` preimage; the compressed `s₂`-only wire encoding and byte-level
+  (de)serialization of FN-DSA are not modeled.
 - The trapdoor sampler enters only through an ideal preimage-sampleable abstraction
   (`idealPSF`) sharing the deterministic `eval`/`isShort` of `falconPSF`. The concrete-to-ideal
   gap is a named total-variation hypothesis — `attemptTransport` per signing attempt, or
@@ -40,8 +42,15 @@ The theorems here are about an **idealized Falcon model**, precisely:
   floating-point inverse-FFT rounding in `Falcon.fromFFTPreimage` the coset identity remains
   a hypothesis.
 - No cost model is attached: the reductions are constructed explicitly but their polynomial
-  runtime is not machine-checked. They perform no exhaustive search and no noncomputable steps
-  beyond the ambient probabilistic semantics.
+  runtime is not machine-checked. Besides the caller-supplied domain sampler `domainSample`,
+  they perform no exhaustive search and no noncomputable steps beyond the ambient probabilistic
+  semantics.
+- `hReg` requires `domainSample` to match the ideal sampler's joint distribution exactly. The
+  collision term is a hardness assumption only when `domainSample` needs no trapdoor. The only
+  `domainSample` in the repository, in `LatticeCryptoTest.Falcon.NonVacuity`, samples with the
+  basis. A discrete Gaussian does not meet the exact form either, since its image is only
+  statistically close to uniform; regularity up to an additive statistical term is not
+  formalized.
 
 ## The two frontiers
 
@@ -55,9 +64,9 @@ plus a sampler loss.
   sampler loss is `qSign · (ε_step / (1 − pRej) + pRej ^ maxAttempts)`
   (`measureTVDist_falconRetryPSF_trapdoorSample_le`): the per-attempt precision budget `ε_step`
   accumulated over the expected retry count, plus the attempt-budget exhaustion mass. The
-  rejection rate `pRej` is priced separately from the precision budget, so `ε_step = 0` is
-  satisfiable at any rejection rate (`attemptTransport_self_zero`) and the loss stays below
-  one at Falcon's query bounds (`attemptSamplerLoss_lt_falconScale`).
+  rejection rate `pRej` is priced separately from the precision budget, so the term is below
+  one at Falcon's query bounds once the precision gap is small enough: at `ε_step = 2^-80` it
+  is below `2^-14` (`attemptSamplerLoss_lt_falconScale`).
   `euf_cma_collision_security` discharges its exact-match branch by the ideal sampler's
   guessing bound `idealSamplerGuessBound`.
 - `euf_cma_security_oneShot` is the **one-shot** headline, for the single-draw scheme, with a
@@ -68,9 +77,24 @@ plus a sampler loss.
   (`oneShot_samplerLoss_one_le_of_samplerTransport`); at Falcon's parameters this frontier
   carries no quantitative content.
 
-`LatticeCrypto.Falcon.NonVacuity` instantiates the attempt-level hypotheses at an NTRU key with
-a genuinely rejecting sampler, where the attempt-level loss is below `1/2` at `qSign = 2^64`
-while every per-draw budget is forced to at least `1/2`.
+## What the bounds give at Falcon's parameters
+
+Every headline here is conditional, and with what is proved so far none is below one at
+Falcon's parameters:
+
+- **Exact-match term.** The only guessing bound proved is `εpp = 1`
+  (`idealSamplerGuessBound_one`), at which the exact-match term of `euf_cma_collision_security`
+  and `euf_cma_collision_security_ntruSIS` is `qSign + qHash + 1`.
+  `LatticeCrypto.Falcon.SamplerMinEntropy` bounds the point mass of `ffSampling`'s output
+  before reduction modulo `q`; the bound for the reduced output is open.
+- **Sampler term.** No `ε_step` is proved for Falcon's floating-point sampler.
+  `attemptTransport_self_zero` reaches `ε_step = 0` only by taking Falcon's own attempt as the
+  ideal one, which moves the precision question into `hReg` and the guessing bound.
+
+`LatticeCryptoTest.Falcon.NonVacuity` instantiates the attempt-level hypotheses at an NTRU key
+with a genuinely rejecting sampler, where the attempt-level loss is below `1/2` at
+`qSign = 2^64` while every per-draw budget is forced to at least `1/2`. It also instantiates
+`euf_cma_collision_security_ntruSIS` with every hypothesis discharged, at `εpp = 1`.
 
 ## Relation to the literature
 
@@ -259,8 +283,9 @@ theorem collisionFindingAdvantage_eq_ntruPSF
 
 /-- **One-shot EUF-CMA security of Falcon**, generic in the salt type `Salt`: the split GPV
 bound for the single-draw scheme `falconSignatureAlg`, with the sampler loss assumed
-monolithically. The attempt-level headline `euf_cma_security` is the quantitatively usable
-form; see the module docstring.
+monolithically. Read per trapdoor draw, that loss reaches one at Falcon's signing budget
+(`oneShot_samplerLoss_one_le_of_samplerTransport`). The attempt-level headline
+`euf_cma_security` is the quantitatively usable form; see the module docstring.
 
 For any EUF-CMA adversary `A` making at most `qSign` signing queries and `qHash`
 random-oracle queries against the single-draw GPV scheme `falconSignatureAlg` with salt type
@@ -324,7 +349,8 @@ The universal forms would be *unsatisfiable* for the Falcon PSF — `isShort` is
 large-norm target `c` (`‖c‖² > betaSquared`) has no short preimage — so no sampler, which always
 returns some output, could be correct at *every* key. Restricting to `support hr.gen` (where the
 NTRU geometry of a valid key guarantees short preimages — the honest-key regime in which Falcon
-signatures verify) makes the hypotheses satisfiable, so this theorem is conditional, not vacuous.
+signatures verify) makes those two hypotheses satisfiable. No joint witness of this theorem's
+hypotheses is formalized.
 The ideal sampler `idealPSF` shares the deterministic `eval`/`isShort` of `falconPSF`
 (`hEval`/`hShort`); `hTransport` carries the finite-precision concrete→ideal gap as the
 monolithic loss `samplerLoss`, assumed here in the same way MLWE/SIS hardness is assumed. The
@@ -353,9 +379,8 @@ theorem euf_cma_security_oneShot
             : ProbComp (Rq p.n × (Rq p.n × Rq p.n))))
     -- Finite-precision sampler transport ([FGdG+25] Rényi term): swapping the concrete signing
     -- oracle for the ideal one costs at most `samplerLoss` and yields a well-behaved ideal-scheme
-    -- adversary. Assumed here as a single transport hypothesis; decomposing it into a
-    -- per-call sampler-approximation bound with a proven adaptive accumulation is the
-    -- intended refinement.
+    -- adversary. Assumed here as a single transport hypothesis; `euf_cma_security` derives
+    -- the corresponding loss from a per-attempt bound instead.
     (adv' : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign idealPSF hr (List Byte) Salt))
     (hTransport : SignatureAlg.unforgeableAdvantage
@@ -506,16 +531,15 @@ For the ideal (exact-arithmetic) discrete Gaussian over the NTRU lattice coset �
 GPV08 and [FGdG+25] analyze — the literature value is `εpp = 2^(-H∞)` of the coset Gaussian
 `D_{Λ+c,σ}`, and GPV08 Lemma 2.10 gives `H∞ ≥ n - 1` bits once `σ` exceeds the smoothing
 parameter of the lattice, so `εpp` is negligible at Falcon parameters (`n = 512` / `1024`).
-The formal discharge of a concrete numeric `εpp` goes through the Klein structure of
-`Primitives.ffSampling` rather than through the smoothing parameter: the one-dimensional bound
-`LatticeCrypto.discreteGaussianPMF_le_one_div_sub_one` controls each of the `4 · 2^κ` leaf draws
-and the merge steps are injective, so the sampler's integer output has pointwise mass at most
-`(1 / (σ_min √(2π) - 1)) ^ (4 · 2^κ)`. On honest keys only short preimages carry mass
-(`idealSamplerGuessBound_of_short`), and a short preimage determines the lattice point modulo `q`
-except for representatives at distance at least `q - β`; bounding the mass of those far
-representatives is the remaining obligation. Until then this is a named assumption with
-inspectable content; it is trivially satisfiable at `εpp = 1` (`idealSamplerGuessBound_one`),
-since pointwise masses of any sampler are probabilities. -/
+What is formalized is a bound before reduction modulo `q`:
+`LatticeCrypto.Falcon.SamplerMinEntropy` bounds the pointwise mass of `Primitives.ffSampling`'s
+output by the product over its `4 · 2^κ` leaf draws, since the merge steps are injective, and by
+`(1 / (σ_min √(2π) - 1)) ^ (4 · 2^κ)` under a leaf envelope. On honest keys only short
+preimages carry mass (`idealSamplerGuessBound_of_short`), and a short preimage determines the
+lattice point modulo `q` except for representatives at distance at least `q - β`. A bound on the
+mass of those far representatives, which would give a numeric `εpp` for the reduced output, is
+not formalized. The only proved instance is the trivial `εpp = 1`
+(`idealSamplerGuessBound_one`), since pointwise masses of any sampler are probabilities. -/
 def idealSamplerGuessBound
     (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
     (idealPSF : PreimageSampleableFunction
@@ -607,10 +631,13 @@ theorem oneShot_rejection_prob_le_of_samplerTransport
   rw [hideal, ENNReal.toReal_one] at habs
   linarith [(abs_le.mp habs).1]
 
-/-- **Falcon's signer as a preimage-sampleable function.**  The norm-checked attempt
-`Falcon.signAttempt` retried up to `maxAttempts` times, read as a total computation by
-`ProbComp.retryToDefault`.  The deterministic `eval` and `isShort` components are those of
-`falconPSF`, so the collision and verification theory transfers verbatim. -/
+/-- **Falcon's rejection loop as a preimage-sampleable function.**  The norm-checked attempt
+`Falcon.signAttempt` retried up to `maxAttempts` times at one target, read as a total
+computation by `ProbComp.retryToDefault`, which returns `default` when every attempt rejects.
+Inside `GPVHashAndSign` the target is the hash of one salt, so every retry reuses that salt;
+`Falcon.sign` instead draws a fresh salt per retry.  The deterministic `eval` and `isShort`
+components are those of `falconPSF`, so the collision and verification theory transfers
+verbatim. -/
 noncomputable def falconRetryPSF [Inhabited (Rq p.n)] (maxAttempts : ℕ) :
     PreimageSampleableFunction (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n) where
   eval := (falconPSF p prims).eval
@@ -702,21 +729,24 @@ theorem measureTVDist_falconRetryPSF_trapdoorSample_le [Inhabited (Rq p.n)]
 
 
 /-- **EUF-CMA security of the Falcon rejection-loop signer from the attempt-level frontier.**
+Conditional on the sampler hypotheses, and not below one at Falcon's parameters with what is
+proved so far (see *What the bounds give at Falcon's parameters* in the module docstring).
 The split GPV bound for any query-bounded adversary against `falconRetrySignatureAlg`, with the
 sampler loss `qSign · (ε_step / (1 - pRej) + pRej ^ maxAttempts)` derived from the per-attempt
 precision budget `ε_step`, the idealized per-attempt rejection probability `pRej`, and the
 attempt budget `maxAttempts` (`measureTVDist_falconRetryPSF_trapdoorSample_le`).
 
-The three cryptographic terms are those of `euf_cma_security_oneShot`:
-the NTRU-PSF collision problem, the exact-match branch at the multi-target factor
-`qSign + qHash + 1`, and the salt birthday bound.  The sampler loss differs in that the
-per-attempt rejection probability appears only through the expected retry count
-`1 / (1 - pRej)` and the exhaustion power `pRej ^ maxAttempts`, so a precision budget
+The three cryptographic terms have the shape of those of `euf_cma_security_oneShot`: the
+NTRU-PSF collision problem, the exact-match branch, and the salt birthday bound. The reductions
+run the forger with its final verification query appended (`appendForgeQuery`), so the
+multi-target factor is `qSign + qHash + 1` rather than `qSign + qHash`.  The sampler loss
+differs in that the per-attempt rejection probability appears only through the expected retry
+count `1 / (1 - pRej)` and the exhaustion power `pRej ^ maxAttempts`, so a precision budget
 `ε_step ≪ 1 / qSign` and an attempt budget with `pRej ^ maxAttempts ≪ 1 / qSign` keep the term
 below one at Falcon's query bounds. -/
 theorem euf_cma_security
     (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
-    [SampleableType (Rq p.n)] [Inhabited (Rq p.n)]
+    [Inhabited (Rq p.n)]
     (hr : GenerableRelation (PublicKey p) (SecretKey p)
       (validKeyPair p))
     (qSign qHash maxAttempts : ℕ)
@@ -817,13 +847,16 @@ theorem attemptTransport_self_zero
     le_of_eq (measureTVDist_self _)
 
 /-- **Collision-only EUF-CMA security of the Falcon rejection-loop signer.**
+Conditional, and not below one at Falcon's parameters with what is proved so far: the only
+guessing bound proved is `εpp = 1` (`idealSamplerGuessBound_one`), at which the exact-match
+term is `qSign + qHash + 1`.
 `euf_cma_security` with the exact-match branch discharged by the ideal
 sampler's guessing-probability bound `hGuess`
 (`GPVHashAndSign.programmedPreimageAdvantage_le_of_prEvent_trapdoorSample_le`), leaving the
 NTRU-PSF collision problem as the only cryptographic residual besides the named assumptions. -/
 theorem euf_cma_collision_security
     (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
-    [SampleableType (Rq p.n)] [Inhabited (Rq p.n)]
+    [Inhabited (Rq p.n)]
     (hr : GenerableRelation (PublicKey p) (SecretKey p)
       (validKeyPair p))
     (qSign qHash maxAttempts : ℕ)

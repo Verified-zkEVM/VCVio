@@ -100,10 +100,13 @@ instantiating those abstractions for a lattice scheme.
   attempt-level headlines `euf_cma_security` and `euf_cma_collision_security` are about the
   same-salt rejection-loop scheme `falconRetrySignatureAlg`, not the fresh-salt `Falcon.sign`;
   `euf_cma_security_oneShot` is the single-draw form for `falconSignatureAlg`, whose per-draw
-  budget carries no content at Falcon's query budget. Also `verify_sign_correct` (conditional on
-  `hcompress` and `hpreimage`), `ntruPSFCollisionProblem` and `ntruSISProblem`. The collision
-  term is a hardness assumption only when the free forward sampler `domainSample` needs no
-  trapdoor; see the module docstring.
+  loss reaches one once the signing budget reaches the inverse rejection rate. Also
+  `verify_sign_correct` (conditional on `hcompress` and `hpreimage`), `ntruPSFCollisionProblem`
+  and `ntruSISProblem`. Every headline is conditional and, with what is proved so far, not below
+  one at Falcon's parameters: the guessing bound is proved only at `εpp = 1`, no per-attempt
+  precision gap is proved for the floating-point sampler, and the collision term is a hardness
+  assumption only when the domain sampler `domainSample` needs no trapdoor. The module
+  docstring's *What the bounds give at Falcon's parameters* has the details.
 - `LatticeCrypto/Falcon/SISBridge.lean`: translation of the Falcon-PSF collision term into the
   keyed kernel-vector problem `ntruSISProblemKeyed` (challenge drawn from `hr.gen`), and the
   headlines `euf_cma_security_oneShot_ntruSIS` and `euf_cma_collision_security_ntruSIS`.

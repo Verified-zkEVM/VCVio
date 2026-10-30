@@ -260,7 +260,7 @@ theorem ResamplesTo.uniform_filter {D : Type} [Fintype D] [SampleableType D]
     ResamplesTo ((fun δ => if P δ then some (F δ) else none) <$> ($ᵗ D))
       ((fun δ : {δ // P δ} => F δ.1) <$>
         (@uniformSample {δ // P δ} (SampleableType.ofFintype _))) := by
-  have _ : DecidableEq α := Classical.decEq α
+  classical
   let _ : SampleableType {δ : D // P δ} := SampleableType.ofFintype _
   set cond : ProbComp α := (fun δ : {δ : D // P δ} => F δ.1) <$> ($ᵗ {δ : D // P δ}) with hcond
   unfold ResamplesTo

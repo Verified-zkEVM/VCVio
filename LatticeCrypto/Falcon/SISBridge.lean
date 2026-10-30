@@ -225,7 +225,7 @@ theorem advantage_le_ntruSISProblemKeyed
 
 /-! ## The EUF-CMA bound in NTRU-SIS terms -/
 
-/-- **EUF-CMA security of Falcon down to keyed NTRU-SIS.** The bound of
+/-- **One-shot EUF-CMA security of Falcon down to keyed NTRU-SIS.** The bound of
 `euf_cma_security_oneShot`, with the collision term translated through
 `advantage_le_ntruSISProblemKeyed` into the advantage against the kernel-vector NTRU-SIS
 problem at the honest key distribution. Hypotheses are exactly those of
@@ -278,8 +278,13 @@ theorem euf_cma_security_oneShot_ntruSIS
   gcongr
   exact advantage_le_ntruSISProblemKeyed p prims hr _
 
-/-- **Falcon EUF-CMA down to keyed NTRU-SIS, with every other branch priced.**  For an
-adversary against the rejection-loop signer obeying the query bound `(qSign, qHash)`, under
+/-- **Falcon EUF-CMA down to keyed NTRU-SIS, with every other branch priced.**  Conditional,
+and not below one at Falcon's parameters with what is proved so far: the only guessing bound
+proved is `εpp = 1` (`Falcon.idealSamplerGuessBound_one`), and no `ε_step` is proved for
+Falcon's floating-point sampler. `LatticeCryptoTest.Falcon.NonVacuity` discharges every
+hypothesis jointly at a toy key, at `εpp = 1`.
+
+For an adversary against the rejection-loop signer obeying the query bound `(qSign, qHash)`, under
 the per-attempt precision budget `ε_step` (`Falcon.attemptTransport`), the idealized
 per-attempt rejection probability `pRej` (`Falcon.attemptRejectBound`), the attempt budget
 `maxAttempts`, and the ideal-sampler guessing bound `εpp` (`Falcon.idealSamplerGuessBound`),
