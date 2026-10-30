@@ -135,7 +135,7 @@ def composeWithDEM_toDEMReduction
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
     (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem)) :
-    dem.IND_CPA_Adversary where
+    dem.IND_CPA_OneTime_Adversary where
   State := CKEM × adversary.State
   chooseMessages := do
     let (pk, _sk) ← kem.keygen
@@ -146,7 +146,7 @@ def composeWithDEM_toDEMReduction
     adversary.distinguish st.2 (st.1, dc)
 
 /-- Proof-ladders A1 reduction statement: the one-time IND-CPA advantage of textbook KEM+DEM is
-bounded by two KEM IND-CPA advantages plus one DEM IND-CPA advantage, using the canonical
+bounded by two KEM IND-CPA advantages plus one one-time DEM IND-CPA advantage, using the canonical
 left/right and DEM reductions defined above.
 
 The probability-free games and shared hybrid argument live in
@@ -174,7 +174,7 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
     AsymmEncAlg.IND_CPA_OneTime_Advantage (kem.composeWithDEM dem) runtime adversary ≤
       kem.IND_CPA_Advantage runtime (kem.composeWithDEM_toKEMLeftReduction dem adversary) +
       kem.IND_CPA_Advantage runtime (kem.composeWithDEM_toKEMRightReduction dem adversary) +
-      dem.IND_CPA_Advantage runtime
+      dem.IND_CPA_OneTime_Advantage runtime
         (kem.composeWithDEM_toDEMReduction dem adversary) := by
   let : MeasurableSpace K := ⊤
   let : MeasurableSpace (CKEM × K) := ⊤
@@ -215,8 +215,8 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
     cases b <;> rfl
   simpa only [evalDist_eq_runtime, Measure.boolBias,
     AsymmEncAlg.IND_CPA_OneTime_Advantage, KEMScheme.IND_CPA_Advantage,
-    DEMScheme.IND_CPA_Advantage,
-    AsymmEncAlg.IND_CPA_OneTime_Game, KEMScheme.IND_CPA_Game, DEMScheme.IND_CPA_Game,
+    DEMScheme.IND_CPA_OneTime_Advantage,
+    AsymmEncAlg.IND_CPA_OneTime_Game, KEMScheme.IND_CPA_Game, DEMScheme.IND_CPA_OneTime_Game,
     KEMDEM.composedGame, KEMDEM.kemGame, KEMDEM.demGame, prepare, encaps, finish,
     composeWithDEM, composeWithDEM_toKEMLeftReduction, composeWithDEM_toKEMRightReduction,
     composeWithDEM_toDEMReduction, bind_assoc, pure_bind, ite_true, Bool.false_eq_true,
