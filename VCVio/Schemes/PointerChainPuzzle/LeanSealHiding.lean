@@ -63,7 +63,9 @@ but bounds neither its running time nor its relation to the paper's time-bounded
 SPEC §8 takes over adversaries in time `t + O(Q + P')`. Hiding security
 (`hidingSecure_byteScheme`) assumes the PRF bound for the distinguishers of all byte-level
 adversaries, including those outside the budgets; `hidingSecure_byteScheme_of_budget` assumes it
-only for adversaries within the budgets.
+only for adversaries within the budgets. Query budgets do not bound local computation, so even the
+budgeted premise covers exhaustive attacks; a computational corollary also needs an efficiency
+restriction on the adversary and a running-time bound for the named distinguisher.
 
 ## Paper citation table
 
