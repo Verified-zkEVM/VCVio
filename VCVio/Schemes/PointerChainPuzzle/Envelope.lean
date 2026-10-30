@@ -75,6 +75,9 @@ commitment.
   function returns the message, for every nonce, subkey function and PRF.
 * `Envelope.sealWith_eq_sealBy`: `sealWith` is `sealBy` in `Id`, with the PRF under the two subkeys
   as the block and tag functions.
+* `Envelope.simulateQ_sealBy`, `Envelope.sealBy_pure_eval`: simulating `sealBy` simulates its block
+  and tag functions, and with the PRF under two subkeys returned purely it returns their envelope,
+  in every lawful monad.
 * `Envelope.nodup_map_be_range`: the keystream block counters of a plaintext are distinct.
 * `Envelope.map_xorBytes_flatMap_evalDistEq`: the one-time pad on byte strings: XOR with
   independent uniform blocks is distributed as the blocks themselves.
@@ -365,6 +368,24 @@ theorem sealWith_eq_sealBy (pz : ByteArray) (nonce : N) (ks : K × K) (msg : Pla
       (sealBy codec (fun x => pure (prf.eval ks.1 x)) (fun x => pure (prf.eval ks.2 x)) pz nonce
         msg : Id ByteArray).run := by
   simp [sealBy, sealWith, keystream, List.flatMap_map]
+
+/-- Simulating the queries of `sealBy` is `sealBy` with the simulated block and tag functions. -/
+lemma simulateQ_sealBy {ι : Type} {spec : OracleSpec ι} {μ : Type → Type} [Monad μ]
+    [LawfulMonad μ] (impl : QueryImpl spec μ) (block tag : ByteArray → OracleComp spec (Bytes 32))
+    (pz : ByteArray) (nonce : N) (msg : Plaintext) :
+    simulateQ impl (sealBy codec block tag pz nonce msg) =
+      sealBy codec (fun x => simulateQ impl (block x)) (fun x => simulateQ impl (tag x)) pz nonce
+        msg := by
+  simp [sealBy]
+
+/-- `sealBy` with the block and tag functions of `prf` under the subkeys `k₁` and `k₂`, returned
+purely, returns the envelope under `(k₁, k₂)`. -/
+lemma sealBy_pure_eval {μ : Type → Type} [Monad μ] [LawfulMonad μ] (k₁ k₂ : K) (pz : ByteArray)
+    (nonce : N) (msg : Plaintext) :
+    sealBy codec (μ := μ) (fun x => pure (prf.eval k₁ x)) (fun x => pure (prf.eval k₂ x)) pz nonce
+      msg = pure (sealWith prf codec pz nonce (k₁, k₂) msg) := by
+  rw [sealWith_eq_sealBy]
+  simp [sealBy]
 
 /-- `sealBy` commutes with monad morphisms: mapping the envelope through a morphism `F` is the
 envelope with the block and tag functions mapped through `F`. -/

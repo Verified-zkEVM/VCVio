@@ -19,6 +19,7 @@ public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.EvalDist.IndepProductMeasure
+public import VCVio.EvalDist.Monad.UniformTable
 
 /-!
 # Pseudorandom Functions (PRFs)
@@ -159,6 +160,28 @@ theorem evalDist_multiKey_keygen_of_uniformKey [SampleableType K] [MeasurableSpa
     𝒟[(prf.multiKey U).keygen] = ProbabilityTheory.uniformOn Set.univ := by
   rw [multiKey_keygen, h]
   exact evalDist_mPi_const_uniform _ SampleableType.evalDist_uniformSample
+
+/-- For a PRF with uniform keys, overwriting two distinct instances of a key of the product scheme
+by a fresh uniform pair of keys leaves its law unchanged, under every continuation. -/
+theorem evalDist_uniformSample_bind_multiKey_keygen_update [SampleableType K] [DecidableEq U]
+    (h : prf.UniformKey) {γ : Type} [MeasurableSpace γ] {i₀ i₁ : U} (hne : i₀ ≠ i₁)
+    (G : (U → K) → ProbComp γ) :
+    𝒟[$ᵗ (K × K) >>= fun ks => (prf.multiKey U).keygen >>= fun T =>
+      G (Function.update (Function.update T i₀ ks.1) i₁ ks.2)] =
+      𝒟[(prf.multiKey U).keygen >>= G] := by
+  let : MeasurableSpace K := ⊤
+  have hT := evalDist_multiKey_keygen_of_uniformKey prf U h
+  have hK : 𝒟[$ᵗ K] = ProbabilityTheory.uniformOn Set.univ :=
+    SampleableType.evalDist_uniformSample
+  rw [SampleableType.uniformSample_prod_eq_bind]
+  simp only [bind_assoc, pure_bind]
+  calc _ = 𝒟[$ᵗ K >>= fun u₀ => (prf.multiKey U).keygen >>= fun T =>
+        G (Function.update T i₀ u₀)] :=
+        evalDist_bind_congr_of_support _ _ _ fun u₀ _ => by
+          simp_rw [Function.update_comm hne]
+          exact evalDist_bind_bind_update ($ᵗ K) _ hK hT i₁
+            (fun g => G (Function.update g i₀ u₀))
+    _ = _ := evalDist_bind_bind_update ($ᵗ K) _ hK hT i₀ G
 
 end multiKey
 

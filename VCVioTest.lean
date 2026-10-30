@@ -97,12 +97,14 @@ public import VCVioTest.PointerChainPuzzle.GuessDelay
 public import VCVioTest.PointerChainPuzzle.Handler
 public import VCVioTest.PointerChainPuzzle.Hiding
 public import VCVioTest.PointerChainPuzzle.HidingIdeal
+public import VCVioTest.PointerChainPuzzle.HidingNonce
 public import VCVioTest.PointerChainPuzzle.HidingPRF
 public import VCVioTest.PointerChainPuzzle.Ideal
 public import VCVioTest.PointerChainPuzzle.LeanSeal
 public import VCVioTest.PointerChainPuzzle.LeanSealBridge
 public import VCVioTest.PointerChainPuzzle.LeanSealDelay
 public import VCVioTest.PointerChainPuzzle.LeanSealEnvelope
+public import VCVioTest.PointerChainPuzzle.LeanSealHidingBridge
 public import VCVioTest.PointerChainPuzzle.LeanSealHidingEncoding
 public import VCVioTest.PointerChainPuzzle.Truncate
 public import VCVioTest.ProbabilityTactics
