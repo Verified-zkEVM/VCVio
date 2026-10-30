@@ -62,9 +62,8 @@ verifier relation `mldsaSTMSISMatrix` (uniform matrix, ML-DSA verifier relation)
 standard `[I_m | A] · y` normal form; see *Tailored vs. standard SelfTargetMSIS* in
 `LatticeCrypto.MLDSA.SecurityNMA`. The CMA-to-NMA engine of `FiatShamirWithAbort` runs its
 adversaries over the two-oracle family `unifSpec + H`, so composing this ROM leg under an EUF-CMA
-forger with `ExpandA` access needs that engine to forward a third oracle; the seed-model and
-short-model CMA compositions in `SecurityHeadlines` keep their abstract MLWE bridge hypothesis
-instead.
+forger with `ExpandA` access needs that engine to forward a third oracle; no such composition is
+stated here.
 -/
 
 public section
