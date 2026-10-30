@@ -54,15 +54,20 @@ rejection loop, and pins the numbers the attempt-level frontier produces there.
 * `toy_oneShot_samplerLoss_one_le`: at the same instance the one-shot frontier is vacuous —
   its budget must absorb the per-draw rejection probability `8/9` at the target `c = 0`, so
   `qSign · ε_step ≥ 1` already at `qSign = 2`.
+* `toy_euf_cma_collision_security_ntruSIS`: every hypothesis of
+  `euf_cma_collision_security_ntruSIS` holds jointly at this instance, with the guessing bound
+  at its only proved value `εpp = 1`. There the exact-match term is `qSign + qHash + 1`, so the
+  instance shows that the hypotheses are consistent, not that the bound is below one.
 
 ## What is not claimed
 
 Regularity (`hReg`) is witnessed with the domain sampler that is the ideal sampler's own
 marginal; it is a distribution, and the framework attaches no cost to sampling it, but only the
-holder of the basis can sample it efficiently. A public domain sampler for a regular short
-preimage sampler is the discrete Gaussian, and the guessing bound `idealSamplerGuessBound`
-below the trivial budget needs its pointwise-mass theory; neither exists in this repository.
-Nothing here is a security claim about any Falcon parameter set.
+holder of the basis can sample it efficiently. The collision term is a hardness assumption only
+for a domain sampler that needs no trapdoor, and none satisfying the exact `hReg` is known: a
+discrete Gaussian maps to a distribution only statistically close to uniform. The guessing bound
+`idealSamplerGuessBound` is discharged only at the trivial `εpp = 1`. Nothing here is a security
+claim about any Falcon parameter set.
 -/
 
 public section
@@ -961,5 +966,37 @@ theorem toy_euf_cma_security
     (fun _ _ => rfl) (fun _ => rfl) toy_correctAt toyDomainSample toy_hReg toy_attemptTransport
     toy_attemptRejectBound toy_idealAttemptResamples hQ
   simpa only [zero_div, zero_add] using h
+
+/-- **The NTRU-SIS headline, instantiated.** Every hypothesis of
+`Falcon.euf_cma_collision_security_ntruSIS` is discharged at this key, with the guessing bound
+at its only proved value `εpp = 1` (`Falcon.idealSamplerGuessBound_one`). At that value the
+exact-match term is `qSign + qHash + 1`, so the bound is at least one for every forger: the
+instance shows that the hypotheses are jointly satisfiable, not that the bound says anything. -/
+theorem toy_euf_cma_collision_security_ntruSIS
+    (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
+    (qSign qHash maxAttempts : ℕ)
+    (adv : SignatureAlg.UnforgeableAdversary
+      (falconRetrySignatureAlg toyP toyPrims Salt maxAttempts toyHr))
+    (hQ : ∀ pk, GPVHashAndSign.signHashQueryBound
+      (M := List Byte) (Salt := Salt) (Range := Rq toyP.n)
+      (S' := Salt × (Rq toyP.n × Rq toyP.n))
+      (α := List Byte × (Salt × (Rq toyP.n × Rq toyP.n))) (oa := adv.main pk)
+      (qSign := qSign) (qHash := qHash)) :
+    SignatureAlg.unforgeableAdvantage
+        (GPVHashAndSign.runtime (Range := Rq toyP.n) (List Byte) Salt) adv ≤
+      SIS.advantage (ntruSISProblemKeyed toyP toyHr)
+          (collisionToKernelAdv toyP toyPrims toyHr
+            (GPVHashAndSign.reduction toyIdealPSF toyHr (List Byte) Salt
+              (GPVHashAndSign.appendForgeQuery toyIdealPSF toyHr (List Byte) Salt ⟨adv.main⟩)
+              toyDomainSample)) +
+        ((qSign + (qHash + 1) : ℕ) : ENNReal) +
+        GPVHashAndSign.collisionBound Salt qSign (qHash + 1) +
+        ENNReal.ofReal (qSign * (80 / 81 : ℝ) ^ maxAttempts) := by
+  have h := euf_cma_collision_security_ntruSIS toyP toyPrims Salt toyHr qSign qHash
+    maxAttempts 0 (80 / 81) le_rfl (by norm_num) (by norm_num) 1 adv (signAttempt toyP toyPrims)
+    toyIdealPSF (fun _ _ => rfl) (fun _ => rfl) toy_correctAt toyDomainSample toy_hReg
+    toy_attemptTransport toy_attemptRejectBound toy_idealAttemptResamples hQ
+    (idealSamplerGuessBound_one toyP toyHr toyIdealPSF)
+  simpa only [zero_div, zero_add, mul_one] using h
 
 end Falcon.NonVacuity

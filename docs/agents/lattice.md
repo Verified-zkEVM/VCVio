@@ -107,10 +107,11 @@ instantiating those abstractions for a lattice scheme.
 - `LatticeCrypto/Falcon/SISBridge.lean`: translation of the Falcon-PSF collision term into the
   keyed kernel-vector problem `ntruSISProblemKeyed` (challenge drawn from `hr.gen`), and the
   headlines `euf_cma_security_oneShot_ntruSIS` and `euf_cma_collision_security_ntruSIS`.
-- `LatticeCrypto/Falcon/NonVacuity.lean`: a witness that the attempt-level hypotheses are jointly
-  satisfiable at a degree-2 NTRU key with a genuinely rejecting sampler, with the loss pinned
-  numerically. It uses a trapdoor domain sampler and `ε_step = 0`, so it claims neither that the
-  collision term is hard nor that any precision gap is small.
+- `LatticeCryptoTest/Falcon/NonVacuity.lean`: a witness that the attempt-level hypotheses, and
+  those of `euf_cma_collision_security_ntruSIS` at `εpp = 1`, are jointly satisfiable at a
+  degree-2 NTRU key with a genuinely rejecting sampler, with the loss pinned numerically. It
+  uses a trapdoor domain sampler and `ε_step = 0`, so it claims neither that the collision term
+  is hard nor that any precision gap is small.
 - `LatticeCrypto/Falcon/Concrete/`: executable NTT, floating-point emulation (FPR/FXR), encodings,
   and the NTRU solver.
 - `Extern/Falcon/`: FFI bindings plus the SHAKE-backed sampler, FFT, keygen, signing, and instance
