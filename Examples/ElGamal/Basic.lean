@@ -40,8 +40,9 @@ payloads (for example elliptic-curve points), and `gen : G` is a fixed public ge
    `IND_CPA_OneTime_DDHReduction_rand_half`, and
    `elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage`.
 3. Final theorem:
-   `elGamal_IND_CPA_le_q_mul_ddh` is a direct instantiation of
-   `AsymmEncAlg.IND_CPA_Advantage_le_mul_of_oneTime_bound` with one-time loss `2 * ε`.
+   `elGamal_IND_CPA_le_sum_ddhAdvantage` instantiates
+   `AsymmEncAlg.IND_CPA_Advantage_le_sum_oneTime_stepAdversary` and bounds the advantage by
+   twice the sum of the DDH advantages of the `q` named hybrid reductions.
 -/
 
 @[expose] public section
@@ -292,23 +293,19 @@ theorem elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage
     DiffieHellman.ddhAdvantage, MeasureTheory.Measure.boolDist]
   rw [IND_CPA_OneTime_DDHReduction_rand_half hg adv]
 
-/-- **Main theorem.** If an adversary makes at most `q` LR queries and every extracted one-time
-ElGamal DDH reduction has DDH advantage at most `ε`, then ElGamal has IND-CPA advantage at most
-`q * (2 * ε)`. -/
-theorem elGamal_IND_CPA_le_q_mul_ddh [DecidableEq G]
+/-- **Main theorem.** An adversary making at most `q` LR queries has IND-CPA advantage at most
+twice the sum of the DDH advantages of the `q` named hybrid reductions. -/
+theorem elGamal_IND_CPA_le_sum_ddhAdvantage [DecidableEq G]
     (hg : Function.Bijective (· • gen : F → G))
-    (adversary : (elGamalAsymmEnc F G gen).IND_CPA_Adversary)
-    (q : ℕ) (ε : ℝ≥0∞)
-    (hq : adversary.MakesAtMostQueries q)
-    (hddh : ∀ adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen),
-      DiffieHellman.ddhAdvantage gen
-        (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv) ≤ ε) :
-    (elGamalAsymmEnc F G gen).IND_CPA_Advantage adversary ≤ q * (2 * ε) := by
-  refine AsymmEncAlg.IND_CPA_Advantage_le_mul_of_oneTime_bound
-    (encAlg' := elGamalAsymmEnc F G gen) adversary q (2 * ε) hq fun adv => ?_
-  rw [elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage hg adv]
-  gcongr
-  exact hddh adv
+    (adversary : (elGamalAsymmEnc F G gen).IND_CPA_Adversary) (q : ℕ)
+    (hq : adversary.MakesAtMostQueries q) :
+    (elGamalAsymmEnc F G gen).IND_CPA_Advantage adversary ≤
+      ∑ k ∈ Finset.range q, 2 * DiffieHellman.ddhAdvantage gen
+        (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen)
+          (AsymmEncAlg.IND_CPA_stepAdversary adversary k)) := by
+  refine (AsymmEncAlg.IND_CPA_Advantage_le_sum_oneTime_stepAdversary adversary q hq).trans_eq
+    (Finset.sum_congr rfl fun k _ => ?_)
+  rw [elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage hg]
 
 end IND_CPA
 
