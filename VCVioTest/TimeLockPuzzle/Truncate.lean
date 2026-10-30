@@ -14,8 +14,11 @@ public import VCVio.CryptoFoundations.TimeLockPuzzle.Truncate
 Checks of `TimeLockPuzzle.TwoPhaseAdversary.truncate` and `TimeLockPuzzle.delayAdvantageWithin`
 through ordinary imports, on a one-round toy puzzle over one oracle on `Bool`: the main statements
 instantiate at the toy puzzle; an adversary whose online phase is a three-round chain, truncated
-at one round, fits the budget `(1, 3)` and returns the fallback key; and at three rounds its
-truncation is itself and its per-run event is its delay advantage.
+at one round, fits the budget `(1, 3)` and returns the fallback key; at three rounds its
+truncation is itself and its per-run event is its delay advantage; and a one-round adversary that
+outputs an answer it obtained during preprocessing wins `delayExperimentWithin` with probability
+`0` within zero rounds and `1` within one round, because preprocessing, generation and the online
+phase share one random oracle.
 -/
 
 public section
@@ -131,5 +134,64 @@ example (k₀ : Bool) : threeAdv.truncate 3 k₀ = threeAdv :=
 example : TimeLockPuzzle.delayAdvantageWithin toy threeAdv 3 =
     TimeLockPuzzle.delayAdvantage toy threeAdv :=
   TimeLockPuzzle.delayAdvantageWithin_eq_delayAdvantage toy threeAdv_isQueryBound
+
+/-! ## Reusing a preprocessing answer within one round -/
+
+/-- The adversary that asks the oracle at `false` during preprocessing, keeps the answer as its
+state, asks at `false` again in one online round, and outputs the conjunction of the two answers.
+It always wins exactly when all three phases share one cache. -/
+def reuseAdv : TimeLockPuzzle.Adversary boolSpec Unit Bool where
+  State := Bool
+  preprocess := liftM ((unifSpec + boolSpec).query (.inr false))
+  online σ _ := do
+    let a ← liftM ((unifSpec + boolSpec.batch).query (.inr [false]))
+    pure (σ && a ⟨0, Nat.zero_lt_one⟩)
+
+/-- One preprocessing query, and one online round holding one point. -/
+theorem reuseAdv_isQueryBound : reuseAdv.IsQueryBound 1 (1, 1) :=
+  ⟨by simp [reuseAdv], fun _ _ => by
+    simp only [reuseAdv, add_apply_inr, isQueryBound_query_bind_iff, onlineCanQuery_inr,
+      Order.lt_one_iff, List.length_cons, List.length_nil, zero_add, Std.le_refl, and_self,
+      onlineCost_inr, tsub_self, true_and]
+    exact fun _ => isQueryBound_pure _ _ _ _⟩
+
+/-- Against any fixed answer table, the experiment returns whether one round is within the
+budget: the generator and both phases of the adversary read the same answer at `false`. -/
+theorem simulateQ_unifFwdAnswerImpl_delayExperimentWithin_reuseAdv (f : QueryImpl boolSpec Id)
+    (r : ℕ) :
+    simulateQ (unifFwdAnswerImpl f) (toy.delayExperimentWithin reuseAdv r) =
+      pure (decide (1 ≤ r)) := by
+  have hf : ∀ b, (liftM (f b) : ProbComp Bool) = pure (f b) := fun _ => rfl
+  simp only [TimeLockPuzzle.delayExperimentWithin, reuseAdv, toy, queryFalse,
+    runCountingRounds_query_bind, runCountingRounds_pure]
+  simp [unifFwdAnswerImpl, hf, roundCount]
+
+/-- Against the lazy random oracle from the empty cache, every run returns whether one round is
+within the budget. -/
+theorem fst_mem_support_delayExperimentWithin_reuseAdv (r : ℕ)
+    {v : Bool × boolSpec.QueryCache}
+    (hv : v ∈ support
+      ((simulateQ boolSpec.romImpl (toy.delayExperimentWithin reuseAdv r)).run ∅)) :
+    v.1 = decide (1 ≤ r) := by
+  obtain ⟨f, -, hf⟩ :=
+    (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff _ ∅ v.1).2 ⟨v.2, hv⟩
+  simpa [simulateQ_unifFwdAnswerImpl_delayExperimentWithin_reuseAdv] using hf
+
+/-- Within zero rounds the adversary never wins: it always completes its one round. -/
+theorem delayAdvantageWithin_reuseAdv_zero :
+    TimeLockPuzzle.delayAdvantageWithin toy reuseAdv 0 = 0 := by
+  rw [TimeLockPuzzle.delayAdvantageWithin_eq, ProbCompRuntime.rom_evalDist,
+    ← prEvent_eq_evalDist_singleton, StateT.run'_eq, prEvent_map]
+  exact (prEvent_eq_zero_iff _ _).2 fun v hv => by
+    simp [fst_mem_support_delayExperimentWithin_reuseAdv 0 hv]
+
+/-- Within one round the adversary always wins: its preprocessing and online answers at `false`
+are both the key, since the three phases share one cache. -/
+theorem delayAdvantageWithin_reuseAdv_one :
+    TimeLockPuzzle.delayAdvantageWithin toy reuseAdv 1 = 1 := by
+  rw [TimeLockPuzzle.delayAdvantageWithin_eq, ProbCompRuntime.rom_evalDist,
+    ← prEvent_eq_evalDist_singleton, StateT.run'_eq, prEvent_map]
+  exact (prEvent_eq_one_iff _ _).2 fun v hv => by
+    simp [fst_mem_support_delayExperimentWithin_reuseAdv 1 hv]
 
 end VCVioTest.TimeLockPuzzle.Truncate

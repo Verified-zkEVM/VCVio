@@ -98,21 +98,6 @@ namespace PointerChainPuzzle
 
 variable {n m : ℕ} {S L Salt Ctx : Type}
 
-/-! ## Redrawing one label -/
-
-/-- **One label, after a computation.** An event of a computation run on a uniform labelling has
-probability at most `ε` if, for every labelling, redrawing the label of `a` alone gives it
-probability at most `ε`. -/
-lemma prEvent_uniform_bind_le_of_update [SampleableType S] [SampleableType L] (a : PathValue n m)
-    (f : Labels n m S L → ProbComp Prop) {ε : ℝ≥0∞}
-    (h : ∀ ℓ, prEvent ($ᵗ (a.Val S L) >>= fun u => f (Function.update ℓ a u)) ≤ ε) :
-    prEvent ($ᵗ Labels n m S L >>= f) ≤ ε := by
-  let : ∀ v : PathValue n m, MeasurableSpace (v.Val S L) := fun _ => ⊤
-  have h₁ := evalDist_bind_bind_update_dependent a ($ᵗ (a.Val S L)) ($ᵗ Labels n m S L)
-    SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample f
-  rw [prEvent_def, ← h₁, ← prEvent_def, prEvent_bind_swap]
-  exact prEvent_bind_le h
-
 /-! ## The online phase does not read the key label -/
 
 section Key
@@ -207,7 +192,7 @@ theorem prEvent_idealOutcomeExperiment_le_of_forall {Out : Type}
       (fun v hv => Function.update_of_ne hv _ _) (IdealState.rhoBounded_init _) (by simpa using hr)
   simp only [hP, hrun, Function.update_self]
   simp only [map_eq_bind_pure_comp, Function.comp_def]
-  rw [prEvent_bind_swap]
+  rw [prEvent_bind_bind_swap]
   refine prEvent_bind_le fun w => le_of_eq_of_le ?_ (hE w.1)
   simp only [map_eq_bind_pure_comp, Function.comp_def]
 

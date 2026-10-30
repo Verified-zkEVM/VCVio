@@ -38,6 +38,15 @@ of reached path values, the number of online rounds so far, and the log of the s
 A value reached in a round therefore never makes another point of the same round legitimate.
 Uniform queries pass through. The commitment `.commit` is public but is not reached at the start.
 
+The ideal handler is the paper's ideal experiment `Ideal` in the proof of `thm:delay`, in the form
+with all its randomness drawn in advance: the labels `ℓ` are the paper's values `ν(v)`, and a point
+earns a label only once the online phase could have computed it, from labels it has already been
+given. Handling a round atomically against the reached set at its submission is the paper's rule
+that a query is legitimate only if every predecessor was revealed in an earlier round, and it is
+what makes the handler sequential by construction (Claim 1,
+`VCVio/Schemes/PointerChainPuzzle/Sequential.lean`): no amount of parallelism within a round
+reaches more than one new step of any path.
+
 ## Online Bad and the comparison
 
 A point is *online-bad* (`OnlineBadAt`) when it is the path input of some path value but is
@@ -611,7 +620,9 @@ lemma preservesInv_idealImpl_compareInv (c₀ : (oracleSpec n S L Salt Ctx).Quer
 
 /-- **Domination until Bad.** The ideal handler is dominated by the handler of the programmed
 experiment until online Bad or the generator's `Bad` for `c₀`, through the map sending a state to
-the programmed cache over its cache. -/
+the programmed cache over its cache. This is the queries step of the paper's Claim 2
+(`claim:hybrid`): the two runs agree up to the first point that is not legitimate and is a path
+input. -/
 theorem dominatedUntilBad_idealImpl (c₀ : (oracleSpec n S L Salt Ctx).QueryCache) :
     QueryImpl.DominatedUntilBad (idealImpl m mkCtx initAcc P ℓ) H
       (fun s => programmedCache m mkCtx initAcc s.cache P ℓ)
@@ -861,9 +872,10 @@ lemma prEvent_idealExperiment_genBad :
 /-- **Programming and until Bad.** The delay advantage of the pointer-chain puzzle is at most the
 winning probability in the ideal experiment plus the probability there of the generator's `Bad` or
 online Bad. A seed with the generator's `Bad` counts fully toward the second term; on any other seed
-the real and programmed continuations agree, so the generator's `Bad` is charged once. The bound is
-the case of `prEvent_guessExperiment_scheme_le_idealOutcomeExperiment` for the event that the
-output is the key. -/
+the real and programmed continuations agree, so the generator's `Bad` is charged once. This is the
+paper's Claim 2 (`claim:hybrid`), for the path-input form of `Bad`. The bound is the case of
+`prEvent_guessExperiment_scheme_le_idealOutcomeExperiment` for the event that the output is the
+key. -/
 theorem delayAdvantage_scheme_le_idealExperiment [Finite Ctx] :
     (scheme n m mkCtx initAcc).delayAdvantage adv ≤
       Pr{let r ← idealExperiment adv m mkCtx initAcc}[r.win = true] +
