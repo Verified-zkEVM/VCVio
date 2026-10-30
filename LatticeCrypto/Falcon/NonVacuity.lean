@@ -169,8 +169,7 @@ theorem toy_keyRelation : negacyclicMul (IntPoly.toRq keyF) keyH = IntPoly.toRq 
   rw [keyF, keyG, toRq_polyOfPair, toRq_polyOfPair]
   apply Poly.ext_get_eq
   intro i
-  fin_cases i <;> simp (config := { decide := true }) [negacyclicMul_get, negacyclicConvCoeff,
-    Fintype.sum_prod_type, Fin.sum_univ_two, keyH]
+  fin_cases i <;> simp (config := { decide := true })
 
 /-- `F · h = G` in `R_q`, the second column relation of the basis. -/
 theorem toy_capRelation :
@@ -178,8 +177,7 @@ theorem toy_capRelation :
   rw [keyCapF, keyCapG, toRq_polyOfPair, toRq_polyOfPair]
   apply Poly.ext_get_eq
   intro i
-  fin_cases i <;> simp (config := { decide := true }) [negacyclicMul_get, negacyclicConvCoeff,
-    Fintype.sum_prod_type, Fin.sum_univ_two, keyH]
+  fin_cases i <;> simp (config := { decide := true })
 
 /-- The public key. -/
 @[expose] noncomputable def toyPk : PublicKey toyP := { h := keyH }
