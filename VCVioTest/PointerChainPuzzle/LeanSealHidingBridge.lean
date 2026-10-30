@@ -28,7 +28,9 @@ On the same encoding, a toy DEM whose ciphertext is the answer at the typed poin
 input `2` in the raw world) is checked against raw adversaries that also read the answer at `2`:
 with the challenge first, with their own query first, and with their query cached in
 preprocessing, they win the raw hiding experiment with probability one, and by the comparison
-theorem so do their adapted adversaries in the typed experiment. The comparison is also
+theorem so do their adapted adversaries in the typed experiment. Run deterministically, with
+counter coins and a fixed typed oracle, the three typed experiments also return `true` directly,
+without the comparison theorem. The comparison is also
 instantiated at the byte encoding of leanSeal, with a DEM that makes no oracle queries.
 -/
 
@@ -295,6 +297,29 @@ theorem advPreprocess_typed (b : Bool) :
   rw [← toyEnc.evalDist_hidingExperiment_adaptHidingAdversary _ tlpRaw_gen demRaw_encrypt
     toyEnc_not_clash]
   exact advPreprocess_raw b
+
+/-- Run the typed hiding experiment of the adapted adversary deterministically, with local coins
+read off a counter from `3` and the typed oracle `typAnswer`; return the output and the final
+counter. The typed point `1` is answered `6`, while a private draw would read `3` off the counter,
+so the adversary wins only if its query at `2` and the challenger's encryption both reach the typed
+oracle at `1`. -/
+noncomputable def runTyped (adv : HidingAdversary rawSpec Unit Unit (Fin 8)) (b : Bool) :
+    Bool × ℕ :=
+  ((simulateQ preImpl (tlpTyp.hidingExperiment demTyp (fun _ => ())
+    (toyEnc.adaptHidingAdversary adv) b)).run 3).run
+
+/-- With the challenge first, the adapted adversary wins the typed run, after one coin. -/
+theorem runTyped_advChalFirst (b : Bool) : runTyped advChalFirst b = (true, 4) := by
+  cases b <;> decide
+
+/-- With its own query first, the adapted adversary wins the typed run, after one coin. -/
+theorem runTyped_advRoundFirst (b : Bool) : runTyped advRoundFirst b = (true, 4) := by
+  cases b <;> decide
+
+/-- With its query cached in preprocessing, the adapted adversary wins the typed run, after one
+coin. -/
+theorem runTyped_advPreprocess (b : Bool) : runTyped advPreprocess b = (true, 4) := by
+  cases b <;> decide
 
 /-- The hiding advantages agree: here both are zero, the adversary winning at both hidden bits. -/
 example : hidingAdvantage tlpRaw demRaw (fun _ => ()) advChalFirst =
