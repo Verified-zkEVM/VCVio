@@ -96,6 +96,7 @@ public import VCVioTest.PointerChainPuzzle.Delay
 public import VCVioTest.PointerChainPuzzle.GuessDelay
 public import VCVioTest.PointerChainPuzzle.Handler
 public import VCVioTest.PointerChainPuzzle.Hiding
+public import VCVioTest.PointerChainPuzzle.HidingIdeal
 public import VCVioTest.PointerChainPuzzle.HidingNonce
 public import VCVioTest.PointerChainPuzzle.HidingPRF
 public import VCVioTest.PointerChainPuzzle.Ideal
