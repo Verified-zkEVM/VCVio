@@ -95,6 +95,7 @@ public import VCVioTest.PointerChainPuzzle.Batch
 public import VCVioTest.PointerChainPuzzle.Delay
 public import VCVioTest.PointerChainPuzzle.GuessDelay
 public import VCVioTest.PointerChainPuzzle.Handler
+public import VCVioTest.PointerChainPuzzle.Hiding
 public import VCVioTest.PointerChainPuzzle.Ideal
 public import VCVioTest.PointerChainPuzzle.LeanSeal
 public import VCVioTest.PointerChainPuzzle.LeanSealBridge
