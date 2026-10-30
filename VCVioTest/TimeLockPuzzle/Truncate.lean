@@ -138,24 +138,25 @@ example : TimeLockPuzzle.delayAdvantageWithin toy threeAdv 3 =
 /-! ## Reusing a preprocessing answer within one round -/
 
 /-- The adversary that asks the oracle at `false` during preprocessing, keeps the answer as its
-state, and outputs it after one online round. -/
+state, asks at `false` again in one online round, and outputs the conjunction of the two answers.
+It always wins exactly when all three phases share one cache. -/
 def reuseAdv : TimeLockPuzzle.Adversary boolSpec Unit Bool where
   State := Bool
   preprocess := liftM ((unifSpec + boolSpec).query (.inr false))
   online σ _ := do
-    let _ ← liftM ((unifSpec + boolSpec.batch).query (.inr [false]))
-    pure σ
+    let a ← liftM ((unifSpec + boolSpec.batch).query (.inr [false]))
+    pure (σ && a ⟨0, Nat.zero_lt_one⟩)
 
 /-- One preprocessing query, and one online round holding one point. -/
 theorem reuseAdv_isQueryBound : reuseAdv.IsQueryBound 1 (1, 1) :=
   ⟨by simp [reuseAdv], fun _ _ => by
     simp only [reuseAdv, add_apply_inr, isQueryBound_query_bind_iff, onlineCanQuery_inr,
       Order.lt_one_iff, List.length_cons, List.length_nil, zero_add, Std.le_refl, and_self,
-      onlineCost_inr, tsub_self, forall_const, true_and]
-    exact isQueryBound_pure _ _ _ _⟩
+      onlineCost_inr, tsub_self, true_and]
+    exact fun _ => isQueryBound_pure _ _ _ _⟩
 
 /-- Against any fixed answer table, the experiment returns whether one round is within the
-budget: the generator and the adversary read the same answer at `false`. -/
+budget: the generator and both phases of the adversary read the same answer at `false`. -/
 theorem simulateQ_unifFwdAnswerImpl_delayExperimentWithin_reuseAdv (f : QueryImpl boolSpec Id)
     (r : ℕ) :
     simulateQ (unifFwdAnswerImpl f) (toy.delayExperimentWithin reuseAdv r) =
@@ -184,8 +185,8 @@ theorem delayAdvantageWithin_reuseAdv_zero :
   exact (prEvent_eq_zero_iff _ _).2 fun v hv => by
     simp [fst_mem_support_delayExperimentWithin_reuseAdv 0 hv]
 
-/-- Within one round the adversary always wins: its preprocessing answer at `false` is the key,
-since the three phases share one cache. -/
+/-- Within one round the adversary always wins: its preprocessing and online answers at `false`
+are both the key, since the three phases share one cache. -/
 theorem delayAdvantageWithin_reuseAdv_one :
     TimeLockPuzzle.delayAdvantageWithin toy reuseAdv 1 = 1 := by
   rw [TimeLockPuzzle.delayAdvantageWithin_eq, ProbCompRuntime.rom_evalDist,
