@@ -42,6 +42,20 @@ the puzzle never reads, and the key components of the logged points are at most 
 guesses of the key; the delay theorem with that many guesses bounds `BadK`
 (`prEvent_privateExperiment_badK_le`).
 
+## From the hiding experiment to the hybrid
+
+The hiding experiment and the hybrid share preprocessing and key generation and differ in their
+online phases, each run as one handler: on the cache of the random oracle for the experiment
+(`hidingOnlineImpl`), and on the pair of that cache and the private cache for the hybrid
+(`privateOnlineImpl`, fused from the nested runs by
+`OracleComp.simulateQ_run_simulateQ_run_evalDistEq`). Laying the private cache over the subkey
+points at the key (`overlayCache`) maps the hybrid's state to the experiment's. Off `BadK`, a step
+of the hybrid read through this map is a step of the experiment
+(`dominatedUntilBad_privateOnlineImpl`), and `BadK` is sticky
+(`preservesInv_privateOnlineImpl_badK`); domination until bad bounds the gap between the two
+experiments by `BadK` in the hybrid, from every shared cache, including one that already holds a
+subkey point at the key (`absDiff_hidingExperiment_privateExperiment_le`).
+
 ## Main definitions
 
 * `PointerChainPuzzle.subkeySpec`, `PointerChainPuzzle.sealSpec`: the two subkey oracles, and the
@@ -55,6 +69,8 @@ guesses of the key; the delay theorem with that many guesses bounds `BadK`
   `PointerChainPuzzle.privateImpl`, `PointerChainPuzzle.privateAdversary`,
   `PointerChainPuzzle.privateExperiment`: the private challenger and the hybrid.
 * `PointerChainPuzzle.BadK`: a subkey point at the key is cached.
+* `PointerChainPuzzle.overlayCache`, `PointerChainPuzzle.hidingOnlineImpl`,
+  `PointerChainPuzzle.privateOnlineImpl`: the state map and the online handlers of the first hop.
 
 ## Main statements
 
@@ -65,6 +81,9 @@ guesses of the key; the delay theorem with that many guesses bounds `BadK`
 * `PointerChainPuzzle.prEvent_privateExperiment_badK_le`: in the hybrid, `BadK` has probability at
   most `[n ≥ 2] Q_on / |L| + Q_pre / (|Salt| |L|) + (Q P + P² + Q) / |S|`, with
   `P = solvePoints n m` and `Q = Q_pre + Q_on`.
+* `PointerChainPuzzle.absDiff_hidingExperiment_privateExperiment_le`: the probabilities that the
+  hiding experiment returns `true` and that the hybrid returns the guess `true` differ by at most
+  the probability of `BadK` in the hybrid.
 -/
 
 public section
@@ -346,5 +365,476 @@ theorem prEvent_privateExperiment_badK_le [Finite Ctx] [Fintype S] [Fintype L] [
       ring_nf
 
 end Bounds
+
+/-! ## From the hiding experiment to the hybrid -/
+
+section StateMap
+
+variable [DecidableEq S]
+
+/-- The state map of the first hop: the cache `c` of the hybrid's oracles with the private cache
+`p` laid over its subkey points at the key `key`, each subkey of a nonce `η` cached in `p` as
+`(k_enc, k_mac)` becoming the entries `k_enc` at `.inr (.inl (key, η))` and `k_mac` at
+`.inr (.inr (key, η))`. Away from the key it is `c`. -/
+def overlayCache (key : S) (c : (sealSpec n S L Salt Ctx N K).QueryCache)
+    (p : (privateSpec N K).QueryCache) : (sealSpec n S L Salt Ctx N K).QueryCache :=
+  QueryCache.ofFn fun
+    | .inl q => c (.inl q)
+    | .inr (.inl x) => if x.1 = key then (p x.2).map Prod.fst else c (.inr (.inl x))
+    | .inr (.inr x) => if x.1 = key then (p x.2).map Prod.snd else c (.inr (.inr x))
+
+lemma overlayCache_apply_inl (key : S) (c : (sealSpec n S L Salt Ctx N K).QueryCache)
+    (p : (privateSpec N K).QueryCache) (q : Point n S L Salt Ctx) :
+    overlayCache key c p (.inl q) = c (.inl q) := by
+  rw [overlayCache, QueryCache.ofFn_apply]
+
+lemma overlayCache_apply_enc (key : S) (c : (sealSpec n S L Salt Ctx N K).QueryCache)
+    (p : (privateSpec N K).QueryCache) (x : S × N) :
+    overlayCache key c p (.inr (.inl x)) =
+      if x.1 = key then (p x.2).map Prod.fst else c (.inr (.inl x)) := by
+  rw [overlayCache, QueryCache.ofFn_apply]
+  rfl
+
+lemma overlayCache_apply_mac (key : S) (c : (sealSpec n S L Salt Ctx N K).QueryCache)
+    (p : (privateSpec N K).QueryCache) (x : S × N) :
+    overlayCache key c p (.inr (.inr x)) =
+      if x.1 = key then (p x.2).map Prod.snd else c (.inr (.inr x)) := by
+  rw [overlayCache, QueryCache.ofFn_apply]
+  rfl
+
+/-- Away from the subkey points at the key, the overlay is the cache. -/
+lemma overlayCache_apply_of_ne (key : S) (c : (sealSpec n S L Salt Ctx N K).QueryCache)
+    (p : (privateSpec N K).QueryCache) {t : (sealSpec n S L Salt Ctx N K).Domain}
+    (ht : ∀ x, t = .inr x → Sum.elim Prod.fst Prod.fst x ≠ key) :
+    overlayCache key c p t = c t := by
+  rcases t with q | x | x
+  · rfl
+  · have := ht (.inl x) rfl
+    simp_all [overlayCache_apply_enc]
+  · have := ht (.inr x) rfl
+    simp_all [overlayCache_apply_mac]
+
+/-- Overlaying the empty private cache on a cache without subkey points at the key changes
+nothing. -/
+lemma overlayCache_empty {key : S} {c : (sealSpec n S L Salt Ctx N K).QueryCache}
+    (h : ¬BadK key c) : overlayCache key c ∅ = c := by
+  ext t : 1
+  rcases t with q | x | x
+  · rfl
+  · rw [overlayCache_apply_enc]
+    split_ifs with hx
+    · cases hc : c (.inr (.inl x))
+      · rfl
+      · exact absurd ⟨.inl x, by simp [hc], hx⟩ h
+    · rfl
+  · rw [overlayCache_apply_mac]
+    split_ifs with hx
+    · cases hc : c (.inr (.inr x))
+      · rfl
+      · exact absurd ⟨.inr x, by simp [hc], hx⟩ h
+    · rfl
+
+variable [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx] [DecidableEq N]
+
+/-- Caching an answer away from the subkey points at the key commutes with the overlay. -/
+lemma overlayCache_cacheQuery_of_ne (key : S) (c : (sealSpec n S L Salt Ctx N K).QueryCache)
+    (p : (privateSpec N K).QueryCache) {t : (sealSpec n S L Salt Ctx N K).Domain}
+    (ht : ∀ x, t = .inr x → Sum.elim Prod.fst Prod.fst x ≠ key)
+    (u : (sealSpec n S L Salt Ctx N K).Range t) :
+    overlayCache key (c.cacheQuery t u) p = (overlayCache key c p).cacheQuery t u := by
+  ext t' : 1
+  by_cases h : t' = t
+  · subst h
+    rw [QueryCache.cacheQuery_self, overlayCache_apply_of_ne _ _ _ ht, QueryCache.cacheQuery_self]
+  · rw [QueryCache.cacheQuery_of_ne _ _ h]
+    rcases t' with q | x | x
+    · simp only [overlayCache_apply_inl, QueryCache.cacheQuery_of_ne _ _ h]
+    · simp only [overlayCache_apply_enc, QueryCache.cacheQuery_of_ne _ _ h]
+    · simp only [overlayCache_apply_mac, QueryCache.cacheQuery_of_ne _ _ h]
+
+/-- Caching both subkeys `u` of the nonce `η` in the private cache is caching `u.1` at the
+encryption subkey point and `u.2` at the MAC subkey point of the key and `η` in the overlay. -/
+lemma overlayCache_cacheQuery_private (key : S) (c : (sealSpec n S L Salt Ctx N K).QueryCache)
+    (p : (privateSpec N K).QueryCache) (η : N) (u : K × K) :
+    overlayCache key c (p.cacheQuery η u) =
+      ((overlayCache key c p).cacheQuery (.inr (.inl (key, η))) u.1).cacheQuery
+        (.inr (.inr (key, η))) u.2 := by
+  ext t : 1
+  rcases t with q | x | x
+  · simp [overlayCache_apply_inl]
+  · by_cases hx : x = (key, η)
+    · subst hx
+      simp [overlayCache_apply_enc]
+    · rw [QueryCache.cacheQuery_of_ne _ _ (by simp), QueryCache.cacheQuery_of_ne _ _ (by simpa),
+        overlayCache_apply_enc, overlayCache_apply_enc]
+      split_ifs with h
+      · rw [QueryCache.cacheQuery_of_ne _ _ fun h' => hx (Prod.ext h h')]
+      · rfl
+  · by_cases hx : x = (key, η)
+    · subst hx
+      simp [overlayCache_apply_mac]
+    · rw [QueryCache.cacheQuery_of_ne _ _ (by simpa), QueryCache.cacheQuery_of_ne _ _ (by simp),
+        overlayCache_apply_mac, overlayCache_apply_mac]
+      split_ifs with h
+      · rw [QueryCache.cacheQuery_of_ne _ _ fun h' => hx (Prod.ext h h')]
+      · rfl
+
+end StateMap
+
+section Hop
+
+variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
+  [SampleableType S] [SampleableType L] [DecidableEq N] [SampleableType N] [SampleableType K]
+
+/-- The online phase of the hiding experiment at hidden bit `b` for the puzzle `puzzle` and its
+key `key`, as one handler of the adversary's online oracles on the cache of the random oracle:
+the challenger of `TimeLockPuzzle.hidingExperiment` over `sealDEM`, with rounds answered point by
+point, followed by the random oracle. -/
+noncomputable def hidingOnlineImpl (puzzle : Puzzle n S L Salt) (key : S) (b : Bool) :
+    QueryImpl ((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
+        (sealSpec n S L Salt Ctx N K).batch)
+      (StateT (sealSpec n S L Salt Ctx N K).QueryCache ProbComp) :=
+  (sealSpec n S L Salt Ctx N K).romImpl ∘ₛ
+    QueryImpl.batch' ((unifSpec.passthrough + LeftOrRight.oracle
+        ((sealDEM (Ctx := Ctx) prf codec encodePuzzle).encrypt (puzzle, key)) plaintextLength b) +
+      (QueryImpl.id' (sealSpec n S L Salt Ctx N K)).liftTarget
+        (OracleComp (unifSpec + sealSpec n S L Salt Ctx N K)))
+
+/-- The online phase of the hybrid at hidden bit `b` for the puzzle `puzzle`, as one handler of
+the adversary's online oracles on the pair of the cache of the random oracle and the private
+cache: a step of `privateImpl` on the private cache, with rounds rewritten as single queries
+answered by the random oracle on the shared cache. -/
+noncomputable def privateOnlineImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
+    QueryImpl ((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
+        (sealSpec n S L Salt Ctx N K).batch)
+      (StateT ((sealSpec n S L Salt Ctx N K).QueryCache × (privateSpec N K).QueryCache)
+        ProbComp) :=
+  fun t => StateT.mk fun s => (fun z => (z.1.1, (z.2, z.1.2))) <$>
+    (simulateQ (sealSpec n S L Salt Ctx N K).romImpl
+      (simulateQ (sealSpec n S L Salt Ctx N K).unbatch
+        ((privateImpl prf codec encodePuzzle puzzle b t).run s.2))).run s.1
+
+lemma hidingOnlineImpl_run_unif (puzzle : Puzzle n S L Salt) (key : S) (b : Bool) (k : ℕ)
+    (c : (sealSpec n S L Salt Ctx N K).QueryCache) :
+    (hidingOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle key b (.inl (.inl k))).run c =
+      (unifFwdImpl (sealSpec n S L Salt Ctx N K) k).run c := by
+  simp [hidingOnlineImpl]
+
+lemma privateOnlineImpl_run_unif (puzzle : Puzzle n S L Salt) (b : Bool) (k : ℕ)
+    (s : (sealSpec n S L Salt Ctx N K).QueryCache × (privateSpec N K).QueryCache) :
+    (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b (.inl (.inl k))).run s =
+      (fun z => (z.1, (z.2, s.2))) <$> (unifFwdImpl (sealSpec n S L Salt Ctx N K) k).run s.1 := by
+  simp only [add_apply_inl, privateOnlineImpl, privateImpl, QueryImpl.add_apply_inl,
+    PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor, QueryImpl.ofLift_apply,
+    StateT.run_monadLift, monadLift_self, bind_pure_comp, simulateQ_map,
+    simulateQ_romImpl_simulateQ_unbatch, StateT.run_map, Functor.map_map, StateT.run_mk,
+    Prod.mk.injEq, and_true, and_imp, Prod.forall, forall_apply_eq_imp_iff, forall_eq',
+    Prod.mk.eta, implies_true, map_inj_right_of_nonempty]
+  rw [OracleComp.liftM_eq_liftM_liftM, OracleQuery.liftM_add_left_query, simulateQ_spec_query]
+  rfl
+
+lemma hidingOnlineImpl_run_challenge (puzzle : Puzzle n S L Salt) (key : S) (b : Bool)
+    (m₀ m₁ : Plaintext) (c : (sealSpec n S L Salt Ctx N K).QueryCache) :
+    (hidingOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle key b
+        (.inl (.inr (m₀, m₁)))).run c =
+      if plaintextLength m₀ = plaintextLength m₁ then (do
+        let nonce ← $ᵗ N
+        let z₁ ← ((sealSpec n S L Salt Ctx N K).randomOracle (.inr (.inl (key, nonce)))).run c
+        let z₂ ← ((sealSpec n S L Salt Ctx N K).randomOracle (.inr (.inr (key, nonce)))).run z₁.2
+        pure (some (sealWith prf codec (encodePuzzle puzzle) nonce (z₁.1, z₂.1)
+          (if b then m₁ else m₀)), z₂.2))
+      else pure (none, c) := by
+  by_cases h : plaintextLength m₀ = plaintextLength m₁
+  · simp [hidingOnlineImpl, LeftOrRight.oracle, h, sealDEM, dem, sealDerive, roSim.run_liftM,
+      QueryImpl.simulateQ_add_liftM_right]
+  · simp [hidingOnlineImpl, LeftOrRight.oracle, h]
+
+lemma privateOnlineImpl_run_challenge (puzzle : Puzzle n S L Salt) (b : Bool) (m₀ m₁ : Plaintext)
+    (s : (sealSpec n S L Salt Ctx N K).QueryCache × (privateSpec N K).QueryCache) :
+    (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b (.inl (.inr (m₀, m₁)))).run s =
+      if plaintextLength m₀ = plaintextLength m₁ then (do
+        let nonce ← $ᵗ N
+        let z ← ((privateSpec N K).randomOracle nonce).run s.2
+        pure (some (sealWith prf codec (encodePuzzle puzzle) nonce z.1 (if b then m₁ else m₀)),
+          (s.1, z.2)))
+      else pure (none, s) := by
+  by_cases h : plaintextLength m₀ = plaintextLength m₁
+  · simp only [privateOnlineImpl, privateImpl, StateT.run_mk, QueryImpl.add_apply_inl,
+      QueryImpl.add_apply_inr, LeftOrRight.oracle, h, ↓reduceIte]
+    simp [privateEncrypt, simulateQ_romImpl_simulateQ_unbatch, QueryImpl.simulateQ_add_liftM_left,
+      unifFwdImpl.simulateQ_run]
+  · simp only [privateOnlineImpl, privateImpl, StateT.run_mk, QueryImpl.add_apply_inl,
+      QueryImpl.add_apply_inr, LeftOrRight.oracle, h, ↓reduceIte]
+    simp
+
+lemma hidingOnlineImpl_run_batch (puzzle : Puzzle n S L Salt) (key : S) (b : Bool)
+    (ts : List (sealSpec n S L Salt Ctx N K).Domain)
+    (c : (sealSpec n S L Salt Ctx N K).QueryCache) :
+    (hidingOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle key b (.inr ts)).run c =
+      ((sealSpec n S L Salt Ctx N K).randomOracle.batch ts).run c := by
+  simp only [add_apply_inr, hidingOnlineImpl, QueryImpl.passthrough_add, QueryImpl.batch'_add,
+    QueryImpl.apply_compose, QueryImpl.add_apply_inr]
+  rw [← QueryImpl.apply_compose, QueryImpl.compose_batch]
+  congr 2
+  funext t
+  rw [QueryImpl.apply_compose, QueryImpl.liftTarget_apply, QueryImpl.id'_apply,
+    QueryImpl.simulateQ_add_liftM_right, simulateQ_spec_query]
+
+lemma privateOnlineImpl_run_batch (puzzle : Puzzle n S L Salt) (b : Bool)
+    (ts : List (sealSpec n S L Salt Ctx N K).Domain)
+    (s : (sealSpec n S L Salt Ctx N K).QueryCache × (privateSpec N K).QueryCache) :
+    (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b (.inr ts)).run s =
+      (fun z => (z.1, (z.2, s.2))) <$>
+        ((sealSpec n S L Salt Ctx N K).randomOracle.batch ts).run s.1 := by
+  simp only [add_apply_inr, privateOnlineImpl, privateImpl, QueryImpl.add_apply_inr,
+    StateT.run_monadLift, bind_pure_comp, simulateQ_map, simulateQ_query, OracleQuery.input_query,
+    OracleQuery.cont_query, unbatch_apply_inr, id_map, StateT.run_map, Functor.map_map,
+    StateT.run_mk, Prod.mk.injEq, and_true, and_imp, Prod.forall, forall_apply_eq_imp_iff,
+    forall_eq', Prod.mk.eta, implies_true, map_inj_right]
+  rw [← QueryImpl.apply_compose, QueryImpl.compose_batch]
+  congr 3
+  funext t
+  simp only [QueryImpl.apply_compose, simulateQ_query, OracleQuery.input_query, add_apply_inr,
+    OracleQuery.cont_query, QueryImpl.add_apply_inr, QueryImpl.withCaching_apply,
+    uniformSampleImpl_apply, map_bind, id_map]
+
+/-- A step of the hybrid's online handler only extends the cache of the random oracle. -/
+lemma le_of_mem_support_privateOnlineImpl_run (puzzle : Puzzle n S L Salt) (b : Bool)
+    (t : ((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
+      (sealSpec n S L Salt Ctx N K).batch).Domain)
+    (s : (sealSpec n S L Salt Ctx N K).QueryCache × (privateSpec N K).QueryCache)
+    {z} (hz : z ∈ support ((privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b
+      t).run s)) : s.1 ≤ z.2.1 := by
+  rcases t with (k | ⟨m₀, m₁⟩) | ts
+  · rw [privateOnlineImpl_run_unif, support_map] at hz
+    obtain ⟨z', hz', rfl⟩ := hz
+    exact (unifFwdImpl.snd_eq_of_mem_support_run k s.1 hz').ge
+  · rw [privateOnlineImpl_run_challenge] at hz
+    by_cases h : plaintextLength m₀ = plaintextLength m₁
+    · simp only [h, ↓reduceIte, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hz
+      obtain ⟨_, _, _, _, rfl⟩ := hz
+      exact le_rfl
+    · simp only [h, ↓reduceIte] at hz
+      rw [mem_support_pure_iff] at hz
+      subst hz
+      exact le_rfl
+  · rw [privateOnlineImpl_run_batch, support_map] at hz
+    obtain ⟨z', hz', rfl⟩ := hz
+    exact (QueryImpl.withCaching_batch_le_and_isSome_iff _ hz').1
+
+/-- **`BadK` is sticky in the hybrid.** Once the cache of the random oracle holds a subkey point
+at the key, every step of the hybrid's online handler keeps it. -/
+lemma preservesInv_privateOnlineImpl_badK (puzzle : Puzzle n S L Salt) (key : S) (b : Bool) :
+    QueryImpl.PreservesInv (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b)
+      (fun s => BadK key s.1) := by
+  rintro t s ⟨x, hx, hkey⟩ z hz
+  exact ⟨x, QueryCache.isSome_mono
+    (le_of_mem_support_privateOnlineImpl_run prf codec encodePuzzle puzzle b t s hz) hx, hkey⟩
+
+/-- **The handlers agree off `BadK`.** Read through `overlayCache key`, each step of the hybrid's
+online handler is a step of the hiding experiment's, unless all its post-states hold a subkey point
+at the key: local coins are forwarded by both; a challenge draws the same nonce, and the private
+cache at the nonce, laid over the shared cache, answers the two subkey points at the key and the
+nonce as the random oracle does; a round with no subkey point at the key commutes with the overlay,
+and a round with one caches it. -/
+theorem dominatedUntilBad_privateOnlineImpl (puzzle : Puzzle n S L Salt) (key : S) (b : Bool) :
+    QueryImpl.DominatedUntilBad (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b)
+      (hidingOnlineImpl prf codec encodePuzzle puzzle key b)
+      (fun s => overlayCache key s.1 s.2) (fun _ => True) (fun s => BadK key s.1) := by
+  refine QueryImpl.DominatedUntilBad.of_evalDistEq_or_bad fun t s _ _ => ?_
+  rcases t with (k | ⟨m₀, m₁⟩) | ts
+  · left
+    simp only [privateOnlineImpl_run_unif, hidingOnlineImpl_run_unif, unifFwdImpl,
+      QueryImpl.liftTarget_apply, StateT.run_liftM, bind_pure_comp, Functor.map_map]
+    rfl
+  · left
+    rw [privateOnlineImpl_run_challenge, hidingOnlineImpl_run_challenge]
+    by_cases h : plaintextLength m₀ = plaintextLength m₁
+    · simp only [h, ↓reduceIte, map_bind, map_pure]
+      refine EvalDistEq.bind_right _ fun nonce => ?_
+      rw [randomOracle.run_eq, randomOracle.run_eq, overlayCache_apply_enc]
+      simp only [↓reduceIte]
+      cases hp : s.2 nonce with
+      | some ks =>
+        simp only [Option.map_some, pure_bind]
+        rw [randomOracle.run_eq, overlayCache_apply_mac]
+        simp [hp]
+      | none =>
+        simp only [Option.map_none, bind_assoc, pure_bind]
+        rw [SampleableType.uniformSample_prod_eq_bind, bind_assoc]
+        refine EvalDistEq.bind_right _ fun u₁ => ?_
+        simp only [bind_assoc, pure_bind]
+        rw [randomOracle.run_eq, QueryCache.cacheQuery_of_ne _ _ (by simp),
+          overlayCache_apply_mac]
+        simp only [↓reduceIte, hp, Option.map_none, bind_assoc, pure_bind]
+        refine EvalDistEq.bind_right _ fun u₂ => ?_
+        rw [overlayCache_cacheQuery_private]
+    · simp only [h, ↓reduceIte, map_pure]
+      rfl
+  · by_cases hk : ∃ t ∈ ts, ∃ x, t = .inr x ∧ Sum.elim Prod.fst Prod.fst x = key
+    · right
+      obtain ⟨t, ht, x, rfl, hx⟩ := hk
+      intro z hz
+      rw [privateOnlineImpl_run_batch, support_map] at hz
+      obtain ⟨z', hz', rfl⟩ := hz
+      exact ⟨x, ((QueryImpl.withCaching_batch_le_and_isSome_iff _ hz').2 _).2 (Or.inr ht), hx⟩
+    · left
+      push Not at hk
+      rw [privateOnlineImpl_run_batch, hidingOnlineImpl_run_batch, Functor.map_map,
+        ← QueryImpl.map_withCaching_batch_run_of_commute uniformSampleImpl
+          (fun c => overlayCache key c s.2)
+          (P := fun t => ∀ x, t = .inr x → Sum.elim Prod.fst Prod.fst x ≠ key)
+          (fun c _ ht => overlayCache_apply_of_ne key c s.2 ht)
+          (fun c _ u ht => overlayCache_cacheQuery_of_ne key c s.2 ht u) hk s.1]
+      rfl
+
+/-- **One online phase, from the hiding experiment to the hybrid.** From any cache `c`, an event of
+the output of the hiding experiment's online handler has at most the mass of the event, or
+`BadK` of the final cache, in the hybrid's online handler started from `c` and the empty private
+cache. From a cache without subkey points at the key the overlay of the empty private cache is
+`c`, and domination until `BadK` applies; from a cache with one, `BadK` holds throughout. -/
+theorem prEvent_hidingOnlineImpl_le {α : Type} (puzzle : Puzzle n S L Salt) (key : S) (b : Bool)
+    (oa : OracleComp ((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
+      (sealSpec n S L Salt Ctx N K).batch) α) (c : (sealSpec n S L Salt Ctx N K).QueryCache)
+    (P : α → Prop) :
+    Pr{let z ← (simulateQ (hidingOnlineImpl prf codec encodePuzzle puzzle key b) oa).run c}[
+        P z.1] ≤
+      Pr{let z ← (simulateQ (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b)
+        oa).run (c, ∅)}[P z.1 ∨ BadK key z.2.1] := by
+  by_cases hc : BadK key c
+  · rw [prEvent_eq_one_of_forall_mem_support _ _ fun z hz => Or.inr
+      (simulateQ_run_preservesInv _ _ (preservesInv_privateOnlineImpl_badK prf codec encodePuzzle
+        puzzle key b) oa (c, ∅) hc z hz)]
+    exact prEvent_le_one _
+  · have := (dominatedUntilBad_privateOnlineImpl prf codec encodePuzzle puzzle key b
+      ).prEvent_simulateQ_run_le_map_or_bad (fun _ _ _ _ _ => trivial)
+      (preservesInv_privateOnlineImpl_badK prf codec encodePuzzle puzzle key b) oa (c, ∅) trivial
+      fun z => P z.1
+    simpa only [overlayCache_empty hc] using this
+
+/-- **One online phase, from the hybrid to the hiding experiment.** From any cache `c`, an event of
+the output of the hybrid's online handler started from `c` and the empty private cache, conjoined
+with the absence of `BadK` in the final cache, has at most the mass of the event in the hiding
+experiment's online handler. -/
+theorem prEvent_privateOnlineImpl_and_not_badK_le {α : Type} (puzzle : Puzzle n S L Salt)
+    (key : S) (b : Bool) (oa : OracleComp ((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
+      (sealSpec n S L Salt Ctx N K).batch) α) (c : (sealSpec n S L Salt Ctx N K).QueryCache)
+    (P : α → Prop) :
+    Pr{let z ← (simulateQ (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b)
+        oa).run (c, ∅)}[P z.1 ∧ ¬BadK key z.2.1] ≤
+      Pr{let z ← (simulateQ (hidingOnlineImpl prf codec encodePuzzle puzzle key b) oa).run c}[
+        P z.1] := by
+  by_cases hc : BadK key c
+  · rw [prEvent_eq_zero_of_forall_mem_support _ _ fun z hz hz' => hz'.2
+      (simulateQ_run_preservesInv _ _ (preservesInv_privateOnlineImpl_badK prf codec encodePuzzle
+        puzzle key b) oa (c, ∅) hc z hz)]
+    exact zero_le
+  · have := (dominatedUntilBad_privateOnlineImpl prf codec encodePuzzle puzzle key b
+      ).prEvent_simulateQ_run_map_and_not_bad_le (fun _ _ _ _ _ => trivial)
+      (preservesInv_privateOnlineImpl_badK prf codec encodePuzzle puzzle key b) oa (c, ∅) trivial
+      fun z => P z.1
+    simpa only [overlayCache_empty hc] using this
+
+/-- The random-oracle run of the online phase of the hiding experiment is the run of its online
+handler. -/
+lemma simulateQ_romImpl_hidingChallenger {α : Type} (puzzle : Puzzle n S L Salt) (key : S)
+    (b : Bool) (oa : OracleComp ((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
+      (sealSpec n S L Salt Ctx N K).batch) α) :
+    simulateQ (sealSpec n S L Salt Ctx N K).romImpl
+      (simulateQ ((unifSpec.passthrough + LeftOrRight.oracle
+          ((sealDEM (Ctx := Ctx) prf codec encodePuzzle).encrypt (puzzle, key)) plaintextLength b) +
+        (QueryImpl.id' (sealSpec n S L Salt Ctx N K)).liftTarget
+          (OracleComp (unifSpec + sealSpec n S L Salt Ctx N K)))
+        (simulateQ (sealSpec n S L Salt Ctx N K).unbatch oa)) =
+      simulateQ (hidingOnlineImpl prf codec encodePuzzle puzzle key b) oa := by
+  rw [QueryImpl.simulateQ_simulateQ_unbatch, hidingOnlineImpl, QueryImpl.simulateQ_compose]
+
+/-- The random-oracle run of the online phase of the hybrid, which runs `privateImpl` on the
+private cache inside the run on the shared cache, is equal in distribution to the run of its
+online handler on the pair of caches (`OracleComp.simulateQ_run_simulateQ_run_evalDistEq`). -/
+lemma run_romImpl_privateImpl_evalDistEq {α : Type} (puzzle : Puzzle n S L Salt) (b : Bool)
+    (oa : OracleComp ((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
+      (sealSpec n S L Salt Ctx N K).batch) α) (c : (sealSpec n S L Salt Ctx N K).QueryCache) :
+    (simulateQ (sealSpec n S L Salt Ctx N K).romImpl
+      (simulateQ (sealSpec n S L Salt Ctx N K).unbatch
+        ((simulateQ (privateImpl prf codec encodePuzzle puzzle b) oa).run' ∅))).run c =ᵈ
+      (fun z => (z.1, z.2.1)) <$>
+        (simulateQ (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b) oa).run
+          (c, ∅) := by
+  have h := simulateQ_run_simulateQ_run_evalDistEq
+    ((sealSpec n S L Salt Ctx N K).romImpl ∘ₛ (sealSpec n S L Salt Ctx N K).unbatch)
+    (privateImpl prf codec encodePuzzle puzzle b)
+    (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b) (fun t s q => by
+      rw [privateOnlineImpl, StateT.run_mk, Functor.map_map, QueryImpl.simulateQ_compose]
+      simp) oa ∅ c
+  rw [QueryImpl.simulateQ_compose] at h
+  rw [StateT.run'_eq, simulateQ_map, simulateQ_map, StateT.run_map]
+  refine (h.map fun z => (z.1.1, z.2)).trans ?_
+  rw [Functor.map_map]
+
+/-- **From the hiding experiment to the hybrid (`G₀ → G₁`).** For a hiding adversary `adv` against
+`sealScheme` with `sealDEM` and leakage `plaintextLength`, at either hidden bit, the probabilities
+that the hiding experiment returns `true` and that the hybrid `privateExperiment` returns the
+guess `true` differ by at most the probability of `BadK` in the hybrid.
+
+The two experiments share preprocessing and key generation. From the resulting cache, the online
+phases are the runs of `hidingOnlineImpl` and, up to distribution, of `privateOnlineImpl` with an
+empty private cache (`run_romImpl_privateImpl_evalDistEq`); the hybrid's handler is dominated by
+the experiment's through `overlayCache` until `BadK` (`dominatedUntilBad_privateOnlineImpl`),
+which is sticky (`preservesInv_privateOnlineImpl_badK`), giving the bound in each direction
+(`prEvent_hidingOnlineImpl_le`, `prEvent_privateOnlineImpl_and_not_badK_le`). -/
+theorem absDiff_hidingExperiment_privateExperiment_le [SampleableType Salt] [NeZero n]
+    [AddCommGroup L] (mkCtx : Salt → Ctx) (initAcc : Ctx → S)
+    (adv : HidingAdversary (sealSpec n S L Salt Ctx N K) (Puzzle n S L Salt) Plaintext ByteArray)
+    (b : Bool) :
+    ENNReal.absDiff
+      ((ProbCompRuntime.rom (sealSpec n S L Salt Ctx N K)).evalDist
+        ((sealScheme n m mkCtx initAcc N K).hidingExperiment
+          (sealDEM (Ctx := Ctx) prf codec encodePuzzle) plaintextLength adv b) {true})
+      (Pr{let z ← (simulateQ (sealSpec n S L Salt Ctx N K).romImpl
+        (privateExperiment m prf codec encodePuzzle mkCtx initAcc adv b)).run ∅}[z.1.1 = true]) ≤
+      Pr{let z ← (simulateQ (sealSpec n S L Salt Ctx N K).romImpl
+        (privateExperiment m prf codec encodePuzzle mkCtx initAcc adv b)).run ∅}[
+          BadK z.1.2 z.2] := by
+  rw [ProbCompRuntime.rom_evalDist, ← prEvent_eq_evalDist_singleton, StateT.run'_eq, prEvent_map]
+  have hA : Pr{let x ← (simulateQ (sealSpec n S L Salt Ctx N K).romImpl
+      ((sealScheme n m mkCtx initAcc N K).hidingExperiment
+        (sealDEM (Ctx := Ctx) prf codec encodePuzzle) plaintextLength adv b)).run ∅}[x.1 = true] ≤
+      Pr{let z ← (simulateQ (sealSpec n S L Salt Ctx N K).romImpl
+        (privateExperiment m prf codec encodePuzzle mkCtx initAcc adv b)).run ∅}[z.1.1 = true ∨
+          BadK z.1.2 z.2] := by
+    simp only [TimeLockPuzzle.hidingExperiment, privateExperiment, guessExperiment, simulateQ_bind,
+      StateT.run_bind]
+    refine prEvent_bind_mono_of_forall_le _ _ _ _ _ fun p => ?_
+    refine prEvent_bind_mono_of_forall_le _ _ _ _ _ fun ⟨⟨puzzle, key⟩, c⟩ => ?_
+    dsimp only
+    rw [simulateQ_romImpl_hidingChallenger]
+    simp only [simulateQ_pure, StateT.run_pure, bind_pure_comp, prEvent_map, privateAdversary]
+    rw [(run_romImpl_privateImpl_evalDistEq prf codec encodePuzzle puzzle b _ c).prEvent_eq,
+      prEvent_map]
+    exact prEvent_hidingOnlineImpl_le prf codec encodePuzzle puzzle key b _ c (· = true)
+  have hB : Pr{let z ← (simulateQ (sealSpec n S L Salt Ctx N K).romImpl
+        (privateExperiment m prf codec encodePuzzle mkCtx initAcc adv b)).run ∅}[z.1.1 = true ∧
+          ¬BadK z.1.2 z.2] ≤
+      Pr{let x ← (simulateQ (sealSpec n S L Salt Ctx N K).romImpl
+        ((sealScheme n m mkCtx initAcc N K).hidingExperiment
+          (sealDEM (Ctx := Ctx) prf codec encodePuzzle) plaintextLength adv b)).run ∅}[
+          x.1 = true] := by
+    simp only [TimeLockPuzzle.hidingExperiment, privateExperiment, guessExperiment, simulateQ_bind,
+      StateT.run_bind]
+    refine prEvent_bind_mono_of_forall_le _ _ _ _ _ fun p => ?_
+    refine prEvent_bind_mono_of_forall_le _ _ _ _ _ fun ⟨⟨puzzle, key⟩, c⟩ => ?_
+    dsimp only
+    rw [simulateQ_romImpl_hidingChallenger]
+    simp only [simulateQ_pure, StateT.run_pure, bind_pure_comp, prEvent_map, privateAdversary]
+    rw [(run_romImpl_privateImpl_evalDistEq prf codec encodePuzzle puzzle b _ c).prEvent_eq,
+      prEvent_map]
+    exact prEvent_privateOnlineImpl_and_not_badK_le prf codec encodePuzzle puzzle key b _ c
+      (· = true)
+  refine ENNReal.absDiff_le_iff.2 ⟨hA.trans (prEvent_or_le _ _ _), ?_⟩
+  rw [add_comm]
+  exact prEvent_le_prEvent_add_of_prEvent_and_not_le _ _ _ _ _ hB
+
+end Hop
 
 end PointerChainPuzzle
