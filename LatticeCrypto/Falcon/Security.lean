@@ -33,10 +33,12 @@ The theorems here are about an **idealized Falcon model**, precisely:
   gap is a named total-variation hypothesis — `attemptTransport` per signing attempt, or
   `samplerTransport` per trapdoor draw — and floating-point `ffSampling` with its precision
   analysis is not modeled.
-- Machine-checked verification correctness (`verify` accepting honest signatures) is not
-  formalized here: it requires preimage-sampleable-function correctness (`s₁ + s₂ · h = c` on
-  honest keys) routed through the floating-point inverse-FFT rounding in
-  `Falcon.fromFFTPreimage`.
+- Verification correctness is proved for the fuel-bounded signer `sign`, not for the modelled
+  schemes: `verify_sign_correct` takes the codec round-trip and the coset identity
+  (`s₁ + s₂ · h = c` on honest keys) as hypotheses, and `Extern.Falcon.SignCorrectness`
+  discharges both at the exact-FFT concrete primitives from key validity. Through the
+  floating-point inverse-FFT rounding in `Falcon.fromFFTPreimage` the coset identity remains
+  a hypothesis.
 - No cost model is attached: the reductions are constructed explicitly but their polynomial
   runtime is not machine-checked. They perform no exhaustive search and no noncomputable steps
   beyond the ambient probabilistic semantics.
