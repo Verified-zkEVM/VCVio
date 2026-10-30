@@ -559,11 +559,13 @@ public import VCVio.Schemes.Pedersen
 public import VCVio.Schemes.PointerChainPuzzle.Bad
 public import VCVio.Schemes.PointerChainPuzzle.Basic
 public import VCVio.Schemes.PointerChainPuzzle.Delay
+public import VCVio.Schemes.PointerChainPuzzle.Envelope
 public import VCVio.Schemes.PointerChainPuzzle.Handler
 public import VCVio.Schemes.PointerChainPuzzle.Ideal
 public import VCVio.Schemes.PointerChainPuzzle.LeanSeal
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealBridge
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealDelay
+public import VCVio.Schemes.PointerChainPuzzle.LeanSealEnvelope
 public import VCVio.Schemes.PointerChainPuzzle.Path
 public import VCVio.Schemes.PointerChainPuzzle.Sequential
 public import VCVio.Schemes.Schnorr.BoundedChallenges
