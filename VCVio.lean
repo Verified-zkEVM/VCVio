@@ -347,6 +347,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.OracleComp.QueryTracking.QueryBound.Batch
 public import VCVio.OracleComp.QueryTracking.QueryBound.Counter
+public import VCVio.OracleComp.QueryTracking.QueryBound.Hazard
 public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryBound.Tagged
@@ -565,6 +566,7 @@ public import VCVio.Schemes.PointerChainPuzzle.Envelope
 public import VCVio.Schemes.PointerChainPuzzle.Handler
 public import VCVio.Schemes.PointerChainPuzzle.Hiding
 public import VCVio.Schemes.PointerChainPuzzle.HidingIdeal
+public import VCVio.Schemes.PointerChainPuzzle.HidingNonce
 public import VCVio.Schemes.PointerChainPuzzle.HidingPRF
 public import VCVio.Schemes.PointerChainPuzzle.Ideal
 public import VCVio.Schemes.PointerChainPuzzle.LeanSeal
