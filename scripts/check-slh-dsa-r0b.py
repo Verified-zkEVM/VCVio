@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Freshly check readable SLH-DSA contracts and immutable runtime/evaluator bindings.
+"""Freshly check current SLH-DSA strength, operational and readable contracts.
 
-Normal `lake test` calls this after its existing executables and exact table check. This
-command does not execute those runtimes again and never recursively invokes `lake test`.
+Normal `lake test` calls this after its registered executables and exact table check. This
+command checks their bindings; it never reruns those runtimes or recursively invokes `lake test`.
+The unchanged check-slh-dsa-r0.py remains the separately callable historical construction-syntax
+audit. Changed protected construction identity is a historical nonPASS, not a refreshed baseline.
 """
 from __future__ import annotations
 
@@ -24,6 +26,14 @@ LEAVES = ["HashSigTest.SLHDSA.Refactor.Semantics." + name
 RUNTIMES = {"slhdsa_shake128s_compiler_tests", "slhdsa_shake128s_game_tests",
             "slhdsa_shake128s_wire_bridge_tests", "slhdsa_fors_secret_order_tests"}
 ALLOWED_AXIOMS = {"propext", "Classical.choice", "Quot.sound"}
+# This archived digest describes a whole implementation, rather than a runtime/parser binding.
+# Its historical value stays in bindings.json; current construction claims are checked below.
+HISTORICAL_SCHEME_SOURCE = "HashSig/SLHDSA/SHAKE128s/Statement/Scheme.lean"
+WOTS_RUNTIME = "slhdsa_wots_integration_tests"
+WOTS_TARGET = {"root": "SLHDSAWotsIntegrationTests", "srcDir": "scripts"}
+WOTS_JOINT_MODULE = "HashSigTest.SLHDSA.Refactor.WotsIntegration"
+WOTS_JOINT_NAMES = ["SLHDSA.Refactor.WotsIntegration." + name
+                    for name in ("observePublicKey", "observeSign", "observeRecovery")]
 
 spec = importlib.util.spec_from_file_location("slh_dsa_r0a", ROOT / "scripts/check-slh-dsa-r0.py")
 if spec is None or spec.loader is None:
@@ -100,6 +110,8 @@ def target_binding(source: str, name: str) -> dict:
 def check_bindings(bindings: dict) -> list[str]:
     for field in ("r0aProtectedFiles", "semanticSourceSha256", "runtimeSourceSha256"):
         for relative, digest in bindings[field].items():
+            if field == "runtimeSourceSha256" and relative == HISTORICAL_SCHEME_SOURCE:
+                continue
             if r0a.sha256((ROOT / relative).read_bytes()) != digest:
                 raise ValueError(f"Frozen {field} binding changed: {relative}")
     original = json.loads((ROOT / "docs/design/slh-dsa-reuse-evidence/r0/capture-input.json").read_text())
@@ -129,6 +141,11 @@ def check_bindings(bindings: dict) -> list[str]:
         pattern = r'#\[\s*"exe"\s*,\s*"' + re.escape(name) + r'"\s*\]'
         if len(re.findall(pattern, driver)) != 1:
             raise ValueError(f"Ordinary lake test must register {name} exactly once")
+    if target_binding(lakefile, WOTS_RUNTIME) != WOTS_TARGET:
+        raise ValueError("The WOTS integration runtime root/srcDir changed")
+    wots_registration = r'#\[\s*"exe"\s*,\s*"' + WOTS_RUNTIME + r'"\s*\]'
+    if len(re.findall(wots_registration, driver)) != 1:
+        raise ValueError("Ordinary lake test must register the WOTS integration runtime exactly once")
     if len(re.findall(r'"scripts/check-slh-dsa-r0b\.py"', driver)) != 1:
         raise ValueError("Ordinary lake test must register its R0b tail gate exactly once")
     csv = ROOT / "docs/design/slh-dsa-security-bounds.csv"
@@ -139,7 +156,8 @@ def check_bindings(bindings: dict) -> list[str]:
 
 def check_axioms(names: list[str], report: Path, steps: list[dict]) -> None:
     probe = report / "Axioms.lean"
-    probe.write_text("import " + MODULE + "\n" +
+    imports = [MODULE, r0a.STRENGTH_MODULE, WOTS_JOINT_MODULE]
+    probe.write_text("".join("import " + module + "\n" for module in imports) +
                      "".join("#print axioms " + name + "\n" for name in names))
     log = report / "axioms.log"
     execute(["lake", "env", "lean", "-DautoImplicit=false", str(probe)], log, steps)
@@ -148,7 +166,7 @@ def check_axioms(names: list[str], report: Path, steps: list[dict]) -> None:
     for match in re.finditer(pattern, log.read_text(), re.MULTILINE):
         actual[match[1]] = set(filter(None, (name.strip() for name in (match[2] or "").split(","))))
     if set(actual) != set(names):
-        raise ValueError("The standard-axiom audit did not cover every public readable equation")
+        raise ValueError("The standard-axiom audit did not cover every current source, witness and joint claim")
     for name, axioms in actual.items():
         if not axioms <= ALLOWED_AXIOMS:
             raise ValueError(f"Nonstandard axioms in {name}: {sorted(axioms - ALLOWED_AXIOMS)}")
@@ -159,24 +177,59 @@ def verify(report: Path, steps: list[dict]) -> dict:
     (report / "before.json").write_text(json.dumps(before, indent=2) + "\n")
     bindings = json.loads((DATA / "bindings.json").read_text())
     names = check_bindings(bindings)
-    execute(["lake", "build", MODULE], report / "build.log", steps)
+    historical = ROOT / "docs/design/slh-dsa-reuse-evidence/r0"
+    baseline = json.loads((historical / "baseline.json").read_text())
+    contracts = json.loads((historical / "kernel-types.json").read_text())["contracts"]
+    contract_spec = json.loads((historical / "capture-input.json").read_text())
+    if len(contracts) != baseline["strengthContracts"]:
+        raise ValueError("The current strength-contract inventory is incomplete")
+    source_names = [entry["source"] for entry in contracts]
+    witness_names = [entry["witness"] for entry in contracts]
+    if len(set(source_names)) != len(contracts) or len(set(witness_names)) != len(contracts):
+        raise ValueError("A current strength source or witness occurs more than once")
+    r0a.check_pins(before, baseline)
+    version_log = report / "lean-version.log"
+    execute(["lake", "env", "lean", "--version"], version_log, steps)
+    if version_log.read_text().strip() != baseline["leanVersionOutput"]:
+        raise ValueError("The actual commit-bearing Lean evaluator changed")
+    execute(["lake", "build", MODULE, r0a.CAPTURE_MODULE, r0a.STRENGTH_MODULE,
+             WOTS_JOINT_MODULE], report / "build.log", steps)
     for index, module in enumerate(LEAVES):
         execute(["lake", "env", "lean", "-DautoImplicit=false",
                  module.replace(".", "/") + ".lean"], report / f"semantic-{index}.log", steps)
-    check_axioms(names, report, steps)
-    execute(["python3", "scripts/check-slh-dsa-r0.py", "--report-dir", str(report / "r0a")],
-            report / "r0a.log", steps)
-    original_result = json.loads((report / "r0a/result.json").read_text())
-    if original_result.get("accepted") is not True:
-        raise ValueError("The original frozen R0a gate did not pass")
+    # Literal JSON reads are not Lake dependencies: elaborate each family freshly.
+    for index, module in enumerate(contract_spec["witnessModules"]):
+        execute(["lake", "env", "lean", "-DautoImplicit=false",
+                 module.replace(".", "/") + ".lean"], report / f"witness-{index}.log", steps)
+    driver = report / "StrengthWitnesses.lean"
+    driver.write_text("\n".join("import " + module for module in contract_spec["imports"]) +
+                      f"\nimport {r0a.CAPTURE_MODULE}\nimport {r0a.STRENGTH_MODULE}\n\n" +
+                      "slhdsa_r0_validate_witnesses " +
+                      json.dumps(str(historical / "kernel-types.json")) + "\n")
+    witness_log = report / "strength-witnesses.log"
+    execute(["lake", "env", "lean", "-DautoImplicit=false", str(driver)], witness_log, steps)
+    if f"Validated {len(contracts)} literal kernel contract witnesses" not in witness_log.read_text():
+        raise ValueError("The complete current strength-witness validation did not execute")
+    axiom_names = list(dict.fromkeys(names + source_names + witness_names + WOTS_JOINT_NAMES))
+    check_axioms(axiom_names, report, steps)
     after = r0a.frame()
     (report / "after.json").write_text(json.dumps(after, indent=2) + "\n")
     if after != before:
         raise ValueError("Source or dependencies changed during the readable-contract gate")
     return {"accepted": True, "semanticGroups": 11, "publicEquations": len(names),
-            "frozenStrengthContracts": 77,
+            "freshStrengthContracts": len(contracts), "standardAxiomClaims": len(axiom_names),
+            "wotsJointClaims": WOTS_JOINT_NAMES,
+            "requiredRuntimeBindings": sorted(RUNTIMES | {WOTS_RUNTIME}),
             "runtimeScope": "Bindings only here; preceding ordinary lake-test steps execute once",
-            "scope": "R0 regression baseline; no P4/P5 or future implementation recovery claim"}
+            "historicalConstructionAudit": {
+                "executed": False, "accepted": None,
+                "command": "python3 scripts/check-slh-dsa-r0.py --report-dir FRESH_EXTERNAL_DIR",
+                "scope": "Separate historical construction identity; mismatch is nonPASS, never refreshed"},
+            "retiredRuntimeSourceIdentity": {
+                "path": HISTORICAL_SCHEME_SOURCE,
+                "recordedSha256": bindings["runtimeSourceSha256"][HISTORICAL_SCHEME_SOURCE]},
+            "scope": "Current quantified strength, readable and WOTS joint operational contracts; "
+                     "no historical private-body identity or future-family recovery claim"}
 
 
 def main() -> int:

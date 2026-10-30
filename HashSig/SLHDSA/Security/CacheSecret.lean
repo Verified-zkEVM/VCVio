@@ -133,7 +133,7 @@ theorem wotsPkGenTopsWithSecret?_eq_some_iff (pk : core.PkSeed)
       ∀ i : Fin p.len, ∃ x, simulateQ c.toPartialImpl (secret (wotsSkAdrs adrs i.val)) = some x ∧
         simulateQ c.toPartialImpl (chainM core pk (wotsChainAdrs adrs i.val) x 0 (p.w - 1)) =
           some tops[i] := by
-  simp only [wotsPkGenTopsWithSecret?, wotsPkGenTopsWithSecret, simulateQ_ofFnM_eq_some_iff,
+  simp only [wotsPkGenTopsWithSecret?, wotsPkGenTopsWithSecret_eq, simulateQ_ofFnM_eq_some_iff,
     simulateQ_bind_eq_some_iff, chainM]
 
 /-- A WOTS+ signature over a provider is settled exactly when, for every chain, the secret at its
@@ -146,7 +146,8 @@ theorem simulateQ_toPartialImpl_wotsSignWithSecret_eq_some_iff (msg : core.Y) (p
       ∀ i : Fin p.len, ∃ x, simulateQ c.toPartialImpl (secret (wotsSkAdrs adrs i.val)) = some x ∧
         simulateQ c.toPartialImpl (chainM core pk (wotsChainAdrs adrs i.val) x 0
           (chainStepsCore core msg i.val)) = some sig[i] := by
-  simp only [wotsSignWithSecret, simulateQ_ofFnM_eq_some_iff, simulateQ_bind_eq_some_iff, chainM]
+  simp only [wotsSignWithSecret_eq, simulateQ_ofFnM_eq_some_iff,
+    simulateQ_bind_eq_some_iff, chainM]
 
 /-- A settled WOTS+ signature over a provider whose recovered chain tops are settled settles the
 honest chain tops over that provider, at the recovered tops. -/
@@ -235,7 +236,7 @@ theorem simulateQ_toPartialImpl_xmssLeafWithSecret_eq_some_of_xmssSignWithSecret
   obtain ⟨leaf, ⟨tops, htops, hleaf⟩, hclimb⟩ :=
     (simulateQ_toPartialImpl_xmssPkFromSigM_eq_some_iff core c idx sig msg pk adrs).mp hrec
   refine ⟨leaf, ?_, hclimb⟩
-  simp only [xmssLeafWithSecret, wotsPkGenWithSecret, simulateQ_bind_eq_some_iff,
+  simp only [xmssLeafWithSecret, wotsPkGenWithSecret_eq, simulateQ_bind_eq_some_iff,
     simulateQ_toPartialImpl_tl]
   exact ⟨tops, wotsPkGenTopsWithSecret?_eq_some_of_wotsSignWithSecret core
     c secret msg pk (wotsLeafAdrs adrs idx) hwots htops, hleaf⟩

@@ -99,7 +99,9 @@ theorem structuralValue_equation (secretSeed publicSeed : Digest) (parent : Stru
   | wotsHash key chain step =>
       rcases step with ⟨step, hstep⟩
       cases step with
-      | zero => rfl
+      | zero =>
+          simp [structuralValue, Wots.chain_succ, canonicalInput, StructuralNode.address,
+            StructuralNode.children, childBytes, value, Hashing.tweakable]
       | succ step =>
           have hchain := Correctness.Wots.chain_add publicSeed
             { key.address with chainOrHeight := BitVec.ofNat 32 chain.val }
@@ -109,9 +111,9 @@ theorem structuralValue_equation (secretSeed publicSeed : Digest) (parent : Stru
             StructuralNode.children, Nat.succ_ne_zero, ↓reduceDIte,
             childBytes, List.map_cons, List.map_nil, List.flatten_cons, List.flatten_nil,
             List.append_nil, value, Nat.add_sub_cancel, Nat.zero_add,
-            Wots.chain, bind, pure, Hashing.tweakable] using hchain
+            Wots.chain_zero, Wots.chain_succ, bind, pure, Hashing.tweakable] using hchain
   | wotsPk key =>
-      simp only [structuralValue, Wots.publicKey, Correctness.sequenceFin_id, bind,
+      simp only [structuralValue, Wots.publicKey_eq, Correctness.sequenceFin_id, bind,
         canonicalInput, StructuralNode.children, childBytes_ofFn, value,
         StructuralNode.address, Hashing.tweakable]
       rfl

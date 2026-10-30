@@ -226,7 +226,8 @@ theorem isSome_thash_of_forgerLayer {c₀ c : PublicHash.Cache core} (hle : c₀
     simulateQ_toPartialImpl_chainM_add_eq_some_iff] at hch
   obtain ⟨y, hy, -⟩ := hch
   obtain ⟨x, hx, hq⟩ := (simulateQ_toPartialImpl_chainM_succ_eq_some_iff core c₀ _ _ _ _ _).1 hy
-  obtain rfl : o.sig.hypertree[j].wots[i.val] = x := by simpa [chainM, chainWith] using hx
+  obtain rfl : o.sig.hypertree[j].wots[i.val] = x := by
+    simpa [chainM, chainWith_zero] using hx
   rw [Nat.add_zero] at hq
   rw [Fin.getElem_fin]
   exact Option.isSome_of_eq_some hq

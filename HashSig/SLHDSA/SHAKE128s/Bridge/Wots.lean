@@ -138,16 +138,11 @@ theorem simulateQ_relabel_derive (publicSeed secretSeed : Digest) (a : Address) 
 
 /-- `chainWith` unfolded from its first step: one hash at index `i`, then `s` steps from
 `i + 1`. -/
-theorem chainWith_succ' {Y : Type} {m : Type → Type*} [Monad m] [LawfulMonad m]
+theorem chainWith_succ' {Y : Type} {m : Type → Type*} [Monad m]
     (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i s : ℕ) :
     chainWith hash adrs x i (s + 1) =
       hash (adrs.setHashAddress i) x >>= fun y => chainWith hash adrs y (i + 1) s := by
-  induction s generalizing x i with
-  | zero => simp [chainWith]
-  | succ s ih =>
-    rw [chainWith, ih, bind_assoc]
-    refine bind_congr fun y => ?_
-    rw [chainWith, Nat.add_right_comm i 1 s, Nat.add_assoc]
+  exact chainWith_head hash adrs x i s
 
 /-- **WOTS+ chains.** The paper's chain of `steps` steps from index `start` is FIPS 205's
 `chainM`, provided every hash index fits its 32-bit field. -/
@@ -158,10 +153,10 @@ theorem simulateQ_relabel_chain (seed : Digest) (a : Address) (start steps : ℕ
       digestEquiv.symm <$> simulateQ (encImpl FIPS205.params)
         (chainM FIPS205.core (digestEquiv seed) (toAdrs a) x start steps : TypedComp _) := by
   induction steps generalizing start x with
-  | zero => simp [Wots.chain, chainM, chainWith]
+  | zero => simp [Wots.chain_zero, chainM, chainWith_zero]
   | succ steps ih =>
     unfold chainM at ih ⊢
-    rw [Wots.chain, chainWith_succ', simulateQ_bind, simulateQ_relabel_tweakable_f,
+    rw [Wots.chain_succ, chainWith_succ', simulateQ_bind, simulateQ_relabel_tweakable_f,
       toAdrs_chainStepAddress a (by omega), simulateQ_bind, map_bind, bind_map_left]
     refine bind_congr fun y => ?_
     exact ih (start + 1) y (by omega)
@@ -252,7 +247,7 @@ theorem simulateQ_relabel_wotsPublicKey (secretSeed publicSeed : Digest) (a : Ad
           (PublicHash.tl FIPS205.core (digestEquiv publicSeed))
           (oracleSecret FIPS205.core (Equiv.refl _) (digestEquiv publicSeed)
             (digestEquiv secretSeed)) (toAdrs a) : TypedComp _) := by
-  rw [Wots.publicKey, wotsPkGenWithSecret, wotsPkGenTopsWithSecret, simulateQ_bind,
+  rw [Wots.publicKey_eq, wotsPkGenWithSecret_eq, wotsPkGenTopsWithSecret_eq, simulateQ_bind,
     simulateQ_relabel_sequenceFin digestEquiv.symm chains _ _
       (fun i => simulateQ_relabel_wotsChain secretSeed publicSeed a hk hh i (w - 1)
         (by decide)),
@@ -271,7 +266,7 @@ theorem simulateQ_relabel_wotsSign (msg : FIPS205.core.Y) (secretSeed publicSeed
         (wotsSignWithSecret FIPS205.core (PublicHash.f FIPS205.core (digestEquiv publicSeed))
           (oracleSecret FIPS205.core (Equiv.refl _) (digestEquiv publicSeed)
             (digestEquiv secretSeed)) msg (toAdrs a) : TypedComp _) := by
-  rw [Wots.sign, wotsSignWithSecret,
+  rw [Wots.sign_eq, wotsSignWithSecret_eq,
     simulateQ_relabel_sequenceFin digestEquiv.symm chains _ _ (fun i => by
       rw [simulateQ_relabel_wotsChain secretSeed publicSeed a hk hh i _
         (lt_of_lt_of_le (Checksum.encode _ i).isLt (by decide)), ← chainStepsCore_eq_encode])]
@@ -289,7 +284,8 @@ theorem simulateQ_relabel_wotsPublicKeyFromSignature
         (wotsPkFromSigWith FIPS205.core (PublicHash.f FIPS205.core (digestEquiv publicSeed))
           (PublicHash.tl FIPS205.core (digestEquiv publicSeed)) sig msg (toAdrs a) :
           TypedComp _) := by
-  rw [Wots.publicKeyFromSignature, wotsPkFromSigWith, wotsPkFromSigTopsWith, simulateQ_bind,
+  rw [Wots.publicKeyFromSignature_eq, wotsPkFromSigWith_eq, wotsPkFromSigTopsWith_eq,
+    simulateQ_bind,
     simulateQ_relabel_sequenceFin digestEquiv.symm chains _ _ (fun i => by
       have hd := (Checksum.encode (digestEquiv.symm msg) i).isLt
       rw [show (wotsOfCore sig) i = digestEquiv.symm sig[i.val] from rfl,

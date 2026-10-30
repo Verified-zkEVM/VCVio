@@ -94,8 +94,9 @@ private theorem secret_wotsSkAdrs_pred (pos : LayerPosition vp) (i : Fin vp.para
 include hpure hbind hhash hcompress hsecret in
 /-- WOTS+ public-key generation at a reachable instance satisfies `Q`. -/
 theorem wotsPkGenWithSecret_pred_of_ledger (pos : LayerPosition vp) :
-    Q (wotsPkGenWithSecret core hash compress secret (wotsInstanceAdrs pos)) :=
-  hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun i =>
+    Q (wotsPkGenWithSecret core hash compress secret (wotsInstanceAdrs pos)) := by
+  rw [wotsPkGenWithSecret_eq, wotsPkGenTopsWithSecret_eq]
+  exact hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun i =>
     hbind _ _ (secret_wotsSkAdrs_pred Q core hsecret pos i) fun x =>
       chainWith_pred_of_ledger Q hpure hbind core hhash pos i x (by omega))
     fun _ => hcompress _ (wotsPkAdrs_mem_constructionAddresses pos) _
@@ -103,8 +104,9 @@ theorem wotsPkGenWithSecret_pred_of_ledger (pos : LayerPosition vp) :
 include hpure hbind hhash hsecret in
 /-- WOTS+ signing at a reachable instance satisfies `Q`. -/
 theorem wotsSignWithSecret_pred_of_ledger (msg : core.Y) (pos : LayerPosition vp) :
-    Q (wotsSignWithSecret core hash secret msg (wotsInstanceAdrs pos)) :=
-  Vector.ofFnM_pred Q hpure hbind _ fun i =>
+    Q (wotsSignWithSecret core hash secret msg (wotsInstanceAdrs pos)) := by
+  rw [wotsSignWithSecret_eq]
+  exact Vector.ofFnM_pred Q hpure hbind _ fun i =>
     hbind _ _ (secret_wotsSkAdrs_pred Q core hsecret pos i) fun x =>
       chainWith_pred_of_ledger Q hpure hbind core hhash pos i x
         (by simpa using chainStepsCore_le core msg i.val)
@@ -113,8 +115,9 @@ include hpure hbind hhash hcompress in
 /-- WOTS+ public-key recovery at a reachable instance satisfies `Q`. -/
 theorem wotsPkFromSigWith_pred_of_ledger (sig : WotsSig vp.params core) (msg : core.Y)
     (pos : LayerPosition vp) :
-    Q (wotsPkFromSigWith core hash compress sig msg (wotsInstanceAdrs pos)) :=
-  hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun i =>
+    Q (wotsPkFromSigWith core hash compress sig msg (wotsInstanceAdrs pos)) := by
+  rw [wotsPkFromSigWith_eq, wotsPkFromSigTopsWith_eq]
+  exact hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun i =>
     chainWith_pred_of_ledger Q hpure hbind core hhash pos i _
       (by have := chainStepsCore_le core msg i.val; omega))
     fun _ => hcompress _ (wotsPkAdrs_mem_constructionAddresses pos) _

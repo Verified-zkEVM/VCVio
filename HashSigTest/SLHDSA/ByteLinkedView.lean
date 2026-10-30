@@ -106,7 +106,7 @@ theorem exists_secret_of_honestEntry {c : PublicHash.Cache (shakeCore vp256s)}
   | xmssNode adrs z i l r _ _ hl =>
     obtain ⟨y, hy⟩ := PerfectMerkleTree.exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq _ _ _
       hl (Nat.zero_le _) (t' := _ * 2 ^ _) (Nat.mul_div_cancel _ (by positivity))
-    simp only [PerfectMerkleTree.merkleRootM, xmssLeafWithSecret, wotsPkGenWithSecret,
+    simp only [PerfectMerkleTree.merkleRootM, xmssLeafWithSecret, wotsPkGenWithSecret_eq,
       simulateQ_bind_eq_some_iff] at hy
     obtain ⟨tops, ht, -⟩ := hy
     exact htops ht

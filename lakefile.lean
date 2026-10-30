@@ -403,6 +403,7 @@ script test (args) do
     #["exe", "slhdsa_data_codec_tests"],
     #["exe", "slhdsa_primitive_tests"],
     #["exe", "slhdsa_wots_tests"],
+    #["exe", "slhdsa_wots_integration_tests"],
     #["exe", "slhdsa_xmss_tests"],
     #["exe", "slhdsa_fors_tests"],
     #["exe", "slhdsa_fors_secret_order_tests"],
@@ -490,6 +491,11 @@ lean_exe slhdsa_primitive_tests where
 /-- WOTS+ checksum/construction exercise across all approved SHA2/SHAKE profiles. -/
 lean_exe slhdsa_wots_tests where
   root := `HashSigTest.SLHDSA.WotsConstructionTests
+
+/-- Actual WOTS provider, ordered payload, cache, output and callback-count checks. -/
+lean_exe slhdsa_wots_integration_tests where
+  srcDir := "scripts"
+  root := `SLHDSAWotsIntegrationTests
 
 /-- Bounded XMSS construction, address-domain, and selected concrete-profile exercise. -/
 lean_exe slhdsa_xmss_tests where

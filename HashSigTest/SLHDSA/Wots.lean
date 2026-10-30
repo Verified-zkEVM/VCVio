@@ -29,14 +29,15 @@ example (pkSeed : prims.PkSeed) (adrs : Adrs) (x : prims.Y) (i : ℕ) :
         let y ← PublicHash.f prims.core pkSeed (adrs.setHashAddress i) x
         PublicHash.f prims.core pkSeed (adrs.setHashAddress (i + 1)) y :
         OracleComp (publicHashSpec prims.core) prims.Y) := by
-  simp [chainM, chainWith]
+  simp [chainM, chainWith_head, chainWith_zero]
 
 example (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
     wotsSignM prims.core msg sk pk adrs =
       (Vector.ofFnM fun i : Fin p.len =>
         chainM prims.core pk (wotsChainAdrs adrs i.val)
           (prims.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (chainStepsCore prims.core msg i.val) :
-        OracleComp (publicHashSpec prims.core) (WotsSig p prims.core)) := rfl
+        OracleComp (publicHashSpec prims.core) (WotsSig p prims.core)) := by
+  exact wotsSignWith_eq prims.core _ msg sk pk adrs
 
 example (sig : WotsSig p prims.core) (msg : prims.Y) (pk : prims.PkSeed) (adrs : Adrs) :
     wotsPkFromSigM prims.core sig msg pk adrs = (do
@@ -45,6 +46,7 @@ example (sig : WotsSig p prims.core) (msg : prims.Y) (pk : prims.PkSeed) (adrs :
           (chainStepsCore prims.core msg i.val)
           (p.w - 1 - chainStepsCore prims.core msg i.val)
       PublicHash.tl prims.core pk (wotsPkAdrs adrs) tops.toList :
-      OracleComp (publicHashSpec prims.core) prims.Y) := rfl
+      OracleComp (publicHashSpec prims.core) prims.Y) := by
+  simp only [wotsPkFromSigM, wotsPkFromSigWith_eq, wotsPkFromSigTopsWith_eq, chainM]
 
 end SLHDSA.WotsTest

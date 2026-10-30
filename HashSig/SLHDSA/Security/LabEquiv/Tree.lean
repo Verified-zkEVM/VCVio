@@ -150,8 +150,9 @@ theorem wotsPkGenTopsWithSecret_labTriple :
         (wotsInstanceAdrs pos))
       (labWotsPkGenTops core (wotsInstanceAdrs pos))
       fun tops st ↦ ∀ i : Fin vp.params.len, CellHolds core st
-        (wotsChainCell core (wotsInstanceAdrs pos) i (vp.params.w - 1)) tops[i] :=
-  ofFnM_labChain_labTriple core hd pkSeed pos (fun _ ↦ _) fun _ ↦ le_rfl
+        (wotsChainCell core (wotsInstanceAdrs pos) i (vp.params.w - 1)) tops[i] := by
+  rw [wotsPkGenTopsWithSecret_eq]
+  exact ofFnM_labChain_labTriple core hd pkSeed pos (fun _ ↦ _) fun _ ↦ le_rfl
 
 include hd in
 /-- **WOTS+ signing.** Honest WOTS+ signing from the secrets is related to lab signing, and each
@@ -162,8 +163,9 @@ theorem wotsSignWithSecret_labTriple (msg : core.Y) :
         (wotsInstanceAdrs pos))
       (labWotsSign core msg (wotsInstanceAdrs pos))
       fun sig st ↦ ∀ i : Fin vp.params.len, CellHolds core st
-        (wotsChainCell core (wotsInstanceAdrs pos) i (chainStepsCore core msg i)) sig[i] :=
-  ofFnM_labChain_labTriple core hd pkSeed pos _ fun i ↦ chainStepsCore_le core msg i
+        (wotsChainCell core (wotsInstanceAdrs pos) i (chainStepsCore core msg i)) sig[i] := by
+  rw [wotsSignWithSecret_eq]
+  exact ofFnM_labChain_labTriple core hd pkSeed pos _ fun i ↦ chainStepsCore_le core msg i
 
 include hd in
 /-- **The WOTS+ public key.** The honest WOTS+ public key from the secrets is related to the lab
@@ -173,8 +175,10 @@ theorem wotsPkGenWithSecret_labTriple :
       (wotsPkGenWithSecret core (PublicHash.f core pkSeed) (PublicHash.tl core pkSeed)
         (labSecret core) (wotsInstanceAdrs pos))
       (labXmssLeaf core pos.toAdrs pos.leaf.val)
-      fun y st ↦ CellHolds core st (childCell core (.inr (wotsPkAdrs (wotsInstanceAdrs pos)))) y :=
-  (wotsPkGenTopsWithSecret_labTriple core hd pkSeed pos).bind fun tops ↦
+      fun y st ↦
+        CellHolds core st (childCell core (.inr (wotsPkAdrs (wotsInstanceAdrs pos)))) y := by
+  rw [wotsPkGenWithSecret_eq]
+  exact (wotsPkGenTopsWithSecret_labTriple core hd pkSeed pos).bind fun tops ↦
     (tl_labTriple core hd pkSeed (wotsPkAdrs_mem_constructionAddresses pos) _).mono
       (fun st h ↦ by
         rw [map_childCell_childAdrs_wotsPkAdrs]
@@ -193,6 +197,7 @@ theorem wotsPkFromSigWith_labTriple (sig : WotsSig vp.params core) (msg : core.Y
       (wotsPkFromSigWith core (labF core) (labTl core) sig msg (wotsInstanceAdrs pos))
       fun y st ↦
         CellHolds core st (childCell core (.inr (wotsPkAdrs (wotsInstanceAdrs pos)))) y := by
+  simp only [wotsPkFromSigWith_eq, wotsPkFromSigTopsWith_eq]
   refine (QueryImpl.EqDistTriple.ofFnM _ (fun (i : Fin vp.params.len) y st ↦ CellHolds core st
       (wotsChainCell core (wotsInstanceAdrs pos) i (vp.params.w - 1)) y)
     (fun _ _ _ _ hle h ↦ h.mono hle) fun i ↦ ?_).bind fun tops ↦ ?_

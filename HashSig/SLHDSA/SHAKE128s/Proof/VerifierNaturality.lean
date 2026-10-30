@@ -70,16 +70,16 @@ theorem chain_simulate (seed : Digest) (address : Address) (start steps : Nat) (
     simulateQ impl (Wots.chain seed address start steps value) =
       (Wots.chain seed address start steps value : m Digest) := by
   induction steps generalizing start value with
-  | zero => rfl
+  | zero => simp only [Wots.chain_zero, simulateQ_pure]
   | succ steps ih =>
-    simp only [Wots.chain, simulateQ_bind, tweakable_simulate impl himpl, ih]
+    simp only [Wots.chain_succ, simulateQ_bind, tweakable_simulate impl himpl, ih]
 
 /-- Simulating WOTS+ public-key recovery is the recovery in `m`. -/
 theorem wots_simulate (signature : WotsSignature) (message publicSeed : Digest)
     (address : Address) :
     simulateQ impl (Wots.publicKeyFromSignature signature message publicSeed address) =
       (Wots.publicKeyFromSignature signature message publicSeed address : m Digest) := by
-  simp only [Wots.publicKeyFromSignature, simulateQ_bind, sequenceFin_simulate,
+  simp only [Wots.publicKeyFromSignature_eq, simulateQ_bind, sequenceFin_simulate,
     chain_simulate impl himpl, tweakable_simulate impl himpl]
 
 /-- Simulating XMSS root recovery is the recovery in `m`. -/

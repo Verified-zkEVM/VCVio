@@ -74,10 +74,20 @@ include hpure hbind in
 at each address the chain visits, `adrs.setHashAddress (i + j)` for `j < s`. -/
 theorem chainWith_pred {Y : Type} {hash : Adrs → Y → m Y} {adrs : Adrs} (x : Y) (i : ℕ) :
     ∀ s, (∀ j < s, ∀ y, Q (hash (adrs.setHashAddress (i + j)) y)) →
-      Q (chainWith hash adrs x i s)
-  | 0, _ => hpure _
-  | s + 1, h => hbind _ _ (chainWith_pred x i s fun j hj => h j (by omega)) fun y =>
-      h s (by omega) y
+      Q (chainWith hash adrs x i s) := by
+  intro s
+  induction s generalizing x i with
+  | zero =>
+      intro _
+      rw [chainWith_zero]
+      exact hpure _
+  | succ s ih =>
+      intro h
+      rw [chainWith_head]
+      refine hbind _ _ (h 0 (by omega) x) fun y => ?_
+      refine ih y (i + 1) ?_
+      intro j hj value
+      simpa only [Nat.add_assoc, Nat.add_comm 1 j] using h (j + 1) (by omega) value
 
 variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
   {hash : Adrs → core.Y → m core.Y} {compress : Adrs → List core.Y → m core.Y}
@@ -92,8 +102,9 @@ variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 include hpure hbind hhash hcompress hsecret in
 /-- The provider-parametric WOTS+ public key satisfies `Q`. -/
 theorem wotsPkGenWithSecret_pred (adrs : Adrs) :
-    Q (wotsPkGenWithSecret core hash compress secret adrs) :=
-  hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun _ =>
+    Q (wotsPkGenWithSecret core hash compress secret adrs) := by
+  rw [wotsPkGenWithSecret_eq, wotsPkGenTopsWithSecret_eq]
+  exact hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun _ =>
     hbind _ _ (hsecret _ (Adrs.isSecretKey_wotsSkAdrs _ _)) fun x =>
       chainWith_pred Q hpure hbind x 0 _ fun _ _ => hhash _ type_le_four)
     fun _ => hcompress _ type_le_four _
@@ -101,16 +112,18 @@ theorem wotsPkGenWithSecret_pred (adrs : Adrs) :
 include hpure hbind hhash hsecret in
 /-- Provider-parametric WOTS+ signing satisfies `Q`. -/
 theorem wotsSignWithSecret_pred (msg : core.Y) (adrs : Adrs) :
-    Q (wotsSignWithSecret core hash secret msg adrs) :=
-  Vector.ofFnM_pred Q hpure hbind _ fun _ =>
+    Q (wotsSignWithSecret core hash secret msg adrs) := by
+  rw [wotsSignWithSecret_eq]
+  exact Vector.ofFnM_pred Q hpure hbind _ fun _ =>
     hbind _ _ (hsecret _ (Adrs.isSecretKey_wotsSkAdrs _ _)) fun x =>
       chainWith_pred Q hpure hbind x 0 _ fun _ _ => hhash _ type_le_four
 
 include hpure hbind hhash hcompress in
 /-- WOTS+ public-key recovery satisfies `Q`. -/
 theorem wotsPkFromSigWith_pred (sig : WotsSig vp.params core) (msg : core.Y) (adrs : Adrs) :
-    Q (wotsPkFromSigWith core hash compress sig msg adrs) :=
-  hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun _ =>
+    Q (wotsPkFromSigWith core hash compress sig msg adrs) := by
+  rw [wotsPkFromSigWith_eq, wotsPkFromSigTopsWith_eq]
+  exact hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun _ =>
     chainWith_pred Q hpure hbind _ _ _ fun _ _ => hhash _ type_le_four)
     fun _ => hcompress _ type_le_four _
 

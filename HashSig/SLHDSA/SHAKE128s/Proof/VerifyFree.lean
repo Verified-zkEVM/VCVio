@@ -226,7 +226,7 @@ theorem wots_free (signature : WotsSignature) (message : Digest) (address : Addr
     FreeBounds publicSeed
       (Wots.publicKeyFromSignature signature message publicSeed address :
         OracleComp HashSpec Digest) 1 := by
-  unfold Wots.publicKeyFromSignature
+  rw [Wots.publicKeyFromSignature_eq]
   simpa only [Nat.zero_add] using (FreeBounds.zero _).bind (fun endpoints =>
     tweakable_free (publicSeed := publicSeed) _ (digestArrayBytes endpoints) (by
       rw [digestArrayBytes_length]

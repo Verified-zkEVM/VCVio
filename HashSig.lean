@@ -389,6 +389,8 @@ public import HashSig.SLHDSA.Security.WotsWitnesses
 public import HashSig.SLHDSA.Security.XmssWitnesses
 public import HashSig.SLHDSA.SigningView.Encoding
 public import HashSig.SLHDSA.Wots
+public import HashSig.SLHDSA.Wots.Program
+public import HashSig.SLHDSA.Wots.Program.Laws
 public import HashSig.SLHDSA.WotsChecksum
 public import HashSig.SLHDSA.WotsEncoding
 public import HashSig.SLHDSA.WotsInjectivity

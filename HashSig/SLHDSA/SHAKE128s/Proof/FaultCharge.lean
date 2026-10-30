@@ -140,6 +140,7 @@ theorem queriesUnder_wots_compression (cache : QueryCache HashSpec)
       (Hashing.tweakableInput publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
         (digestArrayBytes (@Extraction.Wots.endpoints (CacheReplay.replayQuery cache)
           signature message publicSeed address))) := by
+  rw [Wots.publicKeyFromSignature_eq]
   rw [← simulateQ_endpoints cache signature message publicSeed address]
   exact queriesUnder_compression cache _ publicSeed _ digestArrayBytes
 
@@ -156,8 +157,9 @@ theorem queriesUnder_wots_chain (cache : QueryCache HashSpec) (signature : WotsS
             BitVec.ofNat 32 ((Checksum.encode message chainIndex).val + offset) }
         (bytesBE n (@SLHDSA.SHAKE128s.Wots.chain Id _ (CacheReplay.replayQuery cache) publicSeed
           { address with chainOrHeight := BitVec.ofNat 32 chainIndex.val }
-          (Checksum.encode message chainIndex).val offset (signature chainIndex)))) :=
-  queriesUnder_bind cache _ _ _
+          (Checksum.encode message chainIndex).val offset (signature chainIndex)))) := by
+  rw [Wots.publicKeyFromSignature_eq]
+  exact queriesUnder_bind cache _ _ _
     (queriesUnder_sequenceFin cache chains _ chainIndex _
       (WotsEntry.queriesUnder_chain cache publicSeed
         { address with chainOrHeight := BitVec.ofNat 32 chainIndex.val }

@@ -69,9 +69,11 @@ theorem chain_exact (publicSeed : Digest) (address : Address) (start steps : Nat
     ExactQueryCount (Wots.chain publicSeed address start steps value : OracleComp HashSpec Digest)
       steps := by
   induction steps generalizing start value with
-  | zero => exact .pure value
+  | zero =>
+    rw [Wots.chain_zero]
+    exact .pure value
   | succ steps ih =>
-    rw [Wots.chain]
+    rw [Wots.chain_succ]
     simpa only [Nat.add_comm] using
       exact_bind (tweakable_exact _ _ _) _ steps (fun next => ih (start + 1) next)
 
@@ -113,7 +115,7 @@ theorem wots_exact (signature : WotsSignature) (message publicSeed : Digest)
       (Wots.publicKeyFromSignature signature message publicSeed address :
         OracleComp HashSpec Digest)
       (Checksum.chainVerificationCalls (Checksum.messageDigit message) + 1) := by
-  unfold Wots.publicKeyFromSignature
+  rw [Wots.publicKeyFromSignature_eq]
   rw [← encoded_chain_steps message]
   exact exact_bind (sequenceFin_exact _ _ (fun i => chain_exact _ _ _ _ _)) _ 1
     (fun _ => tweakable_exact _ _ _)

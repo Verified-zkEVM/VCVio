@@ -47,7 +47,8 @@ theorem queriesUnder_chain (cache : QueryCache HashSpec) (publicSeed : Digest)
     intro offset start value hoffset
     cases offset with
     | zero =>
-      simp only [Nat.add_zero, SLHDSA.SHAKE128s.Wots.chain, pure]
+      simp only [Nat.add_zero, SLHDSA.SHAKE128s.Wots.chain_zero,
+        SLHDSA.SHAKE128s.Wots.chain_succ, pure]
       exact queriesUnder_tweakable cache publicSeed
         { address with hashOrIndex := BitVec.ofNat 32 start } (bytesBE n value) _
     | succ offset =>
@@ -62,9 +63,9 @@ theorem queriesUnder_chain (cache : QueryCache HashSpec) (publicSeed : Digest)
             { address with hashOrIndex := BitVec.ofNat 32 start } (bytesBE n value))) >>=
             (fun answer => SLHDSA.SHAKE128s.Wots.chain (m := OracleComp HashSpec) publicSeed
               address (start + 1) remaining (Hashing.truncate answer)) from by
-        simp [SLHDSA.SHAKE128s.Wots.chain, Hashing.tweakable, Hashing.shortHash]]
+        simp [SLHDSA.SHAKE128s.Wots.chain_succ, Hashing.tweakable, Hashing.shortHash]]
       refine QueriesUnder.tail _ _ _ ?_
-      simp only [SLHDSA.SHAKE128s.Wots.chain, replayFold_step_eq_tweakable] at hstep ⊢
+      simp only [SLHDSA.SHAKE128s.Wots.chain_succ, replayFold_step_eq_tweakable] at hstep ⊢
       exact hstep
 
 end SLHDSA.SHAKE128s.WotsEntry

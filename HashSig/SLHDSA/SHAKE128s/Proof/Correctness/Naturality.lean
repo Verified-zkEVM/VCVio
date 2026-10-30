@@ -47,14 +47,14 @@ theorem randomizer_simulate (prf seed : Digest) (message : Bytes) :
 theorem wots_publicKey_simulate (secretSeed publicSeed : Digest) (address : Address) :
     simulateQ impl (Wots.publicKey secretSeed publicSeed address) =
       (Wots.publicKey secretSeed publicSeed address : m Digest) := by
-  simp only [Wots.publicKey, simulateQ_bind, sequenceFin_simulate,
+  simp only [Wots.publicKey_eq, simulateQ_bind, sequenceFin_simulate,
     derive_simulate impl himpl, chain_simulate impl himpl, tweakable_simulate impl himpl]
 
 /-- Simulating WOTS signing is WOTS signing in the target monad. -/
 theorem wots_sign_simulate (message secretSeed publicSeed : Digest) (address : Address) :
     simulateQ impl (Wots.sign message secretSeed publicSeed address) =
       (Wots.sign message secretSeed publicSeed address : m WotsSignature) := by
-  simp only [Wots.sign, sequenceFin_simulate, simulateQ_bind,
+  simp only [Wots.sign_eq, sequenceFin_simulate, simulateQ_bind,
     derive_simulate impl himpl, chain_simulate impl himpl]
 
 /-- Simulating an XMSS node computation is that computation in the target monad. -/

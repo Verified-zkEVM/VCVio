@@ -213,8 +213,9 @@ above the one `msg` selects. -/
 theorem readsUnhidden_wotsPkFromSigWith (hd : core.KeyDiscipline vp)
     (sig : WotsSig vp.params core) :
     ReadsUnhidden core pkSeed U st
-      (wotsPkFromSigWith core (labF core) (labTl core) sig msg (wotsInstanceAdrs pos)) :=
-  allQueriesSatisfy_bind (allQueriesSatisfy_ofFnM _ fun i ↦
+      (wotsPkFromSigWith core (labF core) (labTl core) sig msg (wotsInstanceAdrs pos)) := by
+  rw [wotsPkFromSigWith_eq, wotsPkFromSigTopsWith_eq]
+  exact allQueriesSatisfy_bind (allQueriesSatisfy_ofFnM _ fun i ↦
     chainWith_pred (ReadsUnhidden core pkSeed U st) (fun _ ↦ allQueriesSatisfy_pure _ _)
       (fun _ _ ↦ allQueriesSatisfy_bind) _ _ _ fun j _ _ ↦
         readsUnhidden_labNode pkSeed hd

@@ -172,7 +172,7 @@ theorem chain {adrs : Adrs} {i : ℕ} {x : core.Y}
       (∀ s < t, (wotsChainAdrs adrs i).setHashAddress s ∈ constructionAddresses vp) →
       chain? core A pk (wotsChainAdrs adrs i) x 0 t = some v →
       chain? core B pk (wotsChainAdrs adrs i) x 0 t = some v
-  | 0, _, _, hc => hc
+  | 0, _, _, hc => by simpa only [chain?_zero] using hc
   | t + 1, v, hmem, hc => by
     obtain ⟨y, hy, hv⟩ := (chain?_succ_eq_some_iff core _ pk _ x 0 t).1 hc
     rw [Nat.zero_add] at hv
@@ -224,7 +224,7 @@ theorem xmssNode {adrs : Adrs} :
       xmssNodeWithSecret? core B (oracleSecret core e pk sk) pk adrs z t = some v
   | 0, t, v, hmem, hn => by
     simp only [xmssNodeWithSecret?, xmssNodeWithSecret, merkleRootM, xmssLeafWithSecret,
-      wotsPkGenWithSecret, simulateQ_bind_eq_some_iff, simulateQ_toPartialImpl_tl] at hn ⊢
+      wotsPkGenWithSecret_eq, simulateQ_bind_eq_some_iff, simulateQ_toPartialImpl_tl] at hn ⊢
     obtain ⟨tops, htops, hv⟩ := hn
     have htops' := h.wotsTops hmem htops
     exact ⟨tops, htops', h.apply_eq_some hv fun hL => .inl ⟨_, hL, .wotsPk _ tops hmem htops'⟩⟩
@@ -440,7 +440,7 @@ theorem xmssPkFromSig (pos : LayerPosition vp) (msg : core.Y) {sig : XmssSig vp.
   obtain ⟨y, hy⟩ := exists_simulateQ_merkleRootM_eq_some_of_div_pow_eq _ _ _ hroot
     (Nat.zero_le _) (by rw [Nat.sub_zero])
   have hy' := hy
-  simp only [merkleRootM, xmssLeafWithSecret, wotsPkGenWithSecret, simulateQ_bind_eq_some_iff,
+  simp only [merkleRootM, xmssLeafWithSecret, wotsPkGenWithSecret_eq, simulateQ_bind_eq_some_iff,
     simulateQ_toPartialImpl_tl] at hy'
   obtain ⟨tops, htops, hpt⟩ := hy'
   refine (simulateQ_toPartialImpl_xmssPkFromSigM_eq_some_iff core B _ _ msg pk _).2

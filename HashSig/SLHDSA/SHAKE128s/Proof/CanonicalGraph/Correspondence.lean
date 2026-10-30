@@ -53,7 +53,7 @@ theorem value_wotsPosition (secretSeed publicSeed : Digest) (key : WotsKey)
   unfold wotsPosition
   split
   · rename_i hzero
-    simp only [value, structuralValue, hzero, Wots.chain, pure]
+    simp only [value, structuralValue, hzero, Wots.chain_zero, pure]
   · rename_i hzero
     simp only [value, structuralValue]
     rw [Nat.sub_add_cancel (by omega : 1 ≤ position.val)]
@@ -63,7 +63,7 @@ theorem wots_sign_cells (message secretSeed publicSeed : Digest) (key : WotsKey)
     Wots.sign (m := Id) message secretSeed publicSeed key.address =
       fun chain => value secretSeed publicSeed
         (.structural (wotsPosition key chain (Checksum.encode message chain))) := by
-  simp only [Wots.sign, Correctness.sequenceFin_id, bind]
+  simp only [Wots.sign_eq, Correctness.sequenceFin_id, bind]
   funext chain
   exact (value_wotsPosition _ _ _ _ _).symm
 

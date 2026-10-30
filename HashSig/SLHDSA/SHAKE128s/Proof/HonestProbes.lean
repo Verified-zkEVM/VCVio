@@ -474,7 +474,7 @@ theorem wots_sign_entry (cache : QueryCache HashSpec) (message secretSeed public
         (Checksum.encode message chain).val
         (@Hashing.derive Id _ (replayQuery cache) publicSeed secretSeed
           (Wots.secretAddress address chain)) := by
-  simp only [Wots.sign, Correctness.sequenceFin_id, bind]
+  simp only [Wots.sign_eq, Correctness.sequenceFin_id, bind]
 
 /-- The WOTS half of an honest XMSS signature. -/
 theorem merkle_sign_wots (cache : QueryCache HashSpec)
@@ -515,12 +515,14 @@ theorem probes_wots_sign (cache : QueryCache HashSpec) (secretSeed publicSeed : 
     Probes cache
       (Wots.sign (m := OracleComp HashSpec) message secretSeed publicSeed key.address)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Wots.sign_eq]
   refine probes_sequenceFin cache _ chains _ fun chain => ?_
   refine probes_tweakable cache publicSeed (Wots.secretAddress key.address chain)
     (bytesBE n secretSeed) _ _
     ⟨.wotsPrf key chain, (canonicalInput_wotsPrf cache secretSeed publicSeed key chain).symm⟩ ?_
-  exact probes_chain cache secretSeed publicSeed key chain
-    (Checksum.encode message chain).val 0 (by simpa using checksum_digit_le message chain)
+  simpa only [@Wots.chain_zero Id _ (replayQuery cache), pure, Hashing.derive] using
+    probes_chain cache secretSeed publicSeed key chain
+      (Checksum.encode message chain).val 0 (by simpa using checksum_digit_le message chain)
 
 /-- **Recovering a WOTS public key from an honest signature consults only canonical
 inputs.** -/
@@ -537,6 +539,7 @@ theorem probes_wots_publicKeyFromSignature (cache : QueryCache HashSpec)
       (Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature message publicSeed
         key.address)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Wots.publicKeyFromSignature_eq]
   refine probes_bind cache _ _ _
     (fun chain : Fin chains => @Wots.chain Id _ (replayQuery cache) publicSeed
       { key.address with chainOrHeight := BitVec.ofNat 32 chain.val } 0 (w - 1)
