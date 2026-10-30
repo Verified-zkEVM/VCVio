@@ -15,10 +15,11 @@ public import VCVio.OracleComp.Coercions.Add.Basic
 # Falcon Signature Scheme
 
 This file defines the core Falcon signature scheme: key types and validity, the one-shot
-signing core (`signAttempt`), and verification (`verify`), together with the bridge to the
-generic GPV hash-and-sign framework via a `PreimageSampleableFunction` instantiation. Key
-generation and the full fresh-salt retry-loop signer are realized in
-`LatticeCrypto.Falcon.Concrete`.
+signing core (`signAttempt`), the fresh-salt retry-loop signer (`sign`), and verification
+(`verify`), together with the bridge to the generic GPV hash-and-sign framework via a
+`PreimageSampleableFunction` instantiation. Key generation enters the security statements only as
+a `GenerableRelation` on `validKeyPair`; the executable seeded key generator is
+`Falcon.Concrete.KeyGen.keyGen` in `Extern.Falcon.KeyGen`.
 
 ## Architecture
 
@@ -35,7 +36,7 @@ The Falcon scheme is an instantiation of the GPV hash-and-sign framework over NT
   `‖(s₁, s₂)‖₂² ≤ ⌊β²⌋`.
 
 The signing flow follows the Falcon+ convention (fresh salt per retry, pk-bound hashing),
-matching the concrete executable signer in `LatticeCrypto.Falcon.Concrete.Sign`.
+matching the concrete executable signer in `Extern.Falcon.Sign`.
 
 ## References
 
