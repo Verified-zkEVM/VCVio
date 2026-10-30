@@ -32,15 +32,13 @@ theorem arbitrary_value_fresh {ι Input Output α : Type} {privateSpec : OracleS
   OracleComp.RandomOraclePresampling.evalDist_prepend_fresh
     privateImpl computation cache target hfresh
 
-/-- A fresh traversal preserves every component of an arbitrary returned value. -/
+/-- An arbitrary discarded traversal preserves the fixed client's complete returned value. -/
 theorem arbitrary_value_traversal {ι Input Output α Index State : Type}
     {privateSpec : OracleSpec.{0, 0} ι} [DecidableEq Input] [SampleableType Output]
     (privateImpl : QueryImpl privateSpec ProbComp)
     (computation : OracleComp (privateSpec + (Input →ₒ Output)) α)
     (input : Index → State → Input) (step : Index → State → Output → State)
-    (hseparated : Separated input) (nodes : List Index) (state : State)
-    (cache : QueryCache (Input →ₒ Output)) (hnodup : nodes.Nodup)
-    (hfresh : FreshFor input nodes cache) :
+    (nodes : List Index) (state : State) (cache : QueryCache (Input →ₒ Output)) :
     let H := privateImpl.liftTarget (StateT (QueryCache (Input →ₒ Output)) ProbComp) +
       (randomOracle : QueryImpl (Input →ₒ Output)
         (StateT (QueryCache (Input →ₒ Output)) ProbComp))
@@ -50,7 +48,7 @@ theorem arbitrary_value_traversal {ι Input Output α Index State : Type}
             OracleComp (privateSpec + (Input →ₒ Output)) State) >>=
           fun _ => computation)).run cache) :=
   OracleComp.RandomOraclePresampling.evalDist_prepend_traversal
-    privateImpl computation input step hseparated nodes state cache hnodup hfresh
+    privateImpl computation input step nodes state cache
 
 /-- A traversal preserves a jointly returned result and downstream request count. -/
 theorem selected_traversal {ι Input Output α Index State : Type}
@@ -58,9 +56,7 @@ theorem selected_traversal {ι Input Output α Index State : Type}
     (privateImpl : QueryImpl privateSpec ProbComp)
     (computation : OracleComp (privateSpec + (Input →ₒ Output)) (α × Nat))
     (input : Index → State → Input) (step : Index → State → Output → State)
-    (hseparated : Separated input) (nodes : List Index) (state : State)
-    (cache : QueryCache (Input →ₒ Output)) (hnodup : nodes.Nodup)
-    (hfresh : FreshFor input nodes cache) :
+    (nodes : List Index) (state : State) (cache : QueryCache (Input →ₒ Output)) :
     let H := privateImpl.liftTarget (StateT (QueryCache (Input →ₒ Output)) ProbComp) +
       (randomOracle : QueryImpl (Input →ₒ Output)
         (StateT (QueryCache (Input →ₒ Output)) ProbComp))
@@ -70,7 +66,7 @@ theorem selected_traversal {ι Input Output α Index State : Type}
             OracleComp (privateSpec + (Input →ₒ Output)) State) >>=
           fun _ => computation)).run cache) :=
   OracleComp.RandomOraclePresampling.evalDist_prepend_traversal
-    privateImpl computation input step hseparated nodes state cache hnodup hfresh
+    privateImpl computation input step nodes state cache
 
 
 /-! ## A supported execution path and its retained observations -/
@@ -169,3 +165,47 @@ def run (complete : String → IO Unit) : IO Unit := do
   complete "c3-presampling"
 
 end VCVioTest.QueryTracking.RandomOraclePresampling
+
+namespace VCVioTest.QueryTracking.RandomOraclePresampling.CollidingPrefix
+
+/-- Every traversal coordinate queries the same cache entry. -/
+@[expose] def input (_node _state : Bool) : Unit := ()
+
+/-- The traversal state records the most recent oracle answer. -/
+@[expose] def step (_node _state : Bool) (answer : Bool) : Bool := answer
+
+/-- A traversal containing a repeated coordinate and colliding inputs. -/
+@[expose] def nodes : List Bool := [false, true, false]
+
+/-- The shared oracle entry is already populated before the traversal starts. -/
+@[expose] def initial : QueryCache (Unit →ₒ Bool) := QueryCache.ofFn fun _ => some true
+
+/-- A fixed client reads the same entry queried by the discarded traversal. -/
+@[expose] def client : OracleComp (unifSpec + (Unit →ₒ Bool)) Bool :=
+  liftM ((unifSpec + (Unit →ₒ Bool)).query (.inr ()))
+
+theorem not_separated : ¬Separated input := by
+  intro h
+  exact h false true (by decide) false false rfl
+
+theorem not_nodup : ¬nodes.Nodup := by decide
+
+theorem not_fresh : ¬FreshFor input nodes initial := by
+  intro h
+  have impossible : some true = (none : Option Bool) := h false (by decide) false
+  cases impossible
+
+/-- The whole returned value law holds despite all three failed coupling premises. -/
+theorem colliding_traversal_value :
+    let H := (QueryImpl.id' unifSpec).liftTarget
+        (StateT (QueryCache (Unit →ₒ Bool)) ProbComp) +
+      (randomOracle : QueryImpl (Unit →ₒ Bool)
+        (StateT (QueryCache (Unit →ₒ Bool)) ProbComp))
+    (Prod.fst <$> (simulateQ H client).run initial) =ᵈ
+      (Prod.fst <$> (simulateQ H
+        ((liftM (evaluate input step nodes false) :
+            OracleComp (unifSpec + (Unit →ₒ Bool)) Bool) >>= fun _ => client)).run initial) :=
+  OracleComp.RandomOraclePresampling.evalDist_prepend_traversal
+    (QueryImpl.id' unifSpec) client input step nodes false initial
+
+end VCVioTest.QueryTracking.RandomOraclePresampling.CollidingPrefix

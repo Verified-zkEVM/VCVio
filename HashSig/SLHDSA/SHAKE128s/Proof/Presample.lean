@@ -14,12 +14,12 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.GrowthBudget
 /-!
 # Value laws for presampling in the SLH-DSA experiment
 
-A fresh uniform oracle entry or separated adaptive traversal may precede an experiment without
-changing its returned value distribution. The final cache and the work performed by the prefix
-can differ. The laws apply to complete returned observations, including the counted outcome.
+Discarding any actual total prefix preserves a fixed subsequent experiment's returned-value
+distribution under the shared lazy oracle and stateless private sampling. The laws include the
+client's complete counted outcome; they discard final public cache and prefix work or trace.
 
 `worldEvaluate` lifts the canonical random-oracle traversal into the experiment's oracle world.
-The concrete warmup discharges separation, duplicate-freedom and freshness from its actual graph.
+Its independent-table coupling has separate separation, duplicate-freedom and freshness premises.
 Private seed sampling leaves the hash cache untouched; keeping warmup outside `countAllHashes`
 preserves the selected downstream count rather than charging the warmup to the adversary.
 -/
@@ -30,28 +30,18 @@ open OracleComp OracleSpec
 
 namespace SLHDSA.SHAKE128s.Presample
 
-/-- Writing two different keys commutes. -/
-theorem cacheQuery_comm (cache : QueryCache HashSpec) {left right : Bytes}
-    (hne : left ≠ right) (leftValue rightValue : HashOutput) :
-    (cache.cacheQuery left leftValue).cacheQuery right rightValue =
-      (cache.cacheQuery right rightValue).cacheQuery left leftValue :=
-  QueryCache.cacheQuery_comm cache hne leftValue rightValue
+/-! ## Discarded prefixes -/
 
-/-! ## Presampling one entry -/
-
-/-- **Pre-sampling an empty hash entry is free.** Filling an entry the cache does not yet hold
-with a uniform value, before the run, leaves the law of the run's value unchanged. -/
-theorem evalDist_prepend_fresh_world {α : Type} (computation : OracleComp OracleWorld α) :
-    ∀ (cache : QueryCache HashSpec) (target : Bytes), cache target = none →
-      (Prod.fst <$> (simulateQ KeygenUniform.rom computation).run cache) =ᵈ
-        (do
-          let value ← ($ᵗ HashOutput : ProbComp HashOutput)
-          Prod.fst <$> (simulateQ KeygenUniform.rom computation).run
-            (cache.cacheQuery target value)) := by
-  intro cache target hfresh
+/-- Discarding an actual total world prefix preserves the fixed client's returned-value law. -/
+theorem evalDist_prepend_prefix_world {α β : Type}
+    (before : OracleComp OracleWorld β) (computation : OracleComp OracleWorld α)
+    (cache : QueryCache HashSpec) :
+    (Prod.fst <$> (simulateQ KeygenUniform.rom computation).run cache) =ᵈ
+      (Prod.fst <$> (simulateQ KeygenUniform.rom
+        (before >>= fun _ => computation)).run cache) := by
   simpa only [KeygenUniform.rom, RandomOracleModel.impl, unifFwdImpl] using
-    OracleComp.RandomOraclePresampling.evalDist_prepend_fresh
-      (QueryImpl.ofLift unifSpec ProbComp) computation cache target hfresh
+    OracleComp.RandomOraclePresampling.evalDist_prepend_prefix
+      (QueryImpl.ofLift unifSpec ProbComp) before computation cache
 
 /-! ## Presampling the canonical traversal -/
 
@@ -61,36 +51,12 @@ noncomputable def worldEvaluate {State Index : Type} (input : Index → State �
     List Index → State → OracleComp OracleWorld State :=
   fun nodes state => liftM (OracleComp.RandomOracleTraversal.evaluate input step nodes state)
 
-/-- **Prepending a fresh traversal is free.** Running an adaptive traversal whose inputs are
-pairwise separated and still empty in the cache before a computation leaves the law of the
-computation's value unchanged. -/
-theorem evalDist_prepend_worldEvaluate {α State Index : Type}
-    (computation : OracleComp OracleWorld α) (input : Index → State → Bytes)
-    (step : Index → State → HashOutput → State)
-    (hseparated : GraphFreshSampling.Separated input) :
-    ∀ (nodes : List Index) (state : State) (cache : QueryCache HashSpec), nodes.Nodup →
-      GraphFreshSampling.FreshFor input nodes cache →
-      (Prod.fst <$> (simulateQ KeygenUniform.rom computation).run cache) =ᵈ
-        (Prod.fst <$> (simulateQ KeygenUniform.rom
-          (worldEvaluate input step nodes state >>= fun _ => computation)).run cache) := by
-  intro nodes state cache hnodup hfresh
-  simpa only [worldEvaluate, KeygenUniform.rom, RandomOracleModel.impl, unifFwdImpl] using
-    OracleComp.RandomOraclePresampling.evalDist_prepend_traversal
-      (QueryImpl.ofLift unifSpec ProbComp) computation input step hseparated
-      nodes state cache hnodup hfresh
-
 /-! ## Prepending the warmup
 
-The traversal the experiment's honest parties perform is
-`CanonicalGraph.Programming.warmup`, whose coordinates are the structural nodes in rank order.
-Every hypothesis of `evalDist_prepend_worldEvaluate` is available for it: the order is
-duplicate-free (`order_nodup`), distinct nodes have distinct byte inputs
-(`input_separated`), and from the empty cache every input is of course still empty.
-
-So the warmup may be prepended to any computation of the game's world for free — which is what
-fixes the honest cells before the adversary runs, since
-`GraphFreshSampling.evalDist_evaluate_eq_uniform_program` then turns that traversal into a
-uniform table and a programmed cache. -/
+The value law discards the complete actual warmup, so it needs no independent-answer
+hypotheses. The separate uniform-table representation of the canonical warmup retains its
+coordinate separation, duplicate-freedom and cache freshness requirements.
+-/
 
 /-- The warmup traversal, in the experiment's oracle world. -/
 @[expose] noncomputable def worldWarmup (publicSeed secretSeed : Digest) :
@@ -99,17 +65,13 @@ uniform table and a programmed cache. -/
     CanonicalGraph.Programming.assign CanonicalGraph.Programming.order
     (CanonicalGraph.Programming.initialCells secretSeed)
 
-/-- **The warmup may be prepended to any run from the empty cache.** -/
+/-- A discarded warmup preserves the subsequent returned-value law from the empty cache. -/
 theorem evalDist_prepend_warmup {α : Type} (computation : OracleComp OracleWorld α)
     (publicSeed secretSeed : Digest) :
     (Prod.fst <$> (simulateQ KeygenUniform.rom computation).run ∅) =ᵈ
       (Prod.fst <$> (simulateQ KeygenUniform.rom
         (worldWarmup publicSeed secretSeed >>= fun _ => computation)).run ∅) :=
-  evalDist_prepend_worldEvaluate computation _ _
-    (CanonicalGraph.Programming.input_separated publicSeed)
-    CanonicalGraph.Programming.order
-    (CanonicalGraph.Programming.initialCells secretSeed) ∅
-    CanonicalGraph.Programming.order_nodup (fun _ _ _ => rfl)
+  evalDist_prepend_prefix_world (worldWarmup publicSeed secretSeed) computation ∅
 
 /-! ## Inserting the warmup after the seeds
 
@@ -117,9 +79,9 @@ The experiment does not begin with hash calls: it begins by sampling the three s
 are coin queries. The warmup can only be written down once those seeds exist, so it has to be
 inserted *after* them rather than prepended to the whole run.
 
-That is sound because coin queries leave the hash cache alone — `run_liftM_probComp` — so the
-run still meets the warmup with an empty cache, which is what `evalDist_prepend_warmup`
-requires. -/
+Private seed sampling leaves the hash cache alone (`run_liftM_probComp`). The value law
+applies pointwise to each fixed seed value; no result of the discarded warmup is passed to
+the subsequent client. -/
 
 /-- Simulating a purely-sampling computation leaves the hash cache untouched.
 

@@ -65,9 +65,9 @@ theorem cacheFrom_congr (publicSeed : Digest) (leftCells rightCells : Cells)
     cacheFrom publicSeed leftCells leftOutputs parents cache =
       cacheFrom publicSeed rightCells rightOutputs parents cache := by
   induction parents generalizing cache with
-  | nil => rfl
+  | nil => simp only [cacheFrom_nil]
   | cons current rest ih =>
-    rw [cacheFrom, cacheFrom, hkeys current (by simp), hvalues current (by simp)]
+    rw [cacheFrom_cons, cacheFrom_cons, hkeys current (by simp), hvalues current (by simp)]
     exact ih _ (fun other hother => hkeys other (by simp [hother]))
       (fun other hother => hvalues other (by simp [hother]))
 
@@ -116,8 +116,9 @@ theorem openCache_congr_of_agreeOff
   classical
   have hne : ∀ other, available other → other ≠ index := fun other hother heq =>
     hindex (heq ▸ hother)
-  refine cacheFrom_congr publicSeed _ _ _ _ _ ∅ (fun parent hparent => ?_)
-    (fun parent hparent => ?_)
+  refine cacheFrom_congr publicSeed left.1 right.1 (fullOutput left.1 left.2)
+    (fullOutput right.1 right.2) (openNodes available) ∅
+    (fun parent hparent => ?_) (fun parent hparent => ?_)
   · refine canonicalInput_congr publicSeed _ _ parent fun child hchild => ?_
     exact hagree.1 child (hne child ((mem_openNodes available parent).mp hparent child hchild))
   · have hcell : available (Node.structural parent) :=

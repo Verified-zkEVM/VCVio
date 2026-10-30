@@ -148,4 +148,8 @@ theorem StructuralNode.toVector_address_injective (widths : Widths p) :
   simpa only [StructuralNode.fromVector_toVector_address widths] using
     congrArg Adrs.fromVector equal
 
+/-- The complete coordinate rectangles of each approved FIPS set fit the address fields. -/
+theorem widths_fips (set : FipsParameterSet) : Widths set.params := by
+  cases set <;> constructor <;> decide
+
 end SLHDSA.Graph

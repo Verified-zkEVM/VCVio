@@ -115,6 +115,7 @@ public import VCVioTest.QueryHom
 public import VCVioTest.QueryTracking.Exact
 public import VCVioTest.QueryTracking.RandomOraclePresampling
 public import VCVioTest.QueryTracking.TraversalFrame
+public import VCVioTest.QueryTracking.TraversalProgramming
 public import VCVioTest.RandomOracleClassIndexedTape
 public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleDefer

@@ -171,6 +171,14 @@ private theorem subtree_ready (valid : p.Valid) (key : ForsKey p) (height : Nat)
         · apply List.mem_append_right
           exact root_mem_subtree key height (by omega) _
 
+/-- Every structural child of a subtree node occurs strictly before its dependent call. -/
+theorem subtree_children_before (valid : p.Valid) (key : ForsKey p) (height : Nat)
+    (bound : height ≤ p.a) (index : Fin (p.k * 2 ^ (p.a - height)))
+    (position : Fin (subtree key height bound index).length) (child : StructuralNode p)
+    (member : Node.structural child ∈ ((subtree key height bound index)[position]).children valid) :
+    child ∈ (subtree key height bound index).take position.val :=
+  subtree_ready valid key height bound index position.val position.isLt child member
+
 private theorem auth_ready (valid : p.Valid) (key : ForsKey p)
     (selected : Fin (p.k * 2 ^ p.a)) (height : Nat) (bound : height ≤ p.a) :
     Ready valid (auth key selected height bound) := by

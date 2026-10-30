@@ -12,9 +12,11 @@ import VCVio.OracleComp.EvalDist.Measure
 /-!
 # Value distributions under random-oracle presampling
 
-A stateless private interpretation can be interleaved with a lazy random oracle. A fresh
-uniform entry, or a fresh separated traversal, may precede any client without changing its
-returned value distribution. These laws discard the final cache and the prefix state.
+An actual total prefix may interleave stateless private sampling and the lazy random oracle.
+Discarding the prefix preserves a fixed subsequent client's complete returned-value law, even
+when inputs collide, coordinates repeat or its cache is populated. This observes neither the
+final cache nor prefix work or trace. A separate virtual fresh-entry overwrite law requires
+that the overwritten coordinate is missing from the initial cache.
 -/
 
 public section
@@ -102,73 +104,76 @@ theorem evalDist_prepend_fresh {ι Input Output α : Type} {privateSpec : Oracle
             bind_map_left, QueryCache.cacheQuery_comm cache hsame]
           rfl
 
-/-- A fresh separated traversal preserves the complete returned value distribution. -/
-theorem evalDist_prepend_traversal {ι Input Output α Index State : Type}
+/-- Discarding any total prefix preserves the fixed client's complete returned-value law. -/
+theorem evalDist_prepend_prefix {ι Input Output α β : Type}
     {privateSpec : OracleSpec.{0, 0} ι} [DecidableEq Input] [SampleableType Output]
     (privateImpl : QueryImpl privateSpec ProbComp)
-    (computation : OracleComp (privateSpec + (Input →ₒ Output)) α)
-    (input : Index → State → Input) (step : Index → State → Output → State)
-    (hseparated : Separated input) (nodes : List Index) (state : State)
-    (cache : QueryCache (Input →ₒ Output)) (hnodup : nodes.Nodup)
-    (hfresh : FreshFor input nodes cache) :
+    (before : OracleComp (privateSpec + (Input →ₒ Output)) β)
+    (client : OracleComp (privateSpec + (Input →ₒ Output)) α)
+    (cache : QueryCache (Input →ₒ Output)) :
     let H := privateImpl.liftTarget (StateT (QueryCache (Input →ₒ Output)) ProbComp) +
       (randomOracle : QueryImpl (Input →ₒ Output)
         (StateT (QueryCache (Input →ₒ Output)) ProbComp))
-    (Prod.fst <$> (simulateQ H computation).run cache) =ᵈ
-      (Prod.fst <$> (simulateQ H
-        ((liftM (evaluate input step nodes state) :
-            OracleComp (privateSpec + (Input →ₒ Output)) State) >>=
-          fun _ => computation)).run cache) := by
+    (Prod.fst <$> (simulateQ H client).run cache) =ᵈ
+      (Prod.fst <$> (simulateQ H (before >>= fun _ => client)).run cache) := by
   let H := privateImpl.liftTarget (StateT (QueryCache (Input →ₒ Output)) ProbComp) +
     (randomOracle : QueryImpl (Input →ₒ Output)
       (StateT (QueryCache (Input →ₒ Output)) ProbComp))
-  change (Prod.fst <$> (simulateQ H computation).run cache) =ᵈ
-    (Prod.fst <$> (simulateQ H
-      ((liftM (evaluate input step nodes state) :
-          OracleComp (privateSpec + (Input →ₒ Output)) State) >>=
-        fun _ => computation)).run cache)
-  have hrun : ∀ ns st c,
-      (simulateQ H
-        ((liftM (evaluate input step ns st) :
-            OracleComp (privateSpec + (Input →ₒ Output)) State) >>=
-          fun _ => computation)).run c =
-        ((simulateQ randomOracle (evaluate input step ns st)).run c >>=
-          fun result => (simulateQ H computation).run result.2) := by
-    intro ns st c
-    rw [simulateQ_bind, show simulateQ H (liftM (evaluate input step ns st) :
-        OracleComp (privateSpec + (Input →ₒ Output)) State) =
-        simulateQ randomOracle (evaluate input step ns st) from
-      QueryImpl.simulateQ_add_liftM_right _ _ _, StateT.run_bind]
-  induction nodes generalizing state cache with
-  | nil =>
+  change (Prod.fst <$> (simulateQ H client).run cache) =ᵈ
+    (Prod.fst <$> (simulateQ H (before >>= fun _ => client)).run cache)
+  induction before using OracleComp.inductionOn generalizing cache with
+  | pure value =>
+    simp only [pure_bind]
     exact EvalDistEq.rfl
-  | cons node rest ih =>
-    have hnot : node ∉ rest := (List.nodup_cons.mp hnodup).1
-    have hrest : rest.Nodup := (List.nodup_cons.mp hnodup).2
-    have hhead : cache (input node state) = none := hfresh node (by simp) state
-    refine (evalDist_prepend_fresh privateImpl computation cache (input node state) hhead).trans ?_
-    have hstep : ∀ value : Output,
-        (Prod.fst <$> (simulateQ H computation).run
-            (cache.cacheQuery (input node state) value)) =ᵈ
-          (Prod.fst <$> (simulateQ H
-            ((liftM (evaluate input step rest (step node state value)) :
-                OracleComp (privateSpec + (Input →ₒ Output)) State) >>=
-              fun _ => computation)).run (cache.cacheQuery (input node state) value)) := by
-      intro value
-      refine ih (step node state value) (cache.cacheQuery (input node state) value) hrest ?_
-      intro other hother otherState
-      rw [QueryCache.cacheQuery_of_ne cache value
-        (hseparated other node (fun same => hnot (same ▸ hother)) otherState state)]
-      exact hfresh other (by simp [hother]) otherState
-    refine (EvalDistEq.bind_right ($ᵗ Output : ProbComp Output) hstep).trans ?_
-    have hmiss : (randomOracle (input node state)).run cache =
-        (fun value => (value, cache.cacheQuery (input node state) value)) <$>
-          ($ᵗ Output : ProbComp Output) := by
-      rw [QueryImpl.withCaching_run_none _ hhead]
-      simp [uniformSampleImpl]
-    simp only [hrun]
-    simp only [evaluate, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
-      hmiss, bind_map_left, map_bind, bind_assoc]
-    exact EvalDistEq.rfl
+  | query_bind queried next ih =>
+    rcases queried with coin | input
+    · have hcoin : ∀ probe : QueryCache (Input →ₒ Output),
+          (H (Sum.inl coin)).run probe =
+            (fun value => (value, probe)) <$> privateImpl coin := by
+        intro probe
+        simp only [H, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, StateT.run_liftM,
+          bind_pure_comp]
+        rfl
+      refine (OracleComp.EvalDistEq.bind_const (privateImpl coin)
+        (Prod.fst <$> (simulateQ H client).run cache)).symm.trans ?_
+      have h := EvalDistEq.bind_right (privateImpl coin) (fun value => ih value cache)
+      simpa only [bind_assoc, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+        map_bind, hcoin, bind_map_left] using h
+    · cases hlookup : cache input with
+      | some value =>
+        have hhit : (H (Sum.inr input)).run cache = pure (value, cache) := by
+          change (randomOracle input).run cache = _
+          exact QueryImpl.withCaching_run_some _ hlookup
+        simpa only [bind_assoc, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+          map_bind, hhit, pure_bind] using ih value cache
+      | none =>
+        have hmiss : (H (Sum.inr input)).run cache =
+            (fun value => (value, cache.cacheQuery input value)) <$>
+              ($ᵗ Output : ProbComp Output) := by
+          change (randomOracle input).run cache = _
+          rw [QueryImpl.withCaching_run_none _ hlookup]
+          simp [uniformSampleImpl]
+        refine (evalDist_prepend_fresh privateImpl client cache input hlookup).trans ?_
+        have h := EvalDistEq.bind_right ($ᵗ Output : ProbComp Output)
+          (fun value => ih value (cache.cacheQuery input value))
+        simpa only [bind_assoc, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+          map_bind, hmiss, bind_map_left] using h
+
+/-- A discarded traversal preserves client values for arbitrary schedules, inputs and caches. -/
+theorem evalDist_prepend_traversal {ι Input Output α Index State : Type}
+    {privateSpec : OracleSpec.{0, 0} ι} [DecidableEq Input] [SampleableType Output]
+    (privateImpl : QueryImpl privateSpec ProbComp)
+    (client : OracleComp (privateSpec + (Input →ₒ Output)) α)
+    (input : Index → State → Input) (step : Index → State → Output → State)
+    (nodes : List Index) (state : State) (cache : QueryCache (Input →ₒ Output)) :
+    let H := privateImpl.liftTarget (StateT (QueryCache (Input →ₒ Output)) ProbComp) +
+      (randomOracle : QueryImpl (Input →ₒ Output)
+        (StateT (QueryCache (Input →ₒ Output)) ProbComp))
+    (Prod.fst <$> (simulateQ H client).run cache) =ᵈ
+      (Prod.fst <$> (simulateQ H
+        ((liftM (evaluate input step nodes state) :
+            OracleComp (privateSpec + (Input →ₒ Output)) State) >>= fun _ => client)).run
+          cache) :=
+  evalDist_prepend_prefix privateImpl _ client cache
 
 end OracleComp.RandomOraclePresampling
