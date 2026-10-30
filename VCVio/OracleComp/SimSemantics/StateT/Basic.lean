@@ -317,6 +317,23 @@ variable {ι : Type*} {spec : OracleSpec ι}
 section support_simulateQ_StateT
 
 variable {α : Type w}
+
+/-- Simulating an `OracleComp` through an implementation in a monad `n` can only shrink the
+support: any output reachable after simulation was already reachable in the original computation
+(where oracle queries may return any value). -/
+theorem support_simulateQ_subset
+    {n : Type w → Type _} [Monad n] [LawfulMonad n] [MonadAttach n] [ExactMonadAttach n]
+    (impl : QueryImpl spec n) (oa : OracleComp spec α) :
+    support (simulateQ impl oa) ⊆ support oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t k ih =>
+    intro x hx
+    simp only [simulateQ_bind, simulateQ_spec_query, MonadAttach.support_bind, Set.mem_iUnion,
+      exists_prop] at hx
+    obtain ⟨u, -, hx⟩ := hx
+    exact (mem_support_bind_iff _ _ _).2 ⟨u, mem_support_query t u, ih u hx⟩
+
 /-- Simulating an `OracleComp` through a stateful implementation in monad `m` can only shrink the
 support: any output reachable after simulation was already reachable in the original computation
 (where oracle queries may return any value). The statement needs no probability interpretation. -/
@@ -370,3 +387,26 @@ lemma OptionT.aux_mem_support_simulateQ_run'
     {x : α} (hx : x ∈ support (OptionT.mk ((simulateQ impl oa).run' s₀))) : P x := by
   rw [MonadAttach.mem_support, MonadAttach.OptionT.canReturn_iff] at hx
   exact h (some x) (support_simulateQ_run'_subset impl oa s₀ hx) x rfl
+
+/-! ### Binds through a stateful handler -/
+
+namespace OracleComp
+
+/-- Running a bind through a stateful handler runs the continuation from the reached state. -/
+lemma run_simulateQ_bind {ι σ α β : Type} {spec : OracleSpec.{0, 0} ι}
+    (impl : QueryImpl spec (StateT σ ProbComp)) (oa : OracleComp spec α)
+    (f : α → OracleComp spec β) (s : σ) :
+    (simulateQ impl (oa >>= f)).run s =
+      (simulateQ impl oa).run s >>= fun p => (simulateQ impl (f p.1)).run p.2 := by
+  rw [simulateQ_bind, StateT.run_bind]
+
+/-- `run_simulateQ_bind` for the output alone. -/
+lemma run'_simulateQ_bind {ι σ α β : Type} {spec : OracleSpec.{0, 0} ι}
+    (impl : QueryImpl spec (StateT σ ProbComp)) (oa : OracleComp spec α)
+    (f : α → OracleComp spec β) (s : σ) :
+    (simulateQ impl (oa >>= f)).run' s =
+      (simulateQ impl oa).run s >>= fun p => (simulateQ impl (f p.1)).run' p.2 := by
+  rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind, map_bind]
+  rfl
+
+end OracleComp
