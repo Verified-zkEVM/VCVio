@@ -45,15 +45,21 @@ legitimate for none at its submission; `IdealState.OnlineBad` holds when some lo
 From a cache off the generator's `Bad`, the ideal handler and the lazy random oracle on the
 programmed cache answer every point that is not online-bad alike (`idealPoint_run_bind`), so the
 ideal handler is dominated by the programmed one until online Bad or the generator's `Bad`
-(`dominatedUntilBad_idealImpl`). The ideal experiment (`idealExperiment`) draws the same `seed` as
-the programmed experiment and runs the online phase under the ideal handler from the cache left by
-the preprocessing phase, with nothing reached and the counter at `0`; it reports whether the
-adversary returns the key label, whether the generator's `Bad` holds, whether online Bad occurred,
-and whether the key is reached. The winning probability in the programmed experiment is at most
-the winning probability in the ideal experiment plus the probability of either Bad there
-(`programmedExperiment_win_le_idealExperiment`). The same bound holds for the delay advantage of
-the scheme itself (`delayAdvantage_scheme_le_idealExperiment`): a seed with the generator's `Bad`
-is charged once, inside the second term.
+(`dominatedUntilBad_idealImpl`). The ideal experiment for an online phase with outputs of any type
+(`idealOutcomeExperiment`) draws the seed of the preprocessing phase (`seedOf`) and runs the online
+phase under the ideal handler from the cache left by the preprocessing phase, with nothing reached
+and the counter at `0`; it reports the output and the key label (`IdealOutcome`), whether the
+generator's `Bad` holds, whether online Bad occurred, and whether the key is reached. Every event of
+the output and the key in the delay experiment of the scheme (`TimeLockPuzzle.guessExperiment`)
+has probability at most that of the event in the ideal experiment plus the probability of either
+Bad there (`prEvent_guessExperiment_scheme_le_idealOutcomeExperiment`): a seed with the generator's
+`Bad` is charged once, inside the second term.
+
+For a delay adversary, the ideal experiment `idealExperiment` summarizes the outcome as whether the
+adversary returns the key label (`IdealOutcome.toResult`, `idealExperiment_eq_map_toResult`). The
+winning probability in the programmed experiment is at most the winning probability in the ideal
+experiment plus the probability of either Bad there (`programmedExperiment_win_le_idealExperiment`),
+and so is the delay advantage of the scheme itself (`delayAdvantage_scheme_le_idealExperiment`).
 
 The log of submissions is kept for the bound on online Bad: each logged point records the round
 in which it was submitted and the reached set at that time.
@@ -640,7 +646,20 @@ end Compare
 
 /-! ## The ideal experiment -/
 
-/-- The outcome of the ideal experiment. -/
+/-- The outcome of the ideal experiment for an online phase with outputs `Out`. -/
+structure IdealOutcome (Out S : Type) where
+  /-- The output of the online phase. -/
+  out : Out
+  /-- The key label. -/
+  key : S
+  /-- The generator's `Bad` holds for the preprocessing cache, the puzzle and the labels. -/
+  genBad : Bool
+  /-- Some point of an online round was online-bad at its submission. -/
+  onlineBad : Bool
+  /-- The key is reached at the end of the online phase. -/
+  keyReached : Bool
+
+/-- The outcome of the ideal experiment for a delay adversary. -/
 structure IdealResult where
   /-- The online phase returned the key label. -/
   win : Bool
@@ -651,6 +670,110 @@ structure IdealResult where
   /-- The key is reached at the end of the online phase. -/
   keyReached : Bool
 
+/-- The outcome of a delay adversary summarized: it wins when its output is the key label. -/
+@[expose]
+def IdealOutcome.toResult [DecidableEq S] (r : IdealOutcome S S) : IdealResult :=
+  ⟨decide (r.out = r.key), r.genBad, r.onlineBad, r.keyReached⟩
+
+section OutcomeExperiment
+
+variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
+  [SampleableType S] [SampleableType L] {Out : Type}
+  (adv : TimeLockPuzzle.TwoPhaseAdversary unifSpec (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt)
+    Out)
+  (m : ℕ) (mkCtx : Salt → Ctx) (initAcc : Ctx → S) [NeZero n] [AddCommGroup L]
+
+/-- The online phase of the ideal experiment after the seed `s`, for an online phase with outputs
+of any type: the online phase of the adversary runs under the ideal handler for the puzzle and the
+labels of `s`, from the cache left by the preprocessing phase, with nothing reached and the round
+counter at `0`. -/
+@[expose]
+def idealOutcomeRest (s : Seed n m S L Salt Ctx adv.State) : ProbComp (IdealOutcome Out S) :=
+  (fun z => ⟨z.1, s.labels .key, decide (Bad m mkCtx initAcc s.cache s.puzzle s.labels),
+      decide (z.2.OnlineBad m mkCtx initAcc s.puzzle s.labels), decide (.key ∈ z.2.reached)⟩) <$>
+    (simulateQ (idealImpl m mkCtx initAcc s.puzzle s.labels) (adv.online s.state s.puzzle)).run
+      (IdealState.init s.cache)
+
+/-- The ideal experiment for an online phase with outputs of any type: draw the seed of the
+preprocessing phase (`seedOf`), then run the online phase under the ideal handler
+(`idealOutcomeRest`). -/
+@[expose]
+def idealOutcomeExperiment [SampleableType Salt] : ProbComp (IdealOutcome Out S) :=
+  seedOf adv.preprocess m >>= idealOutcomeRest adv m mkCtx initAcc
+
+omit [NeZero n] [AddCommGroup L] in
+/-- The online phase run in the random oracle model from a cache `c` is the lazy random oracle
+answering each round point by point. -/
+lemma onlineRun_eq_map_run (σ : adv.State) (P : Puzzle n S L Salt) (key : S)
+    (c : (oracleSpec n S L Salt Ctx).QueryCache) :
+    onlineRun adv σ P key c = (fun z => (z.1, key)) <$>
+      (simulateQ (unifFwdImpl (oracleSpec n S L Salt Ctx) +
+        QueryImpl.batch (oracleSpec n S L Salt Ctx).randomOracle) (adv.online σ P)).run c := by
+  simp [onlineRun, OracleSpec.simulateQ_romImpl_simulateQ_unbatch, StateT.run'_eq]
+
+/-- **Until Bad, after the seed, for any event.** For a preprocessing cache `c`, a puzzle `P` and
+labels `ℓ`, an event of the output of the online phase and the key label holds from the programmed
+cache with probability at most that of the event, online Bad or the generator's `Bad` for `c`
+under the ideal handler from `c`. -/
+theorem prEvent_onlineRun_le (E : Out → S → Prop) (σ : adv.State) (P : Puzzle n S L Salt)
+    (ℓ : Labels n m S L) (c : (oracleSpec n S L Salt Ctx).QueryCache) :
+    Pr{let z ← onlineRun adv σ P (ℓ .key) (programmedCache m mkCtx initAcc c P ℓ)}[E z.1 z.2] ≤
+      Pr{let z ← (simulateQ (idealImpl m mkCtx initAcc P ℓ) (adv.online σ P)).run
+          (IdealState.init c)}[
+        E z.1 (ℓ .key) ∨ z.2.OnlineBad m mkCtx initAcc P ℓ ∨ Bad m mkCtx initAcc c P ℓ] := by
+  rw [onlineRun_eq_map_run, prEvent_map]
+  have hinit : CompareInv m mkCtx initAcc P ℓ c (IdealState.init c) := by
+    by_cases h : Bad m mkCtx initAcc c P ℓ
+    · exact Or.inr (Or.inl h)
+    · exact Or.inr (Or.inr h)
+  exact (dominatedUntilBad_idealImpl c).prEvent_simulateQ_run_le_map_or_bad
+    (preservesInv_idealImpl_compareInv c) (preservesInv_idealImpl_compareBad c) (adv.online σ P)
+    (IdealState.init c) hinit fun z => E z.1 (ℓ .key)
+
+variable [SampleableType Salt]
+
+/-- The generator's `Bad` in the ideal experiment is `Bad` on the seed. -/
+lemma prEvent_idealOutcomeExperiment_genBad :
+    Pr{let r ← idealOutcomeExperiment adv m mkCtx initAcc}[r.genBad = true] =
+      Pr{let s ← seedOf adv.preprocess m}[Bad m mkCtx initAcc s.cache s.puzzle s.labels] := by
+  rw [idealOutcomeExperiment, map_bind, map_eq_bind_pure_comp]
+  refine prEvent_bind_congr_of_support _ _ _ fun s _ => ?_
+  simp only [idealOutcomeRest, Functor.map_map, Function.comp_def, prEvent_def,
+    OracleComp.evalDist_map_const, evalDist_pure, decide_eq_true_eq]
+
+/-- **Programming and until Bad, for any event.** For an online phase with outputs of any type, an
+event of the output and the key in the delay experiment of the pointer-chain puzzle
+(`TimeLockPuzzle.guessExperiment`) has probability at most that of the event in the ideal
+experiment plus the probability there of the generator's `Bad` or online Bad. A seed with the
+generator's `Bad` counts fully toward the second term; on any other seed the real and programmed
+runs agree (`realRun_eq_of_not_bad`), so the generator's `Bad` is charged once. -/
+theorem prEvent_guessExperiment_scheme_le_idealOutcomeExperiment [Finite Ctx]
+    (E : Out → S → Prop) :
+    Pr{let z ← (simulateQ (oracleSpec n S L Salt Ctx).romImpl
+        ((scheme n m mkCtx initAcc).guessExperiment adv)).run' ∅}[E z.1 z.2] ≤
+      Pr{let r ← idealOutcomeExperiment adv m mkCtx initAcc}[E r.out r.key] +
+        Pr{let r ← idealOutcomeExperiment adv m mkCtx initAcc}[
+          r.genBad = true ∨ r.onlineBad = true] := by
+  refine le_of_eq_of_le (((evalDistEq_guessExperiment_maskedScheme m mkCtx initAcc adv).prEvent_eq
+    fun z => E z.1 z.2).symm.trans
+      ((evalDistEq_guessExperiment_maskedScheme_seedOf adv m mkCtx initAcc).prEvent_eq _)) ?_
+  refine (prEvent_bind_mono_of_forall_le _ _ _ _
+    (fun r : IdealOutcome Out S => E r.out r.key ∨ (r.genBad = true ∨ r.onlineBad = true))
+    fun s => ?_).trans (prEvent_or_le _ _ _)
+  by_cases hbad : Bad m mkCtx initAcc s.cache s.puzzle s.labels
+  · rw [idealOutcomeRest, prEvent_map]
+    simp only [decide_eq_true_eq, hbad, true_or, or_true]
+    rw [prEvent_true_eq_one]
+    exact prEvent_le_one _
+  · rw [realRun_eq_of_not_bad adv m mkCtx initAcc s hbad, programmedRun, idealOutcomeRest,
+      prEvent_map]
+    refine (prEvent_onlineRun_le adv m mkCtx initAcc E _ _ _ _).trans (le_of_eq ?_)
+    refine prEvent_congr _ _ _ fun z => ?_
+    simp only [decide_eq_true_eq]
+    tauto
+
+end OutcomeExperiment
+
 section Experiment
 
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
@@ -658,21 +781,27 @@ variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
   (adv : TimeLockPuzzle.Adversary (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt) S)
   (m : ℕ) (mkCtx : Salt → Ctx) (initAcc : Ctx → S) [NeZero n] [AddCommGroup L]
 
-/-- The online phase of the ideal experiment after the seed `s`: the online phase of the adversary
-runs under the ideal handler for the puzzle and the labels of `s`, from the cache left by the
-preprocessing phase, with nothing reached and the round counter at `0`. -/
+/-- The online phase of the ideal experiment after the seed `s`, summarized
+(`IdealOutcome.toResult` of `idealOutcomeRest`): the online phase of the adversary runs under the
+ideal handler for the puzzle and the labels of `s`, from the cache left by the preprocessing phase,
+with nothing reached and the round counter at `0`. -/
 @[expose]
 def idealRest (s : Seed n m S L Salt Ctx adv.State) : ProbComp IdealResult :=
-  (fun z => ⟨decide (z.1 = s.labels .key), decide (Bad m mkCtx initAcc s.cache s.puzzle s.labels),
-      decide (z.2.OnlineBad m mkCtx initAcc s.puzzle s.labels), decide (.key ∈ z.2.reached)⟩) <$>
-    (simulateQ (idealImpl m mkCtx initAcc s.puzzle s.labels) (adv.online s.state s.puzzle)).run
-      (IdealState.init s.cache)
+  IdealOutcome.toResult <$> idealOutcomeRest adv m mkCtx initAcc s
 
 /-- The ideal experiment: draw the `seed` of the programmed experiment, then run the online phase
 under the ideal handler (`idealRest`). -/
 @[expose]
 def idealExperiment [SampleableType Salt] : ProbComp IdealResult :=
   seed adv m >>= idealRest adv m mkCtx initAcc
+
+/-- The ideal experiment of a delay adversary is the summary of its ideal experiment for outputs
+of any type. -/
+theorem idealExperiment_eq_map_toResult [SampleableType Salt] :
+    idealExperiment adv m mkCtx initAcc =
+      IdealOutcome.toResult <$> idealOutcomeExperiment adv m mkCtx initAcc := by
+  rw [idealOutcomeExperiment, map_bind]
+  rfl
 
 omit [NeZero n] [AddCommGroup L] in
 /-- Winning in the online phase of the programmed experiment, from a cache `c`, is the event that
@@ -683,11 +812,7 @@ lemma prEvent_onlineWin (σ : adv.State) (P : Puzzle n S L Salt) (key : S)
       Pr{let z ← (simulateQ (unifFwdImpl (oracleSpec n S L Salt Ctx) +
           QueryImpl.batch (oracleSpec n S L Salt Ctx).randomOracle) (adv.online σ P)).run c}[
         z.1 = key] := by
-  have h : onlineWin adv σ P key c = (fun z => decide (z.1 = key)) <$>
-      (simulateQ (unifFwdImpl (oracleSpec n S L Salt Ctx) +
-        QueryImpl.batch (oracleSpec n S L Salt Ctx).randomOracle) (adv.online σ P)).run c := by
-    simp [onlineWin, OracleSpec.simulateQ_romImpl_simulateQ_unbatch, StateT.run'_eq]
-  rw [h, prEvent_map]
+  rw [onlineWin, onlineRun_eq_map_run, Functor.map_map, prEvent_map]
   simp only [decide_eq_true_eq]
 
 /-- **Until Bad, after the seed.** For a preprocessing cache `c`, a puzzle `P` and labels `ℓ`, the
@@ -699,14 +824,8 @@ theorem prEvent_onlineWin_le (σ : adv.State) (P : Puzzle n S L Salt) (ℓ : Lab
       Pr{let z ← (simulateQ (idealImpl m mkCtx initAcc P ℓ) (adv.online σ P)).run
           (IdealState.init c)}[
         z.1 = ℓ .key ∨ z.2.OnlineBad m mkCtx initAcc P ℓ ∨ Bad m mkCtx initAcc c P ℓ] := by
-  rw [prEvent_onlineWin]
-  have hinit : CompareInv m mkCtx initAcc P ℓ c (IdealState.init c) := by
-    by_cases h : Bad m mkCtx initAcc c P ℓ
-    · exact Or.inr (Or.inl h)
-    · exact Or.inr (Or.inr h)
-  exact (dominatedUntilBad_idealImpl c).prEvent_simulateQ_run_le_map_or_bad
-    (preservesInv_idealImpl_compareInv c) (preservesInv_idealImpl_compareBad c) (adv.online σ P)
-    (IdealState.init c) hinit fun z => z.1 = ℓ .key
+  rw [onlineWin, prEvent_map]
+  simpa only [decide_eq_true_eq] using prEvent_onlineRun_le adv m mkCtx initAcc (· = ·) σ P ℓ c
 
 variable [SampleableType Salt]
 
@@ -726,49 +845,33 @@ theorem programmedExperiment_win_le_idealExperiment :
         (programmedCache m mkCtx initAcc s.cache s.puzzle s.labels) := by
     rw [programmedRest, Functor.map_map]
     exact id_map _
-  rw [hrest, idealRest, prEvent_map]
+  rw [hrest, idealRest, idealOutcomeRest, Functor.map_map, prEvent_map]
   refine (prEvent_onlineWin_le adv m mkCtx initAcc _ _ _ _).trans (le_of_eq ?_)
   refine prEvent_congr _ _ _ fun z => ?_
-  simp only [decide_eq_true_eq]
+  simp only [IdealOutcome.toResult, decide_eq_true_eq]
   tauto
 
 /-- The generator's `Bad` in the ideal experiment is `Bad` on the seed. -/
 lemma prEvent_idealExperiment_genBad :
     Pr{let r ← idealExperiment adv m mkCtx initAcc}[r.genBad = true] =
       Pr{let s ← seed adv m}[Bad m mkCtx initAcc s.cache s.puzzle s.labels] := by
-  rw [idealExperiment, map_bind, map_eq_bind_pure_comp]
-  refine prEvent_bind_congr_of_support _ _ _ fun s _ => ?_
-  simp only [idealRest, Functor.map_map, Function.comp_def, prEvent_def,
-    OracleComp.evalDist_map_const, evalDist_pure, decide_eq_true_eq]
+  rw [idealExperiment_eq_map_toResult, prEvent_map]
+  exact prEvent_idealOutcomeExperiment_genBad adv m mkCtx initAcc
 
 /-- **Programming and until Bad.** The delay advantage of the pointer-chain puzzle is at most the
 winning probability in the ideal experiment plus the probability there of the generator's `Bad` or
 online Bad. A seed with the generator's `Bad` counts fully toward the second term; on any other seed
-the real and programmed continuations agree, so the generator's `Bad` is charged once. -/
+the real and programmed continuations agree, so the generator's `Bad` is charged once. The bound is
+the case of `prEvent_guessExperiment_scheme_le_idealOutcomeExperiment` for the event that the
+output is the key. -/
 theorem delayAdvantage_scheme_le_idealExperiment [Finite Ctx] :
     (scheme n m mkCtx initAcc).delayAdvantage adv ≤
       Pr{let r ← idealExperiment adv m mkCtx initAcc}[r.win = true] +
         Pr{let r ← idealExperiment adv m mkCtx initAcc}[r.genBad = true ∨ r.onlineBad = true] := by
-  rw [← delayAdvantage_maskedScheme m mkCtx initAcc adv, delayAdvantage_maskedScheme_eq]
-  refine (prEvent_bind_mono_of_forall_le _ _ _ _
-    (fun r : IdealResult => r.win = true ∨ (r.genBad = true ∨ r.onlineBad = true))
-    fun s => ?_).trans (prEvent_or_le _ _ _)
-  by_cases hbad : Bad m mkCtx initAcc s.cache s.puzzle s.labels
-  · rw [idealRest, prEvent_map]
-    simp only [decide_eq_true_eq, hbad, true_or, or_true]
-    rw [prEvent_true_eq_one]
-    exact prEvent_le_one _
-  · rw [realRest_eq_of_not_bad adv m mkCtx initAcc s hbad]
-    have hrest : Prod.fst <$> programmedRest adv m mkCtx initAcc s =
-        onlineWin adv s.state s.puzzle (s.labels .key)
-          (programmedCache m mkCtx initAcc s.cache s.puzzle s.labels) := by
-      rw [programmedRest, Functor.map_map]
-      exact id_map _
-    rw [hrest, idealRest, prEvent_map]
-    refine (prEvent_onlineWin_le adv m mkCtx initAcc _ _ _ _).trans (le_of_eq ?_)
-    refine prEvent_congr _ _ _ fun z => ?_
-    simp only [decide_eq_true_eq]
-    tauto
+  rw [TimeLockPuzzle.delayAdvantage_eq_prEvent_guessExperiment, idealExperiment_eq_map_toResult,
+    prEvent_map, prEvent_map]
+  simpa only [IdealOutcome.toResult, decide_eq_true_eq] using
+    prEvent_guessExperiment_scheme_le_idealOutcomeExperiment adv m mkCtx initAcc (· = ·)
 
 end Experiment
 
