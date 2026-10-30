@@ -574,6 +574,7 @@ public import VCVio.Schemes.PointerChainPuzzle.LeanSeal
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealBridge
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealDelay
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealEnvelope
+public import VCVio.Schemes.PointerChainPuzzle.LeanSealHiding
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealHidingBridge
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealHidingEncoding
 public import VCVio.Schemes.PointerChainPuzzle.Path

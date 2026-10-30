@@ -87,6 +87,7 @@ The leanSeal paper's statement, with the declarations that formalize it.
 | `thm:hiding`, paper's constants | `hidingAdvantage_sealScheme_le_paper` |
 | `thm:hiding`, as hiding security | `hidingSecure_sealScheme` |
 | `thm:hiding`, the paper's capped challenger | `cappedHidingAdvantage_sealScheme_le_paper` |
+| `thm:hiding`, leanSeal's bytes (SPEC §8) | `LeanSeal.hidingAdvantage_byteScheme_le` |
 
 ## Main statements
 
