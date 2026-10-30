@@ -27,7 +27,10 @@ rounds holding at most `Q_on` points, and at most `q_enc` challenge queries, the
 ```
 
 (`hidingAdvantage_sealScheme_le`), where `Adv^PRF(D*)` is the advantage of the explicit
-distinguisher `hidingDistinguisher` against `2 q_enc` independent keys of the PRF. With the paper's
+distinguisher `hidingDistinguisher` against `2 q_enc` independent keys of the PRF. Running time is
+not modelled: these theorems formalize the probabilistic reduction of `thm:hiding`, and the paper's
+term, the best PRF advantage in time `t + O(Q + P')`, follows only with a running-time estimate for
+`hidingDistinguisher`, which is not formalized. With the paper's
 sizes `|S| = 2^256`, `|L| = 2^(8b)`, `|Salt| = 2^128` and `|N| = 2^128` and `P' = P + 2 q_enc`,
 it is at most
 
@@ -233,7 +236,9 @@ theorem hidingAdvantage_sealScheme_le_paper [Finite Ctx] [Fintype S] [Fintype L]
 `hidingDistinguisher` has PRF advantage at most `ε` against `2 qEnc` independent keys, then
 `sealScheme` with `sealDEM` is hiding against adversaries with at most `Q_pre` preprocessing
 queries, an online phase within `keyRound n m - 1` rounds holding at most `Q_on` points, and at
-most `qEnc` challenge queries, with the bound of `hidingAdvantage_sealScheme_le`. -/
+most `qEnc` challenge queries, with the bound of `hidingAdvantage_sealScheme_le`. The PRF premise
+quantifies over every hiding adversary, including those outside these budgets; it is not derived
+from a time-bounded PRF assumption. -/
 theorem hidingSecure_sealScheme [Finite Ctx] [Fintype S] [Fintype L] [Fintype Salt]
     [Fintype N] (hprf : prf.UniformKey) (mkCtx : Salt → Ctx) (initAcc : Ctx → S)
     (hctx : Function.Injective mkCtx) (Qpre Qon qEnc : ℕ) {ε : ℝ≥0∞}
