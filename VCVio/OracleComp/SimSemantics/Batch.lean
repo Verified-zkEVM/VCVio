@@ -39,6 +39,9 @@ challenger's oracle), and counting its rounds is an ordinary path-wise query bou
 * `QueryImpl.simulateQ_simulateQ_unbatch`: running a program with rounds through `unbatch` and
   then a handler is running it through the batched handler.
 * `OracleSpec.simulateQ_romImpl_simulateQ_unbatch`: the corollary for the lazy random oracle.
+* `QueryImpl.run_simulateQ_add_parallelStateT_batch_liftComp`: a program with rounds of `spec`,
+  lifted to rounds of `spec + side` and answered by two handlers side by side, runs against the
+  first handler alone and leaves the state of the second unchanged.
 * `OracleComp.simulateQ_queryRound₂`, `OracleComp.simulateQ_queryRound`,
   `OracleComp.simulateQ_queryPoint`: against a fixed answer table, a round returns the table's
   answers at its points.
@@ -320,6 +323,71 @@ instance [h : spec ⊂ₒ superSpec] [LawfulSubSpec spec superSpec] :
           · exact congrFun hus j
 
 end OracleSpec.SubSpec
+
+/-! ### Lifted rounds against handlers side by side -/
+
+namespace QueryImpl
+
+variable {ι ι' σ₁ σ₂ : Type} {spec : OracleSpec.{0, 0} ι} {side : OracleSpec.{0, 0} ι'}
+  {m : Type → Type w} [Monad m] [LawfulMonad m]
+
+/-- A round of `spec`, lifted to the round of `spec + side` at its translated points and answered
+point by point by `impl₁` and `impl₂` side by side, is answered by `impl₁` and leaves the state of
+`impl₂` unchanged. -/
+lemma run_batchOnResponse_map_batch_parallelStateT (impl₁ : QueryImpl spec (StateT σ₁ m))
+    (impl₂ : QueryImpl side (StateT σ₂ m)) (ts : List ι) (s₁ : σ₁) (s₂ : σ₂) :
+    (SubSpec.batchOnResponse (inferInstance : spec ⊂ₒ (spec + side)) ts <$>
+        (parallelStateT impl₁ impl₂).batch (ts.map Sum.inl)).run (s₁, s₂) =
+      Prod.map id (·, s₂) <$> (impl₁.batch ts).run s₁ := by
+  induction ts generalizing s₁ with
+  | nil =>
+    change (SubSpec.batchOnResponse (inferInstance : spec ⊂ₒ (spec + side)) [] <$>
+      (pure batchNil : StateT (σ₁ × σ₂) m ((spec + side).batch.Range []))).run (s₁, s₂) = _
+    simp [SubSpec.batchOnResponse, eq_batchNil]
+  | cons t ts ih =>
+    have ih' := fun s₁ => (StateT.run_map _ _ _).symm.trans (ih s₁)
+    change (SubSpec.batchOnResponse (inferInstance : spec ⊂ₒ (spec + side)) (t :: ts) <$> (do
+      let u ← parallelStateT impl₁ impl₂ (.inl t)
+      let us ← (parallelStateT impl₁ impl₂).batch (ts.map Sum.inl)
+      pure (batchCons (spec := spec + side) (t := Sum.inl t) (ts := ts.map Sum.inl) u us))).run
+        (s₁, s₂) = _
+    simp only [map_bind, StateT.run_bind, QueryImpl.batch_cons, map_pure, StateT.run_pure]
+    rw [show (parallelStateT impl₁ impl₂ (.inl t)).run (s₁, s₂) =
+      Prod.map id (·, s₂) <$> (impl₁ t).run s₁ from rfl, bind_map_left]
+    refine bind_congr fun a => ?_
+    simp only [bind_pure_comp]
+    have h := congrArg ((fun q => (batchCons (spec := spec) (t := t) a.1 q.1, q.2)) <$> ·)
+      (ih' a.2)
+    simp only [Functor.map_map] at h
+    exact h
+
+/-- **A lifted program against handlers side by side.** A program with rounds of `spec`, lifted to
+rounds of `spec + side` and run with queries to `free` answered by `base` and rounds answered
+point by point by `impl₁` and `impl₂` side by side, runs as against `base` and `impl₁` alone and
+leaves the state of `impl₂` unchanged. -/
+theorem run_simulateQ_add_parallelStateT_batch_liftComp {τ : Type} {free : OracleSpec.{0, 0} τ}
+    (base : QueryImpl free m) (impl₁ : QueryImpl spec (StateT σ₁ m))
+    (impl₂ : QueryImpl side (StateT σ₂ m)) {α : Type} (oa : OracleComp (free + spec.batch) α)
+    (s₁ : σ₁) (s₂ : σ₂) :
+    (simulateQ (base.liftTarget (StateT (σ₁ × σ₂) m) + (parallelStateT impl₁ impl₂).batch)
+        (liftComp oa (free + (spec + side).batch))).run (s₁, s₂) =
+      Prod.map id (·, s₂) <$>
+        (simulateQ (base.liftTarget (StateT σ₁ m) + impl₁.batch) oa).run s₁ := by
+  rw [liftComp_def, ← QueryImpl.simulateQ_compose]
+  refine (map_run_simulateQ_eq_of_query_map_eq _ _ (·, s₂) (fun t s₁ => ?_) oa s₁).symm
+  rcases t with n | ts
+  · simp only [QueryImpl.apply_compose]
+    rw [liftM_eq_liftM_liftM, OracleQuery.liftM_right_add_right_add_query]
+    simp
+  · simp only [QueryImpl.apply_compose]
+    rw [liftM_eq_liftM_liftM, OracleQuery.liftM_right_add_right_add_query]
+    simp only [simulateQ_query]
+    change _ = (SubSpec.batchOnResponse (inferInstance : spec ⊂ₒ (spec + side)) ts <$>
+      (parallelStateT impl₁ impl₂).batch (ts.map Sum.inl)).run (s₁, s₂)
+    rw [run_batchOnResponse_map_batch_parallelStateT]
+    rfl
+
+end QueryImpl
 
 /-! ## Rounds with typed answers
 

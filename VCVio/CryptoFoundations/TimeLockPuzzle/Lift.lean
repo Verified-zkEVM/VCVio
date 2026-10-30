@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.TimeLockPuzzle
+import VCVio.OracleComp.SimSemantics.StateT.Measure
 
 /-!
 # Lifting a time-lock puzzle and simulating a side oracle
@@ -46,6 +47,11 @@ the adversary is at most one round of the simulation, holding only the round's `
   round holding its `spec` points.
 * `TimeLockPuzzle.TwoPhaseAdversary.isQueryBound_simulateSide`: the simulation keeps the
   preprocessing budget and the online budget of rounds and points.
+* `TimeLockPuzzle.evalDist_guessExperiment_liftSpec_add`: in the random oracle model, the guess
+  experiment of the puzzle lifted to `spec + side` against `adv` has the law of the guess
+  experiment of the puzzle against `adv.simulateSide`.
+* `TimeLockPuzzle.delayAdvantage_liftSpec_add`, `TimeLockPuzzle.delaySecure_liftSpec_add`: delay
+  security transfers to the puzzle lifted to an independent sum.
 -/
 
 public section
@@ -234,5 +240,158 @@ theorem TwoPhaseAdversary.isQueryBound_simulateSide {τ : Type} {free : OracleSp
   exact (isQueryBound_map_iff _ _ _ _ _).2 hrun
 
 end Side
+
+/-! ## Security for an independent sum
+
+In the random oracle model on `spec + side`, the two summands are independent lazy random oracles
+on a product cache (`OracleComp.map_run_simulateQ_add_parallelStateT_randomOracle`). The lifted
+generator only touches the `spec` cache
+(`QueryImpl.run_simulateQ_add_parallelStateT_batch_liftComp`). A mixed round answered point by
+point has, in distribution, the law of its `side` points drawn first and its `spec` points
+answered after (`TimeLockPuzzle.run_batch_parallelStateT_evalDistEq`), which is how
+`sideOnlineImpl` answers it. -/
+
+/-- **A mixed round against two handlers side by side.** A mixed round `ts` of `spec + side`,
+answered point by point by `impl₁` and `impl₂` side by side, has the law of answering its `side`
+points by `impl₂`, then its `spec` points by `impl₁`, each in order, and reassembling the answer
+tuple with `batchMerge`. -/
+theorem run_batch_parallelStateT_evalDistEq {σ₁ σ₂ : Type}
+    (impl₁ : QueryImpl spec (StateT σ₁ ProbComp)) (impl₂ : QueryImpl side (StateT σ₂ ProbComp))
+    (ts : List (ι ⊕ ι')) (s₁ : σ₁) (s₂ : σ₂) :
+    ((QueryImpl.parallelStateT impl₁ impl₂).batch ts).run (s₁, s₂) =ᵈ
+      (impl₂.batch (ts.filterMap Sum.getRight?)).run s₂ >>= fun z =>
+        (impl₁.batch (ts.filterMap Sum.getLeft?)).run s₁ >>= fun y =>
+          pure (batchMerge ts y.1 z.1, (y.2, z.2)) := by
+  induction ts generalizing s₁ s₂ with
+  | nil => exact EvalDistEq.rfl
+  | cons t ts ih =>
+    rcases t with t | t
+    · dsimp only [QueryImpl.batch_cons, StateT.run_bind, List.filterMap, Sum.getLeft?,
+        Sum.getRight?]
+      rw [show (QueryImpl.parallelStateT impl₁ impl₂ (.inl t)).run (s₁, s₂) =
+        Prod.map id (·, s₂) <$> (impl₁ t).run s₁ from rfl, bind_map_left]
+      dsimp only [Prod.map, id]
+      refine (EvalDistEq.bind_right _ fun (a : spec.Range t × σ₁) =>
+        (ih a.2 s₂).bind_left _).trans ?_
+      simp only [bind_assoc, pure_bind, StateT.run_pure]
+      exact EvalDistEq.bind_bind_swap _ _ _
+    · dsimp only [QueryImpl.batch_cons, StateT.run_bind, List.filterMap, Sum.getLeft?,
+        Sum.getRight?]
+      rw [show (QueryImpl.parallelStateT impl₁ impl₂ (.inr t)).run (s₁, s₂) =
+        Prod.map id (s₁, ·) <$> (impl₂ t).run s₂ from rfl, bind_map_left]
+      dsimp only [Prod.map, id]
+      refine (EvalDistEq.bind_right _ fun (a : side.Range t × σ₂) =>
+        (ih s₁ a.2).bind_left _).trans ?_
+      simp only [bind_assoc, pure_bind, StateT.run_pure]
+      exact EvalDistEq.rfl
+
+section Security
+
+variable [DecidableEq ι] [DecidableEq ι'] [∀ t, SampleableType (spec.Range t)]
+  [∀ t, SampleableType (side.Range t)]
+
+/-- The random oracle model on `spec + side` with the caches of the two summands kept apart. -/
+private noncomputable abbrev sumRomImpl :
+    QueryImpl (unifSpec + (spec + side)) (StateT (spec.QueryCache × side.QueryCache) ProbComp) :=
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget
+      (StateT (spec.QueryCache × side.QueryCache) ProbComp) +
+    QueryImpl.parallelStateT spec.randomOracle side.randomOracle
+
+/-- A preprocessing step of the simulation, run in the random oracle model on `spec`, is the step
+of the random oracle model on `spec + side` with the two caches kept apart. -/
+private lemma sidePreprocessImpl_run_step (t : (unifSpec + (spec + side)).Domain)
+    (sc : side.QueryCache) (c : spec.QueryCache) :
+    (simulateQ spec.romImpl ((sidePreprocessImpl t).run sc)).run c =
+      (fun z => ((z.1, z.2.2), z.2.1)) <$>
+        ((sumRomImpl (spec := spec) (side := side)) t).run (c, sc) := by
+  rcases t with n | t | t
+  · simp [sidePreprocessImpl, unifFwdImpl]
+  · simp only [sidePreprocessImpl, StateT.run_lift, simulateQ_bind, simulateQ_spec_query,
+      simulateQ_pure, StateT.run_bind, StateT.run_pure, OracleSpec.romImpl_apply_inr]
+    rw [show (sumRomImpl (spec := spec) (side := side) (.inr (.inl t))).run (c, sc) =
+      Prod.map id (·, sc) <$> (spec.randomOracle t).run c from rfl, Functor.map_map,
+      bind_pure_comp]
+    rfl
+  · simp only [sidePreprocessImpl, StateT.run_mk]
+    rw [roSim.simulateQ_liftComp, unifFwdImpl.simulateQ_run,
+      show (sumRomImpl (spec := spec) (side := side) (.inr (.inr t))).run (c, sc) =
+        Prod.map id (c, ·) <$> (side.randomOracle t).run sc from rfl, Functor.map_map]
+    rfl
+
+/-- An online step of the simulation, run in the random oracle model on `spec`, has the law of the
+step of the random oracle model on `spec + side` with the two caches kept apart. -/
+private lemma sideOnlineImpl_run_step (t : (unifSpec + (spec + side).batch).Domain)
+    (sc : side.QueryCache) (c : spec.QueryCache) :
+    (simulateQ (unifFwdImpl spec + spec.randomOracle.batch) ((sideOnlineImpl t).run sc)).run c =ᵈ
+      (fun z => ((z.1, z.2.2), z.2.1)) <$>
+        ((sumRomImpl (spec := spec) (side := side)).batch' t).run (c, sc) := by
+  rcases t with n | ts
+  · simp [sideOnlineImpl, unifFwdImpl]
+  · refine EvalDistEq.trans ?_ ((run_batch_parallelStateT_evalDistEq _ _ ts c sc).map _).symm
+    simp only [add_apply_inr, sideOnlineImpl, sideDraws, liftComp_eq_liftM,
+      bind_pure_comp, StateT.run_bind, StateT.run_mk, StateT.run_map, StateT.run_lift,
+      Functor.map_map, simulateQ_bind, simulateQ_map, simulateQ_query, OracleQuery.input_query,
+      OracleQuery.cont_query, QueryImpl.add_apply_inr, id_map, map_bind]
+    rw [QueryImpl.simulateQ_add_liftM_left, unifFwdImpl.simulateQ_run, bind_map_left]
+
+/-- **Delay security for an independent sum.** In the random oracle model, the guess experiment
+of the puzzle lifted to `spec + side` against `adv` has the law of the guess experiment of the
+puzzle against `adv.simulateSide`, for outputs of any type. The free summand is `unifSpec`, the
+free summand of `guessExperiment`. -/
+theorem evalDist_guessExperiment_liftSpec_add {Out : Type} (tlp : TimeLockPuzzle spec Puzzle Key)
+    (adv : TwoPhaseAdversary unifSpec (spec + side) Puzzle Out) :
+    (simulateQ (spec + side).romImpl ((tlp.liftSpec (spec + side)).guessExperiment adv)).run' ∅ =ᵈ
+      (simulateQ spec.romImpl (tlp.guessExperiment adv.simulateSide)).run' ∅ := by
+  have hsplit : (simulateQ (spec + side).romImpl
+      ((tlp.liftSpec (spec + side)).guessExperiment adv)).run' ∅ =
+      (simulateQ sumRomImpl ((tlp.liftSpec (spec + side)).guessExperiment adv)).run' (∅, ∅) := by
+    have h := map_run_simulateQ_add_parallelStateT_randomOracle
+      (QueryImpl.ofLift unifSpec ProbComp) ((tlp.liftSpec (spec + side)).guessExperiment adv)
+      (∅, ∅)
+    rw [QueryCache.addEquiv_empty] at h
+    rw [StateT.run'_eq, StateT.run'_eq]
+    exact (congrArg (Prod.fst <$> ·) h).symm.trans (by rw [Functor.map_map]; rfl)
+  rw [hsplit]
+  have hpre := simulateQ_run_simulateQ_run_evalDistEq spec.romImpl sidePreprocessImpl
+    sumRomImpl (fun t s q => by rw [sidePreprocessImpl_run_step]) adv.preprocess ∅ ∅
+  simp only [guessExperiment, liftSpec, TwoPhaseAdversary.simulateSide, simulateQ_bind,
+    StateT.run_bind, StateT.run'_eq, map_bind]
+  refine EvalDistEq.trans ?_ (hpre.bind_left _).symm
+  rw [bind_map_left]
+  refine EvalDistEq.bind_right _ fun z => ?_
+  obtain ⟨st, c, sc⟩ := z
+  have hgen : (simulateQ sumRomImpl (simulateQ (spec + side).unbatch
+      (liftComp tlp.gen (unifSpec + (spec + side).batch)))).run (c, sc) =
+      Prod.map id (·, sc) <$> (simulateQ spec.romImpl (simulateQ spec.unbatch tlp.gen)).run c := by
+    rw [QueryImpl.simulateQ_simulateQ_unbatch, simulateQ_romImpl_simulateQ_unbatch]
+    exact QueryImpl.run_simulateQ_add_parallelStateT_batch_liftComp _ _ _ _ _ _
+  simp only [hgen, bind_map_left]
+  refine EvalDistEq.bind_right _ fun w => ?_
+  simp only [simulateQ_pure, StateT.run_pure, map_pure, Prod.map, id, simulateQ_map,
+    StateT.run_map, QueryImpl.simulateQ_simulateQ_unbatch, bind_map_left]
+  refine EvalDistEq.trans ?_ ((simulateQ_run_simulateQ_run_evalDistEq _ sideOnlineImpl
+    sumRomImpl.batch' sideOnlineImpl_run_step (adv.online st w.1.1) sc w.2).bind_left _).symm
+  rw [bind_map_left]
+
+/-- The delay advantage of `adv` against the puzzle lifted to `spec + side` is the delay advantage
+of `adv.simulateSide` against the puzzle. -/
+theorem delayAdvantage_liftSpec_add [DecidableEq Key] (tlp : TimeLockPuzzle spec Puzzle Key)
+    (adv : Adversary (spec + side) Puzzle Key) :
+    (tlp.liftSpec (spec + side)).delayAdvantage adv = tlp.delayAdvantage adv.simulateSide := by
+  rw [delayAdvantage_eq_prEvent_guessExperiment, delayAdvantage_eq_prEvent_guessExperiment]
+  exact (evalDist_guessExperiment_liftSpec_add tlp adv).prEvent_eq _
+
+open scoped ENNReal in
+/-- **Delay security transfers to an independent sum.** If the puzzle is delay secure against
+adversaries with at most `Q` preprocessing queries and an online budget `b`, so is the puzzle
+lifted to `spec + side`: the simulation of an adversary against the lifted puzzle keeps its
+budgets (`TwoPhaseAdversary.isQueryBound_simulateSide`) and its advantage. -/
+theorem delaySecure_liftSpec_add [DecidableEq Key] {tlp : TimeLockPuzzle spec Puzzle Key}
+    {Q : ℕ} {b : ℕ × ℕ} {ε : ℝ≥0∞} (h : tlp.DelaySecure Q b ε) :
+    (tlp.liftSpec (spec + side)).DelaySecure Q b ε := fun adv hadv =>
+  (delayAdvantage_liftSpec_add tlp adv).trans_le
+    (h _ (TwoPhaseAdversary.isQueryBound_simulateSide hadv))
+
+end Security
 
 end TimeLockPuzzle
