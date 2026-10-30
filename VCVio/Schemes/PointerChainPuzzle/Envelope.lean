@@ -73,6 +73,8 @@ commitment.
 
 * `Envelope.openUnder_sealUnder`: opening a sealed envelope under the same puzzle bytes and subkey
   function returns the message, for every nonce, subkey function and PRF.
+* `Envelope.sealWith_eq_sealBy`: `sealWith` is `sealBy` in `Id`, with the PRF under the two subkeys
+  as the block and tag functions.
 * `Envelope.simulateQ_dem_encrypt`, `Envelope.simulateQ_dem_decrypt`: with the oracles answered
   by a fixed table, the DEM seals under a uniform nonce and opens with `openUnder`.
 * `Envelope.dem_perfectlyCorrect_answerTable`, `Envelope.dem_perfectlyCorrect_rom`: the DEM is
@@ -304,6 +306,30 @@ theorem openUnder_sealUnder (sk : N → K × K) (pz : ByteArray) (nonce : N) (ms
     openUnder prf codec sk pz (sealUnder prf codec sk pz nonce msg) = some msg := by
   rw [openUnder, sealUnder, ← openFields_sealWith prf codec pz nonce (sk nonce) msg,
     parse_sealWith, Option.bind_some, Option.bind_some]
+
+/-! ## The envelope with monadic PRF evaluations -/
+
+/-- The envelope of `msg` under the puzzle bytes `pz` and the nonce, with the PRF evaluations given
+as monadic functions: keystream block `j` is `block (be64(j))`, for each of the `⌈|msg| / 32⌉`
+blocks in order, and the tag is `tag` of the signed bytes. `sealWith prf codec` is the case
+`block := prf.eval k_enc`, `tag := prf.eval k_mac` in `Id` (`sealWith_eq_sealBy`); a reduction
+that answers the two evaluations with oracle queries runs it in `OracleComp`. -/
+@[expose]
+def sealBy {μ : Type → Type} [Monad μ] (block tag : ByteArray → μ (Bytes 32)) (pz : ByteArray)
+    (nonce : N) (msg : Plaintext) : μ ByteArray := do
+  let blocks ← (List.range ((msg.1.size + 31) / 32)).mapM fun j => block (be 8 j)
+  let ks := (blocks.flatMap fun x => x.toList).take msg.1.size
+  let e := signedBytes codec pz nonce (xorBytes msg.1.data.toList ks)
+  let t ← tag ⟨e.toArray⟩
+  return ⟨(e ++ t.toList).toArray⟩
+
+/-- The envelope under the subkeys `(k_enc, k_mac)` is `sealBy` in `Id` with the block function
+`prf.eval k_enc` and the tag function `prf.eval k_mac`. -/
+theorem sealWith_eq_sealBy (pz : ByteArray) (nonce : N) (ks : K × K) (msg : Plaintext) :
+    sealWith prf codec pz nonce ks msg =
+      (sealBy codec (fun x => pure (prf.eval ks.1 x)) (fun x => pure (prf.eval ks.2 x)) pz nonce
+        msg : Id ByteArray).run := by
+  simp [sealBy, sealWith, keystream, List.flatMap_map]
 
 /-! ## The envelope as a DEM -/
 
