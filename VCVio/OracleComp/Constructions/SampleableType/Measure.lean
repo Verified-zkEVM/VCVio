@@ -155,6 +155,20 @@ theorem prEvent_uniformSample_eq_singleton {α : Type} [SampleableType α] [_roo
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_singleton, evalDist_uniformSample_singleton]
 
+/-- The probability of drawing one particular element uniformly, with the element on the left of
+the equation. -/
+theorem prEvent_uniformSample_eq_singleton' {α : Type} [SampleableType α] [_root_.Fintype α]
+    (a : α) : Pr{let x ← $ᵗ α}[a = x] = (Fintype.card α : ℝ≥0∞)⁻¹ := by
+  rw [← prEvent_uniformSample_eq_singleton a]
+  exact prEvent_congr _ _ _ fun _ => eq_comm
+
+/-- A uniform sample is among `q` fixed elements with probability at most `q / |α|`. -/
+theorem prEvent_uniformSample_exists_eq_le {α : Type} [SampleableType α] [_root_.Fintype α]
+    {q : ℕ} (f : _root_.Fin q → α) : Pr{let x ← $ᵗ α}[∃ i, f i = x] ≤ q / Fintype.card α := by
+  refine (prEvent_exists_le_card_mul ($ᵗ α) (fun i x => f i = x)
+    fun i => (prEvent_uniformSample_eq_singleton' (f i)).le).trans (le_of_eq ?_)
+  simp [div_eq_mul_inv]
+
 /-- Each length-`n` list is drawn by `n` independent uniform samples with probability
 `(|α| ^ n)⁻¹`. -/
 theorem prEvent_replicate_uniformSample {α : Type} [SampleableType α] [_root_.Fintype α]
@@ -510,3 +524,14 @@ theorem evalDistEq_simulateQ {α : Type} (oa : OracleComp spec α) :
   EvalDistEq.of_evalDist_eq (evalDist_simulateQ oa)
 
 end uniformSampleImpl
+
+namespace OracleComp
+
+/-- A uniform draw, transported along an equality of types, is uniform. -/
+lemma evalDist_cast_uniformSample {X Y : Type} [SampleableType X] [MeasurableSpace Y]
+    [MeasurableSingletonClass Y] (h : X = Y) :
+    𝒟[cast h <$> ($ᵗ X)] = ProbabilityTheory.uniformOn Set.univ := by
+  subst h
+  exact (congrArg (fun mx => 𝒟[mx]) (id_map _)).trans SampleableType.evalDist_uniformSample
+
+end OracleComp
