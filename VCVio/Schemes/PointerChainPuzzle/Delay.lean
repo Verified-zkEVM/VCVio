@@ -55,6 +55,7 @@ formalize them.
 | `thm:delay`, paper's constants | `delayAdvantageWithin_scheme_le_paper` |
 | `thm:delay`, paper's constants, within the rounds | `delaySecure_scheme_paper` |
 | `thm:delay`, within the rounds | `delayAdvantage_scheme_le`, `delaySecure_scheme` |
+| `thm:delay`, leanSeal's bytes (SPEC §8) | `LeanSeal.delayAdvantageWithin_byteScheme_le` |
 | Claim 1 (`claim:sequential`) | `rho_le_round_of_mem_support` |
 | Claim 1, the key | `key_not_mem_reached_of_isOnlineQueryBound` |
 | Claim 2 (`claim:hybrid`), links | `delayAdvantage_maskedScheme` |
