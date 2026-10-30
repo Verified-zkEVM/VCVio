@@ -17,8 +17,8 @@ This file proves completeness and commitment recoverability of the ML-DSA identi
 and defines the ML-DSA CMA-to-NMA loss `cmaToNmaLoss`, following the CRYPTO 2023 paper
 "Fixing and Mechanizing the Security Proof of Fiat-Shamir with Aborts and Dilithium" (Barbosa
 et al., ePrint 2023/246). The ML-DSA hardness problems are defined in
-`LatticeCrypto.MLDSA.SecurityNMA`, and the composed security theorems are in
-`LatticeCrypto.MLDSA.SecurityHeadlines`.
+`LatticeCrypto.MLDSA.SecurityNMA`, and the composed EUF-NMA theorems are in
+`LatticeCrypto.MLDSA.SecurityHeadlines` and `LatticeCrypto.MLDSA.SecurityExpandARO`.
 
 The target result (Theorem 4) is that the ML-DSA signature scheme is EUF-CMA secure, reducing
 to two computational assumptions plus a statistical loss from the CMA-to-NMA reduction:
@@ -49,14 +49,14 @@ The argument has two steps:
    commitment-recoverable `(c̃, z, h)` signatures for ML-DSA.
 2. EUF-NMA → MLWE + SelfTargetMSIS (Lemma 7).
 
-The theorems in `LatticeCrypto.MLDSA.SecurityHeadlines` formalize both steps for the
-commitment-carrying signature `(w₁, z, h)`, at the loss `FiatShamirWithAbort.cmaToNmaLoss qS qH`
-and with additional bridge and key-generation slack terms. The commitment-recovery conversion of
-step 1, which moves the hash budget from `qH` to `qH + qS`, is not formalized. The larger gap to
-the FIPS-204 statement is in the scheme itself: `identificationScheme` samples the mask from all
-of `R_q^l` rather than from the `γ₁` box of FIPS 204, and this departure makes every composed
-EUF-CMA bound trivial at the FIPS 204 parameter sets (see the Limitations section of
-`LatticeCrypto.MLDSA.SecurityHeadlines`).
+Step 2 is formalized by the EUF-NMA theorems of `LatticeCrypto.MLDSA.SecurityHeadlines`
+(`nma_security_short`, `nma_security_fips` and their `_seed` forms) and of
+`LatticeCrypto.MLDSA.SecurityExpandARO` (`NMA.nma_security_rom`). The Fiat-Shamir-with-aborts
+reduction of step 1 is `FiatShamirWithAbort.euf_cma_to_nma`; its composition with step 2 is left
+to a follow-up. Composed today it would be trivial at the FIPS 204 parameter sets, because
+`identificationScheme` samples the mask from all of `R_q^l` rather than from the `γ₁` box of
+FIPS 204 (#995). The commitment-recovery conversion of step 1, which moves the hash budget from
+`qH` to `qH + qS`, is not formalized.
 
 ## References
 
@@ -298,9 +298,8 @@ effective random-oracle budget, yielding:
      + δ`
 
 This is exactly `FiatShamirWithAbort.cmaToNmaLoss qS (qH + qS) ...`. It is the target loss of
-the end-to-end FIPS-204 statement; the composed theorems of
-`LatticeCrypto.MLDSA.SecurityHeadlines` cover the commitment-carrying format at the smaller
-budget `qH`. -/
+the end-to-end FIPS-204 statement; the abstract reduction `FiatShamirWithAbort.euf_cma_to_nma`
+covers the commitment-carrying format at the smaller budget `qH`. -/
 noncomputable def cmaToNmaLoss
     (qS qH : ℕ) (ε p_abort ζ_zk δ : ℝ) (hp : p_abort < 1) : ℝ :=
   FiatShamirWithAbort.cmaToNmaLoss qS (qH + qS) ε p_abort ζ_zk δ hp
@@ -309,33 +308,22 @@ end CMAtoNMA
 
 /-! ### Main Security Theorem (Theorem 4)
 
-The EUF-CMA security theorems for ML-DSA are assembled downstream in
-`LatticeCrypto.MLDSA.SecurityHeadlines`. Each composes the Fiat-Shamir-with-aborts CMA-to-NMA
-reduction with an EUF-NMA bound, for the commitment-carrying signature and at the loss
-`FiatShamirWithAbort.cmaToNmaLoss qS qH`; the commitment-recovery bridge to the FIPS-204
-signature format, at the loss `cmaToNmaLoss` above, is not formalized.
+No EUF-CMA theorem for ML-DSA is stated in this library yet. The EUF-NMA half (Lemma 7) is
+proved in `LatticeCrypto.MLDSA.SecurityHeadlines`:
 
-- `MLDSA.euf_cma_security_of_nma_fips`: seed-derived key generation, with the EUF-NMA leg
-  `MLDSA.nma_security_fips`. `MLDSA.euf_cma_security_of_nma_fips_hvzkReal` discharges its HVZK
-  hypothesis with the simulator `hvzkSimulatorReal`, proved HVZK at the bound `hvzkBound` by
-  `idsWithAbort_hvzk` under `Primitives.Laws`.
-- `MLDSA.euf_cma_security_of_nma_short`: the short-secret model, with the EUF-NMA leg
-  `MLDSA.nma_security_short`.
+- `MLDSA.nma_security_short` and `MLDSA.nma_security_short_seed`: the short-secret model.
+- `MLDSA.nma_security_fips` and `MLDSA.nma_security_fips_seed`: seed-derived key generation,
+  with the `ExpandS` hop charged to the named distinguisher `NMA.expandSDistinguisher`.
 
-Both take nonnegativity side conditions on the statistical-loss parameters, so the loss cannot
-be clamped to `0` by `ENNReal.ofReal`.
+`MLDSA.NMA.nma_security_rom` in `LatticeCrypto.MLDSA.SecurityExpandARO` models `ExpandA` as a
+programmed random oracle and reaches the uniform-matrix MLWE problem.
 
-None of the three is quantitative at the FIPS 204 parameter sets:
-
-- All three are trivial once `qS ≥ 1`, whatever the simulator and `ζ_zk`. The commitment step of
-  `identificationScheme` draws the mask from all of `R_q^l` rather than from the `γ₁` box, so the
-  acceptance probability `1 - p_abort` is at most `((2(γ₁ - β) - 1)/q)^(256l)` and the
-  commitment-collision term of the loss exceeds `1`.
-- The two seed-model theorems are also non-quantitative through `expandSReplacement`, which
-  forces `εPRG ≥ 1 - 2^-256` against distinguishers with no cost bound.
-- Separately, the HVZK hypothesis of the short-model theorem has no known witness below
-  `ζ_zk = 1`.
-
-The Limitations section of `LatticeCrypto.MLDSA.SecurityHeadlines` gives the exact bounds. -/
+Composing these with the Fiat-Shamir-with-aborts reduction `FiatShamirWithAbort.euf_cma_to_eufNma`
+is a follow-up. Such a composition is trivial at the FIPS 204 parameter sets once `qS ≥ 1` until
+the commitment step of `identificationScheme` samples the mask from the `γ₁` box instead of all
+of `R_q^l` (#995). The acceptance probability `1 - p_abort` is then at most
+`((2(γ₁ - β) - 1)/q)^(256l)`, and the commitment-collision term of the loss exceeds `1`. The
+commitment-recovery bridge to the FIPS-204 signature format, at the loss `cmaToNmaLoss` above, is
+not formalized either. -/
 
 end MLDSA

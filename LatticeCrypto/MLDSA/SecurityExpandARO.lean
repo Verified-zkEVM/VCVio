@@ -42,8 +42,9 @@ generator `keygenShortRO` obtains `Â = ExpandA(ρ)` by querying it, the honest 
 ## How the oracle model is pinned to the scheme
 
 The identification verifier and the short key generator are the scheme's own algorithms with the
-`ExpandA` evaluation abstracted into a parameter: `verifyWithMatrix` is the verifier at an explicit
-matrix and `identificationScheme.verify` is it at `ExpandA(pk.ρ)`
+`ExpandA` evaluation abstracted into a parameter: `verifyWithMatrix` (in
+`LatticeCrypto.MLDSA.SecurityNMA`) is the verifier at an explicit matrix and
+`identificationScheme.verify` is it at `ExpandA(pk.ρ)`
 (`identificationScheme_verify_eq_verifyWithMatrix`, definitional); `keygenShortWith` is the short
 key generator at an explicit expansion function and `keygenShort` is it at `prims.expandA`
 (`keygenShort_eq_keygenShortWith`, definitional). Answering the ROM algorithms' `ExpandA` queries
@@ -60,11 +61,11 @@ The forger's `ExpandA` queries are unbounded and the cost of either reduction is
 for; both wait on the cost-model infrastructure. The SelfTargetMSIS leg lands on the *tailored*
 verifier relation `mldsaSTMSISMatrix` (uniform matrix, ML-DSA verifier relation), not on the
 standard `[I_m | A] · y` normal form; see *Tailored vs. standard SelfTargetMSIS* in
-`LatticeCrypto.MLDSA.SecurityNMA`. The CMA-to-NMA engine of `FiatShamirWithAbort` runs its
-adversaries over the two-oracle family `unifSpec + H`, so composing this ROM leg under an EUF-CMA
-forger with `ExpandA` access needs that engine to forward a third oracle; the seed-model and
-short-model CMA compositions in `SecurityHeadlines` keep their abstract MLWE bridge hypothesis
-instead.
+`LatticeCrypto.MLDSA.SecurityNMA`. The SelfTargetMSIS extraction shares its per-key tail
+`stmsis_tail_le_withMatrix` with the short model. The CMA-to-NMA engine of `FiatShamirWithAbort`
+runs its adversaries over the two-oracle family `unifSpec + H`, so composing this ROM leg under an
+EUF-CMA forger with `ExpandA` access needs that engine to forward a third oracle; no such
+composition is stated here.
 -/
 
 public section
@@ -73,45 +74,6 @@ open OracleComp OracleSpec ENNReal
 open LatticeCrypto TransformOps
 
 namespace MLDSA
-
-section VerifyWithMatrix
-
-variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps] [DecidableEq prims.High]
-
-/-- The ML-DSA identification verifier at an explicitly supplied public matrix `aHat`
-(FIPS 204 Algorithm 8, lines 8–13): check `‖z‖∞ < γ₁ − β`, recover
-`w'_Approx = Â·z − c·(t₁·2^d)` from `aHat`, and require `UseHint(h, w'_Approx) = w₁` and hint
-weight `≤ ω`. `identificationScheme.verify` is this verifier at `aHat := ExpandA(pk.ρ)`
-(`identificationScheme_verify_eq_verifyWithMatrix`); the `ExpandA` random-oracle verifier
-`NMA.verifyRO` supplies `aHat` by an oracle query instead. -/
-def verifyWithMatrix (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims)
-    (w1 : Commitment p prims) (cTilde : CommitHashBytes p) : Response p prims → Bool
-  | (z, h) =>
-    let c := prims.sampleInBall cTilde
-    let wApprox := computeWApprox p prims aHat c z pk.t1
-    let w1' := prims.useHintVec h wApprox
-    decide (polyVecNorm z < p.gamma1 - p.beta) &&
-    decide (w1' = w1) &&
-    decide (prims.hintWeight h ≤ p.omega)
-
-/-- The identification verifier evaluates `ExpandA` exactly once, at the public seed: it is
-`verifyWithMatrix` at `ExpandA(pk.ρ)`. -/
-theorem identificationScheme_verify_eq_verifyWithMatrix (pk : PublicKey p prims)
-    (w1 : Commitment p prims) (cTilde : CommitHashBytes p) (zh : Response p prims) :
-    (identificationScheme p prims).verify pk w1 cTilde zh =
-      verifyWithMatrix p prims (prims.expandA pk.rho) pk w1 cTilde zh := by
-  rcases zh with ⟨z, h⟩
-  rfl
-
-/-- The short-tagged scheme carries the same verifier (`identificationSchemeShort` re-uses the
-operations of `identificationScheme`), so it too is `verifyWithMatrix` at `ExpandA(pk.ρ)`. -/
-theorem identificationSchemeShort_verify_eq_verifyWithMatrix (pk : PublicKey p prims)
-    (w1 : Commitment p prims) (cTilde : CommitHashBytes p) (zh : Response p prims) :
-    (identificationSchemeShort p prims).verify pk w1 cTilde zh =
-      verifyWithMatrix p prims (prims.expandA pk.rho) pk w1 cTilde zh :=
-  identificationScheme_verify_eq_verifyWithMatrix p prims pk w1 cTilde zh
-
-end VerifyWithMatrix
 
 namespace NMA
 
@@ -184,31 +146,6 @@ def verifyRO (pk : PublicKey p prims) (msg : M)
     let c ← HasQuery.query (spec := HashSpec p prims M) (msg, w')
     let aHat ← HasQuery.query (spec := ExpandASpec p) pk.rho
     pure (verifyWithMatrix p prims aHat pk w' c z)
-
-/-- Fiat-Shamir-with-aborts verification at an explicit matrix `aHat`, in the two-oracle world of
-the signature: the challenge is queried from `H` and `verifyWithMatrix` decides. At
-`aHat := ExpandA(pk.ρ)` this is the signature's own `verify` (`verifyAtMatrix_expandA`); the
-reductions use it at the matrix they programmed. -/
-def verifyAtMatrix (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims) (msg : M)
-    (σ : Option (Commitment p prims × Response p prims)) :
-    OracleComp (unifSpec + HashSpec p prims M) Bool :=
-  match σ with
-  | none => pure false
-  | some (w', z) => do
-    let c ← HasQuery.query (spec := HashSpec p prims M) (msg, w')
-    pure (verifyWithMatrix p prims aHat pk w' c z)
-
-omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
-/-- At the honest matrix `ExpandA(pk.ρ)`, `verifyAtMatrix` is the verification algorithm of the
-short-model ML-DSA signature `FiatShamirWithAbort (identificationSchemeShort …)`. -/
-theorem verifyAtMatrix_expandA
-    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
-    (maxAttempts : ℕ) (pk : PublicKey p prims) (msg : M)
-    (σ : Option (Commitment p prims × Response p prims)) :
-    verifyAtMatrix p prims (prims.expandA pk.rho) pk msg σ =
-      (FiatShamirWithAbort (m := OracleComp (unifSpec + HashSpec p prims M))
-        (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ := by
-  rcases σ with _ | ⟨w', z, h⟩ <;> rfl
 
 /-! ### Pinning the oracle algorithms to the scheme
 
@@ -437,13 +374,13 @@ noncomputable def distinguisherBRom
 /-- **The uniform-matrix tailored SelfTargetMSIS problem.** The parameters are a uniform matrix
 `Â` and a public key `pk = (ρ, Power2Round(t).1)` with uniform `ρ` and uniform `t` — the
 uniform-`t` key of the short model with the matrix supplied independently of the seed, as the
-`ExpandA` random-oracle model prescribes. Validity is the ML-DSA verifier relation at the
-challenge matrix: recover `w' = UseHint(h, Â·z − SampleInBall(c̃)·(t₁·2^d))`, bind it to the
-commitment component of the hashed preimage (the self-target binding), and run
-`verifyWithMatrix` at `Â`. At `Â = ExpandA(pk.ρ)` this validity predicate is that of the
-seed-based `mldsaSTMSISShort` (`mldsaSTMSISShort_isValid_expandA_eq_matrix`). Like
-`mldsaSTMSISShort` it is the tailored verifier relation, not the standard SelfTargetMSIS normal
-form. -/
+`ExpandA` random-oracle model prescribes. Validity is `stmsisValidWithMatrix`, the ML-DSA
+verifier relation at the challenge matrix: recover
+`w' = UseHint(h, Â·z − SampleInBall(c̃)·(t₁·2^d))`, bind it to the commitment component of the
+hashed preimage (the self-target binding), and run `verifyWithMatrix` at `Â`. At
+`Â = ExpandA(pk.ρ)` this validity predicate is that of the seed-based `mldsaSTMSISShort`
+(`mldsaSTMSISShort_isValid_expandA_eq_matrix`). Like `mldsaSTMSISShort` it is the tailored
+verifier relation, not the standard SelfTargetMSIS normal form. -/
 noncomputable def mldsaSTMSISMatrix (M : Type) :
     SelfTargetMSIS.Problem (TqMatrix p.k p.l) (Response p prims) (PublicKey p prims)
       (M × Commitment p prims) (CommitHashBytes p) where
@@ -452,9 +389,7 @@ noncomputable def mldsaSTMSISMatrix (M : Type) :
     let t ← $ᵗ (RqVec p.k)
     let rho ← $ᵗ (Bytes 32)
     return (aHat, ⟨rho, (prims.power2RoundVec t).1⟩)
-  isValid := fun aHat pk hashInput cTilde (z, h) =>
-    let w' := prims.useHintVec h (computeWApprox p prims aHat (prims.sampleInBall cTilde) z pk.t1)
-    decide (hashInput.2 = w') && verifyWithMatrix p prims aHat pk w' cTilde (z, h)
+  isValid := stmsisValidWithMatrix p prims
 
 omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
 /-- At the honest matrix `ExpandA(pk.ρ)`, the seed-based tailored problem and the uniform-matrix
@@ -581,91 +516,11 @@ theorem romNmaAdvantage_eq_realExperiment
   exact (evalDistEq_verifyRO_eq_verifyAtMatrix p prims main
     ⟨rho, (prims.power2RoundVec (aHat * s1 + s2)).1⟩ aHat).evalDist_eq
 
-/-- **Per-key STMSIS read-back comparison at an explicit matrix.** For a fixed public key `pk`
-and matrix `aHat`, the forge-and-verify tail at `aHat` (run through `simulateToProbComp`) accepts
-no more often than the SelfTargetMSIS experiment tail of `extractorC` at the parameters
-`(aHat, pk)` with `mldsaSTMSISMatrix` validity. Both tails simulate `main pk` against the same
-random oracle from the empty cache; an aborting forgery contributes weight `0`; on
-`some (w', (z, h))` both branches issue the same `H(msg, w')` query, whose cached answer the
-STMSIS experiment reads back before `isValid` recovers the commitment, binds it to the preimage
-component `w'`, and runs the identical verifier at `aHat`. -/
-private theorem stmsis_tail_le_matrix
-    [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
-    (aHat : TqMatrix p.k p.l)
-    (main : PublicKey p prims →
-      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
-        (M × Option (Commitment p prims × Response p prims)))
-    (pk : PublicKey p prims) :
-    𝒟[simulateToProbComp p prims (M := M) (do
-        let (msg, σ) ← main pk
-        verifyAtMatrix p prims aHat pk msg σ)] {true} ≤
-      𝒟[do
-        let ((hashInput, response), cache) ←
-          (simulateQ (roImpl p prims (M := M))
-            ((extractorC p prims main).run (aHat, pk))).run ∅
-        match cache hashInput with
-        | some hashOutput =>
-            pure ((mldsaSTMSISMatrix p prims M).isValid aHat pk hashInput hashOutput response)
-        | none => pure false] {true} := by
-  classical
-  -- Decompose both tails over the shared simulation of `main pk` from the empty cache.
-  unfold simulateToProbComp extractorC
-  simp only [bind_pure_comp, simulateQ_bind, StateT.run_bind, StateT.run'_eq, map_bind,
-    bind_assoc]
-  refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
-    (measurableSet_singleton true) fun a _ => ?_
-  obtain ⟨⟨msg, σ⟩, cache0⟩ := a
-  cases σ with
-  | none =>
-    -- Aborting forgery: the verify tail is deterministically `false`, so it has weight `0`.
-    simp only [verifyAtMatrix, simulateQ_pure, StateT.run_pure, map_pure, evalDist_pure,
-      MeasureTheory.Measure.dirac_apply]
-    simp
-  | some wzh =>
-    obtain ⟨w', z, h⟩ := wzh
-    -- Both branches issue the same `H(msg, w')` query on `cache0`; compare per random answer.
-    simp only [verifyAtMatrix, simulateQ_map, StateT.run_map, bind_pure_comp]
-    simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc]
-    refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
-      (measurableSet_singleton true) fun cc hcc => ?_
-    simp only [pure_bind]
-    -- The query simulation caches its answer: `cc.2 (msg, w') = some cc.1`.
-    have hquery : simulateQ (roImpl p prims (M := M)) (query (msg, w') :
-          OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) _) =
-        (randomOracle : QueryImpl (M × Commitment p prims →ₒ CommitHashBytes p) _) (msg, w') :=
-      roSim.simulateQ_liftM_spec_query _ _
-    rw [hquery] at hcc
-    have hcache : cc.2 (msg, w') = some cc.1 := by
-      cases hc0 : cache0 (msg, w') with
-      | some u =>
-        rw [randomOracle, QueryImpl.withCaching_run_some _ hc0, support_pure,
-          Set.mem_singleton_iff] at hcc
-        subst hcc; exact hc0
-      | none =>
-        rw [randomOracle, QueryImpl.withCaching_run_none _ hc0, support_map] at hcc
-        obtain ⟨u, _, hu⟩ := hcc
-        subst hu
-        exact QueryCache.cacheQuery_self _ (msg, w') u
-    rw [hcache]
-    -- An accepted forgery is a valid solution: the verifier's middle conjunct identifies the
-    -- recomputed commitment with `w'`, which is the commitment component of the preimage.
-    simp only [evalDist_pure, MeasureTheory.Measure.dirac_apply]
-    by_cases hverify : verifyWithMatrix p prims aHat pk w' cc.1 (z, h) = true
-    · have hvalid :
-          (mldsaSTMSISMatrix p prims M).isValid aHat pk (msg, w') cc.1 (z, h) = true := by
-        simp only [mldsaSTMSISMatrix, verifyWithMatrix] at hverify ⊢
-        revert hverify
-        grind
-      simp [hverify, hvalid]
-    · simp only [Bool.not_eq_true] at hverify
-      rw [hverify]
-      simp
-
 /-- **The uniform MLWE branch is bounded by SelfTargetMSIS.** The uniform branch of the
 uniform-matrix Module-LWE game against `distinguisherBRom` — a uniform matrix, a uniform `t`, a
 self-chosen seed — is the parameter distribution of `mldsaSTMSISMatrix`, and per parameter the
 forge-and-verify tail at the challenge matrix accepts no more often than the extractor's
-read-back tail (`stmsis_tail_le_matrix`). -/
+read-back tail (`stmsis_tail_le_withMatrix`). -/
 theorem randomExperiment_le_stmsis_rom
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
@@ -683,7 +538,7 @@ theorem randomExperiment_le_stmsis_rom
     (measurableSet_singleton true) fun t _ => ?_
   refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
     (measurableSet_singleton true) fun rho _ => ?_
-  convert stmsis_tail_le_matrix p prims aHat
+  convert stmsis_tail_le_withMatrix p prims aHat
     (fun pk => withExpandACache p prims (programmedAt p pk.rho aHat) (main pk))
     ⟨rho, (prims.power2RoundVec t).1⟩ using 2
   rw [roImpl, OracleSpec.romImpl, unifFwdImpl]
