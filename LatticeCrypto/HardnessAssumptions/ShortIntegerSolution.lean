@@ -65,7 +65,9 @@ variable {Sample Solution : Type}
 short vectors the adversary must find. The predicate `isValid` checks whether a solution
 is valid (short and satisfying the linear constraint). -/
 structure Problem (Sample Solution : Type) where
+  /-- Sample the public challenge given to the adversary. -/
   sampleChallenge : ProbComp Sample
+  /-- Decide whether a candidate solution is valid for a challenge. -/
   isValid : Sample → Solution → Bool
 
 /-- A search adversary for a SIS-style problem. -/
@@ -138,6 +140,8 @@ preimage and a response; the experiment checks RO consistency by looking up the 
 in the oracle's cache. -/
 structure Adversary (problem : Problem Challenge Response Target HashInput HashOutput)
     where
+  /-- Given the public parameters `(A, t)`, produce a hash preimage and a response, with
+  access to uniform randomness and to the random oracle for `H`. -/
   run (params : Challenge × Target) :
     OracleComp (unifSpec + (HashInput →ₒ HashOutput)) (HashInput × Response)
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Check the declaration names the documentation cites.
 
-Two checks over the agent guides (`docs/agents/*.md`, `AGENTS.md`, `CONTRIBUTING.md`,
-`README.md`), the design notes (`docs/design/*.md`) and the reading documents
-(`docs/reading/*.md`), the first also over the docstrings and comments of the Lean libraries:
+Retired-name checks cover all first-party Markdown and comments in active Lean libraries.
+Declaration resolution covers the agent guides (`docs/agents/*.md`, `AGENTS.md`,
+`CONTRIBUTING.md`, `README.md`).
 
 1. Retired names (needs no build). A name the downstream codemod renames or removes
    (`scripts/migrate-native-probability.py`: `RENAMES`, `MODULES`, `LEGACY_HINTS`,
@@ -44,6 +44,8 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 
+from doc_refs import source_files
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CODEMOD = REPO_ROOT / "scripts" / "migrate-native-probability.py"
 ALLOWLIST = REPO_ROOT / "scripts" / "doc_names_allowlist.txt"
@@ -81,9 +83,7 @@ def default_docs() -> tuple[list[Path], list[Path]]:
     guides = sorted((REPO_ROOT / "docs" / "agents").glob("*.md")) + [
         REPO_ROOT / "AGENTS.md", REPO_ROOT / "CONTRIBUTING.md", REPO_ROOT / "README.md"]
     guides = [doc for doc in guides if doc.is_file()]
-    designs = sorted(DESIGN_DIR.glob("*.md"))
-    readings = sorted(READING_DIR.glob("*.md"))
-    return guides + designs + readings, guides
+    return source_files(REPO_ROOT, "*.md"), guides
 
 
 def historical(text: str) -> bool:
@@ -306,7 +306,7 @@ def read_allowlist(path: Path) -> dict[str, str]:
     return entries
 
 
-def resolve(tokens: list[str]) -> tuple[dict[str, str], int]:
+def resolve(tokens: list[str], roots: list[str] | None = None) -> tuple[dict[str, str], int]:
     """Unresolved tokens with their suggestions, by `lake exe docnames`; the second component is
     its exit status."""
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False,
@@ -314,7 +314,8 @@ def resolve(tokens: list[str]) -> tuple[dict[str, str], int]:
         json.dump({"names": tokens}, handle, ensure_ascii=False)
         names_path = handle.name
     try:
-        result = subprocess.run(["lake", "exe", "docnames", names_path], cwd=REPO_ROOT,
+        root_args = [arg for root in (roots or []) for arg in ("--root", root)]
+        result = subprocess.run(["lake", "exe", "docnames", names_path, *root_args], cwd=REPO_ROOT,
                                 capture_output=True, text=True, encoding="utf-8")
     finally:
         Path(names_path).unlink(missing_ok=True)
@@ -343,6 +344,8 @@ def main() -> int:
     parser.add_argument("files", nargs="*", type=Path,
                         help="documents or Lean sources to check (default: the guides, design "
                              "notes, reading documents and library sources)")
+    parser.add_argument("--root", action="append", default=[], metavar="MODULE",
+                        help="compiled root for resolution (repeat for optional libraries)")
     parser.add_argument("--resolve", action="store_true",
                         help="also resolve the tokens with `lake exe docnames`")
     parser.add_argument("--emit", type=Path, metavar="FILE",
@@ -369,7 +372,7 @@ def main() -> int:
     failures = check_retired(retired_docs, patterns)
     resolved_count = 0
     if args.resolve:
-        unresolved, status = resolve(tokens)
+        unresolved, status = resolve(tokens, args.root)
         if status != 0:
             print(f"Documentation names: the resolver failed with status {status}")
             return 2

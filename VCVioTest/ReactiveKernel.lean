@@ -22,7 +22,8 @@ public section
 
 namespace Interaction.UC.ReactiveKernel.Tests
 
-open PFunctor ReactiveProcess ReactiveNetwork DynSystem OracleComp MeasureTheory
+open PFunctor Interaction.Execution.ReactiveProcess Interaction.Execution.ReactiveNetwork DynSystem
+  OracleComp MeasureTheory
 
 @[expose] def effect : PFunctor.{0, 0} := ⟨Bool, fun _ => Bool⟩
 

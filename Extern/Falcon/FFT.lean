@@ -56,6 +56,9 @@ instance : Inhabited F := ⟨FloatLike.zero⟩
 
 /-! ## FFT -/
 
+/-- The negacyclic FFT of a polynomial of degree `n = 2^logn` from real to FFT
+representation, in the split real/imaginary layout; mirrors c-fn-dsa's `fpoly_FFT`. For
+`logn ≤ 1` the two layouts coincide and `f` is returned unchanged. -/
 def fpolyFFT (logn : Nat) (f : Array F) : Array F := Id.run do
   if logn ≤ 1 then return f
   let hn := 1 <<< (logn - 1)
@@ -88,6 +91,8 @@ def fpolyFFT (logn : Nat) (f : Array F) : Array F := Id.run do
 
 /-! ## Inverse FFT -/
 
+/-- The inverse of `fpolyFFT`, from FFT to real representation, including the final scaling
+by `2 / n`; mirrors c-fn-dsa's `fpoly_iFFT`. -/
 def fpolyIFFT (logn : Nat) (f : Array F) : Array F := Id.run do
   if logn ≤ 1 then return f
   let n := 1 <<< logn
@@ -124,6 +129,8 @@ def fpolyIFFT (logn : Nat) (f : Array F) : Array F := Id.run do
 
 /-! ## FPoly arithmetic -/
 
+/-- The real-representation polynomial with the small integer coefficients `f`; mirrors
+c-fn-dsa's `fpoly_set_small`. -/
 def fpolySetSmall (logn : Nat) (f : Array Int32) : Array F := Id.run do
   let n := 1 <<< logn
   let mut d : Array F := Array.replicate n fZero
@@ -131,6 +138,8 @@ def fpolySetSmall (logn : Nat) (f : Array Int32) : Array F := Id.run do
     d := d.set! i (FloatLike.ofInt32 (f.getD i 0))
   return d
 
+/-- The sum `a + b`, coefficient by coefficient, in either representation; mirrors c-fn-dsa's
+`fpoly_add`. -/
 def fpolyAdd (logn : Nat) (a b : Array F) : Array F := Id.run do
   let n := 1 <<< logn
   let mut aa := a
@@ -138,6 +147,8 @@ def fpolyAdd (logn : Nat) (a b : Array F) : Array F := Id.run do
     aa := aa.set! i (FloatLike.add aa[i]! (b.getD i fZero))
   return aa
 
+/-- The difference `a - b`, coefficient by coefficient, in either representation; mirrors
+c-fn-dsa's `fpoly_sub`. -/
 def fpolySub (logn : Nat) (a b : Array F) : Array F := Id.run do
   let n := 1 <<< logn
   let mut aa := a
@@ -145,6 +156,8 @@ def fpolySub (logn : Nat) (a b : Array F) : Array F := Id.run do
     aa := aa.set! i (FloatLike.sub aa[i]! (b.getD i fZero))
   return aa
 
+/-- The negation `-a`, coefficient by coefficient, in either representation; mirrors
+c-fn-dsa's `fpoly_neg`. -/
 def fpolyNeg (logn : Nat) (a : Array F) : Array F := Id.run do
   let n := 1 <<< logn
   let mut aa := a
@@ -152,6 +165,8 @@ def fpolyNeg (logn : Nat) (a : Array F) : Array F := Id.run do
     aa := aa.set! i (FloatLike.neg aa[i]!)
   return aa
 
+/-- The product `a · b` of two polynomials in FFT representation, computed as the pointwise
+complex product; mirrors c-fn-dsa's `fpoly_mul_fft`. -/
 def fpolyMulFFT (logn : Nat) (a b : Array F) : Array F := Id.run do
   let hn := 1 <<< (logn - 1)
   let mut aa := a
@@ -164,6 +179,8 @@ def fpolyMulFFT (logn : Nat) (a b : Array F) : Array F := Id.run do
     aa := aa.set! (i + hn) (FloatLike.add (FloatLike.mul a_re b_im) (FloatLike.mul a_im b_re))
   return aa
 
+/-- The product of `a` with the real constant `x`, in either representation; mirrors
+c-fn-dsa's `fpoly_mulconst`. -/
 def fpolyMulConst (logn : Nat) (a : Array F) (x : F) : Array F := Id.run do
   let n := 1 <<< logn
   let mut aa := a
@@ -173,6 +190,11 @@ def fpolyMulConst (logn : Nat) (a : Array F) (x : F) : Array F := Id.run do
 
 /-! ## LDL decomposition in FFT domain -/
 
+/-- The LDL decomposition (`LDL*` of the Falcon specification) of the self-adjoint matrix
+`G = [[g00, g01], [adj g01, g11]]` in FFT representation: `G = L · D · adj L` with
+`L = [[1, 0], [l10, 1]]` and `D = [[g00, 0], [0, d11]]`. Returns `(l10, d11)` as updated
+copies of `g01` and `g11`; only the first `n / 2` entries of the self-adjoint `g00`, `g11` and
+`d11` are used. Mirrors c-fn-dsa's `fpoly_LDL_fft`. -/
 def fpolyLDLFFT (logn : Nat) (g00 g01 g11 : Array F) : Array F × Array F := Id.run do
   let hn := 1 <<< (logn - 1)
   let mut gg01 := g01
@@ -193,6 +215,9 @@ def fpolyLDLFFT (logn : Nat) (g00 g01 g11 : Array F) : Array F × Array F := Id.
 
 /-! ## Split / Merge in FFT domain -/
 
+/-- The split operation (`splitfft` of the Falcon specification) in FFT representation: the
+half-size polynomials `(f0, f1)` modulo `X^(n/2) + 1` with `f = f0(x²) + x · f1(x²)`; mirrors
+c-fn-dsa's `fpoly_split_fft`. -/
 def fpolySplitFFT (logn : Nat) (f : Array F) : Array F × Array F := Id.run do
   let hn := 1 <<< (logn - 1)
   let qn := hn >>> 1
@@ -220,6 +245,9 @@ def fpolySplitFFT (logn : Nat) (f : Array F) : Array F × Array F := Id.run do
     f1 := f1.set! (i + qn) (FloatLike.mul v_im h)
   return (f0, f1)
 
+/-- `fpolySplitFFT` for a self-adjoint `f`, reading only its first `n / 2` entries. The output
+`f0` is again self-adjoint, while `f1` in general is not. Mirrors c-fn-dsa's
+`fpoly_split_selfadj_fft`. -/
 def fpolySplitSelfadjFFT (logn : Nat) (f : Array F) : Array F × Array F := Id.run do
   let hn := 1 <<< (logn - 1)
   let qn := hn >>> 1
@@ -241,6 +269,9 @@ def fpolySplitSelfadjFFT (logn : Nat) (f : Array F) : Array F × Array F := Id.r
     f1 := f1.set! (i + qn) (FloatLike.mul u_re (FloatLike.neg s_im))
   return (f0, f1)
 
+/-- The merge operation (`mergefft` of the Falcon specification), inverse to `fpolySplitFFT`:
+the polynomial `f = f0(x²) + x · f1(x²)` in FFT representation built from the half-size `f0`
+and `f1`; mirrors c-fn-dsa's `fpoly_merge_fft`. -/
 def fpolyMergeFFT (logn : Nat) (f0 f1 : Array F) : Array F := Id.run do
   let hn := 1 <<< (logn - 1)
   let qn := hn >>> 1
@@ -265,6 +296,10 @@ def fpolyMergeFFT (logn : Nat) (f0 f1 : Array F) : Array F := Id.run do
 
 /-! ## Gram matrix in FFT domain -/
 
+/-- The Gram matrix `G = B · adj B` of `B = [[b00, b01], [b10, b11]]` in FFT representation,
+returned as `(g00, g01, g11)` with `g00 = b00 · adj b00 + b01 · adj b01`,
+`g01 = b00 · adj b10 + b01 · adj b11` and `g11 = b10 · adj b10 + b11 · adj b11`; the imaginary
+halves of the self-adjoint `g00` and `g11` are zero. Mirrors c-fn-dsa's `fpoly_gram_fft`. -/
 def fpolyGramFFT (logn : Nat) (b00 b01 b10 b11 : Array F) :
     Array F × Array F × Array F := Id.run do
   let hn := 1 <<< (logn - 1)
@@ -302,6 +337,10 @@ def fpolyGramFFT (logn : Nat) (b00 b01 b10 b11 : Array F) :
 private def invQ : F := FloatLike.scaled (6004310871091074 : Int64) (-66 : Int32)
 private def minusInvQ : F := FloatLike.scaled (-6004310871091074 : Int64) (-66 : Int32)
 
+/-- The target vector of Falcon signing, `(t0, t1) = (FFT(hm) · b11 / q, -(FFT(hm) · b01) / q)`
+in FFT representation, for the hash point `hm = c` with coefficients in `[0, q)`. With
+`b01 = -FFT(f)` and `b11 = -FFT(F)` this is `t = (-FFT(c) · FFT(F) / q, FFT(c) · FFT(f) / q)`
+of the Falcon specification's `Sign`. Mirrors c-fn-dsa's `fpoly_apply_basis`. -/
 def fpolyApplyBasis (logn : Nat) (b01 b11 : Array F) (hm : Array UInt16) :
     Array F × Array F := Id.run do
   let n := 1 <<< logn
@@ -394,6 +433,13 @@ private def ffsampFFTDeepest (origLogn : Nat) (state : PRNGState) (tmp : Array F
   buf := buf.set! 1 (FloatLike.ofInt32 z1i)
   return (buf, st4)
 
+/-- One level of fast Fourier sampling on the flat buffer `tmp` at degree `2^logn`, where
+`2^origLogn` is the signature degree that selects the sampler constants. It computes the LDL
+decomposition of the Gram matrix, samples the right sub-tree on the split of `t1` and the left
+sub-tree on the split of `t0 + (t1 - z1) · l10`, each by a recursive call, and merges the
+results into `(z0, z1)`, written over `(t0, t1)`. At `logn ≤ 1` it runs the unrolled base case
+of c-fn-dsa's `ffsamp_fft_deepest`. Returns the buffer and the advanced PRNG state; mirrors
+`ffsamp_fft_inner`. -/
 partial def ffsampFFTInner (origLogn logn : Nat) (state : PRNGState) (tmp : Array F) :
     Array F × PRNGState :=
   if logn ≤ 1 then
@@ -467,6 +513,11 @@ partial def ffsampFFTInner (origLogn logn : Nat) (state : PRNGState) (tmp : Arra
 
     return (buf, st)
 
+/-- Fast Fourier sampling (`ffSampling` of the Falcon specification) at degree `2^logn`, with
+the LDL tree computed on the fly from the Gram matrix rather than precomputed. The buffer `tmp`
+holds `t0`, `t1` and `g01` (`n` entries each), the self-adjoint `g00` and `g11` (`n / 2` each)
+and at least `3n` entries of free space, all in FFT representation. The sampled vector
+`(z0, z1)` is written over `(t0, t1)`. Mirrors c-fn-dsa's `ffsamp_fft`. -/
 def ffSampling (logn : Nat) (state : PRNGState) (tmp : Array F) :
     Array F × PRNGState :=
   ffsampFFTInner logn logn state tmp

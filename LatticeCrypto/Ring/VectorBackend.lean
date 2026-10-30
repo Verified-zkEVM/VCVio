@@ -217,6 +217,8 @@ variable {Coeff : Type u} {n : Nat}
 
 variable [CommRing Coeff]
 
+/-- Short name for `vectorNegacyclicRing Coeff n`, the vector-backed negacyclic ring of degree
+`n`. -/
 abbrev vRing (Coeff : Type u) [CommRing Coeff] (n : Nat) :=
   vectorNegacyclicRing Coeff n
 

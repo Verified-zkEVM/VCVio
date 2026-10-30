@@ -157,6 +157,11 @@ theorem SampleableType.uniformSample_prod_eq_bind (α β : Type) [SampleableType
   change ((·, ·) <$> ($ᵗ α) <*> ($ᵗ β)) = _
   simp [seq_eq_bind_map, map_eq_bind_pure_comp, bind_assoc]
 
+/-- The canonical sampler of `α × β` samples from `α`, then from `β`, and pairs the results. -/
+lemma uniformSample_prod (α β : Type) [SampleableType α] [SampleableType β] :
+    $ᵗ (α × β) = (·, ·) <$> ($ᵗ α) <*> ($ᵗ β) :=
+  rfl
+
 /-- Transport a uniform sampler along an equivalence. -/
 @[expose, reducible] def SampleableType.ofEquiv {α β : Type} [SampleableType α] (e : α ≃ β) :
     SampleableType β where

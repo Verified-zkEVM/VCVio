@@ -47,7 +47,7 @@ private def runVCGenFinish : TacticM Unit := do
   unless (← getGoals).isEmpty do
     discard <| tryEvalTacticSyntax
       (← `(tactic| all_goals try
-        (refine Std.Internal.Do.Triple.intro ?_
+        (refine Std.WP.Triple.intro ?_
          repeat intro _
          simp [Lean.Order.PartialOrder.rel,
            MonadStateOf.get, MonadStateOf.set, MonadReaderOf.read, MonadWriter.tell,
@@ -63,9 +63,7 @@ private def runVCGenFinish : TacticM Unit := do
            OracleComp.Lower.WriterT.wp_monadLift,
            OracleComp.Lower.WriterT.wp_map,
            WriterT.run_bind, WriterT.run_pure, WriterT.run_tell, WriterT.run_map,
-           MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp_epost,
+           ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))
@@ -85,9 +83,7 @@ private def runVCGenFinish : TacticM Unit := do
            OracleComp.Lower.WriterT.wp_tell,
            OracleComp.Lower.WriterT.wp_monadLift,
            WriterT.run_tell, WriterT.run_pure, WriterT.run_monadLift, WriterT.run_map,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp_epost,
-           MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
+           ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))
@@ -109,9 +105,7 @@ private def runVCGenFinish : TacticM Unit := do
            OracleComp.Lower.WriterT.wp_tell,
            OracleComp.Lower.WriterT.wp_monadLift,
            WriterT.run_tell, WriterT.run_pure, WriterT.run_monadLift, WriterT.run_map,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp_epost,
-           MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
+           ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))

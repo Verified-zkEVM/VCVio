@@ -29,7 +29,7 @@ three places:
 
 Build coverage on that historical compatibility attempt was 1625/1662 jobs.
 
-## Plan (applies once upstream ships a v4.29 build)
+## Plan (requires revalidation against the root toolchain)
 
 ```lean
 import Aeneas.Std.Primitives

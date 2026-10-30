@@ -58,16 +58,69 @@ infrastructure and some tooling and automation remain under active development.
 
 ## Repository Map
 
+See the [repository ownership map](docs/design/repository-layout.md) for placement rules,
+build boundaries and the staged consolidation.
+
 - `VCVio/` contains the oracle-computation framework, probability semantics, program logic, and generic crypto abstractions.
+- `VCVio/Algorithms/` contains shared pure SHA-2, HMAC, MGF1, SHA-3 and SHAKE implementations;
+  their independent regressions run with `lake exe algorithm_tests`.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
 - `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
 - `HashSig/` contains hash-based signatures: proof-level specifications, component-level FIPS 205
-  conformance results, and security-facing interfaces for SLH-DSA. Neither an unforgeability
-  theorem nor a complete FIPS conformance result is proved yet; see
-  `docs/design/slh-dsa-status-and-roadmap.md`.
+  conformance results, and security results for SLH-DSA. SLH-DSA has a proved quantitative SUF-CMA
+  bound (strong unforgeability: no valid message-signature pair the signer never returned, which
+  gives EUF-CMA at the same bound) in the classical random-oracle model with three oracles (the
+  tweakable hash, `Hmsg` and `PRFmsg`), per public seed and averaged over seed distributions
+  (`securityTarget_two_one`). A model of the SHAKE parameter sets over a single SHAKE256 random
+  oracle on byte strings is stated (`shakeRomScheme`); answering its oracle with SHAKE256 gives the
+  library's FIPS 205 SHAKE internal algorithms (`shakeRomScheme_map_shakeAnswer`), which are checked
+  against pinned NIST ACVP vectors at SLH-DSA-SHAKE-128f. In that model the SUF-CMA bound is proved
+  at the six SHAKE parameter sets: the three-oracle bound plus `(q_s + 1) / 2^{8n}` and a weak-key
+  term, which over the uniform public seed is at most `|A_hon| / 2^256`, about `2^{−172}` or less,
+  and at `n = 32` only the weak seeds' share of a bound that holds at every seed
+  (`shakeStrongAdvantage_le_securityBound_validatedParams`); in hedged signing the second term is
+  `1 / 2^{8n} + q_s (q_h + q_s + 1) / 2^{16n}`
+  (`shakeStrongAdvantage_pure_le_securityBound_hedged_validatedParams`,
+  `shakeStrongAdvantage_le_securityBound_hedged_validatedParams`), which reaches the three-oracle
+  level per public seed (at `n = 32`, for every seed outside the weak set) and over the uniform
+  public seed. Every EUF-CMA form follows from its SUF-CMA one through
+  `shakeAdvantage_le_shakeStrongAdvantage`; the named EUF-CMA forms are the six
+  `shakeAdvantage_*_validatedParams` theorems (`shakeAdvantage_le_securityBound_validatedParams`)
+  and `shakeAdvantage_le_securityBound`, `shakeAdvantage_pure_le_securityBound` and
+  `shakeAdvantage_le_securityBound_hedged`. The bounds are over the structured
+  signatures of FIPS 205's internal functions and extend to the pure-mode byte interface at a
+  fixed valid context, using canonical public-key and signature codecs with unchanged adversary
+  query budgets (`wireStrongAdvantage_le_securityBound_validatedParams` and its hedged form).
+  Exact evaluators and a kernel-certified 18-entry table accompany the bounds; uniform
+  budget-range certificates cover the three-oracle bound. Variable-length XOF game transport,
+  SLH-DSA-specific honest-work certificates, byte-level range certificates, and a second
+  construction remain open. The SHA-2 parameter sets have no single-oracle model. A complete
+  FIPS conformance result is not proved; see `docs/design/slh-dsa-status-and-roadmap.md` and,
+  for the accounting and levels, `docs/design/slh-dsa-classical-rom-bound.md`.
+  `HashSig/SLHDSA/SHAKE128s/` adds a specialized deterministic SHAKE-128s pure-mode proof,
+  `SLHDSA.SHAKE128s.slhDsa_sufCma_127`. Its signing requests carry variable contexts and its
+  signatures are byte strings. Over one shared random oracle with fixed 30-byte answers and
+  independent uniform key seeds, the winning probability is at most `q / 2^127` for `q ≥ 1`,
+  subject to probability-one work and signing-request caps. Work counts signing requests, direct
+  adversary hash calls and final-verification hash calls; the signing lifetime is at most
+  `2^64` requests. Key-generation and signer hashes are outside that work count. The
+  [specialized design record](docs/design/slh-dsa-shake128s-suf-cma.md) specifies this interface.
+  The fixed-context byte-wire interface has the same advantage as this counted game
+  (`Bridge.strongUnforgeableAdvantage_eq_fixedContext`). A wire adversary with syntactic budgets
+  `RomQueryBound q_h q_s` and `q_s ≤ 2^64` has advantage at most
+  `(q_h + q_s + 3929) / 2^127` (`wireStrongAdvantage_le_workBound`); the 3929 calls are a proved
+  universal cap for the actual external verifier, including losing and malformed forgeries.
+  `wireStrongAdvantage_le_min_bound` retains the smaller of this bound and the existing general
+  SHAKE bound on their common deterministic, fixed-valid-context, uniform-seed scope. The
+  original variable-context headline and the broader six-set deterministic and hedged results
+  remain available. See the
+  [integration execution record](docs/design/slh-dsa-pr766-pr912-integration-plan.md#implementation-execution-record)
+  for the accepted revisions and exact-head validation requirements.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
 - `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr.
+- `VCVio/Schemes/` owns reusable Schnorr, Pedersen, KEM–DEM and MAC-from-PRF constructions;
+  `Examples/` includes small consumers of these APIs.
 - `Interop/` contains experimental bridges to Rust verification frontends such as hax and Aeneas.
 - `csrc/` contains C FFI bridges for the native ML-DSA, ML-KEM, and Falcon implementations used in tests.
 - `third_party/` contains the native backends as git submodules, used by the `Extern` FFI layer and differential tests.
@@ -79,6 +132,10 @@ for lattice-specific entry points and workflows.
 
 External papers and project references cited in this repo are centralized in
 [`REFERENCES.md`](REFERENCES.md).
+
+For the quantum layer (`VCVio/Quantum/`), [`docs/quantum/`](docs/quantum/README.md) has a tutorial
+for readers new to quantum computing, a guide to the layer's definitions and theorems, and
+reference pages; the design record is [`docs/design/quantum-layer.md`](docs/design/quantum-layer.md).
 
 ## End-to-end examples
 

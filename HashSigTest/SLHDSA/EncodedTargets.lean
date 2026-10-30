@@ -22,9 +22,10 @@ PRE selection.
 Two further groups pin the negative direction, because the ledgers of a small profile keep every
 field far below its encoded width and so exercise no boundary on their own.  `checkFieldBoundaries`
 walks the SHA-2 layer and tree fields across their exact limits.  `checkFallbackAliasing` shows what
-each encoder does past its domain: SHA-2 returns the all-zero key, which is the genuine key of the
-all-zero WOTS-hash address rather than a sentinel, and SHAKE truncates each field to its width, so
-two addresses differing only above a width collide silently.
+each encoder does past its domain: SHA-2 returns the fallback key of the address type, which is the
+key of no address in its domain but is shared by every rejected address of one type class, and
+SHAKE truncates each field to its width, so two addresses differing only above a width collide
+silently.
 
 One group is kernel-checked rather than run: a parameter set whose hypertree is too tall for
 SHA-2's compressed tree field separates the two conditions theorems.  It satisfies the canonical
@@ -98,7 +99,8 @@ example : EncodedTargetLedgerConditions deep (shakePrimitives deepParams) :=
 
 /-- The SHA-2 conditions are not merely unavailable for it, they are false.  Two distinct
 layer-zero trees whose indices exceed the compressed eight-byte field are both listed XMSS
-internal-node targets, and the total SHA-2 key projection maps both to the all-zero key. -/
+internal-node targets, and the total SHA-2 key projection maps both to the fallback key of their
+type. -/
 theorem deep_sha2_conditions_false :
     ¬ EncodedTargetLedgerConditions deep (sha2Primitives deep.params) := by
   intro hconditions
@@ -118,8 +120,9 @@ theorem deep_sha2_conditions_false :
   have heq : xmssNodeAdrs c₁.toAdrs 1 0 = xmssNodeAdrs c₂.toAdrs 1 0 := by
     refine hinj _ hm₁ _ hm₂ ?_
     rw [adrsToKey_sha2, adrsToKey_sha2,
-      sha2AdrsKey_eq_zero_of_tree_overflow _ (by rw [htree₁]; decide),
-      sha2AdrsKey_eq_zero_of_tree_overflow _ (by rw [htree₂]; decide)]
+      sha2AdrsKey_eq_sha2FallbackKey_of_tree_overflow _ (by rw [htree₁]; decide),
+      sha2AdrsKey_eq_sha2FallbackKey_of_tree_overflow _ (by rw [htree₂]; decide)]
+    rfl
   have hcontra := congrArg Adrs.tree heq
   rw [htree₁, htree₂] at hcontra
   omega
@@ -182,13 +185,14 @@ example (a : Adrs) : Sha2Domain a ↔ (Sha2Address.ofAdrs a).toOption.isSome = t
   sha2Domain_iff_ofAdrs_isSome
 
 /-- Every ledger address passes the checked SHA-2 compression boundary, so none of them is encoded
-through the zero fallback, and only the genuinely all-zero address carries the all-zero key. -/
+through the fallback, and none carries a fallback key. -/
 def checkSha2Domain (profile : String) (vp : ValidatedParams) : IO Unit := do
   for (label, addresses) in ledgers vp do
     ensure s!"{profile} {label}: every address is accepted by the checked SHA-2 boundary"
       (addresses.all fun a => (Sha2Address.ofAdrs a).toOption.isSome)
-    ensure s!"{profile} {label}: only the all-zero address carries the all-zero key"
-      (addresses.all fun a => a = Adrs.zero || sha2AdrsKey a != zeroBytes 22)
+    ensure s!"{profile} {label}: no address carries a fallback key"
+      (addresses.all fun a => sha2AdrsKey a != sha2FallbackKey 0 &&
+        sha2AdrsKey a != sha2FallbackKey 5)
 
 /-- Encoded tweaks stay distinct under both approved encoders. -/
 def checkEncodedNodup (profile : String) (vp : ValidatedParams) : IO Unit := do
@@ -244,14 +248,19 @@ def checkFallbackAliasing : IO Unit := do
   let wideTree := wotsAt 0 (2 ^ 64) 0
   ensure "an over-wide tree index is rejected by the checked SHA-2 boundary"
     (Sha2Address.ofAdrs wideTree).toOption.isNone
-  ensure "SHA-2 maps it to the all-zero key"
-    (sha2AdrsKey wideTree == zeroBytes 22)
+  ensure "SHA-2 maps it to the fallback key of its type"
+    (sha2AdrsKey wideTree == sha2FallbackKey wideTree.type)
   ensure "the all-zero WOTS-hash address is inside the checked domain"
     (Sha2Address.ofAdrs Adrs.zero).toOption.isSome
-  ensure "so the all-zero key is genuinely its own compression, not a fallback"
+  ensure "so its key is its own compression, the all-zero key"
     (sha2AdrsKey Adrs.zero == zeroBytes 22)
-  ensure "so SHA-2 does not separate the two"
-    (wideTree != Adrs.zero && sha2AdrsKey wideTree == sha2AdrsKey Adrs.zero)
+  ensure "which the fallback key of the rejected address of the same type is not"
+    (sha2AdrsKey wideTree != sha2AdrsKey Adrs.zero)
+  let widerTree := wotsAt 0 (2 ^ 64 + 1) 0
+  ensure "SHA-2 does not separate two rejected addresses of one type class"
+    (wideTree != widerTree && sha2AdrsKey wideTree == sha2AdrsKey widerTree)
+  ensure "but its fallback keeps a rejected secret-key address apart from them"
+    (sha2AdrsKey { wideTree with type := 5 } != sha2AdrsKey wideTree)
   let overWideTree := wotsAt 0 (2 ^ 96) 0
   ensure "an over-wide tree index is not canonical"
     (!overWideTree.isCanonical)

@@ -24,9 +24,11 @@ The contract is enforced at three levels:
    under `VCVio/`, `LatticeCrypto/`, `LatticeCryptoTest/`, `Examples/`,
    `ToMathlib/`, `FFI/`, `VCVioWidgets/`, or `VCVioTest/` must never
    `import Interop.…`, `import Hax.…`, or `import Aeneas.…`.
-2. **CI**: `scripts/check-interop-isolation.sh` greps for forbidden imports
-   and exits non-zero on violation. `.github/workflows/interop-isolation.yml`
-   runs it on every PR and on pushes to `main`.
+2. **CI**: `scripts/check-interop-isolation.sh` uses Lean's source parser to
+   check for forbidden imports and exits non-zero on violation.
+   `.github/workflows/interop-isolation.yml` runs it on every PR and on pushes
+   to `main`. The source parser needs the pinned Lean toolchain but no built
+   project modules or Lake dependencies.
 3. **Reverse direction**: `Interop/**` is allowed to depend on `VCVio/**`,
    `ToMathlib/**`, hax (`Hax.…`), and aeneas (`Aeneas.…`), but **not** on
    `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `FFI/**`,

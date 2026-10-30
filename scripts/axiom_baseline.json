@@ -1,11 +1,1 @@
-{"sorry":
- ["Falcon.euf_cma_security",
-  "Falcon.euf_cma_security_bytes40",
-  "Falcon.keyGenFromSeed",
-  "GPVHashAndSign.euf_cma_collision_bound",
-  "GPVHashAndSign.euf_cma_split_bound",
-  "GPVHashAndSign.forgery_yields_collision",
-  "GPVHashAndSign.forgery_yields_collision_or_exact_match",
-  "GPVHashAndSign.programmedPreimageReduction",
-  "GPVHashAndSign.reduction"],
- "nonstandard": []}
+{"sorry": ["Falcon.keyGenFromSeed"], "nonstandard": []}

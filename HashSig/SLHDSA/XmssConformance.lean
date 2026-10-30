@@ -29,8 +29,10 @@ variable {Y : Type*}
 /-- A valid node position in a perfect tree of height `treeHeight`: level `z` above the leaves and
 horizontal index `t < 2^(treeHeight-z)`. -/
 structure TreePosition (treeHeight : ℕ) where
+  /-- The node's level `z` above the leaves, where level `0` holds the leaves. -/
   level : ℕ
   level_le : level ≤ treeHeight
+  /-- The node's horizontal index `t` among the `2 ^ (treeHeight - z)` nodes at its level. -/
   index : Fin (2 ^ (treeHeight - level))
 
 /-- The horizontal index of a valid node position is also below the full leaf count. -/

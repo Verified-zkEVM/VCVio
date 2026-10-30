@@ -15,8 +15,9 @@ public import Mathlib.Analysis.SpecificLimits.Normed
 
 The composed security statements over the reductions of `LatticeCrypto.MLDSA.SecurityNMA`.
 `nma_security_short` and `nma_security_fips` bound the EUF-NMA advantage of the short-key and
-seed-derived schemes by MLWE and SelfTargetMSIS advantages; `nma_security_short_matrix` lands
-the MLWE leg on the uniform-matrix problem `NMA.mldsaMatrixMLWE`.
+seed-derived schemes by MLWE and SelfTargetMSIS advantages; `nma_security_short_seed` takes the
+short-model MLWE leg at the seed-based problem with no supplied bridge, and
+`nma_security_short_matrix` lands it on the uniform-matrix problem `NMA.mldsaMatrixMLWE`.
 
 `euf_cma_security_of_nma_short` composes the CMA-to-NMA engine with the short-model NMA leg; its
 HVZK hypothesis is an open obligation (no witness below `ζ_zk = 1`, see its docstring).
@@ -95,8 +96,8 @@ non-vacuous instances.
 
 This is the EUF-NMA half (Lemma 7) of the ML-DSA security proof in the idealized short-key model;
 the CMA-to-NMA statistical step (`euf_cma_security_of_nma_short`) composes on top of it. -/
-theorem nma_security_short
-    (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
+theorem nma_security_short {Sample : Type}
+    (mlwe : LearningWithErrors.Problem Sample (RqVec p.l) (RqVec p.k))
     (maxAttempts : ℕ)
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p)
       (validKeyPairShort p prims))
@@ -169,6 +170,36 @@ theorem nma_security_short
       exact add_le_add hstm hB
     _ = LearningWithErrors.advantage mlwe (bridge adv.main) + εbridge +
         SelfTargetMSIS.advantage (extractorCShort p prims adv.main) := add_comm _ _
+
+open scoped Classical in
+/-- **NMA security of ML-DSA in the idealized short-key model, against seed-based MLWE.**
+
+`nma_security_short` with no supplied bridge: the MLWE reduction is the key-swap distinguisher
+`distinguisherBShort` itself, played against the seed-based short problem `mldsaMLWEShort`, at
+zero bridge slack. For every EUF-NMA adversary `A`,
+
+  `Adv^{EUF-NMA}(A) ≤ Adv^{MLWE-seed}(distinguisherBShort A) + Adv^{SelfTargetMSIS}(C)`.
+
+The MLWE problem here draws the matrix as `ExpandA(ρ)` from a uniform public seed `ρ`; the
+uniform-matrix form without idealization slack is `MLDSA.NMA.nma_security_rom` in
+`LatticeCrypto.MLDSA.SecurityExpandARO`, which models `ExpandA` as a programmed random oracle. -/
+theorem nma_security_short_seed
+    (maxAttempts : ℕ)
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p)
+      (validKeyPairShort p prims))
+    (hGen : hr.gen = keygenShort p prims) :
+    ∀ (adv : SignatureAlg.EufNmaAdversary
+      (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts)),
+    SignatureAlg.eufNmaAdvantage
+        (FiatShamirWithAbort.runtime
+          (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
+      LearningWithErrors.advantage (mldsaMLWEShort p prims)
+          (distinguisherBShort p prims hr maxAttempts adv.main) +
+        SelfTargetMSIS.advantage (extractorCShort p prims adv.main) := by
+  intro adv
+  simpa only [add_zero] using
+    nma_security_short p prims (mldsaMLWEShort p prims) maxAttempts hr hGen 0
+      (distinguisherBShort p prims hr maxAttempts) (fun _ => le_of_eq (add_zero _).symm) adv
 
 open scoped Classical in
 /-- **NMA security of ML-DSA at the FIPS seed-derived key generation.**

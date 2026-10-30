@@ -1,0 +1,60 @@
+/-
+Copyright (c) 2026 Tom Wambsgans. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Tom Wambsgans
+-/
+
+module
+
+public import HashSig.SLHDSA.SHAKE128s.Proof.KeygenFresh
+import VCVio.OracleComp.Constructions.SampleableType.Measure
+
+/-!
+# Truncating a uniform hash output
+
+A uniformly random `HashOutput` truncated to its leading `Digest` is a uniformly random `Digest`.
+The proof splits a hash output bijectively into its leading digest and its trailing `112` bits
+(`splitOutput`, `splitOutput_bijective`), so the first component of the split of a uniform output
+is uniform (`truncate_uniform`). This is the distributional fact behind the uniformity of the
+public-key root drawn from a fresh oracle at key generation.
+-/
+
+public section
+
+open OracleComp OracleSpec ENNReal
+
+namespace SLHDSA.SHAKE128s.KeygenUniform
+
+/-- Splits a hash output into its leading `Digest` (the truncation used throughout the scheme)
+and its trailing `112` bits. -/
+@[expose] def splitOutput (output : HashOutput) : Digest × BitVec 112 :=
+  (Hashing.truncate output, output.extractLsb' 0 112)
+
+/-- Splitting a hash output into digest and remainder loses no information. -/
+theorem splitOutput_bijective : Function.Bijective splitOutput := by
+  apply (Fintype.bijective_iff_injective_and_card _).2
+  constructor
+  · intro left right h
+    have hleft : Hashing.truncate left ++ left.extractLsb' 0 112 = left :=
+      BitVec.extractLsb'_append_extractLsb'
+    have hright : Hashing.truncate right ++ right.extractLsb' 0 112 = right :=
+      BitVec.extractLsb'_append_extractLsb'
+    rw [← hleft, ← hright]
+    exact congrArg₂ HAppend.hAppend (congrArg Prod.fst h) (congrArg Prod.snd h)
+  · norm_num [HashOutput, Digest, messageDigestBytes, n, Fintype.card_prod, Fintype.card_bitVec]
+
+/-- The truncation of a uniform hash output is a uniform digest. -/
+theorem truncate_uniform :
+    (Hashing.truncate <$> ($ᵗ HashOutput : ProbComp HashOutput)) =ᵈ
+      ($ᵗ Digest : ProbComp Digest) := by
+  have hmap : Hashing.truncate <$> ($ᵗ HashOutput : ProbComp HashOutput) =
+      Prod.fst <$> (splitOutput <$> ($ᵗ HashOutput : ProbComp HashOutput)) := by
+    simp [Functor.map_map, splitOutput]
+  rw [hmap]
+  refine ((SampleableType.map_uniformSample_evalDistEq_of_bijective
+    splitOutput_bijective).map Prod.fst).trans ?_
+  refine EvalDistEq.of_forall_prEvent_eq fun p => ?_
+  rw [prEvent_map]
+  exact SampleableType.prEvent_uniformSample_fst p
+
+end SLHDSA.SHAKE128s.KeygenUniform

@@ -735,7 +735,7 @@ theorem quantitativeStepClass_cost {A B : Type} {input : Representation A}
 
 This still does not assume categorical closure: a single `PolynomialCode` is useful immediately.
 General identity and composition evidence is expressed directly by PolyFun's
-`QuantitativeStepClass.HasCategory` mixin. -/
+`QuantitativeStepClass.HasComposition` mixin. -/
 def polynomialQuantitativeStepClass : PFunctor.QuantitativeStepClass stepClass where
   Realizer input output function := PolynomialCode input output function
   size := encodedSize
@@ -771,7 +771,7 @@ end Primitive
 /-! ## Optional closure seam
 
 General machine-level closure is intentionally absent.  A future implementation must inhabit
-PolyFun's `QuantitativeStepClass.HasCategory`, `HasExactCategory`, `HasProd`, `HasSum`,
+PolyFun's `QuantitativeStepClass.HasComposition`, `HasExactComposition`, `HasProd`, `HasSum`,
 `HasOption`, and `IsDistributive` mixins directly for the step class above.  Keeping one set of
 interfaces prevents the adapter from drifting away from the generic composition API. -/
 
