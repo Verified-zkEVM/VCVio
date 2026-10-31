@@ -897,7 +897,7 @@ request rather than to a byte string. -/
 theorem probes_sign_none (cache : QueryCache HashSpec) (sk : SecretKey) (request : Message)
     (hframe : request.frame = none) (predicate : Bytes → Prop) :
     Probes cache (Scheme.sign (m := OracleComp HashSpec) sk request) predicate := by
-  rw [Scheme.sign, hframe]
+  rw [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, hframe]
   exact probes_pure cache _ _
 
 /-- **A served request consults only canonical inputs and the two its own frame names.** -/
@@ -907,7 +907,8 @@ theorem probes_sign (cache : QueryCache HashSpec) (sk : SecretKey) (request : Me
       (fun probe =>
         Canonical sk.publicKey.seed (replayCells cache sk.seed sk.publicKey.seed) probe ∨
           MessageProbe cache sk message probe) := by
-  rw [Scheme.sign, hframe]
+  simp only [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, hframe]
+  rw [map_eq_bind_pure_comp]
   exact probes_bind_replay cache _ _ _ (probes_signInternal cache sk message)
     (probes_pure cache _ _)
 

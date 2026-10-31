@@ -154,7 +154,7 @@ theorem executableRejectedSign_eq (sk : SecretKeyCore FIPS205.core)
     executableRejectedSign request long = FIPS205.scheme.sign sk request := by
   unfold executableRejectedSign
   split <;> rename_i framed
-  · simp only [FIPS205.scheme, framed]
+  · simp only [FIPS205.scheme, FIPS205.signingView_sign, framed]
   · rw [encodePureMessage_error request long] at framed
     cases framed
 

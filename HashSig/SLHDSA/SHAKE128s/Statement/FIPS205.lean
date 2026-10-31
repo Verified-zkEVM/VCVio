@@ -10,6 +10,8 @@ public import HashSig.SLHDSA.SHAKE128s.Statement.Game
 public import HashSig.SLHDSA.Security.ByteModel
 public import HashSig.SLHDSA.External
 public import HashSig.SLHDSA.Concrete.Codec
+public import HashSig.SLHDSA.SHAKE128s.FIPS205.Params
+public import HashSig.SLHDSA.SigningView.Encoding
 
 /-!
 # SLH-DSA-SHAKE-128s over one SHAKE256 random oracle, in pure mode
@@ -37,15 +39,6 @@ namespace SLHDSA.SHAKE128s.FIPS205
 
 open SLHDSA SLHDSA.Security SLHDSA.Concrete SLHDSA.External
 
-/-- The validated SLH-DSA-SHAKE-128s parameters. -/
-abbrev params : ValidatedParams := FipsParameterSet.SLHDSA_SHAKE_128s.validatedParams
-
-/-- The SHAKE256 primitive context at those parameters. -/
-abbrev core : CorePrimitives params.params := shakeCore params
-
-/-- The random oracle's answers: `m = 30` bytes. -/
-abbrev Answer : Type := SLHDSA.Bytes params.params.m
-
 /-- Deterministic signing: `opt_rand` is the public seed. -/
 @[expose] def deterministicRand (pk : PublicKeyCore core) : ProbComp core.Y :=
   pure pk.pkSeed
@@ -59,6 +52,42 @@ noncomputable abbrev internal :=
 @[expose] def SecretKeyCore.publicKey (sk : SecretKeyCore core) : PublicKeyCore core :=
   ⟨sk.pkSeed, sk.pkRoot⟩
 
+/-- The strict signing view of the actual deterministic internal algorithms. -/
+@[expose] noncomputable def signingView :=
+  SLHDSA.SigningView.fromInternalPure params (shakeWireCodec params.params) internal
+    (fun request : Message => (encodePureMessage request.context request.message).toOption)
+
+/-- Invalid contexts reject; valid requests sign with the public key and encode fully. -/
+@[simp] theorem signingView_sign (pk : PublicKeyCore core) (sk : SecretKeyCore core)
+    (request : Message) :
+    signingView.sign pk sk request =
+      match encodePureMessage request.context request.message with
+      | .error _ => pure none
+      | .ok message =>
+        (fun signature => some (encodeSignature params
+          (shakeWireCodec params.params) signature)) <$>
+          internal.sign pk sk message := by
+  cases framed : encodePureMessage request.context request.message <;>
+    simp only [signingView, SLHDSA.SigningView.fromInternalPure,
+      SignatureAlg.SigningView.rejectingEncoding, SignatureAlg.SigningView.Encoding.sign,
+      framed, Except.toOption, Function.comp_def]
+
+/-- Framing or complete decoding rejects before verification; decoded candidates execute it. -/
+@[simp] theorem signingView_verify (pk : PublicKeyCore core) (request : Message)
+    (wire : Bytes) :
+    signingView.verify pk request wire =
+      match encodePureMessage request.context request.message with
+      | .error _ => pure false
+      | .ok message =>
+        match decodeSignature params (shakeWireCodec params.params) wire with
+        | .error _ => pure false
+        | .ok signature => internal.verify pk message signature := by
+  cases framed : encodePureMessage request.context request.message <;>
+    cases decoded : decodeSignature params (shakeWireCodec params.params) wire <;>
+    simp only [signingView, SLHDSA.SigningView.fromInternalPure,
+      SignatureAlg.SigningView.rejectingEncoding, SignatureAlg.SigningView.Encoding.verify,
+      framed, decoded, Except.toOption]
+
 /-- **SLH-DSA-SHAKE-128s in pure mode over one SHAKE256 random oracle.** Key generation is
 FIPS 205 Algorithm 21's; signing frames the request (Algorithm 22) and signs the framed message
 with the internal signer, returning the canonical byte encoding of the signature, or `none` when
@@ -67,19 +96,8 @@ internal verifier (Algorithm 24), rejecting a request it cannot frame or a strin
 decode. -/
 @[expose] noncomputable def scheme :
     Game.ExternalScheme Answer (PublicKeyCore core) (SecretKeyCore core) where
-  keygen := (fun keys => (keys.2, keys.1)) <$> internal.keygen
-  sign sk request :=
-    match encodePureMessage request.context request.message with
-    | .error _ => pure none
-    | .ok message =>
-      (fun signature => some (encodeSignature params (shakeWireCodec params.params) signature)) <$>
-        internal.sign (SecretKeyCore.publicKey sk) sk message
-  verify pk request signature :=
-    match encodePureMessage request.context request.message with
-    | .error _ => pure false
-    | .ok message =>
-      match decodeSignature params (shakeWireCodec params.params) signature with
-      | .error _ => pure false
-      | .ok decoded => internal.verify pk message decoded
+  keygen := Prod.swap <$> signingView.keygen
+  sign sk request := signingView.sign (SecretKeyCore.publicKey sk) sk request
+  verify := signingView.verify
 
 end SLHDSA.SHAKE128s.FIPS205

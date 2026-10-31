@@ -444,7 +444,8 @@ theorem sign_none_run (walk : Walk) (request : Message) (hframe : request.frame 
     (hz : z ∈ support ((simulateQ (noticingSplitTapeRecorder (leftAt walk) (rightAt walk))
       (Scheme.sign (m := OracleComp OracleWorld) (skAt walk) request)).run state)) :
     z.2 = state := by
-  rw [Scheme.sign, hframe, simulateQ_pure, StateT.run_pure, support_pure,
+  rw [Scheme.sign, SignatureAlg.SigningView.Encoding.sign,
+    hframe, simulateQ_pure, StateT.run_pure, support_pure,
     Set.mem_singleton_iff] at hz
   rw [hz]
 

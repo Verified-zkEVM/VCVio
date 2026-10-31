@@ -94,7 +94,8 @@ theorem queriesUnder_verify_digest (cache : QueryCache HashSpec) (pk : PublicKey
     (hquery : QueriesUnder cache
       (Hashing.messageDigest (m := OracleComp HashSpec) parsed.randomizer pk message) probe) :
     QueriesUnder cache (Scheme.verify (m := OracleComp HashSpec) pk request signature) probe := by
-  simp only [Scheme.verify, Scheme.verifyInternal, hframe, hparsed]
+  simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify,
+    Scheme.verifyInternal_components, hframe, hparsed]
   exact queriesUnder_bind cache _ _ probe hquery
 
 /-- **Two caches that agree on the verifier's probes give the same claimed candidates.** -/

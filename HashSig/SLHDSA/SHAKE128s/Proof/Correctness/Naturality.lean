@@ -181,9 +181,9 @@ theorem signInternal_simulate (sk : SecretKey) (message : Bytes) :
 /-- Simulating the signing oracle's computation is signing in the target monad. -/
 theorem sign_simulate (sk : SecretKey) (request : Message) :
     simulateQ impl (Scheme.sign sk request) = (Scheme.sign sk request : m (Option Bytes)) := by
-  unfold Scheme.sign
+  unfold Scheme.sign SignatureAlg.SigningView.Encoding.sign
   cases request.frame with
   | none => simp only [simulateQ_pure]
-  | some message => simp only [simulateQ_bind, simulateQ_pure, signInternal_simulate impl himpl]
+  | some message => simp only [simulateQ_map, signInternal_simulate impl himpl]
 
 end SLHDSA.SHAKE128s.Correctness.Naturality

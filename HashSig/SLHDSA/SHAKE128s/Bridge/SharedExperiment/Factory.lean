@@ -77,12 +77,14 @@ theorem countedExperiment_pureShakeView_fips205
     | error error =>
       simp [pureShakeView, SLHDSA.SigningView.fromInternalPure,
         SignatureAlg.SigningView.rejectingEncoding,
+        SignatureAlg.SigningView.Encoding.sign, SignatureAlg.SigningView.Encoding.verify,
         externalView, FIPS205.scheme, hf, Except.toOption]
     | ok message =>
       cases hd : decodeSignature FIPS205.params
           (Concrete.shakeWireCodec FIPS205.params.params) wire <;>
         simp [pureShakeView, SLHDSA.SigningView.fromInternalPure,
           SignatureAlg.SigningView.rejectingEncoding,
+        SignatureAlg.SigningView.Encoding.sign, SignatureAlg.SigningView.Encoding.verify,
           externalView, FIPS205.scheme, hf, hd, Except.toOption]
   · intro keys member request
     have consistent : keys.1 = FIPS205.SecretKeyCore.publicKey keys.2 :=
@@ -90,6 +92,7 @@ theorem countedExperiment_pureShakeView_fips205
     cases hf : External.encodePureMessage request.context request.message <;>
       simp [pureShakeView, SLHDSA.SigningView.fromInternalPure,
         SignatureAlg.SigningView.rejectingEncoding,
+        SignatureAlg.SigningView.Encoding.sign,
         externalView, FIPS205.scheme, hf, Except.toOption, consistent]; rfl
 
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment

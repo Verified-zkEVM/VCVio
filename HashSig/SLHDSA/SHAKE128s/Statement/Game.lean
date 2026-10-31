@@ -6,6 +6,7 @@ Authors: Tom Wambsgans
 
 module
 
+public import HashSig.SLHDSA.SHAKE128s.Statement.Requests
 public import HashSig.SLHDSA.SHAKE128s.Statement.RandomOracleModel
 public import HashSig.SLHDSA.SHAKE128s.Statement.UnforgeabilityGame
 public import HashSig.SLHDSA.SHAKE128s.Statement.BitSecurity
@@ -32,17 +33,6 @@ public section
 open OracleComp OracleSpec ENNReal
 
 namespace SLHDSA.SHAKE128s
-
-/-- Byte strings. -/
-abbrev Bytes := List UInt8
-
-/-- A signing request: message and context. -/
-structure Message where
-  /-- The message. -/
-  message : Bytes
-  /-- The context string. -/
-  context : Bytes
-deriving DecidableEq
 
 /-- At most `2 ^ 64` signatures per key. -/
 @[expose] def signingLimit : Nat := 2 ^ 64

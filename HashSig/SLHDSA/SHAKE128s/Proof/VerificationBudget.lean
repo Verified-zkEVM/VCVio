@@ -136,14 +136,16 @@ theorem verification_accepted_count_bounds (pk : PublicKey) (request : Message) 
     569 ≤ result.2 .verification ∧ result.2 .verification ≤ 3824 := by
   cases hframe : request.frame with
   | none =>
-    simp only [Scheme.verify, hframe, countQueries_pure, simulateQ_pure,
+    simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, hframe,
+      countQueries_pure, simulateQ_pure,
       StateT.run'_eq, StateT.run_pure, map_pure, support_pure, Set.mem_singleton_iff] at hresult
     subst result
     contradiction
   | some message =>
     cases hparse : Signature.fromBytes? wire with
     | none =>
-      simp only [Scheme.verify, hframe, hparse, countQueries_pure, simulateQ_pure,
+      simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, hframe, hparse,
+        countQueries_pure, simulateQ_pure,
         StateT.run'_eq, StateT.run_pure, map_pure, support_pure, Set.mem_singleton_iff] at hresult
       subst result
       contradiction

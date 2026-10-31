@@ -35,6 +35,113 @@ WOTS_JOINT_MODULE = "HashSigTest.SLHDSA.Refactor.WotsIntegration"
 WOTS_JOINT_NAMES = ["SLHDSA.Refactor.WotsIntegration." + name
                     for name in ("observePublicKey", "observeSign", "observeRecovery")]
 
+# The archived Construction digest remains unchanged. Fresh literal full-type
+# applications below check the readable equations independently of their proof bodies.
+HISTORICAL_CONSTRUCTION_SOURCE = "HashSigTest/SLHDSA/Refactor/Semantics/Construction.lean"
+READABLE_CONSTRUCTION_WITNESSES = r"""/-
+Copyright (c) 2026 Alexander Hicks. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Alexander Hicks
+-/
+
+module
+public import HashSigTest.SLHDSA.Refactor.Semantics.Construction
+
+/-! # Complete quantified readable construction witnesses -/
+
+public section
+
+open OracleComp OracleSpec
+open SLHDSA SLHDSA.Security SLHDSA.External SLHDSA.Concrete
+open SLHDSA.SHAKE128s
+
+example :
+    (FIPS205.params.params.n, FIPS205.params.params.h, FIPS205.params.params.d,
+      FIPS205.params.params.hp, FIPS205.params.params.a, FIPS205.params.params.k,
+      FIPS205.params.params.m) = (16, 63, 7, 9, 12, 14, 30) :=
+  SLHDSA.Refactor.Semantics.shake128sParametersEquation
+
+example : Bridge.verifierCap = 3929 :=
+  SLHDSA.Refactor.Semantics.conservativeVerifierCapEquation
+
+example : FIPS205.Answer = SLHDSA.Bytes 30 :=
+  SLHDSA.Refactor.Semantics.answerCarrierEquation
+
+example : ∀ (pk : PublicKeyCore FIPS205.core),
+    FIPS205.deterministicRand pk = pure pk.pkSeed :=
+  SLHDSA.Refactor.Semantics.deterministicRandomizerEquation
+
+example :
+    FIPS205.internal = shakeRomScheme FIPS205.params (fun pk => pure pk.pkSeed)
+      ($ᵗ FIPS205.core.PkSeed) :=
+  SLHDSA.Refactor.Semantics.internalSchemeEquation
+
+example :
+    FIPS205.scheme.keygen = (fun keys => (keys.2, keys.1)) <$> FIPS205.internal.keygen :=
+  SLHDSA.Refactor.Semantics.externalKeygenEquation
+
+example : ∀ (sk : SecretKeyCore FIPS205.core) (request : Message),
+    FIPS205.scheme.sign sk request =
+      match encodePureMessage request.context request.message with
+      | .error _ => pure none
+      | .ok message =>
+        (fun signature => some (encodeSignature FIPS205.params
+          (shakeWireCodec FIPS205.params.params) signature)) <$>
+            FIPS205.internal.sign ⟨sk.pkSeed, sk.pkRoot⟩ sk message :=
+  SLHDSA.Refactor.Semantics.externalSigningEquation
+
+example : ∀ (pk : PublicKeyCore FIPS205.core)
+    (request : Message) (signature : SHAKE128s.Bytes),
+    FIPS205.scheme.verify pk request signature =
+      match encodePureMessage request.context request.message with
+      | .error _ => pure false
+      | .ok message =>
+        match decodeSignature FIPS205.params (shakeWireCodec FIPS205.params.params) signature with
+        | .error _ => pure false
+        | .ok decoded => FIPS205.internal.verify pk message decoded :=
+  SLHDSA.Refactor.Semantics.externalVerificationEquation
+
+example : ∀ {p : Params} (core : CorePrimitives p)
+    {m : Type → Type*} [Monad m]
+    (hash : Adrs → core.Y → m core.Y) (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (secret : Adrs → m core.Y) (digest : List Byte) (address : Adrs),
+    forsSignWithSecret core hash nodeHash secret digest address =
+      Vector.ofFnM (fun i : Fin p.k => do
+        let index := i.val * 2 ^ p.a + forsIdx p digest i.val
+        let selected ← secret (forsSkAdrs address index)
+        let path ← PerfectMerkleTree.intrinsicAuthPathM
+          (forsLeafWithSecret core hash secret address)
+          (forsNodeHashWith nodeHash address) index p.a
+        return ⟨selected, path⟩) :=
+  SLHDSA.Refactor.Semantics.secretFirstProgramEquation
+
+example : ForsSecretOrderTest.expectedTrace = [
+    .secret ⟨2, 7, 6, 3, 0, 1⟩,
+    .secret ⟨2, 7, 6, 3, 0, 0⟩, .leafHash ⟨2, 7, 3, 3, 0, 0⟩ 100,
+    .secret ⟨2, 7, 6, 3, 0, 2⟩, .leafHash ⟨2, 7, 3, 3, 0, 2⟩ 102,
+    .secret ⟨2, 7, 6, 3, 0, 3⟩, .leafHash ⟨2, 7, 3, 3, 0, 3⟩ 103,
+    .nodeHash ⟨2, 7, 3, 3, 1, 1⟩ 1122 1133,
+    .secret ⟨2, 7, 6, 3, 0, 6⟩,
+    .secret ⟨2, 7, 6, 3, 0, 7⟩, .leafHash ⟨2, 7, 3, 3, 0, 7⟩ 107,
+    .secret ⟨2, 7, 6, 3, 0, 4⟩, .leafHash ⟨2, 7, 3, 3, 0, 4⟩ 104,
+    .secret ⟨2, 7, 6, 3, 0, 5⟩, .leafHash ⟨2, 7, 3, 3, 0, 5⟩ 105,
+    .nodeHash ⟨2, 7, 3, 3, 1, 2⟩ 1144 1155] :=
+  SLHDSA.Refactor.Semantics.literalForsTraceEquation
+"""
+
+# The runtime file retains its original whole-source binding. Its named rejection
+# proof may use the public signing-view equation without changing executable behavior.
+WIRE_BRIDGE_SOURCE = "HashSigTest/SLHDSA/SHAKE128s/WireBridge.lean"
+WIRE_BRIDGE_SIGNING_PROOF = r"""theorem executableRejectedSign_eq (sk : SecretKeyCore FIPS205.core)
+    (request : Message) (long : 255 < request.context.length) :
+    executableRejectedSign request long = FIPS205.scheme.sign sk request := by
+  unfold executableRejectedSign
+  split <;> rename_i framed
+  · simp only [FIPS205.scheme, framed]
+  · rw [encodePureMessage_error request long] at framed
+    cases framed
+"""
+
 spec = importlib.util.spec_from_file_location("slh_dsa_r0a", ROOT / "scripts/check-slh-dsa-r0.py")
 if spec is None or spec.loader is None:
     raise RuntimeError("The original R0a verifier is unavailable")
@@ -108,6 +215,22 @@ def target_binding(source: str, name: str) -> dict:
 
 
 def check_bindings(bindings: dict) -> list[str]:
+    wire_source = (ROOT / WIRE_BRIDGE_SOURCE).read_bytes()
+    original_proof = WIRE_BRIDGE_SIGNING_PROOF.encode()
+    public_equation_proof = WIRE_BRIDGE_SIGNING_PROOF.replace(
+        "  · simp only [FIPS205.scheme, framed]",
+        "  · simp only [FIPS205.scheme, FIPS205.signingView_sign, framed]", 1).encode()
+    if wire_source.count(public_equation_proof) == 1:
+        wire_source = wire_source.replace(public_equation_proof, original_proof, 1)
+    if r0a.sha256(wire_source) != bindings["runtimeSourceSha256"][WIRE_BRIDGE_SOURCE]:
+        raise ValueError(f"Frozen runtimeSourceSha256 binding changed: {WIRE_BRIDGE_SOURCE}")
+    # Preserve every archived binding on disk; only whole Construction proof identity
+    # is superseded by the literal quantified applications executed below.
+    bindings = {**bindings, "semanticSourceSha256": {
+        path: digest for path, digest in bindings["semanticSourceSha256"].items()
+        if path != HISTORICAL_CONSTRUCTION_SOURCE}, "runtimeSourceSha256": {
+        path: digest for path, digest in bindings["runtimeSourceSha256"].items()
+        if path != WIRE_BRIDGE_SOURCE}}
     for field in ("r0aProtectedFiles", "semanticSourceSha256", "runtimeSourceSha256"):
         for relative, digest in bindings[field].items():
             if field == "runtimeSourceSha256" and relative == HISTORICAL_SCHEME_SOURCE:
@@ -210,6 +333,11 @@ def verify(report: Path, steps: list[dict]) -> dict:
     execute(["lake", "env", "lean", "-DautoImplicit=false", str(driver)], witness_log, steps)
     if f"Validated {len(contracts)} literal kernel contract witnesses" not in witness_log.read_text():
         raise ValueError("The complete current strength-witness validation did not execute")
+    # These literal statements retain all ten public Construction equations.
+    construction_witnesses = report / "ReadableConstructionWitnesses.lean"
+    construction_witnesses.write_text(READABLE_CONSTRUCTION_WITNESSES)
+    execute(["lake", "env", "lean", "-DautoImplicit=false", str(construction_witnesses)],
+            report / "readable-construction-witnesses.log", steps)
     axiom_names = list(dict.fromkeys(names + source_names + witness_names + WOTS_JOINT_NAMES))
     check_axioms(axiom_names, report, steps)
     after = r0a.frame()
@@ -221,6 +349,12 @@ def verify(report: Path, steps: list[dict]) -> dict:
             "wotsJointClaims": WOTS_JOINT_NAMES,
             "requiredRuntimeBindings": sorted(RUNTIMES | {WOTS_RUNTIME}),
             "runtimeScope": "Bindings only here; preceding ordinary lake-test steps execute once",
+            "freshReadableConstructionContracts": 10,
+            "retiredReadableConstructionSourceIdentity": {
+                "path": HISTORICAL_CONSTRUCTION_SOURCE,
+                "recordedSha256": bindings["semanticSourceSha256"][HISTORICAL_CONSTRUCTION_SOURCE],
+                "observedSha256": r0a.sha256((ROOT / HISTORICAL_CONSTRUCTION_SOURCE).read_bytes()),
+                "currentCheck": "10 fresh literal full-type readable Construction applications"},
             "historicalConstructionAudit": {
                 "executed": False, "accepted": None,
                 "command": "python3 scripts/check-slh-dsa-r0.py --report-dir FRESH_EXTERNAL_DIR",

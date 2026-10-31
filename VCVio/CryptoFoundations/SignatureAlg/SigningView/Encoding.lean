@@ -18,6 +18,28 @@ public section
 
 universe v
 
+namespace SignatureAlg.SigningView.Encoding
+
+/-- Reject an invalid request before signing, otherwise encode its actual signature reply. -/
+@[expose] def sign {m : Type → Type v} [Monad m] {Request Msg SK Sig WireSig : Type}
+    (frame : Request → Option Msg) (encode : Sig → WireSig) (signer : SK → Msg → m Sig)
+    (sk : SK) (request : Request) : m (Option WireSig) :=
+  match frame request with
+  | none => pure none
+  | some message => (some ∘ encode) <$> signer sk message
+
+/-- Reject invalid framing or parsing; decoded candidates execute the verifier. -/
+@[expose] def verify {m : Type → Type v} [Monad m] {Request Msg PK Sig WireSig : Type}
+    (frame : Request → Option Msg) (decode : WireSig → Option Sig)
+    (verifier : PK → Msg → Sig → m Bool) (pk : PK) (request : Request) (wire : WireSig) : m Bool :=
+  match frame request with
+  | none => pure false
+  | some message => match decode wire with
+    | none => pure false
+    | some signature => verifier pk message signature
+
+end SignatureAlg.SigningView.Encoding
+
 namespace SignatureAlg.SigningView
 
 /-- A partial request frame and signature codec around the same internal algorithms. -/
@@ -26,14 +48,9 @@ namespace SignatureAlg.SigningView
     (frame : Request → Option Msg) (encode : Sig → WireSig) (decode : WireSig → Option Sig) :
     SignatureAlg.SigningView m Request PK SK WireSig (Option WireSig) where
   keygen := alg.keygen
-  sign pk sk request := match frame request with
-    | none => pure none
-    | some message => (some ∘ encode) <$> alg.sign pk sk message
-  verify pk request wire := match frame request with
-    | none => pure false
-    | some message => match decode wire with
-      | none => pure false
-      | some signature => alg.verify pk message signature
+  sign pk sk request := Encoding.sign frame encode (fun key message => alg.sign pk key message)
+    sk request
+  verify := Encoding.verify frame decode alg.verify
   readback := id
 
 /-- Request and signature encoding preserve the entire internal key-generation program. -/

@@ -61,7 +61,7 @@ Invalid contexts and malformed encodings return before hashing. Acceptance is no
 theorem isTotalQueryBound_FIPS205_verify (pk : PublicKeyCore FIPS205.core) (request : Message)
     (signature : Bytes) :
     IsTotalQueryBound (FIPS205.scheme.verify pk request signature) verifierCap := by
-  simp only [FIPS205.scheme]
+  simp only [FIPS205.scheme, FIPS205.signingView_verify]
   split
   · trivial
   · split

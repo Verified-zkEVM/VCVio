@@ -288,7 +288,8 @@ theorem verify_bounds (pk : PublicKey) (request : Message) (wire : Bytes)
     (message : Bytes) (signature : Signature)
     (hframe : request.frame = some message) (hparse : Signature.fromBytes? wire = some signature) :
     Bounds (Scheme.verify pk request wire) 569 3824 := by
-  simpa only [Scheme.verify, hframe, hparse] using verifyInternal_bounds pk message signature
+  simpa only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, hframe, hparse]
+    using verifyInternal_bounds pk message signature
 
 /-- Instrument the free computation before interpreting its hash calls. -/
 @[expose]

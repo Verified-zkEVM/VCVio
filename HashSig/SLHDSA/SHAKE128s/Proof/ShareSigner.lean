@@ -68,9 +68,11 @@ theorem sign_eq (sk : SecretKey) (request : Message) (framed : Bytes)
           OracleComp HashSpec HashOutput) >>= fun digest =>
           signAfter (Hashing.truncate seed) sk digest >>= fun signature =>
             pure (some signature.toBytes) := by
-  simp only [Scheme.sign, hframe, SignerRandomiser.signInternal_eq, signInternalAt_eq,
+  simp only [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, hframe,
+    map_eq_bind_pure_comp, SignerRandomiser.signInternal_eq, signInternalAt_eq,
     Hashing.randomizer, Hashing.shortHash, Hashing.messageDigest, Hashing.hash, bind_assoc,
     pure_bind]
+  rfl
 
 /-- **Everything `signAfter` consults is canonical**, read at the replayed cells. -/
 theorem probes_signAfter (cache : QueryCache HashSpec) (randomizer : Digest) (sk : SecretKey)

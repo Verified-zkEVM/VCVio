@@ -59,7 +59,8 @@ theorem externalSigningEquation (sk : SecretKeyCore FIPS205.core) (request : Mes
       | .ok message =>
         (fun signature => some (encodeSignature FIPS205.params
           (shakeWireCodec FIPS205.params.params) signature)) <$>
-            FIPS205.internal.sign ⟨sk.pkSeed, sk.pkRoot⟩ sk message := rfl
+            FIPS205.internal.sign ⟨sk.pkSeed, sk.pkRoot⟩ sk message := by
+  exact FIPS205.signingView_sign ⟨sk.pkSeed, sk.pkRoot⟩ sk request
 
 /-- Invalid framing or decoding returns false before the internal verifier executes. -/
 theorem externalVerificationEquation (pk : PublicKeyCore FIPS205.core)
@@ -70,7 +71,8 @@ theorem externalVerificationEquation (pk : PublicKeyCore FIPS205.core)
       | .ok message =>
         match decodeSignature FIPS205.params (shakeWireCodec FIPS205.params.params) signature with
         | .error _ => pure false
-        | .ok decoded => FIPS205.internal.verify pk message decoded := rfl
+        | .ok decoded => FIPS205.internal.verify pk message decoded := by
+  exact FIPS205.signingView_verify pk request signature
 
 /-- Each selected secret precedes its authentication work, with trees in ascending order. -/
 theorem secretFirstProgramEquation {p : Params} (core : CorePrimitives p)

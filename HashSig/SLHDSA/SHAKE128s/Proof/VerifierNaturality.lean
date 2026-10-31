@@ -151,7 +151,7 @@ theorem verifyInternal_simulate (pk : PublicKey) (message : Bytes) (signature : 
 theorem verify_simulate (pk : PublicKey) (request : Message) (signature : Bytes) :
     simulateQ impl (Scheme.verify pk request signature) =
       (Scheme.verify pk request signature : m Bool) := by
-  unfold Scheme.verify
+  unfold Scheme.verify SignatureAlg.SigningView.Encoding.verify
   cases request.frame with
   | none => rfl
   | some message =>

@@ -7,7 +7,7 @@ Authors: Alexander Hicks
 module
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.Relabel.RandomOracle
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Defs
-public import HashSig.SLHDSA.SHAKE128s.Bridge.Encodings
+public import HashSig.SLHDSA.SHAKE128s.Representation
 
 /-!
 # Complete counted observations in the full byte-answer representation

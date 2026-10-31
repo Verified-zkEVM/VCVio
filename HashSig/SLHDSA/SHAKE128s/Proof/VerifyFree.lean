@@ -290,7 +290,8 @@ theorem verify_free (pk : PublicKey) (request : Message) (wire : Bytes)
     (message : Bytes) (signature : Signature)
     (hframe : request.frame = some message) (hparse : Signature.fromBytes? wire = some signature) :
     FreeBounds pk.seed (Scheme.verify pk request wire : OracleComp HashSpec Bool) 239 := by
-  simpa only [Scheme.verify, hframe, hparse] using verifyInternal_free pk message signature
+  simpa only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify,
+    hframe, hparse] using verifyInternal_free pk message signature
 
 /-! ## Transfer to stateful implementations -/
 
