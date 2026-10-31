@@ -260,7 +260,8 @@ theorem simulateQ_toPartialImpl_verifyInternalM_eq_some_true_iff [DecidableEq co
           (splitDigest vp.params digest).forsAdrs) = some forsPk ∧
         simulateQ c.toPartialImpl (GeneralHypertree.pkFromSigM vp core forsPk sig.hypertree
           pk.pkSeed (splitDigest vp.params digest)) = some pk.pkRoot := by
-  simp only [GeneralScheme.verifyInternalM, GeneralHypertree.verifyM, simulateQ_bind_eq_some_iff,
+  simp only [GeneralScheme.verifyInternalM_components, GeneralHypertree.verifyM,
+    simulateQ_bind_eq_some_iff,
     simulateQ_pure_eq_some_iff, simulateQ_toPartialImpl_hmsg, decide_eq_true_eq,
     exists_eq_right, exists_and_left]
 
@@ -277,7 +278,8 @@ theorem exists_of_simulateQ_toPartialImpl_verifyInternalM_eq_some [DecidableEq c
         (splitDigest vp.params digest).forsAdrs = some forsPk ∧
       simulateQ c.toPartialImpl (GeneralHypertree.pkFromSigM vp core forsPk sig.hypertree
         pk.pkSeed (splitDigest vp.params digest)) = some root := by
-  simp only [GeneralScheme.verifyInternalM, GeneralHypertree.verifyM, simulateQ_bind_eq_some_iff,
+  simp only [GeneralScheme.verifyInternalM_components, GeneralHypertree.verifyM,
+    simulateQ_bind_eq_some_iff,
     simulateQ_toPartialImpl_hmsg] at h
   obtain ⟨digest, hd, forsPk, hf, root, hr, -⟩ := h
   exact ⟨digest, forsPk, root, hd, hf, hr⟩

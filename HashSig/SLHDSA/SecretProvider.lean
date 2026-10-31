@@ -900,13 +900,12 @@ the message randomizer `R` supplied: neither secret seed appears. -/
 @[expose] def signInternalWithSecretRandomizerM {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m]
     (secret : Adrs → m core.Y) (msg : List Byte) (pkSeed : core.PkSeed) (pkRoot : core.Y)
-    (R : core.Y) : m (SignatureCore vp core) := do
-  let digest ← PublicHash.hmsg core R pkSeed pkRoot msg
-  let parts := splitDigest vp.params digest
-  let forsSig ← forsSignWithSecretM core secret parts.md.toList pkSeed parts.forsAdrs
-  let forsPk ← forsPkFromSigM core forsSig parts.md.toList pkSeed parts.forsAdrs
-  let htSig ← GeneralHypertree.signWithSecretM core secret forsPk pkSeed parts
-  return ⟨R, forsSig, htSig⟩
+    (R : core.Y) : m (SignatureCore vp core) :=
+  Scheme.Program.sign (PublicHash.hmsg core R pkSeed pkRoot msg) (splitDigest vp.params)
+    (fun parts => forsSignWithSecretM core secret parts.md.toList pkSeed parts.forsAdrs)
+    (fun parts signature => forsPkFromSigM core signature parts.md.toList pkSeed parts.forsAdrs)
+    (fun parts root => GeneralHypertree.signWithSecretM core secret root pkSeed parts)
+    (fun forsSignature hypertreeSignature => ⟨R, forsSignature, hypertreeSignature⟩)
 
 /-- At the honest provider provider-parametric signing at a supplied randomizer is
 `signInternalWithRandomizerM`. -/
@@ -943,8 +942,8 @@ theorem signInternalWithSecretRandomizerM_natural {m n : Type → Type*} [Monad 
     (msg : List Byte) (pkSeed : core.PkSeed) (pkRoot R : core.Y) :
     F.toMonadHom (signInternalWithSecretRandomizerM core secretm msg pkSeed pkRoot R) =
       signInternalWithSecretRandomizerM core secretn msg pkSeed pkRoot R := by
-  rw [signInternalWithSecretRandomizerM, signInternalWithSecretRandomizerM,
-    F.toMonadHom.mmap_bind, PublicHash.hmsg_natural core F]
+  unfold signInternalWithSecretRandomizerM Scheme.Program.sign
+  rw [F.toMonadHom.mmap_bind, PublicHash.hmsg_natural core F]
   refine bind_congr fun digest => ?_
   rw [F.toMonadHom.mmap_bind, forsSignWithSecretM_natural core F secretm secretn hsecret]
   refine bind_congr fun forsSig => ?_

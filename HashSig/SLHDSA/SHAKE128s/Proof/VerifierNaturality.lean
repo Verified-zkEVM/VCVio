@@ -143,7 +143,8 @@ theorem hypertree_simulate (message : Digest) (signature : HypertreeSignature) (
 theorem verifyInternal_simulate (pk : PublicKey) (message : Bytes) (signature : Signature) :
     simulateQ impl (Scheme.verifyInternal pk message signature) =
       (Scheme.verifyInternal pk message signature : m Bool) := by
-  simp only [Scheme.verifyInternal, Hashing.messageDigest, simulateQ_bind, hash_simulate impl himpl,
+  simp only [Scheme.verifyInternal_components, Hashing.messageDigest, simulateQ_bind,
+    hash_simulate impl himpl,
     fors_simulate impl himpl, hypertree_simulate impl himpl]
 
 /-- Simulating pure-mode verification is the verification in `m`. -/

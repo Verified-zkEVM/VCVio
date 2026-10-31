@@ -282,7 +282,7 @@ theorem verifyInternal_free (pk : PublicKey) (message : Bytes) (signature : Sign
       (hypertree_root_free (publicSeed := pk.seed) layers signature.hypertree 0
         (MessageDigest.treeIndex digest).toNat (MessageDigest.leafIndex digest).toFin forsKey).map
         (fun root => root == pk.root)
-  unfold Scheme.verifyInternal
+  rw [Scheme.verifyInternal_components]
   simpa only [Nat.zero_add] using (FreeBounds.zero _).bind htail
 
 /-- **Every path of the verifier on a parsed signature makes at least `239` free queries.** -/

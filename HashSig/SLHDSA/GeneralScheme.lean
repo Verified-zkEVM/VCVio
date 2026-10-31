@@ -40,22 +40,9 @@ returned as `(PK, SK)`, the repository-wide keygen convention; FIPS 205 lists `(
 def keygenInternalM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
-    m (PublicKeyCore core × SecretKeyCore core) := do
-  let pkRoot ← GeneralHypertree.rootM vp core skSeed pkSeed
-  return (⟨pkSeed, pkRoot⟩, ⟨skSeed, skPrf, pkSeed, pkRoot⟩)
-
-/-- FIPS Algorithm 19: randomized internal signing for every validated parameter set. -/
-def signInternalM (vp : ValidatedParams) (core : CorePrimitives vp.params)
-    {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
-    (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
-    m (SignatureCore vp core) := do
-  let R := core.PRFmsg sk.skPrf addrnd msg
-  let digest ← PublicHash.hmsg core R sk.pkSeed sk.pkRoot msg
-  let parts := splitDigest vp.params digest
-  let forsSig ← forsSignM core parts.md.toList sk.skSeed sk.pkSeed parts.forsAdrs
-  let forsPk ← forsPkFromSigM core forsSig parts.md.toList sk.pkSeed parts.forsAdrs
-  let htSig ← GeneralHypertree.signM vp core forsPk sk.skSeed sk.pkSeed parts
-  return ⟨R, forsSig, htSig⟩
+    m (PublicKeyCore core × SecretKeyCore core) :=
+  Scheme.Program.keygen (GeneralHypertree.rootM vp core skSeed pkSeed)
+    (fun root => (⟨pkSeed, root⟩, ⟨skSeed, skPrf, pkSeed, root⟩))
 
 /-- FIPS Algorithm 19 with the message randomizer supplied rather than derived.  `SK.prf` is
 absent from the signature: the randomizer `R` is the only value `PRF_msg` contributes, so a
@@ -63,13 +50,20 @@ caller holding `R` signs from the secret seed and the public material alone. -/
 def signInternalWithRandomizerM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
     (msg : List Byte) (skSeed : core.SkSeed) (pkSeed : core.PkSeed) (pkRoot : core.Y)
-    (R : core.Y) : m (SignatureCore vp core) := do
-  let digest ← PublicHash.hmsg core R pkSeed pkRoot msg
-  let parts := splitDigest vp.params digest
-  let forsSig ← forsSignM core parts.md.toList skSeed pkSeed parts.forsAdrs
-  let forsPk ← forsPkFromSigM core forsSig parts.md.toList pkSeed parts.forsAdrs
-  let htSig ← GeneralHypertree.signM vp core forsPk skSeed pkSeed parts
-  return ⟨R, forsSig, htSig⟩
+    (R : core.Y) : m (SignatureCore vp core) :=
+  Scheme.Program.sign (PublicHash.hmsg core R pkSeed pkRoot msg) (splitDigest vp.params)
+    (fun parts => forsSignM core parts.md.toList skSeed pkSeed parts.forsAdrs)
+    (fun parts signature => forsPkFromSigM core signature parts.md.toList pkSeed parts.forsAdrs)
+    (fun parts root => GeneralHypertree.signM vp core root skSeed pkSeed parts)
+    (fun forsSignature hypertreeSignature => ⟨R, forsSignature, hypertreeSignature⟩)
+
+/-- FIPS Algorithm 19: randomized internal signing for every validated parameter set. -/
+def signInternalM (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
+    (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
+    m (SignatureCore vp core) :=
+  signInternalWithRandomizerM vp core msg sk.skSeed sk.pkSeed sk.pkRoot
+    (core.PRFmsg sk.skPrf addrnd msg)
 
 /-- Algorithm 19 signs at the randomizer `PRF_msg` derives from `SK.prf` and `addrnd`.  Read in
 the other direction: `SK.prf` reaches a signature only through `R`, which is what lets a
@@ -87,11 +81,23 @@ theorem signInternalM_eq_signInternalWithRandomizerM (vp : ValidatedParams)
 trajectory used by signing. -/
 def verifyInternalM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m] [DecidableEq core.Y]
-    (msg : List Byte) (sig : SignatureCore vp core) (pk : PublicKeyCore core) : m Bool := do
-  let digest ← PublicHash.hmsg core sig.randomness pk.pkSeed pk.pkRoot msg
-  let parts := splitDigest vp.params digest
-  let forsPk ← forsPkFromSigM core sig.fors parts.md.toList pk.pkSeed parts.forsAdrs
-  GeneralHypertree.verifyM vp core forsPk sig.hypertree pk.pkSeed parts pk.pkRoot
+    (msg : List Byte) (sig : SignatureCore vp core) (pk : PublicKeyCore core) : m Bool :=
+  Scheme.Program.verify
+    (PublicHash.hmsg core sig.randomness pk.pkSeed pk.pkRoot msg) (splitDigest vp.params)
+    (fun parts => forsPkFromSigM core sig.fors parts.md.toList pk.pkSeed parts.forsAdrs)
+    (fun parts root => GeneralHypertree.pkFromSigM vp core root sig.hypertree pk.pkSeed parts)
+    (fun root => decide (root = pk.pkRoot))
+
+/-- Verification evaluates the digest and FORS recovery before the general hypertree verifier. -/
+theorem verifyInternalM_components (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m] [DecidableEq core.Y]
+    (msg : List Byte) (sig : SignatureCore vp core) (pk : PublicKeyCore core) :
+    verifyInternalM vp core msg sig pk = (do
+      let digest ← PublicHash.hmsg core sig.randomness pk.pkSeed pk.pkRoot msg
+      let parts := splitDigest vp.params digest
+      let forsPk ← forsPkFromSigM core sig.fors parts.md.toList pk.pkSeed parts.forsAdrs
+      GeneralHypertree.verifyM vp core forsPk sig.hypertree pk.pkSeed parts pk.pkRoot :
+        m Bool) := rfl
 
 /-! ## Naturality -/
 
@@ -103,7 +109,7 @@ theorem keygenInternalM_natural (vp : ValidatedParams) (core : CorePrimitives vp
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
     F.toMonadHom (keygenInternalM vp core skSeed skPrf pkSeed) =
       keygenInternalM vp core skSeed skPrf pkSeed := by
-  simp [keygenInternalM, GeneralHypertree.rootM_natural vp core F]
+  simp [keygenInternalM, Scheme.Program.keygen, GeneralHypertree.rootM_natural vp core F]
 
 /-- Query-preserving monad morphisms commute with general internal signing. -/
 theorem signInternalM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)
@@ -113,7 +119,8 @@ theorem signInternalM_natural (vp : ValidatedParams) (core : CorePrimitives vp.p
     (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
     F.toMonadHom (signInternalM vp core msg sk addrnd) =
       signInternalM vp core msg sk addrnd := by
-  simp [signInternalM, PublicHash.hmsg_natural core F, forsSignM_natural core F,
+  simp [signInternalM, signInternalWithRandomizerM, Scheme.Program.sign,
+    PublicHash.hmsg_natural core F, forsSignM_natural core F,
     forsPkFromSigM_natural core F, GeneralHypertree.signM_natural vp core F]
 
 /-- Query-preserving monad morphisms commute with general internal verification. -/
@@ -125,7 +132,7 @@ theorem verifyInternalM_natural (vp : ValidatedParams) (core : CorePrimitives vp
     (msg : List Byte) (sig : SignatureCore vp core) (pk : PublicKeyCore core) :
     F.toMonadHom (verifyInternalM vp core msg sig pk) =
       verifyInternalM vp core msg sig pk := by
-  simp [verifyInternalM, PublicHash.hmsg_natural core F, forsPkFromSigM_natural core F,
+  simp [verifyInternalM_components, PublicHash.hmsg_natural core F, forsPkFromSigM_natural core F,
     GeneralHypertree.verifyM_natural vp core F]
 
 /-! ## Fixed-answer completeness -/
@@ -142,7 +149,8 @@ theorem simulateQ_verifyInternalM_signInternalM_withPublicHash
       let (pk, sk) ← keygenInternalM vp core skSeed skPrf pkSeed
       let sig ← signInternalM vp core msg sk addrnd
       verifyInternalM vp core msg sig pk) = true := by
-  simp only [keygenInternalM, signInternalM, verifyInternalM,
+  simp only [keygenInternalM, Scheme.Program.keygen, signInternalM, signInternalWithRandomizerM,
+    Scheme.Program.sign, verifyInternalM_components,
     simulateQ_bind, simulateQ_pure,
     GeneralHypertree.simulateQ_rootM_withPublicHash,
     simulateQ_forsSignM_withPublicHash, simulateQ_forsPkFromSigM_withPublicHash,
@@ -247,7 +255,7 @@ theorem keygenInternal_fst (vp : ValidatedParams) (prims : Primitives vp.params)
     (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
     (keygenInternal vp prims skSeed skPrf pkSeed).1 =
       ⟨pkSeed, GeneralHypertree.root vp prims skSeed pkSeed⟩ := by
-  unfold keygenInternal keygenInternalM GeneralHypertree.root
+  unfold keygenInternal keygenInternalM Scheme.Program.keygen GeneralHypertree.root
   simp only [simulateQ_bind]
   rfl
 
@@ -265,7 +273,7 @@ theorem keygenInternal_snd (vp : ValidatedParams) (prims : Primitives vp.params)
     (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
     (keygenInternal vp prims skSeed skPrf pkSeed).2 =
       ⟨skSeed, skPrf, pkSeed, GeneralHypertree.root vp prims skSeed pkSeed⟩ := by
-  unfold keygenInternal keygenInternalM GeneralHypertree.root
+  unfold keygenInternal keygenInternalM Scheme.Program.keygen GeneralHypertree.root
   simp only [simulateQ_bind]
   rfl
 
@@ -284,7 +292,9 @@ theorem verifyInternal_eq (vp : ValidatedParams) (prims : Primitives vp.params)
        GeneralHypertree.verify vp prims
          (forsPkFromSig prims sig.fors parts.md.toList pk.pkSeed parts.forsAdrs)
          sig.hypertree pk.pkSeed parts pk.pkRoot) := by
-  unfold verifyInternal verifyInternalM GeneralHypertree.verify forsPkFromSig
+  unfold verifyInternal
+  rw [verifyInternalM_components]
+  unfold GeneralHypertree.verify forsPkFromSig
   simp only [simulateQ_bind, PublicHash.simulateQ_hmsg]
   rfl
 

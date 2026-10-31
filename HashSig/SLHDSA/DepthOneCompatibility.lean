@@ -232,7 +232,8 @@ theorem signInternalM_toOneLayer_eq (vp : ValidatedParams)
     apply Vector.ext
     intro i hi
     simp [HtSigCore.singleLayer]
-  simp [GeneralScheme.signInternalM,
+  simp [GeneralScheme.signInternalM, GeneralScheme.signInternalWithRandomizerM,
+    Scheme.Program.sign,
     GeneralHypertree.signM, GeneralHypertree.signFromPositionM,
     GeneralHypertree.signFromPositionWith_one,
     initial_toAdrs_eq_htAdrs_zero,
@@ -248,7 +249,8 @@ theorem verifyInternalM_eq_slhVerifyInternalM (vp : ValidatedParams)
     (pk : PublicKeyCore core) :
     (GeneralScheme.verifyInternalM vp core msg sig pk : m Bool) =
       (slhVerifyInternalM hd core msg (schemeSignatureEquiv vp core hd sig) pk : m Bool) := by
-  simp [GeneralScheme.verifyInternalM, slhVerifyInternalM, schemeSignatureEquiv,
+  simp [GeneralScheme.verifyInternalM_components, slhVerifyInternalM_components,
+    schemeSignatureEquiv,
     verifyM_eq_htVerifyM vp core hd]
 
 /-- Deterministic general key generation specializes to compatibility key generation. -/
@@ -288,7 +290,7 @@ theorem signInternal_toOneLayer_eq (vp : ValidatedParams)
       (slhSignInternalM hd prims.core msg sk addrnd :
         OracleComp (publicHashSpec prims.core) (SignatureCore vp.params prims.core))).run
   have hr := congrArg Id.run h
-  simpa only [slhSignInternalM, simulateQ_bind, simulateQ_pure,
+  simpa only [slhSignInternalM, Scheme.Program.sign, simulateQ_bind, simulateQ_pure,
     Id.run_bind, Id.run_pure] using hr
 
 /-- Deterministic general verification specializes to compatibility verification after

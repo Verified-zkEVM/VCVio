@@ -54,6 +54,7 @@ public import HashSig.SLHDSA.SHAKE128s.Bridge.ForsObservation
 public import HashSig.SLHDSA.SHAKE128s.Bridge.GraphInput
 public import HashSig.SLHDSA.SHAKE128s.Bridge.GraphStructure
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Hypertree
+public import HashSig.SLHDSA.SHAKE128s.Bridge.KeygenObservation
 public import HashSig.SLHDSA.SHAKE128s.Bridge.PaperGame
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Scheme
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.AnswerRepresentation
@@ -312,6 +313,7 @@ public import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.StrongUnforgeability
 public import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.WireStrongUnforgeability
 public import HashSig.SLHDSA.SHAKE128s.Statement.UnforgeabilityGame
 public import HashSig.SLHDSA.Scheme
+public import HashSig.SLHDSA.Scheme.Program
 public import HashSig.SLHDSA.SecretProvider
 public import HashSig.SLHDSA.SecretProvider.Observation
 public import HashSig.SLHDSA.Security

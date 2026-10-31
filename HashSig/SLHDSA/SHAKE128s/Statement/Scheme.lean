@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game
 public import HashSig.SLHDSA.Wots.Program.Laws
+public import HashSig.SLHDSA.Scheme.Program
 public import HashSig.SLHDSA.Hypertree.Program
 public import Mathlib.Data.BitVec
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
@@ -840,11 +841,10 @@ variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
 /-- Algorithm 18: the root of the top XMSS tree. -/
 @[expose]
-def keygenInternal (secretSeed prfSeed publicSeed : Digest) : m (SecretKey × PublicKey) := do
-  let root ← Merkle.node secretSeed publicSeed (Hypertree.address (layers - 1) 0)
-    subtreeHeight 0
-  let pk : PublicKey := { seed := publicSeed, root }
-  return ({ seed := secretSeed, prf := prfSeed, publicKey := pk }, pk)
+def keygenInternal (secretSeed prfSeed publicSeed : Digest) : m (SecretKey × PublicKey) :=
+  SLHDSA.Scheme.Program.keygen
+    (Merkle.node secretSeed publicSeed (Hypertree.address (layers - 1) 0) subtreeHeight 0)
+    (fun root => (⟨secretSeed, prfSeed, ⟨publicSeed, root⟩⟩, ⟨publicSeed, root⟩))
 
 /-- Algorithm 21: three uniform seeds. -/
 @[expose] noncomputable def keygen [HasQuery unifSpec m] : m (SecretKey × PublicKey) := do
@@ -858,26 +858,42 @@ def keygenInternal (secretSeed prfSeed publicSeed : Digest) : m (SecretKey × Pu
   { (Hypertree.address 0 (MessageDigest.treeIndex digest).toNat).setTypeAndClear .forsTree with
     keyPair := BitVec.ofNat 32 (MessageDigest.leafIndex digest).toNat }
 
+/-- Internal signing at a supplied randomizer through the digest, FORS and hypertree components. -/
+@[expose] def signInternalWithRandomizer (sk : SecretKey) (message : Bytes)
+    (randomizer : Digest) : m Signature :=
+  SLHDSA.Scheme.Program.sign (Hashing.messageDigest randomizer sk.publicKey message) id
+    (fun digest => Fors.sign (MessageDigest.forsIndices digest) sk.seed sk.publicKey.seed
+      (forsAddress digest))
+    (fun digest signature => Fors.publicKeyFromSignature signature
+      (MessageDigest.forsIndices digest)
+      sk.publicKey.seed (forsAddress digest))
+    (fun digest root => Hypertree.sign root sk.seed sk.publicKey.seed
+      (MessageDigest.treeIndex digest) (MessageDigest.leafIndex digest).toFin)
+    (fun forsSignature hypertreeSignature => ⟨randomizer, forsSignature, hypertreeSignature⟩)
+
 /-- Algorithm 19, deterministic. -/
 @[expose] def signInternal (sk : SecretKey) (message : Bytes) : m Signature := do
   let randomizer ← Hashing.randomizer sk.prf sk.publicKey.seed message
-  let digest ← Hashing.messageDigest randomizer sk.publicKey message
-  let indices := MessageDigest.forsIndices digest
-  let address := forsAddress digest
-  let fors ← Fors.sign indices sk.seed sk.publicKey.seed address
-  let forsKey ← Fors.publicKeyFromSignature fors indices sk.publicKey.seed address
-  let hypertree ← Hypertree.sign forsKey sk.seed sk.publicKey.seed
-    (MessageDigest.treeIndex digest) (MessageDigest.leafIndex digest).toFin
-  return { randomizer, fors, hypertree }
+  signInternalWithRandomizer sk message randomizer
 
 /-- Algorithm 20. -/
 @[expose]
-def verifyInternal (pk : PublicKey) (message : Bytes) (signature : Signature) : m Bool := do
-  let digest ← Hashing.messageDigest signature.randomizer pk message
-  let forsKey ← Fors.publicKeyFromSignature signature.fors (MessageDigest.forsIndices digest)
-    pk.seed (forsAddress digest)
-  Hypertree.verify forsKey signature.hypertree pk
-    (MessageDigest.treeIndex digest) (MessageDigest.leafIndex digest).toFin
+def verifyInternal (pk : PublicKey) (message : Bytes) (signature : Signature) : m Bool :=
+  SLHDSA.Scheme.Program.verify (Hashing.messageDigest signature.randomizer pk message) id
+    (fun digest => Fors.publicKeyFromSignature signature.fors (MessageDigest.forsIndices digest)
+      pk.seed (forsAddress digest))
+    (fun digest root => Hypertree.rootFromSignature pk.seed layers signature.hypertree 0
+      (MessageDigest.treeIndex digest).toNat (MessageDigest.leafIndex digest).toFin root)
+    (fun root => root == pk.root)
+
+/-- Verification evaluates the digest and FORS recovery before the hypertree verifier. -/
+theorem verifyInternal_components (pk : PublicKey) (message : Bytes) (signature : Signature) :
+    verifyInternal pk message signature = (do
+      let digest ← Hashing.messageDigest signature.randomizer pk message
+      let forsKey ← Fors.publicKeyFromSignature signature.fors (MessageDigest.forsIndices digest)
+        pk.seed (forsAddress digest)
+      Hypertree.verify forsKey signature.hypertree pk
+        (MessageDigest.treeIndex digest) (MessageDigest.leafIndex digest).toFin : m Bool) := rfl
 
 /-- Algorithm 22; `none` for a context longer than 255 bytes. -/
 @[expose] def sign (sk : SecretKey) (request : Message) : m (Option Bytes) := do

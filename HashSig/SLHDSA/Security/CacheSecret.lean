@@ -370,7 +370,8 @@ theorem simulateQ_toPartialImpl_signInternalWithSecretRandomizerM_eq_some_iff (m
         simulateQ c.toPartialImpl (GeneralHypertree.signWithSecretM core secret forsPk pkSeed
           (splitDigest vp.params digest)) = some htSig ∧
         (⟨R, forsSig, htSig⟩ : GeneralScheme.SignatureCore vp core) = σ := by
-  simp only [GeneralScheme.signInternalWithSecretRandomizerM, simulateQ_bind_eq_some_iff,
+  simp only [GeneralScheme.signInternalWithSecretRandomizerM, Scheme.Program.sign,
+    simulateQ_bind_eq_some_iff,
     simulateQ_pure_eq_some_iff, simulateQ_toPartialImpl_hmsg, exists_and_left]
 
 /-- A settled run of Algorithm 19 over a provider at a supplied randomizer carries that

@@ -264,7 +264,8 @@ theorem keygenInternal_eq (t : Digest × Digest × Digest) :
           return ((⟨(seedMap t).1, pkRoot⟩ : PublicKeyCore FIPS205.core),
             (⟨(seedMap t).2.1, (seedMap t).2.2, (seedMap t).1, pkRoot⟩ :
               SecretKeyCore FIPS205.core)) : TypedComp _) := by
-  rw [Scheme.keygenInternal, simulateQ_bind, simulateQ_relabel_keygenRoot, bind_map_left,
+  rw [Scheme.keygenInternal, SLHDSA.Scheme.Program.keygen, simulateQ_bind,
+    simulateQ_relabel_keygenRoot, bind_map_left,
     simulateQ_bind, map_bind, map_bind]
   refine bind_congr fun root => ?_
   simp [skMap, pkMap, seedMap]

@@ -80,7 +80,7 @@ theorem queriesUnder_verify_fors (cache : QueryCache HashSpec) (pk : PublicKey)
         (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed
         (Scheme.forsAddress (digestOf cache pk message parsed))) probe) :
     QueriesUnder cache (Scheme.verify (m := OracleComp HashSpec) pk request signature) probe := by
-  simp only [Scheme.verify, Scheme.verifyInternal, hframe, hparsed]
+  simp only [Scheme.verify, Scheme.verifyInternal_components, hframe, hparsed]
   refine queriesUnder_bind_right cache _ _ probe ?_
   rw [simulateQ_messageDigest]
   exact queriesUnder_bind cache _ _ probe hquery
@@ -96,7 +96,7 @@ theorem queriesUnder_verify_hypertree (cache : QueryCache HashSpec) (pk : Public
         (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
         (forsKeyOf cache pk message parsed)) probe) :
     QueriesUnder cache (Scheme.verify (m := OracleComp HashSpec) pk request signature) probe := by
-  simp only [Scheme.verify, Scheme.verifyInternal, hframe, hparsed]
+  simp only [Scheme.verify, Scheme.verifyInternal_components, hframe, hparsed]
   refine queriesUnder_bind_right cache _ _ probe ?_
   rw [simulateQ_messageDigest]
   refine queriesUnder_bind_right cache _ _ probe ?_

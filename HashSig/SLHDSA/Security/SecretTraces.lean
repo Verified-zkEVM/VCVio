@@ -287,6 +287,8 @@ theorem signInternalWithSecretRandomizerM_pred_of_ledger (msg : List Byte) (pkSe
     (htl : ∀ a ∈ constructionAddresses vp, ∀ xs, Q (PublicHash.tl core pkSeed a xs))
     (hmsg : Q (PublicHash.hmsg core R pkSeed pkRoot msg)) :
     Q (GeneralScheme.signInternalWithSecretRandomizerM core secret msg pkSeed pkRoot R) := by
+  unfold GeneralScheme.signInternalWithSecretRandomizerM SLHDSA.Scheme.Program.sign
+  dsimp only
   have hf := fun a ha x => htl a ha [x]
   have hh := fun a ha l r => htl a ha [l, r]
   refine hbind _ _ hmsg fun digest => ?_
@@ -306,6 +308,7 @@ theorem verifyInternalM_pred_of_ledger [DecidableEq core.Y] (msg : List Byte)
     (htl : ∀ a ∈ constructionAddresses vp, ∀ xs, Q (PublicHash.tl core pk.pkSeed a xs))
     (hmsg : Q (PublicHash.hmsg core sig.randomness pk.pkSeed pk.pkRoot msg)) :
     Q (GeneralScheme.verifyInternalM vp core msg sig pk) := by
+  rw [GeneralScheme.verifyInternalM_components]
   have hf := fun a ha x => htl a ha [x]
   have hh := fun a ha l r => htl a ha [l, r]
   refine hbind _ _ hmsg fun digest => ?_
