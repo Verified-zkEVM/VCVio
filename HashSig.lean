@@ -38,6 +38,7 @@ public import HashSig.SLHDSA.Graph.Fors.Schedule
 public import HashSig.SLHDSA.Graph.Input
 public import HashSig.SLHDSA.Graph.Structure
 public import HashSig.SLHDSA.Hypertree
+public import HashSig.SLHDSA.Hypertree.Program
 public import HashSig.SLHDSA.HypertreeConformance
 public import HashSig.SLHDSA.HypertreeGeneral
 public import HashSig.SLHDSA.HypertreeGeneral.QueryBound

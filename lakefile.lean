@@ -412,6 +412,7 @@ script test (args) do
     #["exe", "slhdsa_fors_node_tests"],
     #["exe", "slhdsa_fors_graph_tests"],
     #["exe", "slhdsa_hypertree_tests"],
+    #["exe", "slhdsa_hypertree_program_tests"],
     #["exe", "slhdsa_external_tests"],
     #["exe", "slhdsa_target_ledger_tests"],
     #["exe", "slhdsa_encoded_ledger_tests"],
@@ -532,6 +533,11 @@ lean_exe slhdsa_fors_graph_tests where
 /-- General-hypertree trajectories, checked addresses, and selected concrete construction. -/
 lean_exe slhdsa_hypertree_tests where
   root := `HashSigTest.SLHDSA.HypertreeConformanceTests
+
+/-- Effectful hypertree singleton policy, nonfinal recovery and retained-failure checks. -/
+lean_exe slhdsa_hypertree_program_tests where
+  srcDir := "scripts"
+  root := `SLHDSAHypertreeProgramTests
 
 /-- Algorithms 21--25 message boundary and all twelve ACVP pre-hash digest/OID canaries. -/
 lean_exe slhdsa_external_tests where

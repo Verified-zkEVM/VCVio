@@ -231,7 +231,7 @@ theorem signFromPositionWithSecret_pred_of_ledger (recoverFinal : Bool)
         recoverFinal pos layers h msg)
   | 0, _, _ => hpure _
   | 1, _, msg => by
-      rw [GeneralHypertree.signFromPositionWithSecret]
+      rw [GeneralHypertree.signFromPositionWithSecret_one]
       refine hbind _ _ (xmssSignWithSecret_pred_of_ledger Q hpure hbind core hhash hcompress hnode
         hsecret msg pos) fun sig => ?_
       cases recoverFinal
@@ -239,7 +239,7 @@ theorem signFromPositionWithSecret_pred_of_ledger (recoverFinal : Bool)
       · exact hbind _ _ (xmssPkFromSigWith_pred_of_ledger Q hpure hbind core hhash hcompress hnode
           sig msg pos) fun _ => hpure _
   | layers + 2, _, msg => by
-      rw [GeneralHypertree.signFromPositionWithSecret]
+      rw [GeneralHypertree.signFromPositionWithSecret_add_two]
       exact hbind _ _ (xmssSignWithSecret_pred_of_ledger Q hpure hbind core hhash hcompress hnode
         hsecret msg pos) fun sig => hbind _ _ (xmssPkFromSigWith_pred_of_ledger Q hpure hbind core
           hhash hcompress hnode sig msg pos) fun root => hbind _ _
@@ -248,19 +248,19 @@ theorem signFromPositionWithSecret_pred_of_ledger (recoverFinal : Bool)
 
 include hpure hbind hhash hcompress hnode in
 /-- Hypertree root recovery from a reachable position satisfies `Q`. -/
-theorem recoverFromPositionWith_pred_of_ledger (pkSeed : core.PkSeed) (pos : LayerPosition vp) :
+theorem recoverFromPositionWith_pred_of_ledger (pos : LayerPosition vp) :
     ∀ (layers : ℕ) (h : pos.layer.val + layers = vp.params.d) (msg : core.Y)
       (sigs : Vector (XmssSig vp.params core) layers),
-      Q (GeneralHypertree.recoverFromPositionWith vp core hash compress nodeHash pkSeed pos layers
+      Q (GeneralHypertree.recoverFromPositionWith vp core hash compress nodeHash pos layers
         h msg sigs)
   | 0, _, _, _ => hpure _
   | 1, _, msg, sigs =>
       xmssPkFromSigWith_pred_of_ledger Q hpure hbind core hhash hcompress hnode sigs.head msg pos
   | layers + 2, _, msg, sigs => by
-      rw [GeneralHypertree.recoverFromPositionWith]
+      rw [GeneralHypertree.recoverFromPositionWith_add_two]
       exact hbind _ _ (xmssPkFromSigWith_pred_of_ledger Q hpure hbind core hhash hcompress hnode
         sigs.head msg pos) fun root =>
-          recoverFromPositionWith_pred_of_ledger pkSeed _ (layers + 1) _ root sigs.tail
+          recoverFromPositionWith_pred_of_ledger _ (layers + 1) _ root sigs.tail
 
 /-! ## The internal scheme -/
 
@@ -311,7 +311,7 @@ theorem verifyInternalM_pred_of_ledger [DecidableEq core.Y] (msg : List Byte)
   refine hbind _ _ hmsg fun digest => ?_
   have hpos := BottomPosition.forsAdrs_ofDigestParts vp (splitDigest vp.params digest)
   refine hbind _ _ ?_ fun _ => hbind _ _
-    (recoverFromPositionWith_pred_of_ledger Q hpure hbind core hf htl hh _ _ _ _ _ _)
+    (recoverFromPositionWith_pred_of_ledger Q hpure hbind core hf htl hh _ _ _ _ _)
     fun _ => hpure _
   rw [← hpos]
   exact forsPkFromSigWith_pred_of_ledger Q hpure hbind core hf htl hh _ _ _

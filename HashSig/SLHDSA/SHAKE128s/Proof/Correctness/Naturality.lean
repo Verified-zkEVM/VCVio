@@ -139,15 +139,19 @@ theorem hypertree_signLayers_simulate (secretSeed publicSeed : Digest)
       (Hypertree.signLayers secretSeed publicSeed remaining layer tree leaf message :
         m (Fin remaining → XmssSignature)) := by
   induction remaining generalizing layer tree leaf message with
-  | zero => rfl
+  | zero => simp only [Hypertree.signLayers_zero, simulateQ_pure]
   | succ remaining ih =>
       cases remaining with
       | zero =>
-          simp only [Hypertree.signLayers, simulateQ_bind, simulateQ_pure,
+          change simulateQ impl
+            (Hypertree.signLayers secretSeed publicSeed 1 layer tree leaf message) =
+              (Hypertree.signLayers secretSeed publicSeed 1 layer tree leaf message :
+                m (Fin 1 → XmssSignature))
+          simp only [Hypertree.signLayers_one, simulateQ_bind, simulateQ_pure,
             merkle_sign_simulate impl himpl]
       | succ remaining =>
-          conv_lhs => rw [Hypertree.signLayers]
-          conv_rhs => rw [Hypertree.signLayers]
+          conv_lhs => rw [Hypertree.signLayers_succ]
+          conv_rhs => rw [Hypertree.signLayers_succ]
           simp only [simulateQ_bind, simulateQ_pure,
             merkle_sign_simulate impl himpl, merkle_simulate impl himpl, ih]
 

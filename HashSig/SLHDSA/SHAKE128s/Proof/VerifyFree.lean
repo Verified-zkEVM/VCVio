@@ -257,7 +257,7 @@ theorem hypertree_root_free (remaining : Nat)
   induction remaining generalizing layer tree leaf message with
   | zero => exact FreeBounds.pure message
   | succ remaining ih =>
-    rw [Hypertree.rootFromSignature]
+    rw [Hypertree.rootFromSignature_succ]
     simpa only [Nat.add_mul, Nat.one_mul, Nat.add_comm] using
       (merkle_free leaf (signatures 0) message (Hypertree.address layer tree)).bind
         (fun root => ih (fun i => signatures i.succ) (layer + 1)

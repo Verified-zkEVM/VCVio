@@ -330,7 +330,7 @@ theorem simulateQ_toPartialImpl_signFromPositionWithSecret_add_two_eq_some_iff
           (pos.next (by omega)) (layers + 1) (by simp [LayerPosition.next]; omega) root) =
             some rest ∧
         rest.insertIdx 0 sig = sigs := by
-  simp only [GeneralHypertree.signFromPositionWithSecret,
+  simp only [GeneralHypertree.signFromPositionWithSecret_add_two,
     xmssPkFromSigWith_publicHash_eq_xmssPkFromSigM, simulateQ_bind_eq_some_iff,
     simulateQ_pure_eq_some_iff, exists_and_left]
 
@@ -347,7 +347,7 @@ theorem simulateQ_toPartialImpl_signFromPositionWithSecret_one_false_eq_some_iff
           (PublicHash.tl core pk) (PublicHash.h core pk) secret msg pos.toAdrs pos.leaf.val) =
             some sig ∧
         #v[sig] = sigs := by
-  simp only [GeneralHypertree.signFromPositionWithSecret, simulateQ_bind_eq_some_iff,
+  simp only [GeneralHypertree.signFromPositionWithSecret_one, simulateQ_bind_eq_some_iff,
     simulateQ_pure_eq_some_iff, Bool.false_eq_true, ↓reduceIte]
 
 /-- Algorithm 19 over a provider, with the randomizer `R` supplied, is settled exactly when its

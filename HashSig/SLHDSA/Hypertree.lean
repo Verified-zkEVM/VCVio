@@ -6,6 +6,7 @@ Authors: Nicolas Consigny, Quang Dao
 
 module
 public import HashSig.SLHDSA.Fors
+public import HashSig.SLHDSA.Hypertree.Program
 
 /-!
 # Hypertree (FIPS 205 §7)
@@ -93,9 +94,26 @@ def htSignWith (core : CorePrimitives p) (hd : p.d = 1) {m : Type → Type*} [Mo
     (compress : Adrs → List core.Y → m core.Y)
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
-    (adrs : Adrs) (idxTree idxLeaf : ℕ) : m (HtSigCore p core) := do
-  let sig ← xmssSignWith core hash compress nodeHash msg sk pk (htAdrs adrs idxTree) idxLeaf
-  return HtSigCore.singleLayer hd sig
+    (adrs : Adrs) (idxTree idxLeaf : ℕ) : m (HtSigCore p core) :=
+  (fun (values : Vector (XmssSig p core) 1) => HtSigCore.singleLayer hd values.head) <$>
+    Hypertree.Program.signLayers (Position := fun _ => Unit) (fun _ _ => ())
+      (fun _ _ value => xmssSignWith core hash compress nodeHash value sk pk
+        (htAdrs adrs idxTree) idxLeaf)
+      (fun _ _ signature value => xmssPkFromSigWith core hash compress nodeHash idxLeaf signature
+        value (htAdrs adrs idxTree)) false 1 () msg
+
+/-- The single-layer profile signs once and returns its intrinsic singleton signature. -/
+theorem htSignWith_eq (core : CorePrimitives p) (hd : p.d = 1)
+    {m : Type → Type*} [Monad m] [LawfulMonad m]
+    (hash : Adrs → core.Y → m core.Y) (compress : Adrs → List core.Y → m core.Y)
+    (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
+    (adrs : Adrs) (idxTree idxLeaf : Nat) :
+    htSignWith core hd hash compress nodeHash msg sk pk adrs idxTree idxLeaf = (do
+      let signature ← xmssSignWith core hash compress nodeHash msg sk pk
+        (htAdrs adrs idxTree) idxLeaf
+      return HtSigCore.singleLayer hd signature) := by
+  simp [htSignWith, Hypertree.Program.signLayers_one_false, Vector.head]
 
 /-- Callback-parametric hypertree root generation for `d = 1`. -/
 def htRootWith (core : CorePrimitives p) (_hd : p.d = 1) {m : Type → Type*} [Monad m]
@@ -112,8 +130,19 @@ def htPkFromSigWith (core : CorePrimitives p) (hd : p.d = 1) {m : Type → Type*
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
     (msg : core.Y) (sig : HtSigCore p core) (adrs : Adrs)
     (idxTree idxLeaf : ℕ) : m core.Y :=
-  xmssPkFromSigWith core hash compress nodeHash idxLeaf (HtSigCore.getSingleLayer hd sig) msg
-    (htAdrs adrs idxTree)
+  Hypertree.Program.recoverLayers (Position := fun _ => Unit) (fun _ _ => ())
+    (fun _ _ signature value => xmssPkFromSigWith core hash compress nodeHash idxLeaf signature
+      value (htAdrs adrs idxTree)) 1 () msg #v[HtSigCore.getSingleLayer hd sig]
+
+/-- Singleton recovery is the actual XMSS recovery of its intrinsic component. -/
+theorem htPkFromSigWith_eq (core : CorePrimitives p) (hd : p.d = 1)
+    {m : Type → Type*} [Monad m]
+    (hash : Adrs → core.Y → m core.Y) (compress : Adrs → List core.Y → m core.Y)
+    (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (msg : core.Y) (sig : HtSigCore p core) (adrs : Adrs) (idxTree idxLeaf : Nat) :
+    htPkFromSigWith core hd hash compress nodeHash msg sig adrs idxTree idxLeaf =
+      xmssPkFromSigWith core hash compress nodeHash idxLeaf (HtSigCore.getSingleLayer hd sig) msg
+        (htAdrs adrs idxTree) := rfl
 
 /-! ### Canonical explicit-public-hash programs -/
 
@@ -161,6 +190,7 @@ theorem htSignM_natural (core : CorePrimitives p) (hd : p.d = 1)
     (adrs : Adrs) (idxTree idxLeaf : ℕ) :
     F.toMonadHom (htSignM core hd msg sk pk adrs idxTree idxLeaf) =
       htSignM core hd msg sk pk adrs idxTree idxLeaf := by
+  simp only [htSignM, htSignWith_eq]
   change F.toMonadHom (do
     let sig ← xmssSignM core msg sk pk (htAdrs adrs idxTree) idxLeaf
     return HtSigCore.singleLayer hd sig) = (do
@@ -226,6 +256,7 @@ theorem htSignM_isTotalQueryBound (core : CorePrimitives p) (hd : p.d = 1)
       ((∑ i : Fin p.len, chainStepsCore core msg i.val) +
         xmssAuthPathQueryBound p p.hp) :=
 by
+  rw [htSignM, htSignWith_eq]
   change IsTotalQueryBound (do
     let sig ← xmssSignM core msg sk pk (htAdrs adrs idxTree) idxLeaf
     return HtSigCore.singleLayer hd sig) _
@@ -303,7 +334,8 @@ theorem htSign_eq_xmssSign (prims : Primitives p) (hd : p.d = 1) (msg : prims.Y)
     (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) (idxTree idxLeaf : ℕ) :
     htSign prims hd msg sk pk adrs idxTree idxLeaf =
       HtSigCore.singleLayer hd (xmssSign prims msg sk pk (htAdrs adrs idxTree) idxLeaf) := by
-  unfold htSign htSignM htSignWith
+  unfold htSign htSignM
+  rw [htSignWith_eq]
   simp only [simulateQ_bind, simulateQ_pure]
   change (do
     let x ← simulateQ (PublicHash.impl prims)

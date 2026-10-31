@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game
 public import HashSig.SLHDSA.Wots.Program.Laws
+public import HashSig.SLHDSA.Hypertree.Program
 public import Mathlib.Data.BitVec
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
 public import Mathlib.Algebra.BigOperators.Group.Finset.Basic
@@ -664,40 +665,164 @@ abbrev TreeIndex := BitVec (totalHeight - subtreeHeight)
 
 variable {m : Type → Type} [Monad m] [HasQuery HashSpec m]
 
-/-- Algorithm 12 (`ht_sign`) over the `remaining` layers from `layer` up: an XMSS signature of
-`message` at tree `tree` and leaf `leaf`, then of the recovered root one layer up. -/
-@[expose] def signLayers (secretSeed publicSeed : Digest) :
-    (remaining : Nat) → Nat → Nat → LeafIndex → Digest →
-      m (Fin remaining → XmssSignature)
-  | 0, _, _, _, _ => pure Fin.elim0
-  | remaining + 1, layer, tree, leaf, message =>
-    Merkle.sign message secretSeed publicSeed (address layer tree) leaf >>= fun signature =>
-    match remaining with
-    | 0 => return Fin.cases signature Fin.elim0
-    | remaining + 1 => do
+/-- A raw paper position keeps layer and tree indices natural until address encoding. -/
+abbrev ProgramPosition (_remaining : Nat) := Nat × Nat × LeafIndex
+
+/-- Advance raw tree coordinates before the next layer's word encoding. -/
+@[expose] def nextProgramPosition (remaining : Nat)
+    (position : ProgramPosition (remaining + 2)) : ProgramPosition (remaining + 1) :=
+  (position.1 + 1, position.2.1 / 2 ^ subtreeHeight, nextLeaf position.2.1)
+
+/-- The layer signatures in increasing order, with recovery only between successive layers. -/
+@[expose] def signVector (secretSeed publicSeed : Digest) (remaining layer tree : Nat)
+    (leaf : LeafIndex) (message : Digest) : m (Vector XmssSignature remaining) :=
+  SLHDSA.Hypertree.Program.signLayers nextProgramPosition
+    (fun _ current value => Merkle.sign value secretSeed publicSeed
+      (address current.1 current.2.1) current.2.2)
+    (fun _ current signature value => Merkle.publicKeyFromSignature current.2.2 signature value
+      publicSeed (address current.1 current.2.1)) false remaining (layer, tree, leaf) message
+
+/-- Algorithm 12 (`ht_sign`) over the remaining layers, as a finite family of layer signatures. -/
+@[expose] def signLayers (secretSeed publicSeed : Digest) (remaining layer tree : Nat)
+    (leaf : LeafIndex) (message : Digest) : m (Fin remaining → XmssSignature) :=
+  (fun (values : Vector XmssSignature remaining) (i : Fin remaining) => values[i]) <$>
+    signVector secretSeed publicSeed remaining layer tree leaf message
+
+/-- Prepending a component prepends the finite-family reading of a vector. -/
+theorem vectorFamily_insertIdx {α : Type*} {remaining : Nat}
+    (values : Vector α remaining) (value : α) :
+    (fun i : Fin (remaining + 1) => (values.insertIdx 0 value)[i]) =
+      Fin.cases value (fun i : Fin remaining => values[i]) := by
+  funext i
+  refine Fin.cases ?_ (fun i => ?_) i
+  · simp [Vector.insertIdx_zero]
+  · simp [Vector.insertIdx_zero, Vector.getElem_append_right]
+
+/-- A singleton vector reads as its canonical singleton finite family. -/
+theorem vectorFamily_singleton {α : Type*} (value : α) :
+    (fun i : Fin 1 => (#v[value])[i]) = Fin.cases value Fin.elim0 := by
+  funext i
+  refine Fin.cases ?_ (fun i => i.elim0) i
+  simp
+
+/-- No layer signs or recovers when the remaining count is zero. -/
+theorem signLayers_zero [LawfulMonad m] (secretSeed publicSeed : Digest)
+    (layer tree : Nat) (leaf : LeafIndex) (message : Digest) :
+    signLayers secretSeed publicSeed 0 layer tree leaf message = (pure Fin.elim0 : m _) := by
+  simp only [signLayers, signVector, SLHDSA.Hypertree.Program.signLayers_zero, map_pure]
+  congr 1
+  funext i
+  exact i.elim0
+
+/-- A singleton paper entry signs without executing public-key recovery. -/
+theorem signLayers_one [LawfulMonad m] (secretSeed publicSeed : Digest)
+    (layer tree : Nat) (leaf : LeafIndex) (message : Digest) :
+    signLayers secretSeed publicSeed 1 layer tree leaf message = (do
+      let signature ← Merkle.sign message secretSeed publicSeed (address layer tree) leaf
+      return Fin.cases signature Fin.elim0 : m _) := by
+  simp only [signLayers, signVector, SLHDSA.Hypertree.Program.signLayers_one_false,
+    map_bind, map_pure]
+  apply bind_congr
+  intro signature
+  exact congrArg (fun family : Fin 1 → XmssSignature => (pure family : m _))
+    (vectorFamily_singleton signature)
+
+/-- Nonfinal paper entries recover their component before signing the next layer. -/
+theorem signLayers_add_two [LawfulMonad m] (secretSeed publicSeed : Digest)
+    (remaining layer tree : Nat) (leaf : LeafIndex) (message : Digest) :
+    signLayers secretSeed publicSeed (remaining + 2) layer tree leaf message = (do
+      let signature ← Merkle.sign message secretSeed publicSeed (address layer tree) leaf
       let root ← Merkle.publicKeyFromSignature leaf signature message publicSeed
         (address layer tree)
       let rest ← signLayers secretSeed publicSeed (remaining + 1) (layer + 1)
         (tree / 2 ^ subtreeHeight) (nextLeaf tree) root
-      return Fin.cases signature rest
+      return Fin.cases signature rest : m _) := by
+  simp only [signLayers, signVector, SLHDSA.Hypertree.Program.signLayers_add_two,
+    nextProgramPosition, map_bind, map_pure]
+  apply bind_congr
+  intro signature
+  apply bind_congr
+  intro root
+  change (do
+    let rest ← signVector secretSeed publicSeed (remaining + 1) (layer + 1)
+      (tree / 2 ^ subtreeHeight) (nextLeaf tree) root
+    return fun i : Fin (remaining + 2) => (rest.insertIdx 0 signature)[i]) = (do
+    let rest ← signLayers secretSeed publicSeed (remaining + 1) (layer + 1)
+      (tree / 2 ^ subtreeHeight) (nextLeaf tree) root
+    return Fin.cases signature rest)
+  rw [signLayers, bind_map_left]
+  apply bind_congr
+  intro rest
+  exact congrArg (fun family : Fin (remaining + 2) → XmssSignature => (pure family : m _))
+    (vectorFamily_insertIdx rest signature)
 
-/-- Algorithm 12 (`ht_sign`): the hypertree signature of `message` at bottom tree `tree` and leaf
-`leaf`. -/
+/-- A nonempty layer family signs its head, then recovers exactly when another layer remains. -/
+theorem signLayers_succ [LawfulMonad m] (secretSeed publicSeed : Digest)
+    (remaining layer tree : Nat) (leaf : LeafIndex) (message : Digest) :
+    signLayers secretSeed publicSeed (remaining + 1) layer tree leaf message =
+      ((Merkle.sign message secretSeed publicSeed (address layer tree) leaf : m XmssSignature) >>=
+        fun signature => Nat.casesOn (motive := fun count => m (Fin (count + 1) → XmssSignature))
+          remaining (pure (Fin.cases signature Fin.elim0)) (fun remaining => do
+            let root ← Merkle.publicKeyFromSignature leaf signature message publicSeed
+              (address layer tree)
+            let rest ← signLayers secretSeed publicSeed (remaining + 1) (layer + 1)
+              (tree / 2 ^ subtreeHeight) (nextLeaf tree) root
+            return Fin.cases signature rest)) := by
+  cases remaining with
+  | zero => exact signLayers_one secretSeed publicSeed layer tree leaf message
+  | succ remaining =>
+      exact signLayers_add_two secretSeed publicSeed remaining layer tree leaf message
+
+/-- Algorithm 12 (`ht_sign`) at the bottom tree and leaf selected by the message digest. -/
 @[expose] def sign (message secretSeed publicSeed : Digest) (tree : TreeIndex) (leaf : LeafIndex) :
     m HypertreeSignature :=
   signLayers secretSeed publicSeed layers 0 tree.toNat leaf message
 
-/-- The root reached from `message` by recovering one XMSS root per layer, from layer `layer` up
-through the `remaining` layers. -/
-@[expose] def rootFromSignature (publicSeed : Digest) :
-    (remaining : Nat) → (Fin remaining → XmssSignature) → Nat → Nat → LeafIndex → Digest →
-      m Digest
-  | 0, _, _, _, _, message => pure message
-  | remaining + 1, signatures, layer, tree, leaf, message => do
-    let root ← Merkle.publicKeyFromSignature leaf (signatures 0) message publicSeed
-      (address layer tree)
-    rootFromSignature publicSeed remaining (fun i => signatures i.succ) (layer + 1)
-      (tree / 2 ^ subtreeHeight) (nextLeaf tree) root
+/-- Recover a root at every supplied layer, retaining the raw position trajectory. -/
+@[expose] def rootFromSignature (publicSeed : Digest) (remaining : Nat)
+    (signatures : Fin remaining → XmssSignature) (layer tree : Nat) (leaf : LeafIndex)
+    (message : Digest) : m Digest :=
+  SLHDSA.Hypertree.Program.recoverLayers nextProgramPosition
+    (fun _ current signature value => Merkle.publicKeyFromSignature current.2.2 signature value
+      publicSeed (address current.1 current.2.1))
+    remaining (layer, tree, leaf) message (Vector.ofFn signatures)
+
+/-- An empty supplied signature returns its message without any recovery action. -/
+theorem rootFromSignature_zero (publicSeed : Digest) (signatures : Fin 0 → XmssSignature)
+    (layer tree : Nat) (leaf : LeafIndex) (message : Digest) :
+    rootFromSignature publicSeed 0 signatures layer tree leaf message = (pure message : m _) := rfl
+
+/-- The head of a vector built from a family is the family's zero coordinate. -/
+theorem vectorOfFn_head {α : Type*} {remaining : Nat} (values : Fin (remaining + 1) → α) :
+    (Vector.ofFn values).head = values 0 := by
+  simp [Vector.head]
+
+/-- The tail of a vector built from a family reads the successor coordinates. -/
+theorem vectorOfFn_tail {α : Type*} {remaining : Nat} (values : Fin (remaining + 1) → α) :
+    (Vector.ofFn values).tail = Vector.ofFn (fun i : Fin remaining => values i.succ) := by
+  apply Vector.ext
+  intro i hi
+  simp [Vector.tail, Nat.add_comm]
+
+/-- Each recovered root becomes the next layer's input, including the final returned root. -/
+theorem rootFromSignature_succ [LawfulMonad m] (publicSeed : Digest) (remaining : Nat)
+    (signatures : Fin (remaining + 1) → XmssSignature) (layer tree : Nat) (leaf : LeafIndex)
+    (message : Digest) :
+    rootFromSignature publicSeed (remaining + 1) signatures layer tree leaf message = (do
+      let root ← Merkle.publicKeyFromSignature leaf (signatures 0) message publicSeed
+        (address layer tree)
+      rootFromSignature publicSeed remaining (fun i => signatures i.succ) (layer + 1)
+        (tree / 2 ^ subtreeHeight) (nextLeaf tree) root : m Digest) := by
+  cases remaining with
+  | zero =>
+      change (Merkle.publicKeyFromSignature leaf (Vector.ofFn signatures).head message publicSeed
+        (address layer tree) : m Digest) =
+        ((Merkle.publicKeyFromSignature leaf (signatures 0) message publicSeed
+          (address layer tree) : m Digest) >>= fun root => pure root)
+      simp only [vectorOfFn_head, bind_pure]
+  | succ remaining =>
+      simp only [rootFromSignature, SLHDSA.Hypertree.Program.recoverLayers_add_two,
+        nextProgramPosition, vectorOfFn_head, vectorOfFn_tail]
 
 /-- Algorithm 13 (`ht_verify`): whether the recovered top root is `PK.root`. -/
 @[expose] def verify (message : Digest) (signature : HypertreeSignature) (pk : PublicKey)

@@ -82,9 +82,9 @@ theorem signM_toOneLayer_eq (vp : ValidatedParams) (core : CorePrimitives vp.par
     intro i hi
     simp [HtSigCore.singleLayer]
   simp [GeneralHypertree.signM, GeneralHypertree.signFromPositionM,
-    GeneralHypertree.signFromPositionWith,
+    GeneralHypertree.signFromPositionWith_one,
     initial_toAdrs_eq_htAdrs_zero, htSignM, htPkFromSigM,
-    htSignWith, htPkFromSigWith, hsingle]
+    htSignWith_eq, htPkFromSigWith_eq, hsingle]
 
 /-- General depth-one root recovery is exactly the compatibility free-oracle program after
 converting the intrinsic singleton signature. -/
@@ -100,8 +100,8 @@ theorem pkFromSigM_eq_htPkFromSigM (vp : ValidatedParams)
   dsimp at hd ⊢
   subst d
   simp [GeneralHypertree.pkFromSigM, GeneralHypertree.recoverFromPositionM,
-    GeneralHypertree.recoverFromPositionWith,
-    initial_toAdrs_eq_htAdrs_zero, htPkFromSigM, htPkFromSigWith,
+    GeneralHypertree.recoverFromPositionWith_one,
+    initial_toAdrs_eq_htAdrs_zero, htPkFromSigM, htPkFromSigWith_eq,
     HtSigCore.getSingleLayer, Vector.head]
 
 /-- General depth-one verification is exactly the compatibility free-oracle program after
@@ -234,9 +234,9 @@ theorem signInternalM_toOneLayer_eq (vp : ValidatedParams)
     simp [HtSigCore.singleLayer]
   simp [GeneralScheme.signInternalM,
     GeneralHypertree.signM, GeneralHypertree.signFromPositionM,
-    GeneralHypertree.signFromPositionWith,
+    GeneralHypertree.signFromPositionWith_one,
     initial_toAdrs_eq_htAdrs_zero,
-    htSignM, htPkFromSigM, htSignWith, htPkFromSigWith,
+    htSignM, htPkFromSigM, htSignWith_eq, htPkFromSigWith_eq,
     hsingle, monad_norm]
 
 /-- General and compatibility depth-one verification are the same free-oracle program after

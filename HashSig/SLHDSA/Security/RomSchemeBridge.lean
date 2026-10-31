@@ -95,7 +95,7 @@ private theorem exists_xmssSignWithSecret_of_signFromPositionWithSecret_one
   · exact (simulateQ_toPartialImpl_signFromPositionWithSecret_one_false_eq_some_iff core c secret
       pk _ _ msg).mp hsign
   · revert hsign
-    simp only [GeneralHypertree.signFromPositionWithSecret, simulateQ_bind_eq_some_iff,
+    simp only [GeneralHypertree.signFromPositionWithSecret_one, simulateQ_bind_eq_some_iff,
       simulateQ_pure_eq_some_iff, ↓reduceIte]
     rintro ⟨sig, hsig, _, _, rfl⟩
     exact ⟨sig, hsig, rfl⟩

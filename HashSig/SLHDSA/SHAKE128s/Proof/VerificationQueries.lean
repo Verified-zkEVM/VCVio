@@ -251,7 +251,7 @@ theorem hypertree_root_bounds (publicSeed : Digest) (remaining : Nat)
   induction remaining generalizing layer tree leaf message with
   | zero => exact Bounds.of_exact (.pure message) le_rfl le_rfl
   | succ remaining ih =>
-    rw [Hypertree.rootFromSignature]
+    rw [Hypertree.rootFromSignature_succ]
     simpa only [Nat.add_mul, Nat.one_mul, Nat.add_comm] using
       (merkle_bounds leaf (signatures 0) message publicSeed (Hypertree.address layer tree)).bind
         (fun root => ih (fun i => signatures i.succ) (layer + 1)

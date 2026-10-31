@@ -612,30 +612,71 @@ variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 
 /-- The hypertree signature of `msg` from layer position `pos` upward over `layers` layers
 (FIPS 205 Algorithm 12), with every XMSS signature produced by `xmssSignWithSecret`. `recoverFinal`
-forces the redundant root recovery in the top layer, matching `signFromPositionWith`. -/
+requests discarded recovery only for a singleton entry. Nonfinal recursion resets it to false. -/
 @[expose] def signFromPositionWithSecret {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y)
     (compress : Adrs → List core.Y → m core.Y)
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
     (secret : Adrs → m core.Y) (recoverFinal : Bool) (pos : LayerPosition vp) :
     (layers : ℕ) → pos.layer.val + layers = vp.params.d → core.Y →
-      m (Vector (XmssSig vp.params core) layers)
-  | 0, _, _ => pure #v[]
-  | 1, _, msg => do
-      let sig ← xmssSignWithSecret core hash compress nodeHash secret msg pos.toAdrs pos.leaf.val
-      if recoverFinal then
-        let _ ← xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig msg pos.toAdrs
-        return #v[sig]
-      else
-        return #v[sig]
-  | layers + 2, hremaining, msg => do
-      let sig ← xmssSignWithSecret core hash compress nodeHash secret msg pos.toAdrs pos.leaf.val
-      let root ←
-        xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig msg pos.toAdrs
-      let next := pos.next (by omega)
-      let rest ← signFromPositionWithSecret hash compress nodeHash secret false next
-        (layers + 1) (by simp [next]; omega) root
-      return rest.insertIdx 0 sig
+      m (Vector (XmssSig vp.params core) layers) :=
+  fun layers remaining message =>
+    Hypertree.Program.signLayers (nextRemainingPosition vp)
+      (fun _ current value =>
+        xmssSignWithSecret core hash compress nodeHash secret value current.val.toAdrs
+          current.val.leaf.val)
+      (fun _ current signature value =>
+        xmssPkFromSigWith core hash compress nodeHash current.val.leaf.val signature value
+          current.val.toAdrs)
+      recoverFinal layers ⟨pos, remaining⟩ message
+
+/-- The zero component equation for the typed signer. -/
+theorem signFromPositionWithSecret_zero {m : Type → Type*} [Monad m]
+    (hash : Adrs → core.Y → m core.Y)
+    (compress : Adrs → List core.Y → m core.Y)
+    (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (secret : Adrs → m core.Y) (recoverFinal : Bool) (pos : LayerPosition vp)
+    (remaining : pos.layer.val + (0) = vp.params.d) (message : core.Y) :
+    signFromPositionWithSecret core hash compress nodeHash secret recoverFinal pos (0)
+      remaining message =
+      (pure #v[] : m (Vector (XmssSig vp.params core) (0))) := rfl
+
+/-- The one component equation for the typed signer. -/
+theorem signFromPositionWithSecret_one {m : Type → Type*} [Monad m]
+    (hash : Adrs → core.Y → m core.Y)
+    (compress : Adrs → List core.Y → m core.Y)
+    (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (secret : Adrs → m core.Y) (recoverFinal : Bool) (pos : LayerPosition vp)
+    (remaining : pos.layer.val + (1) = vp.params.d) (message : core.Y) :
+    signFromPositionWithSecret core hash compress nodeHash secret recoverFinal pos (1)
+      remaining message =
+      (do
+        let sig ← xmssSignWithSecret core hash compress nodeHash secret message
+          pos.toAdrs pos.leaf.val
+        if recoverFinal then
+          let _ ← xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig message pos.toAdrs
+          return #v[sig]
+        else
+          return #v[sig] : m (Vector (XmssSig vp.params core) (1))) := rfl
+
+/-- The add two component equation for the typed signer. -/
+theorem signFromPositionWithSecret_add_two {m : Type → Type*} [Monad m]
+    (hash : Adrs → core.Y → m core.Y)
+    (compress : Adrs → List core.Y → m core.Y)
+    (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (secret : Adrs → m core.Y) (recoverFinal : Bool) (pos : LayerPosition vp)
+    (layers : Nat) (remaining : pos.layer.val + (layers + 2) = vp.params.d) (message : core.Y) :
+    signFromPositionWithSecret core hash compress nodeHash secret recoverFinal pos
+      (layers + 2) remaining message =
+      (do
+        let sig ← xmssSignWithSecret core hash compress nodeHash secret message
+          pos.toAdrs pos.leaf.val
+        let root ←
+          xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig message pos.toAdrs
+        let next := pos.next (by omega)
+        let rest ← signFromPositionWithSecret core hash compress nodeHash secret false next
+          (layers + 1) (by simp [next]; omega) root
+        return rest.insertIdx 0 sig : m (Vector (XmssSig vp.params core) (layers + 2))) := rfl
 
 /-- At the honest provider provider-parametric hypertree signing from a position is
 `signFromPositionWith`. -/
@@ -649,11 +690,13 @@ theorem signFromPositionWithSecret_eq_signFromPositionWith {m : Type → Type*} 
       signFromPositionWithSecret core hash compress nodeHash (fun a => pure (core.PRF pk sk a))
           recoverFinal pos layers h msg =
         signFromPositionWith vp core hash compress nodeHash sk pk recoverFinal pos layers h msg
-  | 0, _, _ => by rw [signFromPositionWithSecret, signFromPositionWith]
+  | 0, _, _ => by rw [signFromPositionWithSecret_zero, signFromPositionWith_zero]
   | 1, _, msg => by
-      rw [signFromPositionWithSecret, signFromPositionWith, xmssSignWithSecret_eq_xmssSignWith]
+      rw [signFromPositionWithSecret_one, signFromPositionWith_one,
+        xmssSignWithSecret_eq_xmssSignWith]
   | layers + 2, hremaining, msg => by
-      rw [signFromPositionWithSecret, signFromPositionWith, xmssSignWithSecret_eq_xmssSignWith]
+      rw [signFromPositionWithSecret_add_two, signFromPositionWith_add_two,
+        xmssSignWithSecret_eq_xmssSignWith]
       refine bind_congr fun sig => bind_congr fun root => ?_
       dsimp only
       rw [signFromPositionWithSecret_eq_signFromPositionWith hash compress nodeHash sk pk false _
@@ -748,9 +791,9 @@ theorem signFromPositionWithSecret_natural {m n : Type → Type*} [Monad m] [Law
         signFromPositionWithSecret core hashn compressn nodeHashn secretn recoverFinal pos
           layers h msg
   | 0, _, _ => by
-      rw [signFromPositionWithSecret, signFromPositionWithSecret, F.mmap_pure]
+      rw [signFromPositionWithSecret_zero, signFromPositionWithSecret_zero, F.mmap_pure]
   | 1, _, msg => by
-      rw [signFromPositionWithSecret, signFromPositionWithSecret, F.mmap_bind,
+      rw [signFromPositionWithSecret_one, signFromPositionWithSecret_one, F.mmap_bind,
         xmssSignWithSecret_natural core F hashm hashn compressm compressn nodeHashm nodeHashn
           secretm secretn hhash hcompress hnode hsecret]
       refine bind_congr fun sig => ?_
@@ -762,7 +805,7 @@ theorem signFromPositionWithSecret_natural {m n : Type → Type*} [Monad m] [Law
               hhash hcompress hnode]
           exact bind_congr fun _ => F.mmap_pure _
   | layers + 2, hremaining, msg => by
-      rw [signFromPositionWithSecret, signFromPositionWithSecret, F.mmap_bind,
+      rw [signFromPositionWithSecret_add_two, signFromPositionWithSecret_add_two, F.mmap_bind,
         xmssSignWithSecret_natural core F hashm hashn compressm compressn nodeHashm nodeHashn
           secretm secretn hhash hcompress hnode hsecret]
       refine bind_congr fun sig => ?_

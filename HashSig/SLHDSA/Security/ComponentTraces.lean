@@ -543,7 +543,7 @@ theorem signFromPositionM_queriesWithinConstructionTargets (skSeed : core.SkSeed
           hremaining msg :
         OracleComp (publicHashSpec core) (Vector (XmssSig vp.params core) layers)) := by
   induction layers using Nat.twoStepInduction generalizing recoverFinal pos msg with
-  | zero => simp [GeneralHypertree.signFromPositionM, GeneralHypertree.signFromPositionWith]
+  | zero => simp [GeneralHypertree.signFromPositionM, GeneralHypertree.signFromPositionWith_zero]
   | one =>
       cases recoverFinal with
       | false =>
@@ -551,7 +551,7 @@ theorem signFromPositionM_queriesWithinConstructionTargets (skSeed : core.SkSeed
             (xmssSignM_queriesWithinConstructionTargets core msg skSeed pkSeed pos)
             (fun sig => QueriesWithinConstructionTargets.pure core
               (#v[sig] : Vector (XmssSig vp.params core) 1))
-          simpa [GeneralHypertree.signFromPositionM, GeneralHypertree.signFromPositionWith,
+          simpa [GeneralHypertree.signFromPositionM, GeneralHypertree.signFromPositionWith_one,
             xmssSignM] using h
       | true =>
           have h := QueriesWithinConstructionTargets.bind
@@ -560,7 +560,7 @@ theorem signFromPositionM_queriesWithinConstructionTargets (skSeed : core.SkSeed
               (xmssPkFromSigM_queriesWithinConstructionTargets core sig msg pkSeed pos)
               (fun _ => QueriesWithinConstructionTargets.pure core
                 (#v[sig] : Vector (XmssSig vp.params core) 1)))
-          simpa [GeneralHypertree.signFromPositionM, GeneralHypertree.signFromPositionWith,
+          simpa [GeneralHypertree.signFromPositionM, GeneralHypertree.signFromPositionWith_one,
             xmssSignM, xmssPkFromSigM] using h
   | more layers _ ih =>
       let next := pos.next (by omega)
@@ -572,7 +572,7 @@ theorem signFromPositionM_queriesWithinConstructionTargets (skSeed : core.SkSeed
             (ih (recoverFinal := false) (pos := next) (hremaining := by simp [next]; omega)
               (msg := root))
             (fun rest => QueriesWithinConstructionTargets.pure core (rest.insertIdx 0 sig))))
-      simpa [GeneralHypertree.signFromPositionM, GeneralHypertree.signFromPositionWith,
+      simpa [GeneralHypertree.signFromPositionM, GeneralHypertree.signFromPositionWith_add_two,
         xmssSignM, xmssPkFromSigM, next, bind_assoc] using h
 
 /-- The typed layer loop of Algorithm 13 from any reachable position queries only union-ledger
@@ -585,9 +585,9 @@ theorem recoverFromPositionM_queriesWithinConstructionTargets (pkSeed : core.PkS
         OracleComp (publicHashSpec core) core.Y) := by
   induction layers using Nat.twoStepInduction generalizing pos msg with
   | zero =>
-      simp [GeneralHypertree.recoverFromPositionM, GeneralHypertree.recoverFromPositionWith]
+      simp [GeneralHypertree.recoverFromPositionM, GeneralHypertree.recoverFromPositionWith_zero]
   | one =>
-      simpa [GeneralHypertree.recoverFromPositionM, GeneralHypertree.recoverFromPositionWith,
+      simpa [GeneralHypertree.recoverFromPositionM, GeneralHypertree.recoverFromPositionWith_one,
         xmssPkFromSigM] using
         xmssPkFromSigM_queriesWithinConstructionTargets core sigs.head msg pkSeed pos
   | more layers _ ih =>
@@ -596,7 +596,8 @@ theorem recoverFromPositionM_queriesWithinConstructionTargets (pkSeed : core.PkS
         (xmssPkFromSigM_queriesWithinConstructionTargets core sigs.head msg pkSeed pos)
         (fun root => ih (pos := next) (hremaining := by simp [next]; omega) (msg := root)
           (sigs := sigs.tail))
-      simpa [GeneralHypertree.recoverFromPositionM, GeneralHypertree.recoverFromPositionWith,
+      simpa [GeneralHypertree.recoverFromPositionM,
+        GeneralHypertree.recoverFromPositionWith_add_two,
         xmssPkFromSigM, next] using h
 
 /-- Hypertree signing (Algorithm 12) at the digest-derived layer-zero position queries only

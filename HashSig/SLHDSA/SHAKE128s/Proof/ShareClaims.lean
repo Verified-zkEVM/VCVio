@@ -67,7 +67,7 @@ theorem forgedAt_congr (publicSeed : Digest) :
             publicSeed (Hypertree.address layer tree) := by
         rw [merkle_replay, merkle_replay]
         refine simulateQ_replay_congr _ left right fun probe hprobe => hagree probe ?_
-        simp only [Hypertree.rootFromSignature]
+        simp only [Hypertree.rootFromSignature_succ]
         exact queriesUnder_bind left _ _ probe hprobe
       change @WotsResidueReduction.forgedAt (replayQuery left) publicSeed remaining
           (fun j => signatures j.succ) (layer + 1) (tree / 2 ^ subtreeHeight)
@@ -81,7 +81,7 @@ theorem forgedAt_congr (publicSeed : Digest) :
             publicSeed (Hypertree.address layer tree)) i
       rw [← hmerkle]
       refine ih _ _ _ _ _ i left right fun probe hprobe => hagree probe ?_
-      simp only [Hypertree.rootFromSignature]
+      simp only [Hypertree.rootFromSignature_succ]
       refine queriesUnder_bind_right left _ _ probe ?_
       rw [← merkle_replay]
       exact hprobe

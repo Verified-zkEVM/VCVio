@@ -87,7 +87,12 @@ theorem signLayers_succ (secretSeed publicSeed : Digest) (remaining layer tree :
             (SLHDSA.SHAKE128s.Merkle.sign (m := Id) message secretSeed publicSeed
               (SLHDSA.SHAKE128s.Hypertree.address layer tree) leaf)
             message publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree))) := by
-  cases remaining <;> rfl
+  cases remaining with
+  | zero =>
+      simpa only [Hypertree.signLayers_zero, pure, bind] using
+        (Hypertree.signLayers_one (m := Id) secretSeed publicSeed layer tree leaf message)
+  | succ remaining =>
+      simp only [Hypertree.signLayers_add_two, pure, bind]
 
 /-- **A canonical WOTS part and canonical siblings are the honest layer signature.** -/
 theorem xmss_eq_sign (secretSeed publicSeed message : Digest) (layer tree : Nat)
@@ -135,14 +140,14 @@ theorem rootFromSignature_fault_or_signed (secretSeed publicSeed rootTarget : Di
   | zero =>
     -- No layers: the fold and the recovery both return their input, and there is nothing to pin.
     refine Or.inl ⟨?_, ?_⟩
-    · simp only [SLHDSA.SHAKE128s.Hypertree.rootFromSignature] at htop
+    · simp only [SLHDSA.SHAKE128s.Hypertree.rootFromSignature_zero] at htop
       simp only [honestFold] at hexp
       exact htop.trans hexp.symm
     · funext i
       exact i.elim0
   | succ remaining ih =>
     -- Peel the bottom layer and apply the induction to the upper segment.
-    rw [SLHDSA.SHAKE128s.Hypertree.rootFromSignature] at htop
+    rw [SLHDSA.SHAKE128s.Hypertree.rootFromSignature_succ] at htop
     simp only [bind] at htop
     set root₀ := SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0)
       message publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree) with hroot₀

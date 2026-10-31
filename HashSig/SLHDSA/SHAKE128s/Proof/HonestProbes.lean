@@ -683,7 +683,13 @@ theorem signLayers_succ_eq (cache : QueryCache HashSpec) (secretSeed publicSeed 
             (@Merkle.sign Id _ (replayQuery cache) message secretSeed publicSeed
               (Hypertree.address layer tree) leaf)
             message publicSeed (Hypertree.address layer tree))) := by
-  cases remaining <;> rfl
+  cases remaining with
+  | zero =>
+      simpa only [Hypertree.signLayers_zero, pure, bind] using
+        (@Hypertree.signLayers_one Id _ (replayQuery cache) _ secretSeed publicSeed
+          layer tree leaf message)
+  | succ remaining =>
+      simp only [Hypertree.signLayers_add_two, pure, bind]
 
 /-- **The layer the signer is standing in** is the subtree signature it writes there. -/
 theorem signLayers_head (cache : QueryCache HashSpec) (secretSeed publicSeed : Digest)
@@ -789,7 +795,7 @@ theorem probes_hypertree_signLayers (cache : QueryCache HashSpec)
       have hlayer : layer < layers := by omega
       have hdiv : tree / 2 ^ subtreeHeight < 2 ^ (totalHeight - subtreeHeight) :=
         lt_of_le_of_lt (Nat.div_le_self _ _) htree
-      rw [Hypertree.signLayers]
+      rw [Hypertree.signLayers_succ]
       refine probes_bind cache _ _ _
         (@Merkle.sign Id _ (replayQuery cache) message secretSeed publicSeed
           (Hypertree.address layer tree) leaf)

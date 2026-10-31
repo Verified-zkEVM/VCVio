@@ -130,7 +130,7 @@ theorem hypertree_root_simulate (publicSeed : Digest) (remaining : Nat)
   induction remaining generalizing layer tree leaf message with
   | zero => rfl
   | succ remaining ih =>
-    simp only [Hypertree.rootFromSignature, simulateQ_bind, merkle_simulate impl himpl, ih]
+    simp only [Hypertree.rootFromSignature_succ, simulateQ_bind, merkle_simulate impl himpl, ih]
 
 /-- Simulating hypertree verification is the verification in `m`. -/
 theorem hypertree_simulate (message : Digest) (signature : HypertreeSignature) (pk : PublicKey)

@@ -104,8 +104,9 @@ theorem queriesUnder_rootFromSignature_head (cache : QueryCache HashSpec) (publi
         (signatures 0) message publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree)) probe) :
     QueriesUnder cache
       (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
-        (remaining + 1) signatures layer tree leaf message) probe :=
-  queriesUnder_bind cache _ _ probe hquery
+        (remaining + 1) signatures layer tree leaf message) probe := by
+  rw [SLHDSA.SHAKE128s.Hypertree.rootFromSignature_succ]
+  exact queriesUnder_bind cache _ _ probe hquery
 
 open CacheReplay in
 /-- Step over this layer to the next, advancing the message to this layer's replayed root. -/
@@ -122,7 +123,8 @@ theorem queriesUnder_rootFromSignature_tail (cache : QueryCache HashSpec) (publi
             (SLHDSA.SHAKE128s.Hypertree.address layer tree)))) probe) :
     QueriesUnder cache
       (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
-        (remaining + 1) signatures layer tree leaf message) probe :=
-  queriesUnder_bind_right cache _ _ probe hquery
+        (remaining + 1) signatures layer tree leaf message) probe := by
+  rw [SLHDSA.SHAKE128s.Hypertree.rootFromSignature_succ]
+  exact queriesUnder_bind_right cache _ _ probe hquery
 
 end SLHDSA.SHAKE128s.HypertreeDispatch

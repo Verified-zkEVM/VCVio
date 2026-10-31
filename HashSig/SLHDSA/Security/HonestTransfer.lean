@@ -478,7 +478,7 @@ theorem signFromPosition (rf : Bool) :
           hl msg).1 hss
       exact (simulateQ_toPartialImpl_signFromPositionWithSecret_one_false_eq_some_iff core B _ pk
         pos hl msg).2 ⟨sig, h.xmssSign pos msg hs, rfl⟩
-    · simp only [GeneralHypertree.signFromPositionWithSecret,
+    · simp only [GeneralHypertree.signFromPositionWithSecret_one,
         xmssPkFromSigWith_publicHash_eq_xmssPkFromSigM, simulateQ_bind_eq_some_iff,
         simulateQ_pure_eq_some_iff, ↓reduceIte] at hss ⊢
       obtain ⟨sig, hs, r, hr, rfl⟩ := hss

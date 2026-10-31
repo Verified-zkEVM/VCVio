@@ -91,7 +91,9 @@ theorem signLayers_congr_cells (publicSeed : Digest) (cache : QueryCache HashSpe
   have hrevealed := ShareCells.revealedOf_le left.1
   intro remaining
   induction remaining with
-  | zero => intro layer tree leaf htree message _ _; rfl
+  | zero =>
+    intro layer tree leaf htree message _ _
+    simp only [Hypertree.signLayers_zero]
   | succ remaining ih =>
     intro layer tree leaf htree message hbound hmessage
     have hl : layer < layers := by omega
