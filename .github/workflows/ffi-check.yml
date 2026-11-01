@@ -26,7 +26,7 @@ jobs:
           submodules: recursive
 
       - name: Set up Lean environment
-        uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
         with:
           auto-config: false
           build: false
