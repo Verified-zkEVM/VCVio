@@ -7,8 +7,10 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game
+public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Recorded
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AnswerRelabel
 public import VCVio.OracleComp.SimSemantics.WriterT.Core
+public import VCVio.OracleComp.QueryTracking.CostModel
 
 /-!
 # Transferring security bits along a relabelling of hash answers
@@ -160,12 +162,30 @@ theorem hashCost_eq :
   funext t
   rcases t with n | x <;> rfl
 
+private theorem countAllHashes_compat {Output α : Type}
+    (body : OracleComp (Game.World Output) α) :
+    Game.countAllHashes body =
+      (fun result => (result.1, Multiplicative.toAdd result.2)) <$>
+        (simulateQ (addCostOracle (spec := Game.World Output) Game.hashCost) body).run := by
+  simp only [Game.countAllHashes, SignatureAlg.SigningView.costed, AddWriterT.runAdd,
+    addCostOracle, QueryImpl.ofLift_eq_id']
+  rfl
+
+private theorem countQueries_compat {Output α : Type}
+    (cost : (Game.World Output).Domain → Game.Counts) (body : OracleComp (Game.World Output) α) :
+    Game.countQueries cost body =
+      (fun result => (result.1, Multiplicative.toAdd result.2)) <$>
+        (simulateQ (addCostOracle (spec := Game.World Output) cost) body).run := by
+  simp only [Game.countQueries, SignatureAlg.SigningView.costed, AddWriterT.runAdd,
+    addCostOracle, QueryImpl.ofLift_eq_id']
+  rfl
+
 /-- Relabelling commutes with counting all hash calls. -/
 theorem simulateQ_relabel_countAllHashes (e : A ≃ B) {α : Type}
     (P : OracleComp (Game.World A) α) :
     simulateQ (relabel e) (Game.countAllHashes P) =
       Game.countAllHashes (simulateQ (relabel e) P) := by
-  unfold Game.countAllHashes
+  rw [countAllHashes_compat, countAllHashes_compat]
   rw [simulateQ_map, simulateQ_relabel_run_addCost, hashCost_eq]
 
 /-- Relabelling commutes with counting queries by any cost on `ℕ ⊕ Bytes`. -/
@@ -173,7 +193,7 @@ theorem simulateQ_relabel_countQueries (e : A ≃ B) (cost : ℕ ⊕ Bytes → G
     {α : Type} (P : OracleComp (Game.World A) α) :
     simulateQ (relabel e) (Game.countQueries cost P) =
       Game.countQueries cost (simulateQ (relabel e) P) := by
-  unfold Game.countQueries
+  rw [countQueries_compat, countQueries_compat]
   rw [simulateQ_map, simulateQ_relabel_run_addCost]
 
 /-! ## Bridged schemes -/
@@ -203,7 +223,7 @@ structure SchemeBridge (e : A ≃ B) [SampleableType B] {PKA SKA PKB SKB : Type}
 theorem countAllHashes_map {Output α β : Type} (f : α → β)
     (P : OracleComp (Game.World Output) α) :
     Game.countAllHashes (f <$> P) = Prod.map f id <$> Game.countAllHashes P := by
-  simp [Game.countAllHashes, Functor.map_map]
+  simp [countAllHashes_compat, Functor.map_map]
 
 /-- The key-generation field of a `SchemeBridge` holds when relabelled key generation, with its
 keys mapped, is the `B` scheme's key generation. -/
@@ -245,7 +265,7 @@ theorem countAllHashes_liftM_bind {Output α β : Type} (oa : ProbComp α)
     (f : α → OracleComp (Game.World Output) β) :
     Game.countAllHashes ((liftM oa : OracleComp (Game.World Output) α) >>= f) =
       (liftM oa : OracleComp (Game.World Output) α) >>= fun a => Game.countAllHashes (f a) := by
-  simp only [Game.countAllHashes, simulateQ_bind, WriterT.run_bind,
+  simp only [countAllHashes_compat, simulateQ_bind, WriterT.run_bind,
     run_simulateQ_addCostOracle_liftM, bind_map_left, map_bind, Functor.map_map, one_mul]
 
 /-- In the random-oracle model, a uniform draw at the start of a program is the draw itself,
@@ -328,7 +348,8 @@ theorem experimentBySource_eq (scheme : Game.ExternalScheme B PKB SKB)
     (adversary : Game.Adversary B PKB) :
     Game.experimentBySource scheme adversary =
       Game.countAllHashes scheme.keygen >>= fun r =>
-        afterKeygenBySource scheme adversary r.1 r.2 := rfl
+        afterKeygenBySource scheme adversary r.1 r.2 := by
+  simpa only [afterKeygenBySource] using Game.experimentBySource_eq_countAllHashes scheme adversary
 
 variable {e : A ≃ B} [SampleableType B]
   {SA : Game.ExternalScheme A PKA SKA} {SB : Game.ExternalScheme B PKB SKB}
@@ -343,27 +364,25 @@ unlabelling its hash queries and forwarding its signing requests. -/
 adversary's phase against the `B` scheme, with the corresponding keys. -/
 theorem simulateQ_relabel_adversaryPhase (b : SchemeBridge e SA SB)
     (adversary : Game.Adversary B PKB) (sk : SKA) (pk : PKA) (s : Game.SigningLog) :
-    simulateQ (relabel e) ((simulateQ
-      ((QueryImpl.ofLift (Game.World A)
-          (StateT Game.SigningLog (OracleComp (Game.World A)))).withAddCost
-          (fun input => Game.Counts.single .hash (Game.hashCost input)) +
-        Game.signingOracle SA sk)
-      ((adapt b adversary).main pk)).run.run s) =
-    (simulateQ
-      ((QueryImpl.ofLift (Game.World B)
-          (StateT Game.SigningLog (OracleComp (Game.World B)))).withAddCost
-          (fun input => Game.Counts.single .hash (Game.hashCost input)) +
-        Game.signingOracle SB (b.sk sk))
-      (adversary.main (b.pk pk))).run.run s := by
-  simp only [adapt]
-  rw [← QueryImpl.simulateQ_compose]
-  refine simulateQ_writerT_stateT_run_compose _ _ _ (fun q s => ?_) _ s
-  rcases q with (n | x) | req
-  · simp [unlabelAdversary]
-    rfl
-  · simp [unlabelAdversary]
-    rfl
-  · simp [unlabelAdversary, Game.signingOracle, run_run_liftM, run_run_modify, b.sign]
+    simulateQ (relabel e) (Game.runPhase SA sk ((adapt b adversary).main pk) s) =
+      Game.runPhase SB (b.sk sk) (adversary.main (b.pk pk)) s := by
+  change simulateQ (relabel e)
+      (Game.runPhase SA sk (simulateQ (unlabelAdversary e) (adversary.main (b.pk pk))) s) = _
+  generalize adversary.main (b.pk pk) = body
+  induction body using OracleComp.inductionOn generalizing s with
+  | pure value => simp [Game.runPhase_pure]
+  | query_bind input next ih =>
+    rcases input with (sample | input) | request
+    · simp only [simulateQ_bind, simulateQ_spec_query, unlabelAdversary]
+      rw [Game.runPhase_query_bind_world, Game.runPhase_query_bind_world]
+      simp [simulateQ_bind, ih]
+      rfl
+    · simp only [simulateQ_bind, simulateQ_spec_query, unlabelAdversary, bind_map_left]
+      rw [Game.runPhase_query_bind_world, Game.runPhase_query_bind_world]
+      simp [simulateQ_bind, ih, Game.hashCost, RandomOracleModel.hashCost]
+    · simp only [simulateQ_bind, simulateQ_spec_query, unlabelAdversary]
+      rw [Game.runPhase_query_bind_sign, Game.runPhase_query_bind_sign]
+      simp [simulateQ_bind, b.sign, ih]
 
 /-- Relabelling the adapted adversary's phase and verification, after keys `(sk, pk)` of the `A`
 scheme, gives the adversary's phase and verification against the `B` scheme with the
@@ -372,7 +391,8 @@ theorem simulateQ_relabel_afterKeygen (b : SchemeBridge e SA SB)
     (adversary : Game.Adversary B PKB) (sk : SKA) (pk : PKA) :
     simulateQ (relabel e) (Game.afterKeygen SA (adapt b adversary) (sk, pk)) =
       Game.afterKeygen SB adversary (b.sk sk, b.pk pk) := by
-  simp only [Game.afterKeygen, simulateQ_bind]
+  rw [Game.afterKeygen_eq_runPhase, Game.afterKeygen_eq_runPhase]
+  simp only [simulateQ_bind]
   rw [simulateQ_relabel_adversaryPhase b adversary sk pk []]
   refine bind_congr fun r => ?_
   rcases r with ⟨⟨forgery, counts⟩, signed⟩
@@ -386,7 +406,8 @@ theorem simulateQ_relabel_experimentBySource (b : SchemeBridge e SA SB)
     simulateQ (relabel e) (Game.experimentBySource SA (adapt b adversary)) =
       Game.countAllHashes (simulateQ (relabel e) SA.keygen) >>= fun r =>
         afterKeygenBySource SB adversary (b.sk r.1.1, b.pk r.1.2) r.2 := by
-  simp only [Game.experimentBySource, simulateQ_bind]
+  rw [Game.experimentBySource_eq_countAllHashes]
+  simp only [simulateQ_bind]
   rw [simulateQ_relabel_countAllHashes]
   refine bind_congr fun r => ?_
   rcases r with ⟨⟨sk, pk⟩, keygenHashes⟩
@@ -403,7 +424,8 @@ theorem runBySource_evalDistEq (b : SchemeBridge e SA SB)
     Game.runBySource SB adversary =ᵈ Game.runBySource SA (adapt b adversary) := by
   calc Game.runBySource SB adversary
       = RandomOracleModel.run (Game.countAllHashes SB.keygen >>= fun r =>
-          afterKeygenBySource SB adversary r.1 r.2) := rfl
+          afterKeygenBySource SB adversary r.1 r.2) := by
+        rw [Game.runBySource, experimentBySource_eq]
     _ =ᵈ RandomOracleModel.run (Game.countAllHashes (simulateQ (relabel e) SA.keygen) >>=
           fun r => afterKeygenBySource SB adversary (b.sk r.1.1, b.pk r.1.2) r.2) :=
         (b.keygen _).symm

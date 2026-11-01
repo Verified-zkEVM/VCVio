@@ -160,11 +160,12 @@ private theorem countedHandlerSquare (e : ∀ input, R input ≃ S input)
         (QueryImpl.relabel (relabelSigningAnswers e) (Sum.inl input))
     rw [phaseMorphism_lift, costQuerySquare e policyR policyS diagram .adversary]
     simp only [QueryImpl.relabel_apply, relabelSigningAnswers, simulateQ_map, simulateQ_spec_query,
-      countedHandler, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply]
+      countedHandler, countedHandlerUsing, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply]
     apply WriterT.ext
     simp [Functor.map_map]
   | inr request =>
-    simpa [countedHandler, QueryImpl.relabel_apply, relabelSigningAnswers] using
+    simpa [countedHandler, countedHandlerUsing, countedSigningOracle,
+      QueryImpl.relabel_apply, relabelSigningAnswers] using
       signingOracleSquare e policyR policyS view diagram pk sk request
 
 /-- The signing-enabled client phase retains its full raw reply log and ordered cost. -/
@@ -192,7 +193,8 @@ private theorem countedPhaseSquare (e : ∀ input, R input ≃ S input)
         exact countedHandlerSquare e policyR policyS view diagram pk sk input
       _ = _ := QueryImpl.simulateQ_compose _ _ body
   have h := congrArg (fun result : LoggedCostM S Request Reply C α => result.run) natural
-  simpa only [phaseMorphism, WriterT.run_mapBaseAppendHom, countedPhase] using h
+  simpa only [phaseMorphism, WriterT.run_mapBaseAppendHom, countedPhase,
+    countedPhaseUsing, countedHandler] using h
 
 /-- Answer conversion preserves the complete counted experiment under the actual policy square. -/
 theorem countedExperiment_relabel (e : ∀ input, R input ≃ S input)
@@ -203,7 +205,7 @@ theorem countedExperiment_relabel (e : ∀ input, R input ≃ S input)
     simulateQ (QueryImpl.relabel e) (countedExperiment policyR view main) =
       countedExperiment policyS (relabelView e view) (relabelMain e main) := by
   change ambientMorphism e (countedExperiment policyR view main) = _
-  simp only [countedExperiment, MonadHom.mmap_map, ← costMorphism_runAdd,
+  simp only [countedExperiment, countedAfterKeygen, MonadHom.mmap_map, ← costMorphism_runAdd,
     MonadHom.mmap_bind, MonadHom.mmap_pure,
     costedSquare e policyR policyS diagram .keygen,
     costedSquare e policyR policyS diagram .verification,

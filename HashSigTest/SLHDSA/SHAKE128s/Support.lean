@@ -28,22 +28,8 @@ variable {Output PK SK : Type}
 /-- Execute the adversary phase and final verifier with the game's source counters. -/
 @[expose] def executableAfterKeygen (scheme : ExternalScheme Output PK SK)
     (adversary : Adversary Output PK) (keys : SK × PK) :
-    OracleComp (World Output) Outcome := do
-  let (sk, pk) := keys
-  let ((forgery, adversaryCounts), signed) ←
-    (simulateQ
-      ((QueryImpl.ofLift (World Output)
-          (StateT SigningLog (OracleComp (World Output)))).withAddCost
-          (fun input => Counts.single .hash (hashCost input)) + signingOracle scheme sk)
-      (adversary.main pk)).run.run []
-  let (verified, verifierCounts) ← countQueries
-    (fun input => Counts.single .verification (hashCost input))
-    (scheme.verify pk forgery.message forgery.signature)
-  return {
-    forgery := forgery
-    signed := signed
-    verified := verified
-    counts := Multiplicative.toAdd adversaryCounts + verifierCounts }
+    OracleComp (World Output) Outcome :=
+  Counted.legacyOutcome <$> Counted.canonicalAfterKeygen scheme adversary keys
 
 /-- The executable phase is the actual counted phase of the game. -/
 theorem executableAfterKeygen_eq (scheme : ExternalScheme Output PK SK)
@@ -53,10 +39,8 @@ theorem executableAfterKeygen_eq (scheme : ExternalScheme Output PK SK)
 /-- Execute key generation and the complete experiment with all source counters. -/
 @[expose] def executableExperimentBySource (scheme : ExternalScheme Output PK SK)
     (adversary : Adversary Output PK) :
-    OracleComp (World Output) (Outcome × Unforgeability.QueryCounts) := do
-  let (keys, keygenHashes) ← countAllHashes scheme.keygen
-  let (outcome, laterHashes) ← countAllHashes (executableAfterKeygen scheme adversary keys)
-  return (outcome, sourceCounts outcome keygenHashes laterHashes)
+    OracleComp (World Output) (Outcome × Unforgeability.QueryCounts) :=
+  Counted.legacyObservation <$> Counted.canonicalExperiment scheme adversary
 
 /-- The executable experiment is the actual source-counted game program. -/
 theorem executableExperimentBySource_eq (scheme : ExternalScheme Output PK SK)

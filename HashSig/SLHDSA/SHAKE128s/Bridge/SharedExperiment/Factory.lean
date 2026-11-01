@@ -46,12 +46,8 @@ private theorem countedExperiment_congr_generated
         SigningView.countedPhase policy right keys.1 keys.2 (adversary keys.1) := by
     have signEq : left.sign keys.1 keys.2 = right.sign keys.1 keys.2 :=
       funext (hsign keys member)
-    have handlerEq : SigningView.countedHandler policy left keys.1 keys.2 =
-        SigningView.countedHandler policy right keys.1 keys.2 := by
-      unfold SigningView.countedHandler SigningView.countedSigningOracle
-      rw [signEq]
-    simp only [SigningView.countedPhase, handlerEq]
-  unfold SigningView.countedExperiment
+    simp only [SigningView.countedPhase, signEq]
+  unfold SigningView.countedExperiment SigningView.countedAfterKeygen
   congr 1
   simp only [AddWriterT.runAdd_bind, AddWriterT.runAdd_pure]
   rw [← hkeygen]

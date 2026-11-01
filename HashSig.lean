@@ -308,6 +308,8 @@ public import HashSig.SLHDSA.SHAKE128s.Statement.BitSecurity
 public import HashSig.SLHDSA.SHAKE128s.Statement.FIPS205
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game.CompleteBudget
+public import HashSig.SLHDSA.SHAKE128s.Statement.Game.Counted
+public import HashSig.SLHDSA.SHAKE128s.Statement.Game.Data
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game.QueryBudget
 public import HashSig.SLHDSA.SHAKE128s.Statement.RandomOracleModel
 public import HashSig.SLHDSA.SHAKE128s.Statement.Requests

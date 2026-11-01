@@ -118,14 +118,29 @@ private theorem forgetCost_addTell [AddMonoid C] (cost : C) :
     forgetCost (AddWriterT.addTell cost : CostM spec C PUnit) = pure ⟨⟩ := by
   simp [forgetCost]
 
-/-- Charge an attempt before executing its signer and logging the actual reply. -/
+/-- Charge an attempt before invoking its signer and logging the actual reply. -/
+@[expose] def countedSigningOracleUsing [AddMonoid C] (policy : Event spec Request → C)
+    (signer : Request → OracleComp spec Reply) :
+    QueryImpl (Request →ₒ Reply) (LoggedCostM spec Request Reply C) :=
+  QueryImpl.withLogging
+    (QueryImpl.preInsert (spec := Request →ₒ Reply)
+      (fun request => costed policy .signer (signer request))
+      (fun request => AddWriterT.addTell (policy (.signingAttempt request))))
+
+/-- A callback attempt is charged before any signer traffic and retains the actual reply. -/
+theorem countedSigningOracleUsing_run [AddMonoid C] (policy : Event spec Request → C)
+    (signer : Request → OracleComp spec Reply) (request : Request) :
+    (countedSigningOracleUsing policy signer request).run = (do
+      AddWriterT.addTell (policy (.signingAttempt request))
+      let reply ← costed policy .signer (signer request)
+      return (reply, [⟨request, reply⟩])) := by
+  simp [countedSigningOracleUsing, QueryImpl.withLogging_apply, monad_norm]
+
+/-- Charge and log each signing attempt at the view's supplied keys. -/
 @[expose] def countedSigningOracle [AddMonoid C] (policy : Event spec Request → C)
     (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
     (pk : PK) (sk : SK) : QueryImpl (Request →ₒ Reply) (LoggedCostM spec Request Reply C) :=
-  QueryImpl.withLogging
-    (QueryImpl.preInsert (spec := Request →ₒ Reply)
-      (fun request => costed policy .signer (view.sign pk sk request))
-      (fun request => AddWriterT.addTell (policy (.signingAttempt request))))
+  countedSigningOracleUsing policy (view.sign pk sk)
 
 /-- Each attempt is charged before any internal signing queries, and its actual reply is logged. -/
 theorem countedSigningOracle_run [AddMonoid C] (policy : Event spec Request → C)
@@ -135,23 +150,58 @@ theorem countedSigningOracle_run [AddMonoid C] (policy : Event spec Request → 
       AddWriterT.addTell (policy (.signingAttempt request))
       let reply ← costed policy .signer (view.sign pk sk request)
       return (reply, [⟨request, reply⟩])) := by
-  simp [countedSigningOracle, QueryImpl.withLogging_apply, monad_norm]
+  simp [countedSigningOracle, countedSigningOracleUsing, QueryImpl.withLogging_apply, monad_norm]
+
+/-- Direct calls and signing callbacks share one chronological cost and raw-reply log. -/
+@[expose] def countedHandlerUsing [AddMonoid C] (policy : Event spec Request → C)
+    (signer : Request → OracleComp spec Reply) :
+    QueryImpl (spec + (Request →ₒ Reply)) (LoggedCostM spec Request Reply C) :=
+  QueryImpl.liftTarget (LoggedCostM spec Request Reply C)
+    ((QueryImpl.id' spec).withAddCost (fun input => policy (.ambient .adversary input))) +
+    countedSigningOracleUsing policy signer
 
 /-- Direct adversary queries have their own phase, while signing replies retain a raw log. -/
 @[expose] def countedHandler [AddMonoid C] (policy : Event spec Request → C)
     (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
     (pk : PK) (sk : SK) :
     QueryImpl (spec + (Request →ₒ Reply)) (LoggedCostM spec Request Reply C) :=
-  QueryImpl.liftTarget (LoggedCostM spec Request Reply C)
-    ((QueryImpl.id' spec).withAddCost (fun input => policy (.ambient .adversary input))) +
-    countedSigningOracle policy view pk sk
+  countedHandlerUsing policy (view.sign pk sk)
+
+/-- Retain a callback-enabled client's result, chronological replies and declared phase cost. -/
+@[expose] def countedPhaseUsing [AddMonoid C] (policy : Event spec Request → C)
+    (signer : Request → OracleComp spec Reply)
+    {α : Type} (body : OracleComp (spec + (Request →ₒ Reply)) α) :
+    CostM spec C (α × QueryLog (Request →ₒ Reply)) :=
+  (simulateQ (countedHandlerUsing policy signer) body).run
+
+/-- Callback phases compose by chronological cost addition and raw-log concatenation. -/
+theorem countedPhaseUsing_bind [AddMonoid C] (policy : Event spec Request → C)
+    (signer : Request → OracleComp spec Reply) {α β : Type}
+    (body : OracleComp (spec + (Request →ₒ Reply)) α)
+    (next : α → OracleComp (spec + (Request →ₒ Reply)) β) :
+    countedPhaseUsing policy signer (body >>= next) = (do
+      let (a, left) ← countedPhaseUsing policy signer body
+      let (b, right) ← countedPhaseUsing policy signer (next a)
+      return (b, left ++ right)) := by
+  simp [countedPhaseUsing]
+
+/-- A callback signing query retains its reply and charges its attempt and actual traffic. -/
+theorem countedPhaseUsing_signingQuery [AddMonoid C] (policy : Event spec Request → C)
+    (signer : Request → OracleComp spec Reply) (request : Request) :
+    countedPhaseUsing policy signer
+      (liftM ((spec + (Request →ₒ Reply)).query (.inr request))) = (do
+        AddWriterT.addTell (policy (.signingAttempt request))
+        let reply ← costed policy .signer (signer request)
+        return (reply, [⟨request, reply⟩])) := by
+  rw [countedPhaseUsing, simulateQ_spec_query]
+  exact countedSigningOracleUsing_run policy signer request
 
 /-- Retain the candidate, chronological raw reply log and accumulated client-phase cost. -/
 @[expose] def countedPhase [AddMonoid C] (policy : Event spec Request → C)
     (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
     (pk : PK) (sk : SK) {α : Type} (body : OracleComp (spec + (Request →ₒ Reply)) α) :
     CostM spec C (α × QueryLog (Request →ₒ Reply)) :=
-  (simulateQ (countedHandler policy view pk sk) body).run
+  countedPhaseUsing policy (view.sign pk sk) body
 
 /-- Sequential client phases retain the chronological concatenation of all raw replies. -/
 theorem countedPhase_bind [AddMonoid C] (policy : Event spec Request → C)
@@ -163,7 +213,7 @@ theorem countedPhase_bind [AddMonoid C] (policy : Event spec Request → C)
       let (a, left) ← countedPhase policy view pk sk body
       let (b, right) ← countedPhase policy view pk sk (next a)
       return (b, left ++ right)) := by
-  simp [countedPhase]
+  simp [countedPhase, countedPhaseUsing]
 
 /-- A signing query keeps its raw response and charges its request and internal signer traffic. -/
 theorem countedPhase_signingQuery [AddMonoid C] (policy : Event spec Request → C)
@@ -174,7 +224,7 @@ theorem countedPhase_signingQuery [AddMonoid C] (policy : Event spec Request →
         AddWriterT.addTell (policy (.signingAttempt request))
         let reply ← costed policy .signer (view.sign pk sk request)
         return (reply, [⟨request, reply⟩])) := by
-  rw [countedPhase, simulateQ_spec_query]
+  rw [countedPhase, countedPhaseUsing, simulateQ_spec_query]
   exact countedSigningOracle_run policy view pk sk request
 
 private theorem forgetCostWithLog_handler [AddMonoid C]
@@ -187,11 +237,11 @@ private theorem forgetCostWithLog_handler [AddMonoid C]
   cases input with
   | inl input =>
     ext
-    simp [countedHandler, forgetCostWithLog, forgetCost,
+    simp [countedHandler, countedHandlerUsing, forgetCostWithLog, forgetCost,
       QueryImpl.withAddCost_apply, WriterT.run_bind, Functor.map_map]
   | inr request =>
     ext
-    simp [countedHandler, countedSigningOracle, forgetCostWithLog,
+    simp [countedHandler, countedHandlerUsing, countedSigningOracleUsing, forgetCostWithLog,
       QueryImpl.withLogging_apply, MonadHom.mmap_map, forgetCost_addTell,
       forgetCost_costed, signingOracle, Functor.map_map]
 
@@ -220,6 +270,16 @@ structure Observation (Request Sig Reply C : Type) extends Outcome Request Sig R
 @[expose] def erase (observation : Observation Request Sig Reply C) : Outcome Request Sig Reply :=
   observation.toOutcome
 
+/-- The signing-enabled client and its actual final verifier share one accumulated writer. -/
+@[expose] def countedAfterKeygen [AddMonoid C] (policy : Event spec Request → C)
+    (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
+    (pk : PK) (sk : SK)
+    (adv : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig)) :
+    CostM spec C (Outcome Request Sig Reply) := do
+  let (forgery, rawLog) ← countedPhase policy view pk sk (adv pk)
+  let verified ← costed policy .verification (view.verify pk forgery.1 forgery.2)
+  return ⟨forgery, rawLog, verified⟩
+
 /-- One accumulated cost log covers keygen, the signing-enabled client and final verification. -/
 @[expose] def countedExperiment [AddMonoid C] (policy : Event spec Request → C)
     (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
@@ -227,16 +287,14 @@ structure Observation (Request Sig Reply C : Type) extends Outcome Request Sig R
     OracleComp spec (Observation Request Sig Reply C) :=
   (fun result => { toOutcome := result.1, cost := result.2 }) <$> (do
     let (pk, sk) ← costed policy .keygen view.keygen
-    let (forgery, rawLog) ← countedPhase policy view pk sk (adv pk)
-    let verified ← costed policy .verification (view.verify pk forgery.1 forgery.2)
-    return (⟨forgery, rawLog, verified⟩ : Outcome Request Sig Reply)).runAdd
+    countedAfterKeygen policy view pk sk adv).runAdd
 
 /-- Cost erasure recovers the full uncounted experiment without any resource assumption. -/
 theorem countedExperiment_erases [AddMonoid C] (policy : Event spec Request → C)
     (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
     (adv : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig)) :
     erase <$> countedExperiment policy view adv = view.experiment adv := by
-  simp only [countedExperiment, erase, AddWriterT.runAdd, Functor.map_map]
+  simp only [countedExperiment, countedAfterKeygen, erase, AddWriterT.runAdd, Functor.map_map]
   change forgetCost (do
     let keys ← costed policy .keygen view.keygen
     let phase ← countedPhase policy view keys.1 keys.2 (adv keys.1)

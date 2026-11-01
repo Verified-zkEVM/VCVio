@@ -72,8 +72,16 @@ theorem experiment_eq (adversary : Adversary) :
     experiment adversary = (liftM seeds : OracleComp OracleWorld _) >>= afterSeeds adversary := by
   have hsample : (simulateQ (fun i => query (spec := unifSpec) i) ($ᵗ Digest) :
       OracleComp OracleWorld Digest) = liftM ($ᵗ Digest : ProbComp Digest) := rfl
-  unfold experiment afterSeeds seeds Scheme.keygen
-  simp only [liftM_bind, bind_pure_comp, bind_assoc, liftM_map, bind_map_left, hsample]
+  have afterEq := funext (fun keys : SecretKey × PublicKey =>
+    Game.afterKeygen_eq_runPhase externalScheme adversary keys)
+  rw [Security.experiment_eq_keygen_bind]
+  change (Scheme.keygen >>= Game.afterKeygen externalScheme adversary) = _
+  rw [afterEq]
+  simp_rw [← Security.legacyPhase_eq_runPhase]
+  unfold afterSeeds seeds Scheme.keygen
+  simp only [liftM_bind, bind_pure_comp, bind_assoc, liftM_map, bind_map_left, hsample,
+    AddWriterT.runAdd, StateT.run_map, externalScheme,
+    countQueries, Counts.single, Game.Counts.single, hashCost, Game.hashCost, Prod.map, id_eq]
 
 /-! ## The warmed run
 

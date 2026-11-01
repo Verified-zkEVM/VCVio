@@ -7,6 +7,8 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Statement.Security
+public import HashSig.SLHDSA.SHAKE128s.Statement.Game.CompleteBudget
+public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Recorded
 
 /-!
 # The forgery experiment and its counted views
@@ -49,21 +51,84 @@ export Game (Counts.work)
 
 /-- Key generation, then the adversary's phase and verification. -/
 @[expose]
-noncomputable def experiment (adversary : Adversary) : OracleComp OracleWorld Outcome := do
-  let (sk, pk) ← Scheme.keygen
-  let ((forgery, adversaryCounts), signed) ←
-    (simulateQ
+noncomputable def experiment (adversary : Adversary) : OracleComp OracleWorld Outcome :=
+  Game.Counted.legacyOutcome <$> Game.Counted.canonicalExperiment externalScheme adversary
+
+/-- Key generation precedes the full supplied-key client and verification observation. -/
+theorem experiment_eq_keygen_bind (adversary : Adversary) :
+    experiment adversary = Scheme.keygen >>= afterKeygen adversary := by
+  have eraseSuffix (keys : SecretKey × PublicKey) :
+      (Game.countAllHashes (afterKeygen adversary keys) >>= fun z => pure z.1) =
+        afterKeygen adversary keys := by
+    simpa only [map_eq_bind_pure_comp, Function.comp_def] using
+      (Game.fst_map_countAllHashes (afterKeygen adversary keys))
+  have projected := congrArg
+    (fun p : OracleComp OracleWorld (Outcome × Unforgeability.QueryCounts) => Prod.fst <$> p)
+    (Game.experimentBySource_eq_countAllHashes externalScheme adversary)
+  have h : experiment adversary =
+      (Game.countAllHashes (Scheme.keygen : OracleComp OracleWorld (SecretKey × PublicKey)) >>=
+        fun keys => Game.countAllHashes (afterKeygen adversary keys.1) >>= fun z => pure z.1) := by
+    simpa only [experiment, Game.experimentBySource, Game.Counted.legacyObservation,
+      map_bind, map_pure, Functor.map_map, Function.comp_def, externalScheme, afterKeygen]
+      using projected
+  rw [h]
+  simp_rw [eraseSuffix]
+  simpa only [bind_map_left] using
+    congrArg (fun p : OracleComp OracleWorld (SecretKey × PublicKey) => p >>= afterKeygen adversary)
+      (Game.fst_map_countAllHashes
+        (Scheme.keygen : OracleComp OracleWorld (SecretKey × PublicKey)))
+
+/-- The writer/state presentation retains the exact shared phase and every raw log prefix. -/
+theorem legacyPhase_eq_runPhase {α : Type} (sk : SecretKey)
+    (body : OracleComp (OracleWorld + SigningSpec) α) (signed : SigningLog) :
+    ((simulateQ
       ((QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld))).withAddCost
-          (fun input => Counts.single .hash (hashCost input)) + signingOracle sk)
-      (adversary.main pk)).run.run []
-  let (verified, verifierCounts) ← countQueries
-    (fun input => Counts.single .verification (hashCost input))
-    (Scheme.verify pk forgery.message forgery.signature)
-  return {
-    forgery := forgery
-    signed := signed
-    verified := verified
-    counts := Multiplicative.toAdd adversaryCounts + verifierCounts }
+        (fun input => Counts.single .hash (hashCost input)) + signingOracle sk)
+      body).runAdd).run signed =
+      Game.runPhase externalScheme sk body signed := by
+  let handler : QueryImpl (OracleWorld + SigningSpec) CountedRun :=
+    (QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld))).withAddCost
+      (fun input => Counts.single .hash (hashCost input)) + signingOracle sk
+  let phase {γ : Type} (program : OracleComp (OracleWorld + SigningSpec) γ)
+      (initialLog : SigningLog) : OracleComp OracleWorld ((γ × Counts) × SigningLog) :=
+    ((simulateQ handler program).runAdd).run initialLog
+  have phase_pure {γ : Type} (value : γ) (initialLog : SigningLog) :
+      phase (pure value) initialLog = pure ((value, 0), initialLog) := by
+    simp [phase]
+  have phase_bind {γ δ : Type}
+      (program : OracleComp (OracleWorld + SigningSpec) γ)
+      (next : γ → OracleComp (OracleWorld + SigningSpec) δ) (initialLog : SigningLog) :
+      phase (program >>= next) initialLog = (do
+        let ((value, firstCounts), middle) ← phase program initialLog
+        let ((result, lastCounts), finalLog) ← phase (next value) middle
+        return ((result, firstCounts + lastCounts), finalLog)) := by
+    simp [phase, simulateQ_bind, AddWriterT.runAdd_bind, StateT.run_bind,
+      map_eq_bind_pure_comp, Prod.map]
+  have phase_world (input : OracleWorld.Domain) (initialLog : SigningLog) :
+      phase (liftM ((OracleWorld + SigningSpec).query (.inl input))) initialLog =
+        (fun answer => ((answer, Counts.single .hash (hashCost input)), initialLog)) <$>
+          (query input : OracleComp OracleWorld _) := by
+    simp [phase, handler, QueryImpl.withAddCost_apply, QueryImpl.ofLift,
+      AddWriterT.runAdd_bind, Prod.map]
+  have phase_sign (request : Message) (initialLog : SigningLog) :
+      phase (liftM ((OracleWorld + SigningSpec).query (.inr request))) initialLog =
+        (fun answer => ((answer, Counts.single .signing 1), initialLog ++ [⟨request, answer⟩])) <$>
+          (Scheme.sign sk request : OracleComp OracleWorld (Option Bytes)) := by
+    simp [phase, handler, signingOracle, AddWriterT.runAdd,
+      Game.Counted.legacyRun_signing_run, Functor.map_map, Prod.map,
+      Counts.single, Game.Counts.single]
+  change phase body signed = _
+  induction body using OracleComp.inductionOn generalizing signed with
+  | pure value =>
+    rw [phase_pure, Game.runPhase_pure]
+  | query_bind input next ih =>
+    rcases input with input | request
+    · rw [phase_bind, phase_world, Game.runPhase_query_bind_world]
+      simp only [bind_map_left, ih, Counts.single, Game.Counts.single,
+        hashCost, Game.hashCost]
+    · rw [phase_bind, phase_sign, Game.runPhase_query_bind_sign]
+      simp only [bind_map_left, ih, externalScheme, Counts.single, Game.Counts.single]
+
 
 /-- The experiment run against a lazily sampled random oracle. -/
 @[expose] noncomputable def run (adversary : Adversary) : ProbComp Outcome :=

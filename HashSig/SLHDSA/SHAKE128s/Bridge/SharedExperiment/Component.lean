@@ -37,7 +37,7 @@ theorem costed_eq_countAllHashes {Output α : Type} (phase : SigningView.Phase)
   have observed := congrArg (fun computation => computation.runAdd) equality
   rw [AddWriterT.runAdd_mapCostHom] at observed
   simpa [singleton, SigningView.costed, sourcePolicy, Game.countAllHashes,
-    addCostOracle, QueryImpl.ofLift_eq_id', AddWriterT.runAdd, Prod.map] using observed.symm
+    QueryImpl.ofLift_eq_id', AddWriterT.runAdd, Prod.map] using observed.symm
 
 /-- Verification and outer hash observers retain the same actual hash count on every path. -/
 theorem countAllHashes_countQueries_verification {Output α : Type}
@@ -59,7 +59,7 @@ theorem countAllHashes_countQueries_verification {Output α : Type}
     (simulateQ ((QueryImpl.id' (Game.World Output)).withAddCost
       (fun input => both (Game.hashCost input))) body).runAdd at composition
   rw [← observed] at composition
-  simpa [both, Game.countAllHashes, Game.countQueries, addCostOracle,
+  simpa [both, Game.countAllHashes, Game.countQueries, SigningView.costed,
     QueryImpl.ofLift_eq_id', AddWriterT.runAdd, Functor.map_map, Game.Counts.single,
     Prod.map] using composition
 

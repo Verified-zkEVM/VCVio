@@ -50,7 +50,8 @@ open Security
 
 /-- The experiment is key generation followed by the phase after it. -/
 theorem experiment_eq_keygen_bind (adversary : Adversary) :
-    experiment adversary = Scheme.keygen >>= afterKeygen adversary := rfl
+    experiment adversary = Scheme.keygen >>= afterKeygen adversary :=
+  Security.experiment_eq_keygen_bind adversary
 
 /-- Counting the whole experiment is the joint run with its two counts added. -/
 theorem countAllHashes_experiment (adversary : Adversary) :
@@ -63,8 +64,9 @@ theorem countAllHashes_experiment (adversary : Adversary) :
 theorem experimentBySource_eq (adversary : Adversary) :
     experimentBySource adversary =
       (fun pair => (pair.2.1, sourceCounts pair.2.1 pair.1.2 pair.2.2)) <$> joint adversary := by
-  unfold experimentBySource joint
-  simp [map_bind]
+  simp only [experimentBySource, Game.experimentBySource_eq_countAllHashes, joint,
+    countAllHashes, afterKeygen, externalScheme, map_bind, map_pure]
+  rfl
 
 /-- Running a reshaped computation in the random-oracle model reshapes its run. -/
 theorem run_map {α β : Type} (reshape : α → β) (computation : OracleComp OracleWorld α) :

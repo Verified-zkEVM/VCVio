@@ -29,6 +29,123 @@ ALLOWED_AXIOMS = {"propext", "Classical.choice", "Quot.sound"}
 # This archived digest describes a whole implementation, rather than a runtime/parser binding.
 # Its historical value stays in bindings.json; current construction claims are checked below.
 HISTORICAL_SCHEME_SOURCE = "HashSig/SLHDSA/SHAKE128s/Statement/Scheme.lean"
+# The archived Game source digest remains in bindings.json. Current readable Game
+# meaning is checked by these literal full types, freshly elaborated below. Never derive
+# these types from the current proof source: the applications freeze all 15 contracts.
+HISTORICAL_GAME_SOURCE = "HashSigTest/SLHDSA/Refactor/Semantics/Game.lean"
+READABLE_GAME_WITNESSES = r"""/-
+Copyright (c) 2026 Alexander Hicks. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Alexander Hicks
+-/
+
+module
+public import HashSigTest.SLHDSA.Refactor.Semantics.Game
+
+/-! # Complete quantified readable Game witnesses -/
+
+public section
+open OracleComp OracleSpec
+open scoped ENNReal
+open SLHDSA.SHAKE128s
+
+example : ∀ {Output : Type} (input : (Game.World Output).Domain),
+  Game.hashCost input = match input with
+      | .inl _ => 0
+      | .inr _ => 1 := SLHDSA.Refactor.Semantics.hashSelectorEquation
+
+example : ∀ {Output PK SK : Type}
+    (scheme : Game.ExternalScheme Output PK SK) (sk : SK) (request : Message)
+    (signed : Game.SigningLog),
+  ((Game.Counted.legacyRun
+      (SignatureAlg.SigningView.countedSigningOracleUsing Game.Counted.phasePolicy
+        (scheme.sign sk) request)).run).run signed =
+      scheme.sign sk request >>= fun answer =>
+        pure ((answer, Multiplicative.ofAdd (Game.Counts.single .signing 1)),
+          signed ++ [⟨request, answer⟩]) := SLHDSA.Refactor.Semantics.countedSigningEquation
+
+example : ∀ {Output PK SK : Type}
+    (scheme : Game.ExternalScheme Output PK SK) (adversary : Game.Adversary Output PK)
+    (keys : SK × PK),
+  Game.afterKeygen scheme adversary keys = (do
+      let ((forgery, adversaryCounts), signed) ←
+        Game.runPhase scheme keys.1 (adversary.main keys.2) []
+      let (verified, verifierCounts) ← Game.countQueries
+        (fun input => Game.Counts.single .verification (Game.hashCost input))
+        (scheme.verify keys.2 forgery.message forgery.signature)
+      return {
+        forgery := forgery
+        signed := signed
+        verified := verified
+        counts := adversaryCounts + verifierCounts }) := SLHDSA.Refactor.Semantics.countedAfterKeygenEquation
+
+example : ∀ (signed : Game.SigningLog) (forgery : Game.Forgery),
+  Game.Fresh signed forgery ↔
+      ¬∃ entry ∈ signed, entry.1 = forgery.message ∧ entry.2 = some forgery.signature := SLHDSA.Refactor.Semantics.countedFreshnessEquation
+
+example : ∀ (outcome : Game.Outcome),
+  Game.Wins outcome ↔ outcome.verified = true ∧
+      ¬∃ entry ∈ outcome.signed,
+        entry.1 = outcome.forgery.message ∧ entry.2 = some outcome.forgery.signature := SLHDSA.Refactor.Semantics.countedWinningEquation
+
+example : ∀ (outcome : Game.Outcome) (keygenHashes laterHashes : Nat),
+  Game.sourceCounts outcome keygenHashes laterHashes = fun kind => match kind with
+      | .sign => outcome.counts .signing
+      | .hash => outcome.counts .hash
+      | .keygen => keygenHashes
+      | .signer => laterHashes - outcome.counts .hash - outcome.counts .verification
+      | .verifier => outcome.counts .verification := SLHDSA.Refactor.Semantics.countedSourcesEquation
+
+example : ∀ {Output PK SK : Type}
+    (scheme : Game.ExternalScheme Output PK SK) (adversary : Game.Adversary Output PK),
+  Game.experimentBySource scheme adversary = (do
+      let (keys, keygenHashes) ← Game.countAllHashes scheme.keygen
+      let (outcome, laterHashes) ← Game.countAllHashes (Game.afterKeygen scheme adversary keys)
+      return (outcome, Game.sourceCounts outcome keygenHashes laterHashes)) := SLHDSA.Refactor.Semantics.countedExperimentEquation
+
+example : ∀ {Output PK SK : Type} [SampleableType Output]
+    (scheme : Game.ExternalScheme Output PK SK) (adversary : Game.Adversary Output PK),
+  Game.runBySource scheme adversary =
+      (simulateQ (RandomOracleModel.impl Bytes Output)
+        (Game.experimentBySource scheme adversary)).run' ∅ := SLHDSA.Refactor.Semantics.countedRandomOracleEquation
+
+example : ∀ {Output PK SK : Type} [SampleableType Output]
+    (scheme : Game.ExternalScheme Output PK SK) (adversary : Game.Adversary Output PK),
+  (Game.securityGame scheme).experiment () adversary =
+      (fun result => (decide (Game.Wins result.1), result.2)) <$>
+        Game.runBySource scheme adversary := SLHDSA.Refactor.Semantics.countedSecurityGameEquation
+
+example : ∀ {Scheme Kind : Type}
+    (game : SecurityGame Scheme Kind) (scheme : Scheme) (selected : Finset Kind)
+    (adversary : game.Adversary) (budget : Nat),
+  game.HasQueryBound scheme selected adversary budget ↔
+      Pr{let result ← game.experiment scheme adversary}[
+        ∑ kind ∈ selected, result.2 kind ≤ budget] = 1 := SLHDSA.Refactor.Semantics.probabilityOneBudgetEquation
+
+example : signingLimit = 2 ^ 64 := SLHDSA.Refactor.Semantics.signingLimitEquation
+
+example : ∀ {Output PK SK : Type} [SampleableType Output]
+    (scheme : Game.ExternalScheme Output PK SK) (adversary : Game.Adversary Output PK),
+  Game.WithinSigningLimit scheme adversary ↔
+      Pr{let result ← (Game.securityGame scheme).experiment () adversary}[
+        result.2 .sign ≤ 2 ^ 64] = 1 := SLHDSA.Refactor.Semantics.lifetimeEquation
+
+example : ∀ {Output PK SK : Type} [SampleableType Output]
+    (scheme : Game.ExternalScheme Output PK SK) (selected : Finset Unforgeability.QueryKind)
+    (bits : Nat),
+  Game.HasSecurityBits scheme selected bits ↔
+      ∀ budget : Nat, 1 ≤ budget → ∀ adversary : Game.Adversary Output PK,
+        Game.WithinSigningLimit scheme adversary →
+        (Game.securityGame scheme).HasQueryBound () selected adversary budget →
+        (Game.securityGame scheme).advantage () adversary ≤
+          budget / ((2 ^ bits : Nat) : ℝ≥0∞) := SLHDSA.Refactor.Semantics.bitSecurityEquation
+
+example : Game.adversaryWork = ({.sign, .hash, .verifier} : Finset Unforgeability.QueryKind) := SLHDSA.Refactor.Semantics.selectedWorkEquation
+
+example : ∀ (counts : Game.Counts),
+  counts.work = counts .hash + counts .verification := SLHDSA.Refactor.Semantics.hashWorkEquation
+"""
+
 WOTS_RUNTIME = "slhdsa_wots_integration_tests"
 WOTS_TARGET = {"root": "SLHDSAWotsIntegrationTests", "srcDir": "scripts"}
 WOTS_JOINT_MODULE = "HashSigTest.SLHDSA.Refactor.WotsIntegration"
@@ -142,6 +259,50 @@ WIRE_BRIDGE_SIGNING_PROOF = r"""theorem executableRejectedSign_eq (sk : SecretKe
     cases framed
 """
 
+# The counted-game fixture retains its original whole-file digest. Only the exact
+# two shared-program wrapper bodies below may be normalized to their original bodies.
+SUPPORT_SOURCE = "HashSigTest/SLHDSA/SHAKE128s/Support.lean"
+SUPPORT_WRAPPERS = (
+    (r"""@[expose] def executableAfterKeygen (scheme : ExternalScheme Output PK SK)
+    (adversary : Adversary Output PK) (keys : SK × PK) :
+    OracleComp (World Output) Outcome := do
+  let (sk, pk) := keys
+  let ((forgery, adversaryCounts), signed) ←
+    (simulateQ
+      ((QueryImpl.ofLift (World Output)
+          (StateT SigningLog (OracleComp (World Output)))).withAddCost
+          (fun input => Counts.single .hash (hashCost input)) + signingOracle scheme sk)
+      (adversary.main pk)).run.run []
+  let (verified, verifierCounts) ← countQueries
+    (fun input => Counts.single .verification (hashCost input))
+    (scheme.verify pk forgery.message forgery.signature)
+  return {
+    forgery := forgery
+    signed := signed
+    verified := verified
+    counts := Multiplicative.toAdd adversaryCounts + verifierCounts }
+
+""", r"""@[expose] def executableAfterKeygen (scheme : ExternalScheme Output PK SK)
+    (adversary : Adversary Output PK) (keys : SK × PK) :
+    OracleComp (World Output) Outcome :=
+  Counted.legacyOutcome <$> Counted.canonicalAfterKeygen scheme adversary keys
+
+"""),
+    (r"""@[expose] def executableExperimentBySource (scheme : ExternalScheme Output PK SK)
+    (adversary : Adversary Output PK) :
+    OracleComp (World Output) (Outcome × Unforgeability.QueryCounts) := do
+  let (keys, keygenHashes) ← countAllHashes scheme.keygen
+  let (outcome, laterHashes) ← countAllHashes (executableAfterKeygen scheme adversary keys)
+  return (outcome, sourceCounts outcome keygenHashes laterHashes)
+
+""", r"""@[expose] def executableExperimentBySource (scheme : ExternalScheme Output PK SK)
+    (adversary : Adversary Output PK) :
+    OracleComp (World Output) (Outcome × Unforgeability.QueryCounts) :=
+  Counted.legacyObservation <$> Counted.canonicalExperiment scheme adversary
+
+"""),
+)
+
 spec = importlib.util.spec_from_file_location("slh_dsa_r0a", ROOT / "scripts/check-slh-dsa-r0.py")
 if spec is None or spec.loader is None:
     raise RuntimeError("The original R0a verifier is unavailable")
@@ -224,6 +385,16 @@ def check_bindings(bindings: dict) -> list[str]:
         wire_source = wire_source.replace(public_equation_proof, original_proof, 1)
     if r0a.sha256(wire_source) != bindings["runtimeSourceSha256"][WIRE_BRIDGE_SOURCE]:
         raise ValueError(f"Frozen runtimeSourceSha256 binding changed: {WIRE_BRIDGE_SOURCE}")
+    support_source = (ROOT / SUPPORT_SOURCE).read_bytes()
+    wrappers = [(old.encode(), new.encode()) for old, new in SUPPORT_WRAPPERS]
+    if all(support_source.count(new) == 1 for _, new in wrappers):
+        for old, new in wrappers:
+            support_source = support_source.replace(new, old, 1)
+    if r0a.sha256(support_source) != bindings["runtimeSourceSha256"][SUPPORT_SOURCE]:
+        raise ValueError(f"Frozen runtimeSourceSha256 binding changed: {SUPPORT_SOURCE}")
+    bindings = {**bindings, "runtimeSourceSha256": {
+        path: digest for path, digest in bindings["runtimeSourceSha256"].items()
+        if path != SUPPORT_SOURCE}}
     # Preserve every archived binding on disk; only whole Construction proof identity
     # is superseded by the literal quantified applications executed below.
     bindings = {**bindings, "semanticSourceSha256": {
@@ -234,6 +405,8 @@ def check_bindings(bindings: dict) -> list[str]:
     for field in ("r0aProtectedFiles", "semanticSourceSha256", "runtimeSourceSha256"):
         for relative, digest in bindings[field].items():
             if field == "runtimeSourceSha256" and relative == HISTORICAL_SCHEME_SOURCE:
+                continue
+            if field == "semanticSourceSha256" and relative == HISTORICAL_GAME_SOURCE:
                 continue
             if r0a.sha256((ROOT / relative).read_bytes()) != digest:
                 raise ValueError(f"Frozen {field} binding changed: {relative}")
@@ -320,6 +493,11 @@ def verify(report: Path, steps: list[dict]) -> dict:
     for index, module in enumerate(LEAVES):
         execute(["lake", "env", "lean", "-DautoImplicit=false",
                  module.replace(".", "/") + ".lean"], report / f"semantic-{index}.log", steps)
+    # These are literal full-type applications, not a source/name/axiom-only check.
+    game_witnesses = report / "ReadableGameWitnesses.lean"
+    game_witnesses.write_text(READABLE_GAME_WITNESSES)
+    execute(["lake", "env", "lean", "-DautoImplicit=false", str(game_witnesses)],
+            report / "readable-game-witnesses.log", steps)
     # Literal JSON reads are not Lake dependencies: elaborate each family freshly.
     for index, module in enumerate(contract_spec["witnessModules"]):
         execute(["lake", "env", "lean", "-DautoImplicit=false",
@@ -346,6 +524,7 @@ def verify(report: Path, steps: list[dict]) -> dict:
         raise ValueError("Source or dependencies changed during the readable-contract gate")
     return {"accepted": True, "semanticGroups": 11, "publicEquations": len(names),
             "freshStrengthContracts": len(contracts), "standardAxiomClaims": len(axiom_names),
+            "freshReadableGameContracts": 15,
             "wotsJointClaims": WOTS_JOINT_NAMES,
             "requiredRuntimeBindings": sorted(RUNTIMES | {WOTS_RUNTIME}),
             "runtimeScope": "Bindings only here; preceding ordinary lake-test steps execute once",
@@ -362,6 +541,11 @@ def verify(report: Path, steps: list[dict]) -> dict:
             "retiredRuntimeSourceIdentity": {
                 "path": HISTORICAL_SCHEME_SOURCE,
                 "recordedSha256": bindings["runtimeSourceSha256"][HISTORICAL_SCHEME_SOURCE]},
+            "retiredSemanticSourceIdentity": {
+                "path": HISTORICAL_GAME_SOURCE,
+                "recordedSha256": bindings["semanticSourceSha256"][HISTORICAL_GAME_SOURCE],
+                "observedSha256": r0a.sha256((ROOT / HISTORICAL_GAME_SOURCE).read_bytes()),
+                "currentCheck": "15 fresh literal full-type readable Game applications"},
             "scope": "Current quantified strength, readable and WOTS joint operational contracts; "
                      "no historical private-body identity or future-family recovery claim"}
 

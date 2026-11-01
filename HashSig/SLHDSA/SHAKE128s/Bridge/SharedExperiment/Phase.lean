@@ -33,13 +33,14 @@ private theorem countAllHashes_bind_exact {Output α β : Type}
       let first ← Game.countAllHashes body
       let last ← Game.countAllHashes (next first.1)
       return (last.1, first.2 + last.2)) := by
-  simp [Game.countAllHashes, WriterT.run_bind, bind_map_left, Functor.map_map]
+  simp [Game.countAllHashes, SigningView.costed]
+  rfl
 
 private theorem countAllHashes_query {Output : Type} (input : (Game.World Output).Domain) :
     Game.countAllHashes (query input : OracleComp (Game.World Output) _) =
       (fun answer => (answer, Game.hashCost input)) <$>
         (query input : OracleComp (Game.World Output) _) := by
-  simp [Game.countAllHashes, addCostOracle, QueryImpl.withAddCost_apply]
+  simp [Game.countAllHashes, SigningView.costed, QueryImpl.withAddCost_apply]
 
 private theorem phaseCounts_add (left right : SourceCounts) :
     phaseCounts (left + right) =
@@ -60,7 +61,8 @@ private theorem countedPhase_world {Output PK SK : Type}
       (liftM ((Game.World Output + Game.SigningSpec).query (.inl input)))).runAdd =
       (fun answer => ((answer, []), Pi.single .hash (Game.hashCost input))) <$>
         (query input : OracleComp (Game.World Output) _) := by
-  simp [SigningView.countedPhase, SigningView.countedHandler, sourcePolicy,
+  simp [SigningView.countedPhase, SigningView.countedPhaseUsing,
+    SigningView.countedHandlerUsing, sourcePolicy,
     sourceKind, QueryImpl.withAddCost_apply]
 
 private theorem countedPhase_sign {Output PK SK : Type}
@@ -76,16 +78,6 @@ private theorem countedPhase_sign {Output PK SK : Type}
     sourcePolicy]
   rw [costed_eq_countAllHashes .signer]
   simp [sourceKind]
-
-private theorem phaseCounts_single (kind : Unforgeability.QueryKind) (amount : Nat) :
-    phaseCounts (Pi.single kind amount) =
-      match kind with
-      | .sign => Game.Counts.single .signing amount
-      | .hash => Game.Counts.single .hash amount
-      | .verifier => Game.Counts.single .verification amount
-      | .keygen | .signer => 0 := by
-  cases kind <;> funext index <;> cases index <;>
-    simp [phaseCounts, Game.Counts.single]
 
 private theorem laterHashes_single (kind : Unforgeability.QueryKind) (amount : Nat) :
     laterHashes (Pi.single kind amount) =
@@ -109,6 +101,7 @@ theorem countAllHashes_runPhase {Output PK SK α : Type}
         funext index
         cases index <;> rfl
       simp [Game.runPhase_pure, countAllHashes_pure, SigningView.countedPhase,
+        SigningView.countedPhaseUsing,
         laterHashes, zeroCounts]
   | query_bind input next ih =>
       cases input with
@@ -125,7 +118,7 @@ theorem countAllHashes_runPhase {Output PK SK α : Type}
           intro first
           apply bind_congr
           intro last
-          simp [phaseCounts_add, laterHashes_add, phaseCounts_single, laterHashes_single]
+          simp [phaseCounts_add, laterHashes_add, laterHashes_single]
       | inr request =>
           rw [Game.runPhase_query_bind_sign]
           simp only [countAllHashes_bind_exact, countAllHashes_pure, pure_bind]
@@ -138,7 +131,7 @@ theorem countAllHashes_runPhase {Output PK SK α : Type}
           intro first
           apply bind_congr
           intro last
-          simp [phaseCounts_add, laterHashes_add, phaseCounts_single, laterHashes_single,
+          simp [phaseCounts_add, laterHashes_add, laterHashes_single,
             List.append_assoc]
 
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment

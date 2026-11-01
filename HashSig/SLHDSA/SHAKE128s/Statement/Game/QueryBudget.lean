@@ -7,6 +7,7 @@ Authors: Alexander Hicks
 module
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game
 public import VCVio.CryptoFoundations.SignatureAlg.RomQueryCount
+public import VCVio.OracleComp.QueryTracking.WriterCost.Map
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 
 /-!
@@ -18,30 +19,94 @@ queries remain beneath those counters, and every returned signing answer extends
 
 public section
 
-open OracleComp OracleSpec
+open OracleComp OracleSpec SignatureAlg
 
 namespace SLHDSA.SHAKE128s.Game
 
+namespace Projection
+
+open Counted
+
+
+/-- Projection to the three client counters preserves additive accumulation. -/
+def phaseCountsHom : SourceCounts →+ Counts where
+  toFun := phaseCounts
+  map_zero' := by funext kind; cases kind <;> rfl
+  map_add' left right := by funext kind; cases kind <;> rfl
+
+/-- Projection commutes with the complete shared component observer. -/
+theorem costed_map {Output α : Type} (phase : SigningView.Phase)
+    (body : OracleComp (World Output) α) :
+    AddWriterT.mapCostHom phaseCountsHom (SigningView.costed sourcePolicy phase body) =
+      SigningView.costed phasePolicy phase body := by
+  exact QueryImpl.mapCostHom_simulateQ_withAddCost phaseCountsHom
+    (QueryImpl.id' (World Output)) (fun input => sourcePolicy (.ambient phase input)) body
+
+/-- The declared phase projection retains the complete chronological reply log. -/
+def phaseMorphism {Output : Type} :
+    SigningView.LoggedCostM (World Output) Message (Option Bytes) SourceCounts →ᵐ
+      SigningView.LoggedCostM (World Output) Message (Option Bytes) Counts :=
+  WriterT.mapBaseAppendHom (AddWriterT.mapCostHom phaseCountsHom)
+
+/-- Projection retains each direct query and each actual signing reply. -/
+theorem handler_map {Output : Type}
+    (signer : Message → OracleComp (World Output) (Option Bytes))
+    (input : (World Output + SigningSpec).Domain) :
+    phaseMorphism (SigningView.countedHandlerUsing sourcePolicy signer input) =
+      SigningView.countedHandlerUsing phasePolicy signer input := by
+  cases input with
+  | inl input =>
+    apply WriterT.ext
+    simp [phaseMorphism, SigningView.countedHandlerUsing, AddWriterT.mapCostHom,
+      WriterT.mapOutputHom, QueryImpl.withAddCost_apply, phaseCountsHom, phasePolicy,
+      Functor.map_map]
+    rfl
+  | inr request =>
+    apply WriterT.ext
+    simp only [phaseMorphism, SigningView.countedHandlerUsing, QueryImpl.add_apply_inr,
+      WriterT.run_mapBaseAppendHom, SigningView.countedSigningOracleUsing_run,
+      MonadHom.mmap_bind, MonadHom.mmap_pure, costed_map]
+    congr 1
+
+/-- The complete client phase projects its cost while retaining the actual result and reply log. -/
+theorem phase_map {Output α : Type}
+    (signer : Message → OracleComp (World Output) (Option Bytes))
+    (body : OracleComp (World Output + SigningSpec) α) :
+    AddWriterT.mapCostHom phaseCountsHom
+      (SigningView.countedPhaseUsing sourcePolicy signer body) =
+        SigningView.countedPhaseUsing phasePolicy signer body := by
+  have equality : phaseMorphism
+      (simulateQ (SigningView.countedHandlerUsing sourcePolicy signer) body) =
+        simulateQ (SigningView.countedHandlerUsing phasePolicy signer) body := by
+    calc
+      _ = simulateQ (fun input => phaseMorphism
+          (SigningView.countedHandlerUsing sourcePolicy signer input)) body :=
+        PFunctor.FreeM.liftM_natural _ (phaseMorphism (Output := Output)) body
+      _ = _ := by simp only [handler_map]
+  have observed := congrArg (fun program => program.run) equality
+  simpa only [phaseMorphism, WriterT.run_mapBaseAppendHom,
+    SigningView.countedPhaseUsing] using observed
+
+/-- The same cost projection commutes with the whole client-and-verifier suffix. -/
+theorem suffix_map {Output PK SK : Type}
+    (view : SigningView (OracleComp (World Output)) Message PK SK Bytes (Option Bytes))
+    (pk : PK) (sk : SK)
+    (main : PK → OracleComp (World Output + SigningSpec) (Message × Bytes)) :
+    AddWriterT.mapCostHom phaseCountsHom
+      (SigningView.countedAfterKeygen sourcePolicy view pk sk main) =
+        SigningView.countedAfterKeygen phasePolicy view pk sk main := by
+  simp only [SigningView.countedAfterKeygen, MonadHom.mmap_bind, MonadHom.mmap_pure,
+    SigningView.countedPhase, phase_map, costed_map]
+
+end Projection
+
 variable {Output PK SK α β : Type}
-
-/-- The actual counted handler of the adversary phase. -/
-@[expose] def phaseHandler (scheme : ExternalScheme Output PK SK) (sk : SK) :
-    QueryImpl (World Output + SigningSpec) (CountedRun Output) :=
-  (QueryImpl.ofLift (World Output)
-    (StateT SigningLog (OracleComp (World Output)))).withAddCost
-      (fun input => Counts.single .hash (hashCost input)) + signingOracle scheme sk
-
-/-- Run an adversary program with its actual additive phase counters and an initial log. -/
-@[expose] def runPhase (scheme : ExternalScheme Output PK SK) (sk : SK)
-    (program : OracleComp (World Output + SigningSpec) α) (signed : SigningLog) :
-    OracleComp (World Output) ((α × Counts) × SigningLog) :=
-  (simulateQ (phaseHandler scheme sk) program).runAdd.run signed
 
 /-- A pure adversary result adds no count and retains the complete signing prefix. -/
 @[simp] theorem runPhase_pure (scheme : ExternalScheme Output PK SK) (sk : SK)
     (x : α) (signed : SigningLog) :
     runPhase scheme sk (pure x) signed = pure ((x, 0), signed) := by
-  simp [runPhase]
+  simp [runPhase, Counted.runPhase, SignatureAlg.SigningView.countedPhaseUsing]
 
 /-- Sequencing adds the actual phase counters and threads the complete signing log. -/
 theorem runPhase_bind (scheme : ExternalScheme Output PK SK) (sk : SK)
@@ -51,7 +116,8 @@ theorem runPhase_bind (scheme : ExternalScheme Output PK SK) (sk : SK)
       let ((x, firstCounts), intermediate) ← runPhase scheme sk program signed
       let ((y, lastCounts), finalLog) ← runPhase scheme sk (next x) intermediate
       return ((y, firstCounts + lastCounts), finalLog) := by
-  simp [runPhase, AddWriterT.runAdd_bind, StateT.run_bind, Prod.map]
+  simp [runPhase, Counted.runPhase, SignatureAlg.SigningView.countedPhaseUsing_bind,
+    AddWriterT.runAdd_bind, Prod.map, List.append_assoc]
 
 /-- An ambient call leaves the signing log intact and charges only its direct hash cost. -/
 theorem runPhase_query_world (scheme : ExternalScheme Output PK SK) (sk : SK)
@@ -59,20 +125,9 @@ theorem runPhase_query_world (scheme : ExternalScheme Output PK SK) (sk : SK)
     runPhase scheme sk (liftM ((World Output + SigningSpec).query (Sum.inl input))) signed =
       (fun answer => ((answer, Counts.single .hash (hashCost input)), signed)) <$>
         (query input : OracleComp (World Output) _) := by
-  simp [runPhase, phaseHandler, QueryImpl.withAddCost_apply, QueryImpl.ofLift_apply,
-    AddWriterT.runAdd_bind, AddWriterT.runAdd_liftM]
-
-private theorem run_lift_world (computation : OracleComp (World Output) α)
-    (signed : SigningLog) :
-    ((liftM computation : CountedRun Output α).run).run signed =
-      (fun x => ((x, (1 : Multiplicative Counts)), signed)) <$> computation := by
-  change ((computation >>= fun x => pure (x, signed)) >>= fun p =>
-    pure ((p.1, (1 : Multiplicative Counts)), p.2)) = _
-  simp
-
-private theorem run_modifyGet (f : SigningLog → α × SigningLog) (signed : SigningLog) :
-    ((modifyGet f : CountedRun Output α).run).run signed =
-      pure (((f signed).1, (1 : Multiplicative Counts)), (f signed).2) := rfl
+  simp [runPhase, Counted.runPhase, SignatureAlg.SigningView.countedPhaseUsing,
+    SignatureAlg.SigningView.countedHandlerUsing, Counted.phasePolicy,
+    Counted.sourcePolicy, Counted.sourceKind, QueryImpl.withAddCost_apply, Counts.single]
 
 /-- Every completed signing call charges one request and appends its answer, including `none`. -/
 theorem runPhase_query_sign (scheme : ExternalScheme Output PK SK) (sk : SK)
@@ -80,8 +135,10 @@ theorem runPhase_query_sign (scheme : ExternalScheme Output PK SK) (sk : SK)
     runPhase scheme sk (liftM ((World Output + SigningSpec).query (Sum.inr request))) signed =
       (fun answer => ((answer, Counts.single .signing 1), signed ++ [⟨request, answer⟩])) <$>
         scheme.sign sk request := by
-  simp [runPhase, phaseHandler, signingOracle, AddWriterT.runAdd, modify, Prod.map,
-    run_lift_world, run_modifyGet]
+  unfold runPhase
+  rw [SigningView.countedPhaseUsing_signingQuery]
+  simp [Counted.costed_phasePolicy_signer, Counted.phasePolicy, Counted.sourcePolicy,
+    AddWriterT.runAdd_bind, Prod.map]
 
 /-- Forwarding an ambient call before its continuation adds precisely its direct hash charge. -/
 theorem runPhase_query_bind_world (scheme : ExternalScheme Output PK SK) (sk : SK)
@@ -181,6 +238,7 @@ theorem runPhase_bounds (scheme : ExternalScheme Output PK SK) (sk : SK)
         · simpa [List.append_assoc] using hlog
         · simp [Counts.single, hlength, Nat.add_comm]
 
+open Counted Projection in
 /-- The actual game phase observes additive counters before adding final verification work. -/
 theorem afterKeygen_eq_runPhase (scheme : ExternalScheme Output PK SK)
     (adversary : Adversary Output PK) (keys : SK × PK) :
@@ -195,8 +253,29 @@ theorem afterKeygen_eq_runPhase (scheme : ExternalScheme Output PK SK)
         signed := signed
         verified := verified
         counts := adversaryCounts + verifierCounts } := by
-  rcases keys with ⟨sk, pk⟩
-  simp [afterKeygen, runPhase, phaseHandler, AddWriterT.runAdd, Prod.map]
+  let view := externalView scheme
+  let main := externalMain adversary
+  let observe : SigningView.Outcome Message Bytes (Option Bytes) × Counts → Outcome :=
+    fun result => {
+      forgery := ⟨result.1.forgery.1, result.1.forgery.2⟩
+      signed := result.1.rawLog
+      verified := result.1.verified
+      counts := result.2 }
+  calc
+    _ = observe <$> (AddWriterT.mapCostHom phaseCountsHom
+        (SigningView.countedAfterKeygen sourcePolicy view keys.2 keys.1 main)).runAdd := by
+      simp [afterKeygen, canonicalAfterKeygen, legacyOutcome, observe, view, main,
+        AddWriterT.runAdd_mapCostHom, phaseCountsHom, Functor.map_map]
+    _ = observe <$>
+        (SigningView.countedAfterKeygen phasePolicy view keys.2 keys.1 main).runAdd := by
+      rw [suffix_map]
+    _ = _ := by
+      simp [observe, view, main, SigningView.countedAfterKeygen, externalView, externalMain,
+        SigningView.countedPhase, SigningView.countedPhaseUsing, runPhase, Counted.runPhase,
+        simulateQ_map, AddWriterT.runAdd_bind,
+        countQueries, SigningView.costed, phasePolicy, sourcePolicy, sourceKind,
+        Functor.map_map, Prod.map]
+
 
 /-- The same actual phase bounds hold from every initial random-oracle cache. -/
 theorem runPhase_bounds_cached [SampleableType Output]

@@ -6,7 +6,6 @@ Authors: Alexander Hicks
 
 module
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Phase
-import HashSig.SLHDSA.SHAKE128s.Bridge.Transfer
 import VCVio.OracleComp.Support
 
 /-!
@@ -23,6 +22,13 @@ open OracleComp OracleSpec SignatureAlg
 
 namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment
 
+private theorem countAllHashes_map {Output α β : Type} (f : α → β)
+    (body : OracleComp (Game.World Output) α) :
+    Game.countAllHashes (f <$> body) =
+      (fun result => (f result.1, result.2)) <$> Game.countAllHashes body := by
+  simp [Game.countAllHashes, SigningView.costed, simulateQ_map, AddWriterT.runAdd_map]
+  rfl
+
 private theorem countedPhase_world {Output PK SK : Type}
     (scheme : Game.ExternalScheme Output PK SK) (pk : PK) (sk : SK)
     (input : (Game.World Output).Domain) :
@@ -30,7 +36,8 @@ private theorem countedPhase_world {Output PK SK : Type}
       (liftM ((Game.World Output + Game.SigningSpec).query (.inl input)))).runAdd =
       (fun answer => ((answer, []), Pi.single .hash (Game.hashCost input))) <$>
         (query input : OracleComp (Game.World Output) _) := by
-  simp [SigningView.countedPhase, SigningView.countedHandler, sourcePolicy,
+  simp [SigningView.countedPhase, SigningView.countedPhaseUsing,
+    SigningView.countedHandlerUsing, sourcePolicy,
     sourceKind, QueryImpl.withAddCost_apply]
 
 private theorem countedPhase_sign {Output PK SK : Type}
@@ -89,7 +96,7 @@ private theorem countedPhase_unused {Output PK SK α : Type}
   induction body using OracleComp.inductionOn generalizing result with
   | pure value =>
       have equal : result = ((value, []), 0) := by
-        simpa [SigningView.countedPhase] using reachable
+        simpa [SigningView.countedPhase, SigningView.countedPhaseUsing] using reachable
       subst result
       exact ⟨rfl, rfl⟩
   | query_bind input next ih =>
@@ -119,7 +126,8 @@ private theorem count_bind {Output α β : Type} (body : OracleComp (Game.World 
       let first ← Game.countAllHashes body
       let last ← Game.countAllHashes (next first.1)
       return (last.1, first.2 + last.2)) := by
-  simp [Game.countAllHashes, WriterT.run_bind, bind_map_left, Functor.map_map]
+  simp [Game.countAllHashes, SigningView.costed]
+  rfl
 
 private theorem countedPhase_map {Output PK SK α β : Type}
     (scheme : Game.ExternalScheme Output PK SK) (pk : PK) (sk : SK) (f : α → β)
@@ -127,7 +135,8 @@ private theorem countedPhase_map {Output PK SK α β : Type}
     (SigningView.countedPhase sourcePolicy (externalView scheme) pk sk (f <$> body)).runAdd =
       (fun result => ((f result.1.1, result.1.2), result.2)) <$>
         (SigningView.countedPhase sourcePolicy (externalView scheme) pk sk body).runAdd := by
-  simp only [SigningView.countedPhase, simulateQ_map, WriterT.run_map',
+  simp only [SigningView.countedPhase, SigningView.countedPhaseUsing, simulateQ_map,
+    WriterT.run_map',
     AddWriterT.runAdd_map]
   rfl
 
@@ -159,10 +168,11 @@ theorem recordedProgram {Output PK SK : Type} (scheme : Game.ExternalScheme Outp
   have phaseEq (sk : SK) (pk : PK) :=
     countAllHashes_runPhase scheme pk sk (adversary.main pk) []
   simp only [canonicalExperiment, legacyOutcome]
-  simp only [SigningView.countedExperiment, AddWriterT.runAdd_bind, AddWriterT.runAdd_pure,
+  simp only [SigningView.countedExperiment, SigningView.countedAfterKeygen,
+    AddWriterT.runAdd_bind, AddWriterT.runAdd_pure,
     externalMain]
   simp only [keygenEq, verifyEq, costed_eq_countAllHashes, sourceKind,
-    Bridge.countAllHashes_map, countedPhase_map]
+    countAllHashes_map, countedPhase_map]
   simp only [map_bind, bind_map_left, Functor.map_map, map_pure]
   simp_rw [Game.afterKeygen_eq_runPhase, count_bind, count_pure]
   simp_rw [phaseEq, countAllHashes_countQueries_verification]
@@ -179,3 +189,23 @@ theorem recordedProgram {Output PK SK : Type} (scheme : Game.ExternalScheme Outp
   simp [counts_total, later_total, unused.1]
 
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment
+
+namespace SLHDSA.SHAKE128s.Game
+
+/-- The complete counted owner admits the component-counted source observation presentation. -/
+theorem experimentBySource_eq_countAllHashes {Output PK SK : Type}
+    (scheme : ExternalScheme Output PK SK) (adversary : Adversary Output PK) :
+    experimentBySource scheme adversary = (do
+      let (keys, keygenHashes) ← countAllHashes scheme.keygen
+      let (outcome, laterCount) ← countAllHashes (afterKeygen scheme adversary keys)
+      return (outcome, sourceCounts outcome keygenHashes laterCount)) := by
+  let project : Outcome × Nat × Nat → Outcome × Unforgeability.QueryCounts :=
+    fun result => (result.1, sourceCounts result.1 result.2.1 result.2.2)
+  have equality := congrArg (fun program => project <$> program)
+    (Bridge.SharedExperiment.recordedProgram scheme adversary)
+  change (fun observed => (Counted.legacyOutcome observed,
+    sourceCounts (Counted.legacyOutcome observed) (observed.cost .keygen)
+      (Counted.laterHashes observed.cost))) <$> Counted.canonicalExperiment scheme adversary = _
+  simpa [project, map_bind, Functor.map_map] using equality.symm
+
+end SLHDSA.SHAKE128s.Game

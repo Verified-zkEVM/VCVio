@@ -33,17 +33,8 @@ open scoped Classical in
 
 private theorem reconstruct
     (observed : SigningView.Observation Message Bytes (Option Bytes) SourceCounts) :
-    (legacyObservation observed).2 = observed.cost := by
-  funext kind
-  cases kind with
-  | sign => rfl
-  | hash => rfl
-  | keygen => rfl
-  | verifier => rfl
-  | signer =>
-      change observed.cost .hash + observed.cost .signer + observed.cost .verifier -
-        observed.cost .hash - observed.cost .verifier = observed.cost .signer
-      omega
+    (legacyObservation observed).2 = observed.cost :=
+  Game.Counted.legacyObservation_counts observed
 
 private theorem winning
     (observed : SigningView.Observation Message Bytes (Option Bytes) SourceCounts) :

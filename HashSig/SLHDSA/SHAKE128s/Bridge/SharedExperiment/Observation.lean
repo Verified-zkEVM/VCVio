@@ -5,7 +5,7 @@ Authors: Alexander Hicks
 -/
 
 module
-public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Recorded
+public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Defs
 
 /-!
 # Complete source observations under one cached interpretation
@@ -26,13 +26,7 @@ namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment
 theorem fullProgram {Output PK SK : Type} (scheme : Game.ExternalScheme Output PK SK)
     (adversary : Game.Adversary Output PK) :
     Game.experimentBySource scheme adversary =
-      legacyObservation <$> canonicalExperiment scheme adversary := by
-  unfold legacyObservation
-  let project : Game.Outcome × Nat × Nat → Game.Outcome × SourceCounts :=
-    fun result => (result.1, Game.sourceCounts result.1 result.2.1 result.2.2)
-  have equality := congrArg (fun program => project <$> program)
-    (recordedProgram scheme adversary)
-  simpa [Game.experimentBySource, project, map_bind, Functor.map_map] using equality
+      legacyObservation <$> canonicalExperiment scheme adversary := rfl
 
 /-- The same cached handler and continuation observe the full same result and final cache. -/
 theorem sharedContinuation {Output PK SK Cache β : Type} {m : Type → Type v}

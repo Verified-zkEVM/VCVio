@@ -6,6 +6,7 @@ Authors: Alexander Hicks
 
 module
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Joint
+public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Component
 public import HashSig.SLHDSA.SHAKE128s.Statement.FIPS205
 public import HashSig.SLHDSA.SHAKE128s.Bridge.PaperGame
 import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.StrongUnforgeability

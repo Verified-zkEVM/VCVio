@@ -32,8 +32,7 @@ open Security GrowthCharge
 
 /-- A pure computation makes no hash queries. -/
 @[simp] theorem countAllHashes_pure {α : Type} (value : α) :
-    countAllHashes (pure value : OracleComp OracleWorld α) = pure (value, 0) := by
-  simp [countAllHashes]
+    countAllHashes (pure value : OracleComp OracleWorld α) = pure (value, 0) := rfl
 
 /-- A query followed by a continuation is charged its `hashCost` on top of the continuation's
 count. -/
@@ -43,9 +42,9 @@ theorem countAllHashes_query_bind {α : Type} (queried : OracleWorld.Domain)
       liftM (OracleWorld.query queried) >>= fun answer =>
         (fun result => (result.1, hashCost queried + result.2)) <$>
           countAllHashes (next answer) := by
-  simp only [countAllHashes, simulateQ_bind, simulateQ_spec_query, addCostOracle,
-    QueryImpl.withAddCost, QueryImpl.withCost]
-  simp [Functor.map_map, map_bind, bind_map_left]
+  simp [countAllHashes, Game.countAllHashes, SignatureAlg.SigningView.costed_bind,
+    SignatureAlg.SigningView.costed_query, AddWriterT.runAdd_bind,
+    map_eq_bind_pure_comp, bind_assoc, Prod.map, hashCost, Game.hashCost]
 
 /-- A single query is charged exactly its `hashCost`. -/
 theorem countAllHashes_query (queried : OracleWorld.Domain) :

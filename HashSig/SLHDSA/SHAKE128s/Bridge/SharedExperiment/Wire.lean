@@ -110,16 +110,17 @@ private theorem countedHandler_attach {C : Type} [AddMonoid C]
   | inl input =>
       rw [Bridge.fixedContextHandler_world, simulateQ_spec_query]
       ext
-      simp [SigningView.countedHandler,
+      simp [SigningView.countedHandler, SigningView.countedHandlerUsing,
         QueryImpl.withAddCost_apply, attachLog, contextPolicy, Bridge.fixedContextLog,
         WriterT.liftM_def, Functor.map_map]
   | inr message =>
       rw [Bridge.fixedContextHandler_sign, simulateQ_map, simulateQ_spec_query]
-      simp only [SigningView.countedHandler, QueryImpl.add_apply_inr]
+      simp only [SigningView.countedHandler, SigningView.countedHandlerUsing,
+        QueryImpl.add_apply_inr]
       ext
-      simp only [WriterT.run_map, SigningView.countedSigningOracle_run]
+      simp only [WriterT.run_map, SigningView.countedSigningOracleUsing_run]
       rw [wire_sign_eq_externalView_of_generated ctx keys generated message]
-      simp [attachLog, SigningView.countedSigningOracle_run, SigningView.ofTotal,
+      simp [attachLog, SigningView.countedSigningOracleUsing_run, SigningView.ofTotal,
         SigningView.costed, contextPolicy, Bridge.fixedContextLog, simulateQ_map,
         Functor.map_map]
 
@@ -149,7 +150,8 @@ private theorem countedPhase_wire_eq_externalView :
     (attachLog ctx) body
   have raw := interpreted.trans natural.symm
   have result := congrArg (fun computation => computation.run.runAdd) raw
-  simpa only [SigningView.countedPhase, attachLog, AddWriterT.runAdd,
+  simpa only [SigningView.countedPhase, SigningView.countedPhaseUsing,
+    SigningView.countedHandler, attachLog, AddWriterT.runAdd,
     WriterT.run_mk, WriterT.run_map, Functor.map_map, Prod.map, simulateQ, id_eq] using result
 
 private theorem generated_key_support {ι Request C K : Type} {spec : OracleSpec ι} [AddMonoid C]
@@ -168,7 +170,7 @@ private theorem countedPhase_map {ι C Request PK SK Sig Reply α β : Type}
     SigningView.countedPhase policy view pk sk (f <$> body) =
       (fun result => (f result.1, result.2)) <$>
         SigningView.countedPhase policy view pk sk body := by
-  unfold SigningView.countedPhase
+  unfold SigningView.countedPhase SigningView.countedPhaseUsing
   rw [simulateQ_map]
   rfl
 
@@ -210,7 +212,7 @@ theorem countedExperiment_wire_eq_externalView :
           (Prod.map Bridge.encodeWirePublicKey id <$>
             (externalView FIPS205.scheme).keygen) := transported
       _ = _ := simulateQ_map _ _ _
-  unfold SigningView.countedExperiment
+  unfold SigningView.countedExperiment SigningView.countedAfterKeygen
   rw [keygen]
   generalize commonEq :
     SigningView.costed policy .keygen (externalView FIPS205.scheme).keygen = common

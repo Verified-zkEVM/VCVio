@@ -5,7 +5,8 @@ Authors: Alexander Hicks
 -/
 
 module
-public import HashSig.SLHDSA.SHAKE128s.Statement.Game
+public import HashSig.SLHDSA.SHAKE128s.Statement.Game.QueryBudget
+public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Recorded
 
 /-!
 # Counted experiment and probability-one resource equations
@@ -29,37 +30,34 @@ theorem hashSelectorEquation {Output : Type} (input : (Game.World Output).Domain
       | .inr _ => 1 := by
   cases input <;> rfl
 
-/-- Every request costs one signing call and appends its exact optional reply. -/
+/-- Every request costs one signing call and appends its exact optional reply to every prefix. -/
 theorem countedSigningEquation {Output PK SK : Type}
-    (scheme : Game.ExternalScheme Output PK SK) (sk : SK) (request : Message) :
-    Game.signingOracle scheme sk request = (do
-      AddWriterT.addTell (Game.Counts.single .signing 1)
-      let answer ← liftM (scheme.sign sk request : OracleComp (Game.World Output) (Option Bytes))
-      liftM (modify (fun signed => signed ++ [⟨request, answer⟩]) :
-        StateT Game.SigningLog (OracleComp (Game.World Output)) Unit)
-      return answer) := rfl
+    (scheme : Game.ExternalScheme Output PK SK) (sk : SK) (request : Message)
+    (signed : Game.SigningLog) :
+    ((Game.Counted.legacyRun
+      (SignatureAlg.SigningView.countedSigningOracleUsing Game.Counted.phasePolicy
+        (scheme.sign sk) request)).run).run signed =
+      scheme.sign sk request >>= fun answer =>
+        pure ((answer, Multiplicative.ofAdd (Game.Counts.single .signing 1)),
+          signed ++ [⟨request, answer⟩]) :=
+  Game.Counted.legacyRun_signing_run (scheme.sign sk) request signed
 
 /-- Actual verification follows the adversary phase and contributes its own source coordinate. -/
 theorem countedAfterKeygenEquation {Output PK SK : Type}
     (scheme : Game.ExternalScheme Output PK SK) (adversary : Game.Adversary Output PK)
     (keys : SK × PK) :
     Game.afterKeygen scheme adversary keys = (do
-      let (sk, pk) := keys
       let ((forgery, adversaryCounts), signed) ←
-        (simulateQ
-          ((QueryImpl.ofLift (Game.World Output)
-              (StateT Game.SigningLog (OracleComp (Game.World Output)))).withAddCost
-              (fun input => Game.Counts.single .hash (Game.hashCost input)) +
-            Game.signingOracle scheme sk)
-          (adversary.main pk)).run.run []
+        Game.runPhase scheme keys.1 (adversary.main keys.2) []
       let (verified, verifierCounts) ← Game.countQueries
         (fun input => Game.Counts.single .verification (Game.hashCost input))
-        (scheme.verify pk forgery.message forgery.signature)
+        (scheme.verify keys.2 forgery.message forgery.signature)
       return {
         forgery := forgery
         signed := signed
         verified := verified
-        counts := Multiplicative.toAdd adversaryCounts + verifierCounts }) := rfl
+        counts := adversaryCounts + verifierCounts }) :=
+  Game.afterKeygen_eq_runPhase scheme adversary keys
 
 /-- Rejected replies cannot make a concrete forged pair stale. -/
 theorem countedFreshnessEquation (signed : Game.SigningLog) (forgery : Game.Forgery) :
@@ -87,7 +85,8 @@ theorem countedExperimentEquation {Output PK SK : Type}
     Game.experimentBySource scheme adversary = (do
       let (keys, keygenHashes) ← Game.countAllHashes scheme.keygen
       let (outcome, laterHashes) ← Game.countAllHashes (Game.afterKeygen scheme adversary keys)
-      return (outcome, Game.sourceCounts outcome keygenHashes laterHashes)) := rfl
+      return (outcome, Game.sourceCounts outcome keygenHashes laterHashes)) :=
+  Game.experimentBySource_eq_countAllHashes scheme adversary
 
 /-- One initially empty random-oracle cache is shared across the complete experiment. -/
 theorem countedRandomOracleEquation {Output PK SK : Type} [SampleableType Output]
