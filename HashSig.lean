@@ -67,6 +67,8 @@ public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Observation
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Phase
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Pure
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Recorded
+public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.ScalarPolicy
+public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.ScalarPolicy.Certificates
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Wire
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Transfer
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Wire
