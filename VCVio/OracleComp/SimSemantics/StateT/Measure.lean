@@ -17,7 +17,10 @@ public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 Local equality in distribution of the joint response and retained state preserves the
 distribution of the complete result and state of every adaptive oracle computation. This
 interface retains service state in its premise because later adaptive calls may reveal changes
-hidden from the immediate response.
+hidden from the immediate response. Running a computation through a stateful handler into a
+second interface and then through a stateful handler of that interface is equal in distribution
+to running it through one handler on the pair of states, if this holds query by query
+(`OracleComp.simulateQ_run_simulateQ_run_evalDistEq`).
 
 A probabilistic state map that intertwines two handlers step by step, `QueryImpl.Intertwines`,
 intertwines their runs of every oracle computation
@@ -71,6 +74,27 @@ theorem evalDist_simulateQ_run_congr
     (program : OracleComp spec α) (state : S) :
     𝒟[(simulateQ left program).run state] = 𝒟[(simulateQ right program).run state] :=
   (evalDistEq_simulateQ_run left right h program state).evalDist_eq
+
+/-- Running a computation through a stateful handler into a second interface, then through a
+stateful handler of that interface, is equal in distribution to running it through one handler on
+the pair of states, if this holds for every query. -/
+theorem simulateQ_run_simulateQ_run_evalDistEq {ι₀ ι₁ σ τ α : Type}
+    {spec₀ : OracleSpec.{0, 0} ι₀} {spec₁ : OracleSpec.{0, 0} ι₁}
+    (outer : QueryImpl spec₁ (StateT τ ProbComp))
+    (inner : QueryImpl spec₀ (StateT σ (OracleComp spec₁)))
+    (impl : QueryImpl spec₀ (StateT (τ × σ) ProbComp))
+    (h : ∀ t s q, (simulateQ outer ((inner t).run s)).run q =ᵈ
+      (fun z => ((z.1, z.2.2), z.2.1)) <$> (impl t).run (q, s))
+    (oa : OracleComp spec₀ α) (s : σ) (q : τ) :
+    (simulateQ outer ((simulateQ inner oa).run s)).run q =ᵈ
+      (fun z => ((z.1, z.2.2), z.2.1)) <$> (simulateQ impl oa).run (q, s) := by
+  induction oa using OracleComp.inductionOn generalizing s q with
+  | pure a => simp
+  | query_bind t k ih =>
+    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, map_bind]
+    refine ((h t s q).bind_left _).trans ?_
+    simp only [bind_map_left]
+    exact EvalDistEq.bind_right _ fun z => ih z.1 z.2.2 z.2.1
 
 /-- A stateful implementation that, from every state, denotes each query's configured answer
 measure preserves the output measure of every simulated computation once the final state is

@@ -122,7 +122,7 @@ noncomputable def widen (E : EmulatedOracle P In) :
   U i := Matrix.reindex (QuantumRuntime.queryEquivOut (In i) E.S (otherIn In i))
     (QuantumRuntime.queryEquivOut (In i) E.S (otherIn In i))
     (E.U i ⊗ₖ (1 : Matrix (otherIn In i) (otherIn In i) ℂ))
-  unitary i := reindex_mem_unitaryGroup _
+  unitary i := Matrix.submatrix_equiv_mem_unitary.mpr
     (Matrix.kronecker_mem_unitary (E.unitary i) (one_mem _))
 
 /-- **The tensor-product interface** (ePrint 2025/2166, p. 28): one port on `tensIn In`,
@@ -134,7 +134,7 @@ noncomputable def tensor (E : EmulatedOracle P In) : EmulatedOracle Unit fun _ �
   init := E.init
   U _ := Matrix.reindex ((tensEquiv In).prodCongr (Equiv.refl E.S)).symm
     ((tensEquiv In).prodCongr (Equiv.refl E.S)).symm (E.widen.coherent.U ())
-  unitary _ := reindex_mem_unitaryGroup _ (E.widen.coherent.unitary ())
+  unitary _ := Matrix.submatrix_equiv_mem_unitary.mpr (E.widen.coherent.unitary ())
 
 variable (E : EmulatedOracle P In)
 
@@ -190,13 +190,13 @@ the port alone (the paper's `|i⟩⟨i|_I`, p. 28): the projector onto the fibre
 (`Quantum.EmulatedOracle.isCoherentIndex_tensIndexProj`). -/
 @[expose, reducible]
 noncomputable def tensIndexProj (In : P → QReg) (i : P) : Matrix (tensIn In) (tensIn In) ℂ :=
-  fiberProj (fun a : tensIn In ↦ a.1) i
+  Matrix.labelProjector (fun a : tensIn In ↦ a.1) i
 
 /-- The projector onto an index, with the private register, is the projector of the
 tensor-product register beside the identity. -/
 theorem tensorProj_eq_kronecker (i : P) :
     E.tensorProj i = tensIndexProj In i ⊗ₖ (1 : Matrix E.S E.S ℂ) := by
-  rw [tensIndexProj, fiberProj_kronecker_one]
+  rw [tensIndexProj, Matrix.labelProjector_kronecker_one]
   rfl
 
 /-- The projectors onto the indices form a coherent index on the signature of the
@@ -205,7 +205,7 @@ tensor-product interface, so the square-root hybrid bounds of
 theorem isCoherentIndex_tensIndexProj :
     Hybrid.IsCoherentIndex (spec := tensSpec In) (fun _ ↦ tensIndexProj In)
       (fun _ ↦ tensIndexProj In) :=
-  isCoherentIndex_fiberProj fun _ (a : tensIn In) ↦ a.1
+  isCoherentIndex_labelProjector fun _ (a : tensIn In) ↦ a.1
 
 /-- **The tensor-product unitary respects the index**: it sends the block of each index into
 itself, `(Pᵢ ⊗ 1) U (Pᵢ ⊗ 1) = U (Pᵢ ⊗ 1)` for the projectors
@@ -276,7 +276,7 @@ theorem sum_tensorMass (x : QuantumComp L (tensSpec In) W A)
   simp only [E.tensorMass_eq_indexMass I x ρ]
   rw [← tsum_fintype (L := .unconditional P)]
   exact E.tensor.toRuntime.tsum_indexMass_eq_queryMass I (fun _ ↦ tensIndexProj In) ()
-    (sum_conjTranspose_mul_fiberProj _) x hρ
+    (Matrix.sum_conjTranspose_mul_labelProjector _) x hρ
 
 /-- **Masses and query budgets on the tensor-product interface.** A program making at most `t`
 queries has masses on the indices adding up to at most `t` times the trace of the initial

@@ -190,7 +190,7 @@ The Fiat–Shamir extraction bounds `nma_to_hard_relation_bound`, `euf_nma_bound
 `Pr{let x ← …}[x = true]` events.
 
 For an aborting identification scheme whose loss is a real-valued formula, keep `ζ_zk : ℝ` and
-pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_bound` does.
+pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_to_nma` does.
 
 ## Modules
 

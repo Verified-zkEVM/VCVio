@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.Quantum.Comp.HybridMeasure
-public import VCVio.Quantum.Oracle.Basis
+public import QuantumFoundations.Oracle.Basis
 
 /-!
 # Query-mass and square-root hybrid regression tests
@@ -160,7 +160,7 @@ theorem tsum_trace_run_idRuntime (ρ : SubState (QReg.of (Unit × Unit))) :
       ENNReal.ofReal ρ.matrix.trace.re := by
   simp only [MatrixMap.conj_one, LinearMap.id_apply]
   refine (idRuntime.tsum_jointPost_trace I oneCall ρ).trans ?_
-  rw [idRuntime.lossless_run I (x := oneCall) (fun _ ↦ trivial)
+  rw [idRuntime.lossless_run I (x := oneCall) (by simp [oneCall])
     (fun _ ↦ DSubInstrument.lossless_ofKraus _ (by simp)), SubState.trace_re_prod]
   simp
 

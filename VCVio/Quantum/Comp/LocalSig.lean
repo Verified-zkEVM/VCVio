@@ -5,8 +5,8 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.Quantum.DSubInstrument
-public import VCVio.Quantum.Register
+public import QuantumFoundations.DSubInstrument
+public import QuantumFoundations.Register
 
 /-!
 # Primitive signatures
@@ -91,7 +91,7 @@ in the trace bound for every operation.
 
 Finite outcomes, a fixed output register and no loss give the instruments in Watrous,
 The Theory of Quantum Information, §2.3.2, equations (2.258)–(2.261), printed p. 112
-(PDF p. 120). Matrix and tensor conventions are fixed in `VCVio.Quantum.MatrixMap`. -/
+(PDF p. 120). Matrix and tensor conventions are fixed in `QuantumFoundations.MatrixMap`. -/
 @[expose]
 def Interp : Type (max 1 u v) :=
   ∀ ⦃A : QReg⦄ (o : L.Op A), DSubInstrument A (L.Outcome o) fun b ↦ L.next o b

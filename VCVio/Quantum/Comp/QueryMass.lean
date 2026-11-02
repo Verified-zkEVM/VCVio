@@ -98,21 +98,6 @@ namespace Quantum
 
 /-! ## Traces of families of positive semidefinite matrices -/
 
-namespace MatrixMap.IsCPTNIFamily
-
-variable {ι : Type*} {A : Type*} [Fintype A] {B : ι → Type*} [∀ i, Fintype (B i)]
-  {Φ : (i : ι) → MatrixMap A (B i)}
-
-/-- On a positive semidefinite input, the traces of the members of a completely positive family
-with trace-nonincreasing partial sums add up to at most the trace of the input, in `ℝ≥0∞`. -/
-theorem tsum_ofReal_trace_re_le (h : IsCPTNIFamily Φ) {ρ : Matrix A A ℂ} (hρ : ρ.PosSemidef) :
-    ∑' i, ENNReal.ofReal (Φ i ρ).trace.re ≤ ENNReal.ofReal ρ.trace.re := by
-  rw [← ENNReal.ofReal_tsum_of_nonneg (fun i ↦ h.trace_re_apply_nonneg i hρ)
-    (h.summable_trace_re_apply hρ)]
-  exact ENNReal.ofReal_le_ofReal (h.tsum_trace_re_apply_le hρ)
-
-end MatrixMap.IsCPTNIFamily
-
 /-- The trace of the sum of a summable family of positive semidefinite matrices is the sum of
 the traces, in `ℝ≥0∞`. -/
 theorem ofReal_trace_re_tsum {ι n : Type*} [Fintype n] {f : ι → Matrix n n ℂ} (hf : Summable f)
@@ -161,19 +146,21 @@ end callInput
 variable {spec : QuantumOracleSpec.{u₁, v₁}} (R : QuantumRuntime spec) {L : LocalSig.{u, v}}
   (I : L.Interp) {X : QReg → Type w} {Y : QReg → Type w₁} {A : QReg}
 
-/-- The weight `w` of the `j`-th call along the paths of a program tree, by recursion on the
-tree. -/
+/-- The weight `w` of the `j`-th call along the paths of a program tree, folded into functions
+of the input state and query index. -/
 @[expose]
 noncomputable def queryWeightAux
     (w : ∀ i, Matrix (spec.In i × R.D) (spec.In i × R.D) ℂ → ℝ≥0∞) :
     {A : QReg} → IFreeM (QuantumComp.toIPFunctor L spec) X A →
-      Matrix (A × R.D) (A × R.D) ℂ → ℕ → ℝ≥0∞
-  | _, .pure _, _, _ => 0
-  | _, .liftBind (.prim o) k, ρ, j =>
-      ∑' b, queryWeightAux w (k (ULift.up b)) (((I o).frame R.D).branch b ρ) j
-  | _, .liftBind (.query i _ ℓ) _, ρ, 0 => w i (callInput ℓ R.D ρ)
-  | _, .liftBind (.query i E ℓ) k, ρ, j + 1 =>
-      ∑' r, queryWeightAux w (k (ULift.up r)) ((R.queryStep i E ℓ).branch r ρ) j
+      Matrix (A × R.D) (A × R.D) ℂ → ℕ → ℝ≥0∞ :=
+  fun {_} x ↦ IFreeM.fold (P := QuantumComp.toIPFunctor L spec)
+    (D := fun A ↦ Matrix (A × R.D) (A × R.D) ℂ → ℕ → ℝ≥0∞)
+    (fun _ _ _ _ ↦ 0)
+    (fun _ cmd next ↦ match cmd with
+      | .prim o => fun ρ j ↦ ∑' b, next (ULift.up b) (((I o).frame R.D).branch b ρ) j
+      | .query i E ℓ => fun ρ j ↦ match j with
+        | 0 => w i (callInput ℓ R.D ρ)
+        | j + 1 => ∑' r, next (ULift.up r) ((R.queryStep i E ℓ).branch r ρ) j) x
 
 /-- **Query weight.** For a weight `w i` on the inputs of the calls of each port `i`, the sum
 over the paths of `x`, run against `R` from the joint operator `ρ` on `A × R.D`, of the weight
@@ -181,7 +168,11 @@ of the input of the `j`-th call (counting calls of all ports, from `0`). Paths t
 their `j`-th call contribute nothing.
 
 From a substate `ρ` of the program register, with the runtime register in `R.init`, the state is
-`ρ.matrix ⊗ₖ R.init.matrix`. -/
+`ρ.matrix ⊗ₖ R.init.matrix`.
+
+To compare weights against two runtimes on a pure program or at a first call, rewrite with
+`queryWeight_pure` or `queryWeight_queryBind_zero` rather than closing by `rfl`: definitional
+unfolding can compare the two unused fold algebras first. -/
 @[expose]
 noncomputable def queryWeight (w : ∀ i, Matrix (spec.In i × R.D) (spec.In i × R.D) ℂ → ℝ≥0∞)
     (x : QuantumComp L spec X A) (ρ : Matrix (A × R.D) (A × R.D) ℂ) (j : ℕ) : ℝ≥0∞ :=

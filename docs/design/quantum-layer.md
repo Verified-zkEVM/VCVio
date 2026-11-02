@@ -2,9 +2,15 @@
 
 This page records why VCVio's quantum layer has the shape it has and what remains to be proved or
 built. For an explanation of the layer itself, read [`docs/quantum/`](../quantum/README.md)
-first. The tracking issue is #706.
+first. The original plan is in #706. Open work is tracked in #964 (execution model), #965
+(reductions and cost) and #966 (remaining quantum random-oracle results).
 
 ## Status
+
+The Mathlib-only base (completely positive maps, subinstruments, Choi–Kraus and Stinespring forms,
+observation, pure states and oracle unitaries) lives in
+[QuantumFoundations](https://github.com/lean-crypto-foundations/QuantumFoundations), shared with
+CatCrypt, and VCVio imports it since #921. The rest of the layer is in `VCVio/Quantum/`.
 
 Merged:
 
@@ -18,19 +24,15 @@ Merged:
 | #855 | The compressed random oracle as a quantum runtime |
 | #856 | How much one compressed-oracle query can disturb a database property |
 | #857 | Query mass and the hybrid argument for general quantum programs |
+| #858 | Vector commitments, multi-extractors and salted Merkle trees |
 | #859 | The optimal constant 24 for compressed-oracle commutator bounds, including checked reads |
+| #860 | Emulated quantum oracles, classical reads and total call budgets |
+| #861, #862, #864, #871, #873–#875, #877 | Multi-extractable vector commitments against quantum adversaries |
 | #878 | The tutorial, guide and reference in [`docs/quantum/`](../quantum/README.md) |
 | #882 | Subsystems and lifting programs along them |
-
-Open:
-
-| PR | Content |
-|---|---|
-| #858 | Vector commitments, multi-extractors and salted Merkle trees (draft) |
-| #860 | Emulated quantum oracles, classical reads and total call budgets (draft) |
-| #861, #862, #864, #871, #873–#875, #877 | Vector commitments against quantum adversaries; stacked on #860 (drafts) |
-| #903 | Sequencing as PolyFun's indexed bind; query and cost budgets as PolyFun charge bounds |
-| #904 | Existing Mathlib and VCVio lemmas in place of local copies (draft) |
+| #903, #916, #917 | Sequencing, budgets and execution through PolyFun's indexed bind and fold |
+| #904 | Existing Mathlib and VCVio lemmas in place of local copies |
+| #921 | The Mathlib-only base taken from QuantumFoundations |
 
 ## Decisions
 
@@ -165,7 +167,7 @@ polynomial-time certificate. A gate-level account needs item 8 and a charge for 
 
 ### 10. The compressed oracle
 
-Zhandry's compressed oracle, as a runtime equivalent to `additiveOracleRuntime` averaged over $H$,
-is the next layer. Together with the instability calculus of #851 it gives the
-Chiesa–Manohar–Spooner bound $\|\Pi_P\,\mathsf{cO}\,\Pi_{\bar P}\|^2 \le 6I(P,t)$ and its
-successors. It is developed separately and is not part of the foundation.
+Zhandry's compressed oracle is a runtime with the same law as the QROM for every program (#855),
+and the Chiesa–Manohar–Spooner bound and its successors are proved on top of it (#856, #859, #862,
+#864, #873–#875, #877). The general final-measurement lemma and collision and zero-preimage
+bounds on the adversary's output are open (#966).

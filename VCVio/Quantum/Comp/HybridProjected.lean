@@ -288,14 +288,15 @@ theorem queryWeight_eq_of_forallQueries {D : QReg} {σ₁ σ₂ : SubState D}
     (j : ℕ) :
     (QuantumRuntime.mk D σ₁ s₁).queryWeight I w x ρ j =
       (QuantumRuntime.mk D σ₂ s₂).queryWeight I w x ρ j := by
+  -- Constructor equations avoid comparing unused runtime algebras by definitional equality.
   induction x using QuantumComp.inductionOn generalizing j with
-  | pure _ _ => rfl
+  | pure _ _ => simp only [queryWeight_pure]
   | primBind _ o k ih =>
     simp only [queryWeight_primBind]
     exact tsum_congr fun b ↦ ih b (hx b) j
   | queryBind _ i E ℓ k ih =>
     cases j with
-    | zero => rfl
+    | zero => simp only [queryWeight_queryBind_zero]
     | succ j =>
       simp only [queryWeight_queryBind_succ]
       refine tsum_congr fun r ↦ ?_

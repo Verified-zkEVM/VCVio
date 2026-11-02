@@ -87,7 +87,7 @@ a quantum oracle.
 * Measuring in the middle destroys interference.
 
 > **In VCVio.** A gate on a system `A` is a matrix `Matrix A A ℂ`, and applying it to a state
-> vector `ψ` is written `U •ᵥ ψ` (`VCVio/Quantum/Pure/Vector.lean`). The Hadamard gate and the
+> vector `ψ` is written `U •ᵥ ψ` (`QuantumFoundations/Pure/Vector.lean`). The Hadamard gate and the
 > first two experiments are in `VCVioTest/Quantum/Pure.lean`: `hadamard`,
 > `hadamard_mem_unitaryGroup`, `hadamard_applyVec_ket0` ($H|0\rangle = |+\rangle$), and
 > `outcomeMeasure_hadamardThenMeasure_ket0` (the fair coin, computed both with vectors and with the

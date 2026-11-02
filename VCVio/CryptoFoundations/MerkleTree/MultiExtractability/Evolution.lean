@@ -91,7 +91,7 @@ theorem tree_append_singleton_eq_of_mem
   | internal left right ihLeft ihRight =>
       have hchildren := children_append_singleton_eq_of_mem
         view log (addressKey .ofInternal) root entry hmem
-      simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt]
+      simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, MerkleTreeExtractor.treeWith]
       rw [hchildren]
       cases hbefore : MerkleTreeExtractor.children view log
           (addressKey .ofInternal) root with
@@ -136,7 +136,8 @@ theorem tree_ne_append_singleton_implies_response_mem_targets
   | leaf =>
       exact absurd rfl hne
   | internal left right ihLeft ihRight =>
-      simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt] at hne
+      simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt,
+        MerkleTreeExtractor.treeWith] at hne
       cases hbefore : MerkleTreeExtractor.children view log (addressKey .ofInternal) root with
       | none =>
           cases hafter : MerkleTreeExtractor.children view (log ++ [⟨query, response⟩])
@@ -145,7 +146,8 @@ theorem tree_ne_append_singleton_implies_response_mem_targets
           | some children =>
               have hresponse := children_append_singleton_some_of_none_response_eq_root
                 view log (addressKey .ofInternal) root response query children hbefore hafter
-              simp [MerkleTreeExtractor.targets, hbefore, hresponse]
+              simp [MerkleTreeExtractor.targets, MerkleTreeExtractor.targetsWith,
+                hbefore, hresponse]
       | some children =>
           have hafter := children_append_singleton_of_eq_some view log
             (addressKey .ofInternal) root children ⟨query, response⟩ hbefore
@@ -164,7 +166,8 @@ theorem tree_ne_append_singleton_implies_response_mem_targets
                 (MerkleTreeExtractor.treeAt view right
                   (fun address => addressKey (.ofRight address))
                   (log ++ [⟨query, response⟩]) rightRoot) at hne
-          simp only [MerkleTreeExtractor.targets, hbefore, List.mem_cons,
+          simp only [MerkleTreeExtractor.targets, MerkleTreeExtractor.targetsWith,
+            hbefore, List.mem_cons,
             List.mem_append]
           by_cases hleft :
               MerkleTreeExtractor.treeAt view left
@@ -234,31 +237,36 @@ theorem MerkleTreeExtractor.targets_eq_of_tree_eq
       MerkleTreeExtractor.targets view s addressKey rightLog rightRoot := by
   induction s generalizing leftRoot rightRoot with
   | leaf =>
-      simpa [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt,
-        MerkleTreeExtractor.targets] using htree
+      simpa [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, MerkleTreeExtractor.treeWith,
+        MerkleTreeExtractor.targets, MerkleTreeExtractor.targetsWith] using htree
   | internal left right ihLeft ihRight =>
       cases hleft : MerkleTreeExtractor.children view leftLog
           (addressKey .ofInternal) leftRoot <;>
         cases hright : MerkleTreeExtractor.children view rightLog
           (addressKey .ofInternal) rightRoot
-      · simpa [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt,
-          MerkleTreeExtractor.targets, hleft, hright] using htree
-      · simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, hleft, hright,
+      · simpa [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, MerkleTreeExtractor.treeWith,
+          MerkleTreeExtractor.targets, MerkleTreeExtractor.targetsWith, hleft, hright] using htree
+      · simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt,
+        MerkleTreeExtractor.treeWith, hleft, hright,
           Option.some.injEq, FullData.internal.injEq] at htree
         have himpossible := congrArg FullData.getRootValue htree.2.1
-        simp [MerkleTreeExtractor.treeAt_getRootValue] at himpossible
-      · simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, hleft, hright,
+        simp [MerkleTreeExtractor.treeWith_getRootValue] at himpossible
+      · simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt,
+        MerkleTreeExtractor.treeWith, hleft, hright,
           Option.some.injEq, FullData.internal.injEq] at htree
         have himpossible := congrArg FullData.getRootValue htree.2.1
-        simp [MerkleTreeExtractor.treeAt_getRootValue] at himpossible
+        simp [MerkleTreeExtractor.treeWith_getRootValue] at himpossible
       · rename_i leftChildren rightChildren
         obtain ⟨leftLeft, leftRight⟩ := leftChildren
         obtain ⟨rightLeft, rightRight⟩ := rightChildren
-        simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, hleft, hright,
+        simp only [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt,
+          MerkleTreeExtractor.treeWith, hleft, hright,
           Option.some.injEq, FullData.internal.injEq] at htree
-        simp only [MerkleTreeExtractor.targets, hleft, hright]
+        simp only [MerkleTreeExtractor.targets, MerkleTreeExtractor.targetsWith, hleft, hright]
         rw [htree.1]
-        rw [ihLeft (fun position => addressKey (.ofLeft position)) _ _ htree.2.1]
-        rw [ihRight (fun position => addressKey (.ofRight position)) _ _ htree.2.2]
+        have hl := ihLeft (fun position => addressKey (.ofLeft position)) _ _ htree.2.1
+        have hr := ihRight (fun position => addressKey (.ofRight position)) _ _ htree.2.2
+        simp only [MerkleTreeExtractor.targets] at hl hr
+        rw [hl, hr]
 
 end MerkleTreeMultiExtractability

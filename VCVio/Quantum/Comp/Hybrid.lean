@@ -8,8 +8,8 @@ module
 public import VCVio.Quantum.Comp.QueryMass
 public import VCVio.Quantum.Comp.Simulation
 public import VCVio.Quantum.Comp.Subsystem
-public import VCVio.Quantum.MatrixMap.Kraus
-public import VCVio.Quantum.MatrixMap.Norm
+public import QuantumFoundations.MatrixMap.Kraus
+public import QuantumFoundations.MatrixMap.Norm
 
 /-!
 # The square-root hybrid bound for general programs

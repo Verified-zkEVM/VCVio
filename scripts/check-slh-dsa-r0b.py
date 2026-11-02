@@ -513,6 +513,27 @@ def check_axioms(names: list[str], report: Path, steps: list[dict]) -> None:
             raise ValueError(f"Nonstandard axioms in {name}: {sorted(axioms - ALLOWED_AXIOMS)}")
 
 
+def check_current_pins(current: dict, historical: dict) -> None:
+    """Check the current lock while retaining the historical evaluator requirement."""
+    manifest_bytes = (ROOT / "lake-manifest.json").read_bytes()
+    packages = json.loads(manifest_bytes)["packages"]
+    revisions = {}
+    for package in packages:
+        name, revision = package["name"], package.get("rev", "")
+        if package["type"] != "git" or re.fullmatch(r"[0-9a-f]{40}", revision) is None:
+            raise ValueError(f"Dependency {name} has no full Git revision in the current lock")
+        if name in revisions:
+            raise ValueError(f"Dependency {name} occurs more than once in the current lock")
+        revisions[name] = revision
+    if set(current["dependencies"]) != set(revisions):
+        raise ValueError("The dependency frame does not cover exactly the current lock")
+    r0a.check_pins(current, {
+        "manifestSha256": r0a.sha256(manifest_bytes),
+        "toolchain": historical["toolchain"],
+        "dependencyRevisions": revisions,
+    })
+
+
 def verify(report: Path, steps: list[dict]) -> dict:
     before = r0a.frame()
     (report / "before.json").write_text(json.dumps(before, indent=2) + "\n")
@@ -528,7 +549,7 @@ def verify(report: Path, steps: list[dict]) -> dict:
     witness_names = [entry["witness"] for entry in contracts]
     if len(set(source_names)) != len(contracts) or len(set(witness_names)) != len(contracts):
         raise ValueError("A current strength source or witness occurs more than once")
-    r0a.check_pins(before, baseline)
+    check_current_pins(before, baseline)
     version_log = report / "lean-version.log"
     execute(["lake", "env", "lean", "--version"], version_log, steps)
     if version_log.read_text().strip() != baseline["leanVersionOutput"]:

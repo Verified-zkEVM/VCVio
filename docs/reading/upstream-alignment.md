@@ -1194,3 +1194,21 @@ source change for them.
   `LawfulAppend` row above stays deferred.
 - **Init sweep.** `VCVioTest.PFunctorFacade.instFintypeTriPFunctor` is no longer flagged, so its
   baseline entry goes.
+
+## PolyFun repin (2026-10-25)
+
+PolyFun `ecac686f` → `4181c822` (`main`, through PolyFun #369). Mathlib, cslib, Batteries and the
+other transitive pins are unchanged, and VCVio needed no source change.
+
+- **PolyFun #375** adds `IFreeM.fold_bind`, roll and charge bounds under state-carrying traversals
+  (`PolyFun/IPFunctor/Free/Bound/Traversal.lean`), roll and charge bounds for `List.foldlM` and
+  `Fin.dfoldlM` over `FreeM₂ P s s` (`Free/Bound/Loops.lean`), and the dependent-tuple sequencer
+  `FreeM₂.seqPi` with its bounds (`Free/Tuple.lean`). The loop bounds are the general form of the
+  hand-written `isQueryBound_foldlM` and `lossless_foldlM` inductions in
+  `VCVio/Quantum/Oracle/Classical.lean`, which can move onto them in a follow-up.
+- **PolyFun #350** adds the optional `PolyFunIO` library, which the `PolyFun` umbrella does not
+  import.
+- **PolyFun #373, #367, #368, #369** add composition of finite orbits with labelled traces,
+  composition of free handlers into any monad and projections of stateful handlers, sequential
+  and parallel composition of stateful packages, and monomorphisms, epimorphisms and cartesian
+  routes of lenses. VCVio does not use these APIs yet.

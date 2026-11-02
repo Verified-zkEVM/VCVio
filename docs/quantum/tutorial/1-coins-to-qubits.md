@@ -89,12 +89,12 @@ differences come from three places, one per chapter: amplitudes can cancel (chap
 qubits can be correlated in ways no joint distribution describes (chapter 3), and the steps a
 quantum computer takes are reversible rotations rather than mixing (chapters 2 and 5).
 
-> **In VCVio.** A system is named by a finite type listing its basis states, so a qubit is
-> `Fin 2`, and a state vector is an element of `EuclideanSpace ℂ (Fin 2)`: one amplitude per
-> basis state, with the usual length, so that $|\alpha|^2 + |\beta|^2$ is the squared length.
-> VCVio mostly works with a different description of states, density matrices, which chapter 4
-> introduces; the files are `VCVio/Quantum/Observe.lean` (states and measurement) and
-> `VCVio/Quantum/Pure/Vector.lean` (vectors). The measurement of `|+⟩` above is worked out in
-> Lean in `VCVioTest/Quantum/Basic.lean`.
+> **In VCVio.** A system is named by a finite type listing its basis states, so a qubit is `Fin 2`,
+> and a state vector is an element of `EuclideanSpace ℂ (Fin 2)`: one amplitude per basis state,
+> with the usual length, so that $|\alpha|^2 + |\beta|^2$ is the squared length. VCVio mostly works
+> with a different description of states, density matrices, which chapter 4 introduces; the files,
+> in the QuantumFoundations dependency, are `QuantumFoundations/Observe.lean` (states and
+> measurement) and `QuantumFoundations/Pure/Vector.lean` (vectors). The measurement of `|+⟩` above
+> is worked out in Lean in `VCVioTest/Quantum/Basic.lean`.
 
 Next: [chapter 2, gates and interference](2-gates-and-interference.md).

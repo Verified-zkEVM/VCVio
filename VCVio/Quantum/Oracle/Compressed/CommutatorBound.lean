@@ -6,8 +6,8 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.Quantum.MatrixMap.OpNorm
-public import VCVio.Quantum.MatrixMap.Pinching
+public import QuantumFoundations.MatrixMap.OpNorm
+public import QuantumFoundations.MatrixMap.Pinching
 public import VCVio.Quantum.Oracle.Compressed.Instability
 public import VCVio.Quantum.Oracle.Compressed.Phase
 

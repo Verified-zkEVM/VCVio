@@ -241,7 +241,8 @@ lemma extractor_tree_internal_of_children_eq_some [DecidableEq Address] [Decidab
           (fun position => addressKey (.ofLeft position)) log leftRoot)
         (MerkleTreeExtractor.tree model.view right
           (fun position => addressKey (.ofRight position)) log rightRoot) := by
-  simp [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, hchildren]
+  simp [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt,
+    MerkleTreeExtractor.treeWith, hchildren]
 
 /-- If a collision-free commit transcript's extracted opening disagrees with a later accepted
 cache chain, then the later phase added a previously uncached query whose response is one of the

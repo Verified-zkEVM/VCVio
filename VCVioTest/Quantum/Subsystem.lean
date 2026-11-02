@@ -91,4 +91,16 @@ example : flipSecond.IsCostBound (fun _ _ ↦ 1) 1 :=
 example : ¬ flipSecond.IsCostBound (fun _ _ ↦ 1) 0 :=
   fun h ↦ absurd h.1 (by decide)
 
+/-- Lifting a gate to a larger register preserves its nonzero operation cost. -/
+example : (flipSecond.lift
+    (Subsystem.fst (QReg.of (Fin 2 × Fin 2)) (QReg.of (Fin 2)))).IsCostBound
+      (fun _ _ ↦ 1) 1 :=
+  (QuantumComp.isCostBound_lift_iff (fun _ _ ↦ 1) _ _ _).mpr ⟨le_rfl, fun _ ↦ trivial⟩
+
+/-- A spectator cannot make a charged gate fit within the zero budget. -/
+example : ¬ (flipSecond.lift
+    (Subsystem.fst (QReg.of (Fin 2 × Fin 2)) (QReg.of (Fin 2)))).IsCostBound
+      (fun _ _ ↦ 1) 0 := fun h ↦
+  absurd ((QuantumComp.isCostBound_lift_iff (fun _ _ ↦ 1) _ _ _).mp h).1 (by decide)
+
 end VCVioTest.QuantumSubsystem

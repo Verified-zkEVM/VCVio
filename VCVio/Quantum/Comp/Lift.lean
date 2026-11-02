@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.Quantum.Comp.QueryBound
 public import VCVio.Quantum.Comp.Subsystem
+public import PolyFun.IPFunctor.Free.Bound.Traversal
 
 /-!
 # Lifting programs along subsystems
@@ -133,21 +134,28 @@ structure LiftLeaf (X : QReg → Type w) (F : QReg) (v : QReg) : Type (max 1 w) 
   /-- The original leaf. -/
   leaf : X reg
 
-/-- Lift a program on `A` into the register `M ≃ A × F`, by recursion on its tree. A call keeps
-its port and moves the spectator `F` into its remainder, so that the register after it is
-`Out i × (E × F)`, factored back as `(Out i × E) × F`. -/
+/-- Frame commands by `F`, carrying the factorization of the current register as state. -/
+@[expose]
+def liftTraversal (F : QReg) : Traversal (toIPFunctor L spec) (toIPFunctor L.framed spec)
+    (fun A M ↦ M ≃ A × F) where
+  op e
+    | .prim o => .prim ⟨_, ⟨F, e⟩, o⟩
+    | .query i E ℓ => .query i (QReg.of (E × F))
+        (e.trans ((ℓ.prodCongr (Equiv.refl F)).trans (Equiv.prodAssoc _ _ _)))
+  arg _ a b := by cases a <;> exact b
+  next _ a _ := by
+    cases a with
+    | prim o => exact Equiv.refl _
+    | query i E _ => exact (Equiv.prodAssoc (spec.Out i) E F).symm
+
+/-- Lift a program on `A` into the register `M ≃ A × F`. A call keeps its port and moves the
+spectator `F` into its remainder, so that the register after it is `Out i × (E × F)`, factored
+back as `(Out i × E) × F`. -/
 @[expose]
 def liftAux (F : QReg) :
     {A : QReg} → IFreeM (toIPFunctor L spec) X A → (M : QReg) → (M ≃ A × F) →
-      QuantumComp L.framed spec (LiftLeaf X F) M
-  | _, .pure x, _, e => QuantumComp.pure ⟨_, e, x⟩
-  | _, .liftBind (.prim o) k, _, e =>
-      primBind (L := L.framed) ⟨_, ⟨F, e⟩, o⟩ fun b ↦
-        liftAux F (k (ULift.up b)) (QReg.of (L.next o b × F)) (Equiv.refl _)
-  | _, .liftBind (.query i E ℓ) k, _, e =>
-      queryBind i (QReg.of (E × F))
-        (e.trans ((ℓ.prodCongr (Equiv.refl F)).trans (Equiv.prodAssoc _ _ _))) fun r ↦
-        liftAux F (k (ULift.up r)) _ (Equiv.prodAssoc (spec.Out i) E F).symm
+      QuantumComp L.framed spec (LiftLeaf X F) M :=
+  fun x _ e ↦ x.traverse (liftTraversal F) (fun e y ↦ .pure ⟨_, e, y⟩) e
 
 /-- **Lifting a program along a subsystem.** Run `x` on the subsystem `S` of `M`, leaving the
 complement of `S` untouched. -/
@@ -189,14 +197,10 @@ theorem liftAux_queryBind (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In i × E
 theorem isQueryBoundAt_liftAux_iff (x : QuantumComp L spec X A) (e : M ≃ A × F)
     (i : spec.Port) (n : ℕ) :
     (liftAux F x M e).IsQueryBoundAt i n ↔ x.IsQueryBoundAt i n := by
-  induction x using QuantumComp.inductionOn generalizing M n with
-  | pure _ _ => exact Iff.rfl
-  | primBind _ o k ih =>
-    rw [liftAux_primBind, isQueryBoundAt_primBind_iff, isQueryBoundAt_primBind_iff]
-    exact forall_congr' fun b ↦ ih b _ _
-  | queryBind _ j E ℓ k ih =>
-    rw [liftAux_queryBind, isQueryBoundAt_queryBind_iff, isQueryBoundAt_queryBind_iff]
-    simp only [ih]
+  refine IFreeM.isChargeBound_traverse_iff (liftTraversal F) _ ?_ ?_ ?_ e x n
+  · intro A M e a; cases a <;> exact Function.surjective_id
+  · intro A M e a; cases a <;> rfl
+  · intro A M e y; trivial
 
 /-- Lifting along a subsystem preserves query budgets exactly. -/
 theorem isQueryBound_lift_iff (S : Subsystem A M) (x : QuantumComp L spec X A)
@@ -208,14 +212,10 @@ operation costs. -/
 theorem isCostBound_liftAux_iff (c : ∀ ⦃A : QReg⦄, L.Op A → ℕ) (x : QuantumComp L spec X A)
     (e : M ≃ A × F) (n : ℕ) :
     (liftAux F x M e).IsCostBound (fun _ (o : L.FramedOp _) ↦ c o.op) n ↔ x.IsCostBound c n := by
-  induction x using QuantumComp.inductionOn generalizing M n with
-  | pure _ _ => exact Iff.rfl
-  | primBind _ o k ih =>
-    rw [liftAux_primBind, isCostBound_primBind_iff, isCostBound_primBind_iff]
-    exact and_congr_right' (forall_congr' fun b ↦ ih b _ _)
-  | queryBind _ j E ℓ k ih =>
-    rw [liftAux_queryBind, isCostBound_queryBind_iff, isCostBound_queryBind_iff]
-    exact forall_congr' fun r ↦ ih r _ _
+  refine IFreeM.isChargeBound_traverse_iff (liftTraversal F) _ ?_ ?_ ?_ e x n
+  · intro A M e a; cases a <;> exact Function.surjective_id
+  · intro A M e a; cases a <;> rfl
+  · intro A M e y; trivial
 
 /-- Lifting along a subsystem preserves operation costs exactly. -/
 theorem isCostBound_lift_iff (c : ∀ ⦃A : QReg⦄, L.Op A → ℕ) (S : Subsystem A M)
@@ -226,17 +226,15 @@ theorem isCostBound_lift_iff (c : ∀ ⦃A : QReg⦄, L.Op A → ℕ) (S : Subsy
 /-- Lifting preserves losslessness. -/
 theorem Lossless.liftAux {I : L.Interp} {x : QuantumComp L spec X A} (hx : x.Lossless I)
     (e : M ≃ A × F) : (liftAux F x M e).Lossless I.framed := by
-  induction x using QuantumComp.inductionOn generalizing M with
-  | pure _ _ => trivial
-  | primBind _ o k ih =>
-    rw [lossless_primBind_iff] at hx
-    rw [liftAux_primBind, lossless_primBind_iff]
-    exact ⟨DSubInstrument.Lossless.bind (SubInstrument.lossless_relabel _) fun _ ↦ hx.1.frame _,
-      fun b ↦ ih b (hx.2 b) _⟩
-  | queryBind _ j E ℓ k ih =>
-    rw [lossless_queryBind_iff] at hx
-    rw [liftAux_queryBind, lossless_queryBind_iff]
-    exact fun r ↦ ih r (hx r) _
+  refine IFreeM.IsRollBound.traverse (liftTraversal F) _
+    (fun _ _ _ ↦ True) ?_ ?_ ?_ hx trivial
+  · intro A M e a _ _ _ ha
+    cases a with
+    | prim o =>
+      exact DSubInstrument.Lossless.bind (SubInstrument.lossless_relabel _) fun _ ↦ ha.frame _
+    | query => trivial
+  · intros; trivial
+  · intros; trivial
 
 /-- Lifting along a subsystem preserves losslessness. -/
 theorem Lossless.lift {I : L.Interp} {x : QuantumComp L spec X A} (hx : x.Lossless I)

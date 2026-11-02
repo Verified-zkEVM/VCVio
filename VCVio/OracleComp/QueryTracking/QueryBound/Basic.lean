@@ -797,6 +797,17 @@ lemma isTotalQueryBound_query_bind_iff {t : spec.Domain}
       0 < n ∧ ∀ u, IsTotalQueryBound (mx u) (n - 1) :=
   Iff.rfl
 
+/-- A computation makes no queries exactly when it is `pure x`. -/
+theorem isTotalQueryBound_zero_iff {oa : OracleComp spec α} :
+    IsTotalQueryBound oa 0 ↔ ∃ x, oa = pure x := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => exact ⟨fun _ => ⟨x, rfl⟩, fun _ => trivial⟩
+  | query_bind t mx _ =>
+      rw [isTotalQueryBound_query_bind_iff]
+      simp only [lt_irrefl, false_and, false_iff, not_exists]
+      intro x h
+      exact absurd (congrArg isPure h) (by simp)
+
 lemma IsTotalQueryBound.mono {oa : OracleComp spec α} {n₁ n₂ : ℕ}
     (h : IsTotalQueryBound oa n₁) (hle : n₁ ≤ n₂) :
     IsTotalQueryBound oa n₂ :=

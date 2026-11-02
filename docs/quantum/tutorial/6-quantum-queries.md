@@ -114,7 +114,7 @@ QROM proofs replace these with new tools:
 > query is `classicalQuery`; a classical algorithm `oa` becomes `oa.toQuantum`, and
 > `qromEvalDist₂_toQuantum_eq_randomOracle` is the first sanity check above. Deutsch's algorithm is
 > `outcomeMeasure_deutsch` in `VCVioTest/Quantum/Oracle.lean`. The hybrid argument's core
-> inequality is `norm_queryState_sub_queryState_le` (`VCVio/Quantum/Pure/`), and instability is
+> inequality is `norm_queryState_sub_queryState_le` (`QuantumFoundations/Pure/`), and instability is
 > `QueryCache.instability`, with the collision bound `instability_cacheHasCollision_le`
 > (`VCVio/OracleComp/QueryTracking/Instability/`). The compressed oracle itself is future work.
 >

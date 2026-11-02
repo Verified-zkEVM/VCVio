@@ -1,0 +1,472 @@
+/-
+Copyright (c) 2026 Quang Dao, Oleksandr Vovkotrub. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Quang Dao, Oleksandr Vovkotrub
+-/
+
+module
+
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Projections
+
+/-!
+# Ghost-layer machinery for Fiat-Shamir with aborts: BodyBounds
+
+Real-versus-reprogrammed signing-body bounds: the within-signing-query
+collision budget, per-attempt collision and abort bounds, and the two body-level cores of
+the Sign → Prog hop.
+
+Part of the hybrid signing-body development for the CMA-to-NMA reduction;
+`VCVio.CryptoFoundations.FiatShamir.WithAbort.GhostBodies.Bodies` opens the
+chain and holds the overview docstring.
+-/
+
+public section
+
+open OracleComp OracleSpec
+open scoped BigOperators ENNReal
+
+variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
+
+namespace FiatShamirWithAbort
+
+variable [DecidableEq Commit] [SampleableType Chal]
+variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
+  (M : Type) [DecidableEq M] (maxAttempts : ℕ)
+variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
+
+/-! ## Real-versus-reprogrammed signing-body bounds
+
+Quantitative body-level core of the Sign → Prog hop
+(`prEvent_hybridExpAtKey_real_le_prog`): run equations unfolding one attempt of the
+real signing loop (`fsAbortSignLoop` under the caching random oracle) and of the
+reprogramming loop (`progSignBody`), the per-attempt commitment-collision and abort
+bounds, the within-signing-query total-variation induction
+(`measureETVDist_run_fsAbortSignLoop_progSignBody_le`), and the expected cache-growth
+bound for the reprogramming loop (`tsum_prEvent_run_progSignBody_mul_enncard_le`). -/
+
+/-- One-attempt unfolding of the reprogramming loop's cache-level run. -/
+lemma run_progSignBody_succ (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ)
+    (c : (M × Commit →ₒ Chal).QueryCache) :
+    (progSignBody ids M pk sk msg (n + 1)).run c =
+      ids.commit pk sk >>= fun ws =>
+        uniformSample Chal >>= fun ch =>
+          ids.respond pk sk ws.2 ch >>= fun oz =>
+            match oz with
+            | some z => pure (some (ws.1, z), c.cacheQuery (msg, ws.1) ch)
+            | none => (progSignBody ids M pk sk msg n).run (c.cacheQuery (msg, ws.1) ch) := by
+  simp only [progSignBody, progSignAttempt, bind_assoc, StateT.run_bind,
+    OracleComp.liftM_run_StateT, pure_bind, StateT.run_modify]
+  refine congrArg (ids.commit pk sk >>= ·) (funext fun ws => ?_)
+  obtain ⟨w, st⟩ := ws
+  refine congrArg (uniformSample Chal >>= ·) (funext fun ch => ?_)
+  refine congrArg (ids.respond pk sk st ch >>= ·) (funext fun oz => ?_)
+  cases oz with
+  | some z => rfl
+  | none => rfl
+
+/-- One-attempt unfolding of the real signing loop's cache-level run under the caching
+random oracle: commit, take one `roStep` at the commitment point, respond against the
+returned challenge, and either return or recurse on the post-step cache. -/
+lemma run_simulateQ_fsAbortSignLoop_succ (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ)
+    (c : (M × Commit →ₒ Chal).QueryCache) :
+    (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+        (randomOracle : QueryImpl (M × Commit →ₒ Chal)
+          (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
+      (fsAbortSignLoop ids M pk sk msg (n + 1))).run c =
+      ids.commit pk sk >>= fun ws =>
+        roStep M c (msg, ws.1) >>= fun chc =>
+          ids.respond pk sk ws.2 chc.1 >>= fun oz =>
+            match oz with
+            | some z => pure (some (ws.1, z), chc.2)
+            | none =>
+                (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+                    (randomOracle : QueryImpl (M × Commit →ₒ Chal)
+                      (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
+                  (fsAbortSignLoop ids M pk sk msg n)).run chc.2 := by
+  simp only [fsAbortSignLoop, fsAbortSignAttempt, simulateQ_bind,
+    roSim.simulateQ_HasQuery_query, bind_assoc, StateT.run_bind]
+  rw [roSim.run_liftM, bind_map_left]
+  refine congrArg (ids.commit pk sk >>= ·) (funext fun ws => ?_)
+  obtain ⟨w, st⟩ := ws
+  rw [randomOracle_run_eq_roStep]
+  refine congrArg (roStep M c (msg, w) >>= ·) (funext fun chc => ?_)
+  rw [roSim.run_liftM, bind_map_left]
+  refine congrArg (ids.respond pk sk st chc.1 >>= ·) (funext fun oz => ?_)
+  cases oz with
+  | some z => rfl
+  | none => rfl
+
+/-! ### The within-signing-query collision budget -/
+
+/-- Collision budget of one signing query of the Sign → Prog hop, as a function of the
+attempt budget `n` and the starting cache size `N`: attempt `a` is reached with
+probability at most `p ^ a` and collides with a cached point with probability at most
+`(N + a) · ε`. -/
+noncomputable def signCollisionBound (ε p : ℝ) (n : ℕ) (N : ℝ≥0∞) : ℝ≥0∞ :=
+  ENNReal.ofReal ε * ∑ a ∈ Finset.range n, ENNReal.ofReal p ^ a * (N + a)
+
+@[simp]
+lemma signCollisionBound_zero (ε p : ℝ) (N : ℝ≥0∞) :
+    signCollisionBound ε p 0 N = 0 := by
+  simp [signCollisionBound]
+
+lemma signCollisionBound_succ (ε p : ℝ) (n : ℕ) (N : ℝ≥0∞) :
+    signCollisionBound ε p (n + 1) N =
+      N * ENNReal.ofReal ε +
+        ENNReal.ofReal p * signCollisionBound ε p n (N + 1) := by
+  have h : ∑ a ∈ Finset.range n, ENNReal.ofReal p ^ (a + 1) * (N + ↑(a + 1)) =
+      ENNReal.ofReal p * ∑ a ∈ Finset.range n, ENNReal.ofReal p ^ a * (N + 1 + ↑a) := by
+    rw [Finset.mul_sum]
+    refine Finset.sum_congr rfl fun a _ => ?_
+    push_cast
+    ring
+  rw [signCollisionBound, signCollisionBound, Finset.sum_range_succ', h]
+  push_cast
+  ring
+
+lemma signCollisionBound_mono (ε p : ℝ) (n : ℕ) {N N' : ℝ≥0∞} (h : N ≤ N') :
+    signCollisionBound ε p n N ≤ signCollisionBound ε p n N' := by
+  unfold signCollisionBound
+  gcongr
+
+/-- Splitting of the collision budget into a state-free part and a part linear in the
+starting cache size, matching the `ζ + R s · β` query-slack shape of
+`OracleComp.ProgramLogic.Relational.expectedQuerySlack_expected_resource_le`. -/
+lemma signCollisionBound_eq (ε p : ℝ) (n : ℕ) (N : ℝ≥0∞) :
+    signCollisionBound ε p n N =
+      ENNReal.ofReal ε * ∑ a ∈ Finset.range n, (a : ℝ≥0∞) * ENNReal.ofReal p ^ a +
+        N * (ENNReal.ofReal ε * ∑ a ∈ Finset.range n, ENNReal.ofReal p ^ a) := by
+  rw [signCollisionBound]
+  simp only [Finset.mul_sum]
+  rw [← Finset.sum_add_distrib]
+  exact Finset.sum_congr rfl fun a _ => by ring
+
+/-! ### Per-attempt collision and abort bounds -/
+
+omit [DecidableEq Commit] in
+/-- Aggregate per-attempt abort bound: the commit-averaged probability that a fresh
+uniform challenge is refused equals the abort probability of one honest execution. -/
+lemma tsum_prEvent_commit_mul_abort_le (pk : Stmt) (sk : Wit) {p_abort : ℝ}
+    (hAbort : Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort) :
+    ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
+        Pr{let x ← uniformSample Chal >>= fun ch => ids.respond pk sk ws.2 ch}[x = none]
+      ≤ ENNReal.ofReal p_abort := by
+  classical
+  refine le_trans (le_of_eq ?_) hAbort
+  rw [IdenSchemeWithAbort.honestExecution, OracleComp.prEvent_bind_eq_tsum]
+  refine tsum_congr fun ws => ?_
+  obtain ⟨cm, st⟩ := ws
+  congr 1
+  rw [OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_bind_eq_tsum]
+  refine tsum_congr fun ch => ?_
+  congr 1
+  rw [OracleComp.prEvent_bind_eq_tsum, tsum_eq_single (none : Option Resp) ?_]
+  · simp
+  · rintro (_ | z) hb
+    · exact absurd rfl hb
+    · simp
+
+omit [SampleableType Chal] [DecidableEq M] [DecidableEq Commit] in
+/-- Commitment-guessing bound for cache hits: under a pointwise commitment-guessing
+bound `ε`, one commit lands on a cached point of `c` at message `msg` with probability
+at most `enncard c · ε`. -/
+lemma prEvent_commit_hit_le (pk : Stmt) (sk : Wit) {ε : ℝ}
+    (hGuess : ∀ cm : Commit,
+      Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = cm] ≤ ENNReal.ofReal ε)
+    (msg : M) (c : (M × Commit →ₒ Chal).QueryCache) :
+    Pr{let ws ← ids.commit pk sk}[c (msg, ws.1) ≠ none]
+      ≤ QueryCache.enncard c * ENNReal.ofReal ε := by
+  classical
+  have : DecidableEq Commit := Classical.decEq Commit
+  let commitDist : ProbComp Commit := Prod.fst <$> ids.commit pk sk
+  let hit : Commit → Prop := fun w => c (msg, w) ≠ none
+  let S : Finset Commit := (finSupport commitDist).filter hit
+  have h_event :
+      Pr{let ws ← ids.commit pk sk}[c (msg, ws.1) ≠ none]
+        = Pr{let x ← commitDist}[hit x] := by
+    simp [commitDist, hit]
+  have h_sum : Pr{let x ← commitDist}[hit x] = ∑ w ∈ S, Pr{let x ← commitDist}[x = w] := by
+    rw [OracleComp.prEvent_eq_tsum_ite, tsum_eq_sum (s := S) fun w hw => ?_]
+    · exact Finset.sum_congr rfl fun w hw => ite_eq_left (Finset.mem_filter.mp hw).2
+    · by_cases hw' : hit w
+      · rw [ite_eq_left hw']
+        exact prEvent_eq_zero_of_not_mem_support _ fun hmem =>
+          hw (Finset.mem_filter.mpr ⟨(mem_finSupport_iff_mem_support _ _).mpr hmem, hw'⟩)
+      · exact ite_eq_right hw'
+  have h_sum_le : ∑ w ∈ S, Pr{let x ← commitDist}[x = w] ≤ ∑ w ∈ S, ENNReal.ofReal ε :=
+    Finset.sum_le_sum fun w _ => hGuess w
+  have h_card_le : (S.card : ℝ≥0∞) ≤ QueryCache.enncard c := by
+    have hex : ∀ w : ↑(S : Set Commit), ∃ v : Chal, c (msg, w.1) = some v := fun w =>
+      Option.ne_none_iff_exists'.mp ((Finset.mem_filter.mp w.2).2)
+    let cacheEntryOfHit : ↑(S : Set Commit) → c.toSet := fun w =>
+      ⟨⟨(msg, w.1), Classical.choose (hex w)⟩, Classical.choose_spec (hex w)⟩
+    have h_inj : Function.Injective cacheEntryOfHit := by
+      intro w₁ w₂ h
+      apply Subtype.ext
+      have hdomain : ((msg, w₁.1) : M × Commit) = (msg, w₂.1) :=
+        congrArg (fun x : c.toSet => x.1.1) h
+      exact congrArg Prod.snd hdomain
+    have henc : (S : Set Commit).encard ≤ c.toSet.encard := by
+      simpa using Function.Embedding.encard_le ⟨cacheEntryOfHit, h_inj⟩
+    have henc_nat : (S.card : ℕ∞) ≤ c.toSet.encard := by simpa using henc
+    exact ENat.toENNReal_mono henc_nat
+  calc Pr{let ws ← ids.commit pk sk}[c (msg, ws.1) ≠ none]
+      = Pr{let x ← commitDist}[hit x] := h_event
+    _ = ∑ w ∈ S, Pr{let x ← commitDist}[x = w] := h_sum
+    _ ≤ ∑ w ∈ S, ENNReal.ofReal ε := h_sum_le
+    _ = (S.card : ℝ≥0∞) * ENNReal.ofReal ε := by simp [Finset.sum_const, nsmul_eq_mul]
+    _ ≤ QueryCache.enncard c * ENNReal.ofReal ε := mul_le_mul' h_card_le le_rfl
+
+/-! ### The two body-level cores of the Sign → Prog hop -/
+
+/-- **Within-signing-query TV induction for the Sign → Prog hop.** From a shared
+starting cache, the real signing loop (live caching random oracle) and the
+all-attempts-reprogramming loop are within total-variation distance
+`ε · ∑_{a<n} p ^ a · (|c| + a)`: the two loops agree until an attempt commits to an
+already-cached point, attempt `a` is reached only after `a` fresh-challenge rejections
+(probability at most `p ^ a` each, by `hAbort`), and at that point the cache holds at
+most `|c| + a` entries, each guessed with probability at most `ε` (`hGuess`). -/
+lemma measureETVDist_run_fsAbortSignLoop_progSignBody_le
+    [MeasurableSpace (Option (Commit × Resp) × (M × Commit →ₒ Chal).QueryCache)]
+    (pk : Stmt) (sk : Wit) (msg : M) {ε p_abort : ℝ}
+    (hGuess : ∀ cm : Commit,
+      Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = cm] ≤ ENNReal.ofReal ε)
+    (hAbort : Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort) :
+    ∀ (n : ℕ) (c : (M × Commit →ₒ Chal).QueryCache),
+      (measureETVDist
+        ((simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+            (randomOracle : QueryImpl (M × Commit →ₒ Chal)
+              (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
+          (fsAbortSignLoop ids M pk sk msg n)).run c)
+        ((progSignBody ids M pk sk msg n).run c))
+        ≤ signCollisionBound ε p_abort n (QueryCache.enncard c) := by
+  intro n
+  induction n with
+  | zero =>
+      intro c
+      simp [fsAbortSignLoop, progSignBody]
+  | succ n ih =>
+      intro c
+      classical
+      rw [run_simulateQ_fsAbortSignLoop_succ, run_progSignBody_succ]
+      refine le_trans (measureETVDist_bind_left_le_tsum _ _ _) ?_
+      set B' := signCollisionBound ε p_abort n (QueryCache.enncard c + 1) with hB'
+      have key : ∀ ws : Commit × PrvState,
+          (measureETVDist
+            (roStep M c (msg, ws.1) >>= fun chc =>
+              ids.respond pk sk ws.2 chc.1 >>= fun oz =>
+                match oz with
+                | some z => pure (some (ws.1, z), chc.2)
+                | none =>
+                    (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+                        (randomOracle : QueryImpl (M × Commit →ₒ Chal)
+                          (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
+                      (fsAbortSignLoop ids M pk sk msg n)).run chc.2)
+            (uniformSample Chal >>= fun ch =>
+              ids.respond pk sk ws.2 ch >>= fun oz =>
+                match oz with
+                | some z => pure (some (ws.1, z), c.cacheQuery (msg, ws.1) ch)
+                | none =>
+                    (progSignBody ids M pk sk msg n).run (c.cacheQuery (msg, ws.1) ch)))
+          ≤ (if c (msg, ws.1) = none then 0 else 1) +
+              Pr{let x ← uniformSample Chal >>= fun ch => ids.respond pk sk ws.2 ch}[x = none] *
+                B' := by
+        intro ws
+        cases hc : c (msg, ws.1) with
+        | some v =>
+            rw [ite_eq_right (by simp)]
+            exact le_add_right (measureETVDist_le_one _ _)
+        | none =>
+            rw [ite_eq_left rfl, zero_add, roStep_of_none M hc]
+            simp only [bind_assoc, pure_bind]
+            refine le_trans (measureETVDist_bind_left_le_tsum _ _ _) ?_
+            have hch : ∀ ch : Chal,
+                (measureETVDist
+                  (ids.respond pk sk ws.2 ch >>= fun oz =>
+                    match oz with
+                    | some z => pure (some (ws.1, z), c.cacheQuery (msg, ws.1) ch)
+                    | none =>
+                        (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+                            (randomOracle : QueryImpl (M × Commit →ₒ Chal)
+                              (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
+                          (fsAbortSignLoop ids M pk sk msg n)).run
+                            (c.cacheQuery (msg, ws.1) ch))
+                  (ids.respond pk sk ws.2 ch >>= fun oz =>
+                    match oz with
+                    | some z => pure (some (ws.1, z), c.cacheQuery (msg, ws.1) ch)
+                    | none =>
+                        (progSignBody ids M pk sk msg n).run
+                          (c.cacheQuery (msg, ws.1) ch)))
+                ≤ Pr{let x ← ids.respond pk sk ws.2 ch}[x = none] * B' := by
+              intro ch
+              refine le_trans (measureETVDist_bind_left_le_tsum _ _ _) ?_
+              calc ∑' oz : Option Resp, Pr{let x ← ids.respond pk sk ws.2 ch}[x = oz] *
+                    (measureETVDist _ _)
+                  ≤ ∑' oz : Option Resp, Pr{let x ← ids.respond pk sk ws.2 ch}[x = oz] *
+                      (if oz = none then B' else 0) := by
+                    refine ENNReal.tsum_le_tsum fun oz => mul_le_mul_right ?_ _
+                    cases oz with
+                    | some z => simp
+                    | none =>
+                        rw [ite_eq_left rfl]
+                        exact le_trans (ih (c.cacheQuery (msg, ws.1) ch))
+                          (signCollisionBound_mono ε p_abort n
+                            (QueryCache.enncard_cacheQuery_le c (msg, ws.1) ch))
+                _ = Pr{let x ← ids.respond pk sk ws.2 ch}[x = none] * B' := by
+                    rw [tsum_eq_single (none : Option Resp)
+                      fun oz hoz => by simp [hoz]]
+                    simp
+            calc ∑' ch : Chal, Pr{let x ← uniformSample Chal}[x = ch] *
+                  (measureETVDist _ _)
+                ≤ ∑' ch : Chal, Pr{let x ← uniformSample Chal}[x = ch] *
+                    (Pr{let x ← ids.respond pk sk ws.2 ch}[x = none] * B') :=
+                  ENNReal.tsum_le_tsum fun ch => mul_le_mul_right (hch ch) _
+              _ = Pr{let x ← (uniformSample Chal >>= fun ch =>
+                    ids.respond pk sk ws.2 ch)}[x = none] * B' := by
+                  rw [OracleComp.prEvent_bind_eq_tsum, ← ENNReal.tsum_mul_right]
+                  exact tsum_congr fun ch => (mul_assoc _ _ _).symm
+      calc ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
+            (measureETVDist _ _)
+          ≤ ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
+              ((if c (msg, ws.1) = none then 0 else 1) +
+                Pr{let x ← (uniformSample Chal >>= fun ch =>
+                  ids.respond pk sk ws.2 ch)}[x = none] * B') :=
+            ENNReal.tsum_le_tsum fun ws => mul_le_mul_right (key ws) _
+        _ = (∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
+              (if c (msg, ws.1) = none then 0 else 1)) +
+            ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
+              (Pr{let x ← (uniformSample Chal >>= fun ch =>
+                ids.respond pk sk ws.2 ch)}[x = none] * B') := by
+            simp_rw [mul_add]
+            exact ENNReal.tsum_add
+        _ ≤ QueryCache.enncard c * ENNReal.ofReal ε + ENNReal.ofReal p_abort * B' := by
+            refine add_le_add ?_ ?_
+            · refine le_trans (le_of_eq ?_)
+                (prEvent_commit_hit_le ids M pk sk hGuess msg c)
+              rw [OracleComp.prEvent_eq_tsum_ite]
+              refine tsum_congr fun ws => ?_
+              by_cases h : c (msg, ws.1) = none <;> simp [h]
+            · calc ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
+                    (Pr{let x ← (uniformSample Chal >>= fun ch =>
+                      ids.respond pk sk ws.2 ch)}[x = none] * B')
+                  = (∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
+                      Pr{let x ← (uniformSample Chal >>= fun ch =>
+                        ids.respond pk sk ws.2 ch)}[x = none]) * B' := by
+                    rw [← ENNReal.tsum_mul_right]
+                    exact tsum_congr fun ws => (mul_assoc _ _ _).symm
+                _ ≤ ENNReal.ofReal p_abort * B' :=
+                    mul_le_mul_left
+                      (tsum_prEvent_commit_mul_abort_le ids pk sk hAbort) _
+        _ = signCollisionBound ε p_abort (n + 1) (QueryCache.enncard c) :=
+            (signCollisionBound_succ ε p_abort n (QueryCache.enncard c)).symm
+
+/-- **Expected cache growth of the reprogramming loop.** Each attempt of `progSignBody`
+programs at most one new cache point and the loop continues only on a fresh-challenge
+rejection, so the expected size of the final cache is at most `|c| + ∑_{a<n} p ^ a`. -/
+lemma tsum_prEvent_run_progSignBody_mul_enncard_le (pk : Stmt) (sk : Wit) (msg : M)
+    {p_abort : ℝ}
+    (hAbort : Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort) :
+    ∀ (n : ℕ) (c : (M × Commit →ₒ Chal).QueryCache),
+      ∑' z : Option (Commit × Resp) × (M × Commit →ₒ Chal).QueryCache,
+        Pr{let x ← (progSignBody ids M pk sk msg n).run c}[x = z] * QueryCache.enncard z.2
+        ≤ QueryCache.enncard c + ∑ a ∈ Finset.range n, ENNReal.ofReal p_abort ^ a := by
+  intro n
+  induction n with
+  | zero =>
+      intro c
+      simp only [progSignBody, StateT.run_pure, OracleComp.tsum_prEvent_pure_mul]
+      simp
+  | succ n ih =>
+      intro c
+      classical
+      set S : ℝ≥0∞ := ∑ a ∈ Finset.range n, ENNReal.ofReal p_abort ^ a with hS
+      have hSucc : ∑ a ∈ Finset.range (n + 1), ENNReal.ofReal p_abort ^ a =
+          1 + ENNReal.ofReal p_abort * S := by
+        rw [Finset.sum_range_succ', pow_zero, add_comm]
+        congr 1
+        rw [Finset.mul_sum]
+        exact Finset.sum_congr rfl fun a _ => pow_succ' _ _
+      rw [run_progSignBody_succ, OracleComp.tsum_prEvent_bind_mul]
+      have h_ws : ∀ ws : Commit × PrvState,
+          (∑' z : Option (Commit × Resp) × (M × Commit →ₒ Chal).QueryCache,
+            Pr{let x ← (uniformSample Chal >>= fun ch =>
+              ids.respond pk sk ws.2 ch >>= fun oz =>
+                match oz with
+                | some z => pure (some (ws.1, z), c.cacheQuery (msg, ws.1) ch)
+                | none =>
+                    (progSignBody ids M pk sk msg n).run (c.cacheQuery (msg, ws.1) ch))}[x = z] *
+              QueryCache.enncard z.2)
+          ≤ (QueryCache.enncard c + 1) +
+              Pr{let x ← uniformSample Chal >>= fun ch => ids.respond pk sk ws.2 ch}[x = none] *
+                S := by
+        intro ws
+        rw [OracleComp.tsum_prEvent_bind_mul]
+        have h_ch : ∀ ch : Chal,
+            (∑' z : Option (Commit × Resp) × (M × Commit →ₒ Chal).QueryCache,
+              Pr{let x ← (ids.respond pk sk ws.2 ch >>= fun oz =>
+                match oz with
+                | some z => pure (some (ws.1, z), c.cacheQuery (msg, ws.1) ch)
+                | none =>
+                    (progSignBody ids M pk sk msg n).run
+                      (c.cacheQuery (msg, ws.1) ch))}[x = z] *
+                QueryCache.enncard z.2)
+            ≤ (QueryCache.enncard c + 1) +
+                Pr{let x ← ids.respond pk sk ws.2 ch}[x = none] * S := by
+          intro ch
+          rw [OracleComp.tsum_prEvent_bind_mul]
+          have h_oz : ∀ oz : Option Resp,
+              (∑' z : Option (Commit × Resp) × (M × Commit →ₒ Chal).QueryCache,
+                Pr{let x ← (match oz with
+                  | some z => pure (some (ws.1, z), c.cacheQuery (msg, ws.1) ch)
+                  | none =>
+                      (progSignBody ids M pk sk msg n).run
+                        (c.cacheQuery (msg, ws.1) ch) :
+                  ProbComp (Option (Commit × Resp) ×
+                    (M × Commit →ₒ Chal).QueryCache))}[x = z] *
+                  QueryCache.enncard z.2)
+              ≤ (QueryCache.enncard c + 1) + (if oz = none then S else 0) := by
+            intro oz
+            cases oz with
+            | some z =>
+                rw [ite_eq_right (by simp), add_zero, OracleComp.tsum_prEvent_pure_mul]
+                exact QueryCache.enncard_cacheQuery_le c (msg, ws.1) ch
+            | none =>
+                rw [ite_eq_left rfl]
+                refine le_trans (ih (c.cacheQuery (msg, ws.1) ch)) ?_
+                exact add_le_add_left
+                  (QueryCache.enncard_cacheQuery_le c (msg, ws.1) ch) S
+          refine le_trans (OracleComp.tsum_prEvent_mul_le_add_of_le _ h_oz) ?_
+          refine add_le_add_right (le_of_eq ?_) _
+          rw [tsum_eq_single (none : Option Resp) fun oz hoz => by simp [hoz]]
+          simp [mul_comm]
+        refine le_trans (OracleComp.tsum_prEvent_mul_le_add_of_le _ h_ch) ?_
+        refine add_le_add_right (le_of_eq ?_) _
+        rw [OracleComp.prEvent_bind_eq_tsum, ← ENNReal.tsum_mul_right]
+        exact tsum_congr fun ch => (mul_assoc _ _ _).symm
+      refine le_trans (OracleComp.tsum_prEvent_mul_le_add_of_le _ h_ws) ?_
+      rw [hSucc]
+      have : ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
+          (Pr{let x ← (uniformSample Chal >>= fun ch =>
+            ids.respond pk sk ws.2 ch)}[x = none] * S)
+          ≤ ENNReal.ofReal p_abort * S := by
+        calc ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
+              (Pr{let x ← (uniformSample Chal >>= fun ch =>
+                ids.respond pk sk ws.2 ch)}[x = none] * S)
+            = (∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
+                Pr{let x ← (uniformSample Chal >>= fun ch =>
+                  ids.respond pk sk ws.2 ch)}[x = none]) * S := by
+              rw [← ENNReal.tsum_mul_right]
+              exact tsum_congr fun ws => (mul_assoc _ _ _).symm
+          _ ≤ ENNReal.ofReal p_abort * S :=
+              mul_le_mul_left
+                (tsum_prEvent_commit_mul_abort_le ids pk sk hAbort) _
+      calc QueryCache.enncard c + 1 +
+            ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
+              (Pr{let x ← (uniformSample Chal >>= fun ch =>
+                ids.respond pk sk ws.2 ch)}[x = none] * S)
+          ≤ QueryCache.enncard c + 1 + ENNReal.ofReal p_abort * S :=
+            add_le_add_right this _
+        _ = QueryCache.enncard c + (1 + ENNReal.ofReal p_abort * S) := by
+            rw [add_assoc]
+
+end FiatShamirWithAbort
