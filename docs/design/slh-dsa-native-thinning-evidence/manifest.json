@@ -37,10 +37,22 @@
     "NativeThin2.lean": {
       "sha256": "60bc79aecd42652fc97de8528a676213d5eb655de178cbfcbd3a1a88e2de4265",
       "physicalLines": 92
+    },
+    "NativeCausalState.lean": {
+      "sha256": "169ec7055c6a9a9c1a05de347f9d788d01845701efd197f9fb6cfe09b5086d97",
+      "physicalLines": 164
+    },
+    "NativeCausalRun.lean": {
+      "sha256": "d27848c1b804f15323726bb75ab6f128a16a02434883b54014b47f77342c607f",
+      "physicalLines": 230
+    },
+    "NativeCausality.lean": {
+      "sha256": "7809543fcc41373ff022629324ae2f9e2c096a96c504d17398b8d9716bdb1a21",
+      "physicalLines": 48
     }
   },
-  "sourcePhysicalLines": 1464,
-  "printedStandardAxiomRoots": 43,
+  "sourcePhysicalLines": 1906,
+  "printedStandardAxiomRoots": 61,
   "allowedAxioms": [
     "propext",
     "Classical.choice",
@@ -70,7 +82,7 @@
     "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
     "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8"
   },
-  "scope": "Single and ordered-pair reach-conditioned thinning at the actual generated public key, deterministic pure kappa, arbitrary fixed L.other=[], original hypotheses. Causality is not included in this archive unit; occupation/adaptive coverage, same-measure actual-joint budget bridge and full q/2^127 remain open.",
+  "scope": "Single/pair actual-generated-key thinning and future-cell global-forger-counter causality are proved on the original native roleRun. Occupation/adaptive coverage, same-measure actual-joint budget transport, byte/weak-seed assembly and full q/2^127 remain open; no production replacement or improvement claim.",
   "additionalInterfaces": {
     "thin2": {
       "theorem": "SLHDSA.Security.Coverage.prEvent_roleRun_pair_firedAtActualKey_le",
@@ -97,6 +109,35 @@
       "newPhysicalLeanLines": 463,
       "threads": 4,
       "scope": "Ordered-slot pair thinning for actual generated public key, arbitrary deterministic pure kappa and every fixed L.other=[]; no additional hypothesis."
+    },
+    "causality": {
+      "theorem": "SLHDSA.Security.Coverage.prEvent_roleRun_forgerCnt_set_ge",
+      "acceptedExternalPacket": {
+        "path": "/tmp/slhdsa-native-causality-pilot-20261102/handoff.json",
+        "sha256": "f11f9d2f8add8f9b060c39d38fe85ff8931aa9139c812743dc1a30bc5004478d"
+      },
+      "independentReview": {
+        "path": "/tmp/adversarial/slhdsa-native-causality-final-review-20261102-01/review.json",
+        "sha256": "fed093ec9ac1d266cf26ff690e4cfde42afd07ee0320800f4b76debd03992933"
+      },
+      "sourceFiles": [
+        "NativeCausalState.lean",
+        "NativeCausalRun.lean",
+        "NativeCausality.lean"
+      ],
+      "reviewedResearchHead": "0bc052192b85bbc2dfc8dda66a7d3f02feb1d25d",
+      "compiler": "Lean v4.35.0, default proof limits and strict standard flags",
+      "warnings": 0,
+      "originalHeaderSha256": "5f74952bf22670aa4aac91fabf6c45caa38de95510194d5bfa4901f9eb881d8b",
+      "syntaxNormalizedHeaderSha256": "9a4826b39fbb0fc352085c8b6db8ac0e2ac3b5e633962c962d4332425f5eb91f",
+      "syntaxNormalizedHeaderByteIdentical": true,
+      "literalOriginalHeaderByteIdentical": false,
+      "normalization": "Only two parentheses grouping the multiline roleRun application; no binder, premise or event change.",
+      "printedStandardAxiomRoots": 18,
+      "distinctStandardAxiomRoots": 16,
+      "newPhysicalLeanLines": 442,
+      "threads": 2,
+      "scope": "Future-cell overwrite invariance for the global forger H_msg counter, including cache hits/off-key queries, at every cell>=index. No new runner or hypothesis."
     }
   }
 }

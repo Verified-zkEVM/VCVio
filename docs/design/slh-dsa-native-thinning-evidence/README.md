@@ -20,19 +20,29 @@ actual-key slots require distinct randomizers, so their singleton outcomes are
 disjoint. The proof does not multiply expectation bounds or assume independence.
 The four pair modules import the existing thin1 support without copying it.
 
-This is research evidence outside active libraries. The four unchanged thin1
-sources contain 1,001 physical Lean lines and the four pair sources add 463;
-the archive totals 1,464 lines including proofs, comments, whitespace and checks.
-All sources are byte-identical to their accepted external proofs. The 34 original
-printed axiom roots and nine pair roots use only `propext`, `Classical.choice` and
-`Quot.sound`; the accepted replays had no warnings. The manifest retains the
-original thin1 hashes and pins both accepted packets and independent reviews.
-There is no production or LOC saving claim.
+`prEvent_roleRun_forgerCnt_set_ge` proves that overwriting forger tape cell
+`cell ≥ index` preserves `Pr[index < cnt forger]`, including `cell = index`.
+This is the global counter of all forger-role `H_msg` queries, including cache hits
+and other public keys; the actual-key filter remains on firing. The native program
+induction distinguishes query count from fresh tape consumption; it adds no runner.
+The final header differs from the source-only contract only by two grouping
+parentheses needed for parsing. Its semantic statement and premises are unchanged.
 
-Causality is not yet included in this archive unit. Occupation/adaptive coverage,
-same-measure actual-joint budget transport, byte/weak-seed assembly and the full
-`q / 2^127` endpoint remain open. This archive neither replaces the existing
-security proof nor establishes independence of proof methods.
+This is research evidence outside active libraries. The unchanged thin1 sources
+contain 1,001 physical Lean lines, pair thinning adds 463, and causality adds 442:
+1,906 lines including proofs, comments, whitespace and checks. All sources are
+byte-identical to their accepted external proofs. The 34 original, nine pair and
+18 causality printed axiom reports use only `propext`, `Classical.choice` and
+`Quot.sound`; causality's reports cover 16 distinct theorems. Accepted replays had
+no warnings. The manifest retains the original thin1 hashes and pins each accepted
+packet, independent review and the causality header normalization. There is no
+production or LOC saving claim.
+
+All three native interfaces are proved. The digest/record witness bridge,
+occupation/adaptive coverage, same-measure actual-joint budget transport,
+byte/weak-seed assembly and the full `q / 2^127` endpoint remain open. This archive
+neither replaces the existing security proof nor establishes independence of
+proof methods.
 
 ## Replay
 
@@ -89,6 +99,9 @@ lean -j4 "${args[@]}" -o "$out/PairHeader.olean" "$evidence/PairHeader.lean"
 lean -j4 "${args[@]}" -o "$out/PairPotential.olean" "$evidence/PairPotential.lean"
 lean -j4 "${args[@]}" -o "$out/PairRun.olean" "$evidence/PairRun.lean"
 lean -j4 "${args[@]}" -o "$out/NativeThin2.olean" "$evidence/NativeThin2.lean"
+lean -j2 "${args[@]}" -o "$out/NativeCausalState.olean" "$evidence/NativeCausalState.lean"
+lean -j2 "${args[@]}" -o "$out/NativeCausalRun.olean" "$evidence/NativeCausalRun.lean"
+lean -j2 "${args[@]}" -o "$out/NativeCausality.olean" "$evidence/NativeCausality.lean"
 check_evidence
 ```
 
