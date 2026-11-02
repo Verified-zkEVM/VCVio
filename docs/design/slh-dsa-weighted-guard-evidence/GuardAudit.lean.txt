@@ -1,0 +1,84 @@
+/-
+Copyright (c) 2026 Alexander Hicks. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Alexander Hicks
+-/
+
+module
+
+public import ForwardingBudgetGuard
+
+/-! # Closed public-import audit of the reviewed weighted-budget targets -/
+
+@[expose] public section
+open OracleComp OracleSpec QueryImpl
+universe v
+namespace ForwardingBudgetGuardAudit
+
+def constructorTarget
+    {ι Cache : Type} {spec : OracleSpec.{0, 0} ι}
+    {m : Type → Type v} [Monad m]
+    (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
+    (handler : QueryImpl spec (StateT Cache m))
+    (fallback : (input : spec.Domain) → spec.Range input) :
+    QueryImpl spec (StateT (Cache × ((Nat × Nat) × Bool)) m) :=
+  fun input => StateT.mk fun state =>
+    if state.2.2 then pure (fallback input, state)
+    else
+      let proposed := state.2.1 + cost input
+      if proposed.1 ≤ caps.1 ∧ proposed.2 ≤ caps.2 then
+        (fun result => (result.1, (result.2, (proposed, false)))) <$>
+          (handler input).run state.1
+      else pure (fallback input, (state.1, (state.2.1, true)))
+
+
+theorem constructor_eq :
+    @QueryImpl.guardQueryBudget.{v} = @constructorTarget.{v} := rfl
+
+def SafetyTarget : Prop :=
+  ∀ {ι α Cache : Type} {spec : OracleSpec.{0, 0} ι}
+    (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
+    (handler : QueryImpl spec (StateT Cache ProbComp))
+    (fallback : (input : spec.Domain) → spec.Range input)
+    (program : OracleComp spec α) (initial : Cache)
+    (result : α × (Cache × ((Nat × Nat) × Bool)))
+    (_hresult : result ∈ support
+      ((simulateQ (guardQueryBudget caps cost handler fallback) program).run
+        (initial, ((0, 0), false)))),
+    result.2.2.1.1 ≤ caps.1 ∧ result.2.2.1.2 ≤ caps.2
+
+def TransparencyTarget : Prop :=
+  ∀ {ι α Cache : Type} {spec : OracleSpec.{0, 0} ι}
+    (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
+    (handler : QueryImpl spec (StateT Cache ProbComp))
+    (fallback : (input : spec.Domain) → spec.Range input)
+    (program : OracleComp spec α) (initial : ProbComp Cache)
+    (_hcap : Pr{let result ←
+      (initial >>= fun cache =>
+        ((simulateQ (handler.withAddCost cost) program).runAdd).run
+          cache)}[result.1.2.1 ≤ caps.1 ∧ result.1.2.2 ≤ caps.2] = 1),
+    let source := do
+      let cache ← initial
+      ((simulateQ (handler.withAddCost cost) program).runAdd).run cache
+    let guarded := do
+      let cache ← initial
+      (simulateQ (guardQueryBudget caps cost handler fallback) program).run
+        (cache, ((0, 0), false))
+    letI : MeasurableSpace (Option α × (Cache × ((Nat × Nat) × Bool))) := ⊤
+    𝒟[(fun result =>
+      (if result.2.2.2 then none else some result.1, result.2)) <$> guarded] =
+      𝒟[(fun result =>
+        (some result.1.1, (result.2, (result.1.2, false)))) <$> source]
+
+/-- The full reviewed support certificate, without a source resource hypothesis. -/
+theorem safety : SafetyTarget := @guardQueryBudget_counts_le_caps
+
+/-- The full reviewed mixed-source joint law. -/
+theorem transparency : TransparencyTarget := @evalDist_guardQueryBudget_eq_of_ae_caps
+
+#check @constructor_eq
+#print axioms constructor_eq
+#print axioms QueryImpl.guardQueryBudget
+#print axioms safety
+#print axioms transparency
+end ForwardingBudgetGuardAudit
