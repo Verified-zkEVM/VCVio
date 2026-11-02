@@ -7,11 +7,13 @@ Authors: Alexander Hicks
 module
 
 import VCVioTest.OracleComp.CostSimulation
+import VCVioTest.OracleComp.MeasuredProgram
 
 /-! # Executable oracle-cost regression checks -/
 
 public section
 
 /-- Execute query-cost refinements on concrete response-dependent programs. -/
-def main : IO Unit :=
+def main : IO Unit := do
   VCVioTest.OracleComp.CostSimulation.run
+  VCVioTest.OracleComp.MeasuredProgram.run

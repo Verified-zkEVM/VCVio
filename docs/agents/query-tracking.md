@@ -69,6 +69,9 @@ labels, unchanged answers, and the ordinary function monoid.
 | `VCVio/OracleComp/QueryTracking/QueryCost.lean` | Generic query-cost accounting for direct-style `HasQuery.Program` computations |
 | `VCVio/OracleComp/QueryTracking/CostModel.lean` | `OracleComp`-specific facade over the generic semantics |
 | `VCVio/OracleComp/QueryTracking/CostModel/Simulation.lean` | Weighted cost bounds for actual oracle-query substitution |
+| `VCVio/OracleComp/QueryTracking/DeterminedCost.lean` | Deterministic executions and singleton-response complete-path costs |
+| `VCVio/OracleComp/QueryTracking/MeasuredProgram.lean` | Named deterministic instruction programs, realization and declared budgets |
+| `VCVio/OracleComp/QueryTracking/MeasuredProgram/Composition.lean` | Sequential programs retaining both instruction traces and adding budgets |
 | `VCVio/OracleComp/QueryTracking/AdaptivePrefix.lean` | Shared-ROM stopping-time bounds for an adaptive prefix followed by a transcript-dependent suffix |
 | `ToMathlib/Control/WriterT.lean` | Pathwise and output-indexed cost predicates for `AddWriterT` |
 | `ToMathlib/Probability/TailSums.lean` | Tail-sum integration for measurable Nat observables under arbitrary measures |
@@ -225,6 +228,23 @@ Use `QueryCost` when you want:
 - a generic theorem over a direct-style `HasQuery.Program`
 - runtime-instantiated cryptographic constructions
 - weighted expected cost and expected query count
+
+### Named measured programs
+
+`OracleComp.MeasuredProgram` names an instruction program, its deterministic handlers, an input
+view and the instruction charges. `Realizes` equates the resulting function with the handler's
+execution; `CostAtMost` is `WorstCaseCostBound` on every view. `BudgetedProgram` bundles these
+proofs for one function. For singleton-response instruction sets, the determined-response laws
+identify the complete-path bound with the actual writer-instrumented run.
+
+`outer.comp inner` executes both instruction programs and passes the actual inner result to the
+outer program. Its disjoint instruction tags retain the originating view and cost; the proved
+budget is the inner budget plus the outer budget. `contramap` precomposes only the input view.
+These are declared instruction counts. Pure computation, view preparation and handler evaluation
+remain uncharged, and `BudgetedProgram.ofFun` gives every function a zero-instruction program.
+Use a named program with a reviewed accounting boundary; existential measured programs give no
+running-time guarantee. The persistent `lake exe oracle_cost_tests` regression checks the actual
+composed output and both vector coordinates, alongside response-dependent query substitution.
 
 ### 4. `ToMathlib`: generic probability facts
 
