@@ -1,0 +1,42 @@
+{
+  "kind": "research-only generic expected-charge evidence",
+  "theorem": "OracleComp.prEvent_run_add_initial_potential_le_expected_final",
+  "sourceFile": "ExpectedCharge.lean",
+  "sourceSha256": "5f0de99a74e59108f3a2a8c57de4e99c2fc0acca225a09cb70b623eafaba6f83",
+  "physicalLeanLines": 126,
+  "canonicalBase": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
+  "canonicalTree": "a6295e765732c14f4b2b675554dd9af5f2e9c490",
+  "toolchain": "leanprover/lean4:v4.35.0",
+  "lakeManifestSha256": "08de459b1889ead9e9b4ea9af537411791b487d5f2981be22e118af1f3362d95",
+  "allowedAxioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "printedAxiomRoots": 1,
+  "frozenHeaderFileSha256": "2df9957dcb80f5081b7d007193e6da328912b34aeac7d7a737a185395cf983df",
+  "acceptedExternalPacket": {
+    "path": "/tmp/slhdsa-expected-charge-pilot-20261102/handoff.json",
+    "sha256": "3d3285907531ee2bc29f7594ea10b846d52eb00aa254ad91336112772f228e66"
+  },
+  "independentReview": {
+    "path": "/tmp/adversarial/slhdsa-expected-charge-final-review-20261102-01/review.json",
+    "sha256": "cac36bfaa2fcecc126ba420827bf0b26c8c0a51a59dc6909b4bf38352b6fb925"
+  },
+  "dependencyRevisions": {
+    "mathlib": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+    "QuantumFoundations": "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac",
+    "PolyFun": "4181c82238142d9b73403fbf4c4b13e1a801e400",
+    "plausible": "dfa4f38190d07c37e315953e08b90fe2d95b3c24",
+    "LeanSearchClient": "d6b4c7be5be75ec4917c873ac50c756dc1436372",
+    "importGraph": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93",
+    "proofwidgets": "df72b022e558978a1c50264cfc4d7fec86fa8e04",
+    "aesop": "4a174c490d8707121c4a9290800489f105d85e07",
+    "Qq": "dce0ad79c486cb1fb504af04f953c3466b0c6db8",
+    "batteries": "66e469188fe07963e5cf666c7d4433f45b8131c5",
+    "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
+    "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8"
+  },
+  "scope": "Existing IsPotentialStep plus initiallyGood only; no persistence, finite-potential, invariant or budget assumption. No SLH/stopped corollary/full127 result.",
+  "archiveReplay": "Separate fresh recorded-commit replay required; accepted original proof evidence is pinned above."
+}
