@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Lean environment
-        uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
         with:
           auto-config: false
           build: false
@@ -103,7 +103,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Lean environment
-        uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
         with:
           auto-config: false
           build: false
@@ -162,7 +162,7 @@ jobs:
             vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
             vcvio-build-${{ runner.os }}-${{ runner.arch }}-
       - name: Set up Lean environment
-        uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
         with:
           auto-config: false
           build: false
@@ -320,7 +320,7 @@ jobs:
             vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
             vcvio-build-${{ runner.os }}-${{ runner.arch }}-
       - name: Set up Lean environment
-        uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
         with:
           auto-config: false
           build: false
@@ -482,7 +482,7 @@ jobs:
           fi
       - name: Upload timing artifact
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ env.BUILD_TIMING_ARTIFACT_NAME }}
           path: ${{ env.BUILD_TIMING_ARTIFACT_DIR }}
@@ -575,7 +575,7 @@ jobs:
             vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
             vcvio-build-${{ runner.os }}-${{ runner.arch }}-
       - name: Set up Lean environment
-        uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
         with:
           auto-config: false
           build: false
