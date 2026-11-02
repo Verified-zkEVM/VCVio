@@ -1,0 +1,64 @@
+{
+  "scope": "GENERIC RESEARCH ONLY; no SLH instantiation, new bound or production integration",
+  "archive_files": [
+    "CostTail.lean",
+    "README.md",
+    "manifest.json"
+  ],
+  "source_sha256": "e81a8d21ecee0cb7d8136d47f9b45bd9efcaddfa88167c029e393590b8db37dc",
+  "readme_sha256": "2a5c19961b613300ac553299eec0ceea4026a677a18235a6f1510e05c51bb7e7",
+  "canonical_commit": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
+  "lean_toolchain": "leanprover/lean4:v4.35.0",
+  "lake_manifest_sha256": "08de459b1889ead9e9b4ea9af537411791b487d5f2981be22e118af1f3362d95",
+  "package_revisions": {
+    "mathlib": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+    "QuantumFoundations": "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac",
+    "PolyFun": "4181c82238142d9b73403fbf4c4b13e1a801e400",
+    "plausible": "dfa4f38190d07c37e315953e08b90fe2d95b3c24",
+    "LeanSearchClient": "d6b4c7be5be75ec4917c873ac50c756dc1436372",
+    "importGraph": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93",
+    "proofwidgets": "df72b022e558978a1c50264cfc4d7fec86fa8e04",
+    "aesop": "4a174c490d8707121c4a9290800489f105d85e07",
+    "Qq": "dce0ad79c486cb1fb504af04f953c3466b0c6db8",
+    "batteries": "66e469188fe07963e5cf666c7d4433f45b8131c5",
+    "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
+    "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8"
+  },
+  "original_source_sha256": "21ee3ea8917a7f34ad5b622143892c64e99c7377e00e6b69ee3980563d8131d1",
+  "original_acceptance_receipt_sha256": "30627a2248db32440fced8c2eb0c6699131dfca2d0d7c4cd3b88944118804f5a",
+  "r7_original_review_sha256": "d4e9480e594e9061bc72fbb28c4ea8a05dc7a6893c5ae1e50e474036571919bf",
+  "implementation_equivalence": {
+    "original_source_sha256": "21ee3ea8917a7f34ad5b622143892c64e99c7377e00e6b69ee3980563d8131d1",
+    "packaged_source_sha256": "e81a8d21ecee0cb7d8136d47f9b45bd9efcaddfa88167c029e393590b8db37dc",
+    "normalized_implementation_sha256": "ea7bd279aefd1b2a396ecb78c02996cd2e18581c7b1d2895fd8475550c6ea370",
+    "equal_after_removing_comments_whitespace_and_terminal_diagnostics": true,
+    "changes": "Standard header, module/public import/public section, exposed stoppedAtBad definition, intrinsic module/public docstrings; terminal diagnostics moved to Audit.lean. All declaration names, types, hypotheses and implementation/proof tokens unchanged."
+  },
+  "validation": {
+    "proof_limits": "Lean defaults; -j2; 90-second process timeout",
+    "source_exit_code": 0,
+    "import_audit_exit_code": 0,
+    "warnings": 0,
+    "axioms": [
+      "propext",
+      "Classical.choice",
+      "Quot.sound"
+    ],
+    "new_axioms_or_admissions": false,
+    "external_receipt": "/tmp/slhdsa-joint-budget-prototype-20261102/packaged/compile-01-receipt.json",
+    "external_receipt_sha256": "3788b235db88d81984ea435dad9a78b7578b3b3a079120dfd5558feda8da8e6e",
+    "source_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "import_audit_log_sha256": "ab667a1c69ffd679a3d09c0484360670c5c5d1ed381273d768073288d042d125",
+    "audit_source_sha256": "c2ac939294c0fb130abb256e058753f3d55f2ae1a3440f19a043e1af23341a6f"
+  },
+  "worktrees_at_receipt": {
+    "/tmp/vcvio-slhdsa-integration": {
+      "head": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
+      "status_porcelain": ""
+    },
+    "/tmp/vcvio-slhdsa-security-delta": {
+      "head": "6367f6be3252656b57677bcfc19f324bd546d12a",
+      "status_porcelain": "?? docs/design/slh-dsa-native-thinning-evidence/\n"
+    }
+  }
+}
