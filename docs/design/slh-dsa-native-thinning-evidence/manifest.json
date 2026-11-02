@@ -21,10 +21,26 @@
     "NativeThin1.lean": {
       "sha256": "8af4c8777d1da8e411bf472ab66ef2c6be35d364f77a95f4c5c722adaf79a1b0",
       "physicalLines": 80
+    },
+    "PairHeader.lean": {
+      "sha256": "d897805cc8bd508014505b6a4a54949fd70509ac00c8764d2983abaec6351a42",
+      "physicalLines": 38
+    },
+    "PairPotential.lean": {
+      "sha256": "f09010068a1b648ab9cedbca2fb683af8fb8b79b3fca35b216954a277101c693",
+      "physicalLines": 194
+    },
+    "PairRun.lean": {
+      "sha256": "b08f46ccc9df6fc14b7327935dfec4c9846f409b774a83c7298bd9beaab6e012",
+      "physicalLines": 139
+    },
+    "NativeThin2.lean": {
+      "sha256": "60bc79aecd42652fc97de8528a676213d5eb655de178cbfcbd3a1a88e2de4265",
+      "physicalLines": 92
     }
   },
-  "sourcePhysicalLines": 1001,
-  "printedStandardAxiomRoots": 34,
+  "sourcePhysicalLines": 1464,
+  "printedStandardAxiomRoots": 43,
   "allowedAxioms": [
     "propext",
     "Classical.choice",
@@ -54,5 +70,33 @@
     "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
     "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8"
   },
-  "scope": "Actual generated public key, deterministic pure kappa, arbitrary fixed tapes with L.other=[], original hypotheses. No pair thinning, overwrite causality, occupation/adaptive coverage, actual-joint budget bridge or full q/2^127 endpoint."
+  "scope": "Single and ordered-pair reach-conditioned thinning at the actual generated public key, deterministic pure kappa, arbitrary fixed L.other=[], original hypotheses. Causality is not included in this archive unit; occupation/adaptive coverage, same-measure actual-joint budget bridge and full q/2^127 remain open.",
+  "additionalInterfaces": {
+    "thin2": {
+      "theorem": "SLHDSA.Security.Coverage.prEvent_roleRun_pair_firedAtActualKey_le",
+      "acceptedExternalPacket": {
+        "path": "/tmp/slhdsa-native-thin2-pilot-20261102/handoff.json",
+        "sha256": "036e94083472ee42d4050c86428846a5a4482b95aae3c3e4fa61fd69945ac42c"
+      },
+      "independentReview": {
+        "path": "/tmp/adversarial/slhdsa-native-thin2-final-review-20261102-01/review.json",
+        "sha256": "ff8147702b3d773f343c6a391f9922b9476c4cfded89d19e7571741a555b44ed"
+      },
+      "sourceFiles": [
+        "PairHeader.lean",
+        "PairPotential.lean",
+        "PairRun.lean",
+        "NativeThin2.lean"
+      ],
+      "reviewedResearchHead": "0bc052192b85bbc2dfc8dda66a7d3f02feb1d25d",
+      "compiler": "Lean v4.35.0, default proof limits and strict standard flags",
+      "warnings": 0,
+      "frozenCandidateSha256": "b53de29b3acc8b4b8e4e4f25adcbc055f6c521ffa3fc1c69696a6691266f42e2",
+      "literalFrozenHeaderByteIdentical": true,
+      "printedStandardAxiomRoots": 9,
+      "newPhysicalLeanLines": 463,
+      "threads": 4,
+      "scope": "Ordered-slot pair thinning for actual generated public key, arbitrary deterministic pure kappa and every fixed L.other=[]; no additional hypothesis."
+    }
+  }
 }
