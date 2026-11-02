@@ -381,12 +381,18 @@ lean_exe algorithm_tests where
   srcDir := "scripts"
   root := `AlgorithmTests
 
+/-- Executable oracle-cost substitution and vector-counter regressions. -/
+lean_exe oracle_cost_tests where
+  srcDir := "scripts"
+  root := `OracleCostTests
+
 /-- Smoke test: imports VCVio and prints OK. -/
 lean_exe smoke_test where
   root := `VCVioTest.Smoke
 
-/-- `lake test`: build the three test libraries, then run the smoke, pure algorithm and SLH-DSA test
-executables and independently check the regenerated exact bound table against its artifact.
+/-- `lake test`: build the three test libraries, then run the smoke, oracle-cost, pure algorithm and
+SLH-DSA test executables and independently check the regenerated exact bound table against its
+artifact.
 `lake test -- --ffi` additionally builds and runs the native-backed ML-KEM / ML-DSA /
 Falcon executables, which compile the vendored C backends under `third_party/`; that path is what
 the nightly FFI workflow runs and is never part of the per-PR CI. -/
@@ -399,6 +405,7 @@ script test (args) do
   let mut steps : Array (Array String) := #[
     #["build", "VCVioTest", "LatticeCryptoTest", "HashSigTest"],
     #["exe", "smoke_test"],
+    #["exe", "oracle_cost_tests"],
     #["exe", "algorithm_tests"],
     #["exe", "slhdsa_kat"],
     #["exe", "slhdsa_c13_kat"],

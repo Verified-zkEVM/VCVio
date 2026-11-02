@@ -68,9 +68,25 @@ labels, unchanged answers, and the ordinary function monoid.
 | `VCVio/OracleComp/QueryTracking/WriterCost.lean` | `AddWriterT` cost facts and `QueryImpl` writer-cost instrumentation |
 | `VCVio/OracleComp/QueryTracking/QueryCost.lean` | Generic query-cost accounting for direct-style `HasQuery.Program` computations |
 | `VCVio/OracleComp/QueryTracking/CostModel.lean` | `OracleComp`-specific facade over the generic semantics |
+| `VCVio/OracleComp/QueryTracking/CostModel/Simulation.lean` | Weighted cost bounds for actual oracle-query substitution |
 | `VCVio/OracleComp/QueryTracking/AdaptivePrefix.lean` | Shared-ROM stopping-time bounds for an adaptive prefix followed by a transcript-dependent suffix |
 | `ToMathlib/Control/WriterT.lean` | Pathwise and output-indexed cost predicates for `AddWriterT` |
 | `ToMathlib/Probability/TailSums.lean` | Tail-sum integration for measurable Nat observables under arbitrary measures |
+
+## Weighted query substitution
+
+`WorstCaseCostBound.simulateQ` transfers a source cost bound through the actual query programs
+supplied by a `QueryImpl`. Every completed run of each handler must fit that source query's
+charge, including all repeated target queries. The cost type may be a coordinate vector or any
+ordered additive commutative monoid; no probability interpretation is required.
+
+`mem_support_costDist_simulateQ` retains the returned value in its source support witness and
+bounds the target charge by the source charge. It supplies a support refinement, not equality of
+the two probability distributions. Complete-path bounds do not establish availability or
+termination: a query with an empty response type has no completed run. The ordinary-import and
+runtime checks in `VCVioTest/OracleComp/CostSimulation.lean` cover response-dependent routing,
+repeated labels, executable vector counters and this empty-response boundary.
+Run the concrete checks with `lake exe oracle_cost_tests`; `lake test` includes that executable.
 
 ## Association-list cache representation
 
