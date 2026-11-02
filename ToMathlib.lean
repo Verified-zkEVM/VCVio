@@ -5,6 +5,7 @@ public import ToMathlib.Analysis.Matrix.PosSemidef
 public import ToMathlib.Analysis.MeanInequalities
 public import ToMathlib.Analysis.Normed.Ring.Commutator
 public import ToMathlib.Analysis.SumIntegralComparisons
+public import ToMathlib.Compiler.FinCases
 public import ToMathlib.Control.Except
 public import ToMathlib.Control.Functor.Prod
 public import ToMathlib.Control.Monad.Algebra

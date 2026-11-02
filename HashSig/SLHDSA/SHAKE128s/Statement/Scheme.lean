@@ -11,6 +11,7 @@ public import HashSig.SLHDSA.SHAKE128s.Statement.Types
 public import HashSig.SLHDSA.SHAKE128s.Encoding
 public import VCVio.CryptoFoundations.SignatureAlg.SigningView.Encoding
 public import HashSig.SLHDSA.Wots.Program.Laws
+public import ToMathlib.Compiler.FinCases
 public import HashSig.SLHDSA.Scheme.Program
 public import HashSig.SLHDSA.Hypertree.Program
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
@@ -59,18 +60,6 @@ def messageDigest (randomizer : Digest) (pk : PublicKey) (message : Bytes) : m H
   hash (messageInput randomizer pk message)
 
 end Hashing
-
-/-- `Fin.cases` by direct matching. Core's goes through `Fin.induction`, which evaluates its
-unused argument, so compiled nested uses take exponential time; `@[csimp]` swaps it in. -/
-@[expose] def finCases {n : Nat} {motive : Fin (n + 1) → Sort _} (zero : motive 0)
-    (succ : ∀ i : Fin n, motive i.succ) : ∀ i, motive i
-  | ⟨0, hi⟩ => by rwa [Fin.mk_zero]
-  | ⟨i + 1, hi⟩ => succ ⟨i, Nat.lt_of_succ_lt_succ hi⟩
-
-/-- `Fin.cases` equals `finCases`, which lets the compiler run one as the other. -/
-@[csimp] theorem fin_cases_eq_finCases : @Fin.cases = @finCases := by
-  funext n motive zero succ i
-  rcases i with ⟨_ | i, hi⟩ <;> rfl
 
 /-- Run the indexed computations in increasing order. -/
 @[expose] def sequenceFin {m : Type → Type} [Monad m] {α : Type} :

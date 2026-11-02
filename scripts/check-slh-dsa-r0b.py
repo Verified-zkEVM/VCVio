@@ -29,6 +29,13 @@ ALLOWED_AXIOMS = {"propext", "Classical.choice", "Quot.sound"}
 # This archived digest describes a whole implementation, rather than a runtime/parser binding.
 # Its historical value stays in bindings.json; current construction claims are checked below.
 HISTORICAL_SCHEME_SOURCE = "HashSig/SLHDSA/SHAKE128s/Statement/Scheme.lean"
+# Explicit compiler owner/client retain the original executable canary.
+COMPILER_SOURCE = "HashSigTest/SLHDSA/SHAKE128s/Compiler.lean"
+COMPILER_OWNER = "ToMathlib/Compiler/FinCases.lean"
+COMPILER_OWNER_MODULE = "ToMathlib.Compiler.FinCases"
+COMPILER_RULE = "Fin.cases_eq_casesDirect"
+COMPILER_MAIN = "def main : IO Unit := SLHDSA.SHAKE128s.CompilerTest.check"
+COMPILER_CANARY_SHA256 = "cd397f6186ac9a4151337b741ed4df661c6d6c61c32a1741567cc2d588e710c8"
 # The archived Game source digest remains in bindings.json. Current readable Game
 # meaning is checked by these literal full types, freshly elaborated below. Never derive
 # these types from the current proof source: the applications freeze all 15 contracts.
@@ -375,7 +382,45 @@ def target_binding(source: str, name: str) -> dict:
     return values
 
 
+def check_current_compiler() -> dict:
+    """Bind the explicit owner/client while retaining the original executable canary."""
+    source = (ROOT / COMPILER_SOURCE).read_text()
+    owner = (ROOT / COMPILER_OWNER).read_bytes()
+    imports = [line.split("--", 1)[0].strip() for line in
+               re.findall(r"^(?:(?:public|meta)[ \t]+)*import[ \t]+([^\n]+)$",
+                          source, re.MULTILINE)]
+    if imports != [COMPILER_OWNER_MODULE, "HashSig.SLHDSA.SHAKE128s.Statement.Scheme"]:
+        raise ValueError("Compiler client must import the explicit owner and actual Scheme client")
+    owner_imports = [line.split("--", 1)[0].strip() for line in
+                     re.findall(r"^(?:(?:public|meta)[ \t]+)*import[ \t]+([^\n]+)$",
+                                owner.decode(), re.MULTILINE)]
+    if owner_imports != ["Mathlib.Data.Fin.Basic"]:
+        raise ValueError("Compiler owner must retain its explicit finite-index dependency")
+    start = "namespace SLHDSA.SHAKE128s.CompilerTest\n"
+    end = "end SLHDSA.SHAKE128s.CompilerTest\n"
+    if source.count(start) != 1 or source.count(end) != 1:
+        raise ValueError("Compiler canary namespace is ambiguous")
+    canary = source[source.index(start):source.index(end) + len(end)]
+    if r0a.sha256(canary.encode()) != COMPILER_CANARY_SHA256:
+        raise ValueError("The original direct/nested compiler canary changed")
+    tail = source[source.index(end) + len(end):].strip()
+    if tail.startswith("/--"):
+        doc_end = tail.find("-/")
+        if doc_end < 0:
+            raise ValueError("Compiler main doc comment is unterminated")
+        tail = tail[doc_end + 2:].strip()
+    if tail != COMPILER_MAIN or len(re.findall(r"^def main\b", source, re.MULTILINE)) != 1:
+        raise ValueError("Compiler main must make its original single CompilerTest.check call")
+    return {"owner": COMPILER_OWNER, "rule": COMPILER_RULE,
+            "ownerSha256": r0a.sha256(owner),
+            "client": COMPILER_SOURCE, "clientSha256": r0a.sha256(source.encode()),
+            "originalCanarySha256": COMPILER_CANARY_SHA256,
+            "scope": "Imports/canary/main bindings; whole source hashes are observed provenance only; "
+                     "preceding ordinary lake-test step executes the canary"}
+
+
 def check_bindings(bindings: dict) -> list[str]:
+    check_current_compiler()
     wire_source = (ROOT / WIRE_BRIDGE_SOURCE).read_bytes()
     original_proof = WIRE_BRIDGE_SIGNING_PROOF.encode()
     public_equation_proof = WIRE_BRIDGE_SIGNING_PROOF.replace(
@@ -404,7 +449,7 @@ def check_bindings(bindings: dict) -> list[str]:
         if path != WIRE_BRIDGE_SOURCE}}
     for field in ("r0aProtectedFiles", "semanticSourceSha256", "runtimeSourceSha256"):
         for relative, digest in bindings[field].items():
-            if field == "runtimeSourceSha256" and relative == HISTORICAL_SCHEME_SOURCE:
+            if field == "runtimeSourceSha256" and relative in {HISTORICAL_SCHEME_SOURCE, COMPILER_SOURCE}:
                 continue
             if field == "semanticSourceSha256" and relative == HISTORICAL_GAME_SOURCE:
                 continue
@@ -452,7 +497,7 @@ def check_bindings(bindings: dict) -> list[str]:
 
 def check_axioms(names: list[str], report: Path, steps: list[dict]) -> None:
     probe = report / "Axioms.lean"
-    imports = [MODULE, r0a.STRENGTH_MODULE, WOTS_JOINT_MODULE]
+    imports = [MODULE, r0a.STRENGTH_MODULE, WOTS_JOINT_MODULE, COMPILER_OWNER_MODULE]
     probe.write_text("".join("import " + module + "\n" for module in imports) +
                      "".join("#print axioms " + name + "\n" for name in names))
     log = report / "axioms.log"
@@ -489,7 +534,7 @@ def verify(report: Path, steps: list[dict]) -> dict:
     if version_log.read_text().strip() != baseline["leanVersionOutput"]:
         raise ValueError("The actual commit-bearing Lean evaluator changed")
     execute(["lake", "build", MODULE, r0a.CAPTURE_MODULE, r0a.STRENGTH_MODULE,
-             WOTS_JOINT_MODULE], report / "build.log", steps)
+             WOTS_JOINT_MODULE, COMPILER_OWNER_MODULE], report / "build.log", steps)
     for index, module in enumerate(LEAVES):
         execute(["lake", "env", "lean", "-DautoImplicit=false",
                  module.replace(".", "/") + ".lean"], report / f"semantic-{index}.log", steps)
@@ -516,7 +561,7 @@ def verify(report: Path, steps: list[dict]) -> dict:
     construction_witnesses.write_text(READABLE_CONSTRUCTION_WITNESSES)
     execute(["lake", "env", "lean", "-DautoImplicit=false", str(construction_witnesses)],
             report / "readable-construction-witnesses.log", steps)
-    axiom_names = list(dict.fromkeys(names + source_names + witness_names + WOTS_JOINT_NAMES))
+    axiom_names = list(dict.fromkeys(names + source_names + witness_names + WOTS_JOINT_NAMES + [COMPILER_RULE]))
     check_axioms(axiom_names, report, steps)
     after = r0a.frame()
     (report / "after.json").write_text(json.dumps(after, indent=2) + "\n")
@@ -538,6 +583,9 @@ def verify(report: Path, steps: list[dict]) -> dict:
                 "executed": False, "accepted": None,
                 "command": "python3 scripts/check-slh-dsa-r0.py --report-dir FRESH_EXTERNAL_DIR",
                 "scope": "Separate historical construction identity; mismatch is nonPASS, never refreshed"},
+            "currentCompilerBinding": check_current_compiler(),
+            "historicalCompilerRule": bindings["globalCompilerRule"],
+            "historicalCompilerClientSha256": bindings["runtimeSourceSha256"][COMPILER_SOURCE],
             "retiredRuntimeSourceIdentity": {
                 "path": HISTORICAL_SCHEME_SOURCE,
                 "recordedSha256": bindings["runtimeSourceSha256"][HISTORICAL_SCHEME_SOURCE]},

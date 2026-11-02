@@ -562,7 +562,7 @@ lean_exe slhdsa_wire_tests where
 lean_exe slhdsa_signing_view_tests where
   root := `HashSigTest.SLHDSA.Refactor.SigningViewEncoding
 
-/-- Finite-index compiler controls through the combined hash-signature import. -/
+/-- Finite-index compiler controls through the explicit owner and sequence client. -/
 lean_exe slhdsa_shake128s_compiler_tests where
   root := `HashSigTest.SLHDSA.SHAKE128s.Compiler
 
