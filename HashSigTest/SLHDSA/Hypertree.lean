@@ -30,7 +30,10 @@ example (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
       OracleComp (publicHashSpec core) (HtSigCore p core)) =
     (do
       let sig ← xmssSignM core msg sk pk (htAdrs adrs idxTree) idxLeaf
-      return HtSigCore.singleLayer hd sig) := rfl
+      return HtSigCore.singleLayer hd sig) :=
+  htSignWith_eq core hd (m := OracleComp (publicHashSpec core))
+    (PublicHash.f core pk) (PublicHash.tl core pk) (PublicHash.h core pk)
+    msg sk pk adrs idxTree idxLeaf
 
 /-- Verification exposes recovery before the final pure comparison. -/
 example [DecidableEq core.Y] (msg : core.Y) (sig : HtSigCore p core)
