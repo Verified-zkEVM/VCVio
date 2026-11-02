@@ -1,0 +1,114 @@
+{
+  "scope": "Research archive package only: one result-polymorphic averaged joint law and its closed private DeriveOutcome specialization audit",
+  "files": {
+    "DeriveAudit.lean.txt": "b2efee95df4acd1fb27d2b330fb36cdb2aa88a59c76d0faebe92bfaca10eac1c",
+    "README.md": "d0473e39254ffbf34329b08f6b6dbd394b101650f63161a97338bbb9577ca4d7",
+    "RelativeKernel.lean": "5377d7f67322f173d60099feaeafe863e2df552947f6ed2a3aed6626c7935f6f"
+  },
+  "physicalLines": {
+    "RelativeKernel.lean": 503,
+    "DeriveAudit.lean.txt": 51
+  },
+  "acceptedProof": {
+    "handoffPath": "/tmp/slhdsa-relative-kernel-result-polymorphic-pilot-20261102/handoff.json",
+    "handoffSHA256": "074f7587ba5e745175909d84321523eec2231ad59582bbd1933c9b6dbfa4621e",
+    "reviewPath": "/tmp/adversarial/slhdsa-relative-kernel-result-polymorphic-final-review-20261102-01/review.json",
+    "reviewSHA256": "58410490e9e7fc4739bd56431fff774d2d7fe4ede4bc5d152e154d079bb14513",
+    "strongerHeaderSHA256": "3ffafe4d4dab1b9c56112f91fbec3c7ff467661b6ab14dc3daac2bfd5852b214",
+    "closedOldAuditTypeSHA256": "33557c2d16b18c92b90d62c46c00497f598a82d25032878d4e73bc6d73fc1c27",
+    "contractReviewSHA256": "4a0d08c17850b3b3ed3057fcb4115adbf86fb053f2123cc1506af4d4f48f1e83",
+    "actualCorrespondenceVersion02SHA256": "a859c117313847ee34f5d194b048b0f09278c740db97e57097f0c256f957bbf2",
+    "freshCompilerExits": [
+      0,
+      0
+    ],
+    "warnings": 0,
+    "standardAxiomRoots": 21,
+    "kernelOutputSHA256": "c2318946b94d18cccd3b111b5a2cde66bbb31c34a8021f6c7c9914f7e4bc2592",
+    "auditOutputSHA256": "e09b600723159a9f329ac8eaebf762424b8a6f0c8561d51e2276dc25eb431501"
+  },
+  "historyOnlyNotArchived": {
+    "DeriveSpecific503SourceSHA256": "e4709643fb476b8f8b34b82cef856b97145816c68947b0b1399c4aae02b8d061",
+    "reviewSHA256": "12bcb3437fac8872326d93aae00bc4e3c3f39e874191087c0f676d2da6103ac3"
+  },
+  "basis": {
+    "canonicalHead": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
+    "proofReplayResearchHead": "31fe8f53b4897f276c67f62794e8673469e0abfc",
+    "lakeManifestSHA256": "08de459b1889ead9e9b4ea9af537411791b487d5f2981be22e118af1f3362d95",
+    "SelectedWorkSourceSHA256": "17b16a69aa2b9bd6ef482b462862e4cf20545e1118354da7c52a015a20eae734",
+    "SelectedWorkOutputSHA256": "6fb4749b380434aa4d21c6a712891af7c58225d8325c75a77ded111a3031960d",
+    "dependencyLocks": [
+      {
+        "name": "mathlib",
+        "rev": "56a005855ea17e0b0958f73ec801ae140b0a1679"
+      },
+      {
+        "name": "QuantumFoundations",
+        "rev": "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac"
+      },
+      {
+        "name": "PolyFun",
+        "rev": "4181c82238142d9b73403fbf4c4b13e1a801e400"
+      },
+      {
+        "name": "plausible",
+        "rev": "dfa4f38190d07c37e315953e08b90fe2d95b3c24"
+      },
+      {
+        "name": "LeanSearchClient",
+        "rev": "d6b4c7be5be75ec4917c873ac50c756dc1436372"
+      },
+      {
+        "name": "importGraph",
+        "rev": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93"
+      },
+      {
+        "name": "proofwidgets",
+        "rev": "df72b022e558978a1c50264cfc4d7fec86fa8e04"
+      },
+      {
+        "name": "aesop",
+        "rev": "4a174c490d8707121c4a9290800489f105d85e07"
+      },
+      {
+        "name": "Qq",
+        "rev": "dce0ad79c486cb1fb504af04f953c3466b0c6db8"
+      },
+      {
+        "name": "batteries",
+        "rev": "66e469188fe07963e5cf666c7d4433f45b8131c5"
+      },
+      {
+        "name": "cslib",
+        "rev": "5b56df99362532c46e1175381fbbdd755bd56030"
+      },
+      {
+        "name": "Cli",
+        "rev": "c24fe6078c630e89b489bffe59b3e20ac30d12c8"
+      }
+    ],
+    "SelectedWorkArtifacts": [
+      {
+        "name": "SelectedWork.ir",
+        "sha256": "2c441355fc4591a40613f0daa0fa758d3169b891ac4e43d5178e234cdac11018"
+      },
+      {
+        "name": "SelectedWork.ir.sig",
+        "sha256": "d59e967f159012a38dbeb74c41a8db08a62419db9a506c48dfb5cd0155b3e5cf"
+      },
+      {
+        "name": "SelectedWork.olean",
+        "sha256": "6fb4749b380434aa4d21c6a712891af7c58225d8325c75a77ded111a3031960d"
+      },
+      {
+        "name": "SelectedWork.olean.private",
+        "sha256": "99fe5178f589dffcda742a453dbf0232e0b79f89d27865cd7106829360621c4b"
+      },
+      {
+        "name": "SelectedWork.olean.server",
+        "sha256": "d20af5edd8d76e31f170cdcf357de00a42435db92b1f471d5773a27efd473610"
+      }
+    ]
+  },
+  "archiveReplayRequirement": "After reviewed exact archive commit, fresh recorded-HEAD two-file replay with clean research/canonical/source Git blobs, all twelve actual locked checkouts and inherited artifact frames before/after; no source modifications."
+}
