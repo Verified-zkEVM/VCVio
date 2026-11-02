@@ -36,7 +36,7 @@ variable {ι : Type u} {R S : OracleSpec.{u, v} ι}
   PFunctor.Handler.ofLens (answerLens e)
 
 /-- Relabelling asks the same input and reads back its dependent answer. -/
-@[simp] theorem relabel_apply (e : ∀ input, R input ≃ S input) (input : ι) :
+@[simp, grind =] theorem relabel_apply (e : ∀ input, R input ≃ S input) (input : ι) :
     relabel e input = (e input).symm <$> (liftM (S.query input) : OracleComp S (S input)) :=
   rfl
 
