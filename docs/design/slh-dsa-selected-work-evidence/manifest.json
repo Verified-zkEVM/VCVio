@@ -1,0 +1,63 @@
+{
+  "kind": "Reviewed generic joint-observer research archive; not production integration",
+  "archive_files": [
+    "SelectedWork.lean",
+    "ImportAudit.lean",
+    "README.md",
+    "manifest.json"
+  ],
+  "canonical_commit": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
+  "historical_research_checkpoint": "0bc052192b85bbc2dfc8dda66a7d3f02feb1d25d",
+  "lean_toolchain": "leanprover/lean4:v4.35.0",
+  "lake_manifest_sha256": "08de459b1889ead9e9b4ea9af537411791b487d5f2981be22e118af1f3362d95",
+  "dependency_revisions": {
+    "mathlib": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+    "QuantumFoundations": "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac",
+    "PolyFun": "4181c82238142d9b73403fbf4c4b13e1a801e400",
+    "plausible": "dfa4f38190d07c37e315953e08b90fe2d95b3c24",
+    "LeanSearchClient": "d6b4c7be5be75ec4917c873ac50c756dc1436372",
+    "importGraph": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93",
+    "proofwidgets": "df72b022e558978a1c50264cfc4d7fec86fa8e04",
+    "aesop": "4a174c490d8707121c4a9290800489f105d85e07",
+    "Qq": "dce0ad79c486cb1fb504af04f953c3466b0c6db8",
+    "batteries": "66e469188fe07963e5cf666c7d4433f45b8131c5",
+    "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
+    "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8"
+  },
+  "files_sha256": {
+    "SelectedWork.lean": "17b16a69aa2b9bd6ef482b462862e4cf20545e1118354da7c52a015a20eae734",
+    "ImportAudit.lean": "dff5bba8d58b6cb6ff960ea9a87663147916acfc25254e6930014afb5b0f8fd2",
+    "README.md": "64777fe0797133c9dbbf95c280d147ee81b73d0141c563179ec3d22bd95a00a2"
+  },
+  "original_acceptance": {
+    "source_lines": 233,
+    "final_receipt_sha256": "fe5671746a28b9d67e49e0a431fde0f003ffa59cd481249756c276a57cda3da9",
+    "independent_review_sha256": "2c748b42669b303cbea63ef9e562f52496043da3c05254a8bd2a480aefaab8db",
+    "reviewed_header_sha256": "5953c7f0f765fb8cec4040703fca6c58f017dac80a3dc39e54d66a0d4cf1c1fb",
+    "source_execution_receipt_sha256": "cabe1f731120080ef387c9b09819f9608f80251e9f205d473dd400b69f08c84b",
+    "import_audit_execution_receipt_sha256": "ee0b40a6ffc92143765026467cfb09214ebeb52ce13a6fe9de468beb23c8e389",
+    "source_olean_sha256": "6fb4749b380434aa4d21c6a712891af7c58225d8325c75a77ded111a3031960d",
+    "import_audit_olean_sha256": "7b35baae2a0866f422810708c44b3fb4fe6397bb93e11c3297c6a8b4959be88a",
+    "source_and_import_audit_exit_codes": [
+      0,
+      0
+    ],
+    "warnings": 0,
+    "threads": 2,
+    "proof_limits": "defaults",
+    "options": "strict repository options, including its documented unicode setting",
+    "axioms": [
+      "propext",
+      "Classical.choice",
+      "Quot.sound"
+    ],
+    "identical_dependency_std_compiler_frame_sha256": "b55ef6a81d9861c8ad252251be775e3fd43a26a3adab2a60d9f6c1d317066843"
+  },
+  "scope_limits": [
+    "Exact joint outcome/rawLog/verification/cache/cost identity only",
+    "No SLH resource or signing-lifetime instantiation",
+    "No guard/OptionT or numerical-bound/full127 result",
+    "No production ownership/migration/deletion/publication acceptance"
+  ],
+  "replay": "README.md gives fresh-output source compile followed by the separate closed-target import audit. This packaging step ran no compiler."
+}
