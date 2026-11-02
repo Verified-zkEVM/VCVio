@@ -2,9 +2,10 @@
 
 Status: P4, P5 and P6 are accepted. The [P5 checkpoint](slh-dsa-reuse-evidence/r6c/p5-checkpoint.md)
 records the shared-experiment security/semantics gate at clean validated `fb6f14cb`.
-Canonical delegation and the remaining finite reuse families are still in progress. The
-[finite completion manifest](slh-dsa-reuse-completion-manifest.md) fixes R6c/R8 deliverables;
-explicit per-unit claims and independent review remain required for acceptance.
+The six canonical delegation units and five finite extraction/use families have independently
+accepted implementation checkpoints. The [current implementation table](slh-dsa-reuse-completion-manifest.md#current-implementation-checkpoints)
+records those checkpoints and the consumer/compiler and R8 work. The finite completion manifest
+fixes the endpoint; per-unit acceptance does not establish final integrated validation.
 Plan approval is not implementation acceptance.
 
 The objective is maximum useful generality **while preserving or improving the end security
@@ -30,6 +31,11 @@ The prototypes ran in an isolated checkout at `92eaa1af9d9c120e6e6e9d3036aca1af9
 with its private locked dependencies. Their framework/#766 inputs are unchanged from the base;
 P1 additionally checks all 295 local import-closure blobs against both commits.
 These are scoped prototype results, not a recorded-head acceptance of future refactoring.
+
+The pins above record the original implementation and prototype inputs. A later independently
+reviewed synchronization with `main` may update the current dependency lock; final validation
+records every dependency in that reviewed lock and requires identical clean source/checkouts
+before and afterward. Historical pin records and archives keep their original revisions.
 
 Read the [agent guide](../../AGENTS.md), [contribution policy](../../CONTRIBUTING.md),
 [crypto guide](../agents/crypto.md), [query-tracking guide](../agents/query-tracking.md),

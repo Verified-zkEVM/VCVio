@@ -4,8 +4,10 @@ The original evidence checkpoint is accepted commit
 `ae23574db895fd68ae28db806b54e0b3b275a551`. The clean committed full validation and independent P6 acceptance passed.
 This manifest freezes the finite completion deliverables; it does not freeze the
 intermediate declarations, proof bodies or public names. The later
-[P5 checkpoint](slh-dsa-reuse-evidence/r6c/p5-checkpoint.md) is accepted at `fb6f14cb`;
-R5 delegation and R6c/R8 completion remain open.
+[P5 checkpoint](slh-dsa-reuse-evidence/r6c/p5-checkpoint.md) is accepted at `fb6f14cb`.
+The six R5 delegation units and five R6c extraction/use families have independently accepted
+implementation checkpoints. Consumer/compiler integration and final R8 acceptance are tracked
+below; the historical P5/P6 records keep their original scope.
 
 This finite endpoint supplements the [reuse plan](slh-dsa-reuse-refactor-plan.md),
 [original strength inventory](slh-dsa-reuse-evidence/strength-manifest.json),
@@ -19,6 +21,27 @@ commit. Those historical hashes are not claims about later documentation revisio
 [P6 checkpoint](slh-dsa-reuse-evidence/r6c/p6-checkpoint.json) distinguish this
 finite deliverable list from the per-unit claims, implementations and evidence
 still needed for acceptance.
+
+## Current implementation checkpoints
+
+These are independently reviewed branch checkpoints, rather than claims of merge to `main`.
+The finite endpoint and all retained-or-improved security requirements below remain unchanged.
+Targeted unit validation does not establish final whole-repository acceptance.
+
+| Scope | Accepted checkpoint or pending gate | Result |
+|---|---|---|
+| R6c C1/C4, sampling and programming | `92c0e08e` | Real 128s/192f graph consumers use the shared traversal laws; warm-cache sampling keeps its explicit freshness/width hypotheses. |
+| R6c C2, independent moments | `0f0292f2` | The production FORS concentration route consumes the generic finite independent-moment proof. |
+| R6c C3, presampling | `b648ea60` | The real warmed-game route uses the generic value-law mechanisms; no final-cache or cost equality is inferred. |
+| R6c C5a, exact counts | `4579a16d` | Actual verifier proofs consume generic counting laws and retain the sharper branch-sensitive guarantees. |
+| R6c C5b, answer transport | `c49f281e` | Dependent generic fold/answer transport supplies the real byte/full-answer bridge, with sampler and policy obligations explicit. |
+| R5 units 1–6, canonical delegation | `75116521` through `5343578a` | WOTS/FORS/XMSS/hypertree, scheme/codec/request guards and actual counted-game bodies share their production owners. |
+| R7 profiles and shared certificates | `9f721f01` | Normal clients retain the original mode-specific and exact eligible shared-work certificates. |
+| R7 context observations and rejection | `ae7b0a4d` | Normal clients retain joint observations and charged/logged rejection with continuation. |
+| R7 provider and graph examples | `66abfede` | The clients passed 17 clean recorded checks, including both existing FORS runtime controls, and retain joint signature/cache observations and the precise programming/sampling scopes. |
+| R7 resource policy and certificates | `774e7a50` | The input-dependent policy proves eventwise domination and same-cap joint budget transport; all five modules, including numerical certificate leaves, passed the 18-check clean recorded validation. |
+| R7 compiler owner and import isolation | `1497e98d` | Explicit compiler ownership is checked across 25 inert and three opt-in imported environments, with the unchanged native 32-entry/sum1024 canary and the complete current-contract gate. |
+| Current-main integration and R8 | Final exact-head gate; see PR validation evidence | Commit the reviewed main/lock integration, documentation and generated imports before clean recorded full validation and independent review. Publish the actual validated commit and results in PR evidence while keeping that source unchanged. |
 
 ## Endpoint and exclusions
 
@@ -343,7 +366,7 @@ effectful provider and ordered/input-dependent policy; old theorem eligibility
 without automatic min under different hypotheses; meaningful registered
 runtime/negative/table tests; checked security/universe comparisons and full
 counted i/r generality; eligible cost observers/transports; reviewed guard changes;
-unchanged pins/baselines;
+the exact reviewed dependency lock and unchanged admission/lint baselines;
 clean recorded final head/source before==after full lint/init/axioms/test/build;
 independent final review. Retain or improve joint127 and all required766 security
 regimes on the same canonical experiment with their distinct eligibility contracts. No new security

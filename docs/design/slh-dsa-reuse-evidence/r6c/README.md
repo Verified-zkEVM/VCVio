@@ -37,8 +37,10 @@ identical internal proof values, owners or ASTs. The
 The root full command and independent P6 acceptance at ae235 passed. That historical
 checkpoint closed the structural/effectful P6 gate only. P5 subsequently passed at
 clean validated `fb6f14cb`; P4/P5/P6 now allow migration in independently reviewed
-units. Actual canonical delegation and R6c/R8 remain unfinished. Each checkpoint
-records its own scope and receipt hashes; the original P6 record is unchanged.
+units. The six canonical delegation units and five finite extraction/use families have since
+been accepted at the [implementation checkpoints](../../slh-dsa-reuse-completion-manifest.md#current-implementation-checkpoints).
+That table records consumer/compiler progress and final R8 status. Each checkpoint records its
+own scope and receipt hashes; the original P6 record is unchanged.
 The gate ran 37 executable actions plus the CSV checker and R0b tail: 39 non-build
 driver actions. CSV has 18 rows; R0b checked 40 equations / 11 groups / 77 contracts and
 invoked R0a's 1242 records / 509-name boundary once. Counts are distinct. Inherited
@@ -66,12 +68,12 @@ An explicitly identified dirty trial patch may supply precommit evidence; it doe
 not establish clean recorded-head acceptance.
 
 Prepare cache/import generation before validation; commit any generated changes.
-Immediately before the final command record clean head/tree/index/source and all
-11 clean dependency revisions, plus the full Lean version/commit and manifest
-hash. Run `/usr/bin/time -v ./scripts/validate.sh --lint --test --axioms` with
+Immediately before the final command record clean head/tree/index/source and the clean revision
+of every dependency in the current reviewed manifest, plus the full Lean version/commit and
+manifest hash. Run `/usr/bin/time -v ./scripts/validate.sh --lint --test --axioms` with
 `LEAN_NUM_THREADS=4`. Do not regenerate imports, edit source, repin dependencies,
 or share a writable project cache during that command. Require exit0 and exactly
 identical clean head/tree/index/source/dependency snapshots afterward. The
-ordinary `lake test` tail already invokes R0b/R0a once; do not add a duplicate R0
-chain. Retain logs and independent review bound to those snapshots. A whitespace
+ordinary `lake test` tail already invokes the current readable/strength-contract gate once;
+do not add a duplicate historical R0 chain. Retain logs and independent review bound to those snapshots. A whitespace
 check alone does not establish validation of the recorded commit.
