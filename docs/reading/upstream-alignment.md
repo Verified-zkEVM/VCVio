@@ -909,7 +909,7 @@ guardrails (no native rebuilds on the PR path, no convention gating by script) b
 | Eight `lake exe mk_all --lib X --module --check` steps | one regenerate-and-diff script (PolyFun `check-imports.sh`) | **adopt** — bare `lake exe mk_all --check` is unusable here (it iterates `HashSigTest`, the fixtures lib, and non-module `Interop`) |
 | `scripts/check-warning-log.py` + 14 path prefixes | `lake build --wfail` | **keep** — the swept libraries carry 40 baseline `sorry` warnings and Lake replays cached warnings, so `--wfail` would need a trace-changing `-Dwarn.sorry=false` and a full local rebuild for every developer |
 | `scripts/build_timing_report.sh` + PR-comment automation | Mathlib `bench`/speed-center | **keep** (maintainer decision) |
-| `scripts/{pr-summary.py,review.py,requirements.txt}` | `lean4repo-utils@0.3` (`summary.yml`, `review.yml`) | **adopt** — dead, delete |
+| `scripts/{pr-summary.py,review.py,requirements.txt}` | `lean4repo-utils@main` (`summary.yml`, `review.yml`; GitHub Actions only) | **adopt** — dead, delete |
 | `scripts/noshake.json` | `lake shake --keep-implied --keep-prefix` | **track** — nothing runs shake; run manually, keep or delete the config on the evidence |
 | Tag-pinned actions | SHA pins + dependabot (PolyFun) | **adopt**; no actionlint/shellcheck/pr-title jobs (no new gating without need) |
 | `leanOptions`: `modulesUpperCamelCase`, `style.whitespace` | already implied (`TextBased.lean:560` default; member of `mathlibStandardSet`, `Mathlib/Init.lean:84`) | **adopt** — drop |
