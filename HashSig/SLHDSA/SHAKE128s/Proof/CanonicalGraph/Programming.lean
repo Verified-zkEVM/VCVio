@@ -9,6 +9,7 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Input
 public import HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Evaluation
 public import HashSig.SLHDSA.SHAKE128s.Proof.GraphFreshSampling
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Traversal.Programming
 public import Mathlib.Data.List.Sort
 import VCVio.OracleComp.Constructions.SampleableType.Measure
 
@@ -92,57 +93,57 @@ input and recording each answer's truncation as the node's cell. -/
 @[expose] noncomputable def warmup (publicSeed secretSeed : Digest) : OracleComp HashSpec Cells :=
   GraphFreshSampling.evaluate (input publicSeed) assign order (initialCells secretSeed)
 
-/-- The canonical cache written using final cells, rather than partial traversal states. -/
-@[expose] def cacheFrom (publicSeed : Digest) (cells : Cells) (outputs : Outputs) :
-    List StructuralNode → QueryCache HashSpec → QueryCache HashSpec
-  | [], cache => cache
-  | parent :: parents, cache => cacheFrom publicSeed cells outputs parents
-      (cache.cacheQuery (canonicalInput publicSeed cells parent) (outputs parent))
+/-- The canonical cache written using final cells in the traversal's exact list order. -/
+def cacheFrom (publicSeed : Digest) (cells : Cells) (outputs : Outputs)
+    (parents : List StructuralNode) (cache : QueryCache HashSpec) : QueryCache HashSpec :=
+  OracleComp.RandomOracleTraversal.Programming.cacheFrom
+    (canonicalInput publicSeed cells) outputs parents cache
 
-/-- The cells agree with the target on the secret seed and on every structural node outside the
-given list. -/
+/-- The canonical cache uses the generic ordered fold at its actual byte inputs. -/
+theorem cacheFrom_eq_generic (publicSeed : Digest) (cells : Cells) (outputs : Outputs)
+    (parents : List StructuralNode) (cache : QueryCache HashSpec) :
+    cacheFrom publicSeed cells outputs parents cache =
+      OracleComp.RandomOracleTraversal.Programming.cacheFrom
+        (canonicalInput publicSeed cells) outputs parents cache := by
+  rw [cacheFrom]
+
+/-- Programming no structural coordinates leaves the cache unchanged. -/
+theorem cacheFrom_nil (publicSeed : Digest) (cells : Cells) (outputs : Outputs)
+    (cache : QueryCache HashSpec) : cacheFrom publicSeed cells outputs [] cache = cache := by
+  rw [cacheFrom_eq_generic]
+  rfl
+
+/-- The next full answer is written before programming the remaining coordinates. -/
+theorem cacheFrom_cons (publicSeed : Digest) (cells : Cells) (outputs : Outputs)
+    (parent : StructuralNode) (parents : List StructuralNode) (cache : QueryCache HashSpec) :
+    cacheFrom publicSeed cells outputs (parent :: parents) cache =
+      cacheFrom publicSeed cells outputs parents
+        (cache.cacheQuery (canonicalInput publicSeed cells parent) (outputs parent)) := by
+  rw [cacheFrom_eq_generic, cacheFrom_eq_generic]
+  rfl
+
+/-- Every cell outside the remaining structural writes already has its target value. -/
 @[expose] def AgreesOutside (remaining : List StructuralNode) (cells target : Cells) : Prop :=
-  cells .secretSeed = target .secretSeed ∧
-    ∀ parent ∉ remaining, cells (.structural parent) = target (.structural parent)
+  OracleComp.RandomOracleTraversal.Programming.AgreesOutside
+    (fun parent : StructuralNode => Node.structural parent) remaining cells target
 
-/-- Assigning the next node its target cell shrinks the region of possible disagreement. -/
-theorem AgreesOutside.assign (remaining : List StructuralNode) (parent : StructuralNode)
-    (cells target : Cells) (output : HashOutput)
-    (hagrees : AgreesOutside (parent :: remaining) cells target)
-    (houtput : Hashing.truncate output = target (.structural parent)) :
-    AgreesOutside remaining (assign parent cells output) target := by
-  constructor
-  · simpa only [Programming.assign,
-      Function.update_of_ne (by simp : Node.secretSeed ≠ .structural parent)] using hagrees.1
-  · intro other hother
-    by_cases heq : other = parent
-    · subst other
-      simpa only [Programming.assign, Function.update_self] using houtput
-    · rw [Programming.assign, Function.update_of_ne (by simpa using heq)]
-      exact hagrees.2 other (by simp [heq, hother])
+private theorem readBeforeWrite_of_pairwiseRankLE (parents : List StructuralNode)
+    (ordered : parents.Pairwise RankLE) :
+    OracleComp.RandomOracleTraversal.Programming.ReadBeforeWrite
+      (fun parent : StructuralNode => Node.structural parent)
+      (fun parent : StructuralNode => parent.children) parents := by
+  intro position child member later occurs same
+  subst child
+  have lower : later.rank < (parents[position]).rank := by
+    simpa only [Node.rank] using (parents[position]).child_rank_lt (.structural later) member
+  have suffix := ordered.drop (i := position.val)
+  rw [List.drop_eq_getElem_cons position.isLt] at suffix occurs
+  rcases List.mem_cons.mp occurs with equal | tail
+  · subst later
+    exact Nat.lt_irrefl _ lower
+  · exact Nat.not_lt_of_ge ((List.pairwise_cons.mp suffix).1 later tail) lower
 
-/-- When the remaining nodes are rank-sorted and the cells agree with the target outside them,
-the next node is queried at its final canonical input. -/
-theorem input_eq_target (publicSeed : Digest) (parent : StructuralNode)
-    (remaining : List StructuralNode) (cells target : Cells)
-    (horder : (parent :: remaining).Pairwise RankLE)
-    (hagrees : AgreesOutside (parent :: remaining) cells target) :
-    input publicSeed parent cells = canonicalInput publicSeed target parent := by
-  apply canonicalInput_congr
-  intro child hchild
-  cases child with
-  | secretSeed => exact hagrees.1
-  | structural child =>
-      apply hagrees.2 child
-      intro hmem
-      have hlt : child.rank < parent.rank := by
-        simpa only [Node.rank] using parent.child_rank_lt (.structural child) hchild
-      rcases List.mem_cons.mp hmem with rfl | htail
-      · exact (Nat.lt_irrefl _ hlt)
-      · exact (Nat.not_lt_of_ge ((List.pairwise_cons.mp horder).1 child htail)) hlt
-
-/-- Programming a rank-sorted list of nodes yields the target cells and the canonical cache
-written with them. -/
+/-- A rank-sorted programming traversal installs the target and the same ordered cache. -/
 theorem program_eq_cacheFrom (publicSeed : Digest) (outputs : Outputs)
     (parents : List StructuralNode) (horder : parents.Pairwise RankLE)
     (cells target : Cells) (hagrees : AgreesOutside parents cells target)
@@ -150,20 +151,14 @@ theorem program_eq_cacheFrom (publicSeed : Digest) (outputs : Outputs)
     (cache : QueryCache HashSpec) :
     GraphFreshSampling.program (input publicSeed) assign outputs parents cells cache =
       (target, cacheFrom publicSeed target outputs parents cache) := by
-  induction parents generalizing cells cache with
-  | nil =>
-      have heq : cells = target := by
-        funext node
-        cases node with
-        | secretSeed => exact hagrees.1
-        | structural parent => exact hagrees.2 parent (by simp)
-      simp only [GraphFreshSampling.program, cacheFrom, heq]
-  | cons parent parents ih =>
-      rw [GraphFreshSampling.program, input_eq_target publicSeed parent parents cells target
-        horder hagrees]
-      exact ih (List.pairwise_cons.mp horder).2
-        (assign parent cells (outputs parent))
-        (hagrees.assign parents parent cells target (outputs parent) (houtputs parent)) _
+  rw [GraphFreshSampling.program_eq_traversal]
+  exact OracleComp.RandomOracleTraversal.Programming.program_eq_cacheFrom
+    (fun parent : StructuralNode => Node.structural parent)
+    (fun parent : StructuralNode => parent.children) (input publicSeed)
+    (fun _ output => Hashing.truncate output)
+    (fun node left right same => canonicalInput_congr publicSeed left right node same)
+    outputs parents cells target (readBeforeWrite_of_pairwiseRankLE _ horder)
+    hagrees (fun parent _ => houtputs parent) cache
 
 /-- Distinct nodes are queried at distinct inputs, whatever the cells. -/
 theorem input_separated (publicSeed : Digest) :
@@ -189,10 +184,10 @@ theorem warmup_uniform (publicSeed secretSeed : Digest) :
           cacheFrom publicSeed (cellsOfOutputs secretSeed outputs) outputs order ∅)) := by
     funext outputs
     apply program_eq_cacheFrom publicSeed outputs order order_pairwise
-    · constructor
-      · rfl
-      · intro parent hnot
-        exact (hnot (mem_order parent)).elim
+    · intro key outside
+      cases key with
+      | secretSeed => rfl
+      | structural parent => exact (outside parent (mem_order parent) rfl).elim
     · intro parent
       rfl
   rw [hprogram]
@@ -204,9 +199,9 @@ theorem cacheFrom_lookup (publicSeed : Digest) (cells : Cells) (outputs : Output
       if parent ∈ parents then some (outputs parent)
       else cache (canonicalInput publicSeed cells parent) := by
   induction parents generalizing cache with
-  | nil => simp [cacheFrom]
+  | nil => simp [cacheFrom_nil]
   | cons current parents ih =>
-      rw [cacheFrom, ih]
+      rw [cacheFrom_cons, ih]
       by_cases heq : parent = current
       · subst current
         simp [QueryCache.cacheQuery_self]
@@ -227,6 +222,7 @@ theorem cacheFrom_canonical (publicSeed : Digest) (cells : Cells) (outputs : Out
   induction parents generalizing cache with
   | nil => exact hcache input hinput
   | cons current parents ih =>
+      rw [cacheFrom_cons] at hinput
       refine ih _ ?_ hinput
       intro key hkey
       by_cases heq : key = canonicalInput publicSeed cells current

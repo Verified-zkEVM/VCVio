@@ -56,6 +56,194 @@ modules use a plain `public section` with per-declaration `@[expose]`); in the b
 `scripts/axiom_baseline.json`. `scripts/validate.sh` runs that per-PR gate locally in CI's order,
 with `--lint`, `--test`, `--ffi`, and `--axioms` selecting the slower passes.
 
+## Reusing SLH-DSA components and security results
+
+Adapt the construction, its experiment and its mathematical observation through the smallest
+owning module. The construction and counted-game delegation have independently accepted branch
+checkpoints. The [current implementation table](slh-dsa-reuse-completion-manifest.md#current-implementation-checkpoints)
+records consumer/compiler integration and the remaining final validation. Accepted branch work
+is distinct from a merge to `main` or completion of R8.
+
+For an approved parameter set or signing mode, begin with
+[Security.Profile](../../HashSig/SLHDSA/Security/Profile.lean) and its original ROM budget. For the specialized deterministic SHAKE-128s shared-work certificate, begin with
+`SharedExperiment.Certificates` and its joint budget. For a changed construction, request policy
+or observation, use the corresponding row below and discharge the transport obligations before
+selecting a numerical theorem.
+
+| Customization | API and ordinary example | Conditions to retain |
+|---|---|---|
+| Requests, replies and wire framing | `SignatureAlg.SigningView`, `readback`, `returnedPairs`, `Fresh`; `SLHDSA.SigningView.fromInternalPure`; [ContextRejection](../../Examples/SLHDSA/ContextRejection.lean) | Supply actual keygen/sign/verify programs, a reply decoder and a partial request encoding with the relevant validity/injectivity laws. Candidate signatures and raw replies retain separate types. |
+| Additive execution observations | `SigningView.Event`, `countedExperiment`, `Observation`; [CountedExperiment.CostMap](../../VCVio/CryptoFoundations/SignatureAlg/CountedExperiment/CostMap.lean), `countedExperiment_mapCost` | An event-to-cost function into an additive monoid; a cost homomorphism maps the complete observation. Reweighting alone supplies no numerical budget transport. |
+| Context or full-answer adapters | [SharedExperiment.Wire](../../HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/Wire.lean), [AnswerRepresentation](../../HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/AnswerRepresentation.lean); [ContextObservation](../../Examples/SLHDSA/ContextObservation.lean) | Wire context attachment uses a valid fixed `PureContext` and the existing generated-key FIPS algorithms. Answer conversion uses the same programs/adversary, a per-input answer equivalence, sampler pushforward and pointwise policy pullback. |
+| A scalar policy with existing shared-work bounds | [SharedExperiment.ScalarPolicy](../../HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/ScalarPolicy.lean), `cap_transport`, `success_probability`; [WeightedPolicy](../../Examples/SLHDSA/WeightedPolicy.lean) | Supply `policy : Event Output → Nat`. For inequalities/cap/security transport prove `∀ event, selectedWork (sourcePolicy event) ≤ policy event`. Joint projection, continuation and success equalities need no domination premise. |
+| Approved parameters and signing mode | `SLHDSA.Security.ShakeProfile`, `.algorithm`, `.boundEvaluator`, `.strongUnforgeableAdvantage_le_boundEvaluator`; [Profiles](../../Examples/SLHDSA/Profiles.lean) | An approved SHAKE set (the examples use 128s/192f), deterministic or hedged mode, valid fixed context and original `RomQueryBound qh qs`. Use the matching mode's evaluator with its seed/randomizer terms. |
+| Effectful FORS secret providers | `SecretProvider.Observation`, `Security.ProviderObservation`; [ForsProvider](../../Examples/SLHDSA/ForsProvider.lean) | Interpret the actual `oracleSecret` and `PublicHash` callbacks with a common handler. Signature, provider-inclusive ordered cost and final cache remain joint; a different provider's security assumptions need justification. |
+| Deterministic graph programming or sampling | `Security.GraphProgramming.signing_program`; `Security.ForsGraphSampling.signing_from`, `.shake128s`, `.shake192f`; [ForsGraph](../../Examples/SLHDSA/ForsGraph.lean) | Canonical deterministic schedules discharge dependency obligations without widths/freshness. Sampling requires `Widths` and `FreshFor` for the actual cache; approved empty-cache clients discharge them. |
+
+`ContextRejection` keeps a rejected attempt's actual `none` reply and charge, then continues on
+`none` with chronological log/cost concatenation. Its invalid final frame returns `false` with
+zero internal verifier work. These statements use a supplied internal algorithm and canonical
+codec; compiling the examples does not execute a full signer or keygen.
+
+Use `countedExperiment_wire_eq_externalView` and its `run_bind` companion for the fixed-context
+adapter. The shared security game itself retains each request's message/context and rejects
+oversized contexts; it has no fixed-context premise. The answer adapter's
+`answerRepresentation_joint` and `answerRepresentation_sourceJoint` retain candidate, chronological
+raw replies, verifier result, ordered additive cost, chronological public query-answer log and
+mapped final warm cache together. Generic `countedExperiment_relabel` and
+`countedExperiment_world_transport` live in `CountedExperiment.Relabel` and its `.RandomOracle`
+child. Supply the policy square `policyR event = policyS (relabelEvent event)` and the actual
+sampler pushforward; the specialized full 30-byte SHAKE-128s equivalence supplies its sampler law.
+These are same-program laws, not keygen replacement, private-draw reordering or private-seed trace
+equivalences, and do not establish a padding/truncation equivalence.
+
+Provider/graph costs are component observations, not an automatic adversary security budget.
+Generic traversal programming requires input dependency congruence, `ReadBeforeWrite`,
+`AgreesOutside` and target-consistent writes; canonical FORS schedules discharge them and preserve
+unscheduled cells. Programming retains cache writes in order, including repeated keys. Sampling
+needs freshness of the scheduled inputs in the supplied cache and canonical duplicate freedom.
+Both retain full `m`-byte cache answers while cells use `n`-byte prefixes; prefix uniformity is a
+separate claim. The 192f Profile/provider/graph examples use their own parameter-dependent oracle
+carriers, not the specialized 128s full-30-byte representation or its 127-bit certificate.
+
+Choose the strongest eligible **existing** certificate after matching its success event, model,
+seed/randomizer regime and budget. Import numerical leaves explicitly:
+[SharedExperiment.Certificates](../../HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/Certificates.lean)
+and [SharedCertificates](../../Examples/SLHDSA/SharedCertificates.lean) show the original shared
+selected-work `q` statements. For `q < 569`, use the matching `advantage_eq_zero_model` or
+`advantage_eq_zero_fips`: advantage is zero, with no positive-q or signing-lifetime premise.
+The FIPS `advantage_le_127` requires `1 ≤ q`, an almost-sure joint selected-work cap `q` and the
+original almost-sure signing lifetime at most `2^64`; its conclusion is `advantage ≤ q / 2^127`,
+not a budget-independent `2^-127`. These certificates use deterministic SHAKE-128s, independent
+uniform seeds, the shared full 30-byte ROM and the original empty cache. Operational laws with
+arbitrary warm caches do not extend certificate scopes.
+
+Selected work counts signing attempts, direct adversary hashes and verifier hashes jointly on
+the actual execution. Within that experiment, keygen/signer hashes and private draws **execute**,
+but are excluded from that selected sum. `ScalarPolicy.cap_transport` uses eventwise domination to transport an
+almost-sure scalar cap to this original cap at the **same `q`** on the same joint execution.
+An expectation cap or unrelated marginal bound is insufficient. Import
+[ScalarPolicy.Certificates](../../HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/ScalarPolicy/Certificates.lean)
+for the same zero/127 applications, retaining those exact hypotheses. Original unweighted
+certificates keep their original domains.
+
+`WeightedPolicy` charges every signing attempt 1, including rejection, and direct adversary/
+verifier public hashes `1 + rawInput.length`. Repeats, cache hits and losing verification are
+charged; keygen/signer hashes and private draws cost zero in this example. Its explicit
+[certificate child](../../Examples/SLHDSA/WeightedPolicy/Certificates.lean) discharges domination
+internally for all three concrete certificates, adding no caller premise.
+`zero_policy_not_dominate` demonstrates why arbitrary weights need that proof.
+
+Profile's original `(qh, qs)` metric and mode-specific evaluator remain separate from joint
+selected-work `q`. For the existing deterministic SHAKE-128s wire game at a valid fixed context,
+with independent uniform seeds and the shared 30-byte ROM, use
+[`SLHDSA.SHAKE128s.wireStrongAdvantage_le_min_bound`](../../HashSig/SLHDSA/SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean).
+It takes `adv.RomQueryBound qh qs` and `qs ≤ signingLimit` (`2^64`). The established bridge gives
+the minimum of the general SHAKE bound, including its complete weak-seed term, and
+`(qh + qs + 3929) / 2^127`. The `3929` is the universal verifier cap in that work transport.
+For a changed policy or model, supply a transport matching the success event, model and budget
+meaning before combining numerical bounds; an arbitrary new policy has no automatic minimum.
+Per-seed/distributed-seed, randomizer, hedged and refined weak-seed results retain their own
+hypotheses rather than acquiring a global signing-lifetime restriction. These examples assert
+no tighter numerical bound or new 192f exponent. For ordinary versus strong freshness, use
+`CountedExperiment.Unforgeability`'s `ofTotal_countedUnforgeableAdvantage` and
+`ofTotal_countedStrongUnforgeableAdvantage`, with the existing
+`SignatureAlg.unforgeableAdvantage_le_strongUnforgeableAdvantage`; proof-recovery test declarations
+are not downstream API entrypoints.
+
+For nested finite families, explicitly import
+[ToMathlib.Compiler.FinCases](../../ToMathlib/Compiler/FinCases.lean) to install the proved compiler
+rule `Fin.cases → Fin.casesDirect`.
+The public `SLHDSA.SHAKE128s.finCases` and `SLHDSA.SHAKE128s.fin_cases_eq_finCases` entrypoints
+are retired in favor of `Fin.casesDirect` and `Fin.cases_eq_casesDirect`, respectively, from this
+explicit owner. The paper `SHAKE128s.Statement.Scheme` is an intentional public
+importer because Lean's exposed `sequenceFin` requires that compilation dependency; a private
+import would not hide the global attribute. The checked request/counting/adaptation and
+native-construction imports exclude this owner. The existing 32-entry/sum1024 native canary remains required in
+integrated validation; library compilation and isolated import checks do not execute it.
+
+### Canonical codecs and API migration
+
+For a parameter-dependent wire representation, use
+[SLHDSA.Codec](../../HashSig/SLHDSA/Codec.lean): `encodeSignature`, `decodeSignature`,
+`decodeSignature_encode`, `decodeSignature_eq_ok_iff` and `encodeSignature_injective`.
+Decoding consumes one complete signature and rejects short, long or trailing input. The paper's
+[Encoding](../../HashSig/SLHDSA/SHAKE128s/Encoding.lean) supplies the complete
+`SLHDSA.SHAKE128s.Bridge.signatureEquiv` between the native and paper structured signatures;
+its `Signature.toBytes` and `Signature.fromBytes?` use that canonical codec.
+[Proof.Signature](../../HashSig/SLHDSA/SHAKE128s/Proof/Signature.lean) provides
+`Signature.toBytes_length` and `Signature.fromBytes_toBytes`;
+[Proof.SignatureCanonical](../../HashSig/SLHDSA/SHAKE128s/Proof/SignatureCanonical.lean)
+provides the all-raw `Signature.toBytes_fromBytes` fact.
+
+In `SLHDSA.SHAKE128s.Signature`, `card`, `encodeFixed`, `encodeFixed_injective` and
+`encodeFixed_bijective` are retired. Their callers need to select the canonical codec facts above;
+there are no compatibility aliases or identical-type replacements for every helper. The three
+`Finite` signature instances remain. Callers of the separate paper byte parser, component
+serializers or offset lemmas should likewise use complete-signature encoding/decoding and the
+representation equivalence. These API changes preserve the original final security bounds and
+their semantic domains.
+
+`SLHDSA.SHAKE128s.SigningFaithful.sign_eq_map` needs `Monad` and `HasQuery HashSpec`, with its
+signing equation unchanged. Its unused `LawfulMonad` argument is removed. Fully explicit
+`@SigningFaithful.sign_eq_map` applications may need to remove that instance argument.
+
+For data and representation facts, import the narrow leaves
+[Statement.Requests](../../HashSig/SLHDSA/SHAKE128s/Statement/Requests.lean),
+[Statement.Types](../../HashSig/SLHDSA/SHAKE128s/Statement/Types.lean),
+[FIPS205.Params](../../HashSig/SLHDSA/SHAKE128s/FIPS205/Params.lean) or
+[Representation](../../HashSig/SLHDSA/SHAKE128s/Representation.lean). They avoid the paper
+algorithms and compiler override. The full `Encoding` module imports the native codec's
+algorithm dependencies. For request framing alone,
+`SignatureAlg.SigningView.Encoding.sign` and `.verify` accept the component functions directly,
+independently of key generation.
+
+### Counted-game API migration
+
+The counted-game delegation was accepted at `5343578a` after its clean recorded 44-command
+validation and independent review. That checkpoint covers the shared engine and its actual
+security consumers; it does not establish later consumer/compiler integration or the final R8
+whole-repository gate. Final security bounds and their original domains remain the acceptance
+requirements.
+
+[Statement.Game.Data](../../HashSig/SLHDSA/SHAKE128s/Statement/Game/Data.lean) owns the `Game`
+carriers, external schemes, adversaries, raw logs and outcomes without selecting an experiment.
+[Statement.Game.Counted](../../HashSig/SLHDSA/SHAKE128s/Statement/Game/Counted.lean) owns execution.
+`Game.runPhase` keeps its qualified name, program/key arguments and arbitrary initial raw log.
+The ten source-policy/observation names exported by `Bridge.SharedExperiment.Defs` likewise
+remain usable through that bridge namespace.
+
+The separate `Game.CountedRun`, `Game.signingOracle` and `Game.phaseHandler` plumbing is retired.
+For a complete client phase, use `Game.runPhase scheme sk program signed`. For a signer callback,
+use `SignatureAlg.SigningView.countedSigningOracleUsing` with the actual `scheme.sign sk` and
+policy; `countedHandlerUsing` also handles ambient client queries. Their callback/handler
+computations use `LoggedCostM`, a chronological log writer over additive cost, rather than the
+former additive cost writer over signing-log state. For a callback/handler computation in that
+form, `Game.Counted.legacyRun` adapts it back to
+`AddWriterT Counts (StateT SigningLog (OracleComp (World Output)))` at cost carrier `Counts`;
+its run law retains the supplied prefix. The adapter and its representation-only run laws no
+longer require an unused cost-monoid argument; fully explicit applications may need to omit that
+instance. These are explicit adaptations, not drop-in aliases.
+`countedPhaseUsing` returns `CostM spec C (α × QueryLog (Request →ₒ Reply))`, with the log already
+paired with the client result inside the cost writer. Use `Game.runPhase` for the former complete
+phase interface; do not apply `legacyRun` directly to `countedPhaseUsing`.
+The concrete paper `Security.CountedRun` and `Security.signingOracle` remain specialized APIs.
+
+Existing generic `countedSigningOracle`, `countedHandler`, `countedPhase` and `countedExperiment`
+keep their view/key/policy interfaces. The new callback forms accept the signer directly;
+`countedAfterKeygen` runs the client and final verifier at supplied keys. Whole-experiment
+execution continues to include key generation.
+
+Proofs that unfolded the former phase machinery can use `Game.runPhase_bind`,
+`Game.runPhase_query_world`, `Game.runPhase_query_sign` and `Game.afterKeygen_eq_runPhase` from
+[Statement.Game.QueryBudget](../../HashSig/SLHDSA/SHAKE128s/Statement/Game/QueryBudget.lean).
+`Bridge.simulateQ_relabel_adversaryPhase` now states the phase equation using additive `Counts`;
+its former explicit writer-run result used `Multiplicative Counts`. Callers retaining that
+presentation must adapt the cost conversion. Import
+[SharedExperiment.Recorded](../../HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/Recorded.lean)
+for `Game.experimentBySource_eq_countAllHashes` or `recordedProgram`: `Observation` now imports
+`Defs` directly and no longer supplies those declarations transitively.
+
 ## Milestone status ledger
 
 The original milestone ledger and G1–G10/primitive-assumption gate diagnoses below describe

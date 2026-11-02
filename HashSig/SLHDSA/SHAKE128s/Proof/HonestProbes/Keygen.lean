@@ -531,9 +531,13 @@ theorem probes_chain (cache : QueryCache HashSpec) (secretSeed publicSeed : Dige
         (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
   intro steps
   induction steps with
-  | zero => intro start _; exact probes_pure cache _ _
+  | zero =>
+      intro start _
+      rw [Wots.chain_zero]
+      exact probes_pure cache _ _
   | succ steps ih =>
       intro start hbound
+      rw [Wots.chain_succ]
       have hstep : start < w - 1 := by simp only [w, winternitzBits] at *; omega
       have hstart : start < w := by simp only [w, winternitzBits] at *; omega
       refine probes_tweakable cache publicSeed
@@ -563,7 +567,8 @@ theorem probes_chain (cache : QueryCache HashSpec) (secretSeed publicSeed : Dige
             { key.address with chainOrHeight := BitVec.ofNat 32 chain.val } 0 start 1
             (@Hashing.derive Id _ (replayQuery cache) publicSeed secretSeed
               (Wots.secretAddress key.address chain)), Nat.zero_add]
-          rfl
+          simp only [@Wots.chain_succ Id _ (replayQuery cache),
+            @Wots.chain_zero Id _ (replayQuery cache), bind, pure]
         change Probes cache
             (Wots.chain (m := OracleComp HashSpec) publicSeed
               { key.address with chainOrHeight := BitVec.ofNat 32 chain.val } (start + 1) steps
@@ -585,6 +590,7 @@ theorem probes_wots_publicKey (cache : QueryCache HashSpec) (secretSeed publicSe
     Probes cache
       (Wots.publicKey (m := OracleComp HashSpec) secretSeed publicSeed key.address)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Wots.publicKey_eq]
   refine probes_bind cache _ _ _
     (fun index : Fin chains =>
       @Wots.chain Id _ (replayQuery cache) publicSeed
@@ -600,7 +606,8 @@ theorem probes_wots_publicKey (cache : QueryCache HashSpec) (secretSeed publicSe
       (bytesBE n secretSeed) _ _ ?_ ?_
     · exact ⟨.wotsPrf key index,
         (canonicalInput_wotsPrf cache secretSeed publicSeed key index).symm⟩
-    · exact probes_chain cache secretSeed publicSeed key index (w - 1) 0 (by omega)
+    · simpa only [@Wots.chain_zero Id _ (replayQuery cache), pure, Hashing.derive] using
+        probes_chain cache secretSeed publicSeed key index (w - 1) 0 (by omega)
   · exact probes_tweakable_self cache publicSeed _ _ _
       ⟨.wotsPk key, (canonicalInput_wotsPk cache secretSeed publicSeed key).symm⟩
 

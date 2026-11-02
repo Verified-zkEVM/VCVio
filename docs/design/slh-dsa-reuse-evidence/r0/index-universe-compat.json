@@ -1,0 +1,826 @@
+{
+  "format": 1,
+  "scope": "Oracle-index arity recovery for the frozen semantic capture; no term or level-syntax quotient and no replacement expected fingerprints.",
+  "sourceHead": "1c20d903a071280bc635aa66dd78b1b42a4171c6",
+  "originalSourceHead": "6fff2a1212d3302a3b21c634782c06b999a498cc",
+  "frozenFingerprintTableSHA256": "70febfb9a47833ebe00b912d39395f3c25cacf707a372e9a2fc0607fda86c73f",
+  "declarationMaps": [
+    {
+      "name": "QueryImpl.withAddCost",
+      "module": "VCVio.OracleComp.QueryTracking.WriterCost",
+      "kind": "definition",
+      "oldLevels": [
+        "u_1"
+      ],
+      "oldLevelNames": [
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "u_1"
+        ]
+      ],
+      "newLevels": [
+        "v",
+        "idx"
+      ],
+      "newLevelNames": [
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "v"
+        ],
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "idx"
+        ]
+      ],
+      "parameterSubstitution": [
+        {
+          "newParameter": [
+            "str",
+            [
+              "anonymous"
+            ],
+            "v"
+          ],
+          "oldLevel": [
+            "param",
+            [
+              "str",
+              [
+                "anonymous"
+              ],
+              "u_1"
+            ]
+          ]
+        },
+        {
+          "newParameter": [
+            "str",
+            [
+              "anonymous"
+            ],
+            "idx"
+          ],
+          "oldLevel": [
+            "zero"
+          ]
+        }
+      ],
+      "indexPosition": 1,
+      "referenceExtraRule": "zero"
+    },
+    {
+      "name": "QueryImpl.withCost",
+      "module": "VCVio.OracleComp.QueryTracking.CountingOracle.Core",
+      "kind": "definition",
+      "oldLevels": [
+        "u",
+        "v"
+      ],
+      "oldLevelNames": [
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "u"
+        ],
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "v"
+        ]
+      ],
+      "newLevels": [
+        "u",
+        "v",
+        "idx"
+      ],
+      "newLevelNames": [
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "u"
+        ],
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "v"
+        ],
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "idx"
+        ]
+      ],
+      "parameterSubstitution": [
+        {
+          "newParameter": [
+            "str",
+            [
+              "anonymous"
+            ],
+            "u"
+          ],
+          "oldLevel": [
+            "param",
+            [
+              "str",
+              [
+                "anonymous"
+              ],
+              "u"
+            ]
+          ]
+        },
+        {
+          "newParameter": [
+            "str",
+            [
+              "anonymous"
+            ],
+            "v"
+          ],
+          "oldLevel": [
+            "param",
+            [
+              "str",
+              [
+                "anonymous"
+              ],
+              "v"
+            ]
+          ]
+        },
+        {
+          "newParameter": [
+            "str",
+            [
+              "anonymous"
+            ],
+            "idx"
+          ],
+          "oldLevel": [
+            "param",
+            [
+              "str",
+              [
+                "anonymous"
+              ],
+              "u"
+            ]
+          ]
+        }
+      ],
+      "indexPosition": 2,
+      "referenceExtraRule": "retained-level-0"
+    },
+    {
+      "name": "QueryImpl.withTraceAppend",
+      "module": "VCVio.OracleComp.QueryTracking.Tracing.Core",
+      "kind": "definition",
+      "oldLevels": [
+        "u",
+        "v"
+      ],
+      "oldLevelNames": [
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "u"
+        ],
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "v"
+        ]
+      ],
+      "newLevels": [
+        "u",
+        "v",
+        "idx"
+      ],
+      "newLevelNames": [
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "u"
+        ],
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "v"
+        ],
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "idx"
+        ]
+      ],
+      "parameterSubstitution": [
+        {
+          "newParameter": [
+            "str",
+            [
+              "anonymous"
+            ],
+            "u"
+          ],
+          "oldLevel": [
+            "param",
+            [
+              "str",
+              [
+                "anonymous"
+              ],
+              "u"
+            ]
+          ]
+        },
+        {
+          "newParameter": [
+            "str",
+            [
+              "anonymous"
+            ],
+            "v"
+          ],
+          "oldLevel": [
+            "param",
+            [
+              "str",
+              [
+                "anonymous"
+              ],
+              "v"
+            ]
+          ]
+        },
+        {
+          "newParameter": [
+            "str",
+            [
+              "anonymous"
+            ],
+            "idx"
+          ],
+          "oldLevel": [
+            "param",
+            [
+              "str",
+              [
+                "anonymous"
+              ],
+              "u"
+            ]
+          ]
+        }
+      ],
+      "indexPosition": 2,
+      "referenceExtraRule": "retained-level-0"
+    },
+    {
+      "name": "QueryImpl.withTraceBefore",
+      "module": "VCVio.OracleComp.QueryTracking.Tracing.Core",
+      "kind": "definition",
+      "oldLevels": [
+        "u",
+        "v"
+      ],
+      "oldLevelNames": [
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "u"
+        ],
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "v"
+        ]
+      ],
+      "newLevels": [
+        "u",
+        "v",
+        "idx"
+      ],
+      "newLevelNames": [
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "u"
+        ],
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "v"
+        ],
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "idx"
+        ]
+      ],
+      "parameterSubstitution": [
+        {
+          "newParameter": [
+            "str",
+            [
+              "anonymous"
+            ],
+            "u"
+          ],
+          "oldLevel": [
+            "param",
+            [
+              "str",
+              [
+                "anonymous"
+              ],
+              "u"
+            ]
+          ]
+        },
+        {
+          "newParameter": [
+            "str",
+            [
+              "anonymous"
+            ],
+            "v"
+          ],
+          "oldLevel": [
+            "param",
+            [
+              "str",
+              [
+                "anonymous"
+              ],
+              "v"
+            ]
+          ]
+        },
+        {
+          "newParameter": [
+            "str",
+            [
+              "anonymous"
+            ],
+            "idx"
+          ],
+          "oldLevel": [
+            "param",
+            [
+              "str",
+              [
+                "anonymous"
+              ],
+              "u"
+            ]
+          ]
+        }
+      ],
+      "indexPosition": 2,
+      "referenceExtraRule": "retained-level-0"
+    }
+  ],
+  "referenceSites": [
+    {
+      "caller": "addCostOracle",
+      "path": [
+        "values",
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "target": "QueryImpl.withAddCost",
+      "targetName": [
+        "str",
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "QueryImpl"
+        ],
+        "withAddCost"
+      ],
+      "newArity": 2,
+      "indexPosition": 1,
+      "extraRule": "zero",
+      "actualExtraAfterCallerSubstitution": [
+        "zero"
+      ],
+      "retainedLevels": [
+        [
+          "zero"
+        ]
+      ]
+    },
+    {
+      "caller": "QueryImpl.withAddCost",
+      "path": [
+        "values",
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "target": "QueryImpl.withCost",
+      "targetName": [
+        "str",
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "QueryImpl"
+        ],
+        "withCost"
+      ],
+      "newArity": 3,
+      "indexPosition": 2,
+      "extraRule": "retained-level-0",
+      "actualExtraAfterCallerSubstitution": [
+        "zero"
+      ],
+      "retainedLevels": [
+        [
+          "zero"
+        ],
+        [
+          "param",
+          [
+            "str",
+            [
+              "anonymous"
+            ],
+            "u_1"
+          ]
+        ]
+      ]
+    },
+    {
+      "caller": "QueryImpl.withCost",
+      "path": [
+        "values",
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "target": "QueryImpl.withTraceBefore",
+      "targetName": [
+        "str",
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "QueryImpl"
+        ],
+        "withTraceBefore"
+      ],
+      "newArity": 3,
+      "indexPosition": 2,
+      "extraRule": "retained-level-0",
+      "actualExtraAfterCallerSubstitution": [
+        "param",
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "u"
+        ]
+      ],
+      "retainedLevels": [
+        [
+          "param",
+          [
+            "str",
+            [
+              "anonymous"
+            ],
+            "u"
+          ]
+        ],
+        [
+          "param",
+          [
+            "str",
+            [
+              "anonymous"
+            ],
+            "v"
+          ]
+        ]
+      ]
+    },
+    {
+      "caller": "SLHDSA.SHAKE128s.Game.afterKeygen",
+      "path": [
+        "values",
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        2,
+        4,
+        4,
+        1,
+        2,
+        1,
+        2,
+        2,
+        1,
+        1,
+        2,
+        1,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "target": "QueryImpl.withAddCost",
+      "targetName": [
+        "str",
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "QueryImpl"
+        ],
+        "withAddCost"
+      ],
+      "newArity": 2,
+      "indexPosition": 1,
+      "extraRule": "zero",
+      "actualExtraAfterCallerSubstitution": [
+        "zero"
+      ],
+      "retainedLevels": [
+        [
+          "zero"
+        ]
+      ]
+    },
+    {
+      "caller": "QueryImpl.withLogging",
+      "path": [
+        "values",
+        0,
+        4,
+        4,
+        4,
+        4,
+        4,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "target": "QueryImpl.withTraceAppend",
+      "targetName": [
+        "str",
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "QueryImpl"
+        ],
+        "withTraceAppend"
+      ],
+      "newArity": 3,
+      "indexPosition": 2,
+      "extraRule": "retained-level-0",
+      "actualExtraAfterCallerSubstitution": [
+        "param",
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "u"
+        ]
+      ],
+      "retainedLevels": [
+        [
+          "param",
+          [
+            "str",
+            [
+              "anonymous"
+            ],
+            "u"
+          ]
+        ],
+        [
+          "param",
+          [
+            "str",
+            [
+              "anonymous"
+            ],
+            "v"
+          ]
+        ]
+      ]
+    },
+    {
+      "caller": "SLHDSA.SHAKE128s.Security.experiment",
+      "path": [
+        "values",
+        0,
+        4,
+        2,
+        4,
+        2,
+        4,
+        4,
+        1,
+        2,
+        1,
+        2,
+        2,
+        1,
+        1,
+        2,
+        1,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "target": "QueryImpl.withAddCost",
+      "targetName": [
+        "str",
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "QueryImpl"
+        ],
+        "withAddCost"
+      ],
+      "newArity": 2,
+      "indexPosition": 1,
+      "extraRule": "zero",
+      "actualExtraAfterCallerSubstitution": [
+        "zero"
+      ],
+      "retainedLevels": [
+        [
+          "zero"
+        ]
+      ]
+    },
+    {
+      "caller": "SLHDSA.SHAKE128s.Security.afterKeygen",
+      "path": [
+        "values",
+        0,
+        4,
+        4,
+        2,
+        4,
+        4,
+        1,
+        2,
+        1,
+        2,
+        2,
+        1,
+        1,
+        2,
+        1,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "target": "QueryImpl.withAddCost",
+      "targetName": [
+        "str",
+        [
+          "str",
+          [
+            "anonymous"
+          ],
+          "QueryImpl"
+        ],
+        "withAddCost"
+      ],
+      "newArity": 2,
+      "indexPosition": 1,
+      "extraRule": "zero",
+      "actualExtraAfterCallerSubstitution": [
+        "zero"
+      ],
+      "retainedLevels": [
+        [
+          "zero"
+        ]
+      ]
+    }
+  ]
+}

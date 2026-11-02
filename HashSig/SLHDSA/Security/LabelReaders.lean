@@ -267,7 +267,7 @@ private theorem cellValue_of_xmssNodeWithSecret? (hd : core.KeyDiscipline vp) {a
       cellValue st (.inr (xmssCellAdrs adrs z t)) = some v
   | 0, t, v, hmem, h => by
     simp only [xmssNodeWithSecret?, xmssNodeWithSecret, PerfectMerkleTree.merkleRootM,
-      xmssLeafWithSecret, wotsPkGenWithSecret, simulateQ_bind_eq_some_iff,
+      xmssLeafWithSecret, wotsPkGenWithSecret_eq, simulateQ_bind_eq_some_iff,
       simulateQ_toPartialImpl_tl] at h
     obtain ⟨tops, htops, hv⟩ := h
     exact (merge_fst_thash_of_forall₂ hd hmem

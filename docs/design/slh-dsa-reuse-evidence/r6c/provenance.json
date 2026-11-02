@@ -1,0 +1,66 @@
+{
+  "format": 1,
+  "status": "FINITE_COMPLETION_DOCUMENTATION_CANDIDATE_ON_ACCEPTED_P6",
+  "acceptedSourceCommit": "ae23574db895fd68ae28db806b54e0b3b275a551",
+  "acceptedSourceTree": "f38db304926f13b34c7c47784938ddf96d77aaf5",
+  "reviewedV1PacketSha256": "3c13b3167c24b526dc309cf9be9a4d96c9ee80b19f1fcbd42f289535eab03b71",
+  "reviewedV2PacketSha256": "43e1f5dc951cde0f936fe7952ea6bf4b3a476ea1c90a28d322889c603d62cde8",
+  "independentV2Review": {
+    "externalEvidence": "post-p6-finite-completion-v2-documentation-review.json",
+    "sha256": "e644e3b22a9f3e70bbc3faa8c04603ac7d7805ec09f1e2777d8c07509f6cd1bb"
+  },
+  "inventoryFilesByteExactFromV2": {
+    "source-map.json": "84318eaea25641c3e1f93423b7fe39dc8ede02ee83f10f815cd17110c71aae50",
+    "proof-route-map.json": "9a6eb2ad4ceb6c5f31808339e1cbc902342af27ff8182ec50978e041849facd2",
+    "proof-route-notes.md": "28afbd304eec9009b4c99b5ed8453908e635e14f029501da908f1967cdd5a13b"
+  },
+  "selectedAcceptedGitAnchors": 43,
+  "all52AbsentOriginalRAW1242": true,
+  "families": 5,
+  "namedSourceRecoveryRows": 52,
+  "R5Units": 6,
+  "checkpoint": "p6-checkpoint.json",
+  "independentP6Review": {
+    "externalEvidence": "p6-final/receipt.json",
+    "sha256": "64240d3728f9ebeae1a5dc4e9bf517f56dc06d82ab7c77c032047cd97354f0d6",
+    "status": "PASS_FINAL_CLEAN_P6_CHECKPOINT",
+    "P6Accepted": true,
+    "fullP5Accepted": false,
+    "broadMigrationAccepted": false,
+    "R6cCompletionOrOverallRefactorAccepted": false
+  },
+  "historicalV2Provenance": {
+    "status": "SOURCE_ONLY_DOCUMENTATION_CANDIDATE",
+    "acceptedSourceCommit": "ae23574db895fd68ae28db806b54e0b3b275a551",
+    "acceptedSourceTree": "f38db304926f13b34c7c47784938ddf96d77aaf5",
+    "P6FullGate": "PENDING_ROOT_FULL51046_NO_PASS_CLAIM",
+    "originalPacketSha256": "3c13b3167c24b526dc309cf9be9a4d96c9ee80b19f1fcbd42f289535eab03b71",
+    "independentV1Review": {
+      "path": "/tmp/slhdsa-refactor-research/adversarial/post-p6-finite-completion-candidate-review.json",
+      "sha256": "cc248320610908af8a02bca5d90127ab203aa3bbbbfb6dc6b3f9469f86c6dab0"
+    },
+    "immutableInventoryFiles": {
+      "source-map.json": "84318eaea25641c3e1f93423b7fe39dc8ede02ee83f10f815cd17110c71aae50",
+      "proof-route-map.json": "9a6eb2ad4ceb6c5f31808339e1cbc902342af27ff8182ec50978e041849facd2",
+      "proof-route-notes.md": "28afbd304eec9009b4c99b5ed8453908e635e14f029501da908f1967cdd5a13b"
+    },
+    "acceptedCommitAnchorsCompared": 43,
+    "all52AbsentRAW1242": true,
+    "fiveFamilies52RowsSixR5UnitsUnchanged": true,
+    "F6ImmutableArchives": {
+      "/tmp/slhdsa-initial-pilots/f6-row-proofs/frozen-input-copies/concrete-goals.json": "a2d2fd815ca8a4f9d025c7a8039167dbedf1517aea2fff02467befa893bd2b96",
+      "/tmp/slhdsa-initial-pilots/f6-proof-batch/packet.json": "7b25a7e8423e7fea00bbe65f35970458f61fbc49419fab1de10cf4ff7db75828",
+      "/tmp/slhdsa-initial-pilots/f6-row-proofs/packet.json": "8ab4ade6b8caaf39f7372b9fe8e8a6ec1f9e0677a3948480bfe5c89b7f10a1b4"
+    },
+    "relativeProductionLinksExistAtAcceptedCommit": [
+      "slh-dsa-reuse-refactor-plan.md",
+      "slh-dsa-reuse-evidence/strength-manifest.json",
+      "slh-dsa-reuse-evidence/r0/README.md",
+      "slh-dsa-reuse-evidence/r0b/README.md"
+    ],
+    "D151ArtifactsStillUnchanged": true,
+    "noProductionEditsBuildsPinsPortsOrCommits": true,
+    "scope": "V2 requires independent documentation review and actual clean committed P6 fullgate before production freeze. Fully quantified Lean headers/maps/owner search per unit must be independently reviewed before any body; prose is not authorization."
+  },
+  "scope": "Documentation-only finite deliverable list, not52 frozen contracts. Before each body, independently freeze/review full Leanheaders/oldschemas/relevant semanticvalues/equations/shape/axioms/owner-dependency closure and concrete carrier/sampler/policy/observer maps plus owner search. No new implementation/port/migration/guard permission."
+}

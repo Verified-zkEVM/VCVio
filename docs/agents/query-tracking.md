@@ -500,3 +500,29 @@ repetitions and a one-point hash range. The count measures hash calls; prover-lo
 response arithmetic, and cache lookup work have separate costs. Ordinary-import consumers in
 `VCVioTest/FischlinExpectedCost.lean` also check the joint output/count/cache law for repeated
 cached queries with a nonzero answer, where the fresh-search formula's hypotheses do not hold.
+
+
+## Branch-uniform exact query counts
+
+Import `VCVio.OracleComp.QueryTracking.QueryBound.Exact` for
+`OracleComp.QueryBound.ExactQueryCount`. Its constructors certify zero queries for a return
+and one query plus a common certified continuation count for a query node. `bind` permits
+different intermediate and final result universes; `map` preserves the count.
+
+`VCVio.OracleComp.QueryTracking.QueryBound.Exact.Sequence` provides `fin_mOfFn`, which sums
+per-index counts, and `foldlM`, which multiplies a uniform step count by the list length.
+Repeated addresses and repeated items retain their separate query charges.
+
+Import `VCVio.OracleComp.QueryTracking.QueryBound.Exact.Cost` to interpret a structural
+certificate using `ExactQueryCount.queryCostExactly`. It supplies unit-cost exactness on
+reachable results for every interpreter with `Monad`, `LawfulMonad`, `MonadAttach` and
+`LawfulMonadAttach`. Source indices and runtime may have independent universes; responses,
+returned values and the natural-number writer payload are in `Type`.
+
+`VCVio.OracleComp.QueryTracking.WriterCost.LawfulAttach` supplies the supporting one-way
+writer rules. Exactness on support alone does not assert that an execution is reachable.
+It also does not imply a structural certificate: a deterministic interpreter can select a
+single branch of a program whose other branches perform different numbers of queries.
+With an empty response type, even structural counts need not be unique. Use the structural
+certificate when every syntactic response branch must have a common count, and the existing
+pathwise cost API when reasoning about an interpreter's reachable executions.

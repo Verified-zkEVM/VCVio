@@ -1,0 +1,139 @@
+{
+  "format": 1,
+  "scope": "Accepted clean committed P6 implementation checkpoint. Full P5, R5 migration, R6c and R8 completion remain open.",
+  "status": "PASS_FINAL_CLEAN_P6_CHECKPOINT",
+  "head": "ae23574db895fd68ae28db806b54e0b3b275a551",
+  "tree": "f38db304926f13b34c7c47784938ddf96d77aaf5",
+  "validation": {
+    "status": "passed",
+    "accepted": true,
+    "command": [
+      "/usr/bin/time",
+      "-v",
+      "./scripts/validate.sh",
+      "--lint",
+      "--test",
+      "--axioms"
+    ],
+    "commandExitCode": 0,
+    "head": "ae23574db895fd68ae28db806b54e0b3b275a551",
+    "tree": "f38db304926f13b34c7c47784938ddf96d77aaf5",
+    "seconds": 2749.385,
+    "beforeAfterIdentical": true,
+    "sourceAndAll11DependenciesClean": true,
+    "commandLogSHA256": "66167b0bca56a619468d3b274b4e86629b4ef4237c5a98e220e04ea9bc5c6ff9",
+    "beforeSHA256": "8bff9752ae8c829860f40ed63e4cf9bbed88da27e6cb3ae162d7eddeacbaa028",
+    "afterSHA256": "8bff9752ae8c829860f40ed63e4cf9bbed88da27e6cb3ae162d7eddeacbaa028",
+    "activeLeanVersion": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+    "scope": "Full strict gate at recorded commit only; independent postgate review remains required"
+  },
+  "artifactHashes": {
+    "validation.json": "43bb6c6d2e09c0d5cc7696985cc4291466d4382e19ca61beca78935e4c2cb26e",
+    "full-artifact-binding.json": "f5092d3adbb558d82791ab94981da7ae7f0c88d3f3859a73b9bcca1b4dad675b",
+    "command.log": "66167b0bca56a619468d3b274b4e86629b4ef4237c5a98e220e04ea9bc5c6ff9",
+    "before.json": "8bff9752ae8c829860f40ed63e4cf9bbed88da27e6cb3ae162d7eddeacbaa028",
+    "after.json": "8bff9752ae8c829860f40ed63e4cf9bbed88da27e6cb3ae162d7eddeacbaa028",
+    "lake-manifest.json": "68e3e9f60f635be3e88e676b871b3419004f882626da3ab85523cb2b374da8d2",
+    "lean-version.txt": "eb22144228dd41cd51a0c84af4f976cd0cef473102dcf99b60be756b11f2b95a",
+    "runtime-actions.json": "af65aff4a5ef9f03ac9322b11015be4c653d39a09e6ba7e5bb3de4e227a516ec",
+    "r0b/result.json": "269b2157d83fc295235a1ad1432c9c282e501fe5e72163037d1198d701bcf52a",
+    "r0b/r0a/result.json": "96c7ed93b8b8d8183aea96128062968121ce8db3a7158eefaffd52f85c11304f"
+  },
+  "sourceFingerprint": "ae886fdecaf31a4f4b8070dc62747668e161a5987cd792e1fad1b3f38d3e0e29",
+  "manifestSha256": "68e3e9f60f635be3e88e676b871b3419004f882626da3ab85523cb2b374da8d2",
+  "toolchain": "leanprover/lean4:v4.35.0",
+  "dependencies": {
+    "mathlib": {
+      "head": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+      "status": ""
+    },
+    "PolyFun": {
+      "head": "ecac686fd8a3b4763d3df2e738c91947bdec40d6",
+      "status": ""
+    },
+    "plausible": {
+      "head": "dfa4f38190d07c37e315953e08b90fe2d95b3c24",
+      "status": ""
+    },
+    "LeanSearchClient": {
+      "head": "d6b4c7be5be75ec4917c873ac50c756dc1436372",
+      "status": ""
+    },
+    "importGraph": {
+      "head": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93",
+      "status": ""
+    },
+    "proofwidgets": {
+      "head": "df72b022e558978a1c50264cfc4d7fec86fa8e04",
+      "status": ""
+    },
+    "aesop": {
+      "head": "4a174c490d8707121c4a9290800489f105d85e07",
+      "status": ""
+    },
+    "Qq": {
+      "head": "dce0ad79c486cb1fb504af04f953c3466b0c6db8",
+      "status": ""
+    },
+    "batteries": {
+      "head": "66e469188fe07963e5cf666c7d4433f45b8131c5",
+      "status": ""
+    },
+    "cslib": {
+      "head": "5b56df99362532c46e1175381fbbdd755bd56030",
+      "status": ""
+    },
+    "Cli": {
+      "head": "c24fe6078c630e89b489bffe59b3e20ac30d12c8",
+      "status": ""
+    }
+  },
+  "runtime": {
+    "registeredExecutableActions": 37,
+    "nonBuildDriverActions": 39,
+    "csvRows": 18,
+    "csvCheckerOnce": true,
+    "R0bTailOnce": true,
+    "R0bPublicEquations": 40,
+    "R0bSemanticGroups": 11,
+    "strengthContracts": 77,
+    "R0aSemanticRecords": 1242,
+    "R0aExternalBoundaryNames": 509
+  },
+  "unchangedBaselines": {
+    "lintEntries": 215,
+    "sorryTaintedDeclarations": 6,
+    "nonstandardAxiomTaintedDeclarations": 0,
+    "initializersProofRoots": 6,
+    "initializersTestRoots": 2
+  },
+  "independentP6Review": {
+    "externalEvidence": "p6-final/receipt.json",
+    "sha256": "64240d3728f9ebeae1a5dc4e9bf517f56dc06d82ab7c77c032047cd97354f0d6",
+    "status": "PASS_FINAL_CLEAN_P6_CHECKPOINT",
+    "P6Accepted": true,
+    "fullP5Accepted": false,
+    "broadMigrationAccepted": false,
+    "R6cCompletionOrOverallRefactorAccepted": false
+  },
+  "reproduction": {
+    "command": [
+      "/usr/bin/time",
+      "-v",
+      "./scripts/validate.sh",
+      "--lint",
+      "--test",
+      "--axioms"
+    ],
+    "preconditions": [
+      "Use an owned environment at a recorded clean committed head and tree; record full source/generated-import and index fingerprints.",
+      "Record active full Lean commit and all11 locked clean dependency revisions before and after.",
+      "Generate imports/commit preparation BEFORE final validation; do not regenerate or edit during the recorded gate."
+    ],
+    "postconditions": [
+      "Require command exit0 and byte-identical clean source/head/index/dependency snapshots after validation.",
+      "Ordinary lake test executes37 exes,CSV18checker and R0b tail exactly once; do not separately repeat the R0a chain.",
+      "Independent final evidence review is required in addition to command success."
+    ]
+  }
+}

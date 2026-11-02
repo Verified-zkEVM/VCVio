@@ -175,7 +175,8 @@ theorem queriesUnder_sign_randomizer (cache : QueryCache HashSpec) (sk : SecretK
     (request : Message) (framed : Bytes) (hframe : request.frame = some framed) :
     QueriesUnder cache (Scheme.sign (m := OracleComp HashSpec) sk request)
       (Hashing.randomizerInput sk.prf sk.publicKey.seed framed) := by
-  rw [Scheme.sign, hframe]
+  simp only [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, hframe]
+  rw [map_eq_bind_pure_comp]
   refine queriesUnder_bind cache _ _ _ ?_
   rw [Scheme.signInternal]
   exact queriesUnder_shortHash cache _ _

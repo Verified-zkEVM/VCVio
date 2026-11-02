@@ -155,14 +155,17 @@ theorem simulateQ_relabel_signInternal (sk : SecretKey) (msg : Bytes) :
 signer at the corresponding secret key. Both reject a context longer than 255 bytes. -/
 theorem simulateQ_relabel_sign (sk : SecretKey) (req : Message) :
     𝓡 (Scheme.sign sk req : PaperComp (Option Bytes)) = FIPS205.scheme.sign (skMap sk) req := by
-  simp only [Scheme.sign, FIPS205.scheme, frame_eq_encodePureMessage]
+  simp only [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, FIPS205.scheme,
+    FIPS205.signingView_sign, frame_eq_encodePureMessage]
   cases External.encodePureMessage req.context req.message with
   | error e => simp [Except.toOption]
   | ok m =>
     simp only [Except.toOption]
-    rw [simulateQ_bind, simulateQ_relabel_signInternal, bind_map_left, map_eq_bind_pure_comp]
-    refine bind_congr fun σ => ?_
-    simp [toBytes_sigOfCore]
+    rw [simulateQ_map, simulateQ_relabel_signInternal, Functor.map_map]
+    apply congrArg (fun f : CoreSignature → Option Bytes =>
+      f <$> FIPS205.internal.sign (FIPS205.SecretKeyCore.publicKey (skMap sk)) (skMap sk) m)
+    funext σ
+    exact congrArg some (toBytes_sigOfCore σ)
 
 /-! ## Verification -/
 
@@ -189,7 +192,8 @@ pure-mode verifier at the corresponding public key. Both reject a context longer
 and a string that does not parse. -/
 theorem simulateQ_relabel_verify (pk : PublicKey) (req : Message) (sig : Bytes) :
     𝓡 (Scheme.verify pk req sig : PaperComp Bool) = FIPS205.scheme.verify (pkMap pk) req sig := by
-  simp only [Scheme.verify, FIPS205.scheme, frame_eq_encodePureMessage, fromBytes?_eq]
+  simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, FIPS205.scheme,
+    FIPS205.signingView_verify, frame_eq_encodePureMessage, fromBytes?_eq]
   cases External.encodePureMessage req.context req.message with
   | error e => simp [Except.toOption]
   | ok m =>
@@ -249,7 +253,9 @@ theorem scheme_keygen :
             (oracleSecret FIPS205.core (Equiv.refl _) t.1 t.2.1) t.1
           return ((⟨t.1, pkRoot⟩ : PublicKeyCore FIPS205.core),
             (⟨t.2.1, t.2.2, t.1, pkRoot⟩ : SecretKeyCore FIPS205.core)) : TypedComp _) := by
-  simp [FIPS205.scheme, FIPS205.internal, fipsSeeds, shakeRomScheme, romScheme, romKeygenAt,
+  simp [FIPS205.scheme, FIPS205.signingView, SLHDSA.SigningView.fromInternalPure,
+    SignatureAlg.SigningView.rejectingEncoding, FIPS205.internal, fipsSeeds,
+    shakeRomScheme, romScheme, romKeygenAt,
     simulateQ_encImpl_liftM]
 
 /-- **Internal key generation** (Algorithm 18): at corresponding seeds, the paper's
@@ -264,7 +270,8 @@ theorem keygenInternal_eq (t : Digest × Digest × Digest) :
           return ((⟨(seedMap t).1, pkRoot⟩ : PublicKeyCore FIPS205.core),
             (⟨(seedMap t).2.1, (seedMap t).2.2, (seedMap t).1, pkRoot⟩ :
               SecretKeyCore FIPS205.core)) : TypedComp _) := by
-  rw [Scheme.keygenInternal, simulateQ_bind, simulateQ_relabel_keygenRoot, bind_map_left,
+  rw [Scheme.keygenInternal, SLHDSA.Scheme.Program.keygen, simulateQ_bind,
+    simulateQ_relabel_keygenRoot, bind_map_left,
     simulateQ_bind, map_bind, map_bind]
   refine bind_congr fun root => ?_
   simp [skMap, pkMap, seedMap]

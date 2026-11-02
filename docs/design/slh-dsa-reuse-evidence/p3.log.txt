@@ -1,0 +1,5 @@
+'ReplyLogProbe.mem_returnedPairs_iff' depends on axioms: [propext, Quot.sound]
+'ReplyLogProbe.optional_fresh_iff' depends on axioms: [propext, Quot.sound]
+'ReplyLogProbe.total_fresh_iff' depends on axioms: [propext, Quot.sound]
+'ReplyLogProbe.fixture_replay_not_fresh' depends on axioms: [propext, Quot.sound]
+'ReplyLogProbe.fixture_different_signature_fresh' depends on axioms: [propext, Quot.sound]

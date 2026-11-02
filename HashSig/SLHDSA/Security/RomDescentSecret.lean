@@ -458,7 +458,7 @@ theorem xmssPkFromSig?_cases (pk : core.PkSeed) (c : PublicHash.Cache core) (adr
   rcases PerfectMerkleTree.climbM_merkleRootM_cases c.toPartialImpl _ _ idx vp.params.hp 0
       (Nat.div_eq_of_lt hidx) leaf' sig.auth hclimb hhonest with
     ⟨hleaf, hauth⟩ | ⟨h, l, rr, l', r', v, hh, hhp, hne, hl, hr, hq, hq'⟩
-  · simp only [xmssLeafWithSecret, wotsPkGenWithSecret, simulateQ_bind_eq_some_iff,
+  · simp only [xmssLeafWithSecret, wotsPkGenWithSecret_eq, simulateQ_bind_eq_some_iff,
       simulateQ_toPartialImpl_tl] at hleaf
     obtain ⟨tops, htops, hTl⟩ := hleaf
     by_cases heq : tops = tops'

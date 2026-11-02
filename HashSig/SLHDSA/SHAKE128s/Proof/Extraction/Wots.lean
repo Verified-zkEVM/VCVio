@@ -49,7 +49,8 @@ theorem chain_eq_or_collision (publicSeed : Digest) (address : Address)
       ChainCollision publicSeed address start actual canonical offset := by
   classical
   induction steps generalizing start actual canonical with
-  | zero => exact Or.inl hend
+  | zero =>
+      exact Or.inl (by simpa only [SLHDSA.SHAKE128s.Wots.chain_zero, pure] using hend)
   | succ steps ih =>
       by_cases heq : actual = canonical
       · exact Or.inl heq
@@ -58,14 +59,17 @@ theorem chain_eq_or_collision (publicSeed : Digest) (address : Address)
       have hnext : SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address (start + 1) steps
           (next actual) =
         SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address (start + 1) steps
-          (next canonical) := hend
+          (next canonical) := by
+        simpa only [SLHDSA.SHAKE128s.Wots.chain_succ, bind, next] using hend
       rcases ih (start + 1) (next actual) (next canonical) hnext with
         hmerge | ⟨offset, hoffset, hcollision⟩
       · exact Or.inr ⟨0, by omega, by
-          simpa only [ChainCollision, SLHDSA.SHAKE128s.Wots.chain, pure, Nat.add_zero]
+          simpa only [ChainCollision, SLHDSA.SHAKE128s.Wots.chain_zero,
+            SLHDSA.SHAKE128s.Wots.chain_succ, pure, Nat.add_zero]
             using And.intro heq hmerge⟩
       · refine Or.inr ⟨offset + 1, by omega, ?_⟩
-        simpa only [ChainCollision, SLHDSA.SHAKE128s.Wots.chain, bind, Nat.add_assoc,
+        simpa only [ChainCollision, SLHDSA.SHAKE128s.Wots.chain_zero,
+          SLHDSA.SHAKE128s.Wots.chain_succ, bind, Nat.add_assoc,
           Nat.add_comm 1 offset, next] using hcollision
 
 omit [HasQuery HashSpec Id] in
@@ -97,7 +101,7 @@ theorem publicKeyFromSignature_eq (signature : WotsSignature) (message publicSee
     SLHDSA.SHAKE128s.Wots.publicKeyFromSignature (m := Id) signature message publicSeed address =
       Hashing.tweakable (m := Id) publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
         (digestArrayBytes (endpoints signature message publicSeed address)) := by
-  simp only [SLHDSA.SHAKE128s.Wots.publicKeyFromSignature, Correctness.sequenceFin_id, bind]
+  simp only [SLHDSA.SHAKE128s.Wots.publicKeyFromSignature_eq, Correctness.sequenceFin_id, bind]
   rfl
 
 /-- A collision at the final WOTS public-key compression: the two endpoint tuples give distinct

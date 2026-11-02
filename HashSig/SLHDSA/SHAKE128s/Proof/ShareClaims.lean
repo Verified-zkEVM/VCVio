@@ -67,7 +67,7 @@ theorem forgedAt_congr (publicSeed : Digest) :
             publicSeed (Hypertree.address layer tree) := by
         rw [merkle_replay, merkle_replay]
         refine simulateQ_replay_congr _ left right fun probe hprobe => hagree probe ?_
-        simp only [Hypertree.rootFromSignature]
+        simp only [Hypertree.rootFromSignature_succ]
         exact queriesUnder_bind left _ _ probe hprobe
       change @WotsResidueReduction.forgedAt (replayQuery left) publicSeed remaining
           (fun j => signatures j.succ) (layer + 1) (tree / 2 ^ subtreeHeight)
@@ -81,7 +81,7 @@ theorem forgedAt_congr (publicSeed : Digest) :
             publicSeed (Hypertree.address layer tree)) i
       rw [← hmerkle]
       refine ih _ _ _ _ _ i left right fun probe hprobe => hagree probe ?_
-      simp only [Hypertree.rootFromSignature]
+      simp only [Hypertree.rootFromSignature_succ]
       refine queriesUnder_bind_right left _ _ probe ?_
       rw [← merkle_replay]
       exact hprobe
@@ -94,7 +94,8 @@ theorem queriesUnder_verify_digest (cache : QueryCache HashSpec) (pk : PublicKey
     (hquery : QueriesUnder cache
       (Hashing.messageDigest (m := OracleComp HashSpec) parsed.randomizer pk message) probe) :
     QueriesUnder cache (Scheme.verify (m := OracleComp HashSpec) pk request signature) probe := by
-  simp only [Scheme.verify, Scheme.verifyInternal, hframe, hparsed]
+  simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify,
+    Scheme.verifyInternal_components, hframe, hparsed]
   exact queriesUnder_bind cache _ _ probe hquery
 
 /-- **Two caches that agree on the verifier's probes give the same claimed candidates.** -/

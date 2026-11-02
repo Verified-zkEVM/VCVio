@@ -132,25 +132,46 @@ theorem Adrs.isSecretKey_forsSkAdrs (adrs : Adrs) (t : ℕ) : (forsSkAdrs adrs t
 @[expose] def wotsPkGenTopsWithSecret {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y) (secret : Adrs → m core.Y)
     (adrs : Adrs) : m (Vector core.Y p.len) :=
-  Vector.ofFnM fun i => do
-    let x ← secret (wotsSkAdrs adrs i.val)
-    chainWith hash (wotsChainAdrs adrs i.val) x 0 (p.w - 1)
+  Wots.Program.runTops (I := Fin p.len) Vector.ofFnM
+    (fun i => secret (wotsSkAdrs adrs i.val))
+    (fun i j y => hash ((wotsChainAdrs adrs i.val).setHashAddress j) y)
+    (p.w - 1) .publicKey
+
+/-- Provider public-key tops preserve each native secret action before its chain. -/
+theorem wotsPkGenTopsWithSecret_eq {m : Type → Type*} [Monad m]
+    (hash : Adrs → core.Y → m core.Y) (secret : Adrs → m core.Y) (adrs : Adrs) :
+    wotsPkGenTopsWithSecret core hash secret adrs = Vector.ofFnM (fun i => do
+      let x ← secret (wotsSkAdrs adrs i.val)
+      chainWith hash (wotsChainAdrs adrs i.val) x 0 (p.w - 1)) := by
+  simp only [wotsPkGenTopsWithSecret, Wots.Program.runTops_publicKey,
+    Wots.Program.runChains_eq, chainWith]
 
 /-- At the honest provider the provider-parametric WOTS+ chain ends are `wotsPkGenTopsWith`. -/
 theorem wotsPkGenTopsWithSecret_eq_wotsPkGenTopsWith {m : Type → Type*} [Monad m] [LawfulMonad m]
     (hash : Adrs → core.Y → m core.Y) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     wotsPkGenTopsWithSecret core hash (fun a => pure (core.PRF pk sk a)) adrs =
       wotsPkGenTopsWith core hash sk pk adrs := by
-  simp only [wotsPkGenTopsWithSecret, wotsPkGenTopsWith, pure_bind]
+  simp only [wotsPkGenTopsWithSecret_eq, wotsPkGenTopsWith_eq, pure_bind]
 
 /-- The WOTS+ signature on `msg` at `adrs` (FIPS 205 Algorithm 7), with each chain started from
 the value the provider `secret` returns at its `WOTS_PRF` address. -/
 @[expose] def wotsSignWithSecret {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y) (secret : Adrs → m core.Y)
     (msg : core.Y) (adrs : Adrs) : m (WotsSig p core) :=
-  Vector.ofFnM fun i => do
-    let x ← secret (wotsSkAdrs adrs i.val)
-    chainWith hash (wotsChainAdrs adrs i.val) x 0 (chainStepsCore core msg i.val)
+  Wots.Program.runTops (I := Fin p.len) Vector.ofFnM
+    (fun i => secret (wotsSkAdrs adrs i.val))
+    (fun i j y => hash ((wotsChainAdrs adrs i.val).setHashAddress j) y)
+    (p.w - 1) (.sign (fun i => chainStepsCore core msg i.val))
+
+/-- Provider signing preserves each native secret action before its message-selected chain. -/
+theorem wotsSignWithSecret_eq {m : Type → Type*} [Monad m]
+    (hash : Adrs → core.Y → m core.Y) (secret : Adrs → m core.Y)
+    (msg : core.Y) (adrs : Adrs) :
+    wotsSignWithSecret core hash secret msg adrs = Vector.ofFnM (fun i => do
+      let x ← secret (wotsSkAdrs adrs i.val)
+      chainWith hash (wotsChainAdrs adrs i.val) x 0 (chainStepsCore core msg i.val)) := by
+  simp only [wotsSignWithSecret, Wots.Program.runTops_sign,
+    Wots.Program.runChains_eq, chainWith]
 
 /-- At the honest provider provider-parametric WOTS+ signing is `wotsSignWith`. -/
 theorem wotsSignWithSecret_eq_wotsSignWith {m : Type → Type*} [Monad m] [LawfulMonad m]
@@ -158,15 +179,26 @@ theorem wotsSignWithSecret_eq_wotsSignWith {m : Type → Type*} [Monad m] [Lawfu
     (adrs : Adrs) :
     wotsSignWithSecret core hash (fun a => pure (core.PRF pk sk a)) msg adrs =
       wotsSignWith core hash msg sk pk adrs := by
-  simp only [wotsSignWithSecret, wotsSignWith, pure_bind]
+  simp only [wotsSignWithSecret_eq, wotsSignWith_eq, pure_bind]
 
 /-- The WOTS+ public key at `adrs` (FIPS 205 Algorithm 6): the provider-parametric chain ends
 compressed by `T_len` at `wotsPkAdrs adrs`. -/
 @[expose] def wotsPkGenWithSecret {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y) (compress : Adrs → List core.Y → m core.Y)
-    (secret : Adrs → m core.Y) (adrs : Adrs) : m core.Y := do
-  let tops ← wotsPkGenTopsWithSecret core hash secret adrs
-  compress (wotsPkAdrs adrs) tops.toList
+    (secret : Adrs → m core.Y) (adrs : Adrs) : m core.Y :=
+  Wots.Program.run (I := Fin p.len) Vector.ofFnM
+    (fun i => secret (wotsSkAdrs adrs i.val))
+    (fun i j y => hash ((wotsChainAdrs adrs i.val).setHashAddress j) y)
+    (fun tops => compress (wotsPkAdrs adrs) tops.toList) (p.w - 1) .publicKey
+
+/-- Provider public-key compression follows the provider-generated native chain tops. -/
+theorem wotsPkGenWithSecret_eq {m : Type → Type*} [Monad m]
+    (hash : Adrs → core.Y → m core.Y) (compress : Adrs → List core.Y → m core.Y)
+    (secret : Adrs → m core.Y) (adrs : Adrs) :
+    wotsPkGenWithSecret core hash compress secret adrs = (do
+      let tops ← wotsPkGenTopsWithSecret core hash secret adrs
+      compress (wotsPkAdrs adrs) tops.toList) := by
+  simp only [wotsPkGenWithSecret, wotsPkGenTopsWithSecret, Wots.Program.run_publicKey]
 
 /-- At the honest provider the provider-parametric WOTS+ public key is `wotsPkGenWith`. -/
 theorem wotsPkGenWithSecret_eq_wotsPkGenWith {m : Type → Type*} [Monad m] [LawfulMonad m]
@@ -174,7 +206,7 @@ theorem wotsPkGenWithSecret_eq_wotsPkGenWith {m : Type → Type*} [Monad m] [Law
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     wotsPkGenWithSecret core hash compress (fun a => pure (core.PRF pk sk a)) adrs =
       wotsPkGenWith core hash compress sk pk adrs := by
-  rw [wotsPkGenWithSecret, wotsPkGenWith, wotsPkGenTopsWithSecret_eq_wotsPkGenTopsWith]
+  rw [wotsPkGenWithSecret_eq, wotsPkGenWith_eq, wotsPkGenTopsWithSecret_eq_wotsPkGenTopsWith]
 
 /-! ## Provider-parametric XMSS -/
 
@@ -364,6 +396,7 @@ theorem wotsPkGenTopsWithSecret_natural {m n : Type → Type*} [Monad m] [Lawful
     (adrs : Adrs) :
     F (wotsPkGenTopsWithSecret core hashm secretm adrs) =
       wotsPkGenTopsWithSecret core hashn secretn adrs := by
+  simp only [wotsPkGenTopsWithSecret_eq]
   apply Vector.ofFnM_natural F
   intro i
   rw [F.mmap_bind, hsecret _ (Adrs.isSecretKey_wotsSkAdrs _ _)]
@@ -380,6 +413,7 @@ theorem wotsSignWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad
     (msg : core.Y) (adrs : Adrs) :
     F (wotsSignWithSecret core hashm secretm msg adrs) =
       wotsSignWithSecret core hashn secretn msg adrs := by
+  simp only [wotsSignWithSecret_eq]
   apply Vector.ofFnM_natural F
   intro i
   rw [F.mmap_bind, hsecret _ (Adrs.isSecretKey_wotsSkAdrs _ _)]
@@ -397,7 +431,7 @@ theorem wotsPkGenWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMona
     (hsecret : ∀ a, a.IsSecretKey → F (secretm a) = secretn a) (adrs : Adrs) :
     F (wotsPkGenWithSecret core hashm compressm secretm adrs) =
       wotsPkGenWithSecret core hashn compressn secretn adrs := by
-  rw [wotsPkGenWithSecret, wotsPkGenWithSecret, F.mmap_bind,
+  rw [wotsPkGenWithSecret_eq, wotsPkGenWithSecret_eq, F.mmap_bind,
     wotsPkGenTopsWithSecret_natural core F hashm hashn secretm secretn hhash hsecret]
   exact bind_congr fun tops => hcompress _ _
 
@@ -578,30 +612,71 @@ variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 
 /-- The hypertree signature of `msg` from layer position `pos` upward over `layers` layers
 (FIPS 205 Algorithm 12), with every XMSS signature produced by `xmssSignWithSecret`. `recoverFinal`
-forces the redundant root recovery in the top layer, matching `signFromPositionWith`. -/
+requests discarded recovery only for a singleton entry. Nonfinal recursion resets it to false. -/
 @[expose] def signFromPositionWithSecret {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y)
     (compress : Adrs → List core.Y → m core.Y)
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
     (secret : Adrs → m core.Y) (recoverFinal : Bool) (pos : LayerPosition vp) :
     (layers : ℕ) → pos.layer.val + layers = vp.params.d → core.Y →
-      m (Vector (XmssSig vp.params core) layers)
-  | 0, _, _ => pure #v[]
-  | 1, _, msg => do
-      let sig ← xmssSignWithSecret core hash compress nodeHash secret msg pos.toAdrs pos.leaf.val
-      if recoverFinal then
-        let _ ← xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig msg pos.toAdrs
-        return #v[sig]
-      else
-        return #v[sig]
-  | layers + 2, hremaining, msg => do
-      let sig ← xmssSignWithSecret core hash compress nodeHash secret msg pos.toAdrs pos.leaf.val
-      let root ←
-        xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig msg pos.toAdrs
-      let next := pos.next (by omega)
-      let rest ← signFromPositionWithSecret hash compress nodeHash secret false next
-        (layers + 1) (by simp [next]; omega) root
-      return rest.insertIdx 0 sig
+      m (Vector (XmssSig vp.params core) layers) :=
+  fun layers remaining message =>
+    Hypertree.Program.signLayers (nextRemainingPosition vp)
+      (fun _ current value =>
+        xmssSignWithSecret core hash compress nodeHash secret value current.val.toAdrs
+          current.val.leaf.val)
+      (fun _ current signature value =>
+        xmssPkFromSigWith core hash compress nodeHash current.val.leaf.val signature value
+          current.val.toAdrs)
+      recoverFinal layers ⟨pos, remaining⟩ message
+
+/-- The zero component equation for the typed signer. -/
+theorem signFromPositionWithSecret_zero {m : Type → Type*} [Monad m]
+    (hash : Adrs → core.Y → m core.Y)
+    (compress : Adrs → List core.Y → m core.Y)
+    (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (secret : Adrs → m core.Y) (recoverFinal : Bool) (pos : LayerPosition vp)
+    (remaining : pos.layer.val + (0) = vp.params.d) (message : core.Y) :
+    signFromPositionWithSecret core hash compress nodeHash secret recoverFinal pos (0)
+      remaining message =
+      (pure #v[] : m (Vector (XmssSig vp.params core) (0))) := rfl
+
+/-- The one component equation for the typed signer. -/
+theorem signFromPositionWithSecret_one {m : Type → Type*} [Monad m]
+    (hash : Adrs → core.Y → m core.Y)
+    (compress : Adrs → List core.Y → m core.Y)
+    (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (secret : Adrs → m core.Y) (recoverFinal : Bool) (pos : LayerPosition vp)
+    (remaining : pos.layer.val + (1) = vp.params.d) (message : core.Y) :
+    signFromPositionWithSecret core hash compress nodeHash secret recoverFinal pos (1)
+      remaining message =
+      (do
+        let sig ← xmssSignWithSecret core hash compress nodeHash secret message
+          pos.toAdrs pos.leaf.val
+        if recoverFinal then
+          let _ ← xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig message pos.toAdrs
+          return #v[sig]
+        else
+          return #v[sig] : m (Vector (XmssSig vp.params core) (1))) := rfl
+
+/-- The add two component equation for the typed signer. -/
+theorem signFromPositionWithSecret_add_two {m : Type → Type*} [Monad m]
+    (hash : Adrs → core.Y → m core.Y)
+    (compress : Adrs → List core.Y → m core.Y)
+    (nodeHash : Adrs → core.Y → core.Y → m core.Y)
+    (secret : Adrs → m core.Y) (recoverFinal : Bool) (pos : LayerPosition vp)
+    (layers : Nat) (remaining : pos.layer.val + (layers + 2) = vp.params.d) (message : core.Y) :
+    signFromPositionWithSecret core hash compress nodeHash secret recoverFinal pos
+      (layers + 2) remaining message =
+      (do
+        let sig ← xmssSignWithSecret core hash compress nodeHash secret message
+          pos.toAdrs pos.leaf.val
+        let root ←
+          xmssPkFromSigWith core hash compress nodeHash pos.leaf.val sig message pos.toAdrs
+        let next := pos.next (by omega)
+        let rest ← signFromPositionWithSecret core hash compress nodeHash secret false next
+          (layers + 1) (by simp [next]; omega) root
+        return rest.insertIdx 0 sig : m (Vector (XmssSig vp.params core) (layers + 2))) := rfl
 
 /-- At the honest provider provider-parametric hypertree signing from a position is
 `signFromPositionWith`. -/
@@ -615,11 +690,13 @@ theorem signFromPositionWithSecret_eq_signFromPositionWith {m : Type → Type*} 
       signFromPositionWithSecret core hash compress nodeHash (fun a => pure (core.PRF pk sk a))
           recoverFinal pos layers h msg =
         signFromPositionWith vp core hash compress nodeHash sk pk recoverFinal pos layers h msg
-  | 0, _, _ => by rw [signFromPositionWithSecret, signFromPositionWith]
+  | 0, _, _ => by rw [signFromPositionWithSecret_zero, signFromPositionWith_zero]
   | 1, _, msg => by
-      rw [signFromPositionWithSecret, signFromPositionWith, xmssSignWithSecret_eq_xmssSignWith]
+      rw [signFromPositionWithSecret_one, signFromPositionWith_one,
+        xmssSignWithSecret_eq_xmssSignWith]
   | layers + 2, hremaining, msg => by
-      rw [signFromPositionWithSecret, signFromPositionWith, xmssSignWithSecret_eq_xmssSignWith]
+      rw [signFromPositionWithSecret_add_two, signFromPositionWith_add_two,
+        xmssSignWithSecret_eq_xmssSignWith]
       refine bind_congr fun sig => bind_congr fun root => ?_
       dsimp only
       rw [signFromPositionWithSecret_eq_signFromPositionWith hash compress nodeHash sk pk false _
@@ -714,9 +791,9 @@ theorem signFromPositionWithSecret_natural {m n : Type → Type*} [Monad m] [Law
         signFromPositionWithSecret core hashn compressn nodeHashn secretn recoverFinal pos
           layers h msg
   | 0, _, _ => by
-      rw [signFromPositionWithSecret, signFromPositionWithSecret, F.mmap_pure]
+      rw [signFromPositionWithSecret_zero, signFromPositionWithSecret_zero, F.mmap_pure]
   | 1, _, msg => by
-      rw [signFromPositionWithSecret, signFromPositionWithSecret, F.mmap_bind,
+      rw [signFromPositionWithSecret_one, signFromPositionWithSecret_one, F.mmap_bind,
         xmssSignWithSecret_natural core F hashm hashn compressm compressn nodeHashm nodeHashn
           secretm secretn hhash hcompress hnode hsecret]
       refine bind_congr fun sig => ?_
@@ -728,7 +805,7 @@ theorem signFromPositionWithSecret_natural {m n : Type → Type*} [Monad m] [Law
               hhash hcompress hnode]
           exact bind_congr fun _ => F.mmap_pure _
   | layers + 2, hremaining, msg => by
-      rw [signFromPositionWithSecret, signFromPositionWithSecret, F.mmap_bind,
+      rw [signFromPositionWithSecret_add_two, signFromPositionWithSecret_add_two, F.mmap_bind,
         xmssSignWithSecret_natural core F hashm hashn compressm compressn nodeHashm nodeHashn
           secretm secretn hhash hcompress hnode hsecret]
       refine bind_congr fun sig => ?_
@@ -823,13 +900,12 @@ the message randomizer `R` supplied: neither secret seed appears. -/
 @[expose] def signInternalWithSecretRandomizerM {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m]
     (secret : Adrs → m core.Y) (msg : List Byte) (pkSeed : core.PkSeed) (pkRoot : core.Y)
-    (R : core.Y) : m (SignatureCore vp core) := do
-  let digest ← PublicHash.hmsg core R pkSeed pkRoot msg
-  let parts := splitDigest vp.params digest
-  let forsSig ← forsSignWithSecretM core secret parts.md.toList pkSeed parts.forsAdrs
-  let forsPk ← forsPkFromSigM core forsSig parts.md.toList pkSeed parts.forsAdrs
-  let htSig ← GeneralHypertree.signWithSecretM core secret forsPk pkSeed parts
-  return ⟨R, forsSig, htSig⟩
+    (R : core.Y) : m (SignatureCore vp core) :=
+  Scheme.Program.sign (PublicHash.hmsg core R pkSeed pkRoot msg) (splitDigest vp.params)
+    (fun parts => forsSignWithSecretM core secret parts.md.toList pkSeed parts.forsAdrs)
+    (fun parts signature => forsPkFromSigM core signature parts.md.toList pkSeed parts.forsAdrs)
+    (fun parts root => GeneralHypertree.signWithSecretM core secret root pkSeed parts)
+    (fun forsSignature hypertreeSignature => ⟨R, forsSignature, hypertreeSignature⟩)
 
 /-- At the honest provider provider-parametric signing at a supplied randomizer is
 `signInternalWithRandomizerM`. -/
@@ -866,8 +942,8 @@ theorem signInternalWithSecretRandomizerM_natural {m n : Type → Type*} [Monad 
     (msg : List Byte) (pkSeed : core.PkSeed) (pkRoot R : core.Y) :
     F.toMonadHom (signInternalWithSecretRandomizerM core secretm msg pkSeed pkRoot R) =
       signInternalWithSecretRandomizerM core secretn msg pkSeed pkRoot R := by
-  rw [signInternalWithSecretRandomizerM, signInternalWithSecretRandomizerM,
-    F.toMonadHom.mmap_bind, PublicHash.hmsg_natural core F]
+  unfold signInternalWithSecretRandomizerM Scheme.Program.sign
+  rw [F.toMonadHom.mmap_bind, PublicHash.hmsg_natural core F]
   refine bind_congr fun digest => ?_
   rw [F.toMonadHom.mmap_bind, forsSignWithSecretM_natural core F secretm secretn hsecret]
   refine bind_congr fun forsSig => ?_

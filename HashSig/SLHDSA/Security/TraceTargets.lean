@@ -270,12 +270,10 @@ theorem chainM_queriesWithinConstructionTargets {vp : ValidatedParams}
       (chainM core pkSeed (wotsChainAdrs (wotsInstanceAdrs pos) chain.val) x i s :
         OracleComp (publicHashSpec core) core.Y) := by
   induction s with
-  | zero => exact QueriesWithinConstructionTargets.pure core x
+  | zero =>
+      simpa only [chainM, chainWith_zero] using QueriesWithinConstructionTargets.pure core x
   | succ s ih =>
-      change QueriesWithinConstructionTargets core
-        (chainM core pkSeed (wotsChainAdrs (wotsInstanceAdrs pos) chain.val) x i s >>= fun y =>
-          PublicHash.f core pkSeed
-            ((wotsChainAdrs (wotsInstanceAdrs pos) chain.val).setHashAddress (i + s)) y)
+      rw [chainM, chainWith_prefix]
       apply QueriesWithinConstructionTargets.bind (ih (by omega))
       intro y
       have hstep : i + s < vp.params.w - 1 := by omega
@@ -300,6 +298,7 @@ theorem wotsPkGenM_queriesWithinConstructionTargets {vp : ValidatedParams}
     QueriesWithinConstructionTargets core
       (wotsPkGenM core skSeed pkSeed (wotsInstanceAdrs pos) :
         OracleComp (publicHashSpec core) core.Y) := by
+  rw [wotsPkGenM, wotsPkGenWith_eq, wotsPkGenTopsWith_eq]
   apply QueriesWithinConstructionTargets.bind
     (QueriesWithinConstructionTargets.ofFnM core
       (fun chain : Fin vp.params.len =>
@@ -319,6 +318,7 @@ theorem wotsSignM_queriesWithinConstructionTargets {vp : ValidatedParams}
     QueriesWithinConstructionTargets core
       (wotsSignM core msg skSeed pkSeed (wotsInstanceAdrs pos) :
         OracleComp (publicHashSpec core) (WotsSig vp.params core)) := by
+  rw [wotsSignM, wotsSignWith_eq]
   exact QueriesWithinConstructionTargets.ofFnM core _ fun chain =>
     chainM_queriesWithinConstructionTargets core pkSeed pos chain _ 0
       (chainStepsCore core msg chain.val) (by
@@ -333,6 +333,7 @@ theorem wotsPkFromSigM_queriesWithinConstructionTargets {vp : ValidatedParams}
     QueriesWithinConstructionTargets core
       (wotsPkFromSigM core sig msg pkSeed (wotsInstanceAdrs pos) :
         OracleComp (publicHashSpec core) core.Y) := by
+  rw [wotsPkFromSigM, wotsPkFromSigWith_eq, wotsPkFromSigTopsWith_eq]
   apply QueriesWithinConstructionTargets.bind
     (QueriesWithinConstructionTargets.ofFnM core
       (fun chain : Fin vp.params.len =>

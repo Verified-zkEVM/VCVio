@@ -154,7 +154,7 @@ theorem executableRejectedSign_eq (sk : SecretKeyCore FIPS205.core)
     executableRejectedSign request long = FIPS205.scheme.sign sk request := by
   unfold executableRejectedSign
   split <;> rename_i framed
-  · simp only [FIPS205.scheme, framed]
+  · simp only [FIPS205.scheme, FIPS205.signingView_sign, framed]
   · rw [encodePureMessage_error request long] at framed
     cases framed
 
@@ -335,6 +335,3 @@ def check : IO Unit := do
   IO.println "SLH-DSA SHAKE-128s wire bridge: PASS (actual query translation; fixed context)"
 
 end SLHDSA.SHAKE128s.WireBridgeTest
-
-/-- Execute the fixed-context wire translation controls. -/
-def main : IO Unit := SLHDSA.SHAKE128s.WireBridgeTest.check

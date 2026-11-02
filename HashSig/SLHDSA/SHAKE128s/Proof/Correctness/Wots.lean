@@ -46,10 +46,11 @@ theorem chain_add (publicSeed : Digest) (address : Address)
       SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address (start + first) second
         (SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address start first value) := by
   induction first generalizing start value with
-  | zero => rw [Nat.zero_add]; rfl
+  | zero => simp only [Nat.zero_add, Nat.add_zero, SLHDSA.SHAKE128s.Wots.chain_zero, pure]
   | succ first ih =>
       have hstart : start + 1 + first = start + (first + 1) := by omega
-      simpa only [Nat.succ_add, SLHDSA.SHAKE128s.Wots.chain, bind, hstart] using
+      simpa only [Nat.succ_add, SLHDSA.SHAKE128s.Wots.chain_zero,
+        SLHDSA.SHAKE128s.Wots.chain_succ, bind, hstart] using
         ih (start + 1)
           (Hashing.tweakable (m := Id) publicSeed
             { address with hashOrIndex := BitVec.ofNat 32 start } (bytesBE n value))
@@ -61,8 +62,8 @@ theorem publicKeyFromSignature_sign (message secretSeed publicSeed : Digest)
         (SLHDSA.SHAKE128s.Wots.sign (m := Id) message secretSeed publicSeed address)
         message publicSeed address =
       SLHDSA.SHAKE128s.Wots.publicKey (m := Id) secretSeed publicSeed address := by
-  simp only [SLHDSA.SHAKE128s.Wots.sign, SLHDSA.SHAKE128s.Wots.publicKeyFromSignature,
-    SLHDSA.SHAKE128s.Wots.publicKey, sequenceFin_id, bind]
+  simp only [SLHDSA.SHAKE128s.Wots.sign_eq, SLHDSA.SHAKE128s.Wots.publicKeyFromSignature_eq,
+    SLHDSA.SHAKE128s.Wots.publicKey_eq, sequenceFin_id, bind]
   congr 2
   funext i
   have digit_le : (Checksum.encode message i).val ≤ w - 1 := by

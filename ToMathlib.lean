@@ -3,6 +3,7 @@ module  -- shake: keep-all --deprecated_module: ignore
 public import ToMathlib.Algebra.BigOperators.Finset
 public import ToMathlib.Analysis.MeanInequalities
 public import ToMathlib.Analysis.SumIntegralComparisons
+public import ToMathlib.Compiler.FinCases
 public import ToMathlib.Control.Except
 public import ToMathlib.Control.Functor.Prod
 public import ToMathlib.Control.Monad.Algebra
@@ -15,6 +16,8 @@ public import ToMathlib.Control.Option
 public import ToMathlib.Control.OptionT
 public import ToMathlib.Control.StateT
 public import ToMathlib.Control.WriterT
+public import ToMathlib.Control.WriterT.Map
+public import ToMathlib.Control.WriterT.State
 public import ToMathlib.Data.BitVec
 public import ToMathlib.Data.ByteArray
 public import ToMathlib.Data.ENNReal.AbsDiff
@@ -75,6 +78,7 @@ public import ToMathlib.Probability.Kernel.Bounds
 public import ToMathlib.Probability.Kernel.Quadratic
 public import ToMathlib.Probability.Kernel.Subprobability
 public import ToMathlib.Probability.Kernel.TotalVariation
+public import ToMathlib.Probability.Moments.IndependentPowers
 public import ToMathlib.Probability.NegativeHypergeometric
 public import ToMathlib.Probability.TailSums
 public import ToMathlib.Probability.UniformOn

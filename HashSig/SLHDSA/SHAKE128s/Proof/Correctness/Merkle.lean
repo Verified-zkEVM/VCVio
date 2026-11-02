@@ -9,6 +9,8 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Wots
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.BinaryPath
+public import HashSig.SLHDSA.SHAKE128s.Proof.XmssRecovery
+public import HashSig.SLHDSA.SHAKE128s.Proof.XmssAuthentication
 
 /-!
 # XMSS subtree correctness
@@ -33,7 +35,8 @@ theorem publicKeyFromSignature_sign (message secretSeed publicSeed : Digest)
         (SLHDSA.SHAKE128s.Merkle.sign (m := Id) message secretSeed publicSeed address index)
         message publicSeed address =
       SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed address subtreeHeight 0 := by
-  simp only [SLHDSA.SHAKE128s.Merkle.sign, SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature,
+  simp only [SLHDSA.SHAKE128s.Merkle.sign_eq_sequenceFin,
+    SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature_eq_fold,
     sequenceFin_id, bind, pure, Wots.publicKeyFromSignature_sign, foldlM_id]
   have hpath := recover_path
     (SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed address)

@@ -212,7 +212,8 @@ theorem sign_shape (sk : SecretKey) (request : Message) (framed : Bytes)
     (signInternalAt_shape (Hashing.truncate seed) sk framed).choose digest >>=
       fun signature => (pure (some signature.toBytes) : OracleComp OracleWorld (Option Bytes)),
     ?_⟩
-  simp only [Scheme.sign, hframe, SignerRandomiser.signInternal_eq, Hashing.randomizer,
+  simp only [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, hframe,
+    map_eq_bind_pure_comp, SignerRandomiser.signInternal_eq, Hashing.randomizer,
     Hashing.shortHash, Hashing.hash, bind_assoc, pure_bind]
   refine congrArg (Bind.bind _) (funext fun seed => ?_)
   have hchoose := (signInternalAt_shape (Hashing.truncate seed) sk framed).choose_spec
@@ -438,7 +439,8 @@ theorem signerFaithful_sign (pk : PublicKey)
           (SignerRandomiser.signInternalAt (m := OracleComp OracleWorld)
               (Hashing.truncate seed) sk framed >>= fun signature =>
             (pure (some signature.toBytes) : OracleComp OracleWorld (Option Bytes))) := by
-    simp only [Scheme.sign, hframe, SignerRandomiser.signInternal_eq, Hashing.randomizer,
+    simp only [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, hframe,
+      map_eq_bind_pure_comp, SignerRandomiser.signInternal_eq, Hashing.randomizer,
       Hashing.shortHash, Hashing.hash, bind_assoc, pure_bind]
     rfl
   rw [hshape] at hresult

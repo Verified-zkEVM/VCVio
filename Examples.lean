@@ -82,6 +82,14 @@ public import Examples.ProgramLogic.UnaryStep
 public import Examples.ProgramLogic.UnaryTriple
 public import Examples.ReplayCheckpoint
 public import Examples.ResumptionRejection
+public import Examples.SLHDSA.ContextObservation
+public import Examples.SLHDSA.ContextRejection
+public import Examples.SLHDSA.ForsGraph
+public import Examples.SLHDSA.ForsProvider
+public import Examples.SLHDSA.Profiles
+public import Examples.SLHDSA.SharedCertificates
+public import Examples.SLHDSA.WeightedPolicy
+public import Examples.SLHDSA.WeightedPolicy.Certificates
 public import Examples.Schnorr.Basic
 public import Examples.SealedSender.AspectObservation
 public import Examples.SimpleTwoServerPIR

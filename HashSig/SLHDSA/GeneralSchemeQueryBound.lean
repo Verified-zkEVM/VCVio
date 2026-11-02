@@ -46,7 +46,7 @@ theorem keygenInternalM_isTotalQueryBound (vp : ValidatedParams)
       (keygenInternalM vp core skSeed skPrf pkSeed :
         OracleComp (publicHashSpec core) (PublicKeyCore core × SecretKeyCore core))
       (keygenInternalQueryBound vp.params) := by
-  simpa [keygenInternalM, keygenInternalQueryBound, GeneralHypertree.rootM,
+  simpa [keygenInternalM, Scheme.Program.keygen, keygenInternalQueryBound, GeneralHypertree.rootM,
     GeneralHypertree.rootWith, xmssRootM] using
     isTotalQueryBound_bind
       (xmssRootM_isTotalQueryBound core skSeed pkSeed
@@ -76,7 +76,8 @@ theorem signInternalM_isTotalQueryBound (vp : ValidatedParams)
                   show IsTotalQueryBound
                     (pure (SignatureCore.mk R sigAndPk.1 htSig) :
                       OracleComp (publicHashSpec core) (SignatureCore vp core)) 0 from trivial
-  simpa [signInternalM, signInternalQueryBound, R, bind_assoc, Nat.add_assoc] using hbound
+  simpa [signInternalM, signInternalWithRandomizerM, Scheme.Program.sign,
+    signInternalQueryBound, R, bind_assoc, Nat.add_assoc] using hbound
 
 theorem verifyInternalM_isTotalQueryBound (vp : ValidatedParams)
     (core : CorePrimitives vp.params) [DecidableEq core.Y]
@@ -97,7 +98,7 @@ theorem verifyInternalM_isTotalQueryBound (vp : ValidatedParams)
                   show IsTotalQueryBound
                     (pure (decide (recovered = pk.pkRoot)) :
                       OracleComp (publicHashSpec core) Bool) 0 from trivial
-  simpa [verifyInternalM, GeneralHypertree.verifyM, verifyInternalQueryBound,
+  simpa [verifyInternalM_components, GeneralHypertree.verifyM, verifyInternalQueryBound,
     bind_assoc, Nat.add_assoc] using hbound
 
 end SLHDSA.GeneralScheme

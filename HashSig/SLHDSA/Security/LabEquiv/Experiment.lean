@@ -63,14 +63,14 @@ theorem signFromPositionWithSecret_labTriple (recoverFinal : Bool) (pos : LayerP
         (labSignFromPosition core recoverFinal pos layers h msg) fun _ _ ↦ True
   | 0, _, _ => QueryImpl.EqDistTriple.pure _ fun _ _ ↦ trivial
   | 1, _, msg => by
-    rw [GeneralHypertree.signFromPositionWithSecret, labSignFromPosition]
+    rw [GeneralHypertree.signFromPositionWithSecret_one, labSignFromPosition]
     refine (xmssSignWithSecret_labTriple core hd pkSeed pos msg).bind fun sig ↦ ?_
     cases recoverFinal
     · exact QueryImpl.EqDistTriple.pure _ fun _ _ ↦ trivial
     · exact (xmssPkFromSigWith_labTriple core hd pkSeed pos sig msg).bind fun _ ↦
         QueryImpl.EqDistTriple.pure _ fun _ _ ↦ trivial
   | layers + 2, _, msg => by
-    rw [GeneralHypertree.signFromPositionWithSecret, labSignFromPosition]
+    rw [GeneralHypertree.signFromPositionWithSecret_add_two, labSignFromPosition]
     exact (xmssSignWithSecret_labTriple core hd pkSeed pos msg).bind fun sig ↦
       (xmssPkFromSigWith_labTriple core hd pkSeed pos sig msg).bind fun root ↦
         ((signFromPositionWithSecret_labTriple false _ (layers + 1) _ root).mono

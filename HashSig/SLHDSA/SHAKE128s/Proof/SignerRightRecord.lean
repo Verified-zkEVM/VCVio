@@ -199,7 +199,7 @@ theorem sign_right_record_none (leftKeep rightKeep : Bytes → QueryCache HashSp
     (hresult : result ∈ support ((simulateQ (recorder leftKeep rightKeep)
       (Scheme.sign (m := OracleComp OracleWorld) sk request)).run state)) :
     result.2 = state := by
-  rw [Scheme.sign, hframe] at hresult
+  simp only [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, hframe] at hresult
   rw [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hresult
   rw [hresult]
 
@@ -224,9 +224,9 @@ theorem sign_right_record (leftKeep rightKeep : Bytes → QueryCache HashSpec �
                 (signInternalAt (m := OracleComp HashSpec) (Hashing.truncate answer) sk framed)
                 entry.1 := by
   classical
-  rw [Scheme.sign, hframe] at hresult
-  simp only [simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure,
-    mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hresult
+  simp only [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, hframe] at hresult
+  rw [map_eq_bind_pure_comp] at hresult
+  simp only [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hresult
   obtain ⟨inner, hinner, hvalue⟩ := hresult
   rw [show result.2 = inner.2 from by rw [hvalue]]
   have hinnerState : result.2 = inner.2 := by rw [hvalue]

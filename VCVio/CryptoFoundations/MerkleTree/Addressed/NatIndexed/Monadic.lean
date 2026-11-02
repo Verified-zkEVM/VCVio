@@ -90,6 +90,16 @@ def intrinsicAuthPathM {m : Type v → Type*} [Monad m] (leaf : ℕ → m Y)
       let siblingRoot ← merkleRootM leaf nodeHash z (sibling (idx / 2 ^ z))
       return path.push siblingRoot
 
+/-- Intrinsic authentication paths are sibling roots collected in increasing level order. -/
+theorem intrinsicAuthPathM_eq_ofFnM {m : Type v → Type*} [Monad m] [LawfulMonad m]
+    (leaf : ℕ → m Y) (nodeHash : ℕ → ℕ → Y → Y → m Y) (idx z : ℕ) :
+    intrinsicAuthPathM leaf nodeHash idx z =
+      Vector.ofFnM fun j : Fin z => merkleRootM leaf nodeHash j.val
+        (sibling (idx / 2 ^ j.val)) := by
+  induction z with
+  | zero => simp [intrinsicAuthPathM]
+  | succ z ih => simp [intrinsicAuthPathM, Vector.ofFnM_succ, ih]
+
 /-- Pure authentication path with its exact height retained in the result type. -/
 def intrinsicAuthPath (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y)
     (idx : ℕ) : (z : ℕ) → Vector Y z

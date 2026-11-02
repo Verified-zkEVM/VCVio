@@ -29,9 +29,11 @@ It also equips `QueryImpl` with additive writer-cost instrumentation.
 
 open OracleSpec
 
+universe v idx
+
 namespace QueryImpl
 
-variable {ι : Type} {spec : OracleSpec ι} {m : Type → Type*}
+variable {ι : Type idx} {spec : OracleSpec.{idx, 0} ι} {m : Type → Type v}
 
 section addCost
 

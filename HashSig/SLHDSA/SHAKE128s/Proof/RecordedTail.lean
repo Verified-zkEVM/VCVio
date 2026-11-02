@@ -142,8 +142,9 @@ tail is the recorded tail read through that projection. -/
 theorem countAllHashes_map {α β : Type} (f : α → β) (computation : OracleComp OracleWorld α) :
     countAllHashes (f <$> computation) =
       (fun result => (f result.1, result.2)) <$> countAllHashes computation := by
-  rw [countAllHashes, countAllHashes, simulateQ_map, WriterT.run_map, Functor.map_map,
-    Functor.map_map]
+  simp only [countAllHashes, Game.countAllHashes, SignatureAlg.SigningView.costed,
+    simulateQ_map, AddWriterT.runAdd_map]
+  rfl
 
 /-- The counted game played from what the walk left, carrying the record. -/
 @[expose] noncomputable def recordedTail (adversary : Adversary)

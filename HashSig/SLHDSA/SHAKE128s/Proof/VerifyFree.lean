@@ -9,6 +9,7 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.GraphStakes
 public import HashSig.SLHDSA.SHAKE128s.Proof.Target127
 public import HashSig.SLHDSA.SHAKE128s.Proof.VerificationBudget
+import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
 
 /-!
 # The verifier's free queries
@@ -197,7 +198,7 @@ theorem fors_free (signature : ForsSignature) (indices : Fors.Indices) (address 
     FreeBounds publicSeed
       (Fors.publicKeyFromSignature signature indices publicSeed address :
         OracleComp HashSpec Digest) 169 := by
-  unfold Fors.publicKeyFromSignature
+  rw [Fors.publicKeyFromSignature_eq_fold]
   have hroots : ∀ i : Fin forsTrees, FreeBounds publicSeed
       (do
         let index := i.val * 2 ^ forsHeight + (indices i).val
@@ -226,7 +227,7 @@ theorem wots_free (signature : WotsSignature) (message : Digest) (address : Addr
     FreeBounds publicSeed
       (Wots.publicKeyFromSignature signature message publicSeed address :
         OracleComp HashSpec Digest) 1 := by
-  unfold Wots.publicKeyFromSignature
+  rw [Wots.publicKeyFromSignature_eq]
   simpa only [Nat.zero_add] using (FreeBounds.zero _).bind (fun endpoints =>
     tweakable_free (publicSeed := publicSeed) _ (digestArrayBytes endpoints) (by
       rw [digestArrayBytes_length]
@@ -238,7 +239,7 @@ theorem merkle_free (index : Fin (2 ^ subtreeHeight)) (signature : XmssSignature
     FreeBounds publicSeed
       (Merkle.publicKeyFromSignature index signature message publicSeed address :
         OracleComp HashSpec Digest) 10 := by
-  unfold Merkle.publicKeyFromSignature
+  rw [Merkle.publicKeyFromSignature_eq_fold]
   change FreeBounds publicSeed _ (1 + subtreeHeight)
   exact (wots_free signature.wots message _).bind (fun leaf => by
     simpa only [List.length_finRange, Nat.mul_one] using
@@ -256,7 +257,7 @@ theorem hypertree_root_free (remaining : Nat)
   induction remaining generalizing layer tree leaf message with
   | zero => exact FreeBounds.pure message
   | succ remaining ih =>
-    rw [Hypertree.rootFromSignature]
+    rw [Hypertree.rootFromSignature_succ]
     simpa only [Nat.add_mul, Nat.one_mul, Nat.add_comm] using
       (merkle_free leaf (signatures 0) message (Hypertree.address layer tree)).bind
         (fun root => ih (fun i => signatures i.succ) (layer + 1)
@@ -281,7 +282,7 @@ theorem verifyInternal_free (pk : PublicKey) (message : Bytes) (signature : Sign
       (hypertree_root_free (publicSeed := pk.seed) layers signature.hypertree 0
         (MessageDigest.treeIndex digest).toNat (MessageDigest.leafIndex digest).toFin forsKey).map
         (fun root => root == pk.root)
-  unfold Scheme.verifyInternal
+  rw [Scheme.verifyInternal_components]
   simpa only [Nat.zero_add] using (FreeBounds.zero _).bind htail
 
 /-- **Every path of the verifier on a parsed signature makes at least `239` free queries.** -/
@@ -289,7 +290,8 @@ theorem verify_free (pk : PublicKey) (request : Message) (wire : Bytes)
     (message : Bytes) (signature : Signature)
     (hframe : request.frame = some message) (hparse : Signature.fromBytes? wire = some signature) :
     FreeBounds pk.seed (Scheme.verify pk request wire : OracleComp HashSpec Bool) 239 := by
-  simpa only [Scheme.verify, hframe, hparse] using verifyInternal_free pk message signature
+  simpa only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify,
+    hframe, hparse] using verifyInternal_free pk message signature
 
 /-! ## Transfer to stateful implementations -/
 

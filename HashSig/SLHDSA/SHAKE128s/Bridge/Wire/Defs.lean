@@ -86,7 +86,8 @@ theorem fixedContext_sign (ctx : SLHDSA.Security.PureContext)
       (fun signature => some (encodeSignature FIPS205.params
         (Concrete.shakeWireCodec FIPS205.params.params) signature)) <$>
         FIPS205.internal.sign (FIPS205.SecretKeyCore.publicKey sk) sk (ctx.encode msg) := by
-  simp only [FIPS205.scheme, SLHDSA.Security.PureContext.encode_eq_external]
+  simp only [FIPS205.scheme, FIPS205.signingView_sign,
+    SLHDSA.Security.PureContext.encode_eq_external]
 
 /-- Verification at the fixed context parses the canonical signature before internal
 verification, rejecting a string that does not parse. -/
@@ -97,7 +98,8 @@ theorem fixedContext_verify (ctx : SLHDSA.Security.PureContext)
           signature with
       | .error _ => pure false
       | .ok decoded => FIPS205.internal.verify pk (ctx.encode msg) decoded := by
-  simp only [FIPS205.scheme, SLHDSA.Security.PureContext.encode_eq_external]
+  simp only [FIPS205.scheme, FIPS205.signingView_verify,
+    SLHDSA.Security.PureContext.encode_eq_external]
   rfl
 
 /-- Conservative intrinsic verifier cap for SHAKE-128s. -/

@@ -227,7 +227,11 @@ theorem countQueries_eq_map_countRecorded {α : Type} (cost : OracleWorld.Domain
     (computation : OracleComp OracleWorld α) :
     countQueries (fun input => (cost input).1) computation =
       (fun result => (result.1, result.2.1)) <$> countRecorded cost computation := by
-  rw [countQueries, countRecorded, Functor.map_map,
+  rw [countQueries, Game.countQueries, SignatureAlg.SigningView.costed,
+    AddWriterT.runAdd, ← QueryImpl.ofLift_eq_id']
+  change ((fun result => (result.1, Multiplicative.toAdd result.2)) <$>
+    (simulateQ (addCostOracle (fun input => (cost input).1)) computation).run) = _
+  rw [countRecorded, Functor.map_map,
     run_simulateQ_map_writer forget forget_one forget_mul (addCostOracle cost)
       (addCostOracle fun input => (cost input).1)
       (fun t => run_withAddCost_map forget

@@ -64,7 +64,7 @@ theorem count_wotsPublicKey_ge (secretSeed publicSeed : Digest) (address : Addre
       (Wots.publicKey (m := OracleComp OracleWorld) secretSeed publicSeed address))).run
         cache)) :
     chains + 1 ≤ result.1.2 := by
-  rw [Wots.publicKey] at hmem
+  rw [Wots.publicKey_eq] at hmem
   obtain ⟨endpoints, middleCache, first, second, hfirst, hsecond, hsplit⟩ :=
     AdversaryQueries.mem_support_counted_bind_count _ _ cache result hmem
   have hone : (1 : Nat) ≤ second := HonestGrowth.one_le_count_tweakable publicSeed _ _

@@ -104,7 +104,7 @@ theorem simulateQ_relabel_signLayers (secretSeed publicSeed : Digest) :
     have := pos.layer.isLt
     omega
   | 1, pos, _, msg => by
-    rw [Hypertree.signLayers, signFromPositionWithSecret]
+    rw [Hypertree.signLayers_succ, signFromPositionWithSecret_one]
     simp only [Bool.false_eq_true, ite_false]
     rw [LayerPosition.toAdrs_eq pos]
     refine ForsBridge.bind_bridge
@@ -116,7 +116,7 @@ theorem simulateQ_relabel_signLayers (secretSeed publicSeed : Digest) :
       | zero => rfl
       | succ i => exact i.elim0)
   | k + 2, pos, h, msg => by
-    rw [Hypertree.signLayers, signFromPositionWithSecret]
+    rw [Hypertree.signLayers_succ, signFromPositionWithSecret_add_two]
     simp only []
     rw [LayerPosition.toAdrs_eq pos]
     refine ForsBridge.bind_bridge
@@ -169,19 +169,30 @@ theorem simulateQ_relabel_rootFromSignature (publicSeed : Digest) :
         (PublicHash.f FIPS205.core (digestEquiv publicSeed))
         (PublicHash.tl FIPS205.core (digestEquiv publicSeed))
         (PublicHash.h FIPS205.core (digestEquiv publicSeed))
-        (digestEquiv publicSeed) pos layers h msg sigs : TypedComp _)
+        pos layers h msg sigs : TypedComp _)
   | 0, pos, h, _, _ => by
     have := pos.layer.isLt
     omega
-  | 1, pos, _, msg, sigs => by
-    rw [Hypertree.rootFromSignature]
-    simp only [Hypertree.rootFromSignature, bind_pure, recoverFromPositionWith]
+  | 1, pos, h, msg, sigs => by
+    have nativeEq := recoverFromPositionWith_one FIPS205.params FIPS205.core
+      (m := OracleComp (unifSpec + hashSpec FIPS205.core))
+      (PublicHash.f FIPS205.core (digestEquiv publicSeed))
+      (PublicHash.tl FIPS205.core (digestEquiv publicSeed))
+      (PublicHash.h FIPS205.core (digestEquiv publicSeed))
+      pos h msg sigs
+    rw [nativeEq, Hypertree.rootFromSignature_succ]
+    simp only [Hypertree.rootFromSignature_zero, bind_pure]
     rw [LayerPosition.toAdrs_eq pos, xmssFamily_zero]
     exact simulateQ_relabel_merklePublicKeyFromSignature ⟨pos.leaf.val, pos.leaf.isLt⟩
       sigs.head msg publicSeed _
   | k + 2, pos, h, msg, sigs => by
-    rw [Hypertree.rootFromSignature]
-    simp only [recoverFromPositionWith]
+    have nativeEq := recoverFromPositionWith_add_two FIPS205.params FIPS205.core
+      (m := OracleComp (unifSpec + hashSpec FIPS205.core))
+      (PublicHash.f FIPS205.core (digestEquiv publicSeed))
+      (PublicHash.tl FIPS205.core (digestEquiv publicSeed))
+      (PublicHash.h FIPS205.core (digestEquiv publicSeed))
+      pos k h msg sigs
+    rw [nativeEq, Hypertree.rootFromSignature_succ]
     rw [LayerPosition.toAdrs_eq pos, xmssFamily_zero]
     refine ForsBridge.bind_bridge
       (simulateQ_relabel_merklePublicKeyFromSignature ⟨pos.leaf.val, pos.leaf.isLt⟩ sigs.head msg

@@ -7,6 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
+public import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.Wots
 public import HashSig.SLHDSA.SHAKE128s.Proof.Correctness.BinaryPath
 
@@ -37,7 +38,8 @@ theorem publicKeyFromSignature_sign (indices : SLHDSA.SHAKE128s.Fors.Indices)
         { address.setTypeAndClear .forsRoots with keyPair := address.keyPair }
         (digestArrayBytes fun i : Fin forsTrees =>
           SLHDSA.SHAKE128s.Fors.node (m := Id) secretSeed publicSeed address forsHeight i.val) := by
-  simp only [SLHDSA.SHAKE128s.Fors.sign, SLHDSA.SHAKE128s.Fors.publicKeyFromSignature,
+  simp only [SLHDSA.SHAKE128s.Fors.sign_eq_sequenceFin,
+    SLHDSA.SHAKE128s.Fors.publicKeyFromSignature_eq_fold,
     sequenceFin_id, bind, pure, foldlM_id]
   apply congrArg (fun roots : Fin forsTrees → Digest =>
     Hashing.tweakable (m := Id) publicSeed

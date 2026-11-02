@@ -125,14 +125,15 @@ theorem state_of_verify_pure (w : Bool × VerifyState)
 /-- The verifier on an unframed request is `pure false`. -/
 theorem verify_eq_pure_of_frame (hframe : request.frame = none) :
     (Scheme.verify (m := OracleComp OracleWorld) pk request wire) = pure false := by
-  simp only [Scheme.verify, hframe]
+  simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, hframe]
 
 /-- The verifier on an unparsed signature is `pure false`. -/
 theorem verify_eq_pure_of_parse (hparse : Signature.fromBytes? wire = none) :
     (Scheme.verify (m := OracleComp OracleWorld) pk request wire) = pure false := by
   cases hframe : request.frame with
-  | none => simp only [Scheme.verify, hframe]
-  | some message => simp only [Scheme.verify, hframe, hparse]
+  | none => simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, hframe]
+  | some message => simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify,
+      hframe, hparse]
 
 /-! ## The free queries -/
 

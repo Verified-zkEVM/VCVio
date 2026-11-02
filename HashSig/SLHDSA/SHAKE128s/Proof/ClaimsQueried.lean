@@ -160,6 +160,7 @@ theorem queriesUnder_root_chain (cache : QueryCache HashSpec) (publicSeed : Dige
     intro signatures layer tree leaf message i chain hdigit
     induction i using Fin.cases with
     | zero =>
+      simp only [Fin.val_zero, layerAt, treeAt, leafAt, forgedAt]
       refine @HypertreeDispatch.queriesUnder_rootFromSignature_head cache publicSeed remaining
         signatures layer tree leaf message _ ?_
       refine FaultCharge.queriesUnder_merkle_wots cache leaf (signatures 0) message publicSeed
@@ -169,7 +170,7 @@ theorem queriesUnder_root_chain (cache : QueryCache HashSpec) (publicSeed : Dige
         (by
           have h' : (Checksum.encode message chain).val < w - 1 := hdigit
           omega)
-      exact h
+      simpa only [@Wots.chain_zero Id _ (replayQuery cache), pure] using h
     | succ j =>
       refine @HypertreeDispatch.queriesUnder_rootFromSignature_tail cache publicSeed remaining
         signatures layer tree leaf message _ ?_

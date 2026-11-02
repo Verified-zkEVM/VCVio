@@ -62,7 +62,7 @@ theorem signFromPositionWith_two (vp : ValidatedParams)
       let next := pos.next (by omega)
       let sig1 ← xmssSignWith core hash compress nodeHash root0 sk pk next.toAdrs next.leaf.val
       return #v[sig0, sig1]) := by
-  simp [signFromPositionWith]
+  simp [signFromPositionWith_add_two, signFromPositionWith_one]
 
 /-- Callback-parametric general hypertree signing is the canonical explicit-query signer after
 instantiating the three public-hash callbacks. This theorem is intentionally not a simp rule: it
@@ -96,7 +96,7 @@ theorem pkFromSigWith_publicHash_eq_pkFromSigM (vp : ValidatedParams)
     (parts : DigestParts vp.params) :
     pkFromSigWith vp core (m := m) (PublicHash.f (m := m) core pk)
         (PublicHash.tl (m := m) core pk) (PublicHash.h (m := m) core pk)
-        msg sig pk parts = pkFromSigM vp core msg sig pk parts := rfl
+        msg sig parts = pkFromSigM vp core msg sig pk parts := rfl
 
 end GeneralHypertree
 

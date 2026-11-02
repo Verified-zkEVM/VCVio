@@ -217,6 +217,7 @@ private theorem allQueriesSatisfy_xmssNodeWithSecret_not_thash (e : core.SkSeed 
       oa.AllQueriesSatisfy (fun t => ¬∃ s ys, t = .thash s k ys)) hb _ _ z t (fun i _ => ?_)
     fun h i _ hh _ l r => allQueriesSatisfy_thash (a := xmssNodeAdrs base h i) pkSeed [l, r]
       (hkey _ (Or.inr (Or.inr (Or.inr ⟨rfl, show h < vp.params.hp by omega⟩))))
+  rw [xmssLeafWithSecret, wotsPkGenWithSecret_eq, wotsPkGenTopsWithSecret_eq]
   refine hb _ _ (Vector.ofFnM_pred
     (fun {α} (oa : OracleComp (publicHashSpec core) α) =>
       oa.AllQueriesSatisfy (fun t => ¬∃ s ys, t = .thash s k ys)) hp hb _ fun j => ?_) fun tops =>

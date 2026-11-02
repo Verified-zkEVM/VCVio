@@ -23,6 +23,10 @@ public import VCVioTest.CryptoFoundations.PRFTableMeasure
 public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SignatureAlgBudget
 public import VCVioTest.CryptoFoundations.SignatureAlgRouted
+public import VCVioTest.CryptoFoundations.SigningViewCounted
+public import VCVioTest.CryptoFoundations.SigningViewEncoding
+public import VCVioTest.CryptoFoundations.SigningViewUnforgeability
+public import VCVioTest.CryptoFoundations.SigningViewUniverse
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.CryptoFoundations.UniversalHash
 public import VCVioTest.EvalDist.BundledSemantics
@@ -145,6 +149,10 @@ public import VCVioTest.Quantum.VectorCommitmentQuantum
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryCacheInstability
 public import VCVioTest.QueryHom
+public import VCVioTest.QueryTracking.Exact
+public import VCVioTest.QueryTracking.RandomOraclePresampling
+public import VCVioTest.QueryTracking.TraversalFrame
+public import VCVioTest.QueryTracking.TraversalProgramming
 public import VCVioTest.RandomOracleClassIndexedTape
 public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleDefer
@@ -161,6 +169,7 @@ public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.RandomOracleSettled
 public import VCVioTest.RandomOracleTouchRead
+public import VCVioTest.RandomOracleTraversal
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
 public import VCVioTest.ReactiveNetwork

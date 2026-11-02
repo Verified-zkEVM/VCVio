@@ -41,7 +41,7 @@ theorem answer_isSome (warm : QueryCache HashSpec) (sk : SecretKey) (request : M
     (hz : z ∈ support ((simulateQ KeygenUniform.rom
       (StrippedGame.strippedSign warm sk request)).run cache)) :
     z.1.isSome = request.frame.isSome := by
-  unfold StrippedGame.strippedSign Scheme.sign at hz
+  unfold StrippedGame.strippedSign Scheme.sign SignatureAlg.SigningView.Encoding.sign at hz
   cases hframe : request.frame with
   | none =>
     simp only [hframe] at hz
@@ -50,10 +50,10 @@ theorem answer_isSome (warm : QueryCache HashSpec) (sk : SecretKey) (request : M
     rw [hz]
   | some message =>
     simp only [hframe] at hz
-    simp only [bind_pure_comp, simulateQ_map, OracleComp.liftComp_map, StateT.run_map,
+    simp only [simulateQ_map, OracleComp.liftComp_map, StateT.run_map,
       support_map, Set.mem_image] at hz
     obtain ⟨w, -, rfl⟩ := hz
-    rfl
+    simp only [Function.comp_apply, Option.isSome_some]
 
 /-! ## The real handler reports the cap's weight -/
 

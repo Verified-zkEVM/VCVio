@@ -84,7 +84,8 @@ theorem simulateQ_toPartialImpl_chainM_succ_eq_some_iff (pk : core.PkSeed) (adrs
     simulateQ c.toPartialImpl (chainM core pk adrs x i (s + 1)) = some y ↔
       ∃ z, simulateQ c.toPartialImpl (chainM core pk adrs x i s) = some z ∧
         c (.thash pk (core.adrsToKey (adrs.setHashAddress (i + s))) [z]) = some y := by
-  simp only [chainM, chainWith, simulateQ_bind_eq_some_iff, simulateQ_toPartialImpl_f]
+  simp only [chainM, chainWith_prefix, simulateQ_bind_eq_some_iff,
+    simulateQ_toPartialImpl_f]
 
 /-- An `a + b`-step chain is settled exactly when its first `a` steps are settled and the
 `b`-step chain from their value at hash address `i + a` is settled. -/
@@ -94,7 +95,7 @@ theorem simulateQ_toPartialImpl_chainM_add_eq_some_iff (pk : core.PkSeed) (adrs 
       ∃ z, simulateQ c.toPartialImpl (chainM core pk adrs x i a) = some z ∧
         simulateQ c.toPartialImpl (chainM core pk adrs z (i + a) b) = some y := by
   induction b generalizing y with
-  | zero => simp [chainM, chainWith]
+  | zero => simp [chainM, chainWith_zero]
   | succ b ih =>
     rw [← Nat.add_assoc]
     simp only [simulateQ_toPartialImpl_chainM_succ_eq_some_iff, ih]
@@ -110,7 +111,7 @@ theorem simulateQ_toPartialImpl_wotsPkFromSigTopsM_eq_some_iff (sig : WotsSig p 
       ∀ i : Fin p.len, simulateQ c.toPartialImpl (chainM core pk (wotsChainAdrs adrs i.val)
         sig[i.val] (chainStepsCore core msg i.val) (p.w - 1 - chainStepsCore core msg i.val)) =
           some tops[i] := by
-  simp only [wotsPkFromSigTopsM, wotsPkFromSigTopsWith, simulateQ_ofFnM_eq_some_iff, chainM]
+  simp only [wotsPkFromSigTopsM, wotsPkFromSigTopsWith_eq, simulateQ_ofFnM_eq_some_iff, chainM]
 
 /-! ## XMSS trees -/
 
@@ -129,7 +130,7 @@ theorem simulateQ_toPartialImpl_xmssPkFromSigM_eq_some_iff (idx : ℕ) (sig : Xm
         simulateQ c.toPartialImpl (PerfectMerkleTree.climbM
           (xmssNodeHashM core pk adrs) idx leaf sig.auth.toList) = some root := by
   rw [xmssPkFromSigM_eq_bind]
-  simp only [wotsPkFromSigM, wotsPkFromSigWith, wotsPkFromSigTopsM, simulateQ_bind_eq_some_iff,
+  simp only [wotsPkFromSigM, wotsPkFromSigWith_eq, wotsPkFromSigTopsM, simulateQ_bind_eq_some_iff,
     simulateQ_toPartialImpl_tl]
 
 /-! ## Chain reader -/
@@ -137,7 +138,9 @@ theorem simulateQ_toPartialImpl_xmssPkFromSigM_eq_some_iff (idx : ℕ) (sig : Xm
 /-- A zero-step chain reads to its input. -/
 @[simp]
 theorem chain?_zero (pk : core.PkSeed) (adrs : Adrs) (x : core.Y) (i : ℕ) :
-    chain? core c pk adrs x i 0 = some x := rfl
+    chain? core c pk adrs x i 0 = some x := by
+  simp only [chain?, chainM, chainWith_zero, simulateQ_pure]
+  rfl
 
 /-- One more chain step is settled exactly when the chain so far is settled and the `F` query at
 hash address `i + s` of its value is cached. -/
@@ -257,7 +260,8 @@ theorem simulateQ_toPartialImpl_verifyInternalM_eq_some_true_iff [DecidableEq co
           (splitDigest vp.params digest).forsAdrs) = some forsPk ∧
         simulateQ c.toPartialImpl (GeneralHypertree.pkFromSigM vp core forsPk sig.hypertree
           pk.pkSeed (splitDigest vp.params digest)) = some pk.pkRoot := by
-  simp only [GeneralScheme.verifyInternalM, GeneralHypertree.verifyM, simulateQ_bind_eq_some_iff,
+  simp only [GeneralScheme.verifyInternalM_components, GeneralHypertree.verifyM,
+    simulateQ_bind_eq_some_iff,
     simulateQ_pure_eq_some_iff, simulateQ_toPartialImpl_hmsg, decide_eq_true_eq,
     exists_eq_right, exists_and_left]
 
@@ -274,7 +278,8 @@ theorem exists_of_simulateQ_toPartialImpl_verifyInternalM_eq_some [DecidableEq c
         (splitDigest vp.params digest).forsAdrs = some forsPk ∧
       simulateQ c.toPartialImpl (GeneralHypertree.pkFromSigM vp core forsPk sig.hypertree
         pk.pkSeed (splitDigest vp.params digest)) = some root := by
-  simp only [GeneralScheme.verifyInternalM, GeneralHypertree.verifyM, simulateQ_bind_eq_some_iff,
+  simp only [GeneralScheme.verifyInternalM_components, GeneralHypertree.verifyM,
+    simulateQ_bind_eq_some_iff,
     simulateQ_toPartialImpl_hmsg] at h
   obtain ⟨digest, hd, forsPk, hf, root, hr, -⟩ := h
   exact ⟨digest, forsPk, root, hd, hf, hr⟩

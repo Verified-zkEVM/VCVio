@@ -304,7 +304,7 @@ theorem real_sign_unframed (warm : QueryCache HashSpec) (sk : SecretKey) (reques
     (hframe : request.frame = none) (cache : QueryCache HashSpec) :
     (simulateQ KeygenUniform.rom (StrippedGame.strippedSign warm sk request)).run cache =
       (pure (none, cache) : ProbComp (Option Bytes × QueryCache HashSpec)) := by
-  unfold StrippedGame.strippedSign Scheme.sign
+  unfold StrippedGame.strippedSign Scheme.sign SignatureAlg.SigningView.Encoding.sign
   simp [hframe]
 
 open scoped Classical in

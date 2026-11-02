@@ -410,10 +410,12 @@ theorem signFromPosition_getElem (vp : ValidatedParams) (prims : Primitives vp.p
       cases j with
       | zero =>
           rw [LayerPosition.advance_zero, honestLayerMsg_zero, getElem_zero_eq_head]
-          simp only [signFromPosition]
+          rw [signFromPosition_add_two]
+          dsimp only
           rw [head_insertIdx_zero]
       | succ i =>
-          simp only [signFromPosition]
+          rw [signFromPosition_add_two]
+          dsimp only
           rw [getElem_succ_eq_tail _ i (by omega), tail_insertIdx_zero,
             xmssPkFromSig_xmssSign prims msg sk pk pos.toAdrs pos.leaf.val pos.leaf.isLt,
             ih false (pos.next (by omega)) (by simp only [LayerPosition.next_layer_val]; omega)
@@ -460,13 +462,13 @@ theorem recoverFromPosition_binding (vp : ValidatedParams) (prims : Primitives v
   induction layers using Nat.twoStepInduction generalizing pos msg msg' with
   | zero => have := pos.layer.isLt; omega
   | one =>
-      simp only [recoverFromPosition] at hroot
+      simp only [recoverFromPosition_one] at hroot
       rw [← LayerPosition.toAdrs_eq_layerAdrs_of_isFinal pos (by omega)] at hroot
       refine ⟨0, by omega, msg, ?_, ?_⟩
       · rw [honestLayerMsg_zero]; exact hne
       · rw [LayerPosition.advance_zero, getElem_zero_eq_head]; exact hroot
   | more layers _ ih =>
-      simp only [recoverFromPosition] at hroot
+      simp only [recoverFromPosition_add_two] at hroot
       by_cases hcase : xmssPkFromSig prims pos.leaf.val sigs.head msg pk pos.toAdrs =
           xmssRoot prims sk pk pos.toAdrs
       · refine ⟨0, by omega, msg, ?_, ?_⟩
@@ -748,13 +750,13 @@ theorem findHypertreeWitness_isSome (vp : ValidatedParams) (prims : Primitives v
   induction layers using Nat.twoStepInduction generalizing pos msg msg' with
   | zero => have := pos.layer.isLt; omega
   | one =>
-      simp only [recoverFromPosition] at hroot
+      simp only [recoverFromPosition_one] at hroot
       rw [← LayerPosition.toAdrs_eq_layerAdrs_of_isFinal pos (by omega)] at hroot
       rw [findHypertreeWitness, ite_eq_left hroot, Option.isSome_map]
       exact findXmssWitness_isSome vp.valid prims laws pos.leaf.val pos.leaf.isLt sigs.head msg
         msg' sk pk pos.toAdrs hne hroot
   | more layers _ ih =>
-      simp only [recoverFromPosition] at hroot
+      simp only [recoverFromPosition_add_two] at hroot
       rw [findHypertreeWitness]
       split
       · rw [Option.isSome_map]

@@ -112,22 +112,21 @@ run and `WarmedSplit.run_eq_replay_of_subset` applies to it directly. What comes
 equation at every later cache, which is `FaithfulFrom` for the single entry just appended. -/
 
 /-- A signer that accepts its framing returns that framing's signature. -/
-theorem sign_eq_map {m : Type → Type} [Monad m] [LawfulMonad m] [HasQuery HashSpec m]
+theorem sign_eq_map {m : Type → Type} [Monad m] [HasQuery HashSpec m]
     (sk : SecretKey) (request : Message) (framed : Bytes)
     (hframe : request.frame = some framed) :
     (Scheme.sign sk request : m (Option Bytes)) =
       (fun signature : Signature => some signature.toBytes) <$>
         (Scheme.signInternal sk framed : m Signature) := by
-  unfold Scheme.sign
-  rw [hframe]
-  simp [map_eq_bind_pure_comp]
+  simp only [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, hframe]
+  rfl
 
 /-- The replayed signer, at a framing it accepts, returns the replayed signature's bytes. -/
 theorem sign_replay_eq (cache : QueryCache HashSpec) (sk : SecretKey) (request : Message)
     (framed : Bytes) (hframe : request.frame = some framed) :
     @Scheme.sign Id Id.instMonad (replayQuery cache) sk request =
       some (@Scheme.signInternal Id Id.instMonad (replayQuery cache) sk framed).toBytes := by
-  rw [@sign_eq_map Id Id.instMonad _ (replayQuery cache) sk request framed hframe]
+  rw [@sign_eq_map Id Id.instMonad (replayQuery cache) sk request framed hframe]
   rfl
 
 /-- **A signing step's answer is the signature every later cache replays.** -/

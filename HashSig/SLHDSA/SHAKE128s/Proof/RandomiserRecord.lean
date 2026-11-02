@@ -120,7 +120,8 @@ theorem mem_verifierRecord (pk : PublicKey) (request : Message) (signature : Byt
             (Scheme.forsAddress digest) >>= fun forsKey =>
               Hypertree.verify forsKey parsed.hypertree pk (MessageDigest.treeIndex digest)
                 (MessageDigest.leafIndex digest).toFin) := by
-    simp only [Scheme.verify, Scheme.verifyInternal, hframe, hparsed]
+    simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify,
+      Scheme.verifyInternal_components, hframe, hparsed]
     rfl
   rw [hverifyEq] at hstep
   exact mem_record_head verifierCost _ _ cache step hstep _ (by simp [verifierCost, recordOf])

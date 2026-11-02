@@ -222,7 +222,8 @@ theorem queriesUnder_verify_message (cache : QueryCache HashSpec) (pk : PublicKe
     (hparsed : Signature.fromBytes? signature = some parsed) :
     QueriesUnder cache (Scheme.verify (m := OracleComp HashSpec) pk request signature)
       (Hashing.messageInput parsed.randomizer pk message) := by
-  simp only [Scheme.verify, Scheme.verifyInternal, hframe, hparsed]
+  simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify,
+    Scheme.verifyInternal_components, hframe, hparsed]
   exact queriesUnder_hash cache _ _
 
 attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal

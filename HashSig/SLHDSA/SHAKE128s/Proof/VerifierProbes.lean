@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.FaultCharge
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsBranch
+import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
 
 /-!
 # The verifier's own queries, as cache entries
@@ -79,7 +80,8 @@ theorem queriesUnder_verify_fors (cache : QueryCache HashSpec) (pk : PublicKey)
         (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed
         (Scheme.forsAddress (digestOf cache pk message parsed))) probe) :
     QueriesUnder cache (Scheme.verify (m := OracleComp HashSpec) pk request signature) probe := by
-  simp only [Scheme.verify, Scheme.verifyInternal, hframe, hparsed]
+  simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify,
+    Scheme.verifyInternal_components, hframe, hparsed]
   refine queriesUnder_bind_right cache _ _ probe ?_
   rw [simulateQ_messageDigest]
   exact queriesUnder_bind cache _ _ probe hquery
@@ -95,7 +97,8 @@ theorem queriesUnder_verify_hypertree (cache : QueryCache HashSpec) (pk : Public
         (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
         (forsKeyOf cache pk message parsed)) probe) :
     QueriesUnder cache (Scheme.verify (m := OracleComp HashSpec) pk request signature) probe := by
-  simp only [Scheme.verify, Scheme.verifyInternal, hframe, hparsed]
+  simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify,
+    Scheme.verifyInternal_components, hframe, hparsed]
   refine queriesUnder_bind_right cache _ _ probe ?_
   rw [simulateQ_messageDigest]
   refine queriesUnder_bind_right cache _ _ probe ?_
@@ -180,6 +183,7 @@ theorem fors_eq_trees_bind_compression (signature : ForsSignature)
         Hashing.shortHash (m := OracleComp HashSpec)
           (Hashing.tweakableInput publicSeed (Extraction.Fors.rootAddress address)
             (digestArrayBytes roots)) := by
+  rw [SLHDSA.SHAKE128s.Fors.publicKeyFromSignature_eq_fold]
   refine congrArg (fun trees : OracleComp HashSpec (Fin forsTrees → Digest) =>
     trees >>= fun roots => Hashing.shortHash (m := OracleComp HashSpec)
       (Hashing.tweakableInput publicSeed (Extraction.Fors.rootAddress address)

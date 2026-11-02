@@ -381,6 +381,11 @@ lean_exe algorithm_tests where
   srcDir := "scripts"
   root := `AlgorithmTests
 
+/-- Ordered source, cost, reply-log and cache checks for the generic signing experiment. -/
+lean_exe signing_view_tests where
+  srcDir := "scripts"
+  root := `SigningViewTests
+
 /-- Smoke test: imports VCVio and prints OK. -/
 lean_exe smoke_test where
   root := `VCVioTest.Smoke
@@ -400,15 +405,22 @@ script test (args) do
     #["build", "VCVioTest", "LatticeCryptoTest", "HashSigTest"],
     #["exe", "smoke_test"],
     #["exe", "algorithm_tests"],
+    #["exe", "signing_view_tests"],
     #["exe", "slhdsa_kat"],
     #["exe", "slhdsa_c13_kat"],
     #["exe", "slhdsa_data_codec_tests"],
     #["exe", "slhdsa_primitive_tests"],
     #["exe", "slhdsa_wots_tests"],
+    #["exe", "slhdsa_wots_integration_tests"],
     #["exe", "slhdsa_xmss_tests"],
+    #["exe", "slhdsa_xmss_program_tests"],
     #["exe", "slhdsa_fors_tests"],
     #["exe", "slhdsa_fors_secret_order_tests"],
+    #["exe", "slhdsa_fors_provider_tests"],
+    #["exe", "slhdsa_fors_node_tests"],
+    #["exe", "slhdsa_fors_graph_tests"],
     #["exe", "slhdsa_hypertree_tests"],
+    #["exe", "slhdsa_hypertree_program_tests"],
     #["exe", "slhdsa_external_tests"],
     #["exe", "slhdsa_target_ledger_tests"],
     #["exe", "slhdsa_encoded_ledger_tests"],
@@ -428,6 +440,7 @@ script test (args) do
     #["exe", "slhdsa_limited_profile_tests"],
     #["exe", "slhdsa_byte_model_tests"],
     #["exe", "slhdsa_wire_tests"],
+    #["exe", "slhdsa_signing_view_tests"],
     #["exe", "slhdsa_shake128s_compiler_tests"],
     #["exe", "slhdsa_shake128s_game_tests"],
     #["exe", "slhdsa_shake128s_wire_bridge_tests"],
@@ -449,7 +462,14 @@ script test (args) do
   let rc ← check.wait
   if rc != 0 then
     IO.eprintln s!"lake test: independent SLH-DSA bound-table check exited with code {rc}"
-  return rc
+    return rc
+  let r0Args := #["scripts/check-slh-dsa-r0b.py"]
+  IO.println s!"# python3 {" ".intercalate r0Args.toList}"
+  let r0Check ← IO.Process.spawn { cmd := "python3", args := r0Args }
+  let r0Result ← r0Check.wait
+  if r0Result != 0 then
+    IO.eprintln s!"lake test: SLH-DSA frozen semantic contracts exited with code {r0Result}"
+  return r0Result
 
 /-- ML-KEM test executable (links against mlkem-native FFI). -/
 lean_exe mlkem_test where
@@ -483,9 +503,19 @@ lean_exe slhdsa_primitive_tests where
 lean_exe slhdsa_wots_tests where
   root := `HashSigTest.SLHDSA.WotsConstructionTests
 
+/-- Actual WOTS provider, ordered payload, cache, output and callback-count checks. -/
+lean_exe slhdsa_wots_integration_tests where
+  srcDir := "scripts"
+  root := `SLHDSAWotsIntegrationTests
+
 /-- Bounded XMSS construction, address-domain, and selected concrete-profile exercise. -/
 lean_exe slhdsa_xmss_tests where
   root := `HashSigTest.SLHDSA.XmssConstructionTests
+
+/-- Paper XMSS traversal, recovery, authentication and retained-effect checks. -/
+lean_exe slhdsa_xmss_program_tests where
+  srcDir := "scripts"
+  root := `SLHDSAXmssProgramTests
 
 /-- S07 FORS extraction, address-domain, tiny exhaustion, and selected concrete-profile exercise. -/
 lean_exe slhdsa_fors_tests where
@@ -495,9 +525,27 @@ lean_exe slhdsa_fors_tests where
 lean_exe slhdsa_fors_secret_order_tests where
   root := `HashSigTest.SLHDSA.ForsSecretOrder
 
+/-- Actual oracle-provider, ordered cost and retained cache checks for canonical FORS. -/
+lean_exe slhdsa_fors_provider_tests where
+  root := `HashSigTest.SLHDSA.Refactor.ForsObservation
+
+/-- Paper FORS traversal, recovery, authentication and retained-effect checks. -/
+lean_exe slhdsa_fors_node_tests where
+  srcDir := "scripts"
+  root := `SLHDSAForsNodeTests
+
+/-- Canonical effectful FORS and its structural traversal retain full cached observations. -/
+lean_exe slhdsa_fors_graph_tests where
+  root := `HashSigTest.SLHDSA.Refactor.ForsGraph
+
 /-- General-hypertree trajectories, checked addresses, and selected concrete construction. -/
 lean_exe slhdsa_hypertree_tests where
   root := `HashSigTest.SLHDSA.HypertreeConformanceTests
+
+/-- Effectful hypertree singleton policy, nonfinal recovery and retained-failure checks. -/
+lean_exe slhdsa_hypertree_program_tests where
+  srcDir := "scripts"
+  root := `SLHDSAHypertreeProgramTests
 
 /-- Algorithms 21--25 message boundary and all twelve ACVP pre-hash digest/OID canaries. -/
 lean_exe slhdsa_external_tests where
@@ -518,7 +566,11 @@ lean_exe slhdsa_bound_table where
 lean_exe slhdsa_wire_tests where
   root := `HashSigTest.SLHDSA.Wire
 
-/-- Finite-index compiler controls through the combined hash-signature import. -/
+/-- Patterned canonical signature, key and framing checks through the internal signing view. -/
+lean_exe slhdsa_signing_view_tests where
+  root := `HashSigTest.SLHDSA.Refactor.SigningViewEncoding
+
+/-- Finite-index compiler controls through the explicit owner and sequence client. -/
 lean_exe slhdsa_shake128s_compiler_tests where
   root := `HashSigTest.SLHDSA.SHAKE128s.Compiler
 
@@ -528,7 +580,8 @@ lean_exe slhdsa_shake128s_game_tests where
 
 /-- Fixed-context wire query translation through the actual SHAKE-128s adversary adapter. -/
 lean_exe slhdsa_shake128s_wire_bridge_tests where
-  root := `HashSigTest.SLHDSA.SHAKE128s.WireBridge
+  srcDir := "scripts"
+  root := `SLHDSAWireBridgeTests
 
 /-- Sizes, distinctness, cross-role disjointness, and pinned membership of the reachable security
 target ledgers, on small validated profiles. -/
