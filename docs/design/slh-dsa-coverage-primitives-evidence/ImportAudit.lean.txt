@@ -1,0 +1,44 @@
+/-
+Copyright (c) 2026 Alexander Hicks. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Alexander Hicks
+-/
+
+module
+public import RouteBPrimitives
+
+/-! # Closed ordinary-import audit of FORS load primitive types -/
+
+public section
+open MeasureTheory ProbabilityTheory OracleComp OracleSpec
+open scoped ENNReal
+
+namespace SLHDSA.SHAKE128s.ForsConcentration
+
+/-- Uniform FORS instance loads exceed the stated cap with probability at most 1/(8*2^128). -/
+theorem audit_uniform_load_tail_nine_eighths_of_le
+    (requests : Nat) (hrequests : requests ≤ 5 * 2 ^ 62) :
+    uniformLoads (2 ^ 63) requests
+      {loads | 9 * 2 ^ 99 < ∑ part, loads part ^ 14} ≤
+        (1 : ℝ≥0∞) / (8 * 2 ^ 128) := by
+  exact uniform_load_tail_nine_eighths_of_le requests hrequests
+
+end SLHDSA.SHAKE128s.ForsConcentration
+
+namespace SLHDSA.SHAKE128s.ForsDisclosureTape
+
+/-- Fixing the first digest view leaves a symmetric load-tail probability unchanged. -/
+theorem audit_prEvent_uniform_tail_load_gt_eq_uniform_tape
+    (remaining cutoff : Nat) (first : View) :
+    Pr{let tail ← ($ᵗ (Tape remaining) : ProbComp (Tape remaining))}[
+      cutoff < ∑ part, loads (Fin.cons first tail) part ^ 14] =
+    Pr{let tape ← ($ᵗ (Tape (remaining + 1)) : ProbComp (Tape (remaining + 1)))}[
+      cutoff < ∑ part, loads tape part ^ 14] := by
+  exact prEvent_uniform_tail_load_gt_eq_uniform_tape remaining cutoff first
+
+end SLHDSA.SHAKE128s.ForsDisclosureTape
+
+#print axioms SLHDSA.SHAKE128s.ForsConcentration.uniform_load_tail_nine_eighths_of_le
+#print axioms SLHDSA.SHAKE128s.ForsDisclosureTape.prEvent_uniform_tail_load_gt_eq_uniform_tape
+#print axioms SLHDSA.SHAKE128s.ForsConcentration.audit_uniform_load_tail_nine_eighths_of_le
+#print axioms SLHDSA.SHAKE128s.ForsDisclosureTape.audit_prEvent_uniform_tail_load_gt_eq_uniform_tape
