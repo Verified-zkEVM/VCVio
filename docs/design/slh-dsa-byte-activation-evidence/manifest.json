@@ -1,0 +1,77 @@
+{
+  "format": 1,
+  "scope": "Research only: stronger unguarded total-source byte activation, unchanged terminal-key factorization; no accepted-counter/cost/full127 claim.",
+  "files": {
+    "ByteActivation.lean": "1991ecf96c2cba6f0210581a2727302c34f5fee3493c26239e459e63586d0a9c",
+    "ImportAudit.lean.txt": "e01135ca963185993414caf616871160e38534aac32abd51f19b3daf077b5986",
+    "README.md": "71f56c92cfe8ab64efd04668cb148ac426a7c308533a0d0f5ed6fab5a325c5d4"
+  },
+  "auditReplayName": "ImportAudit.lean",
+  "accepted": {
+    "packet": {
+      "path": "/tmp/slhdsa-byte-activation-stronger-pilot-20261103/result.json",
+      "sha256": "9fb5bf66dbb82b1a6bd4ebb8ff6eda41e5b75f0b18e13ed8a0d41b11ba7a76f2"
+    },
+    "review": {
+      "path": "/tmp/adversarial/slhdsa-byte-activation-stronger-final-review-20261103-01/review.json",
+      "sha256": "6e2da1dfeed75dd5cc4db9d99026ff8ee8492b8ac788a079edf6452dc8708a46"
+    },
+    "identityAndPrivateRecovery": {
+      "path": "/tmp/slhdsa-byte-activation-stronger-pilot-20261103/identity-and-recovery.json",
+      "sha256": "2a121d51d429868d67eaea02ab065b20a1e8c4fec7410213b5714c38d703d9c4"
+    }
+  },
+  "externalEvidence": {
+    "ordinaryAndMetaOwnSources": {
+      "path": "/tmp/slhdsa-byte-activation-stronger-pilot-20261103/full-source-closure.json",
+      "sha256": "b535bc5295b6e4d29f64858db469ab59d527f380207c3dfbe70d74bf8acbd9ad",
+      "count": 281
+    },
+    "canonicalArtifacts": {
+      "path": "/tmp/slhdsa-byte-activation-stronger-pilot-20261103/body-01-canonical-artifacts-before.json",
+      "sha256": "65823e4da771c5c433fcca64a4dc8ffd1a4acf65ce729571ac516133dae829d3",
+      "count": 1405
+    },
+    "bodyReceipt": {
+      "path": "/tmp/slhdsa-byte-activation-stronger-pilot-20261103/body-01-receipt.json",
+      "sha256": "8360f82b60df4409da5fb33cd54d755b393c6b3be62559ddf07614fc6f2cc5d3"
+    },
+    "auditReceipt": {
+      "path": "/tmp/slhdsa-byte-activation-stronger-pilot-20261103/audit-01-receipt.json",
+      "sha256": "9bbb30713c75aaf185b18aade49bf55e478cd689a7f1da678ed701a138b596e0"
+    }
+  },
+  "secondWholeBlockSHA256": "183682b90014ed99788488d388d6492b0f2ba6a039b906684330a57856bcfeef",
+  "originalProofHead": "9c8bd5f7a6959cc426622ec50e3d49c0ce9601d5",
+  "canonicalHead": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
+  "canonicalManifestSHA256": "08de459b1889ead9e9b4ea9af537411791b487d5f2981be22e118af1f3362d95",
+  "compiler": {
+    "path": "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/bin/lean",
+    "sha256": "bf8d54e4714cc4b03d3f6bb34c83b7202b87e49c8bfcbff6895c085bb90ceb38"
+  },
+  "stdRoots": {
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.ilean": "402a081c1b92c1c836ad1fd78d5de32e999c3d5ae08c6fc07c5d5007e2895a1f",
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.ir": "48d4f0aaae228606564b38761f254852facad2f5a74bd558baa4c9134bf64f7e",
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.ir.sig": "d569208402af80adcfa69cd3964697eb04520dcccb6a14a94045195b4570ddf9",
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.olean": "81655926012444f214099f1ed6610ed63ade63f9e91b2e5af6689acd9cf1b400",
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.olean.private": "4eba4e5b4c294d614eca0a2b896179515f926d23f635ee8e3e96fe8406c47ad4",
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.olean.server": "ccbd1909281893abf6acffc47186b80ff37c8bba967c53c3e45be3ea3269165d"
+  },
+  "dependencyRevisions": {
+    "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8",
+    "LeanSearchClient": "d6b4c7be5be75ec4917c873ac50c756dc1436372",
+    "PolyFun": "4181c82238142d9b73403fbf4c4b13e1a801e400",
+    "Qq": "dce0ad79c486cb1fb504af04f953c3466b0c6db8",
+    "QuantumFoundations": "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac",
+    "aesop": "4a174c490d8707121c4a9290800489f105d85e07",
+    "batteries": "66e469188fe07963e5cf666c7d4433f45b8131c5",
+    "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
+    "importGraph": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93",
+    "mathlib": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+    "plausible": "dfa4f38190d07c37e315953e08b90fe2d95b3c24",
+    "proofwidgets": "df72b022e558978a1c50264cfc4d7fec86fa8e04"
+  },
+  "historicalLimit": "Old ordinary280 packet did not pin the historical meta artifact; separate current addendum is not retrospective. Stronger accepted execution and future replay explicitly pin all1405 canonical own artifacts.",
+  "futureReplay": "Require exact committed clean actual HEAD/tree/fourGitblobs and all sources/artifacts/12actualpins/compiler/6Std/indices unchanged beforeafter; body5observedbeforeaudit; both0/no warnings/5standardaxiomroots; auditnormally1output; independentpostreview.",
+  "productionSelection": "Final PR selects live code and needed concise docs/tests, not research archive payload wholesale."
+}

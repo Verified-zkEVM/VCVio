@@ -1,0 +1,85 @@
+/-
+Copyright (c) 2026 Alexander Hicks. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Alexander Hicks
+-/
+
+import ByteActivation
+
+/-! # Closed private checks of activated byte-clash bounds -/
+
+open OracleComp OracleSpec SignatureAlg MeasureTheory SLHDSA SLHDSA.Security
+open scoped ENNReal
+namespace ByteActivationStrongAudit
+
+private def StrongTarget : Prop :=
+  ∀    (vp : ValidatedParams) (_hn16 : 16 ≤ vp.params.n)
+    (hn : vp.params.n ≤ 32) (hnm : vp.params.n ≤ vp.params.m)
+    (optRand : PublicKeyCore (shakeCore vp) → ProbComp (shakeCore vp).Y)
+    (pkSeed : (shakeCore vp).PkSeed)
+    (adv : StrongUnforgeableAdversary
+      (shakeRomScheme vp optRand (pure pkSeed))),
+    shakeStrongAdvantage vp adv ≤
+      Pr{let z ← romSchemeRun (shakeCore vp) (Equiv.refl _) optRand (pure pkSeed)
+          (routeAdv vp hn hnm adv.toUnforgeableAdversary)}[
+        (z.1.strongWins = true ∨
+          ((HmsgAtPrfKey id z.1.sk.skPrf z.2 ∨ z.1.sk.skPrf = pkSeed) ∧ z.1.log ≠ [])) ∨
+            IsWeakKey vp z.1.pk]
+
+private def OldTarget : Prop :=
+  ∀    (vp : ValidatedParams) (_hn16 : 16 ≤ vp.params.n)
+    (hn : vp.params.n ≤ 32) (hnm : vp.params.n ≤ vp.params.m)
+    (optRand : PublicKeyCore (shakeCore vp) → ProbComp (shakeCore vp).Y)
+    (pkSeed : (shakeCore vp).PkSeed)
+    (adv : StrongUnforgeableAdversary
+      (shakeRomScheme vp optRand (pure pkSeed))),
+    shakeStrongAdvantage vp adv ≤
+      Pr{let z ← romSchemeRun (shakeCore vp) (Equiv.refl _) optRand (pure pkSeed)
+          (routeAdv vp hn hnm adv.toUnforgeableAdversary)}[
+        ((z.1.strongWins = true ∨ HmsgAtPrfKey id z.1.sk.skPrf z.2) ∨
+          (z.1.sk.skPrf = pkSeed ∧ z.1.log ≠ [])) ∨ IsWeakKey vp z.1.pk]
+
+private def SecondTarget : Prop :=
+  ∀    {vp : ValidatedParams} (core : CorePrimitives vp.params)
+    [SampleableType core.Y] [DecidableEq core.Y]
+    [SampleableType core.SkSeed] [SampleableType core.SkPrf]
+    [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed]
+    [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
+    (pkSeed : core.PkSeed) {α : Type}
+    (program : OracleComp (labSpec core) α) (active : α → Prop)
+    (key : core.SkPrf),
+    Pr{let w ← (slhGraph core pkSeed).deferredFillDraw
+        ($ᵗ (core.SkSeed × core.SkPrf)) program}[
+      w.2.2.2 = key ∧ active w.1.1] =
+    Pr{let w ← (slhGraph core pkSeed).deferredFillDraw
+        ($ᵗ (core.SkSeed × core.SkPrf)) program}[
+      active w.1.1] / Nat.card core.SkPrf
+
+/-- The complete strengthened first type, through ordinary public imports. -/
+private theorem strongComplete : StrongTarget :=
+  @SLHDSA.Security.shakeStrongAdvantage_pure_le_activated_key_clash
+
+/-- The complete independent-key type, through the same unchanged public endpoint. -/
+private theorem secondComplete : SecondTarget :=
+  @SLHDSA.Security.prEvent_deferredFillDraw_skPrf_eq_and_event_eq
+
+/-- The exact earlier first type follows from the stronger event by monotonicity. -/
+private theorem oldComplete : OldTarget := by
+  intro vp hn16 hn hnm optRand pkSeed adv
+  refine (shakeStrongAdvantage_pure_le_activated_key_clash
+    vp hn16 hn hnm optRand pkSeed adv).trans
+    (prEvent_mono _ _ _ fun z event => ?_)
+  rcases event with (win | activated) | weak
+  · exact Or.inl (Or.inl (Or.inl win))
+  · rcases activated with ⟨hit | key, signed⟩
+    · exact Or.inl (Or.inl (Or.inr hit))
+    · exact Or.inl (Or.inr ⟨key, signed⟩)
+  · exact Or.inr weak
+
+#check @strongComplete
+#check @secondComplete
+#check @oldComplete
+#print axioms strongComplete
+#print axioms secondComplete
+#print axioms oldComplete
+end ByteActivationStrongAudit
