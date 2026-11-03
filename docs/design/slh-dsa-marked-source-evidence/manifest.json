@@ -1,0 +1,191 @@
+{
+  "format": 1,
+  "kind": "Research evidence: four inner marked-source laws; no production or security-bound acceptance",
+  "baseCommit": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
+  "baseTree": "a6295e765732c14f4b2b675554dd9af5f2e9c490",
+  "toolchain": "leanprover/lean4:v4.35.0",
+  "lakeManifestSha256": "08de459b1889ead9e9b4ea9af537411791b487d5f2981be22e118af1f3362d95",
+  "compiler": {
+    "path": "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/bin/lean",
+    "sha256": "bf8d54e4714cc4b03d3f6bb34c83b7202b87e49c8bfcbff6895c085bb90ceb38"
+  },
+  "stdRoots": {
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.ilean": "402a081c1b92c1c836ad1fd78d5de32e999c3d5ae08c6fc07c5d5007e2895a1f",
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.ir": "48d4f0aaae228606564b38761f254852facad2f5a74bd558baa4c9134bf64f7e",
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.ir.sig": "d569208402af80adcfa69cd3964697eb04520dcccb6a14a94045195b4570ddf9",
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.olean": "81655926012444f214099f1ed6610ed63ade63f9e91b2e5af6689acd9cf1b400",
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.olean.private": "4eba4e5b4c294d614eca0a2b896179515f926d23f635ee8e3e96fe8406c47ad4",
+    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.olean.server": "ccbd1909281893abf6acffc47186b80ff37c8bba967c53c3e45be3ea3269165d"
+  },
+  "dependencyRevisions": {
+    "mathlib": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+    "QuantumFoundations": "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac",
+    "PolyFun": "4181c82238142d9b73403fbf4c4b13e1a801e400",
+    "plausible": "dfa4f38190d07c37e315953e08b90fe2d95b3c24",
+    "LeanSearchClient": "d6b4c7be5be75ec4917c873ac50c756dc1436372",
+    "importGraph": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93",
+    "proofwidgets": "df72b022e558978a1c50264cfc4d7fec86fa8e04",
+    "aesop": "4a174c490d8707121c4a9290800489f105d85e07",
+    "Qq": "dce0ad79c486cb1fb504af04f953c3466b0c6db8",
+    "batteries": "66e469188fe07963e5cf666c7d4433f45b8131c5",
+    "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
+    "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8"
+  },
+  "frozenBasisCommit": "faeb6d964ef2d0ef24a7ddb9c27ced978938f29f",
+  "basisSources": {
+    "Thin1Header": {
+      "path": "docs/design/slh-dsa-native-thinning-evidence/Thin1Header.lean",
+      "gitBlob": "2969acabcfea805696e22cad397e76c43414eb9d",
+      "sha256": "ad2d924bff2c056986eda5fdd6302c5b91ef9a119f05b46a7af2fa66a0beb1ce",
+      "physicalLines": 53,
+      "printedAxiomReports": 1
+    },
+    "NativePotential": {
+      "path": "docs/design/slh-dsa-native-thinning-evidence/NativePotential.lean",
+      "gitBlob": "23a56fc91ea8c3d341b5bc22b4dea873d0cfd3fa",
+      "sha256": "f84c9e7630f615fc364c9b5adf62affa85afb3033b1bc90d2c8be817ccd90200",
+      "physicalLines": 613,
+      "printedAxiomReports": 22
+    },
+    "SelectedWork": {
+      "path": "docs/design/slh-dsa-selected-work-evidence/SelectedWork.lean",
+      "gitBlob": "371e9afb5e7820aec3f6449bb40f75ddf315c4a0",
+      "sha256": "17b16a69aa2b9bd6ef482b462862e4cf20545e1118354da7c52a015a20eae734",
+      "physicalLines": 233,
+      "printedAxiomReports": 1
+    },
+    "RelativeKernel": {
+      "path": "docs/design/slh-dsa-relative-kernel-evidence/RelativeKernel.lean",
+      "gitBlob": "b483ca2ef78c34c5c478e0a395ecf0783c5b84c4",
+      "sha256": "5377d7f67322f173d60099feaeafe863e2df552947f6ed2a3aed6626c7935f6f",
+      "physicalLines": 503,
+      "printedAxiomReports": 20
+    },
+    "ForwardingBudgetGuard": {
+      "path": "docs/design/slh-dsa-weighted-guard-evidence/ForwardingBudgetGuard.lean",
+      "gitBlob": "91a726fdbb2048c538797b4195914acaa3d4ce57",
+      "sha256": "607e83770153c0e4542e41b8273accb4560b86a03eb1d0bc95865d6ecd0b781e",
+      "physicalLines": 287,
+      "printedAxiomReports": 3
+    },
+    "FreeGuardInterpretation": {
+      "path": "docs/design/slh-dsa-weighted-guard-evidence/FreeGuardInterpretation.lean",
+      "gitBlob": "500a0aa0094a2e208602a6cc7d7b33b6cedd1bef",
+      "sha256": "bc206158d527a5b07c54b2390256f354f95ada7b9c5067baf109febd9cfde6de",
+      "physicalLines": 88,
+      "printedAxiomReports": 1
+    }
+  },
+  "sourceFiles": {
+    "MarkedLab.lean": {
+      "sha256": "ede953c9e5bd29e12a9d7e833e876113a4ace664233cbfbd1c2df332dcff2283",
+      "gitBlob": "44c037ffe88279e5e8ab30e09f37d7af443e66cb",
+      "physicalLines": 1471
+    }
+  },
+  "auditFiles": {
+    "ImportAudit.lean.txt": {
+      "sha256": "d8fe0262a7fa2de616e976767a05ab0207d5d2364d3a2d96931b819afc90d404",
+      "gitBlob": "3993acfb2b51c44e783227d3e481b6ef463b444c",
+      "physicalLines": 118,
+      "kind": "NONMODULE PRIVATE ordinary-import closed complete types for all four inner public laws",
+      "transformation": "Accepted two-new-header audit: name the two examples privately, append the accepted original erasure/suffix private applications, print the four private roots. No theorem type or proof application changed."
+    }
+  },
+  "metrics": {
+    "originalSourceLines": 686,
+    "addedCountLines": 602,
+    "addedObserverLines": 183,
+    "combinedAddedLines": 785,
+    "wholeBodyLines": 1471,
+    "scope": "Prototype owner metrics, not a production PR diff or bound improvement."
+  },
+  "publicDeclarations": [
+    "SLHDSA.Security.MarkedLab.erase_markedLabExperiment",
+    "SLHDSA.Security.MarkedLab.allQueriesSatisfy_relative_markedLabSuffix",
+    "SLHDSA.Security.MarkedLab.native_counts_markedLabExperiment",
+    "SLHDSA.Security.MarkedLab.runObs_markedLabExperiment_eq_counted_full_transcript"
+  ],
+  "acceptedEvidence": {
+    "combinedProof": {
+      "path": "/tmp/slhdsa-marked-source-count-pilot-20261103/final-handoff.json",
+      "sha256": "b6eb03a5890ea51a415e61be9d4e439eeb42f1139626354cf14c3caaa1a15006"
+    },
+    "originalSourceProof": {
+      "path": "/tmp/slhdsa-marked-lab-source-pilot-20261102/handoff-pinned-replay-02.json",
+      "sha256": "b18217e0b0c4d3fb139399d0faa36a501f2187b574252d12f378a635443f19b3"
+    },
+    "countReview": {
+      "path": "/tmp/adversarial/slhdsa-marked-source-count-final-review-20261103-01/review.json",
+      "sha256": "7bb612912a6736a52fbf624b2fac96f8ec5fecb8c4ca39a6276bfec839ca56ab"
+    },
+    "observerReview": {
+      "path": "/tmp/adversarial/slhdsa-marked-source-observer-final-review-20261103-01/review.json",
+      "sha256": "b69ab9992503e572a653d0ce9b83d1edb5c02b30d2c542fe99860430dc878dde"
+    },
+    "frozenTwoNewHeaders": {
+      "path": "/tmp/slhdsa-marked-source-count-pilot-20261103/frozen-headers.lean.txt",
+      "sha256": "fcb2d2c3ad998e1209412ee6a857d3562b69593310f2dc7d64154c8411d85f1a"
+    }
+  },
+  "allowedAxioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "excludedImportPrefixes": [
+    "HashSig.SLHDSA.SHAKE128s.Proof",
+    "Extern",
+    "Interop",
+    "Hax",
+    "Aeneas"
+  ],
+  "replay": {
+    "status": "UNRUN proposed committed replay; external accepted proofs are not relabelled as this replay",
+    "moduleOrder": [
+      "Thin1Header",
+      "NativePotential",
+      "SelectedWork",
+      "RelativeKernel",
+      "ForwardingBudgetGuard",
+      "FreeGuardInterpretation",
+      "MarkedLab",
+      "ImportAudit"
+    ],
+    "jobs": 2,
+    "wallCapSeconds": 240,
+    "proofLimits": "compiler defaults",
+    "moduleArtifacts": [
+      "olean",
+      "olean.private",
+      "olean.server",
+      "ir",
+      "ir.sig"
+    ],
+    "auditArtifacts": [
+      "olean"
+    ],
+    "expectedCompilerCommands": 8,
+    "expectedArtifacts": 36,
+    "expectedPrintedAxiomReports": 56,
+    "basisFrozenSourceOwners": 6,
+    "historicalImportedBasisArtifacts": 30,
+    "freshImportedFiveSidecars": "All five for every fresh transitive local dependency, pinned before each consumer and checked afterward.",
+    "printedAxiomReports": {
+      "Thin1Header": 1,
+      "NativePotential": 22,
+      "SelectedWork": 1,
+      "RelativeKernel": 20,
+      "ForwardingBudgetGuard": 3,
+      "FreeGuardInterpretation": 1,
+      "MarkedLab": 4,
+      "ImportAudit": 4
+    },
+    "expectedSourceModules": 3363,
+    "expectedCompilerLeaves": 213,
+    "frameChecks": "Full clean recorded environment before EACH compiler and afterward, input receipt binds per-command frame.",
+    "axiomReportForms": "Both depends-on-axioms lists and does-not-depend-on-any-axioms; empty reports mean empty allowed set."
+  },
+  "scope": "Free marker erasure; actual deterministic relative suffix query discipline; guarded INNER TOTAL native count bounds; exact joint inner actual key/transcript/cache/cost identity. No rejected None/variable-context wire bridge, source cap transfer, guarded private-byte activation, filling, seed accounting or full127 claim. Retain abort flag: raw verified on an aborted fallback is not a winning event. Final production integration is selective and omits these evidence archives.",
+  "readmeSha256": "2c39e405845bbc1bbf55c4873355c4525e2129b174d2986fe466f8d520727d73"
+}

@@ -1,0 +1,118 @@
+import MarkedLab
+open OracleComp OracleSpec SignatureAlg SLHDSA SLHDSA.Security
+namespace SLHDSA.Security.MarkedLab
+
+private theorem counts_contract
+    {vp : ValidatedParams} (core : CorePrimitives vp.params)
+    [SampleableType core.Y] [SampleableType (Bytes vp.params.m)]
+    [DecidableEq core.Y] [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey]
+    [DecidableEq core.SkPrf] [SampleableType core.SkSeed] [SampleableType core.SkPrf]
+    (e : core.SkSeed ≃ core.Y)
+    (kappa : PublicKeyCore core → core.Y) (pkSeed : core.PkSeed)
+    (adv : UnforgeableAdversary
+      (romScheme core e (fun pk => pure (kappa pk)) (pure pkSeed)))
+    (caps : Nat × Nat)
+    (extra : SigningView.Event (labSpec core) (List Byte) → Nat)
+    (fallback : (input : (SigningView.Events.Spec (labSpec core) (List Byte)).Domain) →
+      (SigningView.Events.Spec (labSpec core) (List Byte)).Range input)
+    (L : (j : Coverage.TapeClass) → List (Coverage.tapeClassRange core j)) :
+    let base : SigningView.Event (labSpec core) (List Byte) → Nat := fun event =>
+      match event with
+      | .signingAttempt _ => 1
+      | .ambient .adversary input | .ambient .verification input =>
+          if IsPublicLabQuery core input then 1 else 0
+      | _ => 0
+    let policy : SigningView.Event (labSpec core) (List Byte) → Nat × Nat := fun event =>
+      (base event + extra event, match event with | .signingAttempt _ => 1 | _ => 0)
+    let guarded := QueryImpl.guardQueryBudget caps (Sum.elim (fun _ => (0, 0)) policy)
+      (CoverageDeferred.relative core pkSeed (fun _ => 0)) fallback
+    let initial : CoverageDeferred.S core × ((Nat × Nat) × Bool) :=
+      ((((∅, ∅), []), (0, .keygen)), ((0, 0), false))
+    let source := markedLabExperiment core adv pkSeed
+    let guardedNative := (simulateQ guarded source).run initial
+    let run := (simulateQ (Coverage.roleRunImpl core) guardedNative).run
+      ((∅, L), (AnswerTape.ClassPos.init, ∅))
+    ∀ result ∈ support run,
+      let resource := result.1.2.2.1
+      let pos := result.2.2.1
+      let S := resource.2
+      let C := pos.cnt .signer
+      let M := pos.cnt .forger
+      C ≤ S ∧ pos.next .signer ≤ C ∧ S + M ≤ resource.1 ∧
+        resource.1 ≤ caps.1 ∧ S ≤ caps.2 := by
+  exact native_counts_markedLabExperiment core e kappa pkSeed adv caps extra fallback L
+
+
+universe v
+
+private theorem observer_contract
+    {vp : ValidatedParams} (core : CorePrimitives vp.params)
+    [SampleableType core.Y] [DecidableEq core.Y]
+    [SampleableType core.SkSeed] [SampleableType core.SkPrf]
+    {e : core.SkSeed ≃ core.Y}
+    {optRand : PublicKeyCore core → ProbComp core.Y} {pkSeedDist : ProbComp core.PkSeed}
+    (adv : UnforgeableAdversary (romScheme core e optRand pkSeedDist))
+    (pkSeed : core.PkSeed)
+    (policy : SigningView.Event (labSpec core) (List Byte) → Nat × Nat)
+    {m : Type → Type v} [Monad m] [LawfulMonad m] {Cache : Type}
+    (handler : QueryImpl (labSpec core) (StateT Cache m)) (initial : Cache) :
+    let counted : SigningView.CostM (labSpec core) (Nat × Nat) (DeriveOutcome core) := do
+      let keys ← SigningView.costed policy .keygen (labScheme core optRand pkSeed).keygen
+      let outcome ← SigningView.countedAfterKeygen policy
+        (SigningView.ofTotal (labScheme core optRand pkSeed)) keys.1 keys.2
+        (labAdversary core adv pkSeed).main
+      return ⟨keys.1, keys.2, outcome.rawLog,
+        outcome.forgery.1, outcome.forgery.2, outcome.verified⟩
+    (fun result => ((result.1.1, Multiplicative.toAdd result.1.2), result.2)) <$>
+      (runObs handler (fun event => Multiplicative.ofAdd (policy event))
+        (markedLabExperiment core adv pkSeed)).run initial =
+      (simulateQ handler counted.runAdd).run initial := by
+  exact runObs_markedLabExperiment_eq_counted_full_transcript core adv pkSeed policy handler initial
+
+end SLHDSA.Security.MarkedLab
+
+open OracleComp OracleSpec SignatureAlg
+namespace SLHDSA.Security.MarkedLab
+variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
+variable [SampleableType core.Y] [DecidableEq core.Y]
+variable [SampleableType core.SkSeed] [SampleableType core.SkPrf]
+
+-- Header 1: equality of free source programs, hence every complete stateful native
+-- interpretation has identical joint output/cache/log distribution after erasing markers.
+private theorem erasure_contract
+    {e : core.SkSeed ≃ core.Y}
+    {optRand : PublicKeyCore core → ProbComp core.Y} {pkSeedDist : ProbComp core.PkSeed}
+    (adv : UnforgeableAdversary (romScheme core e optRand pkSeedDist))
+    (pkSeed : core.PkSeed) :
+    simulateQ
+      (SigningView.Events.handlerWithEvents (Request := List Byte)
+        (QueryImpl.id' (labSpec core)))
+      (markedLabExperiment core adv pkSeed) = labExperiment core adv pkSeed :=
+  erase_markedLabExperiment core adv pkSeed
+
+-- Existing relative handler ornament requirements, not security hypotheses.
+variable [SampleableType (Bytes vp.params.m)]
+variable [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
+
+-- Header 2: actual transcript suffix, deterministic nonce, supplied actual PK retained.
+-- All initial metadata/cache values allowed; the adjacent phase/native pairs set role.
+private theorem suffix_contract
+    (kappa : PublicKeyCore core → core.Y) (pkSeed : core.PkSeed)
+    (e : core.SkSeed ≃ core.Y)
+    (adv : UnforgeableAdversary
+      (romScheme core e (fun pk => pure (kappa pk)) (pure pkSeed)))
+    (pk sk : PublicKeyCore core)
+    (policy : SigningView.Event (labSpec core) (List Byte) → Nat)
+    (initial : CoverageDeferred.S core) :
+    AllQueriesSatisfy
+      ((simulateQ (CoverageDeferred.relative core pkSeed policy)
+        (markedLabSuffix core kappa pkSeed e adv pk sk)).run initial)
+      (fun input => Coverage.NativeThin1.GoodQuery core pk kappa input ∧
+        SuffixShape core pkSeed sk input) :=
+  allQueriesSatisfy_relative_markedLabSuffix core kappa pkSeed e adv pk sk policy initial
+end SLHDSA.Security.MarkedLab
+
+#print axioms SLHDSA.Security.MarkedLab.erasure_contract
+#print axioms SLHDSA.Security.MarkedLab.suffix_contract
+#print axioms SLHDSA.Security.MarkedLab.counts_contract
+#print axioms SLHDSA.Security.MarkedLab.observer_contract
