@@ -26,6 +26,14 @@ Follow [`CONTRIBUTING.md`](CONTRIBUTING.md) for the repo's explicit attribution 
 - Do not add a separate AI-attribution line.
 - For inline section breaks within a Lean file, use Mathlib-style doc-comment headers `/-! ## Title -/` (or the multi-line `/-! ## Title \n\n explanation -/` form). **Do not use ASCII banners** such as `-- ====...===` flanking a `-- § Title` line. The `/-!` form is rendered by `doc-gen4`; ASCII banners are not, and they make the file feel artificially partitioned. If a section is large enough to want a loud header, it is usually large enough to want its own `namespace` or its own file. See *Section Headers Within A File* in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## Writing
+
+Before you draft or revise prose, follow the [writing workflow](docs/agents/write-technical-prose.md).
+It applies to documentation, docstrings, comments, commit messages, PR and issue text, and review
+comments. Assess existing prose against the [writing standard](docs/agents/writing.md) rather than
+preserving its defects. Before you hand over a PR description, run `scripts/check-writing.py` on
+the changed prose, the commit messages, and the draft. Its findings are advisory, so read each one.
+
 ## Module Scopes
 
 Active Lean libraries and tests use Lean's module system. Put declarations in a `public section`;
@@ -490,6 +498,9 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **All notation**: [`docs/agents/notation.md`](docs/agents/notation.md)
 - **Proof workflows (game-hopping, reductions)**: [`docs/agents/proof-workflows.md`](docs/agents/proof-workflows.md)
 - **Gotchas and troubleshooting**: [`docs/agents/gotchas.md`](docs/agents/gotchas.md)
+- **Writing standard for all prose**: [`docs/agents/writing.md`](docs/agents/writing.md), with the
+  [vocabulary](docs/agents/writing-vocabulary.md) and the
+  [writing workflow](docs/agents/write-technical-prose.md)
 - **Module visibility and the PolyFun façade**: [`docs/agents/module-system.md`](docs/agents/module-system.md)
 - **Upstream alignment ledger (what Mathlib/core/cslib/PolyFun already own, with verdicts)**:
   [`docs/reading/upstream-alignment.md`](docs/reading/upstream-alignment.md)
