@@ -770,7 +770,8 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
   set reach : Nat → ℝ≥0∞ := fun index =>
     Pr{let outcome ← blockRunOf run leftLength rightLength}[index < len outcome.2] with hreach
   have hsum : ∑ index : Fin rightLength, reach index.val ≤ expectation :=
-    sum_prob_selected_le_expected_of run rightOfResult leftLength rightLength
+    sum_prob_selected_le_expected_of run (fun z => (rightOfResult z).length)
+      leftLength rightLength
   -- The four events.
   set eventA : (List HashOutput × List HashOutput) × ρ → Prop := fun outcome =>
     ∃ index : Fin rightLength, index.val < (rightOfResult outcome.2).length ∧
@@ -821,7 +822,8 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
   -- The first-order term.
   have hfirstOrder : Pr{let x ← blockRunOf run leftLength rightLength}[eventA x] ≤
       expectation * (1 / ((2 ^ 129 : Nat) : ℝ≥0∞)) :=
-    NoticingTape.prob_exists_hit_le_expected_of_causal run rightOfResult leftLength rightLength
+    NoticingTape.prob_exists_hit_le_expected_of_causal run (fun z => (rightOfResult z).length)
+      leftLength rightLength
       (GoodLeft leftLength) (BlockHit leftLength) (1 / ((2 ^ 129 : Nat) : ℝ≥0∞))
       (fun leftTape hgood => by
         refine le_trans (le_of_eq ?_) (ForsCoverage.fresh_coverage_le_sharper

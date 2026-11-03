@@ -170,6 +170,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ForsCoverage
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsDisclosureTape
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsDispatch
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsLeafCharge
+public import HashSig.SLHDSA.SHAKE128s.Proof.ForsLoadTail
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsMoments
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsPrefixCapacity
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
@@ -284,6 +285,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.TapeWatch
 public import HashSig.SLHDSA.SHAKE128s.Proof.Target
 public import HashSig.SLHDSA.SHAKE128s.Proof.Target127
 public import HashSig.SLHDSA.SHAKE128s.Proof.TouchedKeys
+public import HashSig.SLHDSA.SHAKE128s.Proof.UsedPrefixCoverage
 public import HashSig.SLHDSA.SHAKE128s.Proof.VerificationBudget
 public import HashSig.SLHDSA.SHAKE128s.Proof.VerificationQueries
 public import HashSig.SLHDSA.SHAKE128s.Proof.VerifierNaturality
