@@ -9,11 +9,15 @@ module
 public import VCVio.OracleComp.QueryTracking.CostModel
 
 /-!
-# Weighted cost bounds through oracle substitution
+# Weighted cost bounds through stateless oracle substitution
 
 Each source query is implemented by an actual target-oracle program. When every completed run of
 that implementation fits the source query's charge, substitution preserves the source program's
-weighted bound. Costs may be vectors or any ordered additive commutative monoid.
+weighted bound. Costs may be vectors or any ordered additive commutative monoid. The route is
+stateless: it does not thread additional handler-local `StateT` state between calls. The target
+oracle may be interpreted in a stateful runtime separately. Stateful query-count simulation is
+treated separately in `QueryBound.Simulation`; this module does not supply a stateful weighted-cost
+refinement theorem.
 
 The support refinement retains the returned value and compares the charges of the two runs. It
 does not identify their probability distributions. Bounds concern completed runs only: an
@@ -73,7 +77,8 @@ theorem mem_support_costDist_simulateQ
       exact mem_support_costDist_query_bind query next step.1 sourceCost
         (tail.1, Multiplicative.ofAdd charge) sourceMember
 
-/-- A source weighted bound transfers through the same handler programs whose costs are bounded. -/
+/-- A source weighted bound transfers through the same stateless handler programs whose costs
+are bounded. The charge of each complete handler call includes all its target queries. -/
 theorem WorstCaseCostBound.simulateQ
     {program : OracleComp source α} {sourceCost : CostModel source ω}
     {targetCost : CostModel target ω} {budget : ω}

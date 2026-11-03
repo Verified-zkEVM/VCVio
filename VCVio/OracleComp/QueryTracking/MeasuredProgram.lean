@@ -28,16 +28,22 @@ evaluating any handler, pure Lean code between instructions, and the bit complex
 not. The instance also chooses the instructions, their charges, and the cost order. A program that
 computes its result without instructions, for example by exhaustive search, costs zero. In
 particular, every function has a budgeted program with budget zero (`BudgetedProgram.ofFun`), so
-an existential statement over measured programs adds nothing; only a named program with a stated
-instruction set is evidence. The bound is an operation count relative to that instruction set,
-not a running-time bound, and each instance must state what its view and handlers leave uncharged.
+an existential statement over measured programs adds nothing. A named program retains the
+accounting boundary for review; naming alone does not make its charges an operation count.
+Signed weights may cancel and reversed orders may make an upper bound vacuous. An operation-count
+interpretation requires a justified nonnegative counting order and charge table, including the
+meaning of zero charges and omitted work. Natural-number vectors with designated unit charges are
+one such model. The generic weighted bound is not a running-time bound, and each instance must
+state what its view and handlers leave uncharged.
 
 ## Scope
 
 Handlers are deterministic: each returns its response in `Id`. The budget is one value for every
 view; a budget that may be any function of the view could restate the program's own cost on that
 view. The cost bound is VCVio's `WorstCaseCostBound` for every view; `CostAtMost.runAdd_le`
-transfers it to the handlers' execution, which `Realizes` identifies with the function.
+transfers it to the handlers' execution; `runAdd_fst_eq_run` identifies that execution's result
+with `run`. `Realizes` is equality of the resulting functions, not a step-by-step refinement of
+arbitrary host code implementing the same function.
 Input, result and cost types live in `Type`, matching the structural cost interface.
 -/
 
@@ -80,10 +86,20 @@ variable {Input Result ω : Type} (M : MeasuredProgram Input Result ω)
 @[expose] def Realizes (f : Input → Result) : Prop :=
   ∀ input, f input = M.run input
 
-/-- On every view, every execution path of the program costs at most `budget`. Paths are taken
-over all responses permitted by the instruction set. -/
+/-- On every view, every execution path has accumulated weight at most `budget` in the declared
+order. Paths are taken over all responses permitted by the instruction set. Signed weights and
+arbitrary preorders are permitted; an operation-count interpretation needs a justified counting
+model. -/
 @[expose] def CostAtMost [AddCommMonoid ω] [Preorder ω] (budget : ω) : Prop :=
   ∀ v, WorstCaseCostBound (M.program v) ⟨M.cost⟩ budget
+
+/-- Discarding the recorded charge from the instrumented execution gives the uninstrumented
+result on the same input. No singleton-response assumption or cost order is needed. -/
+theorem runAdd_fst_eq_run [AddMonoid ω] (input : Input) :
+    (simulateQ ((M.answer (M.view input)).withAddCost M.cost)
+      (M.program (M.view input))).runAdd.1 = M.run input :=
+  congrArg Id.run (QueryImpl.fst_map_run_withCost (M.answer (M.view input))
+    (fun op => Multiplicative.ofAdd (M.cost op)) (M.program (M.view input)))
 
 variable {M} in
 /-- A cost bound remains valid for any larger budget. -/
@@ -134,7 +150,7 @@ end MeasuredProgram
 path of the program, on every view, costs at most the budget. -/
 structure BudgetedProgram {Input Result : Type} (f : Input → Result) (ω : Type) [AddCommMonoid ω]
     [Preorder ω] where
-  /-- The measured program executed by `f`. -/
+  /-- The measured program whose returned values agree with `f`. -/
   program : MeasuredProgram Input Result ω
   /-- The bound on the program's declared instruction charges. -/
   budget : ω

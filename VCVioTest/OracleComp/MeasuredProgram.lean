@@ -14,7 +14,9 @@ public import VCVio.OracleComp.QueryTracking.MeasuredProgram.Composition
 The programs below have the same original instruction tag but distinct views and profile
 coordinates. Composition must execute the first instruction before preparing the second view,
 retain both charges and pass the first result to the second program. A separate nondeterministic
-example shows that a cheap deterministic handler does not establish a worst-case bound.
+example shows that a cheap deterministic handler does not establish a worst-case bound. Abstract
+preorders, signed refunds and reversed orders exercise the generic weighted scope, and empty
+carriers require no chosen witness.
 -/
 
 public section
@@ -95,6 +97,59 @@ example (input : Nat × Bool) :
 
 example {Input Result : Type} (f : Input → Result) :
     (BudgetedProgram.ofFun (ω := Nat) f).budget = 0 := rfl
+
+/-- Weighted composition needs monotone addition, but not antisymmetry of the cost order. -/
+example {A B C ω : Type} [AddCommMonoid ω] [Preorder ω] [IsOrderedAddMonoid ω]
+    {inner : MeasuredProgram A B ω} {outer : MeasuredProgram B C ω}
+    {innerBudget outerBudget : ω} (hi : inner.CostAtMost innerBudget)
+    (ho : outer.CostAtMost outerBudget) :
+    (outer.comp inner).CostAtMost (innerBudget + outerBudget) := ho.comp hi
+
+example {A B C ω : Type} [AddCommMonoid ω] [Preorder ω] [IsOrderedAddMonoid ω]
+    {f : A → B} {g : B → C} (inner : BudgetedProgram f ω) (outer : BudgetedProgram g ω) :
+    (outer.comp inner).budget = inner.budget + outer.budget := rfl
+
+/-- Writer instrumentation retains the result even with signed weights and arbitrary responses. -/
+example {Input Result ω : Type} [AddMonoid ω] (program : MeasuredProgram Input Result ω)
+    (input : Input) :
+    (simulateQ ((program.answer (program.view input)).withAddCost program.cost)
+      (program.program (program.view input))).runAdd.1 = program.run input :=
+  program.runAdd_fst_eq_run input
+
+/-- Empty result carriers need no chosen witness when the input is empty too. -/
+example : ((BudgetedProgram.ofFun (ω := Nat) (id : Empty → Empty)).comp
+    (BudgetedProgram.ofFun (ω := Nat) (id : Empty → Empty))).budget = 0 := rfl
+
+/-- An instruction with a single response. -/
+abbrev unitSignature : OracleSpec Unit := fun _ => Unit
+
+/-- One instruction with an arbitrary weight; its handler returns the only possible response. -/
+@[expose] def weightedInstruction {ω : Type} (weight : ω) : MeasuredProgram Unit Unit ω where
+  View := Unit
+  view := id
+  Op := Unit
+  spec _ := unitSignature
+  program _ := liftM (unitSignature.query ())
+  answer _ _ := pure ()
+  cost _ := weight
+
+/-- The one instruction has its declared weight in any cost preorder. -/
+theorem weightedInstruction_costAtMost {ω : Type} [AddCommMonoid ω] [Preorder ω] (weight : ω) :
+    (weightedInstruction weight).CostAtMost weight :=
+  MeasuredProgram.costAtMost_of_forall_eq_answer _ _
+    (fun _ _ result => Subsingleton.elim (α := Unit) result ())
+    (fun _ => by
+      simp [weightedInstruction, QueryImpl.withAddCost_apply]
+      rfl)
+
+/-- Signed weights may refund an earlier charge; a zero weighted budget need not mean no work. -/
+example : ((weightedInstruction (-1 : Int)).comp (weightedInstruction 1)).CostAtMost 0 := by
+  simpa using (weightedInstruction_costAtMost (-1 : Int)).comp
+    (weightedInstruction_costAtMost 1)
+
+/-- Reversing the cost order turns an upper bound into a lower bound on natural counts. -/
+example : (weightedInstruction (1 : Natᵒᵈ)).CostAtMost 0 :=
+  (weightedInstruction_costAtMost (1 : Natᵒᵈ)).mono (Nat.zero_le 1)
 
 /-- A response may choose whether the program requests a second instruction. -/
 abbrev choiceSpec : OracleSpec Unit := fun _ => Bool

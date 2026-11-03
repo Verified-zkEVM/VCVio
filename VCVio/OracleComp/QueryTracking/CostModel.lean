@@ -15,7 +15,12 @@ import Mathlib.Tactic.GRewrite
 
 This file defines a general cost model for oracle computations, parametric over any
 `AddCommMonoid` cost type. This supports natural numbers, extended non-negative reals,
-per-oracle cost vectors, and custom multi-dimensional cost structures.
+per-oracle cost vectors, signed weights, and custom multi-dimensional cost structures. An upper
+bound uses the declared cost order: signed refunds may cancel earlier charges, and reversing the
+order changes what an upper bound means. These weighted bounds are operation counts only with a
+separately justified counting order and charge table, such as natural-number vectors with unit
+charges in the designated coordinates. Even a nonnegative model may deliberately omit work or
+charge zero for an instruction; its accounting boundary must be stated.
 
 Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost accumulation.
 
@@ -255,7 +260,7 @@ theorem worstCaseCostBound_query_bind_iff [AddCommMonoid ω] [Preorder ω]
     exact h u w hw
 
 /-- Pathwise budgets add under sequencing of the actual instrumented computations. -/
-theorem WorstCaseCostBound.bind [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
+theorem WorstCaseCostBound.bind [AddCommMonoid ω] [Preorder ω] [IsOrderedAddMonoid ω]
     {oa : OracleComp spec α} {k : α → OracleComp spec β} {cm : CostModel spec ω} {A B : ω}
     (ha : WorstCaseCostBound oa cm A) (hb : ∀ a, WorstCaseCostBound (k a) cm B) :
     WorstCaseCostBound (oa >>= k) cm (A + B) := by

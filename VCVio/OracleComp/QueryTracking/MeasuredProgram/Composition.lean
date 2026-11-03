@@ -15,7 +15,9 @@ public import VCVio.OracleComp.QueryTracking.CostModel.Simulation
 Composing two measured programs executes the inner instruction program and then the outer
 instruction program on its actual result. Their queries are embedded in disjoint indexed
 specifications, retaining each instruction's view and charge. Neither program is executed while
-constructing the input view. Their worst-case budgets add, uniformly over all permitted responses.
+constructing the input view. The outer view is computed, uncharged, on the actual intermediate
+result during execution. Their worst-case weighted budgets add, uniformly over all permitted
+responses; this is not a complete execution-cost or expected-cost composition theorem.
 
 Input precomposition changes only the uncharged view. The accounting boundary remains that of
 `MeasuredProgram`: view construction, handler evaluation and pure computation are not charged.
@@ -56,7 +58,8 @@ theorem CostAtMost.contramap [AddCommMonoid ω] [Preorder ω]
     (M.contramap f).CostAtMost budget := h
 
 /-- Execute the inner program and then the outer program on its result, retaining both programs'
-instruction charges. The order agrees with function composition. -/
+instruction charges. The outer view is computed without charge from the inner result. The order
+agrees with function composition. -/
 @[expose] def comp (outer : MeasuredProgram B C ω) (inner : MeasuredProgram A B ω) :
     MeasuredProgram A C ω where
   View := inner.View
@@ -143,7 +146,7 @@ theorem Realizes.comp {outer : MeasuredProgram B C ω} {inner : MeasuredProgram 
   exact hg (f input)
 
 /-- Uniform bounds for the two instruction programs add under their actual composition. -/
-theorem CostAtMost.comp [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
+theorem CostAtMost.comp [AddCommMonoid ω] [Preorder ω] [IsOrderedAddMonoid ω]
     {outer : MeasuredProgram B C ω} {inner : MeasuredProgram A B ω}
     {outerBudget innerBudget : ω} (ho : outer.CostAtMost outerBudget)
     (hi : inner.CostAtMost innerBudget) :
@@ -169,7 +172,7 @@ variable {A B C I ω : Type} [AddCommMonoid ω]
   costAtMost := M.costAtMost.contramap g
 
 /-- Compose budgeted instruction programs, adding their declared bounds. -/
-@[expose] def comp [PartialOrder ω] [IsOrderedAddMonoid ω] {f : A → B} {g : B → C}
+@[expose] def comp [Preorder ω] [IsOrderedAddMonoid ω] {f : A → B} {g : B → C}
     (outer : BudgetedProgram g ω) (inner : BudgetedProgram f ω) :
     BudgetedProgram (g ∘ f) ω where
   program := outer.program.comp inner.program

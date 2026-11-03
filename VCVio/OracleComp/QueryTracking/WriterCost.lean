@@ -545,7 +545,7 @@ end expectedCost
 
 section weightedPathwiseBounds
 
-variable [MonadAttach m] {ω : Type} [AddCommMonoid ω] [PartialOrder ω]
+variable [MonadAttach m] {ω : Type} [AddCommMonoid ω] [Preorder ω]
 
 @[gcongr]
 lemma pathwiseCostAtMost_mono {oa : AddWriterT ω m α} {w₁ w₂ : ω}
