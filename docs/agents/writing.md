@@ -77,8 +77,10 @@ standard. This guide adopts the recommendations named below as repository requir
   For example, write "find" rather than "figure out". (STE 9.3)
 - **W7.** Write English words instead of Latin abbreviations in prose. For example, write
   "for example" instead of "e.g.". Preserve official titles and source quotations. (STE GR-6)
-- **W8.** Use American English spelling in prose. Preserve official names, identifiers, and
-  quotations with a different spelling. (STE 1.14)
+- **W8.** Use Oxford spelling in prose: British spelling with "-ize" endings, such as "behaviour",
+  "optimization", and "analyse". American spelling is also correct. Keep one spelling within a
+  file. Preserve official names, identifiers, and quotations with a different spelling. Lean
+  declaration names follow the American spelling of Mathlib. (STE 1.14, 9.4)
 - **W9.** Use gender-neutral language when gender is not relevant. Use "they" for a person whose
   pronouns you do not know. (STE GR-7)
 
@@ -244,6 +246,7 @@ The third column says whether a row follows STE or adapts it for VCVio:
 | STE 1.1 to 1.4, general vocabulary | The reference for general meanings and grammatical roles. This guide and its checker do not implement the full dictionary. | STE |
 | STE 1.5 to 1.13, technical terms | Applied through the project vocabulary and established subject-field usage. | STE |
 | STE 1.5, 1.7, 1.12, and 1.13, noun and verb roles | One word can be a technical noun and a technical verb when each use meets its category rules. An example is "query". | STE |
+| STE 1.14, spelling | STE 1.14 permits another official spelling directive. VCVio uses Oxford spelling and also accepts American spelling. Lean declaration names follow Mathlib. | VCVio directive |
 | All STE rules | Technical accuracy takes priority. Standard terminology and language patterns in cryptography, computer science, and mathematics remain when a rule conflicts with them. | VCVio adaptation |
 | STE 2 to 6, 8, and 9 | The source principles inform the rules above. Mathematical notation and the stated adaptations preserve technical meaning. | STE |
 | STE 3.1 to 3.4 | Simple constructions remain preferred. VCVio keeps a modal or complex form when changing it would lose uncertainty or time. | VCVio adaptation |
