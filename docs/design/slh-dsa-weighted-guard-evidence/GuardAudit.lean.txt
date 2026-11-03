@@ -82,3 +82,28 @@ theorem transparency : TransparencyTarget := @evalDist_guardQueryBudget_eq_of_ae
 #print axioms safety
 #print axioms transparency
 end ForwardingBudgetGuardAudit
+
+namespace ForwardingBudgetGuardAudit
+
+/-- The complete zero-start joint event-filtering law. -/
+private theorem event_filtered_guard_contract
+    {ι α Cache : Type} {spec : OracleSpec.{0, 0} ι}
+    (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
+    (handler : QueryImpl spec (StateT Cache ProbComp))
+    (fallback : (input : spec.Domain) → spec.Range input)
+    (program : OracleComp spec α) (initial : ProbComp Cache)
+    (event : (α × (Nat × Nat)) × Cache → Prop) :
+    Pr{let result ← (do
+      let cache ← initial
+      (simulateQ (guardQueryBudget caps cost handler fallback) program).run
+        (cache, ((0, 0), false)))}[
+      event ((result.1, result.2.2.1), result.2.1) ∧ result.2.2.2 = false] =
+    Pr{let result ← (do
+      let cache ← initial
+      ((simulateQ (handler.withAddCost cost) program).runAdd).run cache)}[
+      event result ∧ result.1.2.1 ≤ caps.1 ∧ result.1.2.2 ≤ caps.2] :=
+  prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps
+    caps cost handler fallback program initial event
+
+#print axioms event_filtered_guard_contract
+end ForwardingBudgetGuardAudit

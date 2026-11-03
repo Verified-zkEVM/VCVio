@@ -285,3 +285,111 @@ theorem evalDist_guardQueryBudget_eq_of_ae_caps
 #print axioms evalDist_guardQueryBudget_eq_of_ae_caps
 
 end QueryImpl
+
+namespace QueryImpl
+
+/-! ## Event-restricted preservation -/
+
+private theorem source_not_aborted_iff_caps
+    {ι α Cache : Type} {spec : OracleSpec.{0, 0} ι}
+    (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
+    (handler : QueryImpl spec (StateT Cache ProbComp))
+    (program : OracleComp spec α) (cache : Cache)
+    (result : α × (Cache × ((Nat × Nat) × Bool)))
+    (hr : result ∈ support ((simulateQ (sourceCounted caps cost handler) program).run
+      (cache, ((0, 0), false)))) :
+    result.2.2.2 = false ↔ result.2.2.1.1 ≤ caps.1 ∧ result.2.2.1.2 ≤ caps.2 := by
+  have hgood : PreservesInv (sourceCounted caps cost handler)
+      (fun state => state.2.2 = false →
+        state.2.1.1 ≤ caps.1 ∧ state.2.1.2 ≤ caps.2) := by
+    intro input state _ next hnext
+    unfold sourceCounted at hnext
+    rw [mem_support_extendState_run_iff] at hnext
+    rw [hnext.2]
+    intro hf
+    by_contra hc
+    have hd : decide (¬((state.2.1 + cost input).1 ≤ caps.1 ∧
+        (state.2.1 + cost input).2 ≤ caps.2)) = true := by
+      simpa only [decide_eq_true_eq] using hc
+    change (state.2.2 || decide (¬((state.2.1 + cost input).1 ≤ caps.1 ∧
+      (state.2.1 + cost input).2 ≤ caps.2))) = false at hf
+    rw [hd] at hf
+    simp at hf
+  constructor
+  · exact simulateQ_run_preservesInv _ _ hgood program
+      (cache, ((0, 0), false)) (by simp) result hr
+  · intro hc
+    apply Bool.eq_false_iff.mpr
+    intro hf
+    exact simulateQ_run_preservesInv _ _ (source_bad_counts caps cost handler)
+      program (cache, ((0, 0), false)) (by simp) result hr hf hc
+
+/-- Non-aborted guarded events equal counted source events restricted to the final caps. -/
+theorem prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps
+    {ι α Cache : Type} {spec : OracleSpec.{0, 0} ι}
+    (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
+    (handler : QueryImpl spec (StateT Cache ProbComp))
+    (fallback : (input : spec.Domain) → spec.Range input)
+    (program : OracleComp spec α) (initial : ProbComp Cache)
+    (event : (α × (Nat × Nat)) × Cache → Prop) :
+    Pr{let result ← (do
+      let cache ← initial
+      (simulateQ (guardQueryBudget caps cost handler fallback) program).run
+        (cache, ((0, 0), false)))}[
+      event ((result.1, result.2.2.1), result.2.1) ∧ result.2.2.2 = false] =
+    Pr{let result ← (do
+      let cache ← initial
+      ((simulateQ (handler.withAddCost cost) program).runAdd).run cache)}[
+      event result ∧ result.1.2.1 ≤ caps.1 ∧ result.1.2.2 ≤ caps.2] := by
+  let project : α × (Cache × ((Nat × Nat) × Bool)) → (α × (Nat × Nat)) × Cache :=
+    fun result => ((result.1, result.2.2.1), result.2.1)
+  let sourceRun := fun cache =>
+    (simulateQ (sourceCounted caps cost handler) program).run (cache, ((0, 0), false))
+  let guardedRun := fun cache =>
+    (simulateQ (guardQueryBudget caps cost handler fallback) program).run
+      (cache, ((0, 0), false))
+  let countedRun := fun cache =>
+    ((simulateQ (handler.withAddCost cost) program).runAdd).run cache
+  have hsame := source_agrees caps cost handler fallback
+  obtain ⟨hguardBad, hsourceBad⟩ := source_bad_persists caps cost handler fallback
+  have hlocal : ∀ cache,
+      Pr{let result ← guardedRun cache}[event (project result) ∧ result.2.2.2 = false] =
+      Pr{let result ← countedRun cache}[
+        event result ∧ result.1.2.1 ≤ caps.1 ∧ result.1.2.2 ≤ caps.2] := by
+    intro cache
+    have hcost : project <$> sourceRun cache =
+        (fun result => ((result.1.1, result.1.2), result.2)) <$> countedRun cache := by
+      simpa only [project, sourceRun, countedRun,
+        show (0, 0) = (0 : Nat × Nat) from rfl, zero_add] using
+        source_run_cost caps cost handler program cache (0, 0) false
+    calc
+      _ = Pr{let result ← guardedRun cache}[
+          event (project result) ∧ result.2.2.2 ≠ true] := by
+        apply prEvent_congr
+        intro result
+        exact and_congr_right fun _ => Bool.eq_false_iff
+      _ = Pr{let result ← sourceRun cache}[
+          event (project result) ∧ result.2.2.2 ≠ true] :=
+        hsame.prEvent_simulateQ_run_and_not_bad_eq hguardBad hsourceBad program
+          (cache, ((0, 0), false)) (fun result => event (project result))
+      _ = Pr{let result ← sourceRun cache}[
+          event (project result) ∧ result.2.2.1.1 ≤ caps.1 ∧ result.2.2.1.2 ≤ caps.2] := by
+        apply prEvent_congr_of_support
+        intro result hr
+        exact and_congr_right fun _ => Bool.eq_false_iff.symm.trans
+          (source_not_aborted_iff_caps caps cost handler program cache result hr)
+      _ = _ := by
+        have hproject := congrArg (fun computation =>
+          Pr{let result ← computation}[
+            event result ∧ result.1.2.1 ≤ caps.1 ∧ result.1.2.2 ≤ caps.2]) hcost
+        simpa only [prEvent_map, project] using hproject
+  change prEvent ((fun result => event (project result) ∧ result.2.2.2 = false) <$>
+      (initial >>= guardedRun)) =
+    prEvent ((fun result => event result ∧ result.1.2.1 ≤ caps.1 ∧ result.1.2.2 ≤ caps.2) <$>
+      (initial >>= countedRun))
+  rw [map_bind, map_bind]
+  exact prEvent_bind_congr_of_support initial _ _ fun cache _ => hlocal cache
+
+#print axioms source_not_aborted_iff_caps
+#print axioms prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps
+end QueryImpl
