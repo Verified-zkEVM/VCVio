@@ -7,10 +7,17 @@ Authors: Tom Wambsgans, Alexander Hicks
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.FiredCoverage
+import all HashSig.SLHDSA.SHAKE128s.Proof.FiredCoverage
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsLoadTail
 import VCVio.OracleComp.EvalDist.Sum
 
-/-! # Symmetric load tails and events determined before a second signer answer -/
+/-!
+# FORS load tails and coverage from consumed signer prefixes
+
+Symmetric load tails factor against events determined before a second signer answer.
+A left-dependent disclosure family bounds coverage from the consumed prefix
+on the same full tape law.
+-/
 
 public section
 
@@ -200,6 +207,175 @@ theorem prEvent_bad_load_and_event_eq_mul
       intro head
       ring
 
-end SLHDSA.SHAKE128s.FiredCoverage
+/-! ## A disclosure family chosen from the left block -/
 
-#print axioms SLHDSA.SHAKE128s.FiredCoverage.prEvent_bad_load_and_event_eq_mul
+private def loadMoment (length : Nat) (leftTape : List HashOutput) : Nat :=
+  ∑ part, ForsDisclosureTape.loads (blockTape length leftTape) part ^ 14
+
+private def disclosureCutoff (length : Nat) (leftTape : List HashOutput) : Nat :=
+  if loadMoment length leftTape ≤ 9 * 2 ^ 99 then length else 1
+
+private theorem loadMoment_one (leftTape : List HashOutput) : loadMoment 1 leftTape = 1 := by
+  classical
+  have hsingle : (Finset.univ : Finset (Fin 1)) = {0} := by ext j; simp [Fin.eq_zero j]
+  have hload (part : Instance) :
+      ForsDisclosureTape.loads (blockTape 1 leftTape) part =
+        if part = (cellView leftTape 0).1 then 1 else 0 := by
+    unfold ForsDisclosureTape.loads
+    rw [hsingle]
+    by_cases hpart : part = (cellView leftTape 0).1
+    · subst part
+      simp [blockTape, cellView]
+    · have hne : (blockTape 1 leftTape (0 : Fin 1)).1 ≠ part := by
+        simpa only [blockTape, cellView, Fin.val_zero] using Ne.symm hpart
+      simp [hne, hpart]
+  simp [loadMoment, hload]
+
+private theorem cutoff_moment_le (length : Nat) (leftTape : List HashOutput) :
+    loadMoment (disclosureCutoff length leftTape) leftTape ≤ 9 * 2 ^ 99 := by
+  unfold disclosureCutoff
+  split_ifs with hgood
+  · exact hgood
+  · rw [loadMoment_one]
+    norm_num
+
+private theorem blockHit_cutoff_rate (length : Nat) (leftTape : List HashOutput) :
+    Pr{let value ← ($ᵗ HashOutput : ProbComp HashOutput)}[
+      BlockHit (disclosureCutoff length leftTape) leftTape value] ≤
+      (((9 * 2 ^ 99 : Nat) : ℝ≥0∞) / ((2 ^ 231 : Nat) : ℝ≥0∞)) := by
+  let cutoff := disclosureCutoff length leftTape
+  have hcount : (∑ index : Instance,
+      ∏ tree : Tree, (leftDisclosures cutoff leftTape index tree).card) ≤ 9 * 2 ^ 99 := by
+    refine le_trans (Finset.sum_le_sum fun index _ => ?_)
+      (cutoff_moment_le length leftTape)
+    calc
+      _ ≤ ∏ _ : Tree, ForsDisclosureTape.loads (blockTape cutoff leftTape) index :=
+        Finset.prod_le_prod fun tree _ => ForsDisclosureTape.disclosures_card_le_loads _ index tree
+      _ = ForsDisclosureTape.loads (blockTape cutoff leftTape) index ^ 14 := by
+        rw [Finset.prod_const, Finset.card_univ, Fintype.card_fin]
+        rfl
+  have hparse : Pr{let value ← ($ᵗ HashOutput : ProbComp HashOutput)}[
+      Covered (leftDisclosures cutoff leftTape) (MessageDigest.parse value)] =
+      Pr{let view ← ($ᵗ View : ProbComp View)}[
+        Covered (leftDisclosures cutoff leftTape) view] := by
+    simpa only [prEvent_map] using (evalDist_parse_uniform.prEvent_eq
+      (fun view : View => Covered (leftDisclosures cutoff leftTape) view))
+  change Pr{let value ← ($ᵗ HashOutput : ProbComp HashOutput)}[
+    Covered (leftDisclosures cutoff leftTape) (MessageDigest.parse value)] ≤ _
+  rw [hparse, fresh_coverage]
+  exact ENNReal.div_le_div_right (Nat.cast_le.mpr hcount) _
+
+set_option exponentiation.threshold 1024 in
+private theorem helped_cutoff_rate (length : Nat) (leftTape : List HashOutput) :
+    Pr{let pair ← ($ᵗ (View × View) : ProbComp (View × View))}[
+      HelpedBy (leftDisclosures (disclosureCutoff length leftTape) leftTape) pair.1 pair.2] ≤
+      1 / ((2 ^ 177 : Nat) : ℝ≥0∞) := by
+  exact prob_helpedBy_le_of_moment_cap _ _ (9 * 2 ^ 99)
+    (fun part tree => ForsDisclosureTape.disclosures_card_le_loads _ part tree)
+    (cutoff_moment_le length leftTape) (by norm_num)
+
+private theorem firedCovered_mono_cutoff {ρ : Type} (len : ρ → Nat)
+    (fired : ρ → Nat → Prop) (small large rightLength : Nat) (hcutoff : small ≤ large)
+    (outcome : (List HashOutput × List HashOutput) × ρ) :
+    FiredCovered len fired small rightLength outcome →
+      FiredCovered len fired large rightLength outcome := by
+  rintro ⟨target, ht, hr, htrees⟩
+  refine ⟨target, ht, hr, fun tree => ?_⟩
+  rcases htrees tree with ⟨cell, hcell, hsupply⟩ | hhelper
+  · exact Or.inl ⟨cell, lt_of_lt_of_le hcell hcutoff, hsupply⟩
+  · exact Or.inr hhelper
+
+private theorem prob_loadMoment_bad_le (length : Nat) (hcap : length ≤ 5 * 2 ^ 62) :
+    Pr{let tape ← padding length}[9 * 2 ^ 99 < loadMoment length tape] ≤
+      (1 : ℝ≥0∞) / ((8 * 2 ^ 128 : Nat) : ℝ≥0∞) := by
+  have hlaw := (evalDist_blockTape length).prEvent_eq
+    (fun tape : ForsDisclosureTape.Tape length =>
+      9 * 2 ^ 99 < ∑ part, ForsDisclosureTape.loads tape part ^ 14)
+  rw [prEvent_map] at hlaw
+  change Pr{let tape ← padding length}[
+    9 * 2 ^ 99 < ∑ part, ForsDisclosureTape.loads (blockTape length tape) part ^ 14] ≤ _
+  rw [hlaw, ForsDisclosureTape.loads_probability
+    (fun counts : Instance → Nat => 9 * 2 ^ 99 < ∑ part, counts part ^ 14)]
+  convert ForsConcentration.uniform_load_tail_nine_eighths_of_le length hcap using 1
+  · congr 1
+  · simp only [Nat.cast_mul, Nat.cast_pow, Nat.cast_ofNat]
+
+open scoped Classical in
+/-- Coverage by the signer cells actually consumed, together with fired targets,
+is charged on one fixed full tape law using a left-only analytical disclosure cutoff. -/
+theorem prob_usedPrefix_firedCovered_le
+    {ρ : Type} (run : List HashOutput → List HashOutput → ProbComp ρ)
+    (len : ρ → Nat) (fired : ρ → Nat → Prop)
+    (signerCount signerPrefix : ρ → Nat)
+    (leftLength rightLength : Nat)
+    (hleft : 2 ≤ leftLength) (hcap : leftLength ≤ 5 * 2 ^ 62)
+    (hprefix : ∀ outcome ∈ support (blockRunOf run leftLength rightLength),
+      signerPrefix outcome.2 ≤ leftLength ∧
+        signerPrefix outcome.2 ≤ signerCount outcome.2)
+    (hcausal : ∀ (index cell : Nat) (leftTape rightTape : List HashOutput)
+        (value : HashOutput), index ≤ cell →
+      (Pr{let z ← run leftTape (rightTape.set cell value)}[index < len z]) =
+      Pr{let z ← run leftTape rightTape}[index < len z])
+    (hthin1 : ∀ (index : Nat) (leftTape rightTape : List HashOutput),
+      Pr{let z ← run leftTape rightTape}[index < len z ∧ fired z index] ≤
+      1 / ((2 ^ 128 : Nat) : ℝ≥0∞) *
+        Pr{let z ← run leftTape rightTape}[index < len z])
+    (hthin2 : ∀ (first second : Nat) (leftTape rightTape : List HashOutput),
+      first < second →
+      Pr{let z ← run leftTape rightTape}[second < len z ∧ fired z first ∧ fired z second] ≤
+      1 / ((2 ^ 256 : Nat) : ℝ≥0∞) *
+        Pr{let z ← run leftTape rightTape}[first < len z])
+    (hsignerCausal : ∀ (cell : Nat) (leftTape rightTape : List HashOutput)
+        (value : HashOutput), 1 ≤ cell →
+      (Pr{let z ← run (leftTape.set cell value) rightTape}[2 ≤ signerCount z]) =
+      Pr{let z ← run leftTape rightTape}[2 ≤ signerCount z]) :
+    Pr{let outcome ← blockRunOf run leftLength rightLength}[
+      FiredCovered len fired
+        (signerPrefix outcome.2) rightLength outcome] ≤
+      ((1 : ℝ≥0∞) / ((8 * 2 ^ 128 : Nat) : ℝ≥0∞)) *
+        Pr{let outcome ← blockRunOf run leftLength rightLength}[
+          2 ≤ signerCount outcome.2] +
+      (∑' outcome,
+        Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
+          ((len outcome.2 : Nat) : ℝ≥0∞)) *
+        ((((9 * 2 ^ 99 : Nat) : ℝ≥0∞) / ((2 ^ 231 : Nat) : ℝ≥0∞)) +
+          (rightLength : ℝ≥0∞) / ((2 ^ 303 : Nat) : ℝ≥0∞)) := by
+  classical
+  have hsplit : Pr{let outcome ← blockRunOf run leftLength rightLength}[
+        FiredCovered len fired (signerPrefix outcome.2) rightLength outcome] ≤
+      Pr{let outcome ← blockRunOf run leftLength rightLength}[
+        (9 * 2 ^ 99 < loadMoment leftLength outcome.1.1) ∧ 2 ≤ signerCount outcome.2] +
+      Pr{let outcome ← blockRunOf run leftLength rightLength}[
+        FiredCovered len fired (disclosureCutoff leftLength outcome.1.1) rightLength outcome] := by
+    refine le_trans (prEvent_mono_of_support _ _ _ fun outcome hmem hcovered => ?_)
+      (prEvent_or_le _ _ _)
+    by_cases hgood : loadMoment leftLength outcome.1.1 ≤ 9 * 2 ^ 99
+    · refine Or.inr (firedCovered_mono_cutoff len fired _ _ rightLength ?_ outcome hcovered)
+      simpa only [disclosureCutoff, ite_eq_left hgood] using (hprefix outcome hmem).1
+    · by_cases hcount : 2 ≤ signerCount outcome.2
+      · exact Or.inl ⟨Nat.lt_of_not_ge hgood, hcount⟩
+      · refine Or.inr (firedCovered_mono_cutoff len fired _ _ rightLength ?_ outcome hcovered)
+        have hp := (hprefix outcome hmem).2
+        simp only [disclosureCutoff, ite_eq_right hgood]
+        omega
+  have hrare : Pr{let outcome ← blockRunOf run leftLength rightLength}[
+        (9 * 2 ^ 99 < loadMoment leftLength outcome.1.1) ∧ 2 ≤ signerCount outcome.2] ≤
+      ((1 : ℝ≥0∞) / ((8 * 2 ^ 128 : Nat) : ℝ≥0∞)) *
+        Pr{let outcome ← blockRunOf run leftLength rightLength}[2 ≤ signerCount outcome.2] := by
+    have hlength : leftLength - 1 + 1 = leftLength := by omega
+    have hfactor := prEvent_bad_load_and_event_eq_mul run (fun z => 2 ≤ signerCount z)
+      (leftLength - 1) rightLength (9 * 2 ^ 99) hsignerCausal
+    rw [hlength] at hfactor
+    change Pr{let outcome ← blockRunOf run leftLength rightLength}[
+      (9 * 2 ^ 99 < ∑ part, ForsDisclosureTape.loads
+        (blockTape leftLength outcome.1.1) part ^ 14) ∧ 2 ≤ signerCount outcome.2] ≤ _
+    rw [hfactor]
+    exact mul_le_mul' (prob_loadMoment_bad_le leftLength hcap) le_rfl
+  have hcoverage := prob_firedCovered_and_good_le run len fired leftLength rightLength
+    (disclosureCutoff leftLength) (fun _ => True)
+    (((9 * 2 ^ 99 : Nat) : ℝ≥0∞) / ((2 ^ 231 : Nat) : ℝ≥0∞))
+    (fun leftTape _ => blockHit_cutoff_rate leftLength leftTape)
+    (fun leftTape _ => helped_cutoff_rate leftLength leftTape) hcausal hthin1 hthin2
+  exact le_trans hsplit (add_le_add hrare (by simpa only [true_and] using hcoverage))
+
+end SLHDSA.SHAKE128s.FiredCoverage
