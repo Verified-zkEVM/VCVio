@@ -1,8 +1,8 @@
 name: Writing
 
 # Advisory prose check. The checker reports findings as warning annotations and exits with
-# status 0. Each check step also continues on error. So this workflow never fails a pull request
-# because of its prose. Only a failure of the checker's own tests fails the job.
+# status 0 when it runs, including when it finds prose problems. Checker errors and failures
+# of its tests fail the job.
 #
 # The pull request body comes from its author. Pass it to the script through an environment
 # variable, and never interpolate it into a shell command.
@@ -40,13 +40,11 @@ jobs:
         run: uv run --no-project --python 3.12 python scripts/test-check-writing.py
 
       - name: Check the changed prose (warnings only)
-        continue-on-error: true
         env:
           BASE_REF: ${{ github.base_ref }}
         run: uv run --no-project --python 3.12 python scripts/check-writing.py --base "origin/${BASE_REF}" --github
 
       - name: Check the pull request description (warnings only)
-        continue-on-error: true
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: printf '%s\n' "$PR_BODY" | uv run --no-project --python 3.12 python scripts/check-writing.py --stdin description --github
