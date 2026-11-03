@@ -161,6 +161,7 @@ STE 8.4 to 8.7 defines word counting. Each of these elements counts as one word:
 - A number, or a number with its unit.
 - An abbreviation or an alphanumeric identifier.
 - Quoted text, a title, or a label.
+- A formula, which STE treats as quoted text.
 - A proper name.
 - A hyphenated group.
 
@@ -170,7 +171,7 @@ Text in parentheses counts as one word in the enclosing sentence. Check the pare
 separately for sentence length. A list introduction ends at its colon for word counting. Each list
 item counts separately.
 
-VCVio also counts a formula, a Lean notation, a command, a URL, or a citation key as one word.
+VCVio also counts Lean notation, a command, a URL, or a citation key as one word.
 Ordinary link text keeps its words. This word-count convention is a technical-text adaptation.
 The checker approximates these conventions. Review the actual sentence when its count is doubtful.
 
@@ -252,7 +253,7 @@ The third column says whether a row follows STE or adapts it for VCVio:
 | STE 3.1 to 3.4 | Simple constructions remain preferred. VCVio keeps a modal or complex form when changing it would lose uncertainty or time. | VCVio adaptation |
 | STE 5.3 | Work steps use the imperative. VCVio also keeps the force of "must", "may", and "can" in requirements. | VCVio adaptation |
 | STE 7, safety instructions | Apply the relevant principle to risky operations: put the condition or instruction before an explanation of the consequence. | STE principle |
-| STE 8.4 to 8.7, word count | VCVio counts formulas, Lean notation, commands, URLs, and citation keys as one word. STE already counts alphanumeric identifiers as one word. | VCVio adaptation |
+| STE 8.4 to 8.7, word count | STE counts alphanumeric identifiers and formulas as one word. VCVio extends this grouping to Lean notation, commands, URLs, and citation keys. | VCVio adaptation |
 | STE general recommendations | The named recommendations are local requirements here. STE gives them as advice. | VCVio adaptation |
 | VCVio additions | Source evidence, history scope, citations, security-claim scope, clause-joining dashes, and emphasis are local contribution policies. | VCVio addition |
 
