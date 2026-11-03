@@ -4,11 +4,14 @@ The sole live generic observer is `VCVio/CryptoFoundations/SignatureAlg/CountedE
 It retains actual keys and the existing raw outcome with arbitrary additive cost and cache.
 The lab observer is a specialization; the earlier parallel phase/client observation bodies
 and Nat-only audit are absent. The four marked-source laws retain their complete types.
+The relative audit checks the full arbitrary-result and independent-event kernel interface.
 
-This stage consolidates the generic observer only. C0 construction integration is separate.
+This stage also separates native lab queries from original byte-event payloads. The private
+construction audit checks the eight C0 boundaries, including the UNROUTED real full-key source,
+original paid events, sign-only log, dependent fallback and free guard tuple.
 
-Working proof owners change by -122 physical lines relative to the pre-A owners
-(Counted +214, shim -222, marked -114). These are working-owner metrics,
+Working proof owners change by -109 physical lines relative to the pre-A owners
+(Counted +214, shim -222, marked -104, relative +3). These are working-owner metrics,
 not a main-to-final-PR compression claim. All ordinary audits are PRIVATE NONMODULE inputs.
 The full-source guard395, generic native basis and source bodies are read from their frozen
 Git blobs; no basis body copies or stale canonical Counted artifacts are used.
@@ -19,8 +22,8 @@ at `56697d5df532d3d68c480cbc604ed89ba45f2513` retain their exact older source sc
 The final production integration remains selective and omits evidence archives.
 
 Run from a CLEAN recorded checkout, with its actual full commit and a NEW ABSENT output.
-The recipe compiles 10 scoped commands: eight proof modules and two private audits.
-Require 42 outputs and 60 standard-only axiom reports, including the guard's empty report,
+The recipe compiles 11 scoped commands: eight proof modules and three private audits.
+Require 43 outputs and 73 standard-only axiom reports, including the guard's empty report,
 zero warnings, clean source before each command and afterward. All five fresh producer
 sidecars are checked BEFORE each consumer. No Lake/cache update or limit waiver is used.
 

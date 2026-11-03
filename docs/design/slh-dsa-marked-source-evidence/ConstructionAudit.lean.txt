@@ -1,0 +1,171 @@
+/-
+Copyright (c) 2026 Alexander Hicks. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Alexander Hicks
+-/
+
+import RelativeKernel
+import MarkedLab
+import FreeGuardInterpretation
+import HashSig.SLHDSA.Security.ByteRouter
+import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Factory
+
+/-! # Partial byte-source construction type fixtures
+
+These private expressions fix the native and observation ports before any router expansion.
+They assert no encoding coupling, source resource transport or security theorem.
+-/
+
+open OracleComp OracleSpec SignatureAlg
+open SLHDSA SLHDSA.Security SLHDSA.SHAKE128s
+
+namespace C0Frontend
+
+private abbrev PK := PublicKeyCore FIPS205.core
+private abbrev SK := SecretKeyCore FIPS205.core
+private abbrev Raw := shakeSpec FIPS205.params
+private abbrev H := hashSpec FIPS205.core
+private abbrev R := Game.World FIPS205.Answer
+private abbrev Ev := SigningView.Event R Message
+private abbrev O := ObsSpec Ev
+private abbrev Sign := Message →ₒ Option (List Byte)
+private abbrev Native := unifSpec + (H + Raw)
+private abbrev Common := Native + O
+private abbrev Alpha := (PK × SK) × SigningView.Outcome Message (List Byte) (Option (List Byte))
+
+private noncomputable def partialLabView (pkSeed : FIPS205.core.PkSeed) :
+    SigningView (OracleComp (labSpec FIPS205.core)) Message PK PK
+      (List Byte) (Option (List Byte)) :=
+  SigningView.rejectingEncoding
+    (labScheme FIPS205.core FIPS205.deterministicRand pkSeed)
+    (fun request : Message =>
+      (SLHDSA.External.encodePureMessage request.context request.message).toOption)
+    (SLHDSA.encodeSignature FIPS205.params
+      (SLHDSA.Concrete.shakeWireCodec FIPS205.params.params))
+    (fun wire => (SLHDSA.decodeSignature FIPS205.params
+      (SLHDSA.Concrete.shakeWireCodec FIPS205.params.params) wire).toOption)
+
+private def honestMarker : SigningView.Event (unifSpec + H) Message → Ev
+  | .signingAttempt request => .signingAttempt request
+  | .ambient phase (.inl n) => .ambient phase (.inl n)
+  | .ambient phase (.inr q) => .ambient phase (.inr (encode FIPS205.params q))
+
+private def rawLift : QueryImpl (R + O) (OracleComp Common) :=
+  QueryImpl.add (spec₁ := R) (spec₂ := O)
+    (fun input => simulateQ (QueryImpl.ofLift Native (OracleComp Common))
+      (liftRawImpl (hs := H) input))
+    (fun event => liftM (Common.query (.inr event)))
+
+private noncomputable def originalMain
+    (adv : Game.Adversary FIPS205.Answer PK) (pk : PK) :
+    OracleComp ((R + O) + Sign) (Message × List Byte) :=
+  SigningView.Events.mainWithEvents (Game.Counted.externalMain adv) pk
+
+private noncomputable def liftedRawClient
+    (adv : Game.Adversary FIPS205.Answer PK) (pk : PK) :
+    OracleComp (Common + Sign) (Message × List Byte) :=
+  simulateQ (QueryImpl.add (spec₁ := R + O) (spec₂ := Sign)
+    (fun input => simulateQ (QueryImpl.ofLift Common (OracleComp (Common + Sign)))
+      (rawLift input))
+    (fun request => liftM ((Common + Sign).query (.inr request))))
+    (originalMain adv pk)
+
+private def reassociateClient :
+    QueryImpl (Common + Sign) (OracleComp (Native + (O + Sign))) :=
+  fun input => match input with
+  | .inl (.inl native) => liftM ((Native + (O + Sign)).query (.inl native))
+  | .inl (.inr event) => liftM ((Native + (O + Sign)).query (.inr (.inl event)))
+  | .inr request => liftM ((Native + (O + Sign)).query (.inr (.inr request)))
+
+private noncomputable def reassociatedRawClient
+    (adv : Game.Adversary FIPS205.Answer PK) (pk : PK) :
+    OracleComp (Native + (O + Sign)) (Message × List Byte) :=
+  simulateQ reassociateClient (liftedRawClient adv pk)
+
+private noncomputable def combinedHandler (pk : PK) (sk : SK) :
+    QueryImpl (O + Sign) (WriterT (QueryLog Sign) (OracleComp Common)) :=
+  QueryImpl.add (spec₁ := O) (spec₂ := Sign)
+    (fun event => liftM (liftM (Common.query (.inr event)) : OracleComp Common PUnit))
+    (QueryImpl.withLogging (fun request => simulateQ rawLift
+      ((SigningView.Events.viewWithEvents (Game.Counted.externalView FIPS205.scheme)).sign
+        pk sk request)))
+
+private noncomputable def originalSource
+    (adv : Game.Adversary FIPS205.Answer PK) : OracleComp (R + O) Alpha := do
+  let view := SigningView.Events.viewWithEvents (Game.Counted.externalView FIPS205.scheme)
+  let keys ← view.keygen
+  let (forgery, rawLog) ← view.runWithSigningOracle keys.1 keys.2 (originalMain adv keys.1)
+  let verified ← view.verify keys.1 forgery.1 forgery.2
+  return (keys, ⟨forgery, rawLog, verified⟩)
+
+private noncomputable def commonSource
+    (adv : Game.Adversary FIPS205.Answer PK) : OracleComp Common Alpha :=
+  simulateQ rawLift (originalSource adv)
+
+private noncomputable def encoding (pkSeed : FIPS205.core.PkSeed) :
+    RandomOracleEncoding H (List Byte) FIPS205.Answer :=
+  shakeEncoding FIPS205.params (by decide) (by decide) pkSeed
+
+private noncomputable def commonFallback (pkSeed : FIPS205.core.PkSeed)
+    (originalFallback : (input : (R + O).Domain) → (R + O).Range input) :
+    (input : Common.Domain) → Common.Range input
+  | .inl (.inl n) => originalFallback (.inl (.inl n))
+  | .inl (.inr (.inr raw)) => originalFallback (.inl (.inr raw))
+  | .inl (.inr (.inl typed)) =>
+      (encoding pkSeed).trunc typed
+        (originalFallback (.inl (.inr ((encoding pkSeed).encode typed))))
+  | .inr _ => PUnit.unit
+
+private def originalPolicy (event : Ev) : Nat × Nat :=
+  let counts := Game.Counted.sourcePolicy event
+  ((∑ kind ∈ Game.adversaryWork, counts kind), counts .sign)
+
+private noncomputable def freeGuardedSource (q : Nat) (pkSeed : FIPS205.core.PkSeed)
+    (adv : Game.Adversary FIPS205.Answer PK)
+    (fallback : (input : (R + O).Domain) → (R + O).Range input) :
+    OracleComp Common (Alpha × (PUnit × ((Nat × Nat) × Bool))) :=
+  let forwarder : QueryImpl Common (StateT PUnit (OracleComp Common)) :=
+    (QueryImpl.id' Common).liftTarget (StateT PUnit (OracleComp Common))
+  (simulateQ (QueryImpl.guardQueryBudget (q, signingLimit)
+    (Sum.elim (fun _ => (0, 0)) originalPolicy) forwarder (commonFallback pkSeed fallback))
+    (commonSource adv)).run (PUnit.unit, ((0, 0), false))
+
+private noncomputable def oldRelativeFixture (pkSeed : FIPS205.core.PkSeed)
+    (policy : SigningView.Event (labSpec FIPS205.core) (List Byte) → Nat) :
+    QueryImpl (SigningView.Events.Spec (labSpec FIPS205.core) (List Byte))
+      (StateT (CoverageDeferred.S FIPS205.core)
+        (OracleComp (Coverage.roleSpec FIPS205.core))) :=
+  CoverageDeferred.relative FIPS205.core pkSeed policy
+
+private noncomputable def originalMarkerRelativeFixture (pkSeed : FIPS205.core.PkSeed)
+    (policy : Ev → Nat) :
+    QueryImpl (labSpec FIPS205.core + O)
+      (StateT (CoverageDeferred.S FIPS205.core)
+        (OracleComp (Coverage.roleSpec FIPS205.core))) :=
+  CoverageDeferred.relative FIPS205.core pkSeed policy
+
+private noncomputable def oldPhaseCostFixture
+    (policy : SigningView.Event (labSpec FIPS205.core) (List Byte) → Nat) :=
+  CoverageDeferred.phaseCostAux FIPS205.core policy
+
+private noncomputable def originalPhaseCostFixture (policy : Ev → Nat) :=
+  CoverageDeferred.phaseCostAux FIPS205.core policy
+
+-- Replayed from fresh MarkedLab: full accepted old602 callback/count consumer, not a copy.
+#check @SLHDSA.Security.MarkedLab.native_counts_markedLabExperiment
+#check @QueryImpl.map_run_simulateQ_guardQueryBudget_free_eq
+#print axioms partialLabView
+#print axioms honestMarker
+#print axioms rawLift
+#print axioms liftedRawClient
+#print axioms reassociatedRawClient
+#print axioms combinedHandler
+#print axioms commonSource
+#print axioms commonFallback
+#print axioms freeGuardedSource
+#print axioms oldRelativeFixture
+#print axioms originalMarkerRelativeFixture
+#print axioms oldPhaseCostFixture
+#print axioms originalPhaseCostFixture
+
+end C0Frontend

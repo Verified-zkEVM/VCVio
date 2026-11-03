@@ -6,30 +6,34 @@ Authors: Alexander Hicks
 
 import RelativeKernel
 
-/-! # Complete signature-outcome specialization of relative tape averaging -/
+/-! # Complete joint observation of relative tape averaging
+
+The result and event interface are independent of the native lab-query domain.
+-/
 
 open OracleSpec OracleComp SignatureAlg
 
 namespace SLHDSA.Security.CoverageDeferred
 
-private theorem deriveOutcomeSpecialization :
-  ∀ {vp : ValidatedParams} (core : CorePrimitives vp.params)
+/-- Native tape averaging retains the complete result, phase metadata and selected cache. -/
+private theorem relative_observation_contract
+    {vp : ValidatedParams} (core : CorePrimitives vp.params)
     [SampleableType core.Y] [SampleableType (Bytes vp.params.m)]
     [DecidableEq core.Y] [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey]
-    [DecidableEq core.SkPrf],
-  ∀ (pkSeed : core.PkSeed)
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat)
-    (program : OracleComp (SigningView.Events.Spec (labSpec core) (List Byte))
-      (DeriveOutcome core))
+    [DecidableEq core.SkPrf]
+    {ιm Request α : Type} {markerSpec : OracleSpec.{0, 0} ιm}
+    (pkSeed : core.PkSeed)
+    (policy : SigningView.Event markerSpec Request → Nat)
+    (program : OracleComp (labSpec core + ObsSpec (SigningView.Event markerSpec Request)) α)
     (initialCost : Nat) (initialPhase : SigningView.Phase)
-    (signerLength forgerLength : Nat),
+    (signerLength forgerLength : Nat) :
     let initial : S core := (((∅, ∅), []), (initialCost, initialPhase))
     let lengths : Coverage.TapeClass → Nat := fun
       | .signer => signerLength
       | .forger => forgerLength
       | .other => 0
     letI : MeasurableSpace
-      (((DeriveOutcome core) × S core) × (Coverage.jointSpec core).QueryCache) := ⊤
+      ((α × S core) × (Coverage.jointSpec core).QueryCache) := ⊤
     𝒟[(do
       let tapes ← AnswerTape.tapeFamily (Coverage.tapeClassRange core) lengths
       let result ← (simulateQ (Coverage.roleRunImpl core)
@@ -38,14 +42,12 @@ private theorem deriveOutcomeSpecialization :
       return (result.1, result.2.1.1))] =
       𝒟[(fun result => (result, nativeCache core result.2.1)) <$>
         (simulateQ
-          ((SigningView.Events.handlerWithEvents (Request := List Byte)
+          ((eraseObsImpl (Ev := SigningView.Event markerSpec Request)
             (slhGraph core pkSeed).deferredImpl).extendState
-              (phaseCostAux core policy)) program).run initial] := by
-  intro vp core _ _ _ _ _ _ pkSeed policy program initialCost initialPhase
-    signerLength forgerLength
-  exact evalDist_relative_average_eq_deferred core pkSeed policy program initialCost
+              (phaseCostAux core policy)) program).run initial] :=
+  evalDist_relative_average_eq_deferred core pkSeed policy program initialCost
     initialPhase signerLength forgerLength
 
-#print axioms deriveOutcomeSpecialization
+#print axioms relative_observation_contract
 
 end SLHDSA.Security.CoverageDeferred

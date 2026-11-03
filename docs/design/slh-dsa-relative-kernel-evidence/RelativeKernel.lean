@@ -6,6 +6,7 @@ Authors: Alexander Hicks
 
 module
 public import SelectedWork
+public import VCVio.OracleComp.QueryTracking.ObservationOracle
 public import HashSig.SLHDSA.Security.LabScheme
 public import HashSig.SLHDSA.Security.CoverageRun
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Defer
@@ -18,6 +19,7 @@ open OracleSpec OracleComp SignatureAlg
 namespace SLHDSA.Security.CoverageDeferred
 
 variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
+variable {ιm Request : Type} {markerSpec : OracleSpec.{0, 0} ιm}
 
 /-- The existing deferred graph cache and pending cells. -/
 abbrev D : Type := LabState core × List (DeriveQuery core ⊕ NodeKey core)
@@ -31,10 +33,10 @@ def phaseRole : SigningView.Phase → Coverage.Role
   | .adversary | .verification => .forger
 
 /-- Event markers update phase and cost; native inputs leave the metadata unchanged. -/
-def phaseCostAux (policy : SigningView.Event (labSpec core) (List Byte) → Nat)
-    (input : (SigningView.Events.Spec (labSpec core) (List Byte)).Domain)
+def phaseCostAux (policy : SigningView.Event markerSpec Request → Nat)
+    (input : (labSpec core + ObsSpec (SigningView.Event markerSpec Request)).Domain)
     (_before : D core)
-    (_answer : (SigningView.Events.Spec (labSpec core) (List Byte)).Range input)
+    (_answer : ((labSpec core + ObsSpec (SigningView.Event markerSpec Request))).Range input)
     (_after : D core) (metadata : Nat × SigningView.Phase) : Nat × SigningView.Phase :=
   match input with
   | .inl _ => metadata
@@ -65,8 +67,8 @@ variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)]
 
 /-- The deferred graph handler with message digests and nonces routed to the native oracle. -/
 noncomputable def relative (pkSeed : core.PkSeed)
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat) :
-    QueryImpl (SigningView.Events.Spec (labSpec core) (List Byte))
+    (policy : SigningView.Event markerSpec Request → Nat) :
+    QueryImpl ((labSpec core + ObsSpec (SigningView.Event markerSpec Request)))
       (StateT (S core) (OracleComp (Coverage.roleSpec core))) :=
   fun input => StateT.mk fun state =>
     match input with
@@ -87,15 +89,15 @@ noncomputable def relative (pkSeed : core.PkSeed)
 
 /-- A marker changes only the declared cost and phase metadata. -/
 theorem relative_marker (pkSeed : core.PkSeed)
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat)
-    (event : SigningView.Event (labSpec core) (List Byte)) (state : S core) :
+    (policy : SigningView.Event markerSpec Request → Nat)
+    (event : SigningView.Event markerSpec Request) (state : S core) :
     (relative core pkSeed policy (.inr event)).run state =
       pure (⟨⟩, (state.1, phaseCostAux core policy (.inr event) state.1 ⟨⟩ state.1 state.2)) := by
   simp only [relative, StateT.run_mk]
 
 /-- Every message-digest call forwards the actual key and message, then mirrors its answer. -/
 theorem relative_hmsg (pkSeed : core.PkSeed)
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat)
+    (policy : SigningView.Event markerSpec Request → Nat)
     (R : core.Y) (seed : core.PkSeed) (root : core.Y) (message : List Byte) (state : S core) :
     (relative core pkSeed policy
       (.inl (.inl (.inl (.inr (.inl (.hmsg R seed root message))))))).run state = (do
@@ -107,7 +109,7 @@ theorem relative_hmsg (pkSeed : core.PkSeed)
 
 /-- Every nonce derivation forwards its exact salt/message cell, then mirrors the answer. -/
 theorem relative_rand (pkSeed : core.PkSeed)
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat)
+    (policy : SigningView.Event markerSpec Request → Nat)
     (salt : core.Y) (message : List Byte) (state : S core) :
     ((relative core pkSeed policy) (.inl (.inl (.inr (.inr (salt, message)))))).run state =
       (fun R => (R, (((state.1.1.1,
@@ -123,7 +125,7 @@ private def IsSelectedNative : (labSpec core).Domain → Prop
 
 /-- The remaining native calls execute the existing deferred handler privately. -/
 private theorem relative_other (pkSeed : core.PkSeed)
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat)
+    (policy : SigningView.Event markerSpec Request → Nat)
     (input : (labSpec core).Domain) (other : ¬IsSelectedNative core input) (state : S core) :
     (relative core pkSeed policy (.inl input)).run state = (do
       let result ← privateUniform core (((slhGraph core pkSeed).deferredImpl input).run state.1)
@@ -309,38 +311,39 @@ private theorem cacheQuery_eq_self {ι : Type} {spec : OracleSpec.{0, 0} ι}
   · simp [QueryCache.cacheQuery_of_ne _ _ eq]
 
 private theorem run_relative_other (pkSeed : core.PkSeed)
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat)
+    (policy : SigningView.Event markerSpec Request → Nat)
     (input : (labSpec core).Domain) (other : ¬IsSelectedNative core input) (state : S core) :
     (simulateQ (AnswerTape.dupRandomOracleFwd (Coverage.jointSpec core))
       ((relative core pkSeed policy (.inl input)).run state)).run
         (nativeCache core state.1) =
       (fun result => (result, nativeCache core result.2.1)) <$>
-        (((SigningView.Events.handlerWithEvents (Request := List Byte)
+        (((eraseObsImpl (Ev := SigningView.Event markerSpec Request)
           (slhGraph core pkSeed).deferredImpl).extendState
             (phaseCostAux core policy)) (.inl input)).run state := by
   rw [relative_other core pkSeed policy input other]
   simp only [simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure]
   rw [run_privateUniform]
   simp only [bind_map_left, QueryImpl.extendState_apply,
-    SigningView.Events.handlerWithEvents, phaseCostAux]
+    eraseObsImpl, phaseCostAux]
   simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc, pure_bind]
   apply bind_congr_of_forall_mem_support
   intro z hz
   rw [nativeCache_deferred_other core pkSeed input other state.1 hz]
 
 private theorem run_relative_step (pkSeed : core.PkSeed)
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat)
-    (input : (SigningView.Events.Spec (labSpec core) (List Byte)).Domain) (state : S core) :
+    (policy : SigningView.Event markerSpec Request → Nat)
+    (input : (labSpec core + ObsSpec (SigningView.Event markerSpec Request)).Domain)
+    (state : S core) :
     (simulateQ (AnswerTape.dupRandomOracleFwd (Coverage.jointSpec core))
       ((relative core pkSeed policy input).run state)).run (nativeCache core state.1) =
       (fun result => (result, nativeCache core result.2.1)) <$>
-        (((SigningView.Events.handlerWithEvents (Request := List Byte)
+        (((eraseObsImpl (Ev := SigningView.Event markerSpec Request)
           (slhGraph core pkSeed).deferredImpl).extendState
             (phaseCostAux core policy)) input).run state := by
   cases input with
   | inr event =>
     simp only [relative_marker, simulateQ_pure, StateT.run_pure,
-      QueryImpl.extendState_apply, SigningView.Events.handlerWithEvents,
+      QueryImpl.extendState_apply, eraseObsImpl,
       StateT.run_pure, pure_bind, map_pure]
   | inl native =>
     by_cases other : ¬IsSelectedNative core native
@@ -352,7 +355,7 @@ private theorem run_relative_step (pkSeed : core.PkSeed)
         rw [relative_hmsg]
         simp only [simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure]
         rw [run_role_hash]
-        simp only [QueryImpl.extendState_apply, SigningView.Events.handlerWithEvents,
+        simp only [QueryImpl.extendState_apply, eraseObsImpl,
           phaseCostAux, map_bind]
         rw [deferred_hmsg core pkSeed R seed root message state.1]
         simp only [bind_map_left, map_pure]
@@ -366,7 +369,7 @@ private theorem run_relative_step (pkSeed : core.PkSeed)
         rw [relative_rand]
         simp only [simulateQ_map, StateT.run_map]
         rw [run_role_derive]
-        simp only [QueryImpl.extendState_apply, SigningView.Events.handlerWithEvents,
+        simp only [QueryImpl.extendState_apply, eraseObsImpl,
           phaseCostAux, map_bind]
         rw [deferred_rand core pkSeed salt message state.1]
         simp only [bind_map_left, map_pure]
@@ -378,14 +381,14 @@ private theorem run_relative_step (pkSeed : core.PkSeed)
         | none => simp [nativeCache_rand]
 
 private theorem run_relative {α : Type} (pkSeed : core.PkSeed)
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat)
-    (program : OracleComp (SigningView.Events.Spec (labSpec core) (List Byte)) α)
+    (policy : SigningView.Event markerSpec Request → Nat)
+    (program : OracleComp ((labSpec core + ObsSpec (SigningView.Event markerSpec Request))) α)
     (state : S core) :
     (simulateQ (AnswerTape.dupRandomOracleFwd (Coverage.jointSpec core))
       ((simulateQ (relative core pkSeed policy) program).run state)).run
         (nativeCache core state.1) =
       (fun result => (result, nativeCache core result.2.1)) <$>
-        (simulateQ ((SigningView.Events.handlerWithEvents (Request := List Byte)
+        (simulateQ ((eraseObsImpl (Ev := SigningView.Event markerSpec Request)
           (slhGraph core pkSeed).deferredImpl).extendState
             (phaseCostAux core policy)) program).run state := by
   induction program using OracleComp.inductionOn generalizing state with
@@ -424,8 +427,8 @@ private theorem run_roleRun_projected {α : Type}
 /-- Averaging native tapes preserves the complete deferred observation and selected cache. -/
 theorem evalDist_relative_average_eq_deferred {α : Type}
     (pkSeed : core.PkSeed)
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat)
-    (program : OracleComp (SigningView.Events.Spec (labSpec core) (List Byte))
+    (policy : SigningView.Event markerSpec Request → Nat)
+    (program : OracleComp ((labSpec core + ObsSpec (SigningView.Event markerSpec Request)))
       α)
     (initialCost : Nat) (initialPhase : SigningView.Phase)
     (signerLength forgerLength : Nat) :
@@ -444,7 +447,7 @@ theorem evalDist_relative_average_eq_deferred {α : Type}
       return (result.1, result.2.1.1))] =
       𝒟[(fun result => (result, nativeCache core result.2.1)) <$>
         (simulateQ
-          ((SigningView.Events.handlerWithEvents (Request := List Byte)
+          ((eraseObsImpl (Ev := SigningView.Event markerSpec Request)
             (slhGraph core pkSeed).deferredImpl).extendState
               (phaseCostAux core policy)) program).run initial] := by
   let initial : S core := (((∅, ∅), []), (initialCost, initialPhase))

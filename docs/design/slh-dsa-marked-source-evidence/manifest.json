@@ -1,6 +1,6 @@
 {
   "format": 2,
-  "stage": "A",
+  "stage": "A+C0",
   "scope": "Shared generic observer and current marked-source research development; no final127 acceptance",
   "canonicalCommit": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
   "frozenBasisCommit": "56697d5df532d3d68c480cbc604ed89ba45f2513",
@@ -66,8 +66,8 @@
     },
     "RelativeKernel": {
       "path": "docs/design/slh-dsa-relative-kernel-evidence/RelativeKernel.lean",
-      "sha256": "5377d7f67322f173d60099feaeafe863e2df552947f6ed2a3aed6626c7935f6f",
-      "gitBlob": "b483ca2ef78c34c5c478e0a395ecf0783c5b84c4",
+      "sha256": "f2e3140c636d8105321383e2422353ffedf450e8eb90fd29c6cf6a7ef4dd13c6",
+      "gitBlob": "f78fec3325c1dc5475546e139eef6bae1cff597e",
       "basis": false,
       "module": true,
       "axiomReports": 20
@@ -90,8 +90,8 @@
     },
     "MarkedLab": {
       "path": "docs/design/slh-dsa-marked-source-evidence/MarkedLab.lean",
-      "sha256": "a139965e0ac090b6918e2934ed411e5550076ebd2876a492b38840b3d7d75d79",
-      "gitBlob": "eda02273fded2e91a92b4cedf449835c337997b8",
+      "sha256": "8cc019143e1849406701426a49b50dc96ee0f441c6811aff889fa0fd18514ef6",
+      "gitBlob": "059ed43f1ffa44bda183713a59a0ae18a4798dd1",
       "basis": false,
       "module": true,
       "axiomReports": 4
@@ -106,24 +106,34 @@
     },
     "DeriveAudit": {
       "path": "docs/design/slh-dsa-relative-kernel-evidence/DeriveAudit.lean.txt",
-      "sha256": "b2efee95df4acd1fb27d2b330fb36cdb2aa88a59c76d0faebe92bfaca10eac1c",
-      "gitBlob": "31f0a11011fd63834cd8c822387b09a41ea24ccc",
+      "sha256": "1fea3a7dd8bb4241a35d45e9d9e945f85f63c85da632444e50f070139777ff36",
+      "gitBlob": "967cb126d55c31189d21a6250a41102d874ecea2",
       "basis": false,
       "module": false,
       "axiomReports": 1
+    },
+    "C0Frontend": {
+      "path": "docs/design/slh-dsa-marked-source-evidence/ConstructionAudit.lean.txt",
+      "sha256": "397c614b89b07091313d07354783236fa463b43fac9ed94a75317486d556a341",
+      "gitBlob": "abfedfa95bd7099bb9d1c5de8b5db218571fc37a",
+      "basis": false,
+      "module": false,
+      "axiomReports": 13
     }
   },
   "payloadFiles": {
     "VCVio/CryptoFoundations/SignatureAlg/CountedExperiment.lean": "83928f7a65ac368ecc50c41ee36dc248d9256ce99c98a6a1a4a41fd3a34ad7f9",
+    "docs/design/slh-dsa-marked-source-evidence/ConstructionAudit.lean.txt": "397c614b89b07091313d07354783236fa463b43fac9ed94a75317486d556a341",
     "docs/design/slh-dsa-marked-source-evidence/ImportAudit.lean.txt": "6f739b5108dcab77104c33c27f9fe1a6eb7732bb8900752bf1c8f6460e89a127",
-    "docs/design/slh-dsa-marked-source-evidence/MarkedLab.lean": "a139965e0ac090b6918e2934ed411e5550076ebd2876a492b38840b3d7d75d79",
-    "docs/design/slh-dsa-marked-source-evidence/README.md": "5463efe8ab541387a741c24df56324dad6c58ec9553d21aa5f418adf7290b217",
-    "docs/design/slh-dsa-relative-kernel-evidence/README.md": "ce602da242fa1efd3c7255cb09a11c74fecfb1695504c0f2faa73efa9b5681e9",
-    "docs/design/slh-dsa-relative-kernel-evidence/RelativeKernel.lean": "5377d7f67322f173d60099feaeafe863e2df552947f6ed2a3aed6626c7935f6f",
-    "docs/design/slh-dsa-relative-kernel-evidence/manifest.json": "8ea87723296c34e552fb2f7539a3c99e6b7778370b287d70f08be375c136fca8",
+    "docs/design/slh-dsa-marked-source-evidence/MarkedLab.lean": "8cc019143e1849406701426a49b50dc96ee0f441c6811aff889fa0fd18514ef6",
+    "docs/design/slh-dsa-marked-source-evidence/README.md": "f5d047b1d7ff1209ddf1067ac210d6a06b2da7efce00bcc59de4b88439b09854",
+    "docs/design/slh-dsa-relative-kernel-evidence/README.md": "af7000e5f57640729235132f2830198bf20a0aad19da6d47953ff8379668a8f7",
+    "docs/design/slh-dsa-relative-kernel-evidence/RelativeKernel.lean": "f2e3140c636d8105321383e2422353ffedf450e8eb90fd29c6cf6a7ef4dd13c6",
+    "docs/design/slh-dsa-relative-kernel-evidence/manifest.json": "f2ce8484aef9d0c7ca687a3c5b427594a592f08d5b3cfeba0e271c28d70c8b0a",
     "docs/design/slh-dsa-selected-work-evidence/README.md": "538e3d1acd18675658c5d47aee06d6e21389ffc0d28a510f78789b5851022f50",
     "docs/design/slh-dsa-selected-work-evidence/SelectedWork.lean": "1ce2eb17e411b5101e99e931ec659d9570d052255c374d0e0eb61aa8afbe918f",
-    "docs/design/slh-dsa-selected-work-evidence/manifest.json": "0bfcf2b74b92b4266ff5728a3923055257833d27a8c0ab4f269935fa9f88425f"
+    "docs/design/slh-dsa-selected-work-evidence/manifest.json": "0bfcf2b74b92b4266ff5728a3923055257833d27a8c0ab4f269935fa9f88425f",
+    "docs/design/slh-dsa-relative-kernel-evidence/DeriveAudit.lean.txt": "1fea3a7dd8bb4241a35d45e9d9e945f85f63c85da632444e50f070139777ff36"
   },
   "retiredPaths": [
     "docs/design/slh-dsa-selected-work-evidence/ImportAudit.lean"
@@ -152,11 +162,12 @@
       "FreeGuardInterpretation",
       "MarkedLab",
       "SharedAudit",
-      "DeriveAudit"
+      "DeriveAudit",
+      "C0Frontend"
     ],
-    "commands": 10,
-    "outputs": 42,
-    "axiomReports": 60,
+    "commands": 11,
+    "outputs": 43,
+    "axiomReports": 73,
     "emptyReports": 1,
     "moduleArtifacts": [
       "olean",
@@ -182,12 +193,13 @@
     "scope": "Original source, metadata and prior recorded receipts remain historical Git inputs, not this replay"
   },
   "acceptedAReviewSHA256": "4d5a77585a3c1d90336f162ba5938b7130309f6d7a63fbc4e8797b2b2bb2ba6e",
-  "acceptedC0SourceHandoffSHA256": null,
-  "workingProofNetLines": -122,
+  "acceptedC0SourceHandoffSHA256": "145438f21c1e71218150a9c3db4a4ed7eba8e1662484514dd238ccb6a50d5c4a",
+  "workingProofNetLines": -109,
   "limits": [
     "No B body or ideal AE assumption",
     "No C1/C2 coupling proof",
     "No private seed/lab transport or final127 claim",
     "No wholesale production archive migration"
-  ]
+  ],
+  "relativeAuditScope": "Full existing generic public law with arbitrary result/event interface and exact Top-space joint cache observation"
 }

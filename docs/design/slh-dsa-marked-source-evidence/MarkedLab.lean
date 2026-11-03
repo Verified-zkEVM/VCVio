@@ -757,7 +757,8 @@ private def activeClass : SigningView.Phase → Coverage.TapeClass
 private theorem other_hmsg_bound (pkSeed : core.PkSeed)
     (input : (labSpec core).Domain) (hi : ¬ CoverageDeferred.IsSelectedNative core input)
     (state : CoverageDeferred.S core) (j : Coverage.TapeClass) :
-    IsQueryBoundP ((CoverageDeferred.relative core pkSeed (fun _ => 0) (.inl input)).run state)
+    IsQueryBoundP ((CoverageDeferred.relative core pkSeed
+      (fun _ : SigningView.Event (labSpec core) (List Byte) => 0) (.inl input)).run state)
       (fun input => AnswerTape.classOf (Coverage.tapeClass core) input = some j) 0 := by
   rw [CoverageDeferred.relative_other core pkSeed (fun _ => 0) input hi state]
   exact isQueryBoundP_bind (uniform_hmsg_bound core _ j)
@@ -766,7 +767,8 @@ private theorem other_hmsg_bound (pkSeed : core.PkSeed)
 private theorem relative_hmsg_bound (pkSeed : core.PkSeed)
     (input : (labSpec core).Domain) (state : CoverageDeferred.S core)
     (j : Coverage.TapeClass) (hj : j ≠ .other) :
-    IsQueryBoundP ((CoverageDeferred.relative core pkSeed (fun _ => 0) (.inl input)).run state)
+    IsQueryBoundP ((CoverageDeferred.relative core pkSeed
+      (fun _ : SigningView.Event (labSpec core) (List Byte) => 0) (.inl input)).run state)
       (fun input => AnswerTape.classOf (Coverage.tapeClass core) input = some j)
       (if IsPublicLabQuery core input ∧ j = activeClass state.2.2 then 1 else 0) := by
   rcases input with (((n | (hash | prf)) | (secret | nonce)) | (touch | read))
@@ -800,7 +802,8 @@ private theorem relative_hmsg_bound (pkSeed : core.PkSeed)
 
 private noncomputable abbrev nativeRelative (pkSeed : core.PkSeed) :=
   ((Coverage.roleRunImpl core).mapStateTBase
-    (CoverageDeferred.relative core pkSeed (fun _ => 0))).flattenStateT
+    (CoverageDeferred.relative core pkSeed
+      (fun _ : SigningView.Event (labSpec core) (List Byte) => 0))).flattenStateT
 
 private theorem nativeRelative_cnt (pkSeed : core.PkSeed) (input : (labSpec core).Domain)
     (state : CoverageDeferred.S core × Coverage.RoleState core)
@@ -837,7 +840,8 @@ private theorem nativeRelative_marker (pkSeed : core.PkSeed)
     (state : CoverageDeferred.S core × Coverage.RoleState core) :
     (nativeRelative core pkSeed (.inr event)).run state =
       pure (⟨⟩, ((state.1.1,
-        CoverageDeferred.phaseCostAux core (fun _ => 0) (.inr event)
+        CoverageDeferred.phaseCostAux core
+          (fun _ : SigningView.Event (labSpec core) (List Byte) => 0) (.inr event)
           state.1.1 ⟨⟩ state.1.1 state.1.2), state.2)) := by
   rw [nativeRelative, QueryImpl.flattenStateT_mapStateTBase_apply_run,
     CoverageDeferred.relative_marker]
@@ -905,12 +909,14 @@ private theorem phase_step (pkSeed : core.PkSeed) (caps : Nat × Nat)
     obtain ⟨out, hout, rfl⟩ := hr
     have hc := nativeRelative_cnt core pkSeed input
       ((state.1.1.1,
-        CoverageDeferred.phaseCostAux core (fun _ => 0) (.inr (.ambient phase input))
+        CoverageDeferred.phaseCostAux core
+          (fun _ : SigningView.Event (labSpec core) (List Byte) => 0) (.inr (.ambient phase input))
           state.1.1.1 ⟨⟩ state.1.1.1 state.1.1.2), state.1.2) out hout
       .signer (by decide)
     have hm := nativeRelative_cnt core pkSeed input
       ((state.1.1.1,
-        CoverageDeferred.phaseCostAux core (fun _ => 0) (.inr (.ambient phase input))
+        CoverageDeferred.phaseCostAux core
+          (fun _ : SigningView.Event (labSpec core) (List Byte) => 0) (.inr (.ambient phase input))
           state.1.1.1 ⟨⟩ state.1.1.1 state.1.1.2), state.1.2) out hout
       .forger (by decide)
     simp only [CoverageDeferred.phaseCostAux, Nat.add_zero] at hc hm
@@ -1181,7 +1187,8 @@ private theorem guard_native_reassoc {α : Type}
     (simulateQ (Coverage.roleRunImpl core)
       ((simulateQ (QueryImpl.guardQueryBudget caps
         (Sum.elim (fun _ => (0, 0)) (sourcePolicy core extra))
-        (CoverageDeferred.relative core pkSeed (fun _ => 0)) fallback) program).run
+        (CoverageDeferred.relative core pkSeed
+      (fun _ : SigningView.Event (labSpec core) (List Byte) => 0)) fallback) program).run
           (relativeState, (counts, flag)))).run nativeState =
     (fun out => ((out.1, (out.2.1.1, out.2.2)), out.2.1.2)) <$>
       (simulateQ (controlled core pkSeed caps extra fallback) program).run
@@ -1189,7 +1196,8 @@ private theorem guard_native_reassoc {α : Type}
   let cost : (SigningView.Events.Spec (labSpec core) (List Byte)).Domain → Nat × Nat :=
     Sum.elim (fun _ => (0, 0)) (sourcePolicy core extra)
   let inner := QueryImpl.guardQueryBudget caps cost
-    (CoverageDeferred.relative core pkSeed (fun _ => 0)) fallback
+    (CoverageDeferred.relative core pkSeed
+      (fun _ : SigningView.Event (labSpec core) (List Byte) => 0)) fallback
   let project : ((CoverageDeferred.S core × ((Nat × Nat) × Bool)) × Coverage.RoleState core) →
       (CoverageDeferred.S core × Coverage.RoleState core) × ((Nat × Nat) × Bool) :=
     fun state => ((state.1.1, state.2), state.1.2)
@@ -1242,7 +1250,8 @@ theorem native_counts_markedLabExperiment
     let policy : SigningView.Event (labSpec core) (List Byte) → Nat × Nat := fun event =>
       (base event + extra event, match event with | .signingAttempt _ => 1 | _ => 0)
     let guarded := QueryImpl.guardQueryBudget caps (Sum.elim (fun _ => (0, 0)) policy)
-      (CoverageDeferred.relative core pkSeed (fun _ => 0)) fallback
+      (CoverageDeferred.relative core pkSeed
+      (fun _ : SigningView.Event (labSpec core) (List Byte) => 0)) fallback
     let initial : CoverageDeferred.S core × ((Nat × Nat) × Bool) :=
       ((((∅, ∅), []), (0, .keygen)), ((0, 0), false))
     let source := markedLabExperiment core adv pkSeed
@@ -1269,7 +1278,8 @@ theorem native_counts_markedLabExperiment
   change result ∈ support ((simulateQ (Coverage.roleRunImpl core)
     ((simulateQ (QueryImpl.guardQueryBudget caps
       (Sum.elim (fun _ => (0, 0)) (sourcePolicy core extra))
-      (CoverageDeferred.relative core pkSeed (fun _ => 0)) fallback)
+      (CoverageDeferred.relative core pkSeed
+      (fun _ : SigningView.Event (labSpec core) (List Byte) => 0)) fallback)
       (markedLabExperiment core adv pkSeed)).run
         ((((∅, ∅), []), (0, .keygen)), ((0, 0), false)))).run
           ((∅, L), (AnswerTape.ClassPos.init, ∅))) at hr
