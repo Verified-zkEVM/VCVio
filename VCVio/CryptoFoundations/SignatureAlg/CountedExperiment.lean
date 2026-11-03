@@ -7,6 +7,7 @@ Authors: Alexander Hicks
 module
 public import VCVio.CryptoFoundations.SignatureAlg.SigningView
 public import VCVio.OracleComp.QueryTracking.WriterCost
+public import VCVio.OracleComp.QueryTracking.ObservationOracle
 
 /-!
 # Phase and input-dependent signature experiment costs
@@ -365,3 +366,216 @@ theorem countedExperiment_erases_run_bind [AddMonoid C]
   simpa only [bind_map_left] using equality
 
 end SignatureAlg.SigningView
+
+/-! ## Deterministic phase observations -/
+
+namespace SignatureAlg.SigningView.Events
+
+/-- Native queries together with deterministic phase and signing-attempt markers. -/
+abbrev Spec {ι : Type} (spec : OracleSpec.{0, 0} ι) (Request : Type) :
+    OracleSpec.{0, 0} (ι ⊕ Event spec Request) :=
+  spec + (Event spec Request →ₒ PUnit)
+
+/-- Emit one phase or signing-attempt event. -/
+@[expose] def emit {ι : Type} (spec : OracleSpec.{0, 0} ι) (Request : Type)
+    (event : Event spec Request) : OracleComp (Spec spec Request) PUnit :=
+  liftM ((Spec spec Request).query (.inr event))
+
+/-- Record an ambient event before forwarding its native query. -/
+@[expose] def phaseImpl {ι : Type} (spec : OracleSpec.{0, 0} ι) (Request : Type)
+    (phase : Phase) : QueryImpl spec (OracleComp (Spec spec Request)) :=
+  QueryImpl.preInsert
+    (fun input => (liftM ((Spec spec Request).query (.inl input)) :
+      OracleComp (Spec spec Request) (spec.Range input)))
+    (fun input => emit spec Request (.ambient phase input))
+
+/-- Embed the supplied algorithms with their phase and callback-entry events. -/
+@[expose] def viewWithEvents {ι Request PK SK Sig Reply : Type} {spec : OracleSpec.{0, 0} ι}
+    (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply) :
+    SignatureAlg.SigningView (OracleComp (Spec spec Request)) Request PK SK Sig Reply where
+  keygen := simulateQ (phaseImpl spec Request .keygen) view.keygen
+  sign pk sk request := do
+    emit spec Request (.signingAttempt request)
+    simulateQ (phaseImpl spec Request .signer) (view.sign pk sk request)
+  verify pk request sig :=
+    simulateQ (phaseImpl spec Request .verification) (view.verify pk request sig)
+  readback := view.readback
+
+/-- Embed the source adversary's native traffic while forwarding its signing calls. -/
+@[expose] def mainWithEvents {ι Request PK Sig Reply : Type} {spec : OracleSpec.{0, 0} ι}
+    (adv : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig)) :
+    PK → OracleComp (Spec spec Request + (Request →ₒ Reply)) (Request × Sig) :=
+  fun pk => simulateQ
+    (QueryImpl.add (spec₁ := spec) (spec₂ := Request →ₒ Reply)
+      (fun input => simulateQ
+        (fun native => liftM ((Spec spec Request + (Request →ₒ Reply)).query (.inl native)))
+        (phaseImpl spec Request .adversary input))
+      (fun request => liftM ((Spec spec Request + (Request →ₒ Reply)).query (.inr request))))
+    (adv pk)
+
+/-- Interpret native queries with the supplied handler and event markers with unit. -/
+@[expose] def handlerWithEvents {ι Request : Type} {spec : OracleSpec.{0, 0} ι}
+    {m : Type → Type v} [Monad m] (handler : QueryImpl spec m) :
+    QueryImpl (Spec spec Request) m :=
+  fun input => match input with
+  | .inl native => handler native
+  | .inr _ => pure ⟨⟩
+
+private def costImpl {ι Request C : Type} [AddMonoid C] {spec : OracleSpec.{0, 0} ι}
+    (policy : Event spec Request → C) : QueryImpl (Spec spec Request) (CostM spec C) :=
+  fun input => match input with
+  | .inl native => liftM (liftM (spec.query native) : OracleComp spec (spec.Range native))
+  | .inr event => do
+    AddWriterT.addTell (policy event)
+    pure ⟨⟩
+
+private theorem simulateQ_phaseImpl {ι Request α C : Type} [AddMonoid C]
+    {spec : OracleSpec.{0, 0} ι}
+    (policy : Event spec Request → C) (phase : Phase) (body : OracleComp spec α) :
+    simulateQ (costImpl policy) (simulateQ (phaseImpl spec Request phase) body) =
+      costed policy phase body := by
+  unfold costed
+  apply QueryImpl.simulateQ_simulateQ_eq_of_apply
+  intro input
+  simp [phaseImpl, emit, costImpl, QueryImpl.withAddCost_apply, monad_norm]
+
+private theorem simulateQ_client {ι Request PK SK Sig Reply C : Type} [AddMonoid C]
+    {spec : OracleSpec.{0, 0} ι} (policy : Event spec Request → C)
+    (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
+    (pk : PK) (sk : SK)
+    (adv : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig)) :
+    simulateQ (costImpl policy)
+      ((viewWithEvents view).runWithSigningOracle pk sk (mainWithEvents adv pk)) =
+      countedPhase policy view pk sk (adv pk) := by
+  let red : QueryImpl (spec + (Request →ₒ Reply))
+      (WriterT (QueryLog (Request →ₒ Reply)) (OracleComp (Spec spec Request))) :=
+    ((Spec spec Request).passthrough + (viewWithEvents view).signingOracle pk sk) ∘ₛ
+      QueryImpl.add (spec₁ := spec) (spec₂ := Request →ₒ Reply)
+        (fun input => simulateQ
+          (fun native => liftM ((Spec spec Request + (Request →ₒ Reply)).query (.inl native)))
+          (phaseImpl spec Request .adversary input))
+        (fun request => liftM ((Spec spec Request + (Request →ₒ Reply)).query (.inr request)))
+  rw [runWithSigningOracle, mainWithEvents, ← QueryImpl.simulateQ_compose]
+  change simulateQ (costImpl policy) (simulateQ red (adv pk)).run =
+    (simulateQ (countedHandler policy view pk sk) (adv pk)).run
+  apply simulateQ_WriterT_compose
+  intro input
+  cases input with
+  | inl input =>
+    have step : (red (.inl input)).run =
+        (fun answer => (answer, [])) <$> (phaseImpl spec Request .adversary input) := by
+      simp only [red, QueryImpl.apply_compose, QueryImpl.add]
+      have h : simulateQ
+          ((Spec spec Request).passthrough + (viewWithEvents view).signingOracle pk sk)
+          (simulateQ
+            (fun native => liftM ((Spec spec Request + (Request →ₒ Reply)).query (.inl native)))
+            (phaseImpl spec Request .adversary input)) =
+          simulateQ ((QueryImpl.id' (Spec spec Request)).liftTarget
+            (WriterT (QueryLog (Request →ₒ Reply)) (OracleComp (Spec spec Request))))
+            (phaseImpl spec Request .adversary input) := by
+        apply QueryImpl.simulateQ_simulateQ_eq_of_apply
+        intro native
+        simp only [simulateQ_spec_query, QueryImpl.passthrough_add, QueryImpl.add_apply_inl]
+      rw [h, writerT_run_simulateQ_liftTarget, simulateQ_id']
+      rfl
+    rw [step, simulateQ_map]
+    have h := simulateQ_phaseImpl policy .adversary (liftM (spec.query input))
+    simp only [simulateQ_spec_query] at h
+    rw [h]
+    simp [countedHandler, countedHandlerUsing, costed, QueryImpl.withAddCost_apply]
+  | inr request =>
+    have step : (red (.inr request)).run =
+        (fun answer => (answer, [⟨request, answer⟩])) <$>
+          (viewWithEvents view).sign pk sk request := by
+      simp [red, QueryImpl.add, signingOracle, QueryImpl.withLogging_apply]
+    rw [step, simulateQ_map]
+    change (fun answer : Reply => (answer, ([⟨request, answer⟩] : QueryLog (Request →ₒ Reply)))) <$>
+      simulateQ (costImpl policy) (emit spec Request (.signingAttempt request) >>= fun _ =>
+        simulateQ (phaseImpl spec Request .signer) (view.sign pk sk request)) = _
+    have hemit : simulateQ (costImpl policy) (emit spec Request (.signingAttempt request)) =
+        AddWriterT.addTell (policy (.signingAttempt request)) := by
+      simp [emit, costImpl, AddWriterT.addTell]
+    rw [simulateQ_bind, hemit]
+    simp [simulateQ_phaseImpl, countedHandler, countedHandlerUsing,
+      countedSigningOracleUsing_run, map_bind]
+
+private theorem simulateQ_fullKeys
+    {ι Request PK SK Sig Reply C : Type} {spec : OracleSpec.{0, 0} ι} [AddMonoid C]
+    (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
+    (adv : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig))
+    (policy : Event spec Request → C) :
+    simulateQ (costImpl policy) (do
+      let keys ← (viewWithEvents view).keygen
+      let (forgery, rawLog) ← (viewWithEvents view).runWithSigningOracle
+        keys.1 keys.2 (mainWithEvents adv keys.1)
+      let verified ← (viewWithEvents view).verify keys.1 forgery.1 forgery.2
+      return (keys, (⟨forgery, rawLog, verified⟩ : Outcome Request Sig Reply))) =
+      (do
+        let keys ← costed policy .keygen view.keygen
+        let outcome ← countedAfterKeygen policy view keys.1 keys.2 adv
+        return (keys, outcome)) := by
+  simp only [simulateQ_bind, simulateQ_pure]
+  change (do
+    let keys ← simulateQ (costImpl policy)
+      (simulateQ (phaseImpl spec Request .keygen) view.keygen)
+    let phase ← simulateQ (costImpl policy)
+      ((viewWithEvents view).runWithSigningOracle keys.1 keys.2 (mainWithEvents adv keys.1))
+    let verified ← simulateQ (costImpl policy)
+      (simulateQ (phaseImpl spec Request .verification) (view.verify keys.1 phase.1.1 phase.1.2))
+    return (keys, (⟨phase.1, phase.2, verified⟩ : Outcome Request Sig Reply))) = _
+  simp_rw [simulateQ_phaseImpl, simulateQ_client]
+  simp only [countedAfterKeygen, bind_assoc, pure_bind]
+
+/-- Phase observations retain the complete key pair, outcome, additive cost and final cache. -/
+theorem runObs_fullKeys_eq_counted
+    {ι Request PK SK Sig Reply Cache C : Type} {spec : OracleSpec.{0, 0} ι}
+    [AddMonoid C]
+    (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
+    (adv : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig))
+    (policy : Event spec Request → C)
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    (handler : QueryImpl spec (StateT Cache m)) (initial : Cache) :
+    let marked : OracleComp (Spec spec Request)
+        ((PK × SK) × Outcome Request Sig Reply) := do
+      let keys ← (viewWithEvents view).keygen
+      let (forgery, rawLog) ← (viewWithEvents view).runWithSigningOracle
+        keys.1 keys.2 (mainWithEvents adv keys.1)
+      let verified ← (viewWithEvents view).verify keys.1 forgery.1 forgery.2
+      return (keys, ⟨forgery, rawLog, verified⟩)
+    let counted : CostM spec C ((PK × SK) × Outcome Request Sig Reply) := do
+      let keys ← costed policy .keygen view.keygen
+      let outcome ← countedAfterKeygen policy view keys.1 keys.2 adv
+      return (keys, outcome)
+    (fun result => ((result.1.1, Multiplicative.toAdd result.1.2), result.2)) <$>
+      (runObs handler (fun event => Multiplicative.ofAdd (policy event)) marked).run initial =
+      (simulateQ handler counted.runAdd).run initial := by
+  intro marked counted
+  have hfree : simulateQ (costImpl policy) marked = counted :=
+    simulateQ_fullKeys view adv policy
+  let morph : CostM spec C →ᵐ AddWriterT C (StateT Cache m) := {
+    toFun := fun {_α} body => WriterT.mk (simulateQ handler body.run)
+    toFun_pure' := fun _ => by
+      apply WriterT.ext
+      simp
+    toFun_bind' := fun body next => by
+      apply WriterT.ext
+      simp only [WriterT.run_mk, WriterT.run_bind, simulateQ_bind, simulateQ_map] }
+  have hhandlers : (fun input => morph (costImpl policy input)) =
+      (eraseObsImpl handler).withCost
+        (obsCostFn (fun event => Multiplicative.ofAdd (policy event))) := by
+    funext input
+    apply WriterT.ext
+    cases input <;>
+      simp [morph, costImpl, QueryImpl.withCost, eraseObsImpl, obsCostFn,
+        AddWriterT.addTell, monad_norm]
+  have natural := PFunctor.FreeM.liftM_natural (costImpl policy) morph marked
+  change morph (simulateQ (costImpl policy) marked) =
+    simulateQ (fun input => morph (costImpl policy input)) marked at natural
+  rw [hfree, hhandlers] at natural
+  have hrun := congrArg (fun body => body.run.run initial) natural.symm
+  change (runObs handler (fun event => Multiplicative.ofAdd (policy event)) marked).run initial =
+    (simulateQ handler counted.run).run initial at hrun
+  rw [hrun, AddWriterT.runAdd, simulateQ_map, StateT.run_map]
+  rfl
+
+end SignatureAlg.SigningView.Events

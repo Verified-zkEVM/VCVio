@@ -1288,116 +1288,7 @@ theorem native_counts_markedLabExperiment
 
 universe v
 
-section Observer
-
-private abbrev observedId
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat × Nat) :
-    QueryImpl (SigningView.Events.Spec (labSpec core) (List Byte))
-      (SigningView.CostM (labSpec core) (Nat × Nat)) :=
-  (SigningView.Events.handlerWithEvents (Request := List Byte)
-    (QueryImpl.id' (labSpec core))).withAddCost (Sum.elim (fun _ => 0) policy)
-
-private theorem observed_phase
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat × Nat)
-    {α : Type} (phase : SigningView.Phase) (body : OracleComp (labSpec core) α) :
-    simulateQ (observedId core policy)
-      (simulateQ (SigningView.Events.phaseImpl (labSpec core) (List Byte) phase) body) =
-      SigningView.costed policy phase body := by
-  unfold SigningView.costed
-  apply QueryImpl.simulateQ_simulateQ_eq_of_apply
-  intro input
-  apply WriterT.ext
-  simp [SigningView.Events.phaseImpl, SigningView.Events.emit, observedId,
-    QueryImpl.withAddCost_apply, SigningView.Events.handlerWithEvents,
-    AddWriterT.addTell, monad_norm]
-
-variable [SampleableType core.Y] [DecidableEq core.Y]
-  [SampleableType core.SkSeed] [SampleableType core.SkPrf]
-
-private theorem observed_client {e : core.SkSeed ≃ core.Y}
-    {optRand : PublicKeyCore core → ProbComp core.Y} {pkSeedDist : ProbComp core.PkSeed}
-    (adv : UnforgeableAdversary (romScheme core e optRand pkSeedDist))
-    (pkSeed : core.PkSeed)
-    (policy : SigningView.Event (labSpec core) (List Byte) → Nat × Nat)
-    (pk sk : PublicKeyCore core) :
-    simulateQ (observedId core policy)
-      ((markedLabScheme core optRand pkSeed).runWithSigningOracle pk sk
-        ((markedLabAdversary core adv pkSeed).main pk)) =
-      SigningView.countedPhase policy (SigningView.ofTotal (labScheme core optRand pkSeed))
-        pk sk ((labAdversary core adv pkSeed).main pk) := by
-  let alg := markedLabScheme core optRand pkSeed
-  let view := SigningView.ofTotal (labScheme core optRand pkSeed)
-  let red : QueryImpl (labSpec core + (List Byte →ₒ GeneralScheme.SignatureCore vp core))
-      (WriterT (QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp core))
-        (OracleComp (SigningView.Events.Spec (labSpec core) (List Byte)))) :=
-    ((SigningView.Events.Spec (labSpec core) (List Byte)).passthrough + alg.signingOracle pk sk) ∘ₛ
-      QueryImpl.add
-        (fun input => simulateQ (fun native => liftM
-          ((SigningView.Events.Spec (labSpec core) (List Byte) +
-            (List Byte →ₒ GeneralScheme.SignatureCore vp core)).query (.inl native)))
-          (SigningView.Events.phaseImpl (labSpec core) (List Byte) .adversary input))
-        (fun request => liftM ((SigningView.Events.Spec (labSpec core) (List Byte) +
-          (List Byte →ₒ GeneralScheme.SignatureCore vp core)).query (.inr request)))
-  simp only [runWithSigningOracle, markedLabAdversary, SigningView.Events.mainWithEvents]
-  rw [← QueryImpl.simulateQ_compose]
-  change simulateQ (observedId core policy)
-      (simulateQ red ((labAdversary core adv pkSeed).main pk)).run =
-    (simulateQ (SigningView.countedHandler policy view pk sk)
-      ((labAdversary core adv pkSeed).main pk)).run
-  apply simulateQ_WriterT_compose
-  intro input
-  cases input with
-  | inl input =>
-      have step : (red (.inl input)).run = (fun answer => (answer, [])) <$>
-          SigningView.Events.phaseImpl (labSpec core) (List Byte) .adversary input := by
-        simp only [red, QueryImpl.apply_compose, QueryImpl.add]
-        have h : simulateQ ((SigningView.Events.Spec (labSpec core) (List Byte)).passthrough +
-            alg.signingOracle pk sk) (simulateQ (fun native => liftM
-              ((SigningView.Events.Spec (labSpec core) (List Byte) +
-                (List Byte →ₒ GeneralScheme.SignatureCore vp core)).query (.inl native)))
-              (SigningView.Events.phaseImpl (labSpec core) (List Byte) .adversary input)) =
-            simulateQ ((QueryImpl.id'
-              (SigningView.Events.Spec (labSpec core) (List Byte))).liftTarget
-              (WriterT (QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp core))
-                (OracleComp (SigningView.Events.Spec (labSpec core) (List Byte)))))
-              (SigningView.Events.phaseImpl (labSpec core) (List Byte) .adversary input) := by
-          apply QueryImpl.simulateQ_simulateQ_eq_of_apply
-          intro native
-          simp only [simulateQ_spec_query, QueryImpl.passthrough_add, QueryImpl.add_apply_inl]
-        rw [h, writerT_run_simulateQ_liftTarget, simulateQ_id']
-        rfl
-      rw [step, simulateQ_map]
-      have h := observed_phase core policy .adversary (liftM ((labSpec core).query input))
-      simp only [simulateQ_spec_query] at h
-      rw [h]
-      simp [SigningView.countedHandler, SigningView.countedHandlerUsing,
-        SigningView.costed, QueryImpl.withAddCost_apply]
-  | inr request =>
-      have step : (red (.inr request)).run =
-          (fun answer => (answer, [⟨request, answer⟩])) <$> alg.sign pk sk request := by
-        simp [red, QueryImpl.add, signingOracle, QueryImpl.withLogging_apply]
-      rw [step, simulateQ_map]
-      change (fun answer => (answer, ([⟨request, answer⟩] : QueryLog
-        (List Byte →ₒ GeneralScheme.SignatureCore vp core)))) <$>
-          simulateQ (observedId core policy)
-            (SigningView.Events.emit (labSpec core) (List Byte) (.signingAttempt request) >>=
-              fun _ => simulateQ
-                (SigningView.Events.phaseImpl (labSpec core) (List Byte) .signer)
-                ((labScheme core optRand pkSeed).sign pk sk request)) = _
-      have hemit : simulateQ (observedId core policy)
-          (SigningView.Events.emit (labSpec core) (List Byte) (.signingAttempt request)) =
-          AddWriterT.addTell (policy (.signingAttempt request)) := by
-        apply WriterT.ext
-        simp [SigningView.Events.emit, observedId, QueryImpl.withAddCost_apply,
-          SigningView.Events.handlerWithEvents, AddWriterT.addTell, monad_norm]
-      rw [simulateQ_bind, hemit]
-      simp [observed_phase, SigningView.countedHandler, SigningView.countedHandlerUsing,
-        SigningView.countedSigningOracleUsing_run, view, SigningView.ofTotal, map_bind]
-
-end Observer
-
-/-- Deterministic phase observation equals the existing full-transcript counted computation.
-The actual key pair, candidate, signing replies, verification result and cache remain joint. -/
+/-- Deterministic phase observation retains the complete counted transcript and its keys. -/
 theorem runObs_markedLabExperiment_eq_counted_full_transcript
     {vp : ValidatedParams} (core : CorePrimitives vp.params)
     [SampleableType core.Y] [DecidableEq core.Y]
@@ -1421,50 +1312,45 @@ theorem runObs_markedLabExperiment_eq_counted_full_transcript
         (markedLabExperiment core adv pkSeed)).run initial =
       (simulateQ handler counted.runAdd).run initial := by
   intro counted
-  have hfree : simulateQ (observedId core policy)
-      (markedLabExperiment core adv pkSeed) = counted := by
-    have hk : simulateQ (observedId core policy) (markedLabScheme core optRand pkSeed).keygen =
-        SigningView.costed policy .keygen (labScheme core optRand pkSeed).keygen :=
-      observed_phase core policy .keygen _
-    have hv : ∀ pk msg sig, simulateQ (observedId core policy)
-        ((markedLabScheme core optRand pkSeed).verify pk msg sig) =
-        SigningView.costed policy .verification
-          ((labScheme core optRand pkSeed).verify pk msg sig) :=
-      fun _ _ _ => observed_phase core policy .verification _
-    simp only [markedLabExperiment, unforgeableTranscriptExperiment_def,
-      simulateQ_bind, simulateQ_pure]
-    simp_rw [hk, observed_client, hv]
-    simp [counted, SigningView.countedAfterKeygen, SigningView.ofTotal]
-  let morph : SigningView.CostM (labSpec core) (Nat × Nat) →ᵐ
-      AddWriterT (Nat × Nat) (StateT Cache m) := {
-    toFun := fun {_α} body => WriterT.mk (simulateQ handler body.run)
-    toFun_pure' := fun _ => by
-      apply WriterT.ext
-      simp
-    toFun_bind' := fun body next => by
-      apply WriterT.ext
-      simp only [WriterT.run_mk, WriterT.run_bind, simulateQ_bind, simulateQ_map] }
-  have hhandlers : (fun input => morph (observedId core policy input)) =
-      (eraseObsImpl handler).withCost
-        (obsCostFn (fun event => Multiplicative.ofAdd (policy event))) := by
-    funext input
-    apply WriterT.ext
-    cases input <;>
-      simp [morph, observedId, QueryImpl.withAddCost_apply, QueryImpl.withCost,
-        SigningView.Events.handlerWithEvents, eraseObsImpl, obsCostFn,
-        AddWriterT.addTell, monad_norm]
-  have natural := PFunctor.FreeM.liftM_natural (observedId core policy) morph
-    (markedLabExperiment core adv pkSeed)
-  change morph (simulateQ (observedId core policy) (markedLabExperiment core adv pkSeed)) =
-    simulateQ (fun input => morph (observedId core policy input))
-      (markedLabExperiment core adv pkSeed) at natural
-  rw [hfree, hhandlers] at natural
-  have hrun := congrArg (fun body => body.run.run initial) natural.symm
-  change (runObs handler (fun event => Multiplicative.ofAdd (policy event))
-      (markedLabExperiment core adv pkSeed)).run initial =
-    (simulateQ handler counted.run).run initial at hrun
-  rw [hrun, AddWriterT.runAdd, simulateQ_map, StateT.run_map]
-  rfl
+  let view := SigningView.ofTotal (labScheme core optRand pkSeed)
+  let main := (labAdversary core adv pkSeed).main
+  let pack := fun result : (PublicKeyCore core × PublicKeyCore core) ×
+      SigningView.Outcome (List Byte) (GeneralScheme.SignatureCore vp core)
+        (GeneralScheme.SignatureCore vp core) =>
+    (⟨result.1.1, result.1.2, result.2.rawLog,
+      result.2.forgery.1, result.2.forgery.2, result.2.verified⟩ : DeriveOutcome core)
+  let markedFull : OracleComp (SigningView.Events.Spec (labSpec core) (List Byte))
+      ((PublicKeyCore core × PublicKeyCore core) ×
+        SigningView.Outcome (List Byte) (GeneralScheme.SignatureCore vp core)
+          (GeneralScheme.SignatureCore vp core)) := do
+    let keys ← (SigningView.Events.viewWithEvents view).keygen
+    let (forgery, rawLog) ← (SigningView.Events.viewWithEvents view).runWithSigningOracle
+      keys.1 keys.2 (SigningView.Events.mainWithEvents main keys.1)
+    let verified ← (SigningView.Events.viewWithEvents view).verify
+      keys.1 forgery.1 forgery.2
+    return (keys, ⟨forgery, rawLog, verified⟩)
+  let countedFull : SigningView.CostM (labSpec core) (Nat × Nat)
+      ((PublicKeyCore core × PublicKeyCore core) ×
+        SigningView.Outcome (List Byte) (GeneralScheme.SignatureCore vp core)
+          (GeneralScheme.SignatureCore vp core)) := do
+    let keys ← SigningView.costed policy .keygen view.keygen
+    let outcome ← SigningView.countedAfterKeygen policy view keys.1 keys.2 main
+    return (keys, outcome)
+  have hmarked : markedLabExperiment core adv pkSeed = pack <$> markedFull := by
+    rw [markedLabExperiment, unforgeableTranscriptExperiment_def]
+    simp only [markedFull, map_bind, map_pure]
+    rfl
+  have hcounted : counted = pack <$> countedFull := by
+    simp only [countedFull, map_bind, map_pure]
+    rfl
+  have h := SigningView.Events.runObs_fullKeys_eq_counted view main policy handler initial
+  change (fun result => ((result.1.1, Multiplicative.toAdd result.1.2), result.2)) <$>
+      (runObs handler (fun event => Multiplicative.ofAdd (policy event)) markedFull).run
+        initial = (simulateQ handler countedFull.runAdd).run initial at h
+  have mapped := congrArg
+    (fun program => (fun result => ((pack result.1.1, result.1.2), result.2)) <$> program) h
+  simpa only [hmarked, hcounted, runObs_map, AddWriterT.runAdd_map,
+    StateT.run_map, simulateQ_map, Functor.map_map, Prod.map, id_eq] using mapped
 
 #print axioms runObs_markedLabExperiment_eq_counted_full_transcript
 

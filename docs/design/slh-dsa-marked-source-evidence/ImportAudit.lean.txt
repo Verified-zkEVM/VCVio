@@ -1,4 +1,18 @@
+/-
+Copyright (c) 2026 Alexander Hicks. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Alexander Hicks
+-/
+
 import MarkedLab
+import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Factory
+
+/-! # Complete signature observation contracts
+
+Private ordinary-import checks retain the full generic and concrete statement types.
+-/
+
+universe v
 open OracleComp OracleSpec SignatureAlg SLHDSA SLHDSA.Security
 namespace SLHDSA.Security.MarkedLab
 
@@ -43,7 +57,6 @@ private theorem counts_contract
   exact native_counts_markedLabExperiment core e kappa pkSeed adv caps extra fallback L
 
 
-universe v
 
 private theorem observer_contract
     {vp : ValidatedParams} (core : CorePrimitives vp.params)
@@ -116,3 +129,46 @@ end SLHDSA.Security.MarkedLab
 #print axioms SLHDSA.Security.MarkedLab.suffix_contract
 #print axioms SLHDSA.Security.MarkedLab.counts_contract
 #print axioms SLHDSA.Security.MarkedLab.observer_contract
+
+namespace SignatureAlg.SigningView.Events
+
+private theorem generic_observer_contract
+    {ι Request PK SK Sig Reply Cache C : Type} {spec : OracleSpec.{0, 0} ι}
+    [AddMonoid C]
+    (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
+    (adv : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig))
+    (policy : Event spec Request → C)
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    (handler : QueryImpl spec (StateT Cache m)) (initial : Cache) :
+    let marked : OracleComp (Spec spec Request)
+        ((PK × SK) × Outcome Request Sig Reply) := do
+      let keys ← (viewWithEvents view).keygen
+      let (forgery, rawLog) ← (viewWithEvents view).runWithSigningOracle
+        keys.1 keys.2 (mainWithEvents adv keys.1)
+      let verified ← (viewWithEvents view).verify keys.1 forgery.1 forgery.2
+      return (keys, ⟨forgery, rawLog, verified⟩)
+    let counted : CostM spec C ((PK × SK) × Outcome Request Sig Reply) := do
+      let keys ← costed policy .keygen view.keygen
+      let outcome ← countedAfterKeygen policy view keys.1 keys.2 adv
+      return (keys, outcome)
+    (fun result => ((result.1.1, Multiplicative.toAdd result.1.2), result.2)) <$>
+      (runObs handler (fun event => Multiplicative.ofAdd (policy event)) marked).run initial =
+      (simulateQ handler counted.runAdd).run initial := by
+  exact runObs_fullKeys_eq_counted view adv policy handler initial
+
+#print axioms generic_observer_contract
+end SignatureAlg.SigningView.Events
+
+private theorem fips_factory_contract
+    (adv : SLHDSA.SHAKE128s.Game.Adversary SLHDSA.SHAKE128s.FIPS205.Answer
+      (SLHDSA.PublicKeyCore SLHDSA.SHAKE128s.FIPS205.core)) :
+    SigningView.countedExperiment SLHDSA.SHAKE128s.Bridge.SharedExperiment.sourcePolicy
+      (SLHDSA.SHAKE128s.Bridge.SharedExperiment.pureShakeView
+        SLHDSA.SHAKE128s.FIPS205.params SLHDSA.SHAKE128s.FIPS205.deterministicRand
+        ($ᵗ SLHDSA.SHAKE128s.FIPS205.core.PkSeed))
+      (SLHDSA.SHAKE128s.Game.Counted.externalMain adv) =
+      SLHDSA.SHAKE128s.Game.Counted.canonicalExperiment
+        SLHDSA.SHAKE128s.FIPS205.scheme adv := by
+  exact SLHDSA.SHAKE128s.Bridge.SharedExperiment.countedExperiment_pureShakeView_fips205 adv
+
+#print axioms fips_factory_contract
