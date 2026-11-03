@@ -1,230 +1,35 @@
 {
-  "format": 2,
-  "scope": "Research evidence: the same forwarding guard with cap, whole-source AE and exact event-filtered ProbComp laws, plus unchanged algebraic free interpretation. No SLH policy affordability/seed/security assembly acceptance.",
+  "format": 3,
+  "scope": "Current generic live guard reexports and public clients; central recorded replay owns integration validation",
+  "liveOwner": {
+    "path": "VCVio/OracleComp/QueryTracking/Enforcement.lean",
+    "sha256": "b80155a2cb0c17c1cabae7e98b5115107d7e0acb29d1c945097caad6202c6c95"
+  },
   "files": {
-    "ForwardingBudgetGuard.lean": "66859c9a2f25e3efe8255e3ab674b65075dfab4ac3d74ce47305bd8ad2730ad2",
-    "FreeGuardInterpretation.lean": "bc206158d527a5b07c54b2390256f354f95ada7b9c5067baf109febd9cfde6de",
-    "GuardAudit.lean.txt": "1d4b88bb30d583c53b545a9afe359b1c80f1f7abda38caafad29f473936c9764",
-    "InterpretationAudit.lean.txt": "bbb5c35c660acc048ecd77f12ef0c83b4dac12df37f4884fc07899b8d5db1323",
-    "README.md": "180e0eba2f523b0e6cf2a147c9a7c8ee8ab5ff9a680242bd26e5c8d68f7231c8"
+    "ForwardingBudgetGuard.lean": "2a0f508611d8cec66d97197b44ed466ceef9a1d3e235cef12d88157270c380ad",
+    "FreeGuardInterpretation.lean": "3c640a5fced30d3fb8485005c52db1b911635ab0f7790a8bf3dad975632fab54",
+    "GuardAudit.lean.txt": "b03ea843bfbaf46b06e40bde2cdbdaaae6ebc5a7b9bdb5117c76697b0676fd5f",
+    "README.md": "8003e32cb3c0cd38910dcd841003fea9b8ef918d8119fb3c34f767e458d2c295"
   },
-  "audit_replay_names": {
-    "GuardAudit.lean.txt": "GuardAudit.lean",
-    "InterpretationAudit.lean.txt": "InterpretationAudit.lean"
-  },
-  "public_declarations": [
-    "QueryImpl.guardQueryBudget",
-    "QueryImpl.guardQueryBudget_counts_le_caps",
-    "QueryImpl.evalDist_guardQueryBudget_eq_of_ae_caps",
-    "QueryImpl.map_run_simulateQ_guardQueryBudget_free_eq",
-    "QueryImpl.prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps"
+  "retiredPaths": [
+    "InterpretationAudit.lean.txt"
   ],
-  "proof_dependencies": [
-    "OracleComp.simulateQ_mapStateTBase_run_eq_map_flattenStateT",
-    "OracleComp.map_run_simulateQ_eq_of_query_map_eq",
-    "QueryImpl.AgreeUntilBad.prEvent_simulateQ_run_and_not_bad_eq",
-    "OracleComp.prEvent_bind_congr_of_support"
-  ],
-  "historical_typo": "Original interpretation result.json used QueryImpl for the first dependency; actual owner is OracleComp. The original reviewed packet remains immutable.",
-  "accepted_packets": {
-    "forwarding": {
-      "path": "/tmp/slhdsa-forwarding-budget-guard-pilot-20261102/result.json",
-      "sha256": "90c6ac18de29f5a851696e3be4e679d38a6602e1f8fec09391b698e4dd162797"
-    },
-    "interpretation": {
-      "path": "/tmp/slhdsa-free-guard-interpretation-pilot-20261102/result.json",
-      "sha256": "0254e971d25b879f5c966dc1598e7bdab8ccd0dda67516bc34167f71c0c831ee"
-    },
-    "event_filtering": {
-      "path": "/tmp/slhdsa-win-selective-cap-pilot-20261103/handoff.json",
-      "sha256": "fe3fc9364fcb663c720def786ae08c49d0b73c8a5c0c359274935c43676e7bd4"
-    }
+  "currentReplay": {
+    "manifest": "../slh-dsa-marked-source-evidence/manifest.json",
+    "status": "UNRUN source composition proposal",
+    "commands": 16,
+    "outputs": 64,
+    "axiomReports": 84,
+    "emptyReports": 2
   },
-  "independent_final_reviews": {
-    "forwarding": {
-      "path": "/tmp/adversarial/slhdsa-forwarding-budget-guard-final-review-20261102-01/review.json",
-      "sha256": "b0e881882a3152747bce409cf551413d280b1fd7453bab28439fb476616305c1"
-    },
-    "interpretation": {
-      "path": "/tmp/adversarial/slhdsa-free-guard-interpretation-final-review-20261102-01/review.json",
-      "sha256": "0f71a618478a53d8a03ee98b03f1f953453c292a46e48eb2c952f31e5715b8f4"
-    },
-    "event_filtering": {
-      "path": "/tmp/adversarial/slhdsa-win-selective-cap-fullproof-review-20261103-01/review.json",
-      "sha256": "cf68987389b0adf094319500d9df4cc31427760633d7021358e1183a2c6202ab"
-    }
+  "acceptedGenericFullReviewSHA256": "e006cd01e511246380a0089fdb05c11945ec3b14ed5ace27daf04e0a1c8f07ef",
+  "historicalAt": {
+    "commit": "56697d5df532d3d68c480cbc604ed89ba45f2513",
+    "scope": "Previous full pair sources, metadata and standalone recipes remain immutable historical Git inputs; their original receipt files are unchanged"
   },
-  "independent_contract_reviews": {
-    "forwarding": {
-      "path": "/tmp/adversarial/slhdsa-guard-forwarding-contract-review-20261102-01/review.json",
-      "sha256": "a30168cf36091ae0b34e833fb69eff35c16daa593db7c56f22f070eafc38a364"
-    },
-    "interpretation": {
-      "path": "/tmp/adversarial/slhdsa-free-guard-interpretation-contract-review-20261102-01/review.json",
-      "sha256": "c5ac33bdfab588c7f60863d1506f66d9651313e60fe19f16233ae8c169703978"
-    }
-  },
-  "accepted_original_receipts": {
-    "forwarding/body-03": {
-      "path": "/tmp/slhdsa-forwarding-budget-guard-pilot-20261102/body-03-receipt.json",
-      "sha256": "9701f6b537173192df3372d49b99ec1952804c69007284862e4d0c88c41d3215"
-    },
-    "forwarding/audit-01": {
-      "path": "/tmp/slhdsa-forwarding-budget-guard-pilot-20261102/audit-01-receipt.json",
-      "sha256": "916b0e1df3616b64cac01d1733322255f60276e6065a54631f12cf57fbbb1847"
-    },
-    "interpretation/body-02": {
-      "path": "/tmp/slhdsa-free-guard-interpretation-pilot-20261102/body-02-receipt.json",
-      "sha256": "6de7cb599eaf4877c1b083a810bf26b2a69a1405716ff3db2ddcca052ad54748"
-    },
-    "interpretation/audit-01": {
-      "path": "/tmp/slhdsa-free-guard-interpretation-pilot-20261102/audit-01-receipt.json",
-      "sha256": "a39fd72ec32aea7beefee860c54f04ba23b75e52f63031ff9ecb75edda8b2fe4"
-    }
-  },
-  "original_source_paths": {
-    "ForwardingBudgetGuard.lean": "/tmp/slhdsa-forwarding-budget-guard-pilot-20261102/ForwardingBudgetGuard.lean",
-    "FreeGuardInterpretation.lean": "/tmp/slhdsa-free-guard-interpretation-pilot-20261102/FreeGuardInterpretation.lean",
-    "GuardAudit.lean.txt": "/tmp/slhdsa-forwarding-budget-guard-pilot-20261102/ImportAudit.lean",
-    "InterpretationAudit.lean.txt": "/tmp/slhdsa-free-guard-interpretation-pilot-20261102/ImportAudit.lean"
-  },
-  "canonical_commit": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
-  "actual_dependency_revisions": {
-    "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8",
-    "LeanSearchClient": "d6b4c7be5be75ec4917c873ac50c756dc1436372",
-    "PolyFun": "4181c82238142d9b73403fbf4c4b13e1a801e400",
-    "Qq": "dce0ad79c486cb1fb504af04f953c3466b0c6db8",
-    "QuantumFoundations": "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac",
-    "aesop": "4a174c490d8707121c4a9290800489f105d85e07",
-    "batteries": "66e469188fe07963e5cf666c7d4433f45b8131c5",
-    "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
-    "importGraph": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93",
-    "mathlib": "56a005855ea17e0b0958f73ec801ae140b0a1679",
-    "plausible": "dfa4f38190d07c37e315953e08b90fe2d95b3c24",
-    "proofwidgets": "df72b022e558978a1c50264cfc4d7fec86fa8e04"
-  },
-  "compiler_sha256": "bf8d54e4714cc4b03d3f6bb34c83b7202b87e49c8bfcbff6895c085bb90ceb38",
-  "std_root_sha256": {
-    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.ilean": "402a081c1b92c1c836ad1fd78d5de32e999c3d5ae08c6fc07c5d5007e2895a1f",
-    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.ir": "48d4f0aaae228606564b38761f254852facad2f5a74bd558baa4c9134bf64f7e",
-    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.ir.sig": "d569208402af80adcfa69cd3964697eb04520dcccb6a14a94045195b4570ddf9",
-    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.olean": "81655926012444f214099f1ed6610ed63ade63f9e91b2e5af6689acd9cf1b400",
-    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.olean.private": "4eba4e5b4c294d614eca0a2b896179515f926d23f635ee8e3e96fe8406c47ad4",
-    "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/lib/lean/Std.olean.server": "ccbd1909281893abf6acffc47186b80ff37c8bba967c53c3e45be3ea3269165d"
-  },
-  "historical_research_commits": {
-    "forwarding": "31fe8f53b4897f276c67f62794e8673469e0abfc",
-    "interpretation": "e93dd458f063a8fd666ebfc4edd26282bbf3c1a2"
-  },
-  "future_replay": "Fresh four-command committedHEAD execution is required after writer grant; explicitbf8d/6Std/actual12clean locks/source and normal artifacts/sourceGitblobs/semanticindices beforeafter, no rawindex-byte claim. Do not reuse the historical9c8 replay as new acceptance.",
-  "axioms": {
-    "constructor": [],
-    "support_and_interpretation": [
-      "propext",
-      "Quot.sound"
-    ],
-    "joint_ae": [
-      "propext",
-      "Classical.choice",
-      "Quot.sound"
-    ],
-    "event_filtering": [
-      "propext",
-      "Classical.choice",
-      "Quot.sound"
-    ]
-  },
-  "packaging_actions": "Current in-place proposal touches only ForwardingBudgetGuard, GuardAuditTXT, README and manifest; no compiler/repository/cache action during preparation. The interpretation source/audit pair stays byte-identical.",
-  "not_included": [
-    "old observation guard",
-    "typed consumer module",
-    "kernel/SelectedWork bodies",
-    "failed or raw logs",
-    "validator framework",
-    "SLH win-local policy affordability",
-    "seed independence certificate",
-    "guarded-byte/source/fill/seed/full127 assembly"
-  ],
-  "replay_requires_only_canonical_b63_normal_dependencies": true,
-  "historical_archive_9c8": {
-    "commit": "9c8bd5f7a6959cc426622ec50e3d49c0ce9601d5",
-    "files": {
-      "ForwardingBudgetGuard.lean": "607e83770153c0e4542e41b8273accb4560b86a03eb1d0bc95865d6ecd0b781e",
-      "FreeGuardInterpretation.lean": "bc206158d527a5b07c54b2390256f354f95ada7b9c5067baf109febd9cfde6de",
-      "GuardAudit.lean.txt": "d04bb9dff6af80ee320829fed55d25229c47b9075143e0879ba4e46659a18161",
-      "InterpretationAudit.lean.txt": "bbb5c35c660acc048ecd77f12ef0c83b4dac12df37f4884fc07899b8d5db1323",
-      "README.md": "d198199a6de6f457806ae594034347ac010bb330a895fe1f095fcb163cc195db"
-    },
-    "recordedReplay": {
-      "path": "/tmp/slhdsa-weighted-guard-archive-validation-20261102-01/receipt.json",
-      "sha256": "1eb9fceee62cd3b06dc8933d3e9b1a7cc3cafefc16d22aebe767727718a965dc"
-    },
-    "recordedPostreview": {
-      "path": "/tmp/adversarial/slhdsa-weighted-guard-archive-postreview-20261102-01/review.json",
-      "sha256": "c8611f3e03c5051fe66817d413c7bc8a2939d3daeb2e9c6c07d45a2843e365c0"
-    },
-    "scope": "Validated original guard287 and old complete audit bytes, plus the unchanged interpretation pair. Its20 outputs/fresh sidecar inputs are historical, not a replay of the new395/new audit."
-  },
-  "current_source_update": {
-    "originalGuardPrefixLines": 287,
-    "originalGuardPrefixSHA256": "607e83770153c0e4542e41b8273accb4560b86a03eb1d0bc95865d6ecd0b781e",
-    "prefixByteExact": true,
-    "newGuardLines": 395,
-    "appendedLines": 108,
-    "newGuardSourceSHA256": "66859c9a2f25e3efe8255e3ab674b65075dfab4ac3d74ce47305bd8ad2730ad2",
-    "frozenFullHeaderSHA256": "1273a7981e02fad386ad5fbe8950b222d94726c7e8292710dbe04a154baecec1",
-    "newPrivateHelpers": 1,
-    "newPublicLaws": 1,
-    "unchangedFiles": [
-      "FreeGuardInterpretation.lean",
-      "InterpretationAudit.lean.txt"
-    ],
-    "oldGuardAuditPrefixByteExact": true,
-    "auditConvention": "Both auditTXT files retain their existing MODULE convention/public complete-target definitions; only the appended new application is private."
-  },
-  "historical_provenance_scope": "Original forwarding/interpretation packets, source paths and receipts retain their original byte scopes. Event-filtering prototype acceptance is separate from the still-UNRUN updated archive replay.",
-  "compiler_path": "/home/alh/.elan/toolchains/leanprover--lean4---v4.35.0/bin/lean",
-  "allowed_axioms": [
-    "propext",
-    "Classical.choice",
-    "Quot.sound"
-  ],
-  "current_replay": {
-    "status": "UNRUN for the updated package",
-    "moduleFiles": {
-      "ForwardingBudgetGuard": "ForwardingBudgetGuard.lean",
-      "FreeGuardInterpretation": "FreeGuardInterpretation.lean",
-      "GuardAudit": "GuardAudit.lean.txt",
-      "InterpretationAudit": "InterpretationAudit.lean.txt"
-    },
-    "moduleOrder": [
-      "ForwardingBudgetGuard",
-      "FreeGuardInterpretation",
-      "GuardAudit",
-      "InterpretationAudit"
-    ],
-    "moduleConventions": "All four are MODULE files and emit5 artifacts each; neither audit is NONMODULE.",
-    "artifactSuffixes": [
-      "olean",
-      "olean.private",
-      "olean.server",
-      "ir",
-      "ir.sig"
-    ],
-    "expectedFreshOutputs": 20,
-    "jobs": 2,
-    "defaultProofLimits": true,
-    "wallSeconds": 240,
-    "expectedStandardReports": 12,
-    "freshTransitiveInputPins": "All5 artifacts of every fresh transitive imported module BEFORE each invocation.",
-    "printedAxiomReports": {
-      "ForwardingBudgetGuard": 5,
-      "FreeGuardInterpretation": 1,
-      "GuardAudit": 5,
-      "InterpretationAudit": 1
-    },
-    "axiomReportForms": "Both depends-on-axioms lists and does-not-depend-on-any-axioms;3 empty reports among12.",
-    "frameChecks": "Full clean recorded frame immediately before EACH compiler/after; per-input frame hash. All archive and canonical source bytes match HEAD and semantic-index Git blobs; fresh five-sidecar hashes match their producer before consumers."
-  },
-  "lake_manifest_sha256": "08de459b1889ead9e9b4ea9af537411791b487d5f2981be22e118af1f3362d95"
+  "limits": [
+    "No current recorded validation yet",
+    "No numeric security improvement or final127 claim",
+    "No win-local affordability or byte/partial-native coupling"
+  ]
 }

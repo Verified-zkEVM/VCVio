@@ -901,10 +901,11 @@ private theorem phase_step (pkSeed : core.PkSeed) (caps : Nat × Nat)
     have hcost : (Sum.elim (fun _ => (0, 0)) (sourcePolicy core extra))
         (.inl input) = (0, 0) := rfl
     simp only [controlled, QueryImpl.guardQueryBudget, StateT.run_mk, hcost,
-      Sum.elim_inr, Prod.fst_add, Prod.snd_add, Nat.add_zero, Bool.false_eq_true, ↓reduceIte] at hr
+      Sum.elim_inr, Bool.false_eq_true, ↓reduceIte] at hr
+    simp only [Prod.mk_zero_zero, add_zero, Prod.le_def, Prod.fst_add, Prod.snd_add] at hr
     have hcap' : state.2.1.1 + (sourcePolicy core extra (.ambient phase input)).1 ≤ caps.1 ∧
         state.2.1.2 + (sourcePolicy core extra (.ambient phase input)).2 ≤ caps.2 := by
-      simpa only [Sum.elim_inr, Prod.fst_add, Prod.snd_add] using hcap
+      simpa only [Sum.elim_inr, Prod.le_def, Prod.fst_add, Prod.snd_add] using hcap
     rw [ite_eq_left hcap', support_map] at hr
     obtain ⟨out, hout, rfl⟩ := hr
     have hc := nativeRelative_cnt core pkSeed input
@@ -1208,7 +1209,7 @@ private theorem guard_native_reassoc {α : Type}
     rintro input ⟨⟨rel, n, aborted⟩, native⟩
     cases aborted with
     | false =>
-        by_cases hcap : n.1 + (cost input).1 ≤ caps.1 ∧ n.2 + (cost input).2 ≤ caps.2
+        by_cases hcap : n + cost input ≤ caps
         all_goals simp [QueryImpl.flattenStateT_mapStateTBase_apply_run, inner, controlled,
           nativeRelative, QueryImpl.guardQueryBudget, project, hcap, cost,
           simulateQ_map, StateT.run_map, Functor.map_map]

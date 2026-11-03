@@ -1,7 +1,7 @@
 {
   "format": 2,
-  "stage": "A+C0",
-  "scope": "Shared generic observer and current marked-source research development; no final127 acceptance",
+  "stage": "A+C0+genericGuard+B",
+  "scope": "Shared observer, live generic guard, actual same-source B cap transport and current native construction; no final127 acceptance",
   "canonicalCommit": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
   "frozenBasisCommit": "56697d5df532d3d68c480cbc604ed89ba45f2513",
   "lakeManifestSHA256": "08de459b1889ead9e9b4ea9af537411791b487d5f2981be22e118af1f3362d95",
@@ -74,35 +74,35 @@
     },
     "ForwardingBudgetGuard": {
       "path": "docs/design/slh-dsa-weighted-guard-evidence/ForwardingBudgetGuard.lean",
-      "sha256": "66859c9a2f25e3efe8255e3ab674b65075dfab4ac3d74ce47305bd8ad2730ad2",
-      "gitBlob": "08785d10d4923b9043ef4996dfb52235033351de",
-      "basis": true,
+      "sha256": "2a0f508611d8cec66d97197b44ed466ceef9a1d3e235cef12d88157270c380ad",
+      "gitBlob": "26eee6e2794d61108d46db8937b01763fa6a422d",
+      "basis": false,
       "module": true,
-      "axiomReports": 5
+      "axiomReports": 0
     },
     "FreeGuardInterpretation": {
       "path": "docs/design/slh-dsa-weighted-guard-evidence/FreeGuardInterpretation.lean",
-      "sha256": "bc206158d527a5b07c54b2390256f354f95ada7b9c5067baf109febd9cfde6de",
-      "gitBlob": "500a0aa0094a2e208602a6cc7d7b33b6cedd1bef",
-      "basis": true,
+      "sha256": "3c640a5fced30d3fb8485005c52db1b911635ab0f7790a8bf3dad975632fab54",
+      "gitBlob": "6455760601a1b200f6546b9dbcafc5d83901b7f5",
+      "basis": false,
       "module": true,
-      "axiomReports": 1
+      "axiomReports": 0
     },
     "MarkedLab": {
       "path": "docs/design/slh-dsa-marked-source-evidence/MarkedLab.lean",
-      "sha256": "8cc019143e1849406701426a49b50dc96ee0f441c6811aff889fa0fd18514ef6",
-      "gitBlob": "059ed43f1ffa44bda183713a59a0ae18a4798dd1",
+      "sha256": "cae1ceac8c172df59fc46c0e68f39e350cdd56015cf6de627db2ed1e7d8a49a4",
+      "gitBlob": "9f83c4ac1f83ae3c6cc0273bcdc9b9c75cd6a141",
       "basis": false,
       "module": true,
       "axiomReports": 4
     },
     "SharedAudit": {
       "path": "docs/design/slh-dsa-marked-source-evidence/ImportAudit.lean.txt",
-      "sha256": "6f739b5108dcab77104c33c27f9fe1a6eb7732bb8900752bf1c8f6460e89a127",
-      "gitBlob": "4e2452e30dfbec2d17b54c95d4df4351186277b2",
+      "sha256": "e9393624b8497032a651af3e241e209f582f9ec222f01b60e02bd212700a00cc",
+      "gitBlob": "ff98c8e5ca0b045526e9a5c1d409eef5ff3b6686",
       "basis": false,
       "module": false,
-      "axiomReports": 6
+      "axiomReports": 7
     },
     "DeriveAudit": {
       "path": "docs/design/slh-dsa-relative-kernel-evidence/DeriveAudit.lean.txt",
@@ -119,24 +119,74 @@
       "basis": false,
       "module": false,
       "axiomReports": 13
+    },
+    "VCVio.OracleComp.QueryTracking.Enforcement": {
+      "path": "VCVio/OracleComp/QueryTracking/Enforcement.lean",
+      "sha256": "b80155a2cb0c17c1cabae7e98b5115107d7e0acb29d1c945097caad6202c6c95",
+      "gitBlob": "f2e871d41016bf295edf075b7679c9dede48cde5",
+      "basis": false,
+      "module": true,
+      "axiomReports": 0
+    },
+    "HashSig.SLHDSA.Security.WeakKeyBound": {
+      "path": "HashSig/SLHDSA/Security/WeakKeyBound.lean",
+      "sha256": "0bc75ae8b8573a66660de5d9050b01cc9ca9cd830df5468259cd04e3e7aaefed",
+      "gitBlob": "67c8a9e6cd29ac037ddc68b4310583ef4bd0d596",
+      "basis": false,
+      "module": true,
+      "axiomReports": 0
+    },
+    "HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Observation": {
+      "path": "HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/Observation.lean",
+      "sha256": "5aa84161145223db6a4802f91e7360e187a44d8a8ec940081c58656db65f4d2e",
+      "gitBlob": "0b16f922ea13531923c9f78c5c8ed3378cfe3575",
+      "basis": false,
+      "module": true,
+      "axiomReports": 0
+    },
+    "HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Joint": {
+      "path": "HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/Joint.lean",
+      "sha256": "b7d3c4e1540f529db05d171ca0be2ce6fe1d4bac4007fb669cbaec95a5896d0e",
+      "gitBlob": "014c23af89c8e43714f3f7ab86ba3eebb3999cba",
+      "basis": false,
+      "module": true,
+      "axiomReports": 0
+    },
+    "GuardAudit": {
+      "path": "docs/design/slh-dsa-weighted-guard-evidence/GuardAudit.lean.txt",
+      "sha256": "b03ea843bfbaf46b06e40bde2cdbdaaae6ebc5a7b9bdb5117c76697b0676fd5f",
+      "gitBlob": "2b6a82b168c7b3a872f592ff9900e2f299101ab2",
+      "basis": false,
+      "module": false,
+      "axiomReports": 16
     }
   },
   "payloadFiles": {
     "VCVio/CryptoFoundations/SignatureAlg/CountedExperiment.lean": "83928f7a65ac368ecc50c41ee36dc248d9256ce99c98a6a1a4a41fd3a34ad7f9",
     "docs/design/slh-dsa-marked-source-evidence/ConstructionAudit.lean.txt": "397c614b89b07091313d07354783236fa463b43fac9ed94a75317486d556a341",
-    "docs/design/slh-dsa-marked-source-evidence/ImportAudit.lean.txt": "6f739b5108dcab77104c33c27f9fe1a6eb7732bb8900752bf1c8f6460e89a127",
-    "docs/design/slh-dsa-marked-source-evidence/MarkedLab.lean": "8cc019143e1849406701426a49b50dc96ee0f441c6811aff889fa0fd18514ef6",
-    "docs/design/slh-dsa-marked-source-evidence/README.md": "f5d047b1d7ff1209ddf1067ac210d6a06b2da7efce00bcc59de4b88439b09854",
+    "docs/design/slh-dsa-marked-source-evidence/ImportAudit.lean.txt": "e9393624b8497032a651af3e241e209f582f9ec222f01b60e02bd212700a00cc",
+    "docs/design/slh-dsa-marked-source-evidence/MarkedLab.lean": "cae1ceac8c172df59fc46c0e68f39e350cdd56015cf6de627db2ed1e7d8a49a4",
+    "docs/design/slh-dsa-marked-source-evidence/README.md": "7665b7cef61e8d05d120ab875d8ff091e8e814f1ce726d6e5e81abadd8bfe43a",
     "docs/design/slh-dsa-relative-kernel-evidence/README.md": "af7000e5f57640729235132f2830198bf20a0aad19da6d47953ff8379668a8f7",
     "docs/design/slh-dsa-relative-kernel-evidence/RelativeKernel.lean": "f2e3140c636d8105321383e2422353ffedf450e8eb90fd29c6cf6a7ef4dd13c6",
     "docs/design/slh-dsa-relative-kernel-evidence/manifest.json": "f2ce8484aef9d0c7ca687a3c5b427594a592f08d5b3cfeba0e271c28d70c8b0a",
     "docs/design/slh-dsa-selected-work-evidence/README.md": "538e3d1acd18675658c5d47aee06d6e21389ffc0d28a510f78789b5851022f50",
     "docs/design/slh-dsa-selected-work-evidence/SelectedWork.lean": "1ce2eb17e411b5101e99e931ec659d9570d052255c374d0e0eb61aa8afbe918f",
     "docs/design/slh-dsa-selected-work-evidence/manifest.json": "0bfcf2b74b92b4266ff5728a3923055257833d27a8c0ab4f269935fa9f88425f",
-    "docs/design/slh-dsa-relative-kernel-evidence/DeriveAudit.lean.txt": "1fea3a7dd8bb4241a35d45e9d9e945f85f63c85da632444e50f070139777ff36"
+    "docs/design/slh-dsa-relative-kernel-evidence/DeriveAudit.lean.txt": "1fea3a7dd8bb4241a35d45e9d9e945f85f63c85da632444e50f070139777ff36",
+    "VCVio/OracleComp/QueryTracking/Enforcement.lean": "b80155a2cb0c17c1cabae7e98b5115107d7e0acb29d1c945097caad6202c6c95",
+    "docs/design/slh-dsa-weighted-guard-evidence/README.md": "8003e32cb3c0cd38910dcd841003fea9b8ef918d8119fb3c34f767e458d2c295",
+    "docs/design/slh-dsa-weighted-guard-evidence/FreeGuardInterpretation.lean": "3c640a5fced30d3fb8485005c52db1b911635ab0f7790a8bf3dad975632fab54",
+    "docs/design/slh-dsa-weighted-guard-evidence/GuardAudit.lean.txt": "b03ea843bfbaf46b06e40bde2cdbdaaae6ebc5a7b9bdb5117c76697b0676fd5f",
+    "docs/design/slh-dsa-weighted-guard-evidence/manifest.json": "2a9fc3510776987999d4aa1ab894b215cbe229932c05f319d674fed4479c2c90",
+    "docs/design/slh-dsa-weighted-guard-evidence/ForwardingBudgetGuard.lean": "2a0f508611d8cec66d97197b44ed466ceef9a1d3e235cef12d88157270c380ad",
+    "HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/Joint.lean": "b7d3c4e1540f529db05d171ca0be2ce6fe1d4bac4007fb669cbaec95a5896d0e",
+    "HashSig/SLHDSA/Security/WeakKeyBound.lean": "0bc75ae8b8573a66660de5d9050b01cc9ca9cd830df5468259cd04e3e7aaefed",
+    "HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/Observation.lean": "5aa84161145223db6a4802f91e7360e187a44d8a8ec940081c58656db65f4d2e"
   },
   "retiredPaths": [
-    "docs/design/slh-dsa-selected-work-evidence/ImportAudit.lean"
+    "docs/design/slh-dsa-selected-work-evidence/ImportAudit.lean",
+    "docs/design/slh-dsa-weighted-guard-evidence/InterpretationAudit.lean.txt"
   ],
   "excludedImports": [
     "HashSig.SLHDSA.SHAKE128s.Proof",
@@ -151,9 +201,13 @@
     "Quot.sound"
   ],
   "replay": {
-    "status": "UNRUN source-only proposal pending composition review and fresh validation before commit acceptance",
+    "status": "UNRUN source composition pending independent review, weak adoption, private candidate commit and recorded execution",
     "order": [
+      "VCVio.OracleComp.QueryTracking.Enforcement",
       "VCVio.CryptoFoundations.SignatureAlg.CountedExperiment",
+      "HashSig.SLHDSA.Security.WeakKeyBound",
+      "HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Observation",
+      "HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Joint",
       "SelectedWork",
       "Thin1Header",
       "NativePotential",
@@ -163,12 +217,13 @@
       "MarkedLab",
       "SharedAudit",
       "DeriveAudit",
-      "C0Frontend"
+      "C0Frontend",
+      "GuardAudit"
     ],
-    "commands": 11,
-    "outputs": 43,
-    "axiomReports": 73,
-    "emptyReports": 1,
+    "commands": 16,
+    "outputs": 64,
+    "axiomReports": 84,
+    "emptyReports": 2,
     "moduleArtifacts": [
       "olean",
       "olean.private",
@@ -179,8 +234,8 @@
     "jobs": 2,
     "wallSeconds": 240,
     "proofLimits": "compiler defaults",
-    "union": "Owned Counted and every local artifact masked; materialize ancestor directories, link unrelated complete namespaces; raw canonical root excluded",
-    "frames": "Recorded HEAD/sourceGitblobs/14 semantic indices/compiler6Std/12 clean locks/source closure/normal artifacts before EACH and afterward",
+    "union": "All owned live producers, current shims and audits masked; no raw canonical fallback",
+    "frames": "Recorded HEAD/source Git blobs/all14 raw+semantic indices/compiler6Std/12 actual clean locks/source closure/normal artifacts before EACH and afterward",
     "freshInputs": "All five transitive producer artifacts pinned before every consumer; no audit imported as a module"
   },
   "historicalAt": {
@@ -194,12 +249,20 @@
   },
   "acceptedAReviewSHA256": "4d5a77585a3c1d90336f162ba5938b7130309f6d7a63fbc4e8797b2b2bb2ba6e",
   "acceptedC0SourceHandoffSHA256": "145438f21c1e71218150a9c3db4a4ed7eba8e1662484514dd238ccb6a50d5c4a",
-  "workingProofNetLines": -109,
   "limits": [
-    "No B body or ideal AE assumption",
-    "No C1/C2 coupling proof",
-    "No private seed/lab transport or final127 claim",
+    "No C1/C2 byte/partial-native coupling proof",
+    "No win-local affordability or final127 claim",
     "No wholesale production archive migration"
   ],
-  "relativeAuditScope": "Full existing generic public law with arbitrary result/event interface and exact Top-space joint cache observation"
+  "relativeAuditScope": "Full existing generic public law with arbitrary result/event interface and exact Top-space joint cache observation",
+  "acceptedGenericGuardFullReviewSHA256": "e006cd01e511246380a0089fdb05c11945ec3b14ed5ace27daf04e0a1c8f07ef",
+  "acceptedBFullReviewSHA256": "c9410c70e7c6abdf5f0e9160980ef27a3161d7779f2ca9e06fb1e1cf8e07c25a",
+  "priorAC0WorkingProofNetLinesVs56697": -109,
+  "thisGuardBAllTrackedTextNetLinesVsParent": 44,
+  "metricsScope": {
+    "priorAC0WorkingProofNetLinesVs56697": "Historical A/C0 proof-owner comparison vs56697 only: Counted+214, Selected-222, Marked-104, Relative+3; not a cumulative current-branch metric.",
+    "thisGuardBAllTrackedTextNetLinesVsParent": "This stage only across the 11 changed and 1 retired tracked text paths against its immediate parent; excludes the separate +329-line weak-keygen parent stage and is not a main-to-PR metric.",
+    "thisGuardBMarkedShimOwnerNetLinesVsParent": "This stage only: Enforcement+436, Joint+113, Marked+1, Forwarding guard-384, free interpretation-77; separate weak-keygen parent work is excluded."
+  },
+  "thisGuardBMarkedShimOwnerNetLinesVsParent": 89
 }

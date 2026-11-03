@@ -4,59 +4,123 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Alexander Hicks
 -/
 
-module
+import ForwardingBudgetGuard
+import FreeGuardInterpretation
+import Mathlib.Algebra.Order.Pi
 
-public import ForwardingBudgetGuard
+/-! Ordinary clients of the complete weighted-budget laws. -/
 
-/-! # Closed public-import audit of the reviewed weighted-budget targets -/
-
-@[expose] public section
 open OracleComp OracleSpec QueryImpl
 universe v
-namespace ForwardingBudgetGuardAudit
+namespace LiveGuardLawAudit
 
-def constructorTarget
-    {ι Cache : Type} {spec : OracleSpec.{0, 0} ι}
-    {m : Type → Type v} [Monad m]
-    (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
+theorem generic0
+    {ι α Cache C : Type} {spec : OracleSpec.{0, 0} ι}
+    [AddMonoid C] [Preorder C] [CanonicallyOrderedAdd C] [DecidableLE C]
+    (caps : C) (cost : spec.Domain → C)
+    (handler : QueryImpl spec (StateT Cache ProbComp))
+    (fallback : (input : spec.Domain) → spec.Range input)
+    (program : OracleComp spec α) (initial : Cache)
+    (result : α × (Cache × (C × Bool)))
+    (hresult : result ∈ support
+      ((simulateQ (guardQueryBudget caps cost handler fallback) program).run
+        (initial, (0, false)))) :
+    result.2.2.1 ≤ caps := by
+  exact QueryImpl.guardQueryBudget_counts_le_caps
+    caps cost handler fallback program initial result hresult
+
+theorem generic1
+    {ι α Cache C : Type} {spec : OracleSpec.{0, 0} ι}
+    [AddMonoid C] [Preorder C] [CanonicallyOrderedAdd C] [DecidableLE C]
+    (caps : C) (cost : spec.Domain → C)
+    (handler : QueryImpl spec (StateT Cache ProbComp))
+    (fallback : (input : spec.Domain) → spec.Range input)
+    (program : OracleComp spec α) (initial : ProbComp Cache)
+    (hcap : Pr{let result ←
+      (initial >>= fun cache =>
+        ((simulateQ (handler.withAddCost cost) program).runAdd).run
+          cache)}[result.1.2 ≤ caps] = 1) :
+    let source := do
+      let cache ← initial
+      ((simulateQ (handler.withAddCost cost) program).runAdd).run cache
+    let guarded := do
+      let cache ← initial
+      (simulateQ (guardQueryBudget caps cost handler fallback) program).run
+        (cache, (0, false))
+    letI : MeasurableSpace (Option α × (Cache × (C × Bool))) := ⊤
+    𝒟[(fun result =>
+      (if result.2.2.2 then none else some result.1, result.2)) <$> guarded] =
+      𝒟[(fun result =>
+        (some result.1.1, (result.2, (result.1.2, false)))) <$> source] := by
+  exact QueryImpl.evalDist_guardQueryBudget_eq_of_ae_caps
+    caps cost handler fallback program initial hcap
+
+theorem generic2
+    {ι α Cache C : Type} {spec : OracleSpec.{0, 0} ι}
+    [AddMonoid C] [Preorder C] [CanonicallyOrderedAdd C] [DecidableLE C]
+    (caps : C) (cost : spec.Domain → C)
+    (handler : QueryImpl spec (StateT Cache ProbComp))
+    (fallback : (input : spec.Domain) → spec.Range input)
+    (program : OracleComp spec α) (initial : ProbComp Cache)
+    (event : (α × C) × Cache → Prop) :
+    Pr{let result ← (do
+      let cache ← initial
+      (simulateQ (guardQueryBudget caps cost handler fallback) program).run
+        (cache, (0, false)))}[
+      event ((result.1, result.2.2.1), result.2.1) ∧ result.2.2.2 = false] =
+    Pr{let result ← (do
+      let cache ← initial
+      ((simulateQ (handler.withAddCost cost) program).runAdd).run cache)}[
+      event result ∧ result.1.2 ≤ caps] := by
+  exact QueryImpl.prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps
+    caps cost handler fallback program initial event
+
+theorem generic3
+    {ι α Cache C : Type} {spec : OracleSpec.{0, 0} ι}
+    [Add C] [LE C] [DecidableLE C]
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    (caps : C) (cost : spec.Domain → C)
     (handler : QueryImpl spec (StateT Cache m))
-    (fallback : (input : spec.Domain) → spec.Range input) :
-    QueryImpl spec (StateT (Cache × ((Nat × Nat) × Bool)) m) :=
-  fun input => StateT.mk fun state =>
-    if state.2.2 then pure (fallback input, state)
-    else
-      let proposed := state.2.1 + cost input
-      if proposed.1 ≤ caps.1 ∧ proposed.2 ≤ caps.2 then
-        (fun result => (result.1, (result.2, (proposed, false)))) <$>
-          (handler input).run state.1
-      else pure (fallback input, (state.1, (state.2.1, true)))
+    (fallback : (input : spec.Domain) → spec.Range input)
+    (program : OracleComp spec α)
+    (initialCache : Cache) (initialCounts : C) (initialAborted : Bool) :
+    let forwarder : QueryImpl spec (StateT PUnit (OracleComp spec)) :=
+      (QueryImpl.id' spec).liftTarget (StateT PUnit (OracleComp spec))
+    let freeGuarded : OracleComp spec (α × (PUnit × (C × Bool))) :=
+      (simulateQ (guardQueryBudget caps cost forwarder fallback) program).run
+        (PUnit.unit, (initialCounts, initialAborted))
+    (fun result : (α × (PUnit × (C × Bool))) × Cache =>
+      (result.1.1, (result.2, result.1.2.2))) <$>
+      (simulateQ handler freeGuarded).run initialCache =
+        (simulateQ (guardQueryBudget caps cost handler fallback) program).run
+          (initialCache, (initialCounts, initialAborted)) := by
+  exact QueryImpl.map_run_simulateQ_guardQueryBudget_free_eq
+    caps cost handler fallback program initialCache initialCounts initialAborted
 
-
-theorem constructor_eq :
-    @QueryImpl.guardQueryBudget.{v} = @constructorTarget.{v} := rfl
-
-def SafetyTarget : Prop :=
-  ∀ {ι α Cache : Type} {spec : OracleSpec.{0, 0} ι}
+theorem paired0
+    {ι α Cache : Type} {spec : OracleSpec.{0, 0} ι}
     (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
     (handler : QueryImpl spec (StateT Cache ProbComp))
     (fallback : (input : spec.Domain) → spec.Range input)
     (program : OracleComp spec α) (initial : Cache)
     (result : α × (Cache × ((Nat × Nat) × Bool)))
-    (_hresult : result ∈ support
+    (hresult : result ∈ support
       ((simulateQ (guardQueryBudget caps cost handler fallback) program).run
-        (initial, ((0, 0), false)))),
-    result.2.2.1.1 ≤ caps.1 ∧ result.2.2.1.2 ≤ caps.2
+        (initial, ((0, 0), false)))) :
+    result.2.2.1.1 ≤ caps.1 ∧ result.2.2.1.2 ≤ caps.2 := by
+  exact QueryImpl.guardQueryBudget_counts_le_caps
+    caps cost handler fallback program initial result hresult
 
-def TransparencyTarget : Prop :=
-  ∀ {ι α Cache : Type} {spec : OracleSpec.{0, 0} ι}
+theorem paired1
+    {ι α Cache : Type} {spec : OracleSpec.{0, 0} ι}
     (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
     (handler : QueryImpl spec (StateT Cache ProbComp))
     (fallback : (input : spec.Domain) → spec.Range input)
     (program : OracleComp spec α) (initial : ProbComp Cache)
-    (_hcap : Pr{let result ←
+    (hcap : Pr{let result ←
       (initial >>= fun cache =>
         ((simulateQ (handler.withAddCost cost) program).runAdd).run
-          cache)}[result.1.2.1 ≤ caps.1 ∧ result.1.2.2 ≤ caps.2] = 1),
+          cache)}[result.1.2.1 ≤ caps.1 ∧ result.1.2.2 ≤ caps.2] = 1) :
     let source := do
       let cache ← initial
       ((simulateQ (handler.withAddCost cost) program).runAdd).run cache
@@ -68,25 +132,11 @@ def TransparencyTarget : Prop :=
     𝒟[(fun result =>
       (if result.2.2.2 then none else some result.1, result.2)) <$> guarded] =
       𝒟[(fun result =>
-        (some result.1.1, (result.2, (result.1.2, false)))) <$> source]
+        (some result.1.1, (result.2, (result.1.2, false)))) <$> source] := by
+  exact QueryImpl.evalDist_guardQueryBudget_eq_of_ae_caps
+    caps cost handler fallback program initial hcap
 
-/-- The full reviewed support certificate, without a source resource hypothesis. -/
-theorem safety : SafetyTarget := @guardQueryBudget_counts_le_caps
-
-/-- The full reviewed mixed-source joint law. -/
-theorem transparency : TransparencyTarget := @evalDist_guardQueryBudget_eq_of_ae_caps
-
-#check @constructor_eq
-#print axioms constructor_eq
-#print axioms QueryImpl.guardQueryBudget
-#print axioms safety
-#print axioms transparency
-end ForwardingBudgetGuardAudit
-
-namespace ForwardingBudgetGuardAudit
-
-/-- The complete zero-start joint event-filtering law. -/
-private theorem event_filtered_guard_contract
+theorem paired2
     {ι α Cache : Type} {spec : OracleSpec.{0, 0} ι}
     (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
     (handler : QueryImpl spec (StateT Cache ProbComp))
@@ -101,9 +151,161 @@ private theorem event_filtered_guard_contract
     Pr{let result ← (do
       let cache ← initial
       ((simulateQ (handler.withAddCost cost) program).runAdd).run cache)}[
-      event result ∧ result.1.2.1 ≤ caps.1 ∧ result.1.2.2 ≤ caps.2] :=
-  prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps
+      event result ∧ result.1.2.1 ≤ caps.1 ∧ result.1.2.2 ≤ caps.2] := by
+  exact QueryImpl.prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps
     caps cost handler fallback program initial event
 
-#print axioms event_filtered_guard_contract
-end ForwardingBudgetGuardAudit
+theorem paired3
+    {ι α Cache : Type} {spec : OracleSpec.{0, 0} ι}
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
+    (handler : QueryImpl spec (StateT Cache m))
+    (fallback : (input : spec.Domain) → spec.Range input)
+    (program : OracleComp spec α)
+    (initialCache : Cache) (initialCounts : Nat × Nat) (initialAborted : Bool) :
+    let forwarder : QueryImpl spec (StateT PUnit (OracleComp spec)) :=
+      (QueryImpl.id' spec).liftTarget (StateT PUnit (OracleComp spec))
+    let freeGuarded : OracleComp spec (α × (PUnit × ((Nat × Nat) × Bool))) :=
+      (simulateQ (guardQueryBudget caps cost forwarder fallback) program).run
+        (PUnit.unit, (initialCounts, initialAborted))
+    (fun result : (α × (PUnit × ((Nat × Nat) × Bool))) × Cache =>
+      (result.1.1, (result.2, result.1.2.2))) <$>
+      (simulateQ handler freeGuarded).run initialCache =
+        (simulateQ (guardQueryBudget caps cost handler fallback) program).run
+          (initialCache, (initialCounts, initialAborted)) := by
+  exact QueryImpl.map_run_simulateQ_guardQueryBudget_free_eq
+    caps cost handler fallback program initialCache initialCounts initialAborted
+
+/-! ## Scalar and vector probability clients -/
+
+abbrev toySpec : OracleSpec Unit := Unit →ₒ Nat
+
+def toyHandler : QueryImpl toySpec (StateT Nat ProbComp) :=
+  fun _ => StateT.mk fun cache => pure (cache, cache + 1)
+
+def toyProgram : OracleComp toySpec Nat := OracleComp.queryBind () pure
+
+/-- A scalar budget of two admits one cost-two request and preserves its complete observation. -/
+theorem scalar_complete_event :
+    Pr{let result ← (do
+      let cache ← (pure 7 : ProbComp Nat)
+      (simulateQ (guardQueryBudget 2 (fun _ => 2) toyHandler (fun _ => 999))
+        toyProgram).run (cache, (0, false)))}[
+      (result.1 = 7 ∧ result.2.2.1 = 2 ∧ result.2.1 = 8) ∧ result.2.2.2 = false] = 1 := by
+  rw [prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps
+    (2 : Nat) (fun _ => 2) toyHandler (fun _ => 999) toyProgram (pure 7)
+    (fun result => result.1.1 = 7 ∧ result.1.2 = 2 ∧ result.2 = 8)]
+  change Pr{let result ← (pure ((7, 2), 8) : ProbComp ((Nat × Nat) × Nat))}[
+    (result.1.1 = 7 ∧ result.1.2 = 2 ∧ result.2 = 8) ∧ result.1.2 ≤ 2] = 1
+  simp
+
+def vectorWeight : Fin 3 → Nat := fun i => if i = 1 then 2 else 1
+
+def vectorCap : Fin 3 → Nat := fun _ => 1
+
+/-- One over-budget coordinate rejects the joint event despite its complete counted source. -/
+theorem vector_joint_rejection :
+    Pr{let result ← (do
+      let cache ← (pure 7 : ProbComp Nat)
+      (simulateQ (guardQueryBudget vectorCap (fun _ => vectorWeight)
+        toyHandler (fun _ => 999)) toyProgram).run (cache, (0, false)))}[
+      (result.1 = 7 ∧ result.2.1 = 8) ∧ result.2.2.2 = false] = 0 := by
+  rw [prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps
+    vectorCap (fun _ => vectorWeight) toyHandler (fun _ => 999) toyProgram (pure 7)
+    (fun result => result.1.1 = 7 ∧ result.2 = 8)]
+  have hnot : ¬ vectorWeight ≤ vectorCap := by
+    intro h
+    have h₁ := h (1 : Fin 3)
+    change 2 ≤ 1 at h₁
+    exact (by decide : ¬ (2 : Nat) ≤ 1) h₁
+  change Pr{let result ← (pure ((7, vectorWeight), 8) :
+      ProbComp ((Nat × (Fin 3 → Nat)) × Nat))}[
+    (result.1.1 = 7 ∧ result.2 = 8) ∧ result.1.2 ≤ vectorCap] = 0
+  simp [hnot]
+
+#check @generic0
+#print axioms generic0
+#check @generic1
+#print axioms generic1
+#check @generic2
+#print axioms generic2
+#check @generic3
+#print axioms generic3
+#check @paired0
+#print axioms paired0
+#check @paired1
+#print axioms paired1
+#check @paired2
+#print axioms paired2
+#check @paired3
+#print axioms paired3
+#print axioms scalar_complete_event
+#print axioms vector_joint_rejection
+#print axioms QueryImpl.guardQueryBudget_counts_le_caps
+#print axioms QueryImpl.evalDist_guardQueryBudget_eq_of_ae_caps
+#print axioms QueryImpl.prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps
+#print axioms QueryImpl.map_run_simulateQ_guardQueryBudget_free_eq
+end LiveGuardLawAudit
+
+namespace LiveGuardRuntimeAudit
+open OracleComp OracleSpec
+
+theorem pair_step_all_initial
+    {ι Cache : Type} {spec : OracleSpec.{0, 0} ι}
+    {m : Type → Type v} [Monad m]
+    (caps : Nat × Nat) (cost : spec.Domain → Nat × Nat)
+    (handler : QueryImpl spec (StateT Cache m))
+    (fallback : (input : spec.Domain) → spec.Range input)
+    (input : spec.Domain) (cache : Cache) (counts : Nat × Nat) (flag : Bool) :
+    (QueryImpl.guardQueryBudget caps cost handler fallback input).run
+        (cache, (counts, flag)) =
+      if flag then pure (fallback input, (cache, (counts, flag)))
+      else
+        let proposed := counts + cost input
+        if proposed.1 ≤ caps.1 ∧ proposed.2 ≤ caps.2 then
+          (fun result => (result.1, (result.2, (proposed, false)))) <$>
+            (handler input).run cache
+        else pure (fallback input, (cache, (counts, true))) := by
+  rfl
+
+
+abbrev spec : OracleSpec Nat := Nat →ₒ Nat
+
+def touches : QueryImpl spec (StateT Nat Id) :=
+  fun input => StateT.mk fun cache => pure (input + cache, cache + 1)
+
+def cost (input : Nat) : Nat × Nat := if input = 0 then (1, 2) else (0, 0)
+
+def fallback (_ : spec.Domain) : Nat := 999
+
+/-- An admitted query updates the physical cache once and commits both coordinates. -/
+example : (QueryImpl.guardQueryBudget (2, 3) cost touches fallback 0).run
+    (7, ((1, 1), false)) = pure (7, (8, ((2, 3), false))) := rfl
+
+/-- Overflow leaves an existing accepted cost and the physical cache intact. -/
+example : (QueryImpl.guardQueryBudget (2, 2) cost touches fallback 0).run
+    (7, ((1, 1), false)) = pure (999, (7, ((1, 1), true))) := rfl
+
+/-- The first rejected request cannot partially commit a coordinate. -/
+example : (QueryImpl.guardQueryBudget (1, 1) cost touches fallback 0).run
+    (7, ((0, 0), false)) = pure (999, (7, ((0, 0), true))) := rfl
+
+/-- A zero-cost request before any abort still delegates, even at cap zero. -/
+example : (QueryImpl.guardQueryBudget (0, 0) cost touches fallback 1).run
+    (7, ((0, 0), false)) = pure (8, (8, ((0, 0), false))) := rfl
+
+/-- Already-aborted calls preserve arbitrary incoming counters and cache. -/
+example (cache : Nat) (counts : Nat × Nat) (input : Nat) :
+    (QueryImpl.guardQueryBudget (0, 0) cost touches fallback input).run
+      (cache, (counts, true)) = pure (999, (cache, (counts, true))) := rfl
+
+/-- A later zero-cost request cannot resume effects after the first overflow. -/
+example : ((do
+      let first ← QueryImpl.guardQueryBudget (1, 1) cost touches fallback 0
+      let second ← QueryImpl.guardQueryBudget (1, 1) cost touches fallback 1
+      pure (first, second)) : StateT (Nat × ((Nat × Nat) × Bool)) Id (Nat × Nat)).run
+        (7, ((0, 0), false)) = pure ((999, 999), (7, ((0, 0), true))) := rfl
+
+#print axioms pair_step_all_initial
+#print axioms QueryImpl.guardQueryBudget
+end LiveGuardRuntimeAudit

@@ -1,37 +1,40 @@
-# Shared signature observation and marked-source replay
+# Shared signature observation, actual source caps and native construction replay
 
-The sole live generic observer is `VCVio/CryptoFoundations/SignatureAlg/CountedExperiment.lean`.
-It retains actual keys and the existing raw outcome with arbitrary additive cost and cache.
-The lab observer is a specialization; the earlier parallel phase/client observation bodies
-and Nat-only audit are absent. The four marked-source laws retain their complete types.
-The relative audit checks the full arbitrary-result and independent-event kernel interface.
+The live generic observer retains actual keys and the existing raw outcome with arbitrary
+additive cost and cache. The live Enforcement owner supplies one generic absorbing guard
+and its four proved laws. The real-FIPS Joint theorem applies its actual signing-lifetime
+and joint adversary-work hypotheses to the SAME full byte-source execution, retaining keys,
+raw replies, candidate/verdict, actual counts and physical cache jointly.
 
-This stage also separates native lab queries from original byte-event payloads. The private
-construction audit checks the eight C0 boundaries, including the UNROUTED real full-key source,
-original paid events, sign-only log, dependent fallback and free guard tuple.
+The Marked602 count/observer conclusions and C0 construction171 fixtures remain exact.
+The generic relative audit retains its arbitrary result and independent event interface.
+The two unchanged weak-key theorem owners are rebuilt first from their separately accepted
+source bytes; this integration does not modify or re-prove their keygen/continuation results.
+The consolidated ordinary guard audit covers all four generic laws, their full original
+Nat-pair conclusions, scalar/vector probability clients and arbitrary incoming runtime state.
 
-Working proof owners change by -109 physical lines relative to the pre-A owners
-(Counted +214, shim -222, marked -104, relative +3). These are working-owner metrics,
-not a main-to-final-PR compression claim. All ordinary audits are PRIVATE NONMODULE inputs.
-The full-source guard395, generic native basis and source bodies are read from their frozen
-Git blobs; no basis body copies or stale canonical Counted artifacts are used.
+CURRENT replay selects the guard/free archives as current reexport shims, never the old
+frozen395/88 bodies. One fresh live Enforcement producer precedes every direct/transitive
+consumer. Counted, both weak owners, Joint, both shims, RelativeKernel and MarkedLab are rebuilt
+from source; every producer contributes all five fresh variants before each consumer.
+Historical56697 receipts remain tied to their exact old sources/dependencies and are unchanged.
 
-This remains research evidence. It proves no B resource bridge, C1/C2 byte coupling, partial
-seed/lab transport, policy affordability or full127 theorem. Historical recipes/receipts
-at `56697d5df532d3d68c480cbc604ed89ba45f2513` retain their exact older source scope. Current recorded replay is UNRUN.
-The final production integration remains selective and omits evidence archives.
+The guard/B/Marked/shim working-owner transfer is +89 physical lines (+436 Enforce,
++113 Joint, +1 Marked, -384/-77 archive modules). This is not a main-to-final-PR compression claim. Current integration
+recorded replay is UNRUN. No byte/partial-native coupling, win-local policy affordability,
+security-bound improvement or final127 result follows from this replay.
 
-Run from a CLEAN recorded checkout, with its actual full commit and a NEW ABSENT output.
-The recipe compiles 11 scoped commands: eight proof modules and three private audits.
-Require 43 outputs and 73 standard-only axiom reports, including the guard's empty report,
-zero warnings, clean source before each command and afterward. All five fresh producer
-sidecars are checked BEFORE each consumer. No Lake/cache update or limit waiver is used.
+Run only from a CLEAN recorded private candidate or adopted checkout with its full commit
+and a NEW ABSENT output. Require 16 scoped commands (12 modules/4 ordinary NONMODULE audits),
+64 fresh outputs, 84 standard-only reports including exactly 2 empty reports, no warnings,
+and identical protected frames before EACH command and afterward. Default proof limits,
+-j2 and 240-second watchdogs apply. No Lake/cache update or repository write is performed.
 
 ```bash
 research=$(GIT_OPTIONAL_LOCKS=0 GIT_NO_LAZY_FETCH=1 git rev-parse --show-toplevel)
 base=/tmp/vcvio-slhdsa-integration
 recorded_head=REPLACE_WITH_ACTUAL_FULL_COMMIT_SHA
-out=/tmp/slhdsa-shared-observer-REPLACE_WITH_NEW_ABSENT_LABEL
+out=/tmp/slhdsa-live-guard-B-REPLACE_WITH_NEW_ABSENT_LABEL
 python3 - "$research" "$base" "$out" "$recorded_head" <<'PYREPLAY'
 from pathlib import Path
 import hashlib,json,os,re,subprocess,sys,time
@@ -42,10 +45,10 @@ assert re.fullmatch('[0-9a-f]{40}',head)and out.is_absolute();out.mkdir(exist_ok
 def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 def blob(b):return hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest()
 def put(p,v):p.write_text(json.dumps(v,indent=2)+'\n')
-def git(p,*a):return subprocess.check_output(['git','-C',str(p),*a])
+def git(p,*a):return subprocess.check_output(['git','--no-optional-locks','-C',str(p),*a])
 def state(p):
  raw=git(p,'ls-files','--stage','-z');index={r.split(b'\t',1)[1].decode():r.split()[1].decode()for r in raw.split(b'\0')if r}
- return {'head':git(p,'rev-parse','HEAD').decode().strip(),'tree':git(p,'rev-parse','HEAD^{tree}').decode().strip(),'status':git(p,'status','--porcelain').decode(),'semanticIndex':hashlib.sha256(raw).hexdigest()},index
+ return {'head':git(p,'rev-parse','HEAD').decode().strip(),'tree':git(p,'rev-parse','HEAD^{tree}').decode().strip(),'status':git(p,'status','--porcelain').decode(),'semanticIndex':hashlib.sha256(raw).hexdigest(),'rawIndex':sha(git(p,'rev-parse','--path-format=absolute','--git-path','index').decode().strip())},index
 specs={n:{**v,'commit':m['frozenBasisCommit']if v['basis']else head}for n,v in m['sources'].items()};local={}
 for n,v in specs.items():
  b=git(research,'show',v['commit']+':'+v['path']);assert blob(b)==v['gitBlob']and hashlib.sha256(b).hexdigest()==v['sha256'];p=src/(n.replace('.','/')+'.lean');p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b);local[n]=p
@@ -111,7 +114,7 @@ def frame():
   if repo==base:
    a=base/'.lake/build/lib/lean'/n.replace('.','/');assert Path(str(a)+'.olean').is_file();f['normalArtifacts'][n]={str(q):sha(q)for q in sorted(a.parent.glob(a.name+'.*'))if q.is_file()}
  assert links=={str(p.relative_to(lib)):str(p.readlink())for p in lib.rglob('*')if p.is_symlink()};return f
-before=frame();put(out/'before.json',before);done={};results=[];total=0;env={**os.environ,'LEAN_NUM_THREADS':'2','LEAN_PATH':':'.join(map(str,libs))}
+before=frame();put(out/'before.json',before);done={};results=[];total=0;empty=0;env={**os.environ,'LEAN_NUM_THREADS':'2','LEAN_PATH':':'.join(map(str,libs))}
 try:
  for n in order:
   needed=set();todo=list(closure[n]['imports'])
@@ -130,12 +133,13 @@ try:
    try:child=subprocess.run(argv,cwd=research,env=env,stdout=log,stderr=subprocess.STDOUT,timeout=240)
    except subprocess.TimeoutExpired:put(out/'timeout.json',{'module':n,'acceptance':False});raise
   row={'module':n,'exit':child.returncode,'seconds':time.monotonic()-start,'sourceSHA256':sha(local[n]),'inputSHA256':sha(out/(tag+'-input.json')),'logSHA256':sha(out/(tag+'.log'))};results.append(row);put(out/'results.json',results);assert child.returncode==0
-  text=(out/(tag+'.log')).read_text();assert not re.search(r'\b(warning|error):',text);reports=re.findall(r'depends on axioms: \[([^\]]*)\]|does not depend on any axioms',text,re.S);assert len(reports)==specs[n]['axiomReports'];total+=len(reports)
+  text=(out/(tag+'.log')).read_text();assert not re.search(r'\b(warning|error):',text);reports=re.findall(r'depends on axioms: \[([^\]]*)\]|does not depend on any axioms',text,re.S);assert len(reports)==specs[n]['axiomReports'];total+=len(reports);empty+=sum(not a.strip()for a in reports)
   assert all({v.strip()for v in a.replace('\n','').split(',')if v.strip()}<=set(m['allowedAxioms'])for a in reports)
   emitted={str(Path(str(target)[:-6]+'.'+s)):sha(Path(str(target)[:-6]+'.'+s))for s in(suffixes if specs[n]['module']else['olean'])};row['outputs']=emitted;put(out/'results.json',results)
   assert specs[n]['module']or all(not Path(str(target)[:-6]+'.'+s).exists()for s in suffixes[1:]);assert all(sha(p)==h for p,h in consumed.items());done[n]=emitted
+  finished=frame();put(out/(tag+'-after.json'),finished);assert before==finished
 finally:
  after=frame();put(out/'after.json',after);assert before==after
-assert len(results)==m['replay']['commands']and sum(len(x['outputs'])for x in results)==m['replay']['outputs']and total==m['replay']['axiomReports']
+assert len(results)==m['replay']['commands']and sum(len(x['outputs'])for x in results)==m['replay']['outputs']and total==m['replay']['axiomReports']and empty==m['replay']['emptyReports']
 PYREPLAY
 ```
