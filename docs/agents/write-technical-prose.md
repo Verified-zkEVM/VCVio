@@ -2,7 +2,7 @@
 
 Use this workflow when you draft or revise VCVio documentation, comments, docstrings, commit
 messages, PR text, issue text, or review comments. Use it for short comments as well as long guides.
-Work on the text that the user requested. A writing review does not authorize unrelated source
+Work on the text within the agreed scope. A prose review does not authorize unrelated source
 changes or publication.
 
 ## Read the local requirements
@@ -11,7 +11,7 @@ Read the [writing standard](writing.md) and the [vocabulary](writing-vocabulary.
 Read the relevant section of [CONTRIBUTING.md](../../CONTRIBUTING.md) for the contribution or text
 that you prepare. The standard owns the requirements. This workflow explains how to apply them.
 
-Treat existing prose as material to assess, not as a style to preserve. Use STE's writing
+Treat current prose as material to assess, not as a style to preserve. Use STE's writing
 principles to correct defects. Keep established identifiers, notation, quotations, and technical
 meanings accurate. Consult the official standard when a rule's source or a word's approval matters.
 Do not invent a dictionary approval or claim full STE conformance from a checker result.
@@ -50,10 +50,14 @@ model, the query budgets, and each term of the bound. Preserve time and requirem
 "may have failed" does not mean "failed", and "recommended" does not mean "required".
 A shorter expression is useful only when it keeps the intended meaning.
 
-Do not let a writing rule change standard terminology. A rule can conflict with a term or language
-pattern that is standard in cryptography research and engineering, computer science, or mathematics.
-In that case, keep the standard form and apply the rules to the rest of the passage. Repository
-habit alone does not make a wording standard.
+Do not let a writing rule change standard terminology. First try a compliant rewrite that keeps the
+technical meaning. Keep a standard form only if a compliant rewrite would change that meaning.
+The form must be standard in cryptography research and engineering, computer science, or mathematics.
+Apply the rules to the rest of the passage. Repository habit alone does not make a wording standard.
+
+Rewrite mathematical introductions with "Assume P. Then ..." or "Let f ...".
+Keep each hypothesis and the scope of each definition. Do not use a general exception for verbal
+"-ing" forms under V2.
 
 Use the vocabulary to resolve ambiguous terms, not to erase valid technical meanings.
 "Complete the template" does not claim protocol completeness. "The scheme is hiding" names a
@@ -62,7 +66,7 @@ context could confuse them.
 
 ## Use the checker
 
-Use `scripts/check-writing.py` as an editing aid:
+Use `scripts/check-writing.py` as a review aid:
 
 ```bash
 uv run --no-project --python 3.12 python scripts/check-writing.py path/to/document.md
@@ -75,12 +79,13 @@ For changed prose, give the actual review base to `--base`. A stacked PR can hav
 branch as its base. Do not assume that every PR targets `main`.
 
 Read each finding before you edit. Counts and grammar patterns are approximations. Correct real
-defects, keep accurate technical expressions, and report a recurring checker defect with an
+defects, keep accurate technical expressions, and report a repeated checker defect with an
 example. Do not rewrite a correct claim only to make the checker quiet.
 
 The checker does not establish clarity, source fidelity, dictionary compliance, or permission to
-publish. It reports findings and exits with status 0. The Writing workflow in CI shows the same
-findings as warnings. A finding does not fail a PR.
+publish. Findings and input diagnostics exit with status 0.
+Usage, Git and configuration errors exit with status 2.
+The Writing workflow in CI shows findings as warnings. A finding does not fail a PR.
 
 ## Read the final text before handoff
 
@@ -88,6 +93,6 @@ Read the complete affected passage after the last edit. Confirm that its structu
 its claims still agree with the source. Check each link or reference that the edit changes.
 A good sentence can still be wrong in its paragraph.
 
-Return or save the requested text. Publish it only when the user's instructions authorize that
-action. If the task includes a commit or a push, run the validation that the contribution workflow
-requires first. Report material evidence gaps without adding a standard disclaimer to every text.
+Return or save the text within the agreed scope. Publish it only with authorization from the person responsible for the contribution.
+If the task includes a commit or a push, run the validation that the contribution workflow requires first.
+Report material evidence gaps. Do not add a standard disclaimer to every text.

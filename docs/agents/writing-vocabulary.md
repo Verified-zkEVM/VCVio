@@ -15,7 +15,7 @@ word. The [notation reference](notation.md) owns the meaning of each Lean notati
 5. Add a missing term or meaning when the contribution first needs it.
 
 One spelling can be a technical noun and a technical verb, as in "a query" and "query an oracle".
-STE permits this dual role when each use meets the rules for its category (STE 1.7, 1.12, 1.13).
+STE permits this dual role when each use meets the rules for its category (STE 1.5, 1.7, 1.12, 1.13).
 Record the noun and the verb uses separately. A category example is not a reason to reject another
 established term from the same field.
 
@@ -42,7 +42,7 @@ meaning of a word in a different context:
 | key | A cryptographic key or the key of a map, such as a cache entry | Write "secret key", "public key", or "cache key" when both occur. |
 | lossless | A computation whose output distribution has total mass one | Under an answer measure, every `OracleComp` computation is lossless. Failure arises in transformers such as `OptionT`. |
 | module | A Lean module or an algebraic module, as in module lattices | Write "Lean module" or "module over `R`" when the distinction matters. |
-| proof | A Lean proof, a mathematical proof, or a proof-system object | Name the kind of proof before comparing different kinds. |
+| proof | A Lean proof, a mathematical proof, or a proof-system object | Name each kind of proof before you compare different kinds. |
 | reduction | A named computation that turns one adversary into another | Name the reduction in a security theorem. Do not state only that one exists. |
 | sound, soundness | A specified soundness property of a protocol | Name the property and its assumptions. Ordinary prose can use "correct" for an argument. |
 | spec | An oracle specification, `OracleSpec` | Write "specification" or the standard name, such as FIPS 205, for a document. |
@@ -68,6 +68,45 @@ Introduce a longer or unfamiliar term before you use an abbreviation:
 | Lean | declaration, theorem, lemma, hypothesis, docstring, namespace, typeclass, instance, tactic, elaboration, axiom, Lean module |
 | Repository tools | branch, commit, pull request, build, linter, axiom baseline, validation, merge queue, CI |
 
+## Technical -ing nouns
+
+These entries name subject-field concepts or supply modifiers in technical nouns under STE 3.5.
+An entry permits that noun use only. It does not approve a verb clause with the same word.
+
+| Term | Technical meaning |
+|---|---|
+| `accounting` | Measurement of queries, work, collisions or trust dependencies. |
+| `batching` | A construction that combines several operations or proof obligations. |
+| `binding` | A commitment security property that bounds the ability to give inconsistent openings. |
+| `closing` | The delimiter role in a closing quote or closing bracket. |
+| `counting` | Measurement of words, queries or computational work. |
+| `coupling` | A joint probability distribution with specified marginals. |
+| `decoding` | The operation that recovers a value from an encoded representation. |
+| `drawing` | A probability experiment that selects a sample, as in a draw without replacement. |
+| `embedding` | A mathematical map that preserves the specified structure. |
+| `encoding` | The operation that represents a value as bytes or another specified format. |
+| `folding` | A construction that combines layers or reduces the size of a represented object. |
+| `forking` | A security-proof technique that derives related executions from an adversary run. |
+| `framing` | The rules that delimit fields or messages in a wire format. |
+| `hashing` | Evaluation of a hash function. |
+| `hiding` | A commitment security property concerning disclosure of the committed value. |
+| `interleaving` | A combination of sequences that preserves each sequence's internal order. |
+| `learning` | The problem-family name in learning with errors. |
+| `loading` | The computer process that initializes an imported module. |
+| `logging` | A computer process that records execution data. |
+| `masking` | A text-processing operation that hides content while it preserves source positions. |
+| `pairing` | A bilinear map used in cryptographic constructions. |
+| `parsing` | Analysis of a string under a specified grammar or encoding format. |
+| `rewinding` | A security-proof technique that resumes an adversary from an earlier state. |
+| `rounding` | A map to a discrete representation with a specified approximation rule. |
+| `sampling` | Selection of a value according to a probability distribution. |
+| `signing` | The operation that produces a signature under a secret key. |
+| `testing` | Execution of software checks against specified expectations. |
+| `tracing` | An execution record or the process that produces that record. |
+| `tracking` | Measurement or recording of queries, costs or execution state. |
+| `unfolding` | Expansion of a Lean definition under its reduction rules. |
+| `winning` | The success predicate of a security game, as in a winning event. |
+
 ## Technical verbs
 
 Use these verbs for the stated subject-field actions. Keep a verb's meaning consistent within a
@@ -85,7 +124,7 @@ passage. Explain the operation or name the relevant declaration when its meaning
 
 ## Words to avoid
 
-This table gives prompts for an editing pass over ordinary prose. They do not define STE word
+This table gives prompts for prose review. They do not define STE word
 approval. Use a replacement only when it preserves the meaning and grammatical role. Rewrite the
 sentence when a direct replacement does not work:
 
@@ -106,7 +145,7 @@ sentence when a direct replacement does not work:
 | "it is worth noting that", "it is important to" | delete the phrase when it adds no information |
 | "now", "no longer", "previously", "formerly", "currently", "new" | in library reference text, the fact about the present state (rule C3) |
 
-"The following are equivalent" is a permitted mathematical introduction. Words such as "simply"
+"These statements are equivalent" is a permitted mathematical introduction. Words such as "simply"
 and "essentially" can occur in technical terms, such as "simply typed" and "essentially
-surjective". Review their meaning rather than deleting them as isolated words. "Negligible" and
+surjective". Review their meaning before you delete them as isolated words. "Negligible" and
 "tight" are technical terms in security proofs. They are not vague qualifiers.

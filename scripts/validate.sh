@@ -34,7 +34,7 @@ Default fast checks (shared with per-PR CI):
   - python3 ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
   - scripts/test-docnames.sh, then python3 ./scripts/check-doc-names.py --resolve
     (the declaration names the guides cite, against the oleans the build produced)
-  - python3 ./scripts/test-check-writing.py (the tests of the advisory writing checker, which
+  - uv run --no-project --python 3.12 python ./scripts/test-check-writing.py (the tests of the advisory writing checker, which
     the Writing workflow runs on pull requests with warnings only)
 
 Optional checks:
@@ -121,7 +121,7 @@ python3 ./scripts/check-agent-docs.py
 python3 ./scripts/extract-doc-fragments.py --check
 bash scripts/test-docnames.sh
 python3 ./scripts/check-doc-names.py --resolve
-python3 ./scripts/test-check-writing.py
+uv run --no-project --python 3.12 python ./scripts/test-check-writing.py
 
 if (( run_lint )); then
   echo ""

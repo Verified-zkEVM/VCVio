@@ -46,6 +46,8 @@ its row in the [upstream alignment ledger](docs/reading/upstream-alignment.md).
 
 ## Validate The Change
 
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) before the Python checks and the default validation pass.
+
 Do these steps before you request review:
 
 1. After you add, rename, or delete a `.lean` file, run `./scripts/update-lib.sh`. CI fails when
@@ -65,14 +67,14 @@ explains the CI build, the caches, and each gate.
 For a change to documentation only, run the documentation checks without a Lean build:
 
 ```bash
-python3 scripts/test-agent-docs.py
-python3 scripts/check-agent-docs.py
-python3 scripts/extract-doc-fragments.py --check
-python3 scripts/check-doc-names.py
+uv run --no-project --python 3.12 python scripts/test-agent-docs.py
+uv run --no-project --python 3.12 python scripts/check-agent-docs.py
+uv run --no-project --python 3.12 python scripts/extract-doc-fragments.py --check
+uv run --no-project --python 3.12 python scripts/check-doc-names.py
 ```
 
 CI also resolves the declaration names that the guides cite. That check needs a build, so
-`./scripts/validate.sh` runs it as `python3 ./scripts/check-doc-names.py --resolve`.
+`./scripts/validate.sh` runs `scripts/check-doc-names.py --resolve` for that purpose.
 
 ### Proof Debt And Linters
 
@@ -82,9 +84,9 @@ CI also resolves the declaration names that the guides cite. That check needs a 
   Commit the change to `scripts/axiom_baseline.json`, and explain it in the PR description.
 - Keep repository-wide Lean options in `lakefile.lean`. Do not restate `autoImplicit = false`
   with a `set_option` line in a file.
-- Do not disable linters to make warnings disappear. Fix the cause instead of adding
-  `set_option linter.* false`, `set_option weak.linter.* false`, or a repository-level linter
-  suppression. [Gotcha 23](docs/agents/gotchas.md#23-do-not-disable-linters-to-silence-warnings)
+- Do not disable linters locally or globally to make warnings disappear.
+  Fix the cause rather than use `set_option linter.* false`, `set_option weak.linter.* false`, or a repository-level linter suppression.
+  [Gotcha 23](docs/agents/gotchas.md#23-do-not-disable-linters-to-silence-warnings)
   gives the one documented exception.
 - When you rename or remove a declaration, update every caller in the same PR. Do not add
   deprecated aliases or compatibility wrappers
@@ -136,7 +138,7 @@ refactor(OracleComp)!: rename the query constructors
 ### Description
 
 Complete the [PR template](.github/PULL_REQUEST_TEMPLATE.md). Keep the description proportional to
-the change. Omit a section that does not apply rather than inventing claims for it. Give reviewers
+the change. Omit a section that does not apply. Do not invent claims for it. Give reviewers
 the information that they need to assess the contribution:
 
 - State the problem, the change, and its purpose.
@@ -148,7 +150,7 @@ the information that they need to assess the contribution:
   `scripts/axiom_baseline.json`.
 - Give the validation commands, their results, and the commit that they cover.
 - List renamed or removed declarations and the callers that the PR updates.
-- Link related issues, the base of a stack, and overlapping work.
+- Link related issues, the base of a stack, and work on the same target.
 
 Keep the claims in the title and the description consistent with the code and the evidence. A
 successful build does not establish fidelity to a source or the absence of `sorry`.
@@ -159,8 +161,8 @@ Give each PR one topic. Separate mechanical changes from mathematical changes wh
 check each one independently.
 
 Use a stack of PRs when a contribution needs several dependent changes. Each PR must build and
-pass its validation against its base. Name that base in the description. A stacked PR merges
-through the merge queue with the asynchronous merge API, as the next section describes.
+pass its validation against its base. Name that base in the description.
+If GitHub marks a PR as stacked, use the asynchronous merge API for the merge queue, as the next section describes.
 
 ### Checks And The Merge Queue
 
@@ -186,7 +188,7 @@ checks and the actual merge result before you report a merge.
 
 Use the [writing standard](docs/agents/writing.md) for documentation, docstrings, comments, commit
 messages, PR and issue text, and review comments. It applies to all authors. It uses Simplified
-Technical English (STE) to correct defects in existing prose. Each departure from STE is marked
+Technical English (STE) to correct defects in current prose. Each departure from STE is marked
 as an adaptation.
 
 Use the [writing workflow](docs/agents/write-technical-prose.md) when you draft or revise that
@@ -194,7 +196,7 @@ text. Keep claims, hypotheses, uncertainty, and requirement strength unchanged d
 The [vocabulary](docs/agents/writing-vocabulary.md) records technical meanings. It does not
 prohibit other meanings when their context is clear.
 
-`scripts/check-writing.py` finds some common defects. It is an editing aid, not a gate, and it
+`scripts/check-writing.py` finds some common defects. It is a review aid, not a gate, and it
 does not establish conformance to the standard. CI runs it on the changed prose and the PR
 description, and it reports findings as warnings only.
 
@@ -207,11 +209,11 @@ You are responsible for content that an AI agent or another tool produces for yo
 - Replace planning codes that a reader cannot find with the maintained source or an explanation.
 - Describe the current library in reference documentation. Explain the change in the commit or PR
   description.
-- Coordinate concurrent tool runs so that they do not open competing PRs for the same target.
+- Coordinate concurrent tool runs so that they do not open rival PRs for the same target.
 
 ## Attribution And File Headers
 
-Start every new Lean file with the standard header:
+Every new Lean file should start with the standard header:
 
 ```lean
 /-
@@ -226,11 +228,11 @@ policy:
 
 1. **New files**: add the standard header with the current year and the names of the credited
    authors.
-2. **Routine edits to existing files**: keep the existing header. Do not change the attribution
+2. **Routine edits to a file**: keep its current header. Do not change the attribution
    only because you edited the file.
 3. **Substantial rewrites or replacements**: update the header to show the new authorship when new
    content effectively replaces a file. The same applies when you rename or recreate an old file as
-   a new file.
+   a genuinely new file. A plain rename does not change the attribution.
 4. **Copied or ported material**: a new file can keep substantial content or structure from
    another source. Then keep the required upstream attribution, and add the current credited
    authors as appropriate.
@@ -245,25 +247,23 @@ or materially replaced.
 The [repository ownership map](docs/design/repository-layout.md) gives the placement rules and the
 build boundaries for documentation and code.
 
-- Give every ordinary Lean source file a module docstring `/-! ... -/` near the top.
-- Keep the import-only umbrella modules bare. Examples are `VCVio.lean`, `LatticeCrypto.lean`, and
-  `Examples.lean`. Keep `lakefile.lean` bare as well.
-- Give public definitions and major theorems a declaration docstring `/-- ... -/`.
-- In a module docstring, give a concise title and summary. Add notation or references when that
-  context helps a reader.
-- In a declaration docstring, describe what a definition is or what a theorem states, not how it
-  evolved.
+- Every ordinary Lean source file should have a module docstring `/-! ... -/` near the top.
+- Import-only umbrella modules should stay bare. Examples are `VCVio.lean`, `LatticeCrypto.lean`, and
+  `Examples.lean`. `lakefile.lean` should stay bare as well.
+- Public definitions and major theorems should have a declaration docstring `/-- ... -/`.
+- A module docstring should give a concise title and summary, with notation or references when that context helps a reader.
+- A declaration docstring should describe what a definition is or what a theorem states, not how it evolved.
 - Keep docstrings intrinsic and descriptive. Refer to current definitions when that helps. Do not
   mention removed or renamed declarations, change history, or phrases such as "replaces" or
   "renamed from".
 - If a file cites papers, add a references section to the module docstring, or cite the source
-  in the surrounding documentation. [`REFERENCES.md`](REFERENCES.md) lists the
+  in the documentation around the claim. [`REFERENCES.md`](REFERENCES.md) lists the
   repository's references.
 
 Use this prologue layout for an ordinary Lean source file, with exactly one blank line between the
 blocks:
 
-1. The copyright, license, and authors header.
+1. The copyright, licence, and authors header.
 2. One blank line.
 3. `module`.
 4. The public and private imports.
@@ -285,7 +285,7 @@ For a section with its own paragraph of explanation, use this form:
 /-!
 ## Section title
 
-Optional paragraph describing what the section contains.
+Optional paragraph that describes what the section contains.
 -/
 ```
 
@@ -306,10 +306,10 @@ output. A section that needs a banner usually needs its own `namespace` or its o
 All active Lean libraries and tests use the module system. Put ordinary declarations in a
 `public section`, and put tactic and elaborator declarations in a `public meta section`.
 
-Most existing source files use `@[expose] public section` to keep the definitional equalities that
+Most source files already in the repository use `@[expose] public section` to keep the definitional equalities that
 they had before the migration. A new file uses a plain `public section`. Mark a definition
-`@[expose]` when unfolding it is part of its intended public API. An executable or runtime
-implementation module uses an opaque `public section` when callers do not need to unfold its
+`@[expose]` when its intended public API includes definition unfolding. An executable or runtime
+implementation module should use an opaque `public section` when callers do not need to unfold its
 definitions.
 
 CI limits the number of broadly exposed files in each library. The
@@ -330,7 +330,7 @@ write a cross-package `import all PolyFun.…`. Add a public PolyFun law or API 
 and the long-term boundary between VCVio and PolyFun.
 
 `LatticeCryptoTest.lean` is curated rather than generated, because its executable modules define
-colliding root-level `main` declarations. For the same reason, `HashSigTest` has no generated root
+root-level `main` declarations whose names collide. For the same reason, `HashSigTest` has no generated root
 umbrella. Build its named executables and modules directly.
 
 ## Style Notes
@@ -384,7 +384,7 @@ order, which keeps `lake update` idempotent. The comment above the PolyFun `requ
    Program logic uses the pinned Lean core WP interface through PolyFun.
 3. Run `lake update --keep-toolchain`, then `lake exe cache get`.
 4. Run `./scripts/validate.sh --lint --test --axioms`. Fix what the new toolchain reports rather
-   than silencing it (`docs/agents/gotchas.md` §23).
+   than suppress its messages (`docs/agents/gotchas.md` §23).
 5. Update `scripts/axiom_baseline.json` only for an intentional change in `sorry` debt.
 6. Check each row of the [upstream alignment ledger](docs/reading/upstream-alignment.md) against the
    newly pinned trees. Do not derive the result from a diff against the previous ledger.

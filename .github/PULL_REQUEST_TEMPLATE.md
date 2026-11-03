@@ -13,7 +13,7 @@ one, cite its row in docs/reading/upstream-alignment.md. -->
 <!-- The commands that you ran locally, and the commit that they cover. Examples are
 `lake build <libs> VCVioTest`, `lake exe axiomsweep --check`, `./scripts/update-lib.sh`,
 `lake lint -- --env-only`, `lake exe lint-style <libs>`, and
-`python3 scripts/check-agent-docs.py`. -->
+`uv run --no-project --python 3.12 python scripts/check-agent-docs.py`. -->
 
 ## Checklist
 
@@ -25,7 +25,7 @@ one, cite its row in docs/reading/upstream-alignment.md. -->
       passes, and `scripts/axiom_baseline.json` is unchanged or the summary explains its diff.
 - [ ] No `set_option linter.* false`, no deprecated aliases (`docs/agents/gotchas.md` §18, §23),
       and no native FFI test executables on the PR path.
-- [ ] Documentation that the change affects is updated, and `python3 scripts/check-agent-docs.py`
+- [ ] Documentation that the change affects is updated, and `uv run --no-project --python 3.12 python scripts/check-agent-docs.py`
       passes.
 - [ ] If a simp, grind, or gcongr set changed, the gate files under `VCVioTest/` gained one-call
       entries. No proof gained a second tactic call outside a dated gap pair. The summary lists

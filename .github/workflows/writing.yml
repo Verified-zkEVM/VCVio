@@ -1,14 +1,14 @@
 name: Writing
 
 # Advisory prose check. The checker reports findings as warning annotations and exits with
-# status 0 when it runs, including when it finds prose problems. Checker errors and failures
+# status 0 when it runs, even when it finds prose problems. Checker errors and failures
 # of its tests fail the job.
 #
 # The pull request body comes from its author. Pass it to the script through an environment
 # variable, and never interpolate it into a shell command.
 
 on:
-  # Every pull request, including a stacked one whose base is another pull request's branch.
+  # Every pull request, even a stacked one whose base is another pull request's branch.
   # `edited` reruns the check when the author changes the description.
   pull_request:
     types: [opened, edited, reopened, synchronize, ready_for_review]
