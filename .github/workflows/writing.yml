@@ -1,0 +1,52 @@
+name: Writing
+
+# Advisory prose check. The checker reports findings as warning annotations and exits with
+# status 0. Each check step also continues on error. So this workflow never fails a pull request
+# because of its prose. Only a failure of the checker's own tests fails the job.
+#
+# The pull request body comes from its author. Pass it to the script through an environment
+# variable, and never interpolate it into a shell command.
+
+on:
+  # Every pull request, including a stacked one whose base is another pull request's branch.
+  # `edited` reruns the check when the author changes the description.
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  writing:
+    name: Check Writing (advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
+
+      - name: Test the writing checker
+        run: uv run --no-project --python 3.12 python scripts/test-check-writing.py
+
+      - name: Check the changed prose (warnings only)
+        continue-on-error: true
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: uv run --no-project --python 3.12 python scripts/check-writing.py --base "origin/${BASE_REF}" --github
+
+      - name: Check the pull request description (warnings only)
+        continue-on-error: true
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s\n' "$PR_BODY" | uv run --no-project --python 3.12 python scripts/check-writing.py --stdin description --github
