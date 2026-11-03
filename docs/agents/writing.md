@@ -109,7 +109,7 @@ standard. This guide adopts the recommendations named below as repository requir
 - **S1.** Use the sentence limits for the text type. Split a long sentence at a logical boundary.
   Keep its conditions and qualifications. Use the [word-count rules](#word-count). (STE 5.1, 6.3)
 - **S2.** Give a sentence one topic. Give a work step one instruction, except for actions that
-  must occur together. (STE 4.1, 5.2, 6.1)
+  must occur together. (STE 4.1, 5.2)
 - **S3.** Put a condition before an instruction when the reader needs it before acting.
   For example, "If the build fails, read the log." (STE 5.4)
 - **S4.** Use the imperative for work steps. Distinguish an instruction from a requirement or a
