@@ -7,7 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.TapeFactor
-public import HashSig.SLHDSA.SHAKE128s.Proof.CoverageCount
+public import HashSig.SLHDSA.SHAKE128s.Proof.BlockViews
 import VCVio.OracleComp.EvalDist.Sum
 
 /-!
