@@ -119,10 +119,13 @@ Use one of these types:
 - `chore`: maintenance
 - `ci`: CI workflows and checks
 
-Write the subject with an imperative verb: "add", not "added" or "adds". Keep ordinary words
-lowercase, and keep the capitalization of names such as ML-KEM. Do not end the subject with a
-period. Use the scope when it identifies the affected component, such as a library, a namespace,
-or a scheme. For a breaking change, put `!` before the colon. For example:
+Write a short subject that names the change. Use an imperative phrase, such as "add the CMA-to-NMA
+reduction". A noun phrase for the result, such as "the hiding theorem for commitments", is also
+correct. Do not use "added" or "adds".
+
+Keep ordinary words lowercase, and keep the capitalization of names such as ML-KEM. Do not end the
+subject with a period. Use the scope when it identifies the affected component, such as a library,
+a namespace, or a scheme. For a breaking change, put `!` before the colon. For example:
 
 ```text
 feat(FiatShamir): add the CMA-to-NMA reduction for signatures with aborts
