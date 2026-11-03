@@ -18,16 +18,18 @@ open scoped ENNReal
 
 namespace SLHDSA.Security.Coverage.NativeCausality
 
-variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
+variable {vp : ValidatedParams} (core : CorePrimitives vp.params) (tracked : TapeClass)
 
-/-- Overwrite one cell of the forger tape in a tape family. -/
+/-- Overwrite one cell of the tracked tape in a tape family. -/
 def overwriteTapes (L : (j : TapeClass) → List (tapeClassRange core j))
-    (cell : Nat) (value : Bytes vp.params.m) : (j : TapeClass) → List (tapeClassRange core j) :=
-  Function.update L TapeClass.forger ((L TapeClass.forger).set cell value)
+    (cell : Nat) (value : tapeClassRange core tracked) :
+    (j : TapeClass) → List (tapeClassRange core j) :=
+  Function.update L tracked ((L tracked).set cell value)
 
-/-- Overwrite one cell of the currently unread forger tape, leaving every other state field. -/
-def overwrite (s : RoleState core) (cell : Nat) (value : Bytes vp.params.m) : RoleState core :=
-  ((s.1.1, overwriteTapes core s.1.2 cell value), s.2)
+/-- Overwrite one cell of the currently unread tracked tape, leaving every other state field. -/
+def overwrite (s : RoleState core) (cell : Nat)
+    (value : tapeClassRange core tracked) : RoleState core :=
+  ((s.1.1, overwriteTapes core tracked s.1.2 cell value), s.2)
 
 variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [DecidableEq core.Y]
   [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
@@ -45,18 +47,18 @@ omit [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] in
 theorem classPosStep_overwrite (j : TapeClass) (point : (jointSpec core).Domain)
     (s : RoleState core) (answer : (jointSpec core).Range point)
     (s' s'' : (jointSpec core).QueryCache × ((j : TapeClass) → List (tapeClassRange core j)))
-    (cell : Nat) (value : Bytes vp.params.m) :
-    AnswerTape.classPosStep (tapeClassRange core) j point (overwrite core s cell value).1
+    (cell : Nat) (value : tapeClassRange core tracked) :
+    AnswerTape.classPosStep (tapeClassRange core) j point (overwrite core tracked s cell value).1
         answer s' s.2.1 =
       AnswerTape.classPosStep (tapeClassRange core) j point s.1 answer s'' s.2.1 := by
   classical
   unfold AnswerTape.classPosStep overwrite overwriteTapes
-  by_cases same : j = TapeClass.forger
+  by_cases same : j = tracked
   · subst j
     cases hc : s.1.1 point with
     | some cached => simp
     | none =>
-      cases hl : s.1.2 TapeClass.forger with
+      cases hl : s.1.2 tracked with
       | nil => simp
       | cons head tail => cases cell <;> simp
   · simp [Function.update_of_ne same]
@@ -67,13 +69,13 @@ theorem post_overwrite (j : TapeClass) (point : (jointSpec core).Domain)
     (s : RoleState core) (answer : (jointSpec core).Range point)
     (cache : (jointSpec core).QueryCache)
     (L : (j : TapeClass) → List (tapeClassRange core j))
-    (cell cell' : Nat) (value : Bytes vp.params.m) :
-    post core j point (overwrite core s cell value) answer
-        (cache, overwriteTapes core L cell' value) =
-      overwrite core (post core j point s answer (cache, L)) cell' value := by
-  exact congrArg (fun p => ((cache, overwriteTapes core L cell' value), p,
+    (cell cell' : Nat) (value : tapeClassRange core tracked) :
+    post core j point (overwrite core tracked s cell value) answer
+        (cache, overwriteTapes core tracked L cell' value) =
+      overwrite core tracked (post core j point s answer (cache, L)) cell' value := by
+  exact congrArg (fun p => ((cache, overwriteTapes core tracked L cell' value), p,
     AnswerTape.freshHitStep (IsRandPoint core) (randRel core) s.1.1 point answer s.2.2))
-    (classPosStep_overwrite core j point s answer _ (cache, L) cell value)
+    (classPosStep_overwrite core tracked j point s answer _ (cache, L) cell value)
 
 /-- A private uniform query changes none of the native state. -/
 theorem run_uniform (n : Nat) (s : RoleState core) :
@@ -110,16 +112,25 @@ omit [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] in
 theorem post_cnt (j : TapeClass) (point : (jointSpec core).Domain)
     (s : RoleState core) (answer : (jointSpec core).Range point)
     (s' : (jointSpec core).QueryCache × ((j : TapeClass) → List (tapeClassRange core j))) :
-    (post core j point s answer s').2.1.cnt TapeClass.forger =
-      s.2.1.cnt TapeClass.forger + if j = TapeClass.forger then 1 else 0 := by
+    (post core j point s answer s').2.1.cnt tracked =
+      s.2.1.cnt tracked + if j = tracked then 1 else 0 := by
   classical
-  cases j <;> unfold post AnswerTape.classPosStep <;> split <;> simp
+  have hcnt : (AnswerTape.classPosStep (tapeClassRange core) j point s.1 answer s' s.2.1).cnt =
+      Function.update s.2.1.cnt j (s.2.1.cnt j + 1) := by
+    unfold AnswerTape.classPosStep
+    split <;> rfl
+  change (AnswerTape.classPosStep (tapeClassRange core) j point s.1 answer s' s.2.1).cnt tracked = _
+  rw [hcnt]
+  by_cases same : j = tracked
+  · subst j
+    simp
+  · simp [Function.update_of_ne (Ne.symm same), same]
 
-/-- The forger counter never decreases at a native query. -/
+/-- The tracked counter never decreases at a native query. -/
 theorem cnt_step_mono (t : (roleSpec core).Domain) (s : RoleState core)
     (y : (roleSpec core).Range t × RoleState core)
     (hy : y ∈ support ((roleRunImpl core t).run s)) :
-    s.2.1.cnt TapeClass.forger ≤ y.2.2.1.cnt TapeClass.forger := by
+    s.2.1.cnt tracked ≤ y.2.2.1.cnt tracked := by
   rcases t with n | (point | point)
   · rw [run_uniform, support_map] at hy
     obtain ⟨value, _, rfl⟩ := hy
@@ -132,22 +143,22 @@ theorem cnt_step_mono (t : (roleSpec core).Domain) (s : RoleState core)
     rw [post_cnt]
     exact Nat.le_add_right _ _
 
-/-- A native program preserves every lower bound on its initial forger counter. -/
+/-- A native program preserves every lower bound on its initial tracked counter. -/
 theorem cnt_run_mono {α : Type} (program : OracleComp (roleSpec core) α)
     (s : RoleState core) (z : α × RoleState core)
     (hz : z ∈ support ((simulateQ (roleRunImpl core) program).run s)) :
-    s.2.1.cnt TapeClass.forger ≤ z.2.2.1.cnt TapeClass.forger := by
+    s.2.1.cnt tracked ≤ z.2.2.1.cnt tracked := by
   exact simulateQ_run_preserves_inv_of_query (roleRunImpl core)
-    (fun state => s.2.1.cnt TapeClass.forger ≤ state.2.1.cnt TapeClass.forger)
-    (fun t state h y hy => h.trans (cnt_step_mono core t state y hy)) program s le_rfl z hz
+    (fun state => s.2.1.cnt tracked ≤ state.2.1.cnt tracked)
+    (fun t state h y hy => h.trans (cnt_step_mono core tracked t state y hy)) program s le_rfl z hz
 
 /-- Once reached, a counter threshold remains reached with probability one. -/
 theorem prEvent_reached_eq_one {α : Type} (program : OracleComp (roleSpec core) α)
-    (s : RoleState core) (threshold : Nat) (h : threshold < s.2.1.cnt TapeClass.forger) :
+    (s : RoleState core) (threshold : Nat) (h : threshold < s.2.1.cnt tracked) :
     Pr{let z ← (simulateQ (roleRunImpl core) program).run s}[
-      threshold < z.2.2.1.cnt TapeClass.forger] = 1 :=
+      threshold < z.2.2.1.cnt tracked] = 1 :=
   prEvent_eq_one_of_forall_mem_support _ _ fun z hz =>
-    h.trans_le (cnt_run_mono core program s z hz)
+    h.trans_le (cnt_run_mono core tracked program s z hz)
 
 end SLHDSA.Security.Coverage.NativeCausality
 

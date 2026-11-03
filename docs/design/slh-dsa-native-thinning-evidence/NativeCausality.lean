@@ -38,10 +38,11 @@ theorem prEvent_roleRun_forgerCnt_set_ge
  by
   classical
   have _ : L .other = [] := hL
-  simpa only [roleRun, NativeCausality.overwrite, NativeCausality.overwriteTapes,
-    AnswerTape.ClassPos.init, Nat.zero_add] using
-      NativeCausality.prEvent_cnt_overwrite core (roleExperiment core adv pkSeed)
-        (((∅, L), (AnswerTape.ClassPos.init, ∅)) : RoleState core) index cell value horder
+  simpa only [roleRun, AnswerTape.ClassPos.init, Nat.zero_add] using
+    NativeCausality.prEvent_cnt_overwrite core TapeClass.forger
+      (roleExperiment core adv pkSeed)
+      (((∅, L), (AnswerTape.ClassPos.init, ∅)) : RoleState core)
+      index cell value horder
 
 end SLHDSA.Security.Coverage
 

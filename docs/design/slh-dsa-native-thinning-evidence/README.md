@@ -1,110 +1,139 @@
-# Native actual-key thinning
+# Native actual-key thinning and tracked-class causality
 
-`prEvent_roleRun_firedAtActualKey_le` proves, for each index `i`,
-`Pr[reached i ∧ fired at actual key i] ≤ |Y|⁻¹ Pr[reached i]`.
-The exact reviewed statement uses the original adversary, the generated public key,
-pure deterministic `kappa`, and arbitrary fixed tapes with `L.other = []`.
-No budget, good-walk, signer-history or extra class assumption is added.
+The original single/pair firing laws use the generated actual public key, pure deterministic
+`kappa`, arbitrary fixed tapes with `L.other=[]`, and no added budget or signer-history premise.
+Their eight source files and historical proof/replay references are unchanged.
 
-The potential banks reciprocal-cardinality credit before assignment and while the
-one deterministic nonce cell is uncached; a hit has value one and a dead cell zero.
-The native step bound uses a uniform fresh nonce draw and pre-cache hit semantics.
-Existing expected-query-count composition, actual signing discipline, signer-role
-keygen's zero forger counter, and finite-credit cancellation yield the statement.
+`NativeCausality.prEvent_cnt_overwrite` now quantifies every `TapeClass`, an arbitrary native
+role program and current `RoleState`. Overwriting cell `cell>=index` preserves the probability
+of crossing the tracked counter's current value plus `index`; the program, cache and metadata
+remain fixed. Cache hits count as calls independently of fresh tape consumption. The same
+three proof owners establish this law; there is no second signer engine. The full concrete
+forger statement is retained. The closed audit also specializes signer index1 to `cnt>=2`.
 
-`prEvent_roleRun_pair_firedAtActualKey_le` proves, for `first < second`,
-`Pr[reached second ∧ fired first ∧ fired second] ≤ |Y|⁻² Pr[reached first]`.
-It uses the same native experiment and hypotheses. One watch's pointwise decrease
-pays for the other's expected step; when both share a fresh nonce cell, distinct
-actual-key slots require distinct randomizers, so their singleton outcomes are
-disjoint. The proof does not multiply expectation bounds or assume independence.
-The four pair modules import the existing thin1 support without copying it.
+The three current sources are the exact accepted468-line prototype (review379a22fb). The
+previous442-line versions and commit074c's validation remain explicitly historical in the
+manifest. They did not validate these new bytes or record five imported artifact pins.
+The current eleven modules total1932 physical Lean lines; the private audit adds73 lines.
+There is no production, axiom-reduction, bound-improvement or LOC-saving claim.
 
-`prEvent_roleRun_forgerCnt_set_ge` proves that overwriting forger tape cell
-`cell ≥ index` preserves `Pr[index < cnt forger]`, including `cell = index`.
-This is the global counter of all forger-role `H_msg` queries, including cache hits
-and other public keys; the actual-key filter remains on firing. The native program
-induction distinguishes query count from fresh tape consumption; it adds no runner.
-The final header differs from the source-only contract only by two grouping
-parentheses needed for parsing. Its semantic statement and premises are unchanged.
-
-This is research evidence outside active libraries. The unchanged thin1 sources
-contain 1,001 physical Lean lines, pair thinning adds 463, and causality adds 442:
-1,906 lines including proofs, comments, whitespace and checks. All sources are
-byte-identical to their accepted external proofs. The 34 original, nine pair and
-18 causality printed axiom reports use only `propext`, `Classical.choice` and
-`Quot.sound`; causality's reports cover 16 distinct theorems. Accepted replays had
-no warnings. The manifest retains the original thin1 hashes and pins each accepted
-packet, independent review and the causality header normalization. There is no
-production or LOC saving claim.
-
-All three native interfaces are proved. The digest/record witness bridge,
-occupation/adaptive coverage, same-measure actual-joint budget transport,
-byte/weak-seed assembly and the full `q / 2^127` endpoint remain open. This archive
-neither replaces the existing security proof nor establishes independence of
-proof methods.
+This evidence does not prove source signing-attempt caps, load/run factorization, used-prefix
+coverage, joint-budget/guard/policy transport, byte/weak-seed assembly, filling or full127.
+The audit's NONMODULE/private packaging and the updated whole archive await a fresh committed
+replay; the existing external proof acceptance is not relabelled as that replay.
 
 ## Replay
 
-Use an immutable, already built checkout at the manifest's `baseCommit` (`b63fede7…`)
-and the recorded twelve clean dependency revisions; no cache download or build is needed.
-Run from the clean research checkout after committing this archive. Record that
-actual commit at replay time; the accepted external packets record their earlier
-research heads. All new outputs go to one fresh `/tmp` directory placed first.
+Use immutable already-built `b63fede7…` and all twelve manifest-locked clean dependencies.
+Run from a clean committed research checkout. Set `recorded_head` to its actual full receipt SHA
+and choose a NEW ABSENT output path. No Lake build/cache download or repository write occurs.
+The finite recipe compiles all eleven modules in one fresh output, then copies the TXT audit
+byte-exactly to a temporary Lean script. It pins the explicit compiler, six Std files, source
+Git blobs/indices, ordinary+meta closure and canonical artifacts before/after. Before every
+consumer it hashes all five artifacts of each fresh transitive imported module; it makes no
+such claim about historical recordings. The private audit emits one artifact. Require twelve
+zero exits, no warnings, standard-only printed axioms and identical frames. Default proof
+limits and a240s per-process watchdog apply; legacy8 usej4 and new3/audit usej2.
 
 ```bash
-set -euo pipefail
-export GIT_OPTIONAL_LOCKS=0 LEAN_NUM_THREADS=4
-research=$(git rev-parse --show-toplevel)
+research=$(GIT_OPTIONAL_LOCKS=0 git rev-parse --show-toplevel)
 artifact=/tmp/vcvio-slhdsa-integration
-evidence="$research/docs/design/slh-dsa-native-thinning-evidence"
-out=$(mktemp -d /tmp/slhdsa-native-thinning-replay.XXXXXX)
-recorded_head=$(git -C "$research" rev-parse HEAD)
-printf '%s\n' "$recorded_head" > "$out/research-head.txt"
-sha256sum "$evidence/manifest.json" > "$out/manifest-sha256.txt"
-check_evidence() {
-  test -z "$(git -C "$research" status --porcelain)"
-  test -z "$(git -C "$artifact" status --porcelain)"
-  test "$(git -C "$research" rev-parse HEAD)" = "$recorded_head"
-  test "$(git -C "$artifact" rev-parse HEAD)" = b63fede77cfcf9e23fda94c28e951e4520fdeb91
-  python3 - "$evidence" "$artifact" <<'PYCHECK'
+recorded_head=REPLACE_WITH_ACTUAL_FULL_COMMIT_SHA
+out=/tmp/slhdsa-native-tracked-REPLACE_WITH_NEW_ABSENT_LABEL
+python3 - "$research" "$artifact" "$out" "$recorded_head" <<'PYREPLAY'
 from pathlib import Path
-import hashlib, json, subprocess, sys
-source, base = map(Path, sys.argv[1:])
-m = json.loads((source / 'manifest.json').read_text())
-assert hashlib.sha256((base / 'lake-manifest.json').read_bytes()).hexdigest() == m['lakeManifestSha256']
-assert (base / 'lean-toolchain').read_text().strip() == m['toolchain']
-for name, entry in m['sourceFiles'].items():
-    assert hashlib.sha256((source / name).read_bytes()).hexdigest() == entry['sha256']
-assert len(m['dependencyRevisions']) == 12
-for name, rev in m['dependencyRevisions'].items():
-    root = base / '.lake/packages' / name
-    assert subprocess.check_output(['git','-C',str(root),'rev-parse','HEAD']).decode().strip() == rev
-    assert not subprocess.check_output(['git','-C',str(root),'status','--porcelain'])
-PYCHECK
-}
-check_evidence
-export LEAN_PATH="$out:$artifact/.lake/build/lib/lean"
-for lib in "$artifact"/.lake/packages/*/.lake/build/lib/lean; do
-  LEAN_PATH="$LEAN_PATH:$lib"
-done
-args=(-DautoImplicit=false -DrelaxedAutoImplicit=false
-  -Dweak.linter.mathlibStandardSet=true -Dweak.linter.redundantVisibility=true
-  "--root=$evidence")
-lean -j4 "${args[@]}" -o "$out/Thin1Header.olean" "$evidence/Thin1Header.lean"
-lean -j4 "${args[@]}" -o "$out/NativePotential.olean" "$evidence/NativePotential.lean"
-lean -j4 "${args[@]}" -o "$out/NativeSuffix.olean" "$evidence/NativeSuffix.lean"
-lean -j4 "${args[@]}" -o "$out/NativeThin1.olean" "$evidence/NativeThin1.lean"
-lean -j4 "${args[@]}" -o "$out/PairHeader.olean" "$evidence/PairHeader.lean"
-lean -j4 "${args[@]}" -o "$out/PairPotential.olean" "$evidence/PairPotential.lean"
-lean -j4 "${args[@]}" -o "$out/PairRun.olean" "$evidence/PairRun.lean"
-lean -j4 "${args[@]}" -o "$out/NativeThin2.olean" "$evidence/NativeThin2.lean"
-lean -j2 "${args[@]}" -o "$out/NativeCausalState.olean" "$evidence/NativeCausalState.lean"
-lean -j2 "${args[@]}" -o "$out/NativeCausalRun.olean" "$evidence/NativeCausalRun.lean"
-lean -j2 "${args[@]}" -o "$out/NativeCausality.olean" "$evidence/NativeCausality.lean"
-check_evidence
+import hashlib,json,os,re,subprocess,sys,time
+os.environ['GIT_OPTIONAL_LOCKS']='0'
+research,base,out=map(Path,sys.argv[1:4]);head=sys.argv[4]
+evidence=research/'docs/design/slh-dsa-native-thinning-evidence'
+m=json.loads((evidence/'manifest.json').read_text());compiler=Path(m['compiler']['path'])
+out.mkdir(exist_ok=False);(out/'audit').mkdir();suffixes=['olean','olean.private','olean.server','ir','ir.sig']
+order=m['currentArchiveReplay']['moduleOrder'];local={n:evidence/(n+'.lean')for n in order[:-1]}
+local['ImportAudit']=evidence/'ImportAudit.lean.txt'
+def sha(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+def put(p,x):p.write_text(json.dumps(x,indent=2)+'\n')
+def git(p,*args):return subprocess.check_output(['git','-C',str(p),*args]).decode().strip()
+def state(p):
+ return {'head':git(p,'rev-parse','HEAD'),'tree':git(p,'rev-parse','HEAD^{tree}'),
+  'status':git(p,'status','--porcelain'),'index':hashlib.sha256(subprocess.check_output(
+   ['git','-C',str(p),'ls-files','--stage','-z'])).hexdigest()}
+def imports(p):
+ text=re.sub(r'/\-.*?\-/','',p.read_text(),flags=re.S)
+ return [v for line in text.splitlines()for match in [re.match(
+  r'^\s*(?:public\s+)?(?:meta\s+)?import\s+(?:all\s+)?([A-Za-z0-9_.]+)',line)]
+  if match for v in [match.group(1)]]
+closure={};external=set();todo=list(local)
+while todo:
+ name=todo.pop()
+ if name in closure or name in external:continue
+ p=local.get(name,base/(name.replace('.','/')+'.lean'))
+ if not p.exists():external.add(name);continue
+ closure[name]={'source':str(p),'imports':imports(p)};todo+=imports(p)
+for name in closure:
+ assert not any(name==p or name.startswith(p+'.')for p in m['excludedPositiveEndpoints'])
+put(out/'closure.json',{'modules':closure,'externalPackageCompilerLeaves':sorted(external)})
+def frame():
+ r={'research':state(research),'canonical':state(base),'compiler':{'path':str(compiler),'sha256':sha(compiler)},
+  'stdRoots':{p:sha(p)for p in m['stdRoots']},'manifest':sha(evidence/'manifest.json'),
+  'readme':sha(evidence/'README.md'),'archiveSources':{},'canonicalSourcesAndArtifacts':{},'dependencies':{}}
+ assert r['research']['head']==head and r['canonical']['head']==m['baseCommit']
+ assert not r['research']['status']and not r['canonical']['status']
+ assert r['compiler']==m['compiler']and r['stdRoots']==m['stdRoots']and len(r['stdRoots'])==6
+ assert sha(base/'lake-manifest.json')==m['lakeManifestSha256']
+ assert (base/'lean-toolchain').read_text().strip()==m['toolchain']
+ for name,entry in {**m['sourceFiles'],**m['auditFiles']}.items():
+  p=evidence/name;assert sha(p)==entry['sha256'];rel=str(p.relative_to(research))
+  r['archiveSources'][name]={'sha256':sha(p),'gitBlob':git(research,'rev-parse',head+':'+rel)}
+ for name,entry in closure.items():
+  if name in local:continue
+  p=Path(entry['source']);artifact=base/'.lake/build/lib/lean'/name.replace('.','/')
+  assert artifact.with_suffix('.olean').is_file()
+  r['canonicalSourcesAndArtifacts'][name]={'source':sha(p),'artifacts':{
+   str(q):sha(q)for q in sorted(artifact.parent.glob(artifact.name+'.*'))if q.is_file()}}
+ assert len(m['dependencyRevisions'])==12
+ for name,rev in m['dependencyRevisions'].items():
+  s=state(base/'.lake/packages'/name);assert s['head']==rev and not s['status'];r['dependencies'][name]=s
+ return r
+before=frame();put(out/'before.json',before);results=[];done=set();env=os.environ.copy()
+env['LEAN_PATH']=':'.join([str(out),str(base/'.lake/build/lib/lean')]+[
+ str(p/'.lake/build/lib/lean')for p in sorted((base/'.lake/packages').iterdir())])
+try:
+ for name in order:
+  needed=set();pending=[x for x in imports(local[name])if x in local]
+  while pending:
+   dep=pending.pop()
+   if dep in needed:continue
+   needed.add(dep);pending += [x for x in imports(local[dep])if x in local]
+  assert needed<=done
+  assert all(not(out/(dep+'.'+s)).is_symlink()for dep in needed for s in suffixes)
+  consumed={str(out/(dep+'.'+s)):sha(out/(dep+'.'+s))for dep in sorted(needed)for s in suffixes}
+  jobs=4 if order.index(name)<8 else 2;env['LEAN_NUM_THREADS']=str(jobs);source=local[name]
+  if name=='ImportAudit':source=out/'audit/ImportAudit.lean';source.write_bytes(local[name].read_bytes())
+  assert sha(source)==({**m['sourceFiles'],**m['auditFiles']}[name+'.lean.txt'if name=='ImportAudit'else name+'.lean']['sha256'])
+  argv=[str(compiler),'-j'+str(jobs),'-DautoImplicit=false','-DrelaxedAutoImplicit=false',
+   '-Dweak.linter.mathlibStandardSet=true','-Dweak.linter.redundantVisibility=true',
+   '--root='+str(source.parent),'-o',str(out/(name+'.olean')),str(source)]
+  put(out/(name+'-input.json'),{'argv':argv,'cwd':str(research),'LEAN_PATH':env['LEAN_PATH'],
+   'sourceSHA256':sha(source),'environment':{'GIT_OPTIONAL_LOCKS':'0','LEAN_NUM_THREADS':str(jobs)},
+   'freshImportedArtifacts':consumed,'jobs':jobs,'defaultProofLimits':True,'wallCapSeconds':240})
+  start=time.monotonic()
+  with (out/(name+'.log')).open('w')as log:
+   try:child=subprocess.run(argv,cwd=research,env=env,stdout=log,stderr=subprocess.STDOUT,timeout=240)
+   except subprocess.TimeoutExpired:
+    put(out/'timeout.json',{'module':name,'wallCapSeconds':240,'acceptance':False});raise
+  row={'module':name,'exit':child.returncode,'seconds':time.monotonic()-start,'outputs':{},
+   'sourceSHA256':sha(source),'inputSHA256':sha(out/(name+'-input.json')),
+   'logSHA256':sha(out/(name+'.log'))}
+  results.append(row);put(out/'results.json',results);assert child.returncode==0
+  emitted={str(out/(name+'.'+s)):sha(out/(name+'.'+s))for s in (['olean']if name=='ImportAudit'else suffixes)}
+  if name=='ImportAudit':assert all(not(out/(name+'.'+s)).exists()for s in suffixes[1:])
+  row['outputs']=emitted;put(out/'results.json',results)
+  assert child.returncode==0 and not re.search(r'\b(warning|error):',(out/(name+'.log')).read_text())
+  for values in re.findall(r'depends on axioms: \[([^\]]*)\]',(out/(name+'.log')).read_text(),re.S):
+   assert {x.strip()for x in values.replace('\n','').split(',')if x.strip()}<=set(m['allowedAxioms'])
+  assert all(sha(p)==v for p,v in consumed.items());done.add(name)
+finally:
+ after=frame();put(out/'after.json',after);assert before==after
+assert len(results)==12
+PYREPLAY
 ```
-
-Require every exit zero, no warnings, and every printed axiom within the stated
-three-name set. Keep the actual research HEAD, manifest hash and recorded twelve
-dependency revisions with the replay result. Default proof limits apply.
