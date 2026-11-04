@@ -341,6 +341,13 @@ theorem wp_ReaderT_map_layer {m : Type u → Type v} {Pred EPred : Type u}
       fun r => Std.WP.wp ((f <$> x).run r) (fun b : β => post b r) epost :=
   rfl
 
+/-! ## Registered unary rules
+
+`@[vcspec]` holds VCVio's own unary rules: the `OracleComp` primitives, the iterator unfoldings
+and the raw-`wp` structural leaves above. The generic transformer rules (`StateT`, `ReaderT`,
+`WriterT`, `OptionT`, `ExceptT`, lifted `MonadExceptOf`, `monadMap`, `liftWith`, `restoreM`) are
+core's and PolyFun's `@[spec]` rules, which core `vcgen` consumes directly. -/
+
 attribute [vcspec]
   OracleComp.ProgramLogic.triple_pure
   wp_pure_le_vcspec
@@ -353,64 +360,6 @@ attribute [vcspec]
   wp_query_le_vcspec
   wp_HasQuery_query_le_vcspec
   wp_uniformSample_le_vcspec
-  -- StateT
-  Std.WP.Spec.get_StateT
-  Std.WP.Spec.set_StateT
-  Std.WP.Spec.modifyGet_StateT
-  Std.WP.Spec.monadLift_StateT
-  -- ReaderT
-  Std.WP.Spec.read_ReaderT
-  Std.WP.Spec.monadLift_ReaderT
-  Std.WP.Spec.adapt_ReaderT
-  Std.WP.Spec.withReader_ReaderT
-  -- WriterT
-  Std.WP.Spec.tell_WriterT
-  Std.WP.Spec.monadLift_WriterT
-  Std.WP.Spec.mk_WriterT
-  WriterT.le_wp_tell
-  WriterT.le_wp_monadLift
-  -- OptionT
-  Std.WP.Spec.run_OptionT
-  Std.WP.Spec.throw_OptionT
-  Std.WP.Spec.tryCatch_OptionT
-  Std.WP.Spec.orElse_OptionT
-  Std.WP.Spec.monadLift_OptionT
-  -- ExceptT
-  Std.WP.Spec.run_ExceptT
-  Std.WP.Spec.throw_ExceptT
-  Std.WP.Spec.tryCatch_ExceptT
-  Std.WP.Spec.orElse_ExceptT
-  Std.WP.Spec.adapt_ExceptT
-  Std.WP.Spec.monadLift_ExceptT
-  -- Lifted MonadExceptOf
-  Std.WP.Spec.throw_MonadExcept
-  Std.WP.Spec.tryCatch_MonadExcept
-  Std.WP.Spec.throw_ReaderT
-  Std.WP.Spec.throw_StateT
-  Std.WP.Spec.throw_ExceptT_lift
-  Std.WP.Spec.throw_Option_lift
-  Std.WP.Spec.tryCatch_ReaderT
-  Std.WP.Spec.tryCatch_StateT
-  Std.WP.Spec.tryCatch_ExceptT_lift
-  Std.WP.Spec.tryCatch_OptionT_lift
-  -- Generic monad-transformer hooks
-  Std.WP.Spec.monadMap_StateT
-  Std.WP.Spec.monadMap_ReaderT
-  Std.WP.Spec.monadMap_ExceptT
-  Std.WP.Spec.monadMap_OptionT
-  Std.WP.Spec.monadMap_refl
-  Std.WP.Spec.monadMap_trans
-  Std.WP.Spec.liftWith_StateT
-  Std.WP.Spec.liftWith_ReaderT
-  Std.WP.Spec.liftWith_ExceptT
-  Std.WP.Spec.liftWith_OptionT
-  Std.WP.Spec.liftWith_refl
-  Std.WP.Spec.liftWith_trans
-  Std.WP.Spec.restoreM_StateT
-  Std.WP.Spec.restoreM_ReaderT
-  Std.WP.Spec.restoreM_ExceptT
-  Std.WP.Spec.restoreM_OptionT
-  Std.WP.Spec.restoreM_refl
 
 end Unary
 end TacticInternals
