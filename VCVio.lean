@@ -352,6 +352,7 @@ public import VCVio.OracleComp.QueryTracking.Collision
 public import VCVio.OracleComp.QueryTracking.CostModel
 public import VCVio.OracleComp.QueryTracking.CostModel.Simulation
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
+public import VCVio.OracleComp.QueryTracking.DeterminedCost
 public import VCVio.OracleComp.QueryTracking.Enforcement
 public import VCVio.OracleComp.QueryTracking.ExpectedQueryCount
 public import VCVio.OracleComp.QueryTracking.HandlerSimp
@@ -360,6 +361,8 @@ public import VCVio.OracleComp.QueryTracking.Instability.Collision
 public import VCVio.OracleComp.QueryTracking.Iter
 public import VCVio.OracleComp.QueryTracking.ListCache
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
+public import VCVio.OracleComp.QueryTracking.MeasuredProgram
+public import VCVio.OracleComp.QueryTracking.MeasuredProgram.Composition
 public import VCVio.OracleComp.QueryTracking.ObservationOracle
 public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
 public import VCVio.OracleComp.QueryTracking.QueryBound
