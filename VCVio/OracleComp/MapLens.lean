@@ -26,7 +26,10 @@ the action of such a lens on oracle computations, `OracleComp.mapLens`, as PolyF
   `mapLens h.toLens`, with the summand inclusions into `spec₁ + spec₂` as instances;
 * `IsQueryBound.mapLens`, `IsTotalQueryBound.mapLens`, `IsQueryBoundP.mapLens`: a query bound
   on a computation, read through the lens, bounds the transported computation, since each query
-  is sent to exactly one query.
+  is sent to exactly one query, and `AllQueriesSatisfy.mapLens` for the predicate-only bound;
+* `isPerIndexQueryBound_iff_forall_isQueryBoundP`: a per-index bound is a bound at each index
+  separately, which gives `IsPerIndexQueryBound.mapLens` and, along a lens injective on queries,
+  `IsPerIndexQueryBound.mapLens_of_injective`.
 -/
 
 public section
@@ -218,6 +221,61 @@ theorem IsQueryBoundP.mapLens (l : Lens spec.toPFunctor spec'.toPFunctor) {p : �
     (h : oa.IsQueryBoundP (fun t => p (l.toFunA t)) n) :
     (oa.mapLens l).IsQueryBoundP p n :=
   IsQueryBound.mapLens l oa h
+
+/-- A predicate-only bound on `oa` at `P ∘ l.toFunA` is a predicate-only bound at `P` on the
+transported computation. -/
+theorem AllQueriesSatisfy.mapLens (l : Lens spec.toPFunctor spec'.toPFunctor) {P : ι' → Prop}
+    {oa : OracleComp spec α} (h : oa.AllQueriesSatisfy fun t => P (l.toFunA t)) :
+    (oa.mapLens l).AllQueriesSatisfy P :=
+  (allQueriesSatisfy_def _ _).2 <| IsQueryBound.mapLens (canQuery := fun t _ => P t)
+    (cost := fun _ _ => ()) l oa ((allQueriesSatisfy_def _ _).1 h)
+
+/-- A per-index bound is a bound at each index separately: the budget vector decreases only at
+the queried index, and the check at a query to `t` reads only the budget of `t`. -/
+theorem isPerIndexQueryBound_iff_forall_isQueryBoundP [DecidableEq ι] (oa : OracleComp spec α)
+    (qb : ι → ℕ) :
+    oa.IsPerIndexQueryBound qb ↔ ∀ t, oa.IsQueryBoundP (· = t) (qb t) := by
+  induction oa using OracleComp.inductionOn generalizing qb with
+  | pure _ => exact iff_of_true trivial fun _ => trivial
+  | query_bind t mx ih =>
+    rw [isPerIndexQueryBound_query_bind_iff]
+    simp only [isQueryBoundP_query_bind_iff, ih]
+    constructor
+    · rintro ⟨h0, h⟩ s
+      by_cases hs : t = s
+      · subst hs
+        exact ⟨Or.inr h0, fun u => by simpa using h u t⟩
+      · exact ⟨Or.inl hs, fun u => by
+          simpa [hs, Function.update_of_ne (Ne.symm hs)] using h u s⟩
+    · intro h
+      refine ⟨(h t).1.resolve_left (by simp), fun u s => ?_⟩
+      by_cases hs : s = t
+      · subst hs
+        simpa using (h s).2 u
+      · simpa [Ne.symm hs, Function.update_of_ne hs] using (h s).2 u
+
+/-- A per-index bound on the transported computation follows from a bound, at each index `t'`,
+on the queries of `oa` that the lens sends to `t'`. -/
+theorem IsPerIndexQueryBound.mapLens [DecidableEq ι'] (l : Lens spec.toPFunctor spec'.toPFunctor)
+    {oa : OracleComp spec α} {qb : ι' → ℕ}
+    (h : ∀ t', oa.IsQueryBoundP (fun t => l.toFunA t = t') (qb t')) :
+    (oa.mapLens l).IsPerIndexQueryBound qb :=
+  (isPerIndexQueryBound_iff_forall_isQueryBoundP _ qb).2 fun t' => IsQueryBoundP.mapLens l (h t')
+
+/-- Along a lens injective on queries, a per-index bound at `qb ∘ l.toFunA` is a per-index bound
+at `qb` on the transported computation. -/
+theorem IsPerIndexQueryBound.mapLens_of_injective [DecidableEq ι] [DecidableEq ι']
+    (l : Lens spec.toPFunctor spec'.toPFunctor) (hl : Function.Injective l.toFunA)
+    {oa : OracleComp spec α} {qb : ι' → ℕ} (h : oa.IsPerIndexQueryBound (qb ∘ l.toFunA)) :
+    (oa.mapLens l).IsPerIndexQueryBound qb := by
+  refine IsPerIndexQueryBound.mapLens l fun t' => ?_
+  rw [isPerIndexQueryBound_iff_forall_isQueryBoundP] at h
+  by_cases ht : ∃ s, l.toFunA s = t'
+  · obtain ⟨s, rfl⟩ := ht
+    exact (h s).of_imp fun t hts => hl hts
+  · exact (((isQueryBoundP_zero_iff oa fun t => l.toFunA t ≠ t').2
+      (allQueriesSatisfy_of_forall (fun t htt => ht ⟨t, htt⟩) oa)).of_imp
+        fun t htt => not_not.2 htt).mono (Nat.zero_le _)
 
 end queryBound
 
