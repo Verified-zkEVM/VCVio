@@ -480,6 +480,11 @@ Worked examples in `HandlerSpecs.lean`:
 
 ### Unary-to-relational handler lift (`Relational/HandlerFromUnary.lean`)
 
+For plain `OracleComp` computations, `Relational/FromUnary.lean` pairs two core triples under the
+necessary reading (`open scoped OracleComp.Necessary`) with the product coupling:
+`relTriple_prod_of_triple` takes `⦃ True ⦄ oa ⦃ P ⦄` and `⦃ True ⦄ ob ⦃ Q ⦄` and gives
+`RelTriple oa ob (fun a b => P a ∧ Q b)`. The handler lift below is its stateful analogue.
+
 If each handler has a `Std.WP.Triple` spec (produced by core `vcgen` or a
 `@[spec]` lemma), you do not have to assemble per-call `RelTriple`s by
 hand. The lift converts unary handler specs plus a synchronization
