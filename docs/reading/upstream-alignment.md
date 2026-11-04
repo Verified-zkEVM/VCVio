@@ -155,7 +155,7 @@ The handler catalogue consumes core `@[spec]` rules and `vcgen`, and
 draws, `replicate`, `liftComp`) for core `vcgen` in both readings, exact by default and pointwise
 under `OracleComp.Lower.Pointwise`.
 VCVio's probability/coupling frontend still owns `@[vcspec]`/`@[wpStep]` dispatch, and its
-exhaustive `vcgen` hands quantitative triples to core `vcgen` (`tryCoreVCGen`): core takes the
+exhaustive `pvcgen` hands quantitative triples to core `vcgen` (`tryCoreVCGen`): core takes the
 structural steps, VCVio the probability lowering, cuts, averages, loops with invariants in
 context, and relational steps. `Pr{…}[…]` keeps its meaning; events reach triples through the
 bridge lemmas `prEvent_eq_wp` and `triple_propInd_self_iff_*`.
@@ -1112,16 +1112,16 @@ The *Maintenance* pass for the v4.35.0 pins, read against the next releases as w
 - Core `List.map_const'`/`List.prod_replicate` replace the deleted `List.prod_map_const`.
 - Mathlib's variation distance is related to `Measure.etvDist` (see *Native TV composition*).
 - Core `vcgen` steps oracle programs with the rules of `Unary/WP/{NecessarySpecs,LowerSpecs}.lean`,
-  and VCVio's exhaustive `vcgen` delegates its quantitative triples to it.
+  and VCVio's exhaustive `pvcgen` delegates its quantitative triples to it.
 
 **Core `vcgen` (v4.35, experimental).** It works over any `Std.WP` lattice, splits
 `ite`/`dite`/`cond`/matchers keeping the branch hypotheses, takes loop invariants (`invariants`,
 `@[spec_invariant_type]`), frames, and a `with <grind step>` discharger, and with
 `errorOnMissingSpec := false` it leaves the programs it has no rule for as verification
 conditions. `@[spec]` is a scoped attribute, so alternative rule sets can be opened per call.
-VCVio's own `vcgen` syntax is a `tactic_alt` of core's `vcgenMacro`, and a bare `vcgen` parses as
-both. Core's `vcgen` does not descend under an integral or sum, which is why the exact rules of the
-lower reading leave the expectation of the rest of the program in the verification condition.
+VCVio's exhaustive driver is `pvcgen`, so a bare `vcgen` parses as core's tactic alone. Core's
+`vcgen` does not descend under an integral or sum, which is why the exact rules of the lower
+reading leave the expectation of the rest of the program in the verification condition.
 
 **v4.36.0-rc1 changes that strengthen core `vcgen`.**
 - lean4#15555: `vcgen` reuses the goal's `WP` instance; on v4.35 it rebuilds each rule for the
