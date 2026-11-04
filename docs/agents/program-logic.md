@@ -199,7 +199,10 @@ planner may emit a grouped multi-step replay when the best explanation is an exp
 bounded head-symbol lookup. This is intentionally narrow: after the built-in structural step and
 explicit hint opportunities, `vcstep` / `pvcgen` consult only `@[vcspec]` theorems whose
 computation head matches the current goal. Use `vcstep with myLemma` when you want to force
-one specific theorem/assumption step manually.
+one specific theorem/assumption step manually. The built-in entries are VCVio's own `OracleComp`
+rules (`Tactics/Unary/Internals/Rules.lean`); the generic transformer rules for `StateT`,
+`ReaderT`, `WriterT`, `OptionT` and `ExceptT` stay in core's and PolyFun's `@[spec]` database,
+which core `vcgen` consumes, and are not registered a second time.
 
 **Opt-in relational lookup**: mark a relational `RelTriple`, `RelWP`, or quantitative
 `VCVio.ProgramLogic.RelTriple` theorem with `@[vcspec]` to register it for the analogous bounded
