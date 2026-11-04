@@ -17,7 +17,8 @@ public meta import VCVio.ProgramLogic.Tactics.Relational
 This is the canonical user-facing umbrella import for tactic-based program-logic proofs.
 
 - `VCVio.ProgramLogic.Tactics.Unary` contains unary / quantitative tactics such as
-  `vcstep`, `vcgen`, `exp_norm`, and `by_hoare`.
+  `vcstep`, `pvcgen`, `exp_norm`, and `by_hoare`.
+  Bare `vcgen` is core Lean's generic verification-condition generator over `Std.WP`.
 - `VCVio.ProgramLogic.Tactics.Relational` contains relational proof-mode tactics such as
   `rvcstep`, `rvcgen`, `by_equiv`, `rel_dist`, `game_trans`, `by_dist`, and `by_upto`.
 
@@ -29,7 +30,7 @@ For probability equalities, use `vcstep` directly:
 For unary theorem-driven steps:
 - `vcstep with thm` forces one explicit unary theorem/assumption step;
 - `@[vcspec]` registers an explicit opt-in theorem for bounded lookup by
-  `vcstep` / `vcgen` / `rvcstep` / `rvcgen`.
+  `vcstep` / `pvcgen` / `rvcstep` / `rvcgen`.
 
 For tactic-choice debugging, enable `set_option vcvio.vcgen.traceSteps true`.
 

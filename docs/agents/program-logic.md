@@ -21,7 +21,7 @@ rules for queries need uniform response measures.
 
 ## In-Tree Walkthroughs
 
-- `Examples/ProgramLogic/UnaryStep.lean`: unary `vcstep` / `vcgen` examples.
+- `Examples/ProgramLogic/UnaryStep.lean`: unary `vcstep`, core `vcgen` and `pvcgen` examples.
 - `Examples/ProgramLogic/RelationalStep.lean`: step-by-step relational tactic examples.
 - `Examples/ProgramLogic/RelationalDerived.lean`: derived relational patterns and automation examples.
 - `Examples/ProgramLogic/ProofMode.lean`: proof-mode entry points and small end-to-end examples.
@@ -109,17 +109,24 @@ before generating the remaining subgoals.
 - `rvcgen using t` / `rvcgen with thm` — use one explicit first hint/theorem, then keep stepping automatically
 - `rel_conseq with R` — provide explicit weaker postcondition
 
-### Quantitative VCGen (`vcgen`)
+### Quantitative VCGen (`pvcgen`)
 
-`vcgen` is the primary unary tactic for new proofs. It accepts both `Triple` goals and
+`pvcgen` is the primary unary tactic for new proofs. It accepts both `Triple` goals and
 probability goals, automatically lowering `Pr{...}[...]` events into the quantitative engine.
+A bare `vcgen` is core Lean's generic verification-condition generator over `Std.WP`: it steps
+binds, conditionals, matchers and transformer layers with the `@[spec]` rules in scope and the
+triples in the local context, but it does not lower probability goals or close a precondition
+stated as the expectation of an opaque oracle computation. Use core `vcgen` when its rules close
+the goal and `pvcgen` otherwise; `VCVioTest/VCGenAmbiguity.lean` pins that the two names parse
+to distinct tactics.
 
 | Tactic | What it does |
 |--------|--------------|
-| `vcgen` | Exhaustively decomposes a `Triple` or probability goal with spec-aware stepping, loop invariant auto-detection, and support/indicator leaf closure |
+| `pvcgen` | Exhaustively decomposes a `Triple` or probability goal with spec-aware stepping, loop invariant auto-detection, and support/indicator leaf closure |
 | `vcstep` | One step: probability lowering → bind → conditional → match → loop → leaf |
 | `vcstep?` | Performs one step and emits the corresponding explicit script, often surfacing `as ⟨...⟩`, `using cut`, `inv I`, or `with theorem` |
-| `vcgen?` | Runs `vcgen` and emits the planned step replay across each pass |
+| `pvcgen?` | Runs `pvcgen` and emits the planned step replay across each pass |
+| `pvcgen using cut` / `pvcgen inv I` | One explicit cut or loop-invariant step, then exhaustive decomposition |
 | `vcstep using cut` | Explicit intermediate postcondition for a bind step |
 | `vcstep with thm` | Force one explicit unary theorem/assumption step |
 | `vcstep as ⟨x, hx⟩` | Explicit names for binders introduced by the current step |
@@ -131,7 +138,7 @@ probability goals, automatically lowering `Pr{...}[...]` events into the quantit
 | `vcstep rw congr'` | Expose one or more shared binds without support hypotheses |
 | `exp_norm` | Normalize indicator (`propInd`) and expectation (`wp`) arithmetic |
 
-**Probability-goal handling**: `vcgen` and `vcstep` automatically handle four
+**Probability-goal handling**: `pvcgen` and `vcstep` automatically handle four
 classes of probability goals:
 
 1. **`Pr{...}[...] = 1` lowering** → rewrites into `Triple` form for structural decomposition:
@@ -158,10 +165,10 @@ classes of probability goals:
      leaving the continuations at the possible outputs of the shared prefix
 
 4. **Other general `Pr{...}[...]` goals** → rewrite to raw `wp` form and keep stepping structurally
-   when a `wp` rule applies. On an already-lowered raw-`wp` goal, `vcstep?` / `vcgen?`
+   when a `wp` rule applies. On an already-lowered raw-`wp` goal, `vcstep?` / `pvcgen?`
    will explicitly note that they are continuing in raw `wp` mode.
 
-**Core `vcgen` steps**: in each exhaustive `vcgen` pass, a quantitative `Triple` goal first goes
+**Core `vcgen` steps**: in each exhaustive `pvcgen` pass, a quantitative `Triple` goal first goes
 to core `vcgen` (`tryCoreVCGen`) with the `@[spec]` rules of `Unary/WP/LowerSpecs.lean`. Core
 steps through binds, conditionals, matchers and transformer layers and uses the triples in the
 local context as rules. A triple with precondition `1` takes the pointwise rules
@@ -174,11 +181,11 @@ and VCVio's own structural steps continue. `vcstep` and the `?` replays do not t
 `VCVioTest/ProgramLogic/VCGenCoreDelegation.lean` exercises it.
 
 
-**Loop invariants**: `vcgen` auto-detects `replicate`, `List.foldlM`, and `List.mapM`
+**Loop invariants**: `pvcgen` auto-detects `replicate`, `List.foldlM`, and `List.mapM`
 in `Triple` goals and applies matching invariant hypotheses from context.
 Use `vcstep inv I` to provide an explicit invariant.
 
-**Support-sensitive leaf closure**: `vcgen` final pass tries `triple_support`,
+**Support-sensitive leaf closure**: `pvcgen` final pass tries `triple_support`,
 `triple_propInd_of_support` and `triple_prEvent_eq_one`
 in addition to the standard `triple_pure`, `triple_zero`, and consequence search.
 
@@ -190,7 +197,7 @@ planner may emit a grouped multi-step replay when the best explanation is an exp
 
 **Opt-in unary lookup**: mark a unary `Triple` or raw `wp` theorem with `@[vcspec]` to register it for
 bounded head-symbol lookup. This is intentionally narrow: after the built-in structural step and
-explicit hint opportunities, `vcstep` / `vcgen` consult only `@[vcspec]` theorems whose
+explicit hint opportunities, `vcstep` / `pvcgen` consult only `@[vcspec]` theorems whose
 computation head matches the current goal. Use `vcstep with myLemma` when you want to force
 one specific theorem/assumption step manually.
 
@@ -276,8 +283,8 @@ variants immediately take the next aligned bind step with cut relation `R`.
 Do not emulate stronger coupling transitivity with broad theorem search until
 the full semantic gluing lemma and goal shape are added.
 
-**Pass budget**: exhaustive `vcgen` / `rvcgen` runs are bounded by
-`set_option vcvio.vcgen.maxPasses <n>`. The default is conservative so large proofs stay
+**Pass budget**: exhaustive `pvcgen` / `rvcgen` runs are bounded by
+`set_option vcvio.vcgen.maxPasses <n>` (the `vcvio.vcgen` option prefix is shared by both). The default is conservative so large proofs stay
 predictable; if you intentionally want a longer exhaustive run, raise the option locally around
 that proof.
 
@@ -287,7 +294,7 @@ goal delta, and any planner alternatives that were previewed while debugging tac
 ### Raw WP Tactics
 
 Raw `wp` goals (`_ ≤ wp _ _`) now use the same unary entrypoints rather than a separate tactic
-family. `vcstep` performs one decomposition step and `vcgen` keeps stepping exhaustively.
+family. `vcstep` performs one decomposition step and `pvcgen` keeps stepping exhaustively.
 
 
 ### Probability Equality Control
@@ -680,7 +687,7 @@ from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
 
 | Want to add… | Tag it with | Expected shape |
 |--------------|-------------|----------------|
-| A unary Triple lemma usable by `vcstep` / `vcgen` | `@[vcspec]` | `Triple pre oa post` or raw `wp oa post ≥ pre` |
+| A unary Triple lemma usable by `vcstep` / `pvcgen` | `@[vcspec]` | `Triple pre oa post` or raw `wp oa post ≥ pre` |
 | A relational lemma usable by `rvcstep` / `rvcgen` | `@[vcspec]` | `RelTriple oa ob R`, `RelWP oa ob post`, or quantitative `VCVio.ProgramLogic.RelTriple pre oa ob post Lean.Order.bot Lean.Order.bot` |
 | A `wp`-driven equational rewrite | `@[wpStep]` | `wp comp post = …` (exact head `wp`) |
 

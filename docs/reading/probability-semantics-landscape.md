@@ -45,7 +45,7 @@ several meanings of “probability semantics”:
 - expectations, costs, couplings, and divergences;
 - measure-theoretic independence and conditioning for Bluebell;
 - bounded and unbounded execution for PolyFun's coalgebraic computations;
-- a semantic base that can be exposed through `mvcgen`, VCVio's `vcgen`, and Iris-style
+- a semantic base that can be exposed through core `vcgen`, VCVio's `pvcgen`, and Iris-style
   weakest preconditions.
 
 The central conclusion of this survey is that no single upstream type is a drop-in
@@ -257,7 +257,7 @@ quantitative mass, and probability is a bounded presentation of the quantitative
 families:
 
 - Lean core `mvcgen`, built around `Std.Do`, `WPSound`, and `MonadAttach`;
-- VCVio `vcgen`/`rvcgen`, which understands probability notation, raw expectation `wp`,
+- VCVio `pvcgen`/`rvcgen`, which understands probability notation, raw expectation `wp`,
   oracle simulation, coupling rules, and VCVio-specific registries.
 
 The long-term goal should not be to make probability semantics depend on a particular
@@ -318,9 +318,9 @@ support/indicator leaf closure, and the `@[vcspec]` / `@[wpStep]` registries. Co
 expose extension points for these (the `@[spec]` database, `vcgen [terms]`, and
 `mvcgen_trivial_extensible`).
 
-One immediate consequence is a name collision rather than a semantic one: core already
-declares a bare `vcgen` tactic token at `v4.33.0`, so VCVio's `vcgen` now shares a
-leading token with it and survives only by careful syntax-kind splitting.
+One immediate consequence concerns names rather than semantics: core declares a bare `vcgen`
+tactic token at `v4.33.0`, so VCVio's exhaustive driver is `pvcgen` and a bare `vcgen` is
+always core's.
 
 ## 3. Consumers at the Original Snapshot
 
@@ -1145,12 +1145,11 @@ in favour of `vcgen`, which dispatches on `Std.WP.wp` rather than `Std.Do`'s
 bridge — will need retargeting, and the natural time to do it is the same cycle in which
 `Std.WP` becomes public.
 
-**`vcgen` is already a taken name.** Lean `v4.33.0` declares a bare `vcgen` tactic token
-in `Std/Tactic/Do/Syntax.lean`, plus a low-priority stub in `Init/Tactics.lean`. VCVio's
-own `vcgen` therefore shares a leading token with a core tactic that is under active
-development and is about to become *the* VC generator. Renaming VCVio's is cheap now and
-gets steadily less so; more importantly, once VCVio's domain tactic is layered *on top
-of* core's, having two tactics named `vcgen` in scope stops being merely confusing.
+**`vcgen` is core's name.** Lean `v4.33.0` declares a bare `vcgen` tactic token
+in `Std/Tactic/Do/Syntax.lean`, plus a low-priority stub in `Init/Tactics.lean`, and core's
+tactic is under active development as *the* VC generator. VCVio's domain tactic is layered
+*on top of* core's under its own name, `pvcgen`, so the two are never in scope under one
+token (`VCVioTest/VCGenAmbiguity.lean`).
 
 This does not change the division of labor above. It changes who owns the name.
 
