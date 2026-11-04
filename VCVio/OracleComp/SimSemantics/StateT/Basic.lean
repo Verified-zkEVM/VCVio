@@ -247,7 +247,7 @@ lemma run_simulateQ_query_bind {α : Type u} (t : spec.Domain)
     (oa : spec.Range t → OracleComp spec α) (s : σ) :
     (simulateQ so ((liftM (spec.query t) : OracleComp spec _) >>= oa)).run s =
       (so t).run s >>= fun us => (simulateQ so (oa us.1)).run us.2 := by
-  simp [simulateQ_bind, simulateQ_query, StateT.run_bind, monad_norm,
+  simp [simulateQ_query, StateT.run_bind, monad_norm,
     OracleQuery.cont_query, OracleQuery.input_query]
 
 /-- If the state type is `Subsingleton`, then we can represent simulation in terms of `simulate'`,

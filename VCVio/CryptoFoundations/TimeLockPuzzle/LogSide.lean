@@ -145,7 +145,7 @@ theorem map_guessExperiment_logSide {Out : Type} (tlp : TimeLockPuzzle (spec + s
   simp only [guessExperiment, TwoPhaseAdversary.logSide, map_bind, map_pure, bind_map_left]
   refine bind_congr fun σ => bind_congr fun pk => ?_
   conv_rhs => rw [← hon σ.1 pk.1 σ.2]
-  simp [simulateQ_map]
+  simp
 
 /-! ## The length of the log -/
 

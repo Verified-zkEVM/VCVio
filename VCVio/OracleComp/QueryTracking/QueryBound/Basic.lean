@@ -193,7 +193,7 @@ theorem IsQueryBound.simulateQ_run_of_step
     IsQueryBound ((simulateQ impl oa).run s) (mapBudget budget) canQuery' cost' := by
   induction oa using OracleComp.inductionOn generalizing budget s with
   | pure x =>
-      simp [simulateQ_pure]
+      simp
   | query_bind t mx ih =>
       rw [isQueryBound_query_bind_iff] at h
       rw [simulateQ_query_bind, StateT.run_bind]
@@ -350,7 +350,7 @@ theorem IsQueryBoundP.simulateQ_run_StateT_of_step
     IsQueryBoundP ((simulateQ impl oa).run s) q n := by
   induction oa using OracleComp.inductionOn generalizing n s with
   | pure x =>
-      simp [simulateQ_pure]
+      simp
   | query_bind t mx ih =>
       rw [isQueryBoundP_query_bind_iff] at h
       rw [simulateQ_query_bind, StateT.run_bind]
@@ -734,7 +734,7 @@ theorem IsPerIndexQueryBound.simulateQ_run_of_uniform_step
     IsPerIndexQueryBound ((simulateQ impl oa).run s) qb := by
   induction oa using OracleComp.inductionOn generalizing qb s with
   | pure x =>
-      simp [simulateQ_pure]
+      simp
   | query_bind t mx ih =>
       rw [isPerIndexQueryBound_query_bind_iff] at h
       rw [simulateQ_query_bind, StateT.run_bind]
@@ -761,7 +761,7 @@ theorem IsPerIndexQueryBound.simulateQ_of_uniform_step
       IsPerIndexQueryBound (impl t) (Function.update 0 t 1)) :
     IsPerIndexQueryBound (simulateQ impl oa) qb := by
   induction oa using OracleComp.inductionOn generalizing qb with
-  | pure x => simp [simulateQ_pure]
+  | pure x => simp
   | query_bind t mx ih =>
       rw [isPerIndexQueryBound_query_bind_iff] at h
       simp only [simulateQ_query_bind, OracleQuery.input_query, monadLift_self]
