@@ -314,7 +314,7 @@ Two consequences for this document:
 
 What core's `vcgen` will *not* absorb is the domain layer: lowering `Pr[…]` and
 `evalDist`-equality goals into `wp` goals, oracle-query specs, `simulateQ` stepping,
-support/indicator leaf closure, and the `@[vcspec]` / `@[wpStep]` registries. Core does
+support/indicator leaf closure, the `@[vcspec]` registry and the raw-`wp` rule table. Core does
 expose extension points for these (the `@[spec]` database, `vcgen [terms]`, and
 `mvcgen_trivial_extensible`).
 

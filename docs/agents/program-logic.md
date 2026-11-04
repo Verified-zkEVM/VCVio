@@ -233,22 +233,15 @@ caching, and local WriterT compatibility equations. Downstream code can use
 the two sets independently; `handler_step` composes them in generic-to-specific
 order.
 
-**Opt-in `wp`-rewrite lookup**: mark an equational rewrite of shape
-`wp comp post = …` with `@[wpStep]` to extend the inner `wp`-stepping driver
-(`runWpStepRules`). The driver indexes registered rules by the path of `comp`
-in a `Lean.Meta.Sym`-backed discrimination tree: pattern construction goes
-through `Lean.Meta.Sym.mkPatternFromDeclWithKey`, which preprocesses the rule's
-LHS (unfolding reducibles, beta/zeta/eta normalizing) and turns universally
-quantified arguments into de Bruijn pattern variables, while
-`Lean.Meta.Sym.insertPattern` automatically wildcards proof / instance
-positions in the discrimination-tree key. Lookup at dispatch time is the pure
-`Lean.Meta.Sym.DiscrTree.getMatch` after a `withReducible whnf` on the goal's
-`comp` to align with the preprocessed patterns. Each match is then tried via
-`rw`, falling back to `simp only`. The default registry already covers
-`wp_pure`, `wp_bind`, `wp_ite`, `wp_dite`, `wp_map`, the `replicate` / `mapM`
-/ `foldlM` families, `wp_query`, `wp_uniformSample`, and the `simulateQ` /
-`liftComp` transport rules, so user-authored `wp` lemmas slot into the same
-dispatch without further wiring.
+**Raw `wp` rewrites**: the inner `wp`-stepping driver (`runWpStepRules`) rewrites a raw `wp`
+goal with one equation of the fixed table `wpStepRules`
+(`Tactics/Common/WpStepDispatch.lean`): PolyFun's `ExactWPMonad.wp_pure`, `wp_bind`, `wp_map`,
+`wp_ite` and `wp_dite` for the monad structure, and VCVio's equations for the oracle primitives
+(`wp_query`, `wp_HasQuery_query`, `wp_uniformSample`), the `replicate` / `mapM` / `foldlM`
+unfoldings and the `simulateQ` / `liftComp` transport rules. A rule is a candidate when the head
+constant of the computation on its left-hand side is the head of the goal's computation, as
+written and then after reducible `whnf`; candidates are tried with `simp only` in table order.
+Use `vcstep with thm` or a plain `rw`/`simp only` for any other `wp` equation.
 
 **Bind normalization**: `rvcstep` (and therefore `rvcgen`) runs a best-effort
 `simp only [bind_assoc, pure_bind, bind_pure_comp, Functor.map_map, map_pure]` pre-pass on the
@@ -631,14 +624,12 @@ is a thin wrapper over `Lean.Meta.DiscrTree` whose insertion keys come from
 those preprocessed patterns and whose lookup is the pure structural
 `getMatch`. Core also ships a `Sym.Simp.Theorems` bundle (discrimination-tree
 + `Sym.Simp.Theorem` records) that core's own Sym-based `vcgen` consumes
-(`Lean.Elab.Tactic.VCGen`). The `@[wpStep]` dispatcher builds one
-`Sym.Simp.Theorem` per rule with `Sym.Simp.mkTheoremFromDecl`, caches it, and
-rewrites with `Sym.simpGoal`.
+(`Lean.Elab.Tactic.VCGen`). The raw-`wp` driver does not use `Sym` rewriting: `Sym.simpGoal`
+matches structurally and does not apply the instance-generic `ExactWPMonad` laws to `OracleComp`
+goals, while ordinary `simp only` does.
 
-Building on `Sym.Pattern` + `Sym.DiscrTree` means our registries share the
-same pattern preprocessing and lookup cost profile as future core tactics,
-and the migration to `Sym.Simp.*`-driven rewriting is a localised follow-up
-in two registry files rather than a framework rewrite.
+Building on `Sym.Pattern` + `Sym.DiscrTree` means the `@[vcspec]` registry shares the
+same pattern preprocessing and lookup cost profile as future core tactics.
 
 **Key alignment invariant**: `Sym.DiscrTree.getMatch` is purely structural, so
 goal-side query terms must expose the same oracle-wrapper shapes as the pattern
@@ -658,12 +649,15 @@ rewrite works).
 | File | Attribute | Role |
 |------|-----------|------|
 | `VCVio/ProgramLogic/Tactics/Common/Registry.lean` | `@[vcspec]` | Unary and relational `Triple` / `RelTriple` / `RelWP` / quantitative `VCVio.ProgramLogic.RelTriple` rules, indexed by a `Sym.Pattern` on the computation slot (`oa` for unary, `oa` with a secondary `rightHead?` filter for relational) |
-| `VCVio/ProgramLogic/Tactics/Common/WpStepRegistry.lean` | `@[wpStep]` | Equational `wp comp post = …` rewrites, indexed by a `Sym.Pattern` on `oa`. `runWpStepRules` (`WpStepDispatch.lean`) builds each candidate's `Sym.Simp.Theorem` on first use (`Sym.Simp.mkTheoremFromDecl`, cached per declaration) and rewrites with `Sym.simpGoal`; core's `registerSymSimpAttr` would hold the same rules as a simp set |
 
 Each entry carries a `SpecProof` (reusing the core-Lean type from
 `Lean.Elab.Tactic.Do.SpecAttr`) so origins can be distinguished between a
 global declaration, a local hypothesis, or a raw term. Priorities are parsed
 from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
+
+The raw-`wp` equations are not a registry: `wpStepRules` in
+`VCVio/ProgramLogic/Tactics/Common/WpStepDispatch.lean` is a fixed table, filtered by the head
+of the computation.
 
 ### Dispatch flow
 
@@ -679,9 +673,9 @@ from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
    applicators), and picks the best plan.
 2. **`wp`-rewrite driver** (`VCVio/ProgramLogic/Tactics/Common/WpStepDispatch.lean`): on any goal
    containing `wp _ _`, `runWpStepRules` pulls the `oa` argument out of the
-   first matching `wp` application, `whnfReducible`s it, asks
-   `getRegisteredWpStepEntries` for hits on the `oa`-keyed `Sym.DiscrTree`,
-   and tries each via `rw` then `simp only` until one lands.
+   first matching `wp` application, selects the `wpStepRules` whose left-hand computation has
+   the head of `oa` (as written, then after reducible `whnf`), and tries each with `simp only`
+   until one lands.
 3. **Handler `@[spec]` rules**: unary handlers (`loggingOracle`,
    `cachingOracle`, …) use core Lean's `Std.WP.Triple` + `@[spec]` catalogue
    directly; those are indexed by Lean itself and consumed by core `vcgen`.
@@ -692,11 +686,9 @@ from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
 |--------------|-------------|----------------|
 | A unary Triple lemma usable by `vcstep` / `pvcgen` | `@[vcspec]` | `Triple pre oa post` or raw `wp oa post ≥ pre` |
 | A relational lemma usable by `rvcstep` / `rvcgen` | `@[vcspec]` | `RelTriple oa ob R`, `RelWP oa ob post`, or quantitative `VCVio.ProgramLogic.RelTriple pre oa ob post Lean.Order.bot Lean.Order.bot` |
-| A `wp`-driven equational rewrite | `@[wpStep]` | `wp comp post = …` (exact head `wp`) |
 
-Priorities (`@[vcspec (prio := 200)]`, `@[wpStep (prio := 200)]`) follow the
-standard Lean convention: higher priority entries are tried first within the
-same candidate pool.
+Priorities (`@[vcspec (prio := 200)]`) follow the standard Lean convention: higher priority
+entries are tried first within the same candidate pool.
 
 ## SymM Stability Note and Future Proof Repair
 
@@ -710,28 +702,24 @@ time we bump the toolchain:
 
 - **Signature changes on `Sym.mkPatternFromDeclWithKey`**. If the selector
   signature changes (e.g. becomes `Expr → MetaM (Pattern × α)` instead of
-  `Expr → MetaM (Expr × α)`), update `buildVCSpecEntry` /
-  `buildWpStepEntry` in `Registry.lean` / `WpStepRegistry.lean` to match.
+  `Expr → MetaM (Expr × α)`), update `buildVCSpecEntry` in `Registry.lean` to match.
 - **`Sym.Pattern` preprocessing behaviour**. If the default reducibility
   used by `preprocessType` shifts (e.g. stops unfolding certain abbreviations
   or starts unfolding more), the "folded vs unfolded head" helpers
   (`headIsOneOf`, `tripleBodyParts?`, `relTripleBodyParts?`, etc. in
   `Registry.lean`) may need to grow new cases. All of these live in a
   clearly-marked `Preprocessed-body head matchers` section.
-- **`Sym.Simp.Theorem` field renames / `mkTheoremFromDecl` moves**. The
-  `@[wpStep]` dispatcher calls `mkTheoremFromDecl` and `Sym.simpGoal`
-  (`WpStepDispatch.lean`); a change to either shows up there.
 - **`SpecProof` variants**. We only use `.global` today. If core splits or
-  merges variants, `VCSpecEntry.declName?` / `WpStepEntry.declName?` plus
-  the matching `MetaM` inserts need to be adjusted.
+  merges variants, `VCSpecEntry.declName?` plus the matching `MetaM` inserts need to be
+  adjusted.
 - **`registerSimpleScopedEnvExtension` purity**. `addEntry` is pure today
-  and we rely on that in both registries; if it changes, the attribute
-  handlers already compute their patterns inside `MetaM` before calling
+  and the registry relies on that; if it changes, the attribute
+  handler already computes its patterns inside `MetaM` before calling
   `.add`, so the fix is to thread the `MetaM` result differently, not to
   restructure the registry.
 
 The compensating design choices are: keep `Sym`-aware logic contained to the
-registry modules (`Registry.lean`, `WpStepRegistry.lean`), prefer the
+registry module (`Registry.lean`), prefer the
 structural `getMatch` over `isDefEq`, and keep an explicit `TacticM`
 fallback path (`rw` / `simp only`) so failures in any single `Sym` lookup
 stage degrade gracefully.
@@ -760,7 +748,7 @@ The coupling interface `VCVio.ProgramLogic.RelWP` is local to VCVio and shares c
 assertion lattices. Its three carriers in `Relational/WP/` also use explicit scopes
 (`OracleComp.Rel.Quantitative`, `.Qualitative`, `.Probabilistic`).
 
-VCVio's probability/coupling tactics continue to consume `@[vcspec]` and `@[wpStep]`.
+VCVio's probability/coupling tactics continue to consume `@[vcspec]` and the `wpStepRules` table.
 Core `vcgen` consumes the core `@[spec]` catalogue. Generic transformer WP comes from
 core and PolyFun's WriterT interpretation; VCVio retains its probability rules and
 existing transformer equality lemmas. The scoped `WriterT.MonoidWP` interpretation
