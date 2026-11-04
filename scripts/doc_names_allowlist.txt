@@ -7,7 +7,6 @@ CURRENT_YEAR # placeholder in the header template of CONTRIBUTING.md
 hss_nf # retired argument name of the Fiat–Shamir extraction bounds
 isPPT # parameter name of the asynchronous UC security notions
 Lean.Meta.Sym.DiscrTree # core symbolic discrimination tree, cited in the SymM stability note
-Lean.Meta.Sym.DiscrTree.getMatch # core lookup cited in the SymM stability note
 lowerCamelCase # naming style
 maxAttempts # parameter name of the with-aborts signer
 merge_action # GitHub merge-queue event

@@ -30,7 +30,7 @@ universe u v
 
 The equality theorem `wp_pure` remains the canonical rewrite rule.
 This lower-bound form lets raw `wp` goals use the cached `@[vcspec]`
-backward-rule path before falling back to `@[wpStep]`. -/
+backward-rule path before falling back to the `wpStepRules` rewrites. -/
 theorem wp_pure_le_vcspec {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.AnswerMeasure spec] {α : Type} (x : α)
     (post : α → ENNReal) :
