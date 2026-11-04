@@ -1,9 +1,8 @@
 # Writing Vocabulary
 
-Use this page with the [writing standard](writing.md). STE's general dictionary remains the
-reference for general words, meanings, and grammatical roles. This page adds subject-field terms
-and advice for VCVio prose. It does not replace the dictionary or list every permitted English
-word. The [notation reference](notation.md) owns the meaning of each Lean notation.
+Use this page with the [writing guide](writing.md) to clarify technical meanings and review wording.
+Its entries are advice, not a list of every permitted English word or an STE dictionary check.
+The [notation reference](notation.md) owns the meaning of each Lean notation.
 
 ## How to add a term
 
@@ -46,6 +45,7 @@ meaning of a word in a different context:
 | reduction | A named computation that turns one adversary into another | Name the reduction in a security theorem. Do not state only that one exists. |
 | sound, soundness | A specified soundness property of a protocol | Name the property and its assumptions. Ordinary prose can use "correct" for an argument. |
 | spec | An oracle specification, `OracleSpec` | Write "specification" or the standard name, such as FIPS 205, for a document. |
+| masking | Hiding text while preserving its source positions, or a cryptographic masking operation such as ML-DSA's masking vector `y` | Name the text-processing or cryptographic context. For ML-DSA, retain the vector's specified distribution and role. |
 | statement | A theorem's proposition or the public input of a relation | Use "theorem statement" or "protocol statement" when both meanings occur. |
 | support | The set of possible outputs of a computation, `support` | Do not use "support" for library coverage in the same passage. |
 | valid | Satisfaction of a specified predicate or well-formedness condition | Name the predicate. Do not replace "valid signature" with "accepted signature" unless they mean the same thing. |
@@ -67,51 +67,6 @@ Introduce a longer or unfamiliar term before you use an abbreviation:
 | Lattices and hashing | module lattice, learning with errors, short integer solution, ML-KEM, ML-DSA, Falcon, SLH-DSA, hash function, extendable-output function |
 | Lean | declaration, theorem, lemma, hypothesis, docstring, namespace, typeclass, instance, tactic, elaboration, axiom, Lean module |
 | Repository tools | branch, commit, pull request, build, linter, axiom baseline, validation, merge queue, CI |
-
-## Technical -ing nouns
-
-These entries record technical nouns, modifiers and their subject-field senses. They are not an
-exhaustive list of permitted language. A listed term does not make every grammatical use correct,
-and a missing term is not automatically a defect. V2 also permits clear post-preposition clauses
-under the local adaptation in the [writing standard](writing.md).
-
-The checker uses the complete backticked terms in this table as lexical hints.
-A multi-word entry does not create separate exemptions for its component words.
-A hint, or the absence of one, does not establish a noun role or a correct subject.
-
-| Term | Technical meaning |
-|---|---|
-| `accounting` | Measurement of queries, work, collisions or trust dependencies. |
-| `batching` | A construction that combines several operations or proof obligations. |
-| `binding` | A commitment security property that bounds the ability to give inconsistent openings. |
-| `closing` | The delimiter role in a closing quote or closing bracket. |
-| `counting` | Measurement of words, queries or computational work. |
-| `coupling` | A joint probability distribution with specified marginals. |
-| `decoding` | The operation that recovers a value from an encoded representation. |
-| `drawing` | A probability experiment that selects a sample, as in a draw without replacement. |
-| `embedding` | A mathematical map that preserves the specified structure. |
-| `encoding` | The operation that represents a value as bytes or another specified format. |
-| `folding` | A construction that combines layers or reduces the size of a represented object. |
-| `forking` | A security-proof technique that derives related executions from an adversary run. |
-| `framing` | The rules that delimit fields or messages in a wire format. |
-| `hashing` | Evaluation of a hash function. |
-| `hiding` | A commitment security property concerning disclosure of the committed value. |
-| `interleaving` | A combination of sequences that preserves each sequence's internal order. |
-| `learning` | The problem-family name in learning with errors. |
-| `loading` | The computer process that initializes an imported module. |
-| `logging` | A computer process that records execution data. |
-| `masking` | A text-processing operation that hides content while it preserves source positions. |
-| `pairing` | A bilinear map used in cryptographic constructions. |
-| `parsing` | Analysis of a string under a specified grammar or encoding format. |
-| `rewinding` | A security-proof technique that resumes an adversary from an earlier state. |
-| `rounding` | A map to a discrete representation with a specified approximation rule. |
-| `sampling` | Selection of a value according to a probability distribution. |
-| `signing` | The operation that produces a signature under a secret key. |
-| `testing` | Execution of software checks against specified expectations. |
-| `tracing` | An execution record or the process that produces that record. |
-| `tracking` | Measurement or recording of queries, costs or execution state. |
-| `unfolding` | Expansion of a Lean definition under its reduction rules. |
-| `winning` | The success predicate of a security game, as in a winning event. |
 
 ## Technical verbs
 

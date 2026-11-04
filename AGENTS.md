@@ -36,9 +36,9 @@ Follow [`CONTRIBUTING.md`](CONTRIBUTING.md) for the repo's explicit attribution 
 
 Before you draft or revise prose, follow the [writing workflow](docs/agents/write-technical-prose.md).
 It applies to documentation, docstrings, comments, commit messages, PR and issue text, and review
-comments. In the passages you add or revise, preserve statement/source correctness and the mandatory
-content rules of the [writing standard](docs/agents/writing.md). Use the style advice when it improves
-clarity. This duty does not authorize an unrelated rewrite.
+comments. Use the [writing guide](docs/agents/writing.md) where its advice improves clarity.
+Preserve claims and source fidelity. CONTRIBUTING owns the contribution requirements.
+Leave clear, correct text alone, and keep unrelated rewrites out of the task.
 
 `scripts/check-writing.py` is an optional aid for changed prose, commit messages and drafts.
 Its hints do not establish correctness or require a word substitution.
@@ -439,7 +439,7 @@ An edit to the baseline cannot make it pass, because acceptance would widen the 
 The `VCVioAxiomSweepTestFixtures` library carries synthetic taint for the tool's own
 tests and is deliberately excluded from every aggregate.
 
-`uv run --no-project --python 3.12 python ./scripts/check-comment-fences.py` checks tracked Lean sources and untracked Lean sources that are not ignored.
+`python3 ./scripts/check-comment-fences.py` checks tracked Lean sources and untracked Lean sources that are not ignored.
 It excludes the vendored `third_party/` tree and includes both lakefiles.
 The rule is positional: a block comment that begins its line must be the last thing on the line where it ends.
 A declaration after the `-/` of its docstring parses, builds and runs.

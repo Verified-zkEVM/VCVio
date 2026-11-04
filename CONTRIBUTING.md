@@ -69,10 +69,10 @@ explains the CI build, the caches, and each gate.
 For a change to documentation only, run the documentation checks without a Lean build:
 
 ```bash
-uv run --no-project --python 3.12 python scripts/test-agent-docs.py
-uv run --no-project --python 3.12 python scripts/check-agent-docs.py
-uv run --no-project --python 3.12 python scripts/extract-doc-fragments.py --check
-uv run --no-project --python 3.12 python scripts/check-doc-names.py
+python3 scripts/test-agent-docs.py
+python3 scripts/check-agent-docs.py
+python3 scripts/extract-doc-fragments.py --check
+python3 scripts/check-doc-names.py
 ```
 
 CI also resolves the declaration names that the guides cite. That check needs a build, so
@@ -87,7 +87,7 @@ CI also resolves the declaration names that the guides cite. That check needs a 
 - Keep repository-wide Lean options in `lakefile.lean`. Do not restate `autoImplicit = false`
   with a `set_option` line in a file.
 - Do not disable linters locally or globally to make warnings disappear.
-  Fix the cause rather than use `set_option linter.* false`, `set_option weak.linter.* false`, or a repository-level linter suppression.
+  Fix the cause instead of adding `set_option linter.* false`, `set_option weak.linter.* false`, or a repository-level linter suppression.
   [Gotcha 23](docs/agents/gotchas.md#23-do-not-disable-linters-to-silence-warnings)
   gives the one documented exception.
 - When you rename or remove a declaration, update every caller in the same PR. Do not add
@@ -188,20 +188,19 @@ checks and the actual merge result before you report a merge.
 
 ### Writing
 
-Use the [writing standard](docs/agents/writing.md) for documentation, docstrings, comments, commit
-messages, PR and issue text, and review comments. It applies to all authors.
-Rules C1–C8 and statement/source correctness are mandatory. The existing C9 security-claim
-requirements also remain mandatory. Other prose rules are advisory. Each departure from STE is
-marked as an adaptation.
+The [writing guide](docs/agents/writing.md) offers advice for documentation, docstrings, comments,
+commit messages, PR and issue text, and review comments. Use it to improve clarity and precision.
+Leave clear, correct text alone, even if it does not follow a rule or the checker reports it.
+The contribution requirements in this document retain their stated force.
 
 Use the [writing workflow](docs/agents/write-technical-prose.md) when you draft or revise that
 text. Keep claims, hypotheses, uncertainty, and requirement strength unchanged during a style edit.
 The [vocabulary](docs/agents/writing-vocabulary.md) records technical meanings. It does not
 prohibit other meanings when their context is clear.
 
-`scripts/check-writing.py` finds some common defects. It is an editing aid, not a gate, and it
-does not establish conformance to the standard. CI runs it on the changed prose and the PR
-description, and it reports findings as warnings only.
+`scripts/check-writing.py` offers optional wording suggestions. It does not establish clarity,
+accuracy or STE conformance. CI runs it on changed prose and the PR description, and reports
+suggestions as warnings only.
 
 ### Tool-Assisted Contributions
 
@@ -260,7 +259,7 @@ build boundaries for documentation and code.
   mention removed or renamed declarations, change history, or phrases such as "replaces" or
   "renamed from".
 - If a file cites papers, add a references section to the module docstring, or cite the source
-  in the documentation around the claim. [`REFERENCES.md`](REFERENCES.md) lists the
+  in the surrounding documentation. [`REFERENCES.md`](REFERENCES.md) lists the
   repository's references.
 
 Use this prologue layout for an ordinary Lean source file, with exactly one blank line between the
