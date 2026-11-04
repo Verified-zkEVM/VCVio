@@ -241,15 +241,15 @@ Substitutes every `query t` in a computation with `impl t`:
 
 So "operational vs denotational" is not a primitive split for monad-valued interpretations: both are `simulateQ` parameterized by the target monad. The measure semantics is the one exception, because `Measure α` needs a `MeasurableSpace α` and is not a Lean monad (see [Output measures and support](#output-measures-and-support) below).
 
-### Key lemmas (all `@[simp, grind =]`)
+### Key lemmas (all `@[grind =]`)
 
-| Lemma | Statement |
-|-------|-----------|
-| `simulateQ_pure` | `simulateQ impl (pure x) = pure x` |
-| `simulateQ_bind` | `simulateQ impl (mx >>= my) = simulateQ impl mx >>= fun x => simulateQ impl (my x)` |
-| `simulateQ_query` | `simulateQ impl (liftM q) = q.cont <$> (impl q.input)` |
-| `simulateQ_map` | `simulateQ impl (f <$> mx) = f <$> simulateQ impl mx` |
-| `simulateQ_id'` | `simulateQ (QueryImpl.id' spec) mx = mx` |
+| Lemma | Statement | `@[simp]` |
+|-------|-----------|-----------|
+| `simulateQ_pure` | `simulateQ impl (pure x) = pure x` | yes |
+| `simulateQ_bind` | `simulateQ impl (mx >>= my) = simulateQ impl mx >>= fun x => simulateQ impl (my x)` | no: `PFunctor.FreeM.liftM_bind` |
+| `simulateQ_query` | `simulateQ impl (liftM q) = q.cont <$> (impl q.input)` | yes |
+| `simulateQ_map` | `simulateQ impl (f <$> mx) = f <$> simulateQ impl mx` | no: `PFunctor.FreeM.liftM_map` |
+| `simulateQ_id'` | `simulateQ (QueryImpl.id' spec) mx = mx` | yes |
 
 ### QueryImpl composition
 
