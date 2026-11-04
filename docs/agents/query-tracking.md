@@ -69,6 +69,9 @@ labels, unchanged answers, and the ordinary function monoid.
 | `VCVio/OracleComp/QueryTracking/QueryCost.lean` | Generic query-cost accounting for direct-style `HasQuery.Program` computations |
 | `VCVio/OracleComp/QueryTracking/CostModel.lean` | `OracleComp`-specific facade over the generic semantics |
 | `VCVio/OracleComp/QueryTracking/CostModel/Simulation.lean` | Weighted cost bounds for actual oracle-query substitution |
+| `VCVio/OracleComp/QueryTracking/DeterminedCost.lean` | Deterministic executions and singleton-response complete-path costs |
+| `VCVio/OracleComp/QueryTracking/MeasuredProgram.lean` | Named deterministic instruction programs, realization and declared budgets |
+| `VCVio/OracleComp/QueryTracking/MeasuredProgram/Composition.lean` | Sequential programs retaining both instruction traces and adding budgets |
 | `VCVio/OracleComp/QueryTracking/AdaptivePrefix.lean` | Shared-ROM stopping-time bounds for an adaptive prefix followed by a transcript-dependent suffix |
 | `ToMathlib/Control/WriterT.lean` | Pathwise and output-indexed cost predicates for `AddWriterT` |
 | `ToMathlib/Probability/TailSums.lean` | Tail-sum integration for measurable Nat observables under arbitrary measures |
@@ -233,6 +236,40 @@ Use `QueryCost` when you want:
 - a generic theorem over a direct-style `HasQuery.Program`
 - runtime-instantiated cryptographic constructions
 - weighted expected cost and expected query count
+
+#### Named measured programs
+
+`OracleComp.MeasuredProgram` names an instruction program, its deterministic handlers, an input
+view and the instruction charges. `Realizes` equates the resulting function with the handler's
+execution; `CostAtMost` is `WorstCaseCostBound` on every view. `BudgetedProgram` bundles these
+proofs for one function. For singleton-response instruction sets, the determined-response laws
+identify the complete-path bound with the actual writer-instrumented run.
+
+`outer.comp inner` executes both instruction programs and passes the actual inner result to the
+outer program. The outer view is computed without charge from that intermediate result.
+Its disjoint instruction tags retain the originating view and cost; the proved
+budget is the inner budget plus the outer budget. `contramap` precomposes only the input view.
+These are weighted bounds in the declared order, not complete-execution or expected-cost
+composition. Signed weights can cancel earlier charges and a reversed order changes an upper
+bound into a lower bound. Idempotent or saturating addition may collapse repeated positive
+charges, even in a canonically ordered nonnegative monoid. Operation counts require justified
+counting arithmetic and a charge table, such as ordinary natural-number vectors with designated
+unit charges; zero charges and omitted work still need their own interpretation. Pure computation,
+view preparation and handler evaluation remain uncharged, and `BudgetedProgram.ofFun` gives every
+function a zero-instruction program. Naming retains the accounting boundary for review; naming
+alone does not justify it.
+`runAdd_fst_eq_run` identifies the writer run's result with `run`; `Realizes` identifies the
+returned function, without proving a step-by-step refinement of other host code.
+Existential measured programs give no running-time guarantee. The persistent
+`lake exe oracle_cost_tests` regression checks the actual composed output and both vector
+coordinates, alongside response-dependent query substitution.
+
+`ResourceProfile` separates intrinsic work from capability usage. Its substitution algebra does
+not by itself certify implementing handlers; changed-cost/profile refinement remains a separate
+obligation. For complete backend-relative execution bounds, see
+[`OracleComp.Complexity.PureCertificate` and `IsOraclePPTBy`](../../VCVio/CryptoFoundations/Asymptotics/ComputationalComplexity.lean).
+Those APIs have executable realizations and explicit representation/backend boundaries; they
+must not be inferred from an instruction profile.
 
 ### 4. `ToMathlib`: generic probability facts
 
