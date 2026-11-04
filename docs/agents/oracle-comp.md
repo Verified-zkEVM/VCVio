@@ -227,10 +227,12 @@ must lift `OracleComp spec`. `spec.passthrough` is not itself a `QueryImpl`: rew
 Substitutes every `query t` in a computation with `impl t`:
 
 ```lean
-def simulateQ [Monad r] (impl : QueryImpl spec r) (mx : OracleComp spec α) : r α
+@[reducible] def simulateQ [Monad r] (impl : QueryImpl spec r) (mx : OracleComp spec α) : r α
 ```
 
-**Universal property.** `simulateQ impl` is the *unique* monad morphism `OracleComp spec →ᵐ r` that agrees with `impl` on queries. Internally it is `PFunctor.FreeM.mapM impl`, i.e. the fold of the free-monad syntax tree into `r`. Every way of "running" an `OracleComp` in another monad factors through `simulateQ`.
+**Universal property.** `simulateQ impl` is the *unique* monad morphism `OracleComp spec →ᵐ r` that agrees with `impl` on queries. It is a reducible wrapper around `PFunctor.FreeM.liftM impl`, i.e. the fold of the free-monad syntax tree into `r`. Every way of "running" an `OracleComp` in another monad factors through `simulateQ`.
+
+**Fold lemmas.** Because `simulateQ` is reducible, the `PFunctor.FreeM.liftM` lemmas of CSLib and PolyFun (`PFunctor.FreeM.liftM_bind`, `PFunctor.FreeM.liftM_map`, `PFunctor.FreeM.liftM_mapLens`, …) apply to `simulateQ` goals under `simp`, and CSLib's `@[simp]` `liftM_pure`/`liftM_bind`/`liftM_map` fire there before the `simulateQ_*` lemmas below. `rw` matches on the head constant without unfolding it, so the `simulateQ_*` lemmas remain the `rw` interface; add a `simulateQ`-headed restatement only where `rw` needs one.
 
 **Handler vs denotation.** The target monad `r` determines how `simulateQ impl` reads:
 

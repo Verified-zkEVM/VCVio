@@ -13,6 +13,12 @@ public import ToMathlib.Control.OptionT
 /-!
 # Simulation Semantics for Oracles in a Computation
 
+`simulateQ impl` runs an oracle computation in the monad `r`, answering each query with `impl`.
+It is a reducible wrapper around the free-monad fold `PFunctor.FreeM.liftM impl`, so the
+`PFunctor.FreeM.liftM` lemmas of CSLib and PolyFun (`PFunctor.FreeM.liftM_bind`,
+`PFunctor.FreeM.liftM_map`, `PFunctor.FreeM.liftM_mapLens`, …) apply to `simulateQ` goals under
+`simp`. `rw` matches on the head constant without unfolding it, so the `simulateQ_*` lemmas below
+restate the structural cases with a `simulateQ`-headed left-hand side.
 -/
 
 @[expose] public section
@@ -27,7 +33,7 @@ section simulateQ
 
 /-- Given an implementation of `spec` in the monad `r`, convert an `OracleComp spec α` to a
 implementation in `r α` by substituting `impl t` for `query t` throughout. -/
-def simulateQ {ι} {spec : OracleSpec ι} {r : Type u → Type _} [Monad r]
+@[reducible] def simulateQ {ι} {spec : OracleSpec ι} {r : Type u → Type _} [Monad r]
     (impl : QueryImpl spec r) {α : Type u} (mx : OracleComp spec α) : r α :=
   PFunctor.FreeM.liftM impl mx
 
