@@ -9,9 +9,10 @@ changes or publication.
 
 Read the [writing standard](writing.md) and the [vocabulary](writing-vocabulary.md).
 Read the relevant section of [CONTRIBUTING.md](../../CONTRIBUTING.md) for the contribution or text
-that you prepare. The standard owns the requirements. This workflow explains how to apply them.
+that you prepare. The standard distinguishes mandatory content requirements from style advice.
+This workflow explains how to apply that distinction.
 
-Treat current prose as material to assess, not as a style to preserve. Use STE's writing
+Treat existing prose as material to assess, not as a style to preserve. Use STE's writing
 principles to correct defects. Keep established identifiers, notation, quotations, and technical
 meanings accurate. Consult the official standard when a rule's source or a word's approval matters.
 Do not invent a dictionary approval or claim full STE conformance from a checker result.
@@ -40,9 +41,14 @@ Choose procedural or descriptive writing from the passage's purpose. Start with 
 problem, or action that the reader needs. Develop one topic in each paragraph. Add headings, lists,
 and examples when they make the text easier to use.
 
-Revise the text for direct verbs, clear actors and antecedents, consistent terms, and short
-sentences. Introduce unfamiliar concepts and notation before you use them. Remove empty praise and
-repetition. Keep instructions distinct from explanations and optional advice.
+Use the style advice on verbs, actors, antecedents, terms and sentence length when it improves the
+passage. Introduce unfamiliar concepts and notation before using them. Keep instructions distinct
+from explanations and optional advice.
+
+Compare the complete old and new paragraphs side by side, including their surrounding context.
+Do not base an edit on isolated fragments or on making a warning disappear. Keep a prose-only edit
+only when you can explain a concrete improvement in clarity without a loss of accuracy.
+Preserve conditions, requirement force and technical terms throughout the comparison.
 
 Compare every mathematical rewrite with its source. Keep the hypotheses, quantifiers, negations,
 error terms, exceptional cases, and direction of implication. For a security bound, keep the
@@ -50,14 +56,16 @@ model, the query budgets, and each term of the bound. Preserve time and requirem
 "may have failed" does not mean "failed", and "recommended" does not mean "required".
 A shorter expression is useful only when it keeps the intended meaning.
 
-Do not let a writing rule change standard terminology. First try a compliant rewrite that keeps the
-technical meaning. Keep a standard form only if a compliant rewrite would change that meaning.
-The form must be standard in cryptography research and engineering, computer science, or mathematics.
-Apply the rules to the rest of the passage. Repository habit alone does not make a wording standard.
+Do not let a writing rule change standard terminology. A rule can conflict with a term or language
+pattern that is standard in cryptography research and engineering, computer science, or mathematics.
+In that case, keep the standard form and apply the rules to the rest of the passage. Repository
+habit alone does not make a wording standard.
 
-Rewrite mathematical introductions with "Assume P. Then ..." or "Let f ...".
-Keep each hypothesis and the scope of each definition. Do not use a general exception for verbal
-"-ing" forms under V2.
+Keep conventional mathematical introductions, including "Assuming P, ...", "Writing f = ..." and
+"The following are equivalent". V2 does not require their replacement. For a post-preposition
+"-ing" clause, review whether its understood subject matches the main clause's subject.
+Clarify a dangling or ambiguous actor as needed to preserve meaning. A pattern match cannot
+establish that relationship.
 
 Use the vocabulary to resolve ambiguous terms, not to erase valid technical meanings.
 "Complete the template" does not claim protocol completeness. "The scheme is hiding" names a
@@ -66,7 +74,7 @@ context could confuse them.
 
 ## Use the checker
 
-Use `scripts/check-writing.py` as a review aid:
+Use `scripts/check-writing.py` as an editing aid:
 
 ```bash
 uv run --no-project --python 3.12 python scripts/check-writing.py path/to/document.md
@@ -79,13 +87,19 @@ For changed prose, give the actual review base to `--base`. A stacked PR can hav
 branch as its base. Do not assume that every PR targets `main`.
 
 Read each finding before you edit. Counts and grammar patterns are approximations. Correct real
-defects, keep accurate technical expressions, and report a repeated checker defect with an
+defects, keep accurate technical expressions, and report a recurring checker defect with an
 example. Do not rewrite a correct claim only to make the checker quiet.
 
 The checker does not establish clarity, source fidelity, dictionary compliance, or permission to
-publish. Findings and input diagnostics exit with status 0.
-Usage, Git and configuration errors exit with status 2.
+publish. It returns status 0 for findings and advisory input diagnostics.
+It returns status 2 for usage, Git and configuration errors.
 The Writing workflow in CI shows findings as warnings. A finding does not fail a PR.
+
+V2 has no blanket warning for a form after a preposition. Its introductory-clause hints ask for
+actor and meaning review. Limited form exceptions cover "Assuming P, we ...", "Using ..., we ..."
+and "Writing f = ...". These exceptions do not infer a subject or certify a claim.
+The checker matches complete vocabulary phrases and reports an invalid vocabulary configuration
+as an error. It reports selected symlink sources as Input diagnostics without reading their targets.
 
 ## Read the final text before handoff
 

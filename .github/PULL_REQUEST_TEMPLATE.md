@@ -1,6 +1,6 @@
 <!--
 Use the title format in CONTRIBUTING.md, "Title".
-Write this description to the writing standard in docs/agents/writing.md.
+Follow the mandatory claim rules in docs/agents/writing.md and consider its advisory style guidance.
 -->
 
 ## Summary
@@ -30,4 +30,4 @@ one, cite its row in docs/reading/upstream-alignment.md. -->
 - [ ] If a simp, grind, or gcongr set changed, the gate files under `VCVioTest/` gained one-call
       entries. No proof gained a second tactic call outside a dated gap pair. The summary lists
       the line counts of the touched proofs before and after the change.
-- [ ] The title follows `CONTRIBUTING.md`, and the prose follows the writing standard.
+- [ ] The title follows `CONTRIBUTING.md`. I checked the mandatory claim rules and considered the advisory style guidance.

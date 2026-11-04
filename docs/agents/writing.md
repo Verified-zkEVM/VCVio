@@ -1,8 +1,12 @@
 # Writing Standard
 
 Use this guide to write clear technical English for VCVio. It draws on ASD-STE100 Simplified
-Technical English (STE), Issue 9, January 2025. STE is the reference for prose improvement.
-A current repository convention is not a reason to keep unclear prose.
+Technical English (STE), Issue 9, January 2025. STE is the reference for improving the prose.
+An existing repository convention is not a reason to keep unclear writing.
+
+The purpose is clear, correct, legible technical prose. Use the rules to help a reader understand
+the content. A rewrite fails if it makes the passage less clear or less accurate, even if it follows
+a style rule. An advisory finding is a reason to review a sentence, not an instruction to replace a word.
 
 The [vocabulary](writing-vocabulary.md) records technical meanings and wording to avoid.
 [CONTRIBUTING.md](../../CONTRIBUTING.md#writing) gives the contribution requirements.
@@ -11,7 +15,7 @@ The [writing workflow](write-technical-prose.md) describes how to draft and revi
 ## Scope
 
 Apply this guide when you add or revise documentation, Lean comments and docstrings, commit
-messages, pull request (PR) and issue descriptions, and review comments. Read the text around the passage
+messages, pull request (PR) and issue descriptions, and review comments. Read the surrounding text
 for context. Correct related defects that affect the passage, but keep unrelated rewrites in a
 separate change.
 
@@ -32,11 +36,10 @@ role. Use the project vocabulary for technical terms. A missing term is not auto
 and a familiar English word is not automatically STE-approved. When a literal replacement changes
 the meaning, rewrite the sentence or keep the necessary term and explain its technical use.
 
-Technical accuracy takes priority over the rules in this guide. A rule can conflict with a standard
-term or language pattern in cryptography research and engineering, computer science, or mathematics.
-First try a compliant rewrite that keeps the technical meaning. Keep the standard form only if a
-compliant rewrite would change that meaning. Apply the rules to the rest of the sentence.
-A repository habit alone is not a standard form.
+Technical accuracy takes priority. A stylistic rule can conflict with a term or language pattern
+that is standard in cryptography research and engineering, computer science, or mathematics.
+In that case, keep the standard form and apply the rest of the advice to the sentence.
+A wording that is only a habit in this repository is not a standard form.
 
 This guide is a repository adaptation, not a complete copy of STE or a claim of full STE
 conformance. It does not distribute or automatically check the official dictionary. The
@@ -57,13 +60,17 @@ the sentence's purpose. Keep commands distinct from explanations and warnings.
 ## Rules
 
 The identifiers below are VCVio labels. STE references identify the source principle, not a claim
-that this page reproduces each source rule. STE's general recommendations (GR) are advice in the
-standard. This guide adopts the recommendations named below as repository requirements.
+that this page reproduces each source rule.
+
+Rules C1–C8 and statement/source correctness are mandatory. The existing security-claim requirements
+in C9 also remain mandatory. The other rules are advisory, including the named STE general
+recommendations. Use them when they improve clarity and legibility. A style hint can reveal a
+meaning error, but the content requirement is the reason to correct that error.
 
 ### Words
 
 - **W1.** Prefer an STE-approved general word with the intended meaning and part of speech.
-  Use an established technical term when the subject requires it. Rephrase before you make a
+  Use an established technical term when the subject requires it. Rephrase before making a
   replacement that changes the meaning. (STE 1.1 to 1.4, 9.1, 9.2)
 - **W2.** Use technical terms with their stated meanings and grammatical roles. Qualify a term
   when the passage could support more than one meaning. (STE 1.5 to 1.13)
@@ -91,20 +98,23 @@ standard. This guide adopts the recommendations named below as repository requir
   when a simpler construction gives the same information. Preserve time and uncertainty:
   "the build may have failed" does not mean "the build failed". (STE 3.1 to 3.4, VCVio
   adaptation)
-- **V2.** Use an "-ing" verb form only as a technical noun or as a modifier in a technical noun.
-  Rewrite other verbal uses, even after a preposition: write "before you use", not "before using".
-  The [vocabulary](writing-vocabulary.md#technical--ing-nouns) records technical noun uses, such as "rewinding" and "lazy sampling".
-  "During" is a preposition, so this rule does not apply to it. (STE 3.5)
+- **V2.** Use established technical nouns and modifiers in their conventional roles, such as
+  "rewinding" and "lazy sampling" ([vocabulary](writing-vocabulary.md#technical--ing-nouns)).
+  A clear clause after a preposition may keep an "-ing" form if its understood subject matches
+  the main clause's subject. Keep conventional mathematical introductions.
+  Clarify a dangling or ambiguous actor rather than make a mechanical word substitution.
+  Ordinary modifiers such as "existing" and "underlying" need no replacement merely for their suffix.
+  (STE 3.5, VCVio adaptation)
 - **V3.** Use the active voice. Name the person, tool, protocol participant, adversary, oracle, or
   mathematical object that does the action. Do not invent an actor. (STE 3.6)
 - **V4.** Use the passive voice in descriptive text only when the actor is unknown. A participle
-  can describe a state without a passive construction: "the query count is bounded".
+  can describe a state without forming a passive construction: "the query count is bounded".
   (STE 3.3, 3.6)
 - **V5.** Express an action with a verb rather than an abstract noun phrase. Write
   "the reduction queries the oracle", not "the reduction performs a query to the oracle".
   (STE 3.7)
 - **V6.** Use "that" after "prove", "show", "assume", or "make sure" when it separates a claim
-  from the verb. Do not add it before an object: "prove the theorem". (STE GR-1)
+  from the preceding verb. Do not add it before an object: "prove the theorem". (STE GR-1)
 
 ### Sentences
 
@@ -112,26 +122,26 @@ standard. This guide adopts the recommendations named below as repository requir
   Keep its conditions and qualifications. Use the [word-count rules](#word-count). (STE 5.1, 6.3)
 - **S2.** Give a sentence one topic. Give a work step one instruction, except for actions that
   must occur together. (STE 4.1, 5.2)
-- **S3.** Put a condition before an instruction when the reader needs it before the action.
+- **S3.** Put a condition before an instruction when the reader needs it before acting.
   For example, "If the build fails, read the log." (STE 5.4)
 - **S4.** Use the imperative for work steps. Distinguish an instruction from a requirement or a
   description. Preserve the force of "must", "may", and "can" when you revise a requirement.
   (STE 5.3, VCVio adaptation)
 - **S5.** Keep the articles, subjects, and verbs that a sentence needs. Do not use contractions
   to shorten prose. (STE 4.2, 4.5)
-- **S6.** Connect related sentences so the reader can follow the argument. State the connection.
-  Do not expect punctuation alone to express it. (STE 4.4)
+- **S6.** Connect related sentences so the reader can follow the argument. State the connection
+  rather than expecting punctuation alone to express it. (STE 4.4)
 - **S7.** Give each pronoun a clear antecedent. After "this" or "these", name the object when
   the reference could be ambiguous. (STE GR-3, GR-4)
 - **S8.** Put instructions in the procedure, not inside a note. Readers can skip notes. Use them
-  for support information. (STE 5.5)
+  for supporting information. (STE 5.5)
 
 ### Paragraphs and lists
 
 - **P1.** Give each paragraph one topic. Introduce that topic before its details. (STE 6.4, 6.5)
 - **P2.** Keep a paragraph to six sentences or fewer. Split it where the subject or purpose
   changes. (STE 6.6)
-- **P3.** Introduce information gradually. Define unfamiliar terms and notation before you use
+- **P3.** Introduce information gradually. Define unfamiliar terms and notation before using
   them in an explanation. (STE 6.1)
 - **L1.** Use a vertical list when it makes steps, cases, or conditions easier to distinguish.
   A short series does not always need a list. (STE 4.3)
@@ -153,7 +163,7 @@ standard. This guide adopts the recommendations named below as repository requir
   Preserve the conventional spelling of an established technical term. (STE 8.2)
 - **U4.** Use parentheses for references, identifiers, abbreviations, explanations, or alternatives.
   (STE 8.3) Keep information needed for an instruction in the instruction itself.
-  That rule about instruction placement is a VCVio policy.
+  The instruction-placement requirement is a VCVio adaptation.
 - **U5.** Use emphasis for a term, label, warning, or specific requirement. Avoid emphasis across
   an entire paragraph. (VCVio)
 
@@ -170,12 +180,15 @@ STE 8.4 to 8.7 defines word counting. Each of these elements counts as one word:
 
 Do not add hyphens or quotation marks to hide a long sentence.
 
-Text in parentheses counts as one word in the outer sentence. Check the parenthetical text
+Text in parentheses counts as one word in the enclosing sentence. Check the parenthetical text
 separately for sentence length. A list introduction ends at its colon for word counting. Each list
 item counts separately.
 
-VCVio also counts Lean notation, a command, a URL, or a citation key as one word.
-Ordinary link text keeps its words. This word-count convention is a technical-text adaptation.
+STE counts formulas as quoted text. VCVio treats a code span as quoted text in code font.
+Thus a Lean expression, command or citation key in a code span counts as one word.
+
+VCVio also counts a URL or a citation key outside a code span as one word.
+This last convention is a technical-text adaptation. Ordinary link text keeps its words.
 The checker approximates these conventions. Review the actual sentence when its count is doubtful.
 
 ### Claims and source evidence
@@ -193,13 +206,13 @@ VCVio adds these requirements to the STE principles:
   or maintained references. A reader of the merged tree must be able to find the cited source.
 - **C5.** Replace unsupported quality claims with a fact or evidence. Words such as "robust" or
   "comprehensive" do not supply that evidence.
-- **C6.** Do not call a result "obvious" or "trivial". Give an argument or a precise reference.
-  Established technical names such as "trivial group" remain permitted.
+- **C6.** Give an argument or a precise reference instead of calling a result "obvious" or
+  "trivial". Established technical names such as "trivial group" remain permitted.
 - **C7.** Remove repetition that adds no useful context. Repeat a condition when the reader
   needs it at the point of use.
 - **C8.** Make the source of each mathematical or cryptographic claim traceable. Use the
-  [documentation conventions](../../CONTRIBUTING.md#documentation-and-docstrings).
-  Do not invent a second citation policy here.
+  [documentation conventions](../../CONTRIBUTING.md#documentation-and-docstrings) rather than
+  inventing a second citation policy here.
 - **C9.** Give the scope of a security claim: the security notion, the model, the assumptions,
   the resource budgets, and the bound. Name the reduction, simulator, or extractor that the
   theorem uses. "The scheme is EUF-CMA secure" alone does not say which bound holds in which model.
@@ -208,11 +221,10 @@ VCVio adds these requirements to the STE principles:
 
 ### Mathematical and cryptographic conventions
 
-"Let", "fix", and "suppose" can introduce mathematical notation. They do not issue a work step.
-Rewrite mathematical introductions with "Assume P. Then ..." or "Let f ...".
-Keep each hypothesis and the scope of each definition.
-"We" can refer to the author and reader in an argument. A state such as "the scheme is perfectly
-hiding" is not an instruction or a passive action.
+"Let", "fix", "suppose" and conventional forms such as "Assuming P, ..." or "Writing f = ..." can
+introduce mathematical notation or assumptions. They do not issue a work step. Keep these forms
+when they are clear. "We" can refer to the author and reader in an argument. A state such as
+"the scheme is perfectly hiding" is not an instruction or a passive action.
 
 STE permits one word as a technical noun and a technical verb when each use meets the rules for
 its category (STE 1.5, 1.7, 1.12, 1.13). Examples are "a query" and "query an oracle", and "a
@@ -252,16 +264,16 @@ The third column says whether a row follows STE or adapts it for VCVio:
 | STE 1.1 to 1.4, general vocabulary | The reference for general meanings and grammatical roles. This guide and its checker do not implement the full dictionary. | STE |
 | STE 1.5 to 1.13, technical terms | Applied through the project vocabulary and established subject-field usage. | STE |
 | STE 1.5, 1.7, 1.12, and 1.13, noun and verb roles | One word can be a technical noun and a technical verb when each use meets its category rules. An example is "query". | STE |
-| STE 1.14, spelling | STE 1.14 permits another official spelling directive. VCVio uses Oxford spelling and also accepts American spelling. Lean declaration names follow Mathlib. | VCVio directive |
-| Technical accuracy | First try a compliant rewrite that keeps technical meaning. Keep a standard technical form only if a compliant rewrite would change that meaning. A repository habit alone does not qualify. | VCVio policy |
+| STE 1.14, spelling | STE 1.14 permits another official spelling directive. VCVio prefers Oxford spelling and accepts American spelling in prose. Lean declaration names follow Mathlib. | VCVio spelling advice |
+| Technical accuracy | Technical accuracy takes priority. Standard terminology and language patterns in cryptography, computer science, and mathematics remain when a rule conflicts with them. Repository habit alone is not a standard. | VCVio adaptation |
 | STE 2 to 6, 8, and 9 | The source principles inform the rules above. Mathematical notation and the stated adaptations preserve technical meaning. | STE |
 | STE 3.1 to 3.4 | Simple constructions remain preferred. VCVio keeps a modal or complex form when a change would lose uncertainty or time. | VCVio adaptation |
-| STE 3.5 | An "-ing" form is a technical noun or a modifier in one. The vocabulary records those uses. | STE |
+| STE 3.5 | STE favors technical noun and modifier uses. VCVio also permits clear post-preposition "-ing" clauses with the same understood subject as the main clause, and keeps conventional mathematical introductions. | VCVio adaptation |
 | STE 5.3 | Work steps use the imperative. VCVio also keeps the force of "must", "may", and "can" in requirements. | VCVio adaptation |
 | STE 7, safety instructions | Apply the relevant principle to risky operations: put the condition or instruction before an explanation of the consequence. | STE principle |
-| STE 8.4 to 8.7, word count | STE counts alphanumeric identifiers and formulas as one word. VCVio extends this grouping to Lean notation, commands, URLs, and citation keys. | VCVio adaptation |
-| STE general recommendations | The named recommendations are local requirements here. STE gives them as advice. | VCVio adaptation |
-| VCVio additions | Source evidence, history scope, citations, security-claim scope, clause-joining dashes, instruction placement (U4), and emphasis are local contribution policies. | VCVio addition |
+| STE 8.4 to 8.7, word count | STE groups alphanumeric identifiers and quoted text, including formulas. VCVio treats code spans as quoted text. URLs and citation keys outside code spans also count as one word locally. | STE with a VCVio adaptation |
+| STE general recommendations | The named recommendations are editing advice here, as they are in STE. | Advisory use |
+| VCVio additions | C1–C8, statement/source correctness and the existing C9 security-claim requirements are mandatory. Dashes, instruction placement (U4) and emphasis are local style advice. | VCVio content policy and advice |
 
 Refer to [ASD's official Issue 9](https://www.asd-ste100.org/assets/files/ASD-STE100_ISSUE9.pdf)
 for the full rules and dictionary. ASD owns the standard.

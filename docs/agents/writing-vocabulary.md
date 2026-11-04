@@ -70,8 +70,14 @@ Introduce a longer or unfamiliar term before you use an abbreviation:
 
 ## Technical -ing nouns
 
-These entries name subject-field concepts or supply modifiers in technical nouns under STE 3.5.
-An entry permits that noun use only. It does not approve a verb clause with the same word.
+These entries record technical nouns, modifiers and their subject-field senses. They are not an
+exhaustive list of permitted language. A listed term does not make every grammatical use correct,
+and a missing term is not automatically a defect. V2 also permits clear post-preposition clauses
+under the local adaptation in the [writing standard](writing.md).
+
+The checker uses the complete backticked terms in this table as lexical hints.
+A multi-word entry does not create separate exemptions for its component words.
+A hint, or the absence of one, does not establish a noun role or a correct subject.
 
 | Term | Technical meaning |
 |---|---|
@@ -124,7 +130,7 @@ passage. Explain the operation or name the relevant declaration when its meaning
 
 ## Words to avoid
 
-This table gives prompts for prose review. They do not define STE word
+This table gives prompts for an editing pass over ordinary prose. They do not define STE word
 approval. Use a replacement only when it preserves the meaning and grammatical role. Rewrite the
 sentence when a direct replacement does not work:
 
@@ -145,7 +151,7 @@ sentence when a direct replacement does not work:
 | "it is worth noting that", "it is important to" | delete the phrase when it adds no information |
 | "now", "no longer", "previously", "formerly", "currently", "new" | in library reference text, the fact about the present state (rule C3) |
 
-"These statements are equivalent" is a permitted mathematical introduction. Words such as "simply"
+"The following are equivalent" is a permitted mathematical introduction. Words such as "simply"
 and "essentially" can occur in technical terms, such as "simply typed" and "essentially
-surjective". Review their meaning before you delete them as isolated words. "Negligible" and
+surjective". Review their meaning rather than deleting them as isolated words. "Negligible" and
 "tight" are technical terms in security proofs. They are not vague qualifiers.

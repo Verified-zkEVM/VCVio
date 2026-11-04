@@ -35,6 +35,8 @@ gh issue list -R Verified-zkEVM/VCVio --state open --search "<topic or declarati
 
 If an open PR covers the same declarations, ask its author whether the work is active. If you open
 a PR for the same target, link the earlier PR and explain how your work relates to it.
+For work that appears abandoned, you may ask a maintainer whether to proceed.
+A maintainer may waive the author-contact step.
 
 ### Place The Work
 
@@ -138,7 +140,7 @@ refactor(OracleComp)!: rename the query constructors
 ### Description
 
 Complete the [PR template](.github/PULL_REQUEST_TEMPLATE.md). Keep the description proportional to
-the change. Omit a section that does not apply. Do not invent claims for it. Give reviewers
+the change. Omit a section that does not apply rather than inventing claims for it. Give reviewers
 the information that they need to assess the contribution:
 
 - State the problem, the change, and its purpose.
@@ -150,7 +152,7 @@ the information that they need to assess the contribution:
   `scripts/axiom_baseline.json`.
 - Give the validation commands, their results, and the commit that they cover.
 - List renamed or removed declarations and the callers that the PR updates.
-- Link related issues, the base of a stack, and work on the same target.
+- Link related issues, the base of a stack, and overlapping work.
 
 Keep the claims in the title and the description consistent with the code and the evidence. A
 successful build does not establish fidelity to a source or the absence of `sorry`.
@@ -187,16 +189,17 @@ checks and the actual merge result before you report a merge.
 ### Writing
 
 Use the [writing standard](docs/agents/writing.md) for documentation, docstrings, comments, commit
-messages, PR and issue text, and review comments. It applies to all authors. It uses Simplified
-Technical English (STE) to correct defects in current prose. Each departure from STE is marked
-as an adaptation.
+messages, PR and issue text, and review comments. It applies to all authors.
+Rules C1–C8 and statement/source correctness are mandatory. The existing C9 security-claim
+requirements also remain mandatory. Other prose rules are advisory. Each departure from STE is
+marked as an adaptation.
 
 Use the [writing workflow](docs/agents/write-technical-prose.md) when you draft or revise that
 text. Keep claims, hypotheses, uncertainty, and requirement strength unchanged during a style edit.
 The [vocabulary](docs/agents/writing-vocabulary.md) records technical meanings. It does not
 prohibit other meanings when their context is clear.
 
-`scripts/check-writing.py` finds some common defects. It is a review aid, not a gate, and it
+`scripts/check-writing.py` finds some common defects. It is an editing aid, not a gate, and it
 does not establish conformance to the standard. CI runs it on the changed prose and the PR
 description, and it reports findings as warnings only.
 
@@ -209,7 +212,7 @@ You are responsible for content that an AI agent or another tool produces for yo
 - Replace planning codes that a reader cannot find with the maintained source or an explanation.
 - Describe the current library in reference documentation. Explain the change in the commit or PR
   description.
-- Coordinate concurrent tool runs so that they do not open rival PRs for the same target.
+- Coordinate concurrent tool runs so that they do not open competing PRs for the same target.
 
 ## Attribution And File Headers
 
@@ -228,7 +231,7 @@ policy:
 
 1. **New files**: add the standard header with the current year and the names of the credited
    authors.
-2. **Routine edits to a file**: keep its current header. Do not change the attribution
+2. **Routine edits to existing files**: keep the existing header. Do not change the attribution
    only because you edited the file.
 3. **Substantial rewrites or replacements**: update the header to show the new authorship when new
    content effectively replaces a file. The same applies when you rename or recreate an old file as
@@ -306,9 +309,9 @@ output. A section that needs a banner usually needs its own `namespace` or its o
 All active Lean libraries and tests use the module system. Put ordinary declarations in a
 `public section`, and put tactic and elaborator declarations in a `public meta section`.
 
-Most source files already in the repository use `@[expose] public section` to keep the definitional equalities that
+Most existing source files use `@[expose] public section` to keep the definitional equalities that
 they had before the migration. A new file uses a plain `public section`. Mark a definition
-`@[expose]` when its intended public API includes definition unfolding. An executable or runtime
+`@[expose]` when unfolding it is part of its intended public API. An executable or runtime
 implementation module should use an opaque `public section` when callers do not need to unfold its
 definitions.
 
@@ -330,7 +333,7 @@ write a cross-package `import all PolyFun.…`. Add a public PolyFun law or API 
 and the long-term boundary between VCVio and PolyFun.
 
 `LatticeCryptoTest.lean` is curated rather than generated, because its executable modules define
-root-level `main` declarations whose names collide. For the same reason, `HashSigTest` has no generated root
+colliding root-level `main` declarations. For the same reason, `HashSigTest` has no generated root
 umbrella. Build its named executables and modules directly.
 
 ## Style Notes
@@ -384,7 +387,7 @@ order, which keeps `lake update` idempotent. The comment above the PolyFun `requ
    Program logic uses the pinned Lean core WP interface through PolyFun.
 3. Run `lake update --keep-toolchain`, then `lake exe cache get`.
 4. Run `./scripts/validate.sh --lint --test --axioms`. Fix what the new toolchain reports rather
-   than suppress its messages (`docs/agents/gotchas.md` §23).
+   than silencing it (`docs/agents/gotchas.md` §23).
 5. Update `scripts/axiom_baseline.json` only for an intentional change in `sorry` debt.
 6. Check each row of the [upstream alignment ledger](docs/reading/upstream-alignment.md) against the
    newly pinned trees. Do not derive the result from a diff against the previous ledger.
