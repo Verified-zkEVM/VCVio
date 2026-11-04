@@ -316,8 +316,8 @@ proof oleans. Findings must exactly match `scripts/nolints.json`: obsolete entri
 findings fail. After fixing findings, `lake lint -- --prune-baseline` safely removes obsolete
 entries across all eight checked libraries and refuses additions. PR CI also checks that the baseline
 only shrinks against the merge base.
-`--test` adds `lake test` (the three test libraries, the smoke test,
-and the SLH-DSA test executables), `--ffi` adds the native ML-KEM / ML-DSA / Falcon
+`--test` adds `lake test` (the three test libraries, the smoke, oracle-cost, pure algorithm
+and SLH-DSA test executables), `--ffi` adds the native ML-KEM / ML-DSA / Falcon
 executables to `--test`, and `--axioms` adds the axiom sweep. The eager-initialisation
 ratchet runs in the default pass, after the boundary ratchets, since it reads the oleans
 the build just produced; `--test` runs it a second time over `VCVioTest` and
