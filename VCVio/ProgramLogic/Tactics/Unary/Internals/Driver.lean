@@ -65,7 +65,7 @@ inductive UnaryGoalKind where
   `List.foldlM` head. -/
   | tripleLoop (comp : Expr)
   /-- A unary `Triple` whose computation does not match the cases above; the
-  dispatcher unfolds to raw `wp` and lets `@[wpStep]` rewrite. -/
+  dispatcher unfolds to raw `wp` and rewrites with `wpStepRules`. -/
   | tripleOther
   /-- A raw `wp` / `≤ wp` goal. -/
   | rawWp
@@ -124,8 +124,8 @@ private def runTripleBindStep (comp : Expr) : TacticM Bool := do
     return true
   return false
 
-/-- Last-ditch triple step: unfold to a raw `wp` goal and dispatch via
-`@[wpStep]`. Used when the specialized triple dispatchers do not match. -/
+/-- Last-ditch triple step: unfold to a raw `wp` goal and rewrite with `wpStepRules`
+(`runWpStepRules`). Used when the specialized triple dispatchers do not match. -/
 private def runTripleFallback : TacticM Bool := do
   match ← observing? do
       evalTactic (← `(tactic| unfold OracleComp.ProgramLogic.Triple))

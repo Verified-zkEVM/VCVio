@@ -292,13 +292,12 @@ For new program-logic proofs, import `VCVio.ProgramLogic.Tactics`.
 interactive proof mode.
 
 For the tactic reference, proof-mode entry points, and workflow details, see
-[`docs/agents/program-logic.md`](docs/agents/program-logic.md). The two
-`@[vcspec]` and `@[wpStep]` registries are indexed via
-`Lean.Meta.Sym.Pattern` / `Lean.Meta.Sym.DiscrTree`. `Sym.*` is under active
-development in core Lean; see the *Internal Architecture* and *SymM
-Stability Note* sections of that doc for the churn classes to watch at each
-toolchain bump; the `@[wpStep]` rewrites already run through
-`Sym.Simp.mkTheoremFromDecl` and `Sym.simpGoal`.
+[`docs/agents/program-logic.md`](docs/agents/program-logic.md). The `@[vcspec]`
+registry is indexed via `Lean.Meta.Sym.Pattern` / `Lean.Meta.Sym.DiscrTree`. `Sym.*` is under
+active development in core Lean; see the *Internal Architecture* and *SymM Stability Note*
+sections of that doc for the churn classes to watch at each toolchain bump. Raw `wp` goals are
+rewritten with the fixed `wpStepRules` table (PolyFun's `ExactWPMonad` laws plus the oracle
+primitives) through ordinary `simp only`.
 
 ## Building
 

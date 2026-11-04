@@ -154,7 +154,7 @@ The handler catalogue consumes core `@[spec]` rules and `vcgen`, and
 `Unary/WP/{NecessarySpecs,LowerSpecs}.lean` register the oracle primitives (queries, uniform
 draws, `replicate`, `liftComp`) for core `vcgen` in both readings, exact by default and pointwise
 under `OracleComp.Lower.Pointwise`.
-VCVio's probability/coupling frontend still owns `@[vcspec]`/`@[wpStep]` dispatch, and its
+VCVio's probability/coupling frontend still owns `@[vcspec]` and raw-`wp` dispatch, and its
 exhaustive `pvcgen` hands quantitative triples to core `vcgen` (`tryCoreVCGen`): core takes the
 structural steps, VCVio the probability lowering, cuts, averages, loops with invariants in
 context, and relational steps. `Pr{…}[…]` keeps its meaning; events reach triples through the
