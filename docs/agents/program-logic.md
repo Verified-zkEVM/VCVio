@@ -464,6 +464,9 @@ state-transformer and writer-transformer models:
 | `simulateQ_triple_preserves_invariant` | `StateT` version |
 | `simulateQ_writerT_triple_preserves_invariant` | `WriterT` (monoid) version |
 
+Both instantiate PolyFun's `PFunctor.FreeM.triple_liftM_invariant`, which lifts a per-call
+invariant through `PFunctor.FreeM.liftM` into any `Std.WP.WPMonad`.
+
 `WriterPreservesInv` is the canonical invariant-preservation API for
 writer-based handlers like `countingOracle`/`costOracle`. Typical use:
 pick `Inv s := s ≤ B` (cost-budget) or `Inv s := s ∈ Submonoid.S` (stays
