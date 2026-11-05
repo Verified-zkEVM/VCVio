@@ -216,23 +216,23 @@ def mixedEventToRaw :
 
 /-- Signing attempts retain the original request. -/
 @[simp] theorem mixedEventToRaw_signingAttempt (request : Message) :
-    mixedEventToRaw (.signingAttempt request) = .signingAttempt request := rfl
+    mixedEventToRaw (.signingAttempt request) = .signingAttempt request := by rfl
 
 /-- Uniform requests retain their original phase and input. -/
 @[simp] theorem mixedEventToRaw_ambient_uniform
     (phase : SigningView.Phase) (n : unifSpec.Domain) :
-    mixedEventToRaw (.ambient phase (.inl n)) = .ambient phase (.inl n) := rfl
+    mixedEventToRaw (.ambient phase (.inl n)) = .ambient phase (.inl n) := by rfl
 
 /-- Typed hash requests retain their phase and use their actual byte encoding. -/
 @[simp] theorem mixedEventToRaw_ambient_typed
     (phase : SigningView.Phase) (typed : (hashSpec FIPS205.core).Domain) :
     mixedEventToRaw (.ambient phase (.inr (.inl typed))) =
-      .ambient phase (.inr (encode FIPS205.params typed)) := rfl
+      .ambient phase (.inr (encode FIPS205.params typed)) := by rfl
 
 /-- Raw hash requests retain their original phase and byte string. -/
 @[simp] theorem mixedEventToRaw_ambient_raw
     (phase : SigningView.Phase) (raw : (shakeSpec FIPS205.params).Domain) :
-    mixedEventToRaw (.ambient phase (.inr (.inr raw))) = .ambient phase (.inr raw) := rfl
+    mixedEventToRaw (.ambient phase (.inr (.inr raw))) = .ambient phase (.inr raw) := by rfl
 
 /-- Lift complete raw fallback answers to the mixed typed/raw interface coherently. -/
 @[expose] noncomputable def mixedFallback (pkSeed : FIPS205.core.PkSeed)
