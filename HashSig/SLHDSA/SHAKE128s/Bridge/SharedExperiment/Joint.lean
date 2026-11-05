@@ -353,7 +353,7 @@ private theorem actualMarkedSource_publicSeed
 theorem mixedSourceRecovery :
   ∀
     (caps : Nat × Nat) (policy : SigningView.Event (Game.World FIPS205.Answer) Message → Nat × Nat)
-    (hfreeKeygenUniform : ∀ n : unifSpec.Domain,
+    (_hfreeKeygenUniform : ∀ n : unifSpec.Domain,
       policy (.ambient .keygen (.inl n)) = (0, 0))
     (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
     (fallback : (input : (SigningView.Events.Spec (Game.World FIPS205.Answer) Message).Domain) →
