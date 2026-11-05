@@ -862,9 +862,10 @@ lemma queryBoundedAboveBy_monadLift [LawfulMonad m] (x : m α) :
     QueryBoundedAboveBy (monadLift x : AddWriterT ℕ m α) 0 :=
   pathwiseCostAtMost_monadLift x
 
-lemma queryBoundedBelowBy_monadLift [LawfulMonad m] (x : m α) :
+omit [ExactMonadAttach m] in
+lemma queryBoundedBelowBy_monadLift (x : m α) :
     QueryBoundedBelowBy (monadLift x : AddWriterT ℕ m α) 0 :=
-  pathwiseCostAtLeast_monadLift x
+  fun _ _ => Nat.zero_le _
 
 lemma queryBoundedAboveBy_addTell [LawfulMonad m] (w : ℕ) :
     QueryBoundedAboveBy (AddWriterT.addTell (M := m) w) w :=

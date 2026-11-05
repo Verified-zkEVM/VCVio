@@ -60,7 +60,6 @@ preimages short (the forged one by the verifier's `isShort` check, the hidden on
 This is the Step-2 collision extraction of the GPV proof, stated pinned over the concrete
 programmed forgery game and the concrete reductions. -/
 theorem gpv_progGameVerifyFreshAvg_le_collisionAdv_add_preimageAdv [DecidableEq Domain]
-    [Inhabited Range]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk) (qSign qHash : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -81,6 +80,7 @@ theorem gpv_progGameVerifyFreshAvg_le_collisionAdv_add_preimageAdv [DecidableEq 
           programmedPreimageAdvantage (psf := psf) (hr := hr)
             (programmedPreimageReduction psf hr M Salt adv domainSample qSign qHash) := by
   classical
+  let : Inhabited Range := Classical.inhabited_of_nonempty inferInstance
   -- Reduce the keygen-average to a per-key `(pk, sk)` bound via
   -- `gpv_progGameVerifyFreshAvg_le_of_perKey`, then discharge that per-key bound (the
   -- distinct-collision transfer + the reservoir exact-match bound) — the Step-2 collision

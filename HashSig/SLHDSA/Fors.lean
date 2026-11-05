@@ -231,8 +231,8 @@ def forsPkFromSig (prims : Primitives p) (sig : ForsSigCore p prims.core) (md : 
 
 /-- A monad morphism commutes with FORS leaf production when it commutes with the leaf-hash
 callback. -/
-theorem forsLeafWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
-    [Monad n] [LawfulMonad n] (F : m →ᵐ n) (core : CorePrimitives p)
+theorem forsLeafWith_natural {m n : Type → Type*} [Monad m]
+    [Monad n] (F : m →ᵐ n) (core : CorePrimitives p)
     (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
     (hhash : ∀ a y, F (hashm a y) = hashn a y)
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (t : ℕ) :
