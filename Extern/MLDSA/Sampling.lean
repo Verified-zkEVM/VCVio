@@ -184,7 +184,7 @@ theorem expandMask_get_cInfNorm_le (p : Params) (hp : p.isApproved) (rhoPrime : 
   obtain ⟨hwidth, hq⟩ := approved_gamma1_width p hp
   unfold expandMask
   rw [Vector.get_ofFn]
-  exact bitUnpackPoly_z_cInfNorm_le _ p.gamma1 hwidth hq
+  exact bitUnpackPoly_z_cInfNorm_le _ p.gamma1 hwidth
 
 /-! ## Challenge sampling -/
 
