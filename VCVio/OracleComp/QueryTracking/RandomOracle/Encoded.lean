@@ -793,6 +793,31 @@ theorem intertwinesOn_fill_patchedImpl_singleImpl :
       obtain ⟨hc, hcol⟩ := not_or.1 hb
       exact evalDist_typedHashImpl_run_bind_fill hc hf (hraw hc) u hcol f
 
+/-- Every completed typed or raw query preserves finite typed support and routed coverage. -/
+theorem preservesInv_typedHashImpl_stateInv :
+    QueryImpl.PreservesInv E.typedHashImpl E.StateInv := by
+  intro q s hs z hz
+  -- A completed router records its typed point and adds at most its own auxiliary input.
+  obtain ⟨hmark, htab⟩ :=
+    E.mem_support_typedHashImpl_run hz
+  rw [RandomOracleEncoding.stateInv_iff] at hs ⊢
+  refine ⟨?_, ?_⟩
+  · rw [hmark]
+    exact E.finite_mark hs.1 q z.1
+  · intro hgood raw hraw point hpoint
+    -- Existing clashes survive recording, so a non-clashing result started without one.
+    have hold : ¬E.Clash s.1 := by
+      intro hclash
+      apply hgood
+      rw [hmark]
+      exact E.clash_mark (.inl hclash) z.1
+    rw [hmark]
+    rcases htab raw hraw with h | h
+    · exact E.isSome_mark z.1
+        (hs.2 hold raw h point hpoint)
+    · subst q
+      exact E.isSome_mark_of_route hpoint z.1
+
 /-- The patched typed world preserves `StateInv`. -/
 theorem preservesInv_patchedImpl_stateInv : QueryImpl.PreservesInv E.patchedImpl E.StateInv := by
   rintro (n | u) ⟨c, pv⟩ ⟨hf, hraw⟩ z hz
