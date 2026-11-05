@@ -337,114 +337,76 @@ private theorem encodeFreeGuardedProgram :
   exact QueryImpl.map_run_simulateQ_guardQueryBudget_free_eq caps rawCost rawHandler
     fallback (simulateQ encodeObserved program) initialCache (0, 0) false
 
-/-- Expose the actual public-seed prefix of the complete chronological FIPS source. -/
-private theorem actualMarkedSource_publicSeed
-    (adv : Game.Adversary FIPS205.Answer PK) :
-    SigningView.Events.fullExperiment (Game.Counted.externalView FIPS205.scheme)
-        (Game.Counted.externalMain adv) = (do
-      let seed ← simulateQ (SigningView.Events.phaseImpl R Message .keygen)
-        (liftM ($ᵗ FIPS205.core.PkSeed) : OracleComp R FIPS205.core.PkSeed)
-      SigningView.Events.fullExperiment
-        (Bridge.SharedExperiment.pureShakeView FIPS205.params FIPS205.deterministicRand
-          (pure seed)) (Game.Counted.externalMain adv)) := by
-  let byteView (seed : FIPS205.core.PkSeed) :=
-    Bridge.SharedExperiment.pureShakeView FIPS205.params FIPS205.deterministicRand (pure seed)
-  have draw :
-      (Bridge.SharedExperiment.pureShakeView FIPS205.params FIPS205.deterministicRand
-        ($ᵗ FIPS205.core.PkSeed)).keygen = (do
-      let seed ← (liftM ($ᵗ FIPS205.core.PkSeed) : OracleComp R FIPS205.core.PkSeed)
-      (byteView seed).keygen) := by
-    simp only [byteView, Bridge.SharedExperiment.pureShakeView_keygen, shakeRomScheme,
-      SignatureAlg.map_keygen, romScheme, simulateQ_bind, simulateQ_encImpl_liftM,
-      liftM_pure, pure_bind]
-  have seedFields (first second : ProbComp FIPS205.core.PkSeed) :
-      (Bridge.SharedExperiment.pureShakeView FIPS205.params FIPS205.deterministicRand
-        first).sign = (Bridge.SharedExperiment.pureShakeView FIPS205.params
-          FIPS205.deterministicRand second).sign ∧
-      (Bridge.SharedExperiment.pureShakeView FIPS205.params FIPS205.deterministicRand
-        first).verify = (Bridge.SharedExperiment.pureShakeView FIPS205.params
-          FIPS205.deterministicRand second).verify := by
-    constructor <;> rfl
-  rw [← Bridge.SharedExperiment.fullExperiment_pureShakeView_fips205]
-  unfold SigningView.Events.fullExperiment
-  simp only [SigningView.Events.viewWithEvents]
-  rw [draw, simulateQ_bind]
-  simp only [bind_assoc]
-  apply bind_congr
-  intro seed
-  apply bind_congr
-  intro keys
-  obtain ⟨seedSigning, seedVerifying⟩ := seedFields ($ᵗ FIPS205.core.PkSeed) (pure seed)
-  simp only [SigningView.runWithSigningOracle, SigningView.signingOracle,
-    seedSigning, seedVerifying]
+/-- The full chronological mixed source at a supplied initial public seed. -/
+@[expose] noncomputable def mixedSourceAt
+    (seed : FIPS205.core.PkSeed)
+    (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core)) :
+    OracleComp ((unifSpec + (hashSpec FIPS205.core + shakeSpec FIPS205.params)) +
+      ObsSpec (SigningView.Event (Game.World FIPS205.Answer) Message))
+      (((PublicKeyCore FIPS205.core) × (SecretKeyCore FIPS205.core)) ×
+        SigningView.Outcome Message (List Byte) (Option (List Byte))) :=
+  let Raw := shakeSpec FIPS205.params
+  let H := hashSpec FIPS205.core
+  let R := Game.World FIPS205.Answer
+  let Native := unifSpec + (H + Raw)
+  let Common := Native + ObsSpec (SigningView.Event R Message)
+  let Sign := Message →ₒ Option (List Byte)
+  let markerProjection : QueryImpl (SigningView.Events.Spec Native Message)
+      (OracleComp Common) :=
+    QueryImpl.add (spec₁ := Native) (spec₂ := ObsSpec (SigningView.Event Native Message))
+      (QueryImpl.ofLift Native (OracleComp Common))
+      (fun event => liftM (Common.query (.inr (mixedEventToRaw event))))
+  let rawMain : PublicKeyCore FIPS205.core →
+      OracleComp (Native + Sign) (Message × List Byte) := fun pk =>
+    simulateQ (QueryImpl.add (spec₁ := R) (spec₂ := Sign)
+      (fun input => simulateQ (QueryImpl.ofLift Native (OracleComp (Native + Sign)))
+        (liftRawImpl (hs := H) input))
+      (fun request => liftM ((Native + Sign).query (.inr request))))
+      (Game.Counted.externalMain adv pk)
+  let typedAlg := romScheme FIPS205.core (Equiv.refl _) FIPS205.deterministicRand (pure seed)
+  let view := SLHDSA.SigningView.fromInternalPure FIPS205.params
+    (SLHDSA.Concrete.shakeWireCodec FIPS205.params.params)
+    (typedAlg.map (simulateQ' (liftTypedImpl (hs := H) (ext := Raw))))
+    (fun request : Message =>
+      (SLHDSA.External.encodePureMessage request.context request.message).toOption)
+  simulateQ markerProjection (SigningView.Events.fullExperiment view rawMain)
 
-
-/-- The genuine mixed source recovers the original guarded byte experiment under one policy. -/
-theorem mixedSourceRecovery :
-  ∀
-    (caps : Nat × Nat) (policy : SigningView.Event (Game.World FIPS205.Answer) Message → Nat × Nat)
-    (_hfreeKeygenUniform : ∀ n : unifSpec.Domain,
-      policy (.ambient .keygen (.inl n)) = (0, 0))
-    (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
-    (fallback : (input : (SigningView.Events.Spec (Game.World FIPS205.Answer) Message).Domain) →
-      (SigningView.Events.Spec (Game.World FIPS205.Answer) Message).Range input)
-    (initialCache : QueryCache (shakeSpec FIPS205.params)),
+/-- Encode the complete fixed-seed mixed source as its original raw chronological source. -/
+private theorem simulateQ_encode_mixedSourceAt
+    (seed : FIPS205.core.PkSeed)
+    (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core)) :
     let Raw := shakeSpec FIPS205.params
     let H := hashSpec FIPS205.core
     let R := Game.World FIPS205.Answer
-    let Ev := SigningView.Event R Message
-    let O := ObsSpec Ev
+    let O := ObsSpec (SigningView.Event R Message)
     let Native := unifSpec + (H + Raw)
     let Common := Native + O
-    let Alpha := ((PublicKeyCore FIPS205.core) × (SecretKeyCore FIPS205.core)) ×
-      SigningView.Outcome Message (List Byte) (Option (List Byte))
-    let Sign := Message →ₒ Option (List Byte)
-    let rawEvent : SigningView.Event Native Message → Ev := mixedEventToRaw
-    let markerProjection : QueryImpl (SigningView.Events.Spec Native Message)
-        (OracleComp Common) :=
-      QueryImpl.add (spec₁ := Native)
-        (spec₂ := ObsSpec (SigningView.Event Native Message))
-        (QueryImpl.ofLift Native (OracleComp Common))
-        (fun event => liftM (Common.query (.inr (rawEvent event))))
-    let rawMain : PublicKeyCore FIPS205.core →
-        OracleComp (Native + Sign) (Message × List Byte) := fun pk =>
-      simulateQ (QueryImpl.add (spec₁ := R) (spec₂ := Sign)
-        (fun input => simulateQ (QueryImpl.ofLift Native (OracleComp (Native + Sign)))
-          (liftRawImpl (hs := H) input))
-        (fun request => liftM ((Native + Sign).query (.inr request))))
-        (Game.Counted.externalMain adv pk)
-    let rawHandler := SigningView.Events.handlerWithEvents (Request := Message)
-      (RandomOracleModel.impl (List Byte) FIPS205.Answer)
-    (do
-      let pkSeed ← ($ᵗ FIPS205.core.PkSeed : ProbComp FIPS205.core.PkSeed)
-      let typedAlg := romScheme FIPS205.core (Equiv.refl _) FIPS205.deterministicRand
-        (pure pkSeed)
-      let view := SLHDSA.SigningView.fromInternalPure FIPS205.params
-        (SLHDSA.Concrete.shakeWireCodec FIPS205.params.params)
-        (typedAlg.map (simulateQ' (liftTypedImpl (hs := H) (ext := Raw))))
-        (fun request : Message =>
-          (SLHDSA.External.encodePureMessage request.context request.message).toOption)
-      let mixed := simulateQ markerProjection (SigningView.Events.fullExperiment view rawMain)
-      let forwarder : QueryImpl Common (StateT PUnit (OracleComp Common)) :=
-        (QueryImpl.id' Common).liftTarget (StateT PUnit (OracleComp Common))
-      let guarded := (simulateQ (QueryImpl.guardQueryBudget caps
-        (Sum.elim (fun _ => (0, 0)) policy) forwarder
-        (mixedFallback pkSeed fallback)) mixed).run (PUnit.unit, ((0, 0), false))
-      let encodeObserved : QueryImpl Common (OracleComp (R + O)) :=
-        QueryImpl.add (spec₁ := Native) (spec₂ := O)
-          (fun input => simulateQ (QueryImpl.ofLift R (OracleComp (R + O)))
-            ((shakeEncoding FIPS205.params (by decide) (by decide) pkSeed).encodeImpl input))
-          (fun event => liftM ((R + O).query (.inr event)))
-      (fun result : (Alpha × (PUnit × ((Nat × Nat) × Bool))) × QueryCache Raw =>
-        (result.1.1, (result.2, result.1.2.2))) <$>
-        (simulateQ rawHandler (simulateQ encodeObserved guarded)).run initialCache) =
-      (simulateQ (QueryImpl.guardQueryBudget caps
-        (Sum.elim (fun _ => (0, 0)) policy) rawHandler fallback)
-        (SigningView.Events.fullExperiment (Game.Counted.externalView FIPS205.scheme)
-          (Game.Counted.externalMain adv))).run (initialCache, ((0, 0), false))
+    let encodeObserved : QueryImpl Common (OracleComp (R + O)) :=
+      QueryImpl.add (spec₁ := Native) (spec₂ := O)
+        (fun input => simulateQ (QueryImpl.ofLift R (OracleComp (R + O)))
+          ((shakeEncoding FIPS205.params (by decide) (by decide) seed).encodeImpl input))
+        (fun event => liftM ((R + O).query (.inr event)))
+    simulateQ encodeObserved (mixedSourceAt seed adv) =
+      SigningView.Events.fullExperiment
+        (pureShakeView FIPS205.params FIPS205.deterministicRand (pure seed))
+        (Game.Counted.externalMain adv)
  := by
-  intro caps policy hfree adv fallback initialCache Raw H R Ev O Native Common Alpha
-    Sign rawEvent markerProjection rawMain rawHandler
+  intro Raw H R O Native Common encodeObservedFixed
+  let Sign := Message →ₒ Option (List Byte)
+  let rawEvent : SigningView.Event Native Message → Ev := mixedEventToRaw
+  let markerProjection : QueryImpl (SigningView.Events.Spec Native Message)
+      (OracleComp Common) :=
+    QueryImpl.add (spec₁ := Native)
+      (spec₂ := ObsSpec (SigningView.Event Native Message))
+      (QueryImpl.ofLift Native (OracleComp Common))
+      (fun event => liftM (Common.query (.inr (rawEvent event))))
+  let rawMain : PublicKeyCore FIPS205.core →
+      OracleComp (Native + Sign) (Message × List Byte) := fun pk =>
+    simulateQ (QueryImpl.add (spec₁ := R) (spec₂ := Sign)
+      (fun input => simulateQ (QueryImpl.ofLift Native (OracleComp (Native + Sign)))
+        (liftRawImpl (hs := H) input))
+      (fun request => liftM ((Native + Sign).query (.inr request))))
+      (Game.Counted.externalMain adv pk)
   let encodeObserved (seed : FIPS205.core.PkSeed) : QueryImpl Common (OracleComp (R + O)) :=
     QueryImpl.add (spec₁ := Native) (spec₂ := O)
       (fun input => simulateQ (QueryImpl.ofLift R (OracleComp (R + O)))
@@ -599,6 +561,232 @@ theorem mixedSourceRecovery :
     apply bind_congr
     intro result
     rw [verification]
+  change simulateQ (encodeObserved seed) (simulateQ markerProjection
+      (SigningView.Events.fullExperiment (typedView seed) rawMain)) = _
+  rw [← QueryImpl.simulateQ_compose]
+  exact source seed
+
+/-- Expose the actual public-seed prefix of the complete chronological FIPS source. -/
+private theorem actualMarkedSource_publicSeed
+    (adv : Game.Adversary FIPS205.Answer PK) :
+    SigningView.Events.fullExperiment (Game.Counted.externalView FIPS205.scheme)
+        (Game.Counted.externalMain adv) = (do
+      let seed ← simulateQ (SigningView.Events.phaseImpl R Message .keygen)
+        (liftM ($ᵗ FIPS205.core.PkSeed) : OracleComp R FIPS205.core.PkSeed)
+      SigningView.Events.fullExperiment
+        (Bridge.SharedExperiment.pureShakeView FIPS205.params FIPS205.deterministicRand
+          (pure seed)) (Game.Counted.externalMain adv)) := by
+  let byteView (seed : FIPS205.core.PkSeed) :=
+    Bridge.SharedExperiment.pureShakeView FIPS205.params FIPS205.deterministicRand (pure seed)
+  have draw :
+      (Bridge.SharedExperiment.pureShakeView FIPS205.params FIPS205.deterministicRand
+        ($ᵗ FIPS205.core.PkSeed)).keygen = (do
+      let seed ← (liftM ($ᵗ FIPS205.core.PkSeed) : OracleComp R FIPS205.core.PkSeed)
+      (byteView seed).keygen) := by
+    simp only [byteView, Bridge.SharedExperiment.pureShakeView_keygen, shakeRomScheme,
+      SignatureAlg.map_keygen, romScheme, simulateQ_bind, simulateQ_encImpl_liftM,
+      liftM_pure, pure_bind]
+  have seedFields (first second : ProbComp FIPS205.core.PkSeed) :
+      (Bridge.SharedExperiment.pureShakeView FIPS205.params FIPS205.deterministicRand
+        first).sign = (Bridge.SharedExperiment.pureShakeView FIPS205.params
+          FIPS205.deterministicRand second).sign ∧
+      (Bridge.SharedExperiment.pureShakeView FIPS205.params FIPS205.deterministicRand
+        first).verify = (Bridge.SharedExperiment.pureShakeView FIPS205.params
+          FIPS205.deterministicRand second).verify := by
+    constructor <;> rfl
+  rw [← Bridge.SharedExperiment.fullExperiment_pureShakeView_fips205]
+  unfold SigningView.Events.fullExperiment
+  simp only [SigningView.Events.viewWithEvents]
+  rw [draw, simulateQ_bind]
+  simp only [bind_assoc]
+  apply bind_congr
+  intro seed
+  apply bind_congr
+  intro keys
+  obtain ⟨seedSigning, seedVerifying⟩ := seedFields ($ᵗ FIPS205.core.PkSeed) (pure seed)
+  simp only [SigningView.runWithSigningOracle, SigningView.signingOracle,
+    seedSigning, seedVerifying]
+
+
+/-- The unguarded actual source retains its sampled initial public seed jointly with all keys. -/
+private theorem actualMarkedSource_publicSeed_joint
+    (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core)) :
+    let R := Game.World FIPS205.Answer
+    let Alpha := ((PublicKeyCore FIPS205.core) × (SecretKeyCore FIPS205.core)) ×
+      SigningView.Outcome Message (List Byte) (Option (List Byte))
+    (fun result : Alpha => (result.1.1.pkSeed, result)) <$>
+        SigningView.Events.fullExperiment (Game.Counted.externalView FIPS205.scheme)
+          (Game.Counted.externalMain adv) = (do
+      let seed ← simulateQ (SigningView.Events.phaseImpl R Message .keygen)
+        (liftM ($ᵗ FIPS205.core.PkSeed) : OracleComp R FIPS205.core.PkSeed)
+      let result ← SigningView.Events.fullExperiment
+        (pureShakeView FIPS205.params FIPS205.deterministicRand (pure seed))
+        (Game.Counted.externalMain adv)
+      pure (seed, result))
+ := by
+  intro R Alpha
+  rw [actualMarkedSource_publicSeed, map_bind]
+  apply bind_congr
+  intro seed
+  simp only [bind_pure_comp]
+  let view := pureShakeView FIPS205.params FIPS205.deterministicRand (pure seed)
+  change (fun result : Alpha => (result.1.1.pkSeed, result)) <$>
+      SigningView.Events.fullExperiment view (Game.Counted.externalMain adv) =
+    (fun result : Alpha => (seed, result)) <$>
+      SigningView.Events.fullExperiment view (Game.Counted.externalMain adv)
+  unfold SigningView.Events.fullExperiment
+  simp only [map_bind]
+  apply OracleComp.bind_congr_of_forall_mem_support
+  intro keys member
+  have byteMember : keys ∈ support view.keygen :=
+    support_simulateQ_subset (SigningView.Events.phaseImpl R Message .keygen) view.keygen member
+  have typedMember : keys ∈ support
+      (romScheme FIPS205.core (Equiv.refl _) FIPS205.deterministicRand (pure seed)).keygen := by
+    apply support_simulateQ_subset (encImpl FIPS205.params)
+      (romScheme FIPS205.core (Equiv.refl _) FIPS205.deterministicRand (pure seed)).keygen
+    simpa only [view, pureShakeView_keygen, shakeRomScheme, SignatureAlg.map_keygen,
+      simulateQ'_apply] using byteMember
+  have sameSeed : keys.1.pkSeed = seed :=
+    pkSeed_eq_of_mem_support_romScheme_keygen FIPS205.core (Equiv.refl _) typedMember
+  simp only [map_pure, sameSeed]
+
+/-- Seed-indexed guarded continuations retain the initial seed and complete raw observation. -/
+theorem mixedSourceRecovery_bind
+    (seedSampler : ProbComp FIPS205.core.PkSeed)
+    (caps : FIPS205.core.PkSeed → Nat × Nat)
+    (policy : FIPS205.core.PkSeed →
+      SigningView.Event (Game.World FIPS205.Answer) Message → Nat × Nat)
+    (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
+    (fallback : (seed : FIPS205.core.PkSeed) →
+      (input : (SigningView.Events.Spec (Game.World FIPS205.Answer) Message).Domain) →
+        (SigningView.Events.Spec (Game.World FIPS205.Answer) Message).Range input)
+    (initial : FIPS205.core.PkSeed → ProbComp (QueryCache (shakeSpec FIPS205.params))) :
+    let Raw := shakeSpec FIPS205.params
+    let H := hashSpec FIPS205.core
+    let R := Game.World FIPS205.Answer
+    let O := ObsSpec (SigningView.Event R Message)
+    let Native := unifSpec + (H + Raw)
+    let Common := Native + O
+    let Alpha := ((PublicKeyCore FIPS205.core) × (SecretKeyCore FIPS205.core)) ×
+      SigningView.Outcome Message (List Byte) (Option (List Byte))
+    let rawHandler := SigningView.Events.handlerWithEvents (Request := Message)
+      (RandomOracleModel.impl (List Byte) FIPS205.Answer)
+    let forwarder : QueryImpl Common (StateT PUnit (OracleComp Common)) :=
+      (QueryImpl.id' Common).liftTarget (StateT PUnit (OracleComp Common))
+    let encodeObserved := fun seed : FIPS205.core.PkSeed =>
+      (QueryImpl.add (spec₁ := Native) (spec₂ := O)
+        (fun input => simulateQ (QueryImpl.ofLift R (OracleComp (R + O)))
+          ((shakeEncoding FIPS205.params (by decide) (by decide) seed).encodeImpl input))
+        (fun event => liftM ((R + O).query (.inr event))) :
+        QueryImpl Common (OracleComp (R + O)))
+    (do
+      let seed ← seedSampler
+      let cache ← initial seed
+      let guarded := (simulateQ (QueryImpl.guardQueryBudget (caps seed)
+        (Sum.elim (fun _ => (0, 0)) (policy seed)) forwarder
+        (mixedFallback seed (fallback seed))) (mixedSourceAt seed adv)).run
+          (PUnit.unit, ((0, 0), false))
+      let result ← (simulateQ rawHandler (simulateQ (encodeObserved seed) guarded)).run cache
+      pure (seed, ((result.1.1, (result.2, result.1.2.2)) :
+        Alpha × (QueryCache Raw × ((Nat × Nat) × Bool))))) =
+    (do
+      let seed ← seedSampler
+      let cache ← initial seed
+      let result ← (simulateQ (QueryImpl.guardQueryBudget (caps seed)
+        (Sum.elim (fun _ => (0, 0)) (policy seed)) rawHandler (fallback seed))
+        (SigningView.Events.fullExperiment
+          (pureShakeView FIPS205.params FIPS205.deterministicRand (pure seed))
+          (Game.Counted.externalMain adv))).run (cache, ((0, 0), false))
+      pure (seed, result))
+ := by
+  intro Raw H R O Native Common Alpha rawHandler forwarder encodeObserved
+  apply bind_congr
+  intro seed
+  apply bind_congr
+  intro cache
+  have recovered := (encodeFreeGuardedProgram (α := Alpha) seed (caps seed) (policy seed)
+    (fallback seed) (mixedSourceAt seed adv) cache).trans
+      (congrArg (fun program =>
+        (simulateQ (QueryImpl.guardQueryBudget (caps seed)
+          (Sum.elim (fun _ => (0, 0)) (policy seed)) rawHandler (fallback seed))
+          program).run (cache, ((0, 0), false)))
+        (simulateQ_encode_mixedSourceAt seed adv))
+  simpa only [encoding, map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def] using
+    congrArg (fun body => (fun result => (seed, result)) <$> body) recovered
+
+/-- The genuine mixed source recovers the original guarded byte experiment under one policy. -/
+theorem mixedSourceRecovery :
+  ∀
+    (caps : Nat × Nat) (policy : SigningView.Event (Game.World FIPS205.Answer) Message → Nat × Nat)
+    (_hfreeKeygenUniform : ∀ n : unifSpec.Domain,
+      policy (.ambient .keygen (.inl n)) = (0, 0))
+    (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
+    (fallback : (input : (SigningView.Events.Spec (Game.World FIPS205.Answer) Message).Domain) →
+      (SigningView.Events.Spec (Game.World FIPS205.Answer) Message).Range input)
+    (initialCache : QueryCache (shakeSpec FIPS205.params)),
+    let Raw := shakeSpec FIPS205.params
+    let H := hashSpec FIPS205.core
+    let R := Game.World FIPS205.Answer
+    let Ev := SigningView.Event R Message
+    let O := ObsSpec Ev
+    let Native := unifSpec + (H + Raw)
+    let Common := Native + O
+    let Alpha := ((PublicKeyCore FIPS205.core) × (SecretKeyCore FIPS205.core)) ×
+      SigningView.Outcome Message (List Byte) (Option (List Byte))
+    let Sign := Message →ₒ Option (List Byte)
+    let rawEvent : SigningView.Event Native Message → Ev := mixedEventToRaw
+    let markerProjection : QueryImpl (SigningView.Events.Spec Native Message)
+        (OracleComp Common) :=
+      QueryImpl.add (spec₁ := Native)
+        (spec₂ := ObsSpec (SigningView.Event Native Message))
+        (QueryImpl.ofLift Native (OracleComp Common))
+        (fun event => liftM (Common.query (.inr (rawEvent event))))
+    let rawMain : PublicKeyCore FIPS205.core →
+        OracleComp (Native + Sign) (Message × List Byte) := fun pk =>
+      simulateQ (QueryImpl.add (spec₁ := R) (spec₂ := Sign)
+        (fun input => simulateQ (QueryImpl.ofLift Native (OracleComp (Native + Sign)))
+          (liftRawImpl (hs := H) input))
+        (fun request => liftM ((Native + Sign).query (.inr request))))
+        (Game.Counted.externalMain adv pk)
+    let rawHandler := SigningView.Events.handlerWithEvents (Request := Message)
+      (RandomOracleModel.impl (List Byte) FIPS205.Answer)
+    (do
+      let pkSeed ← ($ᵗ FIPS205.core.PkSeed : ProbComp FIPS205.core.PkSeed)
+      let typedAlg := romScheme FIPS205.core (Equiv.refl _) FIPS205.deterministicRand
+        (pure pkSeed)
+      let view := SLHDSA.SigningView.fromInternalPure FIPS205.params
+        (SLHDSA.Concrete.shakeWireCodec FIPS205.params.params)
+        (typedAlg.map (simulateQ' (liftTypedImpl (hs := H) (ext := Raw))))
+        (fun request : Message =>
+          (SLHDSA.External.encodePureMessage request.context request.message).toOption)
+      let mixed := simulateQ markerProjection (SigningView.Events.fullExperiment view rawMain)
+      let forwarder : QueryImpl Common (StateT PUnit (OracleComp Common)) :=
+        (QueryImpl.id' Common).liftTarget (StateT PUnit (OracleComp Common))
+      let guarded := (simulateQ (QueryImpl.guardQueryBudget caps
+        (Sum.elim (fun _ => (0, 0)) policy) forwarder
+        (mixedFallback pkSeed fallback)) mixed).run (PUnit.unit, ((0, 0), false))
+      let encodeObserved : QueryImpl Common (OracleComp (R + O)) :=
+        QueryImpl.add (spec₁ := Native) (spec₂ := O)
+          (fun input => simulateQ (QueryImpl.ofLift R (OracleComp (R + O)))
+            ((shakeEncoding FIPS205.params (by decide) (by decide) pkSeed).encodeImpl input))
+          (fun event => liftM ((R + O).query (.inr event)))
+      (fun result : (Alpha × (PUnit × ((Nat × Nat) × Bool))) × QueryCache Raw =>
+        (result.1.1, (result.2, result.1.2.2))) <$>
+        (simulateQ rawHandler (simulateQ encodeObserved guarded)).run initialCache) =
+      (simulateQ (QueryImpl.guardQueryBudget caps
+        (Sum.elim (fun _ => (0, 0)) policy) rawHandler fallback)
+        (SigningView.Events.fullExperiment (Game.Counted.externalView FIPS205.scheme)
+          (Game.Counted.externalMain adv))).run (initialCache, ((0, 0), false))
+ := by
+  intro caps policy hfree adv fallback initialCache Raw H R Ev O Native Common Alpha
+    Sign rawEvent markerProjection rawMain rawHandler
+  let encodeObserved (seed : FIPS205.core.PkSeed) : QueryImpl Common (OracleComp (R + O)) :=
+    QueryImpl.add (spec₁ := Native) (spec₂ := O)
+      (fun input => simulateQ (QueryImpl.ofLift R (OracleComp (R + O)))
+        ((encoding seed).encodeImpl input))
+      (fun event => liftM ((R + O).query (.inr event)))
+  let byteView (seed : FIPS205.core.PkSeed) :=
+    pureShakeView FIPS205.params FIPS205.deterministicRand (pure seed)
   let initial := (initialCache, ((0, 0), false))
   let controlled := QueryImpl.guardQueryBudget caps
     (Sum.elim (fun _ => (0, 0)) policy) rawHandler fallback
@@ -638,14 +826,11 @@ theorem mixedSourceRecovery :
         (Game.Counted.externalMain adv))).run initial) := by
       apply bind_congr
       intro seed
-      have embeddedSource : simulateQ (encodeObserved seed) (simulateQ markerProjection
-          (SigningView.Events.fullExperiment (typedView seed) rawMain)) =
-          SigningView.Events.fullExperiment (byteView seed) (Game.Counted.externalMain adv) := by
-        rw [← QueryImpl.simulateQ_compose]
-        exact source seed
+      have embeddedSource : simulateQ (encodeObserved seed) (mixedSourceAt seed adv) =
+          SigningView.Events.fullExperiment (byteView seed) (Game.Counted.externalMain adv) :=
+        simulateQ_encode_mixedSourceAt seed adv
       exact (encodeFreeGuardedProgram (α := Alpha) seed caps policy fallback
-        (simulateQ markerProjection (SigningView.Events.fullExperiment (typedView seed) rawMain))
-        initialCache).trans
+        (mixedSourceAt seed adv) initialCache).trans
           (congrArg (fun program => (simulateQ controlled program).run initial) embeddedSource)
     _ = _ := by
       rw [actualMarkedSource_publicSeed]
