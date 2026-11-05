@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.PFunctorKernelTransport
+public import PolyFunProbability.PFunctor.Free.Kernel.Transport
 public import VCVio.ProgramLogic.Relational.Measure.Bind
 
 /-!
