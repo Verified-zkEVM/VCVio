@@ -189,7 +189,6 @@
  ["unusedArguments", "QueryImpl.simulateQ_postInsert.induct"],
  ["unusedArguments", "QueryImpl.simulateQ_preInsert.induct"],
  ["unusedArguments", "SLHDSA.forsLeafWith"],
- ["unusedArguments", "SLHDSA.forsLeafWith_natural"],
  ["unusedArguments", "SLHDSA.forsNodeHashM"],
  ["unusedArguments", "SLHDSA.forsNodeHashWith_natural"],
  ["unusedArguments", "Schnorr.signature"],
