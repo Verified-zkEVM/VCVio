@@ -416,6 +416,11 @@ theorem isSome_mark {c : spec.QueryCache} {u : (spec + (D →ₒ M)).Domain}
   · simp only [mark]
     cases E.route x <;> simp [QueryCache.isSome_cacheQuery_apply_iff, hq]
 
+/-- A routed full read records the typed point returned by the routing map. -/
+theorem isSome_mark_of_route {c : spec.QueryCache} {x : D} {q : ι}
+    (h : E.route x = some q) (a : M) : (E.mark c (.inr x) a q).isSome := by
+  simp [mark, h]
+
 /-- Recording a step that creates a clash, or any step from a state with a clash, leaves a
 clash. -/
 theorem clash_mark {c : spec.QueryCache} {u : (spec + (D →ₒ M)).Domain}
@@ -559,6 +564,13 @@ a clash every tabulated raw input read as a typed point has that point cached. -
 def StateInv (s : spec.QueryCache × (D →ₒ M).QueryCache) : Prop :=
   {q | (s.1 q).isSome}.Finite ∧
     (¬E.Clash s.1 → ∀ x, (s.2 x).isSome → ∀ q, E.route x = some q → (s.1 q).isSome)
+
+omit [DecidableEq ι] [DecidableEq D] in
+/-- The completion invariant consists of finite typed support and routed table coverage. -/
+theorem stateInv_iff (s : spec.QueryCache × (D →ₒ M).QueryCache) :
+    E.StateInv s ↔ {q | (s.1 q).isSome}.Finite ∧
+      (¬E.Clash s.1 → ∀ x, (s.2 x).isSome → ∀ q, E.route x = some q → (s.1 q).isSome) :=
+  Iff.rfl
 
 variable {E}
 
@@ -780,6 +792,31 @@ theorem intertwinesOn_fill_patchedImpl_singleImpl :
     · simp only [hb, ↓reduceIte]
       obtain ⟨hc, hcol⟩ := not_or.1 hb
       exact evalDist_typedHashImpl_run_bind_fill hc hf (hraw hc) u hcol f
+
+/-- Every completed typed or raw query preserves finite typed support and routed coverage. -/
+theorem preservesInv_typedHashImpl_stateInv :
+    QueryImpl.PreservesInv E.typedHashImpl E.StateInv := by
+  intro q s hs z hz
+  -- A completed router records its typed point and adds at most its own auxiliary input.
+  obtain ⟨hmark, htab⟩ :=
+    E.mem_support_typedHashImpl_run hz
+  rw [RandomOracleEncoding.stateInv_iff] at hs ⊢
+  refine ⟨?_, ?_⟩
+  · rw [hmark]
+    exact E.finite_mark hs.1 q z.1
+  · intro hgood raw hraw point hpoint
+    -- Existing clashes survive recording, so a non-clashing result started without one.
+    have hold : ¬E.Clash s.1 := by
+      intro hclash
+      apply hgood
+      rw [hmark]
+      exact E.clash_mark (.inl hclash) z.1
+    rw [hmark]
+    rcases htab raw hraw with h | h
+    · exact E.isSome_mark z.1
+        (hs.2 hold raw h point hpoint)
+    · subst q
+      exact E.isSome_mark_of_route hpoint z.1
 
 /-- The patched typed world preserves `StateInv`. -/
 theorem preservesInv_patchedImpl_stateInv : QueryImpl.PreservesInv E.patchedImpl E.StateInv := by

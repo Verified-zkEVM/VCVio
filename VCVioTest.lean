@@ -29,6 +29,7 @@ public import VCVioTest.CryptoFoundations.SigningViewUnforgeability
 public import VCVioTest.CryptoFoundations.SigningViewUniverse
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.CryptoFoundations.UniversalHash
+public import VCVioTest.EncodedStateInv
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.DisagreementMeasure
