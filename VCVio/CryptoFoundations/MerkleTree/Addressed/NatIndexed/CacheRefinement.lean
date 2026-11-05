@@ -11,10 +11,11 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 /-!
 # Root reconstruction from a settled authentication path
 
-A cached authentication path settles every sibling subtree.
-Replaying those subtrees leaves the entire cache unchanged and never calls the miss handler.
-The full root computation therefore has the same result and final cache as the selected leaf
-followed by a climb along that path, in any lawful target monad.
+Successful evaluation of the path program under a partial cache settles its sibling subtrees.
+Every raw query reached by those subtrees must be settled.
+Replaying them leaves the entire cache unchanged and never calls the miss handler.
+The full root has the same result and final cache as the selected leaf followed by its climb.
+This holds for every lawful target monad.
 The two programs need not make the same number of physical oracle calls.
 -/
 
@@ -116,9 +117,11 @@ private theorem free_root_eq_leaf_climb (leaf : Nat → OracleComp spec Y)
       simp only [Vector.toList_push, climbM_concat, Vector.length_toList, heven,
         ↓reduceIte, simulateQ_bind, StateT.run_bind, bind_assoc]
 
-/-- A settled authentication path lets the selected leaf and climb reproduce the full root
-computation's result and entire final cache, for any lawful miss handler.
-The path may be settled in a smaller cache, and indices retain their global subtree offsets.
+/-- A settled path program permits root reconstruction in any lawful miss handler.
+The selected leaf and climb retain the full root result and entire final cache.
+The premise evaluates the path program under a partial cache.
+That cache may be smaller than the initial live cache.
+Indices retain their global subtree offsets.
 No equality of physical query counts is asserted.
 -/
 theorem run_simulateQ_merkleRootM_eq_run_climbM_of_path_settled
