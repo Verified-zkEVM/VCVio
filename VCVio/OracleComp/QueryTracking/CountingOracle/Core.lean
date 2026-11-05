@@ -21,17 +21,16 @@ public section
 
 open OracleSpec OracleComp
 
-universe u v w
+universe u v w idx
 
 open scoped OracleSpec.PrimitiveQuery
 
-variable {ι : Type u} {spec : OracleSpec ι} {α β γ : Type u}
-
 namespace QueryImpl
 
-variable {m : Type u → Type v} [Monad m]
-
 section withCost
+
+variable {ι : Type idx} {spec : OracleSpec.{idx, u} ι} {α β γ : Type u}
+variable {m : Type u → Type v} [Monad m]
 
 variable {ω : Type u} [Monoid ω]
 
@@ -96,6 +95,9 @@ lemma support_fst_run_withCost [LawfulMonad m] [MonadAttach m]
 
 end withCost
 
+variable {ι : Type u} {spec : OracleSpec ι} {α β γ : Type u}
+variable {m : Type u → Type v} [Monad m]
+
 /-- Wrap an oracle implementation to count queries in an additive writer.
 Counting happens before the implementation runs; failure in the base monad can discard
 the writer result. Use `AddWriterT.runAdd` to observe ordinary pointwise counts.
@@ -124,6 +126,8 @@ lemma fst_map_runAdd_withCounting [DecidableEq ι] [LawfulMonad m]
   rw [AddWriterT.fst_map_runAdd, fst_map_run_withCounting]
 
 end QueryImpl
+
+variable {ι : Type u} {spec : OracleSpec ι} {α β γ : Type u}
 
 /-- Oracle with arbitrary cost tracking. The cost is accumulated in a `WriterT ω` layer
 while preserving the original oracle behavior. -/
