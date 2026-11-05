@@ -13,7 +13,7 @@ import HashSig.SLHDSA.SHAKE128s.Bridge.Wire.KeyLog
 # Canonical pure SHAKE signing views of the complete FIPS experiment
 
 Generated-key consistency aligns the supplied-public-key signer with the FIPS service signer.
-The entire counted free program retains raw replies, forged candidate, verification and costs;
+The chronological free program retains actual keys, raw replies, forged candidate and verification;
 key generation uses the original sampling computation with its pair presentation restored.
 -/
 
@@ -30,44 +30,17 @@ theorem externalView_fips205_keygen :
   change Prod.swap <$> (Prod.swap <$> FIPS205.internal.keygen) = _
   simp only [Functor.map_map, Prod.swap_swap, id_map']
 
-private theorem countedExperiment_congr_generated
-    {ι : Type} {spec : OracleSpec ι} {Request PK SK Sig Reply C : Type} [AddMonoid C]
-    (policy : SigningView.Event spec Request → C)
-    (left right : SigningView (OracleComp spec) Request PK SK Sig Reply)
-    (hkeygen : left.keygen = right.keygen)
-    (hverify : ∀ pk request sig, left.verify pk request sig = right.verify pk request sig)
-    (hsign : ∀ keys ∈ support left.keygen, ∀ request,
-      left.sign keys.1 keys.2 request = right.sign keys.1 keys.2 request)
-    (adversary : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig)) :
-    SigningView.countedExperiment policy left adversary =
-      SigningView.countedExperiment policy right adversary := by
-  have phaseEq (keys : PK × SK) (member : keys ∈ support left.keygen) :
-      SigningView.countedPhase policy left keys.1 keys.2 (adversary keys.1) =
-        SigningView.countedPhase policy right keys.1 keys.2 (adversary keys.1) := by
-    have signEq : left.sign keys.1 keys.2 = right.sign keys.1 keys.2 :=
-      funext (hsign keys member)
-    simp only [SigningView.countedPhase, signEq]
-  unfold SigningView.countedExperiment SigningView.countedAfterKeygen
-  congr 1
-  simp only [AddWriterT.runAdd_bind, AddWriterT.runAdd_pure]
-  rw [← hkeygen]
-  apply OracleComp.bind_congr_of_forall_mem_support
-  intro tagged member
-  have hkeys : tagged.1 ∈ support left.keygen := by
-    rw [← SigningView.costed_erases policy .keygen left.keygen, support_map]
-    exact ⟨tagged, member, rfl⟩
-  rw [phaseEq tagged.1 hkeys]
-  simp only [hverify]
-
-/-- The actual constructor refines the complete FIPS experiment without a caller key premise. -/
-theorem countedExperiment_pureShakeView_fips205
-    (adversary : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core)) :
-    SigningView.countedExperiment sourcePolicy
-      (pureShakeView FIPS205.params FIPS205.deterministicRand ($ᵗ FIPS205.core.PkSeed))
-      (externalMain adversary) = canonicalExperiment FIPS205.scheme adversary := by
-  unfold canonicalExperiment
-  apply countedExperiment_congr_generated
-  · exact (pureShakeView_keygen _ _ _).trans externalView_fips205_keygen.symm
+/-- The actual pure and service views agree on all algorithms at generated keys. -/
+private theorem pureShakeView_fips205_generated_coherence :
+    let left := pureShakeView FIPS205.params FIPS205.deterministicRand
+      ($ᵗ FIPS205.core.PkSeed)
+    let right := externalView FIPS205.scheme
+    left.keygen = right.keygen ∧
+      (∀ pk request wire, left.verify pk request wire = right.verify pk request wire) ∧
+      (∀ keys ∈ support left.keygen, ∀ request,
+        left.sign keys.1 keys.2 request = right.sign keys.1 keys.2 request) := by
+  dsimp only
+  refine ⟨(pureShakeView_keygen _ _ _).trans externalView_fips205_keygen.symm, ?_, ?_⟩
   · intro pk request wire
     cases hf : External.encodePureMessage request.context request.message with
     | error error =>
@@ -90,5 +63,40 @@ theorem countedExperiment_pureShakeView_fips205
         SignatureAlg.SigningView.rejectingEncoding,
         SignatureAlg.SigningView.Encoding.sign,
         externalView, FIPS205.scheme, hf, Except.toOption, consistent]; rfl
+
+
+/-- The actual FIPS constructors share the full key-bearing chronological source. -/
+theorem fullExperiment_pureShakeView_fips205
+    (adversary : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core)) :
+    SigningView.Events.fullExperiment
+        (pureShakeView FIPS205.params FIPS205.deterministicRand ($ᵗ FIPS205.core.PkSeed))
+        (Game.Counted.externalMain adversary) =
+      SigningView.Events.fullExperiment (Game.Counted.externalView FIPS205.scheme)
+        (Game.Counted.externalMain adversary) := by
+  obtain ⟨keygen, verify, sign⟩ := pureShakeView_fips205_generated_coherence
+  exact SigningView.Events.fullExperiment_congr_generated _ _ keygen verify sign
+    (Game.Counted.externalMain adversary)
+
+/-- The actual constructor refines the complete FIPS experiment without a caller key premise. -/
+theorem countedExperiment_pureShakeView_fips205
+    (adversary : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core)) :
+    SigningView.countedExperiment sourcePolicy
+      (pureShakeView FIPS205.params FIPS205.deterministicRand ($ᵗ FIPS205.core.PkSeed))
+      (externalMain adversary) = canonicalExperiment FIPS205.scheme adversary := by
+  have chronological := congrArg
+    (fun program => (simulateQ (SigningView.Events.costImpl sourcePolicy) program).runAdd)
+    (fullExperiment_pureShakeView_fips205 adversary)
+  simp only [SigningView.Events.simulateQ_fullKeys] at chronological
+  have observed := congrArg
+    (fun program => (fun result :
+      (((PublicKeyCore FIPS205.core × SecretKeyCore FIPS205.core) ×
+        SigningView.Outcome Message Bytes (Option Bytes)) × SourceCounts) =>
+      ({ toOutcome := result.1.2, cost := result.2 } :
+        SigningView.Observation Message Bytes (Option Bytes) SourceCounts)) <$> program)
+    chronological
+  simpa only [canonicalExperiment, SigningView.countedExperiment,
+    AddWriterT.runAdd_bind, AddWriterT.runAdd_pure, map_bind, map_pure, Functor.map_map,
+    Prod.map, id_eq, add_zero, map_eq_bind_pure_comp,
+    bind_assoc, pure_bind, Function.comp_apply] using observed
 
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment

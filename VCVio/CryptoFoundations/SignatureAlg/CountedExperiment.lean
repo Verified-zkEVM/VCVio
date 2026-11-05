@@ -413,6 +413,43 @@ abbrev Spec {ι : Type} (spec : OracleSpec.{0, 0} ι) (Request : Type) :
       (fun request => liftM ((Spec spec Request + (Request →ₒ Reply)).query (.inr request))))
     (adv pk)
 
+/-- Run the marked signing view with its actual keys and complete raw outcome. -/
+@[expose] def fullExperiment
+    {ι Request PK SK Sig Reply : Type} {spec : OracleSpec.{0, 0} ι}
+    (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
+    (main : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig)) :
+    OracleComp (Spec spec Request) ((PK × SK) × Outcome Request Sig Reply) := do
+  let marked := viewWithEvents view
+  let keys ← marked.keygen
+  let (forgery, rawLog) ← marked.runWithSigningOracle keys.1 keys.2 (mainWithEvents main keys.1)
+  let verified ← marked.verify keys.1 forgery.1 forgery.2
+  return (keys, ⟨forgery, rawLog, verified⟩)
+
+/-- Generated-key algorithm agreement preserves the full chronological marked program. -/
+theorem fullExperiment_congr_generated
+    {ι Request PK SK Sig Reply : Type} {spec : OracleSpec.{0, 0} ι}
+    (left right : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
+    (hkeygen : left.keygen = right.keygen)
+    (hverify : ∀ pk request sig, left.verify pk request sig = right.verify pk request sig)
+    (hsign : ∀ keys ∈ support left.keygen, ∀ request,
+      left.sign keys.1 keys.2 request = right.sign keys.1 keys.2 request)
+    (main : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig)) :
+    fullExperiment left main = fullExperiment right main := by
+  unfold fullExperiment
+  change (simulateQ (phaseImpl spec Request .keygen) left.keygen >>= _) =
+    (simulateQ (phaseImpl spec Request .keygen) right.keygen >>= _)
+  rw [← hkeygen]
+  apply OracleComp.bind_congr_of_forall_mem_support
+  intro keys member
+  have originalMember : keys ∈ support left.keygen :=
+    support_simulateQ_subset (phaseImpl spec Request .keygen) left.keygen member
+  have signEq : (viewWithEvents left).sign keys.1 keys.2 =
+      (viewWithEvents right).sign keys.1 keys.2 := by
+    funext request
+    simp only [viewWithEvents, hsign keys originalMember request]
+  simp only [SigningView.runWithSigningOracle, SigningView.signingOracle, signEq]
+  simp only [viewWithEvents, hverify]
+
 /-- Interpret native queries with the supplied handler and event markers with unit. -/
 @[expose] def handlerWithEvents {ι Request : Type} {spec : OracleSpec.{0, 0} ι}
     {m : Type → Type v} [Monad m] (handler : QueryImpl spec m) :
@@ -421,7 +458,8 @@ abbrev Spec {ι : Type} (spec : OracleSpec.{0, 0} ι) (Request : Type) :
   | .inl native => handler native
   | .inr _ => pure ⟨⟩
 
-private def costImpl {ι Request C : Type} [AddMonoid C] {spec : OracleSpec.{0, 0} ι}
+/-- Interpret native queries unchanged and accumulate deterministic event costs. -/
+def costImpl {ι Request C : Type} [AddMonoid C] {spec : OracleSpec.{0, 0} ι}
     (policy : Event spec Request → C) : QueryImpl (Spec spec Request) (CostM spec C) :=
   fun input => match input with
   | .inl native => liftM (liftM (spec.query native) : OracleComp spec (spec.Range native))
@@ -499,21 +537,18 @@ private theorem simulateQ_client {ι Request PK SK Sig Reply C : Type} [AddMonoi
     simp [simulateQ_phaseImpl, countedHandler, countedHandlerUsing,
       countedSigningOracleUsing_run, map_bind]
 
-private theorem simulateQ_fullKeys
+/-- Interpreting the complete chronological source retains its keys, outcome and additive cost. -/
+theorem simulateQ_fullKeys
     {ι Request PK SK Sig Reply C : Type} {spec : OracleSpec.{0, 0} ι} [AddMonoid C]
     (view : SignatureAlg.SigningView (OracleComp spec) Request PK SK Sig Reply)
     (adv : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig))
     (policy : Event spec Request → C) :
-    simulateQ (costImpl policy) (do
-      let keys ← (viewWithEvents view).keygen
-      let (forgery, rawLog) ← (viewWithEvents view).runWithSigningOracle
-        keys.1 keys.2 (mainWithEvents adv keys.1)
-      let verified ← (viewWithEvents view).verify keys.1 forgery.1 forgery.2
-      return (keys, (⟨forgery, rawLog, verified⟩ : Outcome Request Sig Reply))) =
+    simulateQ (costImpl policy) (fullExperiment view adv) =
       (do
         let keys ← costed policy .keygen view.keygen
         let outcome ← countedAfterKeygen policy view keys.1 keys.2 adv
         return (keys, outcome)) := by
+  unfold fullExperiment
   simp only [simulateQ_bind, simulateQ_pure]
   change (do
     let keys ← simulateQ (costImpl policy)
@@ -535,13 +570,7 @@ theorem runObs_fullKeys_eq_counted
     (policy : Event spec Request → C)
     {m : Type → Type v} [Monad m] [LawfulMonad m]
     (handler : QueryImpl spec (StateT Cache m)) (initial : Cache) :
-    let marked : OracleComp (Spec spec Request)
-        ((PK × SK) × Outcome Request Sig Reply) := do
-      let keys ← (viewWithEvents view).keygen
-      let (forgery, rawLog) ← (viewWithEvents view).runWithSigningOracle
-        keys.1 keys.2 (mainWithEvents adv keys.1)
-      let verified ← (viewWithEvents view).verify keys.1 forgery.1 forgery.2
-      return (keys, ⟨forgery, rawLog, verified⟩)
+    let marked := fullExperiment view adv
     let counted : CostM spec C ((PK × SK) × Outcome Request Sig Reply) := do
       let keys ← costed policy .keygen view.keygen
       let outcome ← countedAfterKeygen policy view keys.1 keys.2 adv
