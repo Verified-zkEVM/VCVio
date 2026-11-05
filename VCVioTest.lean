@@ -234,4 +234,5 @@ public import VCVioTest.ToMathlib.AbsDiff
 public import VCVioTest.UniformOn
 public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability
+public import VCVioTest.UntilBadBind
 public import VCVioTest.VCGenAmbiguity
