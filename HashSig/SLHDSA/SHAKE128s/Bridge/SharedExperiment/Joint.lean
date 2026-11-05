@@ -504,7 +504,8 @@ theorem mixedSourceRecovery :
     rw [show simulateQ (eventMap seed) (SigningView.Events.emit Native Message
         (.signingAttempt request)) = SigningView.Events.emit R Message
         (.signingAttempt request) by simp [eventMap, encodeObserved, markerProjection,
-          rawEvent, SigningView.Events.emit, QueryImpl.apply_compose, QueryImpl.add]]
+          rawEvent, mixedEventToRaw, SigningView.Events.emit, QueryImpl.apply_compose,
+          QueryImpl.add]]
     congr 1
     funext _
     split
