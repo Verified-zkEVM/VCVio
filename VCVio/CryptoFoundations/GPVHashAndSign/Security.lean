@@ -162,7 +162,7 @@ programmed-preimage adversary by the largest pointwise output mass of `psf.trapd
 honest key.  The exact-match term cannot be dropped in general: an adversary that outputs the most
 likely trapdoor output wins the programmed-preimage experiment with positive probability. -/
 theorem forgery_yields_collision [DecidableEq Domain]
-    [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk) (qSign qHash : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -219,7 +219,7 @@ probability.
 
 References: GPV08 Section 6; BDF+11 for the QROM extension. -/
 theorem euf_cma_collision_bound [DecidableEq Domain]
-    [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
     (domainSample : PK → ProbComp Domain)
     (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
@@ -260,7 +260,7 @@ This form carries the `ForgesQueriedPoint` convention as a hypothesis; the endpo
 is `euf_cma_split_bound_of_queryBound`, which discharges it for every adversary at one extra hash
 query via the append-forgery-query compiler. -/
 theorem euf_cma_split_bound [DecidableEq Domain]
-    [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
     (domainSample : PK → ProbComp Domain)
     (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
