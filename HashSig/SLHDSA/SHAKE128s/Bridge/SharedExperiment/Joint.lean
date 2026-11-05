@@ -204,6 +204,36 @@ private noncomputable def encoding (pkSeed : FIPS205.core.PkSeed) :
   shakeEncoding FIPS205.params (by decide) (by decide) pkSeed
 
 
+/-- Project mixed signing markers to the original raw-byte event interface. -/
+def mixedEventToRaw :
+    SigningView.Event (unifSpec + (hashSpec FIPS205.core + shakeSpec FIPS205.params)) Message →
+      SigningView.Event (Game.World FIPS205.Answer) Message
+  | .signingAttempt request => .signingAttempt request
+  | .ambient phase (.inl n) => .ambient phase (.inl n)
+  | .ambient phase (.inr (.inl typed)) =>
+      .ambient phase (.inr (encode FIPS205.params typed))
+  | .ambient phase (.inr (.inr raw)) => .ambient phase (.inr raw)
+
+/-- Signing attempts retain the original request. -/
+@[simp] theorem mixedEventToRaw_signingAttempt (request : Message) :
+    mixedEventToRaw (.signingAttempt request) = .signingAttempt request := rfl
+
+/-- Uniform requests retain their original phase and input. -/
+@[simp] theorem mixedEventToRaw_ambient_uniform
+    (phase : SigningView.Phase) (n : unifSpec.Domain) :
+    mixedEventToRaw (.ambient phase (.inl n)) = .ambient phase (.inl n) := rfl
+
+/-- Typed hash requests retain their phase and use their actual byte encoding. -/
+@[simp] theorem mixedEventToRaw_ambient_typed
+    (phase : SigningView.Phase) (typed : (hashSpec FIPS205.core).Domain) :
+    mixedEventToRaw (.ambient phase (.inr (.inl typed))) =
+      .ambient phase (.inr (encode FIPS205.params typed)) := rfl
+
+/-- Raw hash requests retain their original phase and byte string. -/
+@[simp] theorem mixedEventToRaw_ambient_raw
+    (phase : SigningView.Phase) (raw : (shakeSpec FIPS205.params).Domain) :
+    mixedEventToRaw (.ambient phase (.inr (.inr raw))) = .ambient phase (.inr raw) := rfl
+
 /-- Lift complete raw fallback answers to the mixed typed/raw interface coherently. -/
 @[expose] noncomputable def mixedFallback (pkSeed : FIPS205.core.PkSeed)
     (originalFallback : (input : (SigningView.Events.Spec
@@ -369,12 +399,7 @@ theorem mixedSourceRecovery :
     let Alpha := ((PublicKeyCore FIPS205.core) × (SecretKeyCore FIPS205.core)) ×
       SigningView.Outcome Message (List Byte) (Option (List Byte))
     let Sign := Message →ₒ Option (List Byte)
-    let rawEvent : SigningView.Event Native Message → Ev := fun event => match event with
-      | .signingAttempt request => .signingAttempt request
-      | .ambient phase (.inl n) => .ambient phase (.inl n)
-      | .ambient phase (.inr (.inl typed)) =>
-          .ambient phase (.inr (encode FIPS205.params typed))
-      | .ambient phase (.inr (.inr raw)) => .ambient phase (.inr raw)
+    let rawEvent : SigningView.Event Native Message → Ev := mixedEventToRaw
     let markerProjection : QueryImpl (SigningView.Events.Spec Native Message)
         (OracleComp Common) :=
       QueryImpl.add (spec₁ := Native)
