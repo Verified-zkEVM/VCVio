@@ -9,6 +9,7 @@ public import ToMathlib.MeasureTheory.Measure.Coupling
 public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import ToMathlib.MeasureTheory.Measure.Monotone
 public import ToMathlib.MeasureTheory.Function.AEMeasurable
+public import PolyFunProbability.ToMathlib.MeasureTheory.Measure.AEBind
 
 /-!
 # Sequential composition of measure couplings
@@ -53,15 +54,6 @@ theorem bind_mono_left {μ ν : Measure α} (h : μ ≤ ν) {k : α → Measure 
   simp only [bind_apply hs hk.aemeasurable]
   exact lintegral_mono' h le_rfl
 
-/-- An almost-everywhere postcondition is preserved by a measurable bind. -/
-theorem ae_bind_of_ae {μ : Measure α} {k : α → Measure β} {p : β → Prop}
-    (hk : Measurable k) (hp : MeasurableSet {b | p b})
-    (h : ∀ᵐ a ∂μ, ∀ᵐ b ∂k a, p b) : ∀ᵐ b ∂μ.bind k, p b := by
-  change (μ.bind k) {b | p b}ᶜ = 0
-  rw [bind_apply hp.compl hk.aemeasurable]
-  exact (lintegral_eq_zero_iff (measurable_coe hp.compl |>.comp hk)).2
-    (h.mono fun _ ha => ha)
-
 /-- Sequential composition couples the bound marginals. Conditional marginal identities are
 required only for pairs reached by the initial coupling. -/
 theorem IsCoupling.bind {c : Measure (α × β)} {μ : Measure α} {ν : Measure β}
@@ -92,16 +84,6 @@ theorem IsCoupling.bind_of_aemeasurable {c : Measure (α × β)} {μ : Measure �
   filter_upwards [h, hj.ae_eq_mk] with z hz heq
   rw [← heq]
   exact hz
-
-/-- Almost everywhere measurable bind preserves measurable almost everywhere postconditions. -/
-theorem ae_bind_of_ae_of_aemeasurable {μ : Measure α} {k : α → Measure β} {p : β → Prop}
-    (hk : AEMeasurable k μ) (hp : MeasurableSet {b | p b})
-    (h : ∀ᵐ a ∂μ, ∀ᵐ b ∂k a, p b) : ∀ᵐ b ∂μ.bind k, p b := by
-  rw [bind_congr_right hk.ae_eq_mk]
-  apply ae_bind_of_ae hk.measurable_mk hp
-  filter_upwards [h, hk.ae_eq_mk] with a ha heq
-  rw [← heq]
-  exact ha
 
 /-- Bind a coupling with a measurable conditional coupling family. -/
 noncomputable def Coupling.bind {μ : Measure α} {ν : Measure β}

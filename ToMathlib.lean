@@ -61,7 +61,6 @@ public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Monotone
 public import ToMathlib.MeasureTheory.Measure.Option
 public import ToMathlib.MeasureTheory.Measure.Prop
-public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Bind
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Variation
@@ -73,7 +72,6 @@ public import ToMathlib.Probability.Divergence.RenyiTotalVariation
 public import ToMathlib.Probability.Divergence.TotalVariation
 public import ToMathlib.Probability.Kernel.Bounds
 public import ToMathlib.Probability.Kernel.Quadratic
-public import ToMathlib.Probability.Kernel.Subprobability
 public import ToMathlib.Probability.Kernel.TotalVariation
 public import ToMathlib.Probability.NegativeHypergeometric
 public import ToMathlib.Probability.TailSums

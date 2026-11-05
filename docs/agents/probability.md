@@ -574,7 +574,7 @@ needed for composition and data-processing theorems.
 
 | Definition | Purpose | Defined in |
 |-----------|---------|------------|
-| `IsSubprobabilityKernel κ` | Every value of `κ` has total mass at most one | `ToMathlib/Probability/Kernel/Subprobability.lean` |
+| `IsSubprobabilityKernel κ` | Every value of `κ` has total mass at most one | PolyFun's `PolyFunProbability/ToMathlib/Probability/Kernel/Subprobability.lean` |
 | `evalDistKernel f hf` | Measurable computation family `ρ → m α` as a kernel | `EvalDist/Kernel.lean` |
 | `evalDistKernelOfDiscrete f` | Discrete-input specialization | `EvalDist/Kernel.lean` |
 | `ReaderT.evalDistKernel` | Reader environment as kernel input | `EvalDist/Kernel.lean` |

@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVioComplexityTest.Backend.PureCanary
-public import VCVio.EvalDist.PFunctorPath
+public import PolyFunProbability.PFunctor.Free.Path.Measure
 
 /-!
 # Test fixture: one-query complexitylib program

@@ -11,7 +11,7 @@ public import VCVio.EvalDist.Defs.Measure.FinRatPMF
 public import VCVioTest.MeasureSemantics
 public import VCVio.EvalDist.Inequalities
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
-public import VCVio.EvalDist.PFunctorPath
+public import PolyFunProbability.PFunctor.Free.Path.Measure
 public import VCVio.EvalDist.Defs.Measure.ExceptT
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 

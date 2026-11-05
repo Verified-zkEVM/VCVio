@@ -278,7 +278,6 @@ lake build
 lake build VCVioTest
 lake env lean ToMathlib/Probability/UniformOn.lean
 lake env lean VCVioTest/UniformOn.lean
-lake env lean VCVio/EvalDist/PFunctorPath.lean
 lake env lean VCVio/CryptoFoundations/SymmEncAlg/Measure.lean
 lake env lean Examples/OneTimePad/ComputationalComplexity.lean
 lake env lean VCVioTest/CryptoFoundations/OracleClosure.lean

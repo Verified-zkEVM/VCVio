@@ -7,14 +7,15 @@ Authors: Devon Tuma
 module
 
 public import VCVio.CryptoFoundations.Asymptotics.ComputationalComplexity
-public import VCVio.EvalDist.PFunctorPath
+public import PolyFunProbability.PFunctor.Free.Path.Measure
 
 /-!
 # Expected path bounds for strict PPT witnesses
 
 This module connects VCVio's strict oracle-complexity witnesses to the measure observer in
-`VCVio.EvalDist.PFunctorPath`. The underlying path measure, output marginal, exact-length law, and
-worst-case-to-expectation theorem are independent of the selected complexity backend.
+PolyFun's `PolyFunProbability.PFunctor.Free.Path.Measure`. The underlying path measure, output
+marginal, exact-length law, and worst-case-to-expectation theorem are independent of the selected
+complexity backend.
 -/
 
 @[expose] public section

@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.Defs.Semantics.Core
-public import ToMathlib.Probability.Kernel.Subprobability
+public import PolyFunProbability.ToMathlib.Probability.Kernel.Subprobability
 
 /-!
 # Kernel-valued evaluation semantics

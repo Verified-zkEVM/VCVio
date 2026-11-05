@@ -46,9 +46,11 @@ VCVio names. `OracleComp spec` remains definitionally the free monad on
 `spec.toPFunctor`, and `QueryImpl` compatibility operations are thin aliases
 of the generic handler operations.
 
-Probability semantics are PFunctor-parametric but remain in VCVio: PolyFun is
-domain-independent and should not acquire VCVio's measure policy. The
-`OracleSpec.AnswerMeasure` name is a definitional abbreviation of
+The generic measure semantics of polynomial programs lives in PolyFun's optional
+`PolyFunProbability` library: `PFunctor.AnswerMeasure`, `PFunctor.FreeM.denote`,
+kernel handlers and path measures, and the staged subprobability classes. VCVio keeps
+its oracle conventions, the `EvalDistSemantics` bridge, the `𝒟[·]` and `Pr{…}[…]`
+notation, and everything security-facing. The `OracleSpec.AnswerMeasure` name is a definitional abbreviation of
 `PFunctor.AnswerMeasure` on `spec.toPFunctor` with the discrete σ-algebra on
 answers. `OracleSpec.UniformAnswerMeasure` extends it with the law that each chosen
 measure is uniform; it carries no finite or inhabited data, and oracle-level uniform

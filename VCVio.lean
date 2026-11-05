@@ -276,17 +276,13 @@ public import VCVio.EvalDist.Monad.Seq.Measure
 public import VCVio.EvalDist.Monad.Seq.Uniform
 public import VCVio.EvalDist.Monad.Support
 public import VCVio.EvalDist.Monad.UniformTable
-public import VCVio.EvalDist.PFunctorKernel
-public import VCVio.EvalDist.PFunctorKernelTransport
 public import VCVio.EvalDist.PFunctorMeasure.Core
-public import VCVio.EvalDist.PFunctorPath
 public import VCVio.EvalDist.PFunctorSupport
 public import VCVio.EvalDist.ProbabilityBounds
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.ProbabilityNotation.Attr
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.ResumptionMeasure
-public import VCVio.EvalDist.WiringKernel
 public import VCVio.EvalDist.WithFailure
 public import VCVio.Foundations
 public import VCVio.Interaction.UC.AsyncRuntime
