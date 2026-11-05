@@ -416,6 +416,11 @@ theorem isSome_mark {c : spec.QueryCache} {u : (spec + (D →ₒ M)).Domain}
   · simp only [mark]
     cases E.route x <;> simp [QueryCache.isSome_cacheQuery_apply_iff, hq]
 
+/-- A routed full read records the typed point returned by the routing map. -/
+theorem isSome_mark_of_route {c : spec.QueryCache} {x : D} {q : ι}
+    (h : E.route x = some q) (a : M) : (E.mark c (.inr x) a q).isSome := by
+  simp [mark, h]
+
 /-- Recording a step that creates a clash, or any step from a state with a clash, leaves a
 clash. -/
 theorem clash_mark {c : spec.QueryCache} {u : (spec + (D →ₒ M)).Domain}
@@ -559,6 +564,13 @@ a clash every tabulated raw input read as a typed point has that point cached. -
 def StateInv (s : spec.QueryCache × (D →ₒ M).QueryCache) : Prop :=
   {q | (s.1 q).isSome}.Finite ∧
     (¬E.Clash s.1 → ∀ x, (s.2 x).isSome → ∀ q, E.route x = some q → (s.1 q).isSome)
+
+omit [DecidableEq ι] [DecidableEq D] in
+/-- The completion invariant consists of finite typed support and routed table coverage. -/
+theorem stateInv_iff (s : spec.QueryCache × (D →ₒ M).QueryCache) :
+    E.StateInv s ↔ {q | (s.1 q).isSome}.Finite ∧
+      (¬E.Clash s.1 → ∀ x, (s.2 x).isSome → ∀ q, E.route x = some q → (s.1 q).isSome) :=
+  Iff.rfl
 
 variable {E}
 
