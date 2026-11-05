@@ -46,6 +46,7 @@ public import VCVioTest.EvalDist.TotalVariationMeasure
 public import VCVioTest.EvalDist.TotalVariationReal
 public import VCVioTest.EvalDist.Transformers
 public import VCVioTest.EvalDist.UniformTable
+public import VCVioTest.ExceptReplies
 public import VCVioTest.FiatShamirAbort
 public import VCVioTest.FiatShamirKnowledgeExtraction
 public import VCVioTest.FischlinExpectedCost
