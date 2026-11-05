@@ -454,12 +454,14 @@ private theorem freshImpl_evalDistEq_inl_inl (pz : ByteArray) (u : ℕ)
     (s : freshState n S L Salt Ctx N K) :
     (freshImpl codec qEnc pz true (.inl (.inl u))).run s =ᵈ
       (freshImpl codec qEnc pz false (.inl (.inl u))).run s := by
+  simp only [freshImpl, QueryImpl.add_apply_inl]
   exact EvalDistEq.rfl
 
 private theorem freshImpl_evalDistEq_inr (pz : ByteArray) (t : (sealSpec n S L Salt Ctx N K).Domain)
     (s : freshState n S L Salt Ctx N K) :
     (freshImpl codec qEnc pz true (.inr t)).run s =ᵈ
       (freshImpl codec qEnc pz false (.inr t)).run s := by
+  simp only [freshImpl, QueryImpl.add_apply_inr]
   exact EvalDistEq.rfl
 
 /-- The fresh game answers a left-or-right query alike at both hidden bits: the envelopes of two
