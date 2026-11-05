@@ -122,7 +122,7 @@ The forger is assumed to query its forgery point (`hForge`, `ForgesQueriedPoint`
 ROM well-formedness condition that the forgery lands on a programmed random-oracle entry, so the
 collision/exact-match extraction observes the simulator's hidden preimage at that point. -/
 theorem forgery_yields_collision_or_exact_match [DecidableEq Domain]
-    [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk) (qSign qHash : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))

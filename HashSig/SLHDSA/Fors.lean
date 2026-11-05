@@ -338,7 +338,7 @@ theorem forsPkFromSigWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad 
 
 /-- Query-preserving monad morphisms commute with canonical FORS leaf computation. -/
 theorem forsLeafM_natural (core : CorePrimitives p) {m n : Type → Type*}
-    [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [Monad m] [Monad n]
     [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
     (F : HasQuery.QueryHom (publicHashSpec core) m n)
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (t : ℕ) :
