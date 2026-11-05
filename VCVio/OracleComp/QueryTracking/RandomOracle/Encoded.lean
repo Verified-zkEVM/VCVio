@@ -526,6 +526,43 @@ theorem isSome_apply_encode_of_mem_support_queryAll {c : spec.QueryCache}
   ((QueryImpl.withCaching_queryAll_le_and_isSome_iff _ hw).2 _).2
     (.inr ((mem_map_encode_toList_iff hf _).2 ⟨q, rfl, hq⟩))
 
+/-- A supported fill preserves cached typed responses and completes them from the same cached
+auxiliary words.
+Its raw domain is the old auxiliary domain together with the encodings of cached typed points.
+-/
+theorem mem_support_fill_coordinates (E : RandomOracleEncoding spec D M)
+    {c : spec.QueryCache} {aux completed : (D →ₒ M).QueryCache}
+    (hf : {q | (c q).isSome}.Finite) (hc : ¬E.Clash c)
+    (hb : completed ∈ support (E.fill (c, aux))) :
+    (∀ q r, c q = some r → (completed (E.encode q)).map (E.trunc q) = some r) ∧
+    (∀ q r p, c q = some r → aux (E.encode q) = some p →
+      completed (E.encode q) = some (E.complete q r p)) ∧
+    (∀ x, (completed x).isSome ↔ (aux x).isSome ∨ E.Covered c x) := by
+  classical
+  -- The existing fill queries only encodings of the finite occupied typed domain.
+  rw [E.fill_of_not_clash hc hf, support_map] at hb
+  obtain ⟨w, hw, rfl⟩ := hb
+  obtain ⟨hle, hdomain⟩ := QueryImpl.withCaching_queryAll_le_and_isSome_iff _ hw
+  refine ⟨?_, ?_, ?_⟩
+  · intro q r hq
+    obtain ⟨p, hp⟩ := Option.isSome_iff_exists.1
+      (E.isSome_apply_encode_of_mem_support_queryAll hf hw (q := q) (by simp [hq]))
+    rw [E.singleView_apply_encode hc hq, hp]
+    simp [E.trunc_complete]
+  · intro q r p hq hp
+    -- Cache extension keeps the exact old full word, including the part truncation ignores.
+    rw [E.singleView_apply_encode hc hq, hle hp]
+    rfl
+  · intro x
+    have hview : (E.singleView c w.2 x).isSome ↔ (w.2 x).isSome := by
+      by_cases hx : E.Covered c x
+      · obtain ⟨q, rfl, hq⟩ := hx
+        obtain ⟨r, hr⟩ := Option.isSome_iff_exists.1 hq
+        rw [E.singleView_apply_encode hc hr]
+        simp
+      · rw [E.singleView_apply_of_not_covered hx]
+    rw [hview, hdomain, E.mem_map_encode_toList_iff hf]
+
 end fill
 
 /-! ## The patched typed world and the intertwining -/
