@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio
+public import VCVioTest.CryptoFoundations.SigningViewCounted
 
 /-!
 # VCVio Smoke Test
@@ -16,4 +17,5 @@ Used by CI to measure build timing and verify the library typechecks end-to-end.
 
 public section
 def main : IO Unit := do
+  VCVioTest.CryptoFoundations.SigningViewCounted.run
   IO.println "VCVio smoke test OK"
