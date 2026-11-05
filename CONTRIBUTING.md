@@ -176,6 +176,12 @@ Rerun a cancelled workflow with `gh run rerun RUN_ID`. After you diagnose a retr
 rerun it with `gh run rerun RUN_ID --failed`. Wait for the reruns to finish before you enqueue
 the PR.
 
+The hosted Linux build, lint and downstream jobs run `scripts/free-ci-disk-space.sh` before
+restoring caches. It removes unused .NET and Android SDKs and reports disk usage; it does not
+change repository sources or Lean/build caches. It requires GitHub-hosted Linux environment flags;
+the guard is an operational safeguard, not runner authentication.
+`python3 scripts/test-ci-disk-space.py` tests its guards and command boundaries using stubs.
+
 VCVio's `main` uses the merge queue. A PR that GitHub marks as stacked needs the
 [asynchronous merge API](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request-asynchronously).
 Send `PUT /repos/Verified-zkEVM/VCVio/pulls/NUMBER/merge-async` with `sha` set to the reviewed

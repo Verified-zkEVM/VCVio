@@ -39,7 +39,7 @@ Default fast checks (shared with per-PR CI):
 
 Optional checks:
   --lint    Batteries environment linters, one process per proof library as in CI
-  --test    lake test (test libraries, the SLH-DSA test executables, the smoke test)
+  --test    lake test (test libraries, SLH-DSA executables, smoke and oracle-cost tests)
   --ffi     with --test: also the native ML-KEM / ML-DSA / Falcon executables
             (initialises the third_party/ submodules; slow)
   --axioms  ./scripts/test-axiomsweep.sh, then lake exe axiomsweep --check

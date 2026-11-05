@@ -395,7 +395,8 @@ Findings must exactly match `scripts/nolints.json`: obsolete entries and unliste
 After you fix findings, `lake lint -- --prune-baseline` safely removes obsolete entries across all eight checked libraries and refuses additions.
 PR CI also checks that the baseline only shrinks against the merge base.
 
-For `./scripts/validate.sh`, `--test` adds `lake test` (the three test libraries, the smoke test, and the SLH-DSA test executables).
+For `./scripts/validate.sh`, `--test` adds `lake test` (the three test libraries, the smoke,
+oracle-cost, pure algorithm and SLH-DSA test executables).
 `--ffi` adds the native ML-KEM / ML-DSA / Falcon executables to `--test`, and `--axioms` adds the axiom sweep.
 The eager-initialization ratchet runs in the default pass, after the boundary ratchets.
 It reads the oleans that the build produced.

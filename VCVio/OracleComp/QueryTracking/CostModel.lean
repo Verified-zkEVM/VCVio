@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Alexander Hicks
 -/
 
 module
@@ -15,7 +15,14 @@ import Mathlib.Tactic.GRewrite
 
 This file defines a general cost model for oracle computations, parametric over any
 `AddCommMonoid` cost type. This supports natural numbers, extended non-negative reals,
-per-oracle cost vectors, and custom multi-dimensional cost structures.
+per-oracle cost vectors, signed weights, and custom multi-dimensional cost structures. An upper
+bound uses the declared cost order: signed refunds may cancel earlier charges, and reversing the
+order changes what an upper bound means. Idempotent addition (such as maximum) or saturating
+accumulation may record arbitrarily many unit charges as one; nonnegativity and canonical order
+alone do not make the model a counter. These weighted bounds are operation counts only with a
+separately justified counting arithmetic and charge table, such as ordinary natural-number vectors
+with unit charges in the designated coordinates. Even a nonnegative model may deliberately omit
+work or charge zero for an instruction; its accounting boundary must be stated.
 
 Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost accumulation.
 
@@ -32,6 +39,8 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 ## Key Results
 
 - `fst_map_costDist`: Cost instrumentation doesn't change the output distribution.
+- `costDist_pure`, `costDist_bind`, `costDist_query`, `costDist_map`: Instrumentation equations.
+- `worstCaseCostBound_map_iff`: Pure observations preserve and reflect query-cost bounds.
 - `expectedCost_pure`: Expected cost of a pure computation is `0`.
 - `prEvent_costDist_gt_le_expectedCost_div`: Markov's inequality for cost distributions.
 -/
@@ -87,6 +96,38 @@ Since `Multiplicative ω` and `ω` are definitionally equal, the second componen
 of the product can be used directly as `ω`. -/
 def costDist [AddCommMonoid ω] (oa : OracleComp spec α) (cm : CostModel spec ω) :=
   (instrumentedRun oa cm).run
+
+/-- A pure computation records zero query cost. -/
+@[simp] theorem costDist_pure [AddCommMonoid ω] (value : α) (cm : CostModel spec ω) :
+    costDist (pure value) cm = pure (value, 1) := by
+  simp only [costDist, instrumentedRun, simulateQ_pure, WriterT.run_pure]
+
+/-- Instrumented sequencing retains the two results' actual charges and adds them. -/
+theorem costDist_bind [AddCommMonoid ω] (first : OracleComp spec α)
+    (next : α → OracleComp spec β) (cm : CostModel spec ω) :
+    costDist (first >>= next) cm = (do
+      let left ← costDist first cm
+      let right ← costDist (next left.1) cm
+      return (right.1, left.2 * right.2)) := by
+  simp only [costDist, instrumentedRun, simulateQ_bind, WriterT.run_bind]
+  apply bind_congr
+  intro left
+  rw [map_eq_bind_pure_comp]
+  rfl
+
+/-- A single query records its designated charge and retains the response. -/
+theorem costDist_query [AddCommMonoid ω] (query : spec.Domain) (cm : CostModel spec ω) :
+    costDist (spec.query query : OracleComp spec (spec.Range query)) cm = (do
+      let response ← (spec.query query : OracleComp spec (spec.Range query))
+      return (response, Multiplicative.ofAdd (cm.queryCost query))) := by
+  simp [costDist, instrumentedRun, QueryImpl.withAddCost, WriterT.run_bind]
+
+/-- A pure result observation preserves all accumulated query charges. -/
+theorem costDist_map [AddCommMonoid ω] (program : OracleComp spec α) (f : α → β)
+    (cm : CostModel spec ω) :
+    costDist (f <$> program) cm =
+      (fun result => (f result.1, result.2)) <$> costDist program cm := by
+  simp [costDist, instrumentedRun, simulateQ_map, WriterT.run_map]
 
 /-- Cost instrumentation does not change the output distribution. -/
 @[simp]
@@ -163,6 +204,31 @@ theorem worstCaseCostBound_iff_support_bound [AddCommMonoid ω] [Preorder ω]
   unfold WorstCaseCostBound costDist instrumentedRun AddWriterT.PathwiseCostAtMost
   rfl
 
+/-- A pure result observation preserves and reflects a complete-path query-cost bound. -/
+theorem worstCaseCostBound_map_iff [AddCommMonoid ω] [Preorder ω]
+    (program : OracleComp spec α) (f : α → β) (cm : CostModel spec ω) (budget : ω) :
+    WorstCaseCostBound (f <$> program) cm budget ↔ WorstCaseCostBound program cm budget := by
+  simp only [worstCaseCostBound_iff_support_bound, costDist_map, support_map, Set.mem_image]
+  constructor
+  · intro h result member
+    exact h (f result.1, result.2) ⟨result, member, rfl⟩
+  · intro h result member
+    obtain ⟨original, member, rfl⟩ := member
+    exact h original member
+
+/-- Every completed response of a single query has its designated charge. -/
+theorem worstCaseCostBound_query [AddCommMonoid ω] [Preorder ω] (query : spec.Domain)
+    (cm : CostModel spec ω) :
+    WorstCaseCostBound (spec.query query : OracleComp spec (spec.Range query)) cm
+      (cm.queryCost query) := by
+  intro result member
+  change result ∈ support (costDist (spec.query query : OracleComp spec _) cm) at member
+  rw [costDist_query] at member
+  rcases (mem_support_bind_iff _ _ _).mp member with ⟨response, _, member⟩
+  rw [mem_support_pure_iff] at member
+  subst result
+  exact le_rfl
+
 /-- The actual instrumented query charges its key before the continuation. -/
 theorem costDist_query_bind [AddCommMonoid ω]
     (t : spec.Domain) (k : spec.Range t → OracleComp spec α) (cm : CostModel spec ω) :
@@ -196,7 +262,7 @@ theorem worstCaseCostBound_query_bind_iff [AddCommMonoid ω] [Preorder ω]
     exact h u w hw
 
 /-- Pathwise budgets add under sequencing of the actual instrumented computations. -/
-theorem WorstCaseCostBound.bind [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
+theorem WorstCaseCostBound.bind [AddCommMonoid ω] [Preorder ω] [IsOrderedAddMonoid ω]
     {oa : OracleComp spec α} {k : α → OracleComp spec β} {cm : CostModel spec ω} {A B : ω}
     (ha : WorstCaseCostBound oa cm A) (hb : ∀ a, WorstCaseCostBound (k a) cm B) :
     WorstCaseCostBound (oa >>= k) cm (A + B) := by
