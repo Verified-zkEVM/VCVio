@@ -50,15 +50,13 @@ abbrev cmaOracleSpec (M Commit Chal Resp : Type) :
     OracleSpec ((ℕ ⊕ (M × Commit)) ⊕ M) :=
   fsRoSpec M Commit Chal + (M →ₒ (Commit × Resp))
 
-def simulatedNmaFwd
-    [DecidableEq M] [DecidableEq Commit] :
+def simulatedNmaFwd :
     QueryImpl (fsRoSpec M Commit Chal)
       (StateT (fsRoSpec M Commit Chal).QueryCache
         (OracleComp (fsRoSpec M Commit Chal))) :=
   (fsRoSpec M Commit Chal).passthrough
 
-def simulatedNmaUnifSim
-    [DecidableEq M] [DecidableEq Commit] :
+def simulatedNmaUnifSim :
     QueryImpl unifSpec
       (StateT (fsRoSpec M Commit Chal).QueryCache
         (OracleComp (fsRoSpec M Commit Chal))) :=
@@ -130,7 +128,6 @@ def simulatedNmaAdv
     (adv.main pk)).run ∅⟩
 
 private theorem simulatedNmaFwd_run_hashQueryBound
-    [DecidableEq M] [DecidableEq Commit]
     (t : (fsRoSpec M Commit Chal).Domain) (s : (fsRoSpec M Commit Chal).QueryCache) :
     nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (oa := (simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) t).run s)
