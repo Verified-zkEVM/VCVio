@@ -409,35 +409,50 @@ nothing in flight the left test cannot fire.
 is a hypothesis, read at the outcome the tail returns — which is where the log ends up, so a
 consumer can discharge it without reaching into a stage. -/
 
-set_option maxHeartbeats 1000000 in
--- Unfolding the carrier tail's three-stage run into its stages is slow.
-/-- **The disclosing recording of the carrier tail is inside the concentration's cap.** -/
-theorem leftRecord_length_le_cap_carrierTail
+-- Stated for an arbitrary key generation and verification, with the tail's shape as an
+-- equation, so that elaborating the proof never unfolds the concrete runs of `carrierTail`.
+private theorem length_le_cap_of_stages
     (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (adversary : Adversary) (walk : Walk)
+    (keygen : OracleComp OracleWorld (SecretKey × PublicKey))
+    (verify : PublicKey → Message → Bytes → OracleComp OracleWorld Bool)
+    (tail : ProbComp (((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState))
+    (htail : tail =
+      (simulateQ (handlerAt rightKeep walk) keygen).run
+        (startAt walk.2, (([], []), 0)) >>= fun keys =>
+      (simulateQ (fuseServing (handlerAt rightKeep walk)
+        (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+        ServedAgreement.startServingOn ServedAgreement.stopServingOn)
+          (adversary.main keys.1.2)).run (1, [], keys.2) >>= fun middle =>
+      (simulateQ (handlerAt rightKeep walk) (countRecorded verifierCost
+        (verify keys.1.2 middle.1.message middle.1.signature))).run
+          middle.2.2.2 >>= fun final =>
+      pure ((({
+          forgery := middle.1
+          signed := middle.2.2.1
+          verified := final.1.1
+          counts := (Multiplicative.toAdd middle.2.1).1 + final.1.2.1 },
+        (Multiplicative.toAdd middle.2.1).2 + final.1.2.2), final.2.2.2),
+          forgetCarrier final.2))
     (hpublic : ¬ HashSeparation.Possible ((keyAt walk).seed, (keyAt walk).root))
-    (hkey : ∀ keys ∈ support ((simulateQ (handlerAt rightKeep walk)
-        (Scheme.keygenInternal walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2)).run
-        (startAt walk.2, (([], []), 0))),
-      keys.1.1.publicKey = keyAt walk)
+    (hkey : ∀ keys ∈ support ((simulateQ (handlerAt rightKeep walk) keygen).run
+        (startAt walk.2, (([], []), 0))), keys.1.1.publicKey = keyAt walk)
     (result : ((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState)
-    (hresult : result ∈ support (carrierTail rightKeep adversary walk))
+    (hresult : result ∈ support tail)
     (hlimit : result.1.1.1.signed.length ≤ signingLimit) :
     result.2.2.1.length ≤ 5 * 2 ^ 62 := by
   classical
-  rw [carrierTail, mem_support_bind_iff] at hresult
+  rw [htail, mem_support_bind_iff] at hresult
   obtain ⟨keys, hkeys, hrest1⟩ := hresult
   rw [mem_support_bind_iff] at hrest1
   obtain ⟨middle, hmiddle, hrest2⟩ := hrest1
   rw [mem_support_bind_iff] at hrest2
   obtain ⟨final, hfinal, hpure⟩ := hrest2
   rw [support_pure, Set.mem_singleton_iff] at hpure
-  -- the three stage boundaries, with nothing in flight
-  obtain ⟨-, hclearKeys, hclearMiddle, -⟩ :=
-    CarrierClearFraming.clear_stages rightKeep adversary walk keys hkeys middle hmiddle final
-      hfinal
   -- key generation leaves the carrier quiet
-  have hquiet := quiet_run rightKeep walk _ _ keys hkeys (quiet_startAt walk.2)
+  have hquiet := quiet_run rightKeep walk keygen _ keys hkeys (quiet_startAt walk.2)
+  have hclearMiddle := CarrierClearFraming.clear_phase rightKeep walk keys.1.1
+    (adversary.main keys.1.2) 1 [] keys.2 middle hmiddle hquiet.1
   -- the recording is cached, nodup and served at the end of the middle stage
   have hnodupKeys := run_invariant (Inv := LeftFreshNodup) (handlerAt rightKeep walk)
     (fun queried state step hstep hinv =>
@@ -473,8 +488,8 @@ theorem leftRecord_length_le_cap_carrierTail
       state.1.framing = none ∧ state.2.1.1 = middle.2.2.2.2.1.1)
     (handlerAt rightKeep walk)
     (fun queried state step hstep hinv =>
-      ⟨by rw [CarrierClearFraming.clear_step rightKeep walk queried state step hstep hinv.1],
-        by rw [leftFixed_step rightKeep walk queried state step hstep hinv.1]; exact hinv.2⟩)
+      ⟨CarrierClearFraming.clear_step rightKeep walk queried state step hstep hinv.1,
+        (leftFixed_step rightKeep walk queried state step hstep hinv.1).trans hinv.2⟩)
     _ middle.2.2.2 final hfinal ⟨hclearMiddle, rfl⟩
   -- and so the tail's recording is the middle stage's, which the agreement caps
   have hsigned : middle.2.2.1 = result.1.1.1.signed := by rw [hpure]
@@ -483,8 +498,56 @@ theorem leftRecord_length_le_cap_carrierTail
   exact ServedAgreement.record_length_le_cap keys.1.1 middle.2.2.1 middle.2.2.2.1 hagree
     middle.2.2.2.2.1.1 hnodupMiddle.2 hservedMiddle (by rw [hsigned]; exact hlimit)
 
-set_option maxHeartbeats 1000000 in
--- Elaborating the carrier tail's support in the statement is slow.
+private theorem le_cap_of_stages
+    (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
+    (adversary : Adversary) (walk : Walk)
+    (keygen : OracleComp OracleWorld (SecretKey × PublicKey))
+    (verify : PublicKey → Message → Bytes → OracleComp OracleWorld Bool)
+    (tail : ProbComp (((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState))
+    (htail : tail =
+      (simulateQ (handlerAt rightKeep walk) keygen).run
+        (startAt walk.2, (([], []), 0)) >>= fun keys =>
+      (simulateQ (fuseServing (handlerAt rightKeep walk)
+        (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+        ServedAgreement.startServingOn ServedAgreement.stopServingOn)
+          (adversary.main keys.1.2)).run (1, [], keys.2) >>= fun middle =>
+      (simulateQ (handlerAt rightKeep walk) (countRecorded verifierCost
+        (verify keys.1.2 middle.1.message middle.1.signature))).run
+          middle.2.2.2 >>= fun final =>
+      pure ((({
+          forgery := middle.1
+          signed := middle.2.2.1
+          verified := final.1.1
+          counts := (Multiplicative.toAdd middle.2.1).1 + final.1.2.1 },
+        (Multiplicative.toAdd middle.2.1).2 + final.1.2.2), final.2.2.2),
+          forgetCarrier final.2))
+    (hpublic : ¬ HashSeparation.Possible ((keyAt walk).seed, (keyAt walk).root))
+    (hkey : ∀ keys ∈ support ((simulateQ (handlerAt rightKeep walk) keygen).run
+        (startAt walk.2, (([], []), 0))), keys.1.1.publicKey = keyAt walk)
+    (hlimit : ∀ result ∈ support tail, result.1.1.1.signed.length ≤ signingLimit) :
+    ∀ result ∈ support tail, result.2.2.1.length ≤ 5 * 2 ^ 62 := by
+  intro result hresult
+  exact length_le_cap_of_stages rightKeep adversary walk keygen verify tail htail hpublic hkey
+    result hresult (hlimit result hresult)
+
+/-- **The disclosing recording of the carrier tail is inside the concentration's cap.** -/
+theorem leftRecord_length_le_cap_carrierTail
+    (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
+    (adversary : Adversary) (walk : Walk)
+    (hpublic : ¬ HashSeparation.Possible ((keyAt walk).seed, (keyAt walk).root))
+    (hkey : ∀ keys ∈ support ((simulateQ (handlerAt rightKeep walk)
+        (Scheme.keygenInternal walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2)).run
+        (startAt walk.2, (([], []), 0))),
+      keys.1.1.publicKey = keyAt walk)
+    (result : ((Outcome × Multiset Bytes) × Nat) × SplitPrefix.SplitState) :
+    (hresult : result ∈ support (carrierTail rightKeep adversary walk)) →
+    (hlimit : result.1.1.1.signed.length ≤ signingLimit) →
+    result.2.2.1.length ≤ 5 * 2 ^ 62 :=
+  length_le_cap_of_stages rightKeep adversary walk
+    (Scheme.keygenInternal walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2)
+    (Scheme.verify (m := OracleComp OracleWorld))
+    (carrierTail rightKeep adversary walk) rfl hpublic hkey result
+
 /-- **The cap in the form a consumer wants it**: quantified over the support of the tail. -/
 theorem leftRecord_le_cap_carrierTail
     (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
@@ -498,9 +561,10 @@ theorem leftRecord_le_cap_carrierTail
       result.1.1.1.signed.length ≤ signingLimit) :
     ∀ result ∈ support (carrierTail rightKeep adversary walk),
       result.2.2.1.length ≤ 5 * 2 ^ 62 :=
-  fun result hresult =>
-    leftRecord_length_le_cap_carrierTail rightKeep adversary walk hpublic hkey result hresult
-      (hlimit result hresult)
+  le_cap_of_stages rightKeep adversary walk
+    (Scheme.keygenInternal walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2)
+    (Scheme.verify (m := OracleComp OracleWorld))
+    (carrierTail rightKeep adversary walk) rfl hpublic hkey hlimit
 
 attribute [local irreducible] WarmedGame.afterSeeds
 
