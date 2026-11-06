@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Chung Thai Nguyen, Yuxi Zheng
 -/
 
 module
@@ -13,11 +13,11 @@ public import VCVio.OracleComp.SimSemantics.Append.Core
 public import VCVio.OracleComp.EvalDist.Measure
 
 /-!
-# `StateT σ ProbComp` Invariant Theory
+# `StateT` Invariant Theory
 
 Support-based invariant reasoning for shared, stateful oracle simulations
-(ROM/AGM/hybrids) whose handlers live in `StateT σ ProbComp`. A user-supplied
-predicate `Inv : σ → Prop` is preserved by an implementation when every reachable
+(ROM/AGM/hybrids) whose handlers live in `StateT σ m`, in particular `StateT σ ProbComp`. A
+user-supplied predicate `Inv : σ → Prop` is preserved by an implementation when every reachable
 post-state satisfies it.
 
 Reachability controls pathwise invariants. Output independence uses the successful-output
@@ -54,11 +54,14 @@ open OracleComp OracleSpec MeasureTheory
 
 open scoped OracleSpec.PrimitiveQuery
 
+universe u v
+
 namespace StateT
 
 /-- `PreservesInv mx Inv` means that starting from any state satisfying `Inv`, every reachable
 post-state (support-wise) also satisfies `Inv`. -/
-def PreservesInv {σ α : Type} (mx : StateT σ ProbComp α) (Inv : σ → Prop) : Prop :=
+def PreservesInv {m : Type → Type v} [MonadAttach m] {σ α : Type}
+    (mx : StateT σ m α) (Inv : σ → Prop) : Prop :=
   ∀ σ0, Inv σ0 → ∀ z ∈ support (mx.run σ0), Inv z.2
 
 end StateT
@@ -68,8 +71,9 @@ namespace QueryImpl
 /-- `PreservesInv impl Inv` means every oracle query implementation step preserves `Inv`
 on all reachable post-states (support-based): each `impl t` is a `StateT.PreservesInv`
 computation. -/
-def PreservesInv {ι : Type} {spec : OracleSpec ι} {σ : Type}
-    (impl : QueryImpl spec (StateT σ ProbComp)) (Inv : σ → Prop) : Prop :=
+def PreservesInv {m : Type → Type v} [MonadAttach m]
+    {ι : Type u} {spec : OracleSpec.{u, 0} ι} {σ : Type}
+    (impl : QueryImpl spec (StateT σ m)) (Inv : σ → Prop) : Prop :=
   ∀ t, StateT.PreservesInv (impl t) Inv
 
 lemma preservesInv_iff {ι : Type} {spec : OracleSpec ι} {σ : Type}
@@ -130,8 +134,9 @@ open QueryImpl
 /-- If `impl` preserves `Inv`, then simulating *any* oracle computation with `simulateQ impl`
 preserves `Inv` on the final state (support-wise). -/
 theorem simulateQ_run_preservesInv
-    {ι : Type} {spec : OracleSpec ι} {σ α : Type}
-    (impl : QueryImpl spec (StateT σ ProbComp)) (Inv : σ → Prop)
+    {m : Type → Type v} [Monad m] [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m]
+    {ι : Type u} {spec : OracleSpec.{u, 0} ι} {σ α : Type}
+    (impl : QueryImpl spec (StateT σ m)) (Inv : σ → Prop)
     (himpl : QueryImpl.PreservesInv impl Inv) :
     ∀ oa : OracleComp spec α,
     ∀ σ0, Inv σ0 →
@@ -139,20 +144,16 @@ theorem simulateQ_run_preservesInv
   intro oa
   induction oa using OracleComp.inductionOn with
   | pure a =>
-      intro σ0 hσ0 z hz
-      simp_all
+    intro σ0 hσ0 z hz
+    simp only [simulateQ_pure, StateT.run_pure, MonadAttach.mem_support] at hz
+    rw [← LawfulMonadAttach.eq_of_canReturn_pure hz]
+    exact hσ0
   | query_bind t oa ih =>
-      intro σ0 hσ0 z hz
-      have hz' :
-          z ∈ support
-            (((simulateQ impl
-                  (OracleSpec.query t : OracleComp spec (spec.Range t))).run σ0) >>=
-              fun us => (simulateQ impl (oa us.1)).run us.2) := by
-        simpa [simulateQ_bind, OracleComp.liftM_def] using hz
-      rcases (mem_support_bind_iff _ _ _).1 hz' with ⟨us, hus, hzcont⟩
-      have hus' : us ∈ support ((impl t).run σ0) := by
-        simpa [simulateQ_spec_query] using hus
-      exact ih us.1 us.2 (himpl t σ0 hσ0 us hus') z hzcont
+    intro σ0 hσ0 z hz
+    simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, id_map,
+      OracleQuery.input_query, StateT.run_bind, MonadAttach.mem_support] at hz
+    obtain ⟨us, hus, hz⟩ := LawfulMonadAttach.canReturn_bind_imp' hz
+    exact ih us.1 us.2 (himpl t σ0 hσ0 us hus) z hz
 
 /-- A relation `Inv` between the state of an inner handler and the state of an outer handler is
 preserved by running a computation through the inner handler and then the result through the
