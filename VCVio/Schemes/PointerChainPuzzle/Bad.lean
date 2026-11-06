@@ -578,7 +578,7 @@ lemma run_simulateQ_query_bind {ℓ : Labels n m S L} {P : Puzzle n S L Salt} {�
         OracleComp (unifSpec + (oracleSpec n S L Salt Ctx).batch) _) >>= f)).run s =
       (idealImpl m mkCtx initAcc P ℓ t).run s >>= fun p =>
         (simulateQ (idealImpl m mkCtx initAcc P ℓ) (f p.1)).run p.2 := by
-  simp [simulateQ_bind]
+  simp
 
 /-- A point logged after a round was logged in that round, against the reached set at its
 submission, or after it. -/

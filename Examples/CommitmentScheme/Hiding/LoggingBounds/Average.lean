@@ -101,7 +101,7 @@ lemma run_simulateQ_hidingAvgRightImpl_eq_liftComp {α : Type}
       OracleComp.liftComp ((simulateQ hidingImplCountAll oa).run st) (HidingAvgSpec M S C) := by
   induction oa using OracleComp.inductionOn generalizing st with
   | pure x =>
-      simp [simulateQ_pure]
+      simp
   | query_bind t mx ih =>
       rw [simulateQ_query_bind, StateT.run_bind, simulateQ_query_bind, StateT.run_bind,
         OracleComp.liftComp_bind]
@@ -511,7 +511,7 @@ lemma sum_wp_hidingOa_eq_wp_choose [Fintype S]
                 (post s))) := by
         refine Finset.sum_congr rfl ?_
         intro s hs
-        simp [hidingOa, simulateQ_bind, StateT.run_bind]
+        simp [hidingOa, StateT.run_bind]
     _ =
       OracleComp.ProgramLogic.wp
         ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))

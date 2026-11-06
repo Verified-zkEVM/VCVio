@@ -357,7 +357,7 @@ theorem freeCounted_query_bind (input : HashSpec.Domain)
       let result ← freeCounted publicSeed (next output)
       return (result.1, Multiplicative.ofAdd
         (freeCost publicSeed input + Multiplicative.toAdd result.2))) := by
-  simp [freeCounted, simulateQ_bind, QueryImpl.withAddCost, QueryImpl.withCost, WriterT.run_bind,
+  simp [freeCounted, QueryImpl.withAddCost, QueryImpl.withCost, WriterT.run_bind,
     bind_assoc, map_eq_bind_pure_comp]
 
 end SLHDSA.SHAKE128s.VerifyFree

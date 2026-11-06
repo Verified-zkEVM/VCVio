@@ -88,7 +88,7 @@ theorem cmaToNma_shiftLeft_signedFreshAdv_eq_bind [DecidableEq M]
             (verifyFreshComp (σ := σ) (hr := hr) (M := M)
               (Commit := Commit) (Chal := Chal) (Resp := Resp) p)).run log' := by
   simp [QueryImpl.Stateful.shiftLeft, QueryImpl.Stateful.run, signedFreshAdv,
-    StateT.run'_eq, simulateQ_bind, StateT.run_bind, monad_norm]
+    StateT.run'_eq, StateT.run_bind, monad_norm]
 
 private lemma cmaToNma_lift_ro_query_run
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
