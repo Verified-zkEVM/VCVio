@@ -492,6 +492,78 @@ theorem prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps
   rw [map_bind, map_bind]
   exact prEvent_bind_congr_of_support initial _ _ fun cache _ => hlocal cache
 
+/-! ### Sampled source prefixes -/
+
+/-- A sampled prefix retains the joint seed, output, cost and cache in capped source events. -/
+theorem prEvent_bind_guardQueryBudget_and_not_aborted_eq_source_and_caps
+    {Seed ι α Cache C : Type} {spec : OracleSpec.{0, 0} ι}
+    [AddMonoid C] [Preorder C] [CanonicallyOrderedAdd C] [DecidableLE C]
+    (seedSampler : ProbComp Seed) (caps : Seed → C) (cost : Seed → spec.Domain → C)
+    (handler : Seed → QueryImpl spec (StateT Cache ProbComp))
+    (fallback : (seed : Seed) → (input : spec.Domain) → spec.Range input)
+    (program : Seed → OracleComp spec α) (initial : Seed → ProbComp Cache)
+    (event : Seed → (α × C) × Cache → Prop) :
+    let guarded : ProbComp (Seed × (α × (Cache × (C × Bool)))) := do
+      let seed ← seedSampler
+      let cache ← initial seed
+      let result ← (simulateQ (guardQueryBudget (caps seed) (cost seed)
+        (handler seed) (fallback seed)) (program seed)).run (cache, (0, false))
+      pure (seed, result)
+    let source : ProbComp (Seed × ((α × C) × Cache)) := do
+      let seed ← seedSampler
+      let cache ← initial seed
+      let result ← ((simulateQ ((handler seed).withAddCost (cost seed))
+        (program seed)).runAdd).run cache
+      pure (seed, result)
+    Pr{let out ← guarded}[
+      event out.1 ((out.2.1, out.2.2.2.1), out.2.2.1) ∧ out.2.2.2.2 = false] =
+      Pr{let out ← source}[event out.1 out.2 ∧ out.2.1.2 ≤ caps out.1] := by
+  dsimp only
+  simp only [map_bind, bind_pure_comp, Functor.map_map]
+  apply prEvent_bind_congr_of_support seedSampler
+  intro seed _
+  simpa only [map_bind, bind_pure_comp, Functor.map_map, Function.comp_def, map_pure] using
+    prEvent_guardQueryBudget_and_not_aborted_eq_source_and_caps
+      (caps seed) (cost seed) (handler seed) (fallback seed)
+      (program seed) (initial seed) (event seed)
+
+/-- One global source event-to-cap law suffices after an arbitrary sampled prefix.
+
+The cap is required only when the source event holds; other source branches may exceed it.
+-/
+theorem prEvent_bind_guardQueryBudget_and_not_aborted_eq_source_of_ae_event_caps
+    {Seed ι α Cache C : Type} {spec : OracleSpec.{0, 0} ι}
+    [AddMonoid C] [Preorder C] [CanonicallyOrderedAdd C] [DecidableLE C]
+    (seedSampler : ProbComp Seed) (caps : Seed → C) (cost : Seed → spec.Domain → C)
+    (handler : Seed → QueryImpl spec (StateT Cache ProbComp))
+    (fallback : (seed : Seed) → (input : spec.Domain) → spec.Range input)
+    (program : Seed → OracleComp spec α) (initial : Seed → ProbComp Cache)
+    (event : Seed → (α × C) × Cache → Prop) :
+    let source : ProbComp (Seed × ((α × C) × Cache)) := do
+      let seed ← seedSampler
+      let cache ← initial seed
+      let result ← ((simulateQ ((handler seed).withAddCost (cost seed))
+        (program seed)).runAdd).run cache
+      pure (seed, result)
+    Pr{let out ← source}[event out.1 out.2 → out.2.1.2 ≤ caps out.1] = 1 →
+    let guarded : ProbComp (Seed × (α × (Cache × (C × Bool)))) := do
+      let seed ← seedSampler
+      let cache ← initial seed
+      let result ← (simulateQ (guardQueryBudget (caps seed) (cost seed)
+        (handler seed) (fallback seed)) (program seed)).run (cache, (0, false))
+      pure (seed, result)
+    Pr{let out ← guarded}[
+      event out.1 ((out.2.1, out.2.2.2.1), out.2.2.1) ∧ out.2.2.2.2 = false] =
+      Pr{let out ← source}[event out.1 out.2] := by
+  dsimp only
+  intro hcaps
+  rw [prEvent_bind_guardQueryBudget_and_not_aborted_eq_source_and_caps
+    seedSampler caps cost handler fallback program initial event]
+  apply prEvent_congr_of_support
+  intro out hout
+  exact ⟨And.left, fun hevent =>
+    ⟨hevent, (prEvent_eq_one_iff _ _).mp hcaps out hout hevent⟩⟩
+
 /-- Interpreting the free guarded program preserves the complete guarded state and output. -/
 theorem map_run_simulateQ_guardQueryBudget_free_eq
     {ι α Cache C : Type} {spec : OracleSpec.{0, 0} ι}
