@@ -1,27 +1,33 @@
+<!--
+Use the title format in CONTRIBUTING.md, "Title".
+-->
+
 ## Summary
 
 <!-- What changes and why. When a Mathlib, core, or Batteries lemma or idiom replaces a local
-one, cite the row in docs/reading/upstream-alignment.md. -->
+one, cite its row in docs/reading/upstream-alignment.md. -->
 
 ## Verification
 
-<!-- The commands run locally, e.g. `lake build <libs> VCVioTest`, `lake exe axiomsweep --check`,
-`./scripts/update-lib.sh`, `lake lint -- --env-only`, `lake exe lint-style <libs>`,
+<!-- The commands that you ran locally, and the commit that they cover. Examples are
+`lake build <libs> VCVioTest`, `lake exe axiomsweep --check`, `./scripts/update-lib.sh`,
+`lake lint -- --env-only`, `lake exe lint-style <libs>`, and
 `python3 scripts/check-agent-docs.py`. -->
 
 ## Checklist
 
-- [ ] New files carry the standard header and module docstring (`CONTRIBUTING.md`, *Attribution
-      And File Headers*); docstrings are intrinsic, with no change history or "renamed from" wording.
-- [ ] New files use plain `public section` with per-declaration `@[expose]` (*Module Scopes*), and
-      the expose-boundary baseline was lowered in this PR if a file was converted.
-- [ ] `./scripts/update-lib.sh` leaves the umbrella files unchanged, and
-      `lake exe axiomsweep --check` passes with `scripts/axiom_baseline.json` untouched (or the
-      baseline diff is explained above).
+- [ ] New files have the standard header and a module docstring (`CONTRIBUTING.md`, *Attribution
+      And File Headers*). Docstrings are intrinsic, with no change history or "renamed from" wording.
+- [ ] New files use a plain `public section` with `@[expose]` on individual declarations
+      (*Module Scopes*). If the PR converts a file, it lowers the expose-boundary baseline.
+- [ ] `./scripts/update-lib.sh` leaves the umbrella files unchanged. `lake exe axiomsweep --check`
+      passes, and `scripts/axiom_baseline.json` is unchanged or the summary explains its diff.
 - [ ] No `set_option linter.* false`, no deprecated aliases (`docs/agents/gotchas.md` §18, §23),
       and no native FFI test executables on the PR path.
-- [ ] Documentation touched by the change is updated and `python3 scripts/check-agent-docs.py`
+- [ ] Documentation that the change affects is updated, and `python3 scripts/check-agent-docs.py`
       passes.
-- [ ] If a simp/grind/gcongr set changed: the gate files under `VCVioTest/` gained one-call
-      entries, no proof gained a second tactic call outside a dated gap pair, and the before/after
-      line counts of the touched proofs are listed above.
+- [ ] If a simp, grind, or gcongr set changed, the gate files under `VCVioTest/` gained one-call
+      entries. No proof gained a second tactic call outside a dated gap pair. The summary lists
+      the line counts of the touched proofs before and after the change.
+- [ ] The title follows `CONTRIBUTING.md`.
+- [ ] The description matches the code and the evidence.

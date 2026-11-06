@@ -6,11 +6,12 @@ Machine-checked cryptographic proofs in Lean, built on Mathlib.
 
 1. Run `lake exe cache get && lake build`.
 2. Read `Examples/OneTimePad/Basic.lean` for a compact modern proof (correctness and privacy).
-3. Choose the work area by task: use `VCVio/` for oracle/probability/program-logic work, `LatticeCrypto/` for lattice schemes and reductions, and `LatticeCryptoTest/` for vectors or differential tests.
-4. If `𝒟` lemmas fail unexpectedly, check for `[OracleSpec.AnswerMeasure spec]`
-   and a measurable space on the result type; oracle answer types need none. The
-   concrete `unifSpec` and `coinSpec` have global uniform-measure instances; other
-   specs need a chosen interpretation.
+3. Choose the work area by task. Use `VCVio/` for oracle/probability/program-logic work.
+   Use `LatticeCrypto/` for lattice schemes and reductions, and `LatticeCryptoTest/` for vectors or differential tests.
+4. If `𝒟` lemmas fail unexpectedly, check for `[OracleSpec.AnswerMeasure spec]`.
+   Also check for a measurable space on the result type. Oracle answer types need none.
+   The concrete `unifSpec` and `coinSpec` have global uniform-measure instances.
+   Other specs need a chosen interpretation.
 
 `AGENTS.md` is the canonical guide. `CLAUDE.md` is a symlink to this file.
 
@@ -18,47 +19,78 @@ Machine-checked cryptographic proofs in Lean, built on Mathlib.
 
 Follow [`CONTRIBUTING.md`](CONTRIBUTING.md) for the repo's explicit attribution policy.
 
-- New Lean files should use the standard copyright / license / authors header and a module docstring.
+- New Lean files should use the standard copyright / licence / authors header and a module docstring.
 - For ordinary Lean source files, use the standard prologue layout: header, blank line, `module`, public imports, blank line, module docstring.
 - Docstrings must be intrinsic and descriptive. Cross-reference live sibling definitions when helpful, but do not mention removed or renamed declarations, change history, or use reactive wording such as "replaces" or "renamed from".
 - Preserve existing headers on routine edits.
 - Only rewrite attribution when a file is genuinely new or materially replaced.
 - Do not add a separate AI-attribution line.
-- For inline section breaks within a Lean file, use Mathlib-style doc-comment headers `/-! ## Title -/` (or the multi-line `/-! ## Title \n\n explanation -/` form). **Do not use ASCII banners** such as `-- ====...===` flanking a `-- § Title` line. The `/-!` form is rendered by `doc-gen4`; ASCII banners are not, and they make the file feel artificially partitioned. If a section is large enough to want a loud header, it is usually large enough to want its own `namespace` or its own file. See *Section Headers Within A File* in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- For inline section breaks within a Lean file, use Mathlib-style doc-comment headers `/-! ## Title -/`.
+  The multi-line `/-! ## Title \n\n explanation -/` form is also suitable.
+  **Do not use ASCII banners** such as `-- ====...===` flanking a `-- § Title` line.
+  `doc-gen4` renders the `/-!` form but does not render ASCII banners, which make the file feel artificially partitioned.
+  A section that seems to need a loud header usually needs its own `namespace` or file.
+  See *Section Headers Within A File* in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## Writing
+
+Before you draft or revise prose, follow the [writing workflow](docs/agents/write-technical-prose.md).
+It applies to documentation, docstrings, comments, commit messages, PR and issue text, and review
+comments. Use the [writing guide](docs/agents/writing.md) where its advice improves clarity.
+Preserve claims and source fidelity. CONTRIBUTING owns the contribution requirements.
+Leave clear, correct text alone, and keep unrelated rewrites out of the task.
+
+`scripts/check-writing.py` is an optional aid for changed prose, commit messages and drafts.
+Its hints do not establish correctness or require a word substitution.
 
 ## Module Scopes
 
-Active Lean libraries and tests use Lean's module system. Put declarations in a `public section`;
-use `public meta section` for tactic and elaborator code. Existing ordinary source files use
-`@[expose] public section` so pre-migration downstream definitional equalities remain available; new
-files use plain `public section` and expose individual definitions with `@[expose]` where unfolding
-is part of the intended API. The per-library count of broadly exposed files is a ceiling
-(`scripts/check-expose-boundary.sh`, baseline `scripts/expose_boundary_baseline.tsv`): converting a
-file lowers it, and raising it needs an explicit baseline change under review. Executable and
-runtime implementation modules should use opaque `public section` when callers do not need to
-unfold their definitions.
+Active Lean libraries and tests use Lean's module system. Put declarations in a `public section`.
+Use `public meta section` for tactic and elaborator code.
+Existing ordinary source files use `@[expose] public section` to preserve downstream definitional equalities from before migration.
+New files use plain `public section` and expose individual definitions with `@[expose]` where unfolding is part of the intended API.
+
+The per-library count of broadly exposed files is a ceiling (`scripts/check-expose-boundary.sh`, baseline `scripts/expose_boundary_baseline.tsv`).
+Converting a file lowers that ceiling. Raising it needs an explicit baseline change under review.
+Executable and runtime implementation modules should use opaque `public section` when callers do not need to unfold their definitions.
 
 - Use `public import` for dependencies that form part of the module's transitive public surface and
   `public meta import` for exported tactic/elaborator dependencies.
 - Use plain `import` for implementation-only dependencies. A proof module may use `import all` to
   access an unexposed implementation from the same dependency when proving its public API.
-- Do not enable `backward.privateInPublic` or `backward.proofsInPublic`; resolve visibility and
-  proof-metavariable issues directly.
+- Do not enable `backward.privateInPublic` or `backward.proofsInPublic`.
+  Resolve visibility and proof-metavariable issues directly.
 - Keep the dormant `Interop` library outside this policy until it is migrated separately.
 
-Section `variable` lines carry an instance assumption only when the theorems in scope share it:
-Lean auto-includes an instance-implicit section variable in every theorem mentioning its types,
-so a section-wide `[Fintype Chal] [Inhabited Chal] [SampleableType Chal]` that most theorems
-ignore turns into an `omit [...] in` line before each of them. Put such assumptions on the
-declarations that use them, or open a `section` around the block that shares them; never declare
-one that another in scope implies (`[Finite X]` beside `[SampleableType X]`). `omit` is for a
-genuine one-off. See *Section Variables* in [`CONTRIBUTING.md`](CONTRIBUTING.md) and gotcha 31.
+Section `variable` lines carry an instance assumption only when the theorems in scope share it.
+Lean auto-includes an instance-implicit section variable in every theorem that mentions its types.
+Suppose most theorems ignore section-wide `[Fintype Chal] [Inhabited Chal] [SampleableType Chal]` assumptions.
+Those assumptions require an `omit [...] in` line before each such theorem.
+Put the assumptions on the declarations that use them, or open a `section` around the block that shares them.
+
+Never declare an instance assumption that another in scope implies (`[Finite X]` beside `[SampleableType X]`).
+Use `omit` only for a genuine exception, not as a routine step.
+See *Section Variables* in [`CONTRIBUTING.md`](CONTRIBUTING.md) and gotcha 31.
 
 ## What This Project Is
 
-VCVio is a framework for formal cryptographic proofs built around `OracleComp spec α`, the free monad on the polynomial functor induced by an oracle signature `OracleSpec ι := ι → Type`. Its universal fold `simulateQ impl : OracleComp spec α → r α` is the unique monad morphism extending any `impl : QueryImpl spec r` to the free monad. For `OracleComp`, `support` is the set of possible outputs, equal to the fold into `SetM` that answers every query with `Set.univ`. Its probability semantics `evalDist` / `𝒟[…]` is a successful-output Mathlib `Measure`, the fold of the answer measures chosen by `[OracleSpec.AnswerMeasure spec]`; missing mass is failure. Events are written `Pr{let x ← oa}[p x]`, whose braces take any `do` sequence with its sugar (a single output is `Pr{let x ← oa}[x = a]`), the failure probability is `prFail oa`, and distributional equality is `oa =ᵈ ob`. Uniform answer measures are `[OracleSpec.UniformAnswerMeasure spec]`. `ProbComp α := OracleComp unifSpec α` specializes to computations whose only oracle is uniform selection.
+VCVio is a framework for formal cryptographic proofs built around `OracleComp spec α`.
+This type is the free monad on the polynomial functor induced by an oracle signature `OracleSpec ι := ι → Type`.
+Its universal fold `simulateQ impl : OracleComp spec α → r α` is the unique monad morphism extending any `impl : QueryImpl spec r` to the free monad.
+For `OracleComp`, `support` is the set of possible outputs, equal to the fold into `SetM` that answers every query with `Set.univ`.
 
-The repo also includes a first-class lattice cryptography library under `LatticeCrypto/`, built on top of the `VCVio` framework. That layer contains generic lattice algebra plus ML-DSA, ML-KEM, and Falcon specifications, security statements, concrete implementations, and tests; the native FFI bridges live in the separate `Extern/` library.
+The probability semantics `evalDist` / `𝒟[…]` is a successful-output Mathlib `Measure`.
+It folds the answer measures chosen by `[OracleSpec.AnswerMeasure spec]`. Missing mass is failure.
+Events are written `Pr{let x ← oa}[p x]`, whose braces take any `do` sequence with its sugar.
+A single output is `Pr{let x ← oa}[x = a]`.
+The failure probability is `prFail oa`, and distributional equality is `oa =ᵈ ob`.
+
+Uniform answer measures are `[OracleSpec.UniformAnswerMeasure spec]`.
+`ProbComp α := OracleComp unifSpec α` specializes to computations whose only oracle is uniform selection.
+
+The repo also includes a first-class lattice cryptography library under `LatticeCrypto/`, built on top of the `VCVio` framework.
+That layer contains generic lattice algebra plus ML-DSA, ML-KEM, and Falcon specifications, security statements, concrete implementations, and tests.
+The native FFI bridges live in the separate `Extern/` library.
 
 ## Repo Map
 
@@ -66,61 +98,63 @@ See the [repository ownership map](docs/design/repository-layout.md) for placeme
 build boundaries and the staged consolidation.
 
 - `VCVio/`: generic oracle-computation framework, program logic, crypto abstractions, and generic reductions.
-- `VCVio/Algorithms/` contains shared pure SHA-2, HMAC, MGF1, SHA-3 and SHAKE implementations;
-  their independent regressions run with `lake exe algorithm_tests`.
-- `VCVioCslib/`: optional cslib-backed non-uniform P/poly adapters; it is a separate Lake library
-  so core `VCVio` remains backend-neutral.
+- `VCVio/Algorithms/` contains shared pure SHA-2, HMAC, MGF1, SHA-3 and SHAKE implementations.
+  Their independent regressions run with `lake exe algorithm_tests`.
+- `VCVioCslib/`: optional cslib-backed non-uniform P/poly adapters.
+  It is a separate Lake library so core `VCVio` remains backend-neutral.
 - `ToMathlib/`: local Mathlib-facing utilities and lemmas intended to remain below the framework layer.
-- `Extern/`: native FFI surface — the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them. No proof library may import it; the backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
+- `Extern/`: native FFI surface, with the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them.
+  No proof library may import it.
+  The backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
 - `LatticeCrypto/`: lattice-specific algebra, hardness assumptions, scheme definitions, security theorems, and concrete implementations.
-- `HashSig/`: hash-based signatures — SLH-DSA (SPHINCS+, FIPS 205) proof-level specs,
-  component-level FIPS conformance results, and an SUF-CMA bound (strong unforgeability, which
-  gives EUF-CMA at the same bound) in the classical random-oracle model with three oracles (the
-  tweakable hash, `Hmsg`, `PRFmsg`): `securityTarget_two_one`, per public seed and averaged over
-  seed distributions. A model of the SHAKE parameter sets over a single SHAKE256 random oracle on
-  byte strings is stated (`shakeRomScheme`); answering its oracle with SHAKE256 gives the library's
-  FIPS 205 SHAKE internal algorithms (`shakeRomScheme_map_shakeAnswer`), which are checked against
-  pinned NIST ACVP vectors at SLH-DSA-SHAKE-128f, 192f, and 256f; the SUF-CMA bound in that model, the three-oracle
-  bound plus `(q_s + 1) / 2^{8n}` and a weak-key term (at `n = 32` only the weak seeds' share of
-  the bound at every seed), is `shakeStrongAdvantage_le_securityBound` (per public seed:
-  `shakeStrongAdvantage_pure_le_securityBound`); in hedged signing `(q_s + 1) / 2^{8n}` becomes
-  `1 / 2^{8n} + q_s (q_h + q_s + 1) / 2^{16n}` (`shakeStrongAdvantage_le_securityBound_hedged`).
-  The EUF-CMA forms are `shakeAdvantage_le_securityBound`, `shakeAdvantage_pure_le_securityBound`
-  and `shakeAdvantage_le_securityBound_hedged`. `Security/Wire.lean` transports the bounds to
-  strict byte-list public keys and signatures in pure mode with a fixed checked context,
-  preserving both query budgets and strong freshness. Canonical parsing and injectivity are
-  proved in `Codec.lean`. `Security/Profile.lean` binds SHAKE parameters, signing mode, context,
-  codecs, uniform seed sampling, and the matching exact bound evaluator. Prehash collision
-  accounting, variable-length-XOF adversaries, and complete FIPS conformance remain open.
-  The specialized `HashSig/SLHDSA/SHAKE128s/` subtree contains `Statement/`, `Proof/` and `Bridge/`
-  for deterministic pure-mode SHAKE-128s over one fixed 30-byte random oracle, with independent
-  uniform key seeds. `SLHDSA.SHAKE128s.slhDsa_sufCma_127` allows message/context signing requests
-  and byte-string signatures. Its work counts signing requests, direct adversary hash calls and
-  final-verification hash calls, with a separate `2^64` signing-request lifetime cap;
-  key-generation and signer hashes are excluded. The general security, wire, evaluator and
-  certificate modules remain alongside it. `SHAKE128s/Bridge/Wire.lean` exports the exact
-  fixed-context advantage equality and the syntactic-to-counted budget transports; the verifier
-  overhead has a proved universal cap of 3929 oracle calls. `SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean`
-  exports `wireStrongAdvantage_le_workBound` and `wireStrongAdvantage_le_min_bound` for
-  `RomQueryBound qh qs` and `qs ≤ 2^64`. The common scope is deterministic signing, a fixed valid
-  context, independent uniform seeds, and the shared fixed-30-byte oracle.
-  `slhdsa_shake128s_game_tests` exercises actual counted work through the proved-equal computable
-  runner in `HashSigTest/SLHDSA/SHAKE128s/Support.lean`; `slhdsa_shake128s_wire_bridge_tests`
-  executes the actual adapter's translation, freshness, framing and rejection controls.
-  Both are explicit `lake test` steps. See
-  [the specialized design record](docs/design/slh-dsa-shake128s-suf-cma.md).
-  Peer of `LatticeCrypto/`; depends on `VCVio`/`ToMathlib` but nothing in those imports it back.
+- `HashSig/`: hash-based signatures.
+  SLH-DSA (SPHINCS+, FIPS 205) has proof-level specs, component-level FIPS conformance results, and an SUF-CMA bound.
+  `HashSig/` is a peer of `LatticeCrypto/`.
+  It depends on `VCVio`/`ToMathlib`, but nothing in those libraries imports it back.
+  Its models and theorem families are:
+  - **Three-oracle bound:** `securityTarget_two_one` states the SUF-CMA bound in the classical random-oracle model with three oracles: the tweakable hash, `Hmsg`, and `PRFmsg`.
+    It assumes the byte laws, the key discipline, and `|Y| ≤ |SK.prf|`.
+    The bound holds for every public seed. Strong unforgeability gives EUF-CMA at the same bound.
+    `strongUnforgeableAdvantage_romScheme_le_securityBound` averages the bound over any distribution of the public seed.
+  - **SHAKE model:** `shakeRomScheme` states a model of the SHAKE parameter sets over a single SHAKE256 random oracle on byte strings.
+    `shakeRomScheme_map_shakeAnswer` gives the library's FIPS 205 SHAKE internal algorithms when SHAKE256 answers that oracle.
+    These algorithms are checked against pinned NIST ACVP vectors at SLH-DSA-SHAKE-128f, 192f, and 256f.
+  - **SHAKE bounds:** in that model, the SUF-CMA bound adds `(q_s + 1) / 2^{8n}` and a weak-key term to the three-oracle bound.
+    At `n = 32`, the weak-key term is only the weak seeds' share of the bound at every seed.
+    The theorems are `shakeStrongAdvantage_le_securityBound` and, per public seed, `shakeStrongAdvantage_pure_le_securityBound`.
+    Hedged signing replaces `(q_s + 1) / 2^{8n}` with `1 / 2^{8n} + q_s (q_h + q_s + 1) / 2^{16n}` (`shakeStrongAdvantage_le_securityBound_hedged`).
+  - **Public interfaces:** the EUF-CMA forms are `shakeAdvantage_le_securityBound`, `shakeAdvantage_pure_le_securityBound`
+    and `shakeAdvantage_le_securityBound_hedged`.
+    `Security/Wire.lean` transports the bounds to strict byte-list public keys and signatures in pure mode with a fixed checked context.
+    It preserves both query budgets and strong freshness. Canonical parsing and injectivity are proved in `Codec.lean`.
+    `Security/Profile.lean` binds SHAKE parameters, signing mode, context, codecs, uniform seed sampling, and the matching exact bound evaluator.
+    Prehash collision accounting, variable-length-XOF adversaries, and complete FIPS conformance remain open.
+  - **Specialized SHAKE-128s:** the `HashSig/SLHDSA/SHAKE128s/` subtree contains `Statement/`, `Proof/` and `Bridge/`
+    for deterministic pure-mode SHAKE-128s over one fixed 30-byte random oracle, with independent uniform key seeds.
+    `SLHDSA.SHAKE128s.slhDsa_sufCma_127` allows message/context signing requests and byte-string signatures.
+  - **Counted work:** the work bound of `SLHDSA.SHAKE128s.slhDsa_sufCma_127` counts signing requests, direct adversary hash calls and final-verification hash calls.
+    There is a separate `2^64` signing-request lifetime cap. Key-generation and signer hashes are excluded.
+    The general security, wire, evaluator and certificate modules remain alongside `HashSig/SLHDSA/SHAKE128s/`.
+  - **Wire bridge:** `SHAKE128s/Bridge/Wire.lean` exports the exact fixed-context advantage equality and the syntactic-to-counted budget transports.
+    The verifier overhead has a proved universal cap of 3929 oracle calls.
+    `SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean` exports `wireStrongAdvantage_le_workBound` and `wireStrongAdvantage_le_min_bound`
+    for `RomQueryBound qh qs` and `qs ≤ 2^64`.
+    The common scope is deterministic signing, a fixed valid context, independent uniform seeds, and the shared fixed-30-byte oracle.
+  - **Regression tests:** `slhdsa_shake128s_game_tests` exercises actual counted work through the proved-equal computable runner in `HashSigTest/SLHDSA/SHAKE128s/Support.lean`.
+    `slhdsa_shake128s_wire_bridge_tests` executes the actual adapter's translation, freshness, framing and rejection controls.
+    Both are explicit `lake test` steps. See [the specialized design record](docs/design/slh-dsa-shake128s-suf-cma.md).
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
 - `VCVioWidgets/`: optional widget experiments and visualizations.
 - `VCVioCslib/`: optional cslib-backed non-uniform P/poly certificates and security-game adapters.
   It stays outside the default library graph but participates in repository validation.
-- `VCVioComplexity/`: optional isolated Lake package for the complexitylib-backed exact-machine
-  substrate; it is not part of VCVio's default dependency graph.
+- `VCVioComplexity/`: optional isolated Lake package for the complexitylib-backed exact-machine substrate.
+  It is not part of VCVio's default dependency graph.
 - `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs.
 - `Interop/`: experimental bridges to Rust verification frontends (hax, aeneas). **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
 - `csrc/`: C FFI shims used for differential testing against native ML-DSA, ML-KEM, and Falcon code.
-- `third_party/`: native backends as git submodules; when they are not checked out (fresh clones, Lake dependency checkouts), the native `extern_lib` targets build as empty stub archives.
+- `third_party/`: native backends as git submodules.
+  When they are not checked out (fresh clones, Lake dependency checkouts), the native `extern_lib` targets build as empty stub archives.
 
 ## Placement policy
 
@@ -129,9 +163,10 @@ planned migration slices. Shared pure implementations belong in `VCVio/Algorithm
 constructions and their proofs in `VCVio/Schemes/`, and cryptographic interfaces, assumptions,
 games and generic reduction theory in `VCVio/CryptoFoundations/`. Examples are instructional
 consumers. Existing HashSig and LatticeCrypto peers migrate only in dependency-complete slices.
+
 Keep implementations unique, preserve the FFI/test boundary, and add a separate library only
 for a dependency, trust or build-isolation requirement. The import guards enforce pure-algorithm independence,
-optional interop isolation and the FFI boundary; other placement rules guide review.
+optional interop isolation and the FFI boundary. Other placement rules guide review.
 
 ## Module Layering
 
@@ -161,9 +196,8 @@ Scheme-specific code in `LatticeCrypto/` may depend on `VCVio/CryptoFoundations`
 The native FFI surface lives in `Extern/`: it may import `VCVio`, `LatticeCrypto`,
 and `ToMathlib`, but no proof library (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`,
 `HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) may import `Extern.…`. That
-keeps every proof library — and any downstream Lake project requiring VCVio —
-link-safe when the `third_party/` submodules are absent. Enforced by
-`scripts/check-extern-isolation.sh` on every PR.
+keeps every proof library and any downstream Lake project requiring VCVio link-safe when the `third_party/` submodules are absent.
+`scripts/check-extern-isolation.sh` enforces the boundary on every PR.
 
 For `Interop/`, the dependency contract is one-way:
 
@@ -173,27 +207,69 @@ Interop/{Hax,Aeneas,Rust}/  →  VCVio/, ToMathlib/, (Hax.…), (Aeneas.…)
 
 `Interop/**` may **never** be imported from `VCVio/`, `LatticeCrypto/`,
 `LatticeCryptoTest/`, `Examples/`, `ToMathlib/`, `Extern/`, `VCVioWidgets/`,
-or `VCVioTest/`. This contract is enforced by
-`scripts/check-interop-isolation.sh` and the
-`Interop TCB Isolation` GitHub workflow on every PR.
+or `VCVioTest/`. `scripts/check-interop-isolation.sh` and the
+`Interop TCB Isolation` GitHub workflow enforce this contract on every PR.
 
 ## Critical Gotchas
 
-1. **Probability assumptions are explicit for arbitrary specs.** `support` on `OracleComp spec` works without a probability interpretation. Direct `evalDist` / `𝒟[…]` and `Pr{…}[…]` need `[OracleSpec.AnswerMeasure spec]` and, for `𝒟[…]`, an ambient `MeasurableSpace` on the result. Oracle answer measures live on the discrete σ-algebra, so answer types take no `MeasurableSpace` hypotheses; continuous answers belong at the `PFunctor.FreeM` level. Uniform-measure instances are global for `unifSpec` and `coinSpec`; for another spec, uniform answers are `[OracleSpec.UniformAnswerMeasure spec]`, built by `UniformAnswerMeasure.ofFiniteNonempty` from `Finite`/`Nonempty` answer types as a local instance on the component spec (sums get theirs from `UniformAnswerMeasure.add`). There are no bundled `spec.Fintype` / `spec.Inhabited` / `spec.DecidableEq` classes: data on answer types are ordinary hypotheses on `spec.Range t` (see gotcha 12).
+1. **Probability assumptions are explicit for arbitrary specs.** `support` on `OracleComp spec` works without a probability interpretation.
+   Direct `evalDist` / `𝒟[…]` and `Pr{…}[…]` need `[OracleSpec.AnswerMeasure spec]`.
+   For `𝒟[…]`, they also need an ambient `MeasurableSpace` on the result.
+   Oracle answer measures live on the discrete σ-algebra, so answer types take no `MeasurableSpace` hypotheses.
+   Continuous answers belong at the `PFunctor.FreeM` level.
+   Uniform-measure instances are global for `unifSpec` and `coinSpec`.
+   For another spec, uniform answers use `[OracleSpec.UniformAnswerMeasure spec]`.
+   `UniformAnswerMeasure.ofFiniteNonempty` builds a local instance on the component spec from `Finite`/`Nonempty` answer types.
+   Sums get their instances from `UniformAnswerMeasure.add`.
+   There are no bundled `spec.Fintype` / `spec.Inhabited` / `spec.DecidableEq` classes.
+   Data on answer types are ordinary hypotheses on `spec.Range t` (see gotcha 12).
 2. **`autoImplicit = false` is set globally in `lakefile.lean`**. Do not add `set_option autoImplicit false` in individual files. Every variable must be explicitly declared.
-3. **`𝒟[oa]` IS the measure fold** `PFunctor.FreeM.denote` of the answer measures, definitionally, and `Pr{…}[…]` is `prEvent` of that measure. `support` is PolyFun's `MonadAttach` support, equal to the fold into `SetM` that answers every query with `Set.univ` by `PFunctor.FreeM.support_eq_liftM_univ`. The definitional identities are internal to `VCVio/EvalDist/**` and `VCVio/OracleComp/**`: code outside those directories crosses them through the public equation lemmas (`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_def`). Existing downstream `rfl` uses are grandfathered; new proofs use the public equations.
-4. **`++ₒ` is dead** — use `+` for combining oracle specs.
-5. **Commented-out code is legacy** — follow only uncommented code. Use `Examples/OneTimePad/Basic.lean` as canonical reference.
+3. **`𝒟[oa]` is definitionally the measure fold** `PFunctor.FreeM.denote` of the answer measures.
+   `Pr{…}[…]` is `prEvent` of that measure.
+   `support` is PolyFun's `MonadAttach` support, equal to the fold into `SetM` that answers every query with `Set.univ`.
+   `PFunctor.FreeM.support_eq_liftM_univ` gives this equality.
+   The definitional identities are internal to `VCVio/EvalDist/**` and `VCVio/OracleComp/**`.
+   Code outside those directories uses the public equation lemmas (`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_def`).
+   Existing downstream `rfl` uses are grandfathered. New proofs use the public equations.
+4. **Use `+` for combining oracle specs.** `++ₒ` is dead.
+5. **Follow only uncommented code.** Commented-out code is legacy.
+   Use `Examples/OneTimePad/Basic.lean` as canonical reference.
 6. **Preserve partial proofs** with `stop` instead of deleting large proof blocks.
-7. **Do not disable linters to silence errors**. Do not use `set_option linter.* false`, `set_option weak.linter.* false`, or add repo-level `leanOptions` that turn lints off to dodge a fixable issue. Fix the root cause instead. (The one deliberate, documented exception is `weak.linter.unicodeLinter, false` in `lakefile.lean`, off so FIPS-204 math notation and diacritics in cited author names are allowed.)
+7. **Do not disable linters to silence errors**.
+   Do not use `set_option linter.* false` or `set_option weak.linter.* false` to avoid a fixable issue.
+   Do not add repo-level `leanOptions` that turn lints off for that purpose. Fix the root cause instead.
+   The one deliberate, documented exception is `weak.linter.unicodeLinter, false` in `lakefile.lean`.
+   This exception permits FIPS-204 math notation and diacritics in cited author names.
 8. **Interop TCB isolation is mandatory**. Core VCVio (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `Examples/`, `LatticeCryptoTest/`, `Extern/`, `VCVioWidgets/`, `VCVioTest/`) must never `import Interop.…`, `import Hax.…`, or `import Aeneas.…`. CI fails the PR if it does. See `docs/agents/interop.md`.
-9. **Extern link-safety isolation is mandatory**. Proof libraries (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) must never `import Extern.…`: the native backends behind it are built as empty stubs whenever the `third_party/` submodules are absent — always the case for Lake dependency checkouts — so importing `Extern` would break downstream executable links. Test libraries may import it. Enforced by `scripts/check-extern-isolation.sh` in CI.
+9. **Extern link-safety isolation is mandatory**.
+   Proof libraries (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) must never `import Extern.…`.
+   The native backends behind it build as empty stubs whenever the `third_party/` submodules are absent.
+   Those submodules are always absent for Lake dependency checkouts. An import of `Extern` would therefore break downstream executable links.
+   Test libraries may import it. `scripts/check-extern-isolation.sh` enforces the boundary in CI.
 
-10. **Probability is `Measure`/`Kernel`, never `PMF`.** Semantic code uses `𝒟[…]`, `Pr{…}[…]`, `=ᵈ`, Mathlib measures and kernels. Mathlib owns `PMF`, so VCVio cannot deprecate it; the environment linter `ToMathlib.Lint.usesPMF` reports any declaration that uses it directly, and `scripts/nolints.json` holds no exceptions for it. Code written against VCVio's removed discrete API (`SPMF`, `Pr[= x | mx]`, `IsUniformSpec`, …) converts with the codemod and guide in [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md). See `docs/reading/denotational-probability-semantics.md`.
+10. **Probability is `Measure`/`Kernel`, never `PMF`.** Semantic code uses `𝒟[…]`, `Pr{…}[…]`, `=ᵈ`, Mathlib measures and kernels.
+    Mathlib owns `PMF`, so VCVio cannot deprecate it.
+    The environment linter `ToMathlib.Lint.usesPMF` reports any declaration that uses it directly.
+    `scripts/nolints.json` holds no exceptions for it.
+    Code written against VCVio's removed discrete API (`SPMF`, `Pr[= x | mx]`, `IsUniformSpec`, …) converts with the codemod and guide in [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md).
+    See `docs/reading/denotational-probability-semantics.md`.
 
-11. **Name the reduction in security theorems.** Write `bound ≤ Pr{let b ← exp (myReduction adv)}[b = true]`, never `∃ B, bound ≤ Pr{let b ← exp B}[b = true]`. Adversary types such as `X → ProbComp W` carry no resource bound, and `Classical.choice` can pick a witness directly, so the existential form holds for every scheme and passes the axiom sweep. The same applies to simulators (`∃ sim ζ, HVZK sim ζ` holds with `ζ := 1`), extractors, and distinguishers. If the reduction does not exist yet, use a named `sorry` definition or a warned placeholder instead. See [`docs/agents/crypto.md`](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
+11. **Name the reduction in security theorems.** Write `bound ≤ Pr{let b ← exp (myReduction adv)}[b = true]`, never `∃ B, bound ≤ Pr{let b ← exp B}[b = true]`.
+    Adversary types such as `X → ProbComp W` carry no resource bound. `Classical.choice` can pick a witness directly.
+    Thus the existential form holds for every scheme and passes the axiom sweep.
+    The same applies to simulators (`∃ sim ζ, HVZK sim ζ` holds with `ζ := 1`), extractors, and distinguishers.
+    If the reduction does not exist yet, use a named `sorry` definition or a warned placeholder instead.
+    See [`docs/agents/crypto.md`](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
 
-12. **No global instance may conclude `C spec.Domain` or `C (spec.Range t)` for a generic `spec`.** `Domain` and `Range` are reducible, so such an instance is indexed as `C ι`, respectively `C (?spec ?t)`, and becomes a candidate for every `C _` goal with `spec` undetermined; search then invents a specification through `ofFn` and either times out or routes ordinary `DecidableEq`/`Fintype`/`Inhabited` instances through oracle data (#772). Write `[DecidableEq ι]` for index equality and `[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, `[Inhabited (spec.Range t)]` (quantified over `t` only when a statement ranges over arbitrary queries) for answer types; concrete specifications reduce to their answer types. `VCVioTest/OracleComp/SpecInstanceSearch.lean` guards this.
+12. **No global instance may conclude `C spec.Domain` or `C (spec.Range t)` for a generic `spec`.**
+    `Domain` and `Range` are reducible. A domain instance is therefore indexed as `C ι`, and a range instance as `C (?spec ?t)`.
+    Such an instance becomes a candidate for every `C _` goal with `spec` undetermined.
+    Search then invents a specification through `ofFn`.
+    It either times out or routes ordinary `DecidableEq`/`Fintype`/`Inhabited` instances through oracle data (#772).
+    Write `[DecidableEq ι]` for index equality.
+    For answer types, write `[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, `[Inhabited (spec.Range t)]`.
+    Quantify those hypotheses over `t` only when a statement ranges over arbitrary queries.
+    Concrete specifications reduce to their answer types. `VCVioTest/OracleComp/SpecInstanceSearch.lean` guards this.
 
 For the full list, see `docs/agents/gotchas.md`.
 
@@ -204,9 +280,10 @@ Examples: `prEvent_bind_eq_lintegral`, `support_pure`, `simulateQ_map`.
 Structures use UpperCamelCase: `SecurityGame`, `SymmEncAlg`, `RelTriple`.
 Security-notion names may begin with an underscore-separated acronym:
 `IND_CPA_Advantage`, `SM_DT_UD_Adversary`, `IND_CPA_OneTime_Game`, `OW_CPA_oracleSpec`.
-`scripts/lint.py` accepts a `defsWithUnderscore` finding without a `nolints.json` entry when
-each underscored name component starts with an acronym of two or more capitals or digits and
-every later segment except the last starts with a capital.
+
+`scripts/lint.py` accepts a `defsWithUnderscore` finding without a `nolints.json` entry when the following conditions hold.
+Each underscored name component starts with an acronym of two or more capitals or digits.
+Every later segment except the last starts with a capital.
 Security notions, experiments, games, and advantages follow
 [`docs/agents/crypto.md`](docs/agents/crypto.md#naming).
 
@@ -266,7 +343,8 @@ Security notions, experiments, games, and advantages follow
 - Computational UC observation layer: `VCVio/Interaction/UC/Computational.lean`
 - Per-node samplers as data (`TypeTree.Sampler m tree` = `Decoration (fun X => m X) tree`): `PolyFun/Interaction/Basic/Sampler.lean`
 - `TypeTree.Fintype` / `TypeTree.Nonempty` ornaments + canonical uniform sampler: `PolyFun/Interaction/Basic/TypeTreeFintype.lean`, `VCVio/Interaction/UC/Runtime.lean`
-- Oracle-aware runtime semantics (monad-parametric process execution, `processSemanticsOracle`): `VCVio/Interaction/UC/Runtime.lean` (no `sampler` argument; pulled from `process.stepSampler`)
+- Oracle-aware runtime semantics (monad-parametric process execution, `processSemanticsOracle`): `VCVio/Interaction/UC/Runtime.lean`.
+  It takes no `sampler` argument and reads the sampler from `process.stepSampler`.
 - Observation-interface `ObservedCompEmulates 0` smoke test: `Examples/OneTimePad/UC.lean`
 - Reactive single-use OTP execution and simulation with private environment state:
   `Examples/OneTimePad/Reactive.lean`, `Examples/OneTimePad/Reactive/Security.lean`
@@ -288,17 +366,16 @@ Security notions, experiments, games, and advantages follow
 ## Program Logic Tactics
 
 For new program-logic proofs, import `VCVio.ProgramLogic.Tactics`.
-`VCVio.ProgramLogic.Notation` holds the notation; `Tactics.lean` is the canonical
+`VCVio.ProgramLogic.Notation` holds the notation. `Tactics.lean` is the canonical
 interactive proof mode.
 
 For the tactic reference, proof-mode entry points, and workflow details, see
 [`docs/agents/program-logic.md`](docs/agents/program-logic.md). The two
 `@[vcspec]` and `@[wpStep]` registries are indexed via
-`Lean.Meta.Sym.Pattern` / `Lean.Meta.Sym.DiscrTree`. `Sym.*` is under active
-development in core Lean; see the *Internal Architecture* and *SymM
-Stability Note* sections of that doc for the churn classes to watch at each
-toolchain bump; the `@[wpStep]` rewrites already run through
-`Sym.Simp.mkTheoremFromDecl` and `Sym.simpGoal`.
+`Lean.Meta.Sym.Pattern` / `Lean.Meta.Sym.DiscrTree`.
+`Sym.*` is under active development in core Lean.
+See the *Internal Architecture* and *SymM Stability Note* sections of that doc for the churn classes to watch at each toolchain bump.
+The `@[wpStep]` rewrites run through `Sym.Simp.mkTheoremFromDecl` and `Sym.simpGoal`.
 
 ## Building
 
@@ -306,100 +383,112 @@ toolchain bump; the `@[wpStep]` rewrites already run through
 lake exe cache get && lake build
 ```
 
-`lake build` builds the seven proof libraries (the default targets); `lake build VCVio` is
-the fast path for framework-only work. `./scripts/validate.sh` runs the fast per-PR CI checks
-locally in CI's order (including the optional `VCVioCslib` facade; build and warning budget, umbrella check, remaining boundary checks, style
-linters, agent-docs checks); `--lint` adds Batteries' environment linters, one process per
-proof library as in CI. `lake lint` runs both source-style and environment checks;
-`-- --style-only` and `-- --env-only` select either pass, and `-- --no-build` requires existing
-proof oleans. Findings must exactly match `scripts/nolints.json`: obsolete entries and unlisted
-findings fail. After fixing findings, `lake lint -- --prune-baseline` safely removes obsolete
-entries across all eight checked libraries and refuses additions. PR CI also checks that the baseline
-only shrinks against the merge base.
-`--test` adds `lake test` (the three test libraries, the smoke, oracle-cost, pure algorithm
-and SLH-DSA test executables), `--ffi` adds the native ML-KEM / ML-DSA / Falcon
-executables to `--test`, and `--axioms` adds the axiom sweep. The eager-initialisation
-ratchet runs in the default pass, after the boundary ratchets, since it reads the oleans
-the build just produced; `--test` runs it a second time over `VCVioTest` and
-`LatticeCryptoTest`, whose oleans `lake test` has just built.
+`lake build` builds the seven proof libraries (the default targets).
+`lake build VCVio` is the fast path for framework-only work.
+`./scripts/validate.sh` runs the fast per-PR CI checks locally in CI's order, including the optional `VCVioCslib` facade.
+The checks cover the build and warning budget, umbrella check, remaining boundary checks, style linters, agent-docs checks, and writing-checker tests.
+`--lint` adds Batteries' environment linters, one process per proof library as in CI.
+
+`lake lint` runs both source-style and environment checks.
+`-- --style-only` and `-- --env-only` select either pass, and `-- --no-build` requires existing proof oleans.
+Findings must exactly match `scripts/nolints.json`: obsolete entries and unlisted findings fail.
+After you fix findings, `lake lint -- --prune-baseline` safely removes obsolete entries across all eight checked libraries and refuses additions.
+PR CI also checks that the baseline only shrinks against the merge base.
+
+For `./scripts/validate.sh`, `--test` adds `lake test` (the three test libraries, the smoke,
+oracle-cost, pure algorithm and SLH-DSA test executables).
+`--ffi` adds the native ML-KEM / ML-DSA / Falcon executables to `--test`, and `--axioms` adds the axiom sweep.
+The eager-initialization ratchet runs in the default pass, after the boundary ratchets.
+It reads the oleans that the build produced.
+`--test` runs it a second time over `VCVioTest` and `LatticeCryptoTest`, whose oleans `lake test` builds.
 
 CI runs the timed build on the non-test Lean libraries:
 `ToMathlib`, `VCVio`, `VCVioCslib`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
 and `VCVioWidgets`. The dormant `Interop` target remains excluded.
-Test libraries and test executables are not part of the timed build; CI only
-times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
+Test libraries and test executables are not part of the timed build.
+CI only times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
-CI keeps two caches: `.lake/packages`, keyed by `lean-toolchain` and `lake-manifest.json`, and
-the project's own `.lake/build`, which every `main` run saves and every run restores. Only `main`
-saves, so pull-request code never publishes a cache another run loads. The `Lint` job restores the
-same caches and builds the changed modules itself, so it runs alongside `Build Project`. Lake
-rebuilds a module when the content hash of its source or imports
-changes, so a restored build only saves work; it never changes a verdict. Lake replays the stored
-messages of modules it does not rebuild, so the warning budgets still see every warning. The
-nightly scheduled run, and a manual run with `clean_build`, skips the build cache.
+CI keeps two caches: `.lake/packages` and the project's own `.lake/build`.
+`lean-toolchain` and `lake-manifest.json` determine the key for `.lake/packages`.
+Every `main` run saves `.lake/build`, and every run restores it.
+Only `main` saves, so pull-request code never publishes a cache that another run loads.
+The `Lint` job restores the same caches and builds the changed modules itself, so it runs alongside `Build Project`.
 
-Because an incremental build's wall time depends on what the change invalidated, the timing report
-compares modules instead: `scripts/module_times.py` keeps the latest `Built <module> (<time>)` for
-every module in `.lake/build/vcvio-module-times.json`, which travels with the build cache. The
-report lists the modules this run rebuilt against those times, and the table's sum before and after
-estimates clean-build compile time.
+Lake rebuilds a module when the content hash of its source or imports changes.
+A restored build therefore only saves work and never changes a verdict.
+Lake replays the stored messages of modules it does not rebuild, so the warning budgets still see every warning.
+The nightly scheduled run and a manual run with `clean_build` skip the build cache.
 
-After the build, CI runs `./scripts/test-axiomsweep.sh` and then
-`lake exe axiomsweep --check`: kernel-level axiom/`sorry` accounting for every
-declaration in the non-test libraries, gated against the committed baseline
-`scripts/axiom_baseline.json`. It fails on *new* `sorryAx` or non-standard-axiom
-taint; after intentionally adding or closing a `sorry`, run
-`lake exe axiomsweep --update-baseline` and commit the diff. `Interop` (the
-declared TCB) is excluded — its boundary is enforced by the import-isolation
-gate instead.
+An incremental build's wall time depends on what the change invalidated, so the timing report compares modules.
+`scripts/module_times.py` keeps the latest `Built <module> (<time>)` for every module in `.lake/build/vcvio-module-times.json`.
+That file travels with the build cache.
+The report compares the modules that this run rebuilt against those times.
+The table's sums before and after estimate clean-build compile time.
 
-The baseline is an allowlist for `sorryAx` debt only. Native trust
-(`native_decide`, which mints per-declaration `._native.` axioms) is held to a
-zero-debt rule: anything outside the explicit `grandfatheredNativeTrust` list in
-`scripts/AxiomSweep.lean` fails `--check` and cannot be greened by editing the
-baseline, since accepting it would widen the trusted computing base. The
-`VCVioAxiomSweepTestFixtures` library carries synthetic taint for the tool's own
+After the build, CI runs `./scripts/test-axiomsweep.sh` and then `lake exe axiomsweep --check`.
+The sweep accounts for kernel-level axiom/`sorry` use in every declaration in the non-test libraries.
+The committed baseline `scripts/axiom_baseline.json` gates its findings.
+The sweep fails on *new* `sorryAx` or non-standard-axiom taint.
+
+After you intentionally add or close a `sorry`, run `lake exe axiomsweep --update-baseline` and commit the diff.
+The sweep excludes `Interop` (the declared TCB). The import-isolation gate enforces its boundary instead.
+
+The baseline is an allowlist for `sorryAx` debt only.
+Native trust (`native_decide`, which mints per-declaration `._native.` axioms) follows a zero-debt rule.
+Anything outside the explicit `grandfatheredNativeTrust` list in `scripts/AxiomSweep.lean` fails `--check`.
+An edit to the baseline cannot make it pass, because acceptance would widen the trusted computing base.
+The `VCVioAxiomSweepTestFixtures` library carries synthetic taint for the tool's own
 tests and is deliberately excluded from every aggregate.
 
-`python3 ./scripts/check-comment-fences.py` enforces one rule over every Lean source the
-repository tracks or would track — tracked files plus untracked ones that are not ignored, the
-vendored `third_party/` tree excluded and both lakefiles included: a block comment that begins
-its line must be the last thing on the line where it ends. A declaration written after the `-/`
-of the docstring that documents it parses, builds and runs, and a reader scanning the left
-margin does not see it. Two passes miss that, for two different reasons, and they are easy to
-confuse. `lake lint -- --style-only` runs Mathlib's four text-based linters, none of which has
-any notion of a comment. `linter.style.whitespace` is not part of that pass at all: it is a
-syntax linter that runs during elaboration under the package's `weak.linter.mathlibStandardSet`,
-and its warnings fail CI through the build log and `scripts/check-warning-log.py`. It does
-reject a command that does not start at the beginning of a line, and it does report the `/-`
-and `/-!` forms of this shape — but it is silent on the `/--` form, because a doc comment is
-part of the command it documents, so the command starts at the `/--`, at column 0. So this gate
-is the only thing that sees the doc-comment form anywhere; over the seven proof and three test
-libraries it deliberately repeats for the other forms what the whitespace linter already says;
-and in four further places it is the only check that can *fail* on any form of the shape, for
-three different reasons. `lakefile.lean` and `VCVioComplexity/lakefile.lean` are elaborated by
-Lake from `import Lake`, with no Mathlib linter registered. `Interop/` is not a default target
-and no job builds it. `scripts/` is built on every pull request, but nothing there imports
-Mathlib, so the `weak.` option is silently dropped and the linter is never registered — one
-Mathlib import in one axiom-sweep fixture would flip that. `VCVioComplexity/` sets
-`linter.style.whitespace` explicitly in its own lakefile and the blocking `complexity_backend`
-job builds it, so there the linter does run and does warn — what is missing is not the linter
-but the gate, since `check-warning-log.py` is invoked only with the proof- and test-library
-prefixes and `VCVioComplexity/scripts/test.sh` pipes its log nowhere. A block comment that
-opens part-way into a line is untouched however many lines it spans — that is an annotation
-inside an expression, a field or a tactic block, and wrapped field docstrings of that shape are
-common here. The rule is positional, so it also rejects five shapes that hide nothing: a
-comment at column 0 in front of a term, a structure field, a tactic or a list element, each of
-which Lean lets begin at column 0 when the enclosing indentation has run out, and a comment at
-column 0 whose line ends inside a second, still-open comment. Those five are clean Lean and are
-asserted, as rejections, in the fixture matrix. Not covered: a declaration indented on its own
-line, which the whitespace linter reports in the built libraries *unless* a margin docstring
-precedes it, in which case nothing reports it anywhere; a comment that starts mid-line; two
-declarations on one line; and a declaration after the closing quote of a multi-line string,
-which is the same hiding with a different delimiter and which `lakefile.lean`, a user of
-multi-line strings, could grow. The baseline is zero with no exception list;
-`scripts/test-comment-fences.sh` carries the fixtures, including the shapes the rule knowingly
-does not reach.
+`python3 ./scripts/check-comment-fences.py` checks tracked Lean sources and untracked Lean sources that are not ignored.
+It excludes the vendored `third_party/` tree and includes both lakefiles.
+The rule is positional: a block comment that begins its line must be the last thing on the line where it ends.
+A declaration after the `-/` of its docstring parses, builds and runs.
+A reader who scans the left margin does not see that declaration.
+
+Two passes miss this shape for different reasons.
+`lake lint -- --style-only` runs Mathlib's four text-based linters, none of which has any notion of a comment.
+`linter.style.whitespace` is a separate syntax linter that runs during elaboration under the package's `weak.linter.mathlibStandardSet`.
+Its warnings fail CI through the build log and `scripts/check-warning-log.py`.
+
+The whitespace linter rejects a command that does not start at the beginning of a line.
+It reports the `/-` and `/-!` forms of this shape but is silent on the `/--` form.
+A doc comment is part of the command it documents, so the command starts at the `/--`, at column 0.
+Thus the comment-fence gate is the only check that sees the doc-comment form anywhere.
+For the other forms, it deliberately repeats the whitespace linter over the seven proof and three test libraries.
+
+The comment-fence gate also covers two lakefiles, `Interop/`, `scripts/`, and `VCVioComplexity/`.
+Their other checks do not reject these shapes, for the reasons below.
+
+Lake elaborates `lakefile.lean` and `VCVioComplexity/lakefile.lean` from `import Lake`, with no Mathlib linter registered.
+`Interop/` is not a default target, and no job builds it.
+Every pull request builds `scripts/`, but nothing there imports Mathlib.
+Thus Lean silently drops the `weak.` option, and the linter is never registered there.
+One Mathlib import in one axiom-sweep fixture would change that.
+
+`VCVioComplexity/` explicitly sets `linter.style.whitespace` in its own lakefile, and the blocking `complexity_backend` job builds it.
+The linter therefore runs and warns there.
+The missing part is the gate: `check-warning-log.py` receives only the proof- and test-library prefixes.
+Also, `VCVioComplexity/scripts/test.sh` pipes its log nowhere.
+
+The rule leaves a block comment that opens part-way into a line untouched, however many lines it spans.
+Such a comment annotates an expression, a field or a tactic block.
+Wrapped field docstrings of that shape are common here.
+
+The positional rule also rejects five shapes that hide nothing.
+Four have a comment at column 0 before a term, a structure field, a tactic or a list element.
+Lean lets each begin at column 0 when the enclosing command's indentation reaches column 0.
+The fifth has a comment at column 0 whose line ends inside a second, still-open comment.
+All five are clean Lean, and the fixture matrix asserts their rejection.
+
+The gate does not cover a declaration indented on its own line.
+The whitespace linter reports that shape in the built libraries, *unless* a margin docstring precedes it.
+With that docstring, nothing reports the shape anywhere.
+The gate also misses a comment that starts mid-line, two declarations on one line, and a declaration after a multi-line string's closing quote.
+The last case hides a declaration with a different delimiter and could occur in `lakefile.lean`, which uses multi-line strings.
+
+The baseline is zero, with no exception list.
+`scripts/test-comment-fences.sh` carries the fixtures, including the shapes that the rule knowingly does not reach.
 
 `./scripts/test-initsweep.sh` and `lake exe initsweep --check` are the companion
 gate for what the *binary* does rather than what the kernel accepted. A top-level
@@ -410,60 +499,58 @@ constant of non-function type is evaluated when its module is loaded, before any
 instance : Fintype limitedPrimitives.Y := inferInstanceAs (Fintype (Bytes 16))
 ```
 
-builds a `Finset` of `2 ^ 128` vectors at start-up in every executable that
-imports the module — while elaborating cleanly and passing the build, the
-linters, every boundary ratchet and the axiom sweep. `lake exe initsweep --check`
-flags a constant when the module initialiser evaluates something for it (its own
-value, because the compiled declaration takes no parameters, or an `initialize`
-body registered for it) and that value either names one of the enumeration entry
-points listed in `scripts/InitSweep.lean` or names a *builder* of an enumeration
-class (`Fintype`, `FinEnum`) — an instance constructor or an instance that takes
-arguments, as opposed to an already-materialised nullary instance such as
-`Bool.fintype`, which costs a pointer copy and is deliberately not counted. The
-second disjunct is what makes the check a class test: writing the instance the
-elaborator would have found (`:= Pi.instFintype`) names none of the entry points
-and builds the same enumeration. The same sweep also walks the compiler-generated
-declarations the module initialiser assigns beside its constants, because a
-parameterless *specialisation* lifted out of a function is initialised at load and
-has no environment constant to read; those are tested by what the functions in
-their mangled name consume.
+builds a `Finset` of `2 ^ 128` vectors at start-up in every executable that imports the module.
+It elaborates cleanly and passes the build, the linters, every boundary ratchet and the axiom sweep.
 
-Marking the instance `noncomputable` is *not* a fix: it removes the instance's
-own compiled code and leaves the compiled auxiliary that carries the enumeration,
-which is the constant the gate names. Adding a parameter is not reliably a fix
-either — `def cardY (_u : Unit) : Nat := Fintype.card T` still enumerates `T` at
-load, through the specialisation the compiler lifts out of it. Route the
-finiteness argument through `Fintype.ofFinite` instead, whose `Prop`-valued
-`Finite` argument leaves nothing compiled at all.
+`lake exe initsweep --check` flags a constant when its module initializer evaluates a value that meets either of two conditions.
+The value names an enumeration entry point listed in `scripts/InitSweep.lean`, or it names a *builder* of an enumeration class (`Fintype`, `FinEnum`).
+The evaluated value can be the constant's own value, because the compiled declaration takes no parameters.
+It can also come from an `initialize` body registered for that constant.
 
-The baseline `scripts/init_sweep_baseline.json` is a list of accepted constant
-names — the allowlist idea `scripts/axiom_baseline.json` uses, with a scope
-attached — rather than a per-library ceiling: accepting one benign instance costs
-exactly that name and leaves every other constant of its library at zero. It
-holds nine rows today; `scripts/InitSweep.lean` lists what each one does at load,
-read off the emitted C, including the two that turn out not to be initialised at
-all. A row is scoped to one constant under one library, so the same name flagged
-under another root, or gaining a new entry point, is still a regression. Adding a
-row is the escape hatch and needs an argument in review;
-`lake exe initsweep --update-baseline` writes it and preserves the rows of
-libraries the run did not sweep. `VCVioInitSweepTestFixtures` carries seven
-hazard modules, one per route by which loading a module can build an enumeration,
-one negative control per clause of the predicate, and the baseline's accept /
-drop / narrow / widen / re-scope / preserve behaviour; like the axiom-sweep
-fixtures it is kept out of every aggregate.
+A builder is an instance constructor or an instance that takes arguments.
+An already-materialized nullary instance such as `Bool.fintype` costs a pointer copy and is deliberately not counted.
+The second disjunct makes the check a class test.
+The instance that the elaborator would have found (`:= Pi.instFintype`) names none of the entry points but builds the same enumeration.
 
-The gate cannot see how *large* an enumeration is, and it does not look at values
-whose size is an argument rather than a type (`List.range n`,
-`Array.replicate n x`); `scripts/InitSweep.lean` lists what that leaves open,
-with the occurrences of each in the current tree.
+The sweep also walks compiler-generated declarations that the module initializer assigns beside its constants.
+A parameterless *specialization* lifted out of a function is initialized at load and has no environment constant to read.
+The sweep tests these declarations by what the functions in their mangled name consume.
 
-After adding new `.lean` files: `./scripts/update-lib.sh` (CI's `scripts/check-imports.sh`
-fails when a regenerated umbrella would differ from the committed one).
+If you mark the instance `noncomputable`, its own compiled code disappears, but the compiled auxiliary that carries the enumeration remains.
+That auxiliary is the constant that the gate names, so this change does not fix the problem.
+A parameter does not reliably fix it either.
+`def cardY (_u : Unit) : Nat := Fintype.card T` still enumerates `T` at load, through the specialization that the compiler lifts out of it.
+Route the finiteness argument through `Fintype.ofFinite` instead.
+Its `Prop`-valued `Finite` argument leaves nothing compiled at all.
 
-Lean toolchain and Mathlib must stay in sync (both currently `v4.35.0`); the bump procedure
-is in `CONTRIBUTING.md`. Mathlib's file-length linter is enabled at 1500 lines. Split
-files by responsibility before crossing that limit; retain an import façade when an existing
-module path forms part of the public API.
+The baseline `scripts/init_sweep_baseline.json` lists accepted constant names with a scope, using the allowlist idea of `scripts/axiom_baseline.json`.
+It is not a per-library ceiling.
+Acceptance of one benign instance costs exactly that name and leaves every other constant of its library at zero.
+The baseline holds eight rows. One accepted constant uses a static literal and does not initialize at load.
+
+For the initialization mechanisms, see `scripts/InitSweep.lean`.
+Some baseline-summary comments in that file are stale.
+
+A row is scoped to one constant under one library.
+The same name flagged under another root is still a regression, as is a new entry point for that name.
+An additional row is the escape hatch and needs an argument in review.
+`lake exe initsweep --update-baseline` writes the row and preserves the rows of libraries that the run did not sweep.
+
+`VCVioInitSweepTestFixtures` carries seven hazard modules, one per route by which module loading can build an enumeration.
+It also carries one negative control per clause of the predicate and the baseline's accept / drop / narrow / widen / re-scope / preserve behaviour.
+Like the axiom-sweep fixtures, this library stays out of every aggregate.
+
+The gate cannot see how *large* an enumeration is.
+It does not inspect values whose size is an argument rather than a type (`List.range n`, `Array.replicate n x`).
+`scripts/InitSweep.lean` lists those gaps and the occurrences of each in the current tree.
+
+After you add, rename, or delete a `.lean` file, run `./scripts/update-lib.sh`.
+CI's `scripts/check-imports.sh` fails when a regenerated umbrella would differ from the committed one.
+
+The Lean toolchain and Mathlib must stay in sync (both `v4.35.0`).
+The bump procedure is in `CONTRIBUTING.md`. Mathlib's file-length linter is enabled at 1500 lines.
+Split files by responsibility before crossing that limit.
+Retain an import façade when an existing module path forms part of the public API.
 
 ## Further Reading
 
@@ -490,6 +577,9 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **All notation**: [`docs/agents/notation.md`](docs/agents/notation.md)
 - **Proof workflows (game-hopping, reductions)**: [`docs/agents/proof-workflows.md`](docs/agents/proof-workflows.md)
 - **Gotchas and troubleshooting**: [`docs/agents/gotchas.md`](docs/agents/gotchas.md)
+- **Writing standard for all prose**: [`docs/agents/writing.md`](docs/agents/writing.md), with the
+  [vocabulary](docs/agents/writing-vocabulary.md) and the
+  [writing workflow](docs/agents/write-technical-prose.md)
 - **Module visibility and the PolyFun façade**: [`docs/agents/module-system.md`](docs/agents/module-system.md)
 - **Upstream alignment ledger (what Mathlib/core/cslib/PolyFun already own, with verdicts)**:
   [`docs/reading/upstream-alignment.md`](docs/reading/upstream-alignment.md)

@@ -3,8 +3,10 @@
 
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -28,7 +30,8 @@ class ValidationTests(unittest.TestCase):
             self.script(scripts / f"{name}.sh", 'exit 0\n')
         for name in ("test-agent-docs.py", "test-interop-isolation.py", "test-check-imports.py", "test-validation.py", "test-lint.py", "check-agent-docs.py",
                      "extract-doc-fragments.py", "test-migrate-native-probability.py",
-                     "test-classify-migration-errors.py", "check-doc-names.py"):
+                     "test-classify-migration-errors.py", "check-doc-names.py",
+                     "test-check-writing.py"):
             (scripts / name).write_text("pass\n")
         # Not a no-op stub: the default pass has to be shown to reach it.
         (scripts / "check-comment-fences.py").write_text(
@@ -43,6 +46,13 @@ if [ "$1" = test ]; then
 fi
 ''')
         self.script(binary / "git", 'exit 0\n')
+        self.script(binary / "uv", f'''
+if [[ "$1" != run || "$2" != --no-project || "$3" != --python || "$4" != 3.12 || "$5" != python ]]; then
+  exit 97
+fi
+shift 5
+exec {shlex.quote(sys.executable)} "$@"
+''')
         self.env = dict(os.environ, PATH=f"{binary}{os.pathsep}{os.environ['PATH']}",
                         VALIDATION_CALLS=str(self.root / "calls"))
 
