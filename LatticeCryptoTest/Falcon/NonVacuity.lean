@@ -39,21 +39,15 @@ rejection loop, and pins the numbers the attempt-level frontier produces there.
   by a uniform point of the box `{−1, 0, 1}⁴` in basis coordinates, followed by Falcon's norm
   check — a genuine rejection sampler, rejecting whenever the perturbation leaves the ball.
 
-* **The idealized attempt is the attempt itself** (`ε_step = 0`, `attemptTransport_self_zero`),
+* **The idealized attempt is the attempt itself** (`ε_step = 0`, `toy_attemptTransport`),
   and the ideal PSF is its accept-conditional: uniform over the accepting perturbations. The
   rejection probability is at most `80/81` for every target (`toy_attemptRejectBound`): the
   unperturbed round-off always lands inside the ball (`toy_center_accepts`).
 
 ## What is pinned
 
-* `falcon_attempt_hyps_inhabited`: every sampler-side hypothesis of
-  `euf_cma_security` holds simultaneously at this instance, at
-  `ε_step = 0` and `pRej = 80/81`.
-* `toy_samplerLoss_lt_half`: at Falcon's signing budget `qSign = 2^64` the sampler loss of the
-  attempt-level frontier is below `1/2` once the attempt budget is `5265`.
-* `toy_oneShot_samplerLoss_one_le`: at the same instance the one-shot frontier is vacuous —
-  its budget must absorb the per-draw rejection probability `8/9` at the target `c = 0`, so
-  `qSign · ε_step ≥ 1` already at `qSign = 2`.
+* `toy_euf_cma_security`: `euf_cma_security` holds at this instance with every sampler-side
+  hypothesis discharged, at `ε_step = 0` and `pRej = 80/81`.
 * `toy_euf_cma_collision_security_ntruSIS`: every hypothesis of
   `euf_cma_collision_security_ntruSIS` holds jointly at this instance, with the guessing bound
   at its only proved value `εpp = 1`. There the exact-match term is `qSign + qHash + 1`, so the
@@ -697,7 +691,9 @@ theorem toy_hReg :
 /-- `hAttempt` at `ε_step = 0`: the idealized attempt is Falcon's attempt itself. -/
 theorem toy_attemptTransport :
     attemptTransport toyP toyPrims toyHr (signAttempt toyP toyPrims) 0 :=
-  attemptTransport_self_zero toyP toyPrims toyHr
+  fun _pk _sk _hmem _c =>
+    letI : MeasurableSpace (Option (Rq toyP.n × Rq toyP.n)) := ⊤
+    le_of_eq (measureTVDist_self _)
 
 /-- `hRes`: the attempt resamples to its accept-conditional, the ideal sampler. -/
 theorem toy_idealAttemptResamples :
@@ -728,208 +724,6 @@ theorem toy_attemptRejectBound :
     (le_of_eq ?_)
   rw [ENNReal.toReal_div, ENNReal.toReal_natCast, ENNReal.toReal_natCast]
   norm_num
-
-/-! ## The hypothesis bundle and its numbers -/
-
-/-- **Joint witness for the attempt-level frontier.** Every sampler-side hypothesis of
-`Falcon.euf_cma_security` holds simultaneously at this instance, at
-`ε_step = 0` and `pRej = 80/81`, together with the GPV laws on the honest key. -/
-theorem falcon_attempt_hyps_inhabited :
-    (∀ pk x, toyIdealPSF.eval pk x = (falconPSF toyP toyPrims).eval pk x) ∧
-    (∀ x, toyIdealPSF.isShort x = (falconPSF toyP toyPrims).isShort x) ∧
-    (∀ pk sk, (pk, sk) ∈ support toyHr.gen → toyIdealPSF.CorrectAt pk sk) ∧
-    (∃ domainSample : PublicKey toyP → ProbComp (Rq toyP.n × Rq toyP.n),
-      ∀ pk sk, (pk, sk) ∈ support toyHr.gen →
-        (do let s ← domainSample pk; pure (toyIdealPSF.eval pk s, s)
-            : ProbComp (Rq toyP.n × (Rq toyP.n × Rq toyP.n))) =ᵈ
-          (do let c ← ($ᵗ (Rq toyP.n)); let s ← toyIdealPSF.trapdoorSample pk sk c; pure (c, s)
-            : ProbComp (Rq toyP.n × (Rq toyP.n × Rq toyP.n)))) ∧
-    attemptTransport toyP toyPrims toyHr (signAttempt toyP toyPrims) 0 ∧
-    attemptRejectBound toyP toyHr (signAttempt toyP toyPrims) (80 / 81) ∧
-    idealAttemptResamples toyP toyHr (signAttempt toyP toyPrims) toyIdealPSF :=
-  ⟨fun _ _ => rfl, fun _ => rfl, toy_correctAt, ⟨toyDomainSample, toy_hReg⟩,
-    toy_attemptTransport, toy_attemptRejectBound, toy_idealAttemptResamples⟩
-
-/-- **The attempt-level sampler loss at Falcon's signing budget.** With `ε_step = 0` and
-`pRej = 80/81`, an attempt budget of `5265` keeps the loss
-`qSign · (ε_step / (1 − pRej) + pRej ^ maxAttempts)` below `1/2` at `qSign = 2^64`. -/
-theorem toy_samplerLoss_lt_half :
-    (2 ^ 64 : ℝ) * ((0 : ℝ) / (1 - 80 / 81) + (80 / 81 : ℝ) ^ 5265) < 1 / 2 := by
-  have h81 : (80 / 81 : ℝ) ^ 81 < 1 / 2 := by norm_num
-  have hpow : (80 / 81 : ℝ) ^ 5265 = ((80 / 81 : ℝ) ^ 81) ^ 65 := by
-    rw [← pow_mul]
-  have hlt : ((80 / 81 : ℝ) ^ 81) ^ 65 < (1 / 2 : ℝ) ^ 65 :=
-    pow_lt_pow_left₀ h81 (by positivity) (by norm_num)
-  rw [zero_div, zero_add, hpow]
-  calc (2 ^ 64 : ℝ) * ((80 / 81 : ℝ) ^ 81) ^ 65 < (2 ^ 64 : ℝ) * (1 / 2 : ℝ) ^ 65 := by
-        gcongr
-    _ = 1 / 2 := by norm_num
-
-/-! ## The one-shot frontier fails at the same instance
-
-At the zero target the sampler's box is centred at the origin, so the candidates are the lattice
-points `z · B` for `z ∈ {−1, 0, 1}⁴`.  The rows of `B` have squared norm exactly `q`, so the norm
-check `‖s‖² ≤ q` accepts precisely the origin and the eight unit moves: `9` of the `81` box
-points.  The one-shot rejection probability at this target is therefore `8/9`, and the per-call
-budget of any one-shot transport hypothesis is forced to at least `1/2`
-(`Falcon.oneShot_samplerLoss_one_le_of_samplerTransport`): the one-shot loss `qSign · ε_step`
-reaches one at every signing budget from two upward, whatever ideal sampler is chosen. -/
-
-/-- Coefficients of zero in `R_q` at degree `2`. -/
-theorem Rq_get_zero (i : Fin 2) : (0 : Rq 2).get i = 0 :=
-  LatticeCrypto.NegacyclicRing.coeff_zero (coeffRing 2) i
-
-/-- The target pair vanishes at the zero target. -/
-theorem tgt_zero_coords : ta 0 = 0 ∧ tb 0 = 0 ∧ tc 0 = 0 ∧ td 0 = 0 := by
-  obtain ⟨h1, h2, h3, h4⟩ := tgt_coords 0
-  simp only [ta, tb, tc, td, h1, h2, h3, h4, Rq_get_zero, ZMod.val_zero, Nat.cast_zero, mul_zero,
-    add_zero, sub_zero, neg_zero, zero_div, and_self]
-
-/-- At the zero target the sampled coordinates are the box offsets themselves. -/
-theorem zOf_zero (δ : Box) :
-    zOf 0 δ = (polyOfPair (off δ.1) (off δ.2.1), polyOfPair (off δ.2.2.1) (off δ.2.2.2)) := by
-  obtain ⟨h1, h2, h3, h4⟩ := tgt_zero_coords
-  simp only [ta, tb, tc, td] at h1 h2 h3 h4
-  simp only [zOf, h1, h2, h3, h4, round_zero, zero_add]
-
-/-- The candidate's coefficients at the zero target, as integer linear forms in the offsets. -/
-@[expose]
-def w10 (δ : Box) : ℤ := -(5 * off δ.1 - 2 * off δ.2.1 - 106 * off δ.2.2.1 + 32 * off δ.2.2.2)
-/-- The second coefficient of the candidate's first component at the zero target. -/
-@[expose]
-def w11 (δ : Box) : ℤ := -(2 * off δ.1 + 5 * off δ.2.1 - 32 * off δ.2.2.1 - 106 * off δ.2.2.2)
-/-- The first coefficient of the candidate's second component at the zero target. -/
-@[expose]
-def w20 (δ : Box) : ℤ := -(106 * off δ.1 + 32 * off δ.2.1 + 5 * off δ.2.2.1 + 2 * off δ.2.2.2)
-/-- The second coefficient of the candidate's second component at the zero target. -/
-@[expose]
-def w21 (δ : Box) : ℤ := 32 * off δ.1 - 106 * off δ.2.1 + 2 * off δ.2.2.1 - 5 * off δ.2.2.2
-
-/-- The candidate at the zero target, coefficient by coefficient. -/
-theorem sOf_zero_eq (δ : Box) :
-    sOf 0 δ = (IntPoly.toRq (polyOfPair (w10 δ) (w11 δ)),
-      IntPoly.toRq (polyOfPair (w20 δ) (w21 δ))) := by
-  rw [sOf_eq, zOf_zero]
-  refine Prod.ext ?_ ?_
-  · apply Poly.ext_get_eq
-    intro i
-    fin_cases i <;>
-    · simp only [Rq_get_sub, Rq_get_zero, toRq_get, Poly.get_add, negacyclicMulPure_get,
-        negacyclicConvCoeff, Fintype.sum_prod_type, Fin.sum_univ_two, keyG, keyCapG,
-        polyOfPair_get_zero, polyOfPair_get_one, w10, w11]
-      simp
-      ring
-  · apply Poly.ext_get_eq
-    intro i
-    fin_cases i <;>
-    · simp only [Rq_get_neg, toRq_get, Poly.get_add, Poly.get_neg, negacyclicMulPure_get,
-        negacyclicConvCoeff, Fintype.sum_prod_type, Fin.sum_univ_two, keyF, keyCapF,
-        polyOfPair_get_zero, polyOfPair_get_one, w20, w21]
-      simp
-      ring
-
-theorem off_bounds (d : Fin 3) : -1 ≤ off d ∧ off d ≤ 1 := by
-  fin_cases d <;> simp [off]
-
-/-- The candidate's coefficients at the zero target are at most `145` in absolute value. -/
-theorem w_natAbs_le (δ : Box) :
-    (w10 δ).natAbs ≤ 145 ∧ (w11 δ).natAbs ≤ 145 ∧ (w20 δ).natAbs ≤ 145 ∧
-      (w21 δ).natAbs ≤ 145 := by
-  obtain ⟨ha1, ha2⟩ := off_bounds δ.1
-  obtain ⟨hb1, hb2⟩ := off_bounds δ.2.1
-  obtain ⟨hc1, hc2⟩ := off_bounds δ.2.2.1
-  obtain ⟨hd1, hd2⟩ := off_bounds δ.2.2.2
-  simp only [w10, w11, w20, w21]
-  omega
-
-/-- The squared norm of the candidate at the zero target: its coefficients are small enough that
-the centered representatives modulo `q` are the integers themselves. -/
-theorem pairL2NormSq_sOf_zero (δ : Box) :
-    pairL2NormSq (sOf 0 δ).1 (sOf 0 δ).2 =
-      (w10 δ).natAbs ^ 2 + (w11 δ).natAbs ^ 2 + (w20 δ).natAbs ^ 2 + (w21 δ).natAbs ^ 2 := by
-  obtain ⟨h1, h2, h3, h4⟩ := w_natAbs_le δ
-  rw [sOf_zero_eq]
-  change (∑ i : Fin 2, (LatticeCrypto.centeredRepr
-      ((IntPoly.toRq (polyOfPair (w10 δ) (w11 δ)) : Rq 2).get i)).natAbs ^ 2) +
-    (∑ i : Fin 2, (LatticeCrypto.centeredRepr
-      ((IntPoly.toRq (polyOfPair (w20 δ) (w21 δ)) : Rq 2).get i)).natAbs ^ 2) = _
-  simp only [Fin.sum_univ_two, toRq_get, polyOfPair_get_zero, polyOfPair_get_one]
-  rw [centeredRepr_intCast_eq_of_natAbs_le _ h1 (by norm_num [modulus]),
-    centeredRepr_intCast_eq_of_natAbs_le _ h2 (by norm_num [modulus]),
-    centeredRepr_intCast_eq_of_natAbs_le _ h3 (by norm_num [modulus]),
-    centeredRepr_intCast_eq_of_natAbs_le _ h4 (by norm_num [modulus])]
-  ring
-
-/-- **Acceptance at the zero target** is an integer inequality in the four linear forms. -/
-theorem accepts_zero_iff (δ : Box) :
-    accepts 0 δ ↔ w10 δ ^ 2 + w11 δ ^ 2 + w20 δ ^ 2 + w21 δ ^ 2 ≤ 12289 := by
-  simp only [accepts, falconPSF, decide_eq_true_iff, pairL2NormSq_sOf_zero]
-  constructor
-  · intro h
-    have h' : (w10 δ).natAbs ^ 2 + (w11 δ).natAbs ^ 2 + (w20 δ).natAbs ^ 2 +
-        (w21 δ).natAbs ^ 2 ≤ 12289 := h
-    zify at h'
-    simpa only [sq_abs] using h'
-  · intro h
-    change (w10 δ).natAbs ^ 2 + (w11 δ).natAbs ^ 2 + (w20 δ).natAbs ^ 2 +
-        (w21 δ).natAbs ^ 2 ≤ 12289
-    zify
-    simpa only [sq_abs] using h
-
-/-- **Exactly nine box points are accepted at the zero target**: the origin and the eight unit
-moves, each of squared norm exactly `q`. -/
-theorem card_accepts_zero : (Finset.univ.filter (accepts 0)).card = 9 := by
-  rw [Finset.filter_congr fun δ _ => accepts_zero_iff δ]
-  decide
-
-theorem toy_mem_gen_self : (toyPk, toySk) ∈ support toyHr.gen := by
-  rw [show toyHr.gen = pure (toyPk, toySk) from rfl, support_pure]
-  rfl
-
-/-- **The one-shot acceptance probability at the zero target is `1/9`.** -/
-theorem toy_oneShot_accept_zero :
-    (Pr{let x ← (falconPSF toyP toyPrims).trapdoorSample toyPk toySk 0}[
-      (falconPSF toyP toyPrims).isShort x = true]).toReal = 1 / 9 := by
-  rw [toy_trapdoorSample, prEvent_map]
-  have hBox : Fintype.card Box = 81 := by simp [Fintype.card_prod, Fintype.card_fin]
-  change (Pr{let x ← $ᵗ Box}[accepts 0 x]).toReal = 1 / 9
-  rw [SampleableType.prEvent_uniformSample, card_accepts_zero, hBox, ENNReal.toReal_div,
-    ENNReal.toReal_natCast, ENNReal.toReal_natCast]
-  norm_num
-
-/-- **The one-shot frontier is vacuous at this instance.** Every ideal sampler admissible for the
-one-shot transport hypotheses at the honest key has its per-call budget forced to at least
-`1/2`: the norm check rejects `8/9` of the draws at the zero target, so the one-shot loss
-`qSign · ε_step` of `Falcon.oneShot_samplerLoss_one_le_of_samplerTransport` already reaches
-one at a signing budget of two. -/
-theorem toy_oneShot_epsStep_ge_half
-    (idealPSF : PreimageSampleableFunction (PublicKey toyP) (SecretKey toyP)
-      (Rq toyP.n × Rq toyP.n) (Rq toyP.n))
-    (ε_step : ℝ)
-    (hShort : ∀ x, idealPSF.isShort x = (falconPSF toyP toyPrims).isShort x)
-    (hCorrect : ∀ pk sk, (pk, sk) ∈ support toyHr.gen → idealPSF.CorrectAt pk sk)
-    (hStep : samplerTransport toyP toyPrims toyHr idealPSF ε_step) :
-    (1 / 2 : ℝ) ≤ ε_step := by
-  have h := oneShot_samplerLoss_one_le_of_samplerTransport toyP toyPrims toyHr idealPSF 2 ε_step
-    hShort hCorrect hStep toyPk toySk toy_mem_gen_self 0
-    (by rw [toy_oneShot_accept_zero]; norm_num)
-  norm_num at h
-  linarith
-
-/-- The one-shot loss term reaches one at every signing budget from two upward, while the
-attempt-level term stays below `1/2` at `2^64` (`toy_samplerLoss_lt_half`). -/
-theorem toy_oneShot_samplerLoss_one_le
-    (idealPSF : PreimageSampleableFunction (PublicKey toyP) (SecretKey toyP)
-      (Rq toyP.n × Rq toyP.n) (Rq toyP.n))
-    (ε_step : ℝ)
-    (hShort : ∀ x, idealPSF.isShort x = (falconPSF toyP toyPrims).isShort x)
-    (hCorrect : ∀ pk sk, (pk, sk) ∈ support toyHr.gen → idealPSF.CorrectAt pk sk)
-    (hStep : samplerTransport toyP toyPrims toyHr idealPSF ε_step)
-    (qSign : ℕ) (hq : 2 ≤ qSign) :
-    (1 : ℝ) ≤ (qSign : ℝ) * ε_step := by
-  have h := toy_oneShot_epsStep_ge_half idealPSF ε_step hShort hCorrect hStep
-  have hq' : (2 : ℝ) ≤ qSign := by exact_mod_cast hq
-  nlinarith
 
 /-! ## The headline at the instance -/
 

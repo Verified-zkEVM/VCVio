@@ -29,12 +29,10 @@ from the coefficientwise bound `(a − b)² ≤ 2·a² + 2·b²` on centered rep
   NTRU-SIS problem at Falcon's honest key distribution, the adversary transform, and the
   advantage transfer. `ntruSISProblemKeyed` differs from `ntruSISProblem` only in the
   challenge distribution (honest NTRU keys versus a uniform ring element); closing that gap
-  is exactly a decisional-NTRU assumption and is not formalized here.
+  would take a decisional-NTRU assumption, which is not formalized here.
 - `euf_cma_collision_security_ntruSIS`: the attempt-level, collision-only EUF-CMA bound of
   `euf_cma_collision_security` restated with the collision term replaced by the keyed NTRU-SIS
   advantage.
-- `euf_cma_security_oneShot_ntruSIS`: the one-shot bound of `euf_cma_security_oneShot`
-  restated the same way.
 -/
 
 public section
@@ -50,7 +48,7 @@ variable (p : Params) (prims : Primitives p)
 /-- The centered representative of a difference is no larger in absolute value than the
 difference of the centered representatives: both are representatives of the same residue
 class modulo `q`, and the centered one lands in the minimal window. -/
-lemma centeredRepr_sub_natAbs_le {q : ℕ} [NeZero q] (x y : ZMod q) :
+private lemma centeredRepr_sub_natAbs_le {q : ℕ} [NeZero q] (x y : ZMod q) :
     (LatticeCrypto.centeredRepr (x - y)).natAbs ≤
       (LatticeCrypto.centeredRepr x - LatticeCrypto.centeredRepr y).natAbs := by
   have hx := LatticeCrypto.centeredRepr_abs_le x
@@ -79,7 +77,7 @@ lemma centeredRepr_sub_natAbs_le {q : ℕ} [NeZero q] (x y : ZMod q) :
 /-- The squared `ℓ₂` norm of a difference of Falcon ring elements is at most twice the sum
 of the individual squared norms: coefficientwise, `centeredRepr_sub_natAbs_le` bounds the
 difference coefficient by the integer difference, and `(a − b)² ≤ 2·a² + 2·b²`. -/
-lemma polyL2NormSq_sub_le {n : ℕ} (f g : Rq n) :
+private lemma polyL2NormSq_sub_le {n : ℕ} (f g : Rq n) :
     polyL2NormSq (f - g) ≤ 2 * polyL2NormSq f + 2 * polyL2NormSq g := by
   unfold polyL2NormSq normOps
   simp only [LatticeCrypto.zmodPolyNormOps, LatticeCrypto.normOpsOfCenteredView,
@@ -102,7 +100,7 @@ lemma polyL2NormSq_sub_le {n : ℕ} (f g : Rq n) :
 
 /-- The pair squared `ℓ₂` norm of a componentwise difference is at most twice the sum of
 the pair norms. -/
-lemma pairL2NormSq_sub_le {n : ℕ} (a₁ a₂ b₁ b₂ : Rq n) :
+private lemma pairL2NormSq_sub_le {n : ℕ} (a₁ a₂ b₁ b₂ : Rq n) :
     pairL2NormSq (a₁ - b₁) (a₂ - b₂) ≤ 2 * pairL2NormSq a₁ a₂ + 2 * pairL2NormSq b₁ b₂ := by
   have h1 := polyL2NormSq_sub_le a₁ b₁
   have h2 := polyL2NormSq_sub_le a₂ b₂
@@ -112,7 +110,7 @@ lemma pairL2NormSq_sub_le {n : ℕ} (a₁ a₂ b₁ b₂ : Rq n) :
 /-! ## Linearity of the negacyclic product in the left argument -/
 
 /-- The negacyclic convolution is linear in its left argument, summandwise. -/
-lemma negacyclicConvCoeff_sub_left {R : Type*} [CommRing R] {n : ℕ}
+private lemma negacyclicConvCoeff_sub_left {R : Type*} [CommRing R] {n : ℕ}
     (f₁ f₂ g : Fin n → R) (k : Fin n) :
     LatticeCrypto.negacyclicConvCoeff (fun i => f₁ i - f₂ i) g k =
       LatticeCrypto.negacyclicConvCoeff f₁ g k - LatticeCrypto.negacyclicConvCoeff f₂ g k := by
@@ -123,14 +121,14 @@ lemma negacyclicConvCoeff_sub_left {R : Type*} [CommRing R] {n : ℕ}
 
 /-- Coefficients of a negacyclic product are the negacyclic convolution of the
 coefficient functions. -/
-lemma negacyclicMul_coeff {n : ℕ} (f g : Rq n) (i : Fin (polyBackend n).degree) :
+private lemma negacyclicMul_coeff {n : ℕ} (f g : Rq n) (i : Fin (polyBackend n).degree) :
     (polyBackend n).coeff (negacyclicMul f g) i =
       LatticeCrypto.negacyclicConvCoeff
         ((polyBackend n).coeff f) ((polyBackend n).coeff g) i :=
   LatticeCrypto.negacyclicMulPure_coeff (LatticeCrypto.vectorKernel Coeff n) f g i
 
 /-- Negacyclic multiplication is linear in its left argument. -/
-lemma negacyclicMul_sub_left {n : ℕ} (f₁ f₂ g : Rq n) :
+private lemma negacyclicMul_sub_left {n : ℕ} (f₁ f₂ g : Rq n) :
     negacyclicMul (f₁ - f₂) g = negacyclicMul f₁ g - negacyclicMul f₂ g := by
   refine LatticeCrypto.PolyBackend.ext_coeff fun i => ?_
   rw [negacyclicMul_coeff, LatticeCrypto.NegacyclicRing.coeff_sub, negacyclicMul_coeff,
@@ -187,8 +185,8 @@ theorem ntruSISProblem_isValid_sub
 
 /-- The NTRU-SIS problem with its challenge drawn from Falcon's honest key distribution
 rather than uniformly: the validity predicate is that of `ntruSISProblem`, read through the
-public key's `h` component. Relating this to the uniform-challenge `ntruSISProblem` is
-exactly a decisional-NTRU assumption on `hr.gen` and is not formalized here. -/
+public key's `h` component. Relating this to the uniform-challenge `ntruSISProblem` would take a
+decisional-NTRU assumption on `hr.gen`, which is not formalized here. -/
 noncomputable def ntruSISProblemKeyed
     (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p)) :
     SIS.Problem (PublicKey p) (Rq p.n × Rq p.n) where
@@ -222,66 +220,12 @@ theorem advantage_le_ntruSISProblemKeyed
   refine prEvent_bind_mono_of_support _ _ _ fun pk _ => ?_
   exact prEvent_mono _ _ _ fun xs hval => ntruSISProblem_isValid_sub p prims hr pk xs hval
 
-
 /-! ## The EUF-CMA bound in NTRU-SIS terms -/
 
-/-- **One-shot EUF-CMA security of Falcon down to keyed NTRU-SIS.** The bound of
-`euf_cma_security_oneShot`, with the collision term translated through
-`advantage_le_ntruSISProblemKeyed` into the advantage against the kernel-vector NTRU-SIS
-problem at the honest key distribution. Hypotheses are exactly those of
-`euf_cma_security_oneShot`. -/
-theorem euf_cma_security_oneShot_ntruSIS
-    (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
-    [Inhabited (Rq p.n)]
-    (hr : GenerableRelation (PublicKey p) (SecretKey p)
-      (validKeyPair p))
-    (qSign qHash : ℕ)
-    (samplerLoss : ENNReal)
-    (adv : SignatureAlg.UnforgeableAdversary
-      (falconSignatureAlg p prims Salt hr))
-    (idealPSF : PreimageSampleableFunction
-      (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
-    (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
-    (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
-    (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
-    (domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n))
-    (hReg : ∀ pk sk, (pk, sk) ∈ support hr.gen →
-        (do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
-            : ProbComp (Rq p.n × (Rq p.n × Rq p.n))) =ᵈ
-          (do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
-            : ProbComp (Rq p.n × (Rq p.n × Rq p.n))))
-    (adv' : SignatureAlg.UnforgeableAdversary
-      (GPVHashAndSign idealPSF hr (List Byte) Salt))
-    (hTransport : SignatureAlg.unforgeableAdvantage
-        (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv ≤
-      SignatureAlg.unforgeableAdvantage
-          (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv' + samplerLoss)
-    (hForge' : GPVHashAndSign.ForgesQueriedPoint idealPSF hr (List Byte) Salt adv' domainSample)
-    (hQ' : ∀ pk, GPVHashAndSign.signHashQueryBound
-      (M := List Byte) (Salt := Salt) (Range := Rq p.n)
-      (S' := Salt × (Rq p.n × Rq p.n))
-      (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv'.main pk)
-      (qSign := qSign) (qHash := qHash)) :
-    SignatureAlg.unforgeableAdvantage
-        (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv ≤
-      SIS.advantage (ntruSISProblemKeyed p hr)
-          (collisionToKernelAdv p prims hr
-            (GPVHashAndSign.reduction idealPSF hr (List Byte) Salt adv' domainSample)) +
-        ((qSign + qHash : ℕ) : ENNReal) *
-          GPVHashAndSign.programmedPreimageAdvantage idealPSF hr
-            (GPVHashAndSign.programmedPreimageReduction idealPSF hr (List Byte) Salt adv'
-              domainSample qSign qHash) +
-        GPVHashAndSign.collisionBound Salt qSign qHash +
-        samplerLoss := by
-  refine le_trans (euf_cma_security_oneShot p prims Salt hr qSign qHash samplerLoss adv idealPSF
-    hEval hShort hCorrect domainSample hReg adv' hTransport hForge' hQ') ?_
-  gcongr
-  exact advantage_le_ntruSISProblemKeyed p prims hr _
-
-/-- **Falcon EUF-CMA down to keyed NTRU-SIS, with every other branch priced.**  Conditional,
-and not below one at Falcon's parameters with what is proved so far: the only guessing bound
-proved is `εpp = 1` (`Falcon.idealSamplerGuessBound_one`), and no `ε_step` is proved for
-Falcon's floating-point sampler. `LatticeCryptoTest.Falcon.NonVacuity` discharges every
+/-- **Conditional EUF-CMA bound for the idealized Falcon rejection-loop signer, in keyed NTRU-SIS
+terms.**  Conditional, and not below one at Falcon's parameters with what is proved so far: the only
+guessing bound proved is `εpp = 1` (`Falcon.idealSamplerGuessBound_one`), and no `ε_step` is proved
+for Falcon's floating-point sampler. `LatticeCryptoTest.Falcon.NonVacuity` discharges every
 hypothesis jointly at a toy key, at `εpp = 1`.
 
 For an adversary against the rejection-loop signer obeying the query bound `(qSign, qHash)`, under
@@ -293,19 +237,19 @@ per-attempt rejection probability `pRej` (`Falcon.attemptRejectBound`), the atte
   `                 + collisionBound Salt qSign (qHash + 1)`
   `                 + qSign · (ε_step / (1 - pRej) + pRej ^ maxAttempts)`
 
-This is `Falcon.euf_cma_collision_security` with its one remaining
-cryptographic residual — the Falcon-PSF collision problem — translated through
-`advantage_le_ntruSISProblemKeyed` into a kernel-vector lattice problem.  The four terms are
-the lattice assumption, the min-entropy branch at the multi-target factor, the salt birthday
-bound, and the sampler loss: per-attempt precision accumulated across retries plus the
-attempt-budget exhaustion mass.
+This is `Falcon.euf_cma_collision_security` with the Falcon-PSF collision term translated through
+`advantage_le_ntruSISProblemKeyed` into a kernel-vector lattice problem. The reduction `B` samples
+through `domainSample`, so this is a hardness assumption only when `domainSample` needs no
+trapdoor.
+The other terms are the min-entropy branch at the multi-target factor, the salt birthday bound, and
+the sampler loss: the per-attempt gap accumulated across retries plus the attempt-budget exhaustion
+mass.
 
 The challenge of `ntruSISProblemKeyed` is drawn from Falcon's honest key distribution `hr.gen`
-rather than uniformly over `Rq p.n`; closing that gap to the uniform-challenge
-`ntruSISProblem` is exactly a decisional-NTRU assumption and is not formalized here. -/
+rather than uniformly over `Rq p.n`; closing that gap to the uniform-challenge `ntruSISProblem`
+would take a decisional-NTRU assumption, which is not formalized here. -/
 theorem euf_cma_collision_security_ntruSIS
     (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
-    [Inhabited (Rq p.n)]
     (hr : GenerableRelation (PublicKey p) (SecretKey p)
       (validKeyPair p))
     (qSign qHash maxAttempts : ℕ)
@@ -350,6 +294,5 @@ theorem euf_cma_collision_security_ntruSIS
     hReg hAttempt hRej hRes hQ hGuess) ?_
   gcongr
   exact advantage_le_ntruSISProblemKeyed p prims hr _
-
 
 end Falcon

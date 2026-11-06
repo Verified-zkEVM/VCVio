@@ -102,14 +102,14 @@ Each hybrid step couples one more attempt, and attempt `j` is only reached when 
 attempts of the second loop all rejected — which is where the geometric factor comes from. -/
 lemma measureTVDist_firstSome_le_geometric [MeasurableSpace (Option α)]
     [DiscreteMeasurableSpace (Option α)] (a₁ a₂ : ProbComp (Option α))
-    {ζ q : ℝ} (hζ : measureTVDist a₁ a₂ ≤ ζ) (hq : Pr{let x ← a₂}[x = none].toReal ≤ q)
-    (hq0 : 0 ≤ q) :
+    {ζ q : ℝ} (hζ : measureTVDist a₁ a₂ ≤ ζ) (hq : Pr{let x ← a₂}[x = none].toReal ≤ q) :
     ∀ n : ℕ, measureTVDist (firstSome a₁ n) (firstSome a₂ n) ≤
       ζ * ∑ j ∈ Finset.range n, q ^ j
   | 0 => by simp [firstSome]
   | (n + 1) => by
+    have hq0 : 0 ≤ q := le_trans ENNReal.toReal_nonneg hq
     have hζ0 : 0 ≤ ζ := le_trans (measureTVDist_nonneg a₁ a₂) hζ
-    have ih := measureTVDist_firstSome_le_geometric a₁ a₂ hζ hq hq0 n
+    have ih := measureTVDist_firstSome_le_geometric a₁ a₂ hζ hq n
     have hGeomNonneg : (0 : ℝ) ≤ ∑ j ∈ Finset.range n, q ^ j :=
       Finset.sum_nonneg fun j _ => pow_nonneg hq0 j
     set k₁ : Option α → ProbComp (Option α) := fun r =>
@@ -153,11 +153,12 @@ error is at most `ζ / (1 - q)` at every attempt budget. -/
 lemma measureTVDist_firstSome_le_div [MeasurableSpace (Option α)]
     [DiscreteMeasurableSpace (Option α)] (a₁ a₂ : ProbComp (Option α))
     {ζ q : ℝ} (hζ : measureTVDist a₁ a₂ ≤ ζ) (hq : Pr{let x ← a₂}[x = none].toReal ≤ q)
-    (hq0 : 0 ≤ q) (hq1 : q < 1) (n : ℕ) :
+    (hq1 : q < 1) (n : ℕ) :
     measureTVDist (firstSome a₁ n) (firstSome a₂ n) ≤ ζ / (1 - q) := by
+  have hq0 : 0 ≤ q := le_trans ENNReal.toReal_nonneg hq
   have hζ0 : 0 ≤ ζ := le_trans (measureTVDist_nonneg a₁ a₂) hζ
   have hlt : (0 : ℝ) < 1 - q := by linarith
-  refine le_trans (measureTVDist_firstSome_le_geometric a₁ a₂ hζ hq hq0 n) ?_
+  refine le_trans (measureTVDist_firstSome_le_geometric a₁ a₂ hζ hq n) ?_
   have key : (∑ j ∈ Finset.range n, q ^ j) * (1 - q) = 1 - q ^ n := by
     have h := geom_sum_mul q n
     nlinarith [h]
@@ -183,10 +184,10 @@ lemma measureTVDist_retryToDefault_le_div [Inhabited α] [MeasurableSpace α]
     [MeasurableSpace (Option α)] [DiscreteMeasurableSpace (Option α)]
     (a₁ a₂ : ProbComp (Option α))
     {ζ q : ℝ} (hζ : measureTVDist a₁ a₂ ≤ ζ) (hq : Pr{let x ← a₂}[x = none].toReal ≤ q)
-    (hq0 : 0 ≤ q) (hq1 : q < 1) (n : ℕ) :
+    (hq1 : q < 1) (n : ℕ) :
     measureTVDist (retryToDefault a₁ n) (retryToDefault a₂ n) ≤ ζ / (1 - q) :=
   le_trans (measureTVDist_retryToDefault_le_firstSome a₁ a₂ n)
-    (measureTVDist_firstSome_le_div a₁ a₂ hζ hq hq0 hq1 n)
+    (measureTVDist_firstSome_le_div a₁ a₂ hζ hq hq1 n)
 
 /-! ## Rejection resampling and the exhaustion-only error -/
 
@@ -210,11 +211,12 @@ budget — only `q ^ n` is. -/
 theorem measureTVDist_retryToDefault_le_pow [Inhabited α] [MeasurableSpace α]
     (attempt : ProbComp (Option α)) (cond : ProbComp α) {q : ℝ}
     (hres : ResamplesTo attempt cond)
-    (hq : Pr{let x ← attempt}[x = none].toReal ≤ q) (hq0 : 0 ≤ q) :
+    (hq : Pr{let x ← attempt}[x = none].toReal ≤ q) :
     ∀ n : ℕ, measureTVDist (retryToDefault attempt n) cond ≤ q ^ n
   | 0 => by simpa using measureTVDist_le_one (pure (default : α) : ProbComp α) cond
   | (n + 1) => by
-    have ih := measureTVDist_retryToDefault_le_pow attempt cond hres hq hq0 n
+    have hq0 : 0 ≤ q := le_trans ENNReal.toReal_nonneg hq
+    have ih := measureTVDist_retryToDefault_le_pow attempt cond hres hq n
     set g : Option α → ProbComp α := fun o =>
       match o with
       | some v => pure v
