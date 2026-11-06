@@ -34,6 +34,7 @@ statement.
 public section
 
 open OracleComp OracleSpec ENNReal FiatShamirWithAbort
+open ProbComp (firstSome)
 
 namespace VCVioTest.FiatShamirWithAbortCanary
 
