@@ -4,7 +4,8 @@
 [Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for
 Post-Quantum Ethereum*](https://eprint.iacr.org/2025/055). The principal security
 interface is the original-domain interval scheme. Complete-tree security is its
-full-range specialization.
+full-range specialization. Separate PRF-derived schemes account for deriving
+secret values from one shared key.
 
 The generic interface accepts an arbitrary globally incomparable code. It does
 not require a target-sum encoding. Incomparability compares distinct codewords;
@@ -98,6 +99,52 @@ and displayed bound. Its named proposition takes the same pathwise signing
 query bound. Lower complete-tree reductions remain available independently of
 this final composition.
 
+## Shared-response PRF derivation
+
+[`PRFDerivedScheme.lean`](../../HashSig/GXMSS/PRFDerivedScheme.lean) defines
+`GXMSS.PRFDerived.Query`, with public-seed, chain-start and retry families.
+[`Interval/PRFDerived/Scheme.lean`](../../HashSig/GXMSS/Interval/PRFDerived/Scheme.lean)
+adds a typed filler family. Distinct typed coordinates separate the families.
+One persistent cache stores the full response before applying a projection;
+repeated coordinates reuse that response. No independence between projections
+of the same response is assumed.
+
+The complete endpoint
+`GXMSS.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound` in
+[`Security/PRFDerived/Unforgeability.lean`](../../HashSig/GXMSS/Security/PRFDerived/Unforgeability.lean)
+adds one named shared-response PRF advantage to the complete direct bound. It
+uses the existing complete additive PRF hop and three projection laws:
+
+- Public parameters have the actual hash public-seed distribution.
+- Chain starts have the uniform `H` distribution.
+- Retry randomizers have the uniform `R` distribution.
+
+It also requires the PRF's actual `UniformKey` law and its declared sampling
+and equality instances. Its function-query bound is `1 + N*v + qs*K`.
+
+The general interval endpoint
+`GXMSS.Interval.PRFDerived.Unforgeability.strong_reduction_bound_of_two_codewords`
+in
+[`Security/PRFDerived/Interval/Unforgeability.lean`](../../HashSig/GXMSS/Security/PRFDerived/Interval/Unforgeability.lean)
+adds one named PRF advantage to the exact ten-term interval bound. It requires
+all direct-theorem premises, `UniformKey`, and four separate projection laws:
+the three above plus uniform `H` filler digests. Its function-query bound is
+`1 + L*v + F + qs*K`, where `F` is the frontier cardinality. The bound charges
+eager retry suffixes even when an earlier retry succeeds. It bounds function
+queries, not runtime or distinct cache misses.
+
+[`Security/PRFDerived/FullRange/Transport.lean`](../../HashSig/GXMSS/Security/PRFDerived/FullRange/Transport.lean)
+restricts the four-family PRF evaluator to the three complete families while
+preserving its actual key generator. `fullRangeRealCorrespondence`,
+`fullRangeIdealCorrespondence` and `fullRangePRFAdvantage` transport whole
+experiment measures and the distinguishing advantage. Real transport assumes
+no key-distribution or projection law; ideal transport needs sampleable
+responses and query equality, with no projection law or finite query-domain
+premise. `fillerQueries_full_bound` proves zero filler queries.
+`fullRangeDisplayedBound` gives the complete displayed right-hand side.
+`fullRangeStrongReductionBound` is a three-law full-range corollary; it needs
+no filler projection law because the full range has no filler coordinate.
+
 ## Modules and consumer evidence
 
 | Responsibility | Module or namespace |
@@ -107,25 +154,26 @@ this final composition.
 | Shared simulation and witness support | `HashSig.GXMSS.Security.Auxiliary.*` |
 | Named direct reductions and full-range transports | `HashSig.GXMSS.Security.Reductions.*`, `GXMSS.Reductions` |
 | Interval reductions and final bound | `GXMSS.Interval.Reductions`, `GXMSS.Interval.Unforgeability` |
+| Complete shared-response PRF hop | `GXMSS.PRFDerived.Unforgeability` |
+| Interval shared-response PRF hop and full-range transports | `GXMSS.Interval.PRFDerived.Unforgeability` |
 
 [`DirectEndpointApplications.lean`](../../HashSigTest/GXMSS/DirectEndpointApplications.lean)
-is an ordinary public-import consumer. It states and applies the expanded ten-term
-interval theorem and both full-range right-hand-side identities.
+and [`PRFEndpointApplications.lean`](../../HashSigTest/GXMSS/PRFEndpointApplications.lean)
+are ordinary public-import consumers. The direct consumer states and applies
+the expanded ten-term theorem and both full-range right-hand-side identities.
 [`CompleteEndpointApplication.lean`](../../HashSigTest/GXMSS/CompleteEndpointApplication.lean)
-imports only the established public facade and applies the complete theorem to its
-expanded separate-term inequality, including the pathwise signing-query premise.
-The construction tests retain height-three `[2,4]` frontier examples, inactive vector/pair
-openings, honest-first collision orientation, retry failures and exact-pair freshness.
-Some implementation regressions import private kernels explicitly; the public endpoint
-consumers do not.
-
-[`DirectTrustAudit.lean`](../../HashSigTest/GXMSS/DirectTrustAudit.lean) checks the direct
-production closure and uses
-[`TrustAuditSupport.lean`](../../HashSigTest/GXMSS/TrustAuditSupport.lean) to inspect compiler
-origins, declaration bodies and allowed transitive axioms, with explicit zero ownership
-for import-only facades. Its explicit meta import-all header tracks the private artifacts
-inspected by the audit. Final validation requires a fresh completed audit after relevant
-production artifacts change.
+imports only the established public facade and applies the complete theorem to
+its expanded separate-term inequality, including the pathwise signing-query premise.
+The PRF consumer applies the complete three-law and interval four-law endpoints,
+whole real/ideal/strong transports, query bounds and PRF-advantage equality.
+`EndpointApplications.lean` imports both consumers. The construction tests retain
+height-three `[2,4]` frontier examples, inactive vector/pair openings,
+honest-first collision orientation, retry failures and exact-pair freshness.
+Some implementation regressions import private kernels explicitly; the public
+endpoint consumers do not. `DirectTrustAudit.lean` checks the direct production
+closure, while `TrustAudit.lean` checks the full direct/PRF closure. Both reuse
+`TrustAuditSupport.lean` to check compiler origins, declaration bodies and
+transitive axioms, with explicit zero ownership for import-only facades.
 
 These statements do not establish a concrete LeanSig parameter instantiation,
 Rust extraction, implementation refinement, measured runtime, the paper's full

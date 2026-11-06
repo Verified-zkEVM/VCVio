@@ -57,7 +57,7 @@ corresponding participant-tuple interface and regular synchronized multisignatur
 Its forgery records its own arity. No strong multisignature experiment is asserted.
 
 The [GXMSS reading guide](../reading/gxmss.md) connects these generic notions to the interval
-construction and original-domain security reductions.
+construction, original-domain security reductions and shared PRF extension.
 
 ### Commitment schemes (`CommitmentScheme`)
 

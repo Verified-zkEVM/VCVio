@@ -67,7 +67,7 @@ build boundaries and the staged consolidation.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
 - `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
 - `HashSig/GXMSS/` contains arbitrary-incomparable-encoding specifications, completeness,
-  original-domain interval strong-unforgeability reductions.
+  original-domain interval strong-unforgeability reductions, and a shared-response PRF extension.
   Complete-tree security specializes the full-range interval. The conditional bounds preserve
   failed signing, consumed epochs and exact pair freshness; they require positive parameters,
   two distinct codewords and an all-request signing-query bound. See the
