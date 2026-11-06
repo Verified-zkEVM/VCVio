@@ -184,7 +184,7 @@ or `VCVioTest/`. This contract is enforced by
 3. **`𝒟[oa]` IS the measure fold** `PFunctor.FreeM.denote` of the answer measures, definitionally, and `Pr{…}[…]` is `prEvent` of that measure. `support` is PolyFun's `MonadAttach` support, equal to the fold into `SetM` that answers every query with `Set.univ` by `PFunctor.FreeM.support_eq_liftM_univ`. The definitional identities are internal to `VCVio/EvalDist/**` and `VCVio/OracleComp/**`: code outside those directories crosses them through the public equation lemmas (`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_def`). Existing downstream `rfl` uses are grandfathered; new proofs use the public equations.
 4. **`++ₒ` is dead** — use `+` for combining oracle specs.
 5. **Commented-out code is legacy** — follow only uncommented code. Use `Examples/OneTimePad/Basic.lean` as canonical reference.
-6. **Preserve partial proofs** with `stop` instead of deleting large proof blocks.
+6. **Preserve partial proofs** with `stop` instead of deleting large proof blocks, on a working branch: `main` carries no `sorry`, so nothing incomplete merges.
 7. **Do not disable linters to silence errors**. Do not use `set_option linter.* false`, `set_option weak.linter.* false`, or add repo-level `leanOptions` that turn lints off to dodge a fixable issue. Fix the root cause instead. (The one deliberate, documented exception is `weak.linter.unicodeLinter, false` in `lakefile.lean`, off so FIPS-204 math notation and diacritics in cited author names are allowed.)
 8. **Interop TCB isolation is mandatory**. Core VCVio (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `Examples/`, `LatticeCryptoTest/`, `Extern/`, `VCVioWidgets/`, `VCVioTest/`) must never `import Interop.…`, `import Hax.…`, or `import Aeneas.…`. CI fails the PR if it does. See `docs/agents/interop.md`.
 9. **Extern link-safety isolation is mandatory**. Proof libraries (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) must never `import Extern.…`: the native backends behind it are built as empty stubs whenever the `third_party/` submodules are absent — always the case for Lake dependency checkouts — so importing `Extern` would break downstream executable links. Test libraries may import it. Enforced by `scripts/check-extern-isolation.sh` in CI.
@@ -346,20 +346,15 @@ estimates clean-build compile time.
 
 After the build, CI runs `./scripts/test-axiomsweep.sh` and then
 `lake exe axiomsweep --check`: kernel-level axiom/`sorry` accounting for every
-declaration in the non-test libraries, gated against the committed baseline
-`scripts/axiom_baseline.json`. It fails on *new* `sorryAx` or non-standard-axiom
-taint; after intentionally adding or closing a `sorry`, run
-`lake exe axiomsweep --update-baseline` and commit the diff. `Interop` (the
-declared TCB) is excluded — its boundary is enforced by the import-isolation
-gate instead.
-
-The baseline is an allowlist for `sorryAx` debt only. Native trust
-(`native_decide`, which mints per-declaration `._native.` axioms) is held to a
-zero-debt rule: anything outside the explicit `grandfatheredNativeTrust` list in
-`scripts/AxiomSweep.lean` fails `--check` and cannot be greened by editing the
-baseline, since accepting it would widen the trusted computing base. The
-`VCVioAxiomSweepTestFixtures` library carries synthetic taint for the tool's own
-tests and is deliberately excluded from every aggregate.
+declaration in the non-test libraries, held at zero debt. Any declaration depending on
+`sorryAx` or on a non-standard axiom fails `--check`; that includes native trust
+(`native_decide`, which mints per-declaration `._native.` axioms). The committed baseline
+`scripts/axiom_baseline.json` must stay `{"sorry": [], "nonstandard": []}`: a nonempty one
+is a policy error rather than an allowlist, and `lake exe axiomsweep --update-baseline`
+refuses to write one. `Interop` (the declared TCB) is excluded — its boundary is enforced by
+the import-isolation gate instead. The `VCVioAxiomSweepTestFixtures` library carries
+synthetic taint for the tool's own tests and is deliberately excluded from every
+aggregate.
 
 `python3 ./scripts/check-comment-fences.py` enforces one rule over every Lean source the
 repository tracks or would track — tracked files plus untracked ones that are not ignored, the
@@ -437,8 +432,7 @@ finiteness argument through `Fintype.ofFinite` instead, whose `Prop`-valued
 `Finite` argument leaves nothing compiled at all.
 
 The baseline `scripts/init_sweep_baseline.json` is a list of accepted constant
-names — the allowlist idea `scripts/axiom_baseline.json` uses, with a scope
-attached — rather than a per-library ceiling: accepting one benign instance costs
+names, each with a scope attached, rather than a per-library ceiling: accepting one benign instance costs
 exactly that name and leaves every other constant of its library at zero. It
 holds nine rows today; `scripts/InitSweep.lean` lists what each one does at load,
 read off the emitted C, including the two that turn out not to be initialised at

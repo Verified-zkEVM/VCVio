@@ -16,8 +16,7 @@ one, cite the row in docs/reading/upstream-alignment.md. -->
 - [ ] New files use plain `public section` with per-declaration `@[expose]` (*Module Scopes*), and
       the expose-boundary baseline was lowered in this PR if a file was converted.
 - [ ] `./scripts/update-lib.sh` leaves the umbrella files unchanged, and
-      `lake exe axiomsweep --check` passes with `scripts/axiom_baseline.json` untouched (or the
-      baseline diff is explained above).
+      `lake exe axiomsweep --check` passes: no `sorry` and no non-standard axiom.
 - [ ] No `set_option linter.* false`, no deprecated aliases (`docs/agents/gotchas.md` §18, §23),
       and no native FFI test executables on the PR path.
 - [ ] Documentation touched by the change is updated and `python3 scripts/check-agent-docs.py`

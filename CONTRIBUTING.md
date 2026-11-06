@@ -12,7 +12,8 @@ Before sending work for review:
 
 - Run `lake exe cache get && lake build`.
 - After adding new `.lean` files, run `./scripts/update-lib.sh`.
-- Avoid leaving `sorry` in finished work unless the change is explicitly meant to preserve partial work.
+- Do not merge `sorry`: `lake exe axiomsweep --check` fails on any `sorryAx` dependency. Keep
+  partial work on its branch.
 - State security reductions for a named reduction, simulator, or extractor, not for one that merely
   exists. Adversary types carry no resource bound and Lean can choose witnesses classically, so
   `∃ B, bound ≤ advantage B` holds for every scheme. See
@@ -156,8 +157,8 @@ The toolchain and Mathlib move together, and the other pins follow them. The ord
    logic uses the pinned Lean core WP interface through PolyFun.
 3. `lake update --keep-toolchain`, then `lake exe cache get`.
 4. `./scripts/validate.sh --lint --test --axioms`; fix what the new toolchain flags rather than
-   silencing it (`docs/agents/gotchas.md` §23), and update `scripts/axiom_baseline.json` only for
-   an intentional change in `sorry` debt.
+   silencing it (`docs/agents/gotchas.md` §23). The axiom sweep stays at zero debt, so a new
+   `sorry` or non-standard axiom is a breakage to fix, not a baseline change.
 5. Re-verify the upstream-alignment ledger (`docs/reading/upstream-alignment.md`): every row is
    checked against the newly pinned trees, never diffed against the previous ledger.
 6. Update the version mentions in `AGENTS.md` (*Building*) and `docs/agents/gotchas.md` §26.

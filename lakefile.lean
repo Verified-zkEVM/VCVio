@@ -754,8 +754,8 @@ at least one. -/
 lean_exe slhdsa_limited_profile_tests where
   root := `HashSigTest.SLHDSA.LimitedProfile
 
-/-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
-committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
+/-- Kernel-level axiom / `sorry` accounting across the non-test libraries, gated at zero debt
+against the empty committed baseline (`scripts/axiom_baseline.json`). Complements the Interop
 TCB-isolation gate: that gate bounds imports, this one accounts for the axioms every
 declaration ultimately rests on. Runtime-imports built oleans, so run it after
 `lake build`. See `scripts/AxiomSweep.lean`. -/
