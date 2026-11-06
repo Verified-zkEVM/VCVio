@@ -320,6 +320,7 @@ public import VCVio.OracleComp.Coinductive.WiredRun
 public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.OracleComp.Constructions.Fork.Basic
 public import VCVio.OracleComp.Constructions.GenerateSeed
+public import VCVio.OracleComp.Constructions.RandomPermutation.Conditioning
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
