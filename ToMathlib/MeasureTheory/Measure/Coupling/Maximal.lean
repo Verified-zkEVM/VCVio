@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Devon Tuma
+Authors: Devon Tuma, Chung Thai Nguyen, Yuxi Zheng
 -/
 
 module
@@ -9,6 +9,7 @@ module
 public import ToMathlib.MeasureTheory.Measure.Coupling
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import Mathlib.MeasureTheory.Measure.Dirac.Basic
+public import Mathlib.MeasureTheory.Measure.Sub
 
 /-!
 # Maximal couplings of finitely supported measures
@@ -17,6 +18,12 @@ Two probability measures concentrated on a common finite set `F` overlap by
 `∑ a ∈ F, min (μ {a}) (ν {a})`, and their total variation is one minus this overlap. No coupling
 puts more than the overlap `min (μ {a}) (ν {a})` on a diagonal point, and `maximalCoupling`, which
 puts the overlap on the diagonal and spreads the residual masses independently, attains it.
+
+Singleton domination by a measure concentrated on a finite set gives measure domination. On a
+finite type, total variation between probability measures is half the L1 distance of their point
+masses. Two probability measures differ in total variation by at most the missing mass of any
+common lower measure; in particular, two that agree on an event `G` differ by at most the mass of
+`Gᶜ`.
 -/
 
 public section
@@ -216,5 +223,79 @@ theorem min_le_maximalCoupling_apply_diag {a : α} (ha : a ∈ F) :
   simp
 
 end maximal
+
+/-- Singleton domination by a measure concentrated on a finite set gives measure domination. -/
+theorem le_of_singleton_le_of_compl_null {μ ν : Measure α} (F : Finset α)
+    (hF : μ (↑F)ᶜ = 0) (h : ∀ x ∈ F, μ {x} ≤ ν {x}) : μ ≤ ν := by
+  classical
+  refine Measure.le_iff.mpr fun T hT => ?_
+  rw [apply_eq_sum_indicator_of_compl_eq_zero hF T, Finset.sum_indicator_eq_sum_filter]
+  calc
+    _ ≤ ∑ x ∈ F with x ∈ T, ν {x} :=
+      Finset.sum_le_sum fun x hx => h x (Finset.mem_filter.mp hx).1
+    _ = ν ↑(F.filter (· ∈ T)) := sum_measure_singleton
+    _ ≤ ν T := measure_mono fun x hx => (Finset.mem_filter.mp hx).2
+
+section finite
+
+variable [Fintype α]
+
+/-- On a finite type, total variation between probability measures is half of the L1 distance of
+their point masses. -/
+theorem tvDist_eq_half_sum_abs (μ ν : Measure α) [IsProbabilityMeasure μ]
+    [IsProbabilityMeasure ν] :
+    μ.tvDist ν = (∑ x, |(μ {x}).toReal - (ν {x}).toReal|) / 2 := by
+  have h2 : 2 * μ.etvDist ν = ∑ x, ENNReal.absDiff (μ {x}) (ν {x}) := by
+    rw [two_mul]
+    nth_rw 2 [etvDist_comm]
+    rw [etvDist_eq_sum_tsub (F := Finset.univ) (by simp) (by simp),
+      etvDist_eq_sum_tsub (μ := ν) (ν := μ) (F := Finset.univ) (by simp) (by simp),
+      ← Finset.sum_add_distrib]
+    rfl
+  have hfin : ∀ x, ENNReal.absDiff (μ {x}) (ν {x}) ≠ ⊤ := fun x =>
+    ne_top_of_le_ne_top (ENNReal.add_ne_top.mpr ⟨measure_ne_top μ _, measure_ne_top ν _⟩)
+      (ENNReal.absDiff_le_add _ _)
+  rw [Measure.tvDist, _root_.eq_div_iff two_ne_zero, mul_comm,
+    show (2 : ℝ) = (2 : ℝ≥0∞).toReal by simp, ← ENNReal.toReal_mul, h2,
+    ENNReal.toReal_sum fun x _ => hfin x]
+  exact Finset.sum_congr rfl fun x _ =>
+    ENNReal.absDiff_toReal (measure_ne_top _ _) (measure_ne_top _ _)
+
+end finite
+
+end MeasureTheory.Measure
+
+namespace MeasureTheory.Measure
+
+variable {α : Type*} [MeasurableSpace α]
+
+/-- Two probability measures differ in total variation by at most the missing mass of any
+common lower measure. -/
+theorem etvDist_le_one_sub_of_le {μ ν c : Measure α} [IsProbabilityMeasure μ]
+    [IsProbabilityMeasure ν] (hμ : c ≤ μ) (hν : c ≤ ν) :
+    μ.etvDist ν ≤ 1 - c Set.univ := by
+  have hcfin : IsFiniteMeasure c :=
+    ⟨(Measure.le_iff'.mp hμ Set.univ).trans_lt (measure_lt_top μ Set.univ)⟩
+  have hrest : ∀ {ρ : Measure α} [IsProbabilityMeasure ρ], c ≤ ρ → ∀ T, MeasurableSet T →
+      ρ T - c T ≤ 1 - c Set.univ := by
+    intro ρ _ hρ T hT
+    rw [← Measure.sub_apply hT hρ, ← measure_univ (μ := ρ),
+      ← Measure.sub_apply MeasurableSet.univ hρ]
+    exact measure_mono (Set.subset_univ T)
+  refine iSup_le fun T => ?_
+  have hcT : c T.1 ≠ ⊤ := measure_ne_top c T.1
+  have hμT : μ T.1 = c T.1 + (μ T.1 - c T.1) :=
+    (add_tsub_cancel_of_le (Measure.le_iff'.mp hμ T.1)).symm
+  have hνT : ν T.1 = c T.1 + (ν T.1 - c T.1) :=
+    (add_tsub_cancel_of_le (Measure.le_iff'.mp hν T.1)).symm
+  have ha := hrest hμ T.1 T.2
+  have hb := hrest hν T.1 T.2
+  rw [hμT, hνT, ENNReal.absDiff, ENNReal.add_sub_add_eq_sub_left hcT,
+    ENNReal.add_sub_add_eq_sub_left hcT]
+  rcases le_total (μ T.1 - c T.1) (ν T.1 - c T.1) with hab | hab
+  · rw [tsub_eq_zero_of_le hab, zero_add]
+    exact tsub_le_self.trans hb
+  · rw [tsub_eq_zero_of_le hab, add_zero]
+    exact tsub_le_self.trans ha
 
 end MeasureTheory.Measure

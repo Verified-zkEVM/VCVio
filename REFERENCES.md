@@ -126,6 +126,16 @@ Used in:
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/ToFinalValidity.lean`
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/ToFinalValidity/Core.lean`
 
+### CY24
+
+Alessandro Chiesa and Eylon Yogev.
+*Building Cryptographic Proofs from Hash Functions*.
+2024.
+Public book: <https://snargsbook.org/>
+
+Used in:
+- `VCVio/EvalDist/DiscreteTVDist.lean`
+
 ## Projects and Repositories
 
 ### MATHLIB4

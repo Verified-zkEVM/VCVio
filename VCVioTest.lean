@@ -28,6 +28,7 @@ public import VCVioTest.CryptoFoundations.UniversalHash
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.DisagreementMeasure
+public import VCVioTest.EvalDist.DiscreteTVDist
 public import VCVioTest.EvalDist.EventBounds
 public import VCVioTest.EvalDist.Failure
 public import VCVioTest.EvalDist.FinRatPMF

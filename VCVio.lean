@@ -246,8 +246,10 @@ public import VCVio.EvalDist.Defs.Measure.OptionT
 public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Support.Failure
+public import VCVio.EvalDist.DiscreteTVDist
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.EvalDistEq
+public import VCVio.EvalDist.FiniteSupport
 public import VCVio.EvalDist.IndepProduct
 public import VCVio.EvalDist.IndepProductMeasure
 public import VCVio.EvalDist.Inequalities
@@ -330,6 +332,8 @@ public import VCVio.OracleComp.Constructions.WithoutReplacement
 public import VCVio.OracleComp.Constructions.WithoutReplacement.Basic
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.EvalDist.AnswerMeasure
+public import VCVio.OracleComp.EvalDist.DiscreteTVDistBind
+public import VCVio.OracleComp.EvalDist.DiscreteTVDistFintype
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.EvalDist.Sum
 public import VCVio.OracleComp.FinRatPMF
