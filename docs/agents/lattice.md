@@ -57,8 +57,6 @@ instantiating those abstractions for a lattice scheme.
 - `LatticeCrypto/MLDSA/Signature.lean`: FIPS-style signing and verification layer built on the
   proof-level scheme.
 - `LatticeCrypto/MLDSA/Security.lean`: completeness and commitment recoverability of the IDS.
-- `LatticeCrypto/MLDSA/SecurityHVZK.lean`: the HVZK simulators `hvzkSimulator` and
-  `hvzkSimulatorReal`, and the HVZK bound `idsWithAbort_hvzk` at `hvzkBound`.
 - `LatticeCrypto/MLDSA/SecurityNMA.lean`: the no-message-attack chain, with the key swap modelled
   over short-box MLWE.
 - `LatticeCrypto/MLDSA/Concrete/`: executable implementations of NTT, rounding, and encoding, plus
