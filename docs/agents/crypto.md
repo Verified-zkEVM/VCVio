@@ -44,6 +44,21 @@ Fiat-Shamir transform → managed-RO NMA → replay forking → DLog), see
 The Schnorr-specific σ-protocol facts that feed in live in
 [`VCVio/Schemes/Schnorr/SigmaProtocol.lean`](../../VCVio/Schemes/Schnorr/SigmaProtocol.lean).
 
+### Synchronized signatures
+
+[`SyncSignatureAlg`](../../VCVio/CryptoFoundations/SyncSignatureAlg.lean) captures system
+configuration in the scheme constructor and has parameterless key generation, epoch-indexed
+optional signing, and deterministic verification. Correctness and the regular/strong experiments
+observe the chosen partial runtime without normalizing away missing mass. Signing histories retain
+failed requests and consumed epochs; strong freshness compares exact message/signature pairs.
+
+[`SyncMultiSignatureAlg`](../../VCVio/CryptoFoundations/SyncMultiSignatureAlg.lean) supplies the
+corresponding participant-tuple interface and regular synchronized multisignature experiment.
+Its forgery records its own arity. No strong multisignature experiment is asserted.
+
+The [GXMSS reading guide](../reading/gxmss.md) connects these generic notions to the interval
+construction and original-domain security reductions.
+
 ### Commitment schemes (`CommitmentScheme`)
 
 ```lean

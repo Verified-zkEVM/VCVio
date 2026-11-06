@@ -225,6 +225,8 @@ public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.CryptoFoundations.SymmEncAlg.Deterministic
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
+public import VCVio.CryptoFoundations.SyncMultiSignatureAlg
+public import VCVio.CryptoFoundations.SyncSignatureAlg
 public import VCVio.CryptoFoundations.TimeLockPuzzle
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Encoding
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Hiding

@@ -1,0 +1,134 @@
+# Generalized XMSS
+
+`HashSig/GXMSS` specifies generalized XMSS from Construction 3 of
+[Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for
+Post-Quantum Ethereum*](https://eprint.iacr.org/2025/055). The principal security
+interface is the original-domain interval scheme. Complete-tree security is its
+full-range specialization.
+
+The generic interface accepts an arbitrary globally incomparable code. It does
+not require a target-sum encoding. Incomparability compares distinct codewords;
+it does not assert that messages encode injectively or that the encoding is
+collision resistant. Winternitz-checksum and target-sum encodings have separate
+instance results under `Encoding/` and security corollaries in
+[`Security/EncodingInstances.lean`](../../HashSig/GXMSS/Security/EncodingInstances.lean).
+
+## Construction and observation
+
+Let `N = 2^h`, `D = 2^w`, and let `I = [a,b]` be a nonempty inclusive interval
+with `a ≤ b < N`. The constructor captures `I` and the finite retry budget `K`
+before sampling public parameters. Key generation is parameterless. The ideal
+interval scheme retains a complete sampled chain-start array and independent
+uniform digests at the roots of maximal inactive subtrees. Only active starts
+affect its public tree and honest signatures. Verification remains defined at every
+epoch, including inactive epochs.
+
+[`Interval/Merkle.lean`](../../HashSig/GXMSS/Interval/Merkle.lean) defines the
+frontier and its addressed tree interpretation.
+[`Interval/Scheme.lean`](../../HashSig/GXMSS/Interval/Scheme.lean) defines
+`GXMSS.Interval.scheme`. Shared complete-tree keys, signatures and verification
+live in [`Scheme.lean`](../../HashSig/GXMSS/Scheme.lean). Chain tweaks advance
+from `k + 1`; Merkle collision witnesses retain the honest ordered child pair as
+`first` and the forged pair as `second`.
+
+The synchronized signature games use native returned-output measures. Missing
+mass remains unreturned mass. A returned `none` signature, retry exhaustion,
+and a returned `false` experiment outcome are distinct observations. A signing
+request consumes its epoch even when signing fails. `SigningQueryBound qs A`
+counts every request along every supported execution, including repeated,
+failed and inactive requests. Strong freshness excludes the exact previously
+returned epoch/message/signature triple; a different signature for the same
+message can remain strongly fresh. Deterministic signing alone does not imply
+uniqueness of valid signatures.
+
+## Interval security
+
+Import
+[`HashSig.GXMSS.Security.IntervalUnforgeability`](../../HashSig/GXMSS/Security/IntervalUnforgeability.lean).
+The theorem
+`GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound_of_two_codewords`
+bounds strong synchronized unforgeability by `strongUnforgeabilityBound`.
+Writing `L = b-a+1` and `C = L*v*(D-1)`, its ten terms are
+
+```text
+MerkleTCR + EncodingTCR + SameMessageRandomizerChainTCR + ChainCutTCR
++ C*ChainPRE + C*(D-1)*ChainUD
++ VectorUD + VectorPRE + PairUD + PairPRE.
+```
+
+Each term uses a named reduction. Chain challenges use the original digest
+domain `H`; filler challenges use endpoint vectors `Fin v → H` and ordered
+child pairs `H × H`. The Merkle TCR capacity is `2*N*v*D`, each chain TCR
+capacity is `N*v*D`, the encoding problem holds `qs` records with retry budget
+`K`, and chain PRE/UD use one selected challenge. Filler capacities count the
+frontier nodes in their respective vector and pair families. They are not
+padded into the chain domain.
+
+The theorem requires sampleable `H` and retry-randomizer type `R`, the declared
+decidable equalities, `0 < v`, `0 < w`, two distinct members of the same global
+code, and `SigningQueryBound qs A`. The public seed is drawn from the actual
+`hash.thf.seedGen`; the direct theorem adds no uniform-public-seed assumption.
+`strong_unforgeability_power_of_two_reduction_bound_of_two_codewords` relaxes
+the chain coefficients to `L*v*D` and `L*v*D²`, retaining the four separate
+filler terms.
+
+## Complete-tree specialization
+
+[`Security/Reductions/FullRange/OriginalDomain.lean`](../../HashSig/GXMSS/Security/Reductions/FullRange/OriginalDomain.lean)
+transports actual named experiments and advantages at `Interval.full h`.
+The frontier is empty, so its filler terms vanish. `strongUnforgeabilityBound_full`
+identifies the exact chain contribution as
+
+```text
+N*v*(D-1)*PRE + N*v*(D-1)²*UD.
+```
+
+`powerOfTwoStrongUnforgeabilityBound_full` identifies the relaxed contribution
+as `N*v*D*(D*UD + PRE)`. Both identities retain the four complete-tree collision
+reductions. These displayed right-hand-side identities are separate from
+scheme equality and whole regular/strong experiment transport.
+
+The complete public theorem
+`GXMSS.Unforgeability.strong_unforgeability_reduction_bound` is available from
+[`Security/Unforgeability.lean`](../../HashSig/GXMSS/Security/Unforgeability.lean),
+the established public import facade. Its proof is defined in
+[`Security/CompleteUnforgeability.lean`](../../HashSig/GXMSS/Security/CompleteUnforgeability.lean).
+It applies the interval theorem at full range and transports the experiment
+and displayed bound. Its named proposition takes the same pathwise signing
+query bound. Lower complete-tree reductions remain available independently of
+this final composition.
+
+## Modules and consumer evidence
+
+| Responsibility | Module or namespace |
+| --- | --- |
+| Generic synchronized interfaces and games | `VCVio.CryptoFoundations.SyncSignatureAlg`, `SyncMultiSignatureAlg` |
+| Codewords and arbitrary incomparable encoding | `HashSig.GXMSS.Encoding.*`, `GXMSS.Encoding` |
+| Shared simulation and witness support | `HashSig.GXMSS.Security.Auxiliary.*` |
+| Named direct reductions and full-range transports | `HashSig.GXMSS.Security.Reductions.*`, `GXMSS.Reductions` |
+| Interval reductions and final bound | `GXMSS.Interval.Reductions`, `GXMSS.Interval.Unforgeability` |
+
+[`DirectEndpointApplications.lean`](../../HashSigTest/GXMSS/DirectEndpointApplications.lean)
+is an ordinary public-import consumer. It states and applies the expanded ten-term
+interval theorem and both full-range right-hand-side identities.
+[`CompleteEndpointApplication.lean`](../../HashSigTest/GXMSS/CompleteEndpointApplication.lean)
+imports only the established public facade and applies the complete theorem to its
+expanded separate-term inequality, including the pathwise signing-query premise.
+The construction tests retain height-three `[2,4]` frontier examples, inactive vector/pair
+openings, honest-first collision orientation, retry failures and exact-pair freshness.
+Some implementation regressions import private kernels explicitly; the public endpoint
+consumers do not.
+
+[`DirectTrustAudit.lean`](../../HashSigTest/GXMSS/DirectTrustAudit.lean) checks the direct
+production closure and uses
+[`TrustAuditSupport.lean`](../../HashSigTest/GXMSS/TrustAuditSupport.lean) to inspect compiler
+origins, declaration bodies and allowed transitive axioms, with explicit zero ownership
+for import-only facades. Its explicit meta import-all header tracks the private artifacts
+inspected by the audit. Final validation requires a fresh completed audit after relevant
+production artifacts change.
+
+These statements do not establish a concrete LeanSig parameter instantiation,
+Rust extraction, implementation refinement, measured runtime, the paper's full
+asymptotic running-time claims, or cryptographic hardness of the named
+problems. Optional padded or weighted variants, concrete runtimes and
+extraction tools are outside the generic proof and consumer closure.
