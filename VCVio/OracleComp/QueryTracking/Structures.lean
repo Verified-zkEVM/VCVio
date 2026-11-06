@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2025 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Devon Tuma, Quang Dao
+Authors: Devon Tuma, Quang Dao, Chung Thai Nguyen, Yuxi Zheng
 -/
 
 module
@@ -820,6 +820,38 @@ protected def inr (log : QueryLog spec₂) : QueryLog (spec₁ + spec₂) :=
 
 instance : Coe (QueryLog spec₁) (QueryLog (spec₁ + spec₂)) := ⟨QueryLog.inl⟩
 instance : Coe (QueryLog spec₂) (QueryLog (spec₁ + spec₂)) := ⟨QueryLog.inr⟩
+
+/-- `QueryLog.fst` distributes over append. -/
+@[simp]
+lemma fst_append (l₁ l₂ : QueryLog (spec₁ + spec₂)) :
+    (l₁ ++ l₂).fst = l₁.fst ++ l₂.fst :=
+  List.filterMap_append
+
+/-- `QueryLog.snd` distributes over append. -/
+@[simp]
+lemma snd_append (l₁ l₂ : QueryLog (spec₁ + spec₂)) :
+    (l₁ ++ l₂).snd = l₁.snd ++ l₂.snd :=
+  List.filterMap_append
+
+/-- The left projection of a left-embedded log is the log itself. -/
+@[simp]
+lemma fst_inl (l : QueryLog spec₁) : (QueryLog.inl (spec₂ := spec₂) l).fst = l := by
+  simp [QueryLog.inl, QueryLog.fst]
+
+/-- The right projection of a left-embedded log is empty. -/
+@[simp]
+lemma snd_inl (l : QueryLog spec₁) : (QueryLog.inl (spec₂ := spec₂) l).snd = [] := by
+  simp [QueryLog.inl, QueryLog.snd]
+
+/-- The left projection of a right-embedded log is empty. -/
+@[simp]
+lemma fst_inr (l : QueryLog spec₂) : (QueryLog.inr (spec₁ := spec₁) l).fst = [] := by
+  simp [QueryLog.inr, QueryLog.fst]
+
+/-- The right projection of a right-embedded log is the log itself. -/
+@[simp]
+lemma snd_inr (l : QueryLog spec₂) : (QueryLog.inr (spec₁ := spec₁) l).snd = l := by
+  simp [QueryLog.inr, QueryLog.snd]
 
 end prod
 

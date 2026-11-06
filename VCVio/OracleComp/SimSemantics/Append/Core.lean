@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Devon Tuma
+Authors: Devon Tuma, Chung Thai Nguyen, Yuxi Zheng
 -/
 
 module
@@ -553,3 +553,33 @@ original `spec` oracles alongside the handler `impl` for `spec'`. -/
 abbrev passthrough {ι : Type*} (spec : OracleSpec.{_, u} ι) : QueryImpl.Passthrough spec := ⟨⟩
 
 end OracleSpec
+
+namespace OracleComp
+
+variable {ι κ ν α : Type} {a : OracleSpec ι} {b : OracleSpec κ} {c : OracleSpec ν}
+  {m : Type → Type} [Monad m] [LawfulMonad m]
+
+/-- Discard an unused right-hand handler when the source interface is itself a sum.
+This handles the componentwise lift route chosen for a sum source. -/
+theorem simulateQ_add_liftComp_sum_left
+    (hab : QueryImpl (a + b) m) (hc : QueryImpl c m) (p : OracleComp (a + b) α) :
+    simulateQ (hab + hc) (liftComp p ((a + b) + c)) = simulateQ hab p := by
+  rw [liftComp_def]
+  apply QueryImpl.simulateQ_simulateQ_eq_of_apply
+  intro q
+  cases q <;> change simulateQ _ (liftM (((a + b) + c).query _)) = _
+  all_goals rw [simulateQ_spec_query]; rfl
+
+/-- Discard two unused right-hand handlers when lifting into a nested sum interface. -/
+theorem simulateQ_add_add_liftComp_left
+    (ha : QueryImpl a m) (hb : QueryImpl b m) (hc : QueryImpl c m)
+    (p : OracleComp a α) :
+    simulateQ ((ha + hb) + hc) (liftComp p ((a + b) + c)) = simulateQ ha p := by
+  rw [liftComp_def]
+  apply QueryImpl.simulateQ_simulateQ_eq_of_apply
+  intro q
+  change simulateQ _ (liftM (((a + b) + c).query (.inl (.inl q)))) = _
+  rw [simulateQ_spec_query]
+  rfl
+
+end OracleComp
