@@ -64,8 +64,8 @@ instantiating those abstractions for a lattice scheme.
   `idsWithAbort_hvzk`, which shows it equal in distribution to the honest prover on valid keys.
 - `LatticeCrypto/MLDSA/SecurityNMA.lean`: the no-message-attack chain, with the key swap modelled
   over short-box MLWE.
-- `LatticeCrypto/MLDSA/SecurityExpandARO.lean`: the no-message-attack bound with `ExpandA` a
-  programmed random oracle, reaching uniform-matrix MLWE.
+- `LatticeCrypto/MLDSA/SecurityExpandARO.lean`: the no-message-attack bound with ExpandA a programmed
+  random oracle, reaching uniform-matrix MLWE.
 - `LatticeCrypto/MLDSA/SecurityHeadlines.lean`: the composed EUF-NMA and EUF-CMA theorems for the
   commitment-carrying signature. Its Limitations section lists what the CMA theorems still assume at
   FIPS 204 parameters.
