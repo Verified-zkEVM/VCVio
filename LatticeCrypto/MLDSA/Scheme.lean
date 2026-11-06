@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import LatticeCrypto.MLDSA.MaskBox
 public import LatticeCrypto.MLDSA.Primitives
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
@@ -35,8 +36,8 @@ The `IdenSchemeWithAbort` type parameters instantiate as follows for ML-DSA:
 
 This file models the **proof-level IDS** used in the Fiat-Shamir-with-aborts security argument:
 
-- **Commit** samples `y` uniformly at random, rather than deriving it from message-dependent
-  seeds via `ExpandMask(ρ'', κ)`.
+- **Commit** samples `y` uniformly from the range of `ExpandMask` (`sampleMaskVec`), rather than
+  deriving it from message-dependent seeds via `ExpandMask(ρ'', κ)`.
 - **No message hashing**: the IDS operates without messages; the message enters only through
   the Fiat-Shamir transform.
 - **No retry counter**: the IDS commit is a single probabilistic step; retry logic with
@@ -189,7 +190,7 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
 
 /-- The core identification scheme with aborts for ML-DSA.
 
-- **Commit**: sample `y` uniformly, compute `w = NTT⁻¹(Â · NTT(y))`,
+- **Commit**: sample `y` uniformly from the mask box, compute `w = NTT⁻¹(Â · NTT(y))`,
   return `(w₁ = HighBits(w), state = (y, w))`.
 - **Respond** (Alg 7, lines 16–30): derive `c = SampleInBall(c̃)`, compute
   `z = y + c·s₁`, check `‖z‖∞ < γ₁ - β` and `‖LowBits(w - c·s₂)‖∞ < γ₂ - β`,
@@ -198,7 +199,7 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
 - **Verify** (Alg 8, lines 8–13): check `‖z‖∞ < γ₁ - β`, reconstruct
   `w'_Approx = Az - c·(t₁·2^d)`, verify `UseHint(h, w'_Approx) = w₁` and
   hint weight `≤ ω`. -/
-def identificationScheme
+noncomputable def identificationScheme
     [DecidableEq prims.High] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)
@@ -207,7 +208,7 @@ def identificationScheme
       (validKeyPair p prims) where
   commit := fun pk _sk => do
     let aHat := prims.expandA pk.rho
-    let y ← $ᵗ (RqVec p.l)
+    let y ← sampleMaskVec p.l p.gamma1
     let w := aHat * y
     let w1 := prims.highBitsVec w
     return (w1, ⟨y, w⟩)
@@ -241,7 +242,7 @@ relation `validKeyPairShort`. The commit / respond / verify algorithms are exact
 never consumed by the operations — so every per-key fact about the operations transports
 between the two scheme constants. This is the scheme used by the idealized short-key security
 statements, whose key generators produce material-valid rather than seed-derived pairs. -/
-def identificationSchemeShort
+noncomputable def identificationSchemeShort
     [DecidableEq prims.High] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)

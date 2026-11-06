@@ -256,10 +256,9 @@ theorem idsWithAbort_complete (h_laws : Primitives.Laws prims nttOps) :
 /-! ### Honest-Verifier Zero-Knowledge
 
 The HVZK theorem `MLDSA.idsWithAbort_hvzk` is proven downstream in
-`LatticeCrypto.MLDSA.SecurityHVZK`, where the concrete simulator `hvzkSimulatorReal` and the
-extra-rejection-mass bound `hvzkBound` are defined. The simulator reproduces the honest
-transcript pointwise on the accept event, so the total-variation distance is bounded by the
-honest prover's extra-rejection mass; see that file for the quantitative statement. -/
+`LatticeCrypto.MLDSA.SecurityHVZK`, for the concrete simulator `hvzkSimulatorReal`. The simulator
+recomputes the honest prover's gates from the public key, so the two transcripts are equal in
+distribution. -/
 
 end Properties
 
