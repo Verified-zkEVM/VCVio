@@ -35,8 +35,8 @@ The `IdenSchemeWithAbort` type parameters instantiate as follows for ML-DSA:
 
 This file models the **proof-level IDS** used in the Fiat-Shamir-with-aborts security argument:
 
-- **Commit** samples `y` uniformly at random, rather than deriving it from message-dependent
-  seeds via `ExpandMask(ρ'', κ)`.
+- **Commit** samples `y` uniformly from the range of `ExpandMask` (`sampleMaskVec`), rather than
+  deriving it from message-dependent seeds via `ExpandMask(ρ'', κ)`.
 - **No message hashing**: the IDS operates without messages; the message enters only through
   the Fiat-Shamir transform.
 - **No retry counter**: the IDS commit is a single probabilistic step; retry logic with
@@ -185,11 +185,30 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
   unfold validKeyPairShort
   exact @decide_eq_true_iff _ (Classical.propDecidable _)
 
+/-! ### The mask distribution -/
+
+/-- Whether `v` lies in the range of FIPS 204's `ExpandMask`: the centered representative of every
+coefficient of every component is in `[-γ₁ + 1, γ₁]`. The zero vector is included outright so that
+the box is inhabited at the degenerate `γ₁ = 0`; for `γ₁ ≥ 1` it already lies in the range. -/
+def maskBounded {k : ℕ} (v : RqVec k) (gamma1 : ℕ) : Prop :=
+  v = 0 ∨ ∀ (j : Fin k) (i : Fin ringDegree),
+    -(gamma1 : ℤ) < centeredRepr ((v.get j).get i) ∧ centeredRepr ((v.get j).get i) ≤ gamma1
+
+/-- The uniform distribution on the mask box. -/
+noncomputable instance (k gamma1 : ℕ) : SampleableType {v : RqVec k // maskBounded v gamma1} :=
+  letI : Fintype {v : RqVec k // maskBounded v gamma1} := .ofFinite _
+  letI : Nonempty {v : RqVec k // maskBounded v gamma1} := ⟨⟨0, .inl rfl⟩⟩
+  .ofFintype _
+
+/-- Uniform sampling from the mask box: the ideal distribution of FIPS 204's `ExpandMask`. -/
+noncomputable def sampleMaskVec (k gamma1 : ℕ) : ProbComp (RqVec k) :=
+  Subtype.val <$> ($ᵗ {v : RqVec k // maskBounded v gamma1})
+
 /-! ### Identification Scheme -/
 
 /-- The core identification scheme with aborts for ML-DSA.
 
-- **Commit**: sample `y` uniformly, compute `w = NTT⁻¹(Â · NTT(y))`,
+- **Commit**: sample `y` uniformly from the mask box, compute `w = NTT⁻¹(Â · NTT(y))`,
   return `(w₁ = HighBits(w), state = (y, w))`.
 - **Respond** (Alg 7, lines 16–30): derive `c = SampleInBall(c̃)`, compute
   `z = y + c·s₁`, check `‖z‖∞ < γ₁ - β` and `‖LowBits(w - c·s₂)‖∞ < γ₂ - β`,
@@ -198,7 +217,7 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
 - **Verify** (Alg 8, lines 8–13): check `‖z‖∞ < γ₁ - β`, reconstruct
   `w'_Approx = Az - c·(t₁·2^d)`, verify `UseHint(h, w'_Approx) = w₁` and
   hint weight `≤ ω`. -/
-def identificationScheme
+noncomputable def identificationScheme
     [DecidableEq prims.High] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)
@@ -207,7 +226,7 @@ def identificationScheme
       (validKeyPair p prims) where
   commit := fun pk _sk => do
     let aHat := prims.expandA pk.rho
-    let y ← $ᵗ (RqVec p.l)
+    let y ← sampleMaskVec p.l p.gamma1
     let w := aHat * y
     let w1 := prims.highBitsVec w
     return (w1, ⟨y, w⟩)
@@ -241,7 +260,7 @@ relation `validKeyPairShort`. The commit / respond / verify algorithms are exact
 never consumed by the operations — so every per-key fact about the operations transports
 between the two scheme constants. This is the scheme used by the idealized short-key security
 statements, whose key generators produce material-valid rather than seed-derived pairs. -/
-def identificationSchemeShort
+noncomputable def identificationSchemeShort
     [DecidableEq prims.High] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)
