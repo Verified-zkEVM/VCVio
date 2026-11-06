@@ -461,7 +461,8 @@ theorem branch_run₂_oracleCall_compressedVCOracle (B : QReg) (j : Fin k) (t : 
         rw [EmulatedOracle.block_apply]
         exact EmulatedOracle.coherent_U_apply_of_ne _ Sum.inr_ne_inl _ _ _ _
       rw [hb, kronecker_zero, MatrixMap.conj_zero, ite_self]
-  · simp
+  · intro h
+    exact (h (Finset.mem_univ _)).elim
 
 end compressed
 
@@ -940,8 +941,11 @@ theorem outcomeMeasure_run₂_extractChallenger_le_of_openingQueryBound
       (extractProj ME (TpIC.full hk c.idx c.cm) tdm)
       (extractProj ME (TpIC.full hk c.idx c.cm) tdm)).symm.trans
       (congrArg₂ (· ⊗ₖ ·) (Matrix.one_mul 1) (extractProj_mul_self ME _ tdm))
-    exact (LinearMap.congr_fun (MatrixMap.conj_mul _ _) σ.matrix).symm.trans
-      (congrArg (fun M ↦ MatrixMap.conj M σ.matrix) hK)
+    have hconj := LinearMap.congr_fun
+      (MatrixMap.conj_mul
+        ((1 : Matrix B B ℂ) ⊗ₖ extractProj ME (TpIC.full hk c.idx c.cm) tdm)
+        ((1 : Matrix B B ℂ) ⊗ₖ extractProj ME (TpIC.full hk c.idx c.cm) tdm)) σ.matrix
+    exact hconj.symm.trans (congrArg (fun M ↦ MatrixMap.conj M σ.matrix) hK)
 
 /-- **The P3 challenger against the compressed oracles, leaf by leaf** (ePrint 2025/2166,
 pp. 59–61). From every joint substate of the adversary's register and the databases, the P3

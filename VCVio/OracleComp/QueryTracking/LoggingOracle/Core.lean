@@ -66,7 +66,7 @@ variable [EmptyCollection ω] [Append ω]
 /-- Running a `WriterT` handler and then interpreting its base oracle
 computations is the same as first mapping the handler's base through the
 outer interpreter. -/
-theorem simulateQ_writerTMapBase_run [LawfulMonad m₁] [LawfulAppend ω]
+theorem simulateQ_writerTMapBase_run [LawfulMonad m₁]
     (outer : QueryImpl spec₁ m₁)
     (inner : QueryImpl spec₀ (WriterT ω (OracleComp spec₁)))
     {α : Type u} (oa : OracleComp spec₀ α) :
@@ -74,7 +74,12 @@ theorem simulateQ_writerTMapBase_run [LawfulMonad m₁] [LawfulAppend ω]
       (simulateQ (outer.writerTMapBase inner) oa).run := by
   induction oa using OracleComp.inductionOn with
   | pure x => simp
-  | query_bind t k ih => simp [writerTMapBase, ih]
+  | query_bind t k ih =>
+      change simulateQ outer ((inner t >>= fun u => simulateQ inner (k u)).run) =
+        (outer.writerTMapBase inner t >>= fun u =>
+          simulateQ (outer.writerTMapBase inner) (k u)).run
+      simp only [WriterT.run_bind, simulateQ_bind, simulateQ_map,
+        writerTMapBase_apply, ih]
 
 end writerTMapBase
 

@@ -37,15 +37,15 @@ theorem keys_eq_replay (rightKeep : Walk → Bytes → HandlerCarrier.State → 
     keys.1 = @Scheme.keygenInternal Id Id.instMonad (CacheReplay.replayQuery walk.2)
       walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 := by
   obtain ⟨outputs, hwarm⟩ := HonestGrowth.walk_cache_eq_warmCache hwalk
+  -- Support hypotheses are passed through `assumption`, not as terms: elaborating `h` as a term
+  -- puts its type in weak head normal form, which evaluates the whole run it is about.
   have hrom := mem_support_rom_of_carrier (keyAt walk) (rightKeep walk) _
-    (startAt walk.2, (([], []), 0)) keys hkeys
+    (startAt walk.2, (([], []), 0)) keys (by assumption)
   rw [show (startAt walk.2, (([], []), (0 : Nat))).1.cache = walk.2 from rfl, hwarm,
     HonestProbes.run_keygenInternal_world_eq_pure, support_pure, Set.mem_singleton_iff] at hrom
   rw [hwarm]
   exact (Prod.ext_iff.mp hrom).1
 
-set_option maxHeartbeats 400000 in
--- Unfolding the replayed `keygenInternal` to its public key exceeds the default budget.
 /-- **The carrier tail's public key is `keyAt walk`.** -/
 theorem keys_publicKey (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) (walk : Walk)
     (hwalk : walk ∈ support WarmedGame.graphWalk)
@@ -54,7 +54,7 @@ theorem keys_publicKey (rightKeep : Walk → Bytes → HandlerCarrier.State → 
       (Scheme.keygenInternal walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2)).run
         (startAt walk.2, (([], []), 0)))) :
     keys.1.1.publicKey = keyAt walk := by
-  rw [keys_eq_replay rightKeep walk hwalk keys hkeys]
+  rw [keys_eq_replay rightKeep walk hwalk keys (by clear * - hkeys; assumption)]
   exact LateProvenance.keygen_publicKey walk.2 walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2
 
 end SLHDSA.SHAKE128s.CarrierRecord
