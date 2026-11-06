@@ -126,6 +126,16 @@ Used in:
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/ToFinalValidity.lean`
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/ToFinalValidity/Core.lean`
 
+### CO25
+
+Alessandro Chiesa and Michele Orrù.
+*A Fiat–Shamir Transformation From Duplex Sponges*.
+Cryptology ePrint Archive, Paper 2025/536, 2025.
+Preprint: <https://eprint.iacr.org/2025/536>
+
+Used in:
+- `VCVio/OracleComp/Constructions/UniformPreimage.lean`
+
 ### CY24
 
 Alessandro Chiesa and Eylon Yogev.
