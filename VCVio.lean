@@ -203,6 +203,11 @@ public import VCVio.CryptoFoundations.PRF.HiddenBit
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
+public import VCVio.CryptoFoundations.Rewinding.Basic
+public import VCVio.CryptoFoundations.Rewinding.Eager
+public import VCVio.CryptoFoundations.Rewinding.FixedTape
+public import VCVio.CryptoFoundations.Rewinding.Instances
+public import VCVio.CryptoFoundations.Rewinding.Laws
 public import VCVio.CryptoFoundations.RoundByRound
 public import VCVio.CryptoFoundations.SecExp
 public import VCVio.CryptoFoundations.SecExp.Measure
