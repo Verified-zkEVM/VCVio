@@ -88,6 +88,20 @@ theorem evalDist_original_fips_keygen_keys :
     root.map (fun root => ((⟨skSeed, skPrf, pkSeed, root⟩ : SecretKeyCore FIPS205.core),
       (⟨pkSeed, root⟩ : PublicKeyCore FIPS205.core)))
 
+/-- The union-ledger and secret-address count for SLH-DSA-SHAKE-128s. -/
+private theorem honestAdrsCount_fips205 :
+    honestAdrsCount FIPS205.params = 1591788895347057694892543 := by
+  have length : FIPS205.params.params.len = 35 := by decide
+  have trees : xmssTreeCount FIPS205.params.params = 18049651735527937 := by
+    have h := xmssTreeCount_mul_pred FIPS205.params.params FIPS205.params.valid
+    change xmssTreeCount FIPS205.params.params * (2 ^ 9 - 1) = 2 ^ 63 - 1 at h
+    generalize xmssTreeCount FIPS205.params.params = total at h ⊢
+    norm_num at h
+    omega
+  rw [honestAdrsCount_eq]
+  simp only [targetCount, wotsInstanceCount_eq_xmssTreeCount_mul, trees, length, Params.w]
+  norm_num [FIPS205.params, FipsParameterSet.validatedParams, FipsParameterSet.params]
+
 /-- An arbitrary continuation shares the actual byte cache and retains the original key pair. -/
 theorem prEvent_original_fips_keygen_then_isWeakKey_le :
   ∀ {α : Type}
@@ -124,17 +138,73 @@ theorem prEvent_original_fips_keygen_then_isWeakKey_le :
   let : MeasurableSpace FIPS205.core.PkSeed := ⊤
   rw [prEvent_bind _ _ Measurable.of_discrete]
   simp only [OracleComp.prEvent_bind_const]
-  have count : honestAdrsCount FIPS205.params = 1591788895347057694892543 := by
-    have length : FIPS205.params.params.len = 35 := by decide
-    have trees : xmssTreeCount FIPS205.params.params = 18049651735527937 := by
-      have h := xmssTreeCount_mul_pred FIPS205.params.params FIPS205.params.valid
-      change xmssTreeCount FIPS205.params.params * (2 ^ 9 - 1) = 2 ^ 63 - 1 at h
-      generalize xmssTreeCount FIPS205.params.params = total at h ⊢
-      norm_num at h
-      omega
-    rw [honestAdrsCount_eq]
-    simp only [targetCount, wotsInstanceCount_eq_xmssTreeCount_mul, trees, length, Params.w]
-    norm_num [FIPS205.params, FipsParameterSet.validatedParams, FipsParameterSet.params]
+  have count := honestAdrsCount_fips205
+  simpa only [count, weakKeyMass, Nat.cast_pow, Nat.cast_ofNat] using
+    (lintegral_weakKeyMass_le (vp := FIPS205.params) (by decide))
+
+/-- A same-state continuation keeps the weak mass of the initial generated public key. -/
+theorem prEvent_deferred_fips_lab_keygen_then_isWeakKey_le :
+  ∀ {alpha : Type}
+    (continuation : FIPS205.core.PkSeed →
+      ((PublicKeyCore FIPS205.core) × (PublicKeyCore FIPS205.core)) →
+      StateT (LabState FIPS205.core × List (DeriveQuery FIPS205.core ⊕ NodeKey FIPS205.core))
+        ProbComp alpha),
+    Pr{let result ← (do
+       let sampledPublicSeed ← ($ᵗ FIPS205.core.PkSeed : ProbComp FIPS205.core.PkSeed)
+       let z ← ((do
+         let keys ← simulateQ (slhGraph FIPS205.core sampledPublicSeed).deferredImpl
+           (labScheme FIPS205.core FIPS205.deterministicRand sampledPublicSeed).keygen
+         let value ← continuation sampledPublicSeed keys
+         pure (keys, value)).run ((∅, ∅), []))
+       pure (sampledPublicSeed, z))}[
+      IsWeakKey FIPS205.params result.2.1.1.1] ≤
+      (1591788895347057694892543 : ℝ≥0∞) / ((2 ^ 256 : Nat) : ℝ≥0∞) := by
+  intro alpha continuation
+  let : MeasurableSpace
+    (PublicKeyCore FIPS205.core × PublicKeyCore FIPS205.core) := ⊤
+  have root :
+    ∀ (sampledPublicSeed : FIPS205.core.PkSeed),
+      (fun result => result.1) <$>
+        ((simulateQ (slhGraph FIPS205.core sampledPublicSeed).deferredImpl
+          (labScheme FIPS205.core FIPS205.deterministicRand sampledPublicSeed).keygen).run
+            ((∅, ∅), [])) =ᵈ
+        (do
+          let root ← ($ᵗ FIPS205.core.Y : ProbComp FIPS205.core.Y)
+          pure ((⟨sampledPublicSeed, root⟩ : PublicKeyCore FIPS205.core),
+            (⟨sampledPublicSeed, root⟩ : PublicKeyCore FIPS205.core))) := by
+    intro sampledPublicSeed
+    have root := evalDist_deferred_labKeygen_eq_uniform FIPS205.core sampledPublicSeed
+      (rootKeySeparated_shakeCore
+        (fipsApprovedAddressBounds .SLHDSA_SHAKE_128s).toCanonicalAddressBounds)
+    simpa only [labScheme, simulateQ_bind, simulateQ_pure, simulateQ_map,
+      StateT.run_map, StateT.run_bind,
+      StateT.run_pure, map_bind, map_pure, bind_pure_comp, Functor.map_map,
+      Function.comp_def] using root.map (fun root =>
+        ((⟨sampledPublicSeed, root⟩ : PublicKeyCore FIPS205.core),
+          (⟨sampledPublicSeed, root⟩ : PublicKeyCore FIPS205.core)))
+  have forgotten (s : FIPS205.core.PkSeed) :
+      (fun z => z.1.1) <$> ((do
+        let keys ← simulateQ (slhGraph FIPS205.core s).deferredImpl
+          (labScheme FIPS205.core FIPS205.deterministicRand s).keygen
+        let value ← continuation s keys
+        pure (keys, value)).run ((∅, ∅), [])) =ᵈ
+      Prod.fst <$> ((simulateQ (slhGraph FIPS205.core s).deferredImpl
+        (labScheme FIPS205.core FIPS205.deterministicRand s).keygen).run
+          ((∅, ∅), [])) := by
+    simp only [StateT.run_bind, StateT.run_pure, map_bind, map_pure]
+    simpa only [bind_pure_comp] using EvalDistEq.bind_right
+      ((simulateQ (slhGraph FIPS205.core s).deferredImpl
+        (labScheme FIPS205.core FIPS205.deterministicRand s).keygen).run ((∅, ∅), []))
+      (fun z => OracleComp.EvalDistEq.map_const ((continuation s z.1).run z.2) z.1)
+  have equal (s : FIPS205.core.PkSeed) :=
+    ((forgotten s).trans (root s)).prEvent_eq
+      (fun keys => IsWeakKey FIPS205.params keys.1)
+  simp only [prEvent_norm] at equal
+  let : MeasurableSpace FIPS205.core.PkSeed := ⊤
+  simp only [prEvent_norm]
+  rw [prEvent_bind _ _ Measurable.of_discrete]
+  simp only [prEvent_norm, equal]
+  have count := honestAdrsCount_fips205
   simpa only [count, weakKeyMass, Nat.cast_pow, Nat.cast_ofNat] using
     (lintegral_weakKeyMass_le (vp := FIPS205.params) (by decide))
 

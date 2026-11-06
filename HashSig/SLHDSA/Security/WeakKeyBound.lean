@@ -7,6 +7,9 @@ Authors: Alexander Hicks
 module
 
 public import HashSig.SLHDSA.Security.ByteRouter
+public import HashSig.SLHDSA.Security.LabScheme
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Defer
+import VCVio.OracleComp.QueryTracking.RandomOracle.ReadSet
 import HashSig.SLHDSA.Security.AddressKeys
 import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
 
@@ -245,6 +248,111 @@ height `h'`. -/
   ∀ a : Adrs, (a.type = 0 ∨ a.type = 1 ∨ a.type = 5 ∨ a.type = 2 ∧ a.word2 < vp.params.hp) →
     core.adrsToKey a ≠
       core.adrsToKey (xmssNodeAdrs (GeneralHypertree.layerAdrs (vp.params.d - 1) 0) vp.params.hp 0)
+
+/-! ### Deferred label key generation -/
+
+section DeferredRoot
+
+variable (core)
+
+private abbrev rootAddress : Adrs :=
+  xmssNodeAdrs (GeneralHypertree.layerAdrs (vp.params.d - 1) 0) vp.params.hp 0
+
+private theorem rootAddress_mem : rootAddress (vp := vp) ∈ constructionAddresses vp := by
+  rw [rootAddress, ← LayerTreeCoord.top_toAdrs_layerAdrs]
+  exact xmssNodeAdrs_mem_constructionAddresses _ vp.valid.hp_pos le_rfl (by simp)
+
+private def rootLabel : NodeKey core :=
+  ⟨core.adrsToKey (rootAddress (vp := vp)), rootAddress (vp := vp), rootAddress_mem, rfl⟩
+
+private def belowRoot : Set (DeriveQuery core ⊕ NodeKey core) :=
+  {cell | match cell with
+    | .inl _ => True
+    | .inr label => label.1 ≠ core.adrsToKey (rootAddress (vp := vp))}
+
+variable [SampleableType core.Y]
+
+private theorem readsWithin_labNode (s : core.PkSeed) {a : Adrs}
+    (hne : core.adrsToKey a ≠ core.adrsToKey (rootAddress (vp := vp))) :
+    AllQueriesSatisfy (labNode core a) ((slhGraph core s).ReadsWithin (belowRoot core)) := by
+  apply (slhGraph core s).allQueriesSatisfy_readsWithin_readCell
+  intro cell hcell
+  obtain ⟨label, _, hkey, rfl⟩ := (childCell_inr_eq_some_iff core).1 hcell
+  change label.1 ≠ core.adrsToKey (rootAddress (vp := vp))
+  exact hkey ▸ hne
+
+private theorem readsWithin_labChain_top (s : core.PkSeed) (hkey : core.RootKeySeparated vp)
+    (adrs : Adrs) (i : Nat) :
+    AllQueriesSatisfy (labChain core adrs i (vp.params.w - 1))
+      ((slhGraph core s).ReadsWithin (belowRoot core)) := by
+  have hw : vp.params.w - 1 = vp.params.w - 2 + 1 := by
+    have : 2 ≤ vp.params.w := Nat.one_lt_two_pow vp.valid.lgw_pos.ne'
+    omega
+  rw [labChain, hw]
+  apply (slhGraph core s).allQueriesSatisfy_readsWithin_touchRead
+  intro cell hcell
+  obtain ⟨label, _, hlabel, rfl⟩ := (childCell_inr_eq_some_iff core).1 hcell
+  change label.1 ≠ core.adrsToKey (rootAddress (vp := vp))
+  rw [← hlabel]
+  exact hkey _ (Or.inl (by simp only [wotsChainAdrs_setHashAddress_eq]))
+
+/-- Proper XMSS subtrees read no label at the final-root key. -/
+private theorem readsWithin_labXmssNode_below_root (s : core.PkSeed)
+    (hkey : core.RootKeySeparated vp) (base : Adrs) {z : Nat}
+    (hz : z < vp.params.hp) (t : Nat) :
+    AllQueriesSatisfy (labXmssNode core base z t)
+      ((slhGraph core s).ReadsWithin (belowRoot core)) := by
+  let Q := fun {α : Type} (oa : OracleComp (labSpec core) α) =>
+    AllQueriesSatisfy oa ((slhGraph core s).ReadsWithin (belowRoot core))
+  refine PerfectMerkleTree.merkleRootM_pred_of_subtree Q
+    (fun _ _ => allQueriesSatisfy_bind) _ _ z t (fun i _ => ?_)
+    (fun h i _ hh _ _ _ => ?_)
+  · exact allQueriesSatisfy_bind
+      (allQueriesSatisfy_ofFnM _ (fun _ => readsWithin_labChain_top core s hkey _ _))
+      (fun _ => readsWithin_labNode core s
+        (hkey _ (Or.inr (Or.inl (by rw [wotsPkAdrs_eq])))))
+  · exact readsWithin_labNode core s
+      (hkey _ (Or.inr (Or.inr (Or.inr ⟨rfl, show h < vp.params.hp by omega⟩))))
+
+variable [DecidableEq core.Y] [SampleableType (Bytes vp.params.m)]
+  [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
+
+/-- Cold deferred LAB key generation returns a uniform public-root marginal. -/
+theorem evalDist_deferred_labKeygen_eq_uniform (s : core.PkSeed)
+    (hkey : core.RootKeySeparated vp) :
+    Prod.fst <$> ((simulateQ (slhGraph core s).deferredImpl (labKeygen core)).run
+      ((∅, ∅), [])) =ᵈ ($ᵗ core.Y : ProbComp core.Y) := by
+  obtain ⟨hp', hhp⟩ : ∃ hp', vp.params.hp = hp' + 1 :=
+    ⟨_, (Nat.succ_pred_eq_of_pos vp.valid.hp_pos).symm⟩
+  let base := GeneralHypertree.layerAdrs (vp.params.d - 1) 0
+  let preRoot : OracleComp (labSpec core) (core.Y × core.Y) := do
+    let left ← labXmssNode core base hp' 0
+    let right ← labXmssNode core base hp' 1
+    pure (left, right)
+  have hdecomp : labKeygen core = (preRoot >>= fun _ =>
+      labNode core (rootAddress (vp := vp))) := by
+    simp only [preRoot, bind_assoc, pure_bind, labKeygen, labXmssNode, rootAddress, hhp]
+    rfl
+  have hpre : AllQueriesSatisfy preRoot
+      ((slhGraph core s).ReadsWithin (belowRoot core)) :=
+    allQueriesSatisfy_bind (readsWithin_labXmssNode_below_root core s hkey base (by omega) 0)
+      fun _ => allQueriesSatisfy_bind
+        (readsWithin_labXmssNode_below_root core s hkey base (by omega) 1)
+        fun _ => allQueriesSatisfy_pure _ _
+  rw [hdecomp, simulateQ_bind, StateT.run_bind, map_bind]
+  refine (EvalDistEq.bind_congr_of_support _ (fun result hresult => ?_)).trans
+    (EvalDistEq.bind_const _ ($ᵗ core.Y : ProbComp core.Y))
+  have hnone : result.2.1.2 (.inr (rootLabel core)) = none := by
+    simpa only [QueryCache.empty_apply] using
+      (slhGraph core s).cell_eq_of_mem_support_simulateQ_deferredImpl hpre hresult
+        (c := .inr (rootLabel core)) (by simp [belowRoot, rootLabel])
+  rw [labNode_of_mem core rootAddress_mem, readCell, simulateQ_HasQuery_query,
+    CanonicalGraph.deferredImpl_run_read,
+    RelabelState.drawCell_run_of_cell_eq_none (by simpa only [rootLabel] using hnone)]
+  simp only [Functor.map_map, id_map']
+  exact EvalDistEq.rfl
+
+end DeferredRoot
 
 variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed]
   [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf] [DecidableEq core.Y]
