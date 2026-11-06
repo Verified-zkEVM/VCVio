@@ -212,7 +212,22 @@ section HeadlineInstances
 variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
   [DecidableEq prims.High]
   (M : Type) [DecidableEq M] [Inhabited M]
-  [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+
+/-- An aborting forger has advantage `0` in the `ExpandA` random-oracle game. A game that ignored
+the verifier, or accepted aborted signatures, would fail this. -/
+theorem romNmaAdvantage_aborting :
+    romNmaAdvantage p prims (M := M) (fun _ => pure (default, none)) = 0 := by
+  simp [romNmaAdvantage, romNmaExperiment, verifyRO, withExpandACache, simulateToProbComp]
+
+/-- An aborting forger gives the `ExpandS` replacement hop advantage `0`. -/
+theorem expandSAdvantage_aborting
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
+    (maxAttempts : ℕ) :
+    expandSAdvantage p prims (expandSDistinguisher p prims hr maxAttempts
+      (M := M) (fun _ => pure (default, none))) = 0 := by
+  simp [expandSAdvantage, expandSDistinguisher, simulateToProbComp, FiatShamirWithAbort]
+
+variable [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
 
 /-- `nma_security_short_seed` at the generable relation `hrShort`. -/
 example (maxAttempts : ℕ) (adv : SignatureAlg.EufNmaAdversary
@@ -276,20 +291,6 @@ example (h_laws : Primitives.Laws prims nttOps) (maxAttempts : ℕ) :
     (fun _pk => ⟨isQueryBoundP_pure _ _ _, isQueryBoundP_pure _ _ _⟩)
     0 (distinguisherBShort p prims (hrShort p prims) maxAttempts)
     (fun _ => le_of_eq (add_zero _).symm)
-
-/-- An aborting forger has advantage `0` in the `ExpandA` random-oracle game. A game that ignored
-the verifier, or accepted aborted signatures, would fail this. -/
-theorem romNmaAdvantage_aborting :
-    romNmaAdvantage p prims (M := M) (fun _ => pure (default, none)) = 0 := by
-  simp [romNmaAdvantage, romNmaExperiment, verifyRO, withExpandACache, simulateToProbComp]
-
-/-- An aborting forger gives the `ExpandS` replacement hop advantage `0`. -/
-theorem expandSAdvantage_aborting
-    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
-    (maxAttempts : ℕ) :
-    expandSAdvantage p prims (expandSDistinguisher p prims hr maxAttempts
-      (M := M) (fun _ => pure (default, none))) = 0 := by
-  simp [expandSAdvantage, expandSDistinguisher, simulateToProbComp, FiatShamirWithAbort]
 
 /-- `nma_security_rom` at the aborting forger. -/
 example :
