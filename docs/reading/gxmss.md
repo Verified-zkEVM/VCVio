@@ -67,7 +67,7 @@ padded into the chain domain.
 The theorem requires sampleable `H` and retry-randomizer type `R`, the declared
 decidable equalities, `0 < v`, `0 < w`, two distinct members of the same global
 code, and `SigningQueryBound qs A`. The public seed is drawn from the actual
-`hash.thf.seedGen`; the direct theorem adds no uniform-public-seed assumption.
+`TweakableHash.seedGen` of `hash.thf`; the direct theorem adds no uniform-public-seed assumption.
 `strong_unforgeability_power_of_two_reduction_bound_of_two_codewords` relaxes
 the chain coefficients to `L*v*D` and `L*v*D²`, retaining the four separate
 filler terms.
