@@ -22,7 +22,12 @@ computations, probability semantics, program logic, and lattice- and hash-based 
     -- Disable the unicode allowlist linter: VCVio docstrings legitimately use
     -- FIPS-204 math notation (combining tilde `c̃`) and cited author names with
     -- diacritics (e.g. `Cătălin Hriţcu`).
-    ⟨`weak.linter.unicodeLinter, false⟩
+    ⟨`weak.linter.unicodeLinter, false⟩,
+    -- Disable core's `constructorNameAsVariable` linter. It puts the type of every named binder,
+    -- hypotheses included, in weak head normal form at default transparency, so a hypothesis such
+    -- as `hmem : x ∈ support (simulateQ impl game)` makes it unfold the whole game. In the SLH-DSA
+    -- proofs that is most of the elaboration time of the slowest modules.
+    ⟨`weak.linter.constructorNameAsVariable, false⟩
   ]
 
 /-- Run Mathlib's source-style checks and Batteries' environment linters, with an exact
