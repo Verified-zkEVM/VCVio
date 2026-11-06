@@ -136,6 +136,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.Level
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Monadic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.CacheRefinement
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.CacheRefinement.Cost
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Collision
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.EqDistTriple
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
@@ -381,6 +382,7 @@ public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
+public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Cost
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.HitPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.Position
