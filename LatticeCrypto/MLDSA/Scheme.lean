@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import LatticeCrypto.MLDSA.MaskBox
 public import LatticeCrypto.MLDSA.Primitives
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
@@ -184,25 +185,6 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
           PublicKey p prims × SecretKey p) = (pk, sk) := by
   unfold validKeyPairShort
   exact @decide_eq_true_iff _ (Classical.propDecidable _)
-
-/-! ### The mask distribution -/
-
-/-- Whether `v` lies in the range of FIPS 204's `ExpandMask`: the centered representative of every
-coefficient of every component is in `[-γ₁ + 1, γ₁]`. The zero vector is included outright so that
-the box is inhabited at the degenerate `γ₁ = 0`; for `γ₁ ≥ 1` it already lies in the range. -/
-def maskBounded {k : ℕ} (v : RqVec k) (gamma1 : ℕ) : Prop :=
-  v = 0 ∨ ∀ (j : Fin k) (i : Fin ringDegree),
-    -(gamma1 : ℤ) < centeredRepr ((v.get j).get i) ∧ centeredRepr ((v.get j).get i) ≤ gamma1
-
-/-- The uniform distribution on the mask box. -/
-noncomputable instance (k gamma1 : ℕ) : SampleableType {v : RqVec k // maskBounded v gamma1} :=
-  letI : Fintype {v : RqVec k // maskBounded v gamma1} := .ofFinite _
-  letI : Nonempty {v : RqVec k // maskBounded v gamma1} := ⟨⟨0, .inl rfl⟩⟩
-  .ofFintype _
-
-/-- Uniform sampling from the mask box: the ideal distribution of FIPS 204's `ExpandMask`. -/
-noncomputable def sampleMaskVec (k gamma1 : ℕ) : ProbComp (RqVec k) :=
-  Subtype.val <$> ($ᵗ {v : RqVec k // maskBounded v gamma1})
 
 /-! ### Identification Scheme -/
 

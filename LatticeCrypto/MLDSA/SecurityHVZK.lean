@@ -96,10 +96,6 @@ lemma uniform_bind_evalDistEq_of_cover {α β γ : Type} [SampleableType α]
 
 /-! ### Componentwise algebra on `Rq` and `RqVec` -/
 
-private lemma neg_rq_get (f : Rq) (i : Fin ringDegree) : (-f).get i = -(f.get i) := by
-  change (coeffRing.neg f).get i = _
-  simp
-
 private lemma polyNorm_neg (f : Rq) : polyNorm (-f) = polyNorm f := by
   unfold polyNorm normOps
   simp only [LatticeCrypto.zmodPolyNormOps, LatticeCrypto.normOpsOfCenteredView]
@@ -120,49 +116,6 @@ private lemma rqVec_sub_add_cancel {k : ℕ} (z v : RqVec k) : z - v + v = z := 
   apply Vector.ext; intro i hi
   simp only [Vector.getElem_sub, Vector.getElem_add]
   exact sub_add_cancel _ _
-
-/-! ### The mask box -/
-
-/-- The centered norm of a polynomial as the largest absolute centered coefficient. -/
-private lemma polyNorm_eq_sup (f : Rq) :
-    polyNorm f = Finset.univ.sup fun i : Fin ringDegree => (centeredRepr (f.get i)).natAbs := by
-  simp only [polyNorm, normOps, zmodPolyNormOps, normOpsOfCenteredView, cInfNormOf,
-    vectorNegacyclicRing_backend, zmodCenteredCoeffView]
-
-/-- Each coefficient of each component is bounded by the vector's centered norm. -/
-private lemma natAbs_centeredRepr_le_polyVecNorm {k : ℕ} (v : RqVec k) (j : Fin k)
-    (i : Fin ringDegree) : (centeredRepr ((v.get j).get i)).natAbs ≤ polyVecNorm v :=
-  calc (centeredRepr ((v.get j).get i)).natAbs ≤ polyNorm (v.get j) := by
-        rw [polyNorm_eq_sup]
-        exact Finset.le_sup (f := fun i => (centeredRepr ((v.get j).get i)).natAbs)
-          (Finset.mem_univ i)
-    _ ≤ polyVecNorm v := PolyVec.component_cInfNorm_le normOps v j
-
-/-- A vector of centered norm below `γ₁` lies in the mask box. -/
-lemma maskBounded_of_polyVecNorm_lt {k gamma1 : ℕ} {v : RqVec k} (hv : polyVecNorm v < gamma1) :
-    maskBounded v gamma1 := by
-  refine .inr fun j i => ?_
-  have h := natAbs_centeredRepr_le_polyVecNorm v j i
-  omega
-
-/-- The triangle inequality for the centered norm of a difference. -/
-private lemma polyVecNorm_sub_le {k : ℕ} (z v : RqVec k) :
-    polyVecNorm (z - v) ≤ polyVecNorm z + polyVecNorm v := by
-  refine (PolyVec.cInfNorm_le_iff normOps).mpr fun j => ?_
-  change polyNorm ((z - v).get j) ≤ _
-  rw [polyNorm_eq_sup]
-  refine Finset.sup_le fun i _ => ?_
-  have hz := natAbs_centeredRepr_le_polyVecNorm z j i
-  have hv := natAbs_centeredRepr_le_polyVecNorm v j i
-  have hget : ((z - v).get j).get i = (z.get j).get i + -(v.get j).get i := by
-    simp only [Vector.get_eq_getElem, Vector.getElem_sub]
-    exact (coeffRing.coeff_sub _ _ i).trans (sub_eq_add_neg _ _)
-  simp only [centeredRepr_eq_valMinAbs] at hz hv ⊢
-  rw [hget]
-  have hneg := ZMod.natAbs_valMinAbs_neg ((v.get j).get i)
-  have hadd := ZMod.natAbs_valMinAbs_add_le ((z.get j).get i) (-(v.get j).get i)
-  have htri := Int.natAbs_add_le ((z.get j).get i).valMinAbs (-(v.get j).get i).valMinAbs
-  omega
 
 variable [nttOps : NTTRingOps]
 

@@ -53,8 +53,9 @@ instantiating those abstractions for a lattice scheme.
   NTT-facing types.
 - `LatticeCrypto/MLDSA/Primitives.lean`: abstract hashing, sampling, rounding, and encoding-facing
   operations.
-- `LatticeCrypto/MLDSA/Scheme.lean`: proof-level identification scheme with aborts, with the mask
-  drawn uniformly from `ExpandMask`'s range (`sampleMaskVec`).
+- `LatticeCrypto/MLDSA/MaskBox.lean`: the uniform distribution on `ExpandMask`'s range
+  (`sampleMaskVec`), and the exact probability that a sample passes a norm gate.
+- `LatticeCrypto/MLDSA/Scheme.lean`: proof-level identification scheme with aborts.
 - `LatticeCrypto/MLDSA/Signature.lean`: FIPS-style signing and verification layer built on the
   proof-level scheme.
 - `LatticeCrypto/MLDSA/Security.lean`: reduction statements from the signature / IDS surfaces to
