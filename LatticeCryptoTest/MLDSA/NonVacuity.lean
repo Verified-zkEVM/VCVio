@@ -5,10 +5,19 @@ Authors: Oleksandr Vovkotrub
 -/
 
 module
+public import LatticeCrypto.MLDSA.SecurityExpandARO
 public import LatticeCrypto.MLDSA.SecurityHeadlines
+import all LatticeCrypto.MLDSA.SecurityExpandARO
+import all LatticeCrypto.MLDSA.SecurityHeadlines
 
 /-!
-# ML-DSA short-model CMA headline: joint hypothesis-consistency witness
+# ML-DSA headlines: joint hypothesis-consistency witnesses
+
+The headlines are instantiated at their own hypotheses: `nma_security_short_seed` at `hrShort`,
+`nma_security_fips` at `hrFips` with the identity bridge, `euf_cma_security_of_nma_fips_hvzkReal`
+under `Primitives.Laws`, and `euf_cma_security_of_nma_short` below. For an aborting forger the
+ROM game and the `ExpandS` replacement hop have advantage `0`, so neither is a game every forger
+wins.
 
 `MLDSA.euf_cma_security_of_nma_short` is a conditional theorem.  Its hypothesis frontier bundles
 the key-generation pin (`hGen`), the HVZK simulator data (`sim`, `ζ_zk`, `hζ`,
@@ -59,7 +68,6 @@ variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
   [DecidableEq prims.High]
   (M : Type) [DecidableEq M] [Inhabited M]
   [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
-  [SampleableType (CommitHashBytes p)]
 
 /-! ## The witness data: simulator, good event, and trivial adversary -/
 
@@ -102,8 +110,7 @@ lemma neverAbortSim_hvzk :
     exact measureETVDist_le_one _ _
 
 omit [DecidableEq M] [Inhabited (Commitment p prims)]
-  [Inhabited (Response p prims)]
-  [SampleableType (CommitHashBytes p)] in
+  [Inhabited (Response p prims)] in
 /-- The trivial forger makes no signing and no random-oracle queries. -/
 lemma trivialForger_signHashQueryBound (maxAttempts : ℕ) (pk : PublicKey p prims) :
     FiatShamir.signHashQueryBound M
@@ -113,7 +120,6 @@ lemma trivialForger_signHashQueryBound (maxAttempts : ℕ) (pk : PublicKey p pri
 
 /-! ## The joint frontier certificate -/
 
-open scoped Classical in
 /-- **Joint consistency (inhabitance) witness for the `MLDSA.euf_cma_security_of_nma_short`
 hypotheses.**  At arbitrary parameters `(p, prims)` (under the headline's own carrier
 instances), any message type `M`, and any retry budget, every explicit hypothesis of the
@@ -164,7 +170,6 @@ theorem mldsa_short_cma_hyps_inhabited (maxAttempts : ℕ) :
     trivialForger_signHashQueryBound p prims M maxAttempts,
     fun _ => le_of_eq (add_zero _).symm⟩
 
-open scoped Classical in
 /-- **End-to-end applicability of the short-model CMA headline.**  The derived theorem
 `MLDSA.euf_cma_security_of_nma_short` applies to the trivial forger with every hypothesis
 discharged at the witness values of `mldsa_short_cma_hyps_inhabited`, for the reductions
@@ -186,10 +191,12 @@ theorem trivial_euf_cma_security_of_nma_short (maxAttempts : ℕ) :
         ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss 0 0 1 0 1 1 zero_lt_one) :=
   euf_cma_security_of_nma_short p prims (mldsaMLWEShort p prims)
     maxAttempts (hrShort p prims) rfl (neverAbortSim p prims) 1 zero_le_one
-    (by rw [ENNReal.ofReal_one]; exact neverAbortSim_hvzk p prims)
     0 0 1 0 1 zero_le_one zero_le_one le_rfl zero_lt_one
     (honestNoAbortGood p prims)
     (by rw [ENNReal.ofReal_one]; exact prEvent_le_one _)
+    (fun pk sk hrel _ => by
+      rw [ENNReal.ofReal_one]
+      exact neverAbortSim_hvzk p prims pk sk hrel)
     (fun _pk _sk _h _cm => by rw [ENNReal.ofReal_one]; exact prEvent_le_one _)
     (fun _pk _sk h => by rw [ENNReal.ofReal_zero]; exact h.le)
     (trivialForger p prims M maxAttempts)
@@ -199,5 +206,99 @@ theorem trivial_euf_cma_security_of_nma_short (maxAttempts : ℕ) :
     (fun _ => le_of_eq (add_zero _).symm)
 
 end ShortCMAWitness
+
+section HeadlineInstances
+
+variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
+  [DecidableEq prims.High]
+  (M : Type) [DecidableEq M] [Inhabited M]
+  [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+
+/-- `nma_security_short_seed` at the generable relation `hrShort`. -/
+example (maxAttempts : ℕ) (adv : SignatureAlg.EufNmaAdversary
+      (FiatShamirWithAbort (identificationSchemeShort p prims) (hrShort p prims) M maxAttempts)) :
+    SignatureAlg.eufNmaAdvantage
+        (FiatShamirWithAbort.runtime
+          (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
+      LearningWithErrors.advantage (mldsaMLWEShort p prims)
+          (distinguisherBShort p prims (hrShort p prims) maxAttempts adv.main) +
+        SelfTargetMSIS.advantage (extractorCShort p prims adv.main) :=
+  nma_security_short_seed p prims maxAttempts (hrShort p prims) rfl adv
+
+/-- `nma_security_fips` at `hrFips` and `hrShort`, with the identity bridge at zero slack. -/
+example (maxAttempts : ℕ) (adv : SignatureAlg.EufNmaAdversary
+      (FiatShamirWithAbort (identificationScheme p prims) (hrFips p prims) M maxAttempts)) :
+    SignatureAlg.eufNmaAdvantage
+        (FiatShamirWithAbort.runtime
+          (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
+      LearningWithErrors.advantage (mldsaMLWEShort p prims)
+          (distinguisherBShort p prims (hrShort p prims) maxAttempts adv.main) + 0 +
+        SelfTargetMSIS.advantage (extractorCShort p prims adv.main) +
+        expandSAdvantage p prims
+          (expandSDistinguisher p prims (hrFips p prims) maxAttempts adv.main) :=
+  nma_security_fips p prims (mldsaMLWEShort p prims) maxAttempts (hrFips p prims) rfl
+    (hrShort p prims) rfl 0 (distinguisherBShort p prims (hrShort p prims) maxAttempts)
+    (fun _ => le_of_eq (add_zero _).symm) adv
+
+/-- The trivial CMA forger against the seed-model Fiat-Shamir-with-aborts scheme. -/
+noncomputable def trivialForgerFips (maxAttempts : ℕ) :
+    SignatureAlg.UnforgeableAdversary
+      (FiatShamirWithAbort
+        (m := OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)))
+        (identificationScheme p prims) (hrFips p prims) M maxAttempts) where
+  main := fun _ => pure (default, none)
+
+/-- `euf_cma_security_of_nma_fips_hvzkReal` applies under `Primitives.Laws`, with every remaining
+hypothesis discharged for the trivial forger. `hAbort` holds on the pairs at which the honest
+prover never aborts, at `p_abort = 0`; `hGood` and `hGuess` hold at the trivial budget `1`. This is
+consistency only: the bound is at least `δ = 1`. -/
+example (h_laws : Primitives.Laws prims nttOps) (maxAttempts : ℕ) :
+    let main := (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims)
+      (hrFips p prims) M maxAttempts (hvzkSimulatorReal p prims)
+      (trivialForgerFips p prims M maxAttempts)).main
+    SignatureAlg.unforgeableAdvantage
+        (FiatShamirWithAbort.runtime
+          (Commit := Commitment p prims) (Chal := CommitHashBytes p) M)
+        (trivialForgerFips p prims M maxAttempts) ≤
+      LearningWithErrors.advantage (mldsaMLWEShort p prims)
+          (distinguisherBShort p prims (hrShort p prims) maxAttempts main) + 0 +
+        SelfTargetMSIS.advantage (extractorCShort p prims main) +
+        expandSAdvantage p prims (expandSDistinguisher p prims (hrFips p prims) maxAttempts main) +
+        ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss 0 0 1 0 0 1 zero_lt_one) :=
+  euf_cma_security_of_nma_fips_hvzkReal p prims h_laws (mldsaMLWEShort p prims) maxAttempts
+    (hrFips p prims) rfl (hrShort p prims) rfl 0 0 1 0 1 zero_le_one zero_le_one le_rfl zero_lt_one
+    (fun pk sk =>
+      Pr{let x ← (identificationScheme p prims).honestExecution pk sk}[x = none] = 0)
+    (by rw [ENNReal.ofReal_one]; exact prEvent_le_one _)
+    (fun _pk _sk _h _cm => by rw [ENNReal.ofReal_one]; exact prEvent_le_one _)
+    (fun _pk _sk h => by rw [ENNReal.ofReal_zero]; exact h.le)
+    (trivialForgerFips p prims M maxAttempts)
+    (fun _pk => ⟨isQueryBoundP_pure _ _ _, isQueryBoundP_pure _ _ _⟩)
+    0 (distinguisherBShort p prims (hrShort p prims) maxAttempts)
+    (fun _ => le_of_eq (add_zero _).symm)
+
+/-- An aborting forger has advantage `0` in the `ExpandA` random-oracle game. A game that ignored
+the verifier, or accepted aborted signatures, would fail this. -/
+theorem romNmaAdvantage_aborting :
+    romNmaAdvantage p prims (M := M) (fun _ => pure (default, none)) = 0 := by
+  simp [romNmaAdvantage, romNmaExperiment, verifyRO, withExpandACache, simulateToProbComp]
+
+/-- An aborting forger gives the `ExpandS` replacement hop advantage `0`. -/
+theorem expandSAdvantage_aborting
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
+    (maxAttempts : ℕ) :
+    expandSAdvantage p prims (expandSDistinguisher p prims hr maxAttempts
+      (M := M) (fun _ => pure (default, none))) = 0 := by
+  simp [expandSAdvantage, expandSDistinguisher, simulateToProbComp, FiatShamirWithAbort]
+
+/-- `nma_security_rom` at the aborting forger. -/
+example :
+    romNmaAdvantage p prims (M := M) (fun _ => pure (default, none)) ≤
+      LearningWithErrors.advantage (mldsaMatrixMLWE p)
+          (distinguisherBRom p prims (M := M) fun _ => pure (default, none)) +
+        SelfTargetMSIS.advantage (extractorCRom p prims (M := M) fun _ => pure (default, none)) :=
+  nma_security_rom p prims _
+
+end HeadlineInstances
 
 end MLDSA

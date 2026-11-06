@@ -11,38 +11,49 @@ public import LatticeCrypto.MLDSA.SecurityHVZK
 /-!
 # ML-DSA EUF-NMA and EUF-CMA headlines
 
-The composed security statements over the reductions of `LatticeCrypto.MLDSA.SecurityNMA`.
-`nma_security_short` and `nma_security_fips` bound the EUF-NMA advantage of the short-key and
-seed-derived schemes by MLWE and SelfTargetMSIS advantages; `nma_security_short_seed` takes the
-short-model MLWE leg at the seed-based problem with no supplied bridge. The uniform-matrix MLWE
-problem is reached in the random-oracle model for `ExpandA` by `MLDSA.NMA.nma_security_rom`
-(`LatticeCrypto.MLDSA.SecurityExpandARO`).
+The composed security statements over the reductions of `LatticeCrypto.MLDSA.SecurityNMA`, for the
+commitment-carrying signature `(w₁, z, h)`. `nma_security_short` and `nma_security_fips` bound the
+EUF-NMA advantage of the short-key and seed-derived schemes by MLWE and SelfTargetMSIS advantages;
+`nma_security_short_seed` takes the short-model MLWE leg at the seed-based problem with no supplied
+bridge. The uniform-matrix MLWE problem is reached in the random-oracle model for `ExpandA` by
+`MLDSA.NMA.nma_security_rom` (`LatticeCrypto.MLDSA.SecurityExpandARO`).
 
-The three CMA theorems are conditional scaffolding: as *Limitations* below explains, each is
-trivial at the FIPS 204 parameter sets once `qS ≥ 1`, until the scheme samples its mask from the
-`γ₁` box. `euf_cma_security_of_nma_short` composes the CMA-to-NMA engine with the short-model
-NMA leg; no witness of its HVZK hypothesis below `ζ_zk = 1` has been constructed (see its
-docstring). `euf_cma_security_of_nma_fips` composes the same engine with the seed-model NMA leg
-`nma_security_fips`, and `euf_cma_security_of_nma_fips_hvzkReal` discharges its HVZK hypothesis
-with the proved simulator `hvzkSimulatorReal` under `Primitives.Laws`, for which
+The three CMA theorems compose the CMA-to-NMA engine with these legs. They are conditional, and no
+instance of them below `1` is proved at a FIPS 204 parameter set, as *Limitations* below explains.
+`euf_cma_security_of_nma_short` uses the short-model NMA leg and `euf_cma_security_of_nma_fips` the
+seed-model leg `nma_security_fips`. `euf_cma_security_of_nma_fips_hvzkReal` discharges the latter's
+HVZK hypothesis at `ζ_zk = 0` with `hvzkSimulatorReal` under `Primitives.Laws`, for which
 `Extern/MLDSA/NonVacuity.lean` holds the approved-parameter witness `mldsa_laws_inhabited`.
 
 ## Limitations
 
-Every CMA theorem (`euf_cma_security_of_nma_short`, `euf_cma_security_of_nma_fips`,
-`euf_cma_security_of_nma_fips_hvzkReal`) is trivial at the FIPS 204 parameter sets once
-`qS ≥ 1`, whatever the simulator and `ζ_zk`. The
-commitment step of `identificationScheme` (shared by `identificationSchemeShort`) draws the
-mask `y` uniformly from all of `R_q^ℓ`, not from the `γ₁` box of FIPS 204, so `z = y + c·s₁`
-is uniform and one attempt passes the response gate `‖z‖∞ < γ₁ - β` with probability exactly
-`((2(γ₁ - β) - 1)/q)^(256ℓ)`: about `2^-5120`, `2^-3839` and `2^-5374` for ML-DSA-44, -65 and
--87. On a good key `hAbort` therefore forces `1 - p_abort` below that, while `hGuess` forces
-`ε ≥ 1 / #w₁` with `#w₁ ≤ 44^1024`, `16^1536`, `16^2048`. The commitment-collision term
-`qS·ε·(qS + 1) / (2(1 - p_abort)²)` of `FiatShamirWithAbort.cmaToNmaLoss` is then at least
-`qS(qS + 1)·2^4647`, `qS(qS + 1)·2^1532` and `qS(qS + 1)·2^2555`; if no generated key is good,
-`hGood` forces `δ ≥ 1` instead. This is an exact counting bound. A better HVZK simulator, and a
-CMA-to-NMA step matched to it, would not change it: the root cause is the full-ring mask
-sampling, a departure from FIPS 204 that has to be fixed in the scheme itself.
+The CMA theorems take hypotheses that are not proved at any FIPS 204 parameter set:
+
+- **`hAbort`, the abort bound.** The response gate passes with probability exactly
+  `((2(γ₁ - β) - 1)/(2γ₁))^(256ℓ)` (`prEvent_sampleMaskVec_polyVecNorm_lt`), which is above `1/2` at
+  each parameter set. The remaining gates of `respond` read `A·y`, and no lower bound on their pass
+  probability is proved.
+- **`hGuess`, the commitment-guessing bound.** The only bound proved is `ε = 1`. A useful `ε` needs
+  the min-entropy of `HighBits(A·y)` on good keys, for `y` drawn from the mask box.
+- **`hhvzk` in the short model.** The withheld key part `t₀` is not determined by the public key
+  across material-valid pairs, so the construction of `hvzkSimulatorReal` does not carry over to
+  `identificationSchemeShort`, and no witness below `ζ_zk = 1` has been constructed. The seed-model
+  `euf_cma_security_of_nma_fips_hvzkReal` has `ζ_zk = 0`.
+
+The statements also stop short of FIPS 204 in their format and hardness problems:
+
+- **Signature format.** FIPS 204 recovers the commitment at verification. That conversion costs one
+  extra hash query per signing query, moving the hash budget of the loss from `qH` to `qH + qS`, and
+  it is not formalized.
+- **Hardness problems.** The MLWE leg is the seed-based `mldsaMLWEShort`, reached at the
+  uniform-matrix problem only in the random-oracle model, and the SelfTargetMSIS leg is the tailored
+  `mldsaSTMSISShort` rather than the standard normal form.
+
+## References
+
+- Fixing and Mechanizing the Security Proof of Fiat-Shamir with Aborts and Dilithium
+  (CRYPTO 2023, ePrint 2023/246), Theorems 3 and 4, Lemma 7
+- NIST FIPS 204
 -/
 
 public section
@@ -60,10 +71,9 @@ variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
   [DecidableEq prims.High]
   {M : Type} [DecidableEq M]
   [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
-  [SampleableType (CommitHashBytes p)]
 
-open scoped Classical in
-/-- **NMA security of ML-DSA in the idealized short-key model (Lemma 7, CRYPTO 2023).**
+/-- **NMA security of the commitment-carrying ML-DSA signature in the idealized short-key model
+(Lemma 7, CRYPTO 2023).**
 
 For every EUF-NMA adversary `A` against the ML-DSA scheme (instantiated via `FiatShamirWithAbort`
 over the idealized short-secret key generation `keygenShort`), the MLWE reduction
@@ -71,8 +81,9 @@ over the idealized short-secret key generation `keygenShort`), the MLWE reductio
 
   `Adv^{EUF-NMA}(A) ≤ (Adv^{MLWE}(B) + εbridge) + Adv^{SelfTargetMSIS}(C)`.
 
-The reductions are the concrete ones built in this file: the key-swap distinguisher
-`distinguisherBShort`, whose `mldsaMLWEShort` advantage **equals** the real-vs-uniform key gap —
+The reductions are the concrete ones of `LatticeCrypto.MLDSA.SecurityNMA`: the key-swap
+distinguisher `distinguisherBShort`, whose `mldsaMLWEShort` advantage **equals** the real-vs-uniform
+key gap —
 the short key-swap hop `nma_keyswap_hop_short` is an exact monad identity, so no statistical
 slack term appears in the bound — and the SelfTargetMSIS extractor `extractorCShort`, which
 turns a uniform-`t` forgery into a short self-target solution
@@ -168,8 +179,8 @@ theorem nma_security_short {Sample : Type}
     _ = LearningWithErrors.advantage mlwe (bridge adv.main) + εbridge +
         SelfTargetMSIS.advantage (extractorCShort p prims adv.main) := add_comm _ _
 
-open scoped Classical in
-/-- **NMA security of ML-DSA in the idealized short-key model, against seed-based MLWE.**
+/-- **NMA security of the commitment-carrying ML-DSA signature in the idealized short-key model,
+against seed-based MLWE.**
 
 `nma_security_short` with no supplied bridge: the MLWE reduction is the key-swap distinguisher
 `distinguisherBShort` itself, played against the seed-based short problem `mldsaMLWEShort`, at
@@ -198,7 +209,6 @@ theorem nma_security_short_seed
     nma_security_short p prims (mldsaMLWEShort p prims) maxAttempts hr hGen 0
       (distinguisherBShort p prims hr maxAttempts) (fun _ => le_of_eq (add_zero _).symm) adv
 
-open scoped Classical in
 /-- The distinguisher of the XOF-replacement hop in `nma_security_fips`. On key material
 `(ρ, K, s₁, s₂)` it runs the EUF-NMA forge-and-verify tail of `main` at the public key that
 `keyFromMaterial` builds from that material. In `expandSAdvantage` its real branch is the EUF-NMA
@@ -215,8 +225,8 @@ noncomputable def expandSDistinguisher
     (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify
       ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩ d.1 d.2)
 
-open scoped Classical in
-/-- **NMA security of ML-DSA at the FIPS seed-derived key generation.**
+/-- **NMA security of the commitment-carrying ML-DSA signature at the FIPS seed-derived key
+generation.**
 
 The short-model bound `nma_security_short` transferred to the deterministic FIPS key
 generator `keygen0` through the XOF-replacement hop: for every
@@ -344,11 +354,9 @@ theorem nma_security_fips {Sample : Type}
   rw [hadv, hgF]
   exact (MeasureTheory.Measure.apply_true_le_add_boolDist _ _).trans (add_le_add hshort' hbias)
 
-open scoped Classical in
-/-- **EUF-CMA security of the commitment-carrying short-key ML-DSA signature.** Conditional
-scaffolding: trivial at every FIPS 204 parameter set once `qS ≥ 1`, because
-`identificationScheme.commit` samples the mask from all of `R_q^ℓ` (module docstring,
-*Limitations*).
+/-- **EUF-CMA security of the commitment-carrying short-key ML-DSA signature.** Conditional on
+`hAbort`, `hGuess` and `hhvzk`, which are not proved at any FIPS 204 parameter set (module
+docstring, *Limitations*).
 
 The CMA-to-NMA-to-hardness composition over the idealized short-secret key generation
 `keygenShort`: for any EUF-CMA adversary `adv` against the Fiat-Shamir-with-aborts ML-DSA
@@ -373,34 +381,17 @@ abstract MLWE problem to the short-model one `mldsaMLWEShort`.
 The relation of `hr` is the material-based `validKeyPairShort`, so `hGen` is inhabited by
 `hrShort` (`keygenShort_generable`).
 
-**Trivial at the FIPS 204 parameter sets once `qS ≥ 1`.** The commitment step draws the mask
-`y` from all of `R_q^ℓ`, so on a good key `hAbort` forces
-`1 - p_abort ≤ ((2(γ₁ - β) - 1)/q)^(256ℓ)`, and together with `ε ≥ 1 / #w₁` from `hGuess` the
-commitment-collision term of `FiatShamirWithAbort.cmaToNmaLoss` far exceeds `1` for every
-`qS ≥ 1`, whatever `ζ_zk` is; if no key is good, `hGood` forces `δ ≥ 1`. The exact figures are
-in the module docstring's Limitations section.
+**Open: `hhvzk` has no witness below `ζ_zk = 1` so far.** In the short model the withheld key part
+`t₀` is not determined by the public key across material-valid pairs, so the construction of the
+seed-model simulator `hvzkSimulatorReal` does not carry over to `identificationSchemeShort`. At
+`ζ_zk = 1` (any simulator, since total variation is at most one) the loss
+`FiatShamirWithAbort.cmaToNmaLoss` contains `qS · 1 / (1 − p_abort) ≥ 1` for `qS ≥ 1`.
 
-**Open obligation: no witness of the HVZK hypothesis `hhvzk` below `ζ_zk = 1` has been
-constructed.** In the short model the withheld key part `t₀` is not determined by the public key
-across material-valid pairs, so the exact-on-accept construction of the seed-model simulator
-`hvzkSimulatorReal` (proved HVZK for `identificationScheme` by `idsWithAbort_hvzk`) does not
-carry over to `identificationSchemeShort`. The only witness available today is `ζ_zk = 1` (any
-simulator, since total variation is at most one), at which the loss
-`FiatShamirWithAbort.cmaToNmaLoss` contains `qS · 1 / (1 − p_abort) ≥ 1`. A quantitative
-short-model HVZK bound would not by itself make the theorem non-trivial, because of the
-commitment-collision term above. The seed-model composition
-`euf_cma_security_of_nma_fips_hvzkReal` has a proved HVZK witness and is trivial for the same
-reason.
-
-**Scope: commitment-carrying, not yet the end-to-end FIPS CMA headline.** This theorem is
-stated for the standard Fiat-Shamir-with-aborts signature whose commitment is *carried* in the
-signature (the generic `Option (Commitment × Response)` type). FIPS-204 ML-DSA instead
-*recovers* the commitment at verification rather than carrying it; reaching that form via
-commitment recovery costs one extra hash query per signing query, so the end-to-end loss grows
-by `qS` to `qH + qS` — the distinction recorded in `FiatShamirWithAbort.cmaToNmaLoss`. Supplying
-that commitment-recovery bridge, and composing it with the FIPS seed-derived key generation, is
-follow-up work: `nma_security_fips` currently gives the seed-derived-key result at the NMA level
-only. -/
+**Scope: commitment-carrying, not the end-to-end FIPS CMA statement.** This theorem is stated for
+the standard Fiat-Shamir-with-aborts signature whose commitment is *carried* in the signature (the
+generic `Option (Commitment × Response)` type). FIPS 204 ML-DSA instead *recovers* the commitment at
+verification; reaching that form costs one extra hash query per signing query, so the loss moves to
+`FiatShamirWithAbort.cmaToNmaLoss qS (qH + qS)`. That conversion is not formalized. -/
 theorem euf_cma_security_of_nma_short {Sample : Type}
     (mlwe : LearningWithErrors.Problem Sample (RqVec p.l) (RqVec p.k))
     (maxAttempts : ℕ)
@@ -410,12 +401,16 @@ theorem euf_cma_security_of_nma_short {Sample : Type}
     (sim : PublicKey p prims →
       ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)))
     (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk)
-    (hhvzk : (identificationSchemeShort p prims).HVZK sim (ENNReal.ofReal ζ_zk))
     (qS qH : ℕ) (ε p_abort δ : ℝ)
     (hε : 0 ≤ ε) (hδ : 0 ≤ δ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (Good : PublicKey p prims → SecretKey p → Prop)
     (hGood : Pr{let xw ← hr.gen}[¬ Good xw.1 xw.2] ≤
       ENNReal.ofReal δ)
+    (hhvzk : ∀ pk sk, validKeyPairShort p prims pk sk = true → Good pk sk →
+      letI : MeasurableSpace
+        (Option (Commitment p prims × CommitHashBytes p × Response p prims)) := ⊤
+      measureETVDist ((identificationSchemeShort p prims).honestExecution pk sk) (sim pk) ≤
+        ENNReal.ofReal ζ_zk)
     (hGuess : ∀ pk sk, Good pk sk → ∀ cm : Commitment p prims,
       Pr{let x ← Prod.fst <$> (identificationSchemeShort p prims).commit pk sk}[x = cm] ≤
         ENNReal.ofReal ε)
@@ -450,20 +445,19 @@ theorem euf_cma_security_of_nma_short {Sample : Type}
           (FiatShamirWithAbort.cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
   classical
   -- CMA advantage ≤ plain EUF-NMA advantage of `simulatedEufNmaAdv` + loss.
-  have hcma := FiatShamirWithAbort.euf_cma_to_eufNma (identificationSchemeShort p prims) hr M
-    maxAttempts sim adv ζ_zk hζ hhvzk qS qH ε p_abort δ hε hδ hp₀ hp Good hGood hGuess
-    hAbort hQ
+  have hcma := FiatShamirWithAbort.euf_cma_to_eufNma_of_good_hvzk
+    (identificationSchemeShort p prims) hr M maxAttempts sim adv ζ_zk hζ qS qH ε p_abort δ
+    hε hδ hp₀ hp Good hGood hhvzk hGuess hAbort hQ
   -- Lemma 7, short model: the plain EUF-NMA advantage is bounded by MLWE + STMSIS.
   have hnma := nma_security_short p prims mlwe maxAttempts hr hGen εbridge bridge hMlweBridge
     (FiatShamirWithAbort.simulatedEufNmaAdv (identificationSchemeShort p prims) hr M
       maxAttempts sim adv)
   exact le_trans hcma (add_le_add hnma le_rfl)
 
-open scoped Classical in
 /-- **EUF-CMA security of the commitment-carrying ML-DSA signature over seed-derived keys.**
-Conditional scaffolding: trivial at every FIPS 204 parameter set once `qS ≥ 1`, because
-`identificationScheme.commit` samples the mask from all of `R_q^ℓ` (module docstring,
-*Limitations*).
+Conditional on `hAbort`, `hGuess` and `hhvzk`; `euf_cma_security_of_nma_fips_hvzkReal` discharges
+`hhvzk` at `ζ_zk = 0`, and the other two are not proved at any FIPS 204 parameter set (module
+docstring, *Limitations*).
 
 The seed-model counterpart of `euf_cma_security_of_nma_short`: the same three-step
 composition (`FiatShamirWithAbort.euf_cma_to_nma`, the bridge
@@ -473,16 +467,11 @@ NMA leg), over the FIPS-shaped key generation `keygen0` and the seed-tagged sche
 the bound gains the advantage of `expandSDistinguisher` in the `ExpandS` replacement hop
 (`expandSAdvantage`), at the forging strategy of `simulatedEufNmaAdv`; in
 exchange the HVZK hypothesis is about the seed-tagged scheme, for which `idsWithAbort_hvzk`
-supplies a simulator with a proved bound — see `euf_cma_security_of_nma_fips_hvzkReal`.
+supplies a perfect simulator — see `euf_cma_security_of_nma_fips_hvzkReal`.
 
-**Trivial at the FIPS 204 parameter sets once `qS ≥ 1`.** Even for a perfect simulator
-(`ζ_zk = 0`), the full-ring mask of `identificationScheme.commit` makes the
-commitment-collision term of `FiatShamirWithAbort.cmaToNmaLoss` exceed `1` at the FIPS 204
-parameter sets once `qS ≥ 1` (see the module docstring's Limitations section).
-
-**Scope: commitment-carrying, not yet the end-to-end FIPS CMA headline.** As in the short
-model, the signature carries the commitment; the commitment-recovery bridge to the FIPS-204
-signature format costs `qS` extra hash queries and is follow-up work. -/
+**Scope: commitment-carrying, not the end-to-end FIPS CMA statement.** As in the short model, the
+signature carries the commitment; the conversion to the FIPS 204 signature format costs `qS` extra
+hash queries and is not formalized. -/
 theorem euf_cma_security_of_nma_fips {Sample : Type}
     (mlwe : LearningWithErrors.Problem Sample (RqVec p.l) (RqVec p.k))
     (maxAttempts : ℕ)
@@ -493,12 +482,16 @@ theorem euf_cma_security_of_nma_fips {Sample : Type}
     (sim : PublicKey p prims →
       ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)))
     (ζ_zk : ℝ) (hζ : 0 ≤ ζ_zk)
-    (hhvzk : (identificationScheme p prims).HVZK sim (ENNReal.ofReal ζ_zk))
     (qS qH : ℕ) (ε p_abort δ : ℝ)
     (hε : 0 ≤ ε) (hδ : 0 ≤ δ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (Good : PublicKey p prims → SecretKey p → Prop)
     (hGood : Pr{let xw ← hr.gen}[¬ Good xw.1 xw.2] ≤
       ENNReal.ofReal δ)
+    (hhvzk : ∀ pk sk, validKeyPair p prims pk sk = true → Good pk sk →
+      letI : MeasurableSpace
+        (Option (Commitment p prims × CommitHashBytes p × Response p prims)) := ⊤
+      measureETVDist ((identificationScheme p prims).honestExecution pk sk) (sim pk) ≤
+        ENNReal.ofReal ζ_zk)
     (hGuess : ∀ pk sk, Good pk sk → ∀ cm : Commitment p prims,
       Pr{let x ← Prod.fst <$> (identificationScheme p prims).commit pk sk}[x = cm] ≤
         ENNReal.ofReal ε)
@@ -536,9 +529,9 @@ theorem euf_cma_security_of_nma_fips {Sample : Type}
           (FiatShamirWithAbort.cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
   classical
   -- CMA advantage ≤ plain EUF-NMA advantage of `simulatedEufNmaAdv` + loss.
-  have hcma := FiatShamirWithAbort.euf_cma_to_eufNma (identificationScheme p prims) hr M
-    maxAttempts sim adv ζ_zk hζ hhvzk qS qH ε p_abort δ hε hδ hp₀ hp Good hGood hGuess
-    hAbort hQ
+  have hcma := FiatShamirWithAbort.euf_cma_to_eufNma_of_good_hvzk
+    (identificationScheme p prims) hr M maxAttempts sim adv ζ_zk hζ qS qH ε p_abort δ
+    hε hδ hp₀ hp Good hGood hhvzk hGuess hAbort hQ
   -- Seed model: the plain EUF-NMA advantage is bounded by MLWE + STMSIS + PRG.
   have hnma := nma_security_fips p prims mlwe maxAttempts hr hGen hrS hGenS εbridge
     bridge hMlweBridge
@@ -546,29 +539,12 @@ theorem euf_cma_security_of_nma_fips {Sample : Type}
       maxAttempts sim adv)
   exact le_trans hcma (add_le_add hnma le_rfl)
 
-open scoped Classical in
-/-- `euf_cma_security_of_nma_fips` with the HVZK hypothesis discharged by the proved
-seed-model simulator; conditional scaffolding like it, trivial at every FIPS 204 parameter set
-once `qS ≥ 1`. Under the primitive laws `h_laws`, `idsWithAbort_hvzk` gives
-`hvzkSimulatorReal` at the bound `hvzkBound`, so the HVZK term of the loss is the proved
-quantity `(hvzkBound p prims).toReal` (the bound is a supremum of probabilities, hence finite)
-rather than a hypothesis.
+/-- `euf_cma_security_of_nma_fips` with the HVZK hypothesis discharged at `ζ_zk = 0`. Conditional on
+`hAbort` and `hGuess`, which are not proved at any FIPS 204 parameter set (module docstring,
+*Limitations*).
 
-**Trivial for any adversary that signs, at the FIPS 204 parameters.** The commitment step of
-`identificationScheme` draws the mask `y` from all of `R_q^ℓ`, so `z = y + c·s₁` is uniform and
-one attempt passes the response gate with probability exactly `((2(γ₁ − β) − 1)/q)^(256ℓ)`. On a
-good key `hAbort` then forces `1 − p_abort` below that, and `hGuess` forces `ε ≥ 1 / #w₁`, so the
-commitment-collision term `qS·ε·(qS + 1) / (2(1 − p_abort)²)` of
-`FiatShamirWithAbort.cmaToNmaLoss` is at least `qS(qS + 1)·2^1532` at every FIPS 204 parameter
-set; if no generated key is good, `hGood` forces `δ ≥ 1` instead. This is an exact counting
-bound (figures in the module docstring's Limitations section), and it holds whatever the
-simulator is: no HVZK simulator or CMA-to-NMA step matched to it would make this statement
-non-trivial while the mask ranges over the whole ring. The statement is non-trivial only at
-`qS = 0`.
-
-The HVZK term is separately large. `hvzkBound` is the supremum over seeds of `hvzkBadMass`,
-the probability that the response gate passes while a secret-dependent gate (`LowBits`, `c·t₀`,
-hint weight) fails, and the loss divides it by `1 − p_abort`. -/
+Under the primitive laws `h_laws`, `idsWithAbort_hvzk` makes `hvzkSimulatorReal` a perfect simulator
+of the honest prover on valid keys, so the HVZK term of the loss vanishes. -/
 theorem euf_cma_security_of_nma_fips_hvzkReal {Sample : Type}
     (h_laws : Primitives.Laws prims nttOps)
     (mlwe : LearningWithErrors.Problem Sample (RqVec p.l) (RqVec p.k))
@@ -615,15 +591,15 @@ theorem euf_cma_security_of_nma_fips_hvzkReal {Sample : Type}
         expandSAdvantage p prims (expandSDistinguisher p prims hr maxAttempts
           (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims) hr M
             maxAttempts (hvzkSimulatorReal p prims) adv).main) +
-        ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss qS qH ε p_abort
-          (hvzkBound p prims).toReal δ hp) := by
-  have hne : hvzkBound p prims ≠ ⊤ :=
-    ne_top_of_le_ne_top one_ne_top (iSup_le fun _ => hvzkBadMass_le_one p prims _ _)
-  exact euf_cma_security_of_nma_fips p prims mlwe maxAttempts hr hGen hrS hGenS
-    (hvzkSimulatorReal p prims) (hvzkBound p prims).toReal ENNReal.toReal_nonneg
-    (by rw [ENNReal.ofReal_toReal hne]; exact idsWithAbort_hvzk p prims h_laws)
-    qS qH ε p_abort δ hε hδ hp₀ hp Good hGood hGuess
-    hAbort adv hQ εbridge bridge hMlweBridge
+        ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss qS qH ε p_abort 0 δ hp) :=
+  euf_cma_security_of_nma_fips p prims mlwe maxAttempts hr hGen hrS hGenS
+    (hvzkSimulatorReal p prims) 0 le_rfl
+    qS qH ε p_abort δ hε hδ hp₀ hp Good hGood
+    (fun pk sk hrel _ => by
+      rw [ENNReal.ofReal_zero]
+      exact ((identificationScheme p prims).perfectHVZK_iff_hvzk_zero _).mp
+        (idsWithAbort_hvzk p prims h_laws) pk sk hrel)
+    hGuess hAbort adv hQ εbridge bridge hMlweBridge
 
 end Headline
 
