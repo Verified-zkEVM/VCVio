@@ -72,7 +72,7 @@ def forsNodeAdrs (adrs : Adrs) (z t : ℕ) : Adrs :=
   (base.setTreeHeight z).setTreeIndex t
 
 /-- Low-level callback-parametric FORS leaf computation. -/
-def forsLeafWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
+def forsLeafWith (core : CorePrimitives p) {m : Type → Type*}
     (hash : Adrs → core.Y → m core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
     (adrs : Adrs) (t : ℕ) : m core.Y :=
   hash (forsNodeAdrs adrs 0 t) (forsSkGenCore core sk pk adrs t)
@@ -149,13 +149,13 @@ def forsPkFromSigWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
 /-! ### Canonical oracle programs -/
 
 /-- Canonical explicit-query FORS leaf computation. -/
-def forsLeafM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
+def forsLeafM (core : CorePrimitives p) {m : Type → Type*}
     [HasQuery (publicHashSpec core) m] (sk : core.SkSeed) (pk : core.PkSeed)
     (adrs : Adrs) (t : ℕ) : m core.Y :=
   forsLeafWith core (PublicHash.f core pk) sk pk adrs t
 
 /-- Canonical explicit-query FORS internal-node computation. -/
-def forsNodeHashM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
+def forsNodeHashM (core : CorePrimitives p) {m : Type → Type*}
     [HasQuery (publicHashSpec core) m] (pk : core.PkSeed) (adrs : Adrs)
     (z t : ℕ) (l r : core.Y) : m core.Y :=
   forsNodeHashWith (PublicHash.h core pk) adrs z t l r
@@ -231,8 +231,8 @@ def forsPkFromSig (prims : Primitives p) (sig : ForsSigCore p prims.core) (md : 
 
 /-- A monad morphism commutes with FORS leaf production when it commutes with the leaf-hash
 callback. -/
-theorem forsLeafWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
-    [Monad n] [LawfulMonad n] (F : m →ᵐ n) (core : CorePrimitives p)
+theorem forsLeafWith_natural {m n : Type → Type*} [Monad m]
+    [Monad n] (F : m →ᵐ n) (core : CorePrimitives p)
     (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
     (hhash : ∀ a y, F (hashm a y) = hashn a y)
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (t : ℕ) :
@@ -242,7 +242,7 @@ theorem forsLeafWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
 /-- A monad morphism commutes with addressed FORS node hashing when it commutes with the node
 callback. -/
 theorem forsNodeHashWith_natural {Y : Type} {m n : Type → Type*}
-    [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    [Monad m] [Monad n] (F : m →ᵐ n)
     (hashm : Adrs → Y → Y → m Y) (hashn : Adrs → Y → Y → n Y)
     (hhash : ∀ a l r, F (hashm a l r) = hashn a l r)
     (adrs : Adrs) (z t : ℕ) (l r : Y) :
@@ -338,7 +338,7 @@ theorem forsPkFromSigWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad 
 
 /-- Query-preserving monad morphisms commute with canonical FORS leaf computation. -/
 theorem forsLeafM_natural (core : CorePrimitives p) {m n : Type → Type*}
-    [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [Monad m] [Monad n]
     [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
     (F : HasQuery.QueryHom (publicHashSpec core) m n)
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (t : ℕ) :
@@ -347,7 +347,7 @@ theorem forsLeafM_natural (core : CorePrimitives p) {m n : Type → Type*}
 
 /-- Query-preserving monad morphisms commute with canonical FORS internal-node computation. -/
 theorem forsNodeHashM_natural (core : CorePrimitives p) {m n : Type → Type*}
-    [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [Monad m] [Monad n]
     [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
     (F : HasQuery.QueryHom (publicHashSpec core) m n)
     (pk : core.PkSeed) (adrs : Adrs) (z t : ℕ) (l r : core.Y) :

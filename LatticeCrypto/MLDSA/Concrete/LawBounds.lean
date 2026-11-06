@@ -72,18 +72,19 @@ is purely about the decoder's output range and holds for any byte input. -/
 
 /-- Decode-range infinity-norm bound for a `z`-range `bitUnpackPoly`: every coefficient of
 `bitUnpackPoly bytes (-γ + 1) γ` has centered absolute value at most `γ`, provided the bit width
-satisfies `2 ^ width = 2 γ` (true for FIPS-204 `γ₁`, a power of two) and `2 γ < q`. -/
+satisfies `2 ^ width = 2 γ` (true for FIPS-204 `γ₁`, a power of two). -/
 theorem bitUnpackPoly_z_cInfNorm_le (bytes : ByteArray) (γ : ℕ)
-    (hwidth : (2 : ℕ) ^ rangeWidth (-(γ : ℤ) + 1) (γ : ℤ) = 2 * γ)
-    (hq : 2 * γ < modulus) :
+    (hwidth : (2 : ℕ) ^ rangeWidth (-(γ : ℤ) + 1) (γ : ℤ) = 2 * γ) :
     LatticeCrypto.cInfNorm (bitUnpackPoly bytes (-(γ : ℤ) + 1) (γ : ℤ)) ≤ γ := by
-  rw [LatticeCrypto.cInfNorm_le_iff]
-  intro i
-  obtain ⟨v, hv, hget⟩ := bitUnpackPoly_get bytes (-(γ : ℤ) + 1) (γ : ℤ) i
-  rw [hget, hwidth] at *
-  have hbound : ((γ : ℤ) - (v : ℤ)).natAbs ≤ γ := by omega
-  rw [LatticeCrypto.centeredRepr_intCast_eq_of_natAbs_le ((γ : ℤ) - (v : ℤ)) hbound (by omega)]
-  exact hbound
+  by_cases hq : 2 * γ < modulus
+  · rw [LatticeCrypto.cInfNorm_le_iff]
+    intro i
+    obtain ⟨v, hv, hget⟩ := bitUnpackPoly_get bytes (-(γ : ℤ) + 1) (γ : ℤ) i
+    rw [hget, hwidth] at *
+    have hbound : ((γ : ℤ) - (v : ℤ)).natAbs ≤ γ := by omega
+    rw [LatticeCrypto.centeredRepr_intCast_eq_of_natAbs_le ((γ : ℤ) - (v : ℤ)) hbound (by omega)]
+    exact hbound
+  · exact (LatticeCrypto.cInfNorm_le_halfq _).trans (by omega)
 
 /-- For each approved parameter set the `z`-range bit width satisfies `2 ^ width = 2 γ₁` (because
 `γ₁` is a power of two) and `2 γ₁ < q`. -/

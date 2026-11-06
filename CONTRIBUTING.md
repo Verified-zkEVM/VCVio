@@ -28,6 +28,12 @@ successful duplicate does not clear a cancelled run. Use `gh run rerun RUN_ID` f
 workflow and `gh run rerun RUN_ID --failed` after diagnosing retryable failures. Wait for the
 reruns to finish before enqueuing.
 
+The hosted Linux build, lint and downstream jobs run `scripts/free-ci-disk-space.sh` before
+restoring caches. It removes unused .NET and Android SDKs and reports disk usage; it does not
+change repository sources or Lean/build caches. It requires GitHub-hosted Linux environment flags;
+the guard is an operational safeguard, not runner authentication.
+`python3 scripts/test-ci-disk-space.py` tests its guards and command boundaries using stubs.
+
 VCVio's `main` uses the merge queue. GitHub-marked stacked PRs require the
 [asynchronous merge API](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request-asynchronously):
 `PUT /repos/Verified-zkEVM/VCVio/pulls/NUMBER/merge-async` with `sha` set to the reviewed head
