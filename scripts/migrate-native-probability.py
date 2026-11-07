@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Rewrite Lean sources from VCVio's discrete probability API to its measure-based API.
 
 Usage:
-  python3 scripts/migrate-native-probability.py [--dry-run] PATH...
+  uv run --no-project --python 3.12 python scripts/migrate-native-probability.py [--dry-run] PATH...
 
 Each PATH is a Lean file or a directory searched recursively for `*.lean`. Files are rewritten
 in place unless `--dry-run` is given, in which case a unified diff is printed instead.

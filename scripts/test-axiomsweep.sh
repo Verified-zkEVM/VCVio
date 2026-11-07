@@ -50,7 +50,7 @@ lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Unimported --out "$UNIMPO
 # The sweep must be deterministic: same build, byte-identical report.
 cmp "$TAINTED_REPORT" "$TAINTED_REPORT_2"
 
-python3 - "$CLEAN_REPORT" "$TAINTED_REPORT" "$UNIMPORTED_REPORT" "$COVERING_BASELINE" <<'PY'
+uv run --no-project --python 3.12 python - "$CLEAN_REPORT" "$TAINTED_REPORT" "$UNIMPORTED_REPORT" "$COVERING_BASELINE" <<'PY'
 import json
 import sys
 
@@ -161,7 +161,7 @@ cp "$COVERING_BASELINE" "$FIXTURE_TMP/shrink.json"
 expect_status 0 shrink-baseline \
   lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Clean \
     --update-baseline --baseline "$FIXTURE_TMP/shrink.json"
-python3 -c "
+uv run --no-project --python 3.12 python -c "
 import json,sys
 b=json.load(open(sys.argv[1]))
 assert b['sorry'] == [] and b['nonstandard'] == [], b

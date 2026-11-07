@@ -20,6 +20,23 @@ Before sending work for review:
 - Keep repo-wide Lean options in `lakefile.lean`. Do not restate `autoImplicit = false` with per-file `set_option` lines.
 - Do not disable linters locally or globally to make warnings disappear. Fix the underlying issue instead of adding `set_option linter.* false`, `set_option weak.linter.* false`, or repo-level linter suppressions.
 
+## Python tooling
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) for all repository Python
+entry points, including validation scripts, `lake lint`, `lake test` and CI. CI uses uv 0.13.6.
+The commands select Python 3.12; uv downloads it if needed. Run them from the repository root.
+These checks use only the standard library, and `--no-project` runs them without installing a
+package or creating a project environment.
+
+The Agent Docs workflow runs these commands:
+
+```bash
+uv run --no-project --python 3.12 python scripts/test-agent-docs.py
+uv run --no-project --python 3.12 python scripts/check-agent-docs.py
+uv run --no-project --python 3.12 python scripts/extract-doc-fragments.py --check
+uv run --no-project --python 3.12 python scripts/check-doc-names.py
+```
+
 ## Pull Request Checks And Merge Queue
 
 Before enqueuing a reviewed PR, inspect every check on its current head, including lint and
@@ -32,7 +49,7 @@ The hosted Linux build, lint and downstream jobs run `scripts/free-ci-disk-space
 restoring caches. It removes unused .NET and Android SDKs and reports disk usage; it does not
 change repository sources or Lean/build caches. It requires GitHub-hosted Linux environment flags;
 the guard is an operational safeguard, not runner authentication.
-`python3 scripts/test-ci-disk-space.py` tests its guards and command boundaries using stubs.
+`uv run --no-project --python 3.12 python scripts/test-ci-disk-space.py` tests its guards and command boundaries using stubs.
 
 VCVio's `main` uses the merge queue. GitHub-marked stacked PRs require the
 [asynchronous merge API](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request-asynchronously):
