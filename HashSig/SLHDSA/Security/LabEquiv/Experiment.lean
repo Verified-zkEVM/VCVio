@@ -105,6 +105,30 @@ theorem signInternalWithSecretRandomizerM_labTriple (msg : List Byte) (pkRoot R 
         (fun _ _ ↦ trivial) fun _ _ h ↦ h).bind fun _ ↦
         QueryImpl.EqDistTriple.pure _ fun _ _ ↦ trivial
 
+include hd in
+/-- The lifted derivation scheme and lab scheme generate the same keys and public seed. -/
+theorem deriveScheme_keygen_labTriple
+    {optRand : PublicKeyCore core → ProbComp core.Y} :
+    LabTriple core pkSeed (fun _ ↦ True)
+      ((deriveScheme core optRand pkSeed).map (labLiftHom core).toMonadHom).keygen
+      (labScheme core optRand pkSeed).keygen (fun kp _ ↦ kp.2.pkSeed = pkSeed) := by
+  rw [map_labLiftHom_deriveScheme_keygen]
+  exact (keygenInternalWithSecretM_labTriple core hd pkSeed).bind fun _ ↦
+    QueryImpl.EqDistTriple.pure _ fun _ _ ↦ rfl
+
+include hd in
+/-- Signing in the lifted derivation scheme agrees with lab signing at its public seed. -/
+theorem deriveScheme_sign_labTriple
+    {optRand : PublicKeyCore core → ProbComp core.Y} :
+    ∀ pk (sk : PublicKeyCore core) msg, sk.pkSeed = pkSeed →
+      LabTriple core pkSeed (fun _ ↦ True)
+        (((deriveScheme core optRand pkSeed).map (labLiftHom core).toMonadHom).sign pk sk msg)
+        ((labScheme core optRand pkSeed).sign pk sk msg) (fun _ _ ↦ True) := by
+  rintro pk ⟨_, pkRoot⟩ msg rfl
+  rw [map_labLiftHom_deriveScheme_sign]
+  exact (labTriple_refl core _ _ _).bind fun R ↦
+    signInternalWithSecretRandomizerM_labTriple core hd _ msg pkRoot R
+
 variable [SampleableType core.SkSeed] [SampleableType core.SkPrf]
 
 include hd in
@@ -120,20 +144,8 @@ theorem evalDist_eagerImpl_liftComp_eq_labExperiment {e : core.SkSeed ≃ core.Y
         (liftComp (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))
           (labSpec core))).run st] =
       𝒟[(simulateQ (slhGraph core pkSeed).eagerImpl (labExperiment core adv pkSeed)).run st] := by
-  have hkeygen : LabTriple core pkSeed (fun _ ↦ True)
-      ((deriveScheme core optRand pkSeed).map (labLiftHom core).toMonadHom).keygen
-      (labScheme core optRand pkSeed).keygen fun kp _ ↦ kp.2.pkSeed = pkSeed := by
-    rw [map_labLiftHom_deriveScheme_keygen]
-    exact (keygenInternalWithSecretM_labTriple core hd pkSeed).bind fun _ ↦
-      QueryImpl.EqDistTriple.pure _ fun _ _ ↦ rfl
-  have hsign : ∀ pk (sk : PublicKeyCore core) msg, sk.pkSeed = pkSeed →
-      LabTriple core pkSeed (fun _ ↦ True)
-        (((deriveScheme core optRand pkSeed).map (labLiftHom core).toMonadHom).sign pk sk msg)
-        ((labScheme core optRand pkSeed).sign pk sk msg) fun _ _ ↦ True := by
-    rintro pk ⟨_, pkRoot⟩ msg rfl
-    rw [map_labLiftHom_deriveScheme_sign]
-    exact (labTriple_refl core _ _ _).bind fun R ↦
-      signInternalWithSecretRandomizerM_labTriple core hd _ msg pkRoot R
+  have hkeygen := deriveScheme_keygen_labTriple core hd pkSeed (optRand := optRand)
+  have hsign := deriveScheme_sign_labTriple core hd pkSeed (optRand := optRand)
   rw [liftComp_unforgeableTranscriptExperiment_deriveAdversary]
   exact evalDist_simulateQ_run_unforgeableTranscriptExperiment_congr_of_inv _
     (allowed := fun _ ↦ True) (fun _ (sk : PublicKeyCore core) _ ↦ sk.pkSeed = pkSeed)
