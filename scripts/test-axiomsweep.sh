@@ -2,10 +2,9 @@
 
 # Execute falsifiable fixtures for the kernel-level axiom sweep.
 #
-# Ported from PolyFun's `scripts/test-axiomsweep.sh`, with the exit-code matrix adapted
-# to VCVio's policy: the baseline is an allowlist for `sorryAx` debt (PolyFun forbids a
-# nonempty baseline outright; VCVio carries genuine work in progress), while native trust
-# is held to the same zero-debt rule through `neverAllowlistable`.
+# Ported from PolyFun's `scripts/test-axiomsweep.sh`; both repositories hold the same
+# zero-debt policy: any `sorryAx` or non-standard axiom fails `--check`, and a nonempty
+# baseline is a policy error rather than an allowlist.
 
 set -euo pipefail
 
@@ -103,7 +102,7 @@ assert hidden in unimported_entries
 assert "sorryAx" in unimported_entries[hidden]["axioms"]
 
 # A baseline that covers every tainted declaration of the fixture root, used below to
-# check that full coverage is accepted and that native trust is refused even so.
+# check that no baseline, however complete, can green taint.
 covering = {
     "sorry": sorted(n for n, e in tainted_entries.items() if "sorryAx" in e["axioms"]),
     "nonstandard": [
@@ -127,13 +126,14 @@ expect_status 0 clean-check \
 expect_status 1 uncovered-taint \
   lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Tainted \
     --check --baseline "$EMPTY_BASELINE"
+grep -q "depend on sorryAx" "$FIXTURE_TMP/uncovered-taint.log"
+grep -q "depend on non-standard axioms" "$FIXTURE_TMP/uncovered-taint.log"
 
-# Full coverage still fails: the fixtures mint `._native.` axioms outside
-# `grandfatheredNativeTrust`, and no baseline edit may green those.
-expect_status 1 native-trust-floor \
+# A baseline listing every tainted declaration is itself a policy error.
+expect_status 2 covering-baseline \
   lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Tainted \
     --check --baseline "$COVERING_BASELINE"
-grep -q "never-allowlistable" "$FIXTURE_TMP/native-trust-floor.log"
+grep -q "is nonempty" "$FIXTURE_TMP/covering-baseline.log"
 
 # --- infrastructure failures must never read as a taint verdict ------------------------
 
@@ -156,7 +156,7 @@ expect_status 2 unwritable-out \
 
 # --- baseline writing -------------------------------------------------------------------
 
-# Shrinking is allowed once the debt is gone.
+# Resetting a stale baseline is allowed once the debt is gone.
 cp "$COVERING_BASELINE" "$FIXTURE_TMP/shrink.json"
 expect_status 0 shrink-baseline \
   lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Clean \
@@ -167,10 +167,10 @@ b=json.load(open(sys.argv[1]))
 assert b['sorry'] == [] and b['nonstandard'] == [], b
 " "$FIXTURE_TMP/shrink.json"
 
-# Pre-authorizing native trust is not, and the file must be left untouched.
+# Recording taint is not, and the file must be left untouched.
 cp "$EMPTY_BASELINE" "$FIXTURE_TMP/growth.json"
 cp "$FIXTURE_TMP/growth.json" "$FIXTURE_TMP/growth-before.json"
-expect_status 1 reject-native-trust-growth \
+expect_status 1 reject-baseline-growth \
   lake exe axiomsweep --root VCVioAxiomSweepTestFixtures.Tainted \
     --update-baseline --baseline "$FIXTURE_TMP/growth.json"
 cmp "$FIXTURE_TMP/growth-before.json" "$FIXTURE_TMP/growth.json"

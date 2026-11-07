@@ -395,10 +395,9 @@ jobs:
         run: |
           bash scripts/build_timing_report.sh run test_path "$BUILD_TIMING_RESULTS" -- \
             bash -eo pipefail -c 'lake env lean VCVioTest/Smoke.lean'
-      # Enforcing from day one: new taint (exit 1: `sorryAx` or non-standard axioms not in
-      # the committed baseline) fails the build, as do infrastructure failures (exit 2:
-      # missing or unparsable baseline, tool breakage) — a broken tool must never read as
-      # a clean verdict.
+      # Zero debt: any taint (exit 1: `sorryAx` or a non-standard axiom) fails the build, as
+      # do infrastructure failures (exit 2: missing, unparsable or nonempty baseline, tool
+      # breakage) — a broken tool must never read as a clean verdict.
       # Sweeps the non-test libraries; Interop (the declared TCB) is bounded by
       # its import-isolation gate instead.
       # Exercise the sweep against its own fixtures before trusting its verdict on the

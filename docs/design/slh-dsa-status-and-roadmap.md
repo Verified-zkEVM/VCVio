@@ -52,9 +52,10 @@ the coverage limitation recorded in issue #629 item 4. In `build.yml`'s
 of them changes, in place of the former per-library `lake exe mk_all --check` steps, and
 `scripts/check-expose-boundary.sh` caps the number of broadly exposed files per library (new
 modules use a plain `public section` with per-declaration `@[expose]`); in the build job,
-`lake exe axiomsweep --check` guards the axiom and `sorry` footprint against
-`scripts/axiom_baseline.json`. `scripts/validate.sh` runs that per-PR gate locally in CI's order,
-with `--lint`, `--test`, `--ffi`, and `--axioms` selecting the slower passes.
+`lake exe axiomsweep --check` holds the axiom and `sorry` footprint at zero (the committed
+`scripts/axiom_baseline.json` must stay empty). `scripts/validate.sh` runs that per-PR gate
+locally in CI's order, with `--lint`, `--test`, `--ffi`, and `--axioms` selecting the slower
+passes.
 
 ## Milestone status ledger
 

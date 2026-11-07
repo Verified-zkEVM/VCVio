@@ -776,8 +776,8 @@ at least one. -/
 lean_exe slhdsa_limited_profile_tests where
   root := `HashSigTest.SLHDSA.LimitedProfile
 
-/-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
-committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
+/-- Kernel-level axiom / `sorry` accounting across the non-test libraries, gated at zero debt
+against the empty committed baseline (`scripts/axiom_baseline.json`). Complements the Interop
 TCB-isolation gate: that gate bounds imports, this one accounts for the axioms every
 declaration ultimately rests on. Runtime-imports built oleans, so run it after
 `lake build`. See `scripts/AxiomSweep.lean`. -/
@@ -790,7 +790,7 @@ lean_exe axiomsweep where
 backend evaluates when their module is loaded, before any `main` runs, and the
 compiler-generated declarations it initialises beside them, when what runs builds an
 enumeration of a type. Gated against a list of accepted constant names scoped by library
-(`scripts/init_sweep_baseline.json`), the allowlist idea `scripts/axiom_baseline.json` uses.
+(`scripts/init_sweep_baseline.json`).
 Complements the axiom sweep: that one accounts for what the kernel accepted, this one for
 what the *binary* does at start-up. Runtime-imports built oleans, so run it after
 `lake build`. See `scripts/InitSweep.lean`. -/
