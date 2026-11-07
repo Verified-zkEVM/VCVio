@@ -7,6 +7,7 @@ Authors: Matthias Meijers
 module
 public import HashSig.GXMSS.PRFDerivedScheme
 public import HashSigTest.GXMSS.Scheme
+meta import HashSigTest.GXMSS.TrustAuditSupport
 
 /-! # Shared-response PRF-derived construction controls
 
@@ -90,33 +91,35 @@ theorem shared_seed_retry_exhaustion :
       result.consumed = [] ∧ transition.epoch = 2 := by
   exact ⟨rfl, rfl, rfl⟩
 
-#check @GXMSS.PRFDerived.keys_eq
-#check @GXMSS.PRFDerived.keys_root
-#check @GXMSS.PRFDerived.keys_secret_key
-#check @GXMSS.PRFDerived.transientCore_start
-#check @GXMSS.PRFDerived.transientCore_endpoint
-#check @GXMSS.PRFDerived.keygen_eq
-#check @GXMSS.PRFDerived.run_eq
-#check @GXMSS.PRFDerived.run_keys_eq
-#check @GXMSS.PRFDerived.run_messageSignature_eq
-#check @GXMSS.PRFDerived.sign_eq
-#check @GXMSS.PRFDerived.verify_eq
-#check @GXMSS.PRFDerived.signResult_nil
-#check @GXMSS.PRFDerived.signResult_cons
-#print axioms GXMSS.PRFDerived.keys_eq
-#print axioms GXMSS.PRFDerived.keys_root
-#print axioms GXMSS.PRFDerived.keys_secret_key
-#print axioms GXMSS.PRFDerived.transientCore_start
-#print axioms GXMSS.PRFDerived.transientCore_endpoint
-#print axioms GXMSS.PRFDerived.keygen_eq
-#print axioms GXMSS.PRFDerived.run_eq
-#print axioms GXMSS.PRFDerived.run_keys_eq
-#print axioms GXMSS.PRFDerived.run_messageSignature_eq
-#print axioms GXMSS.PRFDerived.sign_eq
-#print axioms GXMSS.PRFDerived.verify_eq
-#print axioms GXMSS.PRFDerived.signResult_nil
-#print axioms GXMSS.PRFDerived.signResult_cons
-#print axioms shared_seed_retry_order
-#print axioms shared_seed_retry_success
+example := @GXMSS.PRFDerived.keys_eq
+example := @GXMSS.PRFDerived.keys_root
+example := @GXMSS.PRFDerived.keys_secret_key
+example := @GXMSS.PRFDerived.transientCore_start
+example := @GXMSS.PRFDerived.transientCore_endpoint
+example := @GXMSS.PRFDerived.keygen_eq
+example := @GXMSS.PRFDerived.run_eq
+example := @GXMSS.PRFDerived.run_keys_eq
+example := @GXMSS.PRFDerived.run_messageSignature_eq
+example := @GXMSS.PRFDerived.sign_eq
+example := @GXMSS.PRFDerived.verify_eq
+example := @GXMSS.PRFDerived.signResult_nil
+example := @GXMSS.PRFDerived.signResult_cons
+run_cmd Lean.Elab.Command.liftCoreM <|
+  GXMSS.Test.TrustAudit.assertStandardAxioms #[
+    ``GXMSS.PRFDerived.keys_eq,
+    ``GXMSS.PRFDerived.keys_root,
+    ``GXMSS.PRFDerived.keys_secret_key,
+    ``GXMSS.PRFDerived.transientCore_start,
+    ``GXMSS.PRFDerived.transientCore_endpoint,
+    ``GXMSS.PRFDerived.keygen_eq,
+    ``GXMSS.PRFDerived.run_eq,
+    ``GXMSS.PRFDerived.run_keys_eq,
+    ``GXMSS.PRFDerived.run_messageSignature_eq,
+    ``GXMSS.PRFDerived.sign_eq,
+    ``GXMSS.PRFDerived.verify_eq,
+    ``GXMSS.PRFDerived.signResult_nil,
+    ``GXMSS.PRFDerived.signResult_cons,
+    ``shared_seed_retry_order,
+    ``shared_seed_retry_success]
 
 end GXMSS.Probe

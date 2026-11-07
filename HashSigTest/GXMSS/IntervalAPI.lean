@@ -25,36 +25,36 @@ public section
 
 open GXMSS GXMSS.IntervalMerkle GXMSS.Interval.Filler
 
-#check GXMSS.Interval.scheme
-#check GXMSS.Interval.viewFromKeys
-#check GXMSS.Interval.interaction_eq_keys_view
-#check GXMSS.Interval.interaction_measure_eq_fillers_view
-#check extractFillerOpening_sound
-#check sourceOpening_measure_eq_fillers_view
-#check sourceOpening_le_advantages
-#check GXMSS.Interval.Unforgeability.sourceStrongObservation_partition
-#check GXMSS.Interval.Unforgeability.activeMatchingExperiment
-#check GXMSS.Interval.Unforgeability.merkleObstructionExperiment
-#check GXMSS.Interval.Unforgeability.strongAdvantage_eq_source_partition
-#check GXMSS.Interval.Unforgeability.strongAdvantage_le_merkle_active_and_filler_advantages
-#check GXMSS.Interval.strongUnforgeableExp_full
+noncomputable example := @GXMSS.Interval.scheme
+noncomputable example := @GXMSS.Interval.viewFromKeys
+example := @GXMSS.Interval.interaction_eq_keys_view
+example := @GXMSS.Interval.interaction_measure_eq_fillers_view
+example := @extractFillerOpening_sound
+example := @sourceOpening_measure_eq_fillers_view
+example := @sourceOpening_le_advantages
+example := @GXMSS.Interval.Unforgeability.sourceStrongObservation_partition
+noncomputable example := @GXMSS.Interval.Unforgeability.activeMatchingExperiment
+noncomputable example := @GXMSS.Interval.Unforgeability.merkleObstructionExperiment
+example := @GXMSS.Interval.Unforgeability.strongAdvantage_eq_source_partition
+example := @GXMSS.Interval.Unforgeability.strongAdvantage_le_merkle_active_and_filler_advantages
+example := @GXMSS.Interval.strongUnforgeableExp_full
 
-#check (fun (f : Family) (h : ℕ) =>
+example := (fun (f : Family) (h : ℕ) =>
   (targetCapacity_full f h : targetCapacity f (Interval.full h) = 0))
 
-#check GXMSS.Interval.Unforgeability.merkleTargetCollisionAdversary
-#check GXMSS.Interval.Unforgeability.MerkleObstructionBound
-#check GXMSS.Interval.Reductions.chainSpliceView
-#check GXMSS.Interval.Reductions.chainSpliceView_honest
-#check GXMSS.Interval.Reductions.encodingTargetCollisionReduction
+noncomputable example := @GXMSS.Interval.Unforgeability.merkleTargetCollisionAdversary
+example := @GXMSS.Interval.Unforgeability.MerkleObstructionBound
+noncomputable example := @GXMSS.Interval.Reductions.chainSpliceView
+example := @GXMSS.Interval.Reductions.chainSpliceView_honest
+noncomputable example := @GXMSS.Interval.Reductions.encodingTargetCollisionReduction
 
 
-#check @GXMSS.Interval.Reductions.Chain.sameMessageRandomizerChainCollisionMass_le_advantage
-#check @GXMSS.Interval.Reductions.Chain.chainCutCollisionMass_le_advantage
-#check @GXMSS.Interval.Reductions.Chain.selectedPreimageMass_le_advantage
+example := @GXMSS.Interval.Reductions.Chain.sameMessageRandomizerChainCollisionMass_le_advantage
+example := @GXMSS.Interval.Reductions.Chain.chainCutCollisionMass_le_advantage
+example := @GXMSS.Interval.Reductions.Chain.selectedPreimageMass_le_advantage
 
-#check @GXMSS.Interval.Reductions.Chain.selectedSource_native_telescope
+example := @GXMSS.Interval.Reductions.Chain.selectedSource_native_telescope
 
-#check @GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound
-#check
+example := @GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound
+example :=
   @GXMSS.Interval.Unforgeability.strong_unforgeability_power_of_two_reduction_bound

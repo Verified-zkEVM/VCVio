@@ -23,12 +23,12 @@ public section
 
 open GXMSS GXMSS.IntervalMerkle GXMSS.Interval.Unforgeability
 
-#check @activeMatchingMass_le_collision_masses_add_remainder
-#check @activeMatchingMass_le_signed_advantages
-#check @activeMatchingMass_le_advantages
+example := @activeMatchingMass_le_collision_masses_add_remainder
+example := @activeMatchingMass_le_signed_advantages
+example := @activeMatchingMass_le_advantages
 
 -- The offset is relative to the first active epoch, including at the upper endpoint.
-#check
+example :=
   let middle : Interval 3 := ⟨3, 4, by decide⟩
   (show (GXMSS.Interval.Unforgeability.activeOffset middle 3 (by decide)).val = 0 ∧
       (GXMSS.Interval.Unforgeability.activeOffset middle 4 (by decide)).val = 1 from by decide)

@@ -20,8 +20,8 @@ public section
 
 open GXMSS.PRFDerived.Unforgeability
 
-#check @randgenPRFReduction_real_strong
-#check @randgenPRFReduction_functionQuery_bound
-#check @ideal_adaptive_strong_correspondence
-#check @adaptive_strong_additive_bound
-#check @strong_unforgeability_reduction_bound
+example := @randgenPRFReduction_real_strong
+example := @randgenPRFReduction_functionQuery_bound
+example := @ideal_adaptive_strong_correspondence
+example := @adaptive_strong_additive_bound
+example := @strong_unforgeability_reduction_bound

@@ -31,14 +31,14 @@ open GXMSS GXMSS.IntervalMerkle GXMSS.Interval.Reductions
 open GXMSS.Reductions SyncSignatureUnforgeability
 open OracleComp OracleSpec
 
-#check @GXMSS.Interval.Reductions.Chain.encodingCollisionMass_le_advantage
-#check @GXMSS.Interval.Reductions.Chain.sameMessageRandomizerChainCollisionMass_le_advantage
-#check @GXMSS.Interval.Reductions.Chain.chainCutCollisionMass_le_advantage
-#check @GXMSS.Interval.Reductions.Chain.selectedPreimageMass_le_advantage
-#check @GXMSS.Interval.Reductions.Chain.selectedSource_native_telescope
+example := @GXMSS.Interval.Reductions.Chain.encodingCollisionMass_le_advantage
+example := @GXMSS.Interval.Reductions.Chain.sameMessageRandomizerChainCollisionMass_le_advantage
+example := @GXMSS.Interval.Reductions.Chain.chainCutCollisionMass_le_advantage
+example := @GXMSS.Interval.Reductions.Chain.selectedPreimageMass_le_advantage
+example := @GXMSS.Interval.Reductions.Chain.selectedSource_native_telescope
 
 -- Closed controls use local fixture bindings, so the probe adds no public API.
-#check
+example :=
   let middle : Interval 3 := ⟨3, 4, by decide⟩
   let P : HashInstance Unit ((Fin 8 × Fin 1 × Fin 3) ⊕ (Fin 4 × Fin 8))
       (Bool ⊕ ((Bool × Bool) ⊕ (Fin 1 → Bool))) Bool 3 2 1 := {

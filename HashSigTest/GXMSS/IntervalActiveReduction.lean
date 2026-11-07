@@ -29,10 +29,10 @@ open GXMSS GXMSS.IntervalMerkle GXMSS.Interval.Reductions
 open GXMSS.Reductions SyncSignatureUnforgeability
 open OracleComp OracleSpec
 
-#check @chainSpliceView_honest
-#check @GXMSS.Interval.Reductions.encodingTargetCollisionReduction
+example := @chainSpliceView_honest
+noncomputable example := @GXMSS.Interval.Reductions.encodingTargetCollisionReduction
 
-#check
+example : True :=
   let middle : Interval 3 := ⟨3, 4, of_decide_eq_true rfl⟩
   let P : HashInstance Unit ((Fin 8 × Fin 1 × Fin 1) ⊕ (Fin 4 × Fin 8))
       (Bool ⊕ ((Bool × Bool) ⊕ (Fin 1 → Bool))) Bool 3 1 1 := {
@@ -83,11 +83,11 @@ open OracleComp OracleSpec
     (⟨GXMSS.IntervalMerkle.root P middle ()
       (splicedEndpoints P () guess response starts) fillers, ()⟩,
       (3, response, signature response), expectedHistory response)
-  (show ∀ response : Bool,
+  have _ : ∀ response : Bool,
     chainSpliceView P enc 1 middle A () guess response starts fillers = (do
       let _ ← ($ᵗ Unit : ProbComp Unit)
       let _ ← ($ᵗ Unit : ProbComp Unit)
-      pure (expected response)) from by
+      pure (expected response)) := by
     intro response
     cases response <;>
       dsimp only [chainSpliceView, A, query, Forgery, ExperimentResult] <;>
@@ -98,6 +98,7 @@ open OracleComp OracleSpec
         Epoch.IsActive, middle, guess, signature, intervalSplicedSignatureOfWord,
         splicedChainValue, guessedEpoch, guessedChain, guessedPosition,
         expected, expectedHistory, map_eq_bind_pure_comp, bind_assoc] <;>
-      rfl)
+      rfl
+  True.intro
 
-#check @filteredChainSpliceView_advance
+example := @filteredChainSpliceView_advance

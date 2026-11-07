@@ -16,91 +16,92 @@ public section
 
 namespace GXMSS.GXMSSUnforgeabilityProbe
 
-#check @GXMSS.Reductions.encoding_problem_eq
-#check @GXMSS.Unforgeability.SpecificEncoding.strong_unforgeability_bound_of_bridge
-#check @GXMSS.Unforgeability.SpecificEncoding.winternitz_strong_unforgeability_bound
-#check @GXMSS.Unforgeability.SpecificEncoding.target_sum_strong_unforgeability_bound
-#check @GXMSS.Unforgeability.SpecificEncoding.target_sum_strong_unforgeability_bound_of_small_target
+example := @GXMSS.Reductions.encoding_problem_eq
+example := @GXMSS.Unforgeability.SpecificEncoding.strong_unforgeability_bound_of_bridge
+example := @GXMSS.Unforgeability.SpecificEncoding.winternitz_strong_unforgeability_bound
+example := @GXMSS.Unforgeability.SpecificEncoding.target_sum_strong_unforgeability_bound
+example :=
+  @GXMSS.Unforgeability.SpecificEncoding.target_sum_strong_unforgeability_bound_of_small_target
 
-#check @GXMSS.Unforgeability.StrongUnforgeabilityReductionBound
-#check @GXMSS.Unforgeability.CorrectnessFailureBound
-#check @GXMSS.Unforgeability.FirstMerkleTargetCollisionBound
-#check @GXMSS.Unforgeability.first_merkle_target_collision_bound
-#check @GXMSS.Unforgeability.SuccessfulEncodingTargetCollisionBound
-#check @GXMSS.Unforgeability.successful_encoding_target_collision_bound
-#check @GXMSS.Unforgeability.successful_first_chain_difference_le_target_collision_advantage
-#check @GXMSS.Unforgeability.game_two_le_game_three_add_first_chain_target_collision
-#check @GXMSS.Unforgeability.successful_second_chain_difference_le_target_collision_advantage
-#check @GXMSS.Unforgeability.game_three_le_game_four_add_second_chain_target_collision
-#check @GXMSS.Unforgeability.ValidForgeryYieldsMerkleCollisionStatement
-#check @GXMSS.Unforgeability.ValidForgeryYieldsMerkleCollision
-#check @GXMSS.Reductions.gameOne
-#check @GXMSS.Reductions.gameOneObservation
-#check @GXMSS.Reductions.merkleDifferenceObservation
-#check @GXMSS.Reductions.sourceStrongObservation_eq_gameOne_or_merkleDifference
-#check @GXMSS.Reductions.sourceProgram_map_eq_interaction
-#check @GXMSS.Reductions.sourceStrongOutputMeasure_eq_strongUnforgeableExp
-#check @GXMSS.Reductions.gameOneOutputMeasure
-#check @GXMSS.Reductions.gameOneAdvantage
-#check @GXMSS.Reductions.gameTwo
-#check @GXMSS.Reductions.gameTwoObservation
-#check @GXMSS.Reductions.gameTwoOutputMeasure
-#check @GXMSS.Reductions.gameTwoAdvantage
-#check @GXMSS.Reductions.successfulEncodingDifferenceMass
-#check @GXMSS.Reductions.successfulEncodingDifferenceMass_le_encodingTargetCollisionAdvantage
-#check @GXMSS.Reductions.gameThree
-#check @GXMSS.Reductions.gameThreeObservation
-#check @GXMSS.Reductions.gameFour
-#check @GXMSS.Reductions.gameFourObservation
-#check @GXMSS.Reductions.gameFourAdvantage
-#check @GXMSS.Reductions.successfulSecondChainDifferenceMass
-#check @GXMSS.Reductions.successfulGameFourMass
-#check @GXMSS.Reductions.unusedGameFourMass
-#check @GXMSS.Reductions.failedConsumedGameFourMass
-#check @GXMSS.Reductions.nonSuccessGameFourMass
-#check @GXMSS.Reductions.gameFourAdvantage_le_successful_add_nonSuccess
-#check @GXMSS.Reductions.nonSuccessGameFourMass_le_unused_add_failedConsumed
-#check @GXMSS.Reductions.gameFourObservation_unused
-#check @GXMSS.Reductions.gameFourObservation_failedConsumed
-#check @GXMSS.Reductions.gameFiveObservation_unused
-#check @GXMSS.Reductions.gameFiveObservation_failedConsumed
-#check @GXMSS.Reductions.gameFive
-#check @GXMSS.Reductions.gameFiveObservation
-#check @GXMSS.Reductions.gameFiveOutputMeasure_univ_eq_gameFourOutputMeasure_univ
-#check @GXMSS.Reductions.guess_cardinality
-#check @GXMSS.Reductions.guess_cardinality_le_paper_coefficient
-#check @GXMSS.Reductions.gameFiveGuess_probability
-#check @GXMSS.Reductions.gameFiveAdvantage_eq_successfulGameFourMass_div_guess_card
-#check @GXMSS.Reductions.successfulGameFourMass_eq_guess_card_mul_gameFiveAdvantage
-#check @GXMSS.Reductions.gameFourAdvantage_le_gameFive_add_unpaid_masses
-#check @GXMSS.Reductions.NoMaximumOutput
-#check @GXMSS.Reductions.findNonMaximumCoordinate
-#check @GXMSS.Reductions.jointChainObservation
-#check @GXMSS.Reductions.jointChainOutputMeasure
-#check @GXMSS.Reductions.jointChainAdvantage
-#check @GXMSS.Reductions.gameFourAdvantage_eq_guess_card_mul_jointChainAdvantage
-#check @GXMSS.Reductions.jointPRESelectedProgram
-#check @GXMSS.Reductions.jointPRESelectedMass_le_preimageAdvantage
-#check @GXMSS.Reductions.JointChainHybridReturnedMeasureBridge
-#check @GXMSS.Reductions.gameSix
-#check @GXMSS.Reductions.gameSixObservation
-#check @GXMSS.Reductions.encodingConsumedEpoch_rejected
-#check @GXMSS.Reductions.registeredIndex_lt_length_of_mem
-#check @GXMSS.Reductions.registeredIndex_lookup_of_mem
-#check @GXMSS.Reductions.registeredIndex_lt_capacity_of_mem
-#check @GXMSS.Reductions.merkleTargetCollisionReduction
-#check @GXMSS.Reductions.encodingTargetCollisionReduction
-#check @GXMSS.Reductions.firstChainTargetCollisionReduction
-#check @GXMSS.Reductions.secondChainTargetCollisionReduction
-#check @GXMSS.Reductions.undetectabilityReduction
-#check @GXMSS.Reductions.preimageReduction
-#check @GXMSS.Reductions.jointUndetectabilityReduction
-#check @GXMSS.Reductions.jointPreimageReduction
-#check @GXMSS.Reductions.noMaximumOutput_of_two_codewords
-#check @GXMSS.Reductions.jointChainAdvantage_le_jointUD_add_jointPRESelected
-#check @GXMSS.Reductions.jointChainHybridReturnedMeasureBridge
-#check @GXMSS.Reductions.jointChainAdvantage_le_jointUD_add_jointPRE
-#check @GXMSS.Unforgeability.strong_unforgeability_reduction_bound
+example := @GXMSS.Unforgeability.StrongUnforgeabilityReductionBound
+example := @GXMSS.Unforgeability.CorrectnessFailureBound
+example := @GXMSS.Unforgeability.FirstMerkleTargetCollisionBound
+example := @GXMSS.Unforgeability.first_merkle_target_collision_bound
+example := @GXMSS.Unforgeability.SuccessfulEncodingTargetCollisionBound
+example := @GXMSS.Unforgeability.successful_encoding_target_collision_bound
+example := @GXMSS.Unforgeability.successful_first_chain_difference_le_target_collision_advantage
+example := @GXMSS.Unforgeability.game_two_le_game_three_add_first_chain_target_collision
+example := @GXMSS.Unforgeability.successful_second_chain_difference_le_target_collision_advantage
+example := @GXMSS.Unforgeability.game_three_le_game_four_add_second_chain_target_collision
+example := @GXMSS.Unforgeability.ValidForgeryYieldsMerkleCollisionStatement
+example := @GXMSS.Unforgeability.ValidForgeryYieldsMerkleCollision
+example := @GXMSS.Reductions.gameOne
+example := @GXMSS.Reductions.gameOneObservation
+example := @GXMSS.Reductions.merkleDifferenceObservation
+example := @GXMSS.Reductions.sourceStrongObservation_eq_gameOne_or_merkleDifference
+example := @GXMSS.Reductions.sourceProgram_map_eq_interaction
+example := @GXMSS.Reductions.sourceStrongOutputMeasure_eq_strongUnforgeableExp
+noncomputable example := @GXMSS.Reductions.gameOneOutputMeasure
+noncomputable example := @GXMSS.Reductions.gameOneAdvantage
+example := @GXMSS.Reductions.gameTwo
+example := @GXMSS.Reductions.gameTwoObservation
+noncomputable example := @GXMSS.Reductions.gameTwoOutputMeasure
+noncomputable example := @GXMSS.Reductions.gameTwoAdvantage
+noncomputable example := @GXMSS.Reductions.successfulEncodingDifferenceMass
+example := @GXMSS.Reductions.successfulEncodingDifferenceMass_le_encodingTargetCollisionAdvantage
+example := @GXMSS.Reductions.gameThree
+example := @GXMSS.Reductions.gameThreeObservation
+example := @GXMSS.Reductions.gameFour
+example := @GXMSS.Reductions.gameFourObservation
+noncomputable example := @GXMSS.Reductions.gameFourAdvantage
+noncomputable example := @GXMSS.Reductions.successfulSecondChainDifferenceMass
+noncomputable example := @GXMSS.Reductions.successfulGameFourMass
+noncomputable example := @GXMSS.Reductions.unusedGameFourMass
+noncomputable example := @GXMSS.Reductions.failedConsumedGameFourMass
+noncomputable example := @GXMSS.Reductions.nonSuccessGameFourMass
+example := @GXMSS.Reductions.gameFourAdvantage_le_successful_add_nonSuccess
+example := @GXMSS.Reductions.nonSuccessGameFourMass_le_unused_add_failedConsumed
+example := @GXMSS.Reductions.gameFourObservation_unused
+example := @GXMSS.Reductions.gameFourObservation_failedConsumed
+example := @GXMSS.Reductions.gameFiveObservation_unused
+example := @GXMSS.Reductions.gameFiveObservation_failedConsumed
+example := @GXMSS.Reductions.gameFive
+example := @GXMSS.Reductions.gameFiveObservation
+example := @GXMSS.Reductions.gameFiveOutputMeasure_univ_eq_gameFourOutputMeasure_univ
+example := @GXMSS.Reductions.guess_cardinality
+example := @GXMSS.Reductions.guess_cardinality_le_paper_coefficient
+example := @GXMSS.Reductions.gameFiveGuess_probability
+example := @GXMSS.Reductions.gameFiveAdvantage_eq_successfulGameFourMass_div_guess_card
+example := @GXMSS.Reductions.successfulGameFourMass_eq_guess_card_mul_gameFiveAdvantage
+example := @GXMSS.Reductions.gameFourAdvantage_le_gameFive_add_unpaid_masses
+example := @GXMSS.Reductions.NoMaximumOutput
+example := @GXMSS.Reductions.findNonMaximumCoordinate
+example := @GXMSS.Reductions.jointChainObservation
+noncomputable example := @GXMSS.Reductions.jointChainOutputMeasure
+noncomputable example := @GXMSS.Reductions.jointChainAdvantage
+example := @GXMSS.Reductions.gameFourAdvantage_eq_guess_card_mul_jointChainAdvantage
+noncomputable example := @GXMSS.Reductions.jointPRESelectedProgram
+example := @GXMSS.Reductions.jointPRESelectedMass_le_preimageAdvantage
+example := @GXMSS.Reductions.JointChainHybridReturnedMeasureBridge
+example := @GXMSS.Reductions.gameSix
+example := @GXMSS.Reductions.gameSixObservation
+example := @GXMSS.Reductions.encodingConsumedEpoch_rejected
+example := @GXMSS.Reductions.registeredIndex_lt_length_of_mem
+example := @GXMSS.Reductions.registeredIndex_lookup_of_mem
+example := @GXMSS.Reductions.registeredIndex_lt_capacity_of_mem
+example := @GXMSS.Reductions.merkleTargetCollisionReduction
+noncomputable example := @GXMSS.Reductions.encodingTargetCollisionReduction
+example := @GXMSS.Reductions.firstChainTargetCollisionReduction
+example := @GXMSS.Reductions.secondChainTargetCollisionReduction
+noncomputable example := @GXMSS.Reductions.undetectabilityReduction
+example := @GXMSS.Reductions.preimageReduction
+noncomputable example := @GXMSS.Reductions.jointUndetectabilityReduction
+example := @GXMSS.Reductions.jointPreimageReduction
+example := @GXMSS.Reductions.noMaximumOutput_of_two_codewords
+example := @GXMSS.Reductions.jointChainAdvantage_le_jointUD_add_jointPRESelected
+example := @GXMSS.Reductions.jointChainHybridReturnedMeasureBridge
+example := @GXMSS.Reductions.jointChainAdvantage_le_jointUD_add_jointPRE
+example := @GXMSS.Unforgeability.strong_unforgeability_reduction_bound
 
 open Encoding ENNReal TweakableHash
 

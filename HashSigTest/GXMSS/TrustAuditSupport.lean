@@ -18,6 +18,31 @@ public meta section
 
 namespace GXMSS.Test.TrustAudit
 
+/-- Reject missing declarations and transitive axioms outside Lean's standard footprint. -/
+def assertStandardAxioms (names : Array Lean.Name) : Lean.CoreM Unit := do
+  let allowed := #[``propext, ``Classical.choice, ``Quot.sound]
+  for name in names do
+    let _ ← Lean.getConstInfo name
+    let axioms ← Lean.collectAxioms name
+    let unexpected := axioms.filter fun ax => !allowed.contains ax
+    unless unexpected.isEmpty do
+      throwError "unapproved transitive axioms for {name}: {unexpected.toList}"
+
+-- Exercise acceptance and both rejection paths without adding any axiom declarations.
+run_cmd Lean.Elab.Command.liftCoreM do
+  assertStandardAxioms #[``propext, ``Classical.choice, ``Quot.sound]
+  let _ ← Lean.getConstInfo ``sorryAx
+  let missing := `GXMSS.Test.TrustAudit.missingControl
+  if (← Lean.getEnv).contains missing then
+    throwError "the missing-declaration control already exists"
+  for name in #[``sorryAx, missing] do
+    let accepted ← try
+      assertStandardAxioms #[name]
+      pure true
+    catch _ => pure false
+    if accepted then
+      throwError "axiom assertion unexpectedly accepted {name}"
+
 /-- Audit all owned declarations and the exact origins of the listed theorem endpoints. -/
 def check (modules : Array Lean.Name) (endpoints : Array (Lean.Name × Lean.Name))
     (facades : Array Lean.Name) (definitions : Array (Lean.Name × Lean.Name) := #[]) :

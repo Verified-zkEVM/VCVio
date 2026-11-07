@@ -22,25 +22,25 @@ open GXMSS.Interval.Reductions.Chain GXMSS.Reductions
 open GXMSS.Unforgeability
 open SyncSignatureUnforgeability OracleComp OracleSpec TweakableHash Encoding
 
-#check @chainPreimageReduction
-#check @chainUndetectabilityReduction
-#check @chainPreimageExperiment_full
-#check @chainUndetectabilityExperiment_full
-#check @chainPreimageAdvantage_full
-#check @chainUndetectabilityAdvantage_full
-#check @strongUnforgeabilityBound_full
-#check @powerOfTwoStrongUnforgeabilityBound_full
-#check @root_eq_of_active_endpoints_eq
-#check @authPath_eq_of_active_endpoints_eq
+noncomputable example := @chainPreimageReduction
+noncomputable example := @chainUndetectabilityReduction
+example := @chainPreimageExperiment_full
+example := @chainUndetectabilityExperiment_full
+example := @chainPreimageAdvantage_full
+example := @chainUndetectabilityAdvantage_full
+example := @strongUnforgeabilityBound_full
+example := @powerOfTwoStrongUnforgeabilityBound_full
+example := @root_eq_of_active_endpoints_eq
+example := @authPath_eq_of_active_endpoints_eq
 
-#check GXMSS.Interval.Unforgeability.merkleTargetCollisionExperiment_full
-#check GXMSS.Interval.Unforgeability.merkleTargetCollisionAdvantage_full
-#check @GXMSS.Interval.Unforgeability.sameMessageRandomizerChainTargetCollisionExperiment_full
-#check @GXMSS.Interval.Unforgeability.chainCutTargetCollisionExperiment_full
-#check @GXMSS.Interval.Unforgeability.chainPreimageExperiment_full
-#check @GXMSS.Interval.Unforgeability.chainUndetectabilityExperiment_full
-#check @GXMSS.Interval.Unforgeability.strongUnforgeabilityBound_full
-#check @GXMSS.Interval.Unforgeability.powerOfTwoStrongUnforgeabilityBound_full
+example := @GXMSS.Interval.Unforgeability.merkleTargetCollisionExperiment_full
+example := @GXMSS.Interval.Unforgeability.merkleTargetCollisionAdvantage_full
+example := @GXMSS.Interval.Unforgeability.sameMessageRandomizerChainTargetCollisionExperiment_full
+example := @GXMSS.Interval.Unforgeability.chainCutTargetCollisionExperiment_full
+example := @GXMSS.Interval.Unforgeability.chainPreimageExperiment_full
+example := @GXMSS.Interval.Unforgeability.chainUndetectabilityExperiment_full
+example := @GXMSS.Interval.Unforgeability.strongUnforgeabilityBound_full
+example := @GXMSS.Interval.Unforgeability.powerOfTwoStrongUnforgeabilityBound_full
 
 example : GXMSS.Interval.activeChainPositionCount (Interval.full 0) 2 2 = 6 := by decide
 
