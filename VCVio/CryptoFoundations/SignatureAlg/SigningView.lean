@@ -6,6 +6,7 @@ Authors: Alexander Hicks
 
 module
 public import VCVio.CryptoFoundations.SignatureAlg
+import VCVio.OracleComp.SimSemantics.WriterT.Core
 
 /-!
 # Signing replies and candidate signatures
@@ -37,6 +38,40 @@ structure SigningView (m : Type → Type v) [Monad m] (Request PK SK Sig Reply :
   readback : Reply → Option Sig
 
 namespace SigningView
+
+universe w
+
+/-- Interpret each algorithm of a signing view through a monad morphism. -/
+@[expose] def map {m : Type → Type v} {n : Type → Type w} [Monad m] [Monad n]
+    {Request PK SK Sig Reply : Type}
+    (view : SigningView m Request PK SK Sig Reply) (f : m →ᵐ n) :
+    SigningView n Request PK SK Sig Reply where
+  keygen := f view.keygen
+  sign pk sk request := f (view.sign pk sk request)
+  verify pk request signature := f (view.verify pk request signature)
+  readback := view.readback
+
+/-- Ambient interpretation preserves the public and secret key carriers. -/
+@[simp] theorem map_keygen {m : Type → Type v} {n : Type → Type w} [Monad m] [Monad n]
+    {Request PK SK Sig Reply : Type} (view : SigningView m Request PK SK Sig Reply)
+    (f : m →ᵐ n) : (view.map f).keygen = f view.keygen := rfl
+
+/-- Ambient interpretation retains the actual signing-service reply type. -/
+@[simp] theorem map_sign {m : Type → Type v} {n : Type → Type w} [Monad m] [Monad n]
+    {Request PK SK Sig Reply : Type} (view : SigningView m Request PK SK Sig Reply)
+    (f : m →ᵐ n) (pk : PK) (sk : SK) (request : Request) :
+    (view.map f).sign pk sk request = f (view.sign pk sk request) := rfl
+
+/-- Ambient interpretation retains the raw forged-signature type. -/
+@[simp] theorem map_verify {m : Type → Type v} {n : Type → Type w} [Monad m] [Monad n]
+    {Request PK SK Sig Reply : Type} (view : SigningView m Request PK SK Sig Reply)
+    (f : m →ᵐ n) (pk : PK) (request : Request) (signature : Sig) :
+    (view.map f).verify pk request signature = f (view.verify pk request signature) := rfl
+
+/-- Ambient interpretation preserves reply readback exactly. -/
+@[simp] theorem map_readback {m : Type → Type v} {n : Type → Type w} [Monad m] [Monad n]
+    {Request PK SK Sig Reply : Type} (view : SigningView m Request PK SK Sig Reply)
+    (f : m →ᵐ n) : (view.map f).readback = view.readback := rfl
 
 variable {Request PK SK Sig Reply : Type}
 
@@ -133,6 +168,54 @@ variable {ι : Type idx} {spec : OracleSpec ι}
     {α : Type} (body : OracleComp (spec + (Request →ₒ Reply)) α) :
     OracleComp spec (α × QueryLog (Request →ₒ Reply)) :=
   (simulateQ (spec.passthrough + view.signingOracle pk sk) body).run
+
+/-- Interpret native client queries and forward its signing requests unchanged. -/
+@[expose] def mapClient {iota kappa Request Reply : Type}
+    {spec : OracleSpec.{0, 0} iota} {target : OracleSpec.{0, 0} kappa}
+    (impl : QueryImpl spec (OracleComp target)) :
+    QueryImpl (spec + (Request →ₒ Reply)) (OracleComp (target + (Request →ₒ Reply))) :=
+  QueryImpl.add
+    (fun input => simulateQ
+      (fun native : target.Domain =>
+        (liftM ((target + (Request →ₒ Reply)).query (.inl native)) :
+          OracleComp (target + (Request →ₒ Reply)) (target.Range native))) (impl input))
+    (fun request => liftM ((target + (Request →ₒ Reply)).query (.inr request)))
+
+/-- Native interpretation commutes with the complete logged signing service. -/
+theorem simulateQ_runWithSigningOracle
+    {iota kappa Request PK SK Sig Reply alpha : Type}
+    {spec : OracleSpec.{0, 0} iota} {target : OracleSpec.{0, 0} kappa}
+    (impl : QueryImpl spec (OracleComp target))
+    (view : SigningView (OracleComp spec) Request PK SK Sig Reply)
+    (pk : PK) (sk : SK) (client : OracleComp (spec + (Request →ₒ Reply)) alpha) :
+    simulateQ impl (view.runWithSigningOracle pk sk client) =
+      (view.map (simulateQ' impl)).runWithSigningOracle pk sk
+        (simulateQ (mapClient impl) client) := by
+  let source := spec.passthrough + view.signingOracle pk sk
+  let targetService := target.passthrough + (view.map (simulateQ' impl)).signingOracle pk sk
+  let liftNative : QueryImpl target (OracleComp (target + (Request →ₒ Reply))) :=
+    fun input => liftM ((target + (Request →ₒ Reply)).query (.inl input))
+  have forward : targetService ∘ₛ liftNative =
+      (QueryImpl.id' target).liftTarget (WriterT (QueryLog (Request →ₒ Reply))
+        (OracleComp target)) := by
+    funext input
+    simp [targetService, liftNative, QueryImpl.compose, QueryImpl.passthrough_add]
+  have bridge : ∀ input, simulateQ impl ((source input).run) =
+      ((targetService ∘ₛ mapClient impl) input).run := by
+    intro input
+    rcases input with native | request
+    · dsimp only [QueryImpl.compose, mapClient, QueryImpl.add]
+      rw [← QueryImpl.simulateQ_compose, forward]
+      rw [writerT_run_simulateQ_liftTarget]
+      simp only [source, QueryImpl.passthrough_add, QueryImpl.add_apply_inl,
+        QueryImpl.liftTarget_apply, WriterT.run_monadLift', QueryImpl.id'_apply,
+        simulateQ_map, simulateQ_spec_query, List.empty_eq, simulateQ_id']
+    · simp [source, targetService, QueryImpl.compose, mapClient, QueryImpl.add,
+        QueryImpl.passthrough_add, signingOracle, map]
+  have h := simulateQ_WriterT_compose source impl (targetService ∘ₛ mapClient impl)
+    bridge client
+  simpa only [runWithSigningOracle, source, targetService,
+    QueryImpl.simulateQ_compose] using h
 
 /-- A client that makes no query returns an empty raw reply log. -/
 @[simp] theorem runWithSigningOracle_pure
