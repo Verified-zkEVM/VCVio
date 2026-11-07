@@ -361,6 +361,7 @@ public import VCVio.OracleComp.QueryTracking.Instability.Collision
 public import VCVio.OracleComp.QueryTracking.Iter
 public import VCVio.OracleComp.QueryTracking.ListCache
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.History
 public import VCVio.OracleComp.QueryTracking.MeasuredProgram
 public import VCVio.OracleComp.QueryTracking.MeasuredProgram.Composition
 public import VCVio.OracleComp.QueryTracking.ObservationOracle
