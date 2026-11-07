@@ -5,20 +5,20 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Auxiliary.FullRangeInteraction
-import all HashSig.GXMSS.Security.Auxiliary.FullRangeInteraction
-public import HashSig.GXMSS.Security.Auxiliary.Interval.MerkleWitnesses
-import all HashSig.GXMSS.Security.Auxiliary.Interval.MerkleWitnesses
+public import HashSig.GXMSS.Security.Interval.Auxiliary.FullRangeInteraction
+import all HashSig.GXMSS.Security.Interval.Auxiliary.FullRangeInteraction
+public import HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses
+import all HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses
 public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 import all HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 public import HashSig.GXMSS.Security.Reductions.CollisionBounds
 import all HashSig.GXMSS.Security.Reductions.CollisionBounds
-public import HashSig.GXMSS.Security.Reductions.Interval.MerkleGames
-import all HashSig.GXMSS.Security.Reductions.Interval.MerkleGames
-public import HashSig.GXMSS.Security.Reductions.Interval.SourcePartition
-import all HashSig.GXMSS.Security.Reductions.Interval.SourcePartition
-public import HashSig.GXMSS.Security.Reductions.TCRSimulation
-import all HashSig.GXMSS.Security.Reductions.TCRSimulation
+public import HashSig.GXMSS.Security.Interval.Reductions.MerkleGames
+import all HashSig.GXMSS.Security.Interval.Reductions.MerkleGames
+public import HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
+import all HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
+public import HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
+import all HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
 
 /-!
 # Interval Merkle reduction and obstruction bound

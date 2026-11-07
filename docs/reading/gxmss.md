@@ -32,7 +32,10 @@ from `k + 1`; Merkle collision witnesses retain the honest ordered child pair as
 `first` and the forged pair as `second`.
 
 The synchronized signature games use native returned-output measures. Missing
-mass remains unreturned mass. A returned `none` signature, retry exhaustion,
+mass remains unreturned mass. The encoding and retry `missingMass` definitions
+observe returned outputs through the constant Boolean `true` map and subtract
+that returned mass from one; `LosslessSampler` requires the same Boolean mass to
+be one. A returned `none` signature, retry exhaustion,
 and a returned `false` experiment outcome are distinct observations. A signing
 request consumes its epoch even when signing fails. `SigningQueryBound qs A`
 counts every request along every supported execution, including repeated,
@@ -44,10 +47,11 @@ uniqueness of valid signatures.
 ## Interval security
 
 Import
-[`HashSig.GXMSS.Security.IntervalUnforgeability`](../../HashSig/GXMSS/Security/IntervalUnforgeability.lean).
+[`HashSig.GXMSS.Security.Interval.Unforgeability`](../../HashSig/GXMSS/Security/Interval/Unforgeability.lean).
 The theorem
-`GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound_of_two_codewords`
-bounds strong synchronized unforgeability by `strongUnforgeabilityBound`.
+`GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound`
+bounds strong synchronized unforgeability by the adjacent numerical definition
+`strongUnforgeabilityBound`.
 Writing `L = b-a+1` and `C = L*v*(D-1)`, its ten terms are
 
 ```text
@@ -68,13 +72,13 @@ The theorem requires sampleable `H` and retry-randomizer type `R`, the declared
 decidable equalities, `0 < v`, `0 < w`, two distinct members of the same global
 code, and `SigningQueryBound qs A`. The public seed is drawn from the actual
 `TweakableHash.seedGen` of `hash.thf`; the direct theorem adds no uniform-public-seed assumption.
-`strong_unforgeability_power_of_two_reduction_bound_of_two_codewords` relaxes
+`strong_unforgeability_power_of_two_reduction_bound` relaxes
 the chain coefficients to `L*v*D` and `L*v*D²`, retaining the four separate
 filler terms.
 
 ## Complete-tree specialization
 
-[`Security/Reductions/FullRange/OriginalDomain.lean`](../../HashSig/GXMSS/Security/Reductions/FullRange/OriginalDomain.lean)
+[`Security/Interval/Reductions/FullRange.lean`](../../HashSig/GXMSS/Security/Interval/Reductions/FullRange.lean)
 transports actual named experiments and advantages at `Interval.full h`.
 The frontier is empty, so its filler terms vanish. `strongUnforgeabilityBound_full`
 identifies the exact chain contribution as
@@ -88,32 +92,44 @@ as `N*v*D*(D*UD + PRE)`. Both identities retain the four complete-tree collision
 reductions. These displayed right-hand-side identities are separate from
 scheme equality and whole regular/strong experiment transport.
 
-The complete public theorem
-`GXMSS.Unforgeability.strong_unforgeability_reduction_bound` is available from
-[`Security/Unforgeability.lean`](../../HashSig/GXMSS/Security/Unforgeability.lean),
-the established public import facade. Its proof is defined in
-[`Security/CompleteUnforgeability.lean`](../../HashSig/GXMSS/Security/CompleteUnforgeability.lean).
-It applies the interval theorem at full range and transports the experiment
-and displayed bound. Its named proposition takes the same pathwise signing
-query bound. Lower complete-tree reductions remain available independently of
-this final composition.
+The ordinary theorem module
+[`Security/Unforgeability.lean`](../../HashSig/GXMSS/Security/Unforgeability.lean)
+defines and proves
+`GXMSS.Unforgeability.strong_unforgeability_reduction_bound`.
+Its adjacent `reductionBound` definition gives the numerical sum of four collision
+advantages and the two weighted chain advantages. The proposition
+`StrongUnforgeabilityReductionBound` retains the pathwise signing-query implication
+and applies that sum to the named reductions. The proof applies the interval theorem
+at full range and transports the experiment and displayed bound. Lower reductions
+remain independently inspectable under `Security/Reductions/`; encoding-specific
+corollaries require the separate `Security/EncodingInstances.lean` import.
+Chain-hybrid bridge APIs likewise require their own
+`Security/Reductions/ChainHybrid.lean` import.
 
 ## Modules and consumer evidence
+
+Construction files live at the GXMSS root and under `Encoding/` and `Interval/`.
+Security endpoints live under `Security/` and `Security/Interval/`, named reductions
+under their `Reductions/` directories, and support under their `Auxiliary/`
+directories.
 
 | Responsibility | Module or namespace |
 | --- | --- |
 | Generic synchronized interfaces and games | `VCVio.CryptoFoundations.SyncSignatureAlg`, `SyncMultiSignatureAlg` |
 | Codewords and arbitrary incomparable encoding | `HashSig.GXMSS.Encoding.*`, `GXMSS.Encoding` |
 | Shared simulation and witness support | `HashSig.GXMSS.Security.Auxiliary.*` |
-| Named direct reductions and full-range transports | `HashSig.GXMSS.Security.Reductions.*`, `GXMSS.Reductions` |
-| Interval reductions and final bound | `GXMSS.Interval.Reductions`, `GXMSS.Interval.Unforgeability` |
+| Named complete-tree reductions | `HashSig.GXMSS.Security.Reductions.*`, `GXMSS.Reductions` |
+| Interval reductions and full-range transports | `HashSig.GXMSS.Security.Interval.Reductions.*`, `GXMSS.Interval.Reductions` |
+| Interval simulation and witness support | `HashSig.GXMSS.Security.Interval.Auxiliary.*` |
+| Interval final bounds | `HashSig.GXMSS.Security.Interval.Unforgeability`, `GXMSS.Interval.Unforgeability` |
+
 
 [`DirectEndpointApplications.lean`](../../HashSigTest/GXMSS/DirectEndpointApplications.lean)
 is an ordinary public-import consumer. It states and applies the expanded ten-term
 interval theorem and both full-range right-hand-side identities.
 [`CompleteEndpointApplication.lean`](../../HashSigTest/GXMSS/CompleteEndpointApplication.lean)
-imports only the established public facade and applies the complete theorem to its
-expanded separate-term inequality, including the pathwise signing-query premise.
+imports only the ordinary `Security.Unforgeability` theorem module and applies its theorem to
+its expanded separate-term inequality, including the pathwise signing-query premise.
 The construction tests retain height-three `[2,4]` frontier examples, inactive vector/pair
 openings, honest-first collision orientation, retry failures and exact-pair freshness.
 Some implementation regressions import private kernels explicitly; the public endpoint

@@ -199,7 +199,7 @@ theorem value_eq_some_of_mem_retry
 /-- Missing execution mass of the retry computation. -/
 @[expose] noncomputable def missingMass (enc : IncomparableEncoding PP M R E n radix)
     (runtime : ProbCompRuntime m) (sample : m R) (pp : PP) (msg : M) (ep : E) (k : ℕ) : ℝ≥0∞ :=
-  1 - runtime.evalDist ((fun _ => True) <$> enc.retry sample pp msg ep k) {True}
+  1 - runtime.evalDist ((fun _ => true) <$> enc.retry sample pp msg ep k) {true}
 
 /-- The three retry observations partition probability one, including missing mass. -/
 theorem failureMass_add_missingMass_add_successMass
@@ -208,19 +208,19 @@ theorem failureMass_add_missingMass_add_successMass
     failureMass enc runtime sample pp msg ep k + missingMass enc runtime sample pp msg ep k +
       successMass enc runtime sample pp msg ep k = 1 := by
   change runtime.evalDist (Option.isNone <$> enc.retry sample pp msg ep k) {true} +
-      (1 - runtime.evalDist ((fun _ => True) <$> enc.retry sample pp msg ep k) {True}) +
+      (1 - runtime.evalDist ((fun _ => true) <$> enc.retry sample pp msg ep k) {true}) +
       runtime.evalDist (Option.isNone <$> enc.retry sample pp msg ep k) {false} = 1
   let : MeasurableSpace (Option (Codeword n radix × R)) := ⊤
   rw [add_right_comm,
     runtime.evalDist_map Option.isNone Measurable.of_discrete,
     MeasureTheory.Measure.apply_true_add_apply_false,
-    runtime.evalDist_map (fun _ : Option (Codeword n radix × R) => True)
+    runtime.evalDist_map (fun _ : Option (Codeword n radix × R) => true)
       Measurable.of_discrete]
   simp only [MeasureTheory.Measure.map_apply Measurable.of_discrete MeasurableSet.univ,
     Set.preimage_univ,
-    MeasureTheory.Measure.map_apply Measurable.of_discrete (MeasurableSet.singleton True)]
+    MeasureTheory.Measure.map_apply Measurable.of_discrete (MeasurableSet.singleton true)]
   have hpreimage :
-      (fun _ : Option (Codeword n radix × R) => True) ⁻¹' ({True} : Set Prop) = Set.univ := by
+      (fun _ : Option (Codeword n radix × R) => true) ⁻¹' ({true} : Set Bool) = Set.univ := by
     ext
     simp
   rw [hpreimage, add_comm]
@@ -258,7 +258,7 @@ theorem missingMass_zero (enc : IncomparableEncoding PP M R E n radix)
     (pp : PP) (msg : M) (ep : E) : missingMass enc runtime sample pp msg ep 0 = 0 := by
   let : MeasurableSpace (Option (Codeword n radix × R)) := ⊤
   rw [missingMass, retry_zero]
-  rw [runtime.evalDist_map (fun _ : Option (Codeword n radix × R) => True)
+  rw [runtime.evalDist_map (fun _ : Option (Codeword n radix × R) => true)
     Measurable.of_discrete, laws.pure_eq]
   simp
 
@@ -477,7 +477,7 @@ theorem missingMass_eq_zero (enc : IncomparableEncoding PP M R E n radix)
     (hl : LosslessSampler runtime sample) (pp : PP) (msg : M) (ep : E) (k : ℕ) :
     missingMass enc runtime sample pp msg ep k = 0 := by
   rw [missingMass_eq_mul_sum enc runtime laws]
-  have hl' : runtime.evalDist ((fun _ => True) <$> sample) {True} = 1 := hl
+  have hl' : runtime.evalDist ((fun _ => true) <$> sample) {true} = 1 := hl
   have hm : IncomparableEncoding.missingMass runtime sample = 0 := by
     rw [IncomparableEncoding.missingMass, hl']
     simp

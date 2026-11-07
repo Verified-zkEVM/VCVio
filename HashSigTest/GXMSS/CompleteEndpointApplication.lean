@@ -9,7 +9,7 @@ public import HashSig.GXMSS.Security.Unforgeability
 
 /-! # Complete GXMSS public endpoint application
 
-The established public facade alone supplies the complete theorem, its named reductions and
+The ordinary security theorem module alone supplies the complete theorem, its named reductions and
 all statement support for an ordinary consumer.
 -/
 

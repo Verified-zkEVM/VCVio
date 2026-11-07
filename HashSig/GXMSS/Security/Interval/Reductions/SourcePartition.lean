@@ -5,12 +5,12 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Auxiliary.Interval.FillerOpening
-import all HashSig.GXMSS.Security.Auxiliary.Interval.FillerOpening
-public import HashSig.GXMSS.Security.Auxiliary.Interval.Interaction
-import all HashSig.GXMSS.Security.Auxiliary.Interval.Interaction
-public import HashSig.GXMSS.Security.Reductions.Interval.FillerGames
-import all HashSig.GXMSS.Security.Reductions.Interval.FillerGames
+public import HashSig.GXMSS.Security.Interval.Auxiliary.FillerOpening
+import all HashSig.GXMSS.Security.Interval.Auxiliary.FillerOpening
+public import HashSig.GXMSS.Security.Interval.Auxiliary.Interaction
+import all HashSig.GXMSS.Security.Interval.Auxiliary.Interaction
+public import HashSig.GXMSS.Security.Interval.Reductions.FillerGames
+import all HashSig.GXMSS.Security.Interval.Reductions.FillerGames
 
 /-!
 # Measured partition of interval strong forgeries

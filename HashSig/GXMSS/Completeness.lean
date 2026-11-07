@@ -83,15 +83,15 @@ theorem sampleStarts_uniform_probability [SampleableType H] [Fintype H]
 /-- Independent finite start sampling has no missing mass, including empty OTS vectors. -/
 theorem sampleStarts_lossless [SampleableType H] :
     LosslessSampler ProbCompRuntime.probComp (sampleStarts H h v) := by
-  rw [LosslessSampler, ProbCompRuntime.probComp_evalDist, ← prEvent_eq_evalDist_map]
-  exact OracleComp.prEvent_true_eq_one _
+  unfold LosslessSampler
+  simp
 
 /-- Key generation is lossless whenever its existing public-seed sampler is lossless. -/
 theorem keygen_lossless [SampleableType H] (hash : HashInstance PP T X H h w v)
     (_hs : LosslessSampler ProbCompRuntime.probComp (HashInstance.thf hash).seedGen) :
     LosslessSampler ProbCompRuntime.probComp (keygen hash) := by
-  rw [LosslessSampler, ProbCompRuntime.probComp_evalDist, ← prEvent_eq_evalDist_map]
-  exact OracleComp.prEvent_true_eq_one _
+  unfold LosslessSampler
+  simp
 
 /-- The paper's uniformity law on the existing seed sampler ensures lossless key generation. -/
 theorem keygen_lossless_of_uniform [SampleableType H] [Fintype PP]
@@ -229,8 +229,8 @@ theorem successMass_eq_one_sub_pow [SampleableType H] [SampleableType R]
   rw [successMass_eq_retry hash enc K ks hc]
   exact IncomparableEncoding.Retry.successMass_eq_one_sub_pow enc ProbCompRuntime.probComp
     samplingLaws_probComp ($ᵗ R) (by
-      rw [LosslessSampler, ProbCompRuntime.probComp_evalDist, ← prEvent_eq_evalDist_map]
-      exact OracleComp.prEvent_true_eq_one _) secretKey.seed msg ep K
+      unfold LosslessSampler
+      simp) secretKey.seed msg ep K
 
 /-- Lemma 3: a uniform error upper bound gives correctness error at most its Kth power.
 This holds also for zero retries and does not identify the bound with the exact failure mass. -/

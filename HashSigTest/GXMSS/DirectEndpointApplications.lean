@@ -5,8 +5,8 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.IntervalUnforgeability
-public import HashSig.GXMSS.Security.Reductions.FullRange.OriginalDomain
+public import HashSig.GXMSS.Security.Interval.Unforgeability
+public import HashSig.GXMSS.Security.Interval.Reductions.FullRange
 public import HashSig.GXMSS.Security.Unforgeability
 public import HashSigTest.GXMSS.CompleteEndpointApplication
 
@@ -56,7 +56,7 @@ example
       SM_DT_UD_Advantage (udAdversary P enc K I A .childPair) +
       SM_DT_PRE_Advantage (preAdversary P enc K I A .childPair) := by
   simpa only [strongUnforgeabilityBound] using
-    (GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound_of_two_codewords P enc K qs
+    (GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound P enc K qs
       I hv hw htwo A hqueries)
 
 example

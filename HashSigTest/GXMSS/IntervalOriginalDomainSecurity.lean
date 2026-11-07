@@ -5,7 +5,7 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Reductions.FullRange.OriginalDomain
+public import HashSig.GXMSS.Security.Interval.Reductions.FullRange
 
 /-!
 # Original-domain interval security consumers
@@ -55,4 +55,4 @@ example {PP T X H M R : Type} {h w v : ℕ}
     (A : SchemeAdversary PP H M R h v) (hqueries : SigningQueryBound qs A) :
     strongAdvantage (GXMSS.Interval.scheme P enc K I) ProbCompRuntime.probComp A ≤
       strongUnforgeabilityBound P enc K qs I hv hw A :=
-  strong_unforgeability_reduction_bound_of_two_codewords P enc K qs I hv hw htwo A hqueries
+  strong_unforgeability_reduction_bound P enc K qs I hv hw htwo A hqueries

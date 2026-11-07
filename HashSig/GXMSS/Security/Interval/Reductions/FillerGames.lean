@@ -5,10 +5,10 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Auxiliary.Interval.FillerOpening
-import all HashSig.GXMSS.Security.Auxiliary.Interval.FillerOpening
-public import HashSig.GXMSS.Security.Auxiliary.Interval.FillerTargets
-import all HashSig.GXMSS.Security.Auxiliary.Interval.FillerTargets
+public import HashSig.GXMSS.Security.Interval.Auxiliary.FillerOpening
+import all HashSig.GXMSS.Security.Interval.Auxiliary.FillerOpening
+public import HashSig.GXMSS.Security.Interval.Auxiliary.FillerTargets
+import all HashSig.GXMSS.Security.Interval.Auxiliary.FillerTargets
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUD
 

@@ -37,7 +37,7 @@ variable {m : Type → Type v} [Monad m] {PP M R E : Type} {n radix : ℕ}
 
 /-- The sampler has no missing output mass in the supplied runtime. -/
 @[expose] def LosslessSampler (runtime : ProbCompRuntime m) {α : Type} (sample : m α) : Prop :=
-  runtime.evalDist ((fun _ => True) <$> sample) {True} = 1
+  runtime.evalDist ((fun _ => true) <$> sample) {true} = 1
 
 /-- Uniform finite sampling is lossless and assigns each element inverse-cardinality mass. -/
 @[expose] def UniformSampler (runtime : ProbCompRuntime m) {α : Type} [Fintype α]
@@ -94,7 +94,7 @@ Missing sampler mass remains missing, independently of the returned encoding-fai
 
 /-- Missing randomizer mass remains distinct from a returned encoding failure. -/
 @[expose] noncomputable def missingMass (runtime : ProbCompRuntime m) (sample : m R) : ℝ≥0∞ :=
-  1 - runtime.evalDist ((fun _ => True) <$> sample) {True}
+  1 - runtime.evalDist ((fun _ => true) <$> sample) {true}
 
 /-- Definition 14's pointwise error bound for a lossless explicit randomizer sampler. -/
 @[expose] def ErrorAtMost (enc : IncomparableEncoding PP M R E n radix)
@@ -120,15 +120,15 @@ theorem failureMass_add_successMass (enc : IncomparableEncoding PP M R E n radix
       1 - missingMass runtime sample := by
   change runtime.evalDist (enc.failed pp msg ep <$> sample) {true} +
       runtime.evalDist (enc.failed pp msg ep <$> sample) {false} =
-    1 - (1 - runtime.evalDist ((fun _ => True) <$> sample) {True})
+    1 - (1 - runtime.evalDist ((fun _ => true) <$> sample) {true})
   let : MeasurableSpace R := ⊤
   rw [runtime.evalDist_map (enc.failed pp msg ep) Measurable.of_discrete sample,
     MeasureTheory.Measure.apply_true_add_apply_false,
-    runtime.evalDist_map (fun _ : R => True) Measurable.of_discrete sample]
+    runtime.evalDist_map (fun _ : R => true) Measurable.of_discrete sample]
   simp only [MeasureTheory.Measure.map_apply Measurable.of_discrete MeasurableSet.univ,
     Set.preimage_univ,
-    MeasureTheory.Measure.map_apply Measurable.of_discrete (MeasurableSet.singleton True)]
-  have hpreimage : (fun _ : R => True) ⁻¹' ({True} : Set Prop) = Set.univ := by
+    MeasureTheory.Measure.map_apply Measurable.of_discrete (MeasurableSet.singleton true)]
+  have hpreimage : (fun _ : R => true) ⁻¹' ({true} : Set Bool) = Set.univ := by
     ext
     simp
   rw [hpreimage]
@@ -140,7 +140,7 @@ theorem failureMass_add_successMass_eq_one (enc : IncomparableEncoding PP M R E 
     (pp : PP) (msg : M) (ep : E) :
     enc.failureMass runtime sample pp msg ep + enc.successMass runtime sample pp msg ep = 1 := by
   rw [failureMass_add_successMass]
-  have hl' : runtime.evalDist ((fun _ => True) <$> sample) {True} = 1 := hl
+  have hl' : runtime.evalDist ((fun _ => true) <$> sample) {true} = 1 := hl
   rw [missingMass, hl']
   simp
 

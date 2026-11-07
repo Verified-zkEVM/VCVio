@@ -5,7 +5,7 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.IntervalUnforgeability
+public import HashSig.GXMSS.Security.Interval.Unforgeability
 
 /-!
 # Native interval security composition controls
@@ -20,8 +20,8 @@ open GXMSS GXMSS.IntervalMerkle GXMSS.Interval.Unforgeability
 
 #check @strongUnforgeabilityBound
 #check @powerOfTwoStrongUnforgeabilityBound
-#check @strong_unforgeability_reduction_bound_of_two_codewords
-#check @strong_unforgeability_power_of_two_reduction_bound_of_two_codewords
+#check @strong_unforgeability_reduction_bound
+#check @strong_unforgeability_power_of_two_reduction_bound
 #check @strongUnforgeabilityBound_le_powerOfTwoStrongUnforgeabilityBound
 #check @GXMSS.Interval.Filler.targetCapacity_sum_le_inactive_leaf_count
 

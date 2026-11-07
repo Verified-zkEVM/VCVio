@@ -7,16 +7,16 @@ Authors: Matthias Meijers
 module
 public import HashSig.GXMSS.Interval.FrontierCount
 import all HashSig.GXMSS.Interval.FrontierCount
-public import HashSig.GXMSS.Security.Auxiliary.Interval.FillerTargets
-import all HashSig.GXMSS.Security.Auxiliary.Interval.FillerTargets
+public import HashSig.GXMSS.Security.Interval.Auxiliary.FillerTargets
+import all HashSig.GXMSS.Security.Interval.Auxiliary.FillerTargets
 public import HashSig.GXMSS.Security.Reductions.CollisionBounds
 import all HashSig.GXMSS.Security.Reductions.CollisionBounds
-public import HashSig.GXMSS.Security.Reductions.Interval.ActiveSecurity
-import all HashSig.GXMSS.Security.Reductions.Interval.ActiveSecurity
-public import HashSig.GXMSS.Security.Reductions.Interval.MerkleCollision
-import all HashSig.GXMSS.Security.Reductions.Interval.MerkleCollision
-public import HashSig.GXMSS.Security.Reductions.Interval.SourcePartition
-import all HashSig.GXMSS.Security.Reductions.Interval.SourcePartition
+public import HashSig.GXMSS.Security.Interval.Reductions.ActiveSecurity
+import all HashSig.GXMSS.Security.Interval.Reductions.ActiveSecurity
+public import HashSig.GXMSS.Security.Interval.Reductions.MerkleCollision
+import all HashSig.GXMSS.Security.Interval.Reductions.MerkleCollision
+public import HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
+import all HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
 
 /-!
 # Strong unforgeability of inclusive interval GXMSS
@@ -49,6 +49,23 @@ private theorem combine_separate
         (add_le_add hactive hmerkle) le_rfl) le_rfl) le_rfl) le_rfl
     _ = _ := by ac_rfl
 
+private theorem chain_coefficients_le_power_of_two
+    (I : Interval h) (w v : ℕ) {a p u b c d e : ℝ≥0∞} :
+    a + (GXMSS.Interval.activeChainPositionCount I w v : ℝ≥0∞) * p +
+        (GXMSS.Interval.activeChainPositionCount I w v : ℝ≥0∞) * ((2 ^ w - 1 : ℕ) : ℝ≥0∞) * u +
+        b + c + d + e ≤
+      a + ((I.length * v * 2 ^ w : ℕ) : ℝ≥0∞) * p +
+        ((I.length * v * (2 ^ w) ^ 2 : ℕ) : ℝ≥0∞) * u + b + c + d + e := by
+  have hp : GXMSS.Interval.activeChainPositionCount I w v ≤ I.length * v * 2 ^ w :=
+    Nat.mul_le_mul_left _ (Nat.sub_le _ _)
+  have hu : GXMSS.Interval.activeChainPositionCount I w v * (2 ^ w - 1) ≤
+      I.length * v * (2 ^ w) ^ 2 := by
+    calc
+      _ ≤ (I.length * v * 2 ^ w) * 2 ^ w := Nat.mul_le_mul hp (Nat.sub_le _ _)
+      _ = _ := by ring
+  gcongr
+  exact_mod_cast hu
+
 /-- The original-domain interval bound has four collision and six separate UD/PRE terms. -/
 @[expose] noncomputable def strongUnforgeabilityBound
     [SampleableType H] [SampleableType R]
@@ -76,6 +93,24 @@ private theorem combine_separate
       SM_DT_UD_Advantage (udAdversary P enc K I A .childPair) +
       SM_DT_PRE_Advantage (preAdversary P enc K I A .childPair)
 
+/-- Separate original-domain reductions bound every strong interval forgery. -/
+theorem strong_unforgeability_reduction_bound
+    [SampleableType H] [SampleableType R]
+    [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
+    [DecidableEq (GXMSS.Signature R H h v)]
+    (P : HashInstance PP T X H h w v)
+    (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ) (I : Interval h)
+    (hv : 0 < v) (hw : 0 < w)
+    (htwo : ∃ x y : Codeword v (2 ^ w), x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y)
+    (A : SchemeAdversary PP H M R h v) (hqueries : SigningQueryBound qs A) :
+    strongAdvantage (GXMSS.Interval.scheme P enc K I) ProbCompRuntime.probComp A ≤
+      strongUnforgeabilityBound P enc K qs I hv hw A := by
+  unfold strongUnforgeabilityBound
+  exact combine_separate
+    (strongAdvantage_le_merkle_active_and_filler_advantages P enc K I A)
+    (activeMatchingMass_le_fixedFallback_advantages P enc K qs I hv hw htwo A hqueries)
+    (merkleObstructionMass_le_advantage P enc K I hv A)
+
 /-- Four collision and six separate UD/PRE terms with power-of-two chain coefficients. -/
 @[expose] noncomputable def powerOfTwoStrongUnforgeabilityBound
     [SampleableType H] [SampleableType R]
@@ -102,8 +137,8 @@ private theorem combine_separate
       SM_DT_UD_Advantage (udAdversary P enc K I A .childPair) +
       SM_DT_PRE_Advantage (preAdversary P enc K I A .childPair)
 
-/-- Separate original-domain reductions bound every strong interval forgery. -/
-theorem strong_unforgeability_reduction_bound_of_two_codewords
+/-- The original-domain theorem also holds with relaxed power-of-two chain coefficients. -/
+theorem strong_unforgeability_power_of_two_reduction_bound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
     [DecidableEq (GXMSS.Signature R H h v)]
@@ -113,12 +148,10 @@ theorem strong_unforgeability_reduction_bound_of_two_codewords
     (htwo : ∃ x y : Codeword v (2 ^ w), x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y)
     (A : SchemeAdversary PP H M R h v) (hqueries : SigningQueryBound qs A) :
     strongAdvantage (GXMSS.Interval.scheme P enc K I) ProbCompRuntime.probComp A ≤
-      strongUnforgeabilityBound P enc K qs I hv hw A := by
-  unfold strongUnforgeabilityBound
-  exact combine_separate
-    (strongAdvantage_le_merkle_active_and_filler_advantages P enc K I A)
-    (activeMatchingMass_le_fixedFallback_advantages P enc K qs I hv hw htwo A hqueries)
-    (merkleObstructionMass_le_advantage P enc K I hv A)
+      powerOfTwoStrongUnforgeabilityBound P enc K qs I hv hw A := by
+  apply (strong_unforgeability_reduction_bound P enc K qs I hv hw htwo A hqueries).trans
+  unfold strongUnforgeabilityBound powerOfTwoStrongUnforgeabilityBound
+  exact chain_coefficients_le_power_of_two I w v
 
 /-- The exact chain-position coefficients are bounded by the power-of-two coefficients. -/
 theorem strongUnforgeabilityBound_le_powerOfTwoStrongUnforgeabilityBound
@@ -130,30 +163,7 @@ theorem strongUnforgeabilityBound_le_powerOfTwoStrongUnforgeabilityBound
     (hv : 0 < v) (hw : 0 < w) (A : SchemeAdversary PP H M R h v) :
     strongUnforgeabilityBound P enc K qs I hv hw A ≤
       powerOfTwoStrongUnforgeabilityBound P enc K qs I hv hw A := by
-  have hp : GXMSS.Interval.activeChainPositionCount I w v ≤ I.length * v * 2 ^ w :=
-    Nat.mul_le_mul_left _ (Nat.sub_le _ _)
-  have hu : GXMSS.Interval.activeChainPositionCount I w v * (2 ^ w - 1) ≤
-      I.length * v * (2 ^ w) ^ 2 := by
-    calc
-      _ ≤ (I.length * v * 2 ^ w) * 2 ^ w := Nat.mul_le_mul hp (Nat.sub_le _ _)
-      _ = _ := by ring
   unfold strongUnforgeabilityBound powerOfTwoStrongUnforgeabilityBound
-  gcongr
-  exact_mod_cast hu
-
-/-- The original-domain theorem also holds with relaxed power-of-two chain coefficients. -/
-theorem strong_unforgeability_power_of_two_reduction_bound_of_two_codewords
-    [SampleableType H] [SampleableType R]
-    [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
-    (P : HashInstance PP T X H h w v)
-    (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ) (I : Interval h)
-    (hv : 0 < v) (hw : 0 < w)
-    (htwo : ∃ x y : Codeword v (2 ^ w), x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y)
-    (A : SchemeAdversary PP H M R h v) (hqueries : SigningQueryBound qs A) :
-    strongAdvantage (GXMSS.Interval.scheme P enc K I) ProbCompRuntime.probComp A ≤
-      powerOfTwoStrongUnforgeabilityBound P enc K qs I hv hw A :=
-  (strong_unforgeability_reduction_bound_of_two_codewords P enc K qs I hv hw htwo A hqueries).trans
-    (strongUnforgeabilityBound_le_powerOfTwoStrongUnforgeabilityBound P enc K qs I hv hw A)
+  exact chain_coefficients_le_power_of_two I w v
 
 end GXMSS.Interval.Unforgeability

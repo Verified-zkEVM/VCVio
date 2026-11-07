@@ -9,8 +9,8 @@ public import HashSig.GXMSS.Merkle
 import all HashSig.GXMSS.Merkle
 public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 import all HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
-public import HashSig.GXMSS.Security.Reductions.Experiments
-import all HashSig.GXMSS.Security.Reductions.Experiments
+public import HashSig.GXMSS.Security.Reductions.ReductionExperiments
+import all HashSig.GXMSS.Security.Reductions.ReductionExperiments
 
 /-!
 # Honest target-registration simulation

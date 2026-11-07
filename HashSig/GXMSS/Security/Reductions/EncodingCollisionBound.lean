@@ -7,8 +7,8 @@ Authors: Matthias Meijers
 module
 public import HashSig.GXMSS.Completeness
 import all HashSig.GXMSS.Completeness
-public import HashSig.GXMSS.Security.Auxiliary.CompleteBounds
-import all HashSig.GXMSS.Security.Auxiliary.CompleteBounds
+public import HashSig.GXMSS.Security.Reductions.MerkleCollisionBound
+import all HashSig.GXMSS.Security.Reductions.MerkleCollisionBound
 public import HashSig.GXMSS.Security.Auxiliary.Encoding
 import all HashSig.GXMSS.Security.Auxiliary.Encoding
 public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
@@ -17,18 +17,18 @@ public import HashSig.GXMSS.Security.Auxiliary.SigningQueries
 import all HashSig.GXMSS.Security.Auxiliary.SigningQueries
 public import HashSig.GXMSS.Security.Auxiliary.SourcePartition
 import all HashSig.GXMSS.Security.Auxiliary.SourcePartition
-public import HashSig.GXMSS.Security.Reductions.Experiments
-import all HashSig.GXMSS.Security.Reductions.Experiments
-public import HashSig.GXMSS.Security.Reductions.FirstChainCollision
-import all HashSig.GXMSS.Security.Reductions.FirstChainCollision
+public import HashSig.GXMSS.Security.Reductions.ReductionExperiments
+import all HashSig.GXMSS.Security.Reductions.ReductionExperiments
+public import HashSig.GXMSS.Security.Reductions.SameMessageChainCollision
+import all HashSig.GXMSS.Security.Reductions.SameMessageChainCollision
 public import HashSig.GXMSS.Security.Reductions.MerkleCollision
 import all HashSig.GXMSS.Security.Reductions.MerkleCollision
 public import HashSig.GXMSS.Security.Reductions.MerkleForgery
 import all HashSig.GXMSS.Security.Reductions.MerkleForgery
-public import HashSig.GXMSS.Security.Reductions.SecondChainCollision
-import all HashSig.GXMSS.Security.Reductions.SecondChainCollision
-public import HashSig.GXMSS.Security.Reductions.TCRSimulation
-import all HashSig.GXMSS.Security.Reductions.TCRSimulation
+public import HashSig.GXMSS.Security.Reductions.ChainCutCollision
+import all HashSig.GXMSS.Security.Reductions.ChainCutCollision
+public import HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
+import all HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
 public import Lean.Elab.Command
 public import Lean.Util.CollectAxioms
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE

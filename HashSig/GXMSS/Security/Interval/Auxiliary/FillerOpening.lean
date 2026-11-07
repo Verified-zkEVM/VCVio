@@ -7,10 +7,10 @@ Authors: Matthias Meijers
 module
 public import HashSig.GXMSS.Interval.Filler
 import all HashSig.GXMSS.Interval.Filler
-public import HashSig.GXMSS.Security.Auxiliary.Interval.Interaction
-import all HashSig.GXMSS.Security.Auxiliary.Interval.Interaction
-public import HashSig.GXMSS.Security.Auxiliary.Interval.MerkleWitnesses
-import all HashSig.GXMSS.Security.Auxiliary.Interval.MerkleWitnesses
+public import HashSig.GXMSS.Security.Interval.Auxiliary.Interaction
+import all HashSig.GXMSS.Security.Interval.Auxiliary.Interaction
+public import HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses
+import all HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses
 
 /-!
 # Typed observations of actual inactive filler openings

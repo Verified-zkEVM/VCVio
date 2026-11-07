@@ -9,16 +9,16 @@ public import HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
 import all HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
 public import HashSig.GXMSS.Security.Reductions.CollisionBounds
 import all HashSig.GXMSS.Security.Reductions.CollisionBounds
-public import HashSig.GXMSS.Security.Reductions.Experiments
-import all HashSig.GXMSS.Security.Reductions.Experiments
-public import HashSig.GXMSS.Security.Reductions.Interval.ActiveSimulation
-import all HashSig.GXMSS.Security.Reductions.Interval.ActiveSimulation
-public import HashSig.GXMSS.Security.Reductions.Interval.Chain
-import all HashSig.GXMSS.Security.Reductions.Interval.Chain
-public import HashSig.GXMSS.Security.Reductions.Interval.ChainHybrid
-import all HashSig.GXMSS.Security.Reductions.Interval.ChainHybrid
-public import HashSig.GXMSS.Security.Reductions.Interval.SourcePartition
-import all HashSig.GXMSS.Security.Reductions.Interval.SourcePartition
+public import HashSig.GXMSS.Security.Reductions.ReductionExperiments
+import all HashSig.GXMSS.Security.Reductions.ReductionExperiments
+public import HashSig.GXMSS.Security.Interval.Reductions.ActiveSimulation
+import all HashSig.GXMSS.Security.Interval.Reductions.ActiveSimulation
+public import HashSig.GXMSS.Security.Interval.Reductions.ChainReductions
+import all HashSig.GXMSS.Security.Interval.Reductions.ChainReductions
+public import HashSig.GXMSS.Security.Interval.Reductions.ChainHybrid
+import all HashSig.GXMSS.Security.Interval.Reductions.ChainHybrid
+public import HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
+import all HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
 
 /-!
 # Active interval probability bounds

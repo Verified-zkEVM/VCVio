@@ -6,7 +6,7 @@ Authors: Matthias Meijers
 
 module
 public import HashSig.GXMSS.Interval.Scheme
-public import HashSig.GXMSS.Security.Auxiliary.FullRangeInteraction
+public import HashSig.GXMSS.Security.Interval.Auxiliary.FullRangeInteraction
 
 /-!
 # Interval GXMSS import and trust probe

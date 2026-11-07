@@ -94,6 +94,20 @@ theorem fixed_sampler_specialization :
 theorem uniform_randomizers : UniformSampler ProbCompRuntime.probComp ($ᵗ Bool) :=
   uniformSampler_uniformSample Bool
 
+/-- Boolean and proposition-valued constant observations retain the same returned mass. -/
+theorem constant_observation_mass_eq {m : Type → Type*} [Monad m] {α : Type}
+    (runtime : ProbCompRuntime m) (sample : m α) :
+    runtime.evalDist ((fun _ => true) <$> sample) {true} =
+      runtime.evalDist ((fun _ => True) <$> sample) {True} := by
+  let : MeasurableSpace α := ⊤
+  rw [runtime.evalDist_map (fun _ : α => true) Measurable.of_discrete sample,
+    runtime.evalDist_map (fun _ : α => True) Measurable.of_discrete sample]
+  rw [MeasureTheory.Measure.map_apply Measurable.of_discrete (MeasurableSet.singleton true),
+    MeasureTheory.Measure.map_apply Measurable.of_discrete (MeasurableSet.singleton True)]
+  congr 1
+  ext x
+  simp
+
 /-- An optional probabilistic computation observes aborts as missing output mass. -/
 @[expose] noncomputable def optionalRuntime : ProbCompRuntime (OptionT ProbComp) where
   toSemanticsVia := SemanticsVia.ofEvalDistSemantics (OptionT ProbComp)
@@ -117,6 +131,12 @@ theorem abort_missing_mass :
     IncomparableEncoding.missingMass optionalRuntime (failure : OptionT ProbComp Bool) = 1 := by
   simp [IncomparableEncoding.missingMass, optionalRuntime, ProbCompRuntime.evalDist,
     SemanticsVia.ofEvalDistSemantics_evalDist]
+
+/-- Zero retries return exhaustion without evaluating the always-aborting sampler. -/
+theorem retry_zero_abort_missing_mass :
+    Retry.missingMass enc optionalRuntime (failure : OptionT ProbComp Bool) () () () 0 = 0 :=
+  Retry.missingMass_zero enc optionalRuntime optional_sampling_laws
+    (failure : OptionT ProbComp Bool) () () ()
 
 /-- A nonempty retry budget preserves the missing mass of an always-aborting sampler. -/
 theorem retry_abort_missing_mass :

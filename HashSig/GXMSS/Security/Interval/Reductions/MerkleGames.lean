@@ -7,14 +7,14 @@ Authors: Matthias Meijers
 module
 public import HashSig.GXMSS.Interval.Merkle
 import all HashSig.GXMSS.Interval.Merkle
-public import HashSig.GXMSS.Security.Auxiliary.Interval.Interaction
-import all HashSig.GXMSS.Security.Auxiliary.Interval.Interaction
-public import HashSig.GXMSS.Security.Auxiliary.Interval.MerkleWitnesses
-import all HashSig.GXMSS.Security.Auxiliary.Interval.MerkleWitnesses
-public import HashSig.GXMSS.Security.Reductions.Experiments
-import all HashSig.GXMSS.Security.Reductions.Experiments
-public import HashSig.GXMSS.Security.Reductions.TCRSimulation
-import all HashSig.GXMSS.Security.Reductions.TCRSimulation
+public import HashSig.GXMSS.Security.Interval.Auxiliary.Interaction
+import all HashSig.GXMSS.Security.Interval.Auxiliary.Interaction
+public import HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses
+import all HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses
+public import HashSig.GXMSS.Security.Reductions.ReductionExperiments
+import all HashSig.GXMSS.Security.Reductions.ReductionExperiments
+public import HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
+import all HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
 
 /-!
 # Pruned interval Merkle target registration

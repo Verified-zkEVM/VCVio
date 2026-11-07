@@ -5,10 +5,10 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Reductions.Interval.MerkleCollision
-public import HashSig.GXMSS.Security.Reductions.Interval.MerkleGames
-public import HashSig.GXMSS.Security.Reductions.FullRange.OriginalDomain
-import all HashSig.GXMSS.Security.Reductions.Interval.MerkleGames
+public import HashSig.GXMSS.Security.Interval.Reductions.MerkleCollision
+public import HashSig.GXMSS.Security.Interval.Reductions.MerkleGames
+public import HashSig.GXMSS.Security.Interval.Reductions.FullRange
+import all HashSig.GXMSS.Security.Interval.Reductions.MerkleGames
 
 /-!
 # Pruned Merkle setup and reduction consumers

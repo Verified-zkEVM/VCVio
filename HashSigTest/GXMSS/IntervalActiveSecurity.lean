@@ -5,8 +5,8 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Reductions.Interval.ActiveSecurity
-import all HashSig.GXMSS.Security.Reductions.Interval.ActiveSecurity
+public import HashSig.GXMSS.Security.Interval.Reductions.ActiveSecurity
+import all HashSig.GXMSS.Security.Interval.Reductions.ActiveSecurity
 
 /-!
 # Active interval probability controls

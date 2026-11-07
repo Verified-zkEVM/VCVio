@@ -5,13 +5,13 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Auxiliary.FullRangeInteraction
-public import HashSig.GXMSS.Security.IntervalUnforgeability
-public import HashSig.GXMSS.Security.Reductions.Interval.ActiveSecurity
-public import HashSig.GXMSS.Security.Reductions.Interval.ActiveSimulation
-public import HashSig.GXMSS.Security.Reductions.Interval.Chain
-public import HashSig.GXMSS.Security.Reductions.Interval.MerkleCollision
-public import HashSig.GXMSS.Security.Reductions.Interval.SourcePartition
+public import HashSig.GXMSS.Security.Interval.Auxiliary.FullRangeInteraction
+public import HashSig.GXMSS.Security.Interval.Unforgeability
+public import HashSig.GXMSS.Security.Interval.Reductions.ActiveSecurity
+public import HashSig.GXMSS.Security.Interval.Reductions.ActiveSimulation
+public import HashSig.GXMSS.Security.Interval.Reductions.ChainReductions
+public import HashSig.GXMSS.Security.Interval.Reductions.MerkleCollision
+public import HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
 
 /-!
 # Ordinary consumers of the interval mathematical API
@@ -55,6 +55,6 @@ open GXMSS GXMSS.IntervalMerkle GXMSS.Interval.Filler
 
 #check @GXMSS.Interval.Reductions.Chain.selectedSource_native_telescope
 
-#check @GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound_of_two_codewords
+#check @GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound
 #check
-  @GXMSS.Interval.Unforgeability.strong_unforgeability_power_of_two_reduction_bound_of_two_codewords
+  @GXMSS.Interval.Unforgeability.strong_unforgeability_power_of_two_reduction_bound

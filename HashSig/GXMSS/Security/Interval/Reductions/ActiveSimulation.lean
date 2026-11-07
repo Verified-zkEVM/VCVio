@@ -11,14 +11,14 @@ public import HashSig.GXMSS.Interval.Scheme
 import all HashSig.GXMSS.Interval.Scheme
 public import HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
 import all HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
-public import HashSig.GXMSS.Security.Auxiliary.Interval.Interaction
-import all HashSig.GXMSS.Security.Auxiliary.Interval.Interaction
+public import HashSig.GXMSS.Security.Interval.Auxiliary.Interaction
+import all HashSig.GXMSS.Security.Interval.Auxiliary.Interaction
 public import HashSig.GXMSS.Security.Reductions.CollisionBounds
 import all HashSig.GXMSS.Security.Reductions.CollisionBounds
-public import HashSig.GXMSS.Security.Reductions.Experiments
-import all HashSig.GXMSS.Security.Reductions.Experiments
-public import HashSig.GXMSS.Security.Reductions.Interval.SourcePartition
-import all HashSig.GXMSS.Security.Reductions.Interval.SourcePartition
+public import HashSig.GXMSS.Security.Reductions.ReductionExperiments
+import all HashSig.GXMSS.Security.Reductions.ReductionExperiments
+public import HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
+import all HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
 
 /-!
 # Active interval interactions and encoding reduction

@@ -5,8 +5,8 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Reductions.Interval.FillerGames
-import all HashSig.GXMSS.Security.Auxiliary.Interval.FillerTargets
+public import HashSig.GXMSS.Security.Interval.Reductions.FillerGames
+import all HashSig.GXMSS.Security.Interval.Auxiliary.FillerTargets
 
 /-!
 # Interval filler game consumers and trust audit

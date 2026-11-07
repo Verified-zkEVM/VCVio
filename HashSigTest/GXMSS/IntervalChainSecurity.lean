@@ -5,12 +5,12 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Reductions.Experiments
-public import HashSig.GXMSS.Security.Reductions.Interval.ActiveSimulation
-public import HashSig.GXMSS.Security.Reductions.Interval.Chain
+public import HashSig.GXMSS.Security.Reductions.ReductionExperiments
+public import HashSig.GXMSS.Security.Interval.Reductions.ActiveSimulation
+public import HashSig.GXMSS.Security.Interval.Reductions.ChainReductions
 import all HashSig.GXMSS.Security.Auxiliary.ChainSelection
 import all HashSig.GXMSS.Security.Auxiliary.ChainSplicing
-import all HashSig.GXMSS.Security.Reductions.Interval.ActiveSimulation
+import all HashSig.GXMSS.Security.Interval.Reductions.ActiveSimulation
 
 /-!
 # Interval chain security controls

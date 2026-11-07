@@ -7,32 +7,32 @@ Authors: Matthias Meijers
 module
 public import HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
 import all HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
-public import HashSig.GXMSS.Security.Auxiliary.FullRangeInteraction
-import all HashSig.GXMSS.Security.Auxiliary.FullRangeInteraction
+public import HashSig.GXMSS.Security.Interval.Auxiliary.FullRangeInteraction
+import all HashSig.GXMSS.Security.Interval.Auxiliary.FullRangeInteraction
 public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 import all HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
-public import HashSig.GXMSS.Security.IntervalUnforgeability
-import all HashSig.GXMSS.Security.IntervalUnforgeability
+public import HashSig.GXMSS.Security.Interval.Unforgeability
+import all HashSig.GXMSS.Security.Interval.Unforgeability
 public import HashSig.GXMSS.Security.Reductions.CollisionBounds
 import all HashSig.GXMSS.Security.Reductions.CollisionBounds
-public import HashSig.GXMSS.Security.Reductions.Experiments
-import all HashSig.GXMSS.Security.Reductions.Experiments
-public import HashSig.GXMSS.Security.Reductions.Interval.ActiveSecurity
-import all HashSig.GXMSS.Security.Reductions.Interval.ActiveSecurity
-public import HashSig.GXMSS.Security.Reductions.Interval.ActiveSimulation
-import all HashSig.GXMSS.Security.Reductions.Interval.ActiveSimulation
-public import HashSig.GXMSS.Security.Reductions.Interval.ChainCollision
-import all HashSig.GXMSS.Security.Reductions.Interval.ChainCollision
-public import HashSig.GXMSS.Security.Reductions.Interval.ChainHybrid
-import all HashSig.GXMSS.Security.Reductions.Interval.ChainHybrid
-public import HashSig.GXMSS.Security.Reductions.Interval.FillerGames
-import all HashSig.GXMSS.Security.Reductions.Interval.FillerGames
-public import HashSig.GXMSS.Security.Reductions.Interval.MerkleCollision
-import all HashSig.GXMSS.Security.Reductions.Interval.MerkleCollision
-public import HashSig.GXMSS.Security.Reductions.Interval.MerkleGames
-import all HashSig.GXMSS.Security.Reductions.Interval.MerkleGames
-public import HashSig.GXMSS.Security.Reductions.TCRSimulation
-import all HashSig.GXMSS.Security.Reductions.TCRSimulation
+public import HashSig.GXMSS.Security.Reductions.ReductionExperiments
+import all HashSig.GXMSS.Security.Reductions.ReductionExperiments
+public import HashSig.GXMSS.Security.Interval.Reductions.ActiveSecurity
+import all HashSig.GXMSS.Security.Interval.Reductions.ActiveSecurity
+public import HashSig.GXMSS.Security.Interval.Reductions.ActiveSimulation
+import all HashSig.GXMSS.Security.Interval.Reductions.ActiveSimulation
+public import HashSig.GXMSS.Security.Interval.Reductions.ChainCollision
+import all HashSig.GXMSS.Security.Interval.Reductions.ChainCollision
+public import HashSig.GXMSS.Security.Interval.Reductions.ChainHybrid
+import all HashSig.GXMSS.Security.Interval.Reductions.ChainHybrid
+public import HashSig.GXMSS.Security.Interval.Reductions.FillerGames
+import all HashSig.GXMSS.Security.Interval.Reductions.FillerGames
+public import HashSig.GXMSS.Security.Interval.Reductions.MerkleCollision
+import all HashSig.GXMSS.Security.Interval.Reductions.MerkleCollision
+public import HashSig.GXMSS.Security.Interval.Reductions.MerkleGames
+import all HashSig.GXMSS.Security.Interval.Reductions.MerkleGames
+public import HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
+import all HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
 
 /-!
 # Full-range primitive security correspondences
