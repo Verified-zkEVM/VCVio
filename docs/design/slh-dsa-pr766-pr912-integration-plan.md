@@ -397,6 +397,8 @@ distinct from the completed canonical implementation checkpoints recorded above 
 combined recorded-head gate.
 The [machine-readable record](slh-dsa-pr766-pr912-evidence/validation-record.json) pins the
 probe environment, artifact hashes, completed checks, and outstanding obligations.
+It keeps the commands exactly as they were run, with `python3`; current runs of the same scripts
+go through uv, as the commands on this page show.
 
 | Check | Status and scope |
 |---|---|

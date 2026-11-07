@@ -111,13 +111,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
       - name: Set up uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.13.6"
           enable-cache: false
-
       - name: Set up Lean environment
         uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
         with:
@@ -152,13 +150,11 @@ jobs:
       # checked out, yet Lake links every dependency `extern_lib` into any
       # consumer `lean_exe`, so the native targets must degrade gracefully.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
       - name: Set up uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.13.6"
           enable-cache: false
-
       - name: Free unused hosted-runner SDKs
         run: bash scripts/free-ci-disk-space.sh
       # The same caches as `Build Project`, with the same paths and keys. A path dependency builds
@@ -292,13 +288,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
-
       - name: Set up uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.13.6"
           enable-cache: false
-
       # PR-controlled values (the branch name) reach the script through `env`, never through
       # `${{ }}` interpolation into the script text.
       - name: Initialize timing paths
@@ -586,13 +580,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-
       - name: Set up uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.13.6"
           enable-cache: false
-
       - name: Check out submodules
         run: git submodule update --init --recursive --depth 1
       - name: Free unused hosted-runner SDKs

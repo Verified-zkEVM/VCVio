@@ -3,8 +3,10 @@
 
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -43,6 +45,13 @@ if [ "$1" = test ]; then
 fi
 ''')
         self.script(binary / "git", 'exit 0\n')
+        self.script(binary / "uv", f'''
+if [[ "$1" != run || "$2" != --no-project || "$3" != --python || "$4" != 3.12 || "$5" != python ]]; then
+  exit 97
+fi
+shift 5
+exec {shlex.quote(sys.executable)} "$@"
+''')
         self.env = dict(os.environ, PATH=f"{binary}{os.pathsep}{os.environ['PATH']}",
                         VALIDATION_CALLS=str(self.root / "calls"))
 
