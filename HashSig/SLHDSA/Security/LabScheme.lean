@@ -48,6 +48,9 @@ generation and signing. The `_pred` lemmas carry a predicate on programs, closed
 `bind`, from the touches and reads of cells to every lab component, with no hypothesis on
 addresses.
 
+`labSignFromPosition_pred_of_components` carries such predicates from the signing and root-recovery
+programs at their reachable positions through the complete hypertree call.
+
 ## References
 
 - NIST FIPS 205, Algorithms 5–7 (WOTS+), 9–10 (XMSS), 12 (hypertree), 14–16 (FORS), 18–20
@@ -337,29 +340,44 @@ theorem labForsSign_pred (md : List Byte) (adrs : Adrs) : Q (labForsSign core md
         fun _ _ _ _ _ _ _ => labNode_pred core hpure hread _)
         fun _ => hpure _
 
-include hpure hbind htouch hread in
-/-- The lab hypertree signature satisfies `Q`. -/
-theorem labSignFromPosition_pred (recoverFinal : Bool) (pos : LayerPosition vp) :
-    ∀ (layers : ℕ) (h : pos.layer.val + layers = vp.params.d) (msg : core.Y),
+include hpure hbind in
+/-- A bind-closed predicate follows the signing and recovery components at reachable positions. -/
+theorem labSignFromPosition_pred_of_components
+    (hsign : ∀ (pos : LayerPosition vp) (msg : core.Y),
+      Q (labXmssSign core msg pos.toAdrs pos.leaf.val))
+    (hrecover : ∀ (pos : LayerPosition vp) (sig : XmssSig vp.params core) (msg : core.Y),
+      Q (xmssPkFromSigWith core (labF core) (labTl core) (labH core)
+        pos.leaf.val sig msg pos.toAdrs))
+    (recoverFinal : Bool) (pos : LayerPosition vp) :
+    ∀ (layers : Nat) (h : pos.layer.val + layers = vp.params.d) (msg : core.Y),
       Q (labSignFromPosition core recoverFinal pos layers h msg)
   | 0, _, _ => hpure _
   | 1, _, msg => by
       rw [labSignFromPosition]
-      refine hbind _ _ (labXmssSign_pred core hpure hbind htouch hread msg _ _) fun sig => ?_
+      refine hbind _ _ (hsign pos msg) fun sig => ?_
       cases recoverFinal
       · exact hpure _
-      · exact hbind _ _ (xmssPkFromSigWith_pred Q hpure hbind core
-          (fun a _ _ => labNode_pred core hpure hread a)
-          (fun a _ _ => labNode_pred core hpure hread a)
-          (fun a _ _ _ => labNode_pred core hpure hread a) _ sig msg _) fun _ => hpure _
+      · exact hbind _ _ (hrecover pos sig msg) fun _ => hpure _
   | layers + 2, _, msg => by
       rw [labSignFromPosition]
-      exact hbind _ _ (labXmssSign_pred core hpure hbind htouch hread msg _ _) fun sig =>
-        hbind _ _ (xmssPkFromSigWith_pred Q hpure hbind core
-          (fun a _ _ => labNode_pred core hpure hread a)
-          (fun a _ _ => labNode_pred core hpure hread a)
-          (fun a _ _ _ => labNode_pred core hpure hread a) _ sig msg _) fun root =>
-        hbind _ _ (labSignFromPosition_pred false _ (layers + 1) _ root) fun _ => hpure _
+      exact hbind _ _ (hsign pos msg) fun sig =>
+        hbind _ _ (hrecover pos sig msg) fun root =>
+        hbind _ _ (labSignFromPosition_pred_of_components hsign hrecover false _
+          (layers + 1) _ root) fun _ => hpure _
+
+include hpure hbind htouch hread in
+/-- The lab hypertree signature satisfies `Q`. -/
+theorem labSignFromPosition_pred (recoverFinal : Bool) (pos : LayerPosition vp) :
+    ∀ (layers : Nat) (h : pos.layer.val + layers = vp.params.d) (msg : core.Y),
+      Q (labSignFromPosition core recoverFinal pos layers h msg) :=
+  labSignFromPosition_pred_of_components core hpure hbind
+    (fun pos msg => labXmssSign_pred core hpure hbind htouch hread msg pos.toAdrs pos.leaf.val)
+    (fun pos sig msg => xmssPkFromSigWith_pred Q hpure hbind core
+      (fun adrs _ _ => labNode_pred core hpure hread adrs)
+      (fun adrs _ _ => labNode_pred core hpure hread adrs)
+      (fun adrs _ _ _ => labNode_pred core hpure hread adrs) pos.leaf.val sig msg pos.toAdrs)
+    recoverFinal pos
+
 
 include hpure hbind htouch hread in
 /-- Lab key generation satisfies `Q`. -/

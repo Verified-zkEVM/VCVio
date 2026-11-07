@@ -8,8 +8,13 @@ module
 
 public import HashSig.SLHDSA.Security.ByteModel
 public import HashSig.SLHDSA.Security.NodeGraph
+public import HashSig.SLHDSA.Security.LabScheme
+public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import HashSig.SLHDSA.Security.RomSchemeRun
 public import VCVio.CryptoFoundations.SignatureAlg.Routed
+import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
+import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
+import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed
 
 /-!
 # Routing SHAKE256 strings to the three SLH-DSA oracles
@@ -89,6 +94,14 @@ keeps the budget of `adv` (`romQueryBound_routeAdv`).
   (`shakeEncoding_route_encode_thash`, `shakeEncoding_route_encode_hmsg`,
   `shakeEncoding_route_encode_prfMsg`).
 * `isWeakKey_of_isThashString_encode_hmsg`: rule 1 on an `H_msg` encoding needs a weak public key.
+
+## Source-query provenance
+
+`NativeProvenance.StructuralInput` restricts lab touches and reads to honest secret-key cells
+and graph nodes. The component lemmas carry this predicate through reachable WOTS+, XMSS,
+FORS and hypertree source programs. Whole signing separately permits a nonce read for its
+actual message. These predicates describe source queries; guard admission and provenance of
+drawn or pending cache entries require their own state invariants.
 
 ## References
 
@@ -604,3 +617,327 @@ theorem shakeStrongAdvantage_pure_le (hn : vp.params.n ≤ 32) (hnm : vp.params.
 end Bound
 
 end SLHDSA.Security
+
+/-! ## Structural inputs of lab source programs -/
+
+namespace SLHDSA.Security.NativeProvenance
+
+variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
+
+/-- Structural cells contain honest secret-key derivations or graph nodes. -/
+@[expose] def StructuralCell : DeriveQuery core ⊕ NodeKey core → Prop
+  | .inl (.inl k) => IsHonestKey vp core k.1
+  | .inl (.inr _) => False
+  | .inr _ => True
+
+/-- Public inputs are unrestricted; derivation reads and label touches are structural. -/
+@[expose] def StructuralInput : (labSpec core).Domain → Prop
+  | .inl (.inl _) => True
+  | .inl (.inr x) => StructuralCell core (.inl x)
+  | .inr (.inl c) => StructuralCell core c
+  | .inr (.inr _) => True
+
+
+/-- A nonce request for this message, or a structural input. -/
+@[expose] def SigningStructuralInput (msg : List Byte) (input : (labSpec core).Domain) : Prop :=
+  StructuralInput core input ∨
+    ∃ addrnd : core.Y, input = .inl (.inr (.inr (addrnd, msg)))
+
+/-- A reachable WOTS+ chain starts at an honest secret-key derivation key. -/
+theorem wots_secret_honesty :
+  ∀ (pos : LayerPosition vp) (i : Fin vp.params.len),
+    IsHonestKey vp core (core.adrsToKey (wotsSkAdrs (wotsInstanceAdrs pos) i.val)) := by
+  intro pos i
+  have hw : 2 ≤ vp.params.w := Nat.one_lt_two_pow vp.valid.lgw_pos.ne'
+  exact isHonestKey_of_inl_mem_childAdrs (core := core)
+    (wotsChainAdrs_setHashAddress_mem_constructionAddresses pos i (t := 0) (by omega))
+    (by rw [childAdrs_wotsChainAdrs_setHashAddress_zero]; exact List.mem_singleton_self _)
+
+/-- Existing cells of a reachable WOTS+ path are structural. -/
+theorem wots_path_cells :
+  ∀ (pos : LayerPosition vp) (i : Fin vp.params.len) (j : Nat)
+    (c : DeriveQuery core ⊕ NodeKey core),
+    pathCell core (wotsSkAdrs (wotsInstanceAdrs pos) i.val)
+      ((wotsChainAdrs (wotsInstanceAdrs pos) i.val).setHashAddress ·) j = some c →
+    StructuralCell core c := by
+  intro pos i j c hc
+  cases j with
+  | zero =>
+      rw [pathCell_zero core (Adrs.isSecretKey_wotsSkAdrs _ _)] at hc
+      cases Option.some.inj hc
+      exact wots_secret_honesty core pos i
+  | succ j =>
+      change childCell core (.inr _) = some c at hc
+      obtain ⟨k, _, _, hk⟩ := (childCell_inr_eq_some_iff core).1 hc
+      cases hk
+      trivial
+
+/-- Touching an optional structural cell makes only a structural input. -/
+theorem touchCell_structural (cell : Option (DeriveQuery core ⊕ NodeKey core))
+    (hcell : ∀ c, cell = some c → StructuralCell core c) :
+    AllQueriesSatisfy (touchCell (pub := hashSpec core) (R := core.Y) cell)
+      (StructuralInput core) := by
+  cases cell with
+  | none => exact allQueriesSatisfy_pure _ _
+  | some c => exact (allQueriesSatisfy_query_iff _ _).2 (hcell c rfl)
+
+/-- Touching a path of structural cells makes only structural inputs. -/
+theorem touchUpTo_structural (cell : Nat → Option (DeriveQuery core ⊕ NodeKey core))
+    (hcell : ∀ j c, cell j = some c → StructuralCell core c) (steps : Nat) :
+    AllQueriesSatisfy (touchUpTo (pub := hashSpec core) (R := core.Y) cell steps)
+      (StructuralInput core) := by
+  induction steps with
+  | zero => exact allQueriesSatisfy_pure _ _
+  | succ steps ih =>
+      exact allQueriesSatisfy_bind ih fun _ => touchCell_structural core _ (hcell steps)
+
+section ReadCell
+
+variable [Nonempty core.Y]
+
+/-- Reading an optional structural cell makes only a structural input. -/
+theorem readCell_structural (cell : Option (DeriveQuery core ⊕ NodeKey core))
+    (hcell : ∀ c, cell = some c → StructuralCell core c) :
+    AllQueriesSatisfy (readCell (pub := hashSpec core) (R := core.Y) cell)
+      (StructuralInput core) := by
+  cases cell with
+  | none => exact allQueriesSatisfy_pure _ _
+  | some c =>
+      cases c with
+      | inl x => exact (allQueriesSatisfy_query_iff _ _).2 (hcell _ rfl)
+      | inr k => exact (allQueriesSatisfy_query_iff _ _).2 trivial
+
+end ReadCell
+
+variable [SampleableType core.Y]
+
+/-- The actual reachable lab chain touches and reads only structural cells. -/
+theorem lab_chain_structural :
+  ∀ (pos : LayerPosition vp) (i : Fin vp.params.len) (steps : Nat),
+    AllQueriesSatisfy (labChain core (wotsInstanceAdrs pos) i.val steps)
+      (StructuralInput core) := by
+  intro pos i steps
+  exact allQueriesSatisfy_bind
+    (touchUpTo_structural core _ (wots_path_cells core pos i) steps)
+    fun _ => readCell_structural core _ (wots_path_cells core pos i steps)
+
+
+/-! ## Reachable lab components -/
+
+/-- Every lab node read is structural, at any address. -/
+theorem lab_node_structural :
+  ∀ (adrs : Adrs), AllQueriesSatisfy (labNode core adrs) (StructuralInput core) := by
+  intro adrs
+  exact readCell_structural core _ fun c hc => by
+    obtain ⟨key, _, _, hk⟩ := (childCell_inr_eq_some_iff core).1 hc
+    cases hk
+    trivial
+
+/-- Reachable WOTS+ public-key chains touch and read only structural cells. -/
+theorem lab_wots_tops_structural :
+  ∀ (pos : LayerPosition vp),
+    AllQueriesSatisfy (labWotsPkGenTops core (wotsInstanceAdrs pos)) (StructuralInput core) := by
+  intro pos
+  exact allQueriesSatisfy_ofFnM _ fun i => lab_chain_structural core pos i _
+
+/-- Reachable WOTS+ signing chains touch and read only structural cells. -/
+theorem lab_wots_sign_structural :
+  ∀ (pos : LayerPosition vp) (msg : core.Y),
+    AllQueriesSatisfy (labWotsSign core msg (wotsInstanceAdrs pos)) (StructuralInput core) := by
+  intro pos msg
+  exact allQueriesSatisfy_ofFnM _ fun i => lab_chain_structural core pos i _
+
+/-- A bounded leaf of a reachable XMSS tree makes only structural inputs. -/
+theorem lab_xmss_leaf_structural :
+  ∀ (coord : LayerTreeCoord vp) (i : Nat), i < 2 ^ vp.params.hp →
+    AllQueriesSatisfy (labXmssLeaf core coord.toAdrs i) (StructuralInput core) := by
+  intro coord i hi
+  refine allQueriesSatisfy_bind ?_ fun _ => lab_node_structural core _
+  exact lab_wots_tops_structural core ⟨coord.layer, coord.tree, ⟨i, hi⟩⟩
+
+/-- A bounded subtree of a reachable XMSS tree makes only structural inputs. -/
+theorem lab_xmss_node_structural :
+  ∀ (coord : LayerTreeCoord vp) (z t : Nat), z ≤ vp.params.hp →
+    t < 2 ^ (vp.params.hp - z) →
+    AllQueriesSatisfy (labXmssNode core coord.toAdrs z t) (StructuralInput core) := by
+  intro coord z t hz ht
+  exact PerfectMerkleTree.merkleRootM_pred_of_subtree
+    (fun oa => AllQueriesSatisfy oa (StructuralInput core))
+    (fun _ _ => allQueriesSatisfy_bind) _ _ z t
+    (fun i hi => lab_xmss_leaf_structural core coord i (lt_pow_of_div_pow_lt hz hi ht))
+    (fun _ _ _ _ _ _ _ => lab_node_structural core _)
+
+/-- XMSS signing at a reachable position makes only structural inputs. -/
+theorem lab_xmss_sign_structural :
+  ∀ (pos : LayerPosition vp) (msg : core.Y),
+    AllQueriesSatisfy (labXmssSign core msg pos.toAdrs pos.leaf.val) (StructuralInput core) := by
+  intro pos msg
+  have hleaf : pos.leaf.val / 2 ^ vp.params.hp = 0 := Nat.div_eq_of_lt pos.leaf.isLt
+  refine allQueriesSatisfy_bind
+    (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree
+      (fun oa => AllQueriesSatisfy oa (StructuralInput core))
+      (fun _ => allQueriesSatisfy_pure _ _) (fun _ _ => allQueriesSatisfy_bind)
+      _ _ pos.leaf.val vp.params.hp ?_
+      (fun _ _ _ _ _ _ _ => lab_node_structural core _)) fun _ => ?_
+  · intro i hi
+    rw [← LayerTreeCoord.ofPosition_toAdrs pos]
+    exact lab_xmss_leaf_structural core (LayerTreeCoord.ofPosition pos) i
+      (lt_pow_of_div_pow_lt le_rfl (hi.trans hleaf) (by positivity))
+  · exact allQueriesSatisfy_bind (lab_wots_sign_structural core pos msg)
+      fun _ => allQueriesSatisfy_pure _ _
+
+/-- A leaf in a reachable FORS tree touches and reads only structural cells. -/
+theorem lab_fors_leaf_structural :
+  ∀ (pos : BottomPosition vp) (tree : Fin vp.params.k) (i : Nat),
+    i / 2 ^ vp.params.a = tree.val →
+    AllQueriesSatisfy (labForsLeaf core pos.forsAdrs i) (StructuralInput core) := by
+  intro pos tree i hi
+  have hmem := forsLeafAdrs_mem_constructionAddresses pos tree hi
+  have hhonest := isHonestKey_of_inl_mem_childAdrs (core := core) hmem
+    (by rw [childAdrs_forsNodeAdrs_zero]; exact List.mem_singleton_self _)
+  rw [labForsLeaf_of_mem core hmem]
+  refine allQueriesSatisfy_bind (touchCell_structural core _ ?_) fun _ =>
+    readCell_structural core _ ?_
+  · intro c hc
+    cases Option.some.inj hc
+    exact hhonest
+  · intro c hc
+    cases Option.some.inj hc
+    trivial
+
+/-- FORS signing at a reachable bottom position makes only structural inputs. -/
+theorem lab_fors_sign_structural :
+  ∀ (pos : BottomPosition vp) (md : List Byte),
+    AllQueriesSatisfy (labForsSign core md pos.forsAdrs) (StructuralInput core) := by
+  intro pos md
+  refine allQueriesSatisfy_ofFnM _ fun tree => allQueriesSatisfy_bind ?_ fun _ =>
+    allQueriesSatisfy_bind
+      (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree
+        (fun oa => AllQueriesSatisfy oa (StructuralInput core))
+        (fun _ => allQueriesSatisfy_pure _ _) (fun _ _ => allQueriesSatisfy_bind)
+        _ _ (forsLeafIndex vp.params md tree.val) vp.params.a
+        (fun i hi => lab_fors_leaf_structural core pos tree i
+          (hi.trans (forsLeafIndex_div vp.params md tree.val)))
+        (fun _ _ _ _ _ _ _ => lab_node_structural core _))
+      fun _ => allQueriesSatisfy_pure _ _
+  have hmem := forsLeafAdrs_mem_constructionAddresses pos tree
+    (forsLeafIndex_div vp.params md tree.val)
+  have hhonest := isHonestKey_of_inl_mem_childAdrs (core := core) hmem
+    (by rw [childAdrs_forsNodeAdrs_zero]; exact List.mem_singleton_self _)
+  rw [labSecret_of_isSecretKey core (Adrs.isSecretKey_forsSkAdrs _ _)]
+  exact readCell_structural core _ fun c hc => by
+    cases Option.some.inj hc
+    exact hhonest
+
+/-- XMSS root recovery at the lab callbacks makes only structural inputs. -/
+theorem lab_xmss_recover_structural :
+  ∀ (pos : LayerPosition vp) (sig : XmssSig vp.params core) (msg : core.Y),
+    AllQueriesSatisfy
+      (xmssPkFromSigWith core (labF core) (labTl core) (labH core)
+        pos.leaf.val sig msg pos.toAdrs) (StructuralInput core) := by
+  intro pos sig msg
+  exact xmssPkFromSigWith_pred (fun oa => AllQueriesSatisfy oa (StructuralInput core))
+    (fun _ => allQueriesSatisfy_pure _ _) (fun _ _ => allQueriesSatisfy_bind) core
+    (fun adrs _ _ => lab_node_structural core adrs)
+    (fun adrs _ _ => lab_node_structural core adrs)
+    (fun adrs _ _ _ => lab_node_structural core adrs) pos.leaf.val sig msg pos.toAdrs
+
+/-- FORS public-key recovery at the lab callbacks makes only structural inputs. -/
+theorem lab_fors_recover_structural :
+  ∀ (pos : BottomPosition vp) (sig : ForsSigCore vp.params core) (md : List Byte),
+    AllQueriesSatisfy
+      (forsPkFromSigWith core (labF core) (labH core) (labTl core) sig md pos.forsAdrs)
+      (StructuralInput core) := by
+  intro pos sig md
+  exact forsPkFromSigWith_pred (fun oa => AllQueriesSatisfy oa (StructuralInput core))
+    (fun _ => allQueriesSatisfy_pure _ _) (fun _ _ => allQueriesSatisfy_bind) core
+    (fun adrs _ _ => lab_node_structural core adrs)
+    (fun adrs _ _ => lab_node_structural core adrs)
+    (fun adrs _ _ _ => lab_node_structural core adrs) sig md pos.forsAdrs
+
+/-- The complete reachable hypertree signing program makes only structural inputs. -/
+theorem lab_hypertree_structural :
+  ∀ (recoverFinal : Bool) (pos : LayerPosition vp) (layers : Nat)
+    (h : pos.layer.val + layers = vp.params.d) (msg : core.Y),
+    AllQueriesSatisfy (labSignFromPosition core recoverFinal pos layers h msg)
+      (StructuralInput core) := by
+  exact labSignFromPosition_pred_of_components core
+    (Q := fun oa => AllQueriesSatisfy oa (StructuralInput core))
+    (fun _ => allQueriesSatisfy_pure _ _) (fun _ _ => allQueriesSatisfy_bind)
+    (lab_xmss_sign_structural core) (lab_xmss_recover_structural core)
+
+/-- The lab root-generation program makes only structural inputs. -/
+theorem lab_keygen_structural :
+  AllQueriesSatisfy (labKeygen core) (StructuralInput core) := by
+  have h := lab_xmss_node_structural core (LayerTreeCoord.top vp) vp.params.hp 0
+    le_rfl (by positivity)
+  rw [LayerTreeCoord.top_toAdrs_layerAdrs] at h
+  exact h
+
+/-- Lab signing at its supplied public seed, root and randomizer makes only structural inputs. -/
+theorem lab_internal_sign_structural :
+  ∀ (pkSeed : core.PkSeed) (msg : List Byte) (pkRoot R : core.Y),
+    AllQueriesSatisfy (labSignInternal core pkSeed msg pkRoot R) (StructuralInput core) := by
+  intro pkSeed msg pkRoot R
+  unfold labSignInternal
+  refine allQueriesSatisfy_bind ?_ fun digest => ?_
+  · exact (allQueriesSatisfy_query_iff _ _).2 True.intro
+  · have hpos := BottomPosition.forsAdrs_ofDigestParts vp (splitDigest vp.params digest)
+    refine allQueriesSatisfy_bind ?_ fun _ => allQueriesSatisfy_bind ?_ fun _ =>
+      allQueriesSatisfy_bind (lab_hypertree_structural core _ _ _ _ _)
+        fun _ => allQueriesSatisfy_pure _ _
+    · rw [← hpos]
+      exact lab_fors_sign_structural core _ _
+    · rw [← hpos]
+      exact lab_fors_recover_structural core _ _ _
+
+/-- Lab signing permits structural inputs and the nonce read for its actual message. -/
+theorem lab_scheme_sign_structural [DecidableEq core.Y] :
+  ∀ (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
+    (pkRoot : core.Y) (msg : List Byte),
+    let key : PublicKeyCore core := ⟨pkSeed, pkRoot⟩
+    AllQueriesSatisfy ((labScheme core optRand pkSeed).sign key key msg)
+      (SigningStructuralInput core msg) := by
+  intro optRand pkSeed pkRoot msg
+  let key : PublicKeyCore core := ⟨pkSeed, pkRoot⟩
+  let nativeP : (deriveSpec core).Domain → Prop := fun input =>
+    match input with
+    | .inl _ => True
+    | .inr (.inl _) => False
+    | .inr (.inr (_, message)) => message = msg
+  have hunif : AllQueriesSatisfy
+      (liftM (optRand key) : OracleComp (deriveSpec core) core.Y) nativeP := by
+    classical
+    rw [← isQueryBoundP_zero_iff]
+    exact isQueryBoundP_liftM_withDerivations (fun _ h => h trivial) _
+  let draw : OracleComp (deriveSpec core) core.Y := do
+    let addrnd ← (optRand key : ProbComp core.Y)
+    query (spec := deriveSpec core) (.inr (.inr (addrnd, msg)))
+  have hdraw : AllQueriesSatisfy draw nativeP :=
+    allQueriesSatisfy_bind hunif fun _ => (allQueriesSatisfy_query_iff _ _).2 rfl
+  have hdrawLab : AllQueriesSatisfy (liftComp draw (labSpec core))
+      (SigningStructuralInput core msg) := by
+    rw [liftComp_def]
+    apply hdraw.simulateQ
+    intro input hi
+    rcases input with native | (secret | nonce)
+    · change AllQueriesSatisfy
+        (liftM ((labSpec core).query (.inl (.inl native))))
+        (SigningStructuralInput core msg)
+      exact (allQueriesSatisfy_query_iff _ _).2 (Or.inl True.intro)
+    · exact False.elim hi
+    · rcases nonce with ⟨addrnd, message⟩
+      change message = msg at hi
+      cases hi
+      change AllQueriesSatisfy
+        (liftM ((labSpec core).query (.inl (.inr (.inr (addrnd, msg))))))
+        (SigningStructuralInput core msg)
+      exact (allQueriesSatisfy_query_iff _ _).2 (Or.inr ⟨addrnd, rfl⟩)
+  change AllQueriesSatisfy
+    (liftComp draw (labSpec core) >>= fun R => labSignInternal core pkSeed msg pkRoot R)
+    (SigningStructuralInput core msg)
+  exact allQueriesSatisfy_bind hdrawLab fun R =>
+    (lab_internal_sign_structural core pkSeed msg pkRoot R).mono fun _ h => Or.inl h
+
+
+end SLHDSA.Security.NativeProvenance
