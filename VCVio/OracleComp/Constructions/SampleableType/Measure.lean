@@ -22,7 +22,10 @@ Finite-range sampling and transport through an equivalence preserve the uniform 
 certified by `SampleableType`. Events of a uniform sample are counting statements: comparisons with
 fractions of the sample space reduce to comparisons of counts, probability one and zero are
 universal and empty events, and independent uniform draws combined by a bijection are a single
-uniform draw. Every uniform sampler of a type denotes the same measure, so statements about `$ᵗ α`
+uniform draw. `natCast_mul_prEvent_le_sum_prEvent_of_le_card_filter` is the double-counting
+bound for uniform events: if every bad sample satisfies at least `k` of a finite family of
+events, then `k` times the bad probability is at most the sum of their probabilities. Every
+uniform sampler of a type denotes the same measure, so statements about `$ᵗ α`
 do not depend on the chosen sampler.
 
 There are two set-mass bounds for a uniform sample, and they differ in where the numerator comes
@@ -255,6 +258,34 @@ theorem prEvent_uniformSample_eq_ofReal :
   simp
 
 end counting
+
+open Classical in
+/-- **Double counting for uniform events.** Let `t` be a finite set and `k` a natural number.
+If every sample `x` with `bad x` satisfies `rel l x` for at least `k` elements `l ∈ t`, then
+`k · Pr[bad] ≤ ∑ l ∈ t, Pr[rel l]` for a uniform sample. -/
+theorem natCast_mul_prEvent_le_sum_prEvent_of_le_card_filter {α ι : Type} [SampleableType α]
+    (t : Finset ι) (bad : α → Prop) (rel : ι → α → Prop) (k : ℕ)
+    (h : ∀ x, bad x → k ≤ (t.filter fun l ↦ rel l x).card) :
+    (k : ℝ≥0∞) * Pr{let x ← $ᵗ α}[bad x] ≤ ∑ l ∈ t, Pr{let x ← $ᵗ α}[rel l x] := by
+  classical
+  let : _root_.Fintype α := Fintype.ofFinite α
+  have hc : k * (Finset.univ.filter bad).card ≤
+      ∑ l ∈ t, (Finset.univ.filter (rel l)).card := by
+    calc
+      k * (Finset.univ.filter bad).card = ∑ x ∈ Finset.univ.filter bad, k := by
+        simp [Nat.mul_comm]
+      _ ≤ ∑ x ∈ Finset.univ.filter bad, (t.filter fun l ↦ rel l x).card :=
+        Finset.sum_le_sum fun x hx ↦ h x (Finset.mem_filter.mp hx).2
+      _ ≤ ∑ x : α, (t.filter fun l ↦ rel l x).card :=
+        Finset.sum_le_sum_of_subset_of_nonneg (Finset.filter_subset _ _) (by intros; omega)
+      _ = ∑ l ∈ t, (Finset.univ.filter (rel l)).card := by
+        simp only [Finset.card_filter]
+        exact Finset.sum_comm
+  simp_rw [prEvent_uniformSample]
+  simp only [div_eq_mul_inv]
+  rw [← Finset.sum_mul, ← mul_assoc]
+  gcongr
+  exact_mod_cast hc
 
 /-! ## Transport between uniform samples -/
 
