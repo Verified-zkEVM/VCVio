@@ -100,9 +100,9 @@ for pr in "${prs[@]}"; do
     esac
   done < "$dir/pr-files.txt"
   if [ "${#lean_files[@]}" -gt 0 ]; then
-    (cd "$worktree" && python3 scripts/migrate-native-probability.py --dry-run "${lean_files[@]}" \
+    (cd "$worktree" && uv run --no-project --python 3.12 python scripts/migrate-native-probability.py --dry-run "${lean_files[@]}" \
       > "$dir/codemod.diff" 2> "$dir/codemod-sites.txt") || true
-    (cd "$worktree" && python3 scripts/migrate-native-probability.py "${lean_files[@]}" \
+    (cd "$worktree" && uv run --no-project --python 3.12 python scripts/migrate-native-probability.py "${lean_files[@]}" \
       > /dev/null 2> "$dir/codemod.txt") || true
   fi
 
