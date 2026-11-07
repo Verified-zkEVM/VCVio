@@ -25,11 +25,13 @@ The statement is a divisibility over an arbitrary commutative ring. So it covers
 into linear factors (block size `1`, where it is evaluation at a root) and partial splits into
 quadratic factors (block size `2`). The bridge lemmas `X_pow_sub_C_dvd_X_pow_mul_add_one` and
 `negacyclicModulus_dvd_toPolynomial_negacyclicMulPure` connect the residues to negacyclic
-multiplication.
+multiplication. At quadratic leaves, `baseCaseMul_of_dvd` identifies the product of two residues
+modulo `X^2 − γ` with `(a0·b0 + a1·b1·γ, a0·b1 + a1·b0)`.
 
 ## References
 
 - NIST FIPS 204, Section 7.5 (NTT and NTT⁻¹)
+- NIST FIPS 203, Section 4.3 (NTT, MultiplyNTTs and BaseCaseMultiply)
 -/
 
 public section
@@ -278,6 +280,55 @@ theorem forwardStages_ofFn_dvd {N k : ℕ} (len : Fin k → ℕ)
           (2 * g' + 1) / 2 * (2 * len (Fin.last k)) + len (Fin.last k) by
         rw [show (2 * g' + 1) / 2 = g' by omega]; ring]
       exact h7.2
+
+/-! ## Quadratic leaves -/
+
+/-- A block of length `2` is the linear polynomial `a[base] + a[base + 1]·X`. -/
+theorem blockPoly_two {N : ℕ} (a : Fin N → R) (base : ℕ) :
+    blockPoly a base 2 = C (coeffAt a base) + C (coeffAt a (base + 1)) * X := by
+  simp [blockPoly, Finset.sum_range_succ]
+
+/-- Two linear polynomials congruent modulo `X^2 − γ` are equal coefficientwise. -/
+theorem eq_of_X_sq_sub_C_dvd {γ a0 a1 b0 b1 : R}
+    (h : X ^ 2 - C γ ∣ (C a0 + C a1 * X) - (C b0 + C b1 * X)) : a0 = b0 ∧ a1 = b1 := by
+  nontriviality R
+  have hlin : (C a0 + C a1 * X) - (C b0 + C b1 * X) = C (a1 - b1) * X + C (a0 - b0) := by
+    simp only [C_sub]; ring
+  have hdeg : (C (a1 - b1) * X + C (a0 - b0)).degree < (X ^ 2 - C γ).degree := by
+    rw [degree_X_pow_sub_C (by norm_num)]
+    exact degree_linear_le.trans_lt (by exact_mod_cast (by norm_num : 1 < 2))
+  rw [hlin] at h
+  have h0 : C (a1 - b1) * X + C (a0 - b0) = 0 := by
+    by_contra hne
+    exact (monic_X_pow_sub_C γ (by norm_num : 2 ≠ 0)).not_dvd_of_degree_lt hne hdeg h
+  have hc0 := congrArg (coeff · 0) h0
+  have hc1 := congrArg (coeff · 1) h0
+  simp only [coeff_add, coeff_C_mul_X, coeff_C, coeff_zero] at hc0 hc1
+  refine ⟨?_, ?_⟩
+  · simpa [sub_eq_zero] using hc0
+  · simpa [sub_eq_zero] using hc1
+
+/-- Base-case multiplication in `R[X] / (X^2 − γ)`: if the linear polynomials `a`, `b`, `c`
+represent `F`, `G` and `H ≡ F·G` modulo `X^2 − γ`, then `c` is the product
+`(a0·b0 + a1·b1·γ, a0·b1 + a1·b0)`. -/
+theorem baseCaseMul_of_dvd {γ a0 a1 b0 b1 c0 c1 : R} {F G H : R[X]}
+    (hF : X ^ 2 - C γ ∣ (C a0 + C a1 * X) - F) (hG : X ^ 2 - C γ ∣ (C b0 + C b1 * X) - G)
+    (hH : X ^ 2 - C γ ∣ (C c0 + C c1 * X) - H) (hFG : X ^ 2 - C γ ∣ H - F * G) :
+    c0 = a0 * b0 + a1 * b1 * γ ∧ c1 = a0 * b1 + a1 * b0 := by
+  apply eq_of_X_sq_sub_C_dvd (γ := γ)
+  obtain ⟨u, hu⟩ := hF
+  obtain ⟨v, hv⟩ := hG
+  have hF' : F = (C a0 + C a1 * X) - (X ^ 2 - C γ) * u := by rw [← hu]; ring
+  have hG' : G = (C b0 + C b1 * X) - (X ^ 2 - C γ) * v := by rw [← hv]; ring
+  have hprod : (C c0 + C c1 * X) - (C (a0 * b0 + a1 * b1 * γ) + C (a0 * b1 + a1 * b0) * X) =
+      ((C c0 + C c1 * X) - H) + (H - F * G) +
+        (X ^ 2 - C γ) * (C (a1 * b1) - u * (C b0 + C b1 * X) - (C a0 + C a1 * X) * v +
+          (X ^ 2 - C γ) * u * v) := by
+    rw [hF', hG']
+    simp only [C_add, C_mul]
+    ring
+  rw [hprod]
+  exact dvd_add (dvd_add hH hFG) (dvd_mul_right _ _)
 
 /-! ## Negacyclic bridges -/
 
