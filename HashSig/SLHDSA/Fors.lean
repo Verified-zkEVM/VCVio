@@ -251,8 +251,8 @@ theorem forsNodeHashWith_natural {Y : Type} {m n : Type → Type*}
 
 /-- A monad morphism commutes with one FORS-tree root computation when it commutes with the leaf
 and node callbacks. -/
-theorem forsRootWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
-    [Monad n] [LawfulMonad n] (F : m →ᵐ n) (core : CorePrimitives p)
+theorem forsRootWith_natural {m n : Type → Type*} [Monad m] [Monad n]
+    (F : m →ᵐ n) (core : CorePrimitives p)
     (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
     (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
     (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
@@ -357,7 +357,7 @@ theorem forsNodeHashM_natural (core : CorePrimitives p) {m n : Type → Type*}
 
 /-- Query-preserving monad morphisms commute with one canonical FORS root computation. -/
 theorem forsRootM_natural (core : CorePrimitives p) {m n : Type → Type*}
-    [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
+    [Monad m] [Monad n]
     [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
     (F : HasQuery.QueryHom (publicHashSpec core) m n)
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (i : ℕ) :

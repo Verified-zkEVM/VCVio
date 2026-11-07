@@ -30,17 +30,35 @@ computations, probability semantics, program logic, and lattice- and hash-based 
     ⟨`weak.linter.constructorNameAsVariable, false⟩
   ]
 
+/-- Whether `uv`, which runs the repository's Python checks, is on `PATH`. -/
+def uvAvailable : IO Bool := do
+  try
+    let out ← IO.Process.output { cmd := "uv", args := #["--version"] }
+    return out.exitCode == 0
+  catch _ =>
+    return false
+
+/-- The message printed when `uv` is missing. -/
+def uvMissingMessage : String :=
+  "uv is required to run the repository's Python checks. Install it from " ++
+  "https://docs.astral.sh/uv/getting-started/installation/ and see the Python tooling " ++
+  "section of CONTRIBUTING.md."
+
 /-- Run Mathlib's source-style checks and Batteries' environment linters, with an exact
 exception baseline. The Python coordinator invokes the upstream executables through Lake;
 each library is imported in a separate process and no native FFI executable is linked. -/
 @[lint_driver]
 script lint (args) do
+  unless ← uvAvailable do
+    IO.eprintln s!"lake lint: {uvMissingMessage}"
+    return 1
   let root ← getRootPackage
   let libraries := (root.defaultTargets.push `VCVioCslib).filterMap fun library =>
     (root.findLeanLib? library).map fun _ => library.toString
   let child ← IO.Process.spawn {
     cmd := "lake"
-    args := #["env", "python3", "scripts/lint.py", "--libraries",
+    args := #["env", "uv", "run", "--no-project", "--python", "3.12", "python",
+      "scripts/lint.py", "--libraries",
       String.intercalate "," libraries.toList] ++ args.toArray
   }
   child.wait
@@ -403,6 +421,9 @@ Falcon executables, which compile the vendored C backends under `third_party/`; 
 the nightly FFI workflow runs and is never part of the per-PR CI. -/
 @[test_driver]
 script test (args) do
+  unless ← uvAvailable do
+    IO.eprintln s!"lake test: {uvMissingMessage}"
+    return 1
   let ffi := args.contains "--ffi"
   let mut exes : Array String := #[
     "smoke_test",
@@ -462,8 +483,9 @@ script test (args) do
   let checkArgs := #["scripts/check-slh-dsa-bound-table.py",
     "docs/design/slh-dsa-security-bounds.csv", "--generator",
     generator.toString]
-  IO.println s!"# python3 {" ".intercalate checkArgs.toList}"
-  let check ← IO.Process.spawn { cmd := "python3", args := checkArgs }
+  let pythonArgs := #["run", "--no-project", "--python", "3.12", "python"] ++ checkArgs
+  IO.println s!"# uv {" ".intercalate pythonArgs.toList}"
+  let check ← IO.Process.spawn { cmd := "uv", args := pythonArgs }
   let rc ← check.wait
   if rc != 0 then
     IO.eprintln s!"lake test: independent SLH-DSA bound-table check exited with code {rc}"
@@ -754,8 +776,8 @@ at least one. -/
 lean_exe slhdsa_limited_profile_tests where
   root := `HashSigTest.SLHDSA.LimitedProfile
 
-/-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
-committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
+/-- Kernel-level axiom / `sorry` accounting across the non-test libraries, gated at zero debt
+against the empty committed baseline (`scripts/axiom_baseline.json`). Complements the Interop
 TCB-isolation gate: that gate bounds imports, this one accounts for the axioms every
 declaration ultimately rests on. Runtime-imports built oleans, so run it after
 `lake build`. See `scripts/AxiomSweep.lean`. -/
@@ -768,7 +790,7 @@ lean_exe axiomsweep where
 backend evaluates when their module is loaded, before any `main` runs, and the
 compiler-generated declarations it initialises beside them, when what runs builds an
 enumeration of a type. Gated against a list of accepted constant names scoped by library
-(`scripts/init_sweep_baseline.json`), the allowlist idea `scripts/axiom_baseline.json` uses.
+(`scripts/init_sweep_baseline.json`).
 Complements the axiom sweep: that one accounts for what the kernel accepted, this one for
 what the *binary* does at start-up. Runtime-imports built oleans, so run it after
 `lake build`. See `scripts/InitSweep.lean`. -/

@@ -713,8 +713,7 @@ the "name is a hypothesis" trap, in the direction of false absence.
 ### Ring, polynomial, and lattice algebra
 
 **Premise correction.** Upstream `main` has **no** `native_decide` in `LatticeCrypto/`
-(`grep` → 0; `scripts/AxiomSweep.lean:90` has `grandfatheredNativeTrust := []`; the committed baseline
-has 40 `sorry` and 0 nonstandard axioms). #614 replaced the dense NTT matrix certificates with
+(`grep` → 0, and `lake exe axiomsweep --check` admits no non-standard axiom). #614 replaced the dense NTT matrix certificates with
 structural butterfly stages (`V:LatticeCrypto/Ring/NTTCert.lean:260–596`). Two docstrings still
 describe the retired certificate: `V:Extern/MLDSA/NonVacuity.lean:36–38,98` and
 `V:Extern/MLDSA/Laws.lean:236` (Adopt: docs fix).

@@ -12,13 +12,31 @@ Before sending work for review:
 
 - Run `lake exe cache get && lake build`.
 - After adding new `.lean` files, run `./scripts/update-lib.sh`.
-- Avoid leaving `sorry` in finished work unless the change is explicitly meant to preserve partial work.
+- Do not merge `sorry`: `lake exe axiomsweep --check` fails on any `sorryAx` dependency. Keep
+  partial work on its branch.
 - State security reductions for a named reduction, simulator, or extractor, not for one that merely
   exists. Adversary types carry no resource bound and Lean can choose witnesses classically, so
   `∃ B, bound ≤ advantage B` holds for every scheme. See
   [Name the reduction in the theorem statement](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
 - Keep repo-wide Lean options in `lakefile.lean`. Do not restate `autoImplicit = false` with per-file `set_option` lines.
 - Do not disable linters locally or globally to make warnings disappear. Fix the underlying issue instead of adding `set_option linter.* false`, `set_option weak.linter.* false`, or repo-level linter suppressions.
+
+## Python tooling
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) for all repository Python
+entry points, including validation scripts, `lake lint`, `lake test` and CI. CI uses uv 0.13.6.
+The commands select Python 3.12; uv downloads it if needed. Run them from the repository root.
+These checks use only the standard library, and `--no-project` runs them without installing a
+package or creating a project environment.
+
+The Agent Docs workflow runs these commands:
+
+```bash
+uv run --no-project --python 3.12 python scripts/test-agent-docs.py
+uv run --no-project --python 3.12 python scripts/check-agent-docs.py
+uv run --no-project --python 3.12 python scripts/extract-doc-fragments.py --check
+uv run --no-project --python 3.12 python scripts/check-doc-names.py
+```
 
 ## Pull Request Checks And Merge Queue
 
@@ -32,7 +50,7 @@ The hosted Linux build, lint and downstream jobs run `scripts/free-ci-disk-space
 restoring caches. It removes unused .NET and Android SDKs and reports disk usage; it does not
 change repository sources or Lean/build caches. It requires GitHub-hosted Linux environment flags;
 the guard is an operational safeguard, not runner authentication.
-`python3 scripts/test-ci-disk-space.py` tests its guards and command boundaries using stubs.
+`uv run --no-project --python 3.12 python scripts/test-ci-disk-space.py` tests its guards and command boundaries using stubs.
 
 VCVio's `main` uses the merge queue. GitHub-marked stacked PRs require the
 [asynchronous merge API](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request-asynchronously):
@@ -156,8 +174,8 @@ The toolchain and Mathlib move together, and the other pins follow them. The ord
    logic uses the pinned Lean core WP interface through PolyFun.
 3. `lake update --keep-toolchain`, then `lake exe cache get`.
 4. `./scripts/validate.sh --lint --test --axioms`; fix what the new toolchain flags rather than
-   silencing it (`docs/agents/gotchas.md` §23), and update `scripts/axiom_baseline.json` only for
-   an intentional change in `sorry` debt.
+   silencing it (`docs/agents/gotchas.md` §23). The axiom sweep stays at zero debt, so a new
+   `sorry` or non-standard axiom is a breakage to fix, not a baseline change.
 5. Re-verify the upstream-alignment ledger (`docs/reading/upstream-alignment.md`): every row is
    checked against the newly pinned trees, never diffed against the previous ledger.
 6. Update the version mentions in `AGENTS.md` (*Building*) and `docs/agents/gotchas.md` §26.
