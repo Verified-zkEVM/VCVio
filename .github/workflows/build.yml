@@ -411,10 +411,10 @@ jobs:
         run: bash scripts/test-docnames.sh
       - name: Check documentation names
         run: python3 scripts/check-doc-names.py --resolve
-      # `lake test` runs the `test` script from `lakefile.lean`: it builds the three test
+      # `lake test` runs the `test` script from `lakefile.lean`: one `lake build` of the three test
       # libraries (every module reachable from `VCVioTest.lean`, the Lean-only lattice helpers
-      # and vectors, the SLH-DSA canaries) and runs the smoke test and the SLH-DSA test
-      # executables. The native ML-KEM / ML-DSA / Falcon executables are behind `-- --ffi` and
+      # and vectors, the SLH-DSA canaries) and every test executable, then the smoke test and the
+      # SLH-DSA test executables. The native ML-KEM / ML-DSA / Falcon executables are behind `-- --ffi` and
       # stay on the nightly FFI workflow. Kept out of the timed build commands on purpose: the
       # library-build row times exactly the non-test libraries.
       - name: Test

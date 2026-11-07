@@ -147,7 +147,7 @@ def Fischlin
     {m : Type → Type v} [Monad m]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel) (ρ b S : ℕ) (M : Type)
-    [DecidableEq M] [MonadLiftT ProbComp m]
+    [MonadLiftT ProbComp m]
     [HasQuery (fischlinROSpec Stmt Commit Chal Resp ρ b M) m] :
     SignatureAlg m
       (M := M) (PK := Stmt) (SK := Wit) (S := FischlinProof Commit Chal Resp ρ) where

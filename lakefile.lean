@@ -22,7 +22,12 @@ computations, probability semantics, program logic, and lattice- and hash-based 
     -- Disable the unicode allowlist linter: VCVio docstrings legitimately use
     -- FIPS-204 math notation (combining tilde `c̃`) and cited author names with
     -- diacritics (e.g. `Cătălin Hriţcu`).
-    ⟨`weak.linter.unicodeLinter, false⟩
+    ⟨`weak.linter.unicodeLinter, false⟩,
+    -- Disable core's `constructorNameAsVariable` linter. It puts the type of every named binder,
+    -- hypotheses included, in weak head normal form at default transparency, so a hypothesis such
+    -- as `hmem : x ∈ support (simulateQ impl game)` makes it unfold the whole game. In the SLH-DSA
+    -- proofs that is most of the elaboration time of the slowest modules.
+    ⟨`weak.linter.constructorNameAsVariable, false⟩
   ]
 
 /-- Run Mathlib's source-style checks and Batteries' environment linters, with an exact
@@ -398,55 +403,61 @@ Falcon executables, which compile the vendored C backends under `third_party/`; 
 the nightly FFI workflow runs and is never part of the per-PR CI. -/
 @[test_driver]
 script test (args) do
-  let step (cmdArgs : Array String) : ScriptM UInt32 := do
-    IO.println s!"# lake {" ".intercalate cmdArgs.toList}"
-    let child ← IO.Process.spawn { cmd := "lake", args := cmdArgs }
-    child.wait
-  let mut steps : Array (Array String) := #[
-    #["build", "VCVioTest", "LatticeCryptoTest", "HashSigTest"],
-    #["exe", "smoke_test"],
-    #["exe", "oracle_cost_tests"],
-    #["exe", "algorithm_tests"],
-    #["exe", "slhdsa_kat"],
-    #["exe", "slhdsa_c13_kat"],
-    #["exe", "slhdsa_data_codec_tests"],
-    #["exe", "slhdsa_primitive_tests"],
-    #["exe", "slhdsa_wots_tests"],
-    #["exe", "slhdsa_xmss_tests"],
-    #["exe", "slhdsa_fors_tests"],
-    #["exe", "slhdsa_fors_secret_order_tests"],
-    #["exe", "slhdsa_hypertree_tests"],
-    #["exe", "slhdsa_external_tests"],
-    #["exe", "slhdsa_target_ledger_tests"],
-    #["exe", "slhdsa_encoded_ledger_tests"],
-    #["exe", "slhdsa_trace_target_tests"],
-    #["exe", "slhdsa_component_trace_tests"],
-    #["exe", "slhdsa_canonical_game_tests"],
-    #["exe", "slhdsa_wots_witness_tests"],
-    #["exe", "slhdsa_fors_witness_tests"],
-    #["exe", "slhdsa_xmss_witness_tests"],
-    #["exe", "slhdsa_hypertree_witness_tests"],
-    #["exe", "slhdsa_scheme_witness_tests"],
-    #["exe", "slhdsa_hmsg_witness_tests"],
-    #["exe", "slhdsa_suf_residual_tests"],
-    #["exe", "slhdsa_scheme_game_tests"],
-    #["exe", "slhdsa_composition_tests"],
-    #["exe", "slhdsa_suf_bound_tests"],
-    #["exe", "slhdsa_limited_profile_tests"],
-    #["exe", "slhdsa_byte_model_tests"],
-    #["exe", "slhdsa_wire_tests"],
-    #["exe", "slhdsa_shake128s_compiler_tests"],
-    #["exe", "slhdsa_shake128s_game_tests"],
-    #["exe", "slhdsa_shake128s_wire_bridge_tests"],
-    #["build", "slhdsa_bound_table"]]
-  if args.contains "--ffi" then
-    steps := steps ++ #[#["exe", "mlkem_test"], #["exe", "mldsa_test"], #["exe", "falcon_test"]]
-  for cmdArgs in steps do
-    let rc ← step cmdArgs
-    if rc != 0 then
-      IO.eprintln s!"lake test: `lake {" ".intercalate cmdArgs.toList}` exited with code {rc}"
-      return rc
+  let ffi := args.contains "--ffi"
+  let mut exes : Array String := #[
+    "smoke_test",
+    "oracle_cost_tests",
+    "algorithm_tests",
+    "slhdsa_kat",
+    "slhdsa_c13_kat",
+    "slhdsa_data_codec_tests",
+    "slhdsa_primitive_tests",
+    "slhdsa_wots_tests",
+    "slhdsa_xmss_tests",
+    "slhdsa_fors_tests",
+    "slhdsa_fors_secret_order_tests",
+    "slhdsa_hypertree_tests",
+    "slhdsa_external_tests",
+    "slhdsa_target_ledger_tests",
+    "slhdsa_encoded_ledger_tests",
+    "slhdsa_trace_target_tests",
+    "slhdsa_component_trace_tests",
+    "slhdsa_canonical_game_tests",
+    "slhdsa_wots_witness_tests",
+    "slhdsa_fors_witness_tests",
+    "slhdsa_xmss_witness_tests",
+    "slhdsa_hypertree_witness_tests",
+    "slhdsa_scheme_witness_tests",
+    "slhdsa_hmsg_witness_tests",
+    "slhdsa_suf_residual_tests",
+    "slhdsa_scheme_game_tests",
+    "slhdsa_composition_tests",
+    "slhdsa_suf_bound_tests",
+    "slhdsa_limited_profile_tests",
+    "slhdsa_byte_model_tests",
+    "slhdsa_wire_tests",
+    "slhdsa_shake128s_compiler_tests",
+    "slhdsa_shake128s_game_tests",
+    "slhdsa_shake128s_wire_bridge_tests"]
+  if ffi then
+    exes := exes ++ #["mlkem_test", "mldsa_test", "falcon_test"]
+  -- One build for the test libraries and every executable, so Lake compiles and links them in
+  -- parallel and checks the build graph once instead of once per `lake exe`.
+  let buildArgs := #["build", "VCVioTest", "LatticeCryptoTest", "HashSigTest"] ++ exes ++
+    #["slhdsa_bound_table"]
+  IO.println s!"# lake {" ".intercalate buildArgs.toList}"
+  let rc ← (← IO.Process.spawn { cmd := "lake", args := buildArgs }).wait
+  if rc != 0 then
+    IO.eprintln s!"lake test: `lake {" ".intercalate buildArgs.toList}` exited with code {rc}"
+    return rc
   let root ← getRootPackage
+  for exe in exes do
+    let bin := (root.binDir / exe).addExtension System.FilePath.exeExtension
+    IO.println s!"# {exe}"
+    let rc ← (← IO.Process.spawn { cmd := bin.toString }).wait
+    if rc != 0 then
+      IO.eprintln s!"lake test: `{exe}` exited with code {rc}"
+      return rc
   let generator := (root.binDir / "slhdsa_bound_table").addExtension System.FilePath.exeExtension
   let checkArgs := #["scripts/check-slh-dsa-bound-table.py",
     "docs/design/slh-dsa-security-bounds.csv", "--generator",

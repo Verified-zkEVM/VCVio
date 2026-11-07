@@ -56,8 +56,7 @@ instantiating those abstractions for a lattice scheme.
 - `LatticeCrypto/MLDSA/Scheme.lean`: proof-level identification scheme with aborts.
 - `LatticeCrypto/MLDSA/Signature.lean`: FIPS-style signing and verification layer built on the
   proof-level scheme.
-- `LatticeCrypto/MLDSA/Security.lean`: reduction statements from the signature / IDS surfaces to
-  underlying assumptions.
+- `LatticeCrypto/MLDSA/Security.lean`: completeness and commitment recoverability of the IDS.
 - `LatticeCrypto/MLDSA/SecurityNMA.lean`: the no-message-attack chain, with the key swap modelled
   over short-box MLWE.
 - `LatticeCrypto/MLDSA/Concrete/`: executable implementations of NTT, rounding, and encoding, plus
