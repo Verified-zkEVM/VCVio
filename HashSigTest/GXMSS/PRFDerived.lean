@@ -5,7 +5,7 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.PRFDerived.Unforgeability
+public import HashSig.GXMSS.Security.PRFDerivedUnforgeability
 
 /-!
 # PRF-derived GXMSS security import audit

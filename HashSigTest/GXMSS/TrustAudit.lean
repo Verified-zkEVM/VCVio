@@ -19,7 +19,7 @@ meta import all HashSig.GXMSS.HashInstance
 meta import all HashSig.GXMSS.Interval.Filler
 meta import all HashSig.GXMSS.Interval.FrontierCount
 meta import all HashSig.GXMSS.Interval.Merkle
-meta import all HashSig.GXMSS.Interval.PRFDerived.Scheme
+meta import all HashSig.GXMSS.Interval.PRFDerivedScheme
 meta import all HashSig.GXMSS.Interval.Scheme
 meta import all HashSig.GXMSS.Merkle
 meta import all HashSig.GXMSS.PRFDerivedScheme
@@ -29,66 +29,65 @@ meta import all HashSig.GXMSS.Security.Auxiliary.ChainSourceMass
 meta import all HashSig.GXMSS.Security.Auxiliary.ChainSplicing
 meta import all HashSig.GXMSS.Security.Auxiliary.ChainTelescope
 meta import all HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
-meta import all HashSig.GXMSS.Security.Auxiliary.CompleteBounds
+meta import all HashSig.GXMSS.Security.Reductions.MerkleCollisionBound
 meta import all HashSig.GXMSS.Security.Auxiliary.Encoding
-meta import all HashSig.GXMSS.Security.Auxiliary.FullRangeInteraction
+meta import all HashSig.GXMSS.Security.Interval.Auxiliary.FullRangeInteraction
 meta import all HashSig.GXMSS.Security.Auxiliary.HashWitnesses
-meta import all HashSig.GXMSS.Security.Auxiliary.Interval.FillerOpening
-meta import all HashSig.GXMSS.Security.Auxiliary.Interval.FillerTargets
-meta import all HashSig.GXMSS.Security.Auxiliary.Interval.Interaction
-meta import all HashSig.GXMSS.Security.Auxiliary.Interval.MerkleWitnesses
+meta import all HashSig.GXMSS.Security.Interval.Auxiliary.FillerOpening
+meta import all HashSig.GXMSS.Security.Interval.Auxiliary.FillerTargets
+meta import all HashSig.GXMSS.Security.Interval.Auxiliary.Interaction
+meta import all HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses
 meta import all HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 meta import all HashSig.GXMSS.Security.Auxiliary.SigningQueries
 meta import all HashSig.GXMSS.Security.Auxiliary.SourceGames
 meta import all HashSig.GXMSS.Security.Auxiliary.SourcePartition
-meta import all HashSig.GXMSS.Security.CompleteUnforgeability
+meta import all HashSig.GXMSS.Security.Unforgeability
 meta import all HashSig.GXMSS.Security.EncodingInstances
-meta import all HashSig.GXMSS.Security.IntervalUnforgeability
-meta import all HashSig.GXMSS.Security.PRFDerived.FullRange.DisplayedBound
-meta import all HashSig.GXMSS.Security.PRFDerived.FullRange.Transport
-meta import all HashSig.GXMSS.Security.PRFDerived.FullRange.Unforgeability
-meta import all HashSig.GXMSS.Security.PRFDerived.Interval.Idealization
-meta import all HashSig.GXMSS.Security.PRFDerived.Interval.OracleInteraction
-meta import all HashSig.GXMSS.Security.PRFDerived.Interval.Unforgeability
-meta import all HashSig.GXMSS.Security.PRFDerived.KeyGeneration
-meta import all HashSig.GXMSS.Security.PRFDerived.KeyMaterial
-meta import all HashSig.GXMSS.Security.PRFDerived.OracleQueries
-meta import all HashSig.GXMSS.Security.PRFDerived.PRFOracleInteraction
-meta import all HashSig.GXMSS.Security.PRFDerived.ResponseCache
-meta import all HashSig.GXMSS.Security.PRFDerived.RetrySampling
-meta import all HashSig.GXMSS.Security.PRFDerived.Signing
-meta import all HashSig.GXMSS.Security.PRFDerived.SigningCoordinates
-meta import all HashSig.GXMSS.Security.PRFDerived.SigningSimulation
-meta import all HashSig.GXMSS.Security.PRFDerived.Unforgeability
+meta import all HashSig.GXMSS.Security.Interval.Unforgeability
+meta import all HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedFullRangeBounds
+meta import all HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedFullRange
+meta import all HashSig.GXMSS.Security.Interval.PRFDerivedFullRange
+meta import all HashSig.GXMSS.Security.Interval.Auxiliary.PRFDerivedIdealization
+meta import all HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedOracleInteraction
+meta import all HashSig.GXMSS.Security.Interval.PRFDerivedUnforgeability
+meta import all HashSig.GXMSS.Security.Auxiliary.PRFDerivedKeyGeneration
+meta import all HashSig.GXMSS.Security.Auxiliary.PRFDerivedKeyMaterial
+meta import all HashSig.GXMSS.Security.Auxiliary.PRFDerivedOracleQueries
+meta import all HashSig.GXMSS.Security.Reductions.PRFDerivedOracleInteraction
+meta import all HashSig.GXMSS.Security.Auxiliary.PRFDerivedResponseCache
+meta import all HashSig.GXMSS.Security.Auxiliary.PRFDerivedRetrySampling
+meta import all HashSig.GXMSS.Security.Auxiliary.PRFDerivedSigning
+meta import all HashSig.GXMSS.Security.Auxiliary.PRFDerivedSigningCoordinates
+meta import all HashSig.GXMSS.Security.Auxiliary.PRFDerivedSigningSimulation
+meta import all HashSig.GXMSS.Security.PRFDerivedUnforgeability
 meta import all HashSig.GXMSS.Security.Reductions.ChainPreimage
 meta import all HashSig.GXMSS.Security.Reductions.ChainUndetectability
 meta import all HashSig.GXMSS.Security.Reductions.CollisionBounds
-meta import all HashSig.GXMSS.Security.Reductions.CompleteChainHybrid
+meta import all HashSig.GXMSS.Security.Reductions.ChainHybrid
 meta import all HashSig.GXMSS.Security.Reductions.EncodingCollision
 meta import all HashSig.GXMSS.Security.Reductions.EncodingCollisionBound
 meta import all HashSig.GXMSS.Security.Reductions.EncodingComposition
 meta import all HashSig.GXMSS.Security.Reductions.EncodingTargetCollisionReduction
-meta import all HashSig.GXMSS.Security.Reductions.Experiments
-meta import all HashSig.GXMSS.Security.Reductions.FirstChainCollision
-meta import all HashSig.GXMSS.Security.Reductions.FullRange.OriginalDomain
-meta import all HashSig.GXMSS.Security.Reductions.Interval.ActiveSecurity
-meta import all HashSig.GXMSS.Security.Reductions.Interval.ActiveSimulation
-meta import all HashSig.GXMSS.Security.Reductions.Interval.Chain
-meta import all HashSig.GXMSS.Security.Reductions.Interval.ChainCollision
-meta import all HashSig.GXMSS.Security.Reductions.Interval.ChainHybrid
-meta import all HashSig.GXMSS.Security.Reductions.Interval.FillerGames
-meta import all HashSig.GXMSS.Security.Reductions.Interval.MerkleCollision
-meta import all HashSig.GXMSS.Security.Reductions.Interval.MerkleGames
-meta import all HashSig.GXMSS.Security.Reductions.Interval.SourcePartition
+meta import all HashSig.GXMSS.Security.Reductions.ReductionExperiments
+meta import all HashSig.GXMSS.Security.Reductions.SameMessageChainCollision
+meta import all HashSig.GXMSS.Security.Interval.Reductions.FullRange
+meta import all HashSig.GXMSS.Security.Interval.Reductions.ActiveSecurity
+meta import all HashSig.GXMSS.Security.Interval.Reductions.ActiveSimulation
+meta import all HashSig.GXMSS.Security.Interval.Reductions.ChainReductions
+meta import all HashSig.GXMSS.Security.Interval.Reductions.ChainCollision
+meta import all HashSig.GXMSS.Security.Interval.Reductions.ChainHybrid
+meta import all HashSig.GXMSS.Security.Interval.Reductions.FillerGames
+meta import all HashSig.GXMSS.Security.Interval.Reductions.MerkleCollision
+meta import all HashSig.GXMSS.Security.Interval.Reductions.MerkleGames
+meta import all HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
 meta import all HashSig.GXMSS.Security.Reductions.MerkleCollision
 meta import all HashSig.GXMSS.Security.Reductions.MerkleForgery
 meta import all HashSig.GXMSS.Security.Reductions.Problems
-meta import all HashSig.GXMSS.Security.Reductions.SecondChainCollision
-meta import all HashSig.GXMSS.Security.Reductions.TCRSimulation
+meta import all HashSig.GXMSS.Security.Reductions.ChainCutCollision
+meta import all HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
 meta import all HashSig.GXMSS.Security.Reductions.TargetCollision
 meta import all HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision
 meta import all HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision
-meta import all HashSig.GXMSS.Security.Unforgeability
 meta import all VCVio.CryptoFoundations.SyncMultiSignatureAlg
 meta import all VCVio.CryptoFoundations.SyncSignatureAlg
 
@@ -115,7 +114,7 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     `HashSig.GXMSS.Interval.Filler,
     `HashSig.GXMSS.Interval.FrontierCount,
     `HashSig.GXMSS.Interval.Merkle,
-    `HashSig.GXMSS.Interval.PRFDerived.Scheme,
+    `HashSig.GXMSS.Interval.PRFDerivedScheme,
     `HashSig.GXMSS.Interval.Scheme,
     `HashSig.GXMSS.Merkle,
     `HashSig.GXMSS.PRFDerivedScheme,
@@ -125,107 +124,106 @@ run_cmd Lean.Elab.Command.liftTermElabM do
     `HashSig.GXMSS.Security.Auxiliary.ChainSplicing,
     `HashSig.GXMSS.Security.Auxiliary.ChainTelescope,
     `HashSig.GXMSS.Security.Auxiliary.ChainWitnesses,
-    `HashSig.GXMSS.Security.Auxiliary.CompleteBounds,
+    `HashSig.GXMSS.Security.Reductions.MerkleCollisionBound,
     `HashSig.GXMSS.Security.Auxiliary.Encoding,
-    `HashSig.GXMSS.Security.Auxiliary.FullRangeInteraction,
+    `HashSig.GXMSS.Security.Interval.Auxiliary.FullRangeInteraction,
     `HashSig.GXMSS.Security.Auxiliary.HashWitnesses,
-    `HashSig.GXMSS.Security.Auxiliary.Interval.FillerOpening,
-    `HashSig.GXMSS.Security.Auxiliary.Interval.FillerTargets,
-    `HashSig.GXMSS.Security.Auxiliary.Interval.Interaction,
-    `HashSig.GXMSS.Security.Auxiliary.Interval.MerkleWitnesses,
+    `HashSig.GXMSS.Security.Interval.Auxiliary.FillerOpening,
+    `HashSig.GXMSS.Security.Interval.Auxiliary.FillerTargets,
+    `HashSig.GXMSS.Security.Interval.Auxiliary.Interaction,
+    `HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses,
     `HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses,
     `HashSig.GXMSS.Security.Auxiliary.SigningQueries,
     `HashSig.GXMSS.Security.Auxiliary.SourceGames,
     `HashSig.GXMSS.Security.Auxiliary.SourcePartition,
-    `HashSig.GXMSS.Security.CompleteUnforgeability,
+    `HashSig.GXMSS.Security.Unforgeability,
     `HashSig.GXMSS.Security.EncodingInstances,
-    `HashSig.GXMSS.Security.IntervalUnforgeability,
-    `HashSig.GXMSS.Security.PRFDerived.FullRange.DisplayedBound,
-    `HashSig.GXMSS.Security.PRFDerived.FullRange.Transport,
-    `HashSig.GXMSS.Security.PRFDerived.FullRange.Unforgeability,
-    `HashSig.GXMSS.Security.PRFDerived.Interval.Idealization,
-    `HashSig.GXMSS.Security.PRFDerived.Interval.OracleInteraction,
-    `HashSig.GXMSS.Security.PRFDerived.Interval.Unforgeability,
-    `HashSig.GXMSS.Security.PRFDerived.KeyGeneration,
-    `HashSig.GXMSS.Security.PRFDerived.KeyMaterial,
-    `HashSig.GXMSS.Security.PRFDerived.OracleQueries,
-    `HashSig.GXMSS.Security.PRFDerived.PRFOracleInteraction,
-    `HashSig.GXMSS.Security.PRFDerived.ResponseCache,
-    `HashSig.GXMSS.Security.PRFDerived.RetrySampling,
-    `HashSig.GXMSS.Security.PRFDerived.Signing,
-    `HashSig.GXMSS.Security.PRFDerived.SigningCoordinates,
-    `HashSig.GXMSS.Security.PRFDerived.SigningSimulation,
-    `HashSig.GXMSS.Security.PRFDerived.Unforgeability,
+    `HashSig.GXMSS.Security.Interval.Unforgeability,
+    `HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedFullRangeBounds,
+    `HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedFullRange,
+    `HashSig.GXMSS.Security.Interval.PRFDerivedFullRange,
+    `HashSig.GXMSS.Security.Interval.Auxiliary.PRFDerivedIdealization,
+    `HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedOracleInteraction,
+    `HashSig.GXMSS.Security.Interval.PRFDerivedUnforgeability,
+    `HashSig.GXMSS.Security.Auxiliary.PRFDerivedKeyGeneration,
+    `HashSig.GXMSS.Security.Auxiliary.PRFDerivedKeyMaterial,
+    `HashSig.GXMSS.Security.Auxiliary.PRFDerivedOracleQueries,
+    `HashSig.GXMSS.Security.Reductions.PRFDerivedOracleInteraction,
+    `HashSig.GXMSS.Security.Auxiliary.PRFDerivedResponseCache,
+    `HashSig.GXMSS.Security.Auxiliary.PRFDerivedRetrySampling,
+    `HashSig.GXMSS.Security.Auxiliary.PRFDerivedSigning,
+    `HashSig.GXMSS.Security.Auxiliary.PRFDerivedSigningCoordinates,
+    `HashSig.GXMSS.Security.Auxiliary.PRFDerivedSigningSimulation,
+    `HashSig.GXMSS.Security.PRFDerivedUnforgeability,
     `HashSig.GXMSS.Security.Reductions.ChainPreimage,
     `HashSig.GXMSS.Security.Reductions.ChainUndetectability,
     `HashSig.GXMSS.Security.Reductions.CollisionBounds,
-    `HashSig.GXMSS.Security.Reductions.CompleteChainHybrid,
+    `HashSig.GXMSS.Security.Reductions.ChainHybrid,
     `HashSig.GXMSS.Security.Reductions.EncodingCollision,
     `HashSig.GXMSS.Security.Reductions.EncodingCollisionBound,
     `HashSig.GXMSS.Security.Reductions.EncodingComposition,
     `HashSig.GXMSS.Security.Reductions.EncodingTargetCollisionReduction,
-    `HashSig.GXMSS.Security.Reductions.Experiments,
-    `HashSig.GXMSS.Security.Reductions.FirstChainCollision,
-    `HashSig.GXMSS.Security.Reductions.FullRange.OriginalDomain,
-    `HashSig.GXMSS.Security.Reductions.Interval.ActiveSecurity,
-    `HashSig.GXMSS.Security.Reductions.Interval.ActiveSimulation,
-    `HashSig.GXMSS.Security.Reductions.Interval.Chain,
-    `HashSig.GXMSS.Security.Reductions.Interval.ChainCollision,
-    `HashSig.GXMSS.Security.Reductions.Interval.ChainHybrid,
-    `HashSig.GXMSS.Security.Reductions.Interval.FillerGames,
-    `HashSig.GXMSS.Security.Reductions.Interval.MerkleCollision,
-    `HashSig.GXMSS.Security.Reductions.Interval.MerkleGames,
-    `HashSig.GXMSS.Security.Reductions.Interval.SourcePartition,
+    `HashSig.GXMSS.Security.Reductions.ReductionExperiments,
+    `HashSig.GXMSS.Security.Reductions.SameMessageChainCollision,
+    `HashSig.GXMSS.Security.Interval.Reductions.FullRange,
+    `HashSig.GXMSS.Security.Interval.Reductions.ActiveSecurity,
+    `HashSig.GXMSS.Security.Interval.Reductions.ActiveSimulation,
+    `HashSig.GXMSS.Security.Interval.Reductions.ChainReductions,
+    `HashSig.GXMSS.Security.Interval.Reductions.ChainCollision,
+    `HashSig.GXMSS.Security.Interval.Reductions.ChainHybrid,
+    `HashSig.GXMSS.Security.Interval.Reductions.FillerGames,
+    `HashSig.GXMSS.Security.Interval.Reductions.MerkleCollision,
+    `HashSig.GXMSS.Security.Interval.Reductions.MerkleGames,
+    `HashSig.GXMSS.Security.Interval.Reductions.SourcePartition,
     `HashSig.GXMSS.Security.Reductions.MerkleCollision,
     `HashSig.GXMSS.Security.Reductions.MerkleForgery,
     `HashSig.GXMSS.Security.Reductions.Problems,
-    `HashSig.GXMSS.Security.Reductions.SecondChainCollision,
-    `HashSig.GXMSS.Security.Reductions.TCRSimulation,
+    `HashSig.GXMSS.Security.Reductions.ChainCutCollision,
+    `HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation,
     `HashSig.GXMSS.Security.Reductions.TargetCollision,
     `HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision,
     `HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision,
-    `HashSig.GXMSS.Security.Unforgeability,
     `VCVio.CryptoFoundations.SyncMultiSignatureAlg,
     `VCVio.CryptoFoundations.SyncSignatureAlg]
   let endpoints := #[
     (`GXMSS.Unforgeability.strong_unforgeability_reduction_bound,
-      `HashSig.GXMSS.Security.CompleteUnforgeability),
+      `HashSig.GXMSS.Security.Unforgeability),
     (`GXMSS.Interval.Unforgeability.strongUnforgeabilityBound_full,
-      `HashSig.GXMSS.Security.Reductions.FullRange.OriginalDomain),
+      `HashSig.GXMSS.Security.Interval.Reductions.FullRange),
     (`GXMSS.Interval.Unforgeability.powerOfTwoStrongUnforgeabilityBound_full,
-      `HashSig.GXMSS.Security.Reductions.FullRange.OriginalDomain),
-    (`GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound_of_two_codewords,
-      `HashSig.GXMSS.Security.IntervalUnforgeability),
+      `HashSig.GXMSS.Security.Interval.Reductions.FullRange),
+    (`GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound,
+      `HashSig.GXMSS.Security.Interval.Unforgeability),
     (`GXMSS.PRFDerived.Unforgeability.randgenPRFReduction_real_strong,
-      `HashSig.GXMSS.Security.PRFDerived.PRFOracleInteraction),
+      `HashSig.GXMSS.Security.Reductions.PRFDerivedOracleInteraction),
     (`GXMSS.PRFDerived.Unforgeability.randgenPRFReduction_functionQuery_bound,
-      `HashSig.GXMSS.Security.PRFDerived.PRFOracleInteraction),
+      `HashSig.GXMSS.Security.Reductions.PRFDerivedOracleInteraction),
     (`GXMSS.PRFDerived.Unforgeability.ideal_adaptive_strong_correspondence,
-      `HashSig.GXMSS.Security.PRFDerived.PRFOracleInteraction),
+      `HashSig.GXMSS.Security.Reductions.PRFDerivedOracleInteraction),
     (`GXMSS.PRFDerived.Unforgeability.adaptive_strong_additive_bound,
-      `HashSig.GXMSS.Security.PRFDerived.PRFOracleInteraction),
+      `HashSig.GXMSS.Security.Reductions.PRFDerivedOracleInteraction),
     (`GXMSS.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound,
-      `HashSig.GXMSS.Security.PRFDerived.Unforgeability),
+      `HashSig.GXMSS.Security.PRFDerivedUnforgeability),
     (`GXMSS.Interval.PRFDerived.Unforgeability.fullRangeRealCorrespondence,
-      `HashSig.GXMSS.Security.PRFDerived.FullRange.Transport),
+      `HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedFullRange),
     (`GXMSS.Interval.PRFDerived.Unforgeability.fullRangeIdealCorrespondence,
-      `HashSig.GXMSS.Security.PRFDerived.FullRange.Transport),
+      `HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedFullRange),
     (`GXMSS.Interval.PRFDerived.Unforgeability.fullRangePRFAdvantage,
-      `HashSig.GXMSS.Security.PRFDerived.FullRange.Transport),
+      `HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedFullRange),
     (`GXMSS.Interval.PRFDerived.Unforgeability.fullRangeDisplayedBound,
-      `HashSig.GXMSS.Security.PRFDerived.FullRange.DisplayedBound),
+      `HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedFullRangeBounds),
     (`GXMSS.Interval.PRFDerived.Unforgeability.fullRangeStrongReductionBound,
-      `HashSig.GXMSS.Security.PRFDerived.FullRange.Unforgeability),
+      `HashSig.GXMSS.Security.Interval.PRFDerivedFullRange),
     (`GXMSS.Interval.PRFDerived.Unforgeability.randgenPRFReduction_real_strong,
-      `HashSig.GXMSS.Security.PRFDerived.Interval.OracleInteraction),
+      `HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedOracleInteraction),
     (`GXMSS.Interval.PRFDerived.Unforgeability.randgenPRFReduction_functionQuery_bound,
-      `HashSig.GXMSS.Security.PRFDerived.Interval.OracleInteraction),
+      `HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedOracleInteraction),
     (`GXMSS.Interval.PRFDerived.Unforgeability.ideal_adaptive_strong_correspondence,
-      `HashSig.GXMSS.Security.PRFDerived.Interval.Unforgeability),
+      `HashSig.GXMSS.Security.Interval.PRFDerivedUnforgeability),
     (`GXMSS.Interval.PRFDerived.Unforgeability.adaptive_strong_additive_bound,
-      `HashSig.GXMSS.Security.PRFDerived.Interval.Unforgeability),
-    (`GXMSS.Interval.PRFDerived.Unforgeability.strong_reduction_bound_of_two_codewords,
-      `HashSig.GXMSS.Security.PRFDerived.Interval.Unforgeability),
+      `HashSig.GXMSS.Security.Interval.PRFDerivedUnforgeability),
+    (`GXMSS.Interval.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound,
+      `HashSig.GXMSS.Security.Interval.PRFDerivedUnforgeability),
     (`GXMSS.Reductions.jointChainGuess_probability,
       `HashSig.GXMSS.Security.Auxiliary.ChainSourceMass),
     (`GXMSS.Reductions.gameFiveGuess_probability,
@@ -247,10 +245,25 @@ run_cmd Lean.Elab.Command.liftTermElabM do
   let facades := #[
     `HashSig.GXMSS.Encoding.RetryIndexed,
     `HashSig.GXMSS.Security.Reductions.CollisionBounds,
-    `HashSig.GXMSS.Security.Reductions.Experiments,
-    `HashSig.GXMSS.Security.Reductions.Interval.Chain,
-    `HashSig.GXMSS.Security.Unforgeability]
+    `HashSig.GXMSS.Security.Reductions.ReductionExperiments,
+    `HashSig.GXMSS.Security.Interval.Reductions.ChainReductions]
   let definitions := #[
+    (`GXMSS.Unforgeability.reductionBound,
+      `HashSig.GXMSS.Security.Unforgeability),
+    (`GXMSS.Unforgeability.StrongUnforgeabilityReductionBound,
+      `HashSig.GXMSS.Security.Unforgeability),
+    (`GXMSS.Unforgeability.FirstMerkleTargetCollisionBound,
+      `HashSig.GXMSS.Security.Reductions.MerkleCollisionBound),
+    (`GXMSS.Interval.Unforgeability.strongUnforgeabilityBound,
+      `HashSig.GXMSS.Security.Interval.Unforgeability),
+    (`GXMSS.Interval.Unforgeability.powerOfTwoStrongUnforgeabilityBound,
+      `HashSig.GXMSS.Security.Interval.Unforgeability),
+    (`GXMSS.PRFDerived.Unforgeability.strongUnforgeabilityBound,
+      `HashSig.GXMSS.Security.PRFDerivedUnforgeability),
+    (`GXMSS.Interval.PRFDerived.Unforgeability.strongUnforgeabilityBound,
+      `HashSig.GXMSS.Security.Interval.PRFDerivedUnforgeability),
+    (`GXMSS.Interval.PRFDerived.Unforgeability.fullRangeStrongUnforgeabilityBound,
+      `HashSig.GXMSS.Security.Interval.PRFDerivedFullRange),
     (`GXMSS.Reductions.encodingHashTargetCollisionReduction,
       `HashSig.GXMSS.Security.Reductions.EncodingComposition)]
   GXMSS.Test.TrustAudit.check modules endpoints facades definitions

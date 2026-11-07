@@ -5,10 +5,10 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Reductions.Interval.ActiveSimulation
+public import HashSig.GXMSS.Security.Interval.Reductions.ActiveSimulation
 import all HashSig.GXMSS.Security.Auxiliary.ChainSelection
 import all HashSig.GXMSS.Security.Auxiliary.ChainSplicing
-import all HashSig.GXMSS.Security.Reductions.Interval.ActiveSimulation
+import all HashSig.GXMSS.Security.Interval.Reductions.ActiveSimulation
 
 /-!
 # Adaptive active interval splice controls

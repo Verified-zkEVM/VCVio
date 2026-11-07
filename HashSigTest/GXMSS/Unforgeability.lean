@@ -6,6 +6,8 @@ Authors: Matthias Meijers
 
 module
 public import HashSig.GXMSS.Security.Unforgeability
+public import HashSig.GXMSS.Security.EncodingInstances
+public import HashSig.GXMSS.Security.Reductions.ChainHybrid
 public import HashSig.GXMSS.Security.Reductions.CollisionBounds
 
 /-! # Generalized XMSS strong-unforgeability reduction-bound probe -/

@@ -33,7 +33,10 @@ from `k + 1`; Merkle collision witnesses retain the honest ordered child pair as
 `first` and the forged pair as `second`.
 
 The synchronized signature games use native returned-output measures. Missing
-mass remains unreturned mass. A returned `none` signature, retry exhaustion,
+mass remains unreturned mass. The encoding and retry `missingMass` definitions
+observe returned outputs through the constant Boolean `true` map and subtract
+that returned mass from one; `LosslessSampler` requires the same Boolean mass to
+be one. A returned `none` signature, retry exhaustion,
 and a returned `false` experiment outcome are distinct observations. A signing
 request consumes its epoch even when signing fails. `SigningQueryBound qs A`
 counts every request along every supported execution, including repeated,
@@ -45,10 +48,11 @@ uniqueness of valid signatures.
 ## Interval security
 
 Import
-[`HashSig.GXMSS.Security.IntervalUnforgeability`](../../HashSig/GXMSS/Security/IntervalUnforgeability.lean).
+[`HashSig.GXMSS.Security.Interval.Unforgeability`](../../HashSig/GXMSS/Security/Interval/Unforgeability.lean).
 The theorem
-`GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound_of_two_codewords`
-bounds strong synchronized unforgeability by `strongUnforgeabilityBound`.
+`GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound`
+bounds strong synchronized unforgeability by the adjacent numerical definition
+`strongUnforgeabilityBound`.
 Writing `L = b-a+1` and `C = L*v*(D-1)`, its ten terms are
 
 ```text
@@ -69,13 +73,13 @@ The theorem requires sampleable `H` and retry-randomizer type `R`, the declared
 decidable equalities, `0 < v`, `0 < w`, two distinct members of the same global
 code, and `SigningQueryBound qs A`. The public seed is drawn from the actual
 `TweakableHash.seedGen` of `hash.thf`; the direct theorem adds no uniform-public-seed assumption.
-`strong_unforgeability_power_of_two_reduction_bound_of_two_codewords` relaxes
+`strong_unforgeability_power_of_two_reduction_bound` relaxes
 the chain coefficients to `L*v*D` and `L*v*D²`, retaining the four separate
 filler terms.
 
 ## Complete-tree specialization
 
-[`Security/Reductions/FullRange/OriginalDomain.lean`](../../HashSig/GXMSS/Security/Reductions/FullRange/OriginalDomain.lean)
+[`Security/Interval/Reductions/FullRange.lean`](../../HashSig/GXMSS/Security/Interval/Reductions/FullRange.lean)
 transports actual named experiments and advantages at `Interval.full h`.
 The frontier is empty, so its filler terms vanish. `strongUnforgeabilityBound_full`
 identifies the exact chain contribution as
@@ -89,21 +93,25 @@ as `N*v*D*(D*UD + PRE)`. Both identities retain the four complete-tree collision
 reductions. These displayed right-hand-side identities are separate from
 scheme equality and whole regular/strong experiment transport.
 
-The complete public theorem
-`GXMSS.Unforgeability.strong_unforgeability_reduction_bound` is available from
-[`Security/Unforgeability.lean`](../../HashSig/GXMSS/Security/Unforgeability.lean),
-the established public import facade. Its proof is defined in
-[`Security/CompleteUnforgeability.lean`](../../HashSig/GXMSS/Security/CompleteUnforgeability.lean).
-It applies the interval theorem at full range and transports the experiment
-and displayed bound. Its named proposition takes the same pathwise signing
-query bound. Lower complete-tree reductions remain available independently of
-this final composition.
+The ordinary theorem module
+[`Security/Unforgeability.lean`](../../HashSig/GXMSS/Security/Unforgeability.lean)
+defines and proves
+`GXMSS.Unforgeability.strong_unforgeability_reduction_bound`.
+Its adjacent `reductionBound` definition gives the numerical sum of four collision
+advantages and the two weighted chain advantages. The proposition
+`StrongUnforgeabilityReductionBound` retains the pathwise signing-query implication
+and applies that sum to the named reductions. The proof applies the interval theorem
+at full range and transports the experiment and displayed bound. Lower reductions
+remain independently inspectable under `Security/Reductions/`; encoding-specific
+corollaries require the separate `Security/EncodingInstances.lean` import.
+Chain-hybrid bridge APIs likewise require their own
+`Security/Reductions/ChainHybrid.lean` import.
 
 ## Shared-response PRF derivation
 
 [`PRFDerivedScheme.lean`](../../HashSig/GXMSS/PRFDerivedScheme.lean) defines
 `GXMSS.PRFDerived.Query`, with public-seed, chain-start and retry families.
-[`Interval/PRFDerived/Scheme.lean`](../../HashSig/GXMSS/Interval/PRFDerived/Scheme.lean)
+[`Interval/PRFDerivedScheme.lean`](../../HashSig/GXMSS/Interval/PRFDerivedScheme.lean)
 adds a typed filler family. Distinct typed coordinates separate the families.
 One persistent cache stores the full response before applying a projection;
 repeated coordinates reuse that response. No independence between projections
@@ -111,9 +119,10 @@ of the same response is assumed.
 
 The complete endpoint
 `GXMSS.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound` in
-[`Security/PRFDerived/Unforgeability.lean`](../../HashSig/GXMSS/Security/PRFDerived/Unforgeability.lean)
-adds one named shared-response PRF advantage to the complete direct bound. It
-uses the existing complete additive PRF hop and three projection laws:
+[`Security/PRFDerivedUnforgeability.lean`](../../HashSig/GXMSS/Security/PRFDerivedUnforgeability.lean)
+uses its adjacent numerical `GXMSS.PRFDerived.Unforgeability.strongUnforgeabilityBound`:
+one named shared-response PRF advantage plus the complete direct bound. It
+uses the complete additive PRF hop and three projection laws:
 
 - Public parameters have the actual hash public-seed distribution.
 - Chain starts have the uniform `H` distribution.
@@ -123,17 +132,19 @@ It also requires the PRF's actual `UniformKey` law and its declared sampling
 and equality instances. Its function-query bound is `1 + N*v + qs*K`.
 
 The general interval endpoint
-`GXMSS.Interval.PRFDerived.Unforgeability.strong_reduction_bound_of_two_codewords`
+`GXMSS.Interval.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound`
 in
-[`Security/PRFDerived/Interval/Unforgeability.lean`](../../HashSig/GXMSS/Security/PRFDerived/Interval/Unforgeability.lean)
-adds one named PRF advantage to the exact ten-term interval bound. It requires
+[`Security/Interval/PRFDerivedUnforgeability.lean`](../../HashSig/GXMSS/Security/Interval/PRFDerivedUnforgeability.lean)
+uses its adjacent numerical
+`GXMSS.Interval.PRFDerived.Unforgeability.strongUnforgeabilityBound`:
+one named PRF advantage plus the exact ten-term interval bound. It requires
 all direct-theorem premises, `UniformKey`, and four separate projection laws:
 the three above plus uniform `H` filler digests. Its function-query bound is
 `1 + L*v + F + qs*K`, where `F` is the frontier cardinality. The bound charges
 eager retry suffixes even when an earlier retry succeeds. It bounds function
 queries, not runtime or distinct cache misses.
 
-[`Security/PRFDerived/FullRange/Transport.lean`](../../HashSig/GXMSS/Security/PRFDerived/FullRange/Transport.lean)
+[`Security/Interval/Reductions/PRFDerivedFullRange.lean`](../../HashSig/GXMSS/Security/Interval/Reductions/PRFDerivedFullRange.lean)
 restricts the four-family PRF evaluator to the three complete families while
 preserving its actual key generator. `fullRangeRealCorrespondence`,
 `fullRangeIdealCorrespondence` and `fullRangePRFAdvantage` transport whole
@@ -142,18 +153,28 @@ no key-distribution or projection law; ideal transport needs sampleable
 responses and query equality, with no projection law or finite query-domain
 premise. `fillerQueries_full_bound` proves zero filler queries.
 `fullRangeDisplayedBound` gives the complete displayed right-hand side.
-`fullRangeStrongReductionBound` is a three-law full-range corollary; it needs
-no filler projection law because the full range has no filler coordinate.
+`fullRangeStrongReductionBound` is a three-law full-range corollary with the
+adjacent numerical `fullRangeStrongUnforgeabilityBound`. It needs no filler
+projection law because the full range has no filler coordinate.
 
 ## Modules and consumer evidence
+
+Construction files live at the GXMSS root and under `Encoding/` and `Interval/`.
+Security endpoints live under `Security/` and `Security/Interval/`, named reductions
+under their `Reductions/` directories, and support under their `Auxiliary/`
+directories. PRF-derived components use descriptive `PRFDerived` filenames in
+these same directories. Their namespaces still distinguish complete and interval
+PRF games.
 
 | Responsibility | Module or namespace |
 | --- | --- |
 | Generic synchronized interfaces and games | `VCVio.CryptoFoundations.SyncSignatureAlg`, `SyncMultiSignatureAlg` |
 | Codewords and arbitrary incomparable encoding | `HashSig.GXMSS.Encoding.*`, `GXMSS.Encoding` |
 | Shared simulation and witness support | `HashSig.GXMSS.Security.Auxiliary.*` |
-| Named direct reductions and full-range transports | `HashSig.GXMSS.Security.Reductions.*`, `GXMSS.Reductions` |
-| Interval reductions and final bound | `GXMSS.Interval.Reductions`, `GXMSS.Interval.Unforgeability` |
+| Named complete-tree reductions | `HashSig.GXMSS.Security.Reductions.*`, `GXMSS.Reductions` |
+| Interval reductions and full-range transports | `HashSig.GXMSS.Security.Interval.Reductions.*`, `GXMSS.Interval.Reductions` |
+| Interval simulation and witness support | `HashSig.GXMSS.Security.Interval.Auxiliary.*` |
+| Interval final bounds | `HashSig.GXMSS.Security.Interval.Unforgeability`, `GXMSS.Interval.Unforgeability` |
 | Complete shared-response PRF hop | `GXMSS.PRFDerived.Unforgeability` |
 | Interval shared-response PRF hop and full-range transports | `GXMSS.Interval.PRFDerived.Unforgeability` |
 
@@ -162,7 +183,7 @@ and [`PRFEndpointApplications.lean`](../../HashSigTest/GXMSS/PRFEndpointApplicat
 are ordinary public-import consumers. The direct consumer states and applies
 the expanded ten-term theorem and both full-range right-hand-side identities.
 [`CompleteEndpointApplication.lean`](../../HashSigTest/GXMSS/CompleteEndpointApplication.lean)
-imports only the established public facade and applies the complete theorem to
+imports only the ordinary `Security.Unforgeability` theorem module and applies its theorem to
 its expanded separate-term inequality, including the pathwise signing-query premise.
 The PRF consumer applies the complete three-law and interval four-law endpoints,
 whole real/ideal/strong transports, query bounds and PRF-advantage equality.

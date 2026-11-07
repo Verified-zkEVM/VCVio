@@ -12,7 +12,7 @@ public import HashSig.GXMSS.Merkle
 public import HashSig.GXMSS.Security.Auxiliary.ChainWitnesses
 public import HashSig.GXMSS.Security.Auxiliary.HashWitnesses
 public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
-public import HashSig.GXMSS.Security.Reductions.TCRSimulation
+public import HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
 import all HashSig.GXMSS.Chain
 import all HashSig.GXMSS.Merkle
 import all HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses

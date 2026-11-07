@@ -5,11 +5,11 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.PRFDerived.Unforgeability
-public import HashSig.GXMSS.Security.PRFDerived.Interval.Unforgeability
-public import HashSig.GXMSS.Security.PRFDerived.FullRange.Transport
-public import HashSig.GXMSS.Security.PRFDerived.FullRange.DisplayedBound
-public import HashSig.GXMSS.Security.PRFDerived.FullRange.Unforgeability
+public import HashSig.GXMSS.Security.PRFDerivedUnforgeability
+public import HashSig.GXMSS.Security.Interval.PRFDerivedUnforgeability
+public import HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedFullRange
+public import HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedFullRangeBounds
+public import HashSig.GXMSS.Security.Interval.PRFDerivedFullRange
 
 /-! # PRF-derived GXMSS public endpoint applications
 
@@ -169,7 +169,7 @@ example
       ProbCompRuntime.probComp adv ≤
       prf.prfAdvantage (randgenPRFReduction hash enc projection budget I adv) +
         GXMSS.Interval.Unforgeability.strongUnforgeabilityBound hash enc budget qs I hv hw adv :=
-  GXMSS.Interval.PRFDerived.Unforgeability.strong_reduction_bound_of_two_codewords hash enc prf
+  GXMSS.Interval.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound hash enc prf
     projection budget qs I hv hw htwo adv hqueries keyLaw hseed hstart hretry hfiller
 
 example

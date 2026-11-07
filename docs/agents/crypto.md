@@ -58,6 +58,11 @@ Its forgery records its own arity. No strong multisignature experiment is assert
 
 The [GXMSS reading guide](../reading/gxmss.md) connects these generic notions to the interval
 construction, original-domain security reductions and shared PRF extension.
+The ordinary complete-tree endpoint is defined in
+[`HashSig/GXMSS/Security/Unforgeability.lean`](../../HashSig/GXMSS/Security/Unforgeability.lean).
+Interval endpoints are under `Security/Interval/`; each security layer keeps named
+reductions under `Reductions/` and simulation or witness support under `Auxiliary/`.
+PRF-derived components use descriptive filenames within these directories.
 
 ### Commitment schemes (`CommitmentScheme`)
 

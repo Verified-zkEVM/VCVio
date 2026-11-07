@@ -72,6 +72,9 @@ build boundaries and the staged consolidation.
   failed signing, consumed epochs and exact pair freshness; they require positive parameters,
   two distinct codewords and an all-request signing-query bound. See the
   [GXMSS reading guide](docs/reading/gxmss.md) for exact sampling laws, losses and public endpoints.
+  The ordinary complete-tree theorem is defined in `Security/Unforgeability.lean`;
+  interval endpoints are under `Security/Interval/`, with named reductions and auxiliary support
+  in their respective directories.
 - `HashSig/` contains hash-based signatures: proof-level specifications, component-level FIPS 205
   conformance results, and security results for SLH-DSA. SLH-DSA has a proved quantitative SUF-CMA
   bound (strong unforgeability: no valid message-signature pair the signer never returned, which

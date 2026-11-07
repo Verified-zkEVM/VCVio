@@ -5,15 +5,15 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Interval.PRFDerived.Scheme
-public import HashSig.GXMSS.Security.PRFDerived.FullRange.Transport
-public import HashSig.GXMSS.Security.PRFDerived.FullRange.Unforgeability
-public import HashSig.GXMSS.Security.PRFDerived.Interval.Idealization
-public import HashSig.GXMSS.Security.PRFDerived.Interval.OracleInteraction
-public import HashSig.GXMSS.Security.PRFDerived.Interval.Unforgeability
-public import HashSig.GXMSS.Security.PRFDerived.ResponseCache
-public import HashSig.GXMSS.Security.PRFDerived.RetrySampling
-public import HashSig.GXMSS.Security.PRFDerived.SigningSimulation
+public import HashSig.GXMSS.Interval.PRFDerivedScheme
+public import HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedFullRange
+public import HashSig.GXMSS.Security.Interval.PRFDerivedFullRange
+public import HashSig.GXMSS.Security.Interval.Auxiliary.PRFDerivedIdealization
+public import HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedOracleInteraction
+public import HashSig.GXMSS.Security.Interval.PRFDerivedUnforgeability
+public import HashSig.GXMSS.Security.Auxiliary.PRFDerivedResponseCache
+public import HashSig.GXMSS.Security.Auxiliary.PRFDerivedRetrySampling
+public import HashSig.GXMSS.Security.Auxiliary.PRFDerivedSigningSimulation
 
 /-!
 # Interval PRF security compiler audit
@@ -33,7 +33,7 @@ open GXMSS.Interval.PRFDerived.Unforgeability
 #check @ideal_interaction_correspondence
 #check @ideal_adaptive_strong_correspondence
 #check @adaptive_strong_additive_bound
-#check @strong_reduction_bound_of_two_codewords
+#check @strong_unforgeability_reduction_bound
 #check @fillerQueries_full_bound
 #check @FullRangeSchemeCorrespondence
 #check @FullRangeRealCorrespondence
@@ -73,7 +73,7 @@ example {Key PP T X H M R Response : Type} {h w v : ℕ}
       ProbCompRuntime.probComp adv ≤
       prf.prfAdvantage (randgenPRFReduction hash enc projection budget I adv) +
         GXMSS.Interval.Unforgeability.strongUnforgeabilityBound hash enc budget qs I hv hw adv :=
-  strong_reduction_bound_of_two_codewords hash enc prf projection budget qs I hv hw htwo adv
+  strong_unforgeability_reduction_bound hash enc prf projection budget qs I hv hw htwo adv
     hqueries keyLaw hseed hstart hretry hfiller
 
 example {Key PP T X H M R Response : Type} {h w v : ℕ}

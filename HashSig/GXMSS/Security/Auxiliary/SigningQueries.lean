@@ -5,8 +5,8 @@ Authors: Matthias Meijers
 -/
 
 module
-public import HashSig.GXMSS.Security.Auxiliary.SourceGames
-import all HashSig.GXMSS.Security.Auxiliary.SourceGames
+public import HashSig.GXMSS.Scheme
+import all HashSig.GXMSS.Scheme
 public import VCVio.CryptoFoundations.SyncSignatureAlg
 import all VCVio.CryptoFoundations.SyncSignatureAlg
 
@@ -31,7 +31,8 @@ variable {PP T X H M R : Type} {h w v : ℕ}
 calls and calls answered with failure count; ambient uniform calls do not. -/
 @[expose]
 def SigningQueryBound (qs : ℕ)
-    (adv : GXMSS.Reductions.SchemeAdversary PP H M R h v) : Prop :=
+    (adv : SyncSignatureUnforgeability.Adversary unifSpec (GXMSS.PublicKey PP H)
+      (Fin (2 ^ h)) M (GXMSS.Signature R H h v)) : Prop :=
   ∀ pk, (adv.forge pk).IsQueryBoundP (fun q => q.isRight = true) qs
 
 end

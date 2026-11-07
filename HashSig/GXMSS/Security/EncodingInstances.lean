@@ -10,8 +10,8 @@ public import HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision
 import all HashSig.GXMSS.Security.Reductions.TargetSumEncodingTargetCollision
 public import HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision
 import all HashSig.GXMSS.Security.Reductions.WinternitzEncodingTargetCollision
-public import HashSig.GXMSS.Security.CompleteUnforgeability
-import all HashSig.GXMSS.Security.CompleteUnforgeability
+public import HashSig.GXMSS.Security.Unforgeability
+import all HashSig.GXMSS.Security.Unforgeability
 
 /-!
 # GXMSS bounds for checksum and target-sum encodings

@@ -7,18 +7,18 @@ Authors: Matthias Meijers
 module
 public import HashSig.GXMSS.Completeness
 import all HashSig.GXMSS.Completeness
-public import HashSig.GXMSS.Security.Auxiliary.CompleteBounds
-import all HashSig.GXMSS.Security.Auxiliary.CompleteBounds
+public import HashSig.GXMSS.Security.Reductions.MerkleCollisionBound
+import all HashSig.GXMSS.Security.Reductions.MerkleCollisionBound
 public import HashSig.GXMSS.Security.Auxiliary.Encoding
 import all HashSig.GXMSS.Security.Auxiliary.Encoding
 public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 import all HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
 public import HashSig.GXMSS.Security.Auxiliary.SigningQueries
 import all HashSig.GXMSS.Security.Auxiliary.SigningQueries
-public import HashSig.GXMSS.Security.Reductions.Experiments
-import all HashSig.GXMSS.Security.Reductions.Experiments
-public import HashSig.GXMSS.Security.Reductions.TCRSimulation
-import all HashSig.GXMSS.Security.Reductions.TCRSimulation
+public import HashSig.GXMSS.Security.Reductions.ReductionExperiments
+import all HashSig.GXMSS.Security.Reductions.ReductionExperiments
+public import HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
+import all HashSig.GXMSS.Security.Reductions.TargetRegistrationSimulation
 public import Lean.Elab.Command
 public import Lean.Util.CollectAxioms
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
