@@ -27,28 +27,28 @@ full-range real and cached-ideal transports discharge their named proposition de
 public section
 open GXMSS.Interval.PRFDerived.Unforgeability
 
-#check @randgenPRFReduction_real_strong
-#check @randgenPRFReduction_functionQuery_bound
-#check @ideal_fixed_interaction_correspondence
-#check @ideal_interaction_correspondence
-#check @ideal_adaptive_strong_correspondence
-#check @adaptive_strong_additive_bound
-#check @strong_unforgeability_reduction_bound
-#check @fillerQueries_full_bound
-#check @FullRangeSchemeCorrespondence
-#check @FullRangeRealCorrespondence
-#check @FullRangeIdealCorrespondence
+example := @randgenPRFReduction_real_strong
+example := @randgenPRFReduction_functionQuery_bound
+example := @ideal_fixed_interaction_correspondence
+example := @ideal_interaction_correspondence
+example := @ideal_adaptive_strong_correspondence
+example := @adaptive_strong_additive_bound
+example := @strong_unforgeability_reduction_bound
+example := @fillerQueries_full_bound
+example := @FullRangeSchemeCorrespondence
+example := @FullRangeRealCorrespondence
+example := @FullRangeIdealCorrespondence
 
-#check @GXMSS.Interval.PRFDerived.run_zero
-#check @GXMSS.Interval.PRFDerived.run_inactive
-#check @GXMSS.Interval.PRFDerived.scheme_full
-#check @fullRangeSchemeCorrespondence
-#check @fullRangeRealCorrespondence
-#check @fullRangeIdealCorrespondence
-#check @fullRangeStrongExperiment
-#check @fullRangeDisplayedBound
-#check @fullRangeStrongReductionBound
-#check @fullRangePRFAdvantage
+example := @GXMSS.Interval.PRFDerived.run_zero
+example := @GXMSS.Interval.PRFDerived.run_inactive
+example := @GXMSS.Interval.PRFDerived.scheme_full
+example := @fullRangeSchemeCorrespondence
+example := @fullRangeRealCorrespondence
+example := @fullRangeIdealCorrespondence
+example := @fullRangeStrongExperiment
+example := @fullRangeDisplayedBound
+example := @fullRangeStrongReductionBound
+example := @fullRangePRFAdvantage
 
 open GXMSS GXMSS.Encoding GXMSS.IntervalMerkle
 
