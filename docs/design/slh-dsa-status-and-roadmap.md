@@ -427,7 +427,7 @@ longer true on `main`:
   the seven-library build with its non-`sorry` warning budget, `scripts/check-imports.sh`, the
   PolyFun, broad-expose, complexity-backend, `Extern` and `Interop` boundary ratchets,
   `lake lint -- --style-only` over the libraries and every test module, and
-  `python3 scripts/check-agent-docs.py` with `extract-doc-fragments.py --check`. Add `--test` for
+  `uv run --no-project --python 3.12 python scripts/check-agent-docs.py` with `extract-doc-fragments.py --check`. Add `--test` for
   `lake test` (the three test libraries, the smoke test, and every SLH-DSA executable, with the
   test-library warning budget applied to its log) and `--axioms` for `lake exe axiomsweep --check`
   before pushing a slice; `--lint` adds the Batteries environment linters. While iterating,

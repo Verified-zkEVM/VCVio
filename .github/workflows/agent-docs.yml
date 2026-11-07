@@ -12,14 +12,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
-          python-version: '3.12'
+          version: "0.13.6"
+          enable-cache: false
       - name: Validate doc references
         run: |
-          python scripts/test-agent-docs.py
-          python scripts/check-agent-docs.py
+          uv run --no-project --python 3.12 python scripts/test-agent-docs.py
+          uv run --no-project --python 3.12 python scripts/check-agent-docs.py
       - name: Check auto-generated doc fragments
-        run: python scripts/extract-doc-fragments.py --check
+        run: uv run --no-project --python 3.12 python scripts/extract-doc-fragments.py --check
       - name: Check documentation names for retired declarations
-        run: python scripts/check-doc-names.py
+        run: uv run --no-project --python 3.12 python scripts/check-doc-names.py

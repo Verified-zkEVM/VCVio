@@ -253,7 +253,7 @@ Run the [recorded-head gate](slh-dsa-pr766-pr912-evidence/validate-recorded-head
 committed implementation worktree. The helper must also be present in the committed tree:
 
 ```bash
-python3 docs/design/slh-dsa-pr766-pr912-evidence/validate-recorded-head.py -- \
+uv run --no-project --python 3.12 python docs/design/slh-dsa-pr766-pr912-evidence/validate-recorded-head.py -- \
   ./scripts/validate.sh --lint --test --axioms
 ```
 
@@ -429,7 +429,7 @@ do not replace the runtime assertion with a theorem-only example. The remaining 
 modules and its final headline have not been rebuilt by the coexistence probe.
 
 Reproduce the validation-gate fixtures with
-`python3 docs/design/slh-dsa-pr766-pr912-evidence/test-validate-recorded-head.py`.
+`uv run --no-project --python 3.12 python docs/design/slh-dsa-pr766-pr912-evidence/test-validate-recorded-head.py`.
 These fixtures exercise commit/lock enforcement. The completed canonical A0, A1 and B0 gates
 are recorded in the implementation execution record; the final combined candidate must still
 pass its own recorded-head full validation.
@@ -482,7 +482,7 @@ Reproduce the arithmetic check against the pinned #766 source snapshot, or the i
 tree retaining its evaluator and CSV:
 
 ```bash
-python3 docs/design/slh-dsa-pr766-pr912-evidence/check-byte-range-targets.py /path/to/pr766-source
+uv run --no-project --python 3.12 python docs/design/slh-dsa-pr766-pr912-evidence/check-byte-range-targets.py /path/to/pr766-source
 ```
 
 ### Variable-length XOF adversaries

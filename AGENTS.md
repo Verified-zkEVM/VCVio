@@ -361,7 +361,7 @@ baseline, since accepting it would widen the trusted computing base. The
 `VCVioAxiomSweepTestFixtures` library carries synthetic taint for the tool's own
 tests and is deliberately excluded from every aggregate.
 
-`python3 ./scripts/check-comment-fences.py` enforces one rule over every Lean source the
+`uv run --no-project --python 3.12 python ./scripts/check-comment-fences.py` enforces one rule over every Lean source the
 repository tracks or would track — tracked files plus untracked ones that are not ignored, the
 vendored `third_party/` tree excluded and both lakefiles included: a block comment that begins
 its line must be the last thing on the line where it ends. A declaration written after the `-/`

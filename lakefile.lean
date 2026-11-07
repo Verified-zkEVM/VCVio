@@ -40,7 +40,8 @@ script lint (args) do
     (root.findLeanLib? library).map fun _ => library.toString
   let child ← IO.Process.spawn {
     cmd := "lake"
-    args := #["env", "python3", "scripts/lint.py", "--libraries",
+    args := #["env", "uv", "run", "--no-project", "--python", "3.12", "python",
+      "scripts/lint.py", "--libraries",
       String.intercalate "," libraries.toList] ++ args.toArray
   }
   child.wait
@@ -462,8 +463,9 @@ script test (args) do
   let checkArgs := #["scripts/check-slh-dsa-bound-table.py",
     "docs/design/slh-dsa-security-bounds.csv", "--generator",
     generator.toString]
-  IO.println s!"# python3 {" ".intercalate checkArgs.toList}"
-  let check ← IO.Process.spawn { cmd := "python3", args := checkArgs }
+  let pythonArgs := #["run", "--no-project", "--python", "3.12", "python"] ++ checkArgs
+  IO.println s!"# uv {" ".intercalate pythonArgs.toList}"
+  let check ← IO.Process.spawn { cmd := "uv", args := pythonArgs }
   let rc ← check.wait
   if rc != 0 then
     IO.eprintln s!"lake test: independent SLH-DSA bound-table check exited with code {rc}"
