@@ -213,6 +213,7 @@ public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.CostMap
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.Encoding
+public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.Meter
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.Relabel
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.Relabel.RandomOracle
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.Unforgeability
