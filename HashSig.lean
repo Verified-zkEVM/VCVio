@@ -376,6 +376,8 @@ public import HashSig.SLHDSA.Security.LabScheme
 public import HashSig.SLHDSA.Security.LabelReaders
 public import HashSig.SLHDSA.Security.LimitedProfile
 public import HashSig.SLHDSA.Security.LinkedHazards
+public import HashSig.SLHDSA.Security.NativeCounts
+public import HashSig.SLHDSA.Security.NativeRelative
 public import HashSig.SLHDSA.Security.NodeGraph
 public import HashSig.SLHDSA.Security.PrfKeyBound
 public import HashSig.SLHDSA.Security.Profile
