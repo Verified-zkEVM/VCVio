@@ -50,7 +50,7 @@ namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment
 
 namespace Guarded
 
-@[expose] public section
+public section
 
 open SignatureAlg
 
@@ -74,16 +74,19 @@ abbrev A := Lab + Raw
 abbrev LabCommon := A + O
 
 /-- The actual structured-to-byte FIPS oracle encoding at a fixed public seed. -/
+@[expose]
 noncomputable def encoding (pkSeed : FIPS205.core.PkSeed) :=
   shakeEncoding FIPS205.params (by decide) (by decide) pkSeed
 
 /-- Original signing-attempt and adversary/verifier hash charges. -/
+@[expose]
 def originalPolicy (event : Ev) : Nat × Nat :=
   let counts := Game.Counted.sourcePolicy event
   ((∑ kind ∈ ({.sign, .hash, .verifier} : Finset Unforgeability.QueryKind), counts kind),
     counts .sign)
 
 /-- Public reserve charges selected by the actual byte router. -/
+@[expose]
 noncomputable def reserveExtra (pkSeed : FIPS205.core.PkSeed) : Ev → Nat
   | .signingAttempt _ => 31
   | .ambient .adversary (.inr input) | .ambient .verification (.inr input) =>
@@ -95,11 +98,13 @@ noncomputable def reserveExtra (pkSeed : FIPS205.core.PkSeed) : Ev → Nat
   | _ => 0
 
 /-- False selects Original; true selects the public reserve policy at the fixed public seed. -/
+@[expose]
 noncomputable def policy (reserve : Bool) (pkSeed : FIPS205.core.PkSeed) (event : Ev) :
     Nat × Nat :=
   originalPolicy event + (if reserve then reserveExtra pkSeed event else 0, 0)
 
 /-- Routed adversary and verifier message-digest observations. -/
+@[expose]
 noncomputable def selectedRaw (pkSeed : FIPS205.core.PkSeed) : Ev → Nat
   | .ambient .adversary (.inr input) | .ambient .verification (.inr input) =>
       match (encoding pkSeed).route input with
@@ -108,10 +113,12 @@ noncomputable def selectedRaw (pkSeed : FIPS205.core.PkSeed) : Ev → Nat
   | _ => 0
 
 /-- Zero or selected-raw bookkeeping for the same original event port. -/
+@[expose]
 noncomputable def metadataCost (trackRaw : Bool) (pkSeed : FIPS205.core.PkSeed)
     (event : Ev) : Nat := if trackRaw then selectedRaw pkSeed event else 0
 
 /-- Existing Nat/phase bookkeeping, updated only by admitted original-source observations. -/
+@[expose]
 def aux {ι Cache : Type} {spec : OracleSpec.{0, 0} ι}
     (charge : Ev → Nat) (input : (spec + O).Domain)
     (_before : Cache) (_answer : (spec + O).Range input) (_after : Cache)
@@ -124,12 +131,14 @@ def aux {ι Cache : Type} {spec : OracleSpec.{0, 0} ι}
       (metadata.1 + charge (.signingAttempt request), .signer)
 
 /-- Internal fallback: index zero for sampling, zero bytes for raw answers and unit for events. -/
+@[expose]
 def rawFallback : (input : (R + O).Domain) → (R + O).Range input
   | .inl (.inl n) => (⟨0, Nat.succ_pos n⟩ : Fin (n + 1))
   | .inl (.inr _) => Vector.replicate _ 0
   | .inr _ => PUnit.unit
 
 /-- The unresolved fallback uses the same zero node for either private derivation variant. -/
+@[expose]
 noncomputable def deriveFallback (pkSeed : FIPS205.core.PkSeed) :
     (input : DCommon.Domain) → DCommon.Range input
   | .inl (.inl (.inl (.inl n))) => rawFallback (.inl (.inl n))
@@ -141,6 +150,7 @@ noncomputable def deriveFallback (pkSeed : FIPS205.core.PkSeed) :
   | .inr _ => PUnit.unit
 
 /-- Sparse original-source labels: private derivations emit no raw marker. -/
+@[expose]
 def nativeObservation : DNative.Domain → Option R.Domain
   | .inl (.inl (.inl n)) => some (.inl n)
   | .inl (.inl (.inr typed)) => some (.inr (encode FIPS205.params typed))
@@ -148,6 +158,7 @@ def nativeObservation : DNative.Domain → Option R.Domain
   | .inr bytes => some (.inr bytes)
 
 /-- Original-source events of the unresolved chronological experiment. -/
+@[expose]
 def sparseProjection :
     QueryImpl (SigningView.Events.Spec DNative Message) (OracleComp DCommon) :=
   QueryImpl.add (QueryImpl.ofLift DNative (OracleComp DCommon))
@@ -157,6 +168,7 @@ def sparseProjection :
         | some label => liftM (DCommon.query (.inr (.ambient phase label)))
         | none => pure PUnit.unit)
 /-- The actual external raw client with unresolved honest derivation ports. -/
+@[expose]
 def rawMainD (adv : Game.Adversary FIPS205.Answer PK) (pk : PK) :
     OracleComp (DNative + Sign) (Message × List Byte) :=
   simulateQ (QueryImpl.add
@@ -167,6 +179,7 @@ def rawMainD (adv : Game.Adversary FIPS205.Answer PK) (pk : PK) :
     (Game.Counted.externalMain adv pk)
 
 /-- Strict FIPS framing and canonical signatures around the derivation scheme. -/
+@[expose]
 noncomputable def unresolvedView (pkSeed : FIPS205.core.PkSeed) :
     SigningView (OracleComp DNative) Message PK PK (List Byte) (Option (List Byte)) :=
   SigningView.rejectingEncoding
@@ -179,6 +192,7 @@ noncomputable def unresolvedView (pkSeed : FIPS205.core.PkSeed) :
       (SLHDSA.Concrete.shakeWireCodec FIPS205.params.params) wire).toOption)
 
 /-- This program has no secret-seed parameter; honest private queries remain unresolved. -/
+@[expose]
 noncomputable def fixedSource (pkSeed : FIPS205.core.PkSeed)
     (adv : Game.Adversary FIPS205.Answer PK) : OracleComp DCommon Full :=
   simulateQ sparseProjection
@@ -186,6 +200,7 @@ noncomputable def fixedSource (pkSeed : FIPS205.core.PkSeed)
 
 
 /-- The framed partial signing view over the existing lab interface. -/
+@[expose]
 noncomputable def partialView (useLab : Bool) (s : FIPS205.core.PkSeed) :
     SigningView (OracleComp Lab) Message PK PK (List Byte) (Option (List Byte)) :=
   SigningView.rejectingEncoding
@@ -201,6 +216,7 @@ noncomputable def partialView (useLab : Bool) (s : FIPS205.core.PkSeed) :
 
 
 /-- Route complete raw queries while forwarding lab queries and source events. -/
+@[expose]
 noncomputable def routeLab (pkSeed : FIPS205.core.PkSeed) : QueryImpl LabCommon
     (StateT (QueryCache Raw) (OracleComp (Lab + O))) :=
   QueryImpl.add (spec₁ := Lab + Raw) (spec₂ := O)
@@ -218,6 +234,7 @@ noncomputable def routeLab (pkSeed : FIPS205.core.PkSeed) : QueryImpl LabCommon
       pure (answer, privateCache))
 
 /-- Lift the framed signing view to the shared lab and raw-query interface. -/
+@[expose]
 noncomputable def commonView (useLab : Bool) (s : FIPS205.core.PkSeed) :
     SigningView (OracleComp A) Message PK PK (List Byte) (Option (List Byte)) :=
   (partialView useLab s).map
@@ -225,6 +242,7 @@ noncomputable def commonView (useLab : Bool) (s : FIPS205.core.PkSeed) :
       (liftM (A.query (.inl input)) : OracleComp A (Lab.Range input))))
 
 /-- The original external client with its raw queries and partial signing service. -/
+@[expose]
 def commonMain (adv : Game.Adversary FIPS205.Answer PK) (pk : PK) :
     OracleComp (A + Sign) (Message × List Byte) :=
   simulateQ (QueryImpl.add (spec₁ := R) (spec₂ := Sign)
@@ -235,11 +253,13 @@ def commonMain (adv : Game.Adversary FIPS205.Answer PK) (pk : PK) :
     (Game.Counted.externalMain adv pk)
 
 /-- Original byte-source labels of public native inputs. -/
+@[expose]
 def sourceInput : (unifSpec + H).Domain → R.Domain
   | .inl n => .inl n
   | .inr typed => .inr (encode FIPS205.params typed)
 
 /-- Preserve original public markers and silence private derivation and label traffic. -/
+@[expose]
 def commonEvent : SigningView.Event A Message → Option Ev
   | .signingAttempt request => some (.signingAttempt request)
   | .ambient phase (.inl (.inl (.inl native))) =>
@@ -248,6 +268,7 @@ def commonEvent : SigningView.Event A Message → Option Ev
   | _ => none
 
 /-- Forward native traffic and the original sparse source observations. -/
+@[expose]
 def commonProjection :
     QueryImpl (SigningView.Events.Spec A Message) (OracleComp LabCommon) :=
   QueryImpl.add
@@ -258,6 +279,7 @@ def commonProjection :
       | none => pure PUnit.unit)
 
 /-- The complete marked signing experiment, including the generated key pair. -/
+@[expose]
 noncomputable def commonSource (useLab : Bool) (s : FIPS205.core.PkSeed)
     (adv : Game.Adversary FIPS205.Answer PK) : OracleComp LabCommon Full :=
   simulateQ commonProjection
@@ -266,6 +288,7 @@ noncomputable def commonSource (useLab : Bool) (s : FIPS205.core.PkSeed)
 
 
 /-- The complete marked lab experiment guarded before its stateful raw router. -/
+@[expose]
 noncomputable def guardedRoutedSource
     (pkSeed : FIPS205.core.PkSeed) (adv : Game.Adversary FIPS205.Answer PK)
     (reserve : Bool) (caps : Nat × Nat)
@@ -282,6 +305,7 @@ noncomputable def guardedRoutedSource
 
 
 /-- Internalize the raw table without resolving any private derivation. -/
+@[expose]
 noncomputable def routeD (pkSeed : FIPS205.core.PkSeed) :
     QueryImpl DCommon
       (StateT Raw.QueryCache (OracleComp (deriveSpec FIPS205.core + O))) :=
@@ -301,6 +325,7 @@ noncomputable def routeD (pkSeed : FIPS205.core.PkSeed) :
       pure (answer, privateCache))
 
 /-- Retain the actual passive metadata in the secret-free source program. -/
+@[expose]
 noncomputable def observeD (pkSeed : FIPS205.core.PkSeed) (trackRaw : Bool) :
     QueryImpl (deriveSpec FIPS205.core + O)
       (StateT Meta (OracleComp (deriveSpec FIPS205.core))) :=
