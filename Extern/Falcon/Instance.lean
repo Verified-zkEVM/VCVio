@@ -39,6 +39,8 @@ function for testing.
    the reference implementation signs in floating point (`sign_fpr.c`) and uses
    32.32 fixed point only inside key generation (`kgen_fxp.c`). Relating that
    floating-point pipeline to the exact one is the remaining bridge obligation.
+   The `nttOps` field of `concretePrimitives` satisfies `NTTRingLaws` for `logn ≤ 11`
+   (`concretePrimitives_transform`).
 
 ## Kernel correctness
 
@@ -778,6 +780,17 @@ theorem concretePrimitives_exactFFT (p : Params) (hn : p.n = 2 ^ p.logn)
     (h : 2 * 2 ^ p.fftDepth = p.n) : (concretePrimitives p hn).ExactFFT h :=
   Primitives.exactFFT_of_eq _ h rfl rfl
 
+private theorem nttRingLaws_cast {n m : ℕ} (h : n = m) {ops : NTTRingOps m}
+    (hops : NTTRingLaws ops) : NTTRingLaws (show NTTRingOps n from h ▸ ops) := by
+  subst h
+  exact hops
+
+/-- The `nttOps` field of `concretePrimitives` satisfies `NTTRingLaws` (the
+`Primitives.Laws.transform` field) for `n = 2^logn ≤ 2048`. -/
+theorem concretePrimitives_transform (p : Params) (hn : p.n = 2 ^ p.logn) (h : p.logn ≤ 11) :
+    NTTRingLaws (concretePrimitives p hn).nttOps :=
+  nttRingLaws_cast hn (concreteNTTRingLaws p.logn h)
+
 /-- `hashToPointForPublicKey` for `concretePrimitives` unfolds to the concrete FN-DSA hash path. -/
 @[simp] theorem concretePrimitives_hashToPointForPublicKey_eq
     (p : Params) (hn : p.n = 2 ^ p.logn) (h : Rq p.n)
@@ -794,5 +807,13 @@ noncomputable def falcon512Primitives : Primitives falcon512 :=
 /-- Concrete primitives specialized to Falcon-1024. -/
 noncomputable def falcon1024Primitives : Primitives falcon1024 :=
   concretePrimitives falcon1024 rfl
+
+/-- The NTT of `falcon512Primitives` satisfies `NTTRingLaws`. -/
+theorem falcon512Primitives_transform : NTTRingLaws falcon512Primitives.nttOps :=
+  concretePrimitives_transform falcon512 rfl (by decide)
+
+/-- The NTT of `falcon1024Primitives` satisfies `NTTRingLaws`. -/
+theorem falcon1024Primitives_transform : NTTRingLaws falcon1024Primitives.nttOps :=
+  concretePrimitives_transform falcon1024 rfl (by decide)
 
 end Falcon.Concrete

@@ -199,13 +199,17 @@ ordinary additive counts. The API-boundary campaign removes the former custom mo
 instance that leaked additive multiplication onto unrelated functions. Its ordinary-import
 consumer checks the canonical function identity and multiplication as well as counting behavior.
 
-**NTT multiplication laws are proved for ML-DSA and assumed for ML-KEM and Falcon.** ML-DSA's
+**NTT multiplication laws are proved for ML-DSA and Falcon and assumed for ML-KEM.** ML-DSA's
 `multiplyNTTs` is the pointwise product and `toHat_mul` is `ntt_negacyclicMul`, proved from the
 Cooley–Tukey residue theorem in `LatticeCrypto/Ring/NTTSplitCert.lean`. ML-KEM's `multiplyNTTs` is
 defined as `ntt (negacyclicMul (invNTT f) (invNTT g))` (`LatticeCrypto/MLKEM/Concrete/NTT.lean:306–308`).
 So its `toHat_mul` is tautological and the executable `loopMultiplyNTTs` is trusted through
-`implemented_by`; Falcon's `Primitives.Laws.transform : NTTRingLaws` (`LatticeCrypto/Falcon/Primitives.lean:297`)
-is a structure field. Mathlib supplies the twiddle half (`IsPrimitiveRoot` + `reduce_mod_char`) and the
+`implemented_by`. Falcon's `ntt` is the in-place `butterflyNTT` loop, proved equal for `logn ≤ 11`
+to the blocked butterfly stages of `NTTCert`. Its `concreteNTTRingLaws`
+(`LatticeCrypto/Falcon/Concrete/NTT.lean`) has `toHat_mul` = `ntt_negacyclicMul` for the pointwise
+`multiplyNTTs`. `concretePrimitives_transform` (`Extern/Falcon/Instance.lean`) proves the
+`Primitives.Laws.transform` obligation of the concrete bundle for `logn ≤ 11`.
+Mathlib supplies the twiddle half (`IsPrimitiveRoot` + `reduce_mod_char`) and the
 CRT half (`Ideal.quotientInfRingEquivPiQuotient` and friends); the Cooley–Tukey bit-reversal lemma is
 not in Mathlib or core; `forwardStages_ofFn_dvd` proves it without the CRT. See the lattice reading
 below.
@@ -896,7 +900,7 @@ toolchain bump; none adds CI gating.
 | 7 | HashSig base-w `reverse` bridges to `Nat.digitsAppend`/`ofDigits`; `sum_le_card_nsmul`; `Forall₂` | data idioms | ≈150 lines of re-derived digit arithmetic |
 | 8 | cslib-inspired: dependent pairing lemma, finiteness-free `perfectSecrecy ↔ ciphertextRowsEqual`, Shannon `Nat.card K ≥ Nat.card M`; optionally a `SecretSharing` port reusing cslib's Lagrange lemma | crypto foundations | two missing textbook theorems and one missing generic lemma |
 | 9 | Prune the 0-reverse-dep `ToMathlib/Control` files; `Examples/{Regev,FrankingProtocol}.lean`; the 30 deprecated aliases; the 23 `BigOperators` opens | hygiene | dead surface |
-| 10 | Track items needing design: `QueryCount` monoid leak; cost-layer unification; NTT multiplication laws for ML-KEM and Falcon (ML-DSA proved; twiddle + CRT halves from Mathlib, bit-reversal lemma by hand); Poisson summation for the discrete Gaussian; matrix conventions; selective-expose pilot; `implicit_reducible` canary | design | issues, not sweep PRs |
+| 10 | Track items needing design: `QueryCount` monoid leak; cost-layer unification; NTT multiplication laws for ML-KEM (ML-DSA and Falcon proved; twiddle + CRT halves from Mathlib, bit-reversal lemma by hand); Poisson summation for the discrete Gaussian; matrix conventions; selective-expose pilot; `implicit_reducible` canary | design | issues, not sweep PRs |
 
 The tooling table below is deliberately last: nothing in it is urgent, and the maintainer's
 guardrails (no native rebuilds on the PR path, no convention gating by script) bound it.
@@ -944,7 +948,7 @@ audit before deletion (see Method).
 | 4 duplicates | this PR (#632) | |
 | 5 lattice | #634 | reviewed and queued; includes the explicit modulus-zero behavior change |
 | 9 hygiene | #647 (C1), #648 (C2) | merged; #648 retains the necessary ML-DSA/ML-KEM equality instances and adds an `Option.elim` measurability lemma |
-| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; cost-layer unification, ML-KEM and Falcon NTT laws, Poisson summation, and matrix conventions remain open |
+| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; cost-layer unification, ML-KEM NTT laws, Poisson summation, and matrix conventions remain open |
 | tooling | #649 (SHA pins, dependabot, templates), Track A PR (drivers, `check-imports.sh`, dead scripts, options) | `CODEOWNERS` was dropped on review: routing files are boilerplate for a small team |
 | gates | #641 | merged; tactic contract and test warnings are checked, with detailed policy in `docs/agents/probability.md` |
 

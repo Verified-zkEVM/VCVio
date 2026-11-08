@@ -17,7 +17,9 @@ reduction. A block of `len` coefficients starting at `base` is read as the polyn
 a block congruent to `F` modulo `X^(2·len) − z²` to two half blocks (`forwardStage_ctLayout_dvd`).
 They are congruent to `F` modulo `X^len − z` and `X^len + z`. Iterating over `k` layers gives
 the Cooley–Tukey residue theorem `forwardStages_ofFn_dvd`: after the last layer, block `g` is
-congruent to the input polynomial modulo `X^(N / 2^k) − c k g`.
+congruent to the input polynomial modulo `X^(N / 2^k) − c k g`. The coefficient formulas
+`coeffAt_forwardStage_ctLayout_left` / `_right` and `coeffAt_inverseStage_ctLayout_left` /
+`_right` give the output of one forward or inverse layer at each coefficient.
 
 The statement is a divisibility over an arbitrary commutative ring. So it covers both full splits
 into linear factors (block size `1`, where it is evaluation at a root) and partial splits into
@@ -50,6 +52,20 @@ noncomputable def blockPoly {N : ℕ} (a : Fin N → R) (base len : ℕ) : R[X] 
 /-- `coeffAt` agrees with `a` inside the range. -/
 theorem coeffAt_fin {N : ℕ} (a : Fin N → R) (i : Fin N) : coeffAt a i = a i := by
   simp [coeffAt]
+
+/-- `coeffAt a n` is entry `n` of `a` for `n < N`. -/
+theorem coeffAt_of_lt {N : ℕ} (a : Fin N → R) {n : ℕ} (h : n < N) : coeffAt a n = a ⟨n, h⟩ :=
+  dite_eq_left h
+
+/-- `coeffAt a n` is `0` for `N ≤ n`. -/
+theorem coeffAt_of_le {N : ℕ} (a : Fin N → R) {n : ℕ} (h : N ≤ n) : coeffAt a n = 0 :=
+  dite_eq_right (Nat.not_lt.mpr h)
+
+/-- `coeffAt` commutes with pointwise scalar multiplication. -/
+theorem coeffAt_scaleCoeffs {N : ℕ} (c : R) (a : Fin N → R) (n : ℕ) :
+    coeffAt (scaleCoeffs c a) n = c * coeffAt a n := by
+  unfold coeffAt scaleCoeffs
+  split_ifs <;> simp
 
 /-- A block of length `m + n` splits into its first `m` and its last `n` coefficients. -/
 theorem blockPoly_add_len {N : ℕ} (a : Fin N → R) (base m n : ℕ) :
@@ -113,6 +129,27 @@ theorem coeffAt_forwardStage_ctLayout_right {groups len N : ℕ} (h : groups * (
   have hrt := ctLayout_right_val h g ⟨r, hr⟩
   rw [coeffAt_of_val_eq _ _ hrt, coeffAt_of_val_eq _ _ hl, coeffAt_of_val_eq _ _ hrt]
   simp [forwardStage, forwardButterfly]
+
+/-- Left inverse butterfly output at block coordinates: `u + v`. -/
+theorem coeffAt_inverseStage_ctLayout_left {groups len N : ℕ} (h : groups * (2 * len) = N)
+    (zInv : Fin groups → R) (a : Fin N → R) (g : Fin groups) {r : ℕ} (hr : r < len) :
+    coeffAt (inverseStage (ctLayout groups len h) (fun p => zInv p.1) a) (g * (2 * len) + r) =
+      coeffAt a (g * (2 * len) + r) + coeffAt a (g * (2 * len) + len + r) := by
+  have hl := ctLayout_left_val h g ⟨r, hr⟩
+  have hrt := ctLayout_right_val h g ⟨r, hr⟩
+  rw [coeffAt_of_val_eq _ _ hl, coeffAt_of_val_eq _ _ hl, coeffAt_of_val_eq _ _ hrt]
+  simp [inverseStage, inverseButterfly]
+
+/-- Right inverse butterfly output at block coordinates: `zInv·(u − v)`. -/
+theorem coeffAt_inverseStage_ctLayout_right {groups len N : ℕ} (h : groups * (2 * len) = N)
+    (zInv : Fin groups → R) (a : Fin N → R) (g : Fin groups) {r : ℕ} (hr : r < len) :
+    coeffAt (inverseStage (ctLayout groups len h) (fun p => zInv p.1) a)
+        (g * (2 * len) + len + r) =
+      zInv g * (coeffAt a (g * (2 * len) + r) - coeffAt a (g * (2 * len) + len + r)) := by
+  have hl := ctLayout_left_val h g ⟨r, hr⟩
+  have hrt := ctLayout_right_val h g ⟨r, hr⟩
+  rw [coeffAt_of_val_eq _ _ hrt, coeffAt_of_val_eq _ _ hl, coeffAt_of_val_eq _ _ hrt]
+  simp [inverseStage, inverseButterfly]
 
 /-- `X^m − z` divides `X^(2m) − z²`. -/
 private theorem X_pow_sub_C_dvd_X_pow_two_mul_sub_C_sq (m : ℕ) (z : R) :
@@ -179,6 +216,13 @@ theorem forwardStages_ofFn_succ {Coord : Type*} {k : ℕ}
       (stage (Fin.last k)).forward
         (forwardStages (List.ofFn fun s : Fin k => stage s.castSucc) a) := by
   rw [List.ofFn_succ', List.concat_eq_append, forwardStages_append]
+
+/-- `k` stages with scale factor `c` accumulate the factor `c ^ k`. -/
+theorem stageScalar_ofFn {Coord : Type*} {k : ℕ} (stage : Fin k → ScaledStage R Coord) {c : R}
+    (h : ∀ s, (stage s).scalar = c) : stageScalar (List.ofFn stage) = c ^ k := by
+  induction k with
+  | zero => exact (pow_zero c).symm
+  | succ k ih => rw [List.ofFn_succ, stageScalar, ih _ fun s => h s.succ, h, pow_succ]
 
 /-- After `k` radix-2 layers on blocked layouts, block `g` of size `N / 2^k` is congruent to the
 input polynomial modulo `X^(N/2^k) − c k g`. Here the twiddles satisfy `z s g ^ 2 = c s g`,
