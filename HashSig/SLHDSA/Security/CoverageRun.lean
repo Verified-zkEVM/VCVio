@@ -348,6 +348,83 @@ theorem RunInv.run {α : Type} {oa : OracleComp (roleSpec core) α}
   h.holds_of_mem_support_run_simulateQ (RunInv core pk log)
     (fun _ ht _ hs _ hy => hs.step ht hy) hI hz
 
+/-- A signer nonce followed by its message digest extends the covered signing log.
+Only the appended signature's randomizer matters to the role invariant; an arbitrary frame-only
+tail preserves the resulting invariant by `Coverage.RunInv.run`. -/
+private theorem runInv_after_signer_nonce_hmsg
+    {vp : ValidatedParams} (core : CorePrimitives vp.params)
+    [SampleableType core.Y] [SampleableType (Bytes vp.params.m)]
+    [DecidableEq core.Y] [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey]
+    [DecidableEq core.SkPrf]
+    (pk : PublicKeyCore core)
+    (log : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp core))
+    (before afterNonce afterHmsg : Coverage.RoleState core)
+    (salt randomizer : core.Y) (message : List Byte) (digest : Bytes vp.params.m)
+    (signature : GeneralScheme.SignatureCore vp core)
+    (hinv : Coverage.RunInv core pk log before)
+    (hnonce : (randomizer, afterNonce) ∈ support
+      ((Coverage.roleRunImpl core
+        (.inr (.inr (.inr (.inr (salt, message)))))).run before))
+    (hhmsg : (digest, afterHmsg) ∈ support
+      ((Coverage.roleRunImpl core
+        (.inr (.inr (Coverage.hmsgPoint core pk randomizer message)))).run afterNonce))
+    (hrandomness : signature.randomness = randomizer) :
+    Coverage.RunInv core pk (log ++ [⟨message, signature⟩]) afterHmsg := by
+  obtain ⟨hR₂, hfresh₂⟩ := cache_cls_hits_of_mem_support_roleRunImpl_run_inr hnonce
+  obtain ⟨hD₃, hfresh₃⟩ := cache_cls_hits_of_mem_support_roleRunImpl_run_inr hhmsg
+  have hle₂ := (AnswerTape.mono_of_mem_support_classPosImplFwd_run _ _ _ _ _ _ _ hnonce).1
+  have hne₂ : ∀ p : (jointSpec core).Domain, p ≠ .inr (.inr (salt, message)) →
+      afterNonce.1.1 p = before.1.1 p ∧
+        (before.1.1 p = none → afterNonce.2.1.cls p = before.2.1.cls p) := fun p hp =>
+    have hc := cache_cls_of_mem_support_roleRunImpl_run hnonce p
+    ⟨hc.1 (by rintro q (hq | hq) rfl <;> cases hq; exact hp rfl),
+      fun _ => hc.2.1 (by rintro ⟨hq | hq, -⟩ <;> cases hq; exact hp rfl)⟩
+  have key₂ : afterNonce.1.1 (hmsgPoint core pk randomizer message) ≠ none →
+      Covered core afterNonce (hmsgPoint core pk randomizer message) := by
+    intro hne
+    rcases hx : before.1.1 (.inr (.inr (salt, message))) with _ | randomizer'
+    · have hh : before.1.1 (hmsgPoint core pk randomizer message) ≠ none := by
+        rwa [← (hne₂ _ (by simp [hmsgPoint])).1]
+      exact ⟨hne, .inr ((hfresh₂ hx).2 trivial _ hh ⟨rfl, rfl⟩)⟩
+    · obtain rfl : randomizer' = randomizer := Option.some_inj.1 ((hle₂ hx).symm.trans hR₂)
+      exact (hinv.covered_rand salt message randomizer' hx).step hnonce
+  have hcov₃ : Covered core afterHmsg (hmsgPoint core pk randomizer message) := by
+    rcases hc : afterNonce.1.1 (hmsgPoint core pk randomizer message) with _ | d
+    · exact ⟨by rw [hD₃]; exact Option.some_ne_none _, .inl (hfresh₃ hc).1⟩
+    · exact (key₂ (by rw [hc]; exact Option.some_ne_none _)).step hhmsg
+  have hne₃ : ∀ p : (jointSpec core).Domain, p ≠ hmsgPoint core pk randomizer message →
+      afterHmsg.1.1 p = afterNonce.1.1 p ∧ afterHmsg.2.1.cls p = afterNonce.2.1.cls p := fun p hp =>
+    have hc := cache_cls_of_mem_support_roleRunImpl_run hhmsg p
+    ⟨hc.1 (by rintro q (hq | hq) rfl <;> cases hq; exact hp rfl),
+      hc.2.1 (by rintro ⟨hq | hq, -⟩ <;> cases hq; exact hp rfl)⟩
+  refine ⟨fun p hp => ?_, fun en hen => ?_, fun a M randomizer'' h => ?_⟩
+  · by_cases hp₃ : p = hmsgPoint core pk randomizer message
+    · exact ⟨⟨message, signature⟩, by simp, by rw [hp₃, hrandomness]⟩
+    rw [(hne₃ p hp₃).2] at hp
+    have hp₁ : before.2.1.cls p = some .signer := by
+      rcases (cache_cls_of_mem_support_roleRunImpl_run hnonce p) with ⟨-, h₁, h₂⟩
+      by_cases hf :
+          ((Sum.inr (Sum.inr (Sum.inr (Sum.inr (salt, message)))) : (roleSpec core).Domain) =
+            .inr (.inl p) ∨ (Sum.inr (Sum.inr (Sum.inr (Sum.inr (salt, message)))) :
+            (roleSpec core).Domain) = .inr (.inr p)) ∧ before.1.1 p = none
+      · have hcls := hp.symm.trans (h₂ hf.1 hf.2)
+        rcases hf with ⟨hq | hq, -⟩ <;> cases hq
+        simp [AnswerTape.classOf, tapeClass] at hcls
+      · rwa [← h₁ hf]
+    obtain ⟨en, hen, rfl⟩ := hinv.exists_mem_log p hp₁
+    exact ⟨en, List.mem_append_left _ hen, rfl⟩
+  · rcases List.mem_append.1 hen with hen | hen
+    · exact ((hinv.covered_log en hen).step hnonce).step hhmsg
+    · obtain rfl : en = ⟨message, signature⟩ := List.mem_singleton.1 hen
+      simpa only [hrandomness] using hcov₃
+  · rw [(hne₃ _ (by simp [hmsgPoint])).1] at h
+    by_cases hx : (a, M) = (salt, message)
+    · obtain ⟨rfl, rfl⟩ := Prod.mk.inj hx
+      obtain rfl : randomizer'' = randomizer := Option.some_inj.1 (h.symm.trans hR₂)
+      exact hcov₃
+    · rw [(hne₂ _ (by simpa using hx)).1] at h
+      exact ((hinv.covered_rand a M randomizer'' h).step hnonce).step hhmsg
+
 /-- **Signing preserves the run invariant.** A run of signing from a state satisfying the run
 invariant at signing key `sk` ends in a state satisfying it with the signature logged: the
 `H_msg` point at the derived randomizer is covered, by the fresh draw of the randomizer, by an
@@ -381,61 +458,11 @@ theorem RunInv.sign {optRand : PublicKeyCore core → ProbComp core.Y} {pkSeed :
   have hI₁ : RunInv core sk log s₁ := hI.run (allQueriesSatisfy_simulateQ_roleImpl core .signer
     (isQueryBoundP_liftM_withDerivations (fun _ h => h.elim id id) _)
     (isHmsgQuery_or_isRandQuery_of_not_isFrameQuery_roleQuery_signer core)) h₁
-  obtain ⟨hR₂, hfresh₂⟩ := cache_cls_hits_of_mem_support_roleRunImpl_run_inr h₂'
-  obtain ⟨hD₃, hfresh₃⟩ := cache_cls_hits_of_mem_support_roleRunImpl_run_inr h₃'
-  have hle₂ := (AnswerTape.mono_of_mem_support_classPosImplFwd_run _ _ _ _ _ _ _ h₂').1
-  have hne₂ : ∀ p : (jointSpec core).Domain, p ≠ .inr (.inr (addrnd, msg)) →
-      s₂.1.1 p = s₁.1.1 p ∧ (s₁.1.1 p = none → s₂.2.1.cls p = s₁.2.1.cls p) := fun p hp =>
-    have hc := cache_cls_of_mem_support_roleRunImpl_run h₂' p
-    ⟨hc.1 (by rintro q (hq | hq) rfl <;> cases hq; exact hp rfl),
-      fun _ => hc.2.1 (by rintro ⟨hq | hq, -⟩ <;> cases hq; exact hp rfl)⟩
-  have key₂ : s₂.1.1 (hmsgPoint core sk R msg) ≠ none →
-      Covered core s₂ (hmsgPoint core sk R msg) := by
-    intro hne
-    rcases hx : s₁.1.1 (.inr (.inr (addrnd, msg))) with _ | R'
-    · have hh : s₁.1.1 (hmsgPoint core sk R msg) ≠ none := by
-        rwa [← (hne₂ _ (by simp [hmsgPoint])).1]
-      exact ⟨hne, .inr ((hfresh₂ hx).2 trivial _ hh ⟨rfl, rfl⟩)⟩
-    · obtain rfl : R' = R := Option.some_inj.1 ((hle₂ hx).symm.trans hR₂)
-      exact (hI₁.covered_rand addrnd msg R' hx).step h₂'
-  have hcov₃ : Covered core s₃ (hmsgPoint core sk R msg) := by
-    rcases hc : s₂.1.1 (hmsgPoint core sk R msg) with _ | d
-    · exact ⟨by rw [hD₃]; exact Option.some_ne_none _, .inl (hfresh₃ hc).1⟩
-    · exact (key₂ (by rw [hc]; exact Option.some_ne_none _)).step h₃'
-  have hne₃ : ∀ p : (jointSpec core).Domain, p ≠ hmsgPoint core sk R msg →
-      s₃.1.1 p = s₂.1.1 p ∧ s₃.2.1.cls p = s₂.2.1.cls p := fun p hp =>
-    have hc := cache_cls_of_mem_support_roleRunImpl_run h₃' p
-    ⟨hc.1 (by rintro q (hq | hq) rfl <;> cases hq; exact hp rfl),
-      hc.2.1 (by rintro ⟨hq | hq, -⟩ <;> cases hq; exact hp rfl)⟩
-  refine RunInv.run (allQueriesSatisfy_simulateQ_roleImpl core .signer
+  have hcore := runInv_after_signer_nonce_hmsg core sk log s₁ s₂ s₃ addrnd R msg digest z.1
+    hI₁ h₂' h₃' hrand
+  exact RunInv.run (allQueriesSatisfy_simulateQ_roleImpl core .signer
     (isQueryBoundP_signTail core _ _ _)
-    (isHmsgQuery_or_isRandQuery_of_not_isFrameQuery_roleQuery_signer core))
-    ⟨fun p hp => ?_, fun en hen => ?_, fun a M R'' h => ?_⟩ h₄
-  · by_cases hp₃ : p = hmsgPoint core sk R msg
-    · exact ⟨⟨msg, z.1⟩, by simp, by rw [hp₃, hrand]⟩
-    rw [(hne₃ p hp₃).2] at hp
-    have hp₁ : s₁.2.1.cls p = some .signer := by
-      rcases (cache_cls_of_mem_support_roleRunImpl_run h₂' p) with ⟨-, h₁, h₂⟩
-      by_cases hf : ((Sum.inr (Sum.inr (Sum.inr (Sum.inr (addrnd, msg)))) : (roleSpec core).Domain)
-          = .inr (.inl p) ∨ (Sum.inr (Sum.inr (Sum.inr (Sum.inr (addrnd, msg)))) :
-            (roleSpec core).Domain) = .inr (.inr p)) ∧ s₁.1.1 p = none
-      · have hcls := hp.symm.trans (h₂ hf.1 hf.2)
-        rcases hf with ⟨hq | hq, -⟩ <;> cases hq
-        simp [AnswerTape.classOf, tapeClass] at hcls
-      · rwa [← h₁ hf]
-    obtain ⟨en, hen, rfl⟩ := hI₁.exists_mem_log p hp₁
-    exact ⟨en, List.mem_append_left _ hen, rfl⟩
-  · rcases List.mem_append.1 hen with hen | hen
-    · exact ((hI₁.covered_log en hen).step h₂').step h₃'
-    · obtain rfl : en = ⟨msg, z.1⟩ := List.mem_singleton.1 hen
-      simpa only [hrand] using hcov₃
-  · rw [(hne₃ _ (by simp [hmsgPoint])).1] at h
-    by_cases hx : (a, M) = (addrnd, msg)
-    · obtain ⟨rfl, rfl⟩ := Prod.mk.inj hx
-      obtain rfl : R'' = R := Option.some_inj.1 (h.symm.trans hR₂)
-      exact hcov₃
-    · rw [(hne₂ _ (by simpa using hx)).1] at h
-      exact ((hI₁.covered_rand a M R'' h).step h₂').step h₃'
+    (isHmsgQuery_or_isRandQuery_of_not_isFrameQuery_roleQuery_signer core)) hcore h₄
 
 end Invariant
 
