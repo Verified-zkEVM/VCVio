@@ -311,6 +311,7 @@ public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.Coercions.SubSpec
 public import VCVio.OracleComp.Coercions.SubSpec.Basic
 public import VCVio.OracleComp.Coercions.SubSpec.Measure
+public import VCVio.OracleComp.Coercions.SubSpec.Routing
 public import VCVio.OracleComp.Coinductive.Bridge
 public import VCVio.OracleComp.Coinductive.DynSystem
 public import VCVio.OracleComp.Coinductive.Machine
@@ -382,6 +383,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryBound.Tagged
 public import VCVio.OracleComp.QueryTracking.QueryBound.Truncate
 public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.OracleComp.QueryTracking.QueryLog
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
@@ -453,6 +455,7 @@ public import VCVio.OracleComp.SimSemantics.Wiring
 public import VCVio.OracleComp.SimSemantics.WriterT.Core
 public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
 public import VCVio.OracleComp.Support
+public import VCVio.OracleComp.Tactics.VCVNorm
 public import VCVio.OracleComp.Traversal
 public import VCVio.Prelude.Core
 public import VCVio.ProgramLogic.Notation
