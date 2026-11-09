@@ -26,6 +26,7 @@ public section
 universe u v
 
 open OracleComp OracleSpec
+open ProbComp (firstSome measureTVDist_firstSome_le_geometric)
 open scoped BigOperators ENNReal
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}

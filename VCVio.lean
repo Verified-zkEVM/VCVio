@@ -321,6 +321,7 @@ public import VCVio.OracleComp.Constructions.GenerateSeed
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
+public import VCVio.OracleComp.Constructions.RetryLoop
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
