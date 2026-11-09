@@ -257,8 +257,9 @@ theorem idsWithAbort_complete (h_laws : Primitives.Laws prims nttOps) :
 
 The HVZK theorem `MLDSA.idsWithAbort_hvzk` is proven downstream in
 `LatticeCrypto.MLDSA.SecurityHVZK`, for the concrete simulator `hvzkSimulatorReal`. The simulator
-recomputes the honest prover's gates from the public key, so the two transcripts are equal in
-distribution. -/
+recomputes the honest prover's gates from the public key and the withheld key part `t₀`, which it
+recovers from the public key by a search over seeds, so on valid key pairs the two transcripts are
+equal in distribution. -/
 
 end Properties
 

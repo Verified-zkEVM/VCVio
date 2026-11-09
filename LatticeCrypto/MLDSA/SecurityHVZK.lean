@@ -19,18 +19,22 @@ content.
 ## The simulator
 
 `hvzkSimulatorReal` samples the challenge hash `c̃` uniformly and the response `z` uniformly from
-the mask box, then computes everything else from the public key: `wApprox = Az − c·t₁·2^d`, the
-value `verify` recomputes; the four gates of `respond`; and on success the pair
+the mask box, then computes everything else from the public key and the withheld key part `t₀`:
+`wApprox = Az − c·t₁·2^d`, the value `verify` recomputes; the four gates of `respond`; and on
+success the pair
 `h = MakeHint(−c·t₀, wApprox)`, `w₁ = UseHint(h, wApprox)`. On valid key pairs
 `wApprox − c·t₀ = w − c·s₂` with `w = A·y` (`keyGenFromSeed_wApprox_eq`), so each gate computes the
 same value as the honest prover, and the two transcripts agree as functions of `(c̃, z)`
 (`hvzkHonestOut_eq_hvzkSimOut`). The abort pattern therefore matches exactly.
 
-The honest pair depends on `t₀`, which the encoded public key `(ρ, t₁)` does not contain as raw
-data, so the simulator recovers it noncomputably from the public key (`recoverT0`). This recovery
-is sound under the key-generation collision-freeness law `Primitives.Laws.keyVector_t0_determined`,
-matching the literature's treatment of the full `t = t₁·2^d + t₀` as public (the `t₁` compression
-is a bandwidth optimization, not a hiding mechanism).
+Three of the gates and the hint depend on `t₀`, which the encoded public key `(ρ, t₁)` does not
+contain. The simulator recovers it from the public key by a search over all key-generation seeds
+(`recoverT0`). The recovery is correct on honestly generated keys under the modelling law
+`Primitives.Laws.keyVector_t0_determined`, which no concrete instantiation proves. The search makes
+the simulator inefficient. The literature treats the full `t = t₁·2^d + t₀` as public instead, so
+its simulator reads `t₀` and runs in polynomial time. On a key that no seed generates, `recoverT0`
+returns `0`, so a reduction that runs this simulator can behave differently on seed-derived keys
+and on keys sampled independently of any seed.
 
 ## The mask coupling
 
@@ -59,40 +63,6 @@ namespace MLDSA
 variable (p : Params) (prims : Primitives p)
 
 section RealHVZK
-
-/-! ### Coupling uniform draws through a partial bijection -/
-
-/-- Two injections of a uniform sample space give the same distribution to any continuation that
-ignores its argument outside a set both of them cover. A permutation of the sample space matches
-the two injections on the preimages of `S` (`Equiv.extendSubtype`), and permuting preserves the
-uniform distribution.
-
-For ML-DSA this couples the honest response `z = y + c·s₁`, uniform on a shifted box, with the
-simulator's draw of `z` from the box itself: the continuation aborts unless `z` passes the response
-gate, and both boxes contain every `z` that does. -/
-lemma uniform_bind_evalDistEq_of_cover {α β γ : Type} [SampleableType α]
-    {f₁ f₂ : α → β} (hf₁ : Function.Injective f₁) (hf₂ : Function.Injective f₂)
-    {S : Set β} (hS₁ : S ⊆ Set.range f₁) (hS₂ : S ⊆ Set.range f₂)
-    (k : β → ProbComp γ) (d : ProbComp γ) (hk : ∀ b ∉ S, k b = d) :
-    (do let a ← $ᵗ α; k (f₁ a)) =ᵈ (do let a ← $ᵗ α; k (f₂ a)) := by
-  classical
-  let e : ∀ f : α → β, Function.Injective f → S ⊆ Set.range f → {a // f a ∈ S} ≃ S :=
-    fun f hf hS => Equiv.ofBijective (fun a => ⟨f a.1, a.2⟩)
-      ⟨fun a b h => Subtype.ext (hf (congrArg Subtype.val h)), fun b => by
-        obtain ⟨a, ha⟩ := hS b.2
-        exact ⟨⟨a, ha ▸ b.2⟩, Subtype.ext ha⟩⟩
-  let e' : {a // f₁ a ∈ S} ≃ {a // f₂ a ∈ S} := (e f₁ hf₁ hS₁).trans (e f₂ hf₂ hS₂).symm
-  have hσ : ∀ a, k (f₁ a) = k (f₂ (e'.extendSubtype a)) := fun a => by
-    by_cases ha : f₁ a ∈ S
-    · rw [Equiv.extendSubtype_apply_of_mem _ a ha]
-      exact congrArg k (congrArg Subtype.val ((e f₂ hf₂ hS₂).apply_symm_apply
-        (e f₁ hf₁ hS₁ ⟨a, ha⟩))).symm
-    · have ha' : f₂ (e'.extendSubtype a) ∉ S := e'.extendSubtype_not_mem a ha
-      rw [hk _ ha, hk _ ha']
-  simp_rw [hσ]
-  simpa only [bind_map_left] using
-    (SampleableType.map_uniformSample_evalDistEq_of_bijective
-      e'.extendSubtype.bijective).bind_left fun a => k (f₂ a)
 
 /-! ### Componentwise algebra on `Rq` and `RqVec` -/
 
@@ -123,7 +93,8 @@ variable [nttOps : NTTRingOps]
 pre-gate joint distribution of the challenge hash and the masked response `(c̃, z = y + c·s)`, with
 `y` drawn from the mask box before the uniform challenge, equals the simulator's direct draw of
 `(c̃, z)` with `z` from the box, as observed by any continuation that ignores `z` outside the
-response gate. -/
+response gate. The two draws are injections of the box, `y ↦ y + c·s` and the inclusion, and both
+cover every `z` that passes the gate (`SampleableType.uniformSample_bind_evalDistEq_of_cover`). -/
 theorem honest_pregate_evalDistEq [SampleableType (CommitHashBytes p)] {s : RqVec p.l}
     (hs : ∀ cTilde : CommitHashBytes p, polyVecNorm (prims.sampleInBall cTilde • s) ≤ p.beta)
     {γ : Type} (g : CommitHashBytes p → RqVec p.l → ProbComp γ)
@@ -143,7 +114,8 @@ theorem honest_pregate_evalDistEq [SampleableType (CommitHashBytes p)] {s : RqVe
   have hgamma : ∀ {z : RqVec p.l}, polyVecNorm z < p.gamma1 - p.beta →
       polyVecNorm z < p.gamma1 := fun hz => by omega
   simpa only [sampleMaskVec, bind_map_left] using
-    uniform_bind_evalDistEq_of_cover (α := {v : RqVec p.l // maskBounded v p.gamma1})
+    SampleableType.uniformSample_bind_evalDistEq_of_cover
+      (α := {v : RqVec p.l // maskBounded v p.gamma1})
       (f₁ := fun a => a.1 + prims.sampleInBall cTilde • s) (f₂ := Subtype.val)
       (S := {z | polyVecNorm z < p.gamma1 - p.beta})
       (fun a b h => Subtype.ext (by
@@ -166,8 +138,8 @@ theorem honest_pregate_evalDistEq [SampleableType (CommitHashBytes p)] {s : RqVe
 seed that key generation maps to `pk` and return its `t₀` (or `0` if `pk` is not honestly
 generated). On valid key pairs this agrees with the actual secret `t₀` exactly under the
 key-generation collision-freeness law `Primitives.Laws.keyVector_t0_determined`
-(`recoverT0_eq`). The HVZK simulator may use it because it is a function of the statement
-only; cryptographically this corresponds to treating the full `t = t₁·2^d + t₀` as public. -/
+(`recoverT0_eq`). It is a function of the statement only, so the HVZK simulator may use it, but
+it searches over all seeds and is not efficient. -/
 noncomputable def recoverT0 (pk : PublicKey p prims) : RqVec p.k :=
   by
     letI : Decidable (∃ seed : Bytes 32, (keyGenFromSeed p prims seed).1 = pk) :=
@@ -294,8 +266,8 @@ theorem hvzkSimulatorReal_accept_match (h_laws : Primitives.Laws prims nttOps)
 /-! ### The simulator -/
 
 /-- The simulator's transcript as a deterministic function of `(c̃, z)`: the four gates of the
-honest `respond`, recomputed from the public key, and on success the pair `(w₁, h)` recovered from
-`wApprox = Az − c·t₁·2^d` and `recoverT0`. -/
+honest `respond`, recomputed from the public key and the recovered `t₀` (`recoverT0`), and on
+success the pair `(w₁, h)` recovered from `wApprox = Az − c·t₁·2^d` and `t₀`. -/
 noncomputable def hvzkSimOut (pk : PublicKey p prims) (cTilde : CommitHashBytes p)
     (z : RqVec p.l) :
     Option (Commitment p prims × CommitHashBytes p × Response p prims) :=
@@ -310,9 +282,10 @@ noncomputable def hvzkSimOut (pk : PublicKey p prims) (cTilde : CommitHashBytes 
     else none
   else none
 
-/-- The Dilithium HVZK simulator for the ML-DSA identification scheme. It receives only the public
-key `pk` (no secret), samples the challenge hash `c̃` uniformly and the response `z` from the mask
-box, and outputs `hvzkSimOut`. -/
+/-- The Dilithium HVZK simulator for the ML-DSA identification scheme. It takes only the public key
+`pk` and recovers `t₀` from it by `recoverT0`, a search over seeds, so it is not efficient. It
+samples the challenge hash `c̃` uniformly and the response `z` from the mask box, and outputs
+`hvzkSimOut`. -/
 noncomputable def hvzkSimulatorReal [SampleableType (CommitHashBytes p)]
     (pk : PublicKey p prims) :
     ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)) := do
@@ -409,7 +382,10 @@ lemma honestExecution_evalDistEq_gated [DecidableEq prims.High]
 
 /-- **Honest-verifier zero-knowledge for the ML-DSA identification scheme.** For every valid key
 pair the honest transcript and `hvzkSimulatorReal` are equal in distribution, aborts included. By
-`IdenSchemeWithAbort.perfectHVZK_iff_hvzk_zero` this is `HVZK` at `ζ_zk = 0`. -/
+`IdenSchemeWithAbort.perfectHVZK_iff_hvzk_zero` this is `HVZK` at `ζ_zk = 0`.
+
+The simulator recovers `t₀` by a search over seeds (`recoverT0`), which is correct under the
+`keyVector_t0_determined` field of `h_laws`, so it is not efficient. -/
 theorem idsWithAbort_hvzk [DecidableEq prims.High] [SampleableType (CommitHashBytes p)]
     (h_laws : Primitives.Laws prims nttOps) :
     (identificationScheme p prims).PerfectHVZK (hvzkSimulatorReal p prims) := by

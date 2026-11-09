@@ -15,7 +15,9 @@ FIPS 204's `ExpandMask` draws each coefficient of the mask `y` from `[-γ₁ + 1
 defines the uniform distribution on that box, `sampleMaskVec`, which is the mask distribution of the
 identification scheme, and counts it. `prEvent_sampleMaskVec_polyVecNorm_lt` gives the exact
 probability that a sample has centered norm below `b`. At `b = γ₁ - β` this is the probability
-`((2(γ₁ - β) - 1)/(2γ₁))^(256ℓ)` that the response of a signing attempt passes the response gate.
+`((2(γ₁ - β) - 1)/(2γ₁))^(256ℓ)` that a sample from the box passes the response gate. The honest
+response `z = y + c·s₁` passes at the same rate, because `MLDSA.honest_pregate_evalDistEq` couples
+it with a sample from the box on every `z` that passes.
 -/
 
 public section
@@ -44,29 +46,24 @@ noncomputable instance (k gamma1 : ℕ) : SampleableType {v : RqVec k // maskBou
 
 /-! ### Norms and coefficients -/
 
-/-- The centered norm of a polynomial as the largest absolute centered coefficient. -/
-private lemma polyNorm_eq_sup (f : Rq) :
-    polyNorm f = Finset.univ.sup fun i : Fin ringDegree => (centeredRepr (f.get i)).natAbs := by
-  simp only [polyNorm, normOps, zmodPolyNormOps, normOpsOfCenteredView, cInfNormOf,
-    vectorNegacyclicRing_backend, zmodCenteredCoeffView]
+/-- The centered norm of an ML-DSA polynomial is the canonical centered infinity norm. -/
+private lemma polyNorm_eq_cInfNorm (f : Rq) : polyNorm f = cInfNorm f := by
+  simp only [polyNorm, normOps, vectorNegacyclicRing_backend, zmodPolyNormOps_cInfNorm]
 
 /-- Each coefficient of each component is bounded by the vector's centered norm. -/
 private lemma natAbs_centeredRepr_le_polyVecNorm {k : ℕ} (v : RqVec k) (j : Fin k)
     (i : Fin ringDegree) : (centeredRepr ((v.get j).get i)).natAbs ≤ polyVecNorm v :=
-  calc (centeredRepr ((v.get j).get i)).natAbs ≤ polyNorm (v.get j) := by
-        rw [polyNorm_eq_sup]
-        exact Finset.le_sup (f := fun i => (centeredRepr ((v.get j).get i)).natAbs)
-          (Finset.mem_univ i)
+  calc (centeredRepr ((v.get j).get i)).natAbs ≤ polyNorm (v.get j) :=
+        (polyNorm_eq_cInfNorm _).symm ▸ coeff_le_cInfNorm (v.get j) i
     _ ≤ polyVecNorm v := PolyVec.component_cInfNorm_le normOps v j
 
 /-- A vector's centered norm is at most `b` exactly when every coefficient is. -/
 private lemma polyVecNorm_le_iff {k b : ℕ} {v : RqVec k} :
     polyVecNorm v ≤ b ↔ ∀ j i, (centeredRepr ((v.get j).get i)).natAbs ≤ b := by
-  refine ⟨fun h j i => (natAbs_centeredRepr_le_polyVecNorm v j i).trans h, fun h => ?_⟩
-  refine (PolyVec.cInfNorm_le_iff normOps).mpr fun j => ?_
-  change polyNorm (v.get j) ≤ b
-  rw [polyNorm_eq_sup]
-  exact Finset.sup_le fun i _ => h j i
+  refine (PolyVec.cInfNorm_le_iff normOps).trans (forall_congr' fun j => ?_)
+  change polyNorm (v.get j) ≤ b ↔ _
+  rw [polyNorm_eq_cInfNorm]
+  exact cInfNorm_le_iff
 
 /-- The triangle inequality for the centered norm of a difference. -/
 lemma polyVecNorm_sub_le {k : ℕ} (z v : RqVec k) :

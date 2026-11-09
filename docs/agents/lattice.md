@@ -60,7 +60,9 @@ instantiating those abstractions for a lattice scheme.
   proof-level scheme.
 - `LatticeCrypto/MLDSA/Security.lean`: completeness and commitment recoverability of the IDS.
 - `LatticeCrypto/MLDSA/SecurityHVZK.lean`: the HVZK simulator `hvzkSimulatorReal`, and
-  `idsWithAbort_hvzk`, which shows it equal in distribution to the honest prover on valid keys.
+  `idsWithAbort_hvzk`, which shows it equal in distribution to the honest prover on valid keys. The
+  simulator recovers `t₀` from the public key by a search over seeds (`recoverT0`), so it is not
+  efficient.
 - `LatticeCrypto/MLDSA/SecurityNMA.lean`: the no-message-attack chain, with the key swap modelled
   over short-box MLWE.
 - `LatticeCrypto/MLDSA/Concrete/`: executable implementations of NTT, rounding, and encoding, plus

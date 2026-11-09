@@ -12,11 +12,12 @@ public import LatticeCrypto.MLDSA.SecurityHVZK
 # Tests for the ML-DSA mask box
 
 - The endpoints of `[-γ₁ + 1, γ₁]`: the box is not the symmetric `[-γ₁, γ₁]` or `[-γ₁ + 1, γ₁ - 1]`.
-- The response gate passes with probability above `1/2` at each FIPS 204 parameter set. A box wider
-  than `ExpandMask`'s range lowers these rates.
-- `uniform_bind_evalDistEq_of_cover` needs the continuation to ignore arguments outside the covered
-  set: without that hypothesis its conclusion fails.
-- `idsWithAbort_hvzk` holds at a `Primitives.Laws` witness for an approved parameter set.
+  These examples are what pin the box.
+- The response gate passes with probability above `1/2` at each FIPS 204 parameter set. This checks
+  the parameters against the exact rate; it does not pin the box, since a slightly different box
+  also passes above `1/2`.
+- `idsWithAbort_hvzk` holds at a `Primitives.Laws` witness for an approved parameter set, so its
+  hypotheses can be met together. The theorem itself, not this test, shows the simulator is right.
 -/
 
 public section
@@ -68,7 +69,7 @@ example {gamma1 : ℕ} (h0 : 0 < gamma1) (hq : 2 * gamma1 + 2 ≤ modulus) :
 /-- The box stays inhabited at the degenerate `γ₁ = 0`. -/
 example (k : ℕ) : maskBounded (0 : RqVec k) 0 := .inl rfl
 
-lemma half_lt_of_lt_two_mul {a b : ℕ} (hb : 0 < b) (h : b < 2 * a) :
+private lemma half_lt_of_lt_two_mul {a b : ℕ} (hb : 0 < b) (h : b < 2 * a) :
     (1 / 2 : ℝ≥0∞) < (a : ℝ≥0∞) / b := by
   have hb' : (0 : ℝ) < b := by exact_mod_cast hb
   have ha : (b : ℝ) < 2 * a := by exact_mod_cast h
@@ -85,7 +86,7 @@ lemma half_lt_of_lt_two_mul {a b : ℕ} (hb : 0 < b) (h : b < 2 * a) :
   exact (ENNReal.ofReal_lt_ofReal_iff (lt_trans (by norm_num) key)).mpr key
 
 /-- The response gate's rate at a parameter set, from the box count. -/
-lemma half_lt_gate (p : Params) (hb : 0 < p.gamma1 - p.beta)
+private lemma half_lt_gate (p : Params) (hb : 0 < p.gamma1 - p.beta)
     (hq : 2 * p.gamma1 < modulus)
     (h : (2 * p.gamma1) ^ (ringDegree * p.l) <
       2 * (2 * (p.gamma1 - p.beta) - 1) ^ (ringDegree * p.l)) :
@@ -112,15 +113,6 @@ theorem half_lt_gate_mldsa87 : (1 / 2 : ℝ≥0∞) <
     Pr{let z ← sampleMaskVec mldsa87.l mldsa87.gamma1}[
       polyVecNorm z < mldsa87.gamma1 - mldsa87.beta] :=
   half_lt_gate mldsa87 (by decide +kernel) (by decide +kernel) (by decide +kernel)
-
-/-- `uniform_bind_evalDistEq_of_cover` fails without `hk`: both injections below cover `{1}`, but
-the continuation tests for `0`, which only `f₁` reaches. -/
-example :
-    Pr{let x ← (do let a ← $ᵗ Bool; pure (decide (a.toNat = 0)) : ProbComp Bool)}[x = true] ≠
-      Pr{let x ← (do
-        let a ← $ᵗ Bool
-        pure (decide (a.toNat + 1 = 0)) : ProbComp Bool)}[x = true] := by
-  simp [SampleableType.prEvent_uniformSample]
 
 /-- `idsWithAbort_hvzk` at a `Primitives.Laws` witness for ML-DSA-44. -/
 theorem perfectHVZK_seedRevealingPrims [DecidableEq (seedRevealingPrims mldsa44).High] :
