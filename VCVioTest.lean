@@ -54,6 +54,9 @@ public import VCVioTest.GroupModel.Interaction.Axioms
 public import VCVioTest.GroupModel.Interaction.Basic
 public import VCVioTest.GroupModel.Interaction.MultiGroup
 public import VCVioTest.GroupModel.Typed
+public import VCVioTest.HashChainAntichain
+public import VCVioTest.HashChainExtraction
+public import VCVioTest.HashChainStrongPayload
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
