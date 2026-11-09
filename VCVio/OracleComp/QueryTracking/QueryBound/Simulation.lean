@@ -932,6 +932,24 @@ theorem AllQueriesSatisfy.holds_of_mem_support_run_simulateQ {ι : Type} {spec :
     obtain ⟨w, hw, hz⟩ := (mem_support_bind_iff _ _ _).1 hz'
     exact ih w.1 (h.2 w.1) (hstep t h.1 s hs w (by simpa [simulateQ_spec_query] using hw)) hz
 
+/-- Interpreters agree on every program whose queries satisfy their agreement predicate. -/
+theorem AllQueriesSatisfy.simulateQ_eq_of_query_eq
+    {ι : Type u} {spec : OracleSpec.{u, u} ι} {α : Type u}
+    {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    {program : OracleComp spec α} {P : ι → Prop}
+    {left right : QueryImpl spec m}
+    (allowed : AllQueriesSatisfy program P)
+    (step : ∀ input, P input → left input = right input) :
+    _root_.simulateQ left program = _root_.simulateQ right program := by
+  induction program using OracleComp.inductionOn with
+  | pure answer => simp
+  | query_bind input next ih =>
+      obtain ⟨hinput, hnext⟩ :=
+        (allQueriesSatisfy_query_bind_iff _ _ _).mp allowed
+      simp only [simulateQ_query_bind, OracleQuery.input_query, OracleQuery.cont_query,
+        monadLift_self, step input hinput]
+      exact bind_congr fun answer => ih answer (hnext answer)
+
 /-- A simulation of a program whose queries all satisfy `P`, through a handler whose programs at
 the queries satisfying `P` make only queries satisfying `Q`, makes only queries satisfying `Q`. -/
 theorem AllQueriesSatisfy.simulateQ {τ : Type u} {spec' : OracleSpec.{u, u} τ}
