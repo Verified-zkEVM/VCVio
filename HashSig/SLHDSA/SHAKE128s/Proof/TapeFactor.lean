@@ -9,6 +9,7 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.DigestTape
 public import HashSig.SLHDSA.SHAKE128s.Proof.SplitPrefix
 public import HashSig.SLHDSA.SHAKE128s.Proof.RecorderView
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Tape
 
 /-!
 # The recording, read off a tape drawn in advance
@@ -70,6 +71,14 @@ does a class query made after the tape is spent. -/
 Both factorisations read their blocks head-first, so the two shapes a block takes under a bind
 are worth having as rewrites that go under a binder: a spent block disappears, and a block with
 one more answer splits into that answer and the rest. -/
+
+/-- Uniform hash draws form exactly the recursive FIPS hash-answer block. -/
+theorem iidTapeList_uniform_eq_padding (length : Nat) :
+    AnswerTape.iidTapeList ($ᵗ HashOutput : ProbComp HashOutput) length =
+      DigestTape.padding length := by
+  induction length with
+  | zero => rw [AnswerTape.iidTapeList_zero, DigestTape.padding]
+  | succ length ih => rw [AnswerTape.iidTapeList_succ, DigestTape.padding, ih]
 
 /-- A spent block disappears from the head of a bind. -/
 theorem padding_zero_bind {γ : Type} (continuation : List HashOutput → ProbComp γ) :
@@ -473,21 +482,10 @@ theorem evalDist_padding_set {γ : Type} :
           (padding length >>= fun tape =>
               ($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
                 continuation (tape.set index value)) := by
-  intro length
-  induction length with
-  | zero => intro index hindex; exact absurd hindex (by omega)
-  | succ remaining ih =>
-    intro index hindex continuation
-    cases index with
-    | zero =>
-      simp only [padding_succ_bind, List.set_cons_zero]
-      refine (OracleComp.EvalDistEq.bind_bind_swap _ (padding remaining)
-        fun value rest => continuation (value :: rest)).trans ?_
-      exact (OracleComp.EvalDistEq.bind_const ($ᵗ HashOutput : ProbComp HashOutput) _).symm
-    | succ smaller =>
-      simp only [padding_succ_bind, List.set_cons_succ]
-      refine EvalDistEq.bind_right _ fun head => ?_
-      exact ih smaller (by omega) fun rest => continuation (head :: rest)
+  intro length index hindex continuation
+  simpa only [iidTapeList_uniform_eq_padding] using
+    (AnswerTape.evalDist_iidTapeList_set ($ᵗ HashOutput : ProbComp HashOutput)
+      length index hindex continuation)
 
 /-- A cell read back after it was overwritten is the value it was overwritten with. -/
 theorem eq_of_getElem?_set (tape : List HashOutput) (index : Nat) (value other : HashOutput)

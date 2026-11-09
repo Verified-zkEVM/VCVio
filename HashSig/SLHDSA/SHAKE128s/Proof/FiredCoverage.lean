@@ -40,7 +40,7 @@ with probability at most `2 ^ -177` (`prob_helpedBy_le`). If there are two, two 
 pair of blocks so they are facts about the run rather than about the blocks' law:
 
 * `hcausal` — whether the run reaches target cell `index` does not depend on any cell at or after
-  it. `NoticingTape.prob_selected_hit_le_of_causal` needs only `cell = index`; the pairs here also
+  it. `AnswerTape.prob_selected_hit_le_of_causal` needs only `cell = index`; the pairs here also
   need later cells, because the helper may be read after the target was reached.
 * `hthin1`, `hthin2` — reaching a cell and then seeing it fire costs `2 ^ -128` per cell.
 -/
@@ -843,9 +843,11 @@ private theorem prob_firedCovered_and_good_le
     ((len outcome.2 : Nat) : ℝ≥0∞) with hexpectation
   set reach : Nat → ℝ≥0∞ := fun index =>
     Pr{let outcome ← blockRunOf run leftLength rightLength}[index < len outcome.2] with hreach
-  have hsum : ∑ index : Fin rightLength, reach index.val ≤ expectation :=
-    sum_prob_selected_le_expected_of run len
-      leftLength rightLength
+  have hsum : ∑ index : Fin rightLength, reach index.val ≤ expectation := by
+    simpa only [reach, expectation, NoticingTape.blockRunOf_eq_generalDraw] using
+        (AnswerTape.sum_prob_selected_le_expected_of
+          (DigestTape.padding leftLength) ($ᵗ HashOutput : ProbComp HashOutput)
+          run len rightLength)
   -- The three selected witness events.
   set eventA : (List HashOutput × List HashOutput) × ρ → Prop := fun outcome =>
     ∃ index : Fin rightLength, index.val < len outcome.2 ∧
@@ -892,11 +894,16 @@ private theorem prob_firedCovered_and_good_le
         (add_le_add le_rfl (prEvent_or_le _ _ _))
   -- The first-order term.
   have hfirstOrder : Pr{let x ← blockRunOf run leftLength rightLength}[eventA x] ≤
-      expectation * freshRate :=
-    NoticingTape.prob_exists_hit_le_expected_of_causal run len leftLength rightLength
-      goodBlock (fun leftTape value => BlockHit (cutoffOf leftTape) leftTape value)
-      freshRate hfresh
-      (fun index leftTape rightTape value => hcausal index index leftTape rightTape value le_rfl)
+      expectation * freshRate := by
+    simpa only [eventA, expectation, NoticingTape.blockRunOf_eq_generalDraw] using
+        (AnswerTape.prob_exists_hit_le_expected_of_causal
+          (A := HashOutput) (B := HashOutput)
+          (DigestTape.padding leftLength) ($ᵗ HashOutput : ProbComp HashOutput)
+          run len rightLength
+          goodBlock (fun leftTape value => BlockHit (cutoffOf leftTape) leftTape value)
+          freshRate hfresh
+          (fun index leftTape rightTape value =>
+            hcausal index index leftTape rightTape value le_rfl))
   -- One fired helper.
   set pairRate : ℝ≥0∞ := 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) * (1 / ((2 ^ 177 : Nat) : ℝ≥0∞))
     with hpairRate
