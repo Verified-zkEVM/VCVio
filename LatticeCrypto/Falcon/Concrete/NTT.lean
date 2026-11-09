@@ -5,10 +5,10 @@ Authors: Quang Dao
 -/
 
 module
-import Init.Internal.Order.While
 import Mathlib.Tactic.ReduceModChar
 public import LatticeCrypto.Falcon.Arithmetic
 public import LatticeCrypto.Ring.NTTCert
+public import LatticeCrypto.Ring.NTTLoop
 public import LatticeCrypto.Ring.NTTSplitCert
 public import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
 
@@ -168,18 +168,12 @@ pointwise product `multiplyNTTs`. -/
 /-! ## Correctness
 
 The loops of `butterflyNTT` and `butterflyInvNTT` compute the blocked butterfly stages of
-`LatticeCrypto.Ring.NTTCert`, layer by layer. So the transform laws follow from the structural
+`LatticeCrypto.Ring.NTTCert`, layer by layer (`ctForward_loop` and `ctInverse_loop` of
+`LatticeCrypto.Ring.NTTLoop`). So the transform laws follow from the structural
 certificates: the residue theorem `forwardStages_ofFn_dvd` and the stage roundtrip
 `scale_inverseStages_forwardStages`. -/
 
 open LatticeCrypto LatticeCrypto.NTTCert
-
-/-- A `for` loop over `[start : stop]` with a pure body is a left fold over `List.range'`. -/
-private theorem forIn_range {β : Type} (start stop : ℕ) (b : β) (f : β → ℕ → β) :
-    forIn (m := Id) [start : stop] b (fun j b => pure (.yield (f b j))) =
-      pure (List.foldl f b (List.range' start (stop - start))) := by
-  simp only [Std.Legacy.Range.forIn_eq_forIn_range', List.forIn_pure_yield_eq_foldl,
-    Std.Legacy.Range.size, Nat.add_sub_cancel, Nat.div_one]
 
 /-! ### Bit reversal -/
 
@@ -221,7 +215,7 @@ private theorem bitRevN_eq (logn i : ℕ) : bitRevN logn i = brv logn i := by
   rw [show brv 0 i = 0 from rfl, zero_mul, pow_zero, Nat.div_one, Nat.zero_add, Nat.sub_self,
     pow_zero, mul_one] at h
   unfold bitRevN
-  simp only [Id.run, forIn_range, pure_bind, Nat.sub_zero]
+  simp only [Id.run, forIn_range_pure, pure_bind, Nat.sub_zero]
   rw [h]
   rfl
 
@@ -305,12 +299,6 @@ private theorem primitiveRoot2N_pow_two_pow {logn : ℕ} (hlogn : logn ≤ 11) :
   rw [primitiveRoot2N, ← pow_mul, e, show (6144 : ℕ) = 6 * 1024 from rfl, pow_mul]
   exact (by reduce_mod_char : ((11 : ZMod 12289) ^ 6) ^ 1024 = -1)
 
-private theorem layer_shape (logn : ℕ) (s : Fin logn) :
-    2 ^ s.val * (2 * 2 ^ (logn - 1 - s.val)) = 2 ^ logn := by
-  rw [← pow_succ', ← pow_add]
-  congr 1
-  omega
-
 private theorem twiddle_index_lt {logn : ℕ} (s : Fin logn) (g : Fin (2 ^ s.val)) :
     2 ^ s.val + g.val < 2 ^ logn ∧ 2 ^ (s.val + 1) - 1 - g.val < 2 ^ logn := by
   have h : 2 ^ (s.val + 1) ≤ 2 ^ logn := Nat.pow_le_pow_right two_pos s.isLt
@@ -337,10 +325,7 @@ twiddles `zetaTable[2^s + g]` and the inverse twiddles `-zetaTable[2^(s+1) - 1 -
 loops. -/
 private def nttStage (logn : ℕ) (hlogn : logn ≤ 11) (s : Fin logn) :
     ScaledStage Coeff (Fin (2 ^ logn)) :=
-  butterflyStage (ctLayout (2 ^ s.val) (2 ^ (logn - 1 - s.val)) (layer_shape logn s))
-    (fun pair => (zetaTable logn).getD (2 ^ s.val + pair.1.val) 0)
-    (fun pair => -(zetaTable logn).getD (2 ^ (s.val + 1) - 1 - pair.1.val) 0)
-    (fun pair => twiddle_partner hlogn s pair.1)
+  ctStage rfl (fun k => (zetaTable logn).getD k 0) (twiddle_partner hlogn) s
 
 private def nttCoeffs (logn : ℕ) (hlogn : logn ≤ 11) (input : Fin (2 ^ logn) → Coeff) :
     Fin (2 ^ logn) → Coeff :=
@@ -414,260 +399,25 @@ private theorem ctPoint_right {logn : ℕ} (hlogn : logn ≤ 11) (s : Fin logn)
     show logn - (s.val + 1) = logn - 1 - s.val by omega,
     show 2 ^ (logn - 1 - s.val) * (2 * (1 * 2 ^ s.val + brv s.val g.val) + 1) =
       2 ^ logn + 2 ^ (logn - 1 - s.val) * (2 * brv s.val g.val + 1) by
-        rw [← layer_shape logn s]; ring,
+        rw [← ctLayer_shape logn s]; ring,
     pow_add, primitiveRoot2N_pow_two_pow hlogn, neg_one_mul]
 
 private theorem ctPoint_last {logn : ℕ} (i : Fin (2 ^ logn)) :
     ctPoint logn logn i.val = nttPoint logn i := by
   rw [ctPoint, nttPoint, Nat.sub_self, pow_zero, one_mul, bitRevN_eq]
 
-/-! ### Loops
-
-An array of size `2^logn` stands for the coefficient function it reads through `getD`. Inside a
-layer, `blockPartial` is the state after the butterflies of the first `r` offsets of the block at
-`start`, all earlier blocks done. -/
-
-/-- A `while` loop through the states `S 0, …, S n` that stops at `S n`. -/
-private theorem loop_eq {σ : Type} {body : Unit → σ → Id (ForInStep σ)} {n : ℕ} (S : ℕ → σ)
-    (hstep : ∀ i < n, body () (S i) = pure (.yield (S (i + 1))))
-    (hdone : body () (S n) = pure (.done (S n))) :
-    forIn Lean.Loop.mk (S 0) body = pure (S n) := by
-  have hu (b : σ) : forIn Lean.Loop.mk b body = (do
-      match ← body () b with
-      | .done b => pure b
-      | .yield b => forIn Lean.Loop.mk b body) :=
-    Lean.Loop.forIn_eq_of_monadTail
-  refine Nat.decreasingInduction (motive := fun i _ => forIn Lean.Loop.mk (S i) body = pure (S n))
-    (fun i hi ih => ?_) ?_ n.zero_le
-  · rw [hu, hstep i hi]
-    exact ih
-  · rw [hu, hdone]
-    rfl
-
-private theorem getD_ofFn {N : ℕ} (y : Fin N → Coeff) (i : ℕ) :
-    (Array.ofFn y).getD i 0 = coeffAt y i := by
-  by_cases h : i < N <;> simp [h, coeffAt_of_lt, coeffAt_of_le, Nat.le_of_not_lt]
-
-private theorem getD_set! (a : Array Coeff) (p i : ℕ) (v : Coeff) :
-    (a.set! p v).getD i 0 = if p = i ∧ p < a.size then v else a.getD i 0 := by
-  by_cases h : p = i
-  · subst h
-    by_cases hp : p < a.size <;> simp [hp]
-  · simp [h]
-
-private theorem eq_ofFn {N : ℕ} {a : Array Coeff} {y : Fin N → Coeff} (hs : a.size = N)
-    (h : ∀ i : Fin N, a.getD i 0 = y i) : a = Array.ofFn y := by
-  refine Array.ext (by simp [hs]) fun i h1 _ => ?_
-  simpa [h1] using h ⟨i, hs ▸ h1⟩
-
-private theorem toArray_eq_ofFn {N : ℕ} (v : Vector Coeff N) :
-    v.toArray = Array.ofFn fun i => v.get i :=
-  (congrArg Vector.toArray (Vector.ofFn_getElem (xs := v))).symm
-
-private def blockPartial {N : ℕ} (x F : Fin N → Coeff) (len start r : ℕ) : Fin N → Coeff :=
-  fun i => if i.val < start + r ∨ start + len ≤ i.val ∧ i.val < start + len + r then F i else x i
-
-private theorem coeffAt_blockPartial {N : ℕ} (x F : Fin N → Coeff) (len start r i : ℕ) :
-    coeffAt (blockPartial x F len start r) i =
-      if i < start + r ∨ start + len ≤ i ∧ i < start + len + r then coeffAt F i
-      else coeffAt x i := by
-  by_cases h : i < N <;> simp [h, coeffAt_of_lt, coeffAt_of_le, Nat.le_of_not_lt, blockPartial]
-
-private theorem blockPartial_zero {N : ℕ} (x F : Fin N → Coeff) (len : ℕ) :
-    blockPartial x F len 0 0 = x := by
-  funext i
-  exact ite_eq_right (by omega)
-
-private theorem blockPartial_len {N : ℕ} (x F : Fin N → Coeff) (len start : ℕ) :
-    blockPartial x F len start len = blockPartial x F len (start + 2 * len) 0 := by
-  funext i
-  simp only [blockPartial]
-  split_ifs <;> first | rfl | omega
-
-private theorem blockPartial_end {N len start r : ℕ} (x F : Fin N → Coeff) (h : N ≤ start + r) :
-    blockPartial x F len start r = F := by
-  funext i
-  exact ite_eq_left (Or.inl (by omega))
-
-private theorem foldl_blockPartial {N len start : ℕ} (x F : Fin N → Coeff)
-    (body : Array Coeff → ℕ → Array Coeff)
-    (hstep : ∀ r < len, body (Array.ofFn (blockPartial x F len start r)) (start + r) =
-      Array.ofFn (blockPartial x F len start (r + 1))) :
-    ∀ r ≤ len, List.foldl body (Array.ofFn (blockPartial x F len start 0)) (List.range' start r) =
-      Array.ofFn (blockPartial x F len start r)
-  | 0, _ => rfl
-  | r + 1, hr => by
-    rw [List.range'_1_concat, List.foldl_append, foldl_blockPartial x F body hstep r (by omega),
-      List.foldl_cons, List.foldl_nil, hstep r hr]
-
-/-- The forward butterfly of the loop at `j` and `j + len`. -/
-private def fwdBfly (z : Coeff) (len : ℕ) (b : Array Coeff) (j : ℕ) : Array Coeff :=
-  (b.set! (j + len) (b.getD j 0 - z * b.getD (j + len) 0)).set! j
-    (b.getD j 0 + z * b.getD (j + len) 0)
-
-/-- The inverse butterfly of the loop at `j` and `j + len`. -/
-private def invBfly (z : Coeff) (len : ℕ) (b : Array Coeff) (j : ℕ) : Array Coeff :=
-  (b.set! j (b.getD j 0 + b.getD (j + len) 0)).set! (j + len)
-    (z * (b.getD j 0 - b.getD (j + len) 0))
-
-/-- A butterfly at `start + r` takes the partial state at `r` to the one at `r + 1`. -/
-private theorem bfly_eq {N len start r : ℕ} {z : Coeff} {x F : Fin N → Coeff}
-    (hN : start + 2 * len ≤ N) (hr : r < len) :
-    let u := coeffAt x (start + r)
-    let v := coeffAt x (start + len + r)
-    let b := Array.ofFn (blockPartial x F len start r)
-    (coeffAt F (start + r) = u + z * v → coeffAt F (start + len + r) = u - z * v →
-      fwdBfly z len b (start + r) = Array.ofFn (blockPartial x F len start (r + 1))) ∧
-    (coeffAt F (start + r) = u + v → coeffAt F (start + len + r) = z * (u - v) →
-      invBfly z len b (start + r) = Array.ofFn (blockPartial x F len start (r + 1))) := by
-  have hu := coeffAt_blockPartial x F len start r (start + r)
-  have hv := coeffAt_blockPartial x F len start r (start + len + r)
-  rw [ite_eq_right (by omega)] at hu hv
-  dsimp only
-  constructor <;> intro hlo hhi
-  all_goals
-    simp only [fwdBfly, invBfly, Nat.add_right_comm start r len, getD_ofFn, hu, hv, ← hlo, ← hhi]
-    refine eq_ofFn (by simp) fun i => ?_
-    rw [← coeffAt_fin (blockPartial x F len start (r + 1))]
-    simp only [getD_set!, getD_ofFn, Array.size_set!, Array.size_ofFn, coeffAt_blockPartial]
-    split_ifs <;> first | rfl | omega | (congr 1; omega)
-
-/-- The body of the middle `while start < n` loops: the block at `start`, butterflies `bf k` at
-`j` and `j + len` for `j ∈ [start, start + len)`; then `k` becomes `kstep k`. -/
-private def midBody (N len : ℕ) (bf : ℕ → Array Coeff → ℕ → Array Coeff) (kstep : ℕ → ℕ)
-    (_ : Unit) (st : Array Coeff × ℕ × ℕ) : Id (ForInStep (Array Coeff × ℕ × ℕ)) :=
-  if st.2.2 < N then do
-    let a ← forIn [st.2.2 : st.2.2 + len] st.1 fun j b => pure (.yield (bf st.2.1 b j))
-    pure (.yield (a, kstep st.2.1, st.2.2 + 2 * len))
-  else pure (.done st)
-
-private theorem midBody_loop {N len G : ℕ} (hG : G * (2 * len) = N) (hlen : 0 < len)
-    {bf : ℕ → Array Coeff → ℕ → Array Coeff} {kstep kOf : ℕ → ℕ} (x F : Fin N → Coeff)
-    (hbf : ∀ g < G, ∀ r < len, g * (2 * len) + 2 * len ≤ N →
-      bf (kOf g) (Array.ofFn (blockPartial x F len (g * (2 * len)) r)) (g * (2 * len) + r) =
-        Array.ofFn (blockPartial x F len (g * (2 * len)) (r + 1)))
-    (hk : ∀ g < G, kstep (kOf g) = kOf (g + 1)) :
-    forIn Lean.Loop.mk (Array.ofFn x, kOf 0, 0) (midBody N len bf kstep) =
-      (pure (Array.ofFn F, kOf G, N) : Id _) := by
-  have h := loop_eq (n := G) (body := midBody N len bf kstep)
-    (fun g => (Array.ofFn (blockPartial x F len (g * (2 * len)) 0), kOf g, g * (2 * len)))
-    (fun g hg => by
-      have hle : g * (2 * len) + 2 * len ≤ N := by
-        rw [← hG, ← Nat.succ_mul]; exact Nat.mul_le_mul_right _ hg
-      simp only [midBody, show g * (2 * len) < N by omega, ite_true, forIn_range,
-        Nat.add_sub_cancel_left, pure_bind,
-        foldl_blockPartial x F _ (fun r hr => hbf g hg r hr hle) len le_rfl, blockPartial_len,
-        hk g hg, Nat.add_one_mul g])
-    (by simp only [midBody, hG, lt_irrefl, ite_false])
-  simpa only [Nat.zero_mul, blockPartial_zero, hG, blockPartial_end x F (Nat.le_add_right N 0)]
-    using h
-
-/-- The body of the outer `while` loops: while `cond len`, a layer of blocks of `2 * len`
-coefficients, butterflies `bf len k` at distance `len`; then `len` becomes `lstep len`. -/
-private def outerBody (N : ℕ) (cond : ℕ → Prop) [DecidablePred cond]
-    (bf : ℕ → ℕ → Array Coeff → ℕ → Array Coeff) (kstep lstep : ℕ → ℕ) (_ : Unit)
-    (st : Array Coeff × ℕ × ℕ) : Id (ForInStep (Array Coeff × ℕ × ℕ)) :=
-  if cond st.2.2 then do
-    let st' ← forIn Lean.Loop.mk (st.1, st.2.1, 0) (midBody N st.2.2 (bf st.2.2) kstep)
-    pure (.yield (st'.1, st'.2.1, lstep st.2.2))
-  else pure (.done st)
-
-/-- The body of the outer loop of `butterflyNTT`. -/
-private def fwdBody (logn : ℕ) :
-    Unit → Array Coeff × ℕ × ℕ → Id (ForInStep (Array Coeff × ℕ × ℕ)) :=
-  outerBody (2 ^ logn) (· ≥ 1) (fun len k => fwdBfly ((zetaTable logn).getD k 0) len) (· + 1)
-    (· / 2)
-
-/-- The body of the outer loop of `butterflyInvNTT`. -/
-private def invBody (logn : ℕ) :
-    Unit → Array Coeff × ℕ × ℕ → Id (ForInStep (Array Coeff × ℕ × ℕ)) :=
-  outerBody (2 ^ logn) (· ≤ 2 ^ logn / 2) (fun len k => invBfly (-(zetaTable logn).getD k 0) len)
-    (· - 1) (· * 2)
-
-/-- The outer loop through the layer states `(Y i, K i, L i)` for `i ≤ n`. -/
-private theorem outer_loop {N n : ℕ} {cond : ℕ → Prop} [DecidablePred cond]
-    {bf : ℕ → ℕ → Array Coeff → ℕ → Array Coeff} {kstep lstep : ℕ → ℕ}
-    (Y : ℕ → Fin N → Coeff) (K L : ℕ → ℕ) {a : Array Coeff} {y : Fin N → Coeff}
-    (ha : a = Array.ofFn (Y 0)) (hy : Y n = y)
-    (hmid : ∀ i < n, forIn Lean.Loop.mk (Array.ofFn (Y i), K i, 0)
-      (midBody N (L i) (bf (L i)) kstep) = pure (Array.ofFn (Y (i + 1)), K (i + 1), N))
-    (hcond : ∀ i ≤ n, cond (L i) ↔ i < n) (hL : ∀ i < n, lstep (L i) = L (i + 1)) :
-    (Id.run (forIn Lean.Loop.mk (a, K 0, L 0) (outerBody N cond bf kstep lstep))).1 =
-      Array.ofFn y := by
-  subst ha hy
-  rw [loop_eq (n := n) (fun i => (Array.ofFn (Y i), K i, L i))
-    (fun i hi => by
-      simp only [outerBody, (hcond i hi.le).2 hi, ite_true, hmid i hi, pure_bind, hL i hi])
-    (by simp only [outerBody, (hcond n le_rfl).trans (iff_false_intro (lt_irrefl n)), ite_false])]
-  rfl
-
-private theorem fwd_loop {logn : ℕ} (hlogn : logn ≤ 11) {a : Array Coeff}
-    {y : Fin (2 ^ logn) → Coeff} (ha : a = Array.ofFn y) :
-    (Id.run (forIn Lean.Loop.mk (a, 1, 2 ^ logn / 2) (fwdBody logn))).1 =
-      Array.ofFn (nttCoeffs logn hlogn y) :=
-  outer_loop (n := logn) (fun s => forwardStages ((List.ofFn (nttStage logn hlogn)).take s) y)
-    (2 ^ ·) (fun s => 2 ^ logn / 2 ^ (s + 1)) ha
-    (congrArg (forwardStages · _) (List.take_of_length_le List.length_ofFn.le))
-    (fun s hs => by
-      have hG := layer_shape logn ⟨s, hs⟩
-      let z (g : Fin (2 ^ s)) := (zetaTable logn).getD (2 ^ s + g.val) 0
-      rw [show 2 ^ logn / 2 ^ (s + 1) = 2 ^ (logn - 1 - s) by
-          rw [Nat.pow_div (by omega) two_pos]; congr 1; omega,
-        List.take_add_one, List.getElem?_ofFn, dite_eq_left hs, Option.toList_some,
-        forwardStages_append, pow_succ, mul_two]
-      exact midBody_loop hG (by positivity) (kOf := (2 ^ s + ·)) _ _ (fun g hg r hr hN =>
-        (bfly_eq hN hr).1 (coeffAt_forwardStage_ctLayout_left hG z _ ⟨g, hg⟩ hr)
-          (coeffAt_forwardStage_ctLayout_right hG z _ ⟨g, hg⟩ hr)) fun _ _ => Nat.add_assoc _ _ _)
-    (fun s _ => by
-      rw [ge_iff_le, Nat.one_le_div_iff (Nat.two_pow_pos _), Nat.pow_le_pow_iff_right one_lt_two]
-      omega)
-    fun s _ => by rw [Nat.div_div_eq_div_mul, ← pow_succ]
-
-private theorem inv_loop {logn : ℕ} (hlogn : logn ≤ 11) {a : Array Coeff}
-    {y : Fin (2 ^ logn) → Coeff} (ha : a = Array.ofFn y) :
-    (Id.run (forIn Lean.Loop.mk (a, 2 ^ logn - 1, 1) (invBody logn))).1 =
-      Array.ofFn (inverseStages (List.ofFn (nttStage logn hlogn)) y) :=
-  outer_loop (n := logn)
-    (fun i => inverseStages ((List.ofFn (nttStage logn hlogn)).drop (logn - i)) y)
-    (fun i => 2 ^ (logn - i) - 1) (2 ^ ·)
-    (ha.trans (by rw [Nat.sub_zero, List.drop_of_length_le List.length_ofFn.le]; rfl))
-    (by rw [Nat.sub_self]; rfl)
-    (fun i hi => by
-      obtain ⟨s, hs, rfl⟩ : ∃ s, s < logn ∧ i = logn - 1 - s := ⟨logn - 1 - i, by omega, by omega⟩
-      have hG := layer_shape logn ⟨s, hs⟩
-      let z (g : Fin (2 ^ s)) := -(zetaTable logn).getD (2 ^ (s + 1) - 1 - g.val) 0
-      rw [show logn - (logn - 1 - s) = s + 1 by omega, show logn - (logn - 1 - s + 1) = s by omega,
-        List.drop_eq_getElem_cons (i := s) (by simpa using hs), List.getElem_ofFn,
-        show 2 ^ s - 1 = 2 ^ (s + 1) - 1 - 2 ^ s by rw [pow_succ]; omega]
-      exact midBody_loop hG (by positivity) (kOf := (2 ^ (s + 1) - 1 - ·)) _ _ (fun g hg r hr hN =>
-        (bfly_eq hN hr).2 (coeffAt_inverseStage_ctLayout_left hG z _ ⟨g, hg⟩ hr)
-          (coeffAt_inverseStage_ctLayout_right hG z _ ⟨g, hg⟩ hr)) fun _ _ => Nat.sub_sub _ _ _)
-    (fun i _ => by
-      rw [Nat.le_div_iff_mul_le two_pos, ← pow_succ, Nat.pow_le_pow_iff_right one_lt_two]
-      omega)
-    fun i _ => (pow_succ 2 i).symm
-
-private theorem scale_loop {N : ℕ} (c : Coeff) (y : Fin N → Coeff) :
-    Id.run (forIn [0 : N] (Array.ofFn y) fun j b => pure (.yield (b.set! j (c * b.getD j 0)))) =
-      Array.ofFn (scaleCoeffs c y) := by
-  rw [forIn_range, Nat.sub_zero]
-  have h := foldl_blockPartial (len := N) (start := 0) y (scaleCoeffs c y)
-    (fun b j => b.set! j (c * b.getD j 0)) (fun r hr => by
-      refine eq_ofFn (by simp) fun i => ?_
-      rw [← coeffAt_fin (blockPartial y _ N 0 (r + 1))]
-      simp only [getD_set!, getD_ofFn, coeffAt_blockPartial, coeffAt_scaleCoeffs,
-        Array.size_ofFn, Nat.zero_add]
-      split_ifs <;> first | rfl | omega | (congr 2; omega)) N le_rfl
-  rwa [blockPartial_zero, blockPartial_end _ _ (Nat.zero_add N).ge] at h
+/-! ### Loops -/
 
 private theorem butterflyNTT_loops (logn : ℕ) (f : Rq (2 ^ logn)) :
     butterflyNTT logn f = ⟨Vector.ofFn fun i =>
-      (Id.run (forIn Lean.Loop.mk (f.toArray, 1, 2 ^ logn / 2) (fwdBody logn))).1.getD i 0⟩ :=
+      (Id.run (forIn Lean.Loop.mk (f.toArray, 1, 2 ^ logn / 2)
+        (ctForwardBody (2 ^ logn) fun k => (zetaTable logn).getD k 0))).1.getD i 0⟩ :=
   rfl
 
 private theorem butterflyInvNTT_loops (logn : ℕ) (fHat : Tq (2 ^ logn)) :
     butterflyInvNTT logn fHat = Vector.ofFn fun i => (Id.run (forIn [0 : 2 ^ logn]
-      (Id.run (forIn Lean.Loop.mk (fHat.coeffs.toArray, 2 ^ logn - 1, 1) (invBody logn))).1
+      (Id.run (forIn Lean.Loop.mk (fHat.coeffs.toArray, 2 ^ logn - 1, 1)
+        (ctInverseBody (2 ^ logn) fun k => (zetaTable logn).getD k 0))).1
       fun j b => pure (.yield (b.set! j (nInv logn * b.getD j 0))))).getD i 0 :=
   rfl
 
@@ -675,15 +425,17 @@ private theorem butterflyInvNTT_loops (logn : ℕ) (fHat : Tq (2 ^ logn)) :
 
 private theorem ntt_eq {logn : ℕ} (hlogn : logn ≤ 11) (f : Rq (2 ^ logn)) :
     ntt logn f = ⟨applyCoeffTransform (polyBackend (2 ^ logn)) (nttCoeffs logn hlogn) f⟩ := by
-  rw [ntt, butterflyNTT_loops, fwd_loop hlogn (toArray_eq_ofFn f)]
-  simp only [getD_ofFn, coeffAt_fin]
+  rw [ntt, butterflyNTT_loops,
+    ctForward_loop rfl _ (twiddle_partner hlogn) (vector_toArray_eq_ofFn f)]
+  simp only [getD_ofFn_eq_coeffAt, coeffAt_fin]
   rfl
 
 private theorem invNTT_eq {logn : ℕ} (hlogn : logn ≤ 11) (fHat : Tq (2 ^ logn)) :
     invNTT logn fHat =
       applyCoeffTransform (polyBackend (2 ^ logn)) (invNTTCoeffs logn hlogn) fHat.coeffs := by
-  rw [invNTT, butterflyInvNTT_loops, inv_loop hlogn (toArray_eq_ofFn fHat.coeffs), scale_loop]
-  simp only [getD_ofFn, coeffAt_fin]
+  rw [invNTT, butterflyInvNTT_loops,
+    ctInverse_loop rfl _ (twiddle_partner hlogn) (vector_toArray_eq_ofFn fHat.coeffs), scale_loop]
+  simp only [getD_ofFn_eq_coeffAt, coeffAt_fin]
   rfl
 
 /-- `invNTT` is a left inverse of `ntt`. -/
@@ -771,7 +523,7 @@ theorem ntt_coeff_eq_eval {logn : ℕ} (hlogn : logn ≤ 11) (f : Rq (2 ^ logn))
     (polyBackend (2 ^ logn)).coeff (ntt logn f).coeffs i =
       ((polyBackend (2 ^ logn)).toPolynomial f).eval (nttPoint logn i) := by
   have h := forwardStages_ofFn_dvd (N := (polyBackend (2 ^ logn)).degree) (k := logn)
-    (fun s => 2 ^ (logn - 1 - s.val)) (layer_shape logn)
+    (fun s => 2 ^ (logn - 1 - s.val)) (ctLayer_shape logn)
     (fun s g => (zetaTable logn).getD (2 ^ s.val + g.val) 0) (ctPoint logn) ctPoint_sq
     ctPoint_left (ctPoint_right hlogn) (nttStage logn hlogn) (fun _ => rfl)
     ((polyBackend (2 ^ logn)).coeff f) i.val i.isLt

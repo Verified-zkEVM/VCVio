@@ -32,6 +32,9 @@ normalization. At runtime, `@[implemented_by]` rebinds those public definitions 
 loop kernels, so execution keeps the intended `O(n log n)` / `O(n)` behavior. That compiler
 substitution remains the executable refinement boundary: the structural formulas mirror the loops,
 but this module does not yet prove the imperative `Array` programs extensionally equal to them.
+The `while`-loop lemmas of `LatticeCrypto.Ring.NTTLoop`, which close this boundary for ML-DSA and
+Falcon, do not apply directly: Algorithms 9 and 10 stop after seven of the eight layers and are
+written as range loops over an explicit list of layer lengths.
 
 ## Coefficient pairs and `MultiplyNTTs`
 

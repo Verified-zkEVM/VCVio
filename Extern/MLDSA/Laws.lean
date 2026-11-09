@@ -236,9 +236,9 @@ Thirteen `Primitives.Laws` fields are proven for the concrete instance at any ap
 set. The transform field is proved from the structural butterfly stages of
 `LatticeCrypto/Ring/NTTCert.lean` and the Cooley–Tukey residue theorem of
 `LatticeCrypto/Ring/NTTSplitCert.lean`, including `toHat_mul` for the pointwise `multiplyNTTs`.
-The proof uses no `native_decide`, and the runtime `ntt`/`invNTT` loop kernels remain an
-`implemented_by` refinement boundary. The remaining proofs introduce no additional
-project-specific trust assumptions. These fields are: the eight algebraic fields
+The proof uses no `native_decide`, and `ntt`/`invNTT` are the runtime loop kernels themselves.
+The remaining proofs introduce no additional project-specific trust assumptions. These fields are:
+the eight algebraic fields
 (`concrete_transform`, `concrete_high_low_decomp`, `concrete_lowBits_bound`, `concrete_hide_low`,
 `concrete_highBitsShift_injective`, `concrete_useHint_makeHint`, `concrete_power2Round_decomp`,
 `concrete_power2Round_bound`); the two byte-encoding fields `concrete_expandMask_bound` and

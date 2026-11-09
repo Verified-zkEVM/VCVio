@@ -211,8 +211,11 @@ pair `i` of `ntt f` is `f mod (X² − γᵢ)` (`MLKEM.Concrete.ntt_coeff_pair`)
 in-place `butterflyNTT` and `butterflyInvNTT` loops, proved equal to the blocked stages for
 `logn ≤ 11`, so `Falcon.Concrete.concreteNTTRingLaws` holds for the loops themselves and
 `Falcon.Concrete.concretePrimitives_transform` discharges `Falcon.Primitives.Laws.transform` for the
-concrete bundle. The remaining NTT refinement boundary is the `implemented_by` from the structural
-ML-DSA and ML-KEM `ntt` / `invNTT` to their `loopNTT` / `loopInvNTT` kernels.
+concrete bundle. ML-DSA's `ntt` and `invNTT` are likewise its `loopNTT` / `loopInvNTT` kernels; both
+schemes go through the shared `while`-loop lemmas `ctForward_loop` / `ctInverse_loop`
+(`LatticeCrypto/Ring/NTTLoop.lean`). The remaining NTT refinement boundary is the `implemented_by`
+from the structural ML-KEM `ntt` / `invNTT` to its `loopNTT` / `loopInvNTT` kernels, whose seven-layer
+range loops the shared lemmas do not cover.
 Mathlib supplies the twiddle half (`IsPrimitiveRoot` + `reduce_mod_char`) and the
 CRT half (`Ideal.quotientInfRingEquivPiQuotient` and friends); the Cooley–Tukey bit-reversal lemma is
 not in Mathlib or core; `forwardStages_ofFn_dvd` proves it without the CRT. See the lattice reading
@@ -784,13 +787,14 @@ ML-DSA uses nested-`Vector` `matVecMul`; `PolyMatrix.toMatrix` exists but no pro
    `change … ZMod 8380417`.
 
 **NTT trust surface (honest assessment).** What remains trusted is not an axiom but one
-`implemented_by` gap disclosed in the docstrings: the structural ML-DSA and ML-KEM `ntt` / `invNTT`
-compile to the mutable-loop kernels `loopNTT` / `loopInvNTT`, which are never shown extensionally
-equal to the structural stages. Pointwise multiplication is verified in all three schemes:
+`implemented_by` gap disclosed in the docstring: the structural ML-KEM `ntt` / `invNTT` compile to
+the mutable-loop kernels `loopNTT` / `loopInvNTT`, which are never shown extensionally equal to the
+structural stages. Pointwise multiplication is verified in all three schemes:
 `multiplyNTTs` is the FIPS 204 `MultiplyNTT` / FIPS 203 `MultiplyNTTs` table-driven body with no
 `implemented_by`, and `toHat_mul` is the theorem `ntt_negacyclicMul` rather than a definitional
-restatement. Falcon has no such gap: `butterflyNTT` / `butterflyInvNTT` are proved equal to the
-blocked stages for `logn ≤ 11`, and `Falcon.Concrete.concretePrimitives_transform` discharges the
+restatement. ML-DSA and Falcon have no such gap: their `ntt` / `invNTT` are the loop kernels,
+proved equal to the blocked stages by `ctForward_loop` / `ctInverse_loop`
+(`LatticeCrypto/Ring/NTTLoop.lean`; Falcon for `logn ≤ 11`), and `Falcon.Concrete.concretePrimitives_transform` discharges the
 `Falcon.Primitives.Laws.transform` field for the concrete bundle (the other `Laws` fields stay
 open). The twiddle half came from Mathlib (item 2); the CRT half is available there too
 (`Ideal.quotientInfRingEquivPiQuotient`, `Ideal.iInf_span_singleton`, `Polynomial.pairwise_coprime_X_sub_C`,
@@ -798,8 +802,10 @@ open). The twiddle half came from Mathlib (item 2); the CRT half is available th
 `IsPrimitiveRoot.card_nthRoots`; ML-KEM's quadratic factors are `AdjoinRoot (X² − C γ)`) but is not
 needed: the Cooley–Tukey bit-reversal lemma, which Mathlib and core lack (no `Nat.bitRev`, no FFT),
 is `forwardStages_ofFn_dvd` over the existing `ButterflyLayout`, stated as divisibility by each
-block's factor of `X^n + 1`. Verdict: *track* the remaining loop refinement; Falcon's loop lemmas
-have the loop structure of `loopNTT` / `loopInvNTT` and are the natural route.
+block's factor of `X^n + 1`. Verdict: *track* the remaining ML-KEM loop refinement. Its butterfly
+sweep matches the shared lemmas, but Algorithms 9 and 10 stop after seven of the eight layers and run
+as range loops over a list of layer lengths, so it needs a truncated `ctStage` and range-loop forms
+of `ctForward_loop` / `ctInverse_loop`.
 
 **Gaps confirmed** (`M:` grep): NTT / negacyclic convolution / skew-circulant (`Matrix.circulant` is
 cyclic only), bit reversal, `cyclotomic (2^(k+1)) = X^(2^k) + 1` as a stated lemma (2-line corollary
@@ -904,7 +910,7 @@ toolchain bump; none adds CI gating.
 | 7 | HashSig base-w `reverse` bridges to `Nat.digitsAppend`/`ofDigits`; `sum_le_card_nsmul`; `Forall₂` | data idioms | ≈150 lines of re-derived digit arithmetic |
 | 8 | cslib-inspired: dependent pairing lemma, finiteness-free `perfectSecrecy ↔ ciphertextRowsEqual`, Shannon `Nat.card K ≥ Nat.card M`; optionally a `SecretSharing` port reusing cslib's Lagrange lemma | crypto foundations | two missing textbook theorems and one missing generic lemma |
 | 9 | Prune the 0-reverse-dep `ToMathlib/Control` files; `Examples/{Regev,FrankingProtocol}.lean`; the 30 deprecated aliases; the 23 `BigOperators` opens | hygiene | dead surface |
-| 10 | Track items needing design: `QueryCount` monoid leak; cost-layer unification; the ML-DSA and ML-KEM NTT loop refinement (`loopNTT` / `loopInvNTT` behind `implemented_by`; the multiplication laws are proved for all three schemes, and Falcon's loops are proved directly); Poisson summation for the discrete Gaussian; matrix conventions; selective-expose pilot; `implicit_reducible` canary | design | issues, not sweep PRs |
+| 10 | Track items needing design: `QueryCount` monoid leak; cost-layer unification; the ML-KEM NTT loop refinement (`loopNTT` / `loopInvNTT` behind `implemented_by`; the multiplication laws are proved for all three schemes, and the ML-DSA and Falcon loops are proved directly); Poisson summation for the discrete Gaussian; matrix conventions; selective-expose pilot; `implicit_reducible` canary | design | issues, not sweep PRs |
 
 The tooling table below is deliberately last: nothing in it is urgent, and the maintainer's
 guardrails (no native rebuilds on the PR path, no convention gating by script) bound it.
@@ -952,7 +958,7 @@ audit before deletion (see Method).
 | 4 duplicates | this PR (#632) | |
 | 5 lattice | #634 | reviewed and queued; includes the explicit modulus-zero behavior change |
 | 9 hygiene | #647 (C1), #648 (C2) | merged; #648 retains the necessary ML-DSA/ML-KEM equality instances and adds an `Option.elim` measurability lemma |
-| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; cost-layer unification, the ML-DSA and ML-KEM NTT loop refinement, Poisson summation, and matrix conventions remain open |
+| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; cost-layer unification, the ML-KEM NTT loop refinement, Poisson summation, and matrix conventions remain open |
 | tooling | #649 (SHA pins, dependabot, templates), Track A PR (drivers, `check-imports.sh`, dead scripts, options) | `CODEOWNERS` was dropped on review: routing files are boilerplate for a small team |
 | gates | #641 | merged; tactic contract and test warnings are checked, with detailed policy in `docs/agents/probability.md` |
 
