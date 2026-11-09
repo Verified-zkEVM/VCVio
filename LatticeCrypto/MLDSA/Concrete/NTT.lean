@@ -14,6 +14,7 @@ public meta import Mathlib.Data.Fintype.Defs
 public meta import Mathlib.Data.ZMod.Defs
 public import LatticeCrypto.MLDSA.Arithmetic
 public import LatticeCrypto.Ring.NTTCert
+public import LatticeCrypto.Ring.NTTLoop
 public import LatticeCrypto.Ring.NTTSplitCert
 public import Mathlib.Algebra.BigOperators.Ring.Finset
 public import Mathlib.RingTheory.RootsOfUnity.PrimitiveRoots
@@ -30,10 +31,9 @@ Complementary bit-reversed twiddles make the inverse stages cancel the forward s
 `ζ^(2·brv(i) + 1)` (`ntt_coeff_eq_eval`). So `ntt` maps negacyclic multiplication to the pointwise
 product `multiplyNTTs` of FIPS 204 Algorithm 45 (`ntt_negacyclicMul`).
 
-Runtime execution of `ntt` / `invNTT` is rebound to the imperative kernels through
-`@[implemented_by]`. This is the executable refinement boundary. The structural formulas mirror
-the loops, but this module does not prove the imperative `Array` programs extensionally equal to
-them.
+`ntt` and `invNTT` are the in-place loop kernels `loopNTT` and `loopInvNTT` themselves. Their
+loops are proved equal to the blocked stages by the shared loop lemmas of
+`LatticeCrypto.Ring.NTTLoop`, so the code that runs is the code the laws are proved about.
 -/
 
 public section
@@ -147,32 +147,17 @@ def loopInvNTT (fHat : Tq) : Rq := Id.run do
     a := a.set! j (nInv * getZ a j)
   return Vector.ofFn fun i => getZ a i.val
 
-private theorem layer_shape :
-    ∀ s : Fin 8, 2 ^ s.val * (2 * (128 / 2 ^ s.val)) = polyBackend.degree := by
-  decide
-
 private abbrev NTTCoord := Fin polyBackend.degree
 
-private def layerLayout (s : Fin 8) :
-    LatticeCrypto.NTTCert.ButterflyLayout
-      (Fin (2 ^ s.val) × Fin (128 / 2 ^ s.val)) NTTCoord :=
-  LatticeCrypto.NTTCert.ctLayout (2 ^ s.val) (128 / 2 ^ s.val) (layer_shape s)
+private theorem degree_eq : 2 ^ 8 = polyBackend.degree := rfl
 
-private def nttStage (s : Fin 8) :
-    LatticeCrypto.NTTCert.ScaledStage Coeff NTTCoord :=
-  LatticeCrypto.NTTCert.butterflyStage (layerLayout s)
-    (fun pair => getZ zetaTable (2 ^ s.val + pair.1.val))
-    (fun pair => -getZ zetaTable (2 ^ (s.val + 1) - 1 - pair.1.val))
-    (by
-      intro pair
-      have h := zetaTable_layer_partner s pair.1
-      calc
-        -getZ zetaTable (2 ^ (s.val + 1) - 1 - pair.1.val) *
-            getZ zetaTable (2 ^ s.val + pair.1.val) =
-          -(getZ zetaTable (2 ^ s.val + pair.1.val) *
-            getZ zetaTable (2 ^ (s.val + 1) - 1 - pair.1.val)) := by ring
-        _ = -(-1) := by rw [h]
-        _ = 1 := by ring)
+/-- The inverse twiddle of group `g` in layer `s` times the forward twiddle is `1`. -/
+private theorem zetaTable_twiddle_partner (s : Fin 8) (g : Fin (2 ^ s.val)) :
+    -getZ zetaTable (2 ^ (s.val + 1) - 1 - g.val) * getZ zetaTable (2 ^ s.val + g.val) = 1 := by
+  rw [neg_mul, mul_comm, zetaTable_layer_partner s g, neg_neg]
+
+private def nttStage (s : Fin 8) : LatticeCrypto.NTTCert.ScaledStage Coeff NTTCoord :=
+  LatticeCrypto.NTTCert.ctStage degree_eq (getZ zetaTable) zetaTable_twiddle_partner s
 
 private def nttStages :
     List (LatticeCrypto.NTTCert.ScaledStage Coeff NTTCoord) :=
@@ -231,12 +216,6 @@ theorem nttPoint_pow_ringDegree (i : Fin ringDegree) : nttPoint i ^ ringDegree =
 private theorem nttStages_eq_ofFn : nttStages = List.ofFn nttStage := by
   simp [nttStages, List.ofFn_succ]
 
-private theorem nttStage_forward (s : Fin 8) :
-    (nttStage s).forward = LatticeCrypto.NTTCert.forwardStage
-      (LatticeCrypto.NTTCert.ctLayout (2 ^ s.val) (128 / 2 ^ s.val) (layer_shape s))
-      (fun p => getZ zetaTable (2 ^ s.val + p.1.val)) := by
-  rfl
-
 private theorem nInv_stageScalar :
     nInv * LatticeCrypto.NTTCert.stageScalar nttStages = 1 := by
   change ((8347681 * 256 : Nat) : ZMod 8380417) = ((1 : Nat) : ZMod 8380417)
@@ -269,15 +248,42 @@ private theorem nttCoeffs_zero : nttCoeffs 0 = 0 := by
   unfold nttCoeffs
   exact LatticeCrypto.NTTCert.forwardStages_zero nttStages
 
-/-- Proof-oriented forward NTT assembled from eight certified butterfly stages. -/
-@[implemented_by loopNTT]
-def ntt (f : Rq) : Tq :=
-  ⟨LatticeCrypto.NTTCert.applyCoeffTransform polyBackend nttCoeffs f⟩
+/-- The forward NTT, computed by the loop kernel `loopNTT`. -/
+def ntt (f : Rq) : Tq := loopNTT f
 
-/-- Proof-oriented inverse NTT assembled from the matching reverse stages and scaling. -/
-@[implemented_by loopInvNTT]
-def invNTT (fHat : Tq) : Rq :=
-  LatticeCrypto.NTTCert.applyCoeffTransform polyBackend invNTTCoeffs fHat.coeffs
+/-- The inverse NTT, computed by the loop kernel `loopInvNTT`. -/
+def invNTT (fHat : Tq) : Rq := loopInvNTT fHat
+
+private theorem loopNTT_loops (f : Rq) :
+    loopNTT f = ⟨Vector.ofFn fun i =>
+      (Id.run (forIn Lean.Loop.mk (f.toArray, 1, polyBackend.degree / 2)
+        (LatticeCrypto.NTTCert.ctForwardBody polyBackend.degree (getZ zetaTable)))).1.getD i 0⟩ :=
+  rfl
+
+private theorem loopInvNTT_loops (fHat : Tq) :
+    loopInvNTT fHat = Vector.ofFn fun i => (Id.run (forIn [0 : polyBackend.degree]
+      (Id.run (forIn Lean.Loop.mk (fHat.coeffs.toArray, polyBackend.degree - 1, 1)
+        (LatticeCrypto.NTTCert.ctInverseBody polyBackend.degree (getZ zetaTable)))).1
+      fun j b => pure (.yield (b.set! j (nInv * b.getD j 0))))).getD i 0 :=
+  rfl
+
+/-- `ntt` is the eight blocked butterfly stages. -/
+private theorem ntt_eq (f : Rq) :
+    ntt f = ⟨LatticeCrypto.NTTCert.applyCoeffTransform polyBackend nttCoeffs f⟩ := by
+  rw [ntt, loopNTT_loops, LatticeCrypto.NTTCert.ctForward_loop degree_eq _
+    zetaTable_twiddle_partner (LatticeCrypto.NTTCert.vector_toArray_eq_ofFn f)]
+  simp only [LatticeCrypto.NTTCert.getD_ofFn_eq_coeffAt, LatticeCrypto.NTTCert.coeffAt_fin]
+  rfl
+
+/-- `invNTT` is the eight inverse stages followed by scaling by `nInv`. -/
+private theorem invNTT_eq (fHat : Tq) :
+    invNTT fHat =
+      LatticeCrypto.NTTCert.applyCoeffTransform polyBackend invNTTCoeffs fHat.coeffs := by
+  rw [invNTT, loopInvNTT_loops, LatticeCrypto.NTTCert.ctInverse_loop degree_eq _
+    zetaTable_twiddle_partner (LatticeCrypto.NTTCert.vector_toArray_eq_ofFn fHat.coeffs),
+    LatticeCrypto.NTTCert.scale_loop]
+  simp only [LatticeCrypto.NTTCert.getD_ofFn_eq_coeffAt, LatticeCrypto.NTTCert.coeffAt_fin]
+  rfl
 
 /-- FIPS 204 Algorithm 45 (`MultiplyNTT`): the pointwise product in `T_q`. -/
 def multiplyNTTs (fHat gHat : Tq) : Tq :=
@@ -293,6 +299,7 @@ theorem coeff_multiplyNTTs (fHat gHat : Tq) (i : Fin ringDegree) :
 
 /-- The concrete inverse transform is a left inverse to the concrete forward transform. -/
 theorem invNTT_ntt (f : Rq) : invNTT (ntt f) = f := by
+  rw [invNTT_eq, ntt_eq]
   exact LatticeCrypto.NTTCert.applyCoeffTransform_comp
     nttCoeffs invNTTCoeffs invNTTCoeffs_nttCoeffs f
 
@@ -351,8 +358,9 @@ private theorem hzero_rq : polyBackend.coeff (0 : Rq) = 0 := by
   exact LatticeCrypto.vectorRing_zero_get i
 
 /-- The concrete NTT is additive. -/
-theorem ntt_add_toRq (f g : Rq) : (ntt (f + g) : Rq) = (ntt f : Rq) + (ntt g : Rq) :=
-  LatticeCrypto.NTTCert.applyCoeffTransform_add nttCoeffs hadd_rq nttCoeffs_add f g
+theorem ntt_add_toRq (f g : Rq) : (ntt (f + g) : Rq) = (ntt f : Rq) + (ntt g : Rq) := by
+  rw [ntt_eq, ntt_eq, ntt_eq]
+  exact LatticeCrypto.NTTCert.applyCoeffTransform_add nttCoeffs hadd_rq nttCoeffs_add f g
 
 /-- The concrete NTT is additive. -/
 theorem ntt_add (f g : Rq) : ntt (f + g) = ntt f + ntt g := by
@@ -361,8 +369,9 @@ theorem ntt_add (f g : Rq) : ntt (f + g) = ntt f + ntt g := by
   exact ntt_add_toRq f g
 
 /-- The concrete NTT preserves subtraction. -/
-theorem ntt_sub_toRq (f g : Rq) : (ntt (f - g) : Rq) = (ntt f : Rq) - (ntt g : Rq) :=
-  LatticeCrypto.NTTCert.applyCoeffTransform_sub nttCoeffs hsub_rq nttCoeffs_sub f g
+theorem ntt_sub_toRq (f g : Rq) : (ntt (f - g) : Rq) = (ntt f : Rq) - (ntt g : Rq) := by
+  rw [ntt_eq, ntt_eq, ntt_eq]
+  exact LatticeCrypto.NTTCert.applyCoeffTransform_sub nttCoeffs hsub_rq nttCoeffs_sub f g
 
 /-- The concrete NTT preserves subtraction. -/
 theorem ntt_sub (f g : Rq) : ntt (f - g) = ntt f - ntt g := by
@@ -374,15 +383,16 @@ theorem ntt_sub (f g : Rq) : ntt (f - g) = ntt f - ntt g := by
 theorem ntt_coeff_eq_eval (f : Rq) (i : Fin ringDegree) :
     polyBackend.coeff (ntt f).coeffs i = (polyBackend.toPolynomial f).eval (nttPoint i) := by
   have h := LatticeCrypto.NTTCert.forwardStages_ofFn_dvd (N := polyBackend.degree) (k := 8)
-    (fun s => 128 / 2 ^ s.val) layer_shape
+    (fun s => 2 ^ (8 - 1 - s.val))
+    (fun s => (LatticeCrypto.NTTCert.ctLayer_shape 8 s).trans degree_eq)
     (fun s g => getZ zetaTable (2 ^ s.val + g.val)) ctPoint ctPoint_sq ctPoint_left ctPoint_right
-    nttStage nttStage_forward (polyBackend.coeff f) i.val i.isLt
+    nttStage (fun _ => rfl) (polyBackend.coeff f) i.val i.isLt
   have hN : polyBackend.degree / 2 ^ 8 = 1 := rfl
   rw [hN, pow_one, mul_one, LatticeCrypto.NTTCert.blockPoly_zero_eq_toPolynomial,
     ← nttStages_eq_ofFn, LatticeCrypto.NTTCert.blockPoly_one (i := i), ctPoint_last,
     Polynomial.dvd_iff_isRoot, Polynomial.IsRoot.def, Polynomial.eval_sub, Polynomial.eval_C,
     sub_eq_zero] at h
-  rw [← h, ntt, LatticeCrypto.NTTCert.applyCoeffTransform,
+  rw [← h, ntt_eq, LatticeCrypto.NTTCert.applyCoeffTransform,
     LatticeCrypto.PolyBackend.coeff_build_apply, nttCoeffs]
 
 /-- The concrete NTT turns negacyclic multiplication into the pointwise product. -/
@@ -432,6 +442,8 @@ theorem concreteNTTRingLaws : NTTRingLaws concreteNTTRingOps where
   fromHat_toHat := invNTT_ntt
   toHat_fromHat := ntt_invNTT
   toHat_zero := by
+    change ntt 0 = 0
+    rw [ntt_eq]
     apply LatticeCrypto.TransformPoly.ext
     exact LatticeCrypto.NTTCert.applyCoeffTransform_zero nttCoeffs hzero_rq nttCoeffs_zero
   toHat_mul f g := ntt_negacyclicMul f g

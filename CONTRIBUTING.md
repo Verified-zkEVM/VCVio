@@ -182,10 +182,12 @@ The toolchain and Mathlib move together, and the other pins follow them. The ord
 
 Two places depend on core internals that carry no stability promise. Program logic uses
 `Lean.Meta.Sym` (see the *SymM Stability Note* in `docs/agents/program-logic.md`).
-`LatticeCrypto/Falcon/Concrete/NTT.lean` imports `Init.Internal.Order.While` for
-`Lean.Loop.forIn_eq_of_monadTail`, and its private `butterflyNTT_loops` / `butterflyInvNTT_loops`
-are `rfl` against the current `while` desugaring. A change to either fails the build in that file
-rather than weakening a statement; repair the loop lemmas there.
+`LatticeCrypto/Ring/NTTLoop.lean` imports `Init.Internal.Order.While` for
+`Lean.Loop.forIn_eq_of_monadTail`, and the private `rfl` lemmas `butterflyNTT_loops` /
+`butterflyInvNTT_loops` (`LatticeCrypto/Falcon/Concrete/NTT.lean`) and `loopNTT_loops` /
+`loopInvNTT_loops` (`LatticeCrypto/MLDSA/Concrete/NTT.lean`) match the current `while`
+desugaring against its loop bodies. A change to either fails the build in those files rather than
+weakening a statement; repair the loop lemmas there.
 
 ## Style Notes
 
