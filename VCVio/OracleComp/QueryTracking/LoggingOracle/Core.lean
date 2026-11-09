@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2024 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Devon Tuma, Quang Dao, Alexander Hicks, Chung Thai Nguyen, Yuxi Zheng
+Authors: Devon Tuma, Quang Dao, Alexander Hicks
 -/
 
 module
@@ -858,8 +858,7 @@ lemma withQueryLog_liftComp_inl {ι₁ ι₂ : Type} {oSpec : OracleSpec ι₁} 
           simulateQ impl (liftM (oSpec.query t) : OracleComp oSpec _).withQueryLog := by
     simp only [simulateQ_spec_query, hi, withQueryLog_query, simulateQ_bind, simulateQ_pure,
       map_bind, map_pure]
-    erw [withQueryLog_query]
-    rfl
+    simp [withQueryLog]
   simpa only [liftComp_def, map_eq_bind_pure_comp, Function.comp_apply, Function.comp_def,
     QueryLog.inl, impl, withQueryLog, OracleSpec.loggingOracle] using
     withQueryLog_simulateQ_of_query impl (fun e => ⟨.inl e.1, e.2⟩) hquery X

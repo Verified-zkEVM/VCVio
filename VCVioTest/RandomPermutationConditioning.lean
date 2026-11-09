@@ -6,14 +6,12 @@ Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù
 
 module
 
-public import VCVio
+public import VCVio.OracleComp.Constructions.RandomPermutation.Conditioning
 
 /-!
 # Uniform permutations extending a finite trace
 
-A fresh edge programmed by an output swap sends the uniform permutation to the uniform permutation
-extending that edge, and the swap installs the edge. Uniform preimage resampling keeps the uniform
-law.
+Sequential swaps retain both programmed edges even when one source is an earlier target.
 -/
 
 public section
@@ -28,26 +26,23 @@ variable {α : Type}
 theorem extensions_nil_nonempty : Nonempty (Extensions ([] : List (α × α))) :=
   ⟨⟨1, by simp⟩⟩
 
-/-- Every fixed edge is fresh for the empty trace. -/
-theorem freshProgram_singleton (x y : α) : FreshProgram [] [(x, y)] where
-  sourcesNodup := by simp
-  targetsNodup := by simp
-  inputsFresh := by simp
-  outputsFresh := by simp
-
-example [DecidableEq α] (p : Equiv.Perm α) (x y : α) : install p [(x, y)] x = y := by
-  simp [install]
-
-example [DecidableEq α] [Fintype α] (x y : α) :
-    (letI : MeasurableSpace (Equiv.Perm α) := ⊤;
-    𝒟[(fun p => install p [(x, y)]) <$> uniformPermutations [] extensions_nil_nonempty] =
-      𝒟[uniformPermutations ([] ++ [(x, y)])
-        (extensions_append_nonempty _ _ (freshProgram_singleton x y) extensions_nil_nonempty)]) :=
-  map_install_uniformPermutations _ _ (freshProgram_singleton x y) extensions_nil_nonempty
-
-example {A B : Type} [DecidableEq A] [Fintype B] [SampleableType B] [MeasurableSpace B]
-    [MeasurableSingletonClass B] (ψ : B → A) (hψ : Function.Surjective ψ) :
-    𝒟[do let b ← $ᵗ B; sampleUniformPreimage ψ hψ (ψ b)] = 𝒟[$ᵗ B] :=
-  bind_sampleUniformPreimage_eq_uniform ψ hψ
+/-- The source `1` of the second edge is the first edge's target. The fresh-program law must
+allow this overlap and retain both constraints after sequential swaps. -/
+example :
+    Pr{let p ← (fun p : Equiv.Perm (Fin 3) => install p [(0, 1), (1, 2)]) <$>
+      uniformPermutations [] extensions_nil_nonempty}[p 0 = 1 ∧ p 1 = 2] = 1 := by
+  have hfresh : FreshProgram ([] : List (Fin 3 × Fin 3)) [(0, 1), (1, 2)] := by
+    constructor <;> simp
+  have hdist := map_install_uniformPermutations [] [(0, 1), (1, 2)] hfresh
+    extensions_nil_nonempty
+  rw [(evalDistEq_iff_evalDist_eq.mpr hdist).prEvent_eq]
+  let _ := extensions_append_nonempty [] [(0, 1), (1, 2)] hfresh extensions_nil_nonempty
+  let _ := SampleableType.ofFintype (Extensions ([] ++ [(0, 1), (1, 2)] : List (Fin 3 × Fin 3)))
+  simp only [uniformPermutations, uniformExtensions, prEvent_map]
+  change Pr{let p ← $ᵗ (Extensions ([] ++ [(0, 1), (1, 2)] : List (Fin 3 × Fin 3)))}[
+    p.1 0 = 1 ∧ p.1 1 = 2] = 1
+  apply (SampleableType.prEvent_uniformSample_eq_one_iff _).mpr
+  intro p
+  exact ⟨p.2 (0, 1) (by simp), p.2 (1, 2) (by simp)⟩
 
 end VCVioTest.RandomPermutationConditioning

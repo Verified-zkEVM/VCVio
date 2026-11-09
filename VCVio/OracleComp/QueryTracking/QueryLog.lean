@@ -1,8 +1,9 @@
 /-
 Copyright (c) 2024 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Chung Thai Nguyen
+Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù
 -/
+
 module
 
 public import VCVio.OracleComp.Coercions.SubSpec.Routing
@@ -76,7 +77,7 @@ namespace OracleSpec.QueryLog
 variable {ι κ ν : Type} {a : OracleSpec ι} {b : OracleSpec κ} {c : OracleSpec ν}
 
 /-- Exchange the last two oracle slots in a logged query-answer pair. -/
-def swapRightEntry : Sigma ((a + b) + c) → Sigma ((a + c) + b)
+@[expose] def swapRightEntry : Sigma ((a + b) + c) → Sigma ((a + c) + b)
   | ⟨.inl (.inl q), r⟩ => ⟨.inl (.inl q), r⟩
   | ⟨.inl (.inr q), r⟩ => ⟨.inr q, r⟩
   | ⟨.inr q, r⟩ => ⟨.inl (.inr q), r⟩

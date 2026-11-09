@@ -50,6 +50,13 @@ namespace discreteTVDist
 
 variable [EvalDistSemantics m]
 
+/-- On a discrete measurable space, choosing the discrete σ-algebra does not change TV. -/
+theorem eq_measureTVDist [MeasurableSpace α] [DiscreteMeasurableSpace α] (mx my : m α) :
+    discreteTVDist mx my = measureTVDist mx my := by
+  have h : ‹MeasurableSpace α› = ⊤ := top_unique fun _ _ => MeasurableSet.of_discrete
+  cases h
+  rfl
+
 @[simp]
 theorem self (mx : m α) : discreteTVDist mx mx = 0 := by
   let : MeasurableSpace α := ⊤

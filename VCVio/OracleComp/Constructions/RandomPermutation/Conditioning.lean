@@ -356,7 +356,7 @@ theorem map_programExtension_uniformAnswerFiber (trace : List (α × α))
         (extensions_cons_nonempty trace x z htrace)]) := by
   classical
   let : MeasurableSpace (Extensions ((x.1, z.1) :: trace)) := ⊤
-  let _ := OracleComp.UniformPreimage.preimageNonempty (answer trace x)
+  let _ := OracleComp.UniformPreimage.preimage_nonempty (answer trace x)
     (answer_surjective trace x htrace) y
   let _ : SampleableType (AnswerFiber trace x y) := SampleableType.ofFintype _
   let _ := extensions_cons_nonempty trace x z htrace

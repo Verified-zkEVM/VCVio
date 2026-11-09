@@ -39,7 +39,7 @@ variable {A B : Type}
 abbrev Preimage (ψ : B → A) (a : A) := { b : B // ψ b = a }
 
 /-- Surjectivity provides a canonical nonempty witness for each fiber. -/
-theorem preimageNonempty (ψ : B → A) (hψ : Function.Surjective ψ) (a : A) :
+theorem preimage_nonempty (ψ : B → A) (hψ : Function.Surjective ψ) (a : A) :
     Nonempty (Preimage ψ a) := by
   rcases hψ a with ⟨b, rfl⟩
   exact ⟨⟨b, rfl⟩⟩
@@ -50,7 +50,7 @@ variable [DecidableEq A] [Fintype B]
 (`SampleableType.ofFintype`). -/
 @[expose] noncomputable def sampleUniformPreimage (ψ : B → A) (hψ : Function.Surjective ψ) (a : A) :
     ProbComp B :=
-  letI := preimageNonempty ψ hψ a
+  letI := preimage_nonempty ψ hψ a
   letI : SampleableType (Preimage ψ a) := SampleableType.ofFintype _
   Subtype.val <$> ($ᵗ (Preimage ψ a))
 
@@ -60,7 +60,7 @@ theorem sampleUniformPreimage_apply [MeasurableSpace B] [MeasurableSingletonClas
     (ψ : B → A) (hψ : Function.Surjective ψ) (a : A) (b : B) :
     𝒟[sampleUniformPreimage ψ hψ a] {b} =
       if ψ b = a then (Fintype.card (Preimage ψ a) : ℝ≥0∞)⁻¹ else 0 := by
-  let _ := preimageNonempty ψ hψ a
+  let _ := preimage_nonempty ψ hψ a
   let _ : SampleableType (Preimage ψ a) := SampleableType.ofFintype _
   let _ : MeasurableSpace (Preimage ψ a) := ⊤
   rw [sampleUniformPreimage, evalDist_map_of_discrete,
@@ -96,7 +96,7 @@ theorem bind_sampleUniformPreimage_eq_uniform [SampleableType B] [MeasurableSpac
   intro b
   let c : ℝ≥0∞ := (Fintype.card (Preimage ψ (ψ b)) : ℝ≥0∞)⁻¹
   have hcard : (Fintype.card (Preimage ψ (ψ b)) : ℝ≥0∞) ≠ 0 := by
-    let _ := preimageNonempty ψ hψ (ψ b)
+    let _ := preimage_nonempty ψ hψ (ψ b)
     exact_mod_cast Fintype.card_ne_zero
   let s : Finset B := Finset.univ.filter fun b' => ψ b' = ψ b
   have hs_card : s.card = Fintype.card (Preimage ψ (ψ b)) := by
@@ -181,7 +181,7 @@ theorem discreteTVDist_bind_sampleUniformPreimage_uniform_eq_discreteTVDist_map
     rw [hb.2]
   rw [Finset.sum_congr rfl hfib, Finset.sum_const, nsmul_eq_mul, ← Fintype.card_subtype]
   have hc_pos : (0 : ℝ) < (Fintype.card (Preimage ψ a) : ℝ) := by
-    have : Nonempty (Preimage ψ a) := preimageNonempty ψ hψ a
+    have : Nonempty (Preimage ψ a) := preimage_nonempty ψ hψ a
     exact_mod_cast Fintype.card_pos
   rw [← abs_of_pos hc_pos, ← abs_mul, mul_sub, abs_of_pos hc_pos]
   rw [mul_left_comm _ (Fintype.card A : ℝ)⁻¹,

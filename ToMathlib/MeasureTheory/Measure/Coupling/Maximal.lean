@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 Devon Tuma. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Devon Tuma, Chung Thai Nguyen, Yuxi Zheng
+Authors: Devon Tuma
 -/
 
 module
@@ -22,8 +22,7 @@ puts the overlap on the diagonal and spreads the residual masses independently, 
 Singleton domination by a measure concentrated on a finite set gives measure domination. On a
 finite type, total variation between probability measures is half the L1 distance of their point
 masses. Two probability measures differ in total variation by at most the missing mass of any
-common lower measure; in particular, two that agree on an event `G` differ by at most the mass of
-`Gᶜ`.
+common lower measure.
 -/
 
 public section
