@@ -18,12 +18,10 @@ EUF-NMA advantage of the short-key and seed-derived schemes by MLWE and SelfTarg
 bridge. The uniform-matrix MLWE problem is reached in the random-oracle model for `ExpandA` by
 `MLDSA.NMA.nma_security_rom` (`LatticeCrypto.MLDSA.SecurityExpandARO`).
 
-The three CMA theorems compose the CMA-to-NMA engine with these legs. They are conditional, and no
+The two CMA theorems compose the CMA-to-NMA engine with these legs. They are conditional, and no
 instance of them below `1` is proved at a FIPS 204 parameter set, as *Limitations* below explains.
 `euf_cma_security_of_nma_short` uses the short-model NMA leg and `euf_cma_security_of_nma_fips` the
-seed-model leg `nma_security_fips`. `euf_cma_security_of_nma_fips_hvzkReal` discharges the latter's
-HVZK hypothesis at `ζ_zk = 0` with `hvzkSimulatorReal` under `Primitives.Laws`, for which
-`Extern/MLDSA/NonVacuity.lean` holds the approved-parameter witness `mldsa_laws_inhabited`.
+seed-model leg `nma_security_fips`. Both take the simulator and its HVZK error as hypotheses.
 
 ## Limitations
 
@@ -35,10 +33,19 @@ The CMA theorems take hypotheses that are not proved at any FIPS 204 parameter s
   probability is proved.
 - **`hGuess`, the commitment-guessing bound.** The only bound proved is `ε = 1`. A useful `ε` needs
   the min-entropy of `HighBits(A·y)` on good keys, for `y` drawn from the mask box.
-- **`hhvzk` in the short model.** The withheld key part `t₀` is not determined by the public key
-  across material-valid pairs, so the construction of `hvzkSimulatorReal` does not carry over to
-  `identificationSchemeShort`, and no witness below `ζ_zk = 1` has been constructed. The seed-model
-  `euf_cma_security_of_nma_fips_hvzkReal` has `ζ_zk = 0`.
+- **`hhvzk`, the HVZK hypothesis.** No efficient simulator is constructed in either model.
+  - In the seed model, `idsWithAbort_hvzk` makes `hvzkSimulatorReal` perfect, but that simulator
+    recovers `t₀` from the public key by a search over seeds (`recoverT0`). In
+    `euf_cma_security_of_nma_fips` the reductions would run the search, and `expandSDistinguisher`
+    could use it to tell the seed-derived keys of the real branch from the independently sampled
+    keys of the ideal branch: on the latter `recoverT0` returns `0`, so every simulated signature
+    carries an all-zero hint. The key-expansion term could then be as large as the forger's own
+    advantage, so no theorem here instantiates `hhvzk` with that simulator.
+  - In the short model `t₀` is not determined by the public key across material-valid pairs, so
+    the construction of `hvzkSimulatorReal` does not carry over to `identificationSchemeShort`,
+    and no witness below `ζ_zk = 1` has been constructed.
+  - Taking `t₀`, or the full `t`, as part of the public statement, as the literature does, would
+    let a simulator read it in polynomial time.
 
 The statements also stop short of FIPS 204 in their format and hardness problems:
 
@@ -455,9 +462,8 @@ theorem euf_cma_security_of_nma_short {Sample : Type}
   exact le_trans hcma (add_le_add hnma le_rfl)
 
 /-- **EUF-CMA security of the commitment-carrying ML-DSA signature over seed-derived keys.**
-Conditional on `hAbort`, `hGuess` and `hhvzk`; `euf_cma_security_of_nma_fips_hvzkReal` discharges
-`hhvzk` at `ζ_zk = 0`, and the other two are not proved at any FIPS 204 parameter set (module
-docstring, *Limitations*).
+Conditional on `hAbort`, `hGuess` and `hhvzk`, which are not proved at any FIPS 204 parameter set,
+`hhvzk` not for any efficient simulator (module docstring, *Limitations*).
 
 The seed-model counterpart of `euf_cma_security_of_nma_short`: the same three-step
 composition (`FiatShamirWithAbort.euf_cma_to_nma`, the bridge
@@ -466,8 +472,9 @@ NMA leg), over the FIPS-shaped key generation `keygen0` and the seed-tagged sche
 `identificationScheme`, with `nma_security_fips` as the NMA leg. Relative to the short model
 the bound gains the advantage of `expandSDistinguisher` in the `ExpandS` replacement hop
 (`expandSAdvantage`), at the forging strategy of `simulatedEufNmaAdv`; in
-exchange the HVZK hypothesis is about the seed-tagged scheme, for which `idsWithAbort_hvzk`
-supplies a perfect simulator — see `euf_cma_security_of_nma_fips_hvzkReal`.
+exchange the HVZK hypothesis is about the seed-tagged scheme. `idsWithAbort_hvzk` gives a perfect
+simulator for it, but not an efficient one, and with that simulator the key-expansion term could be
+as large as the forger's own advantage (module docstring, *Limitations*).
 
 **Scope: commitment-carrying, not the end-to-end FIPS CMA statement.** As in the short model, the
 signature carries the commitment; the conversion to the FIPS 204 signature format costs `qS` extra
@@ -538,68 +545,6 @@ theorem euf_cma_security_of_nma_fips {Sample : Type}
     (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims) hr M
       maxAttempts sim adv)
   exact le_trans hcma (add_le_add hnma le_rfl)
-
-/-- `euf_cma_security_of_nma_fips` with the HVZK hypothesis discharged at `ζ_zk = 0`. Conditional on
-`hAbort` and `hGuess`, which are not proved at any FIPS 204 parameter set (module docstring,
-*Limitations*).
-
-Under the primitive laws `h_laws`, `idsWithAbort_hvzk` makes `hvzkSimulatorReal` a perfect simulator
-of the honest prover on valid keys, so the HVZK term of the loss vanishes. -/
-theorem euf_cma_security_of_nma_fips_hvzkReal {Sample : Type}
-    (h_laws : Primitives.Laws prims nttOps)
-    (mlwe : LearningWithErrors.Problem Sample (RqVec p.l) (RqVec p.k))
-    (maxAttempts : ℕ)
-    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
-    (hGen : hr.gen = keygen0 p prims)
-    (hrS : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
-    (hGenS : hrS.gen = keygenShort p prims)
-    (qS qH : ℕ) (ε p_abort δ : ℝ)
-    (hε : 0 ≤ ε) (hδ : 0 ≤ δ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
-    (Good : PublicKey p prims → SecretKey p → Prop)
-    (hGood : Pr{let xw ← hr.gen}[¬ Good xw.1 xw.2] ≤
-      ENNReal.ofReal δ)
-    (hGuess : ∀ pk sk, Good pk sk → ∀ cm : Commitment p prims,
-      Pr{let x ← Prod.fst <$> (identificationScheme p prims).commit pk sk}[x = cm] ≤
-        ENNReal.ofReal ε)
-    (hAbort : ∀ pk sk, Good pk sk →
-      Pr{let x ← (identificationScheme p prims).honestExecution pk sk}[x = none] ≤
-        ENNReal.ofReal p_abort)
-    (adv : SignatureAlg.UnforgeableAdversary
-      (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts))
-    (hQ : ∀ pk, FiatShamir.signHashQueryBound M
-      (S' := Option (Commitment p prims × Response p prims)) (oa := adv.main pk) qS qH)
-    (εbridge : ℝ≥0∞)
-    (bridge : (PublicKey p prims →
-        OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
-          (M × Option (Commitment p prims × Response p prims))) →
-      LearningWithErrors.Adversary mlwe)
-    (hMlweBridge : ∀ (main : PublicKey p prims →
-        OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
-          (M × Option (Commitment p prims × Response p prims))),
-      LearningWithErrors.advantage (mldsaMLWEShort p prims)
-          (distinguisherBShort p prims hrS maxAttempts main) ≤
-        LearningWithErrors.advantage mlwe (bridge main) + εbridge) :
-    SignatureAlg.unforgeableAdvantage
-        (FiatShamirWithAbort.runtime
-          (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
-      LearningWithErrors.advantage mlwe
-          (bridge (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims) hr M
-            maxAttempts (hvzkSimulatorReal p prims) adv).main) + εbridge +
-        SelfTargetMSIS.advantage (extractorCShort p prims
-          (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims) hr M
-            maxAttempts (hvzkSimulatorReal p prims) adv).main) +
-        expandSAdvantage p prims (expandSDistinguisher p prims hr maxAttempts
-          (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims) hr M
-            maxAttempts (hvzkSimulatorReal p prims) adv).main) +
-        ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss qS qH ε p_abort 0 δ hp) :=
-  euf_cma_security_of_nma_fips p prims mlwe maxAttempts hr hGen hrS hGenS
-    (hvzkSimulatorReal p prims) 0 le_rfl
-    qS qH ε p_abort δ hε hδ hp₀ hp Good hGood
-    (fun pk sk hrel _ => by
-      rw [ENNReal.ofReal_zero]
-      exact ((identificationScheme p prims).perfectHVZK_iff_hvzk_zero _).mp
-        (idsWithAbort_hvzk p prims h_laws) pk sk hrel)
-    hGuess hAbort adv hQ εbridge bridge hMlweBridge
 
 end Headline
 
