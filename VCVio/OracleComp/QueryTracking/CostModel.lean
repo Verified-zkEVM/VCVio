@@ -38,6 +38,10 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 
 ## Key Results
 
+- `support_costDist_eq_range_path`: The reachable `(output, totalCost)` pairs are the outputs and
+  charges of the completed paths of `oa`.
+- `worstCaseCostBound_iff_forall_charge_le`: A worst-case bound is a bound on the charge of every
+  completed path; with signed weights this is weaker than a bound on every prefix.
 - `fst_map_costDist`: Cost instrumentation doesn't change the output distribution.
 - `costDist_pure`, `costDist_bind`, `costDist_query`, `costDist_map`: Instrumentation equations.
 - `worstCaseCostBound_map_iff`: Pure observations preserve and reflect query-cost bounds.
@@ -135,6 +139,16 @@ theorem fst_map_costDist [AddCommMonoid ω] (oa : OracleComp spec α) (cm : Cost
     Prod.fst <$> costDist oa cm = oa :=
   fst_map_run_simulateQ_addCostOracle cm.queryCost oa
 
+/-- **Completed paths.** The reachable `(output, totalCost)` pairs of the instrumented run are
+the outputs of the completed paths of `oa` with their charges under `cm`. -/
+theorem support_costDist_eq_range_path [AddCommMonoid ω] (oa : OracleComp spec α)
+    (cm : CostModel spec ω) :
+    support (costDist oa cm) = Set.range fun p : PFunctor.FreeM.Path oa =>
+      (PFunctor.FreeM.output oa p,
+        Multiplicative.ofAdd (PFunctor.FreeM.Path.charge cm.queryCost oa p)) := by
+  rw [costDist, instrumentedRun, QueryImpl.withAddCost_eq_withChargeW]
+  exact PFunctor.Handler.supp_run_liftM_id_withChargeW cm.queryCost oa
+
 
 /-! ## Expected Cost -/
 
@@ -202,6 +216,16 @@ theorem worstCaseCostBound_iff_support_bound [AddCommMonoid ω] [Preorder ω]
     WorstCaseCostBound oa cm bound ↔
       ∀ z ∈ support (costDist oa cm), Multiplicative.toAdd z.2 ≤ bound := by
   unfold WorstCaseCostBound costDist instrumentedRun AddWriterT.PathwiseCostAtMost
+  rfl
+
+/-- A worst-case cost bound bounds the charge of every completed path. It says nothing about
+prefixes: with negative charges, a prefix may exceed a budget that every completed path meets. -/
+theorem worstCaseCostBound_iff_forall_charge_le [AddCommMonoid ω] [Preorder ω]
+    (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) :
+    WorstCaseCostBound oa cm bound ↔
+      ∀ p : PFunctor.FreeM.Path oa, PFunctor.FreeM.Path.charge cm.queryCost oa p ≤ bound := by
+  rw [worstCaseCostBound_iff_support_bound, support_costDist_eq_range_path,
+    Set.forall_mem_range]
   rfl
 
 /-- A pure result observation preserves and reflects a complete-path query-cost bound. -/
