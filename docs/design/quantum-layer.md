@@ -126,9 +126,17 @@ needs separate treatment.
 
 ### 4. Classical algorithms with private randomness
 
-`OracleComp.toQuantum` embeds algorithms whose only oracle is the random function. Algorithms that
-also sample their own coins (`OracleComp (unifSpec + (X →ₒ Y)) α`) need a classical sampling
-command or a second runtime that samples, with the agreement theorem extended accordingly.
+`OracleComp.toQuantumAt` with `QComp.coinImpl` runs a classical sampler `oa : ProbComp α`
+inside any quantum runtime. `branch_run₂_toQuantumAt_coinImpl` proves that its branch at `a` is
+exactly `Pr{let x ← oa}[x = a]` (converted to a complex scalar) times the identity on both the
+held register and the runtime's private register. `outcomeMeasure_run₂_toQuantumAt_coinImpl`
+identifies the full outcome measure with `𝒟[oa]` scaled by the trace of the joint input substate,
+including correlated inputs. Its `…_apply_singleton` corollary gives each `a` its classical
+probability times that trace.
+
+`OracleComp.toQuantum` embeds algorithms whose only oracle is the random function. Extending
+classical/QROM distributional agreement to algorithms that both sample private coins and query
+the random function (`OracleComp (unifSpec + (X →ₒ Y)) α`) remains open.
 
 ### 5. Result universes of the classical embedding
 
