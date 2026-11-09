@@ -33,19 +33,14 @@ The CMA theorems take hypotheses that are not proved at any FIPS 204 parameter s
   probability is proved.
 - **`hGuess`, the commitment-guessing bound.** The only bound proved is `ε = 1`. A useful `ε` needs
   the min-entropy of `HighBits(A·y)` on good keys, for `y` drawn from the mask box.
-- **`hhvzk`, the HVZK hypothesis.** No efficient simulator is constructed in either model.
-  - In the seed model, `idsWithAbort_hvzk` makes `hvzkSimulatorReal` perfect, but that simulator
-    recovers `t₀` from the public key by a search over seeds (`recoverT0`). In
-    `euf_cma_security_of_nma_fips` the reductions would run the search, and `expandSDistinguisher`
-    could use it to tell the seed-derived keys of the real branch from the independently sampled
-    keys of the ideal branch: on the latter `recoverT0` returns `0`, so every simulated signature
-    carries an all-zero hint. The key-expansion term could then be as large as the forger's own
-    advantage, so no theorem here instantiates `hhvzk` with that simulator.
-  - In the short model `t₀` is not determined by the public key across material-valid pairs, so
-    the construction of `hvzkSimulatorReal` does not carry over to `identificationSchemeShort`,
-    and no witness below `ζ_zk = 1` has been constructed.
-  - Taking `t₀`, or the full `t`, as part of the public statement, as the literature does, would
-    let a simulator read it in polynomial time.
+- **`hhvzk`, the HVZK hypothesis.** These theorems are about the signature over
+  `identificationScheme`, whose statement `(ρ, t₁)` leaves `t₀` out, and no efficient simulator for
+  it is constructed. The efficient perfect simulator is for the variant with `t₀` in the
+  statement: `idsWithAbort_hvzk` proves `hvzkSimulator` perfect for `identificationSchemeFull`, and
+  `unforgeableAdvantage_eq_full` makes a forger against this signature one against the variant's.
+  Composing the two needs the NMA bounds above for forgers that also receive `t₀`. The reductions
+  hold the full `t` and can supply it, but those bounds are not stated yet. In the short model the
+  same applies, and `idsWithAbort_hvzk` itself covers only the seed model.
 
 The statements also stop short of FIPS 204 in their format and hardness problems:
 
@@ -388,10 +383,9 @@ abstract MLWE problem to the short-model one `mldsaMLWEShort`.
 The relation of `hr` is the material-based `validKeyPairShort`, so `hGen` is inhabited by
 `hrShort` (`keygenShort_generable`).
 
-**Open: `hhvzk` has no witness below `ζ_zk = 1` so far.** In the short model the withheld key part
-`t₀` is not determined by the public key across material-valid pairs, so the construction of the
-seed-model simulator `hvzkSimulatorReal` does not carry over to `identificationSchemeShort`. At
-`ζ_zk = 1` (any simulator, since total variation is at most one) the loss
+**Open: `hhvzk` has no witness below `ζ_zk = 1` so far.** The statement `(ρ, t₁)` of
+`identificationSchemeShort` leaves out `t₀`, which the simulator's gates need (module docstring,
+*Limitations*). At `ζ_zk = 1` (any simulator, since total variation is at most one) the loss
 `FiatShamirWithAbort.cmaToNmaLoss` contains `qS · 1 / (1 − p_abort) ≥ 1` for `qS ≥ 1`.
 
 **Scope: commitment-carrying, not the end-to-end FIPS CMA statement.** This theorem is stated for
@@ -472,9 +466,9 @@ NMA leg), over the FIPS-shaped key generation `keygen0` and the seed-tagged sche
 `identificationScheme`, with `nma_security_fips` as the NMA leg. Relative to the short model
 the bound gains the advantage of `expandSDistinguisher` in the `ExpandS` replacement hop
 (`expandSAdvantage`), at the forging strategy of `simulatedEufNmaAdv`; in
-exchange the HVZK hypothesis is about the seed-tagged scheme. `idsWithAbort_hvzk` gives a perfect
-simulator for it, but not an efficient one, and with that simulator the key-expansion term could be
-as large as the forger's own advantage (module docstring, *Limitations*).
+exchange the HVZK hypothesis is about the seed-tagged scheme. The efficient perfect simulator of
+`idsWithAbort_hvzk` is for its variant with `t₀` in the statement; using it here needs the NMA leg
+for forgers that receive `t₀` (module docstring, *Limitations*).
 
 **Scope: commitment-carrying, not the end-to-end FIPS CMA statement.** As in the short model, the
 signature carries the commitment; the conversion to the FIPS 204 signature format costs `qS` extra
