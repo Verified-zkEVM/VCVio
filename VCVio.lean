@@ -246,8 +246,10 @@ public import VCVio.EvalDist.Defs.Measure.OptionT
 public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Support.Failure
+public import VCVio.EvalDist.DiscreteTVDist
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.EvalDistEq
+public import VCVio.EvalDist.FiniteSupport
 public import VCVio.EvalDist.IndepProduct
 public import VCVio.EvalDist.IndepProductMeasure
 public import VCVio.EvalDist.Inequalities
@@ -309,6 +311,7 @@ public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.Coercions.SubSpec
 public import VCVio.OracleComp.Coercions.SubSpec.Basic
 public import VCVio.OracleComp.Coercions.SubSpec.Measure
+public import VCVio.OracleComp.Coercions.SubSpec.Routing
 public import VCVio.OracleComp.Coinductive.Bridge
 public import VCVio.OracleComp.Coinductive.DynSystem
 public import VCVio.OracleComp.Coinductive.Machine
@@ -318,6 +321,7 @@ public import VCVio.OracleComp.Coinductive.WiredRun
 public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.OracleComp.Constructions.Fork.Basic
 public import VCVio.OracleComp.Constructions.GenerateSeed
+public import VCVio.OracleComp.Constructions.RandomPermutation.Conditioning
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
@@ -325,11 +329,15 @@ public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.OracleComp.Constructions.UniformPreimage
 public import VCVio.OracleComp.Constructions.UniformSelectMeasure
 public import VCVio.OracleComp.Constructions.WithoutReplacement
 public import VCVio.OracleComp.Constructions.WithoutReplacement.Basic
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.EvalDist.AnswerMeasure
+public import VCVio.OracleComp.EvalDist.DiscreteTVDistBind
+public import VCVio.OracleComp.EvalDist.DiscreteTVDistFintype
+public import VCVio.OracleComp.EvalDist.DiscreteTVDistPi
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.EvalDist.Sum
 public import VCVio.OracleComp.FinRatPMF
@@ -375,6 +383,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryBound.Tagged
 public import VCVio.OracleComp.QueryTracking.QueryBound.Truncate
 public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.OracleComp.QueryTracking.QueryLog
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial

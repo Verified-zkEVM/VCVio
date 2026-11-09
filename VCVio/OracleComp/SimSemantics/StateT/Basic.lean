@@ -355,7 +355,30 @@ theorem support_simulateQ_run'_subset
     rw [StateT.run'_eq, MonadAttach.support_map]
     exact Set.mem_image_of_mem _ hsupp
 
+/-- A supported stateful interpretation returns a value supported by the source computation.
+The final handler state is retained in the supplied supported outcome. -/
+theorem mem_support_of_mem_support_simulateQ_run
+    {n : Type w → Type _} [Monad n] [LawfulMonad n] [MonadAttach n] [ExactMonadAttach n]
+    {σ : Type w} (impl : QueryImpl spec (StateT σ n)) (oa : OracleComp spec α) (s : σ)
+    {z : α × σ} (hz : z ∈ support ((simulateQ impl oa).run s)) : z.1 ∈ support oa := by
+  apply support_simulateQ_run'_subset impl oa s
+  rw [StateT.run'_eq, MonadAttach.support_map]
+  exact Set.mem_image_of_mem _ hz
+
 end support_simulateQ_StateT
+
+/-- Read-only oracle state can be evaluated by fixing its realization before simulation. -/
+theorem simulateQ_readOnly_run {ι : Type} {spec : OracleSpec ι} {σ α : Type}
+    {n : Type → Type v} [Monad n] [LawfulMonad n]
+    (impl : QueryImpl spec (StateT σ n)) (fixed : σ → QueryImpl spec n)
+    (h : ∀ q s, (impl q).run s = (fun x => (x, s)) <$> fixed s q)
+    (oa : OracleComp spec α) (s : σ) :
+    (simulateQ impl oa).run s = (fun x => (x, s)) <$> simulateQ (fixed s) oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind q k ih =>
+    simp only [simulateQ_bind, simulateQ_query, StateT.run_bind,
+      h, bind_map_left, map_bind, ih]
 
 end OracleComp
 
