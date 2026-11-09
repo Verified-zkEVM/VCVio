@@ -93,7 +93,7 @@ internals.
 Every type a user supplies may lie in any universe. For `L : Quantum.LocalSig.{u, v}` (operations
 in `Type u`, outcomes in `Type v`), `spec : Quantum.QuantumOracleSpec.{u₁, v₁}` (ports in
 `Type u₁`, results in `Type v₁`) and `X : QReg → Type w`, the program type lies in
-`Type (max u v u₁ v₁ (w + 1))`, and `bind` may change the universe of the leaves.
+`Type (max 1 u v u₁ v₁ w)`, and `bind` may change the universe of the leaves.
 
 Registers (`Quantum.QReg`) are finite types with carriers in `Type`. This loses nothing, since
 every finite type is equivalent to some `Fin n`, and puts `QReg` in `Type 1`. PolyFun's indexed
@@ -211,7 +211,7 @@ branch ends on the same register, and `QComp` to supply local operations directl
 subinstruments. -/
 @[expose]
 def QuantumComp (L : LocalSig.{u, v}) (spec : QuantumOracleSpec.{u₁, v₁}) (X : QReg → Type w)
-    (A : QReg) : Type (max u v u₁ v₁ (w + 1)) :=
+    (A : QReg) : Type (max 1 u v u₁ v₁ w) :=
   IFreeM (QuantumComp.toIPFunctor L spec) X A
 
 namespace QuantumComp
@@ -350,7 +350,7 @@ monad, and a lawful monad when `A = B`. Use `QuantumComp` when branches end on d
 registers. -/
 @[expose]
 def QuantumComp₂ (L : LocalSig.{u, v}) (spec : QuantumOracleSpec.{u₁, v₁}) (A B : QReg)
-    (α : Type w) : Type (max u v u₁ v₁ (w + 1)) :=
+    (α : Type w) : Type (max 1 u v u₁ v₁ w) :=
   QuantumComp L spec (QuantumComp₂.Leaf B α) A
 
 namespace QuantumComp₂
