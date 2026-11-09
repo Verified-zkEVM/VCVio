@@ -303,23 +303,6 @@ theorem invNTT_ntt (f : Rq) : invNTT (ntt f) = f := by
   exact LatticeCrypto.NTTCert.applyCoeffTransform_comp
     nttCoeffs invNTTCoeffs invNTTCoeffs_nttCoeffs f
 
-private def rqEquivCoeffFun : Rq ≃ (Fin ringDegree → Coeff) where
-  toFun f i := f.get i
-  invFun f := Vector.ofFn f
-  left_inv f := by
-    apply Vector.ext
-    intro i hi
-    exact Vector.getElem_ofFn (f := fun i => f.get i) hi
-  right_inv f := by
-    funext i
-    exact Vector.get_ofFn f i
-
-private def rqEquivTq : Rq ≃ Tq where
-  toFun f := ⟨f⟩
-  invFun fHat := fHat.coeffs
-  left_inv _ := rfl
-  right_inv fHat := by cases fHat; rfl
-
 private theorem ntt_injective : Function.Injective ntt := by
   intro f g h
   have hInv := congrArg invNTT h
@@ -330,8 +313,7 @@ private theorem ntt_surjective : Function.Surjective ntt := by
   let : Fintype Coeff := by
     dsimp [Coeff]
     exact ZMod.fintype modulus
-  let : Finite Rq := Finite.of_equiv (Fin ringDegree → Coeff) rqEquivCoeffFun.symm
-  exact ntt_injective.surjective_of_finite rqEquivTq
+  exact ntt_injective.surjective_of_finite (LatticeCrypto.TransformPoly.equivPoly _).symm
 
 /-- The concrete forward transform is a left inverse to the concrete inverse transform. -/
 theorem ntt_invNTT (fHat : Tq) : ntt (invNTT fHat) = fHat := by
@@ -341,26 +323,11 @@ theorem ntt_invNTT (fHat : Tq) : ntt (invNTT fHat) = fHat := by
     _ = ntt f := by rw [invNTT_ntt]
     _ = fHat := hf
 
-private theorem hadd_rq (f g : Rq) :
-    polyBackend.coeff (f + g) = polyBackend.coeff f + polyBackend.coeff g := by
-  funext i
-  change ((LatticeCrypto.vectorNegacyclicRing Coeff ringDegree).add f g).get i = f.get i + g.get i
-  simp
-
-private theorem hsub_rq (f g : Rq) :
-    polyBackend.coeff (f - g) = polyBackend.coeff f - polyBackend.coeff g := by
-  funext i
-  change ((LatticeCrypto.vectorNegacyclicRing Coeff ringDegree).sub f g).get i = f.get i - g.get i
-  simp
-
-private theorem hzero_rq : polyBackend.coeff (0 : Rq) = 0 := by
-  funext i
-  exact LatticeCrypto.vectorRing_zero_get i
-
 /-- The concrete NTT is additive. -/
 theorem ntt_add_toRq (f g : Rq) : (ntt (f + g) : Rq) = (ntt f : Rq) + (ntt g : Rq) := by
   rw [ntt_eq, ntt_eq, ntt_eq]
-  exact LatticeCrypto.NTTCert.applyCoeffTransform_add nttCoeffs hadd_rq nttCoeffs_add f g
+  exact LatticeCrypto.NTTCert.applyCoeffTransform_add nttCoeffs
+    (fun f g => funext (LatticeCrypto.NegacyclicRing.coeff_add coeffRing f g)) nttCoeffs_add f g
 
 /-- The concrete NTT is additive. -/
 theorem ntt_add (f g : Rq) : ntt (f + g) = ntt f + ntt g := by
@@ -371,7 +338,8 @@ theorem ntt_add (f g : Rq) : ntt (f + g) = ntt f + ntt g := by
 /-- The concrete NTT preserves subtraction. -/
 theorem ntt_sub_toRq (f g : Rq) : (ntt (f - g) : Rq) = (ntt f : Rq) - (ntt g : Rq) := by
   rw [ntt_eq, ntt_eq, ntt_eq]
-  exact LatticeCrypto.NTTCert.applyCoeffTransform_sub nttCoeffs hsub_rq nttCoeffs_sub f g
+  exact LatticeCrypto.NTTCert.applyCoeffTransform_sub nttCoeffs
+    (fun f g => funext (LatticeCrypto.NegacyclicRing.coeff_sub coeffRing f g)) nttCoeffs_sub f g
 
 /-- The concrete NTT preserves subtraction. -/
 theorem ntt_sub (f g : Rq) : ntt (f - g) = ntt f - ntt g := by
@@ -445,7 +413,8 @@ theorem concreteNTTRingLaws : NTTRingLaws concreteNTTRingOps where
     change ntt 0 = 0
     rw [ntt_eq]
     apply LatticeCrypto.TransformPoly.ext
-    exact LatticeCrypto.NTTCert.applyCoeffTransform_zero nttCoeffs hzero_rq nttCoeffs_zero
+    exact LatticeCrypto.NTTCert.applyCoeffTransform_zero nttCoeffs
+      (funext (LatticeCrypto.NegacyclicRing.coeff_zero coeffRing)) nttCoeffs_zero
   toHat_mul f g := ntt_negacyclicMul f g
   toHat_add f g := ntt_add f g
   toHat_sub f g := ntt_sub f g
