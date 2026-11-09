@@ -95,7 +95,7 @@ requirement authoritative over their inherited pins and makes
 -/
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun" @
-  "4181c82238142d9b73403fbf4c4b13e1a801e400"
+  "d405fa31e47001c80396b22d94cd9289e7ee1a24"
 
 /-
 The Mathlib-only quantum foundation (matrix maps, instruments, registers,
