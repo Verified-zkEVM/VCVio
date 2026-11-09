@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import Extern.MLDSA.NonVacuity
+public import Extern.MLDSA.Laws
 public import LatticeCrypto.MLDSA.SecurityHVZK
 
 /-!
@@ -16,8 +16,9 @@ public import LatticeCrypto.MLDSA.SecurityHVZK
 - The response gate passes with probability above `1/2` at each FIPS 204 parameter set. This checks
   the parameters against the exact rate; it does not pin the box, since a slightly different box
   also passes above `1/2`.
-- `idsWithAbort_hvzk` holds at a `Primitives.Laws` witness for an approved parameter set, so its
-  hypotheses can be met together. The theorem itself, not this test, shows the simulator is right.
+- The statement of `identificationSchemeFull` rejects any `t₀` other than the secret key's.
+- `idsWithAbort_hvzk` applies at the concrete FIPS 204 primitives for ML-DSA-44, so its hypotheses
+  hold there. The theorem itself, not this test, shows the simulator is right.
 -/
 
 public section
@@ -114,13 +115,21 @@ theorem half_lt_gate_mldsa87 : (1 / 2 : ℝ≥0∞) <
       polyVecNorm z < mldsa87.gamma1 - mldsa87.beta] :=
   half_lt_gate mldsa87 (by decide +kernel) (by decide +kernel) (by decide +kernel)
 
-/-- `idsWithAbort_hvzk` at a `Primitives.Laws` witness for ML-DSA-44. -/
-theorem perfectHVZK_seedRevealingPrims [DecidableEq (seedRevealingPrims mldsa44).High] :
+/-- The statement of `identificationSchemeFull` must carry the secret key's `t₀`: any other `t₀` is
+rejected, whatever the public key. -/
+example (p : Params) (prims : Primitives p) [NTTRingOps] (pk : PublicKey p prims)
+    (sk : SecretKey p) (t0 : RqVec p.k) (h : t0 ≠ sk.t0) :
+    validFullKeyPair p prims ⟨pk, t0⟩ sk = false := by
+  simp [validFullKeyPair, h]
+
+/-- `idsWithAbort_hvzk` at the concrete FIPS 204 primitives for ML-DSA-44. -/
+theorem perfectHVZK_concretePrimitives
+    [DecidableEq (MLDSA.Concrete.concretePrimitives mldsa44).High] :
     letI : NTTRingOps := MLDSA.Concrete.concreteNTTRingOps
-    (identificationScheme mldsa44 (seedRevealingPrims mldsa44)).PerfectHVZK
-      (hvzkSimulatorReal mldsa44 (seedRevealingPrims mldsa44)) :=
+    (identificationSchemeFull mldsa44 (MLDSA.Concrete.concretePrimitives mldsa44)).PerfectHVZK
+      (hvzkSimulator mldsa44 (MLDSA.Concrete.concretePrimitives mldsa44)) :=
   letI : NTTRingOps := MLDSA.Concrete.concreteNTTRingOps
-  idsWithAbort_hvzk mldsa44 (seedRevealingPrims mldsa44)
-    (seedRevealingPrims_laws mldsa44 (.inl rfl))
+  idsWithAbort_hvzk mldsa44 (MLDSA.Concrete.concretePrimitives mldsa44)
+    (MLDSA.Concrete.concretePrimitives_laws mldsa44 (.inl rfl))
 
 end MLDSA.MaskBoxTest
