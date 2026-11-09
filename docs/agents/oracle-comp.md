@@ -345,6 +345,12 @@ Preservation of the output measure through `uniformSampleImpl` is a **lemma**, n
 `evalDist_simulateQ_eq_of_forall` preserves the output measure when each query's implementation
 denotes its configured answer measure.
 
+`SampleableType.uniformFiber f b` samples uniformly from the fiber `{a | f a = b}`
+(`VCVio/OracleComp/Constructions/SampleableType/Fiber.lean`).
+`SampleableType.uniformSample_bind_evalDistEq_uniformFiber` says a uniform `a` is distributed as
+its image `f a` followed by a uniform point of that fiber, so a reduction that sees only `f a` can
+reproduce the rest of `a` exactly.
+
 ## Enforcement Oracle
 
 Defined in `VCVio/OracleComp/QueryTracking/Enforcement.lean`. Wraps an oracle with a

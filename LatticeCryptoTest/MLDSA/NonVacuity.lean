@@ -14,8 +14,9 @@ import all LatticeCrypto.MLDSA.SecurityHeadlines
 # ML-DSA headlines: joint hypothesis-consistency witnesses
 
 The headlines are instantiated at their own hypotheses: `nma_security_short_seed` at `hrShort`,
-`nma_security_fips` at `hrFips` with the identity bridge, and the two CMA headlines
-`euf_cma_security_of_nma_fips` and `euf_cma_security_of_nma_short`. For an aborting forger the
+`nma_security_fips` at `hrFips` with the identity bridge, and the CMA headlines
+`euf_cma_security_of_nma_short`, `euf_cma_security_of_nma_fips` and
+`euf_cma_security_of_nma_fips_hvzk`. For an aborting forger the
 ROM game and the `ExpandS` replacement hop have advantage `0`, so neither is a game every forger
 wins.
 
@@ -155,7 +156,7 @@ theorem mldsa_short_cma_hyps_inhabited (maxAttempts : ℕ) :
       (S' := Option (Commitment p prims × Response p prims))
       (oa := (trivialForger p prims M maxAttempts).main pk) 0 0) ∧
     -- hMlweBridge at mlwe = mldsaMLWEShort p prims, εbridge = 0, bridge = distinguisherBShort
-    (∀ main : PublicKey p prims →
+    (∀ main : FullPublicKey p prims →
         OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
           (M × Option (Commitment p prims × Response p prims)),
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
@@ -185,9 +186,9 @@ theorem trivial_euf_cma_security_of_nma_short (maxAttempts : ℕ) :
           (Commit := Commitment p prims) (Chal := CommitHashBytes p) M)
         (trivialForger p prims M maxAttempts) ≤
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
-          (distinguisherBShort p prims (hrShort p prims) maxAttempts main) +
+          (distinguisherBShort p prims (hrShort p prims) maxAttempts fun fpk => main fpk.pk) +
         0 +
-        SelfTargetMSIS.advantage (extractorCShort p prims main) +
+        SelfTargetMSIS.advantage (extractorCShort p prims fun fpk => main fpk.pk) +
         ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss 0 0 1 0 1 1 zero_lt_one) :=
   euf_cma_security_of_nma_short p prims (mldsaMLWEShort p prims)
     maxAttempts (hrShort p prims) rfl (neverAbortSim p prims) 1 zero_le_one
@@ -236,8 +237,8 @@ example (maxAttempts : ℕ) (adv : SignatureAlg.EufNmaAdversary
         (FiatShamirWithAbort.runtime
           (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
-          (distinguisherBShort p prims (hrShort p prims) maxAttempts adv.main) +
-        SelfTargetMSIS.advantage (extractorCShort p prims adv.main) :=
+          (distinguisherBShort p prims (hrShort p prims) maxAttempts fun fpk => adv.main fpk.pk) +
+        SelfTargetMSIS.advantage (extractorCShort p prims fun fpk => adv.main fpk.pk) :=
   nma_security_short_seed p prims maxAttempts (hrShort p prims) rfl adv
 
 /-- `nma_security_fips` at `hrFips` and `hrShort`, with the identity bridge at zero slack. -/
@@ -247,12 +248,13 @@ example (maxAttempts : ℕ) (adv : SignatureAlg.EufNmaAdversary
         (FiatShamirWithAbort.runtime
           (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
-          (distinguisherBShort p prims (hrShort p prims) maxAttempts adv.main) + 0 +
-        SelfTargetMSIS.advantage (extractorCShort p prims adv.main) +
+          (distinguisherBShort p prims (hrShort p prims) maxAttempts fun fpk => adv.main fpk.pk) +
+        0 +
+        SelfTargetMSIS.advantage (extractorCShort p prims fun fpk => adv.main fpk.pk) +
         expandSAdvantage p prims
-          (expandSDistinguisher p prims (hrFips p prims) maxAttempts adv.main) :=
+          (expandSDistinguisher p prims (hrFips p prims) maxAttempts fun fpk => adv.main fpk.pk) :=
   nma_security_fips p prims (mldsaMLWEShort p prims) maxAttempts (hrFips p prims) rfl
-    (hrShort p prims) rfl 0 (distinguisherBShort p prims (hrShort p prims) maxAttempts)
+    (hrShort p prims) 0 (distinguisherBShort p prims (hrShort p prims) maxAttempts)
     (fun _ => le_of_eq (add_zero _).symm) adv
 
 /-- The trivial CMA forger against the seed-model Fiat-Shamir-with-aborts scheme. -/
@@ -263,14 +265,20 @@ noncomputable def trivialForgerFips (maxAttempts : ℕ) :
         (identificationScheme p prims) (hrFips p prims) M maxAttempts) where
   main := fun _ => pure (default, none)
 
+/-- The never-aborting simulator for the scheme with `t₀` in the statement. -/
+noncomputable def neverAbortSimFull :
+    FullPublicKey p prims →
+      ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)) :=
+  fun _ => pure (some default)
+
 /-- `euf_cma_security_of_nma_fips` applies with every hypothesis discharged for the trivial forger,
-at the simulator `neverAbortSim` with `ζ_zk = 1`. `hAbort` holds on the pairs at which the honest
-prover never aborts, at `p_abort = 0`; `hGood` and `hGuess` hold at the trivial budget `1`. This is
-consistency only: the bound is at least `δ = 1`. -/
+at the simulator `neverAbortSimFull` with `ζ_zk = 1`. `hAbort` holds on the pairs at which the
+honest prover never aborts, at `p_abort = 0`; `hGood` and `hGuess` hold at the trivial budget `1`.
+This is consistency only: the bound is at least `δ = 1`. -/
 example (maxAttempts : ℕ) :
-    let main := (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims)
-      (hrFips p prims) M maxAttempts (neverAbortSim p prims)
-      (trivialForgerFips p prims M maxAttempts)).main
+    let main := (FiatShamirWithAbort.simulatedEufNmaAdv (identificationSchemeFull p prims)
+      (fullRelation p prims (hrFips p prims)) M maxAttempts (neverAbortSimFull p prims)
+      ⟨fun fpk => (trivialForgerFips p prims M maxAttempts).main fpk.pk⟩).main
     SignatureAlg.unforgeableAdvantage
         (FiatShamirWithAbort.runtime
           (Commit := Commitment p prims) (Chal := CommitHashBytes p) M)
@@ -281,18 +289,46 @@ example (maxAttempts : ℕ) :
         expandSAdvantage p prims (expandSDistinguisher p prims (hrFips p prims) maxAttempts main) +
         ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss 0 0 1 0 1 1 zero_lt_one) :=
   euf_cma_security_of_nma_fips p prims (mldsaMLWEShort p prims) maxAttempts
-    (hrFips p prims) rfl (hrShort p prims) rfl (neverAbortSim p prims) 1 zero_le_one
+    (hrFips p prims) rfl (hrShort p prims) (neverAbortSimFull p prims) 1 zero_le_one
     0 0 1 0 1 zero_le_one zero_le_one le_rfl zero_lt_one
-    (fun pk sk =>
-      Pr{let x ← (identificationScheme p prims).honestExecution pk sk}[x = none] = 0)
+    (fun fpk sk =>
+      Pr{let x ← (identificationSchemeFull p prims).honestExecution fpk sk}[x = none] = 0)
     (by rw [ENNReal.ofReal_one]; exact prEvent_le_one _)
-    (fun _pk _sk _hrel _hgood => by
+    (fun _fpk _sk _hrel _hgood => by
       let : MeasurableSpace
         (Option (Commitment p prims × CommitHashBytes p × Response p prims)) := ⊤
       rw [ENNReal.ofReal_one]
       exact measureETVDist_le_one _ _)
-    (fun _pk _sk _h _cm => by rw [ENNReal.ofReal_one]; exact prEvent_le_one _)
-    (fun _pk _sk h => by rw [ENNReal.ofReal_zero]; exact h.le)
+    (fun _fpk _sk _h _cm => by rw [ENNReal.ofReal_one]; exact prEvent_le_one _)
+    (fun _fpk _sk h => by rw [ENNReal.ofReal_zero]; exact h.le)
+    (trivialForgerFips p prims M maxAttempts)
+    (fun _pk => ⟨isQueryBoundP_pure _ _ _, isQueryBoundP_pure _ _ _⟩)
+    0 (distinguisherBShort p prims (hrShort p prims) maxAttempts)
+    (fun _ => le_of_eq (add_zero _).symm)
+
+/-- `euf_cma_security_of_nma_fips_hvzk` applies under `Primitives.Laws`, with every remaining
+hypothesis discharged for the trivial forger at the trivial budgets. Consistency only. -/
+example (h_laws : Primitives.Laws prims nttOps) (maxAttempts : ℕ) :
+    let main := (FiatShamirWithAbort.simulatedEufNmaAdv (identificationSchemeFull p prims)
+      (fullRelation p prims (hrFips p prims)) M maxAttempts (hvzkSimulator p prims)
+      ⟨fun fpk => (trivialForgerFips p prims M maxAttempts).main fpk.pk⟩).main
+    SignatureAlg.unforgeableAdvantage
+        (FiatShamirWithAbort.runtime
+          (Commit := Commitment p prims) (Chal := CommitHashBytes p) M)
+        (trivialForgerFips p prims M maxAttempts) ≤
+      LearningWithErrors.advantage (mldsaMLWEShort p prims)
+          (distinguisherBShort p prims (hrShort p prims) maxAttempts main) + 0 +
+        SelfTargetMSIS.advantage (extractorCShort p prims main) +
+        expandSAdvantage p prims (expandSDistinguisher p prims (hrFips p prims) maxAttempts main) +
+        ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss 0 0 1 0 0 1 zero_lt_one) :=
+  euf_cma_security_of_nma_fips_hvzk p prims h_laws (mldsaMLWEShort p prims) maxAttempts
+    (hrFips p prims) rfl (hrShort p prims)
+    0 0 1 0 1 zero_le_one zero_le_one le_rfl zero_lt_one
+    (fun fpk sk =>
+      Pr{let x ← (identificationSchemeFull p prims).honestExecution fpk sk}[x = none] = 0)
+    (by rw [ENNReal.ofReal_one]; exact prEvent_le_one _)
+    (fun _fpk _sk _h _cm => by rw [ENNReal.ofReal_one]; exact prEvent_le_one _)
+    (fun _fpk _sk h => by rw [ENNReal.ofReal_zero]; exact h.le)
     (trivialForgerFips p prims M maxAttempts)
     (fun _pk => ⟨isQueryBoundP_pure _ _ _, isQueryBoundP_pure _ _ _⟩)
     0 (distinguisherBShort p prims (hrShort p prims) maxAttempts)
