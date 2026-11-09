@@ -180,6 +180,13 @@ The toolchain and Mathlib move together, and the other pins follow them. The ord
    checked against the newly pinned trees, never diffed against the previous ledger.
 6. Update the version mentions in `AGENTS.md` (*Building*) and `docs/agents/gotchas.md` §26.
 
+Two places depend on core internals that carry no stability promise. Program logic uses
+`Lean.Meta.Sym` (see the *SymM Stability Note* in `docs/agents/program-logic.md`).
+`LatticeCrypto/Falcon/Concrete/NTT.lean` imports `Init.Internal.Order.While` for
+`Lean.Loop.forIn_eq_of_monadTail`, and its private `butterflyNTT_loops` / `butterflyInvNTT_loops`
+are `rfl` against the current `while` desugaring. A change to either fails the build in that file
+rather than weakening a statement; repair the loop lemmas there.
+
 ## Style Notes
 
 - Keep imports at the top of the file.
