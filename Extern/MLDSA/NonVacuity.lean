@@ -34,11 +34,13 @@ makes the published seed-component injective (matching `ρ` forces the same seed
 
 **Trust surface.**  `mldsa_laws_inhabited` depends only on `propext`, `Classical.choice`, and
 `Quot.sound`. The structural butterfly stages in `LatticeCrypto/Ring/NTTCert.lean` have
-round-trip laws proved from per-stage twiddle identities. The executable implementation has
-an `@[implemented_by]` refinement boundary: the imperative `loopNTT`/`loopInvNTT` kernels are
-rebound at runtime and are not proved
-extensionally equal to the structural stages, and `multiplyNTTs` is defined through
-`invNTT`/`ntt` rather than verified pointwise.  The *abstract* `Laws`-gated theorems (quantified
+round-trip laws proved from per-stage twiddle identities. `ntt_coeff_eq_eval`, from the residue
+theorem of `LatticeCrypto/Ring/NTTSplitCert.lean`, proves that coordinate `i` of the structural NTT
+is the evaluation at `ζ^(2·brv(i) + 1)`. So `ntt_negacyclicMul` holds for the pointwise
+`multiplyNTTs` (FIPS 204 Algorithm 45).
+The executable implementation has an `@[implemented_by]` refinement boundary: the imperative
+`loopNTT`/`loopInvNTT` kernels are rebound at runtime and are not proved extensionally equal to the
+structural stages.  The *abstract* `Laws`-gated theorems (quantified
 over `nttOps`) are unaffected; this witness only shows that their `Laws` hypothesis can be met by
 the concrete layer.
 -/
