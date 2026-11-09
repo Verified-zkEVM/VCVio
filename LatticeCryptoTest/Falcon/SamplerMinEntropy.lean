@@ -219,10 +219,7 @@ theorem roundPrimitives_samplerQuality {a : ℝ} (ha : 1 < a) :
 with a large `ε` does not give a slack-free envelope. -/
 theorem not_roundPrimitives_samplerEnvelope_zero : ¬ roundPrimitives.SamplerEnvelope 0 := by
   intro h
-  have hle : falcon512.sigmaMin ≤ falcon512.sigmaMax := by
-    rw [show falcon512.sigmaMin = (12778336969128337 : ℝ) / 10000000000000000 from rfl,
-      show falcon512.sigmaMax = (18205 : ℝ) / 10000 from rfl]
-    norm_num
+  have hle := falcon512_sigmaMin_le_sigmaMax
   have h3 := falcon512_sigmaMin_sqrt_two_pi_ge_three
   have hv := h.pointMass_le 0 falcon512.sigmaMin le_rfl hle (round (0 : ℝ))
   change Pr{let outcome ← (pure (round (0 : ℝ)) : ProbComp ℤ)}[outcome = round (0 : ℝ)] ≤ _ at hv

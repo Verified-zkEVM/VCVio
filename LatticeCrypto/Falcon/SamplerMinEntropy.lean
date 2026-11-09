@@ -105,7 +105,11 @@ theorem _root_.LatticeCrypto.evalDist_ne_discreteGaussianMeasure (mx : ProbComp 
 `σ' ∈ [σ_min, σ_max]` (the range Falcon v1.2 Section 3.9.3 guarantees for `ffSampling` leaves),
 every integer has mass at most `1 / (σ'√(2π) - 1) + δ`. The bound is meaningful when
 `1 < σ_min √(2π)`, as for both Falcon parameter sets; the ideal discrete Gaussian then meets it
-with `δ = 0` (`discreteGaussianMeasure_singleton_le`). -/
+with `δ = 0` (`discreteGaussianMeasure_singleton_le`).
+
+The envelope bounds min-entropy only, not closeness to the Gaussian: a sampler that ignores `μ`
+and `σ'` can meet it, and a uniform draw from `{0, 1, 2, 3}` meets `SamplerEnvelope 0` at
+Falcon-512. Closeness to the Gaussian is `Primitives.SamplerQuality`. -/
 structure Primitives.SamplerEnvelope {p : Params} (prims : Primitives p) (δ : ℝ≥0∞) : Prop where
   /-- Every point mass of `samplerZ μ σ'` is within `δ` of the ideal guessing bound. -/
   pointMass_le : ∀ (μ σ' : ℝ), p.sigmaMin ≤ σ' → σ' ≤ p.sigmaMax → ∀ v : ℤ,
@@ -386,6 +390,18 @@ theorem falcon1024_sigmaMin_sqrt_two_pi_ge_three :
   have hs : falcon1024.sigmaMin = (1298280334344292 : ℝ) / 1000000000000000 := rfl
   rw [hs]
   nlinarith [h6]
+
+/-- The Falcon-512 standard-deviation range `[σ_min, σ_max]` is nonempty. -/
+theorem falcon512_sigmaMin_le_sigmaMax : falcon512.sigmaMin ≤ falcon512.sigmaMax := by
+  rw [show falcon512.sigmaMin = (12778336969128337 : ℝ) / 10000000000000000 from rfl,
+    show falcon512.sigmaMax = (18205 : ℝ) / 10000 from rfl]
+  norm_num
+
+/-- The Falcon-1024 standard-deviation range `[σ_min, σ_max]` is nonempty. -/
+theorem falcon1024_sigmaMin_le_sigmaMax : falcon1024.sigmaMin ≤ falcon1024.sigmaMax := by
+  rw [show falcon1024.sigmaMin = (1298280334344292 : ℝ) / 1000000000000000 from rfl,
+    show falcon1024.sigmaMax = (18205 : ℝ) / 10000 from rfl]
+  norm_num
 
 end Falcon
 
