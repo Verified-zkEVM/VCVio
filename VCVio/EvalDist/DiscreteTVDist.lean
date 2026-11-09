@@ -1,5 +1,5 @@
 /-
-Copyright (c) 2026 VCVio Contributors. All rights reserved.
+Copyright (c) 2026 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù
 -/
@@ -19,8 +19,10 @@ public import VCVio.EvalDist.ProbabilityNotation
 locally by `letI : MeasurableSpace α := ⊤`, so statements about it carry no measurable-space
 hypothesis. Every set of outputs is then an event, and every continuation is measurable.
 
-The distance sees only successful outputs. For a computation that can fail, compare the total
-computations that expose failure (for example `OptionT.run`) when failure mass matters.
+Failure mass is counted. Output measures may have total mass below one, and on such measures the
+distance equals the total variation after adding the missing mass as an explicit failure outcome
+(see `ToMathlib.MeasureTheory.Measure.TotalVariation`): a computation that always fails is at
+distance one from a computation that never fails.
 
 An event's probability under one computation is at most its probability under another plus the
 discrete total-variation distance between them: `μ(E) ≤ ν(E) + d_TV(μ, ν)`.

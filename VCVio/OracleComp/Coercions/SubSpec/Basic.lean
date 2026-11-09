@@ -486,24 +486,4 @@ lemma liftComp_inst_irrel {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁}
     simp only [liftComp_bind, ih]
     exact congrArg (· >>= _) (hq t)
 
-/-- Instance-agnostic double-lift bind congruence: a two-step lift bound to `f` equals the
-direct lift bound to `g`, given per-query compatibility of the routes and pointwise equality of
-the continuations. Proven by induction, so no alignment of `MonadLiftT` instance routes is
-needed at the use site. -/
-lemma liftComp_liftComp_bind_congr {ι₁ ι₂ ι₃ : Type} {spec₁ : OracleSpec ι₁}
-    {spec₂ : OracleSpec ι₂} {spec₃ : OracleSpec ι₃} {α β : Type}
-    {i₁₂ : MonadLiftT (OracleQuery spec₁) (OracleQuery spec₂)}
-    {i₂₃ : MonadLiftT (OracleQuery spec₂) (OracleQuery spec₃)}
-    {i₁₃ : MonadLiftT (OracleQuery spec₁) (OracleQuery spec₃)}
-    (hq : ∀ t : spec₁.Domain,
-      (liftComp (liftComp ((liftM (spec₁.query t) : OracleComp spec₁ _)) spec₂ (h := i₁₂))
-          spec₃
-          (h := i₂₃))
-        = liftComp ((liftM (spec₁.query t) : OracleComp spec₁ _)) spec₃ (h := i₁₃))
-    (X : OracleComp spec₁ α) (f g : α → OracleComp spec₃ β) (hfg : ∀ a, f a = g a) :
-    (liftComp (liftComp X spec₂ (h := i₁₂)) spec₃ (h := i₂₃)) >>= f
-      = (liftComp X spec₃ (h := i₁₃)) >>= g := by
-  rw [liftComp_liftComp (fun t => hq t) X]
-  exact bind_congr hfg
-
 end OracleComp

@@ -1,5 +1,6 @@
 /-
-Copyright (c) 2026 VCVio Contributors. All rights reserved.
+Copyright (c) 2024 ArkLib Contributors,
+  2025 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù
 -/
@@ -12,8 +13,8 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 /-!
 # Lookup in query logs and logs of routed sum interfaces
 
-- `QueryLog.lookup?` — first-match lookup of a query's logged answer (computable, unlike a
-  `Classical.dec`-based scan), with `cons`/`append` evaluation lemmas.
+- `QueryLog.lookup?` — first-match lookup of a query's logged answer, the occurrence `0` of
+  `QueryLog.getQueryValue?`, with `cons`/`append` evaluation lemmas.
 - Logs of the slot-routing handlers `swapRight`, `insertMiddle` and `mergeRight`, and of
   computations lifted into either summand.
 -/
@@ -30,24 +31,28 @@ section lookup
 
 variable {ι : Type u} {spec : OracleSpec ι} [DecidableEq ι]
 
-/-- First-match lookup of the answer to a query `t` in a query log, if any.
+/-- First-match lookup of the answer to a query `t` in a query log, if any: the occurrence `0`
+of `getQueryValue?`.
 
 Note that a log may answer the same query several times (e.g. when it records a randomness
 oracle rather than a function); `lookup?` returns the *earliest* entry. When the log is
 function-like (at most one entry per query, as for the canonical transcript-derivation log),
 this is the unique answer. -/
 @[expose] def lookup? (log : QueryLog spec) (t : spec.Domain) : Option (spec.Range t) :=
-  match log with
-  | [] => none
-  | ⟨t', u⟩ :: rest => if ht : t' = t then some (ht ▸ u) else lookup? rest t
+  log.getQueryValue? t 0
+
+lemma lookup?_eq_getQueryValue? (log : QueryLog spec) (t : spec.Domain) :
+    log.lookup? t = log.getQueryValue? t 0 := rfl
 
 @[simp]
-lemma lookup?_nil (t : spec.Domain) : lookup? ([] : QueryLog spec) t = none := rfl
+lemma lookup?_nil (t : spec.Domain) : lookup? ([] : QueryLog spec) t = none := by
+  simp [lookup?, getQueryValue?]
 
 lemma lookup?_cons (t' : spec.Domain) (u : spec.Range t') (rest : QueryLog spec)
     (t : spec.Domain) :
     lookup? (⟨t', u⟩ :: rest) t
-      = if ht : t' = t then some (ht ▸ u) else lookup? rest t := rfl
+      = if ht : t' = t then some (ht ▸ u) else lookup? rest t := by
+  by_cases ht : t' = t <;> simp [lookup?, getQueryValue?, ht]
 
 /-- `lookup?` scans left-to-right through an append: the second log answers only the
 queries the first leaves unanswered. -/
@@ -81,6 +86,17 @@ variable {ι κ ν : Type} {a : OracleSpec ι} {b : OracleSpec κ} {c : OracleSp
   | ⟨.inl (.inl q), r⟩ => ⟨.inl (.inl q), r⟩
   | ⟨.inl (.inr q), r⟩ => ⟨.inr q, r⟩
   | ⟨.inr q, r⟩ => ⟨.inl (.inr q), r⟩
+
+/-- Relabel a logged query-answer pair of two oracle slots for the interface with a middle slot
+inserted. -/
+@[expose] def insertMiddleEntry : Sigma (a + b) → Sigma ((a + c) + b)
+  | ⟨.inl q, r⟩ => ⟨.inl (.inl q), r⟩
+  | ⟨.inr q, r⟩ => ⟨.inr q, r⟩
+
+/-- Relabel a log of two oracle slots for the interface with a middle slot inserted. The middle
+slot stays unused. -/
+@[expose] def insertMiddle (log : QueryLog (a + b)) : QueryLog ((a + c) + b) :=
+  log.map insertMiddleEntry
 
 /-- Relabel a log by exchanging its last two oracle slots. -/
 @[expose] def swapRight (log : QueryLog ((a + b) + c)) : QueryLog ((a + c) + b) :=
@@ -142,12 +158,10 @@ theorem withQueryLog_swapRight (p : OracleComp ((a + b) + c) α) :
 /-- Embedding a logged computation preserves its log, with the corresponding query labels. -/
 theorem withQueryLog_insertMiddle (p : OracleComp (a + b) α) :
     (p.insertMiddle (c := c)).withQueryLog =
-      (fun z => (z.1, z.2.map (fun e => match e with
-        | ⟨.inl q, r⟩ => ⟨.inl (.inl q), r⟩
-        | ⟨.inr q, r⟩ => ⟨.inr q, r⟩))) <$> p.withQueryLog.insertMiddle := by
-  apply withQueryLog_simulateQ_of_query
+      (fun z => (z.1, z.2.insertMiddle)) <$> p.withQueryLog.insertMiddle := by
+  apply withQueryLog_simulateQ_of_query QueryImpl.insertMiddle QueryLog.insertMiddleEntry
   intro q
-  cases q <;> simp [QueryImpl.insertMiddle, withQueryLog_query]
+  cases q <;> simp [QueryImpl.insertMiddle, QueryLog.insertMiddleEntry, withQueryLog_query]
 
 /-- Projecting away both merged slots preserves the retained query log. -/
 theorem fst_withQueryLog_mergeRight
@@ -175,7 +189,7 @@ theorem withQueryLog_liftComp_left {ι κ α : Type} {a : OracleSpec ι} {b : Or
       (fun z => (z.1, QueryLog.inl z.2)) <$> liftComp p.withQueryLog (a + b) := by
   simpa only [withQueryLog, loggingOracle, QueryImpl.ofLift_eq_id',
     map_eq_bind_pure_comp, Function.comp_def] using
-    withQueryLog_liftComp_inl (oSpec := a) (spec₂ := b) (fun _ => rfl) p
+    withQueryLog_liftComp_left_of_query (oSpec := a) (spec₂ := b) (fun _ => rfl) p
 
 /-- A computation using only the right-hand oracle leaves the left-hand log empty. -/
 theorem fst_withQueryLog_liftComp_right {ι κ α : Type}

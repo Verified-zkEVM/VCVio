@@ -42,4 +42,14 @@ theorem erase_private_interleaved :
         QueryLog (replies + replies)) := by
   rfl
 
+/-- Inserting an unused middle slot relabels both public slots and keeps their order. -/
+theorem insert_middle_interleaved :
+    let log : QueryLog (replies + replies) :=
+      [⟨.inl false, (7 : ℕ)⟩, ⟨.inr true, false⟩, ⟨.inl false, (9 : ℕ)⟩]
+    log.insertMiddle (c := coinSpec) =
+      ([⟨.inl (.inl false), (7 : ℕ)⟩, ⟨.inr true, false⟩, ⟨.inl (.inl false), (9 : ℕ)⟩] :
+        QueryLog ((replies + coinSpec) + replies)) ∧
+      (log.insertMiddle (c := coinSpec)).eraseMiddle = log := by
+  exact ⟨rfl, rfl⟩
+
 end VCVioTest.QueryLog

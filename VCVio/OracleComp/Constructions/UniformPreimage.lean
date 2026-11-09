@@ -1,7 +1,9 @@
 /-
-Copyright (c) 2026 VCVio Contributors. All rights reserved.
+Copyright (c) 2024 ArkLib Contributors,
+  2025 ArkLib Contributors,
+  2026 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù
+Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù, ArkLib Contributors
 -/
 
 module
@@ -13,8 +15,9 @@ public import VCVio.OracleComp.EvalDist.DiscreteTVDistFintype
 # Uniform sampling from finite preimages
 
 Sampling a fresh uniform preimage after observing a deterministic image preserves the original
-uniform law. The same fiber decomposition identifies the total-variation loss when the target
-is drawn uniformly instead of from the image distribution.
+uniform law, for any map: only fibers over image points are sampled. For a surjection, the same
+fiber decomposition identifies the total-variation loss when the target is drawn uniformly
+instead of from the image distribution.
 
 Samplers are `ProbComp`s; laws are output measures `𝒟[·]`, and distances are `discreteTVDist`.
 
@@ -39,29 +42,34 @@ variable {A B : Type}
 /-- The fiber of `ψ` over `a`. -/
 abbrev Preimage (ψ : B → A) (a : A) := { b : B // ψ b = a }
 
-/-- Surjectivity provides a canonical nonempty witness for each fiber. -/
+/-- The fiber over an image point contains the point it is the image of. -/
+theorem preimage_apply_nonempty (ψ : B → A) (b : B) : Nonempty (Preimage ψ (ψ b)) :=
+  ⟨⟨b, rfl⟩⟩
+
+/-- Every fiber of a surjection is nonempty. -/
 theorem preimage_nonempty (ψ : B → A) (hψ : Function.Surjective ψ) (a : A) :
     Nonempty (Preimage ψ a) := by
   rcases hψ a with ⟨b, rfl⟩
-  exact ⟨⟨b, rfl⟩⟩
+  exact preimage_apply_nonempty ψ b
 
 variable [DecidableEq A] [Fintype B]
 
-/-- Sample a uniformly random preimage of `a` under `ψ`. The fiber is sampled by enumeration
-(`SampleableType.ofFintype`). -/
-@[expose] noncomputable def sampleUniformPreimage (ψ : B → A) (hψ : Function.Surjective ψ) (a : A) :
-    ProbComp B :=
-  letI := preimage_nonempty ψ hψ a
+/-- Sample a uniformly random preimage of `a` under `ψ`, given that the fiber over `a` is
+nonempty: `preimage_apply_nonempty` at an image point, `preimage_nonempty` at any point of a
+surjection. The fiber is sampled by enumeration (`SampleableType.ofFintype`). -/
+@[expose] noncomputable def sampleUniformPreimage (ψ : B → A) (a : A)
+    (ha : Nonempty (Preimage ψ a)) : ProbComp B :=
+  letI := ha
   letI : SampleableType (Preimage ψ a) := SampleableType.ofFintype _
   Subtype.val <$> ($ᵗ (Preimage ψ a))
 
 /-- Pointwise description of `sampleUniformPreimage`.
 Probability of sampling `b` from the fiber of `a` = `1/|fiber_{a}|` or `0` -/
 theorem sampleUniformPreimage_apply [MeasurableSpace B] [MeasurableSingletonClass B]
-    (ψ : B → A) (hψ : Function.Surjective ψ) (a : A) (b : B) :
-    𝒟[sampleUniformPreimage ψ hψ a] {b} =
+    (ψ : B → A) (a : A) (ha : Nonempty (Preimage ψ a)) (b : B) :
+    𝒟[sampleUniformPreimage ψ a ha] {b} =
       if ψ b = a then (Fintype.card (Preimage ψ a) : ℝ≥0∞)⁻¹ else 0 := by
-  let _ := preimage_nonempty ψ hψ a
+  let _ := ha
   let _ : SampleableType (Preimage ψ a) := SampleableType.ofFintype _
   let _ : MeasurableSpace (Preimage ψ a) := ⊤
   rw [sampleUniformPreimage, evalDist_map_of_discrete,
@@ -79,25 +87,24 @@ theorem sampleUniformPreimage_apply [MeasurableSpace B] [MeasurableSingletonClas
     rw [hpre, measure_empty]
 
 /-- The uniform preimage sampler never fails. -/
-instance (ψ : B → A) (hψ : Function.Surjective ψ) (a : A) [MeasurableSpace B] :
-    IsProbabilityMeasure 𝒟[sampleUniformPreimage ψ hψ a] := by
+instance (ψ : B → A) (a : A) (ha : Nonempty (Preimage ψ a)) [MeasurableSpace B] :
+    IsProbabilityMeasure 𝒟[sampleUniformPreimage ψ a ha] := by
   unfold sampleUniformPreimage
   infer_instance
 
 /-- Observing the image of a uniform sample and resampling a uniform preimage of it preserves the
-uniform law. -/
+uniform law. The map need not be onto: only fibers over image points are sampled. -/
 theorem bind_sampleUniformPreimage_eq_uniform [SampleableType B] [MeasurableSpace B]
-    [MeasurableSingletonClass B]
-    (ψ : B → A) (hψ : Function.Surjective ψ) :
+    [MeasurableSingletonClass B] (ψ : B → A) :
     𝒟[do
       let b' ← $ᵗ B
-      sampleUniformPreimage ψ hψ (ψ b')] = 𝒟[$ᵗ B] := by
+      sampleUniformPreimage ψ (ψ b') (preimage_apply_nonempty ψ b')] = 𝒟[$ᵗ B] := by
   classical
   apply Measure.ext_of_singleton
   intro b
   let c : ℝ≥0∞ := (Fintype.card (Preimage ψ (ψ b)) : ℝ≥0∞)⁻¹
   have hcard : (Fintype.card (Preimage ψ (ψ b)) : ℝ≥0∞) ≠ 0 := by
-    let _ := preimage_nonempty ψ hψ (ψ b)
+    let _ := preimage_apply_nonempty ψ b
     exact_mod_cast Fintype.card_ne_zero
   let s : Finset B := Finset.univ.filter fun b' => ψ b' = ψ b
   have hs_card : s.card = Fintype.card (Preimage ψ (ψ b)) := by
@@ -129,7 +136,7 @@ variable {A B : Type} [DecidableEq A] [Fintype B]
 each `b` receives mass `1 / (|A| · |ψ⁻¹(ψ b)|)`. -/
 lemma bind_sampleUniformPreimage_uniform_apply [Fintype A] [SampleableType A]
     (ψ : B → A) (hψ : Function.Surjective ψ) (b : B) :
-    Pr{let x ← ($ᵗ A >>= sampleUniformPreimage ψ hψ)}[x = b]
+    Pr{let x ← ($ᵗ A >>= fun a => sampleUniformPreimage ψ a (preimage_nonempty ψ hψ a))}[x = b]
       = (Fintype.card A : ℝ≥0∞)⁻¹ * (Fintype.card (Preimage ψ (ψ b)) : ℝ≥0∞)⁻¹ := by
   let : MeasurableSpace A := ⊤
   let : MeasurableSpace B := ⊤
@@ -157,13 +164,14 @@ as far from uniform as the pushforward of the uniform distribution is. Grouping 
 `B` by the fibers of `ψ` matches the terms of the `L¹` sum over `A` one for one. -/
 theorem discreteTVDist_bind_sampleUniformPreimage_uniform_eq_discreteTVDist_map
     [SampleableType A] [SampleableType B] (ψ : B → A) (hψ : Function.Surjective ψ) :
-    discreteTVDist ($ᵗ A >>= sampleUniformPreimage ψ hψ) ($ᵗ B)
+    discreteTVDist ($ᵗ A >>= fun a => sampleUniformPreimage ψ a (preimage_nonempty ψ hψ a))
+        ($ᵗ B)
       = discreteTVDist (ψ <$> ($ᵗ B)) ($ᵗ A) := by
   classical
   have : Fintype A := Fintype.ofFinite A
   rw [discreteTVDist.eq_half_sum_abs, discreteTVDist.eq_half_sum_abs]
   congr 1
-  simp only [bind_sampleUniformPreimage_uniform_apply, map_uniform_apply_fiber,
+  simp only [bind_sampleUniformPreimage_uniform_apply ψ hψ, map_uniform_apply_fiber,
     SampleableType.prEvent_uniformSample_eq_singleton, ENNReal.toReal_mul,
     ENNReal.toReal_inv, ENNReal.toReal_natCast]
   -- Group the `B`-sum along the fibers of `ψ`.
@@ -194,9 +202,9 @@ end FiberGrouping
 pair. -/
 theorem map_sampleUniformPreimage_decode_pair
     {A B : Type} [DecidableEq A] [Fintype B]
-    (ψ : B → A) (hψ : Function.Surjective ψ) (a : A) :
-    (fun b => (ψ b, b)) <$> sampleUniformPreimage ψ hψ a =
-      (fun b => (a, b)) <$> sampleUniformPreimage ψ hψ a := by
+    (ψ : B → A) (a : A) (ha : Nonempty (Preimage ψ a)) :
+    (fun b => (ψ b, b)) <$> sampleUniformPreimage ψ a ha =
+      (fun b => (a, b)) <$> sampleUniformPreimage ψ a ha := by
   simp only [sampleUniformPreimage, Functor.map_map]
   congr 1
   funext b
@@ -204,30 +212,32 @@ theorem map_sampleUniformPreimage_decode_pair
 
 /-- Every supported preimage decodes to the target whose fiber was sampled. -/
 theorem mem_support_sampleUniformPreimage {A B : Type} [DecidableEq A] [Fintype B]
-    (f : B → A) (hf : Function.Surjective f) (a : A) {b : B}
-    (hb : b ∈ support (sampleUniformPreimage f hf a)) : f b = a := by
+    (ψ : B → A) (a : A) (ha : Nonempty (Preimage ψ a)) {b : B}
+    (hb : b ∈ support (sampleUniformPreimage ψ a ha)) : ψ b = a := by
   unfold sampleUniformPreimage at hb
   rw [support_map] at hb
   obtain ⟨p, -, rfl⟩ := hb
   exact p.2
 
-/-- Resampling the uniform fiber preserves the joint law of image and preimage. -/
+/-- Resampling the uniform fiber preserves the joint law of image and preimage. The map need not
+be onto. -/
 theorem bind_uniform_fiber_observe
     {A B C : Type} [DecidableEq A] [Fintype B] [SampleableType B] [MeasurableSpace C]
-    (f : B → A) (hf : Function.Surjective f) (k : A → B → ProbComp C) :
+    (ψ : B → A) (k : A → B → ProbComp C) :
     𝒟[($ᵗ B) >>= fun b =>
-      sampleUniformPreimage f hf (f b) >>= k (f b)] =
-    𝒟[($ᵗ B) >>= fun b => k (f b) b] := by
+      sampleUniformPreimage ψ (ψ b) (preimage_apply_nonempty ψ b) >>= k (ψ b)] =
+    𝒟[($ᵗ B) >>= fun b => k (ψ b) b] := by
   calc
     _ = 𝒟[($ᵗ B) >>= fun b =>
-        sampleUniformPreimage f hf (f b) >>= fun b' => k (f b') b'] := by
+        sampleUniformPreimage ψ (ψ b) (preimage_apply_nonempty ψ b) >>= fun b' =>
+          k (ψ b') b'] := by
       refine evalDist_bind_congr _ _ _ fun b => ?_
       refine OracleComp.evalDist_bind_congr_of_support _ _ _ fun b' hb' => ?_
-      rw [mem_support_sampleUniformPreimage f hf (f b) hb']
+      rw [mem_support_sampleUniformPreimage ψ (ψ b) _ hb']
     _ = _ := by
       let : MeasurableSpace B := ⊤
       rw [← bind_assoc]
       exact ((evalDistEq_iff_evalDist_eq.mpr
-        (bind_sampleUniformPreimage_eq_uniform f hf)).bind_left _).evalDist_eq
+        (bind_sampleUniformPreimage_eq_uniform ψ)).bind_left _).evalDist_eq
 
 end OracleComp.UniformPreimage

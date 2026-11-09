@@ -17,6 +17,8 @@ outputs, and a common continuation or an independent second draw stays within th
 Singleton masses decide equality of the discrete measures of finitely supported computations.
 -/
 
+public section
+
 open OracleComp
 
 namespace VCVioTest.DiscreteTVDist

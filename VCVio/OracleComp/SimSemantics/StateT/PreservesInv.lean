@@ -54,7 +54,7 @@ open OracleComp OracleSpec MeasureTheory
 
 open scoped OracleSpec.PrimitiveQuery
 
-universe u v
+universe u v w
 
 namespace StateT
 
@@ -78,39 +78,39 @@ def PreservesInv {m : Type → Type v} [MonadAttach m]
 
 variable {m : Type → Type v} [MonadAttach m]
 
-lemma preservesInv_iff {ι : Type} {spec : OracleSpec ι} {σ : Type}
+lemma preservesInv_iff {ι : Type u} {spec : OracleSpec.{u, 0} ι} {σ : Type}
     (impl : QueryImpl spec (StateT σ m)) (Inv : σ → Prop) :
     PreservesInv impl Inv ↔ ∀ t, StateT.PreservesInv (impl t) Inv :=
   Iff.rfl
 
-lemma PreservesInv.trivial {ι : Type} {spec : OracleSpec ι} {σ : Type}
+lemma PreservesInv.trivial {ι : Type u} {spec : OracleSpec.{u, 0} ι} {σ : Type}
     (impl : QueryImpl spec (StateT σ m)) :
     PreservesInv impl (fun _ => True) :=
   fun _ _ _ _ _ => True.intro
 
-lemma PreservesInv.and {ι : Type} {spec : OracleSpec ι} {σ : Type}
+lemma PreservesInv.and {ι : Type u} {spec : OracleSpec.{u, 0} ι} {σ : Type}
     {impl : QueryImpl spec (StateT σ m)} {P Q : σ → Prop}
     (hP : PreservesInv impl P) (hQ : PreservesInv impl Q) :
     PreservesInv impl (fun s => P s ∧ Q s) :=
   fun t σ0 ⟨hp, hq⟩ z hz => ⟨hP t σ0 hp z hz, hQ t σ0 hq z hz⟩
 
-lemma PreservesInv.of_forall {ι : Type} {spec : OracleSpec ι} {σ : Type}
+lemma PreservesInv.of_forall {ι : Type u} {spec : OracleSpec.{u, 0} ι} {σ : Type}
     {impl : QueryImpl spec (StateT σ m)} {Inv : σ → Prop}
     (h : ∀ t σ0 z, z ∈ support ((impl t).run σ0) → Inv z.2) :
     PreservesInv impl Inv :=
   fun t σ0 _ z hz => h t σ0 z hz
 
 /-- A sum of implementations preserves `Inv` when both summands do. -/
-lemma PreservesInv.add {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁}
-    {spec₂ : OracleSpec ι₂} {σ : Type}
+lemma PreservesInv.add {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, 0} ι₁}
+    {spec₂ : OracleSpec.{u, 0} ι₂} {σ : Type}
     {impl₁ : QueryImpl spec₁ (StateT σ m)} {impl₂ : QueryImpl spec₂ (StateT σ m)}
     {Inv : σ → Prop} (h₁ : PreservesInv impl₁ Inv) (h₂ : PreservesInv impl₂ Inv) :
     PreservesInv (impl₁ + impl₂) Inv
   | .inl t => by rw [add_apply_inl]; exact h₁ t
   | .inr t => by rw [add_apply_inr]; exact h₂ t
 
-lemma preservesInv_add_iff {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {σ : Type} (impl₁ : QueryImpl spec₁ (StateT σ m))
+lemma preservesInv_add_iff {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, 0} ι₁}
+    {spec₂ : OracleSpec.{u, 0} ι₂} {σ : Type} (impl₁ : QueryImpl spec₁ (StateT σ m))
     (impl₂ : QueryImpl spec₂ (StateT σ m)) (Inv : σ → Prop) :
     PreservesInv (impl₁ + impl₂) Inv ↔ PreservesInv impl₁ Inv ∧ PreservesInv impl₂ Inv :=
   ⟨fun h => ⟨fun t => by simpa only [add_apply_inl] using h (.inl t),
@@ -187,8 +187,8 @@ namespace QueryImpl
 
 /-- If `so'` preserves `Inv`, then `so' ∘ₛ so` also preserves `Inv` for any `so`. -/
 lemma PreservesInv.compose {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [MonadAttach m] [LawfulMonadAttach m] {ι ι' : Type}
-    {spec : OracleSpec ι} {spec' : OracleSpec ι'}
+    [MonadAttach m] [LawfulMonadAttach m] {ι : Type u} {ι' : Type w}
+    {spec : OracleSpec.{u, 0} ι} {spec' : OracleSpec.{w, 0} ι'}
     {σ : Type} {so' : QueryImpl spec' (StateT σ m)}
     {so : QueryImpl spec (OracleComp spec')} {Inv : σ → Prop}
     (h : PreservesInv so' Inv) :

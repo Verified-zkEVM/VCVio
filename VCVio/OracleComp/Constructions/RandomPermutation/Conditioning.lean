@@ -1,5 +1,5 @@
 /-
-Copyright (c) 2026 VCVio Contributors. All rights reserved.
+Copyright (c) 2026 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù
 -/
@@ -88,7 +88,6 @@ end Swap
 theorem answer_surjective (trace : List (α × α)) (x : UnusedInputs trace)
     (htrace : Nonempty (Extensions trace)) : Function.Surjective (answer trace x) := by
   classical
-  let _ : DecidableEq α := Classical.decEq α
   obtain ⟨p⟩ := htrace
   intro y
   refine ⟨swapOutputs trace (answer trace x p) y p, ?_⟩
@@ -150,7 +149,6 @@ theorem extensions_cons_nonempty (trace : List (α × α)) (x : UnusedInputs tra
     (y : UnusedOutputs trace) (htrace : Nonempty (Extensions trace)) :
     Nonempty (Extensions ((x.1, y.1) :: trace)) := by
   classical
-  let _ : DecidableEq α := Classical.decEq α
   exact htrace.map (programExtension trace x y)
 
 /-! ## Fixed fresh programs -/
@@ -233,8 +231,9 @@ variable [DecidableEq α] [Fintype α]
 @[expose] def uniformAnswerFiber (trace : List (α × α)) (x : UnusedInputs trace)
     (htrace : Nonempty (Extensions trace)) (y : UnusedOutputs trace) :
     ProbComp (Extensions trace) :=
-  OracleComp.UniformPreimage.sampleUniformPreimage (answer trace x)
-    (answer_surjective trace x htrace) y
+  OracleComp.UniformPreimage.sampleUniformPreimage (answer trace x) y
+    (OracleComp.UniformPreimage.preimage_nonempty (answer trace x)
+      (answer_surjective trace x htrace) y)
 
 /-- Every unused answer has the same number of compatible extensions. -/
 theorem card_answerFiber_eq (trace : List (α × α)) (x : UnusedInputs trace)
@@ -315,7 +314,7 @@ theorem uniformExtensions_eq_bind_fibers (trace : List (α × α)) (x : UnusedIn
       (uniformAnswerFiber trace x htrace)).evalDist_eq,
     bind_map_left]
   exact (OracleComp.UniformPreimage.bind_sampleUniformPreimage_eq_uniform
-    (answer trace x) (answer_surjective trace x htrace)).symm
+    (answer trace x)).symm
 
 /-- Inversion turns extensions of a forward trace into extensions of its reversed edges. -/
 @[expose] def inverseExtensionsEquiv (trace : List (α × α)) :

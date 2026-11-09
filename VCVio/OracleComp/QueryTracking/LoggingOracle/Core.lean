@@ -837,7 +837,8 @@ re-indexed.
 The `MonadLiftT` instance is a *free* implicit argument (not instance-bound), so this applies
 whatever (possibly non-canonical) instance route appears in the goal; the query-agreement
 hypothesis `hq` is typically closed by `rfl`. -/
-lemma withQueryLog_liftComp_inl {ι₁ ι₂ : Type} {oSpec : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+lemma withQueryLog_liftComp_left_of_query {ι₁ ι₂ : Type} {oSpec : OracleSpec ι₁}
+    {spec₂ : OracleSpec ι₂}
     {α : Type} {i₁ : MonadLiftT (OracleQuery oSpec) (OracleQuery (oSpec + spec₂))}
     (hq : ∀ (t : oSpec.Domain),
       (liftComp ((oSpec.query t : OracleQuery oSpec _) : OracleComp oSpec _) (oSpec + spec₂)

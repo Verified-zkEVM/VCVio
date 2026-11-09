@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 VCVio Contributors. All rights reserved.
+Copyright (c) 2026 ArkLib Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù
+Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù, ArkLib Contributors
 -/
 
 module
@@ -17,8 +17,11 @@ public import VCVio.EvalDist.ProbabilityNotation
 
 A computation whose support is finite denotes, under the discrete σ-algebra, a measure
 concentrated on a finite set. Its event masses are finite sums of singleton masses, so
-singleton comparisons `Pr{let y ← mx}[y = x]` determine measure comparisons. Oracle computations
-with finite answer types, and their `OptionT` wrappers, have finite support.
+singleton comparisons `Pr{let y ← mx}[y = x]` determine measure comparisons.
+
+The finiteness hypothesis is supplied by the monad. Oracle computations with finite answer types
+have finite support by `OracleComp.support_finite`, and `OptionT.support_finite_of_run` transfers
+finite support of the underlying run to an optional computation.
 -/
 
 public section
