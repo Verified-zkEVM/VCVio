@@ -121,4 +121,11 @@ def mldsa87 : Params := ParameterSet.params .MLDSA_87
 def Params.isApproved (params : Params) : Prop :=
   params = mldsa44 ∨ params = mldsa65 ∨ params = mldsa87
 
+/-- ML-DSA-44's mask range is nonempty: `γ₁ = 2^17`. -/
+instance : NeZero mldsa44.gamma1 := ⟨by decide⟩
+/-- ML-DSA-65's mask range is nonempty: `γ₁ = 2^19`. -/
+instance : NeZero mldsa65.gamma1 := ⟨by decide⟩
+/-- ML-DSA-87's mask range is nonempty: `γ₁ = 2^19`. -/
+instance : NeZero mldsa87.gamma1 := ⟨by decide⟩
+
 end MLDSA

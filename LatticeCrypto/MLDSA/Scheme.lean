@@ -200,7 +200,7 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
   `w'_Approx = Az - c·(t₁·2^d)`, verify `UseHint(h, w'_Approx) = w₁` and
   hint weight `≤ ω`. -/
 def identificationScheme
-    [DecidableEq prims.High] :
+    [DecidableEq prims.High] [NeZero p.gamma1] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
@@ -243,7 +243,7 @@ never consumed by the operations — so every per-key fact about the operations 
 between the two scheme constants. This is the scheme used by the idealized short-key security
 statements, whose key generators produce material-valid rather than seed-derived pairs. -/
 def identificationSchemeShort
-    [DecidableEq prims.High] :
+    [DecidableEq prims.High] [NeZero p.gamma1] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
@@ -287,7 +287,7 @@ noncomputable def validFullKeyPair (fpk : FullPublicKey p prims) (sk : SecretKey
 those of `identificationScheme` at the public key `fpk.pk` and ignore `t₀`, so the transcripts and
 verification are the same; only a simulator, which sees the statement, can use `t₀`. -/
 def identificationSchemeFull
-    [DecidableEq prims.High] :
+    [DecidableEq prims.High] [NeZero p.gamma1] :
     IdenSchemeWithAbort
       (FullPublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)

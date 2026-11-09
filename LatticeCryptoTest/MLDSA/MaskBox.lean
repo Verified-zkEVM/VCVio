@@ -71,15 +71,16 @@ example {gamma1 : ℕ} (hq : 2 * gamma1 + 2 ≤ modulus) :
   absurd ((maskBounded_constVec_iff (by omega) (by omega)).mp h).2 (by omega)
 
 /-- The value `0` decodes to the top endpoint `γ₁`. -/
-example {gamma1 : ℕ} (hq : 2 * gamma1 < modulus) :
-    centeredRepr (maskDecodeCoeff gamma1 0) = gamma1 := by
+example {gamma1 : ℕ} (h0 : 0 < gamma1) (hq : 2 * gamma1 < modulus) :
+    centeredRepr (maskDecodeCoeff gamma1 ⟨0, by omega⟩) = gamma1 := by
   rw [centeredRepr_maskDecodeCoeff hq]
   simp
 
 /-- The largest value `2γ₁ - 1` decodes to the bottom endpoint `-γ₁ + 1`. -/
 example {gamma1 : ℕ} (h0 : 0 < gamma1) (hq : 2 * gamma1 < modulus) :
-    centeredRepr (maskDecodeCoeff gamma1 (Fin.last _)) = -(gamma1 : ℤ) + 1 := by
-  rw [centeredRepr_maskDecodeCoeff hq, Fin.val_last]
+    centeredRepr (maskDecodeCoeff gamma1 ⟨2 * gamma1 - 1, by omega⟩) = -(gamma1 : ℤ) + 1 := by
+  rw [centeredRepr_maskDecodeCoeff hq]
+  change (gamma1 : ℤ) - ((2 * gamma1 - 1 : ℕ) : ℤ) = _
   omega
 
 /-! ### Computability
@@ -88,17 +89,17 @@ Each `def` below elaborates without `noncomputable`, so code generation succeeds
 sampler, the identification schemes and the HVZK simulator. -/
 
 /-- The mask sampler as an executable `IO` action. -/
-def sampleMaskVecIO (k gamma1 : ℕ) : IO (RqVec k) :=
+def sampleMaskVecIO (k gamma1 : ℕ) [NeZero gamma1] : IO (RqVec k) :=
   OracleComp.runIO (sampleMaskVec k gamma1)
 
 /-- The identification scheme with `t₀` in the statement. -/
 def identificationSchemeFullCompiled (p : Params) (prims : Primitives p) [NTTRingOps]
-    [DecidableEq prims.High] :=
+    [DecidableEq prims.High] [NeZero p.gamma1] :=
   identificationSchemeFull p prims
 
 /-- The HVZK simulator as an executable `IO` action. -/
 def hvzkSimulatorIO (p : Params) (prims : Primitives p) [NTTRingOps]
-    [SampleableType (CommitHashBytes p)] (fpk : FullPublicKey p prims) :
+    [SampleableType (CommitHashBytes p)] [NeZero p.gamma1] (fpk : FullPublicKey p prims) :
     IO (Option (Commitment p prims × CommitHashBytes p × Response p prims)) :=
   OracleComp.runIO (hvzkSimulator p prims fpk)
 
@@ -119,7 +120,7 @@ private lemma half_lt_of_lt_two_mul {a b : ℕ} (hb : 0 < b) (h : b < 2 * a) :
   exact (ENNReal.ofReal_lt_ofReal_iff (lt_trans (by norm_num) key)).mpr key
 
 /-- The response gate's rate at a parameter set, from the box count. -/
-private lemma half_lt_gate (p : Params) (hb : 0 < p.gamma1 - p.beta)
+private lemma half_lt_gate (p : Params) [NeZero p.gamma1] (hb : 0 < p.gamma1 - p.beta)
     (hq : 2 * p.gamma1 < modulus)
     (h : (2 * p.gamma1) ^ (ringDegree * p.l) <
       2 * (2 * (p.gamma1 - p.beta) - 1) ^ (ringDegree * p.l)) :

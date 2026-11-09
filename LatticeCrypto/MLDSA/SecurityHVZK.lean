@@ -95,8 +95,8 @@ direct draw of `(c̃, z)` with `z` a fresh mask, as observed by any continuation
 outside the response gate. Both draws are injections of the raw mask samples, `a ↦ maskDecode a +
 c·s` and `maskDecode`, and both cover every `z` that passes the gate
 (`SampleableType.uniformSample_bind_evalDistEq_of_cover`). -/
-theorem honest_pregate_evalDistEq [SampleableType (CommitHashBytes p)] {s : RqVec p.l}
-    (hq : 2 * p.gamma1 < modulus)
+theorem honest_pregate_evalDistEq [SampleableType (CommitHashBytes p)] [NeZero p.gamma1]
+    {s : RqVec p.l} (hq : 2 * p.gamma1 < modulus)
     (hs : ∀ cTilde : CommitHashBytes p, polyVecNorm (prims.sampleInBall cTilde • s) ≤ p.beta)
     {γ : Type} (g : CommitHashBytes p → RqVec p.l → ProbComp γ)
     (d : CommitHashBytes p → ProbComp γ)
@@ -232,7 +232,7 @@ def hvzkSimOut (fpk : FullPublicKey p prims) (cTilde : CommitHashBytes p)
 /-- The Dilithium HVZK simulator for the ML-DSA identification scheme with `t₀` in the statement. It
 receives only the statement `(ρ, t₁, t₀)`, samples the challenge hash `c̃` uniformly and the
 response `z` from the mask box, and outputs `hvzkSimOut`. -/
-def hvzkSimulator [SampleableType (CommitHashBytes p)]
+def hvzkSimulator [SampleableType (CommitHashBytes p)] [NeZero p.gamma1]
     (fpk : FullPublicKey p prims) :
     ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)) := do
   let cTilde ← $ᵗ (CommitHashBytes p)
@@ -285,7 +285,7 @@ lemma hvzkHonestOut_eq_hvzkSimOut (h_laws : Primitives.Laws prims nttOps)
 `hvzkHonestOut` (which recovers `y = z − c·s₁`), so the uniform-shift coupling
 `honest_pregate_evalDistEq` applies. -/
 lemma honestExecution_eq_pregate [DecidableEq prims.High] [SampleableType (CommitHashBytes p)]
-    (pk : PublicKey p prims) (sk : SecretKey p) :
+    [NeZero p.gamma1] (pk : PublicKey p prims) (sk : SecretKey p) :
     (identificationScheme p prims).honestExecution pk sk =
       sampleMaskVec p.l p.gamma1 >>= fun y => ($ᵗ (CommitHashBytes p)) >>= fun cTilde =>
         (fun cT zv =>
@@ -300,7 +300,7 @@ lemma honestExecution_eq_pregate [DecidableEq prims.High] [SampleableType (Commi
 /-- The honest transcript distribution over the simulator's `(c̃, z)` randomness, on a valid key
 pair with `2γ₁ < q`. Honest secrets are `η`-bounded, so their challenge products are `β`-bounded,
 and the honest transcript aborts outside the response gate; the mask coupling then applies. -/
-lemma honestExecution_evalDistEq_gated [DecidableEq prims.High]
+lemma honestExecution_evalDistEq_gated [DecidableEq prims.High] [NeZero p.gamma1]
     [SampleableType (CommitHashBytes p)] (h_laws : Primitives.Laws prims nttOps)
     (hq : 2 * p.gamma1 < modulus)
     {pk : PublicKey p prims} {sk : SecretKey p} (seed : Bytes 32)
@@ -325,7 +325,7 @@ lemma honestExecution_evalDistEq_gated [DecidableEq prims.High]
 
 /-- The scheme with `t₀` in the statement runs the honest prover of `identificationScheme` at the
 public key `fpk.pk`. -/
-lemma honestExecution_identificationSchemeFull [DecidableEq prims.High]
+lemma honestExecution_identificationSchemeFull [DecidableEq prims.High] [NeZero p.gamma1]
     [SampleableType (CommitHashBytes p)] (fpk : FullPublicKey p prims) (sk : SecretKey p) :
     (identificationSchemeFull p prims).honestExecution fpk sk =
       (identificationScheme p prims).honestExecution fpk.pk sk := rfl
@@ -337,7 +337,7 @@ statement.** For every valid key pair the honest transcript and `hvzkSimulator` 
 distribution, aborts included. By `IdenSchemeWithAbort.perfectHVZK_iff_hvzk_zero` this is `HVZK` at
 `ζ_zk = 0`. The hypothesis `2γ₁ < q`, which every FIPS 204 parameter set meets, makes the mask
 decoding injective. -/
-theorem identificationSchemeFull_perfectHVZK [DecidableEq prims.High]
+theorem identificationSchemeFull_perfectHVZK [DecidableEq prims.High] [NeZero p.gamma1]
     [SampleableType (CommitHashBytes p)] (h_laws : Primitives.Laws prims nttOps)
     (hq : 2 * p.gamma1 < modulus) :
     (identificationSchemeFull p prims).PerfectHVZK (hvzkSimulator p prims) := by
@@ -370,7 +370,8 @@ def fullRelation
 
 /-- The signing loop of the variant at `fpk` is the signing loop of `identificationScheme` at the
 public key `fpk.pk`. -/
-lemma fsAbortSignLoop_identificationSchemeFull [DecidableEq prims.High] {M : Type}
+lemma fsAbortSignLoop_identificationSchemeFull [DecidableEq prims.High] [NeZero p.gamma1]
+    {M : Type}
     {m : Type → Type} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (M × Commitment p prims →ₒ CommitHashBytes p) m]
     (fpk : FullPublicKey p prims) (sk : SecretKey p) (msg : M) (n : ℕ) :
@@ -386,8 +387,8 @@ lemma fsAbortSignLoop_identificationSchemeFull [DecidableEq prims.High] {M : Typ
 and verification ignore `t₀`, so running a forger for the Fiat-Shamir-with-aborts signature over
 `identificationScheme` on the public key `fpk.pk` of the variant over `identificationSchemeFull`
 gives the same unforgeability advantage. -/
-theorem unforgeableAdvantage_eq_full [DecidableEq prims.High] {M : Type} [DecidableEq M]
-    [SampleableType (CommitHashBytes p)]
+theorem unforgeableAdvantage_eq_full [DecidableEq prims.High] [NeZero p.gamma1] {M : Type}
+    [DecidableEq M] [SampleableType (CommitHashBytes p)]
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
     (maxAttempts : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary

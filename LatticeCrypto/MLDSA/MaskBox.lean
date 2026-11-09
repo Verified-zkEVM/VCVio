@@ -14,7 +14,8 @@ public import VCVio.OracleComp.Constructions.SampleableType.Measure
 FIPS 204's `ExpandMask` decodes each coefficient of the mask `y` from a value `v < 2γ₁` as `γ₁ - v`,
 so the coefficients lie in `[-γ₁ + 1, γ₁]` (`maskBounded`). `sampleMaskVec`, the identification
 scheme's mask, applies the same decoding (`maskDecode`) to uniform values, coefficient by
-coefficient, and is computable. When `2γ₁ < q` the decoding is injective
+coefficient, and is computable. Sampling needs `γ₁ ≠ 0` (`[NeZero γ₁]`), which every FIPS 204
+parameter set meets. When `2γ₁ < q` the decoding is injective
 (`maskDecode_injective`) and lands in the range (`maskBounded_maskDecode`). It reaches every
 vector of centered norm below `γ₁` (`exists_maskDecode_eq_of_polyVecNorm_lt`).
 
@@ -31,10 +32,8 @@ open LatticeCrypto
 
 namespace MLDSA
 
-/-- The values a raw mask coefficient is drawn from: `Fin (2γ₁)` when `γ₁ ≥ 1`. The form
-`Fin (2γ₁ - 1 + 1)` is nonempty for every `γ₁`, so sampling it needs no hypothesis; at `γ₁ = 0`,
-where FIPS 204's range is empty, the mask is `0`, and the lemmas below that need `0 < γ₁` say so. -/
-abbrev MaskValue (gamma1 : ℕ) : Type := Fin (2 * gamma1 - 1 + 1)
+/-- The values a raw mask coefficient is drawn from, `v < 2γ₁`. -/
+abbrev MaskValue (gamma1 : ℕ) : Type := Fin (2 * gamma1)
 
 /-- A raw mask sample: one value for each coefficient of each component. -/
 abbrev MaskSample (k gamma1 : ℕ) : Type := Vector (Vector (MaskValue gamma1) ringDegree) k
@@ -47,8 +46,9 @@ abbrev MaskSample (k gamma1 : ℕ) : Type := Vector (Vector (MaskValue gamma1) r
 @[expose] def maskDecode {k gamma1 : ℕ} (a : MaskSample k gamma1) : RqVec k :=
   Vector.ofFn fun j => (Poly.ofPi fun i => maskDecodeCoeff gamma1 ((a.get j).get i) : Rq)
 
-/-- The identification scheme's mask: uniform values decoded as in FIPS 204's `ExpandMask`. -/
-@[expose] def sampleMaskVec (k gamma1 : ℕ) : ProbComp (RqVec k) :=
+/-- The identification scheme's mask: uniform values decoded as in FIPS 204's `ExpandMask`. Every
+FIPS 204 parameter set has `γ₁ ≠ 0`, which makes the values nonempty. -/
+@[expose] def sampleMaskVec (k gamma1 : ℕ) [NeZero gamma1] : ProbComp (RqVec k) :=
   maskDecode <$> ($ᵗ (MaskSample k gamma1))
 
 /-! ### The decoding -/
@@ -77,9 +77,9 @@ theorem maskDecode_injective {k gamma1 : ℕ} (hq : 2 * gamma1 < modulus) :
   simp only [Vector.get_eq_getElem] at hc
   omega
 
-/-- Decoded samples lie in the mask range when `0 < γ₁` and `2γ₁ < q`. -/
-theorem maskBounded_maskDecode {k gamma1 : ℕ} (hgamma1 : 0 < gamma1)
-    (hq : 2 * gamma1 < modulus) (a : MaskSample k gamma1) :
+/-- Decoded samples lie in the mask range when `2γ₁ < q`. -/
+theorem maskBounded_maskDecode {k gamma1 : ℕ} (hq : 2 * gamma1 < modulus)
+    (a : MaskSample k gamma1) :
     maskBounded (maskDecode a) gamma1 := fun j i => by
   rw [maskDecode_get, centeredRepr_maskDecodeCoeff hq]
   have hv := ((a.get j).get i).isLt
@@ -140,7 +140,7 @@ private lemma natCard_coeffBox (k : ℕ) {a b : ℤ} (ha : -(modulus : ℤ) < a 
 
 /-- The exact probability that a mask has centered norm below `b`, for `0 < b ≤ γ₁` and
 `2γ₁ < q`: `(2b - 1)` of the `2γ₁` values of each coefficient decode below `b`. -/
-theorem prEvent_sampleMaskVec_polyVecNorm_lt (k : ℕ) {gamma1 b : ℕ} (hb : 0 < b)
+theorem prEvent_sampleMaskVec_polyVecNorm_lt (k : ℕ) {gamma1 b : ℕ} [NeZero gamma1] (hb : 0 < b)
     (hbgamma1 : b ≤ gamma1) (hq : 2 * gamma1 < modulus) :
     Pr{let z ← sampleMaskVec k gamma1}[polyVecNorm z < b] =
       ((2 * b - 1 : ℕ) : ℝ≥0∞) ^ (ringDegree * k) /
@@ -150,8 +150,6 @@ theorem prEvent_sampleMaskVec_polyVecNorm_lt (k : ℕ) {gamma1 b : ℕ} (hb : 0 
     rw [Fintype.card_congr (arrayVectorEquivFin _ _), Fintype.card_fun,
       Fintype.card_congr (arrayVectorEquivFin _ _), Fintype.card_fun, Fintype.card_fin,
       Fintype.card_fin, Fintype.card_fin, ← pow_mul]
-    congr 1
-    omega
   have hgate : ∀ v : RqVec k, polyVecNorm v < b ↔ ∀ (j : Fin k) (i : Fin ringDegree),
       -(b : ℤ) < centeredRepr ((v.get j).get i) ∧
         centeredRepr ((v.get j).get i) ≤ (b : ℤ) - 1 := fun v => by

@@ -113,7 +113,7 @@ theorem hide_lowVec (h_laws : Primitives.Laws prims nttOps) {k : ℕ}
   rw [Vector.get_eq_getElem] at hsi hri
   exact h_laws.hide_low r[i] s[i] b hsi hri
 
-variable [DecidableEq prims.High]
+variable [DecidableEq prims.High] [NeZero p.gamma1]
 
 /-- Commitment recoverability for ML-DSA: the public commitment `w₁` can be reconstructed
 from `(pk, c̃, (z, h))` alone using `UseHint(h, Az - ct₁·2^d)`. This is the key property
