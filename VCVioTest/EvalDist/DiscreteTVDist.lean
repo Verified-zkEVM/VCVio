@@ -17,37 +17,35 @@ outputs, and a common continuation or an independent second draw stays within th
 Singleton masses decide equality of the discrete measures of finitely supported computations.
 -/
 
-public section
-
 open OracleComp
 
 namespace VCVioTest.DiscreteTVDist
 
-/-- A uniform bit is at distance one half from a fixed bit. -/
-theorem discreteTVDist_uniform_pure_true :
-    discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool) = 1 / 2 := by
+/-- A uniform bit is at distance one half from a fixed bit. The examples below that use this
+distance take it as the hypothesis `h`. -/
+example : discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool) = 1 / 2 := by
   rw [discreteTVDist.eq_half_sum_abs]
   simp only [Fintype.sum_bool, SampleableType.prEvent_uniformSample_eq_singleton]
   norm_num
 
 /-- The event bound is attained: the fixed bit never outputs `false`, and the uniform bit does so
 with exactly the distance between them. -/
-example :
+example (h : discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool) = 1 / 2) :
     Pr{let b ← ($ᵗ Bool : ProbComp Bool)}[b = false] =
       Pr{let b ← (pure true : ProbComp Bool)}[b = false] +
         ENNReal.ofReal (discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool)) := by
-  rw [discreteTVDist_uniform_pure_true, SampleableType.prEvent_uniformSample_eq_singleton]
+  rw [h, SampleableType.prEvent_uniformSample_eq_singleton]
   simp
 
 /-- A common continuation, here negation, does not move the two bits further apart. -/
-example :
+example (h : discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool) = 1 / 2) :
     discreteTVDist (do let b ← ($ᵗ Bool : ProbComp Bool); pure (!b))
       (do let b ← (pure true : ProbComp Bool); pure (!b)) ≤ 1 / 2 :=
-  (discreteTVDist.bind_le _ _ _).trans_eq discreteTVDist_uniform_pure_true
+  (discreteTVDist.bind_le _ _ _).trans_eq h
 
 /-- Two independent uniform bits are within the sum of the coordinate distances of two fixed
 bits. -/
-example :
+example (h : discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool) = 1 / 2) :
     discreteTVDist
       (do
         let a ← ($ᵗ Bool : ProbComp Bool)
@@ -57,7 +55,7 @@ example :
         let a ← (pure true : ProbComp Bool)
         let b ← (pure true : ProbComp Bool)
         pure (a, b)) ≤ 1 / 2 + 1 / 2 :=
-  (discreteTVDist.pair_le _ _ _ _).trans_eq (by rw [discreteTVDist_uniform_pure_true])
+  (discreteTVDist.pair_le _ _ _ _).trans_eq (by rw [h])
 
 /-- Negating a uniform bit leaves its discrete measure unchanged, decided on singleton masses. -/
 example :
