@@ -22,7 +22,8 @@ also gives the bound `(1 / (σ_min √(2π) - 1)) ^ (4 · 2^κ)` and its half-po
 These are bounds on the FFT-domain sample before reduction modulo `q`.
 
 The hypotheses concern point masses of the actual finite-support `ProbComp` leaf sampler.
-An exact discrete-Gaussian law has infinite support and cannot hold for such a computation.
+An exact discrete-Gaussian law has infinite support and cannot hold for such a computation
+(`Primitives.not_laws`).
 The envelope must therefore be established for the intended sampler separately. The arithmetic
 facts about Falcon's parameter sets do not establish that sampler-quality obligation. Likewise,
 shortness of a modular output does not make its unreduced preimage unique; no point-mass bound
@@ -80,6 +81,19 @@ private theorem pointMass_eq_zero_iff {α : Type} (mx : ProbComp α) (x : α) :
   rw [prEvent_eq_evalDist_singleton]
   simpa only [not_lt, nonpos_iff_eq_zero] using
     (not_congr (mem_support_iff_evalDist_singleton_pos mx x)).symm
+
+/-! ## No finite-support sampler meets the exact law -/
+
+/-- No `Primitives` bundle satisfies `Primitives.Laws`: a `ProbComp` has finite support, while
+for `σ > 0` the discrete Gaussian gives positive mass to every integer (`discreteGaussianPMF_pos`),
+so no `samplerZ` satisfies `samplerZ_correct`. -/
+theorem Primitives.not_laws {p : Params} (prims : Primitives p) : ¬ prims.Laws := by
+  intro h
+  obtain ⟨z, hz⟩ := Infinite.exists_notMem_finset (finSupport (prims.samplerZ 0 1))
+  have h0 := (pointMass_eq_zero_iff (prims.samplerZ 0 1) z).2
+    fun hs => hz ((mem_finSupport_iff_mem_support _ _).2 hs)
+  rw [h.samplerZ_correct 0 1 one_pos z, ENNReal.ofReal_eq_zero] at h0
+  exact (discreteGaussianPMF_pos 1 0 one_pos z).not_ge h0
 
 /-! ## Injectivity of the merge step and of the leaf packing -/
 
