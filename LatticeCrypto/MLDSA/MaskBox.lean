@@ -9,15 +9,19 @@ public import LatticeCrypto.MLDSA.Arithmetic
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
-# The ML-DSA mask box
+# The ML-DSA mask sampler
 
-FIPS 204's `ExpandMask` draws each coefficient of the mask `y` from `[-γ₁ + 1, γ₁]`. This file
-defines the uniform distribution on that box, `sampleMaskVec`, which is the mask distribution of the
-identification scheme, and counts it. `prEvent_sampleMaskVec_polyVecNorm_lt` gives the exact
-probability that a sample has centered norm below `b`. At `b = γ₁ - β` this is the probability
-`((2(γ₁ - β) - 1)/(2γ₁))^(256ℓ)` that a sample from the box passes the response gate. The honest
-response `z = y + c·s₁` passes at the same rate, because `MLDSA.honest_pregate_evalDistEq` couples
-it with a sample from the box on every `z` that passes.
+FIPS 204's `ExpandMask` decodes each coefficient of the mask `y` from a value `v < 2γ₁` as `γ₁ - v`,
+so the coefficients lie in `[-γ₁ + 1, γ₁]` (`maskBounded`). `sampleMaskVec`, the identification
+scheme's mask, applies the same decoding (`maskDecode`) to uniform values, coefficient by
+coefficient, and is computable. When `2γ₁ < q` the decoding is injective
+(`maskDecode_injective`) and lands in the range (`maskBounded_maskDecode`). It reaches every
+vector of centered norm below `γ₁` (`exists_maskDecode_eq_of_polyVecNorm_lt`).
+
+`prEvent_sampleMaskVec_polyVecNorm_lt` gives the exact probability that a mask has centered norm
+below `b`. At `b = γ₁ - β` this is `((2(γ₁ - β) - 1)/(2γ₁))^(256ℓ)`, the rate at which a fresh mask
+passes the response gate. The honest response `z = y + c·s₁` passes at the same rate, because
+`MLDSA.honest_pregate_evalDistEq` couples it with a fresh mask on every `z` that passes.
 -/
 
 public section
@@ -27,84 +31,78 @@ open LatticeCrypto
 
 namespace MLDSA
 
-/-- Whether `v` lies in the range of FIPS 204's `ExpandMask`: the centered representative of every
-coefficient of every component is in `[-γ₁ + 1, γ₁]`. The zero vector is included outright so that
-the box is inhabited at the degenerate `γ₁ = 0`; for `γ₁ ≥ 1` it already lies in the range. -/
-@[expose] def maskBounded {k : ℕ} (v : RqVec k) (gamma1 : ℕ) : Prop :=
-  v = 0 ∨ ∀ (j : Fin k) (i : Fin ringDegree),
-    -(gamma1 : ℤ) < centeredRepr ((v.get j).get i) ∧ centeredRepr ((v.get j).get i) ≤ gamma1
+/-- The values a raw mask coefficient is drawn from: `Fin (2γ₁)` when `γ₁ ≥ 1`. The form
+`Fin (2γ₁ - 1 + 1)` is nonempty for every `γ₁`, so sampling it needs no hypothesis; at `γ₁ = 0`,
+where FIPS 204's range is empty, the mask is `0`, and the lemmas below that need `0 < γ₁` say so. -/
+abbrev MaskValue (gamma1 : ℕ) : Type := Fin (2 * gamma1 - 1 + 1)
 
-/-- The uniform distribution on the mask box. -/
-noncomputable instance (k gamma1 : ℕ) : SampleableType {v : RqVec k // maskBounded v gamma1} :=
-  letI : Fintype {v : RqVec k // maskBounded v gamma1} := .ofFinite _
-  letI : Nonempty {v : RqVec k // maskBounded v gamma1} := ⟨⟨0, .inl rfl⟩⟩
-  .ofFintype _
+/-- A raw mask sample: one value for each coefficient of each component. -/
+abbrev MaskSample (k gamma1 : ℕ) : Type := Vector (Vector (MaskValue gamma1) ringDegree) k
 
-/-- Uniform sampling from the mask box: the ideal distribution of FIPS 204's `ExpandMask`. -/
-@[expose] noncomputable def sampleMaskVec (k gamma1 : ℕ) : ProbComp (RqVec k) :=
-  Subtype.val <$> ($ᵗ {v : RqVec k // maskBounded v gamma1})
+/-- FIPS 204's decoding of one mask coefficient: the value `v` becomes `γ₁ - v`. -/
+@[expose] def maskDecodeCoeff (gamma1 : ℕ) (v : MaskValue gamma1) : Coeff :=
+  (((gamma1 : ℤ) - (v.val : ℤ) : ℤ) : Coeff)
 
-/-! ### Norms and coefficients -/
+/-- Decode a raw mask sample coefficient by coefficient. -/
+@[expose] def maskDecode {k gamma1 : ℕ} (a : MaskSample k gamma1) : RqVec k :=
+  Vector.ofFn fun j => (Poly.ofPi fun i => maskDecodeCoeff gamma1 ((a.get j).get i) : Rq)
 
-/-- The centered norm of an ML-DSA polynomial is the canonical centered infinity norm. -/
-private lemma polyNorm_eq_cInfNorm (f : Rq) : polyNorm f = cInfNorm f := by
-  simp only [polyNorm, normOps, vectorNegacyclicRing_backend, zmodPolyNormOps_cInfNorm]
+/-- The identification scheme's mask: uniform values decoded as in FIPS 204's `ExpandMask`. -/
+@[expose] def sampleMaskVec (k gamma1 : ℕ) : ProbComp (RqVec k) :=
+  maskDecode <$> ($ᵗ (MaskSample k gamma1))
 
-/-- Each coefficient of each component is bounded by the vector's centered norm. -/
-private lemma natAbs_centeredRepr_le_polyVecNorm {k : ℕ} (v : RqVec k) (j : Fin k)
-    (i : Fin ringDegree) : (centeredRepr ((v.get j).get i)).natAbs ≤ polyVecNorm v :=
-  calc (centeredRepr ((v.get j).get i)).natAbs ≤ polyNorm (v.get j) :=
-        (polyNorm_eq_cInfNorm _).symm ▸ coeff_le_cInfNorm (v.get j) i
-    _ ≤ polyVecNorm v := PolyVec.component_cInfNorm_le normOps v j
+/-! ### The decoding -/
 
-/-- A vector's centered norm is at most `b` exactly when every coefficient is. -/
-private lemma polyVecNorm_le_iff {k b : ℕ} {v : RqVec k} :
-    polyVecNorm v ≤ b ↔ ∀ j i, (centeredRepr ((v.get j).get i)).natAbs ≤ b := by
-  refine (PolyVec.cInfNorm_le_iff normOps).trans (forall_congr' fun j => ?_)
-  change polyNorm (v.get j) ≤ b ↔ _
-  rw [polyNorm_eq_cInfNorm]
-  exact cInfNorm_le_iff
+/-- The coefficients of a decoded sample are the decoded values. -/
+theorem maskDecode_get {k gamma1 : ℕ} (a : MaskSample k gamma1) (j : Fin k)
+    (i : Fin ringDegree) :
+    ((maskDecode a).get j).get i = maskDecodeCoeff gamma1 ((a.get j).get i) := by
+  rw [maskDecode, Poly.get_vectorOfFn]
+  exact Poly.get_ofPi _ i
 
-/-- The triangle inequality for the centered norm of a difference. -/
-lemma polyVecNorm_sub_le {k : ℕ} (z v : RqVec k) :
-    polyVecNorm (z - v) ≤ polyVecNorm z + polyVecNorm v := by
-  refine polyVecNorm_le_iff.mpr fun j i => ?_
-  have hz := natAbs_centeredRepr_le_polyVecNorm z j i
-  have hv := natAbs_centeredRepr_le_polyVecNorm v j i
-  have hget : ((z - v).get j).get i = (z.get j).get i + -(v.get j).get i := by
-    simp only [Vector.get_eq_getElem, Vector.getElem_sub]
-    exact (coeffRing.coeff_sub _ _ i).trans (sub_eq_add_neg _ _)
-  simp only [centeredRepr_eq_valMinAbs] at hz hv ⊢
-  rw [hget]
-  have hneg := ZMod.natAbs_valMinAbs_neg ((v.get j).get i)
-  have hadd := ZMod.natAbs_valMinAbs_add_le ((z.get j).get i) (-(v.get j).get i)
-  have htri := Int.natAbs_add_le ((z.get j).get i).valMinAbs (-(v.get j).get i).valMinAbs
+/-- The centered representative of a decoded coefficient is `γ₁ - v` when `2γ₁ < q`. -/
+theorem centeredRepr_maskDecodeCoeff {gamma1 : ℕ} (hq : 2 * gamma1 < modulus)
+    (v : MaskValue gamma1) :
+    centeredRepr (maskDecodeCoeff gamma1 v) = (gamma1 : ℤ) - (v.val : ℤ) := by
+  have hv := v.isLt
+  exact centeredRepr_intCast_eq _ (by omega) (by omega)
+
+/-- The decoding is injective when `2γ₁ < q`. -/
+theorem maskDecode_injective {k gamma1 : ℕ} (hq : 2 * gamma1 < modulus) :
+    Function.Injective (maskDecode (k := k) (gamma1 := gamma1)) := by
+  intro a b h
+  refine Vector.ext fun j hj => Vector.ext fun i hi => Fin.ext ?_
+  have hc := congrArg (fun z : RqVec k => centeredRepr ((z.get ⟨j, hj⟩).get ⟨i, hi⟩)) h
+  simp only [maskDecode_get, centeredRepr_maskDecodeCoeff hq] at hc
+  simp only [Vector.get_eq_getElem] at hc
   omega
 
-/-- A vector of centered norm below `γ₁` lies in the mask box. -/
-lemma maskBounded_of_polyVecNorm_lt {k gamma1 : ℕ} {v : RqVec k} (hv : polyVecNorm v < gamma1) :
-    maskBounded v gamma1 := by
-  refine .inr fun j i => ?_
-  have h := natAbs_centeredRepr_le_polyVecNorm v j i
+/-- Decoded samples lie in the mask range when `0 < γ₁` and `2γ₁ < q`. -/
+theorem maskBounded_maskDecode {k gamma1 : ℕ} (hgamma1 : 0 < gamma1)
+    (hq : 2 * gamma1 < modulus) (a : MaskSample k gamma1) :
+    maskBounded (maskDecode a) gamma1 := fun j i => by
+  rw [maskDecode_get, centeredRepr_maskDecodeCoeff hq]
+  have hv := ((a.get j).get i).isLt
   omega
 
-/-- For `γ₁ ≥ 1` the mask box is exactly the coefficient range. -/
-lemma maskBounded_iff {k gamma1 : ℕ} (hgamma1 : 0 < gamma1) {v : RqVec k} :
-    maskBounded v gamma1 ↔ ∀ (j : Fin k) (i : Fin ringDegree),
-      -(gamma1 : ℤ) < centeredRepr ((v.get j).get i) ∧
-        centeredRepr ((v.get j).get i) ≤ gamma1 := by
-  refine ⟨?_, .inr⟩
-  rintro (rfl | h) j i
-  · have hz : polyVecNorm (0 : RqVec k) ≤ 0 := polyVecNorm_le_iff.mpr fun j i => by
-      have hj : (0 : RqVec k).get j = (0 : Rq) := by
-        change (0 : Vector Rq k).get j = 0
-        simp [Vector.get]
-      have hi : Vector.get (0 : Rq) i = (0 : Coeff) := NegacyclicRing.coeff_zero coeffRing i
-      rw [hj, hi]
-      simp [centeredRepr_eq_valMinAbs]
-    have h := natAbs_centeredRepr_le_polyVecNorm (0 : RqVec k) j i
-    omega
-  · exact h j i
+/-- Every vector of centered norm below `γ₁` is a decoded sample. -/
+theorem exists_maskDecode_eq_of_polyVecNorm_lt {k gamma1 : ℕ} {z : RqVec k}
+    (hz : polyVecNorm z < gamma1) :
+    ∃ a : MaskSample k gamma1, maskDecode a = z := by
+  have hc : ∀ j i, (centeredRepr ((z.get j).get i)).natAbs < gamma1 := fun j i =>
+    (natAbs_centeredRepr_le_polyVecNorm z j i).trans_lt hz
+  refine ⟨Vector.ofFn fun j => Vector.ofFn fun i =>
+    ⟨((gamma1 : ℤ) - centeredRepr ((z.get j).get i)).toNat, by have := hc j i; omega⟩, ?_⟩
+  refine Vector.ext fun j hj => Poly.ext_get_eq fun i => ?_
+  have hz' := maskDecode_get (Vector.ofFn fun j => Vector.ofFn fun i =>
+    (⟨((gamma1 : ℤ) - centeredRepr ((z.get j).get i)).toNat, by have := hc j i; omega⟩ :
+      MaskValue gamma1)) ⟨j, hj⟩ i
+  refine hz'.trans ?_
+  have hji := hc ⟨j, hj⟩ i
+  simp only [maskDecodeCoeff, Vector.get_ofFn]
+  rw [show ((gamma1 : ℤ) - (((gamma1 : ℤ) - centeredRepr ((z.get ⟨j, hj⟩).get i)).toNat : ℤ)) =
+      centeredRepr ((z.get ⟨j, hj⟩).get i) by omega]
+  exact (centeredRepr_intCast ((z.get ⟨j, hj⟩).get i)).symm
 
 /-! ### Counting -/
 
@@ -140,46 +138,43 @@ private lemma natCard_coeffBox (k : ℕ) {a b : ℤ} (ha : -(modulus : ℤ) < a 
   rw [Nat.card_congr e, Nat.card_eq_fintype_card]
   simp [pow_mul]
 
-/-- The exact probability that a sample from the mask box has centered norm below `b`, for
-`0 < b ≤ γ₁` and a box inside the centered window of `ℤ_q`. -/
+/-- The exact probability that a mask has centered norm below `b`, for `0 < b ≤ γ₁` and
+`2γ₁ < q`: `(2b - 1)` of the `2γ₁` values of each coefficient decode below `b`. -/
 theorem prEvent_sampleMaskVec_polyVecNorm_lt (k : ℕ) {gamma1 b : ℕ} (hb : 0 < b)
     (hbgamma1 : b ≤ gamma1) (hq : 2 * gamma1 < modulus) :
     Pr{let z ← sampleMaskVec k gamma1}[polyVecNorm z < b] =
       ((2 * b - 1 : ℕ) : ℝ≥0∞) ^ (ringDegree * k) /
         ((2 * gamma1 : ℕ) : ℝ≥0∞) ^ (ringDegree * k) := by
   classical
-  let : Fintype {v : RqVec k // maskBounded v gamma1} := .ofFinite _
-  have hgamma1 : 0 < gamma1 := by omega
-  have hden : Fintype.card {v : RqVec k // maskBounded v gamma1} =
-      (2 * gamma1) ^ (ringDegree * k) := by
-    rw [← Nat.card_eq_fintype_card,
-      Nat.card_congr (Equiv.subtypeEquivRight fun v => maskBounded_iff hgamma1),
-      natCard_coeffBox k (a := -(gamma1 : ℤ)) (b := gamma1) (by omega) (by omega)]
+  have hden : Fintype.card (MaskSample k gamma1) = (2 * gamma1) ^ (ringDegree * k) := by
+    rw [Fintype.card_congr (arrayVectorEquivFin _ _), Fintype.card_fun,
+      Fintype.card_congr (arrayVectorEquivFin _ _), Fintype.card_fun, Fintype.card_fin,
+      Fintype.card_fin, Fintype.card_fin, ← pow_mul]
     congr 1
     omega
-  have hnum : (Finset.univ.filter fun a : {v : RqVec k // maskBounded v gamma1} =>
-      polyVecNorm a.1 < b).card = (2 * b - 1) ^ (ringDegree * k) := by
+  have hgate : ∀ v : RqVec k, polyVecNorm v < b ↔ ∀ (j : Fin k) (i : Fin ringDegree),
+      -(b : ℤ) < centeredRepr ((v.get j).get i) ∧
+        centeredRepr ((v.get j).get i) ≤ (b : ℤ) - 1 := fun v => by
+    rw [Nat.lt_iff_le_pred hb, polyVecNorm_le_iff]
+    exact forall_congr' fun j => forall_congr' fun i => by omega
+  have hnum : (Finset.univ.filter fun a : MaskSample k gamma1 =>
+      polyVecNorm (maskDecode a) < b).card = (2 * b - 1) ^ (ringDegree * k) := by
     rw [← Fintype.card_subtype, ← Nat.card_eq_fintype_card]
-    have hgate : ∀ v : RqVec k, polyVecNorm v < b ↔ ∀ (j : Fin k) (i : Fin ringDegree),
-        -(b : ℤ) < centeredRepr ((v.get j).get i) ∧
-          centeredRepr ((v.get j).get i) ≤ (b : ℤ) - 1 := fun v => by
-      rw [Nat.lt_iff_le_pred hb, polyVecNorm_le_iff]
-      exact forall_congr' fun j => forall_congr' fun i => by omega
-    let e : {a : {v : RqVec k // maskBounded v gamma1} // polyVecNorm a.1 < b} ≃
+    let e : {a : MaskSample k gamma1 // polyVecNorm (maskDecode a) < b} ≃
         {v : RqVec k // ∀ (j : Fin k) (i : Fin ringDegree),
           -(b : ℤ) < centeredRepr ((v.get j).get i) ∧
             centeredRepr ((v.get j).get i) ≤ (b : ℤ) - 1} :=
-      { toFun := fun a => ⟨a.1.1, (hgate _).mp a.2⟩
-        invFun := fun v => ⟨⟨v.1, maskBounded_of_polyVecNorm_lt
-          (((hgate _).mpr v.2).trans_le hbgamma1)⟩, (hgate _).mpr v.2⟩
-        left_inv := fun _ => rfl
-        right_inv := fun _ => rfl }
+      Equiv.ofBijective (fun a => ⟨maskDecode a.1, (hgate _).mp a.2⟩)
+        ⟨fun a a' h => Subtype.ext (maskDecode_injective hq (congrArg Subtype.val h)),
+          fun v => by
+            obtain ⟨a, ha⟩ := exists_maskDecode_eq_of_polyVecNorm_lt
+              (((hgate _).mpr v.2).trans_le hbgamma1)
+            exact ⟨⟨a, ha ▸ (hgate _).mpr v.2⟩, Subtype.ext ha⟩⟩
     rw [Nat.card_congr e, natCard_coeffBox k (a := -(b : ℤ)) (b := (b : ℤ) - 1)
       (by omega) (by omega)]
     congr 1
     omega
-  rw [sampleMaskVec, prEvent_map]
-  simp only [SampleableType.prEvent_uniformSample, hnum, hden]
+  rw [sampleMaskVec, prEvent_map, SampleableType.prEvent_uniformSample, hnum, hden]
   push_cast
   rfl
 

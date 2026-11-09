@@ -315,7 +315,7 @@ EXPLICIT_COMPUTATION_RENAMES: dict[str, str] = {
 REPORT_NAMES: dict[str, str] = {
     "evalDist_apply_true_le_add_ofReal_boolDistAdvantage":
         "`MeasureTheory.Measure.apply_true_le_add_boolDist 𝒟[pc₀] 𝒟[pc₁]`, in `ℝ≥0∞`",
-    "hvzkBoundReal": "`idsWithAbort_hvzk` is `PerfectHVZK`, so the bound is `0` "
+    "hvzkBoundReal": "`identificationSchemeFull_perfectHVZK` is `PerfectHVZK`, so the bound is `0` "
         "(`IdenSchemeWithAbort.perfectHVZK_iff_hvzk_zero`)",
     "prEvent_congr_of_evalDist_eq":
         "use `(EvalDistEq.of_evalDist_eq h).prEvent_eq p`",

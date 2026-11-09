@@ -255,7 +255,7 @@ theorem idsWithAbort_complete (h_laws : Primitives.Laws prims nttOps) :
 
 /-! ### Honest-Verifier Zero-Knowledge
 
-The HVZK theorem `MLDSA.idsWithAbort_hvzk` is proven downstream in
+The HVZK theorem `MLDSA.identificationSchemeFull_perfectHVZK` is proven downstream in
 `LatticeCrypto.MLDSA.SecurityHVZK`, for the scheme with `t₀` in the statement
 (`identificationSchemeFull`) and the simulator `hvzkSimulator`. The simulator recomputes the honest
 prover's gates from the statement `(ρ, t₁, t₀)`, so on valid key pairs the two transcripts are equal

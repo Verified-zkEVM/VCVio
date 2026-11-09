@@ -159,10 +159,11 @@ structure Primitives.Laws {p : Params} (prims : Primitives p) (nttOps : NTTRingO
   expandS_bound : ∀ rhoPrime,
     polyVecBounded (prims.expandS rhoPrime).1 p.eta ∧
     polyVecBounded (prims.expandS rhoPrime).2 p.eta
-  /-- `ExpandMask(ρ'', κ)` produces masking vectors bounded by `γ₁`. The FIPS 204 `ExpandMask`
-  output coefficients lie in `[-γ₁ + 1, γ₁]`, so their centered infinity norm is at most `γ₁`. -/
+  /-- Every coefficient of `ExpandMask(ρ'', κ)` lies in `[-γ₁ + 1, γ₁]`, the range of FIPS 204's
+  decoding. When `2γ₁ < q` this is the support of the identification scheme's mask
+  `sampleMaskVec`, so the mask idealizes only the uniformity of `ExpandMask`'s output. -/
   expandMask_bound : ∀ rhoDoublePrime kappa,
-    polyVecBounded (prims.expandMask rhoDoublePrime kappa) p.gamma1
+    maskBounded (prims.expandMask rhoDoublePrime kappa) p.gamma1
   /-- Generic transform laws for the instantiated ring backend. -/
   transform : NTTRingLaws nttOps
   /-- Decomposition identity: `highBitsShift(highBits(r)) + lowBits(r) = r`. -/

@@ -724,7 +724,7 @@ solution.
 
 The `sampleParams` draws the same seed-based key as `keygen1`/`mldsaMLWE`: it samples `ρ` through
 `ExpandSeed`, a uniform `t`, and publishes `(ExpandA(ρ), pk)` with `pk = ⟨ρ, Power2Round(t).1⟩`. -/
-noncomputable def mldsaSTMSIS (M : Type) :
+def mldsaSTMSIS (M : Type) :
     SelfTargetMSIS.Problem (TqMatrix p.k p.l) (Response p prims) (PublicKey p prims)
       (M × Commitment p prims) (CommitHashBytes p) where
   sampleParams := do

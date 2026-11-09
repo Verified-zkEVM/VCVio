@@ -12,7 +12,7 @@ public import Extern.MLDSA.Laws
 # Hypothesis-consistency certificate for `MLDSA.Primitives.Laws` (issue #228)
 
 The ML-DSA correctness and zero-knowledge theorems — `MLDSA.idsWithAbort_complete`
-(`MLDSA/Security.lean`), `MLDSA.idsWithAbort_hvzk` (`MLDSA/SecurityHVZK.lean`),
+(`MLDSA/Security.lean`), `MLDSA.identificationSchemeFull_perfectHVZK` (`MLDSA/SecurityHVZK.lean`),
 `MLDSA.fipsSign_fipsVerify_correct` (`MLDSA/Signature.lean`), and the algebraic identity they run
 on (`MLDSA.keyGenFromSeed_wApprox_eq`) — are each gated on `h_laws : Primitives.Laws prims nttOps`.
 A conditional theorem asserts nothing if its hypothesis is uninhabitable, and `#print axioms`
@@ -40,8 +40,8 @@ namespace MLDSA
 
 /-- **The #228 non-vacuity certificate.** The concrete primitives at ML-DSA-44 satisfy
 `Primitives.Laws`, so the `Laws`-gated ML-DSA theorems (`MLDSA.idsWithAbort_complete`,
-`MLDSA.idsWithAbort_hvzk`, `MLDSA.fipsSign_fipsVerify_correct`, `MLDSA.keyGenFromSeed_wApprox_eq`)
-are not true-but-vacuous. -/
+`MLDSA.identificationSchemeFull_perfectHVZK`, `MLDSA.fipsSign_fipsVerify_correct`,
+`MLDSA.keyGenFromSeed_wApprox_eq`) are not true-but-vacuous. -/
 theorem mldsa_laws_inhabited :
     ∃ (p : Params) (prims : MLDSA.Primitives p),
       Nonempty (MLDSA.Primitives.Laws prims MLDSA.Concrete.concreteNTTRingOps) :=

@@ -13,14 +13,15 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort
 
 This file proves that the ML-DSA identification scheme with `t₀` in the statement,
 `identificationSchemeFull`, is perfectly honest-verifier zero-knowledge for a named simulator,
-`hvzkSimulator` (`MLDSA.idsWithAbort_hvzk`). An existential statement asserting only that *some*
-simulator with *some* error exists would be trivially dischargeable with `ζ_zk := 1` (because total
-variation is at most one, `Measure.etvDist_le_one`) and would carry no content.
+`hvzkSimulator` (`MLDSA.identificationSchemeFull_perfectHVZK`). An existential statement asserting
+only that *some* simulator with *some* error exists would be trivially dischargeable with
+`ζ_zk := 1` (because total variation is at most one, `Measure.etvDist_le_one`) and would carry no
+content.
 
 ## The simulator
 
-`hvzkSimulator` samples the challenge hash `c̃` uniformly and the response `z` uniformly from the
-mask box, then computes everything else from the statement `(ρ, t₁, t₀)`:
+`hvzkSimulator` samples the challenge hash `c̃` uniformly and the response `z` as a fresh mask
+(`sampleMaskVec`), then computes everything else from the statement `(ρ, t₁, t₀)`:
 `wApprox = Az − c·t₁·2^d`, the value `verify` recomputes; the four gates of `respond`; and on
 success the pair `h = MakeHint(−c·t₀, wApprox)`, `w₁ = UseHint(h, wApprox)`. On valid key pairs
 `wApprox − c·t₀ = w − c·s₂` with `w = A·y` (`keyGenFromSeed_wApprox_eq`), so each gate computes the
@@ -35,10 +36,11 @@ against this one.
 
 ## The mask coupling
 
-The honest response is `z = y + c·s₁` with `y` uniform on the mask box, so `z` is uniform on a
-shifted box rather than on the box itself. The two distributions agree on every `z` that can pass
-the response gate: `‖z‖∞ < γ₁ − β` and `‖c·s₁‖∞ ≤ β` put both `z` and `z − c·s₁` in the box, and
-every other `z` aborts (`honest_pregate_evalDistEq`). This is the rejection-sampling step that makes
+The honest response is `z = y + c·s₁` with `y` uniform on the mask box `[-γ₁ + 1, γ₁]`, so `z` is
+uniform on a shifted box rather than on the box itself. When `2γ₁ < q` the mask decoding is
+injective, and the two distributions agree on every `z` that can pass the response gate:
+`‖z‖∞ < γ₁ − β` and `‖c·s₁‖∞ ≤ β` put both `z` and `z − c·s₁` in the box, and every other `z`
+aborts (`honest_pregate_evalDistEq`). This is the rejection-sampling step that makes
 the accepted `z` independent of the secret.
 
 ## References
@@ -86,13 +88,15 @@ private lemma rqVec_sub_add_cancel {k : ℕ} (z v : RqVec k) : z - v + v = z := 
 
 variable [nttOps : NTTRingOps]
 
-/-- **The mask coupling.** With `s` a vector whose challenge products stay `β`-bounded, the honest
-pre-gate joint distribution of the challenge hash and the masked response `(c̃, z = y + c·s)`, with
-`y` drawn from the mask box before the uniform challenge, equals the simulator's direct draw of
-`(c̃, z)` with `z` from the box, as observed by any continuation that ignores `z` outside the
-response gate. The two draws are injections of the box, `y ↦ y + c·s` and the inclusion, and both
-cover every `z` that passes the gate (`SampleableType.uniformSample_bind_evalDistEq_of_cover`). -/
+/-- **The mask coupling.** With `s` a vector whose challenge products stay `β`-bounded and
+`2γ₁ < q`, the honest pre-gate joint distribution of the challenge hash and the masked response
+`(c̃, z = y + c·s)`, with the mask `y` drawn before the uniform challenge, equals the simulator's
+direct draw of `(c̃, z)` with `z` a fresh mask, as observed by any continuation that ignores `z`
+outside the response gate. Both draws are injections of the raw mask samples, `a ↦ maskDecode a +
+c·s` and `maskDecode`, and both cover every `z` that passes the gate
+(`SampleableType.uniformSample_bind_evalDistEq_of_cover`). -/
 theorem honest_pregate_evalDistEq [SampleableType (CommitHashBytes p)] {s : RqVec p.l}
+    (hq : 2 * p.gamma1 < modulus)
     (hs : ∀ cTilde : CommitHashBytes p, polyVecNorm (prims.sampleInBall cTilde • s) ≤ p.beta)
     {γ : Type} (g : CommitHashBytes p → RqVec p.l → ProbComp γ)
     (d : CommitHashBytes p → ProbComp γ)
@@ -112,21 +116,22 @@ theorem honest_pregate_evalDistEq [SampleableType (CommitHashBytes p)] {s : RqVe
       polyVecNorm z < p.gamma1 := fun hz => by omega
   simpa only [sampleMaskVec, bind_map_left] using
     SampleableType.uniformSample_bind_evalDistEq_of_cover
-      (α := {v : RqVec p.l // maskBounded v p.gamma1})
-      (f₁ := fun a => a.1 + prims.sampleInBall cTilde • s) (f₂ := Subtype.val)
+      (α := MaskSample p.l p.gamma1)
+      (f₁ := fun a => maskDecode a + prims.sampleInBall cTilde • s) (f₂ := maskDecode)
       (S := {z | polyVecNorm z < p.gamma1 - p.beta})
-      (fun a b h => Subtype.ext (by
+      (fun a b h => maskDecode_injective hq (by
         simpa only [rqVec_add_sub_cancel] using
           congrArg (· - prims.sampleInBall cTilde • s) h))
-      Subtype.val_injective
-      (fun z hz => ⟨⟨z - prims.sampleInBall cTilde • s,
-        maskBounded_of_polyVecNorm_lt (by
-          have := polyVecNorm_sub_le z (prims.sampleInBall cTilde • s)
-          have := hs cTilde
-          have hz' : polyVecNorm z < p.gamma1 - p.beta := hz
-          omega)⟩,
-        rqVec_sub_add_cancel z _⟩)
-      (fun z hz => ⟨⟨z, maskBounded_of_polyVecNorm_lt (hgamma hz)⟩, rfl⟩)
+      (maskDecode_injective hq)
+      (fun z hz => by
+        obtain ⟨a, ha⟩ := exists_maskDecode_eq_of_polyVecNorm_lt (gamma1 := p.gamma1)
+          (z := z - prims.sampleInBall cTilde • s) (by
+            have := polyVecNorm_sub_le z (prims.sampleInBall cTilde • s)
+            have := hs cTilde
+            have hz' : polyVecNorm z < p.gamma1 - p.beta := hz
+            omega)
+        exact ⟨a, by simp only [ha, rqVec_sub_add_cancel]⟩)
+      (fun z hz => exists_maskDecode_eq_of_polyVecNorm_lt (hgamma hz))
       (g cTilde) (d cTilde) (fun z hz => hg cTilde z hz)
 
 /-! ### The accept-branch transcripts coincide pointwise -/
@@ -210,7 +215,7 @@ theorem hvzkSimulator_accept_match (h_laws : Primitives.Laws prims nttOps)
 /-- The simulator's transcript as a deterministic function of `(c̃, z)`: the four gates of the
 honest `respond`, recomputed from the statement `(ρ, t₁, t₀)`, and on success the pair `(w₁, h)`
 recovered from `wApprox = Az − c·t₁·2^d` and `t₀`. -/
-noncomputable def hvzkSimOut (fpk : FullPublicKey p prims) (cTilde : CommitHashBytes p)
+def hvzkSimOut (fpk : FullPublicKey p prims) (cTilde : CommitHashBytes p)
     (z : RqVec p.l) :
     Option (Commitment p prims × CommitHashBytes p × Response p prims) :=
   let c := prims.sampleInBall cTilde
@@ -227,7 +232,7 @@ noncomputable def hvzkSimOut (fpk : FullPublicKey p prims) (cTilde : CommitHashB
 /-- The Dilithium HVZK simulator for the ML-DSA identification scheme with `t₀` in the statement. It
 receives only the statement `(ρ, t₁, t₀)`, samples the challenge hash `c̃` uniformly and the
 response `z` from the mask box, and outputs `hvzkSimOut`. -/
-noncomputable def hvzkSimulator [SampleableType (CommitHashBytes p)]
+def hvzkSimulator [SampleableType (CommitHashBytes p)]
     (fpk : FullPublicKey p prims) :
     ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)) := do
   let cTilde ← $ᵗ (CommitHashBytes p)
@@ -239,7 +244,7 @@ noncomputable def hvzkSimulator [SampleableType (CommitHashBytes p)]
 /-- The honest transcript as a deterministic function of `(c̃, z)`, with the commit mask
 recovered as `y = z − c·s₁`: the four abort gates of the honest `commit`/`respond` followed by
 the honest accept output `(HighBits(A·y), c̃, (z, h))`. -/
-noncomputable def hvzkHonestOut (pk : PublicKey p prims) (sk : SecretKey p)
+def hvzkHonestOut (pk : PublicKey p prims) (sk : SecretKey p)
     (cTilde : CommitHashBytes p) (z : RqVec p.l) :
     Option (Commitment p prims × CommitHashBytes p × Response p prims) :=
   let c := prims.sampleInBall cTilde
@@ -293,10 +298,11 @@ lemma honestExecution_eq_pregate [DecidableEq prims.High] [SampleableType (Commi
   split_ifs with h1 h2 <;> simp
 
 /-- The honest transcript distribution over the simulator's `(c̃, z)` randomness, on a valid key
-pair. Honest secrets are `η`-bounded, so their challenge products are `β`-bounded, and the honest
-transcript aborts outside the response gate; the mask coupling then applies. -/
+pair with `2γ₁ < q`. Honest secrets are `η`-bounded, so their challenge products are `β`-bounded,
+and the honest transcript aborts outside the response gate; the mask coupling then applies. -/
 lemma honestExecution_evalDistEq_gated [DecidableEq prims.High]
     [SampleableType (CommitHashBytes p)] (h_laws : Primitives.Laws prims nttOps)
+    (hq : 2 * p.gamma1 < modulus)
     {pk : PublicKey p prims} {sk : SecretKey p} (seed : Bytes 32)
     (hkeygen : keyGenFromSeed p prims seed = (pk, sk)) :
     (identificationScheme p prims).honestExecution pk sk =ᵈ
@@ -310,7 +316,7 @@ lemma honestExecution_evalDistEq_gated [DecidableEq prims.High]
     rw [← h]
     exact (h_laws.expandS_bound _).1
   rw [honestExecution_eq_pregate p prims pk sk]
-  exact honest_pregate_evalDistEq p prims
+  exact honest_pregate_evalDistEq p prims hq
     (fun cTilde => h_laws.sampleInBall_smul_bound cTilde sk.s1 hs1)
     (fun cT zv =>
       (pure (hvzkHonestOut p prims pk sk cT zv) :
@@ -329,16 +335,18 @@ lemma honestExecution_identificationSchemeFull [DecidableEq prims.High]
 /-- **Honest-verifier zero-knowledge for the ML-DSA identification scheme with `t₀` in the
 statement.** For every valid key pair the honest transcript and `hvzkSimulator` are equal in
 distribution, aborts included. By `IdenSchemeWithAbort.perfectHVZK_iff_hvzk_zero` this is `HVZK` at
-`ζ_zk = 0`. -/
-theorem idsWithAbort_hvzk [DecidableEq prims.High] [SampleableType (CommitHashBytes p)]
-    (h_laws : Primitives.Laws prims nttOps) :
+`ζ_zk = 0`. The hypothesis `2γ₁ < q`, which every FIPS 204 parameter set meets, makes the mask
+decoding injective. -/
+theorem identificationSchemeFull_perfectHVZK [DecidableEq prims.High]
+    [SampleableType (CommitHashBytes p)] (h_laws : Primitives.Laws prims nttOps)
+    (hq : 2 * p.gamma1 < modulus) :
     (identificationSchemeFull p prims).PerfectHVZK (hvzkSimulator p prims) := by
   intro fpk sk hrel
   obtain ⟨hvalid, ht0⟩ := (validFullKeyPair_eq_true_iff p prims fpk sk).mp hrel
   obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims fpk.pk sk).mp hvalid
   rw [honestExecution_identificationSchemeFull]
   simpa only [hvzkSimulator, hvzkHonestOut_eq_hvzkSimOut p prims h_laws seed hkeygen ht0] using
-    honestExecution_evalDistEq_gated p prims h_laws seed hkeygen
+    honestExecution_evalDistEq_gated p prims h_laws hq seed hkeygen
 
 end RealHVZK
 
@@ -349,7 +357,7 @@ section FullTransfer
 variable [nttOps : NTTRingOps]
 
 /-- Key generation with `t₀` published: run `hr.gen` and publish the secret key's `t₀`. -/
-noncomputable def fullRelation
+def fullRelation
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims)) :
     GenerableRelation (FullPublicKey p prims) (SecretKey p) (validFullKeyPair p prims) where
   gen := (fun ks => (⟨ks.1, ks.2.t0⟩, ks.2)) <$> hr.gen
