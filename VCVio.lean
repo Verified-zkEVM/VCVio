@@ -455,7 +455,6 @@ public import VCVio.OracleComp.SimSemantics.Wiring
 public import VCVio.OracleComp.SimSemantics.WriterT.Core
 public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
 public import VCVio.OracleComp.Support
-public import VCVio.OracleComp.Tactics.VCVNorm
 public import VCVio.OracleComp.Traversal
 public import VCVio.Prelude.Core
 public import VCVio.ProgramLogic.Notation
