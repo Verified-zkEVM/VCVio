@@ -418,6 +418,7 @@ public import VCVio.OracleComp.QueryTracking.SubSpec
 public import VCVio.OracleComp.QueryTracking.Tracing.Core
 public import VCVio.OracleComp.QueryTracking.Unpredictability
 public import VCVio.OracleComp.QueryTracking.WriterCost
+public import VCVio.OracleComp.QueryTracking.WriterCost.StateT
 public import VCVio.OracleComp.ReachableWhen
 public import VCVio.OracleComp.RunIO
 public import VCVio.OracleComp.Runtime
