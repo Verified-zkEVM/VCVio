@@ -311,7 +311,8 @@ end Primitives
 /-- Algebraic and distributional laws that the Falcon primitives must satisfy. -/
 structure Primitives.Laws {p : Params} (prims : Primitives p) : Prop where
   /-- The discrete Gaussian sampler produces output distributed according to the ideal
-  discrete Gaussian PMF `D_{ℤ,σ',μ}`. -/
+  discrete Gaussian PMF `D_{ℤ,σ',μ}`. No finite-support sampler meets this exactly
+  (`Primitives.not_laws`). -/
   samplerZ_correct : ∀ (μ σ' : ℝ) (_hσ : 0 < σ'),
     ∀ z : ℤ, Pr{let x ← prims.samplerZ μ σ'}[x = z] =
       ENNReal.ofReal (LatticeCrypto.discreteGaussianPMF σ' μ z)
