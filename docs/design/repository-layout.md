@@ -93,6 +93,9 @@ source hashes and evidence classifications; it does not regenerate expected answ
 
 ## Documentation checks
 
+See [Python tooling](../../CONTRIBUTING.md#python-tooling) for uv setup and the
+commands used by the Agent Docs workflow.
+
 `scripts/check-agent-docs.py` inventories every tracked or non-ignored first-party Markdown
 and Lean file. It checks local Markdown links and anchors, and repository-root file paths in
 Markdown and Lean comments. Dependency URLs and explicitly historical or planned bare paths

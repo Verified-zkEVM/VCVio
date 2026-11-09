@@ -34,13 +34,14 @@ makes the published seed-component injective (matching `ρ` forces the same seed
 
 **Trust surface.**  `mldsa_laws_inhabited` depends only on `propext`, `Classical.choice`, and
 `Quot.sound`. The structural butterfly stages in `LatticeCrypto/Ring/NTTCert.lean` have
-round-trip laws proved from per-stage twiddle identities. The executable implementation has
-an `@[implemented_by]` refinement boundary: the imperative `loopNTT`/`loopInvNTT` kernels are
-rebound at runtime and are not proved
-extensionally equal to the structural stages, and `multiplyNTTs` is defined through
-`invNTT`/`ntt` rather than verified pointwise.  The *abstract* `Laws`-gated theorems (quantified
-over `nttOps`) are unaffected; this witness only shows that their `Laws` hypothesis can be met by
-the concrete layer.
+round-trip laws proved from per-stage twiddle identities. `ntt_coeff_eq_eval`, from the residue
+theorem of `LatticeCrypto/Ring/NTTSplitCert.lean`, proves that coordinate `i` of the structural NTT
+is the evaluation at `ζ^(2·brv(i) + 1)`. So `ntt_negacyclicMul` holds for the pointwise
+`multiplyNTTs` (FIPS 204 Algorithm 45).
+The concrete `ntt`/`invNTT` are the imperative `loopNTT`/`loopInvNTT` kernels, proved equal to the
+structural stages, so the laws are about the code that runs. The *abstract* `Laws`-gated theorems
+(quantified over `nttOps`) do not depend on this; this witness only shows that their `Laws`
+hypothesis can be met by the concrete layer.
 -/
 
 public section
@@ -95,8 +96,7 @@ theorem seedRevealingPrims_laws (p : Params) (hp : p.isApproved) :
 /-- **The #228 non-vacuity certificate.**  There is an approved parameter set and a primitive
 bundle whose `Primitives.Laws` is inhabited — so the `Laws`-gated ML-DSA theorems
 (`MLDSA.idsWithAbort_complete`, `MLDSA.idsWithAbort_hvzk`, `MLDSA.fipsSign_fipsVerify_correct`,
-`MLDSA.keyGenFromSeed_wApprox_eq`, `MLDSA.recoverT0_eq`) are not true-but-vacuous.  (See the
-trust-surface note in the module docstring on the `implemented_by` refinement boundary.) -/
+`MLDSA.keyGenFromSeed_wApprox_eq`, `MLDSA.recoverT0_eq`) are not true-but-vacuous. -/
 theorem mldsa_laws_inhabited :
     ∃ (p : Params) (prims : MLDSA.Primitives p),
       Nonempty (MLDSA.Primitives.Laws prims MLDSA.Concrete.concreteNTTRingOps) :=

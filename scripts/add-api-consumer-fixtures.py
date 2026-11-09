@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Add ordinary-import semantic fixtures to an existing scratch Lake consumer."""
 
 import json

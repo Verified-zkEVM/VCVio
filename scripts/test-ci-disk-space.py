@@ -1,10 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Check cleanup boundaries without removing any installed SDK or invoking real sudo."""
 
 import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -20,7 +21,7 @@ class DiskSpaceTests(unittest.TestCase):
             for name in ("df", "sudo"):
                 stub = directory / name
                 stub.write_text(
-                    "#!/usr/bin/env python3\n"
+                    f"#!{sys.executable}\n"
                     "import json, os, sys\n"
                     "from pathlib import Path\n"
                     "with open(os.environ['CI_DISK_TEST_LOG'], 'a') as log:\n"

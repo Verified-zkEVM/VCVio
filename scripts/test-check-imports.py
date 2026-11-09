@@ -1,10 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Check umbrella validation and restoration without invoking Lake."""
 
 from pathlib import Path
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -76,7 +77,7 @@ class CheckImportsTests(unittest.TestCase):
         binary = self.root / "bin"
         binary.mkdir()
         lake = binary / "lake"
-        lake.write_text("#!/usr/bin/env python3\n" + body)
+        lake.write_text("#!" + sys.executable + "\n" + body)
         lake.chmod(0o755)
         env = {**os.environ, "PATH": str(binary) + os.pathsep + os.environ["PATH"]}
         return subprocess.run(["bash", "scripts/update-lib.sh"], cwd=self.root,
