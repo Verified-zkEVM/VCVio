@@ -206,7 +206,7 @@ scaling. -/
     Unit → Array R × ℕ × ℕ → Id (ForInStep (Array R × ℕ × ℕ)) :=
   loopOuterBody N (· ≤ N / 2) (fun len k => invBfly (-tw k) len) (· - 1) (· * 2)
 
-private theorem midBody_loop [CommRing R] {N len G : ℕ} (hG : G * (2 * len) = N) (hlen : 0 < len)
+private theorem midBody_loop {N len G : ℕ} (hG : G * (2 * len) = N) (hlen : 0 < len)
     {bf : ℕ → Array R → ℕ → Array R} {kstep kOf : ℕ → ℕ} (x F : Fin N → R)
     (hbf : ∀ g < G, ∀ r < len, g * (2 * len) + 2 * len ≤ N →
       bf (kOf g) (Array.ofFn (blockPartial x F len (g * (2 * len)) r)) (g * (2 * len) + r) =
