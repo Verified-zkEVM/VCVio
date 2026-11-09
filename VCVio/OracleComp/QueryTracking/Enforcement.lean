@@ -23,8 +23,6 @@ the budget. This implements EasyCrypt's `Enforce`/`Bounder` pattern.
 
 ## Main Results
 
-- `OracleComp.isPerIndexQueryBound_iff_isChargeBound`: A per-index query bound is PolyFun's
-  structural charge bound for the vector charge `Pi.single t 1` of a query at `t`.
 - `enforceOracle.run_simulateQ_sub_eq`: Enforcement is PolyFun's budget gate with fallback,
   `PFunctor.Handler.withBudgetOr`, for that charge and the same `default` fallback. Enforcement
   keeps the remaining budget `qb - spent` as state where `withBudgetOr` keeps the amount spent.
@@ -52,25 +50,6 @@ def OracleSpec.enforceOracle [DecidableEq ι] [∀ t, Inhabited (spec.Range t)] 
       (·, Function.update budget t (budget t - 1)) <$> liftM (query t)
     else
       pure (default, budget)
-
-/-- A per-index query bound is a structural charge bound for the vector charge that spends one
-unit at the queried index. -/
-theorem OracleComp.isPerIndexQueryBound_iff_isChargeBound [DecidableEq ι]
-    (oa : OracleComp spec α) (qb : ι → ℕ) :
-    IsPerIndexQueryBound oa qb ↔
-      PFunctor.FreeM.IsChargeBound (P := spec.toPFunctor) oa (fun t => Pi.single t 1) qb := by
-  rw [PFunctor.FreeM.isChargeBound_iff_isRollBound_orderedSub, tsub_zero,
-    isPerIndexQueryBound_iff_isRollBound]
-  have hcan : ∀ (t : ι) (b : ι → ℕ), 0 < b t ↔ Pi.single t 1 ≤ b := fun t b =>
-    ⟨fun hb j => by
-      by_cases hj : j = t
-      · subst hj; simp; omega
-      · simp [hj],
-      fun hb => Nat.pos_of_ne_zero (Nat.one_le_iff_ne_zero.1 (by simpa using hb t))⟩
-  have hcost : ∀ (t : ι) (b : ι → ℕ), Function.update b t (b t - 1) = b - Pi.single t 1 :=
-    fun t b => by funext j; by_cases hj : j = t <;> simp [hj]
-  exact ⟨fun h => ⟨zero_le, (PFunctor.FreeM.isRollBound_congr hcan hcost).1 h⟩,
-    fun h => (PFunctor.FreeM.isRollBound_congr hcan hcost).2 h.2⟩
 
 namespace enforceOracle
 
