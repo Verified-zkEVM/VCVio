@@ -325,7 +325,7 @@ twiddles `zetaTable[2^s + g]` and the inverse twiddles `-zetaTable[2^(s+1) - 1 -
 loops. -/
 private def nttStage (logn : ℕ) (hlogn : logn ≤ 11) (s : Fin logn) :
     ScaledStage Coeff (Fin (2 ^ logn)) :=
-  ctStage rfl (fun k => (zetaTable logn).getD k 0) (twiddle_partner hlogn) s
+  ctStage le_rfl rfl (fun k => (zetaTable logn).getD k 0) (twiddle_partner hlogn) s
 
 private def nttCoeffs (logn : ℕ) (hlogn : logn ≤ 11) (input : Fin (2 ^ logn) → Coeff) :
     Fin (2 ^ logn) → Coeff :=
