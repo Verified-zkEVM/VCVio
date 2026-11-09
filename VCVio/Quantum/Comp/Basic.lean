@@ -386,18 +386,17 @@ theorem leafEquiv_apply (B : QReg) (a : α) : leafEquiv B α a = ⟨B, rfl, a⟩
 protected def pure (a : α) : QuantumComp₂ L spec A A α :=
   FreeM₂.pure a
 
-/-- Sequencing: run `x`, then the program selected by its return value. It is the general
-sequencing `Quantum.QuantumComp.bind` at the leaves `⟨B, rfl, a⟩`, and the value types may lie in
-different universes. -/
+/-- Sequencing: run `x`, then the program selected by its return value. This is PolyFun's
+`IPFunctor.FreeM₂.bind`, and the value types may lie in different universes. -/
 @[expose]
 protected def bind (x : QuantumComp₂ L spec A B α) (k : α → QuantumComp₂ L spec B C β) :
     QuantumComp₂ L spec A C β :=
-  QuantumComp.bind x fun _ p ↦ p.casesOn fun h a ↦ h ▸ k a
+  FreeM₂.bind x k
 
 /-- Apply `f` to the return value of a program. -/
 @[expose]
 protected def map (f : α → β) (x : QuantumComp₂ L spec A B α) : QuantumComp₂ L spec A B β :=
-  x.bind fun a ↦ QuantumComp₂.pure (f a)
+  FreeM₂.map f x
 
 /-- The local operation `o`, followed by the continuation selected by its outcome. -/
 @[expose]
@@ -451,46 +450,39 @@ protected theorem inductionOn {motive : ∀ A B : QReg, QuantumComp₂ L spec A 
 @[simp]
 protected theorem pure_bind (a : α) (k : α → QuantumComp₂ L spec A B β) :
     (QuantumComp₂.pure a).bind k = k a :=
-  rfl
+  FreeM₂.pure_bind a k
 
 /-- Right unit law. -/
 @[simp]
 protected theorem bind_pure (x : QuantumComp₂ L spec A B α) : x.bind QuantumComp₂.pure = x :=
-  ibind_ipure (M := FreeM₂ (QuantumComp.toIPFunctor L spec)) x
+  FreeM₂.bind_pure_right x
 
 /-- Sequencing of programs is associative. -/
 protected theorem bind_assoc (x : QuantumComp₂ L spec A B α) (k : α → QuantumComp₂ L spec B C β)
     (l : β → QuantumComp₂ L spec C D γ) :
-    (x.bind k).bind l = x.bind fun a ↦ (k a).bind l := by
-  refine (IFreeM.bind_assoc x _ _).trans (congrArg (IFreeM.bind x) ?_)
-  funext u ⟨h, a⟩
-  cases h
-  rfl
+    (x.bind k).bind l = x.bind fun a ↦ (k a).bind l :=
+  FreeM₂.bind_assoc x k l
 
-/-- On value types in one universe, sequencing is PolyFun's `IPFunctor.FreeM₂.bind`. -/
-theorem bind_eq_freeM₂_bind {β : Type w} (x : QuantumComp₂ L spec A B α)
+/-- Sequencing is PolyFun's `IPFunctor.FreeM₂.bind`, with independent value universes. -/
+theorem bind_eq_freeM₂_bind (x : QuantumComp₂ L spec A B α)
     (k : α → QuantumComp₂ L spec B C β) : x.bind k = FreeM₂.bind x k :=
   rfl
 
 /-- Applying `f` to the return value is sequencing with `fun a ↦ pure (f a)`. -/
 theorem map_eq_bind_pure (f : α → β) (x : QuantumComp₂ L spec A B α) :
     x.map f = x.bind fun a ↦ QuantumComp₂.pure (f a) :=
-  rfl
+  FreeM₂.map_eq_bind_pure x f
 
-/-- On value types in one universe, applying `f` to the return value is PolyFun's
-`IPFunctor.FreeM₂.map`. -/
-theorem map_eq_freeM₂_map {β : Type w} (f : α → β) (x : QuantumComp₂ L spec A B α) :
-    x.map f = FreeM₂.map f x := by
-  induction x using IFreeM.inductionOn with
-  | pure _ y =>
-    obtain ⟨rfl, _⟩ := y
-    rfl
-  | liftBind _ c r ih => exact congrArg (IFreeM.liftBind c) (funext ih)
+/-- Applying `f` to the return value is PolyFun's `IPFunctor.FreeM₂.map`, with independent
+value universes. -/
+theorem map_eq_freeM₂_map (f : α → β) (x : QuantumComp₂ L spec A B α) :
+    x.map f = FreeM₂.map f x :=
+  rfl
 
 /-- Applying the identity to the return value changes nothing. -/
 @[simp]
 protected theorem map_id (x : QuantumComp₂ L spec A B α) : x.map id = x :=
-  QuantumComp₂.bind_pure x
+  (map_eq_bind_pure id x).trans (QuantumComp₂.bind_pure x)
 
 /-- Sequencing after a local operation sequences each continuation. -/
 @[simp]
