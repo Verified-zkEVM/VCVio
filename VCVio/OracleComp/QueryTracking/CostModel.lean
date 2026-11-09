@@ -30,7 +30,9 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 
 - `instrumentedRun oa cm`: `oa` interpreted in the canonical free runtime with additive cost
   tracking.
-- `addCostOracle costFn`: the corresponding one-query instrumented oracle implementation.
+- `addCostOracle costFn`: the corresponding one-query instrumented oracle implementation, which is
+  PolyFun's charge writer `PFunctor.Handler.withChargeW` on the identity handler
+  (`addCostOracle_eq_withChargeW`).
 - `CostModel spec ω`: Assigns cost `queryCost t : ω` to each oracle query `t`.
 - `costDist oa cm`: Joint distribution of `(output, totalCost)`.
 - `expectedCost oa cm val`: Expected total cost `E[val(cost)]`, computed by Lebesgue integration.
@@ -67,11 +69,18 @@ def addCostOracle [AddCommMonoid ω] (costFn : spec.Domain → ω) :
     QueryImpl spec (AddWriterT ω (OracleComp spec)) :=
   (QueryImpl.ofLift spec (OracleComp spec)).withAddCost costFn
 
+/-- The additive cost oracle is PolyFun's charge writer on the identity handler: each query
+writes its charge and is then issued unchanged. -/
+theorem addCostOracle_eq_withChargeW [AddCommMonoid ω] (costFn : spec.Domain → ω) :
+    addCostOracle costFn =
+      PFunctor.Handler.withChargeW (PFunctor.Handler.id spec.toPFunctor) costFn :=
+  QueryImpl.withAddCost_eq_withChargeW _ costFn
+
 @[simp]
 lemma fst_map_run_simulateQ_addCostOracle [AddCommMonoid ω] (costFn : spec.Domain → ω)
     (oa : OracleComp spec α) :
-    Prod.fst <$> (simulateQ (addCostOracle costFn) oa).run = oa := by
-  simp [addCostOracle, QueryImpl.withAddCost, QueryImpl.fst_map_run_withCost]
+    Prod.fst <$> (simulateQ (addCostOracle costFn) oa).run = oa :=
+  (QueryImpl.fst_map_run_simulateQ_withAddCost _ costFn oa).trans (simulateQ_ofLift_eq_self oa)
 
 /-- A cost model assigns a cost in `ω` to each oracle query.
 The cost type `ω` can be `ℕ`, `ℝ≥0∞`, `ι → ℕ` (per-oracle), or any `AddCommMonoid`. -/

@@ -55,6 +55,12 @@ theorem withAddCost_eq_withChargeW [LawfulMonad m] {ω : Type} [AddMonoid ω]
     impl.withAddCost costFn = PFunctor.Handler.withChargeW (P := spec.toPFunctor) impl costFn :=
   (PFunctor.Handler.withChargeW_eq_withTraceBefore (P := spec.toPFunctor) impl costFn).symm
 
+/-- Forgetting the additive cost recovers the uninstrumented simulation. -/
+theorem fst_map_run_simulateQ_withAddCost [LawfulMonad m] {ω α : Type} [AddMonoid ω]
+    (impl : QueryImpl spec m) (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
+    Prod.fst <$> (simulateQ (impl.withAddCost costFn) oa).run = simulateQ impl oa :=
+  fst_map_run_withCost impl _ oa
+
 /-- **Deterministic recording.** A handler into `Id` instrumented with additive cost returns the
 output of the one completed path it picks, together with the charge of that path. -/
 theorem run_simulateQ_withAddCost_id {ω α : Type} [AddMonoid ω] (answer : QueryImpl spec Id)
