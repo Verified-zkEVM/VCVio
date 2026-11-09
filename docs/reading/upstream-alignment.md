@@ -794,7 +794,10 @@ Pointwise multiplication is verified in all three schemes: `multiplyNTTs` is the
 `MultiplyNTT` / FIPS 203 `MultiplyNTTs` table-driven body with no `implemented_by`, and `toHat_mul`
 is the theorem `ntt_negacyclicMul` rather than a definitional restatement.
 `Falcon.Concrete.concretePrimitives_transform` discharges the `Falcon.Primitives.Laws.transform`
-field for the concrete bundle (the other `Laws` fields stay open).
+field for the concrete bundle, `Falcon.Concrete.decompress_compress` discharges its
+`compress_decompress` field, and `hashToPoint_welldefined` holds trivially (its body is `True`).
+`samplerZ_correct` holds for no sampler: a `ProbComp` has finite support, so no `Primitives` bundle
+satisfies `Falcon.Primitives.Laws` (`Falcon.Primitives.not_laws`).
 The twiddle half came from Mathlib (item 2); the CRT half is available there too
 (`Ideal.quotientInfRingEquivPiQuotient`, `Ideal.iInf_span_singleton`, `Polynomial.pairwise_coprime_X_sub_C`,
 `Polynomial.quotientSpanXSubCAlgEquiv`, `prod_multiset_X_sub_C_of_monic_of_roots_card_eq`,
