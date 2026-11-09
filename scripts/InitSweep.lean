@@ -139,10 +139,9 @@ lake exe initsweep --update-baseline   # rewrite the baseline from the current b
 The committed baseline (`scripts/init_sweep_baseline.json`) is a **list of constant names**
 with the entry points each one is accepted for, rather than a per-library count: accepting
 one benign instance costs exactly that one name and leaves every other constant of its
-library at zero. It is the `scripts/axiom_baseline.json` idea — an
-allowlist keyed by declaration, argued row by row in review — with a scope attached, which
-`axiom_baseline.json`'s flat name lists do not have: a row covers one constant *under one
-library* and exactly the entry points it lists, so `--update-baseline` over a partial
+library at zero. It is an allowlist keyed by declaration, argued row by row in review, with
+a scope attached: a row covers one constant *under one library* and exactly the entry points
+it lists, so `--update-baseline` over a partial
 `--root` set rewrites only those libraries' rows and preserves the rest, and a row written
 for one sweep cannot green the same name in another.
 

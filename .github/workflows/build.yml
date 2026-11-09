@@ -32,8 +32,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
+
       - name: Check CI disk cleanup safeguards
-        run: python3 scripts/test-ci-disk-space.py
+        run: uv run --no-project --python 3.12 python scripts/test-ci-disk-space.py
 
       - name: Set up Lean environment
         uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
@@ -60,11 +66,11 @@ jobs:
         run: bash scripts/check-expose-boundary.sh --report "origin/${{ github.base_ref }}"
 
       - name: Test downstream probability codemod
-        run: python3 scripts/test-migrate-native-probability.py
+        run: uv run --no-project --python 3.12 python scripts/test-migrate-native-probability.py
 
       # The classifier of a migration dry run (`scripts/migration-dry-run.sh`).
       - name: Test migration dry-run classifier
-        run: python3 scripts/test-classify-migration-errors.py
+        run: uv run --no-project --python 3.12 python scripts/test-classify-migration-errors.py
 
       - name: Check optional complexity backend isolation
         run: |
@@ -91,13 +97,13 @@ jobs:
       - name: Check comment fences
         run: |
           bash scripts/test-comment-fences.sh
-          python3 scripts/check-comment-fences.py
+          uv run --no-project --python 3.12 python scripts/check-comment-fences.py
 
       # Regenerates every umbrella with scripts/update-lib.sh and fails if any of them changes.
       - name: Check generated umbrella modules
         run: |
-          python3 scripts/test-check-imports.py
-          python3 scripts/test-validation.py
+          uv run --no-project --python 3.12 python scripts/test-check-imports.py
+          uv run --no-project --python 3.12 python scripts/test-validation.py
           bash scripts/check-imports.sh
 
   complexity_backend:
@@ -105,6 +111,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
       - name: Set up Lean environment
         uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
         with:
@@ -139,6 +150,11 @@ jobs:
       # checked out, yet Lake links every dependency `extern_lib` into any
       # consumer `lean_exe`, so the native targets must degrade gracefully.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
       - name: Free unused hosted-runner SDKs
         run: bash scripts/free-ci-disk-space.sh
       # The same caches as `Build Project`, with the same paths and keys. A path dependency builds
@@ -249,7 +265,7 @@ jobs:
             echo ''
             echo 'public def main : IO Unit := IO.println "consumer ok"'
           } > "$consumer/Main.lean"
-          python3 scripts/add-api-consumer-fixtures.py "$consumer"
+          uv run --no-project --python 3.12 python scripts/add-api-consumer-fixtures.py "$consumer"
           cd "$consumer"
           lake update
           lake exe cache get
@@ -272,6 +288,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
       # PR-controlled values (the branch name) reach the script through `env`, never through
       # `${{ }}` interpolation into the script text.
       - name: Initialize timing paths
@@ -351,7 +372,7 @@ jobs:
       # rebuild, so the log carries every warning whether or not the module came from the cache.
       - name: Check warning budget
         run: |
-          python3 ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/library_build.log" \
+          uv run --no-project --python 3.12 python ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/library_build.log" \
             --path-prefix ToMathlib/ \
             --path-prefix VCVio/ \
             --path-prefix VCVioCslib/ \
@@ -374,10 +395,9 @@ jobs:
         run: |
           bash scripts/build_timing_report.sh run test_path "$BUILD_TIMING_RESULTS" -- \
             bash -eo pipefail -c 'lake env lean VCVioTest/Smoke.lean'
-      # Enforcing from day one: new taint (exit 1: `sorryAx` or non-standard axioms not in
-      # the committed baseline) fails the build, as do infrastructure failures (exit 2:
-      # missing or unparsable baseline, tool breakage) — a broken tool must never read as
-      # a clean verdict.
+      # Zero debt: any taint (exit 1: `sorryAx` or a non-standard axiom) fails the build, as
+      # do infrastructure failures (exit 2: missing, unparsable or nonempty baseline, tool
+      # breakage) — a broken tool must never read as a clean verdict.
       # Sweeps the non-test libraries; Interop (the declared TCB) is bounded by
       # its import-isolation gate instead.
       # Exercise the sweep against its own fixtures before trusting its verdict on the
@@ -410,7 +430,7 @@ jobs:
       - name: Test the documentation name checker
         run: bash scripts/test-docnames.sh
       - name: Check documentation names
-        run: python3 scripts/check-doc-names.py --resolve
+        run: uv run --no-project --python 3.12 python scripts/check-doc-names.py --resolve
       # `lake test` runs the `test` script from `lakefile.lean`: one `lake build` of the three test
       # libraries (every module reachable from `VCVioTest.lean`, the Lean-only lattice helpers
       # and vectors, the SLH-DSA canaries) and every test executable, then the smoke test and the
@@ -427,7 +447,7 @@ jobs:
       # under the proof libraries are the proof-library gate's business.
       - name: Check test-library warning budget
         run: |
-          python3 ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/test_build.log" \
+          uv run --no-project --python 3.12 python ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/test_build.log" \
             --path-prefix VCVioTest/ \
             --path-prefix VCVioTest.lean \
             --path-prefix LatticeCryptoTest/ \
@@ -444,7 +464,7 @@ jobs:
         run: lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
       - name: Record module times
         run: |
-          python3 scripts/module_times.py update .lake/build/vcvio-module-times.json \
+          uv run --no-project --python 3.12 python scripts/module_times.py update .lake/build/vcvio-module-times.json \
             --commit "$GITHUB_SHA" \
             "$BUILD_TIMING_LOG_DIR/library_build.log" "$BUILD_TIMING_LOG_DIR/test_build.log"
       # Only `main` writes caches. Pull request and merge-queue runs restore them and discard their
@@ -559,6 +579,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
       - name: Check out submodules
         run: git submodule update --init --recursive --depth 1
       - name: Free unused hosted-runner SDKs
@@ -595,7 +620,7 @@ jobs:
       - name: Fetch Mathlib cache
         run: lake exe cache get
       - name: Test lint orchestration
-        run: python3 scripts/test-lint.py
+        run: uv run --no-project --python 3.12 python scripts/test-lint.py
       # Without `--no-build` the driver runs `lake build` on the proof libraries first.
       - name: Build and lint each library, and check exact baseline
         env:

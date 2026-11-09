@@ -5,7 +5,10 @@ Authors: Oleksandr Vovkotrub
 -/
 
 module
+public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
+public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
 public import LatticeCrypto.MLDSA.Security
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
 import VCVio.OracleComp.EvalDist.Measure
 
 /-!

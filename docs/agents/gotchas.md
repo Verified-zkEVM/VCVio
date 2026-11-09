@@ -37,7 +37,7 @@ The README and large amounts of commented-out code use `++ₒ` for combining ora
 Do not keep large commented-out Lean blocks around as reference material,
 especially if they use obsolete patterns (`Pr[= x | ...]`, `[= x | ...]`, `++ₒ`, `simulate'`,
 `getM`, `guard` via `Alternative`). Delete them instead. This is distinct from
-unfinished live proof attempts, which should be preserved with `stop`.
+unfinished live proof attempts on a working branch, which should be preserved with `stop`.
 Use `Examples/OneTimePad/Basic.lean` as the canonical reference for current style.
 
 ## Type System
@@ -283,7 +283,7 @@ ToMathlib → Prelude → EvalDist/Defs → OracleComp core → EvalDist bridge
 
 ### 16. Preserve partial proof attempts with `stop`
 
-When a proof attempt is not finished or is currently broken, insert a local `stop` marker instead of deleting large proof blocks. This preserves search context for later agents.
+When a proof attempt on a working branch is not finished or is currently broken, insert a local `stop` marker instead of deleting large proof blocks. This preserves search context for later agents. A `stop` leaves the proof incomplete, so the branch cannot merge until it is gone: `main` carries no `sorry` (see *Building* in `AGENTS.md`).
 
 ### 17. `OracleComp.inductionOn` is the canonical eliminator
 

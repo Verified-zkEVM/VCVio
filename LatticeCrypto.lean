@@ -53,6 +53,8 @@ public import LatticeCrypto.Ring.Core
 public import LatticeCrypto.Ring.IntegralLift
 public import LatticeCrypto.Ring.Kernel
 public import LatticeCrypto.Ring.NTTCert
+public import LatticeCrypto.Ring.NTTLoop
+public import LatticeCrypto.Ring.NTTSplitCert
 public import LatticeCrypto.Ring.Norms
 public import LatticeCrypto.Ring.Rounding
 public import LatticeCrypto.Ring.Sampling
