@@ -197,10 +197,20 @@ def multiplyNTTs (fHat gHat : Tq) : Tq :=
     let a1 := getZ fa (base + 1)
     let b0 := getZ ga base
     let b1 := getZ ga (base + 1)
-    if pos % 2 == 0 then
-      a0 * b0 + a1 * b1 * gamma
-    else
-      a0 * b1 + a1 * b0⟩
+    let c := baseCaseMultiply a0 a1 b0 b1 gamma
+    if pos % 2 == 0 then c.1 else c.2⟩
+
+/-- Coordinate `2i`, the first coefficient of pair `i`. -/
+@[expose] def pairFst (i : Fin 128) : Fin polyBackend.degree :=
+  ⟨2 * i.val, by have := i.isLt; change _ < 256; omega⟩
+
+/-- Coordinate `2i + 1`, the second coefficient of pair `i`. -/
+@[expose] def pairSnd (i : Fin 128) : Fin polyBackend.degree :=
+  ⟨2 * i.val + 1, by have := i.isLt; change _ < 256; omega⟩
+
+@[simp] theorem val_pairFst (i : Fin 128) : (pairFst i).val = 2 * i.val := rfl
+
+@[simp] theorem val_pairSnd (i : Fin 128) : (pairSnd i).val = 2 * i.val + 1 := rfl
 
 private theorem layer_shape :
     ∀ s : Fin 7, 2 ^ s.val * (2 * (128 / 2 ^ s.val)) = polyBackend.degree := by
@@ -468,10 +478,8 @@ private theorem coeff_ntt (f : Rq) (j : Fin polyBackend.degree) :
 /-- Coordinates `(2i, 2i+1)` of the concrete NTT are the coefficients of `f mod (X² − γᵢ)`. -/
 theorem ntt_coeff_pair (f : Rq) (i : Fin 128) :
     Polynomial.X ^ 2 - Polynomial.C (nttGamma i) ∣
-      Polynomial.C (polyBackend.coeff (ntt f).coeffs
-          ⟨2 * i.val, by have := i.isLt; change _ < 256; omega⟩) +
-        Polynomial.C (polyBackend.coeff (ntt f).coeffs
-          ⟨2 * i.val + 1, by have := i.isLt; change _ < 256; omega⟩) * Polynomial.X -
+      Polynomial.C (polyBackend.coeff (ntt f).coeffs (pairFst i)) +
+        Polynomial.C (polyBackend.coeff (ntt f).coeffs (pairSnd i)) * Polynomial.X -
         polyBackend.toPolynomial f := by
   have h := LatticeCrypto.NTTCert.forwardStages_ofFn_dvd (N := polyBackend.degree) (k := 7)
     (fun s => 128 / 2 ^ s.val) layer_shape
@@ -498,15 +506,11 @@ private theorem getZ_toArray (fHat : Tq) {n m : ℕ} (hm : m < polyBackend.degre
 /-- FIPS 203 Algorithm 11: coordinates `(2i, 2i+1)` of `multiplyNTTs fHat gHat` are
 `BaseCaseMultiply` of the corresponding coordinates of `fHat` and `gHat` with `γᵢ`. -/
 theorem multiplyNTTs_pair (fHat gHat : Tq) (i : Fin 128) :
-    (polyBackend.coeff (multiplyNTTs fHat gHat).coeffs
-        ⟨2 * i.val, by have := i.isLt; change _ < 256; omega⟩,
-      polyBackend.coeff (multiplyNTTs fHat gHat).coeffs
-        ⟨2 * i.val + 1, by have := i.isLt; change _ < 256; omega⟩) =
+    (polyBackend.coeff (multiplyNTTs fHat gHat).coeffs (pairFst i),
+      polyBackend.coeff (multiplyNTTs fHat gHat).coeffs (pairSnd i)) =
       baseCaseMultiply
-        (polyBackend.coeff fHat.coeffs ⟨2 * i.val, by have := i.isLt; change _ < 256; omega⟩)
-        (polyBackend.coeff fHat.coeffs ⟨2 * i.val + 1, by have := i.isLt; change _ < 256; omega⟩)
-        (polyBackend.coeff gHat.coeffs ⟨2 * i.val, by have := i.isLt; change _ < 256; omega⟩)
-        (polyBackend.coeff gHat.coeffs ⟨2 * i.val + 1, by have := i.isLt; change _ < 256; omega⟩)
+        (polyBackend.coeff fHat.coeffs (pairFst i)) (polyBackend.coeff fHat.coeffs (pairSnd i))
+        (polyBackend.coeff gHat.coeffs (pairFst i)) (polyBackend.coeff gHat.coeffs (pairSnd i))
         (nttGamma i) := by
   have hi := i.isLt
   have h0 : 2 * i.val < polyBackend.degree := by change _ < 256; omega
@@ -522,12 +526,12 @@ theorem multiplyNTTs_pair (fHat gHat : Tq) (i : Fin 128) :
   refine Prod.ext ?_ ?_
   · change (Vector.ofFn _).get ⟨2 * i.val, h0⟩ = _
     rw [Vector.get_ofFn]
-    simp only [e3, e4, hγ, baseCaseMultiply_eq]
+    simp only [e3, e4, hγ, baseCaseMultiply_eq, pairFst, pairSnd]
     simp [getZ_toArray fHat h0 (Nat.mul_comm _ _), getZ_toArray gHat h0 (Nat.mul_comm _ _),
       getZ_toArray fHat h1 (by rw [Nat.mul_comm]), getZ_toArray gHat h1 (by rw [Nat.mul_comm])]
   · change (Vector.ofFn _).get ⟨2 * i.val + 1, h1⟩ = _
     rw [Vector.get_ofFn]
-    simp only [e2, e5, hγ, baseCaseMultiply_eq]
+    simp only [e2, e5, hγ, baseCaseMultiply_eq, pairFst, pairSnd]
     simp [getZ_toArray fHat h0 (Nat.mul_comm _ _), getZ_toArray gHat h0 (Nat.mul_comm _ _),
       getZ_toArray fHat h1 (by rw [Nat.mul_comm]), getZ_toArray gHat h1 (by rw [Nat.mul_comm])]
 
@@ -550,9 +554,9 @@ theorem ntt_negacyclicMul (f g : Rq) :
   have hm := multiplyNTTs_pair (ntt f) (ntt g) i
   simp only [baseCaseMultiply_eq, Prod.mk.injEq] at hm
   rcases Nat.mod_two_eq_zero_or_one pos.val with h | h
-  · have hp : pos = ⟨2 * i.val, by change _ < 256; omega⟩ := Fin.ext (by simp [i]; omega)
+  · have hp : pos = pairFst i := Fin.ext (by simp [i]; omega)
     rw [hp, hc0, hm.1]
-  · have hp : pos = ⟨2 * i.val + 1, by change _ < 256; omega⟩ := Fin.ext (by simp [i]; omega)
+  · have hp : pos = pairSnd i := Fin.ext (by simp [i]; omega)
     rw [hp, hc1, hm.2]
 
 /-- `multiplyNTTs` is negacyclic multiplication transported through the NTT. -/
