@@ -157,7 +157,7 @@ private theorem zetaTable_twiddle_partner (s : Fin 8) (g : Fin (2 ^ s.val)) :
   rw [neg_mul, mul_comm, zetaTable_layer_partner s g, neg_neg]
 
 private def nttStage (s : Fin 8) : LatticeCrypto.NTTCert.ScaledStage Coeff NTTCoord :=
-  LatticeCrypto.NTTCert.ctStage degree_eq (getZ zetaTable) zetaTable_twiddle_partner s
+  LatticeCrypto.NTTCert.ctStage le_rfl degree_eq (getZ zetaTable) zetaTable_twiddle_partner s
 
 private def nttStages :
     List (LatticeCrypto.NTTCert.ScaledStage Coeff NTTCoord) :=
