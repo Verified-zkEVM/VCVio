@@ -18,11 +18,6 @@ from the coefficientwise bound `(a − b)² ≤ 2·a² + 2·b²` on centered rep
 
 ## Main results
 
-- `centeredRepr_sub_natAbs_le`: the centered representative of a difference in `ZMod q` is
-  no larger in absolute value than the difference of the centered representatives.
-- `pairL2NormSq_sub_le`: the squared `ℓ₂` norm of a componentwise difference is at most
-  twice the sum of the squared norms.
-- `negacyclicMul_sub_left`: negacyclic multiplication is linear in its left argument.
 - `ntruSISProblem_isValid_sub`: the witness-level bridge — a valid collision pair yields a
   valid NTRU-SIS kernel vector at the same public key.
 - `ntruSISProblemKeyed` / `collisionToKernelAdv` / `advantage_le_ntruSISProblemKeyed`: the

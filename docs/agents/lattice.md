@@ -109,8 +109,9 @@ instantiating those abstractions for a lattice scheme.
   headline `euf_cma_collision_security_ntruSIS`.
 - `LatticeCryptoTest/Falcon/NonVacuity.lean`: a witness that the hypotheses of `euf_cma_security`,
   and those of `euf_cma_collision_security_ntruSIS` at `εpp = 1`, are jointly satisfiable at a
-  degree-2 NTRU key with a genuinely rejecting sampler. It uses a trapdoor domain sampler and `ε_step = 0`, so it claims neither that the collision term
-  is hard nor that any precision gap is small.
+  degree-2 NTRU key with a genuinely rejecting sampler. It uses a trapdoor domain sampler and
+  `ε_step = 0`, so it claims neither that the collision term is hard nor that any precision gap is
+  small.
 - `LatticeCrypto/Falcon/Concrete/`: executable NTT, floating-point emulation (FPR/FXR), encodings,
   and the NTRU solver.
 - `Extern/Falcon/`: FFI bindings plus the SHAKE-backed sampler, FFT, keygen, signing, and instance
