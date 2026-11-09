@@ -650,6 +650,18 @@ theorem isTotalQueryBound_withQueryLog_iff {α : Type}
     (isTotalQueryBound_run_simulateQ_withLogging_iff
       (QueryImpl.ofLift spec (OracleComp spec)) mx n)
 
+/-- Logging after substitution records the target queries actually made by each handler program.
+One source query may make zero, one, or many target queries, in the handler's execution order.
+The right side interprets source queries with these logged programs rather than mapping entries
+of a source-level log. -/
+theorem withQueryLog_simulateQ {ι κ : Type} {source : OracleSpec ι}
+    {target : OracleSpec κ} {A : Type}
+    (route : QueryImpl source (OracleComp target)) (program : OracleComp source A) :
+    (simulateQ route program).withQueryLog =
+      (simulateQ (QueryImpl.compose target.loggingOracle route) program).run := by
+  unfold OracleComp.withQueryLog OracleSpec.loggingOracle
+  rw [QueryImpl.simulateQ_compose]
+
 /-- Erase an intrinsic execution path to its output and query log. -/
 @[expose, reducible] def pathLogResult {i : Type} {oSpec : OracleSpec.{0, 0} i} {β : Type}
     (mx : OracleComp oSpec β) (path : PFunctor.FreeM.Path mx) :
