@@ -1,5 +1,5 @@
 /-
-Copyright (c) 2024 ArkLib Contributors. All rights reserved.
+Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù
 -/
@@ -21,7 +21,8 @@ Samplers are `ProbComp`s; laws are output measures `𝒟[·]`, and distances are
 ## References
 
 * A. Chiesa, M. Orrù, *A Fiat–Shamir Transformation From Duplex Sponges*, ePrint 2025/536,
-  Lemma 3.2: the uniform-resampling law `bind_sampleUniformPreimage_eq_uniform`.
+  version of March 27, 2026, Claim 7.9 (pp. 56–57): the uniform-resampling law
+  `bind_sampleUniformPreimage_eq_uniform`.
 -/
 
 public section

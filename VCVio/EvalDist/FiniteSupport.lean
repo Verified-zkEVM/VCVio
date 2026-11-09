@@ -1,5 +1,5 @@
 /-
-Copyright (c) 2026 ArkLib Contributors. All rights reserved.
+Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù
 -/
@@ -102,35 +102,3 @@ theorem OptionT.support_finite_of_run {m : Type → Type*} [Monad m] [MonadAttac
     (mx : OptionT m α) (h : (support mx.run).Finite) :
     (support mx).Finite :=
   h.preimage (Option.some_injective α).injOn
-
-section Events
-
-universe v
-
-variable {m : Type → Type v} [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-  {α β : Type}
-
-/-- Rewrite the event of a two-step computation pointwise in its first draw: if every inner
-event has the same probability, so has the whole event. -/
-theorem prEvent_bind_congr_of_forall [LawfulMonad m] {γ : Type} (mx : m α) (f : α → m β)
-    (g : α → m γ) (p : α → β → Prop) (q : α → γ → Prop)
-    (h : ∀ x, Pr{let y ← f x}[p x y] = Pr{let z ← g x}[q x z]) :
-    Pr{let x ← mx; let y ← f x}[p x y] = Pr{let x ← mx; let z ← g x}[q x z] := by
-  have key := prEvent_bind_congr mx (fun x => do let y ← f x; return p x y)
-    (fun x => do let z ← g x; return q x z) id id (fun x => by
-      simpa only [prEvent_norm, bind_assoc, pure_bind, id] using h x)
-  simpa only [prEvent_norm, bind_assoc, pure_bind, id] using key
-
-/-- Measure domination of a prefix and of every continuation gives domination of the composed
-measures, in any measurable space of final outputs. -/
-theorem evalDist_bind_le_of_le [MeasurableSpace β] {mx my : m α} {f g : α → m β}
-    (hxy : (letI : MeasurableSpace α := ⊤; 𝒟[mx] ≤ 𝒟[my])) (hfg : ∀ a, 𝒟[f a] ≤ 𝒟[g a]) :
-    𝒟[mx >>= f] ≤ 𝒟[my >>= g] := by
-  let : MeasurableSpace α := ⊤
-  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
-  refine Measure.le_iff.mpr fun T hT => ?_
-  rw [Measure.bind_apply hT Measurable.of_discrete.aemeasurable,
-    Measure.bind_apply hT Measurable.of_discrete.aemeasurable]
-  exact (lintegral_mono fun a => Measure.le_iff'.mp (hfg a) T).trans (lintegral_mono' hxy le_rfl)
-
-end Events

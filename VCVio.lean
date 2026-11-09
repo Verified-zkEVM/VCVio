@@ -328,7 +328,6 @@ public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
-public import VCVio.OracleComp.Constructions.SampleableType.Pi
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.Constructions.UniformPreimage
 public import VCVio.OracleComp.Constructions.UniformSelectMeasure
@@ -338,6 +337,7 @@ public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.EvalDist.AnswerMeasure
 public import VCVio.OracleComp.EvalDist.DiscreteTVDistBind
 public import VCVio.OracleComp.EvalDist.DiscreteTVDistFintype
+public import VCVio.OracleComp.EvalDist.DiscreteTVDistPi
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.EvalDist.Sum
 public import VCVio.OracleComp.FinRatPMF

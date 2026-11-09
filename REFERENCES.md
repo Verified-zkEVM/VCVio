@@ -131,6 +131,7 @@ Used in:
 Alessandro Chiesa and Michele Orrù.
 *A Fiat–Shamir Transformation From Duplex Sponges*.
 Cryptology ePrint Archive, Paper 2025/536, 2025.
+Version of March 27, 2026; Claim 7.9 (pp. 56–57).
 Preprint: <https://eprint.iacr.org/2025/536>
 
 Used in:
