@@ -132,6 +132,7 @@ variable {coinInput coinOutput : Type} {CoinClass : StepClass}
   (CoinQ : QuantitativeStepClass CoinClass)
   (coinBoundary : Boundary CoinClass coinSpec.toPFunctor coinInput coinOutput)
 
+omit [CoinClass.HasProd] [CoinClass.HasSum] [CoinClass.HasOption] in
 /-- The canonical fair-coin contract admits both Boolean replies. -/
 theorem fair_coin_allows_both_answers :
     (fairCoinResourceModel CoinQ coinBoundary.interface).allows PUnit.unit false ∧
