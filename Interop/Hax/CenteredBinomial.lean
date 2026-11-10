@@ -1,28 +1,23 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Devon Tuma
 -/
 
-import Interop.Hax.Bridge
-import Interop.Rust.Run
-import Hax.rust_primitives.Cast
-import Hax.rust_primitives.BVDecide
-import Hax.Tactic
-import VCVio.OracleComp.ProbComp
-import VCVio.EvalDist.Instances.ErrorT
-import VCVio.EvalDist.Instances.OptionT
-import VCVio.EvalDist.Monad.Basic
+module
+
+public import Aeneas.Std.Scalar
+public import Interop.Rust.RustM
+public import Interop.Rust.Run
+public import Interop.Rust.Triple
+public import VCVio.OracleComp.ProbComp
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.ProgramLogic.Tactics
 
 /-!
-# End-to-end hax example: centered-binomial sampler (CBD, η = 1)
+# A Rust centered-binomial sampler, through `RustM`, in VCVio
 
-The first `Interop.Hax` example whose probabilistic content is
-**intrinsic to the Rust code**, not bolted on from the VCVio side.
-
-## Provenance
-
-The Rust source lives at `third_party/hax-cbd/src/lib.rs`:
+One step of ML-KEM's `SamplePolyCBD_η` at `η = 1`, as Rust:
 
 ```rust
 pub fn sample_cbd1(b: u8) -> i32 {
@@ -32,289 +27,141 @@ pub fn sample_cbd1(b: u8) -> i32 {
 }
 ```
 
-Running `cargo hax into lean` produces
-`third_party/hax-cbd/proofs/lean/extraction/hax_cbd.lean`; the `def
-sample_cbd1` below is the verbatim hax emission (modulo the `Interop`
-namespace).
+`sample_cbd1` below is that function in the `RustM` code hax emits today, over Aeneas's scalars:
+the bitwise `&&&` and the casts are pure, while the shift and the subtraction are checked and
+return `RustM`. It is a transcription: `cargo hax into lean` was not run to produce it.
 
-## What this demonstrates
+Lifted into `RustOracleComp unifSpec` by `Interop.Rust.liftRustM` and fed two uniform bits, it
+returns `0` with probability `1/2` and `±1` with probability `1/4` each: the centered binomial
+distribution with parameter `1`.
 
-`sample_cbd1` is one step of ML-KEM's `SamplePolyCBD_η` noise sampler
-at parameter `η = 1`: given one byte of uniform randomness it returns
-a single signed field-element in `{-1, 0, 1}`, distributed as the
-centered binomial with parameter 1 (i.e. `Bernoulli(1/2) -
-Bernoulli(1/2)`). Only the low two bits of `b` affect the output.
+## Main results
 
-Unlike `Barrett.lean`, `Computation.lean`, and `Adc.lean`, whose
-inputs are data and whose outputs are deterministic, `sample_cbd1`'s
-input **is** randomness. The bridge then lets us make two
-complementary statements on the two sides:
-
-* On the hax / `RustM` side, `sample_cbd1_run_in_range` establishes
-  the bound `r ∈ {-1, 0, 1}` for every `u8` input. We prove it at the
-  `.run` level via `decide` over the 256 possible `u8` values, rather
-  than through `hax_bv_decide` on a `Triple`: the `u8 → i32` widening
-  in the body goes through `UInt8.toInt32`, which the bit-blast
-  backend abstracts as opaque. Every other example in this folder
-  covers the `Triple` / bit-blast pattern; CBD covers the
-  complementary `.run` / `decide` pattern, which is what's available
-  whenever a `u8 → i*` widening appears in the body.
-* On the VCVio / `RustOracleComp` side, `sampleRandomCbd1_prob_zero`
-  (and its `+1` / `-1` siblings) establish the **exact distribution**
-  `Pr[0] = 1/2`, `Pr[±1] = 1/4`. This is the claim that only makes
-  sense on this side of the bridge: the `Triple` layer is universal
-  over oracle outcomes, and `Hax.RustM` has no oracle at all.
-
-`sampleRandomCbd1` samples from `Fin 4` (the two relevant bits)
-rather than from a full `u8`. The output distribution is the same as
-sampling a full byte and passing it to `sample_cbd1` (the six high
-bits are unused), but restricting the input space to four values
-keeps the peel + enumeration proof short. Extending to the full
-8-bit version is a pushforward argument and is left as a follow-up.
-
-## Scaling path
-
-ML-KEM-512 uses the same pattern at `η = 2` (4 bits in, one coefficient
-out, so a byte yields two coefficients). ML-KEM-768/1024 uses `η = 2`
-for both secret and noise, and ML-KEM-512 uses `η = 3` for the secret.
-Each of those samplers is a one-page hax function of the same shape,
-verifiable by the same `decide` on the hax side and the same
-enumeration on the VCVio side. Wrapping into a 256-coefficient loop
-is the next step up.
+* `Interop.Hax.Examples.CenteredBinomial.sample_cbd1_zero` (and `_one`, `_two`, `_three`): the
+  four bit patterns that matter.
+* `Interop.Hax.Examples.CenteredBinomial.prob_sampleRandomCbd1_zero`, `_pos_one`, `_neg_one`: the
+  distribution.
+* `Interop.Hax.Examples.CenteredBinomial.triple_sampleRandomCbd1`: the possible values, by core's
+  `vcgen` through the Rust step.
 -/
 
-open Std.Do OracleSpec OracleComp ENNReal
+public section
+
+open Aeneas.Std Interop.Rust OracleSpec OracleComp OracleComp.ProgramLogic ENNReal
 
 namespace Interop.Hax.Examples.CenteredBinomial
 
-variable {ι : Type} {spec : OracleSpec ι}
+/-- The Rust `sample_cbd1` in `RustM`: the low two bits of `b`, widened to `i32`, subtracted. -/
+def sample_cbd1 (b : U8) : RustM I32 := do
+  let a : I32 := UScalar.hcast .I32 (b &&& 1#u8)
+  let s ← b >>> 1#i32
+  let c : I32 := UScalar.hcast .I32 (s &&& 1#u8)
+  a - c
 
-/-! ### Hax emission
+/-- Evaluate `sample_cbd1` on a literal: unfold the checked shift and subtraction and decide
+their range tests. `RustM` is irreducible, so `decide` alone cannot. -/
+local macro "cbd_eval" : tactic =>
+  `(tactic| (simp (config := { decide := true }) only [sample_cbd1, HShiftRight.hShiftRight,
+    UScalar.shiftRight_IScalar, UScalar.shiftRight, HSub.hSub, IScalar.sub, IScalar.tryMk,
+    ite_true, bind_tc_ok]; rfl))
 
-Verbatim hax output, namespaced into `Interop.Hax.Examples.CenteredBinomial`. The
-regenerate-from-source pipeline is: edit `third_party/hax-cbd/src/lib.rs`,
-run `cargo hax into lean`, copy the emitted definition here. Three
-checked operations (bitwise AND on `u8`, right shift by `1`, widening
-cast `u8 → i32`) and one subtraction on `i32`; none of them can fail
-on a `u8` input, so the `RustM` monad is carried for shape alone. -/
+theorem sample_cbd1_zero : sample_cbd1 0#u8 = RustM.ok 0#i32 := by cbd_eval
 
-/-- Centered binomial distribution (η = 1) sampler, emitted by hax.
-Takes one byte, returns `a - c` where `a = b & 1` and `c = (b >> 1) & 1`
-are the low two bits of `b` widened to `i32`. Only bits 0 and 1 of `b`
-are read. -/
-@[spec]
-def sample_cbd1 (b : u8) : RustM i32 := do
-  let a : i32 ← (rust_primitives.hax.cast_op (← (b &&&? (1 : u8))) : RustM i32)
-  let c : i32 ←
-    (rust_primitives.hax.cast_op
-      (← ((← (b >>>? (1 : i32))) &&&? (1 : u8))) :
-      RustM i32)
-  (a -? c)
+theorem sample_cbd1_one : sample_cbd1 1#u8 = RustM.ok 1#i32 := by cbd_eval
 
-/-! ### Constructor-level evaluation on the four bit-patterns
+theorem sample_cbd1_two : sample_cbd1 2#u8 = RustM.ok (-1)#i32 := by cbd_eval
 
-Each of the four `b &&& 3` patterns reduces `sample_cbd1 b` to a
-`RustM.ok` constructor with a concrete `i32` value. These are the
-only `sample_cbd1` evaluations `sampleRandomCbd1` ever encounters.
-The concrete `u8` inputs let the bitwise ops, shift, cast, and
-subtraction all reduce definitionally. -/
+theorem sample_cbd1_three : sample_cbd1 3#u8 = RustM.ok 0#i32 := by cbd_eval
 
-@[simp] theorem sample_cbd1_val_0 :
-    sample_cbd1 (0 : u8) = (RustM.ok (0 : i32)) := rfl
+/-- The two low bits of a byte, as a byte. -/
+def lowBits : Fin 4 → U8
+  | 0 => 0#u8
+  | 1 => 1#u8
+  | 2 => 2#u8
+  | 3 => 3#u8
 
-@[simp] theorem sample_cbd1_val_1 :
-    sample_cbd1 (1 : u8) = (RustM.ok (1 : i32)) := rfl
-
-@[simp] theorem sample_cbd1_val_2 :
-    sample_cbd1 (2 : u8) = (RustM.ok (-1 : i32)) := rfl
-
-@[simp] theorem sample_cbd1_val_3 :
-    sample_cbd1 (3 : u8) = (RustM.ok (0 : i32)) := rfl
-
-set_option linter.style.nativeDecide false in
-/-- Total-correctness statement: every `u8` input yields an `ok`
-output in `{-1, 0, 1}`. Proved by `native_decide` exhausting the 256
-`u8` values (pure `decide` exceeds Lean's default recursion depth on
-this size of a search space). -/
-theorem sample_cbd1_run_in_range (b : u8) :
-    (sample_cbd1 b).run = some (Except.ok (-1 : i32)) ∨
-    (sample_cbd1 b).run = some (Except.ok 0) ∨
-    (sample_cbd1 b).run = some (Except.ok 1) := by
-  revert b
-  native_decide
-
-/-! ### Oracle-lifted sampler
-
-The lift is one line, as in `Barrett.lean` / `Computation.lean` etc.
-No `Triple`-level transport lemma here because the source statement
-lives at the `.run` level rather than as a `Triple`. -/
-
-/-- Lift of `sample_cbd1` into `RustOracleComp spec`. Neither side of
-the bridge issues any oracle query. -/
-def sample_cbd1_Lifted (b : u8) : Interop.Rust.RustOracleComp spec i32 :=
-  liftRustM (sample_cbd1 b)
-
-/-! ### Randomized sampler
-
-Draw two uniform bits (encoded as `Fin 4`), cast into a `u8`, and
-apply the hax-emitted `sample_cbd1`. This is the first `Interop.Hax`
-program in which the randomness feeds into the Rust code proper,
-rather than only into an external branch selector. -/
-
-/-- Randomized CBD(η = 1) sampler. Draws a uniform two-bit value `n`
-and runs `sample_cbd1 (UInt8.ofNat n.val)`. Equivalent in distribution
-to sampling a full byte (the six high bits are unused). -/
-def sampleRandomCbd1 : Interop.Rust.RustOracleComp unifSpec i32 := do
+/-- The sampler fed two uniform bits. The six high bits of a byte are unused, so this has the
+distribution of `sample_cbd1` on a uniform byte. -/
+def sampleRandomCbd1 : RustOracleComp unifSpec I32 := do
   let n ← ($[0..3] : ProbComp (Fin 4))
-  sample_cbd1_Lifted (UInt8.ofNat n.val)
+  liftRustM (sample_cbd1 (lowBits n))
 
-/-- Peel of `sampleRandomCbd1` to `OracleComp unifSpec`. The four
-outcomes of the `Fin 4` draw determine the output deterministically
-via the four `sample_cbd1_val_{0,1,2,3}` constructor equations. -/
+/-- The output for each pair of low bits. -/
+def cbdOut : Fin 4 → I32
+  | 0 => 0#i32
+  | 1 => 1#i32
+  | 2 => (-1)#i32
+  | 3 => 0#i32
+
+/-- The four draws decide the output. -/
 theorem sampleRandomCbd1_run_run :
     sampleRandomCbd1.run.run =
-      ($[0..3] >>= fun n : Fin 4 =>
-        pure (some (if n = 0 ∨ n = 3 then
-          (Except.ok (0 : i32) : Except Interop.Rust.Error i32)
-         else if n = 1 then
-          Except.ok (1 : i32)
-         else
-          Except.ok (-1 : i32))) :
-            OracleComp unifSpec (Option (Except Interop.Rust.Error i32))) := by
-  unfold sampleRandomCbd1 sample_cbd1_Lifted
-  simp only [Interop.Rust.RustOracleComp.run_run_bind_liftM]
+      ((fun n => some (Except.ok (cbdOut n))) <$> ($[0..3] : ProbComp (Fin 4)) :
+        OracleComp unifSpec (Option (Except Interop.Rust.Error I32))) := by
+  unfold sampleRandomCbd1
+  simp only [RustOracleComp.run_run_bind_liftM, map_eq_bind_pure_comp]
   refine bind_congr fun n => ?_
-  fin_cases n <;> simp [UInt8.ofNat, Interop.Hax.liftRustM_ok]
+  fin_cases n <;>
+    simp [lowBits, cbdOut, sample_cbd1_zero, sample_cbd1_one, sample_cbd1_two,
+      sample_cbd1_three, RustOracleComp.ok]
 
-/-! ### Distribution
+/-- A uniform draw from `Fin 4` lands in a given set with probability its size over `4`. -/
+theorem prob_uniformFin_four (p : Fin 4 → Prop) [DecidablePred p] :
+    Pr{let n ← ($[0..3] : ProbComp (Fin 4))}[p n] =
+      ((if p 0 then 1 else 0) + (if p 1 then 1 else 0) + (if p 2 then 1 else 0) +
+        (if p 3 then 1 else 0)) * 4⁻¹ := by
+  vcgen
+  simp only [ProbComp.uniformFin]
+  rw [wp_query_uniform, Fin.sum_univ_four,
+    show Fintype.card (unifSpec.Range 3) = 4 from rfl]
+  push_cast
+  ring
 
-Three exact probability statements, together characterizing the
-CBD(η = 1) distribution on the output of `sampleRandomCbd1`. Each is
-a `simp` / `norm_num` calculation on the four-term sum produced by
-the peel. -/
+/-- An output event of the sampler is the event that the two bits produce that output. -/
+theorem prob_sampleRandomCbd1 (a : I32) :
+    Pr{let r ← sampleRandomCbd1.run.run}[r = some (Except.ok a)] =
+      Pr{let n ← ($[0..3] : ProbComp (Fin 4))}[cbdOut n = a] := by
+  rw [sampleRandomCbd1_run_run]
+  simp only [Functor.map_map, Option.some.injEq, Except.ok.injEq]
 
-/-- ENNReal arithmetic used by `sampleRandomCbd1_prob_zero` below:
-`1/4 + 1/4 = 1/2`. Factored out because `norm_num` does not close it
-directly over `ℝ≥0∞`. -/
-private lemma ennreal_inv_four_add_inv_four :
-    (4 : ℝ≥0∞)⁻¹ + 4⁻¹ = 2⁻¹ := by
-  have h4 : (4 : ℝ≥0∞) = 2 * 2 := by norm_num
-  rw [h4, ENNReal.mul_inv (Or.inl (by norm_num)) (Or.inl (by norm_num)),
-    ← mul_add, ENNReal.inv_two_add_inv_two, mul_one]
+/-- `0` with probability `1/2`: the bit patterns `00` and `11`. -/
+theorem prob_sampleRandomCbd1_zero :
+    Pr{let r ← sampleRandomCbd1.run.run}[r = some (Except.ok 0#i32)] = 2⁻¹ := by
+  have half : ((1 : ℝ≥0∞) + 1) * 4⁻¹ = 2⁻¹ := by
+    rw [one_add_one_eq_two, show (4 : ℝ≥0∞) = 2 * 2 by norm_num,
+      ENNReal.mul_inv (Or.inl two_ne_zero) (Or.inl ENNReal.ofNat_ne_top), ← mul_assoc,
+      ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top, one_mul]
+  rw [prob_sampleRandomCbd1, prob_uniformFin_four]
+  simpa (config := { decide := true }) using half
 
-/-- Numeric rewrite shared by the three probability lemmas below:
-`ProbComp.probOutput_uniformFin` hands back `((3 : ℕ) + 1 : ℝ≥0∞)⁻¹`
-rather than `4⁻¹`, so collapse the cast + sum before pattern-matching
-on `4⁻¹`. -/
-private lemma three_add_one_ennreal : ((3 : ℕ) + 1 : ℝ≥0∞) = 4 := by norm_num
+/-- `1` with probability `1/4`: the bit pattern `01`. -/
+theorem prob_sampleRandomCbd1_pos_one :
+    Pr{let r ← sampleRandomCbd1.run.run}[r = some (Except.ok 1#i32)] = 4⁻¹ := by
+  rw [prob_sampleRandomCbd1, prob_uniformFin_four]
+  simp (config := { decide := true })
 
-private abbrev cbdOutputZero : Option (Except Interop.Rust.Error i32) :=
-  some (Except.ok (0 : i32))
+/-- `-1` with probability `1/4`: the bit pattern `10`. -/
+theorem prob_sampleRandomCbd1_neg_one :
+    Pr{let r ← sampleRandomCbd1.run.run}[r = some (Except.ok (-1)#i32)] = 4⁻¹ := by
+  rw [prob_sampleRandomCbd1, prob_uniformFin_four]
+  simp (config := { decide := true })
 
-private abbrev cbdOutputPosOne : Option (Except Interop.Rust.Error i32) :=
-  some (Except.ok (1 : i32))
+section Necessary
 
-private abbrev cbdOutputNegOne : Option (Except Interop.Rust.Error i32) :=
-  some (Except.ok (-1 : i32))
+open scoped OracleComp.Necessary
 
-private lemma probOutput_pure_cbd_zero_zero :
-    Pr[= cbdOutputZero | (pure cbdOutputZero : OracleComp unifSpec _)] = 1 :=
-  probOutput_pure_self cbdOutputZero
+/-- Every value the sampler can return is `0`, `1` or `-1`, and it neither panics nor diverges,
+whatever the exception postconditions. Core's `vcgen` steps through the uniform sample, and through
+the Rust step by `Interop.Rust.Spec.liftRustM`; what remains is the Rust step's value at each input.
+VCVio's own driver takes the bare `vcgen` syntax, so the empty argument list selects core's. -/
+theorem triple_sampleRandomCbd1
+    (epost : (Interop.Rust.Error → Prop) × (Unit → Prop) × Std.WP.EStackEnd) :
+    Std.WP.Triple sampleRandomCbd1 True (fun r => r = 0#i32 ∨ r = 1#i32 ∨ r = (-1)#i32) epost := by
+  unfold sampleRandomCbd1
+  vcgen []
+  fin_cases n <;> simp [lowBits, sample_cbd1_zero, sample_cbd1_one, sample_cbd1_two,
+    sample_cbd1_three]
 
-private lemma probOutput_pure_cbd_zero_pos :
-    Pr[= cbdOutputZero | (pure cbdOutputPosOne : OracleComp unifSpec _)] = 0 := by
-  rw [probOutput_pure]
-  have h : cbdOutputZero ≠ cbdOutputPosOne := by decide
-  simp [h]
-
-private lemma probOutput_pure_cbd_zero_neg :
-    Pr[= cbdOutputZero | (pure cbdOutputNegOne : OracleComp unifSpec _)] = 0 := by
-  rw [probOutput_pure]
-  have h : cbdOutputZero ≠ cbdOutputNegOne := by decide
-  simp [h]
-
-private lemma probOutput_pure_cbd_pos_zero :
-    Pr[= cbdOutputPosOne | (pure cbdOutputZero : OracleComp unifSpec _)] = 0 := by
-  rw [probOutput_pure]
-  have h : cbdOutputPosOne ≠ cbdOutputZero := by decide
-  simp [h]
-
-private lemma probOutput_pure_cbd_pos_pos :
-    Pr[= cbdOutputPosOne | (pure cbdOutputPosOne : OracleComp unifSpec _)] = 1 :=
-  probOutput_pure_self cbdOutputPosOne
-
-private lemma probOutput_pure_cbd_pos_neg :
-    Pr[= cbdOutputPosOne | (pure cbdOutputNegOne : OracleComp unifSpec _)] = 0 := by
-  rw [probOutput_pure]
-  have h : cbdOutputPosOne ≠ cbdOutputNegOne := by decide
-  simp [h]
-
-private lemma probOutput_pure_cbd_neg_zero :
-    Pr[= cbdOutputNegOne | (pure cbdOutputZero : OracleComp unifSpec _)] = 0 := by
-  rw [probOutput_pure]
-  have h : cbdOutputNegOne ≠ cbdOutputZero := by decide
-  simp [h]
-
-private lemma probOutput_pure_cbd_neg_pos :
-    Pr[= cbdOutputNegOne | (pure cbdOutputPosOne : OracleComp unifSpec _)] = 0 := by
-  rw [probOutput_pure]
-  have h : cbdOutputNegOne ≠ cbdOutputPosOne := by decide
-  simp [h]
-
-private lemma probOutput_pure_cbd_neg_neg :
-    Pr[= cbdOutputNegOne | (pure cbdOutputNegOne : OracleComp unifSpec _)] = 1 :=
-  probOutput_pure_self cbdOutputNegOne
-
-/-- `Pr[output = 0] = 1/2` under `sampleRandomCbd1`. The two
-bit-patterns `00` (`n = 0`) and `11` (`n = 3`) both map to `0`, so
-exactly half the four equiprobable inputs yield the zero output.
-
-The proof peels the `$[0..3]` draw, evaluates each of the four `pure`
-branches against the zero target, and closes the resulting `4⁻¹ + 4⁻¹
-= 2⁻¹` via `ennreal_inv_four_add_inv_four`. The concrete
-`probOutput_pure_cbd_*` lemmas keep this proof from repeatedly
-synthesizing large decidable equality instances for `i32` outputs. -/
-theorem sampleRandomCbd1_prob_zero :
-    Pr[= some (Except.ok (0 : i32)) | sampleRandomCbd1.run.run] = 2⁻¹ := by
-  rw [sampleRandomCbd1_run_run, probOutput_bind_eq_sum_fintype,
-    Fin.sum_univ_four]
-  change _ * Pr[= cbdOutputZero | (pure cbdOutputZero : OracleComp unifSpec _)] +
-      _ * Pr[= cbdOutputZero | (pure cbdOutputPosOne : OracleComp unifSpec _)] +
-      _ * Pr[= cbdOutputZero | (pure cbdOutputNegOne : OracleComp unifSpec _)] +
-      _ * Pr[= cbdOutputZero | (pure cbdOutputZero : OracleComp unifSpec _)] = _
-  simp only [ProbComp.probOutput_uniformFin, three_add_one_ennreal,
-    probOutput_pure_cbd_zero_zero, probOutput_pure_cbd_zero_pos,
-    probOutput_pure_cbd_zero_neg, mul_one, mul_zero, add_zero]
-  exact ennreal_inv_four_add_inv_four
-
-/-- `Pr[output = +1] = 1/4` under `sampleRandomCbd1`. Only `n = 1`
-contributes (bit pattern `01`, `a = 1`, `c = 0`), one of four
-equiprobable draws. -/
-theorem sampleRandomCbd1_prob_pos_one :
-    Pr[= some (Except.ok (1 : i32)) | sampleRandomCbd1.run.run] = 4⁻¹ := by
-  rw [sampleRandomCbd1_run_run, probOutput_bind_eq_sum_fintype,
-    Fin.sum_univ_four]
-  change _ * Pr[= cbdOutputPosOne | (pure cbdOutputZero : OracleComp unifSpec _)] +
-      _ * Pr[= cbdOutputPosOne | (pure cbdOutputPosOne : OracleComp unifSpec _)] +
-      _ * Pr[= cbdOutputPosOne | (pure cbdOutputNegOne : OracleComp unifSpec _)] +
-      _ * Pr[= cbdOutputPosOne | (pure cbdOutputZero : OracleComp unifSpec _)] = _
-  simp only [ProbComp.probOutput_uniformFin, three_add_one_ennreal,
-    probOutput_pure_cbd_pos_zero, probOutput_pure_cbd_pos_pos,
-    probOutput_pure_cbd_pos_neg, mul_one, mul_zero, add_zero, zero_add]
-
-/-- `Pr[output = -1] = 1/4` under `sampleRandomCbd1`. Only `n = 2`
-contributes (bit pattern `10`, `a = 0`, `c = 1`), one of four
-equiprobable draws. -/
-theorem sampleRandomCbd1_prob_neg_one :
-    Pr[= some (Except.ok (-1 : i32)) | sampleRandomCbd1.run.run] = 4⁻¹ := by
-  rw [sampleRandomCbd1_run_run, probOutput_bind_eq_sum_fintype,
-    Fin.sum_univ_four]
-  change _ * Pr[= cbdOutputNegOne | (pure cbdOutputZero : OracleComp unifSpec _)] +
-      _ * Pr[= cbdOutputNegOne | (pure cbdOutputPosOne : OracleComp unifSpec _)] +
-      _ * Pr[= cbdOutputNegOne | (pure cbdOutputNegOne : OracleComp unifSpec _)] +
-      _ * Pr[= cbdOutputNegOne | (pure cbdOutputZero : OracleComp unifSpec _)] = _
-  simp only [ProbComp.probOutput_uniformFin, three_add_one_ennreal,
-    probOutput_pure_cbd_neg_zero, probOutput_pure_cbd_neg_pos,
-    probOutput_pure_cbd_neg_neg, mul_one, mul_zero, add_zero, zero_add]
+end Necessary
 
 end Interop.Hax.Examples.CenteredBinomial

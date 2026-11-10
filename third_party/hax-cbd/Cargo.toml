@@ -14,7 +14,7 @@ coefficient) and is what VCV-io lifts into `RustOracleComp` in
 """
 
 [dependencies]
-hax-lib = { path = "../../.lake/packages/Hax/hax-lib" }
+hax-lib = { path = "../../.lake/packages/hax/hax-lib" }
 
 [lib]
 crate-type = ["rlib"]

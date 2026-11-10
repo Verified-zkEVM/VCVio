@@ -425,8 +425,8 @@ longer true on `main`:
 - Branch from the previous slice's head, `feat/slhdsa-<slice>-YYYYMMDD`; open as a draft PR
   immediately; push regular commits.
 - Per slice, the gate is `./scripts/validate.sh`, which runs the per-PR CI checks in CI's order:
-  the seven-library build with its non-`sorry` warning budget, `scripts/check-imports.sh`, the
-  PolyFun, broad-expose, complexity-backend, `Extern` and `Interop` boundary ratchets,
+  the six-library build with its non-`sorry` warning budget, `scripts/check-imports.sh`, the
+  PolyFun, broad-expose, `Extern` and `Interop` boundary ratchets,
   `lake lint -- --style-only` over the libraries and every test module, and
   `uv run --no-project --python 3.12 python scripts/check-agent-docs.py` with `extract-doc-fragments.py --check`. Add `--test` for
   `lake test` (the three test libraries, the smoke test, and every SLH-DSA executable, with the
