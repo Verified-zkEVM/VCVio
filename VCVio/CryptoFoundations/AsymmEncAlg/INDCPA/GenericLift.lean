@@ -385,16 +385,30 @@ theorem IND_CPA_Advantage_le_sum_oneTime_stepAdversary [Inhabited M]
     (Finset.sum_congr rfl fun k _ ↦ ?_)
   rw [IND_CPA_OneTime_Advantage_stepAdversary, MeasureTheory.Measure.boolDist_comm]
 
-/-- Uniform corollary of the generic lift: if every one-time adversary has advantage at most `ε`,
-then any `q`-query oracle adversary has IND-CPA advantage at most `q * ε`. -/
+/-- Uniform corollary of the generic lift: if each of the `q` named one-time adversaries
+`IND_CPA_stepAdversary adversary k` has advantage at most `ε`, then the `q`-query oracle adversary
+has IND-CPA advantage at most `q * ε`. -/
+theorem IND_CPA_Advantage_le_mul_of_stepAdversary_bound [Inhabited M]
+    (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ) (ε : ℝ≥0∞)
+    (hq : adversary.MakesAtMostQueries q)
+    (hstep : ∀ k < q, IND_CPA_OneTime_Advantage encAlg' ProbCompRuntime.probComp
+      (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) ≤ ε) :
+    IND_CPA_Advantage (encAlg := encAlg') adversary ≤ q * ε :=
+  (IND_CPA_Advantage_le_sum_oneTime_stepAdversary adversary q hq).trans <|
+    (Finset.sum_le_card_nsmul _ _ ε fun k hk ↦ hstep k (Finset.mem_range.mp hk)).trans_eq
+      (by simp [nsmul_eq_mul])
+
+/-- `IND_CPA_Advantage_le_mul_of_stepAdversary_bound` with the bound assumed for every one-time
+adversary. The premise ranges over adversaries of any complexity, so for a scheme that is only
+computationally secure it forces `ε` up to the advantage of an unbounded adversary; it is
+meaningful for perfectly secure schemes. -/
 theorem IND_CPA_Advantage_le_mul_of_oneTime_bound [Inhabited M]
     (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ) (ε : ℝ≥0∞)
     (hq : adversary.MakesAtMostQueries q)
     (hstep : ∀ adv : IND_CPA_OneTime_Adversary encAlg',
       IND_CPA_OneTime_Advantage encAlg' ProbCompRuntime.probComp adv ≤ ε) :
     IND_CPA_Advantage (encAlg := encAlg') adversary ≤ q * ε :=
-  (IND_CPA_Advantage_le_sum_oneTime_stepAdversary adversary q hq).trans <|
-    (Finset.sum_le_card_nsmul _ _ ε fun k _ ↦ hstep _).trans_eq (by simp [nsmul_eq_mul])
+  IND_CPA_Advantage_le_mul_of_stepAdversary_bound adversary q ε hq fun _ _ ↦ hstep _
 
 end MultiQueryHybridLift
 

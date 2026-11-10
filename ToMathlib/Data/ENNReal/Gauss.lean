@@ -20,6 +20,8 @@ in a separate module that only the files that need them pull in.
 
 - `ENNReal.one_sub_one_sub_mul_one_sub` — the identity `1 - (1-x)(1-y) = x + y - xy`
   used when combining two bounded failure probabilities.
+- `ENNReal.one_sub_add_le_one_sub_mul_one_sub` — `1 - (x + y) ≤ (1 - x)(1 - y)`: the complement
+  of a sum of two failure probabilities is below the product of their complements.
 - `ENNReal.toReal_sub_le_abs_toReal_sub` — real-valued bridge for truncated subtraction.
 - `ENNReal.gauss_sum_inv_le` and `ENNReal.gauss_sum_inv_eq` — the Gauss sum
   `∑_{k<n} k/N ≤ n²/(2N)` (and its equality variant), the arithmetic core of the
@@ -49,6 +51,21 @@ lemma one_sub_one_sub_mul_one_sub {x y : ℝ≥0∞} (hx : x ≤ 1) (hy : y ≤ 
   · simp
     linarith
   all_goals try aesop
+
+/-- The complement of a sum of two failure probabilities is at most the product of their
+complements. Neither side needs `x, y ≤ 1`: once `x + y ≥ 1` the left side is zero. -/
+lemma one_sub_add_le_one_sub_mul_one_sub (x y : ℝ≥0∞) :
+    1 - (x + y) ≤ (1 - x) * (1 - y) := by
+  by_cases hx : x ≤ 1
+  · by_cases hy : y ≤ 1
+    · rw [tsub_le_iff_right]
+      calc (1 : ℝ≥0∞) = (1 - x) * ((1 - y) + y) + x := by
+            rw [tsub_add_cancel_of_le hy, mul_one, tsub_add_cancel_of_le hx]
+        _ = (1 - x) * (1 - y) + (1 - x) * y + x := by rw [mul_add]
+        _ ≤ (1 - x) * (1 - y) + 1 * y + x := by gcongr; exact tsub_le_self
+        _ = (1 - x) * (1 - y) + (x + y) := by rw [one_mul, add_assoc, add_comm y]
+    · simp [tsub_eq_zero_of_le ((le_of_not_ge hy).trans le_add_self)]
+  · simp [tsub_eq_zero_of_le ((le_of_not_ge hx).trans le_self_add)]
 
 /-- Real bridge for truncated `ENNReal` subtraction:
 `(a - b).toReal` is bounded by `|a.toReal - b.toReal|`. -/
