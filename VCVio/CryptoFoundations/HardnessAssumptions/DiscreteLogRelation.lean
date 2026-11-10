@@ -32,8 +32,8 @@ variable {F G : Type} {n : ℕ}
 abbrev Adversary (F G : Type) (n : ℕ) := (Fin n → G) → ProbComp (Fin n → F)
 
 /-- Sample a uniform basis and accept a nonzero coefficient vector with vanishing group sum. -/
-@[expose] def experiment [Field F] [DecidableEq F] [SampleableType F]
-    [AddCommGroup G] [Module F G] [DecidableEq G]
+@[expose] def experiment [Semiring F] [DecidableEq F] [SampleableType F]
+    [AddCommMonoid G] [Module F G] [DecidableEq G]
     (g : G) (A : Adversary F G n) : ProbComp Bool := do
   let x ← $ᵗ (Fin n → F)
   let a ← A (fun i => x i • g)
@@ -42,7 +42,7 @@ abbrev Adversary (F G : Type) (n : ℕ) := (Fin n → G) → ProbComp (Fin n →
 /-- Program the basis with the discrete-log challenge and extract by dividing its coefficient
 into the negated generator coefficient, returning zero when that denominator vanishes. -/
 @[expose] def reduction [Field F] [DecidableEq F] [SampleableType F]
-    [AddCommGroup G] [Module F G]
+    [AddCommMonoid G] [Module F G]
     (A : Adversary F G n) : DiffieHellman.DLogAdversary F G := fun g Z => do
   let x ← $ᵗ (Fin n → F)
   let y ← $ᵗ (Fin n → F)
