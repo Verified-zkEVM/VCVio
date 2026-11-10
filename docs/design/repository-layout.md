@@ -86,11 +86,15 @@ functions `bsig0Sha512`, `bsig1Sha512`, `ssig0Sha512`, `ssig1Sha512`, `hmacKey0S
 SLH-DSA adapters remain in HashSig and consume these implementations directly.
 
 `lake exe algorithm_tests` runs the pure regressions and checks the pinned shared corpus in
-`VCVioTest/Algorithms/HashVectors/`. `slhdsa_primitive_tests` checks the scheme's address
+`VCVioTest/Algorithms/HashVectors/`. It also runs the leanSeal known-answer tests against the
+vendored vectors in `VCVioTest/PointerChainPuzzle/LeanSealVectors/`. `slhdsa_primitive_tests` checks the scheme's address
 boundary and twelve profile fingerprints. The corpus split preserves the input/output bytes,
 source hashes and evidence classifications; it does not regenerate expected answers.
 
 ## Documentation checks
+
+See [Python tooling](../../CONTRIBUTING.md#python-tooling) for uv setup and the
+commands used by the Agent Docs workflow.
 
 `scripts/check-agent-docs.py` inventories every tracked or non-ignored first-party Markdown
 and Lean file. It checks local Markdown links and anchors, and repository-root file paths in

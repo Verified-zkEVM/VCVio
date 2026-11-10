@@ -200,7 +200,7 @@ theorem run₂_bind_record (f : QuantumComp₂ L spec A B α)
 theorem bind_record_map_snd (f : QuantumComp₂ L spec A B α)
     (g : α → QuantumComp₂ L spec B C β) :
     (f.bind fun a ↦ (g a).map (fun b ↦ (a, b))).map Prod.snd = f.bind g := by
-  simp only [QuantumComp₂.map, QuantumComp₂.bind_assoc, QuantumComp₂.pure_bind,
+  simp only [QuantumComp₂.map_eq_bind_pure, QuantumComp₂.bind_assoc, QuantumComp₂.pure_bind,
     QuantumComp₂.bind_pure]
 
 end QuantumRuntime
@@ -1094,10 +1094,11 @@ theorem offlineChallenger_eq_bind_offlineChecks [DecidableEq Msg] [∀ i, Decida
     offlineChallenger VC code hk qs c B =
       QuantumComp₂.bind (offlineChecks VC code hk c B)
         (offlineFinish VC (Z := Z) hk qs c B) := by
-  simp only [offlineChallenger, offlineChecks, QuantumComp₂.map,
+  simp only [offlineChallenger, offlineChecks, QuantumComp₂.map_eq_bind_pure,
     QuantumComp₂.bind_assoc]
   congr 1
   funext b₁
+  refine Eq.trans ?_ (congrArg (QuantumComp₂.bind · _) (QuantumComp₂.map_eq_bind_pure _ _).symm)
   erw [QuantumComp₂.bind_assoc, QuantumComp₂.bind_assoc]
   simp only [QuantumComp₂.pure_bind]
   congr 1
