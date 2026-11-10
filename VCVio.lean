@@ -109,7 +109,9 @@ public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.GroupModel.OfExplained
 public import VCVio.CryptoFoundations.GroupModel.Oracle
 public import VCVio.CryptoFoundations.GroupModel.Projection
+public import VCVio.CryptoFoundations.GroupModel.RoundTrip
 public import VCVio.CryptoFoundations.GroupModel.Signature
+public import VCVio.CryptoFoundations.GroupModel.ToExplained
 public import VCVio.CryptoFoundations.GroupModel.Tracking
 public import VCVio.CryptoFoundations.GroupModel.Typed
 public import VCVio.CryptoFoundations.GroupModel.Virtualize
