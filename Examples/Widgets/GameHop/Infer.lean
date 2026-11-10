@@ -1,9 +1,9 @@
 module
 
 public meta import Lean
-public meta import VCVioWidgets.GameHop.Hints
-public meta import VCVioWidgets.GameHop.Model
-public meta import VCVioWidgets.GameHop.Registry
+public meta import Examples.Widgets.GameHop.Hints
+public meta import Examples.Widgets.GameHop.Model
+public meta import Examples.Widgets.GameHop.Registry
 
 public meta section
 

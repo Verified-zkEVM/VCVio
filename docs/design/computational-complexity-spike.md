@@ -3,7 +3,9 @@
 Status: historical record of the usability spike completed on
 `dtumad/complexity-usability-spike` and `dtumad/quantitative-usability-spike`, audited
 2026-08-24. Its revisions, toolchain results and blockers are those of that date; the
-[computational-complexity design](computational-complexity.md) describes the present.
+[computational-complexity design](computational-complexity.md) describes the present. The
+optional `VCVioComplexity` package it exercises has since been removed in favour of a
+cslib-frontier-based package; its sources remain in git history.
 
 ## Question and method
 

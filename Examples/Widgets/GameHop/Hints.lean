@@ -1,7 +1,7 @@
 module
 
 public meta import Lean
-public meta import VCVioWidgets.GameHop.Model
+public meta import Examples.Widgets.GameHop.Model
 
 public meta section
 

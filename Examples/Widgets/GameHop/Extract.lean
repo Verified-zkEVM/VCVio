@@ -4,8 +4,8 @@ public meta import Lean.DocString
 public meta import Lean.Data.Lsp.Utf16
 public meta import Lean.Server.Utils
 public meta import Lean.Widget.InteractiveCode
-public meta import VCVioWidgets.GameHop.Anchor
-public meta import VCVioWidgets.GameHop.Model
+public meta import Examples.Widgets.GameHop.Anchor
+public meta import Examples.Widgets.GameHop.Model
 
 public meta section
 

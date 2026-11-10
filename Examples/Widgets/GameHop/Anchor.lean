@@ -3,7 +3,7 @@ module
 public meta import Lean.DeclarationRange
 public meta import Lean.Data.Lsp.Utf16
 public meta import Lean.Server.Utils
-public import VCVioWidgets.GameHop.Model
+public import Examples.Widgets.GameHop.Model
 
 public meta section
 

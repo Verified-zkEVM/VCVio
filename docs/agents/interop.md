@@ -34,7 +34,7 @@ The contract is therefore enforced at three levels:
 3. **Reverse direction**: `Interop/**` may import from `VCVio/**`,
    `ToMathlib/**`, `Hax.…`, and `Aeneas.…`, but **not** from
    `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `Extern/**`,
-   `VCVioWidgets/**`, or `VCVioTest/**`.
+   or `VCVioTest/**`.
    Those libraries are themselves clients of VCVio, so Interop depending on
    them would create circular layering and pull user-facing libraries into the
    Interop TCB.

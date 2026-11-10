@@ -1,8 +1,8 @@
 module
 
-public meta import VCVioWidgets.GameHop.Hints
-public meta import VCVioWidgets.GameHop.Registry
-public meta import VCVioWidgets.GameHop.Infer
+public meta import Examples.Widgets.GameHop.Hints
+public meta import Examples.Widgets.GameHop.Registry
+public meta import Examples.Widgets.GameHop.Infer
 
 public meta section
 
