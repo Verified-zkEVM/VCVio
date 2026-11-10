@@ -9,6 +9,7 @@ module
 public import Aeneas.Std.Scalar
 public import Interop.Rust.RustM
 public import Interop.Rust.Run
+public import Interop.Rust.Triple
 public import VCVio.OracleComp.ProbComp
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.ProgramLogic.Tactics
@@ -38,8 +39,10 @@ distribution with parameter `1`.
 
 * `Interop.Hax.Examples.CenteredBinomial.sample_cbd1_zero` (and `_one`, `_two`, `_three`): the
   four bit patterns that matter.
-* `Interop.Hax.Examples.CenteredBinomial.probOutput_sampleRandomCbd1_zero`, `_pos_one`, `_neg_one`:
-  the distribution.
+* `Interop.Hax.Examples.CenteredBinomial.prob_sampleRandomCbd1_zero`, `_pos_one`, `_neg_one`: the
+  distribution.
+* `Interop.Hax.Examples.CenteredBinomial.triple_sampleRandomCbd1`: the possible values, by core's
+  `vcgen` through the Rust step.
 -/
 
 public section
@@ -142,5 +145,23 @@ theorem prob_sampleRandomCbd1_neg_one :
     Pr{let r ← sampleRandomCbd1.run.run}[r = some (Except.ok (-1)#i32)] = 4⁻¹ := by
   rw [prob_sampleRandomCbd1, prob_uniformFin_four]
   simp (config := { decide := true })
+
+section Necessary
+
+open scoped OracleComp.Necessary
+
+/-- Every value the sampler can return is `0`, `1` or `-1`, and it neither panics nor diverges,
+whatever the exception postconditions. Core's `vcgen` steps through the uniform sample, and through
+the Rust step by `Interop.Rust.Spec.liftRustM`; what remains is the Rust step's value at each input.
+VCVio's own driver takes the bare `vcgen` syntax, so the empty argument list selects core's. -/
+theorem triple_sampleRandomCbd1
+    (epost : (Interop.Rust.Error → Prop) × (Unit → Prop) × Std.WP.EStackEnd) :
+    Std.WP.Triple sampleRandomCbd1 True (fun r => r = 0#i32 ∨ r = 1#i32 ∨ r = (-1)#i32) epost := by
+  unfold sampleRandomCbd1
+  vcgen []
+  fin_cases n <;> simp [lowBits, sample_cbd1_zero, sample_cbd1_one, sample_cbd1_two,
+    sample_cbd1_three]
+
+end Necessary
 
 end Interop.Hax.Examples.CenteredBinomial
