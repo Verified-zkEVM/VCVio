@@ -81,7 +81,7 @@ theorem liftBlocks_adjoint (e : J ≃ M × B) (A : B → Matrix M M ℂ) :
   simp only [liftBlocks, ← blockDiagonal_conjTranspose, conjTranspose_submatrix]
 
 /-- Positive semidefinite blocks give a positive semidefinite lifted matrix. -/
-theorem posSemidef_liftBlocks [Finite M] [Finite B] (e : J ≃ M × B) {A : B → Matrix M M ℂ}
+theorem posSemidef_liftBlocks (e : J ≃ M × B) {A : B → Matrix M M ℂ}
     (hA : ∀ b, (A b).PosSemidef) : (liftBlocks e A).PosSemidef :=
   (Matrix.posSemidef_blockDiagonal hA).submatrix e
 
