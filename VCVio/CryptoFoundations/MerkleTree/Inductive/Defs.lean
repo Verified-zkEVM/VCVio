@@ -65,10 +65,9 @@ variable {α : Type _}
 
 /-- Example: a single hash computation -/
 @[simp, grind]
-def singleHash {m : Type _ → Type _} [Monad m] [hq : HasQuery (spec α) m]
-    (left : α) (right : α) : m α := do
-  let out ← hq.query ⟨left, right⟩
-  return out
+def singleHash {m : Type _ → Type _} [hq : HasQuery (spec α) m]
+    (left : α) (right : α) : m α :=
+  hq.query ⟨left, right⟩
 
 /-- Interpreting one Merkle hash query applies the supplied hash implementation. -/
 lemma simulateQ_singleHash (f : QueryImpl (spec α) Id) (left right : α) :

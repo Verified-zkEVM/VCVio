@@ -38,8 +38,6 @@ open Security CacheReplay Extraction CanonicalGraph VerifierProbes SplitCharged
 attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.sign
   Security.signingOracle Security.countQueries
 
-set_option maxHeartbeats 400000 in
--- Unifying the verifier's digest and FORS-key terms across both dichotomies is expensive.
 /-- **A win in the warmed tail is a charged structural collision, a WOTS one-wayness residue, or
 a forgery whose FORS part and hypertree are both the signer's own.** -/
 theorem cases_of_win_canonical (adversary : Adversary)
@@ -99,10 +97,12 @@ theorem cases_of_win_canonical (adversary : Adversary)
     WarmedSplit.split_afterSeeds adversary walk.1.1 walk.2 result hrun
   rw [WarmedSplit.keygenInternal_liftM, WarmedSplit.run_rom_liftM] at hkeys
   rw [WarmedSplit.verify_liftM, WarmedSplit.run_rom_liftM] at hverify
+  -- Support hypotheses are passed through `assumption`, not as terms: elaborating `h` as a term
+  -- puts its type in weak head normal form, which evaluates the whole run it is about.
   have hkeyreplay : keys = @Scheme.keygenInternal Id Id.instMonad
       (CacheReplay.replayQuery result.2) walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 :=
-    WarmedSplit.keygenInternal_eq_replay_of_subset _ _ _ walk.2 keyCache result.2 keys hkeys
-      hpersist
+    WarmedSplit.keygenInternal_eq_replay_of_subset _ _ _ walk.2 keyCache result.2 keys
+      (by clear * - hkeys; assumption) hpersist
   rw [hkeyreplay] at hverify
   have hverifyreplay : result.1.1.verified =
       @Scheme.verify Id Id.instMonad (CacheReplay.replayQuery result.2)
