@@ -29,16 +29,16 @@ variable {F S ι : Type}
 in every sort. -/
 @[expose] def SameKernel [Field F] (T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)) : Prop :=
   ∀ s, (T₀ s).length = (T₁ s).length ∧
-    ∀ r : Repr F, evRepr (T₀ s) r = 0 ↔ evRepr (T₁ s) r = 0
+    ∀ r : Coeffs F, evRepr (T₀ s) r = 0 ↔ evRepr (T₁ s) r = 0
 
 /-- Equal relation kernels identify the same pairs of representations. -/
 theorem SameKernel.eq_iff [Field F] {T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)}
-    (h : SameKernel T₀ T₁) (s : S) (r r' : Repr F) :
+    (h : SameKernel T₀ T₁) (s : S) (r r' : Coeffs F) :
     evRepr (T₀ s) r = evRepr (T₀ s) r' ↔ evRepr (T₁ s) r = evRepr (T₁ s) r' := by
   simpa only [map_sub, sub_eq_zero] using (h s).2 (r - r')
 
 private theorem evRepr_eq_zero_iff [Field F] {G : Type} [AddCommGroup G] [Module F G]
-    (xs : List G) (h : LinearIndependent F xs.get) (r : Repr F) :
+    (xs : List G) (h : LinearIndependent F xs.get) (r : Coeffs F) :
     evRepr xs r = 0 ↔ ∀ i < xs.length, r i = 0 := by
   rw [evRepr_apply, ← Fin.sum_univ_eq_sum_range]
   simp only [List.getD_eq_get]
@@ -83,7 +83,7 @@ theorem SameKernel.runGen_fst_eq [Field F] [DecidableEq F] [DecidableEq ι] [Dec
     {α : Type} (oa : OracleComp (genSpec F (discreteSig S)) α) :
     Prod.fst <$> runGen (symbolic F (discreteSig S) ι) (fun _ => id) oa T₀ =
       Prod.fst <$> runGen (symbolic F (discreteSig S) ι) (fun _ => id) oa T₁ := by
-  let units : Tbl (fun _ : S => Repr F) :=
+  let units : Tbl (fun _ : S => Coeffs F) :=
     fun s => List.ofFn (fun i : Fin (T₀ s).length => Pi.single (i : Handle) 1)
   have hu : units =
       (fun s => List.ofFn (fun i : Fin (T₁ s).length => Pi.single (i : Handle) 1)) := by
