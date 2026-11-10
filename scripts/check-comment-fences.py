@@ -26,7 +26,7 @@ So the shape divides by what a warning *does*, not by whether a linter exists:
   each before a `def` and before `@[simp] theorem` / `instance`. *This form is the one the
   gate alone covers.*
 * the `/-` and `/-!` forms, wrapped or on one line, each draw a warning, as an indented
-  `def` and a second `def` after a mid-line `/- … -/` do. In the seven proof libraries and
+  `def` and a second `def` after a mid-line `/- … -/` do. In the six proof libraries and
   the three test libraries that warning is already a CI failure, because
   `scripts/check-warning-log.py` reads the build log with a `--path-prefix` per library.
   This gate is redundant there and deliberately says the same thing.
@@ -98,7 +98,7 @@ What this cannot catch. The same-line `/--` form has an uncovered layout:
   the same `def` under a margin docstring is not.
 
 The other four are reported by `linter.style.whitespace` wherever it is registered, so they
-fail CI in the ten built libraries and survive in the four places above:
+fail CI in the nine built libraries and survive in the four places above:
 
 * an *indented* comment followed by a declaration on its closing line,
   `  /-- Doc. -/ lean_exe hidden where`;

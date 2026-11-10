@@ -129,10 +129,9 @@ Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but no
 `VCVio`/`ToMathlib`/`Extern`/`Interop` may import it. -/
 @[default_target] lean_lib HashSig
 
-/-- Example constructions of cryptographic primitives. -/
+/-- Example constructions of cryptographic primitives, with the proof widgets they display
+(`Examples/Widgets/`). -/
 @[default_target] lean_lib Examples
-/-- Optional proof widget experiments and visualizations. -/
-@[default_target] lean_lib VCVioWidgets
 /-- Separate section of the project for things that should be ported. -/
 @[default_target] lean_lib ToMathlib
 

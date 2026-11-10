@@ -84,7 +84,7 @@ jobs:
       # has any notion of a comment. `linter.style.whitespace` is not in that pass at all:
       # it is a syntax linter that runs during elaboration under the package's
       # `weak.linter.mathlibStandardSet`, and its warnings fail the build job through
-      # check-warning-log.py. It reports the `/-` and `/-!` forms in the seven proof and
+      # check-warning-log.py. It reports the `/-` and `/-!` forms in the six proof and
       # three test libraries, but never the `/--` form, whose command starts at the `/--`
       # at column 0. This check is text only, so it belongs in this job rather than behind
       # a build, and for lakefile.lean, VCVioComplexity/lakefile.lean, Interop/ and
@@ -308,7 +308,7 @@ jobs:
           echo "BUILD_TIMING_COMMENT=$RUNNER_TEMP/build-timing-comment.md" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_SOURCE_BRANCH=$SOURCE_BRANCH" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_BUILD_COMMAND=lake build ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
+          echo "BUILD_TIMING_BUILD_COMMAND=lake build ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_NAME=Smoke test" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_COMMAND=lake env lean VCVioTest/Smoke.lean" >> "$GITHUB_ENV"
           {
@@ -380,7 +380,6 @@ jobs:
             --path-prefix LatticeCrypto/ \
             --path-prefix HashSig/ \
             --path-prefix Examples/ \
-            --path-prefix VCVioWidgets/ \
             --path-prefix ToMathlib.lean \
             --path-prefix VCVio.lean \
             --path-prefix VCVioCslib.lean \
@@ -388,7 +387,6 @@ jobs:
             --path-prefix LatticeCrypto.lean \
             --path-prefix HashSig.lean \
             --path-prefix Examples.lean \
-            --path-prefix VCVioWidgets.lean \
             --exclude-substring 'declaration uses `sorry`' \
             --label 'repository non-sorry warnings'
       - name: Time test module

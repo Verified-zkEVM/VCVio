@@ -75,7 +75,7 @@ RETIRED_LABEL_RE = re.compile(
     r"weakest\s+preconditions?)\b|\bstructural\s+support\b|\bstructurally\s+"
     r"(?:reachable|possible)\b", re.I)
 LEAN_ROOTS = ("ToMathlib/", "VCVio/", "VCVioCslib/", "LatticeCrypto/", "HashSig/", "Examples/",
-              "Extern/", "VCVioWidgets/", "VCVioTest/", "LatticeCryptoTest/", "HashSigTest/")
+              "Extern/", "VCVioTest/", "LatticeCryptoTest/", "HashSigTest/")
 
 
 def default_docs() -> tuple[list[Path], list[Path]]:

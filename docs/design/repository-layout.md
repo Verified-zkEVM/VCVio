@@ -15,7 +15,7 @@ Status: current placement policy; the migration table distinguishes planned move
 | `VCVioCslib/` | Optional non-uniform complexity facade | Separate non-default Lake target |
 | `VCVioComplexity/` | Optional concrete machine backend | Separate Lake package with coordinated pins |
 | `Examples/` | Pedagogical consumers and proof walkthroughs | Above reusable libraries |
-| `VCVioWidgets/` | Interactive proof visualizations | Presentation dependency, never a scheme dependency |
+| `Examples/Widgets/` | Interactive proof visualizations used by the examples | Presentation dependency, never a scheme dependency |
 | `VCVioTest/`, `LatticeCryptoTest/`, `HashSigTest/` | Tests, vectors and executable regressions | Mirror the owning implementation; fixtures do not enter proof libraries |
 | `Extern/`, `csrc/`, `third_party/` | FFI bindings, native shims and vendored backends | Proof libraries never import Extern; downstream links work without submodules |
 | `Interop/` | Source-language models, imported references and conformance | Optional downstream development; core never imports it |

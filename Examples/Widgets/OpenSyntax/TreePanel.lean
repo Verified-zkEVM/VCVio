@@ -11,7 +11,7 @@ public meta import ProofWidgets.Component.Basic
 public meta import ProofWidgets.Component.OfRpcMethod
 public meta import ProofWidgets.Component.Panel.Basic
 public meta import ProofWidgets.Data.Html
-public meta import VCVioWidgets.OpenSyntax.Panel
+public meta import Examples.Widgets.OpenSyntax.Panel
 
 public meta section
 

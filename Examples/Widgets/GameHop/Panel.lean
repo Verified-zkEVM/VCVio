@@ -3,8 +3,8 @@ module
 public meta import Lean.Server.Requests
 public meta import ProofWidgets.Component.OfRpcMethod
 public meta import ProofWidgets.Component.Panel.Basic
-public meta import VCVioWidgets.GameHop.Lookup
-public import VCVioWidgets.GameHop.Render
+public meta import Examples.Widgets.GameHop.Lookup
+public import Examples.Widgets.GameHop.Render
 
 public meta section
 

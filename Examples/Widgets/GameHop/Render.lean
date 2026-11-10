@@ -2,8 +2,8 @@ module
 
 public meta import ProofWidgets.Component.Basic
 public meta import ProofWidgets.Data.Html
-public import VCVioWidgets.Component.RevealLocation
-public import VCVioWidgets.GameHop.Extract
+public import Examples.Widgets.Component.RevealLocation
+public import Examples.Widgets.GameHop.Extract
 
 public meta section
 

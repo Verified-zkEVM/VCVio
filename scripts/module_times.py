@@ -30,7 +30,6 @@ MODULE_PREFIXES = (
     "LatticeCrypto",
     "HashSig",
     "Examples",
-    "VCVioWidgets",
     "Interop",
     "VCVioTest",
     "LatticeCryptoTest",
