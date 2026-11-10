@@ -9,10 +9,9 @@ public import HashSig.GXMSS.Interval.Scheme
 public import HashSig.GXMSS.Security.Interval.Auxiliary.FullRangeInteraction
 
 /-!
-# Interval GXMSS import and trust probe
+# Interval GXMSS frontier geometry
 
-`DirectTrustAudit` checks compiler origins and transitive axioms in both interval
-specification and security modules. The finite fixtures exercise mixed frontier geometry.
+The finite fixtures exercise mixed frontier geometry.
 -/
 
 public section

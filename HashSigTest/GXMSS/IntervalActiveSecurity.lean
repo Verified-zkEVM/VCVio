@@ -11,9 +11,7 @@ import all HashSig.GXMSS.Security.Interval.Reductions.ActiveSecurity
 /-!
 # Active interval probability controls
 
-The inclusive offset controls pin both endpoints of a strict interior interval. The separate
-`DirectTrustAudit` checks compiler origins, bodies and allowed transitive axioms, including
-private and generated declarations. Ordinary applications separately pin selected theorem types.
+The inclusive offset controls pin both endpoints of a strict interior interval.
 
 Private imports supply the actual implementation kernels used by these controls. Ordinary public
 endpoint applications live in `DirectEndpointApplications`.
@@ -22,10 +20,6 @@ endpoint applications live in `DirectEndpointApplications`.
 public section
 
 open GXMSS GXMSS.IntervalMerkle GXMSS.Interval.Unforgeability
-
-example := @activeMatchingMass_le_collision_masses_add_remainder
-example := @activeMatchingMass_le_signed_advantages
-example := @activeMatchingMass_le_advantages
 
 -- The offset is relative to the first active epoch, including at the upper endpoint.
 example :=

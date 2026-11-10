@@ -29,9 +29,6 @@ open GXMSS GXMSS.IntervalMerkle GXMSS.Interval.Reductions
 open GXMSS.Reductions SyncSignatureUnforgeability
 open OracleComp OracleSpec
 
-example := @chainSpliceView_honest
-noncomputable example := @GXMSS.Interval.Reductions.encodingTargetCollisionReduction
-
 example : True :=
   let middle : Interval 3 := ⟨3, 4, of_decide_eq_true rfl⟩
   let P : HashInstance Unit ((Fin 8 × Fin 1 × Fin 1) ⊕ (Fin 4 × Fin 8))
@@ -100,5 +97,3 @@ example : True :=
         expected, expectedHistory, map_eq_bind_pure_comp, bind_assoc] <;>
       rfl
   True.intro
-
-example := @filteredChainSpliceView_advance

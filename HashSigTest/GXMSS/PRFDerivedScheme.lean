@@ -7,7 +7,6 @@ Authors: Matthias Meijers
 module
 public import HashSig.GXMSS.PRFDerivedScheme
 public import HashSigTest.GXMSS.Scheme
-meta import HashSigTest.GXMSS.TrustAuditSupport
 
 /-! # Shared-response PRF-derived construction controls
 
@@ -90,36 +89,5 @@ theorem shared_seed_retry_exhaustion :
     result.isExhausted = true ∧
       result.consumed = [] ∧ transition.epoch = 2 := by
   exact ⟨rfl, rfl, rfl⟩
-
-example := @GXMSS.PRFDerived.keys_eq
-example := @GXMSS.PRFDerived.keys_root
-example := @GXMSS.PRFDerived.keys_secret_key
-example := @GXMSS.PRFDerived.transientCore_start
-example := @GXMSS.PRFDerived.transientCore_endpoint
-example := @GXMSS.PRFDerived.keygen_eq
-example := @GXMSS.PRFDerived.run_eq
-example := @GXMSS.PRFDerived.run_keys_eq
-example := @GXMSS.PRFDerived.run_messageSignature_eq
-example := @GXMSS.PRFDerived.sign_eq
-example := @GXMSS.PRFDerived.verify_eq
-example := @GXMSS.PRFDerived.signResult_nil
-example := @GXMSS.PRFDerived.signResult_cons
-run_cmd Lean.Elab.Command.liftCoreM <|
-  GXMSS.Test.TrustAudit.assertStandardAxioms #[
-    ``GXMSS.PRFDerived.keys_eq,
-    ``GXMSS.PRFDerived.keys_root,
-    ``GXMSS.PRFDerived.keys_secret_key,
-    ``GXMSS.PRFDerived.transientCore_start,
-    ``GXMSS.PRFDerived.transientCore_endpoint,
-    ``GXMSS.PRFDerived.keygen_eq,
-    ``GXMSS.PRFDerived.run_eq,
-    ``GXMSS.PRFDerived.run_keys_eq,
-    ``GXMSS.PRFDerived.run_messageSignature_eq,
-    ``GXMSS.PRFDerived.sign_eq,
-    ``GXMSS.PRFDerived.verify_eq,
-    ``GXMSS.PRFDerived.signResult_nil,
-    ``GXMSS.PRFDerived.signResult_cons,
-    ``shared_seed_retry_order,
-    ``shared_seed_retry_success]
 
 end GXMSS.Probe

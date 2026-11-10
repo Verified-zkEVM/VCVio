@@ -506,7 +506,7 @@ private theorem intervalEncodingSourceImpl_proj [SampleableType H] [SampleableTy
     · dsimp [intervalEncodingSourceImpl, intervalSourceImpl, signingOracle]
       rw [hused]
       by_cases hactive : Epoch.IsActive I ep <;>
-        simp [GXMSS.Interval.scheme, GXMSS.Interval.sign, hactive,
+        simp [GXMSS.Interval.scheme, GXMSS.Interval.sign, hactive, hused,
           map_eq_bind_pure_comp, bind_assoc]
     · cases hentry : state.1 ep with
       | none => exact (hused hentry).elim

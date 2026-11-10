@@ -15,8 +15,6 @@ import all HashSig.GXMSS.Merkle
 
 Accepted examples exercise every partition branch, both kinds of active raw difference,
 and both inactive families. Negative controls cover decoding failure and exact-pair replay.
-The separate `DirectTrustAudit` inspects all source declarations, including private and generated
-declarations.
 
 Private imports supply the actual source-partition branches and the chain/Merkle computations
 used by these implementation fixtures. Ordinary endpoint applications use public imports.

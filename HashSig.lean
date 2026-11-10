@@ -6,7 +6,6 @@ public import HashSig.GXMSS.Encoding.Basic
 public import HashSig.GXMSS.Encoding.Error
 public import HashSig.GXMSS.Encoding.Incomparable
 public import HashSig.GXMSS.Encoding.Retry
-public import HashSig.GXMSS.Encoding.RetryIndexed
 public import HashSig.GXMSS.Encoding.TargetSum
 public import HashSig.GXMSS.Encoding.Winternitz
 public import HashSig.GXMSS.HashInstance
@@ -62,7 +61,6 @@ public import HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
 public import HashSig.GXMSS.Security.Interval.Unforgeability
 public import HashSig.GXMSS.Security.PRFDerivedUnforgeability
 public import HashSig.GXMSS.Security.Reductions.ChainCutCollision
-public import HashSig.GXMSS.Security.Reductions.ChainHybrid
 public import HashSig.GXMSS.Security.Reductions.ChainPreimage
 public import HashSig.GXMSS.Security.Reductions.ChainUndetectability
 public import HashSig.GXMSS.Security.Reductions.CollisionBounds

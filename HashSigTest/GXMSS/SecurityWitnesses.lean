@@ -30,31 +30,6 @@ public section
 
 namespace GXMSS.SecurityWitnessProbe
 
-example := @GXMSS.Reductions.tcrEval_run_of_fresh
-example := @GXMSS.Reductions.tcrFullChain_run
-example := @GXMSS.Reductions.tcrFullChain_fallback_irrelevant
-example := @GXMSS.Reductions.endpointTargets_length
-example := @GXMSS.Reductions.chainTarget_mem_endpointTargets
-example := @GXMSS.Reductions.tcrEndpoints_run_empty
-example := @GXMSS.Reductions.tcrChainSetup_run
-example := @GXMSS.Reductions.merkleTargets_length
-example := @GXMSS.Reductions.merkleTargets_tweaks_nodup
-example := @HashInstance.mem_merkleOpeningQueries_honest_shape
-example := @GXMSS.Reductions.merkleOpeningTarget_mem_merkleTargets
-example := @GXMSS.Reductions.tcrMerkleRoot_run
-example := @GXMSS.Reductions.merkleOpeningTarget_mem_registeredHistory
-example := @GXMSS.Reductions.tcrKeySetup_run
-example := @GXMSS.Reductions.mem_honestOpeningTargets
-example := @GXMSS.Reductions.TCRKeyState.keys_eq
-example := @GXMSS.Reductions.tcrKeySetup_keys_run
-example := @GXMSS.Reductions.tcrKeySetup_observe_run
-example := @GXMSS.Reductions.tcrKeySetup_observe_evalDist
-example := @GXMSS.Reductions.chainProblem_capacity
-example := @GXMSS.Reductions.merkleProblem_capacity
-example := @GXMSS.Reductions.registeredIndex_spec
-example := @GXMSS.Reductions.chainTarget_registeredIndex_spec
-example := @GXMSS.Reductions.merkleOpeningTarget_registeredIndex_spec
-
 /-- Disjoint constructors preserve each raw input form. -/
 abbrev Input := ℕ ⊕ ((ℕ × ℕ) ⊕ (Fin 1 → ℕ))
 

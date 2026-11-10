@@ -9,12 +9,11 @@ public import HashSig.GXMSS.Security.Interval.Reductions.FillerGames
 import all HashSig.GXMSS.Security.Interval.Auxiliary.FillerTargets
 
 /-!
-# Interval filler game consumers and trust audit
+# Interval filler game consumers
 
 Finite fixtures cover mixed target families, issue order, empty registration and both raw payloads.
 The adaptive fixture exercises repeated requests after inactive failure and retry exhaustion through
-exactly the shared original signing view. `DirectTrustAudit` covers every declaration in the filler
-specification, interaction, opening and reduction modules.
+exactly the shared original signing view.
 
 Private imports supply the actual implementation kernels used by these controls. Ordinary public
 endpoint applications live in `DirectEndpointApplications`.
@@ -190,7 +189,6 @@ example (f : Family) : TweakableHash.SM_DT_UD_Advantage
 example (f : Family) : TweakableHash.SM_DT_PRE_Advantage
     (preAdversary testHash testEncoding 0 (Interval.full 3) (requests 0) f) = 0 :=
   preAdvantage_full testHash testEncoding 0 (requests 0) f
-
 
 /-- The ordinary public target API specializes to empty families at height zero. -/
 theorem full_zero_target_capacity (f : Family) : targetCapacity f (Interval.full 0) = 0 :=

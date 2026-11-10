@@ -33,7 +33,6 @@ theorem retry_eq_shared {m : Type → Type*} [Monad m]
     (sample : m R) (pp : PP) (msg : M) (ep : E) (k : ℕ) :
     TargetCollisionResistance.retry enc sample pp msg ep k = enc.retry sample pp msg ep k := rfl
 
-
 open TargetCollisionResistance OracleComp OracleSpec
 
 /-- The only codeword is the one-digit zero word. -/
@@ -175,8 +174,6 @@ theorem hash_zero_retry {PP M R E Tweak Y : Type} {n radix : ℕ}
 theorem target_sum_invalid_word :
     TargetSumCollision.accepts (v := 1) (w := 1) (target := 1) word = false := by decide
 
-/- `DirectTrustAudit` checks the direct closure's compiler origins and transitive axioms,
-including the encoding reductions and their instances. -/
 /-- A seed-agreed encoding bridge bounds the scheme's encoding advantage using the named
 hash-game reduction, with the retained digest and signature equality premises. -/
 example {PP T X H M R Y : Type} {h w v : ℕ}

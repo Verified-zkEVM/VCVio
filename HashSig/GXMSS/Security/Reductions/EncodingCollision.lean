@@ -144,7 +144,7 @@ private theorem encodingSourceCoupledImpl_proj [SampleableType H] [SampleableTyp
     · dsimp [encodingSourceCoupledImpl, sourceSigningImpl,
         SyncSignatureUnforgeability.signingOracle]
       rw [hused]
-      simp [GXMSS.scheme, GXMSS.sign, map_eq_bind_pure_comp, bind_assoc]
+      simp [GXMSS.scheme, GXMSS.sign, map_eq_bind_pure_comp, bind_assoc, hused]
     · cases hentry : state.1 ep with
       | none => exact False.elim (hused hentry)
       | some entry =>

@@ -52,10 +52,6 @@ optional signing, and deterministic verification. Correctness and the regular/st
 observe the chosen partial runtime without normalizing away missing mass. Signing histories retain
 failed requests and consumed epochs; strong freshness compares exact message/signature pairs.
 
-[`SyncMultiSignatureAlg`](../../VCVio/CryptoFoundations/SyncMultiSignatureAlg.lean) supplies the
-corresponding participant-tuple interface and regular synchronized multisignature experiment.
-Its forgery records its own arity. No strong multisignature experiment is asserted.
-
 The [GXMSS reading guide](../reading/gxmss.md) connects these generic notions to the interval
 construction, original-domain security reductions and shared PRF extension.
 The ordinary complete-tree endpoint is defined in

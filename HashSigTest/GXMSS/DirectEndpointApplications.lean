@@ -12,8 +12,7 @@ public import HashSigTest.GXMSS.CompleteEndpointApplication
 
 /-! # Direct GXMSS public endpoint applications
 
-Ordinary consumers state and apply the ten-term interval bound and both complete-tree
-right-hand-side identities using the public API.
+An ordinary consumer applies the ten-term interval bound using the public API.
 -/
 
 public section
@@ -58,43 +57,5 @@ example
   simpa only [strongUnforgeabilityBound] using
     (GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound P enc K qs
       I hv hw htwo A hqueries)
-
-example
-    [SampleableType H] [SampleableType R]
-    [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
-    (P : HashInstance PP T X H h w v)
-    (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ)
-    (hv : 0 < v) (hw : 0 < w) (A : SchemeAdversary PP H M R h v) :
-    strongUnforgeabilityBound P enc K qs (Interval.full h) hv hw A =
-      SM_DT_TCR_Advantage (GXMSS.Reductions.merkleTargetCollisionReduction P enc K hv A) +
-      TargetCollisionResistance.advantage
-        (GXMSS.Reductions.encodingTargetCollisionReduction P enc qs K A) +
-      SM_DT_TCR_Advantage (GXMSS.Reductions.firstChainTargetCollisionReduction P enc K A) +
-      SM_DT_TCR_Advantage (GXMSS.Reductions.secondChainTargetCollisionReduction P enc K A) +
-      (((2 ^ h) * v * (2 ^ w - 1) : ℕ) : ℝ≥0∞) *
-        SM_DT_PRE_Advantage (GXMSS.Reductions.jointPreimageReduction P enc K hv hw A) +
-      (((2 ^ h) * v * (2 ^ w - 1) ^ 2 : ℕ) : ℝ≥0∞) *
-        SM_DT_UD_Advantage (GXMSS.Reductions.jointUndetectabilityReduction P enc K hv hw A) :=
-  GXMSS.Interval.Unforgeability.strongUnforgeabilityBound_full P enc K qs hv hw A
-
-example
-    [SampleableType H] [SampleableType R]
-    [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
-    (P : HashInstance PP T X H h w v)
-    (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ)
-    (hv : 0 < v) (hw : 0 < w) (A : SchemeAdversary PP H M R h v) :
-    powerOfTwoStrongUnforgeabilityBound P enc K qs (Interval.full h) hv hw A =
-      SM_DT_TCR_Advantage (GXMSS.Reductions.merkleTargetCollisionReduction P enc K hv A) +
-      TargetCollisionResistance.advantage
-        (GXMSS.Reductions.encodingTargetCollisionReduction P enc qs K A) +
-      SM_DT_TCR_Advantage (GXMSS.Reductions.firstChainTargetCollisionReduction P enc K A) +
-      SM_DT_TCR_Advantage (GXMSS.Reductions.secondChainTargetCollisionReduction P enc K A) +
-      (((2 ^ h) * v * 2 ^ w : ℕ) : ℝ≥0∞) *
-        (((2 ^ w : ℕ) : ℝ≥0∞) *
-          SM_DT_UD_Advantage (GXMSS.Reductions.jointUndetectabilityReduction P enc K hv hw A) +
-          SM_DT_PRE_Advantage (GXMSS.Reductions.jointPreimageReduction P enc K hv hw A)) :=
-  GXMSS.Interval.Unforgeability.powerOfTwoStrongUnforgeabilityBound_full P enc K qs hv hw A
 
 end

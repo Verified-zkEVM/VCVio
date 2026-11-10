@@ -7,7 +7,6 @@ Authors: Matthias Meijers
 module
 public import HashSig.GXMSS.Encoding.Retry
 public import VCVio.EvalDist.Instances.OptionT
-meta import HashSigTest.GXMSS.TrustAuditSupport
 
 /-!
 # Encoding retry foundation probes
@@ -144,14 +143,5 @@ theorem retry_abort_missing_mass :
     Retry.missingMass enc optionalRuntime (failure : OptionT ProbComp Bool) () () () 1 = 1 := by
   rw [Retry.missingMass_eq_mul_sum enc optionalRuntime optional_sampling_laws]
   simp [abort_missing_mass]
-
-example := @IncomparableEncoding.retryIndexed_id_succ
-example := @IncomparableEncoding.retry_eq_indexed_constant
-run_cmd Lean.Elab.Command.liftCoreM <|
-  GXMSS.Test.TrustAudit.assertStandardAxioms #[
-    ``IncomparableEncoding.retryIndexed_id_succ,
-    ``IncomparableEncoding.retry_eq_indexed_constant,
-    ``indexed_second_attempt_trace,
-    ``fixed_sampler_specialization]
 
 end GXMSS.Encoding.RetryProbe

@@ -17,33 +17,6 @@ for Construction 3 of ePrint 2025/055. Returned exhaustion retains its full prob
 
 public section
 
-namespace GXMSS.Unforgeability
-
-open Encoding ENNReal OracleComp OracleSpec TweakableHash
-
-
-variable {PP T X H M R : Type} {h w v : ℕ}
-
-/-- Separate correctness obligation from Lemma 3. The pointwise one-attempt failure is `q`, exact
-independent retry failure is `q ^ K`, and `δ ^ K` is only the uniform upper bound and resulting
-correctness loss. None of these quantities is added to the security inequality above. -/
-@[expose]
-def CorrectnessFailureBound [SampleableType H] [SampleableType R]
-    [Fintype R] [DecidableEq H]
-    (hash : HashInstance PP T X H h w v)
-    (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K : ℕ)
-    (q : PP → M → Fin (2 ^ h) → ℝ≥0∞) (δ : ℝ≥0∞) : Prop :=
-  enc.UniformErrorAtMost ProbCompRuntime.probComp ($ᵗ R) δ ∧
-    (∀ pp msg ep, q pp msg ep = enc.failureMass ProbCompRuntime.probComp ($ᵗ R) pp msg ep) ∧
-    (∀ pp msg ep, IncomparableEncoding.Retry.failureMass enc ProbCompRuntime.probComp
-      ($ᵗ R) pp msg ep K = (q pp msg ep) ^ K) ∧
-    (∀ pp msg ep, (q pp msg ep) ^ K ≤ δ ^ K) ∧
-    (GXMSS.scheme hash enc K).Complete ProbCompRuntime.probComp (δ ^ K)
-
-end GXMSS.Unforgeability
-
-public section
-
 namespace GXMSS
 
 open Encoding ENNReal

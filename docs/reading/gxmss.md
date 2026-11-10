@@ -104,8 +104,6 @@ and applies that sum to the named reductions. The proof applies the interval the
 at full range and transports the experiment and displayed bound. Lower reductions
 remain independently inspectable under `Security/Reductions/`; encoding-specific
 corollaries require the separate `Security/EncodingInstances.lean` import.
-Chain-hybrid bridge APIs likewise require their own
-`Security/Reductions/ChainHybrid.lean` import.
 
 ## Shared-response PRF derivation
 
@@ -168,7 +166,7 @@ PRF games.
 
 | Responsibility | Module or namespace |
 | --- | --- |
-| Generic synchronized interfaces and games | `VCVio.CryptoFoundations.SyncSignatureAlg`, `SyncMultiSignatureAlg` |
+| Generic synchronized interfaces and games | `VCVio.CryptoFoundations.SyncSignatureAlg` |
 | Codewords and arbitrary incomparable encoding | `HashSig.GXMSS.Encoding.*`, `GXMSS.Encoding` |
 | Shared simulation and witness support | `HashSig.GXMSS.Security.Auxiliary.*` |
 | Named complete-tree reductions | `HashSig.GXMSS.Security.Reductions.*`, `GXMSS.Reductions` |
@@ -181,20 +179,18 @@ PRF games.
 [`DirectEndpointApplications.lean`](../../HashSigTest/GXMSS/DirectEndpointApplications.lean)
 and [`PRFEndpointApplications.lean`](../../HashSigTest/GXMSS/PRFEndpointApplications.lean)
 are ordinary public-import consumers. The direct consumer states and applies
-the expanded ten-term theorem and both full-range right-hand-side identities.
+the expanded ten-term theorem.
 [`CompleteEndpointApplication.lean`](../../HashSigTest/GXMSS/CompleteEndpointApplication.lean)
 imports only the ordinary `Security.Unforgeability` theorem module and applies its theorem to
 its expanded separate-term inequality, including the pathwise signing-query premise.
-The PRF consumer applies the complete three-law and interval four-law endpoints,
-whole real/ideal/strong transports, query bounds and PRF-advantage equality.
-`EndpointApplications.lean` imports both consumers. The construction tests retain
+The PRF consumer applies the complete three-law, interval four-law and full-range three-law
+security endpoints.
+The construction tests retain
 height-three `[2,4]` frontier examples, inactive vector/pair openings,
 honest-first collision orientation, retry failures and exact-pair freshness.
 Some implementation regressions import private kernels explicitly; the public
-endpoint consumers do not. `DirectTrustAudit.lean` checks the direct production
-closure, while `TrustAudit.lean` checks the full direct/PRF closure. Both reuse
-`TrustAuditSupport.lean` to check compiler origins, declaration bodies and
-transitive axioms, with explicit zero ownership for import-only facades.
+endpoint consumers do not. The repository axiom sweep checks the production libraries
+under the unchanged zero-debt policy.
 
 These statements do not establish a concrete LeanSig parameter instantiation,
 Rust extraction, implementation refinement, measured runtime, the paper's full

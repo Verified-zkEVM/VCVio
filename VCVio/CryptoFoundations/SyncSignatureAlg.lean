@@ -153,6 +153,13 @@ variable {M PK SK S E : Type}
     (ep : E) (msg : M) (answer : Option S) : History E M S :=
   if history ep = none then Function.update history ep (some (msg, answer)) else history
 
+/-- Recording an unused epoch updates exactly its first request and optional answer. -/
+@[simp] theorem record_eq_update [DecidableEq E] (history : History E M S)
+    (ep : E) (msg : M) (answer : Option S) (h : history ep = none) :
+    record history ep msg answer = Function.update history ep (some (msg, answer)) := by
+  unfold record
+  exact ite_eq_left h
+
 /-- A fresh epoch records the request even when its answer is failure. -/
 theorem record_unused [DecidableEq E] (history : History E M S)
     (ep : E) (msg : M) (answer : Option S) (h : history ep = none) :
@@ -222,7 +229,7 @@ structure Adversary (spec : OracleSpec ι) (PK E M S : Type) where
     | some _ => pure (none, history)
     | none => do
       let answer ← alg.sign sk ep msg
-      pure (answer, Function.update history ep (some (msg, answer)))
+      pure (answer, record history ep msg answer)
 
 /-- The signing oracle at a used epoch returns failure and the unchanged history. -/
 theorem signingOracle_used [DecidableEq E]
@@ -239,7 +246,7 @@ theorem signingOracle_unused [DecidableEq E]
     signingOracle alg sk (ep, msg) history = (do
       let answer ← alg.sign sk ep msg
       pure (answer, Function.update history ep (some (msg, answer)))) := by
-  simp [signingOracle, h]
+  simp [signingOracle, record, h]
 
 /-- Generate keys and run the adaptive adversary from empty signing history.
 Ambient queries are forwarded; signing queries update the history through the signing handler.

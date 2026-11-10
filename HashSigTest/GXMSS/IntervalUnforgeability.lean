@@ -18,13 +18,6 @@ public section
 
 open GXMSS GXMSS.IntervalMerkle GXMSS.Interval.Unforgeability
 
-noncomputable example := @strongUnforgeabilityBound
-noncomputable example := @powerOfTwoStrongUnforgeabilityBound
-example := @strong_unforgeability_reduction_bound
-example := @strong_unforgeability_power_of_two_reduction_bound
-example := @strongUnforgeabilityBound_le_powerOfTwoStrongUnforgeabilityBound
-example := @GXMSS.Interval.Filler.targetCapacity_sum_le_inactive_leaf_count
-
 example : GXMSS.Interval.activeChainPositionCount (Interval.full 0) 2 2 = 6 := by decide
 
 example : (Interval.full 0).length * 2 * 2 ^ 2 = 8 ∧
