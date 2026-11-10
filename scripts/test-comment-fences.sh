@@ -296,10 +296,9 @@ rm Lib/ColumnZero.lean
 # everywhere, including the libraries that elaborate: `linter.style.whitespace` measures the command
 # from its doc comment, which is at column 0, so it draws no warning either. The other four the
 # linter does report, so they fail CI in the six proof and three test libraries — but not in
-# `lakefile.lean`, `VCVioComplexity/lakefile.lean` or `Interop/`, which nothing elaborates; not in
-# `scripts/`, which per-PR CI builds but whose sources import no Mathlib, so the `weak.` option is
-# dropped and the linter is never registered; and not effectively in `VCVioComplexity/`, where the
-# linter does run and warn but no step turns that warning into a failure.
+# `lakefile.lean` or `Interop/`, which nothing elaborates; and not in `scripts/`, which per-PR CI
+# builds but whose sources import no Mathlib, so the `weak.` option is dropped and the linter is
+# never registered.
 cat > Lib/Uncovered.lean <<'LEAN'
 /-- A docstring at the margin, its declaration indented on the next line. -/
   def hiddenOne : Nat := 1

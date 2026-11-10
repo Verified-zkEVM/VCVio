@@ -110,8 +110,6 @@ build boundaries and the staged consolidation.
   Peer of `LatticeCrypto/`; depends on `VCVio`/`ToMathlib` but nothing in those imports it back.
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
-- `VCVioComplexity/`: optional isolated Lake package for the complexitylib-backed exact-machine
-  substrate; it is not part of VCVio's default dependency graph.
 - `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs; `Examples/Widgets/` holds the proof widgets they display.
 - `Interop/`: experimental bridges to Rust verification frontends (hax, aeneas). **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
 - `csrc/`: C FFI shims used for differential testing against native ML-DSA, ML-KEM, and Falcon code.
@@ -232,13 +230,6 @@ Security notions, experiments, games, and advantages follow
   `VCVio/CryptoFoundations/Asymptotics/ComplexityTactics.lean`
 - Syntactic ElGamal complexity canary:
   `Examples/ElGamal/ComputationalComplexity.lean`
-- Optional exact complexitylib machine substrate:
-  `VCVioComplexity/VCVioComplexity/Backend/TuringMachine.lean`
-- Complexitylib polynomial adapter and end-to-end pure canary:
-  `VCVioComplexity/VCVioComplexity/Backend/Polynomial.lean`,
-  `VCVioComplexity/VCVioComplexityTest/Backend/PureCanary.lean`
-- End-to-end complexitylib canary with one enabled fair-coin query:
-  `VCVioComplexity/VCVioComplexityTest/Backend/OracleCanary.lean`
 - Asymptotic security games: `VCVio/CryptoFoundations/Asymptotics/Security.lean`
 - Negligible function algebra: `VCVio/CryptoFoundations/Asymptotics/Negligible.lean`
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`
@@ -353,7 +344,7 @@ aggregate.
 
 `uv run --no-project --python 3.12 python ./scripts/check-comment-fences.py` enforces one rule over every Lean source the
 repository tracks or would track — tracked files plus untracked ones that are not ignored, the
-vendored `third_party/` tree excluded and both lakefiles included: a block comment that begins
+vendored `third_party/` tree excluded and the lakefile included: a block comment that begins
 its line must be the last thing on the line where it ends. A declaration written after the `-/`
 of the docstring that documents it parses, builds and runs, and a reader scanning the left
 margin does not see it. Two passes miss that, for two different reasons, and they are easy to
@@ -366,16 +357,12 @@ and `/-!` forms of this shape — but it is silent on the `/--` form, because a 
 part of the command it documents, so the command starts at the `/--`, at column 0. So this gate
 is the only thing that sees the doc-comment form anywhere; over the six proof and three test
 libraries it deliberately repeats for the other forms what the whitespace linter already says;
-and in four further places it is the only check that can *fail* on any form of the shape, for
-three different reasons. `lakefile.lean` and `VCVioComplexity/lakefile.lean` are elaborated by
-Lake from `import Lake`, with no Mathlib linter registered. `Interop/` is not a default target
-and no job builds it. `scripts/` is built on every pull request, but nothing there imports
-Mathlib, so the `weak.` option is silently dropped and the linter is never registered — one
-Mathlib import in one axiom-sweep fixture would flip that. `VCVioComplexity/` sets
-`linter.style.whitespace` explicitly in its own lakefile and the blocking `complexity_backend`
-job builds it, so there the linter does run and does warn — what is missing is not the linter
-but the gate, since `check-warning-log.py` is invoked only with the proof- and test-library
-prefixes and `VCVioComplexity/scripts/test.sh` pipes its log nowhere. A block comment that
+and in three further places it is the only check that can *fail* on any form of the shape, for
+three different reasons. `lakefile.lean` is elaborated by Lake from `import Lake`, with no
+Mathlib linter registered. `Interop/` is not a default target and no job builds it. `scripts/`
+is built on every pull request, but nothing there imports Mathlib, so the `weak.` option is
+silently dropped and the linter is never registered — one Mathlib import in one axiom-sweep
+fixture would flip that. A block comment that
 opens part-way into a line is untouched however many lines it spans — that is an annotation
 inside an expression, a field or a tactic block, and wrapped field docstrings of that shape are
 common here. The rule is positional, so it also rejects five shapes that hide nothing: a

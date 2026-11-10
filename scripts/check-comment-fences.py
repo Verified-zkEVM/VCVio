@@ -30,24 +30,18 @@ So the shape divides by what a warning *does*, not by whether a linter exists:
   the three test libraries that warning is already a CI failure, because
   `scripts/check-warning-log.py` reads the build log with a `--path-prefix` per library.
   This gate is redundant there and deliberately says the same thing.
-* four places elaborate no such warning, or elaborate one that fails nothing, and every
-  form of the shape survives in them:
+* three places elaborate no such warning, and every form of the shape survives in them:
 
-  - `lakefile.lean` and `VCVioComplexity/lakefile.lean`: Lake elaborates each from
-    `import Lake`, with no Mathlib linter registered.
+  - `lakefile.lean`: Lake elaborates it from `import Lake`, with no Mathlib linter
+    registered.
   - `Interop/`: not a default target and no CI job builds it, so nothing elaborates it.
   - `scripts/`: per-PR CI *does* build it (`lake build VCVioAxiomSweepTestFixtures`, then
     `lake exe axiomsweep --check`), but no source there has Mathlib in its import closure —
     `AxiomSweep.lean` imports `Lean`, the axiom-sweep fixture modules import nothing outside
     their own library — so `weak.linter.mathlibStandardSet` is dropped and the linter is
     never registered. One Mathlib import in one fixture would flip that.
-  - `VCVioComplexity/`: its own lakefile sets `linter.style.whitespace` explicitly, its
-    sources do import Mathlib, and the `complexity_backend` job builds it on every pull
-    request, so the linter runs and warns. What is missing there is the *gate*:
-    `check-warning-log.py` is invoked only with the proof- and test-library prefixes, and
-    `VCVioComplexity/scripts/test.sh` pipes its build log nowhere.
 
-  `scripts/lint.py`'s text-based style pass reaches only `Interop/` of those four, and
+  `scripts/lint.py`'s text-based style pass reaches only `Interop/` of those three, and
   catches none of this in any file: its four linters have no model of a comment at all.
 
 The rule, in one sentence: *a block comment that begins its line must be the last thing on
@@ -98,7 +92,7 @@ What this cannot catch. The same-line `/--` form has an uncovered layout:
   the same `def` under a margin docstring is not.
 
 The other four are reported by `linter.style.whitespace` wherever it is registered, so they
-fail CI in the nine built libraries and survive in the four places above:
+fail CI in the nine built libraries and survive in the three places above:
 
 * an *indented* comment followed by a declaration on its closing line,
   `  /-- Doc. -/ lean_exe hidden where`;

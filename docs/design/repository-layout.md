@@ -12,7 +12,6 @@ Status: current placement policy; the migration table distinguishes planned move
 | `VCVio/CryptoFoundations/` | Cryptographic interfaces, assumptions, games and generic reduction theory | Uses the framework; does not import concrete schemes |
 | `VCVio/Schemes/` | Named constructions with their correctness and security proofs | Uses algorithms and foundations, never Examples or widgets |
 | `LatticeCrypto/`, `HashSig/` | Existing lattice and hash-signature libraries | Peers above VCVio; migrate only in dependency-complete slices |
-| `VCVioComplexity/` | Optional concrete machine backend | Separate Lake package with coordinated pins |
 | `Examples/` | Pedagogical consumers and proof walkthroughs | Above reusable libraries |
 | `Examples/Widgets/` | Interactive proof visualizations used by the examples | Presentation dependency, never a scheme dependency |
 | `VCVioTest/`, `LatticeCryptoTest/`, `HashSigTest/` | Tests, vectors and executable regressions | Mirror the owning implementation; fixtures do not enter proof libraries |
@@ -39,7 +38,11 @@ built on PolyFun's `PolyFunFrontier` package and through it on
 
 The `VCVioCslib` library, a one-file non-uniform P/poly facade over PolyFun's
 `ComplexityBackends.CslibSingleTape`, was removed. cslib-frontier has its own P/poly, so the
-crypto-facing non-uniform facade belongs in `VCVioFrontier`. The removed source remains in git
+crypto-facing non-uniform facade belongs in `VCVioFrontier`. The `VCVioComplexity` nested
+package, which pinned complexitylib at `b6738219`, was also removed: cslib-frontier is the
+renamed complexitylib, and its oracle machines replace the substrate and adequacy phases of the
+[complexity design](computational-complexity.md#delivery-phases)
+([#906](https://github.com/Verified-zkEVM/VCVio/issues/906)). The removed sources remain in git
 history.
 
 ## Upstream comparison

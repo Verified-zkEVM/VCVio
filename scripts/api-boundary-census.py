@@ -10,7 +10,6 @@ ROOT = Path(__file__).resolve().parent.parent
 SCANNER = runpy.run_path(str(ROOT / "scripts/count-expose-boundary.py"))
 ROOTS = (
     "ToMathlib", "VCVio", "LatticeCrypto", "HashSig", "Extern", "Examples",
-    "VCVioComplexity/VCVioComplexity",
 )
 
 
