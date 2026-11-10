@@ -11,6 +11,12 @@ public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
 # Table semantics for sorted group queries
+
+The handler `impl` keeps one table of values per sort. Operations append their result and return
+its handle, and equality queries compare the two values through an observation. A handle out of
+range in its sort reads as zero (`lookup`), so bounds that count table entries count that zero.
+`run` executes group queries together with a game oracle on the same table, and `runGen` adds
+uniform sampling that leaves the table unchanged.
 -/
 
 public section
