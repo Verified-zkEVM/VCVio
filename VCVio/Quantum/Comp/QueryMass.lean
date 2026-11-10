@@ -98,8 +98,6 @@ universe u v u₁ v₁ w w₁
 
 namespace Quantum
 
-/-! ## Traces of families of positive semidefinite matrices -/
-
 namespace QuantumRuntime
 
 /-! ## The input of a call -/

@@ -412,9 +412,6 @@ theorem extractUnitary_swap_conjugacy (ME : MultiExtractor k Cm Dm S)
 end
 
 section
-variable {A B : Type*}
-end
-section
 variable {Q S R : Type*} [Fintype Q] [DecidableEq Q] [Fintype S] [DecidableEq S]
   [Fintype R] [DecidableEq R]
 /-- The commutator with a private controlled permutation, entrywise. -/
@@ -598,10 +595,6 @@ theorem l2_opNorm_recordingDefect_le
     rw [he]
     exact (l2_opNorm_submatrix_le_of_injective K Subtype.val_injective
       Subtype.val_injective).trans (hlocal keys)
-end
-section
-variable {m n m' n' : Type*} [Fintype m] [Fintype n] [Fintype m'] [Fintype n']
-  [DecidableEq n] [DecidableEq n']
 end
 section
 variable {X Y R : Type} {k : ℕ} [Fintype X] [DecidableEq X]

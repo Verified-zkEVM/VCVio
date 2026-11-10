@@ -74,8 +74,6 @@ universe u v w
 
 namespace Quantum
 
-/-! ## Basis matrices on basis states -/
-
 /-! ## The uniform superposition over functions -/
 
 section uniform
