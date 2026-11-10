@@ -7,13 +7,26 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.HardnessAssumptions.PairingDLog
-import all VCVio.CryptoFoundations.GroupModel.Instances
+import VCVio.CryptoFoundations.GroupModel.Instances
 import Mathlib.Algebra.Module.Torsion.Free
 
-/-! # Generic hardness in Type 3 pairing groups
+/-!
+# Generic hardness in Type 3 pairing groups
 
-Evaluation transports symbolic computations to real bilinear groups. Per-sort collision
-bounds then control recovery of a common exponent from its powers in the source groups.
+Evaluation transports symbolic computations to real bilinear groups
+(`runGen_pairing_mapTbl_evalHom`). Per-sort collision bounds then control recovery of a common
+exponent from its powers in the source groups: `PairingDLog.experiment_ofGeneric_le` bounds the
+`(q₁, q₂)`-DLog success of a generic adversary with per-sort append budgets, and
+`PairingDLog.experiment_ofGeneric_le_of_total` with one total group-operation budget. The only
+nondegeneracy hypothesis is that the pairing of the two generators is nonzero; it forces both
+generators to be nonzero.
+
+## References
+
+* V. Shoup, *Lower bounds for discrete logarithms and related problems*, EUROCRYPT 1997.
+* D. Boneh, X. Boyen, *Short signatures without random oracles*, EUROCRYPT 2004.
+* B. Bauer, G. Fuchsbauer, J. Loss, *A classification of computational assumptions in the
+  algebraic group model*, CRYPTO 2020, ePrint 2020/859.
 -/
 
 public section
@@ -25,19 +38,20 @@ namespace GroupModel
 
 variable {F G₁ G₂ Gₜ ι α : Type}
 
-/-- Evaluating the symbolic table commutes with a real pairing run when scalar multiplication
-by each chosen source generator and their pairing is injective. -/
+/-- Evaluating the symbolic table commutes with a real pairing run when the pairing of the two
+chosen source generators is nonzero. -/
 theorem runGen_pairing_mapTbl_evalHom [Field F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
-    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0) (x : ι → F)
+    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂) (he : e g₁ g₂ ≠ 0) (x : ι → F)
     (A : OracleComp (genSpec F pairingSig) α)
     (tbl : Tbl (fun _ : PSort => MvPolynomial ι F)) :
     runGen (pairingReal e) (fun _ => id) A
         (mapTbl (fun s => (evalHom.pairing e g₁ g₂ x).toFun s) tbl) =
       Prod.map id (mapTbl (fun s => (evalHom.pairing e g₁ g₂ x).toFun s)) <$>
         runGen (symbolic F pairingSig ι) (fun _ p => MvPolynomial.eval x p) A tbl := by
+  have hg₁ : g₁ ≠ 0 := by rintro rfl; simp at he
+  have hg₂ : g₂ ≠ 0 := by rintro rfl; simp at he
   have h := runGen_map (evalHom.pairing e g₁ g₂ x) (fun _ => id) A tbl
   simp only [Function.comp_def, id_eq] at h
   rw [← h]
@@ -48,14 +62,11 @@ theorem runGen_pairing_mapTbl_evalHom [Field F] [DecidableEq F]
     (fun _ p => MvPolynomial.eval x p) (by
       intro s p r
       cases s
-      · change (evalAt g₁ x p = evalAt g₁ x r) ↔ _
-        simp only [evalAt_apply]
+      · simp only [evalHom.pairing_apply_g₁, evalAt_apply]
         exact (smul_left_injective F hg₁).eq_iff
-      · change (evalAt g₂ x p = evalAt g₂ x r) ↔ _
-        simp only [evalAt_apply]
+      · simp only [evalHom.pairing_apply_g₂, evalAt_apply]
         exact (smul_left_injective F hg₂).eq_iff
-      · change (evalAt (e g₁ g₂) x p = evalAt (e g₁ g₂) x r) ↔ _
-        simp only [evalAt_apply]
+      · simp only [evalHom.pairing_apply_gₜ, evalAt_apply]
         exact (smul_left_injective F he).eq_iff) ProbComp]
 
 end GroupModel
@@ -66,9 +77,9 @@ open GroupModel
 
 /-- Interpret a generic scalar-valued adversary in a real pairing group on the two lists
 of source powers, with an initially empty target table. -/
-@[expose] def Adversary.ofGeneric {F G₁ G₂ Gₜ : Type} [Field F]
-    [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
+@[expose] def Adversary.ofGeneric {F G₁ G₂ Gₜ : Type} [CommSemiring F]
+    [AddCommMonoid G₁] [Module F G₁] [AddCommMonoid G₂] [Module F G₂]
+    [AddCommMonoid Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {q₁ q₂ : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
     (A : OracleComp (genSpec F pairingSig) F) : Adversary F G₁ G₂ q₁ q₂ :=
   fun xs ys => Prod.fst <$> runGen (pairingReal e) (fun _ => id) A (fun
@@ -76,21 +87,16 @@ of source powers, with an initially empty target table. -/
     | .g₂ => List.ofFn ys
     | .gₜ => [])
 
-private theorem uniform_unit {F : Type} [SampleableType F] :
-    (fun a (_ : Unit) => a) <$> ($ᵗ F : ProbComp F) =ᵈ
-      ($ᵗ (Unit → F) : ProbComp (Unit → F)) := by
-  apply SampleableType.map_uniformSample_evalDistEq_of_bijective
-  exact ⟨fun _ _ h => congrFun h (), fun f => ⟨f (), by funext u; cases u; rfl⟩⟩
-
-/-- In a Type 3 pairing group, a generic adversary recovering a common exponent from
-powers through `q₁` and `q₂` has success bounded by the three collision terms and one
-additional linear root term, divided by the scalar field cardinality. -/
+/-- In a Type 3 pairing group whose two generators pair to a nonzero element, a generic adversary
+recovering a common exponent from its powers through `q₁` and `q₂`, with at most `n₁`, `n₂` and
+`nₜ` appends to the three sorts, succeeds with probability at most the three per-sort collision
+terms plus one linear root term, divided by the scalar field cardinality. Equality queries are
+free. -/
 theorem experiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
     [Field F] [Fintype F] [SampleableType F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
-    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂) (he : e g₁ g₂ ≠ 0)
     (q₁ q₂ : ℕ) (A : OracleComp (genSpec F pairingSig) F) (n₁ n₂ nₜ : ℕ)
     (hn₁ : IsQueryBoundP A (appendsTo .g₁) n₁)
     (hn₂ : IsQueryBoundP A (appendsTo .g₂) n₂)
@@ -99,7 +105,6 @@ theorem experiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
       (((q₁ + n₁ + 2).choose 2 * q₁ + (q₂ + n₂ + 2).choose 2 * q₂ +
         (nₜ + 1).choose 2 * (q₁ + q₂) + 1 : ℕ) : ℝ≥0∞) / Fintype.card F := by
   classical
-  let : Fintype PSort := ⟨{.g₁, .g₂, .gₜ}, by intro s; cases s <;> simp⟩
   let tbl : Tbl (fun _ : PSort => MvPolynomial Unit F) := fun
     | .g₁ => List.ofFn (fun i : Fin (q₁ + 1) => MvPolynomial.X () ^ (i : ℕ))
     | .g₂ => List.ofFn (fun i : Fin (q₂ + 1) => MvPolynomial.X () ^ (i : ℕ))
@@ -156,8 +161,8 @@ theorem experiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
         rfl
       · rfl
     rw [← ht]
-    exact runGen_pairing_mapTbl_evalHom e g₁ g₂ hg₁ hg₂ he _ A tbl
-  have hs := (uniform_unit (F := F)).bind_left (fun x =>
+    exact runGen_pairing_mapTbl_evalHom e g₁ g₂ he _ A tbl
+  have hs := (SampleableType.map_const_uniformSample_evalDistEq (α := F)).bind_left (fun x =>
     (fun z => z.1 = x ()) <$> runGen (symbolic F pairingSig Unit)
       (fun _ p => MvPolynomial.eval x p) A tbl)
   have hevent : Pr{let b ← (experiment g₁ g₂
@@ -200,14 +205,13 @@ theorem experiment_ofGeneric_le_of_total {F G₁ G₂ Gₜ : Type}
     [Field F] [Fintype F] [SampleableType F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
-    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂) (he : e g₁ g₂ ≠ 0)
     (q₁ q₂ : ℕ) (A : OracleComp (genSpec F pairingSig) F) (q : ℕ)
     (hq : IsQueryBoundP A (fun i => isGroupOp i = true) q) :
     Pr{let b ← experiment g₁ g₂ (Adversary.ofGeneric (q₁ := q₁) (q₂ := q₂) e A)}[b = true] ≤
       (((q₁ + q + 2).choose 2 * q₁ + (q₂ + q + 2).choose 2 * q₂ +
         (q + 1).choose 2 * (q₁ + q₂) + 1 : ℕ) : ℝ≥0∞) / Fintype.card F := by
-  exact experiment_ofGeneric_le e g₁ g₂ hg₁ hg₂ he q₁ q₂ A q q q
+  exact experiment_ofGeneric_le e g₁ g₂ he q₁ q₂ A q q q
     (hq.appendsTo .g₁) (hq.appendsTo .g₂) (hq.appendsTo .gₜ)
 
 end PairingDLog

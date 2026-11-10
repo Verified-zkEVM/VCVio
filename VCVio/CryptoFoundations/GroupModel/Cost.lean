@@ -81,7 +81,8 @@ variable {F S : Type} {σ : Sig S} {ι : Type} {Γ : OracleSpec ι}
   Sum.elim (fun t => t.target = some s) (fun _ => False)
 
 /-- Append targets can be decided from equality of sorts. -/
-instance [DecidableEq S] (s : S) : DecidablePred (appendsTo (F := F) (σ := σ) (ι := ι) s) :=
+instance instDecidablePredAppendsTo [DecidableEq S] (s : S) :
+    DecidablePred (appendsTo (F := F) (σ := σ) (ι := ι) s) :=
   fun t => match t with
     | .inl t => inferInstanceAs (Decidable (t.target = some s))
     | .inr _ => inferInstanceAs (Decidable False)

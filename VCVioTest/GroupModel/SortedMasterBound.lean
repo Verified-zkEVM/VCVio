@@ -42,7 +42,6 @@ theorem pairing_bilinear_masterBound :
           let z ← runGen (symbolic (ZMod 5) pairingSig Unit) (fun _ => id) oa tbl
           pure (x, z)) ≤ 4 / 5 := by
   let : Fact (Nat.Prime 5) := ⟨Nat.prime_five⟩
-  let : Fintype PSort := ⟨{.g₁, .g₂, .gₜ}, by intro s; cases s <;> simp⟩
   let : MeasurableSpace ((Unit → ZMod 5) ×
       (Handle × Tbl (fun _ : PSort => MvPolynomial Unit (ZMod 5)))) := ⊤
   let tbl : Tbl (fun _ : PSort => MvPolynomial Unit (ZMod 5)) :=

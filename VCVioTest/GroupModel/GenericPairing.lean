@@ -34,7 +34,7 @@ theorem pairing_dlog_zmod_101 :
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
   dsimp only
   apply (PairingDLog.experiment_ofGeneric_le
-    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1 one_ne_zero one_ne_zero
+    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1
     (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : ZMod 101) ≠ 0))
     2 1 _ 0 0 1 ?_ ?_ ?_).trans
   · norm_num [ZMod.card, Nat.choose]

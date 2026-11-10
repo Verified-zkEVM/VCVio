@@ -24,6 +24,19 @@ the run that compares evaluations at the hidden point agrees with the run that c
 polynomials until two distinct entries, or an entry and zero, evaluate equally, and each such
 pair has a nonzero difference of bounded degree. The root probability is a hypothesis;
 Schwartz–Zippel supplies it for uniform points in `measureETVDist_runGen_symbolic_uniform_le`.
+Scalars form a commutative ring; only the Schwartz–Zippel specialization needs a domain.
+
+The sorted master bound T3ₛ holds for every signature whose degree bounds are closed under its
+structure maps (`Sig.DegreeClosed`), with one root bound for each sort.
+`measureETVDist_runGen_symbolic_le_of_support` takes a bound on the sorted collision sum of every
+reachable exact output, and `measureETVDist_runGen_symbolic_le_of_target` derives one from
+per-sort append budgets. T3 is the case of independent sorts with one total budget. The event
+forms are `prEvent_runGen_symbolic_le_add_of_support`, `prEvent_runGen_symbolic_le_add_of_target`
+and `prEvent_runGen_symbolic_le_add`.
+
+The computational master theorem T8, `prEvent_runGen_symbolic_le_add_of_polynomial`, bounds a
+success event that forces a nonzero bounded-degree output polynomial to vanish at the hidden
+point: the collision bound plus one root bound for that polynomial.
 
 ## References
 
@@ -53,10 +66,17 @@ variable {F S ι : Type}
 theorem degreeClosed_discreteSig (D : S → ℕ) : (discreteSig S).DegreeClosed D :=
   ⟨fun o => o.elim, fun o => o.elim⟩
 
-/-- The least closed Type 3 bounds extend the target bound by the sum of source bounds. -/
+/-- Type 3 degree bounds are closed exactly when the target bound is at least the sum of the
+source bounds. -/
+theorem pairingSig_degreeClosed_iff (D : PSort → ℕ) :
+    pairingSig.DegreeClosed D ↔ D .g₁ + D .g₂ ≤ D .gₜ :=
+  ⟨fun h => h.2 (), fun h => ⟨fun o => o.elim, fun _ => h⟩⟩
+
+/-- Raising a target bound to the sum of the source bounds closes Type 3 degree bounds. By
+`pairingSig_degreeClosed_iff`, `max dₜ (d₁ + d₂)` is the least closed target bound above `dₜ`. -/
 theorem degreeClosed_pairingSig (d₁ d₂ dₜ : ℕ) :
     pairingSig.DegreeClosed (fun | .g₁ => d₁ | .g₂ => d₂ | .gₜ => max dₜ (d₁ + d₂)) :=
-  ⟨fun o => o.elim, fun _ => Nat.le_max_right _ _⟩
+  (pairingSig_degreeClosed_iff _).2 (Nat.le_max_right _ _)
 
 /-- Every polynomial stored in the table has total degree at most `D s` in sort `s`. -/
 @[expose] def DegreeLE [CommSemiring F] (D : S → ℕ) (tbl : Tbl (fun _ : S => MvPolynomial ι F)) :
@@ -246,7 +266,7 @@ theorem collisionProbGen_le_tableCollision {K A B : Type} [CommSemiring K] [Deci
 private def ListCollision [CommSemiring F] (ps : List (MvPolynomial ι F)) (x : ι → F) :
     Prop := ∃ p ∈ ps, ∃ q ∈ ps, p ≠ q ∧ MvPolynomial.eval x p = MvPolynomial.eval x q
 
-private theorem pair_collision_le [Field F] (xs : ProbComp (ι → F)) {d : ℕ} {ε : ℝ≥0∞}
+private theorem pair_collision_le [CommRing F] (xs : ProbComp (ι → F)) {d : ℕ} {ε : ℝ≥0∞}
     (hε : ∀ f : MvPolynomial ι F, f ≠ 0 → f.totalDegree ≤ d →
       Pr{let x ← xs}[MvPolynomial.eval x f = 0] ≤ ε)
     (p q : MvPolynomial ι F) (hp : p.totalDegree ≤ d) (hq : q.totalDegree ≤ d) :
@@ -259,7 +279,7 @@ private theorem pair_collision_le [Field F] (xs : ProbComp (ι → F)) {d : ℕ}
     intro x hx
     simpa only [map_sub, sub_eq_zero] using hx.2
 
-private theorem list_collision_le [Field F] (xs : ProbComp (ι → F)) {d : ℕ} {ε : ℝ≥0∞}
+private theorem list_collision_le [CommRing F] (xs : ProbComp (ι → F)) {d : ℕ} {ε : ℝ≥0∞}
     (hε : ∀ f : MvPolynomial ι F, f ≠ 0 → f.totalDegree ≤ d →
       Pr{let x ← xs}[MvPolynomial.eval x f = 0] ≤ ε)
     (ps : List (MvPolynomial ι F)) (hd : ∀ p ∈ ps, p.totalDegree ≤ d) :
@@ -302,7 +322,7 @@ private theorem list_collision_le [Field F] (xs : ProbComp (ι → F)) {d : ℕ}
         Nat.cast_add, add_mul]
 
 /-- A root bound for each sort controls collisions among its entries and its zero default. -/
-theorem tableCollision_prob_le [Field F] [Fintype S]
+theorem tableCollision_prob_le [CommRing F] [Fintype S]
     (xs : ProbComp (ι → F)) {D : S → ℕ} {ε : S → ℝ≥0∞}
     (hε : ∀ s (f : MvPolynomial ι F), f ≠ 0 → f.totalDegree ≤ D s →
       Pr{let x ← xs}[MvPolynomial.eval x f = 0] ≤ ε s)
@@ -345,7 +365,7 @@ private theorem sum_choose_succ_le (m : S → ℕ) (t : Finset S) :
 
 /-- **T3ₛ.** A bound on the sorted collision sum of every exact output bounds joint total
 variation, including the hidden point and the full output table. -/
-theorem measureETVDist_runGen_symbolic_le_of_support [Field F] [DecidableEq F] [DecidableEq ι]
+theorem measureETVDist_runGen_symbolic_le_of_support [CommRing F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type} {σ : Sig S}
     [MeasurableSpace ((ι → F) × (α × Tbl (fun _ : S => MvPolynomial ι F)))]
     (xs : ProbComp (ι → F)) {D : S → ℕ} {ε : S → ℝ≥0∞} {B : ℝ≥0∞}
@@ -398,7 +418,7 @@ theorem measureETVDist_runGen_symbolic_le_of_support [Field F] [DecidableEq F] [
 
 /-- **T3ₛ.** Per-sort operation budgets bound joint total variation with the hidden point
 and the full output table. -/
-theorem measureETVDist_runGen_symbolic_le_of_target [Field F] [DecidableEq F] [DecidableEq ι]
+theorem measureETVDist_runGen_symbolic_le_of_target [CommRing F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type} {σ : Sig S}
     [MeasurableSpace ((ι → F) × (α × Tbl (fun _ : S => MvPolynomial ι F)))]
     (xs : ProbComp (ι → F)) {D : S → ℕ} {ε : S → ℝ≥0∞} {n : S → ℕ}
@@ -423,11 +443,30 @@ theorem measureETVDist_runGen_symbolic_le_of_target [Field F] [DecidableEq F] [D
   have hs := runGen_length_le_of_target (symbolic F σ ι) (fun _ => id) s (hn s) tbl z hz
   gcongr
 
+/-- One total operation budget at independent sorts bounds the sorted collision sum of every
+reachable exact output with one root bound. -/
+private theorem sum_choose_mul_le_of_total [CommRing F] [DecidableEq F] [DecidableEq ι]
+    [Fintype S] [DecidableEq S] {α : Type} {q : ℕ} (ε : ℝ≥0∞)
+    (oa : OracleComp (genSpec F (discreteSig S)) α)
+    (hq : IsQueryBoundP oa (fun i => isGroupOp i = true) q)
+    (tbl : Tbl (fun _ : S => MvPolynomial ι F)) (z : α × Tbl (fun _ : S => MvPolynomial ι F))
+    (hz : z ∈ support (runGen (symbolic F (discreteSig S) ι) (fun _ => id) oa tbl)) :
+    ∑ s, (((z.2 s).length + 1).choose 2 : ℝ≥0∞) * ε ≤
+      (((∑ s, (tbl s).length) + q + 1).choose 2 : ℝ≥0∞) * ε := by
+  rw [← Finset.sum_mul]
+  have hc := sum_choose_succ_le (fun s => (z.2 s).length) Finset.univ
+  have hs := runGen_sum_length_le (symbolic F (discreteSig S) ι) (fun _ => id) hq tbl z hz
+  have hcast : (∑ s, (((z.2 s).length + 1).choose 2 : ℝ≥0∞)) ≤
+      (((∑ s, (tbl s).length) + q + 1).choose 2 : ℝ≥0∞) := by
+    rw [← Nat.cast_sum]
+    exact_mod_cast hc.trans (Nat.choose_le_choose 2 (Nat.add_le_add_right hs 1))
+  gcongr
+
 /-- **T3, the master bound** (Shoup 1997). Evaluated and exact equality differ in total
 variation by at most `choose (initial size + operation budget + 1) 2 * ε`, jointly with the hidden
 point and full output/table pair. The joint output may carry any measurable space; the proof uses
 local discrete spaces on the point and intermediate table outputs. -/
-theorem measureETVDist_runGen_symbolic_le [Field F] [DecidableEq F] [DecidableEq ι]
+theorem measureETVDist_runGen_symbolic_le [CommRing F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type}
     [MeasurableSpace ((ι → F) × (α × Tbl (fun _ : S => MvPolynomial ι F)))]
     (xs : ProbComp (ι → F)) {d q : ℕ} {ε : ℝ≥0∞}
@@ -444,21 +483,13 @@ theorem measureETVDist_runGen_symbolic_le [Field F] [DecidableEq F] [DecidableEq
           let z ← runGen (symbolic F (discreteSig S) ι) (fun _ => id) oa tbl
           pure (x, z)) ≤
       (((∑ s, (tbl s).length) + q + 1).choose 2 : ℝ≥0∞) * ε := by
-  apply measureETVDist_runGen_symbolic_le_of_support xs (degreeClosed_discreteSig _)
-    (fun _ => hε) oa tbl hd
-  intro z hz
-  rw [← Finset.sum_mul]
-  have hc := sum_choose_succ_le (fun s => (z.2 s).length) Finset.univ
-  have hs := runGen_sum_length_le (symbolic F (discreteSig S) ι) (fun _ => id) hq tbl z hz
-  have hcast : (∑ s, (((z.2 s).length + 1).choose 2 : ℝ≥0∞)) ≤
-      (((∑ s, (tbl s).length) + q + 1).choose 2 : ℝ≥0∞) := by
-    rw [← Nat.cast_sum]
-    exact_mod_cast hc.trans (Nat.choose_le_choose 2 (Nat.add_le_add_right hs 1))
-  gcongr
+  exact measureETVDist_runGen_symbolic_le_of_support xs (degreeClosed_discreteSig _)
+    (fun _ => hε) oa tbl hd (sum_choose_mul_le_of_total ε oa hq tbl)
 
-/-- Every measurable event on the hidden point and full run output satisfies the master
-bound in both directions. -/
-theorem prEvent_runGen_symbolic_le_add_of_support [Field F] [DecidableEq F] [DecidableEq ι]
+/-- Event form of T3ₛ over reachable outputs: if the sorted collision sum of every reachable
+exact output is at most `B`, then every measurable event on the hidden point and the full run
+output has evaluated and exact probabilities within `B` of each other, in both directions. -/
+theorem prEvent_runGen_symbolic_le_add_of_support [CommRing F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type} {σ : Sig S}
     [MeasurableSpace ((ι → F) × (α × Tbl (fun _ : S => MvPolynomial ι F)))]
     (xs : ProbComp (ι → F)) {D : S → ℕ} {ε : S → ℝ≥0∞} {B : ℝ≥0∞}
@@ -501,9 +532,11 @@ theorem prEvent_runGen_symbolic_le_add_of_support [Field F] [DecidableEq F] [Dec
   simpa only [left, right, map_bind, map_pure, bind_pure_comp, Functor.map_map,
     Function.comp_def] using And.intro hl hr
 
-/-- Every measurable event on the hidden point and full run output satisfies the master
-bound in both directions. -/
-theorem prEvent_runGen_symbolic_le_add_of_target [Field F] [DecidableEq F] [DecidableEq ι]
+/-- Event form of T3ₛ with per-sort budgets: with at most `n s` appends to each sort `s`, every
+measurable event on the hidden point and the full run output has evaluated and exact
+probabilities within `∑ s, choose (initial size of s + n s + 1) 2 * ε s` of each other, in both
+directions. -/
+theorem prEvent_runGen_symbolic_le_add_of_target [CommRing F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type} {σ : Sig S}
     [MeasurableSpace ((ι → F) × (α × Tbl (fun _ : S => MvPolynomial ι F)))]
     (xs : ProbComp (ι → F)) {D : S → ℕ} {ε : S → ℝ≥0∞} {n : S → ℕ}
@@ -534,9 +567,11 @@ theorem prEvent_runGen_symbolic_le_add_of_target [Field F] [DecidableEq F] [Deci
   have hs := runGen_length_le_of_target (symbolic F σ ι) (fun _ => id) s (hn s) tbl z hz
   gcongr
 
-/-- Every measurable event on the hidden point and full run output satisfies the master
-bound in both directions. -/
-theorem prEvent_runGen_symbolic_le_add [Field F] [DecidableEq F] [DecidableEq ι]
+/-- Event form of T3 at independent sorts with one total budget: with at most `q` group
+operations, every measurable event on the hidden point and the full run output has evaluated and
+exact probabilities within `choose (initial size + q + 1) 2 * ε` of each other, in both
+directions. -/
+theorem prEvent_runGen_symbolic_le_add [CommRing F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type}
     [MeasurableSpace ((ι → F) × (α × Tbl (fun _ : S => MvPolynomial ι F)))]
     (xs : ProbComp (ι → F)) {d q : ℕ} {ε : ℝ≥0∞}
@@ -558,30 +593,16 @@ theorem prEvent_runGen_symbolic_le_add [Field F] [DecidableEq F] [DecidableEq ι
       Pr{let x ← xs; let z ← (runGen (symbolic F (discreteSig S) ι)
           (fun _ p => MvPolynomial.eval x p) oa tbl)}[
           (x, z) ∈ E] +
-      (((∑ s, (tbl s).length) + q + 1).choose 2 : ℝ≥0∞) * ε) := by
-  let left : ProbComp ((ι → F) × (α × Tbl (fun _ : S => MvPolynomial ι F))) := do
-    let x ← xs
-    let z ← runGen (symbolic F (discreteSig S) ι) (fun _ p => MvPolynomial.eval x p) oa tbl
-    pure (x, z)
-  let right : ProbComp ((ι → F) × (α × Tbl (fun _ : S => MvPolynomial ι F))) := do
-    let x ← xs
-    let z ← runGen (symbolic F (discreteSig S) ι) (fun _ => id) oa tbl
-    pure (x, z)
-  have h : measureETVDist left right ≤ _ := measureETVDist_runGen_symbolic_le xs hε oa hq tbl hd
-  have hl := (prEvent_le_prEvent_add_measureETVDist left right (· ∈ E) hE.mem).trans
-    (add_le_add le_rfl h)
-  rw [measureETVDist_comm] at h
-  have hr := (prEvent_le_prEvent_add_measureETVDist right left (· ∈ E) hE.mem).trans
-    (add_le_add le_rfl h)
-  simpa only [left, right, map_bind, map_pure, bind_pure_comp, Functor.map_map,
-    Function.comp_def] using And.intro hl hr
+      (((∑ s, (tbl s).length) + q + 1).choose 2 : ℝ≥0∞) * ε) :=
+  prEvent_runGen_symbolic_le_add_of_support xs (degreeClosed_discreteSig _) (fun _ => hε) oa
+    tbl hd (sum_choose_mul_le_of_total ε oa hq tbl) E hE
 
 /-! ## Computational master theorem -/
 
 /-- **T8.** If success forces a nonzero bounded-degree output polynomial to vanish, the
 hidden-point success probability is at most the collision bound plus its root bound. -/
 theorem prEvent_runGen_symbolic_le_add_of_polynomial_of_support
-    [Field F] [DecidableEq F] [DecidableEq ι]
+    [CommRing F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type} {σ : Sig S}
     (xs : ProbComp (ι → F)) {D : S → ℕ} {ε : S → ℝ≥0∞} {B ε' : ℝ≥0∞}
     (hD : σ.DegreeClosed D)
@@ -622,7 +643,7 @@ theorem prEvent_runGen_symbolic_le_add_of_polynomial_of_support
 
 /-- **T8 with per-sort budgets.** The collision sum uses the budget and degree of each sort;
 the output polynomial contributes one further root-probability bound. -/
-theorem prEvent_runGen_symbolic_le_add_of_polynomial [Field F] [DecidableEq F] [DecidableEq ι]
+theorem prEvent_runGen_symbolic_le_add_of_polynomial [CommRing F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type} {σ : Sig S}
     (xs : ProbComp (ι → F)) {D : S → ℕ} {ε : S → ℝ≥0∞} {ε' : ℝ≥0∞} {n : S → ℕ}
     (hD : σ.DegreeClosed D)
@@ -653,7 +674,7 @@ theorem prEvent_runGen_symbolic_le_add_of_polynomial [Field F] [DecidableEq F] [
 /-- Uniform hidden points over a finite field give the Schwartz–Zippel specialization
 `choose (initial size + operation budget + 1) 2 * (d / card F)` of the joint master bound
 `measureETVDist_runGen_symbolic_le`. -/
-theorem measureETVDist_runGen_symbolic_uniform_le [Field F] [DecidableEq F]
+theorem measureETVDist_runGen_symbolic_uniform_le [CommRing F] [IsDomain F] [DecidableEq F]
     [Fintype F] [Finite ι] [DecidableEq ι] [SampleableType (ι → F)]
     [Fintype S] [DecidableEq S] {α : Type}
     [MeasurableSpace ((ι → F) × (α × Tbl (fun _ : S => MvPolynomial ι F)))]
