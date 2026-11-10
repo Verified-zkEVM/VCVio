@@ -14,6 +14,10 @@ public import Mathlib.Data.Fintype.Pi
 Rounds are indexed by any finite linearly ordered type. A challenge tree assigns a vector to
 each branch path, with the challenge at a round depending only on the path through that round.
 The finder sees only a Boolean acceptance oracle and its own independent random coins.
+
+## References
+
+* Attema, Cramer and Kohl, *A compressed Σ-protocol theory for lattices*, CRYPTO 2021.
 -/
 
 public section
@@ -48,7 +52,8 @@ structure VecTree [LinearOrder R] (C : R → Type) (k : R → ℕ) where
     (nodeOk : (r : R) → (Fin (k r) → C r) → Prop) (t : VecTree C k) : Prop :=
   ∀ p r, nodeOk r (t.siblings p r)
 
-/-- Run a finder against a fixed acceptance function, returning its output and query count. -/
+/-- Run a finder against a fixed acceptance function, returning its output and the number of
+acceptance-oracle calls. Coin queries and local work are not charged. -/
 @[expose] def runFinder {β : Type} (find : OracleComp (unifSpec + accSpec C) β)
     (f : ((r : R) → C r) → Bool) : ProbComp (β × ℕ) :=
   (simulateQ (coins (S := ℕ) + counted f) find).run 0
@@ -121,7 +126,9 @@ theorem IsTreeFinder.acceptRate_sub_le [Fintype R] [LinearOrder R] [∀ r, Finty
   tsub_le_iff_left.mpr ((h.success f).trans
     (add_le_add le_rfl (mul_le_of_le_one_left zero_le tsub_le_self)))
 
-/-- Threshold knowledge error `1 − ∏ᵣ (1 − (kᵣ − 1)/|Cᵣ|)`. -/
+/-- Threshold knowledge error `1 − ∏ᵣ (1 − (kᵣ − 1)/|Cᵣ|)`: the knowledge error of a protocol
+that is special sound with threshold `k r` and challenge set `C r` in each round (Attema, Cramer
+and Kohl, Remark 1, eq. (3)). -/
 @[expose] noncomputable def thresholdError [Fintype R]
     (C : R → Type) [∀ r, Fintype (C r)] (k : R → ℕ) : ℝ≥0∞ :=
   1 - ∏ r, (1 - ((k r - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (C r) : ℝ≥0∞))

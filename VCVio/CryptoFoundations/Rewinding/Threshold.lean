@@ -13,7 +13,7 @@ public import Mathlib.Data.Fin.Tuple.Basic
 /-!
 # Recursive threshold challenge trees
 
-The threshold finder processes rounds in the order of `Fin μ`. At each node it aborts if its
+The threshold finder processes rounds in the order of `Fin n`. At each node it aborts if its
 first child fails, and otherwise searches the remaining challenges without replacement for
 enough successful children. Its oracle queries are complete challenge vectors.
 
@@ -88,7 +88,9 @@ theorem mem_samplerOutcomes {α : Type} (mx : ProbComp α) (a : α) :
     change (∃ i, a ∈ samplerOutcomes (next i)) ↔ _
     simp [ih]
 
-/-- A duplicate-free executable challenge enumeration obtained from its uniform sampler. -/
+/-- A duplicate-free executable challenge enumeration obtained from its uniform sampler. It
+enumerates the whole challenge set, so it is meant for small challenge sets and is not something
+to run over a large field. -/
 @[expose] def challengePool (α : Type) [SampleableType α] [DecidableEq α] : List α :=
   (samplerOutcomes ($ᵗ α)).dedup
 

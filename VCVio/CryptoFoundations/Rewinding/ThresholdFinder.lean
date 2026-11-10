@@ -12,19 +12,22 @@ import Mathlib.Algebra.Order.BigOperators.Group.List
 /-!
 # The ACK threshold tree finder
 
-For rounds indexed by `Fin n` and thresholds `1 ≤ kᵢ ≤ |Cᵢ|`, the explicit computable
-`thresholdFinder` returns only accepting trees with pairwise distinct siblings. Against every
-Boolean acceptance function with acceptance rate `ε`, its success probability is at least
-`ε − (1 − ∏ᵢ (1 − (kᵢ − 1)/|Cᵢ|))`. Its unconditional expected number of acceptance-oracle
-calls is at most `∏ᵢ kᵢ`, including failed attempts.
+For rounds indexed by `Fin n`, the explicit computable `thresholdFinder` returns only accepting
+trees with pairwise distinct siblings, for every choice of thresholds `kᵢ`. Its unconditional
+expected number of acceptance-oracle calls is at most `∏ᵢ kᵢ`, including failed attempts.
 
-These are complete-run call bounds; constructing challenge pools and processing trees are not
-charged. `ResetPolicy.finder_bounds` transfers the guarantees to frozen reruns.
+For thresholds `1 ≤ kᵢ ≤ |Cᵢ|`, write `κ = 1 − ∏ᵢ (1 − (kᵢ − 1)/|Cᵢ|)`. Against every Boolean
+acceptance function with acceptance rate `ε`, its success probability `p` satisfies
+`ε ≤ κ + (1 − κ) p`, so in particular `p ≥ ε − κ`.
+
+These are complete-run call bounds; coin queries, constructing challenge pools and processing
+trees are not charged. `ResetPolicy.finder_bounds` transfers the guarantees to frozen reruns, and
+`ResetPolicy.finder_bounds_honest` states them with the honest acceptance probability.
 
 ## References
 
 * Attema, Cramer and Kohl, *A compressed Σ-protocol theory for lattices*, CRYPTO 2021,
-  Lemma 5 and Section 3.2.
+  Lemma 5 and Sections 3.2 and 3.3.
 -/
 
 public section
@@ -111,7 +114,9 @@ private theorem average_affine {C : Type} [Fintype C] [Nonempty C]
     ENNReal.mul_inv_cancel hN (by finiteness), mul_one]
   rw [mul_assoc]
 
-/-- The stronger affine ACK success estimate for the explicit recursive threshold finder. -/
+/-- The affine success estimate for the explicit recursive threshold finder: the acceptance rate
+is at most `κ + (1 − κ) p` for the threshold error `κ` and success probability `p`, the sharper
+form of Lemma 5 given in Attema, Cramer and Kohl, Section 3.3. -/
 theorem thresholdFinder_success_scaled {n : ℕ} (C : Fin n → Type)
     [∀ i, Fintype (C i)] [∀ i, SampleableType (C i)] [∀ i, DecidableEq (C i)]
     (k : Fin n → ℕ) (hk : ∀ i, 1 ≤ k i ∧ k i ≤ Fintype.card (C i))
