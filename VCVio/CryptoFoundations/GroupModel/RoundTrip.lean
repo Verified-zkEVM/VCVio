@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.GroupModel.ToExplained
 public import VCVio.CryptoFoundations.GroupModel.OfExplained
 
 /-!
-Exact round trips between handles and certified explanations
+# Exact round trips between handles and certified explanations
 
 The translations preserve output values and all ambient monadic effects when decoding
 is a left inverse of encoding. The internal tables and coefficient vectors may differ.

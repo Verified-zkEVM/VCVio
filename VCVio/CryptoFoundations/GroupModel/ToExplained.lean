@@ -9,10 +9,27 @@ public import VCVio.CryptoFoundations.GroupModel.Tracking
 public import VCVio.CryptoFoundations.GroupModel.Coins
 
 /-!
-Certified explanations of handle computations
+# Certified explanations of handle computations
+
+A certified algebraic adversary in the sense of Fuchsbauer, Kiltz and Loss sends each group
+element together with its coefficients over the elements it has received. `toExplained` turns a
+handle adversary into such an adversary: it simulates the group oracle in the tracking model on
+the received values and explains every outgoing handle by its tracked representation.
+`toExplained_run` shows that forgetting the explanations gives exactly the handle run read back
+through its final table.
 
 Tracking records coefficients over chronological receipts independently at each sort.
 Private randomness is forwarded through the coin-bearing interaction interface.
+
+Certification covers the group elements of each message, its `groups` field. The plain `data`
+of a message is not explained: an adversary may place there anything it computed, including
+group elements obtained from encoding queries when the data type contains them. Games must
+therefore read the adversary's group outputs only from `groups`.
+
+## References
+
+* G. Fuchsbauer, E. Kiltz, J. Loss, *The Algebraic Group Model and its Applications*,
+  CRYPTO 2018.
 -/
 
 public section
@@ -281,7 +298,12 @@ private theorem basis_initial [Zero F] [One F] [∀ s, Zero (G s)] (xs : Groups 
   · intro i hi hj
     simp [basis, trackInputs, lookup, List.getD, hj]
 
-/-- Turn a handle adversary into a certified adversary with chronological explanations. -/
+/-- Turn a handle adversary into a certified adversary (Fuchsbauer, Kiltz and Loss 2018) with
+chronological explanations.
+
+Each outgoing request and the final result explain their group elements, the `groups` field, by
+coefficients over the elements received so far at each sort. Their plain `data` is forwarded
+unexplained, so games must read the adversary's group outputs only from `groups`. -/
 @[expose] def toExplained [CommSemiring F] [DecidableEq S]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)] [∀ s, DecidableEq (G s)]
     (A : HandleAdversary F (discreteSig S) E Input Query Reply Result)
