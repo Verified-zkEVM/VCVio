@@ -61,7 +61,7 @@ theorem pairing_bilinear_masterBound :
       (hf : f ≠ 0) (hfD : f.totalDegree ≤ D s) :
       Pr{let x ← $ᵗ (Unit → ZMod 5)}[MvPolynomial.eval x f = 0] ≤
         (D s : ℝ≥0∞) / 5 := by
-    simpa only [ZMod.card, Nat.cast_ofNat] using prob_eval_zero_univ_le_div f hf hfD
+    simpa only [ZMod.card, Nat.cast_ofNat] using prEvent_eval_eq_zero_univ_le_div f hf hfD
   have h := measureETVDist_runGen_symbolic_le_of_target ($ᵗ (Unit → ZMod 5))
     pairing_degreeClosed_one_one_two hε oa hn tbl hd
   have huniv : (Finset.univ : Finset PSort) = {.g₁, .g₂, .gₜ} := rfl

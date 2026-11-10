@@ -88,10 +88,10 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampleabl
     · simpa [W] using he.2
   have h := prEvent_runGen_symbolic_le_add_of_polynomial ($ᵗ (Fin n → F))
     (degreeClosed_discreteSig (fun _ : Unit => 1))
-    (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A
+    (fun _ f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd) A
     (fun s => hq.appendsTo s) tbl hd W 1 (fun z _ => hW z) E
     (fun x z _ he => hE x z he)
-    (fun f hf hd => prob_eval_zero_univ_le_div f hf hd)
+    (fun f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd)
   refine h.trans_eq ?_
   simp only [Fintype.sum_unique, tbl, List.length_ofFn, Nat.cast_one,
     Nat.add_comm n q, Nat.cast_add, ENNReal.add_div]

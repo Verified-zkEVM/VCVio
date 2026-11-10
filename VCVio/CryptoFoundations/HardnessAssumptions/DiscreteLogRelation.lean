@@ -77,7 +77,7 @@ theorem prEvent_sum_mul_eq_zero_le [Field F] [Fintype F] [SampleableType F]
       (1 : ℝ≥0∞) / Fintype.card F := by
   classical
   let p : MvPolynomial (Fin n) F := ∑ i, MvPolynomial.C (a i) * MvPolynomial.X i
-  simpa [p] using prob_eval_zero_univ_le_div p
+  simpa [p] using prEvent_eval_eq_zero_univ_le_div p
     (sum_C_mul_X_ne_zero a ha) (totalDegree_sum_C_mul_X_le_one a)
 
 private theorem programmed_eq [Field F] [SampleableType F]

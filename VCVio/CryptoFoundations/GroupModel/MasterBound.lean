@@ -656,6 +656,6 @@ theorem measureETVDist_runGen_symbolic_uniform_le [Field F] [DecidableEq F]
         ((d : ℝ≥0∞) / Fintype.card F) := by
   apply measureETVDist_runGen_symbolic_le ($ᵗ (ι → F)) _ oa hq tbl hd
   intro f hf hdeg
-  exact prob_eval_zero_univ_le_div f hf hdeg
+  exact prEvent_eval_eq_zero_univ_le_div f hf hdeg
 
 end GroupModel
