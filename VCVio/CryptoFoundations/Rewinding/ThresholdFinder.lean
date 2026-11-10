@@ -153,8 +153,7 @@ theorem thresholdFinder_success_scaled {n : ℕ} (C : Fin n → Type)
       apply prEvent_assembleChildren
       exact length_thresholdChildren_run ProbComp.uniformFin (chargedChild child)
         (k 0) (challengePool (C 0)) 0
-    have hstep := thresholdChildren_success_scaled child (k 0) (challengePool (C 0))
-      (hk 0).1 (by simpa only [length_challengePool] using (hk 0).2)
+    have hstep := thresholdChildren_success_scaled child (k 0) (challengePool (C 0)) (hk 0).1
     simp only [sum_challengePool, length_challengePool, child, prEvent_map,
       Option.isSome_map] at hstep
     let a : ℝ≥0∞ := ((k 0 - 1 : ℕ) : ℝ≥0∞) / Fintype.card (C 0)

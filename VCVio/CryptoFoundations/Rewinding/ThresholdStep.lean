@@ -63,20 +63,19 @@ theorem prEvent_thresholdChildren_table (r : ℕ) (z : Option W × ℕ)
 
 /-- The affine threshold success estimate for a deterministic child table. -/
 theorem thresholdChildren_table_success_scaled (r : ℕ) (z : Option W × ℕ)
-    (zs : List (Option W × ℕ)) (count : ℕ) (hr : r ≤ zs.length) :
+    (zs : List (Option W × ℕ)) (count : ℕ) :
     ((z :: zs).countP (fun z => z.1.isSome) : ℝ≥0∞) / (zs.length + 1) ≤
       (r : ℝ≥0∞) / (zs.length + 1) +
         (1 - (r : ℝ≥0∞) / (zs.length + 1)) *
           Pr{let t ← (thresholdChildren (fun n => StateT.lift (ProbComp.uniformFin n)) tableChild
             (r + 1) (z :: zs)).run count}[t.1.isSome] := by
   rw [prEvent_thresholdChildren_table_eq]
-  have h := thresholdRound_success_scaled (fun z : Option W × ℕ => z.1.isSome) r z zs hr
+  have h := thresholdRound_success_scaled (fun z : Option W × ℕ => z.1.isSome) r z zs
   simpa only [add_comm] using tsub_le_iff_right.mp h
 
-/-- The affine threshold estimate for an arbitrary nonempty child table and feasible positive
-threshold. -/
+/-- The affine threshold estimate for an arbitrary child table and positive threshold. -/
 theorem thresholdChildren_table_success_scaled_all (k : ℕ)
-    (pool : List (Option W × ℕ)) (count : ℕ) (hkpos : 1 ≤ k) (hkle : k ≤ pool.length) :
+    (pool : List (Option W × ℕ)) (count : ℕ) (hkpos : 1 ≤ k) :
     (pool.countP (fun z => z.1.isSome) : ℝ≥0∞) / pool.length ≤
       ((k - 1 : ℕ) : ℝ≥0∞) / pool.length +
         (1 - ((k - 1 : ℕ) : ℝ≥0∞) / pool.length) *
@@ -86,10 +85,8 @@ theorem thresholdChildren_table_success_scaled_all (k : ℕ)
   | zero => omega
   | succ r =>
       cases pool with
-      | nil => simp at hkle
-      | cons z zs =>
-          have hr : r ≤ zs.length := by simpa using hkle
-          simpa using thresholdChildren_table_success_scaled r z zs count hr
+      | nil => simp
+      | cons z zs => simpa using thresholdChildren_table_success_scaled r z zs count
 
 /-- A deterministic child table costs at most the threshold times the average entry cost,
 without conditioning on whether a full set of successful children was found. -/
@@ -160,7 +157,7 @@ theorem expectedCalls_thresholdChildren {C W : Type}
 error times the success probability of the complete threshold step. -/
 theorem thresholdChildren_success_scaled {C W : Type}
     (child : C → ProbComp (Option W × ℕ)) (k : ℕ) (pool : List C)
-    (hk : 1 ≤ k) (hkl : k ≤ pool.length) :
+    (hk : 1 ≤ k) :
     (pool.map fun c => Pr{let z ← child c}[z.1.isSome]).sum / pool.length ≤
       ((k - 1 : ℕ) : ℝ≥0∞) / pool.length +
         (1 - ((k - 1 : ℕ) : ℝ≥0∞) / pool.length) *
@@ -188,7 +185,7 @@ theorem thresholdChildren_success_scaled {C W : Type}
       intro table ht
       have hlen := List.length_of_mem_support_mapM child pool table ht
       rw [← hlen]
-      exact thresholdChildren_table_success_scaled_all k table 0 hk (hlen ▸ hkl)
+      exact thresholdChildren_table_success_scaled_all k table 0 hk
     _ = _ := by
       rw [lintegral_add_left measurable_const, lintegral_const, measure_univ, mul_one,
         lintegral_const_mul _ Measurable.of_discrete]

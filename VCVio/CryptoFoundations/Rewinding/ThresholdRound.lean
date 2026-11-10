@@ -520,8 +520,7 @@ theorem expectedCalls_thresholdRound (f : C → Bool) (r : ℕ) (c : C) (cs : Li
 
 /-- The strengthened one-round success estimate keeps the multiplicative factor needed when
 threshold attempts are nested over several rounds. -/
-theorem thresholdRound_success_scaled (f : C → Bool) (r : ℕ) (c : C) (cs : List C)
-    (hr : r ≤ cs.length) :
+theorem thresholdRound_success_scaled (f : C → Bool) (r : ℕ) (c : C) (cs : List C) :
     ((c :: cs).countP f : ℝ≥0∞) / (cs.length + 1) -
         (r : ℝ≥0∞) / (cs.length + 1) ≤
       (1 - (r : ℝ≥0∞) / (cs.length + 1)) *
@@ -534,12 +533,14 @@ theorem thresholdRound_success_scaled (f : C → Bool) (r : ℕ) (c : C) (cs : L
     let a : ℝ≥0∞ := (r : ℝ≥0∞) / (cs.length + 1)
     have hN : (cs.length : ℝ≥0∞) + 1 ≠ 0 := by positivity
     have hNt : (cs.length : ℝ≥0∞) + 1 ≠ ⊤ := by finiteness
+    have hcl := List.countP_le_length (p := f) (l := c :: cs)
+    simp only [List.length_cons] at hcl
     have hε : ε ≤ 1 := by
       calc
         ε ≤ ((cs.length : ℝ≥0∞) + 1) / (cs.length + 1) := by
           dsimp only [ε]
           gcongr
-          exact_mod_cast List.countP_le_length (p := f) (l := c :: cs)
+          exact_mod_cast hcl
         _ = 1 := ENNReal.div_self hN hNt
     have ha : a ≤ 1 := by
       calc
