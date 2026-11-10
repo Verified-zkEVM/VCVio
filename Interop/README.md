@@ -53,14 +53,9 @@ and the fork of Aeneas it pins names it `RustM`; upstream Aeneas calls the same 
 | `Interop.Rust.Triple` | Aeneas's specifications (`spec`, `dspec`, `Std.Do` triples) as `Std.WP` triples for the lift, under any interpretation of `OracleComp spec`, and the `vcgen` rule `Spec.liftRustM` |
 | `Interop.Aeneas.ITree` | Aeneas's interaction trees as PolyFun's: an injective monad morphism into `ITree ⟨E.I, E.O⟩`, sending `div` to `ITree.diverge` |
 | `Interop.Aeneas.WP` | Aeneas's total and partial correctness (`DWP`, `DWLP`) are PolyFun's `ITree.wpTotal` and `ITree.wpPartial` along `toPolyFun`, for every Aeneas effect, with exact `bind` laws as corollaries |
-| `Interop.Hax.CenteredBinomial` | ML-KEM's CBD(η = 1) step, from its Rust source (`third_party/hax-cbd`) through `RustM` to its distribution: `0` with probability `1/2`, `±1` with `1/4` each |
-
-The other modules in `Interop/Hax/` predate hax's move onto Aeneas, and are not built until they
-are ported; see [its README](Hax/README.md).
+| `Interop.Hax.*` | hax examples, from Rust source through `RustM` into VCVio: ML-KEM's centred binomial sampler and Barrett reduction, add-with-carry, checked arithmetic and division, and a Rust step after an oracle query; see [their README](Hax/README.md) |
 
 ## Not yet done
 
-- **Port the other hax examples** to Aeneas's scalars (`U8`, `I32`, literals such as `1#u8`), where
-  bitwise operations and casts are pure and shifts and arithmetic are checked.
-- **Regenerate extractions.** Regenerate `third_party/hax-cbd` with the hax CLI. The sampler in
-  `CenteredBinomial` is transcribed in hax's current emission style.
+- **Regenerate extractions.** Regenerate the hax examples with the hax CLI (`third_party/hax-cbd`
+  for the sampler). Their code is transcribed in hax's current emission style.
