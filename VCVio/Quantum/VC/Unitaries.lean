@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.Oracle.Basis
 public import VCVio.Quantum.VC.MultiExtractor
 public import VCVio.Quantum.Oracle.Compressed.CommutatorSharp
 public import VCVio.Quantum.Oracle.Emulated
@@ -61,12 +62,6 @@ namespace Quantum
 /-! ## Basis permutations and placement on a factor -/
 
 section onFactor
-
-/-- The basis matrix of a bijection is unitary. -/
-theorem basisMatrix_perm_mem_unitaryGroup {A : Type*} [Fintype A] [DecidableEq A]
-    (e : Equiv.Perm A) : basisMatrix e ∈ unitaryGroup A ℂ := by
-  rw [mem_unitaryGroup_iff', star_eq_conjTranspose]
-  exact conjTranspose_basisMatrix_mul_self e.injective
 
 variable {n A R : Type*} [DecidableEq R]
 

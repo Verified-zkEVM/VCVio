@@ -79,7 +79,7 @@ def obsDiscard : HasQuery (ObsSpec Ev) m where
 /-- `HasQuery` instance that accumulates observation events in a `WriterT ω m` layer.
 Each event `e` is encoded as `encode e` and accumulated via `tell`. -/
 @[reducible]
-def obsAccumulate [Monoid ω] (encode : Ev → ω) : HasQuery (ObsSpec Ev) (WriterT ω m) where
+def obsAccumulate (encode : Ev → ω) : HasQuery (ObsSpec Ev) (WriterT ω m) where
   query e := tell (encode e)
 
 end HasQuery

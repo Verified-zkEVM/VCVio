@@ -30,7 +30,13 @@ $S\psi = \sum_a (K_a\psi) \otimes |a\rangle$. Here $S|a\rangle = |a\rangle \otim
 copies the basis value into an environment. Then
 $\Delta(\rho) = \operatorname{tr}_E(S\rho S^\dagger)$ (`sum_conj_eq_traceRight_comp_conj`), and
 $S^\dagger S = 1$, so $S$ is an isometry (`exists_stinespring_of_isTP` gives this for every
-channel).
+channel). The isometry extends to a unitary on a larger system: every channel is a basis embedding,
+then a unitary, then discarding the environment (`IsCP.exists_unitary_of_isTP`).
+
+**Trace dual.** The dual $\Phi^\dagger$ is defined by
+$\operatorname{tr}(\Phi^\dagger(Y)\,X) = \operatorname{tr}(Y\,\Phi(X))$ (`MatrixMap.dual`,
+`trace_dual_mul`). In Kraus form it replaces each $K_a$ by $K_a^\dagger$ (`dual_conj`), and
+$\Phi$ preserves the trace exactly when $\Phi^\dagger(1) = 1$ (`isTP_iff_dual_one`).
 
 For contrast, the identity channel has Choi matrix $|\Omega\rangle\langle\Omega|$, of rank one, and
 the single Kraus operator $1$ (`choi_id`, `id_eq_sum_conj`). The Choi matrix of the transpose map

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Report API-boundary source signals; this is an inventory, not a defect linter."""
 
 from pathlib import Path
@@ -10,7 +10,6 @@ ROOT = Path(__file__).resolve().parent.parent
 SCANNER = runpy.run_path(str(ROOT / "scripts/count-expose-boundary.py"))
 ROOTS = (
     "ToMathlib", "VCVio", "LatticeCrypto", "HashSig", "Extern", "Examples",
-    "VCVioWidgets", "VCVioCslib", "VCVioComplexity/VCVioComplexity",
 )
 
 
