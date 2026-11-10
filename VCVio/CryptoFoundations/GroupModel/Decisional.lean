@@ -9,7 +9,8 @@ public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import Mathlib.LinearAlgebra.LinearIndependent.Defs
 import Mathlib.Data.List.GetD
 
-/-! # The decisional master theorem for discrete group models
+/-!
+# The decisional master theorem for discrete group models
 
 Equally shaped symbolic tables with the same linear relations give identical exact runs.
 The hidden-point runs differ by at most the sum of their two polynomial collision bounds,
@@ -27,17 +28,17 @@ variable {F S ι : Type}
 
 /-- Two symbolic tables have equal lengths and the same vanishing linear combinations
 in every sort. -/
-@[expose] def SameKernel [Field F] (T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)) : Prop :=
+@[expose] def SameKernel [CommRing F] (T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)) : Prop :=
   ∀ s, (T₀ s).length = (T₁ s).length ∧
     ∀ r : Coeffs F, evRepr (T₀ s) r = 0 ↔ evRepr (T₁ s) r = 0
 
 /-- Equal relation kernels identify the same pairs of representations. -/
-theorem SameKernel.eq_iff [Field F] {T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)}
+theorem SameKernel.eq_iff [CommRing F] {T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)}
     (h : SameKernel T₀ T₁) (s : S) (r r' : Coeffs F) :
     evRepr (T₀ s) r = evRepr (T₀ s) r' ↔ evRepr (T₁ s) r = evRepr (T₁ s) r' := by
   simpa only [map_sub, sub_eq_zero] using (h s).2 (r - r')
 
-private theorem evRepr_eq_zero_iff [Field F] {G : Type} [AddCommGroup G] [Module F G]
+private theorem evRepr_eq_zero_iff [CommRing F] {G : Type} [AddCommGroup G] [Module F G]
     (xs : List G) (h : LinearIndependent F xs.get) (r : Coeffs F) :
     evRepr xs r = 0 ↔ ∀ i < xs.length, r i = 0 := by
   rw [evRepr_apply, ← Fin.sum_univ_eq_sum_range]
@@ -49,7 +50,7 @@ private theorem evRepr_eq_zero_iff [Field F] {G : Type} [AddCommGroup G] [Module
     exact Finset.sum_eq_zero fun i _ => by rw [he i i.isLt, zero_smul]
 
 /-- Equally long, linearly independent tables have the same relation kernel. -/
-theorem sameKernel_of_linearIndependent [Field F]
+theorem sameKernel_of_linearIndependent [CommRing F]
     {T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)}
     (hlen : ∀ s, (T₀ s).length = (T₁ s).length)
     (h₀ : ∀ s, LinearIndependent F (T₀ s).get)
@@ -70,15 +71,17 @@ private theorem symbolic_discrete_eq [CommSemiring F] :
     exact o.elim
   exact congrArg₂ Model.mk hl hb
 
-private theorem mapTbl_units [Field F] (T : Tbl (fun _ : S => MvPolynomial ι F)) :
+private theorem mapTbl_units [CommSemiring F] (T : Tbl (fun _ : S => MvPolynomial ι F)) :
     mapTbl (fun s => evRepr (F := F) (T s))
       (fun s => List.ofFn (fun i : Fin (T s).length => Pi.single (i : Handle) 1)) = T := by
   funext s
   simp [mapTbl, List.map_ofFn, Function.comp_def, evRepr_single]
 
 /-- Tables with the same shape and relation kernel give identical exact returned values.
-T6 applies to evaluation morphisms out of the free discrete model on unit representations. -/
-theorem SameKernel.runGen_fst_eq [Field F] [DecidableEq F] [DecidableEq ι] [DecidableEq S]
+The kernel lemma `runGen_fst_eq_of_kernel_eq` (T6) applies to the evaluation morphisms
+`evHom.discrete T₀` and `evHom.discrete T₁` out of the free discrete model, on unit
+representations. -/
+theorem SameKernel.runGen_fst_eq [CommRing F] [DecidableEq F] [DecidableEq ι] [DecidableEq S]
     {T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)} (h : SameKernel T₀ T₁)
     {α : Type} (oa : OracleComp (genSpec F (discreteSig S)) α) :
     Prod.fst <$> runGen (symbolic F (discreteSig S) ι) (fun _ => id) oa T₀ =
@@ -128,9 +131,10 @@ theorem measureETVDist_runGen_symbolic_fst_le [Field F] [DecidableEq F] [Decidab
 
 /-! ## Decisional bounds -/
 
-/-- **T7, the decisional master theorem.** Equal shapes and relation kernels bound the
-joint hidden-point/output distance by the sum of the two T3 collision terms. Each side
-uses its own degree and root-probability bound. -/
+/-- The decisional master theorem (T7). Equal shapes and relation kernels bound the joint
+distance of the hidden point and the output by the sum of two collision terms of
+`measureETVDist_runGen_symbolic_le` (T3), one for each table. Each side uses its own degree and
+root-probability bound; `q` bounds the group operations over all sorts together. -/
 theorem measureETVDist_runGen_sameKernel_le [Field F] [DecidableEq F]
     [Fintype S] [DecidableEq S] {α : Type} [MeasurableSpace ((ι → F) × α)]
     (xs : ProbComp (ι → F)) {d₀ d₁ q : ℕ} {ε₀ ε₁ : ℝ≥0∞}
@@ -156,14 +160,15 @@ theorem measureETVDist_runGen_sameKernel_le [Field F] [DecidableEq F]
     let x ← xs
     let z ← runGen (symbolic F (discreteSig S) ι) (fun _ => id) oa T
     pure (x, z.1)
-  -- T6 identifies the exact runs, including their joint outputs with the hidden point.
+  -- `SameKernel.runGen_fst_eq` identifies the exact runs, jointly with the hidden point.
   have he : exactRun T₀ = exactRun T₁ := by
     simp only [exactRun, bind_pure_comp]
     congr 1
     funext x
     simpa only [Functor.map_map, Function.comp_def] using
       congrArg (fun c : ProbComp α => (fun a => (x, a)) <$> c) (h.runGen_fst_eq oa)
-  -- Project T3 on each side and join the bounds through the common exact run.
+  -- Bound each side by `measureETVDist_runGen_symbolic_fst_le` and join them through the
+  -- common exact run.
   have h₀ := measureETVDist_runGen_symbolic_fst_le xs hε₀ oa hq T₀ hd₀
   have h₁ := measureETVDist_runGen_symbolic_fst_le xs hε₁ oa hq T₁ hd₁
   change measureETVDist _ (exactRun T₁) ≤ _ at h₁
