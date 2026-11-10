@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Bind
-public import ToMathlib.Probability.Kernel.Subprobability
+public import ToCslib.Probability.Kernel.Subprobability
 
 /-!
 # Total variation for composed kernels
