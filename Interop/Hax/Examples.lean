@@ -61,7 +61,7 @@ theorem triple_oracleThenAdd (x : U32) (t : ι) (coe : spec.Range t → U32)
       (fun _ => False, fun _ => False, ()) := by
   unfold oracleThenAdd
   refine Std.WP.Triple.bind _ _ (fun _ => True) ?_ fun y => ?_
-  · vcgen []
+  · vcgen
   · refine ⟨Std.WP.Triple.entails_wp_of_pre_post
       (triple_liftRustM_of_triple (spec := spec) (addOrPanic_spec x (coe y)))
       (fun _ => hbound y) (fun r hr => ?_)⟩
