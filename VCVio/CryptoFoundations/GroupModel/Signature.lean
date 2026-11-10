@@ -11,6 +11,13 @@ public import Mathlib.LinearAlgebra.Prod
 
 /-!
 # Sorted group signatures and models
+
+A signature names the sorts of a group setting and its linear and bilinear structure maps; a
+model interprets each sort as a module and each structure map as a linear or bilinear map. A
+generic computation refers to group elements by handles (`Handle := ℕ`), positions in the table
+of one sort. Handles carry no sort, as in Maurer's register model of generic computation
+(Maurer, *Abstract Models of Computation in Cryptography*, IMA 2005): each query names the sort
+it reads.
 -/
 
 public section
@@ -65,6 +72,7 @@ structure Model (F : Type) [CommSemiring F] {S : Type} (σ : Sig S) (V : S → T
   bil : (o : σ.Bil) → V (σ.src₁ o) →ₗ[F] V (σ.src₂ o) →ₗ[F] V (σ.tgt o)
 
 /-- A morphism of models: a linear map per sort that commutes with the structure maps. -/
+@[ext]
 structure Model.Hom {F : Type} [CommSemiring F] {S : Type} {σ : Sig S} {V W : S → Type}
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
     [∀ s, AddCommMonoid (W s)] [∀ s, Module F (W s)]
@@ -118,6 +126,29 @@ def Model.Hom.snd (M : Model F σ V) (N : Model F σ W) : (M.prod N).Hom N where
   map_lin _ _ := by rfl
   map_bil _ _ _ := by rfl
 
+/-- Composing with the identity on the left does nothing. -/
+@[simp] theorem Model.Hom.id_comp {M : Model F σ V} {N : Model F σ W} (φ : M.Hom N) :
+    (Model.Hom.id N).comp φ = φ := by
+  ext1
+  funext s
+  exact LinearMap.id_comp _
+
+/-- Composing with the identity on the right does nothing. -/
+@[simp] theorem Model.Hom.comp_id {M : Model F σ V} {N : Model F σ W} (φ : M.Hom N) :
+    φ.comp (Model.Hom.id M) = φ := by
+  ext1
+  funext s
+  exact LinearMap.comp_id _
+
+/-- Composition of model morphisms is associative. -/
+theorem Model.Hom.comp_assoc {K : S → Type} [∀ s, AddCommMonoid (K s)] [∀ s, Module F (K s)]
+    {L : Model F σ V} {M : Model F σ W} {N : Model F σ X} {P : Model F σ K}
+    (χ : N.Hom P) (ψ : M.Hom N) (φ : L.Hom M) :
+    (χ.comp ψ).comp φ = χ.comp (ψ.comp φ) := by
+  ext1
+  funext s
+  exact LinearMap.comp_assoc _ _ _
+
 /-- The identity morphism acts as the identity at each sort. -/
 @[simp] theorem Model.Hom.id_apply (M : Model F σ V) (s : S) (x : V s) :
     (Model.Hom.id M).toFun s x = x := by rfl
@@ -148,9 +179,12 @@ def Model.Hom.snd (M : Model F σ V) (N : Model F σ W) : (M.prod N).Hom N where
 
 end Models
 
-/-- One group: one sort, no structure map. -/
-@[expose] def groupSig : Sig Unit :=
+/-- Independent sorts with no structure maps. -/
+@[expose] def discreteSig (S : Type) : Sig S :=
   ⟨Empty, Empty.elim, Empty.elim, Empty, Empty.elim, Empty.elim, Empty.elim⟩
+
+/-- One group: one sort, no structure map. -/
+@[expose] def groupSig : Sig Unit := discreteSig Unit
 
 /-- The sorts of a pairing group. -/
 inductive PSort
@@ -161,16 +195,15 @@ inductive PSort
 @[expose] def pairingSig : Sig PSort :=
   ⟨Empty, Empty.elim, Empty.elim, Unit, fun _ => .g₁, fun _ => .g₂, fun _ => .gₜ⟩
 
-/-- Asymmetric pairing with a map from the second source group to the first (Type 2). -/
+/-- Asymmetric pairing with a map from the second source group to the first (Type 2). That the
+map is invertible or not is a property of the model, not of the signature. -/
 @[expose] def pairingIsoSig : Sig PSort :=
   ⟨Unit, fun _ => .g₂, fun _ => .g₁, Unit, fun _ => .g₁, fun _ => .g₂, fun _ => .gₜ⟩
 
-/-- Symmetric pairing (Type 1): one source sort paired with itself. -/
+/-- Symmetric pairing (Type 1): one source sort paired with itself. Symmetry of the pairing is a
+property of the model's bilinear map, which the signature does not impose. -/
 @[expose] def symmPairingSig : Sig Bool :=
   ⟨Empty, Empty.elim, Empty.elim, Unit, fun _ => false, fun _ => false, fun _ => true⟩
 
-/-- Independent sorts with no structure maps. -/
-@[expose] def discreteSig (S : Type) : Sig S :=
-  ⟨Empty, Empty.elim, Empty.elim, Empty, Empty.elim, Empty.elim, Empty.elim⟩
 
 end GroupModel

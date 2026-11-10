@@ -94,10 +94,22 @@ theorem impl_congr {U' : S → Type} [∀ s, DecidableEq (U s)] [∀ s, Decidabl
   | eq s a b => simp [impl, h]
   | _ => rfl
 
+/-- A generic run in a product model, observed through the second component, projects to the run
+in the second factor. -/
+theorem runGen_prod_snd [∀ s, DecidableEq (W s)] (M : Model F σ V) (N : Model F σ W) {α : Type}
+    (oa : OracleComp (genSpec F σ) α) (tbl : Tbl fun s => V s × W s) :
+    Prod.map id (mapTbl fun _ => Prod.snd) <$> runGen (M.prod N) (fun _ => Prod.snd) oa tbl =
+      runGen N (fun _ => id) oa (mapTbl (fun _ => Prod.snd) tbl) := by
+  have hsnd : (fun s => ⇑((Model.Hom.snd M N).toFun s)) = (fun _ => Prod.snd) := by
+    funext s x
+    simp only [Model.Hom.snd_apply]
+  simpa only [hsnd, Function.comp_def, id_eq] using
+    runGen_map (Model.Hom.snd M N) (fun _ => id) oa tbl
+
 /-- The kernel lemma. If two tables are the images of one table under morphisms that identify
-the same pairs of elements, the two generic runs have the same output distribution.
-Uniform sampling does not touch the table; this statement concerns `runGen`. -/
-theorem run_fst_eq_of_kernel_eq {K : S → Type} [∀ s, AddCommMonoid (K s)] [∀ s, Module F (K s)]
+the same pairs of elements, the two generic runs are the same computation of outputs. Uniform
+sampling does not touch the table. -/
+theorem runGen_fst_eq_of_kernel_eq {K : S → Type} [∀ s, AddCommMonoid (K s)] [∀ s, Module F (K s)]
     [∀ s, DecidableEq (V s)] [∀ s, DecidableEq (W s)]
     {L : Model F σ K} {M : Model F σ V} {N : Model F σ W} (φ : L.Hom M) (ψ : L.Hom N)
     (h : ∀ s x y, φ.toFun s x = φ.toFun s y ↔ ψ.toFun s x = ψ.toFun s y)
