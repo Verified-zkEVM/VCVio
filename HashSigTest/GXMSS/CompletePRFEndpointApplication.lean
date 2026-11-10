@@ -25,7 +25,7 @@ open GXMSS.PRFDerived.Unforgeability
 example
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M]
-    [DecidableEq R] [DecidableEq (Signature R H h v)]
+    [DecidableEq R]
     [DecidableEq (GXMSS.PRFDerived.Query PP M h v)] [SampleableType Response]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
     (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
@@ -48,12 +48,12 @@ example
         (GXMSS.Reductions.firstChainTargetCollisionReduction hash enc budget adv) +
       SM_DT_TCR_Advantage
         (GXMSS.Reductions.secondChainTargetCollisionReduction hash enc budget adv) +
-      (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) *
-        ((↑(2 ^ w) : ℝ≥0∞) * SM_DT_UD_Advantage
-          (GXMSS.Reductions.jointUndetectabilityReduction
-            hash enc budget hv hw adv) +
-          SM_DT_PRE_Advantage
-            (GXMSS.Reductions.jointPreimageReduction hash enc budget hv hw adv))) :=
+      (((2 ^ h) * v * (2 ^ w - 1) : ℕ) : ℝ≥0∞) *
+        SM_DT_PRE_Advantage
+          (GXMSS.Reductions.jointPreimageReduction hash enc budget hv hw adv) +
+      (((2 ^ h) * v * (2 ^ w - 1) ^ 2 : ℕ) : ℝ≥0∞) *
+        SM_DT_UD_Advantage
+          (GXMSS.Reductions.jointUndetectabilityReduction hash enc budget hv hw adv)) :=
   GXMSS.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound hash enc prf projection
     budget qs hv hw htwo adv hbound hseed hstart hretry
 

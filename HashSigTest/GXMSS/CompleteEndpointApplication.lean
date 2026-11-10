@@ -21,7 +21,6 @@ open OracleComp OracleSpec TweakableHash ENNReal
 example {PP T X H M R : Type} {h w v : ℕ}
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K qs : ℕ)
     (hv : 0 < v) (hw : 0 < w)
@@ -36,10 +35,10 @@ example {PP T X H M R : Type} {h w v : ℕ}
           (GXMSS.Reductions.encodingTargetCollisionReduction hash enc qs K adv) +
         SM_DT_TCR_Advantage (GXMSS.Reductions.firstChainTargetCollisionReduction hash enc K adv) +
         SM_DT_TCR_Advantage (GXMSS.Reductions.secondChainTargetCollisionReduction hash enc K adv) +
-        (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) *
-          ((↑(2 ^ w) : ℝ≥0∞) * SM_DT_UD_Advantage
-              (GXMSS.Reductions.jointUndetectabilityReduction hash enc K hv hw adv) +
-            SM_DT_PRE_Advantage
-              (GXMSS.Reductions.jointPreimageReduction hash enc K hv hw adv)) :=
+        (↑((2 ^ h) * v * (2 ^ w - 1)) : ℝ≥0∞) *
+          SM_DT_PRE_Advantage (GXMSS.Reductions.jointPreimageReduction hash enc K hv hw adv) +
+        (((2 ^ h) * v * (2 ^ w - 1) ^ 2 : ℕ) : ℝ≥0∞) *
+          SM_DT_UD_Advantage
+            (GXMSS.Reductions.jointUndetectabilityReduction hash enc K hv hw adv) :=
   (GXMSS.Unforgeability.strong_unforgeability_reduction_bound
     hash enc K qs hv hw htwo adv) hqueries

@@ -56,7 +56,7 @@ variable {Key PP T X H M R Response : Type} {h w v : ℕ}
 @[expose] noncomputable def strongUnforgeabilityBound
     [SampleableType H] [SampleableType R] [SampleableType Response]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (Signature R H h v)] [DecidableEq (GXMSS.PRFDerived.Query PP M h v)]
+    [DecidableEq (GXMSS.PRFDerived.Query PP M h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
     (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
@@ -89,7 +89,7 @@ count from the generic theorem. -/
 theorem strong_unforgeability_reduction_bound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M]
-    [DecidableEq R] [DecidableEq (Signature R H h v)]
+    [DecidableEq R]
     [DecidableEq (GXMSS.PRFDerived.Query PP M h v)] [SampleableType Response]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
     (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
@@ -109,6 +109,5 @@ theorem strong_unforgeability_reduction_bound
   have hgeneric := (GXMSS.Unforgeability.strong_unforgeability_reduction_bound
     hash enc budget qs hv hw htwo adv) hbound
   exact hhop.trans (add_le_add_right hgeneric _)
-
 
 end GXMSS.PRFDerived.Unforgeability

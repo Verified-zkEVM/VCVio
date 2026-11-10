@@ -104,8 +104,10 @@ The ordinary theorem module
 [`Security/Unforgeability.lean`](../../HashSig/GXMSS/Security/Unforgeability.lean)
 defines and proves
 `GXMSS.Unforgeability.strong_unforgeability_reduction_bound`.
-Its adjacent `reductionBound` definition gives the numerical sum of four collision
-advantages and the two weighted chain advantages. The proposition
+Its adjacent `reductionBound` definition uses the exact positive-position coefficients
+above, together with the four collision advantages.
+`strong_unforgeability_power_of_two_reduction_bound` is a separate corollary with the
+relaxed `powerOfTwoReductionBound`. The proposition
 `StrongUnforgeabilityReductionBound` retains the pathwise signing-query implication
 and applies that sum to the named reductions. The proof applies the interval theorem
 at full range and transports the experiment and displayed bound. Lower reductions
@@ -134,7 +136,8 @@ uses the complete additive PRF hop and three projection laws:
 - Retry randomizers have the uniform `R` distribution.
 
 The scheme uses the PRF's actual key generator and retains the declared sampling
-and equality instances; no uniform-key hypothesis is required. Its function-query bound is `1 + N*v + qs*K`.
+and equality instances; no uniform-key hypothesis is required. Its function-query
+bound is `1 + N*v + qs*K`.
 
 The general interval endpoint
 `GXMSS.Interval.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound`
@@ -157,7 +160,7 @@ experiment measures and the distinguishing advantage. Real transport assumes
 no key-distribution or projection law; ideal transport needs sampleable
 responses and query equality, with no projection law or finite query-domain
 premise. `fillerQueries_full_bound` proves zero filler queries.
-`fullRangeDisplayedBound` gives the complete displayed right-hand side.
+`fullRangeDisplayedBound` gives the sharp complete displayed right-hand side.
 `fullRangeStrongReductionBound` is a three-law full-range corollary with the
 adjacent numerical `fullRangeStrongUnforgeabilityBound`. It needs no filler
 projection law because the full range has no filler coordinate.

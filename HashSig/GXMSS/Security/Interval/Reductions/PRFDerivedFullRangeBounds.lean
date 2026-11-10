@@ -19,7 +19,7 @@ import all HashSig.GXMSS.Security.Interval.Reductions.FullRange
 /-!
 # Full-range PRF bound expression
 
-Actual query-domain advantage transport and original-domain algebra identify the relaxed
+Actual query-domain advantage transport and original-domain algebra identify the sharp
 interval bound expression with the complete-tree displayed expression.
 -/
 
@@ -29,12 +29,11 @@ open OracleComp OracleSpec Encoding GXMSS GXMSS.IntervalMerkle
 open ProbabilityTheory MeasureTheory ENNReal
 variable {Key PP T X H M R Response : Type} {h w v : ℕ}
 
-/-- Actual PRF domain renaming and original-domain algebra specialize the relaxed full-range
+/-- Actual PRF domain renaming and original-domain algebra specialize the sharp full-range
 interval RHS without key or response projection sampling laws. -/
 theorem fullRangeDisplayedBound
     [SampleableType H] [SampleableType R] [SampleableType Response]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)]
     [DecidableEq (GXMSS.PRFDerived.Query PP M h v)]
     (hash : HashInstance PP T X H h w v)
@@ -45,7 +44,7 @@ theorem fullRangeDisplayedBound
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
     prf.prfAdvantage (randgenPRFReduction hash enc p K (Interval.full h) adv) +
-      GXMSS.Interval.Unforgeability.powerOfTwoStrongUnforgeabilityBound hash enc K qs
+      GXMSS.Interval.Unforgeability.strongUnforgeabilityBound hash enc K qs
         (Interval.full h) hv hw adv =
       (restrictPRF prf).prfAdvantage
         (GXMSS.PRFDerived.Unforgeability.randgenPRFReduction hash enc p.toComplete K adv) +
@@ -57,13 +56,14 @@ theorem fullRangeDisplayedBound
           (GXMSS.Reductions.firstChainTargetCollisionReduction hash enc K adv) +
         TweakableHash.SM_DT_TCR_Advantage
           (GXMSS.Reductions.secondChainTargetCollisionReduction hash enc K adv) +
-        (((2 ^ h) * v * 2 ^ w : ℕ) : ℝ≥0∞) *
-          (((2 ^ w : ℕ) : ℝ≥0∞) * TweakableHash.SM_DT_UD_Advantage
-            (GXMSS.Reductions.jointUndetectabilityReduction hash enc K hv hw adv) +
+        (((2 ^ h) * v * (2 ^ w - 1) : ℕ) : ℝ≥0∞) *
           TweakableHash.SM_DT_PRE_Advantage
-            (GXMSS.Reductions.jointPreimageReduction hash enc K hv hw adv))) := by
+            (GXMSS.Reductions.jointPreimageReduction hash enc K hv hw adv) +
+        (((2 ^ h) * v * (2 ^ w - 1) ^ 2 : ℕ) : ℝ≥0∞) *
+          TweakableHash.SM_DT_UD_Advantage
+            (GXMSS.Reductions.jointUndetectabilityReduction hash enc K hv hw adv)) := by
   rw [fullRangePRFAdvantage hash enc prf p K adv,
-    GXMSS.Interval.Unforgeability.powerOfTwoStrongUnforgeabilityBound_full hash enc K qs hv hw adv]
+    GXMSS.Interval.Unforgeability.strongUnforgeabilityBound_full hash enc K qs hv hw adv]
 
 
 end GXMSS.Interval.PRFDerived.Unforgeability

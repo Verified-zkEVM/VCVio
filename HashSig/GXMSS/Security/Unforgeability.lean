@@ -30,11 +30,33 @@ noncomputable section
 
 variable {PP T X H M R : Type} {h w v : ℕ}
 
-/-- The complete-tree numerical bound for four collision and two chain advantages. -/
+/-- The sharp complete-tree bound with exact positive-chain-position coefficients. -/
 @[expose] def reductionBound (h w v : ℕ)
     (merkle encoding firstChain secondChain ud pre : ℝ≥0∞) : ℝ≥0∞ :=
   merkle + encoding + firstChain + secondChain +
+    (↑((2 ^ h) * v * (2 ^ w - 1)) : ℝ≥0∞) * pre +
+    (((2 ^ h) * v * (2 ^ w - 1) ^ 2 : ℕ) : ℝ≥0∞) * ud
+
+/-- The power-of-two relaxation of the exact complete-tree bound. -/
+@[expose] def powerOfTwoReductionBound (h w v : ℕ)
+    (merkle encoding firstChain secondChain ud pre : ℝ≥0∞) : ℝ≥0∞ :=
+  merkle + encoding + firstChain + secondChain +
     (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) * ((↑(2 ^ w) : ℝ≥0∞) * ud + pre)
+
+/-- Enlarging positive-position counts gives the power-of-two relaxation. -/
+theorem reductionBound_le_powerOfTwo (h w v : ℕ)
+    (merkle encoding firstChain secondChain ud pre : ℝ≥0∞) :
+    reductionBound h w v merkle encoding firstChain secondChain ud pre ≤
+      powerOfTwoReductionBound h w v merkle encoding firstChain secondChain ud pre := by
+  unfold reductionBound powerOfTwoReductionBound
+  calc
+    _ ≤ merkle + encoding + firstChain + secondChain +
+        (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) * pre +
+        (((2 ^ h) * v * (2 ^ w) ^ 2 : ℕ) : ℝ≥0∞) * ud := by
+      gcongr <;> exact Nat.sub_le _ _
+    _ = _ := by
+      push_cast
+      ring
 
 /-- The concrete separate-term reduction inequality underlying Theorem 1. The parameter `qs`
 controls the encoding target-collision transcript, and `K` controls its retry law. The source
@@ -45,7 +67,6 @@ reduction-query or running-time bounds. -/
 def StrongUnforgeabilityReductionBound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K qs : ℕ)
     (advGXMSS : SyncSignatureUnforgeability.Adversary unifSpec (GXMSS.PublicKey PP H)
@@ -83,7 +104,6 @@ global code containing two distinct words. -/
 theorem strong_unforgeability_reduction_bound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K qs : ℕ)
     (hv : 0 < v) (hw : 0 < w)
@@ -100,14 +120,39 @@ theorem strong_unforgeability_reduction_bound
       (GXMSS.Reductions.jointPreimageReduction hash enc K hv hw adv) := by
   intro hqueries
   unfold reductionBound
-  have hbound := strong_unforgeability_power_of_two_reduction_bound
+  have hbound := GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound
       hash enc K qs (GXMSS.IntervalMerkle.Interval.full h) hv hw htwo adv hqueries
-  rw [GXMSS.Interval.Unforgeability.powerOfTwoStrongUnforgeabilityBound_full] at hbound
+  rw [GXMSS.Interval.Unforgeability.strongUnforgeabilityBound_full] at hbound
   simpa only [SyncSignatureUnforgeability.strongAdvantage,
     GXMSS.Interval.strongUnforgeableExp_full, GXMSS.Reductions.Epoch,
     GXMSS.Reductions.merkleTCRProblem, GXMSS.Reductions.chainTCRProblem,
     GXMSS.Reductions.encodingTCRProblem, GXMSS.Reductions.chainUDProblem,
     GXMSS.Reductions.chainPREProblem, Nat.cast_pow, Nat.cast_ofNat] using hbound
+
+/-- The complete strong-unforgeability theorem with relaxed power-of-two coefficients. -/
+theorem strong_unforgeability_power_of_two_reduction_bound
+    [SampleableType H] [SampleableType R]
+    [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
+    (hash : HashInstance PP T X H h w v)
+    (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w)) (K qs : ℕ)
+    (hv : 0 < v) (hw : 0 < w)
+    (htwo : ∃ x y : Codeword v (2 ^ w),
+      x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y)
+    (adv : SyncSignatureUnforgeability.Adversary unifSpec (GXMSS.PublicKey PP H)
+      (Fin (2 ^ h)) M (GXMSS.Signature R H h v))
+    (hqueries : SigningQueryBound qs adv) :
+    SyncSignatureUnforgeability.strongAdvantage (GXMSS.scheme hash enc K)
+      ProbCompRuntime.probComp adv ≤
+      powerOfTwoReductionBound h w v
+        (SM_DT_TCR_Advantage (GXMSS.Reductions.merkleTargetCollisionReduction hash enc K hv adv))
+        (Encoding.TargetCollisionResistance.advantage
+          (GXMSS.Reductions.encodingTargetCollisionReduction hash enc qs K adv))
+        (SM_DT_TCR_Advantage (GXMSS.Reductions.firstChainTargetCollisionReduction hash enc K adv))
+        (SM_DT_TCR_Advantage (GXMSS.Reductions.secondChainTargetCollisionReduction hash enc K adv))
+        (SM_DT_UD_Advantage (GXMSS.Reductions.jointUndetectabilityReduction hash enc K hv hw adv))
+        (SM_DT_PRE_Advantage (GXMSS.Reductions.jointPreimageReduction hash enc K hv hw adv)) := by
+  exact (strong_unforgeability_reduction_bound hash enc K qs hv hw htwo adv hqueries).trans
+    (reductionBound_le_powerOfTwo h w v _ _ _ _ _ _)
 
 end
 

@@ -155,7 +155,6 @@ theorem adaptive_strong_additive_bound
 @[expose] noncomputable def strongUnforgeabilityBound
     [SampleableType H] [SampleableType R] [SampleableType Response]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
@@ -171,7 +170,6 @@ theorem adaptive_strong_additive_bound
 theorem strong_unforgeability_reduction_bound
     [SampleableType H] [SampleableType R] [SampleableType Response]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))

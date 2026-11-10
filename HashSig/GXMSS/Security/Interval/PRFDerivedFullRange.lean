@@ -31,11 +31,10 @@ open OracleComp OracleSpec Encoding GXMSS GXMSS.IntervalMerkle
 open ProbabilityTheory MeasureTheory ENNReal
 variable {Key PP T X H M R Response : Type} {h w v : ℕ}
 
-/-- The full-range PRF advantage plus the relaxed original-domain interval bound. -/
+/-- The full-range PRF advantage plus the sharp original-domain interval bound. -/
 @[expose] noncomputable def fullRangeStrongUnforgeabilityBound
     [SampleableType H] [SampleableType R] [SampleableType Response]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
@@ -45,7 +44,7 @@ variable {Key PP T X H M R Response : Type} {h w v : ℕ}
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) : ℝ≥0∞ :=
   prf.prfAdvantage (randgenPRFReduction hash enc p K (Interval.full h) adv) +
-    GXMSS.Interval.Unforgeability.powerOfTwoStrongUnforgeabilityBound hash enc K qs
+    GXMSS.Interval.Unforgeability.strongUnforgeabilityBound hash enc K qs
       (Interval.full h) hv hw adv
 
 set_option maxHeartbeats 1600000 in
@@ -55,7 +54,6 @@ projection laws. No filler law is needed for the actual interval reduction or ex
 theorem fullRangeStrongReductionBound
     [SampleableType H] [SampleableType R] [SampleableType Response]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
@@ -82,6 +80,5 @@ theorem fullRangeStrongReductionBound
     GXMSS.Unforgeability.reductionBound, restrictPRF_keygen, Nat.cast_pow, Nat.cast_ofNat] using
     GXMSS.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound hash enc (restrictPRF prf)
     p.toComplete K qs hv hw htwo adv hbound hseed hstart hretry
-
 
 end GXMSS.Interval.PRFDerived.Unforgeability

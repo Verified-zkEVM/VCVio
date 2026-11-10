@@ -40,7 +40,7 @@ encoding hash's SM-DT-rTCR advantage. The other generic GXMSS terms are unchange
 theorem strong_unforgeability_bound_of_bridge
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq Y] [DecidableEq (GXMSS.Signature R H h v)]
+    [DecidableEq Y]
     (hash : HashInstance PP T X H h w v)
     (bridge : TargetCollisionReduction.Bridge PP M R (Fin (2 ^ h)) T Y v (2 ^ w))
     (hseed : hash.thf.seedGen = bridge.th.seedGen) (K qs : ℕ)
@@ -51,33 +51,26 @@ theorem strong_unforgeability_bound_of_bridge
     (hqueries : SigningQueryBound qs adv) :
     SyncSignatureUnforgeability.strongAdvantage
         (GXMSS.scheme hash bridge.enc K) ProbCompRuntime.probComp adv ≤
-      SM_DT_TCR_Advantage (merkleTargetCollisionReduction hash bridge.enc K hv adv) +
-        SM_DT_RTCR_Advantage (encodingHashTargetCollisionReduction hash bridge hseed qs K adv) +
-        SM_DT_TCR_Advantage (firstChainTargetCollisionReduction hash bridge.enc K adv) +
-        SM_DT_TCR_Advantage (secondChainTargetCollisionReduction hash bridge.enc K adv) +
-        (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) *
-          ((↑(2 ^ w) : ℝ≥0∞) *
-              SM_DT_UD_Advantage (jointUndetectabilityReduction hash bridge.enc K hv hw adv) +
-            SM_DT_PRE_Advantage (jointPreimageReduction hash bridge.enc K hv hw adv)) := by
-  let source := encodingTargetCollisionReduction hash bridge.enc qs K adv
+      reductionBound h w v
+        (SM_DT_TCR_Advantage
+          (merkleTargetCollisionReduction hash bridge.enc K hv adv))
+        (SM_DT_RTCR_Advantage
+          (encodingHashTargetCollisionReduction hash bridge hseed qs K adv))
+        (SM_DT_TCR_Advantage
+          (firstChainTargetCollisionReduction hash bridge.enc K adv))
+        (SM_DT_TCR_Advantage
+          (secondChainTargetCollisionReduction hash bridge.enc K adv))
+        (SM_DT_UD_Advantage
+          (jointUndetectabilityReduction hash bridge.enc K hv hw adv))
+        (SM_DT_PRE_Advantage
+          (jointPreimageReduction hash bridge.enc K hv hw adv)) := by
   have hencoding := encodingTargetCollisionAdvantage_le_hash hash bridge hseed qs K adv
   have hbase := (strong_unforgeability_reduction_bound
     hash bridge.enc K qs hv hw htwo adv) hqueries
-  change SyncSignatureUnforgeability.strongAdvantage
-      (GXMSS.scheme hash bridge.enc K) ProbCompRuntime.probComp adv ≤
-    SM_DT_TCR_Advantage (merkleTargetCollisionReduction hash bridge.enc K hv adv) +
-      TargetCollisionResistance.advantage source +
-      SM_DT_TCR_Advantage (firstChainTargetCollisionReduction hash bridge.enc K adv) +
-      SM_DT_TCR_Advantage (secondChainTargetCollisionReduction hash bridge.enc K adv) +
-      (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) *
-        ((↑(2 ^ w) : ℝ≥0∞) *
-            SM_DT_UD_Advantage (jointUndetectabilityReduction hash bridge.enc K hv hw adv) +
-          SM_DT_PRE_Advantage (jointPreimageReduction hash bridge.enc K hv hw adv)) at hbase
-  calc
-    _ ≤ _ := hbase
-    _ ≤ _ :=
-      _root_.add_le_add (_root_.add_le_add (_root_.add_le_add
-        (_root_.add_le_add le_rfl hencoding) le_rfl) le_rfl) le_rfl
+  unfold reductionBound at hbase ⊢
+  exact hbase.trans
+    (_root_.add_le_add (_root_.add_le_add (_root_.add_le_add
+      (_root_.add_le_add (_root_.add_le_add le_rfl hencoding) le_rfl) le_rfl) le_rfl) le_rfl)
 
 set_option maxHeartbeats 800000 in
 -- The checksum code dimensions appear in all six concrete reduction types and require a larger
@@ -88,7 +81,6 @@ theorem winternitz_strong_unforgeability_bound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
     [DecidableEq (Codeword n₀ (2 ^ w))]
-    [DecidableEq (GXMSS.Signature R H h (n₀ + Winternitz.checksumWidth n₀ w))]
     (hash : HashInstance PP T X H h w (n₀ + Winternitz.checksumWidth n₀ w))
     (params : Winternitz.Parameters PP M R (Fin (2 ^ h)) T n₀ w)
     (hEpoch : Function.Injective params.epochToTweak)
@@ -97,29 +89,26 @@ theorem winternitz_strong_unforgeability_bound
     SigningQueryBound qs adv →
     SyncSignatureUnforgeability.strongAdvantage
         (GXMSS.scheme hash (Winternitz.encoding params) K) ProbCompRuntime.probComp adv ≤
-      SM_DT_TCR_Advantage
+      reductionBound h w (n₀ + Winternitz.checksumWidth n₀ w)
+        (SM_DT_TCR_Advantage
           (merkleTargetCollisionReduction hash (Winternitz.encoding params) K
             (by have := params.payloadLengthPositive; omega :
-              0 < n₀ + Winternitz.checksumWidth n₀ w) adv) +
-        SM_DT_RTCR_Advantage
+              0 < n₀ + Winternitz.checksumWidth n₀ w) adv))
+        (SM_DT_RTCR_Advantage
           (encodingHashTargetCollisionReduction hash (WinternitzCollision.bridge params hEpoch)
-            (by simpa [WinternitzCollision.bridge] using hseed) qs K adv) +
-        SM_DT_TCR_Advantage
-          (firstChainTargetCollisionReduction hash (Winternitz.encoding params) K adv) +
-        SM_DT_TCR_Advantage
-          (secondChainTargetCollisionReduction hash (Winternitz.encoding params) K adv) +
-        (↑((2 ^ h) * (n₀ + Winternitz.checksumWidth n₀ w) * (2 ^ w)) : ℝ≥0∞) *
-          ((↑(2 ^ w) : ℝ≥0∞) *
-              SM_DT_UD_Advantage
-                (jointUndetectabilityReduction hash (Winternitz.encoding params) K
-                  (by have := params.payloadLengthPositive; omega :
-                    0 < n₀ + Winternitz.checksumWidth n₀ w)
-                  params.digitWidthPositive adv) +
-            SM_DT_PRE_Advantage
-              (jointPreimageReduction hash (Winternitz.encoding params) K
-                (by have := params.payloadLengthPositive; omega :
-                  0 < n₀ + Winternitz.checksumWidth n₀ w)
-                params.digitWidthPositive adv)) := by
+            (by simpa [WinternitzCollision.bridge] using hseed) qs K adv))
+        (SM_DT_TCR_Advantage
+          (firstChainTargetCollisionReduction hash (Winternitz.encoding params) K adv))
+        (SM_DT_TCR_Advantage
+          (secondChainTargetCollisionReduction hash (Winternitz.encoding params) K adv))
+        (SM_DT_UD_Advantage
+          (jointUndetectabilityReduction hash (Winternitz.encoding params) K
+            (by have := params.payloadLengthPositive; omega :
+              0 < n₀ + Winternitz.checksumWidth n₀ w) params.digitWidthPositive adv))
+        (SM_DT_PRE_Advantage
+          (jointPreimageReduction hash (Winternitz.encoding params) K
+            (by have := params.payloadLengthPositive; omega :
+              0 < n₀ + Winternitz.checksumWidth n₀ w) params.digitWidthPositive adv)) := by
   intro hqueries
   have hv : 0 < n₀ + Winternitz.checksumWidth n₀ w := by
     have := params.payloadLengthPositive
@@ -143,7 +132,6 @@ theorem target_sum_strong_unforgeability_bound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
     [DecidableEq (Codeword v (2 ^ w))]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (params : TargetSum.Parameters PP M R (Fin (2 ^ h)) T v w target)
     (hEpoch : Function.Injective params.epochToTweak)
@@ -154,21 +142,20 @@ theorem target_sum_strong_unforgeability_bound
     SigningQueryBound qs adv →
     SyncSignatureUnforgeability.strongAdvantage
         (GXMSS.scheme hash (TargetSum.encoding params) K) ProbCompRuntime.probComp adv ≤
-      SM_DT_TCR_Advantage
-          (merkleTargetCollisionReduction hash (TargetSum.encoding params) K hv adv) +
-        SM_DT_RTCR_Advantage
+      reductionBound h w v
+        (SM_DT_TCR_Advantage
+          (merkleTargetCollisionReduction hash (TargetSum.encoding params) K hv adv))
+        (SM_DT_RTCR_Advantage
           (encodingHashTargetCollisionReduction hash (TargetSumCollision.bridge params hEpoch)
-            (by simpa [TargetSumCollision.bridge] using hseed) qs K adv) +
-        SM_DT_TCR_Advantage
-          (firstChainTargetCollisionReduction hash (TargetSum.encoding params) K adv) +
-        SM_DT_TCR_Advantage
-          (secondChainTargetCollisionReduction hash (TargetSum.encoding params) K adv) +
-        (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) *
-          ((↑(2 ^ w) : ℝ≥0∞) *
-              SM_DT_UD_Advantage
-                (jointUndetectabilityReduction hash (TargetSum.encoding params) K hv hw adv) +
-            SM_DT_PRE_Advantage
-              (jointPreimageReduction hash (TargetSum.encoding params) K hv hw adv)) := by
+            (by simpa [TargetSumCollision.bridge] using hseed) qs K adv))
+        (SM_DT_TCR_Advantage
+          (firstChainTargetCollisionReduction hash (TargetSum.encoding params) K adv))
+        (SM_DT_TCR_Advantage
+          (secondChainTargetCollisionReduction hash (TargetSum.encoding params) K adv))
+        (SM_DT_UD_Advantage
+          (jointUndetectabilityReduction hash (TargetSum.encoding params) K hv hw adv))
+        (SM_DT_PRE_Advantage
+          (jointPreimageReduction hash (TargetSum.encoding params) K hv hw adv)) := by
   intro hqueries
   have htwo : ∃ x y : Codeword v (2 ^ w),
       x ∈ (TargetSumCollision.bridge params hEpoch).enc.code ∧
@@ -185,7 +172,6 @@ theorem target_sum_strong_unforgeability_bound_of_small_target
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
     [DecidableEq (Codeword v (2 ^ w))]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (params : TargetSum.Parameters PP M R (Fin (2 ^ h)) T v w target)
     (hEpoch : Function.Injective params.epochToTweak)
@@ -195,24 +181,23 @@ theorem target_sum_strong_unforgeability_bound_of_small_target
     SigningQueryBound qs adv →
     SyncSignatureUnforgeability.strongAdvantage
         (GXMSS.scheme hash (TargetSum.encoding params) K) ProbCompRuntime.probComp adv ≤
-      SM_DT_TCR_Advantage
+      reductionBound h w v
+        (SM_DT_TCR_Advantage
           (merkleTargetCollisionReduction hash (TargetSum.encoding params) K
-            (by omega : 0 < v) adv) +
-        SM_DT_RTCR_Advantage
+            (by omega : 0 < v) adv))
+        (SM_DT_RTCR_Advantage
           (encodingHashTargetCollisionReduction hash (TargetSumCollision.bridge params hEpoch)
-            (by simpa [TargetSumCollision.bridge] using hseed) qs K adv) +
-        SM_DT_TCR_Advantage
-          (firstChainTargetCollisionReduction hash (TargetSum.encoding params) K adv) +
-        SM_DT_TCR_Advantage
-          (secondChainTargetCollisionReduction hash (TargetSum.encoding params) K adv) +
-        (↑((2 ^ h) * v * (2 ^ w)) : ℝ≥0∞) *
-          ((↑(2 ^ w) : ℝ≥0∞) *
-              SM_DT_UD_Advantage
-                (jointUndetectabilityReduction hash (TargetSum.encoding params) K
-                  (by omega : 0 < v) hw adv) +
-            SM_DT_PRE_Advantage
-              (jointPreimageReduction hash (TargetSum.encoding params) K
-                (by omega : 0 < v) hw adv)) := by
+            (by simpa [TargetSumCollision.bridge] using hseed) qs K adv))
+        (SM_DT_TCR_Advantage
+          (firstChainTargetCollisionReduction hash (TargetSum.encoding params) K adv))
+        (SM_DT_TCR_Advantage
+          (secondChainTargetCollisionReduction hash (TargetSum.encoding params) K adv))
+        (SM_DT_UD_Advantage
+          (jointUndetectabilityReduction hash (TargetSum.encoding params) K
+            (by omega : 0 < v) hw adv))
+        (SM_DT_PRE_Advantage
+          (jointPreimageReduction hash (TargetSum.encoding params) K
+            (by omega : 0 < v) hw adv)) := by
   exact target_sum_strong_unforgeability_bound hash params hEpoch hseed K qs
     (by omega : 0 < v) hw
     (TargetSum.acceptedCount_two_le_of_small_target v w target hv htarget hfit) adv

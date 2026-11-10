@@ -30,7 +30,6 @@ open GXMSS.Interval.Reductions.Chain GXMSS.Reductions GXMSS.Unforgeability GXMSS
 example
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ) (I : Interval h)
     (hv : 0 < v) (hw : 0 < w)

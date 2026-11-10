@@ -70,7 +70,6 @@ private theorem chain_coefficients_le_power_of_two
 @[expose] noncomputable def strongUnforgeabilityBound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ) (I : Interval h)
     (hv : 0 < v) (hw : 0 < w)
@@ -97,7 +96,6 @@ private theorem chain_coefficients_le_power_of_two
 theorem strong_unforgeability_reduction_bound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ) (I : Interval h)
     (hv : 0 < v) (hw : 0 < w)
@@ -115,7 +113,6 @@ theorem strong_unforgeability_reduction_bound
 @[expose] noncomputable def powerOfTwoStrongUnforgeabilityBound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ) (I : Interval h)
     (hv : 0 < v) (hw : 0 < w)
@@ -141,7 +138,6 @@ theorem strong_unforgeability_reduction_bound
 theorem strong_unforgeability_power_of_two_reduction_bound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ) (I : Interval h)
     (hv : 0 < v) (hw : 0 < w)
@@ -157,7 +153,6 @@ theorem strong_unforgeability_power_of_two_reduction_bound
 theorem strongUnforgeabilityBound_le_powerOfTwoStrongUnforgeabilityBound
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ) (I : Interval h)
     (hv : 0 < v) (hw : 0 < w) (A : SchemeAdversary PP H M R h v) :

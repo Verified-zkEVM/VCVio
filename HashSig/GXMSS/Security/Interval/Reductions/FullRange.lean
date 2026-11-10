@@ -138,7 +138,6 @@ theorem encodingTargetCollisionExperiment_full
 private theorem intervalSelectedChainObservation_full
     [SampleableType H] [SampleableType R]
     [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K : ℕ)
     (fillers : Fillers (Interval.full h) H) (guess : Guess h w v)
@@ -219,7 +218,6 @@ private theorem intervalChainContext_full
 private theorem fixedFallbackPreimageWitness_full
     [SampleableType H] [SampleableType R] [NeZero v]
     [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K : ℕ)
     (fillers : Fillers (Interval.full h) H) (guess : Guess h w v)
@@ -252,7 +250,6 @@ the complete adaptive view, and every fallback output. -/
 theorem chainPreimageExperiment_full
     [SampleableType H] [SampleableType R] [DecidableEq T]
     [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K : ℕ)
     (hv : 0 < v) (hw : 0 < w) (A : SchemeAdversary PP H M R h v) :
@@ -299,7 +296,6 @@ original response law and complete adaptive view are transported before observin
 theorem chainUndetectabilityExperiment_full
     [SampleableType H] [SampleableType R] [DecidableEq T]
     [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K : ℕ)
     (hv : 0 < v) (hw : 0 < w) (A : SchemeAdversary PP H M R h v)
@@ -401,7 +397,6 @@ theorem merkleTargetCollisionExperiment_full [SampleableType H] [SampleableType 
     forgedLeaf?, Epoch.isActive_full, ite_true, authPath_full]
   cases enc.value pp msg sig.randomizer e <;> rfl
 
-
 /-- The full-range Merkle reduction has the complete-tree target-collision advantage. -/
 theorem merkleTargetCollisionAdvantage_full [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H]
@@ -483,7 +478,6 @@ theorem chainCutTargetCollisionExperiment_full
 theorem chainPreimageAdvantage_full
     [SampleableType H] [SampleableType R] [DecidableEq T]
     [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K : ℕ)
     (hv : 0 < v) (hw : 0 < w) (A : SchemeAdversary PP H M R h v) :
@@ -496,7 +490,6 @@ theorem chainPreimageAdvantage_full
 theorem chainUndetectabilityAdvantage_full
     [SampleableType H] [SampleableType R] [DecidableEq T]
     [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K : ℕ)
     (hv : 0 < v) (hw : 0 < w) (A : SchemeAdversary PP H M R h v) :
@@ -510,7 +503,6 @@ primitive advantages. Empty frontier families contribute no tickets; chain terms
 theorem strongUnforgeabilityBound_full
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ)
     (hv : 0 < v) (hw : 0 < w) (A : SchemeAdversary PP H M R h v) :
@@ -541,7 +533,6 @@ primitive experiment equalities and coefficient rewriting. -/
 theorem powerOfTwoStrongUnforgeabilityBound_full
     [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
-    [DecidableEq (GXMSS.Signature R H h v)]
     (P : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Epoch h) v (2 ^ w)) (K qs : ℕ)
     (hv : 0 < v) (hw : 0 < w) (A : SchemeAdversary PP H M R h v) :
