@@ -15,6 +15,12 @@ public import Mathlib.Data.Fin.Tuple.Basic
 
 Querying a lazy random oracle at distinct labels gives a uniform basis. The label domain need
 not be finite, and the oracle may already contain answers away from these labels.
+
+This connects generator-oracle setup to `DiscreteLogRelation.experiment` only in distribution.
+The experiment fixes the adversary's oracle implementation and initial state before it samples
+the basis, so the basis is independent of that oracle: an adversary that queries its oracle at
+the generator labels sees fresh answers, not the basis it was given. Relation finding against
+generators that the adversary can recompute by hashing their labels is therefore not covered.
 -/
 
 public section
