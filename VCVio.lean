@@ -333,7 +333,6 @@ public import VCVio.Interaction.UC.ReactiveSecurity
 public import VCVio.Interaction.UC.ReactiveWorld
 public import VCVio.Interaction.UC.Runtime
 public import VCVio.Interaction.UC.Standard
-public import VCVio.Interaction.UC.StdDoBridge
 public import VCVio.OracleComp.CanReturn
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.Coercions.SubSpec
@@ -539,8 +538,6 @@ public import VCVio.ProgramLogic.Unary.HandlerSpecs
 public import VCVio.ProgramLogic.Unary.HoarePropTriple
 public import VCVio.ProgramLogic.Unary.HoareTriple
 public import VCVio.ProgramLogic.Unary.SimulateQ
-public import VCVio.ProgramLogic.Unary.StdDoBridge
-public import VCVio.ProgramLogic.Unary.StdDoExamples
 public import VCVio.ProgramLogic.Unary.WP.Coherence
 public import VCVio.ProgramLogic.Unary.WP.Lower
 public import VCVio.ProgramLogic.Unary.WP.LowerSpecs
@@ -550,7 +547,6 @@ public import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
-public import VCVio.ProgramLogic.Unary.WriterTBridge
 public import VCVio.Quantum.Comp.Basic
 public import VCVio.Quantum.Comp.Combinators
 public import VCVio.Quantum.Comp.GradedRuntime

@@ -105,8 +105,7 @@ Other renames: `AdvBound.of_tvDist` → `AdvBound.of_measureETVDist` (and `AdvBo
 `evalSPMF_eq_of_relTriple_eqRel` → `evalDistEq_of_relTriple_eqRel`; in the identical-until-bad
 family `_plus_probEvent_bad` → `_add_prEvent_bad` (for example
 `advantage_le_expectedQuerySlack_add_prEvent_bad_of_inv_preserved`) and `tvDist_simulateQ_…` →
-the `measureETVDist_simulateQ_run…` lemmas in `Relational/SimulateQ/UntilBad.lean`;
-`wpProp_iff_probEvent_eq_one` → `wpProp_iff_prEvent_eq_one`.
+the `measureETVDist_simulateQ_run…` lemmas in `Relational/SimulateQ/UntilBad.lean`.
 
 The bridges between the two representations have no replacement; state the measure fact
 directly:
@@ -115,7 +114,9 @@ directly:
 - `evalDist_apply_univ` → `prFail_eq_one_sub_evalDist_univ` or
   `prEvent_true_eq_evalDist_apply_univ`, or `OptionT.evalDist_apply_univ`;
 - `probOutput_bind_eq_tsum`, `probEvent_bind_eq_tsum` → `prEvent_bind_eq_lintegral` (with
-  `_of_discrete` for a discrete draw), then `lintegral_fintype` for a finite sum.
+  `_of_discrete` for a discrete draw), then `lintegral_fintype` for a finite sum;
+- `wpProp_iff_probEvent_eq_one`, from the retired `Std.Do` bridge →
+  `OracleComp.Necessary.wp_iff_forall_support` with `OracleComp.prEvent_eq_one_iff`.
 
 Statements of equality in distribution now use `=ᵈ`:
 - `prEvent_congr_of_evalDist_eq mx my h p` → `(EvalDistEq.of_evalDist_eq h).prEvent_eq p`;
