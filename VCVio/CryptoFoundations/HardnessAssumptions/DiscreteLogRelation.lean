@@ -39,7 +39,7 @@ abbrev Adversary (F G ι : Type) (spec : OracleSpec κ) :=
   (ι → G) → OracleComp spec (ι → F)
 
 /-- Sample a uniform basis and accept a nonzero coefficient vector with vanishing group sum. -/
-@[expose] noncomputable def experiment [Fintype ι] [DecidableEq ι]
+@[expose] noncomputable def experiment [Fintype ι]
     [Field F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)
@@ -50,7 +50,7 @@ abbrev Adversary (F G ι : Type) (spec : OracleSpec κ) :=
 
 /-- Program the basis with the discrete-log challenge and extract by dividing its coefficient
 into the negated generator coefficient, returning zero when that denominator vanishes. -/
-@[expose] noncomputable def reduction [Fintype ι] [DecidableEq ι]
+@[expose] noncomputable def reduction [Fintype ι]
     [Field F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)
@@ -192,7 +192,7 @@ an empty input vector. The implementation and initial state are fixed independen
 so the finder can share an oracle cache with the computation from which it is extracted.
 This is the oracle-computation form of ironwood `Zcash/Common/RelationProbabilityCoins.lean`.
 The hidden mask is sampled independently after the adversary's output. -/
-theorem experiment_le [Fintype ι] [DecidableEq ι]
+theorem experiment_le [Fintype ι]
     [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)
@@ -200,6 +200,7 @@ theorem experiment_le [Fintype ι] [DecidableEq ι]
     Pr{let b ← experiment impl s g A}[b = true] ≤
       Pr{let b ← DiffieHellman.dlogExperiment g (reduction impl s A)}[b = true] +
         1 / Fintype.card F := by
+  classical
   let R : ProbComp (F × (ι → F) × (ι → F) × (ι → F)) := do
     let z ← $ᵗ F
     let t ← $ᵗ (ι → F)

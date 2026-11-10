@@ -44,7 +44,7 @@ The `none` slot is the blinding base and `some i` is message generator `i`. -/
   verify pp a c r := decide (commitValue (fun i => pp (some i)) (pp none) a r = c)
 
 /-- Uniform public parameters as independently sampled multiples of a generator. -/
-@[expose] noncomputable def uniformSetup [Fintype ι] [DecidableEq ι]
+@[expose] noncomputable def uniformSetup [Fintype ι]
     [Field F] [SampleableType F] [AddCommGroup G] [Module F G]
     (g : G) : ProbComp (Option ι → G) := do
   let x ← $ᵗ (Option ι → F)
@@ -166,13 +166,14 @@ theorem bindingReduction_ofGeneric [Fintype ι] [Field F]
 
 /-- A generic binder making at most `q` group operations has advantage at most
 `((q + card ι + 2).choose 2 + 1) / |F|`; both the message and blinding bases count as inputs. -/
-theorem bindingAdvantage_ofGeneric_le [Fintype ι] [DecidableEq ι]
+theorem bindingAdvantage_ofGeneric_le [Fintype ι]
     [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (g : G) (hg : g ≠ 0) (A : GenericBinder F ι) (q : ℕ)
     (hq : IsQueryBoundP A (fun i => GroupModel.isGroupOp i = true) q) :
     (scheme (uniformSetup (F := F) (ι := ι) g)).bindingAdvantage (ofGeneric A) ≤
       (((q + Fintype.card ι + 2).choose 2 + 1 : ℕ) : ℝ≥0∞) / Fintype.card F := by
+  classical
   refine (bindingAdvantage_le_relation g (ofGeneric A)).trans ?_
   rw [bindingReduction_ofGeneric]
   simpa [Fintype.card_option, Nat.add_assoc] using
