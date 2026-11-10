@@ -6,7 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 
-public import ToMathlib.MeasureTheory.Measure.Subprobability
+public import ToCslib.MeasureTheory.Measure.Subprobability
 
 /-!
 # Couplings of measures
