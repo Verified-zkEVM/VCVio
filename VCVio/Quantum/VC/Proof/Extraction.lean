@@ -9,6 +9,7 @@ public import VCVio.Quantum.Oracle.ClassicalCalls
 public import VCVio.Quantum.Oracle.Compressed.Consistency
 public import VCVio.Quantum.VC.CheckedRead
 public import VCVio.Quantum.VC.Conditions
+import QuantumFoundations.Pure.Instrument
 
 /-!
 # Extraction correctness for compressed oracles
@@ -500,13 +501,6 @@ theorem SubInstrument.outcomeMeasure_bind_le {A B C : Type*} [Fintype A] [Fintyp
         exact mul_le_mul_of_nonneg_left
           (ENNReal.ofReal_le_ofReal (p.isTNI_total _ ρ.posSemidef)) zero_le
 
-/-- A substate with zero matrix has the zero outcome measure. -/
-theorem SubInstrument.outcomeMeasure_eq_zero_of_matrix_eq_zero {A B : Type*} [Fintype A]
-    [Fintype B] {α : Type*} [MeasurableSpace α] (p : SubInstrument A B α) {ρ : SubState A}
-    (hρ : ρ.matrix = 0) : p.outcomeMeasure ρ = 0 := by
-  rw [DSubInstrument.outcomeMeasure_eq_sum, hρ]
-  simp
-
 /-- For a lossless subinstrument with two outcomes, the traces of the two branches add up to the
 trace of the input. -/
 theorem SubInstrument.trace_re_branch_add_of_lossless {A B : Type*} [Fintype A] [Fintype B]
@@ -857,7 +851,7 @@ theorem outcomeMeasure_run₂_openings_le_of_openingQueryBound
     (fun i ↦ support ((VC i).opening (tdm i).1.dom (tdm i).2))
     (fun i b ↦ exists_branch_run₂_toQuantumAt_coinImpl_eq_smul _ _ b) pf
   by_cases hs : ∃ i, pf i ∉ support ((VC i).opening (tdm i).1.dom (tdm i).2)
-  · rw [SubInstrument.outcomeMeasure_eq_zero_of_matrix_eq_zero _ (by
+  · rw [DSubInstrument.outcomeMeasure_eq_zero_of_matrix_eq_zero _ (by
       rw [DSubInstrument.matrix_post, hc₀, hz hs, zero_smul, LinearMap.zero_apply])]
     exact zero_le
   · refine outcomeMeasure_run₂_checks_le_of_openingQueryBound chk ME code q hq hC hk n c tdm pf

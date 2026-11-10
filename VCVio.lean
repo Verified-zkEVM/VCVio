@@ -580,11 +580,13 @@ public import VCVio.Quantum.Oracle.Compressed.Measurement
 public import VCVio.Quantum.Oracle.Compressed.Oracle
 public import VCVio.Quantum.Oracle.Compressed.Phase
 public import VCVio.Quantum.Oracle.Compressed.ProjectorEvent
+public import VCVio.Quantum.Oracle.Compressed.QueryCache
 public import VCVio.Quantum.Oracle.Compressed.Size
 public import VCVio.Quantum.Oracle.Compressed.Truncation
 public import VCVio.Quantum.Oracle.Emulated
 public import VCVio.Quantum.Oracle.EmulatedTensor
 public import VCVio.Quantum.Oracle.Model
+public import VCVio.Quantum.Oracle.UniformSample
 public import VCVio.Quantum.Semantics
 public import VCVio.Quantum.Subprobability
 public import VCVio.Quantum.VC.CheckedRead
