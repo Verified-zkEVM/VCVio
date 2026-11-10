@@ -27,8 +27,8 @@ namespace GroupModel
 variable {F G : Type}
 
 /-- Run a generic Boolean computation on the generator and three DDH challenge elements. -/
-@[expose] def DDHAdversary.ofGeneric [Field F]
-    [AddCommGroup G] [Module F G] [DecidableEq G]
+@[expose] def DDHAdversary.ofGeneric [CommSemiring F] [AddCommMonoid G] [Module F G]
+    [DecidableEq G]
     (A : OracleComp (genSpec F groupSig) Bool) : DiffieHellman.DDHAdversary F G :=
   fun g X Y T => Prod.fst <$> runGen (Model.group G) (fun _ => id) A
     (fun _ => [g, X, Y, T])
