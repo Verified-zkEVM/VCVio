@@ -5,16 +5,15 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.GroupModel.Decisional
+public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import Mathlib.Algebra.Field.ZMod
 public import Mathlib.Tactic.NormNum.Prime
-import Mathlib.RingTheory.MvPolynomial.Basic
 
 /-!
 # Relation-kernel examples and separations
 
-The DDH polynomial lists have the same linear relations over every field, and with one group
-operation over the field with 101 elements the decisional bound for them is `45/101`. Repeated
+With one group operation over the field with 101 elements, the decisional bound for the DDH
+polynomial lists (`ddhTables_sameKernel`) is `45/101`. Repeated
 variables introduce a relation, and one free equality test between the repeated entries
 separates the hidden-point runs by more than the decisional bound would allow, so its kernel
 clause cannot be dropped. Zero padding preserves the vanishing condition but is observable
@@ -28,62 +27,6 @@ open OracleComp OracleSpec MeasureTheory MvPolynomial
 open scoped ENNReal
 
 namespace GroupModel
-
-private theorem ddh_left_independent {K : Type} [Field K] :
-    LinearIndependent K ([1, X 0, X 1, X 0 * X 1] : List (MvPolynomial (Fin 3) K)).get := by
-  let e : Fin 4 → (Fin 3 →₀ ℕ) :=
-    ![0, Finsupp.single 0 1, Finsupp.single 1 1, Finsupp.single 0 1 + Finsupp.single 1 1]
-  have he : Function.Injective e := by
-    intro i j h
-    have h₀ := congrArg (fun f : Fin 3 →₀ ℕ => f 0) h
-    have h₁ := congrArg (fun f : Fin 3 →₀ ℕ => f 1) h
-    have h₂ := congrArg (fun f : Fin 3 →₀ ℕ => f 2) h
-    clear h
-    fin_cases i <;> fin_cases j <;> simp_all [e]
-  convert (basisMonomials (Fin 3) K).linearIndependent.comp e he using 1
-  funext i
-  fin_cases i <;> simp [e, coe_basisMonomials, X, monomial_mul_monomial]
-
-private theorem ddh_right_independent {K : Type} [Field K] :
-    LinearIndependent K ([1, X 0, X 1, X 2] : List (MvPolynomial (Fin 3) K)).get := by
-  let e : Fin 4 → (Fin 3 →₀ ℕ) :=
-    ![0, Finsupp.single 0 1, Finsupp.single 1 1, Finsupp.single 2 1]
-  have he : Function.Injective e := by
-    intro i j h
-    have h₀ := congrArg (fun f : Fin 3 →₀ ℕ => f 0) h
-    have h₁ := congrArg (fun f : Fin 3 →₀ ℕ => f 1) h
-    have h₂ := congrArg (fun f : Fin 3 →₀ ℕ => f 2) h
-    clear h
-    fin_cases i <;> fin_cases j <;> simp_all [e]
-  convert (basisMonomials (Fin 3) K).linearIndependent.comp e he using 1
-  funext i
-  fin_cases i <;> simp [e, coe_basisMonomials, X]
-
-/-- The four DDH entries on either side have the same linear relation kernel over any field. -/
-theorem ddh_sameKernel {K : Type} [Field K] :
-    SameKernel (F := K) (ι := Fin 3)
-      (fun _ : Unit => [1, X 0, X 1, X 0 * X 1])
-      (fun _ : Unit => [1, X 0, X 1, X 2]) :=
-  sameKernel_of_linearIndependent (fun _ => rfl)
-    (fun _ => ddh_left_independent) (fun _ => ddh_right_independent)
-
-/-- The two DDH lists have total-degree bounds two and one, respectively. -/
-theorem ddh_degreeLE {K : Type} [Field K] :
-    DegreeLE (F := K) (ι := Fin 3) 2
-      (fun _ : Unit => [1, X 0, X 1, X 0 * X 1]) ∧
-    DegreeLE (F := K) (ι := Fin 3) 1
-      (fun _ : Unit => [1, X 0, X 1, X 2]) := by
-  constructor
-  · intro s p hp
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hp
-    rcases hp with rfl | rfl | rfl | rfl
-    · simp
-    · simp
-    · simp
-    · exact (totalDegree_mul _ _).trans (by simp)
-  · intro s p hp
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hp
-    rcases hp with rfl | rfl | rfl | rfl <;> simp
 
 /-- Repeating one variable creates a linear relation absent from independent variables. -/
 theorem repeated_variable_not_sameKernel :
@@ -112,7 +55,8 @@ theorem ddh_uniform_bound {α : Type} [MeasurableSpace (((Fin 3) → ZMod 101) �
   let : Fact (Nat.Prime 101) := ⟨by norm_num⟩
   have hb := measureETVDist_runGen_sameKernel_uniform_le oa hq
     (fun _ => [1, X 0, X 1, X 0 * X 1]) (fun _ => [1, X 0, X 1, X 2])
-    (ddh_degreeLE (K := ZMod 101)).1 (ddh_degreeLE (K := ZMod 101)).2 ddh_sameKernel
+    (ddhTables_degreeLE (F := ZMod 101)).1 (ddhTables_degreeLE (F := ZMod 101)).2
+    ddhTables_sameKernel
   refine hb.trans (le_of_eq ?_)
   simp [ZMod.card, Nat.choose]
   simp only [div_eq_mul_inv]
