@@ -4,7 +4,7 @@ name: Interop TCB Isolation
 # `docs/agents/interop.md`: core VCVio libraries must not import from
 # `Interop.…`, `Hax.…`, or `Aeneas.…`, and `Interop/**` must not depend on
 # downstream libraries (`LatticeCrypto`, `Examples`, `LatticeCryptoTest`,
-# `Extern`, `VCVioWidgets`, `VCVioTest`).
+# `Extern`, `VCVioTest`).
 #
 # Runs on every PR and on pushes to `main`. The check is fast
 # and parses source with Lean; it does not build the project or fetch Lake dependencies.

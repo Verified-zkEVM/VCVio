@@ -23,8 +23,7 @@ class ValidationTests(unittest.TestCase):
             shutil.copy2(source / name, scripts / name)
         for name in ("check-imports", "test-polyfun-boundary", "check-polyfun-boundary",
                      "test-expose-boundary",
-                     "check-expose-boundary", "test-complexity-backend-isolation",
-                     "check-complexity-backend-isolation", "check-extern-isolation",
+                     "check-expose-boundary", "check-extern-isolation",
                      "check-interop-isolation", "test-axiomsweep",
                      "test-comment-fences", "test-initsweep", "test-docnames"):
             self.script(scripts / f"{name}.sh", 'exit 0\n')
