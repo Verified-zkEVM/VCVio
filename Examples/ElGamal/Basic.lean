@@ -104,8 +104,6 @@ theorem correct [DecidableEq G] :
 
 section IND_CPA
 
-local instance : Inhabited G := ⟨0⟩
-
 /-- One-time DDH reduction for ElGamal. On input `(gen, A, B, T)`, use `A` as the ElGamal public
 key, form the challenge ciphertext `(B, T + m_b)`, and return whether the one-time adversary
 guessed the hidden bit `b`. -/
@@ -294,8 +292,10 @@ theorem elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage
   rw [IND_CPA_OneTime_DDHReduction_rand_half hg adv]
 
 /-- **Main theorem.** An adversary making at most `q` LR queries has IND-CPA advantage at most
-twice the sum of the DDH advantages of the `q` named hybrid reductions. -/
-theorem elGamal_IND_CPA_le_sum_ddhAdvantage [DecidableEq G]
+twice the sum of the DDH advantages of the `q` named hybrid reductions. A hybrid whose adversary
+stops before its `k`-th query submits the default message twice, so the bound holds for every
+default element of `G`. -/
+theorem elGamal_IND_CPA_le_sum_ddhAdvantage [DecidableEq G] [Inhabited G]
     (hg : Function.Bijective (· • gen : F → G))
     (adversary : (elGamalAsymmEnc F G gen).IND_CPA_Adversary) (q : ℕ)
     (hq : adversary.MakesAtMostQueries q) :
