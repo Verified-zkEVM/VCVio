@@ -141,8 +141,7 @@ This is the foundational marginalization step of the direct M_ideal/S_ideal coup
 reference-slot cells of `gS` are themselves jointly uniform and independent of the off-slot
 cells, so the multiple-session sub-table is uniform whenever the single-session full table is. -/
 lemma evalDist_slotZeroSubTable_uniformSample
-    [Fintype TagId] [DecidableEq TagId]
-    [Fintype Nonce] [DecidableEq Nonce]
+    [Fintype TagId] [Fintype Nonce]
     [Finite Digest] [Nonempty Digest] [SampleableType Digest]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
     [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]

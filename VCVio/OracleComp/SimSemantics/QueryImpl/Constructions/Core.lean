@@ -80,7 +80,7 @@ in `pure x` the projected term reduces to `pure x`, and in `query t >>= k` it re
 to `so t >>= k'` for some continuation `k' u = proj (simulateQ (so.preInsert nx) (k u))`.
 Tagged `@[elab_as_elim]` so it is usable as `induction oa using simulateQ_preInsert.induct`. -/
 @[elab_as_elim]
-lemma simulateQ_preInsert.induct [Monad m] [LawfulMonad m] [LawfulMonad n]
+lemma simulateQ_preInsert.induct [Monad m] [LawfulMonad n]
     (so : QueryImpl spec m) (nx : spec.Domain → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
     (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
@@ -195,7 +195,7 @@ in `pure x` the projected term reduces to `pure x`, and in `query t >>= k` it re
 to `so t >>= k'` for some continuation `k' u = proj (simulateQ (so.postInsert nx) (k u))`.
 Tagged `@[elab_as_elim]` so it is usable as `induction oa using simulateQ_postInsert.induct`. -/
 @[elab_as_elim]
-lemma simulateQ_postInsert.induct [LawfulMonad m] [LawfulMonad n]
+lemma simulateQ_postInsert.induct [LawfulMonad n]
     (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
     (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
