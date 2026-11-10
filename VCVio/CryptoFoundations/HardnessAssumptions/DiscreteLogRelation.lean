@@ -67,7 +67,7 @@ theorem prEvent_sum_mul_eq_zero_le [Field F] [Fintype F] [SampleableType F]
     apply MvPolynomial.totalDegree_finsetSum_le
     intro i _
     exact (MvPolynomial.totalDegree_mul _ _).trans (by simp)
-  simpa [p] using prob_eval_zero_univ_le_div p hn hd
+  simpa [p] using prEvent_eval_eq_zero_univ_le_div p hn hd
 
 private theorem programmed_eq [Field F] [SampleableType F]
     [AddCommGroup G] [Module F G] (g : G) (A : Adversary F G n) (z : F) :

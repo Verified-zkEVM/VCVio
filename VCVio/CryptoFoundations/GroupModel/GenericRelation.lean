@@ -89,7 +89,7 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampleabl
   let : MeasurableSpace ((Fin n → F) ×
       ((Fin n → F) × Tbl (fun _ : Unit => MvPolynomial (Fin n) F))) := ⊤
   have hm := (prEvent_runGen_symbolic_le_add ($ᵗ (Fin n → F))
-    (fun f hf hd => prob_eval_zero_univ_le_div f hf hd) A hq tbl hd
+    (fun f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd) A hq tbl hd
     {w | E w.1 w.2} (MeasurableSet.of_discrete)).1
   have hs : Pr{let x ← $ᵗ (Fin n → F); let z ← (runGen (symbolic F groupSig (Fin n))
       (fun _ => id) A tbl)}[E x z] ≤ (1 : ℝ≥0∞) / Fintype.card F := by
