@@ -207,6 +207,11 @@ public import VCVio.CryptoFoundations.PRF.HiddenBit
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
+public import VCVio.CryptoFoundations.Rewinding.Basic
+public import VCVio.CryptoFoundations.Rewinding.Eager
+public import VCVio.CryptoFoundations.Rewinding.FixedTape
+public import VCVio.CryptoFoundations.Rewinding.Instances
+public import VCVio.CryptoFoundations.Rewinding.Laws
 public import VCVio.CryptoFoundations.RoundByRound
 public import VCVio.CryptoFoundations.SecExp
 public import VCVio.CryptoFoundations.SecExp.Measure
@@ -332,6 +337,7 @@ public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.SchwartzZippel
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.Constructions.UniformPreimage
 public import VCVio.OracleComp.Constructions.UniformSelectMeasure
@@ -563,11 +569,13 @@ public import VCVio.Quantum.Oracle.Compressed.Measurement
 public import VCVio.Quantum.Oracle.Compressed.Oracle
 public import VCVio.Quantum.Oracle.Compressed.Phase
 public import VCVio.Quantum.Oracle.Compressed.ProjectorEvent
+public import VCVio.Quantum.Oracle.Compressed.QueryCache
 public import VCVio.Quantum.Oracle.Compressed.Size
 public import VCVio.Quantum.Oracle.Compressed.Truncation
 public import VCVio.Quantum.Oracle.Emulated
 public import VCVio.Quantum.Oracle.EmulatedTensor
 public import VCVio.Quantum.Oracle.Model
+public import VCVio.Quantum.Oracle.UniformSample
 public import VCVio.Quantum.Semantics
 public import VCVio.Quantum.Subprobability
 public import VCVio.Quantum.VC.CheckedRead

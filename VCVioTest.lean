@@ -85,6 +85,7 @@ public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.QueryAndHandlerLaws
 public import VCVioTest.OracleComp.QueryTracking.QueryLog
+public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.OracleComp.SpecInstanceSearch
 public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
@@ -177,6 +178,7 @@ public import VCVioTest.ReactiveSecurity
 public import VCVioTest.ReactiveWorld
 public import VCVioTest.ReplayCheckpoint
 public import VCVioTest.ResumptionCompatibility
+public import VCVioTest.Rewinding
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.Runtime
 public import VCVioTest.SMDTDSPR
