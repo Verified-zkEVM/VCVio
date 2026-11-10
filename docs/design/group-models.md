@@ -831,7 +831,7 @@ generic computation and every table `tbl` in `L`, the run in `M` on `φ tbl` and
 `ψ tbl` have the same output distribution.
 
 ```lean
-theorem run_fst_eq_of_kernel_eq (φ : L.Hom M) (ψ : L.Hom N)
+theorem runGen_fst_eq_of_kernel_eq (φ : L.Hom M) (ψ : L.Hom N)
     (h : ∀ s x y, φ.toFun s x = φ.toFun s y ↔ ψ.toFun s x = ψ.toFun s y)
     (oa : OracleComp (genSpec F σ) α) (tbl : Tbl K) :
     Prod.fst <$> run M (fun _ => id) oa (mapTbl (fun s => φ.toFun s) tbl) =
@@ -1068,7 +1068,7 @@ such as `impl`, `run` and `lookup`. The expose-boundary ceiling excludes new fil
    `Model.prod`,
    `Hom.fst/snd`, `Tbl`, `lookup`, `append`, `push`, `mapTbl`, `impl`, and `run` with a game
    handler. Prove `run_map` for any pair of game handlers related by `φ`, `impl_congr`, and
-   `run_fst_eq_of_kernel_eq`. Define `groupSig`, `discreteSig`, `pairingSig`, `pairingIsoSig`,
+   `runGen_fst_eq_of_kernel_eq`. Define `groupSig`, `discreteSig`, `pairingSig`, `pairingIsoSig`,
    and `symmPairingSig`; add executable runs over `ZMod 7`.
 2. **Instances and tracking.** `Instances.lean`, `Tracking.lean`, and tests: `real`, `symbolic`,
    `free` for `groupSig`, `discreteSig`, and the source sorts of `pairingSig`; `evHom`,
@@ -1327,7 +1327,7 @@ This note is checked against VCVio `main` at `e3d105040`, using Lean and Mathlib
 The library slices are proof obligations, not claims of completed formalization. No Lean
 elaboration is part of this documentation check.
 
-Slice 1 will prove L1 (`run_map`), `impl_congr`, and T6 (`run_fst_eq_of_kernel_eq`) in
+Slice 1 will prove L1 (`run_map`), `impl_congr`, and T6 (`runGen_fst_eq_of_kernel_eq`) in
 `Projection.lean`, using the definitions in `Signature.lean` and `Oracle.lean`. Slice 2 will
 prove the real, symbolic and source-sort free-model evaluation maps in `Instances.lean`, and
 the tracking projection and `Explains` preservation in `Tracking.lean`. In particular,
