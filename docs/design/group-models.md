@@ -553,7 +553,8 @@ uniformly among the nonzero scalars, where it is `k/(|F| − 1)`. Section 6.4 gi
 several sorts.
 
 **T4 (generic hardness).** Corollaries of T3 and L1, each stated about the standard-model
-adversary that a generic one induces:
+adversary that a generic one induces. `GenericHardness.lean` proves the DLog and CDH cases as
+`dlogExperiment_ofGeneric_le` and `cdhExperiment_ofGeneric_le`:
 
 ```lean
 def DLogAdversary.ofGeneric (A : OracleComp (genSpec F) F) : DiffieHellman.DLogAdversary F G :=
@@ -572,15 +573,20 @@ hidden-real run with `d = 1`: L1 for that map, and `impl_congr` to replace the o
 `((q + 3) choose 2)/|F|` of the symbolic run, whose output is independent of `x` and so equals
 `x` with probability `1/|F|`. With no group operation at all an adversary succeeds with
 probability `min(3, |F|)/|F|`: it tests `x • g` against `g` and against zero, and otherwise
-guesses a third value when there is one. The bound at `q = 0` is `4/|F|`.
+guesses a third value when there is one. The bound at `q = 0` is `4/|F|`. The test of
+`GenericHardness.lean` evaluates this adversary at `|F| = 5`: it wins with probability exactly
+`3/5`.
 
 The same template gives CDH and the discrete-log relation problem, and with a pairing the
 `(q₁, q₂)`-DLog family of Bauer, Fuchsbauer and Loss, co-CDH, `t`-SDH and ARSDH (T8 in
 Section 6.5), with the constants fixed by the proofs. For the relation problem on `n` random
 elements the table starts with `n` entries, so the bound has `n` in it:
 `((q + n + 1).choose 2 + 1)/|F|`. DDH needs one more lemma (T6). Note the
-form: the statement is about `ofGeneric A`, a `DLogAdversary`, so it composes with every
-existing reduction in VCVio. No hypothesis quantifies over solvers.
+form: the statement is about `ofGeneric A`, a `DLogAdversary`. It bounds a reduction to DLog
+when the reduction, run on its adversary, is itself `ofGeneric A'` for a generic computation
+`A'` whose group operations are counted; T5 is meant to supply such reductions and their counts.
+It says nothing about an arbitrary `DLogAdversary`, nor about a reduction that handles group
+elements other than through the oracle. No hypothesis quantifies over solvers.
 
 **T5 (transfer).** Write a reduction once, as a handler that implements the scheme's oracles on
 top of the group oracle. Then:
@@ -876,6 +882,18 @@ bounds `D⁰` and `D¹`, then for every generic computation the hidden-real runs
 are within `Σ_s ((m s + 1) choose 2) · (ε (D⁰ s) + ε (D¹ s))`.
 
 *Argument.* T3ₛ on each side and T6 in the middle.
+
+`Decisional.lean` proves T7 at `discreteSig S` as `measureETVDist_runGen_sameKernel_le`, in a
+coarser form than the per-sort statement above: it takes one group-operation budget `q` over all
+sorts and one degree bound for each table, `d₀` for `T₀` and `d₁` for `T₁`, and bounds the joint
+distance of the hidden point and the output by
+`((Σ_s |T₀ s| + q + 1) choose 2) · ε d₀ + ((Σ_s |T₁ s| + q + 1) choose 2) · ε d₁`. The proof uses
+T3 on each side and T6 (`SameKernel.runGen_fst_eq`) in the middle.
+`measureETVDist_runGen_sameKernel_uniform_le` specializes it to uniform points. Its test shows
+that neither clause of `SameKernel` can be dropped: over `ZMod 17` the tables `[1, X₀, X₀]` and
+`[1, X₀, X₁]` have equal lengths and degree one, and one free equality test separates their runs
+by at least `16/17`, above the `12/17` the bound would give. The per-sort form and T7 at the
+pairing signatures remain targets.
 
 Three instances show what the hypothesis means.
 
@@ -1285,11 +1303,11 @@ against the paper before a theorem cites it).
 
 | Paper | Object or theorem here | Status | Basis |
 |---|---|---|---|
-| Shoup, *Lower bounds for discrete logarithms and related problems* (1997) | T3, T4; the labelled variant of the encoding oracle | T3 proved; T4 target | recalled |
+| Shoup, *Lower bounds for discrete logarithms and related problems* (1997) | T3, T4; the labelled variant of the encoding oracle | T3 and T4 proved | recalled |
 | Maurer, *Abstract models of computation in cryptography* (2005) | `spec F`, `impl`, equality as a relation query | library target | recalled |
 | Fuchsbauer, Kiltz, Loss, ePrint 2017/620 | the algebraic class; T1, T2; Groth16 in the algebraic model | L1 in slice 1 | abstract |
 | Boneh, Boyen, *Short signatures without random oracles* (2004) | `t`-SDH and its generic bound (T8) | target | recalled; the assumption as restated in Marlin was read |
-| Boneh, Boyen, Goh, ePrint 2005/015; Boyen, *The uber-assumption family* (2008) | T7; the independence condition as equality of relation kernels | T6 in slice 1 | recalled |
+| Boneh, Boyen, Goh, ePrint 2005/015; Boyen, *The uber-assumption family* (2008) | T7; the independence condition as equality of relation kernels | T6 proved; T7 proved at `discreteSig S` | recalled |
 | Galbraith, Paterson, Smart, ePrint 2006/165 | the three pairing signatures; hashing per sort | library target | abstract |
 | Boneh, Gentry, Lynn, Shacham, *Aggregate and verifiably encrypted signatures from bilinear maps* (2003) | `pairingIsoSig`; co-CDH | library target | read |
 | Jager, Rupp, *The semi-generic group model and applications to pairing-based cryptography* (2010) | a per-sort choice of knobs (Section 6.6) | target | abstract |
@@ -1371,9 +1389,19 @@ with a root-probability hypothesis `ε` and a total group-operation budget `q`. 
 are the event form `prEvent_runGen_symbolic_le_add` and the Schwartz–Zippel specialization for
 uniform points, `measureETVDist_runGen_symbolic_uniform_le`.
 
-Everything else is a paper argument or theorem target: T4 (including
-`dlogExperiment_ofGeneric_le`), T3ₛ, T5 and its cost certificate, the relation-problem bounds,
-T7/T8, S1–S3, P1–P3, restriction along a map of signatures, the invariant at the target sort
-over `CoeffsT`, the free and tracking models for Types 1 and 2, the accessible spans,
-the polynomial-table instance of T6, and every numeric constant in Section 8. The trilemma in
-Section 3 and the argument about ArkLib's KZG hypotheses in Section 8.3 are paper arguments.
+T4 is proved in `GenericHardness.lean` as `dlogExperiment_ofGeneric_le` and
+`cdhExperiment_ofGeneric_le`, for the adversaries that `DLogAdversary.ofGeneric` and
+`CDHAdversary.ofGeneric` induce from generic computations.
+
+T7 is proved in `Decisional.lean` as `measureETVDist_runGen_sameKernel_le`, at `discreteSig S`
+with one total group-operation budget `q` and one degree bound for each table, rather than the
+per-sort form of Section 6.5. Its event form is `prEvent_runGen_sameKernel_le_add`, and its
+Schwartz–Zippel specialization for uniform points is
+`measureETVDist_runGen_sameKernel_uniform_le`.
+
+Everything else is a paper argument or theorem target: T3ₛ, T5 and its cost certificate, the
+relation-problem bounds, T7 in its per-sort form and at the pairing signatures, T8, S1–S3, P1–P3,
+restriction along a map of signatures, the invariant at the target sort over `CoeffsT`, the free
+and tracking models for Types 1 and 2, the accessible spans, the polynomial-table instance of T6,
+and every numeric constant in Section 8. The trilemma in Section 3 and the argument about
+ArkLib's KZG hypotheses in Section 8.3 are paper arguments.
