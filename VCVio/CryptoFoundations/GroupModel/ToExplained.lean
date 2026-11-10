@@ -27,7 +27,7 @@ variable {S F Input Query Result : Type} {G E : S → Type} {Reply : Query → T
 
 /-- The chronological received handles together with the representation table. -/
 abbrev Tracked (F : Type) (G : S → Type) :=
-  (S → List Handle) × Tbl (fun s => Repr F × G s)
+  (S → List Handle) × Tbl (fun s => Coeffs F × G s)
 
 /-- Read the chronological basis from a tracking state. -/
 private def basis [Zero F] [∀ s, Zero (G s)] (st : Tracked F G) : Groups G :=
@@ -165,8 +165,8 @@ abbrev HandleSpec (F S : Type) (E : S → Type) (Query : Type)
 /-- Answer a group query in the tracking model, observing equality on real values. -/
 @[expose] def groupStep [CommSemiring F] [DecidableEq S]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)] [∀ s, DecidableEq (G s)]
-    (q : GroupModel.Query F (discreteSig S)) (tbl : Tbl (fun s => Repr F × G s)) :
-    (spec F (discreteSig S)).Range q × Tbl (fun s => Repr F × G s) :=
+    (q : GroupModel.Query F (discreteSig S)) (tbl : Tbl (fun s => Coeffs F × G s)) :
+    (spec F (discreteSig S)).Range q × Tbl (fun s => Coeffs F × G s) :=
   match q with
   | .add s a b => ((tbl s).length, append tbl s (lookup tbl s a + lookup tbl s b))
   | .smul s c a => ((tbl s).length, append tbl s (c • lookup tbl s a))
@@ -178,7 +178,8 @@ private theorem groupStep_inv [CommSemiring F] [DecidableEq S]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)] [∀ s, DecidableEq (G s)]
     (q : GroupModel.Query F (discreteSig S)) (st : Tracked F G)
     (ht : Explains st.1 st.2) : Explains st.1 (groupStep q st.2).2 := by
-  apply impl_tracking_preservesInv st.1 q st.2 ht (groupStep q st.2)
+  apply impl_tracking_preservesInv (obs := fun _ => Prod.snd) (m := ProbComp) st.1 q st.2 ht
+    (groupStep q st.2)
   cases q with
   | add s a b =>
       change (_, _) ∈ support (pure (_, _) : ProbComp _)
@@ -195,7 +196,7 @@ private theorem groupStep_inv [CommSemiring F] [DecidableEq S]
 
 private theorem basis_append [CommSemiring F] [DecidableEq S]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)]
-    (st : Tracked F G) (ht : Explains st.1 st.2) (s : S) (e : Repr F × G s) :
+    (st : Tracked F G) (ht : Explains st.1 st.2) (s : S) (e : Coeffs F × G s) :
     basis (st.1, append st.2 s e) = basis st := by
   funext t
   apply List.map_congr_left
@@ -219,7 +220,7 @@ private theorem groupStep_basis [CommSemiring F] [DecidableEq S]
     (enc : (s : S) → G s → E s)
     (program : OracleComp (HandleSpec F S E Query Reply)
       (Message Result (fun _ : S => Handle))) :
-    (S → List Handle) × Tbl (fun s => Repr F × G s) →
+    (S → List Handle) × Tbl (fun s => Coeffs F × G s) →
       OracleComp (explainedSpec F G (CoinQuery Query) (CoinReply Reply))
         (Explained F Result G) :=
   OracleComp.recOn program (fun msg st => pure (explain st msg))
@@ -242,7 +243,7 @@ theorem explainProgram_isAlgebraic [CommSemiring F] [DecidableEq S]
     (enc : (s : S) → G s → E s)
     (program : OracleComp (HandleSpec F S E Query Reply)
       (Message Result (fun _ : S => Handle)))
-    (st : (S → List Handle) × Tbl (fun s => Repr F × G s))
+    (st : (S → List Handle) × Tbl (fun s => Coeffs F × G s))
     (ht : Explains st.1 st.2) :
     IsAlgebraic (fun s => (st.1 s).map fun h => (lookup st.2 s h).2)
       (explainProgram enc program st) := by
@@ -303,9 +304,9 @@ private theorem basis_initial [Zero F] [One F] [∀ s, Zero (G s)] (xs : Groups 
 
 private theorem lookup_snd [CommSemiring F]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)]
-    (tbl : Tbl (fun s => Repr F × G s)) (s : S) (h : Handle) :
+    (tbl : Tbl (fun s => Coeffs F × G s)) (s : S) (h : Handle) :
     lookup (mapTbl (fun _ => Prod.snd) tbl) s h = (lookup tbl s h).2 :=
-  lookup_mapTbl (fun s => LinearMap.snd F (Repr F) (G s)) tbl s h
+  lookup_mapTbl (fun s => LinearMap.snd F (Coeffs F) (G s)) tbl s h
 
 private theorem explain_value [CommSemiring F]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)]
@@ -367,7 +368,7 @@ variable [CommSemiring F] [DecidableEq S]
     {N : Type → Type} [Monad N] [LawfulMonad N]
 
 private theorem groupStep_projection (M : Model F (discreteSig S) G)
-    (q : GroupModel.Query F (discreteSig S)) (tbl : Tbl (fun s => Repr F × G s)) :
+    (q : GroupModel.Query F (discreteSig S)) (tbl : Tbl (fun s => Coeffs F × G s)) :
     (impl M (fun _ => id) N q).run (mapTbl (fun _ => Prod.snd) tbl) =
       pure ((groupStep q tbl).1, mapTbl (fun _ => Prod.snd) (groupStep q tbl).2) := by
   cases q with
