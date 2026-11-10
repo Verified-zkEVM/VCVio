@@ -564,6 +564,7 @@ public import VCVio.Quantum.Oracle.Compressed.Truncation
 public import VCVio.Quantum.Oracle.Emulated
 public import VCVio.Quantum.Oracle.EmulatedTensor
 public import VCVio.Quantum.Oracle.Model
+public import VCVio.Quantum.Oracle.UniformSample
 public import VCVio.Quantum.Semantics
 public import VCVio.Quantum.Subprobability
 public import VCVio.Quantum.VC.CheckedRead
