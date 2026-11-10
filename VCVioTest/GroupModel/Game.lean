@@ -12,7 +12,8 @@ public import Mathlib.Data.ZMod.Basic
 # Executable handle-game checks
 
 Two sorts exercise group operations, encodings, coins, and replies containing group elements.
-A separate game retains hidden state between identical requests.
+A separate game retains hidden state between identical requests. The generic inclusion is
+evaluated on both sides, and a message lookup reads an out-of-range handle as zero.
 -/
 
 public section
@@ -79,7 +80,8 @@ theorem handle_game_hidden_state :
   funext s
   cases s <;> rfl
 
-/-- The concrete generic inclusion preserves a group query, coin, and game request. -/
+/-- The concrete generic inclusion preserves a group query, coin, and game request: with and
+without the encoding oracle, the run returns the same handle and coin and the same tables. -/
 theorem generic_game_inclusion :
     let M : Model (ZMod 7) (discreteSig Bool) (fun _ => ZMod 7) :=
       ⟨Empty.elim, Empty.elim⟩
@@ -90,15 +92,19 @@ theorem generic_game_inclusion :
       let c ← Ω.query (.inr (.inl 1))
       let _ ← Ω.query (.inr (.inr ()))
       pure (h, c)
-    let random := QueryImpl.ofLift unifSpec ProbComp
-    let game : QueryImpl Γ (StateT (Tbl fun _ : Bool => ZMod 7) ProbComp) :=
-      fun _ => pure ()
-    run M (fun _ => id) (encImpl (m := ProbComp) (V := fun _ : Bool => ZMod 7) (fun _ => id) +
-        (coinImpl (G := fun _ : Bool => ZMod 7) random + game))
-        (toAlgebraic A) (fun _ => [1, 2]) =
-      run M (fun _ => id) (coinImpl (G := fun _ : Bool => ZMod 7) random + game)
-        A (fun _ => [1, 2]) := by
-  dsimp only
-  exact run_toAlgebraic _ _ _ _ _ _ _
+    let random : QueryImpl unifSpec Id := fun n => pure ⟨n, Nat.lt_succ_self n⟩
+    let game : QueryImpl Γ (StateT (Tbl fun _ : Bool => ZMod 7) Id) := fun _ => pure ()
+    let lhs := run M (fun _ => id)
+      (encImpl (m := Id) (V := fun _ : Bool => ZMod 7) (fun _ => id) +
+        (coinImpl (G := fun _ : Bool => ZMod 7) random + game)) (toAlgebraic A) (fun _ => [1, 2])
+    let rhs := run M (fun _ => id) (coinImpl (G := fun _ : Bool => ZMod 7) random + game)
+        A (fun _ => [1, 2])
+    lhs.1 = (2, 1) ∧ rhs.1 = (2, 1) ∧ lhs.2 true = [1, 2, 3] ∧ rhs.2 true = [1, 2, 3] ∧
+      lhs.2 false = [1, 2] ∧ rhs.2 false = [1, 2] := by
+  decide
+
+/-- An out-of-range handle in a message reads as zero. -/
+example : (lookupMessage (S := Unit) (G := fun _ => ZMod 7) (fun _ => [1])
+    ⟨(), fun _ => [0, 5]⟩).groups () = [1, 0] := by decide
 
 end GroupModel
