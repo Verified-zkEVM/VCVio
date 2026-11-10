@@ -25,8 +25,6 @@ namespace GroupModel
 `(2, 1)`-DLog experiment with multiplication as its pairing. -/
 theorem pairing_dlog_zmod_101 :
     letI : Fact (Nat.Prime 101) := ⟨by decide⟩
-    letI : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-      fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
     let A : OracleComp (genSpec (ZMod 101) pairingSig) (ZMod 101) := do
       let _ ← (genSpec (ZMod 101) pairingSig).query (.inl (.bil () 1 1))
       pure 0
@@ -34,8 +32,6 @@ theorem pairing_dlog_zmod_101 :
       (PairingDLog.Adversary.ofGeneric (q₁ := 2) (q₂ := 1)
         (LinearMap.mul (ZMod 101) (ZMod 101)) A))}[b = true] ≤ (19 / 101 : ℝ≥0∞) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
-  let : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-    fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
   dsimp only
   apply (PairingDLog.experiment_ofGeneric_le
     (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1 one_ne_zero one_ne_zero

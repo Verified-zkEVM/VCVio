@@ -29,7 +29,7 @@ variable {F G₁ G₂ Gₜ ι α : Type}
 by each chosen source generator and their pairing is injective. -/
 theorem runGen_pairing_mapTbl_evalHom [Field F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
     (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0) (x : ι → F)
     (A : OracleComp (genSpec F pairingSig) α)
@@ -68,7 +68,7 @@ open GroupModel
 of source powers, with an initially empty target table. -/
 @[expose] def Adversary.ofGeneric {F G₁ G₂ Gₜ : Type} [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {q₁ q₂ : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
     (A : OracleComp (genSpec F pairingSig) F) : Adversary F G₁ G₂ q₁ q₂ :=
   fun xs ys => Prod.fst <$> runGen (pairingReal e) (fun _ => id) A (fun
@@ -88,7 +88,7 @@ additional linear root term, divided by the scalar field cardinality. -/
 theorem experiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
     [Field F] [Fintype F] [SampleableType F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
     (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
     (q₁ q₂ : ℕ) (A : OracleComp (genSpec F pairingSig) F) (n₁ n₂ nₜ : ℕ)
@@ -199,7 +199,7 @@ one common budget in the Type 3 powers discrete-logarithm bound. Equality querie
 theorem experiment_ofGeneric_le_of_total {F G₁ G₂ Gₜ : Type}
     [Field F] [Fintype F] [SampleableType F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
     (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
     (q₁ q₂ : ℕ) (A : OracleComp (genSpec F pairingSig) F) (q : ℕ)
