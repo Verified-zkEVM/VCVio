@@ -98,7 +98,7 @@ theorem SameKernel.runGen_fst_eq [Field F] [DecidableEq F] [DecidableEq ι] [Dec
   have h₁ : mapTbl (fun s => (evHom.discrete T₁).toFun s) units = T₁ := by
     rw [hu]
     simpa only [hev] using mapTbl_units T₁
-  have he := run_fst_eq_of_kernel_eq (evHom.discrete T₀) (evHom.discrete T₁)
+  have he := runGen_fst_eq_of_kernel_eq (evHom.discrete T₀) (evHom.discrete T₁)
     (fun s r r' => by simpa only [evHom.discrete_apply] using h.eq_iff s r r') oa units
   simpa only [h₀, h₁, symbolic_discrete_eq] using he
 
@@ -243,8 +243,8 @@ theorem measureETVDist_runGen_sameKernel_uniform_le [Field F] [DecidableEq F]
     simp [hij] at he)
   apply measureETVDist_runGen_sameKernel_le ($ᵗ (ι → F)) _ _ oa hq T₀ T₁ hd₀ hd₁ h
   · intro f hf hdeg
-    exact prob_eval_zero_univ_le_div f hf hdeg
+    exact prEvent_eval_eq_zero_univ_le_div f hf hdeg
   · intro f hf hdeg
-    exact prob_eval_zero_univ_le_div f hf hdeg
+    exact prEvent_eval_eq_zero_univ_le_div f hf hdeg
 
 end GroupModel
