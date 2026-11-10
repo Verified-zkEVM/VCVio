@@ -101,6 +101,7 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
 public import VCVio.CryptoFoundations.GroupModel.Coins
 public import VCVio.CryptoFoundations.GroupModel.Collision
 public import VCVio.CryptoFoundations.GroupModel.Cost
+public import VCVio.CryptoFoundations.GroupModel.Decisional
 public import VCVio.CryptoFoundations.GroupModel.Encoding
 public import VCVio.CryptoFoundations.GroupModel.Game
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
