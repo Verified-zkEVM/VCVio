@@ -11,7 +11,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import Mathlib.Data.Fin.Tuple.Basic
 
 /-!
- # Uniform bases from a generator oracle
+# Uniform bases from a generator oracle
 
 Querying a lazy random oracle at distinct labels gives a uniform basis. The label domain need
 not be finite, and the oracle may already contain answers away from these labels.

@@ -11,7 +11,7 @@ public import VCVio.CryptoFoundations.GroupModel.GenericRelation
 public import Mathlib.Data.FinEnum.Option
 
 /-!
- # Vector Pedersen commitments
+# Vector Pedersen commitments
 
 The public basis has one blinding slot `none` and message slots `some i`. Commitment is
 `∑ i, a i • gs i + r • h`. Correctness holds for every setup, and perfect hiding holds for every

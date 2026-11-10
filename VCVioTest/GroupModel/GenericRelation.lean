@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.GroupModel.GenericRelation
 public import Mathlib.Algebra.Field.ZMod
 
 /-!
- # Generic discrete-log relation regression test
+# Generic discrete-log relation regression test
 
 A free equality query compares the two challenge handles. It returns `![1, -1]` on equality
 and the zero vector otherwise, using no group operations.

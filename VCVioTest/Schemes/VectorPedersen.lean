@@ -9,7 +9,7 @@ public import VCVio.Schemes.VectorPedersen
 public import Mathlib.Algebra.Field.ZMod
 
 /-!
- # Vector Pedersen regression tests
+# Vector Pedersen regression tests
 
 Two-coordinate commitments over `ZMod 101` exercise the named relation and DLog reductions,
 the generic bound, and perfect hiding at a fixed and at a random generating blinding base. The

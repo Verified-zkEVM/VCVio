@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation
 public import Mathlib.Algebra.Field.ZMod
 
 /-!
- # Discrete-log relation regression tests
+# Discrete-log relation regression tests
 
 The fixed coefficient vector `![1, -1]` finds precisely collisions between two supplied
 elements. The finder `alwaysWins` returns `![b₁, -b₀]` on a nonzero basis `b` and `![1, 0]` on
