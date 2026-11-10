@@ -53,16 +53,17 @@ instantiating those abstractions for a lattice scheme.
   NTT-facing types.
 - `LatticeCrypto/MLDSA/Primitives.lean`: abstract hashing, sampling, rounding, and encoding-facing
   operations.
-- `LatticeCrypto/MLDSA/MaskBox.lean`: the uniform distribution on the range of FIPS 204's ExpandMask
-  (`sampleMaskVec`), and the exact probability that a sample passes a norm gate.
+- `LatticeCrypto/MLDSA/MaskBox.lean`: the mask `sampleMaskVec`, which decodes uniform values as
+  FIPS 204's ExpandMask does (`maskDecode`, computable), and the exact probability that a mask
+  passes a norm gate. The range predicate `maskBounded` is in `Arithmetic.lean`.
 - `LatticeCrypto/MLDSA/Scheme.lean`: proof-level identification scheme with aborts, and its variant
   with `t₀` in the statement (`identificationSchemeFull`).
 - `LatticeCrypto/MLDSA/Signature.lean`: FIPS-style signing and verification layer built on the
   proof-level scheme.
 - `LatticeCrypto/MLDSA/Security.lean`: completeness and commitment recoverability of the IDS.
 - `LatticeCrypto/MLDSA/SecurityHVZK.lean`: the HVZK simulator `hvzkSimulator` for the scheme with
-  `t₀` in the statement (`identificationSchemeFull`), and `idsWithAbort_hvzk`, which shows it equal
-  in distribution to the honest prover on valid keys.
+  `t₀` in the statement (`identificationSchemeFull`), and `identificationSchemeFull_perfectHVZK`,
+  which shows it equal in distribution to the honest prover on valid keys.
 - `LatticeCrypto/MLDSA/SecurityNMA.lean`: the no-message-attack chain, with the key swap modelled
   over short-box MLWE. The short-model games give the forger `t₀` as well as the public key, and
   the SelfTargetMSIS extractor redraws `t₀` from the fiber of `t₁`.

@@ -7,18 +7,23 @@ Authors: Devon Tuma
 module
 public import Extern.MLDSA.Laws
 public import LatticeCrypto.MLDSA.SecurityHVZK
+public import VCVio.OracleComp.RunIO
 
 /-!
-# Tests for the ML-DSA mask box
+# Tests for the ML-DSA mask sampler
 
-- The endpoints of `[-γ₁ + 1, γ₁]`: the box is not the symmetric `[-γ₁, γ₁]` or `[-γ₁ + 1, γ₁ - 1]`.
-  These examples are what pin the box.
+- The endpoints of `[-γ₁ + 1, γ₁]`: `maskBounded` is not the symmetric `[-γ₁, γ₁]` or
+  `[-γ₁ + 1, γ₁ - 1]`. These examples are what pin the range.
+- The decoding sends the value `0` to `γ₁` and the value `2γ₁ - 1` to `-γ₁ + 1`, as FIPS 204's
+  `ExpandMask` does.
+- The mask sampler, the identification schemes and the HVZK simulator are plain `def`s: this file
+  fails to compile if any of them becomes noncomputable. Outputs are random, so nothing is run.
 - The response gate passes with probability above `1/2` at each FIPS 204 parameter set. This checks
-  the parameters against the exact rate; it does not pin the box, since a slightly different box
-  also passes above `1/2`.
+  the parameters against the exact rate; it does not pin the range, since a slightly different
+  range also passes above `1/2`.
 - The statement of `identificationSchemeFull` rejects any `t₀` other than the secret key's.
-- `idsWithAbort_hvzk` applies at the concrete FIPS 204 primitives for ML-DSA-44, so its hypotheses
-  hold there. The theorem itself, not this test, shows the simulator is right.
+- `identificationSchemeFull_perfectHVZK` applies at the concrete FIPS 204 primitives for ML-DSA-44,
+  so its hypotheses hold there. The theorem itself, not this test, shows the simulator is right.
 -/
 
 public section
@@ -37,38 +42,66 @@ private lemma constVec_coeff (k : ℕ) (c : ℤ) (j : Fin k) (i : Fin ringDegree
   rw [constVec, Poly.get_vectorOfFn]
   exact Poly.get_ofPi _ i
 
-/-- In `maskBounded` terms, a small constant vector is in the box exactly when its value is in
-`[-γ₁ + 1, γ₁]`. -/
-private lemma maskBounded_constVec_iff {gamma1 : ℕ} (hgamma1 : 0 < gamma1) {c : ℤ}
+/-- A small constant vector is in the mask range exactly when its value is in `[-γ₁ + 1, γ₁]`. -/
+private lemma maskBounded_constVec_iff {gamma1 : ℕ} {c : ℤ}
     (hlo : -(modulus : ℤ) < c * 2) (hhi : c * 2 ≤ modulus) :
     maskBounded (constVec 1 c) gamma1 ↔ -(gamma1 : ℤ) < c ∧ c ≤ gamma1 := by
   have hrepr : centeredRepr (c : Coeff) = c := centeredRepr_intCast_eq c hlo hhi
-  rw [maskBounded_iff hgamma1]
-  simp only [constVec_coeff, hrepr]
+  simp only [maskBounded, constVec_coeff, hrepr]
   exact ⟨fun h => h 0 ⟨0, by simp [ringDegree]⟩, fun h _ _ => h⟩
 
-/-- The top endpoint `γ₁` is in the box. -/
+/-- The top endpoint `γ₁` is in the range. -/
 example {gamma1 : ℕ} (h0 : 0 < gamma1) (hq : 2 * gamma1 < modulus) :
     maskBounded (constVec 1 gamma1) gamma1 :=
-  (maskBounded_constVec_iff h0 (by omega) (by omega)).mpr ⟨by omega, le_rfl⟩
+  (maskBounded_constVec_iff (by omega) (by omega)).mpr ⟨by omega, le_rfl⟩
 
-/-- The bottom endpoint `-γ₁ + 1` is in the box. -/
+/-- The bottom endpoint `-γ₁ + 1` is in the range. -/
 example {gamma1 : ℕ} (h0 : 0 < gamma1) (hq : 2 * gamma1 < modulus) :
     maskBounded (constVec 1 (-(gamma1 : ℤ) + 1)) gamma1 :=
-  (maskBounded_constVec_iff h0 (by omega) (by omega)).mpr ⟨by omega, by omega⟩
+  (maskBounded_constVec_iff (by omega) (by omega)).mpr ⟨by omega, by omega⟩
 
-/-- `-γ₁` is outside the box. -/
-example {gamma1 : ℕ} (h0 : 0 < gamma1) (hq : 2 * gamma1 < modulus) :
+/-- `-γ₁` is outside the range. -/
+example {gamma1 : ℕ} (hq : 2 * gamma1 < modulus) :
     ¬maskBounded (constVec 1 (-(gamma1 : ℤ))) gamma1 := fun h =>
-  absurd ((maskBounded_constVec_iff h0 (by omega) (by omega)).mp h).1 (by omega)
+  absurd ((maskBounded_constVec_iff (by omega) (by omega)).mp h).1 (by omega)
 
-/-- `γ₁ + 1` is outside the box. -/
-example {gamma1 : ℕ} (h0 : 0 < gamma1) (hq : 2 * gamma1 + 2 ≤ modulus) :
+/-- `γ₁ + 1` is outside the range. -/
+example {gamma1 : ℕ} (hq : 2 * gamma1 + 2 ≤ modulus) :
     ¬maskBounded (constVec 1 ((gamma1 : ℤ) + 1)) gamma1 := fun h =>
-  absurd ((maskBounded_constVec_iff h0 (by omega) (by omega)).mp h).2 (by omega)
+  absurd ((maskBounded_constVec_iff (by omega) (by omega)).mp h).2 (by omega)
 
-/-- The box stays inhabited at the degenerate `γ₁ = 0`. -/
-example (k : ℕ) : maskBounded (0 : RqVec k) 0 := .inl rfl
+/-- The value `0` decodes to the top endpoint `γ₁`. -/
+example {gamma1 : ℕ} (h0 : 0 < gamma1) (hq : 2 * gamma1 < modulus) :
+    centeredRepr (maskDecodeCoeff gamma1 ⟨0, by omega⟩) = gamma1 := by
+  rw [centeredRepr_maskDecodeCoeff hq]
+  simp
+
+/-- The largest value `2γ₁ - 1` decodes to the bottom endpoint `-γ₁ + 1`. -/
+example {gamma1 : ℕ} (h0 : 0 < gamma1) (hq : 2 * gamma1 < modulus) :
+    centeredRepr (maskDecodeCoeff gamma1 ⟨2 * gamma1 - 1, by omega⟩) = -(gamma1 : ℤ) + 1 := by
+  rw [centeredRepr_maskDecodeCoeff hq]
+  change (gamma1 : ℤ) - ((2 * gamma1 - 1 : ℕ) : ℤ) = _
+  omega
+
+/-! ### Computability
+
+Each `def` below elaborates without `noncomputable`, so code generation succeeds for the mask
+sampler, the identification schemes and the HVZK simulator. -/
+
+/-- The mask sampler as an executable `IO` action. -/
+def sampleMaskVecIO (k gamma1 : ℕ) [NeZero gamma1] : IO (RqVec k) :=
+  OracleComp.runIO (sampleMaskVec k gamma1)
+
+/-- The identification scheme with `t₀` in the statement. -/
+def identificationSchemeFullCompiled (p : Params) (prims : Primitives p) [NTTRingOps]
+    [DecidableEq prims.High] [NeZero p.gamma1] :=
+  identificationSchemeFull p prims
+
+/-- The HVZK simulator as an executable `IO` action. -/
+def hvzkSimulatorIO (p : Params) (prims : Primitives p) [NTTRingOps]
+    [SampleableType (CommitHashBytes p)] [NeZero p.gamma1] (fpk : FullPublicKey p prims) :
+    IO (Option (Commitment p prims × CommitHashBytes p × Response p prims)) :=
+  OracleComp.runIO (hvzkSimulator p prims fpk)
 
 private lemma half_lt_of_lt_two_mul {a b : ℕ} (hb : 0 < b) (h : b < 2 * a) :
     (1 / 2 : ℝ≥0∞) < (a : ℝ≥0∞) / b := by
@@ -87,7 +120,7 @@ private lemma half_lt_of_lt_two_mul {a b : ℕ} (hb : 0 < b) (h : b < 2 * a) :
   exact (ENNReal.ofReal_lt_ofReal_iff (lt_trans (by norm_num) key)).mpr key
 
 /-- The response gate's rate at a parameter set, from the box count. -/
-private lemma half_lt_gate (p : Params) (hb : 0 < p.gamma1 - p.beta)
+private lemma half_lt_gate (p : Params) [NeZero p.gamma1] (hb : 0 < p.gamma1 - p.beta)
     (hq : 2 * p.gamma1 < modulus)
     (h : (2 * p.gamma1) ^ (ringDegree * p.l) <
       2 * (2 * (p.gamma1 - p.beta) - 1) ^ (ringDegree * p.l)) :
@@ -122,14 +155,15 @@ example (p : Params) (prims : Primitives p) [NTTRingOps] (pk : PublicKey p prims
     validFullKeyPair p prims ⟨pk, t0⟩ sk = false := by
   simp [validFullKeyPair, h]
 
-/-- `idsWithAbort_hvzk` at the concrete FIPS 204 primitives for ML-DSA-44. -/
+/-- `identificationSchemeFull_perfectHVZK` at the concrete FIPS 204 primitives for ML-DSA-44. -/
 theorem perfectHVZK_concretePrimitives
     [DecidableEq (MLDSA.Concrete.concretePrimitives mldsa44).High] :
     letI : NTTRingOps := MLDSA.Concrete.concreteNTTRingOps
     (identificationSchemeFull mldsa44 (MLDSA.Concrete.concretePrimitives mldsa44)).PerfectHVZK
       (hvzkSimulator mldsa44 (MLDSA.Concrete.concretePrimitives mldsa44)) :=
   letI : NTTRingOps := MLDSA.Concrete.concreteNTTRingOps
-  idsWithAbort_hvzk mldsa44 (MLDSA.Concrete.concretePrimitives mldsa44)
+  identificationSchemeFull_perfectHVZK mldsa44 (MLDSA.Concrete.concretePrimitives mldsa44)
     (MLDSA.Concrete.concretePrimitives_laws mldsa44 (.inl rfl))
+    (MLDSA.Concrete.approved_gamma1_width mldsa44 (.inl rfl)).2
 
 end MLDSA.MaskBoxTest

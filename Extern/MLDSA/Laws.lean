@@ -37,9 +37,9 @@ Two further fields are discharged from the concrete byte-encoding decode ranges 
 roundtrip in `LatticeCrypto/MLDSA/Concrete/Encoding.lean`:
 
 - `expandMask_bound` (`concrete_expandMask_bound`): every `expandMask` coefficient is a value
-  decoded by `polyZUnpack` over the range `[-γ₁ + 1, γ₁]`, so its centered infinity norm is at
-  most `γ₁`. This is a property of the decoder's output window (`bitUnpackPoly_z_cInfNorm_le`) and
-  is independent of the opaque SHAKE byte stream. It matches the abstract field's bound `γ₁`.
+  decoded by `polyZUnpack` over the range `[-γ₁ + 1, γ₁]`, which is the abstract field's
+  `maskBounded`. This is a property of the decoder's output window (`bitUnpackPoly_z_coeff_mem`)
+  and is independent of the opaque SHAKE byte stream.
 - `w1Encode_injective` (`concrete_w1Encode_injOn`): on the valid commitment range — every
   component an actual `highBits` output — each coefficient lies in `[0, (q-1)/(2γ₂) - 1]`
   (`highBits_coeff_val_lt_width`), which fits the `w₁` packer's bit width, so `simpleBitPackPoly`
@@ -134,21 +134,15 @@ theorem concrete_power2Round_bound (r : Rq) :
 
 /-! ## `expandMask_bound` at the FIPS-204 `z`-range
 
-The concrete `expandMask` decodes each coefficient through `polyZUnpack p`. The decode-range bound
-`bitUnpackPoly_z_cInfNorm_le` holds for any byte input, so it applies to the opaque SHAKE stream
-after generalizing the byte argument; the two side conditions on the `z`-range bit width come from
-`approved_gamma1_width`. -/
+The concrete `expandMask` decodes each coefficient through `polyZUnpack p`. The decode range
+`bitUnpackPoly_z_coeff_mem` holds for any byte input, so it applies to the opaque SHAKE stream;
+the two side conditions on the `z`-range bit width come from `approved_gamma1_width`. -/
 
-set_option maxRecDepth 1200 in
-/-- `Primitives.Laws.expandMask_bound` (bound `γ₁`) for the concrete instance, at any
-approved parameter set. -/
+/-- `Primitives.Laws.expandMask_bound` for the concrete instance, at any approved parameter set:
+every coefficient lies in `[-γ₁ + 1, γ₁]`. -/
 theorem concrete_expandMask_bound (hp : p.isApproved) (rhoDoublePrime : Bytes 64) (kappa : ℕ) :
-    polyVecBounded ((concretePrimitives p).expandMask rhoDoublePrime kappa) p.gamma1 := by
-  rw [polyVecBounded, polyVecNorm, LatticeCrypto.PolyVec.cInfNorm_le_iff]
-  intro j
-  change LatticeCrypto.cInfNorm
-      ((MLDSA.Concrete.expandMask rhoDoublePrime kappa p).get j) ≤ p.gamma1
-  exact MLDSA.Concrete.expandMask_get_cInfNorm_le p hp rhoDoublePrime kappa j
+    maskBounded ((concretePrimitives p).expandMask rhoDoublePrime kappa) p.gamma1 := fun j i =>
+  MLDSA.Concrete.expandMask_get_coeff_mem p hp rhoDoublePrime kappa j i
 
 /-! ## `w1Encode_injective` as `Set.InjOn` on the valid range
 

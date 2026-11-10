@@ -36,8 +36,8 @@ The `IdenSchemeWithAbort` type parameters instantiate as follows for ML-DSA:
 
 This file models the **proof-level IDS** used in the Fiat-Shamir-with-aborts security argument:
 
-- **Commit** samples `y` uniformly from the range of `ExpandMask` (`sampleMaskVec`), rather than
-  deriving it from message-dependent seeds via `ExpandMask(ρ'', κ)`.
+- **Commit** samples `y` with `sampleMaskVec`, which decodes uniform values as `ExpandMask` does,
+  rather than deriving it from message-dependent seeds via `ExpandMask(ρ'', κ)`.
 - **No message hashing**: the IDS operates without messages; the message enters only through
   the Fiat-Shamir transform.
 - **No retry counter**: the IDS commit is a single probabilistic step; retry logic with
@@ -199,8 +199,8 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
 - **Verify** (Alg 8, lines 8–13): check `‖z‖∞ < γ₁ - β`, reconstruct
   `w'_Approx = Az - c·(t₁·2^d)`, verify `UseHint(h, w'_Approx) = w₁` and
   hint weight `≤ ω`. -/
-noncomputable def identificationScheme
-    [DecidableEq prims.High] :
+def identificationScheme
+    [DecidableEq prims.High] [NeZero p.gamma1] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
@@ -242,8 +242,8 @@ relation `validKeyPairShort`. The commit / respond / verify algorithms are exact
 never consumed by the operations — so every per-key fact about the operations transports
 between the two scheme constants. This is the scheme used by the idealized short-key security
 statements, whose key generators produce material-valid rather than seed-derived pairs. -/
-noncomputable def identificationSchemeShort
-    [DecidableEq prims.High] :
+def identificationSchemeShort
+    [DecidableEq prims.High] [NeZero p.gamma1] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
@@ -258,7 +258,12 @@ noncomputable def identificationSchemeShort
 FIPS 204 publishes only `t₁` and keeps the low-order part `t₀` of `t = t₁·2^d + t₀` in the secret
 key. The security analyses of ML-DSA work with the variant whose public key is the full `t`: a
 forger against the real scheme is a forger against the variant that ignores `t₀`, and the variant's
-statement gives an HVZK simulator `t₀` directly. -/
+statement gives an HVZK simulator `t₀` directly.
+
+That transfer (`unforgeableAdvantage_eq_full`) holds because the Fiat–Shamir-with-aborts layer
+hashes `(msg, w₁)` and never the statement. FIPS 204's signing layer also binds the message to
+`tr = H(ρ, t₁)`. A FIPS-format layer over this variant must keep that hash on `(ρ, t₁)` and never
+hash `t₀`; otherwise its signatures depend on `t₀` and its forgers differ from the real scheme's. -/
 
 /-- The public key together with the low-order part `t₀`: the statement of the identification
 scheme in which the full `t = t₁·2^d + t₀` is public. -/
@@ -281,8 +286,8 @@ noncomputable def validFullKeyPair (fpk : FullPublicKey p prims) (sk : SecretKey
 /-- The ML-DSA identification scheme with `t₀` in the statement. Commit, respond and verify are
 those of `identificationScheme` at the public key `fpk.pk` and ignore `t₀`, so the transcripts and
 verification are the same; only a simulator, which sees the statement, can use `t₀`. -/
-noncomputable def identificationSchemeFull
-    [DecidableEq prims.High] :
+def identificationSchemeFull
+    [DecidableEq prims.High] [NeZero p.gamma1] :
     IdenSchemeWithAbort
       (FullPublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
