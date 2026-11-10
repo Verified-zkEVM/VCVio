@@ -450,10 +450,10 @@ and `Signatures/Model/DirectAGM.lean`.
   `dec := id`):
 
   ```lean
-  def ofExplained [DecidableEq F] [FinEnum S]
+  def ofExplained [DecidableEq F] [DecidableEq S] [FinEnum S]
       (B : Interaction.Adversary F G Input (CoinQuery Query) (CoinReply Reply) Result) (dec) :
       HandleAdversary F (discreteSig S) E Input Query Reply Result
-  theorem ofExplained_run [DecidableEq F] [FinEnum S]
+  theorem ofExplained_run [DecidableEq F] [DecidableEq S] [FinEnum S]
       {N : Type → Type} [Monad N] [LawfulMonad N]
       (random : QueryImpl unifSpec N) (impl : QueryImpl (plainSpec G Query Reply) N)
       (hdec : ∀ s g, dec s (enc s g) = g) :
