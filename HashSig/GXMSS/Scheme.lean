@@ -52,6 +52,7 @@ structure Signature (R H : Type) (h v : ℕ) where
   ots : Fin v → H
   /-- One sibling per level, starting at the leaf. -/
   path : Fin h → H
+  deriving DecidableEq
 
 variable {PP T X H M R : Type} {h w v : ℕ}
 

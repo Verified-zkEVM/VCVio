@@ -99,6 +99,20 @@ Returned failure, verification rejection and missing mass all count against `δ`
   ∀ ks, alg.Generated runtime ks → ∀ ep msg,
     1 - δ ≤ alg.successMass runtime ks ep msg
 
+/-- Correctness for every generated key, message and epoch satisfying the supplied predicate.
+Returned failure, rejection and missing mass count against the error allowance. -/
+@[expose] def CompleteOn (alg : SyncSignatureAlg m M PK SK S E)
+    (runtime : ProbCompRuntime m) (active : E → Prop) (δ : ℝ≥0∞) : Prop :=
+  ∀ ks, alg.Generated runtime ks → ∀ ep, active ep → ∀ msg,
+    1 - δ ≤ alg.successMass runtime ks ep msg
+
+/-- Restricting to every epoch is the usual per-key correctness property. -/
+theorem completeOn_true_iff (alg : SyncSignatureAlg m M PK SK S E)
+    (runtime : ProbCompRuntime m) (δ : ℝ≥0∞) :
+    alg.CompleteOn runtime (fun _ => True) δ ↔ alg.Complete runtime δ := by
+  simp only [CompleteOn, Complete, forall_const]
+
+
 /-- The fully quantified per-key characterization of correctness. -/
 theorem complete_iff (alg : SyncSignatureAlg m M PK SK S E)
     (runtime : ProbCompRuntime m) (δ : ℝ≥0∞) :

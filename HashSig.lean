@@ -9,6 +9,7 @@ public import HashSig.GXMSS.Encoding.Retry
 public import HashSig.GXMSS.Encoding.TargetSum
 public import HashSig.GXMSS.Encoding.Winternitz
 public import HashSig.GXMSS.HashInstance
+public import HashSig.GXMSS.Interval.Completeness
 public import HashSig.GXMSS.Interval.Filler
 public import HashSig.GXMSS.Interval.FrontierCount
 public import HashSig.GXMSS.Interval.Merkle

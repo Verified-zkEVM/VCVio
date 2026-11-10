@@ -45,6 +45,13 @@ returned epoch/message/signature triple; a different signature for the same
 message can remain strongly fresh. Deterministic signing alone does not imply
 uniqueness of valid signatures.
 
+[`Interval/Completeness.lean`](../../HashSig/GXMSS/Interval/Completeness.lean) proves
+`GXMSS.Interval.complete_isActive`: for every generated key, signing at each active epoch
+has correctness error at most `δ^K` under the encoding's uniform error bound `δ`.
+`SyncSignatureAlg.CompleteOn` restricts the epoch quantifier while retaining per-key
+correctness and all failure mass. Its unrestricted form agrees with `Complete`.
+Inactive epochs have zero success mass; full-range interval correctness recovers `Complete`.
+
 ## Interval security
 
 Import
