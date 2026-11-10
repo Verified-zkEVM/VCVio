@@ -155,6 +155,7 @@ public import VCVioTest.RandomOracleClassIndexedTape
 public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleDefer
 public import VCVioTest.RandomOracleEncoded
+public import VCVioTest.RandomOracleEncodedFullCache
 public import VCVioTest.RandomOracleFreshAnswer
 public import VCVioTest.RandomOracleFreshQuery
 public import VCVioTest.RandomOracleHiddenSeed

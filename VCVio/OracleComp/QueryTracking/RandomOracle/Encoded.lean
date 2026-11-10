@@ -854,6 +854,45 @@ theorem prEvent_simulateQ_romImpl_encodeImpl_run_le {α : Type}
   rw [simulateQ_romImpl_simulateQ_encodeImpl]
   exact E.prEvent_simulateQ_singleImpl_run_le oa P
 
+/-- An injective encoding preserves the complete result and the filled full-reply cache.
+
+The typed run starts empty, so its finite-cache invariant is derived internally.
+The output may retain observations, ordinary errors and a counter it already carries.
+-/
+theorem singleImpl_run_evalDistEq_typedImpl_fill_of_injective
+    (injective : Function.Injective E.encode) {α : Type}
+    (body : OracleComp (unifSpec + (spec + (D →ₒ M))) α) :
+    (simulateQ E.singleImpl body).run ∅ =ᵈ (do
+      let z ← (simulateQ E.typedImpl body).run (∅, ∅)
+      let fullCache ← E.fill z.2
+      pure (z.1, fullCache)) := by
+  classical
+  have noClash : ∀ cache, ¬E.Clash cache := by
+    rintro cache ⟨left, right, distinct, _, _, same⟩
+    exact distinct (injective same)
+  have noCollides : ∀ cache operation, ¬E.Collides cache operation := by
+    intro cache operation collision
+    let answer : (spec + (D →ₒ M)).Range operation := Classical.choice inferInstance
+    exact noClash (E.mark cache operation answer)
+      (E.clash_mark (Or.inr collision) answer)
+  -- With no possible clash, the existing patched handler is the typed handler.
+  have patched : E.patchedImpl = E.typedImpl := by
+    funext operation state
+    rcases operation with draw | operation
+    · rfl
+    · simp [patchedImpl, typedImpl, patchedHashImpl, noClash, noCollides]
+      rfl
+  have initial : E.StateInv (∅, ∅) :=
+    ⟨by simp, fun _ input present => by simp at present⟩
+  let : MeasurableSpace (α × (D →ₒ M).QueryCache) := ⊤
+  apply EvalDistEq.of_evalDist_eq
+  -- Existing intertwining retains the result and the whole completed cache jointly.
+  have joint := E.intertwinesOn_fill_patchedImpl_singleImpl.evalDist_simulateQ_run
+    E.preservesInv_patchedImpl_stateInv body (∅, ∅) initial
+    (fun result fullCache => pure (result, fullCache))
+  rw [patched] at joint
+  simpa only [fill_empty, pure_bind, Prod.mk.eta, bind_pure] using joint.symm
+
 end intertwining
 
 end RandomOracleEncoding
