@@ -83,13 +83,6 @@ variable {V : S → Type} {ι' : Type} {spec' : OracleSpec ι'}
 @[expose] def PreservesTbl (game : QueryImpl Γ (StateT (Tbl V) (OracleComp spec'))) : Prop :=
   ∀ t tbl z, z ∈ support ((game t).run tbl) → z.2 = tbl
 
-/-- Appending preserves all existing entries in every sort. -/
-theorem prefix_append [DecidableEq S] (tbl : Tbl V) (s t : S) (v : V s) :
-    tbl t <+: append tbl s v t := by
-  by_cases h : t = s
-  · subst t; simp [append]
-  · simp [append, Function.update_of_ne h]
-
 /-- Appending increases any one sort's length by at most one. -/
 theorem length_append_le [DecidableEq S] (tbl : Tbl V) (s t : S) (v : V s) :
     (append tbl s v t).length ≤ (tbl t).length + 1 := by
@@ -118,13 +111,6 @@ theorem preservesTbl_coins : PreservesTbl
   have hz' : ∃ y, (y, tbl) = z := by simpa using hz
   obtain ⟨y, rfl⟩ := hz'
   rfl
-
-/-- Prefix extension preserves the value of every old handle. -/
-theorem lookup_eq_of_prefix [∀ s, Zero (V s)] {tbl tbl' : Tbl V} (s : S)
-    (hp : tbl s <+: tbl' s) (h : Handle) (hh : h < (tbl s).length) :
-    lookup tbl' s h = lookup tbl s h := by
-  obtain ⟨tail, he⟩ := hp
-  simp only [lookup, ← he, List.getD_append _ _ _ _ hh]
 
 section Semantics
 
@@ -156,7 +142,7 @@ theorem impl_prefix [DecidableEq S] [CommSemiring F]
   split at h
   · obtain ⟨t, v, hv⟩ := h
     rw [hv]
-    exact prefix_append tbl t s v
+    exact extends_append tbl t v s
   · rw [h]
 
 /-- A group handler increases any size functional by its zero-or-one operation charge. -/

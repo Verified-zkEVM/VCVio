@@ -8,6 +8,7 @@ module
 public import VCVio.CryptoFoundations.GroupModel.Signature
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.SimSemantics.Append
+import Mathlib.Data.List.GetD
 
 /-!
 # Table semantics for sorted group queries
@@ -16,7 +17,8 @@ The handler `impl` keeps one table of values per sort. Operations append their r
 its handle, and equality queries compare the two values through an observation. A handle out of
 range in its sort reads as zero (`lookup`), so bounds that count table entries count that zero.
 `run` executes group queries together with a game oracle on the same table, and `runGen` adds
-uniform sampling that leaves the table unchanged.
+uniform sampling that leaves the table unchanged. `Tbl.Extends` is the prefix order that every
+run respects; the lookup lemmas say which values it preserves.
 -/
 
 public section
@@ -59,6 +61,45 @@ theorem lookup_mapTbl [CommSemiring F]
     lookup (mapTbl (fun s => φ s) tbl) s h = φ s (lookup tbl s h) := by
   simp only [lookup, mapTbl, List.getD_eq_getElem?_getD, List.getElem?_map]
   cases (tbl s)[h]? <;> simp
+
+/-- Every sort's list in `tbl` is a prefix of its list in `tbl'`. -/
+@[expose] def Tbl.Extends (tbl tbl' : Tbl V) : Prop := ∀ s, tbl s <+: tbl' s
+
+theorem Tbl.Extends.refl (tbl : Tbl V) : Tbl.Extends tbl tbl := fun s => List.prefix_refl (tbl s)
+
+theorem Tbl.Extends.trans {tbl₁ tbl₂ tbl₃ : Tbl V} (h₁₂ : Tbl.Extends tbl₁ tbl₂)
+    (h₂₃ : Tbl.Extends tbl₂ tbl₃) : Tbl.Extends tbl₁ tbl₃ := fun s => (h₁₂ s).trans (h₂₃ s)
+
+/-- Appending a value extends the table. -/
+theorem extends_append [DecidableEq S] (tbl : Tbl V) (s : S) (v : V s) :
+    Tbl.Extends tbl (append tbl s v) := by
+  intro t
+  by_cases h : t = s
+  · subst h
+    simp [append]
+  · simp [append, Function.update_of_ne h]
+
+/-- A lookup at or past the end of its sort's table returns zero. -/
+theorem lookup_eq_zero [∀ s, Zero (V s)] (tbl : Tbl V) (s : S) (h : Handle)
+    (hh : (tbl s).length ≤ h) : lookup tbl s h = 0 := List.getD_eq_default _ _ hh
+
+/-- Extending a sort's table preserves the value of every handle already in range. -/
+theorem lookup_eq_of_prefix [∀ s, Zero (V s)] {tbl tbl' : Tbl V} (s : S)
+    (hp : tbl s <+: tbl' s) (h : Handle) (hh : h < (tbl s).length) :
+    lookup tbl' s h = lookup tbl s h := by
+  obtain ⟨tail, he⟩ := hp
+  simp only [lookup, ← he, List.getD_append _ _ _ _ hh]
+
+/-- Appending preserves lookups at every existing handle. -/
+theorem lookup_append_old [DecidableEq S] [∀ s, Zero (V s)] (tbl : Tbl V) (s : S) (v : V s)
+    (t : S) (h : Handle) (hh : h < (tbl t).length) :
+    lookup (append tbl s v) t h = lookup tbl t h :=
+  lookup_eq_of_prefix t (extends_append tbl s v t) h hh
+
+/-- Appending places the new value at the fresh handle. -/
+theorem lookup_append_fresh [DecidableEq S] [∀ s, Zero (V s)] (tbl : Tbl V) (s : S) (v : V s) :
+    lookup (append tbl s v) s (tbl s).length = v := by
+  simp [lookup, append]
 
 /-- Append a value and return its fresh handle in that sort. -/
 @[expose] def push [DecidableEq S] {m : Type → Type} [Monad m]
@@ -103,5 +144,34 @@ abbrev genSpec (F : Type) (σ : Sig S) := spec F σ + unifSpec
   run M obs ((QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (Tbl V) ProbComp)) oa tbl
 
 end Handler
+
+/-! ## Run equations -/
+
+section Run
+
+variable {F : Type} {S : Type} {σ : Sig S} {V U : S → Type} [DecidableEq S] [CommSemiring F]
+  [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)] [∀ s, DecidableEq (U s)]
+  (M : Model F σ V) (obs : (s : S) → V s → U s)
+
+theorem runGen_pure {α : Type} (a : α) (tbl : Tbl V) :
+    runGen M obs (pure a) tbl = pure (a, tbl) := rfl
+
+theorem runGen_bind {α β : Type} (oa : OracleComp (genSpec F σ) α)
+    (k : α → OracleComp (genSpec F σ) β) (tbl : Tbl V) :
+    runGen M obs (oa >>= k) tbl =
+      (runGen M obs oa tbl >>= fun r => runGen M obs (k r.1) r.2) := by
+  simp only [runGen, run, simulateQ_bind, StateT.run_bind]
+
+/-- An addition query appends the sum of its two operands and returns the fresh handle. -/
+theorem runGen_add (s : S) (a b : Handle) (tbl : Tbl V) :
+    runGen M obs (OracleComp.lift ((genSpec F σ).query (.inl (.add s a b)))) tbl =
+      pure ((tbl s).length, append tbl s (lookup tbl s a + lookup tbl s b)) := rfl
+
+/-- A scaling query appends the scaled operand and returns the fresh handle. -/
+theorem runGen_smul (s : S) (c : F) (a : Handle) (tbl : Tbl V) :
+    runGen M obs (OracleComp.lift ((genSpec F σ).query (.inl (.smul s c a)))) tbl =
+      pure ((tbl s).length, append tbl s (c • lookup tbl s a)) := rfl
+
+end Run
 
 end GroupModel
