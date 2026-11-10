@@ -12,7 +12,7 @@ import unittest
 
 UMBRELLAS = (
     "ToMathlib.lean", "VCVio.lean", "LatticeCrypto.lean", "Extern.lean",
-    "HashSig.lean", "Examples.lean", "VCVioTest.lean", "Interop.lean",
+    "HashSig.lean", "Examples.lean", "VCVioTest.lean",
 )
 
 

@@ -305,7 +305,7 @@ specific submodule it actually uses.
 
 **Allowed umbrellas** (strictly top-level roots only): root imports such as
 `VCVio.lean`, `ToMathlib.lean`, `Extern.lean`, `HashSig.lean`, `Examples.lean`,
-`LatticeCrypto.lean`, `Interop.lean`, `VCVioTest.lean`, and
+`LatticeCrypto.lean`, `VCVioTest.lean`, and
 `LatticeCryptoTest.lean`.
 When a new top-level root is added, extend this list alongside it.
 
@@ -389,9 +389,9 @@ and remaining migrations by their effect on callers.
 This regenerates the active module root files covered by the build import check:
 `ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
 `HashSig.lean`, `Examples.lean`, and `VCVioTest.lean`.
-It also updates the legacy `Interop.lean` umbrella without enabling module mode.
 CI runs `scripts/check-imports.sh`, which regenerates the umbrellas and fails if any differs
-from the committed file; `Interop` remains dormant and is migrated separately.
+from the committed file. The `Interop/` package lists its library roots in `Interop/lakefile.toml`
+and has no generated umbrella.
 
 ### 25. Active Lean sources use explicit module scopes
 
@@ -405,7 +405,7 @@ use opaque `public section` when downstream code does not need definitional unfo
 `backward.proofsInPublic`; make helper visibility explicit or give proof terms enough type
 information to avoid public metavariables.
 
-The dormant `Interop` library is intentionally excluded until its separate migration.
+The `Interop/` package builds separately; its unported hax examples are not built.
 `LatticeCryptoTest.lean` remains a curated umbrella and `HashSigTest` has no root umbrella because
 their executable modules contain colliding root-level `main` declarations.
 

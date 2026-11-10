@@ -34,7 +34,9 @@ So the shape divides by what a warning *does*, not by whether a linter exists:
 
   - `lakefile.lean`: Lake elaborates it from `import Lake`, with no Mathlib linter
     registered.
-  - `Interop/`: not a default target and no CI job builds it, so nothing elaborates it.
+  - `Interop/`: its own package (`Interop/lakefile.toml`) sets `weak.linter.mathlibStandardSet`, and
+    the `interop` job builds its listed bridges on every pull request, so the linter runs and warns
+    there, but that job does not gate on warnings, and modules not yet listed are not elaborated.
   - `scripts/`: per-PR CI *does* build it (`lake build VCVioAxiomSweepTestFixtures`, then
     `lake exe axiomsweep --check`), but no source there has Mathlib in its import closure —
     `AxiomSweep.lean` imports `Lean`, the axiom-sweep fixture modules import nothing outside

@@ -84,8 +84,9 @@ jobs:
       # at column 0. This check is text only, so it belongs in this job rather than behind
       # a build, and for lakefile.lean, Interop/ and scripts/ it is the only check of any
       # kind that reads them for this: Lake elaborates the lakefile from `import Lake` with
-      # no Mathlib linter registered, nothing builds Interop/, and scripts/ is built here but
-      # imports no Mathlib, so the `weak.` option is dropped.
+      # no Mathlib linter registered, the interop job builds only Interop/'s listed bridges
+      # and does not gate on warnings, and scripts/ is built here but imports no Mathlib, so
+      # the `weak.` option is dropped.
       - name: Check comment fences
         run: |
           bash scripts/test-comment-fences.sh
@@ -97,6 +98,65 @@ jobs:
           uv run --no-project --python 3.12 python scripts/test-check-imports.py
           uv run --no-project --python 3.12 python scripts/test-validation.py
           bash scripts/check-imports.sh
+
+  interop:
+    name: Interop Bridges
+    runs-on: ubuntu-latest
+    env:
+      CLEAN_BUILD: ${{ github.event_name == 'schedule' || inputs.clean_build == true }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - name: Free unused hosted-runner SDKs
+        run: bash scripts/free-ci-disk-space.sh
+      # The same caches as `Build Project`. `Interop/lakefile.toml` shares the root's dependency
+      # cache (`packagesDir = "../.lake/packages"`) and requires VCVio by path, whose build lands in
+      # the root's `.lake/build`, so both restore as they are.
+      - name: Restore dependency cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .lake/packages
+            !.lake/packages/**/*.setup.json
+          key: lake-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+          restore-keys: |
+            lake-deps-${{ runner.os }}-${{ runner.arch }}-
+      - name: Restore build cache
+        if: env.CLEAN_BUILD != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .lake/build
+            !.lake/build/**/*.setup.json
+          key: vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: |
+            vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+            vcvio-build-${{ runner.os }}-${{ runner.arch }}-
+      - name: Set up Lean environment
+        uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - name: Build the Interop package (hax, Aeneas and the bridges)
+        working-directory: Interop
+        run: |
+          lake exe cache get
+          lake build
+      # The modules are `InteropRust`'s roots in `Interop/lakefile.toml`.
+      - name: Enforce zero axiom and sorry debt in the bridges
+        working-directory: Interop
+        run: >-
+          lake exe axiomsweep --root Interop.Rust.Common --root Interop.Rust.Run
+          --root Interop.Rust.RustM --root Interop.Hax.CenteredBinomial
+          --baseline ../scripts/axiom_baseline.json --check
 
   downstream_stub_link:
     name: Downstream Consumer Build (no submodules)

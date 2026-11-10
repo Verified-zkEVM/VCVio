@@ -14,7 +14,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 UMBRELLAS=(ToMathlib.lean VCVio.lean LatticeCrypto.lean Extern.lean HashSig.lean Examples.lean
-  VCVioTest.lean Interop.lean)
+  VCVioTest.lean)
 
 # A missing umbrella must fail before regeneration: otherwise it would be created without
 # comparison or an original file to restore, silently turning this check into a repair.

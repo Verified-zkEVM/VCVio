@@ -44,7 +44,7 @@ unfold their definitions.
   access an unexposed implementation from the same dependency when proving its public API.
 - Do not enable `backward.privateInPublic` or `backward.proofsInPublic`; resolve visibility and
   proof-metavariable issues directly.
-- Keep the dormant `Interop` library outside this policy until it is migrated separately.
+- The `Interop/` package's built bridges follow this policy. The unported hax examples in `Interop/Hax/` are not built and keep their old form until ported.
 
 Section `variable` lines carry an instance assumption only when the theorems in scope share it:
 Lean auto-includes an instance-implicit section variable in every theorem mentioning its types,
@@ -111,7 +111,7 @@ build boundaries and the staged consolidation.
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
 - `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs; `Examples/Widgets/` holds the proof widgets they display.
-- `Interop/`: experimental bridges to Rust verification frontends (hax, aeneas). **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
+- `Interop/`: bridges to external verification tools (hax and Aeneas today), built as their own Lake package so their requires never reach VCVio's dependents. **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
 - `csrc/`: C FFI shims used for differential testing against native ML-DSA, ML-KEM, and Falcon code.
 - `third_party/`: native backends as git submodules; when they are not checked out (fresh clones, Lake dependency checkouts), the native `extern_lib` targets build as empty stub archives.
 
@@ -269,7 +269,7 @@ Security notions, experiments, games, and advantages follow
 - Falcon GPV instantiation: `LatticeCrypto/Falcon/Scheme.lean`
 - Lattice hardness assumptions: `LatticeCrypto/HardnessAssumptions/LearningWithErrors.lean`, `LatticeCrypto/HardnessAssumptions/ShortIntegerSolution.lean`
 - Differential and vector tests: `LatticeCryptoTest/`
-- Rust verification interop (hax / aeneas): `Interop/Rust/Common.lean`, `Interop/README.md`, `scripts/check-interop-isolation.sh`
+- Rust verification interop (hax / aeneas): `Interop/lakefile.toml`, `Interop/Rust/RustM.lean`, `Interop/README.md`, `scripts/check-interop-isolation.sh`
 
 ## Program Logic Tactics
 
@@ -311,7 +311,7 @@ the build just produced; `--test` runs it a second time over `VCVioTest` and
 
 CI runs the timed build on the non-test Lean libraries:
 `ToMathlib`, `VCVio`, `LatticeCrypto`, `Extern`, `HashSig`, and `Examples`.
-The dormant `Interop` target remains excluded.
+The `Interop/` package builds separately.
 Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
@@ -337,7 +337,7 @@ declaration in the non-test libraries, held at zero debt. Any declaration depend
 (`native_decide`, which mints per-declaration `._native.` axioms). The committed baseline
 `scripts/axiom_baseline.json` must stay `{"sorry": [], "nonstandard": []}`: a nonempty one
 is a policy error rather than an allowlist, and `lake exe axiomsweep --update-baseline`
-refuses to write one. `Interop` (the declared TCB) is excluded — its boundary is enforced by
+refuses to write one. `Interop/` (the declared TCB) is excluded — its boundary is enforced by
 the import-isolation gate instead. The `VCVioAxiomSweepTestFixtures` library carries
 synthetic taint for the tool's own tests and is deliberately excluded from every
 aggregate.
