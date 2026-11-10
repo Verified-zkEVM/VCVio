@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import Mathlib.Algebra.Field.ZMod
 
 /-!
-Sharpness of the master bound at a zero default
+# Sharpness of the master bound at a zero default
 
 Over `ZMod 5`, comparing the single polynomial `X` with the out-of-range handle `1`
 attains the `1/5` collision bound with no group operations.
