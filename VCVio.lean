@@ -109,6 +109,8 @@ public import VCVio.CryptoFoundations.GroupModel.Instances
 public import VCVio.CryptoFoundations.GroupModel.Interaction
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.GroupModel.Oracle
+public import VCVio.CryptoFoundations.GroupModel.PairingSeparation
+public import VCVio.CryptoFoundations.GroupModel.PairingVariants
 public import VCVio.CryptoFoundations.GroupModel.Projection
 public import VCVio.CryptoFoundations.GroupModel.Signature
 public import VCVio.CryptoFoundations.GroupModel.Tracking

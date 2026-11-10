@@ -65,6 +65,7 @@ public import VCVioTest.GroupModel.Interaction.Axioms
 public import VCVioTest.GroupModel.Interaction.Basic
 public import VCVioTest.GroupModel.Interaction.MultiGroup
 public import VCVioTest.GroupModel.MasterBound
+public import VCVioTest.GroupModel.PairingVariants
 public import VCVioTest.GroupModel.SortedMasterBound
 public import VCVioTest.GroupModel.Typed
 public import VCVioTest.ITSR
