@@ -14,10 +14,23 @@ public import Mathlib.Algebra.MvPolynomial.CommRing
 import Mathlib.Data.List.GetD
 
 /-!
-Polynomial group models: degree invariants and the master bound
+# Polynomial group models: degree invariants and the master bound
 
 Equality under evaluation at a hidden point is compared with exact polynomial equality.
 Zero defaults for out-of-range handles are included in the collision event.
+
+The master bound T3, `measureETVDist_runGen_symbolic_le`, is Shoup's generic-group argument:
+the run that compares evaluations at the hidden point agrees with the run that compares
+polynomials until two distinct entries, or an entry and zero, evaluate equally, and each such
+pair has a nonzero difference of bounded degree. The root probability is a hypothesis;
+Schwartz–Zippel supplies it for uniform points in `measureETVDist_runGen_symbolic_uniform_le`.
+
+## References
+
+* V. Shoup, *Lower Bounds for Discrete Logarithms and Related Problems*, EUROCRYPT 1997.
+* J. T. Schwartz, *Fast probabilistic algorithms for verification of polynomial identities*,
+  J. ACM 27 (1980).
+* R. Zippel, *Probabilistic algorithms for sparse polynomials*, EUROSAM 1979.
 -/
 
 public section
@@ -35,7 +48,7 @@ variable {F S ι : Type}
 @[expose] def DegreeLE [CommSemiring F] (d : ℕ) (tbl : Tbl (fun _ : S => MvPolynomial ι F)) :
     Prop := ∀ s p, p ∈ tbl s → p.totalDegree ≤ d
 
-private theorem lookup_mem [Zero F] (tbl : Tbl (fun _ : S => F)) (s : S) (a : Handle) :
+private theorem lookup_mem {A : Type} [Zero A] (tbl : Tbl (fun _ : S => A)) (s : S) (a : Handle) :
     lookup tbl s a ∈ tbl s ++ [0] := by
   by_cases h : a < (tbl s).length
   · simp only [lookup, List.getD_eq_getElem _ _ h, List.mem_append, List.mem_singleton]
@@ -118,11 +131,12 @@ theorem runGen_degreeLE [CommSemiring F] [DecidableEq S]
 /-! ## Collisions in the final table -/
 
 /-- A table collision includes distinct entries or the zero default in one sort. -/
-@[expose] def TableCollision [Zero F] (obs : S → F → ι) (tbl : Tbl (fun _ : S => F)) : Prop :=
+@[expose] def TableCollision {A B : Type} [Zero A] (obs : S → A → B) (tbl : Tbl (fun _ : S => A)) :
+    Prop :=
   ∃ s p, p ∈ tbl s ++ [0] ∧ ∃ q, q ∈ tbl s ++ [0] ∧ p ≠ q ∧ obs s p = obs s q
 
-private theorem tableCollision_mono [Zero F] {obs : S → F → ι}
-    {tbl tbl' : Tbl (fun _ : S => F)} (hp : ∀ s, tbl s <+: tbl' s)
+private theorem tableCollision_mono {A B : Type} [Zero A] {obs : S → A → B}
+    {tbl tbl' : Tbl (fun _ : S => A)} (hp : ∀ s, tbl s <+: tbl' s)
     (h : TableCollision obs tbl) : TableCollision obs tbl' := by
   obtain ⟨s, p, hp', q, hq, hne, he⟩ := h
   refine ⟨s, p, ?_, q, ?_, hne, he⟩
@@ -130,8 +144,8 @@ private theorem tableCollision_mono [Zero F] {obs : S → F → ι}
     rw [List.mem_append] at *
     exact Or.imp (fun h => (hp s).subset h) id (by assumption)
 
-private theorem isCollision_tableCollision [Zero F] {σ : Sig S}
-    {K : Type} {obs : S → F → ι} {tbl : Tbl (fun _ : S => F)} {t : Query K σ}
+private theorem isCollision_tableCollision {A B : Type} [Zero A] {σ : Sig S}
+    {K : Type} {obs : S → A → B} {tbl : Tbl (fun _ : S => A)} {t : Query K σ}
     (h : IsCollision obs tbl t) : TableCollision obs tbl := by
   cases t with
   | eq s a b => exact ⟨s, _, lookup_mem tbl s a, _, lookup_mem tbl s b, h⟩
@@ -289,9 +303,11 @@ theorem tableCollision_prob_le [Field F] [Fintype S]
 
 /-! ## Joint total variation and event bounds -/
 
-/-- **T3, the master bound.** Evaluated and exact equality differ in total variation by at
-most `choose (initial size + operation budget + 1) 2 * ε`, jointly with the hidden point and
-full output/table pair. The joint output may carry any measurable space; the proof uses
+/-- **T3, the master bound** (Shoup 1997). Evaluated and exact equality differ in total variation
+by at most `choose (initial size + operation budget + 1) 2 * ε`, jointly with the hidden point
+and full output/table pair. The signature is discrete, every initial entry has total degree at
+most `d`, `ε` bounds the root probability of nonzero polynomials of degree at most `d`, and `q`
+bounds the group operations. The joint output may carry any measurable space; the proof uses
 local discrete spaces on the point and intermediate table outputs. -/
 theorem measureETVDist_runGen_symbolic_le [Field F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type}
@@ -344,8 +360,10 @@ theorem measureETVDist_runGen_symbolic_le [Field F] [DecidableEq F] [DecidableEq
     gcongr)
   simpa only [map_bind, id_map] using hbnd
 
-/-- Every measurable event on the hidden point and full run output satisfies the master
-bound in both directions. -/
+/-- The event form of `measureETVDist_runGen_symbolic_le`, under the same hypotheses (a discrete
+signature, one degree bound `d` and root bound `ε`, and a total group-operation budget `q`):
+every measurable event on the hidden point and full run output has probabilities within
+`choose (initial size + q + 1) 2 * ε` of each other under evaluated and exact equality. -/
 theorem prEvent_runGen_symbolic_le_add [Field F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type}
     [MeasurableSpace ((ι → F) × (α × Tbl (fun _ : S => MvPolynomial ι F)))]
@@ -387,7 +405,8 @@ theorem prEvent_runGen_symbolic_le_add [Field F] [DecidableEq F] [DecidableEq ι
     Function.comp_def] using And.intro hl hr
 
 /-- Uniform hidden points over a finite field give the Schwartz–Zippel specialization
-`choose (initial size + operation budget + 1) 2 * (d / card F)` of the joint master bound. -/
+`choose (initial size + operation budget + 1) 2 * (d / card F)` of the joint master bound
+`measureETVDist_runGen_symbolic_le`. -/
 theorem measureETVDist_runGen_symbolic_uniform_le [Field F] [DecidableEq F]
     [Fintype F] [Finite ι] [DecidableEq ι] [SampleableType (ι → F)]
     [Fintype S] [DecidableEq S] {α : Type}
