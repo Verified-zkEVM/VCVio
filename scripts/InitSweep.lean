@@ -147,10 +147,11 @@ for one sweep cannot green the same name in another.
 
 Its nine rows, read off the emitted C rather than off their names:
 
-* `SLHDSA.Security.instFintypeTargetRole` and `OneTimePad.Separated.instFintypeNode` —
-  `Fintype` instances on 8- and 6-constructor enumerations with `elems` written out in
-  source. Both are assigned in their module's initialiser: they really do build their
-  `Finset` at load, and it is eight and six elements.
+* `SLHDSA.Security.instFintypeTargetRole`, `OneTimePad.Separated.instFintypeNode` and
+  `GroupModel.instFintypePSort` — `Fintype` instances on 8-, 6- and 3-constructor
+  enumerations with `elems` written out in source. All three are assigned in their module's
+  initialiser: they really do build their `Finset` at load, and it is eight, six and three
+  elements.
 * `instFinEnumBool_toMathlib` — `FinEnum Bool` built by `FinEnum.ofList [true, false]`, so
   the two-element list really is materialised at load.
 * `FinRatPMF.Demo.instFinEnumBool_vCVio`, `instFinEnumUSize_vCVio`,
