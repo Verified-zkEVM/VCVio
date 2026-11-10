@@ -27,13 +27,15 @@ namespace GroupModel
 variable {F G ι α : Type}
 
 /-- Run a generic scalar-valued computation on the generator and challenge, returning its guess. -/
-@[expose] def DLogAdversary.ofGeneric [Field F] [AddCommGroup G] [Module F G] [DecidableEq G]
+@[expose] def DLogAdversary.ofGeneric [CommSemiring F] [AddCommMonoid G] [Module F G]
+    [DecidableEq G]
     (A : OracleComp (genSpec F groupSig) F) : DiffieHellman.DLogAdversary F G :=
   fun g X => Prod.fst <$> runGen (Model.group G) (fun _ => id) A (fun _ => [g, X])
 
 /-- Run a generic handle-valued computation on the generator and two challenges, then read its
 output handle; an out-of-range handle returns zero. -/
-@[expose] def CDHAdversary.ofGeneric [Field F] [AddCommGroup G] [Module F G] [DecidableEq G]
+@[expose] def CDHAdversary.ofGeneric [CommSemiring F] [AddCommMonoid G] [Module F G]
+    [DecidableEq G]
     (A : OracleComp (genSpec F groupSig) Handle) : DiffieHellman.CDHAdversary F G :=
   fun g X Y => (fun z => lookup z.2 () z.1) <$>
     runGen (Model.group G) (fun _ => id) A (fun _ => [g, X, Y])
