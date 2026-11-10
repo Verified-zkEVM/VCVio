@@ -22,7 +22,7 @@ The contract is enforced at three levels:
 1. **Lake**: `Interop` is its own `lean_lib` in `lakefile.lean`, sibling to
    `LatticeCrypto`/`Examples`. Cross-library imports are physical: a file
    under `VCVio/`, `LatticeCrypto/`, `LatticeCryptoTest/`, `Examples/`,
-   `ToMathlib/`, `FFI/`, `VCVioWidgets/`, or `VCVioTest/` must never
+   `ToMathlib/`, `FFI/`, or `VCVioTest/` must never
    `import Interop.…`, `import Hax.…`, or `import Aeneas.…`.
 2. **CI**: `scripts/check-interop-isolation.sh` uses Lean's source parser to
    check for forbidden imports and exits non-zero on violation.
@@ -32,7 +32,7 @@ The contract is enforced at three levels:
 3. **Reverse direction**: `Interop/**` is allowed to depend on `VCVio/**`,
    `ToMathlib/**`, hax (`Hax.…`), and aeneas (`Aeneas.…`), but **not** on
    `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `FFI/**`,
-   `VCVioWidgets/**`, or `VCVioTest/**`.
+   or `VCVioTest/**`.
    Those are themselves clients of VCVio. The same script checks this.
 
 If you need to share infrastructure between Interop and another library,
