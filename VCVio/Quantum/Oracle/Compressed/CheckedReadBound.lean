@@ -306,7 +306,7 @@ theorem checkedReadFourier_conj_translation_apply (f : Option Y → Y × ZMod 2)
         (cellCompress Y * diagonal (fun a ↦ χ (f a)) * cellCompress Y :
           Matrix (Option Y) (Option Y) ℂ) (D' x) (D x) else 0 := by
   rw [checkedReadFourier_conj_translation,
-    one_kronecker_mul_diagonal_mul_one_kronecker_apply]
+    Matrix.one_kronecker_mul_diagonal_mul_one_kronecker_apply]
   by_cases hm : (x', χ') = (x, χ)
   · obtain ⟨rfl, rfl⟩ := Prod.mk.inj hm
     have key := sum_mul_piKron_mul_piKron (fun _ : X ↦ cellCompress Y)

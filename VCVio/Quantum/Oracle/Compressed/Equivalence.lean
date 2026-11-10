@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.Oracle.Basis
 public import VCVio.Quantum.Oracle.Compressed.Oracle
 public import VCVio.Quantum.Oracle.Comb
 public import VCVio.Quantum.Oracle.Model
@@ -74,22 +75,6 @@ universe u v w
 namespace Quantum
 
 /-! ## Basis matrices on basis states -/
-
-/-- The column of the basis state at `b`, times its adjoint, is the basis state at `b`. -/
-theorem basisMatrix_const_mul_conjTranspose {B : Type*} [DecidableEq B] (b : B) :
-    basisMatrix (fun _ : Unit ↦ b) * (basisMatrix fun _ : Unit ↦ b)ᴴ = Matrix.single b b 1 := by
-  ext c c'
-  by_cases h : c = b <;> by_cases h' : c' = b <;>
-    simp [Matrix.mul_apply, Matrix.single_apply, h, h'] <;> grind
-
-/-- The gate of a basis matrix sends the basis state at `a` to the basis state at `f a`. -/
-theorem conj_basisMatrix_single {A B : Type*} [Fintype A] [DecidableEq A] [DecidableEq B]
-    (f : A → B) (a : A) :
-    MatrixMap.conj (basisMatrix f) (Matrix.single a a 1) = Matrix.single (f a) (f a) 1 := by
-  rw [← basisMatrix_const_mul_conjTranspose a, MatrixMap.conj_apply,
-    ← Matrix.mul_assoc (basisMatrix f), Matrix.mul_assoc (basisMatrix f * _),
-    ← Matrix.conjTranspose_mul, ← basisMatrix_comp]
-  exact basisMatrix_const_mul_conjTranspose (f a)
 
 /-! ## The uniform superposition over functions -/
 

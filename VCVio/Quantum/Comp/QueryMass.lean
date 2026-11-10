@@ -5,6 +5,8 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.MatrixMap.Family
+public import QuantumFoundations.MatrixMap.Kraus
 public import VCVio.Quantum.Comp.QueryBound
 
 /-!
@@ -97,15 +99,6 @@ universe u v u₁ v₁ w w₁
 namespace Quantum
 
 /-! ## Traces of families of positive semidefinite matrices -/
-
-/-- The trace of the sum of a summable family of positive semidefinite matrices is the sum of
-the traces, in `ℝ≥0∞`. -/
-theorem ofReal_trace_re_tsum {ι n : Type*} [Fintype n] {f : ι → Matrix n n ℂ} (hf : Summable f)
-    (hpos : ∀ b, (f b).PosSemidef) :
-    ENNReal.ofReal (∑' b, f b).trace.re = ∑' b, ENNReal.ofReal (f b).trace.re := by
-  rw [Matrix.trace_tsum hf, Complex.re_tsum (Matrix.summable_trace hf)]
-  exact ENNReal.ofReal_tsum_of_nonneg (fun b ↦ (hpos b).trace_re_nonneg)
-    (Complex.reCLM.summable (Matrix.summable_trace hf))
 
 namespace QuantumRuntime
 
@@ -468,7 +461,7 @@ theorem queryMassAt_tsum_state (x : QuantumComp L spec X A) {ι : Type*}
   classical
   refine R.queryWeight_tsum_state I (fun i' g hg hgpos ↦ ?_) x hf hpos j
   split_ifs
-  · exact ofReal_trace_re_tsum hg hgpos
+  · exact Matrix.ofReal_trace_re_tsum hg hgpos
   · simp
 
 /-- **Total query mass** (ePrint 2025/2166, §4.2, for the classical ports): the sum over all
@@ -739,26 +732,6 @@ theorem tsum_queryWeight_le_tsum_mul_indexMass (C : (Σ i, κ i) → ℝ≥0∞)
   rw [ENNReal.tsum_comm]
   simp only [indexMass, ENNReal.tsum_mul_left]
 
-omit B in
-/-- The blocks of a complete family `∑ₖ (B k)ᴴ B k = 1` split the trace. -/
-theorem tsum_ofReal_trace_conj_kronecker_one {J D : Type*} [Fintype J] [DecidableEq J]
-    [Fintype D] [DecidableEq D] {K : Type*} [Fintype K] {B : K → Matrix J J ℂ}
-    (hB : ∑ k, (B k)ᴴ * B k = 1) {σ : Matrix (J × D) (J × D) ℂ} (hσ : σ.PosSemidef) :
-    ∑' k, ENNReal.ofReal (MatrixMap.conj (B k ⊗ₖ (1 : Matrix D D ℂ)) σ).trace.re =
-      ENNReal.ofReal σ.trace.re := by
-  have hnn : ∀ k, 0 ≤ (MatrixMap.conj (B k ⊗ₖ (1 : Matrix D D ℂ)) σ).trace.re := fun k ↦
-    (hσ.mul_mul_conjTranspose_same _).trace_re_nonneg
-  have h1 : ∑ k, (B k ⊗ₖ (1 : Matrix D D ℂ))ᴴ * (B k ⊗ₖ (1 : Matrix D D ℂ)) = 1 := by
-    simp only [Matrix.conjTranspose_kronecker, Matrix.conjTranspose_one, ← Matrix.mul_kronecker_mul,
-      Matrix.one_mul]
-    rw [← Matrix.one_kronecker_one, ← hB]
-    ext ⟨a, b⟩ ⟨c, d⟩
-    simp [Matrix.sum_apply, Finset.sum_mul]
-  rw [tsum_fintype, ← ENNReal.ofReal_sum_of_nonneg fun k _ ↦ hnn k]
-  congr 1
-  simp only [MatrixMap.trace_conj_apply, ← Complex.re_sum, ← Matrix.trace_sum, ← Matrix.sum_mul,
-    h1, Matrix.one_mul]
-
 /-- **Index masses refine query masses** (the analogue of Remark 4.2 of ePrint 2025/2166 for a
 coherent index): if the blocks of port `i` are complete, `∑ₖ (B i k)ᴴ B i k = 1`, the index
 masses of its blocks at the `j`-th call add up to its query mass. -/
@@ -772,7 +745,7 @@ theorem tsum_indexMassAt_eq_queryMassAt (i : spec.Port) [Fintype (κ i)]
   by_cases h : i' = i
   · subst h
     simp only [↓reduceIte]
-    rw [ENNReal.tsum_comm, ← tsum_ofReal_trace_conj_kronecker_one hB hσ]
+    rw [ENNReal.tsum_comm, ← MatrixMap.tsum_ofReal_trace_conj_kronecker_one hB hσ]
     refine tsum_congr fun k ↦ ?_
     rw [tsum_eq_single k fun k' hk' ↦ by simp [Ne.symm hk']]
     simp

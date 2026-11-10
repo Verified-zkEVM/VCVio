@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.Contraction
 
 public import Mathlib.Analysis.Fourier.FiniteAbelian.PontryaginDuality
 public import VCVio.Quantum.Oracle.Compressed.Truncation
@@ -298,23 +299,6 @@ theorem phaseCell_some_some {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (u w : Y) :
 
 end phase
 
-/-- An entry of `(1 ⊗ A) diag(d) (1 ⊗ B)`: the first register is kept, and the second is
-summed over the intermediate states. -/
-theorem one_kronecker_mul_diagonal_mul_one_kronecker_apply {Q Z : Type*} [Fintype Q]
-    [DecidableEq Q] [Fintype Z] [DecidableEq Z] (A B : Matrix Z Z ℂ) (d : Q × Z → ℂ)
-    (q' : Q) (z' : Z) (q : Q) (z : Z) :
-    (((1 : Matrix Q Q ℂ) ⊗ₖ A) * diagonal d * ((1 : Matrix Q Q ℂ) ⊗ₖ B)) (q', z') (q, z) =
-      if q' = q then ∑ z₁, A z' z₁ * d (q, z₁) * B z₁ z else 0 := by
-  rw [mul_apply, Fintype.sum_prod_type, Finset.sum_eq_single q]
-  · simp only [mul_diagonal, kroneckerMap_apply, one_apply, ↓reduceIte, one_mul]
-    split_ifs with h
-    · subst h
-      simp only [one_mul]
-    · simp
-  · intro b _ hb
-    simp [hb]
-  · simp
-
 section phaseOracle
 
 variable (X Y : Type*) [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
@@ -349,7 +333,7 @@ theorem phaseOracle_apply (x' : X) (χ' : AddChar Y ℂ) (D' : Database X Y) (x 
     (χ : AddChar Y ℂ) (D : Database X Y) :
     phaseOracle X Y ((x', χ'), D') ((x, χ), D) =
       if (x', χ') = (x, χ) ∧ ∀ j ≠ x, D' j = D j then phaseCell Y χ (D' x) (D x) else 0 := by
-  rw [phaseOracle_eq, phaseDiagonal, one_kronecker_mul_diagonal_mul_one_kronecker_apply]
+  rw [phaseOracle_eq, phaseDiagonal, Matrix.one_kronecker_mul_diagonal_mul_one_kronecker_apply]
   by_cases hm : (x', χ') = (x, χ)
   · obtain ⟨rfl, rfl⟩ := Prod.mk.inj hm
     have key := sum_mul_piKron_mul_piKron (fun _ : X ↦ cellCompress Y)

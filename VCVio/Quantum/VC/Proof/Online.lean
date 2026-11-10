@@ -5,6 +5,8 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.MatrixMap.BlockNorm
+public import QuantumFoundations.Oracle.Basis
 public import VCVio.Quantum.VC.Proof.Commutativity
 public import VCVio.Quantum.VC.Proof.Offline
 public import VCVio.Quantum.Oracle.Compressed.CollisionRuntime
@@ -411,11 +413,6 @@ end
 
 section
 variable {A B : Type*}
-/-- Right multiplication by a permutation matrix relabels columns. -/
-theorem mul_basisMatrix_perm_apply [Fintype B] [DecidableEq B] (M : Matrix A B ℂ) (e : Equiv.Perm B)
-    (a : A) (b : B) :
-    (M * basisMatrix e) a b = M a (e b) := by
-  simp [mul_apply, basisMatrix_apply, mul_ite]
 end
 section
 variable {Q S R : Type*} [Fintype Q] [DecidableEq Q] [Fintype S] [DecidableEq S]
@@ -430,7 +427,7 @@ theorem controlledPermutation_commutator_apply
     (V * O - O * V) (q, s, v) (p, r, w) =
       M (q, s) (p, r) * ((if v = e s w then 1 else 0) - if v = e r w then 1 else 0) := by
   dsimp only
-  rw [Matrix.sub_apply, basisMatrix_equiv_mul_apply, mul_basisMatrix_perm_apply]
+  rw [Matrix.sub_apply, basisMatrix_equiv_mul_apply, mul_basisMatrix_apply]
   simp only [reindex_apply, submatrix_apply, Equiv.prodCongr_symm, Equiv.refl_symm,
     Equiv.prodCongr_apply, Prod.map_apply, Equiv.refl_apply, Equiv.prodCongrRight_symm,
     Equiv.prodCongrRight_apply, Function.comp_apply, Equiv.prodAssoc_symm_apply,
@@ -527,7 +524,7 @@ theorem labelControlled_permutation_commutator_apply (π : S → ι)
       simp
     · simp [h]
   dsimp only
-  rw [hl, Matrix.sub_apply, basisMatrix_equiv_mul_apply, mul_basisMatrix_perm_apply]
+  rw [hl, Matrix.sub_apply, basisMatrix_equiv_mul_apply, mul_basisMatrix_apply]
   simp only [Equiv.prodCongrRight_symm, Equiv.prodCongrRight_apply, Function.comp_apply,
     kroneckerMap_apply, one_apply, Equiv.symm_apply_eq, mul_sub]
 end
@@ -605,15 +602,6 @@ end
 section
 variable {m n m' n' : Type*} [Fintype m] [Fintype n] [Fintype m'] [Fintype n']
   [DecidableEq n] [DecidableEq n']
-/-- Restricting rows and columns and applying a contractive source mask preserves a norm bound. -/
-theorem l2_opNorm_submatrix_mul_mask_le (M : Matrix m n ℂ) (f : m' → m) (g : n' → n)
-    (hf : Function.Injective f) (hg : Function.Injective g) (p : n' → ℂ)
-    (hp : ∀ a, ‖p a‖ ≤ 1) : ‖M.submatrix f g * diagonal p‖ ≤ ‖M‖ := by
-  have hd : ‖diagonal p‖ ≤ 1 := by
-    rw [l2_opNorm_diagonal]
-    exact (pi_norm_le_iff_of_nonneg zero_le_one).mpr hp
-  exact ((l2_opNorm_mul _ _).trans (mul_le_of_le_one_right (norm_nonneg _) hd)).trans
-    (l2_opNorm_submatrix_le_of_injective M hf hg)
 end
 section
 variable {X Y R : Type} {k : ℕ} [Fintype X] [DecidableEq X]
@@ -692,7 +680,7 @@ theorem l2_opNorm_familyDefect_source_le (i : Fin k)
       · simp [hg]
     rw [he]
     apply le_trans ?_ (hlocal fix)
-    apply l2_opNorm_submatrix_mul_mask_le K f f hf hf
+    apply Matrix.l2_opNorm_submatrix_mul_mask_le K f f hf hf
     intro a
     split_ifs <;> norm_num
 end
