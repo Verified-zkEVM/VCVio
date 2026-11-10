@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.SubInstrument.Relabel
 public import VCVio.Quantum.Comp.Simulation
 
 /-!
@@ -17,8 +18,6 @@ ePrint 2025/2166, §4.1–4.2 (`VCVio.Quantum.Oracle.Emulated`) and their extens
   has no classical result. The emulated oracles of §4.1 (paper p. 28) answer this
   signature.
 * `Quantum.QuantumOracleSpec.sum s t`: the disjoint union of two signatures.
-* `Quantum.SubInstrument.reindex eA eB p`: transport a subinstrument along bijections of its
-  input and output bases.
 * `Quantum.QuantumRuntime.extend R step'`: add ports that act on the runtime's private register.
   This is the step from `EO` to `EO^(Ext)` (paper p. 50).
 * `Quantum.QuantumRuntime.addRegister R G σ`: adjoin a register `G`, prepared in `σ`, that the
@@ -64,37 +63,6 @@ def QuantumOracleSpec.sum (s : QuantumOracleSpec.{u₁, v₁}) (t : QuantumOracl
   In := Sum.elim s.In t.In
   Out := Sum.elim s.Out t.Out
   Result := Sum.elim s.Result t.Result
-
-/-! ## Transport of subinstruments along bases -/
-
-namespace SubInstrument
-
-variable {A A' B B' : Type*} [Fintype A] [Fintype A'] [Fintype B] [Fintype B'] [DecidableEq A]
-  [DecidableEq A'] [DecidableEq B] [DecidableEq B'] {α : Type*}
-
-/-- Transport a subinstrument `p` from `A` to `B` along bijections `eA : A ≃ A'` and
-`eB : B ≃ B'`: relabel `A'` back to `A`, run `p`, and relabel `B` to `B'`. -/
-@[expose]
-noncomputable def reindex (eA : A ≃ A') (eB : B ≃ B') (p : SubInstrument A B α) :
-    SubInstrument A' B' α :=
-  (relabel eA.symm).bind fun _ ↦ p.bind fun a ↦ (relabel eB).bind fun _ ↦ SubInstrument.pure a
-
-/-- The branch of a transported subinstrument: move the input back along `eA`, apply the branch
-of `p`, and move the output along `eB`. -/
-theorem branch_reindex_apply (eA : A ≃ A') (eB : B ≃ B') (p : SubInstrument A B α) (a : α)
-    (ρ : Matrix A' A' ℂ) :
-    (p.reindex eA eB).branch a ρ = (p.branch a (ρ.submatrix eA eA)).submatrix eB.symm eB.symm := by
-  rw [reindex, DSubInstrument.branch_bind_unit, DSubInstrument.branch_bind_bind_unit_ret,
-    LinearMap.comp_apply,
-    LinearMap.comp_apply, relabel_branch_apply, relabel_branch_apply, Equiv.symm_symm]
-
-/-- A transported lossless subinstrument is lossless. -/
-theorem Lossless.reindex {p : SubInstrument A B α} (hp : p.Lossless) (eA : A ≃ A')
-    (eB : B ≃ B') : (p.reindex eA eB).Lossless :=
-  (lossless_relabel _).bind fun _ ↦ hp.bind fun _ ↦
-    (lossless_relabel _).bind fun _ ↦ DSubInstrument.lossless_ret _ _
-
-end SubInstrument
 
 /-! ## Runtimes -/
 

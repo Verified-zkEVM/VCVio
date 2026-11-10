@@ -565,7 +565,6 @@ public import VCVio.Quantum.Comp.QueryBound
 public import VCVio.Quantum.Comp.QueryMass
 public import VCVio.Quantum.Comp.Runtime
 public import VCVio.Quantum.Comp.Simulation
-public import VCVio.Quantum.Comp.Subsystem
 public import VCVio.Quantum.Comp.TotalQueryBound
 public import VCVio.Quantum.Oracle.Classical
 public import VCVio.Quantum.Oracle.ClassicalCalls
