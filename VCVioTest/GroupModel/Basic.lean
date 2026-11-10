@@ -52,6 +52,16 @@ theorem singleProgram_result :
 example : (run singleModel (fun _ => id) singleGame singleProgram (fun _ => [1])).2 () =
   [1, 3, 4, 5] := by decide
 
+/-- A game that clears the table. -/
+def clearGame : QueryImpl gameSpec (StateT (Tbl fun _ : Unit => ZMod 7) Id) :=
+  fun _ => do set (fun _ : Unit => ([] : List (ZMod 7))); pure 0
+
+/-- A run whose game clears the table does not extend it, so `run_extends` needs its hypothesis
+on the game. -/
+example : ¬ Tbl.Extends (fun _ => [1]) (run singleModel (fun _ => id) clearGame
+    ((spec (ZMod 7) groupSig + gameSpec).query (.inr ())) (fun _ => [1])).2 :=
+  fun h => absurd (h ()) (by decide)
+
 /-- Three-sort model with identity transport and field multiplication. -/
 def pairingModel : Model (ZMod 7) pairingIsoSig (fun _ => ZMod 7) where
   lin _ := LinearMap.id
