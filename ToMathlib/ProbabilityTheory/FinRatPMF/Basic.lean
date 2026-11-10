@@ -693,7 +693,7 @@ private lemma probOfList_toList_eq_getD [DecidableEq α] [BEq α] [Hashable α]
 
 /-- The hash map sending each outcome of positive probability under `p` to that probability. -/
 @[expose]
-def normalizeMap [BEq α] [Hashable α] [LawfulBEq α] [LawfulHashable α] (p : Raw α) :
+def normalizeMap [BEq α] [Hashable α] (p : Raw α) :
     Std.HashMap α ℚ≥0 :=
   (accumulateWeights p.data).filter (fun _ q => q ≠ 0)
 
@@ -725,7 +725,7 @@ private lemma probOfNormalizeMap_eq_prob [DecidableEq α] [BEq α] [Hashable α]
         _ = p.prob x := hacc'
 
 private lemma snd_ne_zero_of_mem_normalizeMap_toList [BEq α] [Hashable α]
-    [LawfulBEq α] [LawfulHashable α] (p : Raw α) {a : α × ℚ≥0}
+    [LawfulBEq α] (p : Raw α) {a : α × ℚ≥0}
     (ha : a ∈ (normalizeMap p).toList) : a.2 ≠ 0 := by
   have hsome : (normalizeMap p)[a.1]? = some a.2 :=
     (Std.HashMap.mem_toList_iff_getElem?_eq_some (m := normalizeMap p)

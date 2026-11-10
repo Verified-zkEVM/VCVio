@@ -28,6 +28,7 @@ public import LatticeCrypto.MLDSA.Concrete.LawBounds
 public import LatticeCrypto.MLDSA.Concrete.NTT
 public import LatticeCrypto.MLDSA.Concrete.Rounding
 public import LatticeCrypto.MLDSA.Encoding
+public import LatticeCrypto.MLDSA.MaskBox
 public import LatticeCrypto.MLDSA.Params
 public import LatticeCrypto.MLDSA.Primitives
 public import LatticeCrypto.MLDSA.Scheme
@@ -50,6 +51,8 @@ public import LatticeCrypto.Ring.Core
 public import LatticeCrypto.Ring.IntegralLift
 public import LatticeCrypto.Ring.Kernel
 public import LatticeCrypto.Ring.NTTCert
+public import LatticeCrypto.Ring.NTTLoop
+public import LatticeCrypto.Ring.NTTSplitCert
 public import LatticeCrypto.Ring.Norms
 public import LatticeCrypto.Ring.Rounding
 public import LatticeCrypto.Ring.Sampling

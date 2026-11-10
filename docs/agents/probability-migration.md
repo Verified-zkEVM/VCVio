@@ -15,7 +15,7 @@ record is `docs/reading/denotational-probability-semantics.md`.
 
 1. Repin VCVio.
 2. Run the codemod over your sources, from the VCVio checkout Lake placed in your project:
-   `python3 .lake/packages/VCVio/scripts/migrate-native-probability.py <source directories>`
+   `uv run --no-project --python 3.12 python .lake/packages/VCVio/scripts/migrate-native-probability.py <source directories>`
    (`--dry-run` prints the diff instead of writing). It rewrites what the tables below convert
    mechanically: legacy events and bare draws in `Pr{…}`, `GameEquiv` and `≡ₚ`, oracle
    answer-type binders, the spec classes, renamed declarations, imports of removed modules, and
@@ -31,7 +31,7 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 
 Maintainers converting an open pull request: `scripts/migration-dry-run.sh --worktree DIR --out OUT
 PR...` merges each pull request onto the current commit in a built worktree, runs the codemod over
-its Lean files and builds their modules; `python3 scripts/classify-migration-errors.py OUT` sorts the
+its Lean files and builds their modules; `uv run --no-project --python 3.12 python scripts/classify-migration-errors.py OUT` sorts the
 remaining build errors by kind, file scope and whether the codemod knows the name.
 
 ## Notation and definitions
@@ -190,7 +190,7 @@ The Fiat–Shamir extraction bounds `nma_to_hard_relation_bound`, `euf_nma_bound
 `Pr{let x ← …}[x = true]` events.
 
 For an aborting identification scheme whose loss is a real-valued formula, keep `ζ_zk : ℝ` and
-pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_bound` does.
+pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_to_nma` does.
 
 ## Modules
 
