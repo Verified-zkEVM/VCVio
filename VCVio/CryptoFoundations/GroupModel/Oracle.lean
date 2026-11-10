@@ -9,6 +9,7 @@ public import VCVio.CryptoFoundations.GroupModel.Signature
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.SimSemantics.Append
 import Mathlib.Data.List.GetD
+import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 
 /-!
 # Table semantics for sorted group queries
@@ -17,8 +18,10 @@ The handler `impl` keeps one table of values per sort. Operations append their r
 its handle, and equality queries compare the two values through an observation. A handle out of
 range in its sort reads as zero (`lookup`), so bounds that count table entries count that zero.
 `run` executes group queries together with a game oracle on the same table, and `runGen` adds
-uniform sampling that leaves the table unchanged. `Tbl.Extends` is the prefix order that every
-run respects; the lookup lemmas say which values it preserves.
+uniform sampling that leaves the table unchanged. `Tbl.Extends` is the prefix order on tables.
+Every group reply extends the table (`impl_extends`), and so does every generic run
+(`runGen_extends`) and every run whose game extends it (`run_extends`); the lookup lemmas say
+which values the order preserves.
 -/
 
 public section
@@ -173,5 +176,47 @@ theorem runGen_smul (s : S) (c : F) (a : Handle) (tbl : Tbl V) :
       pure ((tbl s).length, append tbl s (c • lookup tbl s a)) := rfl
 
 end Run
+
+/-! ## Table growth -/
+
+section Extends
+
+variable {F : Type} {S : Type} {σ : Sig S} {V U : S → Type} [DecidableEq S] [CommSemiring F]
+  [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)] [∀ s, DecidableEq (U s)]
+  (M : Model F σ V) (obs : (s : S) → V s → U s)
+
+/-- Every reachable reply of the group handler extends the table. The handler may run in any
+lawful monad whose support is lawful. -/
+theorem impl_extends {m : Type → Type} [Monad m] [LawfulMonad m] [MonadAttach m]
+    [LawfulMonadAttach m] (t : Query F σ) (tbl : Tbl V) (z : spec F σ t × Tbl V)
+    (hz : z ∈ support ((impl M obs m t).run tbl)) : Tbl.Extends tbl z.2 := by
+  cases t <;>
+    simp only [impl, push, StateT.run_bind, StateT.run_get, pure_bind, StateT.run_modifyGet,
+      MonadAttach.mem_support] at hz <;>
+    obtain rfl := LawfulMonadAttach.eq_of_canReturn_pure hz
+  all_goals first | exact Tbl.Extends.refl tbl | exact extends_append _ _ _
+
+/-- A run extends its input table when every reachable step of the game does. The monad is any
+lawful monad whose support is lawful. -/
+theorem run_extends {m : Type → Type} [Monad m] [LawfulMonad m] [MonadAttach m]
+    [LawfulMonadAttach m] {ι : Type} {Γ : OracleSpec ι} (game : QueryImpl Γ (StateT (Tbl V) m))
+    (hg : ∀ t tbl z, z ∈ support ((game t).run tbl) → Tbl.Extends tbl z.2)
+    {α : Type} (oa : OracleComp (spec F σ + Γ) α) (tbl : Tbl V) (z : α × Tbl V)
+    (hz : z ∈ support (run M obs game oa tbl)) : Tbl.Extends tbl z.2 := by
+  refine simulateQ_run_preservesInv (impl M obs m + game) (Tbl.Extends tbl) ?_ oa tbl
+    (Tbl.Extends.refl tbl) z hz
+  rintro (t | t) tbl' htbl' w hw
+  · exact htbl'.trans (impl_extends M obs t tbl' w hw)
+  · exact htbl'.trans (hg t tbl' w hw)
+
+/-- A generic run extends its input table: uniform sampling leaves the table unchanged. -/
+theorem runGen_extends {α : Type} (oa : OracleComp (genSpec F σ) α) (tbl : Tbl V)
+    (z : α × Tbl V) (hz : z ∈ support (runGen M obs oa tbl)) : Tbl.Extends tbl z.2 := by
+  refine run_extends M obs _ ?_ oa tbl z hz
+  intro t tbl' w hw
+  obtain ⟨y, rfl⟩ : ∃ y, (y, tbl') = w := by simpa using hw
+  exact Tbl.Extends.refl tbl'
+
+end Extends
 
 end GroupModel
