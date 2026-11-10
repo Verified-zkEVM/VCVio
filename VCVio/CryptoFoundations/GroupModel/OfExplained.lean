@@ -131,7 +131,7 @@ private def sortMap [DecidableEq S] {m : Type → Type} [Monad m] {A : S → Typ
       let rest ← sortMap f ss
       pure (Function.update rest s xs)
 
-private def decodeGroups [FinEnum S] (dec : (s : S) → E s → G s)
+private def decodeGroups [DecidableEq S] [FinEnum S] (dec : (s : S) → E s → G s)
     (handles : Groups (fun _ : S => Handle)) : OracleComp (Target F S E Query Reply) (Groups G) :=
   sortMap (fun s => (handles s).mapM fun h => do
     let e ← encodingQ s h
@@ -157,14 +157,14 @@ private def buildVector [Zero F] [DecidableEq F] (s : S) (cs : List F) (hs : Lis
   | some h => pure h
   | none => smulQ s 0 0
 
-private def buildMessage [Zero F] [DecidableEq F] [FinEnum S] {Data : Type}
+private def buildMessage [Zero F] [DecidableEq F] [DecidableEq S] [FinEnum S] {Data : Type}
     (handles : Groups (fun _ : S => Handle)) (out : Explained F Data G) :
     OracleComp (Target F S E Query Reply) (Message Data (fun _ : S => Handle)) := do
   let groups ← sortMap (fun s => (out.coefficients s).mapM fun cs =>
     buildVector s cs (handles s)) (FinEnum.toList S)
   pure ⟨out.value.data, groups⟩
 
-private def compile [Zero F] [DecidableEq F] [FinEnum S]
+private def compile [Zero F] [DecidableEq F] [DecidableEq S] [FinEnum S]
     (dec : (s : S) → E s → G s)
     (program : OracleComp (explainedSpec F G (CoinQuery Query) (CoinReply Reply))
       (Explained F Result G)) :
@@ -186,12 +186,12 @@ private def compile [Zero F] [DecidableEq F] [FinEnum S]
           next ⟨coin, fun _ => []⟩ handles)
         q.value.data next)
 
-private theorem compile_pure [Zero F] [DecidableEq F] [FinEnum S]
+private theorem compile_pure [Zero F] [DecidableEq F] [DecidableEq S] [FinEnum S]
     (dec : (s : S) → E s → G s) (out : Explained F Result G)
     (hs : Groups (fun _ : S => Handle)) :
     compile (Query := Query) (Reply := Reply) dec (pure out) hs = buildMessage hs out := rfl
 
-private theorem compile_coin [Zero F] [DecidableEq F] [FinEnum S]
+private theorem compile_coin [Zero F] [DecidableEq F] [DecidableEq S] [FinEnum S]
     (dec : (s : S) → E s → G s) (n : ℕ) (groups : Groups G)
     (coefficients : S → List (List F))
     (next : Message (Fin (n + 1)) G → OracleComp
@@ -202,7 +202,7 @@ private theorem compile_coin [Zero F] [DecidableEq F] [FinEnum S]
         let coin ← coinQ n
         compile dec (next ⟨coin, fun _ => []⟩) hs) := rfl
 
-private theorem compile_request [Zero F] [DecidableEq F] [FinEnum S]
+private theorem compile_request [Zero F] [DecidableEq F] [DecidableEq S] [FinEnum S]
     (dec : (s : S) → E s → G s) (q : Query) (groups : Groups G)
     (coefficients : S → List (List F))
     (next : Message (Reply q) G → OracleComp
@@ -225,7 +225,7 @@ corresponding received handle, added to the element built from the remaining coe
 an all-zero vector becomes one `smul` by zero. Sorts are visited in the order
 `FinEnum.toList S`. -/
 def ofExplained [Zero F] [DecidableEq F] [∀ s, AddMonoid (G s)]
-    [∀ s, SMul F (G s)] [FinEnum S]
+    [∀ s, SMul F (G s)] [DecidableEq S] [FinEnum S]
     (B : Interaction.Adversary F G Input (CoinQuery Query) (CoinReply Reply) Result)
     (dec : (s : S) → E s → G s) :
     HandleAdversary F (discreteSig S) E Input Query Reply Result := fun input => do
@@ -262,15 +262,11 @@ private theorem run_certified {N : Type → Type} [Monad N]
 
 section Semantics
 
-variable [CommSemiring F]
+variable [CommSemiring F] [DecidableEq S]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)] [∀ s, DecidableEq (G s)]
     {N : Type → Type} [Monad N] [LawfulMonad N]
     (M : Model F (discreteSig S) G) (enc : (s : S) → G s → E s)
     (random : QueryImpl unifSpec N) (game : QueryImpl (plainSpec G Query Reply) N)
-
-section
-
-variable [DecidableEq S]
 
 private abbrev handler : QueryImpl (Target F S E Query Reply) (StateT (Tbl G) N) :=
   impl M (fun _ => id) N + (encImpl (m := N) enc + (coinImpl (G := G) random + liftGame game))
@@ -458,8 +454,6 @@ private theorem run_decodeSorts (dec : (s : S) → E s → G s)
       · subst t
         simp
       · simp [hts]
-
-end
 
 private theorem run_buildMessage [DecidableEq F] [FinEnum S] {Data : Type}
     (handles : Groups (fun _ : S => Handle)) (basis : Groups G)
