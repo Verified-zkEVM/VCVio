@@ -453,6 +453,34 @@ theorem evalDist_uniformSample_bind_equiv_symm [SampleableType γ] {δ : Type} [
 
 end transport
 
+/-- Two injections of a uniform sample space give the same distribution to any continuation that
+ignores its argument outside a set both of them cover. A permutation of the sample space matches
+the two injections on the preimages of `S` (`Equiv.extendSubtype`), and permuting preserves the
+uniform distribution (`map_uniformSample_evalDistEq_of_bijective`). -/
+theorem uniformSample_bind_evalDistEq_of_cover {α β γ : Type} [SampleableType α]
+    {f₁ f₂ : α → β} (hf₁ : Function.Injective f₁) (hf₂ : Function.Injective f₂)
+    {S : Set β} (hS₁ : S ⊆ Set.range f₁) (hS₂ : S ⊆ Set.range f₂)
+    (k : β → ProbComp γ) (d : ProbComp γ) (hk : ∀ b ∉ S, k b = d) :
+    (do let a ← $ᵗ α; k (f₁ a)) =ᵈ (do let a ← $ᵗ α; k (f₂ a)) := by
+  classical
+  let e : ∀ f : α → β, Function.Injective f → S ⊆ Set.range f → {a // f a ∈ S} ≃ S :=
+    fun f hf hS => Equiv.ofBijective (fun a => ⟨f a.1, a.2⟩)
+      ⟨fun a b h => Subtype.ext (hf (congrArg Subtype.val h)), fun b => by
+        obtain ⟨a, ha⟩ := hS b.2
+        exact ⟨⟨a, ha ▸ b.2⟩, Subtype.ext ha⟩⟩
+  let e' : {a // f₁ a ∈ S} ≃ {a // f₂ a ∈ S} := (e f₁ hf₁ hS₁).trans (e f₂ hf₂ hS₂).symm
+  have hσ : ∀ a, k (f₁ a) = k (f₂ (e'.extendSubtype a)) := fun a => by
+    by_cases ha : f₁ a ∈ S
+    · rw [Equiv.extendSubtype_apply_of_mem _ a ha]
+      exact congrArg k (congrArg Subtype.val ((e f₂ hf₂ hS₂).apply_symm_apply
+        (e f₁ hf₁ hS₁ ⟨a, ha⟩))).symm
+    · have ha' : f₂ (e'.extendSubtype a) ∉ S := e'.extendSubtype_not_mem a ha
+      rw [hk _ ha, hk _ ha']
+  simp_rw [hσ]
+  simpa only [bind_map_left] using
+    (map_uniformSample_evalDistEq_of_bijective e'.extendSubtype.bijective).bind_left
+      fun a => k (f₂ a)
+
 /-! ## Independence of the chosen sampler -/
 
 section samplerIrrelevance
