@@ -32,10 +32,7 @@ theorem binding_zmod_101 :
           (plainReduction (bindingReduction binder)))}[b = true] + (1 / 101 : ℝ≥0∞) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
   intro binder
-  simpa [ZMod.card] using bindingAdvantage_le_dlog (1 : ZMod 101)
-    (by
-      simp only [smul_eq_mul, mul_one]
-      exact ⟨fun _ _ h => h, fun x => ⟨x, rfl⟩⟩) binder
+  simpa [ZMod.card] using bindingAdvantage_le_dlog (1 : ZMod 101) one_ne_zero binder
 
 /-- Blinding by `1` perfectly hides a two-coordinate message over arbitrary fixed message bases. -/
 theorem hiding_zmod_101 :

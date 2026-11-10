@@ -125,11 +125,12 @@ theorem bindingAdvantage_le_relation [Fintype ι]
   simp only [Bool.and_eq_true, decide_eq_true_eq] at hw ⊢
   exact openingDifference_wins _ _ _ _ _ hw.1.1 (hw.1.2.trans hw.2.symm)
 
-/-- Binding reduces to discrete logarithm with additive loss `1 / |F|`. -/
+/-- Binding reduces to discrete logarithm with additive loss `1 / |F|`, for any nonzero
+generator. -/
 theorem bindingAdvantage_le_dlog [Fintype ι]
     [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
-    (g : G) (hg : Function.Bijective (· • g : F → G))
+    (g : G) (hg : g ≠ 0)
     (binder : BindingAdversary (Option ι → G) (ι → F) G F) :
     (scheme (uniformSetup (F := F) (ι := ι) g)).bindingAdvantage binder ≤
       Pr{let b ← (DiffieHellman.dlogExperiment g
@@ -158,9 +159,9 @@ abbrev GenericBinder (F ι : Type) :=
 theorem bindingReduction_ofGeneric [Fintype ι] [Field F]
     [AddCommGroup G] [Module F G] [DecidableEq G] (A : GenericBinder F ι) :
     bindingReduction (ofGeneric (G := G) A) =
-      GroupModel.DiscreteLogRelation.Adversary.ofGeneric (genericBindingReduction A) := by
+      DiscreteLogRelation.Adversary.ofGeneric (genericBindingReduction A) := by
   funext pp
-  simp [bindingReduction, ofGeneric, GroupModel.DiscreteLogRelation.Adversary.ofGeneric,
+  simp [bindingReduction, ofGeneric, DiscreteLogRelation.Adversary.ofGeneric,
     genericBindingReduction, GroupModel.runGen, GroupModel.run, StateT.run_map,
     Functor.map_map]
 
@@ -176,7 +177,7 @@ theorem bindingAdvantage_ofGeneric_le [Fintype ι]
   refine (bindingAdvantage_le_relation g (ofGeneric A)).trans ?_
   rw [bindingReduction_ofGeneric]
   simpa [Fintype.card_option, Nat.add_assoc] using
-    GroupModel.experiment_ofGeneric_le g hg (genericBindingReduction A) q
+    DiscreteLogRelation.experiment_ofGeneric_le g hg (genericBindingReduction A) q
       ((isQueryBoundP_map_iff A _ q).mpr hq)
 
 end VectorPedersen

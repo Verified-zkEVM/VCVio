@@ -40,8 +40,8 @@ abbrev Adversary (F G ι : Type) (spec : OracleSpec κ) :=
 
 /-- Sample a uniform basis and accept a nonzero coefficient vector with vanishing group sum. -/
 @[expose] noncomputable def experiment [Fintype ι]
-    [Field F] [DecidableEq F] [SampleableType F]
-    [AddCommGroup G] [Module F G] [DecidableEq G]
+    [Semiring F] [DecidableEq F] [SampleableType F]
+    [AddCommMonoid G] [Module F G] [DecidableEq G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)
     (g : G) (A : Adversary F G ι spec) : ProbComp Bool := do
   let x ← $ᵗ (ι → F)
@@ -52,7 +52,7 @@ abbrev Adversary (F G ι : Type) (spec : OracleSpec κ) :=
 into the negated generator coefficient, returning zero when that denominator vanishes. -/
 @[expose] noncomputable def reduction [Fintype ι]
     [Field F] [DecidableEq F] [SampleableType F]
-    [AddCommGroup G] [Module F G]
+    [AddCommMonoid G] [Module F G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)
     (A : Adversary F G ι spec) : DiffieHellman.DLogAdversary F G := fun g Z => do
   let x ← $ᵗ (ι → F)
@@ -70,20 +70,20 @@ abbrev plainImpl : QueryImpl (unifSpec + emptySpec) (StateT Unit ProbComp) :=
     Adversary F G ι (unifSpec + emptySpec) := fun basis => liftM (A basis)
 
 /-- The plain experiment is the shared experiment with the empty auxiliary specification. -/
-noncomputable abbrev plainExperiment [Fintype ι] [Field F] [DecidableEq F]
-    [SampleableType F] [AddCommGroup G] [Module F G] [DecidableEq G]
+noncomputable abbrev plainExperiment [Fintype ι] [Semiring F] [DecidableEq F]
+    [SampleableType F] [AddCommMonoid G] [Module F G] [DecidableEq G]
     (g : G) (A : Adversary F G ι unifSpec) : ProbComp Bool :=
   experiment plainImpl () g (plainAdversary A)
 
 /-- The plain reduction is the shared reduction with the empty auxiliary specification. -/
 noncomputable abbrev plainReduction [Fintype ι] [Field F] [DecidableEq F]
-    [SampleableType F] [AddCommGroup G] [Module F G]
+    [SampleableType F] [AddCommMonoid G] [Module F G]
     (A : Adversary F G ι unifSpec) : DiffieHellman.DLogAdversary F G :=
   reduction plainImpl () (plainAdversary A)
 
 /-- Unfolding the plain experiment selects the empty auxiliary specification and unit state. -/
-theorem plainExperiment_eq [Fintype ι] [Field F] [DecidableEq F]
-    [SampleableType F] [AddCommGroup G] [Module F G] [DecidableEq G]
+theorem plainExperiment_eq [Fintype ι] [Semiring F] [DecidableEq F]
+    [SampleableType F] [AddCommMonoid G] [Module F G] [DecidableEq G]
     (g : G) (A : Adversary F G ι unifSpec) :
     plainExperiment g A = experiment plainImpl () g (plainAdversary A) := rfl
 
@@ -188,15 +188,16 @@ private theorem programmed_eq [Fintype ι] [Field F] [SampleableType F]
           (fun y a => pure ((fun i => t i - y i * z), y, a))))))
 
 /-- Relation finding reduces to discrete logarithm with additive loss `1 / |F|`, including
-an empty input vector. The implementation and initial state are fixed independently of the basis,
-so the finder can share an oracle cache with the computation from which it is extracted.
-This is the oracle-computation form of ironwood `Zcash/Common/RelationProbabilityCoins.lean`.
-The hidden mask is sampled independently after the adversary's output. -/
+an empty input vector, for any nonzero generator. The implementation and initial state are fixed
+independently of the basis, so the finder can share an oracle cache with the computation from
+which it is extracted. This is the oracle-computation form of ironwood
+`Zcash/Common/RelationProbabilityCoins.lean`. The hidden mask is sampled independently after the
+adversary's output. -/
 theorem experiment_le [Fintype ι]
     [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)
-    (g : G) (hg : Function.Bijective (· • g : F → G)) (A : Adversary F G ι spec) :
+    (g : G) (hg : g ≠ 0) (A : Adversary F G ι spec) :
     Pr{let b ← experiment impl s g A}[b = true] ≤
       Pr{let b ← DiffieHellman.dlogExperiment g (reduction impl s A)}[b = true] +
         1 / Fintype.card F := by
@@ -216,7 +217,8 @@ theorem experiment_le [Fintype ι]
       (∑ i, a i • (t i • g) = 0) ↔ ∑ i, a i * t i = 0 := by
     rw [show (∑ i, a i • (t i • g)) = (∑ i, a i * t i) • g by
       simp only [smul_smul, Finset.sum_smul]]
-    exact ⟨fun h => hg.injective (h.trans (zero_smul F g).symm), fun h => by rw [h, zero_smul]⟩
+    exact ⟨fun h => smul_left_injective F hg (h.trans (zero_smul F g).symm),
+      fun h => by rw [h, zero_smul]⟩
   have hw : Pr{let w ← R}[win w] = Pr{let b ← experiment impl s g A}[b = true] := by
     simp only [R, win, experiment, prEvent_norm, decide_eq_true_eq, hgroup]
     simp only [← bind_pure_comp, OracleComp.prEvent_bind_const]
