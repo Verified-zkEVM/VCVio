@@ -336,13 +336,13 @@ private theorem ideal_embed_step [SampleableType Response]
 
 /-- Full-range scheme equality is a separate deterministic obligation; filler projection laws
 are absent because no filler response is evaluated at full range. -/
-@[expose] def FullRangeSchemeCorrespondence [SampleableType Key] [DecidableEq H]
+@[expose] def FullRangeSchemeCorrespondence [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
     (prf : SharedPRF Key PP M Response h v)
     (p : GXMSS.Interval.PRFDerived.Interpretation PP H R Response) (K : ℕ) : Prop :=
-  GXMSS.Interval.PRFDerived.scheme hash enc prf.eval p K (Interval.full h) =
-    GXMSS.PRFDerived.scheme hash enc (restrictPRF prf).eval p.toComplete K
+  GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval p K (Interval.full h) =
+    GXMSS.PRFDerived.scheme prf.keygen hash enc (restrictPRF prf).eval p.toComplete K
 
 /-- Equality of real PRF experiment measures under the explicit query embedding. -/
 @[expose] def FullRangeRealCorrespondence [DecidableEq H] [DecidableEq M]
@@ -372,13 +372,13 @@ are absent because no filler response is evaluated at full range. -/
       (GXMSS.PRFDerived.Unforgeability.randgenPRFReduction hash enc p.toComplete K adv)]
 
 /-- Deterministic full-range scheme correspondence needs no filler projection law. -/
-theorem fullRangeSchemeCorrespondence [SampleableType Key] [DecidableEq H]
+theorem fullRangeSchemeCorrespondence [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
     (prf : SharedPRF Key PP M Response h v)
     (p : GXMSS.Interval.PRFDerived.Interpretation PP H R Response) (K : ℕ) :
     FullRangeSchemeCorrespondence hash enc prf p K :=
-  GXMSS.Interval.PRFDerived.scheme_full hash enc prf.eval p K
+  GXMSS.Interval.PRFDerived.scheme_full prf.keygen hash enc prf.eval p K
 
 /-- Full-range real PRF experiments agree for the actual retained key generator and evaluator.
 No key distribution or response projection law is required. -/
@@ -450,7 +450,7 @@ theorem fullRangePRFAdvantage [SampleableType Response] [DecidableEq H] [Decidab
 
 /-- Full-range strong experiment measures agree from exact scheme equality, without any
 response projection sampling law. -/
-theorem fullRangeStrongExperiment [SampleableType Key] [DecidableEq H] [DecidableEq M]
+theorem fullRangeStrongExperiment [DecidableEq H] [DecidableEq M]
     [DecidableEq (Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
@@ -459,9 +459,9 @@ theorem fullRangeStrongExperiment [SampleableType Key] [DecidableEq H] [Decidabl
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
     SyncSignatureUnforgeability.strongUnforgeableExp
-      (GXMSS.Interval.PRFDerived.scheme hash enc prf.eval p K (Interval.full h))
+      (GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval p K (Interval.full h))
       ProbCompRuntime.probComp adv = SyncSignatureUnforgeability.strongUnforgeableExp
-        (GXMSS.PRFDerived.scheme hash enc (restrictPRF prf).eval p.toComplete K)
+        (GXMSS.PRFDerived.scheme prf.keygen hash enc (restrictPRF prf).eval p.toComplete K)
         ProbCompRuntime.probComp adv := by
   exact congrArg (fun alg => SyncSignatureUnforgeability.strongUnforgeableExp
     alg ProbCompRuntime.probComp adv) (fullRangeSchemeCorrespondence hash enc prf p K)

@@ -133,8 +133,8 @@ uses the complete additive PRF hop and three projection laws:
 - Chain starts have the uniform `H` distribution.
 - Retry randomizers have the uniform `R` distribution.
 
-It also requires the PRF's actual `UniformKey` law and its declared sampling
-and equality instances. Its function-query bound is `1 + N*v + qs*K`.
+The scheme uses the PRF's actual key generator and retains the declared sampling
+and equality instances; no uniform-key hypothesis is required. Its function-query bound is `1 + N*v + qs*K`.
 
 The general interval endpoint
 `GXMSS.Interval.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound`
@@ -143,7 +143,7 @@ in
 uses its adjacent numerical
 `GXMSS.Interval.PRFDerived.Unforgeability.strongUnforgeabilityBound`:
 one named PRF advantage plus the exact ten-term interval bound. It requires
-all direct-theorem premises, `UniformKey`, and four separate projection laws:
+all direct-theorem premises and four separate projection laws:
 the three above plus uniform `H` filler digests. Its function-query bound is
 `1 + L*v + F + qs*K`, where `F` is the frontier cardinality. The bound charges
 eager retry suffixes even when an earlier retry succeeds. It bounds function

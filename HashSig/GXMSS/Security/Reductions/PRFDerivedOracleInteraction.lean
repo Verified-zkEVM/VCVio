@@ -508,22 +508,21 @@ private theorem adaptiveInteraction_real [DecidableEq H]
 
 /-- The real PRF distinguisher observes the complete strong synchronized game.
 The same runtime interpretation therefore preserves missing mass as well as returned failure. -/
-theorem randgenPRFReduction_real_strong [SampleableType Key] [DecidableEq H]
+theorem randgenPRFReduction_real_strong [DecidableEq H]
     [DecidableEq M] [DecidableEq (Signature R H h v)]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
     (prf : SharedPRF Key PP M Response h v)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget : ℕ)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
-      (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) (keyLaw : prf.UniformKey) :
+      (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
     prf.prfRealExperiment (randgenPRFReduction hash enc projection budget adv) =
       SyncSignatureUnforgeability.strongValid
-        (GXMSS.PRFDerived.scheme hash enc prf.eval projection budget) <$>
+        (GXMSS.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget) <$>
       SyncSignatureUnforgeability.interaction
-        (GXMSS.PRFDerived.scheme hash enc prf.eval projection budget) adv := by
+        (GXMSS.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget) adv := by
   unfold PRFScheme.prfRealExperiment randgenPRFReduction
-  rw [keyLaw]
   change (do
-    let key ← $ᵗ Key
+    let key ← prf.keygen
     simulateQ (prf.prfRealQueryImpl key)
       ((SyncSignatureUnforgeability.strongValid
         (oracleScheme hash enc projection budget)) <$>
@@ -591,23 +590,23 @@ theorem randgenPRFReduction_functionQuery_bound [DecidableEq H] [DecidableEq M]
   exact hresult
 
 /-- The strong pair-fresh adaptive game has the same one-cache PRF hop. -/
-private theorem adaptive_strong_prf_bound [SampleableType Key] [DecidableEq H]
+private theorem adaptive_strong_prf_bound [DecidableEq H]
     [DecidableEq M] [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.PRFDerived.Query PP M h v)] [SampleableType Response]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
     (prf : SharedPRF Key PP M Response h v)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget : ℕ)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
-      (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) (keyLaw : prf.UniformKey) :
+      (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
     (SyncSignatureUnforgeability.strongUnforgeableExp
-      (GXMSS.PRFDerived.scheme hash enc prf.eval projection budget)
+      (GXMSS.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget)
       ProbCompRuntime.probComp adv).boolDist
       𝒟[PRFScheme.prfIdealExperiment
         (randgenPRFReduction hash enc projection budget adv)] ≤
       prf.prfAdvantage (randgenPRFReduction hash enc projection budget adv) := by
   unfold SyncSignatureUnforgeability.strongUnforgeableExp
     SyncSignatureUnforgeability.outputMeasure
-  rw [← randgenPRFReduction_real_strong hash enc prf projection budget adv keyLaw]
+  rw [← randgenPRFReduction_real_strong hash enc prf projection budget adv]
   rfl
 
 /-- The ideal full-interaction strong game is generic GXMSS strong
@@ -664,7 +663,7 @@ set_option maxHeartbeats 1600000 in
 -- exceeds the default heartbeat limit; the proof is a short measure bound.
 /-- The shared-response PRF cost adds to the generic strong GXMSS game. The
 Boolean measures retain returned failure and missing mass. -/
-theorem adaptive_strong_additive_bound [SampleableType Key]
+theorem adaptive_strong_additive_bound
     [SampleableType H] [SampleableType R] [DecidableEq H] [DecidableEq M]
     [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.PRFDerived.Query PP M h v)] [SampleableType Response]
@@ -672,21 +671,21 @@ theorem adaptive_strong_additive_bound [SampleableType Key]
     (prf : SharedPRF Key PP M Response h v)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget : ℕ)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
-      (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) (keyLaw : prf.UniformKey)
+      (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v))
     (hseed : PublicSeedSamplingLaw hash projection) (hstart : ChainStartSamplingLaw projection)
     (hretry : RetrySamplingLaw projection) :
     SyncSignatureUnforgeability.strongAdvantage
-      (GXMSS.PRFDerived.scheme hash enc prf.eval projection budget)
+      (GXMSS.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget)
       ProbCompRuntime.probComp adv ≤
     prf.prfAdvantage (randgenPRFReduction hash enc projection budget adv) +
       SyncSignatureUnforgeability.strongAdvantage
         (GXMSS.scheme hash enc budget) ProbCompRuntime.probComp adv := by
   let source := SyncSignatureUnforgeability.strongUnforgeableExp
-    (GXMSS.PRFDerived.scheme hash enc prf.eval projection budget)
+    (GXMSS.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget)
     ProbCompRuntime.probComp adv
   let ideal := 𝒟[PRFScheme.prfIdealExperiment
     (randgenPRFReduction hash enc projection budget adv)]
-  have hhop := adaptive_strong_prf_bound hash enc prf projection budget adv keyLaw
+  have hhop := adaptive_strong_prf_bound hash enc prf projection budget adv
   have hcorr := ideal_adaptive_strong_correspondence hash enc projection budget
     adv hseed hstart hretry
   change source {true} ≤ _

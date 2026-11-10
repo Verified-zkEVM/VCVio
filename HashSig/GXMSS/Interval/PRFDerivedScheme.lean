@@ -188,11 +188,11 @@ theorem signatureOfWord_eq_of_active_starts_eq (hash : HashInstance PP T X H h w
   ((GXMSS.Interval.keys hash I pp (starts I evaluate p key pp)
     (fillers I evaluate p key pp)).1, key)
 
-/-- Key generation is parameterless and samples one evaluator key. -/
-@[expose] def keygen [SampleableType Key] (hash : HashInstance PP T X H h w v)
+/-- Parameterless key generation uses the captured evaluator-key sampler. -/
+@[expose] def keygen (sampleKey : ProbComp Key) (hash : HashInstance PP T X H h w v)
     (I : Interval h) (evaluate : Evaluator Key PP M Response h v)
     (p : Interpretation PP H R Response) : ProbComp (PublicKey PP H × Key) := do
-  let key ← $ᵗ Key
+  let key ← sampleKey
   pure (keys hash I evaluate p key)
 
 /-- The whole bounded list is queried eagerly; consumed prefixes remain a separate observation. -/
@@ -255,13 +255,14 @@ theorem run_zero (hash : HashInstance PP T X H h w v)
   simp [run, retryRandomizers, signResult, GXMSS.PRFDerived.signResult_nil, replacePath]
 
 /-- Captured configuration defines the one-key scheme; verification covers all epochs. -/
-@[expose] def scheme [SampleableType Key] [DecidableEq H]
+@[expose] def scheme [DecidableEq H]
+    (sampleKey : ProbComp Key)
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
     (evaluate : Evaluator Key PP M Response h v) (p : Interpretation PP H R Response)
     (K : ℕ) (I : Interval h) :
     SyncSignatureAlg ProbComp M (PublicKey PP H) Key (Signature R H h v) (Fin (2 ^ h)) where
-  keygen := keygen hash I evaluate p
+  keygen := keygen sampleKey hash I evaluate p
   sign := sign hash enc evaluate p K I
   verify := GXMSS.verify hash enc
 
@@ -316,12 +317,13 @@ theorem run_full (hash : HashInstance PP T X H h w v)
     Query.ofComplete]
 
 /-- Full-range schemes agree exactly, independently of any filler response sampling law. -/
-theorem scheme_full [SampleableType Key] [DecidableEq H]
+theorem scheme_full [DecidableEq H]
+    (sampleKey : ProbComp Key)
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
     (evaluate : Evaluator Key PP M Response h v) (p : Interpretation PP H R Response) (K : ℕ) :
-    scheme hash enc evaluate p K (Interval.full h) =
-      GXMSS.PRFDerived.scheme hash enc (fun k q => evaluate k (Query.ofComplete q))
+    scheme sampleKey hash enc evaluate p K (Interval.full h) =
+      GXMSS.PRFDerived.scheme sampleKey hash enc (fun k q => evaluate k (Query.ofComplete q))
         p.toComplete K := by
   unfold scheme GXMSS.PRFDerived.scheme
   congr 1

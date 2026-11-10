@@ -310,20 +310,20 @@ theorem transientCore_endpoint (hash : HashInstance PP T X H h w v)
       hash.chain pp epoch chain 0 (2 ^ w - 1)
         (interpretation.chainStart (evaluate key (.start pp epoch chain))) := rfl
 
-/-- Sample one evaluator key, then derive the public parameter and all starts from it. -/
-@[expose] def keygen [SampleableType Key] (hash : HashInstance PP T X H h w v)
+/-- Sample one key from the captured generator, then derive the public parameter and all starts. -/
+@[expose] def keygen (sampleKey : ProbComp Key) (hash : HashInstance PP T X H h w v)
     (evaluate : Evaluator Key PP M Response h v)
     (interpretation : Interpretation PP H R Response) :
     ProbComp (PublicKey PP H × SecretKey Key) := do
-  let key ← $ᵗ Key
+  let key ← sampleKey
   pure (keys hash evaluate interpretation key)
 
-/-- Key generation has exactly one evaluator-key sample and no separate seed draw. -/
-theorem keygen_eq [SampleableType Key] (hash : HashInstance PP T X H h w v)
+/-- Key generation uses the captured evaluator-key sampler without a separate seed draw. -/
+theorem keygen_eq (sampleKey : ProbComp Key) (hash : HashInstance PP T X H h w v)
     (evaluate : Evaluator Key PP M Response h v)
     (interpretation : Interpretation PP H R Response) :
-    keygen hash evaluate interpretation = (do
-      let key ← $ᵗ Key
+    keygen sampleKey hash evaluate interpretation = (do
+      let key ← sampleKey
       pure (keys hash evaluate interpretation key)) := rfl
 
 /-- Deterministic first-success signing with a transient Construction 3 key. -/
@@ -431,14 +431,15 @@ theorem verify_eq [DecidableEq H] (hash : HashInstance PP T X H h w v)
       GXMSS.verify hash enc pk epoch message signature := rfl
 
 /-- Shared-seed derived GXMSS with the hash, arbitrary encoding, evaluator, and budget captured. -/
-@[expose] def scheme [SampleableType Key] [DecidableEq H]
+@[expose] def scheme [DecidableEq H]
+    (sampleKey : ProbComp Key)
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
     (evaluate : Evaluator Key PP M Response h v)
     (interpretation : Interpretation PP H R Response) (budget : ℕ) :
     SyncSignatureAlg ProbComp M (PublicKey PP H) (SecretKey Key)
       (Signature R H h v) (Fin (2 ^ h)) where
-  keygen := keygen hash evaluate interpretation
+  keygen := keygen sampleKey hash evaluate interpretation
   sign := sign budget evaluate interpretation hash enc
   verify := verify hash enc
 

@@ -53,7 +53,7 @@ set_option maxHeartbeats 1600000 in
 /-- Full-range interval strong security recovers the complete theorem with its original three
 projection laws. No filler law is needed for the actual interval reduction or experiment. -/
 theorem fullRangeStrongReductionBound
-    [SampleableType Key] [SampleableType H] [SampleableType R] [SampleableType Response]
+    [SampleableType H] [SampleableType R] [SampleableType Response]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
     [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)]
@@ -65,23 +65,23 @@ theorem fullRangeStrongReductionBound
     (htwo : ∃ x y : Codeword v (2 ^ w), x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v))
-    (hbound : GXMSS.Unforgeability.SigningQueryBound qs adv) (keyLaw : prf.UniformKey)
+    (hbound : GXMSS.Unforgeability.SigningQueryBound qs adv)
     (hseed : PublicSeedSamplingLaw hash p) (hstart : ChainStartSamplingLaw p)
     (hretry : RetrySamplingLaw p) :
     SyncSignatureUnforgeability.strongAdvantage
-      (GXMSS.Interval.PRFDerived.scheme hash enc prf.eval p K (Interval.full h))
+      (GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval p K (Interval.full h))
       ProbCompRuntime.probComp adv ≤
       fullRangeStrongUnforgeabilityBound hash enc prf p K qs hv hw adv := by
   classical
   unfold fullRangeStrongUnforgeabilityBound
-  rw [show GXMSS.Interval.PRFDerived.scheme hash enc prf.eval p K
-    (Interval.full h) = GXMSS.PRFDerived.scheme hash enc
+  rw [show GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval p K
+    (Interval.full h) = GXMSS.PRFDerived.scheme prf.keygen hash enc
       (restrictPRF prf).eval p.toComplete K from fullRangeSchemeCorrespondence hash enc prf p K,
     fullRangeDisplayedBound hash enc prf p K qs hv hw adv]
   simpa only [GXMSS.PRFDerived.Unforgeability.strongUnforgeabilityBound,
-    GXMSS.Unforgeability.reductionBound, Nat.cast_pow, Nat.cast_ofNat] using
+    GXMSS.Unforgeability.reductionBound, restrictPRF_keygen, Nat.cast_pow, Nat.cast_ofNat] using
     GXMSS.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound hash enc (restrictPRF prf)
-    p.toComplete K qs hv hw htwo adv hbound keyLaw hseed hstart hretry
+    p.toComplete K qs hv hw htwo adv hbound hseed hstart hretry
 
 
 end GXMSS.Interval.PRFDerived.Unforgeability

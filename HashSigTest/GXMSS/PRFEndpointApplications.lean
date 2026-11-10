@@ -28,7 +28,7 @@ section
 open GXMSS.PRFDerived.Unforgeability
 
 example
-    [SampleableType Key] [SampleableType H] [SampleableType R]
+    [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M]
     [DecidableEq R] [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.PRFDerived.Query PP M h v)] [SampleableType Response]
@@ -38,11 +38,11 @@ example
     (hv : 0 < v) (hw : 0 < w) (htwo : ∃ x y : Codeword v (2 ^ w),
       x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y) (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v))
-    (hbound : GXMSS.Unforgeability.SigningQueryBound qs adv) (keyLaw : prf.UniformKey)
+    (hbound : GXMSS.Unforgeability.SigningQueryBound qs adv)
     (hseed : PublicSeedSamplingLaw hash projection) (hstart : ChainStartSamplingLaw projection)
     (hretry : RetrySamplingLaw projection) :
     SyncSignatureUnforgeability.strongAdvantage
-      (GXMSS.PRFDerived.scheme hash enc prf.eval projection budget)
+      (GXMSS.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget)
       ProbCompRuntime.probComp adv ≤
     prf.prfAdvantage (randgenPRFReduction hash enc projection budget adv) +
       (SM_DT_TCR_Advantage
@@ -60,7 +60,7 @@ example
           SM_DT_PRE_Advantage
             (GXMSS.Reductions.jointPreimageReduction hash enc budget hv hw adv))) :=
   GXMSS.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound hash enc prf projection
-    budget qs hv hw htwo adv hbound keyLaw hseed hstart hretry
+    budget qs hv hw htwo adv hbound hseed hstart hretry
 
 end
 
@@ -69,7 +69,7 @@ section
 open GXMSS.Interval.PRFDerived.Unforgeability
 
 example
-    [SampleableType Key] [SampleableType H] [SampleableType R] [SampleableType Response]
+    [SampleableType H] [SampleableType R] [SampleableType Response]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
     [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)]
@@ -81,19 +81,19 @@ example
     (htwo : ∃ x y : Codeword v (2 ^ w), x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v))
-    (hqueries : GXMSS.Unforgeability.SigningQueryBound qs adv) (keyLaw : prf.UniformKey)
+    (hqueries : GXMSS.Unforgeability.SigningQueryBound qs adv)
     (hseed : PublicSeedSamplingLaw hash projection) (hstart : ChainStartSamplingLaw projection)
     (hretry : RetrySamplingLaw projection) (hfiller : FillerSamplingLaw projection) :
     SyncSignatureUnforgeability.strongAdvantage
-      (GXMSS.Interval.PRFDerived.scheme hash enc prf.eval projection budget I)
+      (GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget I)
       ProbCompRuntime.probComp adv ≤
       prf.prfAdvantage (randgenPRFReduction hash enc projection budget I adv) +
         GXMSS.Interval.Unforgeability.strongUnforgeabilityBound hash enc budget qs I hv hw adv :=
   GXMSS.Interval.PRFDerived.Unforgeability.strong_unforgeability_reduction_bound hash enc prf
-    projection budget qs I hv hw htwo adv hqueries keyLaw hseed hstart hretry hfiller
+    projection budget qs I hv hw htwo adv hqueries hseed hstart hretry hfiller
 
 example
-    [SampleableType Key] [SampleableType H] [SampleableType R] [SampleableType Response]
+    [SampleableType H] [SampleableType R] [SampleableType Response]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
     [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)]
@@ -105,16 +105,16 @@ example
     (htwo : ∃ x y : Codeword v (2 ^ w), x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v))
-    (hbound : GXMSS.Unforgeability.SigningQueryBound qs adv) (keyLaw : prf.UniformKey)
+    (hbound : GXMSS.Unforgeability.SigningQueryBound qs adv)
     (hseed : PublicSeedSamplingLaw hash p) (hstart : ChainStartSamplingLaw p)
     (hretry : RetrySamplingLaw p) :
     SyncSignatureUnforgeability.strongAdvantage
-      (GXMSS.Interval.PRFDerived.scheme hash enc prf.eval p K (Interval.full h))
+      (GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval p K (Interval.full h))
       ProbCompRuntime.probComp adv ≤
       prf.prfAdvantage (randgenPRFReduction hash enc p K (Interval.full h) adv) +
         GXMSS.Interval.Unforgeability.powerOfTwoStrongUnforgeabilityBound hash enc K qs
           (Interval.full h) hv hw adv :=
   GXMSS.Interval.PRFDerived.Unforgeability.fullRangeStrongReductionBound hash enc prf p K qs hv hw
-    htwo adv hbound keyLaw hseed hstart hretry
+    htwo adv hbound hseed hstart hretry
 
 end

@@ -600,7 +600,7 @@ private theorem adaptiveInteraction_real [DecidableEq H]
 
 /-- The real PRF distinguisher observes the complete strong synchronized game.
 The same runtime interpretation therefore preserves missing mass as well as returned failure. -/
-theorem randgenPRFReduction_real_strong [SampleableType Key] [DecidableEq H]
+theorem randgenPRFReduction_real_strong [DecidableEq H]
     [DecidableEq M] [DecidableEq (Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
@@ -608,17 +608,16 @@ theorem randgenPRFReduction_real_strong [SampleableType Key] [DecidableEq H]
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (budget : ℕ) (I : Interval h)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
-      (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v))
-    (keyLaw : prf.UniformKey) :
+      (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
     prf.prfRealExperiment (randgenPRFReduction hash enc projection budget I adv) =
       SyncSignatureUnforgeability.strongValid
-        (GXMSS.Interval.PRFDerived.scheme hash enc prf.eval projection budget I) <$>
+        (GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget I) <$>
       SyncSignatureUnforgeability.interaction
-        (GXMSS.Interval.PRFDerived.scheme hash enc prf.eval projection budget I) adv := by
+        (GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget I)
+          adv := by
   unfold PRFScheme.prfRealExperiment randgenPRFReduction
-  rw [keyLaw]
   change (do
-    let key ← $ᵗ Key
+    let key ← prf.keygen
     simulateQ (prf.prfRealQueryImpl key)
       ((SyncSignatureUnforgeability.strongValid
         (oracleScheme hash enc projection budget I)) <$>

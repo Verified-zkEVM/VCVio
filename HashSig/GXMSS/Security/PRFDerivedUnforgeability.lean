@@ -87,7 +87,7 @@ from the named adaptive PRF advantage and the proved two-codeword generic
 reduction. Each hardness term keeps the exact reduction adversary and target
 count from the generic theorem. -/
 theorem strong_unforgeability_reduction_bound
-    [SampleableType Key] [SampleableType H] [SampleableType R]
+    [SampleableType H] [SampleableType R]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M]
     [DecidableEq R] [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.PRFDerived.Query PP M h v)] [SampleableType Response]
@@ -97,16 +97,15 @@ theorem strong_unforgeability_reduction_bound
     (hv : 0 < v) (hw : 0 < w) (htwo : ∃ x y : Codeword v (2 ^ w),
       x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y) (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v))
-    (hbound : GXMSS.Unforgeability.SigningQueryBound qs adv) (keyLaw : prf.UniformKey)
+    (hbound : GXMSS.Unforgeability.SigningQueryBound qs adv)
     (hseed : PublicSeedSamplingLaw hash projection) (hstart : ChainStartSamplingLaw projection)
     (hretry : RetrySamplingLaw projection) :
     SyncSignatureUnforgeability.strongAdvantage
-      (GXMSS.PRFDerived.scheme hash enc prf.eval projection budget)
+      (GXMSS.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget)
       ProbCompRuntime.probComp adv ≤
       strongUnforgeabilityBound hash enc prf projection budget qs hv hw adv := by
   unfold strongUnforgeabilityBound
-  have hhop := adaptive_strong_additive_bound hash enc prf projection budget adv
-    keyLaw hseed hstart hretry
+  have hhop := adaptive_strong_additive_bound hash enc prf projection budget adv hseed hstart hretry
   have hgeneric := (GXMSS.Unforgeability.strong_unforgeability_reduction_bound
     hash enc budget qs hv hw htwo adv) hbound
   exact hhop.trans (add_le_add_right hgeneric _)

@@ -24,7 +24,7 @@ open ProbabilityTheory MeasureTheory
 open GXMSS.PRFDerived.ResponseCache
 variable {Key PP T X H M R Response : Type} {h w v : ℕ}
 
-private theorem adaptive_strong_prf_bound [SampleableType Key] [DecidableEq H]
+private theorem adaptive_strong_prf_bound [DecidableEq H]
     [DecidableEq M] [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)] [SampleableType Response]
     (hash : HashInstance PP T X H h w v)
@@ -33,17 +33,16 @@ private theorem adaptive_strong_prf_bound [SampleableType Key] [DecidableEq H]
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (budget : ℕ) (I : Interval h)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
-      (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v))
-    (keyLaw : prf.UniformKey) :
+      (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
     (SyncSignatureUnforgeability.strongUnforgeableExp
-      (GXMSS.Interval.PRFDerived.scheme hash enc prf.eval projection budget I)
+      (GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget I)
       ProbCompRuntime.probComp adv).boolDist
       𝒟[PRFScheme.prfIdealExperiment
         (randgenPRFReduction hash enc projection budget I adv)] ≤
       prf.prfAdvantage (randgenPRFReduction hash enc projection budget I adv) := by
   unfold SyncSignatureUnforgeability.strongUnforgeableExp
     SyncSignatureUnforgeability.outputMeasure
-  rw [← randgenPRFReduction_real_strong hash enc prf projection budget I adv keyLaw]
+  rw [← randgenPRFReduction_real_strong hash enc prf projection budget I adv]
   rfl
 
 /-- The ideal full-interaction strong game is generic GXMSS strong
@@ -109,7 +108,7 @@ set_option maxHeartbeats 1600000 in
 -- exceeds the default heartbeat limit; the proof is a short measure bound.
 /-- The shared-response PRF cost adds to the direct strong interval game. The
 Boolean measures retain returned failure and missing mass. -/
-theorem adaptive_strong_additive_bound [SampleableType Key]
+theorem adaptive_strong_additive_bound
     [SampleableType H] [SampleableType R] [DecidableEq H] [DecidableEq M]
     [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)] [SampleableType Response]
@@ -120,22 +119,21 @@ theorem adaptive_strong_additive_bound [SampleableType Key]
     (budget : ℕ) (I : Interval h)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v))
-    (keyLaw : prf.UniformKey)
     (hseed : PublicSeedSamplingLaw hash projection)
     (hstart : ChainStartSamplingLaw projection)
     (hretry : RetrySamplingLaw projection) (hfiller : FillerSamplingLaw projection) :
     SyncSignatureUnforgeability.strongAdvantage
-      (GXMSS.Interval.PRFDerived.scheme hash enc prf.eval projection budget I)
+      (GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget I)
       ProbCompRuntime.probComp adv ≤
     prf.prfAdvantage (randgenPRFReduction hash enc projection budget I adv) +
       SyncSignatureUnforgeability.strongAdvantage
         (GXMSS.Interval.scheme hash enc budget I) ProbCompRuntime.probComp adv := by
   let source := SyncSignatureUnforgeability.strongUnforgeableExp
-    (GXMSS.Interval.PRFDerived.scheme hash enc prf.eval projection budget I)
+    (GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget I)
     ProbCompRuntime.probComp adv
   let ideal := 𝒟[PRFScheme.prfIdealExperiment
     (randgenPRFReduction hash enc projection budget I adv)]
-  have hhop := adaptive_strong_prf_bound hash enc prf projection budget I adv keyLaw
+  have hhop := adaptive_strong_prf_bound hash enc prf projection budget I adv
   have hcorr := ideal_adaptive_strong_correspondence hash enc projection budget I
     adv hseed hstart hretry hfiller
   change source {true} ≤ _
@@ -171,7 +169,7 @@ theorem adaptive_strong_additive_bound [SampleableType Key]
 
 /-- The named PRF advantage adds to the original-domain ten-term interval bound. -/
 theorem strong_unforgeability_reduction_bound
-    [SampleableType Key] [SampleableType H] [SampleableType R] [SampleableType Response]
+    [SampleableType H] [SampleableType R] [SampleableType Response]
     [DecidableEq T] [DecidableEq X] [DecidableEq H] [DecidableEq M] [DecidableEq R]
     [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)]
@@ -183,16 +181,16 @@ theorem strong_unforgeability_reduction_bound
     (htwo : ∃ x y : Codeword v (2 ^ w), x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v))
-    (hqueries : GXMSS.Unforgeability.SigningQueryBound qs adv) (keyLaw : prf.UniformKey)
+    (hqueries : GXMSS.Unforgeability.SigningQueryBound qs adv)
     (hseed : PublicSeedSamplingLaw hash projection) (hstart : ChainStartSamplingLaw projection)
     (hretry : RetrySamplingLaw projection) (hfiller : FillerSamplingLaw projection) :
     SyncSignatureUnforgeability.strongAdvantage
-      (GXMSS.Interval.PRFDerived.scheme hash enc prf.eval projection budget I)
+      (GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval projection budget I)
       ProbCompRuntime.probComp adv ≤
       strongUnforgeabilityBound hash enc prf projection budget qs I hv hw adv := by
   unfold strongUnforgeabilityBound
   have hhop := adaptive_strong_additive_bound hash enc prf projection budget I adv
-    keyLaw hseed hstart hretry hfiller
+    hseed hstart hretry hfiller
   have hgeneric :=
     GXMSS.Interval.Unforgeability.strong_unforgeability_reduction_bound
       hash enc budget qs I hv hw htwo adv hqueries
