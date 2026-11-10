@@ -423,9 +423,9 @@ theorem measureETVDist_runGen_symbolic_le_of_target [Field F] [DecidableEq F] [D
   have hs := runGen_length_le_of_target (symbolic F σ ι) (fun _ => id) s (hn s) tbl z hz
   gcongr
 
-/-- **T3, the master bound.** Evaluated and exact equality differ in total variation by at
-most `choose (initial size + operation budget + 1) 2 * ε`, jointly with the hidden point and
-full output/table pair. The joint output may carry any measurable space; the proof uses
+/-- **T3, the master bound** (Shoup 1997). Evaluated and exact equality differ in total
+variation by at most `choose (initial size + operation budget + 1) 2 * ε`, jointly with the hidden
+point and full output/table pair. The joint output may carry any measurable space; the proof uses
 local discrete spaces on the point and intermediate table outputs. -/
 theorem measureETVDist_runGen_symbolic_le [Field F] [DecidableEq F] [DecidableEq ι]
     [Fintype S] [DecidableEq S] {α : Type}
