@@ -46,5 +46,3 @@ name = "InteropRust"
 roots = [
   "Interop.Rust.Common", "Interop.Rust.Run", "Interop.Rust.RustM", "Interop.Hax.CenteredBinomial",
 ]
-# The bridges predate the module system.
-allowNonModules = true

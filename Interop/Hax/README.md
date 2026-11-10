@@ -16,7 +16,7 @@ bridge.
 The unported modules still use hax's pre-Aeneas API (`Hax.rust_primitives.*`, `RustM` as
 `ExceptT Error Option`, and the removed `Interop.Hax.Bridge`) and VCVio's retired `Pr[…]`
 notation.
-- *Porting one:* rewrite its code over Aeneas's scalars, prove the statements against
+- *Porting one:* rewrite its code as a module over Aeneas's scalars, prove the statements against
   `Interop.Rust.RustM` and current VCVio, and add it to `InteropRust`'s roots in
-  `Interop/lakefile.toml`.
+  `Interop/lakefile.toml` and to the axiom-sweep step of CI's `Interop Bridges` job.
 - *History:* their earlier design notes are in git history.

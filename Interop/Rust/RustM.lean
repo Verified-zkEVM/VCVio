@@ -4,9 +4,11 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Devon Tuma
 -/
 
-import Aeneas.Std.Primitives
-import Interop.Rust.Common
-import PolyFun.Control.Monad.Hom
+module
+
+public import Aeneas.Std.Primitives
+public import Interop.Rust.Common
+public import PolyFun.Control.Monad.Hom
 
 /-!
 # Aeneas's `RustM` in `RustOracleComp`
@@ -31,6 +33,8 @@ lift and a bundled monad morphism `RustM →ᵐ RustOracleComp spec`.
 * `Interop.Rust.liftRustM_ok`, `Interop.Rust.liftRustM_fail`, `Interop.Rust.liftRustM_div`.
 * `Interop.Rust.liftRustM_bind`: the lift commutes with `bind`.
 -/
+
+public section
 
 open Aeneas.Std
 
@@ -108,7 +112,7 @@ instance instLawfulMonadLiftRustM : LawfulMonadLift RustM (RustOracleComp spec) 
   monadLift_bind x k := liftRustM_bind x k
 
 /-- The lift as a bundled monad morphism. -/
-def liftRustMHom : RustM →ᵐ RustOracleComp spec :=
+@[expose] def liftRustMHom : RustM →ᵐ RustOracleComp spec :=
   MonadHom.ofLift _ _
 
 @[simp]

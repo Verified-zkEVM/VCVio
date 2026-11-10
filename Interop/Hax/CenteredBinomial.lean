@@ -4,12 +4,14 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao, Devon Tuma
 -/
 
-import Aeneas.Std.Scalar
-import Interop.Rust.RustM
-import Interop.Rust.Run
-import VCVio.OracleComp.ProbComp
-import VCVio.EvalDist.Monad.Basic
-import VCVio.ProgramLogic.Tactics
+module
+
+public import Aeneas.Std.Scalar
+public import Interop.Rust.RustM
+public import Interop.Rust.Run
+public import VCVio.OracleComp.ProbComp
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.ProgramLogic.Tactics
 
 /-!
 # A Rust centered-binomial sampler, through `RustM`, in VCVio
@@ -39,6 +41,8 @@ distribution with parameter `1`.
 * `Interop.Hax.Examples.CenteredBinomial.probOutput_sampleRandomCbd1_zero`, `_pos_one`, `_neg_one`:
   the distribution.
 -/
+
+public section
 
 open Aeneas.Std Interop.Rust OracleSpec OracleComp OracleComp.ProgramLogic ENNReal
 

@@ -405,7 +405,7 @@ use opaque `public section` when downstream code does not need definitional unfo
 `backward.proofsInPublic`; make helper visibility explicit or give proof terms enough type
 information to avoid public metavariables.
 
-The `Interop` package builds separately and is excluded until its bridges adopt the module system.
+The `Interop` package builds separately; its unported hax examples are not built.
 `LatticeCryptoTest.lean` remains a curated umbrella and `HashSigTest` has no root umbrella because
 their executable modules contain colliding root-level `main` declarations.
 

@@ -44,7 +44,7 @@ unfold their definitions.
   access an unexposed implementation from the same dependency when proving its public API.
 - Do not enable `backward.privateInPublic` or `backward.proofsInPublic`; resolve visibility and
   proof-metavariable issues directly.
-- The `Interop` package (`Interop/lakefile.toml`) is outside this policy until its bridges adopt the module system.
+- The `Interop` package's built bridges follow this policy. The unported hax examples in `Interop/Hax/` are not built and keep their old form until ported.
 
 Section `variable` lines carry an instance assumption only when the theorems in scope share it:
 Lean auto-includes an instance-implicit section variable in every theorem mentioning its types,

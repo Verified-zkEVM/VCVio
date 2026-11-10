@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Std.Tactic.Do
-import VCVio.ProgramLogic.Unary.StdDoBridge
+module
+
+public import Std.Tactic.Do
+public import VCVio.ProgramLogic.Unary.StdDoBridge
 
 /-!
 # `RustOracleComp`: target monad for Rust verification frontends
@@ -34,6 +36,8 @@ It is the smallest extension of a Rust frontend's target that admits oracle quer
 `ExceptT` layer, divergence the `OptionT` layer, and queries the inner `OracleComp spec`, so the
 boundary lemmas of the lift are case splits.
 -/
+
+public section
 
 open Std.Do
 
@@ -68,15 +72,15 @@ namespace RustOracleComp
 variable {ι : Type} {spec : OracleSpec ι} {α : Type}
 
 /-- A successful Rust computation. -/
-@[reducible, match_pattern]
+@[expose, reducible, match_pattern]
 def ok (v : α) : RustOracleComp spec α := pure v
 
 /-- A panicking Rust computation. -/
-@[reducible, match_pattern]
+@[expose, reducible, match_pattern]
 def fail (e : Error) : RustOracleComp spec α := throw e
 
 /-- A diverging Rust computation. -/
-@[reducible, match_pattern]
+@[expose, reducible, match_pattern]
 def div : RustOracleComp spec α :=
   ExceptT.mk (OptionT.mk (pure none))
 
@@ -91,7 +95,7 @@ the standard `@[spec]` rules `Spec.monadLift_OptionT` and
 `Spec.monadLift_ExceptT`. A direct `MonadLift (OracleComp spec)
 (RustOracleComp spec)` instance would short-circuit that chain and leave
 mvcgen with no spec rule to apply. -/
-@[reducible]
+@[expose, reducible]
 def liftOracleComp (oa : OracleComp spec α) : RustOracleComp spec α :=
   ExceptT.lift (OptionT.lift oa)
 
