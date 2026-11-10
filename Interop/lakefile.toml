@@ -44,5 +44,7 @@ rev = "v4.35.0"
 [[lean_lib]]
 name = "InteropRust"
 roots = [
-  "Interop.Rust.Common", "Interop.Rust.Run", "Interop.Rust.RustM", "Interop.Hax.CenteredBinomial",
+  "Interop.Aeneas.ITree", "Interop.Rust.Common", "Interop.Rust.Run", "Interop.Rust.RustM",
+  "Interop.Rust.Triple",
+  "Interop.Hax.CenteredBinomial",
 ]
