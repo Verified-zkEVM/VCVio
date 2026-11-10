@@ -28,7 +28,7 @@ variable {R : Type} {C : R → Type}
 
 /-- Average acceptance rate of a randomly chosen Boolean acceptance function. -/
 @[expose] noncomputable def averageAcceptRate [Fintype R] [DecidableEq R]
-    [∀ r, Fintype (C r)] [∀ r, DecidableEq (C r)]
+    [∀ r, Fintype (C r)]
     (F : ProbComp (((r : R) → C r) → Bool)) : ℝ≥0∞ :=
   letI : MeasurableSpace (((r : R) → C r) → Bool) := ⊤
   ∫⁻ f, acceptRate f ∂𝒟[F]
