@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.Quantum.Oracle.Classical
 public import VCVio.Quantum.Oracle.Emulated
+import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # Coins, sequencing and basis calls for experiments
@@ -18,7 +19,10 @@ challengers of the security experiments of ePrint 2025/2166 (§7, p. 51) do.
   register `A` untouched; its branch at every outcome is the map `ρ ↦ ρ / |Ω|`. It is the
   measurement of a fresh uniform register, and answers the queries of `unifSpec` through
   `Quantum.QComp.coinImpl`, so a `ProbComp` or an `OracleComp (unifSpec + _)` runs inside an
-  experiment by `OracleComp.toQuantumAt`.
+  experiment by `OracleComp.toQuantumAt`. For a `ProbComp`, every branch is its classical
+  output probability times the identity (`Quantum.branch_run₂_toQuantumAt_coinImpl`), and the
+  outcome measure is its classical law scaled by the input trace
+  (`Quantum.outcomeMeasure_run₂_toQuantumAt_coinImpl`).
 * **Sequencing.** `Quantum.QComp.pi f` runs the programs `f 0, …, f (k - 1)` in order on a held
   register and returns the dependent tuple of their results.
 * **Lifting outcomes.** `Quantum.QuantumComp.liftInstruments` reads a program over instruments
@@ -40,6 +44,8 @@ challengers of the security experiments of ePrint 2025/2166 (§7, p. 51) do.
 
 * `Quantum.SubInstrument.branch_uniform_apply`, `Quantum.SubInstrument.lossless_uniform`.
 * `Quantum.QComp.lossless_pi`, `Quantum.QComp.isQueryBound_pi`.
+* `Quantum.branch_run₂_toQuantumAt_coinImpl`,
+  `Quantum.outcomeMeasure_run₂_toQuantumAt_coinImpl`.
 * `Quantum.QuantumComp.run_liftInstruments`, `Quantum.QuantumComp.isQueryBound_liftInstruments_iff`,
   `Quantum.QuantumComp.lossless_liftInstruments_iff`.
 * `Quantum.EmulatedOracle.branch_run₂_callBasis`.
@@ -47,8 +53,8 @@ challengers of the security experiments of ePrint 2025/2166 (§7, p. 51) do.
 
 public section
 
-open Matrix OracleSpec
-open scoped Kronecker
+open Matrix OracleSpec OracleComp
+open scoped Kronecker ENNReal
 
 universe u v u₁ v₁ w w₁
 
@@ -165,6 +171,80 @@ theorem isQueryBound_pi : {k : ℕ} → {β : Fin k → Type w} →
   exact IPFunctor.FreeM₂.isChargeBound_seqPi (fun i ↦ b i p) (fun i ↦ hf i p)
 
 end QComp
+
+/-! ## Classical sampling laws -/
+
+variable {spec : QuantumOracleSpec.{u₁, v₁}} (R : QuantumRuntime spec) {B : QReg}
+
+/-- A classical sampler run with uniform coins has each branch equal to its classical output
+probability times the identity on the held and runtime registers. -/
+theorem branch_run₂_toQuantumAt_coinImpl {α : Type} (oa : ProbComp α) (a : α) :
+    (R.run₂ .instruments (oa.toQuantumAt (QComp.coinImpl spec B))).branch a =
+      ((Pr{let x ← oa}[x = a]).toReal : ℂ) • LinearMap.id := by
+  classical
+  induction oa using OracleComp.inductionOn with
+  | pure x =>
+    rw [toQuantumAt_pure, QuantumRuntime.run₂_pure, prEvent_pure]
+    by_cases h : a = x
+    · subst h
+      simp
+    · simp [Ne.symm h, SubInstrument.branch_pure_of_ne h]
+  | query_bind t k ih =>
+    have hcoin (y : Fin (t + 1)) :
+        (R.run₂ .instruments (QComp.coinImpl spec B t)).branch y =
+          ((Fintype.card (Fin (t + 1)) : ℂ)⁻¹) • LinearMap.id := by
+      rw [QComp.coinImpl, QuantumRuntime.run₂_act, SubInstrument.bind_pure,
+        DSubInstrument.branch_frame_apply]
+      refine LinearMap.ext fun ρ ↦ ?_
+      ext x x'
+      simp [SubInstrument.branch_uniform_apply]
+    have hp (y : Fin (t + 1)) :
+        Pr{let x ← (liftM (unifSpec.query t) : ProbComp (Fin (t + 1)))}[x = y] =
+          (Fintype.card (Fin (t + 1)) : ℝ≥0∞)⁻¹ := by
+      simpa [Finset.filter_eq'] using
+        (prEvent_liftM_query_eq_card_div (spec := unifSpec) t (fun x ↦ x = y))
+    rw [toQuantumAt_query_bind, QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply_univ,
+      prEvent_bind_eq_sum_fintype]
+    simp only [hp]
+    rw [ENNReal.toReal_sum (fun y _ ↦ ENNReal.mul_ne_top (by simp) (prEvent_ne_top _))]
+    simp only [ENNReal.toReal_mul, ENNReal.toReal_inv, ENNReal.toReal_natCast,
+      Complex.ofReal_sum, Complex.ofReal_mul, Complex.ofReal_inv, Complex.ofReal_natCast]
+    refine LinearMap.ext fun ρ ↦ ?_
+    simp only [LinearMap.sum_apply, LinearMap.comp_apply, ih, hcoin, LinearMap.smul_apply,
+      LinearMap.id_apply, smul_smul, Finset.sum_smul, mul_comm]
+
+/-- The complete outcome measure of a classical sampler is its classical output measure scaled
+by the trace of the joint input substate. -/
+theorem outcomeMeasure_run₂_toQuantumAt_coinImpl {α : Type} [MeasurableSpace α]
+    (oa : ProbComp α) (ρ : SubState (B × R.D)) :
+    (R.run₂ .instruments (oa.toQuantumAt (QComp.coinImpl spec B))).outcomeMeasure ρ =
+      ENNReal.ofReal ρ.matrix.trace.re • 𝒟[oa] := by
+  classical
+  ext s hs
+  rw [DSubInstrument.outcomeMeasure_apply _ _ hs, MeasureTheory.Measure.smul_apply, smul_eq_mul]
+  simp_rw [branch_run₂_toQuantumAt_coinImpl, LinearMap.smul_apply, LinearMap.id_apply,
+    Matrix.trace_smul, smul_eq_mul, Complex.re_ofReal_mul,
+    ENNReal.ofReal_mul ENNReal.toReal_nonneg, ENNReal.ofReal_toReal (prEvent_ne_top _)]
+  calc
+    _ = ENNReal.ofReal ρ.matrix.trace.re *
+        ∑' a, if a ∈ s then Pr{let x ← oa}[x = a] else 0 := by
+      rw [← ENNReal.tsum_mul_left]
+      refine tsum_congr fun a ↦ ?_
+      by_cases ha : a ∈ s <;> simp [ha, mul_comm]
+    _ = _ := by
+      congr 1
+      rw [← OracleComp.prEvent_eq_tsum_ite]
+      exact prEvent_eq_evalDist oa (· ∈ s) hs.mem
+
+/-- Every outcome of a classical sampler has its classical probability times the trace of the
+joint input substate as its weight, including inputs correlated with the runtime register. -/
+theorem outcomeMeasure_run₂_toQuantumAt_coinImpl_apply_singleton {α : Type}
+    [MeasurableSpace α] [MeasurableSingletonClass α] (oa : ProbComp α)
+    (ρ : SubState (B × R.D)) (a : α) :
+    (R.run₂ .instruments (oa.toQuantumAt (QComp.coinImpl spec B))).outcomeMeasure ρ {a} =
+      Pr{let x ← oa}[x = a] * ENNReal.ofReal ρ.matrix.trace.re := by
+  rw [outcomeMeasure_run₂_toQuantumAt_coinImpl, MeasureTheory.Measure.smul_apply,
+    smul_eq_mul, ← prEvent_eq_evalDist_singleton, mul_comm]
 
 /-! ## Lifting the outcomes of local operations -/
 

@@ -292,31 +292,10 @@ of the identity, and the scalar vanishes at every value outside the support of t
 theorem exists_branch_run₂_toQuantumAt_coinImpl_eq_smul {α : Type} (oa : ProbComp α) (a : α) :
     ∃ c : ℂ, (R.run₂ .instruments (oa.toQuantumAt (QComp.coinImpl spec B))).branch a =
       c • LinearMap.id ∧ (a ∉ support oa → c = 0) := by
-  induction oa using OracleComp.inductionOn with
-  | pure x =>
-    rw [toQuantumAt_pure, QuantumRuntime.run₂_pure]
-    by_cases h : a = x
-    · subst h
-      exact ⟨1, by rw [SubInstrument.branch_pure_self, one_smul],
-        fun h' ↦ absurd (by simp) h'⟩
-    · exact ⟨0, by rw [SubInstrument.branch_pure_of_ne h, zero_smul], fun _ ↦ rfl⟩
-  | query_bind t k ih =>
-    choose c hc hs using ih
-    have hcoin (y : Fin (t + 1)) :
-        (R.run₂ .instruments (QComp.coinImpl spec B t)).branch y =
-          ((Fintype.card (Fin (t + 1)) : ℂ)⁻¹) • LinearMap.id := by
-      rw [QComp.coinImpl, QuantumRuntime.run₂_act, SubInstrument.bind_pure,
-        DSubInstrument.branch_frame_apply]
-      refine LinearMap.ext fun ρ ↦ ?_
-      ext x x'
-      simp [SubInstrument.branch_uniform_apply]
-    rw [toQuantumAt_query_bind, QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply_univ]
-    refine ⟨∑ y, c y * (Fintype.card (Fin (t + 1)) : ℂ)⁻¹, ?_, fun ha ↦ ?_⟩
-    · refine LinearMap.ext fun ρ ↦ ?_
-      simp only [LinearMap.sum_apply, LinearMap.comp_apply, hc, hcoin, LinearMap.smul_apply,
-        LinearMap.id_apply, smul_smul, Finset.sum_smul]
-    · refine Finset.sum_eq_zero fun y _ ↦ ?_
-      rw [hs y fun hy ↦ ha ((mem_support_bind_iff _ _ _).mpr ⟨y, by simp, hy⟩), zero_mul]
+  refine ⟨((Pr{let x ← oa}[x = a]).toReal : ℂ),
+    branch_run₂_toQuantumAt_coinImpl R oa a, fun ha ↦ ?_⟩
+  rw [prEvent_eq_zero_of_not_mem_support oa ha]
+  simp
 
 omit [Fintype Y] [DecidableEq Y] in
 /-- **Sequenced scalar programs act as scalars.** If every program `f i` has its branches scalar
@@ -461,7 +440,8 @@ theorem branch_run₂_oracleCall_compressedVCOracle (B : QReg) (j : Fin k) (t : 
         rw [EmulatedOracle.block_apply]
         exact EmulatedOracle.coherent_U_apply_of_ne _ Sum.inr_ne_inl _ _ _ _
       rw [hb, kronecker_zero, MatrixMap.conj_zero, ite_self]
-  · simp
+  · intro h
+    exact (h (Finset.mem_univ _)).elim
 
 end compressed
 
@@ -940,8 +920,11 @@ theorem outcomeMeasure_run₂_extractChallenger_le_of_openingQueryBound
       (extractProj ME (TpIC.full hk c.idx c.cm) tdm)
       (extractProj ME (TpIC.full hk c.idx c.cm) tdm)).symm.trans
       (congrArg₂ (· ⊗ₖ ·) (Matrix.one_mul 1) (extractProj_mul_self ME _ tdm))
-    exact (LinearMap.congr_fun (MatrixMap.conj_mul _ _) σ.matrix).symm.trans
-      (congrArg (fun M ↦ MatrixMap.conj M σ.matrix) hK)
+    have hconj := LinearMap.congr_fun
+      (MatrixMap.conj_mul
+        ((1 : Matrix B B ℂ) ⊗ₖ extractProj ME (TpIC.full hk c.idx c.cm) tdm)
+        ((1 : Matrix B B ℂ) ⊗ₖ extractProj ME (TpIC.full hk c.idx c.cm) tdm)) σ.matrix
+    exact hconj.symm.trans (congrArg (fun M ↦ MatrixMap.conj M σ.matrix) hK)
 
 /-- **The P3 challenger against the compressed oracles, leaf by leaf** (ePrint 2025/2166,
 pp. 59–61). From every joint substate of the adversary's register and the databases, the P3
