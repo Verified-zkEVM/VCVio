@@ -190,16 +190,9 @@ theorem isTreeFinder_thresholdFinder {n : ℕ} (C : Fin n → Type)
     (k : Fin n → ℕ) (hk : ∀ i, 1 ≤ k i ∧ k i ≤ Fintype.card (C i)) :
     IsTreeFinder k (fun _ ch => Function.Injective ch) (thresholdFinder C k)
       (thresholdError C k) (∏ i, (k i : ℝ≥0∞)) where
+  one_le i := (hk i).1
   sound := thresholdFinder_sound C k
-  success f := by
-    apply tsub_le_iff_right.mpr
-    apply (thresholdFinder_success_scaled C k hk f).trans
-    calc
-      _ ≤ thresholdError C k + Pr{let z ← runFinder (thresholdFinder C k) f}[z.1.isSome] := by
-        apply add_le_add le_rfl
-        exact (mul_le_mul' (show 1 - thresholdError C k ≤ 1 from tsub_le_self) le_rfl).trans_eq
-          (one_mul _)
-      _ = _ := add_comm _ _
+  success := thresholdFinder_success_scaled C k hk
   cost := expectedCalls_thresholdFinder C k
 
 end Rewinding
