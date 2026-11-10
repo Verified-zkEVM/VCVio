@@ -7,17 +7,19 @@ Authors: Devon Tuma
 module
 public import Extern.MLDSA.Laws
 public import LatticeCrypto.MLDSA.SecurityHVZK
+public import LatticeCrypto.MLDSA.SecurityNMA
 public import VCVio.OracleComp.RunIO
 
 /-!
-# Tests for the ML-DSA mask sampler
+# Tests for the ML-DSA box samplers
 
 - The endpoints of `[-γ₁ + 1, γ₁]`: `maskBounded` is not the symmetric `[-γ₁, γ₁]` or
   `[-γ₁ + 1, γ₁ - 1]`. These examples are what pin the range.
-- The decoding sends the value `0` to `γ₁` and the value `2γ₁ - 1` to `-γ₁ + 1`, as FIPS 204's
-  `ExpandMask` does.
-- The mask sampler, the identification schemes and the HVZK simulator are plain `def`s: this file
-  fails to compile if any of them becomes noncomputable. Outputs are random, so nothing is run.
+- The mask decoding sends the value `0` to `γ₁` and the value `2γ₁ - 1` to `-γ₁ + 1`, as FIPS 204's
+  `ExpandMask` does. The short decoding sends `0` to `η` and `2η` to `-η`, as `ExpandS` does.
+- The box samplers, the short-model key generation, the identification schemes and the HVZK
+  simulator are plain `def`s: this file fails to compile if any of them becomes noncomputable.
+  Outputs are random, so nothing is run.
 - The response gate passes with probability above `1/2` at each FIPS 204 parameter set. This checks
   the parameters against the exact rate; it does not pin the range, since a slightly different
   range also passes above `1/2`.
@@ -31,7 +33,7 @@ public section
 open OracleComp OracleSpec ENNReal
 open LatticeCrypto MLDSA
 
-namespace MLDSA.MaskBoxTest
+namespace MLDSA.BoxSamplingTest
 
 /-- The vector with every coefficient of every component equal to the integer `c`. -/
 private noncomputable def constVec (k : ℕ) (c : ℤ) : RqVec k :=
@@ -70,27 +72,54 @@ example {gamma1 : ℕ} (hq : 2 * gamma1 + 2 ≤ modulus) :
     ¬maskBounded (constVec 1 ((gamma1 : ℤ) + 1)) gamma1 := fun h =>
   absurd ((maskBounded_constVec_iff (by omega) (by omega)).mp h).2 (by omega)
 
-/-- The value `0` decodes to the top endpoint `γ₁`. -/
+/-- The mask value `0` decodes to the top endpoint `γ₁`. -/
 example {gamma1 : ℕ} (h0 : 0 < gamma1) (hq : 2 * gamma1 < modulus) :
-    centeredRepr (maskDecodeCoeff gamma1 ⟨0, by omega⟩) = gamma1 := by
-  rw [centeredRepr_maskDecodeCoeff hq]
+    centeredRepr (boxDecodeCoeff gamma1 (⟨0, by omega⟩ : Fin (2 * gamma1))) = gamma1 := by
+  rw [centeredRepr_boxDecodeCoeff hq (by omega)]
   simp
 
-/-- The largest value `2γ₁ - 1` decodes to the bottom endpoint `-γ₁ + 1`. -/
+/-- The largest mask value `2γ₁ - 1` decodes to the bottom endpoint `-γ₁ + 1`. -/
 example {gamma1 : ℕ} (h0 : 0 < gamma1) (hq : 2 * gamma1 < modulus) :
-    centeredRepr (maskDecodeCoeff gamma1 ⟨2 * gamma1 - 1, by omega⟩) = -(gamma1 : ℤ) + 1 := by
-  rw [centeredRepr_maskDecodeCoeff hq]
+    centeredRepr (boxDecodeCoeff gamma1 (⟨2 * gamma1 - 1, by omega⟩ : Fin (2 * gamma1))) =
+      -(gamma1 : ℤ) + 1 := by
+  rw [centeredRepr_boxDecodeCoeff hq (by omega)]
   change (gamma1 : ℤ) - ((2 * gamma1 - 1 : ℕ) : ℤ) = _
   omega
 
+/-- The short value `0` decodes to the top endpoint `η`. -/
+example {eta : ℕ} (hq : 2 * eta < modulus) :
+    centeredRepr (boxDecodeCoeff eta (0 : Fin (2 * eta + 1))) = eta := by
+  rw [centeredRepr_boxDecodeCoeff hq le_rfl]
+  simp
+
+/-- The largest short value `2η` decodes to the bottom endpoint `-η`. -/
+example {eta : ℕ} (hq : 2 * eta < modulus) :
+    centeredRepr (boxDecodeCoeff eta (Fin.last (2 * eta))) = -(eta : ℤ) := by
+  rw [centeredRepr_boxDecodeCoeff hq le_rfl, Fin.val_last]
+  omega
+
+/-- At ML-DSA-44, every mask lies in the range of FIPS 204's `ExpandMask`. -/
+example (v : RqVec mldsa44.l) (hv : v ∈ support (sampleMaskVec mldsa44.l mldsa44.gamma1)) :
+    maskBounded v mldsa44.gamma1 :=
+  mem_support_sampleMaskVec (MLDSA.Concrete.approved_gamma1_width mldsa44 (.inl rfl)).2 hv
+
 /-! ### Computability
 
-Each `def` below elaborates without `noncomputable`, so code generation succeeds for the mask
-sampler, the identification schemes and the HVZK simulator. -/
+Each `def` below elaborates without `noncomputable`, so code generation succeeds for the box
+samplers, the short-model key generation, the identification schemes and the HVZK simulator. -/
 
 /-- The mask sampler as an executable `IO` action. -/
 def sampleMaskVecIO (k gamma1 : ℕ) [NeZero gamma1] : IO (RqVec k) :=
   OracleComp.runIO (sampleMaskVec k gamma1)
+
+/-- The short sampler as an executable `IO` action. -/
+def sampleShortVecIO (k eta : ℕ) : IO (RqVec k) :=
+  OracleComp.runIO (NMA.sampleShortVec k eta)
+
+/-- The short-model key generation as an executable `IO` action. -/
+def keygenShortIO (p : Params) (prims : Primitives p) [NTTRingOps] :
+    IO (PublicKey p prims × SecretKey p) :=
+  OracleComp.runIO (NMA.keygenShort p prims)
 
 /-- The identification scheme with `t₀` in the statement. -/
 def identificationSchemeFullCompiled (p : Params) (prims : Primitives p) [NTTRingOps]
@@ -166,4 +195,4 @@ theorem perfectHVZK_concretePrimitives
     (MLDSA.Concrete.concretePrimitives_laws mldsa44 (.inl rfl))
     (MLDSA.Concrete.approved_gamma1_width mldsa44 (.inl rfl)).2
 
-end MLDSA.MaskBoxTest
+end MLDSA.BoxSamplingTest
