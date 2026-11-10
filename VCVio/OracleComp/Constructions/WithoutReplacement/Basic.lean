@@ -5,6 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
+public import ToMathlib.Data.List.Count
 public import ToMathlib.Probability.NegativeHypergeometric
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
@@ -49,17 +50,6 @@ theorem countP_eraseIdx_of_pos {l : List α} {i : ℕ} (hi : i < l.length) (hp :
     countP_cons, hp]
   simp
   omega
-
-/-- `countP` as a sum of indicators, the form that matches `Finset.card_filter`. -/
-theorem countP_eq_sum_map (l : List α) (p : α → Bool) :
-    l.countP p = (l.map fun x => if p x then 1 else 0).sum := by
-  induction l with
-  | nil => simp
-  | cons x xs ih =>
-      rw [countP_cons, map_cons, sum_cons, ih]
-      cases p x
-      · simp
-      · simp; omega
 
 /-- In a duplicate-free list, deleting a position removes that value entirely. -/
 theorem getElem_notMem_eraseIdx {l : List α} (hl : l.Nodup) {i : ℕ} (hi : i < l.length) :
