@@ -100,7 +100,8 @@ theorem simulateQ_tweakable_tl (seed : Digest) (a : Address) {A : Adrs}
   rw [simulateQ_relabel_tweakable, hE]
   refine Eq.trans ?_ (Functor.map_map (prefixBytes FIPS205.params.params.n) digestEquiv.symm
     (ask (Hashing.tweakableInput seed a (List.map (bytesBE n) xs).flatten))).symm
-  congr 1
+  apply congrArg (fun f : FIPS205.Answer → Digest =>
+    f <$> ask (Hashing.tweakableInput seed a (List.map (bytesBE n) xs).flatten))
   funext h
   have hp := prefixBytes_answerEquiv (answerEquiv.symm h)
   rw [Equiv.apply_symm_apply] at hp

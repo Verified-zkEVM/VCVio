@@ -432,6 +432,7 @@ private theorem isQueryBound_foldlM {b : Fin k → spec.Port → ℕ}
     rw [List.foldlM_cons, List.filter_cons]
     by_cases hi : i ∈ W
     · simp only [hi, ↓reduceIte, decide_true, List.map_cons, List.sum_cons]
+      rw [QuantumComp₂.map_eq, QuantumComp₂.map_eq_bind_pure]
       refine (QuantumComp₂.isQueryBound_bind (b₁ := b i + 0)
         (QuantumComp₂.isQueryBound_bind (hf i hi) fun _ ↦ QuantumComp₂.isQueryBound_pure _ _)
         fun s ↦ ih s).mono (by rw [add_zero])
@@ -446,7 +447,8 @@ private theorem lossless_foldlM (hf : ∀ i ∈ W, (f i).Lossless .instruments) 
   refine IPFunctor.FreeM₂.isRollBound_foldlM_unit (isDiagonalMonad (spec := spec) B) ?_ l acc
   intro acc i
   split_ifs with hi
-  · exact QuantumComp₂.lossless_bind (hf i hi) fun _ ↦ QuantumComp₂.lossless_pure _
+  · rw [QuantumComp₂.map_eq, QuantumComp₂.map_eq_bind_pure]
+    exact QuantumComp₂.lossless_bind (hf i hi) fun _ ↦ QuantumComp₂.lossless_pure _
   · exact QuantumComp₂.lossless_pure acc
 
 /-- The conjunction of checks is within the sum, over `W`, of the budgets of the checks. -/
