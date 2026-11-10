@@ -106,6 +106,7 @@ public import VCVio.CryptoFoundations.GroupModel.Encoding
 public import VCVio.CryptoFoundations.GroupModel.Game
 public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
+public import VCVio.CryptoFoundations.GroupModel.GenericRelation
 public import VCVio.CryptoFoundations.GroupModel.Instances
 public import VCVio.CryptoFoundations.GroupModel.Interaction
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
@@ -120,6 +121,7 @@ public import VCVio.CryptoFoundations.GroupModel.Typed
 public import VCVio.CryptoFoundations.GroupModel.Virtualize
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.Covering
