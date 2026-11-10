@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Interop.Rust.Common
+module
+
+public import Interop.Rust.Common
 
 /-!
 # Peeling the `RustOracleComp` transformer stack
@@ -29,6 +31,8 @@ The constructor-level lemmas (`run_run_pure`, `run_run_fail`,
 `run_run_div`) hold by `rfl` and are stated as `@[simp]` so the peel
 can finish the job on closed programs.
 -/
+
+public section
 
 open Std.Do
 

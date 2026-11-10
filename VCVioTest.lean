@@ -10,7 +10,6 @@ public import VCVioTest.CryptoFoundations.BR93Measure
 public import VCVioTest.CryptoFoundations.ComplexityAdapters
 public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
-public import VCVioTest.CryptoFoundations.CslibPPolyUniverses
 public import VCVioTest.CryptoFoundations.DEMIndCpa
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortCanary
@@ -54,6 +53,7 @@ public import VCVioTest.GrindFailFast
 public import VCVioTest.GroupModel.Basic
 public import VCVioTest.GroupModel.Collision
 public import VCVioTest.GroupModel.Cost
+public import VCVioTest.GroupModel.Game
 public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.Interaction.Axioms
 public import VCVioTest.GroupModel.Interaction.Basic
@@ -181,6 +181,7 @@ public import VCVioTest.ReactiveSecurity
 public import VCVioTest.ReactiveWorld
 public import VCVioTest.ReplayCheckpoint
 public import VCVioTest.ResumptionCompatibility
+public import VCVioTest.Rewinding
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.Runtime
 public import VCVioTest.SMDTDSPR
@@ -208,6 +209,7 @@ public import VCVioTest.Tactic.FunProp
 public import VCVioTest.Tactic.GeneralizedRelations
 public import VCVioTest.Tactic.GeneralizedRelationsExperiments
 public import VCVioTest.Tactic.Positivity
+public import VCVioTest.ThresholdFinder
 public import VCVioTest.TimeLockPuzzle.FreeSummand
 public import VCVioTest.TimeLockPuzzle.Hiding
 public import VCVioTest.TimeLockPuzzle.HidingCap
