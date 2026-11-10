@@ -375,7 +375,8 @@ count the two separately; `ResourceProfile` already carries a usage vector.
 `m₀` is the length of the initial table, `q` a bound on the number of `add` and `smul` queries
 (an `IsQueryBoundP` hypothesis), `m := m₀ + q`.
 
-The following translation theorems are targets, except T1b, which `ofExplained_run` proves.
+The following translation theorems are targets, except T1a and T1b: `toExplained_run` proves
+T1a, with certification from `explainProgram_isAlgebraic`, and `ofExplained_run` proves T1b.
 T1a and T1b are polymorphic in `N` with
 `[Monad N] [LawfulMonad N]`, a game handler `impl : QueryImpl (plainSpec G Query Reply) N`,
 and an explicit shared `random : QueryImpl unifSpec N`. Their run equations are exact
@@ -447,8 +448,12 @@ and `Signatures/Model/DirectAGM.lean`.
 
   `toExplained` simulates the group oracle in the tracking model on the received values. Each
   outgoing handle becomes the tracked value together with the coefficients `given.map repr`.
-  `algebraic` is proved from `Explains`, including `given_nodup` for the coefficient conversion,
-  and `_run` from L1 for `snd` and the matching private-coin handlers.
+  `algebraic` is proved from `Explains`, including `given_nodup` for the coefficient conversion
+  (`explainProgram_isAlgebraic`). `toExplained_run` is proved by induction on the handle program,
+  one oracle component at a time: a tracked group step projects to the real step, and encoding,
+  coin and game requests receive the same answers on both sides. It does not use L1
+  (`run_map`). Certification covers the group elements of each message, its `groups` field;
+  plain data is not explained, so games read the adversary's group outputs only from `groups`.
 - **T1b (explanations → handles).** Under `[FinEnum S]` and `[DecidableEq F]`, given a decoder
   `dec` with `∀ s g, dec s (enc s g) = g` (the real-value setting is `E := G`, `enc := id`,
   `dec := id`):
@@ -1340,12 +1345,14 @@ Slice 1 will prove L1 (`run_map`), `impl_congr`, and T6 (`runGen_fst_eq_of_kerne
 `Projection.lean`, using the definitions in `Signature.lean` and `Oracle.lean`. Slice 2 proves
 the real, symbolic and free-model evaluation maps in `Instances.lean`, including
 `evReprT_outer`, and the tracking projection and `Explains` preservation in `Tracking.lean`.
-In particular, T2 for generic runs is `explains_of_mem_support_runGen`. Slices 3–5 will supply
-the certified interaction interface and the T1a/T1c translations, including their exact run
-equalities.
+In particular, T2 for generic runs is `explains_of_mem_support_runGen`. The certified
+interaction interface is in `Interaction.lean`, and `Typed.lean` holds the T1c equivalence
+`explainedEquivTyped` with the program-level `Adversary.toTyped` and `ofTyped`.
 
-T1b is proved in `OfExplained.lean` as `ofExplained_run`, an exact equality of runs in any lawful
-monad `N`.
+T1a is proved in `ToExplained.lean` as `toExplained_run`, with certification from
+`explainProgram_isAlgebraic`, and T1b in `OfExplained.lean` as `ofExplained_run`. Both are exact
+equalities of runs in any lawful monad `N`. `RoundTrip.lean` composes them in both directions as
+`toExplained_ofExplained_run` and `ofExplained_toExplained_run`.
 
 Everything else is a paper argument or theorem target: L2, T3/T4 (including
 `dlogExperiment_ofGeneric_le`), T3ₛ, T5 and its cost certificate, the relation-problem bounds,
