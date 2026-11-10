@@ -7,11 +7,13 @@ Authors: Devon Tuma
 module
 public import VCVio.EvalDist.Defs.Measure.Core
 public import PolyFun.Control.Monad.Algebra.WP
+public import PolyFun.Control.Monad.Measure.Expectation
 
 /-!
 # Weakest preconditions from successful-output measures
 
-The ordered expectation algebra integrates the identity against a computation's
+The ordered expectation algebra, PolyFun's `ExpectationWP.algebra` (in
+`PolyFun.Control.Monad.Measure.Expectation`), integrates the identity against a computation's
 successful-output measure. Its construction only needs lawful measure semantics;
 neither uniform sampling nor losslessness is required.
 
@@ -32,21 +34,6 @@ universe v
 namespace ExpectationWP
 
 variable (m : Type → Type v) [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-
-/-- The ordered algebra of nonnegative expectations under successful-output measures. -/
-@[expose, instance_reducible]
-noncomputable def algebra : MAlgOrdered m ENNReal where
-  μ mx := ∫⁻ x, x ∂𝒟[mx]
-  μ_pure x := by simp
-  μ_bind_mono {α} f g hfg mx := by
-    let obs : α → Measure ENNReal × Measure ENNReal := fun a ↦ (𝒟[f a], 𝒟[g a])
-    let : MeasurableSpace α := MeasurableSpace.comap obs inferInstance
-    have hobs : Measurable obs := comap_measurable obs
-    rw [lintegral_evalDist_bind mx f (measurable_fst.comp hobs)
-      (g := fun x ↦ x) measurable_id,
-      lintegral_evalDist_bind mx g (measurable_snd.comp hobs)
-        (g := fun x ↦ x) measurable_id]
-    exact lintegral_mono hfg
 
 namespace Lower
 
