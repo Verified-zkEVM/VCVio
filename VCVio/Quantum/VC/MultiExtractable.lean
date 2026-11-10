@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.PosSemidef
 public import Mathlib.Geometry.Convex.ConvexSpace.Barycenter
 public import VCVio.Quantum.VC.Emulated
 public import VCVio.Quantum.Oracle.ClassicalCalls
@@ -200,7 +201,7 @@ theorem run₂_bind_record (f : QuantumComp₂ L spec A B α)
 theorem bind_record_map_snd (f : QuantumComp₂ L spec A B α)
     (g : α → QuantumComp₂ L spec B C β) :
     (f.bind fun a ↦ (g a).map (fun b ↦ (a, b))).map Prod.snd = f.bind g := by
-  simp only [QuantumComp₂.map, QuantumComp₂.bind_assoc, QuantumComp₂.pure_bind,
+  simp only [QuantumComp₂.map_eq_bind_pure, QuantumComp₂.bind_assoc, QuantumComp₂.pure_bind,
     QuantumComp₂.bind_pure]
 
 end QuantumRuntime
@@ -490,14 +491,6 @@ theorem ComBound.min {κ κ' : ℕ → ℝ≥0∞} (h : ComBound.{v, w} E ME cod
   ⟨fun i t _ _ _ x ρ hx ↦ le_min (h.1 i t x ρ hx) (h'.1 i t x ρ hx),
     fun t _ _ _ x ρ c hx ↦ le_min (h.2 t x ρ c hx) (h'.2 t x ρ c hx)⟩
 
-/-- The trace of `C |v⟩⟨v| C†` is the squared norm of `C v`. -/
-theorem trace_mul_vecMulVec_mul_conjTranspose_re {m n : Type*} [Fintype m] [Fintype n]
-    (C : Matrix n m ℂ) (v : m → ℂ) :
-    (C * vecMulVec v (star v) * Cᴴ).trace.re = ∑ a, ‖(C *ᵥ v) a‖ ^ 2 := by
-  rw [mul_vecMulVec, vecMulVec_mul, ← star_mulVec, trace_vecMulVec]
-  simp only [dotProduct, Pi.star_apply, Complex.star_def, Complex.mul_conj, Complex.re_sum,
-    Complex.ofReal_re, Complex.normSq_eq_norm_sq]
-
 variable (E ME code)
 
 /-- **P2's distance for a single-outcome adversary**: if the run of `x` against `EO^(Ext)` has the
@@ -535,7 +528,7 @@ theorem comError_of_pure {i : Fin k} {A Env : QReg} {α : Type w}
     comError E ME code i x ρ =
       ENNReal.ofReal (∑ b, ‖((comDefect E ME code Env i * V) *ᵥ v) b‖ ^ 2) := by
   rw [comError_eq_of_branch E ME code a₀ V hx₀ hx, hv,
-    ← trace_mul_vecMulVec_mul_conjTranspose_re, conjTranspose_mul]
+    ← Matrix.trace_mul_vecMulVec_mul_conjTranspose_re, conjTranspose_mul]
   simp only [Matrix.mul_assoc]
 
 /-- The ordinary commutator is bounded by four times the joint input trace. -/
@@ -550,7 +543,7 @@ theorem comDefect_trace_le_four (Env : QReg) (i : Fin k)
     (extractUnitary_mem_unitaryGroup ME code)
   have hV := onFactor_mem_unitaryGroup (slotFst₃ (X × Y) (TpIC k Cm × Z) Env E.S)
     (E.unitary i)
-  have h := sum_trace_conj_sub_le_four (fun _ : Unit ↦ U * V) (fun _ : Unit ↦ V * U)
+  have h := MatrixMap.sum_trace_conj_sub_le_four (fun _ : Unit ↦ U * V) (fun _ : Unit ↦ V * U)
     (by simpa only [Fintype.sum_unique, U, V, star_eq_conjTranspose] using
       (mem_unitaryGroup_iff'.mp (mul_mem hU hV)))
     (by simpa only [Fintype.sum_unique, U, V, star_eq_conjTranspose] using
@@ -578,7 +571,7 @@ theorem readComDefect_trace_le_four (Env : QReg) (c : Fin k × X)
   have hG : ∑ a, (U * J a)ᴴ * (U * J a) = 1 := by
     simpa only [conjTranspose_mul, Matrix.mul_assoc, ← Matrix.mul_assoc Uᴴ U,
       hU, Matrix.one_mul] using hJ
-  exact sum_trace_conj_sub_le_four (fun a ↦ J a * U) (fun a ↦ U * J a) hF hG ρ.posSemidef
+  exact MatrixMap.sum_trace_conj_sub_le_four (fun a ↦ J a * U) (fun a ↦ U * J a) hF hG ρ.posSemidef
 
 /-- Both commutation defects are at most four for every total call budget. -/
 theorem comBound_four : ComBound.{v, w} E ME code (fun _ ↦ 4) := by
@@ -703,26 +696,33 @@ theorem run₂_checkedRead_eq (R : QuantumRuntime (mixedExtSpec k X Y Cm Z))
         ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D))
         ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D)) := by
   rw [checkedRead, QuantumRuntime.run₂_act_bind, SubInstrument.frame_relabel]
-  unfold SubInstrument.reindex
-  refine congrArg (fun f : Unit → SubInstrument ((Unit × B) × R.D) (B × R.D) (Option Y) ↦
-    (SubInstrument.relabel
-      ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D)).symm).bind f) ?_
-  funext u
-  have hq := R.run₂_query_bind (A := QReg.of (Unit × B)) (B := B)
-    .instruments (.inr (j, t)) B
-    (Equiv.refl (Unit × B)) (fun a ↦
-      QuantumComp₂.bind (QComp.act (SubInstrument.relabel (Equiv.uniqueProd B Unit)))
-        fun _ ↦ QuantumComp₂.pure a)
-  refine hq.trans ?_
-  refine congrArg (fun f : Option Y → SubInstrument ((Unit × B) × R.D) (B × R.D) (Option Y) ↦
-    (R.queryStep (A := QReg.of (Unit × B)) (.inr (j, t)) B (Equiv.refl _)).bind f) ?_
-  funext a
-  rw [QuantumRuntime.run₂_act_bind]
-  erw [SubInstrument.frame_relabel]
-  exact congrArg (fun f : Unit → SubInstrument (B × R.D) (B × R.D) (Option Y) ↦
-    (SubInstrument.relabel
-      ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D))).bind f)
-    (funext fun _ ↦ R.run₂_pure .instruments a)
+  trans (SubInstrument.relabel
+      ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D)).symm).bind fun _ ↦
+    (R.queryStep (A := QReg.of (Unit × B)) (.inr (j, t)) B (Equiv.refl _)).bind fun a ↦
+      (SubInstrument.relabel
+        ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D))).bind fun _ ↦
+          SubInstrument.pure a
+  · refine congrArg (fun f : Unit → SubInstrument ((Unit × B) × R.D) (B × R.D) (Option Y) ↦
+      (SubInstrument.relabel ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D)).symm).bind f) ?_
+    funext u
+    have hq := R.run₂_query_bind (A := QReg.of (Unit × B)) (B := B)
+      .instruments (.inr (j, t)) B (Equiv.refl (Unit × B)) (fun a ↦
+        QuantumComp₂.bind (QComp.act (SubInstrument.relabel (Equiv.uniqueProd B Unit)))
+          fun _ ↦ QuantumComp₂.pure a)
+    refine hq.trans ?_
+    refine congrArg (fun f : Option Y → SubInstrument ((Unit × B) × R.D) (B × R.D) (Option Y) ↦
+      (R.queryStep (A := QReg.of (Unit × B)) (.inr (j, t)) B (Equiv.refl _)).bind f) ?_
+    funext a
+    erw [QuantumRuntime.run₂_act_bind, SubInstrument.frame_relabel]
+    exact congrArg (fun f : Unit → SubInstrument (B × R.D) (B × R.D) (Option Y) ↦
+      (SubInstrument.relabel ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D))).bind f)
+      (funext fun _ ↦ R.run₂_pure .instruments a)
+  · refine DSubInstrument.ext (funext fun a ↦ LinearMap.ext fun ρ ↦ ?_)
+    conv_rhs => erw [SubInstrument.branch_reindex_apply]
+    erw [DSubInstrument.branch_bind_unit, LinearMap.comp_apply,
+      SubInstrument.relabel_branch_apply, DSubInstrument.branch_bind_bind_unit_ret,
+      LinearMap.comp_apply, SubInstrument.relabel_branch_apply]
+    rfl
 
 variable [AddGroup Z]
 
@@ -1094,10 +1094,11 @@ theorem offlineChallenger_eq_bind_offlineChecks [DecidableEq Msg] [∀ i, Decida
     offlineChallenger VC code hk qs c B =
       QuantumComp₂.bind (offlineChecks VC code hk c B)
         (offlineFinish VC (Z := Z) hk qs c B) := by
-  simp only [offlineChallenger, offlineChecks, QuantumComp₂.map,
+  simp only [offlineChallenger, offlineChecks, QuantumComp₂.map_eq_bind_pure,
     QuantumComp₂.bind_assoc]
   congr 1
   funext b₁
+  refine Eq.trans ?_ (congrArg (QuantumComp₂.bind · _) (QuantumComp₂.map_eq_bind_pure _ _).symm)
   erw [QuantumComp₂.bind_assoc, QuantumComp₂.bind_assoc]
   simp only [QuantumComp₂.pure_bind]
   congr 1

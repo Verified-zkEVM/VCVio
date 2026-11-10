@@ -140,9 +140,10 @@ From `Examples/ElGamal/Basic.lean` — multi-query security via the generic one-
 **Key patterns used**:
 - Define ElGamal correctness and the one-time DDH bridge.
 - Prove that the one-time advantage is twice the DDH advantage of the reduction.
-- Instantiate `AsymmEncAlg.IND_CPA_Advantage_le_mul_of_oneTime_bound`.
-- Final bound: `IND_CPA_Advantage ≤ q * (2 * ε)`, where `IND_CPA_Advantage` is the Boolean bias
-  `Measure.boolBias` of the oracle IND-CPA game `AsymmEncAlg.IND_CPA_Game`.
+- Instantiate `AsymmEncAlg.IND_CPA_Advantage_le_sum_oneTime_stepAdversary`.
+- Final bound: `elGamal_IND_CPA_le_sum_ddhAdvantage` bounds `IND_CPA_Advantage` by twice the
+  sum of the DDH advantages of the `q` named hybrid reductions. Here `IND_CPA_Advantage` is
+  the Boolean bias `Measure.boolBias` of the oracle IND-CPA game `AsymmEncAlg.IND_CPA_Game`.
 
 For tactic-heavy hybrid proofs, use the generic recipe above or the focused
 examples under `Examples/ProgramLogic/`.

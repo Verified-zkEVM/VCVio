@@ -1,0 +1,49 @@
+name = "VCVioInterop"
+defaultTargets = ["InteropRust"]
+
+# Bridges from external verification tools whose Lean libraries VCVio's dependents must never
+# resolve: every dependent resolves every `require` in VCVio's root lakefile, so these requires live
+# here. See README.md. Sources stay at the repository root, so modules keep their `Interop.` names;
+# the pins equal the root's (Lean v4.35.0, Mathlib v4.35.0), so the root's dependency cache is
+# shared.
+srcDir = ".."
+packagesDir = "../.lake/packages"
+
+# The root package's options, so the bridges meet the same style.
+[leanOptions]
+pp.unicode.fun = true
+pp.proofs.withType = false
+autoImplicit = false
+relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+weak.linter.redundantVisibility = true
+weak.linter.style.longFile = 1500
+experimental.vcgen = true
+weak.linter.unicodeLinter = false
+weak.linter.constructorNameAsVariable = false
+
+[[require]]
+name = "VCVio"
+path = ".."
+
+# hax's Lean library, which brings Aeneas's (through the fork hax pins). hax and Aeneas emit code
+# in the same monad, `Aeneas.Std.RustM`.
+[[require]]
+name = "hax"
+git = { url = "https://github.com/cryspen/hax", subDir = "hax-lib/proof-libs/lean" }
+rev = "a045d15a3bf43fe05096146f488668b521a4ae44"
+
+# Declared last so the root's Mathlib pin stays authoritative.
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.35.0"
+
+# The Rust bridges. Modules not listed here (the hax examples not yet ported to Aeneas's scalars)
+# are not built.
+[[lean_lib]]
+name = "InteropRust"
+roots = [
+  "Interop.Aeneas.ITree", "Interop.Aeneas.WP", "Interop.Rust.Common", "Interop.Rust.Run",
+  "Interop.Rust.RustM", "Interop.Rust.Triple", "Interop.Hax.CenteredBinomial",
+]
