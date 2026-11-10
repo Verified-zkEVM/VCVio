@@ -27,17 +27,17 @@ variable {F S ι : Type}
 
 /-- Two symbolic tables have equal lengths and the same vanishing linear combinations
 in every sort. -/
-@[expose] def SameKernel [Field F] (T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)) : Prop :=
+@[expose] def SameKernel [CommRing F] (T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)) : Prop :=
   ∀ s, (T₀ s).length = (T₁ s).length ∧
     ∀ r : Coeffs F, evRepr (T₀ s) r = 0 ↔ evRepr (T₁ s) r = 0
 
 /-- Equal relation kernels identify the same pairs of representations. -/
-theorem SameKernel.eq_iff [Field F] {T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)}
+theorem SameKernel.eq_iff [CommRing F] {T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)}
     (h : SameKernel T₀ T₁) (s : S) (r r' : Coeffs F) :
     evRepr (T₀ s) r = evRepr (T₀ s) r' ↔ evRepr (T₁ s) r = evRepr (T₁ s) r' := by
   simpa only [map_sub, sub_eq_zero] using (h s).2 (r - r')
 
-private theorem evRepr_eq_zero_iff [Field F] {G : Type} [AddCommGroup G] [Module F G]
+private theorem evRepr_eq_zero_iff [CommRing F] {G : Type} [AddCommGroup G] [Module F G]
     (xs : List G) (h : LinearIndependent F xs.get) (r : Coeffs F) :
     evRepr xs r = 0 ↔ ∀ i < xs.length, r i = 0 := by
   rw [evRepr_apply, ← Fin.sum_univ_eq_sum_range]
@@ -49,7 +49,7 @@ private theorem evRepr_eq_zero_iff [Field F] {G : Type} [AddCommGroup G] [Module
     exact Finset.sum_eq_zero fun i _ => by rw [he i i.isLt, zero_smul]
 
 /-- Equally long, linearly independent tables have the same relation kernel. -/
-theorem sameKernel_of_linearIndependent [Field F]
+theorem sameKernel_of_linearIndependent [CommRing F]
     {T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)}
     (hlen : ∀ s, (T₀ s).length = (T₁ s).length)
     (h₀ : ∀ s, LinearIndependent F (T₀ s).get)
@@ -70,7 +70,7 @@ private theorem symbolic_discrete_eq [CommSemiring F] :
     exact o.elim
   exact congrArg₂ Model.mk hl hb
 
-private theorem mapTbl_units [Field F] (T : Tbl (fun _ : S => MvPolynomial ι F)) :
+private theorem mapTbl_units [CommSemiring F] (T : Tbl (fun _ : S => MvPolynomial ι F)) :
     mapTbl (fun s => evRepr (F := F) (T s))
       (fun s => List.ofFn (fun i : Fin (T s).length => Pi.single (i : Handle) 1)) = T := by
   funext s
@@ -78,7 +78,7 @@ private theorem mapTbl_units [Field F] (T : Tbl (fun _ : S => MvPolynomial ι F)
 
 /-- Tables with the same shape and relation kernel give identical exact returned values.
 T6 applies to evaluation morphisms out of the free discrete model on unit representations. -/
-theorem SameKernel.runGen_fst_eq [Field F] [DecidableEq F] [DecidableEq ι] [DecidableEq S]
+theorem SameKernel.runGen_fst_eq [CommRing F] [DecidableEq F] [DecidableEq ι] [DecidableEq S]
     {T₀ T₁ : Tbl (fun _ : S => MvPolynomial ι F)} (h : SameKernel T₀ T₁)
     {α : Type} (oa : OracleComp (genSpec F (discreteSig S)) α) :
     Prod.fst <$> runGen (symbolic F (discreteSig S) ι) (fun _ => id) oa T₀ =
