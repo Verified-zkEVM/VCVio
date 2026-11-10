@@ -20,6 +20,9 @@ cd Interop
 lake build      # VCVio, hax, Aeneas and the bridges (`InteropRust`)
 ```
 
+CI's `Interop Bridges` job (`.github/workflows/build.yml`) builds the package on every PR and runs
+the axiom sweep over `InteropRust`'s modules.
+
 ## TCB isolation
 
 Nothing in core VCVio depends on `Interop`. A Rust frontend's trusted base (its extraction engine,
@@ -63,5 +66,5 @@ are ported; see [its README](Hax/README.md).
 - **An ITree-level bridge to PolyFun.** Aeneas's `ITree E` has an explicit `div` in place of
   `tau`, and maps to PolyFun's `ITree` over the polynomial `⟨E.I, E.O⟩` up to tau-insensitive
   bisimulation. It would serve every Aeneas effect.
-- **Module system and CI.** Convert the bridges to the module system (they build with
-  `allowNonModules`), and add a CI job that builds this package.
+- **Module system.** Convert the bridges to the module system; they build with
+  `allowNonModules`.

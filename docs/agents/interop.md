@@ -18,4 +18,4 @@ The rules for agents:
 - **Extracted code.** A module holding hax or Aeneas output names its Rust source and states
   whether the code was emitted by the tool or transcribed.
 - **Building.** `cd Interop && lake build`. The `InteropRust` library lists its roots; add a module
-  there once it builds.
+  there once it builds, and add it to the axiom-sweep step of CI's `Interop Bridges` job.

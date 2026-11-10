@@ -9,10 +9,18 @@ defaultTargets = ["InteropRust"]
 srcDir = ".."
 packagesDir = "../.lake/packages"
 
+# The root package's options, so the bridges meet the same style.
 [leanOptions]
 pp.unicode.fun = true
+pp.proofs.withType = false
 autoImplicit = false
 relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+weak.linter.redundantVisibility = true
+weak.linter.style.longFile = 1500
+experimental.vcgen = true
+weak.linter.unicodeLinter = false
+weak.linter.constructorNameAsVariable = false
 
 [[require]]
 name = "VCVio"

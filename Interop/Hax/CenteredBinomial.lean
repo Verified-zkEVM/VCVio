@@ -120,11 +120,12 @@ theorem prob_sampleRandomCbd1 (a : I32) :
 /-- `0` with probability `1/2`: the bit patterns `00` and `11`. -/
 theorem prob_sampleRandomCbd1_zero :
     Pr{let r ← sampleRandomCbd1.run.run}[r = some (Except.ok 0#i32)] = 2⁻¹ := by
+  have half : ((1 : ℝ≥0∞) + 1) * 4⁻¹ = 2⁻¹ := by
+    rw [one_add_one_eq_two, show (4 : ℝ≥0∞) = 2 * 2 by norm_num,
+      ENNReal.mul_inv (Or.inl two_ne_zero) (Or.inl ENNReal.ofNat_ne_top), ← mul_assoc,
+      ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top, one_mul]
   rw [prob_sampleRandomCbd1, prob_uniformFin_four]
-  simp (config := { decide := true })
-  rw [one_add_one_eq_two, show (4 : ℝ≥0∞) = 2 * 2 by norm_num,
-    ENNReal.mul_inv (Or.inl two_ne_zero) (Or.inl ENNReal.ofNat_ne_top), ← mul_assoc,
-    ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top, one_mul]
+  simpa (config := { decide := true }) using half
 
 /-- `1` with probability `1/4`: the bit pattern `01`. -/
 theorem prob_sampleRandomCbd1_pos_one :
