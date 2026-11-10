@@ -31,13 +31,13 @@ Default fast checks (shared with per-PR CI):
   - with --test, the same ratchet over the two test libraries that have umbrella
     modules, once lake test has built them
   - lake lint -- --style-only on every library and test module
-  - python3 ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
-  - scripts/test-docnames.sh, then python3 ./scripts/check-doc-names.py --resolve
+  - uv run --no-project --python 3.12 python ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
+  - scripts/test-docnames.sh, then uv run --no-project --python 3.12 python ./scripts/check-doc-names.py --resolve
     (the declaration names the guides cite, against the oleans the build produced)
 
 Optional checks:
   --lint    Batteries environment linters, one process per proof library as in CI
-  --test    lake test (test libraries, the SLH-DSA test executables, the smoke test)
+  --test    lake test (test libraries, SLH-DSA executables, smoke and oracle-cost tests)
   --ffi     with --test: also the native ML-KEM / ML-DSA / Falcon executables
             (initialises the third_party/ submodules; slow)
   --axioms  ./scripts/test-axiomsweep.sh, then lake exe axiomsweep --check
@@ -74,15 +74,15 @@ warning_args=()
 for lib in "${PROOF_LIBS[@]}"; do
   warning_args+=(--path-prefix "$lib/" --path-prefix "$lib.lean")
 done
-python3 ./scripts/check-warning-log.py "$BUILD_LOG" "${warning_args[@]}" \
+uv run --no-project --python 3.12 python ./scripts/check-warning-log.py "$BUILD_LOG" "${warning_args[@]}" \
   --exclude-substring 'declaration uses `sorry`' \
   --label 'repository non-sorry warnings'
 
 echo ""
 echo "# Checking generated umbrella modules"
-python3 ./scripts/test-check-imports.py
-python3 ./scripts/test-validation.py
-python3 ./scripts/test-lint.py
+uv run --no-project --python 3.12 python ./scripts/test-check-imports.py
+uv run --no-project --python 3.12 python ./scripts/test-validation.py
+uv run --no-project --python 3.12 python ./scripts/test-lint.py
 ./scripts/check-imports.sh
 
 echo ""
@@ -93,15 +93,15 @@ if [[ -f scripts/check-expose-boundary.sh ]]; then
   bash scripts/test-expose-boundary.sh
   bash scripts/check-expose-boundary.sh
 fi
-python3 ./scripts/test-migrate-native-probability.py
-python3 ./scripts/test-classify-migration-errors.py
+uv run --no-project --python 3.12 python ./scripts/test-migrate-native-probability.py
+uv run --no-project --python 3.12 python ./scripts/test-classify-migration-errors.py
 bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 bash scripts/check-extern-isolation.sh
-python3 scripts/test-interop-isolation.py
+uv run --no-project --python 3.12 python scripts/test-interop-isolation.py
 bash scripts/check-interop-isolation.sh
 bash scripts/test-comment-fences.sh
-python3 ./scripts/check-comment-fences.py
+uv run --no-project --python 3.12 python ./scripts/check-comment-fences.py
 
 echo ""
 echo "# Checking eagerly-initialised constants"
@@ -114,11 +114,11 @@ lake lint -- --style-only
 
 echo ""
 echo "# Checking the agent documentation"
-python3 ./scripts/test-agent-docs.py
-python3 ./scripts/check-agent-docs.py
-python3 ./scripts/extract-doc-fragments.py --check
+uv run --no-project --python 3.12 python ./scripts/test-agent-docs.py
+uv run --no-project --python 3.12 python ./scripts/check-agent-docs.py
+uv run --no-project --python 3.12 python ./scripts/extract-doc-fragments.py --check
 bash scripts/test-docnames.sh
-python3 ./scripts/check-doc-names.py --resolve
+uv run --no-project --python 3.12 python ./scripts/check-doc-names.py --resolve
 
 if (( run_lint )); then
   echo ""
@@ -135,7 +135,7 @@ if (( run_test )); then
   else
     lake test 2>&1 | tee "$TEST_LOG"
   fi
-  python3 ./scripts/check-warning-log.py "$TEST_LOG" \
+  uv run --no-project --python 3.12 python ./scripts/check-warning-log.py "$TEST_LOG" \
     --path-prefix VCVioTest/ --path-prefix VCVioTest.lean \
     --path-prefix LatticeCryptoTest/ --path-prefix LatticeCryptoTest.lean \
     --path-prefix HashSigTest/ \

@@ -154,8 +154,6 @@ real seed. -/
 
 /-! ## Key generation files nothing and changes no answer -/
 
-set_option maxHeartbeats 400000 in
--- Unfolding key generation through the noticing tape recorder exceeds the default budget.
 /-- **Key generation, run from the walk's cache, leaves the cache as it was and the target
 recording empty**, and returns the walk's own key. -/
 theorem keygen_stage (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWalk)
@@ -167,7 +165,10 @@ theorem keygen_stage (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWal
     keys.1 = (skAt walk, keyAt walk) ∧
       CacheView.cacheOf keys.2.1 = walk.2 ∧ keys.2.2.2.2 = [] := by
   classical
-  have hrom := tape_run_rom (leftAt walk) (rightAt walk) _ _ keys hkeys
+  -- Support hypotheses are passed through `assumption`, not as terms: elaborating `h` as a term
+  -- puts its type in weak head normal form, which evaluates the whole run it is about.
+  have hrom := tape_run_rom (leftAt walk) (rightAt walk) _ _ keys
+    (by revert hkeys; intro; assumption)
   obtain ⟨outputs, hwarm⟩ := HonestGrowth.walk_cache_eq_warmCache hwalk
   have hstart : CacheView.cacheOf (σ := CountedAt (keyAt walk))
       ((startAt walk.2, 0) : Counted) = walk.2 := rfl
@@ -179,7 +180,8 @@ theorem keygen_stage (walk : Walk) (hwalk : walk ∈ support WarmedGame.graphWal
   refine ⟨by rw [hvalue]; exact Prod.ext (SigningFaithful.keygen_secretKey _ _ _ _) rfl,
     hcacheEq, ?_⟩
   obtain ⟨suffix, hsuffix, hentries⟩ := run_right_suffix (leftAt walk) (rightAt walk)
-    (fun _ => True) ⟨fun _ _ _ => trivial, fun _ _ _ _ => trivial⟩ _ _ trivial keys hkeys
+    (fun _ => True) ⟨fun _ _ _ => trivial, fun _ _ _ _ => trivial⟩ _ _ trivial keys
+      (by revert hkeys; intro; assumption)
   rw [hsuffix]
   cases suffix with
   | nil => rfl
