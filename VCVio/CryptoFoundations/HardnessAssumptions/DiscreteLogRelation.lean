@@ -99,7 +99,7 @@ theorem plainExperiment_eq [Fintype ι] [DecidableEq ι] [Field F] [DecidableEq 
 
 /-- At a generating base, uniform generator-oracle outputs are uniform scalar multiples.
 This connects generator-oracle setup with the sampling used by `experiment`. -/
-theorem queryBasis_empty_evalDistEq_scalar [Fintype ι] [DecidableEq ι]
+theorem queryBasis_empty_evalDistEq_scalar [Fintype ι]
     [DecidableEq κ] [Field F] [SampleableType F] [SampleableType G]
     [AddCommGroup G] [Module F G]
     (labels : ι → κ) (hinj : Function.Injective labels)
@@ -139,7 +139,7 @@ theorem sum_C_mul_X_ne_zero [CommSemiring F] {ι : Type*} [Fintype ι]
 
 /-- A nonzero coefficient vector has vanishing scalar product with a uniformly sampled vector
 over a finite field with probability at most the reciprocal of the field cardinality. -/
-theorem prEvent_sum_mul_eq_zero_le [Fintype ι] [DecidableEq ι]
+theorem prEvent_sum_mul_eq_zero_le [Fintype ι]
     [Field F] [Fintype F] [SampleableType F]
     (a : ι → F) (ha : a ≠ 0) :
     Pr{let y ← $ᵗ (ι → F)}[∑ i, a i * y i = 0] ≤
@@ -149,7 +149,7 @@ theorem prEvent_sum_mul_eq_zero_le [Fintype ι] [DecidableEq ι]
   simpa [p] using prob_eval_zero_univ_le_div p
     (sum_C_mul_X_ne_zero a ha) (totalDegree_sum_C_mul_X_le_one a)
 
-private theorem programmed_eq [Fintype ι] [DecidableEq ι] [Field F] [SampleableType F]
+private theorem programmed_eq [Fintype ι] [Field F] [SampleableType F]
     [AddCommGroup G] [Module F G] (g : G) (A : Adversary F G ι unifSpec) (z : F) :
     (do
       let x ← $ᵗ (ι → F)

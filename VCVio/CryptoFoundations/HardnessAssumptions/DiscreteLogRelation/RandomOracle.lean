@@ -84,7 +84,7 @@ private theorem queryFin_uniform [DecidableEq D] [SampleableType G]
 
 /-- Distinct uncached generator labels give a uniformly distributed basis, even if the cache
 contains unrelated entries. The output equality discards the final cache. -/
-theorem queryBasis_evalDistEq_uniform [Fintype ι] [DecidableEq ι]
+theorem queryBasis_evalDistEq_uniform [Fintype ι]
     [DecidableEq D] [SampleableType G]
     (labels : ι → D) (hinj : Function.Injective labels)
     (cache : (D →ₒ G).QueryCache) (hfresh : ∀ i, cache (labels i) = none) :
@@ -98,7 +98,7 @@ theorem queryBasis_evalDistEq_uniform [Fintype ι] [DecidableEq ι]
 
 /-- A fresh lazy generator oracle produces the same basis distribution as independent uniform
 sampling. Injectivity of the labels is the only restriction on their domain. -/
-theorem queryBasis_empty_evalDistEq_uniform [Fintype ι] [DecidableEq ι]
+theorem queryBasis_empty_evalDistEq_uniform [Fintype ι]
     [DecidableEq D] [SampleableType G]
     (labels : ι → D) (hinj : Function.Injective labels) :
     (simulateQ randomOracle (queryBasis (G := G) labels)).run' ∅ =ᵈ ($ᵗ (ι → G)) :=
