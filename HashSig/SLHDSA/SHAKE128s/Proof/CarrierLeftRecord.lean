@@ -154,10 +154,13 @@ theorem leftServed_carrierTail (rightKeep : Walk → Bytes → HandlerCarrier.St
     {γ : Type} (last : OracleComp OracleWorld γ) (final : γ × CountedState)
     (hfinal : final ∈ support ((simulateQ (handlerAt rightKeep walk) last).run middle.2.2.2)) :
     LeftServed final.2 := by
+  -- Support hypotheses are passed through `assumption`, not as terms: elaborating `h` as a term
+  -- puts its type in weak head normal form, which evaluates the whole run it is about.
   have hfirst := RecordInvariant.run_invariant (Inv := LeftServed) _
     (fun queried state step hstep hinv =>
       step_leftServed (keyAt walk) (rightKeep walk) queried state step hstep hinv)
-    _ (startAt walk.2, (([], []), 0)) keys hkeys (leftServed_start walk.2)
+    _ (startAt walk.2, (([], []), 0)) keys (by revert hkeys; intro; assumption)
+      (leftServed_start walk.2)
   have hsecond := RecordInvariant.phase_invariant (Inv := LeftServed) _
     (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
     ServedAgreement.startServingOn ServedAgreement.stopServingOn
@@ -165,11 +168,11 @@ theorem leftServed_carrierTail (rightKeep : Walk → Bytes → HandlerCarrier.St
       step_leftServed (keyAt walk) (rightKeep walk) queried state step hstep hinv)
     (fun request state hinv => leftServed_startServingOn request state hinv)
     (fun state hinv => leftServed_stopServingOn state hinv)
-    _ 1 [] keys.2 middle hmiddle hfirst
+    _ 1 [] keys.2 middle (by revert hmiddle; intro; assumption) hfirst
   exact RecordInvariant.run_invariant (Inv := LeftServed) _
     (fun queried state step hstep hinv =>
       step_leftServed (keyAt walk) (rightKeep walk) queried state step hstep hinv)
-    _ middle.2.2.2 final hfinal hsecond
+    _ middle.2.2.2 final (by revert hfinal; intro; assumption) hsecond
 
 /-! ## The disclosing recording is in the signed log
 
@@ -178,8 +181,6 @@ The served set contains every disclosing entry (`leftServed_carrierTail`), and
 theorem below is the decomposition with the three facts about the walk: the key the run
 generates, the good walk's separation, and the quiet start. -/
 
-set_option maxHeartbeats 1000000 in
--- Unfolding the carrier tail's three-stage run into its stages is slow.
 /-- **Every disclosing entry of the carrier tail is in the signed log.** The served-agreement
 hypothesis, with nothing assumed but a supported run and a good walk. -/
 theorem servedLog_leftRecord_carrierTail
@@ -201,30 +202,34 @@ theorem servedLog_leftRecord_carrierTail
   obtain ⟨final, hlast, hpure⟩ := hrest
   rw [support_pure, Set.mem_singleton_iff] at hpure
   have hpk : keys.1.1.publicKey = keyAt walk :=
-    CarrierRecord.keys_publicKey rightKeep walk hwalk keys hkeys
+    CarrierRecord.keys_publicKey rightKeep walk hwalk keys (by revert hkeys; intro; assumption)
   have hpublic : ¬ HashSeparation.Possible
       (keys.1.1.publicKey.seed, keys.1.1.publicKey.root) := by
     rw [hpk]
     exact AnswerSide.not_possible_generatedKey hwalk hgood
   have hquiet : CarrierCap.Quiet keys.2.1 :=
-    CarrierCap.quiet_run rightKeep walk _ (startAt walk.2, (([], []), 0)) keys hkeys
+    CarrierCap.quiet_run rightKeep walk _ (startAt walk.2, (([], []), 0)) keys
+      (by revert hkeys; intro; assumption)
       (CarrierCap.quiet_startAt walk.2)
   have hclearMiddle : middle.2.2.2.1.framing = none :=
-    CarrierClearFraming.clear_phase rightKeep walk keys.1.1 _ 1 [] keys.2 middle hmiddle hquiet.1
+    CarrierClearFraming.clear_phase rightKeep walk keys.1.1 _ 1 [] keys.2 middle
+      (by revert hmiddle; intro; assumption) hquiet.1
   have hlogged : ServedAgreement.CarrierLogged keys.1.1 ∅ middle.2.2.1 final.2.1 :=
     CarrierServedLog.carrierLogged_run keys.1.1 ∅ middle.2.2.1 rightKeep walk _
-      middle.2.2.2 final hlast hclearMiddle
+      middle.2.2.2 final (by revert hlast; intro; assumption) hclearMiddle
       (CarrierServedLog.carrierLogged_phase rightKeep walk keys.1.1 hpk hpublic _ 1 keys.2
-        hquiet.1 hquiet.2 middle hmiddle)
+        hquiet.1 hquiet.2 middle (by revert hmiddle; intro; assumption))
   have hfiled : ServedAgreement.LogFiled keys.1.1 middle.2.2.1 final.2.1 :=
     CarrierServedLog.logFiled_run keys.1.1 middle.2.2.1 rightKeep walk _ middle.2.2.2 final
-      hlast hclearMiddle
-      (CarrierServedLog.logFiled_phase rightKeep walk keys.1.1 hpk _ 1 keys.2 middle hmiddle)
+      (by revert hlast; intro; assumption) hclearMiddle
+      (CarrierServedLog.logFiled_phase rightKeep walk keys.1.1 hpk _ 1 keys.2 middle
+        (by revert hmiddle; intro; assumption))
   intro entry hentry
   rw [hpure] at hentry ⊢
   exact CarrierServedLog.carrierBelowLog_of_invariants keys.1.1 (keyAt walk) hpk
     middle.2.2.1 final.2.1 hfiled hlogged _ rfl (fun _ _ hvalue => hvalue) entry.1
-    (leftServed_carrierTail rightKeep adversary walk keys hkeys middle hmiddle _ final hlast
-      entry hentry)
+    (leftServed_carrierTail rightKeep adversary walk keys (by revert hkeys; intro; assumption)
+      middle (by revert hmiddle; intro; assumption)
+      _ final (by revert hlast; intro; assumption) entry hentry)
 
 end SLHDSA.SHAKE128s.CarrierLeftRecord

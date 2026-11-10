@@ -70,6 +70,16 @@ theorem XmssSignature.ext {left right : XmssSignature}
   simp [signatureBytes, layers, totalHeight, subtreeHeight, forsTrees,
     forsHeight, chains, messageDigits, checksumDigits, winternitzBits, n]
 
+private theorem extract_byte_step (value : BitVec 128) (offset : Nat) :
+    (value.extractLsb' (offset + 8) 128 <<< 8) |||
+        (value.extractLsb' offset 8).setWidth 128 = value.extractLsb' offset 128 := by
+  apply BitVec.eq_of_getLsbD_eq
+  intro bit hbit
+  by_cases hlow : bit < 8
+  · simp [hbit, hlow]
+  · have hindex : offset + 8 + (bit - 8) = offset + bit := by omega
+    simp [hbit, hlow, hindex]
+
 /-- The big-endian fold of the sixteen bytes of a `128`-bit value rebuilds that value. -/
 private theorem foldl_bytes128 (value : BitVec 128) :
     ((List.ofFn fun i : Fin 16 => UInt8.ofBitVec (value.extractLsb' (8 * i.val) 8)).reverse).foldl
@@ -84,11 +94,13 @@ private theorem foldl_bytes128 (value : BitVec 128) :
     simp
   simp only [widen]
   clear widen
-  apply BitVec.eq_of_getLsbD_eq
-  intro bit hbit
-  interval_cases bit <;>
-    simp only [BitVec.getLsbD_or, BitVec.getLsbD_shiftLeft, BitVec.getLsbD_setWidth,
-      BitVec.getLsbD_extractLsb'] <;> simp
+  have hzero : value.extractLsb' 128 128 = 0 := by
+    apply BitVec.eq_of_getLsbD_eq
+    intro bit _
+    simp
+  rw [← hzero]
+  simp only [extract_byte_step]
+  simp
 
 /-- Reading a digest from its own big-endian encoding returns it. -/
 theorem Signature.readDigest_bytesBE (value : Digest) :
