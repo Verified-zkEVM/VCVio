@@ -51,13 +51,6 @@ no execution-local state. -/
   Cursor := Unit
   begin := ()
   answer := persistentAnswer impl
-  faithful oa := by
-    have h := OracleComp.run'_simulateQ_eq_of_query_map_eq
-      (persistentAnswer impl) impl Prod.fst (by
-        intro q s
-        simp [persistentAnswer, Functor.map_map, Prod.map]) oa (empty, ())
-    simp only [pure_bind]
-    rw [h]
   faithful_coins oa := by
     have h := OracleComp.run'_simulateQ_eq_of_query_map_eq
       (coins (S := W × Unit) + persistentAnswer impl) (coins (S := W) + impl) Prod.fst (by
@@ -83,7 +76,7 @@ no execution-local state. -/
 
 /-- The reset policy for a lazily sampled random-oracle table. Repeated queries read the same
 entry, and extensions only install previously missing entries. -/
-@[expose] def randomOracle [DecidableEq ι]
+@[expose] def ofRandomOracle [DecidableEq ι]
     [∀ q : spec.Domain, SampleableType (spec.Range q)] :
     ResetPolicy (pure (∅ : spec.QueryCache)) spec.randomOracle :=
   persistent ∅ spec.randomOracle
@@ -93,7 +86,7 @@ entry, and extensions only install previously missing entries. -/
     (fun q₁ q₂ w => by
       let : MeasurableSpace (spec.Range q₁ × spec.Range q₂ × spec.QueryCache) := ⊤
       apply EvalDistEq.of_evalDist_eq
-      exact _root_.randomOracle.evalDist_run_bind_run_swap q₁ q₂ w
+      exact randomOracle.evalDist_run_bind_run_swap q₁ q₂ w
         (fun a b c => pure (a, b, c)))
 
 /-- A deterministic query handler carries no oracle state. -/
@@ -112,7 +105,7 @@ entry, and extensions only install previously missing entries. -/
     (fun _ _ _ => by simp [statelessImpl])
 
 /-- The empty oracle signature has a reset policy with no effects. -/
-@[expose] def trivial :
+@[expose] def ofEmptySpec :
     ResetPolicy (pure ()) (statelessImpl (spec := emptySpec) (fun q => PEmpty.elim q)) :=
   stateless (spec := emptySpec) (fun q => PEmpty.elim q)
 
@@ -174,39 +167,6 @@ private theorem replaceRight {κ T σ α : Type} {ctxSpec : OracleSpec κ}
         (simulateQ (QueryImpl.parallelStateT ctx impl) oa).run' (t, s)) := by
   simpa only [stageRight_run', map_bind] using
     P.faithful_coins (Prod.fst <$> (simulateQ (stageRight ctx) oa).run t)
-
-private def swapQueries {κ : Type} {ctxSpec : OracleSpec κ} :
-    QueryImpl (spec + ctxSpec) (OracleComp (ctxSpec + spec))
-  | .inl q => query (spec := ctxSpec + spec) (.inr q)
-  | .inr q => query (spec := ctxSpec + spec) (.inl q)
-
-private theorem parallel_swap_run' {κ T σ α : Type} {ctxSpec : OracleSpec κ}
-    (handler : QueryImpl spec (StateT σ ProbComp))
-    (ctx : QueryImpl ctxSpec (StateT T ProbComp))
-    (oa : OracleComp (spec + ctxSpec) α) (s : σ) (t : T) :
-    (simulateQ (QueryImpl.parallelStateT handler ctx) oa).run' (s, t) =
-      (simulateQ (QueryImpl.parallelStateT ctx handler)
-        (simulateQ swapQueries oa)).run' (t, s) := by
-  rw [← QueryImpl.simulateQ_compose]
-  apply OracleComp.run'_simulateQ_eq_of_query_map_eq
-    (proj := Prod.swap)
-  intro q z
-  cases q <;>
-    simp [QueryImpl.compose, swapQueries, QueryImpl.parallelStateT, Functor.map_map,
-      Prod.map, Prod.swap] <;> rfl
-
-private theorem replaceLeft {κ T σ α : Type} {ctxSpec : OracleSpec κ}
-    {init : ProbComp σ} {impl : QueryImpl spec (StateT σ ProbComp)}
-    (P : ResetPolicy init impl) (ctx : QueryImpl ctxSpec (StateT T ProbComp))
-    (oa : OracleComp (spec + ctxSpec) α) (t : T) :
-    (simulateQ (QueryImpl.parallelStateT P.answer ctx) oa).run' ((P.empty, P.begin), t) =ᵈ
-      (do
-        let s ← init
-        (simulateQ (QueryImpl.parallelStateT impl ctx) oa).run' (s, t)) := by
-  rw [parallel_swap_run' P.answer ctx oa (P.empty, P.begin) t]
-  exact (replaceRight P ctx (simulateQ swapQueries oa) t).trans
-    (EvalDistEq.bind_right init fun s => by
-      rw [← parallel_swap_run' impl ctx oa s t])
 
 private def reassocQueries {κ : Type} {ctxSpec : OracleSpec κ} :
     QueryImpl (unifSpec + (ctxSpec + spec)) (OracleComp ((unifSpec + ctxSpec) + spec))
@@ -368,18 +328,6 @@ theorem productAnswer_commute (q₁ q₂ : (spec₁ + spec₂).Domain) (c₁ c�
               (fun z => ((z.1.1, (c₁.1, z.1.2)),
                 (z.2.1.1, (c₂.1, z.2.1.2)), (w.1, z.2.2)))
 
-private theorem productAnswer_run' {α : Type}
-    (oa : OracleComp (spec₁ + spec₂) α) (w : P₁.World × P₂.World)
-    (c : P₁.Cursor × P₂.Cursor) :
-    (simulateQ (productAnswer P₁ P₂) oa).run' (w, c) =
-      (simulateQ (QueryImpl.parallelStateT P₁.answer P₂.answer) oa).run'
-        ((w.1, c.1), (w.2, c.2)) := by
-  apply OracleComp.run'_simulateQ_eq_of_query_map_eq
-    (proj := fun s : (P₁.World × P₂.World) × (P₁.Cursor × P₂.Cursor) =>
-      ((s.1.1, s.2.1), (s.1.2, s.2.2)))
-  intro q s
-  cases q <;> simp [productAnswer, QueryImpl.parallelStateT, Functor.map_map, Prod.map] <;> rfl
-
 private theorem productAnswer_coins_run' {α : Type}
     (oa : OracleComp (unifSpec + (spec₁ + spec₂)) α) (w : P₁.World × P₂.World)
     (c : P₁.Cursor × P₂.Cursor) :
@@ -405,12 +353,6 @@ both local cursors at the start of every run. -/
   Cursor := P₁.Cursor × P₂.Cursor
   begin := (P₁.begin, P₂.begin)
   answer := productAnswer P₁ P₂
-  faithful oa := by
-    rw [productAnswer_run']
-    simp only [bind_assoc, pure_bind]
-    exact (replaceRight P₂ P₁.answer oa (P₁.empty, P₁.begin)).trans
-      ((EvalDistEq.bind_right init₂ fun s₂ => replaceLeft P₁ impl₂ oa s₂).trans
-        (OracleComp.EvalDistEq.bind_bind_swap init₂ init₁ _))
   faithful_coins oa := by
     rw [productAnswer_coins_run']
     simp only [bind_assoc, pure_bind]

@@ -228,32 +228,38 @@ theorem attempt_draw {n : ℕ} (qs : Fin n → Q) (idx : Q → Fin n)
   rw [P.algorithm_of_settled run _ y.2 hf alg 0]
   simp [bind_pure_comp, Functor.map_map]
 
-/-- On a finite input set, frozen reruns are distributed as a single random function with
-honest marginals. Every black-box algorithm sees the same joint output and complete-run count
-when answered by that function. -/
-theorem rerun_eager [Finite Q] :
-    ∃ F : ProbComp (Q → α),
-      (∀ q, ((fun f => f q) <$> F) =ᵈ
-        (do (simulateQ impl (run q)).run' (← init))) ∧
-      ∀ {β : Type} (alg : OracleComp (unifSpec + rerunSpec Q α) β),
-        P.attempt run alg =ᵈ
-          (do let f ← F
-              (simulateQ (coins (S := ℕ) + counted f) alg).run 0) := by
+/-- On a finite input set, the eager table: the outputs of every complete rerun, drawn once from
+the empty world in a fixed enumeration of the inputs. -/
+@[expose] noncomputable def eagerTable [Finite Q] : ProbComp (Q → α) :=
+  letI : Fintype Q := Fintype.ofFinite Q
+  (fun z q => z.1 (Fintype.equivFin Q q)) <$> (P.draw run (Fintype.equivFin Q).symm).run P.empty
+
+/-- Every entry of the eager table has the honest distribution of its run. -/
+theorem eagerTable_marginal [Finite Q] (q : Q) :
+    ((fun f => f q) <$> P.eagerTable run) =ᵈ
+      (do (simulateQ impl (run q)).run' (← init)) := by
   classical
   let : Fintype Q := Fintype.ofFinite Q
-  let e := Fintype.equivFin Q
-  let F : ProbComp (Q → α) :=
-    (fun z q => z.1 (e q)) <$> (P.draw run e.symm).run P.empty
-  refine ⟨F, fun q => ?_, fun alg => ?_⟩
-  · have hm := P.draw_marginal run e.symm (e q) P.empty
-    simp only [Equiv.symm_apply_apply] at hm
-    have hf := P.faithful (run q)
-    have hf' : (P.runWorld run q).run' P.empty =ᵈ
-        (do (simulateQ impl (run q)).run' (← init)) := by
-      simpa only [runWorld, StateT.run'_eq, StateT.run_mk, Functor.map_map] using hf
-    simpa only [F, Functor.map_map, map_eq_bind_pure_comp, bind_assoc, pure_bind,
-      Function.comp_def] using hm.trans hf'
-  · simpa only [F, bind_map_left] using
-      P.attempt_draw run e.symm e (fun q => e.symm_apply_apply q) alg
+  have hm := P.draw_marginal run (Fintype.equivFin Q).symm (Fintype.equivFin Q q) P.empty
+  simp only [Equiv.symm_apply_apply] at hm
+  have hf := P.faithful (run q)
+  have hf' : (P.runWorld run q).run' P.empty =ᵈ
+      (do (simulateQ impl (run q)).run' (← init)) := by
+    simpa only [runWorld, StateT.run'_eq, StateT.run_mk, Functor.map_map] using hf
+  simpa only [eagerTable, Functor.map_map, map_eq_bind_pure_comp, bind_assoc, pure_bind,
+    Function.comp_def] using hm.trans hf'
+
+/-- On a finite input set, every black-box algorithm sees the same joint output and complete-run
+count from frozen reruns as from the eager table. -/
+theorem attempt_eagerTable [Finite Q] {β : Type}
+    (alg : OracleComp (unifSpec + rerunSpec Q α) β) :
+    P.attempt run alg =ᵈ
+      (do let f ← P.eagerTable run
+          (simulateQ (coins (S := ℕ) + counted f) alg).run 0) := by
+  classical
+  let : Fintype Q := Fintype.ofFinite Q
+  simpa only [eagerTable, bind_map_left] using
+    P.attempt_draw run (Fintype.equivFin Q).symm (Fintype.equivFin Q)
+      (fun q => (Fintype.equivFin Q).symm_apply_apply q) alg
 
 end Rewinding.ResetPolicy

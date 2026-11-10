@@ -26,13 +26,17 @@ namespace Rewinding
 
 variable {ι σ : Type} {spec : OracleSpec ι}
 
-/-- The extractor's own fresh randomness, independent of the prover's frozen randomness. -/
+/-- Fresh uniform randomness from the ambient `ProbComp`, threading a state it does not touch.
+It answers the extractor's own coins, and it is also the honest implementation of private
+randomness that a reset policy freezes (`fixedTape`). -/
 @[expose] def coins {S : Type} : QueryImpl unifSpec (StateT S ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT S ProbComp)
 
 /-- An implementation of oracle effects with persistent, consistently extendible answers.
 
-`faithful` identifies a single execution with the honest implementation. `grows` preserves
+`faithful_coins` identifies a single execution, interleaved with independent ambient randomness,
+with the honest implementation; `ResetPolicy.faithful` is its case without ambient randomness.
+`grows` preserves
 information already drawn. `frozen` makes a completed query, including its cursor update,
 replayable in every extension of its resulting world. `commute` permits independent executions
 to discover the same frozen world in either order; it retains both cursor updates, so it also
@@ -50,12 +54,8 @@ structure ResetPolicy (init : ProbComp σ) (impl : QueryImpl spec (StateT σ Pro
   begin : Cursor
   /-- Answer an oracle query, extending the world and advancing the local cursor. -/
   answer : QueryImpl spec (StateT (World × Cursor) ProbComp)
-  /-- A single execution has the honest output distribution. -/
-  faithful : ∀ {α : Type} (oa : OracleComp spec α),
-    (simulateQ answer oa).run' (empty, begin) =ᵈ
-      (do (simulateQ impl oa).run' (← init))
-  /-- Faithfulness also holds in the presence of independent ambient randomness. This form
-  permits independently initialized policies to be composed. -/
+  /-- A single execution, interleaved with independent ambient randomness, has the honest output
+  distribution. The ambient randomness lets independently initialized policies be composed. -/
   faithful_coins : ∀ {α : Type} (oa : OracleComp (unifSpec + spec) α),
     (simulateQ (coins (S := World × Cursor) + answer) oa).run' (empty, begin) =ᵈ
       (do (simulateQ (coins (S := σ) + impl) oa).run' (← init))
@@ -77,6 +77,15 @@ structure ResetPolicy (init : ProbComp σ) (impl : QueryImpl spec (StateT σ Pro
       pure ((z₁.1, z₁.2.2), (z₂.1, z₂.2.2), z₁.2.1))
 
 attribute [instance] ResetPolicy.order
+
+/-- A single execution has the honest output distribution: `faithful_coins` with no ambient
+randomness. -/
+theorem ResetPolicy.faithful {init : ProbComp σ} {impl : QueryImpl spec (StateT σ ProbComp)}
+    (P : ResetPolicy init impl) {α : Type} (oa : OracleComp spec α) :
+    (simulateQ P.answer oa).run' (P.empty, P.begin) =ᵈ
+      (do (simulateQ impl oa).run' (← init)) := by
+  simpa only [QueryImpl.simulateQ_add_liftComp_right] using
+    P.faithful_coins (OracleComp.liftComp oa (unifSpec + spec))
 
 /-- The black-box oracle whose input selects a complete run and whose answer is its output. -/
 abbrev rerunSpec (Q α : Type) : OracleSpec Q := Q →ₒ α
