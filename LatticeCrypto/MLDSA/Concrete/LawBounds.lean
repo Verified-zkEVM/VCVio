@@ -22,16 +22,12 @@ library and away from the native `@[extern]` surface.
 
 ## Contents
 
-- `polyNorm_eq_cInfNorm`: the ML-DSA centered infinity norm `polyNorm` is the backend-generic
-  `LatticeCrypto.cInfNorm` on the canonical vector backend. This bridge lets the `polyNorm`-stated
-  `Primitives.Laws` fields consume the `cInfNorm`-stated lemmas of `Ring/Norms.lean` and
-  `Concrete/Rounding.lean`.
 - `concrete_transform`: the `Primitives.Laws.transform` field, i.e. the concrete `NTTRingLaws`
   witness of `Concrete/NTT.lean`, restated under the `concrete_*` naming used for the law fields.
-- `bitUnpackPoly_z_cInfNorm_le`: every coefficient produced by a `z`-range `bitUnpackPoly` has
-  centered absolute value at most `γ`. This is a property of the decoder's output window
-  (`bitUnpackPoly_get`) and holds for an arbitrary byte input, so it is independent of which byte
-  stream the caller supplies.
+- `bitUnpackPoly_z_coeff_mem`, `bitUnpackPoly_z_cInfNorm_le`: every coefficient produced by a
+  `z`-range `bitUnpackPoly` has centered representative in `[-γ + 1, γ]`, and so centered absolute
+  value at most `γ`. This is a property of the decoder's output window (`bitUnpackPoly_get`) and
+  holds for an arbitrary byte input, so it is independent of which byte stream the caller supplies.
 - `approved_gamma1_width`: the `z`-range bit width of each approved parameter set satisfies
   `2 ^ width = 2 γ₁` and `2 γ₁ < q`, the two side conditions of the previous bound.
 - `highBits_coeff_val_lt_width`: every approved-parameter `highBits` coefficient fits in the bit
@@ -49,12 +45,6 @@ namespace MLDSA.Concrete
 
 open MLDSA LatticeCrypto
 
-/-- The ML-DSA centered infinity norm `polyNorm` agrees with the backend-generic
-`LatticeCrypto.cInfNorm` on the canonical vector backend. This is the bridge that lets the
-`polyNorm`-stated `Primitives.Laws` fields consume the `cInfNorm`-stated rounding lemmas. -/
-theorem polyNorm_eq_cInfNorm (f : Rq) : polyNorm f = LatticeCrypto.cInfNorm f := by
-  exact LatticeCrypto.zmodPolyNormOps_cInfNorm f
-
 variable (p : Params)
 
 /-- `Primitives.Laws.transform` for the concrete instance. -/
@@ -70,20 +60,33 @@ parameter sets `2 ^ width = 2 γ₁`, so `v ≤ 2 γ₁ - 1` and `γ₁ - v ∈ 
 representative (since `2 γ₁ < q`) is `γ₁ - v` itself, of absolute value at most `γ₁`. The argument
 is purely about the decoder's output range and holds for any byte input. -/
 
-/-- Decode-range infinity-norm bound for a `z`-range `bitUnpackPoly`: every coefficient of
-`bitUnpackPoly bytes (-γ + 1) γ` has centered absolute value at most `γ`, provided the bit width
-satisfies `2 ^ width = 2 γ` (true for FIPS-204 `γ₁`, a power of two) and `2 γ < q`. -/
-theorem bitUnpackPoly_z_cInfNorm_le (bytes : ByteArray) (γ : ℕ)
-    (hwidth : (2 : ℕ) ^ rangeWidth (-(γ : ℤ) + 1) (γ : ℤ) = 2 * γ)
-    (hq : 2 * γ < modulus) :
-    LatticeCrypto.cInfNorm (bitUnpackPoly bytes (-(γ : ℤ) + 1) (γ : ℤ)) ≤ γ := by
-  rw [LatticeCrypto.cInfNorm_le_iff]
-  intro i
+/-- Exact decode range of a `z`-range `bitUnpackPoly`: every coefficient of
+`bitUnpackPoly bytes (-γ + 1) γ` has centered representative in `[-γ + 1, γ]`, provided the bit
+width satisfies `2 ^ width = 2 γ` and `2 γ < q`. -/
+theorem bitUnpackPoly_z_coeff_mem (bytes : ByteArray) (γ : ℕ)
+    (hwidth : (2 : ℕ) ^ rangeWidth (-(γ : ℤ) + 1) (γ : ℤ) = 2 * γ) (hq : 2 * γ < modulus)
+    (i : Fin ringDegree) :
+    -(γ : ℤ) < LatticeCrypto.centeredRepr ((bitUnpackPoly bytes (-(γ : ℤ) + 1) (γ : ℤ)).get i) ∧
+      LatticeCrypto.centeredRepr ((bitUnpackPoly bytes (-(γ : ℤ) + 1) (γ : ℤ)).get i) ≤ γ := by
   obtain ⟨v, hv, hget⟩ := bitUnpackPoly_get bytes (-(γ : ℤ) + 1) (γ : ℤ) i
   rw [hget, hwidth] at *
   have hbound : ((γ : ℤ) - (v : ℤ)).natAbs ≤ γ := by omega
   rw [LatticeCrypto.centeredRepr_intCast_eq_of_natAbs_le ((γ : ℤ) - (v : ℤ)) hbound (by omega)]
-  exact hbound
+  omega
+
+/-- Decode-range infinity-norm bound for a `z`-range `bitUnpackPoly`: every coefficient of
+`bitUnpackPoly bytes (-γ + 1) γ` has centered absolute value at most `γ`, provided the bit width
+satisfies `2 ^ width = 2 γ` (true for FIPS-204 `γ₁`, a power of two). For `2 γ < q` this is the
+norm form of `bitUnpackPoly_z_coeff_mem`; otherwise every centered value is at most `γ`. -/
+theorem bitUnpackPoly_z_cInfNorm_le (bytes : ByteArray) (γ : ℕ)
+    (hwidth : (2 : ℕ) ^ rangeWidth (-(γ : ℤ) + 1) (γ : ℤ) = 2 * γ) :
+    LatticeCrypto.cInfNorm (bitUnpackPoly bytes (-(γ : ℤ) + 1) (γ : ℤ)) ≤ γ := by
+  by_cases hq : 2 * γ < modulus
+  · rw [LatticeCrypto.cInfNorm_le_iff]
+    intro i
+    have h := bitUnpackPoly_z_coeff_mem bytes γ hwidth hq i
+    omega
+  · exact (LatticeCrypto.cInfNorm_le_halfq _).trans (by omega)
 
 /-- For each approved parameter set the `z`-range bit width satisfies `2 ^ width = 2 γ₁` (because
 `γ₁` is a power of two) and `2 γ₁ < q`. -/
