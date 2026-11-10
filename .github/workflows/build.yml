@@ -194,8 +194,9 @@ jobs:
       - name: Enforce zero axiom and sorry debt in the bridges
         working-directory: Interop
         run: >-
-          lake exe axiomsweep --root Interop.Rust.Common --root Interop.Rust.Run
-          --root Interop.Rust.RustM --root Interop.Hax.CenteredBinomial
+          lake exe axiomsweep --root Interop.Aeneas.ITree --root Interop.Rust.Common
+          --root Interop.Rust.Run --root Interop.Rust.RustM --root Interop.Rust.Triple
+          --root Interop.Hax.CenteredBinomial
           --baseline ../scripts/axiom_baseline.json --check
 
   downstream_stub_link:

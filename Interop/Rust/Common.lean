@@ -6,8 +6,7 @@ Authors: Quang Dao
 
 module
 
-public import Std.Tactic.Do
-public import VCVio.ProgramLogic.Unary.StdDoBridge
+public import VCVio.OracleComp.OracleComp
 
 /-!
 # `RustOracleComp`: target monad for Rust verification frontends
@@ -39,7 +38,6 @@ boundary lemmas of the lift are case splits.
 
 public section
 
-open Std.Do
 
 namespace Interop.Rust
 
@@ -89,12 +87,12 @@ total, panic-free Rust value. This is the `pure`/`some` chain through both
 transformers and is what every oracle query reduces to inside the Rust
 target.
 
-Defined as the two-step `ExceptT.lift ∘ OptionT.lift` so `mvcgen` can
+Defined as the two-step `ExceptT.lift ∘ OptionT.lift` so `vcgen` can
 peel the `MonadLiftT (OracleComp spec) (RustOracleComp spec)` chain via
-the standard `@[spec]` rules `Spec.monadLift_OptionT` and
-`Spec.monadLift_ExceptT`. A direct `MonadLift (OracleComp spec)
+core's `@[spec]` rules `Std.WP.Spec.monadLift_OptionT` and
+`Std.WP.Spec.monadLift_ExceptT`. A direct `MonadLift (OracleComp spec)
 (RustOracleComp spec)` instance would short-circuit that chain and leave
-mvcgen with no spec rule to apply. -/
+`vcgen` with no spec rule to apply. -/
 @[expose, reducible]
 def liftOracleComp (oa : OracleComp spec α) : RustOracleComp spec α :=
   ExceptT.lift (OptionT.lift oa)
