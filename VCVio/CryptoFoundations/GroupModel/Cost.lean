@@ -93,7 +93,6 @@ theorem length_append_le [DecidableEq S] (tbl : Tbl V) (s t : S) (v : V s) :
 /-- Appending increases the total number of entries by exactly one. -/
 theorem sum_length_append [DecidableEq S] [Fintype S] (tbl : Tbl V) (s : S) (v : V s) :
     ∑ t, (append tbl s v t).length = (∑ t, (tbl t).length) + 1 := by
-  classical
   have he : (fun t => (append tbl s v t).length) =
       Function.update (fun t => (tbl t).length) s ((tbl s).length + 1) := by
     funext t
@@ -137,13 +136,8 @@ theorem impl_prefix [DecidableEq S] [CommSemiring F]
     (M : Model F σ V) (obs : (s : S) → V s → U s)
     (t : Query F σ) (tbl : Tbl V) (z : spec F σ t × Tbl V)
     (hz : z ∈ support ((impl M obs (OracleComp spec') t).run tbl)) (s : S) :
-    tbl s <+: z.2 s := by
-  have h := impl_table_step M obs t tbl z hz
-  split at h
-  · obtain ⟨t, v, hv⟩ := h
-    rw [hv]
-    exact extends_append tbl t v s
-  · rw [h]
+    tbl s <+: z.2 s :=
+  impl_extends M obs t tbl z hz s
 
 /-- A group handler increases any size functional by its zero-or-one operation charge. -/
 theorem impl_size_le [DecidableEq S] [CommSemiring F]
@@ -160,30 +154,6 @@ theorem impl_size_le [DecidableEq S] [CommSemiring F]
   · obtain ⟨s, v, hv⟩ := h
     simp [*]
   · simp_all
-
-/-- All initial entries remain a prefix after a run with a table-preserving game. -/
-theorem run_prefix [DecidableEq S] [CommSemiring F]
-    [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
-    {U : S → Type} [∀ s, DecidableEq (U s)]
-    (M : Model F σ V) (obs : (s : S) → V s → U s)
-    (game : QueryImpl Γ (StateT (Tbl V) (OracleComp spec')))
-    (hg : PreservesTbl game) {α : Type} (oa : OracleComp (spec F σ + Γ) α)
-    (tbl : Tbl V) (z : α × Tbl V) (hz : z ∈ support (run M obs game oa tbl))
-    (s : S) : tbl s <+: z.2 s := by
-  induction oa using OracleComp.inductionOn generalizing tbl with
-  | pure a =>
-    simp only [run, simulateQ_pure, StateT.run_pure, mem_support_pure_iff] at hz
-    subst z
-    exact List.prefix_rfl
-  | query_bind t k ih =>
-    simp only [run, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
-      mem_support_bind_iff] at hz
-    obtain ⟨w, hw, hz⟩ := hz
-    have hp : tbl s <+: w.2 s := by
-      cases t with
-      | inl t => exact impl_prefix M obs t tbl w hw s
-      | inr t => rw [hg t tbl w hw]
-    exact hp.trans (ih w.1 w.2 hz)
 
 /-- A size functional growing by at most one per append grows by at most the budget. -/
 theorem run_size_le [DecidableEq S] [CommSemiring F]
@@ -251,16 +221,6 @@ theorem impl_sum_length [DecidableEq S] [CommSemiring F]
   · obtain ⟨s, v, hv⟩ := h
     simp [*, sum_length_append]
   · simp_all
-
-/-- Private-coin runs preserve all initial entries. -/
-theorem runGen_prefix [DecidableEq S] [CommSemiring F]
-    [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
-    {U : S → Type} [∀ s, DecidableEq (U s)]
-    (M : Model F σ V) (obs : (s : S) → V s → U s)
-    {α : Type} (oa : OracleComp (genSpec F σ) α)
-    (tbl : Tbl V) (z : α × Tbl V) (hz : z ∈ support (runGen M obs oa tbl)) (s : S) :
-    tbl s <+: z.2 s :=
-  run_prefix M obs _ preservesTbl_coins oa tbl z hz s
 
 /-- Private-coin runs add at most the operation budget in any sort. -/
 theorem runGen_length_le [DecidableEq S] [CommSemiring F]

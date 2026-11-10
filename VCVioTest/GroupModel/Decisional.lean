@@ -70,7 +70,7 @@ theorem empty_zero_uniform_separation :
     let oa : OracleComp (genSpec (ZMod 5) groupSig) Handle :=
       (genSpec (ZMod 5) groupSig).query (.inl (.add () 0 0))
     let : MeasurableSpace (((Fin 3) → ZMod 5) × Handle) := ⊤
-    (∀ s (r : Repr (ZMod 5)), evRepr (T₀ s) r = 0 ↔ evRepr (T₁ s) r = 0) ∧
+    (∀ s (r : Coeffs (ZMod 5)), evRepr (T₀ s) r = 0 ↔ evRepr (T₁ s) r = 0) ∧
     ¬ SameKernel T₀ T₁ ∧
     measureETVDist
       (do let x ← $ᵗ ((Fin 3) → ZMod 5)
