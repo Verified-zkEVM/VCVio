@@ -77,36 +77,31 @@ variable {ι σ : Type} {spec : OracleSpec ι} {init : ProbComp σ}
   {impl : QueryImpl spec (StateT σ ProbComp)} (P : ResetPolicy init impl)
 
 /-- A finder against frozen reruns has the joint output and counter law of that finder against
-one random acceptance function, whose marginals are the honest acceptance decisions. -/
-theorem finder_eager [Finite ((r : R) → C r)]
-    (run : ((r : R) → C r) → OracleComp spec Bool) :
-    ∃ F : ProbComp (((r : R) → C r) → Bool),
-      (∀ c, ((fun f => f c) <$> F) =ᵈ
-        (do (simulateQ impl (run c)).run' (← init))) ∧
-      ∀ {β : Type} (find : OracleComp (unifSpec + accSpec C) β),
-        P.attempt run find =ᵈ (do let f ← F; runFinder find f) := by
-  exact P.rerun_eager run
+the eager table of acceptance decisions, whose entries have the honest acceptance distribution
+(`ResetPolicy.eagerTable_marginal`). -/
+theorem attempt_eq_runFinder_eagerTable [Finite ((r : R) → C r)]
+    (run : ((r : R) → C r) → OracleComp spec Bool) {β : Type}
+    (find : OracleComp (unifSpec + accSpec C) β) :
+    P.attempt run find =ᵈ (do let f ← P.eagerTable run; runFinder find f) :=
+  P.attempt_eagerTable run find
 
 /-- A black-box tree finder retains its average success guarantee and unconditional expected
-complete-run bound when its acceptance oracle is implemented by frozen reruns. -/
+complete-run bound when its acceptance oracle is implemented by frozen reruns. The average is
+over the eager table of acceptance decisions. -/
 theorem finder_bounds [Fintype R] [LinearOrder R]
     [∀ r, Fintype (C r)] [∀ r, DecidableEq (C r)]
     (run : ((r : R) → C r) → OracleComp spec Bool)
     {k : R → ℕ} {nodeOk : (r : R) → (Fin (k r) → C r) → Prop}
     {find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))} {κ T : ℝ≥0∞}
     (h : IsTreeFinder k nodeOk find κ T) :
-    ∃ F : ProbComp (((r : R) → C r) → Bool),
-      (∀ c, ((fun f => f c) <$> F) =ᵈ
-        (do (simulateQ impl (run c)).run' (← init))) ∧
-      (P.attempt run find =ᵈ (do let f ← F; runFinder find f)) ∧
-      averageAcceptRate F - κ ≤ Pr{let z ← P.attempt run find}[z.1.isSome] ∧
+    averageAcceptRate (P.eagerTable run) - κ ≤ Pr{let z ← P.attempt run find}[z.1.isSome] ∧
       expectedCalls (P.attempt run find) ≤ T := by
-  obtain ⟨F, hmarg, hlaw⟩ := P.finder_eager run
-  refine ⟨F, hmarg, hlaw find, ?_, ?_⟩
-  · rw [(hlaw find).prEvent_eq]
-    exact h.average_success F
-  · rw [expectedCalls_eq_of_evalDistEq (hlaw find)]
-    exact h.average_cost F
+  have hlaw := P.attempt_eq_runFinder_eagerTable run find
+  refine ⟨?_, ?_⟩
+  · rw [hlaw.prEvent_eq]
+    exact h.average_success _
+  · rw [expectedCalls_eq_of_evalDistEq hlaw]
+    exact h.average_cost _
 
 end ResetPolicy
 end Rewinding

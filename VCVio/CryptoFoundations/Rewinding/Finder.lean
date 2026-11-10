@@ -85,7 +85,7 @@ theorem expectedCalls_bind {α β : Type} [MeasurableSpace α] [DiscreteMeasurab
 
 /-- Fraction of complete challenge vectors accepted by `f`. -/
 @[expose] noncomputable def acceptRate [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
-    [∀ r, DecidableEq (C r)] (f : ((r : R) → C r) → Bool) : ℝ≥0∞ :=
+    (f : ((r : R) → C r) → Bool) : ℝ≥0∞ :=
   ((Finset.univ.filter fun c => f c = true).card : ℝ≥0∞) /
     (Fintype.card ((r : R) → C r) : ℝ≥0∞)
 

@@ -24,7 +24,7 @@ namespace Rewinding
 
 /-- The acceptance rate is the average of the Boolean acceptance indicators. -/
 theorem acceptRate_eq_sum {R : Type} [Fintype R] [DecidableEq R] {C : R → Type}
-    [∀ r, Fintype (C r)] [∀ r, DecidableEq (C r)]
+    [∀ r, Fintype (C r)]
     (f : ((r : R) → C r) → Bool) :
     acceptRate f = (∑ c, if f c then (1 : ℝ≥0∞) else 0) /
       Fintype.card ((r : R) → C r) := by
@@ -35,10 +35,11 @@ theorem acceptRate_eq_sum {R : Type} [Fintype R] [DecidableEq R] {C : R → Type
 /-- Acceptance of a complete vector is the average acceptance rate of its first-coordinate
 sections. -/
 theorem acceptRate_cons {n : ℕ} {C : Fin (n + 1) → Type}
-    [∀ i, Fintype (C i)] [∀ i, DecidableEq (C i)] [∀ i, Nonempty (C i)]
+    [∀ i, Fintype (C i)]
     (f : ((i : Fin (n + 1)) → C i) → Bool) :
     acceptRate f = (∑ c : C 0, acceptRate (fun q => f (Fin.cons c q))) /
       Fintype.card (C 0) := by
+  classical
   simp only [acceptRate_eq_sum]
   have hcard := Fintype.card_congr (Fin.consEquiv C)
   rw [Fintype.card_prod] at hcard
