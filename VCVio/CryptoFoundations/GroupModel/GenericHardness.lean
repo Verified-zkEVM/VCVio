@@ -11,10 +11,24 @@ import Mathlib.Algebra.Module.Torsion.Free
 import Mathlib.Algebra.MvPolynomial.NoZeroDivisors
 
 /-!
-Generic hardness of discrete logarithms and computational Diffie–Hellman
+# Generic hardness of discrete logarithms and computational Diffie–Hellman
 
-Generic computations induce ordinary adversaries by interpreting their handles in a module.
-Polynomial collision bounds control their success, including handles outside the table.
+The model is Shoup's generic group model in Maurer's formulation: a computation holds untyped
+handles, natural-number indices into a table of group elements, and reaches the group only
+through queries. Equality queries are free, `add` and `smul` queries are counted, and coins are
+free. Generic computations induce ordinary adversaries by interpreting their handles in a module
+(`DLogAdversary.ofGeneric`, `CDHAdversary.ofGeneric`).
+
+`dlogExperiment_ofGeneric_le` and `cdhExperiment_ofGeneric_le` bound their success by polynomial
+collisions in the symbolic run plus the chance that the final answer is right there. A handle
+outside the table reads the zero default, which counts as one extra table entry, so a table of
+`m` initial elements and `q` operations contributes `(m + q + 1).choose 2` collision pairs.
+
+## References
+
+* V. Shoup, *Lower bounds for discrete logarithms and related problems*, EUROCRYPT 1997.
+* U. Maurer, *Abstract models of computation in cryptography*, IMA International Conference on
+  Cryptography and Coding 2005.
 -/
 
 public section
@@ -27,13 +41,15 @@ namespace GroupModel
 variable {F G ι α : Type}
 
 /-- Run a generic scalar-valued computation on the generator and challenge, returning its guess. -/
-@[expose] def DLogAdversary.ofGeneric [Field F] [AddCommGroup G] [Module F G] [DecidableEq G]
+@[expose] def DLogAdversary.ofGeneric [CommSemiring F] [AddCommMonoid G] [Module F G]
+    [DecidableEq G]
     (A : OracleComp (genSpec F groupSig) F) : DiffieHellman.DLogAdversary F G :=
   fun g X => Prod.fst <$> runGen (Model.group G) (fun _ => id) A (fun _ => [g, X])
 
 /-- Run a generic handle-valued computation on the generator and two challenges, then read its
 output handle; an out-of-range handle returns zero. -/
-@[expose] def CDHAdversary.ofGeneric [Field F] [AddCommGroup G] [Module F G] [DecidableEq G]
+@[expose] def CDHAdversary.ofGeneric [CommSemiring F] [AddCommMonoid G] [Module F G]
+    [DecidableEq G]
     (A : OracleComp (genSpec F groupSig) Handle) : DiffieHellman.CDHAdversary F G :=
   fun g X Y => (fun z => lookup z.2 () z.1) <$>
     runGen (Model.group G) (fun _ => id) A (fun _ => [g, X, Y])
@@ -87,8 +103,14 @@ private theorem uniform_bool [SampleableType F] :
   simpa only [prEvent_norm] using
     SampleableType.prEvent_uniformSample_pair_of_bijective hb p
 
-/-- A generic discrete-logarithm adversary using at most `q` group operations succeeds with
-probability at most `((q + 3).choose 2 + 1) / |F|`. Equality queries are free. -/
+/-- Shoup's generic bound for discrete logarithms (Shoup 1997), in the model with untyped
+handles, free equality, counted `add` and `smul`, and free coins (Maurer 2005): a generic
+adversary using at most `q` group operations succeeds with probability at most
+`((q + 3).choose 2 + 1) / |F|`.
+
+The table starts with the generator and the challenge, and the zero default that out-of-range
+handles read is one extra entry, so `(q + 3).choose 2` counts the collision pairs. The final `1`
+is the chance that the guess equals the uniform exponent. -/
 theorem dlogExperiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (g : G) (hg : g ≠ 0) (A : OracleComp (genSpec F groupSig) F)
@@ -145,8 +167,15 @@ theorem dlogExperiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampl
     Nat.cast_one, Nat.add_comm 2 q, Nat.add_assoc, Nat.cast_add, ENNReal.add_div]
   simp [div_eq_mul_inv]
 
-/-- A generic computational Diffie–Hellman adversary using at most `q` group operations
-succeeds with probability at most `((q + 4).choose 2 + 2) / |F|`. Equality queries are free. -/
+/-- Shoup's generic bound for computational Diffie–Hellman (Shoup 1997), in the model with
+untyped handles, free equality, counted `add` and `smul`, and free coins (Maurer 2005): a generic
+adversary using at most `q` group operations succeeds with probability at most
+`((q + 4).choose 2 + 2) / |F|`.
+
+The table starts with the generator and both challenges, and the zero default that out-of-range
+handles read is one extra entry, so `(q + 4).choose 2` counts the collision pairs. The final `2`
+bounds the chance that the degree-one output agrees with the degree-two product `x y` at the
+uniform exponents. -/
 theorem cdhExperiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (g : G) (hg : g ≠ 0) (A : OracleComp (genSpec F groupSig) Handle)
