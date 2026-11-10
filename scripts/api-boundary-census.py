@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Report API-boundary source signals; this is an inventory, not a defect linter."""
 
 from pathlib import Path

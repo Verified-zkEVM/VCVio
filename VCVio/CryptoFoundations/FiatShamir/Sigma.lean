@@ -279,7 +279,7 @@ theorem sign_usesCostAsQueryCost {ω : Type} [AddMonoid ω]
 commitment cost over the output signature distribution. -/
 theorem sign_expectedQueryCost_eq_outputExpectation {ω : Type}
     [MeasurableSpace ω] [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    [MonadAttach m] [ExactMonadAttach m] [MeasurableSpace (Commit × Resp)]
+    [MeasurableSpace (Commit × Resp)]
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     (costFn : M × Commit → ω) (val : ω → ENNReal)
     (hcostMeas : Measurable fun sig : Commit × Resp ↦ costFn (msg, sig.1))

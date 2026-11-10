@@ -84,6 +84,7 @@ variable [LawfulMonad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
   (prepare : m A) (encaps : A → m (B × K))
   (finish : A → B → K → Bool → m Bool) (coin : m Bool) (key : m K)
 
+omit [DiscreteMeasurableSpace K] in
 /-- Both KEM message branches share the same measure decomposition into real and random keys. -/
 lemma evalDist_kemGame (hkey : 𝒟[key] Set.univ = 1) (side : Bool) :
     𝒟[kemGame prepare encaps finish coin key side] =
@@ -102,7 +103,8 @@ lemma evalDist_kemGame (hkey : 𝒟[key] Set.univ = 1) (side : Bool) :
     simp only [evalDist_bind_of_discrete]
     apply Measure.bind_congr_right (Filter.Eventually.of_forall fun a => ?_)
     apply Measure.bind_congr_right (Filter.Eventually.of_forall fun ck => ?_)
-    rw [Measure.bind_const, hkey, one_smul]
+    rw [evalDist_bind _ _ measurable_const, Measure.bind_const, hkey, one_smul]
+    exact evalDist_bind_of_discrete _ _
 
 variable [Countable K]
 
