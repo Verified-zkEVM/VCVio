@@ -26,7 +26,7 @@ class DocumentationTests(unittest.TestCase):
         self.write(".gitignore", ".lake/\n")
         expected = [self.write("AGENTS.md", "guide"),
                     self.write("Interop/Backend/README.md", "guide"),
-                    self.write("VCVioComplexity/PROVENANCE.md", "guide")]
+                    self.write("NestedPackage/PROVENANCE.md", "guide")]
         (self.root / "CLAUDE.md").symlink_to("AGENTS.md")
         self.write("third_party/vendor/README.md", "external")
         self.write(".lake/packages/README.md", "ignored")
