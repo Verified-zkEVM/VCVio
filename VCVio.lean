@@ -103,6 +103,7 @@ public import VCVio.CryptoFoundations.GroupModel.Cost
 public import VCVio.CryptoFoundations.GroupModel.Decisional
 public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
+public import VCVio.CryptoFoundations.GroupModel.GenericPairing
 public import VCVio.CryptoFoundations.GroupModel.GenericRelation
 public import VCVio.CryptoFoundations.GroupModel.Instances
 public import VCVio.CryptoFoundations.GroupModel.Interaction
@@ -124,6 +125,7 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.CoveringEval
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.ITSR
 public import VCVio.CryptoFoundations.HardnessAssumptions.NoisyLearning
 public import VCVio.CryptoFoundations.HardnessAssumptions.OneWay
+public import VCVio.CryptoFoundations.HardnessAssumptions.PairingDLog
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collection
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.OpenPREFromTCRDSPR
