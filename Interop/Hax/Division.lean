@@ -89,7 +89,7 @@ theorem prob_randomDiv_panic (x : U32) :
     Pr{let r ← (randomDiv x).run.run}[r = some (Except.error Interop.Rust.Error.panic)] = 2⁻¹ := by
   rw [randomDiv_run_run]
   simp only [Functor.map_map, Option.some.injEq]
-  vcgen
+  pvcgen
   simp only [ProbComp.uniformFin]
   rw [wp_query_uniform, Fin.sum_univ_two, show Fintype.card (unifSpec.Range 1) = 2 from rfl]
   simp

@@ -235,37 +235,37 @@ vcstep as ⟨x⟩
 rvcstep using S as ⟨a₁, a₂, hrel⟩
 ```
 
-### `vcgen` driver variants
+### `pvcgen` driver variants
 
-Use `vcgen using cut` to perform one explicit bind step with an intermediate
+Use `pvcgen using cut` to perform one explicit bind step with an intermediate
 postcondition, then continue with exhaustive decomposition:
 
 ```lean
 -- Goal: ⦃1⦄ (do let x ← oa; let y ← f x; g y) ⦃post⦄
 -- with hoa : ⦃1⦄ oa ⦃cut⦄ in context
-vcgen using cut            -- splits at first bind with `cut`, then auto-decomposes
+pvcgen using cut           -- splits at first bind with `cut`, then auto-decomposes
 ```
 
-Use `vcgen inv I` to apply an explicit loop invariant to the first
+Use `pvcgen inv I` to apply an explicit loop invariant to the first
 `replicate`/`foldlM`/`mapM` goal, then continue:
 
 ```lean
 -- Goal: ⦃pre⦄ oa.replicate n ⦃post⦄
 -- with hstep : ⦃I⦄ oa ⦃fun _ => I⦄ in context
-vcgen inv I                -- applies invariant I, then auto-decomposes
+pvcgen inv I               -- applies invariant I, then auto-decomposes
 ```
 
 ### Support-cut synthesis
 
 When decomposing a bind `oa >>= f`, if no explicit spec is available in context,
-`vcstep` and `vcgen` will automatically try a support-based intermediate
+`vcstep` and `pvcgen` will automatically try a support-based intermediate
 postcondition. This applies `triple_bind` with `triple_support` as the spec for `oa`,
 unifying the cut to `fun x => ⌜x ∈ support oa⌝`:
 
 ```lean
 -- Goal: ⦃1⦄ (do let x ← oa; f x) ⦃post⦄
 -- No spec for oa, but h : ∀ x ∈ support oa, ⦃...⦄ f x ⦃post⦄
-vcgen                      -- auto-inserts support cut, then decomposes f
+pvcgen                     -- auto-inserts support cut, then decomposes f
 ```
 
 ### Opt-in unary theorem lookup
@@ -292,11 +292,11 @@ You can also force a specific theorem or local assumption explicitly:
 vcstep with triple_wrappedTrue
 ```
 
-If an exhaustive `vcgen` / `rvcgen` run stops too early, raise the local pass budget with:
+If an exhaustive `pvcgen` / `rvcgen` run stops too early, raise the local pass budget with:
 
 ```lean
 set_option vcvio.vcgen.maxPasses 128 in
-  vcgen
+  pvcgen
 ```
 
 For tactic-choice debugging, enable the planned-step trace locally:

@@ -110,7 +110,7 @@ theorem prob_uniformFin_four (p : Fin 4 → Prop) [DecidablePred p] :
     Pr{let n ← ($[0..3] : ProbComp (Fin 4))}[p n] =
       ((if p 0 then 1 else 0) + (if p 1 then 1 else 0) + (if p 2 then 1 else 0) +
         (if p 3 then 1 else 0)) * 4⁻¹ := by
-  vcgen
+  pvcgen
   simp only [ProbComp.uniformFin]
   rw [wp_query_uniform, Fin.sum_univ_four,
     show Fintype.card (unifSpec.Range 3) = 4 from rfl]
@@ -153,12 +153,12 @@ open scoped OracleComp.Necessary
 /-- Every value the sampler can return is `0`, `1` or `-1`, and it neither panics nor diverges,
 whatever the exception postconditions. Core's `vcgen` steps through the uniform sample, and through
 the Rust step by `Interop.Rust.Spec.liftRustM`; what remains is the Rust step's value at each input.
-VCVio's own driver takes the bare `vcgen` syntax, so the empty argument list selects core's. -/
+-/
 theorem triple_sampleRandomCbd1
     (epost : (Interop.Rust.Error → Prop) × (Unit → Prop) × Std.WP.EStackEnd) :
     Std.WP.Triple sampleRandomCbd1 True (fun r => r = 0#i32 ∨ r = 1#i32 ∨ r = (-1)#i32) epost := by
   unfold sampleRandomCbd1
-  vcgen []
+  vcgen
   fin_cases n <;> simp [lowBits, sample_cbd1_zero, sample_cbd1_one, sample_cbd1_two,
     sample_cbd1_three]
 

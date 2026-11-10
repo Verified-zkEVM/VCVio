@@ -18,6 +18,10 @@ public import VCVio.OracleComp.Coercions.SubSpec.Measure
 
 This file validates one-step unary tactic behavior for raw `wp` goals,
 registered `@[vcspec]` hints, and `liftComp`.
+
+The exhaustive transformer examples use core `vcgen` where its `@[spec]` rules close the goal,
+and `pvcgen` where the precondition is the expectation of an opaque oracle computation, which
+core `vcgen` has no rule for.
 -/
 
 @[expose] public section
@@ -121,7 +125,7 @@ example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) :
         let a ← (MonadLift.monadLift oa : StateT Nat (OracleComp spec) α)
         pure (s, a))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (s' : Nat) (oa : OracleComp spec α) (post : α → Nat → ℝ≥0∞) :
     ⦃fun _ => wp⟦oa⟧ (fun a => post a s')⦄
@@ -144,7 +148,7 @@ example (f : Nat → α × Nat) (post : α → Nat → ℝ≥0∞) :
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : Unit → ℝ≥0∞) :
     ⦃wp⟦oa⟧ post⦄ (MonadLift.monadLift oa : OptionT (OracleComp spec) α)
       ⦃post; estack⟨nonePost⟩⦄ := by
-  vcgen
+  pvcgen
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : Unit → ℝ≥0∞) :
     ⦃wp⟦oa⟧ post⦄
@@ -152,7 +156,7 @@ example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : Unit �
         let a ← (MonadLift.monadLift oa : OptionT (OracleComp spec) α)
         pure a)
       ⦃post; estack⟨nonePost⟩⦄ := by
-  vcgen
+  pvcgen
 
 example (post : α → ℝ≥0∞) (nonePost : Unit → ℝ≥0∞) :
     ⦃nonePost ()⦄ (failure : OptionT (OracleComp spec) α) ⦃post; estack⟨nonePost⟩⦄ := by
@@ -163,7 +167,7 @@ example (post : α → ℝ≥0∞) (nonePost : Unit → ℝ≥0∞) :
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
     ⦃wp⟦oa⟧ post⦄ (MonadLift.monadLift oa : ExceptT String (OracleComp spec) α)
       ⦃post; estack⟨errPost⟩⦄ := by
-  vcgen
+  pvcgen
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
     ⦃wp⟦oa⟧ post⦄
@@ -171,7 +175,7 @@ example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (errPost : String �
         let a ← (MonadLift.monadLift oa : ExceptT String (OracleComp spec) α)
         pure a)
       ⦃post; estack⟨errPost⟩⦄ := by
-  vcgen
+  pvcgen
 
 example (err : String) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
     ⦃errPost err⦄ (throw err : ExceptT String (OracleComp spec) α) ⦃post; estack⟨errPost⟩⦄ := by
@@ -192,7 +196,7 @@ example (oa : OracleComp spec α) (post : String × α → String → ℝ≥0∞
         let a ← (MonadLift.monadLift oa : ReaderT String (OracleComp spec) α)
         pure (r, a))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 /-! ## Mixed transformer stack steps -/
 
@@ -205,7 +209,7 @@ example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) (non
           StateT Nat (OptionT (OracleComp spec)) α)
         pure (s, a))
       ⦃post; estack⟨nonePost⟩⦄ := by
-  vcgen
+  pvcgen
 
 /-! ## `WriterT (OracleComp spec)` transformer steps -/
 
@@ -229,7 +233,7 @@ example (oa : OracleComp spec α) (out : Multiplicative Nat)
         let a ← (MonadLift.monadLift oa : WriterT (Multiplicative Nat) (OracleComp spec) α)
         pure (PUnit.unit, a))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (oa : OracleComp spec α) (out : Multiplicative Nat)
     (post : Nat × α → Nat → Multiplicative Nat → ℝ≥0∞) :
@@ -249,7 +253,7 @@ example (oa : OracleComp spec α) (out : Multiplicative Nat)
           StateT Nat (WriterT (Multiplicative Nat) (OracleComp spec)) (Nat × α))) :
         StateT Nat (WriterT (Multiplicative Nat) (OracleComp spec)) (Nat × α))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (oa : OracleComp spec α) (out : Multiplicative Nat)
     (post : String × α → String → Multiplicative Nat → ℝ≥0∞) :
@@ -267,7 +271,7 @@ example (oa : OracleComp spec α) (out : Multiplicative Nat)
           ReaderT String (WriterT (Multiplicative Nat) (OracleComp spec)) (String × α))) :
         ReaderT String (WriterT (Multiplicative Nat) (OracleComp spec)) (String × α))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 /--
 info: [wpstep cache] hit `OracleComp.ProgramLogic.wp_replicate_succ`
