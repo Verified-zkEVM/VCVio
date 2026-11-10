@@ -109,7 +109,7 @@ private theorem openingDifference_wins [Fintype ι] [Field F]
       sub_smul, Finset.sum_sub_distrib, add_sub_add_comm, add_comm] using hd
 
 /-- Binding reduces without loss to the relation experiment on the full `Option ι` basis. -/
-theorem bindingAdvantage_le_relation [Fintype ι] [DecidableEq ι]
+theorem bindingAdvantage_le_relation [Fintype ι]
     [Field F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (g : G) (binder : BindingAdversary (Option ι → G) (ι → F) G F) :
@@ -126,7 +126,7 @@ theorem bindingAdvantage_le_relation [Fintype ι] [DecidableEq ι]
   exact openingDifference_wins _ _ _ _ _ hw.1.1 (hw.1.2.trans hw.2.symm)
 
 /-- Binding reduces to discrete logarithm with additive loss `1 / |F|`. -/
-theorem bindingAdvantage_le_dlog [Fintype ι] [DecidableEq ι]
+theorem bindingAdvantage_le_dlog [Fintype ι]
     [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (g : G) (hg : Function.Bijective (· • g : F → G))
@@ -173,7 +173,6 @@ theorem bindingAdvantage_ofGeneric_le [Fintype ι]
     (hq : IsQueryBoundP A (fun i => GroupModel.isGroupOp i = true) q) :
     (scheme (uniformSetup (F := F) (ι := ι) g)).bindingAdvantage (ofGeneric A) ≤
       (((q + Fintype.card ι + 2).choose 2 + 1 : ℕ) : ℝ≥0∞) / Fintype.card F := by
-  classical
   refine (bindingAdvantage_le_relation g (ofGeneric A)).trans ?_
   rw [bindingReduction_ofGeneric]
   simpa [Fintype.card_option, Nat.add_assoc] using

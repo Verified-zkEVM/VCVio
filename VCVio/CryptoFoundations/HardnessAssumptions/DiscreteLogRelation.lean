@@ -70,19 +70,19 @@ abbrev plainImpl : QueryImpl (unifSpec + emptySpec) (StateT Unit ProbComp) :=
     Adversary F G ι (unifSpec + emptySpec) := fun basis => liftM (A basis)
 
 /-- The plain experiment is the shared experiment with the empty auxiliary specification. -/
-noncomputable abbrev plainExperiment [Fintype ι] [DecidableEq ι] [Field F] [DecidableEq F]
+noncomputable abbrev plainExperiment [Fintype ι] [Field F] [DecidableEq F]
     [SampleableType F] [AddCommGroup G] [Module F G] [DecidableEq G]
     (g : G) (A : Adversary F G ι unifSpec) : ProbComp Bool :=
   experiment plainImpl () g (plainAdversary A)
 
 /-- The plain reduction is the shared reduction with the empty auxiliary specification. -/
-noncomputable abbrev plainReduction [Fintype ι] [DecidableEq ι] [Field F] [DecidableEq F]
+noncomputable abbrev plainReduction [Fintype ι] [Field F] [DecidableEq F]
     [SampleableType F] [AddCommGroup G] [Module F G]
     (A : Adversary F G ι unifSpec) : DiffieHellman.DLogAdversary F G :=
   reduction plainImpl () (plainAdversary A)
 
 /-- Unfolding the plain experiment selects the empty auxiliary specification and unit state. -/
-theorem plainExperiment_eq [Fintype ι] [DecidableEq ι] [Field F] [DecidableEq F]
+theorem plainExperiment_eq [Fintype ι] [Field F] [DecidableEq F]
     [SampleableType F] [AddCommGroup G] [Module F G] [DecidableEq G]
     (g : G) (A : Adversary F G ι unifSpec) :
     plainExperiment g A = experiment plainImpl () g (plainAdversary A) := rfl
@@ -200,7 +200,6 @@ theorem experiment_le [Fintype ι]
     Pr{let b ← experiment impl s g A}[b = true] ≤
       Pr{let b ← DiffieHellman.dlogExperiment g (reduction impl s A)}[b = true] +
         1 / Fintype.card F := by
-  classical
   let R : ProbComp (F × (ι → F) × (ι → F) × (ι → F)) := do
     let z ← $ᵗ F
     let t ← $ᵗ (ι → F)

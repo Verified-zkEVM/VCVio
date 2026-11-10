@@ -45,7 +45,7 @@ The table contains exactly `Fintype.card ι` entries, without an additional gene
 /-- A generic relation adversary given a finite basis and at most `q` group operations
 succeeds with probability at most `((q + Fintype.card ι + 1).choose 2 + 1) / |F|`. Equality queries
 are free, and handles outside the table retain the ordinary zero-default semantics. -/
-theorem experiment_ofGeneric_le [Fintype ι] [DecidableEq ι]
+theorem experiment_ofGeneric_le [Fintype ι]
     [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (g : G) (hg : g ≠ 0) (A : OracleComp (genSpec F groupSig) (ι → F))
