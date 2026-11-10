@@ -147,7 +147,6 @@
  ["docBlame", "SLHDSA.GeneralScheme.verifyInternal"],
  ["docBlame", "bd"],
  ["docBlame", "bd2"],
- ["docBlame", "elGamalAsymmEnc.instInhabited"],
  ["docBlame", "hidingAvgLeftImpl"],
  ["docBlame", "hidingAvgRightImpl"],
  ["docBlame", "rawAuxLeft"],

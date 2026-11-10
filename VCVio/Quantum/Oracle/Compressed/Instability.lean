@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.OracleComp.QueryTracking.Instability.Basic
-public import VCVio.Quantum.Oracle.Compressed.Basic
+public import VCVio.Quantum.Oracle.Compressed.QueryCache
 
 /-!
 # Instability of a labelling of databases

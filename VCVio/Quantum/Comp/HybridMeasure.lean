@@ -293,7 +293,7 @@ private theorem trace_amplifyLeft_conj_inj {J : Type*} [Fintype J]
   classical
   have h : (inj D false)ᴴ * inj D false = 1 := by
     simpa using conjTranspose_inj_mul_inj (D := D) false false
-  rw [MatrixMap.amplifyLeft_conj, trace_conj_of_isometry (one_kronecker_isometry h)]
+  rw [MatrixMap.amplifyLeft_conj, MatrixMap.isTP_conj (one_kronecker_isometry h) _]
 
 private theorem queryMassAt_ext (x : QuantumComp L spec X A) (ρ : Matrix (A × D) (A × D) ℂ)
     (i : spec.Port) (j : ℕ) :
@@ -540,7 +540,7 @@ private theorem trace_conj_kronecker_one_amplifyLeft {J : Type*} [Fintype J]
     simpa using conjTranspose_inj_mul_inj (D := D) false false
   rw [MatrixMap.amplifyLeft_conj, ← LinearMap.comp_apply (MatrixMap.conj _),
     ← MatrixMap.conj_mul, kronecker_one_mul_one_kronecker, MatrixMap.conj_mul,
-    LinearMap.comp_apply, trace_conj_of_isometry (one_kronecker_isometry h)]
+    LinearMap.comp_apply, MatrixMap.isTP_conj (one_kronecker_isometry h) _]
 
 private theorem indexMassAt_ext {κ : spec.Port → Type*}
     (B : ∀ i, κ i → Matrix (spec.In i) (spec.In i) ℂ) (x : QuantumComp L spec X A)
