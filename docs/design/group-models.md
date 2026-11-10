@@ -870,6 +870,18 @@ are within `Σ_s ((m s + 1) choose 2) · (ε (D⁰ s) + ε (D¹ s))`.
 
 *Argument.* T3ₛ on each side and T6 in the middle.
 
+`Decisional.lean` proves T7 at `discreteSig S` as `measureETVDist_runGen_sameKernel_le`, in a
+coarser form than the per-sort statement above: it takes one group-operation budget `q` over all
+sorts and one degree bound for each table, `d₀` for `T₀` and `d₁` for `T₁`, and bounds the joint
+distance of the hidden point and the output by
+`((Σ_s |T₀ s| + q + 1) choose 2) · ε d₀ + ((Σ_s |T₁ s| + q + 1) choose 2) · ε d₁`. The proof uses
+T3 on each side and T6 (`SameKernel.runGen_fst_eq`) in the middle.
+`measureETVDist_runGen_sameKernel_uniform_le` specializes it to uniform points. Its test shows
+that neither clause of `SameKernel` can be dropped: over `ZMod 17` the tables `[1, X₀, X₀]` and
+`[1, X₀, X₁]` have equal lengths and degree one, and one free equality test separates their runs
+by at least `16/17`, above the `12/17` the bound would give. The per-sort form and T7 at the
+pairing signatures remain targets.
+
 Three instances show what the hypothesis means.
 
 - *DDH, one group.* `T₀ = [1, A, B, A·B]` and `T₁ = [1, A, B, C]`. Each is linearly independent,
@@ -1281,7 +1293,7 @@ against the paper before a theorem cites it).
 | Maurer, *Abstract models of computation in cryptography* (2005) | `spec F`, `impl`, equality as a relation query | library target | recalled |
 | Fuchsbauer, Kiltz, Loss, ePrint 2017/620 | the algebraic class; T1, T2; Groth16 in the algebraic model | L1 in slice 1 | abstract |
 | Boneh, Boyen, *Short signatures without random oracles* (2004) | `t`-SDH and its generic bound (T8) | target | recalled; the assumption as restated in Marlin was read |
-| Boneh, Boyen, Goh, ePrint 2005/015; Boyen, *The uber-assumption family* (2008) | T7; the independence condition as equality of relation kernels | T6 in slice 1 | recalled |
+| Boneh, Boyen, Goh, ePrint 2005/015; Boyen, *The uber-assumption family* (2008) | T7; the independence condition as equality of relation kernels | T6 proved; T7 proved at `discreteSig S` | recalled |
 | Galbraith, Paterson, Smart, ePrint 2006/165 | the three pairing signatures; hashing per sort | library target | abstract |
 | Boneh, Gentry, Lynn, Shacham, *Aggregate and verifiably encrypted signatures from bilinear maps* (2003) | `pairingIsoSig`; co-CDH | library target | read |
 | Jager, Rupp, *The semi-generic group model and applications to pairing-based cryptography* (2010) | a per-sort choice of knobs (Section 6.6) | target | abstract |
@@ -1360,9 +1372,15 @@ T4 is proved in `GenericHardness.lean` as `dlogExperiment_ofGeneric_le` and
 `cdhExperiment_ofGeneric_le`, for the adversaries that `DLogAdversary.ofGeneric` and
 `CDHAdversary.ofGeneric` induce from generic computations.
 
+T7 is proved in `Decisional.lean` as `measureETVDist_runGen_sameKernel_le`, at `discreteSig S`
+with one total group-operation budget `q` and one degree bound for each table, rather than the
+per-sort form of Section 6.5. Its event form is `prEvent_runGen_sameKernel_le_add`, and its
+Schwartz–Zippel specialization for uniform points is
+`measureETVDist_runGen_sameKernel_uniform_le`.
+
 Everything else is a paper argument or theorem target: T3ₛ, T5 and its cost certificate, the
-relation-problem bounds, T7/T8, S1–S3, P1–P3, restriction along a map of signatures, the
-invariant at the target sort over `CoeffsT`, the free and tracking models for Types 1 and 2, the
-accessible spans, the polynomial-table instance of T6, and every numeric constant in Section 8.
-The trilemma in Section 3 and the argument about ArkLib's KZG hypotheses in Section 8.3 are paper
-arguments.
+relation-problem bounds, T7 in its per-sort form and at the pairing signatures, T8, S1–S3, P1–P3,
+restriction along a map of signatures, the invariant at the target sort over `CoeffsT`, the free
+and tracking models for Types 1 and 2, the accessible spans, the polynomial-table instance of T6,
+and every numeric constant in Section 8. The trilemma in Section 3 and the argument about
+ArkLib's KZG hypotheses in Section 8.3 are paper arguments.
