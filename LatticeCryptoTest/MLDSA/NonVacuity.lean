@@ -66,7 +66,7 @@ open NMA
 section ShortCMAWitness
 
 variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
-  [DecidableEq prims.High]
+  [DecidableEq prims.High] [NeZero p.gamma1]
   (M : Type) [DecidableEq M] [Inhabited M]
   [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
 
@@ -211,9 +211,10 @@ end ShortCMAWitness
 section HeadlineInstances
 
 variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
-  [DecidableEq prims.High]
+  [DecidableEq prims.High] [NeZero p.gamma1]
   (M : Type) [DecidableEq M] [Inhabited M]
 
+omit [NeZero p.gamma1] in
 /-- An aborting forger has advantage `0` in the `ExpandA` random-oracle game. A game that ignored
 the verifier, or accepted aborted signatures, would fail this. -/
 theorem romNmaAdvantage_aborting :
@@ -308,7 +309,7 @@ example (maxAttempts : ℕ) :
 
 /-- `euf_cma_security_of_nma_fips_hvzk` applies under `Primitives.Laws`, with every remaining
 hypothesis discharged for the trivial forger at the trivial budgets. Consistency only. -/
-example (h_laws : Primitives.Laws prims nttOps) (maxAttempts : ℕ) :
+example (h_laws : Primitives.Laws prims nttOps) (hq : 2 * p.gamma1 < modulus) (maxAttempts : ℕ) :
     let main := (FiatShamirWithAbort.simulatedEufNmaAdv (identificationSchemeFull p prims)
       (fullRelation p prims (hrFips p prims)) M maxAttempts (hvzkSimulator p prims)
       ⟨fun fpk => (trivialForgerFips p prims M maxAttempts).main fpk.pk⟩).main
@@ -321,7 +322,7 @@ example (h_laws : Primitives.Laws prims nttOps) (maxAttempts : ℕ) :
         SelfTargetMSIS.advantage (extractorCShort p prims main) +
         expandSAdvantage p prims (expandSDistinguisher p prims (hrFips p prims) maxAttempts main) +
         ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss 0 0 1 0 0 1 zero_lt_one) :=
-  euf_cma_security_of_nma_fips_hvzk p prims h_laws (mldsaMLWEShort p prims) maxAttempts
+  euf_cma_security_of_nma_fips_hvzk p prims h_laws hq (mldsaMLWEShort p prims) maxAttempts
     (hrFips p prims) rfl (hrShort p prims)
     0 0 1 0 1 zero_le_one zero_le_one le_rfl zero_lt_one
     (fun fpk sk =>

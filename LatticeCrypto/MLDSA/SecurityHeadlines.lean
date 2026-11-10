@@ -29,7 +29,7 @@ instance of them below `1` is proved at a FIPS 204 parameter set, as *Limitation
 `euf_cma_security_of_nma_short` uses the short-model bound. `euf_cma_security_of_nma_fips` moves a
 forger to the scheme with `t₀` in the statement (`unforgeableAdvantage_eq_full`) and uses
 `nma_security_fips_full`; `euf_cma_security_of_nma_fips_hvzk` discharges its HVZK hypothesis at
-`ζ_zk = 0` with the efficient simulator `hvzkSimulator` (`idsWithAbort_hvzk`).
+`ζ_zk = 0` with the efficient simulator `hvzkSimulator` (`identificationSchemeFull_perfectHVZK`).
 
 ## Limitations
 
@@ -43,8 +43,9 @@ The CMA theorems take hypotheses that are not proved at any FIPS 204 parameter s
   the min-entropy of `HighBits(A·y)` on good keys, for `y` drawn from the mask box.
 - **`hhvzk` in the short model.** `euf_cma_security_of_nma_short` runs over
   `identificationSchemeShort`, whose statement `(ρ, t₁)` leaves out the `t₀` the simulator needs,
-  and `idsWithAbort_hvzk` covers only the seed model. No witness below `ζ_zk = 1` is constructed
-  there. The seed model has `ζ_zk = 0` (`euf_cma_security_of_nma_fips_hvzk`).
+  and `identificationSchemeFull_perfectHVZK` covers only the seed model. No witness below
+  `ζ_zk = 1` is constructed there. The seed model has `ζ_zk = 0`
+  (`euf_cma_security_of_nma_fips_hvzk`).
 
 The statements also stop short of FIPS 204 in their format and hardness problems:
 
@@ -74,13 +75,13 @@ open NMA
 section Headline
 
 variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
-  [DecidableEq prims.High]
+  [DecidableEq prims.High] [NeZero p.gamma1]
   {M : Type} [DecidableEq M]
   [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
 
 /-! ### The EUF-NMA bounds -/
 
-omit nttOps [Inhabited (Commitment p prims)] [Inhabited (Response p prims)] in
+omit nttOps [NeZero p.gamma1] [Inhabited (Commitment p prims)] [Inhabited (Response p prims)] in
 /-- Pushing the key generator out of the Fiat-Shamir-with-aborts runtime: a lifted key draw
 followed by a random-oracle computation has the measure of the plain `ProbComp` that draws the key
 and then simulates the rest from the empty cache. -/
@@ -585,11 +586,12 @@ theorem euf_cma_security_of_nma_fips {Sample : Type}
 on `hAbort` and `hGuess`, which are not proved at any FIPS 204 parameter set (module docstring,
 *Limitations*).
 
-Under the primitive laws `h_laws`, `idsWithAbort_hvzk` makes `hvzkSimulator` a perfect simulator
-for `identificationSchemeFull`, so the HVZK term of the loss vanishes. The simulator reads `t₀`
+Under the primitive laws `h_laws` and `2γ₁ < q`, `identificationSchemeFull_perfectHVZK` makes
+`hvzkSimulator` a perfect simulator for `identificationSchemeFull`, so the HVZK term of the loss
+vanishes. The simulator reads `t₀`
 from the statement and runs in polynomial time, so every reduction here is efficient. -/
 theorem euf_cma_security_of_nma_fips_hvzk {Sample : Type}
-    (h_laws : Primitives.Laws prims nttOps)
+    (h_laws : Primitives.Laws prims nttOps) (hq : 2 * p.gamma1 < modulus)
     (mlwe : LearningWithErrors.Problem Sample (RqVec p.l) (RqVec p.k))
     (maxAttempts : ℕ)
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
@@ -644,7 +646,7 @@ theorem euf_cma_security_of_nma_fips_hvzk {Sample : Type}
     (fun fpk sk hrel _ => by
       rw [ENNReal.ofReal_zero]
       exact ((identificationSchemeFull p prims).perfectHVZK_iff_hvzk_zero _).mp
-        (idsWithAbort_hvzk p prims h_laws) fpk sk hrel)
+        (identificationSchemeFull_perfectHVZK p prims h_laws hq) fpk sk hrel)
     hGuess hAbort adv hQ εbridge bridge hMlweBridge
 
 end Headline

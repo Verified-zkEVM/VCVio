@@ -1247,7 +1247,7 @@ private theorem stmsis_tail_le_short
       revert hverify
       grind)
 
-omit nttOps [DecidableEq prims.High] in
+omit nttOps [DecidableEq prims.High] [NeZero p.gamma1] in
 /-- In the uniform-`t` key generator, `t₀` can be redrawn from the fiber of `t₁`: a continuation
 of the generated key that reads `pk` and `t₀` sees the same distribution when `t₀` comes from a
 uniform `t` with `Power2Round(t).1 = pk.t₁`. -/
