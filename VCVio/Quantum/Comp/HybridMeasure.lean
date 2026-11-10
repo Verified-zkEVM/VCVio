@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.Contraction
 public import VCVio.Quantum.Comp.HybridIndex
 
 /-!
@@ -131,17 +132,6 @@ theorem conjTranspose_inj_true_mul_purifiedMeas_mul_inj_false {Q : Matrix D D �
     ← Matrix.mul_assoc, ← Matrix.mul_assoc, conjTranspose_inj_mul_inj, conjTranspose_inj_mul_inj]
   simp
 
-/-- `P ⊗ 1_B` is a contraction when `P` is. -/
-theorem posSemidef_one_sub_kronecker_one {P : Matrix D D ℂ} (hP : (1 - Pᴴ * P).PosSemidef) :
-    (1 - (P ⊗ₖ (1 : Matrix Bool Bool ℂ))ᴴ * (P ⊗ₖ (1 : Matrix Bool Bool ℂ))).PosSemidef := by
-  have e : 1 - (P ⊗ₖ (1 : Matrix Bool Bool ℂ))ᴴ * (P ⊗ₖ (1 : Matrix Bool Bool ℂ)) =
-      (1 - Pᴴ * P) ⊗ₖ (1 : Matrix Bool Bool ℂ) := by
-    rw [conjTranspose_kronecker, conjTranspose_one, ← mul_kronecker_mul, Matrix.one_mul]
-    ext ⟨a, b⟩ ⟨a', b'⟩
-    by_cases ha : a = a' <;> by_cases hb : b = b' <;> simp [ha, hb]
-  rw [e]
-  exact hP.kronecker Matrix.PosSemidef.one
-
 omit [Fintype D] in
 theorem conjTranspose_sel {Y : Type*} [DecidableEq Y] (b : Bool) :
     (sel (D := D) Y b)ᴴ = (1 : Matrix Y Y ℂ) ⊗ₖ inj D b := by
@@ -199,10 +189,10 @@ theorem RespectsIndex.ctrl {κ : spec.Port → Type*} {B : ∀ i, κ i → Matri
         (B i k ⊗ₖ (1 : Matrix (D × Bool) (D × Bool) ℂ)) =
       (sel (D := D) (spec.Out i) b)ᴴ * U i r * sel (D := D) (spec.In i) b *
         (B i k ⊗ₖ (1 : Matrix (D × Bool) (D × Bool) ℂ)) := fun b ↦
-    mul_mul_eq_of_comm_right
-      (by rw [sel]; exact (kronecker_one_mul_one_kronecker (B i k) (inj D b)ᴴ).symm)
-      (mul_mul_eq_of_comm_left
-        (by rw [conjTranspose_sel]; exact kronecker_one_mul_one_kronecker (B' i k) (inj D b))
+    Matrix.mul_mul_eq_of_comm_right
+      (by rw [sel]; exact (Matrix.kronecker_one_mul_one_kronecker (B i k) (inj D b)ᴴ).symm)
+      (Matrix.mul_mul_eq_of_comm_left
+        (by rw [conjTranspose_sel]; exact Matrix.kronecker_one_mul_one_kronecker (B' i k) (inj D b))
         (hU i r k))
   simp only [Hybrid.ctrl, Matrix.mul_add, Matrix.add_mul, h]
 
@@ -293,7 +283,8 @@ private theorem trace_amplifyLeft_conj_inj {J : Type*} [Fintype J]
   classical
   have h : (inj D false)ᴴ * inj D false = 1 := by
     simpa using conjTranspose_inj_mul_inj (D := D) false false
-  rw [MatrixMap.amplifyLeft_conj, trace_conj_of_isometry (one_kronecker_isometry h)]
+  rw [MatrixMap.amplifyLeft_conj,
+    MatrixMap.isTP_conj (Matrix.conjTranspose_one_kronecker_mul_self h) _]
 
 private theorem queryMassAt_ext (x : QuantumComp L spec X A) (ρ : Matrix (A × D) (A × D) ℂ)
     (i : spec.Port) (j : ℕ) :
@@ -426,7 +417,7 @@ private theorem rpow_inv_two_tsum_trace_conj_one_sub_le (x : QuantumComp L spec 
   have key := rpow_inv_two_tsum_trace_conj_run_le_of_inImage' I
     (σ₀ := zeroInit _) (σ₁ := zeroInit _) (s₀ := extSteps hU) (s₁ := extSteps hU)
     (U := fun i r ↦ ctrl (U i r) (U i r)) (W := fun i r ↦ ctrl (U i r) (U i r))
-    (fun _ _ ↦ rfl) (fun _ _ ↦ rfl) (posSemidef_one_sub_kronecker_one hP)
+    (fun _ _ ↦ rfl) (fun _ _ ↦ rfl) (Matrix.posSemidef_one_sub_kronecker_one hP)
     (purifiedMeas_isometry hQ hQQ) x (Z := fun p ↦ p.1 × D) (fun p ↦ sel p.1 true)
     posSemidef_one_sub_sel_true hΓ (conj_purifiedMeas_lift ρ hQσ) h' h'
   have hbr : ∀ p, ((QuantumRuntime.mk (QReg.of (D × Bool)) (zeroInit _) (extSteps hU)).run I
@@ -539,8 +530,8 @@ private theorem trace_conj_kronecker_one_amplifyLeft {J : Type*} [Fintype J]
   have h : (inj D false)ᴴ * inj D false = 1 := by
     simpa using conjTranspose_inj_mul_inj (D := D) false false
   rw [MatrixMap.amplifyLeft_conj, ← LinearMap.comp_apply (MatrixMap.conj _),
-    ← MatrixMap.conj_mul, kronecker_one_mul_one_kronecker, MatrixMap.conj_mul,
-    LinearMap.comp_apply, trace_conj_of_isometry (one_kronecker_isometry h)]
+    ← MatrixMap.conj_mul, Matrix.kronecker_one_mul_one_kronecker, MatrixMap.conj_mul,
+    LinearMap.comp_apply, MatrixMap.isTP_conj (Matrix.conjTranspose_one_kronecker_mul_self h) _]
 
 private theorem indexMassAt_ext {κ : spec.Port → Type*}
     (B : ∀ i, κ i → Matrix (spec.In i) (spec.In i) ℂ) (x : QuantumComp L spec X A)

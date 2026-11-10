@@ -23,12 +23,12 @@ public import LatticeCrypto.Falcon.Security
 public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
 public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
 public import LatticeCrypto.MLDSA.Arithmetic
+public import LatticeCrypto.MLDSA.BoxSampling
 public import LatticeCrypto.MLDSA.Concrete.Encoding
 public import LatticeCrypto.MLDSA.Concrete.LawBounds
 public import LatticeCrypto.MLDSA.Concrete.NTT
 public import LatticeCrypto.MLDSA.Concrete.Rounding
 public import LatticeCrypto.MLDSA.Encoding
-public import LatticeCrypto.MLDSA.MaskBox
 public import LatticeCrypto.MLDSA.Params
 public import LatticeCrypto.MLDSA.Primitives
 public import LatticeCrypto.MLDSA.Scheme

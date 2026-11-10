@@ -51,7 +51,7 @@ ours_changed="$(git -C "$repo" diff --name-only "$main_base" "$base")"
 kept=(lean-toolchain lake-manifest.json lakefile.lean scripts/axiom_baseline.json
   scripts/nolints.json scripts/nolints-style.txt scripts/init_sweep_baseline.json
   scripts/expose_boundary_baseline.tsv scripts/doc_names_allowlist.txt)
-library_roots='^(ToMathlib|VCVio|VCVioCslib|LatticeCrypto|HashSig|Examples|Extern|VCVioWidgets|VCVioTest|LatticeCryptoTest|HashSigTest)/'
+library_roots='^(ToMathlib|VCVio|LatticeCrypto|HashSig|Examples|Extern|VCVioTest|LatticeCryptoTest|HashSigTest)/'
 
 mkdir -p "$out"
 for pr in "${prs[@]}"; do

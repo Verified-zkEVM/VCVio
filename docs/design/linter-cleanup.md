@@ -31,7 +31,7 @@ exception entries.
 The deliberate Unicode policy remains in `lakefile.lean`: cited author names and FIPS
 notation require characters outside Mathlib's allowlist. The optional `VCVioComplexity`
 package has the same Unicode policy and remains outside the root package's driver.
-Dormant `Interop/Hax/CenteredBinomial.lean` retains its local `nativeDecide` linter override;
+`Interop/Hax/CenteredBinomial.lean` no longer uses `native_decide`;
 the generated `third_party/hax-cbd` extraction retains its unused-variable override.
 Those belong to the separate Interop migration and generator policy. Interop keeps its
 existing source-style coverage and stays outside environment linting and proof imports.
