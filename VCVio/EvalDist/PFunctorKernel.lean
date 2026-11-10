@@ -7,13 +7,18 @@ Authors: Devon Tuma
 module
 
 public import PolyFun.PFunctor.Free.Measure.Kernel
-public import ToMathlib.MeasureTheory.Measure.Coupling.Bind
+public import ToCslib.MeasureTheory.Function.AEMeasurable
+public import ToCslib.MeasureTheory.Measure.Coupling.Bind
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import ToMathlib.MeasureTheory.Measure.Monotone
 
 /-!
 # Deprecated: re-exports `PolyFun.PFunctor.Free.Measure.Kernel`
 
 This module is deprecated. It re-exports `PolyFun.PFunctor.Free.Measure.Kernel`, together with
-`ToMathlib.MeasureTheory.Measure.Coupling.Bind`. Import those modules instead.
+`ToCslib.MeasureTheory.Function.AEMeasurable`, `ToCslib.MeasureTheory.Measure.Coupling.Bind`,
+`ToMathlib.MeasureTheory.Measure.GiryMonad` and `ToMathlib.MeasureTheory.Measure.Monotone`. Import
+those modules instead.
 -/
 
 deprecated_module

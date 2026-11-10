@@ -8,7 +8,9 @@ module
 public import PolyFun.Interaction.Open.Emulates
 public import VCVio.CryptoFoundations.Asymptotics.Negligible
 public import VCVio.CryptoFoundations.Asymptotics.Security
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import PolyFun.Control.Monad.Measure.SemanticsVia
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import VCVio.EvalDist.MeasureTVDist.Basic
 
 /-!

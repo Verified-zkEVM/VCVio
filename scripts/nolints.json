@@ -169,7 +169,6 @@
  ["unusedArguments", "LatticeCrypto.zmodCenteredCoeffView"],
  ["unusedArguments", "OracleQuery.instSubSpecPEmptyEmptySpecOfInhabited"],
  ["unusedArguments", "PFunctor.Resumption.returnedMeasure"],
- ["unusedArguments", "ProbabilityTheory.uniformOn_univ_apply_singleton"],
  ["unusedArguments", "QueryImpl.Stateful.parRouteSeparatedWith"],
  ["unusedArguments", "VCVio.StateSeparating.CellRef.SupportCellRel"],
  ["unusedArguments", "VCVio.StateSeparating.CellRef.SupportMeasureBound"],

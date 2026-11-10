@@ -259,7 +259,7 @@ jobs:
             echo '-- `public import`: the universe example below is a `public` declaration, so'
             echo '-- the names in its type must be publicly imported, not just privately visible.'
             echo 'public import VCVio'
-            echo 'public import VCVio.EvalDist.PFunctorMeasure.Core'
+            echo 'public import PolyFun.PFunctor.Free.Measure.EvalDist'
             echo 'public import SchemeAPI'
             echo 'public import CountingAPI'
             echo 'public import CacheAPI'

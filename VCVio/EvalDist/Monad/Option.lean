@@ -5,9 +5,12 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.Defs.Measure.OptionT
+public import PolyFun.Control.Monad.Measure.OptionT
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import VCVio.EvalDist.ProbabilityBounds
-public import VCVio.EvalDist.Monad.Failure
+public import PolyFun.Control.Monad.Measure.Failure
+public import VCVio.EvalDist.ProbabilityNotation
 public import ToMathlib.Control.OptionT
 
 /-!
@@ -26,83 +29,6 @@ open MeasureTheory
 universe v
 
 namespace OptionT
-
-/-- Successful events are the events of present values in the underlying run. -/
-theorem prEvent_eq_run {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : OptionT m α) (p : α → Prop) :
-    Pr{let x ← mx}[p x] = Pr{let value ← mx.run}[value.elim False p] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete,
-    OptionT.evalDist_apply]
-  congr 1
-  ext value
-  cases value <;> simp
-
-/-- Lifting into the optional monad preserves the probability of an observed event. -/
-@[simp↓ high, grind norm↓]
-theorem prEvent_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m α) (p : α → Prop) :
-    Pr{let x ← OptionT.lift mx}[p x] = Pr{let x ← mx}[p x] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete,
-    OptionT.evalDist_lift]
-
-/-- A monadic lift into the optional monad preserves the probability of an observed event. -/
-@[simp↓ high, grind norm↓]
-theorem prEvent_liftM {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m α) (p : α → Prop) :
-    Pr{let x ← (liftM mx : OptionT m α)}[p x] = Pr{let x ← mx}[p x] :=
-  prEvent_lift mx p
-
-/-- A guard contributes its condition to the observed event after a lifted draw. -/
-@[simp↓ high, grind norm↓]
-theorem prEvent_bind_guard {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m α) (p q : α → Prop) [DecidablePred p] :
-    Pr{let x ← OptionT.lift mx; guard (p x)}[q x] =
-      Pr{let x ← mx}[p x ∧ q x] := by
-  classical
-  let : MeasurableSpace α := ⊤
-  have h (x : α) : Pr{let _ ← (guard (p x) : OptionT m Unit)}[q x] =
-      if p x ∧ q x then 1 else 0 := by
-    by_cases hp : p x <;> by_cases hq : q x <;> simp [guard, hp, hq]
-  rw [prEvent_bind_of_discrete, OptionT.evalDist_lift]
-  simp_rw [h]
-  rw [prEvent_eq_evalDist_of_discrete]
-  simpa only [Set.indicator_apply, Pi.one_apply, Set.mem_ofPred_eq] using
-    lintegral_indicator_one (μ := 𝒟[mx]) (MeasurableSet.of_discrete (s := {x | p x ∧ q x}))
-
-/-- A lifted draw followed by a guard puts its successful event mass at the unit output. -/
-@[simp↓ high]
-theorem evalDist_lift_bind_guard {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m α) (p : α → Prop) [DecidablePred p] :
-    𝒟[do let x ← OptionT.lift mx; guard (p x)] =
-      Pr{let x ← mx}[p x] • Measure.dirac () := by
-  apply Measure.ext_of_singleton
-  rintro ⟨⟩
-  rw [← prEvent_eq_evalDist_singleton]
-  simp
-
-/-- A monadic lift followed by a guard puts its successful event mass at the unit output. -/
-@[simp↓ high]
-theorem evalDist_liftM_bind_guard {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m α) (p : α → Prop) [DecidablePred p] :
-    𝒟[do let x ← (liftM mx : OptionT m α); guard (p x)] =
-      Pr{let x ← mx}[p x] • Measure.dirac () :=
-  evalDist_lift_bind_guard mx p
-
-/-- A successful event of a wrapped computation is the event of present values that satisfy it
-in the underlying computation. -/
-theorem prEvent_mk {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m (Option α)) (p : α → Prop) :
-    Pr{let x ← OptionT.mk mx}[p x] = Pr{let o ← mx}[o.elim False p] := by
-  rw [prEvent_eq_run, OptionT.run_mk]
 
 section sequencing
 
@@ -147,20 +73,5 @@ theorem prEvent_mk_bind_le_of_forall_le (mx : m α) (f : α → m (Option β)) (
     h a (mem_support_of_mem_support_lift ha)
 
 end sequencing
-
-/-- Lifting into the optional monad adds no failure. -/
-@[simp]
-theorem prFail_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α) :
-    prFail (OptionT.lift mx) = prFail mx := by
-  let : MeasurableSpace α := ⊤
-  rw [prFail_eq_one_sub_evalDist_univ, prFail_eq_one_sub_evalDist_univ, OptionT.evalDist_lift]
-
-/-- A monadic lift into the optional monad adds no failure. -/
-@[simp]
-theorem prFail_liftM {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α) :
-    prFail (liftM mx : OptionT m α) = prFail mx :=
-  prFail_lift mx
 
 end OptionT

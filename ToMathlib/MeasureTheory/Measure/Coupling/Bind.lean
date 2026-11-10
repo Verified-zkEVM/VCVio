@@ -5,101 +5,20 @@ Authors: Devon Tuma
 -/
 
 module
-public import ToMathlib.MeasureTheory.Measure.Coupling
+
+public import ToCslib.MeasureTheory.Measure.Coupling.Bind
+public import ToCslib.MeasureTheory.Function.AEMeasurable
 public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import ToMathlib.MeasureTheory.Measure.Monotone
-public import ToMathlib.MeasureTheory.Function.AEMeasurable
-public import ToCslib.MeasureTheory.Measure.AEBind
 
 /-!
-# Sequential composition of measure couplings
+# Deprecated: re-exports `ToCslib.MeasureTheory.Measure.Coupling.Bind`
 
-A measurable family of joint measures composes with an initial coupling by Giry bind.
-Marginal and postcondition obligations need only hold almost everywhere under the initial joint
-law. The family is supplied as data: no measurable choice of pointwise coupling witnesses is
-assumed. These laws apply to arbitrary measurable spaces and arbitrary measure mass.
+This module is deprecated. It re-exports `ToCslib.MeasureTheory.Measure.Coupling.Bind`, together
+with `ToCslib.MeasureTheory.Function.AEMeasurable`, `ToMathlib.MeasureTheory.Measure.GiryMonad` and
+`ToMathlib.MeasureTheory.Measure.Monotone`. Import those modules instead.
 -/
 
-public section
-
-open MeasureTheory
-
-universe u v w x
-
-namespace MeasureTheory.Measure
-
-variable {α : Type u} {β : Type v} {γ : Type w} {δ : Type x}
-variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ] [MeasurableSpace δ]
-
-/-- Bind is additive in its initial measure. -/
-theorem bind_add_left (μ ν : Measure α) {k : α → Measure β} (hk : Measurable k) :
-    (μ + ν).bind k = μ.bind k + ν.bind k := by
-  ext s hs
-  simp only [bind_apply hs hk.aemeasurable, add_apply, lintegral_add_measure]
-
-/-- Bind is additive in a measurable continuation. -/
-theorem bind_add_right (μ : Measure α) {k l : α → Measure β}
-    (hk : Measurable k) (hl : Measurable l) :
-    μ.bind (fun a => k a + l a) = μ.bind k + μ.bind l := by
-  ext s hs
-  rw [bind_apply hs (show Measurable (fun a => k a + l a) from hk.add hl).aemeasurable,
-    add_apply, bind_apply hs hk.aemeasurable, bind_apply hs hl.aemeasurable]
-  simp only [add_apply]
-  exact lintegral_add_left ((measurable_coe hs).comp hk) _
-
-/-- Bind is monotone in its initial measure. -/
-theorem bind_mono_left {μ ν : Measure α} (h : μ ≤ ν) {k : α → Measure β}
-    (hk : Measurable k) : μ.bind k ≤ ν.bind k := by
-  refine Measure.le_iff.2 fun s hs => ?_
-  simp only [bind_apply hs hk.aemeasurable]
-  exact lintegral_mono' h le_rfl
-
-/-- Sequential composition couples the bound marginals. Conditional marginal identities are
-required only for pairs reached by the initial coupling. -/
-theorem IsCoupling.bind {c : Measure (α × β)} {μ : Measure α} {ν : Measure β}
-    (hc : IsCoupling c μ ν) {k : α → Measure γ} {l : β → Measure δ}
-    {j : α × β → Measure (γ × δ)} (hk : Measurable k) (hl : Measurable l)
-    (hj : Measurable j) (h : ∀ᵐ z ∂c, IsCoupling (j z) (k z.1) (l z.2)) :
-    IsCoupling (c.bind j) (μ.bind k) (ν.bind l) := by
-  constructor
-  · rw [Measure.fst, map_bind hj.aemeasurable measurable_fst.aemeasurable]
-    change c.bind (fun z => (j z).fst) = _
-    rw [bind_congr_right (h.mono fun _ hz => hz.fst_eq)]
-    rw [← bind_map measurable_fst.aemeasurable hk.aemeasurable]
-    exact congrArg (fun μ => μ.bind k) hc.fst_eq
-  · rw [Measure.snd, map_bind hj.aemeasurable measurable_snd.aemeasurable]
-    change c.bind (fun z => (j z).snd) = _
-    rw [bind_congr_right (h.mono fun _ hz => hz.snd_eq)]
-    rw [← bind_map measurable_snd.aemeasurable hl.aemeasurable]
-    exact congrArg (fun ν => ν.bind l) hc.snd_eq
-
-/-- Conditional joint families need only be measurable under the initial joint law. -/
-theorem IsCoupling.bind_of_aemeasurable {c : Measure (α × β)} {μ : Measure α} {ν : Measure β}
-    (hc : IsCoupling c μ ν) {k : α → Measure γ} {l : β → Measure δ}
-    {j : α × β → Measure (γ × δ)} (hk : Measurable k) (hl : Measurable l)
-    (hj : AEMeasurable j c) (h : ∀ᵐ z ∂c, IsCoupling (j z) (k z.1) (l z.2)) :
-    IsCoupling (c.bind j) (μ.bind k) (ν.bind l) := by
-  rw [bind_congr_right hj.ae_eq_mk]
-  apply hc.bind hk hl hj.measurable_mk
-  filter_upwards [h, hj.ae_eq_mk] with z hz heq
-  rw [← heq]
-  exact hz
-
-/-- Bind a coupling with a measurable conditional coupling family. -/
-noncomputable def Coupling.bind {μ : Measure α} {ν : Measure β}
-    (c : Coupling μ ν) {k : α → Measure γ} {l : β → Measure δ}
-    {j : α × β → Measure (γ × δ)} (hk : Measurable k) (hl : Measurable l)
-    (hj : Measurable j) (h : ∀ᵐ z ∂c.joint, IsCoupling (j z) (k z.1) (l z.2)) :
-    Coupling (μ.bind k) (ν.bind l) :=
-  ⟨c.joint.bind j, c.isCoupling.bind hk hl hj h⟩
-
-/-- The joint measure of sequentially composed couplings is their Giry bind. -/
-@[simp]
-theorem Coupling.bind_joint {μ : Measure α} {ν : Measure β}
-    (c : Coupling μ ν) {k : α → Measure γ} {l : β → Measure δ}
-    {j : α × β → Measure (γ × δ)} (hk : Measurable k) (hl : Measurable l)
-    (hj : Measurable j) (h : ∀ᵐ z ∂c.joint, IsCoupling (j z) (k z.1) (l z.2)) :
-    (c.bind hk hl hj h).joint = c.joint.bind j := by
-  rfl
-
-end MeasureTheory.Measure
+deprecated_module
+  "Import `ToCslib.MeasureTheory.Measure.Coupling.Bind` and this module's other imports instead."
+  (since := "2026-11-10")

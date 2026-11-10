@@ -16,7 +16,9 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.ProbCompLift
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import PolyFun.Control.Monad.Measure.SemanticsVia
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.Data.FinEnum
 public import Mathlib.Data.Nat.Choose.Basic
 public import Mathlib.Order.Interval.Finset.Fin

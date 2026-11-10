@@ -7,7 +7,11 @@ Authors: Devon Tuma, Quang Dao
 module
 
 public import PolyFun.Control.Monad.Hom
-public import VCVio.EvalDist.Defs.Measure.Deterministic
+public import PolyFun.Control.Monad.Measure.Deterministic
+public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.ProbabilityNotation
+public import ToMathlib.Control.Except
+public import ToMathlib.Control.Option
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.EvalDist.Measure

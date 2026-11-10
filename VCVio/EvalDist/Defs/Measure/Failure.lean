@@ -5,30 +5,17 @@ Authors: Devon Tuma
 -/
 
 module
+
+public import PolyFun.Control.Monad.Measure.Failure
 public import VCVio.EvalDist.Defs.Measure.Core
 
 /-!
-# Successful-output measure of failure
+# Deprecated: re-exports `PolyFun.Control.Monad.Measure.Failure`
 
-`LawfulFailureEvalDistSemantics` certifies that failure has zero successful-output measure.
-This law is independent of attachment, pure and bind.
+This module is deprecated. It re-exports `PolyFun.Control.Monad.Measure.Failure`, together with
+`VCVio.EvalDist.Defs.Measure.Core` for the `𝒟[…]` notation. Import those modules instead.
 -/
 
-public section
-
-open MeasureTheory
-
-universe u v
-
-/-- A measure interpretation assigns zero successful-output mass to failure. -/
-class LawfulFailureEvalDistSemantics (m : Type u → Type v) [Alternative m]
-    [EvalDistSemantics m] : Prop where
-  /-- Failure denotes the zero measure. -/
-  denote_failure {α : Type u} [MeasurableSpace α] : 𝒟[(failure : m α)] = 0
-
-/-- Failure has zero successful-output measure. -/
-@[simp, grind =]
-theorem evalDist_failure_eq_zero {m : Type u → Type v} [Alternative m]
-    [EvalDistSemantics m] [LawfulFailureEvalDistSemantics m]
-    {α : Type u} [MeasurableSpace α] : 𝒟[(failure : m α)] = 0 :=
-  LawfulFailureEvalDistSemantics.denote_failure
+deprecated_module
+  "Import `PolyFun.Control.Monad.Measure.Failure` and this module's other imports instead."
+  (since := "2026-11-10")

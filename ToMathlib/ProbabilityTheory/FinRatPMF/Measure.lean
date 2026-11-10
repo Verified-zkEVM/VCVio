@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 public import ToMathlib.ProbabilityTheory.FinRatPMF.Basic
 public import Mathlib.MeasureTheory.Measure.GiryMonad
-public import ToMathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 
 /-!
 # Measures of finite rational distributions

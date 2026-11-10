@@ -6,8 +6,14 @@ Authors: Devon Tuma
 
 module
 public import VCVio.Schemes.KEMDEM.Measure
-public import VCVio.EvalDist.PFunctorMeasure.Core
-public import VCVio.EvalDist.WithFailure
+public import PolyFun.PFunctor.Free.Measure.EvalDist
+public import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+public import Mathlib.MeasureTheory.Measure.Prod
+public import Mathlib.Probability.UniformOn
+public import VCVio.EvalDist.Defs.Measure.Core
+public import PolyFun.Control.Monad.Measure.WithFailure
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import VCVio.EvalDist.ProbabilityNotation
 import Mathlib.Tactic.NormNum
 
 /-!

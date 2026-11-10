@@ -6,9 +6,13 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.EvalDist.PFunctorMeasure.Core
+public import PolyFun.PFunctor.Free.Measure.EvalDist
+public import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+public import Mathlib.MeasureTheory.Measure.Prod
+public import Mathlib.Probability.UniformOn
+public import VCVio.EvalDist.Defs.Measure.Core
 public import VCVio.OracleComp.OracleComp
-import ToMathlib.Probability.UniformOn
+import ToCslib.Probability.UniformOn
 
 /-!
 # Measure-valued oracle specifications
@@ -179,21 +183,24 @@ namespace OracleComp
 
 variable {ι : Type u} {spec : OracleSpec.{u, v} ι}
 
-/-- Oracle computations denote the measure fold of their chosen answer measures. -/
+/-- Oracle computations denote the measure fold of their chosen answer measures. The instance
+places results in the universe of the answers, as `OracleComp.{u, v, v}`: PolyFun's instance on
+free programs holds at every result universe, and without the pin a statement about
+`OracleComp spec α` would leave the answer universe of `spec` free. -/
 noncomputable instance (priority := 30) instEvalDistSemantics [OracleSpec.AnswerMeasure spec] :
-    EvalDistSemantics (OracleComp spec) :=
+    EvalDistSemantics (OracleComp.{u, v, v} spec) :=
   letI : ∀ a, MeasurableSpace (spec.toPFunctor.B a) := fun _ ↦ ⊤
   PFunctor.FreeM.instEvalDistSemanticsFreeM
 
 /-- Oracle computations denote `pure` as a Dirac measure. -/
 noncomputable instance (priority := 30) instLawfulPureEvalDistSemantics
-    [OracleSpec.AnswerMeasure spec] : LawfulPureEvalDistSemantics (OracleComp spec) :=
+    [OracleSpec.AnswerMeasure spec] : LawfulPureEvalDistSemantics (OracleComp.{u, v, v} spec) :=
   letI : ∀ a, MeasurableSpace (spec.toPFunctor.B a) := fun _ ↦ ⊤
   PFunctor.FreeM.instLawfulPureEvalDistSemanticsFreeM
 
 /-- Over discrete oracle answers, the measure semantics satisfies the Giry monad laws. -/
 noncomputable instance (priority := 30) instLawfulEvalDistSemantics
-    [OracleSpec.AnswerMeasure spec] : LawfulEvalDistSemantics (OracleComp spec) :=
+    [OracleSpec.AnswerMeasure spec] : LawfulEvalDistSemantics (OracleComp.{u, v, v} spec) :=
   letI : ∀ a, MeasurableSpace (spec.toPFunctor.B a) := fun _ ↦ ⊤
   letI : ∀ a, DiscreteMeasurableSpace (spec.toPFunctor.B a) := fun _ ↦ inferInstanceAs
     (@DiscreteMeasurableSpace _ ⊤)

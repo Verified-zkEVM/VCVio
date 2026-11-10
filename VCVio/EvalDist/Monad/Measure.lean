@@ -10,7 +10,7 @@ public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Monad.Support
 public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Bounds
-import ToMathlib.Probability.UniformOn
+import ToCslib.Probability.UniformOn
 
 /-!
 # Measure-valued computation laws
@@ -37,7 +37,7 @@ variable {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
 /-- Reindexing a uniform draw by a bijection does not change the measure of any subsequent
 computation. -/
 theorem evalDist_bind_bijective_of_uniform [LawfulMonad m]
-    [DiscreteMeasurableSpace α] [MeasurableSingletonClass α] [Finite α] [Nonempty α]
+    [DiscreteMeasurableSpace α] [MeasurableSingletonClass α]
     (mx : m α) (huniform : 𝒟[mx] = uniformOn Set.univ)
     (e : α → α) (he : Function.Bijective e) (f : α → m β) :
     𝒟[mx >>= fun x => f (e x)] = 𝒟[mx >>= f] := by
@@ -54,7 +54,6 @@ before an arbitrary continuation. -/
 theorem evalDist_bind_bijective_uniform_cross [LawfulMonad m]
     [DiscreteMeasurableSpace α] [DiscreteMeasurableSpace β]
     [MeasurableSingletonClass α] [MeasurableSingletonClass β]
-    [Finite α] [Finite β] [Nonempty α] [Nonempty β]
     (mx : m α) (my : m β)
     (hα : 𝒟[mx] = uniformOn Set.univ) (hβ : 𝒟[my] = uniformOn Set.univ)
     (e : α → β) (he : Function.Bijective e) (f : β → m γ) :

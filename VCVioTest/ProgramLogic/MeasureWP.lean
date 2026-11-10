@@ -6,7 +6,11 @@ Authors: Devon Tuma
 
 module
 public import VCVio.ProgramLogic.Unary.WP.Measure
-public import VCVio.EvalDist.Defs.Measure.Deterministic
+public import PolyFun.Control.Monad.Measure.Deterministic
+public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.ProbabilityNotation
+public import ToMathlib.Control.Except
+public import ToMathlib.Control.Option
 public import Mathlib.Tactic.GRewrite
 
 /-!

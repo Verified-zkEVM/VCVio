@@ -6,7 +6,10 @@ Authors: Devon Tuma
 
 module
 public import PolyFun.PFunctor.Free.Measure.Kernel.Transport
-public import VCVio.ProgramLogic.Relational.Measure.Bind
+public import PolyFun.Control.Monad.Measure.Relational.Bind
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import ToMathlib.MeasureTheory.Measure.Monotone
 
 /-!
 # Local coupling contracts for polynomial kernel handlers

@@ -5,67 +5,17 @@ Authors: Devon Tuma
 -/
 
 module
-public import Batteries.Control.AlternativeMonad
-public import VCVio.EvalDist.Defs.Measure.Failure
+
+public import PolyFun.Control.Monad.Measure.Failure
 public import VCVio.EvalDist.ProbabilityNotation
 
 /-!
-# Failure in measure-valued compositions
+# Deprecated: re-exports `PolyFun.Control.Monad.Measure.Failure`
 
-Failure contributes no successful outputs to a measurable composition. The intermediate
-measurable-space choice is internal to these laws, so final observations need no source space.
+This module is deprecated. It re-exports `PolyFun.Control.Monad.Measure.Failure`, together with
+`VCVio.EvalDist.ProbabilityNotation` for the `Pr{…}[…]` notation. Import those modules instead.
 -/
 
-public section
-
-open MeasureTheory
-
-universe u v
-
-variable {m : Type u → Type v} [AlternativeMonad m]
-  [EvalDistSemantics m] [LawfulEvalDistSemantics m] [LawfulFailureEvalDistSemantics m]
-  {α β : Type u} [MeasurableSpace β]
-
-/-- Binding any continuation after failure has zero successful-output measure. -/
-@[simp, grind =]
-theorem evalDist_failure_bind (f : α → m β) : 𝒟[(failure : m α) >>= f] = 0 := by
-  let : MeasurableSpace α := ⊤
-  rw [evalDist_bind_of_discrete, evalDist_failure_eq_zero, Measure.bind_zero_left]
-
-/-- A continuation that always fails has zero successful-output measure. -/
-@[simp↓ high, grind norm↓]
-theorem evalDist_bind_failure (mx : m α) :
-    𝒟[mx >>= fun _ ↦ (failure : m β)] = 0 := by
-  let : MeasurableSpace α := ⊤
-  simp
-
-/-- A failed event computation has probability zero. -/
-@[simp, grind =]
-theorem prEvent_failure_prop {m : Type → Type v} [AlternativeMonad m]
-    [EvalDistSemantics m] [LawfulFailureEvalDistSemantics m] :
-    prEvent (failure : m Prop) = 0 := by
-  rw [prEvent_def, evalDist_failure_eq_zero]
-  rfl
-
-/-- No final event succeeds after failure. -/
-@[simp↓ high, grind norm↓]
-theorem prEvent_failure {m : Type → Type v} [AlternativeMonad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] [LawfulFailureEvalDistSemantics m]
-    {α : Type} (p : α → Prop) : Pr{let x ← (failure : m α)}[p x] = 0 := by
-  rw [prEvent_def, map_eq_bind_pure_comp]
-  simp
-
-/-- `failure` always fails. -/
-@[simp, grind =]
-theorem prFail_failure {m : Type → Type v} [AlternativeMonad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] [LawfulFailureEvalDistSemantics m]
-    {α : Type} : prFail (failure : m α) = 1 := by
-  simp [prFail_def]
-
-/-- `guard p` fails exactly when `p` does not hold. -/
-@[simp]
-theorem prFail_guard {m : Type → Type v} [AlternativeMonad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] [LawfulFailureEvalDistSemantics m]
-    (p : Prop) [Decidable p] : prFail (guard p : m Unit) = if p then 0 else 1 := by
-  by_cases hp : p <;> simp [guard, hp]
-
+deprecated_module
+  "Import `PolyFun.Control.Monad.Measure.Failure` and this module's other imports instead."
+  (since := "2026-11-10")

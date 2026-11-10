@@ -10,7 +10,7 @@ public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import VCVio.ProgramLogic.Unary.HoareTriple
 public import ToMathlib.MeasureTheory.Measure.Coupling.Maximal
 import ToMathlib.Data.ENNReal.Gauss
-import ToMathlib.MeasureTheory.Function.AEMeasurable
+import ToCslib.MeasureTheory.Function.AEMeasurable
 import ToMathlib.MeasureTheory.Integral.Countable
 
 /-!

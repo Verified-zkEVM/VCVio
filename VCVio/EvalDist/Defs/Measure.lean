@@ -9,10 +9,14 @@ public import VCVio.Prelude.Core
 public import Mathlib.Probability.Distributions.Uniform
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Measure.Core
-public import VCVio.EvalDist.Defs.Measure.Deterministic
-public import VCVio.EvalDist.Defs.Measure.ExceptT
-public import VCVio.EvalDist.Defs.Measure.OptionT
-public import ToMathlib.MeasureTheory.Measure.Option
+public import PolyFun.Control.Monad.Measure.Deterministic
+public import VCVio.EvalDist.ProbabilityNotation
+public import ToMathlib.Control.Except
+public import ToMathlib.Control.Option
+public import PolyFun.Control.Monad.Measure.ExceptT
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import PolyFun.Control.Monad.Measure.OptionT
+public import ToCslib.MeasureTheory.Measure.Option
 
 /-!
 # Measure-valued evaluation

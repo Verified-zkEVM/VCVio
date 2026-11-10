@@ -8,7 +8,7 @@ module
 
 public import VCVio.EvalDist.Defs.Measure.Core
 public import ToMathlib.MeasureTheory.Measure.UniformTable
-public import ToMathlib.MeasureTheory.DiscreteInstances
+public import ToCslib.MeasureTheory.MeasurableSpace.Instances
 public import Mathlib.Data.LawfulXor.Equiv
 
 /-!
