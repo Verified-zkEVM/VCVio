@@ -156,7 +156,7 @@ an initial table. All the models in this note are instances.
 | Instance | `V` | `obs` | Meaning |
 |---|---|---|---|
 | real | `G` | `id` | the group |
-| tracking | `Repr F × G`, with `Repr F := Handle → F` | `Prod.snd` | each element stored with its coefficients over the elements that were given, not computed |
+| tracking | `Coeffs F × G`, with `Coeffs F := Handle → F` | `Prod.snd` | each element stored with its coefficients over the elements that were given, not computed |
 | symbolic | `MvPolynomial σ F` | `id` | each element is a polynomial in the unknown logarithms; equality is formal |
 | hidden-real | `MvPolynomial σ F` | `MvPolynomial.eval x` | polynomials, compared by their value at the secret point `x` |
 
@@ -164,7 +164,7 @@ an initial table. All the models in this note are instances.
 
 ```mermaid
 flowchart LR
-  T["tracking<br/>Repr F × G, snd"] -- "L1, exact" --> R["real<br/>G, id"]
+  T["tracking<br/>Coeffs F × G, snd"] -- "L1, exact" --> R["real<br/>G, id"]
   H["hidden-real<br/>F[σ], eval x"] -- "L1, exact" --> R
   H -. "L2, up to a collision" .- S["symbolic<br/>F[σ], id"]
 ```
@@ -185,9 +185,10 @@ table. The proof target in `Projection.lean` uses `OracleComp.map_run_simulateQ_
 instances:
 
 - `φ := LinearMap.snd`: the tracking run and the real run have the same output distribution
-  (`runTracking_map_snd`).
+  (`runGen_tracking_map_snd`, and `runGen_tracking_map_snd.pairing` for pairings).
 - `φ := MvPolynomial.aeval x`: the hidden-real run on polynomials `P` is the real run on their
-  values `P.map (eval x)` (`runEval_map_eval`).
+  values `P.map (eval x)` (`runGen_map` at the morphisms `evalHom.discrete` and
+  `evalHom.pairing`, which also scale the values by chosen generators).
 
 A companion fact, `impl_congr`: the handler depends on `obs` only through the equalities it
 induces. In particular, composing `obs` with an injective map does not change the handler. It is
@@ -200,9 +201,11 @@ computation up to the first collision. Hence for every event `E` on the output,
 
 `| Pr[run obs ∈ E] − Pr[run id ∈ E] | ≤ Pr[a collision occurs in run id]`.
 
-The intended proof instruments `impl obs` with a flag set at the first collision and applies
-`measureETVDist_simulateQ_run_le_prEvent_bad`
-(`VCVio/ProgramLogic/Relational/SimulateQ/UntilBad.lean`). It is not proved yet.
+The proof instruments `impl obs` with a flag set at the first collision and applies the
+until-bad lemmas of `VCVio/ProgramLogic/Relational/SimulateQ/UntilBad.lean`. L2 is
+`measureETVDist_run_le_collisionProb` in `Collision.lean`, for any game handler; its event form
+is `prEvent_run_le_add_collisionProb`, and `measureETVDist_runGen_le_collisionProbGen` is the
+case of a generic run.
 
 L1 gives every exact statement in this note and L2 every bound. A generic lower bound is L2 at
 `obs := eval x` with Schwartz–Zippel bounding the collision probability. An extraction argument
@@ -211,15 +214,15 @@ is L1 at `φ := snd`, after which the reduction reads coefficients off the table
 ### 4.4 Tracking and the invariant
 
 ```lean
-abbrev Repr (F : Type) := Handle → F
+abbrev Coeffs (F : Type) := Handle → F
 
-def trackInputs (xs : List G) : List (Repr F × G) :=
+def trackInputs (xs : List G) : List (Coeffs F × G) :=
   xs.mapIdx fun i x => (Pi.single i 1, x)
 
-def Repr.eval (r : Repr F) (tbl : List (Repr F × G)) : G :=
+def Coeffs.eval (r : Coeffs F) (tbl : List (Coeffs F × G)) : G :=
   ((List.range tbl.length).map fun h => r h • (lookup tbl h).2).sum
 
-structure Explains (given : List Handle) (tbl : List (Repr F × G)) : Prop where
+structure Explains (given : List Handle) (tbl : List (Coeffs F × G)) : Prop where
   given_nodup : given.Nodup
   given_lt : ∀ h ∈ given, h < tbl.length
   repr_given : ∀ h ∈ given, (lookup tbl h).1 = Pi.single h 1
@@ -248,7 +251,7 @@ once. Repeated group values still have distinct handles and distinct basis posit
 allocation by `pushGiven` preserves `given_nodup` while extending the table and the list; group
 operations append only to the table.
 
-`Repr F` is a function type so that it is a computable module (`Pi`). `Handle →₀ F` gives
+`Coeffs F` is a function type so that it is a computable module (`Pi`). `Handle →₀ F` gives
 finite support for free and makes every operation noncomputable. This is decision D4.
 
 **Four presentations.**
@@ -426,9 +429,12 @@ and `Signatures/Model/DirectAGM.lean`.
   - every `(x, tbl') ∈ support (runTracking A tbl)` satisfies `Explains given' tbl'`, where
     `given'` is `given` extended by the receipts of the run.
 
-  The proof uses `QueryImpl.PreservesInv`. Milestone 1 covers source sorts, meaning sorts that are
-  not the target of a structure map; that is every sort of `discreteSig`. The target sort of a
-  pairing waits for `ReprT` (D10).
+  The proof uses `QueryImpl.PreservesInv`. For a generic run the run hands out nothing, so
+  `given' = given`: the first item is `runGen_tracking_map_snd`, and the second is
+  `explains_of_mem_support_runGen`, which also gives `Tbl.Extends tbl tbl'`. Milestone 1 covers
+  source sorts, meaning sorts that are not the target of a structure map; that is every sort of
+  `discreteSig`. The invariant at the target sort of a pairing, over `CoeffsT`, is not stated
+  yet (D10).
 - **T1a (handles → explanations).** For any `enc`:
 
   ```lean
@@ -508,7 +514,7 @@ and `Signatures/Model/DirectAGM.lean`.
 T1a and T1b are stated at `discreteSig S`, which has sorts but no structure maps. That matches
 agm-lean, which offers no pairing query and has no target-group representations. A version at
 `pairingSig` for source-sort outputs follows from the same proofs once the game reads only
-source-sort handles. Target outputs need `ReprT` (milestone 6).
+source-sort handles. Target outputs need the invariant over `CoeffsT` (milestone 6).
 
 **T3 (master bound).** Let the initial table be polynomials `P : List (MvPolynomial σ F)` of
 total degree at most `d`, with `σ` finite and `x` uniform in `σ → F`. For every generic
@@ -744,12 +750,12 @@ generators must satisfy `ψ g₂ = g₁`.
 **Free.** Representations without the elements they represent. For a pairing group:
 
 ```lean
-abbrev Repr (F : Type) := Handle → F
-abbrev ReprT (F : Type) := (Handle → F) × (Handle → Handle → F)
+abbrev Coeffs (F : Type) := Handle → F
+abbrev CoeffsT (F : Type) := (Handle → F) × (Handle → Handle → F)
 
 -- (0, fun i j => r₁ i * r₂ j)
-def outer (F : Type) [CommSemiring F] : Repr F →ₗ[F] Repr F →ₗ[F] ReprT F
-def free (F : Type) [CommSemiring F] : Model F pairingSig (PFam (Repr F) (Repr F) (ReprT F))
+def outer (F : Type) [CommSemiring F] : Coeffs F →ₗ[F] Coeffs F →ₗ[F] CoeffsT F
+def free (F : Type) [CommSemiring F] : Model F pairingSig (PFam (Coeffs F) (Coeffs F) (CoeffsT F))
 def evHom (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (xs : List G₁) (ys : List G₂) (zs : List Gₜ) :
     (free F).Hom (real e)
 ```
@@ -759,7 +765,7 @@ coefficient for each given target element and a coefficient for each pair of a g
 element and a given `G₂` element. The pairing of two representations is their outer product.
 `evHom` evaluates a representation on the given elements, using `e` for the pairs; that it is a
 morphism is the identity `Σᵢⱼ (r₁ i * r₂ j) • e xᵢ yⱼ = e (Σᵢ r₁ i • xᵢ) (Σⱼ r₂ j • yⱼ)`
-(`evReprT_outer`, a milestone-6 target). This is the representation the literature asks of an
+(`evReprT_outer`). This is the representation the literature asks of an
 algebraic algorithm in a
 bilinear group: Rotem's statement of the model of Bauer, Fuchsbauer and Loss explains a target
 output by coefficients over the pairings of pairs of inputs.
@@ -767,7 +773,7 @@ output by coefficients over the pairings of pairs of inputs.
 **Tracking.** The product of the free and real models, with `tracking.forget` the second
 projection `Model.Hom.snd`. L1 gives equality of the tracking and real outputs. T2 also needs
 the `Explains` invariant; milestone 1 proves it for source sorts, and milestone 6 covers target
-sorts with `ReprT`.
+sorts with `CoeffsT`.
 
 Two remarks on representations.
 
@@ -942,7 +948,7 @@ gets which.
 
 In KZG, Groth16, PLONK and BLS the adversary outputs source-group elements only and the verifier
 computes the pairings. Their proofs use representations at the source sorts and never a target
-representation. So the fourth row is enough for them, and it is the first to build. `ReprT` is
+representation. So the fourth row is enough for them, and it is the first to build. `CoeffsT` is
 needed when an adversary outputs target elements.
 
 With real encodings an algebraic adversary can compute a pairing itself and hold the result as
@@ -1072,8 +1078,9 @@ such as `impl`, `run` and `lookup`. The expose-boundary ceiling excludes new fil
    `runGen_fst_eq_of_kernel_eq`. Define `groupSig`, `discreteSig`, `pairingSig`, `pairingIsoSig`,
    and `symmPairingSig`; add executable runs over `ZMod 7`.
 2. **Instances and tracking.** `Instances.lean`, `Tracking.lean`, and tests: `real`, `symbolic`,
-   `free` for `groupSig`, `discreteSig`, and the source sorts of `pairingSig`; `evHom`,
-   `evalHom`, `tracking := free.prod real`, `pushGiven`, `Explains`, and T2. Depends on slice 1.
+   `free` for `groupSig`, `discreteSig`, and `pairingSig` with target coefficients `CoeffsT`;
+   `evHom`, `evalHom`, `tracking := free.prod real`, `pushGiven`, `Explains`, and T2. Depends on
+   slice 1.
 3. **Certified interaction.** `Interaction.lean` and `VCVioTest/GroupModel/Interaction/`: move
    agm-lean's module and its three test files, preserving the zkSecurity / Kobi Gurkan header
    and adopting the module system and `GroupModel.Interaction` namespace. The authors have
@@ -1105,9 +1112,9 @@ that compose with the named VCVio reductions.
 
 **Later milestones.** Milestone 3 covers the discrete-log relation problem and its reduction;
 milestone 4 ports linear-functional signatures and BLS; milestone 5 proves T5 with handle
-virtualization and cost certificates. Milestone 6 covers pairing bounds, KZG, `ReprT`, and the
-free models for Types 1 and 2. Milestone 7 adds random labels and decoding. The real encoding
-handler needed by T1 belongs to milestone 1.
+virtualization and cost certificates. Milestone 6 covers pairing bounds, KZG, the invariant at
+the target sort over `CoeffsT`, and the free models for Types 1 and 2. Milestone 7 adds random
+labels and decoding. The real encoding handler needed by T1 belongs to milestone 1.
 
 ### 8.1 One group (milestone 2)
 
@@ -1275,7 +1282,7 @@ against the paper before a theorem cites it).
 | Groth, ePrint 2016/260 | knowledge soundness in the generic bilinear group model (Section 8.3) | not planned yet | abstract |
 | Chiesa, Hu, Maller, Mishra, Vesely, Ward, *Marlin*, ePrint 2019/1047, Appendices A.4 and B.3 | pairing as a query; KZG extraction from the adversary's representations | target | read |
 | Bauer, Fuchsbauer, Loss, ePrint 2020/859 | `(q₁, q₂)`-DLog; the uber family from `q`-DLog for algebraic adversaries | target | abstract; restated in Rotem, read |
-| Rotem, ePrint 2022/584 | target-group representations (`ReprT`); the degree needed in `q`-DLog | library target | read |
+| Rotem, ePrint 2022/584 | target-group representations (`CoeffsT`); the degree needed in `q`-DLog | library target | read |
 | Rotem, Segev, ePrint 2020/1144 | algebraic distinguishers for decisional problems | not planned | abstract |
 | Bauer, Farshim, Harasser, Kohlweiss, *The uber-knowledge assumption* (IACR CiC 1(3)) | knowledge assumptions that instantiate algebraic extraction | not planned | abstract |
 | Jaeger, Tessaro, ePrint 2020/1213, Lemma 3 | discrete-log relation ≤ DLog + `1/\|F\|` | proved in ironwood on other foundations | recalled; ironwood's statement was read |
@@ -1315,7 +1322,7 @@ D1–D15 are settled.
 | D7 | no `∀`-solver premises | None enter the library. Statements are reduction inequalities with named reductions, and bounds on `ofGeneric A`. |
 | D8 | pairings | An instance of a signature; the real model takes a Mathlib map `G₁ →ₗ[F] G₂ →ₗ[F] Gₜ`. The signature repository's `BilinearPairing` class gets a one-line adapter in that repository. |
 | D9 | agm-lean | Once its module is in VCVio, a re-export shim pinned to VCVio, then archived. The owners decide. |
-| D10 | free models | One per signature. Milestone 1 builds `groupSig`, `discreteSig S` and `pairingSig` (source sorts); `ReprT` and Types 1 and 2 come at milestone 6. |
+| D10 | free models | One per signature. Milestone 1 builds `groupSig`, `discreteSig S` and `pairingSig`, with target coefficients `CoeffsT`; the invariant at the target sort and Types 1 and 2 come at milestone 6. |
 | D11 | The one definition of an algebraic adversary | It is a handle computation with the encoding oracle: `OracleComp (spec F σ + encSpec E + unifSpec + Γ) α`. Its representations come from the tracking run; the adversary does not supply them. Private coins are supplied by `unifSpec`; the certified presentation obtains them through `withCoins`. A generic adversary is the same computation without `encSpec`, so generic ⊆ algebraic is `liftComp`. agm-lean's certified explained adversary and ironwood's typed points are presentations of this class, with translations that preserve the game's output exactly (Section 5). Reasons for this choice: the inclusion of the generic class is syntactic; group work is countable; nobody writing an adversary has to supply a proof obligation; a reduction written as a handler serves both classes (T5). |
 | D12 | Games | A game may be written on values in agm-lean's form (`plainSpec G Query Reply`, a handler on actual elements) and lifted to handles once, by `liftGame`. A game may also be written directly on handles with `lookup` and `push`. T1 is stated for lifted games in a lawful monad `N`, with an explicit shared `random : QueryImpl unifSpec N` and certified runs using `withCoins random impl`. For `N := StateT GameState ProbComp`, use lifted uniform sampling; the run equations preserve the output and final game state. T1b and its round trip require `[Fintype S]` and `[DecidableEq S]`; the core, T1a and the interaction interface remain general. |
 | D13 | Basis bookkeeping | The tracking state keeps, for each sort, the list of given handles in order of arrival, one entry per receipt. agm-lean's coefficient list is then `given.map repr`, and no reindexing lemma is needed. `Explains` includes `given.Nodup` per sort; T1a uses it to avoid counting a handle twice, while repeated group values receive distinct handles. |
@@ -1329,15 +1336,18 @@ The library slices are proof obligations, not claims of completed formalization.
 elaboration is part of this documentation check.
 
 Slice 1 will prove L1 (`run_map`), `impl_congr`, and T6 (`runGen_fst_eq_of_kernel_eq`) in
-`Projection.lean`, using the definitions in `Signature.lean` and `Oracle.lean`. Slice 2 will
-prove the real, symbolic and source-sort free-model evaluation maps in `Instances.lean`, and
-the tracking projection and `Explains` preservation in `Tracking.lean`. In particular,
-`explains_of_mem_support_runTracking` remains a target. Slices 3–5 will supply the certified
-interaction interface and the T1a/T1b/T1c translations, including their exact run equalities.
+`Projection.lean`, using the definitions in `Signature.lean` and `Oracle.lean`. Slice 2 proves
+the real, symbolic and free-model evaluation maps in `Instances.lean`, including
+`evReprT_outer`, and the tracking projection and `Explains` preservation in `Tracking.lean`.
+In particular, T2 for generic runs is `explains_of_mem_support_runGen`. Slices 3–5 will supply
+the certified interaction interface and the T1a/T1b/T1c translations, including their exact run
+equalities.
 
-Everything else is a paper argument or theorem target: L2, T3/T4 (including
+L2 is proved in `Collision.lean` as `measureETVDist_run_le_collisionProb`.
+
+Everything else is a paper argument or theorem target: T3/T4 (including
 `dlogExperiment_ofGeneric_le`), T3ₛ, T5 and its cost certificate, the relation-problem bounds,
-T7/T8, S1–S3, P1–P3, restriction along a map of signatures, the target representation `ReprT`
-and `evReprT_outer`, the free and tracking models for Types 1 and 2, the accessible spans,
+T7/T8, S1–S3, P1–P3, restriction along a map of signatures, the invariant at the target sort
+over `CoeffsT`, the free and tracking models for Types 1 and 2, the accessible spans,
 the polynomial-table instance of T6, and every numeric constant in Section 8. The trilemma in
 Section 3 and the argument about ArkLib's KZG hypotheses in Section 8.3 are paper arguments.
