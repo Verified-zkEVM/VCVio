@@ -13,10 +13,12 @@ public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 
 A generic adversary receives `Fintype.card ι` challenge elements as its initial table
 (`DiscreteLogRelation.Adversary.ofGeneric`). With at most `q` group operations, its
-relation-finding probability is at most `((q + Fintype.card ι + 1).choose 2 + 1) / |F|`
-(`DiscreteLogRelation.experiment_ofGeneric_le`). The master bound T3 compares the hidden-point
-run directly with the exact symbolic run; a nonzero output coefficient vector then defines a
-nonzero linear polynomial, bounded by Schwartz–Zippel. No reduction cost certificate is needed.
+relation-finding probability in the plain experiment is at most
+`((q + Fintype.card ι + 1).choose 2 + 1) / |F|`
+(`DiscreteLogRelation.plainExperiment_ofGeneric_le`). The master bound T3 compares the
+hidden-point run directly with the exact symbolic run; a nonzero output coefficient vector then
+defines a nonzero linear polynomial, bounded by Schwartz–Zippel. No reduction cost certificate is
+needed.
 
 The bound depends on the basis cardinality: free equality tests among the given elements reveal
 relations on collisions. The generator is not an additional initial table entry.
@@ -44,7 +46,7 @@ The table contains exactly `Fintype.card ι` entries, without an additional gene
 /-- A generic relation adversary given a finite basis and at most `q` group operations
 succeeds with probability at most `((q + Fintype.card ι + 1).choose 2 + 1) / |F|`. Equality queries
 are free, and handles outside the table retain the ordinary zero-default semantics. -/
-theorem experiment_ofGeneric_le [Fintype ι]
+theorem plainExperiment_ofGeneric_le [Fintype ι]
     [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (g : G) (hg : g ≠ 0) (A : OracleComp (genSpec F groupSig) (ι → F))

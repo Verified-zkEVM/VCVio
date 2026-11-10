@@ -177,7 +177,7 @@ theorem bindingAdvantage_ofGeneric_le [Fintype ι]
   refine (bindingAdvantage_le_relation g (ofGeneric A)).trans ?_
   rw [bindingReduction_ofGeneric]
   simpa [Fintype.card_option, Nat.add_assoc] using
-    DiscreteLogRelation.experiment_ofGeneric_le g hg (genericBindingReduction A) q
+    DiscreteLogRelation.plainExperiment_ofGeneric_le g hg (genericBindingReduction A) q
       ((isQueryBoundP_map_iff A _ q).mpr hq)
 
 end VectorPedersen

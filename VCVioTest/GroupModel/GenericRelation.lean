@@ -33,7 +33,8 @@ theorem relation_generic_zmod_101 :
       (DiscreteLogRelation.Adversary.ofGeneric A))}[b = true] ≤ (4 / 101 : ℝ≥0∞) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
   dsimp only
-  apply (DiscreteLogRelation.experiment_ofGeneric_le (1 : ZMod 101) one_ne_zero _ 0 ?_).trans
+  apply (DiscreteLogRelation.plainExperiment_ofGeneric_le (1 : ZMod 101) one_ne_zero _ 0
+    ?_).trans
   · norm_num [ZMod.card, Nat.choose]
   · exact ⟨by decide, fun _ => trivial⟩
 
