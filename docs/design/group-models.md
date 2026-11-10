@@ -595,7 +595,11 @@ The second item is the transfer studied by Jaeger and Mohan. Its formal content 
 virtualization*: handles are predictable, so a reduction that shares its table with the
 adversary would let the adversary address the reduction's intermediate values. The reduction
 keeps a translation table from the adversary's handles to its own. This is a named construction,
-`GroupModel.virtualize`, to be built once.
+`GroupModel.virtualize` in `Virtualize.lean`, for generic adversaries (`genSpec`, with no game
+oracle); the reduction's table holds one designated zero entry per sort, to which the
+adversary's out-of-range handles translate. `runGen_virtualize` reads a virtualized run back to
+the direct run, and `isQueryBoundP_virtualize` transports the adversary's group-operation
+budget.
 
 A scheme that hashes group elements (Schnorr) cannot be written against `genSpec F` alone,
 because a handle is not data that identifies an element. It needs the encoding oracle: with
@@ -1272,7 +1276,7 @@ against the paper before a theorem cites it).
 
 | Paper | Object or theorem here | Status | Basis |
 |---|---|---|---|
-| Shoup, *Lower bounds for discrete logarithms and related problems* (1997) | T3, T4; the labelled variant of the encoding oracle | target | recalled |
+| Shoup, *Lower bounds for discrete logarithms and related problems* (1997) | T3, T4; the labelled variant of the encoding oracle | T3 proved; T4 target | recalled |
 | Maurer, *Abstract models of computation in cryptography* (2005) | `spec F`, `impl`, equality as a relation query | library target | recalled |
 | Fuchsbauer, Kiltz, Loss, ePrint 2017/620 | the algebraic class; T1, T2; Groth16 in the algebraic model | L1 in slice 1 | abstract |
 | Boneh, Boyen, *Short signatures without random oracles* (2004) | `t`-SDH and its generic bound (T8) | target | recalled; the assumption as restated in Marlin was read |
@@ -1344,9 +1348,16 @@ In particular, T2 for generic runs is `explains_of_mem_support_runGen`. Slices 3
 the certified interaction interface and the T1a/T1b/T1c translations, including their exact run
 equalities.
 
-L2 is proved in `Collision.lean` as `measureETVDist_run_le_collisionProb`.
+L2 is proved in `Collision.lean` as `measureETVDist_run_le_collisionProb`. Handle
+virtualization is proved in `Virtualize.lean`: `runGen_virtualize` reads a virtualized run back
+to the direct run, and `isQueryBoundP_virtualize` transports group-operation budgets.
 
-Everything else is a paper argument or theorem target: T3/T4 (including
+T3 is proved in `MasterBound.lean` as `measureETVDist_runGen_symbolic_le`, at `discreteSig S`
+with a root-probability hypothesis `ε` and a total group-operation budget `q`. Its corollaries
+are the event form `prEvent_runGen_symbolic_le_add` and the Schwartz–Zippel specialization for
+uniform points, `measureETVDist_runGen_symbolic_uniform_le`.
+
+Everything else is a paper argument or theorem target: T4 (including
 `dlogExperiment_ofGeneric_le`), T3ₛ, T5 and its cost certificate, the relation-problem bounds,
 T7/T8, S1–S3, P1–P3, restriction along a map of signatures, the invariant at the target sort
 over `CoeffsT`, the free and tracking models for Types 1 and 2, the accessible spans,
