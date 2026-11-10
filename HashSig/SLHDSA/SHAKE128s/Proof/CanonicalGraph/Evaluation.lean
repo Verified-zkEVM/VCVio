@@ -87,6 +87,14 @@ theorem value_merkleChild (secretSeed publicSeed : Digest) (tree : Tree)
         (2 * index.val + side.val) :=
   value_merkleNode _ _ _ _ _ _
 
+private theorem chain_one (publicSeed : Digest) (address : Address) (start : Nat)
+    (input : Digest) :
+    Wots.chain (m := Id) publicSeed address start 1 input =
+      Hashing.tweakable (m := Id) publicSeed
+        { address with hashOrIndex := BitVec.ofNat 32 start } (bytesBE n input) := by
+  rw [Wots.chain]
+  rfl
+
 /-- Each structural value is the hash of the node's canonical input under the evaluation. -/
 theorem structuralValue_equation (secretSeed publicSeed : Digest) (parent : StructuralNode) :
     structuralValue secretSeed publicSeed parent =
@@ -101,15 +109,16 @@ theorem structuralValue_equation (secretSeed publicSeed : Digest) (parent : Stru
       cases step with
       | zero => rfl
       | succ step =>
-          have hchain := Correctness.Wots.chain_add publicSeed
+          simp only [structuralValue]
+          rw [Correctness.Wots.chain_add publicSeed
             { key.address with chainOrHeight := BitVec.ofNat 32 chain.val }
             0 (step + 1) 1
-            (Hashing.derive (m := Id) publicSeed secretSeed (Wots.secretAddress key.address chain))
-          simpa only [structuralValue, canonicalInput, StructuralNode.address,
-            StructuralNode.children, Nat.succ_ne_zero, ↓reduceDIte,
-            childBytes, List.map_cons, List.map_nil, List.flatten_cons, List.flatten_nil,
-            List.append_nil, value, Nat.add_sub_cancel, Nat.zero_add,
-            Wots.chain, bind, pure, Hashing.tweakable] using hchain
+            (Hashing.derive (m := Id) publicSeed secretSeed (Wots.secretAddress key.address chain))]
+          rw [chain_one, Nat.zero_add, Hashing.tweakable]
+          simp only [canonicalInput, StructuralNode.address, StructuralNode.children,
+            Nat.succ_ne_zero, ↓reduceDIte, childBytes, List.map_cons, List.map_nil,
+            List.flatten_cons, List.flatten_nil, List.append_nil, value,
+            structuralValue, Nat.add_sub_cancel]
   | wotsPk key =>
       simp only [structuralValue, Wots.publicKey, Correctness.sequenceFin_id, bind,
         canonicalInput, StructuralNode.children, childBytes_ofFn, value,

@@ -329,7 +329,7 @@ independent of a secret:
   `measureETVDist ≤ 1`;
 - extractors, distinguishers, collision finders, and preimage finders.
 
-Name each one with a definition (`cmaReduction`, `hvzkSimulatorReal`,
+Name each one with a definition (`cmaReduction`, `hvzkSimulator`,
 `unlinkToMultiplePRFReduction`) and state the bound for that definition.
 
 A named reduction also makes the next steps possible. Its query count or cost can be proved as
@@ -339,12 +339,9 @@ such as `SecurityGame.secureAgainst_of_reduction`, take the reduction as a funct
 `reduce : Adv → Adv'` with an efficiency hypothesis `isPPT A → isPPT' (reduce A)`. That hypothesis
 cannot be stated for an adversary that exists only inside an existential.
 
-When the reduction is not implemented yet, do not fall back to `∃`. Either:
-
-- define it as a `sorry` placeholder and state the bound for that definition, as
-  `MLDSA.eufCmaMLWEReduction` does; or
-- leave the theorem as a placeholder whose docstring warns that the statement has no security
-  content until a reduction is named.
+When the reduction is not implemented yet, do not fall back to `∃`, and do not land a `sorry`
+placeholder either: `lake exe axiomsweep --check` rejects every `sorryAx` dependency. Keep the
+statement on its branch until the reduction is defined and the bound proved.
 
 `∃` remains appropriate for mathematical objects that the argument does not need to be efficient,
 such as a witness in a relation, an index in a support, or a key pair in the image of key

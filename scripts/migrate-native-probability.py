@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Rewrite Lean sources from VCVio's discrete probability API to its measure-based API.
 
 Usage:
-  python3 scripts/migrate-native-probability.py [--dry-run] PATH...
+  uv run --no-project --python 3.12 python scripts/migrate-native-probability.py [--dry-run] PATH...
 
 Each PATH is a Lean file or a directory searched recursively for `*.lean`. Files are rewritten
 in place unless `--dry-run` is given, in which case a unified diff is printed instead.
@@ -167,10 +167,8 @@ RENAMES: dict[str, str] = {
         "cmaReal_cmaSim_measureETVDist_sign_le_cmaSignEpsCore_of_valid",
     "cmaReal_cmaSim_tv_costly_le_cmaSignEpsCore_of_valid":
         "cmaReal_cmaSim_measureETVDist_costly_le_cmaSignEpsCore_of_valid",
-    "evalSPMF_uniform_add_right_swap": "uniform_add_right_swap_evalDistEq",
     "evalSPMF_honest_pregate": "honest_pregate_evalDistEq",
     "evalSPMF_honestExecution_eq_gated": "honestExecution_evalDistEq_gated",
-    "hvzkBadMass_eq_probOutput_indicator": "hvzkBadMass_eq_prEvent_indicator",
     # Equality in distribution.
     "GameEquiv.prEvent_eq": "EvalDistEq.prEvent_eq",
     "GameEquiv.rfl": "EvalDistEq.rfl",
@@ -317,8 +315,8 @@ EXPLICIT_COMPUTATION_RENAMES: dict[str, str] = {
 REPORT_NAMES: dict[str, str] = {
     "evalDist_apply_true_le_add_ofReal_boolDistAdvantage":
         "`MeasureTheory.Measure.apply_true_le_add_boolDist 𝒟[pc₀] 𝒟[pc₁]`, in `ℝ≥0∞`",
-    "hvzkBoundReal": "the bound is `hvzkBound` in `ℝ≥0∞`; a real bound is `(hvzkBound p prims).toReal` "
-        "(`ENNReal.ofReal_toReal` returns, given `hvzkBound p prims ≠ ⊤`)",
+    "hvzkBoundReal": "`identificationSchemeFull_perfectHVZK` is `PerfectHVZK`, so the bound is `0` "
+        "(`IdenSchemeWithAbort.perfectHVZK_iff_hvzk_zero`)",
     "prEvent_congr_of_evalDist_eq":
         "use `(EvalDistEq.of_evalDist_eq h).prEvent_eq p`",
     "evalDist_bind_congr_of_evalDist_eq":

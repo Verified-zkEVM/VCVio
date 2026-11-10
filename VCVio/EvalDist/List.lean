@@ -11,8 +11,9 @@ public import VCVio.EvalDist.Monad.Seq
 /-!
 # Support of computations with lists and vectors
 
-The support of `cons <$> mx <*> my` for lists and vectors, and index extraction from the support
-of `Vector.mapM`. The lemmas are generic over any monad `m` with
+The support of `cons <$> mx <*> my` for lists and vectors, the length of lists sampled by
+`List.mapM`, and index extraction from the support of `Vector.mapM`. The lemmas are generic
+over any monad `m` with
 `[MonadAttach m] [ExactMonadAttach m]`.
 -/
 
@@ -51,6 +52,20 @@ lemma support_seq_map_vector_cons {n : ℕ} (mx : m α) (my : m (List.Vector α 
     fun ⟨hh, ht⟩ => ⟨xs.head, hh, xs.tail, ht, xs.cons_head_tail⟩⟩
 
 end support
+
+/-- Every list produced by monadic sampling has the length of its input list. -/
+theorem List.length_of_mem_support_mapM [LawfulMonad m]
+    [MonadAttach m] [ExactMonadAttach m] (f : α → m β)
+    (l : List α) (xs : List β) (hx : xs ∈ support (l.mapM f)) :
+    xs.length = l.length := by
+  induction l generalizing xs with
+  | nil => simpa using hx
+  | cons x l ih =>
+      simp only [List.mapM_cons, mem_support_bind_iff] at hx
+      obtain ⟨y, -, ys, hy, hx⟩ := hx
+      simp only [support_pure, Set.mem_singleton_iff] at hx
+      subst xs
+      exact congrArg Nat.succ (ih ys hy)
 
 section VectorMapM
 
