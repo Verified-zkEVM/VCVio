@@ -1,10 +1,12 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Exercise validation failure propagation with lightweight command substitutes."""
 
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -21,8 +23,7 @@ class ValidationTests(unittest.TestCase):
             shutil.copy2(source / name, scripts / name)
         for name in ("check-imports", "test-polyfun-boundary", "check-polyfun-boundary",
                      "test-expose-boundary",
-                     "check-expose-boundary", "test-complexity-backend-isolation",
-                     "check-complexity-backend-isolation", "check-extern-isolation",
+                     "check-expose-boundary", "check-extern-isolation",
                      "check-interop-isolation", "test-axiomsweep",
                      "test-comment-fences", "test-initsweep", "test-docnames"):
             self.script(scripts / f"{name}.sh", 'exit 0\n')
@@ -43,6 +44,13 @@ if [ "$1" = test ]; then
 fi
 ''')
         self.script(binary / "git", 'exit 0\n')
+        self.script(binary / "uv", f'''
+if [[ "$1" != run || "$2" != --no-project || "$3" != --python || "$4" != 3.12 || "$5" != python ]]; then
+  exit 97
+fi
+shift 5
+exec {shlex.quote(sys.executable)} "$@"
+''')
         self.env = dict(os.environ, PATH=f"{binary}{os.pathsep}{os.environ['PATH']}",
                         VALIDATION_CALLS=str(self.root / "calls"))
 

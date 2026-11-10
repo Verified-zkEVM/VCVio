@@ -477,6 +477,20 @@ theorem prEvent_bind_bind_eq_lintegral_of_discrete
   simp only [id_map, Functor.map_map, id_eq] at key
   exact key
 
+/-- Rewrite the event of a two-step computation pointwise in its first draw: if every inner
+event has the same probability, so has the whole event. -/
+theorem prEvent_bind_congr_of_forall
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β γ : Type} (mx : m α) (f : α → m β) (g : α → m γ)
+    (p : α → β → Prop) (q : α → γ → Prop)
+    (h : ∀ x, Pr{let y ← f x}[p x y] = Pr{let z ← g x}[q x z]) :
+    Pr{let x ← mx; let y ← f x}[p x y] = Pr{let x ← mx; let z ← g x}[q x z] := by
+  have key := prEvent_bind_congr mx (fun x => do let y ← f x; return p x y)
+    (fun x => do let z ← g x; return q x z) id id (fun x => by
+      simpa only [prEvent_norm, bind_assoc, pure_bind, id] using h x)
+  simpa only [prEvent_norm, bind_assoc, pure_bind, id] using key
+
 /-- An output map composes the final event with that map. -/
 @[grind norm]
 theorem prEvent_map

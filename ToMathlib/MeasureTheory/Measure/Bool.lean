@@ -67,13 +67,27 @@ lemma apply_true_false_eq_one (μ : Measure Bool) [IsProbabilityMeasure μ] :
 
 /-- A Boolean selector partitions each event of the first marginal into its two branches. -/
 lemma fst_apply_eq_add {α : Type*} [MeasurableSpace α] (μ : Measure (α × Bool))
-    {s : Set α} (hs : MeasurableSet s) :
+    {s : Set α} :
     μ.fst s = μ (s ×ˢ {true}) + μ (s ×ˢ {false}) := by
-  rw [Measure.fst_apply hs, ← measure_union
-    (Set.disjoint_prod.mpr (Or.inr (by simp))) (hs.prod (measurableSet_singleton false))]
-  congr 1
-  ext ⟨a, b⟩
-  cases b <;> simp
+  have hbranch (b : Bool) :
+      (μ.restrict (Set.univ ×ˢ {b})).fst = μ.comap (fun a => (a, b)) := by
+    have he := measurableEmbedding_prod_mk_right (β := α) b
+    have hr : Set.range (fun a : α => (a, b)) = Set.univ ×ˢ {b} := by
+      ext ⟨a, c⟩
+      simp [eq_comm]
+    rw [← hr, ← he.map_comap]
+    simpa using (fst_map_prodMk (μ := μ.comap (fun a => (a, b)))
+      measurable_id measurable_const)
+  have hc : (Set.univ ×ˢ ({true} : Set Bool))ᶜ =
+      (Set.univ : Set α) ×ˢ {false} := by
+    ext ⟨a, b⟩
+    cases b <;> simp
+  conv_lhs => rw [← μ.restrict_add_restrict_compl
+    (MeasurableSet.univ.prod (measurableSet_singleton true))]
+  rw [hc, fst_add, hbranch true, hbranch false, Measure.add_apply,
+    (measurableEmbedding_prod_mk_right true).comap_apply,
+    (measurableEmbedding_prod_mk_right false).comap_apply]
+  congr 2 <;> ext ⟨a, b⟩ <;> simp
 
 /-- The Boolean bias of a finite measure is finite. -/
 lemma boolBias_ne_top (μ : Measure Bool) [IsFiniteMeasure μ] : μ.boolBias ≠ ⊤ :=

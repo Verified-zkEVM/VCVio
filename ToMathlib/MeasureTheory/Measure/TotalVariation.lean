@@ -8,7 +8,9 @@ module
 
 public import ToMathlib.Data.ENNReal.AbsDiff
 public import Mathlib.MeasureTheory.Measure.Map
+public import Mathlib.MeasureTheory.Measure.Sub
 public import Mathlib.MeasureTheory.Measure.Typeclasses.Finite
+public import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
 
 /-!
 # Total variation distance for subprobability measures
@@ -17,7 +19,8 @@ The extended distance is the supremum of the absolute difference of the two meas
 measurable events.  This formulation is native to Mathlib measures, applies to continuous spaces,
 and also detects differing total mass.  On probability measures it is the usual total variation
 distance; on subprobability measures it agrees with first completing the missing mass as an
-explicit failure outcome.
+explicit failure outcome.  Two probability measures differ by at most the mass missing from any
+common lower measure.
 
 Mathlib's `MeasureTheory.etvDist` is the total variation of `μ - ν`, twice this distance on
 probability measures; `ToMathlib.MeasureTheory.Measure.TotalVariation.Variation` relates the two.
@@ -95,6 +98,35 @@ theorem etvDist_le_one (μ ν : Measure α)
 theorem etvDist_ne_top (μ ν : Measure α)
     (hμ : μ Set.univ ≤ 1) (hν : ν Set.univ ≤ 1) : μ.etvDist ν ≠ ⊤ :=
   ne_top_of_le_ne_top one_ne_top (etvDist_le_one μ ν hμ hν)
+
+/-- Two probability measures differ in total variation by at most the missing mass of any
+common lower measure. -/
+theorem etvDist_le_one_sub_of_le {μ ν c : Measure α} [IsProbabilityMeasure μ]
+    [IsProbabilityMeasure ν] (hμ : c ≤ μ) (hν : c ≤ ν) :
+    μ.etvDist ν ≤ 1 - c Set.univ := by
+  have hcfin : IsFiniteMeasure c :=
+    ⟨(Measure.le_iff'.mp hμ Set.univ).trans_lt (measure_lt_top μ Set.univ)⟩
+  have hrest : ∀ {ρ : Measure α} [IsProbabilityMeasure ρ], c ≤ ρ → ∀ T, MeasurableSet T →
+      ρ T - c T ≤ 1 - c Set.univ := by
+    intro ρ _ hρ T hT
+    rw [← Measure.sub_apply hT hρ, ← measure_univ (μ := ρ),
+      ← Measure.sub_apply MeasurableSet.univ hρ]
+    exact measure_mono (Set.subset_univ T)
+  refine iSup_le fun T => ?_
+  have hcT : c T.1 ≠ ⊤ := measure_ne_top c T.1
+  have hμT : μ T.1 = c T.1 + (μ T.1 - c T.1) :=
+    (add_tsub_cancel_of_le (Measure.le_iff'.mp hμ T.1)).symm
+  have hνT : ν T.1 = c T.1 + (ν T.1 - c T.1) :=
+    (add_tsub_cancel_of_le (Measure.le_iff'.mp hν T.1)).symm
+  have ha := hrest hμ T.1 T.2
+  have hb := hrest hν T.1 T.2
+  rw [hμT, hνT, ENNReal.absDiff, ENNReal.add_sub_add_eq_sub_left hcT,
+    ENNReal.add_sub_add_eq_sub_left hcT]
+  rcases le_total (μ T.1 - c T.1) (ν T.1 - c T.1) with hab | hab
+  · rw [tsub_eq_zero_of_le hab, zero_add]
+    exact tsub_le_self.trans hb
+  · rw [tsub_eq_zero_of_le hab, add_zero]
+    exact tsub_le_self.trans ha
 
 /-- Deterministic measurable post-processing cannot increase total variation. -/
 theorem etvDist_map_le (μ ν : Measure α) (f : α → β) (hf : Measurable f) :

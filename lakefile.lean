@@ -22,47 +22,52 @@ computations, probability semantics, program logic, and lattice- and hash-based 
     -- Disable the unicode allowlist linter: VCVio docstrings legitimately use
     -- FIPS-204 math notation (combining tilde `c̃`) and cited author names with
     -- diacritics (e.g. `Cătălin Hriţcu`).
-    ⟨`weak.linter.unicodeLinter, false⟩
+    ⟨`weak.linter.unicodeLinter, false⟩,
+    -- Disable core's `constructorNameAsVariable` linter. It puts the type of every named binder,
+    -- hypotheses included, in weak head normal form at default transparency, so a hypothesis such
+    -- as `hmem : x ∈ support (simulateQ impl game)` makes it unfold the whole game. In the SLH-DSA
+    -- proofs that is most of the elaboration time of the slowest modules.
+    ⟨`weak.linter.constructorNameAsVariable, false⟩
   ]
+
+/-- Whether `uv`, which runs the repository's Python checks, is on `PATH`. -/
+def uvAvailable : IO Bool := do
+  try
+    let out ← IO.Process.output { cmd := "uv", args := #["--version"] }
+    return out.exitCode == 0
+  catch _ =>
+    return false
+
+/-- The message printed when `uv` is missing. -/
+def uvMissingMessage : String :=
+  "uv is required to run the repository's Python checks. Install it from " ++
+  "https://docs.astral.sh/uv/getting-started/installation/ and see the Python tooling " ++
+  "section of CONTRIBUTING.md."
 
 /-- Run Mathlib's source-style checks and Batteries' environment linters, with an exact
 exception baseline. The Python coordinator invokes the upstream executables through Lake;
 each library is imported in a separate process and no native FFI executable is linked. -/
 @[lint_driver]
 script lint (args) do
+  unless ← uvAvailable do
+    IO.eprintln s!"lake lint: {uvMissingMessage}"
+    return 1
   let root ← getRootPackage
-  let libraries := (root.defaultTargets.push `VCVioCslib).filterMap fun library =>
+  let libraries := root.defaultTargets.filterMap fun library =>
     (root.findLeanLib? library).map fun _ => library.toString
   let child ← IO.Process.spawn {
     cmd := "lake"
-    args := #["env", "python3", "scripts/lint.py", "--libraries",
+    args := #["env", "uv", "run", "--no-project", "--python", "3.12", "python",
+      "scripts/lint.py", "--libraries",
       String.intercalate "," libraries.toList] ++ args.toArray
   }
   child.wait
 
 /-
-Interop backends are intentionally disabled for the Lean 4.35 baseline. Their
-source remains under `Interop/`, isolated from the trusted libraries by
-`scripts/check-interop-isolation.sh`, but the aggregate module and CI do not
-build it. Re-enable a backend only once its upstream Lean library supports the
-repository's Lean version without a local compatibility layer.
-
-The pinned Hax revision still targets Lean 4.29.0-rc1 and is not part of the
-Lean 4.35 build. Subdirectory: `hax-lib/proof-libs/lean`.
+The Rust bridges under `Interop/` require hax and Aeneas, and every dependent of this package would
+resolve any `require` written here. They are built by the separate package in `Interop/lakefile.toml`
+instead, which requires this one by path.
 -/
--- require Hax from git
---   "https://github.com/cryspen/hax" @
---   "492a34e3" / "hax-lib/proof-libs/lean"
-
-/-
-Aeneas now natively pins Lean and Mathlib v4.31.0. This dormant pin follows its
-published `nightly-2026.07.11-15b9684`; keep it disabled until the VCVio bridge
-is tested separately and can be enabled without compatibility aliases.
-Subdirectory: `backends/lean`.
--/
--- require aeneas from git
---   "https://github.com/AeneasVerif/aeneas" @
---   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 
 /-
 List PolyFun and QuantumFoundations before the root Mathlib pin. Lake resolves
@@ -72,7 +77,7 @@ requirement authoritative over their inherited pins and makes
 -/
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun" @
-  "4181c82238142d9b73403fbf4c4b13e1a801e400"
+  "ea3b29785cba402588ea79a1b71bfedc2cfaff49"
 
 /-
 The Mathlib-only quantum foundation (matrix maps, instruments, registers,
@@ -80,16 +85,12 @@ observation, pure states and oracle unitaries), shared with CatCrypt-core.
 -/
 require QuantumFoundations from git
   "https://github.com/lean-crypto-foundations/QuantumFoundations" @
-  "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac"
+  "9bc93ed50a76d62b509dc1926638118e7b5cf5fe"
 
 require "leanprover-community" / "mathlib" @ git "v4.35.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
-
-/-- Optional cslib-backed non-uniform complexity adapters. Kept outside the
-default `VCVio` umbrella so core VCVio remains backend-neutral. -/
-lean_lib VCVioCslib
 
 /-- Native FFI surface: `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA,
 Falcon) and every module whose transitive imports reach them. Isolated here so
@@ -106,18 +107,11 @@ Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but no
 `VCVio`/`ToMathlib`/`Extern`/`Interop` may import it. -/
 @[default_target] lean_lib HashSig
 
-/-- Example constructions of cryptographic primitives. -/
+/-- Example constructions of cryptographic primitives, with the proof widgets they display
+(`Examples/Widgets/`). -/
 @[default_target] lean_lib Examples
-/-- Optional proof widget experiments and visualizations. -/
-@[default_target] lean_lib VCVioWidgets
 /-- Separate section of the project for things that should be ported. -/
 @[default_target] lean_lib ToMathlib
-
-/-- Dormant Interop bridges to Rust verification frontends (hax, aeneas).
-Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
-`Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
-excluded from the Lean 4.35 baseline build. -/
-lean_lib Interop
 
 /-
 The four `extern_lib` targets below compile C sources that live in git
@@ -398,61 +392,71 @@ Falcon executables, which compile the vendored C backends under `third_party/`; 
 the nightly FFI workflow runs and is never part of the per-PR CI. -/
 @[test_driver]
 script test (args) do
-  let step (cmdArgs : Array String) : ScriptM UInt32 := do
-    IO.println s!"# lake {" ".intercalate cmdArgs.toList}"
-    let child ← IO.Process.spawn { cmd := "lake", args := cmdArgs }
-    child.wait
-  let mut steps : Array (Array String) := #[
-    #["build", "VCVioTest", "LatticeCryptoTest", "HashSigTest"],
-    #["exe", "smoke_test"],
-    #["exe", "oracle_cost_tests"],
-    #["exe", "algorithm_tests"],
-    #["exe", "slhdsa_kat"],
-    #["exe", "slhdsa_c13_kat"],
-    #["exe", "slhdsa_data_codec_tests"],
-    #["exe", "slhdsa_primitive_tests"],
-    #["exe", "slhdsa_wots_tests"],
-    #["exe", "slhdsa_xmss_tests"],
-    #["exe", "slhdsa_fors_tests"],
-    #["exe", "slhdsa_fors_secret_order_tests"],
-    #["exe", "slhdsa_hypertree_tests"],
-    #["exe", "slhdsa_external_tests"],
-    #["exe", "slhdsa_target_ledger_tests"],
-    #["exe", "slhdsa_encoded_ledger_tests"],
-    #["exe", "slhdsa_trace_target_tests"],
-    #["exe", "slhdsa_component_trace_tests"],
-    #["exe", "slhdsa_canonical_game_tests"],
-    #["exe", "slhdsa_wots_witness_tests"],
-    #["exe", "slhdsa_fors_witness_tests"],
-    #["exe", "slhdsa_xmss_witness_tests"],
-    #["exe", "slhdsa_hypertree_witness_tests"],
-    #["exe", "slhdsa_scheme_witness_tests"],
-    #["exe", "slhdsa_hmsg_witness_tests"],
-    #["exe", "slhdsa_suf_residual_tests"],
-    #["exe", "slhdsa_scheme_game_tests"],
-    #["exe", "slhdsa_composition_tests"],
-    #["exe", "slhdsa_suf_bound_tests"],
-    #["exe", "slhdsa_limited_profile_tests"],
-    #["exe", "slhdsa_byte_model_tests"],
-    #["exe", "slhdsa_wire_tests"],
-    #["exe", "slhdsa_shake128s_compiler_tests"],
-    #["exe", "slhdsa_shake128s_game_tests"],
-    #["exe", "slhdsa_shake128s_wire_bridge_tests"],
-    #["build", "slhdsa_bound_table"]]
-  if args.contains "--ffi" then
-    steps := steps ++ #[#["exe", "mlkem_test"], #["exe", "mldsa_test"], #["exe", "falcon_test"]]
-  for cmdArgs in steps do
-    let rc ← step cmdArgs
-    if rc != 0 then
-      IO.eprintln s!"lake test: `lake {" ".intercalate cmdArgs.toList}` exited with code {rc}"
-      return rc
+  unless ← uvAvailable do
+    IO.eprintln s!"lake test: {uvMissingMessage}"
+    return 1
+  let ffi := args.contains "--ffi"
+  let mut exes : Array String := #[
+    "smoke_test",
+    "oracle_cost_tests",
+    "algorithm_tests",
+    "slhdsa_kat",
+    "slhdsa_c13_kat",
+    "slhdsa_data_codec_tests",
+    "slhdsa_primitive_tests",
+    "slhdsa_wots_tests",
+    "slhdsa_xmss_tests",
+    "slhdsa_fors_tests",
+    "slhdsa_fors_secret_order_tests",
+    "slhdsa_hypertree_tests",
+    "slhdsa_external_tests",
+    "slhdsa_target_ledger_tests",
+    "slhdsa_encoded_ledger_tests",
+    "slhdsa_trace_target_tests",
+    "slhdsa_component_trace_tests",
+    "slhdsa_canonical_game_tests",
+    "slhdsa_wots_witness_tests",
+    "slhdsa_fors_witness_tests",
+    "slhdsa_xmss_witness_tests",
+    "slhdsa_hypertree_witness_tests",
+    "slhdsa_scheme_witness_tests",
+    "slhdsa_hmsg_witness_tests",
+    "slhdsa_suf_residual_tests",
+    "slhdsa_scheme_game_tests",
+    "slhdsa_composition_tests",
+    "slhdsa_suf_bound_tests",
+    "slhdsa_limited_profile_tests",
+    "slhdsa_byte_model_tests",
+    "slhdsa_wire_tests",
+    "slhdsa_shake128s_compiler_tests",
+    "slhdsa_shake128s_game_tests",
+    "slhdsa_shake128s_wire_bridge_tests"]
+  if ffi then
+    exes := exes ++ #["mlkem_test", "mldsa_test", "falcon_test"]
+  -- One build for the test libraries and every executable, so Lake compiles and links them in
+  -- parallel and checks the build graph once instead of once per `lake exe`.
+  let buildArgs := #["build", "VCVioTest", "LatticeCryptoTest", "HashSigTest"] ++ exes ++
+    #["slhdsa_bound_table"]
+  IO.println s!"# lake {" ".intercalate buildArgs.toList}"
+  let rc ← (← IO.Process.spawn { cmd := "lake", args := buildArgs }).wait
+  if rc != 0 then
+    IO.eprintln s!"lake test: `lake {" ".intercalate buildArgs.toList}` exited with code {rc}"
+    return rc
   let root ← getRootPackage
+  for exe in exes do
+    let bin := (root.binDir / exe).addExtension System.FilePath.exeExtension
+    IO.println s!"# {exe}"
+    let rc ← (← IO.Process.spawn { cmd := bin.toString }).wait
+    if rc != 0 then
+      IO.eprintln s!"lake test: `{exe}` exited with code {rc}"
+      return rc
   let generator := (root.binDir / "slhdsa_bound_table").addExtension System.FilePath.exeExtension
   let checkArgs := #["scripts/check-slh-dsa-bound-table.py",
     "docs/design/slh-dsa-security-bounds.csv", "--generator",
     generator.toString]
-  IO.println s!"# python3 {" ".intercalate checkArgs.toList}"
-  let check ← IO.Process.spawn { cmd := "python3", args := checkArgs }
+  let pythonArgs := #["run", "--no-project", "--python", "3.12", "python"] ++ checkArgs
+  IO.println s!"# uv {" ".intercalate pythonArgs.toList}"
+  let check ← IO.Process.spawn { cmd := "uv", args := pythonArgs }
   let rc ← check.wait
   if rc != 0 then
     IO.eprintln s!"lake test: independent SLH-DSA bound-table check exited with code {rc}"
@@ -743,8 +747,8 @@ at least one. -/
 lean_exe slhdsa_limited_profile_tests where
   root := `HashSigTest.SLHDSA.LimitedProfile
 
-/-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
-committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
+/-- Kernel-level axiom / `sorry` accounting across the non-test libraries, gated at zero debt
+against the empty committed baseline (`scripts/axiom_baseline.json`). Complements the Interop
 TCB-isolation gate: that gate bounds imports, this one accounts for the axioms every
 declaration ultimately rests on. Runtime-imports built oleans, so run it after
 `lake build`. See `scripts/AxiomSweep.lean`. -/
@@ -757,7 +761,7 @@ lean_exe axiomsweep where
 backend evaluates when their module is loaded, before any `main` runs, and the
 compiler-generated declarations it initialises beside them, when what runs builds an
 enumeration of a type. Gated against a list of accepted constant names scoped by library
-(`scripts/init_sweep_baseline.json`), the allowlist idea `scripts/axiom_baseline.json` uses.
+(`scripts/init_sweep_baseline.json`).
 Complements the axiom sweep: that one accounts for what the kernel accepted, this one for
 what the *binary* does at start-up. Runtime-imports built oleans, so run it after
 `lake build`. See `scripts/InitSweep.lean`. -/

@@ -23,6 +23,7 @@ public import LatticeCrypto.Falcon.Security
 public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
 public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
 public import LatticeCrypto.MLDSA.Arithmetic
+public import LatticeCrypto.MLDSA.BoxSampling
 public import LatticeCrypto.MLDSA.Concrete.Encoding
 public import LatticeCrypto.MLDSA.Concrete.LawBounds
 public import LatticeCrypto.MLDSA.Concrete.NTT
@@ -50,6 +51,8 @@ public import LatticeCrypto.Ring.Core
 public import LatticeCrypto.Ring.IntegralLift
 public import LatticeCrypto.Ring.Kernel
 public import LatticeCrypto.Ring.NTTCert
+public import LatticeCrypto.Ring.NTTLoop
+public import LatticeCrypto.Ring.NTTSplitCert
 public import LatticeCrypto.Ring.Norms
 public import LatticeCrypto.Ring.Rounding
 public import LatticeCrypto.Ring.Sampling

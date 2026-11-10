@@ -151,18 +151,14 @@ theorem carrierLogged_run (sk : SecretKey) (warm : QueryCache HashSpec) (log : S
     served_run_of_clear rightKeep walk computation state result hresult hclear] at hserved
   exact hserved
 
-/-- **A stage with nothing in flight grows the carrier and nothing more.** -/
+/-- Every supported stage grows the carrier's cache and served inputs. -/
 theorem grows_run_of_clear (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop)
     (walk : Walk) {α : Type} (computation : OracleComp OracleWorld α)
     (state : CountedState) (result : α × CountedState)
-    (hresult : result ∈ support ((simulateQ (handlerAt rightKeep walk) computation).run state))
-    (hclear : state.1.framing = none) : HandlerCarrier.Grows state.1 result.2.1 :=
-  ⟨fun input value hvalue =>
-      cache_persists_run rightKeep walk computation state result hresult input value hvalue,
-    fun input hinput => by
-      rw [HandlerCarrier.Served,
-        served_run_of_clear rightKeep walk computation state result hresult hclear]
-      exact hinput⟩
+    (hresult : result ∈ support ((simulateQ (handlerAt rightKeep walk) computation).run state)) :
+    HandlerCarrier.Grows state.1 result.2.1 :=
+  (files_countedCarrierRecorder (keyAt walk) (rightKeep walk)).runPersists
+    computation state result hresult
 
 /-! ## The same application, at the other invariant
 
@@ -193,10 +189,10 @@ theorem logFiled_run (sk : SecretKey) (log : SigningLog)
     {α : Type} (computation : OracleComp OracleWorld α)
     (state : CountedState) (result : α × CountedState)
     (hresult : result ∈ support ((simulateQ (handlerAt rightKeep walk) computation).run state))
-    (hclear : state.1.framing = none)
+    (_hclear : state.1.framing = none)
     (hfiled : ServedAgreement.LogFiled sk log state.1) :
     ServedAgreement.LogFiled sk log result.2.1 :=
-  hfiled.mono (grows_run_of_clear rightKeep walk computation state result hresult hclear)
+  hfiled.mono (grows_run_of_clear rightKeep walk computation state result hresult)
 
 /-! ## And the containment itself
 
