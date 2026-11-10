@@ -83,7 +83,7 @@ private theorem wellFormed_append [DecidableEq S] [∀ s, Zero (V s)]
     (hw : WellFormed z τ T) (s : S) (v : V s) :
     WellFormed z (append τ s (T s).length) (append T s v) := by
   intro t
-  have hp := prefix_append T s t v
+  have hp := extends_append T s v t
   refine ⟨?_, lt_of_lt_of_le (hw t).2.1 hp.length_le, ?_⟩
   · intro h hh
     by_cases ht : t = s
@@ -101,23 +101,13 @@ private theorem readBack_append [DecidableEq S] [∀ s, Zero (V s)]
     {z : S → Handle} {τ : Tbl (fun _ : S => Handle)} {T : Tbl V}
     (hw : WellFormed z τ T) (s : S) (v : V s) :
     readBack (append τ s (T s).length) (append T s v) = append (readBack τ T) s v := by
-  have hp := readBack_prefix hw (fun t => prefix_append T s t v)
+  have hp := readBack_prefix hw (extends_append T s v)
   funext t
   by_cases ht : t = s
   · subst t
     simpa [readBack, append, lookup, List.map_append] using
       congrArg (fun R : Tbl V => R s ++ [v]) hp
   · simpa [readBack, append, Function.update_of_ne ht] using congrFun hp t
-
-private theorem runGen_bind [DecidableEq S] [CommSemiring F]
-    [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
-    {U : S → Type} [∀ s, DecidableEq (U s)]
-    (M : Model F σ V) (obs : (s : S) → V s → U s)
-    {α β : Type} (A : OracleComp (genSpec F σ) α)
-    (k : α → OracleComp (genSpec F σ) β) (T : Tbl V) :
-    runGen M obs (A >>= k) T =
-      (runGen M obs A T >>= fun r => runGen M obs (k r.1) r.2) := by
-  simp only [runGen, run, simulateQ_bind, StateT.run_bind]
 
 private theorem runGen_virtualize_bind [DecidableEq S] [CommSemiring F]
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
