@@ -44,7 +44,7 @@ unfold their definitions.
   access an unexposed implementation from the same dependency when proving its public API.
 - Do not enable `backward.privateInPublic` or `backward.proofsInPublic`; resolve visibility and
   proof-metavariable issues directly.
-- The `Interop` package's built bridges follow this policy. The unported hax examples in `Interop/Hax/` are not built and keep their old form until ported.
+- The `Interop/` package's built bridges follow this policy. The unported hax examples in `Interop/Hax/` are not built and keep their old form until ported.
 
 Section `variable` lines carry an instance assumption only when the theorems in scope share it:
 Lean auto-includes an instance-implicit section variable in every theorem mentioning its types,
@@ -325,7 +325,7 @@ the build just produced; `--test` runs it a second time over `VCVioTest` and
 
 CI runs the timed build on the non-test Lean libraries:
 `ToMathlib`, `VCVio`, `VCVioCslib`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
-and `VCVioWidgets`. The `Interop` package builds separately.
+and `VCVioWidgets`. The `Interop/` package builds separately.
 Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
@@ -351,7 +351,7 @@ declaration in the non-test libraries, held at zero debt. Any declaration depend
 (`native_decide`, which mints per-declaration `._native.` axioms). The committed baseline
 `scripts/axiom_baseline.json` must stay `{"sorry": [], "nonstandard": []}`: a nonempty one
 is a policy error rather than an allowlist, and `lake exe axiomsweep --update-baseline`
-refuses to write one. `Interop` (the declared TCB) is excluded — its boundary is enforced by
+refuses to write one. `Interop/` (the declared TCB) is excluded — its boundary is enforced by
 the import-isolation gate instead. The `VCVioAxiomSweepTestFixtures` library carries
 synthetic taint for the tool's own tests and is deliberately excluded from every
 aggregate.
