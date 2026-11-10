@@ -206,6 +206,7 @@ public import VCVioTest.Tactic.FunProp
 public import VCVioTest.Tactic.GeneralizedRelations
 public import VCVioTest.Tactic.GeneralizedRelationsExperiments
 public import VCVioTest.Tactic.Positivity
+public import VCVioTest.ThresholdFinder
 public import VCVioTest.TimeLockPuzzle.FreeSummand
 public import VCVioTest.TimeLockPuzzle.Hiding
 public import VCVioTest.TimeLockPuzzle.HidingCap
