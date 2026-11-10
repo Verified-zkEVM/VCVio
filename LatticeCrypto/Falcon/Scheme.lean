@@ -14,9 +14,12 @@ public import VCVio.OracleComp.Coercions.Add.Basic
 /-!
 # Falcon Signature Scheme
 
-This file defines the core Falcon signature scheme algorithms: key generation, signing,
-and verification. It also establishes the bridge to the generic GPV hash-and-sign framework
-via a `PreimageSampleableFunction` instantiation.
+This file defines the core Falcon signature scheme: key types and validity, the one-shot
+signing core (`signAttempt`), the fresh-salt retry-loop signer (`sign`), and verification
+(`verify`), together with the bridge to the generic GPV hash-and-sign framework via a
+`PreimageSampleableFunction` instantiation. Key generation enters the security statements only as
+a `GenerableRelation` on `validKeyPair`; the executable seeded key generator is
+`Falcon.Concrete.KeyGen.keyGen` in `Extern.Falcon.KeyGen`.
 
 ## Architecture
 
@@ -33,7 +36,7 @@ The Falcon scheme is an instantiation of the GPV hash-and-sign framework over NT
   `‖(s₁, s₂)‖₂² ≤ ⌊β²⌋`.
 
 The signing flow follows the Falcon+ convention (fresh salt per retry, pk-bound hashing),
-matching the concrete executable signer in `LatticeCrypto.Falcon.Concrete.Sign`.
+matching the concrete executable signer in `Extern.Falcon.Sign`.
 
 ## References
 
@@ -110,19 +113,6 @@ theorem validKeyPair_eq_true_iff (pk : PublicKey p) (sk : SecretKey p) :
       ntruEquation p sk.f sk.g sk.capF sk.capG ∧
       negacyclicMul (IntPoly.toRq sk.f) pk.h = IntPoly.toRq sk.g := by
   simp [validKeyPair]
-
-/-! ### Core Algorithms -/
-
-/-- Falcon key generation (Algorithms 4–9).
-
-1. Generate short polynomials `(f, g)` via NTRUGen (Algorithm 5).
-2. Compute `(F, G)` satisfying the NTRU equation `fG - gF = q` (Algorithm 6).
-3. Compute `h = g · f⁻¹ mod q`.
-4. Build the Falcon tree via `ffLDL*` and normalize (Algorithms 8–9).
-
-This is modeled as a deterministic function from a seed. The actual NTRUGen uses
-rejection sampling, but that detail is abstracted away. -/
-noncomputable def keyGenFromSeed (_seed : List Byte) : PublicKey p × SecretKey p := sorry
 
 /-! ### GPV Bridge -/
 

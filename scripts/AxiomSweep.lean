@@ -37,23 +37,19 @@ Modes (run after `lake build`):
 lake exe axiomsweep                     # summary only
 lake exe axiomsweep --out report.json   # also write the full per-declaration report
 lake exe axiomsweep --check             # gate against scripts/axiom_baseline.json
-lake exe axiomsweep --update-baseline   # rewrite the baseline from the current build
+lake exe axiomsweep --update-baseline   # reset the baseline after all taint is removed
 ```
 
-The committed baseline (`scripts/axiom_baseline.json`) records the currently-known
-`sorryAx`-tainted declarations and any declarations depending on non-standard axioms
-(anything beyond `propext`, `Classical.choice`, `Quot.sound` — so native trust axioms
-surface here too: `native_decide`-style tactics mint per-declaration
-`…._native.<tactic>.ax_<number>_<number>` axioms, recorded under their owning
-declaration). `--check` fails exactly when a declaration is tainted that the baseline
-does not cover. When gaps are closed, `--check` reports them and stays green; run
-`--update-baseline` to shrink the file in the same PR.
-
-The baseline is an allowlist for `sorryAx` debt only. Native trust is held to PolyFun's
-zero-debt rule instead: `neverAllowlistable` rejects any `._native.` axiom outside the
-explicit `grandfatheredNativeTrust` list, so no baseline edit can widen the trusted
-computing base. Exit codes are a contract with CI — `1` is a taint verdict, anything else
-an infrastructure failure — which is why `main` traps uncaught exceptions into `2`.
+The committed baseline (`scripts/axiom_baseline.json`) states the zero-debt policy PolyFun
+also follows: both of its arrays must stay empty. `--check` fails on every declaration that
+depends on `sorryAx` or on a non-standard axiom (anything beyond `propext`,
+`Classical.choice`, `Quot.sound`). Native trust surfaces as a non-standard axiom:
+`native_decide`-style tactics mint per-declaration
+`…._native.<tactic>.ax_<number>_<number>` axioms, reported under their owning declaration.
+A nonempty baseline is a policy error, not an allowlist, and `--update-baseline` refuses to
+write one, so no baseline edit can pre-authorize taint. Exit codes are a contract with CI —
+`1` is a taint verdict, anything else an infrastructure failure — which is why `main` traps
+uncaught exceptions into `2`.
 
 `scripts/test-axiomsweep.sh` exercises all of this against the `VCVioAxiomSweepTestFixtures`
 library, whose fixtures carry synthetic taint of each shape this file reasons about.
@@ -74,33 +70,6 @@ def defaultRoots : Array Name :=
 
 /-- Axioms that carry no extra trust assumptions beyond Lean's standard foundation. -/
 def standardAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
-
-/-- Whether `a` names native-compiler trust: either a bare compiler axiom, or one of the
-per-declaration axioms `native_decide`-style tactics mint, which this toolchain names
-`Owner._native.<tactic>.ax_<n>_<n>` rather than routing through `Lean.ofReduceBool`. -/
-def isNativeTrust (a : String) : Bool :=
-  a == "Lean.ofReduceBool" || a == "Lean.trustCompiler" || (a.splitOn "._native.").length > 1
-
-/-- The native trust this repository has already accepted, listed by full axiom name so
-the acceptance is auditable in source rather than hidden in a JSON allowlist. The list is
-currently empty: both concrete NTT inversion certificates now use structural butterfly-stage
-proofs checked by the kernel.
-
-Fails closed: if a private-name index or module path shifts, the entry stops matching and
-`--check` goes red until someone consciously re-accepts it. -/
-def grandfatheredNativeTrust : List String := []
-
-/-- Axioms that may never be baselined: native-compiler trust beyond what
-`grandfatheredNativeTrust` already accepts. Unlike `sorryAx` debt — honest work in
-progress, which the baseline is allowed to track — new native trust is a widening of the
-trusted computing base, so no baseline edit can green it; remove the dependency instead.
-
-This is the counterpart of PolyFun's zero-debt gate. PolyFun refuses a nonempty baseline
-outright; VCVio cannot, since it carries genuine `sorryAx` debt, so the floor applies the
-same "cannot pre-authorize future taint" rule to the part of the baseline where widening
-the TCB is at stake. -/
-def neverAllowlistable (a : String) : Bool :=
-  isNativeTrust a && !grandfatheredNativeTrust.contains a
 
 /-- Phase 1: DFS. Compute, for every constant reachable from the work list, an
 under-approximation of the set of axioms it transitively depends on, memoised across
@@ -177,7 +146,7 @@ structure NonstandardEntry where
   axioms : Array String
   deriving FromJson, ToJson
 
-/-- The committed regression baseline. -/
+/-- The committed baseline, which the zero-debt policy requires to be empty. -/
 structure Baseline where
   «sorry» : Array String
   nonstandard : Array NonstandardEntry
@@ -188,11 +157,10 @@ def isDecimal (s : String) : Bool :=
   !s.isEmpty && s.toList.all fun c => '0' ≤ c && c ≤ '9'
 
 /-- Collapse exactly the generated counter suffix of native trust axioms
-(`Foo._native.native_decide.ax_1_1` → `Foo._native.native_decide`), so baselines key by
+(`Foo._native.native_decide.ax_1_1` → `Foo._native.native_decide`), so reports key by
 owning declaration rather than a rebuild-volatile counter. Names that merely contain
-`._native.` or resemble a generated suffix are preserved: collapsing them would let two
-distinct axioms share one baseline key, so real taint could hide behind an accepted
-entry. -/
+`._native.` or resemble a generated suffix are preserved: collapsing them would report two
+distinct axioms under one name. -/
 def normalizeAxiomName (s : String) : String :=
   match s.splitOn "._native." with
   | [owner, tail] =>
@@ -281,72 +249,47 @@ def currentBaseline (entries : Array Entry) : Baseline where
     let bad := nonstandardOf e
     if bad.isEmpty then none else some { name := e.name, axioms := bad }
 
-/-- Compare the current taint sets against the committed baseline. Returns the exit
-code: `1` iff there is a regression (new taint not covered by the baseline). -/
-def runCheck (cur : Baseline) (basePath : String) : IO UInt32 := do
+/-- Read and validate the committed zero-debt baseline. A nonempty baseline is a policy
+error rather than an allowlist: VCVio carries no accepted axiom or `sorry` debt. -/
+def readZeroBaseline (basePath : String) : IO (Except UInt32 Baseline) := do
   if !(← System.FilePath.pathExists basePath) then
-    IO.eprintln s!"axiomsweep: baseline {basePath} not found; \
-      create it with `lake exe axiomsweep --update-baseline`"
-    return 2
+    IO.eprintln s!"axiomsweep: baseline {basePath} not found"
+    return .error 2
   let base ← match Json.parse (← IO.FS.readFile basePath) >>= fromJson? (α := Baseline) with
     | .ok b => pure b
     | .error e =>
       IO.eprintln s!"axiomsweep: cannot parse baseline {basePath}: {e}"
-      return 2
-  let newSorry := cur.«sorry».filter (!base.«sorry».contains ·)
-  let fixedSorry := base.«sorry».filter (!cur.«sorry».contains ·)
-  let newNonstd := cur.nonstandard.filter fun e =>
-    match base.nonstandard.find? (·.name == e.name) with
-    | none => true
-    | some b => e.axioms.any (!b.axioms.contains ·)
-  let fixedNonstd := base.nonstandard.filter fun b =>
-    match cur.nonstandard.find? (·.name == b.name) with
-    | none => true
-    | some c => b.axioms.any (!c.axioms.contains ·)
-  let mut failed := false
-  let floor := cur.nonstandard.filter fun e => e.axioms.any neverAllowlistable
-  if !floor.isEmpty then
-    failed := true
-    IO.eprintln s!"axiomsweep: {floor.size} declaration(s) depend on never-allowlistable \
-      axioms (bare native-compiler trust) — the baseline cannot green these:"
-    for e in floor do IO.eprintln s!"  {e.name} : {e.axioms.filter neverAllowlistable}"
-  if !newSorry.isEmpty then
-    failed := true
-    IO.eprintln s!"axiomsweep: {newSorry.size} declaration(s) newly depend on sorryAx \
-      (not in {basePath}):"
-    for n in newSorry do IO.eprintln s!"  {n}"
-  if !newNonstd.isEmpty then
-    failed := true
-    IO.eprintln s!"axiomsweep: {newNonstd.size} declaration(s) newly depend on \
-      non-standard axioms (not in {basePath}):"
-    for e in newNonstd do IO.eprintln s!"  {e.name} : {e.axioms}"
-  if failed then
-    IO.eprintln s!"axiomsweep: if intentional (new tagged sorry), refresh the baseline \
-      with `lake exe axiomsweep --update-baseline` and commit the diff."
+      return .error 2
+  if !base.«sorry».isEmpty || !base.nonstandard.isEmpty then
+    IO.eprintln s!"axiomsweep: baseline {basePath} is nonempty; the zero-debt policy \
+      forbids allowlisting axiom or sorry taint"
+    return .error 2
+  return .ok base
+
+/-- Check the current taint sets against the zero-debt policy. Returns exit code `1` for a
+taint finding and `2` for a missing, malformed, or nonempty baseline. -/
+def runCheck (cur : Baseline) (basePath : String) : IO UInt32 := do
+  if let .error code ← readZeroBaseline basePath then return code
+  if !cur.«sorry».isEmpty then
+    IO.eprintln s!"axiomsweep: {cur.«sorry».size} declaration(s) depend on sorryAx:"
+    for n in cur.«sorry» do IO.eprintln s!"  {n}"
+  if !cur.nonstandard.isEmpty then
+    IO.eprintln s!"axiomsweep: {cur.nonstandard.size} declaration(s) depend on \
+      non-standard axioms:"
+    for e in cur.nonstandard do IO.eprintln s!"  {e.name} : {e.axioms}"
+  if !cur.«sorry».isEmpty || !cur.nonstandard.isEmpty then
+    IO.eprintln "axiomsweep: check failed; remove all axiom and sorry taint"
     return 1
-  if !fixedSorry.isEmpty || !fixedNonstd.isEmpty then
-    IO.println s!"axiomsweep: good news — {fixedSorry.size + fixedNonstd.size} baseline \
-      entr(y/ies) no longer tainted; run `lake exe axiomsweep --update-baseline` to shrink \
-      the baseline:"
-    for n in fixedSorry do IO.println s!"  {n}"
-    for e in fixedNonstd do IO.println s!"  {e.name}"
-  IO.println "axiomsweep: check passed (no new axiom/sorry taint)."
+  IO.println "axiomsweep: check passed (zero axiom/sorry taint)."
   return 0
 
-/-- Rewrite the baseline from the current build. Refuses while never-allowlistable taint
-is present: `--check` would reject the result anyway (the floor is enforced there, not
-here), so writing it would only produce a baseline that looks authoritative and is not.
-Recording new `sorryAx` debt is fine — that is what the baseline is for. -/
+/-- Write the canonical empty baseline, but only after the current sweep is clean. -/
 def runUpdate (cur : Baseline) (basePath : String) : IO UInt32 := do
-  let floor := cur.nonstandard.filter fun e => e.axioms.any neverAllowlistable
-  if !floor.isEmpty then
-    IO.eprintln s!"axiomsweep: refusing to update {basePath} while \
-      {floor.size} declaration(s) depend on never-allowlistable axioms:"
-    for e in floor do IO.eprintln s!"  {e.name} : {e.axioms.filter neverAllowlistable}"
-    IO.eprintln "axiomsweep: remove the dependency; the baseline cannot pre-authorize it."
+  if !cur.«sorry».isEmpty || !cur.nonstandard.isEmpty then
+    IO.eprintln "axiomsweep: refusing to update the baseline while axiom or sorry taint exists"
     return 1
   IO.FS.writeFile basePath ((toJson cur).pretty ++ "\n")
-  IO.println s!"axiomsweep: wrote baseline to {basePath}"
+  IO.println s!"axiomsweep: wrote zero-debt baseline to {basePath}"
   return 0
 
 structure Config where

@@ -37,7 +37,7 @@ fi
 count_tree() {
   local tree_root="$1"
   local output="$2"
-  python3 "$REPO_ROOT/scripts/count-expose-boundary.py" "$tree_root" "${LIBS[@]}" > "$output"
+  uv run --no-project --python 3.12 python "$REPO_ROOT/scripts/count-expose-boundary.py" "$tree_root" "${LIBS[@]}" > "$output"
 }
 
 CURRENT="$(mktemp "${TMPDIR:-/tmp}/vcvio-expose-boundary.XXXXXX")"

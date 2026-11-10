@@ -162,7 +162,6 @@ variable [MonadAttach m] [ExactMonadAttach m]
 
 private lemma signAttempt_usesWeightedQueryCostAtMost
     {κ : Type} [AddCommMonoid κ] [PartialOrder κ] [IsOrderedAddMonoid κ]
-    [CanonicallyOrderedAdd κ]
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     (costFn : M × Commit → κ) (w : κ) (hcost : ∀ t, costFn t ≤ w) :
     HasQuery.UsesCostAtMost

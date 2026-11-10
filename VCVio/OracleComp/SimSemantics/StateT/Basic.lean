@@ -317,6 +317,23 @@ variable {ι : Type*} {spec : OracleSpec ι}
 section support_simulateQ_StateT
 
 variable {α : Type w}
+
+/-- Simulating an `OracleComp` through an implementation in a monad `n` can only shrink the
+support: any output reachable after simulation was already reachable in the original computation
+(where oracle queries may return any value). -/
+theorem support_simulateQ_subset
+    {n : Type w → Type _} [Monad n] [LawfulMonad n] [MonadAttach n] [ExactMonadAttach n]
+    (impl : QueryImpl spec n) (oa : OracleComp spec α) :
+    support (simulateQ impl oa) ⊆ support oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t k ih =>
+    intro x hx
+    simp only [simulateQ_bind, simulateQ_spec_query, MonadAttach.support_bind, Set.mem_iUnion,
+      exists_prop] at hx
+    obtain ⟨u, -, hx⟩ := hx
+    exact (mem_support_bind_iff _ _ _).2 ⟨u, mem_support_query t u, ih u hx⟩
+
 /-- Simulating an `OracleComp` through a stateful implementation in monad `m` can only shrink the
 support: any output reachable after simulation was already reachable in the original computation
 (where oracle queries may return any value). The statement needs no probability interpretation. -/
@@ -338,7 +355,30 @@ theorem support_simulateQ_run'_subset
     rw [StateT.run'_eq, MonadAttach.support_map]
     exact Set.mem_image_of_mem _ hsupp
 
+/-- A supported stateful interpretation returns a value supported by the source computation.
+The final handler state is retained in the supplied supported outcome. -/
+theorem mem_support_of_mem_support_simulateQ_run
+    {n : Type w → Type _} [Monad n] [LawfulMonad n] [MonadAttach n] [ExactMonadAttach n]
+    {σ : Type w} (impl : QueryImpl spec (StateT σ n)) (oa : OracleComp spec α) (s : σ)
+    {z : α × σ} (hz : z ∈ support ((simulateQ impl oa).run s)) : z.1 ∈ support oa := by
+  apply support_simulateQ_run'_subset impl oa s
+  rw [StateT.run'_eq, MonadAttach.support_map]
+  exact Set.mem_image_of_mem _ hz
+
 end support_simulateQ_StateT
+
+/-- Read-only oracle state can be evaluated by fixing its realization before simulation. -/
+theorem simulateQ_readOnly_run {ι : Type} {spec : OracleSpec ι} {σ α : Type}
+    {n : Type → Type v} [Monad n] [LawfulMonad n]
+    (impl : QueryImpl spec (StateT σ n)) (fixed : σ → QueryImpl spec n)
+    (h : ∀ q s, (impl q).run s = (fun x => (x, s)) <$> fixed s q)
+    (oa : OracleComp spec α) (s : σ) :
+    (simulateQ impl oa).run s = (fun x => (x, s)) <$> simulateQ (fixed s) oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind q k ih =>
+    simp only [simulateQ_bind, simulateQ_query, StateT.run_bind,
+      h, bind_map_left, map_bind, ih]
 
 end OracleComp
 
@@ -370,3 +410,26 @@ lemma OptionT.aux_mem_support_simulateQ_run'
     {x : α} (hx : x ∈ support (OptionT.mk ((simulateQ impl oa).run' s₀))) : P x := by
   rw [MonadAttach.mem_support, MonadAttach.OptionT.canReturn_iff] at hx
   exact h (some x) (support_simulateQ_run'_subset impl oa s₀ hx) x rfl
+
+/-! ### Binds through a stateful handler -/
+
+namespace OracleComp
+
+/-- Running a bind through a stateful handler runs the continuation from the reached state. -/
+lemma run_simulateQ_bind {ι σ α β : Type} {spec : OracleSpec.{0, 0} ι}
+    (impl : QueryImpl spec (StateT σ ProbComp)) (oa : OracleComp spec α)
+    (f : α → OracleComp spec β) (s : σ) :
+    (simulateQ impl (oa >>= f)).run s =
+      (simulateQ impl oa).run s >>= fun p => (simulateQ impl (f p.1)).run p.2 := by
+  rw [simulateQ_bind, StateT.run_bind]
+
+/-- `run_simulateQ_bind` for the output alone. -/
+lemma run'_simulateQ_bind {ι σ α β : Type} {spec : OracleSpec.{0, 0} ι}
+    (impl : QueryImpl spec (StateT σ ProbComp)) (oa : OracleComp spec α)
+    (f : α → OracleComp spec β) (s : σ) :
+    (simulateQ impl (oa >>= f)).run' s =
+      (simulateQ impl oa).run s >>= fun p => (simulateQ impl (f p.1)).run' p.2 := by
+  rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind, map_bind]
+  rfl
+
+end OracleComp
