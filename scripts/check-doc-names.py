@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Check the declaration names the documentation cites.
 
 Retired-name checks cover all first-party Markdown and comments in active Lean libraries.
@@ -74,8 +74,8 @@ RETIRED_LABEL_RE = re.compile(
     r"\b(?:structural|angelic|demonic)\s+(?:readings?|interpretations?|triples?|WP|"
     r"weakest\s+preconditions?)\b|\bstructural\s+support\b|\bstructurally\s+"
     r"(?:reachable|possible)\b", re.I)
-LEAN_ROOTS = ("ToMathlib/", "VCVio/", "VCVioCslib/", "LatticeCrypto/", "HashSig/", "Examples/",
-              "Extern/", "VCVioWidgets/", "VCVioTest/", "LatticeCryptoTest/", "HashSigTest/")
+LEAN_ROOTS = ("ToMathlib/", "VCVio/", "LatticeCrypto/", "HashSig/", "Examples/",
+              "Extern/", "VCVioTest/", "LatticeCryptoTest/", "HashSigTest/")
 
 
 def default_docs() -> tuple[list[Path], list[Path]]:

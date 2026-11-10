@@ -52,9 +52,10 @@ the coverage limitation recorded in issue #629 item 4. In `build.yml`'s
 of them changes, in place of the former per-library `lake exe mk_all --check` steps, and
 `scripts/check-expose-boundary.sh` caps the number of broadly exposed files per library (new
 modules use a plain `public section` with per-declaration `@[expose]`); in the build job,
-`lake exe axiomsweep --check` guards the axiom and `sorry` footprint against
-`scripts/axiom_baseline.json`. `scripts/validate.sh` runs that per-PR gate locally in CI's order,
-with `--lint`, `--test`, `--ffi`, and `--axioms` selecting the slower passes.
+`lake exe axiomsweep --check` holds the axiom and `sorry` footprint at zero (the committed
+`scripts/axiom_baseline.json` must stay empty). `scripts/validate.sh` runs that per-PR gate
+locally in CI's order, with `--lint`, `--test`, `--ffi`, and `--axioms` selecting the slower
+passes.
 
 ## Milestone status ledger
 
@@ -424,10 +425,10 @@ longer true on `main`:
 - Branch from the previous slice's head, `feat/slhdsa-<slice>-YYYYMMDD`; open as a draft PR
   immediately; push regular commits.
 - Per slice, the gate is `./scripts/validate.sh`, which runs the per-PR CI checks in CI's order:
-  the seven-library build with its non-`sorry` warning budget, `scripts/check-imports.sh`, the
-  PolyFun, broad-expose, complexity-backend, `Extern` and `Interop` boundary ratchets,
+  the six-library build with its non-`sorry` warning budget, `scripts/check-imports.sh`, the
+  PolyFun, broad-expose, `Extern` and `Interop` boundary ratchets,
   `lake lint -- --style-only` over the libraries and every test module, and
-  `python3 scripts/check-agent-docs.py` with `extract-doc-fragments.py --check`. Add `--test` for
+  `uv run --no-project --python 3.12 python scripts/check-agent-docs.py` with `extract-doc-fragments.py --check`. Add `--test` for
   `lake test` (the three test libraries, the smoke test, and every SLH-DSA executable, with the
   test-library warning budget applied to its log) and `--axioms` for `lake exe axiomsweep --check`
   before pushing a slice; `--lint` adds the Batteries environment linters. While iterating,

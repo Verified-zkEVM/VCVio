@@ -38,7 +38,7 @@ repository. The layer is the subject of issue #706. Open questions and planned w
 |---|---|---|
 | [States and measurements](1-states-and-instruments.md) | `QuantumFoundations/MatrixMap*`, `SubInstrument`, `DSubInstrument`, `Observe`; `VCVio/Quantum/Semantics` | Quantum operations, measurements with classical outcomes, failure, composition, outcome measures. |
 | [Vectors](2-vectors-and-hybrid-bound.md) | `QuantumFoundations/Pure/*` | State vectors and operator norms, with theorems that they agree with the density-matrix semantics. |
-| [Three descriptions of one map](3-choi-kraus-stinespring.md) | `QuantumFoundations/MatrixMap/Kraus.lean` | Choi matrices, Kraus operators and Stinespring form. |
+| [Three descriptions of one map](3-choi-kraus-stinespring.md) | `QuantumFoundations/MatrixMap/Kraus.lean`, `MatrixMap/Stinespring.lean`, `MatrixMap/Dual.lean` | Choi matrices, Kraus operators, Stinespring form and its unitary version, the trace dual. |
 | [Oracles and programs](4-programs-and-runtimes.md), [QROM](5-qrom.md) | `VCVio/Quantum/Comp/*`, `VCVio/Quantum/Oracle/*` | Quantum programs, oracle implementations, the quantum random-oracle model, classical algorithms inside it. |
 | [Instability](6-instability.md) | `VCVio/OracleComp/QueryTracking/Instability/*` | The classical quantity that compressed-oracle proofs bound quantum queries by. |
 

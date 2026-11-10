@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.Contraction
 
 public import Mathlib.Analysis.Fourier.FiniteAbelian.PontryaginDuality
 public import VCVio.Quantum.Oracle.Compressed.Truncation
@@ -226,16 +227,11 @@ theorem phaseCell_zero : phaseCell Y 0 = 1 := by
 variable {Y}
 
 omit [DecidableEq Y] in
-/-- The values of a nontrivial character sum to zero. -/
-theorem sum_apply_eq_zero_of_ne_zero {χ : AddChar Y ℂ} (hχ : χ ≠ 0) : ∑ y, χ y = 0 :=
-  AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
-
-omit [DecidableEq Y] in
 /-- A unit-modulus multiple of a nontrivial character has the same quadratic sum law. -/
 theorem sum_norm_sub_signed_char_sq {χ : AddChar Y ℂ} (hχ : χ ≠ 0)
     {ε : ℂ} (hε : ‖ε‖ = 1) (c : ℂ) :
     ∑ w, ‖c - ε * χ w‖ ^ 2 = Fintype.card Y * (‖c‖ ^ 2 + 1) := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
+  have hs := AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
   have e : ∀ w, ‖c - ε * χ w‖ ^ 2 =
       (‖c‖ ^ 2 + 1) - 2 * (c * conj (ε * χ w)).re := fun w ↦ by
     rw [Complex.sq_norm, Complex.sq_norm, Complex.normSq_sub,
@@ -248,7 +244,7 @@ theorem sum_norm_sub_signed_char_sq {χ : AddChar Y ℂ} (hχ : χ ≠ 0)
   simp
 
 theorem phaseCell_none_none {χ : AddChar Y ℂ} (hχ : χ ≠ 0) : phaseCell Y χ none none = 0 := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
+  have hs := AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
   rw [phaseCell_apply, Fintype.sum_option]
   simp only [cellCompress_none_none, cellCompress_none_some, cellCompress_some_none, zero_mul,
     zero_add]
@@ -260,7 +256,7 @@ theorem phaseCell_none_none {χ : AddChar Y ℂ} (hχ : χ ≠ 0) : phaseCell Y 
 
 theorem phaseCell_some_none {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (u : Y) :
     phaseCell Y χ (some u) none = cellAmp Y * χ u := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
+  have hs := AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
   rw [phaseCell_apply, Fintype.sum_option]
   simp only [cellCompress_none_none, cellCompress_some_none, cellCompress_some_some, mul_zero,
     zero_add, Option.getD_some, sub_mul, ite_mul, one_mul, zero_mul, Finset.sum_sub_distrib,
@@ -270,7 +266,7 @@ theorem phaseCell_some_none {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (u : Y) :
 
 theorem phaseCell_none_some {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (w : Y) :
     phaseCell Y χ none (some w) = cellAmp Y * χ w := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
+  have hs := AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
   rw [phaseCell_apply, Fintype.sum_option]
   simp only [cellCompress_none_none, cellCompress_none_some, cellCompress_some_some, zero_mul,
     zero_add, Option.getD_some, mul_sub, mul_ite, mul_one, mul_zero, Finset.sum_sub_distrib,
@@ -281,7 +277,7 @@ theorem phaseCell_none_some {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (w : Y) :
 theorem phaseCell_some_some {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (u w : Y) :
     phaseCell Y χ (some u) (some w) =
       (if u = w then χ u else 0) + (Fintype.card Y : ℂ)⁻¹ * (1 - χ u - χ w) := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
+  have hs := AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
   rw [phaseCell_apply, Fintype.sum_option]
   simp only [cellCompress_some_none, cellCompress_none_some, cellCompress_some_some,
     Option.getD_none, AddChar.map_zero_eq_one, mul_one, cellAmp_mul_self, Option.getD_some]
@@ -302,23 +298,6 @@ theorem phaseCell_some_some {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (u w : Y) :
   · ring
 
 end phase
-
-/-- An entry of `(1 ⊗ A) diag(d) (1 ⊗ B)`: the first register is kept, and the second is
-summed over the intermediate states. -/
-theorem one_kronecker_mul_diagonal_mul_one_kronecker_apply {Q Z : Type*} [Fintype Q]
-    [DecidableEq Q] [Fintype Z] [DecidableEq Z] (A B : Matrix Z Z ℂ) (d : Q × Z → ℂ)
-    (q' : Q) (z' : Z) (q : Q) (z : Z) :
-    (((1 : Matrix Q Q ℂ) ⊗ₖ A) * diagonal d * ((1 : Matrix Q Q ℂ) ⊗ₖ B)) (q', z') (q, z) =
-      if q' = q then ∑ z₁, A z' z₁ * d (q, z₁) * B z₁ z else 0 := by
-  rw [mul_apply, Fintype.sum_prod_type, Finset.sum_eq_single q]
-  · simp only [mul_diagonal, kroneckerMap_apply, one_apply, ↓reduceIte, one_mul]
-    split_ifs with h
-    · subst h
-      simp only [one_mul]
-    · simp
-  · intro b _ hb
-    simp [hb]
-  · simp
 
 section phaseOracle
 
@@ -354,7 +333,7 @@ theorem phaseOracle_apply (x' : X) (χ' : AddChar Y ℂ) (D' : Database X Y) (x 
     (χ : AddChar Y ℂ) (D : Database X Y) :
     phaseOracle X Y ((x', χ'), D') ((x, χ), D) =
       if (x', χ') = (x, χ) ∧ ∀ j ≠ x, D' j = D j then phaseCell Y χ (D' x) (D x) else 0 := by
-  rw [phaseOracle_eq, phaseDiagonal, one_kronecker_mul_diagonal_mul_one_kronecker_apply]
+  rw [phaseOracle_eq, phaseDiagonal, Matrix.one_kronecker_mul_diagonal_mul_one_kronecker_apply]
   by_cases hm : (x', χ') = (x, χ)
   · obtain ⟨rfl, rfl⟩ := Prod.mk.inj hm
     have key := sum_mul_piKron_mul_piKron (fun _ : X ↦ cellCompress Y)
