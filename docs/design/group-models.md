@@ -525,10 +525,11 @@ most `((m + 1) choose 2)` nonzero differences, and `x` is a root of each with pr
 most `d/|F|`. The zero has to be counted: on the table `[X]` the query `eq 0 1` compares `X`
 with zero, and it is a collision with probability `1/|F|`.
 
-The probability form of Schwartz–Zippel exists in ArkLib as `prob_eval_zero_univ_le_div`
-(`ArkLib/Data/MvPolynomial/SchwartzZippelCounting.lean`), stated in VCVio's `Pr{…}` notation
-over `$ᵗ (Fin s → F)`. It imports one ArkLib file, `ArkLib.Data.Probability.Uniform`, so it has
-to be moved down before VCVio can use it.
+The probability form of Schwartz–Zippel is `prEvent_eval_eq_zero_univ_le_div`
+(`VCVio/OracleComp/Constructions/SampleableType/SchwartzZippel.lean`), over any finite variable
+type and any finite integral domain. It generalizes ArkLib's `prob_eval_zero_univ_le_div`
+(`ArkLib/Data/MvPolynomial/SchwartzZippelCounting.lean`), which is stated over `Fin s` and a
+field.
 
 The argument uses one property of the distribution of `x`: a nonzero polynomial of total degree
 at most `k` vanishes at `x` with probability at most `ε k`. T3 is stated with `ε` as a
