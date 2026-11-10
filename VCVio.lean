@@ -327,6 +327,7 @@ public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Fiber
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.Constructions.UniformPreimage

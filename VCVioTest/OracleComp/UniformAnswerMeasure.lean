@@ -15,6 +15,7 @@ public import VCVio.EvalDist.IndepProductMeasure
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.Fiber
 import Mathlib.Tactic.GCongr
 import Mathlib.Tactic.GRewrite
 
@@ -24,7 +25,8 @@ import Mathlib.Tactic.GRewrite
 The canonical concrete uniform response certificates are resolved by typeclass synthesis.
 Coin, finite-range, and bit-vector samplers exercise direct measure semantics. Two injections of
 a uniform draw give one distribution to a continuation that ignores the points they do not both
-cover, and not otherwise.
+cover, and not otherwise. A uniform sample is its image followed by a uniform point of the image's
+fiber.
 -/
 
 public section
@@ -150,5 +152,27 @@ example :
         let a ← $ᵗ Bool
         pure (decide (a.toNat + 1 = 0)) : ProbComp Bool)}[x = true] := by
   simp [SampleableType.prEvent_uniformSample]
+
+/-! ### Uniform sampling on fibers -/
+
+/-- On a constant map the fiber is the whole type, so the fiber sample is uniform on `Bool`. -/
+example : Pr{let y ← SampleableType.uniformFiber (fun _ : Bool => ()) ()}[y = true] = 2⁻¹ := by
+  refine (SampleableType.prEvent_uniformFiber_eq_of_eq (fun _ : Bool => ()) (a := true)
+    rfl).trans ?_
+  simp [Nat.card_eq_fintype_card]
+
+/-- The fiber sample of `id` at `true` never returns `false`; a sampler that ignored the fiber and
+drew all of `Bool` would give `1/2` here. -/
+example : Pr{let y ← SampleableType.uniformFiber (id : Bool → Bool) true}[y = false] = 0 :=
+  SampleableType.prEvent_uniformFiber_eq_zero_of_ne (id : Bool → Bool) (a := true) (x := false)
+    (by decide)
+
+/-- A uniform `Bool` is its parity image followed by a uniform point of the fiber. -/
+example : (do let a ← $ᵗ Bool; return (a == true, a) : ProbComp (Bool × Bool)) =ᵈ
+    (do
+      let a ← $ᵗ Bool
+      let a' ← SampleableType.uniformFiber (fun b : Bool => b == true) (a == true)
+      return (a == true, a')) :=
+  SampleableType.uniformSample_pair_evalDistEq_uniformFiber (fun b : Bool => b == true)
 
 end VCVioTest.UniformAnswerMeasure

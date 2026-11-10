@@ -65,7 +65,13 @@ instantiating those abstractions for a lattice scheme.
   `t₀` in the statement (`identificationSchemeFull`), and `identificationSchemeFull_perfectHVZK`,
   which shows it equal in distribution to the honest prover on valid keys.
 - `LatticeCrypto/MLDSA/SecurityNMA.lean`: the no-message-attack chain, with the key swap modelled
-  over short-box MLWE.
+  over short-box MLWE. The short-model games give the forger `t₀` as well as the public key, and
+  the SelfTargetMSIS extractor redraws `t₀` from the fiber of `t₁`.
+- `LatticeCrypto/MLDSA/SecurityExpandARO.lean`: the no-message-attack bound with ExpandA a programmed
+  random oracle, reaching uniform-matrix MLWE.
+- `LatticeCrypto/MLDSA/SecurityHeadlines.lean`: the composed EUF-NMA and EUF-CMA theorems for the
+  commitment-carrying signature. Its Limitations section lists what the CMA theorems still assume at
+  FIPS 204 parameters.
 - `LatticeCrypto/MLDSA/Concrete/`: executable implementations of NTT, rounding, and encoding, plus
   `LawBounds.lean` — the algebraic range and bit-width bounds behind the `Primitives.Laws` fields.
 - `Extern/MLDSA/`: FFI bindings, SHAKE-backed sampling, and the FFI-backed instance. `Laws.lean`

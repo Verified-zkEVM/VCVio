@@ -9,6 +9,7 @@ public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
 public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
 public import LatticeCrypto.MLDSA.Security
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
+public import VCVio.OracleComp.Constructions.SampleableType.Fiber
 import VCVio.OracleComp.EvalDist.Measure
 
 /-!
@@ -19,8 +20,10 @@ This file builds the reduction infrastructure for the ML-DSA EUF-NMA analysis:
 1. **Exact short-secret MLWE key swap.** `keygenShort` samples `(s₁, s₂)` on the `η`-bounded box
    used by the ML-DSA assumption, while `keygenShort1` replaces `t = Â · s₁ + s₂` by a uniform
    vector. `nma_keyswap_hop_short` identifies their NMA-game gap with the seed-based
-   `mldsaMLWEShort` advantage, and `advantage_mldsaMLWEShort_le_matrix` relates that problem to
-   uniform-matrix MLWE under an explicit `ExpandA` idealization.
+   `mldsaMLWEShort` advantage. `advantage_mldsaMLWEShort_le_matrix` relates that problem to
+   uniform-matrix MLWE under the `expandAIdealization` assumption, which forces its budget to at
+   least `1 - 1/|TqMatrix|` (`one_sub_le_of_expandAIdealization`); the quantitative route to the
+   uniform-matrix problem is the random-oracle model of `LatticeCrypto.MLDSA.SecurityExpandARO`.
 2. **Seed-derived scaffolding.** `keygen0` and `keygen1` describe the concrete seed-derived and
    uniform-`t` key distributions. The generic lemma `nmaExperiment_eq_keygen_bind` factors either
    key-generator prefix out of the NMA runtime. The older full-ring `mldsaMLWE` definitions remain
@@ -53,9 +56,9 @@ an embedding witness `ExpandA(ρ) = Â` (which need not exist, since `ExpandA` i
 **re-seed-base** the MLWE problem: the public challenge of `mldsaMLWE` is the *seed* `ρ` itself, and
 the matrix is *defined* as `Â := ExpandA(ρ)` wherever it is used, so that
 `noiseless s₁ ρ = ExpandA(ρ)·s₁`.
-This is the standard ROM modeling of Dilithium with `ExpandA` a random oracle, and it makes the
-distinguisher `B` total: it consumes `(ρ, t)` and forms `pk = (ρ, Power2Round(t).1)` directly with
-no embedding witness required.
+This makes the distinguisher `B` total: it consumes `(ρ, t)` and forms
+`pk = (ρ, Power2Round(t).1)` directly with no embedding witness required. `ExpandA` stays the fixed
+`prims.expandA` here; `LatticeCrypto.MLDSA.SecurityExpandARO` models it as a random oracle.
 
 ## Tailored vs. standard SelfTargetMSIS
 
@@ -190,14 +193,14 @@ with `(s₁, s₂)` uniform on the `η`-bounded box `S_η^ℓ × S_η^k` — the
 distribution the Module-LWE assumption for ML-DSA is stated over. The key-swap
 hop is then an exact monad identity against `mldsaMLWEShort` (no statistical
 slack); the deterministic-XOF derivation is not part of this hop and is handled
-separately by a named XOF-replacement assumption. -/
+separately by the `expandSAdvantage` term of `MLDSA.nma_security_fips`. -/
 
 /-- **Idealized key generation (real `t`).** Sample the matrix seed `ρ`, the
 signing key `K`, and the short secrets `(s₁, s₂)` independently — `(s₁, s₂)`
 uniform on the `η`-bounded box — and form `t = ExpandA(ρ) · s₁ + s₂`. This is
 the honestly-sampled key distribution of the idealized proof-level ML-DSA
-model; the deterministic seed-expanded `keygen0` is related to it by a separate
-XOF-replacement assumption. -/
+model; the deterministic seed-expanded `keygen0` is related to it by the
+`expandSAdvantage` term of `MLDSA.nma_security_fips`. -/
 noncomputable def keygenShort : ProbComp (PublicKey p prims × SecretKey p) := do
   let key ← $ᵗ (Bytes 32)
   let rho ← $ᵗ (Bytes 32)
@@ -245,6 +248,58 @@ theorem keygenShort_generable :
       hr.gen = keygenShort p prims :=
   ⟨hrShort p prims, rfl⟩
 
+/-- The generable relation carried by the FIPS seed-derived key generation: the generator is
+`keygen0`, and every generated pair is seed-valid. Each pair drawn by `keygen0` is literally
+the key assembled by `keyFromMaterial` from the material expanded out of its seed, which
+`keyFromMaterial_eq` identifies with `keyGenFromSeed` — exactly the witness `validKeyPair`
+asks for. This inhabits the `hGen` hypothesis of the FIPS-keygen security corollary
+(`keygen0_generable`). -/
+def hrFips :
+    GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims) :=
+  ⟨keygen0 p prims, fun pk sk hmem => by
+    rw [validKeyPair_eq_true_iff]
+    simp only [keygen0, mem_support_bind_iff] at hmem
+    obtain ⟨seed, -, hpure⟩ := hmem
+    refine ⟨seed, ?_⟩
+    have h := (eq_of_mem_support_pure _ hpure).symm
+    simpa only [keyFromMaterial, keyGenFromSeed] using h⟩
+
+/-- **Satisfiability certificate for the FIPS-keygen `hGen` hypothesis.** Some generable
+relation over `validKeyPair` has the seed-derived FIPS key generator `keygen0` as its
+generator — witnessed by `hrFips`. The FIPS-keygen security corollary hypothesizes such a
+relation via `hGen : hr.gen = keygen0 p prims`; this theorem records that the hypothesis
+pair `(hr, hGen)` is inhabited, so that statement has non-vacuous instances. -/
+theorem keygen0_generable :
+    ∃ hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims),
+      hr.gen = keygen0 p prims :=
+  ⟨hrFips p prims, rfl⟩
+
+/-- **Advantage of a distinguisher against the XOF replacement for the ML-DSA secret derivation
+(`ExpandSeed`/`ExpandS`).** The distinguisher `D` receives `(ρ, K, s₁, s₂)`, either from the
+FIPS derivation — expand a uniform 32-byte seed into `(ρ, ρ', K)` and derive
+`(s₁, s₂) = ExpandS(ρ')` — or from independent sampling with the correct short marginals: `ρ`,
+`K` uniform and `(s₁, s₂)` uniform on the `η`-bounded box `S_η^ℓ × S_η^k`, i.e. exactly the
+draws of the idealized key generator `keygenShort`. The advantage is the Boolean distance of
+its outputs on the two branches.
+
+Security statements take this advantage for a *named* distinguisher, the one their proof builds
+(`nma_security_fips` uses `expandSDistinguisher`). A hypothesis bounding it for every `D` would
+hold only near `1`: for the fixed deterministic `prims`, an unbounded distinguisher can test
+membership in the `2^256`-point image of the seed expansion. -/
+noncomputable def expandSAdvantage
+    (D : Bytes 32 → Bytes 32 → RqVec p.l → RqVec p.k → ProbComp Bool) : ℝ≥0∞ :=
+  𝒟[do
+      let seed ← $ᵗ (Bytes 32)
+      let (rho, rhoPrime, key) := prims.expandSeed seed
+      let (s1, s2) := prims.expandS rhoPrime
+      D rho key s1 s2].boolDist
+    𝒟[do
+      let key ← $ᵗ (Bytes 32)
+      let rho ← $ᵗ (Bytes 32)
+      let s1 ← sampleShortVec p.l p.eta
+      let s2 ← sampleShortVec p.k p.eta
+      D rho key s1 s2]
+
 end KeyGen
 
 section Game
@@ -288,21 +343,23 @@ noncomputable def nmaAdvantage
 
 /-! ### Short-model EUF-NMA game -/
 
-/-- The EUF-NMA experiment over the idealized short-key scheme: identical to `nmaExperiment` except
-the signature scheme is `FiatShamirWithAbort` over `identificationSchemeShort`, whose key relation
-`validKeyPairShort` is the material-based one that `keygenShort` generates (`hrShort`). The forging
-interface and the verify recomputation are unchanged. -/
+/-- The EUF-NMA experiment over the idealized short-key scheme: as `nmaExperiment`, but the
+signature scheme is `FiatShamirWithAbort` over `identificationSchemeShort`, whose key relation
+`validKeyPairShort` is the material-based one that `keygenShort` generates (`hrShort`), and the
+forger receives the full public key `(ρ, t₁, t₀)` (`FullPublicKey`). A forger that ignores `t₀` is a
+forger against the scheme itself; the CMA-to-NMA step produces forgers that use it, through an HVZK
+simulator that reads `t₀`. -/
 noncomputable def nmaShortExperiment
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
     (keygen : ProbComp (PublicKey p prims × SecretKey p))
-    (main : PublicKey p prims →
+    (main : FullPublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) Bool := do
-  let (pk, _) ← (liftM keygen : OracleComp
+  let (pk, sk) ← (liftM keygen : OracleComp
     (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) _)
-  let (msg, σ) ← main pk
+  let (msg, σ) ← main ⟨pk, sk.t0⟩
   (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
 
 /-- The advantage of the short-model NMA experiment with key generator `keygen` is its
@@ -313,7 +370,7 @@ noncomputable def nmaShortAdvantage
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
     (keygen : ProbComp (PublicKey p prims × SecretKey p))
-    (main : PublicKey p prims →
+    (main : FullPublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) : ℝ≥0∞ :=
   (FiatShamirWithAbort.runtime (Commit := Commitment p prims) (Chal := CommitHashBytes p)
@@ -354,13 +411,12 @@ with `keygen0` / `keygen1`, so the uniform branch against `keygen1` is a clean m
 fact. The real branch is intentionally not identified with `keygen0`: here `s₁` and the error are
 independent uniform elements of the full ring, whereas `keygen0` derives `η`-bounded vectors from
 the same seed as `ρ`. No random-oracle assumption turns those distributions into one another.
-The short-secret problem `mldsaMLWEShort` below is the literature-facing formulation used by the
-proved key-swap theorem.
+The short-secret problem `mldsaMLWEShort` below is the formulation used by the proved key-swap
+theorem.
 
-The matrix never appears as a free challenge: phrasing the MLWE instance over seeds is exactly the
-ROM modeling of Dilithium with `ExpandA` a random oracle, and it makes the distinguisher `B` total
-(no `ExpandA`-surjectivity assumption). Relating an abstract matrix-based MLWE problem to this
-concrete seed-based one is a statement-level bridge obligation. -/
+The matrix never appears as a free challenge: phrasing the MLWE instance over seeds makes the
+distinguisher `B` total (no `ExpandA`-surjectivity assumption). Relating an abstract matrix-based
+MLWE problem to this concrete seed-based one is a statement-level bridge obligation. -/
 def mldsaMLWE (p : Params) (prims : Primitives p) :
     LearningWithErrors.Problem (Bytes 32) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := do
@@ -399,20 +455,23 @@ noncomputable def distinguisherB
 /-! ### Short-secret MLWE problems and the seed-to-matrix bridge
 
 The idealized short-key model states its Module-LWE assumption over short `(s₁, s₂)`
-(`mldsaMLWEShort`, seed-based; `mldsaMatrixMLWE`, uniform-matrix form). The seed-based problem
-reduces to the standard matrix form under the `expandAIdealization` XOF assumption
-(`advantage_mldsaMLWEShort_le_matrix`), and `distinguisherBShort` is the induced distinguisher
-whose advantage the short key-swap hop bounds. -/
+(`mldsaMLWEShort`, seed-based; `mldsaMatrixMLWE`, uniform-matrix form). The bridge lemma
+`advantage_mldsaMLWEShort_le_matrix` relates the two under `expandAIdealization`, which holds
+only at `εA ≈ 1`, so the bridge carries no quantitative content; the uniform-matrix problem is
+reached with no idealization slack by `MLDSA.NMA.nma_security_rom`, which models `ExpandA` as a
+random oracle. `distinguisherBShort` is the induced distinguisher whose advantage the short
+key-swap hop bounds. -/
 
 /-- **The short-secret Module-LWE problem for ML-DSA** (seed-based form). The public
 challenge is the matrix seed `ρ` itself (uniform), the secret `s₁` and the additive
 error `s₂` are uniform on the `η`-bounded box (`sampleShortVec`), and the decision
-target is `t = ExpandA(ρ) · s₁ + s₂` versus uniform `t`. This is the distribution the
-ML-DSA literature states its MLWE assumption over; unlike a uniform-error variant it
-is not information-theoretically trivial, since `ExpandA(ρ) · s₁ + s₂` with short
-`(s₁, s₂)` is far from uniform. Bridging the seed-based challenge to the standard
-uniform-matrix form is `advantage_mldsaMLWEShort_le_matrix`, under the explicit
-`expandAIdealization` assumption. -/
+target is `t = ExpandA(ρ) · s₁ + s₂` versus uniform `t`. The secret and error distribution is
+the one the ML-DSA literature states its MLWE assumption over, with the matrix derived from a
+seed rather than uniform; unlike a uniform-error variant it is not information-theoretically
+trivial, since `ExpandA(ρ) · s₁ + s₂` with short
+`(s₁, s₂)` is far from uniform. The bridge lemma `advantage_mldsaMLWEShort_le_matrix` to the
+uniform-matrix form holds only at `εA ≈ 1` (see `expandAIdealization`); the uniform-matrix
+problem is reached quantitatively by `MLDSA.NMA.nma_security_rom`. -/
 noncomputable def mldsaMLWEShort (p : Params) (prims : Primitives p) :
     LearningWithErrors.Problem (Bytes 32) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := $ᵗ (Bytes 32)
@@ -424,8 +483,9 @@ noncomputable def mldsaMLWEShort (p : Params) (prims : Primitives p) :
 /-- **The matrix-based short Module-LWE problem for ML-DSA.** The standard form: the
 public challenge is a uniform matrix `A`, the secret and error are uniform on the
 `η`-bounded box, and the decision target is `A · s₁ + s₂` versus uniform. This is the
-literature-facing hardness assumption; `mldsaMLWEShort` reduces to it under
-`expandAIdealization` (`advantage_mldsaMLWEShort_le_matrix`). -/
+literature-facing hardness assumption. `advantage_mldsaMLWEShort_le_matrix` bounds
+`mldsaMLWEShort` by it only at `εA ≈ 1`; `MLDSA.NMA.nma_security_rom` reaches it with no
+idealization slack by modelling `ExpandA` as a random oracle. -/
 noncomputable def mldsaMatrixMLWE (p : Params) :
     LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := $ᵗ (TqMatrix p.k p.l)
@@ -434,18 +494,24 @@ noncomputable def mldsaMatrixMLWE (p : Params) :
   noiseless := fun s1 A => A * s1
   sampleUniform := $ᵗ (RqVec p.k)
 
-/-- **ExpandA idealization (quantified XOF-as-random-matrix step).** For every
+/-- **ExpandA idealization.** For every
 distinguisher `D` receiving both the seed and the matrix, the pair
 `(ρ, ExpandA(ρ))` for uniform `ρ` is `εA`-indistinguishable from `(ρ, A)` with `A`
 uniform and independent of `ρ`.
 
-This is the standard random-oracle reading of `ExpandA` (Dilithium's `A = ExpandA(ρ)`
-with `ExpandA` modeled as a random function), stated once with inspectable content
-rather than supplied per-reduction. For a fixed deterministic `prims.expandA` the
-unrestricted-quantifier form is only satisfiable at large `εA` (a distinguisher may
-recompute `ExpandA(ρ)` and compare); pending the cost-model infrastructure (#460) it
-should be read computationally, against bounded distinguishers, where it is the
-assumption that SHAKE-based expansion yields a pseudorandom matrix. -/
+**This predicate forces `εA ≥ 1 - 1/|TqMatrix|`** (`one_sub_le_of_expandAIdealization`). For the
+fixed deterministic function `prims.expandA` the distinguisher
+`D ρ Â := pure (decide (Â = ExpandA(ρ)))` accepts the real branch with probability `1` and the
+ideal branch with probability `1 / |TqMatrix|`. Restricting to bounded distinguishers would not
+change that: recomputing `ExpandA(ρ)` is the same efficient evaluation that key generation and
+verification themselves perform. Consequently `advantage_mldsaMLWEShort_le_matrix`, which
+consumes it, gives no quantitative bound.
+
+Reaching the uniform-matrix problem requires *modelling* `ExpandA` as a random oracle rather
+than assuming a property of a fixed function. That model is
+`LatticeCrypto.MLDSA.SecurityExpandARO`, where `ExpandA` is an oracle shared by key generation,
+verification, and the reduction, and both reductions program it at a self-chosen seed; its
+headline `MLDSA.NMA.nma_security_rom` reaches `mldsaMatrixMLWE` with no idealization slack. -/
 def expandAIdealization (p : Params) (prims : Primitives p) (εA : ℝ≥0∞) : Prop :=
   ∀ D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool,
     𝒟[do
@@ -456,9 +522,26 @@ def expandAIdealization (p : Params) (prims : Primitives p) (εA : ℝ≥0∞) :
         let A ← $ᵗ (TqMatrix p.k p.l)
         D rho A] ≤ εA
 
+omit nttOps in
+/-- The distinguisher that compares the matrix with `ExpandA(ρ)` forces the budget of
+`expandAIdealization` up to one minus the chance that a uniform matrix equals `ExpandA(ρ)`. -/
+theorem one_sub_le_of_expandAIdealization {p : Params} {prims : Primitives p} {εA : ℝ≥0∞}
+    (h : expandAIdealization p prims εA) :
+    1 - Pr{let rho ← $ᵗ (Bytes 32); let A ← $ᵗ (TqMatrix p.k p.l)}[A = prims.expandA rho] ≤ εA := by
+  classical
+  have hD := h fun rho A => pure (decide (A = prims.expandA rho))
+  refine tsub_le_iff_left.mpr ((le_of_eq ?_).trans
+    ((MeasureTheory.Measure.apply_true_le_add_boolDist _ _).trans (add_le_add ?_ hD)))
+  · simp
+  · have hmem : ({true} : Set Bool) = {b | b = true} := rfl
+    rw [hmem, ← prEvent_eq_evalDist_of_discrete]
+    simp only [prEvent_norm, decide_eq_true_eq]
+    exact le_rfl
+
 /-- The short-model MLWE distinguisher: form `pk = (ρ, Power2Round(t).1)` from the challenge
 `(ρ, t)`, run the NMA forging strategy
-`main` on `pk`, simulate the random oracle to verify the returned forgery, and output the
+`main` on `pk` and `t₀ = Power2Round(t).2`, simulate the random oracle to verify the returned
+forgery, and output the
 validity bit — typed against the short-secret problem `mldsaMLWEShort` and the short-key
 scheme `identificationSchemeShort`. When `(ρ, t)` is real it reproduces
 `nmaShortExperiment … keygenShort`; when `t` is uniform it reproduces
@@ -466,7 +549,7 @@ scheme `identificationSchemeShort`. When `(ρ, t)` is real it reproduces
 noncomputable def distinguisherBShort
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
-    (main : PublicKey p prims →
+    (main : FullPublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     LearningWithErrors.Adversary (mldsaMLWEShort p prims) :=
@@ -475,7 +558,7 @@ noncomputable def distinguisherBShort
     let t := challenge.2
     let pk : PublicKey p prims := ⟨rho, (prims.power2RoundVec t).1⟩
     simulateToProbComp p prims (M := M) do
-      let (msg, σ) ← main pk
+      let (msg, σ) ← main ⟨pk, (prims.power2RoundVec t).2⟩
       (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
 
 /-- Lift a seed-based short-MLWE adversary to the uniform-matrix problem: run it on a
@@ -489,12 +572,15 @@ def matrixLift
 
 end Distinguisher
 
-/-- **Seed-to-matrix bridge.** Under `expandAIdealization`, any adversary against the
-seed-based short problem yields one against the standard uniform-matrix problem: the
-matrix adversary runs the seed adversary on a freshly sampled seed and the challenged
-target vector. The uniform branches agree exactly (both present an independent uniform
-`t`), and the real branches differ by one application of the idealization at the
-distinguisher `D ρ A := s₁ ← S_η^ℓ; s₂ ← S_η^k; B (ρ, A·s₁ + s₂)`.
+/-- **Seed-to-matrix bound at the idealization slack.** Under `expandAIdealization p prims εA`,
+the advantage of an adversary against the seed-based short problem is at most that of its
+`matrixLift` against the uniform-matrix problem plus `εA`: the matrix adversary runs the seed
+adversary on a freshly sampled seed and the challenged target vector. Since
+`expandAIdealization` holds only at `εA ≈ 1`, the bound is vacuous as a reduction;
+`MLDSA.NMA.nma_security_rom` is the quantitative route to the uniform-matrix problem. The
+uniform branches agree exactly (both present an independent uniform `t`), and the real branches
+differ by one application of the idealization at the distinguisher
+`D ρ A := s₁ ← S_η^ℓ; s₂ ← S_η^k; B (ρ, A·s₁ + s₂)`.
 
 Proof recipe: rewrite both advantages via `NoisyLearning.advantage_eq_boolDist` and
 `Measure.boolDist`; the `randomExperiment` branches are identified by stripping the
@@ -621,22 +707,22 @@ theorem nmaShortExperiment_eq_keygen_bind
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
     (keygen : ProbComp (PublicKey p prims × SecretKey p))
-    (main : PublicKey p prims →
+    (main : FullPublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     (FiatShamirWithAbort.runtime (Commit := Commitment p prims) (Chal := CommitHashBytes p)
         M).evalDist (nmaShortExperiment p prims hr maxAttempts keygen main) =
       𝒟[(do
-        let (pk, _) ← keygen
+        let (pk, sk) ← keygen
         simulateToProbComp p prims (M := M) (do
-          let (msg, σ) ← main pk
+          let (msg, σ) ← main ⟨pk, sk.t0⟩
           (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify
             pk msg σ))] := by
   let : MeasurableSpace (PublicKey p prims × SecretKey p) := ⊤
-  let rest : PublicKey p prims →
-      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) Bool := fun pk => do
-    let (msg, σ) ← main pk
-    (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
+  let rest : PublicKey p prims × SecretKey p →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) Bool := fun pksk => do
+    let (msg, σ) ← main ⟨pksk.1, pksk.2.t0⟩
+    (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pksk.1 msg σ
   unfold nmaShortExperiment
   rw [FiatShamirWithAbort.runtime_evalDist_bind_liftComp
     (Commit := Commitment p prims) (Chal := CommitHashBytes p) (M := M),
@@ -645,7 +731,7 @@ theorem nmaShortExperiment_eq_keygen_bind
   filter_upwards [] with pk
   simpa only [simulateToProbComp, roImpl] using
     (FiatShamirWithAbort.runtime_evalDist_eq_simulateQ_run'
-      (Commit := Commitment p prims) (Chal := CommitHashBytes p) M (rest pk.1))
+      (Commit := Commitment p prims) (Chal := CommitHashBytes p) M (rest pk))
 
 /-- **The exact short-model key-swap hop.** Against the idealized key generators
 `keygenShort` / `keygenShort1`, the short-model NMA-game gap **is** the `mldsaMLWEShort`
@@ -663,7 +749,7 @@ close by simplifying the resulting plain `ProbComp` bind. -/
 theorem nma_keyswap_hop_short
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
-    (main : PublicKey p prims →
+    (main : FullPublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     ENNReal.absDiff (nmaShortAdvantage p prims hr maxAttempts (keygenShort p prims) main)
@@ -788,18 +874,83 @@ def extractorC [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
       -- `false` here, so any STMSIS-side success on the dummy only loosens the bound favorably.
       return ((msg, default), default)
 
-/-- **Per-key STMSIS read-back comparison.** For a fixed public key `pk`, the NMA forge-and-verify
-tail (run through `simulateToProbComp`) accepts no more often than the SelfTargetMSIS experiment
-tail of `extractorC` at the matching parameters `(ExpandA(ρ), pk)`.
+/-- **The STMSIS read-back comparison.** Fix a public key `pk`, a per-commitment verifier `ver` and
+a validity predicate `valid`, and let `tail` reject an aborted forgery and otherwise query
+`H(msg, w')` and run `ver`. If `ver` accepting implies `valid` at the preimage `(msg, w')`, then
+`tail` after `main pk` accepts no more often than the SelfTargetMSIS experiment tail of `extractorC`
+at parameters `(params, pk)`.
 
 Both tails first simulate `main pk` against the same random oracle from the empty cache; the proof
 compares them after that shared prefix (`OracleComp.evalDist_bind_apply_mono_of_support`). On an
-aborting forgery the NMA tail
-is deterministically `false`. On a forgery `some (w', (z, h))` both branches issue the *same*
-`H(msg, w')` query on the *same* cache, so the random answer `c̃` and the resulting cache coincide;
-the STMSIS experiment then reads `c̃` back and `mldsaSTMSIS.isValid` recovers `w'` as exactly the
-`useHintVec …` value that `verify` checks against, so an accepted NMA forgery is a valid STMSIS
-solution. -/
+aborting forgery `tail` is deterministically `false`. On a forgery `some (w', r)` both branches
+issue the *same* `H(msg, w')` query on the *same* cache, so the random answer `c̃` and the resulting
+cache coincide, and the experiment reads `c̃` back. -/
+theorem stmsis_tail_le_of_verify_imp_valid
+    [DecidableEq M] [SampleableType (CommitHashBytes p)]
+    [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+    (params : TqMatrix p.k p.l) (pk : PublicKey p prims)
+    (main : PublicKey p prims →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
+        (M × Option (Commitment p prims × Response p prims)))
+    (tail : M → Option (Commitment p prims × Response p prims) →
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) Bool)
+    (ver : Commitment p prims → CommitHashBytes p → Response p prims → Bool)
+    (valid : M × Commitment p prims → CommitHashBytes p → Response p prims → Bool)
+    (htail_none : ∀ msg, tail msg none = pure false)
+    (htail_some : ∀ msg w' r, tail msg (some (w', r)) = do
+      let c ← HasQuery.query (spec := (M × Commitment p prims →ₒ CommitHashBytes p)) (msg, w')
+      pure (ver w' c r))
+    (hvalid : ∀ msg w' c r, ver w' c r = true → valid (msg, w') c r = true) :
+    𝒟[simulateToProbComp p prims (M := M) (do
+        let (msg, σ) ← main pk
+        tail msg σ)] {true} ≤
+      𝒟[do
+        let ((hashInput, response), cache) ←
+          (simulateQ (roImpl p prims (M := M))
+            ((extractorC p prims main).run (params, pk))).run ∅
+        match cache hashInput with
+        | some hashOutput => pure (valid hashInput hashOutput response)
+        | none => pure false] {true} := by
+  classical
+  -- Decompose both tails over the shared simulation of `main pk` from the empty cache.
+  unfold simulateToProbComp extractorC
+  simp only [bind_pure_comp, simulateQ_bind, StateT.run_bind, StateT.run'_eq, map_bind,
+    bind_assoc]
+  refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
+    (measurableSet_singleton true) fun a _ => ?_
+  obtain ⟨⟨msg, σ⟩, cache0⟩ := a
+  cases σ with
+  | none =>
+    -- Aborting forgery: `tail` is deterministically `false`, so it has weight `0`.
+    simp only [htail_none, simulateQ_pure, StateT.run_pure, map_pure, evalDist_pure,
+      Measure.dirac_apply]
+    simp
+  | some wzh =>
+    obtain ⟨w', z, h⟩ := wzh
+    -- Both branches are now maps over the same `H(msg, w')` run; compare per random answer.
+    simp only [htail_some, simulateQ_map, StateT.run_map, bind_pure_comp]
+    simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc]
+    refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
+      (measurableSet_singleton true) fun cc hcc => ?_
+    simp only [pure_bind]
+    -- The query simulation caches its answer: `cc.2 (msg, w') = some cc.1`.
+    have hquery : simulateQ (roImpl p prims (M := M)) (query (msg, w') :
+          OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) _) =
+        (randomOracle : QueryImpl (M × Commitment p prims →ₒ CommitHashBytes p) _) (msg, w') :=
+      roSim.simulateQ_liftM_spec_query _ _
+    rw [hquery, randomOracle] at hcc
+    rw [QueryImpl.withCaching_run_caches _ _ _ _ hcc]
+    simp only [evalDist_pure, Measure.dirac_apply]
+    by_cases hverify : ver w' cc.1 (z, h) = true
+    · simp [hverify, hvalid msg w' cc.1 (z, h) hverify]
+    · simp only [Bool.not_eq_true] at hverify
+      rw [hverify]
+      simp
+
+/-- **Per-key STMSIS read-back comparison.** For a fixed public key `pk`, the NMA forge-and-verify
+tail accepts no more often than the SelfTargetMSIS experiment tail of `extractorC` at the matching
+parameters `(ExpandA(ρ), pk)`: `mldsaSTMSIS.isValid` recovers `w'` as exactly the `useHintVec …`
+value that `verify` checks against, so an accepted NMA forgery is a valid STMSIS solution. -/
 private theorem stmsis_tail_le
     [DecidableEq M] [SampleableType (CommitHashBytes p)]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
@@ -821,61 +972,16 @@ private theorem stmsis_tail_le
         | some hashOutput =>
             pure ((mldsaSTMSIS p prims M).isValid (prims.expandA pk.rho) pk hashInput hashOutput
               response)
-        | none => pure false] {true} := by
-  classical
-  -- Decompose both tails over the shared simulation of `main pk` from the empty cache.
-  unfold simulateToProbComp extractorC
-  simp only [bind_pure_comp, simulateQ_bind, StateT.run_bind, StateT.run'_eq, map_bind,
-    bind_assoc]
-  -- Compare after the shared `main pk` simulation prefix.
-  refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
-    (measurableSet_singleton true) fun a _ => ?_
-  -- `a = ((msg, σ), cache₀)`; split on whether the forgery aborts.
-  obtain ⟨⟨msg, σ⟩, cache0⟩ := a
-  cases σ with
-  | none =>
-    -- Aborting forgery: NMA `verify` is deterministically `false`, so the NMA tail has weight `0`.
-    simp only [FiatShamirWithAbort, simulateQ_pure, StateT.run_pure, map_pure,
-      evalDist_pure, Measure.dirac_apply]
-    simp
-  | some wzh =>
-    obtain ⟨w', z, h⟩ := wzh
-    -- Non-aborting forgery `(w', (z, h))`. Both branches issue the same `H(msg, w')` query on
-    -- `cache0`; reduce the NMA `verify` and the extractor body to that single query.
-    simp only [FiatShamirWithAbort, simulateQ_map, StateT.run_map, bind_pure_comp]
-    -- Both sides are now `f <$> (simulateQ roImpl (query (msg, w'))).run cache0`; turn the maps
-    -- into binds over the shared random-oracle run and compare per random answer `(c, cache₁)`.
-    simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc]
-    refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
-      (measurableSet_singleton true) fun cc hcc => ?_
-    simp only [pure_bind]
-    -- The query simulation caches its answer: `cc.2 (msg, w') = some cc.1`.
-    have hquery : simulateQ (roImpl p prims (M := M)) (query (msg, w') :
-          OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) _) =
-        (randomOracle : QueryImpl (M × Commitment p prims →ₒ CommitHashBytes p) _) (msg, w') :=
-      roSim.simulateQ_liftM_spec_query _ _
-    rw [hquery] at hcc
-    rw [randomOracle] at hcc
-    rw [QueryImpl.withCaching_run_caches _ _ _ _ hcc]
-    -- An accepted NMA forgery is a valid STMSIS solution. The self-target binding
-    -- `hashInput.2 = w'` holds because the queried preimage is exactly `(msg, w')`, so the binding
-    -- reduces to `decide (w' = w') = true`; commitment recoverability is the middle conjunct of
-    -- `verify`, which `isValid` discharges by `decide (X = X)`.
-    simp only [evalDist_pure, Measure.dirac_apply]
-    by_cases hverify :
-        (identificationScheme p prims).verify pk w' cc.1 (z, h) = true
-    · -- Accepted: `isValid` recovers `w'` as the very `useHintVec …` value `verify` checks against,
-      -- and the preimage's commitment component `(msg, w').2` is `w'`, so both conjuncts hold.
-      have hvalid :
-          (mldsaSTMSIS p prims M).isValid (prims.expandA pk.rho) pk (msg, w') cc.1 (z, h)
-            = true := by
-        simp only [mldsaSTMSIS, identificationScheme] at hverify ⊢
-        revert hverify
-        grind
-      simp [hverify, hvalid]
-    · simp only [Bool.not_eq_true] at hverify
-      rw [hverify]
-      simp
+        | none => pure false] {true} :=
+  stmsis_tail_le_of_verify_imp_valid p prims (prims.expandA pk.rho) pk main
+    ((FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify pk)
+    ((identificationScheme p prims).verify pk)
+    ((mldsaSTMSIS p prims M).isValid (prims.expandA pk.rho) pk)
+    (fun _ => rfl) (fun _ _ _ => rfl)
+    (fun msg w' c ⟨z, h⟩ hverify => by
+      simp only [mldsaSTMSIS, identificationScheme] at hverify ⊢
+      revert hverify
+      grind)
 
 /-- **The SelfTargetMSIS extraction bound (Lemma 7, Step 3).** The uniform-`t` EUF-NMA advantage is
 bounded by the SelfTargetMSIS advantage of the extractor `C`.
@@ -1083,27 +1189,31 @@ theorem mldsaSTMSISShort_isValid_expandA_iff (pk : PublicKey p prims)
     Bool.and_eq_true, decide_eq_true_eq]
   tauto
 
-/-- **The SelfTargetMSIS extractor for the idealized short-key model.** It performs the same
-forger-to-preimage extraction as `extractorC` — run the NMA forger `main` on the target public
-key, force the `H(msg, w')` query, and output the STMSIS preimage `(msg, w')` with the response
-`(z, h)` — typed against the short-model problem `mldsaSTMSISShort`, whose parameters are sampled
-from `keygenShort1`. -/
+/-- **The SelfTargetMSIS extractor for the idealized short-key model.** The problem's parameters
+`(Â, pk)` carry only `t₁`, while the forger also expects `t₀`. The extractor draws `t` uniformly
+from the fiber `{t | Power2Round(t).1 = t₁}`, gives the forger `t₀ = Power2Round(t).2`, and then
+performs the extraction of `extractorC`: run the forger on the target public key, force the
+`H(msg, w')` query, and output the STMSIS preimage `(msg, w')` with the response `(z, h)`. In the
+uniform-`t` game this reproduces the forger's view exactly
+(`SampleableType.uniformSample_bind_evalDistEq_uniformFiber`), and the fiber sample is
+efficient: `Power2Round` acts coefficientwise, so the fiber is a box of at most `2^d` values per
+coefficient. -/
 noncomputable def extractorCShort [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
-    (main : PublicKey p prims →
+    (main : FullPublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     SelfTargetMSIS.Adversary (mldsaSTMSISShort p prims M) :=
-  ⟨(extractorC p prims main).run⟩
+  ⟨fun params => do
+    let t ← (liftM (SampleableType.uniformFiber
+        (fun t : RqVec p.k => (prims.power2RoundVec t).1) params.2.t1) :
+      OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) _)
+    (extractorC p prims fun pk => main ⟨pk, (prims.power2RoundVec t).2⟩).run params⟩
 
 /-- **Per-key STMSIS read-back comparison, short model.** For a fixed public key `pk`, the
-short-model NMA forge-and-verify tail (run
-through `simulateToProbComp`) accepts no more often than the SelfTargetMSIS experiment tail of
-`extractorCShort` at the matching parameters `(ExpandA(ρ), pk)`. The argument never inspects
-the key relation: both tails simulate `main pk` against the same random oracle from the empty
-cache, an aborting forgery contributes weight `0`, and on `some (w', (z, h))` both branches
-issue the same `H(msg, w')` query, whose cached answer the STMSIS experiment reads back before
-`mldsaSTMSISShort.isValid` recovers the commitment, binds it to the preimage component `w'`,
-and runs the identical verifier. -/
+short-model NMA forge-and-verify tail accepts no more often than the SelfTargetMSIS experiment tail
+of `extractorC` at the matching parameters `(ExpandA(ρ), pk)`: `mldsaSTMSISShort.isValid`
+recovers the commitment, binds it to the preimage component `w'`, and runs the identical
+verifier. -/
 private theorem stmsis_tail_le_short
     [DecidableEq M] [SampleableType (CommitHashBytes p)]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
@@ -1120,85 +1230,57 @@ private theorem stmsis_tail_le_short
       𝒟[do
         let ((hashInput, response), cache) ←
           (simulateQ (roImpl p prims (M := M))
-            ((extractorCShort p prims main).run (prims.expandA pk.rho, pk))).run ∅
+            ((extractorC p prims main).run (prims.expandA pk.rho, pk))).run ∅
         match cache hashInput with
         | some hashOutput =>
             pure ((mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk
               hashInput hashOutput response)
-        | none => pure false] {true} := by
-  classical
-  -- Decompose both tails over the shared simulation of `main pk` from the empty cache.
-  unfold simulateToProbComp extractorCShort extractorC
-  simp only [bind_pure_comp, simulateQ_bind, StateT.run_bind, StateT.run'_eq, map_bind,
-    bind_assoc]
-  -- Compare after the shared `main pk` simulation prefix.
-  refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
-    (measurableSet_singleton true) fun a _ => ?_
-  -- `a = ((msg, σ), cache₀)`; split on whether the forgery aborts.
-  obtain ⟨⟨msg, σ⟩, cache0⟩ := a
-  cases σ with
-  | none =>
-    -- Aborting forgery: NMA `verify` is deterministically `false`, so the NMA tail has weight `0`.
-    simp only [FiatShamirWithAbort, simulateQ_pure, StateT.run_pure, map_pure,
-      evalDist_pure, Measure.dirac_apply]
-    simp
-  | some wzh =>
-    obtain ⟨w', z, h⟩ := wzh
-    -- Non-aborting forgery `(w', (z, h))`. Both branches issue the same `H(msg, w')` query on
-    -- `cache0`; reduce the NMA `verify` and the extractor body to that single query.
-    simp only [FiatShamirWithAbort, simulateQ_map, StateT.run_map, bind_pure_comp]
-    -- Both sides are now `f <$> (simulateQ roImpl (query (msg, w'))).run cache0`; turn the maps
-    -- into binds over the shared random-oracle run and compare per random answer `(c, cache₁)`.
-    simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc]
-    refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
-      (measurableSet_singleton true) fun cc hcc => ?_
-    simp only [pure_bind]
-    -- The query simulation caches its answer: `cc.2 (msg, w') = some cc.1`.
-    have hquery : simulateQ (roImpl p prims (M := M)) (query (msg, w') :
-          OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) _) =
-        (randomOracle : QueryImpl (M × Commitment p prims →ₒ CommitHashBytes p) _) (msg, w') :=
-      roSim.simulateQ_liftM_spec_query _ _
-    rw [hquery] at hcc
-    rw [randomOracle] at hcc
-    rw [QueryImpl.withCaching_run_caches _ _ _ _ hcc]
-    -- An accepted NMA forgery is a valid STMSIS solution: the middle conjunct of `verify`
-    -- says the recomputed commitment equals the forgery's `w'`, which is the commitment
-    -- component of the extractor's preimage `(msg, w')` — exactly the self-target binding
-    -- `isValid` demands.
-    simp only [evalDist_pure, Measure.dirac_apply]
-    by_cases hverify :
-        (identificationSchemeShort p prims).verify pk w' cc.1 (z, h) = true
-    · -- Accepted: `verify`'s middle conjunct identifies the recomputed commitment with `w'`,
-      -- so the binding conjunct holds at the preimage `(msg, w')` and `verify` re-accepts at
-      -- the recomputed commitment, giving `isValid = true`.
-      have hvalid :
-          (mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk (msg, w') cc.1
-            (z, h) = true := by
-        simp only [mldsaSTMSISShort, identificationSchemeShort, identificationScheme]
-          at hverify ⊢
-        revert hverify
-        grind
-      simp [hverify, hvalid]
-    · simp only [Bool.not_eq_true] at hverify
-      rw [hverify]
-      simp
+        | none => pure false] {true} :=
+  stmsis_tail_le_of_verify_imp_valid p prims (prims.expandA pk.rho) pk main
+    ((FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk)
+    ((identificationSchemeShort p prims).verify pk)
+    ((mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk)
+    (fun _ => rfl) (fun _ _ _ => rfl)
+    (fun msg w' c ⟨z, h⟩ hverify => by
+      simp only [mldsaSTMSISShort, identificationSchemeShort, identificationScheme]
+        at hverify ⊢
+      revert hverify
+      grind)
+
+omit nttOps [DecidableEq prims.High] [NeZero p.gamma1] in
+/-- In the uniform-`t` key generator, `t₀` can be redrawn from the fiber of `t₁`: a continuation
+of the generated key that reads `pk` and `t₀` sees the same distribution when `t₀` comes from a
+uniform `t` with `Power2Round(t).1 = pk.t₁`. -/
+private lemma keygenShort1_bind_evalDistEq_fiber {γ : Type}
+    (k : PublicKey p prims → RqVec p.k → ProbComp γ) :
+    (do let (pk, sk) ← keygenShort1 p prims; k pk sk.t0) =ᵈ
+      (do
+        let (pk, _) ← keygenShort1 p prims
+        let t ← SampleableType.uniformFiber
+          (fun t : RqVec p.k => (prims.power2RoundVec t).1) pk.t1
+        k pk (prims.power2RoundVec t).2) := by
+  simp only [keygenShort1, keyFromMaterial, bind_assoc, pure_bind]
+  refine EvalDistEq.bind_right _ fun key => EvalDistEq.bind_right _ fun rho =>
+    EvalDistEq.bind_right _ fun s1 => EvalDistEq.bind_right _ fun s2 => ?_
+  exact SampleableType.uniformSample_bind_evalDistEq_uniformFiber
+    (fun t : RqVec p.k => (prims.power2RoundVec t).1)
+    (fun t1 t => k ⟨rho, t1⟩ (prims.power2RoundVec t).2)
 
 /-- **The SelfTargetMSIS extraction bound in the idealized short-key model.** The uniform-`t`
 short-model EUF-NMA advantage (key generator `keygenShort1`) is bounded by the SelfTargetMSIS
 advantage of the extractor against `mldsaSTMSISShort`.
 
-The argument is a shared-prefix read-back comparison: after the
-bundled-semantics rewrite (`nmaShortExperiment_eq_keygen_bind`) both sides bind over the same
-`keygenShort1` prefix — the short problem's `sampleParams` is definitionally `keygenShort1`
-followed by publishing `(ExpandA(ρ), pk)` — so monotonicity reduces to the per-key comparison
-`stmsis_tail_le_short`, which never inspects the key distribution and packages the cache
-read-back and commitment recoverability. -/
+The forger's `t₀` is first redrawn from the fiber of `t₁` (`keygenShort1_bind_evalDistEq_fiber`),
+which is what `extractorCShort` does. Both sides then bind over the same `keygenShort1` prefix —
+the short problem's `sampleParams` is definitionally `keygenShort1` followed by publishing
+`(ExpandA(ρ), pk)` — and over the same fiber draw, so monotonicity reduces to the per-key
+comparison `stmsis_tail_le_short` at each drawn `t₀`. -/
 theorem nmaAdvantage_keygenShort1_le_stmsis
     [DecidableEq M] [SampleableType (CommitHashBytes p)]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
-    (main : PublicKey p prims →
+    (main : FullPublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     nmaShortAdvantage p prims hr maxAttempts (keygenShort1 p prims) main ≤
@@ -1206,22 +1288,40 @@ theorem nmaAdvantage_keygenShort1_le_stmsis
   classical
   rw [nmaShortAdvantage, nmaShortExperiment_eq_keygen_bind, SelfTargetMSIS.advantage,
     SelfTargetMSIS.experiment]
-  -- The short STMSIS `sampleParams` is exactly `keygenShort1` followed by publishing
-  -- `(ExpandA(ρ), pk)`, so both event measures bind over the same prefix; compare them per-key.
-  rw [show (mldsaSTMSISShort p prims M).sampleParams =
-      (keygenShort1 p prims) >>= fun pkSk => pure (prims.expandA pkSk.1.rho, pkSk.1) from rfl]
-  rw [bind_assoc]
-  refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
-    (measurableSet_singleton true) ?_
-  rintro ⟨pk, sk⟩ _
-  rw [pure_bind]
-  convert stmsis_tail_le_short p prims hr maxAttempts main pk using 2
-  rw [roImpl, OracleSpec.romImpl, unifFwdImpl]
-  apply congrArg (fun mx : ProbComp Bool => 𝒟[mx])
-  refine bind_congr fun x => ?_
-  obtain ⟨⟨hashInput, response⟩, cache⟩ := x
-  dsimp only
-  cases cache hashInput <;> rfl
+  calc _ = 𝒟[do
+          let (pk, _) ← keygenShort1 p prims
+          let t ← SampleableType.uniformFiber
+            (fun t : RqVec p.k => (prims.power2RoundVec t).1) pk.t1
+          simulateToProbComp p prims (M := M) (do
+            let (msg, σ) ← main ⟨pk, (prims.power2RoundVec t).2⟩
+            (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify
+              pk msg σ)] {true} :=
+        congrArg (fun μ : Measure Bool => μ {true})
+          (keygenShort1_bind_evalDistEq_fiber p prims (fun pk t0 =>
+            simulateToProbComp p prims (M := M) (do
+              let (msg, σ) ← main ⟨pk, t0⟩
+              (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify
+                pk msg σ))).evalDist_eq
+    _ ≤ _ := by
+      rw [show (mldsaSTMSISShort p prims M).sampleParams =
+          (keygenShort1 p prims) >>= fun pkSk => pure (prims.expandA pkSk.1.rho, pkSk.1) from rfl,
+        bind_assoc]
+      refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
+        (measurableSet_singleton true) ?_
+      rintro ⟨pk, sk⟩ _
+      rw [pure_bind]
+      simp only [extractorCShort, simulateQ_bind, StateT.run_bind,
+        OracleSpec.simulateQ_romImpl_liftM_run, bind_map_left, bind_assoc]
+      refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
+        (measurableSet_singleton true) ?_
+      intro t _
+      convert stmsis_tail_le_short p prims hr maxAttempts
+        (fun pk => main ⟨pk, (prims.power2RoundVec t).2⟩) pk using 2
+      rw [roImpl]
+      refine congrArg (fun mx : ProbComp Bool => 𝒟[mx]) (bind_congr fun x => ?_)
+      obtain ⟨⟨hashInput, response⟩, cache⟩ := x
+      dsimp only
+      cases cache hashInput <;> rfl
 
 end Extractor
 
@@ -1233,9 +1333,12 @@ The live short-secret reduction and the extraction bound are fully proven:
 
 - **MLWE key swap (`nma_keyswap_hop_short`).** The exact NMA-game gap for
   `keygenShort` / `keygenShort1` is the advantage of `distinguisherBShort` against
-  `mldsaMLWEShort`. `advantage_mldsaMLWEShort_le_matrix` supplies the explicit seed-to-matrix
-  bridge. The older `mldsaMLWE` / `distinguisherB` declarations are scaffolding only: their
-  full-ring real branch is not the seed-derived `keygen0` distribution.
+  `mldsaMLWEShort`. `advantage_mldsaMLWEShort_le_matrix` supplies the seed-to-matrix bridge, but
+  only under `expandAIdealization`, which forces its budget to at least `1 - 1/|TqMatrix|`; the
+  quantitative uniform-matrix statement is `MLDSA.NMA.nma_security_rom` in
+  `LatticeCrypto.MLDSA.SecurityExpandARO`. The older `mldsaMLWE` / `distinguisherB` declarations
+  are scaffolding only: their full-ring real branch is not the seed-derived `keygen0`
+  distribution.
 - **STMSIS extraction (`nmaAdvantage_keygen1_le_stmsis`).** The uniform-`t` NMA advantage is bounded
   by the SelfTargetMSIS advantage of `extractorC`; after `nmaExperiment_eq_keygen_bind` both sides
   bind over the same `keygen1` prefix, so `OracleComp.evalDist_bind_apply_mono_of_support` reduces
