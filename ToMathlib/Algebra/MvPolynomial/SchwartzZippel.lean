@@ -9,13 +9,12 @@ public import Mathlib.Algebra.MvPolynomial.SchwartzZippel
 public import Mathlib.Algebra.Order.Ring.NNRat
 public import Mathlib.Basic.ENNReal.BigOperators
 public import Mathlib.Basic.ENNReal.Real
-import Mathlib.Data.FinEnum
 
 /-! ## Counting zeros of multivariate polynomials
 
-A nonzero polynomial of bounded total degree has few zeros on products of finite subsets of a
-field. The variables range over any finite type. Full finite fields give a bound in terms of the
-field cardinality and the number of variables.
+A nonzero polynomial of bounded total degree has few zeros on products of finite subsets of an
+integral domain. The variables range over any finite type. A finite integral domain gives a bound
+in terms of its cardinality and the number of variables.
 -/
 
 public section
@@ -23,15 +22,16 @@ public section
 open scoped ENNReal NNReal BigOperators
 
 /-- A nonzero polynomial of total degree at most `d` has at most `d / m` times the product
-cardinality zeros, when each factor has at least `m > 0` elements. -/
+cardinality zeros, when each factor has at least `m` elements. -/
 theorem schwartz_zippel_counting
-    {F : Type*} [Field F] [DecidableEq F] {ι : Type*} [Fintype ι] [DecidableEq ι]
+    {F : Type*} [CommRing F] [IsDomain F] [DecidableEq F] {ι : Type*} [Fintype ι] [DecidableEq ι]
     (f : MvPolynomial ι F) (hf : f ≠ 0) (S : ι → Finset F)
-    (d m : ℕ) (hd : f.totalDegree ≤ d) (hm_pos : 0 < m)
-    (hm : ∀ i, m ≤ (S i).card) :
+    (d m : ℕ) (hd : f.totalDegree ≤ d) (hm : ∀ i, m ≤ (S i).card) :
     (Finset.filter (fun x => MvPolynomial.eval x f = 0) (Fintype.piFinset S)).card * m
       ≤ d * ∏ i, (S i).card := by
   classical
+  rcases Nat.eq_zero_or_pos m with rfl | hm_pos
+  · simp
   let e := Fintype.equivFin ι
   let g := MvPolynomial.rename (e : ι → Fin (Fintype.card ι)) f
   let T := fun i => S (e.symm i)
@@ -82,17 +82,14 @@ theorem schwartz_zippel_counting
   rw [hcard, ← hprod_eq]
   exact key
 
-/-- The number of elements in `∀ i, ↥(S i)` satisfying `eval (↑·) f = 0` equals
-the number of elements in `Fintype.piFinset (fun i => (S i).toFinset)` satisfying
-`eval · f = 0`. -/
-lemma card_filter_eval_subtype_eq_piFinset
-    {F : Type} [Field F] [DecidableEq F]
+/-- The number of elements of `∀ i, ↥(S i)` whose underlying function satisfies `P` equals the
+number of elements of `Fintype.piFinset (fun i => (S i).toFinset)` satisfying `P`. -/
+lemma card_filter_pi_subtype_eq_piFinset
+    {F : Type*}
     {ι : Type*} [Fintype ι] [DecidableEq ι] (S : ι → Set F) [∀ i, Fintype ↥(S i)]
-    (f : MvPolynomial ι F) :
-    (Finset.univ.filter (fun (x : ∀ i, ↥(S i)) =>
-      MvPolynomial.eval (fun i => (↑(x i) : F)) f = 0)).card =
-    (Finset.filter (fun x => MvPolynomial.eval x f = 0)
-      (Fintype.piFinset (fun i => (S i).toFinset))).card := by
+    (P : (ι → F) → Prop) [DecidablePred P] :
+    (Finset.univ.filter (fun (x : ∀ i, ↥(S i)) => P fun i => (↑(x i) : F))).card =
+    (Finset.filter P (Fintype.piFinset (fun i => (S i).toFinset))).card := by
   classical
   refine Finset.card_bij ?_ ?_ ?_ ?_
   · use fun a ha => fun i => a i
@@ -102,10 +99,16 @@ lemma card_filter_eval_subtype_eq_piFinset
     true_and, exists_prop, and_imp]
     exact fun b hb hb' => ⟨fun i => ⟨b i, hb i⟩, hb', rfl⟩
 
-/-- If `k * m ≤ d * n` with `m > 0` and `n > 0`, then `k / n ≤ d / m` in `ℝ≥0∞`. -/
+/-- If `k * m ≤ d * n` with `m > 0`, then `k / n ≤ d / m` in `ℝ≥0∞`. -/
 lemma ENNReal.div_le_div_of_mul_le {k n d m : ℕ}
-    (hm_pos : 0 < m) (hn_pos : 0 < n) (h : k * m ≤ d * n) :
+    (hm_pos : 0 < m) (h : k * m ≤ d * n) :
     (k : ℝ≥0∞) / n ≤ d / m := by
+  rcases Nat.eq_zero_or_pos n with rfl | hn_pos
+  · have hk : k = 0 := by
+      rcases Nat.eq_zero_or_pos k with hk | hk
+      · exact hk
+      · simp at h; omega
+    simp [hk]
   rw [ENNReal.div_le_iff_le_mul] <;> norm_cast
   · rw [← ENNReal.toReal_le_toReal] <;> norm_num
     · rw [div_mul_eq_mul_div, le_div_iff₀] <;> norm_cast
@@ -113,16 +116,18 @@ lemma ENNReal.div_le_div_of_mul_le {k n d m : ℕ}
   · grind
   · exact Or.inl <| ENNReal.natCast_ne_top _
 
-/-- A nonzero polynomial of total degree at most `D` over a finite field has at most
-`D * |F| ^ (|ι| - 1)` zeros, for any finite type `ι` of variables. -/
+/-- A nonzero polynomial of total degree at most `D` over a finite integral domain has at most
+`D * |F| ^ (|ι| - 1)` zeros, for any finite type `ι` of variables. With no variables the bound
+reads `D`, which holds because a nonzero constant has no zeros. -/
 theorem MvPolynomial.card_zeros_le_of_totalDegree_le
-    {F : Type*} [Field F] [Fintype F] [DecidableEq F] {ι : Type*} [Fintype ι] [DecidableEq ι]
+    {F : Type*} [CommRing F] [IsDomain F] [Fintype F] [DecidableEq F]
+    {ι : Type*} [Fintype ι] [DecidableEq ι]
     (f : MvPolynomial ι F) (hf : f ≠ 0) {D : ℕ} (hd : f.totalDegree ≤ D) :
     (Finset.univ.filter (fun x : ι → F => MvPolynomial.eval x f = 0)).card ≤
       D * Fintype.card F ^ (Fintype.card ι - 1) := by
   classical
   have hq : 0 < Fintype.card F := Fintype.card_pos
-  have key := schwartz_zippel_counting f hf (fun _ => Finset.univ) D (Fintype.card F) hd hq
+  have key := schwartz_zippel_counting f hf (fun _ => Finset.univ) D (Fintype.card F) hd
     (fun _ => by simp)
   simp only [Fintype.piFinset_univ, Finset.card_univ, Finset.prod_const] at key
   rcases Nat.eq_zero_or_pos (Fintype.card ι) with hι | hι

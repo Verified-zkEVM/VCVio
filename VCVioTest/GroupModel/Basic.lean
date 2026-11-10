@@ -12,14 +12,15 @@ public import Mathlib.Data.ZMod.Basic
 # Executable sorted group-model checks
 
 The extra game oracle inserts values into the same table used by the group oracle.
-The three-sort example checks linear transport and bilinear multiplication modulo seven.
+The three-sort example checks linear transport and bilinear multiplication modulo seven, and that
+an equality query reads the table of the sort it names.
 -/
 
 public section
 
-open OracleComp OracleSpec
+open OracleComp OracleSpec GroupModel
 
-namespace GroupModel
+namespace GroupModelTest
 
 /-- One-sort model over the field with seven elements. -/
 def singleModel : Model (ZMod 7) groupSig (fun _ => ZMod 7) where
@@ -78,11 +79,11 @@ def pairingProgram : OracleComp pairingQueries
   let a ← pairingQueries.query (.inl (.add .g₁ 0 l))
   let b ← pairingQueries.query (.inl (.smul .g₂ 2 0))
   let p ← pairingQueries.query (.inl (.bil () a b))
-  let same ← pairingQueries.query (.inl (.eq .g₁ a b))
-  pure (g, l, a, b, p, same)
+  let equal ← pairingQueries.query (.inl (.eq .g₁ a l))
+  pure (g, l, a, b, p, equal)
 
 example : (run pairingModel (fun _ => id) pairingGame pairingProgram pairingTable).1 =
-  (1, 1, 2, 2, 0, true) := by decide
+  (1, 1, 2, 2, 0, false) := by decide
 
 example : (run pairingModel (fun _ => id) pairingGame pairingProgram pairingTable).2 .g₁ =
   [2, 4, 6] := by decide
@@ -104,6 +105,28 @@ example : (run singleModel (fun _ => id) singleGame equalityProgram
 
 example : (run singleModel (fun _ _ => ()) singleGame equalityProgram
     (fun _ => [1, 3])).1 = true := by decide
+
+/-- An equality query reads the table of the sort it names: handles `0` and `1` hold equal values
+in `g₁` and different values in `g₂`. -/
+theorem eq_reads_its_sort :
+    let tbl : Tbl (fun _ : PSort => ZMod 7) := fun
+      | .g₁ => [1, 1]
+      | .g₂ => [1, 2]
+      | .gₜ => []
+    let oa : OracleComp pairingQueries (Bool × Bool) := do
+      let e₁ ← pairingQueries.query (.inl (.eq .g₁ 0 1))
+      let e₂ ← pairingQueries.query (.inl (.eq .g₂ 0 1))
+      pure (e₁, e₂)
+    (run pairingModel (fun _ => id) pairingGame oa tbl).1 = (true, false) := by decide
+
+/-- A generic run's coin handler can answer `1`, not only `0`. -/
+theorem runGen_coin_support :
+    let M : Model (ZMod 7) groupSig (fun _ => ZMod 7) := ⟨Empty.elim, Empty.elim⟩
+    let oa : OracleComp (genSpec (ZMod 7) groupSig) (Fin 2) :=
+      (genSpec (ZMod 7) groupSig).query (.inr 1)
+    ((1 : Fin 2), (fun _ => [])) ∈ support (runGen M (fun _ => id) oa (fun _ => [])) := by
+  dsimp only
+  simp [runGen, run, QueryImpl.add_apply_inr]
 
 /-- Bilinear queries look up each handle in its corresponding source table. -/
 theorem bilinear_argument_order :
@@ -146,14 +169,14 @@ example [∀ s, DecidableEq (W s)] (M : Model F σ V) (N : Model F σ W) {α : T
     (oa : OracleComp (genSpec F σ) α) (tbl : Tbl fun s => V s × W s) :
     Prod.map id (mapTbl fun _ => Prod.snd) <$>
         runGen (M.prod N) (fun _ => Prod.snd) oa tbl =
-      runGen N (fun _ => id) oa (mapTbl (fun _ => Prod.snd) tbl) := by
-  have hsnd : (fun s => ⇑((Model.Hom.snd M N).toFun s)) =
-      (fun _ => Prod.snd) := by
-    funext s x
-    simp only [Model.Hom.snd_apply]
-  simpa only [hsnd, Function.comp_def, id_eq] using
-    runGen_map (Model.Hom.snd M N) (fun _ => id) oa tbl
+      runGen N (fun _ => id) oa (mapTbl (fun _ => Prod.snd) tbl) :=
+  runGen_prod_snd M N oa tbl
+
+example {K : S → Type} [∀ s, AddCommMonoid (K s)] [∀ s, Module F (K s)]
+    {L : Model F σ V} {M : Model F σ W} {N : Model F σ K} (ψ : M.Hom N) (φ : L.Hom M) :
+    ((Model.Hom.id N).comp ψ).comp (φ.comp (Model.Hom.id L)) = ψ.comp φ := by
+  simp
 
 end ProductProjection
 
-end GroupModel
+end GroupModelTest
