@@ -366,6 +366,7 @@ private lemma nma_lift_unif_run
       simp [impl₁, nma, nmaPublic])
     (oa := oa) ▸ himpl₁
 
+omit [DecidableEq M] [DecidableEq Commit] in
 private lemma simulatedNmaUnifSim_fsUniform_run
     {α : Type} (oa : ProbComp α)
     (cache : (fsRoSpec M Commit Chal).QueryCache) :

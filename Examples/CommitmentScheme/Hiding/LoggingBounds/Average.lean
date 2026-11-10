@@ -122,7 +122,7 @@ lemma run_simulateQ_hidingAvgRightImpl_eq_liftComp {α : Type}
       exact OracleComp.bind_congr' hstep (fun p => by
         simpa using ih p.1 p.2)
 
-lemma run_simulateQ_hidingAvgComp_eq_bind [Inhabited M] [Inhabited S]
+lemma run_simulateQ_hidingAvgComp_eq_bind
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     (simulateQ hidingAvgQueryImpl (hidingAvgComp A)).run (∅, fun _ => 0) =
@@ -325,7 +325,7 @@ section Averaging
 This packages the per-salt bad probabilities into the shared `hidingAvgComp`
 run, where the salt is sampled once up front and then the shared count-all
 simulation is reused for the rest of the game. -/
-theorem sum_prEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited M] [Inhabited S]
+theorem sum_prEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     (∑ s : S, Pr{let z ← (
@@ -372,7 +372,7 @@ lemma prEvent_hidingAvg_bad_le_wp_selectedCountPred [Fintype S] [Inhabited S]
   simpa [oa] using h
 
 lemma card_mul_wp_hidingAvg_selectedCountPred_eq_sum_wp_countPred
-    [Fintype S] [Inhabited M] [Inhabited S]
+    [Fintype S] [Inhabited S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     (Fintype.card S : ℝ≥0∞) *

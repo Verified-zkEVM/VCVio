@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Fixtures for `classify-migration-errors.py`: the kind and name of each error message shape,
 the codemod lookup of an unknown name, the scope of a file, and the CSV and summary of a run."""
 

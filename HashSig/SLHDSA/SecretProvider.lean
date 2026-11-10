@@ -499,8 +499,8 @@ theorem forsLeafWithSecret_natural {m n : Type → Type*} [Monad m] [Monad n] (F
 
 /-- A monad morphism commutes with a provider-parametric FORS tree root when it commutes with the
 leaf and node callbacks and with the provider at secret-key addresses. -/
-theorem forsRootWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
-    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+theorem forsRootWithSecret_natural {m n : Type → Type*} [Monad m]
+    [Monad n] (F : m →ᵐ n)
     (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
     (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
     (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
