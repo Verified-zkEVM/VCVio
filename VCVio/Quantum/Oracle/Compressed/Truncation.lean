@@ -5,6 +5,8 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.Contraction
+public import QuantumFoundations.Oracle.Unitary
 public import VCVio.Quantum.Oracle.Compressed.Size
 
 /-!
@@ -67,51 +69,6 @@ theorem QuantumRuntime.forallQueries_of_isQueryBound_zero {L : LocalSig.{u, v}}
     exact fun b ↦ ih b (hx b) _
   | queryBind _ i E ℓ k ih => exact absurd hx.of_queryBind.1 (lt_irrefl 0)
 
-/-! ## Projectors onto a support -/
-
-namespace QuerySupportedOn
-
-variable {M R Z : Type*} [Fintype M] [DecidableEq M]
-
-/-- Conjugating by a diagonal operator whose entries are `1` on the support does not change an
-operator supported there. -/
-theorem conj_diagonal_eq_self {q : M → Z} {S : Set Z} {d : M → ℂ} (hd : ∀ m, q m ∈ S → d m = 1)
-    {ρ : Matrix M M ℂ} (h : QuerySupportedOn q S ρ) : MatrixMap.conj (diagonal d) ρ = ρ := by
-  ext m m'
-  simp only [MatrixMap.conj_apply, diagonal_conjTranspose, mul_diagonal, diagonal_mul,
-    Pi.star_apply]
-  by_cases hm : ρ m m' = 0
-  · simp [hm]
-  · obtain ⟨h₁, h₂⟩ := h m m' hm
-    simp [hd m h₁, hd m' h₂]
-
-/-- Conjugating the first factor by a diagonal operator whose entries are `1` on the support does
-not change an operator supported there through the first factor. -/
-theorem amplify_conj_diagonal_eq_self {q : M → Z} {S : Set Z} {d : M → ℂ}
-    (hd : ∀ m, q m ∈ S → d m = 1) {ρ : Matrix (M × R) (M × R) ℂ}
-    (h : QuerySupportedOn (fun m : M × R ↦ q m.1) S ρ) :
-    (MatrixMap.conj (diagonal d)).amplify R ρ = ρ := by
-  ext ⟨m, r⟩ ⟨m', r'⟩
-  rw [MatrixMap.amplify_apply, (h.block r r').conj_diagonal_eq_self hd]
-  rfl
-
-end QuerySupportedOn
-
-open scoped MatrixOrder in
-/-- If `P` is a Hermitian projector and `U` is an isometry, then `P U P` is a contraction:
-`1 - (P U P)ᴴ (P U P)` is positive semidefinite. -/
-theorem posSemidef_one_sub_conjTranspose_mul_self_of_projector {n : Type*} [Fintype n]
-    [DecidableEq n] {P U : Matrix n n ℂ} (hP : Pᴴ = P) (hPP : P * P = P) (hU : Uᴴ * U = 1) :
-    (1 - (P * U * P)ᴴ * (P * U * P)).PosSemidef := by
-  have hP₁ := (show IsStarProjection P from ⟨hPP, hP⟩).one_sub_nonneg.posSemidef
-  have e : 1 - (P * U * P)ᴴ * (P * U * P) = (1 - P) + Pᴴ * (Uᴴ * (1 - P) * U) * P := by
-    rw [conjTranspose_mul, conjTranspose_mul, hP]
-    simp only [Matrix.mul_sub, Matrix.sub_mul, Matrix.mul_one, Matrix.mul_assoc]
-    rw [← Matrix.mul_assoc P P, hPP, ← Matrix.mul_assoc Uᴴ U, hU, Matrix.one_mul, hPP]
-    abel
-  rw [e]
-  exact hP₁.add ((hP₁.conjTranspose_mul_mul_same U).conjTranspose_mul_mul_same P)
-
 /-! ## The truncated oracle -/
 
 section truncated
@@ -159,7 +116,7 @@ noncomputable def truncatedOracle (t : ℕ) :
 /-- The truncated oracle is a contraction, not necessarily an isometry. -/
 theorem posSemidef_one_sub_conjTranspose_truncatedOracle_mul_self (t : ℕ) :
     (1 - (truncatedOracle X Y t)ᴴ * truncatedOracle X Y t).PosSemidef :=
-  posSemidef_one_sub_conjTranspose_mul_self_of_projector (conjTranspose_sizeProjector t)
+  Matrix.posSemidef_one_sub_conjTranspose_mul_self_of_projector (conjTranspose_sizeProjector t)
     (sizeProjector_mul_self t) conjTranspose_compressedOracle_mul_self
 
 variable (X Y) in

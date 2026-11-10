@@ -68,31 +68,39 @@ claim that a pull request has been opened or merged.
   closing recovers the established reduction. The conservative
   `@[ppt_primitive]`, `ppt`, `ppt?`, and `ppt using` tooling performs only exact
   lookup of certified `PolyRealizer` data or proved `IsOraclePPTBy` theorems.
-- The optional `VCVioComplexity` package directly imports the compatible
-  complexitylib machine and Cobham-definition modules. It provides closed
+- The optional `VCVioComplexity` nested package, which pinned complexitylib at
+  `b6738219`, has been removed. cslib-frontier, the renamed complexitylib, supersedes
+  that pin, and its oracle machines replace the VCVio-owned `OracleTM` planned for
+  phases 4 and 5 ([#906](https://github.com/Verified-zkEVM/VCVio/issues/906)); a cslib-frontier-based nested package will take over the
+  concrete-backend role (see the [repository layout](repository-layout.md#optional-backends-and-external-bridges)).
+  The removed package directly imported the compatible
+  complexitylib machine and Cobham-definition modules. It provided closed
   representations, exact `TM.reachesIn` run certificates, exact run costs, a
   pointwise polynomial certificate, a Mathlib-polynomial-to-PolyFun adapter, and
-  explicit closure requirement structures. Its `PureCanary` constructs the
-  concrete machines for a unit identity realization and proves an end-to-end
+  explicit closure requirement structures. Its `PureCanary` constructed the
+  concrete machines for a unit identity realization and proved an end-to-end
   backend-relative `IsOraclePPTBy` theorem over the empty oracle. Its
-  `OracleCanary` uses the same trusted representation and exact-run layer for a
-  real enabled fair-coin transition, proves both replies have the same exact
-  resource cost, and derives `oneCoin_isOraclePPTBy` and the public facade
-  `oneCoin_isPPTBy`. Exact-run output-length lemmas justify
-  `PolynomialCode.toPolyRealizerFromTime`. The package records that its pair codec is incompatible
-  with complexitylib's canonical pairing and tests second-order quantification over two
-  fixed-answer envelopes. `Backend/Copy.lean` proves exact linear copying and tag insertion on
-  every binary word. `HandlerCanary` realizes completed echo-handler execution on arbitrary-length
-  input, with derived `2n + 7` work and linear state/readout sizes. This is a specialized exact
-  realization, not the general handler compiler. It does not yet export an inhabitant of the general machine-level
+  `OracleCanary` used the same trusted representation and exact-run layer for a
+  real enabled fair-coin transition, proved both replies have the same exact
+  resource cost, and derived `oneCoin_isOraclePPTBy` and the public facade
+  `oneCoin_isPPTBy`. Exact-run output-length lemmas justified
+  `PolynomialCode.toPolyRealizerFromTime`. The package recorded that its pair codec is incompatible
+  with complexitylib's canonical pairing and tested second-order quantification over two
+  fixed-answer envelopes. `Backend/Copy.lean` proved exact linear copying and tag insertion on
+  every binary word. `HandlerCanary` realized completed echo-handler execution on arbitrary-length
+  input, with derived `2n + 7` work and linear state/readout sizes. This was a specialized exact
+  realization, not the general handler compiler. It did not export an inhabitant of the general machine-level
   closure gates or compile arbitrary PolyFun machines to complexitylib machines.
 - The optional `PolyFunCslib` library now owns a separate cslib-backed,
   parameter-indexed P/poly model: pinned encodings, polynomial description
   bounds, nonvacuous progress, generic execution traces, closure operations,
-  and a counting nontriviality theorem. The optional `VCVioCslib` library is a
-  thin crypto-facing facade over that model, adding oracle specialization, a
-  fair-coin boundary, and a security-game bridge. This backend is explicitly
-  nonuniform and backend-relative; core PolyFun and core VCVio remain neutral.
+  and a counting nontriviality theorem. The optional `VCVioCslib` library, a
+  thin crypto-facing facade over that model that added oracle specialization, a
+  fair-coin boundary, and a security-game bridge, has been removed: cslib-frontier
+  has its own P/poly, and the facade's role moves to the planned cslib-frontier-based
+  package (see the [repository layout](repository-layout.md#optional-backends-and-external-bridges)).
+  This backend is explicitly nonuniform and backend-relative; core PolyFun and core VCVio
+  remain neutral.
 
 The following are design targets, not claims about the current API: a richer
 event-decorated `ResourceTrace`, bounded iteration and handler composition, general polynomial
@@ -127,7 +135,8 @@ Only the [VCVio](https://github.com/Verified-zkEVM/VCVio) and
 for this project. complexitylib, CSLib, and Mathlib are dependencies and design
 inputs for now; this plan opens no PRs or issues in those repositories.
 
-The dependency boundary is:
+The dependency boundary, with the removed `VCVioComplexity` in the concrete-backend position,
+was:
 
 ```text
 VCVioComplexity ----> VCVio ----> PolyFun ----> Mathlib
@@ -135,7 +144,7 @@ VCVioComplexity ----> VCVio ----> PolyFun ----> Mathlib
        `----> complexitylib ------------> Mathlib
 ```
 
-The separate cslib library integration is:
+The separate cslib library integration, while `VCVioCslib` existed, was:
 
 ```text
 VCVioCslib ----> VCVio
@@ -146,9 +155,10 @@ VCVioCslib ----> VCVio
 An arrow means "imports." PolyFun owns the generic syntactic and quantitative
 realizability theory. Core VCVio owns the backend-neutral `OracleComp`,
 probability, and cryptographic bridges. An optional nested Lake package,
-`VCVioComplexity`, owns the first concrete backend substrate and adapter work using
-[complexitylib](https://github.com/SamuelSchlesinger/complexitylib). Core
-PolyFun and core VCVio do not import complexitylib.
+`VCVioComplexity`, owned the first concrete backend substrate and adapter work using
+[complexitylib](https://github.com/SamuelSchlesinger/complexitylib) until its removal;
+a cslib-frontier-based nested package takes that position in both diagrams. Core
+PolyFun and core VCVio import neither complexitylib nor cslib-frontier.
 
 ## Security and trust model
 
@@ -233,9 +243,9 @@ adjusted to satisfy the module system, but their meanings may not drift.
 | `ppt` | Landed conservative tooling | Exact local-assumption or registered-primitive lookup for goals headed by `PolyRealizer` or `IsOraclePPTBy`; it performs no recursive synthesis or generic proof search. |
 | `VCVioComplexity.IsPPT` | Reserved, not exported | The eventual strict uniform PPT predicate after the complexitylib adequacy theorem. |
 | `IsExpectedPPT` | Reserved | Expected polynomial time with its probability space and tail/independence hypotheses exposed. It has no unrestricted oracle-substitution rule. |
-| `IsNonuniformPPTBy B` | Landed in optional `VCVioCslib` | Backend-relative existence of a parameter-indexed P/poly witness with an explicit polynomial description bound. Its `By` suffix and package boundary distinguish it from the reserved model-independent name. |
+| `IsNonuniformPPTBy B` | Landed in optional `VCVioCslib`, since removed | Backend-relative existence of a parameter-indexed P/poly witness with an explicit polynomial description bound. Its `By` suffix and package boundary distinguish it from the reserved model-independent name. |
 | `IsNonuniformPPT` | Reserved | A polynomial-size randomized machine or circuit family with explicit description/advice bounds. |
-| `P`, `FP`, `BPP`, `PPoly` | Upstream concepts | Conventional language, function, randomized-language, and circuit-family classes of a concrete backend. They are not aliases for interactive predicates; the current optional package does not re-export the incompatible full class layer. |
+| `P`, `FP`, `BPP`, `PPoly` | Upstream concepts | Conventional language, function, randomized-language, and circuit-family classes of a concrete backend. They are not aliases for interactive predicates; the removed optional package did not re-export the incompatible full class layer. |
 
 Strict bounds quantify over every coin path and every oracle-answer path admitted
 by the pinned contract. Probability enters only when those syntactic paths are
@@ -268,9 +278,9 @@ VCVio now provides a `SecurityFamily` packing layer with the following behavior:
   output-length event remains part of the richer `ResourceTrace` target.
 
 The packing declarations only express a family. Uniformity comes from the one
-realizer theorem, never from the packing function itself. The optional
-`OracleComp.Complexity.IsNonuniformPPTBy` admits a family of separate codes only relative
-to its pinned cslib P/poly backend, where code description length is part of the
+realizer theorem, never from the packing function itself. The removed optional
+`OracleComp.Complexity.IsNonuniformPPTBy` admitted a family of separate codes only relative
+to its pinned cslib P/poly backend, where code description length was part of the
 bound. The unqualified, model-independent `IsNonuniformPPT` remains reserved.
 
 ## PolyFun implementation
@@ -549,8 +559,12 @@ three capabilities remain follow-on work.
 
 ### Optional complexitylib instantiation
 
-The first concrete backend lives in a nested package in this repository, not in
-the default VCVio dependency graph. Its Lake package depends by path on root
+This section records the removed `VCVioComplexity` package as it stood at its
+complexitylib pin; its sources remain in git history, and the cslib-frontier-based
+package that takes over its role keeps the same placement (see the [repository layout](repository-layout.md#optional-backends-and-external-bridges)).
+
+The first concrete backend lived in a nested package in this repository, not in
+the default VCVio dependency graph. Its Lake package depended by path on root
 VCVio and directly on complexitylib. This avoids making every VCVio user fetch a
 young complexity library and avoids a dependency cycle.
 
@@ -598,6 +612,11 @@ project. Improvements discovered there are recorded locally for later
 coordination.
 
 ### Concrete adequacy target
+
+The substrate and canary described here belonged to the removed `VCVioComplexity`
+package. Per [#906](https://github.com/Verified-zkEVM/VCVio/issues/906), cslib-frontier's oracle machines replace the VCVio-owned
+`OracleTM` planned below, and adequacy becomes a generic PolyFun theorem; the plan is
+kept as the design record.
 
 The landed concrete substrate provides a closed representation grammar for
 words, empty types, unit, booleans, unary naturals, fixed-width bit vectors,
@@ -762,7 +781,7 @@ machine. That is compatible with this design.
 The current integration deliberately requires no CSLib change. Low-level
 cslib/mathlib-only compatibility material lives in PolyFun's `ToCslib`
 library, the reusable quantitative P/poly backend lives in `PolyFunCslib`, and
-VCVio's optional `VCVioCslib` library adds only the crypto-facing facade. This
+VCVio's optional `VCVioCslib` library added only the crypto-facing facade until its removal. This
 establishes a narrow backend-relative nonuniform model; it does not claim a
 strict-uniform adequacy theorem or equivalence with the complexitylib backend.
 No CSLib PR is part of this work.
@@ -825,7 +844,9 @@ gate.
    public `IsPPTBy` facade. Pair-codec incompatibility, guarded trust reports, and a two-model
    second-order acceptance canary are regression-tested.
    The general machine-level category and structural closure gates remain
-   uninhabited; a VCVio-owned `OracleTM` semantics remains staged.
+   uninhabited; a VCVio-owned `OracleTM` semantics remains staged. The package has
+   since been removed: cslib-frontier's oracle machines replace this phase and the
+   next ([#906](https://github.com/Verified-zkEVM/VCVio/issues/906)).
 5. **Not landed — adequacy.** Prove PolyFun-to-`OracleTM` compilation, converse
    embedding, transcript/coin preservation, and polynomial overhead. Only then
    export the unqualified concrete `IsPPT` alias.
@@ -856,10 +877,11 @@ machine-checked fixtures already cover explicit realizers for `pure`, rejection
 of unregistered or ill-shaped `ppt` goals, illegal-answer nonconformance,
 charging and resolving allowed zero-probability branches, failure on a reachable
 empty response, exact structural query accounting, ranked two/adaptive/parity control flow,
-`HandlerCertificate` API shape and semantic closing, ElGamal semantic closing, exact complexitylib
-pure and one-coin canaries, exact-run output growth, pair-codec incompatibility, and multiple
-second-order environments for a fixed-size response. Root validation also covers polynomial
-returned-output recovery and bounded dependent `seqComp`. The fixtures do not yet cover
+`HandlerCertificate` API shape and semantic closing, and ElGamal semantic closing. Root
+validation also covers polynomial returned-output recovery and bounded dependent `seqComp`. The
+removed `VCVioComplexity` package additionally covered exact complexitylib pure and one-coin
+canaries, exact-run output growth, pair-codec incompatibility, and multiple second-order
+environments for a fixed-size response. The fixtures do not yet cover
 quantitative handler substitution, a usable bounded loop, or a genuinely variable-size oracle
 reply. The other bullets remain acceptance targets.
 
@@ -906,8 +928,8 @@ reply. The other bullets remain acceptance targets.
 
 ### Repository gates
 
-Run the full root build, the nested-package build, targeted negative fixtures,
+Run the full root build, the concrete-backend package build when one is present, targeted negative fixtures,
 `scripts/test-axiomsweep.sh`, `lake exe axiomsweep --check`, and the Extern and
 Interop isolation checks. New files follow VCVio module/attribution policy. No
 new `sorry`, nonstandard axiom, native-trust debt, or dependency from PolyFun or
-core VCVio to `VCVioComplexity` is accepted.
+core VCVio to a concrete-backend package is accepted.

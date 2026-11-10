@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.MatrixMap.Comparison
 public import VCVio.Quantum.Comp.HybridProjected
 
 /-!
@@ -47,7 +48,8 @@ zero when the local leak estimate is exact; in that case the bound is
 
 Both conditions are stated on traces, so that runtimes with countably many outcomes and drops
 that are not given by operators are covered. Loewner inequalities between operators give them
-(`Quantum.QuantumRuntime.drop_of_posSemidef` and `Quantum.QuantumRuntime.leak_of_posSemidef`).
+(`Quantum.QuantumRuntime.drop_of_posSemidef` and
+`Quantum.MatrixMap.tsum_ofReal_trace_conj_le_of_posSemidef`).
 
 ## Proof
 
@@ -73,8 +75,7 @@ leak condition, optimized over `s`, bounds by `√(λₙ mₙ) + √Eₙ`, with 
 ## Main statements
 
 * `Quantum.QuantumRuntime.sum_range_queryWeight_le_potential`: telescoping of the drops.
-* `Quantum.QuantumRuntime.drop_of_posSemidef` and `Quantum.QuantumRuntime.leak_of_posSemidef`:
-  the two conditions from Loewner inequalities.
+* `Quantum.QuantumRuntime.drop_of_posSemidef`: the drop condition from a Loewner inequality.
 * `Quantum.QuantumRuntime.eventWeight_pinch_eq_zero`: the pinched runtime keeps the event
   empty; `Quantum.QuantumRuntime.krausWeight_sub_pinch`: it differs from the runtime by the
   Kraus weights of the commutators.
@@ -496,30 +497,6 @@ theorem drop_of_posSemidef (U : α → Matrix (O × D) (J × D) ℂ) (K K' : Mat
   simp only [Matrix.sub_mul, Matrix.add_mul, Matrix.sum_mul, Matrix.trace_sub, Matrix.trace_add,
     Matrix.trace_sum, Complex.sub_re, Complex.add_re, Complex.re_sum]
   ring
-
-omit [Fintype Z] [DecidableEq J] [DecidableEq O] in
-/-- **The leak condition from operators.** If
-`(1 + s) λ Δ + (1 + s⁻¹) Ε - ∑ᵣ (C r)ᴴ (C r)` is positive semidefinite, then the Kraus weight of
-the `C r` on `σ` is at most `(1 + s) λ tr (Δ σ) + (1 + s⁻¹) tr (Ε σ)`. -/
-theorem leak_of_posSemidef (C : α → Matrix O J ℂ) (Δ Ε : Matrix J J ℂ) {lam s : ℝ}
-    (hlam : 0 ≤ lam) (hs : 0 < s) {σ : Matrix J J ℂ} (hσ : σ.PosSemidef) (hΔ : Δ.PosSemidef)
-    (hC : (((1 + s) * lam : ℝ) • Δ + ((1 + s⁻¹ : ℝ) : ℝ) • Ε - ∑ r, (C r)ᴴ * C r).PosSemidef) :
-    ∑' r, ENNReal.ofReal (MatrixMap.conj (C r) σ).trace.re ≤
-      ENNReal.ofReal (1 + s) * (ENNReal.ofReal lam * ENNReal.ofReal (Δ * σ).trace.re) +
-        ENNReal.ofReal (1 + s⁻¹) * ENNReal.ofReal (Ε * σ).trace.re := by
-  have hnn : ∀ r, 0 ≤ (MatrixMap.conj (C r) σ).trace.re := fun r ↦
-    (hσ.mul_mul_conjTranspose_same _).trace_re_nonneg
-  have hpos := hC.trace_mul_re_nonneg hσ
-  simp only [Matrix.sub_mul, Matrix.add_mul, Matrix.sum_mul, Matrix.smul_mul, Matrix.trace_sub,
-    Matrix.trace_add, Matrix.trace_sum, Matrix.trace_smul, Complex.sub_re, Complex.add_re,
-    Complex.re_sum, Complex.real_smul, Complex.re_ofReal_mul] at hpos
-  rw [tsum_fintype, ← ENNReal.ofReal_sum_of_nonneg fun r _ ↦ hnn r,
-    ← ENNReal.ofReal_mul hlam, ← ENNReal.ofReal_mul (by positivity),
-    ← ENNReal.ofReal_mul (by positivity)]
-  refine (ENNReal.ofReal_le_ofReal ?_).trans ENNReal.ofReal_add_le
-  simp only [MatrixMap.trace_conj_apply]
-  have := hΔ.trace_mul_re_nonneg hσ
-  nlinarith
 
 end Loewner
 

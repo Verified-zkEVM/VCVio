@@ -201,9 +201,11 @@ computation up to the first collision. Hence for every event `E` on the output,
 
 `| Pr[run obs ∈ E] − Pr[run id ∈ E] | ≤ Pr[a collision occurs in run id]`.
 
-The intended proof instruments `impl obs` with a flag set at the first collision and applies
-`measureETVDist_simulateQ_run_le_prEvent_bad`
-(`VCVio/ProgramLogic/Relational/SimulateQ/UntilBad.lean`). It is not proved yet.
+The proof instruments `impl obs` with a flag set at the first collision and applies the
+until-bad lemmas of `VCVio/ProgramLogic/Relational/SimulateQ/UntilBad.lean`. L2 is
+`measureETVDist_run_le_collisionProb` in `Collision.lean`, for any game handler; its event form
+is `prEvent_run_le_add_collisionProb`, and `measureETVDist_runGen_le_collisionProbGen` is the
+case of a generic run.
 
 L1 gives every exact statement in this note and L2 every bound. A generic lower bound is L2 at
 `obs := eval x` with Schwartz–Zippel bounding the collision probability. An extraction argument
@@ -538,10 +540,11 @@ most `((m + 1) choose 2)` nonzero differences, and `x` is a root of each with pr
 most `d/|F|`. The zero has to be counted: on the table `[X]` the query `eq 0 1` compares `X`
 with zero, and it is a collision with probability `1/|F|`.
 
-The probability form of Schwartz–Zippel exists in ArkLib as `prob_eval_zero_univ_le_div`
-(`ArkLib/Data/MvPolynomial/SchwartzZippelCounting.lean`), stated in VCVio's `Pr{…}` notation
-over `$ᵗ (Fin s → F)`. It imports one ArkLib file, `ArkLib.Data.Probability.Uniform`, so it has
-to be moved down before VCVio can use it.
+The probability form of Schwartz–Zippel is `prEvent_eval_eq_zero_univ_le_div`
+(`VCVio/OracleComp/Constructions/SampleableType/SchwartzZippel.lean`), over any finite variable
+type and any finite integral domain. It generalizes ArkLib's `prob_eval_zero_univ_le_div`
+(`ArkLib/Data/MvPolynomial/SchwartzZippelCounting.lean`), which is stated over `Fin s` and a
+field.
 
 The argument uses one property of the distribution of `x`: a nonzero polynomial of total degree
 at most `k` vanishes at `x` with probability at most `ε k`. T3 is stated with `ε` as a
@@ -601,7 +604,11 @@ The second item is the transfer studied by Jaeger and Mohan. Its formal content 
 virtualization*: handles are predictable, so a reduction that shares its table with the
 adversary would let the adversary address the reduction's intermediate values. The reduction
 keeps a translation table from the adversary's handles to its own. This is a named construction,
-`GroupModel.virtualize`, to be built once.
+`GroupModel.virtualize` in `Virtualize.lean`, for generic adversaries (`genSpec`, with no game
+oracle); the reduction's table holds one designated zero entry per sort, to which the
+adversary's out-of-range handles translate. `runGen_virtualize` reads a virtualized run back to
+the direct run, and `isQueryBoundP_virtualize` transports the adversary's group-operation
+budget.
 
 A scheme that hashes group elements (Schnorr) cannot be written against `genSpec F` alone,
 because a handle is not data that identifies an element. It needs the encoding oracle: with
@@ -1131,7 +1138,7 @@ labels and decoding. The real encoding handler needed by T1 belongs to milestone
 | generic DDH | `ddhAdvantage g (ofGeneric A) ≤ 3 · (q + 5).choose 2/\|F\|` |  | Shoup; T7 |
 | Pedersen binding, unconditional | for a generic binder with `q` operations, success at most `((q + 9).choose 2 + 1)/\|F\|` | `pedersenCommit.binding_le_dlog` and `pedersenCommit.dlogReduction` in `VCVio/Schemes/Pedersen.lean` |  |
 | ElGamal one-time IND-CPA, unconditional | for a generic adversary, twice the generic DDH bound at a counted number of operations | `elGamalAsymmEnc.elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage` in `Examples/ElGamal/Basic.lean` |  |
-| ElGamal IND-CPA with `q` queries, unconditional | `2q` times the generic DDH bound | `elGamalAsymmEnc.elGamal_IND_CPA_le_q_mul_ddh`, after it is restated (below) |  |
+| ElGamal IND-CPA with `q` queries, unconditional | `2q` times the generic DDH bound | `elGamalAsymmEnc.elGamal_IND_CPA_le_sum_ddhAdvantage` in `Examples/ElGamal/Basic.lean` (below) |  |
 
 The three constants come from T3, T7 and T8 as follows. DLog: `m = q + 2`, degree `1`, and
 `1/|F|` for the final guess. CDH: `m = q + 3`, degree `1`, and `W = A · B − p` of degree `2`.
@@ -1142,11 +1149,12 @@ checks two openings with four `smul`, two `add` and two equality tests, so a gen
 `q` operations yields a generic DLog solver with `q + 6`, and the two existing lemmas compose
 with T4 without change.
 
-The multi-query ElGamal theorem does not compose as it stands. Its hypothesis `hddh` bounds
-`ddhAdvantage gen (IND_CPA_OneTime_DDHReduction adv)` for every one-time adversary `adv`, of any
-kind. A generic DDH bound covers generic adversaries only. The theorem has to be restated with
-the hybrid adversaries named, as a sum of their DDH advantages, before a generic bound can be
-substituted. The one-time theorem is an equation about one named reduction and composes now.
+The multi-query ElGamal theorem `elGamal_IND_CPA_le_sum_ddhAdvantage` bounds the advantage by
+twice the sum of the DDH advantages of the named hybrid reductions
+`IND_CPA_OneTime_DDHReduction (IND_CPA_stepAdversary adversary k)`, not by a bound over every
+one-time adversary. A generic DDH bound covers generic adversaries only, so it applies term by
+term once each of these reductions is shown generic. The one-time theorem is an equation about one
+named reduction and composes as it is.
 
 ### 8.2 Algebraic adversaries and the transfer (milestones 1 and 3 to 5)
 
@@ -1277,7 +1285,7 @@ against the paper before a theorem cites it).
 
 | Paper | Object or theorem here | Status | Basis |
 |---|---|---|---|
-| Shoup, *Lower bounds for discrete logarithms and related problems* (1997) | T3, T4; the labelled variant of the encoding oracle | target | recalled |
+| Shoup, *Lower bounds for discrete logarithms and related problems* (1997) | T3, T4; the labelled variant of the encoding oracle | T3 proved; T4 target | recalled |
 | Maurer, *Abstract models of computation in cryptography* (2005) | `spec F`, `impl`, equality as a relation query | library target | recalled |
 | Fuchsbauer, Kiltz, Loss, ePrint 2017/620 | the algebraic class; T1, T2; Groth16 in the algebraic model | L1 in slice 1 | abstract |
 | Boneh, Boyen, *Short signatures without random oracles* (2004) | `t`-SDH and its generic bound (T8) | target | recalled; the assumption as restated in Marlin was read |
@@ -1354,7 +1362,16 @@ T1a is proved in `ToExplained.lean` as `toExplained_run`, with certification fro
 equalities of runs in any lawful monad `N`. `RoundTrip.lean` composes them in both directions as
 `toExplained_ofExplained_run` and `ofExplained_toExplained_run`.
 
-Everything else is a paper argument or theorem target: L2, T3/T4 (including
+L2 is proved in `Collision.lean` as `measureETVDist_run_le_collisionProb`. Handle
+virtualization is proved in `Virtualize.lean`: `runGen_virtualize` reads a virtualized run back
+to the direct run, and `isQueryBoundP_virtualize` transports group-operation budgets.
+
+T3 is proved in `MasterBound.lean` as `measureETVDist_runGen_symbolic_le`, at `discreteSig S`
+with a root-probability hypothesis `ε` and a total group-operation budget `q`. Its corollaries
+are the event form `prEvent_runGen_symbolic_le_add` and the Schwartz–Zippel specialization for
+uniform points, `measureETVDist_runGen_symbolic_uniform_le`.
+
+Everything else is a paper argument or theorem target: T4 (including
 `dlogExperiment_ofGeneric_le`), T3ₛ, T5 and its cost certificate, the relation-problem bounds,
 T7/T8, S1–S3, P1–P3, restriction along a map of signatures, the invariant at the target sort
 over `CoeffsT`, the free and tracking models for Types 1 and 2, the accessible spans,

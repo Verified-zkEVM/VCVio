@@ -81,7 +81,7 @@ theorem filledCheck_nil : filledCheck ([] : QueryLog ((Fin k × X) →ₒ Y)) = 
 theorem filledCheck_cons (p : (_ : Fin k × X) × Y) (log : QueryLog ((Fin k × X) →ₒ Y)) :
     filledCheck (p :: log) = compressedReadProjector k X Y p.1 (some p.2) * filledCheck log := by
   rw [filledCheck, compressedReadProjector, filledCheck,
-    compressed_conjugate_mul _ (compressDatabases_mul_self k X Y)]
+    conj_mul_conj_of_involution _ (compressDatabases_mul_self k X Y)]
   congr 2
   rw [partialCheck, partialCheck, diagonal_mul_diagonal]
   congr 1
