@@ -108,10 +108,11 @@ private theorem programmed_eq [Field F] [SampleableType F]
           (fun y a => pure ((fun i => t i - y i * z), y, a))))))
 
 /-- Relation finding reduces to discrete logarithm with additive loss `1 / |F|`, including
-an empty input vector. The hidden mask is sampled independently after the adversary's output. -/
+an empty input vector, for any nonzero generator. The hidden mask is sampled independently
+after the adversary's output. -/
 theorem experiment_le [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
-    (g : G) (hg : Function.Bijective (· • g : F → G)) (A : Adversary F G n) :
+    (g : G) (hg : g ≠ 0) (A : Adversary F G n) :
     Pr{let b ← experiment g A}[b = true] ≤
       Pr{let b ← DiffieHellman.dlogExperiment g (reduction A)}[b = true] +
         1 / Fintype.card F := by
@@ -131,7 +132,8 @@ theorem experiment_le [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
       (∑ i, a i • (t i • g) = 0) ↔ ∑ i, a i * t i = 0 := by
     rw [show (∑ i, a i • (t i • g)) = (∑ i, a i * t i) • g by
       simp only [smul_smul, Finset.sum_smul]]
-    exact ⟨fun h => hg.injective (h.trans (zero_smul F g).symm), fun h => by rw [h, zero_smul]⟩
+    exact ⟨fun h => smul_left_injective F hg (h.trans (zero_smul F g).symm),
+      fun h => by rw [h, zero_smul]⟩
   have hw : Pr{let w ← R}[win w] = Pr{let b ← experiment g A}[b = true] := by
     simp only [R, win, experiment, prEvent_norm, decide_eq_true_eq, hgroup]
     simp only [← bind_pure_comp, OracleComp.prEvent_bind_const]

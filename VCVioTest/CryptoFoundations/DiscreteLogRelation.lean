@@ -31,10 +31,7 @@ theorem reduction_zmod_five :
         (1 / 5 : ℝ≥0∞) := by
   let : Fact (Nat.Prime 5) := ⟨Nat.prime_five⟩
   dsimp only
-  simpa [ZMod.card] using experiment_le (F := ZMod 5) (1 : ZMod 5)
-    (by
-      simp only [smul_eq_mul, mul_one]
-      exact ⟨fun _ _ h => h, fun x => ⟨x, rfl⟩⟩)
+  simpa [ZMod.card] using experiment_le (F := ZMod 5) (1 : ZMod 5) one_ne_zero
     (fun _ => pure ![1, -1])
 
 /-- The vector `![1, -1]` wins exactly on equality of the two sampled scalars. -/
