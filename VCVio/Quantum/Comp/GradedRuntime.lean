@@ -18,7 +18,7 @@ weights be checked only on the grades that the actual `j`-th query can reach.
 
 public section
 
-open Matrix OracleSpec
+open Matrix
 open scoped ENNReal ComplexOrder
 
 universe u w uL vL u₁ v₁

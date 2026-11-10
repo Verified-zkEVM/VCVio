@@ -92,8 +92,8 @@ variable [nttOps : NTTRingOps]
 `2γ₁ < q`, the honest pre-gate joint distribution of the challenge hash and the masked response
 `(c̃, z = y + c·s)`, with the mask `y` drawn before the uniform challenge, equals the simulator's
 direct draw of `(c̃, z)` with `z` a fresh mask, as observed by any continuation that ignores `z`
-outside the response gate. Both draws are injections of the raw mask samples, `a ↦ maskDecode a +
-c·s` and `maskDecode`, and both cover every `z` that passes the gate
+outside the response gate. Both draws are injections of the raw mask samples, `a ↦ boxDecode γ₁ a +
+c·s` and `boxDecode γ₁`, and both cover every `z` that passes the gate
 (`SampleableType.uniformSample_bind_evalDistEq_of_cover`). -/
 theorem honest_pregate_evalDistEq [SampleableType (CommitHashBytes p)] [NeZero p.gamma1]
     {s : RqVec p.l} (hq : 2 * p.gamma1 < modulus)
@@ -114,24 +114,25 @@ theorem honest_pregate_evalDistEq [SampleableType (CommitHashBytes p)] [NeZero p
   refine EvalDistEq.bind_right _ fun cTilde => ?_
   have hgamma : ∀ {z : RqVec p.l}, polyVecNorm z < p.gamma1 - p.beta →
       polyVecNorm z < p.gamma1 := fun hz => by omega
-  simpa only [sampleMaskVec, bind_map_left] using
+  simpa only [sampleMaskVec, sampleBoxVec, bind_map_left] using
     SampleableType.uniformSample_bind_evalDistEq_of_cover
-      (α := MaskSample p.l p.gamma1)
-      (f₁ := fun a => maskDecode a + prims.sampleInBall cTilde • s) (f₂ := maskDecode)
+      (α := BoxSample p.l (2 * p.gamma1))
+      (f₁ := fun a => boxDecode p.gamma1 a + prims.sampleInBall cTilde • s)
+      (f₂ := boxDecode p.gamma1)
       (S := {z | polyVecNorm z < p.gamma1 - p.beta})
-      (fun a b h => maskDecode_injective hq (by
+      (fun a b h => boxDecode_injective hq (by omega) (by
         simpa only [rqVec_add_sub_cancel] using
           congrArg (· - prims.sampleInBall cTilde • s) h))
-      (maskDecode_injective hq)
+      (boxDecode_injective hq (by omega))
       (fun z hz => by
-        obtain ⟨a, ha⟩ := exists_maskDecode_eq_of_polyVecNorm_lt (gamma1 := p.gamma1)
+        obtain ⟨a, ha⟩ := exists_boxDecode_eq_of_polyVecNorm_lt (gamma1 := p.gamma1)
           (z := z - prims.sampleInBall cTilde • s) (by
             have := polyVecNorm_sub_le z (prims.sampleInBall cTilde • s)
             have := hs cTilde
             have hz' : polyVecNorm z < p.gamma1 - p.beta := hz
             omega)
         exact ⟨a, by simp only [ha, rqVec_sub_add_cancel]⟩)
-      (fun z hz => exists_maskDecode_eq_of_polyVecNorm_lt (hgamma hz))
+      (fun z hz => exists_boxDecode_eq_of_polyVecNorm_lt (hgamma hz))
       (g cTilde) (d cTilde) (fun z hz => hg cTilde z hz)
 
 /-! ### The accept-branch transcripts coincide pointwise -/

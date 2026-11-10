@@ -1,188 +1,97 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Devon Tuma
 -/
 
-import Interop.Hax.Bridge
-import Interop.Rust.Run
-import Hax.rust_primitives.ops
-import VCVio.OracleComp.ProbComp
-import VCVio.EvalDist.Instances.ErrorT
-import VCVio.EvalDist.Instances.OptionT
-import VCVio.EvalDist.Monad.Basic
+module
+
+public import Hax
+public import Interop.Rust.RustM
+public import Interop.Rust.Run
+public import Interop.Rust.Triple
+public import VCVio.OracleComp.ProbComp
+public import VCVio.EvalDist.Monad.Basic
+public import VCVio.ProgramLogic.Tactics
 
 /-!
-# End-to-end hax example exercising `divisionByZero`
+# Checked division in Rust, through `RustM`, in VCVio
 
-A second hax-style `RustM` example that complements `Computation.lean`.
-Where `Computation.lean` only exercises the `.integerOverflow` branch of
-`errorOfHax` (and only indirectly, via a no-overflow precondition), this
-file exercises `.divisionByZero` directly at both the Hoare-logic and
-equality levels.
+Rust's `x / y` on `u32` panics when `y` is zero, and hax emits it as Aeneas's checked division,
+which fails with `panic`. This example follows both branches into VCVio:
 
-## What this file covers
+* `checkedDiv_spec`: with a nonzero divisor the result is the quotient, by `hax_mvcgen`; the lifted
+  triple follows by `Interop.Rust.triple_liftRustM_of_triple`.
+* `checkedDiv_lifted_zero`: with divisor zero the lifted program throws `Interop.Rust.Error.panic`.
+* `prob_randomDiv_panic`: a program that divides by zero on one of two uniform bits panics with
+  probability `1/2`.
 
-* `checkedDiv x y` — hax-style checked division: `x /? y` on `u32`,
-  which panics with `.divisionByZero` when `y = 0`.
-* `checkedDiv_triple` (RustM level) — total-correctness Triple using
-  hax's own `UInt32.haxDiv_spec` under the `y ≠ 0` precondition.
-* `checkedDivLifted_triple` — oracle-lifted Triple, obtained by
-  `triple_liftRustM` from `Bridge.lean`. Exercises the transport lemma
-  end-to-end on a function whose panic branch is division-by-zero
-  rather than overflow.
-* `checkedDivLifted_fail_of_zero` — equality-level check: when `y = 0`
-  the lifted computation reduces to `fail .divisionByZero`, which is
-  where `errorOfHax` actually moves the error constructor through the
-  bridge (as opposed to the Triple case where the precondition rules
-  the branch out).
-
-## Why a separate file
-
-Keeping this example separate from `Computation.lean` has two benefits:
-
-* it isolates the `.divisionByZero` witness so a future error-enum
-  refactor has an obvious regression target, and
-* the proofs are ~identical in structure to `Computation.lean`, so the
-  diff highlights what changes (the error constructor, the `haxDiv_spec`
-  side condition) while keeping everything else constant.
+The division is written as hax emits it; `cargo hax into lean` was not run.
 -/
 
-open Std.Do OracleSpec OracleComp
+public section
+
+open Aeneas Aeneas.Std Std.Do Interop.Rust OracleSpec OracleComp OracleComp.ProgramLogic ENNReal
 
 namespace Interop.Hax.Examples.Division
 
-set_option mvcgen.warning false
+/-- The Rust `x / y` on `u32`, in `RustM`. -/
+def checkedDiv (x y : U32) : RustM U32 := x / y
+
+set_option mvcgen.warning false in
+set_option hax_mvcgen.warnings false in
+/-- With a nonzero divisor, `checkedDiv` returns the quotient. -/
+theorem checkedDiv_spec (x y : U32) :
+    ⦃⌜y.val ≠ 0⌝⦄ checkedDiv x y ⦃⇓ r => ⌜r.val = x.val / y.val⌝⦄ := by
+  unfold checkedDiv
+  hax_mvcgen
+
+section Lifted
 
 variable {ι : Type} {spec : OracleSpec ι}
 
-/-- Hax-style checked division on `u32`: `x /? y` reduces to
-`if y = 0 then .fail .divisionByZero else pure (x / y)` by the
-`rust_primitives.ops.arith.Div` instance shipped in
-`Hax.rust_primitives.ops`. We wrap it in a top-level definition to give
-it a name `mvcgen` can drive. -/
-@[spec]
-def checkedDiv (x y : u32) : RustM u32 := x /? y
+/-- With divisor zero, the lifted program throws `panic`. -/
+theorem checkedDiv_lifted_zero (x : U32) :
+    (liftRustM (checkedDiv x 0#u32) : RustOracleComp spec U32) = RustOracleComp.fail .panic := by
+  have : checkedDiv x 0#u32 = RustM.fail .panic := by
+    simp (config := { decide := true }) [checkedDiv, HDiv.hDiv, UScalar.div]
+  rw [this, liftRustM_fail, errorOfAeneas_panic]
 
-/-- `RustM`-level Triple for `checkedDiv`. Under the non-zero precondition
-`y ≠ 0`, the function returns `x.toNat / y.toNat`. Proof is a one-liner:
-unfold `checkedDiv`, drive `mvcgen` with the `Div` instance, and close
-the single vc by `UInt32.haxDiv_spec`. -/
-theorem checkedDiv_triple (x y : u32) (h : y ≠ 0) :
-    ⦃⌜True⌝⦄
-    (checkedDiv x y)
-    ⦃⇓ r => ⌜r.toNat = x.toNat / y.toNat⌝⦄ := by
-  unfold checkedDiv
-  exact UInt32.haxDiv_spec x y h
+variable [Std.WP.WPMonad (OracleComp spec) Prop Std.WP.EStackEnd]
 
-/-- Oracle-aware version of `checkedDiv`: just the bridge lift. Same
-shape as `computationLifted` in `Computation.lean`, only the panic
-branch differs. -/
-def checkedDivLifted (x y : u32) : Interop.Rust.RustOracleComp spec u32 :=
-  liftRustM (checkedDiv x y)
+/-- With a nonzero divisor, the lifted program returns the quotient, and neither panics nor
+diverges. -/
+theorem triple_checkedDiv_lifted (x y : U32) :
+    Std.WP.Triple (liftRustM (checkedDiv x y) : RustOracleComp spec U32)
+      (y.val ≠ 0) (fun r => r.val = x.val / y.val) (fun _ => False, fun _ => False, ()) :=
+  triple_liftRustM_of_triple (checkedDiv_spec x y)
 
-/-- Oracle-lifted Triple for division. Obtained in one step from
-`checkedDiv_triple` via `triple_liftRustM`, with the `y ≠ 0`
-precondition preserved. The `errorOfHax` rebrand inside
-`triple_liftRustM` is again invisible at the Triple level because the
-precondition rules out the panic branch; the equality-level lemma
-below is the one that actually witnesses the rebrand. -/
-theorem checkedDivLifted_triple [IsUniformSpec spec]
-    (x y : u32) (h : y ≠ 0) :
-    ⦃⌜True⌝⦄
-    (checkedDivLifted (spec := spec) x y)
-    ⦃⇓ r => ⌜r.toNat = x.toNat / y.toNat⌝⦄ := by
-  unfold checkedDivLifted
-  exact triple_liftRustM _ (checkedDiv_triple x y h)
+end Lifted
 
-/-! ### Equality-level panic witnesses
-
-Separate from the Triple specs above, we also record the two
-equality-level outcomes of `checkedDivLifted` so that the
-`errorOfHax` rebrand is exercised concretely:
-
-* `checkedDivLifted_ok_of_ne_zero`: when `y ≠ 0`, the lifted
-  computation reduces to `ok (x / y)`.
-* `checkedDivLifted_fail_of_zero`: when `y = 0`, it reduces to
-  `fail .divisionByZero` — this is the only place where the bridge's
-  `errorOfHax .divisionByZero = .divisionByZero` rebrand actually
-  fires, because the `RustM` tail is `RustM.fail .divisionByZero` by
-  reduction of the `Div` instance.
--/
-
-/-- When the divisor is nonzero, the lifted computation reduces to
-`ok (x / y)` via `liftRustM_pure` on the `pure (x / y)` branch of the
-`Div` instance. -/
-theorem checkedDivLifted_ok_of_ne_zero (x y : u32) (h : y ≠ 0) :
-    (checkedDivLifted (spec := spec) x y) =
-      Interop.Rust.RustOracleComp.ok (x / y) := by
-  unfold checkedDivLifted checkedDiv
-  change liftRustM (if y = 0 then .fail .divisionByZero else pure (x / y)) = _
-  rw [ite_eq_right h]
-  rfl
-
-/-- When the divisor is zero, the lifted computation reduces to
-`fail .divisionByZero`, i.e. the rebranded hax error constructor
-coming out of `errorOfHax`. This is the concrete witness that the
-bridge's error translation preserves the `divisionByZero`
-constructor, complementing `Computation.lean` which only witnesses
-`integerOverflow` indirectly. -/
-theorem checkedDivLifted_fail_of_zero (x : u32) :
-    (checkedDivLifted (spec := spec) x 0) =
-      Interop.Rust.RustOracleComp.fail .divisionByZero := by
-  unfold checkedDivLifted checkedDiv
-  change liftRustM (if (0 : u32) = 0 then .fail .divisionByZero else pure (x / 0)) = _
-  rw [ite_eq_left rfl]
-  rfl
-
-/-! ### Probabilistic spec: panic probability over a uniform coin
-
-Pulling everything together: `randomDiv x` flips a uniform bit `b ∈ Fin 2`
-and either calls `checkedDivLifted x 0` (guaranteed division-by-zero
-panic) or returns `x` deterministically. The panic probability is
-exactly `1/2`, witnessed on the `.divisionByZero` error constructor.
-
-This mirrors `tossedAdd_panic_prob` in `Examples.lean` but on a
-different error constructor, so the probabilistic story is now tested
-on at least two of the seven `Interop.Rust.Error` enum variants. -/
-
-/-- Probabilistic harness: flip a uniform bit, run the division-by-zero
-panic path on `b = 0` and return `x` on `b = 1`. -/
-def randomDiv (x : u32) : Interop.Rust.RustOracleComp unifSpec u32 := do
+/-- Draw a uniform bit, divide by zero on `0`, and return `x` on `1`. -/
+def randomDiv (x : U32) : RustOracleComp unifSpec U32 := do
   let b ← ($[0..1] : ProbComp (Fin 2))
-  if b = 0 then checkedDivLifted x 0
-  else pure x
+  if b = 0 then liftRustM (checkedDiv x 0#u32) else pure x
 
-/-- `.run.run` peel for `randomDiv`: after running the transformer
-stack, we land at the canonical `OracleComp (Option (Except ε α))`
-form. Proved in a single `simp only` using the reusable peel lemmas
-from `Interop.Rust.Run`. -/
-theorem randomDiv_run_run (x : u32) :
+/-- The draw decides the outcome. -/
+theorem randomDiv_run_run (x : U32) :
     (randomDiv x).run.run =
-      ($[0..1] >>= fun b : Fin 2 =>
-        pure (some (if b = 0 then
-          (Except.error Interop.Rust.Error.divisionByZero : Except Interop.Rust.Error u32)
-          else Except.ok x)) :
-            OracleComp unifSpec (Option (Except Interop.Rust.Error u32))) := by
+      ((fun b : Fin 2 => some (if b = 0 then Except.error Interop.Rust.Error.panic
+          else Except.ok x)) <$> ($[0..1] : ProbComp (Fin 2)) :
+        OracleComp unifSpec (Option (Except Interop.Rust.Error U32))) := by
   unfold randomDiv
-  simp only [checkedDivLifted_fail_of_zero,
-    Interop.Rust.RustOracleComp.run_run_bind_liftM,
-    apply_ite (f := fun x : Interop.Rust.RustOracleComp unifSpec u32 => x.run.run),
-    Interop.Rust.RustOracleComp.run_run_fail,
-    Interop.Rust.RustOracleComp.run_run_pure,
-    apply_ite (pure (f := OracleComp unifSpec)), apply_ite some]
+  simp only [RustOracleComp.run_run_bind_liftM, map_eq_bind_pure_comp]
+  refine bind_congr fun b => ?_
+  fin_cases b <;> simp [checkedDiv_lifted_zero]
 
-/-- Panic probability of `randomDiv` is exactly `1/2`: the sole panic
-branch is triggered by the uniform draw `b = 0`, and it panics with
-`.divisionByZero`, the rebranded hax error constructor. -/
-theorem randomDiv_panic_prob (x : u32) :
-    Pr[= some (Except.error Interop.Rust.Error.divisionByZero) |
-        (randomDiv x).run.run] = 2⁻¹ := by
-  rw [randomDiv_run_run, probOutput_bind_eq_sum_fintype]
-  -- ∑ b : Fin 2, Pr[= b | $[0..1]] * Pr[= some (.error .divisionByZero) | pure _].
-  -- Each factor of `Pr[= · | $[0..1]]` is `(1 + 1)⁻¹`; only `b = 0` gives a
-  -- nonzero second factor (coefficient `1`), so the sum is `(1 + 1)⁻¹ = 2⁻¹`.
-  simp [ProbComp.probOutput_uniformFin]
-  norm_num
+/-- The program panics with probability `1/2`: exactly on the draw `0`. -/
+theorem prob_randomDiv_panic (x : U32) :
+    Pr{let r ← (randomDiv x).run.run}[r = some (Except.error Interop.Rust.Error.panic)] = 2⁻¹ := by
+  rw [randomDiv_run_run]
+  simp only [Functor.map_map, Option.some.injEq]
+  vcgen
+  simp only [ProbComp.uniformFin]
+  rw [wp_query_uniform, Fin.sum_univ_two, show Fintype.card (unifSpec.Range 1) = 2 from rfl]
+  simp
 
 end Interop.Hax.Examples.Division
