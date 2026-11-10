@@ -1,108 +1,67 @@
 # Interop
 
-Experimental bridges that let VCVio reason about Lean code emitted by Rust
-verification frontends (currently [hax](https://github.com/cryspen/hax) and
-[aeneas](https://github.com/AeneasVerif/aeneas)).
+Bridges that let VCVio reason about Lean code produced by external verification tools: today, the
+Rust frontends [hax](https://github.com/cryspen/hax) and
+[Aeneas](https://github.com/AeneasVerif/aeneas).
 
-> **Lean 4.31 baseline:** Interop is dormant. Neither backend is resolved by
-> Lake, and CI intentionally excludes the `Interop` aggregate target. Hax does
-> not yet support Lean 4.31; Aeneas does, but its VCVio bridge has not been
-> revalidated. Source and TCB-isolation checks remain in place.
+## A separate package
 
-## TCB Isolation Contract
+The Rust bridges need hax's and Aeneas's Lean libraries, and every package that requires VCVio
+would resolve any `require` in VCVio's root lakefile. So `Interop/lakefile.toml` is its own Lake
+package. It requires VCVio by path and hax by commit; hax brings Aeneas.
+- *Sources.* It reads them from the repository root (`srcDir = ".."`), so modules keep their
+  `Interop.` names.
+- *Pins.* Its pins equal the root's (Lean v4.35.0, Mathlib v4.35.0), so it shares the root's
+  dependency cache. A bridge with no Lake dependency of its own can build in the root package
+  instead.
 
-The single most important property of this library is that **nothing in core
-VCVio depends on it**. Pulling hax / aeneas into the build adds a sizeable
-trusted computing base (extraction frontend, Charon, the backend's own
-runtime axioms), and we never want a routine `lake build` of the core
-framework to inherit that.
-
-The contract is enforced at three levels:
-
-1. **Lake**: `Interop` is its own `lean_lib` in `lakefile.lean`, sibling to
-   `LatticeCrypto`/`Examples`. Cross-library imports are physical: a file
-   under `VCVio/`, `LatticeCrypto/`, `LatticeCryptoTest/`, `Examples/`,
-   `ToMathlib/`, `FFI/`, `VCVioWidgets/`, or `VCVioTest/` must never
-   `import Interop.…`, `import Hax.…`, or `import Aeneas.…`.
-2. **CI**: `scripts/check-interop-isolation.sh` uses Lean's source parser to
-   check for forbidden imports and exits non-zero on violation.
-   `.github/workflows/interop-isolation.yml` runs it on every PR and on pushes
-   to `main`. The source parser needs the pinned Lean toolchain but no built
-   project modules or Lake dependencies.
-3. **Reverse direction**: `Interop/**` is allowed to depend on `VCVio/**`,
-   `ToMathlib/**`, hax (`Hax.…`), and aeneas (`Aeneas.…`), but **not** on
-   `LatticeCrypto/**`, `Examples/**`, `LatticeCryptoTest/**`, `FFI/**`,
-   `VCVioWidgets/**`, or `VCVioTest/**`.
-   Those are themselves clients of VCVio. The same script checks this.
-
-If you need to share infrastructure between Interop and another library,
-move the shared piece into `VCVio/` first.
-
-## Layout
-
-```
-Interop/
-├── README.md             ← this file
-├── Rust/                 ← framework-side Rust target monad (`RustOracleComp`)
-│   ├── Common.lean       ← `RustOracleComp`, mirrored `Error`, `Std.Do.WP` glue
-│   └── Run.lean          ← reusable `.run.run` peel lemmas for the
-│                           `ExceptT / OptionT / OracleComp` stack, used
-│                           by probabilistic proofs downstream
-├── Hax/                  ← bridge to `Hax.RustM` (gated on hax require)
-│   ├── README.md
-│   ├── Bridge.lean       ← `liftRustM`, `errorOfHax`,
-│   │                       `@[spec] triple_liftRustM`, `LawfulMonadLift`
-│   │                       instance, bundled `MonadHom` (`liftRustMHom`)
-│   ├── Examples.lean     ← hand-crafted demo: `addOrPanicLifted`,
-│   │                       oracle-composed `oracleThenAdd`, probabilistic
-│   │                       `tossedAdd` with `Pr[panic] = 1/2`
-│   ├── Computation.lean  ← hax-emitted `x + x + 1` (first real hax source)
-│   ├── Division.lean     ← hax-emitted `/?`: `.divisionByZero` end-to-end
-│   ├── Adc.lean          ← hax `lean_adc`: 32-bit ADC via
-│   │                       `hax_mvcgen <;> bv_decide`, transported by
-│   │                       one application of `triple_liftRustM`
-│   ├── Barrett.lean      ← hax `lean_barrett`: signed 32-bit Barrett
-│   │                       reduction mod 3329, proven in-range via
-│   │                       `hax_bv_decide` (bit-blast, 300s timeout)
-│   └── CenteredBinomial.lean
-│                         ← CBD(η = 1) sampler from `third_party/hax-cbd`;
-│                           first randomized hax source. Deterministic
-│                           `{-1, 0, 1}` range over all `u8` by
-│                           `native_decide`; exact distribution
-│                           `Pr[0] = 1/2`, `Pr[±1] = 1/4` on
-│                           `sampleRandomCbd1 : RustOracleComp unifSpec i32`
-└── Aeneas/               ← bridge to `Aeneas.Std.Result` (currently disabled)
-    └── README.md
+```bash
+cd Interop
+lake build      # VCVio, hax, Aeneas and the bridges (`InteropRust`)
 ```
 
-`Rust/Common.lean` is **self-contained**: it builds without hax or aeneas
-loaded, by mirroring their shared `Error` enum and reconstructing the
-`ExceptT Error (OptionT (OracleComp spec))` stack that hax's `RustM` collapses
-into. The actual `MonadLift` instances from hax/aeneas live in `Hax/` and
-`Aeneas/`, where they can use the upstream definitions.
+## TCB isolation
 
-## Git-pinned Backend Requires
+Nothing in core VCVio depends on `Interop`. A Rust frontend's trusted base (its extraction engine,
+Charon, its runtime library) must never reach a routine build of the core.
+- `VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `LatticeCryptoTest/`, `Examples/`, `Extern/` and
+  `VCVioTest/` never import `Interop.…`, `Hax.…` or `Aeneas.…`.
+- `Interop/**` may import `VCVio/**`, `ToMathlib/**`, hax and Aeneas, but not the libraries that
+  are themselves VCVio's clients.
+- `scripts/check-interop-isolation.sh` checks both directions, and
+  `.github/workflows/interop-isolation.yml` runs it on every PR.
+- To share infrastructure between `Interop` and another library, move it into `VCVio/` first.
 
-`lakefile.lean` carries explicit git pins for both backends. Current state:
+## The Rust bridges
 
-```lean
--- Hax: disabled; upstream does not build with Lean 4.31.
--- require Hax from git
---   "https://github.com/cryspen/hax" @ "492a34e3" / "hax-lib/proof-libs/lean"
+hax and Aeneas emit code in one monad, `Aeneas.Std.RustM`. hax's Lean library builds on Aeneas's,
+and the fork of Aeneas it pins names it `RustM`; upstream Aeneas calls the same definition
+`Result`.
+- It is an interaction tree over Aeneas's effect `RustEffect`, from Aeneas's own coinductive
+  library.
+- That effect's only event is `fail e`, with no answer. So a `RustM` computation unfolds in one step
+  to a returned value, a failure or divergence, and one lift serves both tools.
 
--- Aeneas: disabled, but pinned to a published Lean 4.31 nightly.
--- require aeneas from git
---   "https://github.com/AeneasVerif/aeneas" @
---   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
-```
+| Module | Content |
+|---|---|
+| `Interop.Rust.Common` | `RustOracleComp spec α := ExceptT Error (OptionT (OracleComp spec)) α`: Rust panics, then divergence, then oracle queries |
+| `Interop.Rust.Run` | `.run.run` equations for that stack, for probabilistic proofs |
+| `Interop.Rust.RustM` | the lift `RustM → RustOracleComp spec`, with its `pure`/`bind` laws, `LawfulMonadLift` and a bundled `MonadHom` |
+| `Interop.Hax.CenteredBinomial` | ML-KEM's CBD(η = 1) step, from its Rust source (`third_party/hax-cbd`) through `RustM` to its distribution: `0` with probability `1/2`, `±1` with `1/4` each |
 
-### Require order matters
+The other modules in `Interop/Hax/` predate hax's move onto Aeneas, and are not built until they
+are ported; see [its README](Hax/README.md).
 
-`require Hax` must appear **before** `require "leanprover-community" /
-"mathlib"`. Hax transitively pins `Qq` at `v4.29.0-rc1`, Mathlib pins it
-at the final release; Lake's conflict resolver takes the **last**
-`require` of each dependency, so mathlib goes last to win. Wrong order
-produces `mathlib: failed to fetch cache` on `lake update`.
+## Not yet done
 
-We git-pin by default so reproducible builds are guaranteed. Bumping a
-pin is a deliberate one-line change reviewed alongside any TCB delta.
+- **Port the other hax examples** to Aeneas's scalars (`U8`, `I32`, literals such as `1#u8`), where
+  bitwise operations and casts are pure and shifts and arithmetic are checked.
+- **Regenerate extractions.** Regenerate `third_party/hax-cbd` with the hax CLI. The sampler in
+  `CenteredBinomial` is transcribed in hax's current emission style.
+- **Triple transport.** Transport `Std.Do` triples along the lift. Aeneas's `WP RustM` instance has
+  three exception layers, `.except (ULift Error) (.except PUnit (.except PUnit .pure))`.
+- **An ITree-level bridge to PolyFun.** Aeneas's `ITree E` has an explicit `div` in place of
+  `tau`, and maps to PolyFun's `ITree` over the polynomial `⟨E.I, E.O⟩` up to tau-insensitive
+  bisimulation. It would serve every Aeneas effect.
+- **Module system and CI.** Convert the bridges to the module system (they build with
+  `allowNonModules`), and add a CI job that builds this package.

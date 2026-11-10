@@ -64,28 +64,10 @@ script lint (args) do
   child.wait
 
 /-
-Interop backends are intentionally disabled for the Lean 4.35 baseline. Their
-source remains under `Interop/`, isolated from the trusted libraries by
-`scripts/check-interop-isolation.sh`, but the aggregate module and CI do not
-build it. Re-enable a backend only once its upstream Lean library supports the
-repository's Lean version without a local compatibility layer.
-
-The pinned Hax revision still targets Lean 4.29.0-rc1 and is not part of the
-Lean 4.35 build. Subdirectory: `hax-lib/proof-libs/lean`.
+The Rust bridges under `Interop/` require hax and Aeneas, and every dependent of this package would
+resolve any `require` written here. They are built by the separate package in `Interop/lakefile.toml`
+instead, which requires this one by path.
 -/
--- require Hax from git
---   "https://github.com/cryspen/hax" @
---   "492a34e3" / "hax-lib/proof-libs/lean"
-
-/-
-Aeneas now natively pins Lean and Mathlib v4.31.0. This dormant pin follows its
-published `nightly-2026.07.11-15b9684`; keep it disabled until the VCVio bridge
-is tested separately and can be enabled without compatibility aliases.
-Subdirectory: `backends/lean`.
--/
--- require aeneas from git
---   "https://github.com/AeneasVerif/aeneas" @
---   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 
 /-
 List PolyFun and QuantumFoundations before the root Mathlib pin. Lake resolves
@@ -135,12 +117,6 @@ Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but no
 @[default_target] lean_lib VCVioWidgets
 /-- Separate section of the project for things that should be ported. -/
 @[default_target] lean_lib ToMathlib
-
-/-- Dormant Interop bridges to Rust verification frontends (hax, aeneas).
-Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
-`Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
-excluded from the Lean 4.35 baseline build. -/
-lean_lib Interop
 
 /-
 The four `extern_lib` targets below compile C sources that live in git

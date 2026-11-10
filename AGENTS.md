@@ -44,7 +44,7 @@ unfold their definitions.
   access an unexposed implementation from the same dependency when proving its public API.
 - Do not enable `backward.privateInPublic` or `backward.proofsInPublic`; resolve visibility and
   proof-metavariable issues directly.
-- Keep the dormant `Interop` library outside this policy until it is migrated separately.
+- The `Interop` package (`Interop/lakefile.toml`) is outside this policy until its bridges adopt the module system.
 
 Section `variable` lines carry an instance assumption only when the theorems in scope share it:
 Lean auto-includes an instance-implicit section variable in every theorem mentioning its types,
@@ -118,7 +118,7 @@ build boundaries and the staged consolidation.
 - `VCVioComplexity/`: optional isolated Lake package for the complexitylib-backed exact-machine
   substrate; it is not part of VCVio's default dependency graph.
 - `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs.
-- `Interop/`: experimental bridges to Rust verification frontends (hax, aeneas). **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
+- `Interop/`: bridges to external verification tools (hax and Aeneas today), built as their own Lake package so their requires never reach VCVio's dependents. **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
 - `csrc/`: C FFI shims used for differential testing against native ML-DSA, ML-KEM, and Falcon code.
 - `third_party/`: native backends as git submodules; when they are not checked out (fresh clones, Lake dependency checkouts), the native `extern_lib` targets build as empty stub archives.
 
@@ -283,7 +283,7 @@ Security notions, experiments, games, and advantages follow
 - Falcon GPV instantiation: `LatticeCrypto/Falcon/Scheme.lean`
 - Lattice hardness assumptions: `LatticeCrypto/HardnessAssumptions/LearningWithErrors.lean`, `LatticeCrypto/HardnessAssumptions/ShortIntegerSolution.lean`
 - Differential and vector tests: `LatticeCryptoTest/`
-- Rust verification interop (hax / aeneas): `Interop/Rust/Common.lean`, `Interop/README.md`, `scripts/check-interop-isolation.sh`
+- Rust verification interop (hax / aeneas): `Interop/lakefile.toml`, `Interop/Rust/RustM.lean`, `Interop/README.md`, `scripts/check-interop-isolation.sh`
 
 ## Program Logic Tactics
 
@@ -325,7 +325,7 @@ the build just produced; `--test` runs it a second time over `VCVioTest` and
 
 CI runs the timed build on the non-test Lean libraries:
 `ToMathlib`, `VCVio`, `VCVioCslib`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
-and `VCVioWidgets`. The dormant `Interop` target remains excluded.
+and `VCVioWidgets`. The `Interop` package builds separately.
 Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 

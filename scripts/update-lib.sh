@@ -19,6 +19,3 @@ regenerate() {
 for library in ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples VCVioWidgets VCVioTest; do
   regenerate --lib "$library" --module
 done
-
-# Interop is dormant and has not yet adopted module scopes.
-regenerate --lib Interop

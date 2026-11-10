@@ -23,36 +23,24 @@ The `ExceptT Error` layer models Rust panics, the `OptionT` layer models
 divergence, and the `OracleComp spec` layer models probabilistic / oracle
 queries.
 
-The `Error` enum in this file is a verbatim mirror of the shared
-`Error` enum in `Hax.rust_primitives.RustM` and `Aeneas.Std.Primitives`.
-We keep it local so this module compiles without requiring the hax / aeneas
-Lake packages. The actual `MonadLift` instances from `Hax.RustM` and
-`Aeneas.Std.Result` live in `Interop.Hax.Bridge` and `Interop.Aeneas.Bridge`,
-both of which are gated on the corresponding `require` in `lakefile.lean`.
+The `Error` enum in this file covers the errors Rust frontends report. It is local, so this module
+compiles without the hax or Aeneas Lake packages. hax and Aeneas both emit code in
+`Aeneas.Std.RustM`, whose computations return, fail or diverge; `Interop.Rust.RustM` lifts it into
+`RustOracleComp spec` by that case analysis.
 
 ## Why a transformer stack?
 
-`Hax.RustM` collapses panic + divergence into `ExceptT Error Option`:
-the resulting WP shape is `.except Error (.except PUnit .pure)`. Replacing
-the inner `Option` with `OptionT (OracleComp spec)` preserves the WP shape
-exactly while threading oracles through the divergence layer; lifts from
-`Hax.RustM` are then a definitional `pure`. Aeneas's `Result α` (an
-inductive `ok | fail | div`) is isomorphic to `Hax.RustM α` and converts
-into `RustOracleComp spec α` by case analysis.
-
-This shape is intentional: it is the smallest extension of the hax /
-aeneas target that admits oracle queries while keeping the boundary lemmas
-trivial.
+It is the smallest extension of a Rust frontend's target that admits oracle queries: failure is the
+`ExceptT` layer, divergence the `OptionT` layer, and queries the inner `OracleComp spec`, so the
+boundary lemmas of the lift are case splits.
 -/
 
 open Std.Do
 
 namespace Interop.Rust
 
-/-- Mirror of the `Error` enum used by both `Hax.rust_primitives.RustM`
-and `Aeneas.Std.Primitives`. Mirrored locally so this module does not
-depend on either upstream package; the bridges in `Interop.Hax` and
-`Interop.Aeneas` translate at the boundary. -/
+/-- The errors a Rust frontend reports, kept locally so this module depends on no frontend's
+package; `Interop.Rust.errorOfAeneas` maps Aeneas's errors into it. -/
 inductive Error where
   | assertionFailure : Error
   | integerOverflow : Error
