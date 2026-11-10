@@ -256,7 +256,7 @@ finite support for free and makes every operation noncomputable. This is decisio
 Common setting: sorts `S` with `[DecidableEq S]`, a signature `σ : Sig S`, a field `F`, carriers
 `G : S → Type` with `Module F (G s)`, and a real model `M : Model F σ G`. The core, T1a
 and the certified interaction interface do not require finitely many sorts. T1b and its round
-trip additionally require `[Fintype S]`.
+trip additionally require `[FinEnum S]`.
 
 **(H) Handle adversaries.** This is the definition, per D11.
 
@@ -374,7 +374,8 @@ count the two separately; `ResourceProfile` already carries a usage vector.
 `m₀` is the length of the initial table, `q` a bound on the number of `add` and `smul` queries
 (an `IsQueryBoundP` hypothesis), `m := m₀ + q`.
 
-The following translation theorems are targets. T1a and T1b are polymorphic in `N` with
+The following translation theorems are targets, except T1b, which `ofExplained_run` proves.
+T1a and T1b are polymorphic in `N` with
 `[Monad N] [LawfulMonad N]`, a game handler `impl : QueryImpl (plainSpec G Query Reply) N`,
 and an explicit shared `random : QueryImpl unifSpec N`. Their run equations are exact
 equalities of computations in `N`, including all effects of the game and sampling handlers.
@@ -444,15 +445,15 @@ and `Signatures/Model/DirectAGM.lean`.
   outgoing handle becomes the tracked value together with the coefficients `given.map repr`.
   `algebraic` is proved from `Explains`, including `given_nodup` for the coefficient conversion,
   and `_run` from L1 for `snd` and the matching private-coin handlers.
-- **T1b (explanations → handles).** Under `[Fintype S]` and `[DecidableEq S]`, given a decoder
+- **T1b (explanations → handles).** Under `[FinEnum S]` and `[DecidableEq F]`, given a decoder
   `dec` with `∀ s g, dec s (enc s g) = g` (the real-value setting is `E := G`, `enc := id`,
   `dec := id`):
 
   ```lean
-  def ofExplained [Fintype S] [DecidableEq S]
+  def ofExplained [DecidableEq F] [FinEnum S]
       (B : Interaction.Adversary F G Input (CoinQuery Query) (CoinReply Reply) Result) (dec) :
       HandleAdversary F (discreteSig S) E Input Query Reply Result
-  theorem ofExplained_run [Fintype S] [DecidableEq S]
+  theorem ofExplained_run [DecidableEq F] [FinEnum S]
       {N : Type → Type} [Monad N] [LawfulMonad N]
       (random : QueryImpl unifSpec N) (impl : QueryImpl (plainSpec G Query Reply) N)
       (hdec : ∀ s g, dec s (enc s g) = g) :
@@ -460,13 +461,16 @@ and `Signatures/Model/DirectAGM.lean`.
         (fun z => z.1.value) <$> B.run (withCoins random impl) input
   ```
 
-  `ofExplained` enumerates the sorts and decodes the received handles. It builds each outgoing
-  element from its coefficients with at most one `smul` and one `add` per nonzero coefficient,
-  which is where `B.algebraic` is used. A certified adversary may output elements at every
-  sort, while a handle run touches only finitely many sorts. Enumerability is therefore needed
-  for this direction. The core model, T1a and agm-lean's interface remain general in `S`.
-  Composing T1a with T1b gives the round trip for (E) under the same `[Fintype S]`,
-  `[DecidableEq S]` and decoder assumptions, with certified runs using `withCoins random impl`.
+  `ofExplained` enumerates the sorts in the order `FinEnum.toList S` and decodes the received
+  handles. It builds each outgoing element from its coefficients: one `smul` per nonzero
+  coefficient, one `add` joining it to the sum of the later ones, and one `smul` by zero for an
+  all-zero vector. `ofExplained_run` uses `B.algebraic` to show that these handles read back to
+  the explained elements. A certified adversary may output elements at every sort, while a
+  handle run touches only finitely many sorts. Enumerability is therefore needed for this
+  direction, and a computable enumeration keeps the compiled adversary executable. The core
+  model, T1a and agm-lean's interface remain general in `S`. Composing T1a with T1b gives the
+  round trip for (E) under the same `[FinEnum S]`, `[DecidableEq F]` and decoder assumptions,
+  with certified runs using `withCoins random impl`.
   For a stateful game, take `N := StateT GameState ProbComp` and
   `random n := liftM (unifSpec.query n : ProbComp (Fin (n + 1)))`. This sampling handler
   preserves `GameState`; `impl` may read and update it, including a persistent hash cache.
@@ -1080,8 +1084,8 @@ such as `impl`, `run` and `lookup`. The expose-boundary ceiling excludes new fil
 4. **Handles and explanations.** `Encoding.lean`, `Game.lean`, and `Algebraic.lean`: `encSpec`
    and its real handler, `handleSpec`, `liftGame`, `withCoins`, `HandleAdversary`, `toAlgebraic`,
    `toExplained`, `ofExplained`, T1a, T1b, and their round trip in a lawful monad `N` with a shared
-   `random : QueryImpl unifSpec N`. T1b and its round trip require `[Fintype S]` and
-   `[DecidableEq S]`; T1a remains general in `S`. Test a private-coin-only adversary and a
+   `random : QueryImpl unifSpec N`. T1b and its round trip require `[FinEnum S]` and
+   `[DecidableEq F]`; T1a remains general in `S`. Test a private-coin-only adversary and a
    repeated-query stateful game that answers identical empty-group requests with `false` then
    `true`. Use `StateT GameState ProbComp` with lifted uniform sampling, and compare both output
    and final game state across translations. Depends on slices 1–3.
@@ -1316,7 +1320,7 @@ D1–D15 are settled.
 | D9 | agm-lean | Once its module is in VCVio, a re-export shim pinned to VCVio, then archived. The owners decide. |
 | D10 | free models | One per signature. Milestone 1 builds `groupSig`, `discreteSig S` and `pairingSig` (source sorts); `ReprT` and Types 1 and 2 come at milestone 6. |
 | D11 | The one definition of an algebraic adversary | It is a handle computation with the encoding oracle: `OracleComp (spec F σ + encSpec E + unifSpec + Γ) α`. Its representations come from the tracking run; the adversary does not supply them. Private coins are supplied by `unifSpec`; the certified presentation obtains them through `withCoins`. A generic adversary is the same computation without `encSpec`, so generic ⊆ algebraic is `liftComp`. agm-lean's certified explained adversary and ironwood's typed points are presentations of this class, with translations that preserve the game's output exactly (Section 5). Reasons for this choice: the inclusion of the generic class is syntactic; group work is countable; nobody writing an adversary has to supply a proof obligation; a reduction written as a handler serves both classes (T5). |
-| D12 | Games | A game may be written on values in agm-lean's form (`plainSpec G Query Reply`, a handler on actual elements) and lifted to handles once, by `liftGame`. A game may also be written directly on handles with `lookup` and `push`. T1 is stated for lifted games in a lawful monad `N`, with an explicit shared `random : QueryImpl unifSpec N` and certified runs using `withCoins random impl`. For `N := StateT GameState ProbComp`, use lifted uniform sampling; the run equations preserve the output and final game state. T1b and its round trip require `[Fintype S]` and `[DecidableEq S]`; the core, T1a and the interaction interface remain general. |
+| D12 | Games | A game may be written on values in agm-lean's form (`plainSpec G Query Reply`, a handler on actual elements) and lifted to handles once, by `liftGame`. A game may also be written directly on handles with `lookup` and `push`. T1 is stated for lifted games in a lawful monad `N`, with an explicit shared `random : QueryImpl unifSpec N` and certified runs using `withCoins random impl`. For `N := StateT GameState ProbComp`, use lifted uniform sampling; the run equations preserve the output and final game state. T1b and its round trip require `[FinEnum S]` and `[DecidableEq F]`; the core, T1a and the interaction interface remain general. |
 | D13 | Basis bookkeeping | The tracking state keeps, for each sort, the list of given handles in order of arrival, one entry per receipt. agm-lean's coefficient list is then `given.map repr`, and no reindexing lemma is needed. `Explains` includes `given.Nodup` per sort; T1a uses it to avoid counting a handle twice, while repeated group values receive distinct handles. |
 | D14 | Milestone order | The algebraic presentations and their translations (without KZG) come immediately after the core, before generic lower bounds. L2 (`Collision.lean`) and `Cost.lean` belong to milestone 2, the first place that uses them. |
 | D15 | agm-lean's namespace | The library namespace is `GroupModel.Interaction`. The signature repository must re-pin to VCVio in any case. |
@@ -1332,7 +1336,10 @@ Slice 1 will prove L1 (`run_map`), `impl_congr`, and T6 (`runGen_fst_eq_of_kerne
 prove the real, symbolic and source-sort free-model evaluation maps in `Instances.lean`, and
 the tracking projection and `Explains` preservation in `Tracking.lean`. In particular,
 `explains_of_mem_support_runTracking` remains a target. Slices 3–5 will supply the certified
-interaction interface and the T1a/T1b/T1c translations, including their exact run equalities.
+interaction interface and the T1a/T1c translations, including their exact run equalities.
+
+T1b is proved in `OfExplained.lean` as `ofExplained_run`, an exact equality of runs in any lawful
+monad `N`.
 
 Everything else is a paper argument or theorem target: L2, T3/T4 (including
 `dlogExperiment_ofGeneric_le`), T3ₛ, T5 and its cost certificate, the relation-problem bounds,
