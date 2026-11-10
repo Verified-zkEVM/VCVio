@@ -174,12 +174,6 @@ theorem polyVecNorm_sub_le {k : ℕ} (z v : RqVec k) :
   have htri := Int.natAbs_add_le ((z.get j).get i).valMinAbs (-(v.get j).get i).valMinAbs
   omega
 
-/-- A vector of centered norm below `γ₁` lies in the mask range. -/
-theorem maskBounded_of_polyVecNorm_lt {k gamma1 : ℕ} {v : RqVec k}
-    (hv : polyVecNorm v < gamma1) : maskBounded v gamma1 := fun j i => by
-  have h := natAbs_centeredRepr_le_polyVecNorm v j i
-  omega
-
 end Norms
 
 section Rounding

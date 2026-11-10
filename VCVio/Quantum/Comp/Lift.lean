@@ -6,7 +6,9 @@ Authors: Quang Dao
 
 module
 public import VCVio.Quantum.Comp.QueryBound
-public import VCVio.Quantum.Comp.Subsystem
+public import VCVio.Quantum.Comp.Simulation
+public import QuantumFoundations.SubInstrument.Subsystem
+public import QuantumFoundations.DSubInstrument.Relabel
 public import PolyFun.IPFunctor.Free.Bound.Traversal
 
 /-!
