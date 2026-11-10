@@ -5,7 +5,10 @@ Authors: Oleksandr Vovkotrub
 -/
 
 module
+public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
+public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
 public import LatticeCrypto.MLDSA.Security
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
 import VCVio.OracleComp.EvalDist.Measure
 
 /-!
@@ -247,6 +250,7 @@ end KeyGen
 section Game
 
 variable {M : Type} [DecidableEq M] [SampleableType (CommitHashBytes p)] [DecidableEq prims.High]
+  [NeZero p.gamma1]
 
 /-- The EUF-NMA experiment over an arbitrary forging strategy `main` and an arbitrary key
 generator `keygen`. `main` receives the public key (but no signing oracle) and returns a candidate
@@ -320,6 +324,7 @@ end Game
 section Distinguisher
 
 variable {M : Type} [DecidableEq M] [SampleableType (CommitHashBytes p)] [DecidableEq prims.High]
+  [NeZero p.gamma1]
 
 /-- The random-oracle simulation implementation used by `FiatShamirWithAbort.runtime`: the
 random oracle model handler `OracleSpec.romImpl` at the ML-DSA commitment-hash oracle. Running
@@ -564,6 +569,7 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ≥0∞}
 section Hop
 
 variable {M : Type} [DecidableEq M] [SampleableType (CommitHashBytes p)] [DecidableEq prims.High]
+  [NeZero p.gamma1]
 
 /-- **NMA-game / distinguisher plumbing.** Pushing the `keygen` sampling out of the
 Fiat-Shamir-with-aborts runtime: the output measure of `nmaExperiment … keygen` equals that of
@@ -707,7 +713,7 @@ theorem computeWApprox_eq_mul_sub_smul (h_transform : NTTRingLaws nttOps)
 
 section Extractor
 
-variable {M : Type} [DecidableEq prims.High]
+variable {M : Type} [DecidableEq prims.High] [NeZero p.gamma1]
 
 /-- The concrete SelfTargetMSIS problem embedded by ML-DSA verification (Lemma 7, Step 3).
 

@@ -309,9 +309,30 @@ generation's question is about an input's **shape**, which the shared oracle can
 projects with `SplitPrefix.mem_support_rom` and asks it there rather than redoing anything at
 the recorder. -/
 
-set_option maxHeartbeats 600000 in
--- Checking the `mem_support_rom` argument against the recorder run of `keygenInternal`
--- needs a `whnf` reduction of that run beyond the default budget.
+private theorem right_record_of_fresh {α : Type}
+    (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
+    (computation : OracleComp OracleWorld α) (state : SplitState) (result : α × SplitState)
+    (hmem : result ∈ support ((simulateQ (recorder leftKeep rightKeep) computation).run state))
+    (P : Bytes → Prop)
+    (hqueries : ∀ probe, state.1 probe = none → result.2.1 probe ≠ none → P probe)
+    (entry : Bytes × HashOutput) (hentry : entry ∈ result.2.2.2) :
+    entry ∈ state.2.2 ∨ P entry.1 := by
+  obtain ⟨suffix, hsuffix, hentries⟩ :=
+    right_record_suffix leftKeep rightKeep computation state result hmem
+  rw [hsuffix] at hentry
+  rcases List.mem_append.mp hentry with hprior | hnew
+  · exact Or.inl hprior
+  · obtain ⟨mid, hstart, -, habsent, -, hfinal⟩ := hentries entry hnew
+    have hfresh : state.1 entry.1 = none := by
+      rcases hstate : state.1 entry.1 with _ | value
+      · rfl
+      · rw [hstart entry.1 value hstate] at habsent
+        exact absurd habsent (by simp)
+    have hpresent : result.2.1 entry.1 ≠ none := by
+      rw [hfinal]
+      simp
+    exact Or.inr (hqueries entry.1 hfresh hpresent)
+
 /-- **An entry key generation files as a target is one of its own probes.** -/
 theorem keygen_right_record (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop)
     (secretSeed prfSeed publicSeed : Digest) (state : SplitState)
@@ -326,23 +347,19 @@ theorem keygen_right_record (leftKeep rightKeep : Bytes → QueryCache HashSpec 
     entry ∈ state.2.2 ∨ QueriesUnder later
       (Scheme.keygenInternal (m := OracleComp HashSpec) secretSeed prfSeed publicSeed)
       entry.1 := by
-  classical
-  obtain ⟨suffix, hsuffix, hentries⟩ :=
-    right_record_suffix leftKeep rightKeep _ state result hmem
-  rw [hsuffix] at hentry
-  rcases List.mem_append.mp hentry with hprior | hnew
-  · exact Or.inl hprior
-  · obtain ⟨mid, hstart, -, habsent, -, hfinal⟩ := hentries entry hnew
-    have hfresh : state.1 entry.1 = none := by
-      rcases hstate : state.1 entry.1 with _ | value
-      · rfl
-      · rw [hstart entry.1 value hstate] at habsent
-        exact absurd habsent (by simp)
-    refine Or.inr (CacheProvenance.queriesUnder_keygenInternal_of_fresh secretSeed prfSeed
-      publicSeed state.1 result.2.1 later result.1
-      (mem_support_rom leftKeep rightKeep _ state result hmem) hlater entry.1 hfresh ?_)
-    rw [hfinal]
-    simp
+  generalize hcomputation :
+    Scheme.keygenInternal (m := OracleComp OracleWorld) secretSeed prfSeed publicSeed =
+      computation at hmem
+  have hrom := mem_support_rom leftKeep rightKeep computation state result hmem
+  refine right_record_of_fresh leftKeep rightKeep computation state result hmem
+    (QueriesUnder later
+      (Scheme.keygenInternal (m := OracleComp HashSpec) secretSeed prfSeed publicSeed))
+    ?_ entry hentry
+  intro probe hfresh hpresent
+  refine CacheProvenance.queriesUnder_keygenInternal_of_fresh secretSeed prfSeed publicSeed
+    state.1 result.2.1 later result.1 ?_ hlater probe hfresh hpresent
+  rw [hcomputation]
+  exact hrom
 
 /-! ## The whole game
 
