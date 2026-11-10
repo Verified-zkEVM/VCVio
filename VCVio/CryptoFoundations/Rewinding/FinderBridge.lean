@@ -13,7 +13,9 @@ public import VCVio.CryptoFoundations.Rewinding.Eager
 
 A frozen prover determines one random Boolean acceptance function on complete challenge vectors.
 The eager representation preserves the finder's joint output and complete-run counter, so uniform
-success and unconditional cost bounds transfer by averaging over this function.
+success and unconditional cost bounds transfer by averaging over this function. Each entry of the
+function has the honest acceptance distribution, so its average acceptance rate is the honest
+acceptance probability averaged over complete challenge vectors.
 -/
 
 public section
@@ -31,6 +33,25 @@ variable {R : Type} {C : R → Type}
     (F : ProbComp (((r : R) → C r) → Bool)) : ℝ≥0∞ :=
   letI : MeasurableSpace (((r : R) → C r) → Bool) := ⊤
   ∫⁻ f, acceptRate f ∂𝒟[F]
+
+/-- The average acceptance rate of a random acceptance function is the average, over complete
+challenge vectors, of the probability that its entry at that vector accepts. -/
+theorem averageAcceptRate_eq_of_marginals [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+    {F : ProbComp (((r : R) → C r) → Bool)} {g : ((r : R) → C r) → ProbComp Bool}
+    (hg : ∀ c, ((fun f => f c) <$> F) =ᵈ g c) :
+    averageAcceptRate F =
+      (∑ c, Pr{let b ← g c}[b = true]) / Fintype.card ((r : R) → C r) := by
+  let : MeasurableSpace (((r : R) → C r) → Bool) := ⊤
+  have hc : ∀ c, Pr{let b ← g c}[b = true] =
+      ∫⁻ f, (if f c = true then 1 else 0) ∂𝒟[F] := by
+    intro c
+    rw [← (hg c).prEvent_eq, prEvent_map]
+    simpa only [bind_pure, prEvent_pure] using
+      prEvent_bind_eq_lintegral_of_discrete F (pure : _ → ProbComp _) (fun f => f c = true)
+  simp only [hc, averageAcceptRate, acceptRate, div_eq_mul_inv]
+  rw [← lintegral_finsetSum _ (fun _ _ => Measurable.of_discrete),
+    ← lintegral_mul_const _ Measurable.of_discrete]
+  simp only [Finset.sum_boole]
 
 /-- Uniform affine finder success bounds average over a randomly chosen acceptance function. -/
 theorem IsTreeFinder.average_success [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
@@ -93,6 +114,15 @@ theorem attempt_eq_runFinder_eagerTable [Finite ((r : R) → C r)]
     P.attempt run find =ᵈ (do let f ← P.eagerTable run; runFinder find f) :=
   P.attempt_eagerTable run find
 
+/-- The average acceptance rate of the eager table is the honest acceptance probability of a
+complete run, averaged over complete challenge vectors. -/
+theorem averageAcceptRate_eagerTable [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+    (run : ((r : R) → C r) → OracleComp spec Bool) :
+    averageAcceptRate (P.eagerTable run) =
+      (∑ c, Pr{let b ← (do (simulateQ impl (run c)).run' (← init))}[b = true]) /
+        Fintype.card ((r : R) → C r) :=
+  averageAcceptRate_eq_of_marginals (P.eagerTable_marginal run)
+
 /-- A black-box tree finder retains its affine success guarantee and unconditional expected
 complete-run bound when its acceptance oracle is implemented by frozen reruns. The acceptance
 rate is averaged over the eager table of acceptance decisions. -/
@@ -124,6 +154,21 @@ theorem finder_bounds_sub [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
   refine ⟨?_, (P.finder_bounds run h).2⟩
   rw [(P.attempt_eq_runFinder_eagerTable run find).prEvent_eq]
   exact h.averageAcceptRate_sub_le _
+
+/-- `ResetPolicy.finder_bounds` with the honest acceptance probability: the probability that a
+complete run accepts, averaged uniformly over complete challenge vectors, is at most the error
+plus its complement times the success probability against frozen reruns. -/
+theorem finder_bounds_honest [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
+    (run : ((r : R) → C r) → OracleComp spec Bool)
+    {k : R → ℕ} {nodeOk : (r : R) → (Fin (k r) → C r) → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))} {κ T : ℝ≥0∞}
+    (h : IsTreeFinder k nodeOk find κ T) :
+    (∑ c, Pr{let b ← (do (simulateQ impl (run c)).run' (← init))}[b = true]) /
+          Fintype.card ((r : R) → C r) ≤
+        κ + (1 - κ) * Pr{let z ← P.attempt run find}[z.1.isSome] ∧
+      expectedCalls (P.attempt run find) ≤ T := by
+  rw [← P.averageAcceptRate_eagerTable run]
+  exact P.finder_bounds run h
 
 end ResetPolicy
 end Rewinding
