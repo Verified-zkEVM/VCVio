@@ -59,7 +59,7 @@ JSON
 lake build VCVioInitSweepTestFixtures
 # A normal import must execute the initializer, establishing that the marker is a
 # valid positive control. The sweep must then leave it absent while reading the body.
-python3 - "$FIXTURE_TMP" <<'PY_STATIC_IMPORT'
+uv run --no-project --python 3.12 python - "$FIXTURE_TMP" <<'PY_STATIC_IMPORT'
 import json
 import os
 from pathlib import Path
@@ -95,7 +95,7 @@ lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard --out "$HAZARD_REPOR
 # The sweep must be deterministic: same build, byte-identical report.
 cmp "$HAZARD_REPORT" "$HAZARD_REPORT_2"
 
-python3 - "$CLEAN_REPORT" "$HAZARD_REPORT" <<'PY'
+uv run --no-project --python 3.12 python - "$CLEAN_REPORT" "$HAZARD_REPORT" <<'PY'
 import json
 import sys
 
@@ -291,7 +291,7 @@ expect_status 0 check-against-written \
   lake exe initsweep --root VCVioInitSweepTestFixtures.Hazard \
     --check --baseline "$ACCEPT_ALL"
 
-python3 - "$ACCEPT_ALL" "$FIXTURE_TMP" <<'PY'
+uv run --no-project --python 3.12 python - "$ACCEPT_ALL" "$FIXTURE_TMP" <<'PY'
 import json
 import sys
 
@@ -369,7 +369,7 @@ grep -q "1 preserved" "$FIXTURE_TMP/update-preserves-foreign.log"
 expect_status 0 shrink-baseline \
   lake exe initsweep --root VCVioInitSweepTestFixtures.Clean \
     --update-baseline --baseline "$ACCEPT_ALL"
-python3 - "$ACCEPT_ALL" <<'PY'
+uv run --no-project --python 3.12 python - "$ACCEPT_ALL" <<'PY'
 import json
 import sys
 

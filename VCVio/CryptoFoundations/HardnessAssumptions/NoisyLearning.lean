@@ -170,7 +170,7 @@ variable {α : Type}
 /-- The standard matrix-based constructor. Choosing `α = ZMod q` recovers
 ordinary LWE, while choosing a finite polynomial-ring carrier `α` gives the
 corresponding module-LWE-style experiment. -/
-def matrixProblem (n m : ℕ) [Semiring α] [DecidableEq α] [SampleableType α]
+def matrixProblem (n m : ℕ) [Semiring α] [SampleableType α]
     (errSamp : ProbComp α) :
     Problem (Matrix (Fin n) (Fin m) α) (Fin n → α) (Fin m → α) where
   sampleChallenge := $ᵗ Matrix (Fin n) (Fin m) α
@@ -188,21 +188,21 @@ def zmodMatrixProblem (n m q : ℕ) [NeZero q]
 /-- Module-LWE-style problems use the same experiment shape as ordinary LWE;
 only the coefficient ring changes. This alias makes the intended instantiation
 explicit at call sites. -/
-def moduleMatrixProblem (n m : ℕ) [Semiring α] [DecidableEq α] [SampleableType α]
+def moduleMatrixProblem (n m : ℕ) [Semiring α] [SampleableType α]
     (errSamp : ProbComp α) :
     Problem (Matrix (Fin n) (Fin m) α) (Fin n → α) (Fin m → α) :=
   matrixProblem (α := α) n m errSamp
 
 /-- Ring-LWE-style problems are the rank-one module case: a single ring element
 challenge per sample column. -/
-def ringProblem (m : ℕ) [Semiring α] [DecidableEq α] [SampleableType α]
+def ringProblem (m : ℕ) [Semiring α] [SampleableType α]
     (errSamp : ProbComp α) :
     Problem (Matrix (Fin 1) (Fin m) α) (Fin 1 → α) (Fin m → α) :=
   moduleMatrixProblem 1 m errSamp
 
 /-- The ring problem is definitionally the rank-one module problem, so the two
 decision advantages agree for every adversary. -/
-lemma ringProblem_advantage (m : ℕ) [Semiring α] [DecidableEq α] [SampleableType α]
+lemma ringProblem_advantage (m : ℕ) [Semiring α] [SampleableType α]
     (errSamp : ProbComp α)
     (adv : Adversary (moduleMatrixProblem 1 m errSamp)) :
     advantage (ringProblem m errSamp) adv = advantage (moduleMatrixProblem 1 m errSamp) adv :=

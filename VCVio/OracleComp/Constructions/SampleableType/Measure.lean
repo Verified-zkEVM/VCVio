@@ -22,7 +22,10 @@ Finite-range sampling and transport through an equivalence preserve the uniform 
 certified by `SampleableType`. Events of a uniform sample are counting statements: comparisons with
 fractions of the sample space reduce to comparisons of counts, probability one and zero are
 universal and empty events, and independent uniform draws combined by a bijection are a single
-uniform draw. Every uniform sampler of a type denotes the same measure, so statements about `$ᵗ α`
+uniform draw. `natCast_mul_prEvent_le_sum_prEvent_of_le_card_filter` is the double-counting
+bound for uniform events: if every bad sample satisfies at least `k` of a finite family of
+events, then `k` times the bad probability is at most the sum of their probabilities. Every
+uniform sampler of a type denotes the same measure, so statements about `$ᵗ α`
 do not depend on the chosen sampler.
 
 There are two set-mass bounds for a uniform sample, and they differ in where the numerator comes
@@ -155,6 +158,20 @@ theorem prEvent_uniformSample_eq_singleton {α : Type} [SampleableType α] [_roo
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_singleton, evalDist_uniformSample_singleton]
 
+/-- The probability of drawing one particular element uniformly, with the element on the left of
+the equation. -/
+theorem prEvent_uniformSample_eq_singleton' {α : Type} [SampleableType α] [_root_.Fintype α]
+    (a : α) : Pr{let x ← $ᵗ α}[a = x] = (Fintype.card α : ℝ≥0∞)⁻¹ := by
+  rw [← prEvent_uniformSample_eq_singleton a]
+  exact prEvent_congr _ _ _ fun _ => eq_comm
+
+/-- A uniform sample is among `q` fixed elements with probability at most `q / |α|`. -/
+theorem prEvent_uniformSample_exists_eq_le {α : Type} [SampleableType α] [_root_.Fintype α]
+    {q : ℕ} (f : _root_.Fin q → α) : Pr{let x ← $ᵗ α}[∃ i, f i = x] ≤ q / Fintype.card α := by
+  refine (prEvent_exists_le_card_mul ($ᵗ α) (fun i x => f i = x)
+    fun i => (prEvent_uniformSample_eq_singleton' (f i)).le).trans (le_of_eq ?_)
+  simp [div_eq_mul_inv]
+
 /-- Each length-`n` list is drawn by `n` independent uniform samples with probability
 `(|α| ^ n)⁻¹`. -/
 theorem prEvent_replicate_uniformSample {α : Type} [SampleableType α] [_root_.Fintype α]
@@ -241,6 +258,34 @@ theorem prEvent_uniformSample_eq_ofReal :
   simp
 
 end counting
+
+open Classical in
+/-- **Double counting for uniform events.** Let `t` be a finite set and `k` a natural number.
+If every sample `x` with `bad x` satisfies `rel l x` for at least `k` elements `l ∈ t`, then
+`k · Pr[bad] ≤ ∑ l ∈ t, Pr[rel l]` for a uniform sample. -/
+theorem natCast_mul_prEvent_le_sum_prEvent_of_le_card_filter {α ι : Type} [SampleableType α]
+    (t : Finset ι) (bad : α → Prop) (rel : ι → α → Prop) (k : ℕ)
+    (h : ∀ x, bad x → k ≤ (t.filter fun l ↦ rel l x).card) :
+    (k : ℝ≥0∞) * Pr{let x ← $ᵗ α}[bad x] ≤ ∑ l ∈ t, Pr{let x ← $ᵗ α}[rel l x] := by
+  classical
+  let : _root_.Fintype α := Fintype.ofFinite α
+  have hc : k * (Finset.univ.filter bad).card ≤
+      ∑ l ∈ t, (Finset.univ.filter (rel l)).card := by
+    calc
+      k * (Finset.univ.filter bad).card = ∑ x ∈ Finset.univ.filter bad, k := by
+        simp [Nat.mul_comm]
+      _ ≤ ∑ x ∈ Finset.univ.filter bad, (t.filter fun l ↦ rel l x).card :=
+        Finset.sum_le_sum fun x hx ↦ h x (Finset.mem_filter.mp hx).2
+      _ ≤ ∑ x : α, (t.filter fun l ↦ rel l x).card :=
+        Finset.sum_le_sum_of_subset_of_nonneg (Finset.filter_subset _ _) (by intros; omega)
+      _ = ∑ l ∈ t, (Finset.univ.filter (rel l)).card := by
+        simp only [Finset.card_filter]
+        exact Finset.sum_comm
+  simp_rw [prEvent_uniformSample]
+  simp only [div_eq_mul_inv]
+  rw [← Finset.sum_mul, ← mul_assoc]
+  gcongr
+  exact_mod_cast hc
 
 /-! ## Transport between uniform samples -/
 
@@ -408,6 +453,34 @@ theorem evalDist_uniformSample_bind_equiv_symm [SampleableType γ] {δ : Type} [
 
 end transport
 
+/-- Two injections of a uniform sample space give the same distribution to any continuation that
+ignores its argument outside a set both of them cover. A permutation of the sample space matches
+the two injections on the preimages of `S` (`Equiv.extendSubtype`), and permuting preserves the
+uniform distribution (`map_uniformSample_evalDistEq_of_bijective`). -/
+theorem uniformSample_bind_evalDistEq_of_cover {α β γ : Type} [SampleableType α]
+    {f₁ f₂ : α → β} (hf₁ : Function.Injective f₁) (hf₂ : Function.Injective f₂)
+    {S : Set β} (hS₁ : S ⊆ Set.range f₁) (hS₂ : S ⊆ Set.range f₂)
+    (k : β → ProbComp γ) (d : ProbComp γ) (hk : ∀ b ∉ S, k b = d) :
+    (do let a ← $ᵗ α; k (f₁ a)) =ᵈ (do let a ← $ᵗ α; k (f₂ a)) := by
+  classical
+  let e : ∀ f : α → β, Function.Injective f → S ⊆ Set.range f → {a // f a ∈ S} ≃ S :=
+    fun f hf hS => Equiv.ofBijective (fun a => ⟨f a.1, a.2⟩)
+      ⟨fun a b h => Subtype.ext (hf (congrArg Subtype.val h)), fun b => by
+        obtain ⟨a, ha⟩ := hS b.2
+        exact ⟨⟨a, ha ▸ b.2⟩, Subtype.ext ha⟩⟩
+  let e' : {a // f₁ a ∈ S} ≃ {a // f₂ a ∈ S} := (e f₁ hf₁ hS₁).trans (e f₂ hf₂ hS₂).symm
+  have hσ : ∀ a, k (f₁ a) = k (f₂ (e'.extendSubtype a)) := fun a => by
+    by_cases ha : f₁ a ∈ S
+    · rw [Equiv.extendSubtype_apply_of_mem _ a ha]
+      exact congrArg k (congrArg Subtype.val ((e f₂ hf₂ hS₂).apply_symm_apply
+        (e f₁ hf₁ hS₁ ⟨a, ha⟩))).symm
+    · have ha' : f₂ (e'.extendSubtype a) ∉ S := e'.extendSubtype_not_mem a ha
+      rw [hk _ ha, hk _ ha']
+  simp_rw [hσ]
+  simpa only [bind_map_left] using
+    (map_uniformSample_evalDistEq_of_bijective e'.extendSubtype.bijective).bind_left
+      fun a => k (f₂ a)
+
 /-! ## Independence of the chosen sampler -/
 
 section samplerIrrelevance
@@ -510,3 +583,14 @@ theorem evalDistEq_simulateQ {α : Type} (oa : OracleComp spec α) :
   EvalDistEq.of_evalDist_eq (evalDist_simulateQ oa)
 
 end uniformSampleImpl
+
+namespace OracleComp
+
+/-- A uniform draw, transported along an equality of types, is uniform. -/
+lemma evalDist_cast_uniformSample {X Y : Type} [SampleableType X] [MeasurableSpace Y]
+    [MeasurableSingletonClass Y] (h : X = Y) :
+    𝒟[cast h <$> ($ᵗ X)] = ProbabilityTheory.uniformOn Set.univ := by
+  subst h
+  exact (congrArg (fun mx => 𝒟[mx]) (id_map _)).trans SampleableType.evalDist_uniformSample
+
+end OracleComp

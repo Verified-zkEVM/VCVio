@@ -139,10 +139,9 @@ lake exe initsweep --update-baseline   # rewrite the baseline from the current b
 The committed baseline (`scripts/init_sweep_baseline.json`) is a **list of constant names**
 with the entry points each one is accepted for, rather than a per-library count: accepting
 one benign instance costs exactly that one name and leaves every other constant of its
-library at zero. It is the `scripts/axiom_baseline.json` idea — an
-allowlist keyed by declaration, argued row by row in review — with a scope attached, which
-`axiom_baseline.json`'s flat name lists do not have: a row covers one constant *under one
-library* and exactly the entry points it lists, so `--update-baseline` over a partial
+library at zero. It is an allowlist keyed by declaration, argued row by row in review, with
+a scope attached: a row covers one constant *under one library* and exactly the entry points
+it lists, so `--update-baseline` over a partial
 `--root` set rewrites only those libraries' rows and preserves the rest, and a row written
 for one sweep cannot green the same name in another.
 
@@ -194,10 +193,9 @@ rest about reach.
   letter of "fixed by a type" they would be in scope. They are out, on the rationale rather
   than the letter — the `n` is written at the application and is as visible as
   `Array.replicate`'s — and the measurement says what that costs: over the load-time
-  population `Array.ofFn` occurs once (`Extern.Falcon.Instance`'s `sampleSamplerSeed`),
-  `Vector.ofFn` twice (`MLDSA.Concrete.rqEquivCoeffFun`, `MLKEM.Concrete.rqEquivCoeffFun`)
-  and `List.ofFn` not at all, so gating them would cost three baseline rows for three
-  constants whose size is a literal at the site.
+  population `Array.ofFn` occurs once (`Extern.Falcon.Instance`'s `sampleSamplerSeed`) and
+  `Vector.ofFn` and `List.ofFn` not at all, so gating them would cost one baseline row for
+  one constant whose size (`samplerSeedBytes`) is named at the site.
 * It reads the value that runs, and only that value. A helper **function** that enumerates
   and is *called* from an initialiser is the same hazard and is not flagged — constructed:
   `def h (u : Unit) : Nat := (Finset.univ : Finset (Fin 3 → Bool)).card` with
