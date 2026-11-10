@@ -7,13 +7,18 @@ Authors: Devon Tuma
 module
 
 public import PolyFun.PFunctor.Wiring.Measure
-public import ToMathlib.MeasureTheory.Measure.Coupling.Bind
+public import ToCslib.MeasureTheory.Function.AEMeasurable
+public import ToCslib.MeasureTheory.Measure.Coupling.Bind
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import ToMathlib.MeasureTheory.Measure.Monotone
 
 /-!
 # Deprecated: re-exports `PolyFun.PFunctor.Wiring.Measure`
 
 This module is deprecated. It re-exports `PolyFun.PFunctor.Wiring.Measure`, together with
-`ToMathlib.MeasureTheory.Measure.Coupling.Bind`. Import those modules instead.
+`ToCslib.MeasureTheory.Function.AEMeasurable`, `ToCslib.MeasureTheory.Measure.Coupling.Bind`,
+`ToMathlib.MeasureTheory.Measure.GiryMonad` and `ToMathlib.MeasureTheory.Measure.Monotone`. Import
+those modules instead.
 -/
 
 deprecated_module

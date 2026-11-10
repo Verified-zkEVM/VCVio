@@ -5,8 +5,9 @@ Authors: Devon Tuma
 -/
 
 module
-public import ToMathlib.MeasureTheory.Measure.Option
-public import ToMathlib.MeasureTheory.MeasurableSpace.Except
+public import ToCslib.MeasureTheory.Measure.Option
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import ToCslib.MeasureTheory.MeasurableSpace.Except
 
 /-!
 # Function-property registrations for optional and exception-valued observations

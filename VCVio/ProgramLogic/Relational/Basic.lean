@@ -7,7 +7,10 @@ Authors: Quang Dao
 module
 
 public import ToMathlib.Control.Monad.RelationalAlgebra
-public import VCVio.ProgramLogic.Relational.Measure.Bind
+public import PolyFun.Control.Monad.Measure.Relational.Bind
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import ToMathlib.MeasureTheory.Measure.Monotone
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Basic

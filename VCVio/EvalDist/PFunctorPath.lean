@@ -7,13 +7,16 @@ Authors: Devon Tuma
 module
 
 public import PolyFun.PFunctor.Free.Measure.Path
-public import VCVio.EvalDist.PFunctorMeasure.Core
+public import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+public import PolyFun.PFunctor.Free.Measure.EvalDist
+public import VCVio.EvalDist.Defs.Measure.Core
 
 /-!
 # Deprecated: re-exports `PolyFun.PFunctor.Free.Measure.Path`
 
 This module is deprecated. It re-exports `PolyFun.PFunctor.Free.Measure.Path`, together with
-`VCVio.EvalDist.PFunctorMeasure.Core`. Import those modules instead.
+`Mathlib.MeasureTheory.Measure.ProbabilityMeasure`, `PolyFun.PFunctor.Free.Measure.EvalDist` and
+`VCVio.EvalDist.Defs.Measure.Core` for the `𝒟[…]` notation. Import those modules instead.
 -/
 
 deprecated_module

@@ -11,7 +11,10 @@ public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.Defs.Measure
-public import VCVio.EvalDist.WithFailure
+public import PolyFun.Control.Monad.Measure.WithFailure
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # Graded contextual comparison of executable reactive fragments

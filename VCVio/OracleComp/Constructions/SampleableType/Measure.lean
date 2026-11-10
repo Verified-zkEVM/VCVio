@@ -10,7 +10,7 @@ public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.SimSemantics.Measure
-public import ToMathlib.MeasureTheory.DiscreteInstances
+public import ToCslib.MeasureTheory.MeasurableSpace.Instances
 import VCVio.EvalDist.Monad.Measure
 import VCVio.EvalDist.ProbabilityBounds
 import Mathlib.Logic.Equiv.Bool

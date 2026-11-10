@@ -5,58 +5,19 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.EvalDist.Defs.Measure.Core
-public import ToMathlib.MeasureTheory.Measure.Option
+
+public import PolyFun.Control.Monad.Measure.WithFailure
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import VCVio.EvalDist.ProbabilityNotation
 
-/-! # Evaluation with an explicit failure result
+/-!
+# Deprecated: re-exports `PolyFun.Control.Monad.Measure.WithFailure`
 
-`evalDistWithFailure` names the semantic completion of a computation's successful-output
-measure. `none` is execution failure/nontermination mass; `some x` is a returned value, including
-any explicit protocol rejection or fault already encoded by `x`. This is a measure operation,
-not an executable recovery procedure or a decoder that silently identifies these outcomes.
-
-This is a thin measure-only interface to `Measure.withFailure`: its laws need only the measure
-semantics of the monad.
+This module is deprecated. It re-exports `PolyFun.Control.Monad.Measure.WithFailure`, together with
+`ToMathlib.MeasureTheory.Measure.GiryMonad` and `VCVio.EvalDist.ProbabilityNotation` for the
+`Pr{…}[…]` notation. Import those modules instead.
 -/
 
-public section
-
-open MeasureTheory
-
-universe u v
-variable {m : Type u → Type v} [EvalDistSemantics m]
-    {α : Type u} [MeasurableSpace α]
-
-/-- Evaluate a distribution with `none` for failure to return and `some` for returned values. -/
-noncomputable def evalDistWithFailure (program : m α) : Measure (Option α) :=
-  (evalDist program).withFailure
-
-/-- The semantics' subprobability bound makes the result a probability measure. -/
-@[instance]
-theorem evalDistWithFailure_isProbabilityMeasure (program : m α) :
-    IsProbabilityMeasure (evalDistWithFailure program) :=
-  inferInstanceAs (IsProbabilityMeasure (𝒟[program]).withFailure)
-
-/-- Execution failure/nontermination is precisely the missing successful-output mass. -/
-theorem evalDistWithFailure_none (program : m α) :
-    evalDistWithFailure program {none} = 1 - evalDist program Set.univ :=
-  Measure.withFailure_apply_none _
-
-/-- Explicit returned outcomes keep their original mass, including returned faults. -/
-theorem evalDistWithFailure_some [MeasurableSingletonClass α] (program : m α) (x : α) :
-    evalDistWithFailure program {some x} = evalDist program {x} :=
-  Measure.withFailure_apply_some _ x
-
-/-- When the computation has total mass one, `none` has probability zero. -/
-theorem evalDistWithFailure_none_of_total (program : m α)
-    (total : evalDist program Set.univ = 1) :
-    evalDistWithFailure program {none} = 0 := by
-  rw [evalDistWithFailure_none, total, tsub_self]
-
-/-- The failure-completed measure puts the failure probability `prFail mx` at `none`. -/
-theorem evalDistWithFailure_none_eq_prFail {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} [MeasurableSpace α]
-    (mx : m α) : evalDistWithFailure mx {none} = prFail mx := by
-  rw [evalDistWithFailure_none, prFail_eq_one_sub_evalDist_univ]
-
+deprecated_module
+  "Import `PolyFun.Control.Monad.Measure.WithFailure` and this module's other imports instead."
+  (since := "2026-11-10")

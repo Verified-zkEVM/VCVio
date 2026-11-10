@@ -5,25 +5,15 @@ Authors: Devon Tuma
 -/
 
 module
-public import Mathlib.MeasureTheory.Measure.Dirac.Basic
-public import Mathlib.MeasureTheory.MeasurableSpace.Instances
+
+public import ToCslib.MeasureTheory.Measure.Prop
 
 /-!
-# Propositional observation measures
+# Deprecated: re-exports `ToCslib.MeasureTheory.Measure.Prop`
 
-The mass of the true proposition under a Dirac measure is the indicator of its proposition.
-This normal form evaluates deterministic final events without exposing singleton functions.
+This module is deprecated. It re-exports `ToCslib.MeasureTheory.Measure.Prop`; import that module
+instead.
 -/
 
-public section
-
-namespace MeasureTheory.Measure
-
-open scoped Classical in
-/-- A deterministic proposition has true mass exactly when it holds. -/
-@[simp high, grind =]
-lemma dirac_apply_singleton_true (p : Prop) :
-    dirac p {True} = if p then 1 else 0 := by
-  simp [Pi.single_apply]
-
-end MeasureTheory.Measure
+deprecated_module "Import `ToCslib.MeasureTheory.Measure.Prop` instead."
+  (since := "2026-11-10")
