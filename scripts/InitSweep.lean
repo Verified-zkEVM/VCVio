@@ -193,10 +193,9 @@ rest about reach.
   letter of "fixed by a type" they would be in scope. They are out, on the rationale rather
   than the letter — the `n` is written at the application and is as visible as
   `Array.replicate`'s — and the measurement says what that costs: over the load-time
-  population `Array.ofFn` occurs once (`Extern.Falcon.Instance`'s `sampleSamplerSeed`),
-  `Vector.ofFn` twice (`MLDSA.Concrete.rqEquivCoeffFun`, `MLKEM.Concrete.rqEquivCoeffFun`)
-  and `List.ofFn` not at all, so gating them would cost three baseline rows for three
-  constants whose size is a literal at the site.
+  population `Array.ofFn` occurs once (`Extern.Falcon.Instance`'s `sampleSamplerSeed`) and
+  `Vector.ofFn` and `List.ofFn` not at all, so gating them would cost one baseline row for
+  one constant whose size (`samplerSeedBytes`) is named at the site.
 * It reads the value that runs, and only that value. A helper **function** that enumerates
   and is *called* from an initialiser is the same hazard and is not flagged — constructed:
   `def h (u : Unit) : Nat := (Finset.univ : Finset (Fin 3 → Bool)).card` with

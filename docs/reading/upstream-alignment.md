@@ -210,10 +210,10 @@ pair `i` of `ntt f` is `f mod (X² − γᵢ)` (`MLKEM.Concrete.ntt_coeff_pair`)
 `ntt_negacyclicMul` and `multiplyNTTs` has no `implemented_by`. Falcon's `ntt` and `invNTT` are the
 in-place `butterflyNTT` and `butterflyInvNTT` loops, proved equal to the blocked stages for
 `logn ≤ 11`, so `Falcon.Concrete.concreteNTTRingLaws` holds for the loops themselves and
-`Falcon.Concrete.concretePrimitives_transform` discharges `Falcon.Primitives.Laws.transform` for the
-concrete bundle. ML-DSA's `ntt` and `invNTT` are likewise its `loopNTT` / `loopInvNTT` kernels; both
-schemes go through the shared `while`-loop lemmas `ctForward_loop` / `ctInverse_loop`
-(`LatticeCrypto/Ring/NTTLoop.lean`). ML-KEM's `ntt` and `invNTT` are its `loopNTT` / `loopInvNTT`
+`Falcon.Concrete.concretePrimitives_transform` discharges
+`Falcon.Primitives.StructuralLaws.transform` for the concrete bundle. ML-DSA's `ntt` and `invNTT`
+are likewise its `loopNTT` / `loopInvNTT` kernels; both schemes go through the shared `while`-loop
+lemmas `ctForward_loop` / `ctInverse_loop` (`LatticeCrypto/Ring/NTTLoop.lean`). ML-KEM's `ntt` and `invNTT` are its `loopNTT` / `loopInvNTT`
 kernels too, whose seven-layer range loops go through `ctForward_range` / `ctInverse_range` in the
 same module, so no scheme has an NTT refinement boundary.
 Mathlib supplies the twiddle half (`IsPrimitiveRoot` + `reduce_mod_char`) and the
@@ -793,8 +793,13 @@ public `ntt` / `invNTT` are the loop kernels themselves, proved equal to the blo
 Pointwise multiplication is verified in all three schemes: `multiplyNTTs` is the FIPS 204
 `MultiplyNTT` / FIPS 203 `MultiplyNTTs` table-driven body with no `implemented_by`, and `toHat_mul`
 is the theorem `ntt_negacyclicMul` rather than a definitional restatement.
-`Falcon.Concrete.concretePrimitives_transform` discharges the `Falcon.Primitives.Laws.transform`
-field for the concrete bundle (the other `Laws` fields stay open).
+The concrete bundle satisfies `Falcon.Primitives.StructuralLaws`
+(`Falcon.Concrete.concretePrimitives_structuralLaws`: `concretePrimitives_transform` and
+`decompress_compress`). No `ProbComp` has the exact discrete Gaussian as its law
+(`LatticeCrypto.evalDist_ne_discreteGaussianMeasure`), so the sampler obligations are
+`Falcon.Primitives.SamplerEnvelope` (point mass on `[σ_min, σ_max]` with slack `δ`, consumed by
+`ffSampling_pointMass_le_of_samplerEnvelope`) and `Falcon.Primitives.SamplerQuality` (forward Rényi
+of order `a > 1`), which implies the envelope; neither is proved for the concrete sampler.
 The twiddle half came from Mathlib (item 2); the CRT half is available there too
 (`Ideal.quotientInfRingEquivPiQuotient`, `Ideal.iInf_span_singleton`, `Polynomial.pairwise_coprime_X_sub_C`,
 `Polynomial.quotientSpanXSubCAlgEquiv`, `prod_multiset_X_sub_C_of_monic_of_roots_card_eq`,

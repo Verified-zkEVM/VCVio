@@ -444,23 +444,6 @@ theorem invNTT_ntt {logn : ℕ} (hlogn : logn ≤ 11) (f : Rq (2 ^ logn)) :
   rw [invNTT_eq hlogn, ntt_eq hlogn]
   exact applyCoeffTransform_comp _ _ (invNTTCoeffs_nttCoeffs hlogn) f
 
-private def rqEquivCoeffFun (n : ℕ) : Rq n ≃ (Fin n → Coeff) where
-  toFun f i := f.get i
-  invFun f := Vector.ofFn f
-  left_inv f := by
-    apply Vector.ext
-    intro i hi
-    exact Vector.getElem_ofFn (f := fun i => f.get i) hi
-  right_inv f := by
-    funext i
-    exact Vector.get_ofFn f i
-
-private def rqEquivTq (n : ℕ) : Rq n ≃ Tq n where
-  toFun f := ⟨f⟩
-  invFun fHat := fHat.coeffs
-  left_inv _ := rfl
-  right_inv fHat := by cases fHat; rfl
-
 private theorem ntt_injective {logn : ℕ} (hlogn : logn ≤ 11) :
     Function.Injective (ntt logn) := by
   intro f g h
@@ -470,8 +453,7 @@ private theorem ntt_injective {logn : ℕ} (hlogn : logn ≤ 11) :
 private theorem ntt_surjective {logn : ℕ} (hlogn : logn ≤ 11) :
     Function.Surjective (ntt logn) := by
   let : Fintype Coeff := ZMod.fintype modulus
-  let : Finite (Rq (2 ^ logn)) := Finite.of_equiv _ (rqEquivCoeffFun (2 ^ logn)).symm
-  exact (ntt_injective hlogn).surjective_of_finite (rqEquivTq (2 ^ logn))
+  exact (ntt_injective hlogn).surjective_of_finite (TransformPoly.equivPoly _).symm
 
 /-- `ntt` is a left inverse of `invNTT`. -/
 theorem ntt_invNTT {logn : ℕ} (hlogn : logn ≤ 11) (fHat : Tq (2 ^ logn)) :
@@ -479,29 +461,14 @@ theorem ntt_invNTT {logn : ℕ} (hlogn : logn ≤ 11) (fHat : Tq (2 ^ logn)) :
   obtain ⟨f, rfl⟩ := ntt_surjective hlogn fHat
   rw [invNTT_ntt hlogn]
 
-private theorem hadd_rq {n : ℕ} (f g : Rq n) :
-    (polyBackend n).coeff (f + g) = (polyBackend n).coeff f + (polyBackend n).coeff g := by
-  funext i
-  change ((vectorNegacyclicRing Coeff n).add f g).get i = f.get i + g.get i
-  simp
-
-private theorem hsub_rq {n : ℕ} (f g : Rq n) :
-    (polyBackend n).coeff (f - g) = (polyBackend n).coeff f - (polyBackend n).coeff g := by
-  funext i
-  change ((vectorNegacyclicRing Coeff n).sub f g).get i = f.get i - g.get i
-  simp
-
-private theorem hzero_rq {n : ℕ} : (polyBackend n).coeff (0 : Rq n) = 0 := by
-  funext i
-  exact vectorRing_zero_get i
-
 /-- `ntt` is additive. -/
 theorem ntt_add {logn : ℕ} (hlogn : logn ≤ 11) (f g : Rq (2 ^ logn)) :
     ntt logn (f + g) = ntt logn f + ntt logn g := by
   apply TransformPoly.ext
   change (ntt logn (f + g)).coeffs = (ntt logn f).coeffs + (ntt logn g).coeffs
   rw [ntt_eq hlogn, ntt_eq hlogn, ntt_eq hlogn]
-  exact applyCoeffTransform_add _ hadd_rq (forwardStages_add _) f g
+  exact applyCoeffTransform_add _
+    (fun f g => funext (NegacyclicRing.coeff_add (coeffRing _) f g)) (forwardStages_add _) f g
 
 /-- `ntt` preserves subtraction. -/
 theorem ntt_sub {logn : ℕ} (hlogn : logn ≤ 11) (f g : Rq (2 ^ logn)) :
@@ -509,13 +476,15 @@ theorem ntt_sub {logn : ℕ} (hlogn : logn ≤ 11) (f g : Rq (2 ^ logn)) :
   apply TransformPoly.ext
   change (ntt logn (f - g)).coeffs = (ntt logn f).coeffs - (ntt logn g).coeffs
   rw [ntt_eq hlogn, ntt_eq hlogn, ntt_eq hlogn]
-  exact applyCoeffTransform_sub _ hsub_rq (forwardStages_sub _) f g
+  exact applyCoeffTransform_sub _
+    (fun f g => funext (NegacyclicRing.coeff_sub (coeffRing _) f g)) (forwardStages_sub _) f g
 
 /-- `ntt` preserves zero. -/
 theorem ntt_zero {logn : ℕ} (hlogn : logn ≤ 11) : ntt logn 0 = 0 := by
   apply TransformPoly.ext
   rw [ntt_eq hlogn]
-  exact applyCoeffTransform_zero _ hzero_rq (forwardStages_zero _)
+  exact applyCoeffTransform_zero _ (funext (NegacyclicRing.coeff_zero (coeffRing _)))
+    (forwardStages_zero _)
 
 /-- Entry `i` of `ntt logn f` is the evaluation of `f` at `nttPoint logn i = ζ^(2·brv(i) + 1)`. -/
 theorem ntt_coeff_eq_eval {logn : ℕ} (hlogn : logn ≤ 11) (f : Rq (2 ^ logn))
@@ -578,12 +547,12 @@ theorem multiplyNTTs_eq_ntt_negacyclicMul_invNTT {logn : ℕ} (hlogn : logn ≤ 
 private theorem coeff_coeffs_add {n : ℕ} (fHat gHat : Tq n) (i : Fin n) :
     (polyBackend n).coeff (fHat + gHat).coeffs i =
       (polyBackend n).coeff fHat.coeffs i + (polyBackend n).coeff gHat.coeffs i :=
-  congrFun (hadd_rq fHat.coeffs gHat.coeffs) i
+  NegacyclicRing.coeff_add (coeffRing n) fHat.coeffs gHat.coeffs i
 
 private theorem coeff_coeffs_sub {n : ℕ} (fHat gHat : Tq n) (i : Fin n) :
     (polyBackend n).coeff (fHat - gHat).coeffs i =
       (polyBackend n).coeff fHat.coeffs i - (polyBackend n).coeff gHat.coeffs i :=
-  congrFun (hsub_rq fHat.coeffs gHat.coeffs) i
+  NegacyclicRing.coeff_sub (coeffRing n) fHat.coeffs gHat.coeffs i
 
 /-- The transform laws of the concrete Falcon NTT for `n = 2^logn ≤ 2048`. -/
 theorem concreteNTTRingLaws (logn : ℕ) (hlogn : logn ≤ 11) :
