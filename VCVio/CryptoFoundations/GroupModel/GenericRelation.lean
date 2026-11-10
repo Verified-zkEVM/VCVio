@@ -11,11 +11,12 @@ public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 /-!
 # Generic hardness of discrete-log relations
 
-A generic adversary receives the `n` challenge elements as its initial table. With at most `q`
-group operations, its relation-finding probability is at most
-`((q + n + 1).choose 2 + 1) / |F|`. The master bound T3 compares the hidden-point run directly
-with the exact symbolic run; a nonzero output coefficient vector then defines a nonzero
-linear polynomial, bounded by Schwartz–Zippel. No reduction cost certificate is needed.
+A generic adversary receives the `n` challenge elements as its initial table
+(`DiscreteLogRelation.Adversary.ofGeneric`). With at most `q` group operations, its
+relation-finding probability is at most `((q + n + 1).choose 2 + 1) / |F|`
+(`DiscreteLogRelation.experiment_ofGeneric_le`). The master bound T3 compares the hidden-point
+run directly with the exact symbolic run; a nonzero output coefficient vector then defines a
+nonzero linear polynomial, bounded by Schwartz–Zippel. No reduction cost certificate is needed.
 
 The bound must depend on `n`: free equality tests among the given elements already reveal
 relations on collisions. The generator is not an additional initial table entry.
@@ -26,16 +27,17 @@ public section
 open OracleComp OracleSpec MeasureTheory
 open scoped ENNReal
 
-namespace GroupModel
+namespace DiscreteLogRelation
+
+open GroupModel
 
 variable {F G : Type} {n : ℕ}
 
 /-- Interpret a generic coefficient-valued computation on the table of supplied group elements.
 The table contains exactly `n` entries, without an additional generator entry. -/
-@[expose] def DiscreteLogRelation.Adversary.ofGeneric [Field F]
-    [AddCommGroup G] [Module F G] [DecidableEq G]
-    (A : OracleComp (genSpec F groupSig) (Fin n → F)) :
-    _root_.DiscreteLogRelation.Adversary F G n :=
+@[expose] def Adversary.ofGeneric [CommSemiring F] [AddCommMonoid G] [Module F G]
+    [DecidableEq G]
+    (A : OracleComp (genSpec F groupSig) (Fin n → F)) : Adversary F G n :=
   fun xs => Prod.fst <$> runGen (Model.group G) (fun _ => id) A (fun _ => List.ofFn xs)
 
 private theorem relation_event_le [Field F] [Fintype F] [SampleableType F]
@@ -46,7 +48,7 @@ private theorem relation_event_le [Field F] [Fintype F] [SampleableType F]
   by_cases ha : a = 0
   · simp [ha]
   simpa only [ha, ne_eq, not_false_eq_true, true_and] using
-    _root_.DiscreteLogRelation.prEvent_sum_mul_eq_zero_le a ha
+    prEvent_sum_mul_eq_zero_le a ha
 
 /-- A generic relation adversary on `n` given elements with at most `q` group operations
 succeeds with probability at most `((q + n + 1).choose 2 + 1) / |F|`. Equality queries are free,
@@ -55,8 +57,7 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampleabl
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (g : G) (hg : g ≠ 0) (A : OracleComp (genSpec F groupSig) (Fin n → F))
     (q : ℕ) (hq : IsQueryBoundP A (fun i => isGroupOp i = true) q) :
-    Pr{let b ← (_root_.DiscreteLogRelation.experiment g
-      (DiscreteLogRelation.Adversary.ofGeneric (G := G) A))}[b = true] ≤
+    Pr{let b ← experiment g (Adversary.ofGeneric (G := G) A)}[b = true] ≤
       (((q + n + 1).choose 2 + 1 : ℕ) : ℝ≥0∞) / Fintype.card F := by
   classical
   let tbl : Tbl (fun _ : Unit => MvPolynomial (Fin n) F) :=
@@ -78,13 +79,11 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampleabl
       simp [mapTbl, tbl, evalAt_apply, List.map_ofFn, Function.comp_def]
     rw [← ht]
     exact runGen_group_mapTbl_evalAt g hg x A tbl
-  have he : Pr{let b ← (_root_.DiscreteLogRelation.experiment g
-        (DiscreteLogRelation.Adversary.ofGeneric (G := G) A))}[b = true] =
+  have he : Pr{let b ← experiment g (Adversary.ofGeneric (G := G) A)}[b = true] =
       Pr{let x ← $ᵗ (Fin n → F); let z ← (runGen (symbolic F groupSig (Fin n))
         (fun _ p => MvPolynomial.eval x p) A tbl)}[E x z] := by
-    simp only [_root_.DiscreteLogRelation.experiment, DiscreteLogRelation.Adversary.ofGeneric,
-      hr, prEvent_norm, decide_eq_true_eq, Prod.map, id_eq, smul_smul,
-      ← Finset.sum_smul, smul_eq_zero, hg, or_false, E]
+    simp only [experiment, Adversary.ofGeneric, hr, prEvent_norm, decide_eq_true_eq, Prod.map,
+      id_eq, smul_smul, ← Finset.sum_smul, smul_eq_zero, hg, or_false, E]
   rw [he]
   let : MeasurableSpace ((Fin n → F) ×
       ((Fin n → F) × Tbl (fun _ : Unit => MvPolynomial (Fin n) F))) := ⊤
@@ -105,4 +104,4 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampleabl
     List.length_ofFn, Nat.cast_add, Nat.cast_one, div_eq_mul_inv, one_mul]
   rw [Nat.add_comm n q, add_mul, one_mul, add_comm]
 
-end GroupModel
+end DiscreteLogRelation
