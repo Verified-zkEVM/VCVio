@@ -20,7 +20,7 @@ public section
 open Lean System
 
 private def core : List String :=
-  ["VCVio", "VCVioCslib", "LatticeCrypto", "LatticeCryptoTest", "HashSig", "HashSigTest",
+  ["VCVio", "LatticeCrypto", "LatticeCryptoTest", "HashSig", "HashSigTest",
    "Examples", "ToMathlib", "Extern", "VCVioTest"]
 
 private def tests : List String := ["VCVioTest", "LatticeCryptoTest", "HashSigTest"]

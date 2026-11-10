@@ -308,7 +308,7 @@ jobs:
           echo "BUILD_TIMING_COMMENT=$RUNNER_TEMP/build-timing-comment.md" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_SOURCE_BRANCH=$SOURCE_BRANCH" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_BUILD_COMMAND=lake build ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples" >> "$GITHUB_ENV"
+          echo "BUILD_TIMING_BUILD_COMMAND=lake build ToMathlib VCVio LatticeCrypto Extern HashSig Examples" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_NAME=Smoke test" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_COMMAND=lake env lean VCVioTest/Smoke.lean" >> "$GITHUB_ENV"
           {
@@ -375,14 +375,12 @@ jobs:
           uv run --no-project --python 3.12 python ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/library_build.log" \
             --path-prefix ToMathlib/ \
             --path-prefix VCVio/ \
-            --path-prefix VCVioCslib/ \
             --path-prefix Extern/ \
             --path-prefix LatticeCrypto/ \
             --path-prefix HashSig/ \
             --path-prefix Examples/ \
             --path-prefix ToMathlib.lean \
             --path-prefix VCVio.lean \
-            --path-prefix VCVioCslib.lean \
             --path-prefix Extern.lean \
             --path-prefix LatticeCrypto.lean \
             --path-prefix HashSig.lean \

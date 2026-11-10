@@ -89,10 +89,13 @@ claim that a pull request has been opened or merged.
 - The optional `PolyFunCslib` library now owns a separate cslib-backed,
   parameter-indexed P/poly model: pinned encodings, polynomial description
   bounds, nonvacuous progress, generic execution traces, closure operations,
-  and a counting nontriviality theorem. The optional `VCVioCslib` library is a
-  thin crypto-facing facade over that model, adding oracle specialization, a
-  fair-coin boundary, and a security-game bridge. This backend is explicitly
-  nonuniform and backend-relative; core PolyFun and core VCVio remain neutral.
+  and a counting nontriviality theorem. The optional `VCVioCslib` library, a
+  thin crypto-facing facade over that model that added oracle specialization, a
+  fair-coin boundary, and a security-game bridge, has been removed: cslib-frontier
+  has its own P/poly, and the facade's role moves to the planned cslib-frontier-based
+  package (see the [repository layout](repository-layout.md#optional-backends-and-external-bridges)).
+  This backend is explicitly nonuniform and backend-relative; core PolyFun and core VCVio
+  remain neutral.
 
 The following are design targets, not claims about the current API: a richer
 event-decorated `ResourceTrace`, bounded iteration and handler composition, general polynomial
@@ -135,7 +138,7 @@ VCVioComplexity ----> VCVio ----> PolyFun ----> Mathlib
        `----> complexitylib ------------> Mathlib
 ```
 
-The separate cslib library integration is:
+The separate cslib library integration, while `VCVioCslib` existed, was:
 
 ```text
 VCVioCslib ----> VCVio
@@ -233,7 +236,7 @@ adjusted to satisfy the module system, but their meanings may not drift.
 | `ppt` | Landed conservative tooling | Exact local-assumption or registered-primitive lookup for goals headed by `PolyRealizer` or `IsOraclePPTBy`; it performs no recursive synthesis or generic proof search. |
 | `VCVioComplexity.IsPPT` | Reserved, not exported | The eventual strict uniform PPT predicate after the complexitylib adequacy theorem. |
 | `IsExpectedPPT` | Reserved | Expected polynomial time with its probability space and tail/independence hypotheses exposed. It has no unrestricted oracle-substitution rule. |
-| `IsNonuniformPPTBy B` | Landed in optional `VCVioCslib` | Backend-relative existence of a parameter-indexed P/poly witness with an explicit polynomial description bound. Its `By` suffix and package boundary distinguish it from the reserved model-independent name. |
+| `IsNonuniformPPTBy B` | Landed in optional `VCVioCslib`, since removed | Backend-relative existence of a parameter-indexed P/poly witness with an explicit polynomial description bound. Its `By` suffix and package boundary distinguish it from the reserved model-independent name. |
 | `IsNonuniformPPT` | Reserved | A polynomial-size randomized machine or circuit family with explicit description/advice bounds. |
 | `P`, `FP`, `BPP`, `PPoly` | Upstream concepts | Conventional language, function, randomized-language, and circuit-family classes of a concrete backend. They are not aliases for interactive predicates; the current optional package does not re-export the incompatible full class layer. |
 
@@ -268,9 +271,9 @@ VCVio now provides a `SecurityFamily` packing layer with the following behavior:
   output-length event remains part of the richer `ResourceTrace` target.
 
 The packing declarations only express a family. Uniformity comes from the one
-realizer theorem, never from the packing function itself. The optional
-`OracleComp.Complexity.IsNonuniformPPTBy` admits a family of separate codes only relative
-to its pinned cslib P/poly backend, where code description length is part of the
+realizer theorem, never from the packing function itself. The removed optional
+`OracleComp.Complexity.IsNonuniformPPTBy` admitted a family of separate codes only relative
+to its pinned cslib P/poly backend, where code description length was part of the
 bound. The unqualified, model-independent `IsNonuniformPPT` remains reserved.
 
 ## PolyFun implementation
@@ -762,7 +765,7 @@ machine. That is compatible with this design.
 The current integration deliberately requires no CSLib change. Low-level
 cslib/mathlib-only compatibility material lives in PolyFun's `ToCslib`
 library, the reusable quantitative P/poly backend lives in `PolyFunCslib`, and
-VCVio's optional `VCVioCslib` library adds only the crypto-facing facade. This
+VCVio's optional `VCVioCslib` library added only the crypto-facing facade until its removal. This
 establishes a narrow backend-relative nonuniform model; it does not claim a
 strict-uniform adequacy theorem or equivalence with the complexitylib backend.
 No CSLib PR is part of this work.

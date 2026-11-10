@@ -10,7 +10,6 @@ public import VCVioTest.CryptoFoundations.BR93Measure
 public import VCVioTest.CryptoFoundations.ComplexityAdapters
 public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
-public import VCVioTest.CryptoFoundations.CslibPPolyUniverses
 public import VCVioTest.CryptoFoundations.DEMIndCpa
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortCanary

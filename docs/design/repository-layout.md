@@ -12,7 +12,6 @@ Status: current placement policy; the migration table distinguishes planned move
 | `VCVio/CryptoFoundations/` | Cryptographic interfaces, assumptions, games and generic reduction theory | Uses the framework; does not import concrete schemes |
 | `VCVio/Schemes/` | Named constructions with their correctness and security proofs | Uses algorithms and foundations, never Examples or widgets |
 | `LatticeCrypto/`, `HashSig/` | Existing lattice and hash-signature libraries | Peers above VCVio; migrate only in dependency-complete slices |
-| `VCVioCslib/` | Optional non-uniform complexity facade | Separate non-default Lake target |
 | `VCVioComplexity/` | Optional concrete machine backend | Separate Lake package with coordinated pins |
 | `Examples/` | Pedagogical consumers and proof walkthroughs | Above reusable libraries |
 | `Examples/Widgets/` | Interactive proof visualizations used by the examples | Presentation dependency, never a scheme dependency |
@@ -30,6 +29,18 @@ Keep one implementation and update its consumers when moving it. Preserve declar
 proof statements and attribution where a move changes only module ownership. Examples should
 contain instructional uses, not forwarding aliases for library definitions. Test support may
 be shared by other test libraries without pulling a scheme into pure implementation imports.
+
+## Optional backends and external bridges
+
+Core VCVio stays backend-neutral: PolyFun owns the generic realizability theory, and a concrete
+machine model enters only through an optional package. A planned nested package, `VCVioFrontier`,
+built on PolyFun's `PolyFunFrontier` package and through it on
+[cslib-frontier](https://github.com/cslib-community/cslib-frontier), will hold that role.
+
+The `VCVioCslib` library, a one-file non-uniform P/poly facade over PolyFun's
+`ComplexityBackends.CslibSingleTape`, was removed. cslib-frontier has its own P/poly, so the
+crypto-facing non-uniform facade belongs in `VCVioFrontier`. The removed source remains in git
+history.
 
 ## Upstream comparison
 

@@ -53,7 +53,7 @@ script lint (args) do
     IO.eprintln s!"lake lint: {uvMissingMessage}"
     return 1
   let root ← getRootPackage
-  let libraries := (root.defaultTargets.push `VCVioCslib).filterMap fun library =>
+  let libraries := root.defaultTargets.filterMap fun library =>
     (root.findLeanLib? library).map fun _ => library.toString
   let child ← IO.Process.spawn {
     cmd := "lake"
@@ -109,10 +109,6 @@ require "leanprover-community" / "mathlib" @ git "v4.35.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
-
-/-- Optional cslib-backed non-uniform complexity adapters. Kept outside the
-default `VCVio` umbrella so core VCVio remains backend-neutral. -/
-lean_lib VCVioCslib
 
 /-- Native FFI surface: `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA,
 Falcon) and every module whose transitive imports reach them. Isolated here so

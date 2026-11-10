@@ -74,7 +74,7 @@ RETIRED_LABEL_RE = re.compile(
     r"\b(?:structural|angelic|demonic)\s+(?:readings?|interpretations?|triples?|WP|"
     r"weakest\s+preconditions?)\b|\bstructural\s+support\b|\bstructurally\s+"
     r"(?:reachable|possible)\b", re.I)
-LEAN_ROOTS = ("ToMathlib/", "VCVio/", "VCVioCslib/", "LatticeCrypto/", "HashSig/", "Examples/",
+LEAN_ROOTS = ("ToMathlib/", "VCVio/", "LatticeCrypto/", "HashSig/", "Examples/",
               "Extern/", "VCVioTest/", "LatticeCryptoTest/", "HashSigTest/")
 
 

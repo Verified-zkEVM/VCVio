@@ -9,7 +9,7 @@ import Lean
 # Axiom sweep: whole-library kernel-level axiom and `sorry` accounting
 
 Walks the compiled environment (the same data the kernel checked) and computes, for every
-declaration in the non-test libraries (`VCVio`, `VCVioCslib`, `ToMathlib`, `Extern`,
+declaration in the non-test libraries (`VCVio`, `ToMathlib`, `Extern`,
 `LatticeCrypto`, `HashSig`, `Examples`), the set of axioms its statement and proof
 ultimately depend on — the same information as `#print axioms`, for the whole library at once.
 
@@ -65,7 +65,7 @@ namespace AxiomSweep
 isolation gate), sits outside the certified surface this sweep accounts for, and is not
 built by the main CI build job. Sweep it explicitly with `--root Interop` if needed. -/
 def defaultRoots : Array Name :=
-  #[`VCVio, `VCVioCslib, `ToMathlib, `Extern, `LatticeCrypto, `HashSig, `Examples]
+  #[`VCVio, `ToMathlib, `Extern, `LatticeCrypto, `HashSig, `Examples]
 
 /-- Axioms that carry no extra trust assumptions beyond Lean's standard foundation. -/
 def standardAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
