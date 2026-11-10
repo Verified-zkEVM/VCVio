@@ -34,7 +34,7 @@ def alwaysWins : Adversary (ZMod 5) (ZMod 5) (Fin 2) unifSpec :=
 theorem alwaysWins_experiment :
     Pr{let b ← plainExperiment (1 : ZMod 5) alwaysWins}[b = true] = 1 := by
   have h : plainExperiment (1 : ZMod 5) alwaysWins =
-      (do let _ ← @uniformSample (Fin 2 → ZMod 5) instSampleableTypePiFintype; pure true) := by
+      (do let _ ← @uniformSample (Fin 2 → ZMod 5) instSampleableTypeFunc; pure true) := by
     simp only [plainExperiment, experiment, plainAdversary, alwaysWins, StateT.run'_eq,
       map_run_plainImpl, pure_bind]
     congr 1
@@ -64,14 +64,17 @@ theorem pair_experiment_zmod_five :
     letI : Fact (Nat.Prime 5) := ⟨Nat.prime_five⟩
     plainExperiment (F := ZMod 5) (1 : ZMod 5) (fun _ => pure ![1, -1]) =
       (do
-        let x ← @uniformSample (Fin 2 → ZMod 5) instSampleableTypePiFintype
+        let x ← @uniformSample (Fin 2 → ZMod 5) instSampleableTypeFunc
         pure (decide (x 0 = x 1))) := by
   let : Fact (Nat.Prime 5) := ⟨Nat.prime_five⟩
   have hn : (![1, -1] : Fin 2 → ZMod 5) ≠ 0 := by
     intro h
     have h0 := congrFun h 0
     norm_num at h0
-  simp [plainExperiment, experiment, plainAdversary, hn, Fin.sum_univ_two,
+  -- The experiment sums with the `Fintype` instance of the enumeration of `Fin 2`.
+  have huniv : @Finset.univ (Fin 2) FinEnum.instFintype = Finset.univ := by
+    congr 1
+  simp [plainExperiment, experiment, plainAdversary, hn, huniv, Fin.sum_univ_two,
     sub_eq_zero, ← sub_eq_add_neg]
 
 /-- Zero-extension into an optional slot preserves the explicit vanishing coefficients. -/

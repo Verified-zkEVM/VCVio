@@ -17,9 +17,10 @@ import VCVio.OracleComp.Constructions.SampleableType.SchwartzZippel
 # The discrete-log relation problem
 
 An adversary receives independently uniform multiples of a generator over a finite index type
-and seeks a nonzero
-vector of coefficients whose linear combination vanishes. Programming each basis element as
-`x i • g + y i • Z` gives a reduction to discrete logarithm with additive loss `1 / |F|`.
+and seeks a nonzero vector of coefficients whose linear combination vanishes. Programming each
+basis element as `x i • g + y i • Z` gives a reduction to discrete logarithm with additive loss
+`1 / |F|`. The index type carries an enumeration (`FinEnum`), so the experiment and the
+reduction sample their bases executably.
 
 Reference: Joseph Jaeger and Stefano Tessaro, *Expected-Time Cryptography: Generic Techniques
 and Applications to Concrete Soundness*, https://eprint.iacr.org/2020/1213, Lemma 3.
@@ -39,7 +40,7 @@ abbrev Adversary (F G ι : Type) (spec : OracleSpec κ) :=
   (ι → G) → OracleComp spec (ι → F)
 
 /-- Sample a uniform basis and accept a nonzero coefficient vector with vanishing group sum. -/
-@[expose] noncomputable def experiment [Fintype ι]
+@[expose] def experiment [FinEnum ι]
     [Semiring F] [DecidableEq F] [SampleableType F]
     [AddCommMonoid G] [Module F G] [DecidableEq G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)
@@ -50,7 +51,7 @@ abbrev Adversary (F G ι : Type) (spec : OracleSpec κ) :=
 
 /-- Program the basis with the discrete-log challenge and extract by dividing its coefficient
 into the negated generator coefficient, returning zero when that denominator vanishes. -/
-@[expose] noncomputable def reduction [Fintype ι]
+@[expose] def reduction [FinEnum ι]
     [Field F] [DecidableEq F] [SampleableType F]
     [AddCommMonoid G] [Module F G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)
@@ -70,19 +71,19 @@ abbrev plainImpl : QueryImpl (unifSpec + emptySpec) (StateT Unit ProbComp) :=
     Adversary F G ι (unifSpec + emptySpec) := fun basis => liftM (A basis)
 
 /-- The plain experiment is the shared experiment with the empty auxiliary specification. -/
-noncomputable abbrev plainExperiment [Fintype ι] [Semiring F] [DecidableEq F]
+abbrev plainExperiment [FinEnum ι] [Semiring F] [DecidableEq F]
     [SampleableType F] [AddCommMonoid G] [Module F G] [DecidableEq G]
     (g : G) (A : Adversary F G ι unifSpec) : ProbComp Bool :=
   experiment plainImpl () g (plainAdversary A)
 
 /-- The plain reduction is the shared reduction with the empty auxiliary specification. -/
-noncomputable abbrev plainReduction [Fintype ι] [Field F] [DecidableEq F]
+abbrev plainReduction [FinEnum ι] [Field F] [DecidableEq F]
     [SampleableType F] [AddCommMonoid G] [Module F G]
     (A : Adversary F G ι unifSpec) : DiffieHellman.DLogAdversary F G :=
   reduction plainImpl () (plainAdversary A)
 
 /-- Unfolding the plain experiment selects the empty auxiliary specification and unit state. -/
-theorem plainExperiment_eq [Fintype ι] [Semiring F] [DecidableEq F]
+theorem plainExperiment_eq [FinEnum ι] [Semiring F] [DecidableEq F]
     [SampleableType F] [AddCommMonoid G] [Module F G] [DecidableEq G]
     (g : G) (A : Adversary F G ι unifSpec) :
     plainExperiment g A = experiment plainImpl () g (plainAdversary A) := rfl
@@ -99,7 +100,7 @@ theorem plainExperiment_eq [Fintype ι] [Semiring F] [DecidableEq F]
 
 /-- At a generating base, uniform generator-oracle outputs are uniform scalar multiples.
 This connects generator-oracle setup with the sampling used by `experiment`. -/
-theorem queryBasis_empty_evalDistEq_scalar [Fintype ι]
+theorem queryBasis_empty_evalDistEq_scalar [FinEnum ι]
     [DecidableEq κ] [Field F] [SampleableType F] [SampleableType G]
     [AddCommGroup G] [Module F G]
     (labels : ι → κ) (hinj : Function.Injective labels)
@@ -140,7 +141,7 @@ theorem sum_C_mul_X_ne_zero [CommSemiring F] {ι : Type*} [Fintype ι]
 /-- A nonzero coefficient vector has vanishing scalar product with a uniformly sampled vector
 over a finite field with probability at most the reciprocal of the field cardinality. -/
 theorem prEvent_sum_mul_eq_zero_le [Fintype ι]
-    [Field F] [Fintype F] [SampleableType F]
+    [Field F] [Fintype F] [SampleableType (ι → F)]
     (a : ι → F) (ha : a ≠ 0) :
     Pr{let y ← $ᵗ (ι → F)}[∑ i, a i * y i = 0] ≤
       (1 : ℝ≥0∞) / Fintype.card F := by
@@ -149,7 +150,7 @@ theorem prEvent_sum_mul_eq_zero_le [Fintype ι]
   simpa [p] using prEvent_eval_eq_zero_univ_le_div p
     (sum_C_mul_X_ne_zero a ha) (totalDegree_sum_C_mul_X_le_one a)
 
-private theorem programmed_eq [Fintype ι] [Field F] [SampleableType F]
+private theorem programmed_eq [Field F] [SampleableType (ι → F)]
     [AddCommGroup G] [Module F G] (g : G) (A : Adversary F G ι unifSpec) (z : F) :
     (do
       let x ← $ᵗ (ι → F)
@@ -193,7 +194,7 @@ independently of the basis, so the finder can share an oracle cache with the com
 which it is extracted. This is the oracle-computation form of ironwood
 `Zcash/Common/RelationProbabilityCoins.lean`. The hidden mask is sampled independently after the
 adversary's output. -/
-theorem experiment_le [Fintype ι]
+theorem experiment_le [FinEnum ι]
     [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)

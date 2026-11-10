@@ -11,10 +11,10 @@ public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 /-!
 # Generic hardness of discrete-log relations
 
-A generic adversary receives `Fintype.card ι` challenge elements as its initial table
-(`DiscreteLogRelation.Adversary.ofGeneric`). With at most `q` group operations, its
-relation-finding probability in the plain experiment is at most
-`((q + Fintype.card ι + 1).choose 2 + 1) / |F|`
+A generic adversary receives the `FinEnum.card ι` challenge elements as its initial table, in the
+order of the enumeration of `ι` (`DiscreteLogRelation.Adversary.ofGeneric`). With at most `q`
+group operations, its relation-finding probability in the plain experiment is at most
+`((q + FinEnum.card ι + 1).choose 2 + 1) / |F|`
 (`DiscreteLogRelation.plainExperiment_ofGeneric_le`). The master bound T3 compares the
 hidden-point run directly with the exact symbolic run; a nonzero output coefficient vector then
 defines a nonzero linear polynomial, bounded by Schwartz–Zippel. No reduction cost certificate is
@@ -36,26 +36,28 @@ open GroupModel
 variable {F G ι : Type}
 
 /-- Interpret a generic coefficient-valued computation on the table of supplied group elements.
-The table contains exactly `Fintype.card ι` entries, without an additional generator entry. -/
-@[expose] noncomputable def Adversary.ofGeneric [Fintype ι] [CommSemiring F]
+Handle `j` holds the basis element at position `j` of the enumeration `FinEnum.equiv`, so a
+generic adversary knows which handle holds which basis element. The table contains exactly
+`FinEnum.card ι` entries, without an additional generator entry. -/
+@[expose] def Adversary.ofGeneric [FinEnum ι] [CommSemiring F]
     [AddCommMonoid G] [Module F G] [DecidableEq G]
     (A : OracleComp (genSpec F groupSig) (ι → F)) : Adversary F G ι unifSpec :=
   fun xs => Prod.fst <$> runGen (Model.group G) (fun _ => id) A
-    (fun _ => List.ofFn (xs ∘ (Fintype.equivFin ι).symm))
+    (fun _ => List.ofFn (xs ∘ FinEnum.equiv.symm))
 
 /-- A generic relation adversary given a finite basis and at most `q` group operations
-succeeds with probability at most `((q + Fintype.card ι + 1).choose 2 + 1) / |F|`. Equality queries
+succeeds with probability at most `((q + FinEnum.card ι + 1).choose 2 + 1) / |F|`. Equality queries
 are free, and handles outside the table retain the ordinary zero-default semantics. -/
-theorem plainExperiment_ofGeneric_le [Fintype ι]
+theorem plainExperiment_ofGeneric_le [FinEnum ι]
     [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (g : G) (hg : g ≠ 0) (A : OracleComp (genSpec F groupSig) (ι → F))
     (q : ℕ) (hq : IsQueryBoundP A (fun i => isGroupOp i = true) q) :
     Pr{let b ← plainExperiment g (Adversary.ofGeneric (G := G) A)}[b = true] ≤
-      (((q + Fintype.card ι + 1).choose 2 + 1 : ℕ) : ℝ≥0∞) / Fintype.card F := by
+      (((q + FinEnum.card ι + 1).choose 2 + 1 : ℕ) : ℝ≥0∞) / Fintype.card F := by
   classical
   let tbl : Tbl (fun _ : Unit => MvPolynomial ι F) :=
-    fun _ => List.ofFn (MvPolynomial.X ∘ (Fintype.equivFin ι).symm)
+    fun _ => List.ofFn (MvPolynomial.X ∘ FinEnum.equiv.symm)
   have hd : DegreeLE (fun _ => 1) tbl := by
     intro s p hp
     obtain ⟨i, rfl⟩ := List.mem_ofFn.mp hp
@@ -65,11 +67,11 @@ theorem plainExperiment_ofGeneric_le [Fintype ι]
     z.1 ≠ 0 ∧ ∑ i, z.1 i * x i = 0
   have hr (x : ι → F) :
       runGen (Model.group G) (fun _ => id) A
-        (fun _ => List.ofFn (fun j => x ((Fintype.equivFin ι).symm j) • g)) =
+        (fun _ => List.ofFn (fun j => x (FinEnum.equiv.symm j) • g)) =
         Prod.map id (mapTbl (fun _ => evalAt g x)) <$>
           runGen (symbolic F groupSig ι) (fun _ p => MvPolynomial.eval x p) A tbl := by
     have ht : mapTbl (fun _ : Unit => evalAt g x) tbl =
-        (fun _ => List.ofFn (fun j => x ((Fintype.equivFin ι).symm j) • g)) := by
+        (fun _ => List.ofFn (fun j => x (FinEnum.equiv.symm j) • g)) := by
       funext u
       simp [mapTbl, tbl, evalAt_apply, List.map_ofFn, Function.comp_def]
     rw [← ht]
@@ -100,7 +102,7 @@ theorem plainExperiment_ofGeneric_le [Fintype ι]
     (fun f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd)
   refine h.trans_eq ?_
   simp only [Fintype.sum_unique, tbl, List.length_ofFn, Nat.cast_one,
-    Nat.add_comm (Fintype.card ι) q, Nat.cast_add, ENNReal.add_div]
+    Nat.add_comm (FinEnum.card ι) q, Nat.cast_add, ENNReal.add_div]
   simp [div_eq_mul_inv]
 
 end DiscreteLogRelation

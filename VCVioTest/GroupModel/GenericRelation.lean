@@ -35,7 +35,7 @@ theorem relation_generic_zmod_101 :
   dsimp only
   apply (DiscreteLogRelation.plainExperiment_ofGeneric_le (1 : ZMod 101) one_ne_zero _ 0
     ?_).trans
-  · norm_num [ZMod.card, Nat.choose]
+  · norm_num [ZMod.card, Nat.choose, FinEnum.card_fin]
   · exact ⟨by decide, fun _ => trivial⟩
 
 end GroupModel
