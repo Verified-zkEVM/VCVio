@@ -5,8 +5,10 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.PosSemidef
 
 public import VCVio.Quantum.Oracle.Compressed.CommutatorBound
+import QuantumFoundations.MatrixMap.Completion
 
 /-!
 # Local potential inequalities for the compressed oracle
@@ -63,80 +65,6 @@ namespace Quantum
 section psd
 
 variable {n : Type*} [Fintype n]
-
-/-- A Hermitian matrix whose quadratic form has nonnegative real part is positive semidefinite. -/
-theorem posSemidef_of_re_dotProduct_mulVec_nonneg {M : Matrix n n ℂ} (hM : M.IsHermitian)
-    (h : ∀ x : n → ℂ, 0 ≤ (star x ⬝ᵥ (M *ᵥ x)).re) : M.PosSemidef := by
-  refine PosSemidef.of_dotProduct_mulVec_nonneg hM fun x ↦ ?_
-  have him : (star x ⬝ᵥ (M *ᵥ x)).im = 0 :=
-    Complex.conj_eq_iff_im.mp (hM.star_dotProduct_mulVec_comm x x)
-  exact Complex.nonneg_iff.mpr ⟨h x, him.symm⟩
-
-/-- The real part of `star v ⬝ᵥ v` is the squared norm of `v`. -/
-theorem re_star_dotProduct_self (v : n → ℂ) : (star v ⬝ᵥ v).re = ∑ a, ‖v a‖ ^ 2 := by
-  simp only [dotProduct, Pi.star_apply, Complex.re_sum]
-  refine Finset.sum_congr rfl fun a _ ↦ ?_
-  rw [RCLike.star_def, Complex.conj_mul', ← Complex.ofReal_pow, Complex.ofReal_re]
-
-/-- The quadratic form of `Kᴴ K` is the squared norm of `K x`. -/
-theorem star_dotProduct_conjTranspose_mul_self_mulVec {m : Type*} [Fintype m]
-    (K : Matrix m n ℂ) (x : n → ℂ) :
-    star x ⬝ᵥ ((Kᴴ * K) *ᵥ x) = star (K *ᵥ x) ⬝ᵥ (K *ᵥ x) := by
-  rw [← mulVec_mulVec, dotProduct_mulVec, star_mulVec]
-
-/-- A block-diagonal matrix of positive semidefinite blocks is positive semidefinite. -/
-theorem posSemidef_blockDiagonal {m o : Type*} [Finite m] [Finite o] [DecidableEq o]
-    {M : o → Matrix m m ℂ} (hM : ∀ k, (M k).PosSemidef) : (blockDiagonal M).PosSemidef := by
-  have := Fintype.ofFinite m
-  have := Fintype.ofFinite o
-  refine PosSemidef.of_dotProduct_mulVec_nonneg ?_ fun x ↦ ?_
-  · rw [IsHermitian, blockDiagonal_conjTranspose]
-    exact congrArg blockDiagonal (funext fun k ↦ (hM k).1)
-  · have h : star x ⬝ᵥ (blockDiagonal M *ᵥ x) =
-        ∑ k, star (fun i ↦ x (i, k)) ⬝ᵥ (M k *ᵥ fun i ↦ x (i, k)) := by
-      simp only [dotProduct, mulVec, Fintype.sum_prod_type, blockDiagonal_apply, Pi.star_apply,
-        ite_mul, zero_mul, Finset.sum_ite_eq, Finset.mem_univ, ite_true]
-      rw [Finset.sum_comm]
-    rw [h]
-    exact Finset.sum_nonneg fun k _ ↦ (hM k).dotProduct_mulVec_nonneg _
-
-/-- A block-diagonal matrix of positive semidefinite blocks, over a sigma type, is positive
-semidefinite. -/
-theorem posSemidef_blockDiagonal' {o : Type*} [Finite o] [DecidableEq o] {m : o → Type*}
-    [∀ k, Finite (m k)] {M : ∀ k, Matrix (m k) (m k) ℂ} (hM : ∀ k, (M k).PosSemidef) :
-    (blockDiagonal' M).PosSemidef := by
-  have := Fintype.ofFinite o
-  have := fun k ↦ Fintype.ofFinite (m k)
-  refine PosSemidef.of_dotProduct_mulVec_nonneg ?_ fun x ↦ ?_
-  · rw [IsHermitian, blockDiagonal'_conjTranspose]
-    exact congrArg blockDiagonal' (funext fun k ↦ (hM k).1)
-  · have h : star x ⬝ᵥ (blockDiagonal' M *ᵥ x) =
-        ∑ k, star (fun i ↦ x ⟨k, i⟩) ⬝ᵥ (M k *ᵥ fun i ↦ x ⟨k, i⟩) := by
-      simp only [dotProduct, mulVec, Fintype.sum_sigma, blockDiagonal'_apply, Pi.star_apply]
-      refine Finset.sum_congr rfl fun k _ ↦ Finset.sum_congr rfl fun i _ ↦ ?_
-      congr 1
-      rw [Finset.sum_eq_single k]
-      · exact Finset.sum_congr rfl fun j _ ↦ by simp
-      · intro k' _ hk'
-        exact Finset.sum_eq_zero fun j _ ↦ by simp [Ne.symm hk']
-      · simp
-    rw [h]
-    exact Finset.sum_nonneg fun k _ ↦ (hM k).dotProduct_mulVec_nonneg _
-
-/-- **Bessel's inequality for two orthonormal vectors**, in coordinates. -/
-theorem norm_dotProduct_star_sq_add_le {e₁ e₂ : n → ℂ} (h₁ : e₁ ⬝ᵥ star e₁ = 1)
-    (h₂ : e₂ ⬝ᵥ star e₂ = 1) (h₁₂ : e₂ ⬝ᵥ star e₁ = 0) (φ : n → ℂ) :
-    ‖φ ⬝ᵥ star e₁‖ ^ 2 + ‖φ ⬝ᵥ star e₂‖ ^ 2 ≤ ∑ i, ‖φ i‖ ^ 2 := by
-  have h₂₁ : e₁ ⬝ᵥ star e₂ = 0 := by rw [dotProduct_star, h₁₂, star_zero]
-  let v : Fin 2 → EuclideanSpace ℂ n := ![WithLp.toLp 2 e₁, WithLp.toLp 2 e₂]
-  have hv : Orthonormal ℂ v := by
-    rw [orthonormal_iff_ite]
-    simp only [Fin.forall_fin_two, v, Matrix.cons_val_zero, Matrix.cons_val_one,
-      EuclideanSpace.inner_toLp_toLp, h₁, h₂, h₁₂, h₂₁]
-    simp
-  have := hv.sum_inner_products_le (x := WithLp.toLp 2 φ) (s := Finset.univ)
-  simpa [Fin.sum_univ_two, v, EuclideanSpace.inner_toLp_toLp, EuclideanSpace.norm_sq_eq]
-    using this
 
 /-- Weighted Cauchy–Schwarz for three real source components with coefficients `1, 2, 1`. -/
 theorem sq_add_two_mul_add_le_three {p q r : ℝ} (hp : 0 < p) (hq : 0 < q)
@@ -432,7 +360,7 @@ theorem sum_norm_flipCommutator_sq_le (χ : AddChar Y ℂ) (fl : Finset Y)
   have hNc : (Fintype.card Y : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr Fintype.card_ne_zero
   -- Bessel's inequality for the two components of the unflipped part.
   have hbessel : ‖S‖ ^ 2 + ‖G‖ ^ 2 ≤ W₀ := by
-    have hs := sum_apply_eq_zero_of_ne_zero hχ
+    have hs := AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
     have hχχ : ∀ w, starRingEnd ℂ (χ w) * χ w = 1 := fun w ↦ by
       rw [Complex.conj_mul', AddChar.norm_apply]
       simp
@@ -458,7 +386,7 @@ theorem sum_norm_flipCommutator_sq_le (χ : AddChar Y ℂ) (fl : Finset Y)
             rw [map_sum, Finset.mul_sum]
             exact Finset.sum_congr rfl fun w _ ↦ by ring
         _ = 0 := by rw [hs, map_zero, mul_zero]
-    have hb := norm_dotProduct_star_sq_add_le e₁ e₂ e₁₂ φ₀
+    have hb := Matrix.norm_dotProduct_star_sq_add_le e₁ e₂ e₁₂ φ₀
     have hS' : φ₀ ⬝ᵥ star (fun _ : Y ↦ a) = S := by
       simp only [dotProduct, Pi.star_apply, hS, hadef, star_cellAmp, Finset.mul_sum]
       exact Finset.sum_congr rfl fun w _ ↦ by ring
@@ -586,14 +514,14 @@ theorem sum_norm_flipCommutator_sq_le (χ : AddChar Y ℂ) (fl : Finset Y)
             (a₀ * ‖ψ none‖ ^ 2 + a₁ * W₀ + d * ‖G‖ ^ 2)) := by
           apply mul_le_mul_of_nonneg_left _ hβ.le
           apply mul_le_mul_of_nonneg_left _ (by positivity)
-          nlinarith [mul_le_mul_of_nonneg_left hbessel h₁]
+          nlinarith only [mul_le_mul_of_nonneg_left hbessel h₁]
       _ = β * (a₀⁻¹ + 4 * a₁⁻¹ + (a₁ + d)⁻¹) *
             (a₀ * ‖ψ none‖ ^ 2 + a₁ * W₀ + d * ‖G‖ ^ 2) := by ring
       _ ≤ lam * (a₀ * ‖ψ none‖ ^ 2 + a₁ * W₀ + d * ‖G‖ ^ 2) :=
           mul_le_mul_of_nonneg_right hν (by positivity)
   have e2 : 6 * β * W₁ ≤ lam * a₁ * W₁ := mul_le_mul_of_nonneg_right h6 hW₁0
   rw [hsplit, hW, hGfull]
-  nlinarith [hT1, hT2, e1, e2]
+  nlinarith only [hT1, hT2, e1, e2]
 
 omit [AddCommGroup Y] in
 /-- The quadratic form of a two-level cell potential. -/
@@ -617,13 +545,12 @@ theorem posSemidef_smul_cellDiag_sub_flip (χ : AddChar Y ℂ) (fl : Finset Y) {
     (lam • cellDiag a₀ a₁ - (flipCell fl * phaseCell Y χ - phaseCell Y χ * flipCell fl)ᴴ *
       (flipCell fl * phaseCell Y χ - phaseCell Y χ * flipCell fl)).PosSemidef := by
   set K := flipCell fl * phaseCell Y χ - phaseCell Y χ * flipCell fl
-  refine posSemidef_of_re_dotProduct_mulVec_nonneg
+  refine Matrix.posSemidef_of_re_dotProduct_mulVec_nonneg
     (((posSemidef_cellDiag h₀ h₁).smul hlam).isHermitian.sub
       (isHermitian_conjTranspose_mul_self K)) fun ψ ↦ ?_
-  rw [sub_mulVec, dotProduct_sub, star_dotProduct_conjTranspose_mul_self_mulVec, Complex.sub_re,
-    re_star_dotProduct_self, smul_mulVec, dotProduct_smul, Complex.smul_re, smul_eq_mul,
-    re_star_dotProduct_cellDiag_mulVec,
-    sub_nonneg]
+  rw [sub_mulVec, dotProduct_sub, Matrix.star_dotProduct_conjTranspose_mul_self_mulVec,
+    Complex.sub_re, RCLike.ofReal_eq_complex_ofReal, Complex.ofReal_re, smul_mulVec,
+    dotProduct_smul, Complex.smul_re, smul_eq_mul, re_star_dotProduct_cellDiag_mulVec, sub_nonneg]
   have hleak' : PhaseLeakBound lam a₀ a₁ 0 (fl.card / Fintype.card Y) := by
     rcases hleak with h | ⟨ha, hb, hν, h6⟩
     · exact Or.inl h
@@ -730,7 +657,7 @@ theorem posSemidef_cellDrop_sub_flip (χ : AddChar Y ℂ) (fl : Finset Y)
     ((posSemidef_cellEmpty.conjTranspose_mul_mul_same U).smul hd)
   have hE := (PosSemidef.one (n := Option Y) (R := ℂ)).smul
     (show 0 ≤ (1 + s⁻¹) * (lam * d * (fl.card / Fintype.card Y : ℝ)) by positivity)
-  refine posSemidef_of_re_dotProduct_mulVec_nonneg
+  refine Matrix.posSemidef_of_re_dotProduct_mulVec_nonneg
     (((hD.smul (by positivity : 0 ≤ (1 + s) * lam)).add hE).isHermitian.sub
       (isHermitian_conjTranspose_mul_self C)) fun ψ ↦ ?_
   have hG : (star ψ ⬝ᵥ ((Uᴴ * cellEmpty * U) *ᵥ ψ)).re = ‖(U *ᵥ ψ) none‖ ^ 2 := by
@@ -741,10 +668,13 @@ theorem posSemidef_cellDrop_sub_flip (χ : AddChar Y ℂ) (fl : Finset Y)
       he, re_star_dotProduct_cellDiag_mulVec]
     ring
   have hI : (star ψ ⬝ᵥ ((1 : Matrix (Option Y) (Option Y) ℂ) *ᵥ ψ)).re =
-      ∑ a, ‖ψ a‖ ^ 2 := by rw [one_mulVec, re_star_dotProduct_self]
+      ∑ a, ‖ψ a‖ ^ 2 := by
+    rw [one_mulVec, Matrix.star_dotProduct_self_eq_sum_norm_sq, RCLike.ofReal_eq_complex_ofReal,
+      Complex.ofReal_re]
   simp only [sub_mulVec, add_mulVec, smul_mulVec, dotProduct_sub, dotProduct_add,
     dotProduct_smul, Complex.sub_re, Complex.add_re, Complex.smul_re, smul_eq_mul,
-    star_dotProduct_conjTranspose_mul_self_mulVec, re_star_dotProduct_self,
+    Matrix.star_dotProduct_conjTranspose_mul_self_mulVec, RCLike.ofReal_eq_complex_ofReal,
+    Complex.ofReal_re,
     re_star_dotProduct_cellDiag_mulVec, hG, hI, sub_nonneg]
   exact sum_norm_flipCommutator_sq_le_drop χ fl hlam h₀ h₁ hd hs hleak ψ
 

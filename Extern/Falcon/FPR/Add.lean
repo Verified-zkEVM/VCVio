@@ -385,16 +385,19 @@ private theorem addPipeline_pre_round (a b : FPR) (ha : FPR.IsNormal a) (hb : FP
           (((addPipeline a b).xu.toNat : ℝ)
             + 1 * (((addPipeline a b).yu_.toNat : ℝ) / 2 ^ (addPipeline a b).n.toNat)) := by
         have hpos : (0 : ℝ) < (2 : ℝ) ^ (-(54 : ℤ)) := zpow_pos (by norm_num) _
-        nlinarith [hc55]
+        nlinarith only [hX55, hYpnn, hpos, hc55]
       have hsmall : |((addPipeline a b).yu.toNat : ℝ)
           - ((addPipeline a b).yu_.toNat : ℝ) / 2 ^ (addPipeline a b).n.toNat| ≤ 1 := by
-        rw [abs_le]; constructor <;> linarith
-      nlinarith
+        exact (abs_lt.mpr hal).le
+      calc
+        _ ≤ 1 * (2 : ℝ) ^ (addPipeline a b).ex'.toInt :=
+          mul_le_mul_of_nonneg_right hsmall hp.le
+        _ ≤ _ := by nlinarith only [hbig, hp]
     · rw [hzr, hmn]
       have : (2 : ℝ) ^ (-(1022 : ℤ)) = (2 : ℝ) ^ (55 : ℕ) * (2 : ℝ) ^ (-(1077 : ℤ)) := by
         rw [two_pow_mul_zpow]; norm_num
       rw [this]
-      nlinarith
+      exact mul_le_mul (by linarith only [hX55, hYpnn]) hpge (by positivity) (by positivity)
   · -- differing signs: cancellation
     rw [ite_eq_right hs] at habsS hzr
     have hYleX : (((addPipeline a b).yu_.toNat : ℝ) / 2 ^ (addPipeline a b).n.toNat)
@@ -408,7 +411,7 @@ private theorem addPipeline_pre_round (a b : FPR) (ha : FPR.IsNormal a) (hb : FP
       · rw [habsdiff, hex, sub_self, abs_zero, zero_mul]
         have : (0 : ℝ) ≤ |toReal a + toReal b| := abs_nonneg _
         have hpos : (0 : ℝ) < (2 : ℝ) ^ (-(54 : ℤ)) := zpow_pos (by norm_num) _
-        nlinarith
+        positivity
       · rw [hzr, hex]
         rw [habsS] at hmin
         linarith
@@ -421,7 +424,7 @@ private theorem addPipeline_pre_round (a b : FPR) (ha : FPR.IsNormal a) (hb : FP
         have h1 : ((addPipeline a b).yu_.toNat : ℝ) < (2 : ℝ) ^ (56 : ℕ) := by exact_mod_cast hym.2
         have h2 : (2 : ℝ) ^ (4 : ℕ) ≤ (2 : ℝ) ^ (addPipeline a b).n.toNat := by
           exact_mod_cast Nat.pow_le_pow_right (by norm_num : 1 ≤ 2) (by omega)
-        nlinarith
+        nlinarith only [h1, h2]
       rw [abs_lt] at hal
       constructor
       · rw [habsdiff, habsS]
@@ -429,11 +432,14 @@ private theorem addPipeline_pre_round (a b : FPR) (ha : FPR.IsNormal a) (hb : FP
             (((addPipeline a b).xu.toNat : ℝ)
               + -1 * (((addPipeline a b).yu_.toNat : ℝ) / 2 ^ (addPipeline a b).n.toNat)) := by
           have hpos : (0 : ℝ) < (2 : ℝ) ^ (-(54 : ℤ)) := zpow_pos (by norm_num) _
-          nlinarith [hc55, hc52]
+          nlinarith only [hX55, hYplt, hpos, hc55, hc52]
         have hsmall : |((addPipeline a b).yu.toNat : ℝ)
             - ((addPipeline a b).yu_.toNat : ℝ) / 2 ^ (addPipeline a b).n.toNat| ≤ 1 := by
-          rw [abs_le]; constructor <;> linarith
-        nlinarith
+          exact (abs_lt.mpr hal).le
+        calc
+          _ ≤ 1 * (2 : ℝ) ^ (addPipeline a b).ex'.toInt :=
+            mul_le_mul_of_nonneg_right hsmall hp.le
+          _ ≤ _ := by nlinarith only [hbig, hp]
       · rw [hzr, hmn]
         have hpge4 : (2 : ℝ) ^ (-(1073 : ℤ)) ≤ (2 : ℝ) ^ (addPipeline a b).ex'.toInt := by
           refine zpow_le_zpow_right₀ (by norm_num) ?_
@@ -444,7 +450,7 @@ private theorem addPipeline_pre_round (a b : FPR) (ha : FPR.IsNormal a) (hb : FP
           have h55 : (2 : ℝ) ^ (55 : ℕ) = 2 * (2 : ℝ) ^ (54 : ℕ) := by norm_num
           have h52 : (2 : ℝ) ^ (52 : ℕ) = (2 : ℝ) ^ (54 : ℕ) / 4 := by norm_num
           have h54 : (1 : ℝ) ≤ (2 : ℝ) ^ (54 : ℕ) := by norm_num
-          nlinarith
+          nlinarith only [hX55, hYplt, hal.2, h55, h52, h54]
         have hlow : (2 : ℝ) ^ (-(1022 : ℤ)) ≤ (2 : ℝ) ^ (54 : ℕ) * (2 : ℝ) ^ (-(1073 : ℤ)) := by
           rw [two_pow_mul_zpow]
           exact zpow_le_zpow_right₀ (by norm_num) (by norm_num)
@@ -674,7 +680,7 @@ private theorem add_error_combine {R W V S δ : ℝ} (hδ : 0 < δ) (hδ16 : δ 
     mul_le_mul_of_nonneg_left hWS (by linarith)
   have hb2 : δ * |V| ≤ δ * ((1 + 2 / 3 * δ) * |S|) :=
     mul_le_mul_of_nonneg_left hVS hδ.le
-  nlinarith [hkey, hb1, hb2, htri, h1, h2, h3]
+  linarith only [hkey, hb1, hb2, htri, h1, h2, h3]
 
 /-! ## (XII) The exact-cancellation branch -/
 

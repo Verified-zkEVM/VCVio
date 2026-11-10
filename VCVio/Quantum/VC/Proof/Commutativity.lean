@@ -232,45 +232,6 @@ end sizeInvariant
 
 /-! ## Block decomposition of the commutation defect -/
 
-/-- A block-diagonal matrix has norm at most `r` when every block does. -/
-theorem _root_.Matrix.l2_opNorm_blockDiagonal_le {o m : Type*} [Fintype o] [DecidableEq o]
-    [Fintype m] [DecidableEq m] (F : o → Matrix m m ℂ) {r : ℝ} (hr : 0 ≤ r)
-    (h : ∀ c, ‖F c‖ ≤ r) : ‖blockDiagonal F‖ ≤ r := by
-  have he : blockDiagonal F = (∑ c, single c c (1 : ℂ) ⊗ₖ F c).submatrix
-      (Equiv.prodComm m o) (Equiv.prodComm m o) := by
-    ext ⟨a, c⟩ ⟨b, c'⟩
-    rw [submatrix_apply, Equiv.prodComm_apply, Equiv.prodComm_apply, Prod.swap_prod_mk,
-      Prod.swap_prod_mk, sum_single_kronecker_apply, blockDiagonal_apply]
-  rw [he, l2_opNorm_submatrix_equiv, l2_opNorm_sum_single_kronecker]
-  exact Real.iSup_le h hr
-
-/-- **The trace bound through a block-diagonal operator on a projected state.** If `C Q` agrees
-with `(⊕_c F c) Q` after reindexing by `e`, every block has `‖F c‖² ≤ r`, and the positive
-semidefinite `σ` is fixed by conjugation with `Q`, then `tr(C σ C†) ≤ r tr σ`. -/
-theorem re_trace_mul_mul_conjTranspose_le_of_blockDiagonal {N B o : Type*} [Fintype N]
-    [Fintype B] [DecidableEq B] [Finite o] [DecidableEq o] (e : N ≃ B × o)
-    (F : o → Matrix B B ℂ) {r : ℝ} (hr : 0 ≤ r) (hF : ∀ c, ‖F c‖ ^ 2 ≤ r)
-    {C Q σ : Matrix N N ℂ} (hC : C * Q = (blockDiagonal F).submatrix e e * Q)
-    (hσ : MatrixMap.conj Q σ = σ) (hpsd : σ.PosSemidef) :
-    (C * σ * Cᴴ).trace.re ≤ r * σ.trace.re := by
-  classical
-  have := Fintype.ofFinite o
-  have key : C * σ * Cᴴ = MatrixMap.conj ((blockDiagonal F).submatrix e e) σ := by
-    calc _ = MatrixMap.conj C (MatrixMap.conj Q σ) := by rw [hσ]; rfl
-      _ = MatrixMap.conj ((blockDiagonal F).submatrix e e * Q) σ := by
-        rw [← hC, MatrixMap.conj_mul]; rfl
-      _ = _ := by rw [MatrixMap.conj_mul, LinearMap.comp_apply, hσ]
-  have hb : ∀ c, ‖F c‖ ≤ √r := fun c ↦ (le_abs_self _).trans (Real.abs_le_sqrt (hF c))
-  have hn : ‖(blockDiagonal F).submatrix e e‖ ^ 2 ≤ r := by
-    rw [l2_opNorm_submatrix_equiv]
-    calc ‖blockDiagonal F‖ ^ 2 ≤ √r ^ 2 :=
-          pow_le_pow_left₀ (norm_nonneg _)
-            (l2_opNorm_blockDiagonal_le F (Real.sqrt_nonneg r) hb) 2
-      _ = r := Real.sq_sqrt hr
-  rw [key]
-  exact (MatrixMap.re_trace_conj_le _ hpsd).trans
-    (mul_le_mul_of_nonneg_right hn hpsd.trace_re_nonneg)
-
 section blocks
 
 variable {ι XY Tc Z Env DB : Type*} [DecidableEq ι]
@@ -904,7 +865,7 @@ theorem comBound_compressedVCOracle [UniformAnswerMeasure (X →ₒ Y)] :
       have hpsd : (σf a).PosSemidef := SubState.posSemidef _
       rw [← ENNReal.ofReal_mul (by positivity)]
       exact ENNReal.ofReal_le_ofReal
-        (re_trace_mul_mul_conjTranspose_le_of_blockDiagonal
+        (Matrix.re_trace_mul_mul_conjTranspose_le_of_blockDiagonal
           (N := ComOut k X Y Cm Z Env × (compressedVCOracle k X Y).S) e _ (by positivity) hb hC hσ
           hpsd)
     calc comError (compressedVCOracle k X Y) ME code i x ρ

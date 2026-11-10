@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.DSubInstrument.Observe
 public import VCVio.Quantum.Oracle.Compressed.Equivalence
 
 /-!
@@ -43,48 +44,6 @@ open scoped Kronecker
 universe u v w
 
 namespace Quantum
-
-/-! ## Marginals of outcome measures -/
-
-namespace SubInstrument
-
-variable {A B C : Type*} [Fintype A] [Fintype B] [Fintype C] {α β : Type*}
-
-/-- Relabelling the outcomes of a subinstrument along a measurable map pushes its outcome
-measure forward along the map. -/
-theorem outcomeMeasure_map_eq_map [MeasurableSpace α] [MeasurableSpace β] {f : α → β}
-    (hf : Measurable f) (p : SubInstrument A B α) (ρ : SubState A) :
-    (p.map f).outcomeMeasure ρ = (p.outcomeMeasure ρ).map f := by
-  rw [DSubInstrument.outcomeMeasure_map, DSubInstrument.outcomeMeasure_eq_sum,
-    Measure.map_sum hf.aemeasurable]
-  refine congrArg Measure.sum (funext fun a ↦ ?_)
-  rw [Measure.map_smul, Measure.map_dirac' hf]
-  exact hf.aemeasurable
-
-/-- Tagging every outcome of a lossless subinstrument with `a` and forgetting the outcome leaves
-the point mass at `a` with the weight of the input. -/
-theorem map_fst_outcomeMeasure_map_prodMk [MeasurableSpace α] [MeasurableSpace β]
-    {p : SubInstrument A B β} (hp : p.Lossless) (a : α) (ρ : SubState A) :
-    ((p.map (Prod.mk a)).outcomeMeasure ρ).map Prod.fst =
-      ENNReal.ofReal ρ.matrix.trace.re • Measure.dirac a := by
-  rw [outcomeMeasure_map_eq_map measurable_prodMk_left,
-    Measure.map_map measurable_fst measurable_prodMk_left,
-    show (Prod.fst ∘ Prod.mk a : β → α) = fun _ ↦ a from rfl, Measure.map_const,
-    hp.outcomeMeasure_apply_univ]
-
-/-- If after each outcome `a` of `p` a lossless subinstrument `k a` is run and `a` is reported
-together with its outcome, the first component of the joint outcome has the law of `p`. -/
-theorem map_fst_outcomeMeasure_bind_map_prodMk [MeasurableSpace α] [MeasurableSpace β]
-    (p : SubInstrument A B α) {k : α → SubInstrument B C β} (hk : ∀ a, (k a).Lossless)
-    (ρ : SubState A) :
-    ((p.bind fun a ↦ (k a).map (Prod.mk a)).outcomeMeasure ρ).map Prod.fst =
-      p.outcomeMeasure ρ := by
-  rw [DSubInstrument.outcomeMeasure_bind, Measure.map_sum measurable_fst.aemeasurable,
-    DSubInstrument.outcomeMeasure_eq_sum]
-  refine congrArg Measure.sum (funext fun a ↦ ?_)
-  rw [map_fst_outcomeMeasure_map_prodMk (hk a), DSubInstrument.matrix_post]
-
-end SubInstrument
 
 /-! ## The database measurement -/
 

@@ -112,13 +112,13 @@ def ExtractorState.checkpointRoots [DecidableEq Y]
   (state.checkpoints.map fun checkpoint => checkpoint.2.root).toFinset
 
 /-- The two ordered child labels exposed by a finite set of complete query keys. -/
-def queryChildren [DecidableEq Query] [DecidableEq Y]
+def queryChildren [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y) (keys : Finset Query) : Finset Y :=
   keys.image (fun query => (view.input query).1) ∪
     keys.image (fun query => (view.input query).2)
 
 /-- Finite semantic support supplied by checkpoint roots and the children of populated keys. -/
-def ExtractorState.targetSupport [DecidableEq Query] [DecidableEq Y]
+def ExtractorState.targetSupport [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y) (keys : Finset Query)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config) : Finset Y :=
@@ -152,7 +152,7 @@ theorem ExtractorState.checkpointRoots_card_le [DecidableEq Y]
     _ = state.checkpoints.length := by simp
 
 /-- Complete query keys contribute at most two child labels each. -/
-theorem queryChildren_card_le [DecidableEq Query] [DecidableEq Y]
+theorem queryChildren_card_le [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y) (keys : Finset Query) :
     (queryChildren view keys).card ≤ 2 * keys.card := by
   calc
@@ -166,7 +166,7 @@ theorem queryChildren_card_le [DecidableEq Query] [DecidableEq Y]
 
 /-- The cache-backed finite support has size at most two children per populated query key plus
 one root per checkpoint. -/
-theorem ExtractorState.targetSupport_card_le [DecidableEq Query] [DecidableEq Y]
+theorem ExtractorState.targetSupport_card_le [DecidableEq Y]
     (view : MerkleTreeExtractor.QueryView Query Address Y) (keys : Finset Query)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config) :
