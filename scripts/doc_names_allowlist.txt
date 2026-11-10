@@ -3,7 +3,6 @@
 # obsolete and fails the check, so this list only shrinks.
 AlternatingFaceMapComplex.obj # Mathlib example in the module-system guide, outside the import closure
 clean_build # workflow input of the scheduled build
-complexity_backend # CI job name
 CURRENT_YEAR # placeholder in the header template of CONTRIBUTING.md
 hss_nf # retired argument name of the Fiat–Shamir extraction bounds
 isPPT # parameter name of the asynchronous UC security notions

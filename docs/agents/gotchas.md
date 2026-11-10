@@ -305,7 +305,7 @@ specific submodule it actually uses.
 
 **Allowed umbrellas** (strictly top-level roots only): root imports such as
 `VCVio.lean`, `ToMathlib.lean`, `Extern.lean`, `HashSig.lean`, `Examples.lean`,
-`LatticeCrypto.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
+`LatticeCrypto.lean`, `VCVioTest.lean`, and
 `LatticeCryptoTest.lean`.
 When a new top-level root is added, extend this list alongside it.
 
@@ -388,7 +388,7 @@ and remaining migrations by their effect on callers.
 
 This regenerates the active module root files covered by the build import check:
 `ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
-`HashSig.lean`, `Examples.lean`, `VCVioWidgets.lean`, and `VCVioTest.lean`.
+`HashSig.lean`, `Examples.lean`, and `VCVioTest.lean`.
 CI runs `scripts/check-imports.sh`, which regenerates the umbrellas and fails if any differs
 from the committed file. The `Interop/` package lists its library roots in `Interop/lakefile.toml`
 and has no generated umbrella.

@@ -53,7 +53,7 @@ script lint (args) do
     IO.eprintln s!"lake lint: {uvMissingMessage}"
     return 1
   let root ← getRootPackage
-  let libraries := (root.defaultTargets.push `VCVioCslib).filterMap fun library =>
+  let libraries := root.defaultTargets.filterMap fun library =>
     (root.findLeanLib? library).map fun _ => library.toString
   let child ← IO.Process.spawn {
     cmd := "lake"
@@ -85,16 +85,12 @@ observation, pure states and oracle unitaries), shared with CatCrypt-core.
 -/
 require QuantumFoundations from git
   "https://github.com/lean-crypto-foundations/QuantumFoundations" @
-  "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac"
+  "26352070f9ccf53f38a6bae6b8dcd908c9eeefd5"
 
 require "leanprover-community" / "mathlib" @ git "v4.35.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
-
-/-- Optional cslib-backed non-uniform complexity adapters. Kept outside the
-default `VCVio` umbrella so core VCVio remains backend-neutral. -/
-lean_lib VCVioCslib
 
 /-- Native FFI surface: `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA,
 Falcon) and every module whose transitive imports reach them. Isolated here so
@@ -111,10 +107,9 @@ Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but no
 `VCVio`/`ToMathlib`/`Extern`/`Interop` may import it. -/
 @[default_target] lean_lib HashSig
 
-/-- Example constructions of cryptographic primitives. -/
+/-- Example constructions of cryptographic primitives, with the proof widgets they display
+(`Examples/Widgets/`). -/
 @[default_target] lean_lib Examples
-/-- Optional proof widget experiments and visualizations. -/
-@[default_target] lean_lib VCVioWidgets
 /-- Separate section of the project for things that should be ported. -/
 @[default_target] lean_lib ToMathlib
 
