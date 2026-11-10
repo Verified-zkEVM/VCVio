@@ -36,7 +36,7 @@ theorem attempt_twoReruns :
     fixedTape.attempt (fun _ : Unit => ($[0..1] : ProbComp (Fin 2))) twoReruns =
       (fun b => ((b, b), 2)) <$> ($[0..1] : ProbComp (Fin 2)) := by
   unfold ResetPolicy.attempt fixedTape ResetPolicy.rerun twoReruns
-  simp [simulateQ_bind, QueryImpl.add_apply_inr, StateT.run_bind,
+  simp [QueryImpl.add_apply_inr, StateT.run_bind,
     FixedTape.answer, FixedTape.advance,
     uniformSample, ProbComp.uniformFin_def,
     map_eq_bind_pure_comp, bind_assoc]
@@ -78,7 +78,7 @@ theorem attempt_twoInputs :
     fixedTape.attempt flipRun twoInputs =
       (fun b => ((b, Fin.rev b), 2)) <$> ($[0..1] : ProbComp (Fin 2)) := by
   unfold ResetPolicy.attempt fixedTape ResetPolicy.rerun twoInputs flipRun
-  simp [simulateQ_bind, QueryImpl.add_apply_inr, StateT.run_bind,
+  simp [QueryImpl.add_apply_inr, StateT.run_bind,
     FixedTape.answer, FixedTape.advance,
     uniformSample, ProbComp.uniformFin_def,
     map_eq_bind_pure_comp, bind_assoc]
@@ -98,7 +98,7 @@ theorem attempt_twoCoins :
           let b ← ($[0..1] : ProbComp (Fin 2))
           pure ((a, b), 0)) := by
   unfold ResetPolicy.attempt ResetPolicy.rerun twoCoins
-  simp [simulateQ_bind, QueryImpl.add_apply_inl, StateT.run_bind, coins,
+  simp [QueryImpl.add_apply_inl, StateT.run_bind, coins,
     map_eq_bind_pure_comp, bind_assoc]
   rfl
 
