@@ -86,33 +86,6 @@ theorem Repr.eval_append (r : Repr F) (tbl : List (Repr F × G)) (e : Repr F × 
 
 end Evaluation
 
-section Lookups
-
-variable {F S : Type} [Zero F] {G : S → Type} [∀ s, Zero (G s)]
-
-/-- A lookup outside the table returns the zero pair. -/
-theorem lookup_eq_zero (tbl : Tbl (fun s => Repr F × G s)) (s : S) (h : Handle)
-    (hh : (tbl s).length ≤ h) : lookup tbl s h = 0 := List.getD_eq_default _ _ hh
-
-variable [DecidableEq S]
-
-/-- Appending preserves lookups at every existing handle. -/
-theorem lookup_append_old (tbl : Tbl (fun s => Repr F × G s)) (s : S)
-    (e : Repr F × G s) (t : S) (h : Handle) (hh : h < (tbl t).length) :
-    lookup (GroupModel.append tbl s e) t h = lookup tbl t h := by
-  by_cases ht : t = s
-  · subst t
-    simp only [lookup, GroupModel.append, Function.update_self]
-    exact List.getD_append _ _ _ _ hh
-  · simp [lookup, GroupModel.append, Function.update_of_ne ht]
-
-/-- Appending places the new element at the fresh handle. -/
-theorem lookup_append_fresh (tbl : Tbl (fun s => Repr F × G s)) (s : S)
-    (e : Repr F × G s) : lookup (GroupModel.append tbl s e) s (tbl s).length = e := by
-  simp [lookup, GroupModel.append]
-
-end Lookups
-
 section Invariant
 
 variable {F S : Type} [CommSemiring F] {G : S → Type}
