@@ -24,21 +24,22 @@ namespace GroupModel
 open Interaction
 
 variable {S F Input Query Result : Type} {G E : S → Type} {Reply : Query → Type}
-    [CommSemiring F] [DecidableEq F] [FinEnum S]
+    [CommSemiring F] [DecidableEq F] [DecidableEq S] [FinEnum S]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)] [∀ s, DecidableEq (G s)]
     {N : Type → Type} [Monad N] [LawfulMonad N]
 
 /-- Compiling and explaining a certified adversary preserves its output values and effects. -/
 theorem toExplained_ofExplained_run
     (B : Interaction.Adversary F G Input (CoinQuery Query) (CoinReply Reply) Result)
-    (M : Model F (discreteSig S) G) (enc : (s : S) → G s → E s)
+    (enc : (s : S) → G s → E s)
     (dec : (s : S) → E s → G s) (hdec : ∀ s g, dec s (enc s g) = g)
     (random : QueryImpl unifSpec N) (game : QueryImpl (plainSpec G Query Reply) N)
     (input : Message Input G) :
     (fun z => z.1.value) <$>
         (toExplained (ofExplained B dec) enc).run (withCoins random game) input =
       (fun z => z.1.value) <$> B.run (withCoins random game) input := by
-  rw [toExplained_run (M := M), ofExplained_run M enc random game B dec hdec]
+  rw [toExplained_run (M := Model.discrete G),
+    ofExplained_run (Model.discrete G) enc random game B dec hdec]
 
 /-- Explaining and compiling a handle adversary preserves its final read-back values and effects. -/
 theorem ofExplained_toExplained_run
