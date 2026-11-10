@@ -63,6 +63,18 @@ theorem pushGroups_map (φ : (s : S) → G s → W s) (groups : Groups G) (tbl :
     let (handles, tbl') := pushGroups reply.groups tbl
     pure (⟨reply.data, handles⟩, tbl')
 
+/-- Every reachable step of a lifted game extends the table: it only appends the reply's group
+values. The game may run in any lawful monad whose support is lawful. -/
+theorem liftGame_extends [∀ s, Zero (G s)] {Query : Type} {Reply : Query → Type}
+    {m : Type → Type} [Monad m] [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m]
+    (impl : QueryImpl (plainSpec G Query Reply) m) (q : Message Query (fun _ : S => Handle))
+    (tbl : Tbl G) (z : (handleSpec (S := S) Query Reply).Range q × Tbl G)
+    (hz : z ∈ support ((liftGame impl q).run tbl)) : Tbl.Extends tbl z.2 := by
+  simp only [liftGame, StateT.run, MonadAttach.mem_support] at hz
+  obtain ⟨r, -, hr⟩ := LawfulMonadAttach.canReturn_bind_imp' hz
+  obtain rfl := LawfulMonadAttach.eq_of_canReturn_pure hr
+  exact fun s => List.prefix_append _ _
+
 /-- Lift the shared randomness handler without changing the handle table. -/
 abbrev coinImpl {N : Type → Type} [Monad N] (random : QueryImpl unifSpec N) :
     QueryImpl unifSpec (StateT (Tbl G) N) :=
@@ -96,6 +108,30 @@ abbrev HandleAdversary (F : Type) (σ : Sig S) (E : S → Type)
     (input : Message Input G) : N (Message Result (fun _ : S => Handle) × Tbl G) :=
   GroupModel.run M (fun _ => id) (encImpl (m := N) enc + (coinImpl (G := G) random + liftGame impl))
     (A ⟨input.data, fun s => List.range (input.groups s).length⟩) input.groups
+
+/-- A handle adversary's final table extends its input table: encodings and coins leave the
+table unchanged, and the lifted game only appends. -/
+theorem HandleAdversary.run_extends {F : Type} [CommSemiring F] [DecidableEq S]
+    {σ : Sig S} [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)]
+    [∀ s, DecidableEq (G s)] {Input Query Result : Type} {Reply : Query → Type}
+    (A : HandleAdversary F σ E Input Query Reply Result) (M : Model F σ G)
+    (enc : (s : S) → G s → E s) {N : Type → Type} [Monad N] [LawfulMonad N] [MonadAttach N]
+    [LawfulMonadAttach N] (random : QueryImpl unifSpec N)
+    (impl : QueryImpl (plainSpec G Query Reply) N) (input : Message Input G)
+    (z : Message Result (fun _ : S => Handle) × Tbl G)
+    (hz : z ∈ support (A.run M enc random impl input)) : Tbl.Extends input.groups z.2 := by
+  refine GroupModel.run_extends M (fun _ => id) _ ?_ _ _ z hz
+  rintro (q | q | q) tbl w hw
+  · simp only [QueryImpl.add_apply_inl, MonadAttach.mem_support] at hw
+    rw [encImpl_apply] at hw
+    obtain rfl := LawfulMonadAttach.eq_of_canReturn_pure hw
+    exact Tbl.Extends.refl tbl
+  · simp only [QueryImpl.add_apply_inr, QueryImpl.add_apply_inl, MonadAttach.mem_support] at hw
+    rw [coinImpl_apply] at hw
+    obtain ⟨x, -, rfl⟩ := LawfulMonadAttach.canReturn_map_imp' hw
+    exact Tbl.Extends.refl tbl
+  · simp only [QueryImpl.add_apply_inr] at hw
+    exact liftGame_extends impl q tbl w hw
 
 /-- Include a generic computation by granting it an additional encoding oracle. -/
 @[expose] def toAlgebraic {F : Type} {σ : Sig S} {ι : Type} {Γ : OracleSpec ι} {α : Type}
