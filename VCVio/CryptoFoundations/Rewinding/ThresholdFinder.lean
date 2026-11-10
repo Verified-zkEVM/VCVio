@@ -202,13 +202,4 @@ theorem isTreeFinder_thresholdFinder {n : ℕ} (C : Fin n → Type)
       _ = _ := add_comm _ _
   cost := expectedCalls_thresholdFinder C k
 
-/-- A threshold tree finder exists uniformly over all Boolean acceptance functions. Its
-witness is the named computable `thresholdFinder`. -/
-theorem exists_thresholdFinder {n : ℕ} (C : Fin n → Type)
-    [∀ i, Fintype (C i)] [∀ i, SampleableType (C i)] [∀ i, DecidableEq (C i)]
-    (k : Fin n → ℕ) (hk : ∀ i, 1 ≤ k i ∧ k i ≤ Fintype.card (C i)) :
-    ∃ find, IsTreeFinder (C := C) k (fun _ ch => Function.Injective ch) find
-      (thresholdError C k) (∏ i, (k i : ℝ≥0∞)) :=
-  ⟨thresholdFinder C k, isTreeFinder_thresholdFinder C k hk⟩
-
 end Rewinding
