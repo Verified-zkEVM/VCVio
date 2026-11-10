@@ -6,15 +6,27 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.GroupModel.Coins
+public import Mathlib.Data.FinEnum
 
 /-!
-Realizing certified explanations with handles
+# Realizing certified explanations with handles
+
+A certified algebraic adversary in the sense of Fuchsbauer, Kiltz and Loss sends each group
+element together with its coefficients over the elements it has received. `ofExplained` turns
+such an adversary into a handle adversary that rebuilds each element from its coefficients with
+`smul` and `add` queries, and `ofExplained_run` shows that reading back the handle run gives the
+certified run exactly.
 
 The received-handle invariant includes bounds as well as read-back equality. Bounds ensure
 that appending to a table preserves the meaning of every received handle.
 
-Sortwise computations use `Finset.univ.toList` from the supplied `Fintype` instance. This fixed
-finite enumeration sequences encoding and group queries, including for dependent group types.
+Sortwise computations visit the sorts in the order `FinEnum.toList S`. This fixed enumeration
+sequences encoding and group queries, including for dependent group types.
+
+## References
+
+* G. Fuchsbauer, E. Kiltz, J. Loss, *The Algebraic Group Model and its Applications*,
+  CRYPTO 2018.
 -/
 
 public section
@@ -119,42 +131,40 @@ private def sortMap [DecidableEq S] {m : Type → Type} [Monad m] {A : S → Typ
       let rest ← sortMap f ss
       pure (Function.update rest s xs)
 
-private noncomputable def decodeGroups [Fintype S] [DecidableEq S] (dec : (s : S) → E s → G s)
+private def decodeGroups [FinEnum S] (dec : (s : S) → E s → G s)
     (handles : Groups (fun _ : S => Handle)) : OracleComp (Target F S E Query Reply) (Groups G) :=
   sortMap (fun s => (handles s).mapM fun h => do
     let e ← encodingQ s h
-    pure (dec s e)) Finset.univ.toList
+    pure (dec s e)) (FinEnum.toList S)
 
-private noncomputable def buildVectorAux [Zero F] (s : S) : List F → List Handle →
-    OracleComp (Target F S E Query Reply) (Option Handle) := by
-  classical
-  exact fun cs hs => match cs, hs with
-    | c :: cs, h :: hs =>
-        if c = 0 then buildVectorAux s cs hs else do
-          let a ← smulQ s c h
-          let rest ← buildVectorAux s cs hs
-          match rest with
-          | none => pure (some a)
-          | some b => do
-              let sum ← addQ s a b
-              pure (some sum)
-    | _, _ => pure none
+private def buildVectorAux [Zero F] [DecidableEq F] (s : S) : List F → List Handle →
+    OracleComp (Target F S E Query Reply) (Option Handle)
+  | c :: cs, h :: hs =>
+      if c = 0 then buildVectorAux s cs hs else do
+        let a ← smulQ s c h
+        let rest ← buildVectorAux s cs hs
+        match rest with
+        | none => pure (some a)
+        | some b => do
+            let sum ← addQ s a b
+            pure (some sum)
+  | _, _ => pure none
 
-private noncomputable def buildVector [Zero F] (s : S) (cs : List F) (hs : List Handle) :
+private def buildVector [Zero F] [DecidableEq F] (s : S) (cs : List F) (hs : List Handle) :
     OracleComp (Target F S E Query Reply) Handle := do
   let result ← buildVectorAux s cs hs
   match result with
   | some h => pure h
   | none => smulQ s 0 0
 
-private noncomputable def buildMessage [Zero F] [Fintype S] [DecidableEq S] {Data : Type}
+private def buildMessage [Zero F] [DecidableEq F] [FinEnum S] {Data : Type}
     (handles : Groups (fun _ : S => Handle)) (out : Explained F Data G) :
     OracleComp (Target F S E Query Reply) (Message Data (fun _ : S => Handle)) := do
   let groups ← sortMap (fun s => (out.coefficients s).mapM fun cs =>
-    buildVector s cs (handles s)) Finset.univ.toList
+    buildVector s cs (handles s)) (FinEnum.toList S)
   pure ⟨out.value.data, groups⟩
 
-private noncomputable def compile [Zero F] [Fintype S] [DecidableEq S]
+private def compile [Zero F] [DecidableEq F] [FinEnum S]
     (dec : (s : S) → E s → G s)
     (program : OracleComp (explainedSpec F G (CoinQuery Query) (CoinReply Reply))
       (Explained F Result G)) :
@@ -176,12 +186,12 @@ private noncomputable def compile [Zero F] [Fintype S] [DecidableEq S]
           next ⟨coin, fun _ => []⟩ handles)
         q.value.data next)
 
-private theorem compile_pure [Zero F] [Fintype S] [DecidableEq S]
+private theorem compile_pure [Zero F] [DecidableEq F] [FinEnum S]
     (dec : (s : S) → E s → G s) (out : Explained F Result G)
     (hs : Groups (fun _ : S => Handle)) :
     compile (Query := Query) (Reply := Reply) dec (pure out) hs = buildMessage hs out := rfl
 
-private theorem compile_coin [Zero F] [Fintype S] [DecidableEq S]
+private theorem compile_coin [Zero F] [DecidableEq F] [FinEnum S]
     (dec : (s : S) → E s → G s) (n : ℕ) (groups : Groups G)
     (coefficients : S → List (List F))
     (next : Message (Fin (n + 1)) G → OracleComp
@@ -192,7 +202,7 @@ private theorem compile_coin [Zero F] [Fintype S] [DecidableEq S]
         let coin ← coinQ n
         compile dec (next ⟨coin, fun _ => []⟩) hs) := rfl
 
-private theorem compile_request [Zero F] [Fintype S] [DecidableEq S]
+private theorem compile_request [Zero F] [DecidableEq F] [FinEnum S]
     (dec : (s : S) → E s → G s) (q : Query) (groups : Groups G)
     (coefficients : S → List (List F))
     (next : Message (Reply q) G → OracleComp
@@ -206,13 +216,16 @@ private theorem compile_request [Zero F] [Fintype S] [DecidableEq S]
         let groups ← decodeGroups dec reply.groups
         compile dec (next ⟨reply.data, groups⟩) (extend hs reply.groups)) := rfl
 
-/-- Realize certified explanations with module operations on received handles.
+/-- Realize a certified algebraic adversary (Fuchsbauer, Kiltz and Loss 2018) with module
+operations on received handles.
 
-Encoding queries recover received values, private coins use `unifSpec`, and each nonzero
-coefficient uses one scalar multiplication and at most one addition. An all-zero vector uses
-one multiplication by zero. The sort order is the supplied `Fintype` enumeration. -/
-noncomputable def ofExplained [Zero F] [∀ s, AddMonoid (G s)]
-    [∀ s, SMul F (G s)] [Fintype S] [DecidableEq S]
+Encoding queries recover received values and private coins use `unifSpec`. Each outgoing
+element is built from its coefficient vector: every nonzero coefficient becomes a `smul` of the
+corresponding received handle, added to the element built from the remaining coefficients, and
+an all-zero vector becomes one `smul` by zero. Sorts are visited in the order
+`FinEnum.toList S`. -/
+def ofExplained [Zero F] [DecidableEq F] [∀ s, AddMonoid (G s)]
+    [∀ s, SMul F (G s)] [FinEnum S]
     (B : Interaction.Adversary F G Input (CoinQuery Query) (CoinReply Reply) Result)
     (dec : (s : S) → E s → G s) :
     HandleAdversary F (discreteSig S) E Input Query Reply Result := fun input => do
@@ -249,11 +262,15 @@ private theorem run_certified {N : Type → Type} [Monad N]
 
 section Semantics
 
-variable [CommSemiring F] [DecidableEq S]
+variable [CommSemiring F]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)] [∀ s, DecidableEq (G s)]
     {N : Type → Type} [Monad N] [LawfulMonad N]
     (M : Model F (discreteSig S) G) (enc : (s : S) → G s → E s)
     (random : QueryImpl unifSpec N) (game : QueryImpl (plainSpec G Query Reply) N)
+
+section
+
+variable [DecidableEq S]
 
 private abbrev handler : QueryImpl (Target F S E Query Reply) (StateT (Tbl G) N) :=
   impl M (fun _ => id) N + (encImpl (m := N) enc + (coinImpl (G := G) random + liftGame game))
@@ -287,7 +304,7 @@ private theorem run_game (q : Message Query (fun _ : S => Handle)) (tbl : Tbl G)
   exact congrArg (fun st : StateT (Tbl G) N (Message (Reply q.data) (fun _ : S => Handle)) =>
     st.run tbl) (simulateQ_spec_query (handler M enc random game) (.inr (.inr (.inr q))))
 
-private theorem run_buildVectorAux (s : S) (cs : List F) (hs : List Handle)
+private theorem run_buildVectorAux [DecidableEq F] (s : S) (cs : List F) (hs : List Handle)
     (gs : List (G s)) (tbl : Tbl G)
     (hr : List.Forall₂ (fun h g => h < (tbl s).length ∧ lookup tbl s h = g) hs gs)
     (hlen : cs.length = gs.length) :
@@ -340,7 +357,7 @@ private theorem run_buildVectorAux (s : S) (cs : List F) (hs : List Handle)
                   exact ⟨hf.1, by
                     exact hf.2.trans (by rw [ha₂.2, ha.2, hh.2, hv.2, evaluate_cons])⟩
 
-private theorem run_buildVector (s : S) (cs : List F) (hs : List Handle)
+private theorem run_buildVector [DecidableEq F] (s : S) (cs : List F) (hs : List Handle)
     (gs : List (G s)) (tbl : Tbl G)
     (hr : List.Forall₂ (fun h g => h < (tbl s).length ∧ lookup tbl s h = g) hs gs)
     (hlen : cs.length = gs.length) :
@@ -358,7 +375,7 @@ private theorem run_buildVector (s : S) (cs : List F) (hs : List Handle)
   | some h =>
       exact ⟨h, tbl', by simp [buildVector, simulateQ_bind, StateT.run_bind, hrun], he, hv⟩
 
-private theorem run_buildVectors (s : S) (css : List (List F)) (hs : List Handle)
+private theorem run_buildVectors [DecidableEq F] (s : S) (css : List (List F)) (hs : List Handle)
     (gs outs : List (G s)) (tbl : Tbl G)
     (hr : List.Forall₂ (fun h g => h < (tbl s).length ∧ lookup tbl s h = g) hs gs)
     (hv : List.Forall₂ (fun g cs => cs.length = gs.length ∧ evaluate cs gs = g) outs css) :
@@ -404,27 +421,6 @@ private theorem run_sortMap (f : (s : S) →
           simpa using list_received_extends he₂ s hv₁
         · simpa [Function.update_of_ne hts] using hv₂ t ((List.mem_cons.mp ht).resolve_left hts)
 
-private theorem run_buildMessage [Fintype S] {Data : Type}
-    (handles : Groups (fun _ : S => Handle)) (basis : Groups G)
-    (out : Explained F Data G) (tbl : Tbl G) (hr : Received tbl handles basis)
-    (hv : out.Valid basis) :
-    ∃ msg tbl',
-      (simulateQ (handler M enc random game) (buildMessage handles out)).run tbl =
-        pure (msg, tbl') ∧ Tbl.Extends tbl tbl' ∧ lookupMessage tbl' msg = out.value := by
-  obtain ⟨hs, tbl', hrun, he, hreads⟩ := run_sortMap M enc random game
-    (fun s => (out.coefficients s).mapM fun cs => buildVector s cs (handles s))
-    out.value.groups tbl (fun s tbl' he =>
-      run_buildVectors M enc random game s (out.coefficients s) (handles s) (basis s)
-        (out.value.groups s) tbl' (received_extends hr he s) (hv s))
-    Finset.univ.toList tbl (Tbl.Extends.refl tbl)
-  refine ⟨⟨out.value.data, hs⟩, tbl', ?_, he, ?_⟩
-  · simp [buildMessage, hrun]
-  · have hh : Received tbl' hs out.value.groups := fun s => hreads s (by simp)
-    cases out with
-    | mk value coefficients =>
-      cases value
-      simp only [lookupMessage, hh.readback]
-
 private theorem run_decodeList (dec : (s : S) → E s → G s)
     (hdec : ∀ s g, dec s (enc s g) = g) (s : S) (hs : List Handle) (tbl : Tbl G) :
     (simulateQ (handler M enc random game) (hs.mapM fun h => do
@@ -463,13 +459,36 @@ private theorem run_decodeSorts (dec : (s : S) → E s → G s)
         simp
       · simp [hts]
 
-private theorem run_decodeGroups [Fintype S] (dec : (s : S) → E s → G s)
+end
+
+private theorem run_buildMessage [DecidableEq F] [FinEnum S] {Data : Type}
+    (handles : Groups (fun _ : S => Handle)) (basis : Groups G)
+    (out : Explained F Data G) (tbl : Tbl G) (hr : Received tbl handles basis)
+    (hv : out.Valid basis) :
+    ∃ msg tbl',
+      (simulateQ (handler M enc random game) (buildMessage handles out)).run tbl =
+        pure (msg, tbl') ∧ Tbl.Extends tbl tbl' ∧ lookupMessage tbl' msg = out.value := by
+  obtain ⟨hs, tbl', hrun, he, hreads⟩ := run_sortMap M enc random game
+    (fun s => (out.coefficients s).mapM fun cs => buildVector s cs (handles s))
+    out.value.groups tbl (fun s tbl' he =>
+      run_buildVectors M enc random game s (out.coefficients s) (handles s) (basis s)
+        (out.value.groups s) tbl' (received_extends hr he s) (hv s))
+    (FinEnum.toList S) tbl (Tbl.Extends.refl tbl)
+  refine ⟨⟨out.value.data, hs⟩, tbl', ?_, he, ?_⟩
+  · simp [buildMessage, hrun]
+  · have hh : Received tbl' hs out.value.groups := fun s => hreads s (FinEnum.mem_toList s)
+    cases out with
+    | mk value coefficients =>
+      cases value
+      simp only [lookupMessage, hh.readback]
+
+private theorem run_decodeGroups [FinEnum S] (dec : (s : S) → E s → G s)
     (hdec : ∀ s g, dec s (enc s g) = g) (hs : Groups (fun _ : S => Handle)) (tbl : Tbl G) :
     (simulateQ (handler M enc random game) (decodeGroups dec hs)).run tbl =
       pure ((fun s => (hs s).map (lookup tbl s)), tbl) := by
-  simpa [decodeGroups] using run_decodeSorts M enc random game dec hdec hs Finset.univ.toList tbl
+  simpa [decodeGroups] using run_decodeSorts M enc random game dec hdec hs (FinEnum.toList S) tbl
 
-private theorem run_compile [Fintype S] (dec : (s : S) → E s → G s)
+private theorem run_compile [DecidableEq F] [FinEnum S] (dec : (s : S) → E s → G s)
     (hdec : ∀ s g, dec s (enc s g) = g)
     (program : OracleComp (explainedSpec F G (CoinQuery Query) (CoinReply Reply))
       (Explained F Result G))
@@ -533,7 +552,7 @@ private theorem run_compile [Fintype S] (dec : (s : S) → E s → G s)
 
 /-- Reading back the compiled handle run gives exactly the certified run, including all
 ambient monadic effects. Decoding must be a left inverse to the supplied encoding. -/
-theorem ofExplained_run [Fintype S]
+theorem ofExplained_run [DecidableEq F] [FinEnum S]
     (B : Interaction.Adversary F G Input (CoinQuery Query) (CoinReply Reply) Result)
     (dec : (s : S) → E s → G s) (hdec : ∀ s g, dec s (enc s g) = g)
     (input : Message Input G) :

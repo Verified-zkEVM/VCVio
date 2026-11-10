@@ -24,7 +24,7 @@ namespace GroupModel
 open Interaction
 
 variable {S F Input Query Result : Type} {G E : S → Type} {Reply : Query → Type}
-    [CommSemiring F] [Fintype S] [DecidableEq S]
+    [CommSemiring F] [DecidableEq F] [FinEnum S]
     [∀ s, AddCommMonoid (G s)] [∀ s, Module F (G s)] [∀ s, DecidableEq (G s)]
     {N : Type → Type} [Monad N] [LawfulMonad N]
 
