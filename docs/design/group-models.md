@@ -200,9 +200,11 @@ computation up to the first collision. Hence for every event `E` on the output,
 
 `| Pr[run obs ∈ E] − Pr[run id ∈ E] | ≤ Pr[a collision occurs in run id]`.
 
-The intended proof instruments `impl obs` with a flag set at the first collision and applies
-`measureETVDist_simulateQ_run_le_prEvent_bad`
-(`VCVio/ProgramLogic/Relational/SimulateQ/UntilBad.lean`). It is not proved yet.
+The proof instruments `impl obs` with a flag set at the first collision and applies the
+until-bad lemmas of `VCVio/ProgramLogic/Relational/SimulateQ/UntilBad.lean`. L2 is
+`measureETVDist_run_le_collisionProb` in `Collision.lean`, for any game handler; its event form
+is `prEvent_run_le_add_collisionProb`, and `measureETVDist_runGen_le_collisionProbGen` is the
+case of a generic run.
 
 L1 gives every exact statement in this note and L2 every bound. A generic lower bound is L2 at
 `obs := eval x` with Schwartz–Zippel bounding the collision probability. An extraction argument
@@ -1334,7 +1336,9 @@ the tracking projection and `Explains` preservation in `Tracking.lean`. In parti
 `explains_of_mem_support_runTracking` remains a target. Slices 3–5 will supply the certified
 interaction interface and the T1a/T1b/T1c translations, including their exact run equalities.
 
-Everything else is a paper argument or theorem target: L2, T3/T4 (including
+L2 is proved in `Collision.lean` as `measureETVDist_run_le_collisionProb`.
+
+Everything else is a paper argument or theorem target: T3/T4 (including
 `dlogExperiment_ofGeneric_le`), T3ₛ, T5 and its cost certificate, the relation-problem bounds,
 T7/T8, S1–S3, P1–P3, restriction along a map of signatures, the target representation `ReprT`
 and `evReprT_outer`, the free and tracking models for Types 1 and 2, the accessible spans,
