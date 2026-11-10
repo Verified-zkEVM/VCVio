@@ -559,6 +559,7 @@ public import VCVio.Quantum.Oracle.Compressed.Measurement
 public import VCVio.Quantum.Oracle.Compressed.Oracle
 public import VCVio.Quantum.Oracle.Compressed.Phase
 public import VCVio.Quantum.Oracle.Compressed.ProjectorEvent
+public import VCVio.Quantum.Oracle.Compressed.QueryCache
 public import VCVio.Quantum.Oracle.Compressed.Size
 public import VCVio.Quantum.Oracle.Compressed.Truncation
 public import VCVio.Quantum.Oracle.Emulated
