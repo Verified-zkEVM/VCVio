@@ -11,8 +11,8 @@
 - `VCVio.ProgramLogic.Unary.StdDoBridge` is a narrow unary bridge for almost-sure correctness in the `.pure`
   `Std.Do` view. It is not the main engine for quantitative or relational VCGen.
 
-For continuous or otherwise non-discrete denotations, import
-`VCVio.ProgramLogic.Relational.Measure`. Its `ExpectationWP.RelWP` uses an almost-everywhere
+For continuous or otherwise non-discrete denotations, import PolyFun's
+`PolyFun.Control.Monad.Measure.Relational`. Its `ExpectationWP.RelWP` uses an almost-everywhere
 postcondition under a Mathlib `Measure.Coupling`, and `eRelWP` integrates quantitative
 post-expectations with `lintegral`. The `OracleComp` relational logic (`RelTriple`, `CouplingPost`,
 `eRelWP`) specializes these to the output measures observed in the discrete structure on each

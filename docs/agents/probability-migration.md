@@ -200,11 +200,11 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_to_nma` d
 | `ToMathlib.Probability.ProbabilityMassFunction.Lemmas` | `Mathlib.Probability.Distributions.Uniform` |
 | `VCVio.EvalDist.Defs.Basic` | `VCVio.EvalDist.Defs.Measure`, `VCVio.EvalDist.ProbabilityNotation` |
 | `VCVio.EvalDist.Defs.AlternativeMonad`, `VCVio.EvalDist.Defs.NeverFails` | `VCVio.EvalDist.Defs.Support.Failure`, `VCVio.EvalDist.ProbabilityNotation` |
-| `VCVio.EvalDist.FailureMeasure` | `VCVio.EvalDist.Defs.Measure` (`OptionT.evalDist_eq_dropNone`), `VCVio.EvalDist.WithFailure` |
-| `VCVio.EvalDist.Bool`, `VCVio.EvalDist.BitVec`, `VCVio.EvalDist.Option` | `VCVio.EvalDist.Monad.Map`; event laws live in `VCVio.EvalDist.ProbabilityNotation` |
+| `VCVio.EvalDist.FailureMeasure` | `VCVio.EvalDist.Defs.Measure` (`OptionT.evalDist_eq_dropNone`), `PolyFun.Control.Monad.Measure.WithFailure` |
+| `VCVio.EvalDist.Bool`, `VCVio.EvalDist.BitVec`, `VCVio.EvalDist.Option` | `VCVio.EvalDist.Monad.Map`; event laws live in `PolyFun.Control.Monad.Measure.Event`, and `VCVio.EvalDist.ProbabilityNotation` adds the `Pr{…}[…]` notation |
 | `VCVio.EvalDist.Fintype` | `VCVio.EvalDist.Monad.Basic` |
 | `VCVio.EvalDist.PFunctor` | `VCVio.EvalDist.PFunctorSupport` |
-| `VCVio.EvalDist.PFunctorMeasure` | `VCVio.EvalDist.PFunctorMeasure.Core` |
+| `VCVio.EvalDist.PFunctorMeasure` | `PolyFun.PFunctor.Free.Measure.EvalDist`, with `VCVio.EvalDist.Defs.Measure.Core` for `𝒟[…]` |
 | `VCVio.OracleComp.EvalDist.UniformCompatibility` | `VCVio.OracleComp.EvalDist.Measure`, `VCVio.OracleComp.EvalDist.AnswerMeasure` |
 | `VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility`, `VCVio.OracleComp.Constructions.SampleableType.NativeMeasure` | `VCVio.OracleComp.Constructions.SampleableType.Measure` |
 | `VCVio.Native` | `VCVio.Foundations` |
@@ -221,7 +221,7 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_to_nma` d
 | `VCVio.EvalDist.TVDist`, `VCVio.EvalDist.MeasureTVDist` | `VCVio.EvalDist.MeasureTVDist.Basic` (with `.Bind` and `.Event` for composition rules) |
 | `VCVio.EvalDist.TVDist.Positivity` | `VCVio.EvalDist.MeasureTVDist.Positivity` (`positivity` on `measureTVDist`) |
 | `VCVio.ProgramLogic.Relational.SimulateQ.Epsilon` | `VCVio.ProgramLogic.Relational.SimulateQ.UntilBad` |
-| `VCVio.EvalDist.Expectation`, `VCVio.EvalDist.ExpectationMeasure` | `VCVio.ProgramLogic.Unary.HoareTriple` (`wp`) or `VCVio.EvalDist.Defs.Measure.Core` (`∫⁻` laws) |
+| `VCVio.EvalDist.Expectation`, `VCVio.EvalDist.ExpectationMeasure` | `VCVio.ProgramLogic.Unary.HoareTriple` (`wp`) or `PolyFun.Control.Monad.Measure` (`∫⁻` laws) |
 | `VCVio.EvalDist.RenyiDivergence`, `ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence`, `ToMathlib.Probability.Divergence.RenyiDiscrete`, `ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym` | `ToMathlib.Probability.Divergence.Renyi` |
 | `ToMathlib.Probability.ProbabilityMassFunction.TotalVariation` | `ToMathlib.MeasureTheory.Measure.TotalVariation`; `ToMathlib.Probability.Divergence.RenyiTotalVariation` for the Rényi comparisons |
 | `VCVio.StateSeparating.Advantage` | `VCVio.StateSeparating.Advantage.Measure` |
@@ -229,13 +229,17 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_to_nma` d
 | `VCVio.EvalDist.Instances.FinRatPMF`, `ToMathlib.ProbabilityTheory.FinRatPMF.PMF` | `ToMathlib.ProbabilityTheory.FinRatPMF.Measure` |
 | `VCVio.EvalDist.Instances.ReaderT` | `VCVio.EvalDist.MeasureSemantics` (`readerTKernel`) |
 | `VCVio.EvalDist.Defs.Semantics` | `VCVio.EvalDist.MeasureSemantics` |
-| `ToMathlib.ProbabilityTheory.Coupling`, `ToMathlib.ProbabilityTheory.OptimalCoupling` | `ToMathlib.MeasureTheory.Measure.Coupling`, `ToMathlib.MeasureTheory.Measure.Coupling.Maximal` |
+| `ToMathlib.ProbabilityTheory.Coupling`, `ToMathlib.ProbabilityTheory.OptimalCoupling` | `ToCslib.MeasureTheory.Measure.Coupling`, `ToMathlib.MeasureTheory.Measure.Coupling.Maximal` |
 | `VCVio.ProgramLogic.Relational.Measure.Oracle` | `VCVio.ProgramLogic.Relational.Basic` |
 | `VCVio.ProgramLogic.Relational.SimulateQ.Basic` | `VCVio.ProgramLogic.Relational.SimulateQ.Coupling`, `VCVio.ProgramLogic.Relational.SimulateQ.UntilBad` |
 | `VCVio.ProgramLogic.Relational.WP.Coherence` | `VCVio.ProgramLogic.Relational.WP.Quantitative` |
 | `VCVio.Prelude` | the modules it re-exported, e.g. `VCVio.Prelude.Core` |
 
 A removed module may have re-exported other modules; add the imports the build then asks for.
+The modules whose declarations moved to PolyFun's measure companions remain as deprecated
+re-exports, and each deprecation warning lists the modules to import instead: the PolyFun module
+and, where the old module provided them, VCVio's notation hosts and other modules (see
+[module boundaries](module-system.md#architectural-decision)).
 The hubs `VCVio.OracleComp.EvalDist`, `VCVio.OracleComp.ProbComp`,
 `VCVio.OracleComp.Coercions.SubSpec` and `VCVio.OracleComp.Constructions.SampleableType` remain
 and import the measure semantics of their area. `import VCVio.Foundations` is an entry point for

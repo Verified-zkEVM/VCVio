@@ -62,7 +62,7 @@ needs an instance-synthesis check, not a grep.
 | `ToMathlib/General.lean:419` `BitVec.toFin_bijective` | `BitVec.toFin_injective`, `Mathlib/Data/BitVec.lean:55`; `BitVec.equivFin`, `:107` | yes | **done** (this PR) — 0 consumers |
 | `ToMathlib/General.lean:156,165` `tprod_ite_eq_apply`, `'` (+ `tsum` twins) | `tprod_ite_eq`, `tprod_ite_eq'`, `Mathlib/Topology/Algebra/InfiniteSum/Basic.lean:510,518` (both `@[simp]`, `to_additive`) | yes | **done** (this PR) — identical statements, 0 consumers |
 | `ToMathlib/General.lean:280` `Finset.image_const_univ` | `Finset.image_const`, `Mathlib/Data/Finset/Image.lean:568` (`Finset.image_const univ_nonempty b`) | yes | **done** (this PR) — 0 named consumers; it is `@[simp]`, so deletion is guarded by a full build |
-| `ToMathlib/MeasureTheory/DiscreteInstances.lean:39` `BitVec.instFinite` | `FinEnum → Fintype → Finite` | yes | **keep** — the `Finite` instance is `Prop`-valued and lets the module stand alone without importing `Mathlib.Data.FinEnum`; only its docstring changed (this PR) |
+| `ToMathlib/MeasureTheory/DiscreteInstances.lean` `BitVec.instFinite` | `FinEnum → Fintype → Finite` | yes | **done** — PolyFun declares the instance in `ToCslib/MeasureTheory/MeasurableSpace/Instances.lean:44` with the other staged measure modules (the generic measure semantics row below), still `Prop`-valued so that the module stands alone without `Mathlib.Data.FinEnum`; the VCVio module is a deprecated re-export |
 | `ToMathlib/Control/Monad/Commutative.lean:35` `Monad.Commutative`, `CommutativeAt` :26, `Set.monadComm` :196, the `Id`/`Option`/`Except`/`ReaderT` instances | `CommApplicative`, `Mathlib/Control/Basic.lean:206`; `instance : CommApplicative Set`, `Mathlib/Data/Set/Functor.lean:88` | yes | **done** (this PR) — 0 consumers outside the file; for a `LawfulMonad`, `bind_comm` follows from `CommApplicative.commutative_prod` via `seq_eq_bind_map`, and the converse constructs `CommApplicative` (both compiled during the survey). Mathlib has **no** `CommApplicative Option`/`Id`/`Except`/`ReaderT` instances at the pin (`grep instance.*CommApplicative` → `Finset`, `Set`, `Applicative.lean:74`, `FreeAbelianGroup`, `Filter`), so those four become *upstream* rows |
 | `ToMathlib/Control/WriterT.lean:130` `run_seqLeft'` | local `run_seqLeft` :83 | — | **done** (this PR) — verbatim duplicate inside the same file, 0 consumers |
 | `ToMathlib/Control/Monad/Ordered.lean:39,46` `pointwiseRelation`, `Proper` | `Pi.le_def`; `Relator.LiftFun`, `Mathlib/Logic/Relator.lean` | yes | **done** (this PR) — 0 uses, even inside the file |
@@ -81,6 +81,7 @@ needs an instance-synthesis check, not a grep.
 | `VCVio/OracleComp/QueryTracking/Structures.lean:321` `QueryCount.single i := Function.update 0 i 1` | `Pi.single i 1`, `Mathlib/Algebra/Notation/Pi/Basic.lean:30` (definitionally equal) | yes | **done** (this PR) — redefine; 50 consumers then use `Pi.single_eq_same/of_ne`, `Finset.sum_pi_single'` instead of hand case splits |
 | `VCVio/EvalDist/Defs/Support.lean:31–41` `SetM.pure_def/bind_def/run_eq` | local `SetM.run_pure/run_bind/run_map`, `ToMathlib/Data/Set/Functor.lean:36–45` | — | **done** (this PR) — two simp normal forms for one term; keep the `run_*` family |
 | `ToMathlib/Control/Monad/Indexed.lean` (whole file) | `PolyFun/Control/Monad/Indexed.lean` (verbatim copy; `ireturn`↔`ipure` only) | yes | **done** (this PR) — both declare a root-namespace `class IndexedMonad`; delete the copy, import PolyFun's from `Graded.lean` |
+| The generic measure semantics: `EvalDist/Defs/Measure/{Deterministic,ExceptT,Failure,OptionT}`, `Defs/Semantics/Core`, `EvalDist/{Lossless,WithFailure}`, `Monad/Failure`, `PFunctorMeasure/Core`, `PFunctorKernel`, `PFunctorKernelTransport`, `PFunctorPath`, `WiringKernel`, `ProgramLogic/Relational/Measure{,/Bind,/Deterministic}`, the laws in `Defs/Measure/Core`, `ProbabilityNotation` and `EvalDistEq`, and the staged `ToMathlib` measure modules (`DiscreteInstances`, `Function/AEMeasurable`, `MeasurableSpace/{Except,Option}`, `Measure/{Coupling,Coupling/Bind,Except,Option,Prop,Subprobability}`, `Probability/{UniformOn,Kernel/Subprobability}`) | PolyFun's `Measure` companions (`PolyFun/Control/Monad/Measure/`, `PolyFun/PFunctor/Free/Measure/`, `PolyFun/PFunctor/Wiring/Measure.lean`) and its staging in `ToCslib/MeasureTheory/` and `ToCslib/Probability/`, under the same names and namespaces | yes | **done** — the VCVio modules are deprecated re-exports of their PolyFun homes; VCVio keeps the notation, sampling, oracle answer measures and the `OracleComp` instances |
 | `ToMathlib/Control/WriterT.lean:30` `LawfulAppend` | `Std.Associative (·++·)` + `Std.LawfulIdentity (·++·) ∅`, `Init/Core.lean:2478,2542`; `List` instances `Init/Data/List/Basic.lean:627,647` (re-proved locally at `:51`) | yes | **deferred** — 49 sites in 8 files, the reverse associativity orientation, `grind =` attributes, and Mathlib's `LawfulMonad (WriterT ω M)` only for `[Monoid ω]`: over 100 lines of churn, so recorded rather than done |
 | `LatticeCrypto/Ring/Norms.lean:74` `centeredRepr` + six restated lemmas `:78–136` | `ZMod.valMinAbs`, `Mathlib/Data/ZMod/ValMinAbs.lean:23–29`; `natAbs_valMinAbs_le`, `natAbs_valMinAbs_neg`, `coe_valMinAbs`, `valMinAbs_mem_Ioc`, `valMinAbs_spec` | yes | **done** (#634) — `centeredRepr` is `ZMod.valMinAbs` by definition and its lemmas delegate |
 | `LatticeCrypto/Ring/Core.lean:204–210` `polyCoeffFinsetSum` | `Polynomial.finsetSum_coeff`, `Mathlib/Algebra/Polynomial/Coeff.lean` | yes | **done** (#634) — the coefficient proofs use `Polynomial.finsetSum_coeff` |
@@ -258,8 +259,8 @@ discrete `SPMF`/`Pr[…]` layer has since been removed, so its items below are s
 
 ### Probability and measure theory
 
-**Correspondence.** `𝒟[mx]` is a `Measure`; the local `IsSubprobabilityMeasure`
-(`V:ToMathlib/MeasureTheory/Measure/Subprobability.lean:37`) has no upstream twin
+**Correspondence.** `𝒟[mx]` is a `Measure`; the `IsSubprobabilityMeasure` that PolyFun stages
+in `ToCslib/MeasureTheory/Measure/Subprobability.lean` has no Mathlib twin
 (`grep -rni 'subprobability\|SubMarkov'` → 0; `IsZeroOrProbabilityMeasure` is incomparable).
 `evalSPMF` takes values in `OptionT PMF`; on the discrete compatibility interpretation,
 `probOutput` is `μ {x}` and `probEvent` is `μ {x | p x}`. Also,
@@ -339,8 +340,8 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
    (`Mathlib/MeasureTheory/Measure/Restrict.lean`), via `Option.measurableEmbedding_some`.
    The remaining work here is to move
    these generally useful constructions upstream and then delete the local copies.
-7. Hypothesis hygiene: bind laws (`V:VCVio/EvalDist/Defs/Measure.lean:85`,
-   `V:VCVio/EvalDist/PFunctorMeasure/Core.lean:133`) ask `Measurable`, Mathlib's
+7. Hypothesis hygiene: bind laws (`V:VCVio/EvalDist/Defs/Measure.lean:85`, and `denote_bind` in
+   PolyFun's `PolyFun/PFunctor/Free/Measure.lean:259`) ask `Measurable`, Mathlib's
    `bind_apply`/`bind_bind`/`lintegral_bind` ask `AEMeasurable`; `Measure.toSPMF`
    (`V:…/Defs/Measure.lean:236`) takes `hμ : μ univ ≤ 1` where the class exists and Mathlib's
    `Measure.toPMF` takes `[IsProbabilityMeasure μ]`; `SPMF.toMeasure_bind` (`:205`) needs countability
@@ -394,8 +395,8 @@ transformer laws reuse them without importing that higher layer. Native transfor
 primary; the explicit `ProbComp.DiscreteCompatibility` scope that once selected a
 finite-distribution adapter has been removed with the discrete layer. Lossless lifts publish
 probability-measure instances, so consumers infer their mass properties from the base computation.
-Generic observation bundles and their native measure observers live in
-`VCVio.EvalDist.Defs.Semantics.Core`.
+Generic observation bundles and their native measure observers live in PolyFun's
+`PolyFun.Control.Monad.Measure.SemanticsVia`.
 Their bundled measures expose subprobability and finiteness automatically, and known probability
 certificates propagate through optional, exceptional, and global semantics bundling. The lossless
 `ProbabilitySemantics` bundle registers the guaranteed probability properties of bare denotations
@@ -862,8 +863,9 @@ default, `docPrime`/`haveLet`/`tacticAnalysis.*` are off.
    goals in ML-KEM/ML-DSA (HashSig already uses `positivity` 17×). Optional ~10-line extensions for
    `OracleComp.tvDist` (used as `abs_nonneg _` at `V:Examples/PRFTagReader/Asymptotic.lean:147–157`)
    and `discreteGaussianWeight/Sum/PMF` (`V:LatticeCrypto/DiscreteGaussian.lean:51,95,122`).
-4. **`fun_prop`.** Tag `measurable_dropNoneKernel` (`V:ToMathlib/MeasureTheory/Measure/Option.lean:38`),
-   `measurable_none/elim` (`MeasurableSpace/Option.lean:35,65`, `Except.lean:42`),
+4. **`fun_prop`.** Tag `measurable_dropNoneKernel` (PolyFun's
+   `ToCslib/MeasureTheory/Measure/Option.lean:43`), `measurable_none/elim`
+   (`ToCslib/MeasureTheory/MeasurableSpace/Option.lean:39,98`, `Except.lean:94`),
    `measurable_pullback_answerMap` (`V:VCVio/OracleComp/Coinductive/Responder.lean:244`); replace the
    `Measurable.of_discrete` term proofs at `V:VCVio/EvalDist/Defs/Measure.lean:152,212`,
    `RenyiDiscrete.lean:136,148`. `@[measurability]` merely forwards `Measurable`-shaped lemmas to
@@ -1163,8 +1165,8 @@ reading leave the expectation of the rest of the program in the verification con
   family that `ToMathlib/Control/Monad/RelWP.lean` mirrors; PolyFun has sixteen such sites.
 - lean4#14316 keeps the type-class cache across commands; the `SpecInstanceSearch` canaries must
   still run a real search.
-- Mathlib #42704 makes the type arguments of `IsZeroApply` implicit
-  (`ToMathlib/MeasureTheory/Measure/Subprobability.lean`).
+- Mathlib #42704 makes the type arguments of `IsZeroApply` implicit (PolyFun's
+  `ToCslib/MeasureTheory/Measure/Subprobability.lean`).
 - Mathlib #41506 makes `Set` a one-field structure. VCVio has no `Set.Mem`/`setOf` unfolding, but
   only a build shows the effect.
 
