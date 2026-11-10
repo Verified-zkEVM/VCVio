@@ -52,6 +52,7 @@ and the fork of Aeneas it pins names it `RustM`; upstream Aeneas calls the same 
 | `Interop.Rust.RustM` | the lift `RustM → RustOracleComp spec`, with its `pure`/`bind` laws, `LawfulMonadLift` and a bundled `MonadHom` |
 | `Interop.Rust.Triple` | Aeneas's specifications (`spec`, `dspec`, `Std.Do` triples) as `Std.WP` triples for the lift, under any interpretation of `OracleComp spec`, and the `vcgen` rule `Spec.liftRustM` |
 | `Interop.Aeneas.ITree` | Aeneas's interaction trees as PolyFun's: an injective monad morphism into `ITree ⟨E.I, E.O⟩`, sending `div` to `ITree.diverge` |
+| `Interop.Aeneas.WP` | Aeneas's total and partial correctness (`DWP`, `DWLP`) are PolyFun's `ITree.wpTotal` and `ITree.wpPartial` along `toPolyFun`, for every Aeneas effect, with exact `bind` laws as corollaries |
 | `Interop.Hax.CenteredBinomial` | ML-KEM's CBD(η = 1) step, from its Rust source (`third_party/hax-cbd`) through `RustM` to its distribution: `0` with probability `1/2`, `±1` with `1/4` each |
 
 The other modules in `Interop/Hax/` predate hax's move onto Aeneas, and are not built until they
@@ -63,8 +64,3 @@ are ported; see [its README](Hax/README.md).
   bitwise operations and casts are pure and shifts and arithmetic are checked.
 - **Regenerate extractions.** Regenerate `third_party/hax-cbd` with the hax CLI. The sampler in
   `CenteredBinomial` is transcribed in hax's current emission style.
-- **Weakest preconditions at the tree level.** Aeneas's per-effect specifications (`EffectWP`)
-  are PolyFun's `OpSpec`s, and its total and partial correctness (`DWP`, `DWLP`) are least and
-  greatest fixed points over its trees. PolyFun has `wpFold` for `FreeM` but no counterpart for
-  `ITree` yet. Once it does, `Interop.Aeneas.ITree` can state that `toPolyFun` carries one to the
-  other, for every Aeneas effect.
