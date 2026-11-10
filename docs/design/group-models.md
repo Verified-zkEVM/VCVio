@@ -525,10 +525,11 @@ most `((m + 1) choose 2)` nonzero differences, and `x` is a root of each with pr
 most `d/|F|`. The zero has to be counted: on the table `[X]` the query `eq 0 1` compares `X`
 with zero, and it is a collision with probability `1/|F|`.
 
-The probability form of Schwartz–Zippel exists in ArkLib as `prob_eval_zero_univ_le_div`
-(`ArkLib/Data/MvPolynomial/SchwartzZippelCounting.lean`), stated in VCVio's `Pr{…}` notation
-over `$ᵗ (Fin s → F)`. It imports one ArkLib file, `ArkLib.Data.Probability.Uniform`, so it has
-to be moved down before VCVio can use it.
+The probability form of Schwartz–Zippel is `prEvent_eval_eq_zero_univ_le_div`
+(`VCVio/OracleComp/Constructions/SampleableType/SchwartzZippel.lean`), over any finite variable
+type and any finite integral domain. It generalizes ArkLib's `prob_eval_zero_univ_le_div`
+(`ArkLib/Data/MvPolynomial/SchwartzZippelCounting.lean`), which is stated over `Fin s` and a
+field.
 
 The argument uses one property of the distribution of `x`: a nonzero polynomial of total degree
 at most `k` vanishes at `x` with probability at most `ε k`. T3 is stated with `ε` as a
@@ -1117,7 +1118,7 @@ handler needed by T1 belongs to milestone 1.
 | generic DDH | `ddhAdvantage g (ofGeneric A) ≤ 3 · (q + 5).choose 2/\|F\|` |  | Shoup; T7 |
 | Pedersen binding, unconditional | for a generic binder with `q` operations, success at most `((q + 9).choose 2 + 1)/\|F\|` | `pedersenCommit.binding_le_dlog` and `pedersenCommit.dlogReduction` in `VCVio/Schemes/Pedersen.lean` |  |
 | ElGamal one-time IND-CPA, unconditional | for a generic adversary, twice the generic DDH bound at a counted number of operations | `elGamalAsymmEnc.elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage` in `Examples/ElGamal/Basic.lean` |  |
-| ElGamal IND-CPA with `q` queries, unconditional | `2q` times the generic DDH bound | `elGamalAsymmEnc.elGamal_IND_CPA_le_q_mul_ddh`, after it is restated (below) |  |
+| ElGamal IND-CPA with `q` queries, unconditional | `2q` times the generic DDH bound | `elGamalAsymmEnc.elGamal_IND_CPA_le_sum_ddhAdvantage` in `Examples/ElGamal/Basic.lean` (below) |  |
 
 The three constants come from T3, T7 and T8 as follows. DLog: `m = q + 2`, degree `1`, and
 `1/|F|` for the final guess. CDH: `m = q + 3`, degree `1`, and `W = A · B − p` of degree `2`.
@@ -1128,11 +1129,12 @@ checks two openings with four `smul`, two `add` and two equality tests, so a gen
 `q` operations yields a generic DLog solver with `q + 6`, and the two existing lemmas compose
 with T4 without change.
 
-The multi-query ElGamal theorem does not compose as it stands. Its hypothesis `hddh` bounds
-`ddhAdvantage gen (IND_CPA_OneTime_DDHReduction adv)` for every one-time adversary `adv`, of any
-kind. A generic DDH bound covers generic adversaries only. The theorem has to be restated with
-the hybrid adversaries named, as a sum of their DDH advantages, before a generic bound can be
-substituted. The one-time theorem is an equation about one named reduction and composes now.
+The multi-query ElGamal theorem `elGamal_IND_CPA_le_sum_ddhAdvantage` bounds the advantage by
+twice the sum of the DDH advantages of the named hybrid reductions
+`IND_CPA_OneTime_DDHReduction (IND_CPA_stepAdversary adversary k)`, not by a bound over every
+one-time adversary. A generic DDH bound covers generic adversaries only, so it applies term by
+term once each of these reductions is shown generic. The one-time theorem is an equation about one
+named reduction and composes as it is.
 
 ### 8.2 Algebraic adversaries and the transfer (milestones 1 and 3 to 5)
 
