@@ -572,12 +572,13 @@ The same template gives CDH and the discrete-log relation problem, and with a pa
 `(q₁, q₂)`-DLog family of Bauer, Fuchsbauer and Loss, co-CDH, `t`-SDH and ARSDH (T8 in
 Section 6.5), with the constants fixed by the proofs. For the relation problem on `n` random
 elements the table starts with `n` entries, so the bound has `n` in it:
-`((q + n + 1).choose 2 + 1)/|F|`. DDH needs one more lemma (T6). Note the
-form: the statement is about `ofGeneric A`, a `DLogAdversary`. It bounds a reduction to DLog
-when the reduction, run on its adversary, is itself `ofGeneric A'` for a generic computation
-`A'` whose group operations are counted; T5 is meant to supply such reductions and their counts.
-It says nothing about an arbitrary `DLogAdversary`, nor about a reduction that handles group
-elements other than through the oracle. No hypothesis quantifies over solvers.
+`((q + n + 1).choose 2 + 1)/|F|` (`DiscreteLogRelation.experiment_ofGeneric_le`). DDH needs
+one more lemma (T6). Note the form: the statement is about `ofGeneric A`, a `DLogAdversary`.
+It bounds a reduction to DLog when the reduction, run on its adversary, is itself `ofGeneric A'`
+for a generic computation `A'` whose group operations are counted; T5 is meant to supply such
+reductions and their counts. It says nothing about an arbitrary `DLogAdversary`, nor about a
+reduction that handles group elements other than through the oracle. No hypothesis quantifies
+over solvers.
 
 **T5 (transfer).** Write a reduction once, as a handler that implements the scheme's oracles on
 top of the group oracle. Then:
@@ -1165,19 +1166,20 @@ substituted. The one-time theorem is an equation about one named reduction and c
 | Result | Statement | Composes with | Source |
 |---|---|---|---|
 | presentations agree (T1) | exact translations among the four presentations of Section 4.4 | agm-lean `Adversary.run_valid`; ArkLib `GroupRepresentation` | Fuchsbauer, Kiltz, Loss |
-| discrete-log relation | finding a nontrivial relation among `n` random elements is at most DLog plus `1/\|F\|`; against a generic adversary, by T5, at most `((q + 3n + 3).choose 2 + 2)/\|F\|` | proved in ironwood on other foundations; T4 | Jaeger, Tessaro, Lemma 3 |
+| discrete-log relation | finding a nontrivial relation among `n` random elements is at most DLog plus `1/\|F\|` (`DiscreteLogRelation.experiment_le`, for a nonzero generator); against a generic adversary with `q` group operations, at most `((q + n + 1).choose 2 + 1)/\|F\|` (`DiscreteLogRelation.experiment_ofGeneric_le`) | T3; ironwood proves the reduction on other foundations | Jaeger, Tessaro, Lemma 3 |
 | linear-functional signatures, BLS | `advantage ≤ adv(goodReduction A) + adv(badReduction A) + 1/\|F\|` against `(1,1)`-DLog | proved in `signature-security-lean` at VCVio `f5119c64e` |  |
 | BLS, unconditional | a bound in `q`, `q_H`, `q_S` and `\|F\|` only | the row above, T5, and generic `(1,1)`-DLog. The last is a bound at `pairingSig` (Section 8.3), so this row is reached in milestone 6 and not before | Jaeger, Mohan |
 | inner-product and Bulletproofs-style arguments | binding of the vector commitment against an algebraic prover | the discrete-log relation row | Jaeger, Tessaro |
 
-The generic bound for the relation problem has the number `n` of given elements in it. The
-reduction programs slot `i` as `xᵢ • g + yᵢ • Z` from the DLog challenge `Z`, as ironwood's
-`ProgrammedBasisEmbedding` does. That is two `smul` and one `add`, so its cost certificate has
-`c₀ = 3n`, cost `1` for each group operation of `A` and `0` for each equality test. T4 at
-`q + 3n` operations and the loss `1/|F|` give `((q + 3n + 3).choose 2 + 2)/|F|`. T3 on the table
-of `n` variables gives the smaller `((q + n + 1).choose 2 + 1)/|F|` directly (Section 5). No
-bound can omit `n`: among `|F| + 1` multiples of `g` two are equal, free equality tests find
-them, and their difference is a relation.
+The generic bound for the relation problem has the number `n` of given elements in it. T3 on
+the table of `n` variables gives `((q + n + 1).choose 2 + 1)/|F|` directly (Section 5), proved as
+`DiscreteLogRelation.experiment_ofGeneric_le`. T4 applied through the reduction gives a larger
+bound. The reduction programs slot `i` as `xᵢ • g + yᵢ • Z` from the DLog challenge `Z`, as
+ironwood's `ProgrammedBasisEmbedding` does. That is two `smul` and one `add`, so its cost
+certificate has `c₀ = 3n`, cost `1` for each group operation of `A` and `0` for each equality
+test. T4 at `q + 3n` operations and the loss `1/|F|` would give
+`((q + 3n + 3).choose 2 + 2)/|F|`. No bound can omit `n`: among `|F| + 1` multiples of `g` two
+are equal, free equality tests find them, and their difference is a relation.
 
 ### 8.3 Pairings (milestone 6)
 
@@ -1303,7 +1305,7 @@ against the paper before a theorem cites it).
 | Rotem, ePrint 2022/584 | target-group representations (`CoeffsT`); the degree needed in `q`-DLog | library target | read |
 | Rotem, Segev, ePrint 2020/1144 | algebraic distinguishers for decisional problems | not planned | abstract |
 | Bauer, Farshim, Harasser, Kohlweiss, *The uber-knowledge assumption* (IACR CiC 1(3)) | knowledge assumptions that instantiate algebraic extraction | not planned | abstract |
-| Jaeger, Tessaro, ePrint 2020/1213, Lemma 3 | discrete-log relation ≤ DLog + `1/\|F\|` | proved in ironwood on other foundations | recalled; ironwood's statement was read |
+| Jaeger, Tessaro, ePrint 2020/1213, Lemma 3 | discrete-log relation ≤ DLog + `1/\|F\|` | proved as `DiscreteLogRelation.experiment_le`; its generic corollary `DiscreteLogRelation.experiment_ofGeneric_le` gives `((q + n + 1).choose 2 + 1)/\|F\|`; ironwood proves the lemma on other foundations | recalled; ironwood's statement was read |
 | Fuchsbauer, Plouviez, Seurin, ePrint 2019/877 | Schnorr, tight, algebraic adversaries | not planned yet | recalled |
 | Bauer, Fuchsbauer, Plouviez, ePrint 2021/866 | one-more discrete log, beyond T3 (Section 8.5) | not planned | abstract |
 | Katz, Zhang, Zhou, ePrint 2022/210 | S2 | target | recalled |
@@ -1372,15 +1374,22 @@ T4 is proved in `GenericHardness.lean` as `dlogExperiment_ofGeneric_le` and
 `cdhExperiment_ofGeneric_le`, for the adversaries that `DLogAdversary.ofGeneric` and
 `CDHAdversary.ofGeneric` induce from generic computations.
 
+The relation-problem bounds are proved in `DiscreteLogRelation.lean` and `GenericRelation.lean`.
+`DiscreteLogRelation.experiment_le` bounds relation finding on `n` elements by the DLog success
+of the named reduction plus `1/|F|`, for any nonzero generator.
+`DiscreteLogRelation.experiment_ofGeneric_le` bounds the adversary that
+`DiscreteLogRelation.Adversary.ofGeneric` induces from a generic computation with `q` group
+operations by `((q + n + 1).choose 2 + 1)/|F|`.
+
 T7 is proved in `Decisional.lean` as `measureETVDist_runGen_sameKernel_le`, at `discreteSig S`
 with one total group-operation budget `q` and one degree bound for each table, rather than the
 per-sort form of Section 6.5. Its event form is `prEvent_runGen_sameKernel_le_add`, and its
 Schwartz–Zippel specialization for uniform points is
 `measureETVDist_runGen_sameKernel_uniform_le`.
 
-Everything else is a paper argument or theorem target: T3ₛ, T5 and its cost certificate, the
-relation-problem bounds, T7 in its per-sort form and at the pairing signatures, T8, S1–S3, P1–P3,
-restriction along a map of signatures, the invariant at the target sort over `CoeffsT`, the free
-and tracking models for Types 1 and 2, the accessible spans, the polynomial-table instance of T6,
-and every numeric constant in Section 8. The trilemma in Section 3 and the argument about
-ArkLib's KZG hypotheses in Section 8.3 are paper arguments.
+Everything else is a paper argument or theorem target: T3ₛ, T5 and its cost certificate, T7 in
+its per-sort form and at the pairing signatures, T8, S1–S3, P1–P3, restriction along a map of
+signatures, the invariant at the target sort over `CoeffsT`, the free and tracking models for
+Types 1 and 2, the accessible spans, the polynomial-table instance of T6, and the numeric
+constants in Section 8 other than those of T4, T7 and the relation problem. The trilemma in
+Section 3 and the argument about ArkLib's KZG hypotheses in Section 8.3 are paper arguments.

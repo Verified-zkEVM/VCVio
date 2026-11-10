@@ -32,8 +32,8 @@ variable {F G : Type} {n : ℕ}
 abbrev Adversary (F G : Type) (n : ℕ) := (Fin n → G) → ProbComp (Fin n → F)
 
 /-- Sample a uniform basis and accept a nonzero coefficient vector with vanishing group sum. -/
-@[expose] def experiment [Field F] [DecidableEq F] [SampleableType F]
-    [AddCommGroup G] [Module F G] [DecidableEq G]
+@[expose] def experiment [Semiring F] [DecidableEq F] [SampleableType F]
+    [AddCommMonoid G] [Module F G] [DecidableEq G]
     (g : G) (A : Adversary F G n) : ProbComp Bool := do
   let x ← $ᵗ (Fin n → F)
   let a ← A (fun i => x i • g)
@@ -42,7 +42,7 @@ abbrev Adversary (F G : Type) (n : ℕ) := (Fin n → G) → ProbComp (Fin n →
 /-- Program the basis with the discrete-log challenge and extract by dividing its coefficient
 into the negated generator coefficient, returning zero when that denominator vanishes. -/
 @[expose] def reduction [Field F] [DecidableEq F] [SampleableType F]
-    [AddCommGroup G] [Module F G]
+    [AddCommMonoid G] [Module F G]
     (A : Adversary F G n) : DiffieHellman.DLogAdversary F G := fun g Z => do
   let x ← $ᵗ (Fin n → F)
   let y ← $ᵗ (Fin n → F)
@@ -119,10 +119,11 @@ private theorem programmed_eq [Field F] [SampleableType F]
           (fun y a => pure ((fun i => t i - y i * z), y, a))))))
 
 /-- Relation finding reduces to discrete logarithm with additive loss `1 / |F|`, including
-an empty input vector. The hidden mask is sampled independently after the adversary's output. -/
+an empty input vector, for any nonzero generator. The hidden mask is sampled independently
+after the adversary's output. -/
 theorem experiment_le [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
-    (g : G) (hg : Function.Bijective (· • g : F → G)) (A : Adversary F G n) :
+    (g : G) (hg : g ≠ 0) (A : Adversary F G n) :
     Pr{let b ← experiment g A}[b = true] ≤
       Pr{let b ← DiffieHellman.dlogExperiment g (reduction A)}[b = true] +
         1 / Fintype.card F := by
@@ -142,7 +143,8 @@ theorem experiment_le [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
       (∑ i, a i • (t i • g) = 0) ↔ ∑ i, a i * t i = 0 := by
     rw [show (∑ i, a i • (t i • g)) = (∑ i, a i * t i) • g by
       simp only [smul_smul, Finset.sum_smul]]
-    exact ⟨fun h => hg.injective (h.trans (zero_smul F g).symm), fun h => by rw [h, zero_smul]⟩
+    exact ⟨fun h => smul_left_injective F hg (h.trans (zero_smul F g).symm),
+      fun h => by rw [h, zero_smul]⟩
   have hw : Pr{let w ← R}[win w] = Pr{let b ← experiment g A}[b = true] := by
     simp only [R, win, experiment, prEvent_norm, decide_eq_true_eq, hgroup]
     simp only [← bind_pure_comp, OracleComp.prEvent_bind_const]

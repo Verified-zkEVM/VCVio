@@ -9,12 +9,19 @@ public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 public import VCVio.CryptoFoundations.GroupModel.Decisional
 import Mathlib.RingTheory.MvPolynomial.Basic
 
-/-! # Generic hardness of decisional Diffie–Hellman
+/-!
+# Generic hardness of decisional Diffie–Hellman
 
 A generic computation induces an ordinary DDH adversary by running on the four challenge
-handles. With at most `q` group operations its advantage is at most
+handles (`DDHAdversary.ofGeneric`). With at most `q` group operations its advantage is at most
 `3 * (q + 5).choose 2 / |F|`; equality queries are free. The real and random polynomial
 tables have the same linear relations and degrees two and one, respectively.
+
+## References
+
+* V. Shoup, *Lower bounds for discrete logarithms and related problems*, EUROCRYPT 1997.
+* U. Maurer, *Abstract models of computation in cryptography*, IMA International Conference on
+  Cryptography and Coding 2005.
 -/
 
 public section
@@ -27,8 +34,8 @@ namespace GroupModel
 variable {F G : Type}
 
 /-- Run a generic Boolean computation on the generator and three DDH challenge elements. -/
-@[expose] def DDHAdversary.ofGeneric [Field F]
-    [AddCommGroup G] [Module F G] [DecidableEq G]
+@[expose] def DDHAdversary.ofGeneric [CommSemiring F] [AddCommMonoid G] [Module F G]
+    [DecidableEq G]
     (A : OracleComp (genSpec F groupSig) Bool) : DiffieHellman.DDHAdversary F G :=
   fun g X Y T => Prod.fst <$> runGen (Model.group G) (fun _ => id) A
     (fun _ => [g, X, Y, T])
