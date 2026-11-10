@@ -9,10 +9,11 @@ public import VCVio.CryptoFoundations.GroupModel.Collision
 public import Mathlib.Data.ZMod.Basic
 
 /-!
-Collision bounds over the field with seven elements
+# Collision bounds over the field with seven elements
 
 A constant observation identifies zero and one. A single equality query attains the collision
-bound, whereas an addition query has no collision and identical table semantics.
+bound, whereas an addition query has no collision and identical table semantics. Equal values,
+and distinct values with distinct observations, are never collisions.
 -/
 
 public section
@@ -68,5 +69,31 @@ theorem no_equality_no_collision :
         ProbComp (Handle × Tbl (fun _ : Unit => ZMod 7) × Bool))}[z.2.2 = true] = 0
     simp
   · rfl
+
+/-- Equal values are not a collision, even under a constant observation. -/
+theorem equal_values_no_collision :
+    let M : Model (ZMod 7) groupSig (fun _ => ZMod 7) := ⟨Empty.elim, Empty.elim⟩
+    let obs : (s : Unit) → ZMod 7 → Unit := fun _ _ => ()
+    let tbl : Tbl (fun _ : Unit => ZMod 7) := fun _ => [1, 1]
+    let oa : OracleComp (genSpec (ZMod 7) groupSig) Bool :=
+      (genSpec (ZMod 7) groupSig).query (.inl (.eq () 0 1))
+    collisionProbGen M obs oa tbl = 0 := by
+  dsimp only
+  change Pr{let z ← (pure (true, (fun _ : Unit => ([1, 1] : List (ZMod 7))), false) :
+      ProbComp (Bool × Tbl (fun _ : Unit => ZMod 7) × Bool))}[z.2.2 = true] = 0
+  simp
+
+/-- Distinct values with distinct observations are not a collision. -/
+theorem distinct_observations_no_collision :
+    let M : Model (ZMod 7) groupSig (fun _ => ZMod 7) := ⟨Empty.elim, Empty.elim⟩
+    let obs : (s : Unit) → ZMod 7 → ZMod 7 := fun _ x => 2 * x
+    let tbl : Tbl (fun _ : Unit => ZMod 7) := fun _ => [0, 1]
+    let oa : OracleComp (genSpec (ZMod 7) groupSig) Bool :=
+      (genSpec (ZMod 7) groupSig).query (.inl (.eq () 0 1))
+    collisionProbGen M obs oa tbl = 0 := by
+  dsimp only
+  change Pr{let z ← (pure (false, (fun _ : Unit => ([0, 1] : List (ZMod 7))), false) :
+      ProbComp (Bool × Tbl (fun _ : Unit => ZMod 7) × Bool))}[z.2.2 = true] = 0
+  simp
 
 end GroupModel
