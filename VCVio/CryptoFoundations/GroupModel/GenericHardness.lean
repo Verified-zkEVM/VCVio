@@ -80,12 +80,6 @@ theorem runGen_group_mapTbl_evalAt [Field F] [DecidableEq F] [AddCommGroup G] [M
       simpa only [Function.comp_apply, id_eq, evalAt_apply] using
         (smul_left_injective F hg).eq_iff) ProbComp]
 
-private theorem uniform_unit [SampleableType F] :
-    (fun a (_ : Unit) => a) <$> ($ᵗ F : ProbComp F) =ᵈ
-      ($ᵗ (Unit → F) : ProbComp (Unit → F)) := by
-  apply SampleableType.map_uniformSample_evalDistEq_of_bijective
-  exact ⟨fun _ _ h => congrFun h (), fun f => ⟨f (), by funext u; cases u; rfl⟩⟩
-
 private theorem uniform_bool [SampleableType F] :
     (do let a ← $ᵗ F; let b ← $ᵗ F; pure (fun i : Bool => if i then b else a)) =ᵈ
       ($ᵗ (Bool → F) : ProbComp (Bool → F)) := by
@@ -133,7 +127,7 @@ theorem dlogExperiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampl
       simp [mapTbl, tbl, evalAt_apply]
     rw [← ht]
     exact runGen_group_mapTbl_evalAt g hg (fun _ : Unit => a) A tbl
-  have hs := (uniform_unit (F := F)).bind_left (fun x =>
+  have hs := (SampleableType.map_const_uniformSample_evalDistEq (α := F)).bind_left (fun x =>
     (fun z => z.1 = x ()) <$> runGen (symbolic F groupSig Unit)
       (fun _ p => MvPolynomial.eval x p) A tbl)
   have he : Pr{let b ← (DiffieHellman.dlogExperiment g
