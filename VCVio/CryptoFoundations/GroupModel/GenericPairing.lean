@@ -171,7 +171,7 @@ theorem experiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
   have hb := prEvent_runGen_symbolic_le_add_of_polynomial ($ᵗ (Unit → F)) hD
     (ε := fun s => (D s : ℝ≥0∞) / Fintype.card F)
     (ε' := (1 : ℝ≥0∞) / Fintype.card F)
-    (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A hn tbl hd
+    (fun _ f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd) A hn tbl hd
     (fun z => MvPolynomial.X () - MvPolynomial.C z.1) 1
     (fun z _ => (MvPolynomial.totalDegree_sub_C_le _ _).trans (by simp))
     (fun x z => z.1 = x ())
@@ -182,7 +182,7 @@ theorem experiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
         simp only [MvPolynomial.totalDegree_X, MvPolynomial.totalDegree_C,
           Nat.one_ne_zero] at ht
       · simp [h])
-    (fun f hf hd => by simpa only [Nat.cast_one] using prob_eval_zero_univ_le_div f hf hd)
+    (fun f hf hd => by simpa only [Nat.cast_one] using prEvent_eval_eq_zero_univ_le_div f hf hd)
   refine hb.trans_eq ?_
   change (∑ s ∈ ({.g₁, .g₂, .gₜ} : Finset PSort),
     (((tbl s).length + n s + 1).choose 2 : ℝ≥0∞) *

@@ -136,10 +136,10 @@ theorem dlogExperiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F] [Sampl
     · simp [W, h]
   have h := prEvent_runGen_symbolic_le_add_of_polynomial ($ᵗ (Unit → F))
     (degreeClosed_discreteSig (fun _ : Unit => 1))
-    (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A
+    (fun _ f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd) A
     (fun s => hq.appendsTo s) tbl hd W 1 (fun z _ => hW z)
     (fun x z => z.1 = x ()) (fun x z _ he => hE x z he)
-    (fun f hf hd => prob_eval_zero_univ_le_div f hf hd)
+    (fun f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd)
   refine h.trans_eq ?_
   simp only [Fintype.sum_unique, tbl, List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.cast_one, Nat.add_comm 2 q, Nat.add_assoc, Nat.cast_add, ENNReal.add_div]
@@ -211,9 +211,9 @@ theorem cdhExperiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
     · simpa only [W, target, map_sub, map_mul, MvPolynomial.eval_X, sub_eq_zero] using he.symm
   have h := prEvent_runGen_symbolic_le_add_of_polynomial ($ᵗ (Bool → F))
     (degreeClosed_discreteSig (fun _ : Unit => 1))
-    (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A
+    (fun _ f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd) A
     (fun s => hq.appendsTo s) tbl hd W 2 hW E hE
-    (fun f hf hd => prob_eval_zero_univ_le_div f hf hd)
+    (fun f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd)
   refine h.trans_eq ?_
   simp only [Fintype.sum_unique, tbl, List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.cast_one, Nat.add_comm 3 q, Nat.add_assoc, Nat.cast_add, ENNReal.add_div]
