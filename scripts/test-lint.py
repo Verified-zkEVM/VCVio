@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Exercise upstream-linter orchestration, source coverage, and safe exception pruning."""
 
 import importlib.util
@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -27,7 +28,7 @@ class LintTests(unittest.TestCase):
 
     def tool(self, body):
         path = self.root / "linter"
-        path.write_text("#!/usr/bin/env python3\n" + body)
+        path.write_text("#!" + sys.executable + "\n" + body)
         path.chmod(0o755)
         return str(path)
 
