@@ -1,39 +1,30 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Devon Tuma
 -/
 
-import Interop.Hax.Bridge
-import Interop.Rust.Run
-import Hax.rust_primitives.Cast
-import Hax.rust_primitives.BVDecide
-import Hax.Tactic
-import Hax.MissingLean.Std.Do.Triple.Basic
-import VCVio.ProgramLogic.Unary.StdDoBridge
+module
+
+public import Hax
+public import Interop.Rust.RustM
+public import Interop.Rust.Triple
+public import VCVio.ProgramLogic.Unary.WP.Necessary
 
 /-!
-# End-to-end hax example: signed Barrett reduction
+# A Rust Barrett reduction, through `RustM`, in VCVio
 
-Reproduces hax's `examples/lean_barrett` demo inside the `Interop`
-bridge. `barrett_reduce` is the signed Barrett reduction routine used
-by ML-KEM (aka Kyber) and ML-DSA for modular reduction by the field
-prime `q = 3329`; it is the smallest genuinely lattice-cryptographic
-primitive that fits on a single page of code.
-
-## Provenance
-
-The Rust source lives at `examples/lean_barrett/src/lib.rs` in hax's
-repository:
+hax's `barrett` example: signed Barrett reduction modulo ML-KEM's prime `3329`.
 
 ```rust
-pub(crate) type FieldElement = i32;
-
-const BARRETT_R: i64 = 0x400000;
 const BARRETT_SHIFT: i64 = 26;
+const BARRETT_R: i64 = 0x4000000; // 2^26
 const BARRETT_MULTIPLIER: i64 = 20159;
 pub(crate) const FIELD_MODULUS: i32 = 3329;
 
+#[hax::requires((i64::from(value) >= -BARRETT_R && i64::from(value) <= BARRETT_R))]
+#[hax::ensures(|result| result > -FIELD_MODULUS && result < FIELD_MODULUS &&
+                   result.rem_euclid(FIELD_MODULUS) == value.rem_euclid(FIELD_MODULUS))]
 pub fn barrett_reduce(value: FieldElement) -> FieldElement {
     let t = i64::from(value) * BARRETT_MULTIPLIER;
     let t = t + (BARRETT_R >> 1);
@@ -44,243 +35,91 @@ pub fn barrett_reduce(value: FieldElement) -> FieldElement {
 }
 ```
 
-Under the precondition `-BARRETT_R ≤ value ≤ BARRETT_R` (which holds
-for every coefficient ML-KEM/ML-DSA ever passes through Barrett),
-`barrett_reduce value` returns a value `r` with `|r| < FIELD_MODULUS`
-and `r ≡ value (mod FIELD_MODULUS)`. The hax source embeds this
-correctness theorem via `#[hax_lib::lean::replace(...)]` and closes it
-with `hax_bv_decide (timeout := 90)`; we reproduce it verbatim here
-and transport the result over the bridge.
+`barrett_reduce` below is that function in the `RustM` code hax emits today, over Aeneas's
+scalars: the widening casts are pure, and the arithmetic and shifts are checked. It is a
+transcription: `cargo hax into lean` was not run to produce it. The contract's `rem_euclid` by the
+positive modulus is Lean's `%` on `Int`. The contract is proved by `hax_mvcgen` and `scalar_tac`:
+every multiplication is by a constant, so the residual conditions are linear, with division by
+constants.
 
-## What this demonstrates
+## Main results
 
-* Signed integer arithmetic (`*?`, `+?`, `-?`), signed shifts
-  (`>>>?`), and integer-width casts (`rust_primitives.hax.cast_op`)
-  all round-trip cleanly through the bridge.
-* `hax_bv_decide` is the right tactic for Barrett-style proofs that
-  need to reason about 64-bit intermediate arithmetic and 32-bit
-  final results simultaneously. `hax_mvcgen + bv_decide` would also
-  work (both compose the same bit-blasting backend) but Barrett's
-  all-`pure` control flow makes the direct `hax_bv_decide` form more
-  idiomatic.
-* The oracle-lifted spec `barrett_reduce_Lifted_spec` is, as in
-  `Computation.lean` / `Division.lean` / `Adc.lean`, one line over
-  the hax-side spec via `triple_liftRustM`. This is the consistent
-  story of the bridge: pay the bit-blasting cost once, on the hax
-  side; oracle-awareness comes free.
-
-## Relation to ML-KEM / ML-DSA
-
-This exact routine (`FIELD_MODULUS = 3329`) is ML-KEM's `barrett_reduce`.
-ML-DSA uses a sibling routine with `FIELD_MODULUS = 8380417` and a
-correspondingly larger Barrett constant; the proof structure is
-identical. A full ML-KEM or ML-DSA port remains a substantial
-undertaking, but every coefficient-level modular reduction in those
-schemes reduces to exactly this pattern.
+* `Interop.Hax.Examples.Barrett.barrett_reduce_spec`: the Rust contract, as a triple for `RustM`.
+* `Interop.Hax.Examples.Barrett.triple_barrett_reduce_lifted`: the contract for the lifted program,
+  as a core `Std.WP` triple.
 -/
 
-open Std.Do OracleSpec OracleComp
-open scoped OracleSpec.PrimitiveQuery
+public section
+
+open Aeneas Aeneas.Std Std.Do
 
 namespace Interop.Hax.Examples.Barrett
 
+/-- `BARRETT_SHIFT`. -/
+def BARRETT_SHIFT : I64 := 26#i64
+
+/-- `BARRETT_R`, that is `2 ^ 26`. -/
+def BARRETT_R : I64 := 67108864#i64
+
+/-- `BARRETT_MULTIPLIER`, that is `2 ^ 26 / 3329` rounded. -/
+def BARRETT_MULTIPLIER : I64 := 20159#i64
+
+/-- `FIELD_MODULUS`, ML-KEM's prime. -/
+def FIELD_MODULUS : I32 := 3329#i32
+
+/-- The Rust `barrett_reduce` in `RustM`. -/
+def barrett_reduce (value : I32) : RustM I32 := do
+  let t ← IScalar.cast .I64 value * BARRETT_MULTIPLIER
+  let half ← BARRETT_R >>> 1#i32
+  let t ← t + half
+  let quotient ← t >>> BARRETT_SHIFT
+  let quotient : I32 := IScalar.cast .I32 quotient
+  let sub ← quotient * FIELD_MODULUS
+  value - sub
+
+/-- A value in `i32`'s range is its own balanced residue modulo `2 ^ 32`: the casts in
+`barrett_reduce` change no value. -/
+private theorem bmod_two_pow_32 {x : ℤ} (h : -2 ^ 31 ≤ x ∧ x < 2 ^ 31) : x.bmod (2 ^ 32) = x :=
+  Int.bmod_eq_of_le (by norm_num; omega) (by norm_num; omega)
+
+private theorem val_20159 : (20159#i64).val = 20159 := by decide
+private theorem val_R : (67108864#i64).val = 67108864 := by decide
+private theorem val_3329 : (3329#i32).val = 3329 := by decide
+private theorem toNat_one : (1#i32).toNat = 1 := by decide
+private theorem toNat_26 : (26#i64).toNat = 26 := by decide
+
+/-- The postcondition of the Rust contract. -/
+def barrettPost (value r : I32) : Prop :=
+  -3329 < r.val ∧ r.val < 3329 ∧ r.val % 3329 = value.val % 3329
+
+set_option mvcgen.warning false in
+set_option hax_mvcgen.warnings false in
+/-- The Rust contract: on inputs of size at most `2 ^ 26`, the result is smaller than the modulus
+in absolute value and congruent to the input. -/
+theorem barrett_reduce_spec (value : I32) :
+    ⦃⌜-2 ^ 26 ≤ value.val ∧ value.val ≤ 2 ^ 26⌝⦄ barrett_reduce value
+      ⦃⇓ r => ⌜barrettPost value r⌝⦄ := by
+  unfold barrett_reduce barrettPost BARRETT_SHIFT BARRETT_R BARRETT_MULTIPLIER FIELD_MODULUS
+  hax_mvcgen
+  all_goals
+    obtain ⟨hlo, hhi⟩ := ‹-2 ^ 26 ≤ value.val ∧ value.val ≤ 2 ^ 26›
+    simp only [IScalar.cast_val_eq, IScalarTy.I64_numBits_eq, IScalarTy.I32_numBits_eq, val_20159,
+      val_R, val_3329, toNat_one, toNat_26, Int.shiftRight_eq_div_pow, Nat.cast_pow, Nat.cast_ofNat,
+      Int.reducePow, Int.reduceDiv, show min 64 32 = 32 from rfl, show min 32 64 = 32 from rfl] at *
+    -- The second cast's bound depends on the first's, so the casts go in two rounds.
+    iterate 2 try simp (disch := omega) only [bmod_two_pow_32] at *
+    scalar_tac
+
 variable {ι : Type} {spec : OracleSpec ι}
+  [Std.WP.WPMonad (OracleComp spec) Prop Std.WP.EStackEnd]
 
-/-! ### Constants
-
-The four Barrett constants, emitted as plain `def`s of the appropriate
-machine-integer types. None of them are candidates for runtime panics
-so hax does not wrap them in `RustM.of_isOk`. -/
-
-/-- `BARRETT_R = 2^22`: the Barrett window, chosen so that the 64-bit
-intermediate `t = value * BARRETT_MULTIPLIER` comfortably fits after
-shifting by `BARRETT_SHIFT`. -/
-def BARRETT_R : i64 := (0x400000 : i64)
-
-/-- `BARRETT_SHIFT = 26`: the final right-shift that divides out the
-Barrett scale. Chosen so that `2^BARRETT_SHIFT ≈ 2 * BARRETT_R *
-FIELD_MODULUS` up to rounding. -/
-def BARRETT_SHIFT : i64 := (26 : i64)
-
-/-- `BARRETT_MULTIPLIER = ⌊2^BARRETT_SHIFT / FIELD_MODULUS⌉ = 20159`:
-the precomputed multiplicative inverse of `FIELD_MODULUS` in the
-Barrett window. -/
-def BARRETT_MULTIPLIER : i64 := (20159 : i64)
-
-/-- `FIELD_MODULUS = 3329`: the Kyber / ML-KEM field prime `q`. The
-same Barrett reduction pattern is used by ML-DSA with
-`FIELD_MODULUS = 8380417`. -/
-def FIELD_MODULUS : i32 := (3329 : i32)
-
-/-! ### Hax-style emission
-
-Reproduces the `RustM` code hax emits for `barrett_reduce`. Five
-panic-capable operations (`*?`, `+?`, `-?`, `>>>?`) are sequenced
-through `do` and separated by casts via `rust_primitives.hax.cast_op`.
-We compute the compile-time constant `(BARRETT_R >>> 1)` inside the
-body so that the shape matches what hax emits at the AST level; the
-bit-blasting proof below is indifferent to the difference. -/
-
-/-- Signed Barrett reduction. Produces a representative `r ∈
-(-FIELD_MODULUS, FIELD_MODULUS)` of `value` modulo `FIELD_MODULUS`
-whenever `|value| ≤ BARRETT_R`; panics with `.integerOverflow` on the
-rare paths where any intermediate overflows (none of which are
-reachable under the precondition). -/
-@[spec]
-def barrett_reduce (value : i32) : RustM i32 := do
-  let t : i64 ← (← (rust_primitives.hax.cast_op value : RustM i64)) *? BARRETT_MULTIPLIER
-  let t : i64 ← t +? (← BARRETT_R >>>? (1 : i64))
-  let quotient : i64 ← t >>>? BARRETT_SHIFT
-  let quotient : i32 ← (rust_primitives.hax.cast_op quotient : RustM i32)
-  let sub : i32 ← quotient *? FIELD_MODULUS
-  value -? sub
-
-/-! ### `RustM`-level Barrett correctness
-
-The Hoare triple is stated directly in terms of `Int32` / `Int64`
-signed comparisons and signed modular arithmetic: the precondition
-is that `value`, widened to `i64`, lies in `[-BARRETT_R, BARRETT_R]`;
-the postcondition is the standard Barrett window property `|r| <
-FIELD_MODULUS ∧ r ≡ value (mod FIELD_MODULUS)`. Keeping the
-specification on machine integers (rather than wrapping it in
-`Bool`-valued helpers) is what allows `hax_bv_decide` to bit-blast
-the whole thing; `.toInt`-style casts would turn the goal into a
-mixed `Int`/`BitVec` problem that the decision procedure cannot
-close.
-
-Proof is `hax_bv_decide` with a bumped heartbeat limit, mirroring
-hax's upstream `examples/lean_barrett` demo. Under the precondition
-none of the `+?` / `*?` / `-?` operations in the body panic, so the
-Triple collapses to the single BitVec assertion about the returned
-value. -/
-
-set_option mvcgen.warning false in
-set_option maxHeartbeats 1_000_000 in
--- The range-only obligation is much smaller than the full modular
--- correctness theorem below. It is the spec most callers need when
--- Barrett reduction is used as a normalization step inside a larger
--- oracle program.
-theorem barrett_reduce_range_spec (value : i32) :
-    ⦃⌜value.toInt64 ≥ -(4194304 : Int64) ∧
-       value.toInt64 ≤ (4194304 : Int64)⌝⦄
-    (barrett_reduce value)
-    ⦃⇓ r => ⌜r > -(3329 : Int32) ∧ r < (3329 : Int32)⌝⦄ := by
-  unfold barrett_reduce FIELD_MODULUS BARRETT_R BARRETT_MULTIPLIER BARRETT_SHIFT
-  hax_bv_decide (timeout := 300)
-
-/-!
-The full modular-correctness theorem below is intentionally not built.
-Profiling on 2026-04-28 showed that the modular-equivalence disjunction
-alone costs about 45 seconds of `bv_decide` time, while
-`barrett_reduce_range_spec` above costs about 1 second and is the only
-property used downstream today. Keep this proof as a reference for the
-stronger statement, but do not put it back in the build unless a caller
-needs modular equivalence.
-
-```lean
-set_option mvcgen.warning false in
-set_option maxHeartbeats 1_000_000 in
-theorem barrett_reduce_spec (value : i32) :
-    ⦃⌜value.toInt64 ≥ -(4194304 : Int64) ∧
-       value.toInt64 ≤ (4194304 : Int64)⌝⦄
-    (barrett_reduce value)
-    ⦃⇓ r => ⌜r > -(3329 : Int32) ∧ r < (3329 : Int32) ∧
-      (r = value % (3329 : Int32) ∨
-       r = value % (3329 : Int32) + (3329 : Int32) ∨
-       r = value % (3329 : Int32) - (3329 : Int32))⌝⦄ := by
-  unfold barrett_reduce FIELD_MODULUS BARRETT_R BARRETT_MULTIPLIER BARRETT_SHIFT
-  hax_bv_decide (timeout := 300)
-```
--/
-
-/-! ### Oracle-lifted Barrett
-
-The oracle-aware side of the bridge. `barrett_reduce_Lifted` is just
-the lift, and `barrett_reduce_Lifted_spec` is the transport of the
-`RustM`-side correctness theorem through `triple_liftRustM`. The
-`errorOfHax` rebrand inside `triple_liftRustM` is invisible in the
-post-condition because the precondition rules out the panic branch. -/
-
-/-- Oracle-lifted Barrett reduction: wraps the hax-emitted
-`barrett_reduce` in `RustOracleComp spec`. Equivalent to just
-`liftRustM (barrett_reduce value)`. -/
-def barrett_reduce_Lifted (value : i32) : Interop.Rust.RustOracleComp spec i32 :=
-  liftRustM (barrett_reduce value)
-
-/-!
-The lifted full modular spec is also kept out of the build, since it
-depends directly on the disabled `barrett_reduce_spec`.
-
-```lean
-theorem barrett_reduce_Lifted_spec [IsUniformSpec spec]
-    (value : i32) :
-    ⦃⌜value.toInt64 ≥ -(4194304 : Int64) ∧
-       value.toInt64 ≤ (4194304 : Int64)⌝⦄
-    (barrett_reduce_Lifted (spec := spec) value)
-    ⦃⇓ r => ⌜r > -(3329 : Int32) ∧ r < (3329 : Int32) ∧
-      (r = value % (3329 : Int32) ∨
-       r = value % (3329 : Int32) + (3329 : Int32) ∨
-       r = value % (3329 : Int32) - (3329 : Int32))⌝⦄ := by
-  unfold barrett_reduce_Lifted
-  exact triple_liftRustM _ (barrett_reduce_spec value)
-```
--/
-
-/-! ### Oracle-composed Barrett
-
-The intended end-to-end usage of the bridge: sample a coefficient from
-an oracle, cast it into the `i32` input type, and reduce it modulo
-`FIELD_MODULUS` with the hax-emitted routine. Under a Barrett-window
-bound on every oracle response, the composed program never panics and
-its result always lies in `(-FIELD_MODULUS, FIELD_MODULUS)`.
-
-This is the minimum sketch of an ML-KEM / ML-DSA inner loop: modular
-reduction of a freshly-sampled coefficient. The `oracleThenBarrett`
-shape is representative; real schemes iterate it `n` times over a
-polynomial ring and eventually apply an NTT on top.
-
-The postcondition here is deliberately weaker than
-`barrett_reduce_Lifted_spec`'s: we drop the modular-equivalence
-disjunction and keep only the window property, so that the
-post-condition does not mention the oracle's output. Retaining the
-modular-equivalence would force a postcondition that quantifies over
-oracle outcomes, which is not expressible at the `Triple` level. -/
-
-section OracleComposition
-
-set_option mvcgen.warning false
-
-variable [IsUniformSpec spec]
-
-/-- Query an oracle for a field coefficient (represented via `spec.Range t`
-and a user-supplied cast), then reduce it modulo `FIELD_MODULUS`. -/
-def oracleThenBarrett (t : ι) (coe : spec.Range t → i32) :
-    Interop.Rust.RustOracleComp spec i32 := do
-  let y ← (liftM (query t) : OracleComp spec _)
-  barrett_reduce_Lifted (coe y)
-
-/-- Under a universal Barrett-window bound on oracle responses, the
-oracle-composed Barrett reduction always produces a coefficient inside
-the representative window `(-FIELD_MODULUS, FIELD_MODULUS)`. -/
-theorem oracleThenBarrett_triple
-    (t : ι) (coe : spec.Range t → i32)
-    (hbound : ∀ y : spec.Range t,
-      (coe y).toInt64 ≥ -(4194304 : Int64) ∧
-      (coe y).toInt64 ≤ (4194304 : Int64)) :
-    ⦃⌜True⌝⦄
-    (oracleThenBarrett (spec := spec) t coe)
-    ⦃⇓ r => ⌜r > -(3329 : Int32) ∧ r < (3329 : Int32)⌝⦄ := by
-  mvcgen [oracleThenBarrett]
-  rw [OracleComp.ProgramLogic.StdDo.wpProp_iff_forall_support]
-  intro y _
-  -- On every oracle outcome, apply the range-only Barrett triple.
-  have hTriple : ⌜(coe y).toInt64 ≥ -(4194304 : Int64) ∧
-      (coe y).toInt64 ≤ (4194304 : Int64)⌝ ⊢ₛ
-        wp⟦barrett_reduce_Lifted (spec := spec) (coe y)⟧
-          (PostCond.noThrow fun r => ⌜r > -(3329 : Int32) ∧ r < (3329 : Int32)⌝) :=
-    triple_liftRustM _ (barrett_reduce_range_spec (coe y))
-  exact hTriple (hbound y)
-
-end OracleComposition
+/-- The contract for the lifted program: it neither panics nor diverges, and its result is
+reduced and congruent to the input. -/
+theorem triple_barrett_reduce_lifted (value : I32) :
+    Std.WP.Triple (Interop.Rust.liftRustM (barrett_reduce value) :
+        Interop.Rust.RustOracleComp spec I32)
+      (-2 ^ 26 ≤ value.val ∧ value.val ≤ 2 ^ 26) (barrettPost value)
+      (fun _ => False, fun _ => False, ()) :=
+  Interop.Rust.triple_liftRustM_of_triple (barrett_reduce_spec value)
 
 end Interop.Hax.Examples.Barrett
