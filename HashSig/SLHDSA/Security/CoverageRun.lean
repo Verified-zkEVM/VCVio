@@ -180,6 +180,143 @@ for the other class. -/
 
 end Events
 
+/-! ## Pure coverage positions -/
+
+section PurePositions
+
+open SLHDSA.DigestTransport CanonicalGames
+
+/-- A fresh covered forgery has a consumed forger position, with consumed signed
+or reached distinct hit coverers for all its FORS coordinates. -/
+theorem exists_coverage_positions_of_runInv_classPosInv
+    {vp : ValidatedParams} (core : CorePrimitives vp.params)
+    (outcome : RomOutcome vp core)
+    (tapes : (j : TapeClass) → List (tapeClassRange core j))
+    (state : RoleState core)
+    (hRun : RunInv core outcome.pk outcome.log state)
+    (hPos : AnswerTape.ClassPosInv (tapeClass core) tapes state.1.1 state.1.2
+      state.2.1.cls state.2.1.pos state.2.1.next state.2.1.cnt)
+    (hForger : state.2.1.cnt .forger ≤ (tapes .forger).length)
+    (hSigner : state.2.1.cnt .signer ≤ (tapes .signer).length)
+    (hCovered : ItsrCovered outcome state.1.1.fst.fst)
+    (hFresh : (outcome.sig.randomness, outcome.msg) ∉
+      outcome.log.map (fun entry => (entry.2.randomness, entry.1))) :
+    ∃ (targetIndex : Nat) (targetDigest : Bytes vp.params.m),
+      targetIndex < (tapes .forger).length ∧
+      targetIndex < state.2.1.next .forger ∧
+      targetIndex < state.2.1.cnt .forger ∧
+      state.2.1.cls
+        (hmsgPoint core outcome.pk outcome.sig.randomness outcome.msg) = some .forger ∧
+      state.2.1.pos
+        (hmsgPoint core outcome.pk outcome.sig.randomness outcome.msg) = some targetIndex ∧
+      (tapes .forger)[targetIndex]? = some targetDigest ∧
+      ForgerDigest outcome state.1.1.fst.fst targetDigest ∧
+      ∀ coordinate : Fin vp.params.k,
+        ∃ (entry : (t : (List Byte →ₒ GeneralScheme.SignatureCore vp core).Domain) ×
+            (List Byte →ₒ GeneralScheme.SignatureCore vp core).Range t)
+          (coverDigest : Bytes vp.params.m),
+          entry ∈ outcome.log ∧
+          LoggedDigest outcome state.1.1.fst.fst entry coverDigest ∧
+          (coveringDigest vp coverDigest).1 = (coveringDigest vp targetDigest).1 ∧
+          (coveringDigest vp coverDigest).2 coordinate =
+            (coveringDigest vp targetDigest).2 coordinate ∧
+          ((∃ signerIndex : Nat,
+              signerIndex < (tapes .signer).length ∧
+              signerIndex < state.2.1.next .signer ∧
+              state.2.1.cls
+                (hmsgPoint core outcome.pk entry.2.randomness entry.1) = some .signer ∧
+              state.2.1.pos
+                (hmsgPoint core outcome.pk entry.2.randomness entry.1) = some signerIndex ∧
+              (tapes .signer)[signerIndex]? = some coverDigest) ∨
+            ∃ forgerIndex : Nat,
+              forgerIndex < (tapes .forger).length ∧
+              forgerIndex < state.2.1.next .forger ∧
+              forgerIndex < state.2.1.cnt .forger ∧
+              forgerIndex ≠ targetIndex ∧
+              state.2.1.cls
+                (hmsgPoint core outcome.pk entry.2.randomness entry.1) = some .forger ∧
+              state.2.1.pos
+                (hmsgPoint core outcome.pk entry.2.randomness entry.1) = some forgerIndex ∧
+              hmsgPoint core outcome.pk entry.2.randomness entry.1 ∈ state.2.2 ∧
+              (tapes .forger)[forgerIndex]? = some coverDigest) := by
+  classical
+  obtain ⟨positions, position_injective⟩ := AnswerTape.ClassPosInv.exists_pos
+    (range_eq_tapeClassRange core) hPos {.forger, .signer} (by
+      intro which hwhich
+      rcases hwhich with rfl | rfl
+      · exact hForger
+      · exact hSigner)
+  obtain ⟨digest, hdigest, covered⟩ := hCovered
+  let target := hmsgPoint core outcome.pk outcome.sig.randomness outcome.msg
+  have targetCached : state.1.1 target = some digest := by
+    simpa only [ForgerDigest, QueryCache.fst_apply, target, hmsgPoint] using hdigest
+  obtain ⟨targetClass, targetCls, targetClasses, targetPos⟩ :=
+    positions target digest targetCached
+  have targetForger : targetClass = .forger := by
+    rcases targetClasses with hforger | hsigner
+    · simpa only [target, hmsgPoint, tapeClass] using hforger
+    · have signerClass : state.2.1.cls target = some .signer := by
+        simpa only [target, hmsgPoint, tapeClass] using
+          targetCls.trans (congrArg some hsigner)
+      obtain ⟨entry, hentry, samePoint⟩ := hRun.exists_mem_log target signerClass
+      obtain ⟨sameRandomness, sameMessage⟩ := (hmsgPoint_inj core outcome.pk).1 samePoint
+      exact (hFresh (List.mem_map.2
+        ⟨entry, hentry, Prod.ext sameRandomness.symm sameMessage.symm⟩)).elim
+  subst targetClass
+  obtain ⟨targetIndex, targetPosition, targetLength, _, targetTape⟩ := targetPos (by simp)
+  have targetNext : targetIndex < state.2.1.next .forger :=
+    (hPos.pos_spec target .forger targetIndex targetCls targetPosition).1
+  have targetCount : targetIndex < state.2.1.cnt .forger :=
+    targetNext.trans_le (hPos.next_le_cnt .forger)
+  refine ⟨targetIndex, digest, targetLength, targetNext, targetCount,
+    targetCls, targetPosition, targetTape, hdigest, ?_⟩
+  intro coordinate
+  obtain ⟨entry, hentry, coverDigest, hlogged, hmatch⟩ := covered
+    ⟨(splitDigest vp.params digest).idxTree, (splitDigest vp.params digest).idxLeaf,
+      coordinate, ⟨forsIdx vp.params (splitDigest vp.params digest).md.toList coordinate.val,
+        forsIdx_lt _ _ _⟩⟩
+    ((mem_hmsgIndices _ _ _).2 ⟨rfl, rfl, rfl⟩)
+  obtain ⟨sameInstance, sameCoordinate⟩ :=
+    coveringDigest_match_of_mem_hmsgIndices vp digest coverDigest coordinate hmatch
+  refine ⟨entry, coverDigest, hentry, hlogged, sameInstance, sameCoordinate, ?_⟩
+  let point := hmsgPoint core outcome.pk entry.2.randomness entry.1
+  have coverCached : state.1.1 point = some coverDigest := by
+    simpa only [LoggedDigest, QueryCache.fst_apply, point, hmsgPoint] using hlogged
+  obtain ⟨which, pointClass, pointClasses, pointPos⟩ := positions point coverDigest coverCached
+  rcases pointClasses with hforger | hsigner
+  · have forgerClass : which = .forger := by
+      simpa only [point, hmsgPoint, tapeClass] using hforger
+    subst which
+    obtain ⟨index, position, length, _, tapeValue⟩ := pointPos (Or.inl forgerClass)
+    have next : index < state.2.1.next .forger :=
+      (hPos.pos_spec point .forger index pointClass position).1
+    have count : index < state.2.1.cnt .forger :=
+      next.trans_le (hPos.next_le_cnt .forger)
+    have differentPoint : point ≠ target := by
+      intro samePoint
+      obtain ⟨sameRandomness, sameMessage⟩ := (hmsgPoint_inj core outcome.pk).1 samePoint
+      exact hFresh (List.mem_map.2 ⟨entry, hentry, Prod.ext sameRandomness sameMessage⟩)
+    have differentIndex : index ≠ targetIndex := by
+      intro sameIndex
+      exact differentPoint (position_injective point target .forger index pointClass position
+        targetCls (by simpa only [sameIndex] using targetPosition))
+    have hit : point ∈ state.2.2 := by
+      rcases (hRun.covered_log entry hentry).2 with signerClass | hit
+      · change state.2.1.cls point = some .signer at signerClass
+        rw [pointClass] at signerClass
+        cases signerClass
+      · exact hit
+    exact Or.inr ⟨index, length, next, count, differentIndex, pointClass, position, hit, tapeValue⟩
+  · have signerClass : which = .signer := by
+      simpa only [point, hmsgPoint, tapeClass] using hsigner
+    subst which
+    obtain ⟨index, position, length, _, tapeValue⟩ := pointPos (Or.inr signerClass)
+    have next : index < state.2.1.next .signer :=
+      (hPos.pos_spec point .signer index pointClass position).1
+    exact Or.inl ⟨index, length, next, pointClass, position, tapeValue⟩
+
+end PurePositions
+
 variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [DecidableEq core.Y]
   [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
 
@@ -573,40 +710,35 @@ theorem exists_witness_of_runItsrCovered {e : core.SkSeed ≃ core.Y}
     ∃ w : Fin (qh + 1) × (Fin vp.params.k → Fin qs ⊕ Fin qh),
       TapeMatch core w L ∧ HitAll (randRel core) .forger (desigPos w) z.2 := by
   classical
-  obtain ⟨⟨digest, hdig, hidx⟩, hfresh⟩ := hcov
-  simp only [DeriveOutcome.fill, ForgerDigest, LoggedDigest, QueryCache.fst_apply] at hdig hidx
-  rw [UnforgeableTranscript.mapSk_pk] at hdig hidx
-  rw [UnforgeableTranscript.mapSk_sig, UnforgeableTranscript.mapSk_msg] at hdig
-  rw [UnforgeableTranscript.mapSk_log] at hidx
-  simp only [RunPointFresh, DeriveOutcome.fill, UnforgeableTranscript.mapSk_msg,
-    UnforgeableTranscript.mapSk_log, UnforgeableTranscript.mapSk_sig] at hfresh
-  have hlen := length_of_mem_support_tapeFamily (tapeLength qh qs) hL
+  obtain ⟨coverage, fresh⟩ := hcov
+  have familyLength := length_of_mem_support_tapeFamily (tapeLength qh qs) hL
   have hF := cnt_le_of_isQueryBoundP (tapeClass core) (range_eq_tapeClassRange core)
     (freshHitAux (IsRandPoint core) (randRel core)) ∅ L _ .forger
     (isQueryBoundP_roleExperiment_forger core hadv pkSeed) hz
   have hS := cnt_le_of_isQueryBoundP (tapeClass core) (range_eq_tapeClassRange core)
     (freshHitAux (IsRandPoint core) (randRel core)) ∅ L _ .signer
     (isQueryBoundP_roleExperiment_signer core hadv pkSeed) hz
-  obtain ⟨hpos, hinj⟩ := exists_pos_of_mem_support_run_classPosImplFwd (tapeClass core)
-    (range_eq_tapeClassRange core) (freshHitAux (IsRandPoint core) (randRel core)) ∅ L _ hz
-    {.forger, .signer} (by
-      rintro j (rfl | rfl)
-      · rw [hlen]; exact hF
-      · rw [hlen]; exact hS)
-  -- the target sits on the forger tape
-  set tgt := hmsgPoint core z.1.pk z.1.sig.randomness z.1.msg
-  obtain ⟨j₀, hcls₀, hj₀, hp₀⟩ := hpos tgt digest hdig
-  have hj₀F : j₀ = .forger := by
-    rcases hj₀ with h | h
-    · exact h
-    · obtain ⟨en, hen, heq⟩ := exists_mem_log_of_cls_eq_signer hz tgt (by rw [hcls₀, h]; rfl)
-      obtain ⟨h1, h2⟩ := (hmsgPoint_inj core _).1 heq
-      exact absurd (List.mem_map.2 ⟨en, hen, Prod.ext h1.symm h2.symm⟩) hfresh
-  subst hj₀F
-  obtain ⟨n₀, hn₀, hn₀lt, _, hv₀⟩ := hp₀ (by simp)
-  rw [hlen] at hn₀lt
-  set n : Fin (qh + 1) := ⟨n₀, hn₀lt⟩
-  -- every digit has a coverer slot
+  have hPos : ClassPosInv (tapeClass core) L z.2.1.1 z.2.1.2
+      z.2.2.1.cls z.2.2.1.pos z.2.2.1.next z.2.2.1.cnt :=
+    simulateQ_run_preserves_inv_of_query (roleRunImpl core)
+      (fun state : RoleState core => ClassPosInv (tapeClass core) L state.1.1 state.1.2
+        state.2.1.cls state.2.1.pos state.2.1.next state.2.1.cnt)
+      (classPosInvAuxFwd_step (tapeClass core) (range_eq_tapeClassRange core)
+        (freshHitAux (IsRandPoint core) (randRel core)) L)
+      (roleExperiment core adv pkSeed) _ (ClassPosInv.empty (tapeClass core) L) z hz
+  obtain ⟨hpk, hI⟩ := runInv_of_mem_support_roleRun hz
+  have hRun : RunInv core (DeriveOutcome.fill core s z.1).pk
+      (DeriveOutcome.fill core s z.1).log z.2 := by
+    simpa only [DeriveOutcome.fill, UnforgeableTranscript.mapSk_pk,
+      UnforgeableTranscript.mapSk_log, hpk] using hI
+  obtain ⟨targetIndex, digest, targetLength, _, _, _, _, targetTape, _, slots⟩ :=
+    exists_coverage_positions_of_runInv_classPosInv core (DeriveOutcome.fill core s z.1)
+      L z.2 hRun hPos (by rw [familyLength]; exact hF)
+      (by rw [familyLength]; exact hS) coverage fresh
+  rw [familyLength] at targetLength
+  let n : Fin (qh + 1) := ⟨targetIndex, targetLength⟩
+  simp only [DeriveOutcome.fill, UnforgeableTranscript.mapSk_pk,
+    UnforgeableTranscript.mapSk_log] at slots
   have key : ∀ i : Fin vp.params.k, ∃ c : Fin qs ⊕ Fin qh, ∃ dc : Bytes vp.params.m,
       coverValue (L .forger) (L .signer) n c = some dc ∧
       (coveringDigest vp dc).1 = (coveringDigest vp digest).1 ∧
@@ -615,48 +747,33 @@ theorem exists_witness_of_runItsrCovered {e : core.SkSeed ≃ core.Y}
         ∀ t, z.2.2.1.cls t = some .forger → z.2.2.1.pos t = some (n.succAbove p) →
           ∃ R M, t = hmsgPoint core z.1.pk R M := by
     intro i
-    obtain ⟨en, hen, d', hd', hmem⟩ := hidx
-      ⟨(splitDigest vp.params digest).idxTree, (splitDigest vp.params digest).idxLeaf, i,
-        ⟨forsIdx vp.params (splitDigest vp.params digest).md.toList i.val, forsIdx_lt _ _ _⟩⟩
-      ((mem_hmsgIndices _ _ _).2 ⟨rfl, rfl, rfl⟩)
-    obtain ⟨hm1, hm2⟩ := coveringDigest_match_of_mem_hmsgIndices vp digest d' i hmem
-    set ti := hmsgPoint core z.1.pk en.2.randomness en.1
-    have hne : ti ≠ tgt := fun h =>
-      hfresh (List.mem_map.2 ⟨en, hen, Prod.ext ((hmsgPoint_inj core _).1 h).1
-        ((hmsgPoint_inj core _).1 h).2⟩)
-    obtain ⟨j, hclsj, hj, hpj⟩ := hpos ti d' hd'
-    rcases hj with hj | hj
-    · -- forger tape: a position other than the target's, and a hit
-      rw [show tapeClass core (Sum.inl ti) = .forger from rfl] at hj
-      subst hj
-      obtain ⟨ni, hni, hnilt, _, hvi⟩ := hpj (by simp)
-      rw [hlen] at hnilt
-      have hneq : (⟨ni, hnilt⟩ : Fin (qh + 1)) ≠ n := fun h =>
-        hne (hinj ti tgt _ ni hclsj hni hcls₀
-          (by rw [hn₀]; exact congrArg (some ∘ Fin.val) h.symm))
-      obtain ⟨p, hp⟩ := Fin.exists_succAbove_eq hneq
-      refine ⟨.inr p, d', ?_, hm1, hm2, fun p' hp' => ?_⟩
-      · simp only [coverValue, hp]
-        exact hvi.trans (by rfl)
-      · cases hp'
-        refine ⟨⟨ti, hclsj, by rw [hp]; exact hni, ?_⟩, fun t hc hpos =>
-          ⟨_, _, hinj t ti _ _ hc hpos hclsj (by rw [hp]; exact hni)⟩⟩
-        rcases cls_eq_signer_or_mem_hits_of_mem_log hz hen with h | h
-        · rw [hclsj] at h; cases h
-        · exact h
-    · -- signer tape
-      rw [show tapeClass core (Sum.inr ti) = .signer from rfl] at hj
-      subst hj
-      obtain ⟨ni, hni, hnilt, _, hvi⟩ := hpj (by simp)
-      rw [hlen] at hnilt
-      refine ⟨.inl ⟨ni, hnilt⟩, d', ?_, hm1, hm2, fun p' hp' => by cases hp'⟩
+    obtain ⟨entry, coverDigest, _, _, sameInstance, sameCoordinate, classified⟩ := slots i
+    rcases classified with ⟨index, slotLength, _, _, _, tapeValue⟩ |
+        ⟨index, slotLength, _, _, differentIndex, pointClass, pointPosition, hit, tapeValue⟩
+    · rw [familyLength] at slotLength
+      refine ⟨.inl ⟨index, slotLength⟩, coverDigest, ?_, sameInstance, sameCoordinate,
+        fun p' hp' => by cases hp'⟩
       simp only [coverValue]
-      exact hvi.trans (by rfl)
+      exact tapeValue
+    · rw [familyLength] at slotLength
+      have differentSlot : (⟨index, slotLength⟩ : Fin (qh + 1)) ≠ n := by
+        intro same
+        exact differentIndex (congrArg Fin.val same)
+      obtain ⟨p, hp⟩ := Fin.exists_succAbove_eq differentSlot
+      refine ⟨.inr p, coverDigest, ?_, sameInstance, sameCoordinate, fun p' hp' => ?_⟩
+      · simp only [coverValue, hp]
+        exact tapeValue
+      · cases hp'
+        let point := hmsgPoint core z.1.pk entry.2.randomness entry.1
+        refine ⟨⟨point, pointClass, by rw [hp]; exact pointPosition, hit⟩,
+          fun t hc hpos => ⟨entry.2.randomness, entry.1, ?_⟩⟩
+        exact hPos.pos_inj t point .forger (n.succAbove p) hc hpos pointClass
+          (by rw [hp]; exact pointPosition)
   choose f dc hf using key
   have hmem : ∀ q, q ∈ desigPos (qs := qs) (n, f) →
       ∃ p, (∃ i, f i = .inr p) ∧ (n.succAbove p : ℕ) = q := fun q hq => by
     simpa [desigPos] using hq
-  refine ⟨(n, f), fun i => ⟨digest, dc i, hv₀.trans (by rfl), (hf i).1, (hf i).2.1,
+  refine ⟨(n, f), fun i => ⟨digest, dc i, targetTape.trans (by rfl), (hf i).1, (hf i).2.1,
     (hf i).2.2.1⟩, fun q hq => ?_, fun t t' q q' hq hq' hc hp hc' hp' x u hr hr' => ?_⟩
   · obtain ⟨p, ⟨i, hi⟩, rfl⟩ := hmem q hq
     exact ((hf i).2.2.2 p hi).1
