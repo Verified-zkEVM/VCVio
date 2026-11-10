@@ -498,6 +498,16 @@ theorem prEvent_eq_one_simulateQ_randomOracle_run_iff
         ⟨cache', hac⟩
     exact ha ▸ h f hf
 
+/-- A lifted `ProbComp`, run beside uniform forwarding, samples and leaves the cache. -/
+lemma run_simulateQ_unifFwdImpl_add_liftM {ι τ : Type} {spec : OracleSpec.{0, 0} ι}
+    {spec' : OracleSpec.{0, 0} τ} (impl : QueryImpl spec' (StateT spec.QueryCache ProbComp))
+    {α : Type} (oa : ProbComp α) (c : spec.QueryCache) :
+    (simulateQ (unifFwdImpl spec + impl) (liftM oa : OracleComp (unifSpec + spec') α)).run c =
+      (·, c) <$> oa := by
+  rw [show simulateQ (unifFwdImpl spec + impl) (liftM oa : OracleComp (unifSpec + spec') α) =
+      simulateQ (unifFwdImpl spec) oa from QueryImpl.simulateQ_add_liftComp_left _ _ oa,
+    unifFwdImpl.simulateQ_run]
+
 end OracleComp
 
 /-- Simulating the random oracle leaves a mapped uniform `Fin` sample unchanged: the query is
