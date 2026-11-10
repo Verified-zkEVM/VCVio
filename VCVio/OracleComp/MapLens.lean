@@ -24,11 +24,15 @@ the action of such a lens on oracle computations, `OracleComp.mapLens`, as PolyF
   expresses `mapLens` itself as a simulation;
 * `liftComp_eq_mapLens`: the lift along a sub-spec inclusion `h : spec ⊂ₒ superSpec` is
   `mapLens h.toLens`, with the summand inclusions into `spec₁ + spec₂` as instances;
-* `IsQueryBound.mapLens`, `IsTotalQueryBound.mapLens`, `IsQueryBoundP.mapLens`: a query bound
-  on a computation, read through the lens, bounds the transported computation, since each query
-  is sent to exactly one query, and `AllQueriesSatisfy.mapLens` for the predicate-only bound;
+* `IsQueryBound.mapLens`, `IsTotalQueryBound.mapLens`, `IsQueryBoundP.mapLens`,
+  `AllQueriesSatisfy.mapLens`: a query bound on a computation, read through the lens, bounds the
+  transported computation. These are PolyFun's `IsRollBound.mapLens` and `IsChargeBound.mapLens`
+  at the charges of VCVio's bounds. When every map `l.toFunB t` is surjective the bounds agree
+  (`isQueryBound_mapLens_iff`, `isTotalQueryBound_mapLens_iff`, `isQueryBoundP_mapLens_iff`,
+  `allQueriesSatisfy_mapLens_iff`);
 * `isPerIndexQueryBound_iff_forall_isQueryBoundP`: a per-index bound is a bound at each index
-  separately, which gives `IsPerIndexQueryBound.mapLens` and, along a lens injective on queries,
+  separately (PolyFun's `isChargeBound_pi_iff`), which gives `IsPerIndexQueryBound.mapLens` and,
+  along a lens injective on queries,
   `IsPerIndexQueryBound.mapLens_of_injective`.
 -/
 
@@ -198,61 +202,82 @@ variable {ι ι' : Type u} {spec : OracleSpec.{u, u} ι} {spec' : OracleSpec.{u,
   {α : Type u} {B : Type*}
 
 /-- A query bound on `oa`, with validity check and cost read through the lens, bounds
-`oa.mapLens l`. -/
+`oa.mapLens l`. This is PolyFun's `IsRollBound.mapLens`. -/
 theorem IsQueryBound.mapLens (l : Lens spec.toPFunctor spec'.toPFunctor)
-    {canQuery : ι' → B → Prop} {cost : ι' → B → B} :
-    ∀ (oa : OracleComp spec α) {b : B},
-      oa.IsQueryBound b (fun t => canQuery (l.toFunA t)) (fun t => cost (l.toFunA t)) →
-      (oa.mapLens l).IsQueryBound b canQuery cost
-  | .pure _, _, _ => trivial
-  | .liftBind a rest, _, h =>
-      ⟨h.1, fun d => IsQueryBound.mapLens l (rest (l.toFunB a d)) (h.2 (l.toFunB a d))⟩
+    {canQuery : ι' → B → Prop} {cost : ι' → B → B} {oa : OracleComp spec α} {b : B}
+    (h : oa.IsQueryBound b (fun t => canQuery (l.toFunA t)) (fun t => cost (l.toFunA t))) :
+    (oa.mapLens l).IsQueryBound b canQuery cost :=
+  PFunctor.FreeM.IsRollBound.mapLens l h
 
-/-- Transport along a lens preserves a total query bound. -/
+/-- When every answer of `spec'` is reached by the lens, the query bound on `oa.mapLens l` is the
+query bound on `oa` read through the lens. This is PolyFun's `isRollBound_mapLens_iff`. -/
+theorem isQueryBound_mapLens_iff (l : Lens spec.toPFunctor spec'.toPFunctor)
+    (hl : ∀ t, Function.Surjective (l.toFunB t)) {canQuery : ι' → B → Prop}
+    {cost : ι' → B → B} {oa : OracleComp spec α} {b : B} :
+    (oa.mapLens l).IsQueryBound b canQuery cost ↔
+      oa.IsQueryBound b (fun t => canQuery (l.toFunA t)) (fun t => cost (l.toFunA t)) :=
+  PFunctor.FreeM.isRollBound_mapLens_iff l hl
+
+/-- Transport along a lens preserves a total query bound. This is PolyFun's
+`isTotalRollBound_mapLens`. -/
 theorem IsTotalQueryBound.mapLens (l : Lens spec.toPFunctor spec'.toPFunctor)
     {oa : OracleComp spec α} {n : ℕ} (h : oa.IsTotalQueryBound n) :
     (oa.mapLens l).IsTotalQueryBound n :=
-  IsQueryBound.mapLens l oa h
+  PFunctor.FreeM.isTotalRollBound_mapLens l oa h
+
+/-- When every answer of `spec'` is reached by the lens, the total query bounds of `oa` and
+`oa.mapLens l` agree. -/
+theorem isTotalQueryBound_mapLens_iff (l : Lens spec.toPFunctor spec'.toPFunctor)
+    (hl : ∀ t, Function.Surjective (l.toFunB t)) {oa : OracleComp spec α} {n : ℕ} :
+    (oa.mapLens l).IsTotalQueryBound n ↔ oa.IsTotalQueryBound n :=
+  isQueryBound_mapLens_iff l hl
 
 /-- A bound on the queries satisfying `p ∘ l.toFunA` bounds the queries of the transported
-computation satisfying `p`. -/
+computation satisfying `p`. This is PolyFun's `IsChargeBound.mapLens` at the charge that counts
+the queries satisfying `p`. -/
 theorem IsQueryBoundP.mapLens (l : Lens spec.toPFunctor spec'.toPFunctor) {p : ι' → Prop}
     [DecidablePred p] {oa : OracleComp spec α} {n : ℕ}
     (h : oa.IsQueryBoundP (fun t => p (l.toFunA t)) n) :
     (oa.mapLens l).IsQueryBoundP p n :=
-  IsQueryBound.mapLens l oa h
+  (isQueryBoundP_iff_isChargeBound p _ n).2 <|
+    PFunctor.FreeM.IsChargeBound.mapLens l <| (isQueryBoundP_iff_isChargeBound _ oa n).1 h
+
+/-- When every answer of `spec'` is reached by the lens, the bound on the queries of
+`oa.mapLens l` satisfying `p` is the bound on the queries of `oa` satisfying `p ∘ l.toFunA`. -/
+theorem isQueryBoundP_mapLens_iff (l : Lens spec.toPFunctor spec'.toPFunctor)
+    (hl : ∀ t, Function.Surjective (l.toFunB t)) {p : ι' → Prop} [DecidablePred p]
+    {oa : OracleComp spec α} {n : ℕ} :
+    (oa.mapLens l).IsQueryBoundP p n ↔ oa.IsQueryBoundP (fun t => p (l.toFunA t)) n :=
+  (isQueryBoundP_iff_isChargeBound p _ n).trans <|
+    (PFunctor.FreeM.isChargeBound_mapLens_iff l hl).trans
+      (isQueryBoundP_iff_isChargeBound _ oa n).symm
 
 /-- A predicate-only bound on `oa` at `P ∘ l.toFunA` is a predicate-only bound at `P` on the
 transported computation. -/
 theorem AllQueriesSatisfy.mapLens (l : Lens spec.toPFunctor spec'.toPFunctor) {P : ι' → Prop}
     {oa : OracleComp spec α} (h : oa.AllQueriesSatisfy fun t => P (l.toFunA t)) :
-    (oa.mapLens l).AllQueriesSatisfy P :=
-  (allQueriesSatisfy_def _ _).2 <| IsQueryBound.mapLens (canQuery := fun t _ => P t)
-    (cost := fun _ _ => ()) l oa ((allQueriesSatisfy_def _ _).1 h)
+    (oa.mapLens l).AllQueriesSatisfy P := by
+  classical
+  exact (allQueriesSatisfy_iff_isChargeBound _ P).2 <|
+    PFunctor.FreeM.IsChargeBound.mapLens l <| (allQueriesSatisfy_iff_isChargeBound oa _).1 h
 
-/-- A per-index bound is a bound at each index separately: the budget vector decreases only at
-the queried index, and the check at a query to `t` reads only the budget of `t`. -/
+/-- When every answer of `spec'` is reached by the lens, `oa.mapLens l` satisfies `P` at every
+query exactly when `oa` satisfies `P ∘ l.toFunA`. -/
+theorem allQueriesSatisfy_mapLens_iff (l : Lens spec.toPFunctor spec'.toPFunctor)
+    (hl : ∀ t, Function.Surjective (l.toFunB t)) {P : ι' → Prop} {oa : OracleComp spec α} :
+    (oa.mapLens l).AllQueriesSatisfy P ↔ oa.AllQueriesSatisfy fun t => P (l.toFunA t) := by
+  rw [allQueriesSatisfy_def, allQueriesSatisfy_def]
+  exact isQueryBound_mapLens_iff l hl
+
+/-- A per-index bound is a bound at each index separately. With the per-index charges
+`fun t => Pi.single t 1`, this is PolyFun's `isChargeBound_pi_iff`. -/
 theorem isPerIndexQueryBound_iff_forall_isQueryBoundP [DecidableEq ι] (oa : OracleComp spec α)
     (qb : ι → ℕ) :
     oa.IsPerIndexQueryBound qb ↔ ∀ t, oa.IsQueryBoundP (· = t) (qb t) := by
-  induction oa using OracleComp.inductionOn generalizing qb with
-  | pure _ => exact iff_of_true trivial fun _ => trivial
-  | query_bind t mx ih =>
-    rw [isPerIndexQueryBound_query_bind_iff]
-    simp only [isQueryBoundP_query_bind_iff, ih]
-    constructor
-    · rintro ⟨h0, h⟩ s
-      by_cases hs : t = s
-      · subst hs
-        exact ⟨Or.inr h0, fun u => by simpa using h u t⟩
-      · exact ⟨Or.inl hs, fun u => by
-          simpa [hs, Function.update_of_ne (Ne.symm hs)] using h u s⟩
-    · intro h
-      refine ⟨(h t).1.resolve_left (by simp), fun u s => ?_⟩
-      by_cases hs : s = t
-      · subst hs
-        simpa using (h s).2 u
-      · simpa [Ne.symm hs, Function.update_of_ne hs] using (h s).2 u
+  rw [isPerIndexQueryBound_iff_isChargeBound, PFunctor.FreeM.isChargeBound_pi_iff]
+  refine forall_congr' fun t => ?_
+  rw [isQueryBoundP_iff_isChargeBound]
+  simp only [Pi.single_apply, Pi.zero_apply, @eq_comm _ t]
 
 /-- A per-index bound on the transported computation follows from a bound, at each index `t'`,
 on the queries of `oa` that the lens sends to `t'`. -/
