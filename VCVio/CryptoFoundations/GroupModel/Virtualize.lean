@@ -12,6 +12,14 @@ import Mathlib.Data.List.GetD
 
 A private translation table restricts an adversary to its own handles. Out-of-range handles
 translate to a designated zero entry of the surrounding computation's table.
+
+The adversary is a generic computation, `OracleComp (genSpec F σ) α`: group operations and
+private coins, with no game oracle. The surrounding table holds one designated zero entry per
+sort, at handle `z s`, which `WellFormed` requires. `runGen_virtualize` reads a virtualized run
+back to the direct run, and `isQueryBoundP_virtualize` transports group-operation budgets.
+Between two virtualized runs, the surrounding computation may extend its table and give the
+adversary further handles; `wellFormed_append_of_extends` and `readBack_append_of_extends` show
+that the invariant and the read-back survive this.
 -/
 
 public section
@@ -61,53 +69,70 @@ variable {F S : Type} {σ : Sig S} {V : S → Type}
     (τ : Tbl (fun _ : S => Handle)) (T : Tbl V) : Prop :=
   ∀ s, (∀ h ∈ τ s, h < (T s).length) ∧ z s < (T s).length ∧ lookup T s (z s) = 0
 
-/-- Reading through a translation agrees with lookup, including out-of-range adversary handles. -/
+/-- Reading through a translation agrees with lookup, including out-of-range adversary handles,
+when the designated zero handle stores zero. -/
 theorem lookup_readBack [∀ s, Zero (V s)] {z : S → Handle}
-    {τ : Tbl (fun _ : S => Handle)} {T : Tbl V} (hw : WellFormed z τ T)
-    (s : S) (h : Handle) :
+    {τ : Tbl (fun _ : S => Handle)} {T : Tbl V} (s : S) (hz : lookup T s (z s) = 0)
+    (h : Handle) :
     lookup (readBack τ T) s h = lookup T s ((τ s).getD h (z s)) := by
   change ((τ s).map (lookup T s)).getD h 0 = _
-  rw [← (hw s).2.2]
+  rw [← hz]
   exact List.getD_map (τ s) (z s) (lookup T s)
 
-private theorem readBack_prefix [∀ s, Zero (V s)] {z : S → Handle}
+/-- Extending the surrounding table leaves the read-back of a well-formed translation unchanged,
+since every translated handle is already in range. -/
+theorem readBack_prefix [∀ s, Zero (V s)] {z : S → Handle}
     {τ : Tbl (fun _ : S => Handle)} {T T' : Tbl V} (hw : WellFormed z τ T)
-    (hp : ∀ s, T s <+: T' s) : readBack τ T' = readBack τ T := by
+    (hp : Tbl.Extends T T') : readBack τ T' = readBack τ T := by
   funext s
   apply List.map_congr_left
   intro h hh
   exact lookup_eq_of_prefix s (hp s) h ((hw s).1 h hh)
 
+/-- Extending the surrounding table and giving the adversary one more handle, in range of the
+extended table, preserves well-formedness. -/
+theorem wellFormed_append_of_extends [DecidableEq S] [∀ s, Zero (V s)]
+    {z : S → Handle} {τ : Tbl (fun _ : S => Handle)} {T T' : Tbl V}
+    (hw : WellFormed z τ T) (hp : Tbl.Extends T T') (s : S) {h : Handle}
+    (hh : h < (T' s).length) :
+    WellFormed z (append τ s h) T' := by
+  intro t
+  refine ⟨?_, lt_of_lt_of_le (hw t).2.1 (hp t).length_le, ?_⟩
+  · intro h' hh'
+    by_cases ht : t = s
+    · subst t
+      simp only [append, Function.update_self, List.mem_append, List.mem_singleton] at hh'
+      rcases hh' with hh' | rfl
+      · exact lt_of_lt_of_le ((hw s).1 h' hh') (hp s).length_le
+      · exact hh
+    · have hh'' : h' ∈ τ t := by simpa [append, Function.update_of_ne ht] using hh'
+      exact lt_of_lt_of_le ((hw t).1 h' hh'') (hp t).length_le
+  · rw [lookup_eq_of_prefix t (hp t) _ (hw t).2.1, (hw t).2.2]
+
+/-- Under the same extension, the adversary's read-back table gains the new handle's entry. -/
+theorem readBack_append_of_extends [DecidableEq S] [∀ s, Zero (V s)]
+    {z : S → Handle} {τ : Tbl (fun _ : S => Handle)} {T T' : Tbl V}
+    (hw : WellFormed z τ T) (hp : Tbl.Extends T T') (s : S) (h : Handle) :
+    readBack (append τ s h) T' = append (readBack τ T) s (lookup T' s h) := by
+  have hq := readBack_prefix hw hp
+  funext t
+  by_cases ht : t = s
+  · subst t
+    simpa [readBack, append, List.map_append] using
+      congrArg (fun R : Tbl V => R s ++ [lookup T' s h]) hq
+  · simpa [readBack, append, Function.update_of_ne ht] using congrFun hq t
+
 private theorem wellFormed_append [DecidableEq S] [∀ s, Zero (V s)]
     {z : S → Handle} {τ : Tbl (fun _ : S => Handle)} {T : Tbl V}
     (hw : WellFormed z τ T) (s : S) (v : V s) :
-    WellFormed z (append τ s (T s).length) (append T s v) := by
-  intro t
-  have hp := extends_append T s v t
-  refine ⟨?_, lt_of_lt_of_le (hw t).2.1 hp.length_le, ?_⟩
-  · intro h hh
-    by_cases ht : t = s
-    · subst t
-      simp only [append, Function.update_self, List.mem_append, List.mem_singleton] at hh
-      simp only [append, Function.update_self, List.length_append, List.length_singleton]
-      rcases hh with hh | rfl
-      · exact Nat.lt_succ_of_lt ((hw s).1 h hh)
-      · exact Nat.lt_succ_self _
-    · have hh' : h ∈ τ t := by simpa [append, Function.update_of_ne ht] using hh
-      exact lt_of_lt_of_le ((hw t).1 h hh') hp.length_le
-  · rw [lookup_eq_of_prefix t hp _ (hw t).2.1, (hw t).2.2]
+    WellFormed z (append τ s (T s).length) (append T s v) :=
+  wellFormed_append_of_extends hw (extends_append T s v) s (by simp [append])
 
 private theorem readBack_append [DecidableEq S] [∀ s, Zero (V s)]
     {z : S → Handle} {τ : Tbl (fun _ : S => Handle)} {T : Tbl V}
     (hw : WellFormed z τ T) (s : S) (v : V s) :
     readBack (append τ s (T s).length) (append T s v) = append (readBack τ T) s v := by
-  have hp := readBack_prefix hw (extends_append T s v)
-  funext t
-  by_cases ht : t = s
-  · subst t
-    simpa [readBack, append, lookup, List.map_append] using
-      congrArg (fun R : Tbl V => R s ++ [v]) hp
-  · simpa [readBack, append, Function.update_of_ne ht] using congrFun hp t
+  rw [readBack_append_of_extends hw (extends_append T s v), lookup_append_fresh]
 
 private theorem runGen_virtualize_bind [DecidableEq S] [CommSemiring F]
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
@@ -120,7 +145,8 @@ private theorem runGen_virtualize_bind [DecidableEq S] [CommSemiring F]
         runGen M obs ((virtualize z (k r.1.1)).run r.1.2) r.2) := by
   simp only [runGen, run, virtualize, simulateQ_bind, StateT.run_bind]
 
-private theorem virtualize_step_wellFormed [DecidableEq S] [CommSemiring F]
+/-- One translated query preserves `WellFormed` in every outcome of its run. -/
+theorem virtualize_step_wellFormed [DecidableEq S] [CommSemiring F]
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
     {U : S → Type} [∀ s, DecidableEq (U s)]
     (M : Model F σ V) (obs : (s : S) → V s → U s)
@@ -164,7 +190,7 @@ private theorem virtualize_step_readBack [DecidableEq S] [CommSemiring F]
           (fun r => (r.1.1, readBack r.1.2 r.2)) <$>
             pure (((τ s).length, append τ s (T s).length),
               append T s (lookup T s ((τ s).getD a (z s)) + lookup T s ((τ s).getD b (z s))))
-      simp only [map_pure, lookup_readBack hw, readBack_append hw]
+      simp only [map_pure, lookup_readBack _ (hw _).2.2, readBack_append hw]
       simp only [readBack, List.length_map]
     | smul s c a =>
       change (pure ((readBack τ T s).length,
@@ -172,7 +198,7 @@ private theorem virtualize_step_readBack [DecidableEq S] [CommSemiring F]
           (fun r => (r.1.1, readBack r.1.2 r.2)) <$>
             pure (((τ s).length, append τ s (T s).length),
               append T s (c • lookup T s ((τ s).getD a (z s))))
-      simp only [map_pure, lookup_readBack hw, readBack_append hw]
+      simp only [map_pure, lookup_readBack _ (hw _).2.2, readBack_append hw]
       simp only [readBack, List.length_map]
     | lin o a =>
       change (pure ((readBack τ T (σ.ltgt o)).length,
@@ -182,7 +208,7 @@ private theorem virtualize_step_readBack [DecidableEq S] [CommSemiring F]
             pure (((τ (σ.ltgt o)).length, append τ (σ.ltgt o) (T (σ.ltgt o)).length),
               append T (σ.ltgt o)
                 (M.lin o (lookup T (σ.lsrc o) ((τ (σ.lsrc o)).getD a (z (σ.lsrc o))))))
-      simp only [map_pure, lookup_readBack hw, readBack_append hw]
+      simp only [map_pure, lookup_readBack _ (hw _).2.2, readBack_append hw]
       simp only [readBack, List.length_map]
     | bil o a b =>
       change (pure ((readBack τ T (σ.tgt o)).length,
@@ -194,7 +220,7 @@ private theorem virtualize_step_readBack [DecidableEq S] [CommSemiring F]
               append T (σ.tgt o)
                 (M.bil o (lookup T (σ.src₁ o) ((τ (σ.src₁ o)).getD a (z (σ.src₁ o))))
                   (lookup T (σ.src₂ o) ((τ (σ.src₂ o)).getD b (z (σ.src₂ o))))))
-      simp only [map_pure, lookup_readBack hw, readBack_append hw]
+      simp only [map_pure, lookup_readBack _ (hw _).2.2, readBack_append hw]
       simp only [readBack, List.length_map]
     | eq s a b =>
       change (pure (decide (obs s (lookup (readBack τ T) s a) =
@@ -202,7 +228,7 @@ private theorem virtualize_step_readBack [DecidableEq S] [CommSemiring F]
           (fun r => (r.1.1, readBack r.1.2 r.2)) <$>
             pure ((decide (obs s (lookup T s ((τ s).getD a (z s))) =
               obs s (lookup T s ((τ s).getD b (z s)))), τ), T)
-      simp only [map_pure, lookup_readBack hw]
+      simp only [map_pure, lookup_readBack _ (hw _).2.2]
   · simp only [virtualizeImpl, StateT.run]
     simp only [runGen, run, simulateQ_bind, simulateQ_pure, simulateQ_spec_query,
       StateT.run_bind, StateT.run_pure, QueryImpl.add_apply_inr]
