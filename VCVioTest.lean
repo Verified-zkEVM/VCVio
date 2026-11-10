@@ -28,6 +28,7 @@ public import VCVioTest.CryptoFoundations.UniversalHash
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.DisagreementMeasure
+public import VCVioTest.EvalDist.DiscreteTVDist
 public import VCVioTest.EvalDist.EventBounds
 public import VCVioTest.EvalDist.Failure
 public import VCVioTest.EvalDist.FinRatPMF
@@ -80,6 +81,8 @@ public import VCVioTest.OracleComp.EqDistTriple
 public import VCVioTest.OracleComp.MeasuredProgram
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
+public import VCVioTest.OracleComp.QueryAndHandlerLaws
+public import VCVioTest.OracleComp.QueryTracking.QueryLog
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.OracleComp.SpecInstanceSearch
 public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
@@ -163,6 +166,7 @@ public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.RandomOracleSettled
 public import VCVioTest.RandomOracleTouchRead
+public import VCVioTest.RandomPermutationConditioning
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
 public import VCVioTest.ReactiveNetwork
