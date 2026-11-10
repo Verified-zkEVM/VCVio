@@ -595,7 +595,11 @@ The second item is the transfer studied by Jaeger and Mohan. Its formal content 
 virtualization*: handles are predictable, so a reduction that shares its table with the
 adversary would let the adversary address the reduction's intermediate values. The reduction
 keeps a translation table from the adversary's handles to its own. This is a named construction,
-`GroupModel.virtualize`, to be built once.
+`GroupModel.virtualize` in `Virtualize.lean`, for generic adversaries (`genSpec`, with no game
+oracle); the reduction's table holds one designated zero entry per sort, to which the
+adversary's out-of-range handles translate. `runGen_virtualize` reads a virtualized run back to
+the direct run, and `isQueryBoundP_virtualize` transports the adversary's group-operation
+budget.
 
 A scheme that hashes group elements (Schnorr) cannot be written against `genSpec F` alone,
 because a handle is not data that identifies an element. It needs the encoding oracle: with
@@ -1343,7 +1347,9 @@ In particular, T2 for generic runs is `explains_of_mem_support_runGen`. Slices 3
 the certified interaction interface and the T1a/T1b/T1c translations, including their exact run
 equalities.
 
-L2 is proved in `Collision.lean` as `measureETVDist_run_le_collisionProb`.
+L2 is proved in `Collision.lean` as `measureETVDist_run_le_collisionProb`. Handle
+virtualization is proved in `Virtualize.lean`: `runGen_virtualize` reads a virtualized run back
+to the direct run, and `isQueryBoundP_virtualize` transports group-operation budgets.
 
 Everything else is a paper argument or theorem target: T3/T4 (including
 `dlogExperiment_ofGeneric_le`), T3ₛ, T5 and its cost certificate, the relation-problem bounds,
