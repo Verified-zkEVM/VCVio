@@ -298,8 +298,8 @@ theorem parseCoeffs_flatMap (xs : List ℤ) (hxs : ∀ x ∈ xs, -2047 ≤ x ∧
 /-! ### The round-trip -/
 
 /-- **Decompression inverts compression**: every byte string `compress` produces decodes back to
-the polynomial it came from. This is the `compress_decompress` law of `Primitives.Laws` for the
-concrete codec. -/
+the polynomial it came from. This is the `compress_decompress` law of
+`Primitives.StructuralLaws` for the concrete codec. -/
 theorem decompress_compress (n : ℕ) (s : IntPoly n) (dlen : ℕ) (d : List UInt8)
     (h : compress n s dlen = some d) : decompress n d dlen = some s := by
   unfold compress at h

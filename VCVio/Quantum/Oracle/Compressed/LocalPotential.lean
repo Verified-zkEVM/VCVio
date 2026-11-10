@@ -586,14 +586,14 @@ theorem sum_norm_flipCommutator_sq_le (χ : AddChar Y ℂ) (fl : Finset Y)
             (a₀ * ‖ψ none‖ ^ 2 + a₁ * W₀ + d * ‖G‖ ^ 2)) := by
           apply mul_le_mul_of_nonneg_left _ hβ.le
           apply mul_le_mul_of_nonneg_left _ (by positivity)
-          nlinarith [mul_le_mul_of_nonneg_left hbessel h₁]
+          nlinarith only [mul_le_mul_of_nonneg_left hbessel h₁]
       _ = β * (a₀⁻¹ + 4 * a₁⁻¹ + (a₁ + d)⁻¹) *
             (a₀ * ‖ψ none‖ ^ 2 + a₁ * W₀ + d * ‖G‖ ^ 2) := by ring
       _ ≤ lam * (a₀ * ‖ψ none‖ ^ 2 + a₁ * W₀ + d * ‖G‖ ^ 2) :=
           mul_le_mul_of_nonneg_right hν (by positivity)
   have e2 : 6 * β * W₁ ≤ lam * a₁ * W₁ := mul_le_mul_of_nonneg_right h6 hW₁0
   rw [hsplit, hW, hGfull]
-  nlinarith [hT1, hT2, e1, e2]
+  nlinarith only [hT1, hT2, e1, e2]
 
 omit [AddCommGroup Y] in
 /-- The quadratic form of a two-level cell potential. -/

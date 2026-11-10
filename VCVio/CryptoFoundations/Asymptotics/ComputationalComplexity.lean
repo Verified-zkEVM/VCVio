@@ -299,7 +299,6 @@ The response envelope is the larger encoded tagged-answer size of the two Boolea
 contract concerns only the open computation's answer lengths; efficient fair-bit generation is a
 separate sampler/handler certificate. -/
 def fairCoinResourceModel {C : StepClass}
-    [C.HasProd] [C.HasSum] [C.HasOption]
     (Q : QuantitativeStepClass C)
     (interface : InterfaceBoundary C coinSpec.toPFunctor) :
     OracleResourceModel Q interface (fun _ ↦ PUnit.unit) where
@@ -317,7 +316,6 @@ def fairCoinResourceModel {C : StepClass}
 /-- Both Boolean replies are admitted by the canonical fair-coin resource model. -/
 @[simp]
 theorem fairCoinResourceModel_allows {C : StepClass}
-    [C.HasProd] [C.HasSum] [C.HasOption]
     (Q : QuantitativeStepClass C)
     (interface : InterfaceBoundary C coinSpec.toPFunctor)
     (position : coinSpec.Domain) (answer : coinSpec.Range position) :
@@ -326,7 +324,6 @@ theorem fairCoinResourceModel_allows {C : StepClass}
 
 /-- Contract admitting exactly the canonical finite fair-coin resource model. -/
 def fairCoinContract {C : StepClass}
-    [C.HasProd] [C.HasSum] [C.HasOption]
     (Q : QuantitativeStepClass C)
     (interface : InterfaceBoundary C coinSpec.toPFunctor) :
     OracleContract Q interface Unit where
@@ -337,7 +334,6 @@ def fairCoinContract {C : StepClass}
 /-- A model compatible with `fairCoinContract` is the canonical fair-coin model. -/
 @[simp]
 theorem fairCoinContract_admissible_iff {C : StepClass}
-    [C.HasProd] [C.HasSum] [C.HasOption]
     (Q : QuantitativeStepClass C)
     (interface : InterfaceBoundary C coinSpec.toPFunctor)
     (model : OracleResourceModel Q interface (fairCoinContract Q interface).labelOf) :
@@ -347,7 +343,6 @@ theorem fairCoinContract_admissible_iff {C : StepClass}
 
 /-- The canonical resource model packaged with its fair-coin contract evidence. -/
 def fairCoinModel {C : StepClass}
-    [C.HasProd] [C.HasSum] [C.HasOption]
     (Q : QuantitativeStepClass C)
     (interface : InterfaceBoundary C coinSpec.toPFunctor) :
     (fairCoinContract Q interface).Model :=
@@ -355,7 +350,6 @@ def fairCoinModel {C : StepClass}
 
 /-- The fair-coin contract admits no resource model other than the canonical one. -/
 theorem fairCoinModel_eq {C : StepClass}
-    [C.HasProd] [C.HasSum] [C.HasOption]
     (Q : QuantitativeStepClass C)
     (interface : InterfaceBoundary C coinSpec.toPFunctor)
     (model : (fairCoinContract Q interface).Model) :
