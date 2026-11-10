@@ -99,7 +99,7 @@ private theorem hidden_event_le [Field F] [Fintype F] [DecidableEq F]
   classical
   let : MeasurableSpace ((ι → F) × (α × Tbl (fun _ : Unit => MvPolynomial ι F))) := ⊤
   have hm := (prEvent_runGen_symbolic_le_add ($ᵗ (ι → F))
-    (fun f hf hd => prob_eval_zero_univ_le_div f hf hd) A hq tbl hd
+    (fun f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd) A hq tbl hd
     {w | E w.1 w.2} (MeasurableSet.of_discrete)).1
   have hs : Pr{let x ← $ᵗ (ι → F); let z ← (runGen (symbolic F (discreteSig Unit) ι)
       (fun _ => id) A tbl)}[E x z] ≤ (k : ℝ≥0∞) / Fintype.card F := by
@@ -228,7 +228,7 @@ theorem cdhExperiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
       omega
     have hdeg : (target - p).totalDegree ≤ 2 :=
       (MvPolynomial.totalDegree_sub _ _).trans (max_le (by omega) (by omega))
-    have hb := prob_eval_zero_univ_le_div (target - p) hn hdeg
+    have hb := prEvent_eval_eq_zero_univ_le_div (target - p) hn hdeg
     simp only [target, map_sub, map_mul, MvPolynomial.eval_X, sub_eq_zero] at hb
     simpa only [E, p, eq_comm] using hb)
   simpa only [groupSig, discreteSig, tbl, List.length_cons, List.length_nil, Nat.reduceAdd,
