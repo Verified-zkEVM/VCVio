@@ -92,7 +92,8 @@ private theorem startInput_injective (I : Interval h) (pp : PP) : Function.Injec
         (GXMSS.Interval.PRFDerived.activeEpoch I i.divNat) i.modNat :
           GXMSS.Interval.PRFDerived.Query PP M h v)) := by
   intro i j hij
-  obtain ⟨_, hepoch, hchain⟩ := GXMSS.Interval.PRFDerived.Query.start.inj hij
+  obtain ⟨_, hepoch, hchain⟩ := GXMSS.PRFDerived.Query.start.inj
+      (GXMSS.Interval.PRFDerived.Query.complete.inj hij)
   have hi := GXMSS.Interval.PRFDerived.activeEpoch_injective I hepoch
   exact (finProdFinEquiv (m := I.last.val - I.first.val + 1) (n := v)).symm.injective
     (Prod.ext hi hchain)
@@ -424,7 +425,8 @@ private theorem retryInput_injective (pp : PP) (ep : Fin (2 ^ h)) (msg : M) (K :
       (GXMSS.Interval.PRFDerived.Query.retry pp ep msg i.val :
         GXMSS.Interval.PRFDerived.Query PP M h v)) := by
   intro i j hij
-  obtain ⟨_, _, _, hattempt⟩ := GXMSS.Interval.PRFDerived.Query.retry.inj hij
+  obtain ⟨_, _, _, hattempt⟩ := GXMSS.PRFDerived.Query.retry.inj
+      (GXMSS.Interval.PRFDerived.Query.complete.inj hij)
   exact Fin.ext hattempt
 
 /-- Active first-success signing has the direct recursive retry law for an arbitrary fixed key. -/
@@ -533,7 +535,8 @@ private theorem oracleSign_ideal_preserves [SampleableType Response]
         GXMSS.Interval.PRFDerived.Query PP M h v) ≠
         .retry complete.seed other message attempt := by
     intro i heq
-    obtain ⟨_, hepoch, _, _⟩ := GXMSS.Interval.PRFDerived.Query.retry.inj heq
+    obtain ⟨_, hepoch, _, _⟩ := GXMSS.PRFDerived.Query.retry.inj
+      (GXMSS.Interval.PRFDerived.Query.complete.inj heq)
     exact hne hepoch.symm
   have havoid : AllQueriesSatisfy (oracleSign hash enc p K I sk ep msg)
       (fun query => ∀ d, query = Sum.inr d →

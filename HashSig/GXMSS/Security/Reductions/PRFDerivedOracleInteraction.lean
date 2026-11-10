@@ -361,7 +361,7 @@ private theorem ideal_adaptive_interaction_correspondence [SampleableType H]
       simp [follow, bind_assoc]
 
 /-- The real PRF handler supplies precisely the deterministic retry sequence. -/
-private theorem retryQueries_real (prf : SharedPRF Key PP M Response h v)
+private theorem retryQueries_real (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response)
     (key : Key) (budget : ℕ) (pp : PP) (epoch : Fin (2 ^ h)) (message : M) :
     simulateQ (prf.prfRealQueryImpl key)
@@ -373,7 +373,7 @@ private theorem retryQueries_real (prf : SharedPRF Key PP M Response h v)
 
 /-- Real oracle signing from the reduction's retained core agrees with
 recomputation by the seed-only scheme for the same evaluator key. -/
-private theorem oracleSign_real (prf : SharedPRF Key PP M Response h v)
+private theorem oracleSign_real (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response)
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
     (key : Key) (budget : ℕ) (epoch : Fin (2 ^ h)) (message : M) :
@@ -390,7 +390,7 @@ private theorem oracleSign_real (prf : SharedPRF Key PP M Response h v)
 /-- The source scheme with its sampled evaluator key fixed for one interaction. -/
 private def fixedKeyScheme [DecidableEq H]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget : ℕ) (key : Key) :
     SyncSignatureAlg ProbComp M (PublicKey PP H) Key
       (Signature R H h v) (Fin (2 ^ h)) where
@@ -401,7 +401,7 @@ private def fixedKeyScheme [DecidableEq H]
 /-- The ordinary synchronized source handler for a fixed evaluator key. -/
 private def fixedKeyHandler [DecidableEq H]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget : ℕ) (key : Key) :
     QueryImpl
       (unifSpec + SyncSignatureUnforgeability.signingSpec (Fin (2 ^ h)) M
@@ -418,7 +418,7 @@ private def fixedKeyHandler [DecidableEq H]
 answers and already consumed epochs. -/
 private theorem adaptiveHandler_real [DecidableEq H]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget : ℕ) (key : Key)
     (query : (unifSpec + SyncSignatureUnforgeability.signingSpec (Fin (2 ^ h)) M
       (Signature R H h v)).Domain) (history : SyncSignatureUnforgeability.History (Fin (2 ^ h)) M
@@ -478,7 +478,7 @@ private theorem adaptiveHandler_real [DecidableEq H]
 including its complete returned-failure and freshness observation. -/
 private theorem adaptiveInteraction_real [DecidableEq H]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget : ℕ) (key : Key)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
@@ -511,7 +511,7 @@ The same runtime interpretation therefore preserves missing mass as well as retu
 theorem randgenPRFReduction_real_strong [DecidableEq H]
     [DecidableEq M] [DecidableEq (Signature R H h v)]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget : ℕ)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
@@ -594,7 +594,7 @@ private theorem adaptive_strong_prf_bound [DecidableEq H]
     [DecidableEq M] [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.PRFDerived.Query PP M h v)] [SampleableType Response]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget : ℕ)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
@@ -668,7 +668,7 @@ theorem adaptive_strong_additive_bound
     [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.PRFDerived.Query PP M h v)] [SampleableType Response]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget : ℕ)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v))

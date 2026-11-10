@@ -6,6 +6,8 @@ Authors: Matthias Meijers
 
 module
 public import HashSig.GXMSS.Interval.PRFDerivedScheme
+public import HashSig.GXMSS.Security.Auxiliary.PRFDerivedOracleQueries
+public import HashSig.GXMSS.Security.Auxiliary.PRFDerivedSigningCoordinates
 public import HashSig.GXMSS.Security.Auxiliary.SigningQueries
 import all HashSig.GXMSS.Interval.PRFDerivedScheme
 public import HashSig.GXMSS.Security.Auxiliary.PRFDerivedResponseCache
@@ -32,23 +34,16 @@ open OracleComp.ProgramLogic.Relational
 open GXMSS.PRFDerived.ResponseCache GXMSS.PRFDerived.RetrySampling
 variable {Key PP T X H M R Response : Type} {h w v : ℕ}
 
-/-- One keyed PRF supplies every query family through a common abstract response. -/
-abbrev SharedPRF (Key PP M Response : Type) (h v : ℕ) :=
-  PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response
-
 /-- The distinguished response has exactly the THF public-seed sampling law. -/
 @[expose] def PublicSeedSamplingLaw [SampleableType Response]
     (hash : HashInstance PP T X H h w v)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response) : Prop :=
-  letI : MeasurableSpace PP := ⊤
-  𝒟[projection.publicParameter <$> ($ᵗ Response)] =
-    𝒟[(HashInstance.thf hash).seedGen]
+  GXMSS.PRFDerived.Unforgeability.PublicSeedSamplingLaw hash projection.toComplete
 
 /-- Each distinct chain-start response projects to the canonical uniform start law. -/
 @[expose] def ChainStartSamplingLaw [SampleableType Response] [SampleableType H]
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response) : Prop :=
-  letI : MeasurableSpace H := ⊤
-  𝒟[projection.chainStart <$> ($ᵗ Response)] = 𝒟[$ᵗ H]
+  GXMSS.PRFDerived.Unforgeability.ChainStartSamplingLaw projection.toComplete
 
 /-- A function-oracle query for the public parameter. -/
 @[expose] def publicSeedQuery
@@ -146,7 +141,8 @@ theorem fillerQueries_bound (I : Interval h)
           ((Fintype.equivFin (Subtree.FrontierNode I)).symm i).val.1
           ((Fintype.equivFin (Subtree.FrontierNode I)).symm i).val.2)))
 
-private theorem startQueries_real (prf : SharedPRF Key PP M Response h v)
+private theorem startQueries_real
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (I : Interval h) (p : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (key : Key) (pp : PP) :
     simulateQ (prf.prfRealQueryImpl key) (startQueries I p pp) =
@@ -167,7 +163,8 @@ private theorem startQueries_real (prf : SharedPRF Key PP M Response h v)
   exact congrArg (fun ij => p.chainStart (prf.eval key
     (.start pp (GXMSS.Interval.PRFDerived.activeEpoch I ij.1) ij.2))) hi
 
-private theorem fillerQueries_real (prf : SharedPRF Key PP M Response h v)
+private theorem fillerQueries_real
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (I : Interval h) (p : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (key : Key) (pp : PP) :
     simulateQ (prf.prfRealQueryImpl key) (fillerQueries I p pp) =
@@ -224,8 +221,7 @@ private def projectedRetries [SampleableType Response]
 /-- One projected response has exactly the canonical uniform retry-randomizer law. -/
 @[expose] def RetrySamplingLaw [SampleableType Response] [SampleableType R]
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response) : Prop :=
-  letI : MeasurableSpace R := ⊤
-  𝒟[projection.retryRandomizer <$> ($ᵗ Response)] = 𝒟[$ᵗ R]
+  GXMSS.PRFDerived.Unforgeability.RetrySamplingLaw projection.toComplete
 
 /-- Seed, active starts and frontier roots, kept together for the complete interaction. -/
 private noncomputable def keyMaterialQueries (I : Interval h)
@@ -412,7 +408,8 @@ private theorem adaptiveInteraction_from_material [DecidableEq H]
   run.map (SyncSignatureUnforgeability.strongValid alg)
 
 /-- The real evaluator supplies the exact indexed retry list. -/
-private theorem retryQueries_real (prf : SharedPRF Key PP M Response h v)
+private theorem retryQueries_real
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (key : Key) (budget : ℕ) (pp : PP) (epoch : Fin (2 ^ h)) (message : M) :
     simulateQ (prf.prfRealQueryImpl key)
@@ -440,7 +437,8 @@ private theorem retryQueries_real (prf : SharedPRF Key PP M Response h v)
 
 /-- Real oracle signing from the reduction's retained core agrees with
 recomputation by the seed-only scheme for the same evaluator key. -/
-private theorem oracleSign_real (prf : SharedPRF Key PP M Response h v)
+private theorem oracleSign_real
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
@@ -463,7 +461,7 @@ private theorem oracleSign_real (prf : SharedPRF Key PP M Response h v)
 private def fixedKeyScheme [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (budget : ℕ) (I : Interval h) (key : Key) :
     SyncSignatureAlg ProbComp M (PublicKey PP H) Key
@@ -476,7 +474,7 @@ private def fixedKeyScheme [DecidableEq H]
 private def fixedKeyHandler [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (budget : ℕ) (I : Interval h) (key : Key) :
     QueryImpl
@@ -495,7 +493,7 @@ answers and already consumed epochs. -/
 private theorem adaptiveHandler_real [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (budget : ℕ) (I : Interval h) (key : Key)
     (query : (unifSpec + SyncSignatureUnforgeability.signingSpec (Fin (2 ^ h)) M
@@ -558,7 +556,7 @@ including its complete returned-failure and freshness observation. -/
 private theorem adaptiveInteraction_real [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (budget : ℕ) (I : Interval h) (key : Key)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
@@ -604,7 +602,7 @@ theorem randgenPRFReduction_real_strong [DecidableEq H]
     [DecidableEq M] [DecidableEq (Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (budget : ℕ) (I : Interval h)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec

@@ -184,14 +184,17 @@ PRF games.
 | Interval shared-response PRF hop and full-range transports | `GXMSS.Interval.PRFDerived.Unforgeability` |
 
 [`DirectEndpointApplications.lean`](../../HashSigTest/GXMSS/DirectEndpointApplications.lean)
-and [`PRFEndpointApplications.lean`](../../HashSigTest/GXMSS/PRFEndpointApplications.lean)
+and [`CompletePRFEndpointApplication.lean`](../../HashSigTest/GXMSS/CompletePRFEndpointApplication.lean)
 are ordinary public-import consumers. The direct consumer states and applies
 the expanded ten-term theorem.
 [`CompleteEndpointApplication.lean`](../../HashSigTest/GXMSS/CompleteEndpointApplication.lean)
 imports only the ordinary `Security.Unforgeability` theorem module and applies its theorem to
 its expanded separate-term inequality, including the pathwise signing-query premise.
-The PRF consumer applies the complete three-law, interval four-law and full-range three-law
-security endpoints.
+The complete PRF consumer applies its three-law endpoint.
+[`PRFProductResponse.lean`](../../HashSigTest/GXMSS/PRFProductResponse.lean) proves the four
+product-response projection laws and applies interval and full-range security with an actual
+nonuniform key generator and a one-request adversary. It checks real/ideal and strong-measure
+transport, the displayed complete bound, and the resulting eighteen-query full-range cap.
 The construction tests retain
 height-three `[2,4]` frontier examples, inactive vector/pair openings,
 honest-first collision orientation, retry failures and exact-pair freshness.

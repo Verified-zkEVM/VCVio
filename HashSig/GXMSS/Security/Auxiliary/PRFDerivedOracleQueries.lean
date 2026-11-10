@@ -38,10 +38,6 @@ open GXMSS.PRFDerived.SigningSimulation
 
 variable {Key PP T X H M R Response : Type} {h w v : ℕ}
 
-/-- One keyed PRF supplies every query family through a common abstract response. -/
-abbrev SharedPRF (Key PP M Response : Type) (h v : ℕ) :=
-  PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response
-
 /-- The distinguished response has exactly the THF public-seed sampling law. -/
 @[expose] def PublicSeedSamplingLaw [SampleableType Response]
     (hash : HashInstance PP T X H h w v)

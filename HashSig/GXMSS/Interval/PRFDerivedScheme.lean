@@ -25,44 +25,43 @@ open Encoding GXMSS GXMSS.IntervalMerkle
 
 variable {Key PP T X H M R Response : Type} {h w v : ℕ}
 
-/-- Disjoint inputs to the one shared evaluator; frontier addresses are raw tree coordinates. -/
+/-- Complete-tree inputs together with the disjoint inactive-frontier family. -/
 inductive Query (PP M : Type) (h v : ℕ) where
-  | publicSeed
-  | start (pp : PP) (epoch : Fin (2 ^ h)) (chain : Fin v)
-  | retry (pp : PP) (epoch : Fin (2 ^ h)) (message : M) (attempt : ℕ)
+  /-- One of the three complete-tree query families. -/
+  | complete (query : GXMSS.PRFDerived.Query PP M h v)
+  /-- A maximal inactive subtree root at its raw tree coordinates. -/
   | filler (pp : PP) (level : Fin (h + 1)) (index : Fin (2 ^ h))
+
+/-- The distinguished complete-tree public-parameter coordinate. -/
+@[match_pattern] abbrev Query.publicSeed : Query PP M h v := .complete .publicSeed
+
+/-- A complete-tree chain-start coordinate in the extended domain. -/
+@[match_pattern] abbrev Query.start (pp : PP) (epoch : Fin (2 ^ h)) (chain : Fin v) :
+    Query PP M h v := .complete (.start pp epoch chain)
+
+/-- A complete-tree retry coordinate in the extended domain. -/
+@[match_pattern] abbrev Query.retry (pp : PP) (epoch : Fin (2 ^ h)) (message : M)
+    (attempt : ℕ) : Query PP M h v := .complete (.retry pp epoch message attempt)
 
 /-- A shared keyed evaluator on all four query families. -/
 abbrev Evaluator (Key PP M Response : Type) (h v : ℕ) :=
   Key → Query PP M h v → Response
 
-/-- Response projections used at distinct typed query coordinates. -/
-structure Interpretation (PP H R Response : Type) where
-  /-- Interpret the distinguished public-parameter response. -/
-  publicParameter : Response → PP
-  /-- Interpret an active chain-start response. -/
-  chainStart : Response → H
-  /-- Interpret a retry response as its encoding randomizer. -/
-  retryRandomizer : Response → R
+/-- Complete-tree response projections with an additional inactive-frontier digest. -/
+structure Interpretation (PP H R Response : Type) extends
+    toComplete : GXMSS.PRFDerived.Interpretation PP H R Response where
   /-- Interpret an inactive-frontier response as its committed digest. -/
   fillerDigest : Response → H
 
-/-- Forget the projection used only by the inactive frontier. -/
-@[expose] def Interpretation.toComplete (p : Interpretation PP H R Response) :
-    GXMSS.PRFDerived.Interpretation PP H R Response :=
-  ⟨p.publicParameter, p.chainStart, p.retryRandomizer⟩
-
 /-- Embed the complete three-family query domain without changing any coordinates. -/
-@[expose] def Query.ofComplete : GXMSS.PRFDerived.Query PP M h v → Query PP M h v
-  | .publicSeed => .publicSeed
-  | .start pp ep chain => .start pp ep chain
-  | .retry pp ep message attempt => .retry pp ep message attempt
+@[expose] def Query.ofComplete : GXMSS.PRFDerived.Query PP M h v → Query PP M h v :=
+  Query.complete
 
 /-- The complete-query embedding is injective. -/
 theorem Query.ofComplete_injective : Function.Injective
     (Query.ofComplete : GXMSS.PRFDerived.Query PP M h v → Query PP M h v) := by
   intro a b hab
-  cases a <;> cases b <;> simp_all [Query.ofComplete]
+  exact Query.complete.inj hab
 
 /-- Position in the finite active interval selects its ordinary full-tree epoch. -/
 @[expose] def activeEpoch (I : Interval h)
@@ -274,7 +273,7 @@ theorem starts_full (evaluate : Evaluator Key PP M Response h v)
   funext ep chain
   unfold starts extendStarts
   rw [dite_eq_left (Epoch.isActive_full ep)]
-  simp [activeEpoch, Interval.full, GXMSS.PRFDerived.starts, Interpretation.toComplete,
+  simp [activeEpoch, Interval.full, GXMSS.PRFDerived.starts,
     Query.ofComplete]
 
 /-- At full range, the public root and the retained evaluator key are the complete scheme's. -/
@@ -284,7 +283,7 @@ theorem keys_full (hash : HashInstance PP T X H h w v)
       GXMSS.PRFDerived.keys hash (fun k q => evaluate k (Query.ofComplete q)) p.toComplete key := by
   simp [keys, GXMSS.PRFDerived.keys, GXMSS.Interval.keys, GXMSS.keys,
     GXMSS.IntervalMerkle.root_full, starts_full, publicSeed, GXMSS.PRFDerived.publicSeed,
-    Interpretation.toComplete, Query.ofComplete]
+    Query.ofComplete]
 
 /-- The full-range path replacement retains the original first-success result and prefix. -/
 theorem signResult_full (hash : HashInstance PP T X H h w v)
@@ -313,7 +312,7 @@ theorem run_full (hash : HashInstance PP T X H h w v)
   rw [ite_eq_left (Epoch.isActive_full ep), signResult_full]
   simp [GXMSS.PRFDerived.run, transientCore, GXMSS.Interval.keys, GXMSS.keys,
     GXMSS.PRFDerived.transientCore, starts_full, publicSeed, GXMSS.PRFDerived.publicSeed,
-    retryRandomizers, GXMSS.PRFDerived.retryRandomizers, Interpretation.toComplete,
+    retryRandomizers, GXMSS.PRFDerived.retryRandomizers,
     Query.ofComplete]
 
 /-- Full-range schemes agree exactly, independently of any filler response sampling law. -/

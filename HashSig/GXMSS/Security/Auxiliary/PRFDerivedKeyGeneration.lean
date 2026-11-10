@@ -76,7 +76,7 @@ private theorem startQueries_bound
       startQuery_bound projection pp (Fin.divNat index) (Fin.modNat index)
   simpa only [Nat.mul_one, IsTotalQueryBound] using hflat
 
-private theorem startQueries_real (prf : SharedPRF Key PP M Response h v)
+private theorem startQueries_real (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (key : Key) (pp : PP) :
     simulateQ (prf.prfRealQueryImpl key) (startQueries projection pp) =
       pure (fun epoch chain =>

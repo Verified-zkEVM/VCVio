@@ -29,7 +29,7 @@ private theorem adaptive_strong_prf_bound [DecidableEq H]
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)] [SampleableType Response]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (budget : ℕ) (I : Interval h)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
@@ -114,7 +114,7 @@ theorem adaptive_strong_additive_bound
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)] [SampleableType Response]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (budget : ℕ) (I : Interval h)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
@@ -159,7 +159,7 @@ theorem adaptive_strong_additive_bound
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (budget qs : ℕ) (I : Interval h) (hv : 0 < v) (hw : 0 < w)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
@@ -175,7 +175,7 @@ theorem strong_unforgeability_reduction_bound
     [DecidableEq (GXMSS.Interval.PRFDerived.Query PP M h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.Interval.PRFDerived.Interpretation PP H R Response)
     (budget qs : ℕ) (I : Interval h) (hv : 0 < v) (hw : 0 < w)
     (htwo : ∃ x y : Codeword v (2 ^ w), x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y)

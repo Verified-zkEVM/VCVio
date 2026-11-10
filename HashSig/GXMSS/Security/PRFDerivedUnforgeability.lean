@@ -59,7 +59,7 @@ variable {Key PP T X H M R Response : Type} {h w v : ℕ}
     [DecidableEq (Signature R H h v)] [DecidableEq (GXMSS.PRFDerived.Query PP M h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget qs : ℕ)
     (hv : 0 < v) (hw : 0 < w)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
@@ -92,7 +92,7 @@ theorem strong_unforgeability_reduction_bound
     [DecidableEq R] [DecidableEq (Signature R H h v)]
     [DecidableEq (GXMSS.PRFDerived.Query PP M h v)] [SampleableType Response]
     (hash : HashInstance PP T X H h w v) (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response)
     (projection : GXMSS.PRFDerived.Interpretation PP H R Response) (budget qs : ℕ)
     (hv : 0 < v) (hw : 0 < w) (htwo : ∃ x y : Codeword v (2 ^ w),
       x ∈ enc.code ∧ y ∈ enc.code ∧ x ≠ y) (adv : SyncSignatureUnforgeability.Adversary unifSpec

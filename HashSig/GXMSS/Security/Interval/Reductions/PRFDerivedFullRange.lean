@@ -32,13 +32,15 @@ open ProbabilityTheory MeasureTheory ENNReal
 variable {Key PP T X H M R Response : Type} {h w v : ℕ}
 
 /-- Restrict the evaluator to the complete three query families, preserving the actual key law. -/
-@[expose] def restrictPRF (prf : SharedPRF Key PP M Response h v) :
-    GXMSS.PRFDerived.Unforgeability.SharedPRF Key PP M Response h v where
+@[expose] def restrictPRF
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response) :
+    PRFScheme Key (GXMSS.PRFDerived.Query PP M h v) Response where
   keygen := prf.keygen
   eval key query := prf.eval key (GXMSS.Interval.PRFDerived.Query.ofComplete query)
 
 /-- Restriction keeps the actual key generator, without a uniform-key assumption. -/
-theorem restrictPRF_keygen (prf : SharedPRF Key PP M Response h v) :
+theorem restrictPRF_keygen
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response) :
     (restrictPRF prf).keygen = prf.keygen := rfl
 
 /-- Full range has no frontier response coordinate and makes no filler function call. -/
@@ -102,7 +104,6 @@ private theorem publicSeedQuery_embed
     simulateQ (embedQueryImpl (M := M) (h := h) (v := v))
       (GXMSS.PRFDerived.Unforgeability.publicSeedQuery p.toComplete) = publicSeedQuery p := by
   simp [GXMSS.PRFDerived.Unforgeability.publicSeedQuery, publicSeedQuery, embed_functionQuery,
-    GXMSS.Interval.PRFDerived.Interpretation.toComplete,
     GXMSS.Interval.PRFDerived.Query.ofComplete]
 
 private theorem map_mOfFn_congr {ι : Type} {spec : OracleSpec ι} {A B : Type} {n m : ℕ}
@@ -139,7 +140,7 @@ private theorem startQueries_full_embed
   · intro i j hij
     unfold startQuery
     congr 3
-    change GXMSS.Interval.PRFDerived.Query.start pp i.divNat i.modNat =
+    change GXMSS.PRFDerived.Query.start pp i.divNat i.modNat =
       .start pp (GXMSS.Interval.PRFDerived.activeEpoch (Interval.full h) j.divNat)
         j.modNat
     congr 1
@@ -339,7 +340,7 @@ are absent because no filler response is evaluated at full range. -/
 @[expose] def FullRangeSchemeCorrespondence [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (p : GXMSS.Interval.PRFDerived.Interpretation PP H R Response) (K : ℕ) : Prop :=
   GXMSS.Interval.PRFDerived.scheme prf.keygen hash enc prf.eval p K (Interval.full h) =
     GXMSS.PRFDerived.scheme prf.keygen hash enc (restrictPRF prf).eval p.toComplete K
@@ -349,7 +350,7 @@ are absent because no filler response is evaluated at full range. -/
     [DecidableEq (Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (p : GXMSS.Interval.PRFDerived.Interpretation PP H R Response) (K : ℕ)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) : Prop :=
@@ -375,7 +376,7 @@ are absent because no filler response is evaluated at full range. -/
 theorem fullRangeSchemeCorrespondence [DecidableEq H]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (p : GXMSS.Interval.PRFDerived.Interpretation PP H R Response) (K : ℕ) :
     FullRangeSchemeCorrespondence hash enc prf p K :=
   GXMSS.Interval.PRFDerived.scheme_full prf.keygen hash enc prf.eval p K
@@ -386,7 +387,7 @@ theorem fullRangeRealCorrespondence [DecidableEq H] [DecidableEq M]
     [DecidableEq (Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (p : GXMSS.Interval.PRFDerived.Interpretation PP H R Response) (K : ℕ)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
@@ -434,7 +435,7 @@ theorem fullRangePRFAdvantage [SampleableType Response] [DecidableEq H] [Decidab
     [DecidableEq (GXMSS.PRFDerived.Query PP M h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (p : GXMSS.Interval.PRFDerived.Interpretation PP H R Response) (K : ℕ)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
@@ -454,7 +455,7 @@ theorem fullRangeStrongExperiment [DecidableEq H] [DecidableEq M]
     [DecidableEq (Signature R H h v)]
     (hash : HashInstance PP T X H h w v)
     (enc : IncomparableEncoding PP M R (Fin (2 ^ h)) v (2 ^ w))
-    (prf : SharedPRF Key PP M Response h v)
+    (prf : PRFScheme Key (GXMSS.Interval.PRFDerived.Query PP M h v) Response)
     (p : GXMSS.Interval.PRFDerived.Interpretation PP H R Response) (K : ℕ)
     (adv : SyncSignatureUnforgeability.Adversary unifSpec
       (PublicKey PP H) (Fin (2 ^ h)) M (Signature R H h v)) :
