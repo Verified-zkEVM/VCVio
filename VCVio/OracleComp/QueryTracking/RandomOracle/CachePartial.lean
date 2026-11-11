@@ -31,6 +31,12 @@ caches admissible at each state, when admissibility is closed backwards along ea
 every cache admissible after a step answers that step's query with its output
 (`OracleComp.simulateQ_toPartialImpl_of_mem_support_run_simulateQ`).
 
+A successful reading also frames a stateful run: a handler that answers each cached query from
+the cache without changing its state runs a settled computation as `pure` of the settled value,
+at the same state (`QueryImpl.run_simulateQ_eq_pure_of_toPartialImpl_frame`). For a cached run
+this is `QueryImpl.run_simulateQ_withCaching_eq_pure_of_toPartialImpl`, which holds for every
+answer sampler.
+
 The lazy random oracle `OracleSpec.romImpl` caches exactly the points it is queried at, so a
 predicate that every query of a program satisfies holds of every point a run of the program adds
 to the cache (`OracleComp.forall_isSome_of_mem_support_run_simulateQ_romImpl`).
@@ -83,6 +89,46 @@ theorem evalWithAnswerFn_eq_of_agreesWithFn {cache : spec.QueryCache} {f : Query
 end OracleSpec.QueryCache
 
 namespace QueryImpl
+
+/-- If `impl` answers every query cached in `cache` from the cache at state `s` and leaves `s`
+unchanged, then a computation that `cache` settles at `a` runs from `s` as `pure (a, s)`. Only
+the queries the computation reaches need to be cached. -/
+theorem run_simulateQ_eq_pure_of_toPartialImpl_frame
+    {ι : Type u} {spec : OracleSpec ι} {m : Type u → Type v}
+    [Monad m] [LawfulMonad m] {σ α : Type u}
+    (impl : QueryImpl spec (StateT σ m)) (cache : spec.QueryCache) (s : σ)
+    (oa : OracleComp spec α) {a : α}
+    (hframe : ∀ (t : spec.Domain) (answer : spec.Range t), cache t = some answer →
+      (impl t).run s = pure (answer, s))
+    (ha : simulateQ cache.toPartialImpl oa = some a) :
+    (simulateQ impl oa).run s = pure (a, s) := by
+  induction oa using OracleComp.inductionOn with
+  | pure x =>
+    have hx : x = a := Option.some.inj ha
+    simp [hx]
+  | query_bind t k ih =>
+    rw [simulateQ_bind, simulateQ_spec_query] at ha
+    obtain ⟨answer, hanswer, ha⟩ := Option.bind_eq_some_iff.mp ha
+    -- The cached answer frames the same state before the reached continuation.
+    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+      hframe t answer hanswer, pure_bind]
+    exact ih answer ha
+
+section Replay
+
+variable {ι : Type u} [DecidableEq ι] {spec : OracleSpec ι} {m : Type u → Type v}
+  [Monad m] [LawfulMonad m] {α : Type u}
+
+/-- A successful partial reading makes a cached execution deterministic and leaves its cache
+unchanged, regardless of the underlying answer sampler. -/
+theorem run_simulateQ_withCaching_eq_pure_of_toPartialImpl (so : QueryImpl spec m)
+    (oa : OracleComp spec α) {cache : spec.QueryCache} {a : α}
+    (ha : simulateQ cache.toPartialImpl oa = some a) :
+    (simulateQ so.withCaching oa).run cache = pure (a, cache) := by
+  exact run_simulateQ_eq_pure_of_toPartialImpl_frame so.withCaching cache cache oa
+    (fun _ _ h => withCaching_run_some so h) ha
+
+end Replay
 
 variable {ι : Type u} [DecidableEq ι] {spec : OracleSpec ι} {m : Type u → Type v} [Monad m]
   [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m] {α : Type u}

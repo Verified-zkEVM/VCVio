@@ -104,6 +104,7 @@ public import VCVioTest.OracleComp.SpecInstanceSearch
 public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
 public import VCVioTest.OracleComp.Sum
 public import VCVioTest.OracleComp.SupportMeasure
+public import VCVioTest.OracleComp.SupportRefinement
 public import VCVioTest.OracleComp.UniformAnswerMeasure
 public import VCVioTest.OracleNetwork
 public import VCVioTest.PFunctorFacade
