@@ -64,7 +64,7 @@ a digest, natural-number indices, and signature or witness data:
   `forsHonestChildren`, with their equations `forsSigLeafIndex_eq`, `forsHonestRoots_getElem`,
   `forsRecoveredRoots_getElem`, `forsHonestChildren_eq`, `forsPkGen_eq_tl_honestRoots`,
   `forsPkFromSig_eq_tl_recoveredRoots`, and the index facts `forsSigLeafIndex_div_pow_a`,
-  `forsSigLeafIndex_div_lt`;
+  `forsSigLeafIndex_lt`, `forsSigLeafIndex_div_lt`;
 * `forsRootsBinding`, `forsTreeBinding`, `forsLeafPreimage`, `forsPkFromSig_cases`;
 * `ForsWitness`, `ForsWitness.Valid` and its three unfolding equations
   `ForsWitness.valid_tlCollision`, `ForsWitness.valid_hCollision`,
@@ -88,7 +88,7 @@ lists in the `forsTl` ledger; that lemma is used directly rather than restated.
 
 The three encoded-distinctness lemmas consume `EncodedTargetLedgerConditions` rather than assuming
 a fresh injectivity hypothesis, so a concrete profile discharges them through
-`approvedEncodedTargetLedgerConditions`; the SHA-2 zero fallback is therefore never treated as
+`approvedEncodedTargetLedgerConditions`; the SHA-2 key fallback is therefore never treated as
 unreachable.
 
 ## The case analysis
@@ -186,6 +186,11 @@ theorem forsSigLeafIndex_div_pow_a (p : Params) (md : List Byte) (i : ℕ) :
     forsSigLeafIndex p md i / 2 ^ p.a = i := by
   rw [forsSigLeafIndex, Nat.add_comm, Nat.add_mul_div_right _ _ (Nat.two_pow_pos p.a),
     Nat.div_eq_of_lt (forsIdx_lt p md i), Nat.zero_add]
+
+/-- The global leaf index of each of the `k` trees is below `k * 2 ^ a`. -/
+theorem forsSigLeafIndex_lt (p : Params) (md : List Byte) {i : ℕ} (hi : i < p.k) :
+    forsSigLeafIndex p md i < p.k * 2 ^ p.a :=
+  (Nat.div_lt_iff_lt_mul (Nat.two_pow_pos _)).1 (by rwa [forsSigLeafIndex_div_pow_a])
 
 /-- At any height `z ≤ a`, the ancestor of tree `i`'s opened leaf carries the global height-`z`
 index `i * 2 ^ (a - z) + j` with `j < 2 ^ (a - z)`, which is the coordinate shape
@@ -715,7 +720,7 @@ tweaks: two `fPreimage` witnesses at different `(position, tree, leaf)` triples 
 tweaks of `forsFOpenPreProblem`.
 
 The conditions are consumed, not assumed afresh: `approvedEncodedTargetLedgerConditions` discharges
-them for every approved profile, so the SHA-2 zero fallback is never treated as unreachable. -/
+them for every approved profile, so the SHA-2 key fallback is never treated as unreachable. -/
 theorem forsLeafAdrsKey_injective {prims : Primitives vp.params}
     (conditions : EncodedTargetLedgerConditions vp prims) :
     Function.Injective fun coord : (BottomPosition vp × Fin vp.params.k) × Fin vp.params.t =>

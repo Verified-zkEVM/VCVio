@@ -157,6 +157,11 @@ theorem SampleableType.uniformSample_prod_eq_bind (α β : Type) [SampleableType
   change ((·, ·) <$> ($ᵗ α) <*> ($ᵗ β)) = _
   simp [seq_eq_bind_map, map_eq_bind_pure_comp, bind_assoc]
 
+/-- The canonical sampler of `α × β` samples from `α`, then from `β`, and pairs the results. -/
+lemma uniformSample_prod (α β : Type) [SampleableType α] [SampleableType β] :
+    $ᵗ (α × β) = (·, ·) <$> ($ᵗ α) <*> ($ᵗ β) :=
+  rfl
+
 /-- Transport a uniform sampler along an equivalence. -/
 @[expose, reducible] def SampleableType.ofEquiv {α β : Type} [SampleableType α] (e : α ≃ β) :
     SampleableType β where
@@ -342,15 +347,15 @@ instance instSampleableTypeEmbedding {β α : Type}
   letI : FinEnum (β ↪ α) := Function.Embedding.finEnum
   FinEnum.SampleableType _
 
-/-- A function from a finite type `D` with `Fintype` + `DecidableEq` (not necessarily `FinEnum`)
-to a `SampleableType` is itself `SampleableType`, transporting the `Fin (Fintype.card D) → α`
-sampler across the canonical equivalence `(D → α) ≃ (Fin (Fintype.card D) → α)`.
+/-- A function from a `Fintype` domain `D` (not necessarily `FinEnum`) to a `SampleableType` is
+itself `SampleableType`, transporting the `Fin (Fintype.card D) → α` sampler across the canonical
+equivalence `(D → α) ≃ (Fin (Fintype.card D) → α)`.
 
 This is the *noncomputable* counterpart to the computable `FinEnum`-domain instance
 `instSampleableTypeFunc`, and is given **lower priority** so that for a `FinEnum` domain the
-computable instance is preferred; it is the fallback for `Fintype` + `DecidableEq`-only domains. -/
+computable instance is preferred; it is the fallback for `Fintype`-only domains. -/
 noncomputable instance (priority := 100) instSampleableTypePiFintype {D : Type}
-    [Fintype D] [DecidableEq D] {α : Type} [SampleableType α] : SampleableType (D → α) :=
+    [Fintype D] {α : Type} [SampleableType α] : SampleableType (D → α) :=
   -- Provide the `Fin (card D) → α` sampler explicitly: synthesizing it could loop, since for the
   -- abstract `Fintype.card D` the overlapping `instSampleableTypeFunc` descends without converging.
   letI : SampleableType (Fin (Fintype.card D) → α) := instSampleableTypeFinFunc

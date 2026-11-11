@@ -26,6 +26,8 @@ lemma heq_of_toArray_eq_of_size_eq {α} {m n : ℕ} {a : Vector α m} {b : Vecto
 
 -- Induction principles for vectors
 
+/-- Case analysis on `v : Vector α m`: build `motive v` from a value at `#v[]` and a value at
+each head `hd` inserted at index `0` of a tail `tl`. -/
 def cases {α} {motive : {n : ℕ} → Vector α n → Sort*} (v_empty : motive #v[])
   (v_insert : {n : ℕ} → (hd : α) → (tl : Vector α n) → motive (tl.insertIdx 0 hd)) {m : ℕ} :
     (v : Vector α m) → motive v := match hm : m with
@@ -34,6 +36,8 @@ def cases {α} {motive : {n : ℕ} → Vector α n → Sort*} (v_empty : motive 
     | ⟨⟨hd :: tl⟩, hSize⟩ => by
       simpa [Vector.insertIdx] using v_insert hd ⟨⟨tl⟩, by simpa using hSize⟩
 
+/-- Induction on `v : Vector α m`: build `motive v` from a value at `#v[]` and a step from
+`motive tl` to `motive (tl.insertIdx 0 hd)`. -/
 @[elab_as_elim]
 def induction {α} {motive : {n : ℕ} → Vector α n → Sort*} (v_empty : motive #v[])
   (v_insert : {n : ℕ} → (hd : α) → (tl : Vector α n) → motive tl → motive (tl.insertIdx 0 hd))

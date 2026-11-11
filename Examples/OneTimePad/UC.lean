@@ -8,7 +8,7 @@ module
 
 public import Examples.OneTimePad.Basic
 public import VCVio.Interaction.UC.Computational
-public import PolyFun.Interaction.UC.OpenProcessModel
+public import PolyFun.Interaction.Open.OpenProcessModel
 public import VCVio.Interaction.UC.Runtime
 public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.EvalDist.ProbabilityNotation
@@ -121,7 +121,7 @@ processes at every boundary.
 
 @[expose] public section
 
-open Interaction Interaction.UC OracleComp ENNReal
+open Interaction Interaction.Open Interaction.UC OracleComp ENNReal
 
 namespace oneTimePad
 namespace UC
@@ -463,7 +463,7 @@ trivial controllers and views, and the given boundary emission
 action. -/
 def otpOpenNode (sp : ℕ)
     (emit : PFunctor.Trace (Δ_otp sp).Out (BitVec sp)) :
-    UC.OpenNodeContext Party (Δ_otp sp) (BitVec sp) where
+    Open.OpenNodeContext Party (Δ_otp sp) (BitVec sp) where
   toNodeProfile :=
     { controllers := fun _ => []
       views := fun _ => .hidden }
@@ -475,14 +475,14 @@ def otpOpenNode (sp : ℕ)
 root and the trivial `PUnit` decoration at the terminal leaf. -/
 def otpDecoration (sp : ℕ)
     (emit : PFunctor.Trace (Δ_otp sp).Out (BitVec sp)) :
-    TypeTree.Decoration (UC.OpenNodeContext Party (Δ_otp sp)) (otpTree sp) :=
+    TypeTree.Decoration (Open.OpenNodeContext Party (Δ_otp sp)) (otpTree sp) :=
   ⟨otpOpenNode sp emit, fun _ => ⟨⟩⟩
 
 /-! ### Real and ideal open processes -/
 
 /-- The single concrete step taken by the real OTP process. -/
 noncomputable abbrev realOtpStep (sp : ℕ) (msg : BitVec sp) :
-    Interaction.UC.OpenStep Party (Δ_otp sp) Unit where
+    Interaction.Open.OpenStep Party (Δ_otp sp) Unit where
   tree := otpTree sp
   semantics := otpDecoration sp (realEmit sp msg)
   next := fun _ => ()
@@ -494,7 +494,7 @@ single-sample `otpTree sp`, emitting the ciphertext `k ⊕ msg` on the
 output port via `realEmit`, with the uniform sampler threaded through
 `otpStepSampler`. -/
 noncomputable abbrev realOtp (sp : ℕ) (msg : BitVec sp) :
-    Interaction.UC.OpenProcess (OptionT ProbComp) Party (Δ_otp sp) where
+    Interaction.Open.OpenProcess (OptionT ProbComp) Party (Δ_otp sp) where
   Proc := Unit
   step := fun _ => realOtpStep sp msg
   stepSampler := fun _ => otpStepSampler sp
@@ -505,7 +505,7 @@ noncomputable abbrev realOtp (sp : ℕ) (msg : BitVec sp) :
 
 /-- The single concrete step taken by the ideal OTP process. -/
 noncomputable abbrev idealOtpStep (sp : ℕ) :
-    Interaction.UC.OpenStep Party (Δ_otp sp) Unit where
+    Interaction.Open.OpenStep Party (Δ_otp sp) Unit where
   tree := otpTree sp
   semantics := otpDecoration sp (idealEmit sp)
   next := fun _ => ()
@@ -521,7 +521,7 @@ Distributional equivalence with `realOtp` is a theorem, not a
 structural identity: OTP privacy (`evalDist_realCipherObserve_eq`)
 collapses the two bundled `Measure Unit` observations. -/
 noncomputable abbrev idealOtp (sp : ℕ) :
-    Interaction.UC.OpenProcess (OptionT ProbComp) Party (Δ_otp sp) where
+    Interaction.Open.OpenProcess (OptionT ProbComp) Party (Δ_otp sp) where
   Proc := Unit
   step := fun _ => idealOtpStep sp
   stepSampler := fun _ => otpStepSampler sp
@@ -536,30 +536,30 @@ noncomputable abbrev idealOtp (sp : ℕ) :
 one-step transcript as the emitted ciphertext packet. -/
 @[simp]
 theorem realOtp_boundaryTrace (sp : ℕ) (msg k : BitVec sp) :
-    Interaction.UC.OpenStep.boundaryTrace ((realOtp sp msg).step ())
+    Interaction.Open.OpenStep.boundaryTrace ((realOtp sp msg).step ())
       (⟨k, ⟨⟩⟩ : TypeTree.Path (otpTree sp)) =
       [(⟨(), k ^^^ msg⟩ : Σ _ : Unit, BitVec sp)] := by
-  rw [Interaction.UC.OpenStep.boundaryTrace_eq]
-  change Interaction.UC.OpenNodeContext.boundaryTrace (otpTree sp)
+  rw [Interaction.Open.OpenStep.boundaryTrace_eq]
+  change Interaction.Open.OpenNodeContext.boundaryTrace (otpTree sp)
     (otpDecoration sp (realEmit sp msg)) ⟨k, ⟨⟩⟩ = _
-  rw [Interaction.UC.OpenNodeContext.boundaryTrace_node]
+  rw [Interaction.Open.OpenNodeContext.boundaryTrace_node]
   simp only [otpDecoration, otpOpenNode, realEmit,
-    Interaction.UC.OpenNodeContext.boundaryTrace_done]
+    Interaction.Open.OpenNodeContext.boundaryTrace_done]
   exact mul_one _
 
 /-- The generic PolyFun boundary-trace extractor reads the ideal OTP
 one-step transcript as the emitted uniform ciphertext packet. -/
 @[simp]
 theorem idealOtp_boundaryTrace (sp : ℕ) (c : BitVec sp) :
-    Interaction.UC.OpenStep.boundaryTrace ((idealOtp sp).step ())
+    Interaction.Open.OpenStep.boundaryTrace ((idealOtp sp).step ())
       (⟨c, ⟨⟩⟩ : TypeTree.Path (otpTree sp)) =
       [(⟨(), c⟩ : Σ _ : Unit, BitVec sp)] := by
-  rw [Interaction.UC.OpenStep.boundaryTrace_eq]
-  change Interaction.UC.OpenNodeContext.boundaryTrace (otpTree sp)
+  rw [Interaction.Open.OpenStep.boundaryTrace_eq]
+  change Interaction.Open.OpenNodeContext.boundaryTrace (otpTree sp)
     (otpDecoration sp (idealEmit sp)) ⟨c, ⟨⟩⟩ = _
-  rw [Interaction.UC.OpenNodeContext.boundaryTrace_node]
+  rw [Interaction.Open.OpenNodeContext.boundaryTrace_node]
   simp only [otpDecoration, otpOpenNode, idealEmit,
-    Interaction.UC.OpenNodeContext.boundaryTrace_done]
+    Interaction.Open.OpenNodeContext.boundaryTrace_done]
   exact mul_one _
 
 /-- For any nonzero plaintext `msg`, the real and ideal OTP open
@@ -580,7 +580,7 @@ theorem realOtp_ne_idealOtp (sp : ℕ) {msg : BitVec sp}
     ({ tree := otpTree sp,
        semantics := otpDecoration sp (realEmit sp msg),
        next := fun _ => () } :
-      Concurrent.StepOver (UC.OpenNodeContext Party (Δ_otp sp)) Unit) =
+      Concurrent.StepOver (Open.OpenNodeContext Party (Δ_otp sp)) Unit) =
     { tree := otpTree sp,
       semantics := otpDecoration sp (idealEmit sp),
       next := fun _ => () } at hstep0

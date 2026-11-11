@@ -18,7 +18,7 @@ instances, indexed transformer semantics, and measure program logic without impo
 
 public section
 
-open MeasureTheory ProbabilityTheory Std.Internal.Do
+open MeasureTheory ProbabilityTheory Std.WP
 open scoped ENNReal
 
 run_cmd do
@@ -58,8 +58,7 @@ example : (support (ProbComp.uniformRange 2 5 (by decide))).Nonempty :=
 section Indexed
 
 example (mx : StateT Bool Id Nat) (f : Nat → Prop) :
-    (letI := MonadAttach.toWPMonadDemonic (m := StateT Bool Id);
-      wp mx f (Lean.Order.bot : EPost.Nil)) ↔
+    ((MonadAttach.toWPMonadDemonic (m := StateT Bool Id)).toWP Nat).wp mx f estack⟨⟩ ↔
       ∀ state, f (mx.run state).run.1 := by
   rw [MonadAttach.toWPMonadDemonic_wp,
     MonadAttach.StateT.allOutputs_iff_forall_allOutputsFrom]

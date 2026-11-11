@@ -24,8 +24,8 @@ and unique responses. This file adds the soundness notions that read a protocol 
   not packaged with an extractor. When the extractor *is* bundled as data, use the corresponding
   `SigmaProtocol` properties instead.
 
-These are the properties the Kilian transformation
-(`VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian`) is stated against.
+`ChallengeVerifyProtocol.Sound` is the target soundness notion for interactive arguments such as
+the Kilian transformation (`VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian`).
 
 ## Probability assumptions
 

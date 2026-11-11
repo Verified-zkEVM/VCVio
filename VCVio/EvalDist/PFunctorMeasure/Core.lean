@@ -188,7 +188,7 @@ theorem denote_bind_bind_prod_mk_eq_prod [MeasurableSpace α] [DiscreteMeasurabl
     denote (FreeM.bind left fun x =>
       FreeM.bind right fun y => pure (x, y)) =
         (denote left).prod (denote right) := by
-  rw [denote_bind_of_discrete left, Measure.prod]
+  rw [denote_bind_of_discrete left, Measure.prod_eq_of_sfinite]
   exact Measure.bind_congr_right (Filter.Eventually.of_forall fun x => by
     change denote (FreeM.bind right fun y => pure (x, y)) =
       Measure.map (Prod.mk x) (denote right)

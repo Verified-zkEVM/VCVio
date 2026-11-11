@@ -114,7 +114,7 @@ variable {Γ : Interaction.TypeTree.Node.Context.{0, 0}}
 process state, then `runSteps n` preserves `I` for any fuel `n`.
 
 This is the process-runtime analogue of
-`OracleComp.ProgramLogic.StdDo.simulateQ_triple_preserves_invariant`:
+`OracleComp.ProgramLogic.simulateQ_triple_preserves_invariant`:
 a generic invariant lemma that factors out the fuel induction so
 downstream proofs stay inside the `Std.Do` world. -/
 theorem runSteps_triple_preserves_invariant {P : Type} (process : ProcessOver P Γ)

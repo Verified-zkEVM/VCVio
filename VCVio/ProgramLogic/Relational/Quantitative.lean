@@ -9,6 +9,7 @@ module
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import VCVio.ProgramLogic.Unary.HoareTriple
 public import ToMathlib.MeasureTheory.Measure.Coupling.Maximal
+import ToMathlib.Data.ENNReal.Gauss
 import ToMathlib.MeasureTheory.Function.AEMeasurable
 import ToMathlib.MeasureTheory.Integral.Countable
 
@@ -130,6 +131,18 @@ theorem eRelWP_le (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
   let : MeasurableSpace β := ⊤
   exact ExpectationWP.eRelWP_le oa ob post bound h
 
+/-- Scaling a postcondition by a constant scales the best coupled expectation by at least that
+constant: each coupling's integral of `c * post` dominates `c` times its integral of `post`. -/
+theorem const_mul_eRelWP_le (c : ℝ≥0∞) (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
+    (post : α → β → ℝ≥0∞) :
+    c * eRelWP oa ob post ≤ eRelWP oa ob (fun a b => c * post a b) := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  change c * (⨆ d : Measure.Coupling 𝒟[oa] 𝒟[ob], ∫⁻ z, post z.1 z.2 ∂d.joint) ≤
+    ⨆ d : Measure.Coupling 𝒟[oa] 𝒟[ob], ∫⁻ z, c * post z.1 z.2 ∂d.joint
+  rw [ENNReal.mul_iSup]
+  exact iSup_mono fun d => lintegral_const_mul_le c _
+
 /-- An indicator postcondition has coupled expectation at most one. -/
 theorem eRelWP_indicator_le_one (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (R : RelPost α β) : eRelWP oa ob (RelPost.indicator R) ≤ 1 :=
@@ -216,6 +229,29 @@ theorem eRelWP_bind_rule
     (hfg : ∀ a b, cut a b ≤ eRelWP (fa a) (fb b) post) :
     pre ≤ eRelWP (oa >>= fa) (ob >>= fb) post :=
   (eRelWP_conseq le_rfl hfg hxy).trans (eRelWP_bind_le oa ob fa fb post)
+
+/-- Approximate relational triples compose through bind with additive error: if `oa` and `ob`
+are related by `R` except with probability `ε`, and every `R`-related pair of continuations is
+related by `S` except with probability `ε'`, then the two binds are related by `S` except with
+probability `ε + ε'`. This is the sequential composition rule of apRHL, read off from
+`eRelWP_bind_rule` with the cut `(1 - ε') * RelPost.indicator R`. -/
+theorem approxRelTriple_bind {ε ε' : ℝ≥0∞} {R : RelPost α β} {S : RelPost γ δ}
+    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    {fa : α → OracleComp spec₁ γ} {fb : β → OracleComp spec₂ δ}
+    (h : ApproxRelTriple ε oa ob R)
+    (hf : ∀ a b, R a b → ApproxRelTriple ε' (fa a) (fb b) S) :
+    ApproxRelTriple (ε + ε') (oa >>= fa) (ob >>= fb) S := by
+  refine eRelWP_bind_rule (cut := fun a b => (1 - ε') * RelPost.indicator R a b) ?_ ?_
+  · calc 1 - (ε + ε') ≤ (1 - ε) * (1 - ε') := ENNReal.one_sub_add_le_one_sub_mul_one_sub _ _
+      _ = (1 - ε') * (1 - ε) := mul_comm _ _
+      _ ≤ (1 - ε') * eRelWP oa ob (RelPost.indicator R) := by gcongr; exact h
+      _ ≤ _ := const_mul_eRelWP_le _ _ _ _
+  · intro a b
+    by_cases hR : R a b
+    · have hi : RelPost.indicator R a b = 1 := by simp [RelPost.indicator, hR]
+      rw [hi, mul_one]
+      exact hf a b hR
+    · simp [RelPost.indicator, hR]
 
 /-! ## Statistical distance via eRHL
 
@@ -360,9 +396,12 @@ coordinate almost surely, so the relational expectation reduces to the unary exp
 qualitative `Anchored Prop` instance in `VCVio/ProgramLogic/Relational/Basic.lean`. -/
 noncomputable instance instAnchored_eRelWP
     [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)] :
-    MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) ℝ≥0∞ where
-  rwp_pure_left a y post := eRelWP_pure_left a y post
-  rwp_pure_right x b post := eRelWP_pure_right x b post
+    @MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) ℝ≥0∞ _ _ _
+      OracleComp.Lower.instWP OracleComp.Lower.instWP _ :=
+  letI := OracleComp.Lower.instWP (spec := spec₁)
+  letI := OracleComp.Lower.instWP (spec := spec₂)
+  { rwp_pure_left := fun a y post => eRelWP_pure_left a y post
+    rwp_pure_right := fun x b post => eRelWP_pure_right x b post }
 
 section finite
 

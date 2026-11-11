@@ -98,6 +98,7 @@ def toLens (h : SubSpec spec superSpec) :
   onQuery t := h₂.onQuery (h₁.onQuery t)
   onResponse t r := h₁.onResponse t (h₂.onResponse (h₁.onQuery t) r)
 
+open scoped PFunctor in
 @[simp] lemma trans_toLens (h₁ : spec ⊂ₒ superSpec) (h₂ : superSpec ⊂ₒ spec₃) :
     (SubSpec.trans h₁ h₂).toLens = h₂.toLens ∘ₗ h₁.toLens := rfl
 
@@ -307,8 +308,8 @@ Registered as a low-priority `MonadLift` (not `MonadLiftT`) so that:
 
 * For `spec = superSpec`, Lean's built-in `MonadLiftT.refl` (which is
   definitionally `id`) wins typeclass resolution. This is what
-  `Std.Do.Spec.UnfoldLift.monadLift_refl` (a `rfl`-based lemma) needs in
-  order to peel off spurious self-lifts inside `mvcgen`-elaborated terms.
+  `Std.WP.Spec.UnfoldLift.monadLift_refl` (a `rfl`-based lemma) needs in
+  order to peel off spurious self-lifts inside terms `vcgen` walks.
 
 * For `MonadLiftT (OracleQuery spec) (OracleComp superSpec)`, the built-in
   high-priority `MonadLift (OracleQuery superSpec) (OracleComp superSpec)` is
@@ -440,5 +441,49 @@ lemma liftM_StateT_eq {σ : Type _} [MonadLift (OracleQuery spec) (OracleQuery s
       StateT.mk fun s => liftM (StateT.run mx s) := rfl
 
 end StateT
+
+/-! ### Independence of `liftComp` from the lift route
+
+Lifting across nested sum specs (for example `(spec₁ + spec₂) + spec₃`) can go through several
+`MonadLiftT (OracleQuery _) (OracleQuery _)` instance routes, which are not definitionally equal.
+The lemmas below align any two routes that agree on single queries; the agreement hypothesis is
+typically closed by `rfl` for the canonical sum embeddings. All instances are free implicit
+arguments, so `rw` applies to whatever route appears in the goal. -/
+
+/-- Lifting an oracle computation in two steps (`spec₁ ↪ spec₂ ↪ spec₃`) equals lifting it
+directly, provided the two routes agree on single queries. -/
+lemma liftComp_liftComp {ι₁ ι₂ ι₃ : Type} {spec₁ : OracleSpec ι₁}
+    {spec₂ : OracleSpec ι₂} {spec₃ : OracleSpec ι₃} {α : Type}
+    {i₁₂ : MonadLiftT (OracleQuery spec₁) (OracleQuery spec₂)}
+    {i₂₃ : MonadLiftT (OracleQuery spec₂) (OracleQuery spec₃)}
+    {i₁₃ : MonadLiftT (OracleQuery spec₁) (OracleQuery spec₃)}
+    (hq : ∀ (t : spec₁.Domain),
+      ((liftM (spec₁.query t) : OracleComp spec₂ (spec₁.Range t)).liftComp spec₃)
+        = (liftM (spec₁.query t) : OracleComp spec₃ (spec₁.Range t)))
+    (x : OracleComp spec₁ α) :
+    liftComp (liftComp x spec₂) spec₃ = liftComp x spec₃ := by
+  induction x using OracleComp.inductionOn with
+  | pure x => simp only [liftComp_pure]
+  | query_bind t k ih =>
+    simp only [liftComp_bind, liftComp_query, bind_map_left, ih]
+    rw [hq]
+
+/-- `liftComp` only depends on the `MonadLiftT` instance through its action on single queries:
+two (possibly structurally different) instance routes that agree on queries give equal lifts. -/
+lemma liftComp_inst_irrel {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁}
+    {spec₂ : OracleSpec ι₂} {α : Type}
+    {i₁ i₂ : MonadLiftT (OracleQuery spec₁) (OracleQuery spec₂)}
+    (hq : ∀ (t : spec₁.Domain),
+      (liftComp ((spec₁.query t : OracleQuery spec₁ _) : OracleComp spec₁ _) spec₂
+          (h := i₁))
+        = (liftComp ((spec₁.query t : OracleQuery spec₁ _) : OracleComp spec₁ _) spec₂
+            (h := i₂)))
+    (x : OracleComp spec₁ α) :
+    liftComp x spec₂ (h := i₁) = liftComp x spec₂ (h := i₂) := by
+  induction x using OracleComp.inductionOn with
+  | pure x => simp only [liftComp_pure]
+  | query_bind t k ih =>
+    simp only [liftComp_bind, ih]
+    exact congrArg (· >>= _) (hq t)
 
 end OracleComp

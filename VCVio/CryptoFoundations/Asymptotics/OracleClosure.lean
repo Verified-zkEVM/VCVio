@@ -41,7 +41,7 @@ variable {p q : PFunctor.{u, u}} {α : Type u} {C : StepClass.{u, v}}
 
 section Bind
 
-variable [DecidableEq p.A] [Q.HasCategory] [Q.HasSum] [Q.HasOption] [Q.HasProd]
+variable [DecidableEq p.A] [Q.HasComposition] [Q.HasSum] [Q.HasOption] [Q.HasProd]
   [Q.IsDistributive]
   {input middle output : Type u} {bd : Boundary C p input middle}
   {outRep : C.Str output} {label : Type x}

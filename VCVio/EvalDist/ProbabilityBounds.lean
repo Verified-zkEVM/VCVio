@@ -436,6 +436,20 @@ theorem prEvent_bind_mono_of_forall_le_of_support {γ : Type} (mx : m α) (f : �
   rw [bind_eq_attach_bind mx f, bind_eq_attach_bind mx g]
   exact prEvent_bind_mono_of_forall_le _ _ _ p q fun a ↦ h a.1 a.2
 
+/-- **An event of a draw bounds an event after its continuation.** An event `p` of `mx`, each of
+whose reachable occurrences leads almost surely to the event `q` of the continuation, has
+probability at most that of `q` after the bind. -/
+theorem prEvent_le_prEvent_bind_of_support (mx : m α) (f : α → m β) (p : α → Prop)
+    (q : β → Prop) (h : ∀ a ∈ support mx, p a → Pr{let y ← f a}[q y] = 1) :
+    Pr{let a ← mx}[p a] ≤ Pr{let y ← mx >>= f}[q y] := by
+  classical
+  conv_lhs => rw [← bind_pure mx]
+  refine prEvent_bind_mono_of_forall_le_of_support mx pure f p q fun a ha => ?_
+  rw [prEvent_pure]
+  split_ifs with hp
+  · exact (h a ha hp).ge
+  · exact zero_le
+
 /-- A lower bound on the event of every reachable continuation bounds the event after a lossless
 draw. -/
 theorem le_prEvent_bind_of_forall_le_of_support (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
@@ -473,6 +487,19 @@ theorem prEvent_bind_le_prEvent_add_of_support (mx : m α) (f : α → m β)
     Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
   (prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support mx f p q h).trans
     (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one _)) _)
+
+/-- A continuation event bounded by `ε` at the reachable draws satisfying `p`, and null at the
+reachable draws outside `p`, is bounded after the draw by the probability of `p` times `ε`. -/
+theorem prEvent_bind_le_prEvent_mul_of_forall_le_of_support (mx : m α) (f : α → m β)
+    (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
+    (h₁ : ∀ a ∈ support mx, p a → Pr{let y ← f a}[q y] ≤ ε)
+    (h₂ : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] = 0) :
+    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] * ε := by
+  rw [bind_eq_attach_bind mx f]
+  refine (prEvent_bind_le_prEvent_mul_of_forall_le (MonadAttach.attach mx) (fun a ↦ f a.1)
+    (fun a ↦ p a.1) q (fun a ha ↦ h₁ a.1 a.2 ha) fun a ha ↦ h₂ a.1 a.2 ha).trans (le_of_eq ?_)
+  conv_rhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
+  rw [prEvent_map]
 
 end attach
 

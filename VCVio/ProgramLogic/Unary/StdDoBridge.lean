@@ -33,7 +33,8 @@ variable {α β : Type}
 
 /-- Structural correctness through the core qualitative interpretation. -/
 noncomputable abbrev wpProp (oa : OracleComp spec α) (post : α → Prop) : Prop :=
-  MAlgOrdered.wp (m := OracleComp spec) (l := Prop) oa post
+  letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec)
+  Std.WP.wp oa post estack⟨⟩
 
 /-- Proposition-style triple alias used by the `Std.Do` bridge. -/
 def tripleProp (pre : Prop) (oa : OracleComp spec α) (post : α → Prop) : Prop :=
@@ -42,7 +43,7 @@ def tripleProp (pre : Prop) (oa : OracleComp spec α) (post : α → Prop) : Pro
 /-- Structural correctness holds exactly on every possible output. -/
 theorem wpProp_iff_forall_support (oa : OracleComp spec α) (p : α → Prop) :
     wpProp (spec := spec) oa p ↔ ∀ x ∈ support oa, p x :=
-  PropLogic.wp_iff_forall_support oa p
+  Iff.rfl
 
 /-- Uniform answer measures identify probability-one observations with structural correctness. -/
 theorem wpProp_iff_prEvent_eq_one
@@ -70,7 +71,7 @@ private theorem wpProp_and (oa : OracleComp spec α) (p q : α → Prop) :
 noncomputable instance instWPOracleComp : Std.Do.WP (OracleComp spec) .pure where
   wp oa :=
     { trans := fun Q => ⌜wpProp (spec := spec) oa (fun a => (Q.1 a).down)⌝
-      conjunctiveRaw := fun Q₁ Q₂ => SPred.pure_congr (by simp [wpProp_and]) }
+      conjunctiveRaw := fun Q₁ Q₂ => SPred.pure_congr (by exact wpProp_and oa _ _) }
 
 /-- `Std.Do` `WPMonad` instance for `OracleComp` under `wpProp`. -/
 noncomputable instance instWPMonadOracleComp : Std.Do.WPMonad (OracleComp spec) .pure where
@@ -123,7 +124,7 @@ pairs `(a, w)`, and the WP transformer defined in
 applying the postcondition. This is why `s` appears only in `Q.1 a (s ++ w)`
 on the right-hand side. -/
 theorem triple_writerT_iff_forall_support {ω α : Type}
-    [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+    [Append ω]
     (mx : WriterT ω (OracleComp spec) α)
     (P : Std.Do.Assertion (.arg ω .pure)) (Q : Std.Do.PostCond α (.arg ω .pure)) :
     Std.Do.Triple mx P Q ↔

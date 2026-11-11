@@ -37,8 +37,11 @@ open OracleSpec OracleComp ENNReal
 /-- MAC algorithm with computations in the monad `m`, where `M` is the message space, `K` the key
 space, and `T` the tag space. -/
 structure MacAlg (m : Type → Type v) [Monad m] (M K T : Type) where
+  /-- Sample a secret key. -/
   keygen : m K
+  /-- Compute a tag on a message under a key. -/
   tag : K → M → m T
+  /-- Check whether a tag is valid for a message under a key. -/
   verify : K → M → T → m Bool
 
 namespace MacAlg

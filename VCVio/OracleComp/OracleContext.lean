@@ -23,7 +23,9 @@ open OracleSpec OracleComp
 /-- An `OracleContext ι m` bundles a specification `spec` of oracles with input set `ι`
 and an implementation of the oracles in terms of the monad `m`. -/
 structure OracleContext (ι : Type u) (m : Type v → Type w) : Type (max u v w + 1) where
+  /-- The ambient oracles, with query inputs indexed by `ι`. -/
   spec : OracleSpec.{u,v} ι
+  /-- The interpretation of each query to `spec` as a computation in `m`. -/
   impl : QueryImpl spec m
 
 /-- Convert an `OracleSpec` into an `OracleContext` with `OracleComp` as the implementation monad,

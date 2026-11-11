@@ -41,6 +41,7 @@ Maps each coefficient to a representative integer, enabling backend-generic
 norm definitions. The canonical instance for `ZMod q` is `zmodCenteredCoeffView`,
 which uses `centeredRepr`. -/
 structure CenteredCoeffView (Coeff : Type*) where
+  /-- The integer representative of a coefficient. -/
   repr : Coeff → ℤ
 
 /-- Norm bundle layered over a `PolyBackend`.
@@ -50,8 +51,11 @@ centered `ℓ∞`, `ℓ₁`, and squared `ℓ₂`. Constructed generically via
 `normOpsOfCenteredView`, or directly via `zmodPolyNormOps` for `ZMod q`
 coefficients. -/
 structure NormOps {Coeff : Type*} (backend : PolyBackend Coeff) where
+  /-- The centered `ℓ∞` norm: the largest absolute value of a centered coefficient. -/
   cInfNorm : backend.Poly → ℕ
+  /-- The `ℓ₁` norm: the sum of the absolute values of the centered coefficients. -/
   l1Norm : backend.Poly → ℕ
+  /-- The squared `ℓ₂` norm: the sum of the squares of the centered coefficients. -/
   l2NormSq : backend.Poly → ℕ
 
 namespace NormOps

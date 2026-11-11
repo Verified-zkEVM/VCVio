@@ -48,7 +48,7 @@ variable {α : Type} {σ : Type}
 /-- A lossless computation has the constant expectation of a constant. -/
 private lemma wp_const_eq {β : Type} (oa : OracleComp spec' β) (c : ℝ≥0∞) :
     (wp oa fun _ => c) = c :=
-  (wp_eq_mAlgOrdered_wp oa _).trans (wp_const oa c)
+  wp_const oa c
 
 /-- Per-`query_bind` step of `expectedQuerySlack`. Given the handler, the charged-query predicate
 `S`, the per-state query slack `ε`, the query symbol `t`, and the continuation

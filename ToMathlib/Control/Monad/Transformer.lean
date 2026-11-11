@@ -22,7 +22,9 @@ universe u v w
 
 /-- A type class for monad transformers. -/
 class MonadTransformer (t : (Type u → Type v) → Type u → Type w) where
+  /-- The monad structure on `t m` induced by a monad structure on `m`. -/
   [mapMonad (m) [Monad m] : Monad (t m)]
+  /-- The lift of computations in the underlying monad `m` into `t m`. -/
   [transform (m) [Monad m] : MonadLift m (t m)]
 
 variable {t : (Type u → Type v) → Type u → Type w} {m : Type u → Type v} {n : Type u → Type v}
@@ -30,12 +32,14 @@ variable {t : (Type u → Type v) → Type u → Type w} {m : Type u → Type v}
 
 instance [MonadTransformer t] [Monad m] : Monad (t m) := MonadTransformer.mapMonad m
 
+/-- Lift a computation in the underlying monad `m`, given explicitly, into `t m`. -/
 @[always_inline, inline, simp]
 abbrev MonadTransformer.liftOf [MonadTransformer t] (m) [Monad m] : m α → t m α :=
   (transform m).monadLift
 
 export MonadTransformer (liftOf)
 
+/-- Lift a computation in the underlying monad `m` into `t m`, with `m` left implicit. -/
 @[always_inline, inline, simp]
 abbrev MonadTransformer.lift [MonadTransformer t] {m} [Monad m] : m α → t m α :=
   liftOf m
@@ -123,6 +127,7 @@ namespace MonadTransformer
 
 /-- A monad transformer is covariant if it lifts monad morphisms to monad morphisms. -/
 class IsCovariant (t : (Type u → Type v) → Type u → Type w) [MonadTransformer t] where
+  /-- The lift from `t m` to `t n` induced by a lift from `m` to `n`. -/
   functorMap {m n : Type u → Type v} [MonadLiftT m n] :
     MonadLiftT (t m) (t n)
 

@@ -1,0 +1,307 @@
+[
+  {
+    "module": "HashSig.SLHDSA.SecretProvider",
+    "result": "pass",
+    "seconds": 2.6
+  },
+  {
+    "module": "HashSig.SLHDSA.AddressDiscipline",
+    "result": "pass",
+    "seconds": 1.9
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.Target",
+    "result": "pass",
+    "seconds": 2.5
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.CacheSecret",
+    "result": "pass",
+    "seconds": 2.9
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.RomDescentSecret",
+    "result": "pass",
+    "seconds": 4.1
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.RomSchemeRun",
+    "result": "pass",
+    "seconds": 2.7
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.SeedCoupling",
+    "result": "pass",
+    "seconds": 2.6
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.CoverageRoles",
+    "result": "pass",
+    "seconds": 3.1
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.CoverageHits",
+    "result": "pass",
+    "seconds": 2.0
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.RomSchemeBridge",
+    "result": "pass",
+    "seconds": 2.5
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.RomSchemeUnion",
+    "result": "pass",
+    "seconds": 2.0
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.CoverageRun",
+    "result": "pass",
+    "seconds": 3.6
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.KeySeparation",
+    "result": "pass",
+    "seconds": 1.8
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.KeyDiscipline",
+    "result": "pass",
+    "seconds": 2.0
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.NodeGraph",
+    "result": "pass",
+    "seconds": 2.9
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.LabScheme",
+    "result": "pass",
+    "seconds": 9.2
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.HiddenCells",
+    "result": "pass",
+    "seconds": 2.6
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.LabReadSet",
+    "result": "pass",
+    "seconds": 4.3
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.HiddenUndrawn",
+    "result": "pass",
+    "seconds": 5.3
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.HonestTransfer",
+    "result": "pass",
+    "seconds": 5.4
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.LabelReaders",
+    "result": "pass",
+    "seconds": 5.2
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.Transport",
+    "result": "pass",
+    "seconds": 7.6
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.SeedCouplingQueries",
+    "result": "pass",
+    "seconds": 3.7
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.SeedCouplingBound",
+    "result": "pass",
+    "seconds": 3.4
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.LabBudget",
+    "result": "pass",
+    "seconds": 5.6
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.LabEquiv.Path",
+    "result": "pass",
+    "seconds": 4.7
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.LabEquiv.Tree",
+    "result": "pass",
+    "seconds": 6.1
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.LabEquiv.Experiment",
+    "result": "pass",
+    "seconds": 5.4
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.JointBound",
+    "result": "pass",
+    "seconds": 5.9
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.CoverageBound",
+    "result": "pass",
+    "seconds": 3.2
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.PrfKeyBound",
+    "result": "pass",
+    "seconds": 3.4
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.HedgedKeyBound",
+    "result": "pass",
+    "seconds": 17.1
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.ByteModel",
+    "result": "pass",
+    "seconds": 4.1
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.ByteRouter",
+    "result": "pass",
+    "seconds": 4.0
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.SecretTraces",
+    "result": "pass",
+    "seconds": 2.9
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.RunProvenance",
+    "result": "pass",
+    "seconds": 2.1
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.ByteClash",
+    "result": "pass",
+    "seconds": 1.9
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.RomConformance",
+    "result": "pass",
+    "seconds": 2.1
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.ByteConformance",
+    "result": "pass",
+    "seconds": 1.8
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.ByteRedirect",
+    "result": "pass",
+    "seconds": 2.0
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.ByteLinkedRun",
+    "result": "pass",
+    "seconds": 2.4
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.ByteLinkedView",
+    "result": "pass",
+    "seconds": 1.9
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.ByteLinkedBound",
+    "result": "pass",
+    "seconds": 4.8
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.LinkedHazards",
+    "result": "pass",
+    "seconds": 2.3
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.WeakKeyBound",
+    "result": "pass",
+    "seconds": 2.2
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.ByteBound",
+    "result": "pass",
+    "seconds": 1.8
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.Wire",
+    "result": "pass",
+    "seconds": 2.1
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.BoundEval",
+    "result": "pass",
+    "seconds": 1.9
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.RangeBound",
+    "result": "pass",
+    "seconds": 3.0
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.BoundCertificates",
+    "result": "pass",
+    "seconds": 20.4
+  },
+  {
+    "module": "HashSig.SLHDSA.Security.Profile",
+    "result": "pass",
+    "seconds": 1.5
+  },
+  {
+    "module": "HashSigTest.SLHDSA.Target",
+    "result": "pass",
+    "seconds": 3.1
+  },
+  {
+    "module": "HashSigTest.SLHDSA.WeakKeyBound",
+    "result": "pass",
+    "seconds": 2.1
+  },
+  {
+    "module": "HashSigTest.SLHDSA.LinkedHazards",
+    "result": "pass",
+    "seconds": 3.5
+  },
+  {
+    "module": "HashSigTest.SLHDSA.ByteBound",
+    "result": "pass",
+    "seconds": 6.5
+  },
+  {
+    "module": "HashSigTest.SLHDSA.ByteLinkedBound",
+    "result": "pass",
+    "seconds": 5.8
+  },
+  {
+    "module": "HashSigTest.SLHDSA.Bundles",
+    "result": "pass",
+    "seconds": 1.7
+  },
+  {
+    "module": "HashSigTest.SLHDSA.CoverageBound",
+    "result": "pass",
+    "seconds": 4.1
+  },
+  {
+    "module": "HashSigTest.SLHDSA.StrongUnforgeability",
+    "result": "pass",
+    "seconds": 7.0
+  },
+  {
+    "module": "HashSigTest.SLHDSA.Wire",
+    "result": "pass",
+    "seconds": 3.3
+  },
+  {
+    "module": "HashSigTest.SLHDSA.ByteModel",
+    "result": "pass",
+    "seconds": 2.4
+  }
+]

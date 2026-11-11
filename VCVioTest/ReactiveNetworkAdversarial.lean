@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import Examples.OneTimePad.Reactive.Separation
-public import PolyFun.Interaction.UC.ReactiveNetwork.Serial
+public import PolyFun.Interaction.Execution.ReactiveNetwork.Serial
 
 /-!
 # Adversarial execution checks
@@ -20,7 +20,8 @@ public section
 
 namespace VCVioTest.ReactiveNetworkAdversarial
 
-open PFunctor Interaction.UC ReactiveProcess ReactiveNetwork ReactiveRuntime
+open PFunctor Interaction Interaction.UC Interaction.Execution.ReactiveProcess
+  Interaction.Execution.ReactiveNetwork ReactiveRuntime
   OneTimePad.Reactive OracleComp
 
 attribute [local implicit_reducible] signature Response network effects ports

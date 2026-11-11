@@ -58,12 +58,13 @@ theorem toInt_lt_pow (x : List Byte) : toInt x < 256 ^ x.length := by
 /-! ## Algorithm 3 (`toByte`) -/
 
 @[simp] theorem toByte_length (x len : ℕ) : (toByte x len).length = len := by
-  simp [toByte]
+  simp [toByte, VCVio.Algorithms.Encoding.natToBytesBE]
 
 /-- Algorithm 3 emits the least significant byte last. -/
 theorem toByte_succ (x len : ℕ) :
     toByte x (len + 1) = toByte (x / 256) len ++ [UInt8.ofNat (x % 256)] := by
-  simp only [toByte, List.range_succ, List.map_append, List.map_cons, List.map_nil]
+  simp only [toByte, VCVio.Algorithms.Encoding.natToBytesBE, List.range_succ,
+    List.map_append, List.map_cons, List.map_nil]
   congr 1
   · apply List.map_congr_left
     intro i hi
@@ -76,7 +77,7 @@ theorem toByte_succ (x len : ℕ) :
 /-- Algorithm 2 reconstructs the low `len` bytes emitted by Algorithm 3. -/
 theorem toInt_toByte_mod (x len : ℕ) : toInt (toByte x len) = x % 256 ^ len := by
   induction len generalizing x with
-  | zero => simp [toByte, Nat.mod_one]
+  | zero => simp [toByte, VCVio.Algorithms.Encoding.natToBytesBE, Nat.mod_one]
   | succ len ih =>
       rw [toByte_succ, toInt_append_byte, ih, pow_succ', Nat.mod_mul]
       have hbyte : (UInt8.ofNat (x % 256)).toNat = x % 256 := by
@@ -92,7 +93,7 @@ theorem toInt_toByte (x len : ℕ) (h : x < 256 ^ len) :
 /-- At a byte string's own width, Algorithm 3 is an exact left inverse of Algorithm 2. -/
 theorem toByte_toInt (x : List Byte) : toByte (toInt x) x.length = x := by
   induction x using List.reverseRecOn with
-  | nil => simp [toByte]
+  | nil => simp [toByte, VCVio.Algorithms.Encoding.natToBytesBE]
   | append_singleton xs b ih =>
       have hb : b.toNat < 256 := UInt8.toNat_lt_size b
       rw [toInt_append_byte, List.length_append, List.length_singleton, toByte_succ,

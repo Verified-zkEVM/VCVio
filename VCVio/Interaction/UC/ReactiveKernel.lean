@@ -23,7 +23,9 @@ public section
 
 namespace Interaction.UC.ReactiveKernel
 
-open PFunctor ReactiveProcess ReactiveNetwork OracleComp MeasureTheory
+open PFunctor Interaction.Execution Interaction.Execution.ReactiveProcess
+  Interaction.Execution.ReactiveNetwork OracleComp
+  MeasureTheory
 
 variable {Node result S : Type} {boundary : PortBoundary}
   [DecidableEq Node] {network : Network Node boundary result}
@@ -120,7 +122,9 @@ end ReactiveKernel
 
 namespace ReactiveRuntime
 
-open PFunctor ReactiveProcess ReactiveNetwork OracleComp MeasureTheory ReactiveKernel
+open PFunctor Interaction.Execution Interaction.Execution.ReactiveProcess
+  Interaction.Execution.ReactiveNetwork OracleComp
+  MeasureTheory ReactiveKernel
 
 variable {Node result S : Type} {boundary : PortBoundary}
   [DecidableEq Node] {network : Network Node boundary result}

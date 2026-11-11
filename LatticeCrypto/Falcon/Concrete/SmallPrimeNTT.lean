@@ -35,33 +35,49 @@ namespace Falcon.Concrete.SmallPrimeNTT
 
 /-! ## Modular arithmetic helpers -/
 
+/-- Expand the top bit of `x` into a full mask: `0xFFFFFFFF` if `x ≥ 0x80000000`, else `0`;
+mirrors c-fn-dsa's `tbmask`. -/
 @[inline] def tbmask (x : UInt32) : UInt32 :=
   (x.toInt32 >>> (31 : Int32)).toUInt32
 
+/-- The residue `v mod p` in `[0, p)`, for `v` in `[-(p - 1), p - 1]`; mirrors c-fn-dsa's
+`mp_set`. -/
 @[inline] def mp_set (v : Int32) (p : UInt32) : UInt32 :=
   v.toUInt32 + (p &&& tbmask v.toUInt32)
 
+/-- The signed representative in `[-p/2, p/2]` of a residue `x` in `[0, p)`; mirrors
+c-fn-dsa's `mp_norm`. -/
 @[inline] def mp_norm (x : UInt32) (p : UInt32) : Int32 :=
   let x' := x - (p &&& tbmask ((p >>> (1 : UInt32)) - x))
   x'.toInt32
 
+/-- The Montgomery constant `R = 2^32 mod p`, computed as `2^32 - 2p` since `2p < 2^32 < 3p`;
+it is the Montgomery representation of `1`. Mirrors c-fn-dsa's `mp_R`. -/
 @[inline] def mp_R (p : UInt32) : UInt32 :=
   0 - (p <<< (1 : UInt32))
 
+/-- The value `R / 2 = 2^31 mod p`, computed as `2^31 - p`; it is the Montgomery representation
+of `1 / 2`. Mirrors c-fn-dsa's `mp_hR`. -/
 @[inline] def mp_hR (p : UInt32) : UInt32 :=
   ((1 : UInt32) <<< (31 : UInt32)) - p
 
+/-- Addition modulo `p` on residues in `[0, p)`; mirrors c-fn-dsa's `mp_add`. -/
 @[inline] def mp_add (a b p : UInt32) : UInt32 :=
   let d := a + b - p
   d + (p &&& tbmask d)
 
+/-- Subtraction modulo `p` on residues in `[0, p)`; mirrors c-fn-dsa's `mp_sub`. -/
 @[inline] def mp_sub (a b p : UInt32) : UInt32 :=
   let d := a - b
   d + (p &&& tbmask d)
 
+/-- Halving modulo `p`: the residue `a / 2 mod p` for `a` in `[0, p)`, with `p` odd; mirrors
+c-fn-dsa's `mp_half`. -/
 @[inline] def mp_half (a p : UInt32) : UInt32 :=
   (a + (p &&& (0 - (a &&& 1)))) >>> (1 : UInt32)
 
+/-- Montgomery multiplication: `(a · b) / R mod p` in `[0, p)`, where `R = 2^32` and
+`p0i = -1/p mod 2^32`; mirrors c-fn-dsa's `mp_mmul`. -/
 @[inline] def mp_montymul (a b p p0i : UInt32) : UInt32 :=
   let z : UInt64 := a.toUInt64 * b.toUInt64
   let w : UInt32 := z.toUInt32 * p0i
@@ -74,15 +90,28 @@ Each entry is `(p, p0i, R2, g, ig, s)`. The table holds the 308 primes of the re
 `PRIMES[]` array, enough for the largest RNS representations used by the NTRU solver
 (`MAX_BL_LARGE` words for unreduced `(F, G)` at Falcon-1024). -/
 
+/-- A small prime modulus together with its Montgomery and NTT constants, an entry of the
+`small_prime` table of c-fn-dsa's `kgen_mp31.c`. -/
 structure SmallPrime where
+  /-- The prime modulus `p`, with `(4/3) · 2^30 < p < 2^31` and `p ≡ 1 mod 2048`. -/
   p   : UInt32
+  /-- The Montgomery constant `-1/p mod 2^32`. -/
   p0i : UInt32
+  /-- The value `2^64 mod p`, used to enter Montgomery representation. -/
   R2  : UInt32
+  /-- A primitive `2048`-th root of unity modulo `p`, so `g^1024 = -1`, in Montgomery
+  representation. -/
   g   : UInt32
+  /-- The inverse `1 / g mod p`, in Montgomery representation. -/
   ig  : UInt32
+  /-- The inverse modulo `p` of the product of the preceding primes in `PRIMES`, in Montgomery
+  representation; the CRT coefficient used to leave RNS representation. -/
   s   : UInt32
   deriving Repr, Inhabited
 
+/-- The 308 largest primes `p` with `(4/3) · 2^30 < p < 2^31` and `p ≡ 1 mod 2048`, in
+descending order, with their constants; the `PRIMES` table of c-fn-dsa's `kgen_mp31.c`. These
+are the moduli of the RNS representation used by the NTRU solver. -/
 def PRIMES : Array SmallPrime := #[
   ⟨2147473409, 2042615807,  419348484, 1790111537,  786166065,      20478⟩,
   ⟨2147389441, 1862176767, 1141604340,  677655126, 2024968256,  942807490⟩,
@@ -396,6 +425,8 @@ def PRIMES : Array SmallPrime := #[
 
 /-! ## Bit-reversal table (10-bit) -/
 
+/-- The bit-reversal permutation of 10-bit indices: entry `i` is `i` with its 10 bits reversed;
+the `REV10` table of c-fn-dsa's `kgen_mp31.c`. -/
 def REV10 : Array UInt16 := #[
      0,  512,  256,  768,  128,  640,  384,  896,   64,  576,  320,  832,
    192,  704,  448,  960,   32,  544,  288,  800,  160,  672,  416,  928,
@@ -487,6 +518,8 @@ def REV10 : Array UInt16 := #[
 
 /-! ## Polynomial conversion helpers -/
 
+/-- Reduce the small coefficients of a polynomial of degree `2^logn` modulo `p`, into
+`[0, p)`; mirrors c-fn-dsa's `poly_mp_set_small`. -/
 def mp_set_small (logn : Nat) (f : Array Int8) (p : UInt32) :
     Array UInt32 := Id.run do
   let n := 1 <<< logn
@@ -520,6 +553,10 @@ def poly_mp_norm (logn : Nat) (f : Array UInt32) (p : UInt32) :
 
 /-! ## Twiddle factor generation -/
 
+/-- The forward NTT twiddle table for degree `2^logn`: `gm[rev i] = γ^i mod p` for `i < 2^logn`,
+where `γ = g^(2^(10 - logn))` is a primitive `2^(logn + 1)`-th root of unity and `rev` reverses
+`logn`-bit indices. `g` and the output are in Montgomery representation. Mirrors c-fn-dsa's
+`mp_mkgm`. -/
 def mp_mkgm (logn : Nat) (g : UInt32) (p p0i : UInt32) :
     Array UInt32 := Id.run do
   let n := 1 <<< logn
@@ -536,6 +573,9 @@ def mp_mkgm (logn : Nat) (g : UInt32) (p p0i : UInt32) :
       x1 := mp_montymul x1 g' p p0i
   return gm
 
+/-- The forward and inverse NTT twiddle tables `(gm, igm)` for degree `2^logn`: `gm` is as in
+`mp_mkgm`, and `igm[rev i] = (1/2) · γ^(-i) mod p`, where the factor `1/2` makes each inverse
+layer halve. All values are in Montgomery representation. Mirrors c-fn-dsa's `mp_mkgmigm`. -/
 def mp_mkgmigm (logn : Nat) (g ig : UInt32) (p p0i : UInt32) :
     Array UInt32 × Array UInt32 := Id.run do
   let n := 1 <<< logn
@@ -562,6 +602,9 @@ def mp_mkgmigm (logn : Nat) (g ig : UInt32) (p p0i : UInt32) :
 
 Cooley-Tukey butterfly with two-layer merging for fewer memory accesses. -/
 
+/-- The NTT modulo `p` of a polynomial of degree `n = 2^logn`, with twiddles `gm` from
+`mp_mkgm`: its evaluations at the roots of `x^n + 1`, the odd powers of the root used by `gm`.
+Mirrors c-fn-dsa's `mp_NTT`. -/
 def mp_NTT (logn : Nat) (a : Array UInt32) (gm : Array UInt32)
     (p p0i : UInt32) : Array UInt32 := Id.run do
   if logn == 0 then return a
@@ -671,6 +714,8 @@ def mp_NTT (logn : Nat) (a : Array UInt32) (gm : Array UInt32)
 
 Gentleman-Sande butterfly with two-layer merging. -/
 
+/-- The inverse of `mp_NTT`, including division by `n = 2^logn`, with twiddles `igm` from
+`mp_mkgmigm`. Mirrors c-fn-dsa's `mp_iNTT`. -/
 def mp_iNTT (logn : Nat) (a : Array UInt32) (igm : Array UInt32)
     (p p0i : UInt32) : Array UInt32 := Id.run do
   if logn == 0 then return a

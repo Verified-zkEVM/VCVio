@@ -68,6 +68,8 @@ def signatureBytes : ℕ := params.n + forsBytes + params.d * htLayerBytes
 
 /-- Public-key size `2n` and secret-key size `4n` (as FIPS 205). -/
 def publicKeyBytes : ℕ := 2 * params.n
+/-- C13 secret-key size `4n`: the `n`-byte values `SK.seed`, `SK.prf`, `PK.seed` and `PK.root`,
+as in FIPS 205. -/
 def secretKeyBytes : ℕ := 4 * params.n
 
 /-- The documented C13 sizes are consistent: signature is 3688 bytes, pk 32, sk 64,

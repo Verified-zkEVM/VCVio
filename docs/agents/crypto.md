@@ -39,10 +39,10 @@ analogue.
 
 For an end-to-end EUF-CMA reduction worked through the framework (Σ-protocol →
 Fiat-Shamir transform → managed-RO NMA → replay forking → DLog), see
-[`Examples/Schnorr/Signature.lean`](../../Examples/Schnorr/Signature.lean) and the
+[`VCVio/Schemes/Schnorr/Signature.lean`](../../VCVio/Schemes/Schnorr/Signature.lean) and the
 [Schnorr signature walkthrough](end-to-end-examples.md#schnorr-signature-euf-cma).
 The Schnorr-specific σ-protocol facts that feed in live in
-[`Examples/Schnorr/SigmaProtocol.lean`](../../Examples/Schnorr/SigmaProtocol.lean).
+[`VCVio/Schemes/Schnorr/SigmaProtocol.lean`](../../VCVio/Schemes/Schnorr/SigmaProtocol.lean).
 
 ### Commitment schemes (`CommitmentScheme`)
 
@@ -217,7 +217,7 @@ so programs the oracle at the cached points. `romImpl` is reducibly
 
 ### KEM–DEM hybrid composition
 
-`VCVio.CryptoFoundations.KEMDEM.Measure` defines the preparation, encapsulation, and final
+`VCVio.Schemes.KEMDEM.Measure` defines the preparation, encapsulation, and final
 observation games independently of probability. `KEMDEM.bias_compose_le` proves the
 composition bound on output measures. Both KEM message branches use `evalDist_kemGame`;
 `evalDist_demGame` performs independent-key interchange. Supply a fair coin, a lossless key
@@ -230,16 +230,27 @@ hypotheses.
 `Measure.boolBias_bind_coin` requires total branches: missing mass is distinct from returning
 `false`, so the assumption cannot be dropped.
 
-### DEM real-or-random IND-CPA
+### DEM IND-CPA
+
+`VCVio.CryptoFoundations.DataEncapMech` defines two left-or-right games for a `DEMScheme` under a
+uniform key. The one-time game `DEMScheme.IND_CPA_OneTime_Game` is the one the KEM–DEM
+composition uses. The multi-query game `dem.IND_CPA_Game runtime leak adv` gives the
+adversary the DEM's own oracles and the shared challenge oracle `LeftOrRight.oracle` of
+`VCVio.CryptoFoundations.LeftOrRight`, built from `dem.encrypt k`, a leakage function `leak` and
+the hidden bit: a pair with equal leakage is encrypted, any other pair is answered `none`.
+Encryption budgets are `DEMScheme.IND_CPA_Adversary.MakesAtMostQueries`.
+`IND_CPA_OneTime_Advantage_eq_IND_CPA_Advantage` is the exact equality between the one-time
+advantage and the multi-query advantage, without leakage, of the one-query adversary
+`IND_CPA_OneTime_Adversary.toMultiQuery`.
 
 `VCVio.CryptoFoundations.DataEncapMech.RealOrRandom` defines the one-time real-or-random game
-`DEMScheme.realOrRandomGame`, which encrypts either the adversary's message or a uniform one.
-Both DEM advantages are `boolBias` of a fair hidden-bit game, that is, the distance between the
-two branches, so the constants carry no factor from the bias normalization.
-`realOrRandomAdvantage_eq_IND_CPA_Advantage` is an exact equality with no runtime hypotheses.
-`IND_CPA_Advantage_le_realOrRandomAdvantage_add` bounds the left-or-right advantage by the sum
-of two real-or-random advantages and takes the runtime coherence hypotheses of the KEM–DEM
-adapter.
+`DEMScheme.oneTimeRealOrRandomGame`, which encrypts either the adversary's message or a uniform
+one. Both one-time advantages are `boolBias` of a fair hidden-bit game, that is, the distance
+between the two branches, so the constants carry no factor from the bias normalization.
+`oneTimeRealOrRandomAdvantage_eq_IND_CPA_OneTime_Advantage` is an exact equality with no runtime
+hypotheses. `IND_CPA_OneTime_Advantage_le_oneTimeRealOrRandomAdvantage_add` bounds the
+left-or-right advantage by the sum of two real-or-random advantages and takes the runtime
+coherence hypotheses of the KEM–DEM adapter.
 
 ### Forking bounds and measure semantics
 
@@ -354,7 +365,7 @@ independent of a secret:
   `measureETVDist ≤ 1`;
 - extractors, distinguishers, collision finders, and preimage finders.
 
-Name each one with a definition (`cmaReduction`, `hvzkSimulatorReal`,
+Name each one with a definition (`cmaReduction`, `hvzkSimulator`,
 `unlinkToMultiplePRFReduction`) and state the bound for that definition.
 
 A named reduction also makes the next steps possible. Its query count or cost can be proved as
@@ -364,12 +375,9 @@ such as `SecurityGame.secureAgainst_of_reduction`, take the reduction as a funct
 `reduce : Adv → Adv'` with an efficiency hypothesis `isPPT A → isPPT' (reduce A)`. That hypothesis
 cannot be stated for an adversary that exists only inside an existential.
 
-When the reduction is not implemented yet, do not fall back to `∃`. Either:
-
-- define it as a `sorry` placeholder and state the bound for that definition, as
-  `GPVHashAndSign.reduction` does; or
-- leave the theorem as a placeholder whose docstring warns that the statement has no security
-  content until a reduction is named, as `FiatShamirWithAbort.euf_cma_bound` does.
+When the reduction is not implemented yet, do not fall back to `∃`, and do not land a `sorry`
+placeholder either: `lake exe axiomsweep --check` rejects every `sorryAx` dependency. Keep the
+statement on its branch until the reduction is defined and the bound proved.
 
 `∃` remains appropriate for mathematical objects that the argument does not need to be efficient,
 such as a witness in a relation, an index in a support, or a key pair in the image of key

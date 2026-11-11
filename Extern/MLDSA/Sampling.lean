@@ -153,6 +153,10 @@ private def requireFullEtaSample (coeffs : Array ℤ) : Array ℤ :=
   else
     panic! s!"ML-DSA eta sampler produced {coeffs.size} coefficients; expected {ringDegree}"
 
+/-- FIPS 204 Algorithm 31 (`RejBoundedPoly`): sample a polynomial with coefficients in
+`[-η, η]` by rejection from the SHAKE-256 stream of `seed ‖ nonce`, with `nonce` as two
+little-endian bytes. The stream is truncated to 1024 bytes, and the sampler panics if it yields
+fewer than `ringDegree` coefficients. -/
 def sampleEtaPoly (eta : Nat) (seed : Bytes 64) (nonce : Nat) : Rq :=
   let stream := shake256Stream (vectorToByteArray seed) nonce 1024
   let coeffs := requireFullEtaSample <| rejEtaCoeffs eta stream
@@ -180,7 +184,18 @@ theorem expandMask_get_cInfNorm_le (p : Params) (hp : p.isApproved) (rhoPrime : 
   obtain ⟨hwidth, hq⟩ := approved_gamma1_width p hp
   unfold expandMask
   rw [Vector.get_ofFn]
-  exact bitUnpackPoly_z_cInfNorm_le _ p.gamma1 hwidth hq
+  exact bitUnpackPoly_z_cInfNorm_le _ p.gamma1 hwidth
+
+/-- Every coefficient produced by `expandMask` has centered representative in the FIPS-204 `z`
+window `[-γ₁ + 1, γ₁]`, for an approved parameter set. -/
+theorem expandMask_get_coeff_mem (p : Params) (hp : p.isApproved) (rhoPrime : Bytes 64)
+    (kappa : ℕ) (j : Fin p.l) (i : Fin ringDegree) :
+    -(p.gamma1 : ℤ) < LatticeCrypto.centeredRepr (((expandMask rhoPrime kappa p).get j).get i) ∧
+      LatticeCrypto.centeredRepr (((expandMask rhoPrime kappa p).get j).get i) ≤ p.gamma1 := by
+  obtain ⟨hwidth, hq⟩ := approved_gamma1_width p hp
+  unfold expandMask
+  rw [Vector.get_ofFn]
+  exact bitUnpackPoly_z_coeff_mem _ p.gamma1 hwidth hq i
 
 /-! ## Challenge sampling -/
 

@@ -21,7 +21,7 @@ public section
 
 namespace Interaction.UC.ReactiveWorld.Tests
 
-open ReactiveSecurity ReactiveNetwork
+open ReactiveSecurity Interaction.Execution.ReactiveNetwork
 open ReactiveSecurity.Tests (boundary server receiver context)
 
 @[expose] def protocol (bit : Bool) : Protocol PortBoundary.empty boundary :=

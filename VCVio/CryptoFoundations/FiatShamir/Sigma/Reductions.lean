@@ -73,8 +73,7 @@ indexes `Fin (qH + 1)`, which is exactly the right number of forkable slots
 (the framework's structural `+1` in `Fin (qH + 1)` is precisely the wrapper's
 verifier slot). The replay-forking denominator is therefore `qH + 1`. -/
 theorem cma_to_nma_advantage_bound
-    [DecidableEq M] [DecidableEq Commit] [SampleableType Stmt] [SampleableType Wit]
-    [Finite Stmt] [Finite Chal] [Inhabited Chal] [SampleableType Chal]
+    [DecidableEq M] [DecidableEq Commit] [Inhabited Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk : ℝ≥0∞)
     (hHVZK : σ.HVZK simTranscript ζ_zk)

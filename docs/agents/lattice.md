@@ -53,18 +53,25 @@ instantiating those abstractions for a lattice scheme.
   NTT-facing types.
 - `LatticeCrypto/MLDSA/Primitives.lean`: abstract hashing, sampling, rounding, and encoding-facing
   operations.
-- `LatticeCrypto/MLDSA/Scheme.lean`: proof-level identification scheme with aborts.
+- `LatticeCrypto/MLDSA/BoxSampling.lean`: computable box samplers that decode uniform values as
+  FIPS 204 does (`boxDecode`, `v ↦ c - v`). The mask `sampleMaskVec` is the ExpandMask instance,
+  with the exact probability that a mask passes a norm gate; `NMA.sampleShortVec`, the short-model
+  secrets, is the ExpandS instance. The range predicate `maskBounded` is in `Arithmetic.lean`.
+- `LatticeCrypto/MLDSA/Scheme.lean`: proof-level identification scheme with aborts, and its variant
+  with `t₀` in the statement (`identificationSchemeFull`).
 - `LatticeCrypto/MLDSA/Signature.lean`: FIPS-style signing and verification layer built on the
   proof-level scheme.
-- `LatticeCrypto/MLDSA/Security.lean`: reduction statements from the signature / IDS surfaces to
-  underlying assumptions.
+- `LatticeCrypto/MLDSA/Security.lean`: completeness and commitment recoverability of the IDS.
+- `LatticeCrypto/MLDSA/SecurityHVZK.lean`: the HVZK simulator `hvzkSimulator` for the scheme with
+  `t₀` in the statement (`identificationSchemeFull`), and `identificationSchemeFull_perfectHVZK`,
+  which shows it equal in distribution to the honest prover on valid keys.
 - `LatticeCrypto/MLDSA/SecurityNMA.lean`: the no-message-attack chain, with the key swap modelled
   over short-box MLWE.
 - `LatticeCrypto/MLDSA/Concrete/`: executable implementations of NTT, rounding, and encoding, plus
   `LawBounds.lean` — the algebraic range and bit-width bounds behind the `Primitives.Laws` fields.
 - `Extern/MLDSA/`: FFI bindings, SHAKE-backed sampling, and the FFI-backed instance. `Laws.lean`
-  discharges the `Primitives.Laws` fields that mention `concretePrimitives`, and `NonVacuity.lean`
-  records `seedRevealingPrims`, a witness that `Primitives.Laws` is inhabited.
+  proves `Primitives.Laws` for `concretePrimitives` at every approved parameter set
+  (`concretePrimitives_laws`), and `NonVacuity.lean` records the certificate at ML-DSA-44.
 
 ### ML-KEM
 
@@ -95,7 +102,11 @@ instantiating those abstractions for a lattice scheme.
 - `LatticeCrypto/Falcon/Primitives.lean`: abstract primitive operations such as sampling, hashing,
   and compression.
 - `LatticeCrypto/Falcon/Scheme.lean`: scheme semantics and the GPV bridge.
-- `LatticeCrypto/Falcon/Security.lean`: high-level security statements.
+- `LatticeCrypto/Falcon/Security.lean`: the NTRU collision and SIS targets intended for a Falcon
+  EUF-CMA bound. No such theorem is stated: the generic GPV endpoints in
+  `VCVio/CryptoFoundations/GPVHashAndSign/` need `CorrectAt` (every single-attempt sampler output
+  short), which the non-rejecting `falconPSF` sampler does not meet, plus regularity and a bridge
+  from the reduction's collision advantage to `ntruPSFCollisionProblem`.
 - `LatticeCrypto/Falcon/Concrete/`: executable NTT, floating-point emulation (FPR/FXR), encodings,
   and the NTRU solver.
 - `Extern/Falcon/`: FFI bindings plus the SHAKE-backed sampler, FFT, keygen, signing, and instance

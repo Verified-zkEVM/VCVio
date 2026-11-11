@@ -61,10 +61,10 @@ theorem deep_tree_bound (t : ℕ) (ht : t < 2 ^ 64 + 2) : t < 2 ^ layerTreeHeigh
     norm_num
   omega
 
-/-- Past the checked domain the SHA-2 key map returns the all-zero key — which is the genuine key
-of the all-zero WOTS-hash address, not a sentinel. -/
-theorem sha2AdrsKey_eq_zero_of_tree_overflow (a : Adrs) (ha : Adrs.Fits 8 a.tree = false) :
-    sha2AdrsKey a = zeroBytes 22 := by
+/-- Past the checked domain the SHA-2 key map returns the fallback key of the address type, so two
+addresses of one type whose trees overflow the compressed field share a key. -/
+theorem sha2AdrsKey_eq_sha2FallbackKey_of_tree_overflow (a : Adrs)
+    (ha : Adrs.Fits 8 a.tree = false) : sha2AdrsKey a = sha2FallbackKey a.type := by
   unfold sha2AdrsKey Adrs.compressSha2Checked
   by_cases h1 : a.isCanonical = false
   · simp [h1]

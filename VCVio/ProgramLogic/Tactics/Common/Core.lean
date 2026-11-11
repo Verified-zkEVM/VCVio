@@ -30,19 +30,26 @@ namespace OracleComp.ProgramLogic
 /-- Maximum number of exhaustive planner passes before requiring manual stepping. -/
 register_option vcvio.vcgen.maxPasses : Nat := {
   defValue := 64
-  descr := "Maximum number of exhaustive vcgen/rvcgen passes before requiring manual stepping."
+  descr := "Maximum number of exhaustive pvcgen/rvcgen passes before requiring manual stepping."
 }
 
 /-- Emit the selected steps, goal counts, and planner choice notes. -/
 register_option vcvio.vcgen.traceSteps : Bool := {
   defValue := false
-  descr := "Emit opt-in trace messages for chosen vcgen/rvcgen planned steps."
+  descr := "Emit opt-in trace messages for chosen pvcgen/rvcgen planned steps."
+}
+
+/-- Hand quantitative triples to core `vcgen` in exhaustive `pvcgen`. -/
+register_option vcvio.vcgen.core : Bool := {
+  defValue := true
+  descr := "Let exhaustive `pvcgen` step quantitative triples with core `vcgen` and the `@[spec]` \
+    rules of the lower reading before VCVio's own structural steps."
 }
 
 /-- Collect and report elapsed time for VCGen planner phases. -/
 register_option vcvio.vcgen.time : Bool := {
   defValue := false
-  descr := "Emit cumulative timing for internal vcgen/rvcgen planner phases."
+  descr := "Emit cumulative timing for internal pvcgen/rvcgen planner phases."
 }
 
 /-- Trace hits and misses in the registered backward-rule cache. -/
@@ -389,7 +396,7 @@ def stdDoRelTripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr × E
 private def findWpApp? (target : Expr) : Option (Expr × Nat) := do
   if let some app := findAppWithHead? ``OracleComp.ProgramLogic.wp target then
     some (app, 2)
-  else if let some app := findAppWithHead? ``Std.Internal.Do.wp target then
+  else if let some app := findAppWithHead? ``Std.WP.wp target then
     some (app, 3)
   else
     none
@@ -420,7 +427,7 @@ def rawWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
 private def findTripleApp? (target : Expr) : Option (Expr × Nat) := do
   if let some app := findAppWithHead? ``OracleComp.ProgramLogic.Triple target then
     some (app, 3)
-  else if let some app := findAppWithHead? ``Std.Internal.Do.Triple target then
+  else if let some app := findAppWithHead? ``Std.WP.Triple target then
     some (app, 5)
   else
     none
