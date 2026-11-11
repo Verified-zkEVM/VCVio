@@ -51,6 +51,8 @@ namespace SLHDSA.SHAKE128s.WotsResidueReduction
 
 open Extraction CanonicalGraph
 
+section Residue
+
 variable [HasQuery HashSpec Id]
 
 /-- The value a forgery holds on one chain of one layer's WOTS key: the honest chain, started
@@ -108,6 +110,8 @@ theorem holds_early_chain_value_of_residue (secretSeed publicSeed : Digest) :
         (Extraction.Hypertree.wotsAddress layer tree leaf) chainIndex
     · exact Or.inr (ih _ _ _ _ _ _ hrest)
 
+end Residue
+
 /-! ## Naming the layer the residue reaches
 
 The recursion above is faithful but implicit about *which* layer it stopped at. These five
@@ -131,6 +135,22 @@ per step, and the tree index only shrinks, which is what bounds the coordinates.
     Nat → SLHDSA.SHAKE128s.Hypertree.LeafIndex
   | 0 => leaf
   | i + 1 => leafAt (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree) (tree / 2 ^ subtreeHeight) i
+
+/-- The layer rises by one per step. -/
+theorem layerAt_eq (layer : Nat) : ∀ i : Nat, layerAt layer i = layer + i := by
+  intro i
+  induction i generalizing layer with
+  | zero => rfl
+  | succ i ih => rw [layerAt, ih (layer + 1)]; omega
+
+/-- The subtree index only shrinks along the recursion. -/
+theorem treeAt_le (tree : Nat) : ∀ i : Nat, treeAt tree i ≤ tree := by
+  intro i
+  induction i generalizing tree with
+  | zero => exact Nat.le_refl tree
+  | succ i ih => exact (ih (tree / 2 ^ subtreeHeight)).trans (Nat.div_le_self _ _)
+
+variable [HasQuery HashSpec Id]
 
 /-- The message the honest key at the layer reached after `i` steps actually signed. Each WOTS
 key of the hypertree signs exactly one message, and that message is the honest node one layer
@@ -156,22 +176,6 @@ chain value sits at be named rather than quantified. -/
         (tree / 2 ^ subtreeHeight) (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree)
         (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0) message
           publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree)) i
-
-omit [HasQuery HashSpec Id] in
-/-- The layer rises by one per step. -/
-theorem layerAt_eq (layer : Nat) : ∀ i : Nat, layerAt layer i = layer + i := by
-  intro i
-  induction i generalizing layer with
-  | zero => rfl
-  | succ i ih => rw [layerAt, ih (layer + 1)]; omega
-
-omit [HasQuery HashSpec Id] in
-/-- The subtree index only shrinks along the recursion. -/
-theorem treeAt_le (tree : Nat) : ∀ i : Nat, treeAt tree i ≤ tree := by
-  intro i
-  induction i generalizing tree with
-  | zero => exact Nat.le_refl tree
-  | succ i ih => exact (ih (tree / 2 ^ subtreeHeight)).trans (Nat.div_le_self _ _)
 
 /-- **The residue, read at an explicit layer.** -/
 theorem exists_held_value_of_residue (secretSeed publicSeed : Digest) :
