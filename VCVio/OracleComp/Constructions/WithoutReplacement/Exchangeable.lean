@@ -5,7 +5,6 @@ Authors: Devon Tuma
 -/
 
 module
-public import ToMathlib.MeasureTheory.DiscreteInstances
 public import VCVio.EvalDist.Lossless
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.Constructions.WithoutReplacement.Basic
@@ -34,8 +33,9 @@ expectation. `sum_lintegral_sum_map_erase_le` is its weighted form, and is the s
 coordinate-wise fork's expected-lookup bound is assembled from.
 
 Observing the drawn list itself, rather than a numeric summary of it, needs a σ-algebra on
-`List S`; `ToMathlib.MeasureTheory.DiscreteInstances` supplies the discrete one for a countable
-alphabet, which is why `[Countable S]` appears throughout.
+`List S`. The laws take a discrete one as a hypothesis (`[DiscreteMeasurableSpace (List S)]`)
+rather than fixing it globally, so a caller that only needs a numeric summary of a draw chooses it
+locally. The two laws that identify measures by their singletons also need `[Countable S]`.
 -/
 
 public section
@@ -57,7 +57,12 @@ namespace ProbComp
 
 -- Every statement below observes the drawn list itself, so the pool's alphabet carries the
 -- discrete measurable structure of `ToMathlib.MeasureTheory.DiscreteInstances`.
-variable {S : Type} [Countable S]
+variable {S : Type}
+
+/-! The laws below observe whole draws, so they take a discrete σ-algebra on lists as a hypothesis
+rather than fixing one globally; a caller that only needs a numeric summary chooses it locally,
+with `let : MeasurableSpace (List S) := ⊤`. -/
+variable [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)]
 
 /-- **The loop is lossless.** It only ever samples an index of a nonempty pool, so its
 successful-output measure is a probability measure. -/
@@ -115,7 +120,7 @@ private theorem evalDist_cons_map_nil (y : S) (mx : ProbComp (List S)) :
   obtain ⟨d, -, rfl⟩ := hl
   simp at hmem
 
-omit [Countable S] in
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 /-- A run against a nonempty pool draws at some index, and what follows is a run against the pool
 with that index removed. -/
 theorem mem_support_drawUntil_cons_iff (accept : S → Bool) (r : ℕ) (x : S) (xs : List S)
@@ -137,14 +142,13 @@ theorem mem_support_drawUntil_cons_iff (accept : S → Bool) (r : ℕ) (x : S) (
     rw [support_map]
     exact ⟨d.tail, hrest, hd.symm⟩
 
-omit [Countable S] in
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 theorem ne_nil_of_mem_support_drawUntil_cons (accept : S → Bool) (r : ℕ) (x : S) (xs : List S)
     {d : List S} (hd : d ∈ support (drawUntil accept (r + 1) (x :: xs))) : d ≠ [] := by
   obtain ⟨i, hi, -⟩ := (mem_support_drawUntil_cons_iff accept r x xs).mp hd
   rw [hi]
   exact List.cons_ne_nil _ _
 
-omit [Countable S] in
 /-- An unreachable outcome has zero mass. -/
 private theorem evalDist_singleton_eq_zero {α : Type} [MeasurableSpace α]
     [DiscreteMeasurableSpace α] {mx : ProbComp α} {d : α} (hd : d ∉ support mx) :
@@ -152,7 +156,6 @@ private theorem evalDist_singleton_eq_zero {α : Type} [MeasurableSpace α]
   evalDist.apply_eq_zero_of_disjoint_support _ MeasurableSet.of_discrete
     fun _ hx hmem => hd (hmem ▸ hx)
 
-omit [Countable S] in
 /-- A uniform index draw averages its continuation's mass over the index. -/
 private theorem evalDist_uniformFin_bind_apply {α : Type} [MeasurableSpace α]
     (n : ℕ) (f : Fin (n + 1) → ProbComp α) {s : Set α} (hs : MeasurableSet s) :
@@ -227,7 +230,7 @@ Every draw is uniform over what is left, so the order the pool was presented in 
 same values, and with `evalDist_drawUntil_apply` that upgrades to `evalDist_drawUntil_congr`: the
 whole law is a function of the pool's set of values. -/
 
-omit [Countable S] in
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 private theorem mem_eraseIdx_iff_of_nodup {l : List S} (hnd : l.Nodup) {i : ℕ}
     (hi : i < l.length) {y : S} : y ∈ l.eraseIdx i ↔ y ∈ l ∧ y ≠ l[i] := by
   rw [List.mem_eraseIdx_iff_getElem]
@@ -238,7 +241,7 @@ private theorem mem_eraseIdx_iff_of_nodup {l : List S} (hnd : l.Nodup) {i : ℕ}
     obtain ⟨j, hj, rfl⟩ := List.getElem_of_mem hy
     exact ⟨j, hj, fun h => hne (by subst h; rfl), rfl⟩
 
-omit [Countable S] in
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 private theorem support_drawUntil_subset (accept : S → Bool) (n : ℕ)
     (ih : ∀ (r : ℕ) (l l' : List S), l.length = n → l'.length = n → l.Nodup → l'.Nodup →
       (∀ y, y ∈ l ↔ y ∈ l') → support (drawUntil accept r l) = support (drawUntil accept r l'))
@@ -272,7 +275,7 @@ private theorem support_drawUntil_subset (accept : S → Bool) (n : ℕ)
       · rw [mem_eraseIdx_iff_of_nodup hndu hi, mem_eraseIdx_iff_of_nodup hndv hj, hjeq, huv y]
     rwa [← hsub]
 
-omit [Countable S] in
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 /-- Two nodup pools holding the same values admit the same runs. -/
 theorem support_drawUntil_congr (accept : S → Bool) (n : ℕ) :
     ∀ (r : ℕ) (l l' : List S), l.length = n → l'.length = n → l.Nodup → l'.Nodup →
@@ -295,7 +298,8 @@ theorem support_drawUntil_congr (accept : S → Bool) (n : ℕ) :
               fun y => (hmem y).symm)
 
 /-- **The loop's law depends only on the pool's values.** -/
-theorem evalDist_drawUntil_congr (accept : S → Bool) (n : ℕ) (r : ℕ) (l l' : List S)
+theorem evalDist_drawUntil_congr [Countable S] (accept : S → Bool) (n : ℕ) (r : ℕ)
+    (l l' : List S)
     (hl : l.length = n) (hl' : l'.length = n) (hnd : l.Nodup) (hnd' : l'.Nodup)
     (hmem : ∀ y, y ∈ l ↔ y ∈ l') :
     𝒟[drawUntil accept r l] = 𝒟[drawUntil accept r l'] := by
@@ -315,7 +319,7 @@ loop samples does not depend on what the values are. Composed with `evalDist_dra
 gives `evalDist_mem_drawUntil_congr`, the fact the weighted analyses need — two values the pool
 treats alike are equally likely to be drawn. -/
 
-omit [Countable S] in
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 /-- Relabelling the pool relabels its runs. Stated between two pools because the sub-pool a run
 descends into is not itself closed under the relabelling — only the correspondence is. -/
 theorem map_mem_support_drawUntil (accept : S → Bool) (σ : Equiv.Perm S) (n : ℕ) :
@@ -368,7 +372,7 @@ theorem map_mem_support_drawUntil (accept : S → Bool) (σ : Equiv.Perm S) (n :
                 hcorr y]
               exact and_congr_right fun _ => not_congr σ.injective.eq_iff.symm
 
-omit [Countable S] in
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 /-- A permutation preserving acceptance and the pool's values maps runs to runs, bijectively. -/
 theorem map_mem_support_drawUntil_iff (accept : S → Bool) (σ : Equiv.Perm S)
     (hacc : ∀ y, accept (σ y) = accept y) (r : ℕ) (l : List S) (hnd : l.Nodup)
@@ -386,7 +390,7 @@ theorem map_mem_support_drawUntil_iff (accept : S → Bool) (σ : Equiv.Perm S)
 
 /-- Relabelling by a permutation that preserves acceptance and the pool's values leaves the law
 alone. -/
-theorem evalDist_drawUntil_map_perm (accept : S → Bool) (σ : Equiv.Perm S)
+theorem evalDist_drawUntil_map_perm [Countable S] (accept : S → Bool) (σ : Equiv.Perm S)
     (hacc : ∀ y, accept (σ y) = accept y) (r : ℕ) (l : List S) (hnd : l.Nodup)
     (hmem : ∀ y, σ y ∈ l ↔ y ∈ l) :
     𝒟[(·.map σ) <$> drawUntil accept r l] = 𝒟[drawUntil accept r l] := by
@@ -416,7 +420,8 @@ theorem evalDist_drawUntil_map_perm (accept : S → Bool) (σ : Equiv.Perm S)
 
 /-- **Exchangeability.** Two values of the pool that the acceptance test cannot tell apart are
 equally likely to be drawn. -/
-theorem evalDist_mem_drawUntil_congr (accept : S → Bool) (r : ℕ) (l : List S) (hnd : l.Nodup)
+theorem evalDist_mem_drawUntil_congr [Countable S] (accept : S → Bool) (r : ℕ) (l : List S)
+    (hnd : l.Nodup)
     {a b : S} (ha : a ∈ l) (hb : b ∈ l) (hab : accept a = accept b) :
     𝒟[drawUntil accept r l] {d | a ∈ d} = 𝒟[drawUntil accept r l] {d | b ∈ d} := by
   let _ : DecidableEq S := Classical.decEq S
@@ -525,7 +530,7 @@ theorem sum_evalDist_mem_drawUntil_accept [DecidableEq S] (accept : S → Bool) 
       · simp
       · simp; ring
 
-omit [Countable S] in
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 private theorem card_filter_toFinset [DecidableEq S] (l : List S) (hnd : l.Nodup) (p : S → Bool) :
     (l.toFinset.filter (fun x => p x)).card = l.countP p := by
   classical
@@ -534,7 +539,7 @@ private theorem card_filter_toFinset [DecidableEq S] (l : List S) (hnd : l.Nodup
 
 /-- **The accepting values are drawn with equal probability**, so each is drawn as often as the
 loop's accepting draws allow, divided by the pool's supply of them. -/
-theorem evalDist_mem_drawUntil_mul_countP (accept : S → Bool) (r : ℕ)
+theorem evalDist_mem_drawUntil_mul_countP [Countable S] (accept : S → Bool) (r : ℕ)
     (l : List S) (hnd : l.Nodup) {x : S} (hx : x ∈ l) (hacc : accept x) :
     𝒟[drawUntil accept r l] {d | x ∈ d} * (l.countP accept : ℝ≥0∞)
       = ((min r (l.countP accept) : ℕ) : ℝ≥0∞) := by
@@ -548,7 +553,7 @@ theorem evalDist_mem_drawUntil_mul_countP (accept : S → Bool) (r : ℕ)
     Finset.sum_const, card_filter_toFinset l hnd accept, nsmul_eq_mul, mul_comm]
 
 /-- The rejecting values likewise, with the loop's remaining draws to share out. -/
-theorem evalDist_mem_drawUntil_mul_countP_not (accept : S → Bool) (r : ℕ)
+theorem evalDist_mem_drawUntil_mul_countP_not [Countable S] (accept : S → Bool) (r : ℕ)
     (l : List S) (hnd : l.Nodup) {x : S} (hx : x ∈ l) (hrej : accept x = false) :
     𝒟[drawUntil accept r l] {d | x ∈ d} * (l.countP (fun y => !accept y) : ℝ≥0∞)
         + ((min r (l.countP accept) : ℕ) : ℝ≥0∞)
@@ -591,7 +596,7 @@ theorem evalDist_mem_drawUntil_eq_zero (a : S → Bool) (r : ℕ) (l : List S) {
   evalDist.apply_eq_zero_of_disjoint_support _ MeasurableSet.of_discrete fun d hd hxd =>
     hx (mem_of_mem_support_drawUntil a l.length r l rfl d hd x hxd)
 
-omit [Countable S] in
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 theorem countP_toList_erase (a : S → Bool) {v : S} (hv : a v) :
     ((Finset.univ.erase v).toList).countP a = (Finset.univ.filter fun y => a y).card - 1 := by
   classical
@@ -605,12 +610,12 @@ theorem countP_toList_erase (a : S → Bool) {v : S} (hv : a v) :
         tauto,
     Finset.card_erase_of_mem hmem]
 
-omit [Countable S] in
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 theorem length_toList_erase (v : S) :
     ((Finset.univ.erase v).toList).length = Fintype.card S - 1 := by
   rw [Finset.length_toList, Finset.card_erase_of_mem (Finset.mem_univ _), Finset.card_univ]
 
-omit [Countable S] in
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 theorem countP_not_toList_erase (a : S → Bool) {v : S} (hv : a v) :
     ((Finset.univ.erase v).toList).countP (fun y => !a y)
       = Fintype.card S - (Finset.univ.filter fun y => a y).card := by

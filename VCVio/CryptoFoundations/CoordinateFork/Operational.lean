@@ -271,6 +271,9 @@ theorem lintegral_cost_coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ 
           1 + ∑ j, NegHypergeom.expectedDraws (Fintype.card S - 1) ((hitSet ρ c₀ j).card) (k - 1)
         else 1 := by
   classical
+  -- The statement observes only the counter; the draws are integrated with discrete lists.
+  let _ : MeasurableSpace (List S) := ⊤
+  have _ : DiscreteMeasurableSpace (List S) := ⟨fun _ => trivial⟩
   rw [coordForkOpAt]
   by_cases hacc : ρ c₀
   · rw [ite_eq_left hacc, ite_eq_left hacc, map_bind,
@@ -417,9 +420,10 @@ across a column's accepting centres no entry is charged more than `k - 1` times 
 
 section Weighted
 
-variable [Nonempty S]
+variable [Nonempty S] [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)]
 
-omit [Nonempty S] [SampleableType (ι → S)] in
+omit [Nonempty S] [SampleableType (ι → S)] [MeasurableSpace (List S)]
+  [DiscreteMeasurableSpace (List S)] in
 /-- Summing over all challenges is summing over columns and then along each column. -/
 private theorem sum_eq_sum_column (j : ι) (F : (ι → S) → ℝ≥0∞) (d : S) :
     ∑ c : ι → S, F c
@@ -536,6 +540,7 @@ theorem lintegral_weight_coordForkOpWAt (k : ℕ) (ρ : (ι → S) → Bool) (Γ
       show (Prod.snd <$> (pure (none, Γ c₀) : ProbComp (Option (Finset (ι → S)) × ℝ≥0∞)))
         = (pure (Γ c₀) : ProbComp ℝ≥0∞) from rfl, evalDist_pure, lintegral_dirac]
 
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 /-- **The weighted cost bound.** The fork's expected charge is at most `1 + ℓ(k-1)` times the
 average charge of a single entry. Taking `Γ = 1` recovers `lintegral_cost_coordForkOp_le`;
 taking `Γ` to be a sub-extractor's expected cost is what multiplies the levels of the multi-round
@@ -546,6 +551,9 @@ theorem lintegral_weight_coordForkOpW_le (k : ℕ)
       ≤ (1 + Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞))
           * ((∑ c : ι → S, Γ c) / Fintype.card (ι → S)) := by
   classical
+  -- The statement observes only the total charge; the draws are integrated with discrete lists.
+  let _ : MeasurableSpace (List S) := ⊤
+  have _ : DiscreteMeasurableSpace (List S) := ⟨fun _ => trivial⟩
   have hCne : (Fintype.card (ι → S) : ℝ≥0∞) ≠ 0 := by simp [Fintype.card_ne_zero]
   have hCtop : (Fintype.card (ι → S) : ℝ≥0∞) ≠ ⊤ := by finiteness
   let _ : MeasurableSpace (ι → S) := ⊤
@@ -578,6 +586,7 @@ theorem lintegral_weight_coordForkOpW_le (k : ℕ)
         rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, div_eq_mul_inv]
         ring
 
+omit [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 /-- The form a recursion consumes: if no entry costs more than `B`, the fork costs at most
 `(1 + ℓ(k-1)) · B`. Iterating this `μ` times is the paper's `(ℓ(k-1)+1)^μ`; what it still needs is
 a `μ`-round extractor that runs its sub-extractor at the entries it examines rather than eagerly
@@ -595,7 +604,8 @@ theorem lintegral_weight_coordForkOpW_le_of_le (k : ℕ) (ρ : (ι → S) → Bo
     _ = B * Fintype.card (ι → S) := by
         rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_comm]
 
-omit [Nonempty S] [SampleableType (ι → S)] in
+omit [Nonempty S] [SampleableType (ι → S)] [MeasurableSpace (List S)]
+  [DiscreteMeasurableSpace (List S)] in
 /-- Charging instead of counting does not change what the fork *returns*. -/
 theorem map_fst_coordForkOpWAt (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞)
     (c₀ : ι → S) :
@@ -609,7 +619,7 @@ theorem map_fst_coordForkOpWAt (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι �
   · rw [ite_eq_right hacc, ite_eq_right hacc]
     simp
 
-omit [Nonempty S] in
+omit [Nonempty S] [MeasurableSpace (List S)] [DiscreteMeasurableSpace (List S)] in
 /-- The same, for the whole fork. -/
 theorem map_fst_coordForkOpW (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞) :
     (·.1) <$> coordForkOpW k ρ Γ = (·.1) <$> coordForkOp k ρ := by
