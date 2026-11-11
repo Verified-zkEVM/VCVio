@@ -11,6 +11,7 @@ public import VCVioTest.CryptoFoundations.ComplexityAdapters
 public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.DEMIndCpa
+public import VCVioTest.CryptoFoundations.DiscreteLogRelation
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortCanary
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortInstance
@@ -53,13 +54,19 @@ public import VCVioTest.GrindFailFast
 public import VCVioTest.GroupModel.Basic
 public import VCVioTest.GroupModel.Collision
 public import VCVioTest.GroupModel.Cost
+public import VCVioTest.GroupModel.Decisional
 public import VCVioTest.GroupModel.Game
+public import VCVioTest.GroupModel.GenericDDH
+public import VCVioTest.GroupModel.GenericHardness
+public import VCVioTest.GroupModel.GenericPairing
+public import VCVioTest.GroupModel.GenericRelation
 public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.Interaction.Axioms
 public import VCVioTest.GroupModel.Interaction.Basic
 public import VCVioTest.GroupModel.Interaction.MultiGroup
 public import VCVioTest.GroupModel.MasterBound
 public import VCVioTest.GroupModel.OfExplained
+public import VCVioTest.GroupModel.SortedMasterBound
 public import VCVioTest.GroupModel.ToExplained
 public import VCVioTest.GroupModel.Typed
 public import VCVioTest.GroupModel.Virtualize
@@ -136,6 +143,7 @@ public import VCVioTest.ProgramLogic.MeasureOracleRelWP
 public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.ProgramLogic.OracleWP
+public import VCVioTest.ProgramLogic.StepCoverage
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.ProgramLogic.VCGenCoreDelegation
 public import VCVioTest.Quantum.Basic

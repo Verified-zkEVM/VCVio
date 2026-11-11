@@ -366,10 +366,10 @@ private theorem run_buildVector [DecidableEq F] (s : S) (cs : List F) (hs : List
   | none =>
       refine ⟨(tbl' s).length, append tbl' s 0, ?_,
         Tbl.Extends.trans he (extends_append tbl' s 0), ?_⟩
-      · simp [buildVector, simulateQ_bind, StateT.run_bind, hrun, run_smul]
+      · simp [buildVector, StateT.run_bind, hrun, run_smul]
       · simpa [hv] using lookup_append_self tbl' s 0
   | some h =>
-      exact ⟨h, tbl', by simp [buildVector, simulateQ_bind, StateT.run_bind, hrun], he, hv⟩
+      exact ⟨h, tbl', by simp [buildVector, StateT.run_bind, hrun], he, hv⟩
 
 private theorem run_buildVectors [DecidableEq F] (s : S) (css : List (List F)) (hs : List Handle)
     (gs outs : List (G s)) (tbl : Tbl G)
@@ -410,7 +410,7 @@ private theorem run_sortMap (f : (s : S) →
       obtain ⟨hs, tbl₁, hrun₁, he₁, hv₁⟩ := hf s tbl he
       obtain ⟨rest, tbl₂, hrun₂, he₂, hv₂⟩ := ih tbl₁ (Tbl.Extends.trans he he₁)
       refine ⟨Function.update rest s hs, tbl₂, ?_, Tbl.Extends.trans he₁ he₂, ?_⟩
-      · simp [sortMap, simulateQ_bind, StateT.run_bind, hrun₁, hrun₂]
+      · simp [sortMap, StateT.run_bind, hrun₁, hrun₂]
       · intro t ht
         by_cases hts : t = s
         · subst t

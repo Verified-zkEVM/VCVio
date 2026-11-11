@@ -58,7 +58,7 @@ theorem countQueries_bind (cost : OracleWorld.Domain → Counts)
       let left ← countQueries cost first
       let right ← countQueries cost (next left.1)
       return (right.1, left.2 + right.2)) := by
-  simp [countQueries, simulateQ_bind, WriterT.run_bind, bind_assoc,
+  simp [countQueries, WriterT.run_bind, bind_assoc,
     map_eq_bind_pure_comp]
 
 /-- A single query is charged its cost. -/
@@ -81,7 +81,7 @@ theorem counted_query_bind (input : HashSpec.Domain)
       let output ← liftM (HashSpec.query input)
       let result ← counted (next output)
       return (result.1, Multiplicative.ofAdd (1 + Multiplicative.toAdd result.2))) := by
-  simp [counted, simulateQ_bind, QueryImpl.withUnitCost,
+  simp [counted, QueryImpl.withUnitCost,
     QueryImpl.withAddCost, QueryImpl.withCost, WriterT.run_bind,
     bind_assoc, map_eq_bind_pure_comp]
 

@@ -41,9 +41,13 @@ open Aeneas.Std
 namespace Interop.Rust
 
 /-- Aeneas's two errors, among the mirrored Rust errors. -/
-def errorOfAeneas : Aeneas.Std.Error → Error
+@[expose] def errorOfAeneas : Aeneas.Std.Error → Error
   | .panic => .panic
   | .undef => .undef
+
+@[simp] theorem errorOfAeneas_panic : errorOfAeneas .panic = .panic := rfl
+
+@[simp] theorem errorOfAeneas_undef : errorOfAeneas .undef = .undef := rfl
 
 variable {ι : Type} {spec : OracleSpec ι} {α : Type}
 

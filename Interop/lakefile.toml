@@ -39,11 +39,12 @@ name = "mathlib"
 scope = "leanprover-community"
 rev = "v4.35.0"
 
-# The Rust bridges. Modules not listed here (the hax examples not yet ported to Aeneas's scalars)
-# are not built.
+# The Rust bridges and the hax examples.
 [[lean_lib]]
 name = "InteropRust"
 roots = [
   "Interop.Aeneas.ITree", "Interop.Aeneas.WP", "Interop.Rust.Common", "Interop.Rust.Run",
-  "Interop.Rust.RustM", "Interop.Rust.Triple", "Interop.Hax.CenteredBinomial",
+  "Interop.Rust.RustM", "Interop.Rust.Triple", "Interop.Hax.Adc", "Interop.Hax.Barrett",
+  "Interop.Hax.CenteredBinomial", "Interop.Hax.Computation", "Interop.Hax.Division",
+  "Interop.Hax.Examples",
 ]

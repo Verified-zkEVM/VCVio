@@ -101,8 +101,13 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
 public import VCVio.CryptoFoundations.GroupModel.Coins
 public import VCVio.CryptoFoundations.GroupModel.Collision
 public import VCVio.CryptoFoundations.GroupModel.Cost
+public import VCVio.CryptoFoundations.GroupModel.Decisional
 public import VCVio.CryptoFoundations.GroupModel.Encoding
 public import VCVio.CryptoFoundations.GroupModel.Game
+public import VCVio.CryptoFoundations.GroupModel.GenericDDH
+public import VCVio.CryptoFoundations.GroupModel.GenericHardness
+public import VCVio.CryptoFoundations.GroupModel.GenericPairing
+public import VCVio.CryptoFoundations.GroupModel.GenericRelation
 public import VCVio.CryptoFoundations.GroupModel.Instances
 public import VCVio.CryptoFoundations.GroupModel.Interaction
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
@@ -117,6 +122,7 @@ public import VCVio.CryptoFoundations.GroupModel.Typed
 public import VCVio.CryptoFoundations.GroupModel.Virtualize
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.Covering
@@ -124,6 +130,7 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.CoveringEval
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.ITSR
 public import VCVio.CryptoFoundations.HardnessAssumptions.NoisyLearning
 public import VCVio.CryptoFoundations.HardnessAssumptions.OneWay
+public import VCVio.CryptoFoundations.HardnessAssumptions.PairingDLog
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collection
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.OpenPREFromTCRDSPR
@@ -526,7 +533,6 @@ public import VCVio.ProgramLogic.Tactics.Common.Registry
 public import VCVio.ProgramLogic.Tactics.Common.SpecIR
 public import VCVio.ProgramLogic.Tactics.Common.Suggestions
 public import VCVio.ProgramLogic.Tactics.Common.WpStepDispatch
-public import VCVio.ProgramLogic.Tactics.Common.WpStepRegistry
 public import VCVio.ProgramLogic.Tactics.Handler
 public import VCVio.ProgramLogic.Tactics.Relational
 public import VCVio.ProgramLogic.Tactics.Relational.Internals

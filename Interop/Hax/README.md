@@ -4,20 +4,18 @@ Examples of hax-extracted Rust carried into VCVio. hax now emits code in Aeneas'
 `Interop.Rust.liftRustM` lifts into `RustOracleComp`, so these examples need no hax-specific
 bridge.
 
-| Module | Shows | State |
-|---|---|---|
-| `CenteredBinomial` | ML-KEM's CBD(η = 1) step from `third_party/hax-cbd`, through `RustM`, to its exact distribution | ported; built by `InteropRust` |
-| `Computation` | hax's `x + x + 1`, the first real hax source | not yet ported |
-| `Division` | checked `/`: division by zero end to end | not yet ported |
-| `Adc` | 32-bit add-with-carry, by `hax_mvcgen` and `bv_decide`, carried to VCVio by `Interop.Rust.triple_liftRustM_of_triple` | not yet ported |
-| `Barrett` | signed 32-bit Barrett reduction mod 3329, in range by `hax_bv_decide` | not yet ported |
-| `Examples` | hand-written demos: an oracle composed with a Rust addition, and a coin-tossed panic with probability `1/2` | not yet ported |
+Each is transcribed in the `RustM` code hax emits today, over Aeneas's scalars (`U32`, `I32`,
+literals such as `1#u8`): bitwise operations and casts are pure, while arithmetic and shifts are
+checked. The hax CLI was not run to produce them. A specification proved with hax's `hax_mvcgen`
+is a `Std.Do` triple, which reaches VCVio's program logic through
+`Interop.Rust.triple_liftRustM_of_triple`. All are roots of `InteropRust` and of the axiom-sweep
+step of CI's `Interop Bridges` job.
 
-The unported modules still use hax's pre-Aeneas API (`Hax.rust_primitives.*`, `RustM` as
-`ExceptT Error Option`, and the removed `Interop.Hax.Bridge`) and VCVio's retired `Pr[…]`
-notation.
-- *Porting one:* rewrite its code as a module over Aeneas's scalars, prove the statements against
-  `Interop.Rust.RustM` and current VCVio (a `Std.Do` triple from `hax_mvcgen` reaches VCVio through
-  `Interop.Rust.triple_liftRustM_of_triple`), and add it to `InteropRust`'s roots in
-  `Interop/lakefile.toml` and to the axiom-sweep step of CI's `Interop Bridges` job.
-- *History:* their earlier design notes are in git history.
+| Module | Shows |
+|---|---|
+| `CenteredBinomial` | ML-KEM's CBD(η = 1) step from `third_party/hax-cbd`, through `RustM`, to its exact distribution, and its possible values by core's `vcgen` |
+| `Barrett` | ML-KEM's signed Barrett reduction modulo 3329: the result is reduced and congruent to the input, by `hax_mvcgen` and `scalar_tac` |
+| `Adc` | 32-bit add-with-carry, the multi-precision building block, by `hax_mvcgen` and `scalar_tac` |
+| `Computation` | `x + x + 1` from hax's Lean test suite, without overflow |
+| `Division` | checked `/`: the quotient for a nonzero divisor, a panic for zero, and a panic probability of `1/2` under a uniform bit |
+| `Examples` | a Rust addition after an oracle query, specified over every possible answer |
