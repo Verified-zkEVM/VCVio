@@ -203,7 +203,6 @@ theorem querySupportedOn_toRuntime_step
   exact QuerySupportedOn.conj hσ fun m' m hK hm ↦
     (hF i m.1 m'.1 m.2 m'.2 hK).trans (Nat.add_le_add_right hm 1)
 
-omit F g in
 /-- The coherent unitary raises the grade by at most one when every port does. -/
 theorem coherent_U_grade {P : Type} [Fintype P] [DecidableEq P] {In : P → QReg}
     (F : EmulatedOracle P In) (g : F.S → ℕ)

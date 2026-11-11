@@ -251,6 +251,51 @@ theorem flipCell_mulVec_apply (fl : Finset Y) (ψ : Option Y → ℂ) (a : Optio
     (flipCell fl *ᵥ ψ) a = Option.elim a 0 (fun y ↦ if y ∈ fl then 1 else 0) * ψ a := by
   rw [flipCell, mulVec_diagonal]
 
+/-- The quadratic form of a two-level cell potential. -/
+theorem re_star_dotProduct_cellDiag_mulVec (a₀ a₁ : ℝ) (ψ : Option Y → ℂ) :
+    (star ψ ⬝ᵥ (cellDiag a₀ a₁ *ᵥ ψ)).re =
+      a₀ * ‖ψ none‖ ^ 2 + a₁ * ∑ y, ‖ψ (some y)‖ ^ 2 := by
+  have e : ∀ (r : ℝ) (z : ℂ), (star z * ((r : ℂ) * z)).re = r * ‖z‖ ^ 2 := fun r z ↦ by
+    rw [mul_left_comm, RCLike.star_def, Complex.conj_mul', ← Complex.ofReal_pow,
+      ← Complex.ofReal_mul, Complex.ofReal_re]
+  simp only [cellDiag, mulVec_diagonal, dotProduct, Fintype.sum_option, Pi.star_apply,
+    Option.elim_none, Option.elim_some, Complex.add_re, Complex.re_sum, e, Finset.mul_sum]
+
+/-- The filled labels on which a binary event differs from its empty-cell value. -/
+@[expose]
+def binaryFlipSet (q : Option Y → Bool) : Finset Y :=
+  Finset.univ.filter fun y ↦ q (some y) ≠ q none
+
+/-- Complementing a binary event does not change its commutator Gram matrix. -/
+theorem binaryCell_commutator_gram (q : Option Y → Bool) (U : Matrix (Option Y) (Option Y) ℂ) :
+    (labelProjector q true * U - U * labelProjector q true)ᴴ *
+        (labelProjector q true * U - U * labelProjector q true) =
+      (flipCell (binaryFlipSet q) * U - U * flipCell (binaryFlipSet q))ᴴ *
+        (flipCell (binaryFlipSet q) * U - U * flipCell (binaryFlipSet q)) := by
+  cases hq : q none
+  · have heq : labelProjector q true = flipCell (binaryFlipSet q) := by
+      apply congrArg diagonal
+      funext a
+      cases a with
+      | none => simp [binaryFlipSet, hq]
+      | some y => cases hy : q (some y) <;> simp [binaryFlipSet, hq, hy]
+    rw [heq]
+  · have heq : labelProjector q true = 1 - flipCell (binaryFlipSet q) := by
+      rw [show (1 : Matrix (Option Y) (Option Y) ℂ) = diagonal (fun _ ↦ 1) from
+        diagonal_one.symm, flipCell, diagonal_sub]
+      apply congrArg diagonal
+      funext a
+      cases a with
+      | none => simp [binaryFlipSet, hq]
+      | some y => cases hy : q (some y) <;> simp [binaryFlipSet, hq, hy]
+    have hc : (1 - flipCell (binaryFlipSet q)) * U -
+        U * (1 - flipCell (binaryFlipSet q)) =
+        -(flipCell (binaryFlipSet q) * U - U * flipCell (binaryFlipSet q)) := by
+      simp only [Matrix.sub_mul, Matrix.mul_sub, Matrix.one_mul, Matrix.mul_one]
+      abel
+    rw [heq, hc]
+    rw [conjTranspose_neg, neg_mul_neg]
+
 variable [AddCommGroup Y]
 
 /-- The commutator of the flip projector with the phase cell, applied to a vector. -/
@@ -523,17 +568,6 @@ theorem sum_norm_flipCommutator_sq_le (χ : AddChar Y ℂ) (fl : Finset Y)
   rw [hsplit, hW, hGfull]
   nlinarith only [hT1, hT2, e1, e2]
 
-omit [AddCommGroup Y] in
-/-- The quadratic form of a two-level cell potential. -/
-theorem re_star_dotProduct_cellDiag_mulVec (a₀ a₁ : ℝ) (ψ : Option Y → ℂ) :
-    (star ψ ⬝ᵥ (cellDiag a₀ a₁ *ᵥ ψ)).re =
-      a₀ * ‖ψ none‖ ^ 2 + a₁ * ∑ y, ‖ψ (some y)‖ ^ 2 := by
-  have e : ∀ (r : ℝ) (z : ℂ), (star z * ((r : ℂ) * z)).re = r * ‖z‖ ^ 2 := fun r z ↦ by
-    rw [mul_left_comm, RCLike.star_def, Complex.conj_mul', ← Complex.ofReal_pow,
-      ← Complex.ofReal_mul, Complex.ofReal_re]
-  simp only [cellDiag, mulVec_diagonal, dotProduct, Fintype.sum_option, Pi.star_apply,
-    Option.elim_none, Option.elim_some, Complex.add_re, Complex.re_sum, e, Finset.mul_sum]
-
 /-- **The occupancy-sensitive bound** for a binary cell event:
 `[Q, U]ᴴ [Q, U] ≤ lam (a₀ P_e + a₁ P_f)`, with different coefficients on the empty and the
 filled contents. This is the local step of the potential refinement of the collision-event
@@ -677,42 +711,6 @@ theorem posSemidef_cellDrop_sub_flip (χ : AddChar Y ℂ) (fl : Finset Y)
     Complex.ofReal_re,
     re_star_dotProduct_cellDiag_mulVec, hG, hI, sub_nonneg]
   exact sum_norm_flipCommutator_sq_le_drop χ fl hlam h₀ h₁ hd hs hleak ψ
-
-/-- The filled labels on which a binary event differs from its empty-cell value. -/
-@[expose]
-def binaryFlipSet (q : Option Y → Bool) : Finset Y :=
-  Finset.univ.filter fun y ↦ q (some y) ≠ q none
-
-omit [AddCommGroup Y] in
-/-- Complementing a binary event does not change its commutator Gram matrix. -/
-theorem binaryCell_commutator_gram (q : Option Y → Bool) (U : Matrix (Option Y) (Option Y) ℂ) :
-    (labelProjector q true * U - U * labelProjector q true)ᴴ *
-        (labelProjector q true * U - U * labelProjector q true) =
-      (flipCell (binaryFlipSet q) * U - U * flipCell (binaryFlipSet q))ᴴ *
-        (flipCell (binaryFlipSet q) * U - U * flipCell (binaryFlipSet q)) := by
-  cases hq : q none
-  · have heq : labelProjector q true = flipCell (binaryFlipSet q) := by
-      apply congrArg diagonal
-      funext a
-      cases a with
-      | none => simp [binaryFlipSet, hq]
-      | some y => cases hy : q (some y) <;> simp [binaryFlipSet, hq, hy]
-    rw [heq]
-  · have heq : labelProjector q true = 1 - flipCell (binaryFlipSet q) := by
-      rw [show (1 : Matrix (Option Y) (Option Y) ℂ) = diagonal (fun _ ↦ 1) from
-        diagonal_one.symm, flipCell, diagonal_sub]
-      apply congrArg diagonal
-      funext a
-      cases a with
-      | none => simp [binaryFlipSet, hq]
-      | some y => cases hy : q (some y) <;> simp [binaryFlipSet, hq, hy]
-    have hc : (1 - flipCell (binaryFlipSet q)) * U -
-        U * (1 - flipCell (binaryFlipSet q)) =
-        -(flipCell (binaryFlipSet q) * U - U * flipCell (binaryFlipSet q)) := by
-      simp only [Matrix.sub_mul, Matrix.mul_sub, Matrix.one_mul, Matrix.mul_one]
-      abel
-    rw [heq, hc]
-    rw [conjTranspose_neg, neg_mul_neg]
 
 /-- The occupancy-sensitive bound for an arbitrary binary event, whether its empty-cell label
 is true or false. -/

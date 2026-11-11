@@ -551,6 +551,22 @@ variable {D : QReg} {s₀ s₁ : ∀ i, SubInstrument (spec.In i × D) (spec.Out
   (σ₀ σ₁ : SubState D)
   (hU : ∀ i r, (s₀ i).branch r = MatrixMap.conj (U i r))
   (hW : ∀ i r, (s₁ i).branch r = MatrixMap.conj (W i r))
+
+/-- The observable of a set of leaves: the identity on the leaves observed in `s`, zero on the
+others. -/
+private theorem ofReal_trace_mul_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
+    [DecidablePred (· ∈ s)] (p : Σ u, X u) (M : Matrix (p.1 × D) (p.1 × D) ℂ) :
+    ENNReal.ofReal M.trace.re * s.indicator 1 (f p) =
+      ENNReal.ofReal (MatrixMap.conj
+        (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0) M).trace.re := by
+  by_cases h : f p ∈ s <;> simp [h]
+
+private theorem posSemidef_one_sub_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
+    [DecidablePred (· ∈ s)] (p : Σ u, X u) :
+    (1 - (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)ᴴ *
+      (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)).PosSemidef := by
+  by_cases h : f p ∈ s <;> simp [h, Matrix.PosSemidef.one, Matrix.PosSemidef.zero]
+
 include hU hW
 
 /-- The zero substate, the initial state of the controlled runtime in the proofs: it is never
@@ -653,23 +669,6 @@ theorem rpow_inv_two_tsum_trace_conj_run_le_mass (x : QuantumComp L spec X A)
     ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
       ((QuantumRuntime.mk D σ₀ s₀).queryWeight_le_tsum_mul_queryMassAt I _
         (fun i _ hσ ↦ krausWeight_le _ i hσ) x hρ j) (by norm_num)
-
-omit hU hW in
-/-- The observable of a set of leaves: the identity on the leaves observed in `s`, zero on the
-others. -/
-private theorem ofReal_trace_mul_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
-    [DecidablePred (· ∈ s)] (p : Σ u, X u) (M : Matrix (p.1 × D) (p.1 × D) ℂ) :
-    ENNReal.ofReal M.trace.re * s.indicator 1 (f p) =
-      ENNReal.ofReal (MatrixMap.conj
-        (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0) M).trace.re := by
-  by_cases h : f p ∈ s <;> simp [h]
-
-omit hU hW in
-private theorem posSemidef_one_sub_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
-    [DecidablePred (· ∈ s)] (p : Σ u, X u) :
-    (1 - (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)ᴴ *
-      (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)).PosSemidef := by
-  by_cases h : f p ∈ s <;> simp [h, Matrix.PosSemidef.one, Matrix.PosSemidef.zero]
 
 /-- **The square-root hybrid bound for events** (ePrint 2025/2166, Lemma 5.7, for general
 programs). Two runtimes with the same register and initial state `σ` and steps the Kraus maps

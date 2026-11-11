@@ -213,11 +213,10 @@ end split
 
 section phase
 
-variable {X Y : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
-  [AddCommGroup Y]
+variable {X Y : Type*} [Fintype X] [DecidableEq X] [DecidableEq Y] [AddCommGroup Y]
 
 /-- The phase oracle is the direct sum of its cell operators, indexed by cell contexts. -/
-theorem phaseOracle_eq_cellBlocks :
+theorem phaseOracle_eq_cellBlocks [Fintype Y] :
     phaseOracle X Y = (blockDiagonal
       (fun c : CellContext X (AddChar Y ℂ) Y ↦ phaseCell Y c.1.2)).submatrix
         phaseCellSplit phaseCellSplit := by
@@ -237,7 +236,6 @@ theorem phaseOracle_eq_cellBlocks :
         ⟨q, fun j ↦ D j.1⟩ := fun h ↦ hq (congrArg Sigma.fst h)
     simp [hq, he]
 
-omit [Fintype Y] in
 /-- A database-diagonal operator decomposes into the corresponding cell-diagonal blocks. -/
 theorem one_kronecker_diagonal_eq_cellBlocks (f : Database X Y → ℂ) :
     (1 : Matrix (X × AddChar Y ℂ) (X × AddChar Y ℂ) ℂ) ⊗ₖ diagonal f =
@@ -258,7 +256,6 @@ theorem one_kronecker_diagonal_eq_cellBlocks (f : Database X Y → ℂ) :
 noncomputable def populationMatrix (t n offset : ℕ) : Matrix (Database X Y) (Database X Y) ℂ :=
   diagonal fun D ↦ (collisionPotential t n (offset + D.size) : ℂ)
 
-omit [Fintype Y] in
 /-- The global population potential restricts to the two-level cell potential. -/
 theorem populationMatrix_eq_cellBlocks (t n offset : ℕ) :
     (1 : Matrix (X × AddChar Y ℂ) (X × AddChar Y ℂ) ℂ) ⊗ₖ
@@ -275,6 +272,8 @@ theorem populationMatrix_eq_cellBlocks (t n offset : ℕ) :
   | none => simp [Database.update_none_of_eq_none]
   | some y =>
     simp [Database.size_update_some_of_eq_none c.emptyDatabase_apply, Nat.add_assoc]
+
+variable [Fintype Y]
 
 /-- The population drop of one ordinary phase query is nonnegative after its charge. -/
 theorem posSemidef_phasePopulationDrop {t n : ℕ} (hn : n < t) (offset : ℕ) :

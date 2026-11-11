@@ -73,7 +73,7 @@ theorem QuantumRuntime.forallQueries_of_isQueryBound_zero {L : LocalSig.{u, v}}
 
 section truncated
 
-variable (X Y : Type*) [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
+variable (X Y : Type*) [Fintype X] [DecidableEq X] [DecidableEq Y]
 
 /-- The projector `P_size^(t)` of ePrint 2025/2166 onto the databases with at most `t` nonempty
 cells, acting on the database component of the joint register: the operator `1 ⊗ P_size^(t)`. -/
@@ -84,27 +84,25 @@ noncomputable def sizeProjector (t : ℕ) :
 
 variable {X Y}
 
-omit [Fintype Y] in
 theorem conjTranspose_sizeProjector (t : ℕ) : (sizeProjector X Y t)ᴴ = sizeProjector X Y t := by
   rw [sizeProjector, diagonal_conjTranspose]
   congr 1
   funext m
   split_ifs <;> simp [*]
 
-theorem sizeProjector_mul_self (t : ℕ) :
+theorem sizeProjector_mul_self [Fintype Y] (t : ℕ) :
     sizeProjector X Y t * sizeProjector X Y t = sizeProjector X Y t := by
   rw [sizeProjector, diagonal_mul_diagonal]
   congr 1
   funext m
   split_ifs <;> simp
 
-omit [Fintype Y] in
 theorem posSemidef_one_sub_sizeProjector (t : ℕ) : (1 - sizeProjector X Y t).PosSemidef := by
   rw [sizeProjector, ← diagonal_one, diagonal_sub, posSemidef_diagonal_iff]
   intro m
   split_ifs <;> simp
 
-variable [AddCommGroup Y]
+variable [Fintype Y] [AddCommGroup Y]
 
 variable (X Y) in
 /-- The truncated compressed oracle `O^(t) = P_size^(t) cO P_size^(t)` of ePrint 2025/2166. -/

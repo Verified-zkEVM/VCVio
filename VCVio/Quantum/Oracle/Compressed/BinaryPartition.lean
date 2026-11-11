@@ -75,12 +75,12 @@ namespace Quantum
 section cross
 
 variable {X Y : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
-  [UniformAnswerMeasure (X →ₒ Y)] {ι : Type*} [DecidableEq ι]
+  [UniformAnswerMeasure (X →ₒ Y)] {ι : Type*}
 
 /-- **The cross block, phase basis.** For distinct labels `i ≠ j`, the part of the truncated phase
 oracle from the databases of label `j` to those of label `i` has
 `‖P^(i) O_ph^(t) P^(j)‖² ≤ 6 I(π, t)`. -/
-theorem l2_opNorm_labelProjector_mul_truncatedPhaseOracle_mul_sq_le_six_mul
+theorem l2_opNorm_labelProjector_mul_truncatedPhaseOracle_mul_sq_le_six_mul [DecidableEq ι]
     (π : Database X Y → ι) (t : ℕ) {i j : ι} (hij : i ≠ j) :
     ‖labelProjector (fun m : (X × AddChar Y ℂ) × Database X Y ↦ π m.2) i *
         truncatedPhaseOracle X Y t *
@@ -145,7 +145,7 @@ theorem l2_opNorm_labelProjector_mul_truncatedPhaseOracle_mul_sq_le_six_mul
 
 /-- **The cross block.** For distinct labels `i ≠ j`, the part of the truncated compressed oracle
 from the databases of label `j` to those of label `i` has `‖P^(i) O^(t) P^(j)‖² ≤ 6 I(π, t)`. -/
-theorem l2_opNorm_labelProjector_mul_truncatedOracle_mul_sq_le_six_mul
+theorem l2_opNorm_labelProjector_mul_truncatedOracle_mul_sq_le_six_mul [DecidableEq ι]
     (π : Database X Y → ι) (t : ℕ) {i j : ι} (hij : i ≠ j) :
     ‖labelProjector (fun m : (X × Y) × Database X Y ↦ π m.2) i * truncatedOracle X Y t *
           labelProjector (fun m : (X × Y) × Database X Y ↦ π m.2) j‖ ^ 2 ≤
@@ -181,7 +181,6 @@ theorem l2_opNorm_labelProjector_mul_truncatedOracle_mul_sq_le_six_mul
     (queryFourier_mul_conjTranspose X Y) _) 2).trans
     (l2_opNorm_labelProjector_mul_truncatedPhaseOracle_mul_sq_le_six_mul π t hij)
 
-omit [DecidableEq ι] in
 /-- **The cross block of a set of databases.** For a set `S` of databases with projector `Q_S`,
 `‖Q_Sᶜ O^(t) Q_S‖² ≤ 6 I(S)` and `‖Q_S O^(t) Q_Sᶜ‖² ≤ 6 I(S)`, where `I(S)` is the instability of
 the two-label partition into `S` and its complement. -/
