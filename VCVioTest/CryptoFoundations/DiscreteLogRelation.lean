@@ -131,8 +131,7 @@ theorem counter_experiment_zmod_101 :
     experiment impl 7 (1 : ZMod 101) A =
       plainExperiment (F := ZMod 101) (1 : ZMod 101) (fun _ => pure ![7, -8]) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
-  simp [experiment, plainExperiment, plainAdversary, simulateQ_bind, StateT.run'_eq,
-    StateT.run_bind]
+  simp [experiment, plainExperiment, plainAdversary, StateT.run'_eq, StateT.run_bind]
 
 /-- The named DLog reduction accepts a stateful counter interpretation directly. -/
 theorem counter_reduction_zmod_101 :
