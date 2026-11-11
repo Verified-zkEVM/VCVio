@@ -301,13 +301,13 @@ open Lean
 
 namespace InitSweep
 
-/-- Root modules swept when no `--root` is given: the same seven non-test libraries
+/-- Root modules swept when no `--root` is given: the same six non-test libraries
 `scripts/AxiomSweep.lean` sweeps, and for the same reason — `Interop` is the declared TCB,
 bounded by its import-isolation gate, and is not built by the main CI build job. The two
 test libraries that have umbrella modules are swept by an explicit `--root` pair after
 `lake test` has built them; see the module docstring. -/
 def defaultRoots : Array Name :=
-  #[`VCVio, `VCVioCslib, `ToMathlib, `Extern, `LatticeCrypto, `HashSig, `Examples, `VCVioWidgets]
+  #[`VCVio, `ToMathlib, `Extern, `LatticeCrypto, `HashSig, `Examples]
 
 /-- The constants whose appearance in an eagerly-initialised value means the initialiser
 enumerates a type. Listed in source, with the reason each one is here, so the gate's reach

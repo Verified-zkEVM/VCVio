@@ -335,7 +335,7 @@ theorem exists_le_mem_support_run_of_mem_log_add_withLogging
     {e : (t : sigSpec.Domain) × sigSpec.Range t} (he : e ∈ z.1.2) :
     ∃ s₁ s₂, s₀ ≤ s₁ ∧ s₂ ≤ z.2 ∧ (e.2, s₂) ∈ support ((simulateQ outer (sign e.1)).run s₁) := by
   induction oa using OracleComp.inductionOn generalizing s₀ z with
-  | pure x => simp_all [simulateQ_pure]
+  | pure x => simp_all
   | query_bind t k ih =>
     rw [simulateQ_bind, simulateQ_spec_query, WriterT.run_bind', simulateQ_bind, StateT.run_bind,
       mem_support_bind_iff] at hz
@@ -388,7 +388,7 @@ theorem holds_of_mem_support_run_add_withLogging
         (WriterT (QueryLog sigSpec) (OracleComp spec)) + sign.withLogging) oa).run)).run s₀)) :
     I (log₀ ++ z.1.2) z.2 := by
   induction oa using OracleComp.inductionOn generalizing log₀ s₀ z with
-  | pure x => simp_all [simulateQ_pure]
+  | pure x => simp_all
   | query_bind t k ih =>
     rw [allQueriesSatisfy_query_bind_iff] at hoa
     rw [simulateQ_bind, simulateQ_spec_query, WriterT.run_bind', simulateQ_bind, StateT.run_bind,

@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import LatticeCrypto.MLDSA.MaskBox
+public import LatticeCrypto.MLDSA.BoxSampling
 public import LatticeCrypto.MLDSA.Primitives
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
 public import VCVio.OracleComp.Constructions.SampleableType.Basic

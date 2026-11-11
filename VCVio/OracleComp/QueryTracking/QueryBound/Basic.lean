@@ -201,7 +201,7 @@ theorem IsQueryBound.simulateQ_run_of_step
     IsQueryBound ((simulateQ impl oa).run s) (mapBudget budget) canQuery' cost' := by
   induction oa using OracleComp.inductionOn generalizing budget s with
   | pure x =>
-      simp [simulateQ_pure]
+      simp
   | query_bind t mx ih =>
       rw [isQueryBound_query_bind_iff] at h
       rw [simulateQ_query_bind, StateT.run_bind]

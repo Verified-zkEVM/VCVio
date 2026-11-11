@@ -36,17 +36,17 @@ variable [OracleSpec.AnswerMeasure spec]
 example {oa : OracleComp spec α} {p : α → Prop} [DecidablePred p]
     (h : ⦃ 1 ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄) :
     Pr{let x ← oa}[p x] = 1 := by
-  vcgen
+  pvcgen
 
 example {oa : OracleComp spec α} {p : α → Prop} [DecidablePred p]
     (h : ⦃ 1 ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄) :
     1 = Pr{let x ← oa}[p x] := by
-  vcgen
+  pvcgen
 
 example {oa : OracleComp spec Bool}
     (h : ⦃ 1 ⦄ oa ⦃ fun y => if y = true then 1 else 0 ⦄) :
     Pr{let y ← oa}[y = true] = 1 := by
-  vcgen
+  pvcgen
 
 end ProbabilityLowering
 
