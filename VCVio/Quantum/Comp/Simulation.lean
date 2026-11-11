@@ -5,6 +5,8 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.DSubInstrument
+public import QuantumFoundations.DSubInstrument.Observe
 public import VCVio.Quantum.Comp.Runtime
 
 /-!
@@ -39,8 +41,6 @@ Each statement is proved for general programs, with the fixed-register forms (`s
 
 ## Main definitions
 
-* `Quantum.DSubInstrument.Intertwines L₁ L₂ p p'`: on every outcome `i`, `p'` after `L₁`
-  is `L₂ i` after `p` on the output register of each outcome `i`.
 * `Quantum.QuantumRuntime.ForallQueries R I P x ρ`: every call along every branch of the run of
   `x` from `ρ` receives an operator satisfying `P`.
 
@@ -62,88 +62,6 @@ open scoped Kronecker
 universe u v u₁ v₁ w
 
 namespace Quantum
-
-namespace DSubInstrument
-
-variable {X X' : Type*} [Fintype X] [Fintype X'] {ι κ : Type*} {B B' : ι → Type*}
-  [∀ i, Fintype (B i)] [∀ i, Fintype (B' i)] {C C' : κ → Type*} [∀ c, Fintype (C c)]
-  [∀ c, Fintype (C' c)]
-
-/-- A step, then a step without outcome, then returning the first outcome: the branch at `a` is
-the second step after the branch of the first at `a`. -/
-theorem branch_bind_bind_unit_ret (p : DSubInstrument X ι B)
-    {Z : ι → Type*} [∀ i, Fintype (Z i)]
-    (u : (i : ι) → DSubInstrument (B i) Unit fun _ ↦ Z i)
-    (a : ι) :
-    (p.bind fun a' ↦ (u a').bind fun _ ↦ DSubInstrument.ret Z a').branch a =
-      (u a).branch () ∘ₗ p.branch a :=
-  LinearMap.ext fun ρ ↦ by
-    rw [branch_bind_apply, tsum_eq_single a fun a' ha' ↦ by
-        rw [branch_bind_unit, branch_ret_of_ne Z (Ne.symm ha'), LinearMap.zero_comp,
-          LinearMap.zero_apply],
-      branch_bind_unit, branch_ret_self, LinearMap.id_comp, LinearMap.comp_apply]
-
-/-! ## Intertwining of dependent subinstruments -/
-
-/-- `p'` simulates `p` through `L₁` on inputs and `L₂ i` on the output register of each outcome
-`i`: on every outcome, `p'.branch i ∘ₗ L₁ = L₂ i ∘ₗ p.branch i`. -/
-@[expose]
-def Intertwines (L₁ : MatrixMap X X') (L₂ : ∀ i, MatrixMap (B i) (B' i))
-    (p : DSubInstrument X ι B) (p' : DSubInstrument X' ι B') : Prop :=
-  ∀ i, p'.branch i ∘ₗ L₁ = L₂ i ∘ₗ p.branch i
-
-/-- Two dependent subinstruments whose branches leave operators of the same trace on two
-substates, on every outcome, have the same outcome measures on them. -/
-theorem outcomeMeasure_congr [MeasurableSpace ι] {p : DSubInstrument X ι B}
-    {p' : DSubInstrument X' ι B'} {ρ : SubState X} {ρ' : SubState X'}
-    (h : ∀ i, (p.branch i ρ.matrix).trace = (p'.branch i ρ'.matrix).trace) :
-    p.outcomeMeasure ρ = p'.outcomeMeasure ρ' := by
-  rw [outcomeMeasure_eq_sum, outcomeMeasure_eq_sum]
-  exact congrArg Measure.sum <| funext fun i ↦ by rw [h i]
-
-namespace Intertwines
-
-/-- `ret i` intertwines with itself through any family of maps. -/
-theorem ret (L : ∀ i, MatrixMap (B i) (B' i)) (i : ι) :
-    Intertwines (L i) L (DSubInstrument.ret B i) (DSubInstrument.ret B' i) := fun j ↦ by
-  obtain rfl | h := eq_or_ne j i
-  · rw [branch_ret_self, branch_ret_self, LinearMap.id_comp, LinearMap.comp_id]
-  · rw [branch_ret_of_ne B h, branch_ret_of_ne B' h, LinearMap.zero_comp, LinearMap.comp_zero]
-
-/-- Intertwining is preserved by sequencing. -/
-theorem bind {L₁ : MatrixMap X X'} {L₂ : ∀ i, MatrixMap (B i) (B' i)}
-    {L₃ : ∀ c, MatrixMap (C c) (C' c)} {p : DSubInstrument X ι B} {p' : DSubInstrument X' ι B'}
-    {k : (i : ι) → DSubInstrument (B i) κ C} {k' : (i : ι) → DSubInstrument (B' i) κ C'}
-    (hp : Intertwines L₁ L₂ p p') (hk : ∀ i, Intertwines (L₂ i) L₃ (k i) (k' i)) :
-    Intertwines L₁ L₃ (p.bind k) (p'.bind k') := fun c ↦ LinearMap.ext fun ρ ↦ by
-  rw [LinearMap.comp_apply, LinearMap.comp_apply, branch_bind_apply, branch_bind_apply,
-    MatrixMap.map_tsum (L₃ c) (f := fun i ↦ (k i).branch c (p.branch i ρ))
-      ((p.isCPTNIFamily.comp_eval (fun i ↦ (k i).isCPTNIFamily) c).summable_apply ρ)]
-  refine tsum_congr fun i ↦ ?_
-  have h₁ := LinearMap.congr_fun (hp i) ρ
-  have h₂ := LinearMap.congr_fun (hk i c) (p.branch i ρ)
-  simp only [LinearMap.comp_apply] at h₁ h₂
-  rw [h₁, h₂]
-
-/-- Framing by a common ancilla preserves intertwining on each output system. -/
-theorem frame {L₁ : MatrixMap X X'} {L₂ : ∀ i, MatrixMap (B i) (B' i)}
-    {p : DSubInstrument X ι B} {p' : DSubInstrument X' ι B'}
-    (h : Intertwines L₁ L₂ p p') (E : Type*) [Fintype E] :
-    Intertwines (L₁.amplify E) (fun i ↦ (L₂ i).amplify E) (p.frame E) (p'.frame E) :=
-  fun i ↦ by
-    rw [branch_frame_apply, branch_frame_apply, ← MatrixMap.amplify_comp, h i,
-      MatrixMap.amplify_comp]
-
-/-- A dependent subinstrument framed by two ancillas intertwines through a map `id ⊗ V` between
-the ancillas. -/
-theorem frame_amplifyLeft (p : DSubInstrument X ι B) {R S : Type*} [Fintype R] [Fintype S]
-    (V : MatrixMap R S) :
-    Intertwines (V.amplifyLeft X) (fun i ↦ V.amplifyLeft (B i)) (p.frame R) (p.frame S) :=
-  fun i ↦ by rw [branch_frame_apply, branch_frame_apply, MatrixMap.amplify_comp_amplifyLeft]
-
-end Intertwines
-
-end DSubInstrument
 
 namespace QuantumRuntime
 

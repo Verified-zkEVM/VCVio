@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.Oracle.Unitary
 public import VCVio.Quantum.Oracle.Compressed.Action
 public import VCVio.Quantum.Oracle.Compressed.Equivalence
 
@@ -51,81 +52,6 @@ open scoped Kronecker
 universe u v w
 
 namespace Quantum
-
-/-! ## Support through a read map -/
-
-namespace QuerySupportedOn
-
-variable {M M' A B R Z Z' : Type*}
-
-/-- Support passes along any change of read map and set that keeps the basis elements in the
-support. -/
-theorem imp {q : M → Z} {q' : M → Z'} {S : Set Z} {S' : Set Z'} {ρ : Matrix M M ℂ}
-    (h : QuerySupportedOn q S ρ) (hq : ∀ m, q m ∈ S → q' m ∈ S') : QuerySupportedOn q' S' ρ :=
-  fun m m' hm ↦ ⟨hq m (h m m' hm).1, hq m' (h m m' hm).2⟩
-
-/-- Support is closed under sums of families. -/
-theorem tsum {ι : Type*} {q : M → Z} {S : Set Z} {f : ι → Matrix M M ℂ}
-    (hf : ∀ i, QuerySupportedOn q S (f i)) : QuerySupportedOn q S (∑' i, f i) := by
-  intro m m' hm
-  by_cases hs : Summable f
-  · rw [Matrix.tsum_apply_apply hs] at hm
-    obtain ⟨i, hi⟩ := not_forall.mp fun hc : ∀ i, f i m m' = 0 ↦ hm (by simp [hc])
-    exact hf i m m' hi
-  · rw [tsum_eq_zero_of_not_summable hs] at hm
-    exact absurd rfl hm
-
-/-- Conjugation by `K` moves the support from `S` to `S'` when every nonzero entry `K m' m` with
-`q m ∈ S` has `q' m' ∈ S'`. -/
-theorem conj [Fintype M] {q : M → Z} {q' : M' → Z'} {S : Set Z} {S' : Set Z'}
-    {ρ : Matrix M M ℂ} (h : QuerySupportedOn q S ρ) {K : Matrix M' M ℂ}
-    (hK : ∀ m' m, K m' m ≠ 0 → q m ∈ S → q' m' ∈ S') :
-    QuerySupportedOn q' S' (MatrixMap.conj K ρ) := by
-  intro n n' hn
-  rw [MatrixMap.conj_apply, Matrix.mul_apply] at hn
-  obtain ⟨b, -, hb⟩ := Finset.exists_ne_zero_of_sum_ne_zero hn
-  have hb₁ := left_ne_zero_of_mul hb
-  have hb₂ := right_ne_zero_of_mul hb
-  rw [Matrix.mul_apply] at hb₁
-  obtain ⟨a, -, ha⟩ := Finset.exists_ne_zero_of_sum_ne_zero hb₁
-  have hρ := h a b (right_ne_zero_of_mul ha)
-  rw [Matrix.conjTranspose_apply, star_ne_zero] at hb₂
-  exact ⟨hK n a (left_ne_zero_of_mul ha) hρ.1, hK n' b hb₂ hρ.2⟩
-
-/-- A relabelling gate moves the read map along the bijection. -/
-theorem branch_relabel [Fintype M] [Fintype M'] [DecidableEq M] [DecidableEq M'] {q : M → Z}
-    {S : Set Z} {ρ : Matrix M M ℂ} (h : QuerySupportedOn q S ρ) (e : M ≃ M') :
-    QuerySupportedOn (q ∘ e.symm) S ((SubInstrument.relabel e).branch () ρ) := by
-  intro m m' hm
-  rw [SubInstrument.relabel_branch_apply, submatrix_apply] at hm
-  exact h _ _ hm
-
-/-- A map acting on the first factor preserves support read through the second factor. -/
-theorem amplify_snd {q : R → Z} {S : Set Z} {ρ : Matrix (A × R) (A × R) ℂ}
-    (h : QuerySupportedOn (fun m : A × R ↦ q m.2) S ρ) (Φ : MatrixMap A B) :
-    QuerySupportedOn (fun m : B × R ↦ q m.2) S (Φ.amplify R ρ) := by
-  intro m m' hm
-  have hblock : ρ.submatrix (·, m.2) (·, m'.2) ≠ 0 := by
-    intro h0
-    rw [MatrixMap.amplify_apply, h0, map_zero] at hm
-    exact hm rfl
-  obtain ⟨a, b, hab⟩ : ∃ a b, ρ (a, m.2) (b, m'.2) ≠ 0 := by
-    by_contra hc
-    simp only [not_exists, not_not] at hc
-    exact hblock (Matrix.ext hc)
-  exact h _ _ hab
-
-/-- A map acting on the first factor that moves support read through `q` on `S` to support read
-through `q'` on `S'` does so on the first factor of the framed register. -/
-theorem amplify_fst {q : A → Z} {q' : B → Z'} {S : Set Z} {S' : Set Z'} {Φ : MatrixMap A B}
-    (hΦ : ∀ σ, QuerySupportedOn q S σ → QuerySupportedOn q' S' (Φ σ))
-    {ρ : Matrix (A × R) (A × R) ℂ} (h : QuerySupportedOn (fun m : A × R ↦ q m.1) S ρ) :
-    QuerySupportedOn (fun m : B × R ↦ q' m.1) S' (Φ.amplify R ρ) := by
-  rintro ⟨b, r⟩ ⟨b', r'⟩ hm
-  rw [MatrixMap.amplify_apply] at hm
-  exact hΦ _ (h.block r r') b b' hm
-
-end QuerySupportedOn
 
 /-! ## Support on small databases -/
 

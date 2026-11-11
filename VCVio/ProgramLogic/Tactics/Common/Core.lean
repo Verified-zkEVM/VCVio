@@ -30,26 +30,26 @@ namespace OracleComp.ProgramLogic
 /-- Maximum number of exhaustive planner passes before requiring manual stepping. -/
 register_option vcvio.vcgen.maxPasses : Nat := {
   defValue := 64
-  descr := "Maximum number of exhaustive vcgen/rvcgen passes before requiring manual stepping."
+  descr := "Maximum number of exhaustive pvcgen/rvcgen passes before requiring manual stepping."
 }
 
 /-- Emit the selected steps, goal counts, and planner choice notes. -/
 register_option vcvio.vcgen.traceSteps : Bool := {
   defValue := false
-  descr := "Emit opt-in trace messages for chosen vcgen/rvcgen planned steps."
+  descr := "Emit opt-in trace messages for chosen pvcgen/rvcgen planned steps."
 }
 
-/-- Hand quantitative triples to core `vcgen` in exhaustive `vcgen`. -/
+/-- Hand quantitative triples to core `vcgen` in exhaustive `pvcgen`. -/
 register_option vcvio.vcgen.core : Bool := {
   defValue := true
-  descr := "Let exhaustive `vcgen` step quantitative triples with core `vcgen` and the `@[spec]` \
+  descr := "Let exhaustive `pvcgen` step quantitative triples with core `vcgen` and the `@[spec]` \
     rules of the lower reading before VCVio's own structural steps."
 }
 
 /-- Collect and report elapsed time for VCGen planner phases. -/
 register_option vcvio.vcgen.time : Bool := {
   defValue := false
-  descr := "Emit cumulative timing for internal vcgen/rvcgen planner phases."
+  descr := "Emit cumulative timing for internal pvcgen/rvcgen planner phases."
 }
 
 /-- Trace hits and misses in the registered backward-rule cache. -/

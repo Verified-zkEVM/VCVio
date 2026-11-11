@@ -1,7 +1,9 @@
 # Computational-complexity feasibility record
 
 Status: historical record of the reviewer audit of 2026-08-28, whose candidate source is merged;
-the [computational-complexity design](computational-complexity.md) describes the present.
+the [computational-complexity design](computational-complexity.md) describes the present. The
+optional `VCVioComplexity` package it cites has since been removed in favour of a
+cslib-frontier-based package; its sources remain in git history.
 This record evaluates whether the interaction-first design is mathematically sound and whether it
 is ready for ordinary cryptographic use. The answer is deliberately split:
 

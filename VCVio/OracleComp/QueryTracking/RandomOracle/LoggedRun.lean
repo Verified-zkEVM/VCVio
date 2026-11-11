@@ -112,7 +112,7 @@ private theorem loggedRun_bind
       ((simulateQ impl oa).run).run cache >>= fun p =>
         (fun q => ((q.1.1, p.1.2 ++ q.1.2), q.2)) <$>
           ((simulateQ impl (ob p.1.1)).run).run p.2 := by
-  simp [simulateQ_bind, WriterT.run_bind, StateT.run_bind]
+  simp [WriterT.run_bind, StateT.run_bind]
 
 /-- A fixed-table interleaved computation composes through its exact returned cache and ordered
 log. This is the phase-handoff equation used by adaptive protocols. -/
@@ -235,14 +235,14 @@ theorem randomOracleLoggedRun_project [DecidableEq D]
                   (WriterT (QueryLog (ofFn R))
                     (StateT (ofFn R).QueryCache ProbComp))) n).run.run cache >>= fun p =>
                   (fun z => (z.1.1, z.2)) <$> randomOracleLoggedRun (k p.1.1) p.2 := by
-            simp [randomOracleLoggedRun, simulateQ_bind, WriterT.run_bind,
+            simp [randomOracleLoggedRun, WriterT.run_bind,
               StateT.run_bind]
           have hright :
               (simulateQ (ofFn R).romImpl
                 (liftM ((unifSpec + ofFn R).query (.inl n)) >>= k)).run cache =
                 (unifFwdImpl (ofFn R) n).run cache >>= fun p =>
                   (simulateQ (ofFn R).romImpl (k p.1)).run p.2 := by
-            simp [simulateQ_bind, StateT.run_bind]
+            simp [StateT.run_bind]
           rw [hleft, hright]
           have hfirst :
               ((unifSpec.passthrough : QueryImpl unifSpec
@@ -269,14 +269,14 @@ theorem randomOracleLoggedRun_project [DecidableEq D]
                     cache =
                 ((ofFn R).randomOracle t).run cache >>= fun p =>
                   (fun z => (z.1.1, z.2)) <$> randomOracleLoggedRun (k p.1) p.2 := by
-            simp [randomOracleLoggedRun, simulateQ_bind, WriterT.run_bind,
+            simp [randomOracleLoggedRun, WriterT.run_bind,
               StateT.run_bind]
           have hright :
               (simulateQ (ofFn R).romImpl
                 (liftM ((unifSpec + ofFn R).query (.inr t)) >>= k)).run cache =
                 ((ofFn R).randomOracle t).run cache >>= fun p =>
                   (simulateQ (ofFn R).romImpl (k p.1)).run p.2 := by
-            simp [simulateQ_bind, StateT.run_bind]
+            simp [StateT.run_bind]
           rw [hleft, hright]
           apply bind_congr
           intro p

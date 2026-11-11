@@ -10,8 +10,8 @@ public import VCVioTest.CryptoFoundations.BR93Measure
 public import VCVioTest.CryptoFoundations.ComplexityAdapters
 public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
-public import VCVioTest.CryptoFoundations.CslibPPolyUniverses
 public import VCVioTest.CryptoFoundations.DEMIndCpa
+public import VCVioTest.CryptoFoundations.DiscreteLogRelation
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortCanary
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortInstance
@@ -28,6 +28,7 @@ public import VCVioTest.CryptoFoundations.UniversalHash
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.DisagreementMeasure
+public import VCVioTest.EvalDist.DiscreteTVDist
 public import VCVioTest.EvalDist.EventBounds
 public import VCVioTest.EvalDist.Failure
 public import VCVioTest.EvalDist.FinRatPMF
@@ -50,10 +51,25 @@ public import VCVioTest.ForkBounds
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.Foundations
 public import VCVioTest.GrindFailFast
+public import VCVioTest.GroupModel.Basic
+public import VCVioTest.GroupModel.Collision
+public import VCVioTest.GroupModel.Cost
+public import VCVioTest.GroupModel.Decisional
+public import VCVioTest.GroupModel.Game
+public import VCVioTest.GroupModel.GenericDDH
+public import VCVioTest.GroupModel.GenericHardness
+public import VCVioTest.GroupModel.GenericPairing
+public import VCVioTest.GroupModel.GenericRelation
+public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.Interaction.Axioms
 public import VCVioTest.GroupModel.Interaction.Basic
 public import VCVioTest.GroupModel.Interaction.MultiGroup
+public import VCVioTest.GroupModel.MasterBound
+public import VCVioTest.GroupModel.OfExplained
+public import VCVioTest.GroupModel.SortedMasterBound
+public import VCVioTest.GroupModel.ToExplained
 public import VCVioTest.GroupModel.Typed
+public import VCVioTest.GroupModel.Virtualize
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
@@ -80,6 +96,9 @@ public import VCVioTest.OracleComp.EqDistTriple
 public import VCVioTest.OracleComp.MeasuredProgram
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
+public import VCVioTest.OracleComp.QueryAndHandlerLaws
+public import VCVioTest.OracleComp.QueryTracking.QueryLog
+public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.OracleComp.SpecInstanceSearch
 public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
@@ -124,6 +143,7 @@ public import VCVioTest.ProgramLogic.MeasureOracleRelWP
 public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.ProgramLogic.OracleWP
+public import VCVioTest.ProgramLogic.StepCoverage
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.ProgramLogic.VCGenCoreDelegation
 public import VCVioTest.Quantum.Basic
@@ -163,6 +183,7 @@ public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.RandomOracleSettled
 public import VCVioTest.RandomOracleTouchRead
+public import VCVioTest.RandomPermutationConditioning
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
 public import VCVioTest.ReactiveNetwork
@@ -171,6 +192,7 @@ public import VCVioTest.ReactiveSecurity
 public import VCVioTest.ReactiveWorld
 public import VCVioTest.ReplayCheckpoint
 public import VCVioTest.ResumptionCompatibility
+public import VCVioTest.Rewinding
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.Runtime
 public import VCVioTest.SMDTDSPR
@@ -188,6 +210,7 @@ public import VCVioTest.SampleableType
 public import VCVioTest.Schemes.KEMDEM
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms
+public import VCVioTest.Schemes.VectorPedersen
 public import VCVioTest.SeparatedOTP
 public import VCVioTest.Smoke
 public import VCVioTest.StateSeparating.Measure
@@ -198,6 +221,7 @@ public import VCVioTest.Tactic.FunProp
 public import VCVioTest.Tactic.GeneralizedRelations
 public import VCVioTest.Tactic.GeneralizedRelationsExperiments
 public import VCVioTest.Tactic.Positivity
+public import VCVioTest.ThresholdFinder
 public import VCVioTest.TimeLockPuzzle.FreeSummand
 public import VCVioTest.TimeLockPuzzle.Hiding
 public import VCVioTest.TimeLockPuzzle.HidingCap

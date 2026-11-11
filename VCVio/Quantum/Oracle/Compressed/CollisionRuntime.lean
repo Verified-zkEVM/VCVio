@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.MatrixMap.Comparison
 
 public import VCVio.Quantum.Oracle.Compressed.CollisionBlocks
 public import VCVio.Quantum.Oracle.Emulated
@@ -75,7 +76,7 @@ theorem coherentBlocks_adjoint (A : ∀ p, Matrix (In p × D) (In p × D) ℂ) :
 /-- Positive semidefinite port operators give a positive semidefinite coherent operator. -/
 theorem posSemidef_coherentBlocks {A : ∀ p, Matrix (In p × D) (In p × D) ℂ}
     (hA : ∀ p, (A p).PosSemidef) : (coherentBlocks A).PosSemidef :=
-  (posSemidef_blockDiagonal' hA).submatrix _
+  (Matrix.posSemidef_blockDiagonal' hA).submatrix _
 
 /-- A common private-register operator is unchanged by coherent block assembly. -/
 theorem coherentBlocks_database (A : Matrix D D ℂ) :
@@ -258,18 +259,6 @@ theorem sum_queryWeight_selectedMass_le (E : EmulatedOracle P In) {L : LocalSig}
     exact ENNReal.sum_le_tsum _
   exact le_min hs (hs.trans hm)
 
-/-- A positive operator leak inequality bounds its weight on every positive input. -/
-theorem ofReal_trace_conj_le {J : Type*} [Fintype J]
-    (C Δ : Matrix J J ℂ) {r : ℝ} (hr : 0 ≤ r)
-    (h : (r • Δ - Cᴴ * C).PosSemidef) {σ : Matrix J J ℂ} (hσ : σ.PosSemidef) :
-    ENNReal.ofReal (MatrixMap.conj C σ).trace.re ≤
-      ENNReal.ofReal r * ENNReal.ofReal (Δ * σ).trace.re := by
-  have ht := h.trace_mul_re_nonneg hσ
-  simp only [Matrix.sub_mul, Matrix.smul_mul, Matrix.trace_sub, Matrix.trace_smul,
-    Complex.sub_re, Complex.real_smul, Complex.re_ofReal_mul] at ht
-  rw [← ENNReal.ofReal_mul hr, MatrixMap.trace_conj_apply]
-  exact ENNReal.ofReal_le_ofReal (sub_nonneg.mp ht)
-
 /-- Portwise squared operator bounds lift to coherent selected mass on a supported input.
 The private projector may depend on the query position; no measurement of its grade or of
 its coherent port index is performed. -/
@@ -293,7 +282,7 @@ theorem ofReal_trace_coherentBlocks_conj_le_selectedMass (E : EmulatedOracle P I
     change coherentBlocks (C * (fun p ↦ (1 : Matrix (In p) (In p) ℂ) ⊗ₖ P₀)) = _
     rw [coherentBlocks_mul, coherentBlocks_database]
   rw [he] at hb
-  have ht := ofReal_trace_conj_le
+  have ht := MatrixMap.ofReal_trace_conj_le
     (coherentBlocks C * ((1 : Matrix (cohIn In) (cohIn In) ℂ) ⊗ₖ P₀))
     (selectedCharge selected r) (r := 1) (by norm_num)
     (by simpa only [one_smul, selectedCharge] using hb) hσ
@@ -352,7 +341,7 @@ theorem eventWeight_le_collision_of_port_bounds (E : EmulatedOracle P In) {L : L
         ENNReal.ofReal (collisionRate t n N) * δ n i σ := by
     cases i
     simpa only [tsum_fintype, Fintype.sum_unique] using
-      ofReal_trace_conj_le _ _ (collisionRate_nonneg t n hN.le) (hb n hn).2 hσ
+      MatrixMap.ofReal_trace_conj_le _ _ (collisionRate_nonneg t n hN.le) (hb n hn).2 hσ
   by_cases ht : 0 < t
   · exact QuantumRuntime.eventWeight_le_of_collisionCertificate I
       E.coherent.toRuntime_step_branch hQ hQQ E.init x hx Finset.univ (by simp)

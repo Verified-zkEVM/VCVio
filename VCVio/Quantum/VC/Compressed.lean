@@ -5,6 +5,9 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Algebra.Group.Conj
+public import QuantumFoundations.MatrixMap.Kraus
+public import QuantumFoundations.Oracle.Basis
 public import VCVio.Quantum.VC.MultiExtractable
 public import VCVio.Quantum.Oracle.Compressed.Equivalence
 
@@ -84,15 +87,6 @@ section table
 
 variable {X Y T : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
   [Fintype T] [DecidableEq T]
-
-/-- A product with the basis matrix of a bijection on the left reads a row of the right factor. -/
-theorem basisMatrix_equiv_mul_apply {A B C : Type*} [Fintype A] [DecidableEq B] (e : A ≃ B)
-    (N : Matrix A C ℂ) (b : B) (c : C) : (basisMatrix e * N) b c = N (e.symm b) c := by
-  rw [Matrix.mul_apply, Finset.sum_eq_single (e.symm b)]
-  · simp
-  · intro a _ ha
-    rw [basisMatrix_apply, ite_eq_right_iff.mpr fun h ↦ absurd (by simp [h]) ha, zero_mul]
-  · simp
 
 /-- **A table oracle commutes with an operator on the table register that never connects two
 tables reading different functions.** -/
@@ -221,13 +215,6 @@ noncomputable def compressedReadProjector (c : Fin k × X) (a : Option Y) :
   compressDatabases k X Y *
     diagonal (fun D ↦ if D c.1 c.2 = a then 1 else 0) * compressDatabases k X Y
 
-/-- Multiplying conjugates cancels the interior copies of an involution. -/
-theorem compressed_conjugate_mul {M : Type*} [Monoid M] (C : M) (hC : C * C = 1) (P Q : M) :
-    (C * P * C) * (C * Q * C) = C * (P * Q) * C := by
-  calc
-    _ = C * P * (C * C) * Q * C := by simp only [mul_assoc]
-    _ = _ := by rw [hC, mul_one]; simp only [mul_assoc]
-
 omit [AddCommGroup Y] in
 /-- Compressed cell outcomes are Hermitian. -/
 theorem compressedReadProjector_hermitian (c : Fin k × X) (a : Option Y) :
@@ -254,7 +241,7 @@ theorem compressedReadProjector_orthogonal (c : Fin k × X) (a b : Option Y) :
     by_cases hab : a = b <;> by_cases he : D = D' <;>
       by_cases ha : D c.1 c.2 = a <;> by_cases hb : D c.1 c.2 = b <;> simp_all
   simp only [compressedReadProjector,
-    compressed_conjugate_mul _ (compressDatabases_mul_self k X Y), h]
+    conj_mul_conj_of_involution _ (compressDatabases_mul_self k X Y), h]
   split_ifs <;> simp
 
 /-- Every cell has exactly one optional label before compression. -/
@@ -274,7 +261,8 @@ theorem compressedReadProjector_commute (c d : Fin k × X) (a b : Option Y) :
     compressedReadProjector k X Y c a * compressedReadProjector k X Y d b =
       compressedReadProjector k X Y d b * compressedReadProjector k X Y c a := by
   simp only [compressedReadProjector,
-    compressed_conjugate_mul _ (compressDatabases_mul_self k X Y), diagonal_mul_diagonal, mul_comm]
+    conj_mul_conj_of_involution _ (compressDatabases_mul_self k X Y), diagonal_mul_diagonal,
+    mul_comm]
 
 /-- The ordinary port commutes with the framed read projector. -/
 theorem compressedReadProjector_commute_ordinary (i : Fin k) (c : Fin k × X) (a : Option Y) :
@@ -295,7 +283,7 @@ theorem compressedReadProjector_commute_ordinary (i : Fin k) (c : Fin k × X) (a
   have hC : ((1 : Matrix (X × Y) (X × Y) ℂ) ⊗ₖ compressDatabases k X Y) *
       (1 ⊗ₖ compressDatabases k X Y) = 1 := by
     rw [← mul_kronecker_mul, Matrix.one_mul, compressDatabases_mul_self, one_kronecker_one]
-  rw [compressed_conjugate_mul _ hC, compressed_conjugate_mul _ hC, hP]
+  rw [conj_mul_conj_of_involution _ hC, conj_mul_conj_of_involution _ hC, hP]
 
 /-- **k compressed oracles** (Chiesa, Di, Hu and Zheng, ePrint 2025/2166, Lemma 9.2, p. 58):
 the emulated oracle whose
@@ -400,11 +388,6 @@ end slots
 
 section commute
 
-/-- Conjugation by an involution preserves commutation. -/
-theorem conj_mul_conj_comm {M : Type*} [Monoid M] {P A B : M} (hP : P * P = 1)
-    (h : A * B = B * A) : P * A * P * (P * B * P) = P * B * P * (P * A * P) := by
-  rw [compressed_conjugate_mul P hP, compressed_conjugate_mul P hP, h]
-
 variable {k : ℕ} {X Y : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
   [AddCommGroup Y]
 
@@ -424,7 +407,7 @@ theorem compressedVCOracle_commute (i j : Fin k) :
           ((compressedVCOracle k X Y).U i) := by
   rw [compressedVCOracle_U_eq_conj, compressedVCOracle_U_eq_conj]
   simp only [onFactor_mul, onFactor_slotFst_one_kronecker, onFactor_slotSnd_one_kronecker]
-  refine conj_mul_conj_comm ?_ (tableOracle_slotSnd_mul_slotFst_comm _ _)
+  refine conj_comm_of_involution ?_ (tableOracle_slotSnd_mul_slotFst_comm _ _)
   rw [← mul_kronecker_mul, Matrix.one_mul, compressDatabases_mul_self, one_kronecker_one]
 
 end commute
@@ -465,25 +448,6 @@ theorem outcomeLawWith_eq_of_intertwine (E₁ E₂ : EmulatedOracle P In)
   change MatrixMap.conj (E₂.U i) ∘ₗ (MatrixMap.conj M).amplifyLeft (In i) =
     (MatrixMap.conj M).amplifyLeft (In i) ∘ₗ MatrixMap.conj (E₁.U i)
   rw [MatrixMap.amplifyLeft_conj, ← MatrixMap.conj_mul, ← MatrixMap.conj_mul, hU i]
-
-/-- Kraus maps whose operators `M ω` resolve the identity (`∑ ω, (M ω)ᴴ M ω = 1`),
-applied on the second factor, preserve the trace in sum. -/
-theorem sum_trace_amplifyLeft_conj {Ω S B : Type*} {S' : Ω → Type*} [Fintype Ω] [Fintype S]
-    [DecidableEq S] [∀ ω, Fintype (S' ω)] [Fintype B] (M : ∀ ω, Matrix (S' ω) S ℂ)
-    (hM : ∑ ω, (M ω)ᴴ * M ω = 1) (N : Matrix (B × S) (B × S) ℂ) :
-    ∑ ω, ((MatrixMap.conj (M ω)).amplifyLeft B N).trace = N.trace := by
-  classical
-  simp only [MatrixMap.amplifyLeft_conj, MatrixMap.conj_apply]
-  have h (ω : Ω) :
-      (((1 : Matrix B B ℂ) ⊗ₖ M ω) * N * ((1 : Matrix B B ℂ) ⊗ₖ M ω)ᴴ).trace =
-      (((1 : Matrix B B ℂ) ⊗ₖ ((M ω)ᴴ * M ω)) * N).trace := by
-    rw [Matrix.trace_mul_cycle, conjTranspose_kronecker, conjTranspose_one, ← mul_kronecker_mul,
-      Matrix.one_mul]
-  have hsum : ∑ ω, (1 : Matrix B B ℂ) ⊗ₖ ((M ω)ᴴ * M ω) =
-      (1 : Matrix B B ℂ) ⊗ₖ ∑ ω, (M ω)ᴴ * M ω := by
-    exact (map_sum (kroneckerBilinear (R := ℂ) (1 : Matrix B B ℂ)) _ _).symm
-  simp only [h, ← Matrix.trace_sum, ← Finset.sum_mul, hsum, hM, one_kronecker_one,
-    Matrix.one_mul]
 
 end intertwine
 
@@ -828,7 +792,7 @@ private theorem runtimeLaw_eq_sum {spec : QuantumOracleSpec.{u₁, v₁}}
       ∑ ω, (c ω : ℝ≥0∞) • (F ω).evalDistMap I x ρ f := by
   have htr (p : Σ u, W u) : (E.jointPost I x ρ p).matrix.trace =
       ∑ ω, ((c ω : ℝ) : ℂ) * ((F ω).jointPost I x ρ p).matrix.trace := by
-    rw [← EmulatedOracle.sum_trace_amplifyLeft_conj M hM]
+    rw [← MatrixMap.sum_trace_amplifyLeft_conj M hM]
     refine Finset.sum_congr rfl fun ω _ ↦ ?_
     have hsim := QuantumRuntime.simulation (R₁ := E) (R₂ := (F ω))
       (V := MatrixMap.conj (M ω)) I (hstep ω) x p
