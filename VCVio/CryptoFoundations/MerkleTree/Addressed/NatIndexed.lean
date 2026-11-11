@@ -158,6 +158,25 @@ theorem authPath_succ (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y →
     unfold FullData.getRootValue
     rw [hleft]
 
+/-- Authentication-path entry `j` is the root of the height-`j` sibling subtree. -/
+theorem authPath_getElem_eq_merkleRoot (leaf : ℕ → Y)
+    (nodeHash : ℕ → ℕ → Y → Y → Y) (idx z j : ℕ) (hj : j < z) :
+    (authPath leaf nodeHash idx z)[j]'(by simpa using hj) =
+      merkleRoot leaf nodeHash j
+        (sibling (idx / 2 ^ j)) := by
+  induction z with
+  | zero => omega
+  | succ z ih =>
+      by_cases h : j < z
+      · have hpath : j < (authPath leaf nodeHash idx z).length := by
+          simpa using h
+        simp only [authPath_succ]
+        rw [List.getElem_append_left hpath]
+        exact ih h
+      · have hjz : j = z := by omega
+        subst j
+        simp [authPath_succ]
+
 /-- Root recovery: starting from `node` at leaf position `idx`, fold in the sibling values of
 `auth` (leaf level first), hashing each step under the address of the node being reconstructed.
 The tree height is the length of `auth`. -/

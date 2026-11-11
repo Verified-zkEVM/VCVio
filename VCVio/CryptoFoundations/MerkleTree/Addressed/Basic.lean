@@ -330,6 +330,53 @@ def childPairAt : {s : Skeleton} → FullData α s → SkeletonInternalIndex s �
   | _, .internal _ L _, .ofLeft a => childPairAt L a
   | _, .internal _ _ R, .ofRight a => childPairAt R a
 
+/-- Every collision returned against an honest first opening keeps the stored child pair
+as its first endpoint. The two leaves may agree; any difference can lie in the paths. -/
+theorem findCollisionAddressed_honest_pair {s : Skeleton} [DecidableEq α]
+    (nh : SkeletonInternalIndex s → α → α → α) (ld : LeafData α s)
+    (idx : SkeletonLeafIndex s) (y : α) (q : List.Vector α idx.depth)
+    (d : SkeletonInternalIndex s × α × α × α × α)
+    (hd : findCollisionAddressed nh idx
+      (InductiveMerkleTree.generateProof (buildMerkleTreeAddressedWithHash ld nh) idx)
+      q (ld.get idx) y = some d) :
+    let values := d.2
+    let remaining := values.2
+    (values.1, remaining.1) = childPairAt (buildMerkleTreeAddressedWithHash ld nh) d.1 := by
+  induction idx with
+  | ofLeaf => simp [findCollisionAddressed] at hd
+  | ofLeft idx ih =>
+    cases ld with
+    | internal dl dr =>
+      have hsub := addressed_functional_completeness idx dl (fun a => nh (.ofLeft a))
+      rw [findCollisionAddressed] at hd
+      split at hd
+      · obtain ⟨d', hd', heq⟩ := Option.map_eq_some_iff.mp hd
+        cases heq
+        exact ih (fun a => nh (.ofLeft a)) dl q.tail d' hd'
+      · split at hd
+        · cases Option.some.inj hd
+          simpa [buildMerkleTreeAddressedWithHash, populateUpAddressed,
+            InductiveMerkleTree.generateProof, childPairAt] using
+              congrArg (fun x => (x, (populateUpAddressed
+                (fun a => nh (.ofRight a)) dr).getRootValue)) hsub
+        · simp at hd
+  | ofRight idx ih =>
+    cases ld with
+    | internal dl dr =>
+      have hsub := addressed_functional_completeness idx dr (fun a => nh (.ofRight a))
+      rw [findCollisionAddressed] at hd
+      split at hd
+      · obtain ⟨d', hd', heq⟩ := Option.map_eq_some_iff.mp hd
+        cases heq
+        exact ih (fun a => nh (.ofRight a)) dr q.tail d' hd'
+      · split at hd
+        · cases Option.some.inj hd
+          simpa [buildMerkleTreeAddressedWithHash, populateUpAddressed,
+            InductiveMerkleTree.generateProof, childPairAt] using
+              congrArg (fun x => ((populateUpAddressed
+                (fun a => nh (.ofLeft a)) dl).getRootValue, x)) hsub
+        · simp at hd
+
 /-- **Orientation**: against an honest first opening, the collision's first endpoint
 is the precommitted child pair at the returned address. -/
 theorem findCollisionAddressed_oriented [DecidableEq α] {s : Skeleton}
@@ -346,115 +393,15 @@ theorem findCollisionAddressed_oriented [DecidableEq α] {s : Skeleton}
       = some (a, (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).1,
           (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).2,
           c.1, c.2) := by
-  induction idx with
-  | ofLeaf =>
-    cases ld with
-    | leaf v =>
-      simp only [getPutativeRootAddressedWithHash, buildMerkleTreeAddressedWithHash,
-        populateUpAddressed, FullData.getRootValue_leaf] at hroot
-      exact absurd hroot.symm (by simpa using hne)
-  | ofLeft idxLeft ih =>
-    cases ld with
-    | internal dl dr =>
-      have hsub : getPutativeRootAddressedWithHash (fun a => nodeHash (.ofLeft a)) idxLeft
-          (dl.get idxLeft)
-          (InductiveMerkleTree.generateProof
-            (populateUpAddressed (fun a => nodeHash (.ofLeft a)) dl) idxLeft)
-        = (populateUpAddressed (fun a => nodeHash (.ofLeft a)) dl).getRootValue :=
-        addressed_functional_completeness idxLeft dl (fun a => nodeHash (.ofLeft a))
-      have hroot' : nodeHash .ofInternal
-          (getPutativeRootAddressedWithHash (fun a => nodeHash (.ofLeft a)) idxLeft y
-            proof₂.tail) proof₂.head
-        = nodeHash .ofInternal
-            (populateUpAddressed (fun a => nodeHash (.ofLeft a)) dl).getRootValue
-            (populateUpAddressed (fun a => nodeHash (.ofRight a)) dr).getRootValue := by
-        simpa only [getPutativeRootAddressedWithHash, buildMerkleTreeAddressedWithHash,
-          populateUpAddressed, FullData.internal_getRootValue] using hroot
-      rw [findCollisionAddressed]
-      split
-      · rename_i hagree
-        simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
-          SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
-          BinaryTree.LeafData.get, hsub, Prod.mk.injEq] at hagree
-        obtain ⟨a', c, hwalk⟩ := ih (fun a => nodeHash (.ofLeft a)) dl proof₂.tail
-          (show getPutativeRootAddressedWithHash (fun a => nodeHash (.ofLeft a)) idxLeft y
-              proof₂.tail
-            = (buildMerkleTreeAddressedWithHash dl (fun a => nodeHash (.ofLeft a))).getRootValue
-            from hagree.1.symm)
-          (by simpa using hne)
-        refine ⟨.ofLeft a', c, ?_⟩
-        simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
-          SkeletonLeafIndex.depth, List.Vector.tail_cons,
-          BinaryTree.LeafData.get] at hwalk ⊢
-        rw [hwalk]
-        simp [childPairAt]
-      · split
-        · refine ⟨.ofInternal, (getPutativeRootAddressedWithHash (fun a => nodeHash (.ofLeft a))
-            idxLeft y proof₂.tail, proof₂.head), ?_⟩
-          simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
-            SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
-            BinaryTree.LeafData.get, hsub, childPairAt]
-        · rename_i hne2
-          refine absurd ?_ hne2
-          simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
-            SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
-            BinaryTree.LeafData.get, hsub]
-          exact hroot'.symm
-  | ofRight idxRight ih =>
-    cases ld with
-    | internal dl dr =>
-      have hsub : getPutativeRootAddressedWithHash (fun a => nodeHash (.ofRight a)) idxRight
-          (dr.get idxRight)
-          (InductiveMerkleTree.generateProof
-            (populateUpAddressed (fun a => nodeHash (.ofRight a)) dr) idxRight)
-        = (populateUpAddressed (fun a => nodeHash (.ofRight a)) dr).getRootValue :=
-        addressed_functional_completeness idxRight dr (fun a => nodeHash (.ofRight a))
-      have hroot' : nodeHash .ofInternal proof₂.head
-          (getPutativeRootAddressedWithHash (fun a => nodeHash (.ofRight a)) idxRight y
-            proof₂.tail)
-        = nodeHash .ofInternal
-            (populateUpAddressed (fun a => nodeHash (.ofLeft a)) dl).getRootValue
-            (populateUpAddressed (fun a => nodeHash (.ofRight a)) dr).getRootValue := by
-        simpa only [getPutativeRootAddressedWithHash, buildMerkleTreeAddressedWithHash,
-          populateUpAddressed, FullData.internal_getRootValue] using hroot
-      rw [findCollisionAddressed]
-      split
-      · rename_i hagree
-        simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
-          SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
-          BinaryTree.LeafData.get, hsub, Prod.mk.injEq] at hagree
-        obtain ⟨a', c, hwalk⟩ := ih (fun a => nodeHash (.ofRight a)) dr proof₂.tail
-          (show getPutativeRootAddressedWithHash (fun a => nodeHash (.ofRight a)) idxRight y
-              proof₂.tail
-            = (buildMerkleTreeAddressedWithHash dr (fun a => nodeHash (.ofRight a))).getRootValue
-            from hagree.2.symm)
-          (by simpa using hne)
-        refine ⟨.ofRight a', c, ?_⟩
-        simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-          InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
-          SkeletonLeafIndex.depth, List.Vector.tail_cons,
-          BinaryTree.LeafData.get] at hwalk ⊢
-        rw [hwalk]
-        simp [childPairAt]
-      · split
-        · refine ⟨.ofInternal, (proof₂.head, getPutativeRootAddressedWithHash
-            (fun a => nodeHash (.ofRight a)) idxRight y proof₂.tail), ?_⟩
-          simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
-            SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
-            BinaryTree.LeafData.get, hsub, childPairAt]
-        · rename_i hne2
-          refine absurd ?_ hne2
-          simp only [buildMerkleTreeAddressedWithHash, populateUpAddressed,
-            InductiveMerkleTree.generateProof, FullData.leftSubtree, FullData.rightSubtree,
-            SkeletonLeafIndex.depth, List.Vector.tail_cons, List.Vector.head_cons,
-            BinaryTree.LeafData.get, hsub]
-          exact hroot'.symm
+  have hhonest := addressed_functional_completeness idx ld nodeHash
+  obtain ⟨⟨a, l₁, r₁, l₂, r₂⟩, hwalk⟩ := Option.isSome_iff_exists.mp
+    (findCollisionAddressed_isSome nodeHash idx
+      (InductiveMerkleTree.generateProof (buildMerkleTreeAddressedWithHash ld nodeHash) idx)
+      proof₂ (ld.get idx) y (hhonest.trans hroot.symm) hne)
+  have hpair := findCollisionAddressed_honest_pair nodeHash ld idx y proof₂ _ hwalk
+  change (l₁, r₁) = childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a at hpair
+  refine ⟨a, (l₂, r₂), ?_⟩
+  simpa only [← hpair, Prod.fst, Prod.snd] using hwalk
 
 /-- **Oriented binding, user-facing**: an adversarial opening that verifies against an
 honestly built root with a different leaf value yields a collision whose first

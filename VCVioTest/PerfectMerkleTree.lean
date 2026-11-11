@@ -63,4 +63,49 @@ example :
       = some (1, (1, 2), (9, 2)) := by
   decide
 
+/-- Height zero has no sibling hashes. -/
+example : authPath leaf orderedHash 0 0 = [] := rfl
+
+/-- The third level preserves the global sibling index and leaf-first order. -/
+example : authPath leaf orderedHash 2 3 = [4, 1012, 16038] := rfl
+
+example : (authPath leaf orderedHash 2 3)[2]'(by decide) = 16038 := by
+  rw [authPath_getElem_eq_merkleRoot leaf orderedHash 2 3 2 (by decide)]
+  rfl
+
+example : climb orderedHash 2 (leaf 2) (authPath leaf orderedHash 2 3) = 151578 := rfl
+
+open BinaryTree AddressedMerkleTree InductiveMerkleTree
+
+/-- The two leaves of a depth-one tree. -/
+def pairLeaves : LeafData ℕ (Skeleton.perfect 1) := .internal (.leaf 1) (.leaf 2)
+
+/-- The left leaf has a single sibling in its path. -/
+def leftIndex : SkeletonLeafIndex (Skeleton.perfect 1) := .ofLeft .ofLeaf
+
+/-- All pairs at this address have the same root. -/
+def constantHash (_address : SkeletonInternalIndex (Skeleton.perfect 1))
+    (_left _right : ℕ) : ℕ := 0
+
+/-- Only the sibling changes; the opened leaf stays equal to the honest leaf. -/
+def changedPath : List.Vector ℕ leftIndex.depth := ⟨[3], by decide⟩
+
+/-- The extractor returns the honest child pair before the changed pair. -/
+def sameLeafWitness : SkeletonInternalIndex (Skeleton.perfect 1) × ℕ × ℕ × ℕ × ℕ :=
+  (.ofInternal, 1, 2, 1, 3)
+
+/-- Equal leaves with different paths can still yield an internal-node collision. -/
+theorem same_leaf_collision :
+    findCollisionAddressed constantHash leftIndex
+      (generateProof (buildMerkleTreeAddressedWithHash pairLeaves constantHash) leftIndex)
+      changedPath (pairLeaves.get leftIndex) (pairLeaves.get leftIndex) =
+        some sameLeafWitness := by
+  decide
+
+example :
+    childPairAt (buildMerkleTreeAddressedWithHash pairLeaves constantHash)
+      sameLeafWitness.1 = (1, 2) :=
+  (findCollisionAddressed_honest_pair constantHash pairLeaves leftIndex
+    (pairLeaves.get leftIndex) changedPath sameLeafWitness same_leaf_collision).symm
+
 end VCVioTest.PerfectMerkleTreeCanary

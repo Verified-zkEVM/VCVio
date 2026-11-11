@@ -50,25 +50,6 @@ theorem sibling_eq_xor_one (i : ℕ) : PerfectMerkleTree.sibling i = i ^^^ 1 := 
   · rw [ite_eq_right h]
     exact (Nat.xor_one_of_odd (by simpa [Nat.odd_iff] using h)).symm
 
-/-- Authentication-path entry `j` is the root of the height-`j` sibling subtree. -/
-theorem authPath_getElem_eq_merkleRoot (leaf : ℕ → Y)
-    (nodeHash : ℕ → ℕ → Y → Y → Y) (idx z j : ℕ) (hj : j < z) :
-    (PerfectMerkleTree.authPath leaf nodeHash idx z)[j]'(by simpa using hj) =
-      PerfectMerkleTree.merkleRoot leaf nodeHash j
-        (PerfectMerkleTree.sibling (idx / 2 ^ j)) := by
-  induction z with
-  | zero => omega
-  | succ z ih =>
-      by_cases h : j < z
-      · have hpath : j < (PerfectMerkleTree.authPath leaf nodeHash idx z).length := by
-          simpa using h
-        simp only [PerfectMerkleTree.authPath_succ]
-        rw [List.getElem_append_left hpath]
-        exact ih h
-      · have hjz : j = z := by omega
-        subst j
-        simp [PerfectMerkleTree.authPath_succ]
-
 /-- The canonical authentication path packaged at its intrinsic tree height. -/
 def authPathVector (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y)
     {z : ℕ} (idx : Fin (2 ^ z)) : Vector Y z :=
@@ -91,7 +72,7 @@ def authPathVector (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y)
       PerfectMerkleTree.merkleRoot leaf nodeHash j.val
         ((idx.val / 2 ^ j.val) ^^^ 1) := by
   simp only [authPathVector, Vector.getElem_ofFn]
-  rw [authPath_getElem_eq_merkleRoot _ _ _ _ _ j.isLt]
+  rw [PerfectMerkleTree.authPath_getElem_eq_merkleRoot _ _ _ _ _ j.isLt]
   rw [sibling_eq_xor_one]
 
 /-! ## Explicit FIPS climb characterization -/
