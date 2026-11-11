@@ -44,7 +44,7 @@ unfold their definitions.
   access an unexposed implementation from the same dependency when proving its public API.
 - Do not enable `backward.privateInPublic` or `backward.proofsInPublic`; resolve visibility and
   proof-metavariable issues directly.
-- Keep the dormant `Interop` library outside this policy until it is migrated separately.
+- The `Interop/` package's built bridges follow this policy. The unported hax examples in `Interop/Hax/` are not built and keep their old form until ported.
 
 Section `variable` lines carry an instance assumption only when the theorems in scope share it:
 Lean auto-includes an instance-implicit section variable in every theorem mentioning its types,
@@ -68,8 +68,6 @@ build boundaries and the staged consolidation.
 - `VCVio/`: generic oracle-computation framework, program logic, crypto abstractions, and generic reductions.
 - `VCVio/Algorithms/` contains shared pure SHA-2, HMAC, MGF1, SHA-3 and SHAKE implementations;
   their independent regressions run with `lake exe algorithm_tests`.
-- `VCVioCslib/`: optional cslib-backed non-uniform P/poly adapters; it is a separate Lake library
-  so core `VCVio` remains backend-neutral.
 - `ToMathlib/`: local Mathlib-facing utilities and lemmas intended to remain below the framework layer.
 - `Extern/`: native FFI surface — the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them. No proof library may import it; the backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
 - `LatticeCrypto/`: lattice-specific algebra, hardness assumptions, scheme definitions, security theorems, and concrete implementations.
@@ -112,13 +110,8 @@ build boundaries and the staged consolidation.
   Peer of `LatticeCrypto/`; depends on `VCVio`/`ToMathlib` but nothing in those imports it back.
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
-- `VCVioWidgets/`: optional widget experiments and visualizations.
-- `VCVioCslib/`: optional cslib-backed non-uniform P/poly certificates and security-game adapters.
-  It stays outside the default library graph but participates in repository validation.
-- `VCVioComplexity/`: optional isolated Lake package for the complexitylib-backed exact-machine
-  substrate; it is not part of VCVio's default dependency graph.
-- `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs.
-- `Interop/`: experimental bridges to Rust verification frontends (hax, aeneas). **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
+- `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs; `Examples/Widgets/` holds the proof widgets they display.
+- `Interop/`: bridges to external verification tools (hax and Aeneas today), built as their own Lake package so their requires never reach VCVio's dependents. **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
 - `csrc/`: C FFI shims used for differential testing against native ML-DSA, ML-KEM, and Falcon code.
 - `third_party/`: native backends as git submodules; when they are not checked out (fresh clones, Lake dependency checkouts), the native `extern_lib` targets build as empty stub archives.
 
@@ -160,7 +153,7 @@ Scheme-specific code in `LatticeCrypto/` may depend on `VCVio/CryptoFoundations`
 
 The native FFI surface lives in `Extern/`: it may import `VCVio`, `LatticeCrypto`,
 and `ToMathlib`, but no proof library (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`,
-`HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) may import `Extern.…`. That
+`HashSig/`, `Examples/`, `Interop/`) may import `Extern.…`. That
 keeps every proof library — and any downstream Lake project requiring VCVio —
 link-safe when the `third_party/` submodules are absent. Enforced by
 `scripts/check-extern-isolation.sh` on every PR.
@@ -172,7 +165,7 @@ Interop/{Hax,Aeneas,Rust}/  →  VCVio/, ToMathlib/, (Hax.…), (Aeneas.…)
 ```
 
 `Interop/**` may **never** be imported from `VCVio/`, `LatticeCrypto/`,
-`LatticeCryptoTest/`, `Examples/`, `ToMathlib/`, `Extern/`, `VCVioWidgets/`,
+`LatticeCryptoTest/`, `Examples/`, `ToMathlib/`, `Extern/`,
 or `VCVioTest/`. This contract is enforced by
 `scripts/check-interop-isolation.sh` and the
 `Interop TCB Isolation` GitHub workflow on every PR.
@@ -186,8 +179,8 @@ or `VCVioTest/`. This contract is enforced by
 5. **Commented-out code is legacy** — follow only uncommented code. Use `Examples/OneTimePad/Basic.lean` as canonical reference.
 6. **Preserve partial proofs** with `stop` instead of deleting large proof blocks, on a working branch: `main` carries no `sorry`, so nothing incomplete merges.
 7. **Do not disable linters to silence errors**. Do not use `set_option linter.* false`, `set_option weak.linter.* false`, or add repo-level `leanOptions` that turn lints off to dodge a fixable issue. Fix the root cause instead. (The one deliberate, documented exception is `weak.linter.unicodeLinter, false` in `lakefile.lean`, off so FIPS-204 math notation and diacritics in cited author names are allowed.)
-8. **Interop TCB isolation is mandatory**. Core VCVio (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `Examples/`, `LatticeCryptoTest/`, `Extern/`, `VCVioWidgets/`, `VCVioTest/`) must never `import Interop.…`, `import Hax.…`, or `import Aeneas.…`. CI fails the PR if it does. See `docs/agents/interop.md`.
-9. **Extern link-safety isolation is mandatory**. Proof libraries (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) must never `import Extern.…`: the native backends behind it are built as empty stubs whenever the `third_party/` submodules are absent — always the case for Lake dependency checkouts — so importing `Extern` would break downstream executable links. Test libraries may import it. Enforced by `scripts/check-extern-isolation.sh` in CI.
+8. **Interop TCB isolation is mandatory**. Core VCVio (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `Examples/`, `LatticeCryptoTest/`, `Extern/`, `VCVioTest/`) must never `import Interop.…`, `import Hax.…`, or `import Aeneas.…`. CI fails the PR if it does. See `docs/agents/interop.md`.
+9. **Extern link-safety isolation is mandatory**. Proof libraries (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `HashSig/`, `Examples/`, `Interop/`) must never `import Extern.…`: the native backends behind it are built as empty stubs whenever the `third_party/` submodules are absent — always the case for Lake dependency checkouts — so importing `Extern` would break downstream executable links. Test libraries may import it. Enforced by `scripts/check-extern-isolation.sh` in CI.
 
 10. **Probability is `Measure`/`Kernel`, never `PMF`.** Semantic code uses `𝒟[…]`, `Pr{…}[…]`, `=ᵈ`, Mathlib measures and kernels. Mathlib owns `PMF`, so VCVio cannot deprecate it; the environment linter `ToMathlib.Lint.usesPMF` reports any declaration that uses it directly, and `scripts/nolints.json` holds no exceptions for it. Code written against VCVio's removed discrete API (`SPMF`, `Pr[= x | mx]`, `IsUniformSpec`, …) converts with the codemod and guide in [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md). See `docs/reading/denotational-probability-semantics.md`.
 
@@ -237,13 +230,6 @@ Security notions, experiments, games, and advantages follow
   `VCVio/CryptoFoundations/Asymptotics/ComplexityTactics.lean`
 - Syntactic ElGamal complexity canary:
   `Examples/ElGamal/ComputationalComplexity.lean`
-- Optional exact complexitylib machine substrate:
-  `VCVioComplexity/VCVioComplexity/Backend/TuringMachine.lean`
-- Complexitylib polynomial adapter and end-to-end pure canary:
-  `VCVioComplexity/VCVioComplexity/Backend/Polynomial.lean`,
-  `VCVioComplexity/VCVioComplexityTest/Backend/PureCanary.lean`
-- End-to-end complexitylib canary with one enabled fair-coin query:
-  `VCVioComplexity/VCVioComplexityTest/Backend/OracleCanary.lean`
 - Asymptotic security games: `VCVio/CryptoFoundations/Asymptotics/Security.lean`
 - Negligible function algebra: `VCVio/CryptoFoundations/Asymptotics/Negligible.lean`
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`
@@ -283,7 +269,7 @@ Security notions, experiments, games, and advantages follow
 - Falcon GPV instantiation: `LatticeCrypto/Falcon/Scheme.lean`
 - Lattice hardness assumptions: `LatticeCrypto/HardnessAssumptions/LearningWithErrors.lean`, `LatticeCrypto/HardnessAssumptions/ShortIntegerSolution.lean`
 - Differential and vector tests: `LatticeCryptoTest/`
-- Rust verification interop (hax / aeneas): `Interop/Rust/Common.lean`, `Interop/README.md`, `scripts/check-interop-isolation.sh`
+- Rust verification interop (hax / aeneas): `Interop/lakefile.toml`, `Interop/Rust/RustM.lean`, `Interop/README.md`, `scripts/check-interop-isolation.sh`
 
 ## Program Logic Tactics
 
@@ -292,13 +278,12 @@ For new program-logic proofs, import `VCVio.ProgramLogic.Tactics`.
 interactive proof mode.
 
 For the tactic reference, proof-mode entry points, and workflow details, see
-[`docs/agents/program-logic.md`](docs/agents/program-logic.md). The two
-`@[vcspec]` and `@[wpStep]` registries are indexed via
-`Lean.Meta.Sym.Pattern` / `Lean.Meta.Sym.DiscrTree`. `Sym.*` is under active
-development in core Lean; see the *Internal Architecture* and *SymM
-Stability Note* sections of that doc for the churn classes to watch at each
-toolchain bump; the `@[wpStep]` rewrites already run through
-`Sym.Simp.mkTheoremFromDecl` and `Sym.simpGoal`.
+[`docs/agents/program-logic.md`](docs/agents/program-logic.md). The `@[vcspec]`
+registry is indexed via `Lean.Meta.Sym.Pattern` / `Lean.Meta.Sym.DiscrTree`. `Sym.*` is under
+active development in core Lean; see the *Internal Architecture* and *SymM Stability Note*
+sections of that doc for the churn classes to watch at each toolchain bump. Raw `wp` goals are
+rewritten with the fixed `wpStepRules` table (PolyFun's `ExactWPMonad` laws plus the oracle
+primitives) through ordinary `simp only`.
 
 ## Building
 
@@ -306,15 +291,15 @@ toolchain bump; the `@[wpStep]` rewrites already run through
 lake exe cache get && lake build
 ```
 
-`lake build` builds the seven proof libraries (the default targets); `lake build VCVio` is
+`lake build` builds the six proof libraries (the default targets); `lake build VCVio` is
 the fast path for framework-only work. `./scripts/validate.sh` runs the fast per-PR CI checks
-locally in CI's order (including the optional `VCVioCslib` facade; build and warning budget, umbrella check, remaining boundary checks, style
+locally in CI's order (build and warning budget, umbrella check, remaining boundary checks, style
 linters, agent-docs checks); `--lint` adds Batteries' environment linters, one process per
 proof library as in CI. `lake lint` runs both source-style and environment checks;
 `-- --style-only` and `-- --env-only` select either pass, and `-- --no-build` requires existing
 proof oleans. Findings must exactly match `scripts/nolints.json`: obsolete entries and unlisted
 findings fail. After fixing findings, `lake lint -- --prune-baseline` safely removes obsolete
-entries across all eight checked libraries and refuses additions. PR CI also checks that the baseline
+entries across all six checked libraries and refuses additions. PR CI also checks that the baseline
 only shrinks against the merge base.
 `--test` adds `lake test` (the three test libraries, the smoke, oracle-cost, pure algorithm
 and SLH-DSA test executables), `--ffi` adds the native ML-KEM / ML-DSA / Falcon
@@ -324,8 +309,8 @@ the build just produced; `--test` runs it a second time over `VCVioTest` and
 `LatticeCryptoTest`, whose oleans `lake test` has just built.
 
 CI runs the timed build on the non-test Lean libraries:
-`ToMathlib`, `VCVio`, `VCVioCslib`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
-and `VCVioWidgets`. The dormant `Interop` target remains excluded.
+`ToMathlib`, `VCVio`, `LatticeCrypto`, `Extern`, `HashSig`, and `Examples`.
+The `Interop/` package builds separately.
 Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
@@ -351,14 +336,14 @@ declaration in the non-test libraries, held at zero debt. Any declaration depend
 (`native_decide`, which mints per-declaration `._native.` axioms). The committed baseline
 `scripts/axiom_baseline.json` must stay `{"sorry": [], "nonstandard": []}`: a nonempty one
 is a policy error rather than an allowlist, and `lake exe axiomsweep --update-baseline`
-refuses to write one. `Interop` (the declared TCB) is excluded — its boundary is enforced by
+refuses to write one. `Interop/` (the declared TCB) is excluded — its boundary is enforced by
 the import-isolation gate instead. The `VCVioAxiomSweepTestFixtures` library carries
 synthetic taint for the tool's own tests and is deliberately excluded from every
 aggregate.
 
 `uv run --no-project --python 3.12 python ./scripts/check-comment-fences.py` enforces one rule over every Lean source the
 repository tracks or would track — tracked files plus untracked ones that are not ignored, the
-vendored `third_party/` tree excluded and both lakefiles included: a block comment that begins
+vendored `third_party/` tree excluded and the lakefile included: a block comment that begins
 its line must be the last thing on the line where it ends. A declaration written after the `-/`
 of the docstring that documents it parses, builds and runs, and a reader scanning the left
 margin does not see it. Two passes miss that, for two different reasons, and they are easy to
@@ -369,18 +354,14 @@ and its warnings fail CI through the build log and `scripts/check-warning-log.py
 reject a command that does not start at the beginning of a line, and it does report the `/-`
 and `/-!` forms of this shape — but it is silent on the `/--` form, because a doc comment is
 part of the command it documents, so the command starts at the `/--`, at column 0. So this gate
-is the only thing that sees the doc-comment form anywhere; over the seven proof and three test
+is the only thing that sees the doc-comment form anywhere; over the six proof and three test
 libraries it deliberately repeats for the other forms what the whitespace linter already says;
-and in four further places it is the only check that can *fail* on any form of the shape, for
-three different reasons. `lakefile.lean` and `VCVioComplexity/lakefile.lean` are elaborated by
-Lake from `import Lake`, with no Mathlib linter registered. `Interop/` is not a default target
-and no job builds it. `scripts/` is built on every pull request, but nothing there imports
-Mathlib, so the `weak.` option is silently dropped and the linter is never registered — one
-Mathlib import in one axiom-sweep fixture would flip that. `VCVioComplexity/` sets
-`linter.style.whitespace` explicitly in its own lakefile and the blocking `complexity_backend`
-job builds it, so there the linter does run and does warn — what is missing is not the linter
-but the gate, since `check-warning-log.py` is invoked only with the proof- and test-library
-prefixes and `VCVioComplexity/scripts/test.sh` pipes its log nowhere. A block comment that
+and in three further places it is the only check that can *fail* on any form of the shape, for
+three different reasons. `lakefile.lean` is elaborated by Lake from `import Lake`, with no
+Mathlib linter registered. `Interop/` is not a default target and no job builds it. `scripts/`
+is built on every pull request, but nothing there imports Mathlib, so the `weak.` option is
+silently dropped and the linter is never registered — one Mathlib import in one axiom-sweep
+fixture would flip that. A block comment that
 opens part-way into a line is untouched however many lines it spans — that is an annotation
 inside an expression, a field or a tactic block, and wrapped field docstrings of that shape are
 common here. The rule is positional, so it also rejects five shapes that hide nothing: a

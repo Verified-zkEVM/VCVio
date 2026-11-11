@@ -329,7 +329,7 @@ independent of a secret:
   `measureETVDist ≤ 1`;
 - extractors, distinguishers, collision finders, and preimage finders.
 
-Name each one with a definition (`cmaReduction`, `hvzkSimulatorReal`,
+Name each one with a definition (`cmaReduction`, `hvzkSimulator`,
 `unlinkToMultiplePRFReduction`) and state the bound for that definition.
 
 A named reduction also makes the next steps possible. Its query count or cost can be proved as

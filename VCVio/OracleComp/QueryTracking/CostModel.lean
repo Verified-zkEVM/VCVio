@@ -140,7 +140,7 @@ theorem costDist_map [AddCommMonoid ω] (program : OracleComp spec α) (f : α �
     (cm : CostModel spec ω) :
     costDist (f <$> program) cm =
       (fun result => (f result.1, result.2)) <$> costDist program cm := by
-  simp [costDist, instrumentedRun, simulateQ_map, WriterT.run_map]
+  simp [costDist, instrumentedRun, WriterT.run_map]
 
 /-- Cost instrumentation does not change the output distribution. -/
 @[simp]
@@ -269,7 +269,7 @@ theorem costDist_query_bind [AddCommMonoid ω]
       (spec.query t : OracleComp spec (spec.Range t)) >>= fun u =>
         (fun z => (z.1, Multiplicative.ofAdd (cm.queryCost t + Multiplicative.toAdd z.2))) <$>
           costDist (k u) cm := by
-  simp [costDist, instrumentedRun, simulateQ_bind, simulateQ_query,
+  simp [costDist, instrumentedRun, simulateQ_query,
     QueryImpl.withAddCost, WriterT.run_bind, bind_assoc]
 
 /-- A pure computation has zero pathwise cost. -/

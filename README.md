@@ -24,13 +24,13 @@ Assuming Lean and Lake are already installed, the project can be built by just r
 lake exe cache get && lake build
 ```
 
-`lake build` covers the seven proof libraries. `./scripts/validate.sh` runs the fast per-PR
+`lake build` covers the six proof libraries. `./scripts/validate.sh` runs the fast per-PR
 checks locally; add `--lint`, `--test`, or `--axioms` for those CI passes. `lake test` builds the
 test libraries and runs the test executables, and `lake lint` runs source-style and environment checks
 (see `AGENTS.md`, *Building*).
 
 CI's timed build covers the non-test Lean libraries `ToMathlib`, `VCVio`,
-`LatticeCrypto`, `Extern`, `HashSig`, `Examples`, and `VCVioWidgets`.
+`LatticeCrypto`, `Extern`, `HashSig`, and `Examples`.
 CI starts from the newest cached build, so Lake rebuilds only the modules a change invalidated;
 a nightly run builds from scratch. The build timing report compares each rebuilt module, including
 test-library modules that `lake test` rebuilt, against its last recorded time (see `AGENTS.md`).
@@ -118,7 +118,8 @@ build boundaries and the staged consolidation.
   for the accepted revisions and exact-head validation requirements.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
-- `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr.
+- `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr, and in
+  `Examples/Widgets/` the proof widgets they display.
 - `VCVio/Schemes/` owns reusable Schnorr, Pedersen, KEM–DEM and MAC-from-PRF constructions;
   `Examples/` includes small consumers of these APIs.
 - `Interop/` contains experimental bridges to Rust verification frontends such as hax and Aeneas.
@@ -220,7 +221,7 @@ The library includes a program logic (`VCVio.ProgramLogic`) inspired by pRHL and
 
 * **Relational proof mode** (`by_equiv`): Coupling-based reasoning via `RelTriple` for proving game equivalence or bounding advantage between two computations.
 * **Unary proof mode** (`by_hoare`): Quantitative Hoare triples for bounding probabilities of events in a single computation.
-* **Interactive tactics**: `rvcstep`, `rvcgen`, `vcstep`, `game_trans`, and explicit probability-equality controls such as `vcstep rw` / `vcstep rw congr'` for stepping through game-based proofs.
+* **Interactive tactics**: `rvcstep`, `rvcgen`, `vcstep`, `pvcgen`, `game_trans`, and explicit probability-equality controls such as `vcstep rw` / `vcstep rw congr'` for stepping through game-based proofs.
 
 ## Other Useful Definitions
 

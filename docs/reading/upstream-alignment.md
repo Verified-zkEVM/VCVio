@@ -154,8 +154,8 @@ The handler catalogue consumes core `@[spec]` rules and `vcgen`, and
 `Unary/WP/{NecessarySpecs,LowerSpecs}.lean` register the oracle primitives (queries, uniform
 draws, `replicate`, `liftComp`) for core `vcgen` in both readings, exact by default and pointwise
 under `OracleComp.Lower.Pointwise`.
-VCVio's probability/coupling frontend still owns `@[vcspec]`/`@[wpStep]` dispatch, and its
-exhaustive `vcgen` hands quantitative triples to core `vcgen` (`tryCoreVCGen`): core takes the
+VCVio's probability/coupling frontend still owns `@[vcspec]` and raw-`wp` dispatch, and its
+exhaustive `pvcgen` hands quantitative triples to core `vcgen` (`tryCoreVCGen`): core takes the
 structural steps, VCVio the probability lowering, cuts, averages, loops with invariants in
 context, and relational steps. `Pr{…}[…]` keeps its meaning; events reach triples through the
 bridge lemmas `prEvent_eq_wp` and `triple_propInd_self_iff_*`.
@@ -210,10 +210,10 @@ pair `i` of `ntt f` is `f mod (X² − γᵢ)` (`MLKEM.Concrete.ntt_coeff_pair`)
 `ntt_negacyclicMul` and `multiplyNTTs` has no `implemented_by`. Falcon's `ntt` and `invNTT` are the
 in-place `butterflyNTT` and `butterflyInvNTT` loops, proved equal to the blocked stages for
 `logn ≤ 11`, so `Falcon.Concrete.concreteNTTRingLaws` holds for the loops themselves and
-`Falcon.Concrete.concretePrimitives_transform` discharges `Falcon.Primitives.Laws.transform` for the
-concrete bundle. ML-DSA's `ntt` and `invNTT` are likewise its `loopNTT` / `loopInvNTT` kernels; both
-schemes go through the shared `while`-loop lemmas `ctForward_loop` / `ctInverse_loop`
-(`LatticeCrypto/Ring/NTTLoop.lean`). ML-KEM's `ntt` and `invNTT` are its `loopNTT` / `loopInvNTT`
+`Falcon.Concrete.concretePrimitives_transform` discharges
+`Falcon.Primitives.StructuralLaws.transform` for the concrete bundle. ML-DSA's `ntt` and `invNTT`
+are likewise its `loopNTT` / `loopInvNTT` kernels; both schemes go through the shared `while`-loop
+lemmas `ctForward_loop` / `ctInverse_loop` (`LatticeCrypto/Ring/NTTLoop.lean`). ML-KEM's `ntt` and `invNTT` are its `loopNTT` / `loopInvNTT`
 kernels too, whose seven-layer range loops go through `ctForward_range` / `ctInverse_range` in the
 same module, so no scheme has an NTT refinement boundary.
 Mathlib supplies the twiddle half (`IsPrimitiveRoot` + `reduce_mod_char`) and the
@@ -793,11 +793,13 @@ public `ntt` / `invNTT` are the loop kernels themselves, proved equal to the blo
 Pointwise multiplication is verified in all three schemes: `multiplyNTTs` is the FIPS 204
 `MultiplyNTT` / FIPS 203 `MultiplyNTTs` table-driven body with no `implemented_by`, and `toHat_mul`
 is the theorem `ntt_negacyclicMul` rather than a definitional restatement.
-`Falcon.Concrete.concretePrimitives_transform` discharges the `Falcon.Primitives.Laws.transform`
-field for the concrete bundle, `Falcon.Concrete.decompress_compress` discharges its
-`compress_decompress` field, and `hashToPoint_welldefined` holds trivially (its body is `True`).
-`samplerZ_correct` holds for no sampler: a `ProbComp` has finite support, so no `Primitives` bundle
-satisfies `Falcon.Primitives.Laws` (`Falcon.Primitives.not_laws`).
+The concrete bundle satisfies `Falcon.Primitives.StructuralLaws`
+(`Falcon.Concrete.concretePrimitives_structuralLaws`: `concretePrimitives_transform` and
+`decompress_compress`). No `ProbComp` has the exact discrete Gaussian as its law
+(`LatticeCrypto.evalDist_ne_discreteGaussianMeasure`), so the sampler obligations are
+`Falcon.Primitives.SamplerEnvelope` (point mass on `[σ_min, σ_max]` with slack `δ`, consumed by
+`ffSampling_pointMass_le_of_samplerEnvelope`) and `Falcon.Primitives.SamplerQuality` (forward Rényi
+of order `a > 1`), which implies the envelope; neither is proved for the concrete sampler.
 The twiddle half came from Mathlib (item 2); the CRT half is available there too
 (`Ideal.quotientInfRingEquivPiQuotient`, `Ideal.iInf_span_singleton`, `Polynomial.pairwise_coprime_X_sub_C`,
 `Polynomial.quotientSpanXSubCAlgEquiv`, `prod_multiset_X_sub_C_of_monic_of_roots_card_eq`,
@@ -1127,16 +1129,16 @@ The *Maintenance* pass for the v4.35.0 pins, read against the next releases as w
 - Core `List.map_const'`/`List.prod_replicate` replace the deleted `List.prod_map_const`.
 - Mathlib's variation distance is related to `Measure.etvDist` (see *Native TV composition*).
 - Core `vcgen` steps oracle programs with the rules of `Unary/WP/{NecessarySpecs,LowerSpecs}.lean`,
-  and VCVio's exhaustive `vcgen` delegates its quantitative triples to it.
+  and VCVio's exhaustive `pvcgen` delegates its quantitative triples to it.
 
 **Core `vcgen` (v4.35, experimental).** It works over any `Std.WP` lattice, splits
 `ite`/`dite`/`cond`/matchers keeping the branch hypotheses, takes loop invariants (`invariants`,
 `@[spec_invariant_type]`), frames, and a `with <grind step>` discharger, and with
 `errorOnMissingSpec := false` it leaves the programs it has no rule for as verification
 conditions. `@[spec]` is a scoped attribute, so alternative rule sets can be opened per call.
-VCVio's own `vcgen` syntax is a `tactic_alt` of core's `vcgenMacro`, and a bare `vcgen` parses as
-both. Core's `vcgen` does not descend under an integral or sum, which is why the exact rules of the
-lower reading leave the expectation of the rest of the program in the verification condition.
+VCVio's exhaustive driver is `pvcgen`, so a bare `vcgen` parses as core's tactic alone. Core's
+`vcgen` does not descend under an integral or sum, which is why the exact rules of the lower
+reading leave the expectation of the rest of the program in the verification condition.
 
 **v4.36.0-rc1 changes that strengthen core `vcgen`.**
 - lean4#15555: `vcgen` reuses the goal's `WP` instance; on v4.35 it rebuilds each rule for the
@@ -1153,9 +1155,9 @@ lower reading leave the expectation of the rest of the program in the verificati
 **Next bump (v4.36).**
 - lean4#15217 renames the `epost` binder of `Std.WP.Triple.iff` to `eposts`. A named argument
   would be a hard error; `triple_iff_le_wp` passes none.
-- lean4#15290 deprecates the `Std.Do` proof mode (`mintro`, `mspec`, …). The `Std.Do` examples
-  are term proofs, and `Unary/StdDoBridge.lean`, `Unary/WriterTBridge.lean` and
-  `Interaction/UC/StdDoBridge.lean` retire with it.
+- lean4#15290 deprecates the `Std.Do` proof mode (`mintro`, `mspec`, …). VCVio's `Std.Do`
+  bridges (`Unary/StdDoBridge.lean`, `Unary/WriterTBridge.lean`, `Unary/StdDoExamples.lean` and
+  `Interaction/UC/StdDoBridge.lean`) are already retired, so nothing here uses it.
 - lean4#15171 renames `Std.WP.WP.wp_consequence_le` to `wp_monotone_post_le` (cited by name in
   `Tactics/Common/Backward.lean`, where the deprecation is not linted) and the `WP.trans`
   family that `ToMathlib/Control/Monad/RelWP.lean` mirrors; PolyFun has sixteen such sites.
