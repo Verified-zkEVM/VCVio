@@ -303,6 +303,12 @@ theorem map_uniformSample_evalDistEq_of_bijective {f : α → β} (hf : Function
     exact map_uniformOn_univ_of_bijective Measurable.of_discrete hf
   exact EvalDistEq.of_evalDist_eq h
 
+/-- A uniform sample, read as a function on `Unit`, is a uniform function on `Unit`. -/
+theorem map_const_uniformSample_evalDistEq [SampleableType (Unit → α)] :
+    (fun a (_ : Unit) => a) <$> ($ᵗ α : ProbComp α) =ᵈ ($ᵗ (Unit → α) : ProbComp (Unit → α)) :=
+  map_uniformSample_evalDistEq_of_bijective
+    ⟨fun _ _ h => congrFun h (), fun f => ⟨f (), by funext u; cases u; rfl⟩⟩
+
 /-- Transport a uniform event along a bijection of sample spaces. -/
 theorem prEvent_uniformSample_comp_of_bijective {f : α → β} (hf : Function.Bijective f)
     (p : β → Prop) :

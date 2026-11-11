@@ -4,7 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Quang Dao
 -/
 
-import Interop.Rust.Common
+module
+
+public import Interop.Rust.Common
 
 /-!
 # Peeling the `RustOracleComp` transformer stack
@@ -18,11 +20,11 @@ obtained by running the `ExceptT` and `OptionT` layers in that order.
 
 This file collects the reusable peel lemmas that reduce common
 `RustOracleComp` program shapes to this canonical form. They are all
-`@[simp]` so `mvcgen` / `simp` can reduce programs automatically.
+`@[simp]` so `vcgen` / `simp` can reduce programs automatically.
 
 The main lemma is `RustOracleComp.run_run_bind_liftM`: a lifted oracle
 call followed by a continuation peels to the underlying `OracleComp`
-bind. This is the shape `mvcgen` / `simp` needs for any `RustOracleComp`
+bind. This is the shape `vcgen` / `simp` needs for any `RustOracleComp`
 program that interleaves oracle queries with lifted `RustM` calls.
 
 The constructor-level lemmas (`run_run_pure`, `run_run_fail`,
@@ -30,7 +32,7 @@ The constructor-level lemmas (`run_run_pure`, `run_run_fail`,
 can finish the job on closed programs.
 -/
 
-open Std.Do
+public section
 
 namespace Interop.Rust.RustOracleComp
 
@@ -51,7 +53,7 @@ theorem run_run_ok (v : α) :
   rfl
 
 /-- `.run.run` of `pure`, as `Monad.pure`. Same as `run_run_ok` but stated
-in the `pure` form that `mvcgen`/`simp` tends to produce. -/
+in the `pure` form that `vcgen`/`simp` tends to produce. -/
 @[simp]
 theorem run_run_pure (v : α) :
     ((pure v : Interop.Rust.RustOracleComp spec α)).run.run
@@ -68,7 +70,7 @@ theorem run_run_fail (e : Interop.Rust.Error) :
   rfl
 
 /-- `.run.run` of `throw`, as `MonadExcept.throw`. Same as `run_run_fail`
-but stated in the `throw` form that `mvcgen`/`simp` tends to produce. -/
+but stated in the `throw` form that `vcgen`/`simp` tends to produce. -/
 @[simp]
 theorem run_run_throw (e : Interop.Rust.Error) :
     ((throw e : Interop.Rust.RustOracleComp spec α)).run.run
