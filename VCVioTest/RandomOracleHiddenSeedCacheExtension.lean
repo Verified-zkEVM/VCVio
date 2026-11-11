@@ -58,7 +58,7 @@ theorem two_uniforms (n : Nat) (initial : SplitCache pub X R) :
         let first ← (unifSpec.query n : ProbComp (Fin (n + 1)))
         let second ← (unifSpec.query n : ProbComp (Fin (n + 1)))
         pure ((first, second), initial)) := by
-  simp [simulateQ_bind, idealImpl, StateT.run_bind]
+  simp [idealImpl, StateT.run_bind]
 
 /-- A missing private label stores its whole sampled value beside the original public table. -/
 theorem missing_private (x : X) (initial : SplitCache pub X R) (missing : initial.2 x = none) :
