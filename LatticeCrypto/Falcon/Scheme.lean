@@ -58,6 +58,7 @@ variable (p : Params) (prims : Primitives p)
 
 /-- The Falcon public key: a single polynomial `h ∈ R_q` where `h = g · f⁻¹ mod q`. -/
 structure PublicKey where
+  /-- The public polynomial `h = g · f⁻¹ mod q`. -/
   h : Rq p.n
 
 noncomputable instance : DecidableEq (PublicKey p) := by
@@ -75,16 +76,28 @@ The FFT recursion depth is `p.fftDepth = p.logn - 1`. The tree encodes the norma
 LDL decomposition of the Gram matrix `[[g, -f], [G, -F]]^T · [[g, -f], [G, -F]]`
 in packed FFT representation. -/
 structure SecretKey where
+  /-- The short polynomial `f` of the NTRU basis; the matching public key is
+  `h = g · f⁻¹ mod q`. -/
   f : IntPoly p.n
+  /-- The short polynomial `g` of the NTRU basis. -/
   g : IntPoly p.n
+  /-- The polynomial `F` of the NTRU basis, which with `G` solves the NTRU equation
+  `fG - gF = q`. -/
   capF : IntPoly p.n
+  /-- The polynomial `G` of the NTRU basis, which with `F` solves the NTRU equation
+  `fG - gF = q`. -/
   capG : IntPoly p.n
+  /-- The normalized Falcon tree of the basis, which `ffSampling` uses to sample short
+  preimages. -/
   tree : FalconTree p.fftDepth
 
 /-- A Falcon signature: a 40-byte random salt `r` paired with the compressed
 representation of the short polynomial `s₂`. -/
 structure Signature where
+  /-- The 40-byte random salt `r`, hashed with the public key and the message to the
+  target `c = HashToPoint(r, pk, message)`. -/
   salt : Bytes 40
+  /-- The compressed encoding `Compress(s₂, sbytelen)` (Algorithm 17) of `s₂`. -/
   compressedS2 : List Byte
 
 /-! ### NTRU Equation -/
