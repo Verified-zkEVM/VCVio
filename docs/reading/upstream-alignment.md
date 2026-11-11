@@ -1155,9 +1155,9 @@ reading leave the expectation of the rest of the program in the verification con
 **Next bump (v4.36).**
 - lean4#15217 renames the `epost` binder of `Std.WP.Triple.iff` to `eposts`. A named argument
   would be a hard error; `triple_iff_le_wp` passes none.
-- lean4#15290 deprecates the `Std.Do` proof mode (`mintro`, `mspec`, …). The `Std.Do` examples
-  are term proofs, and `Unary/StdDoBridge.lean`, `Unary/WriterTBridge.lean` and
-  `Interaction/UC/StdDoBridge.lean` retire with it.
+- lean4#15290 deprecates the `Std.Do` proof mode (`mintro`, `mspec`, …). VCVio's `Std.Do`
+  bridges (`Unary/StdDoBridge.lean`, `Unary/WriterTBridge.lean`, `Unary/StdDoExamples.lean` and
+  `Interaction/UC/StdDoBridge.lean`) are already retired, so nothing here uses it.
 - lean4#15171 renames `Std.WP.WP.wp_consequence_le` to `wp_monotone_post_le` (cited by name in
   `Tactics/Common/Backward.lean`, where the deprecation is not linted) and the `WP.trans`
   family that `ToMathlib/Control/Monad/RelWP.lean` mirrors; PolyFun has sixteen such sites.

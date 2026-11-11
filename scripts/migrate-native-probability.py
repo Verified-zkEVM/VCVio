@@ -47,7 +47,6 @@ RENAMES: dict[str, str] = {
     # Probability heads.
     "AdvBound.of_tvDist": "AdvBound.of_measureETVDist",
     "AdvBound.of_gameEquiv": "AdvBound.of_evalDistEq",
-    "wpProp_iff_probEvent_eq_one": "wpProp_iff_prEvent_eq_one",
     # Failure probability.
     "probFailure": "prFail",
     "probFailure_le_one": "prFail_le_one",

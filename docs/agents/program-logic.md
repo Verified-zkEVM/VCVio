@@ -8,8 +8,6 @@
 - `VCVio.ProgramLogic.Notation` provides the core notation and convenience predicates used by
   the tactic surface.
 - Prefer the step-through tactics from `Tactics` for new proofs.
-- `VCVio.ProgramLogic.Unary.StdDoBridge` is a narrow unary bridge for almost-sure correctness in the `.pure`
-  `Std.Do` view. It is not the main engine for quantitative or relational VCGen.
 
 For continuous or otherwise non-discrete denotations, import
 `VCVio.ProgramLogic.Relational.Measure`. Its `ExpectationWP.RelWP` uses an almost-everywhere
@@ -445,7 +443,7 @@ for core `vcgen` to compose through multi-query handler programs:
 The `WriterT`-based handlers come in both `Append`-parameterized
 (`loggingOracle`) and `Monoid`-parameterized (`countingOracle`,
 `costOracle`) flavors. Their core interpretations are `WriterT.AppendWP` and
-`WriterT.MonoidWP`. The older SPred adapter remains in `Unary/StdDoBridge.lean`.
+`WriterT.MonoidWP`.
 
 ### Whole-program invariant preservation (`SimSemantics/PreservesInv.lean`)
 
@@ -614,8 +612,6 @@ theorem my_security : g₁ =ᵈ gₙ := by
 
 4. **`rvcstep using R`**: when Lean can't infer the witness for the current relational shape
    (bind cut, bijection, traversal input relation, or simulation invariant), provide it explicitly.
-
-5. **`StdDoBridge` is deliberately narrow**: use it for unary almost-sure `.pure` `Std.Do` experiments, not as the default path for quantitative or relational proofs.
 
 ## Internal Architecture (`Sym`-backed Registries)
 
