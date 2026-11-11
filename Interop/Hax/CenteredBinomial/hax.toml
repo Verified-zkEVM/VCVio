@@ -1,0 +1,5 @@
+# Extract into the Lean modules `Interop.Hax.CenteredBinomial.Extraction.*` next to this crate.
+[scenario.cbd]
+backend = "lean"
+project-files = false
+aeneas-args = ["-dest", "../../..", "-subdir", "Interop/Hax/CenteredBinomial/Extraction"]

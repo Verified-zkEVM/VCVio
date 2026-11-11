@@ -7,6 +7,7 @@ Authors: Quang Dao, Devon Tuma
 module
 
 public import Aeneas.Std.Scalar
+public import Interop.Hax.CenteredBinomial.Extraction.Funs
 public import Interop.Rust.RustM
 public import Interop.Rust.Run
 public import Interop.Rust.Triple
@@ -15,9 +16,10 @@ public import VCVio.EvalDist.Monad.Basic
 public import VCVio.ProgramLogic.Tactics
 
 /-!
-# A Rust centered-binomial sampler, through `RustM`, in VCVio
+# A Rust centered-binomial sampler, extracted by hax, in VCVio
 
-One step of ML-KEM's `SamplePolyCBD_η` at `η = 1`, as Rust:
+One step of ML-KEM's `SamplePolyCBD_η` at `η = 1`, as Rust, in the crate next to this file
+(`Interop/Hax/CenteredBinomial/src/lib.rs`):
 
 ```rust
 pub fn sample_cbd1(b: u8) -> i32 {
@@ -27,9 +29,9 @@ pub fn sample_cbd1(b: u8) -> i32 {
 }
 ```
 
-`sample_cbd1` below is that function in the `RustM` code hax emits today, over Aeneas's scalars:
-the bitwise `&&&` and the casts are pure, while the shift and the subtraction are checked and
-return `RustM`. It is a transcription: `cargo hax into lean` was not run to produce it.
+`scripts/regenerate-hax.sh` extracts it with the hax CLI into
+`Interop.Hax.CenteredBinomial.Extraction` as `hax_cbd.sample_cbd1`: the bitwise `&&&` and the casts
+are pure, lifted into `RustM`, while the shift and the subtraction are checked.
 
 Lifted into `RustOracleComp unifSpec` by `Interop.Rust.liftRustM` and fed two uniform bits, it
 returns `0` with probability `1/2` and `±1` with probability `1/4` each: the centered binomial
@@ -47,23 +49,16 @@ distribution with parameter `1`.
 
 public section
 
-open Aeneas.Std Interop.Rust OracleSpec OracleComp OracleComp.ProgramLogic ENNReal
+open Aeneas Aeneas.Std Interop.Rust OracleSpec OracleComp OracleComp.ProgramLogic ENNReal hax_cbd
 
 namespace Interop.Hax.Examples.CenteredBinomial
-
-/-- The Rust `sample_cbd1` in `RustM`: the low two bits of `b`, widened to `i32`, subtracted. -/
-def sample_cbd1 (b : U8) : RustM I32 := do
-  let a : I32 := UScalar.hcast .I32 (b &&& 1#u8)
-  let s ← b >>> 1#i32
-  let c : I32 := UScalar.hcast .I32 (s &&& 1#u8)
-  a - c
 
 /-- Evaluate `sample_cbd1` on a literal: unfold the checked shift and subtraction and decide
 their range tests. `RustM` is irreducible, so `decide` alone cannot. -/
 local macro "cbd_eval" : tactic =>
-  `(tactic| (simp (config := { decide := true }) only [sample_cbd1, HShiftRight.hShiftRight,
+  `(tactic| (simp (config := { decide := true }) only [sample_cbd1, lift, HShiftRight.hShiftRight,
     UScalar.shiftRight_IScalar, UScalar.shiftRight, HSub.hSub, IScalar.sub, IScalar.tryMk,
-    ite_true, bind_tc_ok]; rfl))
+    ite_true, bind_tc_ok, bind_ok, RustM.ofOption, IScalar.tryMkOpt]; rfl))
 
 theorem sample_cbd1_zero : sample_cbd1 0#u8 = RustM.ok 0#i32 := by cbd_eval
 
