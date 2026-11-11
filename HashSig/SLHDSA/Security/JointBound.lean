@@ -104,10 +104,15 @@ open scoped ENNReal
 
 namespace SLHDSA.Security
 
-variable {vp : ValidatedParams} {core : CorePrimitives vp.params}
-  [SampleableType core.Y] [DecidableEq core.Y] [SampleableType core.SkSeed]
-  [SampleableType core.SkPrf] [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed]
-  [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
+variable {vp : ValidatedParams} {core : CorePrimitives vp.params} [SampleableType core.Y]
+
+/-- A finite quantity over `|Y|` is finite: the node type is finite and nonempty. -/
+theorem div_natCard_ne_top {x : ℝ≥0∞} (hx : x ≠ ⊤) : x / Nat.card core.Y ≠ ⊤ :=
+  ENNReal.div_ne_top hx (Nat.cast_ne_zero.2 Nat.card_pos.ne')
+
+variable [DecidableEq core.Y] [SampleableType core.SkSeed] [SampleableType core.SkPrf]
+  [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey]
+  [DecidableEq core.SkPrf]
 
 /-- **The ideal hidden-seed game is bounded on the deferred lab experiment.** Under the key
 discipline, an event `F` of the seeds and the outcome of `idealDraw` at public seed `pkSeed` has
@@ -185,13 +190,6 @@ theorem prEvent_romSchemeRun_le_prEvent_deferredFillDraw (hd : core.KeyDisciplin
       Q (DeriveOutcome.fill core s z.1, (secretEncoding core e pkSeed).merge s z.2) ∨
         ∃ x, (z.2.1 ((secretEncoding core e pkSeed).enc s x)).isSome).trans
       (prEvent_mono_of_support _ _ _ hH))
-
-omit [DecidableEq core.Y] [SampleableType core.SkSeed] [SampleableType core.SkPrf]
-  [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey]
-  [DecidableEq core.SkPrf] in
-/-- A finite quantity over `|Y|` is finite: the node type is finite and nonempty. -/
-theorem div_natCard_ne_top {x : ℝ≥0∞} (hx : x ≠ ⊤) : x / Nat.card core.Y ≠ ⊤ :=
-  ENNReal.div_ne_top hx (Nat.cast_ne_zero.2 Nat.card_pos.ne')
 
 variable (core) in
 /-- **A further hazard charged inside the joint potential** of the deferred lab run at public seed
