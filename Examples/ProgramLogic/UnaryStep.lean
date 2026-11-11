@@ -273,13 +273,6 @@ example (oa : OracleComp spec α) (out : Multiplicative Nat)
     ⦃post⦄ := by
   pvcgen
 
-/--
-info: [wpstep cache] hit `OracleComp.ProgramLogic.wp_replicate_succ`
----
-info: [wpstep cache] miss `OracleComp.ProgramLogic.wp_replicate_zero`
--/
-#guard_msgs in
-set_option vcvio.vcgen.traceCachedRules true in
 example (oa : OracleComp spec α) (post : List α → ℝ≥0∞) :
     wp⟦oa.replicate 0⟧ post = post [] := by
   vcstep
