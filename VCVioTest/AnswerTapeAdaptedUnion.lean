@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 VCVio Contributors. All rights reserved.
+Copyright (c) 2026 Alexander Hicks. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: VCVio Contributors
+Authors: Alexander Hicks
 -/
 
 module
