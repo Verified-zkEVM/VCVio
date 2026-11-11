@@ -229,6 +229,27 @@ theorem encodedQuery_eq_true_iff (s : S) (t : (pub.withDerivations X R).Domain) 
   · simp only [encodedQuery, decide_eq_true_eq, Sum.inl.injEq, Sum.inr.injEq]
   · simp only [encodedQuery, Bool.false_eq_true, reduceCtorEq, exists_false]
 
+/-- Answer a derivation query `x` by the public query at `E.enc s x`. -/
+@[expose] def deriveImpl (s : S) :
+    QueryImpl (pub.withDerivations X R) (OracleComp (unifSpec + pub)) := fun
+  | .inl t => (unifSpec + pub).query t
+  | .inr x => cast (E.range_eq s x) <$> (unifSpec + pub).query (.inr (E.enc s x))
+
+/-- Lifting sampling and public queries into the derivation world and then answering through
+`E.deriveImpl s` is the identity handler: a lifted program makes no derivation query. -/
+theorem deriveImpl_comp_withDerivationsLift (s : S) :
+    E.deriveImpl s ∘ₛ pub.withDerivationsLift X R = QueryImpl.id' (unifSpec + pub) := by
+  funext t
+  rcases t with n | t <;> rfl
+
+/-- Answering a lifted probabilistic computation through `E.deriveImpl s` gives the same
+computation, lifted into sampling and public queries. -/
+theorem simulateQ_deriveImpl_liftM (s : S) {α : Type} (oa : ProbComp α) :
+    simulateQ (E.deriveImpl s) (liftM oa : OracleComp (pub.withDerivations X R) α) =
+      (liftM oa : OracleComp (unifSpec + pub) α) := by
+  rw [QueryImpl.simulateQ_liftM_eq_of_query _ (fun t => liftM (unifSpec.query t)) fun _ => rfl]
+  rfl
+
 variable [DecidableEq ι]
 
 /-- Filling the table at `x` fills the merged cache at `E.enc s x`. -/
@@ -266,29 +287,6 @@ theorem merge_cacheQuery_public (s : S) (st : SplitCache pub X R) {t : ι}
         E.merge_apply_of_not_exists s _ ht']
 
 variable [∀ t, SampleableType (pub.Range t)]
-
-/-- Answer a derivation query `x` by the public query at `E.enc s x`. -/
-@[expose] def deriveImpl (s : S) :
-    QueryImpl (pub.withDerivations X R) (OracleComp (unifSpec + pub)) := fun
-  | .inl t => (unifSpec + pub).query t
-  | .inr x => cast (E.range_eq s x) <$> (unifSpec + pub).query (.inr (E.enc s x))
-
-omit [DecidableEq ι] [∀ t, SampleableType (pub.Range t)] in
-/-- Lifting sampling and public queries into the derivation world and then answering through
-`E.deriveImpl s` is the identity handler: a lifted program makes no derivation query. -/
-theorem deriveImpl_comp_withDerivationsLift (s : S) :
-    E.deriveImpl s ∘ₛ pub.withDerivationsLift X R = QueryImpl.id' (unifSpec + pub) := by
-  funext t
-  rcases t with n | t <;> rfl
-
-omit [DecidableEq ι] [∀ t, SampleableType (pub.Range t)] in
-/-- Answering a lifted probabilistic computation through `E.deriveImpl s` gives the same
-computation, lifted into sampling and public queries. -/
-theorem simulateQ_deriveImpl_liftM (s : S) {α : Type} (oa : ProbComp α) :
-    simulateQ (E.deriveImpl s) (liftM oa : OracleComp (pub.withDerivations X R) α) =
-      (liftM oa : OracleComp (unifSpec + pub) α) := by
-  rw [QueryImpl.simulateQ_liftM_eq_of_query _ (fun t => liftM (unifSpec.query t)) fun _ => rfl]
-  rfl
 
 /-- The real game: derivations and public queries share one lazily sampled public cache. -/
 @[expose] noncomputable def realImpl (s : S) :
