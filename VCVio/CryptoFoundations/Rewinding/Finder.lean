@@ -94,37 +94,49 @@ theorem expectedCalls_bind {α β : Type} [MeasurableSpace α] [DiscreteMeasurab
   ((Finset.univ.filter fun c => f c = true).card : ℝ≥0∞) /
     (Fintype.card ((r : R) → C r) : ℝ≥0∞)
 
-/-- A black-box tree finder with branching factors `k`, node predicate `nodeOk`, error `κ` and
-cost `T`. Against every acceptance function `f`, every returned tree is structured and accepting,
-the acceptance rate `ε` of `f` and the success probability `p` satisfy `ε ≤ κ + (1 - κ) * p`, and
-the expected number of acceptance-oracle calls is at most `T`, counted over complete runs whether
-or not they succeed. Coin queries and local work are not charged.
+/-- A black-box finder with output type `Out`, output predicate `good`, error `κ` and cost `T`.
+Against every acceptance function `f`, every returned output satisfies `good f`, the acceptance
+rate `ε` of `f` and the success probability `p` satisfy `ε ≤ κ + (1 - κ) * p`, and the expected
+number of acceptance-oracle calls is at most `T`, counted over complete runs whether or not they
+succeed. Coin queries and local work are not charged.
 
-Every branching factor is at least one. At `k r = 0` there are no branch paths, so every tree is
-vacuously structured and accepting, and a finder that returns a tree without calling the oracle
-would meet the contract at error `0` and cost `0`. -/
-structure IsTreeFinder [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)] (k : R → ℕ)
-    (nodeOk : (r : R) → (Fin (k r) → C r) → Prop)
-    (find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))) (κ T : ℝ≥0∞) : Prop where
-  /-- Every round has at least one branch, so the leaves of a returned tree are not vacuous. -/
-  one_le : ∀ r, 1 ≤ k r
-  /-- Every returned tree is structured and all of its leaves accept. -/
-  sound : ∀ f, ∀ z ∈ support (runFinder find f), ∀ t, z.1 = some t →
-    t.IsStructured nodeOk ∧ ∀ p, f (t.leaf p) = true
+The contract does not fix the shape of the output: a tree finder returns a `VecTree`
+(`Rewinding.IsTreeFinder`), and other extractors return other configurations of accepting
+challenge vectors. The transfer to frozen reruns (`Rewinding.ResetPolicy.finder_bounds`) uses only
+the success and cost fields. -/
+structure IsFinder [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)] {Out : Type}
+    (good : (((r : R) → C r) → Bool) → Out → Prop)
+    (find : OracleComp (unifSpec + accSpec C) (Option Out)) (κ T : ℝ≥0∞) : Prop where
+  /-- Every returned output satisfies the output predicate for the acceptance function. -/
+  sound : ∀ f, ∀ z ∈ support (runFinder find f), ∀ o, z.1 = some o → good f o
   /-- The acceptance rate is at most the error plus its complement times the success
   probability, uniformly over all acceptance functions. -/
   success : ∀ f, acceptRate f ≤ κ + (1 - κ) * Pr{let z ← runFinder find f}[z.1.isSome]
   /-- Complete-run cost is bounded without conditioning on success. -/
   cost : ∀ f, expectedCalls (runFinder find f) ≤ T
 
-/-- A tree finder succeeds with probability at least the acceptance rate minus its error. -/
-theorem IsTreeFinder.acceptRate_sub_le [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
-    {k : R → ℕ} {nodeOk : (r : R) → (Fin (k r) → C r) → Prop}
-    {find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))} {κ T : ℝ≥0∞}
-    (h : IsTreeFinder k nodeOk find κ T) (f : ((r : R) → C r) → Bool) :
+/-- A finder succeeds with probability at least the acceptance rate minus its error. -/
+theorem IsFinder.acceptRate_sub_le [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)] {Out : Type}
+    {good : (((r : R) → C r) → Bool) → Out → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
+    (h : IsFinder good find κ T) (f : ((r : R) → C r) → Bool) :
     acceptRate f - κ ≤ Pr{let z ← runFinder find f}[z.1.isSome] :=
   tsub_le_iff_left.mpr ((h.success f).trans
     (add_le_add le_rfl (mul_le_of_le_one_left zero_le tsub_le_self)))
+
+/-- A black-box tree finder with branching factors `k`, node predicate `nodeOk`, error `κ` and
+cost `T`: a finder (`Rewinding.IsFinder`) whose every returned tree is structured and accepting.
+
+Every branching factor is at least one. At `k r = 0` there are no branch paths, so every tree is
+vacuously structured and accepting, and a finder that returns a tree without calling the oracle
+would meet the contract at error `0` and cost `0`. -/
+structure IsTreeFinder [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)] (k : R → ℕ)
+    (nodeOk : (r : R) → (Fin (k r) → C r) → Prop)
+    (find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))) (κ T : ℝ≥0∞) : Prop
+    extends IsFinder (fun f (t : VecTree C k) => t.IsStructured nodeOk ∧ ∀ p, f (t.leaf p) = true)
+      find κ T where
+  /-- Every round has at least one branch, so the leaves of a returned tree are not vacuous. -/
+  one_le : ∀ r, 1 ≤ k r
 
 /-- Threshold knowledge error `1 − ∏ᵣ (1 − (kᵣ − 1)/|Cᵣ|)`: the knowledge error of a protocol
 that is special sound with threshold `k r` and challenge set `C r` in each round (Attema, Cramer
