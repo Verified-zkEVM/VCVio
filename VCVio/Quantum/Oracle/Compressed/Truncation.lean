@@ -71,7 +71,7 @@ theorem QuantumRuntime.forallQueries_of_isQueryBound_zero {L : LocalSig.{u, v}}
 
 /-! ## The truncated oracle -/
 
-section truncated
+section sizeProjector
 
 variable (X Y : Type*) [Fintype X] [DecidableEq X] [DecidableEq Y]
 
@@ -90,19 +90,25 @@ theorem conjTranspose_sizeProjector (t : ℕ) : (sizeProjector X Y t)ᴴ = sizeP
   funext m
   split_ifs <;> simp [*]
 
-theorem sizeProjector_mul_self [Fintype Y] (t : ℕ) :
+theorem posSemidef_one_sub_sizeProjector (t : ℕ) : (1 - sizeProjector X Y t).PosSemidef := by
+  rw [sizeProjector, ← diagonal_one, diagonal_sub, posSemidef_diagonal_iff]
+  intro m
+  split_ifs <;> simp
+
+end sizeProjector
+
+section truncated
+
+variable {X Y : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
+
+theorem sizeProjector_mul_self (t : ℕ) :
     sizeProjector X Y t * sizeProjector X Y t = sizeProjector X Y t := by
   rw [sizeProjector, diagonal_mul_diagonal]
   congr 1
   funext m
   split_ifs <;> simp
 
-theorem posSemidef_one_sub_sizeProjector (t : ℕ) : (1 - sizeProjector X Y t).PosSemidef := by
-  rw [sizeProjector, ← diagonal_one, diagonal_sub, posSemidef_diagonal_iff]
-  intro m
-  split_ifs <;> simp
-
-variable [Fintype Y] [AddCommGroup Y]
+variable [AddCommGroup Y]
 
 variable (X Y) in
 /-- The truncated compressed oracle `O^(t) = P_size^(t) cO P_size^(t)` of ePrint 2025/2166. -/

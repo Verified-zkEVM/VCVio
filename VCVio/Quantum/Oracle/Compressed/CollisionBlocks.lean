@@ -211,30 +211,9 @@ theorem phaseCellSplit_symm_eq_update (a : Option Y) (c : CellContext X Q Y) :
 
 end split
 
-section phase
+section population
 
 variable {X Y : Type*} [Fintype X] [DecidableEq X] [DecidableEq Y] [AddCommGroup Y]
-
-/-- The phase oracle is the direct sum of its cell operators, indexed by cell contexts. -/
-theorem phaseOracle_eq_cellBlocks [Fintype Y] :
-    phaseOracle X Y = (blockDiagonal
-      (fun c : CellContext X (AddChar Y ℂ) Y ↦ phaseCell Y c.1.2)).submatrix
-        phaseCellSplit phaseCellSplit := by
-  ext ⟨q', D'⟩ ⟨q, D⟩
-  rw [phaseOracle_apply, submatrix_apply, blockDiagonal_apply]
-  change (if q' = q ∧ ∀ j ≠ q.1, D' j = D j then _ else 0) =
-    if (⟨q', fun j ↦ D' j.1⟩ : CellContext X (AddChar Y ℂ) Y) =
-        ⟨q, fun j ↦ D j.1⟩ then _ else 0
-  by_cases hq : q' = q
-  · subst q'
-    have he : (fun j : {j // j ≠ q.1} ↦ D' j.1) = (fun j ↦ D j.1) ↔
-        ∀ j ≠ q.1, D' j = D j := by
-      simp only [funext_iff, Subtype.forall]
-    simp only [true_and, Sigma.mk.inj_iff, heq_eq_eq, true_and, he]
-    rfl
-  · have he : (⟨q', fun j ↦ D' j.1⟩ : CellContext X (AddChar Y ℂ) Y) ≠
-        ⟨q, fun j ↦ D j.1⟩ := fun h ↦ hq (congrArg Sigma.fst h)
-    simp [hq, he]
 
 /-- A database-diagonal operator decomposes into the corresponding cell-diagonal blocks. -/
 theorem one_kronecker_diagonal_eq_cellBlocks (f : Database X Y → ℂ) :
@@ -273,7 +252,33 @@ theorem populationMatrix_eq_cellBlocks (t n offset : ℕ) :
   | some y =>
     simp [Database.size_update_some_of_eq_none c.emptyDatabase_apply, Nat.add_assoc]
 
-variable [Fintype Y]
+end population
+
+section phase
+
+variable {X Y : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
+  [AddCommGroup Y]
+
+/-- The phase oracle is the direct sum of its cell operators, indexed by cell contexts. -/
+theorem phaseOracle_eq_cellBlocks :
+    phaseOracle X Y = (blockDiagonal
+      (fun c : CellContext X (AddChar Y ℂ) Y ↦ phaseCell Y c.1.2)).submatrix
+        phaseCellSplit phaseCellSplit := by
+  ext ⟨q', D'⟩ ⟨q, D⟩
+  rw [phaseOracle_apply, submatrix_apply, blockDiagonal_apply]
+  change (if q' = q ∧ ∀ j ≠ q.1, D' j = D j then _ else 0) =
+    if (⟨q', fun j ↦ D' j.1⟩ : CellContext X (AddChar Y ℂ) Y) =
+        ⟨q, fun j ↦ D j.1⟩ then _ else 0
+  by_cases hq : q' = q
+  · subst q'
+    have he : (fun j : {j // j ≠ q.1} ↦ D' j.1) = (fun j ↦ D j.1) ↔
+        ∀ j ≠ q.1, D' j = D j := by
+      simp only [funext_iff, Subtype.forall]
+    simp only [true_and, Sigma.mk.inj_iff, heq_eq_eq, true_and, he]
+    rfl
+  · have he : (⟨q', fun j ↦ D' j.1⟩ : CellContext X (AddChar Y ℂ) Y) ≠
+        ⟨q, fun j ↦ D j.1⟩ := fun h ↦ hq (congrArg Sigma.fst h)
+    simp [hq, he]
 
 /-- The population drop of one ordinary phase query is nonnegative after its charge. -/
 theorem posSemidef_phasePopulationDrop {t n : ℕ} (hn : n < t) (offset : ℕ) :
