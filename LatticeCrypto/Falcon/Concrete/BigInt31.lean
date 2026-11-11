@@ -328,9 +328,14 @@ big integers, each with `xlen` limbs (stride = `n`).
 
 /-- A small-prime record, matching the C `PRIMES[]` table entries. -/
 structure SmallPrime where
+  /-- The prime modulus `p`, a prime below `2^31`. -/
   p : UInt32
+  /-- The Montgomery constant `-1/p mod 2^32`. -/
   p0i : UInt32
+  /-- The value `2^64 mod p`, used to enter Montgomery representation. -/
   R2 : UInt32
+  /-- The inverse modulo `p` of the product of the preceding primes in the table, in
+  Montgomery representation; the CRT coefficient used by `zint_rebuild_CRT`. -/
   s : UInt32
   deriving Repr, Inhabited
 

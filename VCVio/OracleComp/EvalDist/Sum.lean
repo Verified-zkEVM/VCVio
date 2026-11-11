@@ -38,6 +38,18 @@ theorem evalDist_ae_mem_support [MeasurableSpace α] [DiscreteMeasurableSpace α
     (oa : OracleComp spec α) : ∀ᵐ x ∂𝒟[oa], x ∈ support oa :=
   evalDist.ae_of_forall_mem_support oa (· ∈ support oa) MeasurableSet.of_discrete fun _ h ↦ h
 
+/-- A common continuation contracts extended total variation; the prefix type is discrete. -/
+theorem measureETVDist_bind_right_le [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    [MeasurableSpace β] (oa ob : OracleComp spec α) (f : α → OracleComp spec β) :
+    measureETVDist (oa >>= f) (ob >>= f) ≤ measureETVDist oa ob :=
+  measureETVDist_bind_le oa ob f .of_discrete
+
+/-- A common continuation contracts real total variation; the prefix type is discrete. -/
+theorem measureTVDist_bind_right_le [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    [MeasurableSpace β] (oa ob : OracleComp spec α) (f : α → OracleComp spec β) :
+    measureTVDist (oa >>= f) (ob >>= f) ≤ measureTVDist oa ob :=
+  measureTVDist_bind_le oa ob f .of_discrete
+
 variable [∀ t, Finite (spec.Range t)]
 
 /-- An integral against the output measure is the sum of the singleton masses times the
@@ -153,5 +165,76 @@ theorem measureETVDist_bind_left_le_tsum [MeasurableSpace β] (oa : OracleComp s
   rw [← lintegral_evalDist_eq_tsum]
   exact measureETVDist_bind_bind_le_lintegral oa f g .of_discrete .of_discrete _
     (Filter.Eventually.of_forall fun _ ↦ le_rfl)
+
+/-- The real total variation after a common prefix is at most the prefix-weighted sum of the
+continuations' real total variations. -/
+theorem measureTVDist_bind_left_le_tsum [MeasurableSpace β] (oa : OracleComp spec α)
+    (f g : α → OracleComp spec β) :
+    measureTVDist (oa >>= f) (oa >>= g) ≤
+      ∑' x, (Pr{let y ← oa}[y = x]).toReal * measureTVDist (f x) (g x) := by
+  have hfin : ∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x) ≠ ⊤ := by
+    refine ne_top_of_le_ne_top ENNReal.one_ne_top ?_
+    calc ∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x)
+        ≤ ∑' x, Pr{let y ← oa}[y = x] * 1 :=
+          ENNReal.tsum_le_tsum fun x ↦ mul_le_mul' le_rfl (measureETVDist_le_one _ _)
+      _ = 1 := by simp only [mul_one, tsum_prEvent_eq_one]
+  rw [measureTVDist_eq_toReal_measureETVDist]
+  calc (measureETVDist (oa >>= f) (oa >>= g)).toReal
+      ≤ (∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x)).toReal :=
+        ENNReal.toReal_mono hfin (measureETVDist_bind_left_le_tsum oa f g)
+    _ = ∑' x, (Pr{let y ← oa}[y = x]).toReal * measureTVDist (f x) (g x) := by
+        rw [ENNReal.tsum_toReal_eq fun x ↦
+          ENNReal.mul_ne_top (prEvent_ne_top _) (measureETVDist_ne_top _ _)]
+        simp only [ENNReal.toReal_mul, measureTVDist_eq_toReal_measureETVDist]
+
+/-- A uniform bound on the continuations' total variations bounds the total variation after a
+common prefix. -/
+theorem measureETVDist_bind_left_le_of_forall_le [MeasurableSpace β] (oa : OracleComp spec α)
+    (f g : α → OracleComp spec β) {δ : ℝ≥0∞} (h : ∀ a, measureETVDist (f a) (g a) ≤ δ) :
+    measureETVDist (oa >>= f) (oa >>= g) ≤ δ :=
+  calc measureETVDist (oa >>= f) (oa >>= g)
+      ≤ ∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x) :=
+        measureETVDist_bind_left_le_tsum oa f g
+    _ ≤ ∑' x, Pr{let y ← oa}[y = x] * δ :=
+        ENNReal.tsum_le_tsum fun x ↦ mul_le_mul' le_rfl (h x)
+    _ = δ := by rw [ENNReal.tsum_mul_right, tsum_prEvent_eq_one, one_mul]
+
+/-- A uniform bound on the continuations' real total variations bounds the real total variation
+after a common prefix. -/
+theorem measureTVDist_bind_left_le_of_forall_le [MeasurableSpace β] (oa : OracleComp spec α)
+    (f g : α → OracleComp spec β) {δ : ℝ} (hδ : 0 ≤ δ)
+    (h : ∀ a, measureTVDist (f a) (g a) ≤ δ) :
+    measureTVDist (oa >>= f) (oa >>= g) ≤ δ :=
+  ENNReal.toReal_le_of_le_ofReal hδ <| measureETVDist_bind_left_le_of_forall_le oa f g fun a ↦
+    (ENNReal.le_ofReal_iff_toReal_le (measureETVDist_ne_top _ _) hδ).2 (h a)
+
+/-- Continuations that agree in distribution off a bad event of the common prefix are at total
+variation at most the probability of that event. -/
+theorem measureETVDist_bind_left_le_prEvent_of_evalDistEq [MeasurableSpace β]
+    (oa : OracleComp spec α) (f g : α → OracleComp spec β) (bad : α → Prop)
+    (h : ∀ a, ¬ bad a → f a =ᵈ g a) :
+    measureETVDist (oa >>= f) (oa >>= g) ≤ Pr{let x ← oa}[bad x] := by
+  classical
+  calc measureETVDist (oa >>= f) (oa >>= g)
+      ≤ ∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x) :=
+        measureETVDist_bind_left_le_tsum oa f g
+    _ ≤ ∑' x, if bad x then Pr{let y ← oa}[y = x] else 0 := by
+        refine ENNReal.tsum_le_tsum fun x ↦ ?_
+        by_cases hx : bad x
+        · simp only [hx, ite_true]
+          exact mul_le_of_le_one_right' (measureETVDist_le_one _ _)
+        · simp only [hx, ite_false]
+          rw [(measureETVDist_eq_zero_iff _ _).2 (h x hx).evalDist_eq, mul_zero]
+    _ = Pr{let x ← oa}[bad x] := (prEvent_eq_tsum_ite oa bad).symm
+
+/-- Continuations that agree in distribution off a bad event of the common prefix are at real
+total variation at most the probability of that event. -/
+theorem measureTVDist_bind_left_le_prEvent_of_evalDistEq [MeasurableSpace β]
+    (oa : OracleComp spec α) (f g : α → OracleComp spec β) (bad : α → Prop)
+    (h : ∀ a, ¬ bad a → f a =ᵈ g a) :
+    measureTVDist (oa >>= f) (oa >>= g) ≤ (Pr{let x ← oa}[bad x]).toReal := by
+  rw [measureTVDist_eq_toReal_measureETVDist]
+  exact ENNReal.toReal_mono (prEvent_ne_top _)
+    (measureETVDist_bind_left_le_prEvent_of_evalDistEq oa f g bad h)
 
 end OracleComp

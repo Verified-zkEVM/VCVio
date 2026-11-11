@@ -6,12 +6,12 @@ Authors: Nicolas Consigny, Alexander Hicks
 
 module
 public import HashSig.SLHDSA.RandomOracle
-public import HashSig.SLHDSA.Concrete.Sha2
+public import VCVio.Algorithms.Sha2
 
 /-!
 # Concrete SLH-DSA-SHA2-128-24 instantiation
 
-Wires pure-Lean SHA-256 (`HashSig.SLHDSA.Concrete.Sha2`) into the abstract `Primitives` bundle
+Wires pure-Lean SHA-256 (`VCVio.Algorithms.Sha2`) into the abstract `Primitives` bundle
 to make the proof-level scheme executable at the SLH-DSA-SHA2-128-24 parameter set, following
 the FIPS 205 §11.2.1 SHA-2 (category-1) instantiation:
 
@@ -38,7 +38,7 @@ FORS trees — ~`10^9` hashes); `verify` is ~`400` hashes and is the executable 
 
 namespace SLHDSA.Concrete
 
-open SLHDSA Sha2
+open SLHDSA VCVio.Algorithms.Sha2
 
 /-! ### Byte conversions -/
 
@@ -171,16 +171,22 @@ def verifyInternalBytes (pkSeed pkRoot : Bytes 16) (msg : List Byte)
   letI : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
   slhVerifyInternal shaParams_d_eq_one shaPrimitives msg (decodeSignature sigBytes) ⟨pkSeed, pkRoot⟩
 
-/-! ### Completeness transfers to the concrete bundle
+/-! ### Carrier instances
 
-The carrier instances are supplied explicitly: the structure projections `shaPrimitives.SkSeed`
-… are definitionally `Bytes 16`, but instance synthesis does not unfold them automatically. -/
+The carrier instances are supplied explicitly: the structure projections `shaPrimitives.SkSeed`,
+`shaPrimitives.AdrsKey`, … are definitionally byte vectors (`Bytes 16`, and `Bytes 22` for the
+address key), but instance synthesis does not unfold them automatically. -/
 
 instance : SampleableType shaPrimitives.SkSeed := inferInstanceAs (SampleableType (Bytes 16))
 instance : SampleableType shaPrimitives.SkPrf := inferInstanceAs (SampleableType (Bytes 16))
 instance : SampleableType shaPrimitives.PkSeed := inferInstanceAs (SampleableType (Bytes 16))
 instance : SampleableType shaPrimitives.Y := inferInstanceAs (SampleableType (Bytes 16))
 instance : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
+instance : DecidableEq shaPrimitives.PkSeed := inferInstanceAs (DecidableEq (Bytes 16))
+instance : DecidableEq shaPrimitives.SkPrf := inferInstanceAs (DecidableEq (Bytes 16))
+instance : DecidableEq shaPrimitives.AdrsKey := inferInstanceAs (DecidableEq (Bytes 22))
+
+/-! ### Completeness transfers to the concrete bundle -/
 
 /-- **Perfect completeness at the concrete SHA2-128-24 bundle.** This specializes the
 definitional concrete-function interpretation of the canonical oracle-parametric scheme to the

@@ -1,34 +1,26 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
 public import ToMathlib.Algebra.BigOperators.Finset
-public import ToMathlib.Algebra.BigOperators.List
+public import ToMathlib.Algebra.MvPolynomial.SchwartzZippel
 public import ToMathlib.Analysis.MeanInequalities
 public import ToMathlib.Analysis.SumIntegralComparisons
 public import ToMathlib.Combinatorics.ChallengeTree
 public import ToMathlib.Combinatorics.CoordinateWise
 public import ToMathlib.Combinatorics.MonotoneStructure
-public import ToMathlib.Control.AlternativeMonad
 public import ToMathlib.Control.Except
 public import ToMathlib.Control.Functor.Prod
-public import ToMathlib.Control.Lawful.MonadControl
-public import ToMathlib.Control.Lawful.MonadFunctor
-public import ToMathlib.Control.Lawful.MonadState
 public import ToMathlib.Control.Monad.Algebra
-public import ToMathlib.Control.Monad.Dijkstra
 public import ToMathlib.Control.Monad.Fold
-public import ToMathlib.Control.Monad.Graded
-public import ToMathlib.Control.Monad.Ordered
 public import ToMathlib.Control.Monad.RelWP
-public import ToMathlib.Control.Monad.Relation
 public import ToMathlib.Control.Monad.RelationalAlgebra
 public import ToMathlib.Control.Monad.RelationalAlgebraAnchored
-public import ToMathlib.Control.Monad.Relative
 public import ToMathlib.Control.Monad.Transformer
 public import ToMathlib.Control.Option
 public import ToMathlib.Control.OptionT
 public import ToMathlib.Control.StateT
 public import ToMathlib.Control.WriterT
 public import ToMathlib.Data.BitVec
+public import ToMathlib.Data.ByteArray
 public import ToMathlib.Data.ENNReal.AbsDiff
 public import ToMathlib.Data.ENNReal.Finiteness
 public import ToMathlib.Data.ENNReal.Gauss
@@ -42,6 +34,8 @@ public import ToMathlib.Data.IndexedBinaryTree.Equiv
 public import ToMathlib.Data.IndexedBinaryTree.Lemmas
 public import ToMathlib.Data.IndexedBinaryTree.Perfect
 public import ToMathlib.Data.List.Count
+public import ToMathlib.Data.List.Forall2
+public import ToMathlib.Data.List.MapM
 public import ToMathlib.Data.Set.Functor
 public import ToMathlib.Data.Vector
 public import ToMathlib.Data.Vector.Count
@@ -74,7 +68,10 @@ public import ToMathlib.MeasureTheory.Measure.Prop
 public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Bind
+public import ToMathlib.MeasureTheory.Measure.TotalVariation.Fintype
+public import ToMathlib.MeasureTheory.Measure.TotalVariation.Variation
 public import ToMathlib.MeasureTheory.Measure.UniformTable
+public import ToMathlib.Order.RelClasses
 public import ToMathlib.OrderEnrichedCategory
 public import ToMathlib.Probability.Divergence.Renyi
 public import ToMathlib.Probability.Divergence.RenyiTotalVariation

@@ -41,7 +41,7 @@ theorem card_pos : 0 < Fintype.card (Fin 3 → Bool) := Fintype.card_pos
 /-- Enumeration clause: eagerly initialised, and sized by a numeral the author wrote at the
 site rather than by a type. That is the boundary `InitSweep.enumerationEntryPoints` draws,
 and this is the shape of the one `List.range` in the swept tree's load-time population
-(`SLHDSA.Concrete.Keccak.piLUT`). -/
+(`VCVio.Algorithms.Keccak.piLUT`). -/
 def table : List Nat := List.range 8
 
 /-- Entry-point clause again: an eagerly-initialised `Finset` whose elements are written

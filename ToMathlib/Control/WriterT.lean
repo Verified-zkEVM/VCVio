@@ -55,6 +55,21 @@ instance (α : Type u) : LawfulAppend (List α) where
 
 end LawfulAppend
 
+namespace WriterT.AppendWP
+
+/-- Append associativity supplies the core law used by the writer interpretation. -/
+scoped instance instAssociativeOfLawfulAppend {ω : Type u} [EmptyCollection ω] [Append ω]
+    [LawfulAppend ω] : Std.Associative (α := ω) (· ++ ·) where
+  assoc a b c := (LawfulAppend.append_assoc a b c).symm
+
+/-- The empty append log is a two-sided identity for the writer interpretation. -/
+scoped instance instLawfulIdentityOfLawfulAppend {ω : Type u} [EmptyCollection ω] [Append ω]
+    [LawfulAppend ω] : Std.LawfulIdentity (α := ω) (· ++ ·) ∅ where
+  left_id := LawfulAppend.empty_append
+  right_id := LawfulAppend.append_empty
+
+end WriterT.AppendWP
+
 namespace WriterT
 
 /-- A direct core monad lift writes the empty multiplicative log. -/
@@ -126,10 +141,10 @@ lemma bind_def' (x : WriterT ω m α) (f : α → WriterT ω m β) :
       (Prod.map id (w₁ ++ ·)) <$> (f a)) := rfl
 
 @[simp]
-lemma run_pure' [LawfulMonad m] (x : α) :
+lemma run_pure' (x : α) :
     (pure x : WriterT ω m α).run = pure (x, ∅) := rfl
 
-lemma run_bind' [LawfulMonad m] (x : WriterT ω m α) (f : α → WriterT ω m β) :
+lemma run_bind' (x : WriterT ω m α) (f : α → WriterT ω m β) :
     (x >>= f).run = x.run >>= fun (a, w₁) => Prod.map id (w₁ ++ ·) <$> (f a).run := rfl
 
 lemma run_map' (x : WriterT ω m α) (f : α → β) : (f <$> x).run = Prod.map f id <$> x.run := rfl
@@ -168,11 +183,14 @@ section fail
 
 variable {m : Type u → Type v} [AlternativeMonad m] {ω : Type u} {α β γ : Type u}
 
+/-- Try `x₁`, falling back to `x₂ ()` through the `orElse` of the underlying monad `m`; the log
+is the one written by the branch whose result is returned. -/
 @[always_inline, inline]
 protected def orElse {α : Type u} (x₁ : WriterT ω m α)
     (x₂ : Unit → WriterT ω m α) : WriterT ω m α :=
   WriterT.mk (x₁.run <|> (x₂ ()).run)
 
+/-- The failing computation, inherited from the underlying monad `m`. -/
 @[always_inline, inline]
 protected def failure {α : Type u} : WriterT ω m α := WriterT.mk failure
 
@@ -249,7 +267,7 @@ def costs (oa : AddWriterT ω M α) : M ω :=
   (fun z => Multiplicative.toAdd z.2) <$> oa.run
 
 /-- Record an additive cost `w` in the writer log. -/
-def addTell [AddMonoid ω] (w : ω) : AddWriterT ω M PUnit :=
+def addTell (w : ω) : AddWriterT ω M PUnit :=
   tell (Multiplicative.ofAdd w)
 
 @[simp]
@@ -267,19 +285,19 @@ lemma costs_pure [AddMonoid ω] [LawfulMonad M] (x : α) :
   simp [costs]
 
 @[simp]
-lemma run_addTell [AddMonoid ω] (w : ω) :
+lemma run_addTell (w : ω) :
     (addTell (M := M) w).run = pure (⟨⟩, Multiplicative.ofAdd w) := rfl
 
 @[simp]
-lemma runAdd_addTell [AddMonoid ω] [LawfulMonad M] (w : ω) :
+lemma runAdd_addTell [LawfulMonad M] (w : ω) :
     (addTell (M := M) w).runAdd = pure (⟨⟩, w) := by
   simp [runAdd]
 
-lemma outputs_addTell [AddMonoid ω] [LawfulMonad M] (w : ω) :
+lemma outputs_addTell [LawfulMonad M] (w : ω) :
     (addTell (M := M) w).outputs = pure ⟨⟩ := by
   simp [outputs, addTell]
 
-lemma costs_addTell [AddMonoid ω] [LawfulMonad M] (w : ω) :
+lemma costs_addTell [LawfulMonad M] (w : ω) :
     (addTell (M := M) w).costs = pure w := by
   simp [costs, addTell]
 

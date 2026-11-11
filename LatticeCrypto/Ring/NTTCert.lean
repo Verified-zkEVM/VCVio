@@ -26,8 +26,8 @@ The first part below retains the reusable `basis`, `applyMatrix`, `idMatrix`,
 and composition / identity / additivity lemmas for developments that use that
 route.
 
-The structural route, now used by both ML-KEM and ML-DSA, avoids a dense matrix
-certificate. A
+The structural route, used by ML-KEM, ML-DSA and Falcon, avoids a dense
+matrix certificate. A
 `ButterflyLayout` records a proof-relevant partition of a coefficient index
 type into pairs. This lets concrete loop developments separate the indexing
 proof (that an array loop implements a layout) from the small ring calculation
@@ -268,6 +268,7 @@ variable {R : Type*} [CommRing R]
 Using an equivalence rather than separate index functions packages coverage,
 disjointness, and uniqueness in the form needed by a butterfly-stage proof. -/
 structure ButterflyLayout (Pair : Type v) (Coord : Type w) where
+  /-- The coordinate of each pair's left (`false`) and right (`true`) side. -/
   equiv : Pair × Bool ≃ Coord
 
 /-- The standard blocked NTT layout.  A pair is a block number and an offset
@@ -315,20 +316,6 @@ def inverseButterfly (zInv x y : R) : Bool → R
   | false => x + y
   | true => zInv * (x - y)
 
-/-- The same inverse butterfly with the right-minus-left convention used by
-the ML-KEM loop.  Its coefficient is the *negation* of the `zInv` expected by
-`inverseButterfly`; keeping this spelling explicit prevents a sign convention
-from being hidden in a concrete refinement proof. -/
-def inverseButterflyRev (zRev x y : R) : Bool → R
-  | false => x + y
-  | true => zRev * (y - x)
-
-theorem inverseButterflyRev_eq (zRev x y : R) :
-    inverseButterflyRev zRev x y = inverseButterfly (-zRev) x y := by
-  funext side
-  cases side <;> simp only [inverseButterflyRev, inverseButterfly]
-  ring
-
 /-- Apply one forward butterfly to every pair in a layout. -/
 def forwardStage {Pair : Type v} {Coord : Type w}
     (layout : ButterflyLayout Pair Coord) (z : Pair → R)
@@ -346,22 +333,6 @@ def inverseStage {Pair : Type v} {Coord : Type w}
   inverseButterfly (zInv pairSide.1)
     (input (layout.equiv (pairSide.1, false)))
     (input (layout.equiv (pairSide.1, true))) pairSide.2
-
-/-- Inverse stage using ML-KEM's right-minus-left spelling. -/
-def inverseStageRev {Pair : Type v} {Coord : Type w}
-    (layout : ButterflyLayout Pair Coord) (zRev : Pair → R)
-    (input : Coord → R) : Coord → R := fun coord =>
-  let pairSide := layout.equiv.symm coord
-  inverseButterflyRev (zRev pairSide.1)
-    (input (layout.equiv (pairSide.1, false)))
-    (input (layout.equiv (pairSide.1, true))) pairSide.2
-
-theorem inverseStageRev_eq {Pair : Type v} {Coord : Type w}
-    (layout : ButterflyLayout Pair Coord) (zRev : Pair → R) :
-    inverseStageRev layout zRev = inverseStage layout (fun pair => -zRev pair) := by
-  funext input coord
-  simp only [inverseStageRev, inverseStage]
-  exact congrFun (inverseButterflyRev_eq _ _ _) _
 
 /-- Pointwise scalar multiplication for coefficient functions. -/
 def scaleCoeffs {Coord : Type w} (c : R) (input : Coord → R) : Coord → R :=
@@ -469,8 +440,12 @@ theorem forwardStage_zero
 the inverse/forward roundtrip and compatibility of the inverse with a scalar
 accumulated by inner stages. -/
 structure ScaledStage (R : Type*) [CommRing R] (Coord : Type w) where
+  /-- The forward stage map on coefficient vectors. -/
   forward : (Coord → R) → (Coord → R)
+  /-- The inverse stage map, which undoes `forward` up to multiplication by `scalar`. -/
   inverse : (Coord → R) → (Coord → R)
+  /-- The factor by which `inverse` composed with `forward` scales its input; a butterfly
+  stage has factor `2`. -/
   scalar : R
   inverse_forward : ∀ input, inverse (forward input) = scaleCoeffs scalar input
   inverse_scale : ∀ c input,
@@ -480,9 +455,9 @@ structure ScaledStage (R : Type*) [CommRing R] (Coord : Type w) where
   forward_zero : forward 0 = 0
 
 /-- Build a composable stage certificate from a butterfly layout and matching
-twiddle tables.  For ML-KEM's syntactic `zRev * (y - x)`, the `zInv` supplied
-here must be `-zRev`; for ML-DSA it is the coefficient already multiplying
-`(x - y)`.  In both cases the obligation is explicitly `zInv * z = 1`. -/
+twiddle tables.  `zInv` is the coefficient multiplying `x - y` in the inverse
+butterfly, so a loop written as `zRev * (y - x)` supplies `zInv = -zRev`; the
+obligation is `zInv * z = 1`. -/
 def butterflyStage {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pair Coord)
     (z zInv : Pair → R) (hz : ∀ pair, zInv pair * z pair = 1) :
     ScaledStage R Coord where
@@ -491,25 +466,6 @@ def butterflyStage {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pa
   scalar := 2
   inverse_forward := inverseStage_forwardStage layout z zInv hz
   inverse_scale := inverseStage_scaleCoeffs layout zInv
-  forward_add := forwardStage_add layout z
-  forward_sub := forwardStage_sub layout z
-  forward_zero := forwardStage_zero layout z
-
-/-- Build a stage certificate using the right-minus-left inverse spelling of
-the ML-KEM loop.  The sign is visible in the required twiddle law:
-`(-zRev pair) * z pair = 1`. -/
-def butterflyStageRev {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pair Coord)
-    (z zRev : Pair → R) (hz : ∀ pair, (-zRev pair) * z pair = 1) :
-    ScaledStage R Coord where
-  forward := forwardStage layout z
-  inverse := inverseStageRev layout zRev
-  scalar := 2
-  inverse_forward := by
-    rw [inverseStageRev_eq]
-    exact inverseStage_forwardStage layout z (fun pair => -zRev pair) hz
-  inverse_scale := by
-    rw [inverseStageRev_eq]
-    exact inverseStage_scaleCoeffs layout (fun pair => -zRev pair)
   forward_add := forwardStage_add layout z
   forward_sub := forwardStage_sub layout z
   forward_zero := forwardStage_zero layout z

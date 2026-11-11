@@ -32,7 +32,7 @@ private def runVCGenFinish : TacticM Unit := do
     -- Only `wp_*`, `propInd_*`, and `game_rule` are kept here; generic ring/if normalization
     -- (`one_mul`, `zero_add`, `ite_true`, `ite_false`, `dite_true`, …) is already in Mathlib's
     -- default simp-set and was rarely firing on the Triple/wp-shaped goals that reach this
-    -- finish pass — building those extra simp entries on every `vcgen` invocation was a
+    -- finish pass — building those extra simp entries on every `pvcgen` invocation was a
     -- constant tax without an observed win.
     let _ ← tryEvalTacticSyntax
       (← `(tactic| all_goals try simp only [
@@ -47,7 +47,7 @@ private def runVCGenFinish : TacticM Unit := do
   unless (← getGoals).isEmpty do
     discard <| tryEvalTacticSyntax
       (← `(tactic| all_goals try
-        (refine Std.Internal.Do.Triple.intro ?_
+        (refine Std.WP.Triple.intro ?_
          repeat intro _
          simp [Lean.Order.PartialOrder.rel,
            MonadStateOf.get, MonadStateOf.set, MonadReaderOf.read, MonadWriter.tell,
@@ -63,9 +63,7 @@ private def runVCGenFinish : TacticM Unit := do
            OracleComp.Lower.WriterT.wp_monadLift,
            OracleComp.Lower.WriterT.wp_map,
            WriterT.run_bind, WriterT.run_pure, WriterT.run_tell, WriterT.run_map,
-           MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp_epost,
+           ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))
@@ -85,14 +83,12 @@ private def runVCGenFinish : TacticM Unit := do
            OracleComp.Lower.WriterT.wp_tell,
            OracleComp.Lower.WriterT.wp_monadLift,
            WriterT.run_tell, WriterT.run_pure, WriterT.run_monadLift, WriterT.run_map,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp_epost,
-           MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
+           ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))
   unless (← getGoals).isEmpty do
-    discard <| runBoundedPasses "vcgen finish" TacticInternals.Unary.runVCGenClosePass
+    discard <| runBoundedPasses "pvcgen finish" TacticInternals.Unary.runVCGenClosePass
   unless (← getGoals).isEmpty do
     discard <| tryEvalTacticSyntax
       (← `(tactic| all_goals try
@@ -109,9 +105,7 @@ private def runVCGenFinish : TacticM Unit := do
            OracleComp.Lower.WriterT.wp_tell,
            OracleComp.Lower.WriterT.wp_monadLift,
            WriterT.run_tell, WriterT.run_pure, WriterT.run_monadLift, WriterT.run_map,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp,
-           OracleComp.Lower.wp_eq_mAlgOrdered_wp_epost,
-           MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
+           ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))
@@ -307,14 +301,17 @@ elab_rules : tactic
         "vcstep inv: expected a `Triple` goal about `replicate`, `List.foldlM`, \
         or `List.mapM`."
 
-/-- `vcgen` exhaustively decomposes a `Triple`, raw `wp`, or probability goal
+/-- `pvcgen` exhaustively decomposes a `Triple`, raw `wp`, or probability goal
 with spec-aware stepping.
 
 Accepts `Triple` goals, raw `wp` goals, lower-bound / exact probability goals, and
 `Pr{…}[…] = Pr{…}[…]` equality goals. Probability goals are automatically lowered or
 dispatched (swap/congr) before structural decomposition continues.
 
-Enhancements over simple structural decomposition:
+Bare `vcgen` is core's generic verification-condition generator over `Std.WP`. Each `pvcgen`
+pass first hands a quantitative triple to it with the `@[spec]` rules of the lower reading
+(`set_option vcvio.vcgen.core false` switches this off), and adds the probability-specific steps
+around it:
 - Lowers `Pr{…}[…]` goals into `Triple` or raw `wp` form before decomposition
 - After bind decomposition, tries to close spec subgoals from local context
 - Falls back to backward WP (`triple_bind_wp`) when no spec is available
@@ -327,32 +324,28 @@ Enhancements over simple structural decomposition:
 - Finishes with bounded local consequence search on closed goals
 
 Typical usage: bring specs into context with `have` or as function parameters, then
-call `vcgen` to automatically decompose and apply them.
+call `pvcgen` to automatically decompose and apply them.
 
 Variants:
-- `vcgen using cut` performs one explicit bind step with intermediate postcondition `cut`,
+- `pvcgen using cut` performs one explicit bind step with intermediate postcondition `cut`,
   then continues with exhaustive decomposition on all resulting goals.
-- `vcgen inv I` applies an explicit loop invariant `I` to the first `replicate`/`foldlM`/`mapM`
-  goal, then continues with exhaustive decomposition. -/
-tactic_extension Lean.Parser.Tactic.vcgenMacro
+- `pvcgen inv I` applies an explicit loop invariant `I` to the first `replicate`/`foldlM`/`mapM`
+  goal, then continues with exhaustive decomposition.
+- `pvcgen?` runs `pvcgen` and emits the planned step replay across each pass. -/
+syntax "pvcgen" : tactic
+@[inherit_doc tacticPvcgen, tactic_alt tacticPvcgen]
+syntax "pvcgen" "using" term : tactic
+@[inherit_doc tacticPvcgen, tactic_alt tacticPvcgen]
+syntax "pvcgen" &"inv" term : tactic
+@[inherit_doc tacticPvcgen, tactic_alt tacticPvcgen]
+syntax "pvcgen?" : tactic
 
-@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
-syntax (name := vcgenBasic) "vcgen" : tactic
-@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
-syntax (name := vcgenUsing) "vcgen" "using" term : tactic
-@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
-syntax (name := vcgenInv) "vcgen" &"inv" term : tactic
-@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
-syntax (name := vcgenSuggestion) "vcgen?" : tactic
-
-elab_rules (kind := vcgenBasic) : tactic
-  | `(tactic| vcgen) => withVCGenRunTiming "vcgen" do
-      discard <| runBoundedPasses "vcgen" TacticInternals.Unary.runVCGenPass
+elab_rules : tactic
+  | `(tactic| pvcgen) => withVCGenRunTiming "pvcgen" do
+      discard <| runBoundedPasses "pvcgen" TacticInternals.Unary.runVCGenPass
       withVCGenFinishTiming runVCGenFinish
-
-elab_rules (kind := vcgenSuggestion) : tactic
-  | `(tactic| vcgen?) => withVCGenRunTiming "vcgen?" do
-      let batches ← runBoundedPassesCollect "vcgen?" TacticInternals.Unary.runVCGenPassPlanned
+  | `(tactic| pvcgen?) => withVCGenRunTiming "pvcgen?" do
+      let batches ← runBoundedPassesCollect "pvcgen?" TacticInternals.Unary.runVCGenPassPlanned
       let needsFinish := !(← getGoals).isEmpty
       withVCGenFinishTiming runVCGenFinish
       for batch in batches do
@@ -382,27 +375,23 @@ elab_rules (kind := vcgenSuggestion) : tactic
           ]
         ]
       if lines.isEmpty then
-        lines := ["vcgen"]
+        lines := ["pvcgen"]
       addTryThisTextSuggestion (← getRef) <| String.intercalate "\n" lines
-
-elab_rules (kind := vcgenUsing) : tactic
-  | `(tactic| vcgen using $cut) => withVCGenRunTiming "vcgen" do
+  | `(tactic| pvcgen using $cut) => withVCGenRunTiming "pvcgen" do
       discard <| TacticInternals.Unary.tryLowerProbGoal
       if ← TacticInternals.Unary.runHoareStepRuleUsing cut then
-        discard <| runBoundedPasses "vcgen" TacticInternals.Unary.runVCGenPass
+        discard <| runBoundedPasses "pvcgen" TacticInternals.Unary.runVCGenPass
         withVCGenFinishTiming runVCGenFinish
       else
         TacticInternals.Unary.throwVCGenStepError
-
-elab_rules (kind := vcgenInv) : tactic
-  | `(tactic| vcgen inv $inv) => withVCGenRunTiming "vcgen" do
+  | `(tactic| pvcgen inv $inv) => withVCGenRunTiming "pvcgen" do
       discard <| TacticInternals.Unary.tryLowerProbGoal
       if ← TacticInternals.Unary.runLoopInvExplicit inv then
-        discard <| runBoundedPasses "vcgen" TacticInternals.Unary.runVCGenPass
+        discard <| runBoundedPasses "pvcgen" TacticInternals.Unary.runVCGenPass
         withVCGenFinishTiming runVCGenFinish
       else
         throwError
-          "vcgen inv: expected a `Triple` goal about `replicate`, `List.foldlM`, \
+          "pvcgen inv: expected a `Triple` goal about `replicate`, `List.foldlM`, \
           or `List.mapM`."
 
 /-- `exp_norm` normalizes expectation / indicator arithmetic in the current goal.

@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import LatticeCrypto.MLDSA.BoxSampling
 public import LatticeCrypto.MLDSA.Primitives
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
@@ -35,8 +36,8 @@ The `IdenSchemeWithAbort` type parameters instantiate as follows for ML-DSA:
 
 This file models the **proof-level IDS** used in the Fiat-Shamir-with-aborts security argument:
 
-- **Commit** samples `y` uniformly at random, rather than deriving it from message-dependent
-  seeds via `ExpandMask(ρ'', κ)`.
+- **Commit** samples `y` with `sampleMaskVec`, which decodes uniform values as `ExpandMask` does,
+  rather than deriving it from message-dependent seeds via `ExpandMask(ρ'', κ)`.
 - **No message hashing**: the IDS operates without messages; the message enters only through
   the Fiat-Shamir transform.
 - **No retry counter**: the IDS commit is a single probabilistic step; retry logic with
@@ -60,21 +61,37 @@ variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
 
 /-- The semantic public key: the public seed `ρ` and the power-2 rounded key vector `t₁`. -/
 structure PublicKey where
+  /-- The 32-byte public seed `ρ`, from which `Â = ExpandA(ρ)` (FIPS 204 Algorithm 32) is
+  expanded. -/
   rho : Bytes 32
+  /-- The high-order part `t₁` of `Power2Round(t)` (FIPS 204 Algorithm 35) for the key vector
+  `t = A·s₁ + s₂`. -/
   t1 : Vector prims.Power2High p.k
 
 /-- The semantic secret key: includes the expanded public key material for efficient signing. -/
 structure SecretKey where
+  /-- The 32-byte public seed `ρ`, as in the public key. -/
   rho : Bytes 32
+  /-- The 32-byte private seed `K`, mixed into the private random seed
+  `ρ'' = H(K ‖ rnd ‖ μ, 64)` during signing (FIPS 204 Algorithm 7). -/
   key : Bytes 32
+  /-- The 64-byte public-key hash `tr = H(pk, 64)`, hashed with the message into `μ`. -/
   tr : Bytes 64
+  /-- The `η`-bounded secret vector `s₁` of length `l`, produced by `ExpandS`
+  (FIPS 204 Algorithm 33). -/
   s1 : RqVec p.l
+  /-- The `η`-bounded secret vector `s₂` of length `k`, produced by `ExpandS`
+  (FIPS 204 Algorithm 33). -/
   s2 : RqVec p.k
+  /-- The low-order part `t₀` of `Power2Round(t)`, withheld from the public key. -/
   t0 : RqVec p.k
 
 /-- The signing state: commitment data retained between commit and respond phases. -/
 structure SigningState where
+  /-- The masking vector `y`, which the response combines with the challenge into
+  `z = y + c·s₁`. -/
   y : RqVec p.l
+  /-- The unrounded commitment vector `w = A·y`, whose high bits form the commitment `w₁`. -/
   w : RqVec p.k
 
 /-- The public commitment: `w₁ = HighBits(w)`. -/
@@ -173,7 +190,7 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
 
 /-- The core identification scheme with aborts for ML-DSA.
 
-- **Commit**: sample `y` uniformly, compute `w = NTT⁻¹(Â · NTT(y))`,
+- **Commit**: sample `y` uniformly from the mask box, compute `w = NTT⁻¹(Â · NTT(y))`,
   return `(w₁ = HighBits(w), state = (y, w))`.
 - **Respond** (Alg 7, lines 16–30): derive `c = SampleInBall(c̃)`, compute
   `z = y + c·s₁`, check `‖z‖∞ < γ₁ - β` and `‖LowBits(w - c·s₂)‖∞ < γ₂ - β`,
@@ -183,7 +200,7 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
   `w'_Approx = Az - c·(t₁·2^d)`, verify `UseHint(h, w'_Approx) = w₁` and
   hint weight `≤ ω`. -/
 def identificationScheme
-    [DecidableEq prims.High] :
+    [DecidableEq prims.High] [NeZero p.gamma1] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
@@ -191,7 +208,7 @@ def identificationScheme
       (validKeyPair p prims) where
   commit := fun pk _sk => do
     let aHat := prims.expandA pk.rho
-    let y ← $ᵗ (RqVec p.l)
+    let y ← sampleMaskVec p.l p.gamma1
     let w := aHat * y
     let w1 := prims.highBitsVec w
     return (w1, ⟨y, w⟩)
@@ -226,7 +243,7 @@ never consumed by the operations — so every per-key fact about the operations 
 between the two scheme constants. This is the scheme used by the idealized short-key security
 statements, whose key generators produce material-valid rather than seed-derived pairs. -/
 def identificationSchemeShort
-    [DecidableEq prims.High] :
+    [DecidableEq prims.High] [NeZero p.gamma1] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
@@ -235,6 +252,50 @@ def identificationSchemeShort
   ⟨(identificationScheme p prims).commit,
     (identificationScheme p prims).respond,
     (identificationScheme p prims).verify⟩
+
+/-! ### The statement with `t₀` public
+
+FIPS 204 publishes only `t₁` and keeps the low-order part `t₀` of `t = t₁·2^d + t₀` in the secret
+key. The security analyses of ML-DSA work with the variant whose public key is the full `t`: a
+forger against the real scheme is a forger against the variant that ignores `t₀`, and the variant's
+statement gives an HVZK simulator `t₀` directly.
+
+That transfer (`unforgeableAdvantage_eq_full`) holds because the Fiat–Shamir-with-aborts layer
+hashes `(msg, w₁)` and never the statement. FIPS 204's signing layer also binds the message to
+`tr = H(ρ, t₁)`. A FIPS-format layer over this variant must keep that hash on `(ρ, t₁)` and never
+hash `t₀`; otherwise its signatures depend on `t₀` and its forgers differ from the real scheme's. -/
+
+/-- The public key together with the low-order part `t₀`: the statement of the identification
+scheme in which the full `t = t₁·2^d + t₀` is public. -/
+structure FullPublicKey where
+  /-- The public key `(ρ, t₁)`. -/
+  pk : PublicKey p prims
+  /-- The low-order part `t₀` of `Power2Round(t)`. -/
+  t0 : RqVec p.k
+
+/-- Key validity with `t₀` public: the public key and the secret key form a generated pair, and
+the published `t₀` is the secret key's. -/
+noncomputable def validFullKeyPair (fpk : FullPublicKey p prims) (sk : SecretKey p) : Bool :=
+  validKeyPair p prims fpk.pk sk && decide (fpk.t0 = sk.t0)
+
+@[simp] theorem validFullKeyPair_eq_true_iff (fpk : FullPublicKey p prims) (sk : SecretKey p) :
+    validFullKeyPair p prims fpk sk = true ↔
+      validKeyPair p prims fpk.pk sk = true ∧ fpk.t0 = sk.t0 := by
+  simp [validFullKeyPair]
+
+/-- The ML-DSA identification scheme with `t₀` in the statement. Commit, respond and verify are
+those of `identificationScheme` at the public key `fpk.pk` and ignore `t₀`, so the transcripts and
+verification are the same; only a simulator, which sees the statement, can use `t₀`. -/
+def identificationSchemeFull
+    [DecidableEq prims.High] [NeZero p.gamma1] :
+    IdenSchemeWithAbort
+      (FullPublicKey p prims) (SecretKey p)
+      (Commitment p prims) (SigningState p)
+      (CommitHashBytes p) (Response p prims)
+      (validFullKeyPair p prims) :=
+  ⟨fun fpk => (identificationScheme p prims).commit fpk.pk,
+    fun fpk => (identificationScheme p prims).respond fpk.pk,
+    fun fpk => (identificationScheme p prims).verify fpk.pk⟩
 
 /-! ### Key Generation Algebraic Properties -/
 

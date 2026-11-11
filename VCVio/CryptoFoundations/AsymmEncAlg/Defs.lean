@@ -28,8 +28,11 @@ purely algorithmic; probabilistic semantics and public-randomness injection are 
 separately when defining security experiments. -/
 @[ext]
 structure AsymmEncAlg (m : Type → Type u) [Monad m] (M PK SK C : Type) where
+  /-- Sample a public/secret key pair. -/
   keygen : m (PK × SK)
+  /-- Encrypt a message under a public key. -/
   encrypt : (pk : PK) → (msg : M) → m C
+  /-- Decrypt a ciphertext under a secret key, returning `none` on rejection. -/
   decrypt : (sk : SK) → (c : C) → m (Option M)
 
 /-- An explicit-coins asymmetric encryption scheme in the monad `m`.
@@ -38,10 +41,15 @@ Key generation runs in `m`, while encryption and decryption become pure once the
 `R` is supplied explicitly. This is the natural refinement used by FO-style transforms, where the
 coins are sampled externally or derived from an oracle. -/
 structure AsymmEncAlg.ExplicitCoins (m : Type → Type u) [Monad m] (M PK SK R C : Type) where
+  /-- Sample a public/secret key pair. -/
   keygen : m (PK × SK)
+  /-- Deterministically encrypt a message under a public key using the supplied coins. -/
   encrypt : (pk : PK) → (msg : M) → (coins : R) → C
+  /-- Deterministically decrypt a ciphertext under a secret key, returning `none` on rejection. -/
   decrypt : (sk : SK) → (c : C) → Option M
 
+/-- `PKE_Alg` is an alternative name for `AsymmEncAlg`, the type of public-key encryption
+schemes. -/
 abbrev PKE_Alg := AsymmEncAlg
 
 namespace AsymmEncAlg

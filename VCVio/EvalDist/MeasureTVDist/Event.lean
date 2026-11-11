@@ -44,6 +44,26 @@ theorem measureETVDist_map_le [MeasurableSpace α] [MeasurableSpace β] (mx my :
   simp only [measureETVDist, evalDist_map mx hf, evalDist_map my hf]
   exact Measure.etvDist_map_le _ _ f hf
 
+/-- Measurable post-processing of both computations cannot increase real total variation. -/
+theorem measureTVDist_map_le [MeasurableSpace α] [MeasurableSpace β] (mx my : m α) (f : α → β)
+    (hf : Measurable f) : measureTVDist (f <$> mx) (f <$> my) ≤ measureTVDist mx my := by
+  rw [measureTVDist_eq_toReal_measureETVDist, measureTVDist_eq_toReal_measureETVDist]
+  exact ENNReal.toReal_mono (measureETVDist_ne_top mx my) (measureETVDist_map_le mx my f hf)
+
+/-- The real probabilities of a measurable event under two computations differ by at most their
+real total variation. -/
+theorem abs_prEvent_toReal_sub_le_measureTVDist [MeasurableSpace α] (mx my : m α)
+    (p : α → Prop) (hp : Measurable p) :
+    |(Pr{let x ← mx}[p x]).toReal - (Pr{let y ← my}[p y]).toReal| ≤ measureTVDist mx my := by
+  have hfin (mz : m α) : (Pr{let x ← mz}[p x]) + measureETVDist mx my ≠ ⊤ :=
+    ENNReal.add_ne_top.2 ⟨prEvent_ne_top _, measureETVDist_ne_top mx my⟩
+  have h₁ := ENNReal.toReal_mono (hfin my) (prEvent_le_prEvent_add_measureETVDist mx my p hp)
+  have h₂ := ENNReal.toReal_mono (hfin mx)
+    (measureETVDist_comm my mx ▸ prEvent_le_prEvent_add_measureETVDist my mx p hp)
+  rw [ENNReal.toReal_add (prEvent_ne_top _) (measureETVDist_ne_top mx my)] at h₁ h₂
+  rw [measureTVDist_eq_toReal_measureETVDist, abs_sub_le_iff]
+  exact ⟨by linarith, by linarith⟩
+
 /-- Computations that agree on every event away from a bad event are, after any post-processing,
 within the bad event's probability in total variation. -/
 theorem measureETVDist_map_le_prEvent_of_agree [MeasurableSpace β] (mx my : m α) (f : α → β)

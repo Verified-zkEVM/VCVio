@@ -129,7 +129,9 @@ the commitment using the trapdoor.
 Named `TrapdoorExtractor` specifically to leave room for other extraction
 paradigms (e.g. rewinding-based extraction). -/
 structure TrapdoorExtractor (PP TD C M : Type) where
+  /-- Generate public parameters together with an extraction trapdoor. -/
   setupExtract : ProbComp (PP × TD)
+  /-- Recover the committed message from a commitment using the trapdoor. -/
   extract : TD → C → ProbComp M
 
 /-- The extraction setup produces the same public parameter distribution as

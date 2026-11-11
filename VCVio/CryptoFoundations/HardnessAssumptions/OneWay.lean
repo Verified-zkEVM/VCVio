@@ -81,8 +81,11 @@ variable {PK SK : Type}
 The forward direction is a permutation computable from the public key;
 the inverse requires the secret key (the trapdoor). -/
 structure TrapdoorPermutation (PK SK X : Type) where
+  /-- Sample a public key together with its trapdoor. -/
   keygen : ProbComp (PK × SK)
+  /-- Evaluate the permutation in the forward direction under the public key. -/
   forward : PK → X → X
+  /-- Invert the permutation using the trapdoor. -/
   inverse : SK → X → X
 
 /-- A trapdoor permutation is correct if inversion recovers the original input

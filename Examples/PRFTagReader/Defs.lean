@@ -30,7 +30,9 @@ namespace PRFTagReader
 
 /-- Transcript emitted by a tag in one session: a fresh nonce together with its authenticator. -/
 structure TagTranscript (Nonce Digest : Type) where
+  /-- The fresh nonce the tag sampled for this session. -/
   nonce : Nonce
+  /-- The authenticator the tag computed on the nonce. -/
   auth : Digest
 deriving DecidableEq, Repr
 
@@ -59,6 +61,7 @@ end ReaderReply
 available to each tag. Real unlinkability worlds reuse one slot per tag; ideal worlds may allocate
 a fresh slot per session. -/
 structure SessionPattern (TagId Slot : Type) (sessionsPerTag : ℕ) where
+  /-- The slot whose secret is used by the given session of the given tag. -/
   slot : TagId → Fin sessionsPerTag → Slot
 
 section Pattern
@@ -79,8 +82,11 @@ end Pattern
 reuse across all sessions of a tag, while `evalSingle` models an independent secret for each
 session of each tag. -/
 structure TagReaderPRFs (K TagId Nonce Digest : Type) (sessionsPerTag : ℕ) where
+  /-- Key generation shared by both keyed hash families. -/
   keygen : ProbComp K
+  /-- Keyed hash on `(tag, nonce)`, with one secret per tag reused across its sessions. -/
   evalMultiple : K → TagId → Nonce → Digest
+  /-- Keyed hash on `(tag, session, nonce)`, with an independent secret per session of a tag. -/
   evalSingle : K → TagId → Fin sessionsPerTag → Nonce → Digest
 
 namespace TagReaderPRFs
@@ -103,14 +109,19 @@ end TagReaderPRFs
 /-- Authentication-game state: the honest tag transcripts emitted so far, together with all
 reader acceptances that cannot be traced back to a prior honest tag output. -/
 structure AuthState (TagId Nonce Digest : Type) where
+  /-- The transcripts emitted so far by the honest tag oracle, each paired with its tag. -/
   honestOutputs : Finset (TagId × TagTranscript Nonce Digest)
+  /-- Accepted reader transcripts, each paired with a matching tag that never emitted it. -/
   readerForged : Finset (TagId × TagTranscript Nonce Digest)
 
 /-- Ideal authentication-game state: the cached random-function table, together with the same
 observable logs used in the real game. -/
 structure AuthIdealState (TagId Nonce Digest : Type) where
+  /-- The lazily sampled random-function table on `(tag, nonce)` pairs. -/
   responses : ((TagId × Nonce) →ₒ Digest).QueryCache
+  /-- The transcripts emitted so far by the honest tag oracle, each paired with its tag. -/
   honestOutputs : Finset (TagId × TagTranscript Nonce Digest)
+  /-- Accepted reader transcripts, each paired with a matching tag that never emitted it. -/
   readerForged : Finset (TagId × TagTranscript Nonce Digest)
 
 section AuthState
@@ -133,6 +144,7 @@ end AuthState
 
 /-- Unlinkability-game state: how many sessions of each tag have already been consumed. -/
 structure UnlinkState (TagId : Type) where
+  /-- The number of sessions each tag has consumed so far. -/
   sessionsUsed : TagId → ℕ
 
 /-- Bad-world state for the multiple-session unlinkability proof: session counters, the list of
@@ -142,9 +154,13 @@ slot-positive trace-union residue on the reader branch. The two flags are indepe
 may flip `bad` but never touch `cacheBad`; reader steps may flip `cacheBad` but never touch `bad`.
 -/
 structure UnlinkBadState (TagId Nonce Digest : Type) where
+  /-- The number of sessions each tag has consumed so far. -/
   sessionsUsed : TagId → ℕ
+  /-- All random-function outputs sampled so far for each `(tag, nonce)` pair, newest first. -/
   responses : ((TagId × Nonce) →ₒ List Digest).QueryCache
+  /-- Tag-side bad-event flag, set once a tag query repeats an earlier `(tag, nonce)` pair. -/
   bad : Bool
+  /-- Reader-side bad-event flag, used by the direct-coupling argument on the reader branch. -/
   cacheBad : Bool
 
 section UnlinkState

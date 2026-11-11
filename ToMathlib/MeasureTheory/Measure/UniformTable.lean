@@ -115,7 +115,7 @@ theorem bind_uniformOn_map_equiv_eq_prod {A B : Type*} [MeasurableSpace A]
     (μ : Measure A) (e : A → B ≃ B) :
     μ.bind (fun a => (uniformOn Set.univ : Measure B).map (fun b => (a, e a b))) =
       μ.prod (uniformOn Set.univ : Measure B) := by
-  rw [Measure.prod]
+  rw [Measure.prod_eq_of_sfinite]
   apply Measure.bind_congr_right
   exact Filter.Eventually.of_forall fun a => by
     change (uniformOn Set.univ : Measure B).map (Prod.mk a ∘ e a) =

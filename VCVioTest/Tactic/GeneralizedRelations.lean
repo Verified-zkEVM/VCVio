@@ -26,7 +26,7 @@ The companion `GeneralizedRelationsExperiments` module isolates proposed registr
 public section
 
 open OracleComp OracleComp.ProgramLogic OracleSpec MeasureTheory
-open scoped ENNReal Std.Internal.Do OracleComp.Lower
+open scoped ENNReal Std.WP OracleComp.Lower
 
 run_cmd do
   let env ← Lean.getEnv
@@ -65,12 +65,9 @@ example (h : ∀ x ∈ support mx, f x ≤ g x) : wp mx f ≤ wp mx g := by
   grw [h]
   assumption
 
+/-- Core's raw `wp` head carries the support-aware congruence directly. -/
 example (h : ∀ x ∈ support mx, f x ≤ g x) :
-    Std.Internal.Do.wp mx f Lean.Order.bot ≤ Std.Internal.Do.wp mx g Lean.Order.bot := by
-  -- gap(gcongr, 2026-09-08): the raw WP head needs explicit facade normalization.
-  fail_if_success gcongr
-  simp only [OracleComp.Lower.wp_eq_mAlgOrdered_wp]
-  guard_target = MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g
+    Std.WP.wp mx f Lean.Order.bot ≤ Std.WP.wp mx g Lean.Order.bot := by
   gcongr with x hx
   guard_hyp hx : x ∈ support mx
   guard_target = f x ≤ g x

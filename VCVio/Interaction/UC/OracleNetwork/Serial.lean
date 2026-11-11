@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.Interaction.UC.OracleNetwork
-public import PolyFun.Interaction.UC.RequestNetwork.Serial
+public import PolyFun.Interaction.Execution.RequestNetwork.Serial
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 
 /-!
@@ -23,6 +23,8 @@ public section
 
 namespace Interaction.UC.OracleNetwork
 
+open Interaction.Execution
+
 export RequestNetwork (serialSchedule serialSchedule_length loggedRun loggedRun_pure
   loggedRun_liftBind run_serialSchedule_return run_serialSchedule initial result
   serialObservation serialObservation_eq_loggedRun)
@@ -37,8 +39,7 @@ theorem map_loggedRun (impl : QueryImpl spec (StateT S m))
     (id : Client) (program : OracleComp spec α) (service : S) :
     (fun out => (out.1.1, out.2)) <$> loggedRun impl id program service =
       (simulateQ impl program).run service := by
-  simpa only [simulateQ_def, FreeM.liftMHom_toFun_eq] using
-    RequestNetwork.map_loggedRun impl id program service
+  exact RequestNetwork.map_loggedRun impl id program service
 
 variable [DecidableEq ι]
 

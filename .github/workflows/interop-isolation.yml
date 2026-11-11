@@ -4,10 +4,10 @@ name: Interop TCB Isolation
 # `docs/agents/interop.md`: core VCVio libraries must not import from
 # `Interop.…`, `Hax.…`, or `Aeneas.…`, and `Interop/**` must not depend on
 # downstream libraries (`LatticeCrypto`, `Examples`, `LatticeCryptoTest`,
-# `Extern`, `VCVioWidgets`, `VCVioTest`).
+# `Extern`, `VCVioTest`).
 #
 # Runs on every PR and on pushes to `main`. The check is fast
-# (a handful of `rg` invocations) and runs without a Lean toolchain.
+# and parses source with Lean; it does not build the project or fetch Lake dependencies.
 
 on:
   push:
@@ -27,8 +27,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
+        with:
+          auto-config: false
+          use-github-cache: false
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: false
       - name: Run isolation check
-        run: bash scripts/check-interop-isolation.sh
+        run: |
+          uv run --no-project --python 3.12 python scripts/test-interop-isolation.py
+          bash scripts/check-interop-isolation.sh
 
       - name: Run Extern isolation check
         run: bash scripts/check-extern-isolation.sh

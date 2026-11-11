@@ -125,7 +125,7 @@ example (f : Bool → ProbComp (Fin 3)) (i : Bool) :
 def emptyFamily : Fin 0 → ProbComp Bool := fun i => i.elim0
 
 example : 𝒟[Fin.mOfFn 0 emptyFamily] Set.univ = 1 := by
-  simp [evalDist_mOfFn]
+  simp
 
 /-- A product family with one successful coordinate and one failing coordinate. -/
 def familyWithFailure : Bool → OptionT ProbComp Bool

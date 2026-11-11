@@ -51,8 +51,13 @@ def IND_CCA_oracleSpec (_encAlg : AsymmEncAlg (OracleComp spec) M PK SK C) :=
 `chooseMessages` runs before the challenge and outputs `(m₀, m₁, st)`;
 `distinguish st c⋆` runs after seeing the challenge ciphertext. -/
 structure IND_CCA_Adversary (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C) where
+  /-- The state the adversary carries from the message-choice phase to the guessing phase. -/
   State : Type
+  /-- Given the public key and decryption-oracle access, choose the two challenge messages
+  together with the state to pass to `distinguish`. -/
   chooseMessages : PK → OracleComp encAlg.IND_CCA_oracleSpec (M × M × State)
+  /-- Given the saved state and the challenge ciphertext, and with access to a decryption oracle
+  that refuses the challenge, guess which challenge message was encrypted. -/
   distinguish : State → C → OracleComp encAlg.IND_CCA_oracleSpec Bool
 
 /-- Pre-challenge decryption oracle for the IND-CCA game. -/

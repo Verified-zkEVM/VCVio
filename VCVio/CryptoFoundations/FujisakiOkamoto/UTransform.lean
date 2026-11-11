@@ -29,19 +29,30 @@ namespace FujisakiOkamoto
 /-- A reusable FO hash world packages the public hash-oracle interface together with the
 variant-specific ways of deriving encryption coins and shared keys. -/
 structure Variant {ι : Type} (hashOracleSpec : OracleSpec ι) (M PK C R K : Type) where
+  /-- The state of the hash oracles, such as the caches of lazily sampled random oracles. -/
   QueryCache : Type
+  /-- The hash-oracle state before any query has been answered. -/
   initCache : QueryCache
+  /-- The stateful implementation of the hash oracles, threading the `QueryCache` state. -/
   queryImpl : QueryImpl hashOracleSpec (StateT QueryCache ProbComp)
+  /-- Derive the encryption coins for a message under a public key by querying the hash
+  oracles. -/
   deriveCoins : {m : Type → Type v} → [Monad m] → [MonadLiftT ProbComp m] →
     [HasQuery hashOracleSpec m] → PK → M → m R
+  /-- Derive the shared key for a message and its ciphertext under a public key by querying the
+  hash oracles. -/
   deriveKey : {m : Type → Type v} → [Monad m] → [MonadLiftT ProbComp m] →
     [HasQuery hashOracleSpec m] → PK → M → C → m K
 
 /-- Rejection behavior is factored out from the FO hash world so explicit and implicit rejection
 share the same core construction. -/
 structure RejectionPolicy (K C : Type) where
+  /-- The extra secret state used to answer rejected ciphertexts, such as a PRF key. -/
   FallbackState : Type
+  /-- Sample the fallback secret state as part of key generation. -/
   keygen : ProbComp FallbackState
+  /-- The decapsulation output for a rejected ciphertext, computed from the fallback state:
+  `none` under explicit rejection, or a pseudorandom fallback key under implicit rejection. -/
   onReject : FallbackState → C → Option K
 
 /-- Explicit rejection returns `none` and carries no extra secret state. -/
@@ -270,8 +281,7 @@ theorem encaps_usesExactlyTwoQueries
 
 /-- Expected weighted query cost of U-transform encapsulation under constant per-family weights. -/
 theorem encaps_expectedQueryCost_eq_of_constantOracleWeights {ω : Type} [MeasurableSpace ω]
-    [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadLiftT m SetM]
-    [LawfulMonadLiftT m SetM]
+    [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
@@ -297,7 +307,6 @@ per-family bounds. -/
 theorem encaps_expectedQueryCost_le {ω : Type} [MeasurableSpace ω]
     [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
     [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
@@ -318,7 +327,7 @@ theorem encaps_expectedQueryCost_le {ω : Type} [MeasurableSpace ω]
 
 /-- Expected query count of U-transform encapsulation is exactly `2`. -/
 theorem encaps_expectedQueries_eq_two [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+    [MonadAttach m]
     [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
@@ -414,8 +423,8 @@ theorem decaps_expectedQueryCost_eq_zero_of_decrypt_eq_none {ω : Type} [Measura
 per-family bounds. -/
 theorem decaps_expectedQueryCost_le {ω : Type} [MeasurableSpace ω]
     [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω] [CanonicallyOrderedAdd ω]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadLiftT m SetM]
-    [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
@@ -451,7 +460,7 @@ theorem decaps_usesAtMostTwoQueries [MonadAttach m] [ExactMonadAttach m]
 
 /-- Expected query count of U-transform decapsulation is at most `2`. -/
 theorem decaps_expectedQueries_le_two [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+    [MonadAttach m]
     [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)

@@ -6,15 +6,11 @@ ArityTree # ArkLib scaffolding cited in docs/agents/forking.md
 ArityTree.Data # ArkLib scaffolding cited in docs/agents/forking.md
 clean_build # workflow input of the scheduled build
 coinFlipAdv # declaration of VCVioTest/Forking/CoordinateFork.lean, outside the resolver's proof-library roots
-complexity_backend # CI job name
 CURRENT_YEAR # placeholder in the header template of CONTRIBUTING.md
 expectedDraws_ne_closedForm_of_exhaustion # declaration of VCVioTest/Forking/WithoutReplacement.lean, outside the resolver's proof-library roots
-Experiment # a name part of the security-notion naming convention
-grandfatheredNativeTrust # constant of scripts/AxiomSweep.lean, outside the proof libraries
 hss_nf # retired argument name of the Fiat–Shamir extraction bounds
 isPPT # parameter name of the asynchronous UC security notions
 Lean.Meta.Sym.DiscrTree # core symbolic discrimination tree, cited in the SymM stability note
-Lean.Meta.Sym.DiscrTree.getMatch # core lookup cited in the SymM stability note
 lowerCamelCase # naming style
 maxAttempts # parameter name of the with-aborts signer
 merge_action # GitHub merge-queue event

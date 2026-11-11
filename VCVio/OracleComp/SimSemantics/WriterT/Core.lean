@@ -52,10 +52,10 @@ identity. Note that `m` cannot vary with `t`. -/
 /-- Reassociate a nested writer transformer into one product log.
 
 The outer log is the first component of the product; the inner/base log is the second. This
-is the writer-transformer analogue of `flattenStateT`. Requires `[Monoid ω₂]` to lift the
-inner writer's run; the resulting `WriterT (ω₁ × ω₂) m` carries both logs as a product. -/
+is the writer-transformer analogue of `flattenStateT`. The resulting `WriterT (ω₁ × ω₂) m`
+carries both logs as a product. -/
 @[expose] def flattenWriterT {ι : Type _} {spec : OracleSpec ι}
-    {m : Type u → Type v} [Monad m] {ω₁ ω₂ : Type u} [Monoid ω₂]
+    {m : Type u → Type v} [Monad m] {ω₁ ω₂ : Type u}
     (impl : QueryImpl spec (WriterT ω₁ (WriterT ω₂ m))) :
     QueryImpl spec (WriterT (ω₁ × ω₂) m) := fun t =>
   WriterT.mk <| do
@@ -81,5 +81,43 @@ lemma fst_map_writerT_run_simulateQ
       OracleQuery.input_query, WriterT.run_bind, map_bind]
     refine (bind_congr fun ⟨a, w₁⟩ => ?_).trans (by rw [← bind_map_left, hso t])
     simpa [← LawfulFunctor.comp_map] using ih a
+
+end OracleComp
+
+/-! ## Append-logged simulations -/
+
+namespace OracleComp
+
+variable {ι : Type u} {spec : OracleSpec ι} {ω : Type u}
+  [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+
+/-- Simulating through a handler lifted into an append-logged `WriterT` logs nothing: the run is
+the simulation through the handler, paired with the empty log. -/
+lemma writerT_run_simulateQ_liftTarget {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    (impl : QueryImpl spec m) {α : Type u} (oa : OracleComp spec α) :
+    (simulateQ (impl.liftTarget (WriterT ω m)) oa).run = (·, (∅ : ω)) <$> simulateQ impl oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t f ih =>
+    simp only [simulateQ_bind, WriterT.run_bind', simulateQ_spec_query,
+      QueryImpl.liftTarget_apply, WriterT.run_monadLift', ih, map_bind, bind_map_left]
+    simp
+
+/-- Two-stage simulation through an append-logged `WriterT`: if a reduction
+`red : QueryImpl spec₁ (WriterT ω (OracleComp spec₂))` followed by an inner `impl` agrees on
+every query with a combined handler `game : QueryImpl spec₁ (WriterT ω n)`, then the agreement
+extends to every computation. This is the append-log analogue of `simulateQ_StateT_compose`. -/
+theorem simulateQ_WriterT_compose {ι₁ ι₂ : Type*} {spec₁ : OracleSpec ι₁}
+    {spec₂ : OracleSpec ι₂} {n : Type u → Type v} [Monad n] [LawfulMonad n]
+    (red : QueryImpl spec₁ (WriterT ω (OracleComp spec₂))) (impl : QueryImpl spec₂ n)
+    (game : QueryImpl spec₁ (WriterT ω n))
+    (bridge : ∀ q : spec₁.Domain, simulateQ impl (red q).run = (game q).run)
+    {α : Type u} (oa : OracleComp spec₁ α) :
+    simulateQ impl (simulateQ red oa).run = (simulateQ game oa).run := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t f ih =>
+    simp only [simulateQ_bind, WriterT.run_bind', simulateQ_spec_query, bridge t, simulateQ_map]
+    exact bind_congr fun p => by rw [ih p.1]
 
 end OracleComp

@@ -139,6 +139,31 @@ theorem idRun_getPutativeRootAddressedM :
 
 end PureInterpretation
 
+/-- Simulation applies the oracle handler to each callback of the shared builder. -/
+theorem simulateQ_buildMerkleTreeAddressedM_with {ι : Type u} {spec : OracleSpec.{u, v} ι}
+    {m : Type v → Type*} [Monad m] [LawfulMonad m] (impl : QueryImpl spec m)
+    {s : Skeleton} (leaf : SkeletonLeafIndex s → OracleComp spec Y)
+    (nodeHash : SkeletonInternalIndex s → Y → Y → OracleComp spec Y) :
+    simulateQ impl (buildMerkleTreeAddressedM leaf nodeHash) =
+      buildMerkleTreeAddressedM (fun i => simulateQ impl (leaf i))
+        (fun i a b => simulateQ impl (nodeHash i a b)) :=
+  buildMerkleTreeAddressedM_natural (simulateQ' impl) leaf nodeHash _ _
+    (fun _ => rfl) (fun _ _ _ => rfl)
+
+/-- Pure leaf and node callbacks produce the deterministic addressed tree in any lawful monad. -/
+theorem buildMerkleTreeAddressedM_pure {m : Type v → Type*} [Monad m] [LawfulMonad m]
+    {s : Skeleton} (leaf : SkeletonLeafIndex s → Y)
+    (nodeHash : SkeletonInternalIndex s → Y → Y → Y) :
+    buildMerkleTreeAddressedM (fun i => (pure (leaf i) : m Y))
+      (fun i a b => pure (nodeHash i a b)) =
+        pure (buildMerkleTreeAddressedWithHash (LeafData.ofFun s leaf) nodeHash) := by
+  induction s with
+  | leaf => simp [buildMerkleTreeAddressedM, LeafData.ofFun,
+      buildMerkleTreeAddressedWithHash, populateUpAddressed]
+  | internal l r ihl ihr =>
+      simp [buildMerkleTreeAddressedM, ihl, ihr, LeafData.ofFun,
+        buildMerkleTreeAddressedWithHash, populateUpAddressed]
+
 section DeterministicInterpretation
 
 variable {ι : Type u} {spec : OracleSpec.{u, v} ι}

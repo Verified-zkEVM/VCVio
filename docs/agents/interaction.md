@@ -16,9 +16,12 @@ Generic protocol theory lives in PolyFun:
   environment actions, and leakage scaffolding: `PolyFun.Interaction.Open.*`
 - Reactive processes, networks, and their execution: `PolyFun.Interaction.Execution.*`
 
-For conceptual background, read PolyFun's `docs/guides/interaction.md` and the module docstrings in
+For conceptual background, read [PolyFun's interaction guide](https://github.com/Verified-zkEVM/PolyFun/blob/ef4c157b3c6775fb55864303d96f9b400428d5f0/docs/guides/interaction.md) and the module docstrings in
 the PolyFun dependency. VCVio should only document how those generic APIs are instantiated with
 probabilistic semantics, oracle computations, and crypto examples.
+
+The manifest pins PolyFun main at `ef4c157b3c6775fb55864303d96f9b400428d5f0`, which includes
+the #314–#328 naming stack. Repin the dependency and this guide link together.
 
 ## VCV-Specific Layers
 
@@ -40,7 +43,6 @@ VCVio provides the computational and runtime interpretation of PolyFun's generic
 | `VCVio/Interaction/UC/ReactiveKernel.lean` | Joint local-handler laws preserve complete residual-state measures at every token/FIFO prefix. |
 | `VCVio/Interaction/UC/ReactiveBudget.lean` | Global rank certificates exclude unfinished probabilistic observations after sufficient activations. |
 | `VCVio/Interaction/UC/Standard.lean` | Standard VCVio UC imports and conveniences. |
-| `VCVio/Interaction/UC/StdDoBridge.lean` | Bridges from VCVio program-logic/Std.Do idioms into the UC runtime layer. |
 
 These files may import PolyFun interaction modules.
 Generic interaction modules belong in PolyFun, not under `VCVio/Interaction` or `ToMathlib`.
@@ -134,7 +136,7 @@ and that uniform ciphertext marginals do not justify key reuse.
 `VCVioTest/ReactiveNetworkAdversarial.lean` checks insufficient fuel, missing deliveries,
 a reachable nonempty serial queue, and shared-state reply dependence.
 
-`PolyFun.Interaction.UC.ReactiveNetwork.Assembly` compiles raw open syntax to finite typed
+`PolyFun.Interaction.Execution.ReactiveNetwork.Assembly` compiles raw open syntax to finite typed
 diagrams; select the single global environment after composition. `Factorization` and
 `Factorization.Right` prove all four parallel/wired closure factorizations under explicit
 node bijections, retaining the original machines. The generic `runToken_reindex_cast` and

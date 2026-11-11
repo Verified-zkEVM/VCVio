@@ -491,7 +491,8 @@ private lemma prEvent_idealFlagged_good_le_cpaGame (adv : CPA_Adversary PK Rand 
     obtain ⟨z, hz, hp⟩ := hp
     rw [support_pure, Set.mem_singleton_iff] at hp
     subst hp
-    have hcached := QueryCache.le_def.1 (roSim.le_of_mem_support_run _ choice.2 z hz) hcr
+    have hcached := QueryCache.le_def.1 (le_snd_of_mem_support_run_unifFwdImpl_add_withCaching
+      uniformSampleImpl _ hz) hcr
     simp [QueryCache.isCached, hcached]
   | none =>
     simp only [bind_assoc, pure_bind]
@@ -499,7 +500,7 @@ private lemma prEvent_idealFlagged_good_le_cpaGame (adv : CPA_Adversary PK Rand 
       fun h _ => ?_
     simp only [QueryCache.isCached, Option.isSome_eq_false_iff, Option.isNone_iff_eq_none]
     simpa only [prEvent_def, map_eq_bind_pure_comp, Function.comp_def] using
-      roSim.prEvent_run_uncached_le_run_cacheQuery _ r h (fun b' => E (b == b')) choice.2 hcr
+      roSim.prEvent_run_uncached_le_run_cacheQuery _ r h (fun b' => E (b == b')) choice.2
 
 /-- Both one-sided up-to-bad bounds between the real game and Game 1, as event masses. -/
 private lemma evalDist_cpaGame_game1_le_badEventExperiment (adv : CPA_Adversary PK Rand M) :

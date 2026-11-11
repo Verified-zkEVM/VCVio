@@ -41,7 +41,9 @@ variable {K X Y Index : Type}
 
 /-- A keyed hash family together with the semantic-index map used by the subset relation. -/
 structure ITSRProblem (K X Y Index : Type) where
+  /-- The keyed hash family whose targets and candidate are hashed. -/
   khf : KeyedHashFamily K X Y
+  /-- The semantic indices selected by a hash output. -/
   indices : Y → List Index
 
 /-- Target oracle: an input is answered with an independently sampled key. -/
@@ -53,6 +55,8 @@ abbrev ITSRTranscript (K X : Type) := List (K × X)
 /-- An ITSR adversary interleaves private uniform randomness and target queries before returning
 its candidate pair. -/
 structure ITSRAdversary (prob : ITSRProblem K X Y Index) where
+  /-- The adversary's computation: with access to uniform randomness and the target oracle, it
+  outputs a candidate key-input pair. -/
   main : OracleComp (unifSpec + ITSRTargetSpec X K) (K × X)
 
 /-- The semantic indices selected by one keyed-hash input. -/

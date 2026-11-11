@@ -1,0 +1,163 @@
+diff --git a/HashSig/SLHDSA/SecretProvider.lean b/HashSig/SLHDSA/SecretProvider.lean
+index 73ccae0..e29283d 100644
+--- a/HashSig/SLHDSA/SecretProvider.lean
++++ b/HashSig/SLHDSA/SecretProvider.lean
+@@ -289,2 +289,2 @@ leaves. -/
+-authentication path through the provider-parametric tree together with the provider's value at the
+-indexed leaf's `FORS_PRF` address. -/
++provider's value at the indexed leaf's `FORS_PRF` address, then the authentication path through
++the provider-parametric tree, in the order FIPS 205 evaluates them. -/
+@@ -295,0 +296 @@ indexed leaf's `FORS_PRF` address. -/
++    let sk ← secret (forsSkAdrs adrs idx)
+@@ -298 +298,0 @@ indexed leaf's `FORS_PRF` address. -/
+-    let sk ← secret (forsSkAdrs adrs idx)
+@@ -489,0 +490,2 @@ theorem forsSignWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad
++  rw [F.mmap_bind, hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)]
++  refine bind_congr fun sk => ?_
+@@ -494,3 +496 @@ theorem forsSignWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad
+-  refine bind_congr fun path => ?_
+-  rw [F.mmap_bind, hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)]
+-  exact bind_congr fun sk => F.mmap_pure _
++  exact bind_congr fun path => F.mmap_pure _
+diff --git a/HashSig/SLHDSA/AddressDiscipline.lean b/HashSig/SLHDSA/AddressDiscipline.lean
+index aaa22cc..f6de258 100644
+--- a/HashSig/SLHDSA/AddressDiscipline.lean
++++ b/HashSig/SLHDSA/AddressDiscipline.lean
+@@ -152,5 +152,6 @@ theorem forsSignWithSecret_pred (md : List Byte) (adrs : Adrs) :
+-    hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
+-      (fun _ _ => hbind _ _ (hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)) fun _ =>
+-        hhash _ type_le_four _)
+-      fun _ _ _ _ _ => hnode _ type_le_four)
+-    fun _ => hbind _ _ (hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)) fun _ => hpure _
++    hbind _ _ (hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)) fun _ =>
++      hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
++        (fun _ _ => hbind _ _ (hsecret _ (Adrs.isSecretKey_forsSkAdrs _ _)) fun _ =>
++          hhash _ type_le_four _)
++        fun _ _ _ _ _ => hnode _ type_le_four)
++      fun _ => hpure _
+diff --git a/HashSig/SLHDSA/Security/CacheSecret.lean b/HashSig/SLHDSA/Security/CacheSecret.lean
+index 8bbd397..4353e67 100644
+--- a/HashSig/SLHDSA/Security/CacheSecret.lean
++++ b/HashSig/SLHDSA/Security/CacheSecret.lean
+@@ -198,3 +198,3 @@ theorem forsPkGenWithSecret?_eq_some_iff (pk : core.PkSeed) (adrs : Adrs)
+-/-- A FORS signature over a provider is settled exactly when, for every tree, the sibling-only
+-authentication path is settled and the secret at the selected leaf's `FORS_PRF` address is
+-settled, at the values the signature carries. -/
++/-- A FORS signature over a provider is settled exactly when, for every tree, the secret at the
++selected leaf's `FORS_PRF` address is settled and the sibling-only authentication path is settled,
++at the values the signature carries. -/
+@@ -204 +204,3 @@ theorem simulateQ_toPartialImpl_forsSignWithSecret_eq_some_iff (md : List Byte)
+-      ∀ i : Fin p.k, ∃ path : Vector core.Y p.a,
++      ∀ i : Fin p.k, ∃ x, simulateQ c.toPartialImpl
++            (secret (forsSkAdrs adrs (i.val * 2 ^ p.a + forsIdx p md i.val))) = some x ∧
++        ∃ path : Vector core.Y p.a,
+@@ -209,2 +210,0 @@ theorem simulateQ_toPartialImpl_forsSignWithSecret_eq_some_iff (md : List Byte)
+-        ∃ x, simulateQ c.toPartialImpl
+-            (secret (forsSkAdrs adrs (i.val * 2 ^ p.a + forsIdx p md i.val))) = some x ∧
+@@ -287 +287 @@ theorem forsPkGenWithSecret?_eq_some_of_forsSignWithSecret (md : List Byte) (pk
+-  obtain ⟨path, hpath, x, hx, hsig⟩ := hsign i
++  obtain ⟨x, hx, path, hpath, hsig⟩ := hsign i
+diff --git a/HashSig/SLHDSA/Security/LabScheme.lean b/HashSig/SLHDSA/Security/LabScheme.lean
+index 57a5ba4..f54d65f 100644
+--- a/HashSig/SLHDSA/Security/LabScheme.lean
++++ b/HashSig/SLHDSA/Security/LabScheme.lean
+@@ -225,0 +226 @@ the lab tree and the secret at the indexed leaf. -/
++    let sk ← labSecret core (forsSkAdrs adrs idx)
+@@ -228 +228,0 @@ the lab tree and the secret at the indexed leaf. -/
+-    let sk ← labSecret core (forsSkAdrs adrs idx)
+@@ -333,3 +332,0 @@ theorem labForsSign_pred (md : List Byte) (adrs : Adrs) : Q (labForsSign core md
+-    hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
+-      (fun _ _ => labForsLeaf_pred core hpure hbind htouch hread _ _)
+-      fun _ _ _ _ _ _ _ => labNode_pred core hpure hread _) fun _ =>
+@@ -337 +334,5 @@ theorem labForsSign_pred (md : List Byte) (adrs : Adrs) : Q (labForsSign core md
+-      fun _ => hpure _
++      fun _ =>
++      hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
++        (fun _ _ => labForsLeaf_pred core hpure hbind htouch hread _ _)
++        fun _ _ _ _ _ _ _ => labNode_pred core hpure hread _)
++        fun _ => hpure _
+diff --git a/HashSig/SLHDSA/Security/LabReadSet.lean b/HashSig/SLHDSA/Security/LabReadSet.lean
+index dea9905..ebc7668 100644
+--- a/HashSig/SLHDSA/Security/LabReadSet.lean
++++ b/HashSig/SLHDSA/Security/LabReadSet.lean
+@@ -247,8 +247,9 @@ theorem readsUnhidden_labForsSign (hd : core.KeyDiscipline vp) {d : Bytes vp.par
+-  refine allQueriesSatisfy_ofFnM _ fun i ↦ allQueriesSatisfy_bind
+-    (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree (ReadsUnhidden core pkSeed U st)
+-      (fun _ ↦ allQueriesSatisfy_pure _ _) (fun _ _ ↦ allQueriesSatisfy_bind) _ _ _ _
+-      (fun _ _ ↦ readsUnhidden_touchRead pkSeed hd (b := .inr (forsNodeAdrs _ 0 _)) rfl fun _ hc ↦
+-        ⟨addressFacts_of_childCell_inr_eq_some hd.canonicalAddressBounds hc,
+-          not_hiddenChild_inr (.inl (by simp [forsNodeAdrs_eq]))⟩)
+-      fun _ _ _ _ _ _ _ ↦ readsUnhidden_forsNodeHashWith pkSeed hd _ _ _ _ _) fun _ ↦
+-      allQueriesSatisfy_bind ?_ fun _ ↦ allQueriesSatisfy_pure _ _
++  refine allQueriesSatisfy_ofFnM _ fun i ↦ allQueriesSatisfy_bind ?_ fun _ ↦
++    allQueriesSatisfy_bind
++      (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree (ReadsUnhidden core pkSeed U st)
++        (fun _ ↦ allQueriesSatisfy_pure _ _) (fun _ _ ↦ allQueriesSatisfy_bind) _ _ _ _
++        (fun _ _ ↦ readsUnhidden_touchRead pkSeed hd (b := .inr (forsNodeAdrs _ 0 _)) rfl fun _ hc ↦
++          ⟨addressFacts_of_childCell_inr_eq_some hd.canonicalAddressBounds hc,
++            not_hiddenChild_inr (.inl (by simp [forsNodeAdrs_eq]))⟩)
++        fun _ _ _ _ _ _ _ ↦ readsUnhidden_forsNodeHashWith pkSeed hd _ _ _ _ _)
++      fun _ ↦ allQueriesSatisfy_pure _ _
+diff --git a/HashSig/SLHDSA/Security/LabEquiv/Tree.lean b/HashSig/SLHDSA/Security/LabEquiv/Tree.lean
+index ebe3786..9ed7f47 100644
+--- a/HashSig/SLHDSA/Security/LabEquiv/Tree.lean
++++ b/HashSig/SLHDSA/Security/LabEquiv/Tree.lean
+@@ -395,7 +395,7 @@ theorem forsSignWithSecret_labTriple (md : List Byte) :
+-      (forsAuthPath_labTriple core hd pkSeed pos md i).bind fun path ↦
+-        (((labSecret_labTriple core pkSeed (Adrs.isSecretKey_forsSkAdrs _ _)).frame
+-          (F := fun st ↦ ∀ j (hj : j < vp.params.a), ForsHolds core pos.forsAdrs j
+-            (sibling (forsLeafIndex vp.params md i / 2 ^ j)) path[j] st)
+-          fun _ _ hle h j hj ↦ (h j hj).mono hle).mono (fun _ h ↦ ⟨trivial, h⟩)
+-            fun _ _ h ↦ h).bind fun sk ↦
+-          QueryImpl.EqDistTriple.pure _ fun _ h ↦ ⟨trivial, h.1, h.2⟩).mono (fun _ h ↦ h)
++      (labSecret_labTriple core pkSeed (Adrs.isSecretKey_forsSkAdrs _ _)).bind fun sk ↦
++        (((forsAuthPath_labTriple core hd pkSeed pos md i).frame
++          (F := fun st ↦ CellHolds core st (childCell core (.inl
++            (forsSkAdrs pos.forsAdrs (forsLeafIndex vp.params md i)))) sk)
++          fun _ _ hle h ↦ h.mono hle).mono (fun _ h ↦ ⟨trivial, h⟩)
++            fun _ _ h ↦ h).bind fun path ↦
++          QueryImpl.EqDistTriple.pure _ fun _ h ↦ ⟨trivial, h.2, h.1⟩).mono (fun _ h ↦ h)
+diff --git a/HashSig/SLHDSA/Security/SecretTraces.lean b/HashSig/SLHDSA/Security/SecretTraces.lean
+index 671d6aa..492ecbf 100644
+--- a/HashSig/SLHDSA/Security/SecretTraces.lean
++++ b/HashSig/SLHDSA/Security/SecretTraces.lean
+@@ -198,6 +198,7 @@ theorem forsSignWithSecret_pred_of_ledger (md : List Byte) (pos : BottomPosition
+-    hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
+-      (fun _ hi => forsLeafWithSecret_pred_of_ledger Q hbind core hhash hsecret pos tree
+-        (hi.trans hdiv))
+-      fun _ _ hh hha hi => hnode _
+-        (forsTreeAdrs_mem_constructionAddresses pos tree hh hha (hi.trans hdiv)))
+-    fun _ => hbind _ _ (secret_forsSkAdrs_pred Q core hsecret pos tree hdiv) fun _ => hpure _
++    hbind _ _ (secret_forsSkAdrs_pred Q core hsecret pos tree hdiv) fun _ =>
++      hbind _ _ (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree Q hpure hbind _ _ _ _
++        (fun _ hi => forsLeafWithSecret_pred_of_ledger Q hbind core hhash hsecret pos tree
++          (hi.trans hdiv))
++        fun _ _ hh hha hi => hnode _
++          (forsTreeAdrs_mem_constructionAddresses pos tree hh hha (hi.trans hdiv)))
++      fun _ => hpure _
+diff --git a/HashSig/SLHDSA/Security/RomDescentSecret.lean b/HashSig/SLHDSA/Security/RomDescentSecret.lean
+index 35efe31..ee95acf 100644
+--- a/HashSig/SLHDSA/Security/RomDescentSecret.lean
++++ b/HashSig/SLHDSA/Security/RomDescentSecret.lean
+@@ -742 +742 @@ theorem targetCollision_or_eq_of_forsSignWithSecret (pk : core.PkSeed)
+-  obtain ⟨path, hpath, x, hx, hsig⟩ := hsign ⟨i, hi⟩
++  obtain ⟨x, hx, path, hpath, hsig⟩ := hsign ⟨i, hi⟩
+diff --git a/HashSig/SLHDSA/Security/HonestTransfer.lean b/HashSig/SLHDSA/Security/HonestTransfer.lean
+index 70c4ea5..379299e 100644
+--- a/HashSig/SLHDSA/Security/HonestTransfer.lean
++++ b/HashSig/SLHDSA/Security/HonestTransfer.lean
+@@ -353 +353 @@ theorem forsSign (pos : BottomPosition vp) (md : List Byte) {sig : ForsSigCore v
+-  obtain ⟨path, hpath, x, hx, hsig⟩ := hs i
++  obtain ⟨x, hx, path, hpath, hsig⟩ := hs i
+@@ -355,4 +355,4 @@ theorem forsSign (pos : BottomPosition vp) (md : List Byte) {sig : ForsSigCore v
+-  exact ⟨path, simulateQ_intrinsicAuthPathM_of_merkleRootM _ _ _ _ _ (fun z hz w hw =>
+-    h.forsNode (forsNodeAdrs_sibling_mem_constructionAddresses pos i hidx hz) hw) hpath, x,
+-    h.secret (forsLeafAdrs_mem_constructionAddresses pos i hidx)
+-      (inl_forsSkAdrs_mem_childAdrs _ _) hx, hsig⟩
++  exact ⟨x, h.secret (forsLeafAdrs_mem_constructionAddresses pos i hidx)
++      (inl_forsSkAdrs_mem_childAdrs _ _) hx,
++    path, simulateQ_intrinsicAuthPathM_of_merkleRootM _ _ _ _ _ (fun z hz w hw =>
++      h.forsNode (forsNodeAdrs_sibling_mem_constructionAddresses pos i hidx hz) hw) hpath, hsig⟩
+@@ -375 +375 @@ theorem forsPkFromSig (pos : BottomPosition vp) (md : List Byte)
+-  obtain ⟨path, hpath, x, hx, hsig⟩ := hsB i
++  obtain ⟨x, hx, path, hpath, hsig⟩ := hsB i

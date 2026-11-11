@@ -65,7 +65,7 @@ private def flush : IO Unit := IO.getStdout >>= IO.FS.Stream.flush
 
 Diagnostic-only helper: the production signer derives its salts from
 `SHAKE256(seed ‖ counter_le32)` instead (see `concreteSignLoop` in
-`LatticeCrypto/Falcon/Concrete/Sign.lean`), which is why this definition was
+`Extern/Falcon/Sign.lean`), which is why this definition was
 removed from the library; the target-vector diagnostic below only needs a
 deterministic salt drawn from a `PRNGState`. -/
 private def prngNextSalt (s : PRNGState) : Bytes 40 × PRNGState := Id.run do
