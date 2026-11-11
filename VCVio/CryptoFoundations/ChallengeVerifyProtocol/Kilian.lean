@@ -45,14 +45,15 @@ is a deterministic `Bool`, as `ChallengeVerifyProtocol` requires. Completeness h
   `DetVectorCommitment`, with the oracle answered by `H`.
 - `KilianTransformation_perfectlyComplete`: perfect completeness, from PCP completeness for a coin
   sampler with full support and perfect completeness of the commitment.
-- `runVerifier_of_KilianTransformation_verify`: the deterministic core of soundness. If the values
-  of an accepted response agree with some proof string, the PCP verifier accepts that string on
-  the challenge coins.
+- `PCP.kilianDecision`: the verifier's decision given the verdict of the commitment's check.
+- `runVerifier_of_kilianDecision`: the deterministic core of soundness. If the values of an
+  accepted response agree with some proof string, the PCP verifier accepts that string on the
+  challenge coins.
 
-Soundness proper is stated in the random-oracle model, where a cheating prover queries the oracle
-and an extractor reads a proof string off its queries; the binding condition of the salted Merkle
-extractor (ePrint 2025/2166, Thm 8.4 condition 2) supplies the agreement hypothesis of
-`runVerifier_of_KilianTransformation_verify`. That statement, and knowledge soundness, are future
+Soundness is stated in the random-oracle model, where the cheating prover and the verifier's check
+share a random oracle and an extractor reads a proof string off the prover's queries
+(`KilianTransformation_rom_sound`, in
+`VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian.Soundness`). Knowledge soundness is future
 work.
 -/
 
@@ -206,6 +207,15 @@ section KilianTransformation
 
 variable {Stmt Wit : Type} {X : Type} {Y Cm Td Pf : Type}
 
+/-- The decision of the Kilian verifier on statement `stmt` and coins `coins`, given the claimed
+values `ans` and the verdict `checkOk` of the commitment's check on the opening: accept iff the
+opening verifies and the replay of `pcp.Verifier stmt coins` against the claims succeeds and
+accepts. An unclaimed position fails the replay. -/
+@[expose]
+def PCP.kilianDecision (pcp : PCP Stmt Wit) (stmt : Stmt) (coins : pcp.Coins)
+    (ans : PartialVec pcp.length pcp.Symbol) (checkOk : Bool) : Bool :=
+  checkOk && (Id.run (simulateQ (claimAnswer ans) (pcp.Verifier stmt coins)).run == some true)
+
 /-- **The Kilian transformation.**
 
 Turn a `PCP` into a (public-coin) succinct `ChallengeVerifyProtocol`, the interactive argument at
@@ -248,10 +258,9 @@ noncomputable def KilianTransformation
     let queried : Finset (Fin pcp.length) := (pathLog st.2 (pcp.Verifier stmt coins)).toFinset
     return (PartialVec.restrict st.2 queried, vc.opening queried st.1)
   verify stmt c coins resp :=
-    -- Check the opening, then replay the verifier answering each position from its claimed value;
-    -- an unclaimed position fails the run, as does an opening that does not verify.
-    evalWithAnswerFn (QueryImpl.ofFn H) (vc.check c resp.1 resp.2) &&
-      (Id.run (simulateQ (claimAnswer resp.1) (pcp.Verifier stmt coins)).run == some true)
+    -- Check the opening against the oracle `H`, then replay the verifier on the claims.
+    pcp.kilianDecision stmt coins resp.1
+      (evalWithAnswerFn (QueryImpl.ofFn H) (vc.check c resp.1 resp.2))
 
 end KilianTransformation
 
@@ -431,15 +440,28 @@ section Soundness
 
 variable {Stmt Wit : Type} {X : Type} {Y Cm Td Pf : Type}
 
-/-- **Deterministic soundness core.** If the claimed values of a response that the Kilian verifier
-accepts agree with a proof string `f`, the successful replay reproduces the PCP verifier's run on
-`f`: the PCP verifier accepts `f` on these coins.
+/-- **Deterministic soundness core.** If the Kilian verifier accepts claimed values `ans` that
+agree with a proof string `f`, the successful replay reproduces the PCP verifier's run on `f`: the
+PCP verifier accepts `f` on these coins, whatever the verdict of the commitment's check.
 
 A soundness argument supplies `f` and the agreement hypothesis `hagree` from the commitment: in
-the random-oracle model, an extractor reads `f` off the prover's oracle queries, and the binding
-condition of the extractor (ePrint 2025/2166, Thm 8.4 condition 2) states that every accepted
-opening agrees with it. PCP soundness then bounds the probability over the coins that `f` is
-accepted. -/
+the random-oracle model an extractor reads `f` off the prover's oracle queries before the coins are
+drawn (`KilianTransformation_rom_sound`). PCP soundness then bounds the probability over the coins
+that `f` is accepted. -/
+theorem runVerifier_of_kilianDecision (pcp : PCP Stmt Wit) (x : Stmt) (coins : pcp.Coins)
+    (ans : PartialVec pcp.length pcp.Symbol) (checkOk : Bool) (f : Fin pcp.length → pcp.Symbol)
+    (hagree : ∀ i v, ans i = some v → v = f i)
+    (hacc : pcp.kilianDecision x coins ans checkOk = true) :
+    pcp.runVerifier x coins (List.Vector.ofFn f) = true := by
+  unfold PCP.kilianDecision at hacc
+  rw [Bool.and_eq_true, beq_iff_eq] at hacc
+  have hf := eq_of_claimAnswer_run_eq_some f ans hagree (pcp.Verifier x coins) true hacc.2
+  rw [runVerifier_eq_evalWithAnswerFn,
+    show (List.Vector.ofFn f).get = f from funext fun i => List.Vector.get_ofFn _ i]
+  exact hf
+
+/-- The deterministic soundness core for the fixed-oracle protocol `KilianTransformation`: an
+accepted response whose claimed values agree with `f` makes the PCP verifier accept `f`. -/
 theorem runVerifier_of_KilianTransformation_verify
     (pcp : PCP Stmt Wit) (rel : Stmt → Wit → Bool)
     (vc : DetVectorCommitment X Y pcp.Symbol Cm Td Pf pcp.length) (H : X → Y)
@@ -447,14 +469,7 @@ theorem runVerifier_of_KilianTransformation_verify
     (resp : PartialVec pcp.length pcp.Symbol × Pf) (f : Fin pcp.length → pcp.Symbol)
     (hagree : ∀ i v, resp.1 i = some v → v = f i)
     (hacc : (KilianTransformation pcp vc H rel).verify x c coins resp = true) :
-    pcp.runVerifier x coins (List.Vector.ofFn f) = true := by
-  change (evalWithAnswerFn (QueryImpl.ofFn H) (vc.check c resp.1 resp.2) &&
-    (Id.run (simulateQ (claimAnswer resp.1) (pcp.Verifier x coins)).run == some true)) = true
-    at hacc
-  rw [Bool.and_eq_true, beq_iff_eq] at hacc
-  have hf := eq_of_claimAnswer_run_eq_some f resp.1 hagree (pcp.Verifier x coins) true hacc.2
-  rw [runVerifier_eq_evalWithAnswerFn,
-    show (List.Vector.ofFn f).get = f from funext fun i => List.Vector.get_ofFn _ i]
-  exact hf
+    pcp.runVerifier x coins (List.Vector.ofFn f) = true :=
+  runVerifier_of_kilianDecision pcp x coins resp.1 _ f hagree hacc
 
 end Soundness

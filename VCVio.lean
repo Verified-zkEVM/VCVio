@@ -24,6 +24,7 @@ public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Basic
 public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian
+public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian.Soundness
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.DataEncapMech.RealOrRandom
@@ -275,6 +276,7 @@ public import VCVio.CryptoFoundations.TimeLockPuzzle.Truncate
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash
 public import VCVio.CryptoFoundations.VectorCommitment
+public import VCVio.CryptoFoundations.VectorCommitment.OnlineExtraction
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Measure
