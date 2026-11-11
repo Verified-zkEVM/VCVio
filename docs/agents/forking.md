@@ -1,10 +1,12 @@
 # Forking Lemmas
 
-Three forking developments live in this repository. They differ in what gets pre-sampled and in
-the shape of the bound they deliver. The coordinate-wise development is a table model with a
-realizability bridge to ordinary adversaries; its extractor is the paper's own algorithm, but its
-cost is a count of *table lookups* returned as data, not oracle queries measured by the cost model.
-See [crypto.md](crypto.md) for the surrounding primitive and reduction machinery.
+Three forking developments live in this repository, beside the black-box rewinding framework of
+[`VCVio/CryptoFoundations/Rewinding/`](../../VCVio/CryptoFoundations/Rewinding/). They differ in
+what gets pre-sampled and in the shape of the bound they deliver. The coordinate-wise development
+proves its bounds in a table model, and its extractor, Figure 11 of Fenzi–Moghaddas–Nguyen, is
+also a black-box finder in the rewinding framework (`OracleComp.coordFinder`): its cost is a count
+of genuine acceptance-oracle calls, and its guarantees transfer to frozen reruns of a prover. See
+[crypto.md](crypto.md) for the surrounding primitive and reduction machinery.
 
 ## Which one to reach for
 
@@ -12,7 +14,8 @@ See [crypto.md](crypto.md) for the surrounding primitive and reduction machinery
 |---|---|---|---|
 | **Seeded** (Bellare–Neven) | every oracle answer, into a `QuerySeed` | `acc²/q − acc/h` | [`VCVio/CryptoFoundations/SeededFork.lean`](../../VCVio/CryptoFoundations/SeededFork.lean) |
 | **Replay** (cursor-native) | only the forked oracle family | `acc²/q − acc/h` | [`VCVio/CryptoFoundations/ReplayFork.lean`](../../VCVio/CryptoFoundations/ReplayFork.lean) |
-| **Coordinate-wise** | the whole acceptance table | `ε − ℓ(k−1)/N` | [`VCVio/CryptoFoundations/CoordinateFork.lean`](../../VCVio/CryptoFoundations/CoordinateFork.lean) |
+| **Coordinate-wise** | the whole acceptance table | `ε ≤ κ + (1 − κ) p`, `κ = ℓ(k−1)/N` | [`VCVio/CryptoFoundations/CoordinateFork.lean`](../../VCVio/CryptoFoundations/CoordinateFork.lean), [`CoordinateFork/Finder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Finder.lean) |
+| **Threshold tree** (Attema–Cramer–Kohl) | nothing: a black-box finder | `ε ≤ κ + (1 − κ) p`, `κ = 1 − ∏(1 − (kᵣ−1)/Nᵣ)` | [`VCVio/CryptoFoundations/Rewinding/ThresholdFinder.lean`](../../VCVio/CryptoFoundations/Rewinding/ThresholdFinder.lean) |
 
 Seeded and replay share a generic core in
 [`VCVio/OracleComp/Constructions/Fork/Basic.lean`](../../VCVio/OracleComp/Constructions/Fork/Basic.lean): the
@@ -21,12 +24,13 @@ answer as a fresh query, and the collision bound on the two focused answers. Bot
 `ENNReal.mul_tsub_inv_le_sum_sq_sub_div` from
 [`ToMathlib/Data/ENNReal/SumSquares.lean`](../../ToMathlib/Data/ENNReal/SumSquares.lean).
 
-**The coordinate-wise table bound uses none of that.** Its loss is subtracted from the accepting
-probability rather than from a quadratic expression. No Cauchy–Schwarz step and nothing from
-`SumSquares` is used. Fenzi–Moghaddas–Nguyen (eprint 2023/846 §7) obtain this shape with an
-expected-query oracle extractor; the present formalization proves all three of its clauses — the
-output, the success probability and the expected number of lookups — of the paper's own algorithm,
-against a fixed acceptance table, and transfers the success bound to an adversary.
+**The coordinate-wise table bound uses none of that.** Its loss is affine in the accepting
+probability rather than quadratic. No Cauchy–Schwarz step and nothing from `SumSquares` is used.
+Fenzi–Moghaddas–Nguyen (eprint 2023/846 §7) obtain this shape with an expected-query oracle
+extractor; the present formalization proves all three of its clauses — the output, the success
+probability and the expected number of oracle calls — of the paper's own algorithm, against a
+fixed acceptance table. Stated as a finder (`OracleComp.isFinder_coordFinder`), the success and
+cost clauses transfer to frozen reruns of a prover (`Rewinding.ResetPolicy.finder_bounds`).
 
 ## Quadratic forks: seeded vs replay
 
@@ -85,7 +89,8 @@ It is stated for a general monad, since nothing in the averaging argument is spe
 `ProbComp`. Only the marginals of `D` appear on the left, so no independence hypothesis is needed.
 Note the converse is *not* true: `forkSuccOf k D` depends on all of `D`, so fixing a particular
 coupling of the table entries is a modelling decision about the extractor's randomness, not a
-theorem. `sum_goodSet_correlated` and `sum_goodSet_anticorrelated` in the test file exhibit two
+theorem. The test file
+[`VCVioTest/Forking/CoordinateFork.lean`](../../VCVioTest/Forking/CoordinateFork.lean) exhibits two
 couplings with equal marginals and different `forkSuccOf`.
 
 ### Transcripts
@@ -162,7 +167,7 @@ marginal lemma requires is automatic.
 **`indepTable` is not a rewound prover, and the file does not claim it is.** A prover holding one
 coin tape answers two challenges with values that share those coins; `Fintype.mPi` gives the two
 answers independent coins. The two constructions agree on every single-challenge marginal and
-differ on the joint law — `coinFlipAdv` in
+differ on the joint law — an adversary in
 [`VCVioTest/Forking/CoordinateFork.lean`](../../VCVioTest/Forking/CoordinateFork.lean) ignores its
 challenge and returns one fair bit, and two challenges accept together with probability `1/2` under
 a shared tape against `1/4` here. Only the marginals feed the transfer above, which is why the
@@ -173,21 +178,20 @@ The independent-product machinery underneath is generic and lives below the cryp
 `Fintype.mPi` their joint events (`prEvent_forall_coord_mPi`) and coordinate marginals, and
 [`VCVio/EvalDist/IndepProductMeasure.lean`](../../VCVio/EvalDist/IndepProductMeasure.lean)
 identifies their denotation with Mathlib's `Measure.pi`. The marginal is an equality only under a
-full-mass hypothesis; `prEvent_coord_mOfFn_le` is what survives without it, and
-`prEvent_coord_mOfFn_failFactor` in the test file is the negative control showing the difference is
-real.
+full-mass hypothesis; `prEvent_coord_mOfFn_le` is what survives without it, and a negative control
+in the test file shows the difference is real.
 
 ### What is and is not proved
 
 Lemma 7.1 is a three-conjunct existential over *an oracle algorithm with oracle access to the
 adversary*. Against a fixed acceptance table all three conjuncts are proved, of the paper's own
-algorithm:
+algorithm, and `OracleComp.isFinder_coordFinder` packages them as the black-box finder contract:
 
 | Clause | Status | Theorem |
 |---|---|---|
 | output structure | proved | `coordForkOp_success`, `coordForkOpT_success` |
-| success probability | proved | `sub_div_le_prEvent_isSome_coordForkOp` |
-| expected lookups | proved | `lintegral_cost_coordForkOp_le` |
+| success probability | proved, affine | `sub_div_le_prEvent_isSome_coordForkOp`, `CoordinateWise.div_card_filter_le_affine` |
+| expected oracle calls | proved | `lintegral_cost_coordForkOp_le`, with `OracleComp.runFinder_coordFinder` |
 
 A fixed acceptance table is the setting §7.1 needs: its own analysis reasons about
 `Xᵢ = |{x ∈ S : V (C x) (A (C x))}|` and uses `Pr[V = 1 ∣ Xᵢ = l] = l/N`, and both presuppose that
@@ -196,9 +200,11 @@ accepted" is well defined at all. Such an `A` is exactly a response table.
 
 What is **not** covered:
 
-- **No oracle-query semantics.** The count is of table lookups, returned as data by the loop, not
-  oracle queries measured by the cost model in [`query-tracking.md`](query-tracking.md). Bridging
-  the two means running the loop against an instrumented handler.
+- **No transcript extraction against a rewound prover.** The finder's calls are genuine
+  acceptance-oracle calls (`OracleComp.runFinder_coordFinder` identifies them with the loop's
+  lookups), and frozen reruns carry its success and cost to a prover. Recovering the prover's
+  *responses* on the found challenges, by replaying them against the frozen world, is not yet a
+  library construction; see *Against a rewound prover* below.
 - **No security parameter.** `CoordSpeciallySoundAt` is the extensional, fixed-statement clause of
   Definition 2.29 — no polynomial-time requirement, no joint bad event, no asymptotics. So this is
   not Definition 2.28.
@@ -251,20 +257,44 @@ weight is exactly the expected number of draws that coordinate's resampling make
 `lintegral_weight_coordForkOpW_le` bounds the expected charge by `(1 + ℓ(k−1))` times the average
 charge of one entry. That is the form the multi-round recursion consumes.
 
+### As a black-box finder
+
+[`CoordinateFork/Finder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Finder.lean) states
+Figure 11 against the Boolean acceptance oracle of the rewinding framework. `coordFinder k` draws
+`c₀`, asks the oracle about it, and collects each coordinate's `k − 1` accepting neighbours with
+`Rewinding.collectChildren`, the threshold finder's draw-without-replacement loop.
+`runFinder_coordFinder` proves that, against any fixed acceptance function, the finder's output and
+its count of oracle calls have exactly the law of `coordForkOp`, so every lookup above is an oracle
+call. `isFinder_coordFinder` then states the contract `Rewinding.IsFinder`:
+
+* every returned set is coordinate-wise `k`-special sound and accepting;
+* success is affine, `ε ≤ κ + (1 − κ) p` with `κ = ℓ(k−1)/N`
+  (`CoordinateWise.div_card_filter_le_affine`). This is stronger than the paper's `ε − κ ≤ p`: a
+  sparse column contributes at most `k − 1` accepting challenges and all `N` of its challenges lie
+  outside the successful set, so the sparse columns are charged against the complement of the
+  successful set;
+* at most `1 + ℓ(k−1)` oracle calls in expectation, rejected calls included.
+
+`IsFinder` is the contract `Rewinding.IsTreeFinder` specializes; the threshold finder of
+Attema–Cramer–Kohl returns trees of challenge vectors, and this one returns stars. On one round the
+two agree in error and cost; on `ℓ` coordinates the threshold finder's error
+`1 − (1 − (k−1)/N)^ℓ` is smaller, at a cost of `k^ℓ` calls against `1 + ℓ(k−1)`.
+
 ### Multi-round, and §8.1: deferred
 
 §7.2's `μ`-round recursion and §8.1's abstract sampling game are **not** in this development. They
 exist, finished, on `dtumad/coordinate-fork-multiround`, and land separately. What they contain,
 so that nobody re-derives it:
 
-- `multiForkOp` / `multiForkOpW` recurse Figure 11 over `μ` rounds, with the success clause
+- The multi-round fork and its weighted variant recurse Figure 11 over `μ` rounds, with the
+  success clause
   `ε − μℓ(k−1)/N`, an output clause producing a level-`μ` challenge tree
   (`ToMathlib/Combinatorics/ChallengeTree.lean` is its combinatorial projection, kept here), and a
   weighted bound `(1 + ℓ(k−1))^μ`. That last one is the paper's `(ℓ(k−1)+1)^μ`, and it comes from
   the weighted single-round bound plus the tower property — **not** from Wald's identity, which is
   what one expects to need and does not.
 - It is nonetheless a **charge on an eagerly pre-sampled table**, not an oracle-query count.
-  `multiForkOpW` runs a recursive extraction at *every* first challenge through `Fintype.mPi` and
+  The weighted variant runs a recursive extraction at *every* first challenge through `Fintype.mPi` and
   returns only the charges of the entries the outer fork selects; at `ℓ = 1`, four challenge
   values, depth two and an always-rejecting table, the eager recursion performs sixteen base-level
   calls while the returned charge is one. Identifying the charge with the paper's query count needs
@@ -297,9 +327,9 @@ The pool is a `List` rather than a `Finset` so that a draw is an *index*: that k
 `ProbComp` with no failure branch and lets it terminate on the pool's length.
 
 Exhaustion needs no separate treatment. The classical closed form `r(M+1)/(G+1)` requires `r ≤ G`,
-and below that it is not merely unproved but false — `expectedDraws_ne_closedForm_of_exhaustion`
-in the test file exhibits a pool of one where the loop stops after one draw and the formula reads
-two. What survives is `NegHypergeom.expectedDraws_le`, the same expression as an *upper* bound with
+and below that it is not merely unproved but false — the test file
+[`VCVioTest/Forking/WithoutReplacement.lean`](../../VCVioTest/Forking/WithoutReplacement.lean)
+exhibits a pool of one where the loop stops after one draw and the formula reads two. What survives is `NegHypergeom.expectedDraws_le`, the same expression as an *upper* bound with
 no hypothesis relating `r` to `G`; above the base cases its induction step is still the same
 equality. That single inequality covers the finishing and the exhausting case at once, which is
 exactly what the paper's `E[Tᵢ] ≤ k − 1` step needs: at `Xᵢ = l < k` the loop drains the coordinate,
@@ -317,14 +347,14 @@ both are built by `lake test`.
 ## Downstream: ArkLib
 
 [ArkLib](https://github.com/Verified-zkEVM/ArkLib) is a *downstream* consumer — its `lakefile.toml`
-carries `require VCVio rev = "v4.30.0"`, on Lean 4.30 against this repo's 4.32.2 — so anything the
-coordinate-wise material is to be used for has to be shaped for export, not imported back. A survey
+pins an earlier VCVio release — so anything the coordinate-wise material is to be used for has to be
+shaped for export, not imported back. A survey
 of it in August 2026 found the following; none of it is acted on here beyond the code shape.
 
 **There is a named consumer waiting.** `ArkLib/Commitments/Functional/Hachi/InnerOuter/Security.lean`
 proves the Greyhound/Hachi inner-outer Ajtai commitment's weak binding by reduction to Module-SIS,
-and states its core theorem `outputToModuleSIS_valid_of_verified` — *two verified weak openings that
-differ yield a Module-SIS witness* — explicitly "independent of how those facts were obtained ...
+and states as its core theorem that *two verified weak openings that differ yield a Module-SIS
+witness* — explicitly "independent of how those facts were obtained ...
 reused by the CWSS argument for the evaluation protocol, where the two weak openings are
 reconstructed from special-soundness transcripts". ArkLib's own notes list the other half as an open
 gap. Its openings carry one challenge per block, so the instantiation is `ι` the block index, `S`
@@ -339,8 +369,8 @@ so that `|S|` in the `ℓ(k−1)/|S|` loss is the right number), and a conversio
 boundary.
 
 **ArkLib's rewinding layer is empty**, so none of this duplicates work there.
-`OracleReduction/Security/SpecialSoundness.lean` is an `ArityTree` skeleton/data scaffolding with no
-soundness predicate and no extractor; `Security/Rewinding.lean` is a stub. Its `ArityTree.Data` is
+`OracleReduction/Security/SpecialSoundness.lean` is an arity-tree skeleton and data scaffolding with
+no soundness predicate and no extractor; `Security/Rewinding.lean` is a stub. Its arity-tree data is
 the natural meeting point for the challenge trees of
 [`ChallengeTree.lean`](../../ToMathlib/Combinatorics/ChallengeTree.lean). What ArkLib does have is
 the *straightline* side — completeness, soundness and knowledge soundness against straightline
@@ -355,7 +385,7 @@ contents here; its uniform-splitting and marginalization theorems overlap
 
 **Lattice overlap, noted only.** ArkLib carries a large, nearly sorry-free cyclotomic-ring library
 — `Rq`, Lyubashevsky–Seiler and Micciancio–Young norm bounds, Galois trace, subfield packing,
-`ModuleSIS` — overlapping `LatticeCrypto/Ring/`. This repo cannot import ArkLib without a cycle, and
+Module-SIS — overlapping `LatticeCrypto/Ring/`. This repo cannot import ArkLib without a cycle, and
 the two libraries serve different ends (FIPS schemes here, proof systems there), so merging them is
 a separate question.
 
@@ -386,10 +416,19 @@ generic extractor nor its cost is formalized here. FMN's §7.3 states the conclu
 way; the defensible reading, and the one these docstrings take, is that the route through
 `Γ`-out-of-`C` special soundness is closed rather than that the generic extractor is slow.
 
-## Deferred oracle semantics
+## Against a rewound prover
 
-The table proof changes a challenge vector by value (`Function.update c j x`). The paper's
-extractor instead needs an operational account of rerunning a prover, fixing a prefix, and varying
-the selected challenge while preserving the appropriate surrounding randomness. No positional
-rewind primitive in this PR is consumed by the proofs, so that machinery is deliberately deferred
-until a concrete costed extractor specifies exactly which state must be retained.
+The rewinding framework supplies the operational account the table model abstracts: a
+`Rewinding.ResetPolicy` reruns a prover from the beginning with its private randomness frozen
+(`Rewinding/FixedTape.lean`), and `Rewinding.ResetPolicy.finder_bounds` carries any finder's success
+and cost bounds to an acceptance oracle implemented by such reruns, with the acceptance rate read
+as the prover's honest acceptance probability averaged over challenges (`finder_bounds_honest`).
+So `isFinder_coordFinder` already bounds Figure 11 against a real prover.
+
+What is not yet a library construction is the last step of extraction: a finder returns
+challenges, and a witness extractor needs the prover's responses on them. Replaying the found
+challenges against the same frozen world returns the responses of the runs the finder saw, by the
+policy's `frozen` law (`Rewinding.ResetPolicy.frozen_run`). That transcript-recovery layer is
+generic over finders, so it serves the threshold finder as well, and is planned as its own change.
+Until it lands, `CoordinateFork/Extraction.lean` extracts in the table model, where the responses
+are a table.
