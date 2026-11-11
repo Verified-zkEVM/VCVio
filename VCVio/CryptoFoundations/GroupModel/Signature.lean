@@ -191,6 +191,10 @@ inductive PSort
   | g₁ | g₂ | gₜ
   deriving DecidableEq
 
+/-- The three pairing sorts, listed as source, source, target. -/
+instance instFintypePSort : Fintype PSort :=
+  ⟨{.g₁, .g₂, .gₜ}, by intro s; cases s <;> simp⟩
+
 /-- Asymmetric pairing without a map between the source groups (Type 3). -/
 @[expose] def pairingSig : Sig PSort :=
   ⟨Empty, Empty.elim, Empty.elim, Unit, fun _ => .g₁, fun _ => .g₂, fun _ => .gₜ⟩
