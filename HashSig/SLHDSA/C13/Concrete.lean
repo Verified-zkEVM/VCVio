@@ -60,18 +60,24 @@ def countWord (c : ℕ) : ByteArray :=
 
 /-! ### keccak256 tweakable hashes -/
 
+/-- `F = keccak256(PK.seed ‖ ADRS32 ‖ y)`, truncated to its top 16 bytes. -/
 def kF (pkSeed : Bytes 16) (adrs : Adrs) (y : Bytes 16) : Bytes 16 :=
   top16 (keccak256 (nodeWord pkSeed ++ adrs32 adrs ++ nodeWord y))
 
+/-- `H = keccak256(PK.seed ‖ ADRS32 ‖ l ‖ r)`, truncated to its top 16 bytes. -/
 def kH (pkSeed : Bytes 16) (adrs : Adrs) (l r : Bytes 16) : Bytes 16 :=
   top16 (keccak256 (nodeWord pkSeed ++ adrs32 adrs ++ nodeWord l ++ nodeWord r))
 
+/-- `T_ℓ = keccak256(PK.seed ‖ ADRS32 ‖ y₁ ‖ … ‖ y_ℓ)`, truncated to its top 16 bytes. -/
 def kTl (pkSeed : Bytes 16) (adrs : Adrs) (ys : List (Bytes 16)) : Bytes 16 :=
   top16 (keccak256 (ys.foldl (fun acc y => acc ++ nodeWord y) (nodeWord pkSeed ++ adrs32 adrs)))
 
+/-- `PRF = keccak256(SK.seed ‖ ADRS32)`, truncated to its top 16 bytes; `PK.seed` is
+unused. -/
 def kPRF (_pkSeed : Bytes 16) (skSeed : Bytes 16) (adrs : Adrs) : Bytes 16 :=
   top16 (keccak256 (nodeWord skSeed ++ adrs32 adrs))
 
+/-- `PRF_msg = keccak256(SK.prf ‖ opt_rand ‖ message)`, truncated to its top 16 bytes. -/
 def kPRFmsg (skPrf : Bytes 16) (optrand : Bytes 16) (msg : List Byte) : Bytes 16 :=
   top16 (keccak256 (nodeWord skPrf ++ nodeWord optrand ++ ByteArray.mk msg.toArray))
 
