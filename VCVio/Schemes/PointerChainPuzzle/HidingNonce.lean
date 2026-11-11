@@ -750,23 +750,7 @@ end KeyTable
 section PRFHop
 
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx] [DecidableEq N]
-  [SampleableType S] [SampleableType L] [SampleableType N] [SampleableType K]
-
-/-- The handler of the online phase of `indexedExperiment` at hidden bit `b` for the puzzle
-`puzzle`, as it appears there: local coins are forwarded, a challenge query is answered by the
-left-or-right oracle over `indexedEncrypt`, and single queries to the oracles with subkeys are
-forwarded. -/
-@[expose]
-def indexedOnlineImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
-    QueryImpl ((unifSpec + LeftOrRight.spec Plaintext ByteArray) + sealSpec n S L Salt Ctx N K)
-      (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))) :=
-  ((QueryImpl.ofLift unifSpec (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))).liftTarget
-      (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))) +
-    LeftOrRight.oracle (indexedEncrypt (n := n) (S := S) (L := L) (Salt := Salt) (Ctx := Ctx)
-      (K := K) codec qEnc (encodePuzzle puzzle)) plaintextLength b) +
-    (fun t => liftM ((indexedSpec n S L Salt Ctx N K qEnc).query (.inr (.inl t))) :
-      QueryImpl (sealSpec n S L Salt Ctx N K)
-        (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))))
+  [SampleableType S] [SampleableType L] [SampleableType K]
 
 /-- The handler of `indexedRun`: local coins are forwarded, the oracles with subkeys are a random
 oracle on the cache, and instance queries go to the function oracle. -/
@@ -798,7 +782,6 @@ noncomputable def keyedRomImpl (T : Fin (2 * qEnc) → K) :
       (fun x => pure (prf.eval (T x.1) x.2) : QueryImpl (instanceSpec qEnc)
         (StateT (sealSpec n S L Salt Ctx N K).QueryCache ProbComp)))
 
-omit [SampleableType N] in
 /-- In the real world of `prf.multiKey` with the key table `T`, the handler of `indexedRun` is
 `keyedRomImpl T`. -/
 lemma mapStateTBase_indexedRunImpl (T : Fin (2 * qEnc) → K) :
@@ -820,7 +803,6 @@ lemma mapStateTBase_indexedRunImpl (T : Fin (2 * qEnc) → K) :
   · simp [QueryImpl.mapStateTBase, indexedRunImpl, keyedRomImpl, functionQuery]
     rfl
 
-omit [SampleableType N] in
 /-- Simulating a computation lifted from the oracles of the hiding game, `keyedRomImpl T` is the
 random oracle model. -/
 lemma simulateQ_keyedRomImpl_liftComp (T : Fin (2 * qEnc) → K) {α : Type}
@@ -834,6 +816,24 @@ lemma simulateQ_keyedRomImpl_liftComp (T : Fin (2 * qEnc) → K) {α : Type}
       (Ctx := Ctx) prf qEnc T) (Sum.inl k)
   · rw [OracleComp.liftM_eq_liftM_liftM, simulateQ_query]
     rcases x with p | p | p <;> exact id_map _
+
+variable [SampleableType N]
+
+/-- The handler of the online phase of `indexedExperiment` at hidden bit `b` for the puzzle
+`puzzle`, as it appears there: local coins are forwarded, a challenge query is answered by the
+left-or-right oracle over `indexedEncrypt`, and single queries to the oracles with subkeys are
+forwarded. -/
+@[expose]
+def indexedOnlineImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
+    QueryImpl ((unifSpec + LeftOrRight.spec Plaintext ByteArray) + sealSpec n S L Salt Ctx N K)
+      (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))) :=
+  ((QueryImpl.ofLift unifSpec (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))).liftTarget
+      (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))) +
+    LeftOrRight.oracle (indexedEncrypt (n := n) (S := S) (L := L) (Salt := Salt) (Ctx := Ctx)
+      (K := K) codec qEnc (encodePuzzle puzzle)) plaintextLength b) +
+    (fun t => liftM ((indexedSpec n S L Salt Ctx N K qEnc).query (.inr (.inl t))) :
+      QueryImpl (sealSpec n S L Salt Ctx N K)
+        (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))))
 
 /-- The online phase of `G₂` with the key table `T`, at hidden bit `b` for the puzzle `puzzle`, as
 one handler on the pair of the cache of the random oracle and the counter: a step of the online

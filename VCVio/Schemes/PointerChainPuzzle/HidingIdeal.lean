@@ -70,8 +70,73 @@ variable {n m : ℕ} {S L Salt Ctx N K : Type}
 variable {w : ℕ} (codec : FixedCodec N w) (encodePuzzle : Puzzle n S L Salt → ByteArray)
   (qEnc : ℕ)
 
+/-! ## Envelopes at instances -/
+
+/-- Distinct kinds or encryptions have distinct instances. -/
+theorem instanceIndex_injective {q : ℕ} {i i' : Fin 2} {j j' : Fin q}
+    (h : instanceIndex i j = instanceIndex i' j') : i = i' ∧ j = j' :=
+  Prod.ext_iff.mp (finProdFinEquiv.injective h)
+
+/-- In the ideal world the instance queries of an envelope go to the random oracle of the
+instances. -/
+private theorem simulateQ_prfIdeal_sealBy (i₀ i₁ : Fin (2 * qEnc)) (pz : ByteArray) (nonce : N)
+    (msg : Plaintext) :
+    simulateQ prfIdealQueryImpl (sealBy codec (fun x => functionQuery (R := Bytes 32) (i₀, x))
+      (fun x => functionQuery (R := Bytes 32) (i₁, x)) pz nonce msg) =
+    sealBy codec (fun x => (instanceSpec qEnc).randomOracle (i₀, x))
+      (fun x => (instanceSpec qEnc).randomOracle (i₁, x)) pz nonce msg := by
+  rw [sealBy_map codec (simulateQ_isMonadHom _)]
+  simp only [simulateQ_prfIdealQueryImpl_functionQuery]
+
+/-- **An envelope at a fresh pair of instances is uniform.** If the random oracle of the
+instances has cached no point of instances `(0, j)` and `(1, j)`, the envelope it answers is
+distributed as the envelope with uniform keystream blocks and a uniform tag. -/
+theorem fst_map_run_sealBy_evalDistEq_of_fresh (j : Fin qEnc) (pz : ByteArray) (nonce : N)
+    (msg : Plaintext) (c₂ : (instanceSpec qEnc).QueryCache)
+    (hfresh : ∀ i x, c₂ (instanceIndex i j, x) = none) :
+    Prod.fst <$> (sealBy codec (fun x => (instanceSpec qEnc).randomOracle (instanceIndex 0 j, x))
+      (fun x => (instanceSpec qEnc).randomOracle (instanceIndex 1 j, x)) pz nonce msg).run c₂ =ᵈ
+      sealBy codec (fun _ => ($ᵗ Bytes 32 : ProbComp (Bytes 32))) (fun _ => $ᵗ Bytes 32)
+        pz nonce msg := by
+  have h01 : instanceIndex (0 : Fin 2) j ≠ instanceIndex 1 j := fun h =>
+    absurd (instanceIndex_injective h).1 (by decide)
+  set G : List (Bytes 32) → ProbComp ByteArray := fun bs =>
+    ($ᵗ Bytes 32 : ProbComp (Bytes 32)) >>= fun t => pure ((⟨(signedBytes codec pz nonce
+      (xorBytes msg.1.data.toList ((bs.flatMap fun x => x.toList).take msg.1.size)) ++
+        t.toList).toArray⟩ : ByteArray)) with hG
+  simp only [sealBy, StateT.run_bind, map_bind, StateT.run_pure]
+  refine (EvalDistEq.bind_congr_of_support (g := fun z => G z.1) _ fun z hz => ?_).trans ?_
+  · have hz2 : ∀ y, z.2 (instanceIndex 1 j, y) = c₂ (instanceIndex 1 j, y) := fun y =>
+      randomOracle.run_list_mapM_apply_of_forall_ne (fun i => (instanceIndex 0 j, be 8 i)) _
+        (t := (instanceIndex 1 j, y)) (fun x _ h => h01 (congrArg Prod.fst h)) c₂ hz
+    rw [randomOracle.run_eq, hz2, hfresh]
+    simp only [hG, bind_assoc, pure_bind, map_pure]
+    exact EvalDistEq.rfl
+  · rw [← bind_map_left Prod.fst _ G, randomOracle.fst_map_run_list_mapM_of_fresh
+      (fun i => (instanceIndex 0 j, be 8 i))]
+    · have := (nodup_map_be_range msg).map (f := Prod.mk (instanceIndex 0 j))
+        (fun _ _ h => (Prod.mk.inj h).2)
+      rwa [List.map_map] at this
+    · exact fun x _ => hfresh 0 _
+
+/-- An envelope at instances `(0, j)` and `(1, j)` leaves the cache of every other instance
+unchanged. -/
+private theorem run_sealBy_apply_of_ne (j : Fin qEnc) (pz : ByteArray) (nonce : N)
+    (msg : Plaintext) (c : (instanceSpec qEnc).QueryCache) {y : Fin (2 * qEnc) × ByteArray}
+    (hy : ∀ i, y.1 ≠ instanceIndex i j) {z : ByteArray × (instanceSpec qEnc).QueryCache}
+    (hz : z ∈ support ((sealBy codec
+      (fun x => (instanceSpec qEnc).randomOracle (instanceIndex 0 j, x))
+      (fun x => (instanceSpec qEnc).randomOracle (instanceIndex 1 j, x)) pz nonce msg).run c)) :
+    z.2 y = c y := by
+  simp only [sealBy, StateT.run_bind, StateT.run_pure, support_bind, support_pure, Set.mem_iUnion,
+    Set.mem_singleton_iff, exists_prop] at hz
+  obtain ⟨a, ha, b, hb, rfl⟩ := hz
+  rw [randomOracle.run_apply_of_ne (fun h => hy 1 (congrArg Prod.fst h).symm) _ hb]
+  exact randomOracle.run_list_mapM_apply_of_forall_ne _ _
+    (fun x _ h => hy 0 (congrArg Prod.fst h).symm) c ha
+
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx] [DecidableEq N]
-  [SampleableType S] [SampleableType L] [SampleableType N] [SampleableType K]
+  [SampleableType S] [SampleableType L] [SampleableType K]
 
 /-! ## The ideal world as one stateful handler -/
 
@@ -92,7 +157,6 @@ private abbrev runImpl : QueryImpl (indexedSpec n S L Salt Ctx N K qEnc)
           (StateT (sealSpec n S L Salt Ctx N K).QueryCache
             (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32))))))
 
-omit [SampleableType N] in
 /-- On a computation of the hiding adversary's own oracles, `runImpl` is the random oracle
 of the oracles with subkeys. -/
 private theorem run_simulateQ_runImpl_liftComp {α : Type}
@@ -112,6 +176,42 @@ private theorem run_simulateQ_runImpl_liftComp {α : Type}
       · simp only [liftComp_bind, simulateQ_bind, StateT.run_bind, ih, simulateQ_liftM_query]
         simp [OracleSpec.query, simulateQ_liftM_query]
         rfl
+
+/-- A prefix that queries only the hiding adversary's own oracles runs in the ideal world as
+its random-oracle simulation. -/
+private theorem run_liftComp_bind_eq {α β : Type}
+    (pre : OracleComp (unifSpec + sealSpec n S L Salt Ctx N K) α)
+    (k : α → OracleComp (indexedSpec n S L Salt Ctx N K qEnc) β)
+    (c₁ : (sealSpec n S L Salt Ctx N K).QueryCache) (c₂ : (instanceSpec qEnc).QueryCache) :
+    (simulateQ prfIdealQueryImpl ((simulateQ (runImpl n S L Salt Ctx N K qEnc)
+        (liftComp pre (indexedSpec n S L Salt Ctx N K qEnc) >>= k)).run' c₁)).run' c₂ =
+      (simulateQ (sealSpec n S L Salt Ctx N K).romImpl pre).run c₁ >>= fun z =>
+        (simulateQ prfIdealQueryImpl ((simulateQ (runImpl n S L Salt Ctx N K qEnc)
+          (k z.1)).run' z.2)).run' c₂ := by
+  simp only [simulateQ_bind, StateT.run'_eq, StateT.run_bind, run_simulateQ_runImpl_liftComp,
+    map_bind, simulateQ_map, simulateQ_prfIdealQueryImpl_liftComp, StateT.run_map,
+    StateT.run_liftM, bind_assoc, pure_bind]
+
+/-- `runImpl` forwards the instance queries of an envelope to the function oracle. -/
+private theorem run_simulateQ_runImpl_sealBy (i₀ i₁ : Fin (2 * qEnc)) (pz : ByteArray)
+    (nonce : N) (msg : Plaintext) (c₁ : (sealSpec n S L Salt Ctx N K).QueryCache) :
+    (simulateQ (runImpl n S L Salt Ctx N K qEnc) (sealBy codec
+      (fun x => liftM ((indexedSpec n S L Salt Ctx N K qEnc).query (.inr (.inr (i₀, x)))))
+      (fun x => liftM ((indexedSpec n S L Salt Ctx N K qEnc).query (.inr (.inr (i₁, x)))))
+      pz nonce msg)).run c₁ =
+    (fun r => (r, c₁)) <$> sealBy codec (fun x => functionQuery (R := Bytes 32) (i₀, x))
+      (fun x => functionQuery (R := Bytes 32) (i₁, x)) pz nonce msg := by
+  have hL : Cslib.IsMonadHom (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))
+      (StateT (sealSpec n S L Salt Ctx N K).QueryCache
+        (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32))))
+      (fun x => liftM x) :=
+    Cslib.IsMonadHom.mk' (fun a => by simp) (fun x y => by simp)
+  rw [sealBy_map codec (simulateQ_isMonadHom _)]
+  simp only [simulateQ_spec_query, QueryImpl.add_apply_inr]
+  rw [← sealBy_map codec hL, StateT.run_liftM, map_eq_bind_pure_comp]
+  rfl
+
+variable [SampleableType N]
 
 variable (n S L Salt Ctx N K) in
 /-- The oracles of the online phase: local coins, the left-or-right oracle and the oracles with
@@ -169,38 +269,6 @@ private theorem jointImpl_unif (pz : ByteArray) (b : Bool) (u : ℕ)
   simp [jointImpl, challengerImpl, prfIdealQueryImpl, romImpl_eq_passthrough_add,
     QueryImpl.simulateQ_add_liftM_query_left]
 
-omit [SampleableType N] in
-/-- `runImpl` forwards the instance queries of an envelope to the function oracle. -/
-private theorem run_simulateQ_runImpl_sealBy (i₀ i₁ : Fin (2 * qEnc)) (pz : ByteArray)
-    (nonce : N) (msg : Plaintext) (c₁ : (sealSpec n S L Salt Ctx N K).QueryCache) :
-    (simulateQ (runImpl n S L Salt Ctx N K qEnc) (sealBy codec
-      (fun x => liftM ((indexedSpec n S L Salt Ctx N K qEnc).query (.inr (.inr (i₀, x)))))
-      (fun x => liftM ((indexedSpec n S L Salt Ctx N K qEnc).query (.inr (.inr (i₁, x)))))
-      pz nonce msg)).run c₁ =
-    (fun r => (r, c₁)) <$> sealBy codec (fun x => functionQuery (R := Bytes 32) (i₀, x))
-      (fun x => functionQuery (R := Bytes 32) (i₁, x)) pz nonce msg := by
-  have hL : Cslib.IsMonadHom (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))
-      (StateT (sealSpec n S L Salt Ctx N K).QueryCache
-        (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32))))
-      (fun x => liftM x) :=
-    Cslib.IsMonadHom.mk' (fun a => by simp) (fun x y => by simp)
-  rw [sealBy_map codec (simulateQ_isMonadHom _)]
-  simp only [simulateQ_spec_query, QueryImpl.add_apply_inr]
-  rw [← sealBy_map codec hL, StateT.run_liftM, map_eq_bind_pure_comp]
-  rfl
-
-omit [DecidableEq N] [SampleableType N] in
-/-- In the ideal world the instance queries of an envelope go to the random oracle of the
-instances. -/
-private theorem simulateQ_prfIdeal_sealBy (i₀ i₁ : Fin (2 * qEnc)) (pz : ByteArray) (nonce : N)
-    (msg : Plaintext) :
-    simulateQ prfIdealQueryImpl (sealBy codec (fun x => functionQuery (R := Bytes 32) (i₀, x))
-      (fun x => functionQuery (R := Bytes 32) (i₁, x)) pz nonce msg) =
-    sealBy codec (fun x => (instanceSpec qEnc).randomOracle (i₀, x))
-      (fun x => (instanceSpec qEnc).randomOracle (i₁, x)) pz nonce msg := by
-  rw [sealBy_map codec (simulateQ_isMonadHom _)]
-  simp only [simulateQ_prfIdealQueryImpl_functionQuery]
-
 /-- In the ideal world the nonce of an encryption is a uniform draw that leaves both caches
 unchanged. -/
 private theorem run_simulateQ_runImpl_nonce (c₁ : (sealSpec n S L Salt Ctx N K).QueryCache)
@@ -241,28 +309,7 @@ private theorem jointImpl_challenge (pz : ByteArray) (b : Bool) (mm : Plaintext 
     · simp [jointImpl, challengerImpl, LeftOrRight.oracle, hl, indexedEncrypt, hj]
   · simp [jointImpl, challengerImpl, LeftOrRight.oracle, hl]
 
-omit [SampleableType N] in
-/-- A prefix that queries only the hiding adversary's own oracles runs in the ideal world as
-its random-oracle simulation. -/
-private theorem run_liftComp_bind_eq {α β : Type}
-    (pre : OracleComp (unifSpec + sealSpec n S L Salt Ctx N K) α)
-    (k : α → OracleComp (indexedSpec n S L Salt Ctx N K qEnc) β)
-    (c₁ : (sealSpec n S L Salt Ctx N K).QueryCache) (c₂ : (instanceSpec qEnc).QueryCache) :
-    (simulateQ prfIdealQueryImpl ((simulateQ (runImpl n S L Salt Ctx N K qEnc)
-        (liftComp pre (indexedSpec n S L Salt Ctx N K qEnc) >>= k)).run' c₁)).run' c₂ =
-      (simulateQ (sealSpec n S L Salt Ctx N K).romImpl pre).run c₁ >>= fun z =>
-        (simulateQ prfIdealQueryImpl ((simulateQ (runImpl n S L Salt Ctx N K qEnc)
-          (k z.1)).run' z.2)).run' c₂ := by
-  simp only [simulateQ_bind, StateT.run'_eq, StateT.run_bind, run_simulateQ_runImpl_liftComp,
-    map_bind, simulateQ_map, simulateQ_prfIdealQueryImpl_liftComp, StateT.run_map,
-    StateT.run_liftM, bind_assoc, pure_bind]
-
 /-! ## Fresh instances -/
-
-/-- Distinct kinds or encryptions have distinct instances. -/
-theorem instanceIndex_injective {q : ℕ} {i i' : Fin 2} {j j' : Fin q}
-    (h : instanceIndex i j = instanceIndex i' j') : i = i' ∧ j = j' :=
-  Prod.ext_iff.mp (finProdFinEquiv.injective h)
 
 variable (n S L Salt Ctx N K) in
 /-- The state of the fresh game: the counter of accepted requests and the cache of the oracles
@@ -293,55 +340,6 @@ private def freshImpl (pz : ByteArray) (b : Bool) :
     (fun t => StateT.mk fun s =>
       (fun z => (z.1, (s.1, z.2))) <$> ((sealSpec n S L Salt Ctx N K).randomOracle t).run s.2 :
       QueryImpl (sealSpec n S L Salt Ctx N K) (StateT (freshState n S L Salt Ctx N K) ProbComp))
-
-omit [DecidableEq N] [SampleableType N] in
-/-- **An envelope at a fresh pair of instances is uniform.** If the random oracle of the
-instances has cached no point of instances `(0, j)` and `(1, j)`, the envelope it answers is
-distributed as the envelope with uniform keystream blocks and a uniform tag. -/
-theorem fst_map_run_sealBy_evalDistEq_of_fresh (j : Fin qEnc) (pz : ByteArray) (nonce : N)
-    (msg : Plaintext) (c₂ : (instanceSpec qEnc).QueryCache)
-    (hfresh : ∀ i x, c₂ (instanceIndex i j, x) = none) :
-    Prod.fst <$> (sealBy codec (fun x => (instanceSpec qEnc).randomOracle (instanceIndex 0 j, x))
-      (fun x => (instanceSpec qEnc).randomOracle (instanceIndex 1 j, x)) pz nonce msg).run c₂ =ᵈ
-      sealBy codec (fun _ => ($ᵗ Bytes 32 : ProbComp (Bytes 32))) (fun _ => $ᵗ Bytes 32)
-        pz nonce msg := by
-  have h01 : instanceIndex (0 : Fin 2) j ≠ instanceIndex 1 j := fun h =>
-    absurd (instanceIndex_injective h).1 (by decide)
-  set G : List (Bytes 32) → ProbComp ByteArray := fun bs =>
-    ($ᵗ Bytes 32 : ProbComp (Bytes 32)) >>= fun t => pure ((⟨(signedBytes codec pz nonce
-      (xorBytes msg.1.data.toList ((bs.flatMap fun x => x.toList).take msg.1.size)) ++
-        t.toList).toArray⟩ : ByteArray)) with hG
-  simp only [sealBy, StateT.run_bind, map_bind, StateT.run_pure]
-  refine (EvalDistEq.bind_congr_of_support (g := fun z => G z.1) _ fun z hz => ?_).trans ?_
-  · have hz2 : ∀ y, z.2 (instanceIndex 1 j, y) = c₂ (instanceIndex 1 j, y) := fun y =>
-      randomOracle.run_list_mapM_apply_of_forall_ne (fun i => (instanceIndex 0 j, be 8 i)) _
-        (t := (instanceIndex 1 j, y)) (fun x _ h => h01 (congrArg Prod.fst h)) c₂ hz
-    rw [randomOracle.run_eq, hz2, hfresh]
-    simp only [hG, bind_assoc, pure_bind, map_pure]
-    exact EvalDistEq.rfl
-  · rw [← bind_map_left Prod.fst _ G, randomOracle.fst_map_run_list_mapM_of_fresh
-      (fun i => (instanceIndex 0 j, be 8 i))]
-    · have := (nodup_map_be_range msg).map (f := Prod.mk (instanceIndex 0 j))
-        (fun _ _ h => (Prod.mk.inj h).2)
-      rwa [List.map_map] at this
-    · exact fun x _ => hfresh 0 _
-
-omit [DecidableEq N] [SampleableType N] in
-/-- An envelope at instances `(0, j)` and `(1, j)` leaves the cache of every other instance
-unchanged. -/
-private theorem run_sealBy_apply_of_ne (j : Fin qEnc) (pz : ByteArray) (nonce : N)
-    (msg : Plaintext) (c : (instanceSpec qEnc).QueryCache) {y : Fin (2 * qEnc) × ByteArray}
-    (hy : ∀ i, y.1 ≠ instanceIndex i j) {z : ByteArray × (instanceSpec qEnc).QueryCache}
-    (hz : z ∈ support ((sealBy codec
-      (fun x => (instanceSpec qEnc).randomOracle (instanceIndex 0 j, x))
-      (fun x => (instanceSpec qEnc).randomOracle (instanceIndex 1 j, x)) pz nonce msg).run c)) :
-    z.2 y = c y := by
-  simp only [sealBy, StateT.run_bind, StateT.run_pure, support_bind, support_pure, Set.mem_iUnion,
-    Set.mem_singleton_iff, exists_prop] at hz
-  obtain ⟨a, ha, b, hb, rfl⟩ := hz
-  rw [randomOracle.run_apply_of_ne (fun h => hy 1 (congrArg Prod.fst h).symm) _ hb]
-  exact randomOracle.run_list_mapM_apply_of_forall_ne _ _
-    (fun x _ h => hy 0 (congrArg Prod.fst h).symm) c ha
 
 variable (n S L Salt Ctx N K) in
 /-- The invariant of the joint state: no instance of an encryption that has not yet happened has
