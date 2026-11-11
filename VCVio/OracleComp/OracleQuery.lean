@@ -29,6 +29,8 @@ def OracleQuery {ι : Type u} (spec : OracleSpec.{u, v} ι) :
     Type w → Type (max u v w) :=
   PFunctor.Obj spec.toPFunctor
 
+/-- The query with oracle input `t : spec.Domain` whose continuation `f` turns the oracle's
+response `u : spec.Range t` into the value `f u`. -/
 @[reducible, match_pattern] protected def OracleQuery.mk {ι α} {spec : OracleSpec ι}
     (t : spec.Domain) (f : spec.Range t → α) : OracleQuery spec α := PFunctor.Obj.mk t f
 

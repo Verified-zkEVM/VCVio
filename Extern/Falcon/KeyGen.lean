@@ -54,6 +54,8 @@ open Falcon.Concrete.FPR
 
 /-! ## PRNG helper: 16-bit extraction -/
 
+/-- Read two bytes from the PRNG as a little-endian 16-bit value, returned in a `UInt32`, with
+the advanced state; mirrors c-fn-dsa's `shake_next_u16`. -/
 def PRNGState.nextU16 (s : PRNGState) : UInt32 × PRNGState :=
   let (b0, s') := s.nextByte
   let (b1, s'') := s'.nextByte
@@ -287,11 +289,18 @@ def ntruGen (logn : Nat) (prng : PRNGState) :
   used as input to `ffSampling` during signing. Stored as a flat
   `UInt64` buffer encoding the LDL tree. -/
 structure RawKeyPair where
+  /-- The short secret polynomial `f`, invertible modulo `q`. -/
   f : Array Int8
+  /-- The short secret polynomial `g`. -/
   g : Array Int8
+  /-- The polynomial `F` of the solution `(F, G)` of the NTRU equation `f · G - g · F = q`. -/
   capF : Array Int8
+  /-- The polynomial `G` of the solution `(F, G)` of the NTRU equation `f · G - g · F = q`. -/
   capG : Array Int8
+  /-- The public key `h = g · f⁻¹ mod q`, with coefficients in `[0, q)`. -/
   h : Array UInt16
+  /-- The Gram matrix entries `g00 ++ g01 ++ g11` of the basis `[[g, -f], [G, -F]]` in FFT
+  representation, as `FPR` bit patterns produced by `computeGramData`. -/
   gramData : Array UInt64
 
 /-! ## Gram matrix computation

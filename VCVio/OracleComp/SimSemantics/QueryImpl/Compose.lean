@@ -36,6 +36,8 @@ def compose (so' : QueryImpl spec' m) (so : QueryImpl spec (OracleComp spec')) :
     QueryImpl spec m :=
   fun t => simulateQ so' (so t)
 
+/-- `so' ∘ₛ so` is `QueryImpl.compose so' so`: answer each query with the `spec'`-program from
+`so`, then run that program under `so'`. -/
 infixl : 65 " ∘ₛ " => QueryImpl.compose
 
 @[simp]
@@ -47,6 +49,15 @@ lemma simulateQ_compose [LawfulMonad m] (so' : QueryImpl spec' m)
     (so : QueryImpl spec (OracleComp spec'))
     (oa : OracleComp spec α) : simulateQ (so' ∘ₛ so) oa = simulateQ so' (simulateQ so oa) := by
   exact (PFunctor.FreeM.liftM_natural so (simulateQ' so') oa).symm
+
+/-- If `so'` runs each program `so t` as `impl` answers the query `t`, then running a program
+rewritten by `so` through `so'` is running the program through `impl`. -/
+lemma simulateQ_simulateQ_eq_of_apply [LawfulMonad m] {so' : QueryImpl spec' m}
+    {so : QueryImpl spec (OracleComp spec')} {impl : QueryImpl spec m}
+    (h : ∀ t, simulateQ so' (so t) = impl t) (oa : OracleComp spec α) :
+    simulateQ so' (simulateQ so oa) = simulateQ impl oa := by
+  rw [← simulateQ_compose]
+  exact congrArg (simulateQ · oa) (funext h)
 
 @[simp]
 lemma compose_id' [LawfulMonad m] (so : QueryImpl spec m) :

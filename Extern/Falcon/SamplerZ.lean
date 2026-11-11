@@ -47,13 +47,21 @@ namespace Falcon.Concrete.SamplerZ
 
 /-! ## PRNG state -/
 
+/-- A SHAKE-256 output stream used as the sampler PRNG, modelling c-fn-dsa's `shake_context`
+after `prng_init`. The stream is read in 4096-byte blocks. -/
 structure PRNGState where
+  /-- The seed absorbed into SHAKE-256. -/
   seed : ByteArray
+  /-- The current block of the SHAKE-256 output stream. -/
   buffer : ByteArray
+  /-- The position of `buffer` in the SHAKE-256 output stream. -/
   offset : Nat
+  /-- The index of the next unread byte in `buffer`. -/
   pos : Nat
 deriving Inhabited
 
+/-- The PRNG state for `seed`, positioned at the start of the SHAKE-256 output stream;
+mirrors the PRNG initialization in c-fn-dsa's `sampler_init`. -/
 @[inline] def PRNGState.init (seed : ByteArray) : PRNGState :=
   { seed := seed, buffer := FFI.Hashing.shake256 seed 4096, offset := 0, pos := 0 }
 
@@ -64,10 +72,14 @@ deriving Inhabited
   let nextBuf := full.extract nextOffset nextEnd
   { s with buffer := nextBuf, offset := nextOffset, pos := 0 }
 
+/-- Read the next byte of the stream, refilling the buffer with the following block when it
+is exhausted; mirrors c-fn-dsa's `shake_next_u8`. -/
 @[inline] def PRNGState.nextByte (s : PRNGState) : UInt8 × PRNGState :=
   let s' := if s.pos < s.buffer.size then s else s.refill
   (s'.buffer[s'.pos]!, { s' with pos := s'.pos + 1 })
 
+/-- Read the next eight bytes of the stream as a little-endian 64-bit value; mirrors
+c-fn-dsa's `shake_next_u64`. -/
 def PRNGState.nextU64 (s : PRNGState) : UInt64 × PRNGState :=
   if s.pos + 8 ≤ s.buffer.size then
     let val : UInt64 :=
@@ -112,6 +124,10 @@ private def gauss0Table : Array (UInt32 × UInt32 × UInt32) := #[
   (       0,        0,        1)
 ]
 
+/-- The half-Gaussian base sampler, `BaseSampler` of the Falcon specification: draw a uniform
+72-bit value and return how many entries of the reverse cumulative table `RCDT` exceed it, a
+nonnegative integer following a half-Gaussian of standard deviation `σ₀ = 1.8205`. Mirrors
+`gaussian0` in c-fn-dsa's `sign_sampler.c`. -/
 def gaussian0 (s : PRNGState) : Int32 × PRNGState :=
   if s.pos + 9 ≤ s.buffer.size then
     let lo : UInt64 :=
@@ -268,6 +284,10 @@ partial def samplerZLoop (state : PRNGState) (sInt : Int64)
   else
     samplerZLoop s''' sInt r dss ccs
 
+/-- The integer discrete Gaussian sampler, `SamplerZ` of the Falcon specification: sample `z`
+from `D_{ℤ,σ,μ}` given the center `mu` and the inverse standard deviation `isigma = 1 / σ`. It
+writes `mu = s + r` with `s = ⌊mu⌋` and runs `samplerZLoop` on center `r`, scaling acceptance
+by `σ_min / σ` for degree `2^logn`. Mirrors c-fn-dsa's `sampler_next`. -/
 def samplerZ (logn : Nat) (s : PRNGState) (mu isigma : F) :
     Int32 × PRNGState :=
   let sInt := FloatLike.floor_ mu

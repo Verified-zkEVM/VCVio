@@ -54,6 +54,9 @@ default is what the heap holds before any cell is written.
 `Ident` lives in `Type u`, value types in `Type v`; both universes are
 independent. Sum composition (`Sum.instCellSpec` below) requires both
 operands' universes to match. -/
+
+/-- A typed cell directory: each identifier `i : Ident` carries a value type `CellSpec.type i`
+together with a default value `CellSpec.default i`. -/
 class CellSpec (Ident : Type u) where
   /-- Value type carried by the cell at identifier `i`. -/
   type : Ident → Type v
@@ -73,6 +76,9 @@ attribute [reducible] CellSpec.type CellSpec.default
 
 `Heap Ident` is the type of states: one cell-value per identifier. Lives in
 `Type max u v`. -/
+
+/-- A typed heap over the identifier set `Ident`: one value of type `CellSpec.type i` in the
+cell at each identifier `i`. -/
 structure Heap (Ident : Type u) [CellSpec.{u, v} Ident] : Type max u v where
   /-- The value stored at each typed cell identifier. -/
   toFn : (i : Ident) → CellSpec.type i
@@ -180,6 +186,9 @@ composition in this layer. The forward direction restricts to `inl` / `inr`
 cells; the inverse is `Sum.rec` on the identifier. Both directions reduce by
 case-analysis on the identifier and are `rfl`-definitional after `cases`.
 -/
+
+/-- The canonical equivalence between heaps over `α ⊕ β` and pairs of heaps over `α` and `β`,
+restricting to the `Sum.inl` and `Sum.inr` cells. -/
 def split (α β : Type u) [CellSpec.{u, v} α] [CellSpec.{u, v} β] :
     Heap (α ⊕ β) ≃ Heap α × Heap β where
   toFun h := (ofFn (fun a => h (.inl a)), ofFn (fun b => h (.inr b)))
@@ -296,6 +305,7 @@ starting point. -/
 
 namespace HeapExample
 
+/-- The two cell identifiers of the example heap: a `Nat` counter and a `Bool` flag. -/
 inductive Id
   | counter
   | flag

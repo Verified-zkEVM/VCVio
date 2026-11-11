@@ -27,9 +27,14 @@ We also require an explicit list of all oracles used in the computation,
 which is necessary in order to make certain reductions computable. -/
 structure BoundedAdversary {ι : Type u} [DecidableEq ι]
     (spec : OracleSpec ι) (α β : Type u) where
+  /-- The adversary's computation on an input, with access to the oracles of `spec`. -/
   run : α → OracleComp spec β
+  /-- The per-oracle query bound: on every input, `run` queries oracle `i` at most `qb i`
+  times. -/
   qb : ι → ℕ
   qb_isQueryBound (x : α) : IsPerIndexQueryBound (run x) (qb)
+  /-- The oracles the adversary may query, listed explicitly: exactly those with a nonzero query
+  bound. -/
   activeOracles : List ι
   mem_activeOracles_iff (i : ι) : i ∈ activeOracles ↔ qb i ≠ 0
 

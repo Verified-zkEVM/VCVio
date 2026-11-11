@@ -22,5 +22,5 @@ lemma Prod.mk.injective2 {α β : Type*} :
     Function.Injective2 (Prod.mk : α → β → α × β) := by
   simp [Function.Injective2]
 
-instance (α : Type) [Inhabited α] : Inhabited {f : α → α // f.Bijective} :=
+instance (α : Type) : Inhabited {f : α → α // f.Bijective} :=
   ⟨id, Function.bijective_id⟩

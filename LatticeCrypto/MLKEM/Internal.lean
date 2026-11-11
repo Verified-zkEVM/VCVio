@@ -29,9 +29,17 @@ abbrev Ciphertext (params : Params) (encoding : Encoding params) :=
 /-- The ML-KEM decapsulation key packages the PKE secret key, the encapsulation key, its hash,
 and the fallback seed used by implicit rejection. -/
 structure DecapsulationKey (params : Params) (encoding : Encoding params) where
+  /-- The K-PKE decryption key `dk_PKE`, which `ML-KEM.Decaps_internal` (FIPS 203 Algorithm 18)
+  uses to decrypt the ciphertext. -/
   dkPKE : KPKE.SecretKey params encoding
+  /-- The encapsulation key `ek`, which `ML-KEM.Decaps_internal` (FIPS 203 Algorithm 18) uses to
+  re-encrypt the decrypted message and compare the result with the received ciphertext. -/
   ekPKE : EncapsulationKey params encoding
+  /-- The hash `H(ek)` of the encapsulation key, hashed with the decrypted message by `G` in
+  `ML-KEM.Decaps_internal` (FIPS 203 Algorithm 18). -/
   ekHash : PublicKeyHash
+  /-- The 32-byte implicit-rejection seed `z`: `ML-KEM.Decaps_internal` (FIPS 203 Algorithm 18)
+  returns `J(z ‖ c)` when re-encryption does not reproduce the ciphertext `c`. -/
   z : Seed32
 
 variable {params : Params}

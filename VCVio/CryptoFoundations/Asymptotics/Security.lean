@@ -44,6 +44,7 @@ efficiency notions as appropriate. -/
 advantage value. It stores the advantage rather than an experiment, so the same meta-theorems
 work for success, bias and distinguishing advantages. -/
 structure SecurityGame (Adv : Type*) where
+  /-- The advantage of an adversary at a given security parameter. -/
   advantage : Adv → ℕ → ℝ≥0∞
 
 namespace SecurityGame

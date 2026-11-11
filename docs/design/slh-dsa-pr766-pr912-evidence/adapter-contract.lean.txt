@@ -1,0 +1,71 @@
+module
+
+public import HashSig.SLHDSA.SHAKE128s.Statement.FIPS205
+public import HashSig.SLHDSA.Security.Wire
+public import HashSig.SLHDSA.GeneralSchemeQueryBound
+
+public section
+
+open OracleComp OracleSpec SignatureAlg
+open scoped ENNReal
+
+namespace SLHDSA.SHAKE128s.PlanProbe
+
+noncomputable abbrev wireAlgorithm (ctx : SLHDSA.Security.PureContext) :=
+  SLHDSA.Security.wireShakeScheme FIPS205.params ctx FIPS205.deterministicRand
+    ($ᵗ FIPS205.core.PkSeed)
+
+def fixedContextHandler (ctx : SLHDSA.Security.PureContext) :
+    QueryImpl ((unifSpec + SLHDSA.Security.shakeSpec FIPS205.params) + (Bytes →ₒ Bytes))
+      (OracleComp (Game.World FIPS205.Answer + Game.SigningSpec))
+  | .inl t => liftM ((Game.World FIPS205.Answer + Game.SigningSpec).query (.inl t))
+  | .inr msg => (fun answer : Option Bytes => answer.getD []) <$>
+      liftM ((Game.World FIPS205.Answer + Game.SigningSpec).query
+        (.inr { message := msg, context := ctx.bytes }))
+
+def fixedContextAdversary (ctx : SLHDSA.Security.PureContext)
+    (adv : StrongUnforgeableAdversary (wireAlgorithm ctx)) :
+    Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core) where
+  main pk := (fun result : Bytes × Bytes =>
+      Game.Forgery.mk (Message.mk result.1 ctx.bytes) result.2) <$>
+    simulateQ (fixedContextHandler ctx)
+      (adv.main ((publicKeyCodec (Concrete.shakeWireCodec FIPS205.params.params)).encode pk))
+
+def verifierCap : ℕ := GeneralScheme.verifyInternalQueryBound FIPS205.params.params
+
+example : verifierCap = 3929 := by decide
+
+theorem fixedContext_sign (ctx : SLHDSA.Security.PureContext)
+    (sk : SecretKeyCore FIPS205.core) (msg : Bytes) :
+    FIPS205.scheme.sign sk { message := msg, context := ctx.bytes } =
+      (fun signature => some (encodeSignature FIPS205.params
+        (Concrete.shakeWireCodec FIPS205.params.params) signature)) <$>
+        FIPS205.internal.sign (FIPS205.SecretKeyCore.publicKey sk) sk (ctx.encode msg) := by
+  simp only [FIPS205.scheme, SLHDSA.Security.PureContext.encode_eq_external]
+
+-- These propositions type-check the requested interfaces; they assert no unproved theorem.
+def AdapterContract (ctx : SLHDSA.Security.PureContext)
+    (adv : StrongUnforgeableAdversary (wireAlgorithm ctx)) (qh qs : ℕ) : Prop :=
+  adv.RomQueryBound qh qs → qs ≤ signingLimit →
+    (Game.securityGame FIPS205.scheme).advantage () (fixedContextAdversary ctx adv) =
+        strongUnforgeableAdvantage (SLHDSA.Security.shakeRuntime FIPS205.params) adv ∧
+    Game.WithinSigningLimit FIPS205.scheme (fixedContextAdversary ctx adv) ∧
+    (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork
+      (fixedContextAdversary ctx adv) (qh + qs + verifierCap)
+
+noncomputable def existingByteBound (qh qs : ℕ) : ℝ≥0∞ :=
+  SLHDSA.Security.byteBound FIPS205.params qh qs +
+    SLHDSA.Security.honestAdrsCount FIPS205.params / 2 ^ 256 *
+      SLHDSA.Security.weakSeedFactor FIPS205.params
+        (SLHDSA.Security.everySeedBound FIPS205.params qh qs)
+
+def CombinedBoundContract : Prop :=
+  ∀ (ctx : SLHDSA.Security.PureContext)
+    (adv : StrongUnforgeableAdversary (wireAlgorithm ctx)) (qh qs : ℕ),
+    adv.RomQueryBound qh qs → qs ≤ signingLimit →
+    strongUnforgeableAdvantage (SLHDSA.Security.shakeRuntime FIPS205.params) adv ≤
+      min (existingByteBound qh qs)
+        (((qh + qs + verifierCap : ℕ) : ℝ≥0∞) / ((2 ^ 127 : ℕ) : ℝ≥0∞))
+
+#print axioms fixedContext_sign
+end SLHDSA.SHAKE128s.PlanProbe

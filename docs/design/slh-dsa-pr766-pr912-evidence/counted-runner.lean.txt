@@ -1,0 +1,76 @@
+module
+public import HashSig.SLHDSA.SHAKE128s.Statement.Game
+public section
+open OracleComp OracleSpec
+namespace SLHDSA.SHAKE128s.RunnerProbe
+open Game
+variable {Output PK SK : Type}
+def executableAfterKeygen (scheme : ExternalScheme Output PK SK)
+    (adversary : Adversary Output PK) (keys : SK × PK) :
+    OracleComp (World Output) Outcome := do
+  let (sk, pk) := keys
+  let ((forgery, adversaryCounts), signed) ←
+    (simulateQ
+      ((QueryImpl.ofLift (World Output)
+          (StateT SigningLog (OracleComp (World Output)))).withAddCost
+          (fun input => Counts.single .hash (hashCost input)) + signingOracle scheme sk)
+      (adversary.main pk)).run.run []
+  let (verified, verifierCounts) ← countQueries
+    (fun input => Counts.single .verification (hashCost input))
+    (scheme.verify pk forgery.message forgery.signature)
+  return {
+    forgery := forgery
+    signed := signed
+    verified := verified
+    counts := Multiplicative.toAdd adversaryCounts + verifierCounts }
+
+def executableExperimentBySource (scheme : ExternalScheme Output PK SK)
+    (adversary : Adversary Output PK) :
+    OracleComp (World Output) (Outcome × Unforgeability.QueryCounts) := do
+  let (keys, keygenHashes) ← countAllHashes scheme.keygen
+  let (outcome, laterHashes) ← countAllHashes (executableAfterKeygen scheme adversary keys)
+  return (outcome, sourceCounts outcome keygenHashes laterHashes)
+
+
+example (scheme : ExternalScheme Output PK SK) (adversary : Adversary Output PK)
+    (keys : SK × PK) : executableAfterKeygen scheme adversary keys =
+      Game.afterKeygen scheme adversary keys := rfl
+example (scheme : ExternalScheme Output PK SK) (adversary : Adversary Output PK) :
+    executableExperimentBySource scheme adversary = Game.experimentBySource scheme adversary := rfl
+
+def toyScheme : ExternalScheme Bool Unit Unit where
+  keygen := do
+    let _ : Bool ← query (spec := RandomOracleModel.HashSpec Bytes Bool) [0]
+    return ((), ())
+  sign _ _ := do
+    let _ : Bool ← query (spec := RandomOracleModel.HashSpec Bytes Bool) [1]
+    let _ : Bool ← query (spec := RandomOracleModel.HashSpec Bytes Bool) [2]
+    return some [0]
+  verify _ _ signature := do
+    let _ : Bool ← query (spec := RandomOracleModel.HashSpec Bytes Bool) [4]
+    return signature == [0] || signature == [1]
+
+def toyAdversary : Adversary Bool Unit where
+  main _ := do
+    let _ : Bool ← query (spec := RandomOracleModel.HashSpec Bytes Bool) [3]
+    let _ : Bool ← query (spec := RandomOracleModel.HashSpec Bytes Bool) [3]
+    let _ ← query (spec := unifSpec) 0
+    let _ ← query (spec := unifSpec) 0
+    let _ ← query (spec := SigningSpec) (Message.mk [5] [6])
+    return Forgery.mk (Message.mk [5] [6]) [1]
+
+def handler : QueryImpl (World Bool) (StateM (Nat × Nat))
+  | .inl _ => do
+      modify fun counts => (counts.1 + 1, counts.2)
+      return default
+  | .inr _ => do
+      modify fun counts => (counts.1, counts.2 + 1)
+      return false
+
+def main : IO Unit := do
+  let (outcome, directCounts) := (simulateQ handler
+    (executableExperimentBySource toyScheme toyAdversary)).run (0, 0)
+  IO.println s!"{(outcome.2 .keygen, outcome.2 .signer, outcome.2 .hash,
+    outcome.2 .sign, outcome.2 .verifier, directCounts)}"
+end SLHDSA.SHAKE128s.RunnerProbe
+def main : IO Unit := SLHDSA.SHAKE128s.RunnerProbe.main

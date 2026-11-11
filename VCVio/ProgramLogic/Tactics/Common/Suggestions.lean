@@ -20,6 +20,8 @@ open Lean Meta
 
 namespace OracleComp.ProgramLogic
 
+/-- Attach a `Try this:` suggestion at `ref` that replaces the source span of `ref` with the
+literal tactic script `text`. -/
 def addTryThisTextSuggestion (ref : Syntax) (text : String) : MetaM Unit := do
   Meta.Tactic.TryThis.addSuggestion ref
     { suggestion := .string text }

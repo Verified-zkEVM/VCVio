@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Monad.Support
 public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Bounds
@@ -17,8 +18,10 @@ import ToMathlib.Probability.UniformOn
 The Giry composition laws transport measure-level independence to computation syntax.
 The general interchange theorem requires joint measurability; the three-draw law
 specializes to discrete intermediate results and leaves the final result space arbitrary.
+Inside an event, a draw with countable outputs commutes with any other draw.
 Uniform finite draws can be reindexed by a bijection before an arbitrary continuation.
-A bound on a scalar observation over the support bounds its expectation.
+A bound on a scalar observation over the support bounds its expectation, and an observation
+that is at least `1` on an event bounds the event's probability.
 -/
 
 public section
@@ -127,6 +130,19 @@ theorem evalDist_bind_apply_mono_of_discrete [DiscreteMeasurableSpace α]
   evalDist_bind_apply_mono mx f g .of_discrete .of_discrete hevent
     (Filter.Eventually.of_forall hfg)
 
+/-- Measure domination of a prefix and of every continuation gives domination of the composed
+measures, in any measurable space of final outputs. The prefix is compared under the discrete
+σ-algebra on its outputs. -/
+theorem evalDist_bind_le_of_le {α : Type u} {mx my : m α} {f g : α → m β}
+    (hxy : (letI : MeasurableSpace α := ⊤; 𝒟[mx] ≤ 𝒟[my])) (hfg : ∀ a, 𝒟[f a] ≤ 𝒟[g a]) :
+    𝒟[mx >>= f] ≤ 𝒟[my >>= g] := by
+  let : MeasurableSpace α := ⊤
+  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
+  refine Measure.le_iff.mpr fun T hT => ?_
+  rw [Measure.bind_apply hT Measurable.of_discrete.aemeasurable,
+    Measure.bind_apply hT Measurable.of_discrete.aemeasurable]
+  exact (lintegral_mono fun a => Measure.le_iff'.mp (hfg a) T).trans (lintegral_mono' hxy le_rfl)
+
 /-- Charge a bad intermediate event separately from uniformly bounded good continuations. -/
 theorem evalDist_bind_apply_le_add_of_bad (mx : m α) (f : α → m β)
     (hf : Measurable fun a => 𝒟[f a]) {bad : Set α} (hbad : MeasurableSet bad)
@@ -181,7 +197,7 @@ theorem apply_eq_zero_of_disjoint_support (mx : m α) {event : Set α}
 
 end evalDist
 
-/-! ## Expectations bounded on the support -/
+/-! ## Expectations bounded on the support, and Markov's inequality -/
 
 /-- A bound on a scalar observation at every output in the support bounds its expectation. -/
 theorem lintegral_id_evalDist_map_le_of_le_of_mem_support {m : Type → Type v} [Monad m]
@@ -194,3 +210,28 @@ theorem lintegral_id_evalDist_map_le_of_le_of_mem_support {m : Type → Type v} 
         lintegral_mono_ae (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete hf)
     _ = c * 𝒟[mx] Set.univ := lintegral_const c
     _ ≤ c := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)
+
+/-- **Markov's inequality for a scalar observation.**  An event on which the observation is at
+least `1` has probability at most the observation's expectation. -/
+theorem prEvent_le_lintegral_id_evalDist_map {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α) {p : α → Prop}
+    {f : α → ENNReal} (hpf : ∀ x, p x → 1 ≤ f x) :
+    Pr{let x ← mx}[p x] ≤ ∫⁻ r, r ∂𝒟[f <$> mx] := by
+  let _ : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete, lintegral_id_evalDist_map]
+  exact meas_le_lintegral₀ Measurable.of_discrete.aemeasurable hpf
+
+/-! ## Commuting draws inside an event -/
+
+/-- Independent draws commute inside an event when the first draw has a countable output type.
+The second output type is arbitrary and needs no measurable structure. -/
+theorem prEvent_bind_bind_swap_of_countable_left {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type} [Countable α] (mx : m α)
+    (my : m β) (p : α → β → Prop) :
+    Pr{let a ← mx; let b ← my}[p a b] = Pr{let b ← my; let a ← mx}[p a b] := by
+  let _ : MeasurableSpace α := ⊤
+  let _ : MeasurableSpace β := ⊤
+  rw [prEvent_def, prEvent_def]
+  simp only [← bind_pure_comp]
+  exact congrArg (· {True}) <| evalDist_bind_bind_swap mx my (fun a b ↦ pure (p a b))
+    (measurable_from_prod_countable_right fun _ ↦ Measurable.of_discrete)

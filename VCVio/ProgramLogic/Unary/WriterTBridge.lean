@@ -62,7 +62,7 @@ computation, factored out so that the `WP` instance and the proofs
 defining `WPMonad` can refer to it by a single name. The writer log is
 threaded through as state and accumulated via `++`. -/
 def wpAppend {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}} {α : Type u}
-    [Monad m] [WP m ps] [EmptyCollection ω] [Append ω]
+    [WP m ps] [Append ω]
     (x : WriterT ω m α) : PredTrans (.arg ω ps) α :=
   PredTrans.pushArg (fun (s : ω) =>
     (fun (z : α × ω) => (z.1, s ++ z.2)) <$> wp (WriterT.run x))
@@ -71,11 +71,10 @@ def wpAppend {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}} {α : Ty
 predicate transformer over the writer log `ω`, with post-shape
 `(.arg ω ps)`. The log is accumulated via `++` with identity `∅`.
 
-This instance only needs the writer combinators `EmptyCollection` and
-`Append` to be definable; lawfulness (`LawfulAppend`) is required for the
-`WPMonad` extension. -/
+This instance needs only `Append`; the `WPMonad` extension also needs
+`EmptyCollection` and `LawfulAppend`. -/
 instance instWPAppend {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
-    [Monad m] [WP m ps] [EmptyCollection ω] [Append ω] :
+    [WP m ps] [Append ω] :
     WP (WriterT ω m) (.arg ω ps) where
   wp x := WriterT.wpAppend x
 
@@ -112,7 +111,7 @@ the role of `LawfulAppend.append_empty`, `empty_append`, `append_assoc`. -/
 computation when `ω` is a (multiplicative) monoid. Analogous to
 `wpAppend` but with `*` / `1` in place of `++` / `∅`. -/
 def wpMonoid {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}} {α : Type u}
-    [Monad m] [WP m ps] [Monoid ω]
+    [WP m ps] [Monoid ω]
     (x : WriterT ω m α) : PredTrans (.arg ω ps) α :=
   PredTrans.pushArg (fun (s : ω) =>
     (fun (z : α × ω) => (z.1, s * z.2)) <$> wp (WriterT.run x))
@@ -123,7 +122,7 @@ identity `1`. The priority is set `low` so that, on a payload carrying
 both `Append` and `Monoid`, `instWPAppend` wins typeclass resolution. -/
 instance (priority := low) instWPMonoid
     {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
-    [Monad m] [WP m ps] [Monoid ω] :
+    [WP m ps] [Monoid ω] :
     WP (WriterT ω m) (.arg ω ps) where
   wp x := WriterT.wpMonoid x
 
@@ -164,7 +163,7 @@ namespace Std.Do.WP
 
 @[simp]
 theorem tell_WriterT {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
-    [Monad m] [WPMonad m ps] [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+    [Monad m] [WPMonad m ps] [Append ω]
     (w : ω) (Q : PostCond PUnit (.arg ω ps)) :
     wp⟦MonadWriter.tell w : WriterT ω m PUnit⟧ Q = fun s => Q.1 ⟨⟩ (s ++ w) := by
   simp only [WP.wp, WriterT.wpAppend, WriterT.run_tell, WPMonad.wp_pure,
@@ -221,7 +220,7 @@ attribute [spec] WriterT.run
 state being the old state appended with the written value `w`. -/
 @[spec]
 theorem tell_WriterT {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
-    [Monad m] [WPMonad m ps] [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+    [Monad m] [WPMonad m ps] [Append ω]
     (w : ω) {Q : PostCond PUnit (.arg ω ps)} :
     Triple (m := WriterT ω m) (MonadWriter.tell w)
       (spred(fun s => Q.1 ⟨⟩ (s ++ w)))

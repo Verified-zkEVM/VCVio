@@ -60,10 +60,12 @@ theorem map_runKernel_state (impl : KernelHandler P S) (target : KernelHandler P
   | pure x => simp only [runKernel_pure, Measure.map_dirac' hm]
   | lift_bind a next ih =>
       rw [← FreeM.liftBind_eq, runKernel_liftBind, runKernel_liftBind]
-      rw [Measure.map_bind _ (measurable_runKernel_continuation impl next) hm]
+      rw [Measure.map_bind (measurable_runKernel_continuation impl next).aemeasurable
+        hm.aemeasurable]
       rw [Measure.bind_congr_right ((hinvariant a state hstate).mono fun out hout =>
         ih out.1 hout)]
-      rw [← Measure.bind_map _ (hq a) (measurable_runKernel_continuation target next),
+      rw [← Measure.bind_map (hq a).aemeasurable
+        (measurable_runKernel_continuation target next).aemeasurable,
         hstep a state hstate]
 
 end PFunctor.FreeM

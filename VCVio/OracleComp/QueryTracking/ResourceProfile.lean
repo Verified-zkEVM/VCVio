@@ -32,7 +32,9 @@ the cost profiles of the adversaries or subroutines that implement them.
 `intrinsic` is the concrete cost paid by the computation itself. `usage k` counts how many times
 the computation invokes external capability `k`. -/
 @[ext] structure ResourceProfile (ω : Type*) (κ : Type*) where
+  /-- The concrete cost paid by the computation's own code. -/
   intrinsic : ω
+  /-- The number of times the computation invokes each external capability `k : κ`. -/
   usage : κ →₀ ℕ
 
 namespace ResourceProfile
@@ -121,6 +123,8 @@ noncomputable instance [AddMonoid ω] : AddMonoid (ResourceProfile ω κ) where
 noncomputable instance [AddCommMonoid ω] : AddCommMonoid (ResourceProfile ω κ) where
   add_comm a b := by ext <;> simp [add_comm]
 
+/-- The pair `(intrinsic, usage)` of a resource profile, along which profiles are ordered
+componentwise. -/
 def toProd (c : ResourceProfile ω κ) : ω × (κ →₀ ℕ) :=
   (c.intrinsic, c.usage)
 

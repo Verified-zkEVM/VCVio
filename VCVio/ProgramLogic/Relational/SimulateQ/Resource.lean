@@ -103,6 +103,18 @@ theorem prEvent_bad_simulateQ_run_le_expectedQuerySlack
         refine (h_free_step t s h _).trans (wp_mono _ fun z => ?_)
         simpa only [h, ↓reduceIte] using hpt z
 
+/-- The flag-guarded expectation over a step's outputs is the sum over its unflagged outputs.
+This is the form in which a handler discharges the step premises of
+`prEvent_bad_simulateQ_run_le_expectedQuerySlack` by summing over its good post-states. -/
+theorem wp_ite_flag_eq_tsum [∀ t, Finite (spec'.Range t)]
+    (mx : OracleComp spec' (γ × σ × Bool)) (F : γ × σ × Bool → ℝ≥0∞) :
+    (wp mx fun z => if z.2.2 then 0 else F z) =
+      ∑' z : γ × σ, Pr{let x ← mx}[x = (z.1, z.2, false)] * F (z.1, z.2, false) := by
+  rw [wp_eq_tsum, ← (Equiv.prodAssoc γ σ Bool).tsum_eq, ENNReal.tsum_prod']
+  refine tsum_congr fun z => ?_
+  rw [tsum_bool]
+  simp
+
 end SingleWorldResourceBad
 
 /-! ## Averaged-state-measure bad accumulator

@@ -123,13 +123,15 @@ example :
     apply Vector.toArray_inj.mp
     simpa [shaAdrsKey] using
       (show Adrs.zero.compressSha2 = (Adrs.zero.setLayerAddress 256).compressSha2 by
-        norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte, Adrs.zero, Adrs.setLayerAddress])
+        norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte,
+          VCVio.Algorithms.Encoding.natToBytesBE, Adrs.zero, Adrs.setLayerAddress])
   · change shaAdrsKey Adrs.zero = shaAdrsKey (Adrs.zero.setTreeAddress (2 ^ 64))
     apply Vector.toArray_inj.mp
     simpa [shaAdrsKey] using
       (show Adrs.zero.compressSha2 =
         (Adrs.zero.setTreeAddress (2 ^ 64)).compressSha2 by
-          norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte, Adrs.zero,
+          norm_num [Adrs.compressSha2, Adrs.toBytesBE, toByte,
+          VCVio.Algorithms.Encoding.natToBytesBE, Adrs.zero,
             Adrs.setTreeAddress]
           decide)
 

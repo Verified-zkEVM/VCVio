@@ -76,6 +76,31 @@ theorem prEvent_bind_le_sum_add_mul_mass_of_support [Fintype ι] [MonadAttach m]
   simpa only [lintegral_const, prEvent_eq_evalDist mx (fun _ ↦ True) measurable_const,
     Set.ofPred_true] using hb
 
+/-- Bound success after a common draw by its exceptional probability and the average error on
+nonexceptional outputs. The local bound need only hold almost everywhere under the actual draw.
+The integral is not normalized: neither computation has to return with probability one. -/
+theorem prEvent_bind_le_prEvent_add_lintegral_ae
+    (mx : m α) (suffix : α → m β) (Exceptional : α → Prop) (Success : β → Prop)
+    (error : α → ENNReal)
+    (hsuffix : letI : MeasurableSpace α := ⊤
+      ∀ᵐ b ∂𝒟[mx], ¬ Exceptional b → Pr{let value ← suffix b}[Success value] ≤ error b) :
+    let : MeasurableSpace α := ⊤
+    Pr{let value ← mx >>= suffix}[Success value] ≤
+      Pr{let b ← mx}[Exceptional b] +
+        ∫⁻ b in {b | ¬ Exceptional b}, error b ∂𝒟[mx] := by
+  classical
+  let : MeasurableSpace α := ⊤
+  have h := prEvent_bind_le_sum_add_lintegral_ae mx suffix Success
+    (fun _ : Unit => fun b => pure (Exceptional b)) Measurable.of_discrete
+    (fun _ => Measurable.of_discrete) ({b | ¬ Exceptional b}.indicator error) (by
+      apply hsuffix.mono
+      intro b hb
+      by_cases he : Exceptional b
+      · simp [he]
+      · simpa [he] using hb he)
+  simpa only [Fintype.sum_unique, bind_assoc, pure_bind, bind_pure_comp,
+    lintegral_indicator MeasurableSet.of_discrete] using h
+
 /-- A uniform reachable allowance gives an additive comparison with finitely many references. -/
 theorem prEvent_bind_le_sum_add_of_support [Fintype ι] [MonadAttach m]
     [WeaklyLawfulMonadAttach m]

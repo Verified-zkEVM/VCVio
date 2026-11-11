@@ -25,18 +25,31 @@ public section
 
 /-- Floating-point-like operations needed by the executable Falcon implementation. -/
 class FloatLike (F : Type) where
+  /-- The value `0` (`FPR_ZERO` in c-fn-dsa). -/
   zero : F
+  /-- The value `1` (`FPR_ONE` in c-fn-dsa). -/
   one : F
+  /-- Negation (`fpr_neg` in c-fn-dsa). -/
   neg : F → F
+  /-- Rounded addition (`fpr_add` in c-fn-dsa). -/
   add : F → F → F
+  /-- Rounded subtraction (`fpr_sub` in c-fn-dsa). -/
   sub : F → F → F
+  /-- Rounded multiplication (`fpr_mul` in c-fn-dsa). -/
   mul : F → F → F
+  /-- Rounded division (`fpr_div` in c-fn-dsa). -/
   div : F → F → F
+  /-- Rounded square root of a nonnegative value (`fpr_sqrt` in c-fn-dsa). -/
   sqrt : F → F
+  /-- Conversion of a 64-bit signed integer (`fpr_of` in c-fn-dsa). -/
   ofInt : Int64 → F
+  /-- Conversion of a 32-bit signed integer (`fpr_of32` in c-fn-dsa). -/
   ofInt32 : Int32 → F
+  /-- `scaled i sc` is the value `i · 2^sc` (`fpr_scaled` in c-fn-dsa). -/
   scaled : Int64 → Int32 → F
+  /-- Rounding to the nearest integer, ties to even (`fpr_rint` in c-fn-dsa). -/
   rint : F → Int64
+  /-- Rounding toward negative infinity (`fpr_floor` in c-fn-dsa). -/
   floor_ : F → Int64
   /-- Returns ⌊2^63 · ccs · exp(-x)⌋ as a UInt64.
   For FPR this is the FACCT polynomial; for Float this uses hardware exp. -/

@@ -69,47 +69,47 @@ example (vp : ValidatedParams) (prims : Primitives vp.params)
 
 /-- Rejects a wrong pure domain byte or a missing empty-context length byte. -/
 example : encodePureMessage [] [0xcc] = .ok [0x00, 0x00, 0xcc] := by
-  decide
+  rfl
 
 set_option maxRecDepth 2048 in
 /-- The largest permitted context is accepted and contributes exactly 257 prefix bytes. -/
 example : (encodePureMessage (List.replicate 255 0x7f) []).map List.length = .ok 257 := by
-  decide
+  rfl
 
 set_option maxRecDepth 2048 in
 /-- The first forbidden context length is rejected with its observed size. -/
 example : encodePureMessage (List.replicate 256 0x7f) [] = .error (.contextTooLong 256) := by
-  decide
+  rfl
 
 set_option maxRecDepth 2048 in
 /-- Algorithm 23 rejects the context before evaluating even a failing pre-hash descriptor. -/
 example : encodePrehashMessageWithDescriptor failingDescriptor
     (List.replicate 256 0x7f) [] = .error (.contextTooLong 256) := by
-  decide
+  rfl
 
 set_option maxRecDepth 2048 in
 /-- The largest permitted pre-hash context remains accepted. -/
 example : (encodePrehashMessageWithDescriptor fixedDescriptor
     (List.replicate 255 0x7f) []).map List.length = .ok 262 := by
-  decide
+  rfl
 
 set_option maxRecDepth 2048 in
 /-- Context rejection also precedes the concrete strength-policy check. -/
 example : SLHDSA.Concrete.Prehash.encodeMessage
     FipsParameterSet.SLHDSA_SHA2_256s.params .sha2_256 (List.replicate 256 0x7f) [] =
     .error (.contextTooLong 256) := by
-  decide
+  rfl
 
 /-- A category-5 parameter rejects the category-1 SHA-256 pre-hash before signing. -/
 example : SLHDSA.Concrete.Prehash.encodeMessage
     FipsParameterSet.SLHDSA_SHA2_256s.params .sha2_256 [] [] =
     .error (.prehashTooWeak 32 32) := by
-  decide
+  rfl
 
 /-- Exact digest conversion fails closed rather than padding a short engine result. -/
 example : digestBytesExact 2 (ByteArray.mk #[0xaa]) =
     .error (.digestLengthMismatch 2 1) := by
-  decide
+  rfl
 
 private def hexValue (c : Char) : UInt8 :=
   if '0' ≤ c ∧ c ≤ '9' then (c.toNat - '0'.toNat).toUInt8

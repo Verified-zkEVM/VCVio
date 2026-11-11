@@ -21,7 +21,7 @@ rules for queries need uniform response measures.
 
 ## In-Tree Walkthroughs
 
-- `Examples/ProgramLogic/UnaryStep.lean`: unary `vcstep` / `vcgen` examples.
+- `Examples/ProgramLogic/UnaryStep.lean`: unary `vcstep`, core `vcgen` and `pvcgen` examples.
 - `Examples/ProgramLogic/RelationalStep.lean`: step-by-step relational tactic examples.
 - `Examples/ProgramLogic/RelationalDerived.lean`: derived relational patterns and automation examples.
 - `Examples/ProgramLogic/ProofMode.lean`: proof-mode entry points and small end-to-end examples.
@@ -33,8 +33,8 @@ rules for queries need uniform response measures.
 
 For `wp oa f ≤ wp oa g`, `gcongr with x hx` exposes `hx : x ∈ support oa` and the
 pointwise obligation `f x ≤ g x`. The unrestricted `wp_mono` theorem remains available as a
-lower-priority fallback. On raw `Std.Internal.Do.WP.wp` expressions, normalize with
-`simp only [OracleComp.Lower.wp_eq_mAlgOrdered_wp]` before `gcongr`.
+lower-priority fallback. The interpretation uses core `Std.WP.WP.wp` directly, and
+`ExactWPMonad` supplies its exact pure, bind and map equations.
 `wp_eq_lintegral` integrates a measurable assertion in the chosen result space;
 `wp_eq_lintegral_map` observes an arbitrary assertion without requiring a space on hidden results.
 
@@ -109,17 +109,24 @@ before generating the remaining subgoals.
 - `rvcgen using t` / `rvcgen with thm` — use one explicit first hint/theorem, then keep stepping automatically
 - `rel_conseq with R` — provide explicit weaker postcondition
 
-### Quantitative VCGen (`vcgen`)
+### Quantitative VCGen (`pvcgen`)
 
-`vcgen` is the primary unary tactic for new proofs. It accepts both `Triple` goals and
+`pvcgen` is the primary unary tactic for new proofs. It accepts both `Triple` goals and
 probability goals, automatically lowering `Pr{...}[...]` events into the quantitative engine.
+A bare `vcgen` is core Lean's generic verification-condition generator over `Std.WP`: it steps
+binds, conditionals, matchers and transformer layers with the `@[spec]` rules in scope and the
+triples in the local context, but it does not lower probability goals or close a precondition
+stated as the expectation of an opaque oracle computation. Use core `vcgen` when its rules close
+the goal and `pvcgen` otherwise; `VCVioTest/VCGenAmbiguity.lean` pins that the two names parse
+to distinct tactics.
 
 | Tactic | What it does |
 |--------|--------------|
-| `vcgen` | Exhaustively decomposes a `Triple` or probability goal with spec-aware stepping, loop invariant auto-detection, and support/indicator leaf closure |
+| `pvcgen` | Exhaustively decomposes a `Triple` or probability goal with spec-aware stepping, loop invariant auto-detection, and support/indicator leaf closure |
 | `vcstep` | One step: probability lowering → bind → conditional → match → loop → leaf |
 | `vcstep?` | Performs one step and emits the corresponding explicit script, often surfacing `as ⟨...⟩`, `using cut`, `inv I`, or `with theorem` |
-| `vcgen?` | Runs `vcgen` and emits the planned step replay across each pass |
+| `pvcgen?` | Runs `pvcgen` and emits the planned step replay across each pass |
+| `pvcgen using cut` / `pvcgen inv I` | One explicit cut or loop-invariant step, then exhaustive decomposition |
 | `vcstep using cut` | Explicit intermediate postcondition for a bind step |
 | `vcstep with thm` | Force one explicit unary theorem/assumption step |
 | `vcstep as ⟨x, hx⟩` | Explicit names for binders introduced by the current step |
@@ -131,15 +138,19 @@ probability goals, automatically lowering `Pr{...}[...]` events into the quantit
 | `vcstep rw congr'` | Expose one or more shared binds without support hypotheses |
 | `exp_norm` | Normalize indicator (`propInd`) and expectation (`wp`) arithmetic |
 
-**Probability-goal handling**: `vcgen` and `vcstep` automatically handle four
+**Probability-goal handling**: `pvcgen` and `vcstep` automatically handle four
 classes of probability goals:
 
 1. **`Pr{...}[...] = 1` lowering** → rewrites into `Triple` form for structural decomposition:
    - `Pr{let x ← oa}[p x] = 1` → `Triple 1 oa (fun x => 𝟙⟦p x⟧)`; a singleton output
      `Pr{let y ← oa}[y = x]` is the event `p := (· = x)`
+   - an event over several draws, `Pr{let x ← oa; let y ← ob x}[p x y] = 1`, is the probability
+     `prEvent mx` of a proposition-valued computation and lowers to
+     `Triple 1 mx (fun P => 𝟙⟦P⟧)` (`triple_propInd_self_iff_prEvent_eq_one`)
 
 2. **Lower-bound event goals** → stay inside unary VCGen by reusing the same `Triple` shell:
-   - `r ≤ Pr{let x ← oa}[p x]` / `Pr{let x ← oa}[p x] ≥ r` → `Triple r oa (fun x => 𝟙⟦p x⟧)`
+   - `r ≤ Pr{let x ← oa}[p x]` / `Pr{let x ← oa}[p x] ≥ r` → `Triple r oa (fun x => 𝟙⟦p x⟧)`,
+     and over several draws `Triple r mx (fun P => 𝟙⟦P⟧)` (`triple_propInd_self_iff_le_prEvent`)
 
 3. **Probability equalities** (`Pr{...}[...]`, applied `𝒟[...]` masses, or output measures):
    - Plain `vcstep` first normalizes common `map`/`bind` surface syntax (`map_eq_bind_pure_comp`,
@@ -154,14 +165,27 @@ classes of probability goals:
      leaving the continuations at the possible outputs of the shared prefix
 
 4. **Other general `Pr{...}[...]` goals** → rewrite to raw `wp` form and keep stepping structurally
-   when a `wp` rule applies. On an already-lowered raw-`wp` goal, `vcstep?` / `vcgen?`
+   when a `wp` rule applies. On an already-lowered raw-`wp` goal, `vcstep?` / `pvcgen?`
    will explicitly note that they are continuing in raw `wp` mode.
 
-**Loop invariants**: `vcgen` auto-detects `replicate`, `List.foldlM`, and `List.mapM`
+**Core `vcgen` steps**: in each exhaustive `pvcgen` pass, a quantitative `Triple` goal first goes
+to core `vcgen` (`tryCoreVCGen`) with the `@[spec]` rules of `Unary/WP/LowerSpecs.lean`. Core
+steps through binds, conditionals, matchers and transformer layers and uses the triples in the
+local context as rules. A triple with precondition `1` takes the pointwise rules
+(`OracleComp.Lower.Pointwise`) and descends through every draw; any other takes the exact rules,
+and the expectations of the rest of the program are computed under the averages of the draws.
+Core's verification conditions are read back to `≤`, and those `simp` closes are closed. The step
+is skipped when core makes no progress or leaves a loop to an invariant, so the loop steps below
+and VCVio's own structural steps continue. `vcstep` and the `?` replays do not take it;
+`set_option vcvio.vcgen.core false` switches it off.
+`VCVioTest/ProgramLogic/VCGenCoreDelegation.lean` exercises it.
+
+
+**Loop invariants**: `pvcgen` auto-detects `replicate`, `List.foldlM`, and `List.mapM`
 in `Triple` goals and applies matching invariant hypotheses from context.
 Use `vcstep inv I` to provide an explicit invariant.
 
-**Support-sensitive leaf closure**: `vcgen` final pass tries `triple_support`,
+**Support-sensitive leaf closure**: `pvcgen` final pass tries `triple_support`,
 `triple_propInd_of_support` and `triple_prEvent_eq_one`
 in addition to the standard `triple_pure`, `triple_zero`, and consequence search.
 
@@ -173,9 +197,12 @@ planner may emit a grouped multi-step replay when the best explanation is an exp
 
 **Opt-in unary lookup**: mark a unary `Triple` or raw `wp` theorem with `@[vcspec]` to register it for
 bounded head-symbol lookup. This is intentionally narrow: after the built-in structural step and
-explicit hint opportunities, `vcstep` / `vcgen` consult only `@[vcspec]` theorems whose
+explicit hint opportunities, `vcstep` / `pvcgen` consult only `@[vcspec]` theorems whose
 computation head matches the current goal. Use `vcstep with myLemma` when you want to force
-one specific theorem/assumption step manually.
+one specific theorem/assumption step manually. The built-in entries are VCVio's own `OracleComp`
+rules (`Tactics/Unary/Internals/Rules.lean`); the generic transformer rules for `StateT`,
+`ReaderT`, `WriterT`, `OptionT` and `ExceptT` stay in core's and PolyFun's `@[spec]` database,
+which core `vcgen` consumes, and are not registered a second time.
 
 **Opt-in relational lookup**: mark a relational `RelTriple`, `RelWP`, or quantitative
 `VCVio.ProgramLogic.RelTriple` theorem with `@[vcspec]` to register it for the analogous bounded
@@ -206,22 +233,15 @@ caching, and local WriterT compatibility equations. Downstream code can use
 the two sets independently; `handler_step` composes them in generic-to-specific
 order.
 
-**Opt-in `wp`-rewrite lookup**: mark an equational rewrite of shape
-`wp comp post = …` with `@[wpStep]` to extend the inner `wp`-stepping driver
-(`runWpStepRules`). The driver indexes registered rules by the path of `comp`
-in a `Lean.Meta.Sym`-backed discrimination tree: pattern construction goes
-through `Lean.Meta.Sym.mkPatternFromDeclWithKey`, which preprocesses the rule's
-LHS (unfolding reducibles, beta/zeta/eta normalizing) and turns universally
-quantified arguments into de Bruijn pattern variables, while
-`Lean.Meta.Sym.insertPattern` automatically wildcards proof / instance
-positions in the discrimination-tree key. Lookup at dispatch time is the pure
-`Lean.Meta.Sym.DiscrTree.getMatch` after a `withReducible whnf` on the goal's
-`comp` to align with the preprocessed patterns. Each match is then tried via
-`rw`, falling back to `simp only`. The default registry already covers
-`wp_pure`, `wp_bind`, `wp_ite`, `wp_dite`, `wp_map`, the `replicate` / `mapM`
-/ `foldlM` families, `wp_query`, `wp_uniformSample`, and the `simulateQ` /
-`liftComp` transport rules, so user-authored `wp` lemmas slot into the same
-dispatch without further wiring.
+**Raw `wp` rewrites**: the inner `wp`-stepping driver (`runWpStepRules`) rewrites a raw `wp`
+goal with one equation of the fixed table `wpStepRules`
+(`Tactics/Common/WpStepDispatch.lean`): PolyFun's `ExactWPMonad.wp_pure`, `wp_bind`, `wp_map`,
+`wp_ite` and `wp_dite` for the monad structure, and VCVio's equations for the oracle primitives
+(`wp_query`, `wp_HasQuery_query`, `wp_uniformSample`), the `replicate` / `mapM` / `foldlM`
+unfoldings and the `simulateQ` / `liftComp` transport rules. A rule is a candidate when the head
+constant of the computation on its left-hand side is the head of the goal's computation, as
+written and then after reducible `whnf`; candidates are tried with `simp only` in table order.
+Use `vcstep with thm` or a plain `rw`/`simp only` for any other `wp` equation.
 
 **Bind normalization**: `rvcstep` (and therefore `rvcgen`) runs a best-effort
 `simp only [bind_assoc, pure_bind, bind_pure_comp, Functor.map_map, map_pure]` pre-pass on the
@@ -259,8 +279,8 @@ variants immediately take the next aligned bind step with cut relation `R`.
 Do not emulate stronger coupling transitivity with broad theorem search until
 the full semantic gluing lemma and goal shape are added.
 
-**Pass budget**: exhaustive `vcgen` / `rvcgen` runs are bounded by
-`set_option vcvio.vcgen.maxPasses <n>`. The default is conservative so large proofs stay
+**Pass budget**: exhaustive `pvcgen` / `rvcgen` runs are bounded by
+`set_option vcvio.vcgen.maxPasses <n>` (the `vcvio.vcgen` option prefix is shared by both). The default is conservative so large proofs stay
 predictable; if you intentionally want a longer exhaustive run, raise the option locally around
 that proof.
 
@@ -270,7 +290,7 @@ goal delta, and any planner alternatives that were previewed while debugging tac
 ### Raw WP Tactics
 
 Raw `wp` goals (`_ ≤ wp _ _`) now use the same unary entrypoints rather than a separate tactic
-family. `vcstep` performs one decomposition step and `vcgen` keeps stepping exhaustively.
+family. `vcstep` performs one decomposition step and `pvcgen` keeps stepping exhaustively.
 
 
 ### Probability Equality Control
@@ -411,8 +431,8 @@ relTriple_simulateQ_run :
 
 ### Handler `@[spec]` catalog (`Unary/HandlerSpecs.lean`)
 
-Per-call `Std.Do.Triple` specs, all tagged `@[spec]` so `mvcgen` can
-compose them automatically through multi-query handler programs:
+Per-call `Std.WP.Triple` specs under `open scoped OracleComp.Necessary`, tagged `@[spec]`
+for core `vcgen` to compose through multi-query handler programs:
 
 | Handler | Spec | Postcondition |
 |---------|------|---------------|
@@ -424,9 +444,8 @@ compose them automatically through multi-query handler programs:
 
 The `WriterT`-based handlers come in both `Append`-parameterized
 (`loggingOracle`) and `Monoid`-parameterized (`countingOracle`,
-`costOracle`) flavors; the corresponding bridge lemmas
-`triple_writerT_iff_forall_support` and
-`triple_writerT_iff_forall_support_monoid` live in `Unary/StdDoBridge.lean`.
+`costOracle`) flavors. Their core interpretations are `WriterT.AppendWP` and
+`WriterT.MonoidWP`. The older SPred adapter remains in `Unary/StdDoBridge.lean`.
 
 ### Whole-program invariant preservation (`SimSemantics/PreservesInv.lean`)
 
@@ -441,12 +460,15 @@ state-transformer and writer-transformer models:
 | `OracleComp.simulateQ_run_preservesInv` | — | lift per-query `PreservesInv` to whole simulation |
 | `OracleComp.simulateQ_run_writerPreservesInv` | — | writer analogue |
 
-`Std.Do.Triple`-fronted whole-program lifts (`Unary/HandlerSpecs.lean`):
+`Std.WP.Triple`-fronted whole-program lifts (`Unary/HandlerSpecs.lean`):
 
 | Theorem | Shape |
 |---------|-------|
 | `simulateQ_triple_preserves_invariant` | `StateT` version |
 | `simulateQ_writerT_triple_preserves_invariant` | `WriterT` (monoid) version |
+
+Both instantiate PolyFun's `PFunctor.FreeM.triple_liftM_invariant`, which lifts a per-call
+invariant through `PFunctor.FreeM.liftM` into any `Std.WP.WPMonad`.
 
 `WriterPreservesInv` is the canonical invariant-preservation API for
 writer-based handlers like `countingOracle`/`costOracle`. Typical use:
@@ -464,7 +486,12 @@ Worked examples in `HandlerSpecs.lean`:
 
 ### Unary-to-relational handler lift (`Relational/HandlerFromUnary.lean`)
 
-If each handler has a `Std.Do.Triple` spec (produced by `mvcgen` or a
+For plain `OracleComp` computations, `Relational/FromUnary.lean` pairs two core triples under the
+necessary reading (`open scoped OracleComp.Necessary`) with the product coupling:
+`relTriple_prod_of_triple` takes `⦃ True ⦄ oa ⦃ P ⦄` and `⦃ True ⦄ ob ⦃ Q ⦄` and gives
+`RelTriple oa ob (fun a b => P a ∧ Q b)`. The handler lift below is its stateful analogue.
+
+If each handler has a `Std.WP.Triple` spec (produced by core `vcgen` or a
 `@[spec]` lemma), you do not have to assemble per-call `RelTriple`s by
 hand. The lift converts unary handler specs plus a synchronization
 condition into a whole-program `RelTriple`:
@@ -485,7 +512,7 @@ Projection and bridge variants:
 |---------|----------|
 | `relTriple_simulateQ_run_of_triples` | Full `(value, state)` postcondition (`StateT`) |
 | `relTriple_simulateQ_run'_of_triples` | Only `EqRel α` on projected outputs (`StateT`) |
-| `relTriple_simulateQ_run_of_impl_eq_triple` | Two handlers agreeing on `Inv`; preservation spec is a `Std.Do.Triple`; conclude `EqRel (α × σ)` |
+| `relTriple_simulateQ_run_of_impl_eq_triple` | Two handlers agreeing on `Inv`; preservation spec is a `Std.WP.Triple`; conclude `EqRel (α × σ)` |
 | `relTriple_simulateQ_run_writerT` | Whole-program `WriterT` coupling from per-query `RelTriple`s plus a monoid-congruence hypothesis on the accumulated writers |
 | `relTriple_simulateQ_run_writerT'` | Output-projection of `relTriple_simulateQ_run_writerT` (drops the writer component, yielding `EqRel α` on outputs) |
 | `relTriple_simulateQ_run_writerT_of_impl_eq` | `WriterT` analogue of `relTriple_simulateQ_run_of_impl_eq_preservesInv`: two handlers with identical `.run` outputs yield `EqRel (α × ω)` on whole simulations |
@@ -494,11 +521,11 @@ Projection and bridge variants:
 | `relTriple_run_of_triple` | Per-call product coupling for `StateT` |
 | `relTriple_run_writerT_of_triple` | Per-call product coupling for `WriterT` (`Append` variant, e.g. `loggingOracle`) |
 | `relTriple_run_writerT_of_triple_monoid` | Per-call product coupling for `WriterT` (`Monoid` variant, e.g. `countingOracle`, `costOracle`) |
-| `support_preservesInv_of_triple` | Convert `Std.Do.Triple` preservation into `support`-based preservation consumed by `SimulateQ.lean` (`StateT`) |
-| `writerPreservesInv_of_triple` | `WriterT` analogue: produces `QueryImpl.WriterPreservesInv impl Inv` from a per-query `Std.Do.Triple` |
+| `support_preservesInv_of_triple` | Convert `Std.WP.Triple` preservation into `support`-based preservation consumed by `SimulateQ.lean` (`StateT`) |
+| `writerPreservesInv_of_triple` | `WriterT` analogue: produces `QueryImpl.WriterPreservesInv impl Inv` from a per-query `Std.WP.Triple` |
 
 Whenever the handler's invariant-preservation proof already lives as a
-`Std.Do.Triple`, prefer `relTriple_simulateQ_run_of_impl_eq_triple` over
+`Std.WP.Triple`, prefer `relTriple_simulateQ_run_of_impl_eq_triple` over
 the raw `relTriple_simulateQ_run_of_impl_eq_preservesInv` — the bridge
 saves you from re-expressing the preservation as a `support`-based
 quantifier.
@@ -605,16 +632,12 @@ is a thin wrapper over `Lean.Meta.DiscrTree` whose insertion keys come from
 those preprocessed patterns and whose lookup is the pure structural
 `getMatch`. Core also ships a `Sym.Simp.Theorems` bundle (discrimination-tree
 + `Sym.Simp.Theorem` records) that core's own Sym-based `vcgen` consumes
-(`Lean.Elab.Tactic.Do.Internal`); we do not consume it today (see *Future
-`vcgen` bridge (deferred)* below) but
-`Sym.Simp.mkTheoremFromDecl` lets us reconstruct it on demand from the
-`@[wpStep]` registry when VCVio's symbolic proof-application bridge is
-implemented and validated.
+(`Lean.Elab.Tactic.VCGen`). The raw-`wp` driver does not use `Sym` rewriting: `Sym.simpGoal`
+matches structurally and does not apply the instance-generic `ExactWPMonad` laws to `OracleComp`
+goals, while ordinary `simp only` does.
 
-Building on `Sym.Pattern` + `Sym.DiscrTree` means our registries share the
-same pattern preprocessing and lookup cost profile as future core tactics,
-and the migration to `Sym.Simp.*`-driven rewriting is a localised follow-up
-in two registry files rather than a framework rewrite.
+Building on `Sym.Pattern` + `Sym.DiscrTree` means the `@[vcspec]` registry shares the
+same pattern preprocessing and lookup cost profile as future core tactics.
 
 **Key alignment invariant**: `Sym.DiscrTree.getMatch` is purely structural, so
 goal-side query terms must expose the same oracle-wrapper shapes as the pattern
@@ -634,12 +657,15 @@ rewrite works).
 | File | Attribute | Role |
 |------|-----------|------|
 | `VCVio/ProgramLogic/Tactics/Common/Registry.lean` | `@[vcspec]` | Unary and relational `Triple` / `RelTriple` / `RelWP` / quantitative `VCVio.ProgramLogic.RelTriple` rules, indexed by a `Sym.Pattern` on the computation slot (`oa` for unary, `oa` with a secondary `rightHead?` filter for relational) |
-| `VCVio/ProgramLogic/Tactics/Common/WpStepRegistry.lean` | `@[wpStep]` | Equational `wp comp post = …` rewrites, indexed by a `Sym.Pattern` on `oa` and consulted by `runWpStepRules` via `TacticM` rewriting (`rw` then `simp only`). The `Sym.Simp.Theorem` bundle for an eventual `SymM`-side rewriter is *not* eagerly built; `Sym.Simp.mkTheoremFromDecl` can rebuild it on demand from `getAllWpStepEntries` |
 
 Each entry carries a `SpecProof` (reusing the core-Lean type from
 `Lean.Elab.Tactic.Do.SpecAttr`) so origins can be distinguished between a
 global declaration, a local hypothesis, or a raw term. Priorities are parsed
 from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
+
+The raw-`wp` equations are not a registry: `wpStepRules` in
+`VCVio/ProgramLogic/Tactics/Common/WpStepDispatch.lean` is a fixed table, filtered by the head
+of the computation.
 
 ### Dispatch flow
 
@@ -655,24 +681,22 @@ from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
    applicators), and picks the best plan.
 2. **`wp`-rewrite driver** (`VCVio/ProgramLogic/Tactics/Common/WpStepDispatch.lean`): on any goal
    containing `wp _ _`, `runWpStepRules` pulls the `oa` argument out of the
-   first matching `wp` application, `whnfReducible`s it, asks
-   `getRegisteredWpStepEntries` for hits on the `oa`-keyed `Sym.DiscrTree`,
-   and tries each via `rw` then `simp only` until one lands.
+   first matching `wp` application, selects the `wpStepRules` whose left-hand computation has
+   the head of `oa` (as written, then after reducible `whnf`), and tries each with `simp only`
+   until one lands.
 3. **Handler `@[spec]` rules**: unary handlers (`loggingOracle`,
-   `cachingOracle`, …) use core Lean's `Std.Do.Triple` + `@[spec]` catalogue
-   directly; those are indexed by Lean itself and consumed by `mvcgen`.
+   `cachingOracle`, …) use core Lean's `Std.WP.Triple` + `@[spec]` catalogue
+   directly; those are indexed by Lean itself and consumed by core `vcgen`.
 
 ### Extending the registries
 
 | Want to add… | Tag it with | Expected shape |
 |--------------|-------------|----------------|
-| A unary Triple lemma usable by `vcstep` / `vcgen` | `@[vcspec]` | `Triple pre oa post` or raw `wp oa post ≥ pre` |
+| A unary Triple lemma usable by `vcstep` / `pvcgen` | `@[vcspec]` | `Triple pre oa post` or raw `wp oa post ≥ pre` |
 | A relational lemma usable by `rvcstep` / `rvcgen` | `@[vcspec]` | `RelTriple oa ob R`, `RelWP oa ob post`, or quantitative `VCVio.ProgramLogic.RelTriple pre oa ob post Lean.Order.bot Lean.Order.bot` |
-| A `wp`-driven equational rewrite | `@[wpStep]` | `wp comp post = …` (exact head `wp`) |
 
-Priorities (`@[vcspec (prio := 200)]`, `@[wpStep (prio := 200)]`) follow the
-standard Lean convention: higher priority entries are tried first within the
-same candidate pool.
+Priorities (`@[vcspec (prio := 200)]`) follow the standard Lean convention: higher priority
+entries are tried first within the same candidate pool.
 
 ## SymM Stability Note and Future Proof Repair
 
@@ -686,37 +710,31 @@ time we bump the toolchain:
 
 - **Signature changes on `Sym.mkPatternFromDeclWithKey`**. If the selector
   signature changes (e.g. becomes `Expr → MetaM (Pattern × α)` instead of
-  `Expr → MetaM (Expr × α)`), update `buildVCSpecEntry` /
-  `buildWpStepEntry` in `Registry.lean` / `WpStepRegistry.lean` to match.
+  `Expr → MetaM (Expr × α)`), update `buildVCSpecEntry` in `Registry.lean` to match.
 - **`Sym.Pattern` preprocessing behaviour**. If the default reducibility
   used by `preprocessType` shifts (e.g. stops unfolding certain abbreviations
   or starts unfolding more), the "folded vs unfolded head" helpers
   (`headIsOneOf`, `tripleBodyParts?`, `relTripleBodyParts?`, etc. in
   `Registry.lean`) may need to grow new cases. All of these live in a
   clearly-marked `Preprocessed-body head matchers` section.
-- **`Sym.Simp.Theorem` field renames / `mkTheoremFromDecl` moves**. We do
-  *not* call `mkTheoremFromDecl` today (the dispatcher works off the
-  `Sym.DiscrTree` alone). When the deferred `vcgen`/`SymM` bridge lands,
-  this is where we'll need to pick the bundle back up; until then this
-  churn class is no-op for us.
 - **`SpecProof` variants**. We only use `.global` today. If core splits or
-  merges variants, `VCSpecEntry.declName?` / `WpStepEntry.declName?` plus
-  the matching `MetaM` inserts need to be adjusted.
+  merges variants, `VCSpecEntry.declName?` plus the matching `MetaM` inserts need to be
+  adjusted.
 - **`registerSimpleScopedEnvExtension` purity**. `addEntry` is pure today
-  and we rely on that in both registries; if it changes, the attribute
-  handlers already compute their patterns inside `MetaM` before calling
+  and the registry relies on that; if it changes, the attribute
+  handler already computes its patterns inside `MetaM` before calling
   `.add`, so the fix is to thread the `MetaM` result differently, not to
   restructure the registry.
 
 The compensating design choices are: keep `Sym`-aware logic contained to the
-registry modules (`Registry.lean`, `WpStepRegistry.lean`), prefer the
+registry module (`Registry.lean`), prefer the
 structural `getMatch` over `isDefEq`, and keep an explicit `TacticM`
 fallback path (`rw` / `simp only`) so failures in any single `Sym` lookup
 stage degrade gracefully.
 
 ### Core WP and the symbolic rewriter boundary
 
-Lean v4.34 provides lattice-generic `Std.Internal.Do.WPMonad`, `Triple`, transformer
+Lean v4.35 provides lattice-generic `Std.WP.WPMonad`, `Triple`, transformer
 instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly:
 
 - `open scoped OracleComp.Lower` selects expectation in `ℝ≥0∞` for `OracleComp spec`
@@ -729,7 +747,7 @@ instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly
   possible output.
 - `open scoped OracleComp.Probabilistic` selects the restricted algebra on `Set.Iic 1`.
 
-Use `open scoped Std.Internal.Do` for core triple notation. Carrier choice is local;
+Use `open scoped Std.WP` for core triple notation. Carrier choice is local;
 importing the library does not install a global unary WP interpretation. Quantitative
 expectation does not provide a general structural reachability certificate. The
 probability-one coherence theorems state their additional uniformity assumptions.
@@ -738,20 +756,43 @@ The coupling interface `VCVio.ProgramLogic.RelWP` is local to VCVio and shares c
 assertion lattices. Its three carriers in `Relational/WP/` also use explicit scopes
 (`OracleComp.Rel.Quantitative`, `.Qualitative`, `.Probabilistic`).
 
-VCVio's probability/coupling tactics continue to consume `@[vcspec]` and `@[wpStep]`.
+VCVio's probability/coupling tactics continue to consume `@[vcspec]` and the `wpStepRules` table.
 Core `vcgen` consumes the core `@[spec]` catalogue. Generic transformer WP comes from
 core and PolyFun's WriterT interpretation; VCVio retains its probability rules and
 existing transformer equality lemmas. The scoped `WriterT.MonoidWP` interpretation
-uses multiplication; append-based logs use `MAlgOrdered.toWPMonad` with explicit operations.
+uses multiplication; `WriterT.AppendWP` handles append-based logs.
 
-The `Std.Do` handler bridge is a separate consumer of core's older SPred API.
-Its migration to lattice-generic triples is a focused follow-up; it does not require Loom.
-Likewise, replacing the probability tactic's `rw` dispatcher with `Sym.Simp` needs a
-separate proof-application adapter and evidence from the existing automation tests.
+The handler catalogue uses core lattice-generic triples under the necessary interpretation
+and core `vcgen`; it does not require Loom. The small `Std.Do` adapter remains for its legacy
+SPred consumers.
 
-For v4.35, track the [Std.WP namespace work](https://github.com/leanprover/lean4/pull/14783),
-[LawfulWPMonadAttach](https://github.com/leanprover/lean4/pull/14801),
-[exception-stack tuples](https://github.com/leanprover/lean4/pull/14836), and
-[mvcgen deprecation](https://github.com/leanprover/lean4/pull/14874), alongside the
-[upstream roadmap](https://lean-lang.org/fro/roadmap/y4-1/).
-These inform the next stable upgrade; they do not change this package's v4.34 pin.
+#### Core `vcgen` rules for oracle computations
+
+`Unary/WP/NecessarySpecs.lean` and `Unary/WP/LowerSpecs.lean` register `@[spec]` rules for the
+primitives of `OracleComp` (queries, `$ᵗ β`, `$[0..n]` through the `ProbComp.uniformFin`
+unfolding, `replicate`, `liftComp`), so core `vcgen` steps through oracle programs in both
+readings; `VCVioTest/ProgramLogic/CoreVCGen.lean` exercises them.
+
+- Under `OracleComp.Necessary`, a draw may return any value and `vcgen` descends through every
+  draw.
+- Under `OracleComp.Lower`, the registered rules are exact: a query integrates the postcondition
+  against its answer measure and `$ᵗ β` averages it (`OracleComp.Lower.wp_uniformSample_eq_tsum`).
+  Fractional events keep their value, but `vcgen` does not descend under the integral or sum, so
+  a draw followed by more program leaves `r ≤ ∫⁻ u, wp (rest u) post ∂μ`; the `wp` equations
+  of `Unary/HoareTriple.lean` compute the inner expectations.
+- `open scoped OracleComp.Lower.Pointwise` registers the pointwise rules above the exact ones:
+  a bound at every answer, as core's indexed infimum, which `vcgen` splits per answer. They serve
+  for bounds that hold on every path, such as events of probability one.
+- `Spec.ofSupport` (in both readings) is passed explicitly for an opaque sub-program.
+
+The v4.35 port adopts the public `Std.WP` namespace and exception stacks (`EStack⟨⟩`,
+`EStack⟨ε → L⟩`). An optional failure postcondition is a function from `Unit`; core's
+`Lean.Order.pushOption` and `pushExcept` combine success and failure assertions. Direct
+`WP` instances for concrete monads take precedence over a `WPMonad`-derived instance, so the
+measure scopes install direct interpretations too. PolyFun's `ExactWPMonad` strengthens core's
+one-sided laws to equalities; the ordered-algebra adapter constructs this evidence.
+
+The package acknowledges core `vcgen`'s experimental status with `experimental.vcgen`.
+See the [namespace change](https://github.com/leanprover/lean4/pull/14783),
+[exception-stack change](https://github.com/leanprover/lean4/pull/14836), and
+[mvcgen deprecation](https://github.com/leanprover/lean4/pull/14874).

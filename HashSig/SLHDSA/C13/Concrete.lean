@@ -6,7 +6,7 @@ Authors: Nicolas Consigny, Alexander Hicks
 
 module
 public import HashSig.SLHDSA.C13.Scheme
-public import HashSig.SLHDSA.Concrete.Keccak
+public import VCVio.Algorithms.Keccak
 public import HashSig.SLHDSA.Concrete.Instance
 
 /-!
@@ -33,7 +33,7 @@ namespace SLHDSA.C13.Concrete
 
 open SLHDSA (Adrs toInt)
 open SLHDSA.Concrete (b16ToBA baToBytes baSliceToB16)
-open SLHDSA.Concrete.Keccak (keccak256)
+open VCVio.Algorithms.Keccak (keccak256)
 
 /-- 16 zero bytes (the low half of a top-aligned word). -/
 def zeros16 : ByteArray := ByteArray.mk (Array.replicate 16 0)

@@ -42,6 +42,7 @@ open OracleComp OracleSpec ENNReal
 The generator is a deterministic function; security comes from the
 seed being sampled uniformly. -/
 structure PRGScheme (S R : Type) where
+  /-- Deterministically map a seed to the generator's output. -/
   gen : S → R
 
 namespace PRGScheme

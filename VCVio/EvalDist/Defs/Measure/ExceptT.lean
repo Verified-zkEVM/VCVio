@@ -182,5 +182,6 @@ instance (priority := 20) instLawfulEvalDistSemanticsExceptT
         (fun x ↦ 𝒟[(f x).run]) := Measurable.of_comap_le le_sup_right
     have hmap := @ExceptT.evalDist_map ε _ m _ _ _ _ α α mObs mα mx id hId
     rw [id_map] at hmap
-    rw [hmap, @Measure.bind_map α α β mObs mα mβ _ _ _ hId hf]
+    rw [hmap, @Measure.bind_map α α mObs mα β mβ _ _ _
+      (@Measurable.aemeasurable α α mObs mα id _ hId) hf.aemeasurable]
     exact @ExceptT.evalDist_bind ε _ m _ _ _ α β mObs mβ mx f hRun

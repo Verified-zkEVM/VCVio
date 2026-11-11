@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import PolyFun.Interaction.UC.RequestNetwork
+public import PolyFun.Interaction.Execution.RequestNetwork
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 
 /-!
@@ -16,13 +16,15 @@ Oracle-specific names for the generic polynomial request network. Stable clients
 at most one outstanding request, a shared stateful service responds, and ticketed replies
 resume the matching continuation. Delivery and local activation consume separate steps.
 
-The implementation and exact transport laws are owned by `Interaction.UC.RequestNetwork`.
+The implementation and exact transport laws are owned by `Interaction.Execution.RequestNetwork`.
 This facade specializes the polynomial to `OracleSpec.toPFunctor`.
 -/
 
 public section
 
 namespace Interaction.UC.OracleNetwork
+
+open Interaction.Execution
 
 variable {ι : Type}
 

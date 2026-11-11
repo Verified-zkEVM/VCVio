@@ -8,7 +8,7 @@ module
 public import Mathlib.MeasureTheory.Measure.Prod
 public import Mathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
-public import Mathlib.Data.FunLike.IsApply
+public import Mathlib.Algebra.Group.IsApply
 
 /-!
 # Subprobability measures

@@ -332,7 +332,7 @@ an `nmaHashQueryBound Q` can grow the internal `queryLog` by at most `Q`.
 Each source `Sum.inr` step consumes one unit of the `nmaHashQueryBound` budget, while
 `roImpl` appends to `queryLog` only on a cache miss, hence at most once per such step. -/
 theorem queryLog_length_le_of_nmaHashQueryBound
-    [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] {α : Type}
+    [DecidableEq M] [DecidableEq Commit] {α : Type}
     {oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α} {Q : ℕ}
     (hQ : nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal) (oa := oa) Q)
     (st : SimState M Commit Chal) {z : α × SimState M Commit Chal}
@@ -450,6 +450,7 @@ theorem simulateQ_uniformImpl_evalDistEq [SampleableType Chal]
   · simp only [QueryImpl.add_apply_inl, QueryImpl.ofLift_eq_id', QueryImpl.id'_apply]
     exact evalDist_liftM_query_uniform (spec := unifSpec) n
   · let : MeasurableSpace Chal := ⊤
+    let : MeasurableSpace ((wrappedSpec Chal).Range (.inr u)) := ‹MeasurableSpace Chal›
     simp only [QueryImpl.add_apply_inr, uniformSampleImpl_apply]
     exact SampleableType.evalDist_uniformSample
 

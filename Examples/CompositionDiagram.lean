@@ -5,12 +5,12 @@ Authors: Quang Dao
 -/
 
 module
-public meta import PolyFun.Interaction.UC.Interface
-public meta import VCVioWidgets.OpenSyntax.Render
-public import PolyFun.Interaction.UC.Notation
-public import VCVioWidgets.OpenSyntax.Render
-public import VCVioWidgets.OpenSyntax.Panel
-public import VCVioWidgets.OpenSyntax.TreePanel
+public meta import PolyFun.Interaction.Interface
+public meta import Examples.Widgets.OpenSyntax.Render
+public import PolyFun.Interaction.Open.Notation
+public import Examples.Widgets.OpenSyntax.Render
+public import Examples.Widgets.OpenSyntax.Panel
+public import Examples.Widgets.OpenSyntax.TreePanel
 
 /-!
 # Diffie-Hellman key exchange as a composition diagram
@@ -42,8 +42,8 @@ show_panel_widgets [
   local VCVioWidgets.OpenSyntax.CompositionPanel,
   local VCVioWidgets.OpenSyntax.TreePanel]
 
-open Interaction.UC
-open Interaction.UC.OpenSyntax
+open Interaction Interaction.Open
+open Interaction.Open.OpenSyntax
 
 -- Symmetric boundary where In = Out, so `swap bd = bd` definitionally.
 abbrev bd : PortBoundary :=

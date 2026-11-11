@@ -166,6 +166,15 @@ lemma simulateQ_add_liftComp_right (ob : OracleComp spec₂' α) :
   congr 1 with t
   exact simulateQ_add_liftM_query_right impl₁' impl₂' t
 
+/-- `HasQuery.toQueryImpl`-keyed form of `simulateQ_add_liftComp_left`: a computation over the
+left summand, embedded in the sum through its query capability, is simulated by the left handler
+alone. -/
+lemma simulateQ_add_simulateQ_toQueryImpl_left (oa : OracleComp spec₁' α) :
+    simulateQ (impl₁' + impl₂') (simulateQ
+      (HasQuery.toQueryImpl (spec := spec₁') (m := OracleComp (spec₁' + spec₂'))) oa) =
+    simulateQ impl₁' oa :=
+  simulateQ_add_liftComp_left impl₁' impl₂' oa
+
 /-- `liftM`-normal-form companion of `simulateQ_add_liftComp_left`. Because `liftComp_eq_liftM`
 normalizes `liftComp → liftM` under `simp`, the `liftComp`-keyed lemma never fires inside `simp`;
 this `liftM`-keyed form is what `simp` actually needs.
@@ -544,3 +553,33 @@ original `spec` oracles alongside the handler `impl` for `spec'`. -/
 abbrev passthrough {ι : Type*} (spec : OracleSpec.{_, u} ι) : QueryImpl.Passthrough spec := ⟨⟩
 
 end OracleSpec
+
+namespace OracleComp
+
+variable {ι κ ν α : Type} {a : OracleSpec ι} {b : OracleSpec κ} {c : OracleSpec ν}
+  {m : Type → Type} [Monad m] [LawfulMonad m]
+
+/-- Discard an unused right-hand handler when the source interface is itself a sum.
+This handles the componentwise lift route chosen for a sum source. -/
+theorem simulateQ_add_liftComp_sum_left
+    (hab : QueryImpl (a + b) m) (hc : QueryImpl c m) (p : OracleComp (a + b) α) :
+    simulateQ (hab + hc) (liftComp p ((a + b) + c)) = simulateQ hab p := by
+  rw [liftComp_def]
+  apply QueryImpl.simulateQ_simulateQ_eq_of_apply
+  intro q
+  cases q <;> change simulateQ _ (liftM (((a + b) + c).query _)) = _
+  all_goals rw [simulateQ_spec_query]; rfl
+
+/-- Discard two unused right-hand handlers when lifting into a nested sum interface. -/
+theorem simulateQ_add_add_liftComp_left
+    (ha : QueryImpl a m) (hb : QueryImpl b m) (hc : QueryImpl c m)
+    (p : OracleComp a α) :
+    simulateQ ((ha + hb) + hc) (liftComp p ((a + b) + c)) = simulateQ ha p := by
+  rw [liftComp_def]
+  apply QueryImpl.simulateQ_simulateQ_eq_of_apply
+  intro q
+  change simulateQ _ (liftM (((a + b) + c).query (.inl (.inl q)))) = _
+  rw [simulateQ_spec_query]
+  rfl
+
+end OracleComp

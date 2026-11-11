@@ -28,22 +28,28 @@ protected def runIO {α : Type} (oa : ProbComp α) : IO α :=
 /-- Automatic lifting of probabilistic computations into `IO`. -/
 instance : MonadLift ProbComp IO where monadLift := OracleComp.runIO
 
+/-- An executable sample computation: draw `x` uniformly from `{0, …, 1618}` and `y` uniformly
+from `{0, …, 3141}`, and return `(x, y, x + y)`. -/
 def test1 : ProbComp (ℕ × ℕ × ℕ) := do
   let x ← $[0..1618]
   let y ← $[0..3141]
   return (x, y, x + y)
 
+/-- A list of `n` independent uniform draws from `{0, …, 100}`, built by recursion on `n`. -/
 def test2 (n : ℕ) : ProbComp (List ℕ) := do
   match n with
   | 0 => return []
   | n + 1 => return (← $[0..100]) :: (← test2 n)
 
+/-- A list of `n` independent uniform draws from `{0, …, 100}`, accumulated by a `for` loop
+over a mutable variable. -/
 def test3 (n : ℕ) : ProbComp (List ℕ) := do
   let mut xs := []
   for _ in List.range n do
     xs := (← $[0..100]) :: xs
   return xs
 
+/-- A list of `n` independent uniform draws from `{0, …, 100}`, built with `List.mapM`. -/
 def test4 (n : ℕ) : ProbComp (List ℕ) := do
   (List.replicate n ()).mapM (fun () => Fin.val <$> ($[0..100]))
 

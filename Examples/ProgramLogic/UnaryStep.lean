@@ -18,15 +18,19 @@ public import VCVio.OracleComp.Coercions.SubSpec.Measure
 
 This file validates one-step unary tactic behavior for raw `wp` goals,
 registered `@[vcspec]` hints, and `liftComp`.
+
+The exhaustive transformer examples use core `vcgen` where its `@[spec]` rules close the goal,
+and `pvcgen` where the precondition is the expectation of an opaque oracle computation, which
+core `vcgen` has no rule for.
 -/
 
 @[expose] public section
 
-open scoped Std.Internal.Do OracleComp.Lower WriterT.MonoidWP
+open scoped Std.WP OracleComp.Lower WriterT.MonoidWP
 
 open ENNReal OracleSpec OracleComp
 open Lean.Order
-open Std.Internal.Do
+open Std.WP
 open OracleComp.ProgramLogic
 open scoped OracleComp.ProgramLogic
 
@@ -121,7 +125,7 @@ example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) :
         let a ← (MonadLift.monadLift oa : StateT Nat (OracleComp spec) α)
         pure (s, a))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (s' : Nat) (oa : OracleComp spec α) (post : α → Nat → ℝ≥0∞) :
     ⦃fun _ => wp⟦oa⟧ (fun a => post a s')⦄
@@ -141,46 +145,40 @@ example (f : Nat → α × Nat) (post : α → Nat → ℝ≥0∞) :
 
 /-! ## `OptionT (OracleComp spec)` transformer steps -/
 
-example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : ℝ≥0∞) :
-    Std.Internal.Do.Triple (MonadLift.monadLift oa : OptionT (OracleComp spec) α)
-      (wp⟦oa⟧ post)
-      post (EPost.Cons.mk nonePost EPost.Nil.mk) := by
-  vcgen
+example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : Unit → ℝ≥0∞) :
+    ⦃wp⟦oa⟧ post⦄ (MonadLift.monadLift oa : OptionT (OracleComp spec) α)
+      ⦃post; estack⟨nonePost⟩⦄ := by
+  pvcgen
 
-example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : ℝ≥0∞) :
-    Std.Internal.Do.Triple ((do
+example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : Unit → ℝ≥0∞) :
+    ⦃wp⟦oa⟧ post⦄
+      (do
         let a ← (MonadLift.monadLift oa : OptionT (OracleComp spec) α)
-        pure a) : (_ : _ → _) _)
-      (wp⟦oa⟧ post)
-      post (EPost.Cons.mk nonePost EPost.Nil.mk) := by
-  vcgen
+        pure a)
+      ⦃post; estack⟨nonePost⟩⦄ := by
+  pvcgen
 
-example (post : α → ℝ≥0∞) (nonePost : ℝ≥0∞) :
-    Std.Internal.Do.Triple (failure : OptionT (OracleComp spec) α)
-      nonePost
-      post (EPost.Cons.mk nonePost EPost.Nil.mk) := by
+example (post : α → ℝ≥0∞) (nonePost : Unit → ℝ≥0∞) :
+    ⦃nonePost ()⦄ (failure : OptionT (OracleComp spec) α) ⦃post; estack⟨nonePost⟩⦄ := by
   vcgen
 
 /-! ## `ExceptT (OracleComp spec)` transformer steps -/
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
-    Std.Internal.Do.Triple (MonadLift.monadLift oa : ExceptT String (OracleComp spec) α)
-      (wp⟦oa⟧ post)
-      post (EPost.Cons.mk errPost EPost.Nil.mk) := by
-  vcgen
+    ⦃wp⟦oa⟧ post⦄ (MonadLift.monadLift oa : ExceptT String (OracleComp spec) α)
+      ⦃post; estack⟨errPost⟩⦄ := by
+  pvcgen
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
-    Std.Internal.Do.Triple ((do
+    ⦃wp⟦oa⟧ post⦄
+      (do
         let a ← (MonadLift.monadLift oa : ExceptT String (OracleComp spec) α)
-        pure a) : (_ : _ → _) _)
-      (wp⟦oa⟧ post)
-      post (EPost.Cons.mk errPost EPost.Nil.mk) := by
-  vcgen
+        pure a)
+      ⦃post; estack⟨errPost⟩⦄ := by
+  pvcgen
 
 example (err : String) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
-    Std.Internal.Do.Triple (throw err : ExceptT String (OracleComp spec) α)
-      (errPost err)
-      post (EPost.Cons.mk errPost EPost.Nil.mk) := by
+    ⦃errPost err⦄ (throw err : ExceptT String (OracleComp spec) α) ⦃post; estack⟨errPost⟩⦄ := by
   vcgen
 
 /-! ## `ReaderT (OracleComp spec)` transformer steps -/
@@ -198,20 +196,20 @@ example (oa : OracleComp spec α) (post : String × α → String → ℝ≥0∞
         let a ← (MonadLift.monadLift oa : ReaderT String (OracleComp spec) α)
         pure (r, a))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 /-! ## Mixed transformer stack steps -/
 
-example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) (nonePost : ℝ≥0∞) :
-    Std.Internal.Do.Triple ((do
+example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) (nonePost : Unit → ℝ≥0∞) :
+    ⦃fun s => wp⟦oa⟧ (fun a => post (s, a) (s + 1))⦄
+      (do
         let s ← (MonadStateOf.get : StateT Nat (OptionT (OracleComp spec)) Nat)
         (MonadStateOf.set (s + 1) : StateT Nat (OptionT (OracleComp spec)) PUnit)
         let a ← (MonadLift.monadLift (OptionT.lift oa) :
           StateT Nat (OptionT (OracleComp spec)) α)
-        pure (s, a)) : (_ : _ → _) _)
-      (fun s => wp⟦oa⟧ (fun a => post (s, a) (s + 1)))
-      post (EPost.Cons.mk nonePost EPost.Nil.mk) := by
-  vcgen
+        pure (s, a))
+      ⦃post; estack⟨nonePost⟩⦄ := by
+  pvcgen
 
 /-! ## `WriterT (OracleComp spec)` transformer steps -/
 
@@ -235,11 +233,12 @@ example (oa : OracleComp spec α) (out : Multiplicative Nat)
         let a ← (MonadLift.monadLift oa : WriterT (Multiplicative Nat) (OracleComp spec) α)
         pure (PUnit.unit, a))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (oa : OracleComp spec α) (out : Multiplicative Nat)
     (post : Nat × α → Nat → Multiplicative Nat → ℝ≥0∞) :
-    Std.Internal.Do.Triple ((do
+    ⦃fun s w => wp⟦oa⟧ (fun a => post (s, a) (s + 1) (w * out))⦄
+      ((do
         let s ← (MonadStateOf.get :
           StateT Nat (WriterT (Multiplicative Nat) (OracleComp spec)) Nat)
         (MonadStateOf.set (s + 1) :
@@ -253,13 +252,13 @@ example (oa : OracleComp spec α) (out : Multiplicative Nat)
         (pure (s, a) :
           StateT Nat (WriterT (Multiplicative Nat) (OracleComp spec)) (Nat × α))) :
         StateT Nat (WriterT (Multiplicative Nat) (OracleComp spec)) (Nat × α))
-      (fun s w => wp⟦oa⟧ (fun a => post (s, a) (s + 1) (w * out)))
-      post Lean.Order.bot := by
-  vcgen
+    ⦃post⦄ := by
+  pvcgen
 
 example (oa : OracleComp spec α) (out : Multiplicative Nat)
     (post : String × α → String → Multiplicative Nat → ℝ≥0∞) :
-    Std.Internal.Do.Triple ((do
+    ⦃fun r w => wp⟦oa⟧ (fun a => post (r, a) r (w * out))⦄
+      ((do
         let r ← (MonadReaderOf.read :
           ReaderT String (WriterT (Multiplicative Nat) (OracleComp spec)) String)
         (MonadLift.monadLift
@@ -271,17 +270,9 @@ example (oa : OracleComp spec α) (out : Multiplicative Nat)
         (pure (r, a) :
           ReaderT String (WriterT (Multiplicative Nat) (OracleComp spec)) (String × α))) :
         ReaderT String (WriterT (Multiplicative Nat) (OracleComp spec)) (String × α))
-      (fun r w => wp⟦oa⟧ (fun a => post (r, a) r (w * out)))
-      post Lean.Order.bot := by
-  vcgen
+    ⦃post⦄ := by
+  pvcgen
 
-/--
-info: [wpstep cache] hit `OracleComp.ProgramLogic.wp_replicate_succ`
----
-info: [wpstep cache] miss `OracleComp.ProgramLogic.wp_replicate_zero`
--/
-#guard_msgs in
-set_option vcvio.vcgen.traceCachedRules true in
 example (oa : OracleComp spec α) (post : List α → ℝ≥0∞) :
     wp⟦oa.replicate 0⟧ post = post [] := by
   vcstep
@@ -376,8 +367,8 @@ example :
   vcstep
 
 @[local vcspec] theorem stdDoTriple_wrappedTrue :
-    Std.Internal.Do.Triple (wrappedTrue (spec := spec)) (1 : ℝ≥0∞)
-      (fun y => if y = true then (1 : ℝ≥0∞) else 0) EPost.Nil.mk := by
+    Std.WP.Triple (wrappedTrue (spec := spec)) (1 : ℝ≥0∞)
+      (fun y => if y = true then (1 : ℝ≥0∞) else 0) estack⟨⟩ := by
   exact triple_wrappedTrue (spec := spec)
 
 example :
@@ -385,19 +376,19 @@ example :
   vcstep with stdDoTriple_wrappedTrue
 
 example :
-    Std.Internal.Do.Triple (wrappedTrue (spec := spec)) (1 : ℝ≥0∞)
-      (fun _ => (1 : ℝ≥0∞)) EPost.Nil.mk := by
+    Std.WP.Triple (wrappedTrue (spec := spec)) (1 : ℝ≥0∞)
+      (fun _ => (1 : ℝ≥0∞)) estack⟨⟩ := by
   vcstep
 
 @[local vcspec] theorem rawWP_wrappedTrue :
     (1 : ℝ≥0∞) ⊑
-      Std.Internal.Do.wp (wrappedTrue (spec := spec))
-        (fun y => if y = true then (1 : ℝ≥0∞) else 0) EPost.Nil.mk := by
+      Std.WP.wp (wrappedTrue (spec := spec))
+        (fun y => if y = true then (1 : ℝ≥0∞) else 0) estack⟨⟩ := by
   exact (stdDoTriple_wrappedTrue (spec := spec)).le_wp
 
 example :
     (1 : ℝ≥0∞) ⊑
-      Std.Internal.Do.wp (wrappedTrue (spec := spec)) (fun _ => (1 : ℝ≥0∞)) EPost.Nil.mk := by
+      Std.WP.wp (wrappedTrue (spec := spec)) (fun _ => (1 : ℝ≥0∞)) estack⟨⟩ := by
   vcstep
 
 @[irreducible] def wrappedTrueStep : OracleComp spec Bool := pure true
@@ -416,6 +407,7 @@ example :
     ⦃ 1 ⦄ wrappedTrueStep (spec := spec) ⦃ fun y => if y = true then 1 else 0 ⦄ := by
   vcstep with triple_wrappedTrueStep
 
+/-- An irreducible wrapper around `pure true`, used to test cached spec lookup. -/
 @[irreducible] def cacheTraceWrapped : OracleComp spec Bool := pure true
 
 @[local vcspec] theorem triple_cacheTraceWrapped :

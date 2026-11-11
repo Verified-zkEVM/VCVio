@@ -120,6 +120,9 @@ private def zint_mod_small_signed (d : Array UInt32) (len : Nat)
 Convert source `f` and `g` into RNS+NTT (one word per coefficient) using
 the first small prime. Returns `ft ++ gt` (each `n = 2^logn` words). -/
 
+/-- The polynomials `f` and `g` of degree `2^logn` in RNS+NTT form modulo the first small prime,
+one word per coefficient, returned as `ft ++ gt`; the depth-0 input of the field-norm descent.
+Mirrors `make_fg_zero` in c-fn-dsa's `kgen_ntru.c`. -/
 def make_fg_zero (logn : Nat) (f g : Array Int8) : Array UInt32 :=
   let pr := SmallPrimeNTT.PRIMES.getD 0 default
   let p := pr.p
@@ -149,6 +152,11 @@ then inverse-NTT the source to recover `(f, g)` in RNS (non-NTT).
 **Phase 3** (primes `slen..tlen-1`): reduce plain-integer coefficients
 modulo each new prime, forward-NTT, compute norms. -/
 
+/-- One step of the field-norm descent: from `(f, g)` of degree `2^(logn_top - depth)` at the
+start of `buf`, in RNS+NTT form with `MAX_BL_SMALL[depth]` words per coefficient, compute the
+field norms `(N(f), N(g))` of half the degree, with `N(f)(x²) = f(x) · f(-x)`, in RNS+NTT form with
+`MAX_BL_SMALL[depth + 1]` words per coefficient. Mirrors `make_fg_step` in c-fn-dsa's
+`kgen_ntru.c`. -/
 def make_fg_step (logn_top depth : Nat) (buf : Array UInt32) :
     Array UInt32 := Id.run do
   let logn := logn_top - depth
@@ -232,6 +240,10 @@ def make_fg_step (logn_top depth : Nat) (buf : Array UInt32) :
 Compute `(f, g)` at a specified depth by starting from the original
 polynomials and applying `depth` field-norm steps. -/
 
+/-- The pair `(f, g)` at depth `depth < logn_top` of the field-norm descent, of degree
+`2^(logn_top - depth)`, in RNS+NTT form with `MAX_BL_SMALL[depth]` words per coefficient,
+obtained by `depth` applications of `make_fg_step` to `make_fg_zero`. Mirrors
+`make_fg_intermediate` in c-fn-dsa's `kgen_ntru.c`. -/
 def make_fg_intermediate (logn_top : Nat) (f g : Array Int8)
     (depth : Nat) : Array UInt32 := Id.run do
   let mut buf := make_fg_zero logn_top f g
@@ -248,6 +260,11 @@ end of the 6n-word buffer for reuse during the lifting phase.
 
 Returns `(buffer, f_is_invertible)`. -/
 
+/-- The deepest level of the field-norm descent: the resultants `Res(f, x^n + 1)` and
+`Res(g, x^n + 1)` in RNS form at the start of a `6n`-word buffer, `n = 2^logn_top`, together
+with whether `f` is invertible modulo `x^n + 1` and the first small prime. The intermediate pairs
+at depths from `MIN_SAVE_FG[logn_top]` to `logn_top - 1` are saved at the end of the buffer for
+the lifting phase. Mirrors `make_fg_deepest` in c-fn-dsa's `kgen_ntru.c`. -/
 def make_fg_deepest (logn_top : Nat) (f g : Array Int8) :
     Array UInt32 × Bool := Id.run do
   let n := 1 <<< logn_top
@@ -288,6 +305,13 @@ the resultants `f₀ = Res(f, x^n + 1)` and `g₀ = Res(g, x^n + 1)`.
 
 On success, `F₀` is at `buf[0..len)` and `G₀` at `buf[len..2·len)`. -/
 
+/-- The base case of `NTRUSolve`: integers `F₀` and `G₀` with
+`Res(f, x^n + 1) · G₀ - Res(g, x^n + 1) · F₀ = q`, from a Bézout relation for the resultants
+(`zint_bezout`) scaled by `q`. On success, returns the `make_fg_deepest` buffer with `F₀` and
+`G₀` written over its first `2 · MAX_BL_SMALL[logn_top]` words and the saved intermediates kept.
+Returns `none` if `f` is not invertible modulo the first small prime, the resultants are not
+coprime, or the scaled values overflow. Mirrors `solve_NTRU_deepest` in c-fn-dsa's
+`kgen_ntru.c`. -/
 def solve_NTRU_deepest (logn_top : Nat) (f g : Array Int8) :
     Option (Array UInt32) := Id.run do
   let (buf, ok) := make_fg_deepest logn_top f g

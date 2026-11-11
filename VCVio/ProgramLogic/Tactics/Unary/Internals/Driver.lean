@@ -10,6 +10,8 @@ public meta import VCVio.ProgramLogic.Tactics.Common
 public import VCVio.ProgramLogic.Relational.Basic
 public meta import VCVio.ProgramLogic.Tactics.Relational.Internals
 public import PolyFun.Control.Do.Spec
+public import VCVio.ProgramLogic.Unary.WP.LowerSpecs
+public import ToCslib.Order.LeanOrder
 public meta import VCVio.ProgramLogic.Tactics.Unary.Internals.Rules
 import all VCVio.ProgramLogic.Tactics.Unary.Internals.Rules
 public meta import VCVio.ProgramLogic.Tactics.Unary.Internals.Steps
@@ -63,7 +65,7 @@ inductive UnaryGoalKind where
   `List.foldlM` head. -/
   | tripleLoop (comp : Expr)
   /-- A unary `Triple` whose computation does not match the cases above; the
-  dispatcher unfolds to raw `wp` and lets `@[wpStep]` rewrite. -/
+  dispatcher unfolds to raw `wp` and rewrites with `wpStepRules`. -/
   | tripleOther
   /-- A raw `wp` / `≤ wp` goal. -/
   | rawWp
@@ -122,8 +124,8 @@ private def runTripleBindStep (comp : Expr) : TacticM Bool := do
     return true
   return false
 
-/-- Last-ditch triple step: unfold to a raw `wp` goal and dispatch via
-`@[wpStep]`. Used when the specialized triple dispatchers do not match. -/
+/-- Last-ditch triple step: unfold to a raw `wp` goal and rewrite with `wpStepRules`
+(`runWpStepRules`). Used when the specialized triple dispatchers do not match. -/
 private def runTripleFallback : TacticM Bool := do
   match ← observing? do
       evalTactic (← `(tactic| unfold OracleComp.ProgramLogic.Triple))
@@ -186,7 +188,7 @@ def runVCGenStructuralCore : TacticM Bool := withVCGenStructuralTiming do
 
 private def mkStructuralStepForTarget (target : Expr) : PlannedStep :=
   let step := mkVCGenPlannedStep
-    "vcgen structural step"
+    "pvcgen structural step"
     "vcstep"
     runVCGenStructuralCore
   if !(hasProbGoal target) && (tripleGoalComp? target |>.isNone) &&
@@ -207,7 +209,7 @@ private def chooseBestCutStep? : TacticM (Option (PlannedStep × PreviewResult))
   withVCGenLocalHintTiming do
     let steps := (← potentialLocalHintNames).map fun cutName =>
       mkVCGenPlannedStep
-        "vcgen explicit cut"
+        "pvcgen explicit cut"
         s!"vcstep using {cutName}"
         (runHoareStepRuleUsing (mkIdent cutName))
     chooseBestPlannedStepCandidate? steps
@@ -216,7 +218,7 @@ private def chooseBestInvariantStep? : TacticM (Option (PlannedStep × PreviewRe
   withVCGenLocalHintTiming do
     let steps := (← potentialLocalHintNames).map fun invName =>
       mkVCGenPlannedStep
-        "vcgen explicit invariant"
+        "pvcgen explicit invariant"
         s!"vcstep inv {invName}"
         (runLoopInvExplicit (mkIdent invName))
     chooseBestPlannedStepCandidate? steps
@@ -226,7 +228,7 @@ private def chooseBestTheoremStep? : TacticM (Option (PlannedStep × PreviewResu
     for tier in ← registeredVCGenRuleCandidateTiers do
       let steps := tier.map fun entry =>
         mkVCGenPlannedStep
-          "vcgen @[vcspec] theorem rule"
+          "pvcgen @[vcspec] theorem rule"
           s!"vcstep with {entry.theoremName!}"
           (runUnaryVCSpecRule entry)
       if let some chosen ← chooseBestPlannedStepCandidate? steps then
@@ -242,7 +244,7 @@ private def planExplicitProbEqStep? (plainPreview : PreviewResult) :
   for plan in ← probEqPlannerActionPlansForGoal do
     let replayText ← renderProbEqPlan plan
     steps := steps.push <| mkVCGenPlannedStep
-      "vcgen probability plan"
+      "pvcgen probability plan"
       replayText
       (tryProbEqActions plan)
   match ← chooseBestPlannedStepCandidate? steps with
@@ -261,7 +263,7 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     let names ← getSuggestedIntroNames 1
     let introStep :=
       mkVCGenPlannedStep
-        "vcgen intro"
+        "pvcgen intro"
         s!"vcstep{renderAsClause names}"
         (introMainGoalNames names)
     if ← previewPlannedStep introStep then
@@ -272,14 +274,14 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     if isBindExpr comp then
       let immediateBindStep :=
         mkVCGenPlannedStep
-          "vcgen bind step"
+          "pvcgen bind step"
           "vcstep"
           (tryBindImmediate comp)
       if ← previewPlannedStep immediateBindStep then
         let names ← getSuggestedIntroNames 1
         let namedStructuralStep :=
           mkVCGenPlannedStep
-            "vcgen named bind step"
+            "pvcgen named bind step"
             s!"vcstep{renderAsClause names}"
             (runVCGenStructuralCoreWithNames names)
         if ← previewPlannedStep namedStructuralStep then
@@ -290,7 +292,7 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     if isReplicateHead comp || isListFoldlMHead comp || isListMapMHead comp then
       let autoInvariantStep :=
         mkVCGenPlannedStep
-          "vcgen automatic loop invariant"
+          "pvcgen automatic loop invariant"
           "vcstep"
           (tryLoopInvariantRuleAuto comp)
       if ← previewPlannedStep autoInvariantStep then
@@ -312,7 +314,7 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     return some theoremStep
   let closeStep :=
     mkVCGenPlannedStep
-      "vcgen close/search"
+      "pvcgen close/search"
       "vcstep"
       tryCloseSpecGoal
   if ← previewPlannedStep closeStep then
@@ -327,6 +329,64 @@ def runVCGenPlannedStep? : TacticM (Option PlannedStep) := do
     return some step
   return none
 
+/-- Whether `e` is the numeral `1` or the indicator of `True`. -/
+private def isProbabilityOne (e : Expr) : MetaM Bool := do
+  let e ← instantiateMVars e
+  if e.isAppOfArity ``OfNat.ofNat 3 && (e.getArg! 1).rawNatLit? == some 1 then
+    return true
+  return e.isAppOfArity ``OracleComp.ProgramLogic.propInd 1 && (e.getArg! 0).isConstOf ``True
+
+/-- Hand a quantitative triple to core `vcgen` with the `@[spec]` rules of
+`VCVio.ProgramLogic.Unary.WP.LowerSpecs`. Core steps through the program structure (binds,
+conditionals, matchers, transformer layers) and leaves its verification conditions, which are
+read back from core's order to `≤`. A triple with precondition `1` uses the pointwise rules,
+which descend through every draw; other triples use the exact rules, whose verification
+conditions keep the averages of the draws for VCVio's `wp` steps. Fails, restoring the state,
+when core makes no progress: when the computation of the triple is still in the goal. -/
+def tryCoreVCGen : TacticM Bool := withMainContext do
+  unless vcvio.vcgen.core.get (← getOptions) do return false
+  let target ← instantiateMVars (← getMainTarget)
+  let some (pre, comp, _) := tripleGoalParts? target | return false
+  unless (← instantiateMVars (← inferType pre)).isConstOf ``ENNReal do return false
+  let stx ← if ← isProbabilityOne pre then
+      `(tactic| open scoped OracleComp.Lower OracleComp.Lower.Pointwise in
+          vcgen (errorOnMissingSpec := false))
+    else
+      `(tactic| open scoped OracleComp.Lower in vcgen (errorOnMissingSpec := false))
+  let saved ← saveState
+  try
+    withOptions (fun o => o.setBool `experimental.vcgen true) (evalTactic stx)
+  catch _ =>
+    saved.restore
+    return false
+  let goals ← getGoals
+  for g in goals do
+    let ty ← instantiateMVars (← g.getType)
+    -- No progress, or a loop left to an invariant that VCVio's loop steps find in context.
+    if (ty.find? (· == comp)).isSome || ty.isAppOf ``Std.WP.Invariant then
+      saved.restore
+      return false
+  let mut readBack := #[]
+  for g in goals do
+    setGoals [g]
+    discard <| tryEvalTacticSyntax (← `(tactic| simp only [Lean.Order.rel_eq_le, binderNameHint]))
+    -- The exact rules leave the expectations of the rest of the program under the averages of
+    -- the draws; their `wp` equations compute them.
+    discard <| tryEvalTacticSyntax (← `(tactic|
+      simp only [OracleComp.ProgramLogic.wp_bind, OracleComp.ProgramLogic.wp_pure,
+        OracleComp.ProgramLogic.wp_map, OracleComp.ProgramLogic.wp_ite,
+        OracleComp.ProgramLogic.wp_HasQuery_query, OracleComp.ProgramLogic.wp_query,
+        OracleComp.Lower.wp_uniformSample_eq_tsum, Function.comp_apply]))
+    -- A verification condition that `simp` closes is closed; any other is left as it was.
+    let vc ← getMainGoal
+    let s ← saveState
+    unless ← tryEvalTacticSyntax (← `(tactic| (simp; done))) do
+      s.restore
+      setGoals [vc]
+    readBack := readBack ++ (← getGoals)
+  setGoals readBack.toList
+  return true
+
 /-- One step of VCGen on a `Triple` goal. Returns `true` if any progress was made. -/
 def runVCGenStep : TacticM Bool := do
   if (← getGoals).isEmpty then
@@ -338,12 +398,10 @@ def runVCGenStep : TacticM Bool := do
       return true
   let cheapCloseState ← saveState
   if ← tryEvalTacticSyntax (← `(tactic|
-      (refine Std.Internal.Do.Triple.intro ?_
+      (refine Std.WP.Triple.intro ?_
        repeat intro _
        simp [Lean.Order.PartialOrder.rel, MonadLift.monadLift,
-         OracleComp.Lower.wp_eq_mAlgOrdered_wp,
-         OracleComp.Lower.wp_eq_mAlgOrdered_wp_epost,
-         MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
+         ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
          one_mul, mul_one]))) then
     if (← getGoals).isEmpty then
       return true
@@ -377,7 +435,8 @@ def runVCGenPassPlanned : TacticM (Array PlannedStep) := do
   setGoals newGoals.toList
   return steps
 
-/-- Run one VCGen pass across all current goals. -/
+/-- Run one VCGen pass across all current goals. Exhaustive `pvcgen` passes first hand a
+quantitative triple to core `vcgen` (`tryCoreVCGen`); single steps (`vcstep`) do not. -/
 def runVCGenPass : TacticM Bool := do
   let goals ← getGoals
   if goals.isEmpty then
@@ -386,7 +445,7 @@ def runVCGenPass : TacticM Bool := do
   let mut newGoals : Array MVarId := #[]
   for goal in goals do
     setGoals [goal]
-    if ← runVCGenStep then
+    if ← tryCoreVCGen <||> runVCGenStep then
       progress := true
       for newGoal in ← getGoals do
         newGoals := newGoals.push newGoal

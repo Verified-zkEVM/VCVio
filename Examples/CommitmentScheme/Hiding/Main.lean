@@ -97,8 +97,9 @@ theorem hiding_bound_finite [Finite M]
     (ae_of_all _ fun s => ?_)).trans ?_
   · simp only [measureETVDist, evalDist_liftComp_uniform, le_refl]
   · rw [lintegral_fintype]
-    simp only [evalDist_liftM_query_uniform (spec := HidingAvgSpec M S C) (Sum.inl ()),
-      ProbabilityTheory.uniformOn_univ_apply_singleton]
+    simp only [evalDist_liftM_query_uniform (spec := HidingAvgSpec M S C) (Sum.inl ())]
+    dsimp only [OracleSpec.add_apply_inl]
+    simp only [ProbabilityTheory.uniformOn_univ_apply_singleton]
     refine le_of_eq_of_le ?_ (hiding_bound_avg A)
     rw [ENNReal.div_eq_inv_mul, Finset.mul_sum]
     exact Finset.sum_congr rfl fun s _ => mul_comm _ _

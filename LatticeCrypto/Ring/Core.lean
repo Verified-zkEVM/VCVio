@@ -101,9 +101,14 @@ vector-backed storage (`vectorBackend`) and function-backed storage (`piBackend`
 The backend carries no arithmetic — ring operations are added by `NegacyclicRing`
 in `LatticeCrypto.Ring.Kernel`. -/
 structure PolyBackend (Coeff : Type u) where
+  /-- The carrier type storing one polynomial. -/
   Poly : Type v
+  /-- The number `n` of stored coefficients; a carrier represents a polynomial of degree
+  less than `n`. -/
   degree : Nat
+  /-- The coefficient at a position `i < degree`. -/
   coeff : Poly → Fin degree → Coeff
+  /-- The carrier with a given coefficient function, inverse to `coeff`. -/
   build : (Fin degree → Coeff) → Poly
   coeff_build : ∀ f i, coeff (build f) i = f i
   build_coeff : ∀ p, build (coeff p) = p
