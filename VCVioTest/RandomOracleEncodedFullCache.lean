@@ -56,7 +56,7 @@ theorem repeatedRaw_single (input : D) :
     (simulateQ E.singleImpl (repeatedRaw spec input)).run ∅ = (do
       let word ← $ᵗ M
       pure ((word, word), (∅ : (D →ₒ M).QueryCache).cacheQuery input word)) := by
-  simp [repeatedRaw, simulateQ_bind, StateT.run_bind,
+  simp [repeatedRaw, StateT.run_bind,
     RandomOracleEncoding.singleImpl, RandomOracleEncoding.singleHashImpl,
     QueryImpl.add_apply_inr]
 
@@ -78,7 +78,7 @@ theorem typedThenRaw_single (point : ι) :
       let word ← $ᵗ M
       pure ((E.trunc point word, word),
         (∅ : (D →ₒ M).QueryCache).cacheQuery (E.encode point) word)) := by
-  simp [typedThenRaw, simulateQ_bind, StateT.run_bind,
+  simp [typedThenRaw, StateT.run_bind,
     RandomOracleEncoding.singleImpl, RandomOracleEncoding.singleHashImpl,
     RandomOracleEncoding.truncatedImpl, StateT.run_map, bind_map_left]
 
