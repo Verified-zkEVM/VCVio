@@ -7,7 +7,8 @@ Authors: Devon Tuma, Alexander Hicks
 module
 
 public import Mathlib.Algebra.Polynomial.Eval.Defs
-public import PolyFun.PFunctor.Bound
+public import PolyFun.PFunctor.Free.Cost.Support
+public import PolyFun.PFunctor.Handler.Charge
 public import VCVio.OracleComp.Support
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.SimSemantics.Append.Core
@@ -15,6 +16,13 @@ public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
 /-!
 # Structural query bounds
+
+`IsQueryBound` admits arbitrary roll-budget automata. Predicate-targeted, per-index and total
+query bounds are its additive special cases, identified with PolyFun's prefix charge bounds by
+`isQueryBoundP_iff_isChargeBound`, `isPerIndexQueryBound_iff_isChargeBound` and
+`isTotalQueryBound_iff_isChargeBound`. `AllQueriesSatisfy` has zero budget for the complementary
+indicator charge. These bounds constrain every query prefix, including an unanswerable query;
+they do not merely constrain completed paths.
 -/
 
 public section
@@ -193,7 +201,7 @@ theorem IsQueryBound.simulateQ_run_of_step
     IsQueryBound ((simulateQ impl oa).run s) (mapBudget budget) canQuery' cost' := by
   induction oa using OracleComp.inductionOn generalizing budget s with
   | pure x =>
-      simp [simulateQ_pure]
+      simp
   | query_bind t mx ih =>
       rw [isQueryBound_query_bind_iff] at h
       rw [simulateQ_query_bind, StateT.run_bind]
@@ -238,6 +246,16 @@ theorem isQueryBoundP_iff_isRollBound (oa : OracleComp spec α) (n : ℕ) :
         (fun t qb => ¬ p t ∨ 0 < qb)
         (fun t qb => if p t then qb - 1 else qb) :=
   Iff.rfl
+
+/-- Predicate-targeted budgets are prefix charge bounds with indicator charges. -/
+theorem isQueryBoundP_iff_isChargeBound (oa : OracleComp spec α) (n : ℕ) :
+    IsQueryBoundP oa p n ↔
+      PFunctor.FreeM.IsChargeBound oa (fun t => if p t then 1 else 0) n := by
+  rw [PFunctor.FreeM.isChargeBound_iff_isRollBound_nat]
+  exact isQueryBound_congr
+    (fun t b => by by_cases ht : p t <;> simp [ht, Nat.one_le_iff_ne_zero,
+      Nat.pos_iff_ne_zero])
+    (fun t b => by by_cases ht : p t <;> simp [ht])
 
 /-- `IsQueryBoundP` rephrased with the `if … then 0 < b else True` validity check.
 This is the shape that arises naturally in `expectedSCost` hypotheses, where the
@@ -294,13 +312,8 @@ lemma IsQueryBoundP.proj
 
 theorem IsQueryBoundP.mono {oa : OracleComp spec α} {n m : ℕ}
     (h : IsQueryBoundP oa p n) (hnm : n ≤ m) : IsQueryBoundP oa p m := by
-  induction oa using OracleComp.inductionOn generalizing n m with
-  | pure _ => trivial
-  | query_bind t mx ih =>
-      rw [isQueryBoundP_query_bind_iff] at h
-      rw [isQueryBoundP_query_bind_iff]
-      refine ⟨h.1.imp id (fun hn => Nat.lt_of_lt_of_le hn hnm), fun u => ?_⟩
-      exact ih u (h.2 u) (by split <;> omega)
+  rw [isQueryBoundP_iff_isChargeBound] at h ⊢
+  exact h.mono hnm
 
 /-- `oa >>= ob` is `p`-bounded by `n + m` when `oa` is `p`-bounded by `n` and every reachable
 continuation `ob x` is `p`-bounded by `m`. -/
@@ -308,20 +321,8 @@ lemma isQueryBoundP_bind
     {oa : OracleComp spec α} {ob : α → OracleComp spec β} {n m : ℕ}
     (h : IsQueryBoundP oa p n) (h' : ∀ x ∈ support oa, IsQueryBoundP (ob x) p m) :
     IsQueryBoundP (oa >>= ob) p (n + m) := by
-  induction oa using OracleComp.inductionOn generalizing n with
-  | pure x =>
-      simp only [monad_norm]
-      exact (h' x (by simp)).mono (Nat.le_add_left _ _)
-  | query_bind t mx ih =>
-      rw [isQueryBoundP_query_bind_iff] at h
-      rw [bind_assoc, isQueryBoundP_query_bind_iff]
-      refine ⟨h.1.imp id (fun hn => Nat.lt_of_lt_of_le hn (Nat.le_add_right _ _)), fun u => ?_⟩
-      have hmx : IsQueryBoundP (mx u) p (if p t then n - 1 else n) := h.2 u
-      have hob : ∀ x ∈ support (mx u), IsQueryBoundP (ob x) p m := fun x hx =>
-        h' x ((mem_support_bind_iff _ _ _).mpr ⟨u, mem_support_query t u, hx⟩)
-      have ih' := ih u hmx hob
-      refine ih'.mono ?_
-      grind
+  rw [isQueryBoundP_iff_isChargeBound] at h ⊢
+  exact h.bind_supp fun x hx => (isQueryBoundP_iff_isChargeBound p (ob x) m).1 (h' x hx)
 
 /-- `oa >>= ob` makes no `p`-query when `oa` and every continuation `ob x` make none. The
 continuations are taken at every value, so the bound composes as a predicate on programs that
@@ -348,20 +349,9 @@ theorem IsQueryBoundP.simulateQ_run_StateT_of_step
     (hstep : ∀ t s, IsQueryBoundP ((impl t).run s) q (if p t then 1 else 0))
     (s : σ) :
     IsQueryBoundP ((simulateQ impl oa).run s) q n := by
-  induction oa using OracleComp.inductionOn generalizing n s with
-  | pure x =>
-      simp [simulateQ_pure]
-  | query_bind t mx ih =>
-      rw [isQueryBoundP_query_bind_iff] at h
-      rw [simulateQ_query_bind, StateT.run_bind]
-      have hrest : ∀ x ∈ support ((impl t).run s),
-          IsQueryBoundP ((simulateQ impl (mx x.1)).run x.2) q
-            (if p t then n - 1 else n) := by
-        intro x hx
-        exact ih x.1 (h.2 x.1) x.2
-      have hbind := isQueryBoundP_bind (hstep t s) hrest
-      refine hbind.mono ?_
-      grind
+  rw [isQueryBoundP_iff_isChargeBound] at h ⊢
+  exact h.run_liftM impl
+    (fun t s => (isQueryBoundP_iff_isChargeBound q _ _).1 (hstep t s)) s
 
 /-- Predicate-extensionality: replacing `p` with an equivalent predicate does not change the
 bound. -/
@@ -378,30 +368,24 @@ lemma IsQueryBoundP.of_imp {oa : OracleComp spec α} {p p' : ι → Prop}
     [DecidablePred p] [DecidablePred p'] {n : ℕ}
     (himp : ∀ t, p t → p' t) (h : IsQueryBoundP oa p' n) :
     IsQueryBoundP oa p n := by
-  induction oa using OracleComp.inductionOn generalizing n with
-  | pure _ => trivial
-  | query_bind t mx ih =>
-      rw [isQueryBoundP_query_bind_iff] at h
-      rw [isQueryBoundP_query_bind_iff]
-      refine ⟨?_, fun u => ?_⟩
-      · by_cases hpt : p t
-        · exact Or.inr (h.1.resolve_left (not_not.mpr (himp t hpt)))
-        · exact Or.inl hpt
-      · refine (ih u (h.2 u)).mono ?_
-        grind
+  rw [isQueryBoundP_iff_isChargeBound] at h ⊢
+  refine h.mono_charge fun t => ?_
+  by_cases hp : p t <;> by_cases hp' : p' t <;> simp_all
 
 /-- Budgets add over a disjunction: a program making at most `n` `p`-queries and at most `m`
 `q`-queries makes at most `n + m` queries at which `p` or `q` holds. -/
 lemma IsQueryBoundP.or {oa : OracleComp spec α} {p q : ι → Prop} [DecidablePred p]
     [DecidablePred q] {n m : ℕ} (hp : IsQueryBoundP oa p n) (hq : IsQueryBoundP oa q m) :
     IsQueryBoundP oa (fun t => p t ∨ q t) (n + m) := by
-  induction oa using OracleComp.inductionOn generalizing n m with
-  | pure _ => trivial
-  | query_bind t mx ih =>
-      rw [isQueryBoundP_query_bind_iff] at hp hq ⊢
-      refine ⟨?_, fun u => (ih u (hp.2 u) (hq.2 u)).mono ?_⟩
-      · grind
-      · by_cases h1 : p t <;> by_cases h2 : q t <;> grind
+  rw [isQueryBoundP_iff_isChargeBound] at hp hq ⊢
+  have h := (PFunctor.FreeM.isChargeBound_pi_iff.2
+    (show ∀ b : Bool, PFunctor.FreeM.IsChargeBound oa
+      (fun t => if (if b then p t else q t) then 1 else 0)
+      (if b then n else m) (0 : ℕ) from
+      fun b => by cases b <;> assumption)).sum
+  simp only [Fintype.sum_bool, Bool.false_eq_true, ↓reduceIte, Nat.add_zero] at h
+  exact h.mono_charge fun t => by
+    by_cases hp : p t <;> by_cases hq : q t <;> simp [hp, hq]
 
 @[simp]
 lemma isQueryBoundP_map_iff (oa : OracleComp spec α) (f : α → β) (n : ℕ) :
@@ -443,13 +427,7 @@ theorem IsQueryBoundP.and_isQueryBound_pair
     oa.IsQueryBound (n₁, n₂)
       (fun t b => (¬ p₁ t ∨ 0 < b.1) ∧ (¬ p₂ t ∨ 0 < b.2))
       (fun t b => (if p₁ t then b.1 - 1 else b.1, if p₂ t then b.2 - 1 else b.2)) := by
-  induction oa using OracleComp.inductionOn generalizing n₁ n₂ with
-  | pure x => trivial
-  | query_bind t mx ih =>
-      rw [isQueryBoundP_query_bind_iff] at h₁ h₂
-      rw [isQueryBound_query_bind_iff]
-      refine ⟨⟨h₁.1, h₂.1⟩, fun u => ?_⟩
-      exact ih u (h₁.2 u) (h₂.2 u)
+  exact PFunctor.FreeM.IsRollBound.prod h₁ h₂
 
 end IsQueryBoundP
 
@@ -484,21 +462,20 @@ lemma allQueriesSatisfy_def (oa : OracleComp spec α) (P : ι → Prop) :
     AllQueriesSatisfy oa P ↔ IsQueryBound oa () (fun t _ => P t) (fun _ _ => ()) :=
   Iff.rfl
 
+/-- Every query satisfies `P` exactly when the complementary indicator has zero budget. -/
+theorem allQueriesSatisfy_iff_isChargeBound (oa : OracleComp spec α) (P : ι → Prop)
+    [DecidablePred P] :
+    AllQueriesSatisfy oa P ↔
+      PFunctor.FreeM.IsChargeBound oa (fun t => if P t then 0 else 1) (0 : ℕ) :=
+  PFunctor.FreeM.callsIn_iff_isChargeBound (P := spec.toPFunctor) (S := {t : ι | P t}) oa
+
 /-- The predicate-only bound is the predicate-targeted bound at budget zero on the complementary
 predicate: spending no budget on `¬ P`-queries is exactly querying only `P`-indices.  This is the
 bridge that makes the `IsQueryBoundP` API available to `AllQueriesSatisfy`. -/
 theorem isQueryBoundP_zero_iff (oa : OracleComp spec α) (P : ι → Prop) [DecidablePred P] :
     IsQueryBoundP oa (fun t => ¬ P t) 0 ↔ AllQueriesSatisfy oa P := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => simp [AllQueriesSatisfy]
-  | query_bind t mx ih =>
-      rw [isQueryBoundP_query_bind_iff, allQueriesSatisfy_def, isQueryBound_query_bind_iff]
-      simp only [not_not, Nat.lt_irrefl, or_false]
-      constructor
-      · rintro ⟨h₁, h₂⟩
-        exact ⟨h₁, fun u => (ih u).1 (by simpa using h₂ u)⟩
-      · rintro ⟨h₁, h₂⟩
-        exact ⟨h₁, fun u => by simpa using (ih u).2 (h₂ u)⟩
+  rw [isQueryBoundP_iff_isChargeBound, allQueriesSatisfy_iff_isChargeBound]
+  simp only [ite_not]
 
 @[simp]
 lemma allQueriesSatisfy_pure (x : α) (P : ι → Prop) :
@@ -519,23 +496,18 @@ lemma allQueriesSatisfy_query_bind_iff (t : ι) (mx : spec t → OracleComp spec
 /-- A predicate-only bound transfers along a pointwise implication of the predicates. -/
 theorem AllQueriesSatisfy.mono {oa : OracleComp spec α} {P Q : ι → Prop}
     (h : AllQueriesSatisfy oa P) (hPQ : ∀ t, P t → Q t) : AllQueriesSatisfy oa Q := by
-  induction oa using OracleComp.inductionOn with
-  | pure _ => exact allQueriesSatisfy_pure _ _
-  | query_bind t mx ih =>
-      obtain ⟨ht, hmx⟩ := (allQueriesSatisfy_query_bind_iff _ _ _).mp h
-      exact (allQueriesSatisfy_query_bind_iff _ _ _).mpr ⟨hPQ t ht, fun u => ih u (hmx u)⟩
+  classical
+  rw [allQueriesSatisfy_iff_isChargeBound] at h ⊢
+  refine h.mono_charge fun t => ?_
+  by_cases hp : P t <;> by_cases hq : Q t <;> simp_all
 
 /-- Two predicates that every query of `oa` satisfies hold jointly of every query. -/
 theorem AllQueriesSatisfy.and {oa : OracleComp spec α} {P Q : ι → Prop}
     (hP : AllQueriesSatisfy oa P) (hQ : AllQueriesSatisfy oa Q) :
     AllQueriesSatisfy oa fun t => P t ∧ Q t := by
-  induction oa using OracleComp.inductionOn with
-  | pure _ => exact allQueriesSatisfy_pure _ _
-  | query_bind t mx ih =>
-      obtain ⟨hPt, hPmx⟩ := (allQueriesSatisfy_query_bind_iff _ _ _).mp hP
-      obtain ⟨hQt, hQmx⟩ := (allQueriesSatisfy_query_bind_iff _ _ _).mp hQ
-      exact (allQueriesSatisfy_query_bind_iff _ _ _).mpr
-        ⟨⟨hPt, hQt⟩, fun u => ih u (hPmx u) (hQmx u)⟩
+  classical
+  rw [← isQueryBoundP_zero_iff] at hP hQ ⊢
+  simpa only [not_and_or] using hP.or hQ
 
 /-- A predicate-only bound composes through monadic sequencing.  The unit budget discharges both
 side conditions of `isQueryBound_bind`. -/
@@ -560,9 +532,8 @@ lemma allQueriesSatisfy_ofFnM {n : ℕ} (f : Fin n → OracleComp spec α) {P : 
 /-- Every computation satisfies a predicate-only bound whose predicate holds at every index. -/
 lemma allQueriesSatisfy_of_forall {P : ι → Prop} (hP : ∀ t, P t) (oa : OracleComp spec α) :
     AllQueriesSatisfy oa P := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => exact allQueriesSatisfy_pure x P
-  | query_bind t mx ih => exact (allQueriesSatisfy_query_bind_iff t mx P).2 ⟨hP t, ih⟩
+  exact (PFunctor.FreeM.callsIn_iff_forall_mayCall (P := spec.toPFunctor) oa).2
+    fun t _ => hP t
 
 end AllQueriesSatisfy
 
@@ -584,6 +555,12 @@ theorem isPerIndexQueryBound_iff_isRollBound (oa : OracleComp spec α) (qb : ι 
         (fun t qb => Function.update qb t (qb t - 1)) :=
   Iff.rfl
 
+/-- Per-index budgets are prefix charge bounds with one unit in the queried coordinate. -/
+theorem isPerIndexQueryBound_iff_isChargeBound (oa : OracleComp spec α) (qb : ι → ℕ) :
+    IsPerIndexQueryBound oa qb ↔
+      PFunctor.FreeM.IsChargeBound oa (fun t => Pi.single t 1) qb :=
+  (PFunctor.FreeM.isChargeBound_single_iff_isRollBound oa qb).symm
+
 lemma isPerIndexQueryBound_pure (x : α) (qb : ι → ℕ) :
     IsPerIndexQueryBound (pure x : OracleComp spec α) qb := trivial
 
@@ -598,64 +575,17 @@ lemma isPerIndexQueryBound_query_iff (t : ι) (qb : ι → ℕ) :
     0 < qb t := by
   simp [IsPerIndexQueryBound]
 
-private lemma update_le_update {qb qb' : ι → ℕ} {t : ι} (hle : qb ≤ qb') :
-    Function.update qb t (qb t - 1) ≤ Function.update qb' t (qb' t - 1) := fun j => by
-  rcases eq_or_ne j t with rfl | hj
-  · simpa using Nat.sub_le_sub_right (hle j) 1
-  · simpa [Function.update_of_ne hj] using hle j
-
-private lemma isPerIndexQueryBound_mono_aux (oa : OracleComp spec α) :
-    ∀ {qb qb' : ι → ℕ}, qb ≤ qb' →
-      oa.IsPerIndexQueryBound qb → oa.IsPerIndexQueryBound qb' := by
-  induction oa using OracleComp.inductionOn with
-  | pure _ => intros; trivial
-  | query_bind t mx ih =>
-    intro qb qb' hle h
-    rw [isPerIndexQueryBound_query_bind_iff] at h ⊢
-    exact ⟨Nat.lt_of_lt_of_le h.1 (hle t), fun u => ih u (update_le_update hle) (h.2 u)⟩
-
 lemma IsPerIndexQueryBound.mono {oa : OracleComp spec α} {qb qb' : ι → ℕ}
-    (h : IsPerIndexQueryBound oa qb) (hle : qb ≤ qb') : IsPerIndexQueryBound oa qb' :=
-  isPerIndexQueryBound_mono_aux oa hle h
-
-private lemma update_add_eq_update_add {qb₁ qb₂ : ι → ℕ} {t : ι} (ht : 0 < qb₁ t) :
-    Function.update qb₁ t (qb₁ t - 1) + qb₂ =
-      Function.update (qb₁ + qb₂) t ((qb₁ + qb₂) t - 1) := by
-  funext j
-  by_cases hj : j = t <;> simp [hj, Pi.add_apply]
-  omega
-
-/-- Split a per-index budget at index `t` into one unit at `t` plus the decremented
-remainder, used to feed `isPerIndexQueryBound_bind` in the `simulateQ` transfer proofs. -/
-private lemma update_zero_one_add_update {qb : ι → ℕ} {t : ι} (ht : 0 < qb t) :
-    qb = Function.update (0 : ι → ℕ) t 1 + Function.update qb t (qb t - 1) := by
-  funext j
-  by_cases hj : j = t <;> simp [hj, Pi.add_apply]
-  omega
-
-private lemma isPerIndexQueryBound_bind_aux (oa : OracleComp spec α)
-    (ob : α → OracleComp spec β) (qb₂ : ι → ℕ)
-    (h2 : ∀ x, IsPerIndexQueryBound (ob x) qb₂) :
-    ∀ {qb₁}, oa.IsPerIndexQueryBound qb₁ →
-      (oa >>= ob).IsPerIndexQueryBound (qb₁ + qb₂) := by
-  induction oa using OracleComp.inductionOn with
-  | pure x =>
-    intro qb₁ _
-    simp only [monad_norm]
-    exact (h2 x).mono le_add_self
-  | query_bind t mx ih =>
-    intro qb₁ h1
-    rw [isPerIndexQueryBound_query_bind_iff] at h1
-    rw [bind_assoc, isPerIndexQueryBound_query_bind_iff]
-    refine ⟨Nat.add_pos_left h1.1 _, fun u => ?_⟩
-    rw [← update_add_eq_update_add h1.1]
-    exact ih u (h1.2 u)
+    (h : IsPerIndexQueryBound oa qb) (hle : qb ≤ qb') : IsPerIndexQueryBound oa qb' := by
+  rw [isPerIndexQueryBound_iff_isChargeBound] at h ⊢
+  exact h.mono hle
 
 lemma isPerIndexQueryBound_bind {oa : OracleComp spec α} {ob : α → OracleComp spec β}
     {qb₁ qb₂ : ι → ℕ}
     (h1 : IsPerIndexQueryBound oa qb₁) (h2 : ∀ x, IsPerIndexQueryBound (ob x) qb₂) :
-    IsPerIndexQueryBound (oa >>= ob) (qb₁ + qb₂) :=
-  isPerIndexQueryBound_bind_aux oa ob qb₂ h2 h1
+    IsPerIndexQueryBound (oa >>= ob) (qb₁ + qb₂) := by
+  rw [isPerIndexQueryBound_iff_isChargeBound] at h1 ⊢
+  exact h1.bind fun x => (isPerIndexQueryBound_iff_isChargeBound _ _).1 (h2 x)
 
 lemma isPerIndexQueryBound_map_iff (oa : OracleComp spec α) (f : α → β) (qb : ι → ℕ) :
     IsPerIndexQueryBound (f <$> oa) qb ↔ IsPerIndexQueryBound oa qb :=
@@ -732,23 +662,10 @@ theorem IsPerIndexQueryBound.simulateQ_run_of_uniform_step
       IsPerIndexQueryBound ((impl t).run s) (Function.update 0 t 1))
     (s : σ) :
     IsPerIndexQueryBound ((simulateQ impl oa).run s) qb := by
-  induction oa using OracleComp.inductionOn generalizing qb s with
-  | pure x =>
-      simp [simulateQ_pure]
-  | query_bind t mx ih =>
-      rw [isPerIndexQueryBound_query_bind_iff] at h
-      rw [simulateQ_query_bind, StateT.run_bind]
-      have hqb_pos : 0 < qb t := h.1
-      have hstep' : IsPerIndexQueryBound
-          ((liftM (impl t) : StateT σ (OracleComp spec) _).run s)
-          (Function.update 0 t 1) := by
-        simpa [OracleComp.liftM_run_StateT, MonadLift.monadLift] using hstep t s
-      have hrest : ∀ p : spec.Range t × σ,
-          IsPerIndexQueryBound ((simulateQ impl (mx p.1)).run p.2)
-            (Function.update qb t (qb t - 1)) :=
-        fun p => ih p.1 (h.2 p.1) p.2
-      rw [update_zero_one_add_update hqb_pos]
-      simpa [StateT.run_bind] using isPerIndexQueryBound_bind hstep' hrest
+  rw [isPerIndexQueryBound_iff_isChargeBound] at h ⊢
+  exact h.run_liftM impl (fun t s => by
+    simpa only [Pi.single, Function.update] using
+      (isPerIndexQueryBound_iff_isChargeBound _ _).1 (hstep t s)) s
 
 /-- Stateless analogue of `IsPerIndexQueryBound.simulateQ_run_of_uniform_step`: when the
 simulation target monad is `OracleComp spec` directly (no `StateT` layer), each step's
@@ -760,17 +677,10 @@ theorem IsPerIndexQueryBound.simulateQ_of_uniform_step
     (hstep : ∀ t : spec.Domain,
       IsPerIndexQueryBound (impl t) (Function.update 0 t 1)) :
     IsPerIndexQueryBound (simulateQ impl oa) qb := by
-  induction oa using OracleComp.inductionOn generalizing qb with
-  | pure x => simp [simulateQ_pure]
-  | query_bind t mx ih =>
-      rw [isPerIndexQueryBound_query_bind_iff] at h
-      simp only [simulateQ_query_bind, OracleQuery.input_query, monadLift_self]
-      have hqb_pos : 0 < qb t := h.1
-      have hrest : ∀ u, IsPerIndexQueryBound (simulateQ impl (mx u))
-          (Function.update qb t (qb t - 1)) :=
-        fun u => ih u (h.2 u)
-      rw [update_zero_one_add_update hqb_pos]
-      exact isPerIndexQueryBound_bind (hstep t) hrest
+  rw [isPerIndexQueryBound_iff_isChargeBound] at h ⊢
+  exact h.liftM impl fun t => by
+    simpa only [Pi.single, Function.update] using
+      (isPerIndexQueryBound_iff_isChargeBound _ _).1 (hstep t)
 
 end IsPerIndexQueryBound
 
@@ -791,6 +701,11 @@ theorem isTotalQueryBound_iff_isRollBound (oa : OracleComp spec α) (n : ℕ) :
         (fun _ b => 0 < b) (fun _ b => b - 1) :=
   Iff.rfl
 
+/-- Total query budgets are prefix charge bounds with unit charges. -/
+theorem isTotalQueryBound_iff_isChargeBound (oa : OracleComp spec α) (n : ℕ) :
+    IsTotalQueryBound oa n ↔ PFunctor.FreeM.IsChargeBound oa (fun _ => (1 : ℕ)) n :=
+  (PFunctor.FreeM.isChargeBound_one_iff_isTotalRollBound oa n).symm
+
 lemma isTotalQueryBound_query_bind_iff {t : spec.Domain}
     {mx : spec.Range t → OracleComp spec α} {n : ℕ} :
     IsTotalQueryBound (liftM (query t) >>= mx) n ↔
@@ -810,39 +725,29 @@ theorem isTotalQueryBound_zero_iff {oa : OracleComp spec α} :
 
 lemma IsTotalQueryBound.mono {oa : OracleComp spec α} {n₁ n₂ : ℕ}
     (h : IsTotalQueryBound oa n₁) (hle : n₁ ≤ n₂) :
-    IsTotalQueryBound oa n₂ :=
-  PFunctor.FreeM.IsTotalRollBound.mono h hle
+    IsTotalQueryBound oa n₂ := by
+  rw [isTotalQueryBound_iff_isChargeBound] at h ⊢
+  exact h.mono hle
 
-/-- Total query budgets add under sequencing; this is
-`PFunctor.FreeM.isTotalRollBound_bind` on the underlying free monad. -/
+/-- Total query budgets add under sequencing. -/
 lemma isTotalQueryBound_bind {oa : OracleComp spec α} {ob : α → OracleComp spec β}
     {n₁ n₂ : ℕ}
     (h1 : IsTotalQueryBound oa n₁) (h2 : ∀ x, IsTotalQueryBound (ob x) n₂) :
-    IsTotalQueryBound (oa >>= ob) (n₁ + n₂) :=
-  PFunctor.FreeM.isTotalRollBound_bind h1 h2
+    IsTotalQueryBound (oa >>= ob) (n₁ + n₂) := by
+  rw [isTotalQueryBound_iff_isChargeBound] at h1 ⊢
+  exact h1.bind fun x => (isTotalQueryBound_iff_isChargeBound _ _).1 (h2 x)
 
-/-- Support-aware bind rule. Under uniform oracle semantics every syntactically reachable
-continuation value lies in `support oa`, so it suffices to bound the continuation on that support
-rather than on every value of its result type. -/
+/-- Total query budgets add under sequencing when the continuation is bounded on the structural
+support of the prefix computation. -/
 theorem isTotalQueryBound_bind_of_mem_support
     {oa : OracleComp spec α} {ob : α → OracleComp spec β}
     {prefixBound suffixBound : ℕ}
     (hprefix : IsTotalQueryBound oa prefixBound)
     (hsuffix : ∀ x ∈ support oa, IsTotalQueryBound (ob x) suffixBound) :
     IsTotalQueryBound (oa >>= ob) (prefixBound + suffixBound) := by
-  induction oa using OracleComp.inductionOn generalizing prefixBound with
-  | pure x =>
-      simpa using (hsuffix x (by simp)).mono (by omega : suffixBound ≤ prefixBound + suffixBound)
-  | query_bind t next ih =>
-      rw [isTotalQueryBound_query_bind_iff] at hprefix
-      rw [bind_assoc, isTotalQueryBound_query_bind_iff]
-      refine ⟨by omega, fun response => ?_⟩
-      apply (ih response (prefixBound := prefixBound - 1) (hprefix.2 response) ?_).mono
-      · omega
-      · intro x hx
-        apply hsuffix x
-        rw [mem_support_bind_iff]
-        exact ⟨response, by simp, hx⟩
+  rw [isTotalQueryBound_iff_isChargeBound] at hprefix ⊢
+  exact hprefix.bind_supp fun x hx =>
+    (isTotalQueryBound_iff_isChargeBound _ _).1 (hsuffix x hx)
 
 /-- If `oa >>= ob` has a total query bound `n`, then `oa` alone has total query bound `n`
 (the continuation can only add queries, not remove them). -/
@@ -912,21 +817,9 @@ theorem IsTotalQueryBound.simulateQ_run_of_step {ι' : Type u} {spec' : OracleSp
     (hstep : ∀ t : spec.Domain, ∀ s : σ, IsTotalQueryBound ((impl t).run s) 1)
     (s : σ) :
     IsTotalQueryBound ((simulateQ impl oa).run s) n := by
-  induction oa using OracleComp.inductionOn generalizing n s with
-  | pure x =>
-      simpa [simulateQ_pure] using
-        (show IsTotalQueryBound (pure (x, s) : OracleComp spec' (α × σ)) n from trivial)
-  | query_bind t mx ih =>
-      rw [isTotalQueryBound_query_bind_iff] at h
-      rw [simulateQ_query_bind, StateT.run_bind]
-      have hstep' : IsTotalQueryBound
-          ((liftM (impl t) : StateT σ (OracleComp spec') (spec.Range t)).run s) 1 := by
-        simpa [OracleComp.liftM_run_StateT, MonadLift.monadLift] using hstep t s
-      have hrest : ∀ p : spec.Range t × σ,
-          IsTotalQueryBound ((simulateQ impl (mx p.1)).run p.2) (n - 1) :=
-        fun p => ih p.1 (h.2 p.1) p.2
-      have hn : 1 + (n - 1) = n := by omega
-      simpa [StateT.run_bind, hn] using isTotalQueryBound_bind hstep' hrest
+  rw [isTotalQueryBound_iff_isChargeBound] at h ⊢
+  exact h.run_liftM impl
+    (fun t s => (isTotalQueryBound_iff_isChargeBound _ _).1 (hstep t s)) s
 
 /-- Stateless analogue of `IsTotalQueryBound.simulateQ_run_of_step`: when the simulation
 target monad is `OracleComp spec'` directly (no `StateT` layer), every per-step bound
@@ -938,17 +831,8 @@ theorem IsTotalQueryBound.simulateQ_of_step {ι' : Type u} {spec' : OracleSpec �
     (h : IsTotalQueryBound oa n)
     (hstep : ∀ t : spec.Domain, IsTotalQueryBound (impl t) 1) :
     IsTotalQueryBound (simulateQ impl oa) n := by
-  induction oa using OracleComp.inductionOn generalizing n with
-  | pure x =>
-      simpa [simulateQ_pure] using
-        (show IsTotalQueryBound (pure x : OracleComp spec' α) n from trivial)
-  | query_bind t mx ih =>
-      rw [isTotalQueryBound_query_bind_iff] at h
-      simp only [simulateQ_query_bind, OracleQuery.input_query, monadLift_self]
-      have hrest : ∀ u, IsTotalQueryBound (simulateQ impl (mx u)) (n - 1) :=
-        fun u => ih u (h.2 u)
-      have hn : 1 + (n - 1) = n := by have := h.1; omega
-      simpa [hn] using isTotalQueryBound_bind (hstep t) hrest
+  rw [isTotalQueryBound_iff_isChargeBound] at h ⊢
+  exact h.liftM impl fun t => (isTotalQueryBound_iff_isChargeBound _ _).1 (hstep t)
 
 /-- Generalisation of `IsTotalQueryBound.simulateQ_of_step` where each per-query handler
 makes at most `step` queries (rather than at most `1`). The bound on the simulation is
@@ -959,17 +843,8 @@ theorem IsTotalQueryBound.simulateQ_of_step_le {ι' : Type u} {spec' : OracleSpe
     (h : IsTotalQueryBound oa n)
     (hstep : ∀ t : spec.Domain, IsTotalQueryBound (impl t) step) :
     IsTotalQueryBound (simulateQ impl oa) (n * step) := by
-  induction oa using OracleComp.inductionOn generalizing n with
-  | pure x =>
-      simpa [simulateQ_pure] using
-        (show IsTotalQueryBound (pure x : OracleComp spec' α) (n * step) from trivial)
-  | query_bind t mx ih =>
-      rw [isTotalQueryBound_query_bind_iff] at h
-      simp only [simulateQ_query_bind, OracleQuery.input_query, monadLift_self]
-      have hrest : ∀ u, IsTotalQueryBound (simulateQ impl (mx u)) ((n - 1) * step) :=
-        fun u => ih u (h.2 u)
-      have hn : step + (n - 1) * step = n * step := by
-        rw [Nat.sub_one_mul, Nat.add_sub_cancel' (Nat.le_mul_of_pos_left step h.1)]
-      simpa [hn] using isTotalQueryBound_bind (hstep t) hrest
+  rw [isTotalQueryBound_iff_isChargeBound] at h ⊢
+  simpa only [simulateQ, smul_eq_mul] using h.liftM_nsmul impl
+    (fun t => (isTotalQueryBound_iff_isChargeBound _ _).1 (hstep t))
 
 end OracleComp

@@ -119,7 +119,7 @@ lemma gpvOuter_writerTMapBase_implW (pk : PK) (sk : SK) :
     simp [QueryImpl.writerTMapBase, SignatureAlg.signingOracle, QueryImpl.withLogging_apply,
       GPVHashAndSign, gpvRealImpl, gpvOuter, QueryImpl.compose, realGameRunImplNoLog,
       QueryImpl.add_apply_inr, StateT.run_bind, StateT.run_pure,
-      simulateQ_bind, simulateQ_pure, WriterT.run_bind, WriterT.run_liftM,
+      WriterT.run_bind, WriterT.run_liftM,
       WriterT.run_tell, WriterT.run_pure, map_eq_bind_pure_comp]
     simp only [HAdd.hAdd, QueryImpl.add, simulateQ_bind, simulateQ_pure,
       StateT.run_bind, StateT.run_pure, bind_assoc, pure_bind, Function.comp_def]

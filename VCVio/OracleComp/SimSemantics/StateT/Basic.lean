@@ -247,7 +247,7 @@ lemma run_simulateQ_query_bind {α : Type u} (t : spec.Domain)
     (oa : spec.Range t → OracleComp spec α) (s : σ) :
     (simulateQ so ((liftM (spec.query t) : OracleComp spec _) >>= oa)).run s =
       (so t).run s >>= fun us => (simulateQ so (oa us.1)).run us.2 := by
-  simp [simulateQ_bind, simulateQ_query, StateT.run_bind, monad_norm,
+  simp [simulateQ_query, StateT.run_bind, monad_norm,
     OracleQuery.cont_query, OracleQuery.input_query]
 
 /-- If the state type is `Subsingleton`, then we can represent simulation in terms of `simulate'`,
@@ -355,6 +355,16 @@ theorem support_simulateQ_run'_subset
     rw [StateT.run'_eq, MonadAttach.support_map]
     exact Set.mem_image_of_mem _ hsupp
 
+/-- A supported stateful interpretation returns a value supported by the source computation.
+The final handler state is retained in the supplied supported outcome. -/
+theorem mem_support_of_mem_support_simulateQ_run
+    {n : Type w → Type _} [Monad n] [LawfulMonad n] [MonadAttach n] [ExactMonadAttach n]
+    {σ : Type w} (impl : QueryImpl spec (StateT σ n)) (oa : OracleComp spec α) (s : σ)
+    {z : α × σ} (hz : z ∈ support ((simulateQ impl oa).run s)) : z.1 ∈ support oa := by
+  apply support_simulateQ_run'_subset impl oa s
+  rw [StateT.run'_eq, MonadAttach.support_map]
+  exact Set.mem_image_of_mem _ hz
+
 end support_simulateQ_StateT
 
 /-- Per-query support refinements preserve the output and relate the final states of the same
@@ -396,6 +406,18 @@ theorem simulateQ_run_support_refinement
     rw [OracleComp.run_simulateQ_query_bind]
     exact (mem_support_bind_iff _ _ _).2 ⟨(reply, middleFull), hfullStep, hfullTail⟩
 
+/-- Read-only oracle state can be evaluated by fixing its realization before simulation. -/
+theorem simulateQ_readOnly_run {ι : Type} {spec : OracleSpec ι} {σ α : Type}
+    {n : Type → Type v} [Monad n] [LawfulMonad n]
+    (impl : QueryImpl spec (StateT σ n)) (fixed : σ → QueryImpl spec n)
+    (h : ∀ q s, (impl q).run s = (fun x => (x, s)) <$> fixed s q)
+    (oa : OracleComp spec α) (s : σ) :
+    (simulateQ impl oa).run s = (fun x => (x, s)) <$> simulateQ (fixed s) oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind q k ih =>
+    simp only [simulateQ_bind, simulateQ_query, StateT.run_bind,
+      h, bind_map_left, map_bind, ih]
 
 end OracleComp
 

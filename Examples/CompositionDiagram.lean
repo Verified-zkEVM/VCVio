@@ -6,11 +6,11 @@ Authors: Quang Dao
 
 module
 public meta import PolyFun.Interaction.Interface
-public meta import VCVioWidgets.OpenSyntax.Render
+public meta import Examples.Widgets.OpenSyntax.Render
 public import PolyFun.Interaction.Open.Notation
-public import VCVioWidgets.OpenSyntax.Render
-public import VCVioWidgets.OpenSyntax.Panel
-public import VCVioWidgets.OpenSyntax.TreePanel
+public import Examples.Widgets.OpenSyntax.Render
+public import Examples.Widgets.OpenSyntax.Panel
+public import Examples.Widgets.OpenSyntax.TreePanel
 
 /-!
 # Diffie-Hellman key exchange as a composition diagram

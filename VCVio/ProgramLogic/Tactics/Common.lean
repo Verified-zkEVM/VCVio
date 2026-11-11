@@ -13,14 +13,13 @@ public meta import VCVio.ProgramLogic.Tactics.Common.Registry
 public meta import VCVio.ProgramLogic.Tactics.Common.SpecIR
 public meta import VCVio.ProgramLogic.Tactics.Common.Suggestions
 public meta import VCVio.ProgramLogic.Tactics.Common.WpStepDispatch
-public meta import VCVio.ProgramLogic.Tactics.Common.WpStepRegistry
 
 /-!
 # Common Program-Logic Tactic Infrastructure
 
 Aggregator import for the shared metaprogramming layer underlying the unary and relational
 program-logic tactics: the core helpers, naming utilities, spec IR, rule registries, backward
-reasoning, `wpStep` dispatch, and `Try this` suggestions.
+reasoning, raw-`wp` step dispatch, and `Try this` suggestions.
 -/
 
 public meta section

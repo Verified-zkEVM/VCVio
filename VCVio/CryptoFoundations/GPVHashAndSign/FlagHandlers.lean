@@ -581,7 +581,7 @@ theorem gpv_orig_flag_le_collisionBound_aux
   induction oa using OracleComp.inductionOn with
   | pure x =>
       intro cache m qS qH _ _ _
-      simp [simulateQ_pure, StateT.run_pure]
+      simp [StateT.run_pure]
   | query_bind t mx ih =>
       intro cache m qS qH hQS hQH hcard
       rw [simulateQ_query_bind, StateT.run_bind]

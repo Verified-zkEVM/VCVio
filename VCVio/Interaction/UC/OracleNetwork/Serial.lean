@@ -39,8 +39,7 @@ theorem map_loggedRun (impl : QueryImpl spec (StateT S m))
     (id : Client) (program : OracleComp spec α) (service : S) :
     (fun out => (out.1.1, out.2)) <$> loggedRun impl id program service =
       (simulateQ impl program).run service := by
-  simpa only [simulateQ_def, FreeM.liftMHom_toFun_eq] using
-    RequestNetwork.map_loggedRun impl id program service
+  exact RequestNetwork.map_loggedRun impl id program service
 
 variable [DecidableEq ι]
 

@@ -5,9 +5,12 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.MatrixMap.Conjugation
+public import QuantumFoundations.SubInstrument
 public import VCVio.Quantum.Comp.QueryMass
 public import VCVio.Quantum.Comp.Simulation
-public import VCVio.Quantum.Comp.Subsystem
+public import QuantumFoundations.SubInstrument.Subsystem
+public import QuantumFoundations.DSubInstrument.Relabel
 public import QuantumFoundations.MatrixMap.Kraus
 public import QuantumFoundations.MatrixMap.Norm
 
@@ -189,17 +192,6 @@ theorem posSemidef_one_sub_sum_ctrl {α : Type*} (s : Finset α)
   rw [h]
   exact (h₀.conjTranspose_mul_mul_same _).add (h₁.conjTranspose_mul_mul_same _)
 
-/-- The Kraus operators of a subinstrument whose branches are Kraus maps have
-`1 - ∑ r ∈ s, (K r)ᴴ * K r` positive semidefinite on every finite set of outcomes. -/
-theorem _root_.Quantum.SubInstrument.posSemidef_one_sub_sum_of_branch_eq_conj {A B α : Type*}
-    [Fintype A] [Fintype B] [DecidableEq A] (p : SubInstrument A B α) {K : α → Matrix B A ℂ}
-    (hK : ∀ r, p.branch r = MatrixMap.conj (K r)) (s : Finset α) :
-    (1 - ∑ r ∈ s, (K r)ᴴ * K r).PosSemidef := by
-  have h := p.isTNI_sum s
-  simp_rw [hK] at h
-  rw [← Finset.sum_coe_sort s] at h ⊢
-  exact MatrixMap.isTNI_sum_conj_iff.mp h
-
 /-- The controlled step: the subinstrument with branches `conj (ctrl (K₀ r) (K₁ r))`. -/
 @[expose]
 noncomputable def ctrlStep {α : Type*} (K₀ K₁ : α → Matrix (O × D) (J × D) ℂ)
@@ -227,39 +219,10 @@ theorem branchDist_tsum {ι : Type*} {f : ι → Matrix (Y × (D × Bool)) (Y ×
     (hf : Summable f) (hpos : ∀ b, (f b).PosSemidef) :
     branchDist (∑' b, f b) = ∑' b, branchDist (f b) := by
   rw [branchDist, MatrixMap.map_tsum _ hf]
-  exact ofReal_trace_re_tsum (MatrixMap.summable_comp _ hf)
+  exact Matrix.ofReal_trace_re_tsum (MatrixMap.summable_comp _ hf)
     fun b ↦ (hpos b).mul_mul_conjTranspose_same _
 
 end Hybrid
-
-namespace MatrixMap
-
-variable {A B R S : Type*} [Fintype A] [Fintype B] [Fintype R]
-
-/-- Kraus maps of `1 ⊗ K` commute with amplification on the left factor. -/
-theorem conj_one_kronecker_amplify_apply [DecidableEq A] [DecidableEq B] (K : Matrix S R ℂ)
-    (Φ : MatrixMap A B)
-    (Z : Matrix (A × R) (A × R) ℂ) :
-    conj ((1 : Matrix B B ℂ) ⊗ₖ K) (Φ.amplify R Z) =
-      Φ.amplify S (conj ((1 : Matrix A A ℂ) ⊗ₖ K) Z) := by
-  rw [← amplifyLeft_conj, ← amplifyLeft_conj, ← LinearMap.comp_apply,
-    ← amplify_comp_amplifyLeft, LinearMap.comp_apply]
-
-/-- The trace of a Kraus map of `X ⊗ 1` is the trace of the Kraus map of `X` on the partial
-trace. -/
-theorem trace_conj_kronecker_one_apply [DecidableEq R] (X : Matrix B A ℂ)
-    (Z : Matrix (A × R) (A × R) ℂ) :
-    (conj (X ⊗ₖ (1 : Matrix R R ℂ)) Z).trace = (conj X (traceRight A R Z)).trace := by
-  rw [← amplify_conj, ← trace_traceRight, ← LinearMap.comp_apply, traceRight_comp_amplify,
-    LinearMap.comp_apply]
-
-omit [Fintype A] [Fintype B] in
-theorem mul_kronecker_one {C : Type*} [Fintype C] [DecidableEq R] (X : Matrix B C ℂ)
-    (Y : Matrix C A ℂ) :
-    (X * Y) ⊗ₖ (1 : Matrix R R ℂ) = (X ⊗ₖ (1 : Matrix R R ℂ)) * (Y ⊗ₖ (1 : Matrix R R ℂ)) := by
-  rw [← mul_kronecker_mul, Matrix.one_mul]
-
-end MatrixMap
 
 namespace Hybrid
 
@@ -483,14 +446,16 @@ theorem tsum_dist_queryStep_le (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In i
         (MatrixMap.conj (U i r - W i r)
           (callInput ℓ D (MatrixMap.conj (sel A false) Γ))).trace := by
     intro r
-    rw [MatrixMap.mul_kronecker_one, MatrixMap.conj_mul, LinearMap.comp_apply,
+    rw [← Matrix.mul_one (1 : Matrix E E ℂ), mul_kronecker_mul, MatrixMap.conj_mul,
+      LinearMap.comp_apply,
       MatrixMap.trace_conj_kronecker_one_apply, ← MatrixMap.amplify_conj (sel (spec.In i) false)]
     simp only [conj_sel, h₀in]
     rfl
   have hb : ∀ r, (MatrixMap.conj ((W i r * seld (spec.In i)) ⊗ₖ (1 : Matrix E E ℂ)) Γ').trace =
       (((s₁ i).frame E).branch r Γm).trace := by
     intro r
-    rw [MatrixMap.mul_kronecker_one, MatrixMap.conj_mul, LinearMap.comp_apply,
+    rw [← Matrix.mul_one (1 : Matrix E E ℂ), mul_kronecker_mul, MatrixMap.conj_mul,
+      LinearMap.comp_apply,
       ← MatrixMap.amplify_conj (seld (spec.In i)), ← MatrixMap.amplify_conj (W i r),
       DSubInstrument.branch_frame_apply, hW, hΓm]
     simp only [conj_seld, hdin]

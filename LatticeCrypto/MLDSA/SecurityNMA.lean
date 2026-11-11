@@ -92,48 +92,26 @@ instance {k b : ℕ} : DecidablePred (fun v : RqVec k => polyVecBounded v b) := 
   unfold polyVecBounded
   exact Nat.decLe _ _
 
-/-- The zero vector lies in every `η`-bounded box. -/
-lemma polyVecBounded_zero (k b : ℕ) : polyVecBounded (0 : RqVec k) b := by
-  unfold polyVecBounded polyVecNorm
-  rw [LatticeCrypto.PolyVec.cInfNorm_le_iff]
-  intro j
-  have hz : (0 : RqVec k).get j = (0 : Rq) := by
-    change (0 : Vector Rq k).get j = 0
-    simp [Vector.get]
-  rw [hz]
-  have h0 : polyNorm (0 : Rq) = 0 := by
-    simp only [polyNorm, normOps, LatticeCrypto.zmodPolyNormOps,
-      LatticeCrypto.normOpsOfCenteredView, LatticeCrypto.cInfNormOf]
-    simp only [vectorNegacyclicRing_backend, vectorBackend_coeff, Finset.sup_eq_zero,
-      Finset.mem_univ, Int.natAbs_eq_zero, forall_const]
-    intro i
-    have hci : Vector.get (0 : Rq) i = (0 : Coeff) :=
-      LatticeCrypto.NegacyclicRing.coeff_zero coeffRing i
-    rw [hci]
-    simp [LatticeCrypto.zmodCenteredCoeffView, LatticeCrypto.centeredRepr]
-  calc normOps.cInfNorm (0 : Rq) = polyNorm (0 : Rq) := rfl
-    _ = 0 := h0
-    _ ≤ b := Nat.zero_le b
+/-- **Uniform sampling from the `η`-bounded box.** Every coefficient of every component is a
+value `v ≤ 2η` decoded as `η - v`, as FIPS 204's `ExpandS` decodes its nibbles. The distribution is
+uniform on `S_η^k = { v : RqVec k | ‖v‖∞ ≤ η }` when `2η < q`. This is the secret and error
+distribution of the Module-LWE assumption used by ML-DSA (`η ∈ {2, 4}` for the approved parameter
+sets). -/
+def sampleShortVec (k b : ℕ) : ProbComp (RqVec k) :=
+  sampleBoxVec k (2 * b + 1) b
 
-/-- **Uniform sampling from the `η`-bounded box.** The uniform distribution on
-`S_b^k = { v : RqVec k | ‖v‖∞ ≤ b }`, i.e. every coefficient of every component
-uniform on the centered interval `[-b, b]`. This is the secret/error
-distribution of the Module-LWE assumption used by ML-DSA (`η ∈ {2, 4}` for the
-approved parameter sets). -/
-noncomputable def sampleShortVec (k b : ℕ) : ProbComp (RqVec k) :=
-  letI : Fintype {v : RqVec k // polyVecBounded v b} := .ofFinite _
-  letI : Nonempty {v : RqVec k // polyVecBounded v b} := ⟨0, polyVecBounded_zero k b⟩
-  letI : SampleableType {v : RqVec k // polyVecBounded v b} := .ofFintype _
-  Subtype.val <$> ($ᵗ {v : RqVec k // polyVecBounded v b})
-
-/-- Every output of `sampleShortVec k b` lies in the `b`-bounded box: the sampler draws from
-the subtype `{v // polyVecBounded v b}` and projects out the value, so support membership
-carries the bound. -/
+/-- Every output of `sampleShortVec k b` lies in the `b`-bounded box. For `2b < q` the decoded
+coefficients lie in `[-b, b]`; otherwise every centered coefficient is at most `q / 2 ≤ b`. -/
 lemma mem_support_sampleShortVec {k b : ℕ} {v : RqVec k}
     (hv : v ∈ support (sampleShortVec k b)) : polyVecBounded v b := by
-  simp only [sampleShortVec, support_map] at hv
-  obtain ⟨u, -, rfl⟩ := hv
-  exact u.property
+  simp only [sampleShortVec, sampleBoxVec, support_map] at hv
+  obtain ⟨a, -, rfl⟩ := hv
+  refine polyVecNorm_le_iff.mpr fun j i => ?_
+  by_cases hq : 2 * b < modulus
+  · have := boxDecode_mem hq le_rfl a j i
+    omega
+  · obtain ⟨hlo, hhi⟩ := centeredRepr_mem_Ioc (((boxDecode b a).get j).get i)
+    omega
 
 variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
 
@@ -198,7 +176,7 @@ uniform on the `η`-bounded box — and form `t = ExpandA(ρ) · s₁ + s₂`. T
 the honestly-sampled key distribution of the idealized proof-level ML-DSA
 model; the deterministic seed-expanded `keygen0` is related to it by a separate
 XOF-replacement assumption. -/
-noncomputable def keygenShort : ProbComp (PublicKey p prims × SecretKey p) := do
+def keygenShort : ProbComp (PublicKey p prims × SecretKey p) := do
   let key ← $ᵗ (Bytes 32)
   let rho ← $ᵗ (Bytes 32)
   let s1 ← sampleShortVec p.l p.eta
@@ -210,7 +188,7 @@ noncomputable def keygenShort : ProbComp (PublicKey p prims × SecretKey p) := d
 except the public vector `t` is sampled uniformly. The gap between the two is
 exactly the `mldsaMLWEShort` distinguishing advantage of the induced
 distinguisher (`nma_keyswap_hop_short`). -/
-noncomputable def keygenShort1 : ProbComp (PublicKey p prims × SecretKey p) := do
+def keygenShort1 : ProbComp (PublicKey p prims × SecretKey p) := do
   let key ← $ᵗ (Bytes 32)
   let rho ← $ᵗ (Bytes 32)
   let s1 ← sampleShortVec p.l p.eta
@@ -250,6 +228,7 @@ end KeyGen
 section Game
 
 variable {M : Type} [DecidableEq M] [SampleableType (CommitHashBytes p)] [DecidableEq prims.High]
+  [NeZero p.gamma1]
 
 /-- The EUF-NMA experiment over an arbitrary forging strategy `main` and an arbitrary key
 generator `keygen`. `main` receives the public key (but no signing oracle) and returns a candidate
@@ -323,6 +302,7 @@ end Game
 section Distinguisher
 
 variable {M : Type} [DecidableEq M] [SampleableType (CommitHashBytes p)] [DecidableEq prims.High]
+  [NeZero p.gamma1]
 
 /-- The random-oracle simulation implementation used by `FiatShamirWithAbort.runtime`: the
 random oracle model handler `OracleSpec.romImpl` at the ML-DSA commitment-hash oracle. Running
@@ -411,7 +391,7 @@ is not information-theoretically trivial, since `ExpandA(ρ) · s₁ + s₂` wit
 `(s₁, s₂)` is far from uniform. Bridging the seed-based challenge to the standard
 uniform-matrix form is `advantage_mldsaMLWEShort_le_matrix`, under the explicit
 `expandAIdealization` assumption. -/
-noncomputable def mldsaMLWEShort (p : Params) (prims : Primitives p) :
+def mldsaMLWEShort (p : Params) (prims : Primitives p) :
     LearningWithErrors.Problem (Bytes 32) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := $ᵗ (Bytes 32)
   sampleSecret := sampleShortVec p.l p.eta
@@ -567,6 +547,7 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ≥0∞}
 section Hop
 
 variable {M : Type} [DecidableEq M] [SampleableType (CommitHashBytes p)] [DecidableEq prims.High]
+  [NeZero p.gamma1]
 
 /-- **NMA-game / distinguisher plumbing.** Pushing the `keygen` sampling out of the
 Fiat-Shamir-with-aborts runtime: the output measure of `nmaExperiment … keygen` equals that of
@@ -710,7 +691,7 @@ theorem computeWApprox_eq_mul_sub_smul (h_transform : NTTRingLaws nttOps)
 
 section Extractor
 
-variable {M : Type} [DecidableEq prims.High]
+variable {M : Type} [DecidableEq prims.High] [NeZero p.gamma1]
 
 /-- The concrete SelfTargetMSIS problem embedded by ML-DSA verification (Lemma 7, Step 3).
 
@@ -954,7 +935,7 @@ parameters published by `sampleParams` acceptance is the norm gates plus the bin
 the standard SelfTargetMSIS normal form `[I_m | A] · y` with the challenge in the final
 coefficient block of `y`; reducing the tailored relation to that normal form is follow-up
 work. -/
-noncomputable def mldsaSTMSISShort (M : Type) :
+def mldsaSTMSISShort (M : Type) :
     SelfTargetMSIS.Problem (TqMatrix p.k p.l) (Response p prims) (PublicKey p prims)
       (M × Commitment p prims) (CommitHashBytes p) where
   sampleParams := do
@@ -1085,7 +1066,7 @@ forger-to-preimage extraction as `extractorC` — run the NMA forger `main` on t
 key, force the `H(msg, w')` query, and output the STMSIS preimage `(msg, w')` with the response
 `(z, h)` — typed against the short-model problem `mldsaSTMSISShort`, whose parameters are sampled
 from `keygenShort1`. -/
-noncomputable def extractorCShort [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
+def extractorCShort [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :

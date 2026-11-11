@@ -30,7 +30,9 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 
 - `instrumentedRun oa cm`: `oa` interpreted in the canonical free runtime with additive cost
   tracking.
-- `addCostOracle costFn`: the corresponding one-query instrumented oracle implementation.
+- `addCostOracle costFn`: the corresponding one-query instrumented oracle implementation, which is
+  PolyFun's charge writer `PFunctor.Handler.withChargeW` on the identity handler
+  (`addCostOracle_eq_withChargeW`).
 - `CostModel spec ω`: Assigns cost `queryCost t : ω` to each oracle query `t`.
 - `costDist oa cm`: Joint distribution of `(output, totalCost)`.
 - `expectedCost oa cm val`: Expected total cost `E[val(cost)]`, computed by Lebesgue integration.
@@ -38,6 +40,10 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 
 ## Key Results
 
+- `support_costDist_eq_range_path`: The reachable `(output, totalCost)` pairs are the outputs and
+  charges of the completed paths of `oa`.
+- `worstCaseCostBound_iff_forall_charge_le`: A worst-case bound is a bound on the charge of every
+  completed path; with signed weights this is weaker than a bound on every prefix.
 - `fst_map_costDist`: Cost instrumentation doesn't change the output distribution.
 - `costDist_pure`, `costDist_bind`, `costDist_query`, `costDist_map`: Instrumentation equations.
 - `worstCaseCostBound_map_iff`: Pure observations preserve and reflect query-cost bounds.
@@ -63,11 +69,18 @@ def addCostOracle [AddCommMonoid ω] (costFn : spec.Domain → ω) :
     QueryImpl spec (AddWriterT ω (OracleComp spec)) :=
   (QueryImpl.ofLift spec (OracleComp spec)).withAddCost costFn
 
+/-- The additive cost oracle is PolyFun's charge writer on the identity handler: each query
+writes its charge and is then issued unchanged. -/
+theorem addCostOracle_eq_withChargeW [AddCommMonoid ω] (costFn : spec.Domain → ω) :
+    addCostOracle costFn =
+      PFunctor.Handler.withChargeW (PFunctor.Handler.id spec.toPFunctor) costFn :=
+  QueryImpl.withAddCost_eq_withChargeW _ costFn
+
 @[simp]
 lemma fst_map_run_simulateQ_addCostOracle [AddCommMonoid ω] (costFn : spec.Domain → ω)
     (oa : OracleComp spec α) :
-    Prod.fst <$> (simulateQ (addCostOracle costFn) oa).run = oa := by
-  simp [addCostOracle, QueryImpl.withAddCost, QueryImpl.fst_map_run_withCost]
+    Prod.fst <$> (simulateQ (addCostOracle costFn) oa).run = oa :=
+  (QueryImpl.fst_map_run_simulateQ_withAddCost _ costFn oa).trans (simulateQ_ofLift_eq_self oa)
 
 /-- A cost model assigns a cost in `ω` to each oracle query.
 The cost type `ω` can be `ℕ`, `ℝ≥0∞`, `ι → ℕ` (per-oracle), or any `AddCommMonoid`. -/
@@ -127,13 +140,23 @@ theorem costDist_map [AddCommMonoid ω] (program : OracleComp spec α) (f : α �
     (cm : CostModel spec ω) :
     costDist (f <$> program) cm =
       (fun result => (f result.1, result.2)) <$> costDist program cm := by
-  simp [costDist, instrumentedRun, simulateQ_map, WriterT.run_map]
+  simp [costDist, instrumentedRun, WriterT.run_map]
 
 /-- Cost instrumentation does not change the output distribution. -/
 @[simp]
 theorem fst_map_costDist [AddCommMonoid ω] (oa : OracleComp spec α) (cm : CostModel spec ω) :
     Prod.fst <$> costDist oa cm = oa :=
   fst_map_run_simulateQ_addCostOracle cm.queryCost oa
+
+/-- **Completed paths.** The reachable `(output, totalCost)` pairs of the instrumented run are
+the outputs of the completed paths of `oa` with their charges under `cm`. -/
+theorem support_costDist_eq_range_path [AddCommMonoid ω] (oa : OracleComp spec α)
+    (cm : CostModel spec ω) :
+    support (costDist oa cm) = Set.range fun p : PFunctor.FreeM.Path oa =>
+      (PFunctor.FreeM.output oa p,
+        Multiplicative.ofAdd (PFunctor.FreeM.Path.charge cm.queryCost oa p)) := by
+  rw [costDist, instrumentedRun, QueryImpl.withAddCost_eq_withChargeW]
+  exact PFunctor.Handler.supp_run_liftM_id_withChargeW cm.queryCost oa
 
 
 /-! ## Expected Cost -/
@@ -204,6 +227,16 @@ theorem worstCaseCostBound_iff_support_bound [AddCommMonoid ω] [Preorder ω]
   unfold WorstCaseCostBound costDist instrumentedRun AddWriterT.PathwiseCostAtMost
   rfl
 
+/-- A worst-case cost bound bounds the charge of every completed path. It says nothing about
+prefixes: with negative charges, a prefix may exceed a budget that every completed path meets. -/
+theorem worstCaseCostBound_iff_forall_charge_le [AddCommMonoid ω] [Preorder ω]
+    (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) :
+    WorstCaseCostBound oa cm bound ↔
+      ∀ p : PFunctor.FreeM.Path oa, PFunctor.FreeM.Path.charge cm.queryCost oa p ≤ bound := by
+  rw [worstCaseCostBound_iff_support_bound, support_costDist_eq_range_path,
+    Set.forall_mem_range]
+  rfl
+
 /-- A pure result observation preserves and reflects a complete-path query-cost bound. -/
 theorem worstCaseCostBound_map_iff [AddCommMonoid ω] [Preorder ω]
     (program : OracleComp spec α) (f : α → β) (cm : CostModel spec ω) (budget : ω) :
@@ -236,7 +269,7 @@ theorem costDist_query_bind [AddCommMonoid ω]
       (spec.query t : OracleComp spec (spec.Range t)) >>= fun u =>
         (fun z => (z.1, Multiplicative.ofAdd (cm.queryCost t + Multiplicative.toAdd z.2))) <$>
           costDist (k u) cm := by
-  simp [costDist, instrumentedRun, simulateQ_bind, simulateQ_query,
+  simp [costDist, instrumentedRun, simulateQ_query,
     QueryImpl.withAddCost, WriterT.run_bind, bind_assoc]
 
 /-- A pure computation has zero pathwise cost. -/

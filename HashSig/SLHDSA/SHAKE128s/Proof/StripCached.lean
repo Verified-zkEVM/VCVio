@@ -62,7 +62,7 @@ theorem run_simulateQ_strip {α : Type} (computation : OracleComp HashSpec α)
       (simulateQ randomOracle (simulateQ (stripImpl cache) computation)).run current =
         (simulateQ randomOracle computation).run current := by
   induction computation using OracleComp.inductionOn with
-  | pure value => intro current _; simp [simulateQ_pure, StateT.run_pure]
+  | pure value => intro current _; simp [StateT.run_pure]
   | query_bind input next ih =>
     intro current hsub
     have hreal : simulateQ randomOracle

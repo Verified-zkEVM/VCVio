@@ -32,8 +32,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
+
       - name: Check CI disk cleanup safeguards
-        run: python3 scripts/test-ci-disk-space.py
+        run: uv run --no-project --python 3.12 python scripts/test-ci-disk-space.py
 
       - name: Set up Lean environment
         uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
@@ -60,16 +66,11 @@ jobs:
         run: bash scripts/check-expose-boundary.sh --report "origin/${{ github.base_ref }}"
 
       - name: Test downstream probability codemod
-        run: python3 scripts/test-migrate-native-probability.py
+        run: uv run --no-project --python 3.12 python scripts/test-migrate-native-probability.py
 
       # The classifier of a migration dry run (`scripts/migration-dry-run.sh`).
       - name: Test migration dry-run classifier
-        run: python3 scripts/test-classify-migration-errors.py
-
-      - name: Check optional complexity backend isolation
-        run: |
-          bash scripts/test-complexity-backend-isolation.sh
-          bash scripts/check-complexity-backend-isolation.sh
+        run: uv run --no-project --python 3.12 python scripts/test-classify-migration-errors.py
 
       # A declaration written after the `-/` of the comment that documents it parses,
       # builds and runs, and is invisible to a reader scanning the left margin. Neither
@@ -78,33 +79,63 @@ jobs:
       # has any notion of a comment. `linter.style.whitespace` is not in that pass at all:
       # it is a syntax linter that runs during elaboration under the package's
       # `weak.linter.mathlibStandardSet`, and its warnings fail the build job through
-      # check-warning-log.py. It reports the `/-` and `/-!` forms in the seven proof and
+      # check-warning-log.py. It reports the `/-` and `/-!` forms in the six proof and
       # three test libraries, but never the `/--` form, whose command starts at the `/--`
       # at column 0. This check is text only, so it belongs in this job rather than behind
-      # a build, and for lakefile.lean, VCVioComplexity/lakefile.lean, Interop/ and
-      # scripts/ it is the only check of any kind that reads them for this: Lake
-      # elaborates the two lakefiles from `import Lake` with no Mathlib linter registered,
-      # nothing builds Interop/, and scripts/ is built here but imports no Mathlib, so the
-      # `weak.` option is dropped. Over VCVioComplexity/ the linter does run and warn --
-      # its own lakefile enables it explicitly and the complexity_backend job builds it --
-      # but no step turns that warning into a failure.
+      # a build, and for lakefile.lean, Interop/ and scripts/ it is the only check of any
+      # kind that reads them for this: Lake elaborates the lakefile from `import Lake` with
+      # no Mathlib linter registered, the interop job builds only Interop/'s listed bridges
+      # and does not gate on warnings, and scripts/ is built here but imports no Mathlib, so
+      # the `weak.` option is dropped.
       - name: Check comment fences
         run: |
           bash scripts/test-comment-fences.sh
-          python3 scripts/check-comment-fences.py
+          uv run --no-project --python 3.12 python scripts/check-comment-fences.py
 
       # Regenerates every umbrella with scripts/update-lib.sh and fails if any of them changes.
       - name: Check generated umbrella modules
         run: |
-          python3 scripts/test-check-imports.py
-          python3 scripts/test-validation.py
+          uv run --no-project --python 3.12 python scripts/test-check-imports.py
+          uv run --no-project --python 3.12 python scripts/test-validation.py
           bash scripts/check-imports.sh
 
-  complexity_backend:
-    name: Optional Complexity Backend
+  interop:
+    name: Interop Bridges
     runs-on: ubuntu-latest
+    env:
+      CLEAN_BUILD: ${{ github.event_name == 'schedule' || inputs.clean_build == true }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - name: Free unused hosted-runner SDKs
+        run: bash scripts/free-ci-disk-space.sh
+      # The same caches as `Build Project`. `Interop/lakefile.toml` shares the root's dependency
+      # cache (`packagesDir = "../.lake/packages"`) and requires VCVio by path, whose build lands in
+      # the root's `.lake/build`, so both restore as they are.
+      - name: Restore dependency cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .lake/packages
+            !.lake/packages/**/*.setup.json
+          key: lake-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+          restore-keys: |
+            lake-deps-${{ runner.os }}-${{ runner.arch }}-
+      - name: Restore build cache
+        if: env.CLEAN_BUILD != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .lake/build
+            !.lake/build/**/*.setup.json
+          key: vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: |
+            vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+            vcvio-build-${{ runner.os }}-${{ runner.arch }}-
       - name: Set up Lean environment
         uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
         with:
@@ -114,19 +145,21 @@ jobs:
           lint: false
           use-github-cache: false
           use-mathlib-cache: false
-
-      - name: Materialize the pinned PolyFun checkout
-        run: lake update PolyFun
-
-      - name: Fetch Mathlib cache for the optional package
-        working-directory: VCVioComplexity
+      - name: Build the Interop package (hax, Aeneas and the bridges)
+        working-directory: Interop
         run: |
-          lake update
           lake exe cache get
-
-      - name: Run exact-machine canaries, trust checks, and compatibility preflight
-        working-directory: VCVioComplexity
-        run: ./scripts/test.sh
+          lake build
+      # The modules are `InteropRust`'s roots in `Interop/lakefile.toml`.
+      - name: Enforce zero axiom and sorry debt in the bridges
+        working-directory: Interop
+        run: >-
+          lake exe axiomsweep --root Interop.Aeneas.ITree --root Interop.Aeneas.WP
+          --root Interop.Rust.Common --root Interop.Rust.Run --root Interop.Rust.RustM
+          --root Interop.Rust.Triple --root Interop.Hax.Adc --root Interop.Hax.Barrett
+          --root Interop.Hax.CenteredBinomial --root Interop.Hax.Computation
+          --root Interop.Hax.Division --root Interop.Hax.Examples
+          --baseline ../scripts/axiom_baseline.json --check
 
   downstream_stub_link:
     name: Downstream Consumer Build (no submodules)
@@ -139,6 +172,11 @@ jobs:
       # checked out, yet Lake links every dependency `extern_lib` into any
       # consumer `lean_exe`, so the native targets must degrade gracefully.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
       - name: Free unused hosted-runner SDKs
         run: bash scripts/free-ci-disk-space.sh
       # The same caches as `Build Project`, with the same paths and keys. A path dependency builds
@@ -249,7 +287,7 @@ jobs:
             echo ''
             echo 'public def main : IO Unit := IO.println "consumer ok"'
           } > "$consumer/Main.lean"
-          python3 scripts/add-api-consumer-fixtures.py "$consumer"
+          uv run --no-project --python 3.12 python scripts/add-api-consumer-fixtures.py "$consumer"
           cd "$consumer"
           lake update
           lake exe cache get
@@ -272,6 +310,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
       # PR-controlled values (the branch name) reach the script through `env`, never through
       # `${{ }}` interpolation into the script text.
       - name: Initialize timing paths
@@ -287,7 +330,7 @@ jobs:
           echo "BUILD_TIMING_COMMENT=$RUNNER_TEMP/build-timing-comment.md" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_SOURCE_BRANCH=$SOURCE_BRANCH" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_BUILD_COMMAND=lake build ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
+          echo "BUILD_TIMING_BUILD_COMMAND=lake build ToMathlib VCVio LatticeCrypto Extern HashSig Examples" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_NAME=Smoke test" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_COMMAND=lake env lean VCVioTest/Smoke.lean" >> "$GITHUB_ENV"
           {
@@ -351,33 +394,28 @@ jobs:
       # rebuild, so the log carries every warning whether or not the module came from the cache.
       - name: Check warning budget
         run: |
-          python3 ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/library_build.log" \
+          uv run --no-project --python 3.12 python ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/library_build.log" \
             --path-prefix ToMathlib/ \
             --path-prefix VCVio/ \
-            --path-prefix VCVioCslib/ \
             --path-prefix Extern/ \
             --path-prefix LatticeCrypto/ \
             --path-prefix HashSig/ \
             --path-prefix Examples/ \
-            --path-prefix VCVioWidgets/ \
             --path-prefix ToMathlib.lean \
             --path-prefix VCVio.lean \
-            --path-prefix VCVioCslib.lean \
             --path-prefix Extern.lean \
             --path-prefix LatticeCrypto.lean \
             --path-prefix HashSig.lean \
             --path-prefix Examples.lean \
-            --path-prefix VCVioWidgets.lean \
             --exclude-substring 'declaration uses `sorry`' \
             --label 'repository non-sorry warnings'
       - name: Time test module
         run: |
           bash scripts/build_timing_report.sh run test_path "$BUILD_TIMING_RESULTS" -- \
             bash -eo pipefail -c 'lake env lean VCVioTest/Smoke.lean'
-      # Enforcing from day one: new taint (exit 1: `sorryAx` or non-standard axioms not in
-      # the committed baseline) fails the build, as do infrastructure failures (exit 2:
-      # missing or unparsable baseline, tool breakage) — a broken tool must never read as
-      # a clean verdict.
+      # Zero debt: any taint (exit 1: `sorryAx` or a non-standard axiom) fails the build, as
+      # do infrastructure failures (exit 2: missing, unparsable or nonempty baseline, tool
+      # breakage) — a broken tool must never read as a clean verdict.
       # Sweeps the non-test libraries; Interop (the declared TCB) is bounded by
       # its import-isolation gate instead.
       # Exercise the sweep against its own fixtures before trusting its verdict on the
@@ -410,7 +448,7 @@ jobs:
       - name: Test the documentation name checker
         run: bash scripts/test-docnames.sh
       - name: Check documentation names
-        run: python3 scripts/check-doc-names.py --resolve
+        run: uv run --no-project --python 3.12 python scripts/check-doc-names.py --resolve
       # `lake test` runs the `test` script from `lakefile.lean`: one `lake build` of the three test
       # libraries (every module reachable from `VCVioTest.lean`, the Lean-only lattice helpers
       # and vectors, the SLH-DSA canaries) and every test executable, then the smoke test and the
@@ -427,7 +465,7 @@ jobs:
       # under the proof libraries are the proof-library gate's business.
       - name: Check test-library warning budget
         run: |
-          python3 ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/test_build.log" \
+          uv run --no-project --python 3.12 python ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/test_build.log" \
             --path-prefix VCVioTest/ \
             --path-prefix VCVioTest.lean \
             --path-prefix LatticeCryptoTest/ \
@@ -444,7 +482,7 @@ jobs:
         run: lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
       - name: Record module times
         run: |
-          python3 scripts/module_times.py update .lake/build/vcvio-module-times.json \
+          uv run --no-project --python 3.12 python scripts/module_times.py update .lake/build/vcvio-module-times.json \
             --commit "$GITHUB_SHA" \
             "$BUILD_TIMING_LOG_DIR/library_build.log" "$BUILD_TIMING_LOG_DIR/test_build.log"
       # Only `main` writes caches. Pull request and merge-queue runs restore them and discard their
@@ -559,6 +597,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
       - name: Check out submodules
         run: git submodule update --init --recursive --depth 1
       - name: Free unused hosted-runner SDKs
@@ -595,7 +638,7 @@ jobs:
       - name: Fetch Mathlib cache
         run: lake exe cache get
       - name: Test lint orchestration
-        run: python3 scripts/test-lint.py
+        run: uv run --no-project --python 3.12 python scripts/test-lint.py
       # Without `--no-build` the driver runs `lake build` on the proof libraries first.
       - name: Build and lint each library, and check exact baseline
         env:
