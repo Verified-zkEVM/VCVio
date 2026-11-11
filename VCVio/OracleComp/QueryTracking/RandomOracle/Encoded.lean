@@ -85,6 +85,9 @@ into a typed answer and a tail (`RandomOracleEncoding.ofSplit`).
 - `RandomOracleEncoding.prEvent_simulateQ_singleImpl_run_le`: the single-oracle world is bounded
   by the typed world or a clash; `RandomOracleEncoding.prEvent_simulateQ_romImpl_encodeImpl_run_le`
   is the same statement for the random oracle model of the single oracle after the encoding.
+- `RandomOracleEncoding.singleImpl_run_evalDistEq_typedImpl_fill_of_injective`: under an injective
+  encoding, the two worlds agree in distribution on the result together with the completed
+  full-reply cache.
 -/
 
 public section
@@ -854,11 +857,9 @@ theorem prEvent_simulateQ_romImpl_encodeImpl_run_le {α : Type}
   rw [simulateQ_romImpl_simulateQ_encodeImpl]
   exact E.prEvent_simulateQ_singleImpl_run_le oa P
 
-/-- An injective encoding preserves the complete result and the filled full-reply cache.
-
-The typed run starts empty, so its finite-cache invariant is derived internally.
-The output may retain observations, ordinary errors and a counter it already carries.
--/
+/-- Under an injective encoding, the single-oracle world run from an empty cache has the same
+distribution as the typed world run from empty caches and followed by `fill`, jointly in the
+result and the completed full-reply cache. -/
 theorem singleImpl_run_evalDistEq_typedImpl_fill_of_injective
     (injective : Function.Injective E.encode) {α : Type}
     (body : OracleComp (unifSpec + (spec + (D →ₒ M))) α) :
