@@ -79,7 +79,7 @@ theorem ordered_word_cost {σ U : Type}
           let b ← liftM ((Nat →ₒ Bool).query second)
           pure (a, b))).run initial := by
   rw [← run_withAddCost_eq_extendState]
-  simp [simulateQ_bind, QueryImpl.withAddCost_apply, AddWriterT.runAdd,
+  simp [QueryImpl.withAddCost_apply, AddWriterT.runAdd,
     AddWriterT.addTell, WriterT.run_bind, QueryImpl.id', Functor.map_map, Prod.map,
     map_bind, bind_map_left]
 
