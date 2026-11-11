@@ -59,8 +59,7 @@ private theorem queryFin_uniform [DecidableEq D] [SampleableType G]
           let gs ← (simulateQ randomOracle (queryFin n (fun i => labels i.succ))).run'
             (cache.cacheQuery (labels 0) g)
           pure (Fin.cons g gs)) := by
-      simp [queryFin, simulateQ_bind, StateT.run'_eq,
-        StateT.run_bind, hfresh 0]
+      simp [queryFin, StateT.run'_eq, StateT.run_bind, hfresh 0]
     rw [he]
     refine EvalDistEq.trans (my := (do
       let g ← $ᵗ G
