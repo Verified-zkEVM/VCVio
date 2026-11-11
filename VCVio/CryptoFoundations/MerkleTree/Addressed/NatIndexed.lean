@@ -241,20 +241,63 @@ theorem natAddr_index_of_isAncestorOf_ofNat {z idx : ℕ}
 def honestChildren (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (h i : ℕ) : Y × Y :=
   (merkleRoot leaf nodeHash (h - 1) (2 * i), merkleRoot leaf nodeHash (h - 1) (2 * i + 1))
 
-/-- Collision extraction, as data. Run the engine's `findCollisionAddressed` kernel against the
-honest opening of leaf `idx` (honest leaf value and honest authentication path over
-`auth.length` levels) and the adversarial opening `(y, auth)`. On success returns the height `h`
-of the collision node, the honest child pair there, and the adversarial child pair; the node's
-horizontal index is `idx / 2 ^ h` (`findCollision_sound`). -/
+/-- Extract an internal-node collision between two openings at the same natural-number
+index. The vectors use the engine's root-first order, unlike `authPath`. The returned
+height determines the global horizontal index `idx / 2 ^ h`. -/
+def findCollisionBetween [DecidableEq Y] (nodeHash : ℕ → ℕ → Y → Y → Y) (z idx : ℕ)
+    (x y : Y) (proof₁ proof₂ : List.Vector Y (SkeletonLeafIndex.ofNat z idx).depth) :
+    Option (ℕ × (Y × Y) × (Y × Y)) :=
+  (findCollisionAddressed (nodeHashAt nodeHash z (idx / 2 ^ z))
+    (SkeletonLeafIndex.ofNat z idx) proof₁ proof₂ x y).map
+    fun w => ((w.1.natAddr (idx / 2 ^ z)).height, (w.2.1, w.2.2.1),
+      (w.2.2.2.1, w.2.2.2.2))
+
+/-- Every result of `findCollisionBetween` is a collision at an internal ancestor of `idx`.
+The first and second child pairs retain the order of the two supplied openings. -/
+theorem findCollisionBetween_sound [DecidableEq Y] (nodeHash : ℕ → ℕ → Y → Y → Y)
+    (z idx : ℕ) (x y : Y)
+    (proof₁ proof₂ : List.Vector Y (SkeletonLeafIndex.ofNat z idx).depth)
+    (h : ℕ) (c₁ c₂ : Y × Y)
+    (hw : findCollisionBetween nodeHash z idx x y proof₁ proof₂ = some (h, c₁, c₂)) :
+    0 < h ∧ h ≤ z ∧ c₁ ≠ c₂ ∧
+      nodeHash h (idx / 2 ^ h) c₁.1 c₁.2 = nodeHash h (idx / 2 ^ h) c₂.1 c₂.2 := by
+  rw [findCollisionBetween, Option.map_eq_some_iff] at hw
+  obtain ⟨w, hw, hmap⟩ := hw
+  simp only [Prod.mk.injEq] at hmap
+  obtain ⟨rfl, rfl, rfl⟩ := hmap
+  have hcol := findCollisionAddressed_sound _ _ _ _ _ _ w hw
+  have hanc := findCollisionAddressed_isAncestorOf _ _ _ _ _ _ w hw
+  have hidx := natAddr_index_of_isAncestorOf_ofNat hanc
+  obtain ⟨hpos, hle⟩ := w.1.natAddr_height_pos_le (idx / 2 ^ z)
+  refine ⟨hpos, hle, ?_, ?_⟩
+  · simpa [AddressedCollision, Prod.ext_iff] using hcol.1
+  · have := hcol.2
+    simp only [nodeHashAt, hidx] at this
+    exact this
+
+/-- Distinct openings with equal recovered roots produce a collision. Distinctness may
+come entirely from the path, with the same leaf value in both openings. -/
+theorem findCollisionBetween_isSome_of_opening_ne [DecidableEq Y]
+    (nodeHash : ℕ → ℕ → Y → Y → Y) (z idx : ℕ) (x y : Y)
+    (proof₁ proof₂ : List.Vector Y (SkeletonLeafIndex.ofNat z idx).depth)
+    (hroot : getPutativeRootAddressedWithHash (nodeHashAt nodeHash z (idx / 2 ^ z))
+      (SkeletonLeafIndex.ofNat z idx) x proof₁ =
+      getPutativeRootAddressedWithHash (nodeHashAt nodeHash z (idx / 2 ^ z))
+        (SkeletonLeafIndex.ofNat z idx) y proof₂)
+    (hne : (x, proof₁) ≠ (y, proof₂)) :
+    (findCollisionBetween nodeHash z idx x y proof₁ proof₂).isSome := by
+  simpa only [findCollisionBetween, Option.isSome_map] using
+    findCollisionAddressed_isSome_of_opening_ne _ _ proof₁ proof₂ x y hroot hne
+
+/-- Collision extraction against the honest opening of leaf `idx` and the adversarial
+opening `(y, auth)`. On success returns the internal height and the honest and adversarial
+child pairs. The node's horizontal index is `idx / 2 ^ h` (`findCollision_sound`). -/
 def findCollision [DecidableEq Y] (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y) (idx : ℕ)
     (y : Y) (auth : List Y) : Option (ℕ × (Y × Y) × (Y × Y)) :=
-  (findCollisionAddressed (nodeHashAt nodeHash auth.length (idx / 2 ^ auth.length))
-    (SkeletonLeafIndex.ofNat auth.length idx)
+  findCollisionBetween nodeHash auth.length idx (leaf idx) y
     (generateProof (tree leaf nodeHash auth.length (idx / 2 ^ auth.length))
       (SkeletonLeafIndex.ofNat auth.length idx))
-    ⟨auth.reverse, by simp⟩ (leaf idx) y).map
-    fun w => ((w.1.natAddr (idx / 2 ^ auth.length)).height, (w.2.1, w.2.2.1),
-      (w.2.2.2.1, w.2.2.2.2))
+    ⟨auth.reverse, by simp⟩
 
 /-- `findCollision` on a path of known length `z`, unfolded to the engine kernel. -/
 theorem findCollision_eq [DecidableEq Y] (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y → Y)
@@ -275,19 +318,8 @@ theorem findCollision_sound [DecidableEq Y] (leaf : ℕ → Y) (nodeHash : ℕ �
     (h : ℕ) (c₁ c₂ : Y × Y) (hw : findCollision leaf nodeHash idx y auth = some (h, c₁, c₂)) :
     0 < h ∧ h ≤ z ∧ c₁ ≠ c₂ ∧
       nodeHash h (idx / 2 ^ h) c₁.1 c₁.2 = nodeHash h (idx / 2 ^ h) c₂.1 c₂.2 := by
-  rw [findCollision_eq leaf nodeHash idx y auth hlen, Option.map_eq_some_iff] at hw
-  obtain ⟨w, hw, hmap⟩ := hw
-  simp only [Prod.mk.injEq] at hmap
-  obtain ⟨rfl, rfl, rfl⟩ := hmap
-  have hcol := findCollisionAddressed_sound _ _ _ _ _ _ w hw
-  have hanc := findCollisionAddressed_isAncestorOf _ _ _ _ _ _ w hw
-  have hidx := natAddr_index_of_isAncestorOf_ofNat hanc
-  obtain ⟨hpos, hle⟩ := w.1.natAddr_height_pos_le (idx / 2 ^ z)
-  refine ⟨hpos, hle, ?_, ?_⟩
-  · simpa [AddressedCollision, Prod.ext_iff] using hcol.1
-  · have := hcol.2
-    simp only [nodeHashAt, hidx] at this
-    exact this
+  subst z
+  exact findCollisionBetween_sound nodeHash auth.length idx (leaf idx) y _ _ h c₁ c₂ hw
 
 /-- **Oriented extraction.** Against an adversarial opening that verifies to the honest root
 with a leaf value `y ≠ leaf idx`, `findCollision` succeeds and its first pair is the honest
