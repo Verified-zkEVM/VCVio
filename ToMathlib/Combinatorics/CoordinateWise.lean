@@ -794,6 +794,188 @@ theorem sub_div_le_div_card_filter [Nonempty S] (k : ℕ) :
                 ((Fintype.card S : ℝ≥0∞))⁻¹) from by ring,
           hcN, hcT, one_mul, one_mul]
 
+omit [Fintype ι] [DecidableEq S] in
+/-- Restricting acceptance to the challenges whose column at `j` holds fewer than `k` accepting
+values keeps the count of such a sparse column and empties every other column, since a column
+count is constant along its column. -/
+theorem columnCount_restrict (j : ι) (k : ℕ) (c : ι → S) :
+    columnCount (fun c => accept c ∧ columnCount accept j c < k) j c =
+      if columnCount accept j c < k then columnCount accept j c else 0 := by
+  change (Finset.univ.filter fun x : S =>
+      accept (Function.update c j x) ∧ columnCount accept j (Function.update c j x) < k).card = _
+  simp only [columnCount_update]
+  by_cases h : columnCount accept j c < k
+  · simp only [h, and_true, ite_true]
+    rfl
+  · simp [h]
+
+omit [DecidableEq S] in
+/-- **The sparse column bound.** A column holding fewer than `k` accepting challenges contributes
+at most `k - 1` of them, and every one of its `Fintype.card S` challenges has a sparse column at
+`j`. So the accepting challenges with a sparse column are bounded by a `(k - 1) / Fintype.card S`
+fraction of the challenges with a sparse column, not of the whole space. -/
+theorem card_mul_card_filter_columnCount_lt_le_sparse [Nonempty S] (j : ι) (k : ℕ) :
+    (Fintype.card S : ℝ≥0∞) *
+        (Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k).card
+      ≤ ((k - 1 : ℕ) : ℝ≥0∞) *
+          (Finset.univ.filter fun c : ι → S => columnCount accept j c < k).card := by
+  classical
+  have h := card_mul_card_filter_columnCount_lt_le
+    (accept := fun c => accept c ∧ columnCount accept j c < k) j k
+  simp only [columnCount_restrict] at h
+  have hleft : (Finset.univ.filter fun c : ι → S => (accept c ∧ columnCount accept j c < k) ∧
+        (if columnCount accept j c < k then columnCount accept j c else 0) < k) =
+      Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k := by
+    ext c
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    constructor
+    · exact fun h => h.1
+    · intro hc
+      exact ⟨hc, by rw [ite_eq_left hc.2]; exact hc.2⟩
+  have hright : (Finset.univ.filter fun c : ι → S =>
+        0 < if columnCount accept j c < k then columnCount accept j c else 0) ⊆
+      Finset.univ.filter fun c : ι → S => columnCount accept j c < k := by
+    intro c
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    split_ifs with hc
+    · exact fun _ => hc
+    · exact fun h => absurd h (lt_irrefl 0)
+  rw [hleft] at h
+  exact h.trans (mul_le_mul' le_rfl (by exact_mod_cast Finset.card_le_card hright))
+
+omit [DecidableEq S] in
+/-- **The affine union bound.** Scaled by `Fintype.card S`, the accepting challenges exceed those
+whose every column is thick by at most `ℓ * (k - 1)` times the challenges that are *not* of that
+kind.
+
+`card_mul_card_filter_accept_le` charges the whole space instead. Charging only the complement of
+the successful set is what turns the bound `ε - ℓ (k - 1) / N ≤ p` into the affine form
+`ε ≤ κ + (1 - κ) p`. -/
+theorem card_mul_card_filter_accept_le_affine [Nonempty S] (k : ℕ) :
+    (Fintype.card S : ℝ≥0∞) * (Finset.univ.filter fun c : ι → S => accept c).card
+      ≤ (Fintype.card S : ℝ≥0∞) * (Finset.univ.filter fun c : ι → S =>
+            accept c ∧ ∀ j, k ≤ columnCount accept j c).card
+          + (Fintype.card ι : ℝ≥0∞) * ((k - 1 : ℕ) : ℝ≥0∞) *
+            (Finset.univ.filter fun c : ι → S =>
+              ¬ (accept c ∧ ∀ j, k ≤ columnCount accept j c)).card := by
+  classical
+  have hcover : (Finset.univ.filter fun c : ι → S => accept c) ⊆
+      (Finset.univ.filter fun c : ι → S => accept c ∧ ∀ j, k ≤ columnCount accept j c) ∪
+        Finset.univ.biUnion fun j =>
+          Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k := by
+    intro c hc
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hc
+    by_cases hall : ∀ j, k ≤ columnCount accept j c
+    · exact Finset.mem_union_left _ (by simp [hc, hall])
+    · push Not at hall
+      obtain ⟨j, hj⟩ := hall
+      exact Finset.mem_union_right _
+        (Finset.mem_biUnion.mpr ⟨j, Finset.mem_univ _, by simp [hc, hj]⟩)
+  have hcard : ((Finset.univ.filter fun c : ι → S => accept c).card : ℝ≥0∞) ≤
+      ((Finset.univ.filter fun c : ι → S =>
+          accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞)
+        + ∑ j : ι, ((Finset.univ.filter fun c : ι → S =>
+            accept c ∧ columnCount accept j c < k).card : ℝ≥0∞) := by
+    rw [← Nat.cast_sum, ← Nat.cast_add]
+    exact_mod_cast le_trans (Finset.card_le_card hcover)
+      (le_trans (Finset.card_union_le _ _) (Nat.add_le_add_left Finset.card_biUnion_le _))
+  have hsparse : ∀ j : ι, (Finset.univ.filter fun c : ι → S => columnCount accept j c < k) ⊆
+      Finset.univ.filter fun c : ι → S => ¬ (accept c ∧ ∀ j, k ≤ columnCount accept j c) := by
+    intro j c
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    exact fun hc h => absurd (h.2 j) (not_le.mpr hc)
+  calc (Fintype.card S : ℝ≥0∞) * (Finset.univ.filter fun c : ι → S => accept c).card
+      ≤ (Fintype.card S : ℝ≥0∞) * (((Finset.univ.filter fun c : ι → S =>
+            accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞)
+          + ∑ j : ι, ((Finset.univ.filter fun c : ι → S =>
+              accept c ∧ columnCount accept j c < k).card : ℝ≥0∞)) := mul_le_mul' le_rfl hcard
+    _ = (Fintype.card S : ℝ≥0∞) * ((Finset.univ.filter fun c : ι → S =>
+            accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞)
+          + ∑ j : ι, (Fintype.card S : ℝ≥0∞) * ((Finset.univ.filter fun c : ι → S =>
+              accept c ∧ columnCount accept j c < k).card : ℝ≥0∞) := by
+        rw [mul_add, Finset.mul_sum]
+    _ ≤ (Fintype.card S : ℝ≥0∞) * ((Finset.univ.filter fun c : ι → S =>
+            accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞)
+          + ∑ _j : ι, ((k - 1 : ℕ) : ℝ≥0∞) * ((Finset.univ.filter fun c : ι → S =>
+              ¬ (accept c ∧ ∀ j, k ≤ columnCount accept j c)).card : ℝ≥0∞) := by
+        refine add_le_add le_rfl (Finset.sum_le_sum fun j _ => ?_)
+        exact (card_mul_card_filter_columnCount_lt_le_sparse j k).trans
+          (mul_le_mul' le_rfl (by exact_mod_cast Finset.card_le_card (hsparse j)))
+    _ = _ := by
+        rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_assoc]
+
+omit [DecidableEq S] in
+/-- **The affine table bound** of Lemma 7.1. Write `ε` for the fraction of accepting challenges,
+`p` for the fraction that accept and have every column thick, and `κ = ℓ (k - 1) / N` with
+`N = Fintype.card S`. Then `ε ≤ κ + (1 - κ) p`.
+
+This is the success form of a black-box finder contract, and it is stronger than
+`sub_div_le_div_card_filter`'s `ε - κ ≤ p`. Charging the sparse columns only against the
+challenges outside the successful set (`card_mul_card_filter_accept_le_affine`) gives
+`ε ≤ p + κ (1 - p)`, which is `κ + (1 - κ) p` when `κ ≤ 1`; when `κ ≥ 1` the bound holds
+because `ε ≤ 1`. -/
+theorem div_card_filter_le_affine [Nonempty S] (k : ℕ) :
+    ((Finset.univ.filter fun c : ι → S => accept c).card : ℝ≥0∞) / Fintype.card (ι → S)
+      ≤ (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
+        + (1 - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S)
+          * (((Finset.univ.filter fun c : ι → S =>
+              accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞)
+            / Fintype.card (ι → S)) := by
+  classical
+  set N : ℝ≥0∞ := (Fintype.card S : ℝ≥0∞) with hN
+  set T : ℝ≥0∞ := (Fintype.card (ι → S) : ℝ≥0∞) with hT
+  set A : ℝ≥0∞ := ((Finset.univ.filter fun c : ι → S => accept c).card : ℝ≥0∞) with hA
+  set G : ℝ≥0∞ := ((Finset.univ.filter fun c : ι → S =>
+    accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞) with hG
+  set B : ℝ≥0∞ := ((Finset.univ.filter fun c : ι → S =>
+    ¬ (accept c ∧ ∀ j, k ≤ columnCount accept j c)).card : ℝ≥0∞) with hB
+  set κ : ℝ≥0∞ := (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / N with hκ
+  have hN0 : N ≠ 0 := by simp [hN]
+  have hNtop : N ≠ ⊤ := ENNReal.natCast_ne_top _
+  have hT0 : T ≠ 0 := by simp [hT]
+  have hTtop : T ≠ ⊤ := ENNReal.natCast_ne_top _
+  have hGB : G + B = T := by
+    rw [hG, hB, hT, ← Nat.cast_add, Finset.card_filter_add_card_filter_not,
+      Finset.card_univ]
+  have hAT : A ≤ T := by
+    rw [hA, hT]
+    exact_mod_cast (Finset.card_filter_le _ _).trans Finset.card_univ.le
+  have hGtop : G ≠ ⊤ := ENNReal.natCast_ne_top _
+  have hg1 : G / T ≤ 1 :=
+    (ENNReal.div_le_iff hT0 hTtop).mpr (by rw [one_mul, ← hGB]; exact le_self_add)
+  have hε1 : A / T ≤ 1 := (ENNReal.div_le_iff hT0 hTtop).mpr (by rwa [one_mul])
+  -- `B / T` is the complement of the success fraction.
+  have hBT : B / T = 1 - G / T := by
+    have hBeq : B = T - G := ENNReal.eq_sub_of_add_eq hGtop (by rw [add_comm]; exact hGB)
+    rw [hBeq, ENNReal.sub_div fun _ _ => hT0, ENNReal.div_self hT0 hTtop]
+  -- Divide the counting bound through by `N * T`.
+  have hmain : A / T ≤ G / T + κ * (1 - G / T) := by
+    have hc := card_mul_card_filter_accept_le_affine (accept := accept) k
+    rw [← hA, ← hG, ← hB, ← hN] at hc
+    have hinv : (N * T)⁻¹ = N⁻¹ * T⁻¹ := ENNReal.mul_inv (Or.inl hN0) (Or.inl hNtop)
+    rw [← hBT]
+    calc A / T = (N * A) / (N * T) := (ENNReal.mul_div_mul_left _ _ hN0 hNtop).symm
+      _ ≤ (N * G + (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) * B) / (N * T) := by gcongr
+      _ = (N * N⁻¹) * (G * T⁻¹) +
+            (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) * N⁻¹ * (B * T⁻¹) := by
+          rw [div_eq_mul_inv, hinv]
+          ring
+      _ = G / T + κ * (B / T) := by
+          rw [ENNReal.mul_inv_cancel hN0 hNtop, one_mul, hκ, div_eq_mul_inv, div_eq_mul_inv,
+            div_eq_mul_inv]
+  rcases le_or_gt 1 κ with hκ1 | hκ1
+  · exact hε1.trans (hκ1.trans le_self_add)
+  · -- Below one, `p + κ (1 - p)` and `κ + (1 - κ) p` are both `κ + p - κ p`.
+    have hκtop : κ ≠ ⊤ := (hκ1.trans ENNReal.one_lt_top).ne
+    have hgtop : G / T ≠ ⊤ := (hg1.trans_lt ENNReal.one_lt_top).ne
+    have hκg_le_κ : κ * (G / T) ≤ κ := mul_le_of_le_one_right zero_le hg1
+    have hκg_le_g : κ * (G / T) ≤ G / T := mul_le_of_le_one_left zero_le hκ1.le
+    have hκgtop : κ * (G / T) ≠ ⊤ := ENNReal.mul_ne_top hκtop hgtop
+    refine hmain.trans (le_of_eq ?_)
+    rw [ENNReal.mul_sub fun _ _ => hκtop, mul_one, ENNReal.sub_mul fun _ _ => hgtop, one_mul,
+      ← (ENNReal.cancel_of_ne hκgtop).add_tsub_assoc_of_le hκg_le_κ,
+      ← (ENNReal.cancel_of_ne hκgtop).add_tsub_assoc_of_le hκg_le_g, add_comm]
+
 end ColumnCount
 
 /-! ## The worked example of Fenzi–Moghaddas–Nguyen §2.9
