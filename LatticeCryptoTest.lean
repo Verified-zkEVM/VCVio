@@ -6,7 +6,9 @@ module
 -- imported into the same environment.
 public import LatticeCryptoTest.ArithmeticInstances
 public import LatticeCryptoTest.Falcon.Binary64Coset
+public import LatticeCryptoTest.Falcon.Fx64
 public import LatticeCryptoTest.Falcon.Helpers
+public import LatticeCryptoTest.Falcon.Precision
 public import LatticeCryptoTest.Falcon.SamplerMinEntropy
 public import LatticeCryptoTest.Falcon.TestVectors
 public import LatticeCryptoTest.MLDSA.ACVPVectors
