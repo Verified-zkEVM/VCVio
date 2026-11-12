@@ -19,8 +19,8 @@ This file builds the reduction infrastructure for the ML-DSA EUF-NMA analysis:
 1. **Exact short-secret MLWE key swap.** `keygenShort` samples `(s₁, s₂)` on the `η`-bounded box
    used by the ML-DSA assumption, while `keygenShort1` replaces `t = Â · s₁ + s₂` by a uniform
    vector. `nma_keyswap_hop_short` identifies their NMA-game gap with the seed-based
-   `mldsaMLWEShort` advantage, and `advantage_mldsaMLWEShort_le_matrix` relates that problem to
-   uniform-matrix MLWE under an explicit `ExpandA` idealization.
+   `mldsaMLWEShort` advantage. The seed-based problem is the assumption this file states; the
+   section *Short-secret MLWE problems* explains why it is not reduced to uniform-matrix MLWE here.
 2. **Seed-derived scaffolding.** `keygen0` and `keygen1` describe the concrete seed-derived and
    uniform-`t` key distributions. The generic lemma `nmaExperiment_eq_keygen_bind` factors either
    key-generator prefix out of the NMA runtime. The older full-ring `mldsaMLWE` definitions remain
@@ -374,13 +374,18 @@ noncomputable def distinguisherB
       let (msg, σ) ← main pk
       (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify pk msg σ
 
-/-! ### Short-secret MLWE problems and the seed-to-matrix bridge
+/-! ### Short-secret MLWE problems
 
-The idealized short-key model states its Module-LWE assumption over short `(s₁, s₂)`
-(`mldsaMLWEShort`, seed-based; `mldsaMatrixMLWE`, uniform-matrix form). The seed-based problem
-reduces to the standard matrix form under the `expandAIdealization` XOF assumption
-(`advantage_mldsaMLWEShort_le_matrix`), and `distinguisherBShort` is the induced distinguisher
-whose advantage the short key-swap hop bounds. -/
+The idealized short-key model states its Module-LWE assumption over short `(s₁, s₂)`:
+`mldsaMLWEShort` is the seed-based form and `mldsaMatrixMLWE` the uniform-matrix form.
+`distinguisherBShort` is the induced distinguisher whose advantage the short key-swap hop bounds.
+
+No standard-model reduction from the seed-based form to the uniform-matrix form is stated. A
+distinguisher for `mldsaMLWEShort` receives a seed `ρ` and may recompute `ExpandA(ρ)` itself, so a
+uniform matrix challenge can be presented to it only by programming `ExpandA` as a random oracle at
+`ρ`. Running it on a fresh seed instead, and discarding the matrix, gives an adversary against
+`mldsaMatrixMLWE` whose advantage is statistically negligible whatever the seed-based distinguisher
+does, because `A · s₁ + s₂` for a hidden uniform `A` is close to uniform. -/
 
 /-- **The short-secret Module-LWE problem for ML-DSA** (seed-based form). The public
 challenge is the matrix seed `ρ` itself (uniform), the secret `s₁` and the additive
@@ -388,9 +393,8 @@ error `s₂` are uniform on the `η`-bounded box (`sampleShortVec`), and the dec
 target is `t = ExpandA(ρ) · s₁ + s₂` versus uniform `t`. This is the distribution the
 ML-DSA literature states its MLWE assumption over; unlike a uniform-error variant it
 is not information-theoretically trivial, since `ExpandA(ρ) · s₁ + s₂` with short
-`(s₁, s₂)` is far from uniform. Bridging the seed-based challenge to the standard
-uniform-matrix form is `advantage_mldsaMLWEShort_le_matrix`, under the explicit
-`expandAIdealization` assumption. -/
+`(s₁, s₂)` is far from uniform. Relating it to the uniform-matrix form `mldsaMatrixMLWE` requires
+programming `ExpandA` as a random oracle. -/
 def mldsaMLWEShort (p : Params) (prims : Primitives p) :
     LearningWithErrors.Problem (Bytes 32) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := $ᵗ (Bytes 32)
@@ -402,8 +406,7 @@ def mldsaMLWEShort (p : Params) (prims : Primitives p) :
 /-- **The matrix-based short Module-LWE problem for ML-DSA.** The standard form: the
 public challenge is a uniform matrix `A`, the secret and error are uniform on the
 `η`-bounded box, and the decision target is `A · s₁ + s₂` versus uniform. This is the
-literature-facing hardness assumption; `mldsaMLWEShort` reduces to it under
-`expandAIdealization` (`advantage_mldsaMLWEShort_le_matrix`). -/
+literature-facing hardness assumption. -/
 noncomputable def mldsaMatrixMLWE (p : Params) :
     LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k) where
   sampleChallenge := $ᵗ (TqMatrix p.k p.l)
@@ -411,28 +414,6 @@ noncomputable def mldsaMatrixMLWE (p : Params) :
   sampleError := sampleShortVec p.k p.eta
   noiseless := fun s1 A => A * s1
   sampleUniform := $ᵗ (RqVec p.k)
-
-/-- **ExpandA idealization (quantified XOF-as-random-matrix step).** For every
-distinguisher `D` receiving both the seed and the matrix, the pair
-`(ρ, ExpandA(ρ))` for uniform `ρ` is `εA`-indistinguishable from `(ρ, A)` with `A`
-uniform and independent of `ρ`.
-
-This is the standard random-oracle reading of `ExpandA` (Dilithium's `A = ExpandA(ρ)`
-with `ExpandA` modeled as a random function), stated once with inspectable content
-rather than supplied per-reduction. For a fixed deterministic `prims.expandA` the
-unrestricted-quantifier form is only satisfiable at large `εA` (a distinguisher may
-recompute `ExpandA(ρ)` and compare); pending the cost-model infrastructure (#460) it
-should be read computationally, against bounded distinguishers, where it is the
-assumption that SHAKE-based expansion yields a pseudorandom matrix. -/
-def expandAIdealization (p : Params) (prims : Primitives p) (εA : ℝ≥0∞) : Prop :=
-  ∀ D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool,
-    𝒟[do
-        let rho ← $ᵗ (Bytes 32)
-        D rho (prims.expandA rho)].boolDist
-      𝒟[do
-        let rho ← $ᵗ (Bytes 32)
-        let A ← $ᵗ (TqMatrix p.k p.l)
-        D rho A] ≤ εA
 
 /-- The short-model MLWE distinguisher: form `pk = (ρ, Power2Round(t).1)` from the challenge
 `(ρ, t)`, run the NMA forging strategy
@@ -456,93 +437,7 @@ noncomputable def distinguisherBShort
       let (msg, σ) ← main pk
       (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
 
-/-- Lift a seed-based short-MLWE adversary to the uniform-matrix problem: run it on a
-freshly sampled seed and the challenged target vector, discarding the matrix. -/
-def matrixLift
-    (B : LearningWithErrors.Adversary (mldsaMLWEShort p prims)) :
-    LearningWithErrors.Adversary (mldsaMatrixMLWE p) :=
-  fun c => do
-    let rho ← $ᵗ (Bytes 32)
-    B (rho, c.2)
-
 end Distinguisher
-
-/-- **Seed-to-matrix bridge.** Under `expandAIdealization`, any adversary against the
-seed-based short problem yields one against the standard uniform-matrix problem: the
-matrix adversary runs the seed adversary on a freshly sampled seed and the challenged
-target vector. The uniform branches agree exactly (both present an independent uniform
-`t`), and the real branches differ by one application of the idealization at the
-distinguisher `D ρ A := s₁ ← S_η^ℓ; s₂ ← S_η^k; B (ρ, A·s₁ + s₂)`.
-
-Proof recipe: rewrite both advantages via `NoisyLearning.advantage_eq_boolDist` and
-`Measure.boolDist`; the `randomExperiment` branches are identified by stripping the
-unused matrix draw with `evalDist_bind_const` and commuting the independent uniform draws with
-`evalDist_bind_bind_swap`; the `realExperiment` branches
-are `≤ εA` by `hA` applied at `D` above, after `bind_assoc` normalization. Conclude
-by the triangle inequality. -/
-lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ≥0∞}
-    (hA : expandAIdealization p prims εA)
-    (B : LearningWithErrors.Adversary (mldsaMLWEShort p prims)) :
-    LearningWithErrors.advantage (mldsaMLWEShort p prims) B ≤
-      LearningWithErrors.advantage (mldsaMatrixMLWE p) (matrixLift p prims B) + εA := by
-  set Bm : LearningWithErrors.Adversary (mldsaMatrixMLWE p) :=
-    matrixLift p prims B with hBm
-  set D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool :=
-    (fun rho A => do
-      let s1 ← sampleShortVec p.l p.eta
-      let s2 ← sampleShortVec p.k p.eta
-      B (rho, A * s1 + s2)) with hD
-  rw [NoisyLearning.advantage_eq_boolDist (mldsaMLWEShort p prims) B,
-    NoisyLearning.advantage_eq_boolDist (mldsaMatrixMLWE p) Bm]
-  have h1 : 𝒟[LearningWithErrors.randomExperiment (mldsaMLWEShort p prims) B] {true} =
-      𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p) Bm] {true} := by
-    simp only [LearningWithErrors.randomExperiment, LearningWithErrors.uniformDistr, mldsaMLWEShort,
-      mldsaMatrixMLWE, hBm, matrixLift, bind_assoc, pure_bind]
-    -- Strip the unused leading matrix draw on the right, then commute the two uniform draws.
-    rw [OracleComp.evalDist_bind_const,
-      OracleComp.evalDist_bind_bind_swap
-        ($ᵗ (Bytes 32)) ($ᵗ (RqVec p.k)) (fun rho t => B (rho, t))]
-  have h0 : 𝒟[LearningWithErrors.realExperiment (mldsaMLWEShort p prims) B].boolDist
-      𝒟[LearningWithErrors.realExperiment (mldsaMatrixMLWE p) Bm] ≤ εA := by
-    have hreal : 𝒟[LearningWithErrors.realExperiment (mldsaMLWEShort p prims) B] {true} =
-        𝒟[do let rho ← $ᵗ (Bytes 32); D rho (prims.expandA rho)] {true} := by
-      simp only [LearningWithErrors.realExperiment, LearningWithErrors.distr, mldsaMLWEShort, hD,
-        bind_assoc, pure_bind]
-    have hunif : 𝒟[LearningWithErrors.realExperiment (mldsaMatrixMLWE p) Bm] {true} =
-        𝒟[do
-          let rho ← $ᵗ (Bytes 32)
-          let A ← $ᵗ (TqMatrix p.k p.l)
-          D rho A] {true} := by
-      simp only [LearningWithErrors.realExperiment, LearningWithErrors.distr, mldsaMatrixMLWE, hBm,
-        matrixLift, hD,
-        bind_assoc, pure_bind]
-      -- Commute the trailing `ρ` draw to the front (three independent-draw transpositions).
-      congr 1
-      refine Eq.trans (evalDist_bind_congr _ _ _ (fun A =>
-        evalDist_bind_congr _ _ _ (fun s1 =>
-          OracleComp.evalDist_bind_bind_swap (sampleShortVec p.k p.eta) ($ᵗ (Bytes 32))
-            (fun s2 rho => B (rho, A * s1 + s2))))) ?_
-      refine Eq.trans (evalDist_bind_congr _ _ _ (fun A =>
-        OracleComp.evalDist_bind_bind_swap (sampleShortVec p.l p.eta) ($ᵗ (Bytes 32))
-          (fun s1 rho => sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2)))) ?_
-      exact OracleComp.evalDist_bind_bind_swap
-        ($ᵗ (TqMatrix p.k p.l)) ($ᵗ (Bytes 32))
-        (fun A rho => sampleShortVec p.l p.eta >>= fun s1 =>
-          sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2))
-    rw [MeasureTheory.Measure.boolDist, hreal, hunif]
-    exact hA D
-  have h1' : 𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p) Bm].boolDist
-      𝒟[LearningWithErrors.randomExperiment (mldsaMLWEShort p prims) B] = 0 := by
-    rw [MeasureTheory.Measure.boolDist, h1, ENNReal.absDiff_self]
-  calc _ ≤ _ := MeasureTheory.Measure.boolDist_triangle _
-        𝒟[LearningWithErrors.realExperiment (mldsaMatrixMLWE p) Bm] _
-    _ ≤ εA + (𝒟[LearningWithErrors.realExperiment (mldsaMatrixMLWE p) Bm].boolDist
-          𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p) Bm] +
-        𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p) Bm].boolDist
-          𝒟[LearningWithErrors.randomExperiment (mldsaMLWEShort p prims) B]) := by
-      gcongr
-      exact MeasureTheory.Measure.boolDist_triangle _ _ _
-    _ = _ := by rw [h1', add_zero, add_comm]
 
 section Hop
 
@@ -1211,9 +1106,8 @@ The live short-secret reduction and the extraction bound are fully proven:
 
 - **MLWE key swap (`nma_keyswap_hop_short`).** The exact NMA-game gap for
   `keygenShort` / `keygenShort1` is the advantage of `distinguisherBShort` against
-  `mldsaMLWEShort`. `advantage_mldsaMLWEShort_le_matrix` supplies the explicit seed-to-matrix
-  bridge. The older `mldsaMLWE` / `distinguisherB` declarations are scaffolding only: their
-  full-ring real branch is not the seed-derived `keygen0` distribution.
+  `mldsaMLWEShort`. The older `mldsaMLWE` / `distinguisherB` declarations are scaffolding only:
+  their full-ring real branch is not the seed-derived `keygen0` distribution.
 - **STMSIS extraction (`nmaAdvantage_keygen1_le_stmsis`).** The uniform-`t` NMA advantage is bounded
   by the SelfTargetMSIS advantage of `extractorC`; after `nmaExperiment_eq_keygen_bind` both sides
   bind over the same `keygen1` prefix, so `OracleComp.evalDist_bind_apply_mono_of_support` reduces
