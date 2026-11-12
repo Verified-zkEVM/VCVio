@@ -175,6 +175,7 @@ public import VCVioTest.RandomOracleEncoded
 public import VCVioTest.RandomOracleFreshAnswer
 public import VCVioTest.RandomOracleFreshQuery
 public import VCVioTest.RandomOracleHiddenSeed
+public import VCVioTest.RandomOracleHiddenSeedCacheExtension
 public import VCVioTest.RandomOracleHiddenSeedCollapse
 public import VCVioTest.RandomOracleHitPotential
 public import VCVioTest.RandomOracleJointPotential
