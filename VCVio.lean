@@ -394,6 +394,7 @@ public import VCVio.OracleComp.OracleSpec
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.ProbComp.IndepProductEvents
+public import VCVio.OracleComp.ProbComp.IndepProductEvents.AdaptedUnion
 public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.QueryTracking
 public import VCVio.OracleComp.QueryTracking.AdaptivePrefix
