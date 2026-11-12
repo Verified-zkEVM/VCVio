@@ -8,7 +8,6 @@ module
 
 public import HashSig.SLHDSA.Security.CoverageRoles
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.HitPotential
-import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Hits of fresh randomizer draws in the role-tagged SLH-DSA experiment

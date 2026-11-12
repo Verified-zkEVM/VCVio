@@ -6,7 +6,6 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.Constructions.WithoutReplacement.Basic
-import ToMathlib.Data.List.Count
 
 /-!
 # Weighted sampling without replacement
