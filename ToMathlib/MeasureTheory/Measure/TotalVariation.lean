@@ -99,6 +99,14 @@ theorem etvDist_ne_top (μ ν : Measure α)
     (hμ : μ Set.univ ≤ 1) (hν : ν Set.univ ≤ 1) : μ.etvDist ν ≠ ⊤ :=
   ne_top_of_le_ne_top one_ne_top (etvDist_le_one μ ν hμ hν)
 
+/-- Dirac measures at distinct points of a space with measurable singletons are at extended TV
+one: the singleton of the first point carries all of one measure and none of the other. -/
+theorem etvDist_dirac_of_ne [MeasurableSingletonClass α] {a b : α} (h : a ≠ b) :
+    (dirac a).etvDist (dirac b) = 1 := by
+  refine le_antisymm (etvDist_le_one _ _ (by simp) (by simp)) ?_
+  have := absDiff_apply_le_etvDist (dirac a) (dirac b) (measurableSet_singleton a)
+  simpa [Set.mem_singleton_iff, Ne.symm h, ENNReal.absDiff] using this
+
 /-- Two probability measures differ in total variation by at most the missing mass of any
 common lower measure. -/
 theorem etvDist_le_one_sub_of_le {μ ν c : Measure α} [IsProbabilityMeasure μ]

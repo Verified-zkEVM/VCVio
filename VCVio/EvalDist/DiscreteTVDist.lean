@@ -94,6 +94,18 @@ theorem map_le [Monad m] [LawfulMonad m] [LawfulEvalDistSemantics m]
     discreteTVDist (f <$> mx) (f <$> my) ≤ discreteTVDist mx my := by
   simpa only [map_eq_bind_pure_comp] using bind_le mx my (pure ∘ f)
 
+/-- Two `pure` computations are at distance zero when they return the same value and at distance
+one otherwise. -/
+theorem pure_pure [Monad m] [LawfulPureEvalDistSemantics m] [DecidableEq α] (a b : α) :
+    discreteTVDist (pure a : m α) (pure b) = if a = b then 0 else 1 := by
+  let : MeasurableSpace α := ⊤
+  split_ifs with h
+  · subst h
+    exact self _
+  · unfold discreteTVDist measureTVDist
+    rw [evalDist_pure, evalDist_pure, Measure.tvDist, Measure.etvDist_dirac_of_ne h]
+    simp
+
 end discreteTVDist
 
 section eventTransfer
