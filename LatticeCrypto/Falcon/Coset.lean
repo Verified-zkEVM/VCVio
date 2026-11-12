@@ -29,7 +29,11 @@ sampler output is the packed FFT of an integer pair (`Primitives.ffSampling_supp
 the packed FFT is multiplicative and inverted by the split recursion
 (`RealFFTPoly.ofCoeffs_negacyclic`, `RealFFTPoly.toCoeffs_ofCoeffs`), so the rounded inverse
 transform returns the integer polynomials `z₀ · g + z₁ · G` and `-(z₀ · f + z₁ · F)` exactly
-(`landsOnLattice_of_exactFFT`, `hpreimage_of_exactFFT`).
+(`ofCoeffs_latticePoint`, `landsOnLattice_of_exactFFT`, `hpreimage_of_exactFFT`).
+
+`SampledCoeffsLe` bounds the integer coefficients of the sampler outputs, which inexact FFT
+primitives need. `Primitives` does not provide such a bound; `sampledCoeffsLe_of_samplerZ_le`
+derives it from a bound on the values `samplerZ` returns that does not depend on the centre.
 -/
 
 public section
@@ -239,24 +243,25 @@ theorem negacyclicConvCoeff_cast {m n : ℕ} (h : m = n) (f g : Fin n → ℝ) (
   subst h
   rfl
 
-/-- **The lattice-point condition at exact FFT primitives.** The packed FFT of any integer pair
-`(z₀, z₁)` is mapped by the basis application to `z₀ · g + z₁ · G` and `-(z₀ · f + z₁ · F)`:
-`fftInt` is the packed FFT, `mulFFT` is negacyclic multiplication under it, the split recursion
-inverts the merge recursion, and rounding fixes integers. -/
-theorem landsOnLattice_of_exactFFT (hn : 2 * 2 ^ p.fftDepth = p.n) (hex : prims.ExactFFT hn)
-    (sk : SecretKey p) (z : FFTPair p.fftDepth)
-    (hz : ∃ a b : Fin (2 * 2 ^ p.fftDepth) → ℤ,
-      z.1 = RealFFTPoly.ofCoeffs p.fftDepth (fun i => (a i : ℝ)) ∧
-      z.2 = RealFFTPoly.ofCoeffs p.fftDepth (fun i => (b i : ℝ))) :
-    LandsOnLattice p prims sk z := by
-  obtain ⟨a, b, ha, hb⟩ := hz
+/-- **The packed FFT of a lattice point.** For integer coefficient functions `a, b` and integer
+polynomials `u₁, u₂`, the exact packed FFT of `z₀ · u₁ + z₁ · u₂`, with `z₀, z₁` the polynomials
+of `a, b`, is the sum of the pointwise products of the exact packed FFTs. -/
+theorem ofCoeffs_latticePoint (hn : 2 * 2 ^ p.fftDepth = p.n)
+    (a b : Fin (2 * 2 ^ p.fftDepth) → ℤ) (u₁ u₂ : IntPoly p.n) :
+    (RealFFTPoly.ofCoeffs p.fftDepth fun i =>
+      ((intPolyMul (Poly.ofPi fun i => a (Fin.cast hn.symm i)) u₁ +
+        intPolyMul (Poly.ofPi fun i => b (Fin.cast hn.symm i)) u₂).get (Fin.cast hn i) : ℝ)) =
+      Primitives.mulFFT (RealFFTPoly.ofCoeffs p.fftDepth fun i => (a i : ℝ))
+          (RealFFTPoly.ofCoeffs p.fftDepth fun i => (u₁.get (Fin.cast hn i) : ℝ)) +
+        Primitives.mulFFT (RealFFTPoly.ofCoeffs p.fftDepth fun i => (b i : ℝ))
+          (RealFFTPoly.ofCoeffs p.fftDepth fun i => (u₂.get (Fin.cast hn i) : ℝ)) := by
   set z₀ : IntPoly p.n := Poly.ofPi fun i => a (Fin.cast hn.symm i) with hz₀
   set z₁ : IntPoly p.n := Poly.ofPi fun i => b (Fin.cast hn.symm i) with hz₁
-  have ha' : (fun i => (a i : ℝ)) = fun i => ((z₀.get (Fin.cast hn i) : ℤ) : ℝ) := by
+  have ha : (fun i => (a i : ℝ)) = fun i => ((z₀.get (Fin.cast hn i) : ℤ) : ℝ) := by
     funext i
     rw [hz₀, Poly.get_ofPi]
     congr 2
-  have hb' : (fun i => (b i : ℝ)) = fun i => ((z₁.get (Fin.cast hn i) : ℤ) : ℝ) := by
+  have hb : (fun i => (b i : ℝ)) = fun i => ((z₁.get (Fin.cast hn i) : ℤ) : ℝ) := by
     funext i
     rw [hz₁, Poly.get_ofPi]
     congr 2
@@ -268,19 +273,36 @@ theorem landsOnLattice_of_exactFFT (hn : 2 * 2 ^ p.fftDepth = p.n) (hex : prims.
     rw [negacyclicConvCoeff_cast hn (fun j => ((u.get j : ℤ) : ℝ)) (fun j => ((v.get j : ℤ) : ℝ)),
       IntPoly.get_mul, intCast_negacyclicConvCoeff]
     congr 1
-  refine ⟨z₀, z₁, ?_, ?_⟩
-  · rw [ha, hb, ha', hb', hex.fftInt_eq, hex.fftInt_eq, ← RealFFTPoly.ofCoeffs_negacyclic,
-      ← RealFFTPoly.ofCoeffs_negacyclic, ← RealFFTPoly.ofCoeffs_add, hex.ifftRound_eq,
-      RealFFTPoly.toCoeffs_ofCoeffs]
-    apply Poly.ext_get_eq
-    intro i
-    rw [Poly.get_ofPi, Poly.get_add, key, key, ← Int.cast_add, round_intCast]
-  · rw [ha, hb, ha', hb', hex.fftInt_eq, hex.fftInt_eq, ← RealFFTPoly.ofCoeffs_negacyclic,
-      ← RealFFTPoly.ofCoeffs_negacyclic, ← RealFFTPoly.ofCoeffs_add, ← RealFFTPoly.ofCoeffs_neg,
+  rw [ha, hb, ← RealFFTPoly.ofCoeffs_negacyclic, ← RealFFTPoly.ofCoeffs_negacyclic,
+    ← RealFFTPoly.ofCoeffs_add]
+  congr 1
+  funext i
+  rw [Poly.get_add, Int.cast_add, ← key, ← key]
+  simp
+
+/-- **The lattice-point condition at exact FFT primitives.** The packed FFT of any integer pair
+`(z₀, z₁)` is mapped by the basis application to `z₀ · g + z₁ · G` and `-(z₀ · f + z₁ · F)`:
+`fftInt` is the packed FFT, `mulFFT` is negacyclic multiplication under it, the split recursion
+inverts the merge recursion, and rounding fixes integers. -/
+theorem landsOnLattice_of_exactFFT (hn : 2 * 2 ^ p.fftDepth = p.n) (hex : prims.ExactFFT hn)
+    (sk : SecretKey p) (z : FFTPair p.fftDepth)
+    (hz : ∃ a b : Fin (2 * 2 ^ p.fftDepth) → ℤ,
+      z.1 = RealFFTPoly.ofCoeffs p.fftDepth (fun i => (a i : ℝ)) ∧
+      z.2 = RealFFTPoly.ofCoeffs p.fftDepth (fun i => (b i : ℝ))) :
+    LandsOnLattice p prims sk z := by
+  obtain ⟨a, b, ha, hb⟩ := hz
+  refine ⟨Poly.ofPi fun i => a (Fin.cast hn.symm i), Poly.ofPi fun i => b (Fin.cast hn.symm i),
+    ?_, ?_⟩
+  · rw [ha, hb, hex.fftInt_eq, hex.fftInt_eq, ← ofCoeffs_latticePoint p hn a b sk.g sk.capG,
       hex.ifftRound_eq, RealFFTPoly.toCoeffs_ofCoeffs]
     apply Poly.ext_get_eq
     intro i
-    rw [Poly.get_ofPi, Poly.get_neg, Poly.get_add, key, key, ← Int.cast_add, ← Int.cast_neg,
+    simp [round_intCast]
+  · rw [ha, hb, hex.fftInt_eq, hex.fftInt_eq, ← ofCoeffs_latticePoint p hn a b sk.f sk.capF,
+      ← RealFFTPoly.ofCoeffs_neg, hex.ifftRound_eq, RealFFTPoly.toCoeffs_ofCoeffs]
+    apply Poly.ext_get_eq
+    intro i
+    rw [Poly.get_ofPi, Poly.get_neg, Fin.cast_cast, Fin.cast_eq_self, ← Int.cast_neg,
       round_intCast]
 
 /-- **The coset condition at exact FFT primitives**, from the key relations alone: every sampler
@@ -296,6 +318,27 @@ theorem hpreimage_of_exactFFT (hn : 2 * 2 ^ p.fftDepth = p.n) (hex : prims.Exact
   hpreimage_of_landsOnLattice p prims (by rw [← hn]; positivity) pk sk hkey hcap
     fun _ z hz => landsOnLattice_of_exactFFT p prims hn hex sk z
       (Primitives.ffSampling_support_ofCoeffs prims _ _ _ z hz)
+
+/-! ## Bounded sampled coefficients -/
+
+/-- **Sampled coefficients bounded by `Z`.** Every output of `ffSampling` on a target of the key
+is the packed FFT of an integer pair with coefficients bounded by `Z`. `Primitives` does not
+provide it: `samplerZ`, `SecretKey.tree` and the target are unconstrained. -/
+@[expose] def SampledCoeffsLe (sk : SecretKey p) (Z : ℝ) : Prop :=
+  ∀ c : Rq p.n, ∀ z ∈ support (Primitives.ffSampling prims p.fftDepth (toFFTTarget p prims c sk)
+      sk.tree), ∃ a b : Fin (2 * 2 ^ p.fftDepth) → ℤ, (∀ i, |(a i : ℝ)| ≤ Z) ∧
+      (∀ i, |(b i : ℝ)| ≤ Z) ∧ z.1 = RealFFTPoly.ofCoeffs p.fftDepth (fun i => (a i : ℝ)) ∧
+      z.2 = RealFFTPoly.ofCoeffs p.fftDepth (fun i => (b i : ℝ))
+
+/-- A sampler whose values are bounded by `Z` independently of the centre gives
+`SampledCoeffsLe` for every key. A sampler that follows its centre, as a discrete Gaussian
+does, has no such bound; bounding its outputs needs bounds on the tree and the targets, which
+are not proved here. -/
+theorem sampledCoeffsLe_of_samplerZ_le (sk : SecretKey p) (Z : ℝ)
+    (hZ : ∀ μ σ : ℝ, ∀ x ∈ support (prims.samplerZ μ σ), |(x : ℝ)| ≤ Z) :
+    SampledCoeffsLe p prims sk Z :=
+  fun _ z hz => Primitives.ffSampling_support_ofCoeffs_of_samplerZ prims (fun x => |(x : ℝ)| ≤ Z)
+    hZ _ _ _ z hz
 
 end Falcon
 

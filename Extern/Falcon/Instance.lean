@@ -37,8 +37,15 @@ function for testing.
    The FFT fields are real-valued and never executed; the executable signing path
    in `Extern.Falcon.Sign` carries its own floating-point FFT over `FloatLike`, as
    the reference implementation signs in floating point (`sign_fpr.c`) and uses
-   32.32 fixed point only inside key generation (`kgen_fxp.c`). Relating that
-   floating-point pipeline to the exact one is the remaining bridge obligation.
+   32.32 fixed point only inside key generation (`kgen_fxp.c`).
+   `Extern.Falcon.Binary64Coset` puts that floating-point FFT, on `FPR` and not on the
+   native `Float` backend, into the three fields (`binary64FFTPrimitives`). It proves the
+   coset condition there for `2 ≤ logn ≤ 9`, key coefficients in `[-127, 127]`, and sampled
+   coefficients below an explicit bound, which is a hypothesis (`Falcon.SampledCoeffsLe`).
+   Its `ifftRound` reads the input through `Binary64.encode` and rounds with `round`, not
+   `fpr_rint`, and nothing is proved about `fftTarget`. Relating the rest of the
+   floating-point pipeline (its products, `ffSampling` and sampler) to the exact one remains
+   open.
    `concretePrimitives` satisfies `Primitives.StructuralLaws` for `logn ≤ 11`
    (`concretePrimitives_structuralLaws`).
 

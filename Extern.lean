@@ -1,6 +1,10 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
 public import Extern.Falcon.ApproxArith
+public import Extern.Falcon.Binary64Coset
+public import Extern.Falcon.Binary64FFT
+public import Extern.Falcon.Binary64Ops
+public import Extern.Falcon.Binary64Table
 public import Extern.Falcon.Expm.CertificateCore
 public import Extern.Falcon.Expm.Certificates
 public import Extern.Falcon.Expm.FixedPoint
@@ -8,6 +12,7 @@ public import Extern.Falcon.Expm.Polynomial
 public import Extern.Falcon.ExpmBridge
 public import Extern.Falcon.FFI
 public import Extern.Falcon.FFT
+public import Extern.Falcon.FFTLoops
 public import Extern.Falcon.FPR.Add
 public import Extern.Falcon.FPR.AddPipeline
 public import Extern.Falcon.FPR.Common
