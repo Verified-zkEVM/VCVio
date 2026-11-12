@@ -36,10 +36,6 @@ namespace MLDSA.Concrete
 
 open LatticeCrypto
 
-local instance : NeZero modulus := by
-  unfold modulus
-  exact ⟨by decide⟩
-
 /-- The high-order representative type used by `HighBits`. -/
 abbrev High := Rq
 
