@@ -33,14 +33,6 @@ open DigestTape TapeFactor
 
 /-! ## A block is a uniform word -/
 
-/-- Uniform sampling of a pair is two independent draws. -/
-theorem uniformSample_prod_eq_bind {α β : Type} [SampleableType α] [SampleableType β] :
-    ($ᵗ (α × β) : ProbComp (α × β)) =
-      (do let left ← $ᵗ α; let right ← $ᵗ β; pure (left, right)) := by
-  rw [uniformSample]
-  change ((·, ·) <$> ($ᵗ α) <*> ($ᵗ β)) = _
-  simp only [seq_eq_bind_map, map_eq_bind_pure_comp, bind_assoc, Function.comp_def, pure_bind]
-
 /-- Consing one answer onto a word is a bijection from the pair. -/
 theorem cons_bijective (length : Nat) :
     Function.Bijective (fun pair : HashOutput × (Fin length → HashOutput) =>
@@ -81,7 +73,7 @@ theorem evalDist_padding_eq_ofFn (length : Nat) :
       _ = (fun pair : HashOutput × (Fin remaining → HashOutput) =>
               pair.1 :: List.ofFn pair.2) <$>
             ($ᵗ (HashOutput × (Fin remaining → HashOutput)) : ProbComp _) := by
-          rw [uniformSample_prod_eq_bind]
+          rw [SampleableType.uniformSample_prod_eq_bind]
           simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def]
       _ = List.ofFn <$> ((fun pair : HashOutput × (Fin remaining → HashOutput) =>
               (Fin.cons pair.1 pair.2 : Fin (remaining + 1) → HashOutput)) <$>
