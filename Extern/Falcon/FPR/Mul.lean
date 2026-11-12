@@ -526,14 +526,6 @@ private theorem mulPipeline_residue_eq_mod (x y : FPR) :
 
 /-! ### The 50-bit sticky fold -/
 
-private theorem nat_or_eq_zero_iff (a b : ℕ) : a ||| b = 0 ↔ a = 0 ∧ b = 0 := by
-  refine ⟨fun h => ⟨?_, ?_⟩, fun h => by rw [h.1, h.2]; rfl⟩ <;>
-  · apply Nat.eq_of_testBit_eq
-    intro i
-    have hi := congrArg (fun n : ℕ => n.testBit i) h
-    simp only [Nat.testBit_or, Nat.zero_testBit, Bool.or_eq_false_iff] at hi
-    simp [Nat.zero_testBit, hi.1, hi.2]
-
 private theorem toNat_and25_uint32 (v : UInt32) :
     (v &&& 0x01FFFFFF).toNat = v.toNat % 2 ^ 25 := by
   rw [UInt32.toNat_and, show (0x01FFFFFF : UInt32).toNat = 2 ^ 25 - 1 from by decide,
@@ -545,7 +537,7 @@ private theorem mulPipeline_stickyWord_eq_zero_iff (x y : FPR) :
     ((mulPipeline x y).z0 ||| ((mulPipeline x y).z1' &&& 0x01FFFFFF)) = 0
       ↔ (mulPipeline x y).xu.toNat * (mulPipeline x y).yu.toNat % 2 ^ 50 = 0 := by
   rw [← mulPipeline_residue_eq_mod, ← UInt32.toNat_inj, UInt32.toNat_or, toNat_and25_uint32,
-    show (0 : UInt32).toNat = 0 from rfl, nat_or_eq_zero_iff]
+    show (0 : UInt32).toNat = 0 from rfl, Nat.or_eq_zero_iff]
   have h2 : (mulPipeline x y).z0.toNat < 2 ^ 25 := by
     rw [mulPipeline_z0_toNat]; exact Nat.mod_lt _ (Nat.two_pow_pos _)
   constructor
@@ -728,7 +720,7 @@ private theorem mulPipeline_zu'''_eq (x y : FPR)
 private theorem mulPipeline_e'_eq (x y : FPR)
     (ha : FPR.IsNormal x) (hb : FPR.IsNormal y) :
     (mulPipeline x y).e' = (mulPipeline x y).e.toInt32 := by
-  rw [mulPipeline_e', mulPipeline_dzu_eq_zero x y ha hb, uint32_zero_and, uint32_xor_zero]
+  rw [mulPipeline_e', mulPipeline_dzu_eq_zero x y ha hb, UInt32.zero_and, UInt32.xor_zero]
 
 /-! ### The exponent chain
 
