@@ -332,6 +332,14 @@ independent of a secret:
 Name each one with a definition (`cmaReduction`, `hvzkSimulator`,
 `unlinkToMultiplePRFReduction`) and state the bound for that definition.
 
+The same reasoning applies to hypotheses. A premise `∀ adv, Adv adv ≤ ε` that ranges over an
+adversary type holds only when `ε` is at least what exhaustive search achieves, so a theorem that
+assumes it says nothing at the parameters it is meant for. Query budgets do not change this,
+because they do not bound local computation: an adversary that searches a PRF key computed outside
+the oracle fits every budget. Assume the bound for the named distinguisher instead, as in
+`hε : prfAdvantage prf (hidingDistinguisher … adv) ≤ ε` for the adversary at hand, and state the
+conclusion for that adversary.
+
 A named reduction also makes the next steps possible. Its query count or cost can be proved as
 a separate lemma about the same definition. The asymptotic lemmas in
 [`VCVio/CryptoFoundations/Asymptotics/Security.lean`](../../VCVio/CryptoFoundations/Asymptotics/Security.lean),

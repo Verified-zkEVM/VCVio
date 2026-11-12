@@ -54,6 +54,8 @@ sampled cache.
   lazily sampled random oracle.
 * `TimeLockPuzzle.HidingSecure`: hiding against adversaries within preprocessing, online and
   encryption budgets.
+* `TimeLockPuzzle.HidingSecureAgainst`: the same against a class of adversaries, the place for a
+  restriction on local computation.
 * `TimeLockPuzzle.cappedHidingExperiment`, `TimeLockPuzzle.cappedHidingAdvantage`: the hiding
   experiment and advantage with a capped challenger, which answers `none` after `qEnc` accepted
   requests, against adversaries with no encryption budget.
@@ -179,13 +181,52 @@ theorem hidingAdvantage_eq (tlp : TimeLockPuzzle spec Puzzle Key)
 /-- Hiding: every adversary with at most `Q` preprocessing queries, an online budget of `b.1`
 rounds and `b.2` points, and at most `qEnc` challenge queries has hiding advantage at most `ε`.
 For a puzzle whose honest solver derives the key in round `T`, the meaningful budgets are
-`b = (T - 1, q)`. -/
+`b = (T - 1, q)`.
+
+The budgets count oracle queries only; local computation is free. The predicate is therefore a
+meaningful bound only when the DEM is computed through the oracle. For a DEM computed outside it,
+such as one keyed by HMAC, an adversary within every budget can recover the key by exhaustive
+search, and `HidingSecure` holds only at large `ε`. Such schemes are hiding against a class of
+adversaries that restricts local computation, `HidingSecureAgainst` (see
+`docs/design/computational-complexity.md`, *Query-count substitution*). -/
 @[expose]
 def HidingSecure (tlp : TimeLockPuzzle spec Puzzle Key)
     (dem : DEMScheme (OracleComp (unifSpec + spec)) (Puzzle × Key) M C) (leak : M → Λ) (Q : ℕ)
     (b : ℕ × ℕ) (qEnc : ℕ) (ε : ℝ≥0∞) : Prop :=
   ∀ adv : HidingAdversary spec Puzzle M C,
     adv.IsQueryBound Q b → adv.MakesAtMostQueries qEnc → hidingAdvantage tlp dem leak adv ≤ ε
+
+/-- Hiding against a class of adversaries: every adversary in `Admissible` within the
+preprocessing, online and encryption budgets of `HidingSecure` has hiding advantage at most `ε`.
+
+`Admissible` is where a restriction on local computation enters, such as a running-time bound,
+since the budgets count oracle queries only. Over the class of all adversaries this is
+`HidingSecure` (`hidingSecureAgainst_true_iff`). -/
+@[expose]
+def HidingSecureAgainst (Admissible : HidingAdversary spec Puzzle M C → Prop)
+    (tlp : TimeLockPuzzle spec Puzzle Key)
+    (dem : DEMScheme (OracleComp (unifSpec + spec)) (Puzzle × Key) M C) (leak : M → Λ) (Q : ℕ)
+    (b : ℕ × ℕ) (qEnc : ℕ) (ε : ℝ≥0∞) : Prop :=
+  ∀ adv : HidingAdversary spec Puzzle M C, Admissible adv →
+    adv.IsQueryBound Q b → adv.MakesAtMostQueries qEnc → hidingAdvantage tlp dem leak adv ≤ ε
+
+/-- Hiding against the class of all adversaries is `HidingSecure`. -/
+theorem hidingSecureAgainst_true_iff (tlp : TimeLockPuzzle spec Puzzle Key)
+    (dem : DEMScheme (OracleComp (unifSpec + spec)) (Puzzle × Key) M C) (leak : M → Λ) (Q : ℕ)
+    (b : ℕ × ℕ) (qEnc : ℕ) (ε : ℝ≥0∞) :
+    HidingSecureAgainst (fun _ => True) tlp dem leak Q b qEnc ε ↔
+      HidingSecure tlp dem leak Q b qEnc ε :=
+  ⟨fun h adv => h adv trivial, fun h adv _ => h adv⟩
+
+/-- Hiding against a class is inherited by every subclass. -/
+theorem HidingSecureAgainst.mono {Admissible Admissible' : HidingAdversary spec Puzzle M C → Prop}
+    {tlp : TimeLockPuzzle spec Puzzle Key}
+    {dem : DEMScheme (OracleComp (unifSpec + spec)) (Puzzle × Key) M C} {leak : M → Λ} {Q : ℕ}
+    {b : ℕ × ℕ} {qEnc : ℕ} {ε : ℝ≥0∞}
+    (h : HidingSecureAgainst Admissible tlp dem leak Q b qEnc ε)
+    (hsub : ∀ adv, Admissible' adv → Admissible adv) :
+    HidingSecureAgainst Admissible' tlp dem leak Q b qEnc ε :=
+  fun adv hadv => h adv (hsub adv hadv)
 
 end advantage
 

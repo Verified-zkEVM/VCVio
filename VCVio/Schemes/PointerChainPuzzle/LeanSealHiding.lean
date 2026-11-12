@@ -60,12 +60,14 @@ context of a salt determines the salt (`ctx_injective`), `Bytes k` has `2^(8k)` 
 
 Running time is not modelled. The bound is an explicit reduction: it names the PRF distinguisher
 but bounds neither its running time nor its relation to the paper's time-bounded `Adv^PRF`, which
-SPEC §8 takes over adversaries in time `t + O(Q + P')`. Hiding security
-(`hidingSecure_byteScheme`) assumes the PRF bound for the distinguishers of all byte-level
-adversaries, including those outside the budgets; `hidingSecure_byteScheme_of_budget` assumes it
-only for adversaries within the budgets. Query budgets do not bound local computation, so even the
-budgeted premise covers exhaustive attacks; a computational corollary also needs an efficiency
-restriction on the adversary and a running-time bound for the named distinguisher.
+SPEC §8 takes over adversaries in time `t + O(Q + P')`. The bound is stated per adversary, for
+the PRF advantage of that adversary's distinguisher `byteHidingDistinguisher`. The uniform form,
+`hidingSecureAgainst_byteScheme`, is stated against a class of adversaries: a PRF bound over the
+distinguishers of *all* adversaries would have to hold for an adversary that recovers the HMAC key
+from the keystream by exhaustive search. HMAC is computed outside the oracle, so that adversary
+makes no oracle query, fits every query budget and wins with probability near `1`, which forces
+`ε` near `1/2`. A computational corollary takes both classes to be classes of efficient algorithms
+and proves that `byteHidingDistinguisher` maps one into the other.
 
 ## Paper citation table
 
@@ -75,8 +77,8 @@ The leanSeal paper's statement, with the declarations that formalize it at leanS
 | --- | --- |
 | `thm:hiding`, leanSeal's bytes (SPEC §8) | `hidingAdvantage_byteScheme_le` |
 | `thm:hiding`, every parameter set leanSeal accepts | `hidingAdvantage_byteScheme_le_of_valid` |
-| `thm:hiding`, as hiding security | `hidingSecure_byteScheme`, `hidingSecure_byteScheme_of_valid` |
-| `thm:hiding`, as hiding security, budgeted PRF premise | `hidingSecure_byteScheme_of_budget` |
+| `thm:hiding`, against an adversary class | `hidingSecureAgainst_byteScheme` |
+| `thm:hiding`, adversary class, valid parameters | `hidingSecureAgainst_byteScheme_of_valid` |
 | `thm:hiding`, the paper's capped challenger | `cappedHidingAdvantage_byteScheme_le` |
 | `thm:hiding`, capped, valid parameters | `cappedHidingAdvantage_byteScheme_le_of_valid` |
 | The game | `TimeLockPuzzle.hidingExperiment`, `LeftOrRight.oracle` |
@@ -104,9 +106,8 @@ To trust the rows above, read these definitions and compare each with the source
 * The constants: `Valid` against SPEC §2, and `card_bytes` for the sizes `2^256`, `2^(8b)` and
   `2^128` of hashes, links, salts and 16-byte nonces, so `Q_enc² / (2 |N|) = Q_enc² / 2^129`.
 
-Scope of every row: running time is not modelled, the PRF term is the advantage of the named
-distinguisher `byteHidingDistinguisher`, and `hidingSecure_byteScheme`'s PRF premise covers all
-byte-level adversaries (`hidingSecure_byteScheme_of_budget` only budgeted ones).
+Scope of every row: running time is not modelled, and the PRF term is the advantage of the named
+distinguisher `byteHidingDistinguisher`.
 
 ## Main statements
 
@@ -115,13 +116,12 @@ byte-level adversaries (`hidingSecure_byteScheme_of_budget` only budgeted ones).
 * `PointerChainPuzzle.LeanSeal.byteHidingDistinguisher`: the PRF distinguisher of the byte-level
   theorem.
 * `PointerChainPuzzle.LeanSeal.hidingAdvantage_byteScheme_le`: the hiding theorem for leanSeal.
-* `PointerChainPuzzle.LeanSeal.hidingSecure_byteScheme`,
-  `PointerChainPuzzle.LeanSeal.hidingSecure_byteScheme_of_budget`: hiding security at the paper's
-  constants.
+* `PointerChainPuzzle.LeanSeal.hidingSecureAgainst_byteScheme`: hiding security against a class of
+  adversaries whose distinguishers lie in a class against which HMAC-SHA256 is a secure PRF.
 * `PointerChainPuzzle.LeanSeal.cappedHidingAdvantage_byteScheme_le`: the hiding theorem in the
   paper's capped game.
 * `PointerChainPuzzle.LeanSeal.hidingAdvantage_byteScheme_le_of_valid`,
-  `PointerChainPuzzle.LeanSeal.hidingSecure_byteScheme_of_valid`,
+  `PointerChainPuzzle.LeanSeal.hidingSecureAgainst_byteScheme_of_valid`,
   `PointerChainPuzzle.LeanSeal.cappedHidingAdvantage_byteScheme_le_of_valid`: the same under
   leanSeal's parameter check `Valid b n m`.
 -/
@@ -195,48 +195,28 @@ theorem hidingAdvantage_byteScheme_le (hb : b ≤ 32) (hn : n < 2 ^ 32) (m : ℕ
     ((sealEncoding hb hn).isQueryBound_adaptTwoPhase hadv)
     ((sealEncoding hb hn).makesAtMostQueries_adaptHidingAdversary henc)
 
-/-- **Hiding security of leanSeal at the paper's constants**, for every PRF bound `ε` that holds
-for the distinguishers `byteHidingDistinguisher` of all byte-level adversaries.
-
-Scope: the PRF premise quantifies over *all* byte-level adversaries, including those outside the
-budgets, and running time is not modelled; the PRF term is the advantage of the named
-distinguisher `byteHidingDistinguisher`. `hidingSecure_byteScheme_of_budget` assumes the PRF
-bound only for adversaries within the budgets. -/
-theorem hidingSecure_byteScheme (hb : b ≤ 32) (hn : n < 2 ^ 32) (m : ℕ) [NeZero n]
+/-- **Hiding security of leanSeal against a class of adversaries, at the paper's constants.**
+If the distinguisher `byteHidingDistinguisher` of every byte-level adversary in `Admissible` within
+the budgets lies in `PRFAdmissible`, and HMAC-SHA256 on `2 qEnc` keys has advantage at most `ε`
+against every distinguisher in `PRFAdmissible`, then leanSeal is hiding against `Admissible` with
+the bound of `hidingAdvantage_byteScheme_le`. The classes carry the efficiency restriction; over the
+class of all distinguishers the PRF premise holds only at large `ε`. -/
+theorem hidingSecureAgainst_byteScheme (hb : b ≤ 32) (hn : n < 2 ^ 32) (m : ℕ) [NeZero n]
     (Qpre Qon qEnc : ℕ) {ε : ℝ≥0∞}
-    (hε : ∀ adv : HidingAdversary byteSpec (Puzzle b n) Plaintext ByteArray,
-      prfAdvantage (hmacPRF.multiKey (Fin (2 * qEnc))) (byteHidingDistinguisher hb hn m qEnc adv)
-        ≤ ε) :
-    HidingSecure (byteScheme b n m) (byteEnvelope b n m) plaintextLength Qpre
+    (Admissible : HidingAdversary byteSpec (Puzzle b n) Plaintext ByteArray → Prop)
+    (PRFAdmissible : PRFScheme.PRFAdversary (Fin (2 * qEnc) × ByteArray) (Bytes 32) → Prop)
+    (hreduce : ∀ adv, Admissible adv → adv.IsQueryBound Qpre (keyRound n m - 1, Qon) →
+      adv.MakesAtMostQueries qEnc → PRFAdmissible (byteHidingDistinguisher hb hn m qEnc adv))
+    (hε : ∀ D, PRFAdmissible D → prfAdvantage (hmacPRF.multiKey (Fin (2 * qEnc))) D ≤ ε) :
+    HidingSecureAgainst Admissible (byteScheme b n m) (byteEnvelope b n m) plaintextLength Qpre
       (keyRound n m - 1, Qon) qEnc
       (2 * ((if 2 ≤ n then (Qon : ℝ≥0∞) / 2 ^ (8 * b) else 0) + Qpre / 2 ^ (128 + 8 * b) +
         ((Qpre + Qon) * (solvePoints n m + 2 * qEnc) +
             ((solvePoints n m + 2 * qEnc : ℕ) : ℝ≥0∞) ^ 2) / 2 ^ 256 +
         (qEnc : ℝ≥0∞) ^ 2 / 2 ^ 129 + ε)) :=
-  fun adv hadv henc =>
-    (hidingAdvantage_byteScheme_le hb hn m hadv henc).trans (by gcongr; exact hε adv)
-
-/-- **Hiding security of leanSeal at the paper's constants, for budgeted adversaries**, for every
-PRF bound `ε` that holds for the distinguishers `byteHidingDistinguisher` of the byte-level
-adversaries within the budgets.
-
-Scope: the PRF premise quantifies only over byte-level adversaries within the budgets, unlike
-`hidingSecure_byteScheme`, whose premise covers all of them. Running time is still not modelled,
-and the PRF term is the advantage of the named distinguisher `byteHidingDistinguisher`. -/
-theorem hidingSecure_byteScheme_of_budget (hb : b ≤ 32) (hn : n < 2 ^ 32) (m : ℕ) [NeZero n]
-    (Qpre Qon qEnc : ℕ) {ε : ℝ≥0∞}
-    (hε : ∀ adv : HidingAdversary byteSpec (Puzzle b n) Plaintext ByteArray,
-      adv.IsQueryBound Qpre (keyRound n m - 1, Qon) → adv.MakesAtMostQueries qEnc →
-      prfAdvantage (hmacPRF.multiKey (Fin (2 * qEnc))) (byteHidingDistinguisher hb hn m qEnc adv)
-        ≤ ε) :
-    HidingSecure (byteScheme b n m) (byteEnvelope b n m) plaintextLength Qpre
-      (keyRound n m - 1, Qon) qEnc
-      (2 * ((if 2 ≤ n then (Qon : ℝ≥0∞) / 2 ^ (8 * b) else 0) + Qpre / 2 ^ (128 + 8 * b) +
-        ((Qpre + Qon) * (solvePoints n m + 2 * qEnc) +
-            ((solvePoints n m + 2 * qEnc : ℕ) : ℝ≥0∞) ^ 2) / 2 ^ 256 +
-        (qEnc : ℝ≥0∞) ^ 2 / 2 ^ 129 + ε)) :=
-  fun adv hadv henc =>
-    (hidingAdvantage_byteScheme_le hb hn m hadv henc).trans (by gcongr; exact hε adv hadv henc)
+  fun adv hA hadv henc =>
+    (hidingAdvantage_byteScheme_le hb hn m hadv henc).trans
+      (by gcongr; exact hε _ (hreduce adv hA hadv henc))
 
 /-! ## The paper's capped challenger -/
 
@@ -277,20 +257,24 @@ theorem hidingAdvantage_byteScheme_le_of_valid {m : ℕ} [NeZero n] (hv : Valid 
           (byteHidingDistinguisher hv.le_32 hv.lt_two_pow_32 m qEnc adv)) :=
   hidingAdvantage_byteScheme_le hv.le_32 hv.lt_two_pow_32 m hadv henc
 
-/-- **Hiding security of leanSeal at every parameter set it accepts**: `hidingSecure_byteScheme`
-under `Valid b n m`, with the same scope. -/
-theorem hidingSecure_byteScheme_of_valid {m : ℕ} [NeZero n] (hv : Valid b n m)
+/-- **Hiding security of leanSeal against a class of adversaries, at every parameter set it
+accepts**: `hidingSecureAgainst_byteScheme` under `Valid b n m`. -/
+theorem hidingSecureAgainst_byteScheme_of_valid {m : ℕ} [NeZero n] (hv : Valid b n m)
     (Qpre Qon qEnc : ℕ) {ε : ℝ≥0∞}
-    (hε : ∀ adv : HidingAdversary byteSpec (Puzzle b n) Plaintext ByteArray,
-      prfAdvantage (hmacPRF.multiKey (Fin (2 * qEnc)))
-        (byteHidingDistinguisher hv.le_32 hv.lt_two_pow_32 m qEnc adv) ≤ ε) :
-    HidingSecure (byteScheme b n m) (byteEnvelope b n m) plaintextLength Qpre
+    (Admissible : HidingAdversary byteSpec (Puzzle b n) Plaintext ByteArray → Prop)
+    (PRFAdmissible : PRFScheme.PRFAdversary (Fin (2 * qEnc) × ByteArray) (Bytes 32) → Prop)
+    (hreduce : ∀ adv, Admissible adv → adv.IsQueryBound Qpre (keyRound n m - 1, Qon) →
+      adv.MakesAtMostQueries qEnc →
+        PRFAdmissible (byteHidingDistinguisher hv.le_32 hv.lt_two_pow_32 m qEnc adv))
+    (hε : ∀ D, PRFAdmissible D → prfAdvantage (hmacPRF.multiKey (Fin (2 * qEnc))) D ≤ ε) :
+    HidingSecureAgainst Admissible (byteScheme b n m) (byteEnvelope b n m) plaintextLength Qpre
       (keyRound n m - 1, Qon) qEnc
       (2 * ((if 2 ≤ n then (Qon : ℝ≥0∞) / 2 ^ (8 * b) else 0) + Qpre / 2 ^ (128 + 8 * b) +
         ((Qpre + Qon) * (solvePoints n m + 2 * qEnc) +
             ((solvePoints n m + 2 * qEnc : ℕ) : ℝ≥0∞) ^ 2) / 2 ^ 256 +
         (qEnc : ℝ≥0∞) ^ 2 / 2 ^ 129 + ε)) :=
-  hidingSecure_byteScheme hv.le_32 hv.lt_two_pow_32 m Qpre Qon qEnc hε
+  hidingSecureAgainst_byteScheme hv.le_32 hv.lt_two_pow_32 m Qpre Qon qEnc Admissible PRFAdmissible
+    hreduce hε
 
 /-- **The hiding theorem for leanSeal in the paper's game, at every parameter set it accepts**:
 `cappedHidingAdvantage_byteScheme_le` under `Valid b n m`, with no encryption budget. -/
