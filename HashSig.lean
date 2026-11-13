@@ -1,5 +1,9 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import HashSig.GXMSS.Interval.PRFDerivedScheme
+public import HashSig.GXMSS.PRFDerived.Query
+public import HashSig.GXMSS.PRFDerived.Retry
+public import HashSig.GXMSS.PRFDerivedScheme
 public import HashSig.SLHDSA.Address
 public import HashSig.SLHDSA.AddressDiscipline
 public import HashSig.SLHDSA.C13.Concrete
