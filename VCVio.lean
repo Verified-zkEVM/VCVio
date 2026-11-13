@@ -150,6 +150,14 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.ToFinalV
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.ToFinalValidity.Core
 public import VCVio.CryptoFoundations.HashCommitment
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
+public import VCVio.CryptoFoundations.IncomparableEncoding
+public import VCVio.CryptoFoundations.IncomparableEncoding.Basic
+public import VCVio.CryptoFoundations.IncomparableEncoding.Code
+public import VCVio.CryptoFoundations.IncomparableEncoding.Error
+public import VCVio.CryptoFoundations.IncomparableEncoding.NonMaximum
+public import VCVio.CryptoFoundations.IncomparableEncoding.Retry
+public import VCVio.CryptoFoundations.IncomparableEncoding.Retry.Basic
+public import VCVio.CryptoFoundations.IncomparableEncoding.Retry.Measure
 public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.LeftOrRight
 public import VCVio.CryptoFoundations.MacAlg
