@@ -340,9 +340,95 @@ variable {spec : QuantumOracleSpec.{u₁, v₁}} {L : LocalSig.{u, v}} (I : L.In
   (hU : ∀ i r, (s₀ i).branch r = MatrixMap.conj (U i r))
   (hW : ∀ i r, (s₁ i).branch r = MatrixMap.conj (W i r))
   {P V : Matrix D D ℂ} (hP : (1 - Pᴴ * P).PosSemidef) (hV : Vᴴ * V = 1)
-include hU hW hP hV
 
-omit hU hW in
+private theorem conj_one_kronecker_kronecker (ρ : Matrix A A ℂ) {σ : Matrix D D ℂ}
+    (hVσ : MatrixMap.conj V σ = σ) :
+    MatrixMap.conj ((1 : Matrix A A ℂ) ⊗ₖ V) (ρ ⊗ₖ σ) = ρ ⊗ₖ σ := by
+  rw [MatrixMap.conj_apply] at hVσ ⊢
+  rw [conjTranspose_kronecker, conjTranspose_one, ← mul_kronecker_mul, ← mul_kronecker_mul,
+    Matrix.one_mul, Matrix.mul_one, hVσ]
+
+section
+
+include hV
+
+/-- The observable of a set of leaves, rotated by `1 ⊗ V`. -/
+private theorem tsum_indicator_eq_isometry {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
+    [DecidablePred (· ∈ s)] (B : ∀ p : Σ u, X u, Matrix (p.1 × D) (p.1 × D) ℂ) :
+    ∑' p, ENNReal.ofReal (B p).trace.re * s.indicator 1 (f p) =
+      ∑' p, ENNReal.ofReal (MatrixMap.conj
+        (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0) (B p)).trace.re := by
+  refine tsum_congr fun p ↦ ?_
+  by_cases h : f p ∈ s
+  · simp only [h, ↓reduceIte, Set.indicator_of_mem h, Pi.one_apply, mul_one]
+    rw [MatrixMap.isTP_conj (Matrix.conjTranspose_one_kronecker_mul_self hV) _]
+  · simp [h]
+
+private theorem tsum_indicator_eq_coisometry {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
+    [DecidablePred (· ∈ s)] (B : ∀ p : Σ u, X u, Matrix (p.1 × D) (p.1 × D) ℂ) :
+    ∑' p, ENNReal.ofReal (B p).trace.re * s.indicator 1 (f p) =
+      ∑' p, ENNReal.ofReal (MatrixMap.conj
+        ((if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0) *
+          ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ Vᴴ)) (B p)).trace.re := by
+  have hV' : V * Vᴴ = 1 := _root_.mul_eq_one_comm.mp hV
+  refine tsum_congr fun p ↦ ?_
+  by_cases h : f p ∈ s
+  · simp [h, one_kronecker_mul_one_kronecker, hV']
+  · simp [h]
+
+private theorem posSemidef_one_sub_indicator_isometry {γ : Type*} (f : (Σ u, X u) → γ)
+    (s : Set γ) [DecidablePred (· ∈ s)] (p : Σ u, X u) :
+    (1 - (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0)ᴴ *
+      (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0)).PosSemidef := by
+  by_cases h : f p ∈ s
+  · simp only [h, ↓reduceIte]
+    rw [Matrix.conjTranspose_one_kronecker_mul_self hV, sub_self]
+    exact Matrix.PosSemidef.zero
+  · simp [h, Matrix.PosSemidef.one]
+
+open scoped Matrix.Norms.L2Operator
+
+private theorem krausWeight_lemmaKraus_le (hPV : P * V = V * P) (i : spec.Port)
+    {τ : Matrix (spec.In i × D) (spec.In i × D) ℂ} (hτ : τ.PosSemidef) :
+    krausWeight (lemmaKraus P V U W) i τ ≤
+      (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) * ENNReal.ofReal τ.trace.re := by
+  refine (krausWeight_le _ i hτ).trans_eq ?_
+  simp only [l2_opNorm_lemmaKraus hV hPV]
+
+/-- The Kraus weights of `lemmaKraus P V U W` on the calls of a run, under condition 3, by the
+masses of the classical ports of that run. -/
+private theorem tsum_rpow_queryWeight_lemmaKraus_le_mass (hPV : P * V = V * P)
+    (x : QuantumComp L spec X A) (ρ : SubState A) :
+    ∑' j, (QuantumRuntime.mk D σ₀ s₀).queryWeight I (krausWeight (lemmaKraus P V U W)) x
+        (ρ.matrix ⊗ₖ σ₀.matrix) j ^ (2⁻¹ : ℝ) ≤
+      ∑' j, (∑' i, (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) *
+        (QuantumRuntime.mk D σ₀ s₀).queryMassAt I x (ρ.matrix ⊗ₖ σ₀.matrix) i j) ^
+          (2⁻¹ : ℝ) :=
+  ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
+    ((QuantumRuntime.mk D σ₀ s₀).queryWeight_le_tsum_mul_queryMassAt I _
+      (fun i _ hτ ↦ krausWeight_lemmaKraus_le hV hPV i hτ) x (ρ.prod σ₀).posSemidef j)
+    (by norm_num)
+
+/-- The Kraus weights of `lemmaKraus P V U W` on the calls of a run within a query budget, under
+condition 3, by the total masses of the classical ports of that run. -/
+private theorem tsum_rpow_queryWeight_lemmaKraus_le_of_isQueryBound (hPV : P * V = V * P)
+    {x : QuantumComp L spec X A} {b : spec.Port → ℕ} (hx : x.IsQueryBound b)
+    (t : Finset spec.Port) (ht : ∀ i ∉ t, b i = 0) (ρ : SubState A) :
+    ∑' j, (QuantumRuntime.mk D σ₀ s₀).queryWeight I (krausWeight (lemmaKraus P V U W)) x
+        (ρ.matrix ⊗ₖ σ₀.matrix) j ^ (2⁻¹ : ℝ) ≤
+      (((∑ i ∈ t, b i : ℕ) : ℝ≥0∞) *
+        ∑' i, (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) *
+          (QuantumRuntime.mk D σ₀ s₀).queryMass I x (ρ.matrix ⊗ₖ σ₀.matrix) i) ^
+        (2⁻¹ : ℝ) := by
+  refine (tsum_rpow_inv_two_queryWeight_le_of_isQueryBound I _ hx t ht _).trans ?_
+  gcongr
+  exact (QuantumRuntime.mk D σ₀ s₀).tsum_queryWeight_le_tsum_mul_queryMass I _
+    (fun i _ hτ ↦ krausWeight_lemmaKraus_le hV hPV i hτ) x (ρ.prod σ₀).posSemidef
+
+end
+
+include hP hV
+
 /-- The three identities that reduce the bound to the core bound for the rotated compressed
 first runtime and the compressed second runtime. -/
 private theorem inImage_reduce (x : QuantumComp L spec X A) {ρ : Matrix (A × D) (A × D) ℂ}
@@ -398,6 +484,8 @@ private theorem inImage_reduce (x : QuantumComp L spec X A) {ρ : Matrix (A × D
     rw [← LinearMap.comp_apply, ← MatrixMap.conj_mul, Matrix.sub_mul,
       Matrix.mul_assoc _ ((1 : Matrix (spec.In i) (spec.In i) ℂ) ⊗ₖ Vᴴ),
       hVV (spec.In i), Matrix.mul_one]
+
+include hU hW
 
 /-- **The square-root hybrid bound with a projector and an isometry** (ePrint 2025/2166,
 Lemma 5.7, for general programs). Let the steps of two runtimes on the register `D` be the Kraus
@@ -467,51 +555,6 @@ theorem rpow_inv_two_tsum_trace_conj_run_le_of_inImage' (x : QuantumComp L spec 
 
 /-! ## Events -/
 
-omit hU hW hP in
-/-- The observable of a set of leaves, rotated by `1 ⊗ V`. -/
-private theorem tsum_indicator_eq_isometry {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
-    [DecidablePred (· ∈ s)] (B : ∀ p : Σ u, X u, Matrix (p.1 × D) (p.1 × D) ℂ) :
-    ∑' p, ENNReal.ofReal (B p).trace.re * s.indicator 1 (f p) =
-      ∑' p, ENNReal.ofReal (MatrixMap.conj
-        (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0) (B p)).trace.re := by
-  refine tsum_congr fun p ↦ ?_
-  by_cases h : f p ∈ s
-  · simp only [h, ↓reduceIte, Set.indicator_of_mem h, Pi.one_apply, mul_one]
-    rw [MatrixMap.isTP_conj (Matrix.conjTranspose_one_kronecker_mul_self hV) _]
-  · simp [h]
-
-omit hU hW hP in
-private theorem tsum_indicator_eq_coisometry {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
-    [DecidablePred (· ∈ s)] (B : ∀ p : Σ u, X u, Matrix (p.1 × D) (p.1 × D) ℂ) :
-    ∑' p, ENNReal.ofReal (B p).trace.re * s.indicator 1 (f p) =
-      ∑' p, ENNReal.ofReal (MatrixMap.conj
-        ((if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0) *
-          ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ Vᴴ)) (B p)).trace.re := by
-  have hV' : V * Vᴴ = 1 := _root_.mul_eq_one_comm.mp hV
-  refine tsum_congr fun p ↦ ?_
-  by_cases h : f p ∈ s
-  · simp [h, one_kronecker_mul_one_kronecker, hV']
-  · simp [h]
-
-omit hU hW hP in
-private theorem posSemidef_one_sub_indicator_isometry {γ : Type*} (f : (Σ u, X u) → γ)
-    (s : Set γ) [DecidablePred (· ∈ s)] (p : Σ u, X u) :
-    (1 - (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0)ᴴ *
-      (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0)).PosSemidef := by
-  by_cases h : f p ∈ s
-  · simp only [h, ↓reduceIte]
-    rw [Matrix.conjTranspose_one_kronecker_mul_self hV, sub_self]
-    exact Matrix.PosSemidef.zero
-  · simp [h, Matrix.PosSemidef.one]
-
-omit hU hW hP hV in
-private theorem conj_one_kronecker_kronecker (ρ : Matrix A A ℂ) {σ : Matrix D D ℂ}
-    (hVσ : MatrixMap.conj V σ = σ) :
-    MatrixMap.conj ((1 : Matrix A A ℂ) ⊗ₖ V) (ρ ⊗ₖ σ) = ρ ⊗ₖ σ := by
-  rw [MatrixMap.conj_apply] at hVσ ⊢
-  rw [conjTranspose_kronecker, conjTranspose_one, ← mul_kronecker_mul, ← mul_kronecker_mul,
-    Matrix.one_mul, Matrix.mul_one, hVσ]
-
 /-- **The square-root hybrid bound with a projector and an isometry, for events** (ePrint
 2025/2166, Lemma 5.7, for general programs). Two runtimes with the same register and initial
 state `σ₀`, invariant under `V` (condition 2), and steps the Kraus maps of `U i r` and `W i r`,
@@ -566,46 +609,6 @@ theorem rpow_inv_two_outcomeLawWith_le_of_inImage' {γ : Type*} [MeasurableSpace
     (conj_one_kronecker_kronecker _ hVσ) h₀ h₁
 
 open scoped Matrix.Norms.L2Operator
-
-omit hU hW hP in
-private theorem krausWeight_lemmaKraus_le (hPV : P * V = V * P) (i : spec.Port)
-    {τ : Matrix (spec.In i × D) (spec.In i × D) ℂ} (hτ : τ.PosSemidef) :
-    krausWeight (lemmaKraus P V U W) i τ ≤
-      (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) * ENNReal.ofReal τ.trace.re := by
-  refine (krausWeight_le _ i hτ).trans_eq ?_
-  simp only [l2_opNorm_lemmaKraus hV hPV]
-
-omit hU hW hP in
-/-- The Kraus weights of `lemmaKraus P V U W` on the calls of a run, under condition 3, by the
-masses of the classical ports of that run. -/
-private theorem tsum_rpow_queryWeight_lemmaKraus_le_mass (hPV : P * V = V * P)
-    (x : QuantumComp L spec X A) (ρ : SubState A) :
-    ∑' j, (QuantumRuntime.mk D σ₀ s₀).queryWeight I (krausWeight (lemmaKraus P V U W)) x
-        (ρ.matrix ⊗ₖ σ₀.matrix) j ^ (2⁻¹ : ℝ) ≤
-      ∑' j, (∑' i, (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) *
-        (QuantumRuntime.mk D σ₀ s₀).queryMassAt I x (ρ.matrix ⊗ₖ σ₀.matrix) i j) ^
-          (2⁻¹ : ℝ) :=
-  ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
-    ((QuantumRuntime.mk D σ₀ s₀).queryWeight_le_tsum_mul_queryMassAt I _
-      (fun i _ hτ ↦ krausWeight_lemmaKraus_le hV hPV i hτ) x (ρ.prod σ₀).posSemidef j)
-    (by norm_num)
-
-omit hU hW hP in
-/-- The Kraus weights of `lemmaKraus P V U W` on the calls of a run within a query budget, under
-condition 3, by the total masses of the classical ports of that run. -/
-private theorem tsum_rpow_queryWeight_lemmaKraus_le_of_isQueryBound (hPV : P * V = V * P)
-    {x : QuantumComp L spec X A} {b : spec.Port → ℕ} (hx : x.IsQueryBound b)
-    (t : Finset spec.Port) (ht : ∀ i ∉ t, b i = 0) (ρ : SubState A) :
-    ∑' j, (QuantumRuntime.mk D σ₀ s₀).queryWeight I (krausWeight (lemmaKraus P V U W)) x
-        (ρ.matrix ⊗ₖ σ₀.matrix) j ^ (2⁻¹ : ℝ) ≤
-      (((∑ i ∈ t, b i : ℕ) : ℝ≥0∞) *
-        ∑' i, (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) *
-          (QuantumRuntime.mk D σ₀ s₀).queryMass I x (ρ.matrix ⊗ₖ σ₀.matrix) i) ^
-        (2⁻¹ : ℝ) := by
-  refine (tsum_rpow_inv_two_queryWeight_le_of_isQueryBound I _ hx t ht _).trans ?_
-  gcongr
-  exact (QuantumRuntime.mk D σ₀ s₀).tsum_queryWeight_le_tsum_mul_queryMass I _
-    (fun i _ hτ ↦ krausWeight_lemmaKraus_le hV hPV i hτ) x (ρ.prod σ₀).posSemidef
 
 /-- **ePrint 2025/2166, Lemma 5.7, with the masses of the classical ports**, for general
 programs: under conditions 1 to 3, the square root of the probability of an event against the

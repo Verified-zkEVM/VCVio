@@ -234,7 +234,16 @@ end sizeInvariant
 
 section blocks
 
-variable {ι XY Tc Z Env DB : Type*} [DecidableEq ι]
+variable {ι XY Tc Z Env DB : Type*}
+
+/-- A tuple is determined by its `i`-th entry and the other entries. -/
+theorem eq_iff_apply_eq_and_restrict_eq (i : ι) {d d' : ι → DB} :
+    d = d' ↔ d i = d' i ∧ (fun j : {j // j ≠ i} ↦ d j.1) = fun j ↦ d' j.1 := by
+  classical
+  rw [← (Equiv.funSplitAt i DB).injective.eq_iff, Equiv.funSplitAt_apply, Equiv.funSplitAt_apply,
+    Prod.mk.injEq]
+
+variable [DecidableEq ι]
 
 /-- The regrouping of the output of a P2 adversary and the tuple of databases into a block
 register and a block index: the block register holds the oracle query register, the database
@@ -259,14 +268,6 @@ def comSplit (i : ι) :
 theorem comSplit_apply (i : ι) (xy : XY) (tc : Tc) (z : Z) (env : Env) (d : ι → DB) :
     comSplit i (((xy, (tc, z)), env), d) = (((xy, d i), (z, env)), (tc, fun j ↦ d j.1)) :=
   rfl
-
-omit [DecidableEq ι] in
-/-- A tuple is determined by its `i`-th entry and the other entries. -/
-theorem eq_iff_apply_eq_and_restrict_eq (i : ι) {d d' : ι → DB} :
-    d = d' ↔ d i = d' i ∧ (fun j : {j // j ≠ i} ↦ d j.1) = fun j ↦ d' j.1 := by
-  classical
-  rw [← (Equiv.funSplitAt i DB).injective.eq_iff, Equiv.funSplitAt_apply, Equiv.funSplitAt_apply,
-    Prod.mk.injEq]
 
 /-- Replacing the `i`-th entry of a tuple split at `i`. -/
 theorem update_funSplitAt_symm (i : ι) (D D' : DB) (f : {j // j ≠ i} → DB) :
@@ -352,25 +353,8 @@ end blocks
 
 section blockAlgebra
 
-variable {X Y W : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
-  [Fintype W] [DecidableEq W]
+variable {X Y W : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
 
-/-- The compressed oracle raises the number of nonempty cells by at most one:
-`cO P_size^(t) = P_size^(t+1) cO P_size^(t)`. -/
-theorem compressedOracle_mul_sizeProjector (t : ℕ) :
-    compressedOracle X Y * sizeProjector X Y t =
-      sizeProjector X Y (t + 1) * compressedOracle X Y * sizeProjector X Y t := by
-  ext a b
-  simp only [sizeProjector, mul_diagonal, diagonal_mul]
-  by_cases hb : b.2.size ≤ t
-  · by_cases h : compressedOracle X Y a b = 0
-    · simp [h]
-    · have ha : a.2.size ≤ t + 1 :=
-        (size_le_of_compressedOracle_apply_ne_zero h).trans (Nat.add_le_add_right hb 1)
-      simp [ha, hb]
-  · simp [hb]
-
-omit [AddCommGroup Y] in
 /-- `P_size^(t+1) P_size^(t) = P_size^(t)`. -/
 theorem sizeProjector_succ_mul_sizeProjector (t : ℕ) :
     sizeProjector X Y (t + 1) * sizeProjector X Y t = sizeProjector X Y t := by
@@ -381,10 +365,9 @@ theorem sizeProjector_succ_mul_sizeProjector (t : ℕ) :
   · simp [h, Nat.le_succ_of_le h]
   · simp [h]
 
-omit [AddCommGroup Y] in
 /-- A purified measurement of a label of the database commutes with `P_size^(s) ⊗ 1`. -/
-theorem labelControlled_mul_sizeProjector_kronecker {ι : Type*} (π : Database X Y → ι)
-    (U : ι → Matrix W W ℂ) (s : ℕ) :
+theorem labelControlled_mul_sizeProjector_kronecker [Fintype W] [DecidableEq W] {ι : Type*}
+    (π : Database X Y → ι) (U : ι → Matrix W W ℂ) (s : ℕ) :
     labelControlled (fun a : ((X × Y) × Database X Y) × W ↦ π a.1.2)
           (fun l ↦ (1 : Matrix ((X × Y) × Database X Y) ((X × Y) × Database X Y) ℂ)
             ⊗ₖ U l) *
@@ -404,6 +387,23 @@ theorem labelControlled_mul_sizeProjector_kronecker {ι : Type*} (π : Database 
     simp only [↓reduceIte]
     ring
   · simp [hab]
+
+variable [AddCommGroup Y] [Fintype W] [DecidableEq W]
+
+/-- The compressed oracle raises the number of nonempty cells by at most one:
+`cO P_size^(t) = P_size^(t+1) cO P_size^(t)`. -/
+theorem compressedOracle_mul_sizeProjector (t : ℕ) :
+    compressedOracle X Y * sizeProjector X Y t =
+      sizeProjector X Y (t + 1) * compressedOracle X Y * sizeProjector X Y t := by
+  ext a b
+  simp only [sizeProjector, mul_diagonal, diagonal_mul]
+  by_cases hb : b.2.size ≤ t
+  · by_cases h : compressedOracle X Y a b = 0
+    · simp [h]
+    · have ha : a.2.size ≤ t + 1 :=
+        (size_le_of_compressedOracle_apply_ne_zero h).trans (Nat.add_le_add_right hb 1)
+      simp [ha, hb]
+  · simp [hb]
 
 /-- **The truncation step on one block.** If `L` commutes with `P_size^(t) ⊗ 1`, then on the
 range of `P_size^(t) ⊗ 1` the commutator of `L` with `cO ⊗ 1` is its commutator with
@@ -541,7 +541,20 @@ end error
 section readBlocks
 
 variable {k : ℕ} {X Y : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
-  [AddCommGroup Y]
+
+private theorem controlled_read_defect_apply {ι E : Type*} [Fintype E] [DecidableEq E]
+    (π : Database X Y → ι) (U : ι → Matrix E E ℂ) (x : X) (a : Option Y)
+    (d d' : Database X Y) (e e' : E) :
+    let T := labelControlled (fun p : Database X Y × E ↦ π p.1)
+      (fun l ↦ (1 : Matrix (Database X Y) (Database X Y) ℂ) ⊗ₖ U l)
+    ((checkedReadProjector x a ⊗ₖ (1 : Matrix E E ℂ)) * T -
+      T * (checkedReadProjector x a ⊗ₖ (1 : Matrix E E ℂ))) (d, e) (d', e') =
+      checkedReadProjector x a d d' * (U (π d') e e' - U (π d) e e') := by
+  dsimp only
+  simp [Matrix.sub_apply, Matrix.mul_apply, Fintype.sum_prod_type, labelControlled_apply,
+    kroneckerMap_apply, Matrix.one_apply, mul_comm, sub_mul]
+
+variable [AddCommGroup Y]
 
 private theorem compressedReadProjector_apply_split (i : Fin k) (x : X) (a : Option Y)
     (D D' : Fin k → Database X Y) :
@@ -707,19 +720,6 @@ private theorem readSplit_extract {Tc Z E : Type*}
       by_cases hi : D i = D' i
     · exact absurd ⟨hi, hr⟩ h
     all_goals simp [hdd, hr, hi]
-
-omit [AddCommGroup Y] in
-private theorem controlled_read_defect_apply {ι E : Type*} [Fintype E] [DecidableEq E]
-    (π : Database X Y → ι) (U : ι → Matrix E E ℂ) (x : X) (a : Option Y)
-    (d d' : Database X Y) (e e' : E) :
-    let T := labelControlled (fun p : Database X Y × E ↦ π p.1)
-      (fun l ↦ (1 : Matrix (Database X Y) (Database X Y) ℂ) ⊗ₖ U l)
-    ((checkedReadProjector x a ⊗ₖ (1 : Matrix E E ℂ)) * T -
-      T * (checkedReadProjector x a ⊗ₖ (1 : Matrix E E ℂ))) (d, e) (d', e') =
-      checkedReadProjector x a d d' * (U (π d') e e' - U (π d) e e') := by
-  dsimp only
-  simp [Matrix.sub_apply, Matrix.mul_apply, Fintype.sum_prod_type, labelControlled_apply,
-    kroneckerMap_apply, Matrix.one_apply, mul_comm, sub_mul]
 
 end readBlocks
 

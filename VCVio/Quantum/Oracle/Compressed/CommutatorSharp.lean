@@ -214,9 +214,8 @@ end cell
 
 section approx
 
-variable {X Y : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
+variable {X Y : Type*} [Fintype X] [DecidableEq X]
 
-omit [Fintype Y] [DecidableEq Y] [AddCommGroup Y] in
 /-- A database with a filled cell `x` has one more nonempty cell than after emptying `x`. -/
 theorem Database.size_eq_size_update_none_add_one {D : Database X Y} {x : X} {u : Y}
     (h : D x = some u) : D.size = Database.size (Function.update D x none) + 1 := by
@@ -224,6 +223,8 @@ theorem Database.size_eq_size_update_none_add_one {D : Database X Y} {x : X} {u 
     rw [Function.update_idem, ← h, Function.update_eq_self]
   conv_lhs => rw [← e]
   exact Database.size_update_some_of_eq_none (Function.update_self x none D) u
+
+variable [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
 
 /-- The entries of `O_ph^(t)` minus the phase diagonal inside a block of size below `t`. -/
 theorem truncatedPhaseOracle_sub_phaseDiagonal_apply {t : ℕ} (x : X) (χ : AddChar Y ℂ)
@@ -361,7 +362,7 @@ theorem eq_of_truncatedPhaseOracle_ne_zero {t : ℕ} {m' m : (X × AddChar Y ℂ
     exact h (by simp [hlt])
   rw [hnone D' hupd hD', hnone D rfl hD]
 
-variable {ι : Type*} [DecidableEq ι]
+variable {ι : Type*}
 
 /-- The bad basis states of the phase basis for `π` and `t`: a nontrivial character, a block of
 size below `t`, and a content of the queried cell that changes the label. -/
@@ -377,7 +378,6 @@ private noncomputable def badProjector (π : Database X Y → ι) (t : ℕ) :
     Matrix ((X × AddChar Y ℂ) × Database X Y) ((X × AddChar Y ℂ) × Database X Y) ℂ :=
   diagonal fun m ↦ if IsBad π t m then 1 else 0
 
-omit [DecidableEq ι] in
 private theorem isStarProjection_badProjector (π : Database X Y → ι) (t : ℕ) :
     IsStarProjection (badProjector π t) := by
   refine ⟨?_, ?_⟩
@@ -390,7 +390,6 @@ private theorem isStarProjection_badProjector (π : Database X Y → ι) (t : �
     funext m
     by_cases h : IsBad π t m <;> simp [h]
 
-omit [DecidableEq ι] in
 private theorem badProjector_mul_apply (π : Database X Y → ι) (t : ℕ)
     (A : Matrix ((X × AddChar Y ℂ) × Database X Y) ((X × AddChar Y ℂ) × Database X Y) ℂ)
     (i j : (X × AddChar Y ℂ) × Database X Y) :
@@ -398,7 +397,6 @@ private theorem badProjector_mul_apply (π : Database X Y → ι) (t : ℕ)
   rw [badProjector, diagonal_mul]
   split_ifs <;> simp
 
-omit [DecidableEq ι] in
 private theorem mul_badProjector_apply (π : Database X Y → ι) (t : ℕ)
     (A : Matrix ((X × AddChar Y ℂ) × Database X Y) ((X × AddChar Y ℂ) × Database X Y) ℂ)
     (i j : (X × AddChar Y ℂ) × Database X Y) :
@@ -494,9 +492,8 @@ end labelChangingRows
 section approxInstability
 
 variable {X Y : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
-  {ι : Type*} [DecidableEq ι]
+  {ι : Type*}
 
-omit [DecidableEq ι] in
 /-- The bad rows of a block-diagonal matrix whose bad rows have squared norm at most `6 / N`
 span an operator of norm at most `√(6 I)`. -/
 private theorem l2_opNorm_badProjector_mul_le [UniformAnswerMeasure (X →ₒ Y)]
@@ -522,7 +519,8 @@ private theorem l2_opNorm_badProjector_mul_le [UniformAnswerMeasure (X →ₒ Y)
 
 /-- **The label-preserving approximation, phase basis.** There is an operator `S` that preserves
 the label `π D` of the database with `‖O_ph^(t) - S‖² ≤ 6 I(π, t)`. -/
-theorem exists_pinch_eq_truncatedPhaseOracle_sub_sq_le [UniformAnswerMeasure (X →ₒ Y)]
+theorem exists_pinch_eq_truncatedPhaseOracle_sub_sq_le [DecidableEq ι]
+    [UniformAnswerMeasure (X →ₒ Y)]
     (π : Database X Y → ι) (t : ℕ) :
     ∃ S, pinch (fun m : (X × AddChar Y ℂ) × Database X Y ↦ π m.2) S = S ∧
       ‖truncatedPhaseOracle X Y t - S‖ ^ 2 ≤ 6 * (Database.instability π t).toReal := by
@@ -591,7 +589,8 @@ theorem exists_pinch_eq_truncatedPhaseOracle_sub_sq_le [UniformAnswerMeasure (X 
 preserves the label `π D` of the database with `‖O^(t) - S‖² ≤ 6 I(π, t)`. For the pinching of
 `O^(t)` the constant is `20` in [CDHZ, Lemma 5.9]
 (`Quantum.l2_opNorm_pinch_truncatedOracle_sub_sq_le`) and `8` at best. -/
-theorem exists_pinch_eq_truncatedOracle_sub_sq_le [UniformAnswerMeasure (X →ₒ Y)]
+theorem exists_pinch_eq_truncatedOracle_sub_sq_le [DecidableEq ι]
+    [UniformAnswerMeasure (X →ₒ Y)]
     (π : Database X Y → ι) (t : ℕ) :
     ∃ S, pinch (fun m : (X × Y) × Database X Y ↦ π m.2) S = S ∧
       ‖truncatedOracle X Y t - S‖ ^ 2 ≤ 6 * (Database.instability π t).toReal := by

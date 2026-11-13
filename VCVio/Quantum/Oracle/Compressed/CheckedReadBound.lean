@@ -24,18 +24,46 @@ open scoped ComplexConjugate Matrix.Norms.L2Operator Kronecker
 
 namespace Quantum
 
-variable {Y : Type*} [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
+variable {Y : Type*}
+
+section answerChar
+
+variable [AddCommGroup Y]
+
+/-- Restriction of a response-pair character to the answer coordinate. -/
+def checkedReadAnswerChar (χ : AddChar (Y × ZMod 2) ℂ) : AddChar Y ℂ :=
+  χ.compAddMonoidHom (AddMonoidHom.inl Y (ZMod 2))
+
+/-- The validity-coordinate character is a sign, including for a trivial answer character. -/
+theorem checkedReadChar_sign (χ : AddChar (Y × ZMod 2) ℂ) :
+    χ (0, 1) = 1 ∨ χ (0, 1) = -1 := by
+  apply mul_self_eq_one_iff.mp
+  rw [← AddChar.map_add_eq_mul]
+  have he : ((0, 1) + (0, 1) : Y × ZMod 2) = 0 := by
+    apply Prod.ext
+    · simp
+    · change (1 : ZMod 2) + 1 = 0
+      decide
+  rw [he, AddChar.map_zero_eq_one]
+
+/-- The filled phase separates into an answer character and a validity sign. -/
+theorem checkedReadChar_value (χ : AddChar (Y × ZMod 2) ℂ) (a : Option Y) :
+    χ (checkedReadValue a) = a.elim 1 (fun y ↦ χ (0, 1) * checkedReadAnswerChar χ y) := by
+  cases a with
+  | none => exact χ.map_zero_eq_one
+  | some y =>
+    change χ (y, 1) = χ (0, 1) * χ (y, 0)
+    rw [← AddChar.map_add_eq_mul]
+    simp
+
+end answerChar
+
+variable [Fintype Y] [DecidableEq Y]
 
 /-- The compressed empty-sector projector on one cell. -/
 noncomputable def checkedReadEmptyCell : Matrix (Option Y) (Option Y) ℂ :=
   cellCompress Y * diagonal (fun a ↦ if a = none then 1 else 0) * cellCompress Y
 
-/-- The signed character block of the read dilation. -/
-noncomputable def checkedReadPhaseCell (χ : AddChar Y ℂ) (ε : ℂ) :
-    Matrix (Option Y) (Option Y) ℂ :=
-  ε • phaseCell Y χ + (1 - ε) • checkedReadEmptyCell
-
-omit [AddCommGroup Y] in
 /-- The compressed empty projector is the filled uniform projector. -/
 theorem checkedReadEmptyCell_apply (a b : Option Y) :
     checkedReadEmptyCell a b = cellUniform Y a * cellUniform Y b := by
@@ -46,6 +74,13 @@ theorem checkedReadEmptyCell_apply (a b : Option Y) :
   · intro c _ hc
     simp [hc]
   · simp
+
+variable [AddCommGroup Y]
+
+/-- The signed character block of the read dilation. -/
+noncomputable def checkedReadPhaseCell (χ : AddChar Y ℂ) (ε : ℂ) :
+    Matrix (Option Y) (Option Y) ℂ :=
+  ε • phaseCell Y χ + (1 - ε) • checkedReadEmptyCell
 
 /-- The signed block is the compression of the diagonal phases `1, ε χ(y)`. -/
 theorem checkedReadPhaseCell_eq (χ : AddChar Y ℂ) (ε : ℂ) :
@@ -265,34 +300,6 @@ theorem checkedReadFourier_conj_translation (f : Option Y → Y × ZMod 2) :
   rw [← Matrix.mul_assoc (checkedReadFourier (X := X) (Y := Y)),
     checkedReadFourier_mul_conjTranspose, Matrix.one_mul]
 
-/-- Restriction of a response-pair character to the answer coordinate. -/
-def checkedReadAnswerChar (χ : AddChar (Y × ZMod 2) ℂ) : AddChar Y ℂ :=
-  χ.compAddMonoidHom (AddMonoidHom.inl Y (ZMod 2))
-
-omit [Fintype Y] [DecidableEq Y] in
-/-- The validity-coordinate character is a sign, including for a trivial answer character. -/
-theorem checkedReadChar_sign (χ : AddChar (Y × ZMod 2) ℂ) :
-    χ (0, 1) = 1 ∨ χ (0, 1) = -1 := by
-  apply mul_self_eq_one_iff.mp
-  rw [← AddChar.map_add_eq_mul]
-  have he : ((0, 1) + (0, 1) : Y × ZMod 2) = 0 := by
-    apply Prod.ext
-    · simp
-    · change (1 : ZMod 2) + 1 = 0
-      decide
-  rw [he, AddChar.map_zero_eq_one]
-
-omit [Fintype Y] [DecidableEq Y] in
-/-- The filled phase separates into an answer character and a validity sign. -/
-theorem checkedReadChar_value (χ : AddChar (Y × ZMod 2) ℂ) (a : Option Y) :
-    χ (checkedReadValue a) = a.elim 1 (fun y ↦ χ (0, 1) * checkedReadAnswerChar χ y) := by
-  cases a with
-  | none => exact χ.map_zero_eq_one
-  | some y =>
-    change χ (y, 1) = χ (0, 1) * χ (y, 0)
-    rw [← AddChar.map_add_eq_mul]
-    simp
-
 /-- Fourier entries of a compressed response translation act on only the queried cell. -/
 theorem checkedReadFourier_conj_translation_apply (f : Option Y → Y × ZMod 2)
     (x' : X) (χ' : AddChar (Y × ZMod 2) ℂ)
@@ -352,11 +359,75 @@ theorem checkedReadFourier_conj_apply (x' : X) (χ' : AddChar (Y × ZMod 2) ℂ)
 
 end fourier
 
+section cellTruncation
+
+variable {X Y : Type} [Fintype X] [DecidableEq X] [DecidableEq Y]
+variable {Q : Type*} [DecidableEq Q]
+
+/-- A population-truncated operator that acts on one cell in each response block. -/
+noncomputable def readCellTruncation
+    (K : Q → Matrix (Option Y) (Option Y) ℂ) (t : ℕ) :
+    Matrix ((X × Q) × Database X Y) ((X × Q) × Database X Y) ℂ :=
+  fun i j ↦ if i.2.size ≤ t ∧ j.2.size ≤ t ∧ i.1 = j.1 ∧
+    ∀ z ≠ j.1.1, i.2 z = j.2 z then K j.1.2 (i.2 j.1.1) (j.2 j.1.1) else 0
+
+private theorem readCellTruncation_block (K : Q → Matrix (Option Y) (Option Y) ℂ) (t : ℕ)
+    {i j : (X × Q) × Database X Y} (h : readCellTruncation K t i j ≠ 0) :
+    (i.1, Function.update i.2 i.1.1 none) = (j.1, Function.update j.2 j.1.1 none) := by
+  dsimp only [readCellTruncation] at h
+  split_ifs at h with hc
+  · refine Prod.ext ?_ ?_
+    · exact hc.2.2.1
+    rw [hc.2.2.1]
+    funext z
+    by_cases hz : z = j.1.1
+    · simp [hz]
+    · simp [Function.update_of_ne hz, hc.2.2.2 z hz]
+  · exact False.elim (h rfl)
+
+private theorem readCellTruncation_inactive (K : Q → Matrix (Option Y) (Option Y) ℂ) (t : ℕ)
+    {i j : (X × Q) × Database X Y} (h : readCellTruncation K t i j ≠ 0)
+    (hs : ¬Database.size (Function.update j.2 j.1.1 none) < t) : i = j := by
+  have hb := readCellTruncation_block K t h
+  have hn : ∀ D : Database X Y,
+      Function.update D j.1.1 none = Function.update j.2 j.1.1 none →
+      D.size ≤ t → D j.1.1 = none := by
+    intro D hd ht
+    by_contra hne
+    obtain ⟨u, hu⟩ := Option.ne_none_iff_exists'.mp hne
+    have he := Database.size_eq_size_update_none_add_one hu
+    rw [hd] at he
+    omega
+  dsimp only [readCellTruncation] at h
+  split_ifs at h with hc
+  · apply Prod.ext hc.2.2.1
+    have hei : i.2 j.1.1 = none := hn i.2 (by simpa [hc.2.2.1] using congrArg Prod.snd hb) hc.1
+    have hej : j.2 j.1.1 = none := hn j.2 rfl hc.2.1
+    funext z
+    by_cases hz : z = j.1.1
+    · simp [hz, hei, hej]
+    · exact hc.2.2.2 z hz
+  · exact False.elim (h rfl)
+
+private theorem readCellTruncation_update (K : Q → Matrix (Option Y) (Option Y) ℂ)
+    {t : ℕ} (x : X) (q : Q) {r : Database X Y} (hs : r.size < t) (a b : Option Y) :
+    readCellTruncation K t ((x, q), Function.update r x a) ((x, q), Function.update r x b) =
+      K q a b := by
+  have hm : ∀ a, Database.size (Function.update r x a) ≤ t := fun a ↦
+    (Database.size_update_le r x a).trans hs
+  have he : ∀ z ≠ x, Function.update r x a z = Function.update r x b z := by
+    intro z hz
+    rw [Function.update_of_ne hz, Function.update_of_ne hz]
+  rw [readCellTruncation, ite_eq_left ⟨hm a, hm b, rfl, he⟩]
+  simp only [Function.update_self]
+
+end cellTruncation
+
 section cellBlocks
 
 variable {X Y : Type} [Fintype X] [DecidableEq X]
   [Fintype Y] [DecidableEq Y]
-variable {Q : Type*} [Fintype Q] [DecidableEq Q] {ι : Type*} [DecidableEq ι]
+variable {Q : Type*} [Fintype Q] [DecidableEq Q] {ι : Type*}
 
 /-- Basis states in a cell block are parameterized by the cell content. -/
 theorem sum_ite_checkedReadBlock {M : Type*} [AddCommMonoid M] (x : X) (q : Q)
@@ -374,7 +445,6 @@ private def ReadBad (π : Database X Y → ι) (t : ℕ) (m : (X × Q) × Databa
 private noncomputable instance (π : Database X Y → ι) (t : ℕ) :
     DecidablePred (ReadBad (Q := Q) π t) := Classical.decPred _
 
-omit [DecidableEq ι] in
 /-- The norm of the label-changing rows is controlled by the instability and a cell row bound. -/
 private theorem readBad_rows_le [OracleSpec.UniformAnswerMeasure (X →ₒ Y)]
     (π : Database X Y → ι) (t : ℕ) {c : ℝ} (hc : 0 ≤ c)
@@ -397,7 +467,7 @@ private theorem readBad_rows_le [OracleSpec.UniformAnswerMeasure (X →ₒ Y)]
   · exact ite_eq_right h
 
 /-- Symmetric cell blocks have a label-preserving approximation from their residual row bound. -/
-private theorem exists_readApprox [OracleSpec.UniformAnswerMeasure (X →ₒ Y)]
+private theorem exists_readApprox [DecidableEq ι] [OracleSpec.UniformAnswerMeasure (X →ₒ Y)]
     (π : Database X Y → ι) (t : ℕ) {c : ℝ} (hc : 0 ≤ c)
     (A : Matrix ((X × Q) × Database X Y) ((X × Q) × Database X Y) ℂ)
     (d : (X × Q) × Database X Y → ℂ)
@@ -467,69 +537,9 @@ private theorem exists_readApprox [OracleSpec.UniformAnswerMeasure (X →ₒ Y)]
       rw [hei, hej, (Prod.mk.inj hb).2]
     · exact False.elim (hne (Sum.inr_injective hij))
 
-/-- A population-truncated operator that acts on one cell in each response block. -/
-noncomputable def readCellTruncation
-    (K : Q → Matrix (Option Y) (Option Y) ℂ) (t : ℕ) :
-    Matrix ((X × Q) × Database X Y) ((X × Q) × Database X Y) ℂ :=
-  fun i j ↦ if i.2.size ≤ t ∧ j.2.size ≤ t ∧ i.1 = j.1 ∧
-    ∀ z ≠ j.1.1, i.2 z = j.2 z then K j.1.2 (i.2 j.1.1) (j.2 j.1.1) else 0
-
-omit [Fintype Y] [Fintype Q] in
-private theorem readCellTruncation_block (K : Q → Matrix (Option Y) (Option Y) ℂ) (t : ℕ)
-    {i j : (X × Q) × Database X Y} (h : readCellTruncation K t i j ≠ 0) :
-    (i.1, Function.update i.2 i.1.1 none) = (j.1, Function.update j.2 j.1.1 none) := by
-  dsimp only [readCellTruncation] at h
-  split_ifs at h with hc
-  · refine Prod.ext ?_ ?_
-    · exact hc.2.2.1
-    rw [hc.2.2.1]
-    funext z
-    by_cases hz : z = j.1.1
-    · simp [hz]
-    · simp [Function.update_of_ne hz, hc.2.2.2 z hz]
-  · exact False.elim (h rfl)
-
-omit [Fintype Y] [Fintype Q] in
-private theorem readCellTruncation_inactive (K : Q → Matrix (Option Y) (Option Y) ℂ) (t : ℕ)
-    {i j : (X × Q) × Database X Y} (h : readCellTruncation K t i j ≠ 0)
-    (hs : ¬Database.size (Function.update j.2 j.1.1 none) < t) : i = j := by
-  have hb := readCellTruncation_block K t h
-  have hn : ∀ D : Database X Y,
-      Function.update D j.1.1 none = Function.update j.2 j.1.1 none →
-      D.size ≤ t → D j.1.1 = none := by
-    intro D hd ht
-    by_contra hne
-    obtain ⟨u, hu⟩ := Option.ne_none_iff_exists'.mp hne
-    have he := Database.size_eq_size_update_none_add_one hu
-    rw [hd] at he
-    omega
-  dsimp only [readCellTruncation] at h
-  split_ifs at h with hc
-  · apply Prod.ext hc.2.2.1
-    have hei : i.2 j.1.1 = none := hn i.2 (by simpa [hc.2.2.1] using congrArg Prod.snd hb) hc.1
-    have hej : j.2 j.1.1 = none := hn j.2 rfl hc.2.1
-    funext z
-    by_cases hz : z = j.1.1
-    · simp [hz, hei, hej]
-    · exact hc.2.2.2 z hz
-  · exact False.elim (h rfl)
-
-omit [Fintype Y] [Fintype Q] in
-private theorem readCellTruncation_update (K : Q → Matrix (Option Y) (Option Y) ℂ)
-    {t : ℕ} (x : X) (q : Q) {r : Database X Y} (hs : r.size < t) (a b : Option Y) :
-    readCellTruncation K t ((x, q), Function.update r x a) ((x, q), Function.update r x b) =
-      K q a b := by
-  have hm : ∀ a, Database.size (Function.update r x a) ≤ t := fun a ↦
-    (Database.size_update_le r x a).trans hs
-  have he : ∀ z ≠ x, Function.update r x a z = Function.update r x b z := by
-    intro z hz
-    rw [Function.update_of_ne hz, Function.update_of_ne hz]
-  rw [readCellTruncation, ite_eq_left ⟨hm a, hm b, rfl, he⟩]
-  simp only [Function.update_self]
-
 /-- A symmetric cell operator with residual rows bounded by `c/N` has a global
 label-preserving approximation at squared distance at most `c I`. -/
-theorem exists_pinch_eq_readCellTruncation_sub_sq_le
+theorem exists_pinch_eq_readCellTruncation_sub_sq_le [DecidableEq ι]
     [OracleSpec.UniformAnswerMeasure (X →ₒ Y)]
     (π : Database X Y → ι) (t : ℕ) (K : Q → Matrix (Option Y) (Option Y) ℂ)
     (d : Q → Option Y → ℂ) {c : ℝ} (hc : 0 ≤ c)
@@ -588,6 +598,8 @@ theorem exists_pinch_eq_readCellTruncation_sub_sq_le
       simp
     · simp
 
+section truncated
+
 variable [AddCommGroup Y]
 
 /-- The checked-read phase operator restricted to databases of population at most `t`. -/
@@ -603,7 +615,7 @@ noncomputable def truncatedValidityPhase (t : ℕ) :
   readCellTruncation (fun χ ↦ checkedReadPhaseCell (0 : AddChar Y ℂ) (χ (0, 1))) t
 
 /-- A label-preserving approximation to the checked-read phase operator has squared error `6 I`. -/
-theorem exists_pinch_eq_truncatedCheckedReadPhase_sub_sq_le
+theorem exists_pinch_eq_truncatedCheckedReadPhase_sub_sq_le [DecidableEq ι]
     [OracleSpec.UniformAnswerMeasure (X →ₒ Y)] (π : Database X Y → ι) (t : ℕ) :
     ∃ S, pinch (fun m : (X × AddChar (Y × ZMod 2) ℂ) × Database X Y ↦ π m.2) S = S ∧
       ‖truncatedCheckedReadPhase t - S‖ ^ 2 ≤ 6 * (Database.instability π t).toReal := by
@@ -613,7 +625,7 @@ theorem exists_pinch_eq_truncatedCheckedReadPhase_sub_sq_le
   · exact fun χ u ↦ sum_norm_checkedReadPhaseCell_sub_sq_le _ (checkedReadChar_sign χ) u
 
 /-- A label-preserving approximation to validity has squared error `4 I`. -/
-theorem exists_pinch_eq_truncatedValidityPhase_sub_sq_le
+theorem exists_pinch_eq_truncatedValidityPhase_sub_sq_le [DecidableEq ι]
     [OracleSpec.UniformAnswerMeasure (X →ₒ Y)] (π : Database X Y → ι) (t : ℕ) :
     ∃ S, pinch (fun m : (X × AddChar (Y × ZMod 2) ℂ) × Database X Y ↦ π m.2) S = S ∧
       ‖truncatedValidityPhase t - S‖ ^ 2 ≤ 4 * (Database.instability π t).toReal := by
@@ -727,7 +739,7 @@ theorem truncatedValidity_eq (t : ℕ) :
   rw [truncatedValidity, truncatedValidityPhase, hK, readCellTruncation_unfourier,
     checkedReadValidity_eq]
 
-private theorem readApprox_fourier (π : Database X Y → ι)
+private theorem readApprox_fourier [DecidableEq ι] (π : Database X Y → ι)
     {A S : Matrix ((X × AddChar (Y × ZMod 2) ℂ) × Database X Y)
       ((X × AddChar (Y × ZMod 2) ℂ) × Database X Y) ℂ}
     (hS : pinch (fun m ↦ π m.2) S = S) {c : ℝ} (hc : ‖A - S‖ ^ 2 ≤ c) :
@@ -749,7 +761,7 @@ private theorem readApprox_fourier (π : Database X Y → ι)
     (checkedReadFourier_mul_conjTranspose (X := X) (Y := Y)) _) 2).trans hc
 
 /-- The complete read has a label-preserving approximation of squared error at most `6 I`. -/
-theorem exists_pinch_eq_truncatedCheckedRead_sub_sq_le
+theorem exists_pinch_eq_truncatedCheckedRead_sub_sq_le [DecidableEq ι]
     [OracleSpec.UniformAnswerMeasure (X →ₒ Y)] (π : Database X Y → ι) (t : ℕ) :
     ∃ S, pinch (fun m : (X × (Y × ZMod 2)) × Database X Y ↦ π m.2) S = S ∧
       ‖truncatedCheckedRead t - S‖ ^ 2 ≤ 6 * (Database.instability π t).toReal := by
@@ -757,14 +769,13 @@ theorem exists_pinch_eq_truncatedCheckedRead_sub_sq_le
   exact readApprox_fourier π hS hc
 
 /-- Validity has a label-preserving approximation of squared error at most `4 I`. -/
-theorem exists_pinch_eq_truncatedValidity_sub_sq_le
+theorem exists_pinch_eq_truncatedValidity_sub_sq_le [DecidableEq ι]
     [OracleSpec.UniformAnswerMeasure (X →ₒ Y)] (π : Database X Y → ι) (t : ℕ) :
     ∃ S, pinch (fun m : (X × (Y × ZMod 2)) × Database X Y ↦ π m.2) S = S ∧
       ‖truncatedValidity t - S‖ ^ 2 ≤ 4 * (Database.instability π t).toReal := by
   obtain ⟨S, hS, hc⟩ := exists_pinch_eq_truncatedValidityPhase_sub_sq_le π t
   exact readApprox_fourier π hS hc
 
-omit [DecidableEq ι] in
 /-- The truncated complete read has label-controlled squared commutator bound `24 I`. -/
 theorem l2_opNorm_commutator_checkedRead_sq_le_twentyFour_mul
     [OracleSpec.UniformAnswerMeasure (X →ₒ Y)]
@@ -786,7 +797,6 @@ theorem l2_opNorm_commutator_checkedRead_sq_le_twentyFour_mul
     _ ≤ 4 * (6 * (Database.instability π t).toReal) := by gcongr
     _ = 24 * (Database.instability π t).toReal := by ring
 
-omit [DecidableEq ι] in
 /-- The truncated validity operation has label-controlled squared commutator bound `16 I`. -/
 theorem l2_opNorm_commutator_validity_sq_le_sixteen_mul
     [OracleSpec.UniformAnswerMeasure (X →ₒ Y)]
@@ -808,6 +818,7 @@ theorem l2_opNorm_commutator_validity_sq_le_sixteen_mul
     _ ≤ 4 * (4 * (Database.instability π t).toReal) := by gcongr
     _ = 16 * (Database.instability π t).toReal := by ring
 
+end truncated
 
 open scoped ComplexOrder
 
@@ -831,6 +842,64 @@ noncomputable def checkedReadOutcomeProjector {E : Type*} [DecidableEq E]
     (a : Option Y) : Matrix (((X × (Y × ZMod 2)) × Database X Y) × E)
       (((X × (Y × ZMod 2)) × Database X Y) × E) ℂ :=
   diagonal (fun i ↦ if checkedReadOutcome i.1.1.2 = a then 1 else 0)
+
+private theorem read_controlled_commutator_apply {n E κ : Type*}
+    [Fintype n] [DecidableEq n] [Fintype E] [DecidableEq E]
+    (A : Matrix n n ℂ) (π : n → κ) (U : κ → Matrix E E ℂ)
+    (i j : n) (e f : E) :
+    (((A ⊗ₖ (1 : Matrix E E ℂ)) * labelControlled (fun a ↦ π a.1)
+      (fun k ↦ (1 : Matrix n n ℂ) ⊗ₖ U k) -
+      labelControlled (fun a ↦ π a.1) (fun k ↦ (1 : Matrix n n ℂ) ⊗ₖ U k) *
+      (A ⊗ₖ (1 : Matrix E E ℂ))) : Matrix (n × E) (n × E) ℂ) (i, e) (j, f) =
+      A i j * (U (π j) e f - U (π i) e f) := by
+  simp [Matrix.mul_apply, Fintype.sum_prod_type, labelControlled_apply,
+    kroneckerMap_apply, Matrix.one_apply, mul_sub, mul_comm]
+
+/-- A checked projector with its query address retained as a classical control. -/
+noncomputable def selectedCheckedReadProjector (a : Option Y) :
+    Matrix (X × Database X Y) (X × Database X Y) ℂ :=
+  fun i j ↦ if i.1 = j.1 then checkedReadProjector i.1 a i.2 j.2 else 0
+
+/-- Selecting an address preserves its classical control and applies its checked projector. -/
+theorem selectedCheckedReadProjector_apply (a : Option Y)
+    (i j : X × Database X Y) :
+    selectedCheckedReadProjector a i j =
+      if i.1 = j.1 then checkedReadProjector i.1 a i.2 j.2 else 0 := by
+  unfold selectedCheckedReadProjector
+  rfl
+
+/-- The defect of the checked instrument against a database-label-controlled auxiliary unitary. -/
+noncomputable def checkedReadDefect {E : Type*} [Fintype E] [DecidableEq E]
+    (π : Database X Y → ι) (U : ι → Matrix E E ℂ) (a : Option Y) :
+    Matrix ((X × Database X Y) × E) ((X × Database X Y) × E) ℂ :=
+  (selectedCheckedReadProjector a ⊗ₖ (1 : Matrix E E ℂ)) *
+    labelControlled (fun i ↦ π i.1.2)
+      (fun k ↦ (1 : Matrix (X × Database X Y) (X × Database X Y) ℂ) ⊗ₖ U k) -
+  labelControlled (fun i ↦ π i.1.2)
+      (fun k ↦ (1 : Matrix (X × Database X Y) (X × Database X Y) ℂ) ⊗ₖ U k) *
+    (selectedCheckedReadProjector a ⊗ₖ (1 : Matrix E E ℂ))
+
+private noncomputable def readInputCutoff {E : Type*} [DecidableEq E] (p : ℕ) :
+    Matrix ((X × Database X Y) × E) ((X × Database X Y) × E) ℂ :=
+  diagonal (fun i ↦ if i.1.2.size ≤ p then 1 else 0)
+
+private theorem readInputCutoff_norm_le {E : Type*} [Fintype E] [DecidableEq E] (p : ℕ) :
+    ‖readInputCutoff (X := X) (Y := Y) (E := E) p‖ ≤ 1 := by
+  rw [readInputCutoff, l2_opNorm_diagonal, pi_norm_le_iff_of_nonneg zero_le_one]
+  intro i
+  split_ifs <;> simp
+
+/-- Each defect entry is the checked projector entry times the difference of label unitaries. -/
+theorem checkedReadDefect_apply {E : Type*} [Fintype E] [DecidableEq E]
+    (π : Database X Y → ι) (U : ι → Matrix E E ℂ) (a : Option Y)
+    (i j : X × Database X Y) (e f : E) :
+    checkedReadDefect π U a (i, e) (j, f) =
+      selectedCheckedReadProjector a i j * (U (π j.2) e f - U (π i.2) e f) := by
+  unfold checkedReadDefect
+  exact read_controlled_commutator_apply (selectedCheckedReadProjector a)
+    (fun i : X × Database X Y ↦ π i.2) U i j e f
+
+variable [AddCommGroup Y]
 
 /-- The retained-outcome branch of the truncated read commutator. -/
 noncomputable def truncatedCheckedReadDefect {E : Type*} [Fintype E] [DecidableEq E]
@@ -866,7 +935,6 @@ theorem sum_trace_truncatedCheckedReadDefect_eq {E : Type*} [Fintype E] [Decidab
       U * (truncatedCheckedRead t ⊗ₖ (1 : Matrix E E ℂ)))ᴴ) using 1 <;>
     simp only [checkedReadOutcomeProjector, Matrix.mul_assoc]
 
-omit [DecidableEq ι] in
 /-- The sum over retained read outcomes costs `24 I`, independently of their number.
 The address register and its correlations with the state remain arbitrary. -/
 theorem sum_trace_truncatedCheckedReadDefect_le
@@ -889,43 +957,6 @@ theorem sum_trace_truncatedCheckedReadDefect_le
   exact mul_le_mul_of_nonneg_right
     (l2_opNorm_commutator_checkedRead_sq_le_twentyFour_mul π t hW hU hA) hσ.trace_re_nonneg
 
-
-private theorem read_controlled_commutator_apply {n E κ : Type*}
-    [Fintype n] [DecidableEq n] [Fintype E] [DecidableEq E]
-    (A : Matrix n n ℂ) (π : n → κ) (U : κ → Matrix E E ℂ)
-    (i j : n) (e f : E) :
-    (((A ⊗ₖ (1 : Matrix E E ℂ)) * labelControlled (fun a ↦ π a.1)
-      (fun k ↦ (1 : Matrix n n ℂ) ⊗ₖ U k) -
-      labelControlled (fun a ↦ π a.1) (fun k ↦ (1 : Matrix n n ℂ) ⊗ₖ U k) *
-      (A ⊗ₖ (1 : Matrix E E ℂ))) : Matrix (n × E) (n × E) ℂ) (i, e) (j, f) =
-      A i j * (U (π j) e f - U (π i) e f) := by
-  simp [Matrix.mul_apply, Fintype.sum_prod_type, labelControlled_apply,
-    kroneckerMap_apply, Matrix.one_apply, mul_sub, mul_comm]
-
-/-- A checked projector with its query address retained as a classical control. -/
-noncomputable def selectedCheckedReadProjector (a : Option Y) :
-    Matrix (X × Database X Y) (X × Database X Y) ℂ :=
-  fun i j ↦ if i.1 = j.1 then checkedReadProjector i.1 a i.2 j.2 else 0
-
-omit [AddCommGroup Y] in
-/-- Selecting an address preserves its classical control and applies its checked projector. -/
-theorem selectedCheckedReadProjector_apply (a : Option Y)
-    (i j : X × Database X Y) :
-    selectedCheckedReadProjector a i j =
-      if i.1 = j.1 then checkedReadProjector i.1 a i.2 j.2 else 0 := by
-  unfold selectedCheckedReadProjector
-  rfl
-
-/-- The defect of the checked instrument against a database-label-controlled auxiliary unitary. -/
-noncomputable def checkedReadDefect {E : Type*} [Fintype E] [DecidableEq E]
-    (π : Database X Y → ι) (U : ι → Matrix E E ℂ) (a : Option Y) :
-    Matrix ((X × Database X Y) × E) ((X × Database X Y) × E) ℂ :=
-  (selectedCheckedReadProjector a ⊗ₖ (1 : Matrix E E ℂ)) *
-    labelControlled (fun i ↦ π i.1.2)
-      (fun k ↦ (1 : Matrix (X × Database X Y) (X × Database X Y) ℂ) ⊗ₖ U k) -
-  labelControlled (fun i ↦ π i.1.2)
-      (fun k ↦ (1 : Matrix (X × Database X Y) (X × Database X Y) ℂ) ⊗ₖ U k) *
-    (selectedCheckedReadProjector a ⊗ₖ (1 : Matrix E E ℂ))
 
 
 private theorem read_embedding_norm_le {a b : Type*} [Fintype a] [Fintype b]
@@ -1012,17 +1043,6 @@ private theorem readResponseIndex_injective {E : Type*} :
   have ha := checkedReadValue_injective h.1.1.2
   simp [h.1.1.1, h.1.2, h.2, ha]
 
-private noncomputable def readInputCutoff {E : Type*} [DecidableEq E] (p : ℕ) :
-    Matrix ((X × Database X Y) × E) ((X × Database X Y) × E) ℂ :=
-  diagonal (fun i ↦ if i.1.2.size ≤ p then 1 else 0)
-
-omit [AddCommGroup Y] in
-private theorem readInputCutoff_norm_le {E : Type*} [Fintype E] [DecidableEq E] (p : ℕ) :
-    ‖readInputCutoff (X := X) (Y := Y) (E := E) p‖ ≤ 1 := by
-  rw [readInputCutoff, l2_opNorm_diagonal, pi_norm_le_iff_of_nonneg zero_le_one]
-  intro i
-  split_ifs <;> simp
-
 private noncomputable def readFullDefect {E : Type*} [Fintype E] [DecidableEq E]
     (π : Database X Y → ι) (U : ι → Matrix E E ℂ) (t : ℕ) :
     Matrix (((X × (Y × ZMod 2)) × Database X Y) × E)
@@ -1036,18 +1056,6 @@ private noncomputable def readFullDefect {E : Type*} [Fintype E] [DecidableEq E]
         ((X × (Y × ZMod 2)) × Database X Y) ℂ) ⊗ₖ U k) *
     (truncatedCheckedRead t ⊗ₖ (1 : Matrix E E ℂ))
 
-omit [DecidableEq ι] [AddCommGroup Y] in
-/-- Each defect entry is the checked projector entry times the difference of label unitaries. -/
-theorem checkedReadDefect_apply {E : Type*} [Fintype E] [DecidableEq E]
-    (π : Database X Y → ι) (U : ι → Matrix E E ℂ) (a : Option Y)
-    (i j : X × Database X Y) (e f : E) :
-    checkedReadDefect π U a (i, e) (j, f) =
-      selectedCheckedReadProjector a i j * (U (π j.2) e f - U (π i.2) e f) := by
-  unfold checkedReadDefect
-  exact read_controlled_commutator_apply (selectedCheckedReadProjector a)
-    (fun i : X × Database X Y ↦ π i.2) U i j e f
-
-omit [DecidableEq ι] in
 private theorem readFullDefect_apply {E : Type*} [Fintype E] [DecidableEq E]
     (π : Database X Y → ι) (U : ι → Matrix E E ℂ) (t : ℕ)
     (i j : (X × (Y × ZMod 2)) × Database X Y) (e f : E) :
@@ -1057,7 +1065,6 @@ private theorem readFullDefect_apply {E : Type*} [Fintype E] [DecidableEq E]
   exact read_controlled_commutator_apply (truncatedCheckedRead t)
     (fun i : (X × (Y × ZMod 2)) × Database X Y ↦ π i.2) U i j e f
 
-omit [DecidableEq ι] in
 private theorem readDefectStack_eq {E : Type*} [Fintype E] [DecidableEq E]
     (π : Database X Y → ι) (U : ι → Matrix E E ℂ) (p : ℕ) :
     MatrixMap.stinespring (checkedReadDefect π U) * readInputCutoff p =
@@ -1079,7 +1086,6 @@ private theorem readDefectStack_eq {E : Type*} [Fintype E] [DecidableEq E]
   · simp [hj]
 
 
-omit [DecidableEq ι] in
 /-- All checked-outcome defects, stacked together and restricted to population at most `p`,
 have squared norm at most `24 I(π,p+1)`. The address register may be correlated with the input. -/
 theorem l2_opNorm_checkedReadDefectStack_sq_le
@@ -1116,7 +1122,6 @@ theorem l2_opNorm_checkedReadDefectStack_sq_le
       _ = _ := mul_one _
   exact (pow_le_pow_left₀ (norm_nonneg _) hs 2).trans hn
 
-omit [DecidableEq ι] in
 /-- The sum of the checked-instrument defects is bounded without a factor for the outcomes.
 The input may be a subnormalized mixed state with arbitrary address correlations, including
 an address selected adaptively before the read. One final read uses population cutoff `p+1`. -/
