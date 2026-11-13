@@ -287,10 +287,12 @@ When a proof attempt on a working branch is not finished or is currently broken,
 
 ### 17. `OracleComp.inductionOn` is the canonical eliminator
 
-Pattern: `| pure x => ... | query_bind t oa ih => ...`. Use `simulateQ_bind`,
-`simulateQ_query`, `simulateQ_pure` simp lemmas in the `query_bind` case.
-See `simulateQ_id'` in `VCVio/OracleComp/SimSemantics/SimulateQ.lean` for a
-clean example.
+Pattern: `| pure x => ... | query_bind t oa ih => ...`. In the `query_bind` case, `simp`
+distributes `simulateQ` with the `@[simp]` lemmas `simulateQ_bind`, `simulateQ_query` and
+`simulateQ_pure`, and `rw [simulateQ_bind, simulateQ_spec_query]` lands on `impl t` directly.
+`simulateQ` is semireducible, so CSLib's `PFunctor.FreeM.liftM` simp lemmas do not rewrite it:
+the pieces stay `simulateQ`-headed after `simp`, and a later `rw [simulateQ_*]` still matches.
+See `simulateQ_id'` in `VCVio/OracleComp/SimSemantics/SimulateQ.lean` for a clean example.
 
 ### 18. Full cutover, no backward-compatibility shims
 

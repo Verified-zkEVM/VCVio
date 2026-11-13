@@ -86,6 +86,19 @@ theorem AnswerMeasure.toMeasure_eq_uniformOn [UniformAnswerMeasure spec] (t : sp
     toMeasure t = @uniformOn (spec.Range t) ⊤ Set.univ :=
   UniformAnswerMeasure.toMeasure_eq_uniform t
 
+/-- The answer measure of query `t` is the uniform measure on its answer type. Statements that
+sample uniformly at one query assume this instead of `UniformAnswerMeasure`, which provides it at
+every query. -/
+class AnswerMeasure.IsUniformAt (spec : OracleSpec.{u, v} ι) [AnswerMeasure spec]
+    (t : spec.Domain) : Prop where
+  /-- The answer measure of query `t` is uniform. -/
+  toMeasure_eq_uniformOn : AnswerMeasure.toMeasure t = @uniformOn (spec.Range t) ⊤ Set.univ
+
+/-- A uniform specification is uniform at each query. -/
+instance UniformAnswerMeasure.isUniformAt [UniformAnswerMeasure spec] (t : spec.Domain) :
+    AnswerMeasure.IsUniformAt spec t :=
+  ⟨AnswerMeasure.toMeasure_eq_uniformOn t⟩
+
 /-- Select uniform measure semantics for an oracle specification whose answer types are finite
 and nonempty. -/
 @[expose, reducible]

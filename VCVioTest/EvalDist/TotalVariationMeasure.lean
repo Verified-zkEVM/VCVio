@@ -14,7 +14,8 @@ public import Mathlib.Probability.Distributions.Gaussian.Real
 /-!
 # Total variation composition regressions
 
-Real spaces retain their usual measurable structure. Conditional variation bounds use supplied
+Real spaces retain their usual measurable structure, under which distinct points still give
+Dirac measures at total variation one. Conditional variation bounds use supplied
 majorants, null-set changes have no cost, and lossy prefixes retain their mass. An explicit
 optional abort remains distinguishable from computational failure.
 -/
@@ -74,6 +75,13 @@ example (κ η : Kernel ℝ ℝ) (ε : ENNReal)
   simpa only [lintegral_const, Measure.smul_apply, measure_univ, smul_eq_mul, mul_one] using
     Measure.statEDist_bind_bind_le_lintegral ((1 / 2 : ENNReal) • gaussianReal 0 1)
       κ η κ.aemeasurable η.aemeasurable (fun _ ↦ ε) h
+
+/-- Dirac measures at distinct reals are at total variation one under the Borel σ-algebra. -/
+example : (Measure.dirac (0 : ℝ)).statEDist (Measure.dirac 1) = 1 :=
+  Measure.statEDist_dirac_dirac_of_ne (by norm_num)
+
+example : (Measure.dirac (0 : ℝ)).statDist (Measure.dirac 1) = 1 :=
+  Measure.statDist_dirac_dirac_of_ne (by norm_num)
 
 /-- Returning an abort is distinct from losing the entire computation. -/
 example : (Measure.dirac (none : Option ℝ)).statEDist 0 = 1 := by

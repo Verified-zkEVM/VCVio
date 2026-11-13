@@ -7,7 +7,6 @@ Authors: Alexander Hicks
 module
 
 public import HashSig.SLHDSA.Security.SeedCouplingQueries
-import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # The hidden-seed bound for the run of SLH-DSA

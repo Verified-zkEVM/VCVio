@@ -100,6 +100,41 @@ theorem measureTVDist_eq_zero_iff [EvalDistSemantics m] [MeasurableSpace α]
   Measure.statDist_eq_zero_iff _ _
     (evalDist_apply_univ_le_one mx) (evalDist_apply_univ_le_one my)
 
+/-- Two `pure` computations returning distinct values are at extended TV one, on a space whose
+measurable sets separate points. -/
+theorem measureETVDist_pure_pure_of_ne [Monad m] [EvalDistSemantics m]
+    [LawfulPureEvalDistSemantics m] [MeasurableSpace α] [MeasurableSpace.SeparatesPoints α]
+    {a b : α} (h : a ≠ b) : measureETVDist (pure a : m α) (pure b) = 1 := by
+  rw [measureETVDist, evalDist_pure, evalDist_pure, Measure.statEDist_dirac_dirac_of_ne h]
+
+/-- Two `pure` computations returning distinct values are at TV one, on a space whose measurable
+sets separate points. -/
+theorem measureTVDist_pure_pure_of_ne [Monad m] [EvalDistSemantics m]
+    [LawfulPureEvalDistSemantics m] [MeasurableSpace α] [MeasurableSpace.SeparatesPoints α]
+    {a b : α} (h : a ≠ b) : measureTVDist (pure a : m α) (pure b) = 1 := by
+  rw [measureTVDist_eq_toReal_measureETVDist, measureETVDist_pure_pure_of_ne h]
+  simp
+
+/-- Two `pure` computations are at extended TV zero when they return the same value and one
+otherwise, on a space whose measurable sets separate points. -/
+theorem measureETVDist_pure_pure [Monad m] [EvalDistSemantics m] [LawfulPureEvalDistSemantics m]
+    [MeasurableSpace α] [MeasurableSpace.SeparatesPoints α] (a b : α) [Decidable (a = b)] :
+    measureETVDist (pure a : m α) (pure b) = if a = b then 0 else 1 := by
+  split_ifs with h
+  · subst h
+    exact measureETVDist_self _
+  · exact measureETVDist_pure_pure_of_ne h
+
+/-- Two `pure` computations are at TV zero when they return the same value and one otherwise, on
+a space whose measurable sets separate points. -/
+theorem measureTVDist_pure_pure [Monad m] [EvalDistSemantics m] [LawfulPureEvalDistSemantics m]
+    [MeasurableSpace α] [MeasurableSpace.SeparatesPoints α] (a b : α) [Decidable (a = b)] :
+    measureTVDist (pure a : m α) (pure b) = if a = b then 0 else 1 := by
+  split_ifs with h
+  · subst h
+    exact measureTVDist_self _
+  · exact measureTVDist_pure_pure_of_ne h
+
 /-- Every measurable-event discrepancy is bounded by the extended TV distance. -/
 theorem measure_absDiff_apply_le_measureETVDist [EvalDistSemantics m] [MeasurableSpace α]
     (mx my : m α) {s : Set α} (hs : MeasurableSet s) :

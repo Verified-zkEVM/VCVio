@@ -387,6 +387,7 @@ public import VCVio.OracleComp.EvalDist.Sum
 public import VCVio.OracleComp.FinRatPMF
 public import VCVio.OracleComp.HasQuery.Basic
 public import VCVio.OracleComp.HasQuery.Morphism
+public import VCVio.OracleComp.MapLens
 public import VCVio.OracleComp.OracleComp
 public import VCVio.OracleComp.OracleContext
 public import VCVio.OracleComp.OracleQuery
@@ -394,6 +395,7 @@ public import VCVio.OracleComp.OracleSpec
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.ProbComp.IndepProductEvents
+public import VCVio.OracleComp.ProbComp.IndepProductEvents.AdaptedUnion
 public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.QueryTracking
 public import VCVio.OracleComp.QueryTracking.AdaptivePrefix
@@ -448,6 +450,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.FiniteSupport
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshAnswer
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed
+public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.CacheExtension
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeedCollapse
 public import VCVio.OracleComp.QueryTracking.RandomOracle.InitialCacheExpectedQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential
@@ -471,6 +474,7 @@ public import VCVio.OracleComp.QueryTracking.SubSpec
 public import VCVio.OracleComp.QueryTracking.Tracing.Core
 public import VCVio.OracleComp.QueryTracking.Unpredictability
 public import VCVio.OracleComp.QueryTracking.WriterCost
+public import VCVio.OracleComp.QueryTracking.WriterCost.StateT
 public import VCVio.OracleComp.ReachableWhen
 public import VCVio.OracleComp.RunIO
 public import VCVio.OracleComp.Runtime
