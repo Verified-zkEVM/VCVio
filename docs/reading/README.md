@@ -32,6 +32,12 @@ section or the pinned source tree.
 | [`generalized-relation-automation.md`](generalized-relation-automation.md) | Investigation with tested pilots | How do `gcongr`, `grw`, and related tactics apply to VCVio's relations, which registrations simplify current proofs, and which candidates should remain experimental? |
 | [`long-proof-audit.md`](long-proof-audit.md) | Source audit with compiled experiments | What drives the longest proofs, how much can small automation or shared lemmas remove, and which arguments need deeper refactoring? |
 
+## Hash-based signatures
+
+[`gxmss.md`](gxmss.md) describes the generalized XMSS construction, per-key and
+joint correctness, interval-first native security bounds and shared-response PRF
+derivation. It links actual public endpoints, sampling premises and consumer tests.
+
 ## Keeping these honest
 
 Two conventions, both learned the hard way and worth preserving:
