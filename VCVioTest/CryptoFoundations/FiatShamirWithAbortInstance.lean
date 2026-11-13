@@ -155,7 +155,8 @@ theorem managedRoNmaAdvantage_toy :
       managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment,
     SignatureAlg.eufNmaExperiment, runtime_evalDist_apply_singleton]
   refine (ENNReal.toReal_eq_toReal_iff' (prEvent_ne_top _) (by finiteness)).mp ?_
-  simp only [simulatedEufNmaAdv, simulatedNmaAdv, toyAdv, toySim, toyIds, toyHr, firstSome,
+  simp only [simulatedEufNmaAdv, simulatedNmaAdv, toyAdv, toySim, toyIds, toyHr, firstSome_succ,
+    firstSome_zero,
     FiatShamirWithAbort,
     simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
     StateT.run_bind, StateT.run'_eq, map_eq_bind_pure_comp, bind_assoc, pure_bind,
